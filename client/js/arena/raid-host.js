@@ -21,10 +21,16 @@ class RaidHost {
     this.lastBotBroadcast = -1;
   }
 
-  makeBot(classId, i) {
+  // entry: a class id, or 'class:spec' ('class:base' for the plain kit). Without one, a bot plays the base kit or
+  // either specialization, a third of the time each.
+  makeBot(entry, i) {
+    const [classId, want] = String(entry).split(':');
     const cls = CLASSES.find(c => c.id === classId);
+    const specs = (typeof SPECS !== 'undefined' && SPECS[classId]) || [];
+    const spec = want ? (want === 'base' ? null : (specs.find(s => s.id === want) || {}).id || null)
+      : (specs.length ? [null, ...specs.map(s => s.id)][Math.floor(this.rng() * (specs.length + 1))] : null);
     const spawnA = Math.PI / 2 + (i - 1) * 0.5;
-    const bot = { id: 1000 + i, name: BOT_NAMES[i % BOT_NAMES.length], cls, role: cls.role, bot: true, slot: i,
+    const bot = { id: 1000 + i, name: BOT_NAMES[i % BOT_NAMES.length], cls, spec, role: cls.role, bot: true, slot: i,
       x: Math.cos(spawnA) * 330, y: Math.sin(spawnA) * 330, a: -Math.PI / 2, moving: false, plan: null, nextThink: 0,
       taken: [], healTarget: null, nextAct: 0 };
     bot.actor = new CombatActor(cls, bot, this.botWorld(bot), this.rng);
@@ -32,7 +38,7 @@ class RaidHost {
   }
 
   allPlayers() {
-    return [...this.humans(), ...this.bots.map(b => ({ id: b.id, name: b.name, cls: b.cls.id, role: b.role, x: b.x, y: b.y, a: b.a, bot: true }))];
+    return [...this.humans(), ...this.bots.map(b => ({ id: b.id, name: b.name, cls: b.cls.id, spec: b.spec, role: b.role, x: b.x, y: b.y, a: b.a, bot: true }))];
   }
 
   emit(msg) { this.emitOut(msg); }
@@ -203,6 +209,7 @@ class RaidHost {
       selfMods: () => { const s = host.sim.ps.get(bot.id); return { dmgDown: s && s.dmgDownEnd > host.sim.t ? FIGHT.DMG_DOWN : 0 }; },
       recentDamage: (actor, secs) => bot.taken.filter(d => d.t > host.sim.t - secs).reduce((a, d) => a + d.a, 0),
       maxHp: () => { const s = host.sim.ps.get(bot.id); return s ? s.maxHp : playerBaseHp(bot.role); },
+      hpFrac: () => { const s = host.sim.ps.get(bot.id); return s && s.maxHp ? Math.max(0, s.hp / s.maxHp) : 1; },
       onEvent: (actor, ev) => {
         switch (ev.type) {
           case 'used': {

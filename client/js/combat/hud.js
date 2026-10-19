@@ -4,17 +4,17 @@ const SLOT_KEYS = ['Q', 'W', 'E', 'R', 'D', 'F', 'SPC'];
 const abilityIcon = (classId, abilityId) => `icons/${classId}/${abilityId}.png`;
 
 const BUFF_NAMES = {
-  oath: 'Oath of Valor', frenzy: 'Frenzy', gorge: 'Free Drains', undying: 'Undying', overload: 'Runic Overload',
+  oath: 'Oath of Valor', frenzy: 'Frenzy', gorge: 'Gorged', undying: 'Undying', overload: 'Runic Overload',
   markself: "Hunter's Mark", keen: 'Keen Eye', barrage: 'Barrage', truenorth: 'Shadowstep', dance: 'Shadow Dance',
   combust: 'Combustion', heating: 'Heating Up', hotstreak: 'Hot Streak', burnt: 'Burnt Out', growth: 'Wild Growth',
-  awaken: 'Awakened', surge: 'Surge', lag: 'Time Lag',
+  awaken: 'Awakened', surge: 'Surge', lag: 'Time Lag', radiant: 'Radiant',
 };
 const BAD_BUFFS = new Set(['burnt', 'lag']);
 // which ability's icon a buff wears
 const BUFF_ICON = {
   oath: 'oath', frenzy: 'frenzy', gorge: 'drain', undying: 'undying', overload: 'overload', markself: 'mark', keen: 'pierce',
   barrage: 'barrage', truenorth: 'step', dance: 'dance', combust: 'combust', heating: 'fireblast', hotstreak: 'pyro', burnt: 'vent',
-  growth: 'growth', awaken: 'bloom', surge: 'shift', lag: 'shift',
+  growth: 'growth', awaken: 'bloom', surge: 'shift', lag: 'shift', radiant: 'edge',
 };
 
 // hover text for each class gauge: what fills it, what spends it, and (state) a live readout under the name
@@ -73,7 +73,7 @@ const Hud = {
     // painted icons live in icons/<class>/<ability id>.png; the dash (and anything without art) shows its letter
     row.innerHTML = items.map((ab, i) => `
       <div class="slot ${ab.type}${i < 6 ? ' has-art' : ''}" data-i="${i}" style="--a:${cls.accent};--fx:${(ab.fx && ab.fx.color) || cls.accent}">
-        <div class="icon"${i < 6 ? ` style="background-image:url(${abilityIcon(cls.id, ab.id)})"` : ''}>${i < 6 ? '' : ab.name.replace(/^The /, '')[0]}</div>
+        <div class="icon"${i < 6 ? ` style="background-image:url(${abilityIcon(cls.id, abilityIconId(ab))})"` : ''}>${i < 6 ? '' : ab.name.replace(/^The /, '')[0]}</div>
         <kbd>${SLOT_KEYS[i]}</kbd>
         <div class="sweep"></div>
         <div class="cdtext"></div>
@@ -85,17 +85,18 @@ const Hud = {
     this.slots.forEach((s, i) => Tip.set(s.el, () => {
       const ab = items[i], k = this.actor && this.actor.kit;
       const name = k && i < 6 ? k.label(ab) : ab.name;
-      const icon = i < 6 ? `<i class="ab-icon ${ab.type}" style="background-image:url(${abilityIcon(cls.id, ab.id)})"></i>` : '<i class="ab-icon dash">»</i>';
+      const icon = i < 6 ? `<i class="ab-icon ${ab.type}" style="background-image:url(${abilityIcon(cls.id, abilityIconId(ab))})"></i>` : '<i class="ab-icon dash">»</i>';
       const meta = [ab.type === 'gcd' ? 'GCD' : 'oGCD'];
       if (typeof ab.cast === 'number' && ab.cast) meta.push(`${ab.cast}s cast`);
       if (ab.charges) meta.push(`${ab.charges} charges · ${ab.cd}s`); else if (typeof ab.cd === 'number' && ab.cd) meta.push(`${ab.cd}s cooldown`);
-      const perks = k ? [...(k.gear().perks || [])].filter(p => ITEM_PERKS[p] && ITEM_PERKS[p].ab === ab.id) : [];
+      const perks = k ? [...(k.gear().perks || [])].filter(p => ITEM_PERKS[p] && ITEM_PERKS[p].ab === (ab.replaces || ab.id)) : [];
       const enh = perks.map(p => `<div class="it-perk"><span><u>Enhanced (${ITEMS[p].name}):</u> ${ITEM_PERKS[p].text}</span></div>`).join('');
       return `<div class="tip-ab">${icon}<div><b>${name}</b><em>${meta.join(' · ')}</em></div></div>${ab.desc || ''}${enh}`;
     }));
     this.slots.forEach((s, i) => s.el.addEventListener('mousedown', e => { e.stopPropagation(); onPress(i); }));
     Tip.set(this.el.querySelector('.gauge-wrap'), () => {
-      const k = this.actor && this.actor.kit, g = k && k.def.gauge, info = GAUGE_TIPS[cls.id];
+      const k = this.actor && this.actor.kit, g = k && k.def.gauge, sp = this.actor && specOf(cls.id, this.actor.spec);
+      const info = sp && sp.gaugeTip ? Object.assign({}, GAUGE_TIPS[cls.id], { desc: sp.gaugeTip }) : GAUGE_TIPS[cls.id];
       if (!g || !info) return '';
       const val = Math.floor(k.g[g.key] || 0);
       const meta = [`${val} / ${g.max}`];
@@ -114,7 +115,7 @@ const Hud = {
     const enhanced = new Set([...(k.gear().perks || [])].map(p => ITEM_PERKS[p] && ITEM_PERKS[p].ab));
     a.abilities.forEach((ab, i) => {
       const s = this.slots[i];
-      s.el.classList.toggle('enhanced', enhanced.has(ab.id));
+      s.el.classList.toggle('enhanced', enhanced.has(ab.replaces || ab.id));
       const usable = k.usable(ab);
       let frac = 0, txt = '';
       const cdLeft = k.cdRemaining(ab);
@@ -150,7 +151,7 @@ const Hud = {
       this.castFill.style.width = (Math.min(1, (now - k.cast.start) / (k.cast.end - k.cast.start)) * 100).toFixed(1) + '%';
       if (this._castAb !== k.cast.ab) {
         this._castAb = k.cast.ab;
-        this.castName.innerHTML = `<i class="cb-icon" style="background-image:url(${abilityIcon(a.cls.id, k.cast.ab.id)})"></i>${k.cast.ab.name}`;
+        this.castName.innerHTML = `<i class="cb-icon" style="background-image:url(${abilityIcon(a.cls.id, abilityIconId(k.cast.ab))})"></i>${k.cast.ab.name}`;
       }
     } else { this.castBar.classList.add('hidden'); this._castAb = null; }
     // gauge

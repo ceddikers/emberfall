@@ -4,7 +4,7 @@
 //   e.g. node tools/bot-raid.js normal 5 skitterra   (arguments can come in any order; the boss defaults to grubnak)
 const path = require('path');
 const load = (p) => require(path.join(__dirname, '../client/js', p));
-Object.assign(global, load('arena/shapes.js'), load('data.js'), load('combat/engine.js'), load('combat/kits.js'),
+Object.assign(global, load('arena/shapes.js'), load('data.js'), load('combat/engine.js'), load('combat/kits.js'), load('combat/specs.js'),
   load('combat/actor.js'), load('arena/fight.js'), load('arena/bots.js'));
 Object.assign(global, load('arena/raid-host.js'));
 const { GRUBNAK } = load('arena/bosses/grubnak.js');

@@ -3,15 +3,17 @@
 //   world.now(), world.findEnemy(actor, ab), world.positional(actor), world.allyTarget(actor, ab),
 //   world.isDead(id), world.defaultLink(actor), world.partyMods(actor), world.targetMods(actor),
 //   world.selfMods(actor), world.recentDamage(actor, secs), world.maxHp(actor), world.moving(actor),
-//   world.canAuto(actor) (optional: may auto-attacks fire right now?),
+//   world.canAuto(actor) (optional: may auto-attacks fire right now?), world.hpFrac(actor) (optional: current HP 0..1),
 //   world.onEvent(actor, ev)  <- every kit event (damage, heal, used, castStart, fail...)
 
 class CombatActor {
+  // the hero's specialization comes from ent.spec (specs.js); none means the base kit
   constructor(cls, ent, world, rng = Math.random) {
     this.cls = cls; this.ent = ent; this.world = world;
+    this.spec = ent.spec || null;
     this.dash = { charges: DASH.charges, next: 0 };
     const actor = this;
-    this.kit = new Kit(KITS[cls.id], {
+    this.kit = new Kit(kitFor(cls.id, this.spec), {
       now: () => world.now(),
       rng,
       moving: () => world.moving(actor),
@@ -28,6 +30,7 @@ class CombatActor {
       gearMods: () => (world.gearMods ? world.gearMods(actor) : null),
       recentDamage: secs => world.recentDamage(actor, secs),
       maxHp: () => world.maxHp(actor),
+      hpFrac: () => (world.hpFrac ? world.hpFrac(actor) : 1),   // your health, 0..1 (Berserker)
       isDead: id => world.isDead(id),
       defaultLink: () => world.defaultLink(actor),
       emit: ev => world.onEvent(actor, ev),

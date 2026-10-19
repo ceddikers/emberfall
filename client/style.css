@@ -613,3 +613,30 @@ kbd { border-radius: 3px; background: #1d1813; border-color: #4a3d2c; color: var
 /* the key legend wraps in the space left of the ability bar instead of running under it */
 #help { max-width: calc(50vw - 336px); line-height: 1.8; border-radius: 3px; background: #0f0d0bc8; border: 1px solid var(--line-soft); }
 #down-veil span { font-size: 34px; letter-spacing: .4em; text-transform: uppercase; color: #ece4d4aa; }
+
+/* specializations on the hero page */
+#sel-spec.hidden { display: none; }
+#sel-spec { display: grid; gap: 10px; }
+.spec-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.spec-tab { display: grid; gap: 1px; text-align: left; padding: 8px 12px; border-radius: 3px; cursor: pointer; background: #0f0d0bcc;
+  border: 1px solid var(--line-soft); color: #e9dfc8; font: inherit; box-shadow: inset 3px 0 0 color-mix(in srgb, var(--sa) 45%, transparent); }
+.spec-tab b { font-family: var(--fantasy); font-size: 14px; letter-spacing: .04em; }
+.spec-tab small { color: var(--muted); font-size: 11.5px; }
+.spec-tab:hover { background: #1a1612; border-color: var(--gold-dim); }
+.spec-tab.on { background: color-mix(in srgb, var(--sa) 12%, #14110d); border-color: color-mix(in srgb, var(--sa) 70%, var(--gold-dim)); box-shadow: inset 3px 0 0 var(--sa); }
+.spec-tab.on b { color: var(--gold-hi); }
+.spec-focus { margin: 0; font-size: 13.5px; line-height: 1.5; color: #d9cfbd; }
+.spec-focus u { text-decoration: none; font-family: var(--fantasy); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--gold); margin-right: 8px; }
+.spec-passive h5 { margin: 0 0 2px; font-family: var(--fantasy); color: #e9d39a; font-size: 12px; letter-spacing: 1px; }
+.spec-passive p { margin: 0; font-size: 13px; line-height: 1.5; }
+.spec-moves { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 8px; }
+.spec-move { display: flex; gap: 10px; align-items: flex-start; padding: 8px; border-radius: 3px; background: #0f0d0bcc; border: 1px solid var(--line-soft); }
+.spec-move .ab-icon { flex: none; width: 40px; height: 40px; border-radius: 3px; background: center / cover no-repeat; box-shadow: 0 0 0 1px var(--line), 0 3px 8px #000a; }
+.spec-move .ab-icon.ogcd { border-radius: 50%; }
+.spec-move b { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; font-size: 13px; color: #f2e6c8; }
+.spec-move b kbd { font-size: 10px; }
+.spec-move b em { font-style: normal; font-size: 11px; color: var(--muted); letter-spacing: .02em; }
+.spec-move p { margin: 2px 0 0; font-size: 12.5px; line-height: 1.45; color: #d4cab8; }
+.key-cell.changed { border-color: color-mix(in srgb, var(--a) 60%, var(--gold-dim)); }
+.key-cell.changed::after { content: ''; position: absolute; top: 6px; right: 6px; width: 6px; height: 6px; transform: rotate(45deg); background: var(--gold); }
+@media (max-width: 700px) { .spec-tabs { grid-template-columns: 1fr; } }

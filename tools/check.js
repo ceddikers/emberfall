@@ -10,7 +10,18 @@ const ROOT = path.join(__dirname, '..');
 const BASELINE = path.join(__dirname, 'check-baseline.json');
 const UPDATE = process.argv.includes('--update-baseline');
 const DPS_TOLERANCE = 0.08;   // a class's pro DPS may drift this far from the baseline before it counts as a change
+const SPEC_TOLERANCE = 0.05;  // a specialization's pro DPS may differ this much from its own base class
 const RAID_RUNS = 2;
+// bot raids: every boss, and every tank spec somewhere, with a fixed line-up so the result doesn't depend on a random spec
+const RAIDS = [
+  ['Grubnak', 'grubnak', 'bastion:base'],
+  ['Skitterra', 'skitterra', 'runeguard:runeblade'],
+  ['Volkar', 'volkar', 'bloodreaver:berserker'],
+  ['Volkar', 'volkar', 'bloodreaver:hemomancer'],
+  ['the Hollow King', 'hollowking', 'bastion:sentinel'],
+  ['the Hollow King', 'hollowking', 'bastion:crusader'],
+  ['the Hollow King', 'hollowking', 'runeguard:spellwarden'],
+];
 
 const results = [];
 const pass = (name, detail = '') => results.push({ ok: true, name, detail });
@@ -30,7 +41,7 @@ function syntax() {
 // ---------------------------------------------------------------- 2. data and shared math
 function data() {
   const load = p => require(path.join(ROOT, 'client/js', p));
-  Object.assign(global, load('arena/shapes.js'), load('data.js'), load('combat/engine.js'), load('combat/kits.js'), load('items.js'), load('interp.js'));
+  Object.assign(global, load('arena/shapes.js'), load('data.js'), load('combat/engine.js'), load('combat/kits.js'), load('combat/specs.js'), load('items.js'), load('interp.js'));
   global.TAU = Math.PI * 2;
 
   // every class has a kit, gear for each tier and enhancements that point at real abilities
@@ -73,7 +84,7 @@ function data() {
   const steps = []; let last = tr.at(0.3).x, overshoot = false;
   for (let t = 0.3 + 1 / 60; t < 2.0; t += 1 / 60) { feed(t); const x = tr.at(t).x; steps.push(x - last); last = x; if (x > 400.01) overshoot = true; }
   const spread = Math.max(...steps) - Math.min(...steps);
-  if (!overshoot && spread < 0.05) pass('Network smoothing is even', `step ${steps[0].toFixed(2)} ± ${(spread / 2).toFixed(3)}`);
+  if (!overshoot && spread < 0.05) pass('Network smoothing is even', `step ${steps[0].toFixed(2)} Â± ${(spread / 2).toFixed(3)}`);
   else fail('Network smoothing is even', `spread ${spread.toFixed(3)}, overshoot ${overshoot}`);
 
   // ... and stays even over a wobbly connection: 40-75 ms delivery, noticed only on the receiver's next frame,
@@ -117,10 +128,7 @@ function run(args) {
 async function heavy() {
   const [sim, ...raids] = await Promise.all([
     run([path.join(__dirname, 'simulate.js')]),
-    run([path.join(__dirname, 'bot-raid.js'), 'normal', String(RAID_RUNS), 'grubnak']),
-    run([path.join(__dirname, 'bot-raid.js'), 'normal', String(RAID_RUNS), 'skitterra']),
-    run([path.join(__dirname, 'bot-raid.js'), 'normal', String(RAID_RUNS), 'volkar']),
-    run([path.join(__dirname, 'bot-raid.js'), 'normal', String(RAID_RUNS), 'hollowking']),
+    ...RAIDS.map(([, boss, tank]) => run([path.join(__dirname, 'bot-raid.js'), 'normal', String(RAID_RUNS), boss, `${tank},cleric,ranger,pyromancer`])),
   ]);
 
   // balance: each class's pro DPS against the baseline
@@ -143,12 +151,22 @@ async function heavy() {
     else pass('Class balance', `all ${Object.keys(base).length} classes within ${DPS_TOLERANCE * 100}% of the baseline`);
   }
 
-  // bot raids: a bot party clears each boss on Normal every time
-  for (const [boss, r] of [['Grubnak', raids[0]], ['Skitterra', raids[1]], ['Volkar', raids[2]], ['the Hollow King', raids[3]]]) {
-    const m = r.out.match(/cleared (\d+) of (\d+)/);
-    if (r.code === 0 && m && m[1] === m[2]) pass(`Bots clear ${boss} (Normal)`, `${m[1]} of ${m[2]}`);
-    else fail(`Bots clear ${boss} (Normal)`, m ? `${m[1]} of ${m[2]}\n` + r.out.split('\n').filter(l => /^run /.test(l)).join('\n') : r.out.slice(-800));
+  // specializations: each spec's pro DPS stays close to its own base class (same simulator run)
+  const specRows = [];
+  for (const line of sim.out.split('\n')) { const m = line.match(/^(\w+):(\w+)\s+(\d+)\s+(\d+)/); if (m) specRows.push({ c: m[1], s: m[2], pro: +m[4] }); }
+  if (specRows.length) {
+    const off = specRows.filter(r => now[r.c] && Math.abs(r.pro - now[r.c].pro) / now[r.c].pro > SPEC_TOLERANCE)
+      .map(r => `${r.c}:${r.s}: pro DPS ${r.pro} vs ${now[r.c].pro} for the base class`);
+    if (off.length) fail('Specializations balanced', off.join('\n'));
+    else pass('Specializations balanced', `${specRows.length} specs within ${SPEC_TOLERANCE * 100}% of their class`);
   }
+
+  // bot raids: a bot party clears each boss on Normal every time
+  RAIDS.forEach(([boss, , tank], i) => {
+    const r = raids[i], m = r.out.match(/cleared (\d+) of (\d+)/), name = `Bots clear ${boss} (Normal, ${tank})`;
+    if (r.code === 0 && m && m[1] === m[2]) pass(name, `${m[1]} of ${m[2]}`);
+    else fail(name, m ? `${m[1]} of ${m[2]}\n` + r.out.split('\n').filter(l => /^run /.test(l)).join('\n') : r.out.slice(-800));
+  });
 }
 
 (async () => {

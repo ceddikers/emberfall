@@ -137,6 +137,7 @@
     targetMods: () => ({ vuln: inArena() ? (raid.boss.v || 0) : (town.vulnEnd > now ? town.vuln : 0) }),
     selfMods: () => { const s = myState(); return { dmgDown: inArena() && s && s.dd ? FIGHT.DMG_DOWN : 0 }; },
     recentDamage: (a, secs) => (inArena() ? raid.taken : town.taken).filter(d => d.t > now - secs).reduce((x, d) => x + d.a, 0),
+    hpFrac: () => { const s = myState(); return s && s.maxHp ? Math.max(0, s.hp / s.maxHp) : 1; },
     maxHp: () => { const s = myState(); return s ? s.maxHp : playerBaseHp(player.cls ? player.cls.role : 'dps') + (Inventory.mods(player.cls && player.cls.id).hp || 0); },
     onEvent: (a, ev) => onKitEvent(ev),
   };
@@ -167,6 +168,8 @@
     if (selfCast && now < selfCast.until && actor && actor.abilities[selfCast.i] === ab && validAlly(Net.id, ab)) return Net.id;
     if (hoverFrame != null && validAlly(hoverFrame, ab)) return hoverFrame;
     if (lockedAlly != null && validAlly(lockedAlly, ab)) return lockedAlly;
+    // a tank (Spellwarden) is usually pointing at the boss, not an ally: only a frame or a locked ally counts
+    if (player.cls && player.cls.role === 'tank') return Net.id;
     const s = softAlly(ab);
     return s != null ? s : Net.id;
   }
@@ -307,6 +310,9 @@
         if (ev.target === 'self' || ev.target === Net.id || ev.target === 'party') {
           if (town.shield) endTownShield();
           town.shield = { amount: ev.amount, max: ev.amount, end: now + (ev.dur || 15), tag: ev.tag };
+        } else if (ev.tag === 'ward' && actor) {
+          // a Spellwarden's Ward on a friend in town soaks nothing (no host here), but still ends with its blast
+          const a = actor; later(ev.dur || 8, () => { if (actor === a) a.notify('shieldEnd', { tag: 'ward', frac: 0 }); });
         }
         break;
     }
@@ -465,7 +471,7 @@
   function playKitFx(ent, name, mine) {
     const f = KIT_VFX[name];
     if (!f) return;
-    const target = name === 'reflect' || name === 'dawnstar' ? (ent === player ? enemyPos() : (inArena() ? { x: raid.boss.x, y: raid.boss.y } : null)) : null;
+    const target = name === 'reflect' || name === 'dawnstar' || name === 'radiant' ? (ent === player ? enemyPos() : (inArena() ? { x: raid.boss.x, y: raid.boss.y } : null)) : null;
     VFX.setScale(mine ? 1 : 0.6);
     try { f(ent, target); } finally { VFX.setScale(1); }
   }
@@ -526,8 +532,8 @@
     return out;
   }
   function raidHumans() {
-    const me = { id: Net.id, name: player.name, cls: player.cls && player.cls.id, role: player.cls && player.cls.role };
-    const others = [...remotes.values()].filter(r => r.cls).map(r => ({ id: r.id, name: r.name, cls: r.cls.id, role: r.cls.role }));
+    const me = { id: Net.id, name: player.name, cls: player.cls && player.cls.id, spec: player.spec || null, role: player.cls && player.cls.role };
+    const others = [...remotes.values()].filter(r => r.cls).map(r => ({ id: r.id, name: r.name, cls: r.cls.id, spec: r.spec || null, role: r.cls.role }));
     return [me, ...others].filter(h => h.cls).slice(0, 4);
   }
 
@@ -542,7 +548,7 @@
     hostRoster = humans.map(h => Object.assign({}, h, { spawn: spawns[h.id] }));
     const bond = bondCounts(humans);   // gear party bonuses, fixed for the fight (gear is locked inside a raid)
     raidHost = new RaidHost({ def, mode, humans: hostHumans, bots: fill ? pickBots(humans) : [], seed: (Math.random() * 1e9) | 0, emit: m => Net.broadcastAll(m), bond: partyBonus(bond) });
-    const roster = [...humans, ...raidHost.bots.map(b => ({ id: b.id, name: b.name, cls: b.cls.id, role: b.role, bot: true }))];
+    const roster = [...humans, ...raidHost.bots.map(b => ({ id: b.id, name: b.name, cls: b.cls.id, spec: b.spec, role: b.role, bot: true }))];
     for (const b of raidHost.bots) spawns[b.id] = [rnd(b.x), rnd(b.y)];
     Net.broadcastAll({ t: 'raid', boss: def.id, mode, roster, spawns, bond });
     // tick the fight off a worker timer so it keeps running if the host's tab is in the background
@@ -672,7 +678,7 @@
       raid.party.set(r.id, { hp: 1, maxHp: 1, shield: 0, alive: true, dd: 0, vuln: 0, mit: 0, weak: 0, debuffs: [] });
       const sp = msg.spawns[r.id] || [0, 360];
       if (r.bot) {
-        raid.bots.set(r.id, { kind: 'remote', remote: true, bot: true, id: r.id, name: r.name, cls: CLASSES.find(c => c.id === r.cls),
+        raid.bots.set(r.id, { kind: 'remote', remote: true, bot: true, id: r.id, name: r.name, cls: CLASSES.find(c => c.id === r.cls), spec: specOf(r.cls, r.spec) ? r.spec : null,
           x: sp[0], y: sp[1], tx: sp[0], ty: sp[1], angle: -Math.PI / 2, ta: -Math.PI / 2, m: 0, lift: 0, tl: 0, faceLock: 0, st: newSt(Math.random() * 3) });
       }
       if (r.id === Net.id) { player.x = sp[0]; player.y = sp[1]; }
@@ -1461,7 +1467,7 @@
       case 'player': case 'remote': {
         const dead = inArena() && raid.party.get(e.id === undefined ? Net.id : e.id) && !raid.party.get(e.id === undefined ? Net.id : e.id).alive;
         if (dead) { ctx.save(); ctx.globalAlpha = 0.4; }
-        drawHero(ctx, e.cls, e.x, e.y, e.angle, dead ? { t: 0, moving: false, action: null } : e.st, heroScale(), { lift: e.lift });
+        drawHero(ctx, e.cls, e.x, e.y, e.angle, dead ? { t: 0, moving: false, action: null } : e.st, heroScale(), { lift: e.lift, spec: e.spec });
         if (dead) ctx.restore();
         break;
       }
@@ -1819,6 +1825,8 @@
   // Optional painted portraits (client/portraits/<classId>.png, front-facing). Missing ones fall back to the sprite.
   const PORTRAITS = {};
   for (const c of CLASSES) { const img = new Image(); img.onload = () => { PORTRAITS[c.id] = img; }; img.src = `portraits/${c.id}.png`; }
+  const SPEC_PORTRAITS = {};
+  for (const [cid, list] of Object.entries(SPECS)) for (const sp of list) { const key = `${cid}-${sp.id}`, img = new Image(); img.onload = () => { SPEC_PORTRAITS[key] = img; }; img.src = `portraits/${key}.png`; }
   // Portraits are square head-and-shoulders busts. Fill a square box with one, breathing a little; zoom > 1 moves in
   // on the face (kept anchored at the top so the head stays in frame).
   function drawBust(c, img, x, y, size, zoom = 1) {
@@ -1847,13 +1855,56 @@
   })();
   // the shared in-game tooltip for an ability
   function abilityTip(cls, a) {
-    const icon = a.id ? `<i class="ab-icon ${a.type}" style="background-image:url(${abilityIcon(cls.id, a.id)})"></i>` : '<i class="ab-icon dash">»</i>';
+    const icon = a.id ? `<i class="ab-icon ${a.type}" style="background-image:url(${abilityIcon(cls.id, abilityIconId(a))})"></i>` : '<i class="ab-icon dash">»</i>';
     return `<div class="tip-ab">${icon}<div><b>${a.name}</b><em>${abilityMeta(a)}</em></div></div>${a.desc}`;
+  }
+  // --- specializations on the hero page: the base class and its two specs as tabs. A spec shows what it
+  // specializes in, its passive, and every move it adds or changes (with the move it replaced).
+  let selSpec = null;
+  function renderSpecBox(cls, kit, rerender) {
+    const box = $('sel-spec'), specs = SPECS[cls.id] || [];
+    box.classList.toggle('hidden', !specs.length);
+    if (!specs.length) return;
+    const spec = specOf(cls.id, selSpec), sk = kitFor(cls.id, selSpec);
+    const tabs = [{ id: null, name: cls.name, title: 'Base class' }, ...specs].map(s => `<button class="spec-tab${(s.id || null) === (selSpec || null) ? ' on' : ''}" data-spec="${s.id || ''}" style="--sa:${s.accent || cls.accent}">
+      <b>${s.name}</b><small>${s.title}</small></button>`).join('');
+    let body;
+    if (!spec) body = `<p class="spec-focus">The class as it was made: every specialization starts from here and changes a few things. Pick one to see what it changes.</p>`;
+    else {
+      const changes = sk.abilities.map((a, i) => ({ a, was: kit.abilities[i], i })).filter(c => c.a !== c.was);
+      body = `<p class="spec-focus"><u>Specializes in</u> ${spec.focus}</p>
+        <div class="spec-passive"><h5>${spec.passive.name}</h5><p>${spec.passive.desc}</p></div>
+        <div class="spec-moves">${changes.map(c => `<div class="spec-move" data-i="${c.i}">
+          <i class="ab-icon ${c.a.type}" style="background-image:url(${abilityIcon(cls.id, abilityIconId(c.a))})"></i>
+          <div><b><kbd>${KEYS[c.i]}</kbd>${c.a.name}${c.a.id !== c.was.id ? `<em>New, replaces ${c.was.name}</em>` : '<em>Changed</em>'}</b><p>${c.a.desc}</p></div></div>`).join('')}</div>`;
+    }
+    box.innerHTML = `<h4>Specialization</h4><div class="spec-tabs">${tabs}</div>${body}`;
+    box.querySelectorAll('.spec-tab').forEach(b => b.addEventListener('click', () => { selSpec = b.dataset.spec || null; rerender(); }));
+    box.querySelectorAll('.spec-move').forEach(m => { const i = Number(m.dataset.i); Tip.set(m, () => abilityTip(cls, sk.abilities[i])); });
+  }
+  function renderChoose(cls) {
+    const btn = $('sel-choose'), spec = specOf(cls.id, selSpec);
+    const same = player.cls === cls, sameSpec = same && (player.spec || null) === (selSpec || null);
+    btn.disabled = sameSpec;
+    btn.textContent = sameSpec ? 'Your current hero' : same ? `Play as ${spec ? spec.name : `a ${cls.name}`}` : `Choose ${cls.name}${spec ? ` · ${spec.name}` : ''}`;
+    btn.onclick = () => (same ? applySpec(selSpec) : chooseHero(cls, selSpec));
+  }
+  // switch the current hero's specialization (in town)
+  function applySpec(specId) {
+    if (!player.cls || scene !== 'town') return;
+    player.spec = specOf(player.cls.id, specId) ? specId : null;
+    Save.setSpec(player.cls.id, player.spec);
+    closePanels();
+    const spec = specOf(player.cls.id, player.spec);
+    heroPickFx(player, spec ? { accent: spec.accent } : player.cls);
+    makeActor();
+    toast(spec ? `You are now a ${spec.name}, ${spec.title}.` : `You are a ${player.cls.name} again.`);
+    Net.send({ t: 'cls', id: player.cls.id, spec: player.spec });
   }
   const slotIndex = k => (k === 'space' ? 6 : SLOT_OF[k]);
   function keyChip(cls, k) {
-    const i = slotIndex(k), a = i === 6 ? DASH_AB : KITS[cls.id].abilities[i];
-    return `<span class="kchip ${a.type}" data-i="${i}">${a.id ? `<i style="background-image:url(${abilityIcon(cls.id, a.id)})"></i>` : '<i class="dash">»</i>'}<kbd>${KEYS[i]}</kbd></span>`;
+    const i = slotIndex(k), a = i === 6 ? DASH_AB : kitFor(cls.id, selSpec).abilities[i];
+    return `<span class="kchip ${a.type}" data-i="${i}">${a.id ? `<i style="background-image:url(${abilityIcon(cls.id, abilityIconId(a))})"></i>` : '<i class="dash">»</i>'}<kbd>${KEYS[i]}</kbd></span>`;
   }
   function openSelect(cls) {
     if (scene !== 'town') return;
@@ -1887,27 +1938,35 @@
       <p class="tagline">“${cls.tagline}”</p>
       <p>${cls.gameplan}</p>
       ${takenBy.length ? `<p class="taken">Also picked by ${takenBy.join(', ')}</p>` : ''}`;
-    $('sel-passive').innerHTML = `<i class="ab-icon passive" style="background-image:url(${abilityIcon(cls.id, guide.passive.icon)})"></i>
-      <div><h4>Passive · ${guide.passive.name}</h4><p>${guide.passive.desc}</p></div>`;
     const keys = $('sel-keys');
-    keys.innerHTML = abs.map((a, i) => `<button class="key-cell ${a.type}" data-i="${i}">
-      <i class="ab-icon ${a.type}${a.id ? '' : ' dash'}" ${a.id ? `style="background-image:url(${abilityIcon(cls.id, a.id)})"` : ''}>${a.id ? '' : '»'}</i>
-      <kbd>${KEYS[i]}</kbd><span>${a.name}</span></button>`).join('');
-    keys.querySelectorAll('.key-cell').forEach(b => {
-      const i = Number(b.dataset.i);
-      Tip.set(b, () => abilityTip(cls, abs[i]));
-      b.addEventListener('mouseenter', () => { playPreview(i); preview.nextDemo = now + 2.5; });
-    });
-    $('sel-tips').innerHTML = `<h4>Tips &amp; Combos</h4>
-      <div class="tips-grid">
-        <div><h5>First steps</h5><p>${kit.floor}</p><h5>Mastery · ${kit.signature}</h5><ul class="ceiling">${kit.ceiling.map(c => `<li>${c}</li>`).join('')}</ul></div>
-        <div><h5>Combos</h5>${guide.combos.map(c => `<div class="combo"><div class="chain">${c.keys.map(k => keyChip(cls, k)).join('<b class="arrow">›</b>')}</div><p>${c.text}</p></div>`).join('')}</div>
-      </div>`;
-    $('sel-tips').querySelectorAll('.kchip').forEach(ch => { const i = Number(ch.dataset.i); Tip.set(ch, () => abilityTip(cls, abs[i])); });
-    const btn = $('sel-choose');
-    btn.disabled = player.cls === cls;
-    btn.textContent = player.cls === cls ? 'Your current hero' : `Choose ${cls.name}`;
-    btn.onclick = () => chooseHero(cls);
+    selSpec = player.cls === cls ? (player.spec || null) : Save.spec(cls.id);
+    const renderKit = () => {
+      const kitAbs = [...kitFor(cls.id, selSpec).abilities, DASH_AB];
+      abs.splice(0, abs.length, ...kitAbs);
+      // the seven keys, with what this specialization changed marked
+      keys.innerHTML = abs.map((a, i) => `<button class="key-cell ${a.type}${i < 6 && a !== kit.abilities[i] ? ' changed' : ''}" data-i="${i}">
+        <i class="ab-icon ${a.type}${a.id ? '' : ' dash'}" ${a.id ? `style="background-image:url(${abilityIcon(cls.id, abilityIconId(a))})"` : ''}>${a.id ? '' : '»'}</i>
+        <kbd>${KEYS[i]}</kbd><span>${a.name}</span></button>`).join('');
+      keys.querySelectorAll('.key-cell').forEach(b => {
+        const i = Number(b.dataset.i);
+        Tip.set(b, () => abilityTip(cls, abs[i]));
+        b.addEventListener('mouseenter', () => { playPreview(i); preview.nextDemo = now + 2.5; });
+      });
+      if (preview) preview.lis = [...keys.querySelectorAll('.key-cell')];
+      renderSpecBox(cls, kit, renderKit);
+      renderChoose(cls);
+      // tips are written for the base class; under a spec the key chips show its moves and it adds its own line first
+      const spec = specOf(cls.id, selSpec);
+      $('sel-passive').innerHTML = `<i class="ab-icon passive" style="background-image:url(${abilityIcon(cls.id, guide.passive.icon)})"></i>
+        <div><h4>Passive · ${guide.passive.name}</h4><p>${(spec && spec.classPassive) || guide.passive.desc}</p></div>`;
+      $('sel-tips').innerHTML = `<h4>Tips &amp; Combos</h4>
+        <div class="tips-grid">
+          <div>${spec ? `<h5>As a ${spec.name}</h5><p>${spec.blurb}</p>` : ''}<h5>First steps</h5><p>${kit.floor}</p><h5>Mastery · ${kit.signature}</h5><ul class="ceiling">${kit.ceiling.map(c => `<li>${c}</li>`).join('')}</ul></div>
+          <div><h5>Combos</h5>${guide.combos.map(c => `<div class="combo"><div class="chain">${c.keys.map(k => keyChip(cls, k)).join('<b class="arrow">›</b>')}</div><p>${c.text}</p></div>`).join('')}</div>
+        </div>`;
+      $('sel-tips').querySelectorAll('.kchip').forEach(ch => { const i = Number(ch.dataset.i); Tip.set(ch, () => abilityTip(cls, abs[i])); });
+    };
+    renderKit();
     const cv = $('sel-portrait');
     if (!cv._w) setupCanvas(cv, 220, 220);
     preview = { kind: 'hero', cls, st: newSt(), nextDemo: now + 0.6, demo: 0, lis: [...keys.querySelectorAll('.key-cell')], abs };
@@ -1942,10 +2001,12 @@
     if (now > preview.nextDemo) { playPreview(preview.demo++ % 6); preview.nextDemo = now + 1.7; }
     st.moving = actP(st) < 0 && Math.sin(now * 1.3) > 0.4;
     const c = prep(selPortrait.cv);
-    if (PORTRAITS[cls.id]) {
-      drawBust(c, PORTRAITS[cls.id], 0, 0, 220);
+    // a spec shows its own painted portrait (portraits/<class>-<spec>.png) or, until there is one, the sprite in its look
+    const spec = specOf(cls.id, selSpec), img = spec ? SPEC_PORTRAITS[`${cls.id}-${spec.id}`] : PORTRAITS[cls.id];
+    if (img) {
+      drawBust(c, img, 0, 0, 220);
       // a slow wash of the hero's colour rising from the bottom of the frame
-      VFX.glowAt(c, 110, 236, 120, cls.accent, 0.16 + Math.sin(now * 1.4) * 0.04);
+      VFX.glowAt(c, 110, 236, 120, spec ? spec.accent : cls.accent, 0.16 + Math.sin(now * 1.4) * 0.04);
       return;
     }
     // no painted portrait: the sprite on a slowly turning sigil, in their colour
@@ -1957,7 +2018,7 @@
     VFX.neonRing(c, 130, 200, 84, cls.accent, 1.2, 0.5, 0.42);
     VFX.glowAt(c, 130, 150, 120, cls.accent, 0.28 + Math.sin(now * 2) * 0.06);
     for (let i = 0; i < 6; i++) { const q = (now * 0.35 + i / 6) % 1, a = i * 2.1; VFX.glowAt(c, 130 + Math.cos(a) * 70, 200 - q * 170, 6, cls.accent, 0.8 * Math.sin(q * Math.PI)); }
-    drawHero(c, cls, 130, 160, 0.45 + Math.sin(now * 0.6) * 0.35, st, 3.1, { ring: false });
+    drawHero(c, cls, 130, 160, 0.45 + Math.sin(now * 0.6) * 0.35, st, 3.1, { ring: false, spec: selSpec });
     c.restore();
   }
 
@@ -1985,8 +2046,11 @@
     VFX.pillar(e.x, e.y, { r: 30, h: 220, color: cls.accent, dur: 1.1, follow: e });
     VFX.burst(e.x, e.y, { color: cls.accent, color2: '#ffffff', n: 18, speed: 220 });
   }
-  function chooseHero(cls) {
+  function chooseHero(cls, specId) {
     player.cls = cls;
+    // the spec picked on the hero page, or the one this hero last played
+    if (specId !== undefined) Save.setSpec(cls.id, specOf(cls.id, specId) ? specId : null);
+    player.spec = specOf(cls.id, Save.spec(cls.id)) ? Save.spec(cls.id) : null;
     closePanels();
     heroPickFx(player, cls);
     Inventory.grantStarter(cls.id);
@@ -1995,7 +2059,7 @@
     updateHeroName(); updatePartyList();
     toast(`You are now the ${cls.name}, ${cls.title}.`);
     setObjective('Try your skills on the <b>Training Yard</b> dummies (east). The red one swings back. When you\'re ready, step into the <b>Raid Portal</b> (north).');
-    Net.send({ t: 'cls', id: cls.id });
+    Net.send({ t: 'cls', id: cls.id, spec: player.spec });
     sendGear();
   }
 
@@ -2084,6 +2148,7 @@
   function makeRemote(p) {
     return {
       kind: 'remote', remote: true, id: p.id, name: p.name, cls: CLASSES.find(c => c.id === p.cls) || null,
+      spec: p.cls && specOf(p.cls, p.spec) ? p.spec : null,
       x: p.x, y: p.y, tx: p.x, ty: p.y, angle: p.a || 0, ta: p.a || 0, m: 0, lift: 0, tl: 0, faceLock: 0, scene: p.s || 0,
       st: newSt(Math.random() * 3),
     };
@@ -2114,8 +2179,10 @@
   Net.on('cls', msg => {
     const r = remotes.get(msg.id);
     if (!r) return;
+    const was = r.cls;
     r.cls = CLASSES.find(c => c.id === msg.cls) || null;
-    if (r.cls) {
+    r.spec = r.cls && specOf(r.cls.id, msg.spec) ? msg.spec : null;
+    if (r.cls && r.cls !== was) {   // a spec change alone (or a reconnect resend) isn't a new pick
       if (r.scene === (scene === 'arena' ? 1 : 0)) heroPickFx(r, r.cls);
       toast(`${r.name} picked ${r.cls.name}.`);
     }
@@ -2130,7 +2197,7 @@
     // where they cast from goes into their track like any position update (snapping here would fight the smoothing)
     if (!e.bot) { e.tx = msg.x; e.ty = msg.y; if (e.track) e.track.push(e.clock ? e.clock.map(msg.c, now) : now, msg.x, msg.y, e.track.latest().a); }
     if (msg.i === 6) { e.dashUntil = now + 0.2; VFX.setScale(0.6); KIT_VFX.dash(e, e.cls.accent); VFX.setScale(1); return; }
-    const ab = KITS[e.cls.id].abilities[msg.i];
+    const ab = kitFor(e.cls.id, e.spec).abilities[msg.i];
     if (!ab) return;
     let tx = msg.tx, ty = msg.ty, tent = null;
     if (msg.ally != null) { tent = entById(msg.ally); if (tent) { tx = tent.x; ty = tent.y; } }
@@ -2200,7 +2267,7 @@
     $('join').classList.add('hidden');
     started = true;
     if (!player.cls) openSelect(null);
-    else { Net.send({ t: 'cls', id: player.cls.id }); sendGear(); }   // back after a lost connection: tell the new room who we are
+    else { Net.send({ t: 'cls', id: player.cls.id, spec: player.spec }); sendGear(); }   // back after a lost connection: tell the new room who we are
     updatePartyList();
     toast(Net.solo ? `Welcome to Emberfall, ${player.name}! Bots will fill your party.` : Net.isHost ? `You're hosting! Room code: ${Net.room}` : `Welcome to Emberfall, ${player.name}!`);
   }

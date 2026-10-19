@@ -11,6 +11,8 @@
 const path = require('path');
 const { ENGINE, Kit } = require(path.join(__dirname, '../client/js/combat/engine.js'));
 const { KITS } = require(path.join(__dirname, '../client/js/combat/kits.js'));
+global.KITS = KITS;
+const { SPECS, kitFor } = require(path.join(__dirname, '../client/js/combat/specs.js'));
 // this tool's model is written in the original big-number units; only ratios matter for balance
 ENGINE.NUM_SCALE = 1; ENGINE.POT_SCALE = 10;
 global.ENGINE = ENGINE;   // the kits read ENGINE.NUM_SCALE
@@ -25,11 +27,11 @@ const RAIDWIDE_EVERY = 30, RAIDWIDE_DMG = 5000;
 
 function mulberry(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 
-function runSim(classId, skill, seed) {
-  const def = KITS[classId];
+function runSim(classId, skill, seed, specId) {
+  const def = kitFor(classId, specId);
   const rng = mulberry(seed);
   const human = mulberry(seed * 7 + 3); // separate stream for "human" randomness
-  const state = { t: 0, moving: false, tookDamage: [], shield: null, mits: [], reflect: null, healDebt: 0, healing: 0, gcdHeals: 0 };
+  const state = { t: 0, moving: false, tookDamage: [], shield: null, mits: [], reflect: null, healDebt: 0, healing: 0, gcdHeals: 0, allyWards: [] };
   const role = ['bastion', 'bloodreaver', 'runeguard'].includes(classId) ? 'tank'
     : ['cleric', 'grovekeeper', 'chronomancer'].includes(classId) ? 'healer' : 'dps';
   const maxHp = role === 'tank' ? 32000 : 21000;
@@ -45,6 +47,8 @@ function runSim(classId, skill, seed) {
     selfMods: () => ({}),
     recentDamage: secs => state.tookDamage.filter(d => d.t > state.t - secs).reduce((s, d) => s + d.a, 0),
     maxHp: () => maxHp,
+    // a rough HP for the Berserker: lower right after big hits
+    hpFrac: () => Math.max(0.15, 1 - Math.min(0.85, env.recentDamage(8) / maxHp * 1.3)),
     isDead: () => false,
     defaultLink: () => 'tank',
     emit: ev => {
@@ -54,6 +58,8 @@ function runSim(classId, skill, seed) {
         state.healDebt = Math.max(0, state.healDebt - (ev.target === 'party' ? amt * 4 : amt));
       }
       if (ev.type === 'shield' && ev.target === 'self') state.shield = { amt: ev.amount, max: ev.amount, end: state.t + ev.dur, tag: ev.tag };
+      // a Ward on an ally (Spellwarden): assume it soaks a bit over half before it ends (an ally isn't tanking)
+      if (ev.type === 'shield' && ev.tag === 'ward' && ev.target !== 'self') state.allyWards.push({ end: state.t + ev.dur });
       if (ev.type === 'shield' && ev.target === 'party') state.healDebt = Math.max(0, state.healDebt - ev.amount * 4);
       if (ev.type === 'mit' && ev.target === 'self') {
         if (ev.kind === 'reflect') state.reflect = state.t + ev.dur;
@@ -94,7 +100,7 @@ function runSim(classId, skill, seed) {
     if (state.t >= nextBuster) { nextBuster += BUSTER_EVERY; state.healDebt += BUSTER_DMG * 0.45; }
   }
 
-  const policy = (skill === 'pro' ? PRO : NEWBIE)[classId] || (skill === 'pro' ? genericPro : genericNewbie);
+  const policy = (skill === 'pro' ? PRO : NEWBIE)[classId] || (skill === 'pro' ? genericPro : genericNewbie);   // a spec plays with its class's policy
   let reaction = 0;
   for (state.t = 0; state.t < FIGHT_LEN; state.t += DT) {
     state.moving = isMoveWindow(state.t);
@@ -106,6 +112,8 @@ function runSim(classId, skill, seed) {
       if (state.t >= nextAuto) { nextAuto += AUTO_EVERY; hitTank(AUTO_DMG, 'auto'); }
       if (state.t >= nextBuster) { nextBuster += BUSTER_EVERY; hitTank(BUSTER_DMG, 'buster'); }
       if (state.t >= nextRaidwide) { nextRaidwide += RAIDWIDE_EVERY; hitTank(RAIDWIDE_DMG, 'raidwide'); }
+      for (const w of state.allyWards) if (state.t >= w.end) { w.done = true; k.notify('shieldEnd', { tag: 'ward', frac: 0.55 }); }
+      state.allyWards = state.allyWards.filter(w => !w.done);
       if (state.shield && state.t >= state.shield.end) { k.notify('shieldEnd', { tag: state.shield.tag, frac: 1 - state.shield.amt / state.shield.max }); state.shield = null; }
     }
     if (role === 'healer') healerIncoming();
@@ -129,9 +137,11 @@ function runSim(classId, skill, seed) {
 }
 
 // ---------------------------------------------------------------- policies
-const I = (k, id) => k.abilities.findIndex(a => a.id === id);
-const ready = (k, id) => { const ab = k.abById(id); return k.readyIn(ab) <= 0.0001 && k.usable(ab); };
-const readySoon = (k, id, s = ENGINE.QUEUE_WINDOW) => { const ab = k.abById(id); return k.readyIn(ab) <= s && k.usable(ab); };
+// abilities by id, or by the id of the base ability a specialization replaced
+const abOf = (k, id) => k.abilities.find(a => a.id === id || a.replaces === id);
+const I = (k, id) => k.abilities.findIndex(a => a.id === id || a.replaces === id);
+const ready = (k, id) => { const ab = abOf(k, id); return k.readyIn(ab) <= 0.0001 && k.usable(ab); };
+const readySoon = (k, id, s = ENGINE.QUEUE_WINDOW) => { const ab = abOf(k, id); return k.readyIn(ab) <= s && k.usable(ab); };
 
 // A believable newbie, based on the research numbers (~85-90% GCD uptime, partial use of hints):
 //  - never queues: waits until the GCD is ready, then reacts 0.1-0.6s late
@@ -175,24 +185,24 @@ const PRO = {
   bastion(k, ctx) {
     // Perfect Block: Brace ~0.3s before each boss swing, keeping one charge for busters
     const toAuto = ctx.nextAuto - ctx.t, toBuster = ctx.nextBuster - ctx.t;
-    const brace = k.abById('brace');
+    const brace = abOf(k, 'brace');
     if (k.charges(brace) > 0 && ((toAuto < 0.45 && toAuto > 0.1 && (k.charges(brace) === 2 || toBuster > 6)) || (toBuster < 0.45 && toBuster > 0.1))) return I(k, 'brace');
     if (toBuster < 1.2 && ready(k, 'bulwark')) return I(k, 'bulwark');
     if (ctx.inBurst(ctx.t) && ready(k, 'oath') && weaveOk(k)) return I(k, 'oath');
-    if (toBuster > 10 && toBuster < 40 && k.cdRemaining(k.abById('bulwark')) > 30 && false) return null;
+    if (toBuster > 10 && toBuster < 40 && k.cdRemaining(abOf(k, 'bulwark')) > 30 && false) return null;
     if (k.gcdRemaining() > 0.0001) return null;
-    const pooling = ctx.burstSoon(ctx.t) || (k.cdRemaining(k.abById('oath')) < 8 && !k.has('oath'));
+    const pooling = ctx.burstSoon(ctx.t) || (k.cdRemaining(abOf(k, 'oath')) < 8 && !k.has('oath'));
     if (k.g.resolve >= 50 && (k.has('oath') || k.g.resolve >= 75 && !pooling || (k.g.resolve >= 90 && k.g.step === 2))) return I(k, 'edge');
     return I(k, 'blade');
   },
   bloodreaver(k, ctx) {
     if (ready(k, 'frenzy') && ctx.inBurst(ctx.t) && weaveOk(k)) return I(k, 'frenzy');
-    const let_ = k.abById('letting');
+    const let_ = abOf(k, 'letting');
     if (weaveOk(k) && k.charges(let_) > 0 && k.g.blood <= 80 && (k.charges(let_) === 2 || ctx.inBurst(ctx.t) || k.cdRemaining(let_) < 1)) return I(k, 'letting');
     if (k.gcdRemaining() > 0.0001) return null;
     if (k.stacks('gorge') > 0) return I(k, 'drain');
     const recent = k.env.recentDamage(6);
-    const pooling = ctx.burstSoon(ctx.t) || k.cdRemaining(k.abById('frenzy')) < 6;
+    const pooling = ctx.burstSoon(ctx.t) || k.cdRemaining(abOf(k, 'frenzy')) < 6;
     if (k.g.blood >= 40 && (recent > 12000 || (k.g.blood >= 85 && !pooling) || (k.g.blood >= 95))) return I(k, 'drain');
     return I(k, 'hack');
   },
@@ -213,10 +223,10 @@ const PRO = {
   },
   ranger(k, ctx) {
     if (ready(k, 'mark') && ctx.inBurst(ctx.t) && weaveOk(k)) return I(k, 'mark');
-    if (ready(k, 'barrage') && weaveOk(k) && (k.has('markself') || k.cdRemaining(k.abById('mark')) > 25)) return I(k, 'barrage');
+    if (ready(k, 'barrage') && weaveOk(k) && (k.has('markself') || k.cdRemaining(abOf(k, 'mark')) > 25)) return I(k, 'barrage');
     if (weaveOk(k) && ready(k, 'rapid') && (k.g.focus >= 90 || (k.has('markself') && k.g.focus >= 50))) return I(k, 'rapid');
     if (k.gcdRemaining() > 0.0001) return null;
-    const p = k.abById('pierce');
+    const p = abOf(k, 'pierce');
     if (k.has('barrage')) return I(k, 'quick');
     if (k.has('keen') && k.charges(p) >= 0 && ready(k, 'pierce')) return I(k, 'pierce');
     if (k.charges(p) === 2 || (k.charges(p) === 1 && k.cdRemaining(p) === 0 && k.cd.pierce.next - k.now < 2.5)) return I(k, 'pierce');
@@ -225,7 +235,7 @@ const PRO = {
   },
   shadowblade(k, ctx) {
     if (ready(k, 'dance') && ctx.inBurst(ctx.t) && weaveOk(k) && k.g.combo <= 2) return I(k, 'dance');
-    const step = k.abById('step');
+    const step = abOf(k, 'step');
     if (weaveOk(k) && k.charges(step) > 0 && (k.charges(step) === 2 || ctx.isMoveWindow(ctx.t))) return I(k, 'step');
     if (k.gcdRemaining() > 0.0001) return null;
     if (k.dotRemaining('poison') < 7) return I(k, 'venom');
@@ -235,7 +245,7 @@ const PRO = {
     return I(k, 'strike');
   },
   pyromancer(k, ctx) {
-    const fb = k.abById('fireblast');
+    const fb = abOf(k, 'fireblast');
     // Fire Blast converts Heating Up into Hot Streak (also mid-cast)
     if (k.has('heating') && k.charges(fb) > 0 && k.readyIn(fb) <= 0.0001) return I(k, 'fireblast');
     if (k.has('combust') && k.charges(fb) > 0 && k.readyIn(fb) <= 0.0001 && !k.has('hotstreak')) return I(k, 'fireblast');
@@ -273,7 +283,7 @@ const PRO = {
   },
   chronomancer(k, ctx) {
     const debt = ctx.state.healDebt;
-    if (debt > 9000 && k.charges(k.abById('rewind')) > 0 && weaveOk(k)) return I(k, 'rewind');
+    if (debt > 9000 && k.charges(abOf(k, 'rewind')) > 0 && weaveOk(k)) return I(k, 'rewind');
     if (ready(k, 'accel') && ctx.inBurst(ctx.t) && weaveOk(k)) return I(k, 'accel');
     const toRw = ctx.nextRaidwide - ctx.t;
     if (ready(k, 'shift') && weaveOk(k)) {
@@ -291,20 +301,26 @@ const PRO = {
 // (handled by env.emit 'heal').
 
 // ---------------------------------------------------------------- run
+// every class, then each of its specializations as "class:spec" (or one of either, given as an argument)
 const only = process.argv[2];
-const classes = only ? [only] : Object.keys(KITS);
+const entries = [];
+for (const c of Object.keys(KITS)) {
+  entries.push([c, null]);
+  for (const s of SPECS[c] || []) entries.push([c, s.id]);
+}
+const picked = only ? entries.filter(([c, s]) => (s ? `${c}:${s}` : c) === only) : entries;
 const RUNS = only ? 8 : 5;
 const rows = [];
-for (const c of classes) {
+for (const [cls, spec] of picked) {
   const avg = skill => {
     let dps = 0, hps = 0, gcdH = 0, last;
-    for (let s = 1; s <= RUNS; s++) { const r = runSim(c, skill, s * 101); dps += r.dps; hps += r.hps; gcdH += r.gcdHeals; last = r; }
+    for (let s = 1; s <= RUNS; s++) { const r = runSim(cls, skill, s * 101, spec); dps += r.dps; hps += r.hps; gcdH += r.gcdHeals; last = r; }
     return { dps: dps / RUNS, hps: hps / RUNS, gcdHeals: gcdH / RUNS, last };
   };
   const nb = avg('newbie'), pro = avg('pro');
-  rows.push({ c, nb, pro });
+  rows.push({ c: spec ? `${cls}:${spec}` : cls, nb, pro });
 }
-console.log('\nclass          newbie DPS   pro DPS   newbie/pro   (pro HPS / newbie HPS for healers)');
+console.log('\nclass                    newbie DPS   pro DPS   newbie/pro   (pro HPS / newbie HPS for healers)');
 for (const { c, nb, pro } of rows) {
   const ratio = (nb.dps / pro.dps * 100).toFixed(0) + '%';
   const heal = pro.hps > 0 ? `   HPS ${pro.hps.toFixed(0)} / ${nb.hps.toFixed(0)}, GCD heals ${pro.gcdHeals.toFixed(0)} / ${nb.gcdHeals.toFixed(0)}` : '';

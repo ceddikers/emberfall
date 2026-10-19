@@ -4,7 +4,8 @@
 // so an update never costs anyone their gear.
 //
 //   v1: { v, name, inv: { next, items: [{ uid, key, q }], equip: { classId: { slot: uid } } },
-//         heroes: { classId: { clears: { bossId: { normal, hard } } } }, settings: { debug } }
+//         heroes: { classId: { clears: { bossId: { normal, hard } }, spec } }, settings: { debug } }
+//   (spec was added later without a version bump: it's optional, and a missing one means the base kit)
 
 const Save = (() => {
   const KEY = 'emberfall-save';
@@ -57,6 +58,13 @@ const Save = (() => {
       write();
     },
     clears: (classId, bossId) => ((data.heroes[classId] || { clears: {} }).clears[bossId] || { normal: 0, hard: 0 }),
+    // each hero's chosen specialization (specs.js), or null for the base kit
+    spec: classId => ((data.heroes[classId] || {}).spec || null),
+    setSpec(classId, specId) {
+      const h = data.heroes[classId] = data.heroes[classId] || { clears: {} };
+      h.spec = specId || null;
+      write();
+    },
   };
 })();
 

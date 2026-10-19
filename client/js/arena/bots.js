@@ -419,7 +419,7 @@ const BotAI = {
         if (a.id === 'brace' && left < 0.6) return i;
         if (a.id === 'mirror' && left < 0.9) return i;
         if (a.id === 'ward' && left < 3 && k.gcdRemaining() <= 0 && !k.cast) return i;
-        if (!mitigated && left < 3 && ['bulwark', 'undying', 'banner', 'sanctum', 'warcry'].includes(a.id)) { bot.mitUntil = view.t + 4; return i; }
+        if (!mitigated && left < 3 && ['bulwark', 'zeal', 'undying', 'banner', 'sanctum', 'warcry'].includes(a.id)) { bot.mitUntil = view.t + 4; return i; }
       }
     }
     // oGCDs: burst and damage when ready; mitigation when the tank is getting hit or a raidwide is coming

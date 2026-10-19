@@ -403,7 +403,68 @@ function attackBody(st) {
   return { lunge: v * 3.5, twist: v * 0.13 * swingDir(st) };
 }
 
-// cls may be null (wisp). opts: { ring, noShadow, lift }
+// Specialization looks, drawn over the class art (same local space: facing +x). SPEC_GROUND goes under the hero.
+const SPEC_GROUND = {
+  // Spellwarden: a slow ring of pale runes under their feet
+  spellwarden(ctx, st) {
+    ctx.save(); ctx.scale(1, 0.7); ctx.rotate(st.t * 0.5);
+    circle(ctx, 0, 0, 24, null, rgba('#9fd8ff', 0.45), 1.4);
+    for (let i = 0; i < 6; i++) { const a = i * TAU / 6; poly(ctx, [Math.cos(a) * 24 - 2, Math.sin(a) * 24, Math.cos(a) * 24, Math.sin(a) * 24 - 3, Math.cos(a) * 24 + 2, Math.sin(a) * 24, Math.cos(a) * 24, Math.sin(a) * 24 + 3], rgba('#cfeeff', 0.8)); }
+    ctx.restore();
+  },
+};
+const SPEC_ART = {
+  // Sentinel: a great silver tower shield (it swings to the front to brace, like the class shield it covers)
+  sentinel(ctx, st) {
+    const pb = actP(st, 'brace'), brace = pb < 0 ? 0 : Math.min(1, pb / 0.12, (1 - pb) / 0.12);
+    const front = Math.max(pulse(actP(st, 'bash')), brace);
+    ctx.save(); ctx.translate(8 + 9 * front, -13 + 12 * front); ctx.rotate(-0.45 * (1 - front));
+    rrect(ctx, -4.5, -17, 9, 34, 3, '#c9d6e6', OUT, 2);
+    rrect(ctx, -2.4, -14, 4.8, 28, 1.5, null, '#3d6fb6', 1.6);
+    line(ctx, 0, -12, 0, 12, '#3d6fb6', 1.4); line(ctx, -2, -4, 2, -4, '#3d6fb6', 1.4);
+    ctx.restore();
+  },
+  // Crusader: a gold tabard over the plate and a blade that glows with dawnlight
+  crusader(ctx, st) {
+    rrect(ctx, -7, -4, 14, 8, 2, '#e8c15a', OUT, 1.2);
+    poly(ctx, [-1, -2.5, 1, -2.5, 1, 2.5, -1, 2.5], '#fff3c0');
+    glow(ctx, 18, 14, 16, '#ffe9a0', 0.35 + Math.sin(st.t * 3) * 0.1);
+    circle(ctx, -9, 0, 5, null, rgba('#ffe27a', 0.6), 1.5);   // a small sun disc on the back
+  },
+  // Berserker: red war paint, and eyes that burn
+  berserker(ctx, st) {
+    for (const sy of [-1, 1]) { line(ctx, -5, 6 * sy, 4, 9 * sy, '#ff5a2a', 2); line(ctx, -6, 2 * sy, 2, 4 * sy, '#ff5a2a', 1.6); }
+    glow(ctx, 6, 0, 8, '#ff6a2a', 0.5 + Math.sin(st.t * 6) * 0.15);
+  },
+  // Hemomancer: a dark cowl over the helm, and orbs of blood circling them
+  hemomancer(ctx, st) {
+    ellipse(ctx, -1, 0, 9, 9.5, 0, '#2a0a14', OUT, 1.8);
+    ellipse(ctx, 4.5, 0, 3, 5, 0, '#120408');
+    circle(ctx, 5.5, -1.8, 0.9, '#ff4a5a'); circle(ctx, 5.5, 1.8, 0.9, '#ff4a5a');
+    for (let i = 0; i < 3; i++) {
+      const a = st.t * 1.4 + i * TAU / 3, x = Math.cos(a) * 25, y = Math.sin(a) * 23;
+      glow(ctx, x, y, 8, '#ff2d4b', 0.45);
+      circle(ctx, x, y, 3, '#c0102a', OUT, 1);
+      circle(ctx, x - 0.8, y - 0.8, 0.9, '#ff9aa8');
+    }
+  },
+  // Spellwarden: pale blue sigils on the robe (the rune ring is under them)
+  spellwarden(ctx) {
+    ellipse(ctx, -2, 0, 8, 12, 0, null, rgba('#9fd8ff', 0.7), 1.4);
+  },
+  // Runeblade: a rune-carved sword in the right hand
+  runeblade(ctx, st) {
+    const s = swing(actP(st, 'attack'));
+    ctx.save(); ctx.translate(9, 11); ctx.rotate(0.3 + s * 1.2);
+    poly(ctx, [2, -2.2, 24, -2.2, 29, 0, 24, 2.2, 2, 2.2], '#d9ccff', OUT, 1.5);
+    for (let i = 0; i < 3; i++) circle(ctx, 8 + i * 6, 0, 1.1, '#c58cff');
+    glow(ctx, 16, 0, 12, '#c58cff', 0.3);
+    rrect(ctx, -0.5, -5, 3, 10, 1, '#7b5cf0', OUT, 1.1);
+    ctx.restore();
+  },
+};
+
+// cls may be null (wisp). opts: { ring, noShadow, lift, spec }
 function drawHero(ctx, cls, x, y, angle, st, scale = 1, opts = {}) {
   ctx.save();
   ctx.translate(x, y);
@@ -413,6 +474,7 @@ function drawHero(ctx, cls, x, y, angle, st, scale = 1, opts = {}) {
   if (cls && opts.ring !== false) ellipse(ctx, 0, 2, 19, 15, 0, null, rgba(ROLES[cls.role].color, 0.85), 2);
   const chP = cls ? channelP(st) : -1;
   if (chP >= 0) drawChannelGround(ctx, cls, st, chP);
+  if (opts.spec && SPEC_GROUND[opts.spec]) SPEC_GROUND[opts.spec](ctx, st);
   ctx.translate(0, -lift);
   const big = pulse(actP(st, 'big'));
   if (cls && big > 0) glow(ctx, 0, 0, 36, cls.accent, big * 0.6);
@@ -422,6 +484,7 @@ function drawHero(ctx, cls, x, y, angle, st, scale = 1, opts = {}) {
   const br = (1 + Math.sin((st.t + (st.phase || 0)) * 2.5) * 0.02) * (1 + big * 0.06);
   ctx.scale(br, br);
   (cls ? HERO_ART[cls.id] : HERO_ART.wisp)(ctx, st);
+  if (cls && opts.spec && SPEC_ART[opts.spec]) SPEC_ART[opts.spec](ctx, st);
   if (cls) drawChannelFocus(ctx, cls, st, chP);
   ctx.restore();
 }

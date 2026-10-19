@@ -432,21 +432,40 @@ Stats:
 - One idle human plus three bots: cleared 2 of 3 at about 9:00. The idle hero misses every bell, so everyone gets doomed, and the bots still cured all 22 Dooms.
 - **Hard:** bots reach phase 3 and wipe at 12-20%, at the enrage.
 - Every Doom in every run was cured.
-### Planned: specializations (after a few bosses)
+### Specializations (in progress: tanks built)
 
-Once players know their base class (around boss 3 or 4), each class can pick one of two specializations. Nothing is built yet. Leanings so far:
-- **A spec reshapes the kit, it doesn't replace it.** It swaps one or two abilities and twists the signature mechanic, still on Q W E R D F + Space.
+Each class picks one of two specializations, or keeps the base kit. Rules:
+- **A spec reshapes the kit, it doesn't replace it.** It swaps one or two abilities and gives the signature mechanic a new purpose, still on Q W E R D F + Space.
 - **The role stays the same:** a tank spec is still a tank, so party building stays simple.
-- **No lock-in:** switch freely in town, and both specs are tuned to the same output with `tools/simulate.js`.
-- **Unlocked by a short solo trial** that teaches the new mechanic by doing it.
-- **A new look, title and gauge** for each spec. The bots learn both specs.
+- **No lock-in:** switch freely on the hero page in town; the choice is saved per hero and sent to the group.
+- **Balanced against the base class:** both specs' pro DPS stay within 5% of their class in `tools/simulate.js` (a check enforces it).
+- **A new look:** each spec draws extra gear or effects on the hero (`SPEC_ART` in `heroes.js`); painted portraits and icons come from `docs/art/spec-icons.md`.
+- **Bots play them too:** a bot fills its slot with the base kit or either spec, a third of the time each.
+- Still to come: the unlock (a Hollow King clear with that hero plus a short solo trial that teaches the spec's mechanic). Until the trials exist, every spec is open so it can be tested.
 
+The hero page shows the base class and both specs as tabs. A spec shows what it specializes in, its passive, and every move it adds or changes (new moves say what they replace); changed keys get a gold mark.
+
+**Tanks (design choices made together on 2026-10-19):**
+
+| Spec | Specializes in | What changes |
+|---|---|---|
+| **Bastion · Sentinel** (The Wall) | Protecting the party | A Perfect Block also gives the party 10% less damage for 4 s; Brace has three charges. Holy Edge becomes **Shield Bash**: spend 50 Resolve, 30% less damage for 4 s, a small heal. |
+| **Bastion · Crusader** (The Dawn Blade) | Damage through blocking | A Perfect Block makes the next Holy Edge **Radiant** (50% stronger, a beam). Oath of Valor lasts 20 s, Judgment gives 35 Resolve. Bulwark becomes **Zealous Guard**: 30% less damage, Brace refills, next Holy Edge Radiant. |
+| **Bloodreaver · Berserker** (The Red Storm) | Risky damage | Blood becomes **Rage**. Crimson Drain becomes **Rampage**: up to 70% harder at low HP, heals for 20% of recent damage. Frenzy also makes you 10% faster. |
+| **Bloodreaver · Hemomancer** (The Blood Mage) | Helping the healer | Crimson Drain's healing also heals the whole party at a quarter strength. Bloodletting becomes **Blood Lance**, thrown from range. |
+| **Runeguard · Spellwarden** (The Warding Circle) | Shielding allies | Runic Ward goes on an ally (yourself if none is picked), explodes from them, and refunds its Rune once it absorbed half. |
+| **Runeguard · Runeblade** (The Carved Edge) | Melee damage | Rune Strike becomes the **Rune Blade** combo (Cut > Carve), Glyph Burst becomes **Rune Cleave** (leaves a burning rune for 12 s), Mirror Aegis has two charges, Wards are 20% smaller. |
+
+**How it's built:** `client/js/combat/specs.js` holds `SPECS` and `kitFor(classId, specId)`, which lays a spec's changes over the base kit (cached). A replacement ability names the one it replaces (`replaces`), keeps its slot, borrows its icon until a painted one arrives, and honours that ability's gear enhancements. `CombatActor` builds from `kitFor`; the spec rides on the `cls` message and the raid roster, so every client draws the right look and cast effects.
+
+**Tested:** pro DPS within 1% of the base class for all six; bot parties with each tank spec cleared Volkar and the Hollow King on Normal 24 of 24 with no deaths; in the browser, the picker, switching spec, the HUD, and a Spellwarden Ward landing on an ally in a raid.
 ## 5. What's built (code map)
 
 | Area | Files |
 |---|---|
 | Combat engine (GCD, oGCD, queue, casts, DoTs, procs, stats) | `client/js/combat/engine.js` |
 | The nine kits | `client/js/combat/kits.js` |
+| Specializations (kit changes, per-hero choice) | `client/js/combat/specs.js` |
 | Kit-to-world bridge (player and bots) | `client/js/combat/actor.js` |
 | Unique class gauges | `client/js/combat/gauges.js` |
 | Ability bar, cast bar, buffs | `client/js/combat/hud.js` |

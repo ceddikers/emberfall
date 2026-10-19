@@ -44,7 +44,7 @@ const GAUGES = {
     shape(); c.fillStyle = '#2a1014'; c.fill();
     c.save(); shape(); c.clip();
     const fillTop = cy + 34 - 70 * v;
-    c.fillStyle = k.has('frenzy') ? '#ff3040' : '#b3131f';
+    c.fillStyle = k.has('frenzy') ? '#ff3040' : (k.def.gauge.color || '#b3131f');   // a spec can recolour it (Berserker's Rage)
     c.beginPath(); c.moveTo(0, fillTop);
     for (let x = 0; x <= w; x += 6) c.lineTo(x, fillTop + Math.sin(x * 0.2 + t * 4) * 2);
     c.lineTo(w, h); c.lineTo(0, h); c.closePath(); c.fill();

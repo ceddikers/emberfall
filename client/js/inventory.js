@@ -264,7 +264,11 @@ const Inventory = (() => {
     }).join('');
     const ok = clsId && slotsFor(inst).some(s => canEquip(inst, clsId, s));
     const perk = ITEM_PERKS[inst.key];
-    const perkLine = perk ? `<div class="it-perk"><i style="background-image:url(${abilityIcon(it.cls, perk.ab)})"></i><span><u>Enhances ${KITS[it.cls].abilities.find(a => a.id === perk.ab).name}:</u> ${perk.text}</span></div>` : '';
+    // your specialization may have replaced that move: name both
+    const baseAb = perk && KITS[it.cls].abilities.find(a => a.id === perk.ab);
+    const specAb = perk && kitFor(it.cls, Save.spec(it.cls)).abilities.find(a => (a.replaces || a.id) === perk.ab);
+    const perkName = perk && (specAb && specAb.name !== baseAb.name ? `${baseAb.name} (your ${specAb.name})` : baseAb.name);
+    const perkLine = perk ? `<div class="it-perk"><i style="background-image:url(${abilityIcon(it.cls, perk.ab)})"></i><span><u>Enhances ${perkName}:</u> ${perk.text}</span></div>` : '';
     // the boss's party bonus: what 2, 3 and 4 people wearing its gear give the whole group
     const pb = PARTY_BONUS[it.tier];
     const bondLine = pb ? `<div class="it-bond"><u>Party bonus: ${pb.name}</u>${[2, 3, 4].map(n => `<span><i>${n}</i> ${bonusText(pb.tiers[n])}</span>`).join('')}<small>When that many in your group wear ${pb.boss} gear.</small></div>` : '';
