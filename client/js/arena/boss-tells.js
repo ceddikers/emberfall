@@ -377,6 +377,84 @@ const BossTells = (() => {
         flyingCleaver(ctx, s.x + Math.cos(s.angle) * (L - 30) + wob, s.y + Math.sin(s.angle) * (L - 30) - 30, s.angle + Math.PI + t * 4 * p, k);
       },
     },
+    // Butcher's Charge: skid marks score the tiles from his feet to whatever he'll hit first (a wall or a cask), and
+    // dust kicks up at that end once he's set
+    charge: {
+      color: '#ffcf9a',
+      ground(ctx, tg, s, p, k, t, env) {
+        const ca = Math.cos(s.angle), sa = Math.sin(s.angle), hw = s.w / 2;
+        let L = toWall(s.x, s.y, s.angle, s.len) + 30;
+        const hit = PROPS.ray(s.x, s.y, s.x + ca * L, s.y + sa * L, env.props, FIGHT.BOSS_R * 0.7);
+        if (hit) L *= hit.t;
+        const locked = p > 1 - (tg.lockAt || 1) / tg.dur;
+        const shape = Object.assign({}, s, { len: L + FIGHT.BOSS_R });
+        ctx.save(); SHAPES.trace(ctx, shape); ctx.fillStyle = rgba('#3a1a08', (0.12 + 0.2 * p) * k); ctx.fill(); ctx.restore();
+        for (const side of [-0.55, -0.2, 0.2, 0.55]) {
+          const ox = -sa * hw * side, oy = ca * hw * side, q = Math.min(1, p * 1.4);
+          line(ctx, s.x + ox + ca * 60, s.y + oy + sa * 60, s.x + ox + ca * (60 + (L - 40) * q), s.y + oy + sa * (60 + (L - 40) * q), rgba('#1a0a04', (0.35 + 0.3 * p) * k), 4);
+        }
+        // the wall (or cask) he'll hit: it trembles, then dust shakes off it
+        const ex = s.x + ca * (L + FIGHT.BOSS_R * 0.7), ey = s.y + sa * (L + FIGHT.BOSS_R * 0.7);
+        if (locked) for (let i = 0; i < 6; i++) { const a = s.angle + Math.PI + (hash(i, tg.id) - 0.5) * 2, q = (t * 1.5 + hash(i, 3)) % 1; circle(ctx, ex + Math.cos(a) * q * 50, ey + Math.sin(a) * q * 50, 6 + q * 12, rgba('#e8dcc8', 0.35 * (1 - q) * k)); }
+        for (let i = 0; i < 6; i++) {
+          const q = (t * (1 + p * 2) + i / 6) % 1, d = 70 + q * (L - 70);
+          ctx.save(); ctx.translate(s.x + ca * d, s.y + sa * d); ctx.rotate(s.angle);
+          poly(ctx, [-9, -14, 9, 0, -9, 14, -3, 0], rgba(locked ? '#ffffff' : '#ffd8b0', (0.25 + 0.45 * p) * (1 - q) * k), null);
+          ctx.restore();
+        }
+      },
+    },
+    // Larder Toss: a cask's shadow grows where it'll land, and the cask itself sails over from the shelves
+    cask: {
+      color: '#ffd8a0',
+      ground(ctx, tg, s, p, k) {
+        shadow(ctx, s.x, s.y, s.r * (0.4 + 0.6 * p), (0.25 + 0.35 * p) * k);
+        ctx.save(); ctx.setLineDash([12, 9]); circle(ctx, s.x, s.y, s.r, null, rgba('#ffe2b8', (0.3 + 0.4 * p) * k), 2.5); ctx.restore();
+      },
+      air(ctx, tg, s, p, k, t, env) {
+        if (p < 0.55) return;   // still on the shelf
+        const q = (p - 0.55) / 0.45, sx = s.x < 0 ? -ARENA.hw - 30 : ARENA.hw + 30, sy = clamp(s.y, -ARENA.hh + 60, ARENA.hh - 60);
+        const to = ARENA.clamp({ x: s.x, y: s.y }, 120);   // where it'll come to rest (off the wall, as the host puts it)
+        const x = sx + (to.x - sx) * q, y = sy + (to.y - sy) * q - Math.sin(q * Math.PI) * 160;
+        ctx.save(); ctx.globalAlpha = k; ctx.translate(x, y); ctx.rotate(q * 9);
+        rrect(ctx, -22, -16, 44, 32, 9, '#9a6a36', OUT, 2.5);
+        line(ctx, -12, -16, -12, 16, '#3a3a42', 3); line(ctx, 12, -16, 12, 16, '#3a3a42', 3);
+        ctx.restore();
+        void env;
+      },
+    },
+    // Gut Blast: a gust of foul breath rolls out of him across the whole kitchen. The shadow behind every cask is cut out
+    gut: {
+      color: '#d8e89a', outline: false,
+      ground(ctx, tg, s, p, k, t) {
+        const R = AR() * 2.2, rr = 80 + R * easeOut(p);
+        const g = ctx.createRadialGradient(s.x, s.y, 40, s.x, s.y, rr);
+        g.addColorStop(0, rgba('#8a9a3a', (0.34 + 0.2 * p) * k)); g.addColorStop(0.75, rgba('#6a7a2a', (0.22 + 0.16 * p) * k)); g.addColorStop(1, rgba('#c8d87a', 0.05 * k));
+        ctx.fillStyle = g; ctx.fillRect(-R, -R, R * 2, R * 2);
+        for (let i = 0; i < 4; i++) { const q = (t * 0.7 + i / 4) % 1; circle(ctx, s.x, s.y, 60 + q * R * 0.5, null, rgba('#e8f0b0', 0.28 * (1 - q) * k), 3); }
+        if (p > 0.7) for (let i = 0; i < 18; i++) { const a = hash(i, tg.id) * TAU, d = 120 + hash(i + 2, tg.id) * 600; circle(ctx, s.x + Math.cos(a) * d, s.y + Math.sin(a) * d, 3 + hash(i, 5) * 4, rgba('#f0f8c0', 0.5 * (p - 0.7) / 0.3 * k)); }
+      },
+    },
+    // Meat Hook (Hard): a chain swings down off the ceiling rail and the drag path toward the stove scrapes into the tiles
+    hook: {
+      color: '#d8dee4',
+      ground(ctx, tg, s, p, k, t, env) {
+        const ca = Math.cos(s.angle), sa = Math.sin(s.angle);
+        ctx.save(); SHAPES.trace(ctx, s); ctx.fillStyle = rgba('#20140c', (0.1 + 0.2 * p) * k); ctx.fill(); ctx.restore();
+        for (let i = 0; i < 5; i++) {
+          const q = (t * (0.8 + p * 1.6) + i / 5) % 1, d = q * s.len;
+          ctx.save(); ctx.translate(s.x + ca * d, s.y + sa * d); ctx.rotate(s.angle);
+          poly(ctx, [-8, -12, 8, 0, -8, 12, -3, 0], rgba('#e8eef4', (0.3 + 0.5 * p) * (1 - q) * k), null);
+          ctx.restore();
+        }
+        const e = tg.follow != null ? env.entById(tg.follow) : null;
+        if (!e) return;
+        // the chain from the rail above, swinging in
+        const top = -ARENA.hh - 40, sw = Math.sin(t * 3) * 30 * (1 - p), hx = e.x + sw, hy = e.y - 30;
+        for (let i = 0; i < 9; i++) { const q = i / 8, x = e.x + sw * q * q, y = top + (hy - top) * q; ellipse(ctx, x, y, 3.5, 6, 0, null, rgba('#8a939e', k), 2); }
+        ctx.save(); ctx.translate(hx, hy); ctx.beginPath(); ctx.arc(0, 8, 9, -Math.PI * 0.9, Math.PI * 0.6); ctx.strokeStyle = rgba('#d8dee4', k); ctx.lineWidth = 3.5; ctx.stroke(); ctx.restore();
+      },
+    },
     // Flambé (Hard): brandy glistens in stripes across the tiles, and blue flame starts to lick along it just before
     // it goes up
     flambe: {
@@ -499,6 +577,36 @@ const BossTells = (() => {
         ellipse(ctx, s.x, s.y - h, 15 + wob, 13 - wob, 0, '#f4f2fa', OUT, 2);
         ellipse(ctx, s.x - 4, s.y - h - 4, 5, 3, -0.5, 'rgba(255,255,255,0.8)');
         ctx.restore();
+      },
+    },
+    // Acid Deluge: acid rains out over the whole cave from her raised abdomen, beading and hissing on the stone. Every
+    // pillar's shadow is cut out of it
+    deluge: {
+      color: '#c8ff8a', outline: false,
+      ground(ctx, tg, s, p, k, t) {
+        const R = AR() * 1.4;
+        ctx.fillStyle = rgba('#5ab82a', (0.16 + 0.18 * p) * k); ctx.fillRect(-R, -R, R * 2, R * 2);
+        for (let i = 0; i < 60; i++) {
+          const a = hash(i, tg.id) * TAU, d = Math.sqrt(hash(i + 7, tg.id)) * AR(), q = (t * (0.8 + p * 1.6) + hash(i, 3)) % 1;
+          const x = s.x + Math.cos(a) * d, y = s.y + Math.sin(a) * d;
+          circle(ctx, x, y, 2 + q * 8 * (0.5 + p), null, rgba('#d8ff9a', (0.25 + 0.4 * p) * (1 - q) * k), 1.4);
+        }
+        for (let i = 0; i < 3; i++) { const q = (t * 0.6 + i / 3) % 1; circle(ctx, s.x, s.y, 80 + q * AR(), null, rgba('#c8ff8a', 0.3 * (1 - q) * k), 3); }
+      },
+    },
+    // Strand Reel: a strand shot to a pillar; it goes taut and the floor along it is churned with webbing
+    strand: {
+      color: '#f4f0ff',
+      ground(ctx, tg, s, p, k, t) {
+        const ca = Math.cos(s.angle), sa = Math.sin(s.angle);
+        ctx.save(); SHAPES.trace(ctx, s); ctx.fillStyle = rgba('#e8e4f4', (0.08 + 0.14 * p) * k); ctx.fill(); ctx.restore();
+        const sag = (1 - p) * 26 * Math.sin(t * 5);
+        for (const off of [-8, 0, 8]) {
+          ctx.beginPath(); ctx.moveTo(s.x - sa * off, s.y + ca * off - 30);
+          ctx.quadraticCurveTo(s.x + ca * s.len / 2 - sa * (off + sag), s.y + sa * s.len / 2 + ca * (off + sag) - 40, s.x + ca * s.len - sa * off * 0.3, s.y + sa * s.len + ca * off * 0.3 - 40);
+          ctx.strokeStyle = rgba('#f4f0ff', (0.4 + 0.5 * p) * k); ctx.lineWidth = 1.6; ctx.stroke();
+        }
+        for (let i = 0; i < 5; i++) { const q = (t * (1 + 2 * p) + i / 5) % 1; glow(ctx, s.x + ca * q * s.len, s.y + sa * q * s.len - 36, 10, '#ffffff', 0.5 * p * k); }
       },
     },
   };
@@ -634,6 +742,54 @@ const BossTells = (() => {
           ctx.setLineDash([10, 10]); ctx.lineDashOffset = t * 12; ctx.strokeStyle = rgba('#d8f0ff', 0.3 * k); ctx.lineWidth = 1.5; ctx.stroke();
           ctx.restore();
         }
+      },
+    },
+    // Rod Strike: a thread of charge runs from each marked player to the stone nearest them, and that stone's runes
+    // wake; within reach the thread holds steady, out of reach it frays. A stone still holding a charge glows red.
+    rodstrike: {
+      outline: false,
+      ground(ctx, tg, s, p, k, t, env) {
+        let st = null, sd = Infinity;
+        for (const pr of env.props || []) if (pr.kind === 'stone') { const d = PROPS.sd(pr, s.x, s.y); if (d < sd) { sd = d; st = pr; } }
+        if (!st) return;
+        const near = sd <= 70, hot = st.state > 0, col = hot ? '#ff8a6a' : '#9ff4ff';
+        glow(ctx, st.x, st.y, st.r + 70, hot ? '#ff5a3a' : '#4fa8e0', (0.12 + 0.2 * p) * k);
+        ctx.save(); ctx.setLineDash([8, 8]); ctx.lineDashOffset = -t * 30;
+        circle(ctx, st.x, st.y, st.r + 70, null, rgba(col, (0.3 + 0.4 * p) * k), 2);
+        ctx.restore();
+        ctx.save(); ctx.globalAlpha = (near ? 0.55 + 0.4 * p : 0.25 + 0.2 * p) * k;
+        if (near || Math.floor(t * 10 + tg.id) % 2) jagged(ctx, s.x, s.y - 16, st.x, st.y - 70, Math.floor(t * (near ? 8 : 16)) + tg.id, col, near ? 1.6 + p : 1);
+        ctx.restore();
+      },
+      air(ctx, tg, s, p, k, t, env) {
+        let st = null, sd = Infinity;
+        for (const pr of env.props || []) if (pr.kind === 'stone') { const d = PROPS.sd(pr, s.x, s.y); if (d < sd) { sd = d; st = pr; } }
+        const x = st && sd <= 70 ? st.x : s.x, y = st && sd <= 70 ? st.y : s.y;
+        stormCloud(ctx, x, y - 200, 55 + p * 30, (0.3 + 0.5 * p) * k, t, tg.id);
+      },
+    },
+    // Avalanche: the lane rumbles, grit jumping along it, and the boulder comes rolling in from the edge to where it stops
+    avalanche: {
+      color: '#d8c8a8',
+      ground(ctx, tg, s, p, k, t) {
+        const c = Math.cos(s.angle), sn = Math.sin(s.angle);
+        ctx.save(); SHAPES.trace(ctx, s); ctx.fillStyle = rgba('#5a4a3a', (0.12 + 0.18 * p) * k); ctx.fill(); ctx.clip();
+        for (let i = 0; i < 18; i++) {
+          const q = (t * (0.8 + 1.6 * p) + hash(i, tg.id)) % 1, along = q * s.len, off = (hash(i, tg.id + 3) - 0.5) * s.w * 0.8;
+          const x = s.x + c * along - sn * off, y = s.y + sn * along + c * off, hop = Math.abs(Math.sin(t * 14 + i)) * 6 * p;
+          circle(ctx, x, y - hop, 2 + hash(i, 5) * 2.5, rgba('#a89880', 0.7 * k));
+        }
+        // ruts where it will run
+        for (const side of [-0.28, 0.28]) line(ctx, s.x - sn * s.w * side, s.y + c * s.w * side, s.x + c * s.len - sn * s.w * side, s.y + sn * s.len + c * s.w * side, rgba('#2a2018', 0.35 * p * k), 3);
+        ctx.restore();
+      },
+      air(ctx, tg, s, p, k, t) {
+        const q = clamp((p - 0.72) / 0.28, 0, 1);
+        if (q <= 0) return;
+        const c = Math.cos(s.angle), sn = Math.sin(s.angle), d = (s.len - 40) * easeIn(q);
+        const x = s.x + c * d, y = s.y + sn * d - Math.abs(Math.sin(q * 9)) * 14 * (1 - q);
+        ArenaView.boulder(ctx, { x, y, r: 40, id: tg.id });
+        void t; void k;
       },
     },
     // Chain Lightning (Hard): a storm cell gathers over its target, and the air crackles out to as far as the bolt can
@@ -857,6 +1013,53 @@ const BossTells = (() => {
         ctx.restore();
       },
     },
+    // Coffin Lids: a groove scored across the flagstones where the lid will skid, grit jumping along it, and the lid
+    // itself shaking loose on its coffin by the wall
+    lid: {
+      color: '#c8ffd8',
+      ground(ctx, tg, s, p, k, t) {
+        const ca = Math.cos(s.angle), sa = Math.sin(s.angle);
+        ctx.save(); SHAPES.trace(ctx, s); ctx.fillStyle = rgba('#0c1412', (0.15 + 0.25 * p) * k); ctx.fill(); ctx.restore();
+        for (const side of [-0.3, 0.3]) line(ctx, s.x - sa * s.w * side, s.y + ca * s.w * side, s.x + ca * s.len * Math.min(1, p * 1.3) - sa * s.w * side, s.y + sa * s.len * Math.min(1, p * 1.3) + ca * s.w * side, rgba('#0a0e0c', 0.6 * k), 3);
+        for (let i = 0; i < 6; i++) { const q = (t * (0.8 + p * 2) + i / 6) % 1; ctx.save(); ctx.translate(s.x + ca * q * s.len, s.y + sa * q * s.len); ctx.rotate(s.angle); poly(ctx, [-8, -12, 8, 0, -8, 12, -3, 0], rgba('#c8ffd8', (0.25 + 0.45 * p) * (1 - q) * k), null); ctx.restore(); }
+        // the lid on its coffin, juddering loose (and where it'll stop)
+        const j = Math.sin(t * 40) * 2 * p, end = s.len - 65;
+        ctx.save(); ctx.globalAlpha = k * (0.5 + 0.5 * p); ctx.translate(s.x + ca * 70 + j, s.y + sa * 70); ctx.rotate(s.angle + Math.PI / 2);
+        rrect(ctx, -23, -60, 46, 120, 6, '#525a5e', OUT, 2.5); line(ctx, 0, -40, 0, 30, 'rgba(10,12,12,0.6)', 3); line(ctx, -12, -22, 12, -22, 'rgba(10,12,12,0.6)', 3);
+        ctx.restore();
+        ctx.save(); ctx.setLineDash([8, 7]); rrect(ctx, s.x + ca * end - 65, s.y - 23, 130, 46, 6, null, rgba('#c8ffd8', (0.25 + 0.4 * p) * k), 1.5); ctx.restore();
+      },
+    },
+    // Royal Decree: grave-light rolls down the hall from the throne in a wall, and every solid thing's shadow is cut
+    // out of it (they run straight down the hall)
+    decree: {
+      color: '#9affc0', outline: false,
+      ground(ctx, tg, s, p, k, t) {
+        const top = -ARENA.hh - 20, front = top + (ARENA.hh * 2 + 40) * easeOut(p);
+        const g = ctx.createLinearGradient(0, top, 0, ARENA.hh);
+        g.addColorStop(0, rgba('#3aff7a', (0.3 + 0.15 * p) * k)); g.addColorStop(1, rgba('#3aff7a', (0.1 + 0.12 * p) * k));
+        ctx.fillStyle = g; ctx.fillRect(-ARENA.hw - 20, top, ARENA.hw * 2 + 40, ARENA.hh * 2 + 40);
+        // the front of the wave, reaching further as the cast goes on
+        ctx.fillStyle = rgba('#c8ffd8', 0.12 * k); ctx.fillRect(-ARENA.hw - 20, top, ARENA.hw * 2 + 40, front - top);
+        line(ctx, -ARENA.hw - 20, front, ARENA.hw + 20, front, rgba('#e8fff0', (0.4 + 0.4 * p) * k), 3);
+        for (let i = 0; i < 16; i++) { const x = -ARENA.hw + (i + 0.5) / 16 * ARENA.hw * 2, q = (t * 0.8 + hash(i, 4)) % 1; glow(ctx, x, top + q * (front - top), 18, '#7affa8', 0.4 * (1 - q) * k); }
+      },
+    },
+    // Falling Masonry (Hard): dust and grit sift down where a chunk of the vault is about to fall, its shadow tightening
+    masonry: {
+      color: '#d8e0dc',
+      ground(ctx, tg, s, p, k, t) {
+        shadow(ctx, s.x, s.y, s.r * (0.5 + 0.5 * p), (0.3 + 0.35 * p) * k);
+        for (let i = 0; i < 8; i++) { const q = (t * 1.4 + hash(i, tg.id)) % 1, a = hash(i + 3, tg.id) * TAU, d = hash(i + 6, tg.id) * s.r; circle(ctx, s.x + Math.cos(a) * d, s.y + Math.sin(a) * d - (1 - q) * 120, 1.5, rgba('#d8e0dc', 0.7 * q * k)); }
+      },
+      air(ctx, tg, s, p, k) {
+        if (p < 0.7) return;
+        const h = (1 - (p - 0.7) / 0.3) * 320;
+        ctx.save(); ctx.globalAlpha = k; ctx.translate(s.x, s.y - h - 20); ctx.rotate(p * 3);
+        poly(ctx, [-30, -14, -6, -28, 26, -18, 32, 10, 4, 26, -26, 16], '#4a5054', OUT, 2.5);
+        ctx.restore();
+      },
+    },
   };
   for (const kind of ['sweep', 'stomp', 'ring']) {
     // the knights' replays: the same thing in the brighter green of the dead
@@ -919,10 +1122,45 @@ const BossTells = (() => {
   function ground(ctx, tg, s, p, k, t, env) {
     const tell = get(tg, env);
     if (!tell) return false;
-    if (tg.type === 'raidwide') { if (tell.ground) tell.ground(ctx, tg, s, p, k, t, env); return true; }
-    if (tell.ground) tell.ground(ctx, tg, s, p, k, t, env);
-    if (tell.outline !== false && !env.hard) outline(ctx, s, p, k, t, tell.color || '#ffffff');
+    // a blast you can hide from: drawn with every cover prop's shadow cut out of it, so the safe floor shows as the
+    // room's own lit tiles behind each prop
+    const shadows = tg.cover ? coverShadows(tg, env) : null;
+    if (shadows) { ctx.save(); clipOut(ctx, shadows); }
+    if (tg.type === 'raidwide') { if (tell.ground) tell.ground(ctx, tg, s, p, k, t, env); }
+    else {
+      if (tell.ground) tell.ground(ctx, tg, s, p, k, t, env);
+      if (tell.outline !== false && !env.hard) outline(ctx, s, p, k, t, tell.color || '#ffffff');
+    }
+    if (shadows) { ctx.restore(); shadowRims(ctx, shadows, p, k, t, tell.color || '#ffffff'); }
     return true;
+  }
+  // the shadows behind every cover prop, seen from the blast's source
+  function coverShadows(tg, env) {
+    const [sx, sy] = tg.cover, out = [];
+    for (const pr of env.props || []) if (pr.cover) { const poly = PROPS.shadowPoly(sx, sy, pr); if (poly) out.push(poly); }
+    return out;
+  }
+  // clip to everything outside the shadows: one even-odd clip per shadow, so overlapping shadows stay cut out
+  function clipOut(ctx, shadows) {
+    for (const sh of shadows) {
+      ctx.beginPath(); ctx.rect(-4000, -4000, 8000, 8000);
+      sh.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.closePath();
+      ctx.clip('evenodd');
+    }
+  }
+  // the safe patch behind each prop: a faint warm lift on the floor and bright edges along the shadow's sides
+  function shadowRims(ctx, shadows, p, k, t, color) {
+    ctx.save();
+    for (const sh of shadows) {
+      ctx.beginPath(); sh.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.closePath();
+      ctx.fillStyle = rgba('#fff2d0', (0.05 + 0.05 * p) * k); ctx.fill();
+      for (const [a, b] of [[0, 1], [3, 2]]) {
+        ctx.beginPath(); ctx.moveTo(sh[a][0], sh[a][1]); ctx.lineTo(sh[b][0], sh[b][1]);
+        ctx.strokeStyle = rgba(color, (0.35 + 0.4 * p) * k); ctx.lineWidth = 2; ctx.stroke();
+      }
+    }
+    ctx.restore();
+    void t;
   }
   // how visible a telegraph is: fades in over its first quarter second, and out over a quarter second once it has
   // landed (tg.gone is set when the host resolves it)
@@ -1084,6 +1322,11 @@ const BossTells = (() => {
       const k = Math.min(form, Math.max(0, (sw.end - t) / 0.5));
       if (k <= 0) continue;
       const live = t >= sw.at, a0 = sw.a0 + Math.max(0, t - sw.at) * sw.spin, dir = Math.sign(sw.spin) || 1;
+      // still air behind the boulders (Avalanche): the walls are drawn with each one's shadow cut out
+      const shadows = [];
+      if (sw.cover) for (const pr of env.props || []) if (pr.kind === sw.cover) { const sh = PROPS.shadowPoly(sw.x, sw.y, pr); if (sh) shadows.push(sh); }
+      ctx.save();
+      if (shadows.length) clipOut(ctx, shadows);
       for (let n = 0; n < sw.arms; n++) {
         const a = a0 + n * TAU / sw.arms, c = Math.cos(a), s = Math.sin(a), hw = sw.w / 2;
         const shape = { kind: 'rect', x: sw.x - c * 10, y: sw.y - s * 10, angle: a, len: L, w: sw.w };
@@ -1110,6 +1353,8 @@ const BossTells = (() => {
           circle(ctx, sw.x + c * along - s * off, sw.y + s * along + c * off, 2.5, rgba('#8a96a8', 0.8 * k));
         }
       }
+      ctx.restore();
+      if (shadows.length) shadowRims(ctx, shadows, live ? 1 : 0.4, k, t, '#e8f4ff');
     }
     ctx.restore();
   }
