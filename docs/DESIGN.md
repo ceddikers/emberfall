@@ -420,7 +420,9 @@ Once players know their base class (around boss 3 or 4), each class can pick one
 | Hero select copy (passives, combos) | `client/js/hero-guide.js` |
 | In-game tooltips (no browser `title=` popups) | `client/js/ui-tip.js` |
 | Items, gear stats, enhancements, loot rolls | `client/js/items.js` |
-| Inventory screen and storage | `client/js/inventory.js` |
+| Inventory screen | `client/js/inventory.js` |
+| The versioned save (name, bag and gear, each hero's boss clears, settings), with step-by-step upgrades for old saves and a backup before each upgrade | `client/js/save.js` |
+| Debug overlay (F3): frame rate, worst frame, ping to the host, messages per second, scene, arena, party, boss update age | `client/js/debug-overlay.js` |
 | Scenes, input, hero select, tab targeting, ally targeting, raid start/retry/leave, loot | `client/js/main.js` |
 | WebRTC: arena coordinates, combat events, solo mode | `client/js/net.js` |
 | Hosting: every push to `main` publishes `client/` to https://ceddikers.github.io/emberfall/ | `.github/workflows/pages.yml` |
@@ -504,6 +506,15 @@ The host can retry or take everyone back to town.
 **Solo play:** "Play solo with bots" on the join screen needs no internet. You host a private room and bots fill the party.
 
 ## 6. Testing status
+
+**One command checks everything automated:** `npm run check` (`tools/check.js`, about 5 s). It runs:
+- a parse of every script;
+- checks that classes, items and enhancements line up;
+- the party bonus math, arena clamping and network smoothing;
+- class DPS against `tools/check-baseline.json` (±8%);
+- bot clears of both bosses on Normal.
+
+After an intended balance change, record the new numbers with `node tools/check.js --update-baseline`.
 
 **Tested:**
 - Kit balance and the newbie/pro gaps, in the rotation sim.

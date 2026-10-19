@@ -27,13 +27,16 @@ const Net = (() => {
 
   const net = {
     id: null, online: false, solo: false, isHost: false, room: null, handlers: {}, hostHandlers: {},
+    // for the debug overlay: round trip to the host (ms, from the heartbeat) and messages in/out so far
+    stats: { rtt: null, in: 0, out: 0 },
+    peers: () => players.size,
     on(type, fn) { this.handlers[type] = fn; },
     // host only: messages from players that game code handles (combat events etc.): fn(playerId, msg)
     onHost(type, fn) { this.hostHandlers[type] = fn; },
     send(msg) {
       if (!this.online) return;
       if (this.isHost) handle(hostPlayer, msg);
-      else if (hostConn && hostConn.open) hostConn.send(msg);
+      else if (hostConn && hostConn.open) { hostConn.send(msg); net.stats.out++; }
     },
     // host only: send to every player, the host included (solo: just to ourselves)
     broadcastAll(msg) {
@@ -64,7 +67,7 @@ const Net = (() => {
   // Send to one player: the host's own player is handled locally, everyone else over WebRTC.
   function deliver(p, msg) {
     if (!p.conn) dispatch(msg);
-    else if (p.conn.open) p.conn.send(msg);
+    else if (p.conn.open) { p.conn.send(msg); net.stats.out++; }
   }
   function broadcast(msg, exceptId) {
     for (const p of players.values()) if (p.id !== exceptId) deliver(p, msg);
@@ -142,9 +145,10 @@ const Net = (() => {
     let me = null;
     conn.on('data', msg => {
       if (!msg || typeof msg.t !== 'string') return;
+      net.stats.in++;
       if (me) {
         me.seen = Date.now();
-        if (msg.t === 'ping') conn.send({ t: 'pong' });
+        if (msg.t === 'ping') conn.send({ t: 'pong', c: Number.isFinite(msg.c) ? msg.c : undefined });   // echo the timestamp back
         else if (msg.t === 'bye') { removePlayer(me); conn.close(); }
         else handle(me, msg);
         return;
@@ -225,13 +229,15 @@ const Net = (() => {
         hostConn.on('data', msg => {
           if (!msg || typeof msg.t !== 'string') return;
           lastHeard = Date.now();
+          net.stats.in++;
+          if (msg.t === 'pong') { if (Number.isFinite(msg.c)) net.stats.rtt = performance.now() - msg.c; return; }
           if (msg.t === 'welcome') {
             settled = true; clearTimeout(timer);
             net.id = msg.id; net.room = code; net.online = true;
             const stop = steadyInterval(() => {
               if (!net.online) { stop(); return; }
               if (Date.now() - lastHeard > TIMEOUT_MS) { stop(); hostConn.close(); return; }
-              hostConn.send({ t: 'ping' });
+              hostConn.send({ t: 'ping', c: performance.now() });
             }, PING_MS);
             resolve(msg);
           } else if (msg.t === 'full') fail(msg.msg);

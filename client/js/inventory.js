@@ -1,14 +1,12 @@
 // Inventory: your bag (shared by every hero you play), each hero's equipped gear, and the screen for it.
-// Saved in this browser (localStorage). Gear numbers reach the fight through Inventory.mods() (your own
-// damage/healing/haste/crit, computed on your machine) and the host (HP and Defense, capped there).
+// Saved in this browser as part of the versioned save (save.js). Gear numbers reach the fight through Inventory.mods()
+// (your own damage/healing/haste/crit, computed on your machine) and the host (HP and Defense, capped there).
 
 const Inventory = (() => {
-  const KEY = 'emberfall-inv-v1';
   const SLOTS = [['weapon', 'Weapon'], ['armor', 'Armor'], ['acc1', 'Accessory'], ['acc2', 'Accessory']];
-  let data = { next: 1, items: [], equip: {} };
-  try { const raw = localStorage.getItem(KEY); if (raw) { const d = JSON.parse(raw); if (d && Array.isArray(d.items)) data = d; } } catch (e) { /* storage unavailable */ }
+  const data = Save.get('inv');   // changed in place; save() writes the whole save
   data.items = data.items.filter(i => ITEMS[i.key]);
-  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (e) { /* storage unavailable */ } };
+  const save = () => Save.commit();
 
   let deps = null;           // from main: { cls(), locked(), drawFigure(ctx, cls, w, h), onChange(), toast(msg) }
   let modsCache = new Map();

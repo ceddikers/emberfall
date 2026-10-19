@@ -731,6 +731,7 @@
     for (const z of raid.zones.values()) z.end = Math.min(z.end, now + 1);
     if (actor && actor.kit.cast) actor.kit.cast = null;
     FX.shake = 8;
+    if (msg.s === 'clear' && player.cls) Save.recordClear(player.cls.id, raid.def.id, raid.mode);
     if (msg.s === 'clear') BOSS_VFX.victory([...raid.rosterIds].map(entById).filter(Boolean));
     else BOSS_VFX.wipe();
   });
@@ -738,6 +739,7 @@
     if (!raid) return;
     Object.assign(raid.boss, { x: msg.x, y: msg.y, f: msg.f, hp: msg.hp, mx: msg.mx, u: msg.u, v: msg.v, tg: msg.tg });
     raid.bossTrack.push(now, msg.x, msg.y, msg.f);
+    raid.lastFb = performance.now();   // for the debug overlay
     raid.fightTime = msg.ft;
     if (msg.na != null) raid.nextAutoAt = now + msg.na;
   });
@@ -2010,14 +2012,14 @@
   // ---------------------------------------------------------------- join screen
   const joinForm = $('join-form'), nameInput = $('name-input'), codeInput = $('code-input'), joinErr = $('join-error');
   const hostBtn = $('host-btn'), joinBtn = $('join-btn'), soloBtn = $('solo-btn');
-  try { nameInput.value = localStorage.getItem('emberfall-name') || ''; } catch (e) { /* storage unavailable */ }
+  nameInput.value = Save.get('name') || '';
   const hashCode = location.hash.replace('#', '').toUpperCase();
   if (/^[A-Z]{4}$/.test(hashCode)) codeInput.value = hashCode; // invite links look like ...#ABCD
   codeInput.addEventListener('input', () => { codeInput.value = codeInput.value.toUpperCase().replace(/[^A-Z]/g, ''); });
 
   async function enter(mode) {
     const name = nameInput.value.trim().slice(0, 16) || 'Adventurer';
-    try { localStorage.setItem('emberfall-name', name); } catch (err) { /* storage unavailable */ }
+    Save.set('name', name);
     joinErr.textContent = '';
     if (mode === 'join' && codeInput.value.length !== 4) { joinErr.textContent = 'Enter the 4-letter room code from your host.'; return; }
     if (mode !== 'solo' && typeof Peer === 'undefined') { joinErr.textContent = 'Could not load the networking library. Check your connection, or play solo.'; return; }
@@ -2057,6 +2059,24 @@
 
   // inventory: the hero figure uses the painted portrait if there is one, else the sprite on a sigil
   const invSt = newSt();
+  // game-side lines for the debug overlay (F3): [label, value, needs attention?]
+  DebugOverlay.init(() => {
+    const out = [];
+    const humans = 1 + [...remotes.values()].filter(r => !inArena() || raid.rosterIds.has(r.id)).length;
+    if (!inArena()) { out.push(['Scene', 'town'], ['Players here', String(humans)]); }
+    else {
+      const age = raid.lastFb ? performance.now() - raid.lastFb : null;
+      out.push(['Scene', `${raid.def.name} · ${raid.mode} · ${raid.state}`]);
+      out.push(['Arena', ARENA.kind === 'rect' ? `rectangle ${ARENA.hw * 2}×${ARENA.hh * 2}` : ARENA.kind === 'poly' ? `${ARENA.n}-sided, ${ARENA.r} across to a corner` : `circle r ${ARENA.r}`]);
+      out.push(['Party', `${humans} player${humans > 1 ? 's' : ''}, ${raid.bots.size} bot${raid.bots.size === 1 ? '' : 's'}`]);
+      out.push(['Last boss update', age == null ? '—' : `${age.toFixed(0)} ms ago`, age != null && age > 400 && raid.state === 'live']);
+      out.push(['On screen', `${raid.adds.size} adds · ${raid.tgs.size} telegraphs · ${raid.puddles.size} puddles`]);
+      if (raid.bond && raid.bond.active.length) out.push(['Party bonus', raid.bond.active.map(b => `${b.name} ${b.n}/4`).join(', ')]);
+    }
+    out.push(['Save', `v${Save.VERSION}`]);
+    return out;
+  });
+
   Inventory.init({
     cls: () => player.cls && player.cls.id,
     locked: () => scene === 'arena',
@@ -2091,8 +2111,9 @@
 
   // ---------------------------------------------------------------- boot
   function frame(ts) {
-    const dt = Math.min(0.05, (ts - last) / 1000);
+    const raw = (ts - last) / 1000, dt = Math.min(0.05, raw);
     last = ts;
+    DebugOverlay.frame(raw);   // the real frame time, before the 50 ms cap
     if (!paused) { now += dt; update(dt); }
     render();
     renderPanels();

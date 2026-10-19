@@ -194,6 +194,13 @@ ul.abilities em.meta { display: block; font-style: normal; font-size: 11px; colo
 .pf-st { display: flex; gap: 3px; margin-top: 3px; min-height: 0; flex-wrap: wrap; }
 .chip { font-size: 10px; font-weight: 700; padding: 0 5px; border-radius: 6px; background: #1d2a3ae0; border: 1px solid #6fa8ff; color: #d8e8ff; }
 .chip.bad { background: #2a1414e0; border-color: #ff5a4f; color: #ffd6d0; }
+#debug-overlay { position: fixed; left: 12px; bottom: 54px; z-index: 70; pointer-events: none; min-width: 210px; padding: 7px 10px 8px;
+  background: #0b0a0ee8; border: 1px solid #3a3127; border-top-color: var(--gold-dim); border-radius: 3px; font: 11.5px/1.5 ui-monospace, Consolas, monospace; color: #d8cfbc; }
+#debug-overlay header { font: 700 10px var(--fantasy); letter-spacing: .14em; text-transform: uppercase; color: var(--gold); margin-bottom: 3px; }
+#debug-overlay div { display: flex; justify-content: space-between; gap: 14px; }
+#debug-overlay span { color: #8f8676; }
+#debug-overlay b { font-weight: 400; font-variant-numeric: tabular-nums; }
+#debug-overlay .warn b { color: #ff9a7a; }
 #scene-veil { position: fixed; inset: 0; background: #07050a; opacity: 0; pointer-events: none; z-index: 40; transition: opacity .55s ease-out; }
 #countdown { position: fixed; left: 50%; top: 38%; transform: translate(-50%, -50%); font-family: var(--fantasy); font-size: 96px; font-weight: 800; color: #fff3d8; text-shadow: 0 6px 24px #000, 0 0 30px #ffb34788; pointer-events: none; z-index: 6; }
 #down-veil { position: fixed; inset: 0; pointer-events: none; z-index: 3; background: radial-gradient(circle, transparent 35%, #000a 100%); display: grid; place-items: center; }
