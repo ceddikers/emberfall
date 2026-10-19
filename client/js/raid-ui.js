@@ -50,6 +50,7 @@ const RaidUI = (() => {
       </div>
       <div id="party-frames"></div>
       <div id="countdown" class="hidden"></div>
+      <div id="trial-lore" class="hidden"><b></b><p></p><p></p></div>
       <div id="down-veil" class="hidden"><span>Down</span></div>
       <button id="raid-leave" class="btn2" type="button">Leave raid</button>`;
     document.body.appendChild(root);
@@ -68,7 +69,7 @@ const RaidUI = (() => {
     document.body.appendChild(res);
   }
 
-  function show(v) { root.classList.toggle('hidden', !v); if (!v) { $('countdown').classList.add('hidden'); $('down-veil').classList.add('hidden'); } }
+  function show(v) { root.classList.toggle('hidden', !v); if (!v) { $('countdown').classList.add('hidden'); $('down-veil').classList.add('hidden'); $('trial-lore').classList.add('hidden'); } }
 
   function setRoster(roster) {
     const key = roster.map(r => r.id).join(',');
@@ -132,6 +133,17 @@ const RaidUI = (() => {
       cd.classList.toggle('hidden', left > 5 || left <= 0);
       cd.textContent = left;
     } else cd.classList.add('hidden');
+    // a trial opens on its memory: two lines of lore while the countdown runs
+    const lore = $('trial-lore'), T = raid.def.trial && TRIALS[raid.def.trial];
+    if (T && raid.state === 'countdown') {
+      if (lore.dataset.k !== T.spec) {
+        lore.dataset.k = T.spec;
+        lore.querySelector('b').textContent = T.name;
+        lore.querySelectorAll('p').forEach((p, i) => { p.textContent = T.lore[i] || ''; });
+      }
+      lore.classList.remove('hidden');
+      lore.classList.toggle('out', raid.countdownEnd - now < 1.2);
+    } else { lore.classList.add('hidden'); lore.dataset.k = ''; }
 
     for (const [id, p] of raid.party) {
       const f = frames[id];
@@ -188,6 +200,7 @@ const RaidUI = (() => {
   function showResults(msg, raid, myId, mine, isHost, actions) {
     const el = $('results');
     const clear = msg.s === 'clear';
+    if (raid.def.trial) return trialResults(el, raid.def, clear, actions);
     const dur = Math.max(1, msg.time || 1);
     const rows = Object.entries(msg.stats).map(([id, s]) => ({ id: Number(id), ...s }))
       .sort((a, b) => (b.damage / dur + b.healing / dur) - (a.damage / dur + a.healing / dur));
@@ -211,6 +224,22 @@ const RaidUI = (() => {
         <div class="res-actions">
           ${isHost ? '<button class="cta" data-a="retry">Try again</button><button class="btn2" data-a="town">Back to town</button>'
                    : '<p class="res-wait">Waiting for the host to choose: try again or head back to town.</p><button class="btn2" data-a="leave">Leave to town</button>'}
+        </div>
+      </div>`;
+    el.classList.remove('hidden');
+    el.querySelectorAll('button[data-a]').forEach(b => b.addEventListener('click', () => actions[b.dataset.a] && actions[b.dataset.a]()));
+  }
+  // a specialization trial ends on its memory, not a damage table
+  function trialResults(el, def, clear, actions) {
+    const T = TRIALS[def.trial], sp = specOf(T.cls, T.spec);
+    el.innerHTML = `
+      <div class="res-card trial">
+        <h2 class="${clear ? 'win' : 'lose'}">${clear ? `${esc(sp.name)} unlocked` : 'The memory fades'}</h2>
+        <p class="res-sub">${esc(T.name)}</p>
+        <p class="res-lore">${esc(clear ? T.outro : T.lore[1])}</p>
+        <div class="res-actions">
+          ${clear ? '' : '<button class="cta" data-a="retry">Try again</button>'}
+          <button class="${clear ? 'cta' : 'btn2'}" data-a="town">Back to town</button>
         </div>
       </div>`;
     el.classList.remove('hidden');

@@ -12,12 +12,15 @@ const { SKITTERRA } = load('arena/bosses/skitterra.js');
 const { VOLKAR } = load('arena/bosses/volkar.js');
 const { HOLLOWKING } = load('arena/bosses/hollowking.js');
 const DEFS = { grubnak: GRUBNAK, skitterra: SKITTERRA, volkar: VOLKAR, hollowking: HOLLOWKING };
+const { TRIALS, trialDef } = load('arena/trials.js');
 
 let mode = 'normal', runs = 3, comp = 'bastion,cleric,ranger,pyromancer'.split(','), def = GRUBNAK;
 for (const a of process.argv.slice(2)) {
   if (a === 'normal' || a === 'hard') mode = a;
   else if (/^\d+$/.test(a)) runs = Number(a);
   else if (DEFS[a]) def = DEFS[a];
+  // trial:<spec> runs that spec's trial, with a bot taking it (or 'trial:<spec>:base' to try it with the base kit)
+  else if (/^trial:\w+/.test(a) && TRIALS[a.split(':')[1]]) { const T = TRIALS[a.split(':')[1]]; def = trialDef(T.spec); comp = [`${T.cls}:${a.split(':')[2] || T.spec}`, ...T.allies]; }
   else if (a.includes(',')) comp = a.split(',');
   else { console.error(`unknown argument: ${a} (bosses: ${Object.keys(DEFS).join(', ')})`); process.exit(1); }
 }

@@ -219,6 +219,18 @@ ul.abilities em.meta { display: block; font-style: normal; font-size: 11px; colo
 .res-card h2.win { color: #ffd65a; }
 .res-card h2.lose { color: #ff8a7a; }
 .res-sub { margin: 2px 0 14px; color: var(--muted); }
+.res-card.trial { text-align: center; max-width: 460px; }
+.res-lore { font-family: Georgia, 'Times New Roman', serif; font-size: 16px; font-style: italic; color: #e9dcc0; line-height: 1.55; margin: 0 0 18px; }
+.res-card.trial .res-actions { justify-content: center; }
+/* a trial's memory, shown over the countdown */
+#trial-lore { position: fixed; left: 50%; top: 56%; transform: translateX(-50%); width: min(640px, calc(100vw - 32px)); padding: 18px 28px 20px; text-align: center; pointer-events: none; z-index: 6;
+  background: radial-gradient(ellipse at center, #07080dd9 0%, #07080d99 55%, transparent 75%);
+  color: #ece6f4; text-shadow: 0 1px 6px #000; animation: lore-in 1.6s ease-out; transition: opacity 1s; }
+#trial-lore b { display: block; font-family: var(--fantasy); font-size: 12px; letter-spacing: 4px; text-transform: uppercase; color: #a9b8e8; margin-bottom: 8px; }
+#trial-lore p { margin: 3px 0; font-family: Georgia, 'Times New Roman', serif; font-size: 19px; font-style: italic; line-height: 1.45; }
+#trial-lore.out { opacity: 0; }
+@keyframes lore-in { from { opacity: 0; transform: translate(-50%, 8px); } to { opacity: 1; transform: translate(-50%, 0); } }
+@media (max-width: 700px) { #trial-lore p { font-size: 16px; } }
 .res-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .res-table th { text-align: left; color: var(--gold); font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; padding: 4px 6px; border-bottom: 1px solid #d8b45a44; }
 .res-table td { padding: 5px 6px; border-bottom: 1px solid #ffffff10; font-variant-numeric: tabular-nums; }
@@ -639,4 +651,16 @@ kbd { border-radius: 3px; background: #1d1813; border-color: #4a3d2c; color: var
 .spec-move p { margin: 2px 0 0; font-size: 12.5px; line-height: 1.45; color: #d4cab8; }
 .key-cell.changed { border-color: color-mix(in srgb, var(--a) 60%, var(--gold-dim)); }
 .key-cell.changed::after { content: ''; position: absolute; top: 6px; right: 6px; width: 6px; height: 6px; transform: rotate(45deg); background: var(--gold); }
+/* sealed specs (no Hollow King clear yet) and specs whose trial is waiting */
+.spec-tab.locked b, .spec-tab.locked small { opacity: .5; }
+.spec-tab.locked b::before { content: ''; display: inline-block; width: 7px; height: 7px; margin-right: 7px; vertical-align: 2px; border: 1px solid var(--muted); transform: rotate(45deg); }
+.spec-tab.trial b::before { content: ''; display: inline-block; width: 7px; height: 7px; margin-right: 7px; vertical-align: 2px; background: #a9b8e8; box-shadow: 0 0 6px #a9b8e8; transform: rotate(45deg); }
+.spec-trial { display: grid; gap: 6px; justify-items: start; padding: 12px 14px; border-radius: 3px; border: 1px solid #a9b8e855; background: linear-gradient(180deg, #161a26cc, #0f0d0bcc); }
+.spec-trial h5 { margin: 0; font-family: var(--fantasy); color: #c9d3f2; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; }
+.spec-trial p { margin: 0; font-family: var(--fantasy); font-style: italic; font-size: 14px; line-height: 1.5; color: #dcd6e8; }
+.spec-trial.locked { border-color: var(--line-soft); background: #0f0d0bcc; }
+.spec-trial.locked h5 { color: var(--muted); }
+.spec-trial.locked p { font-family: inherit; font-style: normal; font-size: 12.5px; color: var(--muted); }
+.spec-trial .trial-go { margin-top: 4px; width: auto; padding: 8px 26px; }
+.spec-trial .trial-go[aria-disabled] { opacity: .5; cursor: default; }
 @media (max-width: 700px) { .spec-tabs { grid-template-columns: 1fr; } }

@@ -441,9 +441,43 @@ Each class picks one of two specializations, or keeps the base kit. Rules:
 - **Balanced against the base class:** both specs' pro DPS stay within 5% of their class in `tools/simulate.js` (a check enforces it). A spec can aim off on purpose with `balance` (the Inquisitor aims for 112% of the Cleric's damage, paid for with less healing).
 - **A new look:** each spec draws extra gear or effects on the hero (`SPEC_ART` in `heroes.js`); painted portraits and icons come from `docs/art/spec-icons.md`.
 - **Bots play them too:** a bot fills its slot with the base kit or either spec, a third of the time each.
-- Still to come: the unlock (a Hollow King clear with that hero plus a short solo trial that teaches the spec's mechanic). Until the trials exist, every spec is open so it can be tested.
+- **Earned, per hero:** a hero's specs are sealed until it clears the Hollow King (any difficulty). That opens one trial per spec, and passing a spec's trial unlocks it for that hero for good. See *Spec trials* below.
 
-The hero page shows the base class and both specs as tabs. A spec shows what it specializes in, its passive, and every move it adds or changes (new moves say what they replace); changed keys get a gold mark.
+The hero page shows the base class and both specs as tabs. A spec shows what it specializes in, its passive, and every move it adds or changes (new moves say what they replace); changed keys get a gold mark. A sealed tab is dimmed with an outlined diamond (its tooltip says how it opens); a tab whose trial is open has a glowing blue diamond, and its page ends in a card with the trial's name, its first lore line and **Begin the trial**. The Choose button stays off for a spec that isn't unlocked, so you can read every spec before you earn it.
+
+### Spec trials (all 18 built; design choices made together on 2026-10-19)
+
+The user picked: **story vignettes**, **one per spec**, **built so the spec's trick is the obvious answer**, and **unlocked by that hero clearing the Hollow King on any difficulty**.
+
+- **A memory of the Barrow.** Every trial is a short fight (about a minute) against the **Shade of the Hollow King**, drawn pale and cold, in his hall, with his telegraphs. It opens on two lines of lore over the countdown and ends on one more. No instructions anywhere: the spec page already explains the moves, and each fight is shaped so the new move is the natural answer.
+- **Solo.** Only you go in (the trial lends you that spec for the fight), with the bots the story needs. Friends in your room stay in town. You start it from town, as host or alone.
+- **Retry freely.** A wipe shows *The memory fades* with **Try again**; a clear shows *&lt;Spec&gt; unlocked*, records it, puts you in that spec, and sends you back to town. Trials drop no loot and don't count as boss clears.
+- **Who must live:** you always; in trials about protecting others, your allies too.
+
+| Spec | Trial | The story asks for |
+|---|---|---|
+| Sentinel | The Gate | Battering rams: three heavy blows in a row on you, again and again. Brace's third charge and the party Perfect Block. |
+| Crusader | Dawn Over the Barrow | Alone; quick, readable strikes at you, each a chance to block and light up a Radiant Holy Edge. |
+| Berserker | The Red Hour | Alone; the fight opens by taking 60% of your health, and there's no healer. Rampage at low health. |
+| Hemomancer | The Blood Vow | No healer; knell after knell wears down your two allies, and they must live. Crimson Drain's party heal. |
+| Spellwarden | The Warded Heir | The Shade keeps aiming a Royal Sentence past you at the heir (a mage), who must live. A Ward on an ally. |
+| Runeblade | The Carved Oath | Alone, a duel: strikes and stomps, enough time to run the Rune Blade combo. |
+| Aegis | The Golden Wall | The Executioner's Axe falls on the tank, slow and plain to see, harder than any heal can answer afterwards. Shields before the hit. |
+| Inquisitor | Judgment | A full party hitting the Shade; your Smite's brand makes every blade count. |
+| Lifebinder | Deep Roots | The Dead Wind: a knell every few seconds, steady as breathing. Healing over time on everyone. |
+| Moonwell | The Silver Pool | Everyone gathers under the bells, then the knell follows right after. A pool where they stand. |
+| Echoist | The Second Voice | Every knell rings twice, three seconds apart. Heals that repeat. |
+| Accelerant | The Quickened Hour | A party racing the enrage. Haste for everyone. |
+| Sharpshooter | The Still Eye | His attacks stay close to him; the far end of the hall stays quiet. Standing still. |
+| Venomstrike | The Green Death | A long fight against a champion with lots of health. Acid that ramps. |
+| Bladedancer | The Whirling Edge | He never stops turning, so he has no back for long. Positionals that always land. |
+| Nightstalker | The Knife Behind | His Royal Gaze, again and again: look away, stay behind. Backstab. |
+| Cataclysm | The Falling Star | He holds the middle of the hall and barely moves. Meteor. |
+| Sigilmancer | The Burning Circle | His sceptre sweeps one side of the hall, then the other; straight behind him never burns. A circle that stays safe. |
+
+**How it's built:** `client/js/arena/trials.js` holds `TRIALS` (name, lore, outro, allies, target length, enrage, regen, who must live, script) and `trialDef(specId)`, which turns one into a boss definition. It keeps the Hollow King's id, so his hall, art and telegraphs all apply, and sizes the Shade's health for the party. The raid id is `trial:<spec>`; `main.js` (`startTrial`, `raidDef`) runs it as a one-human raid, skips loot and clear records, and calls `Save.recordTrial`. `save.js` adds `trialsOpen`, `trialDone`, `recordTrial` and `specState` ('locked', 'trial' or 'open'); `Save.spec` reads a spec that isn't unlocked as none.
+
+**Tested:** a bot playing the spec passes every trial (`tools/check.js` runs all 18). For the four where the base kit could plausibly scrape through, the base kit was also run and fails: Sentinel, Hemomancer and Spellwarden 0 of 4, Aegis 0 of 5 (the spec cleared them all). In the browser: sealed, trial and open tabs and their tooltips, the trial card, starting a trial from it, the lore over the countdown, the pale Shade, a wipe and **Try again**, a clear unlocking and equipping the spec with no loot and no boss clear recorded, and leaving mid-trial handing back the previous spec. Not yet played by a human, and the other 14 trials are vignettes a base kit can also pass with care.
 
 **Tanks (design choices made together on 2026-10-19):**
 

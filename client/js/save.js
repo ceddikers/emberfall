@@ -5,7 +5,8 @@
 //
 //   v1: { v, name, inv: { next, items: [{ uid, key, q }], equip: { classId: { slot: uid } } },
 //         heroes: { classId: { clears: { bossId: { normal, hard } }, spec } }, settings: { debug } }
-//   (spec was added later without a version bump: it's optional, and a missing one means the base kit)
+//   (spec and trials were added later without a version bump: both optional; a missing spec means the base kit,
+//   missing trials mean none passed: heroes[classId].trials = { specId: 1 })
 
 const Save = (() => {
   const KEY = 'emberfall-save';
@@ -58,8 +59,19 @@ const Save = (() => {
       write();
     },
     clears: (classId, bossId) => ((data.heroes[classId] || { clears: {} }).clears[bossId] || { normal: 0, hard: 0 }),
-    // each hero's chosen specialization (specs.js), or null for the base kit
-    spec: classId => ((data.heroes[classId] || {}).spec || null),
+    // specializations: a hero's trials open once it has cleared the Hollow King (any difficulty), and passing a
+    // spec's trial unlocks that spec for the hero (trials.js)
+    trialsOpen(classId) { const c = this.clears(classId, 'hollowking'); return c.normal + c.hard > 0; },
+    trialDone: (classId, specId) => !!(((data.heroes[classId] || {}).trials || {})[specId]),
+    recordTrial(classId, specId) {
+      const h = data.heroes[classId] = data.heroes[classId] || { clears: {} };
+      h.trials = h.trials || {}; h.trials[specId] = 1;
+      write();
+    },
+    // 'open' (playable), 'trial' (its trial is open) or 'locked'
+    specState(classId, specId) { return !specId || this.trialDone(classId, specId) ? 'open' : this.trialsOpen(classId) ? 'trial' : 'locked'; },
+    // each hero's chosen specialization (specs.js), or null for the base kit (a spec it hasn't unlocked reads as none)
+    spec(classId) { const s = (data.heroes[classId] || {}).spec || null; return s && this.trialDone(classId, s) ? s : null; },
     setSpec(classId, specId) {
       const h = data.heroes[classId] = data.heroes[classId] || { clears: {} };
       h.spec = specId || null;

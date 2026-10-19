@@ -515,6 +515,35 @@
   let raidHost = null, hostRoster = [], stopHostTick = null, lastRaidOpts = { mode: 'normal', fill: true, boss: 'grubnak' };
 
   const RAID_DEFS = { grubnak: GRUBNAK, skitterra: SKITTERRA, volkar: VOLKAR, hollowking: HOLLOWKING };
+  // a raid id is a boss id, or 'trial:<spec>' for a specialization trial (trials.js)
+  const raidDef = id => RAID_DEFS[id] || (typeof id === 'string' && id.startsWith('trial:') ? trialDef(id.slice(6)) : null);
+  let hostTrial = null;   // host: the spec whose trial is running, if it's a trial
+  let trialPrevSpec;      // the spec you wore before stepping into a trial (undefined when not in one)
+
+  // a specialization trial: a solo memory against the Shade (only you go in, with the trial's own allies)
+  function startTrial(specId) {
+    const T = TRIALS[specId];
+    if (!Net.isHost || !T || !player.cls || player.cls.id !== T.cls) return;
+    stopRaidHost();
+    hostTrial = specId;
+    const def = trialDef(specId);
+    const me = { id: Net.id, name: player.name, cls: T.cls, spec: specId, role: player.cls.role };
+    hostRoster = [Object.assign({}, me, { spawn: [0, 300] })];
+    raidHost = new RaidHost({ def, mode: 'normal', humans: hostHumans, bots: T.allies, seed: (Math.random() * 1e9) | 0, emit: m => Net.broadcastAll(m) });
+    const roster = [me, ...raidHost.bots.map(b => ({ id: b.id, name: b.name, cls: b.cls.id, spec: b.spec, role: b.role, bot: true }))];
+    const spawns = { [Net.id]: [0, 300] };
+    for (const b of raidHost.bots) spawns[b.id] = [rnd(b.x), rnd(b.y)];
+    Net.broadcastAll({ t: 'raid', boss: 'trial:' + specId, mode: 'normal', roster, spawns, bond: {} });
+    let lastT = performance.now(), endedAt = null;
+    stopHostTick = Net.steadyInterval(() => {
+      if (!raidHost) return;
+      const t = performance.now();
+      let dt = Math.min(0.25, (t - lastT) / 1000); lastT = t;
+      while (dt > 0) { const step = Math.min(0.05, dt); raidHost.tick(step); dt -= step; }
+      const st = raidHost.sim.state;
+      if (st === 'clear' || st === 'wipe') { endedAt = endedAt || t; if (t - endedAt > 3000) stopRaidHost(true); }
+    }, 33);
+  }
 
   function pickBots(humans) {
     const slots = ['tank', 'healer', 'dps', 'dps'];
@@ -540,6 +569,7 @@
   function startRaid(mode, fill, bossId = lastRaidOpts.boss) {
     if (!Net.isHost || !player.cls) return;
     stopRaidHost();
+    hostTrial = null;
     const def = RAID_DEFS[bossId] || GRUBNAK;
     lastRaidOpts = { mode, fill, boss: def.id };
     const humans = raidHumans();
@@ -596,6 +626,7 @@
   }
   // ---- loot: the host rolls it when a raid is cleared and tells everyone who got what
   function hostRollLoot() {
+    if (hostTrial) return;   // a trial is a memory: nothing drops
     const drops = [];
     for (const h of hostRoster) if (!h.left) for (const it of rollLoot(lastRaidOpts.boss, lastRaidOpts.mode, h.cls, Math.random)) drops.push([h.id, it.key, it.q]);
     if (drops.length) Net.broadcastAll({ t: 'loot', d: drops });
@@ -644,9 +675,9 @@
   }
 
   function enterArena(msg) {
-    const def = RAID_DEFS[msg.boss];
+    const def = raidDef(msg.boss);
     if (!def || !msg.roster.some(r => r.id === Net.id)) {
-      if (scene === 'town' && def) toast(`Your party went into the raid: ${def.name}.`);
+      if (scene === 'town' && def && !def.trial) toast(`Your party went into the raid: ${def.name}.`);
       return;
     }
     closePanels();
@@ -674,6 +705,8 @@
     };
     player.reel = null;
     lockedEnemy = null;
+    // a trial lends you its spec for the length of the memory
+    if (def.trial) { if (trialPrevSpec === undefined) trialPrevSpec = player.spec || null; player.spec = def.trial; }
     for (const r of msg.roster) {
       raid.party.set(r.id, { hp: 1, maxHp: 1, shield: 0, alive: true, dd: 0, vuln: 0, mit: 0, weak: 0, debuffs: [] });
       const sp = msg.spawns[r.id] || [0, 360];
@@ -703,6 +736,10 @@
     }
     if (Net.isHost) { stopRaidHost(); hostRoster = []; }
     if (scene !== 'arena') return;
+    if (trialPrevSpec !== undefined) {
+      player.spec = trialPrevSpec; trialPrevSpec = undefined;
+      if (player.cls) Net.send({ t: 'cls', id: player.cls.id, spec: player.spec });
+    }
     raid = null;
     scene = 'town';
     sceneFade();
@@ -758,7 +795,13 @@
     for (const z of raid.zones.values()) z.end = Math.min(z.end, now + 1);
     if (actor && actor.kit.cast) actor.kit.cast = null;
     FX.shake = 8;
-    if (msg.s === 'clear' && player.cls) Save.recordClear(player.cls.id, raid.def.id, raid.mode);
+    if (msg.s === 'clear' && player.cls && raid.def.trial) {
+      Save.recordTrial(player.cls.id, raid.def.trial);
+      trialPrevSpec = raid.def.trial;   // you leave the memory wearing the spec you just earned
+      Save.setSpec(player.cls.id, raid.def.trial);
+      const sp = specOf(player.cls.id, raid.def.trial);
+      if (sp) { heroPickFx(player, { accent: sp.accent }); toast(`${sp.name} unlocked.`); }
+    } else if (msg.s === 'clear' && player.cls) Save.recordClear(player.cls.id, raid.def.id, raid.mode);
     if (msg.s === 'clear') BOSS_VFX.victory([...raid.rosterIds].map(entById).filter(Boolean));
     else BOSS_VFX.wipe();
   });
@@ -1412,7 +1455,7 @@
     if (raid.result && raid.resultAt && now >= raid.resultAt) {
       raid.resultAt = 0;
       RaidUI.showResults(raid.result, raid, Net.id, actor ? { stats: actor.kit.stats, cls: player.cls } : null, Net.isHost, {
-        retry: () => startRaid(lastRaidOpts.mode, lastRaidOpts.fill),
+        retry: () => raid.def.trial ? startTrial(raid.def.trial) : startRaid(lastRaidOpts.mode, lastRaidOpts.fill),
         town: () => Net.broadcastAll({ t: 'raidend' }),
         leave: () => leaveRaid(true),
       });
@@ -1670,6 +1713,10 @@
       if (e === bossEnt) {
         ctx.save(); ctx.globalAlpha = bd.fade;
         if (raid.nightK > 0.05) ctx.filter = `brightness(${(1 - 0.55 * raid.nightK).toFixed(2)})`;   // he's a shape in the dark
+        if (raid.def.trial) {   // in a trial he's only a memory: pale, cold and not quite there
+          ctx.globalAlpha = bd.fade * (0.72 + 0.06 * Math.sin(now * 2.3));
+          ctx.filter = 'grayscale(0.7) brightness(1.9) sepia(0.35) hue-rotate(175deg) drop-shadow(0 0 9px #8fa8ff)';
+        }
         drawBoss(ctx, bossDef, bd.x, bd.y, bd.f, bd.st, RAID_BOSS_SCALE);
         ctx.restore();
       } else if (e.kind === 'knight') {
@@ -1867,7 +1914,10 @@
     box.classList.toggle('hidden', !specs.length);
     if (!specs.length) return;
     const spec = specOf(cls.id, selSpec), sk = kitFor(cls.id, selSpec);
-    const tabs = [{ id: null, name: cls.name, title: 'Base class' }, ...specs].map(s => `<button class="spec-tab${(s.id || null) === (selSpec || null) ? ' on' : ''}" data-spec="${s.id || ''}" style="--sa:${s.accent || cls.accent}">
+    // a spec is sealed until this hero clears the Hollow King, then opens through its trial
+    const stateOf = s => (s.id ? Save.specState(cls.id, s.id) : 'open');
+    const STATE_TIP = { locked: `Sealed. Clear the Hollow King as the ${cls.name} to open its trial.`, trial: 'Its trial is open.' };
+    const tabs = [{ id: null, name: cls.name, title: 'Base class' }, ...specs].map(s => `<button class="spec-tab ${stateOf(s)}${(s.id || null) === (selSpec || null) ? ' on' : ''}" data-spec="${s.id || ''}" style="--sa:${s.accent || cls.accent}"${STATE_TIP[stateOf(s)] ? ` data-tip="${STATE_TIP[stateOf(s)]}"` : ''}>
       <b>${s.name}</b><small>${s.title}</small></button>`).join('');
     let body;
     if (!spec) body = `<p class="spec-focus">The class as it was made: every specialization starts from here and changes a few things. Pick one to see what it changes.</p>`;
@@ -1878,22 +1928,40 @@
         <div class="spec-moves">${changes.map(c => `<div class="spec-move" data-i="${c.i}">
           <i class="ab-icon ${c.a.type}" style="background-image:url(${abilityIcon(cls.id, abilityIconId(c.a))})"></i>
           <div><b><kbd>${KEYS[c.i]}</kbd>${c.a.name}${c.a.id !== c.was.id ? `<em>New, replaces ${c.was.name}</em>` : '<em>Changed</em>'}</b><p>${c.a.desc}</p></div></div>`).join('')}</div>`;
+      body += trialCard(cls, spec, Save.specState(cls.id, spec.id));
     }
     box.innerHTML = `<h4>Specialization</h4><div class="spec-tabs">${tabs}</div>${body}`;
     box.querySelectorAll('.spec-tab').forEach(b => b.addEventListener('click', () => { selSpec = b.dataset.spec || null; rerender(); }));
+    const tb = box.querySelector('.trial-go');
+    if (tb) tb.addEventListener('click', () => {
+      if (tb.getAttribute('aria-disabled') || scene !== 'town') return;
+      if (player.cls !== cls) chooseHero(cls);
+      closePanels();
+      startTrial(tb.dataset.spec);
+    });
     box.querySelectorAll('.spec-move').forEach(m => { const i = Number(m.dataset.i); Tip.set(m, () => abilityTip(cls, sk.abilities[i])); });
+  }
+  // under a sealed or trial-ready spec: the trial's name and memory, and the way in once it's open
+  function trialCard(cls, spec, state) {
+    const T = TRIALS[spec.id];
+    if (state === 'open' || !T) return '';
+    if (state === 'locked') return `<div class="spec-trial locked"><h5>${T.name}</h5><p>Sealed until this hero has cleared the Hollow King.</p></div>`;
+    const host = Net.isHost && scene === 'town';
+    return `<div class="spec-trial"><h5>${T.name}</h5><p>${T.lore[0]}</p>
+      <button class="cta trial-go" type="button" data-spec="${spec.id}"${host ? '' : ' aria-disabled="true" data-tip="Trials are solo. Begin one from town while you are hosting or playing alone."'}>Begin the trial</button></div>`;
   }
   function renderChoose(cls) {
     const btn = $('sel-choose'), spec = specOf(cls.id, selSpec);
     const same = player.cls === cls, sameSpec = same && (player.spec || null) === (selSpec || null);
-    btn.disabled = sameSpec;
-    btn.textContent = sameSpec ? 'Your current hero' : same ? `Play as ${spec ? spec.name : `a ${cls.name}`}` : `Choose ${cls.name}${spec ? ` · ${spec.name}` : ''}`;
+    const sealed = spec && Save.specState(cls.id, spec.id) !== 'open';
+    btn.disabled = sameSpec || sealed;
+    btn.textContent = sealed ? `${spec.name} is sealed` : sameSpec ? 'Your current hero' : same ? `Play as ${spec ? spec.name : `a ${cls.name}`}` : `Choose ${cls.name}${spec ? ` · ${spec.name}` : ''}`;
     btn.onclick = () => (same ? applySpec(selSpec) : chooseHero(cls, selSpec));
   }
   // switch the current hero's specialization (in town)
   function applySpec(specId) {
     if (!player.cls || scene !== 'town') return;
-    player.spec = specOf(player.cls.id, specId) ? specId : null;
+    player.spec = specOf(player.cls.id, specId) && Save.specState(player.cls.id, specId) === 'open' ? specId : null;
     Save.setSpec(player.cls.id, player.spec);
     closePanels();
     const spec = specOf(player.cls.id, player.spec);
@@ -2331,7 +2399,7 @@
   // Handy for poking at the game from the browser console.
   window.__game = {
     player, remotes, get actor() { return actor; }, get raid() { return raid; }, get raidHost() { return raidHost; },
-    openHeroPanel, openBossPanel, chooseHero, startRaid, pressSlot, leaveRaid, CLASSES, BOSSES,
+    openHeroPanel, openBossPanel, chooseHero, startRaid, startTrial, openSelect, pressSlot, leaveRaid, CLASSES, BOSSES,
     // testing aid: advance the game clock by hand (for screenshots in throttled preview panes)
     step(sec = 0.5) { for (let t = 0; t < sec; t += 1 / 60) { now += 1 / 60; update(1 / 60); } render(); renderPanels(); updateTargetFrame(); Hud.update(now, now); },
     cycleTarget, get lockedEnemy() { return lockedEnemy; },

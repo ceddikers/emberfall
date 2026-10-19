@@ -126,10 +126,13 @@ function run(args) {
   });
 }
 async function heavy() {
+  const trialIds = Object.values(SPECS).flat().map(s => s.id);
   const [sim, ...raids] = await Promise.all([
     run([path.join(__dirname, 'simulate.js')]),
     ...RAIDS.map(([, boss, ...comp]) => run([path.join(__dirname, 'bot-raid.js'), 'normal', String(RAID_RUNS), boss, comp.join(',')])),
+    ...trialIds.map(id => run([path.join(__dirname, 'bot-raid.js'), 'normal', '2', 'trial:' + id])),
   ]);
+  const trials = raids.splice(RAIDS.length);
 
   // balance: each class's pro DPS against the baseline
   const now = {};
@@ -169,6 +172,11 @@ async function heavy() {
     if (r.code === 0 && m && m[1] === m[2]) pass(name, `${m[1]} of ${m[2]}`);
     else fail(name, m ? `${m[1]} of ${m[2]}\n` + r.out.split('\n').filter(l => /^run /.test(l)).join('\n') : r.out.slice(-800));
   });
+
+  // spec trials: a bot playing the spec can pass each one (a bot isn't a careful player, so one clear of two is enough)
+  const stuck = trialIds.filter((id, i) => { const m = trials[i].out.match(/cleared (\d+) of/); return trials[i].code !== 0 || !m || +m[1] < 1; });
+  if (stuck.length) fail('Spec trials can be passed', stuck.map(id => `${id}: ${(trials[trialIds.indexOf(id)].out.split('\n').filter(l => /^run /.test(l)).join(' | ') || trials[trialIds.indexOf(id)].out.slice(-300))}`).join('\n'));
+  else pass('Spec trials can be passed', `all ${trialIds.length}, by a bot playing the spec`);
 }
 
 (async () => {

@@ -397,6 +397,15 @@ const BotAI = {
         const want = (tank && !has(tank.p.id)) ? tank : hurt.find(h => h.f < 0.85 && !has(h.p.id));
         if (want && readyIdx(ri)) { bot.healTarget = want.p.id; return ri; }
       }
+      // a buster is coming: put a shield on the tank first (Benediction, an Aegis's Petals and Divine Barrier)
+      if (busterSoon && tankH) {
+        for (let i = 0; i < k.abilities.length; i++) {
+          const a = ab(i);
+          if (a.target !== 'ally' || !/shield|dome/i.test(a.desc) || !readyIdx(i)) continue;
+          if (a.type === 'gcd' && (k.gcdRemaining() > 0 || k.cast || (moving && k.castTime(a)))) continue;
+          bot.healTarget = tankH.p.id; return i;
+        }
+      }
       // Chronomancer: Bolts heal the link, and Rewind moves the link. Keep it on the tank: re-link before a buster
       // or when the tank sags, and only spend Rewind on someone else when they're in real danger.
       if (bot.cls.id === 'chronomancer' && tankH) {
@@ -428,6 +437,12 @@ const BotAI = {
           if (low.f < 0.75 && instant.length) return instant[0];
         }
       }
+    }
+    // a Ward that can go on an ally (Spellwarden): put it on whoever a heavy blow is about to land on
+    const wardI = idx('ward');
+    if (wardI >= 0 && k.abilities[wardI].target === 'ally' && readyIdx(wardI) && k.gcdRemaining() <= 0 && !k.cast) {
+      const hit = view.mechs.find(m => m.type === 'buster' && m.resolveAt - view.t < 3 && (m.target ?? m.follow) != null && (m.target ?? m.follow) !== bot.id);
+      if (hit) { bot.healTarget = hit.target ?? hit.follow; return wardI; }
     }
     // tanks: answer a buster aimed at them with a cooldown (and Brace timed for a Perfect Block)
     const myBuster = view.mechs.find(m => m.type === 'buster' && (m.target ?? m.follow) === bot.id);
