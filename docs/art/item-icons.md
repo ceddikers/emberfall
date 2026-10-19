@@ -205,3 +205,25 @@ TD-18. **Barrowwind Leathers** (`driftblade_a4`): a near-black duelling coat wit
 120. **Silk-Lined Lab Coat** (`alembist_a2`): An olive lab coat lined with pale spider silk showing at the open front and cuffs, a row of chitin buttons and a small vial loop on the chest.
 121. **Oilskin Coat of the Summit** (`alembist_a3`): A long slate-grey oilskin coat with a high storm collar, rain beading on its shoulders, a bandolier of three blue-tinted vials across it.
 122. **Gravedust Smock** (`alembist_a4`): A plum-grey smock dusted pale with grave dust, a tarnished gold clasp at the throat, a few small labelled jars hanging from a cord belt.
+
+## Threadweaver and Marionettist sheets (2026-10; lilac and rose accents)
+**Style:** the shared style above and each boss's tier theme. A Threadweaver's weapon is a **long needle** (rapier length, an eye at the grip end); a Marionettist's is a **wooden control bar** (a cross of two bars with strings hanging from its ends). Draw both diagonal like the other weapons; shawls and blacks stand front view. Until the art arrives the bag draws a simple needle or control-bar shape. Files: `client/items/<key>.png`.
+
+123. **Recruit's Needle** (`threadweaver_w0`): A plain steel needle, a little bent, a frayed bit of grey thread through its eye.
+124. **Trussing Needle** (`threadweaver_w1`): A thick kitchen trussing needle, greasy brass, a loop of butcher's twine through the eye.
+125. **Silkspinner Needle** (`threadweaver_w2`): A slim bone-white needle like a spider's leg, a strand of glistening spider silk through the eye.
+126. **Stormstitch Needle** (`threadweaver_w3`): A dark iron needle with a zigzag groove along it, a flat blue lightning bolt for thread.
+127. **Shroudmaker's Needle** (`threadweaver_w4`): A tarnished gold needle with a tiny crown at the eye, a pale grave-green thread.
+128. **Patchwork Shawl** (`threadweaver_a1`): A lilac shawl of mismatched patches, one sauce stain, sewn with big visible stitches.
+129. **Cobweb-Lace Shawl** (`threadweaver_a2`): A fine grey lace shawl patterned like spider webs, a chitin brooch at the throat.
+130. **Windwoven Shawl** (`threadweaver_a3`): A long slate-blue shawl with its fringe blown sideways, a silver storm-cloud clasp.
+131. **Shawl of the Last Stitch** (`threadweaver_a4`): A plum-black funeral shawl edged in tarnished gold, one unfinished seam with the needle still in it.
+132. **Recruit's Control Bar** (`marionettist_w0`): A plain pine cross-bar, two knots of rough twine hanging from its ends.
+133. **Butcher-Twine Control Bar** (`marionettist_w1`): A cross-bar made from two wooden spoons lashed together with butcher's twine, a meat hook on one end.
+134. **Silk-Strung Control Bar** (`marionettist_w2`): A black lacquered cross-bar with spider-leg finials, glistening silk strings.
+135. **Lightning-Wire Control Bar** (`marionettist_w3`): A dark iron cross-bar with copper caps, its strings drawn as thin flat blue zigzags.
+136. **Control Bar of the Dead Court** (`marionettist_w4`): A tarnished gold cross-bar shaped like a small crown, its strings ending in grave-green ribbons.
+137. **Stagehand Blacks** (`marionettist_a1`): A plain black jerkin and hood, patched at the elbows, a coil of string at the belt.
+138. **Gossamer Blacks** (`marionettist_a2`): A black jerkin with a faint silver web pattern, the hood edged in silk.
+139. **Stormproof Blacks** (`marionettist_a3`): A black oilskin jerkin beaded with rain, a high storm collar, copper buckles.
+140. **Blacks of the Final Act** (`marionettist_a4`): A black velvet jerkin with a rose-red lining, tarnished gold buttons, a dried rose pinned at the chest.

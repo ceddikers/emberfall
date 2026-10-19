@@ -1417,7 +1417,7 @@
     sendPos();
     // your Dolls to the host, 10 times a second (classes-c; the host's own go straight in)
     if (inArena() && raid.state === 'live' && Stagecraft.dueMine(now)) {
-      const l = Stagecraft.mine.l;
+      const l = Stagecraft.S.mine.l;
       if (Net.isHost && raidHost) raidHost.sim.setDoll(Net.id, l); else Net.send({ t: 'doll', l: l.map(d => [d.x, d.y, d.st, d.s]) });
     }
     Stagecraft.update(now, dt);
