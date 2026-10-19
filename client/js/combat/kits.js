@@ -86,7 +86,7 @@ const KITS = {
       {
         id: 'bulwark', name: 'Bulwark', type: 'ogcd', target: 'self', cd: 120, anim: 'big',
         desc: 'Big cooldown: 40% less damage for 10s, and Brace\'s charges refill.',
-        effect(k) { k.mitigate('self', 0.4, 10, { ab: this }); k.refill('brace'); },
+        effect(k) { k.mitigate('self', 0.4, 10, { ab: this }); k.refill('brace'); if (k.perk('bastion_w3')) k.shield('party', 160, 8, { ab: this }); },
         fx: { type: 'aura', style: 'hex', color: '#9fc4ff', r: 34, dur: 2.5 },
       },
     ],
@@ -147,7 +147,7 @@ const KITS = {
       {
         id: 'frenzy', name: 'Frenzy', type: 'ogcd', target: 'self', cd: 60, anim: 'big',
         desc: 'Burst: 12s of +15% damage, and your next three Crimson Drains are free and stronger.',
-        effect(k) { k.buff('frenzy', 12); k.buff('gorge', 12, {}, 3, 3); },
+        effect(k) { k.buff('frenzy', 12); k.buff('gorge', 12, {}, 3, 3); if (k.perk('bloodreaver_w3')) k.gain('blood', 30); },
         fx: { type: 'aura', color: '#ff2020', r: 40, dur: 2.5 },
       },
       {
@@ -217,7 +217,7 @@ const KITS = {
       {
         id: 'overload', name: 'Runic Overload', type: 'ogcd', target: 'self', cd: 60, anim: 'big',
         desc: 'Burst: 15s of +10% damage. Rune Strike gives 2 Runes, Glyph Burst and Ward blasts hit harder.',
-        effect(k) { k.buff('overload', 15); },
+        effect(k) { k.buff('overload', 15); if (k.perk('runeguard_w3')) k.gain('runes', 2, 3); },
         fx: { type: 'aura', color: '#b18cff', r: 40, dur: 2 },
       },
       {
@@ -299,7 +299,7 @@ const KITS = {
         id: 'barrage', name: 'Barrage', type: 'ogcd', target: 'self', cd: 30, anim: 'big',
         desc: 'Your next Quick Shot fires three times and gives triple Focus.',
         glow: k => k.has('markself'),
-        effect(k) { k.buff('barrage', 15); },
+        effect(k) { k.buff('barrage', 15); if (k.perk('ranger_w3')) k.proc('keen', 15); },
         fx: { type: 'aura', color: '#ffe27a', r: 30, dur: 1 },
       },
     ],
@@ -352,7 +352,7 @@ const KITS = {
       {
         id: 'dance', name: 'Shadow Dance', type: 'ogcd', target: 'self', cd: 60, anim: 'big',
         desc: 'Burst: 10s of faster attacks, every positional lands, and Eviscerate hits 25% harder.',
-        effect(k) { k.buff('dance', 10); },
+        effect(k) { k.buff('dance', 10); if (k.perk('shadowblade_w3')) k.gain('combo', 2, 5); },
         fx: { type: 'aura', color: '#b04dff', r: 36, dur: 2 },
       },
       {
@@ -436,7 +436,7 @@ const KITS = {
       {
         id: 'combust', name: 'Combustion', type: 'ogcd', target: 'self', cd: 60, anim: 'big',
         desc: 'Burst: for 10s every Fireball, Pyroblast and Fire Blast crits.',
-        effect(k) { k.buff('combust', 10); },
+        effect(k) { k.buff('combust', 10); if (k.perk('pyromancer_w3')) k.refill('fireblast'); },
         fx: { type: 'aura', color: '#ff7a1a', r: 40, dur: 2 },
       },
       {
@@ -509,7 +509,7 @@ const KITS = {
       {
         id: 'prayer', name: 'Prayer Circle', type: 'ogcd', target: 'self', cd: 60, anim: 'cast',
         desc: 'The party takes 10% less damage for 10s and regenerates for 15s.',
-        effect(k) { k.mitigate('party', 0.1, 10, { ab: this }); k.hot('party', 100, 5, 3, { ab: this, id: 'prayer' }); },
+        effect(k) { k.mitigate('party', k.perk('cleric_w3') ? 0.15 : 0.1, 10, { ab: this }); k.hot('party', 100, 5, 3, { ab: this, id: 'prayer' }); },
         fx: { type: 'zone', style: 'holy', color: '#ffe680', r: 160, range: 0, dur: 3 },
       },
       {
@@ -582,7 +582,7 @@ const KITS = {
       {
         id: 'growth', name: 'Wild Growth', type: 'ogcd', target: 'self', cd: 60, anim: 'big',
         desc: 'The whole party regenerates for 15s, and your heals are 25% stronger for 15s.',
-        effect(k) { k.buff('growth', 15); k.hot('party', 90, 5, 3, { ab: this, id: 'growth' }); },
+        effect(k) { k.buff('growth', 15); k.hot('party', 90, 5, 3, { ab: this, id: 'growth' }); if (k.perk('grovekeeper_w3')) k.gain('bloom', 25); },
         fx: { type: 'cone', color: '#7ee06a', r: 170, span: 6.28 },
       },
       {
@@ -666,7 +666,7 @@ const KITS = {
       {
         id: 'accel', name: 'Accelerando', type: 'ogcd', target: 'self', cd: 60, anim: 'big',
         desc: 'Party burst: everyone attacks 10% faster for 15s. You gain 40 Flux.',
-        effect(k) { k.partyBuff('haste', 0.1, 15, { ab: this }); k.gain('flux', 40); },
+        effect(k) { k.partyBuff('haste', 0.1, 15, { ab: this }); k.gain('flux', 40); if (k.perk('chronomancer_w3')) k.heal('party', 150, { ab: this }); },
         fx: { type: 'zone', style: 'clock', color: '#3fd0d0', r: 160, range: 0, dur: 2 },
       },
       {

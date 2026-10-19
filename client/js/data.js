@@ -91,14 +91,17 @@ const BOSSES = [
     ],
   },
   {
-    id: 'volkar', name: 'Volkar', title: 'The Storm Titan', color: '#5b8ab0',
-    blurb: 'A living mountain crackling with the fury of the sky. Opposites attract.',
+    id: 'volkar', name: 'Volkar', title: 'The Storm Titan', color: '#5b8ab0', playable: true,
+    blurb: 'A living mountain crackling with the fury of the sky. He never moves from the summit. He has never needed to.',
     teaches: 'Polarity, knockbacks, a shrinking arena, healer pressure.',
     favors: 'Ranger, Grovekeeper',
     mechanics: [
-      { name: 'Polarity', desc: 'Positive and negative charges, and what happens when they meet.' },
-      { name: 'Lightning Rods', desc: 'Something has to catch the strike.' },
-      { name: 'Storm Wall', desc: 'In the second half, the sky closes in.' },
+      { name: 'Polarity', desc: 'Positive and negative charges, and what happens when they meet. Opposites attract.' },
+      { name: 'Lightning Rods', desc: 'Something has to catch the strike. Nothing catches two in a row and walks away.' },
+      { name: 'Gale Slam', desc: 'The wind has to go somewhere. Iron doesn\'t move.' },
+      { name: 'Storm Walls', desc: 'Walls of wind, turning slowly around the titan.' },
+      { name: 'The Storm', desc: 'It never stops, and it only grows.' },
+      { name: 'Eye of the Storm', desc: 'In the second half, the sky closes in.' },
     ],
   },
   {

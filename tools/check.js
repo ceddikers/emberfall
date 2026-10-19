@@ -1,6 +1,6 @@
 // One command that says whether the game is still healthy: `npm run check` (or `node tools/check.js`).
 // It parses every script, checks the data and the shared math, compares class balance with the recorded baseline,
-// and has a bot party clear both bosses on Normal. Exit code 0 means everything passed.
+// and has a bot party clear every built boss on Normal. Exit code 0 means everything passed.
 //   node tools/check.js --update-baseline   (after an intended balance change: record the new numbers)
 const path = require('path');
 const fs = require('fs');
@@ -39,7 +39,7 @@ function data() {
     const kit = KITS[c.id];
     if (!kit) { probs.push(`${c.id}: no kit`); continue; }
     if (kit.abilities.length !== 6) probs.push(`${c.id}: ${kit.abilities.length} abilities (want 6)`);
-    for (const key of [`${c.id}_w0`, `${c.id}_w1`, `${c.id}_w2`, `${c.id}_a1`, `${c.id}_a2`]) if (!ITEMS[key]) probs.push(`missing item ${key}`);
+    for (const key of [`${c.id}_w0`, `${c.id}_w1`, `${c.id}_w2`, `${c.id}_w3`, `${c.id}_a1`, `${c.id}_a2`, `${c.id}_a3`]) if (!ITEMS[key]) probs.push(`missing item ${key}`);
   }
   for (const [key, p] of Object.entries(ITEM_PERKS)) {
     const it = ITEMS[key];
@@ -119,6 +119,7 @@ async function heavy() {
     run([path.join(__dirname, 'simulate.js')]),
     run([path.join(__dirname, 'bot-raid.js'), 'normal', String(RAID_RUNS), 'grubnak']),
     run([path.join(__dirname, 'bot-raid.js'), 'normal', String(RAID_RUNS), 'skitterra']),
+    run([path.join(__dirname, 'bot-raid.js'), 'normal', String(RAID_RUNS), 'volkar']),
   ]);
 
   // balance: each class's pro DPS against the baseline
@@ -142,7 +143,7 @@ async function heavy() {
   }
 
   // bot raids: a bot party clears each boss on Normal every time
-  for (const [boss, r] of [['Grubnak', raids[0]], ['Skitterra', raids[1]]]) {
+  for (const [boss, r] of [['Grubnak', raids[0]], ['Skitterra', raids[1]], ['Volkar', raids[2]]]) {
     const m = r.out.match(/cleared (\d+) of (\d+)/);
     if (r.code === 0 && m && m[1] === m[2]) pass(`Bots clear ${boss} (Normal)`, `${m[1]} of ${m[2]}`);
     else fail(`Bots clear ${boss} (Normal)`, m ? `${m[1]} of ${m[2]}\n` + r.out.split('\n').filter(l => /^run /.test(l)).join('\n') : r.out.slice(-800));

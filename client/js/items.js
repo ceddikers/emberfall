@@ -28,19 +28,20 @@ const TIERS = {
   0: { name: 'Recruit', power: 0.3, rarity: 0, ilvl: 1 },
   1: { name: 'Grubnak', power: 0.55, rarity: 1, ilvl: 10 },
   2: { name: 'Skitterra', power: 0.8, rarity: 2, ilvl: 20 },
+  3: { name: 'Volkar', power: 1.05, rarity: 3, ilvl: 30 },
 };
 const HARD_MULT = 1.25;
 
 const CLASS_GEAR = {
-  bastion: { wtype: 'sword', w: ["Recruit's Arming Sword", 'Cleaverguard Sword', 'Silkrend Oathblade'], a: ['Iron Skillet Plate', 'Broodwarden Plate'] },
-  bloodreaver: { wtype: 'axe', w: ["Recruit's Hatchet", "Butcher's Greataxe", 'Fangreaver Axe'], a: ['Bloodstained Apron Mail', 'Chitin Ravager Harness'] },
-  runeguard: { wtype: 'focus', w: ["Recruit's Rune Focus", 'Spiced Rune Focus', 'Eight-Eyed Ward Focus'], a: ['Simmerweave Robes', 'Silkward Robes'] },
-  ranger: { wtype: 'bow', w: ["Recruit's Shortbow", 'Hickory Kitchen Bow', 'Silkstring Longbow'], a: ['Smoked Leather Jerkin', 'Webstalker Cloak'] },
-  shadowblade: { wtype: 'daggers', w: ["Recruit's Knives", 'Paring Knives', 'Twin Fangs'], a: ['Pantry Shadow Garb', "Widow's Wrap"] },
-  pyromancer: { wtype: 'tome', w: ["Recruit's Primer", 'Grease Fire Grimoire', 'Venomflame Tome'], a: ['Charred Chef Robes', 'Broodfire Vestments'] },
-  cleric: { wtype: 'sunstaff', w: ["Recruit's Sunstaff", 'Dawnladle Staff', 'Sunweb Staff'], a: ['Linen of the Hearth', 'Silken Vestments of Dawn'] },
-  grovekeeper: { wtype: 'branch', w: ["Recruit's Branch", 'Herb Garden Staff', 'Mossweb Staff'], a: ['Rootcellar Robes', "Spinner's Bark Mantle"] },
-  chronomancer: { wtype: 'hourglass', w: ["Recruit's Chronoglass", 'Kitchen Timer Chronoglass', 'Eightfold Hourglass'], a: ['Simmering Moment Robes', 'Silken Second Robes'] },
+  bastion: { wtype: 'sword', w: ["Recruit's Arming Sword", 'Cleaverguard Sword', 'Silkrend Oathblade', 'Stormward Oathblade'], a: ['Iron Skillet Plate', 'Broodwarden Plate', 'Thunderforged Plate'] },
+  bloodreaver: { wtype: 'axe', w: ["Recruit's Hatchet", "Butcher's Greataxe", 'Fangreaver Axe', 'Skysplitter Axe'], a: ['Bloodstained Apron Mail', 'Chitin Ravager Harness', 'Stormrent Harness'] },
+  runeguard: { wtype: 'focus', w: ["Recruit's Rune Focus", 'Spiced Rune Focus', 'Eight-Eyed Ward Focus', 'Lodestone Rune Focus'], a: ['Simmerweave Robes', 'Silkward Robes', 'Galeweave Robes'] },
+  ranger: { wtype: 'bow', w: ["Recruit's Shortbow", 'Hickory Kitchen Bow', 'Silkstring Longbow', 'Thunderhead Longbow'], a: ['Smoked Leather Jerkin', 'Webstalker Cloak', 'Windrunner Cloak'] },
+  shadowblade: { wtype: 'daggers', w: ["Recruit's Knives", 'Paring Knives', 'Twin Fangs', 'Stormcut Knives'], a: ['Pantry Shadow Garb', "Widow's Wrap", 'Galeshroud Garb'] },
+  pyromancer: { wtype: 'tome', w: ["Recruit's Primer", 'Grease Fire Grimoire', 'Venomflame Tome', 'Tome of the Burning Sky'], a: ['Charred Chef Robes', 'Broodfire Vestments', 'Stormfire Vestments'] },
+  cleric: { wtype: 'sunstaff', w: ["Recruit's Sunstaff", 'Dawnladle Staff', 'Sunweb Staff', 'Skylight Staff'], a: ['Linen of the Hearth', 'Silken Vestments of Dawn', 'Vestments of the Clear Sky'] },
+  grovekeeper: { wtype: 'branch', w: ["Recruit's Branch", 'Herb Garden Staff', 'Mossweb Staff', 'Stormstruck Oak'], a: ['Rootcellar Robes', "Spinner's Bark Mantle", 'Rainwood Mantle'] },
+  chronomancer: { wtype: 'hourglass', w: ["Recruit's Chronoglass", 'Kitchen Timer Chronoglass', 'Eightfold Hourglass', 'Storm-Eye Hourglass'], a: ['Simmering Moment Robes', 'Silken Second Robes', 'Robes of the Still Moment'] },
 };
 
 // Enhancements: class drops that change how an ability works (the kits check k.perk(itemKey)).
@@ -73,6 +74,16 @@ const ITEM_PERKS = {
   chronomancer_w1: { ab: 'shift', text: 'Shifting into Haste gives 10 Flux.' },
   chronomancer_a2: { ab: 'shift', text: 'Flux drains 25% slower in Haste.' },
   chronomancer_w2: { ab: 'rewind', text: 'Rewind also shields its target.' },
+  // Volkar (tier 3): the storm in the weapon, on a big cooldown
+  bastion_w3: { ab: 'bulwark', text: 'Bulwark also shields the whole party.' },
+  bloodreaver_w3: { ab: 'frenzy', text: 'Frenzy gives 30 Blood.' },
+  runeguard_w3: { ab: 'overload', text: 'Runic Overload gives 2 Runes.' },
+  ranger_w3: { ab: 'barrage', text: 'Barrage also lights up Keen Eye.' },
+  shadowblade_w3: { ab: 'dance', text: 'Shadow Dance gives 2 combo points.' },
+  pyromancer_w3: { ab: 'combust', text: "Combustion refills Fire Blast's charges." },
+  cleric_w3: { ab: 'prayer', text: 'Prayer Circle cuts damage by 15% instead of 10%.' },
+  grovekeeper_w3: { ab: 'growth', text: 'Wild Growth gives 25 Bloom.' },
+  chronomancer_w3: { ab: 'accel', text: 'Accelerando also heals the whole party.' },
 };
 
 // base stat lines at power 1.0 (class items get a little more than general ones)
@@ -93,16 +104,22 @@ const ITEMS = {};
     { key: 'g_ladle', name: 'Simmering Ladle', slot: 'weapon', main: 'mag', wtype: 'ladle', tier: 1, base: { main: 80, crit: 2 } },
     { key: 'g_fang', name: 'Fang Shortblade', slot: 'weapon', main: 'phys', wtype: 'fang', tier: 2, base: { main: 80, haste: 2 } },
     { key: 'g_wand', name: 'Silkspun Wand', slot: 'weapon', main: 'mag', wtype: 'wand', tier: 2, base: { main: 80, haste: 2 } },
+    { key: 'g_maul', name: 'Thunderstone Maul', slot: 'weapon', main: 'phys', wtype: 'maul', tier: 3, base: { main: 80, crit: 1, haste: 1 } },
+    { key: 'g_rod', name: 'Lightning Rod Scepter', slot: 'weapon', main: 'mag', wtype: 'scepter', tier: 3, base: { main: 80, crit: 1, haste: 1 } },
     // general armor: anyone
     { key: 'g_coat', name: "Traveler's Coat", slot: 'armor', tier: 0, atype: 'coat', base: { hp: 75, def: 50 } },
     { key: 'g_apron', name: 'Apron of the Kitchen Guard', slot: 'armor', tier: 1, atype: 'apron', base: { hp: 85, def: 40 } },
     { key: 'g_hauberk', name: 'Chitin Hauberk', slot: 'armor', tier: 2, atype: 'chitin', base: { hp: 65, def: 60 } },
+    { key: 'g_slate', name: 'Slatescale Mail', slot: 'armor', tier: 3, atype: 'scale', base: { hp: 80, def: 55 } },
     // accessories: anyone, two at a time
     { key: 'g_pepper', name: 'Peppercorn Ring', slot: 'accessory', atype: 'ring', tier: 1, base: { crit: 3, main: 10 } },
     { key: 'g_timer', name: 'Egg Timer Pendant', slot: 'accessory', atype: 'amulet', tier: 1, base: { haste: 3, main: 10 } },
     { key: 'g_band', name: 'Eightfold Band', slot: 'accessory', atype: 'ring', tier: 2, base: { haste: 3, main: 15 } },
     { key: 'g_venom', name: 'Venom Pendant', slot: 'accessory', atype: 'amulet', tier: 2, base: { crit: 3, main: 15 } },
     { key: 'g_silk', name: 'Silkguard Charm', slot: 'accessory', atype: 'charm', tier: 2, base: { hp: 40, def: 25 } },
+    { key: 'g_polar', name: 'Polarity Ring', slot: 'accessory', atype: 'ring', tier: 3, base: { crit: 2, haste: 2, main: 12 } },
+    { key: 'g_eye', name: 'Eye of the Storm', slot: 'accessory', atype: 'amulet', tier: 3, base: { haste: 3, main: 15 } },
+    { key: 'g_iron', name: 'Grounding Charm', slot: 'accessory', atype: 'charm', tier: 3, base: { hp: 45, def: 30 } },
   ];
   for (const it of gen) ITEMS[it.key] = it;
 })();
@@ -165,6 +182,8 @@ const PARTY_BONUS = {
     tiers: { 2: { hp: 0.03 }, 3: { hp: 0.03, dmg: 0.02 }, 4: { hp: 0.05, dmg: 0.03 } } },
   2: { name: 'Brood Bond', boss: 'Skitterra', flavor: 'Hunt like a brood, strike like one.',
     tiers: { 2: { crit: 0.02 }, 3: { crit: 0.02, haste: 0.02 }, 4: { crit: 0.03, haste: 0.03 } } },
+  3: { name: 'Stormbound', boss: 'Volkar', flavor: 'Weather the storm together, and strike like lightning.',
+    tiers: { 2: { haste: 0.02 }, 3: { hp: 0.03, haste: 0.02 }, 4: { hp: 0.04, haste: 0.03 } } },
 };
 const BONUS_STAT = { hp: 'max HP', dmg: 'damage', crit: 'critical chance', haste: 'haste' };
 const bonusText = m => Object.entries(m).map(([k, v]) => `+${Math.round(v * 100)}% ${BONUS_STAT[k]}`).join(', ');
@@ -189,7 +208,7 @@ function partyBonus(counts) {
 }
 
 // loot from a clear: more for your own class, Hard gives two drops of higher quality
-const BOSS_TIER = { grubnak: 1, skitterra: 2 };
+const BOSS_TIER = { grubnak: 1, skitterra: 2, volkar: 3 };
 function rollLoot(bossId, mode, clsId, rng) {
   const tier = BOSS_TIER[bossId] || 1, q = mode === 'hard' ? 1 : 0, out = [];
   const general = Object.values(ITEMS).filter(it => !it.cls && it.tier === tier);

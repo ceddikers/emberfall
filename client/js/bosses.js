@@ -168,13 +168,26 @@ const BOSS_ART = {
 
   volkar(ctx, st) {
     const stone = '#5b6a80', dark = '#3a4455', bolt = '#7fe8ff';
+    const props = st.props || {};
     const pa = actP(st, 'attack');
     let f = 0; // fist punch: pull back, slam forward, recover
     if (pa >= 0) f = pa < 0.4 ? -easeOut(pa / 0.4) * 0.6 : pa < 0.55 ? -0.6 + 1.6 * ((pa - 0.4) / 0.15) : 1 - (pa - 0.55) / 0.45;
-    glow(ctx, 0, 0, 80, bolt, 0.12);
-    // orbiting rocks tethered by lightning
+    if (st.raid) ctx.scale(1.35, 1.35);   // in his own arena he is a giant
+    glow(ctx, 0, 0, 80, bolt, props.charge ? 0.3 : 0.12);
+    // Thunderclap / Eye of the Storm: the sky churns overhead
+    if (props.sky) for (let i = 0; i < 7; i++) {
+      const a = st.t * 1.4 + i * TAU / 7;
+      glow(ctx, Math.cos(a) * 46, Math.sin(a) * 46, 30, '#1a2230', 0.7);
+      if ((Math.floor(st.t * 10) + i) % 5 === 0) jagged(ctx, Math.cos(a) * 46, Math.sin(a) * 46, 0, 0, Math.floor(st.t * 20) + i, bolt, 1.2);
+    }
+    // Gale Slam: he draws breath, and the air streams into him
+    if (props.inhale) for (let i = 0; i < 10; i++) {
+      const q = (st.t * 1.8 + i / 10) % 1, a = i * TAU / 10, d = 110 - q * 80;
+      line(ctx, Math.cos(a) * d, Math.sin(a) * d, Math.cos(a) * (d - 18), Math.sin(a) * (d - 18), `rgba(225,240,255,${0.7 * q})`, 2);
+    }
+    // orbiting rocks tethered by lightning (they whirl while the storm walls turn)
     for (let i = 0; i < 4; i++) {
-      const a = st.t * 0.8 + i * TAU / 4, rx = Math.cos(a) * 64, ry = Math.sin(a) * 64;
+      const a = st.t * (props.spin ? 3.2 : 0.8) + i * TAU / 4, rx = Math.cos(a) * 64, ry = Math.sin(a) * 64;
       if (Math.floor(st.t * 8 + i * 3) % 4 !== 0) jagged(ctx, rx * 0.45, ry * 0.45, rx, ry, Math.floor(st.t * 14) + i * 31, bolt, 1.2);
       poly(ctx, [rx - 7, ry - 4, rx - 2, ry - 8, rx + 6, ry - 5, rx + 7, ry + 3, rx + 1, ry + 7, rx - 6, ry + 5], stone, OUT, 2);
     }
@@ -192,10 +205,18 @@ const BOSS_ART = {
     for (const sy of [-1, 1]) {
       const fx = 16 + f * 18, fy = 36 * sy;
       ellipse(ctx, 4 + f * 8, 32 * sy, 14, 10, 0, dark, OUT, 2.5);
+      // Polarity Surge: one hand burns gold, the other cold blue. Titan Fist: the right fist gathers lightning.
+      if (props.polar) glow(ctx, fx, fy, 30, sy < 0 ? '#ffc24a' : '#4ad8ff', 0.6 + Math.sin(st.t * 8) * 0.15);
+      if (props.fist && sy > 0) { glow(ctx, fx, fy, 34, bolt, 0.7 + Math.sin(st.t * 12) * 0.2); if (Math.floor(st.t * 14) % 2) jagged(ctx, fx, fy, fx + 30, fy + (Math.random() - 0.5) * 30, Math.floor(st.t * 14), bolt, 1.2); }
       circle(ctx, fx, fy, 14, stone, OUT, 3);
       line(ctx, fx + 7, fy - 6, fx + 7, fy + 6, dark, 2);
       line(ctx, fx + 3, fy - 8, fx + 3, fy + 8, dark, 1.5);
       if (f > 0.5) glow(ctx, fx + 8, fy, 22, bolt, f - 0.5);
+    }
+    // charged up (rods, Thunder Crash, Static Field): lightning crawls over the stone
+    if (props.charge && Math.floor(st.t * 12) % 2) for (let i = 0; i < 2; i++) {
+      const a = (Math.floor(st.t * 12) * 1.7 + i * 2.4) % TAU;
+      jagged(ctx, Math.cos(a) * 12, Math.sin(a) * 30, Math.cos(a + 0.8) * 28, Math.sin(a + 0.8) * 40, Math.floor(st.t * 12) * 5 + i, bolt, 1.1);
     }
     // head with a crown of stone spikes
     for (let k = 0; k < 5; k++) {

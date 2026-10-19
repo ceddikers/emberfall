@@ -85,3 +85,34 @@
 55. **Eightfold Band**: A silver ring shaped like eight spider legs wrapping around the finger, set with a small blue gem.
 56. **Venom Pendant**: A gold pendant holding a green gem shaped like a drop of venom.
 57. **Silkguard Charm**: A small shield-shaped charm wrapped in pale silk threads with a lavender sheen.
+
+## Volkar sheet (items 58-81)
+**Tier style:** storm-themed. Slate-grey stone, dark wet iron, lightning-blue glow (cracks, runes or arcs of light), with a little rain sheen. Keep each class's accent colour in the trim. Same layout rules as above.
+
+### Class items
+58. **Stormward Oathblade** (Bastion): A broad steel longsword with a slate-grey fuller cracked by a line of blue lightning, a crossguard shaped like two storm clouds, and royal-blue leather on the grip.
+59. **Thunderforged Plate** (Bastion): A heavy breastplate of dark iron with slate inlays, a lightning-bolt emblem embossed in silver on the chest, and blue cloth trim.
+60. **Skysplitter Axe** (Bloodreaver): A huge axe whose head is a wedge of split slate bound in iron, with a crackling blue seam along the edge and a red-wrapped haft.
+61. **Stormrent Harness** (Bloodreaver): A spiked iron-and-leather harness with storm-grey plates, deep red straps, and small blue sparks caught on the spikes.
+62. **Lodestone Rune Focus** (Runeguard): A hexagonal lodestone crystal, dark and metallic, with a violet rune glowing in it and tiny iron filings standing on end around its edges.
+63. **Galeweave Robes** (Runeguard): Violet robes whose hem streams sideways as if caught in a gale, with silver wind-swirl embroidery.
+64. **Thunderhead Longbow** (Ranger): A tall dark-wood longbow with grey storm clouds carved along its limbs, a string that glows faint blue, and green grip wrapping.
+65. **Windrunner Cloak** (Ranger): A grey-green hooded cloak with a rain-darkened hem, flapping as if in wind, fastened with a small silver feather clasp.
+66. **Stormcut Knives** (Shadowblade): Two short knives with blades of dark slate edged in blue light, crossed, with purple-wrapped grips.
+67. **Galeshroud Garb** (Shadowblade): A dark grey wrapped vest with a long trailing scarf blowing sideways, a purple sash, and a faint rain sheen.
+68. **Tome of the Burning Sky** (Pyromancer): A thick book bound in charred slate-grey leather, a lightning bolt and a flame crossed on the cover, orange fire and blue sparks escaping its pages.
+69. **Stormfire Vestments** (Pyromancer): Dark red robes with orange flame trim, a pattern of blue lightning forks running through the fabric.
+70. **Skylight Staff** (Cleric): A white-wood staff topped by a golden sun disc breaking through a small grey storm cloud, rays shining through.
+71. **Vestments of the Clear Sky** (Cleric): Pale sky-blue and cream vestments with a gold sunburst on the chest and a soft parting-cloud pattern at the hem.
+72. **Stormstruck Oak** (Grovekeeper): A gnarled oak staff split down the middle by an old lightning strike, the scar glowing faint blue, with fresh green leaves sprouting from the split.
+73. **Rainwood Mantle** (Grovekeeper): A bark shoulder mantle beaded with raindrops, moss in the grooves, leaf-green trim.
+74. **Storm-Eye Hourglass** (Chronomancer): A silver hourglass whose glass holds a tiny swirling storm cloud instead of sand, with a spark flickering in its centre.
+75. **Robes of the Still Moment** (Chronomancer): Dark teal robes with raindrops embroidered frozen in mid-fall and silver clock-hand trim.
+
+### General items
+76. **Thunderstone Maul**: A two-handed maul with a block of grey slate for a head, a blue lightning crack running through it, on an iron-banded wooden haft.
+77. **Lightning Rod Scepter**: A short iron scepter crowned with three spikes like a lightning rod, a blue spark crackling between the tips.
+78. **Slatescale Mail**: A coat of small overlapping slate-grey scales like a fish, with an iron collar.
+79. **Polarity Ring**: A silver ring set with two small gems side by side, one warm gold and one cold blue.
+80. **Eye of the Storm**: A pendant holding a round grey stone with a slowly turning blue swirl inside it, like a storm seen from above.
+81. **Grounding Charm**: A small iron charm shaped like a spike driven into a rock, with a copper wire wound around it.

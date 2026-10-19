@@ -88,6 +88,15 @@
     if (raid && raid.bots.has(id)) return raid.bots.get(id);
     return remotes.get(id) || null;
   }
+  // everyone in the raid who's alive and on screen: [{ id, x, y }] (for mechanics drawn between players)
+  function raidUnits() {
+    const out = [];
+    if (raid) for (const id of raid.rosterIds) {
+      const e = entById(id), s = raid.party.get(id);
+      if (e && (!s || s.alive)) out.push({ id, x: e.x, y: e.y });
+    }
+    return out;
+  }
 
   const world = {
     now: () => now,
@@ -499,7 +508,7 @@
   // host only
   let raidHost = null, hostRoster = [], stopHostTick = null, lastRaidOpts = { mode: 'normal', fill: true, boss: 'grubnak' };
 
-  const RAID_DEFS = { grubnak: GRUBNAK, skitterra: SKITTERRA };
+  const RAID_DEFS = { grubnak: GRUBNAK, skitterra: SKITTERRA, volkar: VOLKAR };
 
   function pickBots(humans) {
     const slots = ['tank', 'healer', 'dps', 'dps'];
@@ -639,12 +648,15 @@
     FX.clear(); VFX.clear();
     ARENA.use(def.id);
     sceneFade();
+    const sp = def.spawn || { x: 0, y: -40 };
     raid = {
       def, mode: msg.mode, roster: msg.roster, rosterIds: new Set(msg.roster.map(r => r.id)),
       state: 'countdown', countdownEnd: now + 8, fightTime: 0,
-      boss: { x: 0, y: -40, f: Math.PI / 2, hp: 1, mx: 1, u: 0, v: 0, tg: null },
-      bossDraw: { x: 0, y: -40, f: Math.PI / 2, st: newSt(), lastX: 0, lastY: -40, fade: 1 },
-      bossTrack: new Track(0, -40, Math.PI / 2), ghosts: [],
+      boss: { x: sp.x, y: sp.y, f: Math.PI / 2, hp: 1, mx: 1, u: 0, v: 0, tg: null },
+      bossDraw: { x: sp.x, y: sp.y, f: Math.PI / 2, st: newSt(), lastX: sp.x, lastY: sp.y, fade: 1 },
+      bossTrack: new Track(sp.x, sp.y, Math.PI / 2), ghosts: [],
+      // Volkar: everyone's charge, rods left standing, turning storm walls, and the closing edge's warning
+      pol: new Map(), posts: new Map(), sweeps: new Map(), edgeWarn: null,
       fightClock: new SendClock(), botClock: new SendClock(),   // the host's fight and bot clocks (see interp.js)
       nextAutoAt: 0, cast: null, props: {}, propsUntil: {},
       tgs: new Map(), puddles: new Map(), party: new Map(), bots: new Map(), pbuffs: [], taken: [], result: null, resultAt: 0,
@@ -732,6 +744,7 @@
     if (msg.s === 'live') { raid.state = 'live'; return; }
     raid.state = msg.s; raid.result = msg; raid.resultAt = now + 2.2;
     fadeTelegraphs(); raid.tethers.clear(); raid.lunges = []; raid.eggs = null; raid.rollers.clear(); raid.reels.clear(); player.reel = null;
+    raid.sweeps.clear(); raid.edgeWarn = null; for (const p of raid.posts.values()) p.end = Math.min(p.end, now + 1);
     for (const z of raid.zones.values()) z.end = Math.min(z.end, now + 1);
     if (actor && actor.kit.cast) actor.kit.cast = null;
     FX.shake = 8;
@@ -767,7 +780,7 @@
     const tg = raid.tgs.get(msg.id);
     if (!tg || tg.gone != null) return;
     tg.gone = now;
-    BOSS_VFX.impact(tg, msg, { entById, boss: raid.def.id });
+    BOSS_VFX.impact(tg, msg, { entById, boss: raid.def.id, pol: raid.pol, units: raidUnits() });
     if (msg.hits && msg.hits.includes(Net.id) && tg.type === 'aoe') FX.shake = Math.max(FX.shake, 5);
   });
   Net.on('tgclear', () => { if (raid) { fadeTelegraphs(); raid.lunges = []; raid.eggs = null; } });
@@ -799,6 +812,13 @@
       case 'lunge': case 'molt': prop('rear', true, end + 0.5); break;
       case 'reel': prop('silk', true, end + 4.5); prop('rear', true, end + 0.5); break;
       case 'meatballs': prop('meat', true, end + 0.3); break;
+      // Volkar: the titan shows what's coming
+      case 'clap': case 'storm': prop('sky', true, end + 0.4); break;
+      case 'fist': prop('fist', true, end + 0.2); break;
+      case 'surge': prop('polar', true, end + 0.3); break;
+      case 'rods': case 'crash': case 'field': prop('charge', true, end + 0.4); break;
+      case 'gale': prop('inhale', true, end + 0.1); break;
+      case 'walls': prop('spin', true, end + 10); break;
     }
     if (msg.anim !== 'mince' && msg.anim !== 'boil') st.action = { type: 'attack', t0: end - 0.45, dur: 1.2 };
   });
@@ -815,6 +835,7 @@
     else if (msg.name === 'leap') later(msg.dur || 0.6, () => raid && BOSS_VFX.leap(raid.boss.x, raid.boss.y));
     else if (msg.name === 'gorge' || msg.name === 'roar') { st.action = { type: 'attack', t0: now, dur: 1.4 }; BOSS_VFX.roar(raid.boss.x, raid.boss.y, raid.def.id); }
     else if (msg.name === 'wrap') { raid.props.silk = true; raid.propsUntil.silk = now + msg.dur + 0.3; }
+    else if (msg.name === 'field') { raid.props.charge = true; raid.propsUntil.charge = now + msg.dur + 0.3; }
   });
   // --- adds, tethers, zones and Skitterra's legs (all host-driven)
   Net.on('adds', msg => {
@@ -911,6 +932,44 @@
     const e = entById(msg.pid);
     if (e && rl) { if (msg.ok) BOSS_VFX.silkSnap(e, raid.bossDraw); else BOSS_VFX.reelBite(e); }
   });
+  // --- Volkar
+  // everyone's charge (+1 / −1); on Hard they flip at 50%
+  Net.on('pol', msg => {
+    if (!raid || !Array.isArray(msg.m)) return;
+    for (const [id, s] of msg.m) raid.pol.set(id, s > 0 ? 1 : -1);
+    if (msg.flip) for (const id of raid.pol.keys()) { const e = entById(id); if (e) BOSS_VFX.polarityFlip(e, raid.pol.get(id)); }
+  });
+  // a rod that has been struck stays planted for a while
+  Net.on('post', msg => {
+    if (!raid) return;
+    if (msg.clear) { raid.posts.clear(); return; }
+    raid.posts.set(msg.id, { x: msg.x, y: msg.y, start: now, end: now + msg.dur });
+  });
+  // Storm Walls: one message, every client turns them on its own clock
+  Net.on('sweep', msg => {
+    if (!raid) return;
+    if (msg.clear) { raid.sweeps.clear(); return; }
+    raid.sweeps.set(msg.id, { x: msg.x, y: msg.y, arms: msg.arms, a0: msg.a0, spin: msg.spin, w: msg.w, start: now, at: now + msg.delay, end: now + msg.delay + msg.dur });
+  });
+  // the closing edge: sparks mark where the wall will be, then it jumps there and pushes anyone outside back in
+  Net.on('edgewarn', msg => { if (raid) raid.edgeWarn = { r: msg.r, from: ARENA.r, start: now, end: now + msg.dur }; });
+  Net.on('edge', msg => {
+    if (!raid) return;
+    const from = raid.edgeWarn ? raid.edgeWarn.from : ARENA.r;
+    ARENA.resize(msg.r);
+    raid.edgeWarn = null;
+    for (const [id, p] of raid.posts) if (Math.hypot(p.x, p.y) > msg.r - 30) p.end = Math.min(p.end, now + 0.4);
+    BOSS_VFX.edgeClose(from, msg.r);
+    const d = Math.hypot(player.x, player.y);
+    if (d > msg.r - 16) {
+      const k = (msg.r - 40) / Math.max(1, d);
+      player.kb = { sx: player.x, sy: player.y, tx: player.x * k, ty: player.y * k, t0: now };
+      player.dashMove = null; player.target = null;
+    }
+  });
+  // the storm's constant pulse: a faint bolt touches everyone
+  Net.on('pulse', () => { if (raid) BOSS_VFX.pulse(raidUnits()); });
+
   Net.on('kb', msg => {
     if (!raid || msg.id !== Net.id) return;
     const a = Math.atan2(player.y - msg.y, player.x - msg.x);
@@ -1247,7 +1306,7 @@
     let df = bp.a - bd.f; while (df > Math.PI) df -= TAU; while (df < -Math.PI) df += TAU;
     bd.f += df * Math.min(1, dt * 9);
     bd.fade += ((b.u ? 0.55 : 1) - bd.fade) * Math.min(1, dt * 5);   // fades out and back in when untargetable
-    bd.st.t = now;
+    bd.st.t = now; bd.st.raid = true;
     bd.st.moving = Math.hypot(bd.x - bd.lastX, bd.y - bd.lastY) > 20 * dt;
     bd.lastX = bd.x; bd.lastY = bd.y;
     // wind-up before each auto-attack (it only lands on the tank, in melee range)
@@ -1285,6 +1344,9 @@
     for (const [id, z] of raid.zones) if (now > z.end) raid.zones.delete(id);   // drawZones fades them out first
     raid.lunges = raid.lunges.filter(l => now < l.start + l.delay + l.n * l.step + 0.3);
     raid.husks = raid.husks.filter(h => now < h.end);
+    for (const [id, p] of raid.posts) if (now > p.end + 0.5) raid.posts.delete(id);
+    for (const [id, sw] of raid.sweeps) if (now > sw.end + 0.4) raid.sweeps.delete(id);
+    if (raid.edgeWarn && now > raid.edgeWarn.end + 1.5) raid.edgeWarn = null;
     for (const h of raid.husks) { h.st.t = now; h.st.props.rear = raid.lunges.some(l => l.who === 'husk'); }
     if (raid.eggs && now > raid.eggs.end + 0.3) raid.eggs = null;
     raid.pbuffs = raid.pbuffs.filter(x => x.end > now);
@@ -1491,20 +1553,26 @@
   }
 
   function renderArena() {
-    ctx.fillStyle = '#120d0a'; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = raid.def.id === 'volkar' ? '#080b11' : '#120d0a'; ctx.fillRect(0, 0, W, H);
     const sh = FX.shake;
     const sx = sh > 0.3 ? (Math.random() - 0.5) * sh : 0, sy = sh > 0.3 ? (Math.random() - 0.5) * sh : 0;
     ctx.scale(zoom, zoom);
     ctx.translate(-cam.x + sx, -cam.y + sy);
     ArenaView.drawFloor(ctx, raid.def.id, Math.min(1.5, DPR * zoom));
     ArenaView.drawAmbient(ctx, now);
+    ArenaView.drawEdge(ctx, now, raid.edgeWarn);
     ArenaView.drawZones(ctx, raid.zones, now);
     ArenaView.drawPuddles(ctx, raid.puddles, now);
     if (raid.eggs) ArenaView.eggs(ctx, raid.eggs.pts, clamp((now - raid.eggs.start) / Math.max(0.1, raid.eggs.end - raid.eggs.start), 0, 1), now);
     const bd = raid.bossDraw;
-    const tellEnv = { boss: bd, bossId: raid.def.id, entById, hard: raid.mode === 'hard' };
+    const units = raidUnits();
+    // things that shelter from Gale Slam: posts, and rods waiting for their bolt
+    const covers = [...raid.posts.values()].filter(p => now < p.end).map(p => ({ x: p.x, y: p.y }));
+    for (const tg of raid.tgs.values()) if (tg.tag === 'rod' && tg.gone == null) covers.push({ x: tg.live.x, y: tg.live.y });
+    const tellEnv = { boss: bd, bossId: raid.def.id, entById, hard: raid.mode === 'hard', pol: raid.pol, units, covers };
     ArenaView.drawTelegraphs(ctx, raid.tgs, now, tellEnv);
     BossTells.drawRollers(ctx, raid.rollers, now, tellEnv);
+    BossTells.drawSweeps(ctx, raid.sweeps, now, tellEnv);
     // the tells' props (cleaver, cloches, jars, whisk) go under every unit too, so nobody is hidden behind a mechanic
     BossTells.air(ctx, raid.tgs, now, tellEnv);
     const ringA = clamp((bd.fade - 0.55) / 0.45, 0, 1);   // the hitbox ring fades with the boss when it goes untargetable
@@ -1518,6 +1586,7 @@
     FX.draw(ctx, true);
     VFX.draw(ctx, 'ground');
     drawAllyTarget();
+    if (raid.pol.size) ArenaView.polarityAuras(ctx, units, raid.pol, now);
 
     const arenaRemotes = [...remotes.values()].filter(r => r.scene === 1 && raid.rosterIds.has(r.id));
     const ents = [player, ...arenaRemotes, ...raid.bots.values()];
@@ -1526,7 +1595,8 @@
     const adds = [...raid.adds.values()].map(a => ({ kind: 'add', y: a.y, a, alpha: Math.min(1, (now - (a.born ?? -9)) / 0.3) }));
     for (const gh of raid.ghosts) adds.push({ kind: 'add', y: gh.a.y, a: gh.a, alpha: Math.max(0, 1 - (now - gh.t0) / gh.dur) });
     const husks = raid.husks.map(h => ({ kind: 'husk', y: h.y, h }));
-    const all = [...ents, bossEnt, ...adds, ...husks].sort((a, b) => a.y - b.y);
+    const posts = [...raid.posts.values()].map(p => ({ kind: 'post', y: p.y, p }));
+    const all = [...ents, bossEnt, ...adds, ...husks, ...posts].sort((a, b) => a.y - b.y);
     const bossDef = BOSSES.find(x => x.id === raid.def.id);
     for (const e of all) {
       if (e === bossEnt) {
@@ -1539,6 +1609,7 @@
         ctx.restore();
       }
       else if (e.kind === 'husk') { ctx.save(); ctx.globalAlpha = 0.8; drawBoss(ctx, bossDef, e.h.x, e.h.y, e.h.f, e.h.st, RAID_BOSS_SCALE); ctx.restore(); }
+      else if (e.kind === 'post') BossTells.rodPost(ctx, e.p.x, e.p.y, now, Math.min(1, (now - e.p.start) / 0.3, Math.max(0, (e.p.end - now) / 0.5)));
       else drawEntity(e);
     }
     for (const lg of raid.lunges) ArenaView.lungeLegs(ctx, lg.x, lg.y, lg, now);

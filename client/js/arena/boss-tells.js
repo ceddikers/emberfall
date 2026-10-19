@@ -361,12 +361,156 @@ const BossTells = (() => {
     },
   };
 
+  // ------------------------------------------------------------------ Volkar
+  // a lightning rod: an iron pole with a crown of spikes, guy-wires pegged into the rock. charge 0..1 lights it up.
+  function rodPole(ctx, x, y, t, a = 1, charge = 0) {
+    if (a <= 0) return;
+    ctx.save(); ctx.globalAlpha = a;
+    ellipse(ctx, x + 7, y + 4, 18, 8, 0, 'rgba(0,0,0,0.35)');
+    for (const [dx, dy] of [[-24, 10], [24, 10], [0, -14]]) { line(ctx, x, y - 58, x + dx, y + dy, 'rgba(24,28,34,0.85)', 1.3); circle(ctx, x + dx, y + dy, 2, '#5a626e', OUT, 1); }
+    rrect(ctx, x - 4, y - 70, 8, 72, 2, '#4a525c', OUT, 2);
+    line(ctx, x - 1.5, y - 67, x - 1.5, y - 2, 'rgba(220,230,240,0.35)', 1.5);
+    for (const dx of [-7, 0, 7]) poly(ctx, [x + dx - 2.5, y - 70, x + dx, y - 84 - (dx ? 0 : 6), x + dx + 2.5, y - 70], '#6a7480', OUT, 1.2);
+    rrect(ctx, x - 9, y - 73, 18, 5, 2, '#5a626e', OUT, 1.5);
+    if (charge > 0) {
+      glow(ctx, x, y - 84, 18 + charge * 26, '#7fe8ff', 0.35 + 0.5 * charge);
+      if (Math.floor(t * 14 + x) % 3 !== 0) jagged(ctx, x, y - 86, x + (hash(Math.floor(t * 14), x) - 0.5) * 50, y - 86 - 20 - charge * 30, Math.floor(t * 14) + x, '#9ff4ff', 1 + charge);
+    }
+    ctx.restore();
+  }
+  function stormCloud(ctx, x, y, s, a, t, seed) {
+    for (let i = 0; i < 6; i++) {
+      const ox = Math.cos(i * 1.7 + seed) * s * 0.55, oy = Math.sin(i * 2.3 + seed) * s * 0.22;
+      glow(ctx, x + ox + Math.sin(t * 0.8 + i) * 4, y + oy, s * (0.45 + hash(i, seed) * 0.3), '#1a2230', a);
+    }
+    if (Math.floor(t * 9 + seed) % 7 === 0) glow(ctx, x, y, s * 0.5, '#9ccfff', a * 0.6);
+  }
+
+  const V = {
+    // Thunderclap (raidwide): storm clouds roll in over the summit and it goes dark, flickering, before the clap
+    clap: {
+      raidwide: true,
+      ground(ctx, tg, s, p, k, t) {
+        const R = AR();
+        ctx.save();
+        ctx.fillStyle = `rgba(6,10,20,${(0.1 + 0.32 * easeIn(p)) * k})`; ctx.fillRect(-R - 60, -R - 60, R * 2 + 120, R * 2 + 120);
+        for (let i = 0; i < 14; i++) {
+          const a = i * TAU / 14 + t * 0.15, d = R * (0.25 + hash(i, 3) * 0.7) * (1.2 - 0.3 * p);
+          glow(ctx, Math.cos(a) * d, Math.sin(a) * d, 90 + hash(i, 5) * 80, '#05070d', 0.35 * k);
+        }
+        if (p > 0.7 && Math.floor(t * 18) % 4 === 0) { ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = `rgba(160,210,255,${0.06 * k})`; ctx.fillRect(-R - 60, -R - 60, R * 2 + 120, R * 2 + 120); }
+        ctx.restore();
+      },
+    },
+    // Polarity Surge: everyone's charge flares. Two of the same charge standing close crackle at each other;
+    // opposite charges close together are joined by a calm, steady bond.
+    surge: {
+      outline: false,
+      ground(ctx, tg, s, p, k, t, env) {
+        const us = env.units || [], pol = env.pol;
+        if (!pol) return;
+        for (let i = 0; i < us.length; i++) for (let j = i + 1; j < us.length; j++) {
+          const a = us[i], b = us[j], d = Math.hypot(a.x - b.x, a.y - b.y);
+          if (d > s.r + 30) continue;
+          const sa = pol.get(a.id), sb = pol.get(b.id);
+          if (!sa || !sb) continue;
+          if (sa === sb) {
+            const col = sa > 0 ? '#ffc24a' : '#4ad8ff';
+            ctx.save(); ctx.globalAlpha = (0.4 + 0.6 * p) * k;
+            for (let n = 0; n < 2; n++) jagged(ctx, a.x, a.y - 16, b.x, b.y - 16, Math.floor(t * 16) * 3 + n + a.id, col, 1.4 + p * 1.5);
+            ctx.restore();
+            glow(ctx, (a.x + b.x) / 2, (a.y + b.y) / 2 - 16, 30, '#ff6a5a', 0.3 * p * k);
+          } else {
+            ctx.save(); ctx.lineCap = 'round';
+            const g = ctx.createLinearGradient(a.x, a.y, b.x, b.y);
+            g.addColorStop(0, rgba(sa > 0 ? '#ffc24a' : '#4ad8ff', 0.6 * k)); g.addColorStop(1, rgba(sb > 0 ? '#ffc24a' : '#4ad8ff', 0.6 * k));
+            ctx.strokeStyle = g; ctx.lineWidth = 3 + 2 * Math.sin(t * 4); ctx.beginPath(); ctx.moveTo(a.x, a.y - 14); ctx.lineTo(b.x, b.y - 14); ctx.stroke();
+            ctx.restore();
+          }
+        }
+        // the auras swell as it nears
+        for (const u of us) {
+          const sg = pol.get(u.id); if (!sg) continue;
+          const col = sg > 0 ? '#ffc24a' : '#4ad8ff';
+          ellipse(ctx, u.x, u.y + 4, 30 + 26 * p, 22 + 19 * p, 0, null, rgba(col, (0.25 + 0.5 * p) * k), 1.5 + p * 2);
+        }
+      },
+    },
+    // Thunder Crash: a storm cloud gathers over each + player, and its shadow is where the pair stands together
+    crash: {
+      color: '#ffd84a', outline: false,
+      ground(ctx, tg, s, p, k, t) { shadow(ctx, s.x, s.y, s.r * 0.9, (0.2 + 0.25 * p) * k); ArenaView.stackMarker(ctx, s, p, k, t); },
+      air(ctx, tg, s, p, k, t) { stormCloud(ctx, s.x, s.y - 170 + p * 40, 70 + p * 20, (0.5 + 0.4 * p) * k, t, tg.id); },
+    },
+    // Static Field: everyone's own crackling ring; stay out of each other's
+    static: {
+      color: '#c070ff', outline: false,
+      ground(ctx, tg, s, p, k, t) {
+        ArenaView.spreadMarker(ctx, s, p, k, t);
+        if (Math.floor(t * 12 + tg.id) % 2) {
+          const a = hash(Math.floor(t * 12), tg.id) * TAU;
+          ctx.save(); ctx.globalAlpha = k * 0.8;
+          jagged(ctx, s.x + Math.cos(a) * s.r * 0.3, s.y + Math.sin(a) * s.r * 0.3, s.x + Math.cos(a) * s.r, s.y + Math.sin(a) * s.r, Math.floor(t * 12) + tg.id, '#d79bff', 1.2);
+          ctx.restore();
+        }
+      },
+    },
+    // Lightning Rods: an iron rod is driven into the rock; a cloud gathers over it and the rod charges up
+    rod: {
+      color: '#9ff4ff',
+      ground(ctx, tg, s, p, k, t) {
+        glow(ctx, s.x, s.y, s.r * 1.4, '#4fa8e0', 0.22 * k);
+        circle(ctx, s.x, s.y, s.r, rgba('#9ff4ff', 0.08 * k), rgba('#bff6ff', (0.45 + 0.4 * p) * k), 2);
+        ctx.beginPath(); ctx.arc(s.x, s.y, s.r + 5, -Math.PI / 2, -Math.PI / 2 + TAU * (1 - p));
+        ctx.strokeStyle = rgba('#ffffff', 0.7 * k); ctx.lineWidth = 2; ctx.stroke();
+      },
+      air(ctx, tg, s, p, k, t) {
+        const drop = Math.min(1, (t - tg.start) / 0.35);   // driven in from above
+        rodPole(ctx, s.x, s.y - (1 - drop) * 160, t, k, p);
+        stormCloud(ctx, s.x, s.y - 190, 60 + p * 30, (0.3 + 0.5 * p) * k, t, tg.id);
+      },
+    },
+    // Gale Slam: the wind pours in toward him (he's drawing breath). On Normal the still air behind each rod
+    // shows faintly, a pale calm strip running out to the wall.
+    gale: {
+      outline: false,
+      ground(ctx, tg, s, p, k, t, env) {
+        const R = AR(), b = env.boss;
+        for (let i = 0; i < 28; i++) {
+          const q = (t * 0.9 + hash(i, 7)) % 1, a = i * TAU / 28 + q * 0.6, d = R - (R - 110) * q;
+          ctx.beginPath(); ctx.arc(b.x, b.y, d, a, a + 0.18 + 0.1 * p);
+          ctx.strokeStyle = rgba('#d8ecff', (0.15 + 0.35 * p) * k * (1 - q * 0.5)); ctx.lineWidth = 2; ctx.stroke();
+        }
+        if (env.hard) return;
+        for (const c of env.covers || []) {
+          const cx = c.x - b.x, cy = c.y - b.y, cd = Math.hypot(cx, cy);
+          if (cd < 1) continue;
+          const ang = Math.atan2(cy, cx);
+          const strip = { kind: 'rect', x: c.x - Math.cos(ang) * 20, y: c.y - Math.sin(ang) * 20, angle: ang, len: R * 2, w: 92 };
+          ctx.save(); SHAPES.trace(ctx, strip);
+          ctx.fillStyle = rgba('#bfe6ff', 0.1 * k); ctx.fill();
+          ctx.setLineDash([10, 10]); ctx.lineDashOffset = t * 12; ctx.strokeStyle = rgba('#d8f0ff', 0.3 * k); ctx.lineWidth = 1.5; ctx.stroke();
+          ctx.restore();
+        }
+      },
+    },
+  };
+
   // tankbusters: Grubnak's chop lines, or Skitterra's silk gathering on the tank
   const buster = {
     color: '#ff6a5a',
     ground(ctx, tg, s, p, k, t, env) {
       const tgt = tg.target != null ? env.entById(tg.target) : null;
       ctx.save(); SHAPES.trace(ctx, s); ctx.fillStyle = rgba('#ff4a3a', (0.06 + 0.1 * p) * k); ctx.fill(); ctx.restore();
+      if (env.bossId === 'volkar') {
+        // Titan Fist: lightning gathers along the cone and runs to the tank
+        for (let i = 0; i < 5; i++) {
+          const a = s.angle - s.arc / 2 + ((i + 0.5) / 5) * s.arc, q = (t * 1.6 + i * 0.29) % 1, d0 = 70 + q * (s.r - 110);
+          if (Math.floor(t * 12 + i) % 3) jagged(ctx, s.x + Math.cos(a) * d0, s.y + Math.sin(a) * d0, s.x + Math.cos(a) * (d0 + 50), s.y + Math.sin(a) * (d0 + 50), Math.floor(t * 12) + i, '#7fe8ff', 1.2);
+        }
+        if (tgt && p > 0.6) glow(ctx, tgt.x, tgt.y - 10, 30, '#7fe8ff', (p - 0.6) * 1.5 * k);
+        return;
+      }
       if (env.bossId === 'skitterra') {
         if (!tgt) return;
         for (let i = 0; i < 9; i++) {
@@ -387,6 +531,7 @@ const BossTells = (() => {
   function get(tg, env) {
     if (tg.type === 'buster') return buster;
     if (env.bossId === 'skitterra') return S[tg.tag] || null;
+    if (env.bossId === 'volkar') return V[tg.tag] || null;
     return G[tg.tag] || null;
   }
   // under everyone (called inside the arena clip)
@@ -508,5 +653,47 @@ const BossTells = (() => {
     }
   }
 
-  return { get, ground, air, fade, drawRollers, drawReels };
+  // ------------------------------------------------------------------ Storm Walls (Volkar)
+  // Walls of wind turning around him: a pale band full of streaks blowing outward, brightest on the side it's turning
+  // toward. They form while he casts, then turn; Normal also draws the wall's exact edge.
+  function drawSweeps(ctx, sweeps, t, env) {
+    if (!sweeps.size) return;
+    const L = AR() * 2 + 100;
+    ctx.save(); ARENA.trace(ctx, 4); ctx.clip();
+    for (const sw of sweeps.values()) {
+      const form = clamp((t - sw.start) / Math.max(0.2, sw.at - sw.start), 0, 1);
+      const k = Math.min(form, Math.max(0, (sw.end - t) / 0.5));
+      if (k <= 0) continue;
+      const live = t >= sw.at, a0 = sw.a0 + Math.max(0, t - sw.at) * sw.spin, dir = Math.sign(sw.spin) || 1;
+      for (let n = 0; n < sw.arms; n++) {
+        const a = a0 + n * TAU / sw.arms, c = Math.cos(a), s = Math.sin(a), hw = sw.w / 2;
+        const shape = { kind: 'rect', x: sw.x - c * 10, y: sw.y - s * 10, angle: a, len: L, w: sw.w };
+        ctx.save();
+        SHAPES.trace(ctx, shape);
+        ctx.fillStyle = rgba('#cfe6ff', (live ? 0.13 : 0.06) * k); ctx.fill();
+        ctx.clip();
+        // streaks of wind blowing outward along the wall
+        for (let i = 0; i < 22; i++) {
+          const q = (t * (live ? 1.3 : 0.6) + hash(i, n + 3)) % 1, along = 80 + q * (L - 80), off = (hash(i, n + 9) - 0.5) * sw.w * 0.9;
+          const x = sw.x + c * along - s * off, y = sw.y + s * along + c * off;
+          ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + c * 46, y + s * 46);
+          ctx.strokeStyle = rgba('#f0f8ff', (live ? 0.45 : 0.2) * k * Math.sin(q * Math.PI)); ctx.lineWidth = 2; ctx.stroke();
+        }
+        ctx.restore();
+        // the leading edge, where it hits
+        const ex = -s * hw * dir, ey = c * hw * dir;
+        ctx.beginPath(); ctx.moveTo(sw.x + ex, sw.y + ey); ctx.lineTo(sw.x + ex + c * L, sw.y + ey + s * L);
+        ctx.strokeStyle = rgba('#e8f4ff', (live ? 0.7 : 0.3) * k); ctx.lineWidth = live ? 3 : 1.5; ctx.stroke();
+        if (!env.hard) { ctx.save(); ctx.setLineDash([12, 10]); ctx.lineDashOffset = -t * 30; SHAPES.trace(ctx, shape); ctx.strokeStyle = rgba('#cfe6ff', 0.35 * k); ctx.lineWidth = 1.5; ctx.stroke(); ctx.restore(); }
+        // grit tumbling in it
+        if (live) for (let i = 0; i < 6; i++) {
+          const q = (t * 0.9 + hash(i, n + 20)) % 1, along = 120 + q * (AR() - 140), off = Math.sin(t * 5 + i) * hw * 0.6;
+          circle(ctx, sw.x + c * along - s * off, sw.y + s * along + c * off, 2.5, rgba('#8a96a8', 0.8 * k));
+        }
+      }
+    }
+    ctx.restore();
+  }
+
+  return { get, ground, air, fade, drawRollers, drawReels, drawSweeps, rodPost: (ctx, x, y, t, a) => rodPole(ctx, x, y, t, a, 0.15) };
 })();

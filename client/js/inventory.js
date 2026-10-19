@@ -118,6 +118,18 @@ const Inventory = (() => {
         shape(() => { c.moveTo(-12, 6); c.lineTo(-12, -22); c.lineTo(10, -22); c.lineTo(10, 6); }, metal);
         shape(() => c.arc(-5, -15, 3, 0, Math.PI * 2), '#1a1612', 1.5);
         break;
+      case 'maul':   // Thunderstone Maul: a slab of slate on a haft, a crack of lightning in it
+        c.rotate(-Math.PI / 4);
+        shape(() => c.rect(-2.5, -14, 5, 40), wood, 2);
+        shape(() => c.rect(-14, -26, 28, 16), '#6a7480');
+        stroke(() => { c.moveTo(-8, -24); c.lineTo(-2, -18); c.lineTo(-6, -16); c.lineTo(2, -11); }, '#7fe8ff', 1.5);
+        break;
+      case 'scepter':   // Lightning Rod Scepter: an iron rod with a crown of spikes
+        c.rotate(-Math.PI / 4);
+        stroke(() => { c.moveTo(0, 26); c.lineTo(0, -14); }, '#8a96a4', 4);
+        c.fillStyle = rgba('#7fe8ff', 0.4); c.beginPath(); c.arc(0, -20, 11, 0, Math.PI * 2); c.fill();
+        for (const x of [-5, 0, 5]) shape(() => { c.moveTo(x - 2, -14); c.lineTo(x, x ? -24 : -28); c.lineTo(x + 2, -14); }, '#c8d2dc', 1.5);
+        break;
       case 'ladle':
         c.rotate(-Math.PI / 5);
         stroke(() => { c.moveTo(0, 26); c.lineTo(0, -10); }, '#c9cfd8', 4);
@@ -179,12 +191,13 @@ const Inventory = (() => {
           c.fillStyle = rgba('#5ff0ff', 0.5); c.beginPath(); c.arc(0, 0, 4, 0, Math.PI * 2); c.fill();
         }
         break;
-      case 'class': case 'coat': case 'apron': case 'chitin': {
-        const col = { coat: '#7a5a3a', apron: '#e8e2d4', chitin: '#3d5a3a' }[it.atype] || accent || '#888';
+      case 'class': case 'coat': case 'apron': case 'chitin': case 'scale': {
+        const col = { coat: '#7a5a3a', apron: '#e8e2d4', chitin: '#3d5a3a', scale: '#5a6676' }[it.atype] || accent || '#888';
         shape(() => { c.moveTo(-12, -20); c.lineTo(-4, -16); c.lineTo(4, -16); c.lineTo(12, -20); c.lineTo(22, -12); c.lineTo(16, -2); c.lineTo(12, -6); c.lineTo(12, 22); c.lineTo(-12, 22); c.lineTo(-12, -6); c.lineTo(-16, -2); c.lineTo(-22, -12); c.closePath(); }, col);
         c.strokeStyle = rgba('#000000', 0.35); c.lineWidth = 1.5; c.beginPath(); c.moveTo(0, -16); c.lineTo(0, 22); c.stroke();
         if (it.atype === 'class') { c.strokeStyle = gold; c.lineWidth = 2; c.beginPath(); c.moveTo(-12, 8); c.lineTo(12, 8); c.stroke(); shape(() => c.arc(0, -4, 4, 0, Math.PI * 2), gold, 1.5); }
         if (it.atype === 'apron') { c.fillStyle = '#c0353d'; c.fillRect(-12, 6, 24, 3); }
+        if (it.atype === 'scale') for (const y of [-8, -1, 6, 13]) for (const x of [-7, 0, 7]) { c.strokeStyle = '#2a323e'; c.lineWidth = 1.2; c.beginPath(); c.arc(x, y, 3.5, 0, Math.PI); c.stroke(); }
         if (it.atype === 'chitin') for (const y of [-6, 2, 10]) { c.strokeStyle = '#1d2a1c'; c.lineWidth = 1.5; c.beginPath(); c.moveTo(-11, y); c.quadraticCurveTo(0, y + 4, 11, y); c.stroke(); }
         break;
       }

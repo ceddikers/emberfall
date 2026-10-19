@@ -8,13 +8,17 @@ const ArenaView = {
   // Drawn once per fight into a canvas that covers the room plus a margin of scenery around it. The room's shape
   // comes from ARENA (shapes.js): Grubnak cooks in a long rectangular kitchen, Skitterra waits in an octagon of web.
   buildFloor(bossId, scale) {
-    const M = 120, bx = Math.ceil((ARENA.kind === 'poly' ? ARENA.R : ARENA.hw) + M), by = Math.ceil((ARENA.kind === 'poly' ? ARENA.R : ARENA.hh) + M);
+    // a round room is drawn at its full size (Volkar's closes in later; the dead ground is drawn over it)
+    const ex = ARENA.kind === 'poly' ? ARENA.R : ARENA.kind === 'circle' ? ARENA.full : ARENA.hw;
+    const ey = ARENA.kind === 'poly' ? ARENA.R : ARENA.kind === 'circle' ? ARENA.full : ARENA.hh;
+    const M = bossId === 'volkar' ? 260 : 120, bx = Math.ceil(ex + M), by = Math.ceil(ey + M);
     const cv = document.createElement('canvas');
     cv.width = Math.ceil(bx * 2 * scale); cv.height = Math.ceil(by * 2 * scale);
     const c = cv.getContext('2d');
     c.scale(scale, scale);
     c.translate(bx, by);
     if (bossId === 'skitterra') this.buildWebCave(c, bx, by);
+    else if (bossId === 'volkar') this.buildPeak(c, bx, by);
     else this.buildKitchen(c, bx, by);
     this.floor = cv; this.floorFor = bossId + '@' + scale; this.floorBox = { bx, by };
   },
@@ -131,6 +135,121 @@ const ArenaView = {
       spiders: Array.from({ length: 4 }, (_, i) => ({ spoke: spokes[(i * 5 + 2) % spokes.length], ph: r() * TAU, sp: 0.05 + r() * 0.05 })),
       spores: Array.from({ length: 30 }, () => ({ x: (r() * 2 - 1) * inner, y: (r() * 2 - 1) * inner, ph: r() * 9, sp: 8 + r() * 10 })),
       fog: Array.from({ length: 10 }, () => ({ a: r() * TAU, sp: (r() < 0.5 ? -1 : 1) * (0.015 + r() * 0.02), s: 70 + r() * 60 })),
+    };
+  },
+
+  // Volkar: the summit of a mountain above the storm. A round shelf of slate and granite, scarred by lightning, with
+  // wind-flattened grass at the rim; beyond the cliff edge, clouds and the tips of other peaks far below
+  buildPeak(c, bx, by) {
+    const r = rng(53), R = ARENA.full;
+    // the sky and the cloud sea below the summit
+    const sky = c.createRadialGradient(0, 0, R * 0.8, 0, 0, Math.hypot(bx, by));
+    sky.addColorStop(0, '#1c2636'); sky.addColorStop(0.5, '#121a26'); sky.addColorStop(1, '#080b11');
+    c.fillStyle = sky; c.fillRect(-bx, -by, bx * 2, by * 2);
+    for (let i = 0; i < 70; i++) {
+      const a = r() * TAU, d = R + 60 + r() * Math.max(bx, by), x = Math.cos(a) * d, y = Math.sin(a) * d * 0.9;
+      glow(c, x, y, 70 + r() * 120, r() < 0.5 ? '#3a4658' : '#2a3444', 0.35 + r() * 0.3);
+    }
+    // other peaks poking up through the clouds
+    for (let i = 0; i < 9; i++) {
+      const a = i * TAU / 9 + r() * 0.4, d = R + 150 + r() * 120, x = Math.cos(a) * d, y = Math.sin(a) * d, s = 40 + r() * 50;
+      if (Math.abs(x) > bx - 20 || Math.abs(y) > by - 20) continue;
+      poly(c, [x - s, y + s * 0.4, x - s * 0.15, y - s * 1.1, x + s * 0.2, y - s * 0.7, x + s, y + s * 0.4], '#222a36', 'rgba(10,12,18,0.6)', 2);
+      poly(c, [x - s * 0.15, y - s * 1.1, x + s * 0.05, y - s * 0.55, x - s * 0.4, y - s * 0.3], 'rgba(200,215,235,0.16)');
+      glow(c, x, y + s * 0.5, s * 1.4, '#2e3848', 0.6);   // cloud wrapping its foot
+    }
+    // the cliff below the rim, seen from above: a dark drop, deeper on the south side
+    c.save(); c.translate(0, 26);
+    c.beginPath(); c.arc(0, 0, R + 26, 0, TAU); c.fillStyle = '#141820'; c.fill();
+    c.restore();
+    // the summit shelf
+    c.save();
+    c.beginPath(); c.arc(0, 0, R, 0, TAU); c.clip();
+    const g = c.createRadialGradient(-R * 0.2, -R * 0.25, 30, 0, 0, R);
+    g.addColorStop(0, '#59616e'); g.addColorStop(0.6, '#454c58'); g.addColorStop(1, '#30353f');
+    c.fillStyle = g; c.fillRect(-R, -R, R * 2, R * 2);
+    // broad plates of slate, split along their grain
+    for (let i = 0; i < 110; i++) {
+      const a = r() * TAU, d = Math.sqrt(r()) * R, cx = Math.cos(a) * d, cy = Math.sin(a) * d, s = 26 + r() * 50, rot = r() * TAU, pts = [];
+      for (let k = 0; k < 5; k++) { const q = rot + k * TAU / 5 + (r() - 0.5) * 0.5, rr = s * (0.6 + r() * 0.5); pts.push(cx + Math.cos(q) * rr, cy + Math.sin(q) * rr * 0.85); }
+      const v = 70 + r() * 30;
+      poly(c, pts, `rgba(${v},${v + 6},${v + 16},${0.22 + r() * 0.22})`, 'rgba(18,20,26,0.4)', 1.5);
+      if (r() < 0.5) line(c, pts[0], pts[1], pts[4], pts[5], 'rgba(220,228,240,0.07)', 1.5);   // a lit edge
+    }
+    // grit, and cracks running through the rock
+    for (let i = 0; i < 2200; i++) {
+      const x = (r() * 2 - 1) * R, y = (r() * 2 - 1) * R;
+      circle(c, x, y, 0.5 + r() * 1.2, r() < 0.6 ? `rgba(14,16,22,${0.2 + r() * 0.3})` : `rgba(200,210,226,${0.05 + r() * 0.08})`);
+    }
+    for (let i = 0; i < 24; i++) {
+      let x = (r() * 2 - 1) * R * 0.85, y = (r() * 2 - 1) * R * 0.85, a = r() * TAU;
+      c.beginPath(); c.moveTo(x, y);
+      for (let k = 0; k < 6 + r() * 6; k++) {
+        a += (r() - 0.5) * 1.0; x += Math.cos(a) * (12 + r() * 18); y += Math.sin(a) * (12 + r() * 18); c.lineTo(x, y);
+        if (r() < 0.2) { c.moveTo(x, y); c.lineTo(x + Math.cos(a + 1.3) * 16, y + Math.sin(a + 1.3) * 16); c.moveTo(x, y); }
+      }
+      c.strokeStyle = 'rgba(10,12,16,0.6)'; c.lineWidth = 1.8; c.stroke();
+      c.strokeStyle = 'rgba(200,210,230,0.07)'; c.lineWidth = 1; c.stroke();
+    }
+    // old lightning scars: a scorched star with a pale fern of fused rock
+    for (let i = 0; i < 7; i++) {
+      const a = r() * TAU, d = 120 + r() * (R - 200), x = Math.cos(a) * d, y = Math.sin(a) * d;
+      glow(c, x, y, 46 + r() * 30, '#0c0e14', 0.55);
+      for (let k = 0; k < 7; k++) {
+        let px = x, py = y, q = k * TAU / 7 + r() * 0.5;
+        c.beginPath(); c.moveTo(px, py);
+        for (let s = 0; s < 4; s++) { q += (r() - 0.5) * 0.9; px += Math.cos(q) * (8 + r() * 10); py += Math.sin(q) * (8 + r() * 10); c.lineTo(px, py); }
+        c.strokeStyle = 'rgba(170,210,240,0.22)'; c.lineWidth = 1.4; c.stroke();
+      }
+    }
+    // the summit stone: a weathered ring carved around the middle, where he stands
+    c.beginPath(); c.arc(0, 0, 150, 0, TAU); c.strokeStyle = 'rgba(14,16,22,0.55)'; c.lineWidth = 7; c.stroke();
+    c.beginPath(); c.arc(0, 0, 150, 0, TAU); c.strokeStyle = 'rgba(190,205,225,0.12)'; c.lineWidth = 2; c.stroke();
+    for (let k = 0; k < 16; k++) {
+      const a = k * TAU / 16, x0 = Math.cos(a) * 138, y0 = Math.sin(a) * 138;
+      line(c, x0, y0, Math.cos(a) * 162, Math.sin(a) * 162, 'rgba(14,16,22,0.5)', 4);
+      if (k % 2 === 0) poly(c, [x0 + Math.cos(a) * 28, y0 + Math.sin(a) * 28, Math.cos(a + 0.05) * 176, Math.sin(a + 0.05) * 176, Math.cos(a - 0.05) * 176, Math.sin(a - 0.05) * 176], 'rgba(190,205,225,0.08)');
+    }
+    // rainwater pooled in hollows
+    const pools = [];
+    for (let i = 0; i < 6; i++) {
+      const a = r() * TAU, d = 200 + r() * (R - 300), x = Math.cos(a) * d, y = Math.sin(a) * d, w = 26 + r() * 30;
+      pools.push({ x, y, w, h: w * 0.6, ph: r() * 9 });
+      ellipse(c, x, y, w, w * 0.6, r() * 0.6, 'rgba(16,24,36,0.7)', 'rgba(120,140,170,0.35)', 1.5);
+      ellipse(c, x - w * 0.25, y - w * 0.15, w * 0.4, w * 0.1, -0.2, 'rgba(170,190,220,0.16)');
+    }
+    // loose stones, and grass flattened by the wind near the rim
+    for (let i = 0; i < 40; i++) {
+      const a = r() * TAU, d = 170 + r() * (R - 190), x = Math.cos(a) * d, y = Math.sin(a) * d, s = 4 + r() * 8;
+      ellipse(c, x + 2, y + 3, s, s * 0.6, 0, 'rgba(0,0,0,0.3)');
+      poly(c, [x - s, y, x - s * 0.3, y - s * 0.8, x + s * 0.8, y - s * 0.4, x + s, y + s * 0.3, x, y + s * 0.6], '#5a626e', OUT, 1.2);
+    }
+    for (let i = 0; i < 90; i++) {
+      const a = r() * TAU, d = R - 20 - Math.pow(r(), 1.6) * 140;
+      glow(c, Math.cos(a) * d, Math.sin(a) * d, 16 + r() * 22, r() < 0.5 ? '#4a5a44' : '#3e4e3e', 0.28 + r() * 0.2);
+    }
+    // the cold light from above: brighter in the middle, the rim falling into shadow
+    const v = c.createRadialGradient(0, 0, R * 0.45, 0, 0, R);
+    v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(6,8,14,0.5)');
+    c.fillStyle = v; c.fillRect(-R, -R, R * 2, R * 2);
+    c.restore();
+    // the rim: a broken lip of rock at the cliff edge
+    c.lineJoin = 'round';
+    c.beginPath(); c.arc(0, 0, R + 8, 0, TAU); c.lineWidth = 18; c.strokeStyle = '#3a414c'; c.stroke();
+    c.beginPath(); c.arc(0, 0, R, 0, TAU); c.lineWidth = 3; c.strokeStyle = '#151820'; c.stroke();
+    for (let i = 0; i < 120; i++) {
+      const a = i * TAU / 120 + r() * 0.03, d = R + 4 + r() * 12, s = 5 + r() * 8;
+      const x = Math.cos(a) * d, y = Math.sin(a) * d;
+      poly(c, [x - s, y + s * 0.3, x - s * 0.2, y - s * 0.7, x + s * 0.7, y - s * 0.3, x + s * 0.6, y + s * 0.5], r() < 0.5 ? '#46505c' : '#3c4450', 'rgba(14,16,22,0.7)', 1.2);
+    }
+    // where the live details go (drawAmbient)
+    const tufts = [];
+    for (let i = 0; i < 70; i++) { const a = r() * TAU, d = R - 16 - Math.pow(r(), 1.5) * 130; tufts.push({ x: Math.cos(a) * d, y: Math.sin(a) * d, ph: r() * TAU, s: 6 + r() * 6 }); }
+    this.amb = {
+      kind: 'peak', pools, tufts, bx, by,
+      clouds: Array.from({ length: 14 }, () => ({ a: r() * TAU, d: R + 70 + r() * 180, sp: (0.008 + r() * 0.012), s: 90 + r() * 90 })),
+      leaves: Array.from({ length: 16 }, () => ({ ph: r() * 9, y: (r() * 2 - 1) * R * 0.9, sp: 120 + r() * 120, w: r() * TAU })),
+      bolts: Array.from({ length: 3 }, (_, i) => ({ every: 5 + r() * 5, ph: r() * 9 + i * 3 })),
     };
   },
 
@@ -291,6 +410,139 @@ const ArenaView = {
     if (!a) return;
     if (a.kind === 'kitchen') this.kitchenLife(ctx, a, t);
     else if (a.kind === 'cave') this.caveLife(ctx, a, t);
+    else if (a.kind === 'peak') this.peakLife(ctx, a, t);
+  },
+
+  // clouds drift past below the summit, rain slants across it, grass shivers in the wind, leaves blow over,
+  // and now and then lightning splits the clouds far below
+  peakLife(ctx, a, t) {
+    const R = ARENA.full;
+    for (const cl of a.clouds) {
+      const an = cl.a + t * cl.sp, x = Math.cos(an) * cl.d, y = Math.sin(an) * cl.d * 0.9;
+      glow(ctx, x, y, cl.s, '#4a5668', 0.22);
+    }
+    // distant lightning in the cloud sea, lighting the whole summit for a moment
+    for (const b of a.bolts) {
+      const q = ((t + b.ph) % b.every) / b.every, n = Math.floor((t + b.ph) / b.every);
+      if (q > 0.04) continue;
+      const k = 1 - q / 0.04, an = (n * 2.39 + b.ph) % TAU, d = R + 130 + (n * 37 % 120);
+      const x = Math.cos(an) * d, y = Math.sin(an) * d;
+      ctx.save(); ctx.globalAlpha = k;
+      jagged(ctx, x + 30, y - 220, x, y, n * 17 + 3, '#a8d8ff', 2.4);
+      ctx.restore();
+      glow(ctx, x, y, 160, '#9ccfff', 0.4 * k);
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.07 * k;
+      ctx.fillStyle = '#b8dcff'; ctx.fillRect(-a.bx, -a.by, a.bx * 2, a.by * 2);
+      ctx.restore();
+    }
+    // grass at the rim bends with the gusts
+    const gust = 0.5 + 0.5 * Math.sin(t * 0.7) * Math.sin(t * 1.9);
+    for (const g of a.tufts) {
+      const bend = 0.4 + 0.5 * gust + Math.sin(t * 5 + g.ph) * 0.15;
+      for (let k = -1; k <= 1; k++) {
+        const bx = g.x + k * 3, tipX = bx + bend * g.s * 1.1, tipY = g.y - g.s * (1.1 - bend * 0.4);
+        ctx.beginPath(); ctx.moveTo(bx, g.y); ctx.quadraticCurveTo(bx + bend * g.s * 0.3, g.y - g.s * 0.7, tipX, tipY);
+        ctx.strokeStyle = k ? 'rgba(110,130,100,0.7)' : 'rgba(140,160,120,0.8)'; ctx.lineWidth = 1.4; ctx.stroke();
+      }
+    }
+    // rain ringing in the pools, and splashing on the stone
+    for (const p of a.pools) for (let k = 0; k < 2; k++) {
+      const q = ((t * 0.9 + p.ph + k * 0.5) % 1);
+      ellipse(ctx, p.x + Math.sin(p.ph + k * 3 + Math.floor(t * 0.9 + p.ph + k * 0.5)) * p.w * 0.4, p.y, p.w * 0.5 * q, p.h * 0.5 * q, 0, null, `rgba(170,190,220,${0.4 * (1 - q)})`, 1.2);
+    }
+    for (let i = 0; i < 18; i++) {
+      const cyc = Math.floor(t * 2 + i * 0.37), q = (t * 2 + i * 0.37) % 1;
+      const an = (cyc * 7.13 + i * 2.1) % TAU, d = ((cyc * 131 + i * 53) % 1000) / 1000 * R * 0.95;
+      if (q > 0.3) continue;
+      ellipse(ctx, Math.cos(an) * d, Math.sin(an) * d, 2 + q * 18, 1 + q * 9, 0, null, `rgba(190,205,230,${0.4 * (1 - q / 0.3)})`, 1);
+    }
+    // leaves and grit blown across
+    for (const l of a.leaves) {
+      const span = R * 2 + 200, x = ((t * l.sp + l.ph * 100) % span) - span / 2, y = l.y + Math.sin(t * 2 + l.ph) * 14;
+      if (ARENA.sd(x, y) > -6) continue;
+      ctx.save(); ctx.translate(x, y); ctx.rotate(t * 6 + l.w);
+      ellipse(ctx, 0, 0, 4, 2, 0, 'rgba(120,130,90,0.75)');
+      ctx.restore();
+    }
+    // slanting rain over everything
+    ctx.strokeStyle = 'rgba(190,210,240,0.16)'; ctx.lineWidth = 1;
+    ctx.beginPath();
+    const span = (R + 160) * 2;
+    for (let i = 0; i < 140; i++) {
+      const x = ((i * 0.6180339 * span + t * 160) % span) - span / 2, y = ((i * 0.4142136 * span + t * 620) % span) - span / 2;
+      ctx.moveTo(x, y); ctx.lineTo(x + 6, y + 22);   // slanted the way it falls
+    }
+    ctx.stroke();
+  },
+
+  // Volkar's phase 2: outside the wall the summit is dead, electrified ground. Before each step, sparks crawl along
+  // the line the wall is about to jump to and the doomed band darkens.
+  drawEdge(ctx, t, warn) {
+    if (ARENA.kind !== 'circle' || (ARENA.r >= ARENA.full - 1 && !warn)) return;
+    const r = ARENA.r, outer = ARENA.full + 40;
+    const band = (r0, r1) => { ctx.beginPath(); ctx.arc(0, 0, r1, 0, TAU); ctx.arc(0, 0, r0, 0, TAU, true); };
+    if (r < ARENA.full - 1) {
+      ctx.save();
+      band(r, outer); ctx.fillStyle = 'rgba(8,16,34,0.62)'; ctx.fill(); ctx.clip();
+      // arcs flickering over the dead ground
+      for (let i = 0; i < 16; i++) {
+        const seed = Math.floor(t * 7) * 31 + i * 13, h = n => { const x = Math.sin(seed * 12.9898 + n * 78.233) * 43758.5453; return x - Math.floor(x); };
+        if (h(1) < 0.45) continue;
+        const a = h(2) * TAU, d0 = r + 10 + h(3) * (outer - r - 20), a2 = a + (h(4) - 0.5) * 0.25, d1 = d0 + (h(5) - 0.5) * 60;
+        ctx.globalAlpha = 0.5 + h(6) * 0.5;
+        jagged(ctx, Math.cos(a) * d0, Math.sin(a) * d0, Math.cos(a2) * d1, Math.sin(a2) * d1, seed, '#6fd8ff', 1.2);
+      }
+      ctx.restore();
+      // the wall itself: a ring of live lightning
+      ctx.save();
+      ctx.beginPath(); ctx.arc(0, 0, r, 0, TAU);
+      ctx.strokeStyle = rgba('#5ac8ff', 0.25); ctx.lineWidth = 14; ctx.stroke();
+      ctx.strokeStyle = rgba('#bff0ff', 0.75 + Math.sin(t * 13) * 0.15); ctx.lineWidth = 2.5; ctx.stroke();
+      const n = 22;
+      for (let i = 0; i < n; i++) {
+        if ((Math.floor(t * 9) + i * 7) % 3 === 0) continue;
+        const a0 = i * TAU / n + Math.floor(t * 9) * 0.07, a1 = a0 + TAU / n;
+        jagged(ctx, Math.cos(a0) * r, Math.sin(a0) * r, Math.cos(a1) * r, Math.sin(a1) * r, Math.floor(t * 12) * 7 + i, '#7fe8ff', 1.4);
+      }
+      ctx.restore();
+    }
+    if (warn) {
+      const p = clamp((t - warn.start) / Math.max(0.1, warn.end - warn.start), 0, 1);
+      const pulseA = 0.5 + 0.5 * Math.sin(t * (6 + p * 16));
+      ctx.save();
+      band(warn.r, r); ctx.fillStyle = rgba('#3a8cff', (0.06 + 0.2 * p) * (0.7 + 0.3 * pulseA)); ctx.fill();
+      ctx.restore();
+      // sparks crawling along the new line, thicker as the step nears
+      const n = Math.round(24 + p * 40);
+      for (let i = 0; i < n; i++) {
+        const a = i * TAU / n + t * (i % 2 ? 0.5 : -0.4), len = 0.05 + 0.04 * p;
+        ctx.save(); ctx.globalAlpha = 0.45 + 0.5 * p;
+        ctx.beginPath(); ctx.arc(0, 0, warn.r, a, a + len);
+        ctx.strokeStyle = '#bff0ff'; ctx.lineWidth = 2 + p * 2; ctx.stroke();
+        ctx.restore();
+        if ((i + Math.floor(t * 10)) % 5 === 0) glow(ctx, Math.cos(a) * warn.r, Math.sin(a) * warn.r, 10 + p * 10, '#7fe8ff', 0.6 * p + 0.2);
+      }
+    }
+  },
+
+  // Polarity: a ring at everyone's feet in their charge's colour, + warm gold and − cold blue, with small marks
+  // turning around it (a cross for +, a bar for −)
+  polarityAuras(ctx, units, pol, t) {
+    for (const u of units) {
+      const s = pol.get(u.id);
+      if (!s) continue;
+      // sits outside the hero's own ring, so the two never read as one
+      const col = s > 0 ? '#ffb31f' : '#38c4ff', spin = t * (s > 0 ? 1.2 : -1.2), rx = 42, ry = 31;
+      glow(ctx, u.x, u.y + 4, 52, col, 0.22);
+      ellipse(ctx, u.x, u.y + 4, rx, ry, 0, rgba(col, 0.12), rgba(col, 0.9), 3);
+      ellipse(ctx, u.x, u.y + 4, rx + 6, ry + 5, 0, null, rgba(col, 0.3 + 0.2 * Math.sin(t * 4 + u.id)), 1.5);
+      for (let k = 0; k < 4; k++) {
+        const a = spin + k * TAU / 4, x = u.x + Math.cos(a) * rx, y = u.y + 4 + Math.sin(a) * ry;
+        circle(ctx, x, y, 7, rgba('#10141c', 0.85), rgba(col, 0.95), 1.5);
+        line(ctx, x - 4, y, x + 4, y, '#ffffff', 2);
+        if (s > 0) line(ctx, x, y - 4, x, y + 4, '#ffffff', 2);
+      }
+    }
   },
 
   // burners flicker, pots steam, the lamps' light breathes on the tiles, flour dust drifts, and now and then a rat

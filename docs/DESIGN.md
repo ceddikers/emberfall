@@ -234,7 +234,7 @@ Shared rules for every fight:
 - **No logic puzzles.** Every check is action/reaction, positioning or teamwork.
 - **Scaling.** Fights scale with party size (boss HP 42% / 62% / 82% / 100% for 1–4 players). Empty slots can be filled with bots that use the real class kits.
 - **Hard mode** casts 15% faster and hits 25% harder, and adds layers: stored or doubled mechanics, telegraphs only on the boss model, and debuffs that punish soaking twice.
-- **Every boss has its own room shape** (`ARENA_DEFS` in `client/js/arena/shapes.js`). The shape fits the theme and the mechanics: Grubnak's kitchen is a long rectangle (1240 × 840, rounded corners), Skitterra's web is an octagon hung between eight rock pillars, and any boss without its own shape gets a circle. The walls are walls: you're never knocked off an edge. Wall clamps, bot planning, the camera, mechanics that start at the wall (Rolling Meatballs, Venom Mist) and telegraph clipping all read the shape, so a new boss only needs a new entry.
+- **Every boss has its own room shape** (`ARENA_DEFS` in `client/js/arena/shapes.js`). The shape fits the theme and the mechanics: Grubnak's kitchen is a long rectangle (1240 × 840, rounded corners), Skitterra's web is an octagon hung between eight rock pillars, Volkar's summit is a circle whose electrified edge closes in during phase 2, and any boss without its own shape gets a circle. The walls are walls: you're never knocked off an edge. Wall clamps, bot planning, the camera, mechanics that start at the wall (Rolling Meatballs, Venom Mist) and telegraph clipping all read the shape, so a new boss only needs a new entry.
 - **The room is alive.** Floors are textured (bevelled, cracked and stained tiles; pitted, cracked and mossy stone with standing water). An ambient layer, drawn under everything else, keeps the room moving:
   - Kitchen: burners flicker, pots steam, lamp light breathes on the tiles, flour dust drifts, and now and then a rat runs along the bottom wall.
   - Web cave: dew twinkles on the threads, drips fall into the pools and ripple, small spiders creep along the spokes, spores drift up, and cold fog slides along the walls.
@@ -359,21 +359,42 @@ Stats:
 
 Explicitly **not** included: any "player gets cocooned and must be broken out" mechanic. That idea is parked elsewhere.
 
-### Boss III: Volkar, the Storm Titan (designed)
+### Boss III: Volkar, the Storm Titan (built, playable on Normal and Hard)
 
-Theme: polarity, knockbacks, and a shrinking arena. The hardest healing fight.
+Theme: polarity, knockbacks, rods that become cover, and a room that closes in. The hardest healing fight. Design choices made together on 2026-10-19: soaked rods stay as cover, the edge closes in three warned steps, healing pressure comes from a ramping Pulse, and he is a giant who never leaves the middle.
 
-- **Polarity:** every player gets + or − (a colored aura).
-  - When it resolves, same charges standing together arc painfully; opposite charges together neutralize.
-  - In practice: pair up with an opposite charge. A movement and teamwork check, not a puzzle; the colors are always visible.
-  - Hard: the charges flip mid-fight (the aura visibly inverts), so partners swap.
-- **Thunder Crash / Static Field:** a stack and spreads together, using polarity pairs as the groups.
-- **Lightning Rods:** towers that must be soaked, or they strike everyone. Soaking gives *Conductive*, so the next rod hits harder. Players rotate.
-- **Gale Slam:** a knockback from the boss. Rods and pillars block it if you stand behind them; the arena edge is a wall, never instant death.
-- **Storm Walls:** rotating walls of wind sweep around the boss (a slower, wider cousin of Whisk).
-- **Pulse:** constant light raidwide damage that ramps every minute.
-- **Phase 2 (50%):** the edge electrifies and closes in, ring by ring, until the room is about 60% of its size. Every mechanic gets tighter.
-- Hard: Gale Slam and Lightning Rods happen together. Use the rod you are soaking as your knockback shield.
+The arena is the summit of a mountain above the storm: a round shelf of slate (radius 540) scarred by old lightning, with a carved ring where he stands, rain pooling in hollows and wind-flattened grass at the rim. Beyond the cliff edge are clouds and other peaks far below. Clouds drift past, rain slants across, grass bends in the gusts, leaves blow over, and lightning splits the clouds now and then, lighting the summit.
+
+Stats:
+- HP: 1.65M (Normal) / 2.2M (Hard).
+- Auto-attacks every 2.8 s; he never walks (`anchor`), so the tank comes to him.
+- Enrage: "Skybreak" at 8:00 (Normal) / 7:10 (Hard).
+
+| Mechanic | What happens | Hard layer |
+|---|---|---|
+| **Polarity** | Everyone carries + (gold ring with + marks) or − (blue ring with − marks), half each, all fight. | The charges flip at 50% |
+| **Polarity Surge** | Two of the same charge within 150 arc (big, avoidable); someone with only opposite charges near takes a little; anyone alone takes the full surge. Arcs crackle between same charges before it lands; a calm bond joins opposite ones. | none |
+| **Thunder Crash** | A storm cloud and a stack over every + player: each pair stacks together, and pairs keep apart. | Comes with Static Field 3 s later |
+| **Static Field** | Everyone spreads. | none |
+| **Lightning Rods** | Iron rods are driven into the rock (2, or 3 on Hard), each wanting one person when the bolt lands. Catching one gives *Conductive* for 32 s; catching another while Conductive hurts a lot. An uncaught rod strikes everyone. The rod then stays planted for 30 s. | 3 rods |
+| **Gale Slam** | He draws breath and throws everyone 300 away. Hitting the wall hurts. The still air behind any standing rod shelters you; on Normal it shows as a pale strip. | Lands together with the rods: shelter behind the rod you're catching. No floor tell |
+| **Storm Walls** | Walls of wind (150 wide) turn slowly around him for 10 s. Walk with them. | 3 walls, turning faster, 12 s |
+| **Titan Fist** | Tankbuster cone that cleaves. Lightning gathers along it. | Leaves the tank Conductive |
+| **Thunderclap** | Raidwide; the summit darkens under rolling clouds first. | none |
+| **Pulse** | The storm hits everyone lightly every 4 s, 20% harder each minute. | Stronger |
+| **Eye of the Storm** (50%) | The edge electrifies and closes in three warned steps 40 s apart: 540 → 470 → 400 → 330 (about 60%). Sparks crawl along the new line for 5 s; anyone outside when it jumps takes a hit and is pushed in. Beyond the wall the ground is dead and crackling. Late in the fight nobody survives a Gale Slam without a rod. | none |
+
+**Timeline:** phase 1 (about 2 minutes, then loops): Thunderclap, Titan Fist, Surge, Rods, Gale Slam (sheltered by the posts), Thunder Crash, Storm Walls, Static Field, Titan Fist, Rods then Gale Slam, Surge, Thunderclap. Phase 2 remixes it with Crash + Field, more Rods + Gale Slam, while the edge closes.
+
+**New engine pieces:** `ARENA.resize()` (a round room's wall moves; `ARENA.full` keeps the original size), `def.spawn` / `def.anchor`, `FightSim.sweep()` (turning walls: one `sweep` message, every client turns them on its own clock), a fall-check grace after the wall moves, and the `pol`, `post`, `edgewarn`, `edge` and `pulse` messages. Bots pair with their opposite charge (the higher id walks to the other, so bots come to you), take rods in turn (bots before humans, Conductive last), shelter behind rods when a Gale Slam would throw them into the wall, read where the storm walls will be along their path, and stay inside the next ring.
+
+**Bot test results:**
+- **Normal, Bastion / Cleric / Ranger / Pyromancer:** cleared 9 of 9, in 4:17-4:30, almost no mistakes.
+- Runeguard / Grovekeeper / Shadowblade / Ranger and Bastion / Grovekeeper / Pyromancer / Ranger: cleared 6 of 6.
+- Line-ups with a Chronomancer healer: 0 of 6. The bot heals about 60 per second where the fight needs about 100. A bot never takes the Chronomancer slot when it fills a party (Cleric, then Grovekeeper), and a person can plan Haste for the big hits, but watch this when someone heals Volkar as Chronomancer.
+- One idle human plus three bots still clears (at 7:20).
+- **Hard:** bots reach 17-68% and wipe; two runs lasted to the enrage. Deaths come from the Crash + Field burst and the Pulse late in phase 2.
+- Bot healers now use Recall on the living (it was filtered out as a raise). That also helped elsewhere: Chronomancer line-ups now clear Grubnak 2 of 3 (was 1 of 3) and Skitterra 3 of 3 (was 2 of 3).
 
 ### Boss IV: The Hollow King, Lord of the Barrow (designed)
 
@@ -479,13 +500,15 @@ Once players know their base class (around boss 3 or 4), each class can pick one
 - Stats: HP, Physical, Magical (each class reads one), Defense, Haste, Critical. No MP (every class already has its own resource) and no movement speed (mechanics are timed for one run speed).
 - Gear is modest on purpose: best-in-slot is roughly +15-20% output, and everything is capped.
 - Icons are drawn in code until painted ones arrive: briefs and the sheet layout are in `docs/art/item-icons.md`. Painted PNGs go in `client/items/<key>.png` and are listed in `client/items/manifest.json`; the game adds the rarity frame.
-- Class drops can carry an **enhancement** that changes one ability (27 in total, three per class, e.g. Holy Edge strikes twice, Glyph Burst refunds a Rune). Enhanced items are one rarity higher; the enhanced ability gets an orange marker on the bar and a line in its tooltip.
+- Class drops can carry an **enhancement** that changes one ability (36 in total, four per class, e.g. Holy Edge strikes twice, Glyph Burst refunds a Rune). Enhanced items are one rarity higher; the enhanced ability gets an orange marker on the bar and a line in its tooltip.
+- Tiers: Recruit, Grubnak, Skitterra, Volkar (Epic, item level 30). Volkar's class weapons put the storm into each class's big cooldown: Bulwark shields the party, Frenzy gives 30 Blood, Runic Overload gives 2 Runes, Barrage lights Keen Eye, Shadow Dance gives 2 combo points, Combustion refills Fire Blast, Prayer Circle cuts 15%, Wild Growth gives 25 Bloom, Accelerando heals the party. Volkar also drops a maul, a scepter, scale mail and three accessories for anyone.
 - **Party bonuses:** when 2, 3 or 4 people in the group each wear at least one item from the same boss, the whole party (bots too) gets that boss's bonus for the fight. Recruit gear has none, and someone wearing gear from two bosses counts toward both. It rewards playing together rather than solo grinding, and stays small like the rest of gear (`PARTY_BONUS` in `client/js/items.js`).
 
   | Bonus | 2 wearing | 3 wearing | 4 wearing |
   |---|---|---|---|
   | **Kitchen Crew** (Grubnak) | +3% max HP | +3% max HP, +2% damage | +5% max HP, +3% damage |
   | **Brood Bond** (Skitterra) | +2% crit | +2% crit, +2% haste | +3% crit, +3% haste |
+  | **Stormbound** (Volkar) | +2% haste | +3% max HP, +2% haste | +4% max HP, +3% haste |
 
   - Each player tells the host which bosses their equipped gear comes from (cleaned on the host). The host counts the humans when the raid starts and sends the result with the raid. Gear is locked inside a raid, so the bonus is fixed for the fight.
   - Damage, crit and haste go into everyone's party modifiers; max HP is applied by the host.

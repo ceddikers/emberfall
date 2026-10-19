@@ -61,7 +61,9 @@ class RaidHost {
       bossCast: b.cast ? { name: b.cast.name, left: b.cast.end - sim.t } : null,
       mechs: [...sim.mechs.values()], puddles: sim.puddles, players,
       adds: [...sim.adds.values()], tethers: [...sim.tethers.values()], zones: sim.zones,
-      rollers: [...sim.rollers.values()], reels: [...sim.reels.values()],
+      rollers: [...sim.rollers.values()], reels: [...sim.reels.values()], sweeps: [...sim.sweeps.values()],
+      // Volkar: everyone's charge, the rods' posts, and where the closing wall is about to jump
+      polarity: sim.polarity || null, posts: (sim.posts || []).filter(c => c.end > sim.t), edgeNext: sim.edgeNext || null,
       debuffs: id => { const s = sim.ps.get(id); const out = {}; if (s) for (const k in s.debuffs) if (s.debuffs[k] > sim.t) out[k] = true; return out; },
     };
   }
@@ -98,6 +100,7 @@ class RaidHost {
           bot.x += dx / d * step; bot.y += dy / d * step; bot.moving = true;
         } else bot.moving = false;
       }
+      ARENA.clamp(bot, 12);   // walls can move (Volkar's closing edge)
       const b = this.sim.boss;
       bot.a = Math.atan2(b.y - bot.y, b.x - bot.x);
       bot.actor.update();

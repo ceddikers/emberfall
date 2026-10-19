@@ -89,17 +89,24 @@ const SHAPES = {
 const ARENA_DEFS = {
   grubnak: { kind: 'rect', hw: 620, hh: 420, corner: 46 },
   skitterra: { kind: 'poly', n: 8, r: 560 },
+  volkar: { kind: 'circle', r: 540 },   // a storm-swept peak; in phase 2 its electrified edge closes in (resize)
 };
 const ARENA = {
   kind: 'circle', r: 520, hw: 520, hh: 520, corner: 0, n: 0,
   R: 520,       // farthest point of the room from the centre (for "big enough" sizes)
   inner: 520,   // nearest wall to the centre (for "always inside" sizes)
+  full: 520,    // a round room's radius before any closing in
   use(id) {
     const d = ARENA_DEFS[id] || { kind: 'circle', r: 520 };
     Object.assign(this, { kind: d.kind, r: d.r || 0, hw: d.hw || 0, hh: d.hh || 0, corner: d.corner || 0, n: d.n || 0 });
-    if (d.kind === 'circle') { this.hw = this.hh = this.R = this.inner = d.r; }
+    if (d.kind === 'circle') { this.hw = this.hh = this.R = this.inner = this.full = d.r; }
     else if (d.kind === 'rect') { this.R = Math.hypot(d.hw, d.hh); this.inner = Math.min(d.hw, d.hh); }
     else { this.inner = d.r * Math.cos(Math.PI / d.n); this.R = d.r; this.hw = this.hh = this.inner; }
+    return this;
+  },
+  // a round room whose wall moves mid-fight (Volkar's closing storm); use() puts it back to full size
+  resize(r) {
+    if (this.kind === 'circle') this.r = this.hw = this.hh = this.R = this.inner = r;
     return this;
   },
   // signed distance to the wall: negative inside, positive outside

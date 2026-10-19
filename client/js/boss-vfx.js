@@ -191,14 +191,68 @@ const BOSS_VFX = (() => {
       streak(s.x, s.y, s.angle, '#b8ff5a', { w: 9, dur: 0.35 });
       for (let i = 1; i <= 4; i++) { const d = i * 110; VFX.splash(s.x + Math.cos(s.angle) * d, s.y + Math.sin(s.angle) * d, { color: '#8ad82a', n: 4 }); }
     },
+    // Volkar
+    clap() {
+      roomTint('#bfe0ff', 0.32, 0.6);
+      for (const q of scatter({ kind: 'circle', x: 0, y: 0, r: AR() - 40 }, 6)) after(rand(0, 0.25), () => {
+        VFX.lightning(q.x + rand(-40, 40), q.y - 320, q.x, q.y, { color: '#bfe8ff', jag: 22, dur: 0.35 });
+        VFX.shock(q.x, q.y, { r: 60, color: '#bfe8ff', w: 4, dur: 0.35, flat: 1 });
+      });
+      shake(8);
+    },
+    surge(tg, ctx) {
+      const us = (ctx && ctx.units) || [], pol = ctx && ctx.pol;
+      if (!pol) return;
+      for (const u of us) {
+        const s = pol.get(u.id); if (!s) continue;
+        const col = s > 0 ? '#ffc24a' : '#4ad8ff';
+        VFX.shock(u.x, u.y, { r: 70, color: col, w: 4, dur: 0.4, flat: 1 });
+        VFX.sparks(u.x, u.y - 14, { color: col, n: 6, speed: 220 });
+      }
+      for (let i = 0; i < us.length; i++) for (let j = i + 1; j < us.length; j++) {
+        const a = us[i], b = us[j];
+        if (pol.get(a.id) !== pol.get(b.id) || Math.hypot(a.x - b.x, a.y - b.y) > tg.live.r) continue;
+        for (let n = 0; n < 3; n++) VFX.lightning(a.x, a.y - 16, b.x, b.y - 16, { color: '#ff7a6a', jag: 14, dur: 0.45 });
+        shake(6);
+      }
+    },
+    crash(tg) {
+      const s = tg.live;
+      VFX.lightning(s.x + rand(-20, 20), s.y - 360, s.x, s.y, { color: '#fff2b0', jag: 26, dur: 0.4 });
+      VFX.pillar(s.x, s.y, { r: s.r * 0.5, h: 260, color: '#fff0a0', dur: 0.6 });
+      VFX.shock(s.x, s.y, { r: s.r * 1.3, color: '#ffe27a', w: 6, flat: 1 });
+      VFX.decal(s.x, s.y, { style: 'crack', r: 50, dur: 2.2, a: 0.5, seed: Math.random() * 6 });
+      shake(6);
+    },
+    static(tg) {
+      const s = tg.live;
+      shapeFlash(s, '#c070ff', { a: 0.35, dur: 0.35 });
+      for (let i = 0; i < 4; i++) { const a = rand(0, TAU); VFX.lightning(s.x, s.y - 10, s.x + Math.cos(a) * s.r, s.y + Math.sin(a) * s.r, { color: '#e0b8ff', jag: 10, dur: 0.3 }); }
+    },
+    rod(tg) {
+      const s = tg.live;
+      VFX.lightning(s.x + rand(-30, 30), s.y - 420, s.x, s.y - 84, { color: '#bff6ff', jag: 30, dur: 0.45 });
+      VFX.lightning(s.x + rand(-30, 30), s.y - 420, s.x, s.y - 84, { color: '#ffffff', jag: 24, dur: 0.3 });
+      VFX.shock(s.x, s.y, { r: s.r * 1.2, color: '#9ff4ff', w: 6, dur: 0.45, flat: 1 });
+      VFX.sparks(s.x, s.y - 80, { color: '#dffbff', n: 14, speed: 300 });
+      roomTint('#bfe8ff', 0.12, 0.3);
+      shake(7);
+    },
+    gale(tg) {
+      const s = tg.live;
+      VFX.shock(s.x, s.y, { r: AR() * 1.1, color: '#e8f4ff', w: 14, dur: 0.6, flat: 1 });
+      VFX.shock(s.x, s.y, { r: AR() * 0.9, color: '#bfe0ff', w: 6, dur: 0.75, flat: 1, delay: 0.08 });
+      for (let i = 0; i < 16; i++) streak(s.x, s.y, i * TAU / 16 + rand(-0.1, 0.1), '#eaf4ff', { w: 6, dur: 0.4, len: AR() });
+      shake(10);
+    },
   };
 
   function impact(tg, msg, ctx) {
-    if (tg.type === 'raidwide') { (IMPACT[tg.tag] || (() => { roomTint('#ffffff', 0.18); shake(6); }))(tg); return; }
+    if (tg.type === 'raidwide') { (IMPACT[tg.tag] || (() => { roomTint('#ffffff', 0.18); shake(6); }))(tg, ctx); return; }
     if (tg.type === 'proximity') { IMPACT.boil(tg); shake(10); return; }
     if (tg.type === 'knockback') { const s = tg.live; VFX.shock(s.x, s.y, { r: 380, color: '#bfe6ff', w: 8, dur: 0.6, flat: 1 }); VFX.tornado(s.x, s.y, { r: 50, h: 160, dur: 0.7 }); return; }
     if (tg.type === 'buster') { buster(tg, ctx); return; }
-    if (IMPACT[tg.tag]) { IMPACT[tg.tag](tg); return; }
+    if (IMPACT[tg.tag]) { IMPACT[tg.tag](tg, ctx); return; }
     const color = { stack: '#ffe27a', spread: '#e0b0ff', tower: '#b0fff4' }[tg.type] || '#ffb070';
     shapeFlash(tg.live, color, { a: 0.38 });
     for (const q of scatter(tg.live, 6)) VFX.sparks(q.x, q.y, { color, n: 3, speed: 260 });
@@ -209,7 +263,13 @@ const BOSS_VFX = (() => {
     const s = tg.live, e = tg.target != null ? ctx.entById(tg.target) : null;
     const x = e ? e.x : s.x + Math.cos(s.angle) * 160, y = e ? e.y : s.y + Math.sin(s.angle) * 160;
     shapeFlash(s, '#ff4a3a', { a: 0.28 });
-    if (ctx.boss === 'skitterra') {
+    if (ctx.boss === 'volkar') {
+      // Titan Fist: a stone fist and the lightning riding it
+      for (let i = 0; i < 3; i++) VFX.lightning(s.x, s.y - 20, x + rand(-16, 16), y + rand(-12, 12), { color: '#9ff4ff', jag: 12, dur: 0.4 });
+      VFX.hit(x, y, '#bff6ff', 2.3);
+      VFX.shock(x, y, { r: 90, color: '#9ff4ff', w: 6, flat: 1 });
+      VFX.decal(x, y, { style: 'crack', r: 64, dur: 2.5, a: 0.6, seed: Math.random() * 6 });
+    } else if (ctx.boss === 'skitterra') {
       for (let i = 0; i < 4; i++) VFX.lightning(s.x, s.y, x + rand(-14, 14), y + rand(-10, 10), { color: '#f4f0ff', jag: 10, dur: 0.5 });
       VFX.smoke(x, y, { color: '#f4f0ff', n: 8, size: 26, a: 0.7, speed: 50 });
       VFX.hit(x, y, '#e8dcff', 2);
@@ -225,6 +285,7 @@ const BOSS_VFX = (() => {
   const CAST_COLOR = {
     grubnak: { def: '#ffb050', boil: '#ff6a2a', bell: '#9ffff4', whisk: '#fff0c8', raise: '#ff7a1a' },
     skitterra: { def: '#d08aff', mist: '#9adf3a', spit: '#9adf3a', wrap: '#f4f0ff', silk: '#f4f0ff', web: '#f4f0ff', lunge: '#ff7ac0' },
+    volkar: { def: '#7fe8ff', surge: '#ffe08a', crash: '#ffe27a', field: '#d79bff', gale: '#e8f4ff', walls: '#e8f4ff', fist: '#9ff4ff' },
   };
   // the wind-up while the boss casts: motes spiral in, a ring tightens, everything brightens near the end
   function castStart(bossKind, anim, dur, bossDraw) {
@@ -250,7 +311,7 @@ const BOSS_VFX = (() => {
     shake(8);
   }
   function roar(x, y, bossKind) {
-    const color = bossKind === 'skitterra' ? '#d08aff' : '#ffb050';
+    const color = bossKind === 'skitterra' ? '#d08aff' : bossKind === 'volkar' ? '#7fe8ff' : '#ffb050';
     for (let i = 0; i < 3; i++) VFX.shock(x, y, { r: 260, color, w: 6, dur: 0.6, flat: 1, delay: i * 0.12 });
     shake(5);
   }
@@ -324,11 +385,27 @@ const BOSS_VFX = (() => {
     VFX.splash(e.x, e.y, { color: '#8ad82a', n: 12 });
     shake(7);
   }
+  // Volkar: a charge turning over (Hard, at 50%), the wall jumping in, and the storm's constant pulse
+  function polarityFlip(e, s) {
+    const col = s > 0 ? '#ffc24a' : '#4ad8ff';
+    VFX.shock(e.x, e.y, { r0: 80, r: 10, color: col, w: 5, dur: 0.5, flat: 1 });
+    VFX.motes(e.x, e.y, { color: col, n: 12, r: 36 });
+  }
+  function edgeClose(from, to) {
+    VFX.shock(0, 0, { r0: from, r: to, color: '#9ff4ff', w: 16, dur: 0.45, flat: 1 });
+    for (let i = 0; i < 18; i++) { const a = i * TAU / 18 + rand(-0.1, 0.1); after(rand(0, 0.3), () => VFX.lightning(Math.cos(a) * (to + 60), Math.sin(a) * (to + 60) - 260, Math.cos(a) * to, Math.sin(a) * to, { color: '#9ff4ff', jag: 20, dur: 0.35 })); }
+    roomTint('#9ccfff', 0.14, 0.5);
+    shake(9);
+  }
+  function pulse(units) {
+    for (const u of units) VFX.lightning(u.x + rand(-30, 30), u.y - 150, u.x, u.y - 20, { color: '#9ccfff', jag: 8, dur: 0.2 });
+  }
+
   function victory(ents) {
     for (const e of ents) { VFX.confetti(e.x, e.y, { n: 50 }); VFX.burst(e.x, e.y, { color: '#ffe27a', color2: '#ffffff', n: 16, speed: 260 }); }
     roomTint('#fff2b0', 0.2, 1);
   }
   function wipe() { roomTint('#200810', 0.4, 1.4); }
 
-  return { meatballLand, meatballHit, silkSnap, reelBite, impact, castStart, auto, leap, roar, addSpawn, addDeath, addEnrage, fury, spit, husk, tetherSnap, playerDeath, playerRaised, partyBuff, victory, wipe };
+  return { polarityFlip, edgeClose, pulse, meatballLand, meatballHit, silkSnap, reelBite, impact, castStart, auto, leap, roar, addSpawn, addDeath, addEnrage, fury, spit, husk, tetherSnap, playerDeath, playerRaised, partyBuff, victory, wipe };
 })();

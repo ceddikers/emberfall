@@ -44,15 +44,18 @@ class FightSim {
     this.t = 0; this.state = 'countdown'; this.countdown = 8;
     this.events = []; this.mechs = new Map(); this.nextMechId = 1; this.puddles = [];
     this.tethers = new Map(); this.adds = new Map(); this.zones = []; this.addsDirty = false;
-    this.rollers = new Map(); this.reels = new Map();
+    this.rollers = new Map(); this.reels = new Map(); this.sweeps = new Map();
+    this.edgeGrace = 0;   // a moving wall (Volkar) leaves people outside it for a moment; don't count that as a fall
     this.phase = 1; this.hpTriggers = [];
     this.ps = new Map();
     const n = Math.max(1, Math.min(4, getPlayers().length));
     this.scale = { hp: [0.42, 0.62, 0.82, 1][n - 1] * FIGHT.NUM_SCALE, dmg: [0.6, 0.8, 0.92, 1][n - 1] * FIGHT.NUM_SCALE, n };
     const hp = Math.round(def.hp[mode] * this.scale.hp);
+    // def.spawn: where the boss stands at the pull; def.anchor: it never walks after the tank (Volkar holds the middle)
+    const sp = def.spawn || { x: 0, y: -40 };
     this.boss = {
-      hp, maxHp: hp, x: 0, y: -40, facing: Math.PI / 2, target: null, cast: null, anim: null, untargetable: false,
-      vuln: 0, vulnEnd: 0, autoAt: 4, moveTo: null, speed: 140, dmgUp: 0,
+      hp, maxHp: hp, x: sp.x, y: sp.y, facing: Math.PI / 2, target: null, cast: null, anim: null, untargetable: false,
+      vuln: 0, vulnEnd: 0, autoAt: 4, moveTo: null, speed: 140, dmgUp: 0, anchor: !!def.anchor,
     };
     this.stats = {};
     for (const p of getPlayers()) this.addPlayer(p);
@@ -128,6 +131,7 @@ class FightSim {
     this.updateZones();
     this.updateRollers();
     this.updateReels();
+    this.updateSweeps();
     this.updatePlayers(dt);
     if (this.state !== 'live') return;
     if (this.alive().length === 0) return this.end('wipe');
@@ -145,7 +149,7 @@ class FightSim {
     if (this.state !== 'live') return;
     this.state = result;
     this.mechs.clear(); this.puddles = []; this.tethers.clear(); this.adds.clear(); this.zones = [];
-    this.rollers.clear(); this.reels.clear();
+    this.rollers.clear(); this.reels.clear(); this.sweeps.clear();
     this.broadcastAdds();
     this.broadcastParty();
     this.emit({ t: 'fight', s: result, time: Math.round(this.t * 10) / 10, stats: this.stats, hp: this.boss.hp, maxHp: this.boss.maxHp, mode: this.mode });
@@ -165,7 +169,7 @@ class FightSim {
     } else if (tank && !b.cast && !b.lockFacing && !b.untargetable) {
       b.facing = Math.atan2(tank.y - b.y, tank.x - b.x);
       const d = Math.hypot(tank.x - b.x, tank.y - b.y);
-      if (d > FIGHT.MELEE) {
+      if (d > FIGHT.MELEE && !b.anchor) {
         const step = Math.min(d - FIGHT.MELEE * 0.85, b.speed * dt);
         b.x += Math.cos(b.facing) * step; b.y += Math.sin(b.facing) * step;
         ARENA.clamp(b, 110);
@@ -195,7 +199,7 @@ class FightSim {
       if (s.alive) {
         s.hist.push([this.t, s.hp]);
         while (s.hist.length && s.hist[0][0] < this.t - 6) s.hist.shift();
-        if (ARENA.sd(p.x, p.y) > 14) this.damagePlayer(p, 9999999, { kind: 'fall' });
+        if (ARENA.sd(p.x, p.y) > 14 && this.t > this.edgeGrace) this.damagePlayer(p, 9999999, { kind: 'fall' });
       }
     }
   }
@@ -634,6 +638,40 @@ class FightSim {
         this.debuff(p.id, 'slowed', 4);
         this.emit({ t: 'reelx', id, pid: rl.pid, ok: 0 });
       } else if (this.t >= rl.end) { this.reels.delete(id); this.emit({ t: 'reelx', id, pid: rl.pid, ok: 1 }); }
+    }
+  }
+
+  // Rotating walls of wind (Volkar's Storm Walls): `arms` beams from (x, y) out past the walls, `w` wide, turning at
+  // `spin` rad/s for `dur` s after a `delay`. Anyone an arm passes over takes dmg (once per arm per pass) and is shoved
+  // along with it. Like the meatballs, clients get one message and turn the walls on their own clock.
+  sweep(opts) {
+    const sw = Object.assign({ id: this.nextMechId++, x: 0, y: 0, arms: 2, a0: 0, spin: 0.5, w: 150, delay: 3, dur: 10, dmg: 8000, kb: 110, tag: 'storm', last: {} }, opts);
+    sw.startAt = this.t + sw.delay; sw.end = sw.startAt + sw.dur;
+    this.sweeps.set(sw.id, sw);
+    this.emit({ t: 'sweep', id: sw.id, x: Math.round(sw.x), y: Math.round(sw.y), arms: sw.arms, a0: +sw.a0.toFixed(3), spin: +sw.spin.toFixed(3), w: sw.w, delay: sw.delay, dur: sw.dur, tag: sw.tag });
+    return sw;
+  }
+  sweepAngle(sw, t) { return sw.a0 + Math.max(0, t - sw.startAt) * sw.spin; }
+  clearSweeps() { this.sweeps.clear(); this.emit({ t: 'sweep', clear: true }); }
+  updateSweeps() {
+    for (const [id, sw] of this.sweeps) {
+      if (this.t >= sw.end) { this.sweeps.delete(id); continue; }
+      if (this.t < sw.startAt) continue;
+      const a0 = this.sweepAngle(sw, this.t);
+      for (let k = 0; k < sw.arms; k++) {
+        const a = a0 + k * Math.PI * 2 / sw.arms, c = Math.cos(a), s = Math.sin(a);
+        for (const p of this.alive()) {
+          const dx = p.x - sw.x, dy = p.y - sw.y, along = dx * c + dy * s, across = -dx * s + dy * c;
+          if (along < 0 || Math.abs(across) > sw.w / 2 + 14) continue;
+          const key = p.id + ':' + k;
+          if (this.t - (sw.last[key] ?? -9) < 1.5) continue;
+          sw.last[key] = this.t;
+          this.damagePlayer(p, sw.dmg, { kind: sw.tag, avoidable: true });
+          // shoved the way the wall is turning
+          const ta = a + Math.sign(sw.spin || 1) * Math.PI / 2;
+          this.emit({ t: 'kb', id: p.id, x: p.x - Math.cos(ta) * 20, y: p.y - Math.sin(ta) * 20, d: sw.kb });
+        }
+      }
     }
   }
 

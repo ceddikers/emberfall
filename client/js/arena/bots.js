@@ -29,6 +29,50 @@ const BotAI = {
     return mine.id;
   },
 
+  // --- Volkar --------------------------------------------------------------------------------
+  // polarity pairs: the living + and − players, each side in id order, matched one to one (leftovers stand alone)
+  partner(me, view) {
+    const pol = view.polarity;
+    if (!pol || !pol.has(me)) return null;
+    const al = view.players.filter(p => p.alive && pol.has(p.id)).sort((a, b) => a.id - b.id);
+    const plus = al.filter(p => pol.get(p.id) > 0), minus = al.filter(p => pol.get(p.id) < 0);
+    const mine = pol.get(me) > 0 ? plus : minus, theirs = pol.get(me) > 0 ? minus : plus;
+    const i = mine.findIndex(p => p.id === me);
+    return i >= 0 ? theirs[i] || null : null;
+  },
+  // anything standing that shelters from Gale Slam: the rods' posts and rods still waiting for their bolt
+  covers(view) {
+    const out = (view.posts || []).map(c => ({ x: c.x, y: c.y }));
+    for (const m of view.mechs) if (m.tag === 'rod') out.push({ x: m.shape.x, y: m.shape.y });
+    return out;
+  },
+  sheltered(px, py, view) {
+    const b = view.boss;
+    return this.covers(view).some(c => {
+      const cx = c.x - b.x, cy = c.y - b.y, cd = Math.hypot(cx, cy);
+      if (cd < 1) return false;
+      const ux = cx / cd, uy = cy / cd, qx = px - b.x, qy = py - b.y;
+      return qx * ux + qy * uy >= cd - 20 && Math.abs(-qx * uy + qy * ux) <= 34;   // a little inside the real shelter
+    });
+  },
+  // which rod this bot should catch: players without Conductive take them in order, bots before humans (a bot can't
+  // count on a person knowing which rod is "theirs"), tanks last
+  rodFor(me, view) {
+    const rods = view.mechs.filter(m => m.tag === 'rod').sort((a, b) => a.id - b.id);
+    if (!rods.length) return null;
+    const deb = id => view.debuffs(id).conductive ? 1 : 0, human = p => (p.id < 1000 ? 1 : 0);
+    const order = view.players.filter(p => p.alive).sort((a, b) => deb(a.id) - deb(b.id) || human(a) - human(b) || (a.role === 'tank') - (b.role === 'tank') || a.id - b.id);
+    // nearest free rod for each catcher in turn
+    const free = [...rods], mine = {};
+    for (const p of order) {
+      if (!free.length) break;
+      let bi = 0;
+      for (let i = 1; i < free.length; i++) if (Math.hypot(free[i].shape.x - p.x, free[i].shape.y - p.y) < Math.hypot(free[bi].shape.x - p.x, free[bi].shape.y - p.y)) bi = i;
+      mine[p.id] = free.splice(bi, 1)[0].id;
+    }
+    return mine[me] ?? null;
+  },
+
   home(bot, view) {
     const b = view.boss, idx = bot.slot || 0;
     // on an add: melee hug it, ranged stand off to one side of it (out of any beam to its sibling)
@@ -88,6 +132,21 @@ const BotAI = {
         }
         case 'stack': {
           if (view.mechs.some(o => o.type === 'spread' && o.follow === me && Math.abs(o.resolveAt - m.resolveAt) < 1)) break;
+          // Thunder Crash: each + player carries one; their partner stacks in, everyone else keeps out
+          if (m.tag === 'crash') {
+            const owner = alive.find(o => o.id === m.follow);
+            if (!owner) break;
+            const d = Math.hypot(owner.x - px, owner.y - py), pt = this.partner(me, view);
+            if (m.follow === me) {
+              for (const o of view.mechs) {
+                if (o.tag !== 'crash' || o.follow === me) continue;
+                const ow = alive.find(q => q.id === o.follow);
+                if (ow && Math.hypot(ow.x - px, ow.y - py) < s.r * 2 + 50) pen += 3000 * urgency;
+              }
+            } else if (pt && pt.id === m.follow) { if (d > s.r * 0.5) pen += (d - s.r * 0.5) * 30 * urgency; }
+            else if (d < s.r + 45) pen += 3000 * urgency;
+            break;
+          }
           const owner = alive.find(o => o.id === m.follow);
           const cx = owner ? owner.x : s.x, cy = owner ? owner.y : s.y;
           const d = Math.hypot(cx - px, cy - py);
@@ -96,7 +155,7 @@ const BotAI = {
         }
         case 'tower': {
           const ti = towers.indexOf(m);
-          const mine = ti === myIdx % Math.max(1, towers.length) && !(view.debuffs(me).stuffed);
+          const mine = m.tag === 'rod' ? this.rodFor(me, view) === m.id : ti === myIdx % Math.max(1, towers.length) && !(view.debuffs(me).stuffed);
           const inside = Math.hypot(s.x - px, s.y - py) < s.r - 18;
           if (mine && !inside) pen += (Math.hypot(s.x - px, s.y - py)) * 12 * urgency;
           if (!mine && inside) pen += 2500 * urgency;
@@ -105,8 +164,41 @@ const BotAI = {
         case 'proximity':
           pen += (900 - Math.min(900, Math.hypot(px - s.x, py - s.y))) * 8 * urgency;
           break;
+        // Polarity Surge: be with your opposite-charge partner and away from anyone of your own charge.
+        // The pair member with the higher id walks to the other (bots have the higher ids, so they come to you).
+        case 'polarity': {
+          const pol = view.polarity;
+          if (!pol) break;
+          for (const o of alive) if (o.id !== me && pol.get(o.id) === pol.get(me) && Math.hypot(o.x - px, o.y - py) < s.r + 45) pen += 4000 * urgency;
+          const pt = this.partner(me, view);
+          if (pt && pt.id < me) { const d = Math.hypot(pt.x - px, pt.y - py); if (d > s.r * 0.45) pen += (d - s.r * 0.45) * 30 * urgency; }
+          break;
+        }
+        // Gale Slam: either shelter behind a rod or stand where the throw doesn't reach the wall
+        case 'gale': {
+          if (dt > 7 || this.sheltered(px, py, view)) break;
+          const a = Math.atan2(py - view.boss.y, px - view.boss.x), dist = m.dist || 300;
+          const over = ARENA.sd(px + Math.cos(a) * dist, py + Math.sin(a) * dist) + 20;
+          if (over > 0) pen += (3000 + over * 10) * urgency;
+          break;
+        }
       }
     }
+    // Storm Walls: stay off where each wall will be over the next second
+    for (const sw of view.sweeps || []) {
+      for (const look of [0, 0.5, 1]) {
+        const tt = view.t + look;
+        if (tt < sw.startAt - 0.8 || tt > sw.end) continue;
+        const a0 = sw.a0 + Math.max(0, tt - sw.startAt) * sw.spin;
+        for (let k = 0; k < sw.arms; k++) {
+          const a = a0 + k * Math.PI * 2 / sw.arms, c = Math.cos(a), sn = Math.sin(a), dx = px - sw.x, dy = py - sw.y;
+          if (dx * c + dy * sn > -20 && Math.abs(-dx * sn + dy * c) < sw.w / 2 + 40) pen += look ? 4000 : 7000;
+        }
+      }
+    }
+    // the closing edge: be well inside where the wall is about to jump to
+    const en = view.edgeNext;
+    if (en && en.at - view.t < 6) { const over = Math.hypot(px, py) - (en.r - 60); if (over > 0) pen += 5000 + over * 50; }
     for (const pd of view.puddles) if (Math.hypot(pd.x - px, pd.y - py) < pd.r + 28) pen += 4000;
     // rolling meatballs: stay off the stretch of path each one covers in the next second and a half
     for (const rl of view.rollers || []) {
@@ -150,6 +242,15 @@ const BotAI = {
       if (m.type === 'tower') cands.push({ x: m.shape.x, y: m.shape.y });
       if (m.type === 'stack') { const o = view.players.find(p => p.id === m.follow); if (o) cands.push({ x: o.x, y: o.y }); }
       if (m.shape.kind === 'donut') cands.push({ x: m.shape.x + (bot.x - m.shape.x) * 0.3, y: m.shape.y + (bot.y - m.shape.y) * 0.3 });
+      // Volkar: beside your polarity partner, and in the still air behind each rod (also the half of a rod's circle
+      // away from him, for catching a rod and sheltering behind it at once)
+      if (m.type === 'polarity' || m.tag === 'crash') { const pt = this.partner(bot.id, view); if (pt) cands.push({ x: pt.x + (bot.x > pt.x ? 30 : -30), y: pt.y }); }
+      if (m.type === 'gale') {
+        for (const c of this.covers(view)) {
+          const a = Math.atan2(c.y - view.boss.y, c.x - view.boss.x);
+          for (const d of [30, 70]) cands.push({ x: c.x + Math.cos(a) * d, y: c.y + Math.sin(a) * d });
+        }
+      }
     }
     // tether partner: right next to them, or straight away from them
     for (const th of view.tethers || []) {
@@ -166,10 +267,26 @@ const BotAI = {
     // walking there: don't cross a burning beam, and don't wade through pools
     const beams = [];
     for (const a of view.adds || []) { const o = a.link && a.linkDmg ? view.adds.find(x => x.id === a.link) : null; if (o && a.id < o.id) beams.push([a, o]); }
+    // Storm Walls: where each turning wall will be when we get to each point along the way (and a moment after)
+    const sweeps = (view.sweeps || []).filter(sw => view.t > sw.startAt - 1.5 && view.t < sw.end);
+    const inWall = (x, y, tt) => sweeps.some(sw => {
+      if (tt < sw.startAt - 0.3 || tt > sw.end) return false;
+      const a0 = sw.a0 + Math.max(0, tt - sw.startAt) * sw.spin;
+      for (let k = 0; k < sw.arms; k++) {
+        const a = a0 + k * Math.PI * 2 / sw.arms, c = Math.cos(a), s = Math.sin(a), dx = x - sw.x, dy = y - sw.y;
+        if (dx * c + dy * s > -20 && Math.abs(-dx * s + dy * c) < sw.w / 2 + 34) return true;
+      }
+      return false;
+    });
     const pathCost = c => {
       let pen = 0;
       for (const [a, o] of beams) if (segsCross(bot.x, bot.y, c.x, c.y, a.x, a.y, o.x, o.y)) pen += 3000;
       for (const pd of view.puddles) if (Math.hypot(pd.x - bot.x, pd.y - bot.y) > pd.r + 20 && segDist(pd.x, pd.y, bot.x, bot.y, c.x, c.y) < pd.r + 20) pen += 1200;
+      if (sweeps.length) {
+        const d = Math.hypot(c.x - bot.x, c.y - bot.y), arrive = d / 230;
+        for (const q of [0.25, 0.5, 0.75, 1]) if (inWall(bot.x + (c.x - bot.x) * q, bot.y + (c.y - bot.y) * q, view.t + arrive * q)) pen += 5000;
+        for (const extra of [0.4, 0.9]) if (inWall(c.x, c.y, view.t + arrive + extra)) pen += 3000;
+      }
       return pen;
     };
     let best = null, bs = Infinity;
@@ -220,7 +337,8 @@ const BotAI = {
           if (['prayer', 'growth', 'bloom', 'accel'].includes(a.id) && avgLow) return i;
         }
         if (k.gcdRemaining() <= 0 && !k.cast) {
-          const heals = k.abilities.map((a, i) => i).filter(i => ab(i).type === 'gcd' && ab(i).target === 'ally' && !ab(i).allowDead && readyIdx(i));
+          // (Recall raises the dead but also heals the living heavily, so it counts as a heal here)
+          const heals = k.abilities.map((a, i) => i).filter(i => ab(i).type === 'gcd' && ab(i).target === 'ally' && (!ab(i).allowDead || ab(i).id === 'recall') && readyIdx(i));
           const instant = heals.filter(i => !k.castTime(ab(i)));
           if (low.f < 0.55 && heals.length) return (moving && instant.length) ? instant[0] : (moving ? null : heals[0]);
           if (low.f < 0.75 && instant.length) return instant[0];
@@ -242,14 +360,14 @@ const BotAI = {
       }
     }
     // oGCDs: burst and damage when ready; mitigation when the tank is getting hit or a raidwide is coming
-    const castingBig = view.bossCast && /Grease|Tenderize|Boil|Gorge|Last Call|Venom Mist|Silk Wrap|Tightening Web|Devour/.test(view.bossCast.name);
+    const castingBig = view.bossCast && /Grease|Tenderize|Boil|Gorge|Last Call|Venom Mist|Silk Wrap|Tightening Web|Devour|Thunderclap|Titan Fist|Eye of the Storm|Skybreak/.test(view.bossCast.name);
     for (let i = 0; i < k.abilities.length; i++) {
       const a = ab(i);
       if (a.type !== 'ogcd' || !readyIdx(i)) continue;
       if (k.gcdRemaining() < 0.65 && !k.cast) continue;
       if (a.target === 'ally') continue;
       const defensive = /mitigate|party takes|less damage|immune|shield/i.test(a.desc) && !/Burst/.test(a.desc);
-      if (a.id === 'stasis' || a.id === 'undying' || a.id === 'mirror') { if (castingBig && view.bossCast.left < 1.2 && (a.id === 'stasis' ? /Last Call|Devour/.test(view.bossCast.name) : bot.role === 'tank')) return i; continue; }
+      if (a.id === 'stasis' || a.id === 'undying' || a.id === 'mirror') { if (castingBig && view.bossCast.left < 1.2 && (a.id === 'stasis' ? /Last Call|Devour|Skybreak/.test(view.bossCast.name) : bot.role === 'tank')) return i; continue; }
       if (defensive && !(castingBig && view.bossCast.left < 3)) continue;
       if (a.id === 'shift') {
         const groupHurt = hurt.filter(h => h.f < 0.8).length >= 2;
