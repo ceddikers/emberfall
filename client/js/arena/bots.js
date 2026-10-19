@@ -87,7 +87,8 @@ const BotAI = {
   // Rod Strike: which standing stone this marked bot brings its bolt down on. The marked take the nearest uncharged
   // stone in turn (a charged one would discharge); null if this bot isn't marked
   stoneFor(me, view) {
-    const marks = view.mechs.filter(m => m.tag === 'rodstrike').sort((a, b) => a.id - b.id);
+    // people first (they'll take the stone nearest them), then the bots fit round them
+    const marks = view.mechs.filter(m => m.tag === 'rodstrike').sort((a, b) => (a.follow >= 1000) - (b.follow >= 1000) || a.id - b.id);
     if (!marks.some(m => m.follow === me)) return null;
     const free = (view.props || []).filter(p => p.kind === 'stone').sort((a, b) => (a.state > 0) - (b.state > 0));
     const mine = {};

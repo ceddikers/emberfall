@@ -1368,6 +1368,16 @@ const ArenaView = {
     c.clip();
     for (let i = 0; i < 10; i++) { const a = fl.a0 + r() * (fl.a1 - fl.a0), d = fl.r + 60 + r() * (R - fl.r); glow(c, Math.cos(a) * d, Math.sin(a) * d, 50 + r() * 50, '#3a4658', 0.4); }
     c.restore();
+    // the cliff face under the lip, where it faces us (the south-facing stretch), going down into the cloud
+    for (let i = 0; i < lip.length - 1; i++) {
+      const [a0, r0] = lip[i], [a1, r1] = lip[i + 1], s = Math.sin((a0 + a1) / 2);
+      if (s <= 0.05) continue;
+      const x0 = Math.cos(a0) * r0, y0 = Math.sin(a0) * r0, x1 = Math.cos(a1) * r1, y1 = Math.sin(a1) * r1, h = 34 * s;
+      const g2 = c.createLinearGradient(0, Math.min(y0, y1), 0, Math.max(y0, y1) + h);
+      g2.addColorStop(0, '#3a424e'); g2.addColorStop(1, 'rgba(20,26,34,0)');
+      c.beginPath(); c.moveTo(x0, y0); c.lineTo(x1, y1); c.lineTo(x1, y1 + h); c.lineTo(x0, y0 + h); c.closePath();
+      c.fillStyle = g2; c.fill();
+    }
     // the broken lip: dark rock face and a lit edge
     c.beginPath(); lip.forEach(([a, rr], i) => (i ? c.lineTo(Math.cos(a) * rr, Math.sin(a) * rr) : c.moveTo(Math.cos(a) * rr, Math.sin(a) * rr)));
     c.strokeStyle = '#151a22'; c.lineWidth = 9; c.stroke();
@@ -1400,13 +1410,14 @@ const ArenaView = {
     const jx = p > 0.75 ? Math.sin(t * 60) * 2 * (p - 0.75) * 4 : 0;
     ctx.save(); ctx.translate(jx, 0);
     ctx.beginPath(); ctx.arc(0, 0, R, cr.a0, cr.a1); ctx.arc(0, 0, cr.r, cr.a1, cr.a0, true); ctx.closePath();
-    ctx.fillStyle = `rgba(8,10,18,${0.12 + 0.3 * p + 0.06 * Math.sin(t * 8)})`; ctx.fill();
+    ctx.fillStyle = `rgba(8,10,18,${0.2 + 0.35 * p + 0.07 * Math.sin(t * 8)})`; ctx.fill();
+    ctx.strokeStyle = rgba('#cfe0f4', 0.12 + 0.2 * p); ctx.lineWidth = 2; ctx.stroke();
     // the crack along the new lip, running out from the middle of the wedge as the time runs down
     const steps = 30, pts = [];
     for (let i = 0; i <= steps; i++) { const a = cr.a0 + (cr.a1 - cr.a0) * i / steps; pts.push([a, cr.r + (i && i < steps ? (r() - 0.5) * 14 : 0)]); }
     const show = Math.min(1, p * 1.6), mid = steps / 2, half = Math.ceil(mid * show);
     ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-    for (const [w, col] of [[5, 'rgba(10,12,18,0.85)'], [1.5, rgba('#cfe0f4', 0.5 + 0.4 * p)]]) {
+    for (const [w, col] of [[7, 'rgba(10,12,18,0.9)'], [2, rgba('#dfeeff', 0.55 + 0.45 * p)]]) {
       ctx.beginPath();
       for (let i = Math.max(0, mid - half); i <= Math.min(steps, mid + half); i++) { const [a, rr] = pts[i]; i === Math.max(0, mid - half) ? ctx.moveTo(Math.cos(a) * rr, Math.sin(a) * rr) : ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); }
       ctx.strokeStyle = col; ctx.lineWidth = w; ctx.stroke();
@@ -1455,9 +1466,10 @@ const ArenaView = {
       const e = env.entById(id); if (!e) continue;
       const p = clamp((t - rs.start) / Math.max(0.1, rs.end - rs.start), 0, 1);
       ctx.save(); ctx.translate(e.x, e.y - 96);
-      glow(ctx, 0, 0, 26, '#9ff4ff', 0.4 + 0.4 * p);
-      ctx.beginPath(); ctx.arc(0, 0, 13, -Math.PI / 2, -Math.PI / 2 + TAU * (1 - p)); ctx.strokeStyle = rgba('#dffbff', 0.9); ctx.lineWidth = 2.5; ctx.stroke();
-      jagged(ctx, -4, -9, 3, 9, Math.floor(t * 10), '#bff6ff', 1.5);
+      glow(ctx, 0, 0, 36, '#9ff4ff', 0.45 + 0.4 * p);
+      circle(ctx, 0, 0, 17, 'rgba(10,20,30,0.55)');
+      ctx.beginPath(); ctx.arc(0, 0, 17, -Math.PI / 2, -Math.PI / 2 + TAU * (1 - p)); ctx.strokeStyle = rgba('#dffbff', 0.95); ctx.lineWidth = 3; ctx.stroke();
+      jagged(ctx, -5, -11, 4, 11, Math.floor(t * 10), '#bff6ff', 2.2);
       ctx.restore();
     }
   },

@@ -249,7 +249,16 @@ Shared rules for every fight:
 - **Normal is a real raid.** A good group should expect several wipes on its first night with any boss, Grubnak included. Avoidable hits take well over half a DPS's HP, and each one leaves +50% Vulnerability for 15 s (`def.vuln`, twice the engine default), so one mistake hurts a lot and two usually kill. The overlapping patterns run from the first loop, the cadence is quick, and the enrage timers are tight. Every Normal attack is still telegraphed on the floor.
 - **Hard mode** casts 15% faster and hits 25% harder, and every boss has **three moves Normal never uses**, each with its own floor tell, body tell and impact effect in that boss's style. On top of those: stored or doubled mechanics, telegraphs only on the boss model, and debuffs that punish soaking twice.
 - **Upcoming moves feed.** Every scripted step has a player-facing name, its cast name (the optional third element of an `f.seq` step; `f.at` / `f.after` take a name too). About once a second, and whenever the list changes, the host sends `{ t: 'bnext', l: [[name, secondsUntil], ...] }`: the next three named steps of the current phase, plus kept ones such as the enrage. A phase change can cut the list short. Each phase's rotation is laid out with `f.loop(build)`, which schedules the next loop 20 s before the current one ends, so the feed sees across the seam. The raid-info branch draws it; the bots read the same list (`view.next`) to top the tank before a buster, heal ahead of party-wide damage, and hold tank cooldowns for the next buster.
-- **Every boss has its own room shape** (`ARENA_DEFS` in `client/js/arena/shapes.js`). The shape fits the theme and the mechanics: Grubnak's kitchen is a long rectangle (1240 × 840, rounded corners), Skitterra's web is an octagon hung between eight rock pillars, Volkar's summit is a circle whose electrified edge closes in during phase 2, and any boss without its own shape gets a circle. The walls are walls: you're never knocked off an edge. Wall clamps, bot planning, the camera, mechanics that start at the wall (Rolling Meatballs, Venom Mist) and telegraph clipping all read the shape, so a new boss only needs a new entry.
+- **Every boss has its own room shape** (`ARENA_DEFS` in `client/js/arena/shapes.js`). The shape fits the theme and the mechanics: Grubnak's kitchen is a long rectangle (1040 × 720, rounded corners; shrunk from 1240 × 840 in October 2026 because the room felt too big, with spawns, plates, Flambé stripes, Boil Over falloff, Belly Flop throw and cask landings retuned to match), Skitterra's web is an octagon hung between eight rock pillars, Volkar's summit is a circle whose electrified edge closes in during phase 2 (on Hard it breaks away a wedge at a time instead), and any boss without its own shape gets a circle. The walls are walls: you're never knocked off an edge, except where Volkar's summit has broken away on Hard (a fall). Wall clamps, bot planning, the camera, mechanics that start at the wall (Rolling Meatballs, Venom Mist) and telegraph clipping all read the shape, so a new boss only needs a new entry.
+- **The room has things in it** (October 2026, `docs/plans/2026-10-arena-mechanics.md`). Every boss's room holds **props** the host owns (`PROPS` in `shapes.js`, `addProp` / `hitProp` / `breakProp` in `fight.js`): casks, rock pillars, braziers, coffin lids and fallen masonry, standing stones, boulders.
+  - **Solid:** nobody walks through one (players, bots, adds and the boss collide and steer round them), and a throw stops at one.
+  - **Cover:** a mechanic with `cover` comes from a point (usually the boss); anyone whose line to it passes through a cover prop is spared. `coverCap` limits how many hide behind one prop (nearest first), and `chip` knocks a hit off the props used (or all of them). The telegraph is drawn with each prop's shadow cut out of it, with bright rims, so the safe floor reads as the room's own tiles.
+  - **Breakable:** props with HP show cracks on their last hit (a step ahead), break with debris and dust, and leave rubble.
+  - **Wall slams:** `FightSim.knock()` throws a player; stopped well short by a wall or prop, they take slam damage and are dazed (held briefly).
+  - **Permanent floor state:** rubble, grease, broken ground, drawn once into a cached layer. Grease catches fire and fire runs on through every puddle it touches.
+  - **Network:** a `props` message (every prop packed, the floor list only when it changes or every 9 s, which grease is burning) on every change and every 3 s, so late joiners get the room; `propfx` for chips, breaks, slams, ignitions, bolts and the like; `roomev` for room moments (Lights Out, an ambush shadow, the stove, rod marks, a wedge about to break).
+  - **Bots** hide behind their own prop (spread over the props in id order, healthiest and nearest first), keep out of solid props, never stand where a throw would slam them, bait Butcher's Charge into a brick wall, stand in the light for Lights Out, and break cocoons and coffins first.
+  - Every new move has a cast-bar name and an upcoming-moves feed entry. Where a new move took an old one's slot, the old one was filler; Normal keeps its pressure and Hard adds.
 - **The room is alive.** Floors are textured (bevelled, cracked and stained tiles; pitted, cracked and mossy stone with standing water). An ambient layer, drawn under everything else, keeps the room moving:
   - Kitchen: burners flicker, pots steam, lamp light breathes on the tiles, flour dust drifts, and now and then a rat runs along the bottom wall.
   - Web cave: dew twinkles on the threads, drips fall into the pools and ripple, small spiders creep along the spokes, spores drift up, and cold fog slides along the walls.
@@ -287,7 +296,7 @@ Stats:
 | **Rolling Meatballs** | He lobs three giant meatballs to the rim. Each wobbles in place (chevrons, plus a dashed lane on Normal), then rolls across the room, flattening (650) and knocking aside anyone in its path. Staggered, so the gaps open one at a time. | Four, faster and tighter |
 | **Spice Rack** | Random circles, plus one locked under each non-tank (650). Ladle or Lid follows straight after. | none |
 | **Whisk** | A cross of beams through him that turns 30° four times (650). | Replaced by Flambé once per loop |
-| **Boil Over** | Damage falls off with distance from him (2,000 at the pot). | 2,875; the first one each loop is replaced by Kitchen Rush (a charge at the farthest player) |
+| **Boil Over** | Damage falls off with distance from him (2,000 at the pot). | 2,875 |
 | **Simmer** (intermission at 55%) | He leaps to the center, untargetable, and rings of boiling water ripple out, then back in (650). | Faster waves |
 | **Gorge** (below 15%) | Raidwide every 18 s (325); he hits 10% harder each time. | same |
 
@@ -299,16 +308,31 @@ Stats:
 | **Cleaver Toss** | A cleaver flies along a line at each of the two farthest non-tanks (812). The lines follow them until a second before the throw, then each cleaver flies back along the same line 1.5 s later (812). | Score marks run out along the floor and sharpen once aimed; a cleaver spins in his hand, drawn back over his shoulder. On the way back it hangs in the far wall and chevrons point home |
 | **Flambé** | Brandy in stripes across the kitchen (six running top to bottom, or four side to side). Every other stripe goes up (875), then the rest 2.2 s later: step into a burnt stripe. | A wet amber sheen slides along each stripe and blue flame licks along it just before it catches; he holds a brandy bottle with a blue flame on its neck |
 
+**The kitchen's props** (October 2026):
+
+| Move | What happens | Mode |
+|---|---|---|
+| **Larder Toss** | He rips two casks off the shelves and throws them at the two farthest players (each circle follows its player until 1.6 s before; 450 under it). A cask stays where it lands, at least 120 from the walls so there's room behind it: solid, two hits, cover. At most four stand at once. | Both |
+| **Gut Blast** | A roar across the whole kitchen (750). Hide behind a cask: the blast is drawn with each cask's shadow cut out. Every cask takes a hit. | Hard: 1,000, two to a cask |
+| **Butcher's Charge** | He lowers his head at his tank (the line follows them until a second before) and charges until he hits something (700 to anyone on the line). A brick wall: stuck for 4 s, stars round his head, taking 20% more damage ("Staggered" under the boss bar). The stove line along the top wall: the burners erupt into a wall of fire over the top third of the room for 10 s (225 a second) and light any grease. A cask: smashed. The tank baits it into a brick wall, away from the stove and the casks. | Both |
+| **Belly Flop** | Its throw (200) now ends in a wall slam (250, dazed) if you're too near a wall or a cask. | Hard |
+| **Flambé** | Every stripe that burns lights the grease in it. Normal: six stripes run down from the stove and catch one after another, side to side; stay behind the fire. | Normal (new) and Hard |
+| **Clogged Drains** | The three drains back up and grease spreads round them for good. Fire (Flambé, the stove, Meat Hook) runs through every puddle it touches. | Hard |
+| **Meat Hook** | A chain off the ceiling rail hooks a non-tank and drags them 210 toward the stove; through burning grease or into the burners they catch fire. | Hard |
+
+Merges: Kitchen Rush (Hard's charge at the farthest player) became Butcher's Charge, so there's one charge, aimed at the tank, with a wall to bait. The Hard grease move is named Clogged Drains because Grease Fire is already his raidwide. Flambé is shared: Normal gets the running version, Hard keeps the alternating one.
+
 **How his tells look** (all drawn in `boss-tells.js`): Mince darkens the doomed half under a giant ghost cleaver; Ladle Spin churns soup around him; Lid Slam casts the lid's shadow with ripples out to the safe ring; Meat Toss drops a steak on a chain; Family Meal lowers a silver cloche; Order Up! lays out steaming plates under glass cloches with a gold progress rim; Spice Rack shakes salt, pepper and paprika jars that pour onto the floor; Whisk draws wire loops; Boil Over is rolling heat with bubbles; Kitchen Rush leaves skid marks; Simmer's rings are stove coils going dull, red, white-hot; Grease Fire spreads an oil slick that catches fire.
 
 **Timeline** (each phase loops; the patterns overlap from the first loop):
-- **Phase 1** (100–55%), about 2 minutes a loop: Grease Fire, Tenderize, Mince, Ladle/Lid, (Hard: Belly Flop), Meat Toss → Family Meal, Chop Chop, Grease Fire, Order Up! with Rolling Meatballs launched over the plates, Tenderize, (Hard: Cleaver Toss), Meat Toss → Family Meal, Chop Chop, Grease Fire.
+- **Phase 1** (100–55%), about 2 minutes a loop: Grease Fire, Tenderize, Mince, Larder Toss (in the solo Ladle/Lid's place), (Hard: Clogged Drains on the first loop, Belly Flop), Meat Toss → Family Meal, Butcher's Charge (in the first Chop Chop's place), Gut Blast (in the middle Grease Fire's place), Order Up! with Rolling Meatballs launched over the plates, Tenderize, (Hard: Cleaver Toss, Meat Hook), Meat Toss → Family Meal, Chop Chop, Grease Fire.
 - **Intermission** (55%): Simmer out, then Simmer in. Telegraphs, puddles and meatballs still out are cleared.
-- **Phase 2:** Grease Fire, Tenderize, Whisk, Spice Rack → Ladle/Lid, Order Up! (with Meat Toss on Hard), Boil Over (Hard: Kitchen Rush, then Flambé), Tenderize, Chop Chop (Hard: Double Chop, then Belly Flop), Family Meal under Spice Rack, Boil Over, Rolling Meatballs (Hard: with Cleaver Toss), Grease Fire, Whisk (Hard: Flambé).
+- **Phase 2:** Larder Toss, Grease Fire, Tenderize, Whisk, Spice Rack → Ladle/Lid, Gut Blast (Normal: in Order Up!'s place; Hard keeps Order Up! with Meat Toss as well), Butcher's Charge (in the second Boil Over's place; on Hard it also takes Kitchen Rush's), (Hard: Clogged Drains, Meat Hook), Tenderize, Chop Chop (Hard: Double Chop, then Belly Flop), Family Meal under Spice Rack, Boil Over, Rolling Meatballs (Hard: with Cleaver Toss), Grease Fire, Flambé (in the second Whisk's place).
 
 **Bot test results** (`node tools/bot-raid.js`; four bots with the real kits and a competent-player AI that reacts instantly and sees hidden telegraphs, so a human group should expect to do worse at first):
 - **Normal, Bastion / Aegis Cleric / Sharpshooter / Cataclysm** (the `check.js` line-up): cleared 17 of 18 over six seed sets, in 3:40–4:33. Wipes start with the healer dying to grease ticks plus the toss → meal pair.
 - **Hard, Bastion / Cleric / Ranger / Pyromancer:** 0 of 8; the bots reach 5–58% and last 2:20–6:08.
+- **With the props and the smaller kitchen** (October 2026, six seeds): Normal (the `check.js` line-up) 6 of 6 in 3:45–4:31; Hard (base specs) 0 of 6, reaching 30–68%.
 
 ### Boss II: Queen Skitterra, the Spider Broodmother (built, playable on Normal and Hard)
 
@@ -352,17 +376,28 @@ Stats:
 - `FightSim.reel()` (Silk Reel): `reel` / `reelx` messages. The reeled client drags and slows its own movement; a dash sends a `snap` combat event. The host bites if the player reaches her, and bots snap after a random reaction time.
 
 **Timeline** (each phase loops):
-- **Phase 1** (100–50%), about 2 minutes a loop: Mist, Wrap, Lunge, Silk Lines, Venom Spit, Brood, Silk Reel, (Hard: Fang Rush), Mist, Lunge, Silk Lines + Venom Spit, (Hard: Egg Sacs, once the brood should be dead), Wrap, Venom Spit.
-- **Phase 2:** Mist, then Wrap + Lunge together (the wrap lands just before the first strike, so the rooted tank must already stand somewhere the first two strikes miss), Brood with Silk Lines, (Hard: Spinneret Volley), Silk Reel, Venom Spit, Lunge (Hard: Molt), Wrap, Silk Lines + Spit, (Hard: Egg Sacs and Fang Rush in turn), Mist, Lunge, Brood, (Hard: Spinneret Volley).
+- **Phase 1** (100–50%), about 2 minutes a loop: Mist, Wrap, Lunge, Silk Lines, Strand Reel (in the first Venom Spit's place), Brood, Silk Reel, (Hard: Fang Rush), Mist, Lunge, Silk Lines + Venom Spit, (Hard: Egg Sacs, once the brood should be dead, then Cocoon), Wrap, Acid Deluge (in the last Venom Spit's place).
+- **Phase 2:** Mist, then Wrap + Lunge together (the wrap lands just before the first strike, so the rooted tank must already stand somewhere the first two strikes miss), Brood with Silk Lines, (Hard: Spinneret Volley), Silk Reel, (Hard: Ceiling Ambush), Strand Reel (in Venom Spit's place), Lunge (Hard: Molt), Wrap, Silk Lines + Spit, (Hard: Egg Sacs and Fang Rush in turn), Mist, (Hard: Cocoon), Acid Deluge (in the last Lunge's place), Brood, (Hard: Spinneret Volley).
 
 **Bot test results:**
 - **Normal, Runeblade / Moonwell / Bladedancer / Sigilmancer** (the `check.js` line-up): cleared 15 of 18 over six seed sets, in 3:46–4:18. The wipes come when both spiderlings enrage.
 - **Hard, Bastion / Cleric / Ranger / Pyromancer:** 1 of 8 (with one death); the rest reach 21–73% and last 1:43–5:37, usually after the healer falls to venom pools, the beam and a bite.
+- **With the pillars** (October 2026, six seeds): Normal (the `check.js` line-up) 4 of 6 in 3:59–4:56 (the wipes at 3% and 53%); Hard (base specs) 2 of 6, the rest reaching 20–74%.
 - The bots split the DPS over the brood pair (one each) and ease off when theirs gets well ahead of its sibling. They stretch or close tethers, bait Venom Spit and Fang Rush outward and sidestep at the lock, avoid crossing the beam and pools, keep walking under the Volley, take the nearest free egg sac (the tank last), and stay out of the sticky ring and the silk trail when they can.
 
 **Not built from the original design:** a "real cleave moment for Pyromancer". No kit has multi-target damage yet, so the brood is a split-and-sync check rather than a cleave check.
 
-Explicitly **not** included: any "player gets cocooned and must be broken out" mechanic. That idea is parked elsewhere.
+**The web's props** (October 2026): eight rock pillars (three hits each, cover) stand at the octagon's corners, 375 out, with her silk tied off round them; the corner pillars drawn in the room art became small anchor spurs.
+
+| Move | What happens | Mode |
+|---|---|---|
+| **Acid Deluge** | She climbs to the middle, raises her abdomen and rains acid over the whole cave. Hide behind a pillar (the rain is drawn with each pillar's shadow cut out); every pillar that sheltered someone takes a hit. | Both. Hard: the floor the acid reached stays sticky (slows) for 8 s |
+| **Strand Reel** | She shoots a strand to a pillar at least 260 away and reels herself across to it: the lane under the strand hits and roots for 2 s, and she holds there for 4 s. | Both |
+| **Fang Rush** | Now stops at the first pillar in its way and chips it. | Hard |
+| **Ceiling Ambush** | She vanishes up into the dark; her shadow crosses the ceiling, then she drops (230 around her) and the shock throws everyone 380 away, slamming anyone who hits a pillar or the wall. | Hard |
+| **Cocoon** | One player is wrapped in a cocoon (an add, rooted, silk eating at them every second); after 10 s it crushes them. Breaking it costs the nearest pillar a hit. | Hard |
+
+Merges: Strand Reel sits beside Silk Reel and Fang Rush rather than replacing either (one pulls you to her, one throws her at you, this one moves her across the room). Acid Deluge comes once or twice a phase and both Venom Mists stay, because the fight got too easy with the Deluge in a Mist's place. **Cocoon** was built although this document used to rule out a "cocooned and broken out" mechanic: the arena-mechanics plan asked for it on Hard, it's tied to the pillars, and it's easy to drop if you'd rather keep it parked.
 
 ### Boss III: Volkar, the Storm Titan (built, playable on Normal and Hard)
 
@@ -382,12 +417,12 @@ Stats:
 | **Thunder Crash → Static Field** | A storm cloud and a stack over every + player (750 split per pair): each pair stacks together, and pairs keep apart. Static Field (everyone spreads, 195) follows 3.8 s later. | 469 each; the Field follows 3.3 s later (223) |
 | **Static Field** | Everyone spreads (325). | 406 |
 | **Lightning Rods** | Two iron rods are driven into the rock, each wanting one person when the bolt lands (250). Catching one gives *Conductive* for 32 s; catching another while Conductive hurts a lot (600 more). An uncaught rod strikes everyone (600). The rod then stays planted for 30 s. The second set each loop comes with a Gale Slam once the rods stand. | 3 rods |
-| **Gale Slam** | He draws breath and throws everyone 300 away. Hitting the wall hurts (450). The still air behind any standing rod shelters you; on Normal it shows as a pale strip. | Lands together with the rods: shelter behind the rod you're catching. No floor tell |
+| **Gale Slam** | He draws breath and throws everyone 300 away. Thrown into the wall or a standing stone is a slam (450) that dazes you for 1.2 s. The still air behind any standing rod shelters you; on Normal it shows as a pale strip. | Lands together with the rods: shelter behind the rod you're catching. No floor tell. Thrown off a broken edge is a fall (937, held 5 s) |
 | **Storm Walls** | Two walls of wind (150 wide) turn slowly around him for 10 s (550). Walk with them. | 3 walls, turning faster, 12 s (594) |
 | **Titan Fist** | Tankbuster cone that cleaves, 1,000 on the tank. Lightning gathers along it. | 1,375, and it leaves the tank Conductive |
 | **Thunderclap** | Raidwide (375); the summit darkens under rolling clouds first. | 469 |
 | **Pulse** | The storm hits everyone lightly every 4 s (21), 20% harder each minute. | 24 |
-| **Eye of the Storm** (50%) | The edge electrifies and closes in three warned steps 40 s apart: 540 → 470 → 400 → 330 (about 60%). Sparks crawl along the new line for 5 s; anyone outside when it jumps takes 600 and is pushed in. Beyond the wall the ground is dead and crackling. Late in the fight nobody survives a Gale Slam without a rod. | 750 |
+| **Eye of the Storm** (50%) | The edge electrifies and closes in three warned steps 40 s apart: 540 → 470 → 400 → 330 (about 60%). Sparks crawl along the new line for 5 s; anyone outside when it jumps takes 600 and is pushed in. Beyond the wall the ground is dead and crackling. Late in the fight nobody survives a Gale Slam without a rod. | Replaced by the Crumbling Summit (below) |
 
 **Hard-only moves:**
 
@@ -397,17 +432,29 @@ Stats:
 | **Ball Lightning** | Four crackling orbs gather at the cliff edge, then drift slowly (135) across the peak in staggered lines. Touching one hurts (750) and throws you aside. | Each orb forms out of a falling bolt and crackles in place with chevrons showing its heading (plus a dashed lane on Normal) before it drifts |
 | **Skyfall** (phase 2) | The sky comes down on the spot where a random player stood when he called it, 5 s later: 2,250 at the spot, falling off with the square of the distance out to 520. In the shrinking room, get as far away as the wall allows. | The clouds open over the spot, the floor brightens toward it and rings of falling air close in; the sky churns over him while he casts |
 
-**Timeline** (each phase loops):
-- **Phase 1**, about 2 minutes a loop: Thunderclap, Titan Fist, Surge, Rods, Gale Slam (sheltered by the posts), Thunder Crash → Static Field, (Hard: Chain Lightning), Storm Walls, Static Field, Titan Fist, Rods + Gale Slam, (Hard: Ball Lightning), Surge, Thunderclap.
-- **Phase 2**, while the edge closes: Thunderclap, Titan Fist, Crash → Field, Rods + Gale Slam, (Hard: Skyfall), Surge, Storm Walls, Titan Fist, Static Field, (Hard: Chain Lightning), Thunderclap, Rods + Gale Slam, (Hard: Skyfall and Ball Lightning in turn), Crash → Field, Surge.
+**The summit's props** (October 2026): four standing stones at the cardinal points, 260 out. They're solid (a throw into one is a slam) but cover from nothing.
 
-**New engine pieces:** `ARENA.resize()` (a round room's wall moves; `ARENA.full` keeps the original size), `def.spawn` / `def.anchor`, `FightSim.sweep()` (turning walls: one `sweep` message, every client turns them on its own clock), a fall-check grace after the wall moves, and the `pol`, `post`, `edgewarn`, `edge` and `pulse` messages. Bots pair with their opposite charge (the higher id walks to the other, so bots come to you), take rods in turn (bots before humans, Conductive last), shelter behind rods when a Gale Slam would throw them into the wall, read where the storm walls will be along their path, and stay inside the next ring.
+| Move | What happens | Mode |
+|---|---|---|
+| **Rod Strike** | Two players are marked (a charge ring over their heads, burning down), then, as their bolts land, the other two. The bolt hits the stone nearest each marked player if they stand within 70 of it: everyone that close takes 400. Out of reach, it hits the marked player in the open (750). A stone keeps the charge for 10 s (its runes glow): struck again in that time it **discharges** into everyone within 180 (600), so the second pair takes the other two stones. | Both. Hard: 562 / 1,125 / 750 |
+| **Grounded** | A discharge also leaps to the nearest player beyond it, within 250 (562). | Hard |
+| **Avalanche** | He stamps and three boulders roll in lanes (100 wide) from one side of the summit, stopping just past the middle (550 and thrown off the lane). They stay as solid cover, and the next **Storm Walls** passes over anyone behind one (drawn with each boulder's still air cut out of the wall), smashing each boulder as it passes. A shrinking edge or a breaking wedge takes any boulder in its way. | Both. Hard: four boulders, 750 |
+| **Crumbling Summit** | Phase 2 on Hard: instead of the edge closing in evenly, a wedge of the summit (a fifth of the circle) breaks away every 20 s, five in all, leaving the floor 310 out. Cracks run along the new lip and the doomed wedge darkens and shudders for 6 s first; anyone still on it falls (937, held 5 s while the wind drags them back up). The room goes lopsided, so the Storm Walls' safe lanes and the Gale's safe spots change with each break. | Hard |
+
+Merges: Rod Strike takes phase 1's first Lightning Rods (the posts, Conductive and the rods-with-Gale stay everywhere else), so the Gale Slam after it has no posts: stand close enough to him that the throw doesn't reach a wall or a stone. The stones are not Gale shelter (the plan said "solid but not cover", and shelter there would make every Gale trivial). Avalanche takes Static Field's solo slot and sits just before Storm Walls; Hard keeps Static Field as well, after the walls.
+
+**Timeline** (each phase loops):
+- **Phase 1**, about 2 minutes a loop: Thunderclap, Titan Fist, Surge, Rod Strike, Gale Slam (no posts: stand in close), Thunder Crash → Static Field, (Hard: Chain Lightning), Avalanche, Storm Walls (hide behind the boulders), (Hard: Static Field), Titan Fist, Rods + Gale Slam, (Hard: Ball Lightning), Surge, Thunderclap.
+- **Phase 2**, while the edge closes (Hard: while the summit crumbles): Thunderclap, Titan Fist, Crash → Field, Rods + Gale Slam, (Hard: Skyfall), Surge, Avalanche, Storm Walls, Titan Fist, (Hard: Static Field, Chain Lightning), Thunderclap, Rods + Gale Slam, (Hard: Skyfall and Ball Lightning in turn), Crash → Field, Surge.
+
+**New engine pieces:** `ARENA.resize()` (a round room's wall moves; `ARENA.full` keeps the original size), `ARENA.cuts` / `radiusAt()` (wedges broken off a round room; clients rebuild them from the `wedge` floor entries, so late joiners get them), sweeps with `cover` (props of one kind shelter from the walls and are smashed as each wall passes), `def.spawn` / `def.anchor`, `FightSim.sweep()` (turning walls: one `sweep` message, every client turns them on its own clock), a fall-check grace after the wall moves, and the `pol`, `post`, `edgewarn`, `edge` and `pulse` messages. Bots pair with their opposite charge (the higher id walks to the other, so bots come to you), take rods in turn (bots before humans, Conductive last), shelter behind rods when a Gale Slam would throw them into the wall, read where the storm walls will be along their path, and stay inside the next ring.
 
 **Bot test results:**
 - **Normal, Hemomancer / Inquisitor / Nightstalker / Sigilmancer:** cleared 18 of 18 over six seed sets, in 4:11–5:43.
 - **Normal, Berserker / Accelerant / Venomstrike / Pyromancer:** cleared 9 of 18 (at least one in every set of three), in 3:42–4:25. The bot Chronomancer heals far less than this fight asks, and a Berserker has only two long cooldowns for the Titan Fists.
 - **Hard, Bastion / Cleric / Ranger / Pyromancer:** 0 of 8; the bots reach 18–77% and last 1:32–7:08 (two runs reached the enrage).
 - Bots keep away from Chain Lightning's target (the target walks away from everyone), stay off the orbs' paths, and run from Skyfall.
+- **With the stones** (October 2026, six seeds): Normal Berserker / Accelerant / Venomstrike / Pyromancer 4 of 6 (3:38–3:54), Hemomancer / Inquisitor / Nightstalker / Sigilmancer 6 of 6 (4:12–4:27); Hard (base specs) 0 of 6, reaching 56–82%. Marked bots take the nearest uncharged stone after the people have taken theirs, the rest keep off the stones being struck, nobody stands where the Gale would throw them into a stone, they hide behind boulders from the walls, and they get off a wedge before it breaks.
 
 ### Boss IV: The Hollow King, Lord of the Barrow (built, playable on Normal and Hard)
 
@@ -440,10 +487,23 @@ Stats:
 | **Funeral March** | Five ranks of his dead march across the hall from one wall to the other, a second apart (875 each). One lane, 220 wide, stays open the whole way across; or step in behind a rank once it has passed. | Grave-light pools where each rank will tread and a row of ghost soldiers with levelled spears tramps forward through it; the first rank shows for the whole cast, the others 2.4 s before they land. He lifts his greatsword while he casts |
 | **Gravebind** | A grave-chain binds two non-tanks for about 7.5 s: they must be within 160 of each other when it breaks, or both take 1,000 and Vulnerability. Everyone else gets Grave Marks (spread) that land at the same time. | Iron chain links between the two, hanging slack once they're close, pulled straight and burning green while they're too far apart; grave-light pools under him during the cast |
 
+**The hall's props** (October 2026): six braziers down the side walls (x ±400; lit or snuffed), solid but no cover. The corner braziers in the room art were removed so the real ones read.
+
+| Move | What happens | Mode |
+|---|---|---|
+| **Lights Out** | He snuffs every brazier and the hall goes black but for a ring of light (140) round each lit brazier. A moment later only the two nearest him flare back up, so you read where to stand from where he is. When it lands his Dread Gaze finds anyone in the dark, exactly like the Gaze. The braziers relight 2.5 s later. | Both. In the Long Night on Hard none relight: only the last lantern's light counts |
+| **Coffin Lids** | He tears the lids off two coffins, one each side, and they skid across the hall (470 long, 100 wide, 600 to anyone in the way), stopping early at anything solid. Each lies where it stops: solid cover, already cracked. | Both |
+| **Royal Decree** | A wave of grave-light rolls down the hall from the throne (750). Only something solid between you and the throne shelters you (the shadows run straight down the hall); it smashes the lids. | Both. Hard: 1,000 |
+| **Falling Masonry** | Each Knell brings two chunks of the vault down (circles of 85, 600, dust sifting first). They stay where they fall as cover, up to eight. | Hard |
+| **Court of Bones** | At 65% he goes back to his throne and holds court for 8 s: six coffins down the walls wake one by one, 3 s apart, each with grave-light leaking out and a ring burning down; each opens into a skeleton unless it's broken first. His Echo Knights rise during it. Lids still lying about crumble. | Both |
+
+Merges: "Last Ember" (one light left in the dark) is the Long Night's last lantern rather than a second rule; at the Long Night the braziers go out for good. Lights Out takes a Royal Gaze's slot, Coffin Lids Grave Marks', and Royal Decree a swing's, so Normal's pressure stays where it was.
+
 **Timeline** (each phase loops):
-- **Phase 1**, about 1:40 a loop: Knell, Sceptre Sweep, Gaze, (Hard: Audience), Cleave, Doom, a swing, Marks, (Hard: Funeral March), a swing, Gaze, Cleave, Knell.
+- **Phase 1**, about 1:40 a loop: Knell, Sceptre Sweep, Gaze, (Hard: Audience), Cleave, Doom, a swing, Coffin Lids (in Marks' place), (Hard: Funeral March), Royal Decree (in the third swing's place), Lights Out (in the second Gaze's place), Cleave, Knell.
+- **Court of Bones** (65%), then phase 2.
 - **Phase 2:** two swings, then their echoes (Hard: with a Gaze), Cleave, Bells, Doom, (Hard: Funeral March), Knell, (the knights move every other loop), two swings, their echoes with a Gaze, Marks (Hard: Gravebind), Cleave, (Hard: Audience).
-- **Phase 3:** Knell, a swing and its echo (Hard: with a Gaze), Gaze (Hard: Cleave), Doom, Bells, (Hard: Funeral March), a swing, Marks, Gaze, (Hard: Audience), Cleave.
+- **Phase 3:** Knell, a swing and its echo (Hard: with a Gaze), Gaze (Hard: Cleave), Doom, Bells, (Hard: Funeral March), Coffin Lids (in the second swing's place), Royal Decree (in Marks' place), Lights Out (in the last Gaze's place), (Hard: Audience), Cleave.
 
 **New engine pieces:** `FightSim.ticker()` (a per-tick hook for a boss script, used for the lanterns and Doom), and the `lant`, `doomed`, `cure`, `gazed`, `knights`, `kmem`, `kswing` and `night` messages. The host judges the Gaze from each player's facing, which already arrives with their position. The Long Night is a screen-sized dark layer with the lights cut out of it, drawn over the floor and under the telegraphs.
 
@@ -453,6 +513,7 @@ Stats:
 - **Normal:** Sentinel / Lifebinder / Ranger / Cataclysm cleared 18 of 18 (5:48–6:07); Crusader / Echoist / Shadowblade / Sharpshooter 18 of 18 (5:32–5:59); Spellwarden / Cleric / Venomstrike / Nightstalker 16 of 18 (5:38–5:55), over six seed sets each.
 - **Hard, Bastion / Cleric / Ranger / Pyromancer:** the bots reach phase 3 in most runs; 2 of 8 killed him during the Moonset cast, the rest wiped at 1–34%.
 - Every Doom in every run was cured.
+- **With the braziers and lids** (October 2026, six seeds each): Normal 6 of 6 for all three line-ups (5:52–6:26); Hard (base specs) 0 of 6, reaching 5–40% (three reached the Moonset).
 ### Specializations (all 18 built)
 
 Each class picks one of two specializations, or keeps the base kit. Rules:

@@ -60,7 +60,7 @@ const VOLKAR = {
       clap: 7500, fist: H ? 22000 : 20000, surgeAlone: 8500, surgeSame: 15000, surgePair: 2000,
       crash: 15000, field: 6500, rod: 5000, rodAgain: 12000, rodFail: 12000, slam: 9000, wall: H ? 9500 : 11000, edge: 12000, pulse: H ? 480 : 420,
       chain: 7000, orb: 12000, skyfall: 36000,
-      strike: H ? 7000 : 5000, strikeOpen: H ? 18000 : 15000, discharge: 12000, grounded: 9000, boulder: H ? 12000 : 11000, fall: 24000,
+      strike: H ? 9000 : 8000, strikeOpen: H ? 18000 : 15000, discharge: 12000, grounded: 9000, boulder: H ? 12000 : 11000, fall: 15000,
     };
     const STONE_REACH = 70;  // how near a stone (from its face) a marked player stands to bring the bolt down on it
     const DISCHARGE = 180;   // how far a stone's discharge reaches
