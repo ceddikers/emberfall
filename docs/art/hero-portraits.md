@@ -1,6 +1,6 @@
 # Hero portrait briefs (hero select and inventory)
 
-Second pass, 2026-10-19: the first sheet read as AI art. These briefs aim for portraits that look painted by a person.
+Second pass, 2026-10-19: the first sheet read as AI art. These briefs aim for a cartoon/anime fantasy look that seems drawn by a person: clean cel shading, confident lines, flat colour.
 
 ## Why the first sheet looks "AI"
 
@@ -12,13 +12,13 @@ Second pass, 2026-10-19: the first sheet read as AI art. These briefs aim for po
 
 ## Shared style (paste this before every portrait)
 
-> Hand-painted gouache character portrait, like an illustration from a printed tabletop RPG book. Head and shoulders, square format. Visible brush strokes and dry-brush texture, slightly rough paper grain. A limited palette: three or four muted colours plus one accent. Shadows are flat, hard-edged shapes, not smooth gradients. Ink linework that varies in weight, thin and broken in the light, heavier in the shadow. One warm light source from the upper left, cool shadow on the right. A plain background of one muted, mottled colour wash, slightly lighter behind the head. The face is a specific, real-looking person with asymmetry and wear. Three-quarter view, the figure a little off-centre. Matte surfaces: metal is dull and scratched, not chrome.
+> Fantasy anime character portrait in a clean cel-shaded style, like key art for a hand-drawn 90s fantasy anime or a classic JRPG character sheet. Head and shoulders, square format. Confident, clean line art: a slightly thicker outer contour, thinner lines inside. Flat colour with two-tone cel shading: one hard-edged shadow tone per colour, plus a small, hard highlight on metal and hair. A bright but controlled palette: three or four main colours plus one accent. Simple, readable shapes; hair drawn in a few big clumps, not hundreds of strands. An expressive face with real personality and features of its own (age, nose, brows, scars), eyes sized to the character, no sparkles in them. One light source from the upper left. A plain flat background in one colour, with one simple graphic shape behind the head (a circle or a few bold diagonal bands). Three-quarter view, the figure a little off-centre.
 
-**Avoid (add as a negative prompt if your tool has one):** glowing eyes, neon rim light, glowing aura, colour halo behind the figure, lens flare, sparkles or particles, airbrushed skin, plastic or chrome shine, smooth gradients, symmetrical front-on pose, face hidden in a dark hood, oversaturated colours, thick uniform outline, frame, border, text, watermark.
+**Avoid (add as a negative prompt if your tool has one):** airbrushed shading, soft gradients, glossy plastic skin, bloom, glow, neon rim light, colour halo, lens flare, sparkles, sparkly eyes, glowing eyes, hundreds of thin hair strands, over-detailed textures, generic pretty face, the same face on every character, face hidden in a dark hood, symmetrical front-on pose, chibi proportions, frame, border, text, watermark.
 
 **Format:** about 512 × 512. The face sits a little above centre, with the top of the head or headgear just inside the frame, and the figure shown down to mid-chest. No frame or text: the game frames them.
 
-**Keep each class's signature piece** (in bold below) so the portrait still matches the hero you control in game. Everything else about the character is new. The accent colour now lives in the background wash and in one piece of clothing, not in a glow.
+**Keep each class's signature piece** (in bold below) so the portrait still matches the hero you control in game. Everything else about the character is new. The accent colour now lives in the flat background and in one piece of clothing, not in a glow.
 
 ## Tanks
 
@@ -45,7 +45,7 @@ Second pass, 2026-10-19: the first sheet read as AI art. These briefs aim for po
 ## Healers
 
 7. **Cleric (Priest of Dawn).** Accent: warm ochre gold.
-   A heavyset man in his fifties with a kind, lined face, ruddy cheeks and receding honey-grey hair. His **halo is a thin flat ring of gold leaf**, like a halo on an old church icon, not a glow. He wears cream robes worn at the seams, a **blue sash**, and gold shoulder pieces with the gilt rubbed off at the edges. The **sun-disc head of his staff** shows at one side, slightly tarnished. He has a gentle, amused look, as if he just heard a bad joke. Warm ochre background.
+   A heavyset man in his fifties with a kind, lined face, ruddy cheeks and receding honey-grey hair. His **halo is a thin, flat gold ring** with a hard white shine mark, not a glow. He wears cream robes worn at the seams, a **blue sash**, and gold shoulder pieces with the gilt rubbed off at the edges. The **sun-disc head of his staff** shows at one side, slightly tarnished. He has a gentle, amused look, as if he just heard a bad joke. Warm ochre background.
 
 8. **Grovekeeper (Druid).** Accent: olive and leaf green.
    A very old woman with weathered tan skin, deep wrinkles and bright, clever eyes. **Pale antlers grow up through her mossy green hood**, with moss on them. Long white hair is braided with twigs and a dried flower, and her knuckles look a little like bark. Her pauldrons are made of **overlapping leaves**, and a small beetle sits on one of them. She looks patient, faintly mischievous and ancient. Olive background.
@@ -57,6 +57,6 @@ Second pass, 2026-10-19: the first sheet read as AI art. These briefs aim for po
 
 - Paste the shared style block word for word for all nine, and keep the same seed or style reference, so they look like one artist made them.
 - Make them one at a time, not as a sheet. Sheets push generators towards matching, centred poses.
-- Pick the image with the most imperfection: uneven brushwork, an odd crop, a real face. Skip the one that looks most "finished".
+- Pick the image with the cleanest, flattest shading and the most character in the face. Skip any with soft airbrushed gradients, glow, or a face that could belong to anyone.
 - Look at them all side by side at 112 px (the hero-select thumbnail). Each should be recognizable by its silhouette and signature piece alone.
 - Files go in `client/portraits/<class>.png`, replacing the current ones.

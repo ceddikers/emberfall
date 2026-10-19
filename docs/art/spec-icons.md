@@ -2,7 +2,7 @@
 
 ## Ability icons
 
-**Style:** the hand-painted gouache style in `ability-icons.md`: use its shared style block, its avoid list and the class's background and palette. Where a line below says "glowing" or "light", paint it as a flat, bright shape of colour, not an actual glow. No frame, border or text; the game adds the slot frame.
+**Style:** the cartoon/anime cel-shaded style in `ability-icons.md`: use its shared style block, its avoid list and the class's background and palette. Where a line below says "glowing" or "light", draw it as a flat, bright shape of colour, not an actual glow. No frame, border or text; the game adds the slot frame.
 
 **Sheet:** one row per spec, in the order below. Files end up in `client/icons/<class>/<id>.png`. The id is given for each icon.
 
@@ -71,7 +71,7 @@ Only moves that are new to a spec need an icon. Changed moves (for example Senti
 
 ## Portraits (one per spec)
 
-**Format:** the same as `hero-portraits.md` (the second, hand-painted gouache pass): a square head-and-shoulders bust, about 512 × 512, using its shared style block and avoid list. The spec's colour goes in the background wash and one piece of gear, not a glow, so read "light" in the lines below as painted colour. Keep the class's new face and design from `hero-portraits.md`; the spec changes the gear and mood. These show on the hero page when the spec is picked. Files go in `client/portraits/<class>-<spec>.png` (for example `bastion-sentinel.png`). Until one arrives, the hero page shows the animated sprite in the spec's look.
+**Format:** the same as `hero-portraits.md` (the second, cartoon/anime cel-shaded pass): a square head-and-shoulders bust, about 512 × 512, using its shared style block and avoid list. The spec's colour goes in the flat background and one piece of gear, not a glow, so read "light" in the lines below as painted colour. Keep the class's new face and design from `hero-portraits.md`; the spec changes the gear and mood. These show on the hero page when the spec is picked. Files go in `client/portraits/<class>-<spec>.png` (for example `bastion-sentinel.png`). Until one arrives, the hero page shows the animated sprite in the spec's look.
 
 1. **Bastion · Sentinel** (silver-blue): the same great-helm, now with a broad silver tower shield raised to the chin, heavier plate pauldrons, a calm and immovable stance.
 2. **Bastion · Crusader** (gold): the helm with its visor raised to show determined eyes, a gold tabard with a sun emblem over the plate, a glowing sword hilt at the shoulder, warm dawn light from one side.
