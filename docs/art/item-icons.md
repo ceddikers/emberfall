@@ -167,3 +167,28 @@
 111. **Thunderhead Mantle** (`m_thunderhead`, Volkar, armour): Heavy slate-grey shoulder plates with a short storm-cloud-grey cape, a flat bright blue lightning bolt running down the chest plate, and rain beading on the iron.
 112. **Crown of the Barrow** (`m_crown`, the Hollow King, accessory): A tarnished gold crown with tall, thin spikes, one spike broken off, a grave-green gem at the front and a few strands of old cobweb between the points.
 113. **Mantle of the Dead Court** (`m_deadcourt`, the Hollow King, armour): A deep plum-black royal mantle with a high stiff collar, a tarnished gold chain of office across the chest, a small grave-green brooch, and a frayed, grave-dusted hem.
+
+## Thermist and Driftblade sheet (added 2026-10-19)
+**Tier style** follows the boss sheets above (Recruit plain, Grubnak kitchen, Skitterra spider, Volkar storm, Hollow King royal-and-dead). Thermist weapons are a **crux**: a palm-sized brass ring holding a fire half and a frost half, held upright like a focus. Driftblade weapons are curved **sabres**, diagonal. Numbered TD-1 to TD-18 so they don't clash with other new sheets; files go in `client/items/<key>.png`.
+
+### Thermist (rose accent, frost blue and ember orange)
+TD-1. **Recruit's Thermocrux** (`thermist_w0`): a plain, dented brass ring, a red glass half and a blue glass half, one of them cracked.
+TD-2. **Simmer-and-Chill Crux** (`thermist_w1`): a copper ring like a pan lid, one half a flat orange flame, the other a lump of blue ice, a little steam where they meet.
+TD-3. **Frostweb Crux** (`thermist_w2`): a silver ring strung across with pale spider silk, frost beaded on the threads on one side and tiny embers caught in them on the other.
+TD-4. **Thunderthaw Crux** (`thermist_w3`): a dark iron ring with a slate core, a blue lightning seam splitting a frozen half from a burning one.
+TD-5. **Crux of the Cold Hearth** (`thermist_w4`): a tarnished gold ring set with a grave-green gem at the top, one half dead grey ash, the other a small warm hearth flame.
+TD-6. **Hearthfrost Robes** (`thermist_a1`): plum robes with a kitchen apron tied over them, one sleeve scorched, the other frosted stiff.
+TD-7. **Silkfrost Robes** (`thermist_a2`): plum robes overlaid with pale web-patterned silk, frost on the left shoulder, an ember-orange hem on the right.
+TD-8. **Stormthaw Robes** (`thermist_a3`): slate-grey and plum robes, half the hem rain-soaked and icy, half steaming, a blue lightning stitch between them.
+TD-9. **Robes of the Banked Ember** (`thermist_a4`): near-black robes with tarnished gold trim, a single banked coal glowing orange in a gold clasp at the chest, frost on the cuffs.
+
+### Driftblade (jade accent)
+TD-10. **Recruit's Sabre** (`driftblade_w0`): a plain curved sabre with a nicked edge, a brass guard and a faded jade ribbon on the grip.
+TD-11. **Filleting Sabre** (`driftblade_w1`): a thin, flexible curved blade like a fish knife, a wooden handle, a kitchen towel knotted on the guard.
+TD-12. **Silkwind Sabre** (`driftblade_w2`): a pale steel sabre with a silver web etched along it, a long strand of silk streaming from the pommel.
+TD-13. **Galecutter Sabre** (`driftblade_w3`): a slate-grey sabre with a bright blue edge, a guard shaped like a swirl of wind, a jade grip.
+TD-14. **Sabre of the Last Wind** (`driftblade_w4`): a dark steel sabre with a grave-green line down the blade, a tarnished gold guard shaped like a small crown, a long frayed ribbon.
+TD-15. **Kitchen-Runner Leathers** (`driftblade_a1`): a short slate leather jacket with a jade sash, flour on the sleeves, a ladle hooked through the belt.
+TD-16. **Webdancer Leathers** (`driftblade_a2`): a fitted dark jacket with chitin shoulder plates and silk cords crossing the chest, a jade sash.
+TD-17. **Squall-Rider Leathers** (`driftblade_a3`): a slate coat with a high collar, rain beading on it, a long jade scarf blowing sideways.
+TD-18. **Barrowwind Leathers** (`driftblade_a4`): a near-black duelling coat with tarnished gold buttons, a grave-green lining, and a long tattered jade scarf.

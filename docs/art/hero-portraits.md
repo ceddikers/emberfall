@@ -60,3 +60,13 @@ Second pass, 2026-10-19: the first sheet read as AI art. These briefs aim for a 
 - Pick the image with the cleanest, flattest shading and the most character in the face. Skip any with soft airbrushed gradients, glow, or a face that could belong to anyone.
 - Look at them all side by side at 112 px (the hero-select thumbnail). Each should be recognizable by its silhouette and signature piece alone.
 - Files go in `client/portraits/<class>.png`, replacing the current ones.
+
+## Advanced DPS (added 2026-10-19)
+
+These two have no spec portraits yet, so the base portrait comes first and sets the face. Paint these before their spec portraits (`spec-icons.md`) and use them as the reference there. Until a file arrives the game shows the animated sprite (data.js `art.portraits: false`; flip it to `true` when the file is in).
+
+10. **Thermist (Living Thermometer).** Accent: rose, with frost blue and ember orange.
+   A woman in her early thirties with a long, thoughtful face, light olive skin, a small burn scar on her right wrist and grey eyes. Her **silver-white hair** is cut to the jaw at the front and tied at the back in a short tail with **one red and one blue cord**. She wears a plum-charcoal robe with a high collar, its trim **split down the middle: icy blue on her left side, ember orange on her right**. Her **left hand and forearm are frosted to the elbow** (pale blue skin, a few flat ice shards on the sleeve), and a **small flame sits in her open right palm**, so one side of her face is lit warm and the other cool. A small brass dial hangs from a chain at her collar. Dry, amused, a little tired, like someone checking a recipe she knows by heart. Rose-plum background, the graphic shape behind the head a flat circle split into a blue half and an orange half.
+
+11. **Driftblade (Wind Duellist).** Accent: jade.
+   A lean man in his mid-twenties with tanned skin, a narrow face, a chipped front tooth and quick dark eyes. His **dark hair is swept back into a high tail**, with a few strands blown loose across his forehead. He wears a fitted slate-blue duelling coat with a high collar and a jade sash, and a **very long jade ribbon scarf** wound once round his neck, its loose end streaming out of frame to one side as if he has just stopped running. The **curved sabre** rests on his shoulder, its back edge to his neck, one hard white highlight along the curve. A loose, cheerful grin, mid-breath. Pale jade background with a few bold diagonal wind bands behind the head.

@@ -212,6 +212,59 @@ The highest ceiling: newbies reach 70% of pro damage. The boss's hitbox ring sho
 
 *Ceiling:* plan Haste for raidwides and burst windows, fire Rewind right after a tankbuster, and land Stasis on the boss's biggest attack.
 
+### Advanced DPS (added 2026-10-19)
+
+Two DPS built for players who want more to juggle. On the hero select their tiles carry small complexity pips (data.js `complexity`: Thermist 3, Driftblade 2), separate from the difficulty diamonds. Both run on the same rules as the first nine: six keys plus the dash, small numbers, a class gauge drawn as its own shape, kits run on each client and report to the host.
+
+**Thermist, Living Thermometer** (◆◆◆). Signature: **Thermal Shock**. Gauge: a two-sided dial (Temperature), frost blue on the left, ember orange on the right, a mark at 0. Ranged caster; autos alternate a fire and a frost spark (25).
+
+| Key | Skill | Type | What it does |
+|---|---|---|---|
+| Q | Cinder Bolt | GCD | 1 s cast, 210, turns the dial 1 toward Blaze. Locked while Overheated. |
+| W | Rime Shard | GCD | 1 s cast, 210, turns the dial 1 toward Rime. |
+| E | Flare | GCD | 2 s cast, 400, dial +2. At +5 it is instant and a sure crit, and holds you **On the Brink** instead of moving the dial. |
+| R | Glacier Lance | GCD | 2 s cast, 400, dial −2. The same edge rule at −5. |
+| D | Equilibrium | oGCD | 30 s: the dial snaps to 0 behind a shield of 70 per step it fell; clears On the Brink. |
+| F | Inversion | oGCD | 90 s burst: flips the dial (+5 becomes −5). From 3 or more steps out that crossing is a Shock half again as strong. 10 s **Attuned**: both elements count as your side. |
+
+- **The dial** runs from −5 (Rime) to +5 (Blaze). Every step from 0 makes that side's spells 8% stronger (Attuned: both sides); spells pushing back toward 0 gain nothing.
+- **Thermal Shock:** a spell that carries the dial across 0, after it peaked at 3 or more since the last crossing, detonates on the target. Its size is the **swing**: the peak plus how far past 0 it landed (+5 down to −1 is 6, an Inversion at ±5 is 10). Potency max(0, −120 + 105 × swing): 195 at 3, 510 at 6, 930 at 10. The gauge shows the peak as a bead that lights up once a Shock is armed.
+- **Overload:** pushing past ±5, or casting the same element again while On the Brink, overloads you: **Overheat** (fire locked 3 s, you lose 8% HP) or **Frostbite** (casts 30% slower for 3 s).
+
+*Ceiling:* a real swing is a plan several casts long. Climb with the side you're on, use the edge spell as your one instant (it doubles as movement), cross with the other element as far as you can, and save Inversion for the party's burst window. Equilibrium is your mitigation and costs you the swing, so the timing matters. Newbies reach 60% of pro damage, the widest gap in the game.
+
+**Driftblade, Wind Duellist** (◆◆◇). Signature: **Drift and Passing Strikes**. Gauge: a crescent of wind that fills while you move (Drift, 0 to 100), streaks racing through it while it rises. Melee; autos are a quick sabre flick (40).
+
+| Key | Skill | Type | What it does |
+|---|---|---|---|
+| Q | Carve | GCD | 240, up to 30% more with full Drift. At 50 Drift or more a follow-through cut adds 30%. |
+| W | Slipstream | oGCD | 2 charges, 14 s each: dash 180 px the way you're heading, +15 Drift. Leaves a **wind lane** for 6 s: anyone running along it is 30% faster, and stepping back onto your own gives +15 Drift. Dashing through an enemy is a Passing Strike. |
+| E | Hook Turn | oGCD | 12 s, range 220: swing round your target to its far side with a cut of 260 (up to 40% more with Drift, a sure crit above 70). Gives back a dash charge. |
+| R | Crosswind | GCD | Needs 20 Drift, range 300: spends it all, 100 + 5 per Drift (600 at full). |
+| D | Stillpoint | oGCD | 25 s: parry for 2 s, 50% less damage, and Drift holds instead of draining. A hit caught in the first moment is answered with a riposte (320, up to 50% more with Drift). |
+| F | Gale Run | oGCD | 90 s burst: for 12 s Drift can't drain and Passing Strikes hit three times as hard. |
+
+- **Drift** fills by 20 a second while you move and drains by 30 while you stand. Nearly every cut scales with it.
+- **Passing Strike:** running into an enemy's body while moving cuts it as you pass (90, doubled at full Drift; at most every 0.45 s). Dashes, Hook Turn and plain running all count, so a dodge can carry you through the boss instead of away.
+
+*Ceiling:* never stop. Thread every dodge through the boss, chain Slipstream, Hook Turn (which hands the dash back) and the shared dash into long runs, fire Crosswind full, and keep Gale Run for the stretches where the fight makes you move. Newbies reach 60% of pro damage: a Driftblade who stands still is half a Driftblade.
+
+**Design notes and changes from the brief (2026-10-19):**
+- **Thermal Shock is measured from the peak since the last crossing**, not from wherever the dial happened to be one cast ago, so a swing is a plan you build over several casts. A crossing from a peak under 3 is just a crossing.
+- **Glacier Lance is single-target** (like every other move in the game), not a piercing line.
+- **Overheat and Frostbite** are different on purpose: Overheat costs HP and locks fire; Frostbite only slows casts. Either way you lose the swing.
+- **Zenith's Redline** replaces overloading at ±5 with a +20% window that builds Strain (11 a second at the edge, −20 a second off it); full Strain is a meltdown (the dial snaps to 0, you lose 12% HP and take a 4 s Overheat or Frostbite). Equilibrium becomes **Bleed Off** (15 s: vents 60 Strain behind a shield of 160).
+- **Pendulum** moves the dial a step further with every spell and gains Momentum (+4% per crossing, up to 5, gone after 6 s without one), so its swings come faster but land closer to the edge.
+- **Carve's follow-through** (a second cut at 50+ Drift) replaced "Carve doesn't stop you moving": every GCD in the game already lets you move, so the line said nothing.
+- **Hook Turn mirrors you through the target** (to the point opposite where you stood), which reads clearly and is the same rule for players and bots.
+- **Slipstream's lane speed** is applied on each player's own client (a lane laid by anyone speeds up anyone running along it). Bots don't use lanes for speed; the Driftblade's own Drift refund from re-entering a lane works for everyone, since it lives in the kit.
+- **Stillpoint is a parry built on Brace's timing** (`mitigate` kind `brace`): the host's Perfect Block notice is what triggers the riposte, so it lands with the same fairness window as the Bastion's block.
+- **Orbit** (spec) counts how far you circle round your target at close range; at 5 stacks Carve strikes on its own every 1.4 s while you move. **Comet** (spec) doubles Drift to 200, fills it faster in straight lines (34 a second) and turns Crosswind into **Impact**: a charge 120 px clean through the target for 120 + 4 per Drift, a sure crit from 160.
+- **Passing Strikes credit the enemy you ran through** (damage events can now name their target, `tgt`), so cutting through an add doesn't hit the boss and vice versa.
+- **Kit moves** (`teleport` events with `where`: `dash`, `around`, `through`) play as a dash for players (the same animation and timing as the shared dash) and snap for bots; `kitMoveDest` in `kits.js` is the one rule both use.
+- **Art:** both classes ship without painted icons or portraits (data.js `art: { icons: false, portraits: false }`). The game draws small glyph icons for them instead of asking for files that don't exist, and the hero page shows the animated sprite. Briefs are in `docs/art/`.
+
+**Tested (2026-10-19):** `tools/check.js` passes with both classes in the class balance (pro DPS between the Shadowblade and the Pyromancer), every spec within 5% of its class, every talent under +7% and full builds +12 to +16%, all four spec trials passed by a bot playing the spec (the base kits also pass, like 14 of the original vignettes), and four new bot raid line-ups clearing on Normal: Grubnak (base / base), Skitterra (Pendulum / Orbit), Volkar (Zenith / Comet) and the Hollow King (base / base). Over six runs each those cleared 6 of 6, except Volkar with Zenith and Comet at 5 of 6. In the browser: the hero select at 1280×800 and phone width, the hero pages, both classes in a bot raid with their gauges, cast and Shock effects, Slipstream lanes, the drawn icons (no missing-file requests for either class), the talent screen with the talent moves on the bar, and the Comet trial. Not yet played by a human or over a real network connection.
 ### Simulation results (`node tools/simulate.js`)
 
 The sim runs a 6-minute fight twice per class. The *pro* follows that class's optimal priorities. The *newbie* model:
@@ -233,10 +286,12 @@ The sim runs a 6-minute fight twice per class. The *pro* follows that class's op
 | Cleric | 658 | 1037 | 63% |
 | Grovekeeper | 744 | 1044 | 71% |
 | Chronomancer | 834 | 1122 | 74% |
+| Thermist | 1422 | 2356 | 60% |
+| Driftblade | 1433 | 2407 | 60% |
 
 These numbers include auto-attacks. Each class's `potMult` was lowered when autos were added, so pro damage stayed where it was. Newbies gained a little, because autos keep hitting while they move or hesitate.
 
-Every class has a clear newbie-to-pro gap (14–37%), and the gap grows with the class's difficulty rating. Within each role, pro damage is balanced to within about 10% through a per-kit `potMult` knob in `combat/kits.js`. Healer pros deal more damage because they stop over-healing and attack instead.
+Every class has a clear newbie-to-pro gap (14–37%; 40% for the two advanced DPS, by design), and the gap grows with the class's difficulty rating. Within each role, pro damage is balanced to within about 10% through a per-kit `potMult` knob in `combat/kits.js`. Healer pros deal more damage because they stop over-healing and attack instead.
 
 ## 4. Bosses
 
@@ -487,6 +542,10 @@ The user picked: **story vignettes**, **one per spec**, **built so the spec's tr
 | Nightstalker | The Knife Behind | His Royal Gaze, again and again: look away, stay behind. Backstab. |
 | Cataclysm | The Falling Star | He holds the middle of the hall and barely moves. Meteor. |
 | Sigilmancer | The Burning Circle | His sceptre sweeps one side of the hall, then the other; straight behind him never burns. A circle that stays safe. |
+| Pendulum | The Swinging Weight | Short stretches between marks, blows and stomps, no room for long casts. Quick swings that keep crossing. |
+| Zenith | The Burning Edge | He holds his ground and the stretches between attacks are long and quiet. Holding Redline and venting in time. |
+| Orbit | The Circling Hawk | His sceptre sweeps one side of the hall, then the next quarter, then the far side: whoever keeps circling stays out of it. |
+| Comet | The Long Charge | In close, then far out, then in again (rings and stomps): long straight runs across the hall. |
 
 **How it's built:** `client/js/arena/trials.js` holds `TRIALS` (name, lore, outro, allies, target length, enrage, regen, who must live, script) and `trialDef(specId)`, which turns one into a boss definition. It keeps the Hollow King's id, so his hall, art and telegraphs all apply, and sizes the Shade's health for the party. The raid id is `trial:<spec>`; `main.js` (`startTrial`, `raidDef`) runs it as a one-human raid, skips loot and clear records, and calls `Save.recordTrial`. `save.js` adds `trialsOpen`, `trialDone`, `recordTrial` and `specState` ('locked', 'trial' or 'open'); `Save.spec` reads a spec that isn't unlocked as none.
 
@@ -524,6 +583,10 @@ The user picked: **story vignettes**, **one per spec**, **built so the spec's tr
 | **Shadowblade · Nightstalker** (The Knife Behind) | Burst from behind | Eviscerate becomes **Backstab**: much stronger from behind, 25% weaker from the front. Shadow Dance lasts 14 s. |
 | **Pyromancer · Cataclysm** (The Falling Star) | Huge single hits | Pyroblast becomes **Meteor**: lands 1.5 s after the cast, hits harder, leaves a burning crater. Hot Streak still makes it instant. |
 | **Pyromancer · Sigilmancer** (The Burning Circle) | Positioning | Combustion becomes **Ember Circle**: a 20 s circle at your feet (45 s cooldown). Inside it you cast 20% faster and deal 15% more damage; outside, nothing. Bots stay in theirs. |
+| **Thermist · Pendulum** (The Swinging Weight) | Fast swings | Every spell moves the dial a step further; every crossing of 0 adds Momentum (up to 5, +4% damage each, gone after 6 s without a crossing). The Pendulum turns back a step short of the edge. |
+| **Thermist · Zenith** (The Burning Edge) | Holding the edge | At ±5 you stay in **Redline** instead of overloading: +20% damage and the edge spell instant, but Strain builds (11 a second) until you vent it or melt down. Equilibrium becomes **Bleed Off** (15 s): vents 60 Strain behind a shield. |
+| **Driftblade · Orbit** (The Circling Hawk) | Smooth circles | Circling your target at close range builds Orbit (a stack per radian, up to 5, fading 2.5 s after you stop); at 5, Carve strikes on its own every 1.4 s while you move. |
+| **Driftblade · Comet** (The Long Charge) | Big, readable burst | Drift holds 200 and fills faster in straight lines. Crosswind becomes **Impact**: a charge clean through the target that releases everything at once (a sure crit from 160). |
 
 New support: kits can ask where their hero stands (`env.pos`, for the Sigilmancer's circle); heals can target `'lowest'` (the most hurt ally, optionally not a given one), healing pools on the floor (`pool` events, ticked in `fight.js`), and the Inquisitor's brand (`brand` events; `burstBrand` credits each burst to the Inquisitor).
 
@@ -558,6 +621,8 @@ Each hero has a small talent tree: **5 rows of 3 talents, one pick per row**. Ta
 | Cleric / Aegis / Inquisitor | 1,038 / 1,026 / 1,167 | 1,128 / 1,141 / 1,370 | +8.6% / +11.3% / +17.4% |
 | Grovekeeper / Lifebinder / Moonwell | 1,044 / 1,041 / 1,051 | 1,194 / 1,139 / 1,198 | +14.4% / +9.5% / +14.0% |
 | Chronomancer / Echoist / Accelerant | 1,142 / 1,141 / 1,155 | 1,299 / 1,303 / 1,352 | +13.8% / +14.3% / +17.1% |
+| Thermist / Pendulum / Zenith | 2,356 / 2,355 / 2,357 | 2,675 / 2,718 / 2,707 | +13.5% / +15.4% / +14.8% |
+| Driftblade / Orbit / Comet | 2,407 / 2,408 / 2,407 | 2,740 / 2,701 / 2,783 | +13.8% / +12.2% / +15.6% |
 
 The base Pyromancer gains least because the pro's Hot Streak and Heat handling leaves little room; its specs gain normally.
 
@@ -741,12 +806,58 @@ The base Pyromancer gains least because the pro's Hot Streak and Heat handling l
 | V | **Hourglass Ward** | Rewind now also slows time around its target: they take 15% less damage for 6s. |
 | V | **Second Hand** | In Haste, Temporal Bolt now strikes again 2s later at 8% strength, healing as a Bolt does. *Echoist:* Your echoes are 60% strength instead of half. *Accelerant:* In Haste, Temporal Bolt now strikes again 2s later at 6% strength, healing as a Bolt does. |
 
+#### Thermist
+
+Built under the newer rule (2026-10-19): talents are mostly new moves and changed behaviour, not percentages. Rows III and V each hold a talent that puts a **new move on a button** (Thermocline on Q, Absolute Zero on W); none of the fifteen is a plain number bump.
+
+| Row | Talent | Effect |
+|---|---|---|
+| I | **Banked Embers** | A Cinder Bolt cast at +3 or hotter now leaves an ember in the target (up to 3). Your next Thermal Shock sets every ember off. |
+| I | **Flicker** | Rime Shard is now instant while the dial is cold, and Cinder Bolt while it is hot. |
+| I | **Afterglow** | A Flare or Glacier Lance cast at its own edge now leaves the target burning or freezing for 9s. |
+| II | **Cold Front** | An Equilibrium that drops the dial 4 or more steps now also gives the whole party 10% less damage for 6s. *Zenith:* a Bleed Off that vents 40 or more Strain. |
+| II | **Phase Step** | Equilibrium now also blinks you 150 px the way you're heading. *Zenith:* Bleed Off does. |
+| II | **Thermal Skin** | Every Thermal Shock now also wraps you in a shield worth part of its strength. |
+| III | **Thermocline** | New move on Q, in place of Cinder Bolt: instant, swings the dial 2 steps toward the other side (3 for *Pendulum*) and counts as that element; hits harder the further from 0 you started. |
+| III | **Latent Heat** | Overloading no longer locks or burns you: the heat is banked and your next Thermal Shock is half again as strong. *Zenith:* the same for a meltdown. |
+| III | **Rebound** | After a Thermal Shock, your next spell is instant (within 10s). |
+| IV | **Polar Vortex** | Inversion now leaves a vortex on the target that strikes every 1.5s for 6s. |
+| IV | **Equilibrium Pulse** | Equilibrium now sets off the heat it snaps away: from 3 or more steps out, a Thermal Shock as if you had swung that far. *Zenith:* Bleed Off in Redline sets off a Shock of 3. |
+| IV | **Solstice** | Inversion now flips the dial back 5s later: a smaller Shock if it's still far enough from 0. |
+| V | **Absolute Zero** | New move on W, in place of Rime Shard: a 2s cast on a 45s cooldown that plunges the dial straight to −5 wherever it was, hitting harder the further it fell (from the hot side that crossing is a Shock of up to 10). |
+| V | **Conduction** | Thermal Shock now arcs: a second, smaller Shock strikes the target 1s later. |
+| V | **Twin Stars** | A Flare or Glacier Lance cast at its own edge now fires a second, smaller bolt after it. *Zenith:* cast in Redline. |
+
+#### Driftblade
+
+Same rule: Gyre (row III, on E) and Tailspin (row V, on D) are new moves, and the rest change how things work. The one near-number talent is Tailwind (Drift and a crit on Hook Turn).
+
+| Row | Talent | Effect |
+|---|---|---|
+| I | **Crescent** | Every third Carve you make while moving now also throws a crescent of wind at the target. |
+| I | **Eddies** | A Slipstream lane laid through an enemy now cuts it when you lay it, and again when the lane fades. |
+| I | **Tailwind** | Hook Turn now also gives 20 Drift, and your next Carve is a critical hit. |
+| II | **Eye of the Storm** | While you hold Stillpoint, the whole party takes 10% less damage too. |
+| II | **Gust Guard** | Slipstream now wraps you in a shield of wind for 6s. |
+| II | **Sidestep** | Hook Turn now also makes you take 30% less damage for 2s. |
+| III | **Gyre** | New move on E, in place of Hook Turn: loop once round your target, one cut for every 25 Drift you have (up to 4). It spends nothing and adds 10 Drift. Two charges. |
+| III | **Second Wind** | A Crosswind that spends 80 Drift or more gives 10 back. *Comet:* an Impact that spends 160 or more gives 20 back. |
+| III | **Hover** | Your Drift no longer drains in the first 1.5s you stand still. |
+| IV | **Galeforce** | When Gale Run ends, it looses a free Crosswind at whatever Drift you hold (it spends nothing). |
+| IV | **Jetstream** | A Slipstream through an enemy gives its charge back (once every 8s). |
+| IV | **Hurricane** | During Gale Run, each Passing Strike makes it last 1s longer (up to 6s). |
+| V | **Tailspin** | New move on D, in place of Stillpoint: whirl in place, parrying like Stillpoint and cutting the nearest enemy three times, then spring 150 px the way you're heading. |
+| V | **Razor Wind** | Passing Strikes leave a cut that bleeds for 6s, deeper with each pass (up to 3). |
+| V | **Afterimage** | Hook Turn leaves an afterimage that cuts the target again a second later. |
+
+**Talent moves (new infrastructure):** `TALENT_ABILITIES` in `kits.js` maps a talent id to a move (`{ cls, ab, spec? }`); the move names the button it takes (`replaces`), and `spec` holds a spec's own version. `kitFor(classId, specId, talents)` in `specs.js` lays the held talent moves over the spec kit (cached per combination) and marks them `fromTalent`. The actor builds from the held set; `abilityById` finds a move by id from the kit, its spec or a talent, so a cast message now also carries the move id (`a`) and other players see the right move. The talent screen shows the move itself in the card's tooltip. `tools/check.js` validates that a granted move belongs to its class and replaces the ability its talent names.
+
 ## 5. What's built (code map)
 
 | Area | Files |
 |---|---|
 | Combat engine (GCD, oGCD, queue, casts, DoTs, procs, stats) | `client/js/combat/engine.js` |
-| The nine kits | `client/js/combat/kits.js` |
+| The kits (the first nine, then the Thermist and Driftblade block: dial, Drift, kit moves, talent moves) | `client/js/combat/kits.js` |
 | Specializations (kit changes, per-hero choice) | `client/js/combat/specs.js` |
 | Kit-to-world bridge (player and bots) | `client/js/combat/actor.js` |
 | Unique class gauges | `client/js/combat/gauges.js` |
@@ -775,7 +886,8 @@ The base Pyromancer gains least because the pro's Hot Streak and Heat handling l
 | Rotation sim, headless bot raid, talent balance | `tools/simulate.js`, `tools/bot-raid.js`, `tools/talents.js` |
 
 **Hero select:** opens right after joining (and from the barkeep, a hero on the deck, or your hero name top-left).
-- The altar grid: nine heroes in three role columns.
+- The altar: one band per role (tanks, damage, healers), each a grid of compact tiles that wraps, so the roster can grow past 16 and still fit at 1280×800; two columns per band on a phone. Advanced classes carry small complexity pips (data.js `complexity`). Built from `CLASSES` and `ROLES`, nothing hard-coded per class.
+- The town deck packs a role with more than three heroes closer together (`lineupSpot(role, col, n)`), and every other name in a packed row sits higher.
 - The detail page: back arrow, flavor text, an animated portrait, the hero's passive (their signature mechanic), the Q W E R D F Space icons with tooltips, and Tips & Combos (first steps, mastery, combos shown as icon chains).
 - Painted front-facing portraits are in `client/portraits/<id>.png`, cut from `docs/art/hero-portraits-sheet.jpg` (briefs in `docs/art/hero-portraits.md`).
   - Each is a square head-and-shoulders bust (440×440), cut from the 3×3 bust sheet; the older full-figure sheet is kept as `docs/art/hero-portraits-fullbody-sheet.jpg`.
