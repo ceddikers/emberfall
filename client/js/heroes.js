@@ -1,7 +1,10 @@
 // Hero art, drawn in code ("paper doll" style). Each hero is drawn in local space
 // facing +x, with the left hand at -y and the right hand at +y, ~16px radius at scale 1.
 
-const ANIM_DUR = { attack: 0.45, bash: 0.4, brace: 1.2, cast: 0.55, big: 0.9, dash: 0.2 };
+const ANIM_DUR = { attack: 0.45, bash: 0.4, brace: 1.2, cast: 0.55, big: 0.9, dash: 0.2,
+  // Ironpalm's strikes (its presses recover in 0.38-0.75s, so its animations are quick)
+  palm: 0.3, fist: 0.42, kick: 0.38, uppercut: 0.5, axe: 0.55, flurry: 0.7, guard: 0.6 };
+const IP_STRIKES = ['palm', 'fist', 'kick', 'uppercut', 'axe', 'flurry'];
 
 function feet(ctx, st, color) {
   const w = st.moving ? Math.sin(st.t * 12) * 5 : 0;
@@ -465,7 +468,7 @@ function drawChannelFocus(ctx, cls, st, p) {
 
 // Body motion for attacks: a little wind-up lean back, then a lunge and twist into the strike.
 function attackBody(st) {
-  const p = Math.max(actP(st, 'attack'), actP(st, 'bash'));
+  const p = Math.max(actP(st, 'attack'), actP(st, 'bash'), st.action && IP_STRIKES.includes(st.action.type) ? actP(st) : -1);
   if (p < 0) return { lunge: 0, twist: 0 };
   const v = p < 0.3 ? -0.5 * easeOut(p / 0.3) : p < 0.55 ? -0.5 + 1.5 * easeOut((p - 0.3) / 0.25) : 1 - easeOut((p - 0.55) / 0.45);
   return { lunge: v * 3.5, twist: v * 0.13 * swingDir(st) };
@@ -911,3 +914,77 @@ const HERO_TRAIL = {
     ctx.restore();
   },
 };
+
+// ---------------------------------------------------------------- Ironpalm (tank)
+// A barefoot monk-brawler: shaved head with a short topknot, a saffron sleeveless gi over a maroon sash, prayer beads
+// round the neck, bare arms and iron plates bound over the knuckles with cloth wraps. Guard up at rest; the lead hand
+// jabs open-palmed (Light), the rear hand drives a straight (Heavy), a leg snaps out (Kick); uppercut, axe kick, a
+// flurry of palms, and forearms crossed for guard. Hits freeze for a beat (hitStop in draw-util.js).
+HERO_ART.ironpalm = function (ctx, st) {
+  const gi = HERO_SPEC === 'stillwater' ? '#9cc4dc' : HERO_SPEC === 'avalanche' ? '#c8875a' : '#f0a73a';
+  const sash = HERO_SPEC === 'stillwater' ? '#2e4a66' : '#7a2430', skin = '#d9a07a', wrap = '#ece0c8', iron = '#8e9aa8';
+  const p = actP(st), raw = p >= 0 && st.action ? st.action.type : null;
+  const type = raw === 'attack' ? (st.action.alt ? 'fist' : 'palm') : raw;   // auto-attacks: a jab, then a straight
+  const ease = q => (q < 0 ? 0 : q < 0.35 ? easeOut(q / 0.35) : 1 - easeOut((q - 0.35) / 0.65));   // out fast, back slower
+  const k = type && p >= 0 ? ease(p) : 0;
+  const bob = st.moving ? Math.sin(st.t * 12) * 1.2 : Math.sin(st.t * 3) * 0.5;
+  // bare feet: wider stance; Kick and axe kick swing the rear leg out
+  const legOut = (type === 'kick' || type === 'axe') ? k : 0;
+  const w = st.moving ? Math.sin(st.t * 12) * 3 : 0;
+  ellipse(ctx, 2 + w, -7.5, 4.6, 3, 0, skin, OUT, 1.4);
+  if (legOut > 0) {
+    const fx = 4 + legOut * 20, fy = 7 - legOut * 5;
+    limb(ctx, [-1, 6, fx * 0.6, fy * 0.9 + 1, fx, fy], sash, 4.2);
+    ellipse(ctx, fx + 2, fy, 4.8, 3.2, -0.3, skin, OUT, 1.4);
+    if (type === 'axe') smear(ctx, 0, 0, 22, -1.2, 0.3, '#ffe0a0', Math.sin(p * Math.PI) * 0.9, 6);
+    else smear(ctx, 0, 4, 20, 1.2, -0.1, '#ffffff', strikeAmt(p) * 1.2, 5);
+  } else ellipse(ctx, 0 - w, 7.5, 4.6, 3, 0, skin, OUT, 1.4);
+  // the body: a sleeveless gi crossed at the chest, tied with the sash
+  torso(ctx, gi, 9, 13);
+  line(ctx, -2, -9, 4, 3, shade(gi, -0.25), 1.6);
+  rrect(ctx, -4.5, -11, 3, 22, 1, sash, OUT, 1.1);
+  poly(ctx, [-4, 10, -11, 13 + Math.sin(st.t * 4) * 1.5, -9, 8], sash, OUT, 1);
+  // prayer beads
+  for (let i = 0; i < 9; i++) { const a = -1.3 + i * 0.32; circle(ctx, 1 + Math.cos(a) * 7.5, Math.sin(a) * 7.5, 1.1, '#4a2a1e', null); }
+  // arms: guard up; which hand moves depends on the strike
+  let L = [8, -8], R = [7, 9], open = false;
+  if (type === 'palm') { L = [8 + k * 16, -8 + k * 6]; open = true; }
+  else if (type === 'fist') R = [7 + k * 19, 9 - k * 8];
+  else if (type === 'uppercut') { R = [7 + k * 12, 9 - k * 6]; }
+  else if (type === 'flurry' && p >= 0) { const s = Math.sin(p * Math.PI * 7); L = [10 + Math.max(0, s) * 14, -6 + Math.max(0, s) * 4]; R = [10 + Math.max(0, -s) * 14, 6 - Math.max(0, -s) * 4]; open = true; }
+  else if (type === 'guard' || type === 'brace') { L = [13, -3]; R = [12, 4]; }
+  else if (type === 'big') { L = [6 - k * 2, -12 - k * 6]; R = [6 - k * 2, 12 + k * 6]; }
+  const arm = (sx, sy, [hx, hy], up) => {
+    limb(ctx, [sx, sy, (sx + hx) / 2 + 1, (sy + hy) / 2 + (sy < 0 ? -1.5 : 1.5), hx, hy], skin, 3.6);
+    limb(ctx, [(sx + hx * 2) / 3, (sy + hy * 2) / 3, hx, hy], wrap, 3.2);   // the cloth wraps up the forearm
+    const r = up ? 4.4 + k * 1.6 : 3.8;
+    if (open && sy < 0 || (type === 'flurry' && p >= 0)) { ellipse(ctx, hx + 1, hy, r * 1.1, r * 1.3, 0, wrap, OUT, 1.4); line(ctx, hx + 2.5, hy - 2, hx + 2.5, hy + 2, 'rgba(90,60,40,0.4)', 0.8); }
+    else { circle(ctx, hx, hy, r, wrap, OUT, 1.4); rrect(ctx, hx + r * 0.2, hy - r * 0.8, r * 0.7, r * 1.6, 1, iron, OUT, 0.9); }   // iron over the knuckles
+  };
+  arm(1, -10, L, type === 'palm');
+  arm(1, 10, R, type === 'fist' || type === 'uppercut');
+  if (type === 'fist') smear(ctx, 7, 9, 18, 0.6, -0.1, '#ffd8a0', strikeAmt(p), 5);
+  if (type === 'uppercut') { const a = Math.sin(Math.min(1, p * 1.6) * Math.PI); glow(ctx, R[0], R[1], 10, '#ffb84a', a * 0.6); smear(ctx, 4, 6, 16, 1.4, -0.4, '#ffd27a', a, 6); }
+  // shaved head, a short topknot at the back, a strip of brow
+  ctx.save(); ctx.translate(0, bob * 0.2);
+  circle(ctx, 0.5, 0, 7.4, skin, OUT, 2);
+  circle(ctx, -1.5, -2.2, 2.4, shade(skin, 0.18));
+  ellipse(ctx, 5.4, 0, 1.4, 4.6, 0, shade(skin, -0.2));
+  circle(ctx, -7, 0, 2.6, '#2a1c16', OUT, 1.2);
+  line(ctx, -9.5, 0, -12, Math.sin(st.t * 5) * 1.2, '#2a1c16', 1.6);
+  ctx.restore();
+};
+CHANNEL.ironpalm = { focus: [12, 0], color: '#ffb84a', hot: '#fff0c8', mote: 'mote' };
+
+Object.assign(SPEC_ART, {
+  // Still Water: ripples spreading under the feet while they stand still, and a pale blue band round the brow
+  stillwater(ctx, st) {
+    if (!st.moving) for (let i = 0; i < 2; i++) { const q = (st.t * 0.6 + i * 0.5) % 1; ctx.save(); ctx.globalAlpha = (1 - q) * 0.5; ellipse(ctx, 0, 2, 12 + q * 16, (12 + q * 16) * 0.75, 0, null, '#bfe4f6', 1.2); ctx.restore(); }
+    ctx.save(); ctx.lineWidth = 1.6; ctx.strokeStyle = '#8fc8e8'; ctx.beginPath(); ctx.arc(0.5, 0, 6.8, -1.2, 1.2); ctx.stroke(); ctx.restore();
+  },
+  // Avalanche Fist: stone gauntlets over the wraps, grit falling off them, a smoulder of momentum
+  avalanche(ctx, st) {
+    for (const sy of [-1, 1]) { const x = 9, y = 8.5 * sy; glow(ctx, x, y, 8, '#d08a5a', 0.15 + Math.sin(st.t * 4 + sy) * 0.05); }
+    for (let i = 0; i < 3; i++) { const q = (st.t * 1.3 + i / 3) % 1; circle(ctx, 6 - q * 6, (i - 1) * 9, 1 - q * 0.6, '#8a6a50'); }
+  },
+});

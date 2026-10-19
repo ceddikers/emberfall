@@ -386,7 +386,7 @@ TALENTS.ironpalm = [
   ],
   [
     { id: 'ironpalm_shirt', name: 'Iron Shirt', ab: 'kick', text: 'Tiger Wall now also wraps you in a shield for 5s.' },
-    { id: 'ironpalm_deflect', name: 'Deflect', ab: 'read', text: 'Reading anything but a tankbuster now also throws the blow back into the boss: your counter hits more than twice as hard.' },
+    { id: 'ironpalm_deflect', name: 'Deflect', ab: 'read', text: 'Reading anything but a tankbuster now also throws the blow back into the boss: your counter hits about twice as hard.' },
     { id: 'ironpalm_bellecho', name: 'Bell\'s Echo', ab: 'bell', text: 'Temple Bell now also heals the whole party a little.', spec: { avalanche: 'Landslide now also heals the whole party a little.' } },
   ],
   [

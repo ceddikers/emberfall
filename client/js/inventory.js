@@ -243,6 +243,15 @@ const Inventory = (() => {
           shape(() => c.arc(0, -19, 4.5, 0, Math.PI * 2), '#b8ff9a', 1.5);
         }
         break;
+      case 'wraps': {   // Ironpalm: a coil of cloth knuckle wraps with iron plates over the knuckles
+        c.rotate(-0.3);
+        c.fillStyle = rgba(accent || '#f0a73a', 0.28); c.beginPath(); c.arc(0, 2, 22, 0, Math.PI * 2); c.fill();
+        shape(() => c.roundRect(-14, -8, 28, 24, 7), '#d8c0a0');
+        for (const y of [0, 6, 12]) stroke(() => { c.moveTo(-14, y); c.lineTo(14, y); }, '#a88a68', 1.2);
+        for (let i = 0; i < 4; i++) shape(() => c.arc(-10.5 + i * 7, -10, 4, 0, Math.PI * 2), ['#9aa6b4', '#a8b4c2', '#c8b07a', '#d0d8e2', '#8ae0b0'][it.tier] || metal, 1.8);
+        stroke(() => { c.moveTo(14, 12); c.quadraticCurveTo(24, 18, 18, 26); }, '#d8c0a0', 3);
+        break;
+      }
       case 'retort': {   // Alembist: a glass retort with a copper collar, its long neck bent down, a coloured mix inside
         c.rotate(-0.2);
         c.fillStyle = rgba(accent || '#d08a3a', 0.3); c.beginPath(); c.arc(-4, 6, 20, 0, Math.PI * 2); c.fill();

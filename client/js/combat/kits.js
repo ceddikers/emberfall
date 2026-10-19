@@ -1922,7 +1922,7 @@ function ipRead(k, d) {
   const b = !!(d && d.b), ab = k.abilities[3];
   k.stats.reads = (k.stats.reads || 0) + 1;
   if (b) k.stats.readBusters = (k.stats.readBusters || 0) + 1;
-  k.damage(IRONPALM.READ.counter + (!b && k.talent('ironpalm_deflect') ? 76 : 0), { ab, threat: 2 });
+  k.damage(IRONPALM.READ.counter + (!b && k.talent('ironpalm_deflect') ? 60 : 0), { ab, threat: 2 });
   ipBreath(k, k.def.stillWater ? k.poolMax() : 15);
   if (b) k.buff('opening', IRONPALM.OPENING);
   if (k.perk('ironpalm_a2')) k.shield('self', 160, 6, { ab });

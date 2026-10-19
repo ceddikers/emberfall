@@ -68,6 +68,17 @@ GAUGE_TIPS.alembist = {
   extra: k => `<div class="alem-book">${alemBook(null, false)}${k.def.alem.fuse ? alemBook(alemKnown(k), true) : ''}</div>`,
 };
 
+// Ironpalm: Breath, and the move list (every string the kit knows, with its talent-made alternatives)
+Object.assign(BUFF_NAMES, { read: 'Read', wall: 'Tiger Wall', opening: 'Opening', wind: 'Second Wind', skin: 'Iron Skin', rush: 'Momentum', stagger: 'Staggered',
+  guard: 'Guard Open', pond: 'Still Pond', slide: 'Landslide', bellows: 'Bellows Stance' });
+BAD_BUFFS.add('stagger');
+Object.assign(BUFF_ICON, { read: 'read', wall: 'kick', opening: 'fist', wind: 'bell', skin: 'skin', rush: 'fist', stagger: 'kick', guard: 'palm', pond: 'pond', slide: 'slide', bellows: 'bellows' });
+GAUGE_TIPS.ironpalm = {
+  desc: 'Every press costs Breath: Light 12, Heavy 18, Kick 15 (40% less when Crisp). It refills slowly while you fight and fast once you stop for half a moment. Crane Step gives some back, and a Read gives 15.',
+  state: k => (k.has('opening') ? 'Opening: Heavy is Thousand Palms' : k.has('wind') ? 'Second Wind' : (k.g.breath || 0) < IP_INPUT.L.cost ? 'Winded' : 'Steady'),
+  extra: k => `<div class="ip-moves">${ipMoves(k).map(e => `<div><b>${[...e.seq].join(' ')}</b> ${e.mv.name}<i> · ${e.mv.desc}</i></div>`).join('')}</div>`,
+};
+
 const Hud = {
   el: null, slots: [], actor: null, gaugeCanvas: null, castFill: null, castName: null, buffRow: null, extra: () => [],
 
@@ -258,6 +269,24 @@ const ICON_GLYPHS = {
     tailspin: c => { c.strokeStyle = '#e8fff8'; c.lineWidth = 3; c.lineCap = 'round'; for (let i = 0; i < 3; i++) { const a = i * TAU / 3; c.beginPath(); c.arc(32 + Math.cos(a) * 6, 32 + Math.sin(a) * 6, 16, a, a + 1.6); c.stroke(); } },
   },
 };
+// Ironpalm: iron, cloth wraps, saffron light
+ICON_GLYPHS.ironpalm = (() => {
+  const wrap = '#d8c0a0', iron = '#9aa6b4', saf = '#f0a73a';
+  const knuckles = (c, x, y, s = 1) => { for (let i = 0; i < 4; i++) { c.fillStyle = iron; c.beginPath(); c.arc(x + (i - 1.5) * 7 * s, y, 3.4 * s, 0, TAU); c.fill(); } };
+  return {
+    palm: c => { c.fillStyle = wrap; c.beginPath(); c.ellipse(32, 36, 13, 15, 0, 0, TAU); c.fill(); for (let i = 0; i < 4; i++) { c.beginPath(); c.ellipse(21 + i * 7, 18, 3.2, 8, 0, 0, TAU); c.fill(); } c.strokeStyle = saf; c.lineWidth = 2; c.beginPath(); c.arc(32, 36, 22, -0.6, 0.6); c.stroke(); c.beginPath(); c.arc(32, 36, 27, -0.4, 0.4); c.stroke(); },
+    fist: c => { c.fillStyle = wrap; c.beginPath(); c.roundRect(16, 22, 32, 26, 7); c.fill(); c.strokeStyle = 'rgba(90,60,40,0.6)'; c.lineWidth = 1.5; for (const y of [32, 38, 44]) { c.beginPath(); c.moveTo(16, y); c.lineTo(48, y); c.stroke(); } knuckles(c, 32, 22); c.fillStyle = saf; c.beginPath(); c.moveTo(52, 14); c.lineTo(58, 8); c.lineTo(56, 18); c.fill(); },
+    kick: c => { c.fillStyle = wrap; c.beginPath(); c.moveTo(10, 44); c.lineTo(34, 40); c.lineTo(50, 26); c.lineTo(56, 32); c.lineTo(40, 50); c.lineTo(10, 52); c.closePath(); c.fill(); c.strokeStyle = saf; c.lineWidth = 3; c.lineCap = 'round'; c.beginPath(); c.arc(22, 54, 30, -1.4, -0.5); c.stroke(); },
+    read: c => { c.strokeStyle = '#f2e6c8'; c.lineWidth = 2; c.beginPath(); c.arc(32, 32, 20, 0, TAU); c.stroke(); c.fillStyle = wrap; c.beginPath(); c.ellipse(32, 34, 9, 12, 0, 0, TAU); c.fill(); c.fillStyle = saf; c.beginPath(); c.arc(32, 12, 4, 0, TAU); c.fill(); c.strokeStyle = saf; c.lineWidth = 3; c.beginPath(); c.moveTo(32, 16); c.lineTo(32, 22); c.stroke(); },
+    skin: c => { c.fillStyle = '#6a7684'; c.beginPath(); c.moveTo(32, 8); c.lineTo(52, 18); c.lineTo(48, 44); c.lineTo(32, 56); c.lineTo(16, 44); c.lineTo(12, 18); c.closePath(); c.fill(); c.strokeStyle = '#c8d2dc'; c.lineWidth = 2; c.stroke(); knuckles(c, 32, 30, 0.8); },
+    bell: c => { c.fillStyle = '#c8943a'; c.beginPath(); c.moveTo(20, 44); c.quadraticCurveTo(20, 16, 32, 14); c.quadraticCurveTo(44, 16, 44, 44); c.closePath(); c.fill(); c.fillStyle = '#8a5a20'; c.fillRect(17, 43, 30, 4); c.strokeStyle = saf; c.lineWidth = 2; for (const r of [26, 31]) { c.beginPath(); c.arc(32, 34, r, -0.5, 0.5); c.stroke(); c.beginPath(); c.arc(32, 34, r, Math.PI - 0.5, Math.PI + 0.5); c.stroke(); } },
+    pond: c => { c.strokeStyle = '#8fc8e8'; for (const [r, w] of [[8, 3], [15, 2], [22, 1.5]]) { c.lineWidth = w; c.beginPath(); c.ellipse(32, 38, r, r * 0.55, 0, 0, TAU); c.stroke(); } c.fillStyle = '#e8f6ff'; c.beginPath(); c.arc(32, 22, 4, 0, TAU); c.fill(); },
+    slide: c => { c.fillStyle = '#8a6a50'; for (const [x, y, r] of [[22, 44, 9], [36, 40, 11], [46, 50, 7], [28, 26, 6]]) { c.beginPath(); c.arc(x, y, r, 0, TAU); c.fill(); } c.strokeStyle = '#d08a5a'; c.lineWidth = 3; c.beginPath(); c.moveTo(10, 14); c.lineTo(54, 56); c.stroke(); },
+    bellows: c => { c.fillStyle = '#7a5434'; c.beginPath(); c.moveTo(14, 20); c.lineTo(40, 26); c.lineTo(40, 38); c.lineTo(14, 44); c.closePath(); c.fill(); c.fillStyle = '#ff9a4a'; for (let i = 0; i < 3; i++) { c.beginPath(); c.arc(46 + i * 5, 32 + (i - 1) * 5, 3 - i * 0.6, 0, TAU); c.fill(); } },
+    dragon: c => { c.strokeStyle = saf; c.lineWidth = 5; c.lineCap = 'round'; c.beginPath(); for (let i = 0; i <= 20; i++) { const q = i / 20; c.lineTo(12 + q * 40, 52 - q * 40 + Math.sin(q * 9) * 6); } c.stroke(); c.fillStyle = '#ffe0a0'; c.beginPath(); c.arc(52, 12, 5, 0, TAU); c.fill(); },
+    taunt: c => { c.fillStyle = wrap; c.beginPath(); c.ellipse(30, 38, 12, 13, 0, 0, TAU); c.fill(); c.lineCap = 'round'; c.strokeStyle = wrap; c.lineWidth = 5; for (let i = 0; i < 2; i++) { c.beginPath(); c.moveTo(24 + i * 7, 28); c.quadraticCurveTo(26 + i * 7, 14, 34 + i * 7, 16); c.stroke(); } c.strokeStyle = saf; c.lineWidth = 2; c.beginPath(); c.arc(30, 36, 24, -2.2, -1.2); c.stroke(); },
+  };
+})();
 function drawnIcon(classId, abilityId) {
   if (typeof document === 'undefined' || typeof CLASSES === 'undefined') return null;
   const key = classId + '/' + abilityId;

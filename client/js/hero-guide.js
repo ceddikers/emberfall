@@ -100,6 +100,19 @@ const HERO_GUIDE = {
   },
 };
 
+// Ironpalm: the combos are its named strings (Light Q, Heavy W, Kick E)
+HERO_GUIDE.ironpalm = {
+  passive: { name: 'Strings', icon: 'fist', desc: 'No global cooldown. Every press of Light, Heavy or Kick is a quick hit that costs Breath, and strings of them pressed in rhythm become named moves. A press made just as the last one recovers is Crisp: harder, and cheaper in Breath.' },
+  combos: [
+    { keys: ['q', 'q', 'w'], text: 'Rising Gate: a launcher that draws the boss to you.' },
+    { keys: ['q', 'q', 'w', 'e', 'e'], text: 'Rising Gate, then two Kicks: Heaven\'s Drop on the airborne boss.' },
+    { keys: ['q', 'e', 'w', 'w'], text: 'Thousand Palms, the finisher.' },
+    { keys: ['w', 'e', 'e'], text: 'Tiger Wall, a blocking stance, before a heavy blow. W W E is Stone Breaker, W W W Iron Ox.' },
+    { keys: ['e', 'q'], text: 'Crane Step gives Breath back without stopping. Q Q Q is Flowing Palms.' },
+    { keys: ['r', 'w'], text: 'Read a tankbuster as it lands, and the next Heavy is a free Thousand Palms.' },
+  ],
+};
+
 // Alembist (classes-b)
 HERO_GUIDE.alembist = {
   passive: { name: 'Ripening', icon: 'throw', desc: 'Two reagents brew a vial into your bandolier. Vials grow 30% stronger over their first 10s and spoil after 40s, and Throw always takes the oldest one, so you brew in the order you will need them.' },
