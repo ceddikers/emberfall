@@ -248,7 +248,9 @@ const BotAI = {
       if (m.cover && (m.type === 'raidwide' || SHAPES.contains(s, px, py, 22))) {
         const pr = this.coverFor(me, view, m), props = view.props || [];
         const ok = pr && PROPS.blocks(pr, m.src.x, m.src.y, px, py, PROPS.COVER_SHRINK + 8);
-        if (!ok) pen += (PROPS.shadowing(m.src.x, m.src.y, px, py, props) ? 1500 : 6000) * urgency + (dt < 2.5 ? 5000 : 0);
+        // (a cover across the room has to be set off for early: "too late" starts a walk and a second before it lands)
+        const walk = pr ? Math.hypot(pr.x - bot.x, pr.y - bot.y) / 230 + 1 : 0;
+        if (!ok) pen += (PROPS.shadowing(m.src.x, m.src.y, px, py, props) ? 1500 : 6000) * urgency + (dt < Math.max(2.5, walk) ? 5000 : 0);
         continue;
       }
       // Lights Out (the Hollow King): be inside a light when it lands
@@ -800,8 +802,11 @@ BOT_CLASS.ironpalm = {
     const hitIn = mine ? mine.resolveAt - view.t : Infinity;
     const next = (view.next || []).find(([n]) => BUSTER_CASTS.test(n)), toBuster = Math.min(hitIn, next ? next[1] + 3 : Infinity);
     const ri = idx('read'), si = idx('skin'), bi = idx('bell');
-    if (free && ok(ri) && hitIn < 0.32 && hitIn > 0.06) return ri;
+    if (free && ok(ri) && hitIn < 0.36 && hitIn > 0.03) return ri;
     if (free && ok(si) && hitIn < 3) return si;
+    // in real trouble with no buster close: Iron Skin now rather than hold it for one that may come too late
+    const me = view.players.find(p => p.id === bot.id);
+    if (free && ok(si) && me && me.hp / me.maxHp < 0.35 && toBuster > 20) return si;
     const raid = view.bossCast && RAID_CASTS.test(view.bossCast.name) && view.bossCast.left < 3;
     if (free && ok(bi) && (raid || k.abilities[bi].id === 'slide' || k.abilities[bi].id === 'dragon')) return bi;
     if (!free) return null;
@@ -813,7 +818,8 @@ BOT_CLASS.ironpalm = {
       if (live && !g.clean) { const on = ipMoves(k).filter(e => e.seq.startsWith(live) && e.seq.length > live.length).sort((a, b) => b.seq.length - a.seq.length); P.plan = on.length ? on[0].seq : null; }
       else {
         const swallow = k.talent('ironpalm_swallow'), cost = s => [...s].reduce((a, x) => a + IP_INPUT[x].cost * 0.6, 0);
-        if (toBuster < 7 && toBuster > 1.6 && !k.has('wall')) P.plan = 'HKK';
+        // (Tiger Wall lasts 5s and its string takes about a second and a half: start it no earlier than that allows)
+        if (toBuster < 6.2 && toBuster > 1.8 && !k.has('wall')) P.plan = 'HKK';
         else if (k.dotRemaining('bruise') < 2.5) P.plan = 'HHK';
         else P.plan = swallow ? 'KLHKK' : 'LLHKK';
         if (g.breath < cost(P.plan) + 2) { if (g.breath >= cost('KL') && !swallow) P.plan = 'KL'; else { P.resting = true; P.plan = null; return null; } }
@@ -822,8 +828,9 @@ BOT_CLASS.ironpalm = {
     if (!P.plan) return null;
     const x = P.plan[live.length];
     if (live.length + 1 >= P.plan.length) P.done = true;
-    // don't start a press whose recovery would still be running when the buster lands
-    if (ok(ri) && hitIn > 0.06 && hitIn < IP_INPUT[x].lock + 0.05) return null;
+    // don't start a press whose recovery would still be running when the Read has to go out (a third of a second
+    // before the buster lands, inside the stance's catching window)
+    if (ok(ri) && hitIn > 0.03 && hitIn < IP_INPUT[x].lock + 0.4) return null;
     return ok(IP_SLOT[x]) ? IP_SLOT[x] : null;
   },
 };
