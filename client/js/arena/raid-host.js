@@ -64,6 +64,8 @@ class RaidHost {
       rollers: [...sim.rollers.values()], reels: [...sim.reels.values()], sweeps: [...sim.sweeps.values()],
       // Volkar: everyone's charge, the rods' posts, and where the closing wall is about to jump
       polarity: sim.polarity || null, posts: (sim.posts || []).filter(c => c.end > sim.t), edgeNext: sim.edgeNext || null,
+      // the Hollow King: lanterns, who is doomed (and when it kills), and the knights' replays still to come
+      lanterns: sim.lanterns || [], doomed: sim.doomed || null, echoPlan: sim.echoPlan || [], night: !!sim.night,
       debuffs: id => { const s = sim.ps.get(id); const out = {}; if (s) for (const k in s.debuffs) if (s.debuffs[k] > sim.t) out[k] = true; return out; },
     };
   }
@@ -103,6 +105,8 @@ class RaidHost {
       ARENA.clamp(bot, 12);   // walls can move (Volkar's closing edge)
       const b = this.sim.boss;
       bot.a = Math.atan2(b.y - bot.y, b.x - bot.x);
+      // Royal Gaze: turn your back on him just before it lands
+      if (view.mechs.some(m => m.type === 'gaze' && m.resolveAt - this.sim.t < 1.1)) bot.a += Math.PI;
       bot.actor.update();
       if (this.sim.t >= bot.nextAct) {
         const i = BotAI.act(bot, bot.actor.kit, view);

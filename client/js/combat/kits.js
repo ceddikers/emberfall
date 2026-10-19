@@ -86,7 +86,7 @@ const KITS = {
       {
         id: 'bulwark', name: 'Bulwark', type: 'ogcd', target: 'self', cd: 120, anim: 'big',
         desc: 'Big cooldown: 40% less damage for 10s, and Brace\'s charges refill.',
-        effect(k) { k.mitigate('self', 0.4, 10, { ab: this }); k.refill('brace'); if (k.perk('bastion_w3')) k.shield('party', 160, 8, { ab: this }); },
+        effect(k) { k.mitigate('self', k.perk('bastion_a4') ? 0.5 : 0.4, 10, { ab: this }); k.refill('brace'); if (k.perk('bastion_w3')) k.shield('party', 160, 8, { ab: this }); },
         fx: { type: 'aura', style: 'hex', color: '#9fc4ff', r: 34, dur: 2.5 },
       },
     ],
@@ -141,7 +141,7 @@ const KITS = {
         id: 'letting', name: 'Bloodletting', type: 'ogcd', target: 'enemy', range: MELEE, charges: 2, cd: 15, anim: 'attack',
         desc: 'Quick slash between attacks: damage and +20 Blood. Two charges.',
         glow: k => k.charges(k.abById('letting')) === 2,
-        effect(k) { k.damage(220, { ab: this }); k.gain('blood', k.perk('bloodreaver_w1') ? 30 : 20); },
+        effect(k) { k.damage(220, { ab: this }); k.gain('blood', k.perk('bloodreaver_w1') ? 30 : 20); if (k.perk('bloodreaver_a4')) k.healRaw('self', k.env.maxHp() * 0.05, { ab: this }); },
         fx: { type: 'slash', color: '#ff7a7a', r: 46, span: 1.2 },
       },
       {
@@ -203,7 +203,7 @@ const KITS = {
         id: 'ward', name: 'Runic Ward', type: 'gcd', target: 'self', anim: 'cast',
         desc: 'Spend 1 Rune: shield yourself (about 20% of your HP) for 8s. It explodes when it ends, harder the more it absorbed.',
         usable: k => k.g.runes >= 1,
-        effect(k) { k.spend('runes', 1); k.shield('self', k.perk('runeguard_a2') ? 812 : 650, 8, { ab: this, tag: 'ward' }); },
+        effect(k) { k.spend('runes', 1); k.shield('self', k.perk('runeguard_a2') ? 812 : 650, k.perk('runeguard_a4') ? 12 : 8, { ab: this, tag: 'ward' }); },
         fx: { type: 'aura', style: 'hex', color: '#9fd8ff', r: 32, dur: 2 },
       },
       {
@@ -280,7 +280,7 @@ const KITS = {
         desc: 'Spend 50 Focus: a volley between your other shots.',
         usable: k => k.g.focus >= 50,
         glow: k => k.g.focus >= 90 || (k.has('markself') && k.g.focus >= 50),
-        effect(k) { k.spend('focus', 50); k.damage(420, { ab: this }); if (k.perk('ranger_a2')) k.gain('focus', 10); },
+        effect(k) { k.spend('focus', 50); k.damage(k.perk('ranger_a4') ? 483 : 420, { ab: this }); if (k.perk('ranger_a2')) k.gain('focus', 10); },
         fx: { type: 'zone', style: 'arrows', color: '#e8d9a0', r: 60, range: RANGED, dur: 0.9 },
       },
       {
@@ -346,7 +346,7 @@ const KITS = {
       {
         id: 'step', name: 'Shadowstep', type: 'ogcd', target: 'enemy', range: 380, charges: 2, cd: 15, anim: 'cast',
         desc: 'Teleport behind the target. For 5s every hit counts as a positional.',
-        effect(k) { k.teleport('behind', { ab: this }); k.buff('truenorth', 5); if (k.perk('shadowblade_a2')) k.gain('combo', 1, 5); },
+        effect(k) { k.teleport('behind', { ab: this }); k.buff('truenorth', k.perk('shadowblade_a4') ? 8 : 5); if (k.perk('shadowblade_a2')) k.gain('combo', 1, 5); },
         fx: { type: 'blink', color: '#9b5fd0' },
       },
       {
@@ -436,7 +436,7 @@ const KITS = {
       {
         id: 'combust', name: 'Combustion', type: 'ogcd', target: 'self', cd: 60, anim: 'big',
         desc: 'Burst: for 10s every Fireball, Pyroblast and Fire Blast crits.',
-        effect(k) { k.buff('combust', 10); if (k.perk('pyromancer_w3')) k.refill('fireblast'); },
+        effect(k) { k.buff('combust', k.perk('pyromancer_a4') ? 13 : 10); if (k.perk('pyromancer_w3')) k.refill('fireblast'); },
         fx: { type: 'aura', color: '#ff7a1a', r: 40, dur: 2 },
       },
       {
@@ -509,7 +509,7 @@ const KITS = {
       {
         id: 'prayer', name: 'Prayer Circle', type: 'ogcd', target: 'self', cd: 60, anim: 'cast',
         desc: 'The party takes 10% less damage for 10s and regenerates for 15s.',
-        effect(k) { k.mitigate('party', k.perk('cleric_w3') ? 0.15 : 0.1, 10, { ab: this }); k.hot('party', 100, 5, 3, { ab: this, id: 'prayer' }); },
+        effect(k) { k.mitigate('party', k.perk('cleric_w3') ? 0.15 : 0.1, 10, { ab: this }); k.hot('party', k.perk('cleric_a4') ? 150 : 100, 5, 3, { ab: this, id: 'prayer' }); },
         fx: { type: 'zone', style: 'holy', color: '#ffe680', r: 160, range: 0, dur: 3 },
       },
       {
@@ -576,7 +576,7 @@ const KITS = {
         id: 'thorn', name: 'Thornlash', type: 'gcd', target: 'enemy', range: RANGED, anim: 'cast',
         desc: 'Instant: thorns that damage the target over 30s.',
         glow: k => k.dotRemaining('thorn') < 9,
-        effect(k) { k.damage(120, { ab: this }); k.dot('thorn', k.perk('grovekeeper_w1') ? 75 : 60, 30, 3, { ab: this }); },
+        effect(k) { k.damage(120, { ab: this }); k.dot('thorn', k.perk('grovekeeper_w1') ? 75 : 60, 30, 3, { ab: this }); if (k.perk('grovekeeper_a4')) k.gain('bloom', 5); },
         fx: { type: 'zone', style: 'roots', color: '#4f9f3f', r: 50, range: RANGED, dur: 1.2 },
       },
       {
@@ -648,7 +648,7 @@ const KITS = {
       {
         id: 'rewind', name: 'Rewind', type: 'ogcd', target: 'ally', charges: 2, cd: 30, anim: 'cast', allowDead: true,
         desc: 'Set an ally\'s HP back to its highest point in the last 4s (revives them if they died in that time). They become your link.',
-        effect(k, t) { k.rewind(t, 4, { ab: this }); k.g.link = t; if (k.perk('chronomancer_w2')) k.shield(t, 250, 8, { ab: this }); },
+        effect(k, t) { k.rewind(t, k.perk('chronomancer_a4') ? 6 : 4, { ab: this }); k.g.link = t; if (k.perk('chronomancer_w2')) k.shield(t, 250, 8, { ab: this }); },
         fx: { type: 'ring', style: 'rewind', color: '#c8fbff', r: 44, onTarget: true },
       },
       {

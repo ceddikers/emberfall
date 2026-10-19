@@ -46,6 +46,7 @@ class FightSim {
     this.tethers = new Map(); this.adds = new Map(); this.zones = []; this.addsDirty = false;
     this.rollers = new Map(); this.reels = new Map(); this.sweeps = new Map();
     this.edgeGrace = 0;   // a moving wall (Volkar) leaves people outside it for a moment; don't count that as a fall
+    this.tickers = [];    // per-tick hooks a boss script adds with ticker() (the Hollow King's lanterns and Doom)
     this.phase = 1; this.hpTriggers = [];
     this.ps = new Map();
     const n = Math.max(1, Math.min(4, getPlayers().length));
@@ -132,6 +133,7 @@ class FightSim {
     this.updateRollers();
     this.updateReels();
     this.updateSweeps();
+    for (const fn of this.tickers) fn(dt);
     this.updatePlayers(dt);
     if (this.state !== 'live') return;
     if (this.alive().length === 0) return this.end('wipe');
@@ -370,6 +372,7 @@ class FightSim {
     this.emit(Object.assign({ t: 'bcast', name, dur, anim }, extra));
   }
   anim(name, dur = 1, extra = {}) { this.boss.anim = { name, start: this.t, end: this.t + dur }; this.emit(Object.assign({ t: 'banim', name, dur }, extra)); }
+  ticker(fn) { this.tickers.push(fn); }
   moveBoss(x, y, speed = 500) { const p = ARENA.clamp({ x, y }, 110); this.boss.moveTo = { x: p.x, y: p.y, speed }; }
 
   // Generic telegraph. opts: { shape, delay, dmg, type, hidden, follow, need, tag, onResolve, avoidable, failDmg }

@@ -232,8 +232,15 @@ const BOSS_ART = {
 
   hollowking(ctx, st) {
     const iron = '#3a3d48', ghost = '#6dff9a', gold = '#b89a4a';
-    const s = swing(actP(st, 'attack'));
+    const props = st.props || {};
+    let s = swing(actP(st, 'attack'));
+    if (props.rise || props.raise) s = -0.9;   // Rise, My Guard / a big swing coming: the greatsword held high
+    if (st.raid) ctx.scale(1.2, 1.2);
     glow(ctx, 0, 0, 75, ghost, 0.14);
+    // Barrow Knell: rings of a tolling bell roll off him
+    if (props.knell) for (let i = 0; i < 3; i++) { const q = (st.t * 0.9 + i / 3) % 1; ellipse(ctx, 0, 0, 30 + q * 70, 30 + q * 70, 0, null, rgba('#d8ffe4', 0.5 * (1 - q)), 2.5); }
+    // Crown of Graves / Barrow Stomp: grave-light pools under him
+    if (props.graves) glow(ctx, 0, 0, 95, '#3aff7a', 0.28 + Math.sin(st.t * 7) * 0.08);
     // tattered cape
     const cape = [-2, -24];
     for (let i = 0; i <= 8; i++) cape.push(-38 - (i % 2) * 8 + Math.sin(st.t * 3 + i) * 3, -26 + i * 6.5);
@@ -255,8 +262,13 @@ const BOSS_ART = {
       ellipse(ctx, 0, 23 * sy, 11, 9, 0, '#4a4e5c', OUT, 2.5);
       poly(ctx, [-4, 29 * sy, -1, 37 * sy, 2, 29 * sy], '#4a4e5c', OUT, 1.5);
     }
-    // ghost flame in the left hand
-    glow(ctx, 16, -24, 14, ghost, 0.6);
+    // ghost flame in the left hand (Royal Doom: it burns violet and a sigil turns in it)
+    if (props.doom) {
+      glow(ctx, 16, -24, 26, '#b46aff', 0.75);
+      ctx.save(); ctx.translate(16, -24); ctx.rotate(st.t * 2);
+      for (let k = 0; k < 3; k++) { const a = k * TAU / 3; line(ctx, Math.cos(a) * 9, Math.sin(a) * 9, Math.cos(a + 2.1) * 9, Math.sin(a + 2.1) * 9, '#e8d0ff', 1.5); }
+      ctx.restore();
+    } else glow(ctx, 16, -24, 14, ghost, 0.6);
     circle(ctx, 16, -24, 5, '#4a4e5c', OUT, 2);
     // greatsword
     ctx.save(); ctx.translate(10, 24); ctx.rotate(0.3 + s * 1.2);
@@ -274,8 +286,16 @@ const BOSS_ART = {
         4 + Math.cos(a + 0.22) * 9, Math.sin(a + 0.22) * 9], gold, OUT, 1.2);
     }
     circle(ctx, 4, 0, 8.5, '#2a2c34');
-    glow(ctx, 11, 0, 10, ghost, 0.6);
-    circle(ctx, 10.5, -3.5, 1.8, ghost); circle(ctx, 10.5, 3.5, 1.8, ghost);
+    // Royal Gaze: he lifts his head and his eyes blaze white
+    if (props.gaze) {
+      const k = 0.7 + Math.sin(st.t * 10) * 0.2;
+      glow(ctx, 12, 0, 34, '#e8fff0', 0.55 * k);
+      for (let i = 0; i < 7; i++) { const a = (i - 3) * 0.2; line(ctx, 14, 0, 14 + Math.cos(a) * 46, Math.sin(a) * 46, rgba('#e8fff0', 0.35 * k), 2); }
+      circle(ctx, 10.5, -3.5, 2.6, '#ffffff'); circle(ctx, 10.5, 3.5, 2.6, '#ffffff');
+    } else {
+      glow(ctx, 11, 0, 10, ghost, 0.6);
+      circle(ctx, 10.5, -3.5, 1.8, ghost); circle(ctx, 10.5, 3.5, 1.8, ghost);
+    }
   },
 };
 
@@ -306,6 +326,46 @@ function drawAdd(ctx, kind, x, y, angle, st, enraged, scale = 1) {
   ellipse(ctx, 2, 6, 22, 17, 0, 'rgba(0,0,0,0.3)');
   ctx.rotate(angle);
   (ADD_ART[kind] || ADD_ART.spiderling)(ctx, st, enraged);
+  ctx.restore();
+}
+
+// The Hollow King's Echo Knights: ghosts of his old guard, see-through and edged in grave-light. st.props.ready: the
+// knight lifts its blade for a replay; st.props.mem (0..1): the swing it just remembered still glows on it.
+function drawEchoKnight(ctx, x, y, angle, st, alpha = 1, scale = 1.6) {
+  const ghost = '#6dff9a', steel = '#7a8a8e', dark = '#33403f';
+  const props = st.props || {};
+  ctx.save(); ctx.translate(x, y); ctx.scale(scale, scale);
+  ctx.globalAlpha = alpha * 0.35;
+  ellipse(ctx, 2, 7, 20, 14, 0, 'rgba(0,0,0,0.5)');
+  ctx.globalAlpha = alpha;
+  ctx.rotate(angle);
+  const bob = Math.sin(st.t * 2.2) * 1.5;
+  glow(ctx, 0, 0, 40, ghost, 0.16 + (props.mem || 0) * 0.4 + (props.ready ? 0.25 : 0));
+  ctx.globalAlpha = alpha * 0.82;
+  // a torn tabard trailing into mist where its legs should be
+  const tab = [-4, -14];
+  for (let i = 0; i <= 6; i++) tab.push(-24 - (i % 2) * 6 + Math.sin(st.t * 3 + i) * 2.5, -14 + i * 4.7);
+  tab.push(-4, 14);
+  poly(ctx, tab, rgba('#1f3a2c', 0.9), rgba(ghost, 0.5), 1.5);
+  ellipse(ctx, -2, bob * 0.3, 14, 18, 0, steel, OUT, 2.2);
+  line(ctx, -2, -12, -2, 12, rgba(ghost, 0.55), 1.4);
+  // kite shield on the left arm
+  ctx.save(); ctx.translate(4, -17);
+  poly(ctx, [-7, -6, 7, -6, 8, 2, 0, 10, -8, 2], dark, OUT, 1.8);
+  line(ctx, 0, -5, 0, 8, rgba(ghost, 0.7), 1.2); line(ctx, -5, -1, 5, -1, rgba(ghost, 0.7), 1.2);
+  ctx.restore();
+  // longsword on the right: held low, or raised for a replay (then it swings through)
+  const sw = swing(actP(st, 'attack'));
+  ctx.save(); ctx.translate(7, 16); ctx.rotate(props.ready ? -1.1 : 0.45 + sw * 1.4);
+  poly(ctx, [3, -2.4, 40, -2.4, 46, 0, 40, 2.4, 3, 2.4], '#9fb0b4', OUT, 1.6);
+  line(ctx, 6, 0, 40, 0, rgba(ghost, 0.95), 1.3);
+  rrect(ctx, 0, -6, 3, 12, 1, '#5a6a6e', OUT, 1.2);
+  ctx.restore();
+  // great helm with a slit full of green light
+  circle(ctx, 3, 0, 9, '#5f6d70', OUT, 2.2);
+  rrect(ctx, 7, -5, 3, 10, 1, '#0d1a14');
+  glow(ctx, 9, 0, 9, ghost, 0.55 + (props.ready ? 0.3 : 0));
+  line(ctx, 9, -3.5, 9, 3.5, '#c8ffd8', 1.6);
   ctx.restore();
 }
 

@@ -120,6 +120,7 @@ async function heavy() {
     run([path.join(__dirname, 'bot-raid.js'), 'normal', String(RAID_RUNS), 'grubnak']),
     run([path.join(__dirname, 'bot-raid.js'), 'normal', String(RAID_RUNS), 'skitterra']),
     run([path.join(__dirname, 'bot-raid.js'), 'normal', String(RAID_RUNS), 'volkar']),
+    run([path.join(__dirname, 'bot-raid.js'), 'normal', String(RAID_RUNS), 'hollowking']),
   ]);
 
   // balance: each class's pro DPS against the baseline
@@ -143,7 +144,7 @@ async function heavy() {
   }
 
   // bot raids: a bot party clears each boss on Normal every time
-  for (const [boss, r] of [['Grubnak', raids[0]], ['Skitterra', raids[1]], ['Volkar', raids[2]]]) {
+  for (const [boss, r] of [['Grubnak', raids[0]], ['Skitterra', raids[1]], ['Volkar', raids[2]], ['the Hollow King', raids[3]]]) {
     const m = r.out.match(/cleared (\d+) of (\d+)/);
     if (r.code === 0 && m && m[1] === m[2]) pass(`Bots clear ${boss} (Normal)`, `${m[1]} of ${m[2]}`);
     else fail(`Bots clear ${boss} (Normal)`, m ? `${m[1]} of ${m[2]}\n` + r.out.split('\n').filter(l => /^run /.test(l)).join('\n') : r.out.slice(-800));

@@ -496,6 +496,149 @@ const BossTells = (() => {
     },
   };
 
+  // ------------------------------------------------------------------ the Hollow King
+  // grave-light rising out of the floor across an area (his swings, and the knights' replays in brighter green)
+  function graveLight(ctx, s, p, k, t, col, seed) {
+    ctx.save(); SHAPES.trace(ctx, s); ctx.clip();
+    ctx.fillStyle = `rgba(4,10,8,${(0.25 + 0.3 * p) * k})`; ctx.fillRect(-AR() * 2, -AR() * 2, AR() * 4, AR() * 4);
+    for (let i = 0; i < 26; i++) {
+      const q = (t * 0.7 + hash(i, seed)) % 1;
+      let x, y;
+      if (s.kind === 'cone') { const a = s.angle + (hash(i, seed + 1) - 0.5) * s.arc, d = 60 + hash(i, seed + 2) * Math.min(s.r, AR() * 1.3); x = s.x + Math.cos(a) * d; y = s.y + Math.sin(a) * d; }
+      else if (s.kind === 'donut') { const a = hash(i, seed + 1) * TAU, d = s.r2 + 20 + hash(i, seed + 2) * (AR() - s.r2); x = s.x + Math.cos(a) * d; y = s.y + Math.sin(a) * d; }
+      else { const a = hash(i, seed + 1) * TAU, d = Math.sqrt(hash(i, seed + 2)) * s.r; x = s.x + Math.cos(a) * d; y = s.y + Math.sin(a) * d; }
+      glow(ctx, x, y - q * 26, 16 + p * 12, col, (0.2 + 0.4 * p) * (1 - q) * k);
+    }
+    ctx.restore();
+  }
+  // a ghostly hand reaching up out of the floor (Crown of Graves)
+  function graveHand(ctx, x, y, h, a) {
+    if (a <= 0) return;
+    ctx.save(); ctx.globalAlpha = a;
+    limb(ctx, [x, y, x + 2, y - h * 0.6], 'rgba(170,240,200,0.75)', 5);
+    for (let f = -2; f <= 2; f++) line(ctx, x + 2, y - h * 0.6, x + 2 + f * 3, y - h * 0.6 - 8 - (2 - Math.abs(f)) * 3, 'rgba(200,255,220,0.8)', 2);
+    ctx.restore();
+  }
+  const K = {
+    // Barrow Knell: the hall darkens and the toll rolls out from him in rings
+    knell: {
+      raidwide: true,
+      ground(ctx, tg, s, p, k, t, env) {
+        const R = AR(), b = env.boss;
+        ctx.save(); ctx.fillStyle = `rgba(4,8,10,${(0.1 + 0.3 * easeIn(p)) * k})`; ctx.fillRect(-R - 80, -R - 80, R * 2 + 160, R * 2 + 160); ctx.restore();
+        for (let i = 0; i < 3; i++) {
+          const q = (t * 0.6 + i / 3) % 1;
+          ellipse(ctx, b.x, b.y, 80 + q * R, (80 + q * R) * 0.9, 0, null, rgba('#c8ffdc', 0.22 * (1 - q) * k * (0.4 + 0.6 * p)), 3);
+        }
+      },
+    },
+    // Royal Gaze: an eye opens over him; under every hero, the way they're facing, red if they'd meet his eyes
+    gaze: {
+      outline: false,
+      ground(ctx, tg, s, p, k, t, env) {
+        const b = env.boss;
+        for (const u of env.units || []) {
+          if (u.a == null) continue;
+          let d = Math.atan2(b.y - u.y, b.x - u.x) - u.a;
+          while (d > Math.PI) d -= TAU; while (d < -Math.PI) d += TAU;
+          const caught = Math.abs(d) < 1.2, col = caught ? '#ff5a4a' : '#d8ffe4';
+          const R = 95, kk = k * (0.55 + 0.45 * p);
+          ctx.save(); ctx.translate(u.x, u.y);
+          ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, R, u.a - 1.2, u.a + 1.2); ctx.closePath();
+          const g = ctx.createRadialGradient(0, 0, 10, 0, 0, R);
+          g.addColorStop(0, rgba(col, (caught ? 0.6 : 0.34) * kk)); g.addColorStop(1, rgba(col, (caught ? 0.12 : 0.04) * kk));
+          ctx.fillStyle = g; ctx.fill();
+          ctx.beginPath(); ctx.arc(0, 0, R, u.a - 1.2, u.a + 1.2);
+          ctx.strokeStyle = rgba(col, (caught ? 0.9 : 0.5) * kk); ctx.lineWidth = caught ? 3 : 2; ctx.stroke();
+          ctx.restore();
+        }
+      },
+      air(ctx, tg, s, p, k, t, env) {
+        const b = env.boss, y = b.y - 175, open = easeOut(Math.min(1, p * 1.3));
+        ctx.save(); ctx.globalAlpha = k;
+        glow(ctx, b.x, y, 90 + 40 * p, '#e8fff0', 0.3 + 0.4 * p);
+        ctx.beginPath(); ctx.ellipse(b.x, y, 52, 24 * open + 0.5, 0, 0, TAU);
+        ctx.fillStyle = 'rgba(10,20,14,0.9)'; ctx.fill(); ctx.strokeStyle = rgba('#e8fff0', 0.95); ctx.lineWidth = 3.5; ctx.stroke();
+        if (open > 0.15) { circle(ctx, b.x, y, 14 * open, '#6dff9a'); circle(ctx, b.x, y, 6 * open, '#ffffff'); }
+        for (let i = 0; i < 10; i++) { const a = i * TAU / 10 + t * 0.4; line(ctx, b.x + Math.cos(a) * 64, y + Math.sin(a) * 34, b.x + Math.cos(a) * (76 + 14 * p), y + Math.sin(a) * (42 + 8 * p), rgba('#e8fff0', 0.6), 2.5); }
+        ctx.restore();
+      },
+    },
+    // Sceptre Sweep: the floor in front of him goes dark and grave-light streams along it
+    sweep: { color: '#c8ffd8', ground(ctx, tg, s, p, k, t) { graveLight(ctx, s, p, k, t, '#5adf8a', tg.id); } },
+    // Barrow Stomp: the stone around him cracks and green fire licks at the rim
+    stomp: {
+      color: '#c8ffd8',
+      ground(ctx, tg, s, p, k, t) {
+        graveLight(ctx, s, p, k, t, '#5adf8a', tg.id);
+        // cracks spreading out through the flagstones
+        ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+        for (let i = 0; i < 10; i++) {
+          const len = s.r * Math.min(1, p * 1.4);
+          let a = i * TAU / 10 + hash(i, tg.id), x = s.x, y = s.y;
+          ctx.beginPath(); ctx.moveTo(x, y);
+          for (let n = 1; n <= 5; n++) { a += (hash(i * 7 + n, tg.id) - 0.5) * 0.7; x += Math.cos(a) * len / 5; y += Math.sin(a) * len / 5; ctx.lineTo(x, y); }
+          ctx.strokeStyle = `rgba(6,14,10,${0.75 * k})`; ctx.lineWidth = 4; ctx.stroke();
+          ctx.strokeStyle = rgba('#7affa8', 0.35 * k * p); ctx.lineWidth = 1.5; ctx.stroke();
+        }
+        ctx.restore();
+      },
+    },
+    // Crown of Graves: hands reach up out of the floor everywhere except close around him
+    ring: {
+      color: '#c8ffd8',
+      ground(ctx, tg, s, p, k, t) {
+        graveLight(ctx, s, p, k, t, '#5adf8a', tg.id);
+        for (let i = 0; i < 18; i++) {
+          const a = hash(i, tg.id + 3) * TAU, d = s.r2 + 40 + hash(i, tg.id + 4) * (AR() - s.r2 - 40);
+          const x = s.x + Math.cos(a) * d, y = s.y + Math.sin(a) * d;
+          if (ARENA.sd(x, y) > -20) continue;
+          graveHand(ctx, x, y, 16 + 22 * easeIn(p), k * Math.min(1, p * 2));
+        }
+      },
+    },
+    // Grave Marks: a rune burns under each hero; keep out of each other's
+    marks: {
+      color: '#c8ffd8', outline: false,
+      ground(ctx, tg, s, p, k, t) {
+        ArenaView.spreadMarker(ctx, s, p, k, t);
+        ctx.save(); ctx.translate(s.x, s.y); ctx.rotate(t * 0.6);
+        for (let i = 0; i < 4; i++) { const a = i * TAU / 4; line(ctx, Math.cos(a) * s.r * 0.35, Math.sin(a) * s.r * 0.35, Math.cos(a) * s.r * 0.75, Math.sin(a) * s.r * 0.75, rgba('#c8ffd8', 0.6 * k), 2); }
+        ctx.restore();
+      },
+    },
+    // Barrow Bells: a bronze bell hangs over each circle and starts to swing; the pips show how many it wants
+    bell: {
+      color: '#ffd88a',
+      ground(ctx, tg, s, p, k, t) {
+        glow(ctx, s.x, s.y, s.r * 1.4, '#c89a4a', 0.2 * k);
+        circle(ctx, s.x, s.y, s.r, rgba('#ffd88a', 0.07 * k), rgba('#ffe2a0', (0.45 + 0.4 * p) * k), 2);
+        ctx.beginPath(); ctx.arc(s.x, s.y, s.r + 5, -Math.PI / 2, -Math.PI / 2 + TAU * (1 - p));
+        ctx.strokeStyle = rgba('#ffffff', 0.7 * k); ctx.lineWidth = 2; ctx.stroke();
+        const n = tg.need || 1;
+        for (let i = 0; i < n; i++) circle(ctx, s.x + (i - (n - 1) / 2) * 16, s.y + s.r + 16, 4.5, rgba('#ffe2a0', 0.9 * k), OUT, 1.5);
+      },
+      air(ctx, tg, s, p, k, t) {
+        const sw = Math.sin(t * (2 + p * 6)) * (0.1 + 0.35 * p), hy = s.y - 150;
+        ctx.save(); ctx.globalAlpha = k; ctx.translate(s.x, hy); ctx.rotate(sw);
+        line(ctx, 0, -80, 0, 0, 'rgba(40,32,24,0.9)', 2.5);
+        poly(ctx, [-8, 0, 8, 0, 18, 40, 26, 52, -26, 52, -18, 40], '#a87a3a', OUT, 2.5);
+        poly(ctx, [-5, 4, 2, 4, 6, 40, -10, 40], 'rgba(255,230,170,0.35)');
+        rrect(ctx, -28, 50, 56, 6, 3, '#8a6230', OUT, 1.5);
+        circle(ctx, 0, 60, 6, '#5a4024', OUT, 1.5);
+        ctx.restore();
+      },
+    },
+  };
+  for (const kind of ['sweep', 'stomp', 'ring']) {
+    // the knights' replays: the same thing in the brighter green of the dead
+    const base = K[kind];
+    K['e' + kind] = { color: '#7affa8', ground(ctx, tg, s, p, k, t, env) {
+      base.ground(ctx, tg, s, p, k, t, env);
+      ctx.save(); SHAPES.trace(ctx, s); ctx.fillStyle = rgba('#3aff7a', (0.05 + 0.12 * p) * k); ctx.fill(); ctx.restore();
+    } };
+  }
+
   // tankbusters: Grubnak's chop lines, or Skitterra's silk gathering on the tank
   const buster = {
     color: '#ff6a5a',
@@ -509,6 +652,15 @@ const BossTells = (() => {
           if (Math.floor(t * 12 + i) % 3) jagged(ctx, s.x + Math.cos(a) * d0, s.y + Math.sin(a) * d0, s.x + Math.cos(a) * (d0 + 50), s.y + Math.sin(a) * (d0 + 50), Math.floor(t * 12) + i, '#7fe8ff', 1.2);
         }
         if (tgt && p > 0.6) glow(ctx, tgt.x, tgt.y - 10, 30, '#7fe8ff', (p - 0.6) * 1.5 * k);
+        return;
+      }
+      if (env.bossId === 'hollowking') {
+        // Grave Cleave: grave-light gathers along the greatsword's path and pools under the tank
+        for (let i = 0; i < 6; i++) {
+          const a = s.angle - s.arc / 2 + ((i + 0.5) / 6) * s.arc, q = (t * 1.2 + i * 0.31) % 1, d = 70 + q * (s.r - 100);
+          glow(ctx, s.x + Math.cos(a) * d, s.y + Math.sin(a) * d, 16, '#5adf8a', 0.5 * (1 - q) * k);
+        }
+        if (tgt && p > 0.5) glow(ctx, tgt.x, tgt.y, 40, '#ff5a4a', (p - 0.5) * k);
         return;
       }
       if (env.bossId === 'skitterra') {
@@ -532,6 +684,7 @@ const BossTells = (() => {
     if (tg.type === 'buster') return buster;
     if (env.bossId === 'skitterra') return S[tg.tag] || null;
     if (env.bossId === 'volkar') return V[tg.tag] || null;
+    if (env.bossId === 'hollowking') return K[tg.tag] || null;
     return G[tg.tag] || null;
   }
   // under everyone (called inside the arena clip)

@@ -73,6 +73,58 @@ const BotAI = {
     return mine[me] ?? null;
   },
 
+  // --- the Hollow King -------------------------------------------------------------------------
+  // Barrow Bells: people go to the bell they're nearest, then the bots fill whatever is still short, nearest first
+  bellFor(me, view) {
+    const bells = view.mechs.filter(m => m.tag === 'bell').sort((a, b) => a.id - b.id);
+    if (!bells.length) return null;
+    const need = bells[0].need || 1, room = bells.map(() => need), mine = {};
+    const al = view.players.filter(p => p.alive);
+    const dist = (p, m) => Math.hypot(m.shape.x - p.x, m.shape.y - p.y);
+    for (const p of al.filter(q => q.id < 1000)) {
+      let bi = 0; bells.forEach((m, i) => { if (dist(p, m) < dist(p, bells[bi])) bi = i; });
+      mine[p.id] = bells[bi].id; room[bi]--;
+    }
+    for (const p of al.filter(q => q.id >= 1000).sort((a, b) => a.id - b.id)) {
+      let bi = -1;
+      bells.forEach((m, i) => { if (room[i] > 0 && (bi < 0 || dist(p, m) < dist(p, bells[bi]))) bi = i; });
+      if (bi < 0) break;
+      mine[p.id] = bells[bi].id; room[bi]--;
+    }
+    return mine[me] ?? null;
+  },
+  // where Doom sends this bot, if anywhere: the doomed walk into the nearest light; a lantern carrier takes it to the
+  // doomed; one bot fetches a lantern for a doomed person; in the Long Night one bot carries the last lantern
+  lanternJob(bot, view) {
+    const doomed = view.doomed, lants = view.lanterns || [];
+    if (!lants.length) return null;
+    const me = bot.id, al = view.players.filter(p => p.alive);
+    const near = (p, list) => list.reduce((m, o) => (!m || Math.hypot(o.x - p.x, o.y - p.y) < Math.hypot(m.x - p.x, m.y - p.y) ? o : m), null);
+    const doomedPs = doomed ? al.filter(p => doomed.has(p.id)) : [];
+    const self = al.find(p => p.id === me);
+    if (!self) return null;
+    if (doomed && doomed.has(me)) { const l = near(self, lants); return l ? { x: l.x, y: l.y } : null; }
+    const mine = lants.find(l => l.carrier === me);
+    if (mine) { const d = near(self, doomedPs); return d ? { x: d.x, y: d.y } : null; }
+    const free = lants.filter(l => l.carrier == null);
+    if (!free.length) return null;
+    const carriers = new Set(lants.map(l => l.carrier).filter(c => c != null));
+    const helpers = al.filter(p => p.id >= 1000 && p.role !== 'tank' && !(doomed && doomed.has(p.id)) && !carriers.has(p.id));
+    // the Long Night: someone has to carry the last lantern (a healer if there is one, they stay in the middle)
+    const last = free.find(l => l.last);
+    if (last) {
+      const pick = helpers.find(p => p.role === 'healer') || helpers[0];
+      return pick && pick.id === me ? { x: last.x, y: last.y } : null;
+    }
+    // a doomed person (not a bot, they walk themselves) needs a lantern brought: the nearest free helper goes
+    if (!doomedPs.some(p => p.id < 1000) || carriers.size) return null;
+    let best = null, bd = Infinity;
+    for (const p of helpers) { const l = near(p, free), d = Math.hypot(l.x - p.x, l.y - p.y); if (d < bd) { bd = d; best = p; } }
+    if (!best || best.id !== me) return null;
+    const l = near(self, free);
+    return { x: l.x, y: l.y };
+  },
+
   home(bot, view) {
     const b = view.boss, idx = bot.slot || 0;
     // on an add: melee hug it, ranged stand off to one side of it (out of any beam to its sibling)
@@ -155,7 +207,8 @@ const BotAI = {
         }
         case 'tower': {
           const ti = towers.indexOf(m);
-          const mine = m.tag === 'rod' ? this.rodFor(me, view) === m.id : ti === myIdx % Math.max(1, towers.length) && !(view.debuffs(me).stuffed);
+          const mine = m.tag === 'rod' ? this.rodFor(me, view) === m.id : m.tag === 'bell' ? this.bellFor(me, view) === m.id
+            : ti === myIdx % Math.max(1, towers.length) && !(view.debuffs(me).stuffed);
           const inside = Math.hypot(s.x - px, s.y - py) < s.r - 18;
           if (mine && !inside) pen += (Math.hypot(s.x - px, s.y - py)) * 12 * urgency;
           if (!mine && inside) pen += 2500 * urgency;
@@ -196,6 +249,14 @@ const BotAI = {
         }
       }
     }
+    // the Echo Knights' replays: the bots remember what each knight saw, and keep clear before it even shows
+    for (const e of view.echoPlan || []) {
+      const dt = e.at - view.t;
+      if (dt < 0 || dt > 7) continue;
+      if (SHAPES.contains(e.shape, px, py, 30)) pen += 5000 / (0.6 + dt);
+    }
+    // Doom: wherever the lanterns send this bot (lanternJob, worked out once per think in move())
+    if (bot.job) pen += Math.min(600, Math.hypot(bot.job.x - px, bot.job.y - py)) * 12;
     // the closing edge: be well inside where the wall is about to jump to
     const en = view.edgeNext;
     if (en && en.at - view.t < 6) { const over = Math.hypot(px, py) - (en.r - 60); if (over > 0) pen += 5000 + over * 50; }
@@ -230,7 +291,9 @@ const BotAI = {
 
   move(bot, view) {
     const home = this.home(bot, view);
+    bot.job = this.lanternJob(bot, view);
     const cands = [home, { x: bot.x, y: bot.y }];
+    if (bot.job) cands.push({ x: bot.job.x, y: bot.job.y });
     for (const c of [{ x: bot.x, y: bot.y }, home]) {
       for (const r of [60, 130, 220, 330]) for (let i = 0; i < 12; i++) {
         const a = i * Math.PI / 6 + r * 0.01;
@@ -360,14 +423,14 @@ const BotAI = {
       }
     }
     // oGCDs: burst and damage when ready; mitigation when the tank is getting hit or a raidwide is coming
-    const castingBig = view.bossCast && /Grease|Tenderize|Boil|Gorge|Last Call|Venom Mist|Silk Wrap|Tightening Web|Devour|Thunderclap|Titan Fist|Eye of the Storm|Skybreak/.test(view.bossCast.name);
+    const castingBig = view.bossCast && /Grease|Tenderize|Boil|Gorge|Last Call|Venom Mist|Silk Wrap|Tightening Web|Devour|Thunderclap|Titan Fist|Eye of the Storm|Skybreak|Barrow Knell|Grave Cleave|Moonset/.test(view.bossCast.name);
     for (let i = 0; i < k.abilities.length; i++) {
       const a = ab(i);
       if (a.type !== 'ogcd' || !readyIdx(i)) continue;
       if (k.gcdRemaining() < 0.65 && !k.cast) continue;
       if (a.target === 'ally') continue;
       const defensive = /mitigate|party takes|less damage|immune|shield/i.test(a.desc) && !/Burst/.test(a.desc);
-      if (a.id === 'stasis' || a.id === 'undying' || a.id === 'mirror') { if (castingBig && view.bossCast.left < 1.2 && (a.id === 'stasis' ? /Last Call|Devour|Skybreak/.test(view.bossCast.name) : bot.role === 'tank')) return i; continue; }
+      if (a.id === 'stasis' || a.id === 'undying' || a.id === 'mirror') { if (castingBig && view.bossCast.left < 1.2 && (a.id === 'stasis' ? /Last Call|Devour|Skybreak|Moonset/.test(view.bossCast.name) : bot.role === 'tank')) return i; continue; }
       if (defensive && !(castingBig && view.bossCast.left < 3)) continue;
       if (a.id === 'shift') {
         const groupHurt = hurt.filter(h => h.f < 0.8).length >= 2;

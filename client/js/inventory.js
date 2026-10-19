@@ -130,6 +130,37 @@ const Inventory = (() => {
         c.fillStyle = rgba('#7fe8ff', 0.4); c.beginPath(); c.arc(0, -20, 11, 0, Math.PI * 2); c.fill();
         for (const x of [-5, 0, 5]) shape(() => { c.moveTo(x - 2, -14); c.lineTo(x, x ? -24 : -28); c.lineTo(x + 2, -14); }, '#c8d2dc', 1.5);
         break;
+      case 'greatsword':   // Hollow Crown Greatsword: a long dark blade with a green fuller and a crowned guard
+        c.rotate(-Math.PI / 4);
+        shape(() => { c.moveTo(-4, -4); c.lineTo(-4, -26); c.lineTo(0, -31); c.lineTo(4, -26); c.lineTo(4, -4); }, '#5a6270');
+        stroke(() => { c.moveTo(0, -6); c.lineTo(0, -26); }, '#6dff9a', 1.2);
+        shape(() => { c.moveTo(-12, -6); c.lineTo(-8, -9); c.lineTo(-4, -6); c.lineTo(0, -10); c.lineTo(4, -6); c.lineTo(8, -9); c.lineTo(12, -6); c.lineTo(12, -3); c.lineTo(-12, -3); c.closePath(); }, gold, 2);
+        shape(() => c.rect(-2.5, -3, 5, 18), '#2a1d14', 2);
+        shape(() => c.arc(0, 17, 3.5, 0, Math.PI * 2), gold, 2);
+        break;
+      case 'royal':   // Sceptre of the Barrow: a gold rod topped with a little crown around a grave-light gem
+        c.rotate(-Math.PI / 4);
+        stroke(() => { c.moveTo(0, 26); c.lineTo(0, -12); }, gold, 4);
+        c.fillStyle = rgba('#6dff9a', 0.4); c.beginPath(); c.arc(0, -18, 12, 0, Math.PI * 2); c.fill();
+        shape(() => { c.moveTo(-9, -12); c.lineTo(-9, -22); c.lineTo(-5, -17); c.lineTo(0, -25); c.lineTo(5, -17); c.lineTo(9, -22); c.lineTo(9, -12); c.closePath(); }, gold, 1.8);
+        shape(() => c.arc(0, -16, 3.5, 0, Math.PI * 2), '#9affc0', 1.5);
+        break;
+      case 'shroud':   // Royal Burial Shroud: pale linen wound round, a gold band and a faded crest
+        shape(() => { c.moveTo(-10, -22); c.quadraticCurveTo(0, -26, 10, -22); c.lineTo(16, 20); c.quadraticCurveTo(0, 26, -16, 20); c.closePath(); }, '#cfc8b6');
+        c.strokeStyle = rgba('#6a6250', 0.6); c.lineWidth = 1.2;
+        for (const y of [-12, -4, 4, 12]) { c.beginPath(); c.moveTo(-13, y); c.quadraticCurveTo(0, y + 5, 13, y - 2); c.stroke(); }
+        c.fillStyle = gold; c.fillRect(-12, -1, 24, 3);
+        shape(() => c.arc(0, -10, 4, 0, Math.PI * 2), '#4a9a6a', 1.5);
+        break;
+      case 'lantern':   // Last Lantern Charm: a tiny iron lantern with a warm flame
+        stroke(() => { c.moveTo(-6, -24); c.quadraticCurveTo(0, -30, 6, -24); }, '#3a322a', 2);
+        c.fillStyle = rgba('#ffcf70', 0.4); c.beginPath(); c.arc(0, 2, 20, 0, Math.PI * 2); c.fill();
+        shape(() => c.rect(-11, -18, 22, 6), '#3a322a', 2);
+        shape(() => c.rect(-9, -12, 18, 26), rgba('#ffd68c', 0.45), 2);
+        c.fillStyle = '#fff0c0'; c.beginPath(); c.ellipse(0, 1, 3.5, 7, 0, 0, Math.PI * 2); c.fill();
+        for (const x of [-4, 4]) stroke(() => { c.moveTo(x, -12); c.lineTo(x, 14); }, '#3a322a', 1.2);
+        shape(() => c.rect(-11, 14, 22, 5), '#3a322a', 2);
+        break;
       case 'ladle':
         c.rotate(-Math.PI / 5);
         stroke(() => { c.moveTo(0, 26); c.lineTo(0, -10); }, '#c9cfd8', 4);

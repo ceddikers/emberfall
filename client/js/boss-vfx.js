@@ -245,7 +245,38 @@ const BOSS_VFX = (() => {
       for (let i = 0; i < 16; i++) streak(s.x, s.y, i * TAU / 16 + rand(-0.1, 0.1), '#eaf4ff', { w: 6, dur: 0.4, len: AR() });
       shake(10);
     },
+    // the Hollow King
+    knell(tg) {
+      roomTint('#c8ffdc', 0.2, 0.7);
+      for (let i = 0; i < 3; i++) VFX.shock(0, 0, { r: AR() * 1.2, color: '#c8ffdc', w: 8, dur: 0.8, flat: 1, delay: i * 0.15 });
+      shake(7);
+    },
+    gaze() { roomTint('#e8fff0', 0.16, 0.4); },
+    sweep(tg) { graveBurst(tg.live, '#7affa8'); shake(7); },
+    stomp(tg) {
+      const s = tg.live;
+      graveBurst(s, '#7affa8');
+      VFX.shock(s.x, s.y, { r: s.r * 1.1, color: '#9affc0', w: 10, dur: 0.5, flat: 1 });
+      VFX.decal(s.x, s.y, { style: 'crack', r: s.r * 0.6, dur: 2.5, a: 0.5, seed: Math.random() * 6 });
+      shake(9);
+    },
+    ring(tg) { graveBurst(tg.live, '#7affa8'); VFX.shock(tg.live.x, tg.live.y, { r0: AR(), r: tg.live.r2, color: '#9affc0', w: 10, dur: 0.5, flat: 1 }); shake(8); },
+    esweep(tg) { graveBurst(tg.live, '#b8ffd0'); shake(5); },
+    estomp(tg) { const s = tg.live; graveBurst(s, '#b8ffd0'); VFX.shock(s.x, s.y, { r: s.r * 1.1, color: '#b8ffd0', w: 8, dur: 0.5, flat: 1 }); shake(6); },
+    ering(tg) { graveBurst(tg.live, '#b8ffd0'); shake(6); },
+    marks(tg) { const s = tg.live; shapeFlash(s, '#9affc0', { a: 0.35, dur: 0.4 }); VFX.sparks(s.x, s.y, { color: '#c8ffd8', n: 6, speed: 220 }); },
+    bell(tg) {
+      const s = tg.live;
+      for (let i = 0; i < 3; i++) VFX.shock(s.x, s.y, { r: s.r * (1.4 + i * 0.6), color: '#ffe2a0', w: 5, dur: 0.6, flat: 1, delay: i * 0.12 });
+      VFX.sparks(s.x, s.y - 100, { color: '#ffe8b0', n: 10, speed: 200 });
+      shake(4);
+    },
   };
+  // grave-light bursting up out of an area
+  function graveBurst(s, color) {
+    shapeFlash(s, color, { a: 0.32, dur: 0.45 });
+    for (const q of scatter(s, 10)) after(rand(0, 0.15), () => VFX.pillar(q.x, q.y, { r: 16, h: 90 + rand(0, 60), color, dur: 0.45 }));
+  }
 
   function impact(tg, msg, ctx) {
     if (tg.type === 'raidwide') { (IMPACT[tg.tag] || (() => { roomTint('#ffffff', 0.18); shake(6); }))(tg, ctx); return; }
@@ -269,6 +300,11 @@ const BOSS_VFX = (() => {
       VFX.hit(x, y, '#bff6ff', 2.3);
       VFX.shock(x, y, { r: 90, color: '#9ff4ff', w: 6, flat: 1 });
       VFX.decal(x, y, { style: 'crack', r: 64, dur: 2.5, a: 0.6, seed: Math.random() * 6 });
+    } else if (ctx.boss === 'hollowking') {
+      // Grave Cleave: the greatsword comes down and the wound keeps bleeding
+      VFX.slash(x, y, s.angle + Math.PI / 2, { r: 90, span: 2.4, color: '#c8ffd8', dur: 0.4, w: 0.55, sparks: 8 });
+      VFX.hit(x, y, '#ff4a3a', 2.3);
+      VFX.splash(x, y, { color: '#a01a1a', n: 10 });
     } else if (ctx.boss === 'skitterra') {
       for (let i = 0; i < 4; i++) VFX.lightning(s.x, s.y, x + rand(-14, 14), y + rand(-10, 10), { color: '#f4f0ff', jag: 10, dur: 0.5 });
       VFX.smoke(x, y, { color: '#f4f0ff', n: 8, size: 26, a: 0.7, speed: 50 });
@@ -286,6 +322,7 @@ const BOSS_VFX = (() => {
     grubnak: { def: '#ffb050', boil: '#ff6a2a', bell: '#9ffff4', whisk: '#fff0c8', raise: '#ff7a1a' },
     skitterra: { def: '#d08aff', mist: '#9adf3a', spit: '#9adf3a', wrap: '#f4f0ff', silk: '#f4f0ff', web: '#f4f0ff', lunge: '#ff7ac0' },
     volkar: { def: '#7fe8ff', surge: '#ffe08a', crash: '#ffe27a', field: '#d79bff', gale: '#e8f4ff', walls: '#e8f4ff', fist: '#9ff4ff' },
+    hollowking: { def: '#6dff9a', gaze: '#f0fff4', doom: '#b46aff', bells: '#ffd88a', cleave: '#ff8a7a', night: '#8aa0ff' },
   };
   // the wind-up while the boss casts: motes spiral in, a ring tightens, everything brightens near the end
   function castStart(bossKind, anim, dur, bossDraw) {
@@ -401,11 +438,39 @@ const BOSS_VFX = (() => {
     for (const u of units) VFX.lightning(u.x + rand(-30, 30), u.y - 150, u.x, u.y - 20, { color: '#9ccfff', jag: 8, dur: 0.2 });
   }
 
+  // the Hollow King: caught by his gaze (grey stone creeps over them), the sentence passed, a cure, a knight
+  // remembering a swing, the knights rising, the night falling
+  function gazed(e) {
+    VFX.shock(e.x, e.y, { r0: 70, r: 14, color: '#d8e0dc', w: 6, dur: 0.45, flat: 1 });
+    VFX.smoke(e.x, e.y, { color: '#a8b0ac', n: 6, size: 22, a: 0.55, speed: 30 });
+    VFX.aura(e, { style: 'ring', color: '#c8d0cc', r: 30, dur: 2, rate: 0.5 });
+    shake(4);
+  }
+  function doomed(e) {
+    VFX.sigil(e.x, e.y, { r: 50, style: 'star5', color: '#b46aff', dur: 1.2 });
+    VFX.charge(e.x, e.y - 60, { color: '#d8b0ff', n: 10, r: 50, dur: 0.5 });
+  }
+  function cure(e) {
+    VFX.pillar(e.x, e.y, { r: 30, h: 220, color: '#ffe2a0', dur: 0.8 });
+    VFX.burst(e.x, e.y - 60, { color: '#d8b0ff', color2: '#ffffff', n: 14, speed: 200, size: 10 });
+    VFX.motes(e.x, e.y, { color: '#fff0c0', n: 12, r: 30 });
+  }
+  function knightMemory(k) {
+    VFX.shock(k.x, k.y, { r0: 20, r: 90, color: '#9affc0', w: 4, dur: 0.5, flat: 1 });
+    VFX.motes(k.x, k.y, { color: '#9affc0', n: 10, r: 36 });
+  }
+  function knightRise(k) {
+    VFX.swirl(k.x, k.y, { r: 60, color: '#6dff9a', dur: 0.8, arms: 3 });
+    VFX.pillar(k.x, k.y, { r: 30, h: 200, color: '#6dff9a', dur: 0.9 });
+    VFX.smoke(k.x, k.y, { color: '#9ab8a8', n: 6, size: 30, a: 0.5, speed: 50 });
+  }
+  function nightFall() { roomTint('#05060c', 0.6, 1.2); shake(6); }
+
   function victory(ents) {
     for (const e of ents) { VFX.confetti(e.x, e.y, { n: 50 }); VFX.burst(e.x, e.y, { color: '#ffe27a', color2: '#ffffff', n: 16, speed: 260 }); }
     roomTint('#fff2b0', 0.2, 1);
   }
   function wipe() { roomTint('#200810', 0.4, 1.4); }
 
-  return { polarityFlip, edgeClose, pulse, meatballLand, meatballHit, silkSnap, reelBite, impact, castStart, auto, leap, roar, addSpawn, addDeath, addEnrage, fury, spit, husk, tetherSnap, playerDeath, playerRaised, partyBuff, victory, wipe };
+  return { gazed, doomed, cure, knightMemory, knightRise, nightFall, polarityFlip, edgeClose, pulse, meatballLand, meatballHit, silkSnap, reelBite, impact, castStart, auto, leap, roar, addSpawn, addDeath, addEnrage, fury, spit, husk, tetherSnap, playerDeath, playerRaised, partyBuff, victory, wipe };
 })();

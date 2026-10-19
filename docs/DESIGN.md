@@ -396,23 +396,42 @@ Stats:
 - **Hard:** bots reach 17-68% and wipe; two runs lasted to the enrage. Deaths come from the Crash + Field burst and the Pulse late in phase 2.
 - Bot healers now use Recall on the living (it was filtered out as a raise). That also helped elsewhere: Chronomancer line-ups now clear Grubnak 2 of 3 (was 1 of 3) and Skitterra 3 of 3 (was 2 of 3).
 
-### Boss IV: The Hollow King, Lord of the Barrow (designed)
+### Boss IV: The Hollow King, Lord of the Barrow (built, playable on Normal and Hard)
 
-Theme: everything combined, across three phases. The final exam.
+Theme: everything combined, across three phases. The final exam. Design choices made together on 2026-10-19: you avoid the Gaze by turning your back (your hero faces where they walk), the Echo Knights replay his last two swings, the Long Night is a dark floor with telegraphs that always glow, and a clean Normal kill takes about 6 minutes.
 
-- **Phase 1, Court:**
-  - **Royal Gaze:** face away when he raises his head; looking at him gives a stacking stun meter.
-  - **Royal Doom:** a debuff on one or two players that kills when it expires. Lanterns spawn around the room. Carrying one to the doomed player, or the doomed player walking into the light, cleanses it. Teamwork, not a puzzle.
-  - **Grave Cleave:** a tankbuster that leaves a bleed.
-- **Phase 2, Echoes:**
-  - **Echo Knights** (ghosts of his guard) rise and replay the boss's swings from earlier in the fight a few seconds later, from their positions. Stored mechanics, E8S Mirror style.
-  - **Bell Towers:** each needs two players; a missed bell gives everyone Doom.
-- **Phase 3, The Long Night:**
-  - The lanterns go out and the room goes dark except for a small light around each player, plus whoever carries the last lantern.
-  - Earlier mechanics return in shorter forms.
-  - There's a hard enrage: the moon finishes setting.
-- Hard: the Gaze and an Echo Knight replay happen together, and Doom lands on two players at once.
+The arena is a long burial hall (a 1200 × 880 rectangle). Worn flagstones and grave slabs, a faded runner up to the dais, his empty throne against the top wall under a tall window, pillars and sarcophagi down both sides, candles along the walls and grave-green braziers in the corners. The moon sinks in the window through the whole fight; when it's gone, that's the enrage. Candles flicker, dust hangs in the air and mist creeps along the walls.
 
+Stats:
+- HP: 2.3M (Normal) / 3.0M (Hard).
+- He walks after his tank like Grubnak and Skitterra.
+- Enrage: "Moonset" at 9:00 (Normal) / 8:00 (Hard).
+
+| Mechanic | What happens | Hard layer |
+|---|---|---|
+| **Royal Gaze** | He lifts his head and an eye opens over him. Under every hero a cone shows which way they face, red if they'd meet his eyes. Anyone facing him (within about 70°) when it lands takes a hit, is held in place for 2 s, and gets *Dread* for 20 s; caught again while Dreading hurts much more. Casting at him turns you toward him, so you stop and step away. | Lands at the same moment as an Echo Knight's replay |
+| **Royal Doom** | A violet skull sigil over one player (never the tank), its ring burning down over 15 s; it kills when it runs out. Lanterns are set down around the hall (one more than there are doomed). The doomed walk into a lantern's light, or anyone picks one up by walking over it and carries it to them. A cure uses the lantern up. | Two players at once, 13 s |
+| **Grave Cleave** | Tankbuster cone that cleaves, then the tank bleeds for 9 s. | Harder |
+| **Barrow Knell** | Raidwide; the hall darkens and the toll rolls out in rings. | none |
+| **Grave Marks** | Everyone spreads. | none |
+| **His swings** | *Sceptre Sweep* (a wide cone in front; he holds still while it winds up), *Barrow Stomp* (a circle around him, cracks spreading through the stone) and *Crown of Graves* (everywhere except close to him; hands reach up out of the floor). | none |
+| **Echo Knights** (65%) | Two ghost knights rise by the side walls, facing the middle. Each swing he makes is remembered by the next knight (it flashes on the knight). A few seconds later each knight replays its swing from where it stands, aimed at the middle, with a short warning (2.6 s): narrower cone, smaller circle, wider safe ring. The knights move to new spots every other cycle. | 1.8 s warning |
+| **Barrow Bells** | Two bronze bells, each wanting two people (one each if fewer than four are alive). A missed bell dooms everyone, with a lantern for each. | none |
+| **The Long Night** (30%) | The lanterns go out. The hall goes dark but for a little light around each hero and a wide pool around the last lantern, which someone carries. Telegraphs, heroes and the knights stay visible; he's a shape in the dark. The last lantern is now the only cure for Doom, and it isn't used up. Everything comes back shorter. The night lifts when he falls. | Doom on two |
+
+**Timeline:** phase 1 (about 2 minutes, then loops): Knell, Sweep, Gaze, Cleave, Doom, a swing, Marks, a swing, Gaze, Cleave, Knell. Phase 2: two swings then their echoes, Cleave, Bells, Doom, Knell, and again with Gaze and Marks. Phase 3: Knell, a swing and its echo, Gaze, Doom, Bells, a swing, Marks, Gaze, Cleave.
+
+**New engine pieces:** `FightSim.ticker()` (a per-tick hook for a boss script, used for the lanterns and Doom), and the `lant`, `doomed`, `cure`, `gazed`, `knights`, `kmem`, `kswing` and `night` messages. The host judges the Gaze from each player's facing, which already arrives with their position. The Long Night is a screen-sized dark layer with the lights cut out of it, drawn over the floor and under the telegraphs.
+
+**Bots:** they turn their backs just before a Gaze lands. A doomed bot walks into the nearest light; a bot carrying a lantern takes it to whoever is doomed; when a person is doomed, the nearest free bot fetches a lantern for them; in the Long Night a bot (the healer if there is one) carries the last lantern. They go to whichever bell still needs people after counting the humans by the bell they're nearest. They remember what each knight saw and keep out of its replay before it shows.
+
+**Bot test results:**
+- **Normal, Bastion / Cleric / Ranger / Pyromancer:** cleared 8 of 8, in 5:40-5:58, no deaths.
+- Other line-ups (Runeguard / Grovekeeper, Bloodreaver / Cleric, Bloodreaver / Grovekeeper, Bastion / Grovekeeper): cleared 11 of 11. Grave Cleave was lowered after it killed a Runeguard tank with its bleed.
+- Line-ups with a Chronomancer healer: 0 of 2 (the same bot-healing gap as Volkar).
+- One idle human plus three bots: cleared 2 of 3 at about 9:00. The idle hero misses every bell, so everyone gets doomed, and the bots still cured all 22 Dooms.
+- **Hard:** bots reach phase 3 and wipe at 12-20%, at the enrage.
+- Every Doom in every run was cured.
 ### Planned: specializations (after a few bosses)
 
 Once players know their base class (around boss 3 or 4), each class can pick one of two specializations. Nothing is built yet. Leanings so far:
@@ -434,7 +453,7 @@ Once players know their base class (around boss 3 or 4), each class can pick one
 | Telegraph shapes (hit tests and drawing), and each boss's room shape (`ARENA`) | `client/js/arena/shapes.js` |
 | Smooth motion for networked units (entity interpolation) | `client/js/interp.js` |
 | Host fight sim (HP, threat, mechanics, deaths, Rewind history, tethers, adds, slow zones) | `client/js/arena/fight.js` |
-| Boss scripts | `client/js/arena/bosses/grubnak.js`, `client/js/arena/bosses/skitterra.js` |
+| Boss scripts | `client/js/arena/bosses/grubnak.js`, `skitterra.js`, `volkar.js`, `hollowking.js` |
 | Bots | `client/js/arena/bots.js`, `client/js/arena/raid-host.js` |
 | Arena drawing (textured kitchen and web-cave floors, ambient life, telegraphs, puddles, hitbox ring, tethers, sticky web, lit legs) | `client/js/arena/arena-view.js` |
 | Per-boss mechanic tells (cleaver, cloches, plates, spice jars, stove coils, meatballs, silk reel, leg strikes, venom beads, fog) | `client/js/arena/boss-tells.js` |
@@ -500,8 +519,9 @@ Once players know their base class (around boss 3 or 4), each class can pick one
 - Stats: HP, Physical, Magical (each class reads one), Defense, Haste, Critical. No MP (every class already has its own resource) and no movement speed (mechanics are timed for one run speed).
 - Gear is modest on purpose: best-in-slot is roughly +15-20% output, and everything is capped.
 - Icons are drawn in code until painted ones arrive: briefs and the sheet layout are in `docs/art/item-icons.md`. Painted PNGs go in `client/items/<key>.png` and are listed in `client/items/manifest.json`; the game adds the rarity frame.
-- Class drops can carry an **enhancement** that changes one ability (36 in total, four per class, e.g. Holy Edge strikes twice, Glyph Burst refunds a Rune). Enhanced items are one rarity higher; the enhanced ability gets an orange marker on the bar and a line in its tooltip.
+- Class drops can carry an **enhancement** that changes one ability (45 in total, five per class, e.g. Holy Edge strikes twice, Glyph Burst refunds a Rune). Enhanced items are one rarity higher; the enhanced ability gets an orange marker on the bar and a line in its tooltip.
 - Tiers: Recruit, Grubnak, Skitterra, Volkar (Epic, item level 30). Volkar's class weapons put the storm into each class's big cooldown: Bulwark shields the party, Frenzy gives 30 Blood, Runic Overload gives 2 Runes, Barrage lights Keen Eye, Shadow Dance gives 2 combo points, Combustion refills Fire Blast, Prayer Circle cuts 15%, Wild Growth gives 25 Bloom, Accelerando heals the party. Volkar also drops a maul, a scepter, scale mail and three accessories for anyone.
+- The Hollow King's tier (Epic, item level 40) puts the enhancement on the class armour: Bulwark cuts 50%, Bloodletting heals 5%, Runic Ward lasts 12 s, Rapid Fire hits 15% harder, True North lasts 8 s, Combustion lasts 13 s, Prayer Circle's regen is 50% stronger, Thornlash grows 5 Bloom, Rewind reaches back 6 s. He also drops a greatsword, a sceptre, a burial shroud, and a signet, bell and lantern charm for anyone.
 - **Party bonuses:** when 2, 3 or 4 people in the group each wear at least one item from the same boss, the whole party (bots too) gets that boss's bonus for the fight. Recruit gear has none, and someone wearing gear from two bosses counts toward both. It rewards playing together rather than solo grinding, and stays small like the rest of gear (`PARTY_BONUS` in `client/js/items.js`).
 
   | Bonus | 2 wearing | 3 wearing | 4 wearing |
@@ -509,6 +529,7 @@ Once players know their base class (around boss 3 or 4), each class can pick one
   | **Kitchen Crew** (Grubnak) | +3% max HP | +3% max HP, +2% damage | +5% max HP, +3% damage |
   | **Brood Bond** (Skitterra) | +2% crit | +2% crit, +2% haste | +3% crit, +3% haste |
   | **Stormbound** (Volkar) | +2% haste | +3% max HP, +2% haste | +4% max HP, +3% haste |
+  | **Court of the Barrow** (the Hollow King) | +2% damage | +2% damage, +2% crit | +3% damage, +3% crit |
 
   - Each player tells the host which bosses their equipped gear comes from (cleaned on the host). The host counts the humans when the raid starts and sends the result with the raid. Gear is locked inside a raid, so the bonus is fixed for the fight.
   - Damage, crit and haste go into everyone's party modifiers; max HP is applied by the host.
@@ -538,7 +559,7 @@ The host can retry or take everyone back to town.
 - checks that classes, items and enhancements line up;
 - the party bonus math, arena clamping and network smoothing;
 - class DPS against `tools/check-baseline.json` (±8%);
-- bot clears of both bosses on Normal.
+- bot clears of all four bosses on Normal.
 
 After an intended balance change, record the new numbers with `node tools/check.js --update-baseline`.
 
@@ -596,6 +617,9 @@ After an intended balance change, record the new numbers with `node tools/check.
   - two tabs over PeerJS: the joined player saw the bots' autos and everyone's channels, and the host received the joined player's autos and channel.
 
 **Not yet tested:**
+- The Hollow King played by a person, on Normal or Hard (tested headless with bots, and in the browser solo with bots: hall, Gaze cones, lanterns, knights and replays, bells, the Long Night, the Doom sigil, loot).
+- The Hollow King over real latency. The host judges the Gaze from the facing it last heard (positions arrive about 12 times a second), so turning away at the very last moment can count a little late on a slow connection. Lantern pickups and cures are judged on the host from positions too.
+- The Long Night's dark layer on a slow machine (it's one extra screen-sized draw each frame).
 - Auto-attacks over real latency: each auto is a small combat event every 2.6 s per player, plus one visual message.
 - The new party frames with a full human party over real latency (HoT timers and health refresh every 0.2 s; hits show at once).
 - Rolling Meatballs and Silk Reel over real latency. Meatballs are drawn from each client's own clock, so a laggy client sees them slightly late; the host is lenient (it checks against the position the client reports). A reel on a laggy client starts pulling a little after the host's, and a snap sent too early is ignored.

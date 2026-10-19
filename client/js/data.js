@@ -105,14 +105,17 @@ const BOSSES = [
     ],
   },
   {
-    id: 'hollowking', name: 'The Hollow King', title: 'Lord of the Barrow', color: '#4a9a6a',
-    blurb: 'The final boss. A king who refused to stay dead, and everything he learned from the ones before.',
+    id: 'hollowking', name: 'The Hollow King', title: 'Lord of the Barrow', color: '#4a9a6a', playable: true,
+    blurb: 'A king who refused to stay dead, holding court in his own tomb. The final raid: everything the others taught you, in three acts.',
     teaches: 'Everything combined, across three phases.',
     favors: 'Cleric, Chronomancer',
     mechanics: [
+      { name: 'Royal Gaze', desc: 'It is not wise to look a king in the eye.' },
       { name: 'Royal Doom', desc: 'A sentence passed. Light has always been the cure for it.' },
-      { name: 'Echo Knights', desc: 'His old guard remember every swing they ever made.' },
-      { name: 'The Long Night', desc: 'At the end, the lanterns go out.' },
+      { name: 'Grave Cleave', desc: 'His greatsword leaves wounds that stay open.' },
+      { name: 'Echo Knights', desc: 'His old guard remember every swing they ever saw.' },
+      { name: 'Barrow Bells', desc: 'Every bell must be rung. Unrung bells toll for everyone.' },
+      { name: 'The Long Night', desc: 'At the end, the lanterns go out, and the moon is setting.' },
     ],
   },
 ];

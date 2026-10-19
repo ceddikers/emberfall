@@ -90,6 +90,7 @@ const ARENA_DEFS = {
   grubnak: { kind: 'rect', hw: 620, hh: 420, corner: 46 },
   skitterra: { kind: 'poly', n: 8, r: 560 },
   volkar: { kind: 'circle', r: 540 },   // a storm-swept peak; in phase 2 its electrified edge closes in (resize)
+  hollowking: { kind: 'rect', hw: 600, hh: 440, corner: 40 },   // a long burial hall, the throne against the top wall
 };
 const ARENA = {
   kind: 'circle', r: 520, hw: 520, hh: 520, corner: 0, n: 0,

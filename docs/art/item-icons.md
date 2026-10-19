@@ -116,3 +116,34 @@
 79. **Polarity Ring**: A silver ring set with two small gems side by side, one warm gold and one cold blue.
 80. **Eye of the Storm**: A pendant holding a round grey stone with a slowly turning blue swirl inside it, like a storm seen from above.
 81. **Grounding Charm**: A small iron charm shaped like a spike driven into a rock, with a copper wire wound around it.
+
+## Hollow King sheet (items 82-105)
+**Tier style:** royal and dead. Tarnished gold, dark iron and old bone, pale grave-green glow (in fullers, gems and runes), a little candle-warm light on the edges. Keep each class's accent colour in the trim. Same layout rules as above.
+
+### Class items
+82. **Barrowking Oathblade** (Bastion): A long dark-steel sword with a grave-green fuller, a crossguard shaped like a small spiked crown in tarnished gold, and royal-blue leather on the grip.
+83. **Gravewarden Plate** (Bastion): A breastplate of blackened iron with a gold crown emblem on the chest, tomb-stone grey pauldrons, and blue cloth trim.
+84. **Kingslayer Greataxe** (Bloodreaver): A huge axe with a crescent head of dark iron, a broken gold crown hammered onto the back of the head like a trophy, and a red-wrapped haft.
+85. **Barrow Reaver Mail** (Bloodreaver): A chainmail shirt with bone plates riveted over the ribs, deep red straps, and a grey burial cloth tied at the waist.
+86. **Crown-Rune Focus** (Runeguard): A hexagonal crystal of smoky green glass ringed by a thin gold crown, a violet rune glowing in its centre.
+87. **Tombward Robes** (Runeguard): Violet robes with tarnished gold borders and a faint pattern of grave slabs and runes down the front.
+88. **Moonset Longbow** (Ranger): A tall black-wood longbow with a silver crescent moon at the grip, its string glowing pale moonlight, with green grip wrapping.
+89. **Nightwatch Cloak** (Ranger): A deep green-black hooded cloak with a small iron lantern clasp and a frayed hem, as if worn on many night watches.
+90. **Lantern-Thief Knives** (Shadowblade): Two short curved knives with a warm amber glow along the edges, crossed, a tiny brass lantern charm hanging from one pommel, purple-wrapped grips.
+91. **Shroud of the Long Night** (Shadowblade): A near-black wrapped garb with a hood, starlit silver flecks woven in, and a purple sash.
+92. **Tome of the Last Lantern** (Pyromancer): A heavy book bound in dark leather with a little iron lantern set into the cover, a warm orange flame burning inside it.
+93. **Candlewax Vestments** (Pyromancer): Dark red robes dripped with pale candle wax at the shoulders, orange flame trim, embers at the hem.
+94. **Staff of the Dawn After** (Cleric): A white-wood staff topped by a golden sun disc rising out of a black crescent of night, rays breaking through.
+95. **Vestments of the Unsetting Sun** (Cleric): Cream and gold vestments with a gold sun on the chest that never sets below its embroidered horizon line, blue sash.
+96. **Barrow Yew** (Grovekeeper): A gnarled dark yew staff (the graveyard tree) with dark needles, red berries, and a glowing green bud at the tip.
+97. **Gravemoss Mantle** (Grovekeeper): A bark shoulder mantle thick with pale grave-moss and tiny white flowers, leaf-green trim.
+98. **Moonset Hourglass** (Chronomancer): A silver hourglass whose upper glass holds a small pale moon, slowly sinking into the lower glass as sand.
+99. **Robes of the Final Hour** (Chronomancer): Dark teal robes with a large silver clock face at the chest, its hands near midnight, and silver trim.
+
+### General items
+100. **Hollow Crown Greatsword**: A long two-handed greatsword of dark steel with a grave-green fuller and a crossguard that is a spiked gold crown.
+101. **Sceptre of the Barrow**: A short gold sceptre topped with a small crown around a glowing grave-green gem.
+102. **Royal Burial Shroud**: Pale linen burial wrappings worn as a tunic, bound with a tarnished gold band, a faded green crest at the chest.
+103. **Signet of the Hollow King**: A heavy tarnished-gold signet ring with a small crown engraved on a dark green stone.
+104. **Barrow Bell Pendant**: A gold chain with a tiny bronze bell pendant, a faint green glow inside its mouth.
+105. **Last Lantern Charm**: A small iron lantern charm on a ring, a warm golden flame burning inside its glass.

@@ -93,7 +93,7 @@
     const out = [];
     if (raid) for (const id of raid.rosterIds) {
       const e = entById(id), s = raid.party.get(id);
-      if (e && (!s || s.alive)) out.push({ id, x: e.x, y: e.y });
+      if (e && (!s || s.alive)) out.push({ id, x: e.x, y: e.y, a: e.angle });
     }
     return out;
   }
@@ -508,7 +508,7 @@
   // host only
   let raidHost = null, hostRoster = [], stopHostTick = null, lastRaidOpts = { mode: 'normal', fill: true, boss: 'grubnak' };
 
-  const RAID_DEFS = { grubnak: GRUBNAK, skitterra: SKITTERRA, volkar: VOLKAR };
+  const RAID_DEFS = { grubnak: GRUBNAK, skitterra: SKITTERRA, volkar: VOLKAR, hollowking: HOLLOWKING };
 
   function pickBots(humans) {
     const slots = ['tank', 'healer', 'dps', 'dps'];
@@ -657,6 +657,8 @@
       bossTrack: new Track(sp.x, sp.y, Math.PI / 2), ghosts: [],
       // Volkar: everyone's charge, rods left standing, turning storm walls, and the closing edge's warning
       pol: new Map(), posts: new Map(), sweeps: new Map(), edgeWarn: null,
+      // the Hollow King: lanterns, who is doomed (and until when), his Echo Knights, and how dark the Long Night is
+      lanterns: [], doom: new Map(), knights: new Map(), night: false, nightK: 0,
       fightClock: new SendClock(), botClock: new SendClock(),   // the host's fight and bot clocks (see interp.js)
       nextAutoAt: 0, cast: null, props: {}, propsUntil: {},
       tgs: new Map(), puddles: new Map(), party: new Map(), bots: new Map(), pbuffs: [], taken: [], result: null, resultAt: 0,
@@ -745,6 +747,8 @@
     raid.state = msg.s; raid.result = msg; raid.resultAt = now + 2.2;
     fadeTelegraphs(); raid.tethers.clear(); raid.lunges = []; raid.eggs = null; raid.rollers.clear(); raid.reels.clear(); player.reel = null;
     raid.sweeps.clear(); raid.edgeWarn = null; for (const p of raid.posts.values()) p.end = Math.min(p.end, now + 1);
+    raid.doom.clear(); raid.lanterns = raid.lanterns.filter(l => l.last); for (const k of raid.knights.values()) k.gone = k.gone || now;
+    if (msg.s === 'clear') raid.night = false;   // the Long Night lifts when he falls
     for (const z of raid.zones.values()) z.end = Math.min(z.end, now + 1);
     if (actor && actor.kit.cast) actor.kit.cast = null;
     FX.shake = 8;
@@ -819,6 +823,13 @@
       case 'rods': case 'crash': case 'field': prop('charge', true, end + 0.4); break;
       case 'gale': prop('inhale', true, end + 0.1); break;
       case 'walls': prop('spin', true, end + 10); break;
+      // the Hollow King
+      case 'gaze': prop('gaze', true, end + 0.3); break;
+      case 'doom': prop('doom', true, end + 0.4); break;
+      case 'knell': case 'bells': prop('knell', true, end + 0.3); break;
+      case 'stomp': case 'ring': prop('graves', true, end + 0.2); break;
+      case 'rise': case 'night': prop('rise', true, end + 0.3); break;
+      case 'sweep': prop('raise', true, end - 0.45); break;
     }
     if (msg.anim !== 'mince' && msg.anim !== 'boil') st.action = { type: 'attack', t0: end - 0.45, dur: 1.2 };
   });
@@ -970,6 +981,34 @@
   // the storm's constant pulse: a faint bolt touches everyone
   Net.on('pulse', () => { if (raid) BOSS_VFX.pulse(raidUnits()); });
 
+  // --- the Hollow King
+  // lanterns: [id, x, y, carrier, last]; a carried one is drawn in its carrier's hands
+  Net.on('lant', msg => { if (raid && Array.isArray(msg.l)) raid.lanterns = msg.l.map(([id, x, y, carrier, last]) => ({ id, x, y, carrier, last: !!last })); });
+  Net.on('doomed', msg => {
+    if (!raid) return;
+    for (const id of msg.ids || []) { raid.doom.set(id, { start: now, end: now + (msg.dur || 14) }); const e = entById(id); if (e) BOSS_VFX.doomed(e); }
+  });
+  Net.on('cure', msg => { if (!raid) return; raid.doom.delete(msg.id); const e = entById(msg.id); if (e) BOSS_VFX.cure(e); });
+  Net.on('gazed', msg => { const e = raid && entById(msg.id); if (e) BOSS_VFX.gazed(e); });
+  // the Echo Knights: where they stand; one remembering a swing; one raising its blade to replay it
+  Net.on('knights', msg => {
+    if (!raid) return;
+    const seen = new Set();
+    for (const [id, x, y, f] of msg.k || []) {
+      seen.add(id);
+      if (!raid.knights.has(id)) { raid.knights.set(id, { id, x, y, f, born: now, st: Object.assign(newSt(Math.random() * 3), { props: {} }) }); BOSS_VFX.knightRise({ x, y }); }
+    }
+    for (const [id, k] of raid.knights) if (!seen.has(id) && !k.gone) k.gone = now;
+  });
+  Net.on('kmem', msg => { const k = raid && raid.knights.get(msg.id); if (k) { k.mem = now; BOSS_VFX.knightMemory(k); } });
+  Net.on('kswing', msg => {
+    const k = raid && raid.knights.get(msg.id);
+    if (!k) return;
+    k.ready = now + msg.dur;
+    k.st.action = { type: 'attack', t0: now + msg.dur - 0.4, dur: 1.0 };
+  });
+  Net.on('night', msg => { if (!raid) return; raid.night = !!msg.on; if (raid.night) BOSS_VFX.nightFall(); });
+
   Net.on('kb', msg => {
     if (!raid || msg.id !== Net.id) return;
     const a = Math.atan2(player.y - msg.y, player.x - msg.x);
@@ -992,6 +1031,7 @@
     if (!raid) return;
     const e = entById(msg.id);
     if (msg.k === 'death' && e) BOSS_VFX.playerDeath(e);
+    if (msg.k === 'death') raid.doom.delete(msg.id);
     if (msg.k === 'raised' && e) BOSS_VFX.playerRaised(e);
     if (msg.id !== Net.id || !actor) return;
     if (msg.k === 'perfect') actor.notify('perfect');
@@ -1347,6 +1387,16 @@
     for (const [id, p] of raid.posts) if (now > p.end + 0.5) raid.posts.delete(id);
     for (const [id, sw] of raid.sweeps) if (now > sw.end + 0.4) raid.sweeps.delete(id);
     if (raid.edgeWarn && now > raid.edgeWarn.end + 1.5) raid.edgeWarn = null;
+    // the Hollow King: knights glow when they remember a swing and lift their blades to replay it; the night falls slowly
+    for (const [id, k] of raid.knights) {
+      k.st.t = now;
+      k.st.props.ready = !!(k.ready && now < k.ready);
+      k.st.props.mem = k.mem ? Math.max(0, 1 - (now - k.mem) / 1.6) : 0;
+      if (k.gone && now > k.gone + 0.8) raid.knights.delete(id);
+    }
+    raid.nightK += ((raid.night ? 1 : 0) - raid.nightK) * Math.min(1, dt * 1.2);
+    ArenaView.night = raid.nightK;
+    for (const [id, d] of raid.doom) if (now > d.end + 0.5) raid.doom.delete(id);
     for (const h of raid.husks) { h.st.t = now; h.st.props.rear = raid.lunges.some(l => l.who === 'husk'); }
     if (raid.eggs && now > raid.eggs.end + 0.3) raid.eggs = null;
     raid.pbuffs = raid.pbuffs.filter(x => x.end > now);
@@ -1553,7 +1603,7 @@
   }
 
   function renderArena() {
-    ctx.fillStyle = raid.def.id === 'volkar' ? '#080b11' : '#120d0a'; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = { volkar: '#080b11', hollowking: '#0a0c0e' }[raid.def.id] || '#120d0a'; ctx.fillRect(0, 0, W, H);
     const sh = FX.shake;
     const sx = sh > 0.3 ? (Math.random() - 0.5) * sh : 0, sy = sh > 0.3 ? (Math.random() - 0.5) * sh : 0;
     ctx.scale(zoom, zoom);
@@ -1561,6 +1611,15 @@
     ArenaView.drawFloor(ctx, raid.def.id, Math.min(1.5, DPR * zoom));
     ArenaView.drawAmbient(ctx, now);
     ArenaView.drawEdge(ctx, now, raid.edgeWarn);
+    if (raid.def.id === 'hollowking') {
+      // the Long Night: dark but for a little light around each hero and a wide pool round each lantern
+      if (raid.nightK > 0.01) {
+        const lights = raidUnits().map(u => ({ x: u.x, y: u.y, r: 120 }));
+        for (const l of raid.lanterns) { const c = l.carrier != null ? entById(l.carrier) : null; lights.push({ x: c ? c.x : l.x, y: c ? c.y : l.y, r: l.last ? 300 : 190 }); }
+        ArenaView.drawNight(ctx, lights, raid.nightK, { W, H, DPR, zoom, cam });
+      }
+      ArenaView.drawMoon(ctx, raid.def.enrage ? raid.fightTime / raid.def.enrage[raid.mode] : 0, now);
+    }
     ArenaView.drawZones(ctx, raid.zones, now);
     ArenaView.drawPuddles(ctx, raid.puddles, now);
     if (raid.eggs) ArenaView.eggs(ctx, raid.eggs.pts, clamp((now - raid.eggs.start) / Math.max(0.1, raid.eggs.end - raid.eggs.start), 0, 1), now);
@@ -1596,13 +1655,21 @@
     for (const gh of raid.ghosts) adds.push({ kind: 'add', y: gh.a.y, a: gh.a, alpha: Math.max(0, 1 - (now - gh.t0) / gh.dur) });
     const husks = raid.husks.map(h => ({ kind: 'husk', y: h.y, h }));
     const posts = [...raid.posts.values()].map(p => ({ kind: 'post', y: p.y, p }));
-    const all = [...ents, bossEnt, ...adds, ...husks, ...posts].sort((a, b) => a.y - b.y);
+    const knights = [...raid.knights.values()].map(k => ({ kind: 'knight', y: k.y, k }));
+    const lants = raid.lanterns.filter(l => l.carrier == null).map(l => ({ kind: 'lantern', y: l.y, l }));
+    const all = [...ents, bossEnt, ...adds, ...husks, ...posts, ...knights, ...lants].sort((a, b) => a.y - b.y);
     const bossDef = BOSSES.find(x => x.id === raid.def.id);
     for (const e of all) {
       if (e === bossEnt) {
         ctx.save(); ctx.globalAlpha = bd.fade;
+        if (raid.nightK > 0.05) ctx.filter = `brightness(${(1 - 0.55 * raid.nightK).toFixed(2)})`;   // he's a shape in the dark
         drawBoss(ctx, bossDef, bd.x, bd.y, bd.f, bd.st, RAID_BOSS_SCALE);
         ctx.restore();
+      } else if (e.kind === 'knight') {
+        const k = e.k, a = Math.min(1, (now - k.born) / 0.6) * (k.gone ? Math.max(0, 1 - (now - k.gone) / 0.8) : 1);
+        drawEchoKnight(ctx, k.x, k.y, k.f, k.st, a * (1 - 0.3 * raid.nightK));
+      } else if (e.kind === 'lantern') {
+        ArenaView.lantern(ctx, e.l.x, e.l.y, now, false, e.l.last);
       } else if (e.kind === 'add') {
         ctx.save(); ctx.globalAlpha = e.alpha;
         drawAdd(ctx, e.a.kind, e.a.x, e.a.y, e.a.f, e.a.st, e.a.enr, 1.5);
@@ -1611,6 +1678,12 @@
       else if (e.kind === 'husk') { ctx.save(); ctx.globalAlpha = 0.8; drawBoss(ctx, bossDef, e.h.x, e.h.y, e.h.f, e.h.st, RAID_BOSS_SCALE); ctx.restore(); }
       else if (e.kind === 'post') BossTells.rodPost(ctx, e.p.x, e.p.y, now, Math.min(1, (now - e.p.start) / 0.3, Math.max(0, (e.p.end - now) / 0.5)));
       else drawEntity(e);
+    }
+    // the Hollow King: lanterns held up by whoever carries them, and the Doom sigil over each doomed head
+    for (const l of raid.lanterns) { const c = l.carrier != null ? entById(l.carrier) : null; if (c) ArenaView.lantern(ctx, c.x + 14, c.y - (c.lift || 0), now, true, l.last); }
+    for (const [id, d] of raid.doom) {
+      const e = entById(id); if (!e) continue;
+      ArenaView.doomMark(ctx, e.x, e.y - (e.lift || 0) - 92 * heroScale() / HERO_SCALE, (d.end - now) / Math.max(0.1, d.end - d.start), now);
     }
     for (const lg of raid.lunges) ArenaView.lungeLegs(ctx, lg.x, lg.y, lg, now);
     BossTells.drawReels(ctx, raid.reels, now, tellEnv);

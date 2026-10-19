@@ -10,7 +10,8 @@ Object.assign(global, load('arena/raid-host.js'));
 const { GRUBNAK } = load('arena/bosses/grubnak.js');
 const { SKITTERRA } = load('arena/bosses/skitterra.js');
 const { VOLKAR } = load('arena/bosses/volkar.js');
-const DEFS = { grubnak: GRUBNAK, skitterra: SKITTERRA, volkar: VOLKAR };
+const { HOLLOWKING } = load('arena/bosses/hollowking.js');
+const DEFS = { grubnak: GRUBNAK, skitterra: SKITTERRA, volkar: VOLKAR, hollowking: HOLLOWKING };
 
 let mode = 'normal', runs = 3, comp = 'bastion,cleric,ranger,pyromancer'.split(','), def = GRUBNAK;
 for (const a of process.argv.slice(2)) {

@@ -29,19 +29,20 @@ const TIERS = {
   1: { name: 'Grubnak', power: 0.55, rarity: 1, ilvl: 10 },
   2: { name: 'Skitterra', power: 0.8, rarity: 2, ilvl: 20 },
   3: { name: 'Volkar', power: 1.05, rarity: 3, ilvl: 30 },
+  4: { name: 'Hollow King', power: 1.3, rarity: 3, ilvl: 40 },
 };
 const HARD_MULT = 1.25;
 
 const CLASS_GEAR = {
-  bastion: { wtype: 'sword', w: ["Recruit's Arming Sword", 'Cleaverguard Sword', 'Silkrend Oathblade', 'Stormward Oathblade'], a: ['Iron Skillet Plate', 'Broodwarden Plate', 'Thunderforged Plate'] },
-  bloodreaver: { wtype: 'axe', w: ["Recruit's Hatchet", "Butcher's Greataxe", 'Fangreaver Axe', 'Skysplitter Axe'], a: ['Bloodstained Apron Mail', 'Chitin Ravager Harness', 'Stormrent Harness'] },
-  runeguard: { wtype: 'focus', w: ["Recruit's Rune Focus", 'Spiced Rune Focus', 'Eight-Eyed Ward Focus', 'Lodestone Rune Focus'], a: ['Simmerweave Robes', 'Silkward Robes', 'Galeweave Robes'] },
-  ranger: { wtype: 'bow', w: ["Recruit's Shortbow", 'Hickory Kitchen Bow', 'Silkstring Longbow', 'Thunderhead Longbow'], a: ['Smoked Leather Jerkin', 'Webstalker Cloak', 'Windrunner Cloak'] },
-  shadowblade: { wtype: 'daggers', w: ["Recruit's Knives", 'Paring Knives', 'Twin Fangs', 'Stormcut Knives'], a: ['Pantry Shadow Garb', "Widow's Wrap", 'Galeshroud Garb'] },
-  pyromancer: { wtype: 'tome', w: ["Recruit's Primer", 'Grease Fire Grimoire', 'Venomflame Tome', 'Tome of the Burning Sky'], a: ['Charred Chef Robes', 'Broodfire Vestments', 'Stormfire Vestments'] },
-  cleric: { wtype: 'sunstaff', w: ["Recruit's Sunstaff", 'Dawnladle Staff', 'Sunweb Staff', 'Skylight Staff'], a: ['Linen of the Hearth', 'Silken Vestments of Dawn', 'Vestments of the Clear Sky'] },
-  grovekeeper: { wtype: 'branch', w: ["Recruit's Branch", 'Herb Garden Staff', 'Mossweb Staff', 'Stormstruck Oak'], a: ['Rootcellar Robes', "Spinner's Bark Mantle", 'Rainwood Mantle'] },
-  chronomancer: { wtype: 'hourglass', w: ["Recruit's Chronoglass", 'Kitchen Timer Chronoglass', 'Eightfold Hourglass', 'Storm-Eye Hourglass'], a: ['Simmering Moment Robes', 'Silken Second Robes', 'Robes of the Still Moment'] },
+  bastion: { wtype: 'sword', w: ["Recruit's Arming Sword", 'Cleaverguard Sword', 'Silkrend Oathblade', 'Stormward Oathblade', 'Barrowking Oathblade'], a: ['Iron Skillet Plate', 'Broodwarden Plate', 'Thunderforged Plate', 'Gravewarden Plate'] },
+  bloodreaver: { wtype: 'axe', w: ["Recruit's Hatchet", "Butcher's Greataxe", 'Fangreaver Axe', 'Skysplitter Axe', 'Kingslayer Greataxe'], a: ['Bloodstained Apron Mail', 'Chitin Ravager Harness', 'Stormrent Harness', 'Barrow Reaver Mail'] },
+  runeguard: { wtype: 'focus', w: ["Recruit's Rune Focus", 'Spiced Rune Focus', 'Eight-Eyed Ward Focus', 'Lodestone Rune Focus', 'Crown-Rune Focus'], a: ['Simmerweave Robes', 'Silkward Robes', 'Galeweave Robes', 'Tombward Robes'] },
+  ranger: { wtype: 'bow', w: ["Recruit's Shortbow", 'Hickory Kitchen Bow', 'Silkstring Longbow', 'Thunderhead Longbow', 'Moonset Longbow'], a: ['Smoked Leather Jerkin', 'Webstalker Cloak', 'Windrunner Cloak', 'Nightwatch Cloak'] },
+  shadowblade: { wtype: 'daggers', w: ["Recruit's Knives", 'Paring Knives', 'Twin Fangs', 'Stormcut Knives', 'Lantern-Thief Knives'], a: ['Pantry Shadow Garb', "Widow's Wrap", 'Galeshroud Garb', 'Shroud of the Long Night'] },
+  pyromancer: { wtype: 'tome', w: ["Recruit's Primer", 'Grease Fire Grimoire', 'Venomflame Tome', 'Tome of the Burning Sky', 'Tome of the Last Lantern'], a: ['Charred Chef Robes', 'Broodfire Vestments', 'Stormfire Vestments', 'Candlewax Vestments'] },
+  cleric: { wtype: 'sunstaff', w: ["Recruit's Sunstaff", 'Dawnladle Staff', 'Sunweb Staff', 'Skylight Staff', 'Staff of the Dawn After'], a: ['Linen of the Hearth', 'Silken Vestments of Dawn', 'Vestments of the Clear Sky', 'Vestments of the Unsetting Sun'] },
+  grovekeeper: { wtype: 'branch', w: ["Recruit's Branch", 'Herb Garden Staff', 'Mossweb Staff', 'Stormstruck Oak', 'Barrow Yew'], a: ['Rootcellar Robes', "Spinner's Bark Mantle", 'Rainwood Mantle', 'Gravemoss Mantle'] },
+  chronomancer: { wtype: 'hourglass', w: ["Recruit's Chronoglass", 'Kitchen Timer Chronoglass', 'Eightfold Hourglass', 'Storm-Eye Hourglass', 'Moonset Hourglass'], a: ['Simmering Moment Robes', 'Silken Second Robes', 'Robes of the Still Moment', 'Robes of the Final Hour'] },
 };
 
 // Enhancements: class drops that change how an ability works (the kits check k.perk(itemKey)).
@@ -84,6 +85,16 @@ const ITEM_PERKS = {
   cleric_w3: { ab: 'prayer', text: 'Prayer Circle cuts damage by 15% instead of 10%.' },
   grovekeeper_w3: { ab: 'growth', text: 'Wild Growth gives 25 Bloom.' },
   chronomancer_w3: { ab: 'accel', text: 'Accelerando also heals the whole party.' },
+  // the Hollow King (tier 4): the barrow's armour, each with something of the old court in it
+  bastion_a4: { ab: 'bulwark', text: 'Bulwark cuts damage by 50% instead of 40%.' },
+  bloodreaver_a4: { ab: 'letting', text: 'Bloodletting also heals you for 5% of your HP.' },
+  runeguard_a4: { ab: 'ward', text: 'Runic Ward lasts 12s instead of 8s.' },
+  ranger_a4: { ab: 'rapid', text: 'Rapid Fire hits 15% harder.' },
+  shadowblade_a4: { ab: 'step', text: 'Shadowstep\'s True North lasts 8s instead of 5s.' },
+  pyromancer_a4: { ab: 'combust', text: 'Combustion lasts 13s instead of 10s.' },
+  cleric_a4: { ab: 'prayer', text: 'Prayer Circle\'s regen is 50% stronger.' },
+  grovekeeper_a4: { ab: 'thorn', text: 'Thornlash also grows 5 Bloom.' },
+  chronomancer_a4: { ab: 'rewind', text: 'Rewind reaches back 6 seconds instead of 4.' },
 };
 
 // base stat lines at power 1.0 (class items get a little more than general ones)
@@ -106,11 +117,14 @@ const ITEMS = {};
     { key: 'g_wand', name: 'Silkspun Wand', slot: 'weapon', main: 'mag', wtype: 'wand', tier: 2, base: { main: 80, haste: 2 } },
     { key: 'g_maul', name: 'Thunderstone Maul', slot: 'weapon', main: 'phys', wtype: 'maul', tier: 3, base: { main: 80, crit: 1, haste: 1 } },
     { key: 'g_rod', name: 'Lightning Rod Scepter', slot: 'weapon', main: 'mag', wtype: 'scepter', tier: 3, base: { main: 80, crit: 1, haste: 1 } },
+    { key: 'g_crown', name: 'Hollow Crown Greatsword', slot: 'weapon', main: 'phys', wtype: 'greatsword', tier: 4, base: { main: 80, crit: 2 } },
+    { key: 'g_sceptre', name: 'Sceptre of the Barrow', slot: 'weapon', main: 'mag', wtype: 'royal', tier: 4, base: { main: 80, haste: 2 } },
     // general armor: anyone
     { key: 'g_coat', name: "Traveler's Coat", slot: 'armor', tier: 0, atype: 'coat', base: { hp: 75, def: 50 } },
     { key: 'g_apron', name: 'Apron of the Kitchen Guard', slot: 'armor', tier: 1, atype: 'apron', base: { hp: 85, def: 40 } },
     { key: 'g_hauberk', name: 'Chitin Hauberk', slot: 'armor', tier: 2, atype: 'chitin', base: { hp: 65, def: 60 } },
     { key: 'g_slate', name: 'Slatescale Mail', slot: 'armor', tier: 3, atype: 'scale', base: { hp: 80, def: 55 } },
+    { key: 'g_shroud', name: 'Royal Burial Shroud', slot: 'armor', tier: 4, atype: 'shroud', base: { hp: 70, def: 60 } },
     // accessories: anyone, two at a time
     { key: 'g_pepper', name: 'Peppercorn Ring', slot: 'accessory', atype: 'ring', tier: 1, base: { crit: 3, main: 10 } },
     { key: 'g_timer', name: 'Egg Timer Pendant', slot: 'accessory', atype: 'amulet', tier: 1, base: { haste: 3, main: 10 } },
@@ -120,6 +134,9 @@ const ITEMS = {};
     { key: 'g_polar', name: 'Polarity Ring', slot: 'accessory', atype: 'ring', tier: 3, base: { crit: 2, haste: 2, main: 12 } },
     { key: 'g_eye', name: 'Eye of the Storm', slot: 'accessory', atype: 'amulet', tier: 3, base: { haste: 3, main: 15 } },
     { key: 'g_iron', name: 'Grounding Charm', slot: 'accessory', atype: 'charm', tier: 3, base: { hp: 45, def: 30 } },
+    { key: 'g_signet', name: 'Signet of the Hollow King', slot: 'accessory', atype: 'ring', tier: 4, base: { crit: 3, main: 12 } },
+    { key: 'g_bell', name: 'Barrow Bell Pendant', slot: 'accessory', atype: 'amulet', tier: 4, base: { haste: 2, crit: 1, main: 12 } },
+    { key: 'g_lantern', name: 'Last Lantern Charm', slot: 'accessory', atype: 'lantern', tier: 4, base: { hp: 50, def: 30 } },
   ];
   for (const it of gen) ITEMS[it.key] = it;
 })();
@@ -184,6 +201,8 @@ const PARTY_BONUS = {
     tiers: { 2: { crit: 0.02 }, 3: { crit: 0.02, haste: 0.02 }, 4: { crit: 0.03, haste: 0.03 } } },
   3: { name: 'Stormbound', boss: 'Volkar', flavor: 'Weather the storm together, and strike like lightning.',
     tiers: { 2: { haste: 0.02 }, 3: { hp: 0.03, haste: 0.02 }, 4: { hp: 0.04, haste: 0.03 } } },
+  4: { name: 'Court of the Barrow', boss: 'The Hollow King', flavor: 'Kneel to no king. Stand together in the dark.',
+    tiers: { 2: { dmg: 0.02 }, 3: { dmg: 0.02, crit: 0.02 }, 4: { dmg: 0.03, crit: 0.03 } } },
 };
 const BONUS_STAT = { hp: 'max HP', dmg: 'damage', crit: 'critical chance', haste: 'haste' };
 const bonusText = m => Object.entries(m).map(([k, v]) => `+${Math.round(v * 100)}% ${BONUS_STAT[k]}`).join(', ');
@@ -208,7 +227,7 @@ function partyBonus(counts) {
 }
 
 // loot from a clear: more for your own class, Hard gives two drops of higher quality
-const BOSS_TIER = { grubnak: 1, skitterra: 2, volkar: 3 };
+const BOSS_TIER = { grubnak: 1, skitterra: 2, volkar: 3, hollowking: 4 };
 function rollLoot(bossId, mode, clsId, rng) {
   const tier = BOSS_TIER[bossId] || 1, q = mode === 'hard' ? 1 : 0, out = [];
   const general = Object.values(ITEMS).filter(it => !it.cls && it.tier === tier);

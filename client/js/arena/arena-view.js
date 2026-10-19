@@ -11,7 +11,7 @@ const ArenaView = {
     // a round room is drawn at its full size (Volkar's closes in later; the dead ground is drawn over it)
     const ex = ARENA.kind === 'poly' ? ARENA.R : ARENA.kind === 'circle' ? ARENA.full : ARENA.hw;
     const ey = ARENA.kind === 'poly' ? ARENA.R : ARENA.kind === 'circle' ? ARENA.full : ARENA.hh;
-    const M = bossId === 'volkar' ? 260 : 120, bx = Math.ceil(ex + M), by = Math.ceil(ey + M);
+    const M = bossId === 'volkar' ? 260 : bossId === 'hollowking' ? 160 : 120, bx = Math.ceil(ex + M), by = Math.ceil(ey + M);
     const cv = document.createElement('canvas');
     cv.width = Math.ceil(bx * 2 * scale); cv.height = Math.ceil(by * 2 * scale);
     const c = cv.getContext('2d');
@@ -19,6 +19,7 @@ const ArenaView = {
     c.translate(bx, by);
     if (bossId === 'skitterra') this.buildWebCave(c, bx, by);
     else if (bossId === 'volkar') this.buildPeak(c, bx, by);
+    else if (bossId === 'hollowking') this.buildBarrow(c, bx, by);
     else this.buildKitchen(c, bx, by);
     this.floor = cv; this.floorFor = bossId + '@' + scale; this.floorBox = { bx, by };
   },
@@ -253,6 +254,138 @@ const ArenaView = {
     };
   },
 
+  // The Hollow King: a long burial hall. Worn flagstones and grave slabs, a faded runner up to the dais, his empty
+  // throne against the top wall under a tall window (the moon sets in it), pillars and sarcophagi down the sides,
+  // candles along the walls and grave-light braziers in the corners
+  buildBarrow(c, bx, by) {
+    const r = rng(117), hw = ARENA.hw, hh = ARENA.hh;
+    // the hall's stone beyond the floor
+    c.fillStyle = '#0a0c0e'; c.fillRect(-bx, -by, bx * 2, by * 2);
+    for (let i = 0; i < 260; i++) {
+      const x = (r() * 2 - 1) * bx, y = (r() * 2 - 1) * by;
+      if (Math.abs(x) < hw + 20 && Math.abs(y) < hh + 20) continue;
+      rrect(c, x, y, 40 + r() * 50, 22 + r() * 14, 3, `rgba(${34 + r() * 14},${38 + r() * 14},${40 + r() * 14},0.55)`, 'rgba(4,5,6,0.6)', 1.5);
+    }
+    // the tall window above the throne: night sky behind tracery (the moon is drawn live, drawMoon)
+    const wy = -hh - 62;
+    c.save();
+    c.beginPath(); c.moveTo(-70, wy + 70); c.lineTo(-70, wy - 20); c.arc(0, wy - 20, 70, Math.PI, 0); c.lineTo(70, wy + 70); c.closePath();
+    const sky = c.createLinearGradient(0, wy - 90, 0, wy + 70);
+    sky.addColorStop(0, '#16233a'); sky.addColorStop(1, '#0c1322');
+    c.fillStyle = sky; c.fill();
+    c.clip();
+    for (let i = 0; i < 40; i++) circle(c, (r() * 2 - 1) * 70, wy - 90 + r() * 160, 0.6 + r() * 0.9, `rgba(220,230,255,${0.3 + r() * 0.5})`);
+    c.restore();
+    this.window = { x: 0, y: wy, w: 70 };
+    // the floor
+    c.save();
+    ARENA.trace(c); c.clip();
+    const g = c.createRadialGradient(0, -hh * 0.3, 60, 0, 0, Math.hypot(hw, hh));
+    g.addColorStop(0, '#3a403d'); g.addColorStop(0.7, '#2b302e'); g.addColorStop(1, '#1d2120');
+    c.fillStyle = g; c.fillRect(-hw, -hh, hw * 2, hh * 2);
+    // big worn flagstones in staggered rows
+    const tw = 92, th = 64;
+    for (let row = 0, y = -hh; y < hh; row++, y += th) {
+      for (let x = -hw - (row % 2) * tw / 2; x < hw; x += tw) {
+        const v = 52 + r() * 18, ix = x + 3 + r() * 2, iy = y + 3 + r() * 2;
+        rrect(c, ix, iy, tw - 6, th - 6, 5, `rgba(${v},${v + 6},${v + 3},${0.35 + r() * 0.25})`, 'rgba(8,10,9,0.55)', 2);
+        if (r() < 0.35) line(c, ix + 6, iy + 4, ix + tw - 14, iy + 4, 'rgba(210,225,215,0.06)', 1.5);   // a lit edge
+        if (r() < 0.12) circle(c, ix + r() * tw, iy + r() * th, 2 + r() * 3, 'rgba(8,10,9,0.5)');
+      }
+    }
+    // the faded runner from the doors to the dais
+    c.fillStyle = 'rgba(70,22,30,0.55)'; c.fillRect(-70, -hh, 140, hh * 2);
+    c.fillStyle = 'rgba(30,8,12,0.4)'; c.fillRect(-70, -hh, 10, hh * 2); c.fillRect(60, -hh, 10, hh * 2);
+    for (let y = -hh + 30; y < hh; y += 70) { poly(c, [0, y - 14, 14, y, 0, y + 14, -14, y], 'rgba(184,154,74,0.18)'); }
+    for (let i = 0; i < 14; i++) { const y = -hh + r() * hh * 2; c.fillStyle = 'rgba(20,24,22,0.35)'; c.fillRect(-70 + r() * 120, y, 20 + r() * 30, 4 + r() * 6); }   // worn through
+    // grave slabs set into the floor, carved with names nobody remembers
+    for (let i = 0; i < 9; i++) {
+      const x = (r() < 0.5 ? -1 : 1) * (150 + r() * (hw - 250)), y = (r() * 2 - 1) * (hh - 110), rot = (r() - 0.5) * 0.1;
+      c.save(); c.translate(x, y); c.rotate(rot);
+      rrect(c, -34, -54, 68, 108, 8, '#43494a', OUT, 2.5);
+      rrect(c, -26, -46, 52, 92, 6, null, 'rgba(10,12,12,0.5)', 1.5);
+      line(c, 0, -34, 0, -6, 'rgba(10,12,12,0.6)', 3); line(c, -10, -24, 10, -24, 'rgba(10,12,12,0.6)', 3);
+      for (let k = 0; k < 3; k++) line(c, -16, 8 + k * 9, 16 - r() * 10, 8 + k * 9, 'rgba(10,12,12,0.45)', 2);
+      c.restore();
+    }
+    // grit and cracks
+    for (let i = 0; i < 2400; i++) {
+      const x = (r() * 2 - 1) * hw, y = (r() * 2 - 1) * hh;
+      circle(c, x, y, 0.5 + r() * 1.2, r() < 0.6 ? `rgba(6,8,7,${0.2 + r() * 0.3})` : `rgba(190,210,200,${0.04 + r() * 0.07})`);
+    }
+    for (let i = 0; i < 22; i++) {
+      let x = (r() * 2 - 1) * hw * 0.9, y = (r() * 2 - 1) * hh * 0.9, a = r() * TAU;
+      c.beginPath(); c.moveTo(x, y);
+      for (let k = 0; k < 5 + r() * 6; k++) { a += (r() - 0.5) * 1.1; x += Math.cos(a) * (10 + r() * 16); y += Math.sin(a) * (10 + r() * 16); c.lineTo(x, y); }
+      c.strokeStyle = 'rgba(6,8,7,0.6)'; c.lineWidth = 1.6; c.stroke();
+    }
+    // pale grave-moss creeping out from the walls
+    for (let i = 0; i < 80; i++) {
+      const side = r(), x = side < 0.5 ? (r() < 0.5 ? -1 : 1) * (hw - r() * 60) : (r() * 2 - 1) * hw, y = side < 0.5 ? (r() * 2 - 1) * hh : (r() < 0.5 ? -1 : 1) * (hh - r() * 50);
+      glow(c, x, y, 14 + r() * 26, r() < 0.5 ? '#3a6a4a' : '#2e5a48', 0.2 + r() * 0.15);
+    }
+    // the light falls off toward the walls
+    const v = c.createRadialGradient(0, 0, Math.min(hw, hh) * 0.6, 0, 0, Math.hypot(hw, hh));
+    v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(4,6,8,0.55)');
+    c.fillStyle = v; c.fillRect(-hw, -hh, hw * 2, hh * 2);
+    c.restore();
+    // the walls: a stone kerb and a dark line where the floor meets them
+    c.lineJoin = 'round';
+    ARENA.trace(c, 12); c.lineWidth = 24; c.strokeStyle = '#2b2f33'; c.stroke();
+    ARENA.trace(c, 0); c.lineWidth = 3; c.strokeStyle = '#08090a'; c.stroke();
+    ARENA.trace(c, 24); c.lineWidth = 3; c.stroke();
+    // the dais steps (a low platform at the top of the floor) and the empty throne against the wall
+    c.save(); ARENA.trace(c); c.clip();
+    rrect(c, -200, -hh - 20, 400, 76, 10, 'rgba(58,64,70,0.75)', 'rgba(8,9,10,0.7)', 2.5);
+    rrect(c, -170, -hh - 20, 340, 50, 8, 'rgba(66,72,78,0.7)', 'rgba(8,9,10,0.6)', 2);
+    c.restore();
+    rrect(c, -46, -hh - 78, 92, 82, 10, '#23262b', OUT, 3);                         // throne back
+    for (let k = 0; k < 7; k++) { const x = -36 + k * 12; poly(c, [x - 5, -hh - 78, x, -hh - 96 - (k % 2) * 8, x + 5, -hh - 78], '#b89a4a', OUT, 1.5); }   // its crown of spikes
+    rrect(c, -40, -hh - 30, 80, 36, 6, '#2e3238', OUT, 2.5);                          // seat
+    rrect(c, -54, -hh - 34, 16, 44, 4, '#2a2d33', OUT, 2); rrect(c, 38, -hh - 34, 16, 44, 4, '#2a2d33', OUT, 2);
+    glow(c, 0, -hh - 40, 70, '#3aff7a', 0.12);
+    // pillars down both sides, and a sarcophagus in every bay between them
+    const candles = [], braziers = [];
+    for (const sx of [-1, 1]) {
+      for (let k = 0; k < 5; k++) {
+        const y = -hh + 60 + k * ((hh * 2 - 120) / 4), x = sx * (hw + 56);
+        ellipse(c, x + 6, y + 10, 34, 18, 0, 'rgba(0,0,0,0.45)');
+        circle(c, x, y, 30, '#30353a', OUT, 3);
+        circle(c, x - 4, y - 5, 22, '#3c4248');
+        circle(c, x - 9, y - 11, 8, 'rgba(255,255,255,0.07)');
+        if (k < 4) {
+          const yy = y + (hh * 2 - 120) / 8, xx = sx * (hw + 64);
+          rrect(c, xx - 22, yy - 46, 44, 92, 8, '#363b3f', OUT, 2.5);
+          rrect(c, xx - 16, yy - 40, 32, 80, 6, '#40464b', 'rgba(8,9,10,0.6)', 1.5);
+          ellipse(c, xx, yy - 24, 9, 7, 0, '#4a5156', OUT, 1.5);   // the effigy's head
+          line(c, xx, yy - 14, xx, yy + 30, 'rgba(8,9,10,0.5)', 3);
+          candles.push({ x: sx * (hw + 30), y: yy - 30, ph: r() * 9 }, { x: sx * (hw + 30), y: yy + 26, ph: r() * 9 });
+        }
+      }
+    }
+    // candles along the bottom wall, and grave-light braziers in the four corners
+    for (let i = 0; i < 9; i++) candles.push({ x: -hw + 80 + i * ((hw * 2 - 160) / 8), y: hh + 26, ph: r() * 9 });
+    for (const [x, y] of [[-hw - 40, -hh - 30], [hw + 40, -hh - 30], [-hw - 40, hh + 40], [hw + 40, hh + 40]]) {
+      braziers.push({ x, y, ph: r() * 9 });
+      ellipse(c, x + 4, y + 10, 26, 12, 0, 'rgba(0,0,0,0.5)');
+      poly(c, [x - 22, y - 6, x + 22, y - 6, x + 14, y + 12, x - 14, y + 12], '#2f3337', OUT, 2.5);
+      for (const dx of [-10, 0, 10]) line(c, x + dx, y + 12, x + dx * 1.4, y + 30, '#202326', 3);
+    }
+    for (const cd of candles) {
+      for (let k = 0; k < 3; k++) {
+        const x = cd.x + (k - 1) * 8, h = 8 + ((cd.ph * 7 + k * 3) % 6);
+        rrect(c, x - 2.5, cd.y - h, 5, h, 1.5, '#d8d0b8', OUT, 1);
+        cd['h' + k] = h;
+      }
+      ellipse(c, cd.x, cd.y + 1, 14, 4, 0, 'rgba(216,208,184,0.35)');   // old wax pooled under them
+    }
+    this.amb = {
+      kind: 'barrow', candles, braziers, bx, by,
+      motes: Array.from({ length: 36 }, () => ({ x: (r() * 2 - 1) * hw, y: (r() * 2 - 1) * hh, ph: r() * 9, sp: 4 + r() * 8 })),
+      mist: Array.from({ length: 16 }, () => ({ s: r(), side: Math.floor(r() * 4), sp: 0.01 + r() * 0.015, r: 60 + r() * 60 })),
+    };
+  },
+
   // Grubnak: a long kitchen of warm checker tiles inside a brick wall, the stove line along the top wall,
   // shelves down the sides and prep counters along the bottom
   buildKitchen(c, bx, by) {
@@ -411,6 +544,120 @@ const ArenaView = {
     if (a.kind === 'kitchen') this.kitchenLife(ctx, a, t);
     else if (a.kind === 'cave') this.caveLife(ctx, a, t);
     else if (a.kind === 'peak') this.peakLife(ctx, a, t);
+    else if (a.kind === 'barrow') this.barrowLife(ctx, a, t);
+  },
+
+  // candles gutter, the braziers burn grave-green, dust hangs in the air and mist creeps in along the walls.
+  // In the Long Night (this.night 0..1) the candles and braziers die down.
+  barrowLife(ctx, a, t) {
+    const lit = 1 - (this.night || 0) * 0.85, hw = ARENA.hw, hh = ARENA.hh;
+    for (const m of a.mist) {
+      const q = (m.s + t * m.sp) % 1, along = (q * 2 - 1);
+      const x = m.side < 2 ? along * hw : (m.side === 2 ? -1 : 1) * (hw - 30), y = m.side < 2 ? (m.side ? 1 : -1) * (hh - 30) : along * hh;
+      glow(ctx, x, y, m.r, '#9ab8a8', 0.07);
+    }
+    if (lit > 0.05) {
+      for (const cd of a.candles) for (let k = 0; k < 3; k++) {
+        const x = cd.x + (k - 1) * 8, y = cd.y - cd['h' + k], fl = 0.75 + Math.sin(t * 9 + cd.ph + k * 2) * 0.15 + Math.sin(t * 23 + k) * 0.08;
+        glow(ctx, x, y - 3, 16, '#ffb860', 0.35 * fl * lit);
+        ctx.save(); ctx.globalAlpha = lit;
+        ellipse(ctx, x, y - 3, 2.2, 4.5 * fl, Math.sin(t * 5 + k) * 0.15, '#ffe2a0');
+        ctx.restore();
+      }
+      for (const b of a.braziers) {
+        glow(ctx, b.x, b.y - 10, 70, '#3aff7a', 0.22 * lit);
+        for (let i = 0; i < 5; i++) {
+          const q = (t * 1.3 + i / 5 + b.ph) % 1;
+          ctx.save(); ctx.globalAlpha = lit * (1 - q);
+          ellipse(ctx, b.x + Math.sin(t * 3 + i * 2) * 6, b.y - 8 - q * 34, 7 * (1 - q * 0.6), 11 * (1 - q * 0.5), 0, i % 2 ? '#7affa8' : '#3adf7a');
+          ctx.restore();
+        }
+      }
+    }
+    for (const m of a.motes) {
+      const x = m.x + Math.sin(t * 0.3 + m.ph) * 30, y = m.y + ((t * m.sp + m.ph * 40) % 80) - 40;
+      circle(ctx, x, y, 1.3, `rgba(220,235,225,${0.18 + Math.sin(t + m.ph) * 0.08})`);
+    }
+  },
+
+  // the moon in the tall window: it sinks through the fight (p 0..1) and is gone at Moonset
+  drawMoon(ctx, p, t) {
+    const w = this.window;
+    if (!w) return;
+    ctx.save();
+    ctx.beginPath(); ctx.moveTo(w.x - w.w, w.y + 70); ctx.lineTo(w.x - w.w, w.y - 20); ctx.arc(w.x, w.y - 20, w.w, Math.PI, 0); ctx.lineTo(w.x + w.w, w.y + 70); ctx.closePath();
+    ctx.clip();
+    const my = w.y - 50 + clamp(p, 0, 1) * 150, mx = w.x + 18 - p * 30;
+    glow(ctx, mx, my, 80, '#cfe0ff', 0.35);
+    circle(ctx, mx, my, 26, '#e8eef8');
+    circle(ctx, mx - 8, my - 5, 6, 'rgba(160,175,200,0.5)'); circle(ctx, mx + 9, my + 8, 4, 'rgba(160,175,200,0.45)');
+    ctx.restore();
+    // tracery over the glass
+    ctx.save(); ctx.strokeStyle = '#15181c'; ctx.lineWidth = 6;
+    ctx.beginPath(); ctx.moveTo(w.x - w.w, w.y + 70); ctx.lineTo(w.x - w.w, w.y - 20); ctx.arc(w.x, w.y - 20, w.w, Math.PI, 0); ctx.lineTo(w.x + w.w, w.y + 70); ctx.stroke();
+    ctx.lineWidth = 4; line(ctx, w.x, w.y - 90, w.x, w.y + 70, '#15181c', 4); line(ctx, w.x - w.w, w.y + 10, w.x + w.w, w.y + 10, '#15181c', 4);
+    ctx.restore();
+    void t;
+  },
+
+  // The Long Night: everything goes dark except soft pools of light (each hero, the last lantern). Drawn into a
+  // screen-sized layer with the lights cut out of it. v = { W, H, DPR, zoom, cam }
+  drawNight(ctx, lights, k, v) {
+    if (k <= 0) return;
+    const cw = Math.max(1, Math.ceil(v.W * v.DPR)), ch = Math.max(1, Math.ceil(v.H * v.DPR));
+    let c = this.nightCv;
+    if (!c || c.width !== cw || c.height !== ch) { c = this.nightCv = document.createElement('canvas'); c.width = cw; c.height = ch; }
+    const n = c.getContext('2d');
+    n.setTransform(1, 0, 0, 1, 0, 0); n.globalCompositeOperation = 'source-over';
+    n.clearRect(0, 0, cw, ch);
+    n.fillStyle = `rgba(3,5,10,${0.88 * k})`; n.fillRect(0, 0, cw, ch);
+    const s = v.DPR * v.zoom;
+    n.setTransform(s, 0, 0, s, -v.cam.x * s, -v.cam.y * s);
+    n.globalCompositeOperation = 'destination-out';
+    for (const L of lights) {
+      const g = n.createRadialGradient(L.x, L.y, L.r * 0.3, L.x, L.y, L.r);
+      g.addColorStop(0, `rgba(0,0,0,${L.a ?? 1})`); g.addColorStop(1, 'rgba(0,0,0,0)');
+      n.fillStyle = g; n.beginPath(); n.arc(L.x, L.y, L.r, 0, TAU); n.fill();
+    }
+    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(c, 0, 0); ctx.restore();
+  },
+
+  // a lantern: an iron cage around a warm flame. On the floor it sits in a pool of light; carried, it's held up.
+  lantern(ctx, x, y, t, carried, last) {
+    const s = last ? 1.8 : 1.45, lift = carried ? 46 : 0, fl = 0.85 + Math.sin(t * 8 + x) * 0.1 + Math.sin(t * 19) * 0.05;
+    if (!carried) {
+      glow(ctx, x, y, 85 * s, '#ffcf70', 0.3 * fl);
+      ellipse(ctx, x, y, 60 * s, 44 * s, 0, null, rgba('#ffd88a', 0.25 * fl), 1.5);   // how far its light reaches
+      ellipse(ctx, x + 3, y + 3, 12 * s, 5 * s, 0, 'rgba(0,0,0,0.4)');
+    }
+    ctx.save(); ctx.translate(x, y - lift - 14 * s); ctx.scale(s, s);
+    glow(ctx, 0, 0, 34, '#ffd27a', 0.55 * fl);
+    if (carried) line(ctx, 0, -14, 0, -22, '#2a2420', 1.5);
+    rrect(ctx, -8, -12, 16, 22, 3, 'rgba(255,214,140,0.25)', '#2a2420', 2);
+    ellipse(ctx, 0, 0, 3.2, 6 * fl, 0, '#fff0c0');
+    glow(ctx, 0, 0, 10, '#ffffff', 0.5 * fl);
+    for (const dx of [-4, 4]) line(ctx, dx, -12, dx, 10, '#2a2420', 1.3);
+    rrect(ctx, -10, -15, 20, 4, 1.5, '#3a322a', OUT, 1.2);
+    rrect(ctx, -9, 9, 18, 4, 1.5, '#3a322a', OUT, 1.2);
+    ctx.beginPath(); ctx.arc(0, -16, 4, Math.PI, 0); ctx.strokeStyle = '#3a322a'; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.restore();
+  },
+
+  // Royal Doom: a violet sigil turns over the doomed player's head, its ring burning down as the time runs out
+  doomMark(ctx, x, y, frac, t) {
+    const hot = frac < 0.3, k = hot ? 0.75 + Math.sin(t * 14) * 0.25 : 1;
+    ctx.save(); ctx.translate(x, y); ctx.scale(1.4, 1.4);
+    glow(ctx, 0, 0, 30, '#b46aff', 0.4 * k);
+    circle(ctx, 0, 0, 15, 'rgba(30,10,46,0.75)', rgba('#7a3ac0', 0.6), 2);
+    ctx.beginPath(); ctx.arc(0, 0, 15, -Math.PI / 2, -Math.PI / 2 + TAU * clamp(frac, 0, 1));
+    ctx.strokeStyle = rgba(hot ? '#ff8ad0' : '#e0b8ff', k); ctx.lineWidth = 3; ctx.stroke();
+    // a little skull
+    ellipse(ctx, 0, -1.5, 6.5, 6, 0, '#efe2ff');
+    rrect(ctx, -3.5, 3, 7, 4, 1, '#efe2ff');
+    circle(ctx, -2.4, -2, 1.7, '#2a1040'); circle(ctx, 2.4, -2, 1.7, '#2a1040');
+    ctx.rotate(t * 0.8);
+    for (let i = 0; i < 6; i++) { const a = i * TAU / 6; circle(ctx, Math.cos(a) * 21, Math.sin(a) * 21, 1.6, rgba('#d8b0ff', 0.8 * k)); }
+    ctx.restore();
   },
 
   // clouds drift past below the summit, rain slants across it, grass shivers in the wind, leaves blow over,
