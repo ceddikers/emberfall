@@ -22,13 +22,62 @@ const BossTells = (() => {
     g.addColorStop(0, `rgba(10,5,2,${a})`); g.addColorStop(0.75, `rgba(10,5,2,${a * 0.7})`); g.addColorStop(1, 'rgba(10,5,2,0)');
     ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(x, y, r, r * 0.92, 0, 0, TAU); ctx.fill();
   }
-  // the fair-play outline (Normal only draws it; Hard keeps the art and drops the outline on hidden mechs)
-  function outline(ctx, s, p, k, t, color) {
-    const late = Math.max(0, (p - 0.8) / 0.2);
+  // One colour language for every boss: the rim says what the mechanic wants of you, the art inside says whose it is.
+  // Orange-red: get out. Red: a tankbuster. Yellow: stack in. Purple: spread out. Cyan: soak it.
+  // (raidwides have no rim: the whole room is the warning)
+  const ROLE_RIM = { aoe: '#ff6a3a', proximity: '#ff6a3a', knockback: '#ff6a3a', buster: '#ff2a3a', stack: '#ffd84a', spread: '#c070ff', chain: '#c070ff', tower: '#4ff0e8' };
+  const roleColor = (tg, tell) => ROLE_RIM[tg.type] || (tell && tell.color) || '#ffffff';
+  // The fair-play outline: a solid rim in the role colour; on Normal also a faint wash sweeping out from the origin as
+  // the cast runs, with a bright leading edge. In the last 0.6s the rim pulses; a shape that follows someone flashes
+  // white the moment it locks in place. Hard keeps the rim, the pulse and the lock (no sweep), and hides the hidden mechs
+  // entirely (they never reach here).
+  function outline(ctx, tg, s, p, k, t, env, tell) {
+    const col = roleColor(tg, tell), left = (1 - p) * tg.dur;
+    const late = clamp(1 - left / 0.6, 0, 1), landed = tg.gone != null;
     ctx.save();
+    if (!env.hard && !landed && p < 0.995) {
+      const g = ArenaView.grown(s, p);
+      if (g) {
+        SHAPES.trace(ctx, g); ctx.fillStyle = rgba(col, 0.1 * k); ctx.fill();
+        ctx.strokeStyle = rgba(col, 0.5 * k * (1 - late)); ctx.lineWidth = 2; ctx.stroke();
+      }
+    }
     SHAPES.trace(ctx, s);
-    ctx.setLineDash([12, 10]); ctx.lineDashOffset = -t * 24;
-    ctx.strokeStyle = rgba(color, (0.3 + 0.55 * late) * k); ctx.lineWidth = 2 + late * 1.5; ctx.stroke();
+    if (s.kind === 'donut') {
+      // the safe circle reads as safe: a soft lift inside it and a clean bright edge
+      if (env.hard) { ctx.fillStyle = rgba(col, 0.06 * k); ctx.fill('evenodd'); }
+      ctx.save(); ctx.beginPath(); ctx.arc(s.x, s.y, s.r2, 0, TAU);
+      ctx.fillStyle = rgba('#fff6e0', 0.05 * k); ctx.fill();
+      ctx.strokeStyle = rgba('#fff6e0', (0.45 + 0.35 * late) * k); ctx.lineWidth = 2.5; ctx.stroke();
+      ctx.restore();
+      SHAPES.trace(ctx, s);
+    }
+    if (!env.hard) { ctx.setLineDash([12, 10]); ctx.lineDashOffset = -t * 24; ctx.strokeStyle = rgba(col, 0.28 * k); ctx.lineWidth = 6; ctx.stroke(); ctx.setLineDash([]); }
+    ctx.strokeStyle = rgba(col, ((env.hard ? 0.4 : 0.55) + 0.4 * late) * k); ctx.lineWidth = 2 + late * 1.5; ctx.stroke();
+    if (late > 0 && !landed) {
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.strokeStyle = rgba(col, late * (0.3 + 0.3 * Math.sin(t * 26)) * k); ctx.lineWidth = 9; ctx.stroke();
+    }
+    if (tg.lockAt && (tg.follow != null || tg.aim != null || tg.aimFromBoss != null) && left < tg.lockAt && left > tg.lockAt - 0.3) {
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.strokeStyle = rgba('#ffffff', (1 - (tg.lockAt - left) / 0.3) * 0.9 * k); ctx.lineWidth = 5; ctx.stroke();
+    }
+    ctx.restore();
+  }
+  // The rims again, over the floor VFX (lingering fire, smoke, auras), so a shape is never lost under them.
+  function rims(ctx, tgs, t, env) {
+    ctx.save();
+    ARENA.trace(ctx, 4); ctx.clip();
+    for (const tg of tgs.values()) {
+      if (tg.hidden || tg.type === 'raidwide' || tg.gone != null) continue;
+      const tell = get(tg, env);
+      if (tell && tell.outline === false) continue;
+      const k = fade(tg, t) * ghost(tg, env);
+      if (k <= 0) continue;
+      const p = clamp((t - tg.start) / tg.dur, 0, 1), late = clamp(1 - (1 - p) * tg.dur / 0.6, 0, 1);
+      SHAPES.trace(ctx, tg.live);
+      ctx.strokeStyle = rgba(roleColor(tg, tell), (0.35 + 0.35 * late) * k); ctx.lineWidth = 1.5; ctx.stroke();
+    }
     ctx.restore();
   }
 
@@ -499,9 +548,11 @@ const BossTells = (() => {
       ground(ctx, tg, s, p, k) {
         const ca = Math.cos(s.angle), sa = Math.sin(s.angle), L = AR() * 2;
         ctx.save(); SHAPES.trace(ctx, s); ctx.clip();
+        // (a pink-lit shadow: the old near-black one vanished on her dark floor)
         const g = ctx.createLinearGradient(s.x, s.y, s.x + ca * L, s.y + sa * L);
-        g.addColorStop(0, `rgba(20,6,24,${(0.35 + 0.3 * p) * k})`); g.addColorStop(1, `rgba(20,6,24,${0.1 * k})`);
+        g.addColorStop(0, `rgba(20,6,24,${(0.3 + 0.25 * p) * k})`); g.addColorStop(1, `rgba(20,6,24,${0.12 * k})`);
         ctx.fillStyle = g; ctx.fill();
+        ctx.fillStyle = rgba('#ff7ac0', (0.08 + 0.1 * p) * k); ctx.fill();
         ctx.restore();
       },
       air(ctx, tg, s, p, k, t) {
@@ -1122,6 +1173,7 @@ const BossTells = (() => {
   function ground(ctx, tg, s, p, k, t, env) {
     const tell = get(tg, env);
     if (!tell) return false;
+    k *= ghost(tg, env);
     // a blast you can hide from: drawn with every cover prop's shadow cut out of it, so the safe floor shows as the
     // room's own lit tiles behind each prop
     const shadows = tg.cover ? coverShadows(tg, env) : null;
@@ -1129,7 +1181,7 @@ const BossTells = (() => {
     if (tg.type === 'raidwide') { if (tell.ground) tell.ground(ctx, tg, s, p, k, t, env); }
     else {
       if (tell.ground) tell.ground(ctx, tg, s, p, k, t, env);
-      if (tell.outline !== false && !env.hard) outline(ctx, s, p, k, t, tell.color || '#ffffff');
+      if (tell.outline !== false) outline(ctx, tg, s, p, k, t, env, tell);
     }
     if (shadows) { ctx.restore(); shadowRims(ctx, shadows, p, k, t, tell.color || '#ffffff'); }
     return true;
@@ -1147,6 +1199,15 @@ const BossTells = (() => {
       sh.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.closePath();
       ctx.clip('evenodd');
     }
+  }
+  // A chain of the same move (Eightfold Lunge's legs, Whisk's crosses, Simmer's waves): the one landing next is drawn
+  // full strength, the one after it as a ghost, anything later fainter still.
+  function ghost(tg, env) {
+    if (!env.tgs) return 1;
+    const at = tg.start + tg.dur;
+    let ahead = 0;
+    for (const o of env.tgs.values()) if (o !== tg && o.tag === tg.tag && o.gone == null && o.start + o.dur < at - 0.05) ahead++;
+    return ahead === 0 ? 1 : ahead === 1 ? 0.45 : 0.22;
   }
   // the safe patch behind each prop: a faint warm lift on the floor and bright edges along the shadow's sides
   function shadowRims(ctx, shadows, p, k, t, color) {
@@ -1174,7 +1235,7 @@ const BossTells = (() => {
       if (tg.hidden && tg.type !== 'raidwide') continue;
       const tell = get(tg, env);
       if (!tell || !tell.air) continue;
-      const p = clamp((t - tg.start) / tg.dur, 0, 1), k = fade(tg, t);
+      const p = clamp((t - tg.start) / tg.dur, 0, 1), k = fade(tg, t) * ghost(tg, env);
       if (k > 0) tell.air(ctx, tg, tg.live, p, k, t, env);
     }
   }
@@ -1359,5 +1420,5 @@ const BossTells = (() => {
     ctx.restore();
   }
 
-  return { get, ground, air, fade, drawRollers, drawReels, drawSweeps, rodPost: (ctx, x, y, t, a) => rodPole(ctx, x, y, t, a, 0.15) };
+  return { get, ground, air, fade, rims, roleColor, drawRollers, drawReels, drawSweeps, rodPost: (ctx, x, y, t, a) => rodPole(ctx, x, y, t, a, 0.15) };
 })();

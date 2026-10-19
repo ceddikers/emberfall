@@ -14,8 +14,10 @@ const VFX = (() => {
   const parts = [];
   const effects = [];
   const MAX_PARTS = 1800;
+  const TICK = 1 / 60;   // the fixed rate effect ticks run at
   let now = 0;
   let scale = 1;   // alpha multiplier for whatever is being spawned (others' abilities are dimmed)
+  let muted = false;   // a hidden tab spawns nothing (it would all play at once on the way back)
 
   // ---------------------------------------------------------------- sprites (cached canvases)
   const cache = new Map();
@@ -99,28 +101,34 @@ const VFX = (() => {
 
   // ---------------------------------------------------------------- particles
   // p: { x, y, z, vx, vy, vz, g, drag, life, size, size1, color, kind, add, rot, vr, stretch, a, spin, ground, fadeIn }
+  // (full: the new one takes the slot of the oldest still around, instead of shifting the whole list)
+  let oldest = 0;
   function spawn(p) {
-    if (parts.length >= MAX_PARTS) parts.shift();
     p.t0 = now; p.z = p.z || 0; p.vx = p.vx || 0; p.vy = p.vy || 0; p.vz = p.vz || 0;
     p.rot = p.rot ?? Math.random() * Math.PI * 2;
     p.a = (p.a ?? 1) * scale;
-    parts.push(p);
+    if (muted) return p;
+    if (parts.length >= MAX_PARTS) { oldest = (oldest + 1) % parts.length; parts[oldest] = p; }
+    else parts.push(p);
     return p;
   }
   const rand = (a, b) => a + Math.random() * (b - a);
 
   // ---------------------------------------------------------------- effects
   // e: { layer: 'ground'|'air', dur, draw(ctx, p, t, e), add }
-  function fx(e) { e.t0 = now + (e.delay || 0); e.sc = scale; e.a = (e.a ?? 1) * scale; effects.push(e); return e; }
+  function fx(e) { e.t0 = now + (e.delay || 0); e.sc = scale; e.a = (e.a ?? 1) * scale; if (!muted) effects.push(e); return e; }
   // run an effect's callbacks with the dimming it was spawned with
   function withScale(s, fn) { const prev = scale; scale = s; try { fn(); } finally { scale = prev; } }
 
   function update(t, dt) {
     now = t;
-    for (let i = parts.length - 1; i >= 0; i--) {
+    // dead particles are dropped by compacting the list in one pass (keeps the draw order, no per-removal splice)
+    let w = 0;
+    for (let i = 0; i < parts.length; i++) {
       const p = parts[i];
       const age = now - p.t0;
-      if (age > p.life) { parts.splice(i, 1); continue; }
+      if (age > p.life) continue;
+      parts[w++] = p;
       const drag = p.drag ? Math.pow(1 - p.drag, dt * 60) : 1;
       p.vx *= drag; p.vy *= drag; p.vz *= drag;
       p.vz -= (p.g || 0) * dt;
@@ -134,10 +142,18 @@ const VFX = (() => {
         p.x = c.x + Math.cos(p.orbit.a) * p.orbit.r; p.y = c.y + Math.sin(p.orbit.a) * p.orbit.r * (p.orbit.flat ?? 0.55);
       }
     }
+    parts.length = w;
+    if (oldest >= w) oldest = 0;
     for (let i = effects.length - 1; i >= 0; i--) {
       const e = effects[i];
       if (now - e.t0 > e.dur) { effects.splice(i, 1); if (e.done) withScale(e.sc, e.done); continue; }
-      if (e.tick && now >= e.t0) withScale(e.sc, () => e.tick(Math.max(0, (now - e.t0) / e.dur), dt, e));
+      // ticks (trails, motes) run at a steady 60 a second whatever the frame rate, so a 144 Hz screen doesn't spawn more
+      // than twice the particles of a 60 Hz one, nor a slow frame fewer
+      if (e.tick && now >= e.t0) {
+        e._acc = Math.min((e._acc ?? TICK) + dt, TICK * 4);
+        const q = Math.max(0, (now - e.t0) / e.dur);
+        while (e._acc >= TICK - 1e-9) { e._acc -= TICK; withScale(e.sc, () => e.tick(q, TICK, e)); }
+      }
     }
   }
 
@@ -148,22 +164,28 @@ const VFX = (() => {
     const size = p.size + ((p.size1 ?? p.size) - p.size) * q;
     const img = sprite(p.kind || 'glow', p.color);
     ctx.globalAlpha = Math.min(1, a);
-    ctx.globalCompositeOperation = p.add === false ? 'source-over' : 'lighter';
+    const op = p.add === false ? 'source-over' : 'lighter';
+    if (op !== curOp) { ctx.globalCompositeOperation = op; curOp = op; }
     const y = p.y - p.z;
     if (p.stretch) {
       // streaks point along their velocity (sparks)
       const sp = Math.hypot(p.vx, p.vy - p.vz);
       const ang = Math.atan2(p.vy - p.vz, p.vx);
       const len = Math.max(size, size * p.stretch * Math.min(1, sp / 300));
-      ctx.save(); ctx.translate(p.x, y); ctx.rotate(ang);
+      place(ctx, p.x, y, ang, 1);
       ctx.drawImage(img, -len / 2, -size / 4, len, size / 2);
-      ctx.restore();
+      ctx.setTransform(base);
     } else if (p.kind && p.kind !== 'glow' && p.kind !== 'soft' && p.kind !== 'smoke') {
-      ctx.save(); ctx.translate(p.x, y); ctx.rotate(p.rot);
-      if (p.flutter) ctx.scale(1, Math.abs(Math.cos(now * p.flutter + p.t0 * 7)) * 0.8 + 0.2);
+      place(ctx, p.x, y, p.rot, p.flutter ? Math.abs(Math.cos(now * p.flutter + p.t0 * 7)) * 0.8 + 0.2 : 1);
       ctx.drawImage(img, -size / 2, -size / 2, size, size);
-      ctx.restore();
+      ctx.setTransform(base);
     } else ctx.drawImage(img, p.x - size / 2, y - size / 2, size, size);
+  }
+  // rotated particles: one setTransform onto the camera's matrix instead of a save/translate/rotate/restore each
+  let base = null, curOp = null;
+  function place(ctx, x, y, ang, sy) {
+    const c = Math.cos(ang), s = Math.sin(ang), m = base;
+    ctx.setTransform(m.a * c + m.c * s, m.b * c + m.d * s, (m.c * c - m.a * s) * sy, (m.d * c - m.b * s) * sy, m.a * x + m.c * y + m.e, m.b * x + m.d * y + m.f);
   }
 
   function draw(ctx, layer) {
@@ -175,6 +197,7 @@ const VFX = (() => {
       ctx.globalCompositeOperation = e.add ? 'lighter' : 'source-over';
       e.draw(ctx, p, now - e.t0, e);
     }
+    base = ctx.getTransform(); curOp = null;
     for (const pt of parts) if (!!pt.ground === (layer === 'ground')) drawPart(ctx, pt);
     ctx.restore();
   }
@@ -373,13 +396,16 @@ const VFX = (() => {
         const tail = Math.max(0, sweep - 0.55) / 0.45;
         const aT = a0 + flip * span * tail;
         const k = e.a * (1 - Math.max(0, (p - 0.45) / 0.55));
-        c.save(); c.globalCompositeOperation = 'lighter';
-        for (const [col, rr, ww, al] of [[color, r, w, 0.55], ['#ffffff', r * 0.98, w * 0.35, 0.9]]) {
-          c.globalAlpha = al * k; c.fillStyle = col;
-          c.beginPath(); c.arc(x, y - 10, rr, flip > 0 ? aT : a1, flip > 0 ? a1 : aT, false);
-          c.arc(x, y - 10, rr * (1 - ww), flip > 0 ? a1 : aT, flip > 0 ? aT : a1, true); c.closePath(); c.fill();
-        }
+        const arcBand = (rr, ww) => { c.beginPath(); c.arc(x, y - 10, rr, flip > 0 ? aT : a1, flip > 0 ? a1 : aT, false); c.arc(x, y - 10, rr * (1 - ww), flip > 0 ? a1 : aT, flip > 0 ? aT : a1, true); c.closePath(); c.fill(); };
+        c.save();
+        // an ink band under the light, so the cut reads on a bright floor too, and a fading smear trailing it
+        c.globalAlpha = 0.32 * k; c.fillStyle = '#140a14'; arcBand(r * 1.03, w * 1.15);
+        c.globalCompositeOperation = 'lighter';
+        if (tail < 1) { c.globalAlpha = 0.18 * k; c.fillStyle = color; c.beginPath(); c.arc(x, y - 10, r * 0.96, flip > 0 ? a0 : aT, flip > 0 ? aT : a0, false); c.arc(x, y - 10, r * (1 - w * 0.7), flip > 0 ? aT : a0, flip > 0 ? a0 : aT, true); c.closePath(); c.fill(); }
+        for (const [col, rr, ww, al] of [[color, r, w, 0.55], ['#ffffff', r * 0.98, w * 0.35, 0.9]]) { c.globalAlpha = al * k; c.fillStyle = col; arcBand(rr, ww); }
         c.restore();
+        // a glint riding the blade's tip while it sweeps
+        if (sweep < 1) glowAt(c, x + Math.cos(a1) * r, y - 10 + Math.sin(a1) * r, 14 + r * 0.12, '#ffffff', 0.8 * k);
       } });
       fx({ dur: dur * 0.35, layer: 'air', draw: () => {}, done: () => B.sparks(x + Math.cos(angle) * r, y + Math.sin(angle) * r, { color, n: o.sparks ?? 6, angle, spread: 0.9, speed: 300 }) });
     },
@@ -395,6 +421,8 @@ const VFX = (() => {
         const tc = style === 'fire' || style === 'meteor' ? (Math.random() < 0.5 ? '#ff6a1a' : '#ffc040') : color;
         for (let i = 0; i < (style === 'meteor' ? 3 : 2); i++) spawn({ x: q.x + rand(-3, 3) * size, y: q.y + rand(-3, 3) * size, z: q.z, vz: style === 'fire' || style === 'meteor' ? 30 : 0, life: rand(0.18, 0.35) * (style === 'meteor' ? 2 : 1), size: rand(8, 14) * size * (style === 'meteor' ? 1.6 : 1), size1: 0, color: tc });
         if (style === 'leaf' && Math.random() < 0.4) spawn({ x: q.x, y: q.y, z: q.z, vx: rand(-40, 40), vy: rand(-40, 40), vz: rand(-20, 30), g: 60, life: 0.7, size: 9, color, kind: 'leaf', add: false, vr: rand(-8, 8) });
+        // embers shed backwards off the flame, slowing and falling
+        if (style === 'fire' && Math.random() < 0.6) { const ca = Math.cos(ang), sa = Math.sin(ang); spawn({ x: q.x, y: q.y, z: q.z, vx: -ca * rand(40, 130) + rand(-35, 35), vy: -sa * rand(40, 130) + rand(-35, 35), vz: rand(10, 70), drag: 0.06, g: 140, life: rand(0.3, 0.6), size: rand(3, 5) * size, size1: 0, color: Math.random() < 0.5 ? '#ffd070' : '#ff8a2a', stretch: 2 }); }
         if ((style === 'fire' || style === 'meteor') && Math.random() < 0.4) spawn({ x: q.x, y: q.y, z: q.z, vx: rand(-30, 30), vy: rand(-30, 30), vz: rand(20, 60), life: 0.6, size: rand(10, 18) * size, size1: 26, color: '#3a2a2a', kind: 'smoke', add: false, a: 0.35 });
       }, draw: (c, p, t, e) => {
         const q = pos(p), y = q.y - q.z;
@@ -435,6 +463,16 @@ const VFX = (() => {
           case 'fire': case 'meteor': {
             const s = style === 'meteor' ? 1.8 * size : size;
             glowAt(c, q.x, y, 30 * s, '#ff7a1a', 0.9 * e.a);
+            if (style === 'fire') {
+              // a teardrop of flame, its tail flickering back along the flight
+              const fl = 1 + Math.sin(t * 40) * 0.12, hx = Math.cos(ang), hy = Math.sin(ang);
+              c.save(); c.translate(q.x, y); c.rotate(Math.atan2(hy, hx)); c.globalCompositeOperation = 'lighter';
+              for (const [col, L, W, al] of [['#ff5a1a', 30, 11, 0.75], ['#ffb040', 22, 7.5, 0.85], ['#fff2c0', 13, 4.5, 1]]) {
+                c.globalAlpha = al * e.a; c.fillStyle = col; c.beginPath();
+                c.moveTo(W * s, 0); c.quadraticCurveTo(W * s * 0.9, W * s, -L * s * 0.45 * fl, W * 0.35 * s); c.lineTo(-L * s * fl, 0); c.lineTo(-L * s * 0.45 * fl, -W * 0.35 * s); c.quadraticCurveTo(W * s * 0.9, -W * s, W * s, 0); c.fill();
+              }
+              c.restore();
+            }
             glowAt(c, q.x, y, 14 * s, '#ffe08a', e.a);
             if (style === 'meteor') { c.save(); c.translate(q.x, y); c.rotate(t * 6); c.fillStyle = '#4a2a1a'; c.beginPath(); for (let i = 0; i < 7; i++) { const a = i * Math.PI * 2 / 7, rr = 9 * s * (i % 2 ? 0.8 : 1); c.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); } c.closePath(); c.fill(); c.restore(); glowAt(c, q.x, y, 10 * s, '#ffb040', 0.7 * e.a); }
             break;
@@ -1157,6 +1195,7 @@ const VFX = (() => {
 
   function setScale(s) { scale = s; }
   function clear() { parts.length = 0; effects.length = 0; }
+  function mute(on) { muted = !!on; }
 
-  return Object.assign({ update, draw, spawn, fx, sprite, setScale, clear, glowAt, neonRing, neonPath, get count() { return parts.length; } }, B);
+  return Object.assign({ update, draw, spawn, fx, sprite, setScale, clear, mute, glowAt, neonRing, neonPath, get count() { return parts.length; } }, B);
 })();

@@ -593,7 +593,7 @@ TALENTS.ironpalm = [
   ],
   [
     { id: 'ironpalm_dragon', name: 'Dragon Ascends', ab: 'bell', grants: true, text: 'New move on F, in place of Temple Bell. Dragon Ascends (60s): leap down on your target with a heavy blow; the whole party deals 5% more damage for 12s, and you get Second Wind.',
-      spec: { avalanche: 'New move on F, in place of Landslide. Dragon Ascends (60s): leap down on your target with a heavy blow; the whole party deals 5% more damage for 12s, you get Second Wind, and your Momentum fills and holds.' } },
+      spec: { avalanche: 'New move on F, in place of Landslide. Dragon Ascends (60s): leap down on your target with a heavy blow; the whole party deals 5% more damage for 12s, you get Second Wind, and your Momentum fills for 15s.' } },
     { id: 'ironpalm_mountain', name: 'Falling Mountain', ab: 'kick', text: 'Heaven\'s Drop now shakes the ground: an aftershock strikes the boss a second later.' },
     { id: 'ironpalm_hundred', name: 'Hundred Hands', ab: 'fist', text: 'Thousand Palms now leaves the boss\'s guard open for 6s: your Light presses hit 30% harder.' },
   ],

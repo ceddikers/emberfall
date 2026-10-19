@@ -166,7 +166,7 @@ const KITS = {
       },
       {
         id: 'undying', name: 'Undying', type: 'ogcd', target: 'self', cd: 150, anim: 'big',
-        desc: 'For 8s you cannot drop below 1 HP, and your heals on yourself are doubled.',
+        desc: 'For 8s you cannot drop below 1 HP, and every heal and shield you give is doubled.',
         effect(k) { k.mitigate('self', 0, 8, { kind: 'living', ab: this }); k.buff('undying', 8); },
         fx: { type: 'aura', color: '#8a0010', r: 36, dur: 3 },
       },
@@ -316,7 +316,7 @@ const KITS = {
       },
       {
         id: 'mark', name: "Hunter's Mark", type: 'ogcd', target: 'enemy', range: RANGED, cd: 60, anim: 'cast',
-        desc: 'Party burst: the boss takes 8% more damage from everyone for 15s, and Keen Eye triggers more often.',
+        desc: 'Party burst: the boss takes 8% more damage from everyone for 15s. For you, Keen Eye triggers more often and your critical chance is 10% higher.',
         effect(k) {
           const dur = 15 + (k.talent('ranger_longhunt') ? 3 : 0);
           k.debuffTarget('vuln', 0.08, dur, { ab: this }); k.buff('markself', dur);
@@ -493,7 +493,7 @@ const KITS = {
       },
       {
         id: 'combust', name: 'Combustion', type: 'ogcd', target: 'self', cd: 60, anim: 'big',
-        desc: 'Burst: for 10s every Fireball, Pyroblast and Fire Blast crits.',
+        desc: 'Burst: for 10s everything you cast crits.',
         effect(k) {
           const dur = (k.perk('pyromancer_a4') ? 13 : 10) + (k.talent('pyromancer_longburn') ? 3 : 0);
           k.buff('combust', dur); if (k.perk('pyromancer_w3')) k.refill('fireblast');
@@ -729,7 +729,7 @@ const KITS = {
       {
         id: 'shift', name: 'Shift', type: 'ogcd', target: 'self', cd: 2.5, anim: 'cast',
         label: k => (k.g.stance === 'haste' ? 'Shift: Slow' : 'Shift: Haste'),
-        desc: 'Switch between Slow (Flux fills, strong single-target healing) and Haste (fast, party healing, Flux drains). Your first Bolt in Haste is instant.',
+        desc: 'Switch between Slow (Flux fills, strong single-target healing) and Haste (fast, party healing, Flux drains). Shifting into Haste makes your next Bolt instant.',
         usable: k => k.g.stance === 'haste' || k.g.flux >= 20,
         glow: k => k.g.stance === 'slow' && k.g.flux >= 95,
         effect(k) {
@@ -1235,7 +1235,9 @@ const tauntAbility = classId => {
 const tauntIconBg = classId => {
   const cls = typeof CLASSES !== 'undefined' && CLASSES.find(c => c.id === classId);
   if (cls && cls.art && cls.art.icons === false && typeof abilityIcon !== 'undefined') return `url(${abilityIcon(classId, 'taunt')})`;
-  return `url(icons/${classId}/taunt.png), url(icons/${classId}/${(TAUNT[classId] || {}).icon}.png)`;
+  // its own painting is asked for once (ArtProbe in draw-util.js); until it's known to exist, only the borrowed icon
+  const own = `icons/${classId}/taunt.png`, borrowed = `icons/${classId}/${(TAUNT[classId] || {}).icon}.png`;
+  return typeof ArtProbe !== 'undefined' && ArtProbe.ok(own) === true ? `url(${own}), url(${borrowed})` : `url(${borrowed})`;
 };
 
 // ======================================================================= ALEMBIST (healer, added with classes-b)
@@ -1584,7 +1586,7 @@ function kitSegDist(px, py, ax, ay, bx, by) {
 // k.g.temp runs from -5 (Rime) to +5 (Blaze). k.g.side is the side of 0 it last stood on, and k.g.peak the furthest it
 // got on that side since it last crossed. A spell that carries the dial across 0 after a peak of 3 or more detonates
 // a Thermal Shock sized by the whole swing (the peak plus how far past 0 it landed): +5 down to -1 is a swing of 6.
-// Pushing past Â±5 overloads you: Overheat (fire locked for 3s, and you burn) or Frostbite (casts 30% slower for 3s).
+// Pushing past ±5 overloads you: Overheat (fire locked for 3s, and you burn) or Frostbite (casts 30% slower for 3s).
 // Zenith (k.def.redline) holds the edge instead, building Strain. Pendulum (k.def.stepBonus) moves it a step further.
 const THERMIST = { STEP: 0.08, EDGE: 5, SHOCK_MIN: 3, SHOCK_BASE: -120, SHOCK_PER: 105, REDLINE: 0.2, STRAIN: 11 };
 const THERM_SHOCK = { id: 'shock', name: 'Thermal Shock' };
@@ -1741,7 +1743,7 @@ KITS.thermist = {
     'Swing the whole dial: build to +5 with fire, then carry it across 0 with frost. The swing that crosses 0 detonates a Thermal Shock, and the further you swung (from +5 down to -1 is 6), the bigger it is.',
     'Every step from 0 is +8% damage for that side\'s spells, so a spell at the far end of a swing hits hardest. Spells that move you toward 0 gain nothing.',
     'At +5 Flare is instant and always crits, but leaves you On the Brink: the next spell must be frost or you overheat. Glacier Lance is the same at -5. Use the edge spells as your movement.',
-    'Inversion flips the dial: at Â±5 that is a swing of 10, half again as strong, and Attunement lets both elements count for 10s. Save it for burst windows. Equilibrium is your mitigation: it snaps the dial back to 0, so it costs you the swing.',
+    'Inversion flips the dial: at ±5 that is a swing of 10, half again as strong, and Attunement lets both elements count for 10s. Save it for burst windows. Equilibrium is your mitigation: it snaps the dial back to 0, so it costs you the swing.',
   ],
   abilities: [
     {
@@ -1764,7 +1766,7 @@ KITS.thermist = {
     {
       id: 'flare', name: 'Flare', type: 'gcd', target: 'enemy', range: RANGED, anim: 'cast', el: 1,
       cast: k => thermCast(k, 1, 2, true),
-      desc: '2s cast: a burst of fire. Turns the dial 2 toward Blaze. At +5 it\'s instant and always crits, but holds you On the Brink: if your next spell is fire too, you overheat.',
+      desc: '2s cast: a burst of fire. Turns the dial 2 toward Blaze. At +5 it\'s instant and always crits, but holds you On the Brink: if your next spell is fire too, you overheat, and waiting it out does the same.',
       usable: k => !k.has('overheat'),
       glow: k => thermPlan(k) === 'flare',
       effect(k) { thermSpell(k, this, 1, 2, 400, { edge: true }); },
@@ -1773,7 +1775,7 @@ KITS.thermist = {
     {
       id: 'lance', name: 'Glacier Lance', type: 'gcd', target: 'enemy', range: RANGED, anim: 'cast', el: -1,
       cast: k => thermCast(k, -1, 2, true),
-      desc: '2s cast: a lance of ice. Turns the dial 2 toward Rime. At -5 it\'s instant and always crits, but holds you On the Brink: if your next spell is frost too, you get frostbite.',
+      desc: '2s cast: a lance of ice. Turns the dial 2 toward Rime. At -5 it\'s instant and always crits, but holds you On the Brink: if your next spell is frost too, you get frostbite, and waiting it out does the same.',
       glow: k => thermPlan(k) === 'lance',
       effect(k) { thermSpell(k, this, -1, 2, 400, { edge: true }); },
       fx: { type: 'line', color: '#bfe8ff', range: 440 },
@@ -2726,7 +2728,7 @@ const IRONPALM = {
   RUSH: 0.03, RUSH_MAX: 8, RUSH_FADE: 2.5,   // Avalanche Fist's Momentum: +3% a named move, up to 8, gone 2.5s after the last
   OPENING: 4,        // a read tankbuster: the next Heavy within 4s is a free Thousand Palms
   READ: { pct: 0.2, dur: 1.2, counter: 63 },
-  pool: { key: 'breath', max: 100, regen: 6, rest: 36, delay: 0.45 },
+  pool: { key: 'breath', max: 100, regen: 11, rest: 36, delay: 0.45 },   // (delay: counted from the end of the last press's recovery, engine.js)
 };
 const IP_SLOT = { L: 0, H: 1, K: 2 };
 const IP_ANIM = { L: 'palm', H: 'fist', K: 'kick' };
@@ -2894,7 +2896,7 @@ function ipRead(k, d) {
 }
 
 KITS.ironpalm = {
-  potMult: 0.67, // balance knob (tools/simulate.js)
+  potMult: 0.68, // balance knob (tools/simulate.js)
   pacing: { kind: 'combo', gcd: false, buffer: 0.45, bufferSize: 2, repeat: false, pool: IRONPALM.pool, itemGcd: (k, ab) => !!ab.named },
   auto: { kind: 'fist', potency: 40, range: MELEE },  // passive auto-attack (see ENGINE.AUTO_EVERY)
   gauge: { kind: 'breath', key: 'breath', max: 100, label: 'Breath', w: 250 },
@@ -2964,7 +2966,7 @@ const ipDragon = {
 };
 TALENT_ABILITIES.ironpalm_dragon = { cls: 'ironpalm', ab: ipDragon,
   spec: { avalanche: Object.assign({}, ipDragon, {
-    desc: 'Leap and come down on your target like a dragon: a heavy blow, the whole party deals 5% more damage for 12s, and you get Second Wind for 15s. Your Momentum fills and holds while it lasts.',
+    desc: 'Leap and come down on your target like a dragon: a heavy blow, the whole party deals 5% more damage for 12s, and you get Second Wind for 15s. Your Momentum fills and lasts 15s, unless a string drops.',
     effect(k) { ipDragon.effect.call(this, k); k.buff('rush', 15, {}, IRONPALM.RUSH_MAX, IRONPALM.RUSH_MAX); },
   }) } };
 

@@ -618,6 +618,7 @@ class FightSim {
     const cov = m.cover ? this.coverCheck(m) : null;
     const inside = this.alive().filter(p => SHAPES.contains(m.shape, p.x, p.y, pad) && !(cov && cov.safe.has(p.id)));
     const hits = [];
+    let fail = 0;   // a stack or soak nobody (or too few) answered: the clients play it as a failure
     // a Gorgemaw with its jaw open eats what lands on it (eatInfo, end of this file): eat.on take it as a Morsel,
     // eat.whole swallows the whole mechanic for everyone (a teammate's spread circle), eat.raid halves a raidwide
     const eat = this.eatInfo ? this.eatInfo(m, inside) : null;
@@ -641,7 +642,8 @@ class FightSim {
       case 'stack': {
         // m.dmg is the total, split among everyone inside; too few people and it hits harder
         const need = Math.min(m.need || 1, this.alive().length);
-        if (!inside.length) { for (const p of this.alive()) hit(p, m.dmg * 0.6, 'stack-miss', true); break; }
+        if (!inside.length) { fail = 1; for (const p of this.alive()) hit(p, m.dmg * 0.6, 'stack-miss', true); break; }
+        if (inside.length < need) fail = 1;
         const each = m.dmg / inside.length * (inside.length < need ? 1.5 : 1);
         for (const p of inside) hit(p, each, 'stack', false);
         break;
@@ -652,7 +654,7 @@ class FightSim {
       case 'tower': {
         const need = Math.min(m.need || 1, Math.max(1, this.alive().length));
         for (const p of inside) hit(p, m.dmg, 'tower', false);
-        if (inside.length < need) for (const p of this.alive()) hit(p, m.failDmg || m.dmg * 2, 'tower-fail', false);
+        if (inside.length < need) { fail = 1; for (const p of this.alive()) hit(p, m.failDmg || m.dmg * 2, 'tower-fail', false); }
         break;
       }
       case 'buster': {
@@ -675,7 +677,7 @@ class FightSim {
         for (const p of this.alive()) this.emit({ t: 'kb', id: p.id, x: m.shape.x, y: m.shape.y, d: m.dist || 260 });
         break;
     }
-    this.emit({ t: 'tgx', id: m.id, hits });
+    this.emit(fail ? { t: 'tgx', id: m.id, hits, fail } : { t: 'tgx', id: m.id, hits });
     this.dollMech(m, cov);   // a Marionettist's Doll caught in it (classes-c)
     if (cov) for (const pr of cov.chip) this.hitProp(pr, 1, m.tag);
     if (m.onResolve) m.onResolve(inside, hits, cov);

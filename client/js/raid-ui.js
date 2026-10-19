@@ -150,30 +150,33 @@ const RaidUI = (() => {
 
   // raid: the client raid state from main.js
   // marks: { healer, locked, heal, casting: { id, frac }, aggro } (see frameMarks in main.js)
+  // (this runs every frame: elements are looked up once, and text and widths are written only when they change)
+  const els = {}, q = sel => els[sel] || (els[sel] = root.querySelector(sel));
+  const setText = (el, v) => { if (el._t !== v) { el._t = v; el.textContent = v; } };
+  const setW = (el, v) => { if (el._w !== v) { el._w = v; el.style.width = v; } };
   function update(raid, now, myId, marks = {}) {
     const dt = Math.min(0.1, Math.max(0, now - lastT)); lastT = now;
     const b = raid.boss;
-    root.querySelector('.bb-name').textContent = raid.def.name;
-    const mode = root.querySelector('.bb-mode');
-    mode.textContent = raid.mode === 'hard' ? 'Hard' : 'Normal';
+    setText(q('.bb-name'), raid.def.name);
+    const mode = q('.bb-mode');
+    setText(mode, raid.mode === 'hard' ? 'Hard' : 'Normal');
     mode.classList.toggle('hard', raid.mode === 'hard');
-    root.querySelector('.bb-time').textContent = raid.state === 'live' || raid.state === 'clear' || raid.state === 'wipe' ? mmss(raid.fightTime || 0) : '';
+    setText(q('.bb-time'), raid.state === 'live' || raid.state === 'clear' || raid.state === 'wipe' ? mmss(raid.fightTime || 0) : '');
     const frac = b.mx ? b.hp / b.mx : 1;
     bossTrail = frac > bossTrail ? frac : Math.max(frac, bossTrail - dt * 0.08 - (bossTrail - frac) * dt * 1.5);
-    root.querySelector('.bb-hp .fill').style.width = (frac * 100).toFixed(2) + '%';
-    root.querySelector('.bb-hp .trail').style.width = (bossTrail * 100).toFixed(2) + '%';
-    root.querySelector('.bb-hp .vuln').classList.toggle('on', !!b.v);
-    root.querySelector('.bb-hp span').textContent = `${(frac * 100).toFixed(1)}%`;
-    root.querySelector('#boss-bar').classList.toggle('untargetable', !!b.u);
+    setW(q('.bb-hp .fill'), (frac * 100).toFixed(2) + '%');
+    setW(q('.bb-hp .trail'), (bossTrail * 100).toFixed(2) + '%');
+    q('.bb-hp .vuln').classList.toggle('on', !!b.v);
+    setText(q('.bb-hp span'), `${(frac * 100).toFixed(1)}%`);
+    q('#boss-bar').classList.toggle('untargetable', !!b.u);
     // the boss's cast bar; it flashes for a moment when the cast goes off
-    const cb = root.querySelector('.bb-cast');
+    const cb = q('.bb-cast');
     const c = raid.cast;
     if (c && now < c.start + c.dur + 0.25) {
       cb.classList.remove('hidden');
       cb.classList.toggle('done', now >= c.start + c.dur);
-      cb.querySelector('.fill').style.width = (Math.min(1, (now - c.start) / c.dur) * 100).toFixed(1) + '%';
-      const sp = cb.querySelector('span');
-      if (sp.textContent !== c.name) sp.textContent = c.name;
+      setW(q('.bb-cast .fill'), (Math.min(1, (now - c.start) / c.dur) * 100).toFixed(1) + '%');
+      setText(q('.bb-cast span'), c.name);
     } else cb.classList.add('hidden');
     upcoming(raid, now);
     bossStatus(raid, now, myId, marks);
@@ -184,7 +187,7 @@ const RaidUI = (() => {
     if (raid.state === 'countdown') {
       const left = Math.ceil(raid.countdownEnd - now);
       cd.classList.toggle('hidden', left > 5 || left <= 0);
-      cd.textContent = left;
+      setText(cd, String(left));
     } else cd.classList.add('hidden');
     // a trial opens on its memory: two lines of lore while the countdown runs
     const lore = $('trial-lore'), T = raid.def.trial && TRIALS[raid.def.trial];
@@ -203,10 +206,11 @@ const RaidUI = (() => {
       if (!f) continue;
       const hpF = p.maxHp ? Math.max(0, Math.min(1, p.hp / p.maxHp)) : 0, shF = p.maxHp ? Math.min(1, p.shield / p.maxHp) : 0;
       f.trailV = p.alive ? trailStep(f.trailV, hpF, p.hitAt, now, dt) : 0;
-      f.hp.style.width = (hpF * 100).toFixed(1) + '%';
-      f.trail.style.width = (f.trailV * 100).toFixed(1) + '%';
-      f.sh.style.width = (shF * 100).toFixed(1) + '%';
-      f.sh.style.left = Math.min(100 - shF * 100, hpF * 100).toFixed(1) + '%';
+      setW(f.hp, (hpF * 100).toFixed(1) + '%');
+      setW(f.trail, (f.trailV * 100).toFixed(1) + '%');
+      setW(f.sh, (shF * 100).toFixed(1) + '%');
+      const shL = Math.min(100 - shF * 100, hpF * 100).toFixed(1) + '%';
+      if (f.sh._l !== shL) { f.sh._l = shL; f.sh.style.left = shL; }
       // healers read the missing health (what a heal would fill); everyone else reads current health
       const missing = p.maxHp - p.hp;
       // (maxHp is 1 until the host's first party update arrives)
@@ -221,12 +225,12 @@ const RaidUI = (() => {
       f.row.classList.toggle('low', p.alive && hpF < 0.35);
       f.row.classList.toggle('hit', p.alive && now - (p.hitAt || -9) < 0.2);
       const casting = marks.casting && marks.casting.id === id;
-      f.cast.style.width = casting ? (marks.casting.frac * 100).toFixed(1) + '%' : '0%';
+      setW(f.cast, casting ? (marks.casting.frac * 100).toFixed(1) + '%' : '0%');
       f.row.classList.toggle('casting', !!casting);
       const chips = [];
       for (const [hid, secs, from] of p.hots || []) {
         const h = HOT_ICON[hid];
-        if (h) chips.push(`<b class="chip hot${from === myId ? '' : ' theirs'}" data-tip="${h[2]}: healing over time"><u style="background-image:url(icons/${h[0]}/${h[1]}.png)"></u>${secs}</b>`);
+        if (h) chips.push(`<b class="chip hot${from === myId ? '' : ' theirs'}" data-tip="${h[2]}: healing over time"><u style="background-image:url(${abilityIcon(h[0], h[1])})"></u>${secs}</b>`);
       }
       if (p.mit) chips.push(`<b class="chip mit" data-tip="Taking ${p.mit}% less damage">${GLYPH.shield}${p.mit}%</b>`);
       if (p.dd) chips.push(`<b class="chip bad" data-tip="Damage Down: dealing 10% less damage">${GLYPH.down}${p.dd}</b>`);

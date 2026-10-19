@@ -95,7 +95,7 @@ const GAUGES = {
       ellipse(c, ex, ey, 12, 7, 0, '#fff3c8', OUT, 1.5);
       circle(c, ex, ey, 4, '#a8641a');
     }
-    if (k.has('barrage')) label(c, 'Ã—3', w - 26, 62, '#ffe27a', 14, 'system-ui', 800);
+    if (k.has('barrage')) label(c, '×3', w - 26, 62, '#ffe27a', 14, 'system-ui', 800);
     label(c, String(Math.floor(k.g.focus)), cx, top + 80, '#f2e6c8', 13, 'system-ui', 800);
   },
 
@@ -220,7 +220,7 @@ const GAUGES = {
     c.lineWidth = 2; c.strokeStyle = frame; c.stroke();
     rrect(c, cx - 32, top, 64, 7, 3, '#5a4a6a', frame, 1.5);
     rrect(c, cx - 32, bot - 7, 64, 7, 3, '#5a4a6a', frame, 1.5);
-    if (k.has('lag')) label(c, 'â€¦', cx, mid + 6, '#ff8a7a', 22, 'system-ui', 800);
+    if (k.has('lag')) label(c, '…', cx, mid + 6, '#ff8a7a', 22, 'system-ui', 800);
     label(c, haste ? 'HASTE' : 'SLOW', cx, bot + 12, haste ? '#5ff0ff' : '#c8d4dc', 11, 'Cinzel, Georgia, serif', 800);
   },
 };

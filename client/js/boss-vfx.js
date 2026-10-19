@@ -25,15 +25,19 @@ const BOSS_VFX = (() => {
   }
   const ringPts = (x, y, r, n) => Array.from({ length: n }, (_, i) => { const a = i * TAU / n + rand(-0.1, 0.1); return { x: x + Math.cos(a) * r, y: y + Math.sin(a) * r, a }; });
 
-  // the whole shape flashes and its rim burns white, then fades (replaces the old flat flash)
+  // the whole shape flashes and its rim burns white, then fades (replaces the old flat flash).
+  // The fill is screened, not added: on a pale floor (Grubnak's cream tiles) an additive fill clips to flat white and
+  // washes the floor out for a moment; screen lifts dark floors about as much and leaves light ones readable. The
+  // punch comes from the rim, which stays additive.
   function shapeFlash(s, color, o = {}) {
     const dur = o.dur ?? 0.5, a = o.a ?? 0.45;
     VFX.fx({ dur, layer: 'ground', draw: (c, p, t, e) => {
       const k = (1 - p) * (1 - p) * e.a;
       c.save(); clipArena(c);
-      c.globalCompositeOperation = 'lighter';
       SHAPES.trace(c, s);
+      c.globalCompositeOperation = 'screen';
       c.globalAlpha = a * k; c.fillStyle = color; c.fill();
+      c.globalCompositeOperation = 'lighter';
       c.globalAlpha = Math.min(1, 0.8 * k); c.strokeStyle = color; c.lineWidth = 10 * (1 - p) + 2; c.stroke();
       c.globalAlpha = Math.min(1, 1.2 * k); c.strokeStyle = '#ffffff'; c.lineWidth = 2.5; c.stroke();
       c.restore();
@@ -59,10 +63,13 @@ const BOSS_VFX = (() => {
       c.restore();
     } });
   }
-  // a whole-room tint (raidwides)
+  // a whole-room tint (raidwides). Bright colours are screened (see shapeFlash: never a white-out on the pale floors);
+  // dark ones (nightfall, a wipe) are laid over normally so they actually darken the room
+  const isDark = col => { const [r, g, b] = hexToRgb(col); return r * 0.3 + g * 0.59 + b * 0.11 < 60; };
   function roomTint(color, a = 0.28, dur = 0.7) {
+    const mode = isDark(color) ? 'source-over' : 'screen';
     VFX.fx({ dur, layer: 'ground', draw: (c, p, t, e) => {
-      c.save(); clipArena(c); c.globalCompositeOperation = 'lighter';
+      c.save(); clipArena(c); c.globalCompositeOperation = mode;
       c.globalAlpha = a * (1 - p) * e.a; c.fillStyle = color; c.fillRect(-AR() - 10, -AR() - 10, AR() * 2 + 20, AR() * 2 + 20);
       c.restore();
     } });
@@ -251,6 +258,7 @@ const BOSS_VFX = (() => {
       VFX.shock(s.x, s.y, { r: s.r * 1.6, color: '#f0e0c8', w: 12, dur: 0.55, flat: 1 });
       VFX.shock(s.x, s.y, { r: AR() * 0.9, color: '#e8d8c0', w: 5, dur: 0.8, flat: 1, delay: 0.1 });
       for (const q of ringPts(s.x, s.y, s.r * 0.9, 12)) VFX.smoke(q.x, q.y, { n: 1, color: '#e0d4c0', size: 34, a: 0.6, speed: 140 });
+      for (const q of ringPts(s.x, s.y, s.r * 0.55, 6)) VFX.debris(q.x, q.y, { color: '#8a6a4a', n: 3, speed: 1.1, up: 1.2 });
       VFX.decal(s.x, s.y, { style: 'crack', r: s.r * 0.7, dur: 2.5, a: 0.55, seed: Math.random() * 6 });
       shake(11);
     },
@@ -284,9 +292,16 @@ const BOSS_VFX = (() => {
     },
     lunge(tg) {
       const s = tg.live;
-      shapeFlash(s, '#ff7ac0', { a: 0.16, dur: 0.3 });
+      shapeFlash(s, '#ff7ac0', { a: 0.22, dur: 0.35 });
       streak(s.x, s.y, s.angle, '#ffb0dc', { w: 12, dur: 0.28 });
       for (let i = 0; i < 3; i++) { const d = rand(120, AR() * 1.2); VFX.sparks(s.x + Math.cos(s.angle) * d, s.y + Math.sin(s.angle) * d, { color: '#ffd0ec', n: 3, angle: s.angle, spread: 0.5, speed: 300 }); }
+      // where the leg's tip drives into the floor: a burst of chitin spikes and broken stone
+      const tip = Math.min(500, s.len || 500), tx = s.x + Math.cos(s.angle) * tip, ty = s.y + Math.sin(s.angle) * tip;
+      if (ARENA.sd(tx, ty) < -20) {
+        VFX.spikeburst(tx, ty, { r: 46, n: 9, color: '#ff7ac0', core: '#ffe0f0', ink: '#2a0a20', layer: 'ground' });
+        VFX.debris(tx, ty, { color: '#4a4156', n: 6, speed: 0.9 });
+      }
+      shake(4);
     },
     venom(tg) {
       const s = tg.live;
@@ -755,5 +770,18 @@ const BOSS_VFX = (() => {
   }
   function wipe() { roomTint('#200810', 0.4, 1.4); }
 
-  return { propFx, stoveBurst, gazed, doomed, cure, knightMemory, knightRise, nightFall, polarityFlip, edgeClose, pulse, orbForm, orbHit, chain, meatballLand, meatballHit, silkSnap, reelBite, impact, castStart, auto, leap, roar, addSpawn, addDeath, addEnrage, fury, spit, husk, tetherSnap, playerDeath, playerRaised, partyBuff, victory, wipe };
+  // a stack or soak that wasn't answered (the host flags it): it must never look like a success. The shape burns red,
+  // the room flushes red, and the screen jolts. A missed Barrow Bell tolls purple through the whole barrow.
+  function failed(tg) {
+    const s = tg.live, bell = tg.tag === 'bell';
+    const col = bell ? '#b04aff' : '#ff3a2a';
+    shapeFlash(s, col, { a: 0.4, dur: 0.7 });
+    VFX.shock(s.x, s.y, { r: (s.r || 120) * 1.6, color: col, w: 9, dur: 0.6, flat: 1 });
+    VFX.sparks(s.x, s.y - 10, { color: bell ? '#e0b0ff' : '#ff8a6a', n: 14, speed: 340 });
+    if (bell) { VFX.pillar(s.x, s.y, { r: 50, h: 360, color: '#c88aff', dur: 0.9 }); for (let i = 0; i < 3; i++) VFX.shock(s.x, s.y, { r: AR() * 1.3, color: '#b04aff', w: 8, dur: 0.9, flat: 1, delay: i * 0.15 }); }
+    roomTint(col, 0.16, 0.6);
+    shake(8);
+  }
+
+  return { failed, propFx, stoveBurst, gazed, doomed, cure, knightMemory, knightRise, nightFall, polarityFlip, edgeClose, pulse, orbForm, orbHit, chain, meatballLand, meatballHit, silkSnap, reelBite, impact, castStart, auto, leap, roar, addSpawn, addDeath, addEnrage, fury, spit, husk, tetherSnap, playerDeath, playerRaised, partyBuff, victory, wipe };
 })();

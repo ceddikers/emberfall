@@ -26,9 +26,7 @@ const RAIDS = [   // [boss name, boss id, tank, healer, two DPS]
   ['the Hollow King', 'hollowking', 'runeguard:spellwarden', 'cleric:base', 'ranger:venomstrike', 'shadowblade:nightstalker'],
   // the advanced classes (classes-a): each spec somewhere
   ['Grubnak', 'grubnak', 'bastion:base', 'cleric:base', 'thermist:base', 'driftblade:base'],
-  // (Skitterra with pillars and Deluge: two advanced DPS bots together run out of time on the adds, so each gets a partner)
-  ['Skitterra', 'skitterra', 'bloodreaver:base', 'grovekeeper:base', 'thermist:pendulum', 'ranger:base'],
-  ['Skitterra', 'skitterra', 'runeguard:base', 'grovekeeper:base', 'driftblade:orbit', 'shadowblade:base'],
+  ['Skitterra', 'skitterra', 'runeguard:base', 'grovekeeper:base', 'thermist:pendulum', 'driftblade:orbit'],   // (both advanced DPS together again since the Driftblade bot keeps moving)
   ['Volkar', 'volkar', 'bastion:base', 'cleric:base', 'thermist:zenith', 'driftblade:comet'],   // (with the reworked Volkar, an Accelerant plus two advanced DPS was too tight)
   ['the Hollow King', 'hollowking', 'runeguard:base', 'cleric:aegis', 'thermist:base', 'driftblade:base'],
   // Alembist (classes-b): the base kit and each spec healing a boss

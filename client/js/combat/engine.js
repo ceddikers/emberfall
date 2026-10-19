@@ -343,7 +343,9 @@ class Kit {
     } else if (ab.type === 'gcd') { this.stats.gcds++; this.stats.gcdTime += ct || lock; }   // no GCD: uptime is time spent in your moves
     if (ab.type === 'ogcd' || ab.cd) this.startCooldown(ab);
     const pool = this.pace && this.pace.pool, cost = pool ? this.costOf(ab) : 0;
-    if (cost) { this.g[pool.key] = Math.max(0, (this.g[pool.key] || 0) - cost); this.lastSpend = this.now; }
+    // (the resting pace counts from the end of the move's recovery, not the press: a chain of presses each made as
+    // the last recovery ends never stops long enough to rest, however slow the recoveries are)
+    if (cost) { this.g[pool.key] = Math.max(0, (this.g[pool.key] || 0) - cost); this.lastSpend = this.now + (ct > 0 ? 0 : lock); }
     if (ct > 0) {
       this.cast = { ab, target, start: this.now, end: this.now + ct };
       this.env.emit({ type: 'castStart', ab, dur: ct, target });

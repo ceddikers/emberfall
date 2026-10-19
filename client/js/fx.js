@@ -3,10 +3,11 @@
 
 const FX = {
   list: [], pending: [], now: 0, heroScale: 1.5, shake: 0,
+  muted: false,   // a hidden tab spawns nothing (it would all play at once on the way back)
   GROUND: new Set(['zone', 'click', 'ring', 'puff', 'cone', 'aura', 'ghost', 'flash']),
 
-  add(f) { f.t0 = this.now; this.list.push(f); return f; },
-  later(delay, fn) { this.pending.push({ t: this.now + delay, fn }); },
+  add(f) { f.t0 = this.now; if (!this.muted) this.list.push(f); return f; },
+  later(delay, fn) { if (!this.muted) this.pending.push({ t: this.now + delay, fn }); },
   clear() { this.list.length = 0; this.pending.length = 0; },
 
   update(now, dt) {
@@ -84,6 +85,10 @@ const FX = {
   // Dash visuals: a quick trail of afterimages.
   dashTrail(ent, color) {
     if (!ent.cls) return;
+    // (called every frame while dashing: at most ~45 afterimages a second, so a 144 Hz screen doesn't draw three times
+    // as many full hero ghosts as a 60 Hz one)
+    if (this.now - (ent._trailAt ?? -1) < 1 / 45) return;
+    ent._trailAt = this.now;
     this.add({ type: 'ghost', cls: ent.cls, x: ent.x, y: ent.y, angle: ent.angle, dur: 0.25 });
     if (Math.random() < 0.5) this.add({ type: 'puff', x: ent.x + (Math.random() - 0.5) * 12, y: ent.y + (Math.random() - 0.5) * 12, r: 9, color: color || '#ffffff', dur: 0.5 });
   },

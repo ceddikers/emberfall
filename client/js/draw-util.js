@@ -6,22 +6,35 @@ const OUT = '#1a1622'; // outline color used by every sprite
 function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
 function easeOut(t) { return 1 - (1 - t) * (1 - t); }
 
+// (colour helpers run thousands of times a frame: parsed colours and shades are remembered, a few hundred at most)
+const _rgbCache = new Map(), _shadeCache = new Map();
 function hexToRgb(hex) {
+  let v = _rgbCache.get(hex);
+  if (v) return v;
   let c = hex.replace('#', '');
   if (c.length === 3) c = c.split('').map(x => x + x).join('');
   const n = parseInt(c, 16);
-  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  v = [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  if (_rgbCache.size > 512) _rgbCache.clear();
+  _rgbCache.set(hex, v);
+  return v;
 }
 function rgba(hex, a) {
-  const [r, g, b] = hexToRgb(hex);
-  return `rgba(${r},${g},${b},${Math.max(0, Math.min(1, a))})`;
+  const v = hexToRgb(hex);
+  return `rgba(${v[0]},${v[1]},${v[2]},${a < 0 ? 0 : a > 1 ? 1 : a})`;
 }
 // amt > 0 lightens toward white, amt < 0 darkens toward black
 function shade(hex, amt) {
+  const key = hex + amt;
+  let s = _shadeCache.get(key);
+  if (s) return s;
   let [r, g, b] = hexToRgb(hex);
   if (amt >= 0) { r += (255 - r) * amt; g += (255 - g) * amt; b += (255 - b) * amt; }
   else { r *= 1 + amt; g *= 1 + amt; b *= 1 + amt; }
-  return `rgb(${r | 0},${g | 0},${b | 0})`;
+  s = `rgb(${r | 0},${g | 0},${b | 0})`;
+  if (_shadeCache.size > 512) _shadeCache.clear();
+  _shadeCache.set(key, s);
+  return s;
 }
 
 function fillStroke(ctx, fill, stroke, lw) {
@@ -62,13 +75,33 @@ function hexagon(ctx, x, y, r, fill, stroke, lw, rot = 0) {
   for (let k = 0; k < 6; k++) { const a = rot + k * Math.PI / 3; pts.push(x + Math.cos(a) * r, y + Math.sin(a) * r); }
   poly(ctx, pts, fill, stroke, lw);
 }
+// A soft radial light: the colour at the centre fading to nothing at r. Drawn from one cached sprite per colour (a
+// gradient built per call was the arena's biggest per-frame cost: ~100 glows a frame in the Hollow King's barrow).
+const _glowCache = new Map();
+function glowSprite(color) {
+  let c = _glowCache.get(color);
+  if (c || typeof document === 'undefined') return c || null;
+  c = document.createElement('canvas'); c.width = c.height = 128;
+  const x = c.getContext('2d'), g = x.createRadialGradient(64, 64, 0, 64, 64, 64);
+  g.addColorStop(0, rgba(color, 1)); g.addColorStop(1, rgba(color, 0));
+  x.fillStyle = g; x.fillRect(0, 0, 128, 128);
+  if (_glowCache.size > 256) _glowCache.clear();
+  _glowCache.set(color, c);
+  return c;
+}
 function glow(ctx, x, y, r, color, a) {
   if (a <= 0 || r <= 0) return;
-  const g = ctx.createRadialGradient(x, y, 0, x, y, r);
-  g.addColorStop(0, rgba(color, a));
-  g.addColorStop(1, rgba(color, 0));
-  ctx.fillStyle = g;
-  ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
+  const s = glowSprite(color);
+  if (!s) {
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, rgba(color, a)); g.addColorStop(1, rgba(color, 0));
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
+    return;
+  }
+  const ga = ctx.globalAlpha;
+  ctx.globalAlpha = ga * (a > 1 ? 1 : a);
+  ctx.drawImage(s, x - r, y - r, r * 2, r * 2);
+  ctx.globalAlpha = ga;
 }
 
 // Deterministic random numbers (mulberry32) so the town looks the same every load.
@@ -129,6 +162,25 @@ function swing(p) {
   return -1.2 * (1 - easeOut((p - 0.55) / 0.45));
 }
 function pulse(p) { return p < 0 ? 0 : Math.sin(p * Math.PI); }
+
+// Painted art that may not be in yet (a tank's own taunt icon, say). The server is asked once per file per session
+// and the answer kept: ok(path) is true once the file has loaded, false once it's known to be missing, null while
+// the one request is out. Callers draw their fallback until it says true, so a missing file is never asked again.
+const ArtProbe = (() => {
+  const known = new Map();
+  function ok(path) {
+    if (typeof Image === 'undefined') return false;
+    if (!known.has(path)) {
+      known.set(path, null);
+      const im = new Image();
+      im.onload = () => known.set(path, true);
+      im.onerror = () => known.set(path, false);
+      im.src = path;
+    }
+    return known.get(path);
+  }
+  return { ok };
+})();
 
 // Text with a dark outline, for name tags and damage numbers.
 function label(ctx, text, x, y, color, size = 12, family = 'Cinzel, Georgia, serif', weight = 700) {

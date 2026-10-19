@@ -163,7 +163,7 @@ class RaidHost {
         if (msg.k === 'carry' || msg.k === 'snapped' || msg.k === 'dollhit' || msg.k === 'tiefail') bot.actor.notify(msg.k, msg);   // classes-c
       }
     }
-    if (msg.t === 'pdmg') { const bot = this.bots.find(b => b.id === msg.id); if (bot) bot.taken.push({ t: this.sim.t, a: msg.a }); }
+    if (msg.t === 'pdmg') { const bot = this.bots.find(b => b.id === msg.id); if (bot) { bot.taken.push({ t: this.sim.t, a: msg.a }); while (bot.taken.length && bot.taken[0].t < this.sim.t - 30) bot.taken.shift(); } }
     if (msg.t === 'reel') {
       const bot = this.bots.find(b => b.id === msg.pid);
       // a bot notices the hook after a human-ish reaction time (slower on purpose: sometimes it gets bitten)

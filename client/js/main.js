@@ -23,6 +23,11 @@
   const $ = id => document.getElementById(id);
   const rnd = Math.round;
   let now = 0, last = performance.now(), started = false;
+  // Network smoothing runs on its own clock (interp.js): real time, so a stalled frame or a throttled tab doesn't
+  // squeeze arrival stamps together the way the capped game clock `now` would. step() (testing) pushes it along too.
+  let rOff = 0;
+  const realNow = () => performance.now() / 1000 + rOff;
+  let rnow = realNow();
   let townLayer = null, layerScale = 1, minimapBase = null;
   let scene = 'town', zoom = 1;
   const cam = { x: 0, y: 0 };
@@ -68,6 +73,23 @@
   function runTimers() {
     for (let i = timers.length - 1; i >= 0; i--) if (now >= timers[i].t) { const tm = timers[i]; timers.splice(i, 1); tm.fn(); }
   }
+  // a scene change drops whatever the last scene still had queued (a queued taunt, a prop due to change)
+  function clearTimers() { timers.length = 0; tauntQueued = false; }
+
+  // Back from a hidden tab: nothing spawned while hidden (FX/VFX muted), what was already playing is dropped, and
+  // everything moving stands at its newest known position instead of fast-forwarding through what was missed.
+  document.addEventListener('visibilitychange', () => {
+    const hidden = document.hidden;
+    FX.muted = hidden; VFX.mute(hidden);
+    if (hidden) return;
+    FX.clear(); VFX.clear(); FX.shake = 0;
+    for (const r of remotes.values()) if (r.track) r.track.settle();
+    if (raid) {
+      raid.bossTrack.settle();
+      for (const a of raid.adds.values()) if (a.track) a.track.settle();
+      for (const b of raid.bots.values()) if (b.track) b.track.settle();
+    }
+  });
 
   // ---------------------------------------------------------------- local combat (your class kit)
   let actor = null;
@@ -267,7 +289,7 @@
           const e = enemyPos(); if (e) { tx = e.x; ty = e.y; } else { const m = mouseWorld(); tx = m.x; ty = m.y; }
         }
         FX.cast(player, ab, tx, ty, { mine: true, tent: ally != null ? entById(ally) : null });
-        Net.send({ t: 'cast', i, a: ab.id, x: rnd(player.x), y: rnd(player.y), tx: rnd(tx), ty: rnd(ty), ally, s: scene === 'arena' ? 1 : 0, c: +now.toFixed(3) });
+        Net.send({ t: 'cast', i, a: ab.id, x: rnd(player.x), y: rnd(player.y), tx: rnd(tx), ty: rnd(ty), ally, s: scene === 'arena' ? 1 : 0, c: +rnow.toFixed(3) });
         break;
       }
       case 'auto': {
@@ -310,8 +332,13 @@
     }
   }
 
+  const PRE_PULL = new Set(['hot', 'shield', 'mit', 'partyBuff', 'pool']);
   function sendCombat(ev) {
-    if (!inArena() || raid.state !== 'live') return;
+    if (!inArena()) return;
+    // a shield, mitigation or heal over time put up in the countdown lands at the pull (what's left of it), instead of
+    // its cooldown being spent for nothing; damage before the pull has nothing to hit
+    if (raid.state === 'countdown' && PRE_PULL.has(ev.type)) { (raid.prePull || (raid.prePull = [])).push({ ev, at: now }); return; }
+    if (raid.state !== 'live') return;
     const e = packEv(ev);
     if (Net.isHost && raidHost) raidHost.onPlayerEvent(Net.id, e);
     else Net.send({ t: 'cev', ev: e });
@@ -637,7 +664,7 @@
     player.dashMove = { sx: player.x, sy: player.y, tx: dest.x, ty: dest.y, t0: now };
     player.angle = a;
     if (player.target && Math.hypot(player.target.x - dest.x, player.target.y - dest.y) < 20) player.target = null;
-    Net.send({ t: 'cast', i: 6, x: rnd(player.x), y: rnd(player.y), tx: rnd(dest.x), ty: rnd(dest.y), s: scene === 'arena' ? 1 : 0, c: +now.toFixed(3) });
+    Net.send({ t: 'cast', i: 6, x: rnd(player.x), y: rnd(player.y), tx: rnd(dest.x), ty: rnd(dest.y), s: scene === 'arena' ? 1 : 0, c: +rnow.toFixed(3) });
   }
 
   // ---------------------------------------------------------------- the raid (client side; every player)
@@ -792,6 +819,13 @@
     if (!ev || !EV_TYPES.has(ev.type)) return;
     for (const k of ['amount', 'pct', 'value', 'dur', 'secs', 'ticks', 'interval', 'threat', 'r', 'not', 'pair', 'mx', 'st', 'dp', 'hm', 'seam', 'both', 'mit', 'keep']) if (ev[k] !== undefined && !Number.isFinite(ev[k])) return;
     if (ev.tgt !== undefined && typeof ev.tgt !== 'string') return;
+    // a bad heal over time (thousands of ticks, no interval) could freeze the host; a party buff is one of the known
+    // kinds, in sane bounds
+    if (ev.type === 'hot' && (!(ev.ticks >= 1 && ev.ticks <= 20) || !(ev.interval >= 0.5 && ev.interval <= 10))) return;
+    if (ev.type === 'partyBuff') {
+      if (!['dmg', 'crit', 'haste'].includes(ev.kind)) return;
+      ev.value = Math.max(0, Math.min(0.2, ev.value || 0)); ev.dur = Math.max(0, Math.min(30, ev.dur || 0));
+    }
     raidHost.onPlayerEvent(pid, ev);
   });
   // a Marionettist's Dolls, from its own client (classes-c): [[x, y, state], ...], at most two
@@ -822,7 +856,7 @@
     }
     closePanels();
     RaidUI.hideResults();
-    FX.clear(); VFX.clear();
+    FX.clear(); VFX.clear(); clearTimers();
     ARENA.use(def.id);
     sceneFade();
     const sp = def.spawn || { x: 0, y: -40 };
@@ -886,7 +920,7 @@
     raid = null;
     scene = 'town';
     sceneFade();
-    FX.clear(); VFX.clear();
+    FX.clear(); VFX.clear(); clearTimers();
     RaidUI.show(false);
     RaidUI.hideResults();
     player.x = TOWN.portal.x + (Math.random() - 0.5) * 80; player.y = TOWN.portal.y + TOWN.portal.r + 30;
@@ -938,7 +972,17 @@
   });
   Net.on('fight', msg => {
     if (!raid) return;
-    if (msg.s === 'live') { raid.state = 'live'; return; }
+    if (msg.s === 'live') {
+      raid.state = 'live';
+      for (const { ev, at } of raid.prePull || []) {
+        const gone = now - at, e = Object.assign({}, ev);
+        if (typeof e.dur === 'number') { e.dur -= gone; if (e.dur <= 0.2) continue; }
+        if (typeof e.ticks === 'number' && e.interval > 0) { e.ticks -= Math.floor(gone / e.interval); if (e.ticks <= 0) continue; }
+        sendCombat(e);
+      }
+      raid.prePull = null;
+      return;
+    }
     raid.state = msg.s; raid.result = msg; raid.resultAt = now + 2.2;
     fadeTelegraphs(); raid.tethers.clear(); Stagecraft.endFight(); raid.lunges = []; raid.eggs = null; raid.rollers.clear(); raid.reels.clear(); player.reel = null;
     raid.sweeps.clear(); raid.edgeWarn = null; for (const p of raid.posts.values()) p.end = Math.min(p.end, now + 1);
@@ -960,7 +1004,7 @@
   Net.on('fb', msg => {
     if (!raid) return;
     Object.assign(raid.boss, { x: msg.x, y: msg.y, f: msg.f, hp: msg.hp, mx: msg.mx, u: msg.u, v: msg.v, tg: msg.tg });
-    raid.bossTrack.push(raid.fightClock.map(msg.c, now), msg.x, msg.y, msg.f);
+    raid.bossTrack.push(raid.fightClock.map(msg.c, rnow), msg.x, msg.y, msg.f);
     raid.lastFb = performance.now();   // for the debug overlay
     raid.fightTime = msg.ft;
     if (msg.na != null) raid.nextAutoAt = now + msg.na;
@@ -992,6 +1036,7 @@
     if (!tg || tg.gone != null) return;
     tg.gone = now;
     BOSS_VFX.impact(tg, msg, { entById, boss: raid.def.id, pol: raid.pol, units: raidUnits() });
+    if (msg.fail) BOSS_VFX.failed(tg);
     if (msg.hits && msg.hits.includes(Net.id) && tg.type === 'aoe') FX.shake = Math.max(FX.shake, 5);
   });
   Net.on('tgclear', () => { if (raid) { fadeTelegraphs(); raid.lunges = []; raid.eggs = null; } });
@@ -1074,7 +1119,7 @@
   // --- adds, tethers, zones and Skitterra's legs (all host-driven)
   Net.on('adds', msg => {
     if (!raid) return;
-    const seen = new Set(), at = raid.fightClock.map(msg.c, now);
+    const seen = new Set(), at = raid.fightClock.map(msg.c, rnow);
     for (const [id, kind, x, y, hp, mx, enr, link, f] of msg.l) {
       seen.add(id);
       let a = raid.adds.get(id);
@@ -1260,6 +1305,11 @@
     raid.taken.push({ t: now, a: msg.a });
     if (msg.a > 0) FX.text(player.x, player.y - 46, '-' + rnd(msg.a), msg.dd ? '#ff4a3a' : '#ff8a7a', msg.a > 400 ? 18 : 14);
     if (msg.dd) FX.shake = Math.max(FX.shake, 4);
+    // the screen's edge flushes red, harder the bigger the bite out of your health
+    if (msg.a > 0 && ps && ps.maxHp > 1) {
+      const k = clamp(msg.a / ps.maxHp * 2.2, 0.25, 1);
+      raid.hurtK = now - (raid.hurtAt ?? -9) < 0.35 ? Math.max(raid.hurtK, k) : k; raid.hurtAt = now;
+    }
   });
   Net.on('fev', msg => {
     if (!raid) return;
@@ -1292,7 +1342,7 @@
   });
   Net.on('bots', msg => {
     if (!raid) return;
-    const at = raid.botClock.map(msg.c, now);
+    const at = raid.botClock.map(msg.c, rnow);
     for (const [id, x, y, a, m] of msg.b) {
       const b = raid.bots.get(id);
       if (!b) continue;
@@ -1519,7 +1569,7 @@
     const s = scene === 'arena' ? 1 : 0;
     const key = `${rnd(player.x)},${rnd(player.y)},${player.angle.toFixed(2)},${player.st.moving ? 1 : 0},${rnd(player.lift)},${s}`;
     if (key !== lastSentKey) {
-      Net.send({ t: 'pos', x: rnd(player.x), y: rnd(player.y), a: +player.angle.toFixed(2), m: player.st.moving ? 1 : 0, l: rnd(player.lift), s, c: +now.toFixed(3) });
+      Net.send({ t: 'pos', x: rnd(player.x), y: rnd(player.y), a: +player.angle.toFixed(2), m: player.st.moving ? 1 : 0, l: rnd(player.lift), s, c: +rnow.toFixed(3) });
       lastSentKey = key;
     }
     lastSent = now;
@@ -1529,7 +1579,7 @@
   function easeEnt(r, dt) {
     r.st.t = now;
     if (!r.track) r.track = new Track(r.x, r.y, r.angle);
-    const p = r.track.at(now), ox = r.x, oy = r.y;
+    const p = r.track.at(rnow), ox = r.x, oy = r.y;
     r.x = p.x; r.y = p.y;
     // legs follow the motion you actually see (the "moving" flag itself arrives before the delayed motion)
     if (Math.hypot(r.x - ox, r.y - oy) > 18 * dt) r.walkUntil = now + 0.12;
@@ -1603,7 +1653,7 @@
   function updateArena(dt) {
     const b = raid.boss, bd = raid.bossDraw;
     // the boss glides between the host's updates (interp.js) and turns at a steady pace
-    const bp = raid.bossTrack.at(now);
+    const bp = raid.bossTrack.at(rnow);
     bd.x = bp.x; bd.y = bp.y;
     let df = bp.a - bd.f; while (df > Math.PI) df -= TAU; while (df < -Math.PI) df += TAU;
     bd.f += df * Math.min(1, dt * 9);
@@ -1634,7 +1684,7 @@
     }
     for (const [id, p] of raid.puddles) if (now > p.end) raid.puddles.delete(id);
     for (const a of raid.adds.values()) {
-      const ox = a.x, oy = a.y, ap = a.track.at(now);
+      const ox = a.x, oy = a.y, ap = a.track.at(rnow);
       a.x = ap.x; a.y = ap.y;
       let da = ap.a - a.f; while (da > Math.PI) da -= TAU; while (da < -Math.PI) da += TAU;
       a.f += da * Math.min(1, dt * 10);
@@ -1694,15 +1744,17 @@
       // the room's own width and height decide how far the camera can lean each way
       // (far enough past the walls to show the scenery there: the stoves, shelves and pillars)
       const tx = lean(player.x, vw, W, 60, 60, ARENA.hw + 100) - vw / 2, ty = lean(player.y, vh, H, 150, 190, ARENA.hh + 110) - vh / 2;
-      cam.x += (tx - cam.x) * Math.min(1, dt * 6);
-      cam.y += (ty - cam.y) * Math.min(1, dt * 6);
+      const ka = 1 - Math.exp(-6 * dt);   // (frame-rate independent easing)
+      cam.x += (tx - cam.x) * ka;
+      cam.y += (ty - cam.y) * ka;
       return;
     }
     zoom = 1;
     const tx = clamp(player.x - W / 2, 0, Math.max(0, WORLD.w - W));
     const ty = clamp(player.y - H / 2, 0, Math.max(0, WORLD.h - H));
-    cam.x += (tx - cam.x) * Math.min(1, dt * 8);
-    cam.y += (ty - cam.y) * Math.min(1, dt * 8);
+    const kt = 1 - Math.exp(-8 * dt);
+    cam.x += (tx - cam.x) * kt;
+    cam.y += (ty - cam.y) * kt;
     if (W > WORLD.w) cam.x = (WORLD.w - W) / 2;
     if (H > WORLD.h) cam.y = (WORLD.h - H) / 2;
   }
@@ -1821,7 +1873,8 @@
     ctx.fillStyle = '#2d4a22'; ctx.fillRect(0, 0, W, H);
     const sh = FX.shake;
     const sx = sh > 0.3 ? (Math.random() - 0.5) * sh : 0, sy = sh > 0.3 ? (Math.random() - 0.5) * sh : 0;
-    const cx = Math.round(cam.x + sx), cy = Math.round(cam.y + sy);
+    // (snapped to device pixels, not whole CSS pixels: on a 2x screen a half-pixel step is visible as jitter)
+    const cx = Math.round((cam.x + sx) * DPR) / DPR, cy = Math.round((cam.y + sy) * DPR) / DPR;
     ctx.translate(-cx, -cy);
 
     const vx = clamp(cx, 0, WORLD.w), vy = clamp(cy, 0, WORLD.h);
@@ -1871,6 +1924,27 @@
     }
   }
 
+  // The boss drawn into a canvas of his own, then darkened (the Long Night: the same as brightness(1 - dark), only on
+  // his own pixels) and/or filtered as one small image onto the scene.
+  let bossCv = null;
+  const BOSS_BOX = 600;   // world px round him: room for his widest swing
+  function bossLayer(def, bd, alpha, dark, filter) {
+    const m = ctx.getTransform(), px = Math.hypot(m.a, m.b) || 1, S = Math.ceil(BOSS_BOX * px);
+    if (!bossCv) bossCv = document.createElement('canvas');
+    if (bossCv.width !== S) bossCv.width = bossCv.height = S;
+    const c = bossCv.getContext('2d');
+    c.setTransform(1, 0, 0, 1, 0, 0); c.globalCompositeOperation = 'source-over'; c.globalAlpha = 1; c.clearRect(0, 0, S, S);
+    c.setTransform(px, 0, 0, px, S / 2 - bd.x * px, S / 2 - bd.y * px);
+    drawBoss(c, def, bd.x, bd.y, bd.f, bd.st, RAID_BOSS_SCALE);
+    if (dark > 0) {
+      c.setTransform(1, 0, 0, 1, 0, 0); c.globalCompositeOperation = 'source-atop'; c.globalAlpha = 1;
+      c.fillStyle = `rgba(0,0,0,${dark.toFixed(3)})`; c.fillRect(0, 0, S, S);
+    }
+    ctx.save(); ctx.globalAlpha = alpha; if (filter) ctx.filter = filter;
+    ctx.drawImage(bossCv, bd.x - BOSS_BOX / 2, bd.y - BOSS_BOX / 2, BOSS_BOX, BOSS_BOX);
+    ctx.restore();
+  }
+
   function renderArena() {
     ctx.fillStyle = { volkar: '#080b11', hollowking: '#0a0c0e' }[raid.def.id] || '#120d0a'; ctx.fillRect(0, 0, W, H);
     const sh = FX.shake;
@@ -1899,7 +1973,7 @@
     // things that shelter from Gale Slam: posts, and rods waiting for their bolt
     const covers = [...raid.posts.values()].filter(p => now < p.end).map(p => ({ x: p.x, y: p.y }));
     for (const tg of raid.tgs.values()) if (tg.tag === 'rod' && tg.gone == null) covers.push({ x: tg.live.x, y: tg.live.y });
-    const tellEnv = { boss: bd, bossId: raid.def.id, entById, hard: raid.mode === 'hard', pol: raid.pol, units, covers, props: raid.room.props, room: raid.room };
+    const tellEnv = { tgs: raid.tgs, boss: bd, bossId: raid.def.id, entById, hard: raid.mode === 'hard', pol: raid.pol, units, covers, props: raid.room.props, room: raid.room };
     ArenaView.drawTelegraphs(ctx, raid.tgs, now, tellEnv);
     BossTells.drawRollers(ctx, raid.rollers, now, tellEnv);
     BossTells.drawSweeps(ctx, raid.sweeps, now, tellEnv);
@@ -1915,6 +1989,7 @@
     for (const a of raid.adds.values()) { const o = a.link && raid.adds.get(a.link); if (o && a.id < o.id && raid.mode === 'hard') ArenaView.addBeam(ctx, a, o, now); }
     FX.draw(ctx, true);
     VFX.draw(ctx, 'ground');
+    BossTells.rims(ctx, raid.tgs, now, tellEnv);   // telegraph rims stay readable over the floor effects
     drawAllyTarget();
     if (raid.pol.size) ArenaView.polarityAuras(ctx, units, raid.pol, now);
     const scEnv = { entById, me: Net.id, boss: bd, units };   // threads, the Stage and the Dolls (classes-c, stagecraft.js)
@@ -1935,14 +2010,11 @@
     const bossDef = BOSSES.find(x => x.id === raid.def.id);
     for (const e of all) {
       if (e === bossEnt) {
-        ctx.save(); ctx.globalAlpha = bd.fade;
-        if (raid.nightK > 0.05) ctx.filter = `brightness(${(1 - 0.55 * raid.nightK).toFixed(2)})`;   // he's a shape in the dark
-        if (raid.def.trial) {   // in a trial he's only a memory: pale, cold and not quite there
-          ctx.globalAlpha = bd.fade * (0.72 + 0.06 * Math.sin(now * 2.3));
-          ctx.filter = 'grayscale(0.7) brightness(1.9) sepia(0.35) hue-rotate(175deg) drop-shadow(0 0 9px #8fa8ff)';
-        }
-        drawBoss(ctx, bossDef, bd.x, bd.y, bd.f, bd.st, RAID_BOSS_SCALE);
-        ctx.restore();
+        // in the Long Night he's a shape in the dark; in a trial only a memory: pale, cold and not quite there. Both go
+        // through a small layer of his own (bossLayer): a filter on the main canvas costs a whole-screen pass every frame
+        if (raid.def.trial) bossLayer(bossDef, bd, bd.fade * (0.72 + 0.06 * Math.sin(now * 2.3)), 0, 'grayscale(0.7) brightness(1.9) sepia(0.35) hue-rotate(175deg) drop-shadow(0 0 9px #8fa8ff)');
+        else if (raid.nightK > 0.05) bossLayer(bossDef, bd, bd.fade, 0.55 * raid.nightK, null);
+        else { ctx.save(); ctx.globalAlpha = bd.fade; drawBoss(ctx, bossDef, bd.x, bd.y, bd.f, bd.st, RAID_BOSS_SCALE); ctx.restore(); }
       } else if (e.kind === 'knight') {
         const k = e.k, a = Math.min(1, (now - k.born) / 0.6) * (k.gone ? Math.max(0, 1 - (now - k.gone) / 0.8) : 1);
         drawEchoKnight(ctx, k.x, k.y, k.f, k.st, a * (1 - 0.3 * raid.nightK));
@@ -1986,6 +2058,21 @@
     for (const tg of raid.tgs.values()) if (tg.type === 'buster' && tg.target != null && tg.gone == null) { const e = entById(tg.target); if (e) ArenaView.busterIcon(ctx, e.x, e.y, now); }
     for (const e of [...arenaRemotes, ...raid.bots.values()]) playerTag(e, false, raid.party.get(e.id));
     playerTag(player, true);
+    hurtVignette();
+  }
+  // a red flush round the screen's edge for a moment when you're hit (stronger for a bigger hit)
+  let hurtGrad = null, hurtFor = '';
+  function hurtVignette() {
+    const age = now - (raid.hurtAt ?? -9);
+    if (age > 0.4) return;
+    const a = raid.hurtK * (1 - age / 0.4) * 0.55;
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    if (hurtFor !== W + 'x' + H) {
+      hurtFor = W + 'x' + H;
+      hurtGrad = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.42, W / 2, H / 2, Math.hypot(W, H) * 0.55);
+      hurtGrad.addColorStop(0, 'rgba(200,20,10,0)'); hurtGrad.addColorStop(1, 'rgba(200,20,10,1)');
+    }
+    ctx.globalAlpha = a; ctx.fillStyle = hurtGrad; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1;
   }
 
   // ---------------------------------------------------------------- minimap (town)
@@ -2488,7 +2575,7 @@
       if (sc !== r.scene) { r.scene = sc; r.x = x; r.y = y; r.track = new Track(x, y, a); updatePartyList(); }
       if (!r.track) r.track = new Track(r.x, r.y, r.angle);
       if (!r.clock) r.clock = new SendClock();
-      r.track.push(r.clock.map(c, now), x, y, a);   // big jumps (teleports, scene changes) snap inside the track
+      r.track.push(r.clock.map(c, rnow), x, y, a);   // big jumps (teleports, scene changes) snap inside the track
       r.tx = x; r.ty = y; r.ta = a; r.m = m; r.tl = l;
     }
   });
@@ -2511,7 +2598,7 @@
     const eScene = e.bot ? 1 : (msg.s ? 1 : 0);
     if (eScene !== (scene === 'arena' ? 1 : 0)) return;
     // where they cast from goes into their track like any position update (snapping here would fight the smoothing)
-    if (!e.bot) { e.tx = msg.x; e.ty = msg.y; if (e.track) e.track.push(e.clock ? e.clock.map(msg.c, now) : now, msg.x, msg.y, e.track.latest().a); }
+    if (!e.bot) { e.tx = msg.x; e.ty = msg.y; if (e.track) e.track.push(e.clock ? e.clock.map(msg.c, rnow) : rnow, msg.x, msg.y, e.track.latest().a); }
     if (msg.i === 6) { e.dashUntil = now + 0.2; VFX.setScale(0.6); KIT_VFX.dash(e, e.cls.accent); VFX.setScale(1); return; }
     // a move a talent granted (msg.a names it) looks like itself, not the move it replaced
     const ab = (msg.a && abilityById(e.cls.id, e.spec, msg.a)) || kitFor(e.cls.id, e.spec).abilities[msg.i];
@@ -2660,7 +2747,8 @@
     player, remotes, get actor() { return actor; }, get raid() { return raid; }, get raidHost() { return raidHost; },
     openHeroPanel, openBossPanel, chooseHero, startRaid, startTrial, openSelect, pressSlot, leaveRaid, CLASSES, BOSSES,
     // testing aid: advance the game clock by hand (for screenshots in throttled preview panes)
-    step(sec = 0.5) { for (let t = 0; t < sec; t += 1 / 60) { now += 1 / 60; update(1 / 60); } render(); renderPanels(); updateTargetFrame(); Hud.update(now, now); },
+    // (it also unmutes FX/VFX: a hidden preview pane is still being watched through screenshots)
+    step(sec = 0.5) { FX.muted = false; VFX.mute(false); for (let t = 0; t < sec; t += 1 / 60) { now += 1 / 60; rOff += 1 / 60; rnow = realNow(); update(1 / 60); } render(); renderPanels(); updateTargetFrame(); Hud.update(now, now); },
     cycleTarget, get lockedEnemy() { return lockedEnemy; },
     pause(on = true) { paused = on; },
   };
@@ -2670,6 +2758,7 @@
   function frame(ts) {
     const raw = (ts - last) / 1000, dt = Math.min(0.05, raw);
     last = ts;
+    rnow = realNow();
     DebugOverlay.frame(raw);   // the real frame time, before the 50 ms cap
     if (!paused) { now += dt; update(dt); }
     render();

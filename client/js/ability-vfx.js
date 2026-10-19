@@ -131,7 +131,7 @@ const ABILITY_VFX = (() => {
     },
     pyromancer: {
       // a flame flickers in the hand, the fireball streaks over, and pops in a small spiky burst
-      fireball: c => { const h = ahead(c, 16); V.glint(h.x, h.y, { color: '#ffb040', size: 18, z: 24 }); V.missile(c.x, c.y, c.tx, c.ty, { style: 'fire', color: '#ff8c2a', speed: 700, arc: 16, onHit: (x, y) => { V.spikeburst(x, y, { r: 30, n: 10, color: '#ff8a2a', dur: 0.26 }); V.flare(x, y, { n: 6, r: 10, size: 0.8 }); V.smoke(x, y, { n: 2, color: '#4a3a3a', size: 18, a: 0.4, speed: 30 }); } }); },
+      fireball: c => { const h = ahead(c, 16); V.glint(h.x, h.y, { color: '#ffb040', size: 18, z: 24 }); V.missile(c.x, c.y, c.tx, c.ty, { style: 'fire', color: '#ff8c2a', speed: 700, arc: 16, onHit: (x, y) => { V.spikeburst(x, y, { r: 30, n: 10, color: '#ff8a2a', dur: 0.26 }); V.shock(x, y, { r: 46, color: '#ffa040', dur: 0.3, w: 3 }); V.flare(x, y, { n: 6, r: 10, size: 0.8 }); V.smoke(x, y, { n: 2, color: '#4a3a3a', size: 18, a: 0.4, speed: 30 }); } }); },
       // heat gathers at the hand, a burning rock arcs over, a big starburst, flying rocks and a smoking scorch
       pyro: c => { const h = ahead(c, 16); V.glint(h.x, h.y, { color: '#ffd070', size: 30, z: 26 }); V.charge(c.x, c.y, { color: '#ff8a3a', r: 40, n: 8, dur: 0.25 });
         V.missile(c.x, c.y, c.tx, c.ty, { style: 'meteor', color: '#ff5a1a', speed: 560, arc: 50, onHit: (x, y) => { V.spikeburst(x, y, { r: 70, n: 16, color: '#ff6a1a', dur: 0.42 }); V.flare(x, y, { n: 16, r: 22, size: 1.2, h: 1.2 }); V.shock(x, y, { r: 110, color: '#ff8a3a', dur: 0.5, w: 7 });

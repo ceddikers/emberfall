@@ -214,7 +214,7 @@ const BotAI = {
   home(bot, view) {
     const b = view.boss, idx = bot.slot || 0;
     const own = typeof BOT_CLASS !== 'undefined' && BOT_CLASS[bot.cls.id] && BOT_CLASS[bot.cls.id].home;   // a class with its own footwork
-    if (own && !bot.wantEnemy) { const h = own(bot, view); if (h) return h; }
+    if (own) { const h = own(bot, view); if (h) return h; }
     // on an add: melee hug it, ranged stand off to one side of it (out of any beam to its sibling)
     const homeId = bot.wantEnemy === 'hold' ? bot.addHome : bot.wantEnemy;
     const add = homeId && (view.adds || []).find(a => a.id === homeId);
@@ -248,7 +248,9 @@ const BotAI = {
       if (m.cover && (m.type === 'raidwide' || SHAPES.contains(s, px, py, 22))) {
         const pr = this.coverFor(me, view, m), props = view.props || [];
         const ok = pr && PROPS.blocks(pr, m.src.x, m.src.y, px, py, PROPS.COVER_SHRINK + 8);
-        if (!ok) pen += (PROPS.shadowing(m.src.x, m.src.y, px, py, props) ? 1500 : 6000) * urgency + (dt < 2.5 ? 5000 : 0);
+        // (a cover across the room has to be set off for early: "too late" starts a walk and a second before it lands)
+        const walk = pr ? Math.hypot(pr.x - bot.x, pr.y - bot.y) / 230 + 1 : 0;
+        if (!ok) pen += (PROPS.shadowing(m.src.x, m.src.y, px, py, props) ? 1500 : 6000) * urgency + (dt < Math.max(2.5, walk) ? 5000 : 0);
         continue;
       }
       // Lights Out (the Hollow King): be inside a light when it lands
@@ -745,11 +747,27 @@ const BOT_CLASS = {
   // Passing Strike), Hook Turn from a flank (so it lands on the other flank, not in front), Crosswind when full.
   driftblade: {
     home(bot, view) {
-      // only while it's calm: with a telegraph on the floor, stand where a melee would and let the dodging take over
-      if (view.mechs.some(m => m.type !== 'raidwide' && m.resolveAt - view.t < 2.5) || (view.rollers || []).length || (view.sweeps || []).some(s => view.t < s.end)) return null;
-      // a long, thin loop through its middle (it never slows to a stop), aimed a little ahead so the bot is always walking
-      const b = view.boss, f = b.facing || 0, th = (view.t + 0.8) * 1.5 + bot.id * 1.7, s = Math.sin(th) * 140, u = Math.cos(th) * 45 - 25;
-      return { x: b.x + Math.cos(f) * u - Math.sin(f) * s, y: b.y + Math.sin(f) * u + Math.cos(f) * s };
+      const b = view.boss, f = b.facing || 0, busy = view.mechs.some(m => m.type !== 'raidwide' && m.resolveAt - view.t < (m.type === 'aoe' ? 2.5 : 5)) || (view.rollers || []).length || (view.sweeps || []).some(s => view.t < s.end);
+      const side = (bot.slot || 0) % 2 ? 40 : -40;
+      // on an add: sweep back and forth round its near side (Passing Strikes through it now and then)
+      const addId = bot.wantEnemy === 'hold' ? bot.addHome : bot.wantEnemy, add = addId && (view.adds || []).find(a => a.id === addId);
+      if (bot.wantEnemy && !add) return null;
+      const at = ahead => {
+        const th = (view.t + ahead) * 1.5 + bot.id * 1.7;
+        if (add) { const a = Math.atan2(-add.y, -add.x) + Math.sin(th) * 1.1, d = add.r + 30 + Math.cos(th * 2) * 25; return { x: add.x + Math.cos(a) * d, y: add.y + Math.sin(a) * d }; }
+        // with a telegraph on the floor: a short shuffle round where a melee would stand (still walking, so Drift holds;
+        // the dodging scores pull it wherever is safe), instead of standing still and bleeding Drift
+        if (busy) return { x: b.x + side + Math.sin(th * 1.4) * 55, y: b.y + 110 + Math.cos(th * 1.4) * 20 };
+        // a long, thin loop through its middle, wide enough to run clean through the body, never so wide that the far
+        // ends are out of sabre reach
+        const s = Math.sin(th) * 115, u = Math.cos(th) * 40 - 20;
+        return { x: b.x + Math.cos(f) * u - Math.sin(f) * s, y: b.y + Math.sin(f) * u + Math.cos(f) * s };
+      };
+      // aimed far enough ahead along the loop that the bot never catches the point and stops (it walks faster than the
+      // loop turns at its ends)
+      let p = at(0.8);
+      for (let ahead = 1.2; ahead <= 2.4 && Math.hypot(p.x - bot.x, p.y - bot.y) < 75; ahead += 0.4) p = at(ahead);
+      return p;
     },
     act(bot, k, view, moving) {
       const idx = id => k.abilities.findIndex(a => a.id === id || a.replaces === id);
@@ -785,8 +803,11 @@ BOT_CLASS.ironpalm = {
     const hitIn = mine ? mine.resolveAt - view.t : Infinity;
     const next = (view.next || []).find(([n]) => BUSTER_CASTS.test(n)), toBuster = Math.min(hitIn, next ? next[1] + 3 : Infinity);
     const ri = idx('read'), si = idx('skin'), bi = idx('bell');
-    if (free && ok(ri) && hitIn < 0.32 && hitIn > 0.06) return ri;
+    if (free && ok(ri) && hitIn < 0.36 && hitIn > 0.03) return ri;
     if (free && ok(si) && hitIn < 3) return si;
+    // in real trouble with no buster close: Iron Skin now rather than hold it for one that may come too late
+    const me = view.players.find(p => p.id === bot.id);
+    if (free && ok(si) && me && me.hp / me.maxHp < 0.35 && toBuster > 20) return si;
     const raid = view.bossCast && RAID_CASTS.test(view.bossCast.name) && view.bossCast.left < 3;
     if (free && ok(bi) && (raid || k.abilities[bi].id === 'slide' || k.abilities[bi].id === 'dragon')) return bi;
     if (!free) return null;
@@ -798,7 +819,8 @@ BOT_CLASS.ironpalm = {
       if (live && !g.clean) { const on = ipMoves(k).filter(e => e.seq.startsWith(live) && e.seq.length > live.length).sort((a, b) => b.seq.length - a.seq.length); P.plan = on.length ? on[0].seq : null; }
       else {
         const swallow = k.talent('ironpalm_swallow'), cost = s => [...s].reduce((a, x) => a + IP_INPUT[x].cost * 0.6, 0);
-        if (toBuster < 7 && toBuster > 1.6 && !k.has('wall')) P.plan = 'HKK';
+        // (Tiger Wall lasts 5s and its string takes about a second and a half: start it no earlier than that allows)
+        if (toBuster < 6.2 && toBuster > 1.8 && !k.has('wall')) P.plan = 'HKK';
         else if (k.dotRemaining('bruise') < 2.5) P.plan = 'HHK';
         else P.plan = swallow ? 'KLHKK' : 'LLHKK';
         if (g.breath < cost(P.plan) + 2) { if (g.breath >= cost('KL') && !swallow) P.plan = 'KL'; else { P.resting = true; P.plan = null; return null; } }
@@ -807,8 +829,9 @@ BOT_CLASS.ironpalm = {
     if (!P.plan) return null;
     const x = P.plan[live.length];
     if (live.length + 1 >= P.plan.length) P.done = true;
-    // don't start a press whose recovery would still be running when the buster lands
-    if (ok(ri) && hitIn > 0.06 && hitIn < IP_INPUT[x].lock + 0.05) return null;
+    // don't start a press whose recovery would still be running when the Read has to go out (a third of a second
+    // before the buster lands, inside the stance's catching window)
+    if (ok(ri) && hitIn > 0.03 && hitIn < IP_INPUT[x].lock + 0.4) return null;
     return ok(IP_SLOT[x]) ? IP_SLOT[x] : null;
   },
 };
