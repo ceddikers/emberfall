@@ -162,6 +162,13 @@
     selfMods: () => { const s = myState(); return { dmgDown: inArena() && s && s.dd ? FIGHT.DMG_DOWN : 0 }; },
     recentDamage: (a, secs) => (inArena() ? raid.taken : town.taken).filter(d => d.t > now - secs).reduce((x, d) => x + d.a, 0),
     hpFrac: () => { const s = myState(); return s && s.maxHp ? Math.max(0, s.hp / s.maxHp) : 1; },
+    // the boss as talents see it (kits.js bossNow): its cast bar, the next move in the bnext feed, who it's on
+    boss: () => {
+      if (!inArena() || !raid || raid.state !== 'live') return null;
+      const c = raid.cast && now <= raid.cast.start + raid.cast.dur ? raid.cast : null, s = myState();
+      const n = raid.bnext && raid.bnext.l.length ? Math.max(0, raid.bnext.l[0][1] - (now - raid.bnext.at)) : null;
+      return { casting: !!c, castLeft: c ? c.start + c.dur - now : 0, next: n, onMe: raid.boss.tg === Net.id, vuln: raid.boss.v || 0, selfVuln: !!(s && s.vuln) };
+    },
     maxHp: () => { const s = myState(); return s ? s.maxHp : playerBaseHp(player.cls ? player.cls.role : 'dps') + (Inventory.mods(player.cls && player.cls.id).hp || 0); },
     onEvent: (a, ev) => onKitEvent(ev),
   };
@@ -274,7 +281,7 @@
         failAt = now;
         FX.text(player.x, player.y - 56, ev.reason === 'target' ? (ev.ab.target === 'enemy' ? (inArena() && (raid.boss.u || raid.state !== 'live') ? 'No target' : 'Out of range') : 'No target') : 'Not ready', '#c8c0d8', 12, 0.7);
         break;
-      case 'teleport': teleportBehind(); break;
+      case 'teleport': if (!ev.where || ev.where === 'behind') teleportBehind(); else kitMove(ev); break;
       case 'fx': kitFx(ev.name, ev.data); break;
       case 'damage': onMyDamage(ev); break;
       default:
@@ -505,6 +512,22 @@
     player.target = null; player.interact = null;
     FX.add({ type: 'ring', x: player.x, y: player.y, r: 38, color: '#c58aff', dur: 0.45 });
   }
+  // a move that moves you (a talent: kits.js kitMove): a quick slide, like the dash. where: 'back' (away from the
+  // enemy), 'forward' (where you face), 'ally' (toward ev.to, up to ev.d), 'point' (ev.x, ev.y)
+  function kitMove(ev) {
+    if (amDead() || player.kb || myDebuff('rooted')) return;
+    const d = ev.d || 140, e = enemyPos();
+    let tx = player.x, ty = player.y;
+    if (ev.where === 'back') { const a = e ? Math.atan2(player.y - e.y, player.x - e.x) : player.angle + Math.PI; tx += Math.cos(a) * d; ty += Math.sin(a) * d; }
+    else if (ev.where === 'forward') { tx += Math.cos(player.angle) * d; ty += Math.sin(player.angle) * d; }
+    else if (ev.where === 'ally') { const a = entById(ev.to); if (!a || a === player) return; const dist = Math.hypot(a.x - player.x, a.y - player.y), k = Math.max(0, Math.min(d, dist - 40)) / (dist || 1); tx += (a.x - player.x) * k; ty += (a.y - player.y) * k; }
+    else if (ev.where === 'point' && Number.isFinite(ev.x) && Number.isFinite(ev.y)) { tx = ev.x; ty = ev.y; }
+    else return;
+    const dest = { x: tx, y: ty };
+    if (inArena()) clampArena(dest); else { dest.x = clamp(dest.x, 40, WORLD.w - 40); dest.y = clamp(dest.y, 40, WORLD.h - 40); }
+    player.dashMove = { t0: now, sx: player.x, sy: player.y, tx: dest.x, ty: dest.y };
+    player.target = null; player.interact = null;
+  }
 
   // class moments (Perfect Block, Overheat...): the big effect plays for everyone, the text only for you
   function kitFx(name, data) {
@@ -517,7 +540,8 @@
   function playKitFx(ent, name, mine, data) {
     const f = KIT_VFX[name];
     if (!f) return;
-    let target = name === 'reflect' || name === 'dawnstar' || name === 'radiant' || name === 'echo' ? (ent === player ? enemyPos() : (inArena() ? { x: raid.boss.x, y: raid.boss.y } : null)) : null;
+    const aimed = name === 'reflect' || name === 'dawnstar' || name === 'radiant' || name === 'echo' || (typeof KIT_VFX_AIMED !== 'undefined' && KIT_VFX_AIMED.has(name));
+    let target = aimed ? (ent === player ? enemyPos() : (inArena() ? { x: raid.boss.x, y: raid.boss.y } : null)) : null;
     // a moment aimed somewhere (an Alembist's vial): data.to names an ally, data.en an enemy ('boss', an add, a dummy)
     if (data && typeof data === 'object') {
       if (data.en != null) target = inArena() ? (enemyNow(data.en) || { x: raid.boss.x, y: raid.boss.y }) : (ent === player ? enemyPos() : null);

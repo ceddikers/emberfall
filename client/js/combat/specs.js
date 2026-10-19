@@ -746,7 +746,10 @@ function kitFor(classId, specId) {
   SPEC_CACHE[key] = kit;
   return kit;
 }
-// the icon an ability wears (a new spec ability borrows one until its own is painted)
-const abilityIconId = ab => ab.icon || ab.id;
+// the icon an ability wears (a new spec ability borrows one until its own is painted). A move a talent grants wears its
+// own icon (icons/<class>/<id>.png) once icons/talent-icons.json lists its id, the one it borrows until then.
+const PAINTED_TALENT_ICONS = new Set();
+if (typeof fetch !== 'undefined' && typeof document !== 'undefined') fetch('icons/talent-icons.json').then(r => (r.ok ? r.json() : [])).then(l => { for (const id of l) PAINTED_TALENT_ICONS.add(id); }).catch(() => {});
+const abilityIconId = ab => (ab.talent && PAINTED_TALENT_ICONS.has(ab.id) ? ab.id : ab.icon || ab.id);
 
 if (typeof module !== 'undefined') module.exports = { SPECS, specOf, kitFor, abilityIconId };

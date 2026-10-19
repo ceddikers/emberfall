@@ -34,7 +34,9 @@ const TalentPanel = (() => {
   function cardTip(cls, kit, spec, t, r) {
     const ab = abFor(kit, t.ab);
     const where = ab ? ab.name : '';
-    return `<div class="tip-ab"><i class="ab-icon ${ab ? ab.type : ''}" style="background-image:url(${abilityIcon(cls.id, t.ab)})"></i><div><b>${t.name}</b><em>${ROMAN[r]} · ${where}</em></div></div>${talentText(t, spec)}`;
+    // a talent that grants a move wears that move's icon and says it's a new move (its text describes the move)
+    const g = t.grants && kit.talentAbilities && kit.talentAbilities[t.id];
+    return `<div class="tip-ab"><i class="ab-icon ${ab ? ab.type : ''}" style="background-image:url(${abilityIcon(cls.id, g ? abilityIconId(g) : t.ab)})"></i><div><b>${t.name}</b><em>${ROMAN[r]} · ${g ? 'New move, in place of ' : ''}${where}</em></div></div>${talentText(t, spec)}`;
   }
 
   function render() {

@@ -491,3 +491,332 @@ const AUTO_VFX = (() => {
     },
   });
 })();
+
+// ======================================================================= Talents
+// The moves a talent grants (combat/talents.js `grants`, the kit's talentAbilities) and the moments talents add
+// (k.fx names). Capstone moves (row V) leave a signature shape on the field for as long as they last: wings, a blood
+// moon, a standing rune, a falcon, a phoenix, a treant, a great clock.
+// KIT_VFX_AIMED: moments that land on the enemy (main.js hands them the boss / the target dummy as `target`).
+const KIT_VFX_AIMED = new Set(['sunlit', 'edgeShard', 'edgeReturn', 'dawnPillar', 'moonburst', 'bloodlust', 'hemorrhage', 'glyphEcho', 'binding', 'runeBolt',
+  'mirrorShards', 'runeOverflow', 'wardNova', 'whirl', 'explode', 'falconDive', 'ricochetArrow', 'stormArc', 'volley', 'deathmark', 'toxicBurst', 'shadowClone',
+  'garrote', 'ambush', 'blossomEnd', 'twinFlame', 'chainReact', 'bomb', 'bombPlant', 'flashpoint', 'petalfall', 'sunfall', 'natureWrath', 'treantSlam',
+  'clockStrike', 'futureMark', 'futureBurst']);
+(() => {
+  const V = VFX, rand = (a, b) => a + Math.random() * (b - a), TAU = Math.PI * 2;
+  const shake = s => { FX.shake = Math.max(FX.shake, s); };
+  const fade = (p, i = 0.1, o = 0.2) => Math.min(1, p / i, (1 - p) / o);
+  // a moment aimed at the enemy, with a spot ahead of the hero when there's no enemy to hand
+  const at = (e, t) => t || { x: e.x + Math.cos(e.angle || 0) * 160, y: e.y + Math.sin(e.angle || 0) * 160 };
+  const longFor = (ent, spec, a, b) => (ent && ent.spec === spec ? b : a);
+
+  // ---- shapes the capstones leave on the field
+  // a pair of feathered wings behind a hero (drawn on the floor layer, so they sit behind the sprite)
+  function wings(ent, dur, color) {
+    V.fx({ dur, layer: 'ground', draw: (c, p, t, e) => {
+      const k = fade(p, 0.06, 0.12) * e.a, open = Math.min(1, p * dur / 0.4), bx = ent.x, by = ent.y - 30, flap = Math.sin(t * 2.4) * 0.12;
+      V.glowAt(c, bx, by - 6, 60, color, 0.3 * k);
+      for (const sd of [-1, 1]) for (let i = 0; i < 6; i++) {
+        const a = -Math.PI / 2 + sd * (0.45 + i * 0.24 * open + flap), L = (26 + i * 7) * (0.5 + 0.5 * open);
+        c.save(); c.translate(bx + sd * 5, by); c.rotate(a);
+        c.globalAlpha = 0.4 * k; c.fillStyle = i % 2 ? '#fff6d8' : color; c.beginPath(); c.ellipse(L / 2, 0, L / 2, 4.5 + i * 0.4, 0, 0, TAU); c.fill();
+        V.neonPath(c, color, 1.3, k * 0.8, () => c.ellipse(L / 2, 0, L / 2, 4.5 + i * 0.4, 0, 0, TAU));
+        c.restore();
+      }
+      c.globalAlpha = 1;
+    }, tick: () => { if (Math.random() < 0.15) V.spawn({ x: ent.x + rand(-40, 40), y: ent.y + rand(-4, 4), z: rand(30, 60), vz: rand(-40, -20), vx: rand(-15, 15), life: 1.3, size: 11, color: '#fff8e6', kind: 'feather', add: false, vr: rand(-2, 2), flutter: 3, fadeIn: 0.1 }); } });
+  }
+  // a bird seen from above: s scale, flap phase, facing ang
+  function bird(c, x, y, s, flap, ang, body, edge, a) {
+    const span = 0.55 + 0.45 * Math.cos(flap);
+    c.save(); c.translate(x, y); c.rotate(ang); c.scale(s, s); c.globalAlpha = a;
+    c.fillStyle = body; c.strokeStyle = OUT; c.lineWidth = 1.2 / s;
+    for (const sd of [-1, 1]) { c.beginPath(); c.moveTo(4, 0); c.quadraticCurveTo(3, sd * 14 * span, -7, sd * 21 * span); c.lineTo(-3, sd * 5); c.closePath(); c.fill(); c.stroke(); }
+    c.beginPath(); c.moveTo(-8, 0); c.lineTo(-16, -5); c.lineTo(-14, 0); c.lineTo(-16, 5); c.closePath(); c.fill(); c.stroke();
+    c.beginPath(); c.ellipse(0, 0, 10, 3.6, 0, 0, TAU); c.fill(); c.stroke();
+    c.fillStyle = edge; c.beginPath(); c.moveTo(10, 0); c.lineTo(13, -1.5); c.lineTo(13, 1.5); c.closePath(); c.fill();
+    c.restore(); c.globalAlpha = 1;
+  }
+  // a rune standing up in the air: a tall diamond with strokes inside
+  function standingRune(c, x, y, h, color, k, t) {
+    const w = h * 0.42;
+    V.glowAt(c, x, y, h * 0.9, color, 0.45 * k);
+    V.neonPath(c, color, 2.4, k, () => { c.moveTo(x, y - h / 2); c.lineTo(x + w, y); c.lineTo(x, y + h / 2); c.lineTo(x - w, y); c.closePath(); });
+    V.neonPath(c, color, 1.6, k * 0.85, () => { c.moveTo(x, y - h * 0.32); c.lineTo(x, y + h * 0.32); c.moveTo(x - w * 0.45, y - h * 0.08); c.lineTo(x + w * 0.45, y + h * 0.1); c.moveTo(x - w * 0.3, y + h * 0.2); c.lineTo(x + w * 0.3, y - h * 0.22); });
+    V.glowAt(c, x, y, 8 + Math.sin(t * 6) * 2, '#ffffff', k);
+  }
+
+  Object.assign(ABILITY_VFX.bastion, {
+    // Hallowed Ground: light falls on the spot and the floor is consecrated for 10s, embers rising off it, a pulse every 2s
+    hallowed: c => { const x = c.x, y = c.y, r = 110;
+      V.lightfall(x, y, { color: '#ffe08a', r: 34, h: 260, dur: 0.9, feathers: 3 });
+      V.ink(x, y, { r, dur: 10 }); V.sigil(x, y, { r, style: 'star5', color: '#f2c84b', dur: 10, spin: 0.3 });
+      c.later(0.15, () => { V.spikeburst(x, y, { r: 70, n: 16, hole: 0.6, color: '#ffc840', core: '#fffbe0', ink: '#3a2a08', layer: 'ground', z: 0, flat: 0.6, dur: 0.5 }); V.debris(x, y, { n: 5, color: '#8a7a68' }); shake(3); });
+      V.fx({ dur: 10, layer: 'ground', draw: () => {}, tick: (p, dt, e) => {
+        if (Math.random() < 0.45) { const a = Math.random() * TAU, d = Math.sqrt(Math.random()) * r * 0.95; V.spawn({ x: x + Math.cos(a) * d, y: y + Math.sin(a) * d * 0.78, z: 0, vz: rand(40, 90), life: rand(0.7, 1.1), size: rand(6, 10), size1: 0, color: Math.random() < 0.6 ? '#ffd65a' : '#fff6d0', kind: Math.random() < 0.3 ? 'star' : 'glow' }); }
+        e.n = e.n || 0; if (p * 10 >= (e.n + 1) * 2) { e.n++; V.shock(x, y, { r: r * 0.95, r0: 20, color: '#ffe08a', dur: 0.6, w: 4 }); }
+      } }); },
+    // Avatar of Dawn: a shaft of dawn, then wings of light on the back for the whole burst
+    avatar: c => { const dur = longFor(c.ent, 'crusader', 15, 20);
+      V.lightfall(c.x, c.y, { color: '#ffe08a', r: 36, h: 300, dur: 1.1, feathers: 8 });
+      c.later(0.2, () => { wings(c.ent, dur, '#ffd65a'); V.aura(c.ent, { color: '#ffd65a', dur, r: 32, rate: 0.15 });
+        V.burst(c.ent.x, c.ent.y - 30, { color: '#ffe9a0', color2: '#ffffff', n: 24, speed: 300, kind: 'star', flashR: 110 }); V.shock(c.ent.x, c.ent.y, { r: 160, color: '#ffe08a', dur: 0.6, w: 7 }); shake(5); }); },
+  });
+
+  Object.assign(ABILITY_VFX.bloodreaver, {
+    // Scab: blood drawn back in and hardening into dark red plates over a crusted shield
+    scab: c => { V.swirl(c.x, c.y, { r: 60, color: '#c01a2a', dur: 0.5, follow: c.ent, inward: true }); V.charge(c.x, c.y, { color: '#ff3a4a', r: 60, n: 10, dur: 0.35, follow: c.ent });
+      c.later(0.3, () => { V.shield(c.ent, { shape: 'hex', color: '#b01a2a', dur: 8, r: 40 }); V.crystals(c.ent.x, c.ent.y, { color: '#8a1020', n: 6, r: 26, h: 26, dur: 0.8 }); V.spikeburst(c.ent.x, c.ent.y, { r: 44, n: 10, color: '#a01028', core: '#ffb0b0', ink: '#2a0408', dur: 0.3, z: 18 }); }); },
+    // Blood Moon: a red moon hangs over the reaver for 10s; blood rises off the floor into it
+    moon: c => { const ent = c.ent;
+      V.ink(c.x, c.y, { r: 70, dur: 10, follow: ent, a: 0.3 }); V.sigil(c.x, c.y, { r: 70, style: 'runes', color: '#c01a2a', dur: 10, spin: -0.6, follow: ent });
+      V.aura(ent, { color: '#8a0010', style: 'shadow', dur: 10, r: 30, rate: 0.25 });
+      V.fx({ dur: 10, layer: 'air', draw: (c2, p, t, e) => {
+        const k = fade(p, 0.08, 0.1) * e.a, rise = Math.min(1, p * 10 / 0.6), mx = ent.x, my = ent.y - 70 - 40 * rise, R = 22;
+        V.glowAt(c2, mx, my, 70, '#ff1a2a', 0.45 * k);
+        c2.globalAlpha = 0.9 * k; c2.fillStyle = '#9a1020'; c2.beginPath(); c2.arc(mx, my, R, 0, TAU); c2.fill();
+        c2.fillStyle = '#c8303a'; c2.beginPath(); c2.arc(mx - 4, my - 4, R * 0.8, 0, TAU); c2.fill();
+        c2.fillStyle = '#6a0810'; for (const [dx, dy, rr] of [[6, 5, 5], [-8, 2, 3.5], [2, -9, 3]]) { c2.beginPath(); c2.arc(mx + dx, my + dy, rr, 0, TAU); c2.fill(); }
+        c2.globalAlpha = 1; V.neonRing(c2, mx, my, R + 2, '#ff4a5a', 2, k);
+      }, tick: () => { if (Math.random() < 0.35) { const a = Math.random() * TAU; V.spawn({ x: ent.x + Math.cos(a) * 40, y: ent.y + Math.sin(a) * 22, z: 0, vz: rand(90, 140), vx: -Math.cos(a) * 20, life: 0.9, size: rand(5, 8), size1: 0, color: '#ff2a3a' }); } } });
+      V.shock(c.x, c.y, { r: 140, color: '#ff2a3a', dur: 0.6, w: 6 }); shake(4); },
+  });
+
+  Object.assign(ABILITY_VFX.runeguard, {
+    // Whirling Runes: the held runes tear loose in a burst of violet (the blades themselves are KIT_VFX.whirl)
+    whirl: c => { V.sigil(c.x, c.y, { r: 60, style: 'runes', color: '#a070ff', dur: 0.8, spin: 6, follow: c.ent }); V.crystals(c.x, c.y, { color: '#c8a8ff', n: 6, r: 34, h: 34, dur: 0.5 });
+      V.burst(c.x, c.y - 20, { color: '#d8c4ff', color2: '#ffffff', n: 16, speed: 260, kind: 'star' }); },
+    // Living Rune: a great rune rises behind the warder and stands there, pulsing, for 15s
+    living: c => { const ent = c.ent;
+      V.pillar(c.x, c.y, { r: 40, h: 200, color: '#b8a0ff', dur: 1 }); V.ink(c.x, c.y, { r: 80, dur: 1.4 }); V.sigil(c.x, c.y, { r: 80, style: 'runes', color: '#9f7aff', dur: 1.4, spin: 2 });
+      V.fx({ dur: 15, layer: 'air', draw: (c2, p, t, e) => {
+        const k = fade(p, 0.05, 0.08) * e.a, rise = Math.min(1, p * 15 / 0.5), a = ent.angle || 0;
+        standingRune(c2, ent.x - Math.cos(a) * 22, ent.y - 40 - 30 * rise + Math.sin(t * 2) * 3, 46, '#b18cff', k, t);
+      }, tick: () => { if (Math.random() < 0.2) { const a = ent.angle || 0; V.spawn({ x: ent.x - Math.cos(a) * 22 + rand(-10, 10), y: ent.y, z: 60, vz: rand(-20, 20), life: 0.8, size: 6, size1: 0, color: '#d8c4ff', kind: 'star' }); } } });
+      c.later(0.3, () => { V.spikeburst(ent.x, ent.y, { r: 50, n: 12, color: '#a070ff', core: '#f0e8ff', ink: '#1e0e3a', dur: 0.34, z: 20 }); shake(4); }); },
+  });
+
+  Object.assign(ABILITY_VFX.ranger, {
+    // Explosive Shot: an arrow that sticks in the boss with a charge blinking faster and faster (the blast is KIT_VFX.explode)
+    explosive: c => V.missile(c.x, c.y, c.tx, c.ty, { style: 'arrow', color: '#ff8a3a', speed: 1400, onHit: (x, y) => {
+      V.hit(x, y, '#ffb060', 0.6);
+      V.fx({ dur: 2.4, layer: 'air', draw: (c2, p, t, e) => { const blink = Math.sin(t * (6 + p * 20)) > 0 ? 1 : 0.35; V.glowAt(c2, x, y - 24, 14 + p * 10, '#ff5a1a', blink * e.a); V.glowAt(c2, x, y - 24, 5, '#ffffff', blink * e.a); } });
+    } }),
+    // Falcon: the falcon dives from the bow to the boss and circles over it for 10s, swooping low every 2s
+    falcon: c => { const tx = c.tx, ty = c.ty;
+      V.glint(c.x, c.y, { color: '#ffe27a', size: 26, z: 30 });
+      V.fx({ dur: 10.5, layer: 'air', draw: (c2, p, t, e) => {
+        const k = fade(p, 0.02, 0.05) * e.a;
+        let x, y, ang;
+        if (t < 0.5) { const q = t / 0.5; x = c.x + (tx - c.x) * q; y = c.y + (ty - c.y) * q - 60 - Math.sin(q * Math.PI) * 30; ang = Math.atan2(ty - c.y, tx - c.x); }
+        else { const s = t - 0.5, sw = Math.max(0, Math.sin(((s % 2) / 2) * Math.PI)) ** 6, a = s * 2.2, R = 70 - 40 * sw;
+          x = tx + Math.cos(a) * R; y = ty + Math.sin(a) * R * 0.5 - 90 + 60 * sw; ang = a + Math.PI / 2; }
+        V.glowAt(c2, x, y, 22, '#ffe27a', 0.35 * k);
+        bird(c2, x, y, 1.1, t * 11, ang, '#8a5a32', '#ffd27a', k);
+      } });
+      c.later(0.5, () => { V.hit(tx, ty, '#ffe27a', 1); V.sparks(tx, ty, { color: '#fff2c0', n: 8 }); for (let i = 0; i < 4; i++) V.spawn({ x: tx, y: ty, z: 30, vx: rand(-60, 60), vy: rand(-30, 30), vz: rand(20, 80), g: 80, life: 1.2, size: 11, color: '#c8a070', kind: 'feather', add: false, vr: rand(-3, 3), flutter: 3 }); }); },
+  });
+
+  Object.assign(ABILITY_VFX.shadowblade, {
+    // Rupture: a deep opening cut, then the wound keeps bleeding onto the floor
+    rupture: c => { V.slash(c.x, c.y, c.ang, { r: 62, span: 1.2, color: '#ff2a4a', w: 0.7, dur: 0.26 });
+      c.later(0.08, () => { const tx = c.tx, ty = c.ty; V.spikeburst(tx, ty, { r: 46, n: 12, color: '#c01a3a', core: '#ffe0ec', ink: '#2a0410', dur: 0.32 }); V.splash(tx, ty, { n: 10, speed: 1.2 });
+        V.puddle(tx + (c.x - tx) * 0.35, ty + (c.y - ty) * 0.35, { r: 24, color: '#a01028', dark: '#3a0610', dur: 6, bubbles: false, fumes: false });
+        V.fx({ dur: 6, layer: 'air', draw: () => {}, tick: () => { if (Math.random() < 0.3) V.spawn({ x: tx + rand(-12, 12), y: ty, z: rand(20, 40), vz: -20, g: 500, life: 0.5, size: 7, color: '#c01a2a', kind: 'drop', add: false, rot: Math.PI / 2 }); } }); }); },
+    // Death Blossom: gone in a puff of smoke, then six cuts flash round the boss from every side and a red flower of steel opens
+    blossom: c => { const tx = c.tx, ty = c.ty;
+      V.smokebomb(c.x, c.y, { r: 60, dur: 1.4, toss: 0 });
+      V.vortex(tx, ty, { r: 70, color: '#c01a5a', steel: '#ffe0ec', dur: 1.6, n: 6 });
+      for (let i = 0; i < 6; i++) c.later(i * 0.25, () => { const a = rand(0, TAU); V.slash(tx - Math.cos(a) * 30, ty - Math.sin(a) * 30, a, { r: 60, span: 1.4, color: i % 2 ? '#ff4d9a' : '#e8e0ff', dur: 0.22, w: 0.5, flip: i % 2 === 1, sparks: 3 }); V.splash(tx, ty, { n: 3, size: 0.7 }); }); },
+  });
+
+  Object.assign(ABILITY_VFX.pyromancer, {
+    // Firestep: the pyromancer bursts into flame and blinks forward, a line of fire left burning along the way
+    firestep: c => { const ent = c.ent, a = c.ang, ex = ent.x, ey = ent.y, sx = ex - Math.cos(a) * 150, sy = ey - Math.sin(a) * 150;
+      V.flare(sx, sy, { n: 14, r: 16, color: '#ff6a1a' }); V.flare(ex, ey, { n: 18, r: 18, color: '#ff8a2a' }); V.shock(ex, ey, { r: 70, color: '#ffb040', dur: 0.35, w: 5 });
+      V.blaze(ent, { r: 36, dur: 0.8 });
+      V.fx({ dur: 1.6, layer: 'ground', draw: (c2, p, t, e) => { const k = (1 - p) * e.a; c2.globalAlpha = 0.4 * k; c2.strokeStyle = '#2a0e04'; c2.lineWidth = 12; c2.lineCap = 'round'; c2.beginPath(); c2.moveTo(sx, sy); c2.lineTo(ex, ey); c2.stroke(); c2.globalAlpha = 1;
+        V.neonPath(c2, '#ff7a1a', 3, k, () => { c2.moveTo(sx, sy); c2.lineTo(ex, ey); }); },
+        tick: () => { for (let i = 0; i < 2; i++) { const q = Math.random(); V.spawn({ x: sx + (ex - sx) * q + rand(-6, 6), y: sy + (ey - sy) * q + rand(-4, 4), z: 0, vz: rand(60, 140), life: rand(0.3, 0.6), size: rand(10, 16), size1: 2, color: Math.random() < 0.5 ? '#ff6a1a' : '#ffd070' }); } } }); },
+    // Phoenix Flight: a great bird of fire sweeps out through the boss and wheels back for a second pass
+    phoenix: c => { const sx = c.x, sy = c.y, tx = c.tx, ty = c.ty, ang = Math.atan2(ty - sy, tx - sx), L = Math.hypot(tx - sx, ty - sy) + 80, nx = -Math.sin(ang), ny = Math.cos(ang);
+      // the path: out past the boss, a wide turn, back through it to the caster
+      const path = q => { const s = q < 0.5 ? q / 0.5 : 1 - (q - 0.5) / 0.5, side = Math.sin(q * TAU) * 70; return { x: sx + Math.cos(ang) * L * s + nx * side, y: sy + Math.sin(ang) * L * s + ny * side - 40 }; };
+      V.charge(sx, sy, { color: '#ffb040', r: 50, n: 10, dur: 0.25 });
+      V.fx({ dur: 1.5, layer: 'air', draw: (c2, p, t, e) => {
+        const q = path(p), b = path(Math.min(1, p + 0.01)), k = fade(p, 0.05, 0.1) * e.a, fa = Math.atan2(b.y - q.y, b.x - q.x);
+        V.glowAt(c2, q.x, q.y, 70, '#ff6a1a', 0.55 * k); V.glowAt(c2, q.x, q.y, 30, '#ffe08a', 0.7 * k);
+        bird(c2, q.x, q.y, 2.2, t * 9, fa, '#ff8a2a', '#fff2b0', k);
+      }, tick: p => { const q = path(p); for (let i = 0; i < 3; i++) V.spawn({ x: q.x + rand(-14, 14), y: q.y + 40 + rand(-8, 8), z: 40, vx: rand(-30, 30), vz: rand(10, 60), life: rand(0.4, 0.8), size: rand(12, 22), size1: 2, color: Math.random() < 0.5 ? '#ff6a1a' : '#ffc040' }); } });
+      for (const d of [0.38, 1.12]) c.later(d, () => { V.spikeburst(tx, ty, { r: 60, n: 14, color: '#ff6a1a', core: '#ffe08a', ink: '#3a0806', dur: 0.36 }); V.flare(tx, ty, { n: 16, r: 20 }); shake(4); }); },
+  });
+
+  Object.assign(ABILITY_VFX.cleric, {
+    // Bloom of Dawn: light falls on the ally and a flower of petals opens round them
+    dawnbloom: c => { const w = c.tent || c.ent;
+      V.lightfall(w.x, w.y, { color: '#ffe680', r: 32, h: 260, dur: 0.9, feathers: 4 });
+      c.later(0.2, () => { V.ink(w.x, w.y, { r: 90, dur: 1.4 }); V.sigil(w.x, w.y, { r: 90, style: 'petals', color: '#ffb8d8', dur: 1.4, spin: 1.5 });
+        V.burst(w.x, w.y - 20, { color: '#ffd0e4', color2: '#ffffff', n: 14, speed: 220, kind: 'petal', flashR: 90 }); V.plus(w.x, w.y, { color: '#fff2a0', n: 8 });
+        V.motes(w.x, w.y, { kind: 'petal', color: '#ffc0dc', n: 10, r: 60, rise: 0.6 }); }); },
+    // Dawn Sanctum: a great circle of dawn at the cleric's feet for 12s, petals and light drifting up out of it
+    dawnsanctum: c => { const x = c.x, y = c.y, r = 130;
+      V.pillar(x, y, { r: 50, h: 220, color: '#ffe680', dur: 1.2 });
+      V.ink(x, y, { r, dur: 12 }); V.sigil(x, y, { r, style: 'star4', color: '#ffd65a', dur: 12, spin: 0.25 }); V.sigil(x, y, { r: r * 0.6, style: 'petals', color: '#ffc0dc', dur: 12, spin: -0.4 });
+      V.shock(x, y, { r: r + 30, color: '#ffe680', dur: 0.6, w: 7 });
+      V.fx({ dur: 12, layer: 'ground', draw: () => {}, tick: (p, dt, e) => {
+        if (Math.random() < 0.4) { const a = Math.random() * TAU, d = Math.sqrt(Math.random()) * r * 0.9, pet = Math.random() < 0.35;
+          V.spawn({ x: x + Math.cos(a) * d, y: y + Math.sin(a) * d * 0.78, z: 0, vz: rand(25, 60), vx: rand(-10, 10), life: rand(1, 1.6), size: pet ? 10 : rand(5, 8), size1: pet ? 10 : 0, color: pet ? '#ffc0dc' : '#fff2a0', kind: pet ? 'petal' : 'glow', add: pet ? false : undefined, flutter: pet ? 5 : 0 }); }
+        e.n = e.n || 0; if (p * 12 >= (e.n + 1) * 1.5) { e.n++; V.shock(x, y, { r: r * 0.9, r0: 30, color: '#fff2a0', dur: 0.5, w: 3 }); }
+      } }); },
+  });
+
+  Object.assign(ABILITY_VFX.grovekeeper, {
+    // Seed of Renewal: a glowing seed sinks into the ally and a sprout grows at their feet while it lasts
+    seed: c => { const w = c.tent || c.ent;
+      V.missile(c.x, c.y, w.x, w.y, { style: 'leaf', color: '#9aff7a', speed: 700, arc: 40 });
+      c.later(0.2, () => { V.sigil(w.x, w.y, { r: 50, style: 'petals', color: '#8aff6a', dur: 1, spin: 2, follow: w }); V.burst(w.x, w.y - 10, { color: '#b0ff9a', n: 10, speed: 160, kind: 'leaf', flash: false }); });
+      V.fx({ dur: 20, layer: 'ground', draw: (c2, p, t, e) => {
+        const k = fade(p, 0.03, 0.05) * e.a, g = Math.min(1, p * 20 / 2), x = w.x + 14, y = w.y + 6, h = 6 + 12 * g;
+        V.glowAt(c2, x, y - h * 0.5, 16, '#8aff6a', 0.4 * k);
+        V.neonPath(c2, '#7ee06a', 1.6, k, () => { c2.moveTo(x, y); c2.quadraticCurveTo(x - 3, y - h * 0.5, x, y - h); });
+        for (const sd of [-1, 1]) V.neonPath(c2, '#b0ff8a', 1.4, k, () => c2.ellipse(x + sd * 4, y - h * 0.8, 4.5 * g + 1, 2, sd * 0.5, 0, TAU));
+      } }); },
+    // Treant: roots burst up beside the boss and a treant stands there for 15s, raising its arms to slam every 3s
+    treant: c => { const x = c.tx + 56, y = c.ty + 14;
+      V.grove(x, y, { r: 50, dur: 1.4, flowers: 4 }); V.debris(x, y, { n: 6, color: '#6a5034' }); V.crystals(x, y, { color: '#6abf4a', n: 6, r: 30, h: 40, dur: 0.6 });
+      V.fx({ dur: 15.2, layer: 'air', draw: (c2, p, t, e) => {
+        const k = fade(p, 0.03, 0.04) * e.a, rise = Math.min(1, t / 0.6), q = (t % 3) / 3, lift = q > 0.6 ? (q - 0.6) / 0.4 : 0, sway = Math.sin(t * 1.5) * 2;
+        const H = 54 * rise, top = y - H;
+        c2.globalAlpha = 0.35 * k; c2.fillStyle = '#000'; c2.beginPath(); c2.ellipse(x, y, 22, 7, 0, 0, TAU); c2.fill();
+        c2.globalAlpha = k; c2.fillStyle = '#6a4a2a'; c2.strokeStyle = OUT; c2.lineWidth = 2;
+        c2.beginPath(); c2.moveTo(x - 12, y); c2.lineTo(x - 7 + sway, top + 6); c2.lineTo(x + 7 + sway, top + 6); c2.lineTo(x + 12, y); c2.closePath(); c2.fill(); c2.stroke();
+        for (const sd of [-1, 1]) { const ax = x + sd * 8 + sway, ay = top + 16, th = 1 - lift * 2.3, hx = ax + sd * Math.cos(th) * 24, hy = ay + Math.sin(th) * 24;
+          c2.lineWidth = 6; c2.strokeStyle = OUT; c2.beginPath(); c2.moveTo(ax, ay); c2.lineTo(hx, hy); c2.stroke();
+          c2.lineWidth = 3.5; c2.strokeStyle = '#7a5a34'; c2.beginPath(); c2.moveTo(ax, ay); c2.lineTo(hx, hy); c2.stroke(); }
+        c2.fillStyle = '#3f8a34'; for (const [dx, dy, rr] of [[-12, 4, 12], [12, 4, 12], [0, -6, 15], [0, 8, 11]]) { c2.beginPath(); c2.arc(x + dx + sway, top + dy - 4, rr * rise, 0, TAU); c2.fill(); c2.lineWidth = 1.5; c2.stroke(); }
+        c2.fillStyle = '#5fbf4a'; c2.beginPath(); c2.arc(x - 4 + sway, top - 10, 7 * rise, 0, TAU); c2.fill(); c2.globalAlpha = 1;
+        for (const sd of [-1, 1]) V.glowAt(c2, x + sd * 4 + sway, top + 16, 5, '#d8ff7a', k);
+      }, tick: () => { if (Math.random() < 0.08) V.spawn({ x: x + rand(-14, 14), y, z: rand(40, 60), vz: rand(-30, -10), vx: rand(-15, 15), life: 1.4, size: 10, color: '#6fbf5a', kind: 'leaf', add: false, vr: rand(-3, 3), flutter: 5 }); } });
+      shake(3); },
+  });
+
+  Object.assign(ABILITY_VFX.chronomancer, {
+    // Time Bubble: a big pale bubble of slowed time round the ally, a clock turning slowly under it, for 6s
+    bubble: c => { const w = c.tent || c.ent;
+      V.shield(w, { shape: 'bubble', color: '#9fe8ff', dur: 6, r: 62 }); V.ink(w.x, w.y, { r: 70, dur: 6, follow: w, a: 0.25 }); V.sigil(w.x, w.y, { r: 70, style: 'clock', color: '#9fe8ff', dur: 6, spin: 0.3, follow: w });
+      V.ribbons(w.x, w.y, { r: 60, dur: 1, dir: -1, follow: w, colors: ['#9fe8ff', '#e0d4ff', '#ffffff'] }); V.shock(w.x, w.y, { r: 90, color: '#bff0ff', dur: 0.5, w: 4 }); },
+    // Time Warp: a great golden clock hangs over the party, its hands racing, for the whole burst
+    warp: c => { const ent = c.ent, dur = longFor(ent, 'accelerant', 15, 20);
+      V.ink(c.x, c.y, { r: 150, dur: 1.6 }); V.sigil(c.x, c.y, { r: 150, style: 'clock', color: '#ffd27a', dur: 1.6, spin: 2 });
+      for (let i = 0; i < 3; i++) V.shock(c.x, c.y, { r: 200 + i * 60, color: '#9fe8ff', dur: 0.7, w: 5 - i, delay: i * 0.12 });
+      V.fx({ dur, layer: 'air', draw: (c2, p, t, e) => {
+        const k = fade(p, 0.04, 0.06) * e.a, x = ent.x, y = ent.y - 120 + Math.sin(t * 1.5) * 4, R = 40 * Math.min(1, t / 0.4);
+        V.glowAt(c2, x, y, R * 2, '#ffd27a', 0.35 * k);
+        c2.globalAlpha = 0.45 * k; c2.fillStyle = '#1a1a34'; c2.beginPath(); c2.arc(x, y, R, 0, TAU); c2.fill(); c2.globalAlpha = 1;
+        V.neonRing(c2, x, y, R, '#ffd27a', 3, k); V.neonRing(c2, x, y, R * 0.84, '#9fe8ff', 1.2, k * 0.8);
+        for (let i = 0; i < 12; i++) { const a = i * TAU / 12; V.neonPath(c2, '#ffe6a8', i % 3 ? 1 : 2, k, () => { c2.moveTo(x + Math.cos(a) * R * 0.7, y + Math.sin(a) * R * 0.7); c2.lineTo(x + Math.cos(a) * R * 0.8, y + Math.sin(a) * R * 0.8); }); }
+        V.neonPath(c2, '#ffffff', 2, k, () => { c2.moveTo(x, y); c2.lineTo(x + Math.cos(t * 8) * R * 0.66, y + Math.sin(t * 8) * R * 0.66); });
+        V.neonPath(c2, '#ffd27a', 3, k, () => { c2.moveTo(x, y); c2.lineTo(x + Math.cos(t * 1.4) * R * 0.42, y + Math.sin(t * 1.4) * R * 0.42); });
+      }, tick: () => { if (Math.random() < 0.2) V.spawn({ x: ent.x + rand(-40, 40), y: ent.y, z: 120 + rand(-30, 30), vz: rand(-30, -10), life: 1, size: 7, size1: 0, color: Math.random() < 0.5 ? '#ffd27a' : '#9fe8ff', kind: 'star' }); } });
+      shake(4); },
+  });
+
+  // ---- the moments talents add (k.fx). target: the enemy for KIT_VFX_AIMED names, the ally for data.to, else null.
+  Object.assign(KIT_VFX, {
+    // Bastion
+    sunlit: (e, t) => { const T = at(e, t); V.beam(e.x, e.y, T.x, T.y, { color: '#ffe9a0', w: 8, dur: 0.35 }); V.spawn({ x: T.x, y: T.y, z: 16, life: 0.3, size: 50, size1: 16, color: '#ffe27a', kind: 'star', vr: 5 }); },
+    edgeShard: (e, t) => { const T = at(e, t); V.missile(e.x, e.y, T.x, T.y, { style: 'blade', color: '#ffe08a', speed: 1000, size: 0.6, onHit: (x, y) => V.hit(x, y, '#ffe9a0', 0.5) }); },
+    edgeReturn: (e, t) => { const T = at(e, t); V.missile(T.x, T.y, e.x, e.y, { style: 'blade', color: '#ffe08a', speed: 900, size: 0.8, arc: 30, onHit: () => V.glint(e.x, e.y, { color: '#ffe08a', size: 24 }) }); V.hit(T.x, T.y, '#ffd65a', 0.7); },
+    dawnPillar: (e, t) => { const T = at(e, t); V.lightfall(T.x, T.y, { color: '#ffe08a', r: 38, h: 320, dur: 0.8, feathers: 2 });
+      FX.later(0.18, () => { V.spikeburst(T.x, T.y, { r: 56, n: 14, color: '#ffc840', core: '#fffbe0', ink: '#3a2a08', dur: 0.36 }); V.shock(T.x, T.y, { r: 90, color: '#ffe08a', dur: 0.4, w: 5 }); shake(3); }); },
+    readSwing: e => { const a = e.angle || 0, fx = e.x + Math.cos(a) * 30, fy = e.y + Math.sin(a) * 30; V.glint(fx, fy, { color: '#ffffff', size: 30 }); V.shock(e.x, e.y, { r: 70, color: '#9fc4ff', dur: 0.35, w: 4 }); V.sparks(fx, fy, { color: '#dbe9ff', n: 8, angle: a, spread: 0.6, speed: 340 }); },
+    lastStand: e => { V.dome(e, { color: '#ffb84a', r: 46, dur: 1.6 }); V.spikeburst(e.x, e.y, { r: 54, n: 14, color: '#ff9a3a', core: '#fff2c0', ink: '#3a1a06', dur: 0.36, z: 18 }); shake(4); },
+    faith: e => { V.motes(e.x, e.y, { color: '#ffe08a', n: 10, r: 30, kind: 'star' }); V.sigil(e.x, e.y, { r: 40, style: 'star4', color: '#ffd65a', dur: 0.6, spin: 4, follow: e }); },
+    // Bloodreaver
+    secondHelping: e => { V.swirl(e.x, e.y, { r: 46, color: '#ff2a4a', dur: 0.5, follow: e, inward: true }); V.plus(e.x, e.y, { color: '#ff8a8a', n: 4 }); },
+    hemorrhage: (e, t) => { const T = at(e, t); V.splash(T.x, T.y, { n: 12, speed: 1.2 }); V.puddle(T.x, T.y + 10, { r: 26, color: '#a01028', dark: '#3a0610', dur: 3, bubbles: false, fumes: false }); V.hit(T.x, T.y, '#ff4a5a', 0.7); },
+    cauterize: e => { V.flare(e.x, e.y, { n: 10, r: 14, color: '#ff7a1a' }); V.shock(e.x, e.y, { r: 50, color: '#ffb040', dur: 0.3, w: 3 }); V.plus(e.x, e.y, { color: '#ffd070', n: 3 }); },
+    bloodlust: (e, t) => { const T = at(e, t); V.aura(e, { color: '#ff2a1a', style: 'flame', dur: 1.2, r: 30, rate: 0.6 }); V.stream(T.x, T.y, e, { color: '#ff2a4a', n: 8 }); V.spikeburst(T.x, T.y, { r: 40, n: 10, color: '#d0203a', core: '#ffd0d0', ink: '#2a0408', dur: 0.3 }); },
+    // the blood moon sets: a tide of blood rolls into the boss and runs back to the reaver
+    moonburst: (e, t) => { const T = at(e, t), ang = Math.atan2(T.y - e.y, T.x - e.x), L = Math.hypot(T.x - e.x, T.y - e.y);
+      V.flash(e.x, e.y - 90, 80, '#ff2a3a', 0.3);
+      for (let i = 0; i < 26; i++) { const sp = rand(500, 800), s = rand(-0.35, 0.35); V.spawn({ x: e.x, y: e.y, z: rand(10, 30), vx: Math.cos(ang + s) * sp, vy: Math.sin(ang + s) * sp, vz: rand(20, 80), g: 200, life: Math.min(1, L / sp + 0.1), size: rand(8, 14), color: '#c01a2a', kind: 'drop', add: false, rot: ang + Math.PI / 2 }); }
+      FX.later(Math.min(0.6, L / 650), () => { V.spikeburst(T.x, T.y, { r: 80, n: 16, color: '#c01a2a', core: '#ffd0d0', ink: '#2a0408', dur: 0.45 }); V.splash(T.x, T.y, { n: 18, speed: 1.4 }); V.shock(T.x, T.y, { r: 130, color: '#ff2a3a', dur: 0.5, w: 7 }); V.stream(T.x, T.y, e, { color: '#ff3a4a', n: 12 }); shake(6); }); },
+    // Runeguard
+    runeOverflow: (e, t) => { const T = at(e, t); V.missile(e.x, e.y, T.x, T.y, { style: 'orb', color: '#c8a8ff', speed: 850, size: 0.8, onHit: (x, y) => { V.hit(x, y, '#e0d0ff', 0.6); V.sigil(x, y, { r: 26, style: 'runes', color: '#c8a8ff', dur: 0.4, spin: 6 }); } }); },
+    runeBolt: (e, t) => { const T = at(e, t), a = e.angle || 0, sx = e.x - Math.cos(a) * 22, sy = e.y - 30;
+      V.missile(sx, sy, T.x, T.y, { style: 'helix', color: '#b18cff', speed: 1000, size: 0.8, onHit: (x, y) => V.hit(x, y, '#d8c4ff', 0.7) }); },
+    emergency: e => { V.shield(e, { shape: 'hex', color: '#c8a8ff', dur: 0.8, r: 44 }); V.shock(e.x, e.y, { r: 80, color: '#b18cff', dur: 0.4, w: 5 }); V.burst(e.x, e.y - 20, { color: '#e0d0ff', n: 10, speed: 200, kind: 'star' }); },
+    glyphEcho: (e, t) => { const T = at(e, t); V.sigil(T.x, T.y, { r: 40, style: 'runes', color: '#9a6bff', dur: 0.4, spin: 8 }); FX.later(0.3, () => V.crystals(T.x, T.y, { color: '#b28cff', n: 4, r: 28, h: 36, dur: 0.6 })); },
+    shatter: e => { for (let i = 0; i < 10; i++) { const a = Math.random() * TAU, sp = rand(120, 260); V.spawn({ x: e.x, y: e.y, z: 24, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * 0.6, vz: rand(60, 180), g: 500, bounce: true, life: rand(0.5, 0.9), size: rand(7, 11), color: '#e8e0ff', kind: 'shard', add: false, vr: rand(-12, 12) }); }
+      V.flash(e.x, e.y - 20, 50, '#e0d4ff', 0.2); V.shock(e.x, e.y, { r: 90, color: '#e0d4ff', dur: 0.4, w: 5 }); },
+    wardLeap: e => { V.sigil(e.x, e.y, { r: 46, style: 'hex', color: '#b18cff', dur: 0.6, spin: 4, follow: e }); V.shock(e.x, e.y, { r: 70, color: '#c8a8ff', dur: 0.35, w: 4 }); },
+    wardNova: (e, t) => { const T = at(e, t); for (let i = 0; i < 2; i++) V.shock(e.x, e.y, { r: 120 + i * 40, color: '#b18cff', dur: 0.5, w: 6 - i * 2, delay: i * 0.08 }); V.lightning(e.x, e.y, T.x, T.y, { color: '#d8c4ff', jag: 12, dur: 0.3 }); FX.later(0.05, () => V.hit(T.x, T.y, '#c8a8ff', 0.9)); },
+    binding: (e, t) => { const T = at(e, t); V.ink(T.x, T.y, { r: 56, dur: 1 }); V.sigil(T.x, T.y, { r: 56, style: 'runes', color: '#b18cff', dur: 1, spin: -3 }); V.lightning(e.x, e.y, T.x, T.y, { color: '#c8a8ff', jag: 8, dur: 0.25 }); },
+    mirrorShards: (e, t) => { const T = at(e, t); for (let i = 0; i < 5; i++) FX.later(i * 0.05, () => V.missile(e.x + rand(-16, 16), e.y + rand(-10, 10), T.x + rand(-14, 14), T.y + rand(-8, 8), { style: 'blade', color: '#e8e0ff', speed: 1100, size: 0.5, onHit: (x, y) => V.sparks(x, y, { color: '#ffffff', n: 3 }) })); },
+    // Whirling Runes: n rune blades spinning round the warder for 12s, one flashing out at the boss every 2s
+    whirl: (e, t, d) => { const n = Math.max(1, Math.min(8, (d && d.n) || 1)), T = t;
+      V.fx({ dur: 12, layer: 'air', draw: (c, p, tt, fx) => {
+        const k = fade(p, 0.03, 0.05) * fx.a;
+        for (let i = 0; i < n; i++) { const a = tt * 3 + i * TAU / n, x = e.x + Math.cos(a) * 46, y = e.y - 18 + Math.sin(a) * 22;
+          c.save(); c.translate(x, y); c.rotate(a + Math.PI / 2);
+          V.glowAt(c, 0, 0, 14, '#a070ff', 0.5 * k);
+          V.neonPath(c, '#c8a8ff', 1.8, k, () => { c.moveTo(0, -10); c.lineTo(4, 0); c.lineTo(0, 10); c.lineTo(-4, 0); c.closePath(); });
+          c.restore(); }
+      }, tick: (p, dt, fx) => { fx.s = fx.s || 0; if (T && p * 12 >= (fx.s + 1) * 2) { fx.s++; V.lightning(e.x, e.y, T.x, T.y, { color: '#d0b8ff', jag: 10, dur: 0.22 }); V.hit(T.x, T.y, '#c8a8ff', 0.6); }
+        if (Math.random() < 0.2) { const a = Math.random() * TAU; V.spawn({ x: e.x + Math.cos(a) * 46, y: e.y + Math.sin(a) * 22, z: 18, vz: 20, life: 0.5, size: 5, size1: 0, color: '#d8c4ff', kind: 'star' }); } } }); },
+    // Ranger
+    explode: (e, t, d) => { const T = at(e, t), s = 1 + 0.3 * ((d && d.n) || 0);
+      V.spikeburst(T.x, T.y, { r: 56 * s, n: 16, color: '#ff6a1a', core: '#ffe08a', ink: '#3a0806', dur: 0.4 }); V.flare(T.x, T.y, { n: Math.round(14 * s), r: 20 * s });
+      V.shock(T.x, T.y, { r: 100 * s, color: '#ffb040', dur: 0.45, w: 6 }); V.debris(T.x, T.y, { n: 6, hot: true, color: '#5a3a2a' }); V.smoke(T.x, T.y, { n: 6, color: '#3a2a2a', size: 30 * s, a: 0.5, speed: 50, life: 1.3 }); shake(3 + 2 * s); },
+    falconDive: (e, t) => { const T = at(e, t);
+      V.fx({ dur: 0.35, layer: 'air', draw: (c, p, tt, fx) => { const x = T.x - 60 * (1 - p), y = T.y - 30 - 150 * (1 - p); V.glowAt(c, x, y, 20, '#ffe27a', 0.5 * fx.a); bird(c, x, y, 1.1, 0, Math.atan2(150, 60), '#8a5a32', '#ffd27a', fx.a); },
+        done: () => { V.hit(T.x, T.y, '#ffe27a', 0.9); V.spawn({ x: T.x, y: T.y, z: 30, vx: rand(-60, 60), vz: rand(30, 80), g: 80, life: 1.1, size: 11, color: '#c8a070', kind: 'feather', add: false, vr: 2, flutter: 3 }); } }); },
+    ricochetArrow: (e, t) => { const T = at(e, t), a = Math.random() * TAU; V.missile(T.x, T.y, T.x + Math.cos(a) * 90, T.y + Math.sin(a) * 60, { style: 'arrow', color: '#bfff9a', speed: 1100, onHit: (x, y) => V.hit(x, y, '#d8ffc0', 0.4) }); },
+    stormArc: (e, t) => { const T = at(e, t); V.lightning(e.x, e.y, T.x, T.y, { color: '#c8ffb0', jag: 14, dur: 0.25 }); V.hit(T.x, T.y, '#e0ffd0', 0.6); },
+    volley: (e, t) => { const T = at(e, t); V.volley(T.x, T.y, { n: 8, r: 46, color: '#bfff9a', wind: 0.12, stay: 1.2 }); },
+    deathmark: (e, t) => { const T = at(e, t); V.ink(T.x, T.y, { r: 60, dur: 1.2 }); V.sigil(T.x, T.y, { r: 60, style: 'star4', color: '#ff4a3a', dur: 1.2, spin: -2 }); V.spikeburst(T.x, T.y, { r: 30, n: 8, color: '#ff4a3a', core: '#ffe0d0', ink: '#3a0806', dur: 0.3, z: 40 }); },
+    secondWind: e => { V.swirl(e.x, e.y, { r: 50, color: '#8fdf7a', dur: 0.6, follow: e }); V.plus(e.x, e.y, { color: '#9aff8a', n: 5 }); V.motes(e.x, e.y, { kind: 'leaf', color: '#6fbf5a', n: 6, r: 36 }); },
+    // Shadowblade
+    feint: e => { const a = (e.angle || 0) + Math.PI / 2; V.shadowdash(e.x - Math.cos(a) * 30, e.y - Math.sin(a) * 30, e.x, e.y, { dur: 0.3 }); },
+    toxicBurst: (e, t) => { const T = at(e, t); V.splash(T.x, T.y, { color: '#7adf3a', n: 12, speed: 1.2 }); V.puddle(T.x, T.y + 8, { r: 34, color: '#9aff4a', dark: '#1e3a0a', dur: 2.4 }); V.shock(T.x, T.y, { r: 60, color: '#9aff4a', dur: 0.35, w: 4 }); },
+    shadowClone: (e, t) => { const T = at(e, t); V.shadowdash(e.x, e.y, T.x, T.y, { color: '#6a3dcf', dur: 0.4 }); FX.later(0.15, () => { V.slash(T.x, T.y, Math.random() * TAU, { r: 50, span: 1.6, color: '#8a5dff', dur: 0.24 }); V.smoke(T.x, T.y, { n: 4, color: '#4a3060', size: 22, a: 0.5, speed: 40 }); }); },
+    ambush: (e, t) => { const T = at(e, t); V.spawn({ x: T.x, y: T.y, z: 18, life: 0.3, size: 64, size1: 22, color: '#ff3a5a', kind: 'star', vr: 5 }); V.splash(T.x, T.y, { n: 6 }); },
+    dodge: e => { V.smoke(e.x, e.y, { n: 5, color: '#4a3060', size: 22, a: 0.55, speed: 50 }); V.shock(e.x, e.y, { r: 46, color: '#c58aff', dur: 0.3, w: 3 }); },
+    garrote: (e, t) => { const T = at(e, t);
+      V.fx({ dur: 0.6, layer: 'air', draw: (c, p, tt, fx) => { const k = (1 - p) * fx.a, R = 34 * (1 - p * 0.5); V.neonPath(c, '#ff3a5a', 1.6, k, () => c.ellipse(T.x, T.y - 30, R, R * 0.4, 0, 0, TAU)); } });
+      FX.later(0.3, () => { V.splash(T.x, T.y, { n: 8 }); V.hit(T.x, T.y, '#ff6a7a', 0.6); }); },
+    blossomEnd: (e, t) => { const T = at(e, t); V.spikeburst(T.x, T.y, { r: 80, n: 18, color: '#d0204a', core: '#ffe0ec', ink: '#2a0410', dur: 0.45 }); V.splash(T.x, T.y, { n: 16, speed: 1.4 });
+      V.burst(T.x, T.y - 20, { color: '#ff7ab0', color2: '#ffffff', n: 16, speed: 260, kind: 'petal' }); V.shock(T.x, T.y, { r: 120, color: '#ff4d9a', dur: 0.5, w: 6 }); shake(6); },
+    // Pyromancer
+    haze: e => { for (let i = 0; i < 6; i++) V.spawn({ x: e.x + rand(-20, 20), y: e.y + rand(-6, 6), z: rand(0, 20), vz: rand(20, 50), life: 1, size: 20, size1: 36, color: '#ffb070', kind: 'smoke', add: false, a: 0.25 }); },
+    hurry: e => { V.shock(e.x, e.y, { r: 50, color: '#ffb040', dur: 0.3, w: 3 }); V.sparks(e.x, e.y, { color: '#ffd070', n: 6, speed: 260 }); },
+    flashpoint: (e, t) => { const T = at(e, t); V.spikeburst(T.x, T.y, { r: 60, n: 14, color: '#ff5a1a', core: '#ffe08a', ink: '#3a0806', dur: 0.36 }); V.flare(T.x, T.y, { n: 14, r: 18 }); shake(4); },
+    chainReact: (e, t) => { const T = at(e, t); for (let i = 0; i < 3; i++) { const a = Math.random() * TAU; V.lightning(T.x, T.y, T.x + Math.cos(a) * 70, T.y + Math.sin(a) * 45, { color: '#ffb070', jag: 8, dur: 0.2 }); } V.flare(T.x, T.y, { n: 8, r: 14 }); },
+    twinFlame: (e, t) => { const T = at(e, t); for (const s of [-1, 1]) V.missile(e.x, e.y, T.x, T.y, { style: 'fire', color: '#ff7a1a', speed: 800, arc: 30 * s, onHit: (x, y) => V.flare(x, y, { n: 8, r: 14 }) }); },
+    bombPlant: (e, t) => { const T = at(e, t); V.sigil(T.x, T.y, { r: 44, style: 'runes', color: '#ff8a2a', dur: 0.8, spin: 4 }); V.glint(T.x, T.y, { color: '#ffb040', size: 26, z: 30 }); },
+    bomb: (e, t) => { const T = at(e, t); V.spikeburst(T.x, T.y, { r: 70, n: 16, color: '#ff5a1a', core: '#ffe08a', ink: '#3a0806', dur: 0.4 }); V.crater(T.x, T.y, { r: 50, color: '#ff4a1a', dur: 2.2, flames: 3, a: 0.5 }); V.flare(T.x, T.y, { n: 18, r: 22 }); shake(5); },
+    // Cleric
+    petalBloom: e => { V.motes(e.x, e.y, { kind: 'petal', color: '#ffc0dc', n: 8, r: 34, rise: 0.6 }); V.shock(e.x, e.y, { r: 50, color: '#ffc0dc', dur: 0.35, w: 3 }); },
+    sunfall: (e, t) => { const T = at(e, t); V.lightfall(T.x, T.y, { color: '#ffe680', r: 30, h: 280, dur: 0.6, feathers: 0 }); FX.later(0.15, () => V.burst(T.x, T.y, { color: '#ffe680', color2: '#ffffff', n: 12, speed: 220, kind: 'star' })); },
+    petalfall: (e, t) => { const T = at(e, t); for (let i = 0; i < 12; i++) V.spawn({ x: T.x + rand(-40, 40), y: T.y + rand(-12, 12), z: rand(80, 140), vz: rand(-90, -60), vx: rand(-20, 20), life: 1.2, size: 11, color: i % 2 ? '#ffc0dc' : '#fff2a0', kind: 'petal', add: false, vr: rand(-3, 3), flutter: 5 }); FX.later(0.5, () => V.hit(T.x, T.y, '#ffd0e4', 0.6)); },
+    purify: (e, t) => { const w = t || e; V.sigil(w.x, w.y, { r: 40, style: 'star4', color: '#ffffff', dur: 0.6, spin: 4, follow: w }); V.burst(w.x, w.y - 20, { color: '#ffffff', color2: '#fff2a0', n: 10, speed: 180, kind: 'star' }); },
+    chorus: e => { V.ribbons(e.x, e.y, { r: 60, dur: 1.2, follow: e, colors: ['#ffe680', '#ffffff', '#ffc0dc'] }); V.shock(e.x, e.y, { r: 160, color: '#ffe680', dur: 0.6, w: 5 }); },
+    twinBless: (e, t) => { if (t && t !== e) V.beam(e.x, e.y, t.x, t.y, { color: '#fff2b0', w: 6, dur: 0.35 }); const w = t || e; V.plus(w.x, w.y, { color: '#fff2a0', n: 5 }); V.burst(w.x, w.y - 20, { color: '#ffe680', n: 8, speed: 160, kind: 'star', flash: false }); },
+    // Grovekeeper
+    lastBlossom: (e, t) => { const w = t || e; V.burst(w.x, w.y - 10, { color: '#ffb8e0', color2: '#ffffff', n: 10, speed: 160, kind: 'petal', flash: false }); V.plus(w.x, w.y, { color: '#9aff8a', n: 4 }); },
+    spill: e => { V.splash(e.x, e.y, { color: '#8aff6a', n: 10, speed: 0.8 }); V.shock(e.x, e.y, { r: 110, color: '#8aff6a', dur: 0.5, w: 4 }); V.motes(e.x, e.y, { kind: 'leaf', color: '#6fbf5a', n: 8, r: 80 }); },
+    ironbark: (e, t) => { const w = t || e; V.shield(w, { shape: 'hex', color: '#b08a5a', dur: 5, r: 38 }); V.crystals(w.x, w.y, { color: '#8a6a3a', n: 5, r: 24, h: 30, dur: 0.6 }); },
+    pulse: e => { for (let i = 0; i < 2; i++) V.shock(e.x, e.y, { r: 140 + i * 40, color: '#8aff6a', dur: 0.55, w: 5 - i * 2, delay: i * 0.1 }); V.plus(e.x, e.y, { color: '#9aff8a', n: 4 }); },
+    natureWrath: (e, t) => { const T = at(e, t); V.crystals(T.x, T.y, { color: '#5fbf4a', n: 8, r: 40, h: 56, dur: 0.8 }); V.spikeburst(T.x, T.y, { r: 46, n: 12, color: '#4fa03a', core: '#e8ffc0', ink: '#0e2a08', dur: 0.32 }); shake(3); },
+    thickBark: e => { V.shield(e, { shape: 'hex', color: '#b08a5a', dur: 1.2, r: 40 }); V.debris(e.x, e.y, { n: 4, color: '#6a5034' }); },
+    seedBurst: (e, t) => { const w = t || e; V.lightfall(w.x, w.y, { color: '#b0ff8a', r: 30, h: 220, dur: 0.8, feathers: 0 }); V.grove(w.x, w.y, { r: 70, dur: 1.6, flowers: 6, follow: w }); V.plus(w.x, w.y, { color: '#9aff8a', n: 8 }); },
+    treantSlam: (e, t) => { const T = at(e, t), x = T.x + 30, y = T.y + 10; V.shock(x, y, { r: 80, color: '#8aff6a', dur: 0.4, w: 5 }); V.decal(x, y, { style: 'crack', r: 44, dur: 2, a: 0.55, seed: Math.random() * 6 });
+      V.debris(x, y, { n: 5, color: '#6a5034' }); V.motes(x, y, { kind: 'leaf', color: '#6fbf5a', n: 5, r: 30 }); shake(3); },
+    // Chronomancer
+    dejavu: e => { V.ribbons(e.x, e.y, { r: 46, dur: 0.9, dir: -1, follow: e, colors: ['#9fe8ff', '#e0d4ff', '#ffd27a'] }); },
+    futureMark: (e, t) => { const T = at(e, t); V.ink(T.x, T.y, { r: 50, dur: 6 }); V.sigil(T.x, T.y, { r: 50, style: 'clock', color: '#9fe8ff', dur: 6, spin: 0.6 }); },
+    futureBurst: (e, t) => { const T = at(e, t); V.burst(T.x, T.y, { color: '#9fe8ff', color2: '#ffffff', n: 16, speed: 240, kind: 'star' }); V.shock(T.x, T.y, { r: 80, color: '#9fe8ff', dur: 0.4, w: 5 }); },
+    clockStrike: (e, t) => { const T = at(e, t); V.lightning(e.x, e.y - 104, T.x, T.y, { color: '#ffe6a8', jag: 12, dur: 0.3 }); V.hit(T.x, T.y, '#ffd27a', 0.8); V.plus(e.x, e.y, { color: '#ffe6a8', n: 3 }); },
+    secondChance: (e, t) => { const w = t || e; V.sigil(w.x, w.y, { r: 60, style: 'clock', color: '#9fe8ff', dur: 1, spin: -4, follow: w }); V.lightfall(w.x, w.y, { color: '#bff0ff', r: 30, h: 240, dur: 0.7, feathers: 0 }); },
+  });
+})();
