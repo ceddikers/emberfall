@@ -819,6 +819,34 @@ body:has(#loot:not(.hidden)) #results { padding-right: 332px; }
 .it-talent { margin-top: 6px; padding: 6px 8px; border-left: 2px solid var(--gold); background: #c9a45c12; font-size: 12px; color: #ece4d4; }
 .it-talent u { text-decoration: none; color: var(--gold-hi); font-weight: 700; }
 .slot.talented::before { content: ''; position: absolute; left: -3px; bottom: -3px; width: 7px; height: 7px; transform: rotate(45deg); background: var(--gold); border: 1px solid #120d06; z-index: 4; }
+/* ---------------------------------------------------------------- hero select: role bands (the roster grows past 16) */
+.sel-page#sel-grid { width: min(1180px, 100%); }
+#sel-grid .sel-head { margin: 0 0 14px; }
+#altar { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+.altar-band { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 10px 10px 0; border-top: none; border-left: 2px solid var(--c); }
+.altar-band h3 { margin: 6px 0 0; padding-left: 12px; text-align: left; display: grid; gap: 2px; }
+.altar-band h3 i { font-style: normal; font-family: inherit; font-size: 11px; letter-spacing: .1em; color: var(--muted); font-variant-numeric: tabular-nums; }
+.band-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(196px, 1fr)); gap: 6px; }
+.altar-band .hero-card { gap: 8px; min-height: 66px; padding: 2px 10px 2px 0; }
+.altar-band .hero-card canvas { width: 62px !important; height: 62px !important; }
+.altar-band .hc-text b { font-size: 14px; }
+.altar-band .hc-text small { font-size: 11.5px; line-height: 1.25; }
+.altar-band .hc-text .diff { font-size: 10px; letter-spacing: 2px; }
+.altar-band .hc-taken { top: 4px; right: 8px; font-size: 10px; }
+.altar-band .hc-text { min-width: 0; }
+.altar-band .hc-text b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hc-cx { position: absolute; right: 8px; bottom: 7px; display: flex; gap: 3px; }
+.hc-cx i { width: 4px; height: 4px; transform: rotate(45deg); background: color-mix(in srgb, var(--a) 70%, #f2e6c8); opacity: .75; }
+@media (max-width: 760px) {
+  .altar-band { grid-template-columns: minmax(0, 1fr); padding: 8px; }
+  .altar-band h3 { display: flex; gap: 8px; align-items: baseline; padding-left: 4px; margin: 0; }
+  .band-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+  .altar-band .hero-card { min-height: 52px; gap: 6px; padding-right: 6px; }
+  .altar-band .hero-card canvas { width: 44px !important; height: 44px !important; }
+  .altar-band .hc-text b { font-size: 11.5px; letter-spacing: .01em; }
+  .altar-band .hc-text small { font-size: 10.5px; }
+  #sel-grid .sel-head h2 { font-size: 24px; padding: 0 48px; }
+}
 
 /* Alembist (classes-b): the recipe book in the bandolier and Catalyst tooltips; sealed Reactions stay unread */
 .alem-book { margin-top: 6px; display: grid; gap: 2px; }

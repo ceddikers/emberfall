@@ -24,6 +24,11 @@ const RAIDS = [   // [boss name, boss id, tank, healer, two DPS]
   ['the Hollow King', 'hollowking', 'bastion:sentinel', 'grovekeeper:lifebinder', 'ranger:base', 'pyromancer:cataclysm'],
   ['the Hollow King', 'hollowking', 'bastion:crusader', 'chronomancer:echoist', 'shadowblade:base', 'ranger:sharpshooter'],
   ['the Hollow King', 'hollowking', 'runeguard:spellwarden', 'cleric:base', 'ranger:venomstrike', 'shadowblade:nightstalker'],
+  // the advanced classes (classes-a): each spec somewhere
+  ['Grubnak', 'grubnak', 'bastion:base', 'cleric:base', 'thermist:base', 'driftblade:base'],
+  ['Skitterra', 'skitterra', 'bloodreaver:base', 'grovekeeper:base', 'thermist:pendulum', 'driftblade:orbit'],
+  ['Volkar', 'volkar', 'bastion:base', 'cleric:base', 'thermist:zenith', 'driftblade:comet'],   // (with the reworked Volkar, an Accelerant plus two advanced DPS was too tight)
+  ['the Hollow King', 'hollowking', 'runeguard:base', 'cleric:aegis', 'thermist:base', 'driftblade:base'],
   // Alembist (classes-b): the base kit and each spec healing a boss
   ['Grubnak', 'grubnak', 'bastion:base', 'alembist:base', 'ranger:base', 'pyromancer:base'],
   ['Skitterra', 'skitterra', 'bastion:sentinel', 'alembist:volatile', 'ranger:base', 'shadowblade:base'],
@@ -101,7 +106,7 @@ function data() {
   const steps = []; let last = tr.at(0.3).x, overshoot = false;
   for (let t = 0.3 + 1 / 60; t < 2.0; t += 1 / 60) { feed(t); const x = tr.at(t).x; steps.push(x - last); last = x; if (x > 400.01) overshoot = true; }
   const spread = Math.max(...steps) - Math.min(...steps);
-  if (!overshoot && spread < 0.05) pass('Network smoothing is even', `step ${steps[0].toFixed(2)} Â± ${(spread / 2).toFixed(3)}`);
+  if (!overshoot && spread < 0.05) pass('Network smoothing is even', `step ${steps[0].toFixed(2)} ± ${(spread / 2).toFixed(3)}`);
   else fail('Network smoothing is even', `spread ${spread.toFixed(3)}, overshoot ${overshoot}`);
 
   // ... and stays even over a wobbly connection: 40-75 ms delivery, noticed only on the receiver's next frame,
@@ -290,16 +295,27 @@ function talents() {
         if (!t.name || !t.text) probs.push(`${where}: needs a name and text`);
         if (!KITS[c.id].abilities.some(a => a.id === t.ab)) probs.push(`${where}: unknown ability ${t.ab}`);
         for (const k of Object.keys(t)) if (!['id', 'name', 'ab', 'text', 'spec', 'cd', 'cast', 'specMods', 'grants'].includes(k)) probs.push(`${where}: unknown field "${k}"`);
-        // a talent that grants a new move: the kit holds it in talentAbilities, in place of the talent's own ability
-        const granted = t.grants && KITS[c.id].talentAbilities && KITS[c.id].talentAbilities[t.id];
-        if (t.grants && (!granted || granted.replaces !== t.ab)) probs.push(`${where}: grants a move the kit doesn't have (talentAbilities.${t.id}, replacing ${t.ab})`);
-        if (granted) used.add(t.id);
+        // a talent that grants a new move (`grants: true`): specs.js talentMoveFor finds it (TALENT_ABILITIES in kits.js, or a
+        // kit's own talentAbilities), for the base kit and every spec, and it takes the slot of the talent's own ability
+        const moves = [null, ...specIds].map(s => ({ s, mv: talentMoveFor(c.id, s, t.id) }));
+        const grant = moves.some(m => m.mv);
+        if (t.grants && !grant) probs.push(`${where}: says grants but no move is registered for it`);
+        if (!t.grants && grant) probs.push(`${where}: has a new move but no grants: true`);
+        for (const { s, mv } of moves) {
+          if (!t.grants) break;
+          if (!mv) { probs.push(`${where}: no move${s ? ' for ' + s : ''}`); continue; }
+          if (mv.replaces !== t.ab) probs.push(`${where}${s ? ' (' + s + ')' : ''}: its move replaces ${mv.replaces}, not ${t.ab}`);
+          if (!mv.id || !mv.name || !mv.desc || typeof mv.effect !== 'function') probs.push(`${where}${s ? ' (' + s + ')' : ''}: its move needs an id, name, desc and effect`);
+          if (KITS[c.id].abilities.some(a => a.id === mv.id)) probs.push(`${where}: its move reuses the id ${mv.id}`);
+        }
+        if (grant) used.add(t.id);
         for (const s of Object.keys(t.spec || {})) if (!specIds.includes(s)) probs.push(`${where}: text for unknown spec ${s}`);
         for (const [s, m] of Object.entries(t.specMods || {})) {
           if (!specIds.includes(s)) probs.push(`${where}: specMods for unknown spec ${s}`);
           for (const k of Object.keys(m)) if (!['cd', 'cast'].includes(k)) probs.push(`${where}: specMods field "${k}"`);
         }
-        if (!used.has(t.id) && t.cd == null && t.cast == null) probs.push(`${where}: does nothing (no k.talent('${t.id}') in the kits, no cd/cast)`);
+        if (!used.has(t.id) && t.cd == null && t.cast == null) probs.push(`${where}: does nothing (no k.talent('${t.id}') in the kits, no cd/cast, no new move)`);
+
       }
     });
   }

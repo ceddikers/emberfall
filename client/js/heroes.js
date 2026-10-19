@@ -697,6 +697,7 @@ function drawHero(ctx, cls, x, y, angle, st, scale = 1, opts = {}) {
   const chP = cls ? channelP(st) : -1;
   if (chP >= 0) drawChannelGround(ctx, cls, st, chP);
   if (opts.spec && SPEC_GROUND[opts.spec]) SPEC_GROUND[opts.spec](ctx, st);
+  if (cls && HERO_TRAIL[cls.id]) HERO_TRAIL[cls.id](ctx, x, y, st, scale, opts.spec);   // world-space trails (the Driftblade's wind)
   ctx.translate(0, -lift);
   const big = pulse(actP(st, 'big'));
   if (cls && big > 0) glow(ctx, 0, 0, 36, cls.accent, big * 0.6);
@@ -774,3 +775,139 @@ function drawDummy(ctx, x, y, st, scale) {
   circle(ctx, 0, 0, 1.2, '#f2efe6');
   ctx.restore();
 }
+
+// ---------------------------------------------------------------- the advanced DPS (Thermist, Driftblade)
+Object.assign(HERO_ART, {
+  // Thermist: a mage in a plum robe with split trim, the left arm frosted to the elbow, the right hand wreathed in flame.
+  thermist(ctx, st) {
+    const robe = '#3d2b40', skin = '#ecc6a6', hair = '#e9e3ea';
+    const cast = castAmt(st);
+    feet(ctx, st, '#22182a');
+    // a short silver tail tied with a red and a blue cord
+    braid(ctx, -6, 0.5, -15, 1.5 + Math.sin(st.t * 2) * 0.8, hair, '#ff7a3a', 4);
+    circle(ctx, -9.5, 1, 0.9, '#7ac8ff');
+    ellipse(ctx, -2, 0, 10.5, 14.5, 0, robe, OUT, 2);
+    ellipse(ctx, -0.5, -3, 5, 6, 0, shade(robe, 0.14));
+    ctx.save(); ctx.lineWidth = 1.5; ctx.lineCap = 'round';
+    ctx.strokeStyle = rgba('#8fd4ff', 0.9); ctx.beginPath(); ctx.ellipse(-2, 0, 7.5, 11.5, 0, Math.PI * 1.04, Math.PI * 1.96); ctx.stroke();
+    ctx.strokeStyle = rgba('#ff9a4a', 0.9); ctx.beginPath(); ctx.ellipse(-2, 0, 7.5, 11.5, 0, Math.PI * 0.04, Math.PI * 0.96); ctx.stroke();
+    ctx.restore();
+    // left arm: frost creeping up the sleeve to the elbow, shards on the forearm, a pale blue hand
+    const lx = 9 + cast * 6, ly = -11 + cast * 1.5;
+    limb(ctx, [0, -10, 4.5, -12.5, lx, ly], robe, 4.2);
+    limb(ctx, [4.5, -12.5, lx, ly], '#bfe4fb', 3.4);
+    for (const [sx, sy, a] of [[5.5, -14.5, -0.9], [7.5, -14, -0.4], [6, -10.5, 0.8]]) poly(ctx, [sx, sy, sx + Math.cos(a) * 3.2, sy + Math.sin(a) * 3.2, sx + 1, sy + 0.6], '#e8f8ff', OUT, 0.8);
+    hand(ctx, lx, ly, '#cfe9ff');
+    glow(ctx, lx + 1, ly, 7 + cast * 4, '#9fe0ff', 0.25 + cast * 0.3);
+    // right arm: a bare forearm and a hand cupping a flame
+    const rx = 10 + cast * 6, ry = 10 - cast * 2;
+    limb(ctx, [0, 10, 4.5, 12.5, rx, ry], robe, 4.2);
+    hand(ctx, rx, ry, skin);
+    flame(ctx, rx + 3, ry, 3.2 + cast * 2.5, st.t);
+    hairHead(ctx, hair, skin, 7.4);
+    circle(ctx, -2, -2.5, 1.4, '#ffffff');
+    // a spark and a snowflake circling each other over the shoulders
+    const a = st.t * 1.8, ex = Math.cos(a) * 15, ey = Math.sin(a) * 13;
+    glow(ctx, ex, ey, 5, '#ff8a3a', 0.6); circle(ctx, ex, ey, 1.2, '#ffd27a');
+    ctx.save(); ctx.translate(-ex, -ey); ctx.rotate(st.t);
+    for (let i = 0; i < 3; i++) { const q = i * Math.PI / 3; line(ctx, -Math.cos(q) * 2.4, -Math.sin(q) * 2.4, Math.cos(q) * 2.4, Math.sin(q) * 2.4, '#d8f2ff', 0.9); }
+    ctx.restore();
+  },
+
+  // Driftblade: a light duellist in a slate coat, a long jade ribbon scarf streaming behind, a curved sabre in the right hand.
+  driftblade(ctx, st) {
+    const coat = '#33475c', sash = '#3fc29d', skin = '#d6a37c', hair = '#1d272b';
+    const pa = actP(st, 'attack'), s = swing(pa), sd = swingDir(st);
+    const pb = actP(st, 'brace'), brace = pb < 0 ? 0 : Math.min(1, pb / 0.1, (1 - pb) / 0.15);
+    const dash = pulse(actP(st, 'dash'));
+    // the scarf: long and straight at speed, loose and curling at rest
+    const mv = st.moving || dash > 0, n = mv ? 10 : 7, pts = [];
+    for (let i = 0; i < n; i++) pts.push(-4 - i * (mv ? 4.2 : 3), -2 + Math.sin(st.t * (mv ? 13 : 3.5) - i * 0.85) * i * (mv ? 0.55 : 0.9) + (mv ? 0 : i * 0.6));
+    limb(ctx, pts, sash, 3.2);
+    const tip = pts.length - 2;
+    poly(ctx, [pts[tip], pts[tip + 1] - 2.2, pts[tip] - 4, pts[tip + 1], pts[tip], pts[tip + 1] + 2.2], sash, OUT, 1);
+    feet(ctx, st, '#1e252c');
+    torso(ctx, coat, 8.5, 13);
+    line(ctx, -6, -9, 3, 10, sash, 2.4);
+    // off hand back for balance (forward to steady the blade while bracing)
+    hand(ctx, 2 + brace * 9, -11 + brace * 4, skin);
+    // the sabre: held low and back, swept across on attacks, held flat across the front to parry
+    const rot = brace > 0 ? -1.35 * brace + 0.5 * (1 - brace) : 0.5 + s * 1.25 * sd;
+    ctx.save(); ctx.translate(9 + brace * 4, 10 - brace * 4); ctx.rotate(rot);
+    ctx.fillStyle = '#e4ecf2'; ctx.strokeStyle = OUT; ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.moveTo(2, -1.6); ctx.quadraticCurveTo(15, -3.2, 27, -6.5); ctx.quadraticCurveTo(16, 0.5, 2, 1.6); ctx.closePath(); ctx.fill(); ctx.stroke();
+    line(ctx, 4, -0.4, 22, -4.2, '#ffffff', 0.8);
+    ellipse(ctx, 1, 0, 1.4, 4, 0, '#c8a24a', OUT, 1);
+    ctx.restore();
+    if (pa >= 0) smear(ctx, 9, 10, 24, 0.5 + 1.25 * sd, 0.5 - 1.5 * sd * strikeAmt(pa), '#7ff0d0', strikeAmt(pa));
+    hand(ctx, 9 + brace * 4, 10 - brace * 4, skin);
+    // dark hair swept back into a high tail
+    poly(ctx, [-3, -2.6, -14, Math.sin(st.t * 6) * 1.5, -3, 2.6], hair, OUT, 1.2);
+    hairHead(ctx, hair, skin, 7.3);
+    circle(ctx, -4.5, 0, 1.4, sash, OUT, 0.8);
+  },
+});
+
+Object.assign(SPEC_ART, {
+  // Pendulum: a brass bob swinging from the waist on a short chain
+  pendulum(ctx, st) {
+    const a = Math.sin(st.t * 2.4) * 0.9, bx = -6 + Math.cos(Math.PI + a) * -2, by = Math.sin(a) * 14;
+    line(ctx, -5, 0, -12 + bx * 0.2, by, '#c8a24a', 1.1);
+    circle(ctx, -12 + bx * 0.2, by, 3, '#d8b25a', OUT, 1.1);
+    circle(ctx, -12.8 + bx * 0.2, by - 0.8, 1, '#fff2c0');
+  },
+  // Zenith: a small crown of flame and frost over the brow, burning brighter in Redline
+  zenith(ctx, st) {
+    for (let i = 0; i < 5; i++) {
+      const a = -1.1 + i * 0.55, x = Math.cos(a) * 7.8, y = Math.sin(a) * 7.8, hot = i >= 2;
+      glow(ctx, x, y, 4, hot ? '#ff7a3a' : '#8fd4ff', 0.5 + Math.sin(st.t * 7 + i) * 0.15);
+      poly(ctx, [x - 1.2, y - 1.2, x + Math.cos(a) * 3, y + Math.sin(a) * 3, x + 1.2, y + 1.2], hot ? '#ffb05a' : '#cfeeff', OUT, 0.7);
+    }
+  },
+  // Orbit: a dashed ring of wind turning round them, a feather riding it
+  orbit(ctx, st) {
+    ctx.save(); ctx.rotate(st.t * 2.2);
+    ctx.setLineDash([5, 6]); circle(ctx, 0, 0, 22, null, rgba('#a8f0c8', 0.55), 1.3); ctx.setLineDash([]);
+    ellipse(ctx, 22, 0, 3.4, 1.3, 1.57, '#e8fff2', OUT, 0.8);
+    ctx.restore();
+  },
+  // Comet: a gold streak trailing straight back from the shoulders
+  comet(ctx, st) {
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    const k = st.moving ? 1 : 0.4;
+    for (const [y, w] of [[-6, 1.6], [0, 2.4], [6, 1.6]]) { ctx.globalAlpha = 0.5 * k; line(ctx, -8, y, -24 - (st.moving ? 10 : 0), y * 0.6, '#ffd08a', w); }
+    ctx.restore();
+    glow(ctx, 2, 0, 12, '#ffd08a', 0.2 * k);
+  },
+});
+
+CHANNEL.thermist = { focus: [16, 0], color: '#ff9a6a', hot: '#e8f6ff', mote: 'ember' };
+
+// World-space trails, drawn under the hero (called from drawHero after translate/scale; x, y are the hero's world position).
+const HERO_TRAIL = {
+  // the Driftblade's wind: two thin ribbons streaming from where they ran, fading in half a second
+  driftblade(ctx, x, y, st, scale, spec) {
+    if (!st || st.t == null) return;
+    const tr = st.windTrail || (st.windTrail = []);
+    const last = tr[tr.length - 1];
+    if (st.moving && (!last || Math.hypot(x - last.x, y - last.y) > 5)) tr.push({ x, y, t: st.t });
+    while (tr.length && (st.t - tr[0].t > 0.5 || st.t < tr[0].t)) tr.shift();
+    if (tr.length > 40) tr.splice(0, tr.length - 40);
+    if (tr.length < 2) return;
+    const col = spec === 'comet' ? '#ffd08a' : spec === 'orbit' ? '#a8f0c8' : '#8ff0d8';
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
+    for (const off of [-7, 7]) {
+      for (let i = 1; i < tr.length; i++) {
+        const a = tr[i - 1], b = tr[i], age = 1 - (st.t - b.t) / 0.5;
+        const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || 1, nx = -dy / d * off, ny = dx / d * off;
+        const wob = Math.sin(b.t * 18 + off) * 1.5;
+        ctx.globalAlpha = Math.max(0, age) * 0.55; ctx.strokeStyle = col; ctx.lineWidth = 1 + age * 2;
+        ctx.beginPath();
+        ctx.moveTo((a.x - x) / scale + nx * 0.5, (a.y - y) / scale + ny * 0.5 + wob);
+        ctx.lineTo((b.x - x) / scale + nx * 0.5, (b.y - y) / scale + ny * 0.5 + wob);
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
+  },
+};

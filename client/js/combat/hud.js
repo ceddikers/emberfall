@@ -1,21 +1,27 @@
 // Combat HUD for the local player: ability bar (Q W E R D F + Space), class gauge, cast bar, buffs.
 
 const SLOT_KEYS = ['Q', 'W', 'E', 'R', 'D', 'F', 'SPC', 'T'];   // 7: a tank's taunt
-// (a class whose icons aren't all painted yet can draw its own until they are: ICON_ART in gauges.js)
-const abilityIcon = (classId, abilityId) => (typeof ICON_ART !== 'undefined' && ICON_ART[classId] && ICON_ART[classId](abilityId)) || `icons/${classId}/${abilityId}.png`;
+// a class whose icons aren't all painted yet draws its own: ICON_ART in gauges.js (the Alembist), or drawnIcon below
+// for classes flagged art.icons === false in data.js (Thermist, Driftblade)
+const abilityIcon = (classId, abilityId) => (typeof ICON_ART !== 'undefined' && ICON_ART[classId] && ICON_ART[classId](abilityId)) || drawnIcon(classId, abilityId) || `icons/${classId}/${abilityId}.png`;
 
 const BUFF_NAMES = {
   oath: 'Oath of Valor', frenzy: 'Frenzy', gorge: 'Gorged', undying: 'Undying', overload: 'Runic Overload',
   markself: "Hunter's Mark", keen: 'Keen Eye', barrage: 'Barrage', truenorth: 'Shadowstep', dance: 'Shadow Dance',
   combust: 'Combustion', heating: 'Heating Up', hotstreak: 'Hot Streak', burnt: 'Burnt Out', growth: 'Wild Growth',
   awaken: 'Awakened', surge: 'Surge', lag: 'Time Lag', radiant: 'Radiant', verdict: 'Swift Verdict', chamber: 'Echo Chamber', moonlit: 'Moonlit', aim: 'Steady Aim', incircle: 'Ember Circle',
+  // the advanced classes
+  brink: 'On the Brink', overheat: 'Overheat', frostbite: 'Frostbite', attuned: 'Attuned', momentum: 'Momentum', redline: 'Redline', rebound: 'Rebound',
+  still: 'Stillpoint', gale: 'Gale Run', orbit: 'Orbit', tailwind: 'Tailwind',
 };
-const BAD_BUFFS = new Set(['burnt', 'lag']);
+const BAD_BUFFS = new Set(['burnt', 'lag', 'overheat', 'frostbite']);
 // which ability's icon a buff wears
 const BUFF_ICON = {
   oath: 'oath', frenzy: 'frenzy', gorge: 'drain', undying: 'undying', overload: 'overload', markself: 'mark', keen: 'pierce',
   barrage: 'barrage', truenorth: 'step', dance: 'dance', combust: 'combust', heating: 'fireblast', hotstreak: 'pyro', burnt: 'vent',
   growth: 'growth', awaken: 'bloom', surge: 'shift', lag: 'shift', radiant: 'edge', verdict: 'smite', chamber: 'accel', moonlit: 'growth', aim: 'pierce', incircle: 'combust',
+  brink: 'flare', overheat: 'cinder', frostbite: 'rime', attuned: 'invert', momentum: 'equil', redline: 'flare', rebound: 'lance',
+  still: 'still', gale: 'gale', orbit: 'slip', tailwind: 'hook',
 };
 
 // hover text for each class gauge: what fills it, what spends it, and (state) a live readout under the name
@@ -37,6 +43,14 @@ const GAUGE_TIPS = {
   chronomancer: {
     desc: 'Fills by 3 a second in Slow stance and drains by 5 a second in Haste. Shifting into Haste needs 20. Run dry in Haste and you drop back to Slow with slower casts for 3s.',
     state: k => (k.g.stance === 'haste' ? 'Haste' : 'Slow') + ' stance',
+  },
+  thermist: {
+    desc: 'Fire spells push the dial right, frost spells push it left. Each step from 0 makes that side\'s spells 8% stronger. Cross 0 after reaching 3 or more and the swing detonates as a Thermal Shock. Past +5 you overheat, past -5 you freeze.',
+    state: k => (k.g.peak >= 3 && k.g.side ? `Shock armed (${k.g.peak})` : 'Shock not armed') + (k.def.redline ? ` · Strain ${Math.floor(k.g.strain || 0)}` : ''),
+  },
+  driftblade: {
+    desc: 'Moving fills it by 20 a second; standing still drains it by 30. Most of your cuts hit harder the fuller it is. Crosswind spends it all.',
+    state: k => `+${Math.round(Math.min(1, (k.g.drift || 0) / 100) * 100)}% to Drift moves`,
   },
 };
 
@@ -214,3 +228,48 @@ const Hud = {
     }
   },
 };
+
+// ---------------------------------------------------------------- drawn ability icons (classes without painted icons yet)
+// A dark tile in the class accent with a simple glyph per move. Cached as data URLs; null for classes that have art.
+const DRAWN_ICONS = {};
+const ICON_GLYPHS = {
+  thermist: {
+    cinder: c => { c.fillStyle = '#ff8a3a'; c.beginPath(); c.arc(30, 34, 9, 0, TAU); c.fill(); c.fillStyle = '#ffe08a'; c.beginPath(); c.arc(32, 32, 4, 0, TAU); c.fill(); c.strokeStyle = '#ff8a3a'; c.lineWidth = 3; c.beginPath(); c.moveTo(22, 40); c.lineTo(10, 52); c.stroke(); },
+    rime: c => { c.fillStyle = '#9ad8ff'; c.beginPath(); c.moveTo(32, 10); c.lineTo(40, 32); c.lineTo(32, 54); c.lineTo(24, 32); c.closePath(); c.fill(); c.fillStyle = '#e8f8ff'; c.fillRect(31, 18, 2, 28); },
+    flare: c => { c.fillStyle = '#ffa64a'; c.beginPath(); for (let i = 0; i < 16; i++) { const a = i * TAU / 16, r = i % 2 ? 9 : 22; c.lineTo(32 + Math.cos(a) * r, 32 + Math.sin(a) * r); } c.fill(); c.fillStyle = '#fff2c0'; c.beginPath(); c.arc(32, 32, 6, 0, TAU); c.fill(); },
+    lance: c => { c.fillStyle = '#7ac0f0'; c.beginPath(); c.moveTo(8, 56); c.lineTo(56, 8); c.lineTo(46, 26); c.lineTo(14, 58); c.closePath(); c.fill(); c.strokeStyle = '#e8f8ff'; c.lineWidth = 2; c.beginPath(); c.moveTo(14, 52); c.lineTo(52, 12); c.stroke(); },
+    equil: c => { c.fillStyle = '#4f94d8'; c.beginPath(); c.arc(32, 32, 18, Math.PI / 2, Math.PI * 1.5); c.fill(); c.fillStyle = '#f08236'; c.beginPath(); c.arc(32, 32, 18, -Math.PI / 2, Math.PI / 2); c.fill(); c.fillStyle = '#f2e6c8'; c.fillRect(30, 10, 4, 44); },
+    invert: c => { c.lineWidth = 5; c.strokeStyle = '#f08236'; c.beginPath(); c.arc(32, 32, 17, -Math.PI * 0.9, -0.1); c.stroke(); c.strokeStyle = '#6fb2f0'; c.beginPath(); c.arc(32, 32, 17, Math.PI * 0.1, Math.PI * 0.9); c.stroke(); c.fillStyle = '#f08236'; c.beginPath(); c.moveTo(50, 26); c.lineTo(56, 38); c.lineTo(43, 36); c.fill(); c.fillStyle = '#6fb2f0'; c.beginPath(); c.moveTo(14, 38); c.lineTo(8, 26); c.lineTo(21, 28); c.fill(); },
+    thermocline: c => { c.lineWidth = 5; const g = c.createLinearGradient(8, 0, 56, 0); g.addColorStop(0, '#ffa64a'); g.addColorStop(1, '#6fb2f0'); c.strokeStyle = g; c.beginPath(); for (let x = 8; x <= 56; x += 2) c.lineTo(x, 32 + Math.sin(x / 6) * 10); c.stroke(); },
+    zero: c => { c.strokeStyle = '#d8f0ff'; c.lineWidth = 3; for (let i = 0; i < 3; i++) { const a = i * Math.PI / 3; c.beginPath(); c.moveTo(32 - Math.cos(a) * 20, 32 - Math.sin(a) * 20); c.lineTo(32 + Math.cos(a) * 20, 32 + Math.sin(a) * 20); c.stroke(); } c.fillStyle = '#9ad8ff'; c.beginPath(); c.arc(32, 32, 5, 0, TAU); c.fill(); },
+    bleed: c => { c.strokeStyle = '#ff7a7a'; c.lineWidth = 3; for (const x of [22, 32, 42]) { c.beginPath(); c.moveTo(x, 50); c.bezierCurveTo(x - 6, 40, x + 6, 30, x, 14); c.stroke(); } },
+  },
+  driftblade: {
+    carve: c => { c.strokeStyle = '#e8fff8'; c.lineWidth = 5; c.lineCap = 'round'; c.beginPath(); c.arc(30, 36, 20, -2.4, 0.2); c.stroke(); c.strokeStyle = '#7fe8cc'; c.lineWidth = 2; c.beginPath(); c.arc(30, 36, 14, -2.2, 0); c.stroke(); },
+    slip: c => { c.strokeStyle = '#7fe8cc'; c.lineWidth = 3; c.lineCap = 'round'; for (const [y, l] of [[22, 30], [32, 40], [42, 26]]) { c.beginPath(); c.moveTo(10, y); c.lineTo(10 + l, y); c.stroke(); } c.fillStyle = '#e8fff8'; c.beginPath(); c.moveTo(56, 32); c.lineTo(44, 24); c.lineTo(44, 40); c.fill(); },
+    hook: c => { c.fillStyle = '#c86a5a'; c.beginPath(); c.arc(32, 32, 6, 0, TAU); c.fill(); c.strokeStyle = '#7fe8cc'; c.lineWidth = 4; c.lineCap = 'round'; c.beginPath(); c.arc(32, 32, 18, Math.PI * 0.8, Math.PI * 2.1); c.stroke(); c.fillStyle = '#7fe8cc'; c.beginPath(); c.moveTo(50, 36); c.lineTo(56, 24); c.lineTo(44, 26); c.fill(); },
+    cross: c => { c.strokeStyle = '#e8fff8'; c.lineWidth = 5; c.lineCap = 'round'; c.beginPath(); c.arc(12, 32, 30, -0.8, 0.8); c.stroke(); c.strokeStyle = '#7fe8cc'; c.beginPath(); c.arc(52, 32, 30, Math.PI - 0.8, Math.PI + 0.8); c.stroke(); },
+    still: c => { c.strokeStyle = '#f2e6c8'; c.lineWidth = 2; c.beginPath(); c.arc(32, 32, 18, 0, TAU); c.stroke(); c.strokeStyle = '#e8fff8'; c.lineWidth = 4; c.beginPath(); c.moveTo(14, 46); c.lineTo(50, 18); c.stroke(); },
+    gale: c => { c.strokeStyle = '#7fe8cc'; c.lineWidth = 4; c.lineCap = 'round'; c.beginPath(); for (let i = 0; i < 40; i++) { const a = i * 0.32, r = 3 + i * 0.55; c.lineTo(32 + Math.cos(a) * r, 32 + Math.sin(a) * r); } c.stroke(); },
+    impact: c => { const g = c.createLinearGradient(8, 56, 46, 18); g.addColorStop(0, 'rgba(255,208,138,0)'); g.addColorStop(1, '#ffd08a'); c.strokeStyle = g; c.lineWidth = 8; c.lineCap = 'round'; c.beginPath(); c.moveTo(8, 56); c.lineTo(44, 20); c.stroke(); c.fillStyle = '#fff2c0'; c.beginPath(); c.arc(46, 18, 7, 0, TAU); c.fill(); },
+    gyre: c => { c.strokeStyle = '#a8f0c8'; c.lineWidth = 4; c.lineCap = 'round'; for (const o of [0, Math.PI]) { c.beginPath(); c.arc(32, 32, 18, o, o + 2.4); c.stroke(); } c.fillStyle = '#e8fff8'; c.beginPath(); c.arc(32, 32, 4, 0, TAU); c.fill(); },
+    tailspin: c => { c.strokeStyle = '#e8fff8'; c.lineWidth = 3; c.lineCap = 'round'; for (let i = 0; i < 3; i++) { const a = i * TAU / 3; c.beginPath(); c.arc(32 + Math.cos(a) * 6, 32 + Math.sin(a) * 6, 16, a, a + 1.6); c.stroke(); } },
+  },
+};
+function drawnIcon(classId, abilityId) {
+  if (typeof document === 'undefined' || typeof CLASSES === 'undefined') return null;
+  const key = classId + '/' + abilityId;
+  if (key in DRAWN_ICONS) return DRAWN_ICONS[key];
+  const cls = CLASSES.find(x => x.id === classId);
+  if (!cls || !cls.art || cls.art.icons !== false) return (DRAWN_ICONS[key] = null);
+  const cv = document.createElement('canvas'); cv.width = cv.height = 64;
+  const c = cv.getContext('2d');
+  const bg = c.createRadialGradient(32, 26, 4, 32, 32, 46);
+  bg.addColorStop(0, shade(cls.accent, -0.35)); bg.addColorStop(1, '#14111a');
+  c.fillStyle = bg; c.fillRect(0, 0, 64, 64);
+  const g = ICON_GLYPHS[classId] && ICON_GLYPHS[classId][abilityId];
+  if (g) g(c);
+  else { c.fillStyle = '#f2e6c8'; c.font = '700 30px Cinzel, Georgia, serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(abilityId[0].toUpperCase(), 32, 34); }
+  c.strokeStyle = rgba(cls.accent, 0.6); c.lineWidth = 2; c.strokeRect(1, 1, 62, 62);
+  return (DRAWN_ICONS[key] = cv.toDataURL());
+}

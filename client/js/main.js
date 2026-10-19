@@ -41,9 +41,10 @@
 
   const lineup = CLASSES.map((cls, i) => {
     const roleIdx = ['tank', 'dps', 'healer'].indexOf(cls.role);
-    const col = CLASSES.filter(c => c.role === cls.role).indexOf(cls);
-    const p = lineupSpot(roleIdx, col);
-    return { kind: 'hero', cls, x: p.x, y: p.y, angle: Math.PI / 2, st: newSt(i * 0.7), nextAct: 2 + Math.random() * 6 };
+    const same = CLASSES.filter(c => c.role === cls.role), col = same.indexOf(cls);
+    const p = lineupSpot(roleIdx, col, Math.max(3, same.length));
+    // labelUp: in a packed row every other name sits higher, so neighbours' names don't run together
+    return { kind: 'hero', cls, x: p.x, y: p.y, angle: Math.PI / 2, st: newSt(i * 0.7), nextAct: 2 + Math.random() * 6, labelUp: same.length > 3 && col % 2 === 1 };
   });
   const keeper = { kind: 'keeper', x: TOWN.keeper.x, y: TOWN.keeper.y, angle: Math.PI / 2, st: newSt() };
   const trainer = { kind: 'trainer', x: TOWN.trainer.x, y: TOWN.trainer.y, angle: Math.PI / 2, st: newSt(1.3) };   // talents (talent-panel.js)
@@ -245,7 +246,7 @@
           const e = enemyPos(); if (e) { tx = e.x; ty = e.y; } else { const m = mouseWorld(); tx = m.x; ty = m.y; }
         }
         FX.cast(player, ab, tx, ty, { mine: true, tent: ally != null ? entById(ally) : null });
-        Net.send(Object.assign({ t: 'cast', i, x: rnd(player.x), y: rnd(player.y), tx: rnd(tx), ty: rnd(ty), ally, s: scene === 'arena' ? 1 : 0, c: +now.toFixed(3) }, ab.talent ? { a: ab.id } : null));
+        Net.send({ t: 'cast', i, a: ab.id, x: rnd(player.x), y: rnd(player.y), tx: rnd(tx), ty: rnd(ty), ally, s: scene === 'arena' ? 1 : 0, c: +now.toFixed(3) });
         break;
       }
       case 'auto': {
@@ -274,7 +275,7 @@
         failAt = now;
         FX.text(player.x, player.y - 56, ev.reason === 'target' ? (ev.ab.target === 'enemy' ? (inArena() && (raid.boss.u || raid.state !== 'live') ? 'No target' : 'Out of range') : 'No target') : 'Not ready', '#c8c0d8', 12, 0.7);
         break;
-      case 'teleport': teleportBehind(); break;
+      case 'teleport': if (ev.where && ev.where !== 'behind') kitMove(ev); else teleportBehind(); break;
       case 'fx': kitFx(ev.name, ev.data); break;
       case 'damage': onMyDamage(ev); break;
       default:
@@ -331,7 +332,7 @@
     const txt = rnd(ev.amount) + (ev.crit ? '!' : '') + (ev.positional ? ' ◆' : '');
     if (inArena()) {
       // damage goes to whatever you last aimed at (DoTs keep ticking on your current target)
-      const tgt = lastEnemy && lastEnemy.id != null && lastEnemy.id !== 'dummy' ? lastEnemy.id : 'boss';
+      const tgt = ev.tgt != null ? ev.tgt : lastEnemy && lastEnemy.id != null && lastEnemy.id !== 'dummy' ? lastEnemy.id : 'boss';
       sendCombat(Object.assign({}, ev, { tgt }));
       const at = enemyNow(tgt) || { x: raid.boss.x, y: raid.boss.y };
       FX.text(at.x + (Math.random() - 0.5) * 40, at.y - (tgt === 'boss' ? 70 : 34), txt, col, tgt === 'boss' ? big : big - 2);
@@ -506,10 +507,19 @@
     FX.add({ type: 'ring', x: player.x, y: player.y, r: 38, color: '#c58aff', dur: 0.45 });
   }
 
+  // a kit move (kits.js kitMoveDest): a dash, a swing round the target, a charge through it; it plays as a dash
+  function kitMove(ev) {
+    const en = enemyPos(), tgt = en ? { x: en.x, y: en.y } : null;
+    const dest = kitMoveDest(ev.where, player, tgt, player.target || mouseWorld(), ev.d);
+    if (inArena()) clampArena(dest); else { dest.x = clamp(dest.x, 40, WORLD.w - 40); dest.y = clamp(dest.y, 40, WORLD.h - 40); }
+    player.dashMove = { sx: player.x, sy: player.y, tx: dest.x, ty: dest.y, t0: now };
+    player.angle = tgt && ev.where !== 'dash' ? Math.atan2(tgt.y - dest.y, tgt.x - dest.x) : Math.atan2(dest.y - player.y, dest.x - player.x);
+    player.target = null; player.interact = null;
+  }
   // class moments (Perfect Block, Overheat...): the big effect plays for everyone, the text only for you
   function kitFx(name, data) {
     const x = player.x, y = player.y;
-    const label = { perfect: ['Perfect!', '#ffe27a'], reflect: ['Reflect!', '#e0d4ff'], overheat: ['Overheat', '#ff6a3a'], lag: ['Time Lag', '#9ab8c0'] }[name];
+    const label = { perfect: ['Perfect!', '#ffe27a'], reflect: ['Reflect!', '#e0d4ff'], overheat: ['Overheat', '#ff6a3a'], lag: ['Time Lag', '#9ab8c0'], frostbite: ['Frostbite', '#9ad8ff'], riposte: ['Riposte!', '#e8fff8'] }[name];
     if (label) FX.text(x, y - 62, label[0], label[1], 17, 1.1);
     playKitFx(player, name, true, data);
     Net.send(Object.assign({ t: 'kfx', k: name, s: scene === 'arena' ? 1 : 0 }, data ? { d: data } : null));
@@ -517,7 +527,7 @@
   function playKitFx(ent, name, mine, data) {
     const f = KIT_VFX[name];
     if (!f) return;
-    let target = name === 'reflect' || name === 'dawnstar' || name === 'radiant' || name === 'echo' ? (ent === player ? enemyPos() : (inArena() ? { x: raid.boss.x, y: raid.boss.y } : null)) : null;
+    let target = name === 'reflect' || name === 'dawnstar' || name === 'radiant' || name === 'echo' || f.atTarget ? (ent === player ? enemyPos() : (inArena() ? { x: raid.boss.x, y: raid.boss.y } : null)) : null;
     // a moment aimed somewhere (an Alembist's vial): data.to names an ally, data.en an enemy ('boss', an add, a dummy)
     if (data && typeof data === 'object') {
       if (data.en != null) target = inArena() ? (enemyNow(data.en) || { x: raid.boss.x, y: raid.boss.y }) : (ent === player ? enemyPos() : null);
@@ -1380,7 +1390,7 @@
       if (d <= stopAt) player.target = null;
       else {
         const reeled = inArena() && player.reel && now >= player.reel.pullAt;
-        const slow = (actP(player.st, 'brace') >= 0 ? 0.4 : 1) * (myDebuff('slowed') ? FIGHT.SLOWED : 1) * (reeled ? 0.4 : 1);
+        const slow = (actP(player.st, 'brace') >= 0 ? 0.4 : 1) * (myDebuff('slowed') ? FIGHT.SLOWED : 1) * (reeled ? 0.4 : 1) * windLaneBoost(player.x, player.y, dx, dy, FX.now);   // a Driftblade's Slipstream lane
         const step = Math.min(d, MOVE_SPEED * slow * dt);
         const ox = player.x, oy = player.y;
         player.x += dx / d * step; player.y += dy / d * step;
@@ -1771,7 +1781,7 @@
     VFX.draw(ctx, 'air');
     drawSmoke(ctx, now);
 
-    for (const h of lineup) if (Math.hypot(player.x - h.x, player.y - h.y) < 260 || hov?.label === h.cls.name) label(ctx, h.cls.name, h.x, h.y - 34, ROLES[h.cls.role].color, 11);
+    for (const h of lineup) if (Math.hypot(player.x - h.x, player.y - h.y) < 260 || hov?.label === h.cls.name) label(ctx, h.cls.name, h.x, h.y - (h.labelUp ? 47 : 34), ROLES[h.cls.role].color, 11);
     const bob = Math.sin(now * 4) * 3;
     label(ctx, '!', keeper.x, keeper.y - 40 + bob, '#ffd65a', 26, 'Cinzel, Georgia, serif', 800);
     label(ctx, 'Barkeep', keeper.x, keeper.y - 28 + 6, '#f0d48a', 11);
@@ -2006,11 +2016,13 @@
   let selPortrait = null, selFromGrid = false;
   // Optional painted portraits (client/portraits/<classId>.png, front-facing). Missing ones fall back to the sprite.
   const PORTRAITS = {};
-  for (const c of CLASSES) { const img = new Image(); img.onload = () => { PORTRAITS[c.id] = img; }; img.src = `portraits/${c.id}.png`; }
+  // (classes flagged art.portraits === false in data.js have none yet: skip them rather than ask for files that 404)
+  const hasPortraits = c => !(c.art && c.art.portraits === false);
+  for (const c of CLASSES.filter(hasPortraits)) { const img = new Image(); img.onload = () => { PORTRAITS[c.id] = img; }; img.src = `portraits/${c.id}.png`; }
   // spec portraits are big, so a hero's are fetched the first time its page opens, not at startup
   const SPEC_PORTRAITS = {}, specPortraitsAsked = new Set();
   function loadSpecPortraits(cid) {
-    if (specPortraitsAsked.has(cid)) return;
+    if (specPortraitsAsked.has(cid) || !hasPortraits(CLASSES.find(c => c.id === cid) || {})) return;
     specPortraitsAsked.add(cid);
     for (const sp of SPECS[cid] || []) { const key = `${cid}-${sp.id}`, img = new Image(); img.onload = () => { SPEC_PORTRAITS[key] = img; }; img.src = `portraits/${key}.png`; }
   }
@@ -2021,23 +2033,30 @@
     c.drawImage(img, (img.width - sw) / 2, (img.height - sh) * 0.15, sw, sh, x, y, size, size);
   }
   (function buildAltar() {
+    // one band per role (rows, so the roster can grow), compact tiles flowing inside each band
     const altar = $('altar');
-    for (const role of ['tank', 'dps', 'healer']) {
-      const col = document.createElement('div');
-      col.className = 'altar-col'; col.style.setProperty('--c', ROLES[role].color);
-      col.innerHTML = `<h3>${role === 'dps' ? 'Damage' : ROLES[role].name + 's'}</h3>`;
-      for (const cls of CLASSES.filter(c => c.role === role)) {
+    const COMPLEXITY = { 2: 'More moving parts than most', 3: 'Many moving parts' };
+    for (const role of Object.keys(ROLES)) {
+      const list = CLASSES.filter(c => c.role === role);
+      if (!list.length) continue;
+      const band = document.createElement('section');
+      band.className = 'altar-col altar-band'; band.style.setProperty('--c', ROLES[role].color);
+      band.innerHTML = `<h3>${role === 'dps' ? 'Damage' : ROLES[role].name + 's'}<i>${list.length}</i></h3><div class="band-grid"></div>`;
+      const grid = band.querySelector('.band-grid');
+      for (const cls of list) {
         const b = document.createElement('button');
         b.className = 'hero-card'; b.dataset.id = cls.id; b.style.setProperty('--a', cls.accent);
         const cv = document.createElement('canvas'); setupCanvas(cv, 112, 112);
         b.appendChild(cv);
-        b.insertAdjacentHTML('beforeend', `<span class="hc-text"><b>${cls.name}</b><small>${cls.title}</small><span class="diff">${diamonds(cls.difficulty)}</span></span><em class="hc-taken"></em>`);
+        // complexity pips: only on the classes that ask more of you (data.js `complexity` 2 or 3)
+        const cx = cls.complexity >= 2 ? `<span class="hc-cx" data-tip="${COMPLEXITY[cls.complexity] || COMPLEXITY[3]}">${'<i></i>'.repeat(cls.complexity)}</span>` : '';
+        b.insertAdjacentHTML('beforeend', `<span class="hc-text"><b>${cls.name}</b><small>${cls.title}</small><span class="diff">${diamonds(cls.difficulty)}</span></span>${cx}<em class="hc-taken"></em>`);
         Tip.set(b, () => `<b>${cls.name}</b><em>${ROLES[cls.role].name} · ${cls.title}</em>“${cls.tagline}”`);
         b.addEventListener('click', () => { selFromGrid = true; showDetail(cls); });
-        col.appendChild(b);
+        grid.appendChild(b);
         selThumbs.push({ cv, cls, b, st: newSt(Math.random() * 3) });
       }
-      altar.appendChild(col);
+      altar.appendChild(band);
     }
   })();
   // an ability's icon as a CSS background (the taunt layers its own painting over the icon it borrows)
@@ -2407,9 +2426,8 @@
     // where they cast from goes into their track like any position update (snapping here would fight the smoothing)
     if (!e.bot) { e.tx = msg.x; e.ty = msg.y; if (e.track) e.track.push(e.clock ? e.clock.map(msg.c, now) : now, msg.x, msg.y, e.track.latest().a); }
     if (msg.i === 6) { e.dashUntil = now + 0.2; VFX.setScale(0.6); KIT_VFX.dash(e, e.cls.accent); VFX.setScale(1); return; }
-    const kit = kitFor(e.cls.id, e.spec);
     // a move a talent granted (msg.a names it) looks like itself, not the move it replaced
-    const ab = (msg.a && kit.talentAbilities && Object.values(kit.talentAbilities).find(t => t.id === msg.a)) || kit.abilities[msg.i];
+    const ab = (msg.a && abilityById(e.cls.id, e.spec, msg.a)) || kitFor(e.cls.id, e.spec).abilities[msg.i];
     if (!ab) return;
     let tx = msg.tx, ty = msg.ty, tent = null;
     if (msg.ally != null) { tent = entById(msg.ally); if (tent) { tx = tent.x; ty = tent.y; } }

@@ -115,6 +115,27 @@ Object.assign(ITEM_PERKS, {
   alembist_a4: { ab: 'distill', text: 'Distill also makes the next vial you brew start fully ripe.' },
 });
 
+// ---------------------------------------------------------------- advanced classes: Thermist and Driftblade
+// Their class gear follows the same pattern as everyone's: a Common Recruit weapon, Legendary enhanced pieces and Rare
+// pieces with their boss's effect. Weapon shapes: 'crux' (two orbs, fire and frost, on one haft) and 'sabre'.
+Object.assign(CLASS_MAIN, { thermist: 'mag', driftblade: 'phys' });
+Object.assign(CLASS_GEAR, {
+  thermist: { wtype: 'crux', w: ["Recruit's Thermocrux", 'Simmer-and-Chill Crux', 'Frostweb Crux', 'Thunderthaw Crux', 'Crux of the Cold Hearth'], a: ['Hearthfrost Robes', 'Silkfrost Robes', 'Stormthaw Robes', 'Robes of the Banked Ember'] },
+  driftblade: { wtype: 'sabre', w: ["Recruit's Sabre", 'Filleting Sabre', 'Silkwind Sabre', 'Galecutter Sabre', 'Sabre of the Last Wind'], a: ['Kitchen-Runner Leathers', 'Webdancer Leathers', 'Squall-Rider Leathers', 'Barrowwind Leathers'] },
+});
+Object.assign(ITEM_PERKS, {
+  thermist_w1: { ab: 'cinder', text: 'Cinder Bolt hits 20% harder at +3 or hotter.' },
+  thermist_a2: { ab: 'equil', text: 'Equilibrium\'s shield is 50% stronger.' },
+  thermist_w2: { ab: 'invert', text: 'Inversion\'s Thermal Shock is 30% stronger.' },
+  thermist_w3: { ab: 'lance', text: 'Glacier Lance hits 15% harder at -3 or colder.' },
+  thermist_a4: { ab: 'invert', text: 'Inversion\'s Attunement lasts 14s instead of 10s.' },
+  driftblade_w1: { ab: 'carve', text: 'Carve\'s follow-through cut hits for 50% instead of 30%.' },
+  driftblade_a2: { ab: 'still', text: 'Stillpoint also gives 20 Drift.' },
+  driftblade_w2: { ab: 'cross', text: 'A Crosswind at 90 Drift or more strikes a second time for 30%.' },
+  driftblade_w3: { ab: 'gale', text: 'Gale Run lasts 15s instead of 12s.' },
+  driftblade_a4: { ab: 'slip', text: 'Slipstream gives 25 Drift instead of 15.' },
+});
+
 // ---------------------------------------------------------------- item effects
 // Effects are data. The combat engine runs them in your own kit (Kit.itemHook / Kit.fxMod in engine.js), like the
 // enhancements; the host only ever sees the ordinary combat events they cause. An effect is either

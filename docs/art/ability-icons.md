@@ -121,3 +121,31 @@ Second pass, 2026-10-19, in the same cartoon/anime fantasy style as `hero-portra
 - Paste the shared style block word for word for every class, and keep the same seed or style reference.
 - Shrink each finished row to 40 px and convert it to grey. If two icons look the same, redo one with a different shape.
 - Pick the image with the flattest shading and boldest shape. Skip any with soft airbrushed gradients or glow.
+
+## Advanced DPS (added 2026-10-19)
+
+Until these arrive the game draws simple glyph icons for both classes (data.js `art.icons: false`; flip it to `true` once the six icons, the two talent moves and the spec move from `spec-icons.md` are all in).
+
+**Thermist**: plum-charcoal background, brass, two accents: frost blue for frost moves, ember orange for fire moves. Keep each icon to one accent unless the move uses both.
+1. **Cinder Bolt** (`thermist/cinder`): a small, fat fire bolt diving down-right, cartoon flame tongues with curled tips, a short tail.
+2. **Rime Shard** (`thermist/rime`): one slim, faceted ice shard flying up-right, a few flat chips breaking off its tail.
+3. **Flare** (`thermist/flare`): an open hand-sized burst of flame shaped like a blooming flower, eight curled petals of fire round a pale yellow centre.
+4. **Glacier Lance** (`thermist/lance`): a long, heavy spear of blue ice, diagonal across the whole frame, its point white.
+5. **Equilibrium** (`thermist/equil`): a brass balance scale perfectly level, a small flame in one pan and a snowflake in the other.
+6. **Inversion** (`thermist/invert`): an hourglass turned on its side mid-flip, orange sand in one bulb and blue snow in the other, a curved arrow round it.
+
+Talent moves (they borrow the icon above until painted):
+7. **Thermocline** (`thermist/thermocline`): a single bolt whose head is orange and whose tail turns blue, a wavy line running through it.
+8. **Absolute Zero** (`thermist/zero`): a large, flat six-armed snowflake over a brass dial whose needle is pinned hard to the far left.
+
+**Driftblade**: slate-teal background, pale steel, jade accent.
+1. **Carve** (`driftblade/carve`): a curved sabre mid-cut, one thick jade crescent arc trailing it.
+2. **Slipstream** (`driftblade/slip`): three long tapered wind streaks running left to right, a single leaf riding the middle one.
+3. **Hook Turn** (`driftblade/hook`): a bold curved arrow hooking round a small dark post and coming back on itself, a sabre glint at the arrow's head.
+4. **Crosswind** (`driftblade/cross`): a wide crescent blade made of wind, flying across the frame, two leaves tumbling in its wake.
+5. **Stillpoint** (`driftblade/still`): a sabre held perfectly level, its point resting on a small circle drawn on the ground, the wind lines around it stopped dead.
+6. **Gale Run** (`driftblade/gale`): a spiral of jade wind, tight at the centre and opening outward, a ribbon caught in it.
+
+Talent moves (they borrow the icon above until painted):
+7. **Gyre** (`driftblade/gyre`): a ribbon making one full loop round a small dark post, four short cut marks spaced round the loop.
+8. **Tailspin** (`driftblade/tailspin`): three sabre arcs whirling round one centre, like a spinning top seen from above.

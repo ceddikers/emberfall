@@ -1212,28 +1212,7 @@ KITS.alembist = {
       fx: { color: '#ffb84a' },
     },
   ],
-  // moves a talent puts in place of one of the six (talents.js `grants`; engine.js swaps them in)
-  talentAbilities: {
-    alembist_blend: {
-      id: 'blend', replaces: 'batch', icon: 'batch', name: 'Grand Blend', type: 'ogcd', target: 'self', cd: 90, anim: 'big', lock: 0.3, talent: true,
-      desc: 'Pour every vial in your bandolier into one Grand Blend. Thrown, it does all of their effects at once where it lands, each at 80% of the strength it had.',
-      usable: k => k.g.vials.length >= 2,
-      effect(k) {
-        const parts = [];
-        for (const v of k.g.vials) { if (v.parts) parts.push(...v.parts); else parts.push({ r: v.r, m: alemStrength(k, v) }); }
-        const v = { r: 'BL', parts, at: k.now, born: k.now, id: ++k.g.n, keep: true };
-        if (k.def.alem.fuse) v.fuse = k.now + k.def.alem.fuse + (k.talent('alembist_cask') ? 2 : 0);
-        k.g.vials = [v]; k.g.sel = 0; k.g.count = 1;
-        k.g.popAt = k.now; k.g.popR = 'BL';
-        k.fx('brew', { r: 'BL' });
-        alemRestock(k);
-      },
-      fx: { color: '#ffe0a8' },
-    },
-    alembist_quicksilver: Object.assign(alemReagentAb('quicksilver', 'Q', 'Quicksilver', null,
-      'A quick reagent (0.75s) that takes Salt\'s place. Quicksilver + Quicksilver is a Silver Mirror, Quicksilver + Dew a Silver Tonic, Quicksilver + Ember a Fulminate.'),
-    { replaces: 'salt', icon: 'salt', talent: true }),
-  },
+
 };
 
 if (typeof module !== 'undefined') {
@@ -1245,4 +1224,514 @@ if (typeof module !== 'undefined') {
     alemSpoilTime, alemStrength, alemAb, alemPick, alemAdd, alemReagent, alemShieldAmt, alemSplash, alemBomb, alemRaise, alemRecipe, alemGoOff, alemLaunch,
     alemReagentAb, alemRoom, alemHealStock, alemOldestReady });
 }
+
+// ===================================================================================================================
+// ADVANCED CLASSES: Thermist and Driftblade (docs/plans/2026-10-new-classes.md). Each is built around one puzzle.
+// Kept in their own block, after the nine above, so later classes slot in beside them.
+// ===================================================================================================================
+
+// Where a kit move lands (Kit.teleport): me / tgt / aim are { x, y } (aim: where you're heading: the cursor or your move
+// target), d its reach. 'around' mirrors you through the target, 'through' charges past it, 'dash' goes toward aim.
+// The world clamps the spot to the arena and moves you (main.js for you, raid-host.js for bots).
+function kitMoveDest(where, me, tgt, aim, d = 170) {
+  if (where === 'around' && tgt) return { x: 2 * tgt.x - me.x, y: 2 * tgt.y - me.y };
+  if (where === 'through' && tgt) {
+    const dx = tgt.x - me.x, dy = tgt.y - me.y, L = Math.hypot(dx, dy) || 1;
+    return { x: tgt.x + dx / L * d, y: tgt.y + dy / L * d };
+  }
+  const to = aim && Math.hypot(aim.x - me.x, aim.y - me.y) > 4 ? aim : tgt;
+  const a = to && Math.hypot(to.x - me.x, to.y - me.y) > 4 ? Math.atan2(to.y - me.y, to.x - me.x) : (me.angle || 0);
+  return { x: me.x + Math.cos(a) * d, y: me.y + Math.sin(a) * d };
+}
+// how close point p comes to the segment a-b
+function kitSegDist(px, py, ax, ay, bx, by) {
+  const dx = bx - ax, dy = by - ay, L2 = dx * dx + dy * dy;
+  const q = L2 ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / L2)) : 0;
+  return Math.hypot(px - ax - dx * q, py - ay - dy * q);
+}
+
+// ---------------------------------------------------------------- Thermist: the dial
+// k.g.temp runs from -5 (Rime) to +5 (Blaze). k.g.side is the side of 0 it last stood on, and k.g.peak the furthest it
+// got on that side since it last crossed. A spell that carries the dial across 0 after a peak of 3 or more detonates
+// a Thermal Shock sized by the whole swing (the peak plus how far past 0 it landed): +5 down to -1 is a swing of 6.
+// Pushing past ±5 overloads you: Overheat (fire locked for 3s, and you burn) or Frostbite (casts 30% slower for 3s).
+// Zenith (k.def.redline) holds the edge instead, building Strain. Pendulum (k.def.stepBonus) moves it a step further.
+const THERMIST = { STEP: 0.08, EDGE: 5, SHOCK_MIN: 3, SHOCK_BASE: -120, SHOCK_PER: 105, REDLINE: 0.2, STRAIN: 11 };
+const THERM_SHOCK = { id: 'shock', name: 'Thermal Shock' };
+const thermAt = (k, n) => Math.abs(k.g.temp) >= n;
+const thermRedline = k => !!k.def.redline && thermAt(k, THERMIST.EDGE);
+// a spell's bonus from where the dial stands: +8% per step on its own side (both sides count while Attuned)
+function thermMult(k, el) {
+  const t = k.g.temp, side = k.has('attuned') ? Math.abs(t) : Math.max(0, el * t);
+  return (1 + THERMIST.STEP * side) * (thermRedline(k) ? 1 + THERMIST.REDLINE : 1);
+}
+// is this element's big spell being cast at its own edge (Flare at +5, Glacier Lance at -5)?
+const thermEdgeCast = (k, el) => k.g.temp === el * THERMIST.EDGE;
+// a Thermist spell's cast time: instant after a Shock with Rebound, at its own edge (big spells), or on its own side with
+// Flicker (quick spells). Only looks: asking must never spend Rebound (thermSpell does).
+function thermCast(k, el, base, edge) {
+  if (k.has('rebound') || (edge && thermEdgeCast(k, el))) return 0;
+  if (!edge && k.talent('thermist_flicker') && Math.sign(k.g.temp) === el) return 0;
+  return base;
+}
+
+// one Thermist spell: el +1 fire / -1 frost, moving the dial `steps` (plus Pendulum's extra step) after it hits.
+// o.edge: a big spell with the edge rule (at its own edge: instant, a sure crit, and On the Brink instead of moving).
+function thermSpell(k, ab, el, steps, pot, o = {}) {
+  const edge = !!o.edge && thermEdgeCast(k, el);
+  k.consume('rebound');
+  thermBrink(k, el);
+  const mult = thermMult(k, el) * (o.mult || 1) * thermPerk(k, ab, el);
+  const r = k.damage(pot, { ab, mult, autoCrit: edge && !k.def.redline });
+  if (edge && k.talent('thermist_twin')) k.after(0.3, () => { k.damage(pot * (k.def.redline ? 0.09 : 0.3), { ab, mult, extra: true }); k.fx('twin', { el }); });
+  if (edge && k.talent('thermist_afterglow')) k.dot(el > 0 ? 'afterglow' : 'afterfrost', k.def.redline ? 30 : 42, 9, 3, { ab });
+  if (el > 0 && k.talent('thermist_embers') && k.g.temp >= 3) k.g.embers = Math.min(3, (k.g.embers || 0) + 1);
+  if (edge && !k.def.redline) k.buff('brink', 6, { el });   // held at the edge: the same element next overloads you
+  else thermMove(k, el * (steps + (k.def.stepBonus || 0)));
+  return r;
+}
+const thermPerk = (k, ab, el) => ((ab.id === 'cinder' && k.perk('thermist_w1') && k.g.temp >= 3) ? 1.2 : (ab.id === 'lance' && k.perk('thermist_w3') && k.g.temp <= -3) ? 1.15 : 1) * (el ? 1 : 1);
+// On the Brink: the next spell decides. The same element overloads you; the other one is safe.
+function thermBrink(k, el) {
+  if (!k.has('brink')) return;
+  const b = k.buffs.get('brink');
+  k.clear('brink');
+  if (b.data.el === el) thermOverload(k, el);
+}
+function thermMove(k, delta) {
+  let t1 = k.g.temp + delta;
+  if (Math.abs(t1) > THERMIST.EDGE) {
+    t1 = Math.sign(t1) * THERMIST.EDGE;
+    if (!k.def.redline) thermOverload(k, Math.sign(delta));   // Zenith stays in Redline instead
+  }
+  k.g.temp = t1;
+  thermSettle(k, t1, 1);
+}
+// the dial has landed on t1: a crossing after a big enough peak is a Thermal Shock; then the side and peak update
+function thermSettle(k, t1, shockMult) {
+  const g = k.g;
+  if (t1 !== 0 && g.side && Math.sign(t1) !== g.side) {
+    const swing = g.peak + Math.abs(t1);
+    if (g.peak >= THERMIST.SHOCK_MIN) {
+      thermShock(k, swing, shockMult, Math.sign(t1));
+    }
+    if (k.def.momentum) k.buff('momentum', 6, {}, 5, 1);   // Pendulum: every crossing swings harder
+    g.peak = Math.abs(t1);
+  } else if (t1 !== 0) g.peak = Math.max(g.peak, Math.abs(t1));
+  if (t1 !== 0) g.side = Math.sign(t1);
+  // the way the swing is going (for the glowing button): turn back at the edge, or a step short of it for Pendulum
+  const turn = THERMIST.EDGE - (k.def.stepBonus || 0);
+  if (t1 >= turn) g.dir = -1; else if (t1 <= -turn) g.dir = 1;
+}
+function thermShock(k, swing, mult = 1, to = 1) {
+  if (k.g.latent) { mult *= 1.5; k.g.latent = 0; }
+  const pot = Math.max(0, THERMIST.SHOCK_BASE + THERMIST.SHOCK_PER * swing) * mult;
+  const r = k.damage(pot, { ab: THERM_SHOCK });
+  k.stats.shocks = (k.stats.shocks || 0) + 1;
+  k.fx('shock', { s: swing, c: to });
+  if (k.g.embers) { const n = k.g.embers; k.g.embers = 0; k.after(0.3, () => { for (let i = 0; i < n; i++) k.damage(95, { ab: THERM_SHOCK, extra: true }); k.fx('embers', { n }); }); }
+  if (k.talent('thermist_skin')) k.shield('self', pot * 0.3, 6, { ab: THERM_SHOCK });
+  if (k.talent('thermist_rebound')) k.buff('rebound', 10);
+  if (k.talent('thermist_conduct')) k.after(1, () => { k.damage(pot * 0.15, { ab: THERM_SHOCK, extra: true }); k.fx('shock', { s: 3, c: to, echo: 1 }); });
+  return r;
+}
+function thermOverload(k, el) {
+  k.stats.overloads = (k.stats.overloads || 0) + 1;
+  if (k.talent('thermist_latent')) { k.g.latent = 1; k.fx('latent'); return; }   // banked for the next Shock instead
+  if (el > 0) { k.buff('overheat', 3); k.selfDamage(0.08); k.fx('overheat'); }
+  else { k.buff('frostbite', 3); k.fx('frostbite'); }
+}
+// Zenith: Strain builds while you hold the edge; full Strain is a meltdown (the dial snaps to 0 and you pay for it)
+function thermTick(k) {
+  const g = k.g, dt = k.now - (g.lastT ?? k.now);
+  g.lastT = k.now;
+  if (!k.def.redline || !(dt > 0 && dt < 1)) return;
+  if (thermAt(k, THERMIST.EDGE)) {
+    g.strain = Math.min(100, (g.strain || 0) + THERMIST.STRAIN * dt);
+    k.buff('redline', 0.3);
+    if (g.strain >= 100) thermMeltdown(k);
+  } else g.strain = Math.max(0, (g.strain || 0) - 20 * dt);
+}
+function thermMeltdown(k) {
+  const el = Math.sign(k.g.temp) || 1;
+  Object.assign(k.g, { strain: 0, temp: 0, side: 0, peak: 0 });
+  k.clear('redline');
+  k.stats.overloads = (k.stats.overloads || 0) + 1;
+  if (k.talent('thermist_latent')) { k.g.latent = 1; k.fx('latent'); return; }
+  k.selfDamage(0.12); k.buff(el > 0 ? 'overheat' : 'frostbite', 4); k.fx(el > 0 ? 'overheat' : 'frostbite');
+}
+// Equilibrium: the dial snaps to 0 behind a shield sized by how far it fell
+function thermEquil(k, ab) {
+  const fell = Math.abs(k.g.temp), from = Math.sign(k.g.temp);
+  k.shield('self', 70 * Math.max(1, fell) * (k.perk('thermist_a2') ? 1.5 : 1), 8, { ab });
+  k.clear('brink');
+  Object.assign(k.g, { temp: 0, side: 0, peak: 0 });
+  thermUtility(k, ab, fell >= 4);
+  if (fell >= THERMIST.SHOCK_MIN && k.talent('thermist_pulse')) thermShock(k, fell, 1, -from);
+}
+// the Equilibrium / Bleed Off talents that don't depend on which one it is
+function thermUtility(k, ab, big) {
+  if (big && k.talent('thermist_front')) k.mitigate('party', 0.1, 6, { ab });
+  if (k.talent('thermist_phase')) k.teleport('dash', { ab, d: 150 });
+}
+// Inversion: the dial flips (+5 to -5), a Shock half again as strong, and 10s of Attunement
+function thermInvert(k, ab) {
+  const t0 = k.g.temp;
+  k.clear('brink');
+  k.buff('attuned', k.perk('thermist_a4') ? 14 : 10);
+  if (t0) { k.g.temp = -t0; thermSettle(k, -t0, k.perk('thermist_w2') ? 1.95 : 1.5); }
+  if (k.talent('thermist_vortex')) k.dot('vortex', 55, 6, 1.5, { ab });
+  if (k.talent('thermist_solstice')) k.after(5, () => { const t = k.g.temp; if (t) { k.g.temp = -t; thermSettle(k, -t, 0.6); k.fx('invert'); } });
+}
+// which spell keeps the swing going (the glowing button): the edge spell, the big step, or the small step
+function thermPlan(k) {
+  const t = k.g.temp, sb = k.def.stepBonus || 0, s = Math.sign(t);
+  const brink = k.has('brink') ? k.buffs.get('brink').data.el : 0;
+  if (Math.abs(t) === THERMIST.EDGE && !brink && !(s > 0 && k.has('overheat')) && (!k.def.redline || (k.g.strain || 0) < 60)) return s > 0 ? 'flare' : 'lance';
+  let dir = brink ? -brink : Math.abs(t) === THERMIST.EDGE ? -s : (k.g.dir || 1);
+  if (dir > 0 && k.has('overheat')) dir = -1;
+  for (let pass = 0; pass < 2; pass++, dir = -dir) {
+    if (Math.abs(t + dir * (2 + sb)) <= THERMIST.EDGE) return dir > 0 ? 'flare' : 'lance';
+    if (Math.abs(t + dir * (1 + sb)) <= THERMIST.EDGE) return dir > 0 ? 'cinder' : 'rime';
+  }
+  return 'lance';
+}
+
+KITS.thermist = {
+  potMult: 0.9, // balance knob (tools/simulate.js)
+  auto: { kind: 'thermo', potency: 25, range: RANGED },  // passive auto-attack (see ENGINE.AUTO_EVERY)
+  gauge: { kind: 'dial', key: 'temp', max: 5, label: 'Temperature' },
+  init: () => ({ temp: 0, side: 0, peak: 0, dir: 1, strain: 0, embers: 0, latent: 0 }),
+  haste: k => (k.has('frostbite') ? 1.3 : 1),
+  tick: k => thermTick(k),
+  onExpire(k, id, b) { if (id === 'brink') thermOverload(k, b.data.el); },   // held the edge too long
+  signature: 'Thermal Shock',
+  floor: 'Alternate Q and W, press E and R when they glow, and press F when the dial is far from 0. D if you\'re about to be hit hard.',
+  ceiling: [
+    'Swing the whole dial: build to +5 with fire, then carry it across 0 with frost. The swing that crosses 0 detonates a Thermal Shock, and the further you swung (from +5 down to -1 is 6), the bigger it is.',
+    'Every step from 0 is +8% damage for that side\'s spells, so a spell at the far end of a swing hits hardest. Spells that move you toward 0 gain nothing.',
+    'At +5 Flare is instant and always crits, but leaves you On the Brink: the next spell must be frost or you overheat. Glacier Lance is the same at -5. Use the edge spells as your movement.',
+    'Inversion flips the dial: at ±5 that is a swing of 10, half again as strong, and Attunement lets both elements count for 10s. Save it for burst windows. Equilibrium is your mitigation: it snaps the dial back to 0, so it costs you the swing.',
+  ],
+  abilities: [
+    {
+      id: 'cinder', name: 'Cinder Bolt', type: 'gcd', target: 'enemy', range: RANGED, anim: 'cast', el: 1,
+      cast: k => thermCast(k, 1, 1),
+      desc: '1s cast: a quick fire bolt. Turns the dial 1 toward Blaze.',
+      usable: k => !k.has('overheat'),
+      glow: k => thermPlan(k) === 'cinder',
+      effect(k) { thermSpell(k, this, 1, 1, 210); },
+      fx: { type: 'projectile', style: 'fire', color: '#ff8a3a', range: RANGED, speed: 800 },
+    },
+    {
+      id: 'rime', name: 'Rime Shard', type: 'gcd', target: 'enemy', range: RANGED, anim: 'cast', el: -1,
+      cast: k => thermCast(k, -1, 1),
+      desc: '1s cast: a quick shard of ice. Turns the dial 1 toward Rime.',
+      glow: k => thermPlan(k) === 'rime',
+      effect(k) { thermSpell(k, this, -1, 1, 210); },
+      fx: { type: 'projectile', color: '#8fd8ff', range: RANGED, speed: 900 },
+    },
+    {
+      id: 'flare', name: 'Flare', type: 'gcd', target: 'enemy', range: RANGED, anim: 'cast', el: 1,
+      cast: k => thermCast(k, 1, 2, true),
+      desc: '2s cast: a burst of fire. Turns the dial 2 toward Blaze. At +5 it\'s instant and always crits, but holds you On the Brink: if your next spell is fire too, you overheat.',
+      usable: k => !k.has('overheat'),
+      glow: k => thermPlan(k) === 'flare',
+      effect(k) { thermSpell(k, this, 1, 2, 400, { edge: true }); },
+      fx: { type: 'projectile', style: 'fire', color: '#ff5a1a', range: RANGED, speed: 700 },
+    },
+    {
+      id: 'lance', name: 'Glacier Lance', type: 'gcd', target: 'enemy', range: RANGED, anim: 'cast', el: -1,
+      cast: k => thermCast(k, -1, 2, true),
+      desc: '2s cast: a lance of ice. Turns the dial 2 toward Rime. At -5 it\'s instant and always crits, but holds you On the Brink: if your next spell is frost too, you get frostbite.',
+      glow: k => thermPlan(k) === 'lance',
+      effect(k) { thermSpell(k, this, -1, 2, 400, { edge: true }); },
+      fx: { type: 'line', color: '#bfe8ff', range: 440 },
+    },
+    {
+      id: 'equil', name: 'Equilibrium', type: 'ogcd', target: 'self', cd: 30, anim: 'cast',
+      desc: 'Snap the dial back to 0 behind a shield: about 3% of your HP for every step it fell. It also clears On the Brink.',
+      effect(k) { thermEquil(k, this); },
+      fx: { type: 'shield', color: '#e8d8ff', dur: 1.2 },
+    },
+    {
+      id: 'invert', name: 'Inversion', type: 'ogcd', target: 'enemy', range: RANGED, cd: 90, anim: 'big',
+      desc: 'Flip the dial: +5 becomes -5. From 3 or more steps out that\'s a Thermal Shock half again as strong. For 10s after, both elements count as your side (Attuned).',
+      glow: k => thermAt(k, 4),
+      effect(k) { thermInvert(k, this); },
+      fx: { type: 'ring', color: '#e4688a', r: 60, range: RANGED },
+    },
+  ],
+};
+
+// ---------------------------------------------------------------- Driftblade: movement is the resource
+// Drift fills while you move (20/s) and drains while you stand still (30/s); most moves hit harder with it. Running
+// through an enemy's body is a Passing Strike. Slipstream lays a wind lane (re-entering it gives Drift back; on every
+// client it also speeds up whoever walks along it). Orbit (k.def.orbit) and Comet (k.def.driftMax, k.def.straight).
+const DRIFT = { FILL: 20, STRAIGHT: 34, DRAIN: 30, ICD: 0.45, LANE_DRIFT: 15 };
+const DRIFT_BODY = { target: 'enemy', range: 12, body: true };    // brushing or inside an enemy's body
+const DRIFT_NEAR = { target: 'enemy', range: 120, near: true };   // close enough to circle (Orbit)
+const DRIFT_REACH = { target: 'enemy', range: MELEE };
+const DRIFT_PASS = { id: 'pass', name: 'Passing Strike' };
+const driftMax = k => k.def.driftMax || 100;
+const driftK = k => Math.min(1, (k.g.drift || 0) / 100);   // how much Drift backs a hit, 0..1 (Comet's second 100 is for Impact)
+function driftAdd(k, n) {
+  const before = k.g.drift || 0;
+  k.g.drift = Math.min(driftMax(k), before + n);
+  if (k.g.drift > before) k.fxGain(k.g.drift - before);
+}
+const driftAngDiff = (a, b) => { let d = a - b; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2; return d; };
+function driftTick(k) {
+  const g = k.g, now = k.now, dt = now - (g.lastT ?? now);
+  g.lastT = now;
+  if (!(dt > 0 && dt < 0.5)) return;
+  const moving = k.env.moving(), pos = k.env.pos ? k.env.pos() : null;
+  // heading: Comet fills faster in a straight line
+  if (pos && g.px != null) {
+    const dx = pos.x - g.px, dy = pos.y - g.py;
+    if (Math.hypot(dx, dy) > 1.5) {
+      const hd = Math.atan2(dy, dx);
+      g.straightT = g.hd != null && Math.abs(driftAngDiff(hd, g.hd)) < 0.3 ? (g.straightT || 0) + dt : 0;
+      g.hd = hd;
+    }
+  }
+  if (pos) { g.px = pos.x; g.py = pos.y; }
+  if (moving) {
+    driftAdd(k, (k.def.straight && g.straightT > 0.4 ? DRIFT.STRAIGHT : DRIFT.FILL) * dt);
+    g.stillT = 0;
+  } else {
+    g.stillT = (g.stillT || 0) + dt;
+    const held = k.has('gale') || k.has('still') || (k.talent('driftblade_hover') && g.stillT < 1.5);
+    if (!held) g.drift = Math.max(0, (g.drift || 0) - DRIFT.DRAIN * dt);
+  }
+  // your own Slipstream lanes: stepping back onto one gives Drift
+  if (g.lanes.length) {
+    g.lanes = g.lanes.filter(l => l.end > now);
+    const on = pos && g.lanes.some(l => kitSegDist(pos.x, pos.y, l.ax, l.ay, l.bx, l.by) < 34);
+    if (on && !g.onLane && now >= (g.laneAt || 0)) { driftAdd(k, DRIFT.LANE_DRIFT); g.laneAt = now + 0.8; k.fx('lane'); }
+    g.onLane = on;
+  }
+  // Passing Strikes: running into an enemy's body
+  const body = k.env.target(DRIFT_BODY), inside = !!body;
+  if (inside && !g.inside && moving && now >= (g.passAt || 0)) { g.passAt = now + DRIFT.ICD; driftPass(k, body); }
+  g.inside = inside;
+  if (k.def.orbit) driftOrbit(k, pos, moving);
+}
+// (tg: the enemy you ran through; the hit lands on it, not on whatever you last aimed at)
+function driftPass(k, tg) {
+  const tgt = tg && tg.id !== 'dummy' ? tg.id : undefined;
+  k.damage(90 * (1 + driftK(k)) * (k.has('gale') ? 3 : 1), { ab: DRIFT_PASS, tgt });
+  k.stats.passes = (k.stats.passes || 0) + 1;
+  k.fx('pass', { g: k.has('gale') ? 1 : 0 });
+  if (k.talent('driftblade_razor')) { k.g.razor = Math.min(3, (k.dots.has('razor') ? k.g.razor || 0 : 0) + 1); k.dots.delete('razor'); k.dot('razor', 16 * k.g.razor, 6, 2, { ab: DRIFT_PASS, tgt }); }
+  if (k.has('gale') && k.talent('driftblade_hurricane') && (k.g.galeAdd || 0) < 6) { k.g.galeAdd = (k.g.galeAdd || 0) + 1; k.buff('gale', 1); k.buffs.get('gale').end += 1; }
+}
+// Orbit: every radian you circle round your target close in is a stack (up to 5, gone 2.5s after you stop);
+// at 5, Carve cuts on its own every 1.4s while you keep moving
+function driftOrbit(k, pos, moving) {
+  const g = k.g, t = moving && pos ? k.env.target(DRIFT_NEAR) : null;
+  if (!t || t.x == null) { g.orbA = null; return; }
+  const a = Math.atan2(pos.y - t.y, pos.x - t.x);
+  if (g.orbA != null) g.orbAcc = (g.orbAcc || 0) + Math.abs(driftAngDiff(a, g.orbA));
+  g.orbA = a;
+  while (g.orbAcc >= 1) { g.orbAcc -= 1; k.buff('orbit', 2.5, {}, 5, 1); }
+  if (k.stacks('orbit') >= 5 && k.now >= (g.orbCutAt || 0) && k.env.target(DRIFT_REACH)) {
+    g.orbCutAt = k.now + 1.4;
+    k.damage(80 * (1 + 0.3 * driftK(k)), { ab: k.abilities[0], extra: true });
+    k.fx('orbitcut');
+  }
+}
+function driftSpend(k, d, full) {
+  if (k.talent('driftblade_second') && d >= full * 0.8) driftAdd(k, full * 0.1);
+}
+function driftHook(k, ab) {
+  if (k.talent('driftblade_tailwind')) { driftAdd(k, 20); k.buff('tailwind', 8); }
+  if (k.talent('driftblade_sidestep')) k.mitigate('self', 0.3, 2, { ab });
+  if (k.talent('driftblade_after')) k.after(1, () => { if (k.env.target(DRIFT_NEAR)) { k.damage(170, { ab, extra: true }); k.fx('afterimage'); } });
+}
+// a riposte (Stillpoint / Tailspin catching a hit in its first moment)
+function driftRiposte(k) {
+  k.damage(320 * (1 + 0.5 * driftK(k)), { ab: k.abilities[4] });
+  k.stats.parries = (k.stats.parries || 0) + 1;
+  k.fx('riposte');
+}
+
+KITS.driftblade = {
+  potMult: 0.66, // balance knob (tools/simulate.js)
+  auto: { kind: 'sabre', potency: 40, range: MELEE },  // passive auto-attack (see ENGINE.AUTO_EVERY)
+  gauge: { kind: 'drift', key: 'drift', max: 100, label: 'Drift' },
+  init: () => ({ drift: 0, lanes: [], stillT: 0 }),
+  tick: k => driftTick(k),
+  onNotify(k, type) { if (type === 'perfect') driftRiposte(k); },
+  signature: 'Drift and Passing Strikes',
+  floor: 'Keep moving. Press Q to cut, and R when the gauge is full. Run through the boss when you can.',
+  ceiling: [
+    'Drift fills while you move and drains while you stand still, and nearly everything hits harder with it. A Driftblade who stands still is half a Driftblade.',
+    'Running clean through an enemy\'s body is a Passing Strike, stronger with Drift. Every dodge can carry you through the boss instead of away from it.',
+    'Hook Turn swings you to the far side of your target and gives back a dash charge: chain it with Slipstream and the shared dash for long runs. Above 70 Drift it always crits.',
+    'Crosswind spends everything: fire it full. Save Gale Run for stretches where the fight makes you move: for 12s Drift can\'t drain and Passing Strikes hit three times as hard.',
+  ],
+  abilities: [
+    {
+      id: 'carve', name: 'Carve', type: 'gcd', target: 'enemy', range: MELEE, anim: 'attack',
+      desc: 'A sabre cut, stronger with Drift. At 50 Drift or more a second cut follows through.',
+      effect(k) {
+        const m = 1 + 0.3 * driftK(k), crit = k.consume('tailwind');
+        k.damage(240 * m, { ab: this, autoCrit: crit });
+        if (k.g.drift >= 50) k.after(0.15, () => k.damage(240 * (k.perk('driftblade_w1') ? 0.5 : 0.3) * m, { ab: this, extra: true }));
+        if (k.talent('driftblade_crescent') && k.env.moving() && (k.g.cres = (k.g.cres || 0) + 1) >= 3) {
+          k.g.cres = 0; k.after(0.25, () => { k.damage(210 * m, { ab: this, extra: true }); k.fx('crescent'); });
+        }
+      },
+      fx: { type: 'slash', color: '#bff8e8', r: 56, span: 1.8 },
+    },
+    {
+      id: 'slip', name: 'Slipstream', type: 'ogcd', target: 'none', charges: 2, cd: 14, lock: 0.3, anim: 'dash',
+      desc: 'Dash 180 px the way you\'re heading and leave a wind lane for 6s. Anyone moving along it goes faster, and stepping back onto it gives you Drift. Dashing through an enemy is a Passing Strike. Two charges.',
+      effect(k) {
+        const p = k.env.pos ? k.env.pos() : null, ab = this;
+        k.teleport('dash', { ab, d: 180 });
+        driftAdd(k, k.perk('driftblade_a4') ? 25 : 15);
+        if (k.talent('driftblade_gust')) k.shield('self', 130, 6, { ab });
+        if (!p) return;
+        k.after(0.22, () => {
+          const q = k.env.pos();
+          k.g.lanes.push({ ax: p.x, ay: p.y, bx: q.x, by: q.y, end: k.now + 6 });
+          const tg = k.env.target({ target: 'enemy', range: 300 });
+          const crossed = tg && tg.x != null && kitSegDist(tg.x, tg.y, p.x, p.y, q.x, q.y) < 60;
+          if (crossed && k.now >= (k.g.passAt || 0)) { k.g.passAt = k.now + DRIFT.ICD; driftPass(k, tg); }
+          if (crossed && k.talent('driftblade_jet') && k.now >= (k.g.jetAt || 0)) { k.g.jetAt = k.now + 8; k.refundCharge(ab.id); }
+          if (crossed && k.talent('driftblade_eddies')) { k.damage(150, { ab }); k.after(6, () => { if (k.env.target(DRIFT_NEAR)) k.damage(150, { ab, extra: true }); }); }
+        });
+      },
+      fx: { type: 'blink', color: '#9ff0e0' },
+    },
+    {
+      id: 'hook', name: 'Hook Turn', type: 'ogcd', target: 'enemy', range: 220, cd: 12, lock: 0.45, anim: 'attack',
+      desc: 'Swing round your target to its far side with a cut, stronger with Drift. Above 70 Drift it always crits. Gives back a dash charge.',
+      glow: k => k.g.drift >= 70,
+      effect(k) {
+        const crit = k.g.drift >= 70;
+        k.teleport('around', { ab: this });
+        k.damage(260 * (1 + 0.4 * driftK(k)), { ab: this, autoCrit: crit });
+        if (k.env.refundDash) k.env.refundDash();
+        driftHook(k, this);
+      },
+      fx: { type: 'slash', color: '#9ff0e0', r: 64, span: 3.2 },
+    },
+    {
+      id: 'cross', name: 'Crosswind', type: 'gcd', target: 'enemy', range: 300, anim: 'big',
+      desc: 'Spend all your Drift on a blade of wind: the more you spend, the harder it hits (about four times as hard at full).',
+      usable: k => k.g.drift >= 20,
+      glow: k => k.g.drift >= 80,
+      effect(k) {
+        const d = k.g.drift; k.g.drift = 0;
+        const r = k.damage(120 + 7 * d, { ab: this });
+        if (d >= 90 && k.perk('driftblade_w2')) { k.damage((120 + 7 * d) * 0.3, { ab: this }); k.fx('empower'); }
+        driftSpend(k, d, 100);
+        return r;
+      },
+      fx: { type: 'line', color: '#dffff6', range: 300 },
+    },
+    {
+      id: 'still', name: 'Stillpoint', type: 'ogcd', target: 'self', cd: 25, lock: 0.5, anim: 'brace',
+      desc: 'Stop and parry for 2s: 50% less damage, and your Drift holds instead of draining. Catch a hit in the first moment and you riposte.',
+      effect(k) {
+        k.mitigate('self', 0.5, 2, { kind: 'brace', ab: this }); k.buff('still', 2);
+        if (k.perk('driftblade_a2')) driftAdd(k, 20);
+        if (k.talent('driftblade_calm')) k.mitigate('party', 0.1, 2, { ab: this });
+      },
+      fx: { type: 'shield', color: '#dffff6', dur: 1.2 },
+    },
+    {
+      id: 'gale', name: 'Gale Run', type: 'ogcd', target: 'self', cd: 90, anim: 'big',
+      desc: 'Burst: for 12s your Drift can\'t drain and Passing Strikes hit three times as hard.',
+      effect(k) {
+        const dur = k.perk('driftblade_w3') ? 15 : 12;
+        k.buff('gale', dur); k.g.galeAdd = 0;
+        if (k.talent('driftblade_galeforce')) k.after(dur, () => { const r = k.env.target({ target: 'enemy', range: 300 }); if (r) { k.damage(100 + 5 * k.g.drift, { ab: k.abilities[3], extra: true }); k.fx('galeforce'); } });
+      },
+      fx: { type: 'aura', color: '#9ff0e0', r: 36, dur: 2 },
+    },
+  ],
+};
+
+// ---------------------------------------------------------------- talents that grant a whole new move
+// TALENT_ABILITIES[talentId] = { cls, ab, spec?: { specId: ab } }: holding the talent puts `ab` in the slot of the base
+// ability it `replaces` (specs.js kitFor), over that slot's spec version. The icon falls back to the replaced move's.
+const TALENT_ABILITIES = {};
+(() => {
+  const thermocline = {
+    id: 'thermocline', replaces: 'cinder', icon: 'cinder', name: 'Thermocline', type: 'gcd', target: 'enemy', range: RANGED, anim: 'cast',
+    desc: 'Instant: a bolt that swings the dial 2 steps toward the other side (toward Rime from 0). It counts as the element it swings toward, and hits harder the further from 0 you started.',
+    glow: k => thermAt(k, 3) && !(k.has('brink') && k.buffs.get('brink').data.el === -Math.sign(k.g.temp)),
+    effect(k) { const t = k.g.temp, el = t > 0 ? -1 : t < 0 ? 1 : -1; thermSpell(k, this, el, 2, 170, { mult: 1 + THERMIST.STEP * Math.abs(t) }); },
+    fx: { type: 'projectile', color: '#e4a8ff', range: RANGED, speed: 1000 },
+  };
+  TALENT_ABILITIES.thermist_thermocline = { cls: 'thermist', ab: thermocline,
+    spec: { pendulum: Object.assign({}, thermocline, { desc: 'Instant: a bolt that swings the dial 3 steps toward the other side (toward Rime from 0). It counts as the element it swings toward, and hits harder the further from 0 you started.' }) } };
+  TALENT_ABILITIES.thermist_zero = { cls: 'thermist', ab: {
+    id: 'zero', replaces: 'rime', icon: 'rime', name: 'Absolute Zero', type: 'gcd', target: 'enemy', range: RANGED, cast: 2, cd: 45, anim: 'big', el: -1,
+    desc: '2s cast, 45s cooldown: the dial plunges straight to -5, wherever it was. It hits harder the further it fell, and from 3 or more on the hot side that crossing is a Thermal Shock of up to 10.',
+    glow: k => k.g.temp >= 3,
+    effect(k) {
+      const fell = k.g.temp + THERMIST.EDGE;
+      thermBrink(k, -1);
+      k.damage(100 + 15 * fell, { ab: this, mult: thermMult(k, -1) });
+      k.g.temp = -THERMIST.EDGE; thermSettle(k, -THERMIST.EDGE, 1);
+    },
+    fx: { type: 'zone', color: '#bfe8ff', r: 80, range: RANGED, dur: 1 },
+  } };
+  TALENT_ABILITIES.driftblade_gyre = { cls: 'driftblade', ab: {
+    id: 'gyre', replaces: 'hook', icon: 'hook', name: 'Gyre', type: 'ogcd', target: 'enemy', range: MELEE, charges: 2, cd: 10, lock: 0.5, anim: 'attack',
+    desc: 'Loop once round your target, cutting it once for every 25 Drift you have (up to 4 cuts). It spends nothing, and the loop adds 10 Drift. Two charges.',
+    glow: k => k.g.drift >= 75,
+    effect(k) {
+      const n = Math.max(1, Math.min(4, Math.floor((k.g.drift || 0) / 25)));
+      for (let i = 0; i < n; i++) k.after(0.12 * i, () => k.damage(105, { ab: this }));
+      driftAdd(k, 10); driftHook(k, this);
+      k.fx('gyre', { n });
+    },
+    fx: { type: 'slash', color: '#9ff0e0', r: 70, span: 6.28 },
+  } };
+  TALENT_ABILITIES.driftblade_tailspin = { cls: 'driftblade', ab: {
+    id: 'tailspin', replaces: 'still', icon: 'still', name: 'Tailspin', type: 'ogcd', target: 'self', cd: 25, lock: 0.5, anim: 'big',
+    desc: 'Whirl in place for a moment: you parry like Stillpoint, cut the nearest enemy three times (stronger with Drift), then spring 150 px the way you\'re heading. Your Drift holds while you spin.',
+    effect(k) {
+      const ab = this, m = 1 + 0.5 * driftK(k);
+      k.mitigate('self', 0.5, 1, { kind: 'brace', ab }); k.buff('still', 1);
+      if (k.perk('driftblade_a2')) driftAdd(k, 20);
+      if (k.talent('driftblade_calm')) k.mitigate('party', 0.1, 1, { ab });
+      for (let i = 0; i < 3; i++) k.after(0.12 + 0.22 * i, () => { if (k.env.target(DRIFT_REACH)) k.damage(115 * m, { ab }); });
+      k.after(0.8, () => k.teleport('dash', { ab, d: 150 }));
+    },
+    fx: { type: 'slash', color: '#dffff6', r: 66, span: 6.28 },
+  } };
+})();
+
+// The Alembist's two (classes-b). They began in the kit's own talentAbilities table; when the two talent-move systems
+// became one they moved here. (A kit can still list moves in talentAbilities: specs.js talentMoveFor reads both.)
+TALENT_ABILITIES.alembist_blend = { cls: 'alembist', ab: {
+    id: 'blend', replaces: 'batch', icon: 'batch', name: 'Grand Blend', type: 'ogcd', target: 'self', cd: 90, anim: 'big', lock: 0.3, talent: true,
+    desc: 'Pour every vial in your bandolier into one Grand Blend. Thrown, it does all of their effects at once where it lands, each at 80% of the strength it had.',
+    usable: k => k.g.vials.length >= 2,
+    effect(k) {
+      const parts = [];
+      for (const v of k.g.vials) { if (v.parts) parts.push(...v.parts); else parts.push({ r: v.r, m: alemStrength(k, v) }); }
+      const v = { r: 'BL', parts, at: k.now, born: k.now, id: ++k.g.n, keep: true };
+      if (k.def.alem.fuse) v.fuse = k.now + k.def.alem.fuse + (k.talent('alembist_cask') ? 2 : 0);
+      k.g.vials = [v]; k.g.sel = 0; k.g.count = 1;
+      k.g.popAt = k.now; k.g.popR = 'BL';
+      k.fx('brew', { r: 'BL' });
+      alemRestock(k);
+    },
+    fx: { color: '#ffe0a8' },
+  } };
+TALENT_ABILITIES.alembist_quicksilver = { cls: 'alembist', ab: Object.assign(alemReagentAb('quicksilver', 'Q', 'Quicksilver', null,
+    'A quick reagent (0.75s) that takes Salt\'s place. Quicksilver + Quicksilver is a Silver Mirror, Quicksilver + Dew a Silver Tonic, Quicksilver + Ember a Fulminate.'),
+  { replaces: 'salt', icon: 'salt', talent: true }) };
+
+if (typeof module !== 'undefined') Object.assign(module.exports, { kitMoveDest, kitSegDist, THERMIST, thermSpell, thermMove, thermSettle, thermShock, thermBrink, thermMult, thermAt,
+  thermEdgeCast, thermEquil, thermUtility, thermInvert, thermPlan, thermTick, thermOverload, DRIFT, DRIFT_BODY, DRIFT_NEAR, DRIFT_REACH, driftAdd, driftTick, driftPass, driftK, driftMax,
+  driftSpend, driftHook, driftRiposte, TALENT_ABILITIES });
 
