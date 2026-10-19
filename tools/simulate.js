@@ -10,9 +10,12 @@
 
 const path = require('path');
 const { ENGINE, Kit } = require(path.join(__dirname, '../client/js/combat/engine.js'));
-const { KITS } = require(path.join(__dirname, '../client/js/combat/kits.js'));
-global.KITS = KITS;
+const kitsModule = require(path.join(__dirname, '../client/js/combat/kits.js'));
+const { KITS } = kitsModule;
+Object.assign(global, kitsModule);   // KITS and the talent helpers the specs share
 const { SPECS, kitFor } = require(path.join(__dirname, '../client/js/combat/specs.js'));
+const { TALENT_BY_ID } = require(path.join(__dirname, '../client/js/combat/talents.js'));
+global.TALENT_BY_ID = TALENT_BY_ID;   // the engine reads talent cooldown / cast changes from it
 // this tool's model is written in the original big-number units; only ratios matter for balance
 ENGINE.NUM_SCALE = 1; ENGINE.POT_SCALE = 10;
 global.ENGINE = ENGINE;   // the kits read ENGINE.NUM_SCALE
@@ -27,7 +30,8 @@ const RAIDWIDE_EVERY = 30, RAIDWIDE_DMG = 5000;
 
 function mulberry(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 
-function runSim(classId, skill, seed, specId) {
+// talents: an optional Set of talent ids the hero holds (tools/talents.js); the class balance runs hold none
+function runSim(classId, skill, seed, specId, talents) {
   const def = kitFor(classId, specId);
   const rng = mulberry(seed);
   const human = mulberry(seed * 7 + 3); // separate stream for "human" randomness
@@ -51,6 +55,7 @@ function runSim(classId, skill, seed, specId) {
     hpFrac: () => Math.max(0.15, 1 - Math.min(0.85, env.recentDamage(8) / maxHp * 1.3)),
     isDead: () => false,
     defaultLink: () => 'tank',
+    talents: () => talents || null,
     // where you stand: away from your spot while a mechanic moves you (and now and then for a newbie), so a Sigilmancer leaves its circle
     pos: () => (state.away ? { x: 999, y: 0 } : { x: 0, y: 0 }),
     emit: ev => {
@@ -112,6 +117,9 @@ function runSim(classId, skill, seed, specId) {
   }
 
   const policy = (skill === 'pro' ? PRO : NEWBIE)[classId] || (skill === 'pro' ? genericPro : genericNewbie);   // a spec plays with its class's policy
+  // a pro who took a talent on a party cooldown the class policy leaves alone (Rally Banner, Smoke Bomb...) uses it
+  // before raidwides, and Undying before tankbusters
+  const extras = skill === 'pro' && talents ? [...new Set([...talents].map(id => TALENT_BY_ID[id] && TALENT_BY_ID[id].t.ab).filter(ab => TALENT_EXTRA.includes(ab)))] : [];
   let reaction = 0;
   for (state.t = 0; state.t < FIGHT_LEN; state.t += DT) {
     state.moving = isMoveWindow(state.t);
@@ -140,7 +148,8 @@ function runSim(classId, skill, seed, specId) {
     if (reaction > state.t) continue;
     const ctx = { t: state.t, inBurst, burstSoon, isMoveWindow, moveSoon, state, human, nextAuto, nextBuster, nextRaidwide, role,
       setPos: p => { lastPos = p; } };
-    const choice = policy(k, ctx);
+    const extra = extras.find(id => ready(k, id) && weaveOk(k) && (id === 'undying' ? nextBuster - state.t < 1.5 : nextRaidwide - state.t < 2));
+    const choice = extra ? I(k, extra) : policy(k, ctx);
     if (choice !== null && choice !== undefined) {
       const ab = k.abilities[choice];
       if (ab && ab.target === 'enemy' && ab.id) { /* positional resolution */ }
@@ -153,6 +162,7 @@ function runSim(classId, skill, seed, specId) {
 }
 
 // ---------------------------------------------------------------- policies
+const TALENT_EXTRA = ['banner', 'warcry', 'undying', 'sanctum', 'cloak', 'smoke', 'smolder', 'stasis'];
 // abilities by id, or by the id of the base ability a specialization replaced
 const abOf = (k, id) => k.abilities.find(a => a.id === id || a.replaces === id);
 const I = (k, id) => k.abilities.findIndex(a => a.id === id || a.replaces === id);
@@ -317,6 +327,9 @@ const PRO = {
 // (handled by env.emit 'heal').
 
 // ---------------------------------------------------------------- run
+if (require.main !== module) module.exports = { runSim, FIGHT_LEN };
+else main();
+function main() {
 // every class, then each of its specializations as "class:spec" (or one of either, given as an argument)
 const only = process.argv[2];
 const entries = [];
@@ -350,4 +363,5 @@ if (only) {
       ' interrupts', s.interrupts, ' perfects', s.perfects || 0, ' wardBreaks', s.wardBreaks || 0, ' overheats', s.overheats || 0,
       ` uptime ${(s.gcdTime / FIGHT_LEN * 100).toFixed(0)}%`, ` burst share ${(s.burstDamage / s.damage * 100).toFixed(0)}%`);
   }
+}
 }

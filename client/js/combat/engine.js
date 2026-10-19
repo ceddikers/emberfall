@@ -101,7 +101,8 @@ class Kit {
   // ---------------------------------------------------------------- cooldowns
   abById(id) { return this.abilities.find(a => a.id === id); }
   recast(ab) {
-    const r = typeof ab.cd === 'function' ? ab.cd(this) : (ab.cd || 0);
+    let r = typeof ab.cd === 'function' ? ab.cd(this) : (ab.cd || 0);
+    if (r) r = Math.max(1, r + this.talentMod('cd', ab));   // talents: shorter cooldowns (talents.js `cd`)
     return r && ab.type === 'ogcd' ? r * (1 - Math.min(0.3, this.fxMod('recast'))) : r;   // item effects: shorter oGCD cooldowns
   }
   refreshCharges(ab) {
@@ -164,6 +165,28 @@ class Kit {
   // is an item enhancement (see ITEM_PERKS in items.js) equipped?
   perk(id) { const p = this.gear().perks; return !!(p && p.has(id)); }
 
+  // ---------------------------------------------------------------- talents (data: TALENTS in talents.js)
+  // env.talents() is the Set of talent ids this hero holds (bots and the plain simulator hold none).
+  talent(id) { const t = this.env.talents && this.env.talents(); return !!(t && t.has(id)); }
+  // the base ability a move stands for (a spec's replacement names the one it took over)
+  baseId(ab) { return ab.replaces || ab.id; }
+  // the summed `cd` or `cast` change (seconds) the held talents make to this ability
+  talentMod(kind, ab) {
+    const t = this.env.talents && this.env.talents();
+    if (!t || !t.size || typeof TALENT_BY_ID === 'undefined') return 0;
+    let v = 0;
+    const base = this.baseId(ab), spec = this.def.spec;
+    for (const id of t) {
+      const d = TALENT_BY_ID[id]; if (!d) continue;
+      const over = d.t.specMods && d.t.specMods[spec] && d.t.specMods[spec][kind];   // a spec's own number (talents.js specMods)
+      const m = over || d.t[kind];
+      if (m && m[base]) v += m[base];
+    }
+    return v;
+  }
+  // run fn a little later (a delayed hit: a second meteor, a bomb, an echo). Game logic, so it runs in update().
+  after(secs, fn) { (this.pending || (this.pending = [])).push({ at: this.now + secs, fn }); }
+
   // ---------------------------------------------------------------- item effects (data: ITEMS[key].fx in items.js)
   // Triggers: crit, gcd, ogcd, heal, dash, gain. Conditions: always, hpAbove, hpBelow. Actions: strike, mend, ward,
   // cdr, buff. Mods: dmg, heal, crit, haste, recast. Everything an effect does reaches the host as an ordinary combat
@@ -218,6 +241,7 @@ class Kit {
   }
   castTime(ab) {
     let t = typeof ab.cast === 'function' ? ab.cast(this) : (ab.cast || 0);
+    if (t > 0) t = Math.max(0.5, t + this.talentMod('cast', ab));
     return t > 0 ? t * this.hasteMult() : 0;
   }
   gcdRemaining() { return Math.max(0, this.gcdReady - this.now); }
@@ -311,6 +335,10 @@ class Kit {
         this.damage(d.potency, Object.assign({ dot: true, ab: d.ab }, d.opts));
       }
       if (now > d.end) this.dots.delete(id);
+    }
+    if (this.pending && this.pending.length) {
+      const due = this.pending.filter(p => now >= p.at);
+      if (due.length) { this.pending = this.pending.filter(p => now < p.at); for (const p of due) p.fn(); }
     }
     this.autoAttack(now);
     if (this.def.tick) this.def.tick(this);
