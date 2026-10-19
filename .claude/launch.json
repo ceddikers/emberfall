@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "emberfall",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["server/server.js"],
+      "port": 3000
+    },
+    {
+      "name": "emberfall-alt",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["-e", "process.env.PORT='3002';require('./server/server.js')"],
+      "port": 3002
+    }
+  ]
+}

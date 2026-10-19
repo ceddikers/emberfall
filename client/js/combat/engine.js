@@ -1,0 +1,353 @@
+// Combat engine: runs one player's kit. FF14-style rules:
+//  - GCD abilities share a global cooldown (2.5s base, haste shortens it). Some have cast times.
+//  - oGCD abilities have their own cooldowns and a short animation lock, so 1-2 fit between GCDs ("weaving").
+//    Pressing too many oGCDs delays the next GCD ("clipping"), which costs damage.
+//  - Presses up to QUEUE_WINDOW early are queued and fire the instant they're ready.
+//  - Casts are interrupted by moving, except during the last SLIDECAST seconds.
+// It also records the numbers the post-fight report shows (uptime, overcap, wasted procs...).
+// Pure logic, no DOM: the same code runs in the game, for bots, and in tools/simulate.js.
+
+const ENGINE = {
+  GCD: 2.5,
+  QUEUE_WINDOW: 0.5,
+  ANIM_LOCK: 0.6,
+  SLIDECAST: 0.5,
+  CAST_LOCK_EXTRA: 0.1,
+  // Number scale for the whole game: small numbers, so a 1,000 crit is a big moment. Everything that
+  // counts HP (boss HP, player HP, boss damage: FIGHT.NUM_SCALE in fight.js) uses the same factor.
+  NUM_SCALE: 0.05,
+  POT_SCALE: 0.5,    // damage per point of potency (10 x NUM_SCALE)
+  BASE_CRIT: 0.10,
+  CRIT_MULT: 1.5,
+  PANDEMIC: 0.3,     // refreshing a DoT keeps up to 30% of its duration as leftover
+  BURST_EVERY: 60,   // the shared raid-buff cycle every class plans around
+  // Auto-attacks (FF14 style, no button): while you're fighting and an enemy is in range, your weapon strikes on
+  // its own every AUTO_EVERY seconds (haste speeds it up). Never while casting. "Fighting" means you used an
+  // enemy skill in the last AUTO_ENGAGE seconds. Each kit sets its own { kind, potency, range } in `auto`.
+  AUTO_EVERY: 2.6,
+  AUTO_ENGAGE: 8,
+};
+
+class Kit {
+  // def: a kit from KITS. env: {
+  //   now(), emit(evt), rng() -> [0,1), moving() -> bool,
+  //   target(ab) -> target (enemy object, ally id, or point) or null,
+  //   positional() -> 'rear' | 'flank' | 'front',
+  //   partyMods() -> { dmg, crit, haste }, targetMods() -> { vuln }, selfMods() -> { dmg } (debuffs from the fight),
+  //   recentDamage(secs) -> damage this player took in the last secs }
+  constructor(def, env) {
+    this.def = def;
+    this.env = env;
+    this.abilities = def.abilities;
+    this.g = def.init ? def.init() : {};
+    this.buffs = new Map();
+    this.cd = {};
+    for (const ab of this.abilities) this.cd[ab.id] = ab.charges ? { charges: ab.charges, next: 0 } : 0;
+    this.gcdReady = 0; this.gcdLen = ENGINE.GCD;
+    this.lockUntil = 0;        // animation lock from the last instant action
+    this.cast = null;          // { ab, target, start, end }
+    this.queued = null;
+    this.dots = new Map();     // id -> { potency, interval, next, end, ab, opts }
+    // auto-attacks: a pseudo-ability so the world's target lookup can apply its range
+    this.autoAb = def.auto ? { id: 'auto', name: 'Attack', target: 'enemy', range: def.auto.range, auto: true } : null;
+    this.engagedAt = -99; this.nextAuto = 0;
+    this.stats = { damage: 0, gcds: 0, gcdTime: 0, casts: {}, start: null, last: 0, overcap: {}, wasted: {},
+      posHit: 0, posMiss: 0, interrupts: 0, burstDamage: 0, deadTime: 0 };
+  }
+
+  get now() { return this.env.now(); }
+
+  // ---------------------------------------------------------------- resources
+  // Add to a gauge value, counting anything above max as overcap (shown in the fight report).
+  gain(key, n, max = 100) {
+    const v = (this.g[key] || 0) + n;
+    if (v > max) this.stats.overcap[key] = (this.stats.overcap[key] || 0) + (v - max);
+    this.g[key] = Math.min(max, v);
+  }
+  spend(key, n) { if ((this.g[key] || 0) < n) return false; this.g[key] -= n; return true; }
+  wasted(what, n = 1) { this.stats.wasted[what] = (this.stats.wasted[what] || 0) + n; }
+
+  // ---------------------------------------------------------------- buffs
+  buff(id, dur, data = {}, maxStacks = 1, addStacks = 1) {
+    const b = this.buffs.get(id);
+    if (b && b.end > this.now) {
+      b.end = Math.max(b.end, this.now + dur);
+      b.stacks = Math.min(maxStacks, b.stacks + addStacks);
+      Object.assign(b.data, data);
+      return b;
+    }
+    const nb = { end: this.now + dur, stacks: Math.min(maxStacks, addStacks), data, start: this.now };
+    this.buffs.set(id, nb);
+    return nb;
+  }
+  has(id) { const b = this.buffs.get(id); return !!b && b.end > this.now; }
+  stacks(id) { return this.has(id) ? this.buffs.get(id).stacks : 0; }
+  remaining(id) { return this.has(id) ? this.buffs.get(id).end - this.now : 0; }
+  consume(id, n = 1) {
+    const b = this.buffs.get(id);
+    if (!b || b.end <= this.now) return false;
+    b.stacks -= n;
+    if (b.stacks <= 0) this.buffs.delete(id);
+    return true;
+  }
+  clear(id) { this.buffs.delete(id); }
+  // A proc that doesn't stack: if it's already up, the new one is wasted.
+  proc(id, dur) {
+    if (this.has(id)) this.wasted(id);
+    this.buff(id, dur);
+  }
+
+  // ---------------------------------------------------------------- cooldowns
+  abById(id) { return this.abilities.find(a => a.id === id); }
+  recast(ab) { return typeof ab.cd === 'function' ? ab.cd(this) : (ab.cd || 0); }
+  refreshCharges(ab) {
+    const c = this.cd[ab.id];
+    while (c.charges < ab.charges && c.next && this.now >= c.next) {
+      c.charges++;
+      c.next = c.charges < ab.charges ? c.next + this.recast(ab) : 0;
+    }
+  }
+  charges(ab) { if (!ab.charges) return 0; this.refreshCharges(ab); return this.cd[ab.id].charges; }
+  cdRemaining(ab) {
+    const c = this.cd[ab.id];
+    if (ab.charges) { this.refreshCharges(ab); return c.charges > 0 ? 0 : c.next - this.now; }
+    return Math.max(0, c - this.now);
+  }
+  // fraction of the cooldown left (for the ability bar sweep)
+  cdFraction(ab) {
+    const r = this.recast(ab);
+    if (!r) return 0;
+    if (ab.charges) { const c = this.cd[ab.id]; return c.next ? Math.max(0, (c.next - this.now) / r) : 0; }
+    return Math.max(0, (this.cd[ab.id] - this.now) / r);
+  }
+  startCooldown(ab) {
+    const r = this.recast(ab);
+    if (!r) return;
+    if (ab.charges) {
+      const c = this.cd[ab.id];
+      this.refreshCharges(ab);
+      c.charges--;
+      if (!c.next) c.next = this.now + r;
+    } else this.cd[ab.id] = this.now + r;
+  }
+  reduceCooldown(id, secs) {
+    const ab = this.abById(id);
+    if (!ab) return;
+    if (ab.charges) { const c = this.cd[id]; if (c.next) c.next -= secs; this.refreshCharges(ab); }
+    else this.cd[id] = Math.max(this.now, this.cd[id] - secs);
+  }
+  refundCharge(id) {
+    const ab = this.abById(id), c = this.cd[id];
+    if (!ab || !ab.charges) return;
+    this.refreshCharges(ab);
+    if (c.charges < ab.charges) { c.charges++; if (c.charges >= ab.charges) c.next = 0; }
+    else this.wasted(id + ' charge');
+  }
+
+  // ---------------------------------------------------------------- readiness
+  hasteMult() {
+    let h = this.def.haste ? this.def.haste(this) : 1;
+    const party = this.env.partyMods ? this.env.partyMods() : null;
+    if (party && party.haste) h *= 1 - party.haste;
+    const gear = this.gear();
+    if (gear.haste) h *= 1 - gear.haste;
+    return h;
+  }
+  // equipment bonuses: { power, crit, haste } (bots and the simulator have none)
+  gear() { return (this.env.gearMods && this.env.gearMods()) || {}; }
+  // is an item enhancement (see ITEM_PERKS in items.js) equipped?
+  perk(id) { const p = this.gear().perks; return !!(p && p.has(id)); }
+  castTime(ab) {
+    let t = typeof ab.cast === 'function' ? ab.cast(this) : (ab.cast || 0);
+    return t > 0 ? t * this.hasteMult() : 0;
+  }
+  gcdRemaining() { return Math.max(0, this.gcdReady - this.now); }
+  usable(ab) { return !ab.usable || ab.usable(this); }
+  needsTarget(ab) { return ab.target && ab.target !== 'self' && ab.target !== 'none'; }
+  available(ab) {
+    if (!this.usable(ab)) return false;
+    if (this.cdRemaining(ab) > 0) return false;
+    if (this.needsTarget(ab) && !this.env.target(ab)) return false;
+    return true;
+  }
+  // Seconds until this ability could fire (for queueing and the bar).
+  readyIn(ab) {
+    let t = Math.max(0, this.lockUntil - this.now);
+    if (this.cast && !ab.duringCast) t = Math.max(t, this.cast.end - this.now + ENGINE.CAST_LOCK_EXTRA);
+    if (ab.type === 'gcd') t = Math.max(t, this.gcdRemaining());
+    t = Math.max(t, this.cdRemaining(ab));
+    return t;
+  }
+  // Should the button glow? (the kit's hint for "this is a good press right now")
+  glows(ab) { return !!(ab.glow && ab.glow(this)); }
+  label(ab) { return typeof ab.label === 'function' ? ab.label(this) : ab.name; }
+
+  // ---------------------------------------------------------------- input
+  press(index) {
+    const ab = this.abilities[index];
+    if (!ab) return false;
+    if (!this.usable(ab)) { this.env.emit({ type: 'fail', reason: 'unusable', ab }); return false; }
+    const wait = this.readyIn(ab);
+    if (wait <= 0.0001) return this.execute(ab);
+    if (wait <= ENGINE.QUEUE_WINDOW) { this.queued = { ab, at: this.now }; return true; }
+    this.env.emit({ type: 'fail', reason: 'cooldown', ab });
+    return false;
+  }
+
+  execute(ab) {
+    if (!this.available(ab)) { this.env.emit({ type: 'fail', reason: this.needsTarget(ab) ? 'target' : 'unusable', ab }); return false; }
+    const target = this.needsTarget(ab) ? this.env.target(ab) : null;
+    if (this.stats.start === null && (ab.target === 'enemy' || ab.startsCombat)) this.stats.start = this.now;
+    if (ab.target === 'enemy') this.engagedAt = this.now;
+    const ct = this.castTime(ab);
+    if (ab.type === 'gcd') {
+      this.gcdLen = (ab.recastGcd || ENGINE.GCD) * this.hasteMult();
+      this.gcdReady = this.now + this.gcdLen;
+      this.stats.gcds++;
+      this.stats.gcdTime += this.gcdLen;
+    }
+    if (ab.type === 'ogcd' || ab.cd) this.startCooldown(ab);
+    if (ct > 0) {
+      this.cast = { ab, target, start: this.now, end: this.now + ct };
+      this.env.emit({ type: 'castStart', ab, dur: ct, target });
+    } else {
+      this.lockUntil = this.now + (ab.lock ?? ENGINE.ANIM_LOCK);
+      this.resolve(ab, target);
+    }
+    return true;
+  }
+
+  resolve(ab, target) {
+    this.stats.casts[ab.id] = (this.stats.casts[ab.id] || 0) + 1;
+    this.env.emit({ type: 'used', ab, target });
+    ab.effect(this, target);
+    if (this.def.afterUse) this.def.afterUse(this, ab);
+  }
+
+  update() {
+    const now = this.now;
+    if (this.cast) {
+      const c = this.cast;
+      if (this.env.moving() && now < c.end - ENGINE.SLIDECAST) {
+        this.cast = null;
+        this.stats.interrupts++;
+        if (c.ab.type === 'gcd') { this.gcdReady = now + 0.5; this.stats.gcdTime -= this.gcdLen - 0.5; }
+        if (c.ab.type === 'ogcd' || c.ab.cd) this.resetCooldown(c.ab);
+        this.env.emit({ type: 'interrupted', ab: c.ab });
+      } else if (now >= c.end) {
+        this.cast = null;
+        this.lockUntil = now + ENGINE.CAST_LOCK_EXTRA;
+        this.resolve(c.ab, this.needsTarget(c.ab) ? (this.env.target(c.ab) || c.target) : null);
+      }
+    }
+    if (this.queued) {
+      const q = this.queued;
+      if (now - q.at > ENGINE.QUEUE_WINDOW + 0.25) this.queued = null;
+      else if (this.readyIn(q.ab) <= 0.0001) { this.queued = null; this.execute(q.ab); }
+    }
+    for (const [id, d] of this.dots) {
+      while (now >= d.next && d.next <= d.end + 0.001) {
+        d.next += d.interval;
+        this.damage(d.potency, Object.assign({ dot: true, ab: d.ab }, d.opts));
+      }
+      if (now > d.end) this.dots.delete(id);
+    }
+    this.autoAttack(now);
+    if (this.def.tick) this.def.tick(this);
+    for (const [id, b] of this.buffs) if (b.end <= now) { this.buffs.delete(id); if (this.def.onExpire) this.def.onExpire(this, id, b); }
+  }
+  autoAttack(now) {
+    const au = this.def.auto;
+    if (!au || this.cast || now < this.nextAuto || now - this.engagedAt > ENGINE.AUTO_ENGAGE) return;
+    if (this.env.canAuto && !this.env.canAuto()) return;
+    const target = this.env.target(this.autoAb);
+    if (!target) return;
+    this.nextAuto = now + ENGINE.AUTO_EVERY * this.hasteMult();
+    this.env.emit({ type: 'auto', kind: au.kind, target });
+    this.damage(au.potency, { auto: true });
+  }
+  refill(id) { const ab = this.abById(id); if (!ab) return; this.cd[id] = ab.charges ? { charges: ab.charges, next: 0 } : 0; }
+  resetCooldown(ab) { if (ab.charges) this.cd[ab.id] = { charges: Math.min(ab.charges, this.cd[ab.id].charges + 1), next: this.cd[ab.id].next }; else this.cd[ab.id] = 0; }
+
+  // Messages from the fight (host) or training sim: e.g. 'perfect' block, 'shieldEnd', 'reflect'.
+  notify(type, data) { if (this.def.onNotify) this.def.onNotify(this, type, data || {}); }
+
+  // ---------------------------------------------------------------- effects API used by kits
+  rng() { return this.env.rng(); }
+
+  // Potency -> damage on the current enemy. opts: { ab, crit, autoCrit, mult, positional: 'rear'|'flank', posBonus, threat }
+  damage(potency, opts = {}) {
+    let pot = potency, posHit = null;
+    if (opts.positional) {
+      const pos = this.env.positional(opts.positional);
+      posHit = this.has('truenorth') || pos === opts.positional || (this.def.positionalAlways && this.def.positionalAlways(this));
+      if (posHit) { pot += opts.posBonus || 0; this.stats.posHit++; } else this.stats.posMiss++;
+    }
+    const party = this.env.partyMods ? this.env.partyMods() : {};
+    const tgt = this.env.targetMods ? this.env.targetMods() : {};
+    const self = this.env.selfMods ? this.env.selfMods() : {};
+    const kitDmg = this.def.dmgMod ? this.def.dmgMod(this, opts) : 0;
+    const gear = this.gear();
+    const critChance = opts.autoCrit ? 1 : ENGINE.BASE_CRIT + (gear.crit || 0) + (opts.crit || 0) + (party.crit || 0) + (this.def.critMod ? this.def.critMod(this, opts) : 0);
+    const crit = this.rng() < critChance;
+    const variance = 0.95 + this.rng() * 0.1;
+    const amount = Math.round(pot * ENGINE.POT_SCALE * (this.def.potMult || 1) * (1 + kitDmg) * (1 + (gear.power || 0)) * (1 + (party.dmg || 0)) * (1 + (tgt.vuln || 0)) *
+      (1 - (self.dmgDown || 0)) * (opts.mult || 1) * (crit ? ENGINE.CRIT_MULT : 1) * variance);
+    this.stats.damage += amount;
+    if (party.dmg || tgt.vuln) this.stats.burstDamage += amount;
+    this.stats.last = this.now;
+    this.env.emit({ type: 'damage', amount, crit, potency: pot, positional: posHit, ab: opts.ab, dot: !!opts.dot, auto: !!opts.auto, threat: opts.threat || 1 });
+    if (this.def.onDamage) this.def.onDamage(this, amount, crit, opts);
+    return { amount, crit, posHit };
+  }
+  // Damage over time, ticking every `interval`. Re-applying keeps up to 30% of the old duration (pandemic).
+  dot(id, potency, dur, interval = 3, opts = {}) {
+    const old = this.dots.get(id);
+    let end = this.now + dur;
+    if (old && old.end > this.now) {
+      const left = old.end - this.now;
+      end += Math.min(left, dur * ENGINE.PANDEMIC);
+      if (left > dur * ENGINE.PANDEMIC) this.wasted(id + ' clipped', left - dur * ENGINE.PANDEMIC);
+    }
+    this.dots.set(id, { potency, interval, next: old && old.end > this.now ? old.next : this.now + interval, end, ab: opts.ab, opts });
+  }
+  dotRemaining(id) { const d = this.dots.get(id); return d ? Math.max(0, d.end - this.now) : 0; }
+
+  healAmount(potency, opts = {}) {
+    const self = this.def.healMod ? this.def.healMod(this, opts) : 0;
+    const gear = this.gear();
+    const crit = this.rng() < ENGINE.BASE_CRIT + (gear.crit || 0) + (opts.crit || 0);
+    return { amount: Math.round(potency * ENGINE.POT_SCALE * (1 + self) * (1 + (gear.power || 0)) * (crit ? ENGINE.CRIT_MULT : 1) * (0.95 + this.rng() * 0.1)), crit };
+  }
+  heal(target, potency, opts = {}) {
+    const { amount, crit } = this.healAmount(potency, opts);
+    this.env.emit({ type: 'heal', target, amount, crit, ab: opts.ab });
+    return amount;
+  }
+  // Heal a fixed number of HP (for heals based on damage taken / dealt rather than potency).
+  healRaw(target, amount, opts = {}) {
+    amount = Math.round(amount * (1 + (this.def.healMod ? this.def.healMod(this, opts) : 0)) * (1 + (this.gear().power || 0)));
+    this.env.emit({ type: 'heal', target, amount, crit: false, ab: opts.ab });
+    return amount;
+  }
+  hot(target, potencyPerTick, ticks, interval = 3, opts = {}) {
+    const { amount } = this.healAmount(potencyPerTick, opts);
+    this.env.emit({ type: 'hot', target, amount, ticks, interval, ab: opts.ab, id: opts.id || (opts.ab && opts.ab.id) });
+  }
+  shield(target, potency, dur, opts = {}) {
+    const amount = Math.round(potency * ENGINE.POT_SCALE * (1 + (this.def.healMod ? this.def.healMod(this, opts) : 0)) * (1 + (this.gear().power || 0)));
+    this.env.emit({ type: 'shield', target, amount, dur, ab: opts.ab, tag: opts.tag });
+    return amount;
+  }
+  // Damage reduction on a player (or 'party'). kind: undefined | 'brace' | 'reflect' | 'living' | 'invuln'
+  mitigate(target, pct, dur, opts = {}) { this.env.emit({ type: 'mit', target, pct, dur, ab: opts.ab, kind: opts.kind }); }
+  partyBuff(kind, value, dur, opts = {}) { this.env.emit({ type: 'partyBuff', kind, value, dur, ab: opts.ab }); }
+  debuffTarget(kind, value, dur, opts = {}) { this.env.emit({ type: 'targetDebuff', kind, value, dur, ab: opts.ab }); }
+  selfDamage(pctMaxHp, opts = {}) { this.env.emit({ type: 'selfDamage', pct: pctMaxHp, ab: opts.ab }); }
+  raise(target, opts = {}) { this.env.emit({ type: 'raise', target, ab: opts.ab }); }
+  rewind(target, secs, opts = {}) { this.env.emit({ type: 'rewind', target, secs, ab: opts.ab }); }
+  teleport(where, opts = {}) { this.env.emit({ type: 'teleport', where, ab: opts.ab }); }
+  fx(name, data) { this.env.emit({ type: 'fx', name, data }); }
+}
+
+if (typeof module !== 'undefined') module.exports = { ENGINE, Kit };

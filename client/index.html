@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Emberfall</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<div id="hud-tl">
+  <div class="town">Emberfall</div>
+  <div id="hero-name"></div>
+  <div id="objective"></div>
+</div>
+<canvas id="minimap"></canvas>
+<div id="party"></div>
+<div id="chat-log"></div>
+<input id="chat-input" class="hidden" maxlength="120" placeholder="Say something... (Enter to send)" autocomplete="off">
+<div id="help"><kbd>Right-click</kbd> move · <kbd>Left-click</kbd> interact · <kbd>Q</kbd><kbd>W</kbd><kbd>E</kbd><kbd>R</kbd><kbd>D</kbd><kbd>F</kbd> skills · <kbd>Space</kbd> dash · <kbd>Enter</kbd> chat</div>
+<div id="toast"></div>
+<div id="target-frame" class="hidden"></div>
+
+<div id="overlay" class="hidden">
+  <div class="panel hidden" id="boss-panel">
+    <button class="close" aria-label="Close">×</button>
+    <header><h2>Raid Board</h2><p>Four bosses stand between you and the Hollow King.</p></header>
+    <div class="panel-body">
+      <nav class="list" id="boss-list"></nav>
+      <section class="detail" id="boss-detail"></section>
+    </div>
+  </div>
+</div>
+
+<div id="select" class="hidden">
+  <div class="sel-page" id="sel-grid">
+    <button class="sel-close" aria-label="Close" data-tip="Close (Esc)">×</button>
+    <header class="sel-head"><h2>Choose your Hero</h2><div class="sel-rule"></div></header>
+    <div id="altar"></div>
+  </div>
+  <div class="sel-page hidden" id="sel-detail">
+    <button class="sel-back" aria-label="Back" data-tip="Back (Esc)">←</button>
+    <div class="sel-top">
+      <div class="sel-portrait"><canvas id="sel-portrait"></canvas></div>
+      <div class="box" id="sel-flavor"></div>
+    </div>
+    <div class="box" id="sel-passive"></div>
+    <div id="sel-keys"></div>
+    <div class="box" id="sel-tips"></div>
+    <button class="cta" id="sel-choose"></button>
+  </div>
+</div>
+
+<div id="join">
+  <form id="join-form" class="join-card">
+    <h1>Emberfall</h1>
+    <p class="join-sub">A four-player raid adventure</p>
+    <label for="name-input">Your name</label>
+    <input id="name-input" maxlength="16" placeholder="Adventurer" autocomplete="off">
+    <button id="host-btn" class="cta" type="button">Host a game</button>
+    <div class="or"><span>or join a friend</span></div>
+    <div class="join-row">
+      <input id="code-input" maxlength="4" placeholder="CODE" autocomplete="off" aria-label="Room code">
+      <button id="join-btn" class="btn2" type="submit">Join</button>
+    </div>
+    <p id="join-error"></p>
+    <p id="join-note">The host shares a 4-letter room code. Players connect directly to the host, peer-to-peer.</p>
+    <button id="solo-btn" class="linkish" type="button">Play solo with bots (works offline)</button>
+  </form>
+</div>
+
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="js/draw-util.js"></script>
+<script src="js/interp.js"></script>
+<script src="js/data.js"></script>
+<script src="js/ui-tip.js"></script>
+<script src="js/heroes.js"></script>
+<script src="js/bosses.js"></script>
+<script src="js/town.js"></script>
+<script src="js/combat/engine.js"></script>
+<script src="js/combat/kits.js"></script>
+<script src="js/combat/actor.js"></script>
+<script src="js/combat/gauges.js"></script>
+<script src="js/combat/hud.js"></script>
+<script src="js/arena/shapes.js"></script>
+<script src="js/arena/fight.js"></script>
+<script src="js/arena/bots.js"></script>
+<script src="js/arena/raid-host.js"></script>
+<script src="js/arena/bosses/grubnak.js"></script>
+<script src="js/arena/bosses/skitterra.js"></script>
+<script src="js/arena/boss-tells.js"></script>
+<script src="js/arena/arena-view.js"></script>
+<script src="js/vfx.js"></script>
+<script src="js/ability-vfx.js"></script>
+<script src="js/fx.js"></script>
+<script src="js/boss-vfx.js"></script>
+<script src="js/hero-guide.js"></script>
+<script src="js/items.js"></script>
+<script src="js/inventory.js"></script>
+<script src="js/raid-ui.js"></script>
+<script src="js/net.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

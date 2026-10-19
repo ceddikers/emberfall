@@ -1,0 +1,9 @@
+{
+  "name": "emberfall",
+  "version": "0.2.0",
+  "private": true,
+  "description": "A four-player co-op raid game.",
+  "scripts": {
+    "start": "node server/server.js"
+  }
+}
