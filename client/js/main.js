@@ -236,7 +236,8 @@
   function onKitEvent(ev) {
     switch (ev.type) {
       case 'used': {
-        const ab = ev.ab, i = actor.abilities.indexOf(ab);
+        // (a named move a paced kit's press completed isn't on the bar itself: it names its button in `slot`)
+        const ab = ev.ab, i = actor.abilities.includes(ab) ? actor.abilities.indexOf(ab) : (ab.slot ?? -1);
         if (selfCast && selfCast.i === i) selfCast = null;
         let tx = player.x, ty = player.y, ally = null;
         if (ab.target === 'enemy' && ev.target) { tx = ev.target.x; ty = ev.target.y; lastEnemy = ev.target; }
@@ -273,8 +274,9 @@
       case 'fail':
         if (now - failAt < 0.6 || ev.reason === 'cooldown') break;
         failAt = now;
-        FX.text(player.x, player.y - 56, ev.reason === 'target' ? (ev.ab.target === 'enemy' ? (inArena() && (raid.boss.u || raid.state !== 'live') ? 'No target' : 'Out of range') : 'No target') : 'Not ready', '#c8c0d8', 12, 0.7);
+        FX.text(player.x, player.y - 56, ev.reason === 'target' ? (ev.ab.target === 'enemy' ? (inArena() && (raid.boss.u || raid.state !== 'live') ? 'No target' : 'Out of range') : 'No target') : ev.reason === 'winded' ? 'Winded' : 'Not ready', '#c8c0d8', 12, 0.7);
         break;
+      case 'fxLocal': playKitFx(player, ev.name, true, ev.data); break;   // a class moment only you see (an Ironpalm's Crisp press)
       case 'teleport': if (ev.where && ev.where !== 'behind') kitMove(ev); else teleportBehind(); break;
       case 'fx': kitFx(ev.name, ev.data); break;
       case 'damage': onMyDamage(ev); break;
@@ -374,10 +376,11 @@
     const dist = Math.hypot(player.x - d.x, player.y - d.y);
     FX.add({ type: 'ring', x: player.x, y: player.y, r: 40, color: '#ff6a4a', dur: 0.35 });
     if (dist > 140 || !actor) return;
-    let amt = 1300 * FIGHT.NUM_SCALE, perfect = false, reflect = false;
+    let amt = 1300 * FIGHT.NUM_SCALE, perfect = false, reflect = false, read = false;
     town.mits = town.mits.filter(m => m.end > now);
     for (const m of town.mits) {
       if (m.kind === 'brace' && now - m.start <= FIGHT.PERFECT_WINDOW && !perfect) { perfect = true; amt *= 0.4; m.end = 0; continue; }
+      if (m.kind === 'parry' && now - m.start <= FIGHT.READ_WINDOW && !read) { read = true; amt *= 0.5; m.end = 0; continue; }
       if (m.kind === 'reflect' && !reflect) { reflect = true; amt *= 0.2; m.end = 0; continue; }
       if (m.kind === 'invuln') { amt = 0; break; }
       if (m.kind !== 'living') amt *= 1 - (m.pct || 0);
@@ -392,6 +395,7 @@
     if (amt > 0) FX.text(player.x, player.y - 46, '-' + amt, '#ff7a6a', 14);
     if (perfect) actor.notify('perfect');
     if (reflect) actor.notify('reflect');
+    if (read) actor.notify('read', { b: d.heavy ? 1 : 0 });   // (the sparring dummy's every third swing counts as a tankbuster)
   }
 
   const ADD_R = 30;
@@ -519,7 +523,7 @@
   // class moments (Perfect Block, Overheat...): the big effect plays for everyone, the text only for you
   function kitFx(name, data) {
     const x = player.x, y = player.y;
-    const label = { perfect: ['Perfect!', '#ffe27a'], reflect: ['Reflect!', '#e0d4ff'], overheat: ['Overheat', '#ff6a3a'], lag: ['Time Lag', '#9ab8c0'], frostbite: ['Frostbite', '#9ad8ff'], riposte: ['Riposte!', '#e8fff8'] }[name];
+    const label = { perfect: ['Perfect!', '#ffe27a'], reflect: ['Reflect!', '#e0d4ff'], overheat: ['Overheat', '#ff6a3a'], lag: ['Time Lag', '#9ab8c0'], frostbite: ['Frostbite', '#9ad8ff'], riposte: ['Riposte!', '#e8fff8'], read: ['Read!', '#ffd9a0'] }[name];
     if (label) FX.text(x, y - 62, label[0], label[1], 17, 1.1);
     playKitFx(player, name, true, data);
     Net.send(Object.assign({ t: 'kfx', k: name, s: scene === 'arena' ? 1 : 0 }, data ? { d: data } : null));
@@ -1215,8 +1219,9 @@
     if (msg.id !== Net.id || !actor) return;
     if (msg.k === 'perfect') actor.notify('perfect');
     if (msg.k === 'reflect') actor.notify('reflect');
+    if (msg.k === 'read') actor.notify('read', msg);   // an Ironpalm's Read caught a hit (msg.b: it was a tankbuster)
     if (msg.k === 'shieldEnd') actor.notify('shieldEnd', msg);
-    if (msg.k === 'death') { actor.kit.cast = null; actor.kit.queued = null; player.target = null; player.dashMove = null; }
+    if (msg.k === 'death') { actor.kit.cast = null; actor.kit.queued = null; actor.kit.inbuf.length = 0; player.target = null; player.dashMove = null; }
   });
   Net.on('pbuff', msg => {
     if (!raid) return;
@@ -1329,6 +1334,7 @@
     if (idx !== undefined) {
       e.preventDefault();
       if (e.repeat && idx >= 6) return;
+      if (e.repeat && actor && actor.kit.pace && actor.kit.pace.repeat === false) return;   // a paced kit counts presses, not a held key
       // a kit's own Shift move (the Apothecary moves its pick along the bandolier with Shift+R)
       if (e.shiftKey && idx < 6 && actor && actor.kit.def.shiftPress) { if (e.repeat) return; if (actor.kit.def.shiftPress(actor.kit, idx)) return; }
       if (e.shiftKey && idx < 6 && actor && actor.abilities[idx].target === 'ally') selfCast = { i: idx, until: now + ENGINE.QUEUE_WINDOW + 0.3 };
@@ -1501,7 +1507,7 @@
       if (!near) { d.nextSwing = 0; continue; }
       if (!d.nextSwing) d.nextSwing = now + 1.5;
       if (now >= d.nextSwing - 0.6 && !d.windup) d.windup = d.nextSwing;
-      if (now >= d.nextSwing) { d.st.hit = now; d.windup = 0; d.nextSwing = now + FIGHT.AUTO_EVERY; sparHit(d); }
+      if (now >= d.nextSwing) { d.st.hit = now; d.windup = 0; d.nextSwing = now + FIGHT.AUTO_EVERY; d.swings = (d.swings || 0) + 1; d.heavy = d.swings % 4 === 0; sparHit(d); }
     }
     town.buffs = town.buffs.filter(b => b.end > now);
     if (town.shield && town.shield.end <= now) endTownShield();
@@ -1759,8 +1765,8 @@
     VFX.draw(ctx, 'ground');
     // the sparring dummy winds up before it swings
     for (const d of dummies) if (d.spar && d.windup) {
-      const p = clamp(1 - (d.windup - now) / 0.6, 0, 1);
-      circle(ctx, d.x, d.y + 4, 20 + p * 30, null, rgba('#ff6a4a', 0.3 + p * 0.6), 2 + p * 2);
+      const p = clamp(1 - (d.windup - now) / 0.6, 0, 1), heavy = ((d.swings || 0) + 1) % 4 === 0;   // every fourth swing is a heavy one
+      circle(ctx, d.x, d.y + 4, 20 + p * 30, null, rgba(heavy ? '#ff3a2a' : '#ff6a4a', 0.3 + p * 0.6), (2 + p * 2) * (heavy ? 1.8 : 1));
     }
     const lt = lockedTarget();
     const en = !lt && actor ? enemyPos() : null;
@@ -2254,7 +2260,7 @@
   }
 
   function abilityMeta(ab) {
-    const bits = [ab.type === 'gcd' ? 'GCD' : 'oGCD'];
+    const bits = [ab.meta || (ab.type === 'gcd' ? 'GCD' : 'oGCD')];
     if (typeof ab.cast === 'number' && ab.cast) bits.push(`${ab.cast}s cast`);
     else if (typeof ab.cast === 'function') bits.push('cast');
     if (ab.charges) bits.push(`${ab.charges} charges · ${ab.cd}s`);

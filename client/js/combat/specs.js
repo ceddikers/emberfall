@@ -762,7 +762,8 @@ function kitFor(classId, specId, talents) {
 // a move by its id, wherever it comes from (the kit, its spec, or a talent): how other clients find what you cast
 function abilityById(classId, specId, id) {
   const k = specKit(classId, specId);
-  const own = k && k.abilities.find(a => a.id === id);
+  // (a paced kit's named moves, the strings an Ironpalm's presses spell, live in its `moves`)
+  const own = k && (k.abilities.find(a => a.id === id) || (k.moves && k.moves.find(m => m.id === id)));
   if (own || typeof TALENT_ABILITIES === 'undefined') return own || null;
   const k2 = specKit(classId, specId), tids = [...Object.keys(TALENT_ABILITIES), ...Object.keys((k2 && k2.talentAbilities) || {})];
   for (const tid of tids) { const m = talentMoveFor(classId, specId, tid); if (m && m.id === id) return m; }
@@ -884,3 +885,52 @@ Object.assign(SPECS, {
     },
   ],
 });
+
+// ===================================================================================================================
+// IRONPALM's specs (its kit is the last block of kits.js)
+// ===================================================================================================================
+SPECS.ironpalm = [
+  {
+    id: 'stillwater', name: 'Still Water', title: 'The Unmoving Pond', accent: '#8fc8e8',
+    gaugeTip: 'Every press costs Breath: Light 10, Heavy 16, Kick 13 (40% less when Crisp). It refills 8 a second while you fight and 40 a second once you stop for half a moment; Crane Step gives 22. A perfect Read fills it to the top.',
+    blurb: 'Let the blow come. Be where it isn\'t, and answer it.',
+    focus: 'Reading blows. Every perfect Read fills your Breath to the top, Read has two charges, and Still Pond lets you read every blow for a while.',
+    passive: { name: 'Still Water', desc: 'A perfect Read fills your Breath to the top, on any hit. Read has two charges. Iron Skin becomes Still Pond.' },
+    build: base => ({
+      potMult: base.potMult * 1.01,   // balance knob (tools/simulate.js)
+      stillWater: true,
+      abilities: {
+        read: { charges: 2, desc: 'Drop into a reading stance for 1.2s: 20% less damage. A hit that lands in its first 0.4s is read: it lands at half strength, you counter, and your Breath fills to the top. Read a tankbuster and your next Heavy is a free Thousand Palms, 30% stronger. Two charges.' },
+        skin: {
+          id: 'pond', replaces: 'skin', icon: 'skin', name: 'Still Pond', type: 'ogcd', target: 'self', cd: 90, lock: 0.5, anim: 'big',
+          desc: 'Settle like still water for 8s: 25% less damage, and Read comes back 0.8s after you use it. Read every blow.',
+          effect(k) { k.mitigate('self', k.perk('ironpalm_a4') ? 0.35 : 0.25, 8, { ab: this }); k.buff('pond', 8); k.refill(ipAbId(k, 'read')); },
+        },
+      },
+    }),
+  },
+  {
+    id: 'avalanche', name: 'Avalanche Fist', title: 'The Falling Mountain', accent: '#d08a5a',
+    gaugeTip: 'Every press costs Breath: Light 10, Heavy 16, Kick 13 (40% less when Crisp). It refills 8 a second while you fight and 40 a second once you stop for half a moment; Crane Step gives 22. Every named move adds Momentum (+3% damage, up to 8), gone 2.5s after your last one. A broken or dropped string staggers you and loses it all.',
+    blurb: 'Start the slide and never let it stop.',
+    focus: 'Long strings. Every named move builds Momentum, and moves of four inputs or more hit harder, but a string you drop or break staggers you and throws it all away.',
+    passive: { name: 'Avalanche', desc: 'Every named move adds Momentum: +3% damage, up to 8, gone 2.5s after your last named move. Moves of four inputs or more hit 20% harder. A string you break or let drop staggers you for 0.7s and loses all your Momentum. Temple Bell becomes Landslide.' },
+    build: base => ({
+      potMult: base.potMult * 0.79,
+      avalanche: true,
+      abilities: {
+        bell: {
+          id: 'slide', replaces: 'bell', icon: 'bell', name: 'Landslide', type: 'ogcd', target: 'self', cd: 60, lock: 0.5, anim: 'big',
+          desc: 'Plant your feet like a mountain coming down: the whole party takes 10% less damage for 8s, and for 15s your strings can\'t drop or break, and your Momentum fills and holds.',
+          effect(k) {
+            k.mitigate('party', 0.1, 8, { ab: this });
+            const dur = k.perk('ironpalm_w3') ? 20 : 15;
+            k.buff('slide', dur); k.buff('rush', dur, {}, IRONPALM.RUSH_MAX, IRONPALM.RUSH_MAX);
+            if (k.talent('ironpalm_bellecho')) k.heal('party', 130, { ab: this });
+            if (k.talent('ironpalm_gong')) k.after(8, () => { k.mitigate('party', 0.1, 4, { ab: this }); k.fx('gong'); });
+          },
+        },
+      },
+    }),
+  },
+];

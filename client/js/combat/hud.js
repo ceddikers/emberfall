@@ -128,7 +128,7 @@ const Hud = {
       const ab = items[i], k = this.actor && this.actor.kit;
       const name = k && i < 6 ? k.label(ab) : ab.name;
       const icon = art(ab, i) ? `<i class="ab-icon ${ab.type}" style="background-image:${art(ab, i)}"></i>` : '<i class="ab-icon dash">»</i>';
-      const meta = [ab.type === 'gcd' ? 'GCD' : 'oGCD'];
+      const meta = [ab.meta || (ab.type === 'gcd' ? 'GCD' : 'oGCD')];   // (a paced kit's moves say what limits them instead)
       if (typeof ab.cast === 'number' && ab.cast) meta.push(`${ab.cast}s cast`);
       if (ab.charges) meta.push(`${ab.charges} charges · ${ab.cd}s`); else if (typeof ab.cd === 'number' && ab.cd) meta.push(`${ab.cd}s cooldown`);
       const perks = k ? [...(k.gear().perks || [])].filter(p => ITEM_PERKS[p] && ITEM_PERKS[p].ab === (ab.replaces || ab.id)) : [];
@@ -177,11 +177,13 @@ const Hud = {
         txt = cdLeft < 1 ? cdLeft.toFixed(1) : Math.ceil(cdLeft);
       }
       if (ab.type === 'gcd' && k.gcdRemaining() > 0 && cdLeft <= 0) frac = Math.max(frac, k.gcdRemaining() / k.gcdLen);
+      // no GCD (a paced kit): its moves show the recovery of the last press instead
+      if (ab.type === 'gcd' && k.gcdFree() && cdLeft <= 0 && k.lockUntil > now) frac = Math.max(frac, (k.lockUntil - now) / Math.max(0.1, k.lockLen));
       s.sweep.style.setProperty('--cd', frac.toFixed(3));
       s.cd.textContent = txt;
       s.el.classList.toggle('glow', usable && cdLeft <= 0 && k.glows(ab));
       s.el.classList.toggle('dim', !usable);
-      s.el.classList.toggle('queued', !!(k.queued && k.queued.ab === ab));
+      s.el.classList.toggle('queued', !!(k.queued && k.queued.ab === ab) || k.inbuf.some(q => q.ab === ab));
       s.el.classList.toggle('casting', !!(k.cast && k.cast.ab === ab));
       const lbl = k.label(ab);
       if (s.name.textContent !== lbl) s.name.textContent = lbl;

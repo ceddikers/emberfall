@@ -87,6 +87,15 @@ CLASSES.push({
   gameplan: 'Three reagents, two presses each: Dew and Dew brews a healing Draught, Ember and Ember a Fire Bomb, Salt a ward. Vials wait in your bandolier and grow stronger, so you brew in the quiet for what\'s coming, then throw the oldest at whoever needs it. A splash catches everyone near where it lands.',
 });
 
+// ---------------------------------------------------------------- Ironpalm (tank; the combo-paced class)
+// No global cooldown: Light, Heavy and Kick spell named moves in short strings (kits.js IRONPALM, engine.js pacing).
+CLASSES.push({
+  id: 'ironpalm', name: 'Ironpalm', title: 'Monk Brawler', role: 'tank', difficulty: 3, complexity: 3, accent: '#f0a73a',
+  art: { icons: false, portraits: false },
+  tagline: 'Every blow is a word. Learn to speak in sentences.',
+  gameplan: 'There is no global cooldown. Light, Heavy and Kick are your keys, and short strings of them pressed in rhythm become named moves: a launching uppercut, a blocking stance, a storm of palms. Breath is the only limit: every press costs some, and it floods back the moment you stop. Read the boss\'s blow in its last instant to take half of it and answer with a free finisher.',
+});
+
 // Boss panel text: flavor only. Nothing here tells you how to deal with an attack.
 const BOSSES = [
   {
