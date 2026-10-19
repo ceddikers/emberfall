@@ -47,5 +47,13 @@
   "alembist": {
     "newbie": 632,
     "pro": 1090
+  },
+  "gorgemaw": {
+    "newbie": 1076,
+    "pro": 1498
+  },
+  "oathbroker": {
+    "newbie": 1197,
+    "pro": 1485
   }
 }

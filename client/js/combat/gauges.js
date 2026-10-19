@@ -457,6 +457,88 @@ const ICON_ART = (() => {
   return out;
 })();
 
+// ======================================================================= Gorgemaw, Oathbroker (tanks-2)
+// a Morsel's shape as a small glyph (the Belly, the icons): Ring a hoop, Lance a bar, Fang a wedge, Spike a star
+function mawGlyph(c, m, x, y, s, col) {
+  const ink = OUT;
+  if (m === 'ring') { c.beginPath(); c.arc(x, y, 6 * s, 0, TAU); c.lineWidth = 3.4 * s; c.strokeStyle = ink; c.stroke(); c.lineWidth = 2.2 * s; c.strokeStyle = col; c.stroke(); }
+  else if (m === 'lance') { rrect(c, x - 8 * s, y - 2.4 * s, 16 * s, 4.8 * s, 2 * s, col, ink, 1.2); }
+  else if (m === 'fang') poly(c, [x - 7 * s, y - 5 * s, x + 7 * s, y - 5 * s, x, y + 7 * s], col, ink, 1.2);
+  else { const p = []; for (let i = 0; i < 8; i++) { const a = -Math.PI / 2 + i * Math.PI / 4, r = (i % 2 ? 3 : 8) * s; p.push(x + Math.cos(a) * r, y + Math.sin(a) * r); } poly(c, p, col, ink, 1.2); }
+}
+Object.assign(GAUGES, {
+  // Gorgemaw: the Belly. Its Morsels sit in a row of hollows (oldest on the left: that's what Spit fires), each in its
+  // shape's colour. A jaw over the row opens while Open Wide is up; a Glutton's matching pair is bracketed (a Fusion).
+  belly(c, k, w, h, t) {
+    const g = k.g, max = (k.def.gauge && k.def.gauge.max) || 3, b = g.belly || [], cx = w / 2, cy = 70;
+    const R = max > 3 ? 54 : 46;
+    ellipse(c, cx, cy, R + 6, 34, 0, '#3a2018', OUT, 2.2);
+    ellipse(c, cx, cy - 4, R, 27, 0, '#5a3020');
+    const gap = (R * 2 - 12) / max;
+    for (let i = 0; i < max; i++) {
+      const x = cx - R + 6 + gap * (i + 0.5), y = cy;
+      circle(c, x, y, Math.min(12, gap * 0.42), '#24120c', 'rgba(255,220,180,0.2)', 1);
+      const m = b[i];
+      if (!m) continue;
+      const col = MAW.COLOR[m.m] || '#ff9a3a', fresh = i === b.length - 1 && k.now - (g.popAt ?? -9) < 0.35;
+      glow(c, x, y, 13, col, fresh ? 0.9 : 0.35);
+      mawGlyph(c, m.m, x, y, fresh ? 1.25 : 1, col);
+    }
+    // a Glutton's Fusion: the oldest two match
+    if (k.def.fuse && b.length >= 2 && b[0].m === b[1].m) {
+      const x0 = cx - R + 6 + gap * 0.1, x1 = cx - R + 6 + gap * 1.9;
+      c.save(); c.globalAlpha = 0.7 + Math.sin(t * 8) * 0.25; rrect(c, x0, cy - 15, x1 - x0, 30, 8, null, '#fff0c8', 1.6); c.restore();
+    }
+    // the jaw over it: shut, or gaping while Open Wide is up (Bottomless: wider, and red)
+    const open = (g.jawUntil || 0) > k.now, all = k.has('bottomless'), gape = open ? (all ? 16 : 11) : 2;
+    const jc = all ? '#ff6a3a' : '#ffd0a0';
+    c.lineCap = 'round';
+    c.beginPath(); c.moveTo(cx - 40, 26); c.quadraticCurveTo(cx, 26 - gape * 1.4, cx + 40, 26); c.lineWidth = 4; c.strokeStyle = OUT; c.stroke(); c.lineWidth = 2; c.strokeStyle = open ? jc : '#8a6a58'; c.stroke();
+    c.beginPath(); c.moveTo(cx - 40, 30); c.quadraticCurveTo(cx, 30 + gape * 0.6, cx + 40, 30); c.lineWidth = 4; c.strokeStyle = OUT; c.stroke(); c.lineWidth = 2; c.strokeStyle = open ? jc : '#8a6a58'; c.stroke();
+    if (open) { for (let i = 0; i < 6; i++) { const x = cx - 30 + i * 12; poly(c, [x - 3, 26 - gape * 0.9, x + 3, 26 - gape * 0.9, x, 26 - gape * 0.9 + 5], '#fff4e0', OUT, 0.8); }
+      glow(c, cx, 28, 26, jc, 0.3 + Math.sin(t * 10) * 0.1); }
+    label(c, String(b.length), cx, cy + 32, '#ffe0c0', 13, 'system-ui', 800);
+    if (k.has('stone')) { c.save(); c.globalAlpha = 0.55; ellipse(c, cx, cy, R + 9, 37, 0, null, '#c8c0b0', 2); c.restore(); }
+  },
+
+  // Oathbroker: the Ledger, as a page. Every entry is a line: its amount (a bar and the number) and the seconds until it
+  // comes due, oldest at the top; a line is red in its last 2s. The total is written above. Terms show in the margin:
+  // Lien (a chain), Writ (a scroll), Moratorium (an hourglass: everything held), Default (the page crossed out and void),
+  // a Guarantor's bond (a link, with its seconds).
+  ledger(c, k, w, h, t) {
+    const g = k.g, L = (g.ledger || []).slice().sort((a, b) => a.due - b.due), now = k.now;
+    const x0 = 22, x1 = w - 8, top = 22, rowH = 10.5, rows = 8;
+    rrect(c, x0 - 4, top - 18, x1 - x0 + 8, h - top + 12, 4, '#e8e0cc', OUT, 1.6);
+    rrect(c, x0 - 4, top - 18, x1 - x0 + 8, 14, 4, '#d4c8ae');
+    const maxHp = (k.env && k.env.maxHp && k.env.maxHp()) || 1, tot = g.total || 0;
+    label(c, String(Math.round(tot)), (x0 + x1) / 2, top - 11, tot > maxHp * 0.35 ? '#a01828' : '#2a2034', 12, 'system-ui', 800);
+    const frozen = (g.frozen || 0) > now;
+    for (let i = 0; i < rows; i++) { const y = top + i * rowH; line(c, x0, y + rowH - 1, x1, y + rowH - 1, 'rgba(60,40,60,0.18)', 1); }
+    const shown = L.slice(0, rows);
+    shown.forEach((e, i) => {
+      const y = top + i * rowH, left = Math.max(0, e.due - now), late = left < 2;
+      const bw = Math.min(1, e.a / (maxHp * 0.12)) * 46;
+      c.fillStyle = e.co ? 'rgba(120,100,180,0.55)' : late ? 'rgba(190,40,56,0.6)' : 'rgba(60,44,70,0.35)'; c.fillRect(x0 + 2, y + 2, Math.max(2, bw), rowH - 4);
+      label(c, String(Math.round(e.a)), x0 + 66, y + rowH / 2 + 0.5, late ? '#a01828' : '#2a2034', 10, 'system-ui', 700);
+      label(c, (g.holdUntil || 0) > now ? '—' : left.toFixed(left < 10 ? 1 : 0), x1 - 14, y + rowH / 2 + 0.5, late ? '#a01828' : '#5a4a6a', 10, 'system-ui', 700);
+    });
+    if (L.length > rows) label(c, '+' + (L.length - rows), x1 - 14, top + rows * rowH + 4, '#5a4a6a', 9, 'system-ui', 700);
+    // the margin: the terms in force
+    let my = top + 4;
+    const pip = (draw, lit) => { c.save(); c.globalAlpha = lit ? 1 : 0; draw(8, my); c.restore(); if (lit) my += 18; };
+    pip((x, y) => { circle(c, x, y, 3.5, null, '#b8a8e0', 1.6); circle(c, x, y + 6, 3.5, null, '#b8a8e0', 1.6); }, (g.lienUntil || 0) > now);
+    pip((x, y) => { rrect(c, x - 5, y - 4, 10, 10, 2, '#f0e8d8', OUT, 1); line(c, x - 3, y, x + 3, y, '#6a5a4a', 1); line(c, x - 3, y + 3, x + 3, y + 3, '#6a5a4a', 1); }, (g.writUntil || 0) > now);
+    pip((x, y) => { poly(c, [x - 4, y - 4, x + 4, y - 4, x, y + 1], '#e8dcc0', OUT, 1); poly(c, [x - 4, y + 6, x + 4, y + 6, x, y + 1], '#e8dcc0', OUT, 1); }, (g.holdUntil || 0) > now);
+    pip((x, y) => { ellipse(c, x - 2, y + 1, 4, 3, 0, null, '#b8a8e0', 1.6); ellipse(c, x + 2, y + 1, 4, 3, 0, null, '#b8a8e0', 1.6); label(c, String(Math.ceil(Math.max(0, g.cosignUntil - now))), x, y + 11, '#b8a8e0', 8, 'system-ui', 700); }, g.cosign != null && (g.cosignUntil || 0) > now);
+    if (frozen) {
+      c.save(); c.globalAlpha = 0.85; line(c, x0, top + 2, x1, top + rows * rowH - 4, '#a01828', 2.5); line(c, x1, top + 2, x0, top + rows * rowH - 4, '#a01828', 2.5); c.restore();
+      label(c, 'VOID ' + Math.ceil(g.frozen - now), (x0 + x1) / 2, top + rows * rowH / 2, '#a01828', 12, 'Cinzel, Georgia, serif', 800);
+    }
+    // a bill just stamped: a red seal flashes in the corner
+    if (g.stampAt != null && now - g.stampAt < 0.5) { const k2 = 1 - (now - g.stampAt) / 0.5; c.save(); c.globalAlpha = k2; circle(c, x1 - 6, top - 11, 7 + (1 - k2) * 4, '#c04a5a', OUT, 1.2); c.restore(); }
+  },
+});
+
 function drawGauge(c, kit, w, h, t) {
   const g = kit.def.gauge;
   if (g && GAUGES[g.kind]) GAUGES[g.kind](c, kit, w, h, t);

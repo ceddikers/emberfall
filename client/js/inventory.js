@@ -253,6 +253,20 @@ const Inventory = (() => {
         c.fillStyle = 'rgba(255,255,255,0.6)'; c.beginPath(); c.ellipse(-9, 0, 2.5, 5, 0.4, 0, Math.PI * 2); c.fill();
         break;
       }
+      case 'gauntlet':   // Gorgemaw: a great bronze fist, knuckles studded, a band of hide at the wrist
+        c.rotate(-0.25);
+        shape(() => c.rect(-9, 6, 18, 14), '#7a4a30', 2);
+        shape(() => { c.moveTo(-15, 8); c.lineTo(-17, -12); c.quadraticCurveTo(0, -26, 17, -12); c.lineTo(15, 8); c.closePath(); }, '#b8743a', 2);
+        for (let i = 0; i < 4; i++) shape(() => c.arc(-10.5 + i * 7, -12, 2.6, 0, Math.PI * 2), i % 2 ? gold : metal, 1.2);
+        stroke(() => { c.moveTo(-12, -2); c.lineTo(12, -2); }, '#5a3420', 1.5);
+        break;
+      case 'stampmace':   // Oathbroker: a mace whose head is a square seal, a dab of red wax on its face
+        c.rotate(-Math.PI / 4);
+        shape(() => c.rect(-2.5, -6, 5, 32), '#5a4a3a', 2);
+        shape(() => c.rect(-10, -26, 20, 20), metal, 2);
+        shape(() => c.rect(-7, -29, 14, 4), '#c04a5a', 1.5);
+        stroke(() => { c.moveTo(-6, -16); c.lineTo(6, -16); c.moveTo(0, -22); c.lineTo(0, -10); }, '#2a2034', 1.5);
+        break;
       case 'hourglass': case 'wand':
         if (it.wtype === 'wand') {
           c.rotate(-Math.PI / 4);

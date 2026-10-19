@@ -903,9 +903,12 @@ Object.assign(BOT_CLASS, {
       const li = idx('lien');
       if (k.abilities[li].id === 'cosign') {
         if (ok(li) && weave && !(k.g.cosign != null && k.g.cosignUntil > k.now + 2)) {
-          const heal = view.players.find(p => p.alive && p.role === 'healer' && p.id !== bot.id);
-          bot.healTarget = heal ? heal.id : null;
-          if (heal) return li;
+          // the one about to take a heavy blow, else the healer, else whoever is most hurt
+          const others = view.players.filter(p => p.alive && !p.left && p.id !== bot.id);
+          const hitId = (view.mechs.find(m => m.type === 'buster' && (m.target ?? m.follow) !== bot.id && (m.target ?? m.follow) != null) || {}).target;
+          const pick = others.find(p => p.id === hitId) || others.find(p => p.role === 'healer') || others.sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
+          bot.healTarget = pick ? pick.id : null;
+          if (pick) return li;
         }
       } else if (ok(li) && weave && oathDueSoon(k, 9) > H * 0.08) return li;
       if (k.gcdRemaining() > 0 || k.cast || k.lockUntil > k.now) return null;

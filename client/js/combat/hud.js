@@ -273,3 +273,46 @@ function drawnIcon(classId, abilityId) {
   c.strokeStyle = rgba(cls.accent, 0.6); c.lineWidth = 2; c.strokeRect(1, 1, 62, 62);
   return (DRAWN_ICONS[key] = cv.toDataURL());
 }
+
+// ======================================================================= Gorgemaw, Oathbroker (tanks-2)
+Object.assign(BUFF_NAMES, { jaw: 'Open Wide', bottomless: 'Bottomless', stone: 'Stone Belly', ironjaw: 'Iron Gut', digest: 'Digest' });
+Object.assign(BUFF_ICON, { jaw: 'wide', bottomless: 'bottomless', stone: 'stonebelly', ironjaw: 'iron', digest: 'digest' });
+GAUGE_TIPS.gorgemaw = {
+  desc: 'An edible hit that lands in your open jaw deals a quarter of its damage and goes in as a Morsel of its shape: circles are Rings, lines Lances, cones Fangs, a tankbuster a Spike. Spit fires the oldest back at the boss; Digest heals you on all of them. A full Belly wastes what you eat next.',
+  state: k => (k.g.belly.length ? 'next Spit: ' + MAW.NAMES[k.g.belly[0].m] + (k.def.fuse && k.g.belly.length > 1 && k.g.belly[0].m === k.g.belly[1].m ? ' (' + MAW.FUSION[k.g.belly[0].m] + ')' : '') : 'empty'),
+};
+GAUGE_TIPS.oathbroker = {
+  desc: '60% of every hit you take is written here instead, and billed to you when it comes due. Your combo pays the oldest lines down. Lines in the last 2s are red.',
+  state: k => `${Math.round(k.g.total || 0)} owed · ${Math.round(oathDueSoon(k, 3))} due in 3s`,
+};
+(() => {
+  const ink = (c, w = 3, col = '#f2e6c8') => { c.strokeStyle = col; c.lineWidth = w; c.lineCap = 'round'; c.lineJoin = 'round'; };
+  const teeth = (c, y, dir, x0 = 14, x1 = 50, n = 5, col = '#fff4e0') => { c.fillStyle = col; const s = (x1 - x0) / n; for (let i = 0; i < n; i++) { c.beginPath(); c.moveTo(x0 + i * s, y); c.lineTo(x0 + (i + 1) * s, y); c.lineTo(x0 + (i + 0.5) * s, y + dir * 9); c.closePath(); c.fill(); } };
+  const jaw = (c, gape, col = '#d0743a') => { c.fillStyle = '#2a0e08'; c.beginPath(); c.ellipse(32, 32, 20, 4 + gape, 0, 0, TAU); c.fill(); ink(c, 4, col); c.beginPath(); c.ellipse(32, 32, 20, 4 + gape, 0, 0, TAU); c.stroke(); teeth(c, 32 - 4 - gape + 1, 1, 16, 48, 4); teeth(c, 32 + 4 + gape - 1, -1, 16, 48, 4); };
+  const sealG = (c, x, y, r, col) => { c.fillStyle = col; c.beginPath(); for (let i = 0; i < 14; i++) { const a = i * Math.PI / 7, rr = r * (i % 2 ? 0.88 : 1); c.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); } c.closePath(); c.fill(); ink(c, 2, '#2a1424'); c.beginPath(); c.arc(x, y, r * 0.6, 0, TAU); c.moveTo(x - r * 0.35, y); c.lineTo(x + r * 0.35, y); c.moveTo(x, y - r * 0.35); c.lineTo(x, y + r * 0.35); c.stroke(); };
+  const page = (c, x, y, w, h) => { c.fillStyle = '#e8e0cc'; c.fillRect(x, y, w, h); ink(c, 1.5, '#5a4a6a'); for (let i = 1; i < 5; i++) { c.beginPath(); c.moveTo(x + 4, y + i * h / 5); c.lineTo(x + w - 4, y + i * h / 5); c.stroke(); } };
+  ICON_GLYPHS.gorgemaw = {
+    gnash: c => jaw(c, 3, '#e8c8a0'),
+    wide: c => jaw(c, 14),
+    spit: c => { jaw(c, 6); c.fillStyle = '#ff9a3a'; c.beginPath(); c.arc(54, 18, 7, 0, TAU); c.fill(); c.fillStyle = '#ffe0b0'; c.beginPath(); c.arc(52, 16, 3, 0, TAU); c.fill(); },
+    regurgitate: c => { jaw(c, 9); for (const [x, y, col] of [[50, 12, '#ff9a3a'], [56, 26, '#7fd0ff'], [46, 22, '#ffe27a']]) { c.fillStyle = col; c.beginPath(); c.arc(x, y, 4.5, 0, TAU); c.fill(); } },
+    digest: c => { c.fillStyle = '#5a3020'; c.beginPath(); c.ellipse(32, 36, 20, 16, 0, 0, TAU); c.fill(); ink(c, 3, '#ffc070'); c.beginPath(); for (let i = 0; i < 30; i++) { const a = i * 0.42, r = 2 + i * 0.5; c.lineTo(32 + Math.cos(a) * r, 36 + Math.sin(a) * r * 0.8); } c.stroke(); },
+    iron: c => { c.fillStyle = '#b8743a'; c.beginPath(); for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3 + Math.PI / 6; c.lineTo(32 + Math.cos(a) * 22, 32 + Math.sin(a) * 22); } c.closePath(); c.fill(); ink(c, 2.5, '#ffd8a0'); c.stroke(); c.fillStyle = '#ffd8a0'; for (const [x, y] of [[24, 26], [40, 26], [32, 40]]) { c.beginPath(); c.arc(x, y, 2.5, 0, TAU); c.fill(); } },
+    stonebelly: c => { c.fillStyle = '#8a8278'; c.beginPath(); c.ellipse(32, 34, 20, 17, 0, 0, TAU); c.fill(); ink(c, 2, '#d8d0c4'); c.beginPath(); c.moveTo(18, 28); c.lineTo(28, 34); c.lineTo(26, 44); c.moveTo(38, 22); c.lineTo(36, 34); c.lineTo(46, 40); c.stroke(); },
+    bottomless: c => { ink(c, 3, '#ff8a3a'); c.beginPath(); for (let i = 0; i < 50; i++) { const a = i * 0.36, r = 24 - i * 0.45; c.lineTo(32 + Math.cos(a) * r, 32 + Math.sin(a) * r); } c.stroke(); teeth(c, 10, 1, 12, 52, 6); teeth(c, 54, -1, 12, 52, 6); },
+    taunt: c => { jaw(c, 10); ink(c, 2.5, '#ffb070'); for (const r of [24, 29]) { c.beginPath(); c.arc(32, 32, r, -0.6, 0.6); c.stroke(); c.beginPath(); c.arc(32, 32, r, Math.PI - 0.6, Math.PI + 0.6); c.stroke(); } },
+  };
+  ICON_GLYPHS.oathbroker = {
+    collect: c => { c.fillStyle = '#8a8098'; c.fillRect(30, 26, 4, 30); c.fillStyle = '#b8a8e0'; c.fillRect(20, 12, 24, 16); ink(c, 2, '#2a1424'); c.strokeRect(20, 12, 24, 16); sealG(c, 32, 44, 8, '#c04a5a'); },
+    reneg: c => { page(c, 16, 14, 30, 38); ink(c, 3, '#b8a8e0'); c.beginPath(); c.arc(32, 33, 12, -2.6, 1.2); c.stroke(); c.fillStyle = '#b8a8e0'; c.beginPath(); c.moveTo(18, 22); c.lineTo(24, 30); c.lineTo(14, 30); c.fill(); },
+    settle: c => sealG(c, 32, 32, 20, '#ffd27a'),
+    audit: c => { page(c, 14, 12, 28, 36); ink(c, 3.5, '#ffd27a'); c.beginPath(); c.arc(38, 36, 9, 0, TAU); c.moveTo(45, 43); c.lineTo(54, 52); c.stroke(); },
+    lien: c => { ink(c, 3.5, '#b8a8e0'); for (let i = 0; i < 4; i++) { c.beginPath(); c.ellipse(14 + i * 11, 44 - i * 8, 7, 4, -0.6, 0, TAU); c.stroke(); } sealG(c, 50, 16, 8, '#c04a5a'); },
+    cosign: c => { page(c, 12, 14, 24, 32); page(c, 28, 20, 24, 32); ink(c, 3, '#b8a8e0'); c.beginPath(); c.moveTo(18, 52); c.bezierCurveTo(26, 40, 34, 58, 48, 46); c.stroke(); },
+    writ: c => { c.fillStyle = '#f0e8d8'; c.fillRect(18, 12, 28, 40); c.fillStyle = '#c8b898'; c.beginPath(); c.ellipse(32, 12, 16, 4, 0, 0, TAU); c.fill(); c.beginPath(); c.ellipse(32, 52, 16, 4, 0, 0, TAU); c.fill(); ink(c, 1.5, '#5a4a6a'); for (let i = 1; i < 6; i++) { c.beginPath(); c.moveTo(22, 12 + i * 7); c.lineTo(42, 12 + i * 7); c.stroke(); } },
+    default: c => { page(c, 14, 14, 18, 36); page(c, 34, 16, 18, 34); ink(c, 3, '#c04a5a'); c.beginPath(); c.moveTo(32, 10); c.lineTo(28, 22); c.lineTo(36, 32); c.lineTo(30, 44); c.lineTo(34, 56); c.stroke(); },
+    foreclose: c => { c.fillStyle = '#8a8098'; c.fillRect(29, 8, 6, 18); c.fillStyle = '#c04a5a'; c.fillRect(16, 24, 32, 12); sealG(c, 32, 48, 10, '#c04a5a'); },
+    moratorium: c => { c.fillStyle = '#e8dcc0'; c.beginPath(); c.moveTo(18, 12); c.lineTo(46, 12); c.lineTo(32, 32); c.closePath(); c.fill(); c.beginPath(); c.moveTo(18, 52); c.lineTo(46, 52); c.lineTo(32, 32); c.closePath(); c.fill(); ink(c, 2.5, '#b8a8e0'); c.beginPath(); c.moveTo(14, 12); c.lineTo(50, 12); c.moveTo(14, 52); c.lineTo(50, 52); c.stroke(); },
+    taunt: c => { sealG(c, 32, 30, 16, '#c04a5a'); ink(c, 2.5, '#b8a8e0'); c.beginPath(); c.moveTo(10, 54); c.lineTo(54, 54); c.stroke(); },
+  };
+})();

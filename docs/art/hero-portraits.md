@@ -77,3 +77,13 @@ No spec portraits exist yet, so this one sets the character; paint it first and 
 
 10. **Alembist (Alchemist).** Accent: copper orange.
    A wiry woman in her late twenties with light olive skin, a sharp nose with a small burn scar on its bridge, quick hazel eyes and thick auburn hair twisted up into a messy bun, held with a **glass stirring rod pushed through it**. **Brass goggles with round amber lenses** sit pushed up on her forehead. She wears a high-collared olive work coat with rolled sleeves over a stained canvas apron, and a **leather bandolier of corked glass vials** (red, blue, white) slants across her chest. One hand holds a small corked vial up to the light, half full of a flat red liquid, and she squints at it with one eyebrow cocked, a crooked, satisfied half-smile. The copper neck of a **small still** pokes over one shoulder with a single curl of flat white steam. Warm copper-orange background with a pale round flask shape behind the head.
+
+## Advanced tanks (added 2026-10-20)
+
+No spec portraits yet, so these set the faces; paint them first and use them as the reference for the spec portraits (`spec-icons.md`). Until a file arrives the game shows the animated sprite (data.js `art.portraits: false`).
+
+13. **Gorgemaw (Glutton Knight).** Accent: burnt orange.
+   A huge, round man in his fifties with a ruddy, cheerful face, heavy jowls, a broken nose and small bright eyes under thick ginger brows; a short ginger beard with crumbs in it. He wears banded leather over an enormous belly with a **bronze belly-plate** riveted on top, iron pauldrons, and **two enormous bronze gauntlets**, one of them resting on his stomach. His **iron helm has a hinged bronze jaw-plate at the front, swung open** so his grinning mouth shows, its plate edged with blunt bronze teeth. A napkin is tucked into his collar. He looks pleased with himself, mid-chew. Burnt-orange background with a pale round plate shape behind the head.
+
+14. **Oathbroker (Contract Knight).** Accent: grey-lilac, with seal-wax red.
+   A tall, thin woman in her forties with a long, severe face, ash-blonde hair cut short under a **grey hood worn over a steel half-helm**, pale skin, ink stains on two fingers and cool grey eyes. She wears a long **grey surcoat over plate**, a lilac line down its front. A **thick ledger book hangs from a chain at her hip**, a red wax seal on its cover, and she holds a **mace whose head is a square seal-stamp**, a dab of red wax on its face, tapping it against her palm. One eyebrow raised, as if you owe her something and she knows exactly how much. Grey-lilac background with a flat red seal shape behind the head.

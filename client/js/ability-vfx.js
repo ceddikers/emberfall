@@ -654,3 +654,230 @@ function windLaneBoost(x, y, vx, vy, now) {
     sabre: c => { V.slash(c.ent.x, c.ent.y, c.ang, { r: 50, span: 1.5, color: windCol(c.ent), dur: 0.2, w: 0.3, flip: c.alt, sparks: 2 }); },
   });
 })();
+// ======================================================================= Gorgemaw, Oathbroker (tanks-2)
+// Gorgemaw: eating is the show. A telegraph that lands in an open jaw doesn't go off: the whole shape is sucked into
+// the mouth (shrinking toward it, its colour streaming in), the jaw snaps shut on it with a chomp of teeth and crumbs,
+// and the morsel's colour glows in the belly. Spat back, each shape keeps its look (Ring a lobbed glob that lands as a
+// ring, Lance a straight bolt, Fang a cone of teeth, Spike a great yellow spike); a Glutton's Fusion is twice the size.
+// Oathbroker: grey vellum and lilac seal-wax. Its hits are stamps; a bill coming due is a red seal pressed at its feet,
+// Settle a gold one, Default the book torn and the pages flung out.
+(() => {
+  const V = VFX, rand = (a, b) => a + Math.random() * (b - a), shake = s => { FX.shake = Math.max(FX.shake, s); };
+  const MCOL = m => (MAW.COLOR[m] || '#ff9a3a');
+  const mouth = e => ({ x: e.x + Math.cos(e.angle || 0) * 12, y: e.y + Math.sin(e.angle || 0) * 6, z: 30 });
+  const ahead = (c, d) => { const a = Math.atan2(c.ty - c.y, c.tx - c.x); return { x: c.x + Math.cos(a) * d, y: c.y + Math.sin(a) * d }; };
+  // the jaw: two rows of teeth snapping together at (x, y - z), size s
+  const chomp = (x, y, z, s, col, dur = 0.28) => V.fx({ dur, layer: 'air', draw: (c, p, t, e) => {
+    const close = p < 0.45 ? 1 - p / 0.45 : 0, k = (p < 0.7 ? 1 : (1 - p) / 0.3) * e.a, gap = 4 + close * 16 * s, yy = y - z;
+    c.save(); c.translate(x, yy);
+    for (const dir of [-1, 1]) {
+      c.globalAlpha = k; c.fillStyle = '#fff4e0'; c.strokeStyle = '#2a1408'; c.lineWidth = 1.6;
+      c.beginPath(); c.moveTo(-14 * s, dir * gap);
+      for (let i = 0; i <= 6; i++) { const tx = -14 * s + i * 28 * s / 6; c.lineTo(tx, dir * gap); if (i < 6) c.lineTo(tx + 14 * s / 6, dir * (gap - 7 * s)); }
+      c.lineTo(14 * s, dir * (gap + 4 * s)); c.lineTo(-14 * s, dir * (gap + 4 * s)); c.closePath(); c.fill(); c.stroke();
+    }
+    c.restore();
+    if (p > 0.4 && p < 0.6) V.glowAt(c, x, yy, 26 * s, col, 0.6 * e.a);
+  } });
+  const crumbs = (x, y, z, col, n = 8) => { for (let i = 0; i < n; i++) { const a = Math.random() * Math.PI * 2, sp = rand(60, 180);
+    V.spawn({ x, y, z, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * 0.6, vz: rand(40, 160), g: 500, bounce: true, life: rand(0.4, 0.8), size: rand(4, 7), color: i % 3 ? col : '#ffe8c8', kind: 'shard', add: false, vr: rand(-12, 12) }); } };
+  // a telegraph's shape pulled into the mouth: it shrinks toward the mouth, stretching, its colour pouring in
+  const swallowShape = (shape, e, col, dur = 0.38) => {
+    if (!shape) return;
+    const s = Object.assign({}, shape);
+    V.fx({ dur, layer: 'ground', draw: (c, p, t, fx) => {
+      const m = mouth(e), q = p * p, k = (1 - p * 0.6) * fx.a;
+      c.save(); c.translate(m.x, m.y); c.scale(1 - q, 1 - q); c.translate(-m.x, -m.y);
+      SHAPES.trace(c, s); c.globalAlpha = 0.35 * k; c.fillStyle = col; c.fill();
+      c.globalAlpha = k; c.strokeStyle = col; c.lineWidth = 3 / Math.max(0.2, 1 - q); c.stroke();
+      c.restore();
+    } });
+    // streams of its colour flowing into the jaw from round the shape's edge
+    const cx = s.x, cy = s.y, R = Math.min(260, s.r || s.len || 120);
+    for (let i = 0; i < 14; i++) { const a = Math.random() * Math.PI * 2, d = R * rand(0.4, 1);
+      FX.later(rand(0, 0.18), () => { const m = mouth(e), x = cx + Math.cos(a) * d, y = cy + Math.sin(a) * d * 0.7;
+        V.spawn({ x, y, z: 4, vx: (m.x - x) * 3.2, vy: (m.y - y) * 3.2, vz: m.z * 3, life: 0.3, size: rand(7, 11), size1: 2, color: i % 2 ? col : '#ffffff', stretch: 3 }); }); }
+  };
+  const gulp = (e, m, big) => {
+    const col = MCOL(m);
+    FX.later(0.3, () => { const q = mouth(e); chomp(q.x, q.y, q.z, big ? 1.5 : 1.1, col); FX.later(0.12, () => { crumbs(q.x, q.y, q.z, col, big ? 12 : 7); V.shock(e.x, e.y, { r: big ? 70 : 46, color: col, dur: 0.3, w: 4 });
+      V.flash(e.x, e.y - 24, 30, col, 0.25); if (big) shake(3); }); });
+    // the belly glows with what went down
+    FX.later(0.5, () => V.fx({ dur: 0.9, layer: 'air', draw: (c, p, t, fx) => V.glowAt(c, e.x, e.y - 14, 22, col, (1 - p) * 0.7 * fx.a) }));
+  };
+
+  ABILITY_VFX.gorgemaw = {
+    // a bite: the jaw snaps on the target, a few chips fly
+    gnash: c => { const h = ahead(c, 34); chomp(h.x, h.y, 22, 0.9, '#ffd8a0', 0.22); c.later(0.08, () => { V.hit(c.tx, c.ty, '#ffe0b0', 0.6); crumbs(c.tx, c.ty, 16, '#c8a070', 4); }); },
+    // the jaw swings open: a wide mouth of teeth in front, air rushing in for as long as it's open
+    wide: c => { const e = c.ent, dur = 1.6; if (e.st) e.st.jawUntil = FX.now + 1.5;
+      V.fx({ dur, layer: 'air', draw: (ctx, p, t, fx) => {
+        const m = mouth(e), open = Math.min(1, t / 0.12) * (p > 0.85 ? (1 - p) / 0.15 : 1), k = fx.a * open, yy = m.y - m.z, a = e.angle || 0;
+        ctx.save(); ctx.translate(m.x, yy); ctx.rotate(a);
+        V.neonPath(ctx, '#ffb070', 3, k, () => { ctx.ellipse(10, 0, 18, 6 + 16 * open, 0, -Math.PI / 2, Math.PI / 2); });
+        ctx.fillStyle = 'rgba(40,10,6,' + (0.55 * k).toFixed(3) + ')'; ctx.beginPath(); ctx.ellipse(10, 0, 14, 4 + 13 * open, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+      }, tick: () => { if (Math.random() < 0.6) { const m = mouth(e), a = (e.angle || 0) + rand(-1, 1), d = rand(60, 120), x = m.x + Math.cos(a) * d, y = m.y + Math.sin(a) * d * 0.6;
+        V.spawn({ x, y, z: rand(10, 40), vx: (m.x - x) * 4, vy: (m.y - y) * 4, vz: 0, life: 0.25, size: 6, size1: 1, color: '#ffe8c8', stretch: 4 }); } } });
+      V.swirl(e.x, e.y, { r: 50, color: '#ffb070', dur: 0.5, inward: true, follow: e }); },
+    spit: () => {},          // the morsel flying is KIT_VFX.spit (it knows the shape)
+    regurgitate: c => { V.shock(c.x, c.y, { r: 70, color: '#ffb070', dur: 0.35, w: 5 }); shake(2); },
+    digest: () => {},        // KIT_VFX.digest (it knows what was eaten)
+    // bronze plates over the gut: a hex shield, sparks, a heavy stamp of dust
+    iron: c => { V.shield(c.ent, { shape: 'hex', color: '#d89a5a', dur: 1.6, r: 42 }); V.sparks(c.x, c.y - 10, { color: '#ffd090', n: 10, speed: 260 }); V.smoke(c.x, c.y, { n: 4, color: '#a08a70', size: 22, a: 0.5, speed: 50 }); shake(2); },
+    // Stone Belly: grey stone crusts over it, chips falling
+    stonebelly: c => { V.crystals(c.x, c.y, { color: '#b8b0a4', n: 8, r: 34, h: 40, dur: 1.2 }); V.shield(c.ent, { shape: 'hex', color: '#c8c0b0', dur: 2, r: 44 }); V.debris(c.x, c.y, { n: 6, color: '#8a8278' }); shake(3); },
+    // Bottomless: the room is pulled toward the jaw: a great inward vortex, the floor's dust streaming in
+    bottomless: c => { const e = c.ent; if (e.st) { e.st.jawUntil = FX.now + 4; e.st.jawAll = FX.now + 4; } V.ink(c.x, c.y, { r: 170, dur: 4, follow: e, a: 0.25 }); V.vortex(c.x, c.y, { r: 170, color: '#ff8a3a', dur: 4, follow: e });
+      V.fx({ dur: 4, layer: 'ground', tick: () => { for (let i = 0; i < 2; i++) { const a = Math.random() * Math.PI * 2, d = rand(150, 320), x = e.x + Math.cos(a) * d, y = e.y + Math.sin(a) * d * 0.7;
+        V.spawn({ x, y, z: 2, vx: (e.x - x) * 2.2, vy: (e.y - y) * 2.2, vz: 30, life: 0.45, size: rand(8, 12), size1: 2, color: i ? '#ffd0a0' : '#c87a4a', stretch: 3 }); } }, draw: () => {} });
+      V.shock(c.x, c.y, { r: 200, color: '#ffb070', dur: 0.6, w: 7 }); shake(5); },
+  };
+
+  // Oathbroker: ink, vellum, seal-wax
+  const INK = '#2a2034', WAX = '#c04a5a', LIL = '#b8a8e0', GOLD = '#ffd27a';
+  // a seal pressed into the floor: a disc of wax, the stamp's rim and a cross in it
+  const seal = (x, y, r, col, dur = 1.2) => V.fx({ dur, layer: 'ground', draw: (c, p, t, e) => {
+    const k = Math.min(1, p / 0.06) * Math.min(1, (1 - p) / 0.4) * e.a, s = p < 0.08 ? 1.4 - p * 5 : 1;
+    c.save(); c.translate(x, y); c.scale(s, s * 0.7);
+    c.globalAlpha = 0.75 * k; c.fillStyle = col; c.beginPath(); for (let i = 0; i < 14; i++) { const a = i * Math.PI / 7, rr = r * (i % 2 ? 0.92 : 1); c.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); } c.closePath(); c.fill();
+    c.globalAlpha = k; c.strokeStyle = INK; c.lineWidth = 2; c.stroke();
+    c.beginPath(); c.arc(0, 0, r * 0.62, 0, Math.PI * 2); c.moveTo(-r * 0.4, 0); c.lineTo(r * 0.4, 0); c.moveTo(0, -r * 0.4); c.lineTo(0, r * 0.4); c.stroke();
+    c.restore();
+  } });
+  const pages = (x, y, n, col = '#f0e8d8') => { for (let i = 0; i < n; i++) { const a = Math.random() * Math.PI * 2, sp = rand(80, 220);
+    V.spawn({ x, y, z: 24, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * 0.6, vz: rand(60, 180), g: 140, drag: 0.04, life: rand(0.9, 1.5), size: rand(9, 13), color: col, kind: 'petal', add: false, vr: rand(-6, 6), flutter: 5 }); } };
+  // the mace's stamp head coming down on (x, y)
+  const stamp = (x, y, col, big) => { V.spikeburst(x, y, { r: big ? 46 : 28, n: 10, color: col, core: '#ffffff', ink: INK, dur: 0.28 }); seal(x, y, big ? 30 : 18, col, big ? 1.4 : 0.8); if (big) shake(3); };
+  ABILITY_VFX.oathbroker = {
+    // Dun, Levy, Collect: the sealing mace comes down; the last of the three stamps a seal
+    collect: c => { V.slash(c.x, c.y, c.ang, { r: 56, span: 1.6, color: '#d8d0e8', w: 0.5, dur: 0.24, flip: Math.random() < 0.5 });
+      c.later(0.09, () => { const third = c.ent.st && c.ent.st.combo === 2; stamp(c.tx, c.ty, third ? WAX : LIL, third); }); },
+    // Renegotiate: pages riffle forward round the knight, a lilac clock face turns back
+    reneg: c => { V.sigil(c.x, c.y, { r: 46, style: 'clock', color: LIL, dur: 0.9, spin: -4, follow: c.ent }); pages(c.x, c.y, 6); },
+    // Settle: a gold seal stamped at the feet, coins thrown up
+    settle: c => { seal(c.x, c.y, 40, GOLD, 1.6); V.burst(c.x, c.y - 10, { color: GOLD, color2: '#fff6d0', n: 14, speed: 220, kind: 'star' }); V.shock(c.x, c.y, { r: 90, color: GOLD, dur: 0.4, w: 5 }); shake(2); },
+    audit: c => { seal(c.x, c.y, 28, GOLD, 1); V.sigil(c.x, c.y, { r: 36, style: 'hex', color: GOLD, dur: 0.6, spin: 3 }); },
+    // Lien: a chain of light run out to the boss and a lock-seal on it
+    lien: c => { V.beam(c.x, c.y, c.tx, c.ty, { color: LIL, w: 4, dur: 0.6 }); c.later(0.15, () => { seal(c.tx, c.ty, 36, LIL, 2); V.sigil(c.tx, c.ty, { r: 50, style: 'runes', color: LIL, dur: 1.2, spin: 1 }); }); },
+    // Co-Sign: a line of ink to the ally, their name sealed under them
+    cosign: c => { const w = c.tent || c.ent; V.beam(c.x, c.y, w.x, w.y, { color: LIL, w: 3, dur: 0.5 }); c.later(0.12, () => { seal(w.x, w.y, 26, LIL, 1.4); V.shield(w, { color: LIL, dur: 1.2, r: 36 }); }); },
+    // Writ of Protection: a scroll unrolled in front of the knight
+    writ: c => { V.shield(c.ent, { shape: 'front', color: '#f0e8d8', dur: 2, r: 44 }); V.sigil(c.x, c.y, { r: 50, style: 'runes', color: '#e8dcc0', dur: 1.4, spin: 0.6, follow: c.ent }); pages(c.x, c.y, 4); },
+    // Default: the book torn open, pages flung everywhere, smoke
+    default: c => { pages(c.x, c.y, 18); V.shock(c.x, c.y, { r: 120, color: WAX, dur: 0.5, w: 6 }); V.smoke(c.x, c.y, { n: 6, color: '#6a6070', size: 26, a: 0.45, speed: 50 }); shake(4); },
+    // Foreclose: a great seal slams down onto the boss
+    foreclose: c => { V.lightfall(c.tx, c.ty, { color: WAX, r: 34, h: 220, dur: 0.5, feathers: 0 }); c.later(0.2, () => { stamp(c.tx, c.ty, WAX, true); seal(c.tx, c.ty, 60, WAX, 1.8); pages(c.tx, c.ty, 10); shake(5); }); },
+    // Moratorium: an hourglass seal, the Ledger held
+    moratorium: c => { V.sigil(c.x, c.y, { r: 56, style: 'clock', color: '#e8dcc0', dur: 5, spin: 0, follow: c.ent }); V.dome(c.ent, { color: LIL, r: 46, dur: 1 }); },
+  };
+
+  Object.assign(KIT_VFX, {
+    // a morsel spat at the boss (d: { m: shape, f: fused, n: order in a Regurgitate volley })
+    spit: Object.assign((e, target, d) => {
+      const m = (d && d.m) || 'ring', f = d && d.f, s = f ? 1.7 : 1, col = MCOL(m), t = target || { x: e.x + Math.cos(e.angle || 0) * 200, y: e.y + Math.sin(e.angle || 0) * 200 };
+      const go = () => {
+        const q = mouth(e);
+        chomp(q.x, q.y, q.z, 0.8 * s, col, 0.2);
+        if (m === 'ring') V.missile(q.x, q.y, t.x, t.y, { style: 'orb', color: col, speed: 650, arc: 60, size: 1.3 * s, onHit: (x, y) => { for (let i = 0; i < (f ? 3 : 2); i++) V.shock(x, y, { r: (60 + i * 30) * s, color: col, dur: 0.45, w: 6, delay: i * 0.08 }); V.splash(x, y, { n: 10, color: col }); V.debris(x, y, { n: 4, color: '#7a5a3a' }); shake(2 * s); } });
+        else if (m === 'lance') V.missile(q.x, q.y, t.x, t.y, { style: 'blade', color: col, speed: 1500, size: 1.4 * s, onHit: (x, y) => { V.spikeburst(x, y, { r: 36 * s, n: 10, color: col, core: '#ffffff', ink: '#0a2030', dur: 0.3 }); V.beam(q.x, q.y, x, y, { color: col, w: 6 * s, dur: 0.25 }); shake(2 * s); } });
+        else if (m === 'fang') { V.breath(q.x, q.y, Math.atan2(t.y - q.y, t.x - q.x), { len: Math.min(220, Math.hypot(t.x - q.x, t.y - q.y) + 20) * s, span: 0.6 * s, color: col });
+          FX.later(0.15, () => { chomp(t.x, t.y, 20, 1.2 * s, col, 0.3); V.splash(t.x, t.y, { n: 8 }); }); }
+        else V.missile(q.x, q.y, t.x, t.y, { style: 'meteor', color: col, speed: 900, arc: 30, size: 1.2 * s, onHit: (x, y) => { V.spikeburst(x, y, { r: 64 * s, n: 16, color: '#ffd23a', core: '#fffbe0', ink: '#3a2a08', dur: 0.4 }); V.crystals(x, y, { color: col, n: 6, r: 40 * s, h: 60 * s, dur: 0.9 }); V.shock(x, y, { r: 120 * s, color: col, dur: 0.5, w: 7 }); shake(5 * s); } });
+        if (f) FX.later(0.3, () => FX.text(t.x, t.y - 80, MAW.FUSION[m], '#fff0c8', 15, 0.9));
+      };
+      const n = (d && d.n) || 0; if (n) FX.later(n * 0.14, go); else go();
+    }, { atTarget: true }),
+    // Digest: the belly churns (d: { n eaten, m: their shapes' first letters }) and the warmth comes out of it
+    digest: (e, target, d) => {
+      const n = (d && d.n) || 0, letters = (d && d.m) || '';
+      V.swirl(e.x, e.y, { r: 40, color: '#ffc070', dur: 0.7, inward: true, follow: e });
+      for (let i = 0; i < n; i++) { const col = MCOL({ r: 'ring', l: 'lance', f: 'fang', s: 'spike' }[letters[i]] || 'ring');
+        FX.later(i * 0.1, () => { V.fx({ dur: 0.5, layer: 'air', draw: (c, p, t, fx) => V.glowAt(c, e.x + Math.sin(t * 20 + i) * 6, e.y - 14, 18 + 10 * Math.sin(p * Math.PI), col, (1 - p) * 0.8 * fx.a) }); }); }
+      FX.later(0.3, () => { V.plus(e.x, e.y, { color: '#ffd8a0', n: 3 + n }); if (e.spec === 'gizzard' && n) V.shock(e.x, e.y, { r: 160, color: '#ffc070', dur: 0.6, w: 5 }); });
+    },
+  });
+
+  // the tanks' taunts: Gorgemaw's Bellow (a roar that rolls out of the jaw), Oathbroker's Summons (a seal on the foe)
+  const baseTaunt = KIT_VFX.taunt;
+  KIT_VFX.taunt = (e, target) => {
+    const id = e.cls && e.cls.id;
+    if (id === 'gorgemaw') {
+      if (e.st) e.st.jawUntil = FX.now + 1;
+      const q = mouth(e); chomp(q.x, q.y, q.z, 1.3, '#ff9a3a', 0.4);
+      for (let i = 0; i < 3; i++) V.shock(e.x, e.y, { r: 70 + i * 40, color: '#ffb070', w: 5 - i, dur: 0.45, delay: i * 0.08 });
+      if (target) FX.later(0.15, () => V.hit(target.x, target.y, '#ffb070', 0.8));
+      return;
+    }
+    if (id === 'oathbroker') {
+      V.shock(e.x, e.y, { r: 60, color: LIL, w: 3, dur: 0.3 });
+      if (target) { V.beam(e.x, e.y - 4, target.x, target.y - 10, { color: LIL, w: 4, dur: 0.35 }); FX.later(0.12, () => { seal(target.x, target.y, 34, WAX, 1.6); V.sigil(target.x, target.y - 60, { r: 20, style: 'runes', color: LIL, dur: 1, spin: -2, flat: 1, layer: 'air' }); }); }
+      return;
+    }
+    baseTaunt(e, target);
+  };
+
+  Object.assign(AUTO_VFX, {
+    // a gauntleted cuff with the jaw-plate snapping
+    maw: c => { V.slash(c.ent.x, c.ent.y, c.ang, { r: 54, span: 1.5, color: '#e8c8a0', dur: 0.22, w: 0.4, flip: c.alt, sparks: 2 }); },
+    // a tap of the stamp-mace: a small lilac seal
+    stamp: c => { V.slash(c.ent.x, c.ent.y, c.ang, { r: 50, span: 1.2, color: '#d8d0e8', dur: 0.22, w: 0.35, flip: c.alt }); c.later(0.08, () => { const d = Math.min(64, Math.hypot(c.tx - c.ent.x, c.ty - c.ent.y)); seal(c.ent.x + Math.cos(c.ang) * d, c.ent.y + Math.sin(c.ang) * d, 10, LIL, 0.5); }); },
+  });
+
+  // ---------------------------------------------------------------- host moments (fev, main.js) and the training yard
+  // eat: { id, m: shape, mid: telegraph, w: whole (a teammate's circle, gone for everyone), r: a raidwide (Bottomless), f: whose it was }
+  // bill: { id, a: amount, s: Settle }  default: { id, b: what the boss paid (Foreclose) }
+  globalThis.CLASS_FEV = {
+    eat(msg, e, o) {
+      const tg = o.tgs && msg.mid != null ? o.tgs.get(msg.mid) : null, col = MCOL(msg.m);
+      if (tg && msg.w) tg.gone = o.now;   // swallowed whole: it never goes off (tgx skips its impact)
+      if (msg.r) {   // a raidwide: the whole room's air pulled into the jaw
+        V.shock(e.x, e.y, { r: 260, color: col, dur: 0.4, w: 6 });
+        V.swirl(e.x, e.y, { r: 120, color: col, dur: 0.5, inward: true, follow: e });
+      } else if (tg) swallowShape(tg.live || tg.shape, e, col);
+      else V.swirl(e.x, e.y, { r: 60, color: col, dur: 0.35, inward: true, follow: e });
+      gulp(e, msg.m, msg.m === 'spike' || msg.w);
+      if (e.st) FX.later(0.3, () => { e.st.chompAt = FX.now; });
+      if (o.mine) shake(2);
+    },
+    bill(msg, e) { const big = msg.s; seal(e.x, e.y + 4, big ? 30 : 16 + Math.min(14, (msg.a || 0) / 8), big ? GOLD : WAX, 0.9); if (!big) V.flash(e.x, e.y - 10, 20, WAX, 0.15); },
+    default(msg, e, o) { pages(e.x, e.y, 14); V.shock(e.x, e.y, { r: 110, color: WAX, dur: 0.45, w: 5 }); if (msg.b > 0 && o.boss) { stamp(o.boss.x, o.boss.y, WAX, true); pages(o.boss.x, o.boss.y, 8); } },
+  };
+
+  // the sparring dummy: the yard plays the host's part for the jaw and the Ledger
+  globalThis.CLASS_TOWN = {
+    cls: actor => actor && actor.cls && actor.cls.id,
+    send(town, actor, now, bill) { const L = town.led; if (L) actor.notify('ledger', Object.assign(OATH.pack(L, now), bill ? { bill } : {})); },
+    event(town, ev, now, actor) {
+      const id = this.cls(actor);
+      if (ev.type === 'maw' && id === 'gorgemaw') { town.maw = { until: now + Math.min(4.2, ev.dur || 0), all: !!ev.all }; return; }
+      if (ev.type !== 'ledger' || id !== 'oathbroker') return;
+      const L = town.led || (town.led = OATH.make()), maxHp = actor.kit.env.maxHp() || 1;
+      if (ev.op === 'terms') { OATH.terms(L, ev, maxHp); return; }
+      if (ev.op === 'cosign') return;   // nobody here to co-sign for
+      const r = OATH.op(L, ev, now, maxHp), e = actor.ent;
+      if (r.self > 0) { FX.text(e.x, e.y - 46, '-' + Math.round(r.self), '#ff7a6a', 14); CLASS_FEV.bill({ a: r.self, s: 1 }, e); }
+      if (ev.op === 'default' || ev.op === 'foreclose') CLASS_FEV.default({ b: r.boss }, e, {});
+      this.send(town, actor, now, r.self > 0 ? Math.round(r.self) : 0);
+    },
+    hit(town, amt, now, actor, player) {
+      const id = this.cls(actor);
+      if (id === 'gorgemaw' && town.maw && town.maw.until > now && amt > 0) {
+        amt *= 0.25;
+        actor.notify('eat', { m: 'ring' });
+        CLASS_FEV.eat({ m: 'ring' }, player, { mine: true });
+      }
+      if (id === 'oathbroker' && amt > 0) { const L = town.led || (town.led = OATH.make()); amt -= OATH.write(L, amt, now); this.send(town, actor, now); }
+      return amt;
+    },
+    tick(town, now, actor, player) {
+      const L = town.led; if (!L || this.cls(actor) !== 'oathbroker') return;
+      const dt = Math.max(0, Math.min(0.5, now - (town.ledT ?? now))); town.ledT = now;
+      const bills = OATH.bills(L, now, dt);
+      if (!bills.length) return;
+      let self = 0; for (const b of bills) self += b.self;
+      if (self > 0) { FX.text(player.x, player.y - 46, '-' + Math.round(self), '#ff7a6a', 13); CLASS_FEV.bill({ a: self }, player); }
+      this.send(town, actor, now, Math.round(self));
+    },
+  };
+})();

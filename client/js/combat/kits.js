@@ -1,4 +1,4 @@
-﻿// The nine class kits. Design rules (see docs/DESIGN.md for the reasoning):
+// The nine class kits. Design rules (see docs/DESIGN.md for the reasoning):
 //  - Easy to learn: the main combo/filler is ONE button, and buttons glow when they're a good press.
 //    Mashing the glowing buttons is a complete, working rotation.
 //  - Hard to master: every class has a resource that can overcap and is worth pooling, a 60s burst to line up
@@ -1847,7 +1847,7 @@ KITS.gorgemaw = {
         k.damage([220, 300, 390][step], { ab: this });
         if (step === 2) {
           k.healRaw('self', k.env.maxHp() * (k.perk('gorgemaw_w1') ? 0.035 : 0.02), { ab: this });
-          if (k.talent('gorgemaw_crunch')) k.after(0.2, () => k.damage(130, { ab: this, extra: true }));
+          if (k.talent('gorgemaw_crunch')) k.after(0.2, () => k.damage(70, { ab: this, extra: true }));
           if (k.talent('gorgemaw_marinade')) k.g.marinade = k.now + 10;
         }
         k.g.step = (step + 1) % 3; k.g.comboUntil = k.now + 15;
@@ -1952,7 +1952,7 @@ const OATH = {
         const paid0 = left;
         for (const e of L.e) { if (left <= 0) break; const p = Math.min(e.a, left); e.a -= p; left -= p; }
         L.e = L.e.filter(e => e.a >= 0.5);
-        if (ev.hit) r.boss += paid0 - left;
+        if (ev.hit) r.boss += (paid0 - left) * C(ev.hit, 0, 0.5, 0);
         if (ev.push && L.e.length) L.e[L.e.length - 1].due += C(ev.push, 0, 3, 0);
         break;
       }
@@ -2044,11 +2044,11 @@ KITS.oathbroker = {
       effect(k) {
         const step = k.now < k.g.comboUntil ? k.g.step : 0;
         let pot = [230, 300, 400][step];
-        if (step === 2 && k.talent('oathbroker_interest')) pot += 28 * Math.min(5, k.g.ledger.length);
+        if (step === 2 && k.talent('oathbroker_interest')) pot += 16 * Math.min(5, k.g.ledger.length);
         k.damage(pot, { ab: this });
         if (k.g.ledger.length) {
           const amount = oathHp(k) * OATH.PAY * (k.perk('oathbroker_w1') ? 1.5 : 1);
-          oathSend(k, { op: 'pay', amount, hit: k.talent('oathbroker_garnish') ? 1 : 0, push: step === 2 && k.talent('oathbroker_notary') ? 3 : 0 });
+          oathSend(k, { op: 'pay', amount, hit: k.talent('oathbroker_garnish') ? 0.4 : 0, push: step === 2 && k.talent('oathbroker_notary') ? 3 : 0 });
           k.g.payAt = k.now;
           // the copy pays down too, so the column answers at once
           let left = amount; for (const e of k.g.ledger) { if (left <= 0) break; const p = Math.min(e.a, left); e.a -= p; left -= p; }

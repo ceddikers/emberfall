@@ -1,4 +1,4 @@
-﻿// Talents: every hero (class) has 5 rows of 3. You hold one pick per row; rows unlock in order with gold
+// Talents: every hero (class) has 5 rows of 3. You hold one pick per row; rows unlock in order with gold
 // (TALENT_COSTS, the account-wide wallet) and picks are free to change in town. Talents belong to the hero, not the
 // spec: a talent on a move a spec replaces works on the replacement (the kits check the base ability's id, and a
 // replacement names the move it took over with `replaces`). Where a spec's version plays very differently the talent
@@ -409,7 +409,7 @@ Object.assign(TALENTS, {
   oathbroker: [
     [
       { id: 'oathbroker_interest', name: 'Interest', ab: 'collect', text: 'Collect, the third strike, now hits harder for every entry in your Ledger (up to 5).' },
-      { id: 'oathbroker_garnish', name: 'Garnish', ab: 'collect', text: 'Whatever your strikes pay down is now also struck from the boss.' },
+      { id: 'oathbroker_garnish', name: 'Garnish', ab: 'collect', text: 'Part of whatever your strikes pay down is now also struck from the boss.' },
       { id: 'oathbroker_stamp', name: 'Rubber Stamp', ab: 'settle', text: 'Settle now also stamps the boss: a blow sized by what you settled.' },
     ],
     [

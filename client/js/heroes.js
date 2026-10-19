@@ -883,6 +883,112 @@ Object.assign(SPEC_ART, {
 
 CHANNEL.thermist = { focus: [16, 0], color: '#ff9a6a', hot: '#e8f6ff', mote: 'ember' };
 
+// ---------------------------------------------------------------- the advanced tanks (Gorgemaw, Oathbroker)
+Object.assign(HERO_ART, {
+  // Gorgemaw: a huge armoured glutton. A great round belly in banded leather under bronze plates, two enormous
+  // gauntlets, and a helm whose jaw-plate hinges open at the front (wide while Open Wide is up, a snap when it eats).
+  gorgemaw(ctx, st) {
+    const bronze = '#b8743a', iron = '#4a3f3a', hide = '#7a4a30', skin = '#c88a64';
+    const s = swing(actP(st, 'attack')), dir = swingDir(st), pa = actP(st, 'attack');
+    const open = Math.max(0, Math.min(1, ((st.jawUntil || 0) - st.t) / 0.15)), chomp = st.chompAt != null && st.t - st.chompAt < 0.25 ? 1 - (st.t - st.chompAt) / 0.25 : 0;
+    const gape = Math.max(open * (st.jawAll > st.t ? 1.4 : 1), chomp * 0.6);
+    feet(ctx, st, '#3a2a22');
+    // the belly: wider than any other hero, bands of hide and a bronze plate on top
+    ellipse(ctx, -1, 0, 13, 18, 0, hide, OUT, 2.2);
+    for (const k of [-0.55, 0, 0.55]) ellipse(ctx, -1 + 2, k * 14, 10, 2.2, 0, shade(hide, -0.18));
+    ellipse(ctx, 1, 0, 8, 11, 0, bronze, OUT, 1.8);
+    ellipse(ctx, 2.5, -3, 3.5, 5, 0, shade(bronze, 0.25));
+    for (const sy of [-1, 1]) circle(ctx, 4, 7 * sy, 1.2, '#ffd8a0', OUT, 0.6);
+    // pauldrons
+    for (const sy of [-1, 1]) { ellipse(ctx, -2, 15 * sy, 7, 5.5, 0, iron, OUT, 1.8); ellipse(ctx, -1, 15 * sy, 4, 3, 0, bronze); }
+    // the gauntlets: the left braced, the right swinging in a cuff (and both forward at the mouth when it eats)
+    const rot = 0.2 + dir * s * 1.1;
+    if (pa >= 0) smear(ctx, 4, 14, 20, 0.2 + dir * 1.1, rot, '#ffd0a0', strikeAmt(pa), 8);
+    ctx.save(); ctx.translate(4, 14); ctx.rotate(rot);
+    limb(ctx, [0, 0, 9, 1], iron, 6);
+    circle(ctx, 13, 1, 6, bronze, OUT, 1.8); for (let i = 0; i < 3; i++) line(ctx, 15, -3 + i * 3, 18, -3 + i * 3, OUT, 1.2);
+    ctx.restore();
+    const lf = gape * 4;
+    limb(ctx, [2, -14, 9 + lf, -15 + lf * 0.5], iron, 6);
+    circle(ctx, 12 + lf, -15 + lf * 0.5, 6, bronze, OUT, 1.8);
+    // the helm: a domed iron bowl and the hinged jaw-plate in front, its teeth showing when it opens
+    circle(ctx, 1, 0, 8.6, iron, OUT, 2);
+    circle(ctx, -1, -2.5, 3, shade(iron, 0.2));
+    const ja = 0.15 + gape * 0.75;
+    for (const sy of [-1, 1]) {
+      ctx.save(); ctx.translate(5, 0); ctx.rotate(sy * ja);
+      poly(ctx, [0, 0, 7, sy * 1, 8.5, sy * 6.5, 1, sy * 7.5], bronze, OUT, 1.4);
+      for (let i = 0; i < 3; i++) poly(ctx, [2 + i * 2.2, sy * 1.2, 3.1 + i * 2.2, sy * 3.4, 4.2 + i * 2.2, sy * 1.2], '#fff4e0');
+      ctx.restore();
+    }
+    if (gape > 0.1) { glow(ctx, 9, 0, 6 + gape * 6, st.jawAll > st.t ? '#ff6a3a' : '#ffb070', 0.35 * gape); ellipse(ctx, 8, 0, 2 + gape * 2, 2 + gape * 4, 0, '#2a0e08'); }
+    line(ctx, 3, -5.5, 3, 5.5, '#2a2422', 1.2);
+    circle(ctx, 4.5, -3, 1, '#ffb070'); circle(ctx, 4.5, 3, 1, '#ffb070');
+  },
+
+  // Oathbroker: a grey-robed contract-knight. A long grey surcoat over plate, a hooded half-helm, a ledger book
+  // chained at the left hip, and a sealing-stamp mace in the right hand (its square head stamps on every hit).
+  oathbroker(ctx, st) {
+    const robe = '#7a7684', plate = '#a8a8b4', wax = '#c04a5a', vellum = '#e8e0cc', lil = '#b8a8e0', skin = '#e0c0a4';
+    const s = swing(actP(st, 'attack')), dir = swingDir(st), pa = actP(st, 'attack'), big = pulse(actP(st, 'big'));
+    const wave = Math.sin(st.t * 3.5) * 1.2 + (st.moving ? Math.sin(st.t * 11) * 2 : 0);
+    // the surcoat's long tails
+    poly(ctx, [-4, -11, -18, -11 + wave * 0.4, -21 + wave, -3, -21 + wave, 3, -18, 11 - wave * 0.4, -4, 11], robe, OUT, 2);
+    line(ctx, -6, 0, -20 + wave, 0, shade(robe, -0.25), 1.2);
+    feet(ctx, st, '#3a3844');
+    torso(ctx, plate, 9, 14);
+    ellipse(ctx, -1.5, 0, 6.5, 12, 0, robe, OUT, 1.4);
+    line(ctx, 3.5, -8, 3.5, 8, lil, 1.4);
+    for (const sy of [-1, 1]) { ellipse(ctx, -0.5, 12.5 * sy, 6, 4.5, 0, plate, OUT, 1.5); line(ctx, -4, 12.5 * sy, 2.5, 12.5 * sy, shade(plate, -0.3), 1); }
+    // the ledger: a thick book on a chain at the left hip, swaying
+    const bs = Math.sin(st.t * 2.2) * 1.2;
+    ctx.save(); ctx.setLineDash([1.6, 1.2]); line(ctx, -2, -12, -7, -17 + bs, '#c8c8d0', 1.4); ctx.setLineDash([]); ctx.restore();
+    ctx.save(); ctx.translate(-8, -18 + bs); ctx.rotate(-0.25);
+    rrect(ctx, -5, -3.5, 10, 7, 1.2, '#4a3a4a', OUT, 1.4); rrect(ctx, -4, -2.6, 8, 5.2, 0.8, vellum); circle(ctx, 0, 0, 1.6, wax, OUT, 0.6);
+    ctx.restore();
+    // the stamp-mace: a shaft and a square seal head, brought down on every hit (and raised high for the big ones)
+    const rot = 0.25 + dir * s * 1.15 - big * 1.2;
+    if (pa >= 0) smear(ctx, 7, 11, 22, 0.25 + dir * 1.15, rot, lil, strikeAmt(pa), 6);
+    ctx.save(); ctx.translate(7, 11); ctx.rotate(rot);
+    rrect(ctx, -3, -1.3, 22, 2.6, 1, '#5a4a3a', OUT, 1.2);
+    rrect(ctx, 18, -5, 7, 10, 1.5, plate, OUT, 1.6); rrect(ctx, 24, -4, 2, 8, 0.6, wax);
+    ctx.restore();
+    hand(ctx, 7, 11, plate);
+    hand(ctx, 6, -10, plate);
+    // hood over a steel half-helm, a sliver of face
+    circle(ctx, 0.5, 0, 7.8, robe, OUT, 2);
+    ellipse(ctx, 3, 0, 4.5, 5.5, 0, plate, OUT, 1.2);
+    ellipse(ctx, 6.4, 0, 1.8, 3.2, 0, skin);
+    line(ctx, 3, -4.5, 3, 4.5, '#3a3844', 1);
+    circle(ctx, -2, -2.2, 2, shade(robe, 0.18));
+  },
+});
+Object.assign(SPEC_ART, {
+  // Glutton: a feast-napkin tied under the helm, and a fat gold belt round the belly
+  glutton(ctx) {
+    ellipse(ctx, -1, 0, 13.5, 18.5, 0, null, '#e8c15a', 2.2);
+    poly(ctx, [8, -5, 14, 0, 8, 5], '#f4f0e4', OUT, 1.2);
+    circle(ctx, -1, 13, 1.8, '#ffd27a', OUT, 0.8);
+  },
+  // Gizzard: grey stone plates set into the belly, glowing warm while it digests
+  gizzard(ctx, st) {
+    for (const [x, y] of [[-4, -8], [-4, 8], [-7, 0]]) poly(ctx, [x - 3, y - 3, x + 3, y - 3.5, x + 3.5, y + 3, x - 3, y + 3.5], '#9a948a', OUT, 1);
+    glow(ctx, 0, 0, 16, '#ffc070', 0.12 + Math.sin(st.t * 3) * 0.05);
+  },
+  // Guarantor: a gold chain across the chest to a second seal, gold trim on the pauldrons
+  guarantor(ctx) {
+    ctx.save(); ctx.setLineDash([1.6, 1.2]); line(ctx, 3, -11, 3, 11, '#e8c15a', 1.4); ctx.setLineDash([]); ctx.restore();
+    circle(ctx, 4, 0, 2.4, '#ffd27a', OUT, 0.9);
+    for (const sy of [-1, 1]) ellipse(ctx, -0.5, 12.5 * sy, 6, 4.5, 0, null, '#e8c15a', 1.2);
+  },
+  // Collector: a red sash hung with coin pouches and wax seals
+  collector(ctx) {
+    line(ctx, -6, -10, 3, 10, '#a02838', 2.6);
+    for (const [x, y] of [[-3, -4], [0, 3]]) circle(ctx, x, y, 1.9, '#d8a040', OUT, 0.8);
+    circle(ctx, -5, 7, 1.6, '#c04a5a', OUT, 0.7);
+  },
+});
+
 // World-space trails, drawn under the hero (called from drawHero after translate/scale; x, y are the hero's world position).
 const HERO_TRAIL = {
   // the Driftblade's wind: two thin ribbons streaming from where they ran, fading in half a second
