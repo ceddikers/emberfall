@@ -6,7 +6,8 @@
 //   v1: { v, name, inv: { next, items: [{ uid, key, q }], equip: { classId: { slot: uid } } },
 //         heroes: { classId: { clears: { bossId: { normal, hard } }, spec } }, settings: { debug } }
 //   (spec and trials were added later without a version bump: both optional; a missing spec means the base kit,
-//   missing trials mean none passed: heroes[classId].trials = { specId: 1 })
+//   missing trials mean none passed: heroes[classId].trials = { specId: 1 }; likewise heroes[classId].found = [ids],
+//   the hidden recipes a hero has brewed, the Alembist's Reactions)
 //   v2: + gold (the account-wide wallet); items lose `q`: rarity is now part of each item (items.js), so a Heroic copy
 //       is simply that item. Each Heroic item you owned pays HEROIC_REFUND gold once, for the bonus it no longer has.
 //       inv.lost holds items whose key the game doesn't know (kept, never deleted; they come back if the key returns).
@@ -132,6 +133,16 @@ const Save = (() => {
       return true;
     },
     resetTalents(classId) { const t = this.heroTalents(classId); t.picks = freshTalents().picks; write(); },
+    // hidden recipes a hero has found (the Alembist's Volatile Reactions): heroes[classId].found = [ids], added
+    // without a version bump (optional; missing means none found)
+    found: classId => { const f = (data.heroes[classId] || {}).found; return Array.isArray(f) ? f.filter(x => typeof x === 'string') : []; },
+    discover(classId, id) {
+      const h = data.heroes[classId] = data.heroes[classId] || { clears: {} };
+      if (!Array.isArray(h.found)) h.found = [];
+      if (typeof id !== 'string' || h.found.includes(id)) return false;
+      h.found.push(id); write();
+      return true;
+    },
   };
 })();
 

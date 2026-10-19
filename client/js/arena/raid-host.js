@@ -243,7 +243,7 @@ class RaidHost {
             break;
           }
           case 'fx':  // class moments (perfect block, overheat...) so every client can show them
-            host.emit({ t: 'kfx', id: bot.id, k: ev.name, s: 1 });
+            host.emit(Object.assign({ t: 'kfx', id: bot.id, k: ev.name, s: 1 }, ev.data ? { d: ev.data } : null));
             break;
           case 'teleport': {
             const b = host.sim.boss, a = b.facing + Math.PI;
@@ -251,7 +251,7 @@ class RaidHost {
             break;
           }
           case 'heal': case 'hot': case 'shield': case 'mit': case 'raise': case 'rewind':
-          case 'selfDamage': case 'targetDebuff': case 'partyBuff': case 'pool': case 'brand':
+          case 'selfDamage': case 'targetDebuff': case 'partyBuff': case 'pool': case 'brand': case 'splash':
             host.onPlayerEvent(bot.id, ev);
             break;
         }

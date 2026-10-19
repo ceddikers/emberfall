@@ -39,6 +39,10 @@ class Kit {
     this.def = def;
     this.env = env;
     this.abilities = def.abilities;
+    // a talent that grants a new move (talents.js `grants`) puts the kit's talentAbilities[id] in the slot of the move
+    // it names in `replaces` (the same mechanism a spec's replacement uses)
+    const ta = def.talentAbilities, held = ta && env.talents && env.talents();
+    if (held && held.size) this.abilities = def.abilities.map(ab => { for (const id of held) if (ta[id] && ta[id].replaces === (ab.replaces || ab.id)) return ta[id]; return ab; });
     this.g = def.init ? def.init() : {};
     this.buffs = new Map();
     this.cd = {};
@@ -284,7 +288,7 @@ class Kit {
     if (ab.target === 'enemy') this.engagedAt = this.now;
     const ct = this.castTime(ab);
     if (ab.type === 'gcd') {
-      this.gcdLen = (ab.recastGcd || ENGINE.GCD) * this.hasteMult();
+      this.gcdLen = ((typeof ab.recastGcd === 'function' ? ab.recastGcd(this) : ab.recastGcd) || ENGINE.GCD) * this.hasteMult();
       this.gcdReady = this.now + this.gcdLen;
       this.stats.gcds++;
       this.stats.gcdTime += this.gcdLen;
