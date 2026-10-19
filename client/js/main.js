@@ -992,6 +992,7 @@
     if (!tg || tg.gone != null) return;
     tg.gone = now;
     BOSS_VFX.impact(tg, msg, { entById, boss: raid.def.id, pol: raid.pol, units: raidUnits() });
+    if (msg.fail) BOSS_VFX.failed(tg);
     if (msg.hits && msg.hits.includes(Net.id) && tg.type === 'aoe') FX.shake = Math.max(FX.shake, 5);
   });
   Net.on('tgclear', () => { if (raid) { fadeTelegraphs(); raid.lunges = []; raid.eggs = null; } });
@@ -1260,6 +1261,11 @@
     raid.taken.push({ t: now, a: msg.a });
     if (msg.a > 0) FX.text(player.x, player.y - 46, '-' + rnd(msg.a), msg.dd ? '#ff4a3a' : '#ff8a7a', msg.a > 400 ? 18 : 14);
     if (msg.dd) FX.shake = Math.max(FX.shake, 4);
+    // the screen's edge flushes red, harder the bigger the bite out of your health
+    if (msg.a > 0 && ps && ps.maxHp > 1) {
+      const k = clamp(msg.a / ps.maxHp * 2.2, 0.25, 1);
+      raid.hurtK = now - (raid.hurtAt ?? -9) < 0.35 ? Math.max(raid.hurtK, k) : k; raid.hurtAt = now;
+    }
   });
   Net.on('fev', msg => {
     if (!raid) return;
@@ -1986,6 +1992,21 @@
     for (const tg of raid.tgs.values()) if (tg.type === 'buster' && tg.target != null && tg.gone == null) { const e = entById(tg.target); if (e) ArenaView.busterIcon(ctx, e.x, e.y, now); }
     for (const e of [...arenaRemotes, ...raid.bots.values()]) playerTag(e, false, raid.party.get(e.id));
     playerTag(player, true);
+    hurtVignette();
+  }
+  // a red flush round the screen's edge for a moment when you're hit (stronger for a bigger hit)
+  let hurtGrad = null, hurtFor = '';
+  function hurtVignette() {
+    const age = now - (raid.hurtAt ?? -9);
+    if (age > 0.4) return;
+    const a = raid.hurtK * (1 - age / 0.4) * 0.55;
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    if (hurtFor !== W + 'x' + H) {
+      hurtFor = W + 'x' + H;
+      hurtGrad = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.42, W / 2, H / 2, Math.hypot(W, H) * 0.55);
+      hurtGrad.addColorStop(0, 'rgba(200,20,10,0)'); hurtGrad.addColorStop(1, 'rgba(200,20,10,1)');
+    }
+    ctx.globalAlpha = a; ctx.fillStyle = hurtGrad; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1;
   }
 
   // ---------------------------------------------------------------- minimap (town)

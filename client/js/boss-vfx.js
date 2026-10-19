@@ -292,9 +292,16 @@ const BOSS_VFX = (() => {
     },
     lunge(tg) {
       const s = tg.live;
-      shapeFlash(s, '#ff7ac0', { a: 0.16, dur: 0.3 });
+      shapeFlash(s, '#ff7ac0', { a: 0.22, dur: 0.35 });
       streak(s.x, s.y, s.angle, '#ffb0dc', { w: 12, dur: 0.28 });
       for (let i = 0; i < 3; i++) { const d = rand(120, AR() * 1.2); VFX.sparks(s.x + Math.cos(s.angle) * d, s.y + Math.sin(s.angle) * d, { color: '#ffd0ec', n: 3, angle: s.angle, spread: 0.5, speed: 300 }); }
+      // where the leg's tip drives into the floor: a burst of chitin spikes and broken stone
+      const tip = Math.min(500, s.len || 500), tx = s.x + Math.cos(s.angle) * tip, ty = s.y + Math.sin(s.angle) * tip;
+      if (ARENA.sd(tx, ty) < -20) {
+        VFX.spikeburst(tx, ty, { r: 46, n: 9, color: '#ff7ac0', core: '#ffe0f0', ink: '#2a0a20', layer: 'ground' });
+        VFX.debris(tx, ty, { color: '#4a4156', n: 6, speed: 0.9 });
+      }
+      shake(4);
     },
     venom(tg) {
       const s = tg.live;
@@ -763,5 +770,18 @@ const BOSS_VFX = (() => {
   }
   function wipe() { roomTint('#200810', 0.4, 1.4); }
 
-  return { propFx, stoveBurst, gazed, doomed, cure, knightMemory, knightRise, nightFall, polarityFlip, edgeClose, pulse, orbForm, orbHit, chain, meatballLand, meatballHit, silkSnap, reelBite, impact, castStart, auto, leap, roar, addSpawn, addDeath, addEnrage, fury, spit, husk, tetherSnap, playerDeath, playerRaised, partyBuff, victory, wipe };
+  // a stack or soak that wasn't answered (the host flags it): it must never look like a success. The shape burns red,
+  // the room flushes red, and the screen jolts. A missed Barrow Bell tolls purple through the whole barrow.
+  function failed(tg) {
+    const s = tg.live, bell = tg.tag === 'bell';
+    const col = bell ? '#b04aff' : '#ff3a2a';
+    shapeFlash(s, col, { a: 0.4, dur: 0.7 });
+    VFX.shock(s.x, s.y, { r: (s.r || 120) * 1.6, color: col, w: 9, dur: 0.6, flat: 1 });
+    VFX.sparks(s.x, s.y - 10, { color: bell ? '#e0b0ff' : '#ff8a6a', n: 14, speed: 340 });
+    if (bell) { VFX.pillar(s.x, s.y, { r: 50, h: 360, color: '#c88aff', dur: 0.9 }); for (let i = 0; i < 3; i++) VFX.shock(s.x, s.y, { r: AR() * 1.3, color: '#b04aff', w: 8, dur: 0.9, flat: 1, delay: i * 0.15 }); }
+    roomTint(col, 0.16, 0.6);
+    shake(8);
+  }
+
+  return { failed, propFx, stoveBurst, gazed, doomed, cure, knightMemory, knightRise, nightFall, polarityFlip, edgeClose, pulse, orbForm, orbHit, chain, meatballLand, meatballHit, silkSnap, reelBite, impact, castStart, auto, leap, roar, addSpawn, addDeath, addEnrage, fury, spit, husk, tetherSnap, playerDeath, playerRaised, partyBuff, victory, wipe };
 })();
