@@ -2,7 +2,7 @@
 
 A four-player co-op raid game (tank, two DPS, healer) in the browser. You meet in a town, pick a hero at the tavern, and step through a portal into an FF14-style boss fight: the boss mostly holds the middle of the room, and the challenge is reading its attacks, moving as a team, and playing your class well under pressure.
 
-This document covers the combat rules, all nine class kits, and all four bosses. It also records what was built, what was tested, and what still needs testing. The research behind the design is in `docs/research/`:
+This document covers the combat rules, all twelve class kits, and all four bosses. It also records what was built, what was tested, and what still needs testing. The research behind the design is in `docs/research/`:
 - `ff14-job-design.md`: where skill expression comes from in FF14 jobs.
 - `class-design-beyond-ff14.md`: WoW, Lost Ark, GW2, Dota and design theory.
 - `ff14-raid-boss-design.md`: mechanic vocabulary, timelines, Normal vs Savage.
@@ -76,7 +76,7 @@ A green dashed ring always shows who your heal will land on. Healers get the par
 
 **Authority:** each player runs their own kit locally and reports damage and heals to the host. The host's fight sim owns boss HP, player HP, threat, mechanics, deaths, and the HP history Rewind needs.
 
-## 3. The nine classes
+## 3. The twelve classes
 
 Each class has 6 skills plus the shared dash. **GCD** skills share the global cooldown; **oGCD** skills have their own cooldowns and can be woven between GCDs. Potency × 10 ≈ damage.
 
@@ -212,6 +212,60 @@ The highest ceiling: newbies reach 70% of pro damage. The boss's hitbox ring sho
 
 *Ceiling:* plan Haste for raidwides and burst windows, fire Rewind right after a tankbuster, and land Stasis on the boss's biggest attack.
 
+### Advanced DPS (added 2026-10-19)
+
+Two DPS built for players who want more to juggle. On the hero select their tiles carry small complexity pips (data.js `complexity`: Thermist 3, Driftblade 2), separate from the difficulty diamonds. Both run on the same rules as the first nine: six keys plus the dash, small numbers, a class gauge drawn as its own shape, kits run on each client and report to the host.
+
+**Thermist, Living Thermometer** (◆◆◆). Signature: **Thermal Shock**. Gauge: a two-sided dial (Temperature), frost blue on the left, ember orange on the right, a mark at 0. Ranged caster; autos alternate a fire and a frost spark (25).
+
+| Key | Skill | Type | What it does |
+|---|---|---|---|
+| Q | Cinder Bolt | GCD | 1 s cast, 210, turns the dial 1 toward Blaze. Locked while Overheated. |
+| W | Rime Shard | GCD | 1 s cast, 210, turns the dial 1 toward Rime. |
+| E | Flare | GCD | 2 s cast, 400, dial +2. At +5 it is instant and a sure crit, and holds you **On the Brink** instead of moving the dial. |
+| R | Glacier Lance | GCD | 2 s cast, 400, dial −2. The same edge rule at −5. |
+| D | Equilibrium | oGCD | 30 s: the dial snaps to 0 behind a shield of 70 per step it fell; clears On the Brink. |
+| F | Inversion | oGCD | 90 s burst: flips the dial (+5 becomes −5). From 3 or more steps out that crossing is a Shock half again as strong. 10 s **Attuned**: both elements count as your side. |
+
+- **The dial** runs from −5 (Rime) to +5 (Blaze). Every step from 0 makes that side's spells 8% stronger (Attuned: both sides); spells pushing back toward 0 gain nothing.
+- **Thermal Shock:** a spell that carries the dial across 0, after it peaked at 3 or more since the last crossing, detonates on the target. Its size is the **swing**: the peak plus how far past 0 it landed (+5 down to −1 is 6, an Inversion at ±5 is 10). Potency max(0, −120 + 105 × swing): 195 at 3, 510 at 6, 930 at 10. The gauge shows the peak as a bead that lights up once a Shock is armed.
+- **Overload:** pushing past ±5, or casting the same element again while On the Brink, overloads you: **Overheat** (fire locked 3 s, you lose 8% HP) or **Frostbite** (casts 30% slower for 3 s).
+
+*Ceiling:* a real swing is a plan several casts long. Climb with the side you're on, use the edge spell as your one instant (it doubles as movement), cross with the other element as far as you can, and save Inversion for the party's burst window. Equilibrium is your mitigation and costs you the swing, so the timing matters. Newbies reach 60% of pro damage, the widest gap in the game.
+
+**Driftblade, Wind Duellist** (◆◆◇). Signature: **Drift and Passing Strikes**. Gauge: a crescent of wind that fills while you move (Drift, 0 to 100), streaks racing through it while it rises. Melee; autos are a quick sabre flick (40).
+
+| Key | Skill | Type | What it does |
+|---|---|---|---|
+| Q | Carve | GCD | 240, up to 30% more with full Drift. At 50 Drift or more a follow-through cut adds 30%. |
+| W | Slipstream | oGCD | 2 charges, 14 s each: dash 180 px the way you're heading, +15 Drift. Leaves a **wind lane** for 6 s: anyone running along it is 30% faster, and stepping back onto your own gives +15 Drift. Dashing through an enemy is a Passing Strike. |
+| E | Hook Turn | oGCD | 12 s, range 220: swing round your target to its far side with a cut of 260 (up to 40% more with Drift, a sure crit above 70). Gives back a dash charge. |
+| R | Crosswind | GCD | Needs 20 Drift, range 300: spends it all, 100 + 5 per Drift (600 at full). |
+| D | Stillpoint | oGCD | 25 s: parry for 2 s, 50% less damage, and Drift holds instead of draining. A hit caught in the first moment is answered with a riposte (320, up to 50% more with Drift). |
+| F | Gale Run | oGCD | 90 s burst: for 12 s Drift can't drain and Passing Strikes hit three times as hard. |
+
+- **Drift** fills by 20 a second while you move and drains by 30 while you stand. Nearly every cut scales with it.
+- **Passing Strike:** running into an enemy's body while moving cuts it as you pass (90, doubled at full Drift; at most every 0.45 s). Dashes, Hook Turn and plain running all count, so a dodge can carry you through the boss instead of away.
+
+*Ceiling:* never stop. Thread every dodge through the boss, chain Slipstream, Hook Turn (which hands the dash back) and the shared dash into long runs, fire Crosswind full, and keep Gale Run for the stretches where the fight makes you move. Newbies reach 60% of pro damage: a Driftblade who stands still is half a Driftblade.
+
+**Design notes and changes from the brief (2026-10-19):**
+- **Thermal Shock is measured from the peak since the last crossing**, not from wherever the dial happened to be one cast ago, so a swing is a plan you build over several casts. A crossing from a peak under 3 is just a crossing.
+- **Glacier Lance is single-target** (like every other move in the game), not a piercing line.
+- **Overheat and Frostbite** are different on purpose: Overheat costs HP and locks fire; Frostbite only slows casts. Either way you lose the swing.
+- **Zenith's Redline** replaces overloading at ±5 with a +20% window that builds Strain (11 a second at the edge, −20 a second off it); full Strain is a meltdown (the dial snaps to 0, you lose 12% HP and take a 4 s Overheat or Frostbite). Equilibrium becomes **Bleed Off** (15 s: vents 60 Strain behind a shield of 160).
+- **Pendulum** moves the dial a step further with every spell and gains Momentum (+4% per crossing, up to 5, gone after 6 s without one), so its swings come faster but land closer to the edge.
+- **Carve's follow-through** (a second cut at 50+ Drift) replaced "Carve doesn't stop you moving": every GCD in the game already lets you move, so the line said nothing.
+- **Hook Turn mirrors you through the target** (to the point opposite where you stood), which reads clearly and is the same rule for players and bots.
+- **Slipstream's lane speed** is applied on each player's own client (a lane laid by anyone speeds up anyone running along it). Bots don't use lanes for speed; the Driftblade's own Drift refund from re-entering a lane works for everyone, since it lives in the kit.
+- **Stillpoint is a parry built on Brace's timing** (`mitigate` kind `brace`): the host's Perfect Block notice is what triggers the riposte, so it lands with the same fairness window as the Bastion's block.
+- **Orbit** (spec) counts how far you circle round your target at close range; at 5 stacks Carve strikes on its own every 1.4 s while you move. **Comet** (spec) doubles Drift to 200, fills it faster in straight lines (34 a second) and turns Crosswind into **Impact**: a charge 120 px clean through the target for 120 + 4 per Drift, a sure crit from 160.
+- **Passing Strikes credit the enemy you ran through** (damage events can now name their target, `tgt`), so cutting through an add doesn't hit the boss and vice versa.
+- **Kit moves** (`teleport` events with `where`: `dash`, `around`, `through`) play as a dash for players (the same animation and timing as the shared dash) and snap for bots; `kitMoveDest` in `kits.js` is the one rule both use.
+- **Art:** both classes ship without painted icons or portraits (data.js `art: { icons: false, portraits: false }`). The game draws small glyph icons for them instead of asking for files that don't exist, and the hero page shows the animated sprite. Briefs are in `docs/art/`.
+
+**Tested (2026-10-19):** `tools/check.js` passes with both classes in the class balance (pro DPS between the Shadowblade and the Pyromancer), every spec within 5% of its class, every talent under +7% and full builds +12 to +16%, all four spec trials passed by a bot playing the spec (the base kits also pass, like 14 of the original vignettes), and four new bot raid line-ups clearing on Normal: Grubnak (base / base), Skitterra (Pendulum / Orbit), Volkar (Zenith / Comet) and the Hollow King (base / base). Over six runs each those cleared 6 of 6, except Volkar with Zenith and Comet at 5 of 6. After merging the boss rework (2026-10-19), the Volkar line-up uses a Cleric instead of an Accelerant (an Accelerant plus two advanced DPS no longer had the damage), the Zenith bot steps off the edge with a quick spell when Strain builds and Bleed Off is cooling (it had been melting down), and the Driftblade bot weaves through the boss unless a telegraph lands within 2.5 s (was 4). The Driftblade bot still deals less than an original DPS bot (about 70 against 100 on Grubnak), so it's the weakest link in a party. In the browser: the hero select at 1280×800 and phone width, the hero pages, both classes in a bot raid with their gauges, cast and Shock effects, Slipstream lanes, the drawn icons (no missing-file requests for either class), the talent screen with the talent moves on the bar, and the Comet trial. Not yet played by a human or over a real network connection.
+
 <!-- classes-b: Alembist (new healer, 2026-10) -->
 **Alembist, Alchemist** (◆◆◆). Signature: **brewing ahead**. Gauge: a copper still with a bandolier of vials. Healing comes from vials you brewed earlier, so you heal now with what you planned 10 seconds ago.
 
@@ -271,11 +325,13 @@ The sim runs a 6-minute fight twice per class. The *pro* follows that class's op
 | Cleric | 658 | 1037 | 63% |
 | Grovekeeper | 744 | 1044 | 71% |
 | Chronomancer | 834 | 1122 | 74% |
+| Thermist | 1422 | 2356 | 60% |
+| Driftblade | 1433 | 2407 | 60% |
 | Alembist | 632 | 1090 | 58% |
 
 These numbers include auto-attacks. Each class's `potMult` was lowered when autos were added, so pro damage stayed where it was. Newbies gained a little, because autos keep hitting while they move or hesitate.
 
-Every class has a clear newbie-to-pro gap (14–37%), and the gap grows with the class's difficulty rating. Within each role, pro damage is balanced to within about 10% through a per-kit `potMult` knob in `combat/kits.js`. Healer pros deal more damage because they stop over-healing and attack instead.
+Every class has a clear newbie-to-pro gap (14–37%; 40% for the two advanced DPS, by design), and the gap grows with the class's difficulty rating. Within each role, pro damage is balanced to within about 10% through a per-kit `potMult` knob in `combat/kits.js`. Healer pros deal more damage because they stop over-healing and attack instead.
 
 ## 4. Bosses
 
@@ -288,7 +344,16 @@ Shared rules for every fight:
 - **Normal is a real raid.** A good group should expect several wipes on its first night with any boss, Grubnak included. Avoidable hits take well over half a DPS's HP, and each one leaves +50% Vulnerability for 15 s (`def.vuln`, twice the engine default), so one mistake hurts a lot and two usually kill. The overlapping patterns run from the first loop, the cadence is quick, and the enrage timers are tight. Every Normal attack is still telegraphed on the floor.
 - **Hard mode** casts 15% faster and hits 25% harder, and every boss has **three moves Normal never uses**, each with its own floor tell, body tell and impact effect in that boss's style. On top of those: stored or doubled mechanics, telegraphs only on the boss model, and debuffs that punish soaking twice.
 - **Upcoming moves feed.** Every scripted step has a player-facing name, its cast name (the optional third element of an `f.seq` step; `f.at` / `f.after` take a name too). About once a second, and whenever the list changes, the host sends `{ t: 'bnext', l: [[name, secondsUntil], ...] }`: the next three named steps of the current phase, plus kept ones such as the enrage. A phase change can cut the list short. Each phase's rotation is laid out with `f.loop(build)`, which schedules the next loop 20 s before the current one ends, so the feed sees across the seam. The raid-info branch draws it; the bots read the same list (`view.next`) to top the tank before a buster, heal ahead of party-wide damage, and hold tank cooldowns for the next buster.
-- **Every boss has its own room shape** (`ARENA_DEFS` in `client/js/arena/shapes.js`). The shape fits the theme and the mechanics: Grubnak's kitchen is a long rectangle (1240 × 840, rounded corners), Skitterra's web is an octagon hung between eight rock pillars, Volkar's summit is a circle whose electrified edge closes in during phase 2, and any boss without its own shape gets a circle. The walls are walls: you're never knocked off an edge. Wall clamps, bot planning, the camera, mechanics that start at the wall (Rolling Meatballs, Venom Mist) and telegraph clipping all read the shape, so a new boss only needs a new entry.
+- **Every boss has its own room shape** (`ARENA_DEFS` in `client/js/arena/shapes.js`). The shape fits the theme and the mechanics: Grubnak's kitchen is a long rectangle (1040 × 720, rounded corners; shrunk from 1240 × 840 in October 2026 because the room felt too big, with spawns, plates, Flambé stripes, Boil Over falloff, Belly Flop throw and cask landings retuned to match), Skitterra's web is an octagon hung between eight rock pillars, Volkar's summit is a circle whose electrified edge closes in during phase 2 (on Hard it breaks away a wedge at a time instead), and any boss without its own shape gets a circle. The walls are walls: you're never knocked off an edge, except where Volkar's summit has broken away on Hard (a fall). Wall clamps, bot planning, the camera, mechanics that start at the wall (Rolling Meatballs, Venom Mist) and telegraph clipping all read the shape, so a new boss only needs a new entry.
+- **The room has things in it** (October 2026, `docs/plans/2026-10-arena-mechanics.md`). Every boss's room holds **props** the host owns (`PROPS` in `shapes.js`, `addProp` / `hitProp` / `breakProp` in `fight.js`): casks, rock pillars, braziers, coffin lids and fallen masonry, standing stones, boulders.
+  - **Solid:** nobody walks through one (players, bots, adds and the boss collide and steer round them), and a throw stops at one.
+  - **Cover:** a mechanic with `cover` comes from a point (usually the boss); anyone whose line to it passes through a cover prop is spared. `coverCap` limits how many hide behind one prop (nearest first), and `chip` knocks a hit off the props used (or all of them). The telegraph is drawn with each prop's shadow cut out of it, with bright rims, so the safe floor reads as the room's own tiles.
+  - **Breakable:** props with HP show cracks on their last hit (a step ahead), break with debris and dust, and leave rubble.
+  - **Wall slams:** `FightSim.knock()` throws a player; stopped well short by a wall or prop, they take slam damage and are dazed (held briefly).
+  - **Permanent floor state:** rubble, grease, broken ground, drawn once into a cached layer. Grease catches fire and fire runs on through every puddle it touches.
+  - **Network:** a `props` message (every prop packed, the floor list only when it changes or every 9 s, which grease is burning) on every change and every 3 s, so late joiners get the room; `propfx` for chips, breaks, slams, ignitions, bolts and the like; `roomev` for room moments (Lights Out, an ambush shadow, the stove, rod marks, a wedge about to break).
+  - **Bots** hide behind their own prop (spread over the props in id order, healthiest and nearest first), keep out of solid props, never stand where a throw would slam them, bait Butcher's Charge into a brick wall, stand in the light for Lights Out, and break cocoons and coffins first.
+  - Every new move has a cast-bar name and an upcoming-moves feed entry. Where a new move took an old one's slot, the old one was filler; Normal keeps its pressure and Hard adds.
 - **The room is alive.** Floors are textured (bevelled, cracked and stained tiles; pitted, cracked and mossy stone with standing water). An ambient layer, drawn under everything else, keeps the room moving:
   - Kitchen: burners flicker, pots steam, lamp light breathes on the tiles, flour dust drifts, and now and then a rat runs along the bottom wall.
   - Web cave: dew twinkles on the threads, drips fall into the pools and ripple, small spiders creep along the spokes, spores drift up, and cold fog slides along the walls.
@@ -326,7 +391,7 @@ Stats:
 | **Rolling Meatballs** | He lobs three giant meatballs to the rim. Each wobbles in place (chevrons, plus a dashed lane on Normal), then rolls across the room, flattening (650) and knocking aside anyone in its path. Staggered, so the gaps open one at a time. | Four, faster and tighter |
 | **Spice Rack** | Random circles, plus one locked under each non-tank (650). Ladle or Lid follows straight after. | none |
 | **Whisk** | A cross of beams through him that turns 30° four times (650). | Replaced by Flambé once per loop |
-| **Boil Over** | Damage falls off with distance from him (2,000 at the pot). | 2,875; the first one each loop is replaced by Kitchen Rush (a charge at the farthest player) |
+| **Boil Over** | Damage falls off with distance from him (2,000 at the pot). | 2,875 |
 | **Simmer** (intermission at 55%) | He leaps to the center, untargetable, and rings of boiling water ripple out, then back in (650). | Faster waves |
 | **Gorge** (below 15%) | Raidwide every 18 s (325); he hits 10% harder each time. | same |
 
@@ -338,16 +403,31 @@ Stats:
 | **Cleaver Toss** | A cleaver flies along a line at each of the two farthest non-tanks (812). The lines follow them until a second before the throw, then each cleaver flies back along the same line 1.5 s later (812). | Score marks run out along the floor and sharpen once aimed; a cleaver spins in his hand, drawn back over his shoulder. On the way back it hangs in the far wall and chevrons point home |
 | **Flambé** | Brandy in stripes across the kitchen (six running top to bottom, or four side to side). Every other stripe goes up (875), then the rest 2.2 s later: step into a burnt stripe. | A wet amber sheen slides along each stripe and blue flame licks along it just before it catches; he holds a brandy bottle with a blue flame on its neck |
 
+**The kitchen's props** (October 2026):
+
+| Move | What happens | Mode |
+|---|---|---|
+| **Larder Toss** | He rips two casks off the shelves and throws them at the two farthest players (each circle follows its player until 1.6 s before; 450 under it). A cask stays where it lands, at least 120 from the walls so there's room behind it: solid, two hits, cover. At most four stand at once. | Both |
+| **Gut Blast** | A roar across the whole kitchen (750). Hide behind a cask: the blast is drawn with each cask's shadow cut out. Every cask takes a hit. | Hard: 1,000, two to a cask |
+| **Butcher's Charge** | He lowers his head at his tank (the line follows them until a second before) and charges until he hits something (700 to anyone on the line). A brick wall: stuck for 4 s, stars round his head, taking 20% more damage ("Staggered" under the boss bar). The stove line along the top wall: the burners erupt into a wall of fire over the top third of the room for 10 s (225 a second) and light any grease. A cask: smashed. The tank baits it into a brick wall, away from the stove and the casks. | Both |
+| **Belly Flop** | Its throw (200) now ends in a wall slam (250, dazed) if you're too near a wall or a cask. | Hard |
+| **Flambé** | Every stripe that burns lights the grease in it. Normal: six stripes run down from the stove and catch one after another, side to side; stay behind the fire. | Normal (new) and Hard |
+| **Clogged Drains** | The three drains back up and grease spreads round them for good. Fire (Flambé, the stove, Meat Hook) runs through every puddle it touches. | Hard |
+| **Meat Hook** | A chain off the ceiling rail hooks a non-tank and drags them 210 toward the stove; through burning grease or into the burners they catch fire. | Hard |
+
+Merges: Kitchen Rush (Hard's charge at the farthest player) became Butcher's Charge, so there's one charge, aimed at the tank, with a wall to bait. The Hard grease move is named Clogged Drains because Grease Fire is already his raidwide. Flambé is shared: Normal gets the running version, Hard keeps the alternating one.
+
 **How his tells look** (all drawn in `boss-tells.js`): Mince darkens the doomed half under a giant ghost cleaver; Ladle Spin churns soup around him; Lid Slam casts the lid's shadow with ripples out to the safe ring; Meat Toss drops a steak on a chain; Family Meal lowers a silver cloche; Order Up! lays out steaming plates under glass cloches with a gold progress rim; Spice Rack shakes salt, pepper and paprika jars that pour onto the floor; Whisk draws wire loops; Boil Over is rolling heat with bubbles; Kitchen Rush leaves skid marks; Simmer's rings are stove coils going dull, red, white-hot; Grease Fire spreads an oil slick that catches fire.
 
 **Timeline** (each phase loops; the patterns overlap from the first loop):
-- **Phase 1** (100–55%), about 2 minutes a loop: Grease Fire, Tenderize, Mince, Ladle/Lid, (Hard: Belly Flop), Meat Toss → Family Meal, Chop Chop, Grease Fire, Order Up! with Rolling Meatballs launched over the plates, Tenderize, (Hard: Cleaver Toss), Meat Toss → Family Meal, Chop Chop, Grease Fire.
+- **Phase 1** (100–55%), about 2 minutes a loop: Grease Fire, Tenderize, Mince, Larder Toss (in the solo Ladle/Lid's place), (Hard: Clogged Drains on the first loop, Belly Flop), Meat Toss → Family Meal, Butcher's Charge (in the first Chop Chop's place), Gut Blast (in the middle Grease Fire's place), Order Up! with Rolling Meatballs launched over the plates, Tenderize, (Hard: Cleaver Toss, Meat Hook), Meat Toss → Family Meal, Chop Chop, Grease Fire.
 - **Intermission** (55%): Simmer out, then Simmer in. Telegraphs, puddles and meatballs still out are cleared.
-- **Phase 2:** Grease Fire, Tenderize, Whisk, Spice Rack → Ladle/Lid, Order Up! (with Meat Toss on Hard), Boil Over (Hard: Kitchen Rush, then Flambé), Tenderize, Chop Chop (Hard: Double Chop, then Belly Flop), Family Meal under Spice Rack, Boil Over, Rolling Meatballs (Hard: with Cleaver Toss), Grease Fire, Whisk (Hard: Flambé).
+- **Phase 2:** Larder Toss, Grease Fire, Tenderize, Whisk, Spice Rack → Ladle/Lid, Gut Blast (Normal: in Order Up!'s place; Hard keeps Order Up! with Meat Toss as well), Butcher's Charge (in the second Boil Over's place; on Hard it also takes Kitchen Rush's), (Hard: Clogged Drains, Meat Hook), Tenderize, Chop Chop (Hard: Double Chop, then Belly Flop), Family Meal under Spice Rack, Boil Over, Rolling Meatballs (Hard: with Cleaver Toss), Grease Fire, Flambé (in the second Whisk's place).
 
 **Bot test results** (`node tools/bot-raid.js`; four bots with the real kits and a competent-player AI that reacts instantly and sees hidden telegraphs, so a human group should expect to do worse at first):
 - **Normal, Bastion / Aegis Cleric / Sharpshooter / Cataclysm** (the `check.js` line-up): cleared 17 of 18 over six seed sets, in 3:40–4:33. Wipes start with the healer dying to grease ticks plus the toss → meal pair.
 - **Hard, Bastion / Cleric / Ranger / Pyromancer:** 0 of 8; the bots reach 5–58% and last 2:20–6:08.
+- **With the props and the smaller kitchen** (October 2026, six seeds): Normal (the `check.js` line-up) 6 of 6 in 3:45–4:31; Hard (base specs) 0 of 6, reaching 30–68%.
 
 ### Boss II: Queen Skitterra, the Spider Broodmother (built, playable on Normal and Hard)
 
@@ -391,17 +471,28 @@ Stats:
 - `FightSim.reel()` (Silk Reel): `reel` / `reelx` messages. The reeled client drags and slows its own movement; a dash sends a `snap` combat event. The host bites if the player reaches her, and bots snap after a random reaction time.
 
 **Timeline** (each phase loops):
-- **Phase 1** (100–50%), about 2 minutes a loop: Mist, Wrap, Lunge, Silk Lines, Venom Spit, Brood, Silk Reel, (Hard: Fang Rush), Mist, Lunge, Silk Lines + Venom Spit, (Hard: Egg Sacs, once the brood should be dead), Wrap, Venom Spit.
-- **Phase 2:** Mist, then Wrap + Lunge together (the wrap lands just before the first strike, so the rooted tank must already stand somewhere the first two strikes miss), Brood with Silk Lines, (Hard: Spinneret Volley), Silk Reel, Venom Spit, Lunge (Hard: Molt), Wrap, Silk Lines + Spit, (Hard: Egg Sacs and Fang Rush in turn), Mist, Lunge, Brood, (Hard: Spinneret Volley).
+- **Phase 1** (100–50%), about 2 minutes a loop: Mist, Wrap, Lunge, Silk Lines, Strand Reel (in the first Venom Spit's place), Brood, Silk Reel, (Hard: Fang Rush), Mist, Lunge, Silk Lines + Venom Spit, (Hard: Egg Sacs, once the brood should be dead, then Cocoon), Wrap, Acid Deluge (in the last Venom Spit's place).
+- **Phase 2:** Mist, then Wrap + Lunge together (the wrap lands just before the first strike, so the rooted tank must already stand somewhere the first two strikes miss), Brood with Silk Lines, (Hard: Spinneret Volley), Silk Reel, (Hard: Ceiling Ambush), Strand Reel (in Venom Spit's place), Lunge (Hard: Molt), Wrap, Silk Lines + Spit, (Hard: Egg Sacs and Fang Rush in turn), Mist, (Hard: Cocoon), Acid Deluge (in the last Lunge's place), Brood, (Hard: Spinneret Volley).
 
 **Bot test results:**
 - **Normal, Runeblade / Moonwell / Bladedancer / Sigilmancer** (the `check.js` line-up): cleared 15 of 18 over six seed sets, in 3:46–4:18. The wipes come when both spiderlings enrage.
 - **Hard, Bastion / Cleric / Ranger / Pyromancer:** 1 of 8 (with one death); the rest reach 21–73% and last 1:43–5:37, usually after the healer falls to venom pools, the beam and a bite.
+- **With the pillars** (October 2026, six seeds): Normal (the `check.js` line-up) 4 of 6 in 3:59–4:56 (the wipes at 3% and 53%); Hard (base specs) 2 of 6, the rest reaching 20–74%.
 - The bots split the DPS over the brood pair (one each) and ease off when theirs gets well ahead of its sibling. They stretch or close tethers, bait Venom Spit and Fang Rush outward and sidestep at the lock, avoid crossing the beam and pools, keep walking under the Volley, take the nearest free egg sac (the tank last), and stay out of the sticky ring and the silk trail when they can.
 
 **Not built from the original design:** a "real cleave moment for Pyromancer". No kit has multi-target damage yet, so the brood is a split-and-sync check rather than a cleave check.
 
-Explicitly **not** included: any "player gets cocooned and must be broken out" mechanic. That idea is parked elsewhere.
+**The web's props** (October 2026): eight rock pillars (three hits each, cover) stand at the octagon's corners, 375 out, with her silk tied off round them; the corner pillars drawn in the room art became small anchor spurs.
+
+| Move | What happens | Mode |
+|---|---|---|
+| **Acid Deluge** | She climbs to the middle, raises her abdomen and rains acid over the whole cave. Hide behind a pillar (the rain is drawn with each pillar's shadow cut out); every pillar that sheltered someone takes a hit. | Both. Hard: the floor the acid reached stays sticky (slows) for 8 s |
+| **Strand Reel** | She shoots a strand to a pillar at least 260 away and reels herself across to it: the lane under the strand hits and roots for 2 s, and she holds there for 4 s. | Both |
+| **Fang Rush** | Now stops at the first pillar in its way and chips it. | Hard |
+| **Ceiling Ambush** | She vanishes up into the dark; her shadow crosses the ceiling, then she drops (230 around her) and the shock throws everyone 380 away, slamming anyone who hits a pillar or the wall. | Hard |
+| **Cocoon** | One player is wrapped in a cocoon (an add, rooted, silk eating at them every second); after 10 s it crushes them. Breaking it costs the nearest pillar a hit. | Hard |
+
+Merges: Strand Reel sits beside Silk Reel and Fang Rush rather than replacing either (one pulls you to her, one throws her at you, this one moves her across the room). Acid Deluge comes once or twice a phase and both Venom Mists stay, because the fight got too easy with the Deluge in a Mist's place. **Cocoon** was built although this document used to rule out a "cocooned and broken out" mechanic: the arena-mechanics plan asked for it on Hard, it's tied to the pillars, and it's easy to drop if you'd rather keep it parked.
 
 ### Boss III: Volkar, the Storm Titan (built, playable on Normal and Hard)
 
@@ -421,12 +512,12 @@ Stats:
 | **Thunder Crash → Static Field** | A storm cloud and a stack over every + player (750 split per pair): each pair stacks together, and pairs keep apart. Static Field (everyone spreads, 195) follows 3.8 s later. | 469 each; the Field follows 3.3 s later (223) |
 | **Static Field** | Everyone spreads (325). | 406 |
 | **Lightning Rods** | Two iron rods are driven into the rock, each wanting one person when the bolt lands (250). Catching one gives *Conductive* for 32 s; catching another while Conductive hurts a lot (600 more). An uncaught rod strikes everyone (600). The rod then stays planted for 30 s. The second set each loop comes with a Gale Slam once the rods stand. | 3 rods |
-| **Gale Slam** | He draws breath and throws everyone 300 away. Hitting the wall hurts (450). The still air behind any standing rod shelters you; on Normal it shows as a pale strip. | Lands together with the rods: shelter behind the rod you're catching. No floor tell |
+| **Gale Slam** | He draws breath and throws everyone 300 away. Thrown into the wall or a standing stone is a slam (450) that dazes you for 1.2 s. The still air behind any standing rod shelters you; on Normal it shows as a pale strip. | Lands together with the rods: shelter behind the rod you're catching. No floor tell. Thrown off a broken edge is a fall (937, held 5 s) |
 | **Storm Walls** | Two walls of wind (150 wide) turn slowly around him for 10 s (550). Walk with them. | 3 walls, turning faster, 12 s (594) |
 | **Titan Fist** | Tankbuster cone that cleaves, 1,000 on the tank. Lightning gathers along it. | 1,375, and it leaves the tank Conductive |
 | **Thunderclap** | Raidwide (375); the summit darkens under rolling clouds first. | 469 |
 | **Pulse** | The storm hits everyone lightly every 4 s (21), 20% harder each minute. | 24 |
-| **Eye of the Storm** (50%) | The edge electrifies and closes in three warned steps 40 s apart: 540 → 470 → 400 → 330 (about 60%). Sparks crawl along the new line for 5 s; anyone outside when it jumps takes 600 and is pushed in. Beyond the wall the ground is dead and crackling. Late in the fight nobody survives a Gale Slam without a rod. | 750 |
+| **Eye of the Storm** (50%) | The edge electrifies and closes in three warned steps 40 s apart: 540 → 470 → 400 → 330 (about 60%). Sparks crawl along the new line for 5 s; anyone outside when it jumps takes 600 and is pushed in. Beyond the wall the ground is dead and crackling. Late in the fight nobody survives a Gale Slam without a rod. | Replaced by the Crumbling Summit (below) |
 
 **Hard-only moves:**
 
@@ -436,17 +527,29 @@ Stats:
 | **Ball Lightning** | Four crackling orbs gather at the cliff edge, then drift slowly (135) across the peak in staggered lines. Touching one hurts (750) and throws you aside. | Each orb forms out of a falling bolt and crackles in place with chevrons showing its heading (plus a dashed lane on Normal) before it drifts |
 | **Skyfall** (phase 2) | The sky comes down on the spot where a random player stood when he called it, 5 s later: 2,250 at the spot, falling off with the square of the distance out to 520. In the shrinking room, get as far away as the wall allows. | The clouds open over the spot, the floor brightens toward it and rings of falling air close in; the sky churns over him while he casts |
 
-**Timeline** (each phase loops):
-- **Phase 1**, about 2 minutes a loop: Thunderclap, Titan Fist, Surge, Rods, Gale Slam (sheltered by the posts), Thunder Crash → Static Field, (Hard: Chain Lightning), Storm Walls, Static Field, Titan Fist, Rods + Gale Slam, (Hard: Ball Lightning), Surge, Thunderclap.
-- **Phase 2**, while the edge closes: Thunderclap, Titan Fist, Crash → Field, Rods + Gale Slam, (Hard: Skyfall), Surge, Storm Walls, Titan Fist, Static Field, (Hard: Chain Lightning), Thunderclap, Rods + Gale Slam, (Hard: Skyfall and Ball Lightning in turn), Crash → Field, Surge.
+**The summit's props** (October 2026): four standing stones at the cardinal points, 260 out. They're solid (a throw into one is a slam) but cover from nothing.
 
-**New engine pieces:** `ARENA.resize()` (a round room's wall moves; `ARENA.full` keeps the original size), `def.spawn` / `def.anchor`, `FightSim.sweep()` (turning walls: one `sweep` message, every client turns them on its own clock), a fall-check grace after the wall moves, and the `pol`, `post`, `edgewarn`, `edge` and `pulse` messages. Bots pair with their opposite charge (the higher id walks to the other, so bots come to you), take rods in turn (bots before humans, Conductive last), shelter behind rods when a Gale Slam would throw them into the wall, read where the storm walls will be along their path, and stay inside the next ring.
+| Move | What happens | Mode |
+|---|---|---|
+| **Rod Strike** | Two players are marked (a charge ring over their heads, burning down), then, as their bolts land, the other two. The bolt hits the stone nearest each marked player if they stand within 70 of it: everyone that close takes 400. Out of reach, it hits the marked player in the open (750). A stone keeps the charge for 10 s (its runes glow): struck again in that time it **discharges** into everyone within 180 (600), so the second pair takes the other two stones. | Both. Hard: 562 / 1,125 / 750 |
+| **Grounded** | A discharge also leaps to the nearest player beyond it, within 250 (562). | Hard |
+| **Avalanche** | He stamps and three boulders roll in lanes (100 wide) from one side of the summit, stopping just past the middle (550 and thrown off the lane). They stay as solid cover, and the next **Storm Walls** passes over anyone behind one (drawn with each boulder's still air cut out of the wall), smashing each boulder as it passes. A shrinking edge or a breaking wedge takes any boulder in its way. | Both. Hard: four boulders, 750 |
+| **Crumbling Summit** | Phase 2 on Hard: instead of the edge closing in evenly, a wedge of the summit (a fifth of the circle) breaks away every 20 s, five in all, leaving the floor 310 out. Cracks run along the new lip and the doomed wedge darkens and shudders for 6 s first; anyone still on it falls (937, held 5 s while the wind drags them back up). The room goes lopsided, so the Storm Walls' safe lanes and the Gale's safe spots change with each break. | Hard |
+
+Merges: Rod Strike takes phase 1's first Lightning Rods (the posts, Conductive and the rods-with-Gale stay everywhere else), so the Gale Slam after it has no posts: stand close enough to him that the throw doesn't reach a wall or a stone. The stones are not Gale shelter (the plan said "solid but not cover", and shelter there would make every Gale trivial). Avalanche takes Static Field's solo slot and sits just before Storm Walls; Hard keeps Static Field as well, after the walls.
+
+**Timeline** (each phase loops):
+- **Phase 1**, about 2 minutes a loop: Thunderclap, Titan Fist, Surge, Rod Strike, Gale Slam (no posts: stand in close), Thunder Crash → Static Field, (Hard: Chain Lightning), Avalanche, Storm Walls (hide behind the boulders), (Hard: Static Field), Titan Fist, Rods + Gale Slam, (Hard: Ball Lightning), Surge, Thunderclap.
+- **Phase 2**, while the edge closes (Hard: while the summit crumbles): Thunderclap, Titan Fist, Crash → Field, Rods + Gale Slam, (Hard: Skyfall), Surge, Avalanche, Storm Walls, Titan Fist, (Hard: Static Field, Chain Lightning), Thunderclap, Rods + Gale Slam, (Hard: Skyfall and Ball Lightning in turn), Crash → Field, Surge.
+
+**New engine pieces:** `ARENA.resize()` (a round room's wall moves; `ARENA.full` keeps the original size), `ARENA.cuts` / `radiusAt()` (wedges broken off a round room; clients rebuild them from the `wedge` floor entries, so late joiners get them), sweeps with `cover` (props of one kind shelter from the walls and are smashed as each wall passes), `def.spawn` / `def.anchor`, `FightSim.sweep()` (turning walls: one `sweep` message, every client turns them on its own clock), a fall-check grace after the wall moves, and the `pol`, `post`, `edgewarn`, `edge` and `pulse` messages. Bots pair with their opposite charge (the higher id walks to the other, so bots come to you), take rods in turn (bots before humans, Conductive last), shelter behind rods when a Gale Slam would throw them into the wall, read where the storm walls will be along their path, and stay inside the next ring.
 
 **Bot test results:**
 - **Normal, Hemomancer / Inquisitor / Nightstalker / Sigilmancer:** cleared 18 of 18 over six seed sets, in 4:11–5:43.
 - **Normal, Berserker / Accelerant / Venomstrike / Pyromancer:** cleared 9 of 18 (at least one in every set of three), in 3:42–4:25. The bot Chronomancer heals far less than this fight asks, and a Berserker has only two long cooldowns for the Titan Fists.
 - **Hard, Bastion / Cleric / Ranger / Pyromancer:** 0 of 8; the bots reach 18–77% and last 1:32–7:08 (two runs reached the enrage).
 - Bots keep away from Chain Lightning's target (the target walks away from everyone), stay off the orbs' paths, and run from Skyfall.
+- **With the stones** (October 2026, six seeds): Normal Berserker / Accelerant / Venomstrike / Pyromancer 4 of 6 (3:38–3:54), Hemomancer / Inquisitor / Nightstalker / Sigilmancer 6 of 6 (4:12–4:27); Hard (base specs) 0 of 6, reaching 56–82%. Marked bots take the nearest uncharged stone after the people have taken theirs, the rest keep off the stones being struck, nobody stands where the Gale would throw them into a stone, they hide behind boulders from the walls, and they get off a wedge before it breaks.
 
 ### Boss IV: The Hollow King, Lord of the Barrow (built, playable on Normal and Hard)
 
@@ -479,10 +582,23 @@ Stats:
 | **Funeral March** | Five ranks of his dead march across the hall from one wall to the other, a second apart (875 each). One lane, 220 wide, stays open the whole way across; or step in behind a rank once it has passed. | Grave-light pools where each rank will tread and a row of ghost soldiers with levelled spears tramps forward through it; the first rank shows for the whole cast, the others 2.4 s before they land. He lifts his greatsword while he casts |
 | **Gravebind** | A grave-chain binds two non-tanks for about 7.5 s: they must be within 160 of each other when it breaks, or both take 1,000 and Vulnerability. Everyone else gets Grave Marks (spread) that land at the same time. | Iron chain links between the two, hanging slack once they're close, pulled straight and burning green while they're too far apart; grave-light pools under him during the cast |
 
+**The hall's props** (October 2026): six braziers down the side walls (x ±400; lit or snuffed), solid but no cover. The corner braziers in the room art were removed so the real ones read.
+
+| Move | What happens | Mode |
+|---|---|---|
+| **Lights Out** | He snuffs every brazier and the hall goes black but for a ring of light (140) round each lit brazier. A moment later only the two nearest him flare back up, so you read where to stand from where he is. When it lands his Dread Gaze finds anyone in the dark, exactly like the Gaze. The braziers relight 2.5 s later. | Both. In the Long Night on Hard none relight: only the last lantern's light counts |
+| **Coffin Lids** | He tears the lids off two coffins, one each side, and they skid across the hall (470 long, 100 wide, 600 to anyone in the way), stopping early at anything solid. Each lies where it stops: solid cover, already cracked. | Both |
+| **Royal Decree** | A wave of grave-light rolls down the hall from the throne (750). Only something solid between you and the throne shelters you (the shadows run straight down the hall); it smashes the lids. | Both. Hard: 1,000 |
+| **Falling Masonry** | Each Knell brings two chunks of the vault down (circles of 85, 600, dust sifting first). They stay where they fall as cover, up to eight. | Hard |
+| **Court of Bones** | At 65% he goes back to his throne and holds court for 8 s: six coffins down the walls wake one by one, 3 s apart, each with grave-light leaking out and a ring burning down; each opens into a skeleton unless it's broken first. His Echo Knights rise during it. Lids still lying about crumble. | Both |
+
+Merges: "Last Ember" (one light left in the dark) is the Long Night's last lantern rather than a second rule; at the Long Night the braziers go out for good. Lights Out takes a Royal Gaze's slot, Coffin Lids Grave Marks', and Royal Decree a swing's, so Normal's pressure stays where it was.
+
 **Timeline** (each phase loops):
-- **Phase 1**, about 1:40 a loop: Knell, Sceptre Sweep, Gaze, (Hard: Audience), Cleave, Doom, a swing, Marks, (Hard: Funeral March), a swing, Gaze, Cleave, Knell.
+- **Phase 1**, about 1:40 a loop: Knell, Sceptre Sweep, Gaze, (Hard: Audience), Cleave, Doom, a swing, Coffin Lids (in Marks' place), (Hard: Funeral March), Royal Decree (in the third swing's place), Lights Out (in the second Gaze's place), Cleave, Knell.
+- **Court of Bones** (65%), then phase 2.
 - **Phase 2:** two swings, then their echoes (Hard: with a Gaze), Cleave, Bells, Doom, (Hard: Funeral March), Knell, (the knights move every other loop), two swings, their echoes with a Gaze, Marks (Hard: Gravebind), Cleave, (Hard: Audience).
-- **Phase 3:** Knell, a swing and its echo (Hard: with a Gaze), Gaze (Hard: Cleave), Doom, Bells, (Hard: Funeral March), a swing, Marks, Gaze, (Hard: Audience), Cleave.
+- **Phase 3:** Knell, a swing and its echo (Hard: with a Gaze), Gaze (Hard: Cleave), Doom, Bells, (Hard: Funeral March), Coffin Lids (in the second swing's place), Royal Decree (in Marks' place), Lights Out (in the last Gaze's place), (Hard: Audience), Cleave.
 
 **New engine pieces:** `FightSim.ticker()` (a per-tick hook for a boss script, used for the lanterns and Doom), and the `lant`, `doomed`, `cure`, `gazed`, `knights`, `kmem`, `kswing` and `night` messages. The host judges the Gaze from each player's facing, which already arrives with their position. The Long Night is a screen-sized dark layer with the lights cut out of it, drawn over the floor and under the telegraphs.
 
@@ -492,7 +608,8 @@ Stats:
 - **Normal:** Sentinel / Lifebinder / Ranger / Cataclysm cleared 18 of 18 (5:48–6:07); Crusader / Echoist / Shadowblade / Sharpshooter 18 of 18 (5:32–5:59); Spellwarden / Cleric / Venomstrike / Nightstalker 16 of 18 (5:38–5:55), over six seed sets each.
 - **Hard, Bastion / Cleric / Ranger / Pyromancer:** the bots reach phase 3 in most runs; 2 of 8 killed him during the Moonset cast, the rest wiped at 1–34%.
 - Every Doom in every run was cured.
-### Specializations (all 18 built)
+- **With the braziers and lids** (October 2026, six seeds each): Normal 6 of 6 for all three line-ups (5:52–6:26); Hard (base specs) 0 of 6, reaching 5–40% (three reached the Moonset).
+### Specializations (all 24 built)
 
 Each class picks one of two specializations, or keeps the base kit. Rules:
 - **A spec reshapes the kit, it doesn't replace it.** It swaps one or two abilities and gives the signature mechanic a new purpose, still on Q W E R D F + Space.
@@ -505,7 +622,7 @@ Each class picks one of two specializations, or keeps the base kit. Rules:
 
 The hero page shows the base class and both specs as tabs. A spec shows what it specializes in, its passive, and every move it adds or changes (new moves say what they replace); changed keys get a gold mark. A sealed tab is dimmed with an outlined diamond (its tooltip says how it opens); a tab whose trial is open has a glowing blue diamond, and its page ends in a card with the trial's name, its first lore line and **Begin the trial**. The Choose button stays off for a spec that isn't unlocked, so you can read every spec before you earn it.
 
-### Spec trials (all 18 built; design choices made together on 2026-10-19)
+### Spec trials (all 24 built; design choices made together on 2026-10-19)
 
 The user picked: **story vignettes**, **one per spec**, **built so the spec's trick is the obvious answer**, and **unlocked by that hero clearing the Hollow King on any difficulty**.
 
@@ -534,12 +651,16 @@ The user picked: **story vignettes**, **one per spec**, **built so the spec's tr
 | Nightstalker | The Knife Behind | His Royal Gaze, again and again: look away, stay behind. Backstab. |
 | Cataclysm | The Falling Star | He holds the middle of the hall and barely moves. Meteor. |
 | Sigilmancer | The Burning Circle | His sceptre sweeps one side of the hall, then the other; straight behind him never burns. A circle that stays safe. |
+| Pendulum | The Swinging Weight | Short stretches between marks, blows and stomps, no room for long casts. Quick swings that keep crossing. |
+| Zenith | The Burning Edge | He holds his ground and the stretches between attacks are long and quiet. Holding Redline and venting in time. |
+| Orbit | The Circling Hawk | His sceptre sweeps one side of the hall, then the next quarter, then the far side: whoever keeps circling stays out of it. |
+| Comet | The Long Charge | In close, then far out, then in again (rings and stomps): long straight runs across the hall. |
 | Apothecary | The Long Vigil | The bells stay quiet for a long while, then ring three times in a row. A deep bandolier brewed in the quiet. |
 | Volatile | The Short Fuse | Short, sharp knells with little time between. Reactions brewed and thrown fast. |
 
 **How it's built:** `client/js/arena/trials.js` holds `TRIALS` (name, lore, outro, allies, target length, enrage, regen, who must live, script) and `trialDef(specId)`, which turns one into a boss definition. It keeps the Hollow King's id, so his hall, art and telegraphs all apply, and sizes the Shade's health for the party. The raid id is `trial:<spec>`; `main.js` (`startTrial`, `raidDef`) runs it as a one-human raid, skips loot and clear records, and calls `Save.recordTrial`. `save.js` adds `trialsOpen`, `trialDone`, `recordTrial` and `specState` ('locked', 'trial' or 'open'); `Save.spec` reads a spec that isn't unlocked as none.
 
-**Tested:** a bot playing the spec passes every trial (`tools/check.js` runs all 18). For the four where the base kit could plausibly scrape through, the base kit was also run and fails: Sentinel, Hemomancer and Spellwarden 0 of 4, Aegis 0 of 5 (the spec cleared them all). In the browser: sealed, trial and open tabs and their tooltips, the trial card, starting a trial from it, the lore over the countdown, the pale Shade, a wipe and **Try again**, a clear unlocking and equipping the spec with no loot and no boss clear recorded, and leaving mid-trial handing back the previous spec. Not yet played by a human, and the other 14 trials are vignettes a base kit can also pass with care.
+**Tested:** a bot playing the spec passes every trial (`tools/check.js` runs all 24). For the four where the base kit could plausibly scrape through, the base kit was also run and fails: Sentinel, Hemomancer and Spellwarden 0 of 4, Aegis 0 of 5 (the spec cleared them all). In the browser: sealed, trial and open tabs and their tooltips, the trial card, starting a trial from it, the lore over the countdown, the pale Shade, a wipe and **Try again**, a clear unlocking and equipping the spec with no loot and no boss clear recorded, and leaving mid-trial handing back the previous spec. Not yet played by a human, and the other 14 trials are vignettes a base kit can also pass with care.
 
 **Tanks (design choices made together on 2026-10-19):**
 
@@ -575,6 +696,10 @@ The user picked: **story vignettes**, **one per spec**, **built so the spec's tr
 | **Shadowblade · Nightstalker** (The Knife Behind) | Burst from behind | Eviscerate becomes **Backstab**: much stronger from behind, 25% weaker from the front. Shadow Dance lasts 14 s. |
 | **Pyromancer · Cataclysm** (The Falling Star) | Huge single hits | Pyroblast becomes **Meteor**: lands 1.5 s after the cast, hits harder, leaves a burning crater. Hot Streak still makes it instant. |
 | **Pyromancer · Sigilmancer** (The Burning Circle) | Positioning | Combustion becomes **Ember Circle**: a 20 s circle at your feet (45 s cooldown). Inside it you cast 20% faster and deal 15% more damage; outside, nothing. Bots stay in theirs. |
+| **Thermist · Pendulum** (The Swinging Weight) | Fast swings | Every spell moves the dial a step further; every crossing of 0 adds Momentum (up to 5, +4% damage each, gone after 6 s without a crossing). The Pendulum turns back a step short of the edge. |
+| **Thermist · Zenith** (The Burning Edge) | Holding the edge | At ±5 you stay in **Redline** instead of overloading: +20% damage and the edge spell instant, but Strain builds (11 a second) until you vent it or melt down. Equilibrium becomes **Bleed Off** (15 s): vents 60 Strain behind a shield. |
+| **Driftblade · Orbit** (The Circling Hawk) | Smooth circles | Circling your target at close range builds Orbit (a stack per radian, up to 5, fading 2.5 s after you stop); at 5, Carve strikes on its own every 1.4 s while you move. |
+| **Driftblade · Comet** (The Long Charge) | Big, readable burst | Drift holds 200 and fills faster in straight lines. Crosswind becomes **Impact**: a charge clean through the target that releases everything at once (a sure crit from 160). |
 
 New support: kits can ask where their hero stands (`env.pos`, for the Sigilmancer's circle); heals can target `'lowest'` (the most hurt ally, optionally not a given one), healing pools on the floor (`pool` events, ticked in `fight.js`), and the Inquisitor's brand (`brand` events; `burstBrand` credits each burst to the Inquisitor).
 
@@ -584,7 +709,7 @@ New support: kits can ask where their hero stands (`env.pos`, for the Sigilmance
 
 **Tested:** pro DPS within 1% of the base class for all six tank specs and within 3% for the healers (the Inquisitor at its 112%); bot parties with each tank spec cleared Volkar and the Hollow King on Normal 24 of 24; each healer spec cleared the Hollow King 4 of 4, and in those raids every new mechanic fired (pools healed ~2 players a tick, ~200 brand bursts a fight, 12 Petals refunded, 135 echoes). In the browser: the picker, switching spec, the HUD, a Spellwarden Ward on an ally, Condemn's brand and credit, and a Moonwell pool with a bot stepping in.
 
-### Talents (all 150 built; design agreed 2026-10-19, reworked 2026-10-20)
+### Talents (all 180 built; design agreed 2026-10-19, reworked 2026-10-20)
 
 Each hero has a small talent tree: **5 rows of 3 talents, one pick per row**. Talents belong to the hero (not the spec) and work in both of its specs: a talent on a move a spec replaces applies to the replacement, with its own wording where the effect differs (shown in italics below).
 
@@ -597,12 +722,14 @@ Each hero has a small talent tree: **5 rows of 3 talents, one pick per row**. Ta
 - **Bots take no talents.** Talents are client-side only: they change what your kit does (damage, heals, shields, gauge, cooldowns, movement), never the host's HP or defence rules.
 - **Icons:** each talent shows the icon of the ability it changes. A granted move uses its painted icon once one is listed in `client/icons/talent-icons.json` (briefs in `docs/art/talent-icons.md`), else the icon of the move it replaces.
 
-**How it's built:** `client/js/combat/talents.js` holds `TALENTS[classId][row][col] = { id, name, ab, text, spec?, grants?, cd?, cast?, specMods? }` (`ab` is the base ability it changes; `spec` holds per-spec wording; `cd` / `cast` are flat changes the engine applies itself). Kits ask `k.talent('id')`. A talent with `grants: true` puts the kit's `talentAbilities[id]` (a self-contained move: id, `replaces`, name, desc, effect, fx, icon fallback) into the slot of the move it replaces, in either spec (engine.js Kit constructor). Pieces added for the rework, all generic:
+**How it's built:** `client/js/combat/talents.js` holds `TALENTS[classId][row][col] = { id, name, ab, text, spec?, grants?, cd?, cast?, specMods? }` (`ab` is the base ability it changes; `spec` holds per-spec wording; `cd` / `cast` are flat changes the engine applies itself). Kits ask `k.talent('id')`. A talent with `grants: true` puts its move (a self-contained entry in `TALENT_ABILITIES`: id, `replaces`, name, desc, effect, fx, icon fallback) into the slot of the move it replaces, in either spec; see *Talent moves: one system for every class* below. Pieces added for the rework, all generic:
 
 - `env.boss()` gives a kit the boss's state: `{ casting, castLeft, next, onMe, vuln, selfVuln }` (main.js from the raid's cast bar and timeline; the sim models busters and raidwides as 2.5s casts). Kit helpers `bossCasting`, `onBossCast` and `castHold` build reactions on it (Hold Fast, Read the Swing, Ironbark...).
-- Kit movement: a kit emits `{ type: 'teleport', where: 'back' | 'forward' | 'ally' | 'point' }` (`kitMove` in kits.js); main.js moves the hero with the dash's movement (Firestep, Disengage, Leaping Ward...).
-- VFX: granted moves have `ABILITY_VFX` recipes, talent moments are `KIT_VFX` names (`k.fx(name, data)`), and `KIT_VFX_AIMED` lists the moments that land on the enemy (all in `client/js/ability-vfx.js`).
-- The save went to **v4**: `heroes[classId].talents = { rows, picks, ids }`. Picks are kept by talent id, so reordering a tree never moves a pick; a v3 save names its picks from a table of the old trees, and a pick whose talent no longer exists clears (the row stays bought). `tools/check.js` tests the upgrade and the rule (one plain number at most, grants in rows III and V, every granted move complete and placed in every spec).
+- Kit movement: a kit emits `{ type: 'teleport', where }`; main.js `kitMove` plays it as a dash. Talents use `'back' | 'forward' | 'ally' | 'point'` (`kitMove` in kits.js: Firestep, Disengage, Leaping Ward...), the Driftblade `'dash' | 'around' | 'through'` (`kitMoveDest`).
+- VFX: granted moves have `ABILITY_VFX` recipes, talent moments are `KIT_VFX` names (`k.fx(name, data)`); the ones that land on the enemy are flagged `atTarget`, so main.js hands them the boss (all in `client/js/ability-vfx.js`).
+- The save went to **v4**: `heroes[classId].talents = { rows, picks, ids }`. Picks are kept by talent id, so reordering a tree never moves a pick; a v3 save names its picks from a table of the old trees (every class, Thermist, Driftblade and Alembist included), and a pick whose talent no longer exists clears (the row stays bought).
+- The buff tracker names a granted move's buffs after the move (Avatar of Dawn, not the Oath of Valor it replaced).
+- `tools/check.js` holds every class to the rule: at most one plain number (`cd` / `cast`), a granted move in row III and in row V, and each granted move complete and placed in the base kit and every spec.
 
 | Pro DPS (5 runs) | Base | Full build | Change |
 |---|---|---|---|
@@ -615,6 +742,8 @@ Each hero has a small talent tree: **5 rows of 3 talents, one pick per row**. Ta
 | Cleric / Aegis / Inquisitor | 1,038 / 1,026 / 1,167 | 1,084 / 1,134 / 1,372 | +4.4% / +10.6% / +17.6% |
 | Grovekeeper / Lifebinder / Moonwell | 1,044 / 1,041 / 1,051 | 1,187 / 1,168 / 1,175 | +13.7% / +12.2% / +11.8% |
 | Chronomancer / Echoist / Accelerant | 1,142 / 1,141 / 1,155 | 1,339 / 1,300 / 1,336 | +17.3% / +13.9% / +15.7% |
+| Thermist / Pendulum / Zenith | 2,356 / 2,355 / 2,357 | 2,675 / 2,718 / 2,707 | +13.5% / +15.4% / +14.8% |
+| Driftblade / Orbit / Comet | 2,407 / 2,408 / 2,407 | 2,740 / 2,701 / 2,783 | +13.8% / +12.2% / +15.6% |
 | Alembist / Apothecary / Volatile | 1,090 / 1,091 / 1,092 | 1,278 / 1,236 / 1,236 | +17.2% / +13.3% / +13.3% |
 
 The base Cleric gains least in damage because its talents mostly change healing and protection (Bloom of Dawn, Dawn Sanctum, Wings of Dawn); the Inquisitor, which heals by Smiting, gains the most.
@@ -799,10 +928,61 @@ The base Cleric gains least in damage because its talents mostly change healing 
 | V | **Future Sight** | Your Bolts now mark the boss with a rune of the future. 6s after the first, it bursts for a tenth of every Bolt that fed it, and a new rune can form 6s later. |
 | V | **Second Chance** | An ally Recall raises is healed to full a moment later, and the rest of the party heals a little. |
 
+#### Thermist
+
+Built under the newer rule (2026-10-19): talents are mostly new moves and changed behaviour, not percentages. Rows III and V each hold a talent that puts a **new move on a button** (Thermocline on Q, Absolute Zero on W); none of the fifteen is a plain number bump.
+
+| Row | Talent | Effect |
+|---|---|---|
+| I | **Banked Embers** | A Cinder Bolt cast at +3 or hotter now leaves an ember in the target (up to 3). Your next Thermal Shock sets every ember off. |
+| I | **Flicker** | Rime Shard is now instant while the dial is cold, and Cinder Bolt while it is hot. |
+| I | **Afterglow** | A Flare or Glacier Lance cast at its own edge now leaves the target burning or freezing for 9s. |
+| II | **Cold Front** | An Equilibrium that drops the dial 4 or more steps now also gives the whole party 10% less damage for 6s. *Zenith:* a Bleed Off that vents 40 or more Strain. |
+| II | **Phase Step** | Equilibrium now also blinks you 150 px the way you're heading. *Zenith:* Bleed Off does. |
+| II | **Thermal Skin** | Every Thermal Shock now also wraps you in a shield worth part of its strength. |
+| III | **Thermocline** | New move on Q, in place of Cinder Bolt: instant, swings the dial 2 steps toward the other side (3 for *Pendulum*) and counts as that element; hits harder the further from 0 you started. |
+| III | **Latent Heat** | Overloading no longer locks or burns you: the heat is banked and your next Thermal Shock is half again as strong. *Zenith:* the same for a meltdown. |
+| III | **Rebound** | After a Thermal Shock, your next spell is instant (within 10s). |
+| IV | **Polar Vortex** | Inversion now leaves a vortex on the target that strikes every 1.5s for 6s. |
+| IV | **Equilibrium Pulse** | Equilibrium now sets off the heat it snaps away: from 3 or more steps out, a Thermal Shock as if you had swung that far. *Zenith:* Bleed Off in Redline sets off a Shock of 3. |
+| IV | **Solstice** | Inversion now flips the dial back 5s later: a smaller Shock if it's still far enough from 0. |
+| V | **Absolute Zero** | New move on W, in place of Rime Shard: a 2s cast on a 45s cooldown that plunges the dial straight to −5 wherever it was, hitting harder the further it fell (from the hot side that crossing is a Shock of up to 10). |
+| V | **Conduction** | Thermal Shock now arcs: a second, smaller Shock strikes the target 1s later. |
+| V | **Twin Stars** | A Flare or Glacier Lance cast at its own edge now fires a second, smaller bolt after it. *Zenith:* cast in Redline. |
+
+#### Driftblade
+
+Same rule: Gyre (row III, on E) and Tailspin (row V, on D) are new moves, and the rest change how things work. The one near-number talent is Tailwind (Drift and a crit on Hook Turn).
+
+| Row | Talent | Effect |
+|---|---|---|
+| I | **Crescent** | Every third Carve you make while moving now also throws a crescent of wind at the target. |
+| I | **Eddies** | A Slipstream lane laid through an enemy now cuts it when you lay it, and again when the lane fades. |
+| I | **Tailwind** | Hook Turn now also gives 20 Drift, and your next Carve is a critical hit. |
+| II | **Eye of the Storm** | While you hold Stillpoint, the whole party takes 10% less damage too. |
+| II | **Gust Guard** | Slipstream now wraps you in a shield of wind for 6s. |
+| II | **Sidestep** | Hook Turn now also makes you take 30% less damage for 2s. |
+| III | **Gyre** | New move on E, in place of Hook Turn: loop once round your target, one cut for every 25 Drift you have (up to 4). It spends nothing and adds 10 Drift. Two charges. |
+| III | **Second Wind** | A Crosswind that spends 80 Drift or more gives 10 back. *Comet:* an Impact that spends 160 or more gives 20 back. |
+| III | **Hover** | Your Drift no longer drains in the first 1.5s you stand still. |
+| IV | **Galeforce** | When Gale Run ends, it looses a free Crosswind at whatever Drift you hold (it spends nothing). |
+| IV | **Jetstream** | A Slipstream through an enemy gives its charge back (once every 8s). |
+| IV | **Hurricane** | During Gale Run, each Passing Strike makes it last 1s longer (up to 6s). |
+| V | **Tailspin** | New move on D, in place of Stillpoint: whirl in place, parrying like Stillpoint and cutting the nearest enemy three times, then spring 150 px the way you're heading. |
+| V | **Razor Wind** | Passing Strikes leave a cut that bleeds for 6s, deeper with each pass (up to 3). |
+| V | **Afterimage** | Hook Turn leaves an afterimage that cuts the target again a second later. |
+
+**Talent moves: one system for every class (unified 2026-10-19, when classes-a and classes-b merged).** A talent that puts a new move on a button says `grants: true` in `talents.js`, and its move names the button it takes (`replaces`), exactly like a spec's replacement.
+- **Where moves live:** `TALENT_ABILITIES[talentId] = { cls, ab, spec?: { specId: ab } }` in `kits.js` is the registry (all 24 moves: the nine original classes' 18 from the talent rework, plus Thermocline, Absolute Zero, Gyre, Tailspin, Grand Blend and Quicksilver). `spec` gives a spec its own version. A kit may instead list moves on itself in `talentAbilities[talentId]` (the Alembist's original form): both are read the same way, so trees written either way keep working.
+- **One lookup:** `talentMoveFor(classId, specId, talentId)` in `specs.js` checks the registry, then the (spec) kit's `talentAbilities`. `kitFor(classId, specId, talents)` lays the held talents' moves over the spec kit (cached per combination, each marked `fromTalent`); the actor, the sim and the hero page all build kits through it, so the engine itself no longer swaps anything.
+- **Over the network:** every cast message carries the move's id (`a`) as well as its slot, and `abilityById` finds the move from the kit, its spec or a talent, so other players see Gyre or Grand Blend and not the move it replaced.
+- **One check:** `tools/check.js` (talents) asks `talentMoveFor` for the base kit and every spec: a `grants` talent must have a move in each, the move must replace the talent's own ability, carry an id, name, description, type, effect and an icon to borrow, not reuse a kit ability's id, land on exactly one button when held, and be found by `abilityById`; a talent with a move but no `grants` fails too.
+- **Screens:** the talent card's tooltip shows the move itself; the move borrows the replaced move's icon (`icon`) until it has its own.
+
 <!-- classes-b: Alembist talents -->
 #### Alembist
 
-Built to a new rule (2026-10): mostly new moves and changed behaviour, at most one plain number. Two talents **grant a new move** that takes over a button (`grants: true`; the kit's `talentAbilities[id]` takes the slot of the move in its `replaces`, like a spec replacement): Grand Blend (row III) and Quicksilver (row V). Both work in either spec.
+Built to a new rule (2026-10): mostly new moves and changed behaviour, at most one plain number. Two talents **grant a new move** that takes over a button (`grants: true`, the shared talent-move system above): Grand Blend (row III) and Quicksilver (row V). Both work in either spec.
 
 | Row | Talent | Effect |
 |---|---|---|
@@ -826,7 +1006,7 @@ Single talents stay under +5% pro DPS (Ricochet +4.3%, Kindling +4.3%, Mother Li
 
 **How the Alembist is built:** the kit, recipes, Reactions and helpers are the `ALEMBIST` block in `client/js/combat/kits.js`; specs in `specs.js`; talents in `talents.js`. New engine pieces, all generic:
 - `splash` events (kits.js `alemSplash` → `fight.js` `splash()`): a heal, shield, cleanse (bit 1 Vulnerability/Damage Down, bit 2 slowed/rooted) or party effect on every ally within a radius of a point; a vial can also leave a `pool` (heal, shield or damage-reduction ward, optionally following an ally; at most 8 per player).
-- `talentAbilities` + `grants` (engine.js Kit constructor, checked by `tools/check.js`); remote players see a granted move's cast through `a: <ability id>` on the cast message.
+- Talent moves (Grand Blend, Quicksilver): the shared system (`grants` + `TALENT_ABILITIES`, see *Talent moves* above); they began as the kit's own `talentAbilities` table, which still works.
 - `recastGcd` may be a function of the kit (Distill makes reagents free of the GCD).
 - `kitFx` messages carry data (`d`), so a vial's arc, colour and target travel with the effect.
 - `Save.found(cls)` / `Save.discover(cls, id)`: `heroes[cls].found`, the Reactions a hero has found (optional field, no version bump).
@@ -839,7 +1019,7 @@ Single talents stay under +5% pro DPS (Ricochet +4.3%, Kindling +4.3%, Mother Li
 | Area | Files |
 |---|---|
 | Combat engine (GCD, oGCD, queue, casts, DoTs, procs, stats) | `client/js/combat/engine.js` |
-| The nine kits | `client/js/combat/kits.js` |
+| The kits (the first nine, then the Alembist block, then the Thermist and Driftblade block: dial, Drift, kit moves, talent moves) | `client/js/combat/kits.js` |
 | Specializations (kit changes, per-hero choice) | `client/js/combat/specs.js` |
 | Kit-to-world bridge (player and bots) | `client/js/combat/actor.js` |
 | Unique class gauges | `client/js/combat/gauges.js` |
@@ -868,7 +1048,8 @@ Single talents stay under +5% pro DPS (Ricochet +4.3%, Kindling +4.3%, Mother Li
 | Rotation sim, headless bot raid, talent balance | `tools/simulate.js`, `tools/bot-raid.js`, `tools/talents.js` |
 
 **Hero select:** opens right after joining (and from the barkeep, a hero on the deck, or your hero name top-left).
-- The altar grid: nine heroes in three role columns.
+- The altar: one band per role (tanks, damage, healers), each a grid of compact tiles that wraps, so the roster can grow past 16 and still fit at 1280×800; two columns per band on a phone. Advanced classes carry small complexity pips (data.js `complexity`). Built from `CLASSES` and `ROLES`, nothing hard-coded per class.
+- The town deck packs a role with more than three heroes closer together (`lineupSpot(role, col, n)`), and every other name in a packed row sits higher.
 - The detail page: back arrow, flavor text, an animated portrait, the hero's passive (their signature mechanic), the Q W E R D F Space icons with tooltips, and Tips & Combos (first steps, mastery, combos shown as icon chains).
 - Painted front-facing portraits are in `client/portraits/<id>.png`, cut from `docs/art/hero-portraits-sheet.jpg` (briefs in `docs/art/hero-portraits.md`).
   - Each is a square head-and-shoulders bust (440×440), cut from the 3×3 bust sheet; the older full-figure sheet is kept as `docs/art/hero-portraits-fullbody-sheet.jpg`.

@@ -32,7 +32,7 @@ function mulberry(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5
 
 // talents: an optional Set of talent ids the hero holds (tools/talents.js); the class balance runs hold none
 function runSim(classId, skill, seed, specId, talents) {
-  const def = kitFor(classId, specId);
+  const def = kitFor(classId, specId, talents);   // (talents that grant a new move put it in its slot)
   const rng = mulberry(seed);
   const human = mulberry(seed * 7 + 3); // separate stream for "human" randomness
   const state = { t: 0, moving: false, tookDamage: [], shield: null, mits: [], reflect: null, healDebt: 0, healing: 0, gcdHeals: 0, allyWards: [], petalShields: [] };
@@ -44,7 +44,9 @@ function runSim(classId, skill, seed, specId, talents) {
     now: () => state.t,
     rng,
     moving: () => state.moving,
-    target: ab => (ab.target === 'ally' ? 'tank' : ab.target === 'enemy' ? (state.outOfRange && ab.range === 'melee' ? null : { id: 'dummy' }) : true),
+    // (a body probe asks whether you're running through the target right now: a Driftblade's Passing Strikes)
+    target: ab => (ab.body ? (state.inBody ? { id: 'dummy', x: 0, y: 0 } : null) : ab.target === 'ally' ? 'tank'
+      : ab.target === 'enemy' ? (state.outOfRange && ab.range === 'melee' ? null : { id: 'dummy', x: 0, y: 0 }) : true),
     positional: want => (lastPos === 'want' ? want || 'rear' : lastPos),
     partyMods: () => (inBurst(state.t) ? { dmg: 0.08 } : {}),
     targetMods: () => ({}),
@@ -63,7 +65,8 @@ function runSim(classId, skill, seed, specId, talents) {
       return { casting: left > 0 && left < 2.5, castLeft: Math.max(0, left), next: Math.max(0, left), onMe: role === 'tank', vuln: 0, selfVuln: role === 'tank' && state.t - lastBusterAt < 8 };
     },
     // where you stand: away from your spot while a mechanic moves you (and now and then for a newbie), so a Sigilmancer leaves its circle
-    pos: () => (state.away ? { x: 999, y: 0 } : { x: 0, y: 0 }),
+    // (a class that plays on the move, the Driftblade, gets a path from its mover: circles for Orbit, long lines for Comet)
+    pos: () => (state.posFn ? state.posFn(state.t) : state.away ? { x: 999, y: 0 } : { x: 0, y: 0 }),
     emit: ev => {
       if (ev.type === 'heal' || ev.type === 'hot') {
         const amt = ev.type === 'hot' ? ev.amount * ev.ticks : ev.amount;
@@ -140,7 +143,9 @@ function runSim(classId, skill, seed, specId, talents) {
     // Pros pre-position, so they spend less time moving.
     if (skill === 'pro' && isMoveWindow(state.t) && (state.t % MOVE_EVERY) > MOVE_LEN * 0.6) state.moving = false;
     // Melee lose uptime while moving out of mechanics (out of range); pros keep it with gap closers.
-    state.outOfRange = state.moving && def.abilities[0].range === 'melee' && skill !== 'pro';
+    state.outOfRange = isMoveWindow(state.t) && state.moving && def.abilities[0].range === 'melee' && skill !== 'pro';
+    // classes that move on purpose (the Driftblade) walk their own path on top of that
+    if (MOVERS[classId]) MOVERS[classId](state, skill, human, specId);
     if (role === 'tank') {
       if (state.t >= nextAuto) { nextAuto += AUTO_EVERY; hitTank(AUTO_DMG, 'auto'); }
       if (state.t >= nextBuster) { nextBuster += BUSTER_EVERY; hitTank(BUSTER_DMG, 'buster'); lastBusterAt = state.t; }
@@ -415,6 +420,82 @@ const PRO = {
     return I(k, { E: 'ember', D: 'dew', S: 'salt', Q: 'salt' }[letter]);
   },
 };
+
+// ---------------------------------------------------------------- advanced classes (Thermist, Driftblade)
+// MOVERS: classes whose damage depends on how they move get a path every tick (state.moving, state.inBody: running
+// through the target right now, state.posFn: where they are, for circles and straight lines).
+const MOVERS = {
+  driftblade(state, skill, human, specId) {
+    const t = state.t;
+    if (skill === 'pro') {
+      // a pro never stops: Orbit circles close round the boss (cutting through it now and then), Comet runs long
+      // straight lines through it, the base kit weaves back and forth through its body
+      state.moving = true;
+      if (specId === 'orbit') { state.posFn = tt => ({ x: Math.cos(tt * 2.1) * 105, y: Math.sin(tt * 2.1) * 105 }); state.inBody = t % 4.5 < 0.12; }
+      else if (specId === 'comet') { const leg = 2.8; state.posFn = tt => { const q = (tt % (leg * 2)) / leg; return { x: (q < 1 ? q : 2 - q) * 640 - 320, y: 0 }; }; state.inBody = Math.abs((t % 2.8) - 1.4) < 0.07; }
+      else { state.posFn = tt => ({ x: Math.sin(tt * 1.3) * 140, y: 0 }); state.inBody = t % 3.2 < 0.12; }
+      return;
+    }
+    // a newbie remembers to keep moving about half the time, and runs through the boss now and then
+    if (state.walkBlock !== Math.floor(t)) { state.walkBlock = Math.floor(t); state.walkOn = human() < 0.65; }
+    state.moving = state.moving || state.walkOn;
+    state.posFn = tt => ({ x: Math.sin(tt * 0.9) * 160, y: Math.cos(tt * 0.6) * 60 });
+    state.inBody = state.moving && t % 7 < 0.12;
+  },
+};
+const thermStepOf = (k, id) => {
+  // the element and dial change of a Thermist spell right now (for the planner): el +1 fire / -1 frost
+  const t = k.g.temp, sb = k.def.stepBonus || 0, ab = abOf(k, id);
+  if (!ab) return null;
+  if (ab.id === 'thermocline') { const el = t > 0 ? -1 : t < 0 ? 1 : -1; return { el, to: t + el * (2 + sb) }; }
+  if (ab.id === 'zero') return { el: -1, to: -5, safe: true };
+  const el = id === 'cinder' || id === 'flare' ? 1 : -1, big = id === 'flare' || id === 'lance';
+  if (big && thermEdgeCast(k, el)) return { el, to: t, edge: true };
+  return { el, to: t + el * ((big ? 2 : 1) + sb) };
+};
+function thermOverloads(k, id) {
+  const s = thermStepOf(k, id);
+  if (!s) return true;
+  const brink = k.has('brink') ? k.buffs.get('brink').data.el : 0;
+  if (brink && brink === s.el) return true;
+  if (s.safe || s.edge) return false;
+  return Math.abs(s.to) > 5 && !k.def.redline;
+}
+Object.assign(PRO, {
+  thermist(k, ctx) {
+    const t = k.g.temp;
+    // Inversion at the edge: a swing of 10, half again as strong (in a burst window when one is close)
+    if (ready(k, 'invert') && weaveOk(k) && Math.abs(t) >= 5 && (ctx.inBurst(ctx.t) || (ctx.t % BURST_EVERY) < 40)) return I(k, 'invert');
+    // Zenith: vent Strain before it melts you down, without leaving the edge
+    if (k.def.redline && ready(k, 'equil') && weaveOk(k) && k.g.strain >= 50 && Math.abs(t) >= 5) return I(k, 'equil');
+    if (k.gcdRemaining() > 0.0001 || k.cast) return null;
+    const plan = thermPlan(k), dir = plan === 'cinder' || plan === 'flare' ? 1 : -1;
+    // Absolute Zero from high up is a swing of up to 10
+    if (abOf(k, 'rime').id === 'zero' && ready(k, 'rime') && t >= 3 && castOk(k, ctx, k.castTime(abOf(k, 'rime')))) return I(k, 'rime');
+    const order = [plan, dir > 0 ? 'cinder' : 'rime', dir > 0 ? 'flare' : 'lance', 'rime', 'cinder', 'lance', 'flare'];
+    for (const id of [...new Set(order)]) {
+      const ab = abOf(k, id);
+      if (!ab || ab.id === 'zero' || !k.usable(ab) || k.readyIn(ab) > 0.0001 || thermOverloads(k, id)) continue;
+      // Thermocline swings away from the side you're on: only when that's the way the plan goes
+      if (ab.id === 'thermocline' && (thermStepOf(k, id).el !== dir || Math.abs(t) < 1)) continue;
+      const ct = k.castTime(ab);
+      if (ct > 0 && !castOk(k, ctx, ct)) continue;
+      return I(k, id);
+    }
+    return null;
+  },
+  driftblade(k, ctx) {
+    const slip = abOf(k, 'slip'), full = driftMax(k);
+    if (ready(k, 'gale') && weaveOk(k) && (ctx.inBurst(ctx.t) || (ctx.t % BURST_EVERY) < 30)) return I(k, 'gale');
+    if (ready(k, 'hook') && weaveOk(k) && (k.g.drift >= 70 || (abOf(k, 'hook').id === 'gyre' && (k.g.drift >= 75 || k.charges(abOf(k, 'hook')) === 2)))) return I(k, 'hook');
+    if (weaveOk(k) && k.charges(slip) > 0 && (k.charges(slip) === 2 || k.g.drift < full * 0.6)) return I(k, 'slip');
+    if (abOf(k, 'still').id === 'tailspin' && ready(k, 'still') && weaveOk(k)) return I(k, 'still');
+    if (k.gcdRemaining() > 0.0001) return null;
+    const cross = abOf(k, 'cross');
+    if (k.usable(cross) && k.readyIn(cross) <= 0.0001 && (k.g.drift >= full * 0.92 || (ctx.inBurst(ctx.t) && k.g.drift >= full * 0.7))) return I(k, 'cross');
+    return I(k, 'carve');
+  },
+});
 
 // healer DPS also gets healing debt cleared by damage-heals (Chronomancer); count Bolt heals against the debt
 // (handled by env.emit 'heal').

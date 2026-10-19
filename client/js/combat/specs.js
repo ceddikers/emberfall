@@ -727,7 +727,43 @@ function specBrand(k, n, ab) {
 // the kit a hero plays with this spec (or the base kit for none / an unknown spec)
 const SPEC_CACHE = {};
 function specOf(classId, specId) { return (SPECS[classId] || []).find(s => s.id === specId) || null; }
-function kitFor(classId, specId) {
+// talents (the third argument: a Set of held talent ids) can grant whole new moves: TALENT_ABILITIES in kits.js maps a
+// talent to the move it puts in a slot (`replaces` names the base ability it takes over, as a spec's replacement does),
+// with an optional per-spec version. The kit then plays that move in that slot, over the spec's own version.
+// The one place a talent's new move is looked up. Two ways to declare one, read the same:
+//   TALENT_ABILITIES[talentId] = { cls, ab, spec?: { specId: ab } }   (kits.js; the main registry)
+//   KITS[classId].talentAbilities[talentId] = ab                       (on the kit itself; a spec's build may override it)
+// Either way the move names the slot it takes (`replaces`), and the talent in talents.js says `grants: true`.
+function talentMoveFor(classId, specId, talentId) {
+  const g = typeof TALENT_ABILITIES !== 'undefined' && TALENT_ABILITIES[talentId];
+  if (g && g.cls === classId) return (g.spec && specId && g.spec[specId]) || g.ab;
+  const k = specKit(classId, specId), ta = k && k.talentAbilities;
+  return (ta && ta[talentId]) || null;
+}
+function kitFor(classId, specId, talents) {
+  const kit = specKit(classId, specId);
+  if (!kit || !talents || !talents.size || typeof TALENT_ABILITIES === 'undefined') return kit;
+  const granted = [...talents].filter(id => talentMoveFor(classId, kit.spec || null, id)).sort();
+  if (!granted.length) return kit;
+  const key = `${classId}:${kit.spec || ''}:${granted.join(',')}`;
+  if (SPEC_CACHE[key]) return SPEC_CACHE[key];
+  const moves = granted.map(id => ({ id, ab: talentMoveFor(classId, kit.spec || null, id) }));
+  const abilities = kit.abilities.map(ab => {
+    const m = moves.find(x => x.ab.replaces === (ab.replaces || ab.id));
+    return m ? Object.assign({}, m.ab, { fromTalent: m.id }) : ab;
+  });
+  return (SPEC_CACHE[key] = Object.assign({}, kit, { abilities }));
+}
+// a move by its id, wherever it comes from (the kit, its spec, or a talent): how other clients find what you cast
+function abilityById(classId, specId, id) {
+  const k = specKit(classId, specId);
+  const own = k && k.abilities.find(a => a.id === id);
+  if (own || typeof TALENT_ABILITIES === 'undefined') return own || null;
+  const k2 = specKit(classId, specId), tids = [...Object.keys(TALENT_ABILITIES), ...Object.keys((k2 && k2.talentAbilities) || {})];
+  for (const tid of tids) { const m = talentMoveFor(classId, specId, tid); if (m && m.id === id) return m; }
+  return null;
+}
+function specKit(classId, specId) {
   const base = KITS[classId], spec = specOf(classId, specId);
   if (!spec) return base;
   const key = classId + ':' + spec.id;
@@ -750,6 +786,99 @@ function kitFor(classId, specId) {
 // own icon (icons/<class>/<id>.png) once icons/talent-icons.json lists its id, the one it borrows until then.
 const PAINTED_TALENT_ICONS = new Set();
 if (typeof fetch !== 'undefined' && typeof document !== 'undefined') fetch('icons/talent-icons.json').then(r => (r.ok ? r.json() : [])).then(l => { for (const id of l) PAINTED_TALENT_ICONS.add(id); }).catch(() => {});
-const abilityIconId = ab => (ab.talent && PAINTED_TALENT_ICONS.has(ab.id) ? ab.id : ab.icon || ab.id);
+const abilityIconId = ab => ((ab.talent || ab.fromTalent) && PAINTED_TALENT_ICONS.has(ab.id) ? ab.id : ab.icon || ab.id);
 
-if (typeof module !== 'undefined') module.exports = { SPECS, specOf, kitFor, abilityIconId };
+if (typeof module !== 'undefined') module.exports = { SPECS, specOf, kitFor, abilityById, abilityIconId, talentMoveFor };
+
+// ===================================================================================================================
+// ADVANCED CLASSES: the Thermist's and the Driftblade's specs (their kits are at the end of kits.js)
+// ===================================================================================================================
+Object.assign(SPECS, {
+  thermist: [
+    {
+      id: 'pendulum', name: 'Pendulum', title: 'The Swinging Weight', accent: '#ffb08a',
+      gaugeTip: 'Fire spells turn the dial toward Blaze and frost toward Rime, one step further than usual. Each step from 0 is +8% damage for that side\'s spells. A crossing of 0 after reaching 3 or more sets off a Thermal Shock, and every crossing adds Momentum (+4% damage each, up to 5), lost after 6s without one. Past ±5 you overload.',
+      blurb: 'Back and forth, faster each time. Never let it settle.',
+      focus: 'Fast swings. Every spell moves the dial a step further and every crossing of 0 builds Momentum, so you play back and forth like a metronome.',
+      passive: { name: 'Momentum', desc: 'Your spells move the dial one step further. Every crossing of 0 adds a stack of Momentum (up to 5, +4% damage each); 6s without a crossing and they\'re gone.' },
+      build: () => ({
+        potMult: 0.845,   // balance knob (tools/simulate.js)
+        stepBonus: 1, momentum: true,
+        dmgMod: k => 0.04 * k.stacks('momentum'),
+        abilities: {
+          cinder: { desc: '1s cast: a quick fire bolt. Turns the dial 2 toward Blaze.' },
+          rime: { desc: '1s cast: a quick shard of ice. Turns the dial 2 toward Rime.' },
+          flare: { desc: '2s cast: a burst of fire. Turns the dial 3 toward Blaze. At +5 it\'s instant and always crits, but holds you On the Brink: if your next spell is fire too, you overheat.' },
+          lance: { desc: '2s cast: a lance of ice. Turns the dial 3 toward Rime. At -5 it\'s instant and always crits, but holds you On the Brink: if your next spell is frost too, you get frostbite.' },
+        },
+      }),
+    },
+    {
+      id: 'zenith', name: 'Zenith', title: 'The Burning Edge', accent: '#ff5a6a',
+      gaugeTip: 'Fire spells turn the dial toward Blaze and frost toward Rime; each step from 0 is +8% damage for that side. At ±5 you stay in Redline: +20% damage, your edge spell is instant, and pushing further doesn\'t overload you. Strain builds 11 a second in Redline and fades outside it; at 100 you melt down. A crossing of 0 after reaching 3 or more sets off a Thermal Shock.',
+      blurb: 'Hold the edge. Feel it burn. Let go a moment before it takes you.',
+      focus: 'Holding the edge. At ±5 you stay in Redline, where every spell is stronger, but Strain builds until you vent it or melt down.',
+      passive: { name: 'Redline', desc: 'At +5 or -5 you stay in Redline instead of overloading: every spell hits 20% harder and your edge spell is instant. Each second there builds Strain; full Strain melts you down (the dial snaps to 0, you burn, and that element is locked for 4s). Equilibrium becomes Bleed Off.' },
+      build: () => ({
+        potMult: 0.877,
+        redline: true,
+        abilities: {
+          flare: { desc: '2s cast: a burst of fire. Turns the dial 2 toward Blaze. In Redline at +5 it\'s instant and keeps you there.' },
+          lance: { desc: '2s cast: a lance of ice. Turns the dial 2 toward Rime. In Redline at -5 it\'s instant and keeps you there.' },
+          equil: {
+            id: 'bleed', replaces: 'equil', icon: 'equil', name: 'Bleed Off', type: 'ogcd', target: 'self', cd: 15, anim: 'cast',
+            desc: 'Vent 60 Strain without leaving the edge. The heat you let go wraps you in a small shield.',
+            glow: k => (k.g.strain || 0) >= 55,
+            effect(k) {
+              const vented = Math.min(60, k.g.strain || 0);
+              k.g.strain = Math.max(0, (k.g.strain || 0) - 60);
+              k.shield('self', 160 * (k.perk('thermist_a2') ? 1.5 : 1), 6, { ab: this });
+              thermUtility(k, this, vented >= 40);
+              if (k.talent('thermist_pulse') && thermAt(k, THERMIST.EDGE)) thermShock(k, 3, 1, Math.sign(k.g.temp));
+            },
+            fx: { type: 'aura', color: '#ff8a6a', r: 34, dur: 1.2 },
+          },
+        },
+      }),
+    },
+  ],
+
+  driftblade: [
+    {
+      id: 'orbit', name: 'Orbit', title: 'The Circling Hawk', accent: '#a8f0c8',
+      gaugeTip: 'Moving fills 20 a second; standing still drains 30. Circling close round your target builds Orbit (up to 5, gone 2.5s after you stop): at 5, Carve cuts on its own every 1.4s while you keep moving.',
+      blurb: 'Round and round, a little closer every time. The hawk never lands.',
+      focus: 'Smooth circles. Circling your target builds Orbit, and at full Orbit your sabre cuts on its own while you keep moving.',
+      passive: { name: 'Circling Hawk', desc: 'Every radian you circle round your target at close range adds a stack of Orbit (up to 5; they fade 2.5s after you stop circling). At 5, Carve strikes on its own every 1.4s while you move.' },
+      build: () => ({ potMult: 0.574, orbit: true }),
+    },
+    {
+      id: 'comet', name: 'Comet', title: 'The Long Charge', accent: '#ffd08a',
+      gauge: { max: 200 },
+      gaugeTip: 'Moving fills 20 a second, 34 once you hold a straight line; standing still drains 30. Holds up to 200. Impact spends it all.',
+      blurb: 'Build speed across the whole hall. Then hit like something falling from the sky.',
+      focus: 'Big, readable burst. Drift holds twice as much and fills faster in straight lines, and Crosswind becomes Impact, a charge clean through the boss.',
+      passive: { name: 'Long Charge', desc: 'Drift holds up to 200 and fills faster while you run in a straight line. Crosswind becomes Impact: a charge clean through your target that releases everything at once.' },
+      build: () => ({
+        potMult: 0.517,
+        driftMax: 200, straight: true,
+        abilities: {
+          cross: {
+            id: 'impact', replaces: 'cross', icon: 'cross', name: 'Impact', type: 'gcd', target: 'enemy', range: SPEC_RANGED, anim: 'big',
+            desc: 'Spend all your Drift: charge clean through your target and out the far side, releasing it all at once. The more you spend, the harder it hits; from 160 it always crits.',
+            usable: k => k.g.drift >= 40,
+            glow: k => k.g.drift >= 180,
+            effect(k) {
+              const d = k.g.drift; k.g.drift = 0;
+              k.teleport('through', { ab: this, d: 120 });
+              k.damage(120 + 4 * d, { ab: this, autoCrit: d >= 160 });
+              if (d >= 180 && k.perk('driftblade_w2')) { k.damage((120 + 4 * d) * 0.3, { ab: this }); k.fx('empower'); }
+              driftSpend(k, d, 200);
+            },
+            fx: { type: 'line', color: '#ffe0a8', range: 440 },
+          },
+        },
+      }),
+    },
+  ],
+});

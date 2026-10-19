@@ -493,15 +493,15 @@ const AUTO_VFX = (() => {
 })();
 
 // ======================================================================= Talents
-// The moves a talent grants (combat/talents.js `grants`, the kit's talentAbilities) and the moments talents add
+// The moves a talent grants (combat/talents.js `grants`, kits.js TALENT_ABILITIES) and the moments talents add
 // (k.fx names). Capstone moves (row V) leave a signature shape on the field for as long as they last: wings, a blood
 // moon, a standing rune, a falcon, a phoenix, a treant, a great clock.
-// KIT_VFX_AIMED: moments that land on the enemy (main.js hands them the boss / the target dummy as `target`).
-const KIT_VFX_AIMED = new Set(['sunlit', 'edgeShard', 'edgeReturn', 'dawnPillar', 'moonburst', 'bloodlust', 'hemorrhage', 'glyphEcho', 'binding', 'runeBolt',
+(() => {
+  // the talent moments that land on the enemy: flagged atTarget, so main.js hands them the boss / the target dummy
+  const AIMED = ['sunlit', 'edgeShard', 'edgeReturn', 'dawnPillar', 'moonburst', 'bloodlust', 'hemorrhage', 'glyphEcho', 'binding', 'runeBolt',
   'mirrorShards', 'runeOverflow', 'wardNova', 'whirl', 'explode', 'falconDive', 'ricochetArrow', 'stormArc', 'volley', 'deathmark', 'toxicBurst', 'shadowClone',
   'garrote', 'ambush', 'blossomEnd', 'twinFlame', 'chainReact', 'bomb', 'bombPlant', 'flashpoint', 'petalfall', 'sunfall', 'natureWrath', 'treantSlam',
-  'clockStrike', 'futureMark', 'futureBurst']);
-(() => {
+  'clockStrike', 'futureMark', 'futureBurst'];
   const V = VFX, rand = (a, b) => a + Math.random() * (b - a), TAU = Math.PI * 2;
   const shake = s => { FX.shake = Math.max(FX.shake, s); };
   const fade = (p, i = 0.1, o = 0.2) => Math.min(1, p / i, (1 - p) / o);
@@ -720,7 +720,7 @@ const KIT_VFX_AIMED = new Set(['sunlit', 'edgeShard', 'edgeReturn', 'dawnPillar'
       shake(4); },
   });
 
-  // ---- the moments talents add (k.fx). target: the enemy for KIT_VFX_AIMED names, the ally for data.to, else null.
+  // ---- the moments talents add (k.fx). target: the enemy for AIMED names, the ally for data.to, else null.
   Object.assign(KIT_VFX, {
     // Bastion
     sunlit: (e, t) => { const T = at(e, t); V.beam(e.x, e.y, T.x, T.y, { color: '#ffe9a0', w: 8, dur: 0.35 }); V.spawn({ x: T.x, y: T.y, z: 16, life: 0.3, size: 50, size1: 16, color: '#ffe27a', kind: 'star', vr: 5 }); },
@@ -818,5 +818,170 @@ const KIT_VFX_AIMED = new Set(['sunlit', 'edgeShard', 'edgeReturn', 'dawnPillar'
     futureBurst: (e, t) => { const T = at(e, t); V.burst(T.x, T.y, { color: '#9fe8ff', color2: '#ffffff', n: 16, speed: 240, kind: 'star' }); V.shock(T.x, T.y, { r: 80, color: '#9fe8ff', dur: 0.4, w: 5 }); },
     clockStrike: (e, t) => { const T = at(e, t); V.lightning(e.x, e.y - 104, T.x, T.y, { color: '#ffe6a8', jag: 12, dur: 0.3 }); V.hit(T.x, T.y, '#ffd27a', 0.8); V.plus(e.x, e.y, { color: '#ffe6a8', n: 3 }); },
     secondChance: (e, t) => { const w = t || e; V.sigil(w.x, w.y, { r: 60, style: 'clock', color: '#9fe8ff', dur: 1, spin: -4, follow: w }); V.lightfall(w.x, w.y, { color: '#bff0ff', r: 30, h: 240, dur: 0.7, feathers: 0 }); },
+  });
+  for (const n of AIMED) KIT_VFX[n].atTarget = true;
+})();
+
+// ---------------------------------------------------------------- the advanced DPS: Thermist and Driftblade
+// Three beats on every big move, like the painted reference sheets: a wind-up glyph, a bold main shape (hot core, saturated
+// middle, dark ink edge), then a slow aftermath. Thermist fire is orange, frost is blue, and the Shock mixes both.
+// Driftblade wind is pale jade (Orbit mint, Comet gold); its dashes leave lanes and ribbons that hang in the air.
+const WIND_LANES = [];   // live Slipstream lanes: { ax, ay, bx, by, end } (anyone moving along one runs faster)
+// speed factor for something at (x, y) moving along (vx, vy): 1.3 on a lane and roughly following it, else 1
+function windLaneBoost(x, y, vx, vy, now) {
+  for (let i = WIND_LANES.length - 1; i >= 0; i--) if (WIND_LANES[i].end < now) WIND_LANES.splice(i, 1);
+  const sp = Math.hypot(vx, vy);
+  if (!sp) return 1;
+  for (const l of WIND_LANES) {
+    const dx = l.bx - l.ax, dy = l.by - l.ay, L = Math.hypot(dx, dy) || 1;
+    if (Math.abs((vx * dx + vy * dy) / (sp * L)) < 0.6) continue;   // crossing it, not running along it
+    if (kitSegDist(x, y, l.ax, l.ay, l.bx, l.by) < 34) return 1.3;
+  }
+  return 1;
+}
+(() => {
+  const V = VFX;
+  const FIRE = { color: '#ff7a2a', core: '#fff0b0', ink: '#3a1004' }, ICE = { color: '#5fb4f0', core: '#f0faff', ink: '#08203a' };
+  const shake = s => { FX.shake = Math.max(FX.shake, s); };
+  const ahead = (c, d) => { const a = Math.atan2(c.ty - c.y, c.tx - c.x); return { x: c.x + Math.cos(a) * d, y: c.y + Math.sin(a) * d }; };
+  const windCol = ent => (ent && ent.spec === 'comet' ? '#ffd08a' : ent && ent.spec === 'orbit' ? '#a8f0c8' : '#8ff0d8');
+  // a ribbon of wind drawn along a path (pts in world space), flowing toward its end and fading out over dur
+  const ribbon = (pts, o = {}) => V.fx({ dur: o.dur ?? 0.7, layer: o.layer || 'air', draw: (c, p, t, e) => {
+    const k = (1 - p) * e.a, col = o.color || '#8ff0d8';
+    V.neonPath(c, col, (o.w ?? 3) * (1 - p * 0.5), k, () => { pts.forEach(([x, y], i) => { const wob = Math.sin(i * 0.9 + t * 14) * (o.wob ?? 3); i ? c.lineTo(x, y - (o.z ?? 14) + wob) : c.moveTo(x, y - (o.z ?? 14) + wob); }); });
+  } });
+  const line2 = (ax, ay, bx, by, n = 10, bow = 0) => Array.from({ length: n + 1 }, (_, i) => { const q = i / n, nx = -(by - ay), ny = bx - ax, L = Math.hypot(nx, ny) || 1, b = Math.sin(q * Math.PI) * bow; return [ax + (bx - ax) * q + nx / L * b, ay + (by - ay) * q + ny / L * b]; });
+  const loop = (x, y, r, a0, span, n = 18) => Array.from({ length: n + 1 }, (_, i) => { const a = a0 + span * i / n; return [x + Math.cos(a) * r, y + Math.sin(a) * r * 0.62]; });
+
+  ABILITY_VFX.thermist = {
+    // a spark in the right hand, a small fire bolt, a little burst
+    cinder: c => { const h = ahead(c, 16); V.glint(h.x, h.y, { color: '#ffb050', size: 16 }); V.missile(c.x, c.y, c.tx, c.ty, { style: 'fire', color: '#ff8a3a', speed: 900, size: 0.8, onHit: (x, y) => { V.spikeburst(x, y, { r: 26, n: 9, ...FIRE, dur: 0.24 }); V.smoke(x, y, { n: 1, color: '#4a3a3a', size: 14, a: 0.35, speed: 20 }); } }); },
+    // frost on the left hand, a shard of ice, a few chips where it breaks
+    rime: c => { const h = ahead(c, 16); V.glint(h.x, h.y, { color: '#cfeeff', size: 16 }); V.missile(c.x, c.y, c.tx, c.ty, { style: 'blade', color: '#8fd0ff', speed: 1000, size: 0.75, onHit: (x, y) => { V.spikeburst(x, y, { r: 24, n: 8, ...ICE, dur: 0.24 }); V.crystals(x, y, { color: '#bfe6ff', n: 3, r: 14, h: 20, dur: 0.5 }); } }); },
+    // a fire glyph on the boss, then a bold orange starburst, flame tongues and a scorch that smokes
+    flare: c => { V.sigil(c.tx, c.ty, { r: 40, style: 'star5', color: '#ff9a3a', dur: 0.35, spin: 5 });
+      c.later(0.12, () => { V.spikeburst(c.tx, c.ty, { r: 58, n: 14, ...FIRE, dur: 0.36 }); V.flare(c.tx, c.ty, { n: 12, r: 18, color: '#ff6a1a' }); V.burst(c.tx, c.ty, { color: '#ffd070', n: 8, speed: 220, flashR: 60 }); shake(2); });
+      c.later(0.4, () => { V.decal(c.tx, c.ty, { r: 34, embers: true, dur: 2.2 }); V.smoke(c.tx, c.ty, { n: 4, r: 24, color: '#5a4a48', size: 26, a: 0.4, speed: 30, life: 1.6 }); }); },
+    // an ice glyph at the hand, a long lance of ice, crystals bursting where it lands and frost left on the floor
+    lance: c => { const h = ahead(c, 18); V.sigil(h.x, h.y, { r: 22, style: 'hex', color: '#9fd8ff', dur: 0.3, spin: 4 });
+      V.missile(c.x, c.y, c.tx, c.ty, { style: 'helix', color: '#7ac0f0', speed: 1300, size: 1.2, onHit: (x, y) => { V.crystals(x, y, { color: '#9fd8ff', n: 7, r: 38, h: 54, dur: 0.9 }); V.spikeburst(x, y, { r: 52, n: 12, ...ICE, dur: 0.34 }); V.shock(x, y, { r: 80, color: '#bfe6ff', dur: 0.4, w: 4 }); shake(2); FX.later(0.4, () => V.smoke(x, y, { n: 4, r: 30, color: '#cfe6f0', size: 24, a: 0.3, speed: 20, life: 1.8 })); } }); },
+    // both hands meet: a half-blue half-orange seal at the feet, a shield closing over, steam rising after
+    equil: c => { V.ink(c.x, c.y, { r: 56, dur: 0.9, follow: c.ent }); V.sigil(c.x, c.y, { r: 56, style: 'hex', color: '#ffb08a', dur: 0.9, spin: 3, follow: c.ent }); V.sigil(c.x, c.y, { r: 44, style: 'hex', color: '#8fd0ff', dur: 0.9, spin: -3, follow: c.ent });
+      c.later(0.1, () => { V.shield(c.ent, { color: '#e8d8ff', dur: 1.4, r: 40 }); V.shock(c.x, c.y, { r: 90, color: '#f2e6c8', dur: 0.4, w: 4 }); });
+      c.later(0.5, () => V.smoke(c.ent.x, c.ent.y, { n: 5, r: 30, color: '#e0e8f0', size: 24, a: 0.3, speed: 25, life: 1.6 })); },
+    // the dial turns over: two coloured arcs wheel round the mage and swap sides, then a ring in both colours
+    invert: c => { V.charge(c.x, c.y, { color: '#e8d8ff', r: 56, n: 10, dur: 0.25, follow: c.ent });
+      V.fx({ dur: 0.7, layer: 'ground', follow: c.ent, draw: (ctx, p, t, e) => { const x = e.follow.x, y = e.follow.y, k = Math.min(1, (1 - p) / 0.4) * e.a, a = easeOut(Math.min(1, p / 0.6)) * Math.PI;
+        ctx.save(); ctx.translate(x, y); ctx.scale(1, 0.62);
+        V.neonPath(ctx, '#ff8a3a', 5, k, () => ctx.arc(0, 0, 52, a - 1.2, a + 1.2));
+        V.neonPath(ctx, '#6fb2f0', 5, k, () => ctx.arc(0, 0, 52, a + Math.PI - 1.2, a + Math.PI + 1.2));
+        ctx.restore(); } });
+      c.later(0.35, () => { V.shock(c.ent.x, c.ent.y, { r: 110, color: '#ff9a5a', dur: 0.5, w: 5 }); V.shock(c.ent.x, c.ent.y, { r: 90, color: '#7ac0f0', dur: 0.5, w: 5, delay: 0.06 }); V.aura(c.ent, { color: '#e8d8ff', dur: 10, r: 28, rate: 0.15 }); }); },
+    // Thermocline (talent): a bolt that changes colour in flight, from the side it left to the side it swings toward
+    thermocline: c => { V.missile(c.x, c.y, c.tx, c.ty, { style: 'orb', color: '#ffb08a', speed: 1100, size: 0.9, onHit: (x, y) => { V.spikeburst(x, y, { r: 30, n: 10, ...ICE, dur: 0.26 }); V.flare(x, y, { n: 4, r: 8, color: '#ff8a3a', size: 0.6 }); } });
+      V.missile(c.x, c.y, c.tx, c.ty, { style: 'orb', color: '#7ac0f0', speed: 1050, size: 0.6, arc: 10 }); },
+    // Absolute Zero (talent): a frost glyph opens under the boss, a pillar of cold drops, a ring of ice and a hanging mist
+    zero: c => { V.ink(c.tx, c.ty, { r: 70, dur: 0.6 }); V.sigil(c.tx, c.ty, { r: 70, style: 'hex', color: '#cfeeff', dur: 0.6, spin: 6 });
+      c.later(0.25, () => { V.pillar(c.tx, c.ty, { r: 40, h: 240, color: '#bfe6ff', dur: 0.9 }); V.crystals(c.tx, c.ty, { color: '#d8f2ff', n: 10, r: 60, h: 64, dur: 1.4 }); V.spikeburst(c.tx, c.ty, { r: 70, n: 16, ...ICE, dur: 0.4 }); V.shock(c.tx, c.ty, { r: 140, color: '#cfeeff', dur: 0.6, w: 7 }); shake(4); });
+      c.later(0.7, () => V.smoke(c.tx, c.ty, { n: 7, r: 60, color: '#d8e8f0', size: 32, a: 0.3, speed: 20, life: 2.2 })); },
+    // Zenith's Bleed Off: steam blasting off the mage, a pale shield, and the red Strain venting upward
+    bleed: c => { V.smoke(c.x, c.y, { n: 9, r: 26, color: '#e8e0e0', size: 30, a: 0.45, speed: 70, life: 1.3 }); V.shock(c.x, c.y, { r: 80, color: '#ff8a8a', dur: 0.4, w: 4 }); V.shield(c.ent, { color: '#ffd0c0', dur: 1.2, r: 38 });
+      for (let i = 0; i < 8; i++) V.spawn({ x: c.x + (Math.random() - 0.5) * 30, y: c.y, z: 10, vz: 120 + Math.random() * 80, life: 0.7, size: 8, size1: 0, color: '#ff5a6a' }); },
+  };
+
+  ABILITY_VFX.driftblade = {
+    // a crescent sabre cut in jade, a sharp white edge, a few sparks
+    carve: c => { const col = windCol(c.ent), f = Math.random() < 0.5; V.slash(c.x, c.y, c.ang, { r: 60, span: 2.2, color: col, w: 0.4, dur: 0.24, flip: f, sparks: 3 }); c.later(0.08, () => V.hit(c.tx, c.ty, '#e8fff8', 0.5)); },
+    // a burst of wind at the start, a ribbon along the dash, and the lane left glowing on the floor for 6s
+    slip: c => { const col = windCol(c.ent), sx = c.x, sy = c.y; V.smoke(sx, sy, { n: 3, color: '#d8e8e0', size: 16, a: 0.5, speed: 50 }); V.shock(sx, sy, { r: 34, color: col, dur: 0.25, w: 3 });
+      c.later(0.22, () => {
+        const ex = c.ent.x, ey = c.ent.y;
+        if (Math.hypot(ex - sx, ey - sy) < 20) return;
+        const lane = { ax: sx, ay: sy, bx: ex, by: ey, end: FX.now + 6 };
+        WIND_LANES.push(lane);
+        ribbon(line2(sx, sy, ex, ey, 12, 10), { color: col, w: 3, dur: 0.6 }); ribbon(line2(sx, sy, ex, ey, 12, -10), { color: '#ffffff', w: 1.5, dur: 0.5 });
+        const dx = ex - sx, dy = ey - sy, L = Math.hypot(dx, dy);
+        V.fx({ dur: 6, layer: 'ground', draw: (ctx, p, t, e) => {
+          const k = Math.min(1, p / 0.04, (1 - p) / 0.15) * e.a;
+          ctx.save(); ctx.translate(sx, sy); ctx.rotate(Math.atan2(dy, dx));
+          ctx.globalAlpha = 0.12 * k; ctx.fillStyle = col; ctx.fillRect(0, -16, L, 32); ctx.globalAlpha = 1;
+          for (let i = 0; i < 6; i++) { const q = ((t * 0.9 + i / 6) % 1), x = q * L, y = (i % 3 - 1) * 9;
+            V.neonPath(ctx, col, 1.6, k * Math.sin(q * Math.PI) * 0.8, () => { ctx.moveTo(x, y); ctx.lineTo(Math.min(L, x + 26), y); }); }
+          ctx.restore();
+        } });
+      }); },
+    // a swing round the target: a curved ribbon from where you were to its far side, a cut as you pass
+    hook: c => { const col = windCol(c.ent), a0 = Math.atan2(c.y - c.ty, c.x - c.tx), r = Math.max(40, Math.hypot(c.x - c.tx, c.y - c.ty));
+      ribbon(loop(c.tx, c.ty, r, a0, Math.PI), { color: col, w: 3.5, dur: 0.6 });
+      c.later(0.1, () => { V.slash(c.tx, c.ty + 10, a0 + Math.PI / 2, { r: 54, span: 2, color: '#e8fff8', w: 0.4, dur: 0.24 }); V.hit(c.tx, c.ty, col, 0.8); }); },
+    // a wind glyph at the blade, then a great crescent of wind flies out and bursts on the target; leaves and grit swirl after
+    cross: c => { const col = windCol(c.ent), h = ahead(c, 20); V.sigil(h.x, h.y, { r: 24, style: 'star4', color: col, dur: 0.3, spin: 6 });
+      c.later(0.08, () => V.missile(c.x, c.y, c.tx, c.ty, { style: 'blade', color: col, speed: 1300, size: 1.5, onHit: (x, y) => { V.slash(x, y + 10, Math.atan2(c.ty - c.y, c.tx - c.x), { r: 70, span: 2.6, color: col, w: 0.6, dur: 0.32 });
+        V.spikeburst(x, y, { r: 54, n: 12, color: col, core: '#ffffff', ink: '#0a2a24', dur: 0.32 }); V.tornado(x, y, { color: '#e8fff8', h: 70, r: 24, dur: 0.7 }); shake(3);
+        FX.later(0.3, () => V.smoke(x, y, { n: 4, r: 30, color: '#c8d0c0', size: 22, a: 0.35, speed: 40, life: 1.3 })); } })); },
+    // the blade held flat across: a thin bright line, a still ring at the feet
+    still: c => { const fx = c.x + Math.cos(c.ang) * 26, fy = c.y + Math.sin(c.ang) * 26; V.glint(fx, fy, { color: '#ffffff', size: 26 }); V.shield(c.ent, { shape: 'front', color: '#e8fff8', dur: 2, r: 38 });
+      V.sigil(c.x, c.y, { r: 40, style: 'star4', color: windCol(c.ent), dur: 2, spin: 0.2, follow: c.ent }); },
+    // a gust spirals up round the duellist, streaks shoot out, and the wind aura stays on
+    gale: c => { const col = windCol(c.ent); V.charge(c.x, c.y, { color: col, r: 60, n: 10, dur: 0.25, follow: c.ent }); V.tornado(c.x, c.y, { color: '#e8fff8', h: 120, r: 36, dur: 0.9 });
+      c.later(0.2, () => { V.shock(c.x, c.y, { r: 140, color: col, dur: 0.5, w: 6 }); for (let i = 0; i < 10; i++) { const a = i * Math.PI / 5; ribbon(line2(c.x + Math.cos(a) * 20, c.y + Math.sin(a) * 12, c.x + Math.cos(a) * 120, c.y + Math.sin(a) * 74, 6, 12), { color: col, w: 2, dur: 0.6 }); } });
+      V.aura(c.ent, { color: col, dur: 12, r: 28, rate: 0.25 }); },
+    // Comet's Impact: a gold glyph, a straight streak through the target, a burst, sparks thrown forward
+    impact: c => { const a = Math.atan2(c.ty - c.y, c.tx - c.x), ex = c.tx + Math.cos(a) * 120, ey = c.ty + Math.sin(a) * 120; V.sigil(c.x, c.y, { r: 30, style: 'star4', color: '#ffd08a', dur: 0.3, spin: 6 });
+      V.beam(c.x, c.y, ex, ey, { color: '#ffd08a', w: 12, dur: 0.4 }); c.later(0.06, () => { V.spikeburst(c.tx, c.ty, { r: 64, n: 14, color: '#ffb84a', core: '#fff6d0', ink: '#3a2404', dur: 0.36 }); V.sparks(c.tx, c.ty, { color: '#ffe0a0', n: 14, angle: a, spread: 0.6, speed: 520 }); shake(4); });
+      c.later(0.3, () => ribbon(line2(c.x, c.y, ex, ey, 10, 0), { color: '#ffd08a', w: 2, dur: 1, wob: 5 })); },
+    // Gyre (talent): a full loop of ribbon round the target, a cut at each quarter
+    gyre: c => { const col = windCol(c.ent), r = 70; ribbon(loop(c.tx, c.ty, r, 0, Math.PI * 2, 28), { color: col, w: 3, dur: 0.8 });
+      for (let i = 0; i < 4; i++) c.later(0.08 + i * 0.09, () => V.slash(c.tx, c.ty + 10, i * Math.PI / 2, { r: 50, span: 1.4, color: '#e8fff8', w: 0.35, dur: 0.2 })); },
+    // Tailspin (talent): three blade arcs whirling in place, a wind ring, then the spring away leaves a ribbon
+    tailspin: c => { const col = windCol(c.ent); for (let i = 0; i < 3; i++) c.later(i * 0.2, () => V.slash(c.ent.x, c.ent.y, c.ang + i * 2.1, { r: 60, span: 2.6, color: i % 2 ? '#e8fff8' : col, w: 0.45, dur: 0.24 }));
+      V.swirl(c.x, c.y, { r: 56, color: col, dur: 0.8, arms: 3, follow: c.ent }); },
+  };
+
+  // class moments sent from the kits (k.fx): Thermal Shock and its cousins, Passing Strikes and the wind's tricks
+  Object.assign(KIT_VFX, {
+    // the payoff: both colours collapse onto the target, then a burst in the colour it swung to, sized by the swing,
+    // with a ring of the other colour shattering round it, and steam and a crack left behind
+    shock: Object.assign((e, target, d) => {
+      const t = target || { x: e.x + Math.cos(e.angle || 0) * 120, y: e.y + Math.sin(e.angle || 0) * 120 };
+      const s = Math.max(3, Math.min(12, (d && d.s) || 5)), to = d && d.c < 0 ? ICE : FIRE, other = to === ICE ? FIRE : ICE, echo = d && d.echo;
+      const R = (echo ? 24 : 34) + s * (echo ? 3 : 8);
+      V.fx({ dur: 0.16, layer: 'ground', draw: (c, p, tt, fx) => { V.neonRing(c, t.x, t.y, R * 1.3 * (1 - p), to.color, 3, fx.a * p, 0.7); V.neonRing(c, t.x, t.y, R * 1.1 * (1 - p), other.color, 3, fx.a * p, 0.7); } });
+      FX.later(0.15, () => {
+        V.spikeburst(t.x, t.y, { r: R, n: 12 + Math.round(s), ...to, dur: 0.34 + s * 0.02 });
+        V.spikeburst(t.x, t.y, { r: R * 1.35, n: 16, hole: 0.7, ...other, dur: 0.4, layer: 'ground', z: 0, flat: 0.7 });
+        V.burst(t.x, t.y, { color: to.core, color2: other.color, n: 8 + s * 2, speed: 160 + s * 25, flashR: R * 1.2 });
+        V.shock(t.x, t.y, { r: R * 2, color: to.color, dur: 0.5, w: 4 + s * 0.5 });
+        if (to === ICE) V.crystals(t.x, t.y, { color: '#bfe6ff', n: 4 + Math.round(s / 2), r: R * 0.7, h: 30 + s * 4, dur: 1 }); else V.flare(t.x, t.y, { n: 6 + s, r: 14 + s, color: '#ff6a1a' });
+        if (!echo) { shake(2 + s * 0.5); FX.text(t.x, t.y - 70, s >= 8 ? 'Thermal Shock!' : 'Shock', to.core, 11 + Math.min(8, s), 0.9); }
+      });
+      if (!echo) FX.later(0.5, () => { V.smoke(t.x, t.y, { n: 3 + Math.round(s / 2), r: R * 0.6, color: '#e0e4e8', size: 22 + s * 2, a: 0.3, speed: 25, life: 2 }); if (s >= 6) V.decal(t.x, t.y, { style: 'crack', r: R * 0.8, dur: 2.4, a: 0.5, seed: Math.random() * 6 }); });
+    }, { atTarget: true }),
+    // Ember Store (talent): banked embers fly from the mage into the target after a Shock
+    embers: Object.assign((e, target, d) => { if (!target) return; for (let i = 0; i < ((d && d.n) || 1); i++) FX.later(i * 0.08, () => V.missile(e.x, e.y, target.x, target.y, { style: 'fire', color: '#ff8a3a', speed: 800, size: 0.6, arc: 30 + i * 12, onHit: (x, y) => V.hit(x, y, '#ffb050', 0.5) })); }, { atTarget: true }),
+    // Latent Charge (talent): an overload banked instead of burned: a pale bead sinking into the mage
+    latent: e => { V.swirl(e.x, e.y, { r: 36, color: '#e8d8ff', dur: 0.5, inward: true, follow: e }); V.flash(e.x, e.y - 20, 30, '#e8d8ff', 0.3); },
+    frostbite: e => { V.crystals(e.x, e.y, { color: '#bfe6ff', n: 6, r: 24, h: 30, dur: 1 }); V.shock(e.x, e.y, { r: 70, color: '#9ad8ff', dur: 0.4 }); },
+    // Twin Spell (talent): a smaller copy of the edge spell follows the first
+    twin: Object.assign((e, target, d) => { if (!target) return; const ice = d && d.el < 0; V.missile(e.x, e.y, target.x, target.y, { style: ice ? 'helix' : 'fire', color: ice ? '#9fd8ff' : '#ff9a3a', speed: 1000, size: 0.7, onHit: (x, y) => V.spikeburst(x, y, { r: 30, n: 9, ...(ice ? ICE : FIRE), dur: 0.26 }) }); }, { atTarget: true }),
+    invert: e => { V.shock(e.x, e.y, { r: 80, color: '#ff9a5a', dur: 0.4, w: 4 }); V.shock(e.x, e.y, { r: 64, color: '#7ac0f0', dur: 0.4, w: 4, delay: 0.05 }); },
+    // a Passing Strike: a straight white cut through the body of the enemy, along the way you were running
+    pass: Object.assign((e, target, d) => {
+      const col = windCol(e), a = e.angle || 0, t = target || e, gale = d && d.g;
+      ribbon(line2(t.x - Math.cos(a) * 60, t.y - Math.sin(a) * 60, t.x + Math.cos(a) * 60, t.y + Math.sin(a) * 60, 6, 0), { color: gale ? '#ffffff' : col, w: gale ? 5 : 3, dur: 0.35, wob: 1 });
+      V.hit(t.x, t.y, col, gale ? 1 : 0.6); if (gale) shake(2);
+    }, { atTarget: true }),
+    lane: e => { V.shock(e.x, e.y, { r: 30, color: windCol(e), dur: 0.25, w: 2 }); },
+    orbitcut: Object.assign((e, target) => { const t = target || e; V.slash(t.x, t.y + 10, Math.random() * 6.28, { r: 46, span: 1.6, color: '#a8f0c8', w: 0.35, dur: 0.2 }); }, { atTarget: true }),
+    crescent: Object.assign((e, target) => { const t = target || e; V.slash(e.x, e.y, Math.atan2(t.y - e.y, t.x - e.x), { r: 80, span: 2.8, color: windCol(e), w: 0.55, dur: 0.3, sparks: 5 }); }, { atTarget: true }),
+    afterimage: Object.assign((e, target) => { const t = target || e; V.slash(t.x, t.y + 10, (e.angle || 0) + Math.PI, { r: 54, span: 1.8, color: '#d8e8e0', w: 0.4, dur: 0.3 }); V.smoke(t.x, t.y, { n: 2, color: '#c8d8d0', size: 18, a: 0.35, speed: 20 }); }, { atTarget: true }),
+    riposte: Object.assign((e, target) => { const t = target || e; V.glint(e.x + Math.cos(e.angle || 0) * 26, e.y + Math.sin(e.angle || 0) * 26, { color: '#ffffff', size: 30 }); FX.later(0.06, () => { V.slash(t.x, t.y + 10, (e.angle || 0), { r: 60, span: 1.2, color: '#ffffff', w: 0.5, dur: 0.24, sparks: 8 }); V.hit(t.x, t.y, '#e8fff8', 1); shake(3); }); }, { atTarget: true }),
+    galeforce: Object.assign((e, target) => { if (target) V.missile(e.x, e.y, target.x, target.y, { style: 'blade', color: windCol(e), speed: 1200, size: 1.2, onHit: (x, y) => V.tornado(x, y, { color: '#e8fff8', h: 60, r: 20, dur: 0.6 }) }); }, { atTarget: true }),
+  });
+
+  // autos: the Thermist's alternate fire and frost sparks; the Driftblade's quick sabre flick
+  Object.assign(AUTO_VFX, {
+    thermo: c => { const ice = c.alt; V.missile(c.ent.x, c.ent.y, c.tx, c.ty, { style: 'orb', color: ice ? '#8fd0ff' : '#ff9a4a', speed: 950, size: 0.5, onHit: (x, y) => V.hit(x, y, ice ? '#cfeeff' : '#ffc080', 0.35) }); },
+    sabre: c => { V.slash(c.ent.x, c.ent.y, c.ang, { r: 50, span: 1.5, color: windCol(c.ent), dur: 0.2, w: 0.3, flip: c.alt, sparks: 2 }); },
   });
 })();

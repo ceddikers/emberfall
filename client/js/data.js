@@ -60,9 +60,29 @@ const CLASSES = [
   },
 ];
 
+// ---------------------------------------------------------------- advanced classes
+// Each has one puzzle at its core (docs/plans/2026-10-new-classes.md). `complexity` (1-4) shows as small pips on the
+// hero select; `art` says which painted art exists yet (until then the game draws its own icons and portraits, and
+// never asks the server for the missing files).
+CLASSES.push(
+  {
+    id: 'thermist', name: 'Thermist', title: 'Living Thermometer', role: 'dps', difficulty: 3, complexity: 3, accent: '#e0648c',
+    art: { icons: false, portraits: false },
+    tagline: 'Frost in one hand, fire in the other. The trick is the swing.',
+    gameplan: 'A dial runs from frost to fire, and your spells push it. Each step from the middle makes that side\'s spells hit harder, but past the edge you overload. Swing the dial all the way across the middle and the change of temperature detonates on the boss as a Thermal Shock: the bigger the swing, the bigger the blast.',
+  },
+  {
+    id: 'driftblade', name: 'Driftblade', title: 'Wind Duellist', role: 'dps', difficulty: 2, complexity: 2, accent: '#4fd0b0',
+    art: { icons: false, portraits: false },
+    tagline: 'Never stand still.',
+    gameplan: 'Moving fills your Drift and standing still drains it, and nearly every cut is stronger with Drift behind it. Run straight through an enemy and you cut it as you pass. Dodging mechanics is how you deal damage: every step you take out of a telegraph can carry you through the boss.',
+  },
+);
+
 // ---------------------------------------------------------------- Alembist (healer, added with classes-b)
 CLASSES.push({
   id: 'alembist', name: 'Alembist', title: 'Alchemist', role: 'healer', difficulty: 3, accent: '#d08a3a',
+  art: { portraits: false },   // (no painted portrait yet: the hero page shows the sprite and nothing asks for the file)
   tagline: 'Brewed before it\'s needed.',
   gameplan: 'Three reagents, two presses each: Dew and Dew brews a healing Draught, Ember and Ember a Fire Bomb, Salt a ward. Vials wait in your bandolier and grow stronger, so you brew in the quiet for what\'s coming, then throw the oldest at whoever needs it. A splash catches everyone near where it lands.',
 });

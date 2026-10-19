@@ -114,7 +114,8 @@ const Net = (() => {
       case 'cast':
         if (!p.cls || !Number.isInteger(msg.i) || msg.i < 0 || msg.i > 6) return;
         p.x = num(msg.x, -3000, 3000, p.x); p.y = num(msg.y, -3000, 3000, p.y);
-        broadcast({ t: 'cast', id: p.id, i: msg.i, x: p.x, y: p.y, tx: num(msg.tx, -3000, 3000, p.x), ty: num(msg.ty, -3000, 3000, p.y),
+        // a: the move's id, so a move a talent swapped onto a button is found by others (specs.js abilityById)
+        broadcast({ t: 'cast', id: p.id, i: msg.i, a: /^[a-z]{1,16}$/.test(msg.a) ? msg.a : undefined, x: p.x, y: p.y, tx: num(msg.tx, -3000, 3000, p.x), ty: num(msg.ty, -3000, 3000, p.y),
           ally: Number.isInteger(msg.ally) ? msg.ally : null, s: msg.s ? 1 : 0, c: clock(msg.c) }, p.id);
         break;
       case 'castStart':
@@ -130,7 +131,7 @@ const Net = (() => {
         break;
       case 'kfx':
         if (!p.cls || !/^[a-z-]{1,16}$/.test(msg.k)) return;
-        broadcast({ t: 'kfx', id: p.id, k: msg.k, s: msg.s ? 1 : 0 }, p.id);
+        broadcast({ t: 'kfx', id: p.id, k: msg.k, s: msg.s ? 1 : 0, d: fxData(msg.d) }, p.id);
         break;
       case 'chat': {
         const text = String(msg.text || '').trim().slice(0, 120);
@@ -280,3 +281,19 @@ const Net = (() => {
 
   return net;
 })();
+
+// a class moment's few parameters (a Thermal Shock's size and side, an Alembist vial's recipe and target...): small numbers,
+// short words and short lists only
+function fxData(d) {
+  if (!d || typeof d !== 'object') return undefined;
+  const o = {};
+  const val = v => (typeof v === 'number' && Number.isFinite(v) ? Math.max(-1e4, Math.min(1e4, v))
+    : typeof v === 'string' && /^[A-Za-z0-9#_-]{1,16}$/.test(v) ? v : typeof v === 'boolean' || v === null ? v : undefined);
+  for (const k of Object.keys(d).slice(0, 8)) {
+    if (!/^[a-z]{1,8}$/.test(k)) continue;
+    const v = d[k];
+    if (Array.isArray(v)) { const a = v.slice(0, 8).map(val); if (a.every(x => x !== undefined)) o[k] = a; }   // (a Grand Blend's parts)
+    else if (val(v) !== undefined) o[k] = val(v);
+  }
+  return o;
+}

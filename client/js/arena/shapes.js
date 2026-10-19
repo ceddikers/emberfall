@@ -37,6 +37,9 @@ const SHAPES = {
         return (Math.abs(a1) <= s.len + pad && Math.abs(b1) <= s.w / 2 + pad) ||
                (Math.abs(b1) <= s.len + pad && Math.abs(a1) <= s.w / 2 + pad);
       }
+      // everywhere a blast from (x, y) reaches: all but the shadows behind the round props in s.covers ([[x, y, r], ...])
+      case 'lit':
+        return !(s.covers || []).some(([cx, cy, r]) => PROPS.blocks({ shape: 'circle', x: cx, y: cy, r }, s.x, s.y, px, py, PROPS.COVER_SHRINK - pad));
     }
     return false;
   },
@@ -45,6 +48,7 @@ const SHAPES = {
   trace(ctx, s) {
     ctx.beginPath();
     switch (s.kind) {
+      case 'lit': ctx.rect(-3000, -3000, 6000, 6000); break;
       case 'circle': ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2); break;
       case 'donut':
         ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
@@ -87,7 +91,7 @@ const SHAPES = {
 //   kind 'rect':   hw, hh (half width / height), corner (rounding)
 //   kind 'poly':   n sides, r (centre to corner); one flat side always faces down
 const ARENA_DEFS = {
-  grubnak: { kind: 'rect', hw: 620, hh: 420, corner: 46 },
+  grubnak: { kind: 'rect', hw: 520, hh: 360, corner: 40 },   // a cramped kitchen: the stove line along the top wall
   skitterra: { kind: 'poly', n: 8, r: 560 },
   volkar: { kind: 'circle', r: 540 },   // a storm-swept peak; in phase 2 its electrified edge closes in (resize)
   hollowking: { kind: 'rect', hw: 600, hh: 440, corner: 40 },   // a long burial hall, the throne against the top wall
@@ -97,9 +101,10 @@ const ARENA = {
   R: 520,       // farthest point of the room from the centre (for "big enough" sizes)
   inner: 520,   // nearest wall to the centre (for "always inside" sizes)
   full: 520,    // a round room's radius before any closing in
+  cuts: [],     // a round room's broken-off wedges: [{ a0, a1, r }] (Volkar's crumbling summit, Hard): inside a0..a1 the floor ends at r
   use(id) {
     const d = ARENA_DEFS[id] || { kind: 'circle', r: 520 };
-    Object.assign(this, { kind: d.kind, r: d.r || 0, hw: d.hw || 0, hh: d.hh || 0, corner: d.corner || 0, n: d.n || 0 });
+    Object.assign(this, { kind: d.kind, r: d.r || 0, hw: d.hw || 0, hh: d.hh || 0, corner: d.corner || 0, n: d.n || 0, cuts: [] });
     if (d.kind === 'circle') { this.hw = this.hh = this.R = this.inner = this.full = d.r; }
     else if (d.kind === 'rect') { this.R = Math.hypot(d.hw, d.hh); this.inner = Math.min(d.hw, d.hh); }
     else { this.inner = d.r * Math.cos(Math.PI / d.n); this.R = d.r; this.hw = this.hh = this.inner; }
@@ -121,7 +126,17 @@ const ARENA = {
       for (let i = 0; i < this.n; i++) { const a = Math.PI / 2 + i * Math.PI * 2 / this.n; m = Math.max(m, x * Math.cos(a) + y * Math.sin(a)); }
       return m - this.inner;
     }
-    return Math.hypot(x, y) - this.r;
+    return Math.hypot(x, y) - (this.cuts.length ? this.radiusAt(Math.atan2(y, x)) : this.r);
+  },
+  // a round room's radius going out along angle a (less where a wedge has broken off)
+  radiusAt(a) {
+    let r = this.r;
+    for (const c of this.cuts) {
+      let d = a - c.a0;
+      d -= Math.floor(d / (Math.PI * 2)) * Math.PI * 2;
+      if (d <= c.a1 - c.a0) r = Math.min(r, c.r);
+    }
+    return r;
   },
   contains(x, y, pad = 0) { return this.sd(x, y) <= -pad; },
   // pull p ({x, y}, changed in place) back inside, at least pad from the wall
@@ -142,7 +157,7 @@ const ARENA = {
         if (over > 0) { p.x -= nx * over; p.y -= ny * over; }
       }
     } else {
-      const d = Math.hypot(p.x, p.y), lim = Math.max(0, this.r - pad);
+      const d = Math.hypot(p.x, p.y), lim = Math.max(0, (this.cuts.length ? this.radiusAt(Math.atan2(p.y, p.x)) : this.r) - pad);
       if (d > lim) { p.x *= lim / d; p.y *= lim / d; }
     }
     return p;
@@ -164,6 +179,9 @@ const ARENA = {
     } else if (this.kind === 'poly') {
       for (const [x, y] of this.corners(grow)) ctx.lineTo(x, y);
       ctx.closePath();
+    } else if (this.cuts.length) {
+      for (let i = 0; i < 180; i++) { const a = i * Math.PI / 90, r = this.radiusAt(a) + grow; ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r); }
+      ctx.closePath();
     } else ctx.arc(0, 0, this.r + grow, 0, Math.PI * 2);
   },
   // corners of a 'poly' room (grown outward by grow)
@@ -174,4 +192,170 @@ const ARENA = {
   },
 };
 
-if (typeof module !== 'undefined') module.exports = { SHAPES, ARENA, ARENA_DEFS };
+// Arena props: things standing in the room that the boss uses and the party reads (Grubnak's casks, Skitterra's
+// pillars, the Hollow King's braziers, coffin lids and fallen masonry, Volkar's standing stones and boulders).
+//   { id, kind, shape: 'circle' | 'rect', x, y, r (circle) or w, h, a (rect: full width / height, turned by a),
+//     hp, maxHp (hits it can take; 0 = never breaks), solid, cover, state }
+// The host owns them (fight.js) and sends the whole list whenever one changes. Everyone moves, aims and draws with
+// the same math below: the host for bots, adds and the boss, each client for its own hero.
+const PROPS = {
+  segDist(px, py, ax, ay, bx, by) {
+    const dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy;
+    const t = l2 ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / l2)) : 0;
+    return Math.hypot(px - ax - dx * t, py - ay - dy * t);
+  },
+  // a point in a rect prop's own frame
+  local(pr, x, y) { const c = Math.cos(pr.a || 0), s = Math.sin(pr.a || 0), dx = x - pr.x, dy = y - pr.y; return [dx * c + dy * s, -dx * s + dy * c]; },
+  // the rect's corners in the room
+  corners(pr, grow = 0) {
+    const c = Math.cos(pr.a || 0), s = Math.sin(pr.a || 0), hw = pr.w / 2 + grow, hh = pr.h / 2 + grow;
+    return [[-hw, -hh], [hw, -hh], [hw, hh], [-hw, hh]].map(([u, v]) => [pr.x + u * c - v * s, pr.y + u * s + v * c]);
+  },
+  // signed distance from (x, y) to the prop's edge (negative inside)
+  sd(pr, x, y) {
+    if (pr.shape === 'rect') {
+      const [lx, ly] = this.local(pr, x, y), qx = Math.abs(lx) - pr.w / 2, qy = Math.abs(ly) - pr.h / 2;
+      return Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0);
+    }
+    return Math.hypot(x - pr.x, y - pr.y) - pr.r;
+  },
+  // the way out of the prop at (x, y)
+  normal(pr, x, y) {
+    if (pr.shape === 'rect') {
+      const [lx, ly] = this.local(pr, x, y), c = Math.cos(pr.a || 0), s = Math.sin(pr.a || 0);
+      const qx = Math.abs(lx) - pr.w / 2, qy = Math.abs(ly) - pr.h / 2;
+      let u, v;
+      if (qx > 0 && qy > 0) { const d = Math.hypot(qx, qy); u = Math.sign(lx) * qx / d; v = Math.sign(ly) * qy / d; }
+      else if (qx > qy) { u = Math.sign(lx) || 1; v = 0; } else { u = 0; v = Math.sign(ly) || 1; }
+      return [u * c - v * s, u * s + v * c];
+    }
+    const dx = x - pr.x, dy = y - pr.y, d = Math.hypot(dx, dy);
+    return d > 0.01 ? [dx / d, dy / d] : [1, 0];
+  },
+  // push e ({ x, y }, changed in place) out of every solid prop, keeping rad clear of it. True if it moved.
+  collide(e, list, rad = 14) {
+    if (!list || !list.length) return false;
+    let moved = false;
+    for (let pass = 0; pass < 2; pass++) for (const pr of list) {
+      if (!pr.solid) continue;
+      const d = this.sd(pr, e.x, e.y);
+      if (d >= rad) continue;
+      const [nx, ny] = this.normal(pr, e.x, e.y);
+      e.x += nx * (rad - d); e.y += ny * (rad - d); moved = true;
+    }
+    return moved;
+  },
+  // the first solid prop a circle of radius rad meets going from a to b: { t (0..1 along the way), prop }, or null
+  ray(ax, ay, bx, by, list, rad = 0, filter) {
+    let best = null;
+    if (Math.hypot(bx - ax, by - ay) < 0.01) return null;
+    for (const pr of list || []) {
+      if (!pr.solid || (filter && !filter(pr))) continue;
+      let t;
+      if (pr.shape === 'rect') {
+        const [x0, y0] = this.local(pr, ax, ay), [x1, y1] = this.local(pr, bx, by), hw = pr.w / 2 + rad, hh = pr.h / 2 + rad;
+        if (Math.abs(x0) < hw && Math.abs(y0) < hh) continue;   // starting inside: collide() sorts that out
+        let t0 = 0, t1 = 1, ok = true;
+        for (const [p, d, h] of [[x0, x1 - x0, hw], [y0, y1 - y0, hh]]) {
+          if (Math.abs(d) < 1e-9) { if (Math.abs(p) > h) { ok = false; break; } continue; }
+          let ta = (-h - p) / d, tb = (h - p) / d;
+          if (ta > tb) [ta, tb] = [tb, ta];
+          t0 = Math.max(t0, ta); t1 = Math.min(t1, tb);
+          if (t0 > t1) { ok = false; break; }
+        }
+        if (!ok) continue;
+        t = t0;
+      } else {
+        const R = pr.r + rad, fx = ax - pr.x, fy = ay - pr.y, dx = bx - ax, dy = by - ay;
+        const A = dx * dx + dy * dy, B = 2 * (fx * dx + fy * dy), C = fx * fx + fy * fy - R * R;
+        if (C < 0) continue;
+        const disc = B * B - 4 * A * C;
+        if (disc < 0) continue;
+        t = (-B - Math.sqrt(disc)) / (2 * A);
+        if (t < 0 || t > 1) continue;
+      }
+      if (!best || t < best.t) best = { t, prop: pr };
+    }
+    return best;
+  },
+  // a move from e toward `to` ({ x, y }, changed in place) stops short at the first solid prop; returns that prop
+  clipMove(e, to, list, rad = 14) {
+    const hit = this.ray(e.x, e.y, to.x, to.y, list, rad);
+    if (!hit) return null;
+    const t = Math.max(0, hit.t - 0.01);
+    to.x = e.x + (to.x - e.x) * t; to.y = e.y + (to.y - e.y) * t;
+    return hit.prop;
+  },
+  // does the line from a source (sx, sy) to (px, py) pass through the prop, at least `shrink` inside its edge?
+  blocks(pr, sx, sy, px, py, shrink = 0) {
+    if (pr.shape === 'rect') {
+      const [x0, y0] = this.local(pr, sx, sy), [x1, y1] = this.local(pr, px, py), hw = pr.w / 2 - shrink, hh = pr.h / 2 - shrink;
+      if (hw <= 0 || hh <= 0) return false;
+      let t0 = 0, t1 = 1;
+      for (const [p, d, h] of [[x0, x1 - x0, hw], [y0, y1 - y0, hh]]) {
+        if (Math.abs(d) < 1e-9) { if (Math.abs(p) > h) return false; continue; }
+        let ta = (-h - p) / d, tb = (h - p) / d;
+        if (ta > tb) [ta, tb] = [tb, ta];
+        t0 = Math.max(t0, ta); t1 = Math.min(t1, tb);
+        if (t0 > t1) return false;
+      }
+      return true;
+    }
+    return this.segDist(pr.x, pr.y, sx, sy, px, py) <= pr.r - shrink;
+  },
+  // the cover prop (if any) that hides (px, py) from a blast at (sx, sy). shrink: how far inside the shadow's edge you
+  // have to stand (a little, so a hero half in the light isn't counted safe)
+  COVER_SHRINK: 6,
+  shadowing(sx, sy, px, py, list, filter) {
+    for (const pr of list || []) if (pr.cover && (!filter || filter(pr)) && this.blocks(pr, sx, sy, px, py, this.COVER_SHRINK)) return pr;
+    return null;
+  },
+  // the shadow a prop casts away from a source, as a polygon reaching `far` out (for drawing it and for the bots)
+  shadowPoly(sx, sy, pr, far = 2600) {
+    const shrink = this.COVER_SHRINK, out = [];
+    if (pr.shape === 'rect') {
+      const cs = this.corners(pr, -shrink), base = Math.atan2(pr.y - sy, pr.x - sx);
+      let lo = null, hi = null;
+      for (const c of cs) {
+        let d = Math.atan2(c[1] - sy, c[0] - sx) - base;
+        while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2;
+        if (!lo || d < lo.d) lo = { d, c }; if (!hi || d > hi.d) hi = { d, c };
+      }
+      out.push(lo.c, [sx + Math.cos(base + lo.d) * far, sy + Math.sin(base + lo.d) * far], [sx + Math.cos(base + hi.d) * far, sy + Math.sin(base + hi.d) * far], hi.c);
+      return out;
+    }
+    const r = pr.r - shrink, dx = pr.x - sx, dy = pr.y - sy, d = Math.hypot(dx, dy);
+    if (d <= r + 1) return null;
+    const base = Math.atan2(dy, dx), b = Math.asin(r / d), tl = Math.sqrt(d * d - r * r);
+    for (const s of [-1, 1]) out.push([sx + Math.cos(base + s * b) * tl, sy + Math.sin(base + s * b) * tl]);
+    return [out[0], [sx + Math.cos(base - b) * far, sy + Math.sin(base - b) * far], [sx + Math.cos(base + b) * far, sy + Math.sin(base + b) * far], out[1]];
+  },
+  // a spot in the prop's shadow, `back` past its far edge, `side` (-1..1) across it (for the bots)
+  shadowSpot(sx, sy, pr, back = 30, side = 0) {
+    const base = Math.atan2(pr.y - sy, pr.x - sx), ext = pr.shape === 'rect' ? Math.min(pr.w, pr.h) / 2 : pr.r;
+    const wide = pr.shape === 'rect' ? Math.max(pr.w, pr.h) / 2 : pr.r;
+    const d = ext + back, px = -Math.sin(base), py = Math.cos(base), across = side * Math.max(0, wide - 18);
+    return { x: pr.x + Math.cos(base) * d + px * across, y: pr.y + Math.sin(base) * d + py * across };
+  },
+  // walking from `from` to `to` past solid props: the next point to head for (a step round the first prop in the way)
+  steer(from, to, list, rad = 14) {
+    const hit = this.ray(from.x, from.y, to.x, to.y, list, rad);
+    if (!hit) return to;
+    const pr = hit.prop, dx = to.x - from.x, dy = to.y - from.y, L = Math.hypot(dx, dy) || 1;
+    const nx = -dy / L, ny = dx / L, side = (pr.x - from.x) * nx + (pr.y - from.y) * ny > 0 ? -1 : 1;
+    const ext = (pr.shape === 'rect' ? Math.hypot(pr.w, pr.h) / 2 : pr.r) + rad + 16;
+    return { x: pr.x + nx * side * ext + dx / L * ext * 0.3, y: pr.y + ny * side * ext + dy / L * ext * 0.3 };
+  },
+  // compact form for the 'props' message: [id, kind, rect?, x, y, r | w, h, a, hp, maxHp, flags, state]
+  pack(pr) {
+    return [pr.id, pr.kind, pr.shape === 'rect' ? 1 : 0, Math.round(pr.x), Math.round(pr.y), Math.round(pr.shape === 'rect' ? pr.w : pr.r), Math.round(pr.h || 0),
+      +(pr.a || 0).toFixed(3), pr.hp, pr.maxHp, (pr.solid ? 1 : 0) | (pr.cover ? 2 : 0), pr.state ?? 0];
+  },
+  unpack(a) {
+    const rect = a[2] === 1;
+    return { id: a[0], kind: a[1], shape: rect ? 'rect' : 'circle', x: a[3], y: a[4], r: rect ? 0 : a[5], w: rect ? a[5] : 0, h: a[6], a: a[7],
+      hp: a[8], maxHp: a[9], solid: !!(a[10] & 1), cover: !!(a[10] & 2), state: a[11] };
+  },
+};
+
+if (typeof module !== 'undefined') module.exports = { SHAPES, ARENA, ARENA_DEFS, PROPS };

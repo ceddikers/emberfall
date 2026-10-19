@@ -21,8 +21,11 @@ const Save = (() => {
   const KEY = 'emberfall-save';
   const VERSION = 4;
   const freshTalents = () => ({ rows: 0, picks: [null, null, null, null, null], ids: [null, null, null, null, null] });
-  // the first talent tree (2026-10-19), row by row, for naming v3 picks (the Alembist's tree hasn't changed since)
+  // the talent trees v3 saves were made with (2026-10-19), row by row, for naming v3 picks (the Alembist's, Thermist's
+  // and Driftblade's trees haven't changed since, so their picks carry over whole)
   const V3_TALENT_IDS = {
+    thermist: 'embers flicker afterglow / front phase skin / thermocline latent rebound / vortex pulse solstice / zero conduct twin',
+    driftblade: 'crescent eddies tailwind / calm gust sidestep / gyre second hover / galeforce jet hurricane / tailspin razor after',
     bastion: 'judgment counter lightforged / steadfast mercy sanctuary / unshaken riposte tithe / vigil wall standard / sunlit echo hallowed',
     bloodreaver: 'maul vein glutton / thirst iron scar / hunger quickvein feast / carnage roar deathless / rend tide frenzied',
     runeguard: 'etched afterglyph volatile / thick sanctum mirror / overflow reclaim thirdmark / long mirrorsedge well / glyphguard shards storm',

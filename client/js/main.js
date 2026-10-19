@@ -41,9 +41,10 @@
 
   const lineup = CLASSES.map((cls, i) => {
     const roleIdx = ['tank', 'dps', 'healer'].indexOf(cls.role);
-    const col = CLASSES.filter(c => c.role === cls.role).indexOf(cls);
-    const p = lineupSpot(roleIdx, col);
-    return { kind: 'hero', cls, x: p.x, y: p.y, angle: Math.PI / 2, st: newSt(i * 0.7), nextAct: 2 + Math.random() * 6 };
+    const same = CLASSES.filter(c => c.role === cls.role), col = same.indexOf(cls);
+    const p = lineupSpot(roleIdx, col, Math.max(3, same.length));
+    // labelUp: in a packed row every other name sits higher, so neighbours' names don't run together
+    return { kind: 'hero', cls, x: p.x, y: p.y, angle: Math.PI / 2, st: newSt(i * 0.7), nextAct: 2 + Math.random() * 6, labelUp: same.length > 3 && col % 2 === 1 };
   });
   const keeper = { kind: 'keeper', x: TOWN.keeper.x, y: TOWN.keeper.y, angle: Math.PI / 2, st: newSt() };
   const trainer = { kind: 'trainer', x: TOWN.trainer.x, y: TOWN.trainer.y, angle: Math.PI / 2, st: newSt(1.3) };   // talents (talent-panel.js)
@@ -252,7 +253,7 @@
           const e = enemyPos(); if (e) { tx = e.x; ty = e.y; } else { const m = mouseWorld(); tx = m.x; ty = m.y; }
         }
         FX.cast(player, ab, tx, ty, { mine: true, tent: ally != null ? entById(ally) : null });
-        Net.send(Object.assign({ t: 'cast', i, x: rnd(player.x), y: rnd(player.y), tx: rnd(tx), ty: rnd(ty), ally, s: scene === 'arena' ? 1 : 0, c: +now.toFixed(3) }, ab.talent ? { a: ab.id } : null));
+        Net.send({ t: 'cast', i, a: ab.id, x: rnd(player.x), y: rnd(player.y), tx: rnd(tx), ty: rnd(ty), ally, s: scene === 'arena' ? 1 : 0, c: +now.toFixed(3) });
         break;
       }
       case 'auto': {
@@ -281,7 +282,7 @@
         failAt = now;
         FX.text(player.x, player.y - 56, ev.reason === 'target' ? (ev.ab.target === 'enemy' ? (inArena() && (raid.boss.u || raid.state !== 'live') ? 'No target' : 'Out of range') : 'No target') : 'Not ready', '#c8c0d8', 12, 0.7);
         break;
-      case 'teleport': if (!ev.where || ev.where === 'behind') teleportBehind(); else kitMove(ev); break;
+      case 'teleport': if (ev.where && ev.where !== 'behind') kitMove(ev); else teleportBehind(); break;
       case 'fx': kitFx(ev.name, ev.data); break;
       case 'damage': onMyDamage(ev); break;
       default:
@@ -338,7 +339,7 @@
     const txt = rnd(ev.amount) + (ev.crit ? '!' : '') + (ev.positional ? ' ◆' : '');
     if (inArena()) {
       // damage goes to whatever you last aimed at (DoTs keep ticking on your current target)
-      const tgt = lastEnemy && lastEnemy.id != null && lastEnemy.id !== 'dummy' ? lastEnemy.id : 'boss';
+      const tgt = ev.tgt != null ? ev.tgt : lastEnemy && lastEnemy.id != null && lastEnemy.id !== 'dummy' ? lastEnemy.id : 'boss';
       sendCombat(Object.assign({}, ev, { tgt }));
       const at = enemyNow(tgt) || { x: raid.boss.x, y: raid.boss.y };
       FX.text(at.x + (Math.random() - 0.5) * 40, at.y - (tgt === 'boss' ? 70 : 34), txt, col, tgt === 'boss' ? big : big - 2);
@@ -512,27 +513,31 @@
     player.target = null; player.interact = null;
     FX.add({ type: 'ring', x: player.x, y: player.y, r: 38, color: '#c58aff', dur: 0.45 });
   }
-  // a move that moves you (a talent: kits.js kitMove): a quick slide, like the dash. where: 'back' (away from the
-  // enemy), 'forward' (where you face), 'ally' (toward ev.to, up to ev.d), 'point' (ev.x, ev.y)
+  // a kit move: it plays as a dash. Talents (kits.js kitMove) use 'back' (away from the enemy), 'forward' (where you
+  // face), 'ally' (toward ev.to, up to ev.d) and 'point' (ev.x, ev.y); the Driftblade's moves (kits.js kitMoveDest)
+  // use 'dash', 'around' (swing round the target) and 'through' (charge through it)
   function kitMove(ev) {
     if (amDead() || player.kb || myDebuff('rooted')) return;
-    const d = ev.d || 140, e = enemyPos();
-    let tx = player.x, ty = player.y;
-    if (ev.where === 'back') { const a = e ? Math.atan2(player.y - e.y, player.x - e.x) : player.angle + Math.PI; tx += Math.cos(a) * d; ty += Math.sin(a) * d; }
-    else if (ev.where === 'forward') { tx += Math.cos(player.angle) * d; ty += Math.sin(player.angle) * d; }
-    else if (ev.where === 'ally') { const a = entById(ev.to); if (!a || a === player) return; const dist = Math.hypot(a.x - player.x, a.y - player.y), k = Math.max(0, Math.min(d, dist - 40)) / (dist || 1); tx += (a.x - player.x) * k; ty += (a.y - player.y) * k; }
-    else if (ev.where === 'point' && Number.isFinite(ev.x) && Number.isFinite(ev.y)) { tx = ev.x; ty = ev.y; }
-    else return;
-    const dest = { x: tx, y: ty };
+    const en = enemyPos(), tgt = en ? { x: en.x, y: en.y } : null;
+    let dest, face = true;
+    if (ev.where === 'back' || ev.where === 'forward' || ev.where === 'ally' || ev.where === 'point') {
+      const d = ev.d || 140;
+      dest = { x: player.x, y: player.y }; face = false;
+      if (ev.where === 'back') { const a = tgt ? Math.atan2(player.y - tgt.y, player.x - tgt.x) : player.angle + Math.PI; dest.x += Math.cos(a) * d; dest.y += Math.sin(a) * d; }
+      else if (ev.where === 'forward') { dest.x += Math.cos(player.angle) * d; dest.y += Math.sin(player.angle) * d; }
+      else if (ev.where === 'ally') { const a = entById(ev.to); if (!a || a === player) return; const dist = Math.hypot(a.x - player.x, a.y - player.y), k = Math.max(0, Math.min(d, dist - 40)) / (dist || 1); dest.x += (a.x - player.x) * k; dest.y += (a.y - player.y) * k; }
+      else if (Number.isFinite(ev.x) && Number.isFinite(ev.y)) { dest.x = ev.x; dest.y = ev.y; }
+      else return;
+    } else dest = kitMoveDest(ev.where, player, tgt, player.target || mouseWorld(), ev.d);
     if (inArena()) clampArena(dest); else { dest.x = clamp(dest.x, 40, WORLD.w - 40); dest.y = clamp(dest.y, 40, WORLD.h - 40); }
-    player.dashMove = { t0: now, sx: player.x, sy: player.y, tx: dest.x, ty: dest.y };
+    player.dashMove = { sx: player.x, sy: player.y, tx: dest.x, ty: dest.y, t0: now };
+    if (face) player.angle = tgt && ev.where !== 'dash' ? Math.atan2(tgt.y - dest.y, tgt.x - dest.x) : Math.atan2(dest.y - player.y, dest.x - player.x);
     player.target = null; player.interact = null;
   }
-
   // class moments (Perfect Block, Overheat...): the big effect plays for everyone, the text only for you
   function kitFx(name, data) {
     const x = player.x, y = player.y;
-    const label = { perfect: ['Perfect!', '#ffe27a'], reflect: ['Reflect!', '#e0d4ff'], overheat: ['Overheat', '#ff6a3a'], lag: ['Time Lag', '#9ab8c0'] }[name];
+    const label = { perfect: ['Perfect!', '#ffe27a'], reflect: ['Reflect!', '#e0d4ff'], overheat: ['Overheat', '#ff6a3a'], lag: ['Time Lag', '#9ab8c0'], frostbite: ['Frostbite', '#9ad8ff'], riposte: ['Riposte!', '#e8fff8'] }[name];
     if (label) FX.text(x, y - 62, label[0], label[1], 17, 1.1);
     playKitFx(player, name, true, data);
     Net.send(Object.assign({ t: 'kfx', k: name, s: scene === 'arena' ? 1 : 0 }, data ? { d: data } : null));
@@ -540,8 +545,7 @@
   function playKitFx(ent, name, mine, data) {
     const f = KIT_VFX[name];
     if (!f) return;
-    const aimed = name === 'reflect' || name === 'dawnstar' || name === 'radiant' || name === 'echo' || (typeof KIT_VFX_AIMED !== 'undefined' && KIT_VFX_AIMED.has(name));
-    let target = aimed ? (ent === player ? enemyPos() : (inArena() ? { x: raid.boss.x, y: raid.boss.y } : null)) : null;
+    let target = name === 'reflect' || name === 'dawnstar' || name === 'radiant' || name === 'echo' || f.atTarget ? (ent === player ? enemyPos() : (inArena() ? { x: raid.boss.x, y: raid.boss.y } : null)) : null;
     // a moment aimed somewhere (an Alembist's vial): data.to names an ally, data.en an enemy ('boss', an add, a dummy)
     if (data && typeof data === 'object') {
       if (data.en != null) target = inArena() ? (enemyNow(data.en) || { x: raid.boss.x, y: raid.boss.y }) : (ent === player ? enemyPos() : null);
@@ -682,7 +686,9 @@
     lastRaidOpts = { mode, fill, boss: def.id };
     const humans = raidHumans();
     const spawns = {};
-    humans.forEach((h, i) => { const a = Math.PI / 2 + (i - (humans.length - 1) / 2) * 0.35; spawns[h.id] = [rnd(Math.cos(a) * 360), rnd(Math.sin(a) * 360)]; });
+    ARENA.use(def.id);
+    const sr = Math.min(360, ARENA.inner - 60);   // a ring below the boss, clear of the walls
+    humans.forEach((h, i) => { const a = Math.PI / 2 + (i - (humans.length - 1) / 2) * 0.35; spawns[h.id] = [rnd(Math.cos(a) * sr), rnd(Math.sin(a) * sr)]; });
     hostRoster = humans.map(h => Object.assign({}, h, { spawn: spawns[h.id] }));
     const bond = bondCounts(humans);   // gear party bonuses, fixed for the fight (gear is locked inside a raid)
     raidHost = new RaidHost({ def, mode, humans: hostHumans, bots: fill ? pickBots(humans) : [], seed: (Math.random() * 1e9) | 0, emit: m => Net.broadcastAll(m), bond: partyBonus(bond) });
@@ -812,6 +818,7 @@
       adds: new Map(), tethers: new Map(), zones: new Map(), lunges: [], husks: [], eggs: null,
       rollers: new Map(), reels: new Map(),
       bond: partyBonus(msg.bond),   // the gear party bonus the host counted for this fight
+      room: ArenaView.newRoom(),    // the room's props and floor state (host-owned, 'props' / 'propfx' / 'roomev')
     };
     player.reel = null;
     lockedEnemy = null;
@@ -891,6 +898,7 @@
   function clampArena(e) {
     ARENA.clamp(e, 12);
     if (raid) {
+      PROPS.collide(e, raid.room.props, 12);   // solid props: casks, pillars, stones...
       const b = raid.boss, dx = e.x - b.x, dy = e.y - b.y, d = Math.hypot(dx, dy), min = FIGHT.BOSS_R * 0.75;
       if (d < min && d > 0.01) { e.x = b.x + dx / d * min; e.y = b.y + dy / d * min; }
     }
@@ -991,13 +999,14 @@
       case 'meatballs': prop('meat', true, end + 0.3); break;
       // Volkar: the titan shows what's coming
       case 'clap': case 'storm': prop('sky', true, end + 0.4); break;
-      case 'fist': prop('fist', true, end + 0.2); break;
+      case 'fist': case 'avalanche': prop('fist', true, end + 0.2); break;
       case 'surge': prop('polar', true, end + 0.3); break;
       case 'rods': case 'crash': case 'field': prop('charge', true, end + 0.4); break;
       case 'gale': prop('inhale', true, end + 0.1); break;
       case 'walls': prop('spin', true, end + 10); break;
       // the Hollow King
-      case 'gaze': prop('gaze', true, end + 0.3); break;
+      case 'gaze': case 'lightsout': prop('gaze', true, end + 0.3); break;
+      case 'lids': case 'decree': prop('raise', true, end - 0.3); break;
       case 'doom': prop('doom', true, end + 0.4); break;
       case 'knell': case 'bells': prop('knell', true, end + 0.3); break;
       case 'stomp': case 'ring': prop('graves', true, end + 0.2); break;
@@ -1005,11 +1014,14 @@
       case 'sweep': prop('raise', true, end - 0.45); break;
       // Hard-only moves
       case 'flop': prop('flop', true, end + 0.2); if (msg.then) prop('next', msg.then, end + 0.3); break;
-      case 'throw': prop('toss', true, end + 0.1); break;
+      case 'throw': case 'larder': case 'hook': prop('toss', true, end + 0.1); break;
+      case 'gut': prop('steam', true, end + 0.3); break;
       case 'flambe': prop('brandy', true, end + 0.3); break;
       case 'eggs': prop('brood', true, end + 0.6); break;
       case 'fang': prop('rear', true, end + 0.4); prop('venom', true, end + 0.2); break;
       case 'volley': prop('silk', true, end + 4.5); prop('rear', true, end + 0.5); break;
+      case 'deluge': prop('venom', true, end + 0.3); prop('rear', true, end + 0.3); break;
+      case 'strand': case 'cocoon': case 'ambush': prop('silk', true, end + 0.4); prop('rear', true, end + 0.3); break;
       case 'chain': case 'orbs': prop('charge', true, end + 0.4); break;
       case 'skyfall': prop('sky', true, end + 0.4); break;
       case 'audience': prop('audience', true, end + 0.3); break;
@@ -1093,7 +1105,7 @@
   Net.on('zone', msg => {
     if (!raid) return;
     if (msg.clear) { for (const z of raid.zones.values()) z.end = Math.min(z.end, now + 1); return; }
-    raid.zones.set(msg.id, { shape: msg.shape, tag: msg.tag, start: now, end: now + msg.dur });
+    raid.zones.set(msg.id, { shape: msg.shape, tag: msg.tag, start: now, end: now + (msg.delay || 0) + msg.dur, at: now + (msg.delay || 0) });
   });
   Net.on('lunge', msg => {
     if (!raid) return;
@@ -1151,7 +1163,7 @@
   Net.on('sweep', msg => {
     if (!raid) return;
     if (msg.clear) { raid.sweeps.clear(); return; }
-    raid.sweeps.set(msg.id, { x: msg.x, y: msg.y, arms: msg.arms, a0: msg.a0, spin: msg.spin, w: msg.w, start: now, at: now + msg.delay, end: now + msg.delay + msg.dur });
+    raid.sweeps.set(msg.id, { x: msg.x, y: msg.y, arms: msg.arms, a0: msg.a0, spin: msg.spin, w: msg.w, start: now, at: now + msg.delay, end: now + msg.delay + msg.dur, cover: msg.cover || null });
   });
   // the closing edge: sparks mark where the wall will be, then it jumps there and pushes anyone outside back in
   Net.on('edgewarn', msg => { if (raid) raid.edgeWarn = { r: msg.r, from: ARENA.r, start: now, end: now + msg.dur }; });
@@ -1171,6 +1183,10 @@
   });
   // the storm's constant pulse: a faint bolt touches everyone
   Net.on('pulse', () => { if (raid) BOSS_VFX.pulse(raidUnits()); });
+  // the room: props and floor state (the whole list), a prop chipped / broken / slammed into, and room moments
+  Net.on('props', msg => { if (raid) ArenaView.roomProps(raid.room, msg, now); });
+  Net.on('propfx', msg => { if (raid) BOSS_VFX.propFx(msg, raid.room, entById); });
+  Net.on('roomev', msg => { if (raid) ArenaView.roomEvent(raid.room, msg, now, entById); });
 
   // --- the Hollow King
   // lanterns: [id, x, y, carrier, last]; a carried one is drawn in its carrier's hands
@@ -1205,6 +1221,7 @@
     const a = Math.atan2(player.y - msg.y, player.x - msg.x);
     const dest = { x: player.x + Math.cos(a) * msg.d, y: player.y + Math.sin(a) * msg.d };
     clampArena(dest);
+    PROPS.clipMove(player, dest, raid.room.props, 14);   // a throw stops at a solid prop
     player.kb = { sx: player.x, sy: player.y, tx: dest.x, ty: dest.y, t0: now };
     player.dashMove = null; player.target = null;
   });
@@ -1404,7 +1421,7 @@
       if (d <= stopAt) player.target = null;
       else {
         const reeled = inArena() && player.reel && now >= player.reel.pullAt;
-        const slow = (actP(player.st, 'brace') >= 0 ? 0.4 : 1) * (myDebuff('slowed') ? FIGHT.SLOWED : 1) * (reeled ? 0.4 : 1);
+        const slow = (actP(player.st, 'brace') >= 0 ? 0.4 : 1) * (myDebuff('slowed') ? FIGHT.SLOWED : 1) * (reeled ? 0.4 : 1) * windLaneBoost(player.x, player.y, dx, dy, FX.now);   // a Driftblade's Slipstream lane
         const step = Math.min(d, MOVE_SPEED * slow * dt);
         const ox = player.x, oy = player.y;
         player.x += dx / d * step; player.y += dy / d * step;
@@ -1795,7 +1812,7 @@
     VFX.draw(ctx, 'air');
     drawSmoke(ctx, now);
 
-    for (const h of lineup) if (Math.hypot(player.x - h.x, player.y - h.y) < 260 || hov?.label === h.cls.name) label(ctx, h.cls.name, h.x, h.y - 34, ROLES[h.cls.role].color, 11);
+    for (const h of lineup) if (Math.hypot(player.x - h.x, player.y - h.y) < 260 || hov?.label === h.cls.name) label(ctx, h.cls.name, h.x, h.y - (h.labelUp ? 47 : 34), ROLES[h.cls.role].color, 11);
     const bob = Math.sin(now * 4) * 3;
     label(ctx, '!', keeper.x, keeper.y - 40 + bob, '#ffd65a', 26, 'Cinzel, Georgia, serif', 800);
     label(ctx, 'Barkeep', keeper.x, keeper.y - 28 + 6, '#f0d48a', 11);
@@ -1817,11 +1834,13 @@
     ArenaView.drawFloor(ctx, raid.def.id, Math.min(1.5, DPR * zoom));
     ArenaView.drawAmbient(ctx, now);
     ArenaView.drawEdge(ctx, now, raid.edgeWarn);
+    ArenaView.drawRoomUnder(ctx, raid.room, now, { W, H, DPR, zoom, cam, units: raidUnits(), entById, boss: raid.bossDraw });
     if (raid.def.id === 'hollowking') {
       // the Long Night: dark but for a little light around each hero and a wide pool round each lantern
       if (raid.nightK > 0.01) {
         const lights = raidUnits().map(u => ({ x: u.x, y: u.y, r: 120 }));
         for (const l of raid.lanterns) { const c = l.carrier != null ? entById(l.carrier) : null; lights.push({ x: c ? c.x : l.x, y: c ? c.y : l.y, r: l.last ? 300 : 190 }); }
+        for (const pr of raid.room.props) if (pr.kind === 'brazier' && pr.state === 1) lights.push({ x: pr.x, y: pr.y, r: 200 });
         ArenaView.drawNight(ctx, lights, raid.nightK, { W, H, DPR, zoom, cam });
       }
       ArenaView.drawMoon(ctx, raid.def.enrage ? raid.fightTime / raid.def.enrage[raid.mode] : 0, now);
@@ -1834,7 +1853,7 @@
     // things that shelter from Gale Slam: posts, and rods waiting for their bolt
     const covers = [...raid.posts.values()].filter(p => now < p.end).map(p => ({ x: p.x, y: p.y }));
     for (const tg of raid.tgs.values()) if (tg.tag === 'rod' && tg.gone == null) covers.push({ x: tg.live.x, y: tg.live.y });
-    const tellEnv = { boss: bd, bossId: raid.def.id, entById, hard: raid.mode === 'hard', pol: raid.pol, units, covers };
+    const tellEnv = { boss: bd, bossId: raid.def.id, entById, hard: raid.mode === 'hard', pol: raid.pol, units, covers, props: raid.room.props, room: raid.room };
     ArenaView.drawTelegraphs(ctx, raid.tgs, now, tellEnv);
     BossTells.drawRollers(ctx, raid.rollers, now, tellEnv);
     BossTells.drawSweeps(ctx, raid.sweeps, now, tellEnv);
@@ -1863,7 +1882,8 @@
     const posts = [...raid.posts.values()].map(p => ({ kind: 'post', y: p.y, p }));
     const knights = [...raid.knights.values()].map(k => ({ kind: 'knight', y: k.y, k }));
     const lants = raid.lanterns.filter(l => l.carrier == null).map(l => ({ kind: 'lantern', y: l.y, l }));
-    const all = [...ents, bossEnt, ...adds, ...husks, ...posts, ...knights, ...lants].sort((a, b) => a.y - b.y);
+    const roomProps = raid.room.props.map(pr => ({ kind: 'prop', y: pr.y + (pr.shape === 'rect' ? 0 : pr.r * 0.4), pr }));
+    const all = [...ents, bossEnt, ...adds, ...husks, ...posts, ...knights, ...lants, ...roomProps].sort((a, b) => a.y - b.y);
     const bossDef = BOSSES.find(x => x.id === raid.def.id);
     for (const e of all) {
       if (e === bossEnt) {
@@ -1880,6 +1900,8 @@
         drawEchoKnight(ctx, k.x, k.y, k.f, k.st, a * (1 - 0.3 * raid.nightK));
       } else if (e.kind === 'lantern') {
         ArenaView.lantern(ctx, e.l.x, e.l.y, now, false, e.l.last);
+      } else if (e.kind === 'prop') {
+        ArenaView.drawProp(ctx, e.pr, now, raid.room);
       } else if (e.kind === 'add') {
         ctx.save(); ctx.globalAlpha = e.alpha;
         drawAdd(ctx, e.a.kind, e.a.x, e.a.y, e.a.f, e.a.st, e.a.enr, 1.5);
@@ -1896,6 +1918,7 @@
       ArenaView.doomMark(ctx, e.x, e.y - (e.lift || 0) - 92 * heroScale() / HERO_SCALE, (d.end - now) / Math.max(0.1, d.end - d.start), now);
     }
     for (const lg of raid.lunges) ArenaView.lungeLegs(ctx, lg.x, lg.y, lg, now);
+    ArenaView.drawRoomOver(ctx, raid.room, now, tellEnv);
     BossTells.drawReels(ctx, raid.reels, now, tellEnv);
     for (const th of raid.tethers.values()) {
       const a = entById(th.a), b = entById(th.b);
@@ -2030,11 +2053,13 @@
   let selPortrait = null, selFromGrid = false;
   // Optional painted portraits (client/portraits/<classId>.png, front-facing). Missing ones fall back to the sprite.
   const PORTRAITS = {};
-  for (const c of CLASSES) { const img = new Image(); img.onload = () => { PORTRAITS[c.id] = img; }; img.src = `portraits/${c.id}.png`; }
+  // (classes flagged art.portraits === false in data.js have none yet: skip them rather than ask for files that 404)
+  const hasPortraits = c => !(c.art && c.art.portraits === false);
+  for (const c of CLASSES.filter(hasPortraits)) { const img = new Image(); img.onload = () => { PORTRAITS[c.id] = img; }; img.src = `portraits/${c.id}.png`; }
   // spec portraits are big, so a hero's are fetched the first time its page opens, not at startup
   const SPEC_PORTRAITS = {}, specPortraitsAsked = new Set();
   function loadSpecPortraits(cid) {
-    if (specPortraitsAsked.has(cid)) return;
+    if (specPortraitsAsked.has(cid) || !hasPortraits(CLASSES.find(c => c.id === cid) || {})) return;
     specPortraitsAsked.add(cid);
     for (const sp of SPECS[cid] || []) { const key = `${cid}-${sp.id}`, img = new Image(); img.onload = () => { SPEC_PORTRAITS[key] = img; }; img.src = `portraits/${key}.png`; }
   }
@@ -2045,23 +2070,30 @@
     c.drawImage(img, (img.width - sw) / 2, (img.height - sh) * 0.15, sw, sh, x, y, size, size);
   }
   (function buildAltar() {
+    // one band per role (rows, so the roster can grow), compact tiles flowing inside each band
     const altar = $('altar');
-    for (const role of ['tank', 'dps', 'healer']) {
-      const col = document.createElement('div');
-      col.className = 'altar-col'; col.style.setProperty('--c', ROLES[role].color);
-      col.innerHTML = `<h3>${role === 'dps' ? 'Damage' : ROLES[role].name + 's'}</h3>`;
-      for (const cls of CLASSES.filter(c => c.role === role)) {
+    const COMPLEXITY = { 2: 'More moving parts than most', 3: 'Many moving parts' };
+    for (const role of Object.keys(ROLES)) {
+      const list = CLASSES.filter(c => c.role === role);
+      if (!list.length) continue;
+      const band = document.createElement('section');
+      band.className = 'altar-col altar-band'; band.style.setProperty('--c', ROLES[role].color);
+      band.innerHTML = `<h3>${role === 'dps' ? 'Damage' : ROLES[role].name + 's'}<i>${list.length}</i></h3><div class="band-grid"></div>`;
+      const grid = band.querySelector('.band-grid');
+      for (const cls of list) {
         const b = document.createElement('button');
         b.className = 'hero-card'; b.dataset.id = cls.id; b.style.setProperty('--a', cls.accent);
         const cv = document.createElement('canvas'); setupCanvas(cv, 112, 112);
         b.appendChild(cv);
-        b.insertAdjacentHTML('beforeend', `<span class="hc-text"><b>${cls.name}</b><small>${cls.title}</small><span class="diff">${diamonds(cls.difficulty)}</span></span><em class="hc-taken"></em>`);
+        // complexity pips: only on the classes that ask more of you (data.js `complexity` 2 or 3)
+        const cx = cls.complexity >= 2 ? `<span class="hc-cx" data-tip="${COMPLEXITY[cls.complexity] || COMPLEXITY[3]}">${'<i></i>'.repeat(cls.complexity)}</span>` : '';
+        b.insertAdjacentHTML('beforeend', `<span class="hc-text"><b>${cls.name}</b><small>${cls.title}</small><span class="diff">${diamonds(cls.difficulty)}</span></span>${cx}<em class="hc-taken"></em>`);
         Tip.set(b, () => `<b>${cls.name}</b><em>${ROLES[cls.role].name} · ${cls.title}</em>“${cls.tagline}”`);
         b.addEventListener('click', () => { selFromGrid = true; showDetail(cls); });
-        col.appendChild(b);
+        grid.appendChild(b);
         selThumbs.push({ cv, cls, b, st: newSt(Math.random() * 3) });
       }
-      altar.appendChild(col);
+      altar.appendChild(band);
     }
   })();
   // an ability's icon as a CSS background (the taunt layers its own painting over the icon it borrows)
@@ -2431,9 +2463,8 @@
     // where they cast from goes into their track like any position update (snapping here would fight the smoothing)
     if (!e.bot) { e.tx = msg.x; e.ty = msg.y; if (e.track) e.track.push(e.clock ? e.clock.map(msg.c, now) : now, msg.x, msg.y, e.track.latest().a); }
     if (msg.i === 6) { e.dashUntil = now + 0.2; VFX.setScale(0.6); KIT_VFX.dash(e, e.cls.accent); VFX.setScale(1); return; }
-    const kit = kitFor(e.cls.id, e.spec);
     // a move a talent granted (msg.a names it) looks like itself, not the move it replaced
-    const ab = (msg.a && kit.talentAbilities && Object.values(kit.talentAbilities).find(t => t.id === msg.a)) || kit.abilities[msg.i];
+    const ab = (msg.a && abilityById(e.cls.id, e.spec, msg.a)) || kitFor(e.cls.id, e.spec).abilities[msg.i];
     if (!ab) return;
     let tx = msg.tx, ty = msg.ty, tent = null;
     if (msg.ally != null) { tent = entById(msg.ally); if (tent) { tx = tent.x; ty = tent.y; } }

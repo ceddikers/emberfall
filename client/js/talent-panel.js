@@ -34,9 +34,12 @@ const TalentPanel = (() => {
   function cardTip(cls, kit, spec, t, r) {
     const ab = abFor(kit, t.ab);
     const where = ab ? ab.name : '';
-    // a talent that grants a move wears that move's icon and says it's a new move (its text describes the move)
-    const g = t.grants && kit.talentAbilities && kit.talentAbilities[t.id];
-    return `<div class="tip-ab"><i class="ab-icon ${ab ? ab.type : ''}" style="background-image:url(${abilityIcon(cls.id, g ? abilityIconId(g) : t.ab)})"></i><div><b>${t.name}</b><em>${ROMAN[r]} · ${g ? 'New move, in place of ' : ''}${where}</em></div></div>${talentText(t, spec)}`;
+    // a talent that puts a new move on a button: show the move itself (kits.js TALENT_ABILITIES); its own description
+    // follows unless the talent's text already tells the whole move
+    const mv = t.grants && typeof talentMoveFor === 'function' ? talentMoveFor(cls.id, spec, t.id) : null;
+    const text = talentText(t, spec);
+    if (mv) return `<div class="tip-ab"><i class="ab-icon ${mv.type}" style="background-image:url(${abilityIcon(cls.id, abilityIconId(Object.assign({ fromTalent: t.id }, mv)))})"></i><div><b>${t.name}</b><em>${ROMAN[r]} · new move, replaces ${where}</em></div></div>${text}${text.includes(mv.name) ? '' : `<div class="it-talent"><span><u>${mv.name}:</u> ${mv.desc}</span></div>`}`;
+    return `<div class="tip-ab"><i class="ab-icon ${ab ? ab.type : ''}" style="background-image:url(${abilityIcon(cls.id, t.ab)})"></i><div><b>${t.name}</b><em>${ROMAN[r]} · ${where}</em></div></div>${text}`;
   }
 
   function render() {
@@ -58,7 +61,7 @@ const TalentPanel = (() => {
         if (sealed) return '<div class="tal-card sealed" aria-hidden="true"><i></i><span></span><span></span></div>';
         const picked = open && st.picks[r] === c;
         return `<button class="tal-card${picked ? ' picked' : ''}${next ? ' preview' : ''}" data-r="${r}" data-c="${c}"${!open || locked ? ' aria-disabled="true"' : ''}>
-          <i class="ab-icon" style="background-image:url(${abilityIcon(cls.id, t.ab)})"></i>
+          <i class="ab-icon" style="background-image:url(${abilityIcon(cls.id, (typeof talentMoveFor === 'function' && talentMoveFor(cls.id, spec, t.id) || {}).id || t.ab)})"></i>
           <span><b>${t.name}</b><p>${talentText(t, spec)}</p></span></button>`;
       }).join('');
       return `<section class="tal-row ${open ? 'open' : next ? 'next' : 'sealed'}">${tier}<div class="tal-cards">${cards}</div></section>`;

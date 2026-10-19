@@ -13,8 +13,6 @@ const DPS_TOLERANCE = 0.08;   // a class's pro DPS may drift this far from the b
 const SPEC_TOLERANCE = 0.05;  // a specialization's pro DPS may differ this much from its own base class
 const TALENT_MAX = 7;    // one talent may add at most this much pro DPS (%) to its class or spec (tools/talents.js)
 const BUILD_MAX = 18;    // ... and the strongest pick of every row together at most this much
-// classes whose trees follow the talent rule (talents.js): at most one plain number, a granted move in rows III and V
-const RULED_TALENTS = ['bastion', 'bloodreaver', 'runeguard', 'ranger', 'shadowblade', 'pyromancer', 'cleric', 'grovekeeper', 'chronomancer', 'alembist'];
 // Normal is meant to take a real group several wipes, so a bot party only has to clear one run in RAID_RUNS
 const RAID_RUNS = 3;
 // bot raids: every boss, and every spec somewhere, with a fixed line-up so the result doesn't depend on a random spec
@@ -26,6 +24,13 @@ const RAIDS = [   // [boss name, boss id, tank, healer, two DPS]
   ['the Hollow King', 'hollowking', 'bastion:sentinel', 'grovekeeper:lifebinder', 'ranger:base', 'pyromancer:cataclysm'],
   ['the Hollow King', 'hollowking', 'bastion:crusader', 'chronomancer:echoist', 'shadowblade:base', 'ranger:sharpshooter'],
   ['the Hollow King', 'hollowking', 'runeguard:spellwarden', 'cleric:base', 'ranger:venomstrike', 'shadowblade:nightstalker'],
+  // the advanced classes (classes-a): each spec somewhere
+  ['Grubnak', 'grubnak', 'bastion:base', 'cleric:base', 'thermist:base', 'driftblade:base'],
+  // (Skitterra with pillars and Deluge: two advanced DPS bots together run out of time on the adds, so each gets a partner)
+  ['Skitterra', 'skitterra', 'bloodreaver:base', 'grovekeeper:base', 'thermist:pendulum', 'ranger:base'],
+  ['Skitterra', 'skitterra', 'runeguard:base', 'grovekeeper:base', 'driftblade:orbit', 'shadowblade:base'],
+  ['Volkar', 'volkar', 'bastion:base', 'cleric:base', 'thermist:zenith', 'driftblade:comet'],   // (with the reworked Volkar, an Accelerant plus two advanced DPS was too tight)
+  ['the Hollow King', 'hollowking', 'runeguard:base', 'cleric:aegis', 'thermist:base', 'driftblade:base'],
   // Alembist (classes-b): the base kit and each spec healing a boss
   ['Grubnak', 'grubnak', 'bastion:base', 'alembist:base', 'ranger:base', 'pyromancer:base'],
   ['Skitterra', 'skitterra', 'bastion:sentinel', 'alembist:volatile', 'ranger:base', 'shadowblade:base'],
@@ -93,6 +98,7 @@ function data() {
     for (let a = 0; a < TAU; a += 0.37) { const e = ARENA.edge(a); if (Math.abs(ARENA.sd(Math.cos(a) * e, Math.sin(a) * e)) > 1) { shapeProbs.push(`${id}: edge() off at angle ${a.toFixed(2)}`); break; } }
   }
   if (shapeProbs.length) fail('Arena shapes hold players in', shapeProbs.join('\n')); else pass('Arena shapes hold players in', Object.keys(ARENA_DEFS).join(', ') + ', circle');
+  props();
 
   // smoothing: a unit moving at a steady speed is drawn at a steady speed, never past where it really is
   // updates arrive 10 times a second as time passes (like the host's boss updates); frames run at 60 fps
@@ -103,7 +109,7 @@ function data() {
   const steps = []; let last = tr.at(0.3).x, overshoot = false;
   for (let t = 0.3 + 1 / 60; t < 2.0; t += 1 / 60) { feed(t); const x = tr.at(t).x; steps.push(x - last); last = x; if (x > 400.01) overshoot = true; }
   const spread = Math.max(...steps) - Math.min(...steps);
-  if (!overshoot && spread < 0.05) pass('Network smoothing is even', `step ${steps[0].toFixed(2)} Â± ${(spread / 2).toFixed(3)}`);
+  if (!overshoot && spread < 0.05) pass('Network smoothing is even', `step ${steps[0].toFixed(2)} ± ${(spread / 2).toFixed(3)}`);
   else fail('Network smoothing is even', `spread ${spread.toFixed(3)}, overshoot ${overshoot}`);
 
   // ... and stays even over a wobbly connection: 40-75 ms delivery, noticed only on the receiver's next frame,
@@ -133,6 +139,60 @@ function data() {
   const okRange = w => w.lo > 180 && w.hi < 220;
   if (okRange(ws) && okRange(wst)) pass('Smoothing holds over a wobbly connection', `speed ${ws.lo.toFixed(0)}-${ws.hi.toFixed(0)}, ${wst.lo.toFixed(0)}-${wst.hi.toFixed(0)} after a stall; by arrival time alone ${wa.lo.toFixed(0)}-${wa.hi.toFixed(0)}`);
   else fail('Smoothing holds over a wobbly connection', `speed ${ws.lo.toFixed(0)}-${ws.hi.toFixed(0)}, after a stall ${wst.lo.toFixed(0)}-${wst.hi.toFixed(0)}; want 180-220`);
+}
+
+// ---------------------------------------------------------------- 2a. arena props: solid, cover, throws, chipping
+function props() {
+  const probs = [];
+  const { FightSim } = require(path.join(ROOT, 'client/js', 'arena/fight.js'));
+  global.FIGHT = global.FIGHT || require(path.join(ROOT, 'client/js', 'arena/fight.js')).FIGHT;
+  const ps = [{ id: 1, name: 'behind', role: 'dps', x: 0, y: 220 }, { id: 2, name: 'open', role: 'dps', x: 220, y: 0 }, { id: 3, name: 'beside', role: 'dps', x: 70, y: 200 }];
+  const sent = [];
+  const def = { id: 'grubnak', name: 'test', hp: { normal: 1e6 }, autoDmg: { normal: 0 }, script() {} };
+  const sim = new FightSim(def, 'normal', () => ps, m => sent.push(m), 1);
+  sim.state = 'live'; sim.boss.x = 0; sim.boss.y = 0;
+  const cask = sim.addProp({ kind: 'cask', x: 0, y: 110, r: 30, hp: 2, solid: true, cover: true });
+  // a blast from the boss: the hero straight behind the cask is spared, the one in the open and the one just beside its shadow are hit
+  sim.mech({ type: 'aoe', shape: { kind: 'circle', x: 0, y: 0, r: 2000 }, delay: 0, dmg: 10000, cover: true, chip: 'all' });
+  sim.updateMechs();
+  const hp = id => sim.ps.get(id).hp, full = id => sim.ps.get(id).hp === sim.ps.get(id).maxHp;
+  if (!full(1)) probs.push('cover: the hero behind the cask was hit');
+  if (full(2)) probs.push('cover: the hero in the open was spared');
+  if (full(3)) probs.push('cover: the hero beside the shadow was spared');
+  if (cask.hp !== 1) probs.push(`cover: the cask has ${cask.hp} hits left after one blast (want 1)`);
+  // ... a cap of one: only the nearer of two behind it is spared
+  ps[2].x = 0; ps[2].y = 300;
+  const before = [hp(1), hp(3)];
+  sim.mech({ type: 'aoe', shape: { kind: 'circle', x: 0, y: 0, r: 2000 }, delay: 0, dmg: 4000, cover: true, coverCap: 1 });
+  sim.updateMechs();
+  if (hp(1) !== before[0] || hp(3) === before[1]) probs.push('cover cap: want the nearer hero spared and the farther one hit');
+  // the shadow drawn for a prop is the same area the host spares
+  const sh = PROPS.shadowPoly(0, 0, cask), inPoly = (x, y) => { let c = false; for (let i = 0, j = sh.length - 1; i < sh.length; j = i++) { const [xi, yi] = sh[i], [xj, yj] = sh[j]; if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) c = !c; } return c; };
+  for (const [x, y] of [[0, 220], [15, 300], [60, 260], [-40, 200], [0, 500]]) if (inPoly(x, y) !== !!PROPS.shadowing(0, 0, x, y, [cask])) probs.push(`shadow drawn and shadow judged disagree at (${x}, ${y})`);
+  // solid: walking into it pushes you out; a throw stops at it (and a throw into it is a wall slam)
+  const e = { x: 4, y: 104 }; PROPS.collide(e, sim.props, 14);
+  if (PROPS.sd(cask, e.x, e.y) < 13.5) probs.push('collide left a hero inside the cask');
+  const thrown = sim.players().find(p => p.id === 1);
+  thrown.y = 220; ps[0].y = 220;
+  const res = sim.knock(thrown, 0, 400, 250, { slam: 1000 });
+  if (!res.slam || res.dest.y < 110 + 30 - 1) probs.push(`a throw through the cask ended at (${res.dest.x | 0}, ${res.dest.y | 0}) without a slam`);
+  sim.hitProp(cask, 1);
+  if (sim.props.length || !sim.floor.some(f => f.kind === 'rubble') || !sent.some(m => m.t === 'propfx' && m.k === 'break')) probs.push('a cask on its last hit should break and leave rubble');
+  sim.broadcastProps();
+  const msg = sent.filter(m => m.t === 'props').pop();
+  if (!msg || msg.p.length !== 0 || !msg.f.length) probs.push('the props message should carry the (empty) props and the rubble');
+  // a round room with a wedge broken off (Volkar, Hard): the wall follows the break, and a throw stops at the new lip
+  const saved = Object.assign({}, ARENA);
+  ARENA.use('volkar'); ARENA.cuts.push({ a0: -0.6, a1: 0.6, r: 300 });
+  if (Math.abs(ARENA.sd(300, 0)) > 1 || Math.abs(ARENA.sd(0, 540)) > 1) probs.push('broken edge: the wall should be 300 out inside the wedge and 540 elsewhere');
+  const lip = ARENA.clamp({ x: 500, y: 0 }, 10);
+  if (Math.hypot(lip.x, lip.y) > 291) probs.push('broken edge: clamp left a hero out over the break');
+  thrown.x = 100; thrown.y = 0;
+  const off = sim.knock(thrown, 0, 0, 300);
+  if (!off.slam || off.dest.x > 300 - 11) probs.push('broken edge: a throw off the lip should stop at it');
+  Object.assign(ARENA, saved);
+  if (probs.length) fail('Arena props: solid, cover, throws', probs.join('\n'));
+  else pass('Arena props: solid, cover, throws', 'cover spares the hero behind a cask and hits the open; caps, shadows, collisions, slams, breaking and broken edges hold');
 }
 
 // ---------------------------------------------------------------- 2b. items: rarities, effects, loot tables, chests
@@ -276,7 +336,9 @@ function saveUpgrade() {
   const store3 = { 'emberfall-save': JSON.stringify({ v: 3, name: 'Cy', gold: 0, inv: { next: 1, items: [], equip: {}, lost: [] }, settings: {}, heroes: {
     ranger: { clears: {}, spec: null, talents: { rows: 5, picks: [0, 0, 2, 1, 2] } },     // rhythm (kept), shelter, trail, barrage (gone), falcon (kept in row V)
     bastion: { clears: {}, spec: null, talents: { rows: 3, picks: [1, null, 0, null, null] } },   // counter, unshaken (gone)
-    alembist: { clears: {}, spec: null, talents: { rows: 2, picks: [2, 1] } } } }) };      // an unchanged tree keeps everything
+    alembist: { clears: {}, spec: null, found: ['EES'], talents: { rows: 2, picks: [2, 1] } },   // an unchanged tree keeps everything
+    thermist: { clears: {}, spec: 'zenith', talents: { rows: 5, picks: [1, 2, 0, 1, 0] } },
+    driftblade: { clears: {}, spec: null, talents: { rows: 4, picks: [0, 0, 0, 2, null] } } } }) };
   global.localStorage = { getItem: k => (k in store3 ? store3[k] : null), setItem: (k, v) => { store3[k] = String(v); } };
   delete require.cache[require.resolve(p)];
   const { Save: S3 } = require(p);
@@ -285,7 +347,11 @@ function saveUpgrade() {
   if (rg.rows !== 5 || JSON.stringify(rg.picks) !== JSON.stringify([col('ranger', 0, 'ranger_rhythm'), null, null, null, col('ranger', 4, 'ranger_falcon')])) probs.push(`v3 ranger picks: ${JSON.stringify(rg)}`);
   if (ba.rows !== 3 || ba.picks.some(x => x != null)) probs.push(`v3 bastion picks should all clear: ${JSON.stringify(ba)}`);
   if (al.rows !== 2 || al.picks[0] !== 2 || al.picks[1] !== 1) probs.push(`v3 alembist picks should stay: ${JSON.stringify(al)}`);
-  if (talentSet('ranger', rg).size !== 2) probs.push(`v3 ranger should hold 2 talents, holds ${[...talentSet('ranger', rg)]}`);
+  if (JSON.stringify(S3.found('alembist')) !== '["EES"]') probs.push(`v3 alembist should keep its found Reactions: ${JSON.stringify(S3.found('alembist'))}`);
+  for (const [cls, rows, picks] of [['thermist', 5, [1, 2, 0, 1, 0]], ['driftblade', 4, [0, 0, 0, 2, null]]]) {
+    const t = S3.talents(cls);
+    if (t.rows !== rows || JSON.stringify(t.picks) !== JSON.stringify(picks)) probs.push(`v3 ${cls} picks should stay: ${JSON.stringify(t)}`);
+  }  if (talentSet('ranger', rg).size !== 2) probs.push(`v3 ranger should hold 2 talents, holds ${[...talentSet('ranger', rg)]}`);
   // a pick whose talent later leaves its row clears on reading, without touching the rows bought
   S3.pickTalent('ranger', 1, 0);
   S3.heroTalents('ranger').ids[1] = 'ranger_gone_talent';
@@ -312,31 +378,41 @@ function talents() {
         if (!t.name || !t.text) probs.push(`${where}: needs a name and text`);
         if (!KITS[c.id].abilities.some(a => a.id === t.ab)) probs.push(`${where}: unknown ability ${t.ab}`);
         for (const k of Object.keys(t)) if (!['id', 'name', 'ab', 'text', 'spec', 'cd', 'cast', 'specMods', 'grants'].includes(k)) probs.push(`${where}: unknown field "${k}"`);
-        // a talent that grants a new move: the kit holds it in talentAbilities, in place of the talent's own ability
-        const granted = t.grants && KITS[c.id].talentAbilities && KITS[c.id].talentAbilities[t.id];
-        if (t.grants && (!granted || granted.replaces !== t.ab)) probs.push(`${where}: grants a move the kit doesn't have (talentAbilities.${t.id}, replacing ${t.ab})`);
-        if (granted) {
-          used.add(t.id);
-          // a granted move is whole on its own (name, words, effect, an icon to borrow, flagged as a talent's) and has a
-          // slot to take in the base kit and in every spec (a spec's replacement still names the move it took over)
-          for (const f of ['id', 'name', 'desc', 'type', 'effect', 'icon']) if (!granted[f]) probs.push(`${where}: granted move has no ${f}`);
-          if (!granted.talent) probs.push(`${where}: granted move should say talent: true (remote players see it by id)`);
-          for (const s of [null, ...specIds]) {
-            const kit = kitFor(c.id, s), slots = kit.abilities.filter(a => (a.replaces || a.id) === t.ab);
-            if (slots.length !== 1) probs.push(`${where}: ${s || 'base'} kit has ${slots.length} slots for ${t.ab}`);
-            if (kit.abilities.some(a => a.id === granted.id && a !== slots[0])) probs.push(`${where}: ${granted.id} clashes with a move in the ${s || 'base'} kit`);
-          }
+        // a talent that grants a new move (grants: true): specs.js talentMoveFor finds it (TALENT_ABILITIES in kits.js, or a
+        // kit's own talentAbilities) for the base kit and every spec. The move is whole on its own (id, name, desc, type,
+        // effect, an icon to borrow), takes the slot of the talent's own ability (exactly one in every spec's kit), lands
+        // there when the talent is held, and other clients can find it by id (abilityById: casts carry the move id)
+        const moves = [null, ...specIds].map(s => ({ s, mv: talentMoveFor(c.id, s, t.id) }));
+        const grant = moves.some(m => m.mv);
+        if (t.grants && !grant) probs.push(`${where}: says grants but no move is registered for it`);
+        if (!t.grants && grant) probs.push(`${where}: has a new move but no grants: true`);
+        for (const { s, mv } of moves) {
+          if (!t.grants) break;
+          const w = where + (s ? ' (' + s + ')' : '');
+          if (!mv) { probs.push(w + ': no move'); continue; }
+          if (mv.replaces !== t.ab) probs.push(w + ': its move replaces ' + mv.replaces + ', not ' + t.ab);
+          for (const fl of ['id', 'name', 'desc', 'type', 'icon']) if (!mv[fl]) probs.push(w + ': its move has no ' + fl);
+          if (typeof mv.effect !== 'function') probs.push(w + ': its move has no effect');
+          if (KITS[c.id].abilities.some(x => x.id === mv.id)) probs.push(w + ': its move reuses the id ' + mv.id);
+          const slots = kitFor(c.id, s).abilities.filter(x => (x.replaces || x.id) === t.ab);
+          if (slots.length !== 1) probs.push(w + ': the kit has ' + slots.length + ' slots for ' + t.ab);
+          const held = kitFor(c.id, s, new Set([t.id])).abilities.filter(x => x.id === mv.id);
+          if (held.length !== 1 || held[0].fromTalent !== t.id) probs.push(w + ': holding it should put ' + mv.id + ' on exactly one button');
+          const found = abilityById(c.id, s, mv.id);
+          if (!found || found.name !== mv.name) probs.push(w + ': other players can\'t find ' + mv.id + ' by its id');
         }
+        if (grant) used.add(t.id);
         for (const s of Object.keys(t.spec || {})) if (!specIds.includes(s)) probs.push(`${where}: text for unknown spec ${s}`);
         for (const [s, m] of Object.entries(t.specMods || {})) {
           if (!specIds.includes(s)) probs.push(`${where}: specMods for unknown spec ${s}`);
           for (const k of Object.keys(m)) if (!['cd', 'cast'].includes(k)) probs.push(`${where}: specMods field "${k}"`);
         }
-        if (!used.has(t.id) && t.cd == null && t.cast == null) probs.push(`${where}: does nothing (no k.talent('${t.id}') in the kits, no cd/cast)`);
+        if (!used.has(t.id) && t.cd == null && t.cast == null) probs.push(`${where}: does nothing (no k.talent('${t.id}') in the kits, no cd/cast, no new move)`);
+
       }
     });
     // the talent rule (2026-10, talents.js): at most one plain number, and a new move in row III and in row V
-    if (RULED_TALENTS.includes(c.id)) {
+    {
       const plain = rows.flat().filter(t => t.cd || t.cast).length;
       if (plain > 1) probs.push(`${c.id}: ${plain} plain-number talents (at most 1)`);
       for (const r of [2, 4]) if (!rows[r].some(t => t.grants)) probs.push(`${c.id} row ${r + 1}: no talent grants a new move`);

@@ -56,6 +56,9 @@ class FightSim {
     this.edgeGrace = 0;   // a moving wall (Volkar) leaves people outside it for a moment; don't count that as a fall
     this.healPools = [];  // players' healing pools on the floor (Moonwell): { from, x, y, r, amount, ticks, next, interval }
     this.tickers = [];    // per-tick hooks a boss script adds with ticker() (the Hollow King's lanterns and Doom)
+    // the room: solid props (casks, pillars, stones...) and lasting floor changes (rubble, grease, broken-off ground).
+    // Host-owned; the whole list goes out in a 'props' message when anything changes, and every 3 s anyway.
+    this.props = []; this.floor = []; this.floorVer = 0; this.propsDirty = false; this.lastPropsSend = -99; this.fires = new Map();
     this.phase = 1; this.hpTriggers = [];
     // Vulnerability per avoidable hit: a boss can make it bite harder (def.vuln)
     this.vulnStep = def.vuln || FIGHT.VULN;
@@ -72,6 +75,8 @@ class FightSim {
     this.stats = {};
     for (const p of getPlayers()) this.addPlayer(p);
     this.lastBroadcast = -1; this.lastPartyBroadcast = -1;
+    // what stands in the room from the start (Skitterra's pillars, the Hollow King's braziers, Volkar's stones)
+    if (def.room) def.room(this);
   }
 
   rng() { let t = (this.rngState += 0x6D2B79F5) >>> 0; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }
@@ -197,6 +202,7 @@ class FightSim {
         if (this.def.enrage) this.atKeep(this.def.enrage[this.mode], () => this.enrage(), this.def.enrageName || 'Enrage');
         this.emit({ t: 'fight', s: 'live' });
       }
+      if (this.propsDirty || (this.t - this.lastPropsSend >= 3 && (this.props.length || this.floor.length))) this.broadcastProps();
       return;
     }
     if (this.state !== 'live') return;
@@ -216,11 +222,14 @@ class FightSim {
     this.updateRollers();
     this.updateReels();
     this.updateSweeps();
+    this.updateFires();
     for (const fn of this.tickers) fn(dt);
     this.updatePlayers(dt);
     if (this.state !== 'live') return;
     if (this.alive().length === 0) return this.end('wipe');
     this.broadcastNext();
+    // the room changes rarely: send it when it does, and every few seconds anyway for anyone who missed it
+    if (this.propsDirty || this.t - this.lastPropsSend >= 3) this.broadcastProps();
     // a steady 10/s: stepping the mark by 0.1 (not to "now") stops 33 ms ticks rounding every gap up to 133 ms
     if (this.t - this.lastBroadcast >= 0.1) { this.lastBroadcast = Math.max(this.lastBroadcast + 0.1, this.t - 0.05); this.broadcastBoss(); }
     if (this.t - this.lastPartyBroadcast >= 0.2) { this.lastPartyBroadcast = this.t; this.broadcastParty(); }
@@ -248,21 +257,25 @@ class FightSim {
     if (b.anim && this.t >= b.anim.end) b.anim = null;
     const tank = this.tank();
     b.target = tank ? tank.id : null;
+    const stunned = b.stunUntil > this.t;   // stuck in a wall after a charge: no walking, turning or autos
     if (b.moveTo) {
       const dx = b.moveTo.x - b.x, dy = b.moveTo.y - b.y, d = Math.hypot(dx, dy);
       const step = (b.moveTo.speed || 400) * dt;
-      if (d <= step) { b.x = b.moveTo.x; b.y = b.moveTo.y; b.moveTo = null; }
+      if (d <= step) { b.x = b.moveTo.x; b.y = b.moveTo.y; const done = b.moveTo.done; b.moveTo = null; if (done) done(); }
       else { b.x += dx / d * step; b.y += dy / d * step; }
-    } else if (tank && !b.cast && !b.lockFacing && !b.untargetable) {
+    } else if (tank && !b.cast && !b.lockFacing && !b.untargetable && !stunned) {
       b.facing = Math.atan2(tank.y - b.y, tank.x - b.x);
       const d = Math.hypot(tank.x - b.x, tank.y - b.y);
-      if (d > FIGHT.MELEE && !b.anchor) {
-        const step = Math.min(d - FIGHT.MELEE * 0.85, b.speed * dt);
-        b.x += Math.cos(b.facing) * step; b.y += Math.sin(b.facing) * step;
+      if (d > FIGHT.MELEE && !b.anchor && !(b.holdUntil > this.t)) {
+        // round any prop in the way rather than pushing into it
+        const goal = this.props.length ? PROPS.steer(b, tank, this.props, FIGHT.BOSS_R * 0.7) : tank;
+        const a = Math.atan2(goal.y - b.y, goal.x - b.x), step = Math.min(d - FIGHT.MELEE * 0.85, b.speed * dt);
+        b.x += Math.cos(a) * step; b.y += Math.sin(a) * step;
         ARENA.clamp(b, 110);
+        PROPS.collide(b, this.props, FIGHT.BOSS_R * 0.7);
       }
     }
-    if (tank && !b.untargetable && this.t >= b.autoAt) {
+    if (tank && !b.untargetable && !stunned && this.t >= b.autoAt) {
       b.autoAt = this.t + FIGHT.AUTO_EVERY;
       const d = Math.hypot(tank.x - b.x, tank.y - b.y);
       if (d < FIGHT.MELEE * 1.5) {
@@ -320,6 +333,7 @@ class FightSim {
           break;
         }
         if (this.boss.untargetable) return;
+        if (this.boss.exposedUntil > this.t) amt = Math.round(amt * (1 + (this.boss.exposed || 0)));   // staggered: takes more
         this.boss.hp = Math.max(0, this.boss.hp - amt);
         this.burstBrand(pid);
         st.damage += amt;
@@ -536,14 +550,31 @@ class FightSim {
 
   // Generic telegraph. opts: { shape, delay, dmg, type, hidden, follow, need, tag, onResolve, avoidable, failDmg }
   // type: 'aoe' | 'raidwide' | 'stack' | 'spread' | 'tower' | 'buster' | 'knockback' | 'proximity'
+  // Cover: opts.cover makes the blast come from opts.src (default: where the boss stands now); anyone whose line to it
+  // passes through a cover prop is spared. coverCap: at most this many people behind one prop (the nearest to it).
+  // chip: 'used' knocks a hit off every prop that sheltered someone, 'all' off every cover prop.
   mech(opts) {
     const id = this.nextMechId++;
     const m = Object.assign({ id, start: this.t, resolveAt: this.t + opts.delay, type: 'aoe', avoidable: true }, opts);
+    if (m.cover && !m.src) m.src = { x: this.boss.x, y: this.boss.y };
     this.mechs.set(id, m);
     this.emit({ t: 'tg', id, shape: m.shape, dur: m.delay, type: m.type, hidden: !!m.hidden, follow: m.follow ?? null,
       target: m.target ?? null, aim: m.aimFromBoss ?? null, lockAt: m.lockAt || (m.aimFromBoss ? 0.6 : 0),
-      need: m.need || 0, tag: m.tag || null, color: m.color || null });
+      need: m.need || 0, tag: m.tag || null, color: m.color || null,
+      cover: m.cover ? [Math.round(m.src.x), Math.round(m.src.y)] : null, cap: m.coverCap || 0 });
     return m;
+  }
+  // who a cover mechanic spares, and which props it chips: { safe: Set of ids, chip: [props] }
+  coverCheck(m) {
+    const src = m.src, safe = new Set(), used = new Map(), list = this.props.filter(pr => pr.cover), behind = [];
+    for (const p of this.alive()) { const pr = PROPS.shadowing(src.x, src.y, p.x, p.y, list); if (pr) behind.push([p, pr]); }
+    behind.sort((a, b) => PROPS.sd(a[1], a[0].x, a[0].y) - PROPS.sd(b[1], b[0].x, b[0].y));
+    for (const [p, pr] of behind) {
+      const n = used.get(pr) || 0;
+      if (m.coverCap && n >= m.coverCap) continue;
+      used.set(pr, n + 1); safe.add(p.id);
+    }
+    return { safe, chip: m.chip === 'all' ? list : m.chip === 'used' ? [...used.keys()] : [] };
   }
   updateMechs() {
     for (const [id, m] of this.mechs) {
@@ -563,12 +594,13 @@ class FightSim {
   }
   resolveMech(m) {
     const pad = 14;
-    const inside = this.alive().filter(p => SHAPES.contains(m.shape, p.x, p.y, pad));
+    const cov = m.cover ? this.coverCheck(m) : null;
+    const inside = this.alive().filter(p => SHAPES.contains(m.shape, p.x, p.y, pad) && !(cov && cov.safe.has(p.id)));
     const hits = [];
     const hit = (p, dmg, kind, avoidable) => { this.damagePlayer(p, dmg, { kind, avoidable }); hits.push(p.id); };
     switch (m.type) {
       case 'aoe': for (const p of inside) hit(p, m.dmg, m.tag || 'aoe', m.avoidable); break;
-      case 'raidwide': for (const p of this.alive()) hit(p, m.dmg, 'raidwide', false); break;
+      case 'raidwide': for (const p of this.alive()) if (!(cov && cov.safe.has(p.id))) hit(p, m.dmg, 'raidwide', false); break;
       case 'stack': {
         // m.dmg is the total, split among everyone inside; too few people and it hits harder
         const need = Math.min(m.need || 1, this.alive().length);
@@ -607,7 +639,8 @@ class FightSim {
         break;
     }
     this.emit({ t: 'tgx', id: m.id, hits });
-    if (m.onResolve) m.onResolve(inside, hits);
+    if (cov) for (const pr of cov.chip) this.hitProp(pr, 1, m.tag);
+    if (m.onResolve) m.onResolve(inside, hits, cov);
   }
 
   raidwide(dmg, delay = 0) { return this.mech({ type: 'raidwide', shape: { kind: 'circle', x: this.boss.x, y: this.boss.y, r: 0 }, delay, dmg, hidden: true }); }
@@ -693,6 +726,8 @@ class FightSim {
   updateAdds(dt) {
     for (const a of [...this.adds.values()]) {
       if (!this.adds.has(a.id)) continue;
+      // inert things you break (a coffin, a cocoon): no moving, no biting
+      if (a.inert) { if (a.onTick) a.onTick(a, dt); continue; }
       const near = this.addTarget(a), nd = near ? Math.hypot(near.x - a.x, near.y - a.y) : Infinity;
       a.target = near ? near.id : null;
       if (near) {
@@ -702,8 +737,10 @@ class FightSim {
         const gd = Math.hypot(gx - a.x, gy - a.y), stop = chase ? a.r + 30 : 4;
         a.facing = Math.atan2(near.y - a.y, near.x - a.x);
         if (gd > stop) {
-          const step = Math.min(gd - stop, a.speed * dt), mv = Math.atan2(gy - a.y, gx - a.x);
+          const goal = this.props.length ? PROPS.steer(a, { x: gx, y: gy }, this.props, a.r * 0.8) : { x: gx, y: gy };
+          const step = Math.min(gd - stop, a.speed * dt), mv = Math.atan2(goal.y - a.y, goal.x - a.x);
           a.x += Math.cos(mv) * step; a.y += Math.sin(mv) * step;
+          PROPS.collide(a, this.props, a.r * 0.8);
         }
         if (nd < a.r + 60 && this.t >= a.nextBite) {
           a.nextBite = this.t + a.biteEvery;
@@ -731,16 +768,27 @@ class FightSim {
   }
 
   // Lasting floor zone with an effect on whoever stands in it. opts: { shape, dur, effect: 'slow', tag }
+  // effect 'burn': hurts whoever stands in it (opts.dmg every second) once opts.delay has passed (a fire wall flaring up)
   zone(opts) {
-    const z = Object.assign({ id: this.nextMechId++, effect: 'slow', tag: 'zone' }, opts);
-    z.end = this.t + (opts.dur || 9999);
+    const z = Object.assign({ id: this.nextMechId++, effect: 'slow', tag: 'zone', last: {} }, opts);
+    z.startAt = this.t + (opts.delay || 0);
+    z.end = z.startAt + (opts.dur || 9999);
     this.zones.push(z);
-    this.emit({ t: 'zone', id: z.id, shape: z.shape, dur: opts.dur || 9999, tag: z.tag });
+    this.emit({ t: 'zone', id: z.id, shape: z.shape, dur: opts.dur || 9999, tag: z.tag, delay: opts.delay || 0 });
     return z;
   }
   updateZones() {
     this.zones = this.zones.filter(z => z.end > this.t);
     for (const z of this.zones) {
+      if (this.t < z.startAt) continue;
+      if (z.effect === 'burn') {
+        for (const p of this.alive()) {
+          if (!SHAPES.contains(z.shape, p.x, p.y, 8) || this.t - (z.last[p.id] ?? -9) < 1) continue;
+          z.last[p.id] = this.t;
+          this.damagePlayer(p, z.dmg || 4000, { kind: z.tag, avoidable: true, noVuln: true });
+        }
+        continue;
+      }
       if (z.effect !== 'slow') continue;
       for (const p of this.alive()) if (SHAPES.contains(z.shape, p.x, p.y, 0)) this.debuff(p.id, 'slowed', 0.6);
     }
@@ -812,7 +860,7 @@ class FightSim {
     const sw = Object.assign({ id: this.nextMechId++, x: 0, y: 0, arms: 2, a0: 0, spin: 0.5, w: 150, delay: 3, dur: 10, dmg: 8000, kb: 110, tag: 'storm', last: {} }, opts);
     sw.startAt = this.t + sw.delay; sw.end = sw.startAt + sw.dur;
     this.sweeps.set(sw.id, sw);
-    this.emit({ t: 'sweep', id: sw.id, x: Math.round(sw.x), y: Math.round(sw.y), arms: sw.arms, a0: +sw.a0.toFixed(3), spin: +sw.spin.toFixed(3), w: sw.w, delay: sw.delay, dur: sw.dur, tag: sw.tag });
+    this.emit({ t: 'sweep', id: sw.id, x: Math.round(sw.x), y: Math.round(sw.y), arms: sw.arms, a0: +sw.a0.toFixed(3), spin: +sw.spin.toFixed(3), w: sw.w, delay: sw.delay, dur: sw.dur, tag: sw.tag, cover: sw.cover || null });
     return sw;
   }
   sweepAngle(sw, t) { return sw.a0 + Math.max(0, t - sw.startAt) * sw.spin; }
@@ -824,11 +872,19 @@ class FightSim {
       const a0 = this.sweepAngle(sw, this.t);
       for (let k = 0; k < sw.arms; k++) {
         const a = a0 + k * Math.PI * 2 / sw.arms, c = Math.cos(a), s = Math.sin(a);
+        // sw.cover: props of that kind shelter whoever stands behind them, and the wall smashes each one once it has passed
+        if (sw.cover) for (const pr of this.props.filter(q => q.kind === sw.cover)) {
+          const dx = pr.x - sw.x, dy = pr.y - sw.y, over = Math.abs(-dx * s + dy * c) < sw.w / 2 + pr.r && dx * c + dy * s > 0;
+          const key = 'p' + pr.id + ':' + k;
+          if (over) sw.last[key] = 1;
+          else if (sw.last[key]) { delete sw.last[key]; this.breakProp(pr, 'storm'); }
+        }
         for (const p of this.alive()) {
           const dx = p.x - sw.x, dy = p.y - sw.y, along = dx * c + dy * s, across = -dx * s + dy * c;
           if (along < 0 || Math.abs(across) > sw.w / 2 + 14) continue;
           const key = p.id + ':' + k;
           if (this.t - (sw.last[key] ?? -9) < 1.5) continue;
+          if (sw.cover && PROPS.shadowing(sw.x, sw.y, p.x, p.y, this.props, q => q.kind === sw.cover)) continue;
           sw.last[key] = this.t;
           this.damagePlayer(p, sw.dmg, { kind: sw.tag, avoidable: true });
           // shoved the way the wall is turning
@@ -839,7 +895,96 @@ class FightSim {
     }
   }
 
+  // ---------------------------------------------------------------- the room: props, floor, fire, wall slams
+  // a prop standing in the room (see PROPS in shapes.js). o.hp: hits it takes before it breaks (0: never);
+  // o.rubble: false leaves nothing behind when it breaks; o.onBreak(prop) runs when it does
+  addProp(o) {
+    const pr = Object.assign({ id: this.nextMechId++, kind: 'prop', shape: 'circle', r: 30, w: 0, h: 0, a: 0, hp: 0, solid: true, cover: false, state: 0 }, o);
+    pr.maxHp = pr.maxHp || pr.hp;
+    this.props.push(pr); this.propsDirty = true;
+    return pr;
+  }
+  propById(id) { return this.props.find(p => p.id === id) || null; }
+  setPropState(pr, state) { if (pr && pr.state !== state) { pr.state = state; this.propsDirty = true; } }
+  // knock hits off a prop; at 0 it breaks. (A prop on its last hit is drawn cracked, so you see it coming.)
+  hitProp(pr, n = 1, how = null) {
+    if (!pr || !pr.maxHp || !this.props.includes(pr)) return;
+    pr.hp -= n;
+    if (pr.hp <= 0) { this.breakProp(pr, how); return; }
+    this.propsDirty = true;
+    this.emit({ t: 'propfx', k: 'chip', id: pr.id, kind: pr.kind, x: Math.round(pr.x), y: Math.round(pr.y) });
+  }
+  breakProp(pr, how = null) {
+    if (!this.props.includes(pr)) return;
+    this.props = this.props.filter(p => p !== pr); this.propsDirty = true;
+    const size = pr.shape === 'rect' ? Math.max(pr.w, pr.h) / 2 : pr.r;
+    this.emit({ t: 'propfx', k: 'break', id: pr.id, kind: pr.kind, x: Math.round(pr.x), y: Math.round(pr.y), r: Math.round(size), a: +(pr.a || 0).toFixed(2), how });
+    if (pr.rubble !== false) this.addFloor({ kind: 'rubble', of: pr.kind, x: Math.round(pr.x), y: Math.round(pr.y), r: Math.round(size * 1.15) });
+    if (pr.onBreak) pr.onBreak(pr);
+  }
+  removeProp(pr) { if (this.props.includes(pr)) { this.props = this.props.filter(p => p !== pr); this.propsDirty = true; } }
+  // a lasting change to the floor, drawn once into the room layer: { kind, x, y, r, ... } (rounded by the caller)
+  addFloor(o) { const fl = Object.assign({ id: this.nextMechId++ }, o); this.floor.push(fl); this.floorVer++; this.propsDirty = true; return fl; }
+  removeFloor(fl) { this.floor = this.floor.filter(f => f !== fl); this.fires.delete(fl.id); this.floorVer++; this.propsDirty = true; }
+
+  // fire on the floor: grease puddles (Grubnak, Hard) touching the shape catch, and fire runs on through every puddle
+  // touching a burning one. Each burns for `dur` s, hurting whoever stands in it every second.
+  ignite(shape, dur = 6) {
+    const grease = this.floor.filter(fl => fl.kind === 'grease');
+    const lit = grease.filter(fl => SHAPES.contains(shape, fl.x, fl.y, fl.r * 0.8));
+    const seen = new Set(lit.map(fl => fl.id));
+    for (let i = 0; i < lit.length; i++) for (const o of grease) {
+      if (seen.has(o.id) || Math.hypot(o.x - lit[i].x, o.y - lit[i].y) > o.r + lit[i].r - 10) continue;
+      seen.add(o.id); lit.push(o);
+    }
+    for (const fl of lit) {
+      if (!(this.fires.get(fl.id) > this.t)) this.emit({ t: 'propfx', k: 'ignite', id: fl.id, x: fl.x, y: fl.y, r: fl.r });
+      this.fires.set(fl.id, Math.max(this.fires.get(fl.id) || 0, this.t + dur));
+    }
+    if (lit.length) this.propsDirty = true;
+    return lit.length;
+  }
+  burning(fl) { return this.fires.get(fl.id) > this.t; }
+  updateFires() {
+    if (!this.fires.size) return;
+    for (const [id, until] of this.fires) {
+      const fl = this.floor.find(f => f.id === id);
+      if (!fl || until <= this.t) { this.fires.delete(id); this.propsDirty = true; continue; }
+      fl.last = fl.last || {};
+      for (const p of this.alive()) {
+        if (Math.hypot(p.x - fl.x, p.y - fl.y) > fl.r + 10 || this.t - (fl.last[p.id] || -9) < 1) continue;
+        fl.last[p.id] = this.t;
+        this.damagePlayer(p, fl.dmg || 4000, { kind: 'burn', avoidable: true, noVuln: true });
+      }
+    }
+  }
+
+  // throw a player away from (fx, fy) by dist. The throw stops at the wall or at a solid prop; stopped well short
+  // (more than opts.slamAt, default 40) it's a wall slam: opts.slam damage, and dazed (held in place) for 0.6 s.
+  knock(p, fx, fy, dist, opts = {}) {
+    const a = Math.atan2(p.y - fy, p.x - fx), want = { x: p.x + Math.cos(a) * dist, y: p.y + Math.sin(a) * dist };
+    const dest = ARENA.clamp({ x: want.x, y: want.y }, 12);
+    const prop = PROPS.clipMove(p, dest, this.props, 14);
+    const short = dist - Math.hypot(dest.x - p.x, dest.y - p.y), slam = short > (opts.slamAt ?? 40);
+    this.emit({ t: 'kb', id: p.id, x: Math.round(fx), y: Math.round(fy), d: dist });
+    if (slam && opts.slam != null) {
+      this.damagePlayer(p, opts.slam, { kind: 'slam', avoidable: true });
+      this.debuff(p.id, 'rooted', opts.daze ?? 0.6);
+      this.emit({ t: 'propfx', k: 'slam', x: Math.round(dest.x), y: Math.round(dest.y), a: +a.toFixed(2), id: prop ? prop.id : null, pid: p.id });
+    }
+    return { slam, dest, prop };
+  }
+
   // ---------------------------------------------------------------- broadcasting
+  // the room: every prop, the floor, which grease is burning, and how a round room's edge has broken
+  broadcastProps() {
+    this.propsDirty = false; this.lastPropsSend = this.t;
+    const lit = []; for (const [id, until] of this.fires) if (until > this.t) lit.push([id, +(until - this.t).toFixed(1)]);
+    // the floor list only when it has changed (and every ~9 s for anyone who missed it)
+    const withFloor = this.floorSent !== this.floorVer || this.t - (this.floorSentAt ?? -99) >= 9;
+    if (withFloor) { this.floorSent = this.floorVer; this.floorSentAt = this.t; }
+    this.emit({ t: 'props', p: this.props.map(pr => PROPS.pack(pr)), f: withFloor ? this.floor.map(({ last, ...fl }) => fl) : undefined, fv: this.floorVer, lit });
+  }
   broadcastBoss() {
     const b = this.boss;
     this.emit({ t: 'fb', hp: b.hp, mx: b.maxHp, x: Math.round(b.x), y: Math.round(b.y), f: +b.facing.toFixed(2), tg: b.target,
@@ -851,13 +996,14 @@ class FightSim {
   }
   // host-side states on the boss, compact: [kind, seconds left (0 = no timer), value, who]
   //   ['vuln', s, % more damage taken] Hunter's Mark · ['dmg', 0, % more damage dealt] (Gorge and the like)
-  //   ['brand', s, charges, Inquisitor's id] · ['fix', s, 0, taunting tank's id]
+  //   ['brand', s, charges, Inquisitor's id] · ['fix', s, 0, taunting tank's id] · ['stun', s, % more damage taken] (wall slam)
   bossStatus() {
     const b = this.boss, t = this.t, out = [];
     if (b.vulnEnd > t && b.vuln) out.push(['vuln', Math.ceil(b.vulnEnd - t), Math.round(b.vuln * 100)]);
     if (b.dmgUp > 0) out.push(['dmg', 0, Math.round(b.dmgUp * 100)]);
     if (b.brand && b.brand.end > t && b.brand.charges > 0) out.push(['brand', Math.ceil(b.brand.end - t), b.brand.charges, b.brand.from]);
     if (b.fix && b.fix.until > t) out.push(['fix', Math.ceil(b.fix.until - t), 0, b.fix.id]);
+    if (b.exposedUntil > t) out.push(['stun', Math.ceil(b.exposedUntil - t), Math.round((b.exposed || 0) * 100)]);
     return out.length ? out : undefined;
   }
   // [id, kind, x, y, hp, maxHp, enraged, link, facing]

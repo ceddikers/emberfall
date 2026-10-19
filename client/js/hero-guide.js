@@ -70,6 +70,25 @@ const HERO_GUIDE = {
       { keys: ['e'], text: 'Thornlash is your instant attack while moving.' },
     ],
   },
+  // the advanced classes
+  thermist: {
+    passive: { name: 'Thermal Shock', icon: 'invert', desc: 'Each step from 0 makes that side\'s spells 8% stronger. Carry the dial across 0 after reaching 3 or more and the swing detonates on the target: the bigger the swing, the bigger the Shock. Past ±5 you overload.' },
+    combos: [
+      { keys: ['e', 'e', 'q', 'e'], text: 'Climb to +5 with Flare and a Cinder Bolt, then the instant, sure-crit Flare at the edge.' },
+      { keys: ['r', 'r', 'r'], text: 'On the Brink: go frost. Three Glacier Lances carry you from +5 across 0: a swing of 6.' },
+      { keys: ['f'], text: 'Inversion at ±5: a swing of 10, half again as strong.' },
+      { keys: ['d'], text: 'Equilibrium before a raidwide: a shield sized by how far the dial falls back to 0.' },
+    ],
+  },
+  driftblade: {
+    passive: { name: 'Drift', icon: 'cross', desc: 'Moving fills Drift and standing still drains it; nearly every cut hits harder with Drift behind it. Run clean through an enemy and you cut it as you pass: a Passing Strike.' },
+    combos: [
+      { keys: ['q', 'q', 'r'], text: 'Keep moving while you Carve, then spend a full gauge on Crosswind.' },
+      { keys: ['w', 'e', 'space'], text: 'Slipstream through the boss, Hook Turn round it (it gives the dash back), then dash again.' },
+      { keys: ['f', 'w', 'w'], text: 'Gale Run when the fight makes you move: every pass through the boss hits three times as hard.' },
+      { keys: ['d'], text: 'Stillpoint just before a hit lands: a parry and a riposte, and your Drift holds.' },
+    ],
+  },
   chronomancer: {
     passive: { name: 'Haste / Slow', icon: 'shift', desc: 'Slow: Bolts heal your linked ally and Flux fills. Haste: faster casts, +10% damage, Bolts heal everyone, but Flux drains. Empty Flux makes you stumble.' },
     combos: [
