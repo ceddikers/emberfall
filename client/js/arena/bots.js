@@ -853,6 +853,12 @@ BotAI.alembist = function (bot, k, view) {
 
 // ======================================================================= Threadweaver and Marionettist (classes-c)
 // is something about to land on this spot that would catch a Doll? (the shapes the host judges on a Doll: fight.js dollMech)
+// everyone threaded to this player (any weaver's threads)
+BotAI.partnersOf = function (view, id) {
+  const out = new Set();
+  for (const th of view.threads || []) { if (th.a === id) out.add(th.b); else if (th.b === id) out.add(th.a); }
+  return out;
+};
 BotAI.dollDanger = function (view, x, y, within = 2.6) {
   const props = (view.props || []).filter(p => p.cover);
   for (const m of view.mechs) {
@@ -901,11 +907,14 @@ BotAI.threadweaver = function (bot, k, view) {
   const tearing = soon('spread', 2.2) || soon('knockback', 1.6) || view.mechs.some(m => m.tag === 'chain' && m.resolveAt - view.t < 2.2) || (view.sweeps || []).some(sw => view.t > sw.startAt - 1.5 && view.t < sw.end);
   const busterSoon = view.mechs.some(m => m.type === 'buster' && m.resolveAt - view.t < 2.5) || !!(view.bossCast && BUSTER_CASTS.test(view.bossCast.name) && view.bossCast.left < 2.5);
   const raidSoon = soon('raidwide', 2.5) || soon('proximity', 2.5) || !!(view.bossCast && RAID_CASTS.test(view.bossCast.name) && view.bossCast.left < 2.5);
-  const weave = k.gcdRemaining() > 0.45 && !k.cast && k.lockUntil <= k.now;
+  // (urgent answers go in whenever she isn't mid-cast, even if it clips the next GCD; the rest weave)
+  const free = !k.cast && k.lockUntil <= k.now, weave = free && k.gcdRemaining() > 0.45;
   const tie = idx('tie'), snip = idx('snip'), tight = idx('tighten'), tap = idx('tapestry'), mend = idx('mend'), needle = idx('needle');
   const shears = (k.def.store || 1) > 1, cradle = k.abilities[tight].id === 'cradle';
+  // a heavy blow about to land on someone who isn't the tank (or on a tank already low): that's what Tapestry is for
+  const sentence = view.mechs.find(m => m.type === 'buster' && m.resolveAt - view.t < 2.2 && (() => { const t = alive.find(p => p.id === (m.target ?? m.follow)); return t && (t.role !== 'tank' || frac(t) < 0.7); })());
+  if (free && ready(tap) && (sentence || busterSoon || (raidSoon && hurt.filter(p => frac(p) < 0.85).length >= 2))) return tap;
   if (weave) {
-    if (ready(tap) && (busterSoon || (raidSoon && hurt.filter(p => frac(p) < 0.85).length >= 2))) return tap;
     if (cradle && ready(tight) && raidSoon) return tight;
     // cut the web ourselves before a spread tears it (or when a thread is about to snap anyway, or someone tied is low)
     if (ready(snip) && mine.length) {
@@ -921,11 +930,29 @@ BotAI.threadweaver = function (bot, k, view) {
         if (inIt) { bot.healTarget = p.id; return tight; }
       }
     }
-    // keep the tank tied to us, then whoever stands closest (never while a spread is coming)
-    if (!tearing && ready(tie)) {
-      if (tank && !linked(tank.id) && dist(me, tank) < 225) { bot.healTarget = tank.id; k.g.tie = null; return tie; }
-      const free = alive.filter(p => p.id !== bot.id && !linked(p.id) && dist(me, p) < 215).sort((a, b) => frac(a) - frac(b))[0];
-      if (free && mine.length < weaveMax(k) && (k.charges(k.abilities[tie]) === 2 || frac(free) < 0.7)) { bot.healTarget = free.id; k.g.tie = null; return tie; }
+  }
+  if (free) {
+    // a heavy blow aimed at someone: tie them to us, or (too far from us) to whoever stands nearest them, two Ties in a row
+    if (bot.tiePair && view.t - bot.tiePair.at < 3 && ready(tie)) { bot.healTarget = bot.tiePair.b; bot.tiePair = null; return tie; }
+    if (ready(tie)) {
+      for (const m of view.mechs) {
+        if (m.type !== 'buster' || m.resolveAt - view.t > 4.5) continue;
+        const t = alive.find(p => p.id === (m.target ?? m.follow));
+        if (!t || (tank && t.id === tank.id) || linked(t.id) || [...this.partnersOf(view, t.id)].length) continue;
+        if (t.id === bot.id) { if (tank && dist(me, tank) < 245) { bot.healTarget = tank.id; k.g.tie = null; return tie; } continue; }
+        if (dist(me, t) < 200) { bot.healTarget = t.id; k.g.tie = null; return tie; }
+        const near = alive.filter(p => p.id !== t.id && p.id !== bot.id && dist(p, t) < 200).sort((a, b) => dist(a, t) - dist(b, t))[0];
+        if (near && k.charges(k.abilities[tie]) >= 2) { bot.tiePair = { b: t.id, at: view.t }; bot.healTarget = near.id; k.g.tie = null; return tie; }
+      }
+    }
+    // keep the tank tied to us, then whoever stands closest (never while a spread is coming, nor with a Tie owed to a blow)
+  }
+  if (weave) {
+    const owed = view.mechs.some(m => m.type === 'buster' && m.resolveAt - view.t < 4.5 && (m.target ?? m.follow) !== bot.id && !linked(m.target ?? m.follow) && !(tank && (m.target ?? m.follow) === tank.id));
+    if (!tearing && !owed && weave && ready(tie)) {
+      if (tank && !linked(tank.id) && dist(me, tank) < 240) { bot.healTarget = tank.id; k.g.tie = null; return tie; }
+      const loose = alive.filter(p => p.id !== bot.id && !linked(p.id) && dist(me, p) < 215).sort((a, b) => frac(a) - frac(b))[0];
+      if (loose && mine.length < weaveMax(k) && (k.charges(k.abilities[tie]) === 2 || frac(loose) < 0.7)) { bot.healTarget = loose.id; k.g.tie = null; return tie; }
     }
   }
   if (k.gcdRemaining() > 0 || k.cast || k.lockUntil > k.now) return null;
@@ -948,8 +975,17 @@ BotAI.threadweaver = function (bot, k, view) {
 // (her threads reach 260 px: she stands off the boss's flank, close enough to the tank to keep them tied)
 BOT_CLASS.threadweaver = {
   home(bot, view) {
-    const b = view.boss, f = b.facing || 0, side = (bot.slot || 0) % 2 ? 1 : -1, a = f + side * 1.45;
-    return { x: b.x + Math.cos(a) * 175, y: b.y + Math.sin(a) * 175 };
+    const b = view.boss, f = b.facing || 0, side = (bot.slot || 0) % 2 ? 1 : -1, a = f + side * 1.6;
+    // a heavy blow coming at someone she can't reach: go and stand just behind them, outside its cone, to tie them
+    const me = view.players.find(p => p.id === bot.id);
+    for (const m of view.mechs) {
+      if (m.type !== 'buster' || m.resolveAt - view.t > 4.5 || (m.target ?? m.follow) === bot.id) continue;
+      const t = view.players.find(p => p.id === (m.target ?? m.follow) && p.alive);
+      if (!t || t.role === 'tank' || !me) continue;
+      const o = m.shape, ta = Math.atan2(t.y - o.y, t.x - o.x), back = Math.max((o.r || 320) + 70, Math.hypot(t.x - o.x, t.y - o.y) + 80);
+      return ARENA.clamp({ x: o.x + Math.cos(ta) * back, y: o.y + Math.sin(ta) * back }, 60);
+    }
+    return { x: b.x + Math.cos(a) * 165, y: b.y + Math.sin(a) * 165 };
   },
 };
 
@@ -960,7 +996,7 @@ BOT_CLASS.marionettist = {
   home(bot, view) {
     const b = view.boss, f = b.facing || 0, side = (bot.slot || 0) % 2 ? 1 : -1;
     const k = bot.actor && bot.actor.kit, far = k && k.def.stretch > 300 ? 230 : 175;
-    const a = f + side * 1.75;
+    const a = f + side * 1.6;
     return { x: b.x + Math.cos(a) * far, y: b.y + Math.sin(a) * far };
   },
   act(bot, k, view, moving) {

@@ -330,6 +330,57 @@ Object.assign(TRIALS, {
   },
 });
 
+// ======================================================================= Threadweaver and Marionettist (classes-c)
+Object.assign(TRIALS, {
+  loomwright: {
+    cls: 'threadweaver', spec: 'loomwright', name: 'The Living Web',
+    lore: ['The King passed sentence on one courtier at a time, and each blow was meant to kill.', 'The weaver tied the whole court together, so no one stood alone.'],
+    outro: 'The sentence falls on everyone, and no one falls. The Loomwright\'s web holds.',
+    allies: ['bastion:base', 'ranger:base', 'pyromancer:base'], guard: 'allies', seconds: 60, enrage: 150, regen: 0,
+    script(f, k) {
+      // a Royal Sentence on someone who isn't the tank: more than one person can take, spread along a web it's nothing
+      const sentence = () => {
+        const al = f.alive().filter(p => p.role !== 'tank');
+        const t = al.length ? f.pick(al) : null;
+        if (t) k.blow(21000, 4, 'Royal Sentence', t.id);
+      };
+      k.loop([[3, sentence], [6, () => k.knell(3000)], [5, sentence], [6, () => k.blow(9000, 4)], [5, sentence], [5, () => k.knell(3000)]]);
+    },
+  },
+  shears: {
+    cls: 'threadweaver', spec: 'shears', name: 'The Cut Thread',
+    lore: ['In the Barrow\'s last winter, the court wore down a little every hour.', 'Then the marks came, and the seamstress cut every thread at once.'],
+    outro: 'Every thread cut on time. The Shears close.',
+    allies: ['bastion:base', 'ranger:base', 'shadowblade:base'], guard: 'allies', seconds: 60, enrage: 150, regen: 0,
+    script(f, k) {
+      // the knells wear everyone down while the web carries it; then the Grave Marks pull everyone apart
+      k.loop([[3, () => k.knell(3400, 3)], [4, () => k.blow(9000, 3.5)], [3.5, () => k.knell(3400, 3)], [3.5, () => k.marks(4200, 4.5)], [5, () => k.knell(3000, 3)], [3, () => {}]]);
+    },
+  },
+  cuttingline: {
+    cls: 'marionettist', spec: 'cuttingline', name: 'The Bladed String',
+    lore: ['The court puppeteer strung her doll with wire.', 'She never came within reach of the King, and he never escaped her lines.'],
+    outro: 'The lines are drawn. The Cutting Line holds.',
+    allies: ['bastion:base', 'cleric:base'], seconds: 55, enrage: 68, regen: 0,
+    script(f, k) {
+      // he holds the middle and stamps the ground around him again and again: stand well back and reach in with long strings
+      f.boss.anchor = true;
+      k.loop([[3, () => k.swing('stomp', 6500, 3.5)], [5, () => k.blow(9000, 3.5)], [4, () => k.swing('stomp', 6500, 3.5)], [5, () => k.knell(2500)]]);
+    },
+  },
+  understudy: {
+    cls: 'marionettist', spec: 'understudy', name: 'Two Dolls on One Bar',
+    lore: ['The King\'s players staged one last performance as the Barrow fell.', 'Two dolls on one bar, and the whole court dancing between them.'],
+    outro: 'The curtain falls to applause. The Understudy takes the stage.',
+    allies: ['bastion:base', 'cleric:base', 'ranger:base'], seconds: 50, enrage: 62, regen: 0,
+    script(f, k) {
+      // a party racing the memory's end: he holds his ground, and every second he stands on the Stage counts
+      f.boss.anchor = true;
+      k.loop([[3, () => k.blow(9000, 4)], [6, () => k.swing('sweep', 6000, 4, Math.PI / 2)], [6, () => k.knell(2800)], [5, () => k.swing('sweep', 6000, 4, -Math.PI / 2)]]);
+    },
+  },
+});
+
 // the boss definition FightSim runs for a trial
 function trialDef(specId) {
   const T = TRIALS[specId];
