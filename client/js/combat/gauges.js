@@ -234,7 +234,8 @@ Object.assign(GAUGES, {
     const ang = v => -Math.PI / 2 + (v / max) * (Math.PI * 0.42);
     const arc = (v0, v1, r, col, lw) => { c.beginPath(); c.arc(cx, cy, r, ang(v0), ang(v1)); c.lineWidth = lw; c.strokeStyle = col; c.stroke(); };
     c.lineCap = 'butt';
-    arc(-max, 0, R, '#1a2433', 11); arc(0, max, R, '#2e1d17', 11);
+    arc(-max, max, R, 'rgba(242,230,200,0.35)', 14);   // a hairline rim round the empty track
+    arc(-max, 0, R, '#1c3044', 11); arc(0, max, R, '#40261a', 11);
     // the filled side, step by step
     const tv = g.temp || 0;
     for (let i = 0; i < Math.abs(tv); i++) {

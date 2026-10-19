@@ -95,7 +95,7 @@ function data() {
   const steps = []; let last = tr.at(0.3).x, overshoot = false;
   for (let t = 0.3 + 1 / 60; t < 2.0; t += 1 / 60) { feed(t); const x = tr.at(t).x; steps.push(x - last); last = x; if (x > 400.01) overshoot = true; }
   const spread = Math.max(...steps) - Math.min(...steps);
-  if (!overshoot && spread < 0.05) pass('Network smoothing is even', `step ${steps[0].toFixed(2)} Â± ${(spread / 2).toFixed(3)}`);
+  if (!overshoot && spread < 0.05) pass('Network smoothing is even', `step ${steps[0].toFixed(2)} ± ${(spread / 2).toFixed(3)}`);
   else fail('Network smoothing is even', `spread ${spread.toFixed(3)}, overshoot ${overshoot}`);
 
   // ... and stays even over a wobbly connection: 40-75 ms delivery, noticed only on the receiver's next frame,

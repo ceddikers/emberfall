@@ -187,6 +187,21 @@ const Inventory = (() => {
         shape(() => c.ellipse(0, -16, 12, 9, 0, 0, Math.PI * 2), '#c9cfd8');
         shape(() => c.ellipse(0, -16, 8, 5, 0, 0, Math.PI * 2), '#ff8a3a', 1.5);
         break;
+      case 'crux':   // Thermist: a brass ring with a fire half and a frost half, a needle across it
+        c.fillStyle = rgba('#ffb08a', 0.25); c.beginPath(); c.arc(0, 0, 24, 0, Math.PI * 2); c.fill();
+        shape(() => c.arc(0, 0, 19, Math.PI / 2, Math.PI * 1.5), '#4f94d8');
+        shape(() => c.arc(0, 0, 19, -Math.PI / 2, Math.PI / 2), '#f08236');
+        shape(() => c.arc(0, 0, 11, 0, Math.PI * 2), '#2a2026', 2);
+        stroke(() => { c.moveTo(-6, 9); c.lineTo(7, -10); }, '#f2e6c8', 2);
+        shape(() => c.arc(0, 0, 2.5, 0, Math.PI * 2), gold, 1.5);
+        break;
+      case 'sabre':   // Driftblade: a curved sabre, a ribbon tied at the hilt
+        c.rotate(-Math.PI / 4);
+        shape(() => { c.moveTo(-2.5, -4); c.quadraticCurveTo(-4, -18, 4, -30); c.quadraticCurveTo(4, -16, 2.5, -4); c.closePath(); }, metal, 2);
+        shape(() => c.ellipse(0, -4, 8, 2.5, 0, 0, Math.PI * 2), gold, 2);
+        shape(() => c.rect(-2.2, -2, 4.4, 14), '#2a1d14', 2);
+        stroke(() => { c.moveTo(0, 12); c.quadraticCurveTo(8, 18, 4, 26); }, accent || '#4fd0b0', 2.5);
+        break;
       case 'focus':
         c.fillStyle = rgba('#a98bff', 0.35); c.beginPath(); c.arc(0, 0, 24, 0, Math.PI * 2); c.fill();
         shape(() => { for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3 + Math.PI / 6; c.lineTo(Math.cos(a) * 20, Math.sin(a) * 20); } c.closePath(); }, '#5b3fa0');

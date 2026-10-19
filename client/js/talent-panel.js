@@ -34,6 +34,9 @@ const TalentPanel = (() => {
   function cardTip(cls, kit, spec, t, r) {
     const ab = abFor(kit, t.ab);
     const where = ab ? ab.name : '';
+    // a talent that puts a new move on a button: show the move itself (talents.js TALENT_ABILITIES)
+    const mv = typeof talentMoveFor === 'function' ? talentMoveFor(cls.id, spec, t.id) : null;
+    if (mv) return `<div class="tip-ab"><i class="ab-icon ${mv.type}" style="background-image:url(${abilityIcon(cls.id, abilityIconId(mv))})"></i><div><b>${t.name}</b><em>${ROMAN[r]} · new move, replaces ${where}</em></div></div>${talentText(t, spec)}<div class="it-talent"><span><u>${mv.name}:</u> ${mv.desc}</span></div>`;
     return `<div class="tip-ab"><i class="ab-icon ${ab ? ab.type : ''}" style="background-image:url(${abilityIcon(cls.id, t.ab)})"></i><div><b>${t.name}</b><em>${ROMAN[r]} · ${where}</em></div></div>${talentText(t, spec)}`;
   }
 
@@ -56,7 +59,7 @@ const TalentPanel = (() => {
         if (sealed) return '<div class="tal-card sealed" aria-hidden="true"><i></i><span></span><span></span></div>';
         const picked = open && st.picks[r] === c;
         return `<button class="tal-card${picked ? ' picked' : ''}${next ? ' preview' : ''}" data-r="${r}" data-c="${c}"${!open || locked ? ' aria-disabled="true"' : ''}>
-          <i class="ab-icon" style="background-image:url(${abilityIcon(cls.id, t.ab)})"></i>
+          <i class="ab-icon" style="background-image:url(${abilityIcon(cls.id, (typeof talentMoveFor === 'function' && talentMoveFor(cls.id, spec, t.id) || {}).id || t.ab)})"></i>
           <span><b>${t.name}</b><p>${talentText(t, spec)}</p></span></button>`;
       }).join('');
       return `<section class="tal-row ${open ? 'open' : next ? 'next' : 'sealed'}">${tier}<div class="tal-cards">${cards}</div></section>`;
