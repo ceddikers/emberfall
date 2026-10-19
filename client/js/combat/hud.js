@@ -54,6 +54,13 @@ const GAUGE_TIPS = {
   },
 };
 
+// moves a talent grants (kits.js TALENT_ABILITIES) show under their own name. Some ride on the buff of the move they
+// replaced (Avatar of Dawn also sets Oath of Valor's buff, so everything keyed to the Oath still works): while the
+// move's own buff is up, the tracker hides the borrowed one
+Object.assign(BUFF_NAMES, { avatar: 'Avatar of Dawn', bloodmoon: 'Blood Moon', living: 'Living Rune', falconHunt: 'Falcon', firestep: 'Firestep', treant: 'Treant', warp: 'Time Warp' });
+Object.assign(BUFF_ICON, { avatar: 'oath', bloodmoon: 'undying', living: 'overload', falconHunt: 'barrage', firestep: 'smolder', treant: 'thorn', warp: 'accel' });
+const BUFF_HIDES = { avatar: 'oath', bloodmoon: 'undying', living: 'overload', warp: 'chamber' };
+
 // Alembist (classes-b): the bandolier's tooltip lists the recipes (and the Volatile's Reactions, sealed until found)
 Object.assign(BUFF_NAMES, { distill: 'Distill', catalyst: 'Catalyst' });
 Object.assign(BUFF_ICON, { distill: 'distill', catalyst: 'distill' });
@@ -134,7 +141,10 @@ const Hud = {
       const perks = k ? [...(k.gear().perks || [])].filter(p => ITEM_PERKS[p] && ITEM_PERKS[p].ab === (ab.replaces || ab.id)) : [];
       const enh = perks.map(p => `<div class="it-perk"><span><u>Enhanced (${ITEMS[p].name}):</u> ${ITEM_PERKS[p].text}</span></div>`).join('');
       // talents (talents.js) that change this move, or the move its spec version replaced
-      const held = k && k.env.talents && typeof TALENT_BY_ID !== 'undefined' ? [...(k.env.talents() || [])].map(id => TALENT_BY_ID[id]).filter(d => d && d.t.ab === (ab.replaces || ab.id)) : [];
+      // (a move a talent granted says so, and doesn't repeat that talent's own words)
+      const granted = ab.talent || ab.fromTalent;
+      if (granted) meta.push('Talent');
+      const held = k && k.env.talents && typeof TALENT_BY_ID !== 'undefined' ? [...(k.env.talents() || [])].map(id => TALENT_BY_ID[id]).filter(d => d && d.t.ab === (ab.replaces || ab.id) && !(d.t.grants && granted)) : [];
       const tal = held.map(d => `<div class="it-talent"><span><u>Talent · ${d.t.name}:</u> ${talentText(d.t, this.actor.spec)}</span></div>`).join('');
       return `<div class="tip-ab">${icon}<div><b>${name}</b><em>${meta.join(' · ')}</em></div></div>${ab.desc || ''}${enh}${tal}`;
     }));
@@ -216,7 +226,8 @@ const Hud = {
     drawGauge(c, k, gw, 116, t);
     // buffs (rebuilt only when the set changes)
     const list = [];
-    for (const [id, b] of k.buffs) if (b.end > now && BUFF_NAMES[id]) list.push({ id, name: BUFF_NAMES[id], left: b.end - now, stacks: b.stacks, bad: BAD_BUFFS.has(id) });
+    const hidden = new Set(Object.entries(BUFF_HIDES).filter(([own]) => k.has(own)).map(([, base]) => base));
+    for (const [id, b] of k.buffs) if (b.end > now && BUFF_NAMES[id] && !hidden.has(id)) list.push({ id, name: BUFF_NAMES[id], left: b.end - now, stacks: b.stacks, bad: BAD_BUFFS.has(id) });
     for (const x of this.extra()) list.push(x);
     for (const x of k.itemBuffs()) list.push(x);   // buffs from item effects
     const key = list.map(b => b.id + ':' + (b.left != null ? Math.ceil(b.left) : '') + ':' + b.stacks).join('|');

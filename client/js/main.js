@@ -163,6 +163,13 @@
     selfMods: () => { const s = myState(); return { dmgDown: inArena() && s && s.dd ? FIGHT.DMG_DOWN : 0 }; },
     recentDamage: (a, secs) => (inArena() ? raid.taken : town.taken).filter(d => d.t > now - secs).reduce((x, d) => x + d.a, 0),
     hpFrac: () => { const s = myState(); return s && s.maxHp ? Math.max(0, s.hp / s.maxHp) : 1; },
+    // the boss as talents see it (kits.js bossNow): its cast bar, the next move in the bnext feed, who it's on
+    boss: () => {
+      if (!inArena() || !raid || raid.state !== 'live') return null;
+      const c = raid.cast && now <= raid.cast.start + raid.cast.dur ? raid.cast : null, s = myState();
+      const n = raid.bnext && raid.bnext.l.length ? Math.max(0, raid.bnext.l[0][1] - (now - raid.bnext.at)) : null;
+      return { casting: !!c, castLeft: c ? c.start + c.dur - now : 0, next: n, onMe: raid.boss.tg === Net.id, vuln: raid.boss.v || 0, selfVuln: !!(s && s.vuln) };
+    },
     maxHp: () => { const s = myState(); return s ? s.maxHp : playerBaseHp(player.cls ? player.cls.role : 'dps') + (Inventory.mods(player.cls && player.cls.id).hp || 0); },
     onEvent: (a, ev) => onKitEvent(ev),
   };
@@ -506,14 +513,25 @@
     player.target = null; player.interact = null;
     FX.add({ type: 'ring', x: player.x, y: player.y, r: 38, color: '#c58aff', dur: 0.45 });
   }
-
-  // a kit move (kits.js kitMoveDest): a dash, a swing round the target, a charge through it; it plays as a dash
+  // a kit move: it plays as a dash. Talents (kits.js kitMove) use 'back' (away from the enemy), 'forward' (where you
+  // face), 'ally' (toward ev.to, up to ev.d) and 'point' (ev.x, ev.y); the Driftblade's moves (kits.js kitMoveDest)
+  // use 'dash', 'around' (swing round the target) and 'through' (charge through it)
   function kitMove(ev) {
+    if (amDead() || player.kb || myDebuff('rooted')) return;
     const en = enemyPos(), tgt = en ? { x: en.x, y: en.y } : null;
-    const dest = kitMoveDest(ev.where, player, tgt, player.target || mouseWorld(), ev.d);
+    let dest, face = true;
+    if (ev.where === 'back' || ev.where === 'forward' || ev.where === 'ally' || ev.where === 'point') {
+      const d = ev.d || 140;
+      dest = { x: player.x, y: player.y }; face = false;
+      if (ev.where === 'back') { const a = tgt ? Math.atan2(player.y - tgt.y, player.x - tgt.x) : player.angle + Math.PI; dest.x += Math.cos(a) * d; dest.y += Math.sin(a) * d; }
+      else if (ev.where === 'forward') { dest.x += Math.cos(player.angle) * d; dest.y += Math.sin(player.angle) * d; }
+      else if (ev.where === 'ally') { const a = entById(ev.to); if (!a || a === player) return; const dist = Math.hypot(a.x - player.x, a.y - player.y), k = Math.max(0, Math.min(d, dist - 40)) / (dist || 1); dest.x += (a.x - player.x) * k; dest.y += (a.y - player.y) * k; }
+      else if (Number.isFinite(ev.x) && Number.isFinite(ev.y)) { dest.x = ev.x; dest.y = ev.y; }
+      else return;
+    } else dest = kitMoveDest(ev.where, player, tgt, player.target || mouseWorld(), ev.d);
     if (inArena()) clampArena(dest); else { dest.x = clamp(dest.x, 40, WORLD.w - 40); dest.y = clamp(dest.y, 40, WORLD.h - 40); }
     player.dashMove = { sx: player.x, sy: player.y, tx: dest.x, ty: dest.y, t0: now };
-    player.angle = tgt && ev.where !== 'dash' ? Math.atan2(tgt.y - dest.y, tgt.x - dest.x) : Math.atan2(dest.y - player.y, dest.x - player.x);
+    if (face) player.angle = tgt && ev.where !== 'dash' ? Math.atan2(tgt.y - dest.y, tgt.x - dest.x) : Math.atan2(dest.y - player.y, dest.x - player.x);
     player.target = null; player.interact = null;
   }
   // class moments (Perfect Block, Overheat...): the big effect plays for everyone, the text only for you

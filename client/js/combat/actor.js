@@ -4,6 +4,7 @@
 //   world.isDead(id), world.defaultLink(actor), world.partyMods(actor), world.targetMods(actor),
 //   world.selfMods(actor), world.recentDamage(actor, secs), world.maxHp(actor), world.moving(actor),
 //   world.canAuto(actor) (optional: may auto-attacks fire right now?), world.hpFrac(actor) (optional: current HP 0..1),
+//   world.boss(actor) (optional: { casting, castLeft, next, onMe, vuln, selfVuln } for talents that react to the boss),
 //   world.onEvent(actor, ev)  <- every kit event (damage, heal, used, castStart, fail...)
 
 class CombatActor {
@@ -35,6 +36,7 @@ class CombatActor {
       maxHp: () => world.maxHp(actor),
       hpFrac: () => (world.hpFrac ? world.hpFrac(actor) : 1),   // your health, 0..1 (Berserker)
       pos: () => ({ x: actor.ent.x, y: actor.ent.y }),            // where you stand (Sigilmancer's circle)
+      boss: () => (world.boss ? world.boss(actor) : null),         // what the boss is doing, for talents that react to it (kits.js bossNow)
       isDead: id => world.isDead(id),
       defaultLink: () => world.defaultLink(actor),
       refundDash: () => actor.refundDash(world.now()),            // a kit giving back a dash charge (Driftblade's Hook Turn)
