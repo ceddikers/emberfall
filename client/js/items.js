@@ -155,6 +155,16 @@ Object.assign(ITEM_PERKS, {
   oathbroker_w3: { ab: 'lien', text: 'Lien lasts 13s instead of 10s (a Guarantor\'s bond 24s instead of 20s).' },
   oathbroker_a4: { ab: 'default', text: 'After Default the Ledger is closed for 7s instead of 10s.' },
 });
+// ---------------------------------------------------------------- Ironpalm (tank): iron knuckle wraps for a weapon, gis for armour
+CLASS_MAIN.ironpalm = 'phys';
+CLASS_GEAR.ironpalm = { wtype: 'wraps', w: ["Recruit's Knuckle Wraps", 'Butcher-Twine Wraps', 'Silk-Bound Iron Wraps', 'Thunder-Iron Wraps', 'Wraps of the Barrow Monk'], a: ['Scullery Gi', 'Webweave Gi', 'Stormcloud Gi', 'Gravestill Gi'] };
+Object.assign(ITEM_PERKS, {
+  ironpalm_w1: { ab: 'palm', text: 'Crane Step gives 30 Breath instead of 22.' },
+  ironpalm_a2: { ab: 'read', text: 'A perfect Read also shields you for about 8% of your HP.' },
+  ironpalm_w2: { ab: 'fist', text: 'Thousand Palms strikes a sixth time, for 30% of a strike.' },
+  ironpalm_w3: { ab: 'bell', text: 'Temple Bell\'s Second Wind lasts 20s instead of 15s.' },
+  ironpalm_a4: { ab: 'skin', text: 'Iron Skin cuts damage by 50% instead of 40%.' },
+});
 
 // ---------------------------------------------------------------- item effects
 // Effects are data. The combat engine runs them in your own kit (Kit.itemHook / Kit.fxMod in engine.js), like the

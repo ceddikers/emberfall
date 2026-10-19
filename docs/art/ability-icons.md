@@ -149,6 +149,22 @@ Talent moves (they borrow the icon above until painted):
 Talent moves (they borrow the icon above until painted):
 7. **Gyre** (`driftblade/gyre`): a ribbon making one full loop round a small dark post, four short cut marks spaced round the loop.
 8. **Tailspin** (`driftblade/tailspin`): three sabre arcs whirling round one centre, like a spinning top seen from above.
+
+**Ironpalm**: deep maroon background, saffron, off-white cloth wraps and dull iron. Bare hands only, no weapons.
+1. **Light: Palm** (`ironpalm/palm`): an open palm, fingers together, driving forward, three short saffron speed lines behind it.
+2. **Heavy: Fist** (`ironpalm/fist`): a wrapped fist with an iron plate over the knuckles, seen head-on, a flat white impact star bursting from the plate.
+3. **Kick** (`ironpalm/kick`): a bare foot snapping out sideways, the heel leading, one thick saffron arc trailing it.
+4. **Read** (`ironpalm/read`): a calm half-closed eye over a raised open palm, a thin white line (a blow's path) stopping dead against the palm.
+5. **Iron Skin** (`ironpalm/skin`): a bare forearm turning to dark riveted iron from the wrist up, a white glint on the metal.
+6. **Temple Bell** (`ironpalm/bell`): a round bronze temple bell with three flat gold rings of sound spreading from it.
+
+Talent moves (they borrow the icon above until painted):
+7. **Bellows Stance** (`ironpalm/bellows`): a leather forge bellows mid-squeeze, a thick orange curl of breath and three sparks blowing out of the nozzle.
+8. **Dragon Ascends** (`ironpalm/dragon`): a saffron dragon made of a single brushstroke coiling up round a raised fist.
+
+The taunt, **Beckoning Palm**, uses the Read icon.
+
+
 ## Advanced tanks (added 2026-10-20)
 
 Until these arrive the game draws simple glyph icons for both classes (data.js `art.icons: false`; flip it to `true` once the six icons, the taunt, the two talent moves and the spec moves from `spec-icons.md` are all in).

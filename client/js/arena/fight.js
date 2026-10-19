@@ -25,6 +25,7 @@ const FIGHT = {
   TAUNT_LEAD: 1.1, TAUNT_FIX: 3, TAUNT_ADD_FIX: 6, TAUNT_CD: 20,
   RAISE_WEAKNESS: 0.25,
   PERFECT_WINDOW: 0.8,   // Bastion's Brace
+  READ_WINDOW: 0.4,      // Ironpalm's Read ('parry'): a hit in its first 0.4 s is caught (halved, and the kit hears 'read')
   SLOWED: 0.55,          // move speed while 'slowed' (webs, venom); 'rooted' stops movement and dashes
   // The boss files are written in "big" numbers; this brings boss HP, player HP and every hit down to the
   // game's small-number scale (same factor as ENGINE.NUM_SCALE, which scales potency).
@@ -495,11 +496,12 @@ class FightSim {
     let amt = opts.raw ? raw : raw * this.scale.dmg * (this.hard ? 1.25 : 1) * (1 + this.boss.dmgUp);
     if (s.vulnEnd > this.t && !opts.raw) amt *= 1 + s.vuln;
     if (s.def && !opts.raw) amt *= 1 - s.def;
-    let mult = 1, perfect = null, reflect = null, invuln = false;
+    let mult = 1, perfect = null, reflect = null, invuln = false, read = null;
     for (const m of (opts.nomit ? [] : s.mits)) {   // (nomit: a bill from the Ledger, mitigated when it was written)
       if (m.kind === 'invuln') { invuln = true; break; }
       if (m.kind === 'living') continue;
       if (m.kind === 'brace' && this.t - m.start <= FIGHT.PERFECT_WINDOW && !perfect) { perfect = m; mult *= 0.4; continue; }
+      if (m.kind === 'parry' && !opts.raw && this.t - m.start <= FIGHT.READ_WINDOW && !read) { read = m; mult *= 0.5; continue; }
       if (m.kind === 'reflect') { if (!reflect) { reflect = m; mult *= 0.2; } continue; }
       mult *= 1 - m.pct;
     }
@@ -511,6 +513,10 @@ class FightSim {
     if (reflect) {
       s.mits = s.mits.filter(m => m !== reflect);
       this.emit({ t: 'fev', k: 'reflect', id: p.id });
+    }
+    if (read) {
+      s.mits = s.mits.filter(m => m !== read);
+      this.emit({ t: 'fev', k: 'read', id: p.id, b: opts.kind === 'buster' ? 1 : 0 });
     }
     const before = amt;
     amt *= mult;

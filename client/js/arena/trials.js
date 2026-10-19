@@ -376,6 +376,31 @@ Object.assign(TRIALS, {
     },
   },
 });
+// ======================================================================= Ironpalm
+Object.assign(TRIALS, {
+  stillwater: {
+    cls: 'ironpalm', spec: 'stillwater', name: 'The Quiet Water',
+    lore: ['The King\'s sword-master struck faster than any shield could rise.', 'A monk met every stroke with an open hand, and breathed.'],
+    outro: 'The sword is still. The Still Water is calm.',
+    allies: [], seconds: 60, enrage: 80, regen: 0.012,
+    script(f, k, me) {
+      // quick strokes at the tank, one after another, each plain to see: every one a chance to Read
+      const stroke = () => k.blow(6600, 1.8, 'Sword Stroke', me.id);
+      k.loop([[2.5, stroke], [3.1, stroke], [3.1, stroke], [3.4, () => k.blow(10000, 3, 'Grave Cleave', me.id)], [4.5, () => k.swing('stomp', 4500, 3.5)]]);
+    },
+  },
+  avalanche: {
+    cls: 'ironpalm', spec: 'avalanche', name: 'The Mountain Road',
+    lore: ['The Barrow sits under a mountain, and a monk once came down it.', 'He did not stop once on the way, and neither did the mountain.'],
+    outro: 'The road ends at the throne. The Avalanche Fist arrives.',
+    allies: ['cleric:base'], seconds: 55, enrage: 66, regen: 0,
+    script(f, k, me) {
+      // long, open stretches at the boss's side, broken only by a stomp to step out of: strings that never stop
+      f.boss.anchor = true;
+      k.loop([[6, () => k.blow(9000, 4, 'Grave Cleave', me.id)], [9, () => k.swing('stomp', 5000, 4)], [8, () => k.knell(2500)]]);
+    },
+  },
+});
 
 // the boss definition FightSim runs for a trial
 function trialDef(specId) {

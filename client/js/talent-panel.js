@@ -34,10 +34,12 @@ const TalentPanel = (() => {
   function cardTip(cls, kit, spec, t, r) {
     const ab = abFor(kit, t.ab);
     const where = ab ? ab.name : '';
-    // a talent that puts a new move on a button: show the move itself (talents.js TALENT_ABILITIES)
-    const mv = typeof talentMoveFor === 'function' ? talentMoveFor(cls.id, spec, t.id) : null;
-    if (mv) return `<div class="tip-ab"><i class="ab-icon ${mv.type}" style="background-image:url(${abilityIcon(cls.id, abilityIconId(mv))})"></i><div><b>${t.name}</b><em>${ROMAN[r]} · new move, replaces ${where}</em></div></div>${talentText(t, spec)}<div class="it-talent"><span><u>${mv.name}:</u> ${mv.desc}</span></div>`;
-    return `<div class="tip-ab"><i class="ab-icon ${ab ? ab.type : ''}" style="background-image:url(${abilityIcon(cls.id, t.ab)})"></i><div><b>${t.name}</b><em>${ROMAN[r]} · ${where}</em></div></div>${talentText(t, spec)}`;
+    // a talent that puts a new move on a button: show the move itself (kits.js TALENT_ABILITIES); its own description
+    // follows unless the talent's text already tells the whole move
+    const mv = t.grants && typeof talentMoveFor === 'function' ? talentMoveFor(cls.id, spec, t.id) : null;
+    const text = talentText(t, spec);
+    if (mv) return `<div class="tip-ab"><i class="ab-icon ${mv.type}" style="background-image:url(${abilityIcon(cls.id, abilityIconId(Object.assign({ fromTalent: t.id }, mv)))})"></i><div><b>${t.name}</b><em>${ROMAN[r]} · new move, replaces ${where}</em></div></div>${text}${text.includes(mv.name) ? '' : `<div class="it-talent"><span><u>${mv.name}:</u> ${mv.desc}</span></div>`}`;
+    return `<div class="tip-ab"><i class="ab-icon ${ab ? ab.type : ''}" style="background-image:url(${abilityIcon(cls.id, t.ab)})"></i><div><b>${t.name}</b><em>${ROMAN[r]} · ${where}</em></div></div>${text}`;
   }
 
   function render() {
