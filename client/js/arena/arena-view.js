@@ -1157,7 +1157,7 @@ const ArenaView = {
       if (tg.hidden) continue;
       if (env && BossTells.ground(ctx, tg, s, p, fadeIn, t, env)) continue;
       switch (tg.type) {
-        case 'aoe': case 'buster': this.areaWarning(ctx, s, p, fadeIn, tg.type === 'buster' ? '#ff4a3a' : '#ff8a2a'); break;
+        case 'aoe': case 'buster': this.areaWarning(ctx, s, p, fadeIn, tg.type === 'buster' ? '#ff2a3a' : '#ff6a3a', t); break;
         case 'stack': this.stackMarker(ctx, s, p, fadeIn, t); break;
         case 'spread': this.spreadMarker(ctx, s, p, fadeIn, t); break;
         case 'tower': this.tower(ctx, s, p, fadeIn, t, tg.need); break;
@@ -1170,8 +1170,7 @@ const ArenaView = {
   // FF14-style: tinted area + bright rim, with a fill that grows from the origin as the cast completes
   // The rim glows, an inner edge marches, and the last quarter pulses faster and brighter
   // (anticipation: the closer it is to landing, the louder it gets).
-  areaWarning(ctx, s, p, k, color) {
-    const t = performance.now() / 1000;
+  areaWarning(ctx, s, p, k, color, t = performance.now() / 1000) {
     const late = Math.max(0, (p - 0.75) / 0.25);
     const pulse = late > 0 ? 0.5 + 0.5 * Math.sin(t * (10 + late * 22)) : 0;
     ctx.save();

@@ -1905,7 +1905,7 @@
     // things that shelter from Gale Slam: posts, and rods waiting for their bolt
     const covers = [...raid.posts.values()].filter(p => now < p.end).map(p => ({ x: p.x, y: p.y }));
     for (const tg of raid.tgs.values()) if (tg.tag === 'rod' && tg.gone == null) covers.push({ x: tg.live.x, y: tg.live.y });
-    const tellEnv = { boss: bd, bossId: raid.def.id, entById, hard: raid.mode === 'hard', pol: raid.pol, units, covers, props: raid.room.props, room: raid.room };
+    const tellEnv = { tgs: raid.tgs, boss: bd, bossId: raid.def.id, entById, hard: raid.mode === 'hard', pol: raid.pol, units, covers, props: raid.room.props, room: raid.room };
     ArenaView.drawTelegraphs(ctx, raid.tgs, now, tellEnv);
     BossTells.drawRollers(ctx, raid.rollers, now, tellEnv);
     BossTells.drawSweeps(ctx, raid.sweeps, now, tellEnv);
@@ -1921,6 +1921,7 @@
     for (const a of raid.adds.values()) { const o = a.link && raid.adds.get(a.link); if (o && a.id < o.id && raid.mode === 'hard') ArenaView.addBeam(ctx, a, o, now); }
     FX.draw(ctx, true);
     VFX.draw(ctx, 'ground');
+    BossTells.rims(ctx, raid.tgs, now, tellEnv);   // telegraph rims stay readable over the floor effects
     drawAllyTarget();
     if (raid.pol.size) ArenaView.polarityAuras(ctx, units, raid.pol, now);
 
