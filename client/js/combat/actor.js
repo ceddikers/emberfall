@@ -12,6 +12,7 @@ class CombatActor {
     this.cls = cls; this.ent = ent; this.world = world;
     this.spec = ent.spec || null;
     this.dash = { charges: DASH.charges, next: 0 };
+    this.taunt = cls.role === 'tank' && typeof TAUNT !== 'undefined' ? { next: 0 } : null;   // tanks' taunt on T (kits.js)
     const actor = this;
     this.kit = new Kit(kitFor(cls.id, this.spec), {
       now: () => world.now(),
@@ -56,6 +57,10 @@ class CombatActor {
     return true;
   }
   dashFraction(now) { return this.dash.next ? Math.max(0, (this.dash.next - now) / DASH.cd) : 0; }
+
+  tauntReady(now) { return !!this.taunt && now >= this.taunt.next; }
+  useTaunt(now) { if (!this.tauntReady(now)) return false; this.taunt.next = now + TAUNT.cd; return true; }
+  tauntLeft(now) { return this.taunt ? Math.max(0, this.taunt.next - now) : 0; }
 }
 
 if (typeof module !== 'undefined') module.exports = { CombatActor };
