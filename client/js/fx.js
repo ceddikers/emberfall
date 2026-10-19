@@ -85,6 +85,10 @@ const FX = {
   // Dash visuals: a quick trail of afterimages.
   dashTrail(ent, color) {
     if (!ent.cls) return;
+    // (called every frame while dashing: at most ~45 afterimages a second, so a 144 Hz screen doesn't draw three times
+    // as many full hero ghosts as a 60 Hz one)
+    if (this.now - (ent._trailAt ?? -1) < 1 / 45) return;
+    ent._trailAt = this.now;
     this.add({ type: 'ghost', cls: ent.cls, x: ent.x, y: ent.y, angle: ent.angle, dur: 0.25 });
     if (Math.random() < 0.5) this.add({ type: 'puff', x: ent.x + (Math.random() - 0.5) * 12, y: ent.y + (Math.random() - 0.5) * 12, r: 9, color: color || '#ffffff', dur: 0.5 });
   },

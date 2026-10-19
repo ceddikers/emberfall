@@ -1679,15 +1679,17 @@
       // the room's own width and height decide how far the camera can lean each way
       // (far enough past the walls to show the scenery there: the stoves, shelves and pillars)
       const tx = lean(player.x, vw, W, 60, 60, ARENA.hw + 100) - vw / 2, ty = lean(player.y, vh, H, 150, 190, ARENA.hh + 110) - vh / 2;
-      cam.x += (tx - cam.x) * Math.min(1, dt * 6);
-      cam.y += (ty - cam.y) * Math.min(1, dt * 6);
+      const ka = 1 - Math.exp(-6 * dt);   // (frame-rate independent easing)
+      cam.x += (tx - cam.x) * ka;
+      cam.y += (ty - cam.y) * ka;
       return;
     }
     zoom = 1;
     const tx = clamp(player.x - W / 2, 0, Math.max(0, WORLD.w - W));
     const ty = clamp(player.y - H / 2, 0, Math.max(0, WORLD.h - H));
-    cam.x += (tx - cam.x) * Math.min(1, dt * 8);
-    cam.y += (ty - cam.y) * Math.min(1, dt * 8);
+    const kt = 1 - Math.exp(-8 * dt);
+    cam.x += (tx - cam.x) * kt;
+    cam.y += (ty - cam.y) * kt;
     if (W > WORLD.w) cam.x = (WORLD.w - W) / 2;
     if (H > WORLD.h) cam.y = (WORLD.h - H) / 2;
   }
@@ -1806,7 +1808,8 @@
     ctx.fillStyle = '#2d4a22'; ctx.fillRect(0, 0, W, H);
     const sh = FX.shake;
     const sx = sh > 0.3 ? (Math.random() - 0.5) * sh : 0, sy = sh > 0.3 ? (Math.random() - 0.5) * sh : 0;
-    const cx = Math.round(cam.x + sx), cy = Math.round(cam.y + sy);
+    // (snapped to device pixels, not whole CSS pixels: on a 2x screen a half-pixel step is visible as jitter)
+    const cx = Math.round((cam.x + sx) * DPR) / DPR, cy = Math.round((cam.y + sy) * DPR) / DPR;
     ctx.translate(-cx, -cy);
 
     const vx = clamp(cx, 0, WORLD.w), vy = clamp(cy, 0, WORLD.h);
@@ -1851,6 +1854,27 @@
     if (hov && !hov.label.match(/Barkeep|Trainer/) &&!lineup.some(h => h.cls.name === hov.label)) {
       label(ctx, hov.label, mouseWorld().x, mouseWorld().y - 18, '#ffe9a8', 13);
     }
+  }
+
+  // The boss drawn into a canvas of his own, then darkened (the Long Night: the same as brightness(1 - dark), only on
+  // his own pixels) and/or filtered as one small image onto the scene.
+  let bossCv = null;
+  const BOSS_BOX = 600;   // world px round him: room for his widest swing
+  function bossLayer(def, bd, alpha, dark, filter) {
+    const m = ctx.getTransform(), px = Math.hypot(m.a, m.b) || 1, S = Math.ceil(BOSS_BOX * px);
+    if (!bossCv) bossCv = document.createElement('canvas');
+    if (bossCv.width !== S) bossCv.width = bossCv.height = S;
+    const c = bossCv.getContext('2d');
+    c.setTransform(1, 0, 0, 1, 0, 0); c.globalCompositeOperation = 'source-over'; c.globalAlpha = 1; c.clearRect(0, 0, S, S);
+    c.setTransform(px, 0, 0, px, S / 2 - bd.x * px, S / 2 - bd.y * px);
+    drawBoss(c, def, bd.x, bd.y, bd.f, bd.st, RAID_BOSS_SCALE);
+    if (dark > 0) {
+      c.setTransform(1, 0, 0, 1, 0, 0); c.globalCompositeOperation = 'source-atop'; c.globalAlpha = 1;
+      c.fillStyle = `rgba(0,0,0,${dark.toFixed(3)})`; c.fillRect(0, 0, S, S);
+    }
+    ctx.save(); ctx.globalAlpha = alpha; if (filter) ctx.filter = filter;
+    ctx.drawImage(bossCv, bd.x - BOSS_BOX / 2, bd.y - BOSS_BOX / 2, BOSS_BOX, BOSS_BOX);
+    ctx.restore();
   }
 
   function renderArena() {
@@ -1915,14 +1939,11 @@
     const bossDef = BOSSES.find(x => x.id === raid.def.id);
     for (const e of all) {
       if (e === bossEnt) {
-        ctx.save(); ctx.globalAlpha = bd.fade;
-        if (raid.nightK > 0.05) ctx.filter = `brightness(${(1 - 0.55 * raid.nightK).toFixed(2)})`;   // he's a shape in the dark
-        if (raid.def.trial) {   // in a trial he's only a memory: pale, cold and not quite there
-          ctx.globalAlpha = bd.fade * (0.72 + 0.06 * Math.sin(now * 2.3));
-          ctx.filter = 'grayscale(0.7) brightness(1.9) sepia(0.35) hue-rotate(175deg) drop-shadow(0 0 9px #8fa8ff)';
-        }
-        drawBoss(ctx, bossDef, bd.x, bd.y, bd.f, bd.st, RAID_BOSS_SCALE);
-        ctx.restore();
+        // in the Long Night he's a shape in the dark; in a trial only a memory: pale, cold and not quite there. Both go
+        // through a small layer of his own (bossLayer): a filter on the main canvas costs a whole-screen pass every frame
+        if (raid.def.trial) bossLayer(bossDef, bd, bd.fade * (0.72 + 0.06 * Math.sin(now * 2.3)), 0, 'grayscale(0.7) brightness(1.9) sepia(0.35) hue-rotate(175deg) drop-shadow(0 0 9px #8fa8ff)');
+        else if (raid.nightK > 0.05) bossLayer(bossDef, bd, bd.fade, 0.55 * raid.nightK, null);
+        else { ctx.save(); ctx.globalAlpha = bd.fade; drawBoss(ctx, bossDef, bd.x, bd.y, bd.f, bd.st, RAID_BOSS_SCALE); ctx.restore(); }
       } else if (e.kind === 'knight') {
         const k = e.k, a = Math.min(1, (now - k.born) / 0.6) * (k.gone ? Math.max(0, 1 - (now - k.gone) / 0.8) : 1);
         drawEchoKnight(ctx, k.x, k.y, k.f, k.st, a * (1 - 0.3 * raid.nightK));

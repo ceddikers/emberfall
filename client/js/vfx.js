@@ -14,6 +14,7 @@ const VFX = (() => {
   const parts = [];
   const effects = [];
   const MAX_PARTS = 1800;
+  const TICK = 1 / 60;   // the fixed rate effect ticks run at
   let now = 0;
   let scale = 1;   // alpha multiplier for whatever is being spawned (others' abilities are dimmed)
   let muted = false;   // a hidden tab spawns nothing (it would all play at once on the way back)
@@ -146,7 +147,13 @@ const VFX = (() => {
     for (let i = effects.length - 1; i >= 0; i--) {
       const e = effects[i];
       if (now - e.t0 > e.dur) { effects.splice(i, 1); if (e.done) withScale(e.sc, e.done); continue; }
-      if (e.tick && now >= e.t0) withScale(e.sc, () => e.tick(Math.max(0, (now - e.t0) / e.dur), dt, e));
+      // ticks (trails, motes) run at a steady 60 a second whatever the frame rate, so a 144 Hz screen doesn't spawn more
+      // than twice the particles of a 60 Hz one, nor a slow frame fewer
+      if (e.tick && now >= e.t0) {
+        e._acc = Math.min((e._acc ?? TICK) + dt, TICK * 4);
+        const q = Math.max(0, (now - e.t0) / e.dur);
+        while (e._acc >= TICK - 1e-9) { e._acc -= TICK; withScale(e.sc, () => e.tick(q, TICK, e)); }
+      }
     }
   }
 
@@ -157,22 +164,28 @@ const VFX = (() => {
     const size = p.size + ((p.size1 ?? p.size) - p.size) * q;
     const img = sprite(p.kind || 'glow', p.color);
     ctx.globalAlpha = Math.min(1, a);
-    ctx.globalCompositeOperation = p.add === false ? 'source-over' : 'lighter';
+    const op = p.add === false ? 'source-over' : 'lighter';
+    if (op !== curOp) { ctx.globalCompositeOperation = op; curOp = op; }
     const y = p.y - p.z;
     if (p.stretch) {
       // streaks point along their velocity (sparks)
       const sp = Math.hypot(p.vx, p.vy - p.vz);
       const ang = Math.atan2(p.vy - p.vz, p.vx);
       const len = Math.max(size, size * p.stretch * Math.min(1, sp / 300));
-      ctx.save(); ctx.translate(p.x, y); ctx.rotate(ang);
+      place(ctx, p.x, y, ang, 1);
       ctx.drawImage(img, -len / 2, -size / 4, len, size / 2);
-      ctx.restore();
+      ctx.setTransform(base);
     } else if (p.kind && p.kind !== 'glow' && p.kind !== 'soft' && p.kind !== 'smoke') {
-      ctx.save(); ctx.translate(p.x, y); ctx.rotate(p.rot);
-      if (p.flutter) ctx.scale(1, Math.abs(Math.cos(now * p.flutter + p.t0 * 7)) * 0.8 + 0.2);
+      place(ctx, p.x, y, p.rot, p.flutter ? Math.abs(Math.cos(now * p.flutter + p.t0 * 7)) * 0.8 + 0.2 : 1);
       ctx.drawImage(img, -size / 2, -size / 2, size, size);
-      ctx.restore();
+      ctx.setTransform(base);
     } else ctx.drawImage(img, p.x - size / 2, y - size / 2, size, size);
+  }
+  // rotated particles: one setTransform onto the camera's matrix instead of a save/translate/rotate/restore each
+  let base = null, curOp = null;
+  function place(ctx, x, y, ang, sy) {
+    const c = Math.cos(ang), s = Math.sin(ang), m = base;
+    ctx.setTransform(m.a * c + m.c * s, m.b * c + m.d * s, (m.c * c - m.a * s) * sy, (m.d * c - m.b * s) * sy, m.a * x + m.c * y + m.e, m.b * x + m.d * y + m.f);
   }
 
   function draw(ctx, layer) {
@@ -184,6 +197,7 @@ const VFX = (() => {
       ctx.globalCompositeOperation = e.add ? 'lighter' : 'source-over';
       e.draw(ctx, p, now - e.t0, e);
     }
+    base = ctx.getTransform(); curOp = null;
     for (const pt of parts) if (!!pt.ground === (layer === 'ground')) drawPart(ctx, pt);
     ctx.restore();
   }

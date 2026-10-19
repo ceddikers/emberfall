@@ -532,6 +532,9 @@ const ArenaView = {
   },
 
   drawFloor(ctx, bossId, scale) {
+    // (the scale is rounded up to quarter steps: a window being resized or the zoom settling doesn't rebuild the floor,
+    // and the room layer keyed on it, every frame)
+    scale = Math.ceil(scale * 4 - 1e-6) / 4;
     if (this.floorFor !== bossId + '@' + scale) this.buildFloor(bossId, scale);
     const { bx, by } = this.floorBox;
     ctx.drawImage(this.floor, -bx, -by, bx * 2, by * 2);

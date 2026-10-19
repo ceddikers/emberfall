@@ -1,6 +1,9 @@
 // Combat HUD for the local player: ability bar (Q W E R D F + Space), class gauge, cast bar, buffs.
 
 const SLOT_KEYS = ['Q', 'W', 'E', 'R', 'D', 'F', 'SPC', 'T'];   // 7: a tank's taunt
+// (the bar is updated every frame: text and the cooldown sweep are only written to the page when they change)
+const hudText = (el, v) => { v = String(v); if (el._t !== v) { el._t = v; el.textContent = v; } };
+const hudCd = (el, v) => { v = String(v); if (el._cd !== v) { el._cd = v; el.style.setProperty('--cd', v); } };
 // a class whose icons aren't all painted yet draws its own: ICON_ART in gauges.js (the Alembist), or drawnIcon below
 // for classes flagged art.icons === false in data.js (Thermist, Driftblade)
 const abilityIcon = (classId, abilityId) => (typeof ICON_ART !== 'undefined' && ICON_ART[classId] && ICON_ART[classId](abilityId)) || drawnIcon(classId, abilityId) || paintedIcon(classId, abilityId);
@@ -271,7 +274,7 @@ const Hud = {
       const cdLeft = k.cdRemaining(ab);
       if (ab.charges) {
         const ch = k.charges(ab);
-        s.ch.textContent = ch;
+        hudText(s.ch, ch);
         frac = ch === 0 ? k.cdFraction(ab) : 0;
         if (ch === 0) txt = cdLeft < 1 ? cdLeft.toFixed(1) : Math.ceil(cdLeft);
         s.el.classList.toggle('partial', ch > 0 && ch < ab.charges);
@@ -282,8 +285,8 @@ const Hud = {
       if (ab.type === 'gcd' && k.gcdRemaining() > 0 && cdLeft <= 0) frac = Math.max(frac, k.gcdRemaining() / k.gcdLen);
       // no GCD (a paced kit): its moves show the recovery of the last press instead
       if (ab.type === 'gcd' && k.gcdFree() && cdLeft <= 0 && k.lockUntil > now) frac = Math.max(frac, (k.lockUntil - now) / Math.max(0.1, k.lockLen));
-      s.sweep.style.setProperty('--cd', frac.toFixed(3));
-      s.cd.textContent = txt;
+      hudCd(s.sweep, frac.toFixed(3));
+      hudText(s.cd, txt);
       s.el.classList.toggle('glow', usable && cdLeft <= 0 && k.glows(ab));
       s.el.classList.toggle('dim', !usable);
       s.el.classList.toggle('queued', !!(k.queued && k.queued.ab === ab) || k.inbuf.some(q => q.ab === ab));
@@ -294,15 +297,15 @@ const Hud = {
     // dash
     const ds = this.slots[6];
     a.dashReady(now);
-    ds.ch.textContent = a.dash.charges;
-    ds.sweep.style.setProperty('--cd', a.dash.charges === 0 ? a.dashFraction(now).toFixed(3) : 0);
-    ds.cd.textContent = a.dash.charges === 0 ? Math.ceil(a.dash.next - now) : '';
+    hudText(ds.ch, a.dash.charges);
+    hudCd(ds.sweep, a.dash.charges === 0 ? a.dashFraction(now).toFixed(3) : 0);
+    hudText(ds.cd, a.dash.charges === 0 ? Math.ceil(a.dash.next - now) : '');
     // taunt (tanks)
     const ts = a.taunt && this.slots[7];
     if (ts) {
       const left = a.tauntLeft(now);
-      ts.sweep.style.setProperty('--cd', (left / TAUNT.cd).toFixed(3));
-      ts.cd.textContent = left > 0 ? (left < 1 ? left.toFixed(1) : Math.ceil(left)) : '';
+      hudCd(ts.sweep, (left / TAUNT.cd).toFixed(3));
+      hudText(ts.cd, left > 0 ? (left < 1 ? left.toFixed(1) : Math.ceil(left)) : '');
     }
     // cast bar
     if (k.cast) {
