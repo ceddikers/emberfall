@@ -879,6 +879,18 @@
       case 'stomp': case 'ring': prop('graves', true, end + 0.2); break;
       case 'rise': case 'night': prop('rise', true, end + 0.3); break;
       case 'sweep': prop('raise', true, end - 0.45); break;
+      // Hard-only moves
+      case 'flop': prop('flop', true, end + 0.2); if (msg.then) prop('next', msg.then, end + 0.3); break;
+      case 'throw': prop('toss', true, end + 0.1); break;
+      case 'flambe': prop('brandy', true, end + 0.3); break;
+      case 'eggs': prop('brood', true, end + 0.6); break;
+      case 'fang': prop('rear', true, end + 0.4); prop('venom', true, end + 0.2); break;
+      case 'volley': prop('silk', true, end + 4.5); prop('rear', true, end + 0.5); break;
+      case 'chain': case 'orbs': prop('charge', true, end + 0.4); break;
+      case 'skyfall': prop('sky', true, end + 0.4); break;
+      case 'audience': prop('audience', true, end + 0.3); break;
+      case 'march': prop('rise', true, end + 0.3); break;
+      case 'bind': prop('graves', true, end + 0.3); break;
     }
     if (msg.anim !== 'mince' && msg.anim !== 'boil') st.action = { type: 'attack', t0: end - 0.45, dur: 1.2 };
   });
@@ -941,7 +953,7 @@
   });
   Net.on('teth', msg => {
     if (!raid) return;
-    raid.tethers.set(msg.id, { a: msg.a, b: msg.b, kind: msg.kind, len: msg.len, start: now, end: now + msg.dur });
+    raid.tethers.set(msg.id, { a: msg.a, b: msg.b, kind: msg.kind, len: msg.len, tag: msg.tag, start: now, end: now + msg.dur });
   });
   Net.on('tethx', msg => {
     if (!raid) return;
@@ -973,10 +985,16 @@
   Net.on('roll', msg => {
     if (!raid) return;
     if (msg.clear) { raid.rollers.clear(); return; }
-    raid.rollers.set(msg.id, { x: msg.x, y: msg.y, a: msg.a, sp: msg.sp, r: msg.r, delay: msg.delay, start: now });
-    later(0.5, () => raid && BOSS_VFX.meatballLand(msg.x, msg.y));
+    raid.rollers.set(msg.id, { x: msg.x, y: msg.y, a: msg.a, sp: msg.sp, r: msg.r, delay: msg.delay, start: now, tag: msg.tag });
+    if (msg.tag === 'orb') BOSS_VFX.orbForm(msg.x, msg.y);
+    else later(0.5, () => raid && BOSS_VFX.meatballLand(msg.x, msg.y));
   });
-  Net.on('rollhit', msg => { const e = raid && entById(msg.pid); if (e) BOSS_VFX.meatballHit(e); });
+  Net.on('rollhit', msg => {
+    const e = raid && entById(msg.pid), r = raid && raid.rollers.get(msg.id);
+    if (e) (r && r.tag === 'orb' ? BOSS_VFX.orbHit : BOSS_VFX.meatballHit)(e);
+  });
+  // Chain Lightning (Volkar, Hard): the bolt's path from player to player
+  Net.on('chain', msg => { if (raid) BOSS_VFX.chain((msg.ids || []).map(id => entById(id)).filter(Boolean)); });
   // Silk Reel: the hooked player is dragged in on their own client; a dash snaps it (see doDash)
   Net.on('reel', msg => {
     if (!raid) return;
@@ -2164,8 +2182,6 @@
           <h3>${boss.name}</h3>
           <div class="sub"><span class="role-tag" style="--c:#ff7a6a">Boss ${['I', 'II', 'III', 'IV'][i]}</span>${boss.title}</div>
           <p class="tagline">${boss.blurb}</p>
-          <div class="box"><h4>Teaches</h4><p>${boss.teaches}</p></div>
-          <div class="box" style="margin-top:8px"><h4>Favors</h4><p>${boss.favors}</p></div>
         </div>
       </div>
       <ul class="abilities mech">${boss.mechanics.map(m => `<li><kbd>◆</kbd><div><b>${m.name}</b><span>${m.desc}</span></div></li>`).join('')}</ul>
@@ -2184,7 +2200,7 @@
     el.innerHTML = `
       <div class="mode-pick">
         <button data-mode="normal" class="${raidMode === 'normal' ? 'on' : ''}"><b>Normal</b><small>Every attack is telegraphed on the floor.</small></button>
-        <button data-mode="hard" class="${raidMode === 'hard' ? 'on' : ''}"><b>Hard</b><small>Faster, deadlier, and some attacks only show on the boss.</small></button>
+        <button data-mode="hard" class="${raidMode === 'hard' ? 'on' : ''}"><b>Hard</b><small>Faster and deadlier, with attacks Normal never uses. Some only show on the boss.</small></button>
       </div>
       <label class="fill"><input type="checkbox" ${raidFill ? 'checked' : ''} ${Net.isHost ? '' : 'disabled'}> Fill empty slots with bots</label>
       <div class="raid-roster">${humans.map(h => `<span style="--c:${ROLES[h.role].color}">${escapeHtml(h.name)}<small>${CLASSES.find(c => c.id === h.cls).name}</small></span>`).join('')}${

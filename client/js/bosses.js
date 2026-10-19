@@ -8,6 +8,8 @@ const BOSS_ART = {
     const props = st.props || {};
     const s = swing(actP(st, 'attack'));
     const w = st.moving ? Math.sin(st.t * 7) * 6 : 0;
+    // Belly Flop (Hard): he crouches and swells, bouncing on his heels, before he drops
+    if (props.flop) { const q = 1.08 + Math.sin(st.t * 14) * 0.04; ctx.scale(q, q); }
     // raid props (the arena sets st.props from the boss's cast): held tools tell you what's coming
     if (props.held === 'ladle' && props.spin) {
       for (let i = 0; i < 3; i++) {
@@ -61,6 +63,15 @@ const BOSS_ART = {
       ellipse(ctx, 18, -50 + bob, 10, 5, 0, 'rgba(200,40,20,0.8)');
       circle(ctx, 27, -40 + bob, 2.5, '#6ec046'); circle(ctx, 16, -38 + bob, 2, '#4a200e');
       circle(ctx, 16, -35, 8, skin, OUT, 2.5);
+    } else if (props.brandy) {
+      // Flambé (Hard): a brandy bottle in his off hand, a blue flame dancing on its neck
+      ellipse(ctx, 4, -31, 13, 9, 0.35, skin, OUT, 2.5);
+      ctx.save(); ctx.translate(24, -42); ctx.rotate(0.5 + Math.sin(st.t * 5) * 0.15);
+      rrect(ctx, -7, -6, 22, 12, 4, '#7a3a12', OUT, 2); rrect(ctx, 13, -3, 10, 6, 2, '#5a2a0e', OUT, 1.5);
+      ellipse(ctx, 2, -2, 6, 2.5, 0, 'rgba(255,220,160,0.5)');
+      glow(ctx, 26, 0, 14, '#5aa8ff', 0.7 + Math.sin(st.t * 14) * 0.2);
+      ctx.restore();
+      circle(ctx, 16, -35, 8, skin, OUT, 2.5);
     } else {
       // left arm holding a drumstick
       ellipse(ctx, 4, -31, 13, 9, 0.35, skin, OUT, 2.5);
@@ -74,8 +85,9 @@ const BOSS_ART = {
     ellipse(ctx, 7, 0, 18, 24, 0, apron, OUT, 2);
     circle(ctx, 10, -8, 2.5, '#b33a2a'); circle(ctx, 4, 9, 1.8, '#b33a2a'); circle(ctx, 13, 6, 1.4, '#8a5a2a');
     // right arm with the giant cleaver
-    const rg = props.mince ? (props.mince.side === 'right' ? 0.75 + Math.sin(st.t * 10) * 0.2 : props.mince.second === 'right' ? 0.25 : 0) : 0;
-    ctx.save(); ctx.translate(2, 27); ctx.rotate(props.mince ? 0.9 : 0.15 + s * 1.2);
+    // (Cleaver Toss, Hard: the cleaver drawn back over his shoulder, glinting)
+    const rg = props.mince ? (props.mince.side === 'right' ? 0.75 + Math.sin(st.t * 10) * 0.2 : props.mince.second === 'right' ? 0.25 : 0) : props.toss ? 0.6 + Math.sin(st.t * 12) * 0.2 : 0;
+    ctx.save(); ctx.translate(2, 27); ctx.rotate(props.mince ? 0.9 : props.toss ? 2.2 : 0.15 + s * 1.2);
     ellipse(ctx, 9, 0, 14, 9, 0, skin, OUT, 2.5);
     cleaver(rg);
     circle(ctx, 20, 0, 8.5, skin, OUT, 2.5);
@@ -278,12 +290,14 @@ const BOSS_ART = {
     rrect(ctx, -9, -2, 9, 4, 1.5, '#2a1d14', OUT, 1.2);
     circle(ctx, 0, 0, 5.5, '#4a4e5c', OUT, 2);
     ctx.restore();
-    // helm and jagged crown
+    // helm and jagged crown (Royal Audience, Hard: the crown blazes and its points grow)
     circle(ctx, 4, 0, 11, '#2a2c34', OUT, 2.5);
+    const aud = props.audience ? 0.75 + Math.sin(st.t * 9) * 0.2 : 0;
+    if (aud) glow(ctx, 4, 0, 44, '#ffe6a0', 0.6 * aud);
     for (let k = 0; k < 9; k++) {
-      const a = k * TAU / 9 + 0.35;
-      poly(ctx, [4 + Math.cos(a - 0.22) * 9, Math.sin(a - 0.22) * 9, 4 + Math.cos(a) * 16, Math.sin(a) * 16,
-        4 + Math.cos(a + 0.22) * 9, Math.sin(a + 0.22) * 9], gold, OUT, 1.2);
+      const a = k * TAU / 9 + 0.35, tip = 16 + aud * 7;
+      poly(ctx, [4 + Math.cos(a - 0.22) * 9, Math.sin(a - 0.22) * 9, 4 + Math.cos(a) * tip, Math.sin(a) * tip,
+        4 + Math.cos(a + 0.22) * 9, Math.sin(a + 0.22) * 9], aud ? '#ffe08a' : gold, OUT, 1.2);
     }
     circle(ctx, 4, 0, 8.5, '#2a2c34');
     // Royal Gaze: he lifts his head and his eyes blaze white
