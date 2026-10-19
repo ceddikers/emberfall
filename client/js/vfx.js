@@ -396,13 +396,16 @@ const VFX = (() => {
         const tail = Math.max(0, sweep - 0.55) / 0.45;
         const aT = a0 + flip * span * tail;
         const k = e.a * (1 - Math.max(0, (p - 0.45) / 0.55));
-        c.save(); c.globalCompositeOperation = 'lighter';
-        for (const [col, rr, ww, al] of [[color, r, w, 0.55], ['#ffffff', r * 0.98, w * 0.35, 0.9]]) {
-          c.globalAlpha = al * k; c.fillStyle = col;
-          c.beginPath(); c.arc(x, y - 10, rr, flip > 0 ? aT : a1, flip > 0 ? a1 : aT, false);
-          c.arc(x, y - 10, rr * (1 - ww), flip > 0 ? a1 : aT, flip > 0 ? aT : a1, true); c.closePath(); c.fill();
-        }
+        const arcBand = (rr, ww) => { c.beginPath(); c.arc(x, y - 10, rr, flip > 0 ? aT : a1, flip > 0 ? a1 : aT, false); c.arc(x, y - 10, rr * (1 - ww), flip > 0 ? a1 : aT, flip > 0 ? aT : a1, true); c.closePath(); c.fill(); };
+        c.save();
+        // an ink band under the light, so the cut reads on a bright floor too, and a fading smear trailing it
+        c.globalAlpha = 0.32 * k; c.fillStyle = '#140a14'; arcBand(r * 1.03, w * 1.15);
+        c.globalCompositeOperation = 'lighter';
+        if (tail < 1) { c.globalAlpha = 0.18 * k; c.fillStyle = color; c.beginPath(); c.arc(x, y - 10, r * 0.96, flip > 0 ? a0 : aT, flip > 0 ? aT : a0, false); c.arc(x, y - 10, r * (1 - w * 0.7), flip > 0 ? aT : a0, flip > 0 ? a0 : aT, true); c.closePath(); c.fill(); }
+        for (const [col, rr, ww, al] of [[color, r, w, 0.55], ['#ffffff', r * 0.98, w * 0.35, 0.9]]) { c.globalAlpha = al * k; c.fillStyle = col; arcBand(rr, ww); }
         c.restore();
+        // a glint riding the blade's tip while it sweeps
+        if (sweep < 1) glowAt(c, x + Math.cos(a1) * r, y - 10 + Math.sin(a1) * r, 14 + r * 0.12, '#ffffff', 0.8 * k);
       } });
       fx({ dur: dur * 0.35, layer: 'air', draw: () => {}, done: () => B.sparks(x + Math.cos(angle) * r, y + Math.sin(angle) * r, { color, n: o.sparks ?? 6, angle, spread: 0.9, speed: 300 }) });
     },
@@ -418,6 +421,8 @@ const VFX = (() => {
         const tc = style === 'fire' || style === 'meteor' ? (Math.random() < 0.5 ? '#ff6a1a' : '#ffc040') : color;
         for (let i = 0; i < (style === 'meteor' ? 3 : 2); i++) spawn({ x: q.x + rand(-3, 3) * size, y: q.y + rand(-3, 3) * size, z: q.z, vz: style === 'fire' || style === 'meteor' ? 30 : 0, life: rand(0.18, 0.35) * (style === 'meteor' ? 2 : 1), size: rand(8, 14) * size * (style === 'meteor' ? 1.6 : 1), size1: 0, color: tc });
         if (style === 'leaf' && Math.random() < 0.4) spawn({ x: q.x, y: q.y, z: q.z, vx: rand(-40, 40), vy: rand(-40, 40), vz: rand(-20, 30), g: 60, life: 0.7, size: 9, color, kind: 'leaf', add: false, vr: rand(-8, 8) });
+        // embers shed backwards off the flame, slowing and falling
+        if (style === 'fire' && Math.random() < 0.6) { const ca = Math.cos(ang), sa = Math.sin(ang); spawn({ x: q.x, y: q.y, z: q.z, vx: -ca * rand(40, 130) + rand(-35, 35), vy: -sa * rand(40, 130) + rand(-35, 35), vz: rand(10, 70), drag: 0.06, g: 140, life: rand(0.3, 0.6), size: rand(3, 5) * size, size1: 0, color: Math.random() < 0.5 ? '#ffd070' : '#ff8a2a', stretch: 2 }); }
         if ((style === 'fire' || style === 'meteor') && Math.random() < 0.4) spawn({ x: q.x, y: q.y, z: q.z, vx: rand(-30, 30), vy: rand(-30, 30), vz: rand(20, 60), life: 0.6, size: rand(10, 18) * size, size1: 26, color: '#3a2a2a', kind: 'smoke', add: false, a: 0.35 });
       }, draw: (c, p, t, e) => {
         const q = pos(p), y = q.y - q.z;
@@ -458,6 +463,16 @@ const VFX = (() => {
           case 'fire': case 'meteor': {
             const s = style === 'meteor' ? 1.8 * size : size;
             glowAt(c, q.x, y, 30 * s, '#ff7a1a', 0.9 * e.a);
+            if (style === 'fire') {
+              // a teardrop of flame, its tail flickering back along the flight
+              const fl = 1 + Math.sin(t * 40) * 0.12, hx = Math.cos(ang), hy = Math.sin(ang);
+              c.save(); c.translate(q.x, y); c.rotate(Math.atan2(hy, hx)); c.globalCompositeOperation = 'lighter';
+              for (const [col, L, W, al] of [['#ff5a1a', 30, 11, 0.75], ['#ffb040', 22, 7.5, 0.85], ['#fff2c0', 13, 4.5, 1]]) {
+                c.globalAlpha = al * e.a; c.fillStyle = col; c.beginPath();
+                c.moveTo(W * s, 0); c.quadraticCurveTo(W * s * 0.9, W * s, -L * s * 0.45 * fl, W * 0.35 * s); c.lineTo(-L * s * fl, 0); c.lineTo(-L * s * 0.45 * fl, -W * 0.35 * s); c.quadraticCurveTo(W * s * 0.9, -W * s, W * s, 0); c.fill();
+              }
+              c.restore();
+            }
             glowAt(c, q.x, y, 14 * s, '#ffe08a', e.a);
             if (style === 'meteor') { c.save(); c.translate(q.x, y); c.rotate(t * 6); c.fillStyle = '#4a2a1a'; c.beginPath(); for (let i = 0; i < 7; i++) { const a = i * Math.PI * 2 / 7, rr = 9 * s * (i % 2 ? 0.8 : 1); c.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); } c.closePath(); c.fill(); c.restore(); glowAt(c, q.x, y, 10 * s, '#ffb040', 0.7 * e.a); }
             break;
