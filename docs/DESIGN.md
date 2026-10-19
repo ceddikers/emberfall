@@ -423,6 +423,7 @@ Once players know their base class (around boss 3 or 4), each class can pick one
 | Inventory screen and storage | `client/js/inventory.js` |
 | Scenes, input, hero select, tab targeting, ally targeting, raid start/retry/leave, loot | `client/js/main.js` |
 | WebRTC: arena coordinates, combat events, solo mode | `client/js/net.js` |
+| Hosting: every push to `main` publishes `client/` to https://ceddikers.github.io/emberfall/ | `.github/workflows/pages.yml` |
 | Rotation sim, headless bot raid | `tools/simulate.js`, `tools/bot-raid.js` |
 
 **Hero select:** opens right after joining (and from the barkeep, a hero on the deck, or your hero name top-left).
