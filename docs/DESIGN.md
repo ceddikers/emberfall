@@ -54,7 +54,15 @@ Four ideas from the research shaped every kit.
 - **Auto-attacks** play a lighter version that alternates forehand and backhand, with small effects and small, muted damage numbers.
 - **Channeling** a real cast: a rune circle under the caster fills with the cast's progress, and motes in the class's style (embers, light motes, leaves, clock ticks) spiral into the staff, orb or hands, which swell until the release. Interrupting a cast stops it for everyone. While casting, the hero keeps turned toward the target (the enemy, or the ally being healed), following it if it moves.
 
-**Controls:** right-click to move. Left-click interacts in town, or picks an ally to heal in the arena. **Q W E R D F** are the six skills, **Space** is a shared dash (2 charges, 12 s each), and **1–4** target party members.
+**Controls:** right-click to move. Left-click interacts in town, or picks an ally to heal in the arena. **Q W E R D F** are the six skills, **Space** is a shared dash (2 charges, 12 s each), **T** is a tank's taunt, and **1–4** target party members.
+
+**Threat and taunt** (host-side, `client/js/arena/fight.js`):
+- Threat is damage dealt × 2.75 for tanks (× 1 for everyone else), plus 20% of healing done. It fades by 5% a second, so what counts is roughly the last 20 seconds. A tank who keeps hitting holds the boss through normal play; a tank who stops for a few seconds (or a newbie tank against a bursting DPS) loses it.
+- The boss attacks, faces and aims its tankbusters at whoever has the most threat. Adds keep their own threat (from damage dealt to that add, with the same tank multiplier) and go for the nearest player until someone hits them.
+- Death wipes your threat; a raise starts you again from zero.
+- **Taunt (T, tanks only, every spec):** an oGCD, 20 s cooldown, 500 range, aimed at your target (the locked enemy, or the nearest). Your threat becomes 10% above the highest, and the boss stays on you for 3 s even if someone out-threats you in that time; an add stays on you for 6 s. Each tank's taunt is its own move with a small gauge tie-in (in the class tables below). The host checks the cooldown, and clamps any threat multiplier a client sends to 0–3.
+- Bot tanks taunt back, after a moment's reaction, when the boss or an add is on someone who isn't a tank. They save it for the boss while a DPS is close to pulling.
+- Tuning test (bot raids, the bot tank stops attacking and never taunts while idle): inside the party's 60 s burst windows it loses the boss after 3–6 s; outside them after 7–11 s. In normal play the top DPS sits at about 70–75% of the tank's threat and the bot tank taunts 1–3 times a fight; with taunts switched off a DPS held the boss for 8–33 s of a fight. With the old setting (× 5, no fade) the top DPS sat near 40% and an idle tank never lost it.
 
 **Ally targeting** (for healers), in order of priority:
 1. the party frame under your mouse;
@@ -82,6 +90,7 @@ Each class has 6 skills plus the shared dash. **GCD** skills share the global co
 | R | Oath of Valor | oGCD | 60 s burst: +10% damage for 15 s. |
 | D | Rally Banner | oGCD | The party takes 15% less damage for 12 s (90 s cooldown). |
 | F | Bulwark | oGCD | 40% less damage for 10 s, and Brace's charges refill (120 s cooldown). |
+| T | Challenge | oGCD | Taunt (20 s cooldown). Steel on the shield: +10 Resolve, and the next Blade Chain counters for +150, as after a Perfect Block. |
 
 *Floor:* combo, Holy Edge when it glows, Brace when you see the swing. *Ceiling:* time Brace to the boss's wind-up (the boss visibly raises its weapon before every auto-attack), pool Resolve for Oath, plan Banner and Bulwark onto known hits.
 
@@ -95,6 +104,7 @@ Each class has 6 skills plus the shared dash. **GCD** skills share the global co
 | R | Frenzy | oGCD | 60 s burst: +15% damage, and the next 3 Drains are free and stronger. |
 | D | War Cry | oGCD | Party shield of about 14% HP (90 s cooldown). |
 | F | Undying | oGCD | Can't drop below 1 HP for 8 s; self-heals doubled (150 s cooldown). |
+| T | Reaver's Hook | oGCD | Taunt (20 s cooldown). A hooked chain thrown into the target: +20 Blood. |
 
 *Ceiling:* Drain right after a tankbuster heals and hits for far more than Drain on cooldown. Save Frenzy's free Drains for the buster.
 
@@ -108,6 +118,7 @@ Each class has 6 skills plus the shared dash. **GCD** skills share the global co
 | R | Runic Overload | oGCD | 60 s burst. |
 | D | Sanctum | oGCD | The party takes 15% less damage for 10 s. |
 | F | Mirror Aegis | oGCD | For 3 s, the next hit is reduced by 80% and reflected for 1500 potency. |
+| T | Binding Rune | oGCD | Taunt (20 s cooldown). A rune of challenge stamped on the target: +1 Rune. |
 
 *Ceiling:* learn the timeline so a Ward goes up right before each heavy hit and gets fully broken (it pays for itself). Line Mirror Aegis up with the boss's biggest swing.
 
@@ -567,6 +578,9 @@ New support: kits can ask where their hero stands (`env.pos`, for the Sigilmance
 
 **Battle UI:**
 - **Boss plate:** name, mode and timer. The HP bar has quarter ticks and a pale trail that drains behind each chunk of damage. The cast bar below it flashes when the cast goes off.
+  - **What's on the boss**, as small icons under the HP bar with seconds left and an in-game tooltip: Hunter's Mark (Vulnerability), a damage-up (Grubnak's Gorge), a taunt's fixation (the tank's taunt icon), the Inquisitor's Judgment brand with its charges (dimmed if it isn't yours), the last 60 s before the hard enrage, and your own damage over time (Poison, Thorns, Acid with its stacks, the Runeblade's burning rune, the Pyromancer's burns). The host sends its part in the boss update (`fb.bs`: `[kind, seconds, value, who]`); your DoTs come from your own kit.
+  - **Upcoming moves** under the cast bar: the boss's next 2–3 moves with countdowns, from the host's `bnext` feed (`{ t: 'bnext', l: [[name, secondsUntil], ...]}`, about once a second). It counts down between updates and hides when there's no feed or it's more than 3 s old. (Testing aid: `?bnext-demo` in the address feeds the local tab a made-up list.)
+- **Threat meter** (under the party frames, raid only): everyone alive, highest first, as a share of the top threat (the tank at 100%), with a thin bar. Your row is lit; a non-tank at 90% or more of the tank's threat turns amber. It reads the threat the host already sends in the party update.
 - **Party frames** (top left, in role order, with keys 1–4):
   - role mark, name, an eye on whoever the boss is attacking, and their class;
   - a tall HP bar that turns amber below 60% and red below 35%, with a pulsing edge when low;
@@ -727,7 +741,14 @@ After an intended balance change, record the new numbers with `node tools/check.
   - bot raids still clear Normal (4/4 each boss);
   - two tabs over PeerJS: the joined player saw the bots' autos and everyone's channels, and the host received the joined player's autos and channel.
 
+- **Threat and taunts (October rework), headless only:**
+  - the careless-tank sweep in "Threat and taunt" above, on Grubnak and Volkar with bot parties;
+  - bot raids still clear Normal (all `npm run check` line-ups; 10-run samples: Grubnak, Volkar and the Hollow King 10/10, Skitterra 7/10, the same as before the change);
+  - every tank and tank spec gets its taunt and its gauge tie-in.
+
 **Not yet tested:**
+- In the browser: the taunt on T (bar slot, tooltip, cooldown sweep, the three looks), the threat meter, the boss status icons and their tooltips, the upcoming-moves row (with `?bnext-demo` until the bosses send `bnext`), and the target frame moving down under a taller boss plate.
+- A human tank taunting over real latency (the host applies it about one round trip after the press; your own look plays at once).
 - The Hollow King played by a person, on Normal or Hard (tested headless with bots, and in the browser solo with bots: hall, Gaze cones, lanterns, knights and replays, bells, the Long Night, the Doom sigil, loot).
 - The Hollow King over real latency. The host judges the Gaze from the facing it last heard (positions arrive about 12 times a second), so turning away at the very last moment can count a little late on a slow connection. Lantern pickups and cures are judged on the host from positions too.
 - The Long Night's dark layer on a slow machine (it's one extra screen-sized draw each frame).

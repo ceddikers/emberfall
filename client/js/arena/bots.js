@@ -368,6 +368,22 @@ const BotAI = {
     return best;
   },
 
+  // Tanks: what to taunt right now, if anything: the boss when it's on someone who isn't a tank, otherwise an add in
+  // reach that's chewing on someone else. An add only gets the taunt while nobody is close to pulling the boss, so the
+  // taunt is still there when the boss needs it.
+  tauntTarget(bot, view) {
+    if (bot.role !== 'tank' || typeof TAUNT === 'undefined') return null;
+    const al = view.players.filter(p => p.alive), byId = id => al.find(p => p.id === id);
+    const notTank = id => { const p = byId(id); return !!p && p.role !== 'tank'; };
+    const reach = (x, y, r) => Math.hypot(x - bot.x, y - bot.y) - r <= TAUNT.range;
+    const b = view.boss;
+    if (!b.untargetable && view.bossTarget != null && view.bossTarget !== bot.id && notTank(view.bossTarget) && reach(b.x, b.y, FIGHT.BOSS_R)) return 'boss';
+    const me = byId(bot.id);
+    if (!me || al.some(p => p.role !== 'tank' && p.threat > me.threat * 0.85)) return null;
+    for (const a of view.adds || []) if (a.target != null && a.target !== bot.id && notTank(a.target) && !(a.fix && a.fix.until > view.t) && reach(a.x, a.y, a.r)) return a.id;
+    return null;
+  },
+
   // pick an ability index for this bot (or null)
   act(bot, k, view) {
     const ab = i => k.abilities[i];

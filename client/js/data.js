@@ -7,7 +7,7 @@ const ROLES = {
   healer: { name: 'Healer', color: '#4fd27a' },
 };
 
-const KEYS = ['Q', 'W', 'E', 'R', 'D', 'F', 'Space'];
+const KEYS = ['Q', 'W', 'E', 'R', 'D', 'F', 'Space', 'T'];   // T: a tank's taunt
 
 const CLASSES = [
   // ---------------------------------------------------------------- Tanks

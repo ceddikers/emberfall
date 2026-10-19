@@ -22,7 +22,14 @@ const RaidUI = (() => {
     dread: svg('<path d="M1 6c1.6-2.6 3.2-3.6 5-3.6S9.4 3.4 11 6c-1.6 2.6-3.2 3.6-5 3.6S2.6 8.6 1 6Z" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M3 9 9 3" stroke="currentColor" stroke-width="1.2"/>'),
     bleed: svg('<path d="M6 1.5C4.5 4 3 5.6 3 7.4a3 3 0 0 0 6 0C9 5.6 7.5 4 6 1.5Z" fill="none" stroke="currentColor" stroke-width="1.3"/>'),
     aggro: svg('<path d="M1 6c1.6-2.6 3.2-3.6 5-3.6S9.4 3.4 11 6c-1.6 2.6-3.2 3.6-5 3.6S2.6 8.6 1 6Z" fill="none" stroke="currentColor" stroke-width="1.2"/><circle cx="6" cy="6" r="1.7" fill="currentColor"/>'),
+    // on the boss: hitting harder, and the enrage
+    fury: svg('<path d="M6 1.2 7.4 4.6 11 6 7.4 7.4 6 10.8 4.6 7.4 1 6 4.6 4.6Z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M6 4.4v3.2" stroke="currentColor" stroke-width="1.2"/>'),
+    enrage: svg('<path d="M6 1c.4 2-1.8 3-1.8 5a1.8 1.8 0 0 0 3.6 0c0-.8-.4-1.4-.4-1.4S9.5 5.5 9.5 7.8A3.5 3.5 0 0 1 2.5 7.8C2.5 4.4 6 3.6 6 1Z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>'),
   };
+  // your own damage over time on the boss, by the kit's DoT id (the icon is the ability that put it there)
+  const DOT_INFO = { poison: ['Poison', 'Venom from your blade, ticking every 3s.'], thorn: ['Thorns', 'Your thorns, biting every 3s.'],
+    acid: ['Acid', 'Your acid burn, stronger with every stack.'], brand: ['Burning Rune', 'Your rune, burning every 3s.'],
+    crater: ['Scorched Earth', 'The ground you set alight, burning every 3s.'], pyroburn: ['Pyroburn', 'Your fire, burning every 3s.'] };
   const ROLE_GLYPH = {
     tank: svg('<path d="M6 1 10.5 2.6V6c0 2.6-2 4.2-4.5 5C3.5 10.2 1.5 8.6 1.5 6V2.6Z" fill="currentColor"/>'),
     healer: svg('<path d="M4.5 1.5h3v3h3v3h-3v3h-3v-3h-3v-3h3Z" fill="currentColor"/>'),
@@ -35,7 +42,7 @@ const RaidUI = (() => {
   // heals over time wear their ability's icon: [class, ability, name]
   const HOT_ICON = { petal: ['cleric', 'petal', 'Dawn Petal'], prayer: ['cleric', 'prayer', 'Prayer Circle'], rejuv: ['grovekeeper', 'rejuv', 'Rejuvenate'], growth: ['grovekeeper', 'growth', 'Wild Growth'] };
 
-  let root, frames = {}, onFrame = null, rosterKey = '', lastT = 0, bossTrail = 1;
+  let root, frames = {}, onFrame = null, rosterKey = '', lastT = 0, bossTrail = 1, roster = [], threatKey = '', nextKey = '', statusKey = '';
 
   function init(handlers) {
     onFrame = handlers.onFrame;
@@ -46,9 +53,11 @@ const RaidUI = (() => {
       <div id="boss-bar">
         <div class="bb-top"><b class="bb-name"></b><span class="bb-mode"></span><span class="bb-time"></span></div>
         <div class="bb-hp"><div class="trail"></div><div class="fill"></div><div class="ticks"></div><div class="vuln"></div><span></span></div>
+        <div class="bb-status"></div>
         <div class="bb-cast hidden"><div class="fill"></div><span></span></div>
+        <div class="bb-next hidden"></div>
       </div>
-      <div id="party-frames"></div>
+      <div id="raid-left"><div id="party-frames"></div><div id="threat-meter" class="hidden"></div></div>
       <div id="countdown" class="hidden"></div>
       <div id="trial-lore" class="hidden"><b></b><p></p><p></p></div>
       <div id="down-veil" class="hidden"><span>Down</span></div>
@@ -59,6 +68,15 @@ const RaidUI = (() => {
       const row = e.target.closest('.pf');
       if (row) { e.stopPropagation(); onFrame(Number(row.dataset.id)); }
     });
+    // the boss plate grows with its status row and upcoming moves: keep the target frame just below it (style.css)
+    if (typeof ResizeObserver !== 'undefined') {
+      const bb = $('boss-bar');
+      new ResizeObserver(() => {
+        const r = bb.getBoundingClientRect();
+        if (r.height > 0) document.documentElement.style.setProperty('--bb-bottom', Math.round(r.bottom) + 'px');
+        else document.documentElement.style.removeProperty('--bb-bottom');
+      }).observe(bb);
+    }
 
     const meter = document.createElement('div');
     meter.id = 'dps-meter'; meter.className = 'hidden';
@@ -71,10 +89,10 @@ const RaidUI = (() => {
 
   function show(v) { root.classList.toggle('hidden', !v); if (!v) { $('countdown').classList.add('hidden'); $('down-veil').classList.add('hidden'); $('trial-lore').classList.add('hidden'); } }
 
-  function setRoster(roster) {
-    const key = roster.map(r => r.id).join(',');
+  function setRoster(list0) {
+    const key = list0.map(r => r.id).join(',');
     if (key === rosterKey) return;
-    rosterKey = key;
+    rosterKey = key; roster = list0; threatKey = '';   // (kept for the threat meter's names and roles)
     const order = { tank: 0, healer: 1, dps: 2 };
     const list = [...roster].sort((a, b) => order[a.role] - order[b.role] || a.id - b.id);
     $('party-frames').innerHTML = list.map((r, i) => `
@@ -125,6 +143,9 @@ const RaidUI = (() => {
       const sp = cb.querySelector('span');
       if (sp.textContent !== c.name) sp.textContent = c.name;
     } else cb.classList.add('hidden');
+    upcoming(raid, now);
+    bossStatus(raid, now, myId, marks);
+    threatMeter(raid, myId);
 
     // countdown before the pull
     const cd = $('countdown');
@@ -185,6 +206,80 @@ const RaidUI = (() => {
     }
     const me = raid.party.get(myId);
     $('down-veil').classList.toggle('hidden', !me || me.alive || raid.state !== 'live');
+  }
+
+  // ---------------------------------------------------------------- boss plate extras
+  // the boss's next moves (the host's 'bnext' feed: [[name, seconds until], ...]), counting down between updates.
+  // Nothing shows without fresh data (none yet, or older than 3s).
+  function upcoming(raid, now) {
+    const el = root.querySelector('.bb-next'), n = raid.bnext;
+    const fresh = n && raid.state === 'live' && now - n.at <= 3;
+    const rows = fresh ? n.l.map(([name, s]) => [name, s - (now - n.at)]).filter(([, s]) => s > -0.5).slice(0, 3) : [];
+    const key = rows.map(([name, s]) => name + ':' + Math.max(0, Math.ceil(s))).join('|');
+    if (key === nextKey) return;
+    nextKey = key;
+    el.classList.toggle('hidden', !rows.length);
+    el.innerHTML = rows.map(([name, s]) => `<span><b>${esc(name)}</b><i>${Math.max(0, Math.ceil(s))}</i></span>`).join('');
+  }
+
+  // icons under the boss's health: Hunter's Mark, a damage-up, a taunt's fixation, the Inquisitor's brand and the last
+  // minute before the enrage (all from the host), then your own damage over time (from your kit)
+  const iconBg = (cls, id) => `url(${abilityIcon(cls, id)})`;
+  function bossStatus(raid, now, myId, marks) {
+    const el = root.querySelector('.bb-status'), items = [];
+    if (raid.state === 'live') {
+      for (const [kind, secs, val, who] of raid.bossStatus || []) {
+        if (kind === 'vuln') items.push({ k: kind, c: 'debuff', bg: iconBg('ranger', 'mark'), n: secs, tip: `<b>Hunter's Mark</b><em>${secs}s</em>Takes ${val}% more damage from everyone.` });
+        else if (kind === 'dmg') items.push({ k: kind, c: 'buff', glyph: GLYPH.fury, n: `+${val}%`, tip: `<b>Fury</b><em>+${val}% damage</em>Every blow from the boss lands harder.` });
+        else if (kind === 'brand') {
+          const mine = who === myId;
+          items.push({ k: kind, c: 'debuff' + (mine ? '' : ' theirs'), bg: iconBg('cleric', 'smite'), n: val,
+            tip: `<b>Judgment</b><em>${val} charge${val === 1 ? '' : 's'} · ${secs}s${mine ? ' · yours' : ''}</em>Each hit from an ally bursts a charge in holy fire.` });
+        } else if (kind === 'fix') {
+          const r = roster.find(x => x.id === who), t = r && typeof TAUNT !== 'undefined' && TAUNT[r.cls];
+          items.push({ k: kind, c: 'buff', bg: t ? tauntIconBg(r.cls) : '', glyph: GLYPH.aggro, n: secs, tip: `<b>${t ? t.name : 'Taunted'}</b><em>${secs}s</em>Fixed on ${esc(r ? r.name : 'a tank')}.` });
+        }
+      }
+      const enr = raid.def.enrage && raid.def.enrage[raid.mode];
+      if (enr) {
+        const left = Math.ceil(enr + 8 - (raid.fightTime || 0));   // the enrage is an 8s cast (fight.js enrage)
+        if (left <= 60 && left > 0) items.push({ k: 'enrage', c: 'buff', glyph: GLYPH.enrage, n: left, tip: `<b>${esc(raid.def.enrageName || 'Enrage')}</b><em>${left}s</em>When this runs out, the fight is lost.` });
+      }
+      const k = marks.kit;
+      if (k && k.dots && marks.cls) for (const [id, d] of k.dots) {
+        if (d.end <= k.now) continue;
+        const secs = Math.ceil(d.end - k.now), info = DOT_INFO[id] || [d.ab ? d.ab.name : id, 'Your damage over time, ticking every 3s.'];
+        const stack = id === 'acid' && k.g.acid > 1 ? k.g.acid : 0;
+        items.push({ k: 'dot:' + id, c: 'debuff mine', bg: d.ab ? iconBg(marks.cls, abilityIconId(d.ab)) : '', glyph: GLYPH.bleed, n: secs, stack,
+          tip: `<b>${info[0]}${stack ? ` ×${stack}` : ''}</b><em>${secs}s · yours</em>${info[1]}` });
+      }
+    }
+    const key = items.map(it => `${it.k}:${it.n}:${it.c}:${it.stack || ''}`).join('|');
+    if (key === statusKey) return;
+    statusKey = key;
+    el.innerHTML = items.map(it => `<b class="bst ${it.c}">${it.bg ? `<u style="background-image:${it.bg}"></u>` : `<u class="g">${it.glyph}</u>`}<i>${it.n}</i>${it.stack ? `<s>${it.stack}</s>` : ''}</b>`).join('');
+    [...el.children].forEach((ch, i) => Tip.set(ch, items[i].tip));
+  }
+
+  // threat on the boss as a share of the top (the tank at 100%); your row is lit, and a non-tank at 90% or more of
+  // the tank's threat turns amber
+  function threatMeter(raid, myId) {
+    const el = $('threat-meter'), rows = [];
+    for (const r of roster) { const p = raid.party.get(r.id); if (p && p.alive && !p.left) rows.push({ r, th: p.threat || 0 }); }
+    const top = rows.reduce((m, x) => Math.max(m, x.th), 0);
+    const tankTh = rows.reduce((m, x) => (x.r.role === 'tank' ? Math.max(m, x.th) : m), 0);
+    const show = raid.state === 'live' && rows.length >= 2 && top > 0;
+    rows.sort((a, b) => b.th - a.th || a.r.id - b.r.id);
+    const view = show ? rows.map(x => ({ x, pct: Math.round(x.th / top * 100), warn: x.r.role !== 'tank' && tankTh > 0 && x.th >= tankTh * 0.9 })) : [];
+    const key = view.map(v => `${v.x.r.id}:${v.pct}:${v.warn ? 1 : 0}`).join('|');
+    if (key === threatKey) return;
+    threatKey = key;
+    el.classList.toggle('hidden', !show);
+    el.innerHTML = show ? `<h6>Threat</h6>` + view.map(({ x, pct, warn }) => `
+      <div class="tm-row${x.r.id === myId ? ' me' : ''}${warn ? ' warn' : ''}" style="--rc:${ROLES[x.r.role].color}">
+        <i class="pf-role">${ROLE_GLYPH[x.r.role] || ''}</i><span>${esc(x.r.name)}</span><b>${pct}%</b>
+        <div class="tm-bar"><i style="width:${pct}%"></i></div>
+      </div>`).join('') : '';
   }
 
   // ---------------------------------------------------------------- town training meter

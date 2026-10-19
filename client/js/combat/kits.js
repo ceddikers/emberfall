@@ -689,6 +689,39 @@ const KITS = {
 // The shared dash on Space: two charges, no GCD.
 const DASH = { charges: 2, cd: 12 };
 
-if (typeof module !== 'undefined') module.exports = { KITS, DASH, MELEE, RANGED };
+// Every tank's taunt, on T: an oGCD outside the six kit slots, like the dash (every spec keeps it). The host applies
+// the shared part (FightSim.taunt in fight.js): threat to the top + 10%, the boss fixed on you for 3s, an add for 6s.
+// Each class's own version also feeds its gauge (use(k), run by CombatActor.useTaunt), and has its own look
+// (KIT_VFX.taunt in ability-vfx.js). cd matches FIGHT.TAUNT_CD. icon: the ability icon it borrows until its own
+// (icons/<class>/taunt.png) is painted.
+const TAUNT = {
+  cd: 20, range: 500, lock: 0.6,
+  hold: 'your threat jumps to 10% above the highest, and the boss stays on you for 3s whatever anyone else does (an add, for 6s)',
+  bastion: {
+    name: 'Challenge', icon: 'banner',
+    desc: 'Bang your blade on your shield and call your target out: {hold}. The challenge steadies you like a Perfect Block: +10 Resolve, and your next Blade Chain counters for +150.',
+    use(k) { k.gain('resolve', 10); k.g.counter = 1; },
+  },
+  bloodreaver: {
+    name: 'Reaver\'s Hook', icon: 'letting',
+    desc: 'Hurl a hooked chain into your target and rip its attention to you: {hold}. The hook draws blood: +20 Blood.',
+    use(k) { k.gain('blood', 20); },
+  },
+  runeguard: {
+    name: 'Binding Rune', icon: 'glyph',
+    desc: 'Stamp a rune of challenge on your target: {hold}. The rune is carved from your own stones and answers you: +1 Rune.',
+    use(k) { k.gain('runes', 1, 3); },
+  },
+};
+// the taunt as an ability-like object for the bar, tooltips and the hero page (null for anyone but a tank)
+const tauntAbility = classId => {
+  const t = TAUNT[classId];
+  return t && t.name ? { id: 'taunt', icon: t.icon, name: t.name, type: 'ogcd', target: 'enemy', range: TAUNT.range, cd: TAUNT.cd, anim: 'big', taunt: true,
+    desc: t.desc.replace('{hold}', TAUNT.hold) } : null;
+};
+// CSS background for the taunt's icon: its own painting once it exists, the borrowed icon underneath until then
+const tauntIconBg = classId => `url(icons/${classId}/taunt.png), url(icons/${classId}/${(TAUNT[classId] || {}).icon}.png)`;
+
+if (typeof module !== 'undefined') module.exports = { KITS, DASH, TAUNT, tauntAbility, tauntIconBg, MELEE, RANGED };
 
 

@@ -59,11 +59,11 @@ class RaidHost {
     const sim = this.sim;
     const players = this.allPlayers().map(p => {
       const s = sim.ps.get(p.id) || {};
-      return { id: p.id, x: p.x, y: p.y, role: p.role, alive: !!s.alive, hp: s.hp || 0, maxHp: s.maxHp || 1, left: s.left };
+      return { id: p.id, x: p.x, y: p.y, role: p.role, alive: !!s.alive, hp: s.hp || 0, maxHp: s.maxHp || 1, left: s.left, threat: s.threat || 0 };
     });
     const b = sim.boss;
     return {
-      t: sim.t, boss: { x: b.x, y: b.y, facing: b.facing, untargetable: b.untargetable },
+      t: sim.t, boss: { x: b.x, y: b.y, facing: b.facing, untargetable: b.untargetable }, bossTarget: b.target,
       bossCast: b.cast ? { name: b.cast.name, left: b.cast.end - sim.t } : null,
       mechs: [...sim.mechs.values()], puddles: sim.puddles, players,
       adds: [...sim.adds.values()], tethers: [...sim.tethers.values()], zones: sim.zones,
@@ -114,6 +114,7 @@ class RaidHost {
       // Royal Gaze: turn your back on him just before it lands
       if (view.mechs.some(m => m.type === 'gaze' && m.resolveAt - this.sim.t < 1.1)) bot.a += Math.PI;
       bot.actor.update();
+      if (bot.actor.taunt) this.botTaunt(bot, view);
       if (this.sim.t >= bot.nextAct) {
         const i = BotAI.act(bot, bot.actor.kit, view);
         if (i !== null && i !== undefined) {
@@ -127,6 +128,15 @@ class RaidHost {
     }
   }
 
+  // a bot tank taunts back what it lost, after a human-ish moment to notice (BotAI.tauntTarget picks what)
+  botTaunt(bot, view) {
+    const t = this.sim.t, want = bot.actor.tauntReady(t) ? BotAI.tauntTarget(bot, view) : null;
+    if (!want) { bot.tauntSeen = null; return; }
+    if (!bot.tauntSeen || bot.tauntSeen.tg !== want) { bot.tauntSeen = { tg: want, at: t + 0.7 }; return; }
+    if (t < bot.tauntSeen.at) return;
+    bot.tauntSeen = null;
+    if (this.sim.taunt(bot.id, want)) bot.actor.useTaunt(t);
+  }
   // ---------------------------------------------------------------- routing
   onSimMsg(msg) {
     // things the bots need to know about themselves

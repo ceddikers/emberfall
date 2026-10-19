@@ -14,7 +14,15 @@ const FIGHT = {
   DMG_DOWN_DUR: 10,
   VULN: 0.25,            // damage taken up per stack, from avoidable hits
   VULN_DUR: 15,
-  TANK_THREAT: 5,
+  // Threat: damage × (TANK_THREAT for tanks) × the event's own multiplier (clamped to EV_THREAT_MAX), heals × HEAL_THREAT.
+  // It fades (THREAT_FADE of it per second), so what counts is the last ~20 s: a tank who stops hitting for a few
+  // seconds can lose the boss to a bursting DPS. A taunt sets your threat to the top + TAUNT_LEAD and fixes the boss
+  // on you for TAUNT_FIX s (an add: TAUNT_ADD_FIX s). TAUNT_CD matches TAUNT.cd in kits.js (the host allows 1 s of slack).
+  TANK_THREAT: 2.75,
+  HEAL_THREAT: 0.2,
+  THREAT_FADE: 0.05,
+  EV_THREAT_MAX: 3,
+  TAUNT_LEAD: 1.1, TAUNT_FIX: 3, TAUNT_ADD_FIX: 6, TAUNT_CD: 20,
   RAISE_WEAKNESS: 0.25,
   PERFECT_WINDOW: 0.8,   // Bastion's Brace
   SLOWED: 0.55,          // move speed while 'slowed' (webs, venom); 'rooted' stops movement and dashes
@@ -99,11 +107,58 @@ class FightSim {
     return out;
   }
   alive() { return this.players().filter(p => p.s.alive); }
+  // whoever the boss is on: a taunt's fixation while it lasts, otherwise the most threat
   tank() {
+    const al = this.alive(), fx = this.boss.fix;
+    if (fx && fx.until > this.t) { const p = al.find(q => q.id === fx.id); if (p) return p; }
     let best = null;
-    for (const p of this.alive()) if (!best || p.s.threat > best.s.threat) best = p;
+    for (const p of al) if (!best || p.s.threat > best.s.threat) best = p;
     return best;
   }
+  // an add's target: a taunt's fixation, then the most threat on that add, then (before anyone has hit it) the nearest
+  addTarget(a) {
+    const al = this.alive();
+    if (a.fix && a.fix.until > this.t) { const p = al.find(q => q.id === a.fix.id); if (p) return p; }
+    let best = null, bt = 0;
+    for (const p of al) { const th = a.threat[p.id] || 0; if (th > bt) { bt = th; best = p; } }
+    if (best) return best;
+    let nd = Infinity;
+    for (const p of al) { const d = Math.hypot(p.x - a.x, p.y - a.y); if (d < nd) { nd = d; best = p; } }
+    return best;
+  }
+  // Taunt (any tank, tgt = 'boss' or an add's id): threat to the top + 10%, and a short fixation. False if refused.
+  taunt(pid, tgt) {
+    const s = this.ps.get(pid);
+    if (!s || !s.alive || s.role !== 'tank' || this.state !== 'live' || this.t < (s.tauntReady || 0)) return false;
+    const al = this.alive();
+    if (tgt != null && tgt !== 'boss') {
+      const a = this.adds.get(tgt);
+      if (!a) return false;
+      let top = 1; for (const p of al) top = Math.max(top, a.threat[p.id] || 0);
+      a.threat[pid] = top * FIGHT.TAUNT_LEAD;
+      a.fix = { id: pid, until: this.t + FIGHT.TAUNT_ADD_FIX };
+    } else {
+      if (this.boss.untargetable) return false;
+      let top = 1; for (const p of al) top = Math.max(top, p.s.threat);
+      s.threat = top * FIGHT.TAUNT_LEAD;
+      this.boss.fix = { id: pid, until: this.t + FIGHT.TAUNT_FIX };
+      tgt = 'boss';
+    }
+    s.tauntReady = this.t + FIGHT.TAUNT_CD - 1;
+    this.emit({ t: 'fev', k: 'taunt', id: pid, tg: tgt });
+    return true;
+  }
+  // a player's share of the room's attention: added to the boss (or an add) and faded every tick
+  threatMult(s, ev) {
+    const m = ev && ev.threat !== undefined ? (Number.isFinite(ev.threat) ? Math.max(0, Math.min(FIGHT.EV_THREAT_MAX, ev.threat)) : 1) : 1;
+    return (s.role === 'tank' ? FIGHT.TANK_THREAT : 1) * m;
+  }
+  fadeThreat(dt) {
+    const k = Math.exp(-FIGHT.THREAT_FADE * dt);
+    for (const s of this.ps.values()) s.threat *= k;
+    for (const a of this.adds.values()) for (const id in a.threat) a.threat[id] *= k;
+  }
+  dropThreat(pid) { for (const a of this.adds.values()) delete a.threat[pid]; }
   nonTanks() { const t = this.tank(); return this.alive().filter(p => !t || p.id !== t.id); }
 
   // ---------------------------------------------------------------- lifecycle
@@ -125,6 +180,7 @@ class FightSim {
       if (e.phase === this.phase || e.keep) e.fn();
     }
     while (this.hpTriggers.length && this.boss.hp / this.boss.maxHp <= this.hpTriggers[0].frac) this.hpTriggers.shift().fn();
+    this.fadeThreat(dt);
     this.updateBoss(dt);
     this.updateMechs();
     this.updatePuddles(dt);
@@ -223,14 +279,14 @@ class FightSim {
         // ev.tgt names the enemy it was aimed at: 'boss' (or nothing) or an add's id
         if (ev.tgt != null && ev.tgt !== 'boss') {
           const a = this.adds.get(ev.tgt);
-          if (a) this.damageAdd(pid, a, amt);
+          if (a) this.damageAdd(pid, a, amt, this.threatMult(s, ev));
           break;
         }
         if (this.boss.untargetable) return;
         this.boss.hp = Math.max(0, this.boss.hp - amt);
         this.burstBrand(pid);
         st.damage += amt;
-        s.threat += amt * (s.role === 'tank' ? FIGHT.TANK_THREAT : 1) * (ev.threat || 1);
+        s.threat += amt * this.threatMult(s, ev);
         if (this.boss.hp <= 0) this.end('clear');
         break;
       }
@@ -297,6 +353,7 @@ class FightSim {
         break;
       }
       case 'snap': this.snapReel(pid); break;   // a dash snapped the silk reeling this player in
+      case 'taunt': this.taunt(pid, typeof ev.tgt === 'string' ? ev.tgt : 'boss'); break;
     }
   }
   resolveTarget(pid, target, not) {
@@ -320,7 +377,7 @@ class FightSim {
 
   revive(tid, ts, frac, by, rewound) {
     ts.alive = true; ts.hp = Math.round(ts.maxHp * Math.max(0.1, Math.min(1, frac)));
-    ts.weakEnd = rewound ? 0 : this.t + 20; ts.threat = ts.role === 'tank' ? 1 : 0; ts.hist = [];
+    ts.weakEnd = rewound ? 0 : this.t + 20; ts.threat = ts.role === 'tank' ? 1 : 0; ts.hist = []; this.dropThreat(tid);
     this.emit({ t: 'fev', k: 'raised', id: tid, by });
   }
 
@@ -333,7 +390,7 @@ class FightSim {
       s.hp += real;
       const st = this.stats[fromId];
       if (st) { st.healing += real; st.overheal += amt - real; }
-      const fs = this.ps.get(fromId); if (fs) fs.threat += real * 0.2;
+      const fs = this.ps.get(fromId); if (fs && fs.alive) fs.threat += real * FIGHT.HEAL_THREAT;
     }
   }
 
@@ -393,7 +450,7 @@ class FightSim {
     if (s.hp <= 0 && s.mits.some(m => m.kind === 'living') && opts.kind !== 'enrage' && opts.kind !== 'fall') s.hp = 1;
     this.emit({ t: 'pdmg', id: p.id, a: amt, k: opts.kind || 'hit', hp: Math.max(0, s.hp), dd: opts.avoidable ? 1 : 0 });
     if (s.hp <= 0) {
-      s.hp = 0; s.alive = false; s.shield = 0; s.mits = []; s.hots = []; s.threat = 0; s.diedAt = this.t;
+      s.hp = 0; s.alive = false; s.shield = 0; s.mits = []; s.hots = []; s.threat = 0; s.diedAt = this.t; this.dropThreat(p.id);
       st.deaths++;
       this.emit({ t: 'fev', k: 'death', id: p.id });
     }
@@ -535,23 +592,25 @@ class FightSim {
     }
   }
 
-  // Killable add. Players hit it by sending damage with tgt = its id. It crawls to the nearest player and bites.
+  // Killable add. Players hit it by sending damage with tgt = its id. It crawls to its target (addTarget: threat on
+  // this add, or a taunt; the nearest player until someone hits it) and bites.
   // opts: { kind, x, y, hp, r, speed, bite, biteEvery, leash, spit, onDeath(add), onTick(add, dt) }
   // leash: only chases players within this distance of its spawn (enraged adds chase anyone). spit: ranged hit otherwise.
   // add.link = another add's id: while both live, a beam joins them that hurts anyone standing across it (linkDmg).
   spawnAdd(opts) {
     const hp = Math.round((opts.hp || 10000) * this.scale.hp);
     const a = Object.assign({ kind: 'add', r: 34, speed: 70, bite: 1000, biteEvery: 2, link: null, linkDmg: 0, linkLast: {} }, opts,
-      { id: 'a' + this.nextMechId++, hp, maxHp: hp, born: this.t, enraged: false, facing: 0 });
+      { id: 'a' + this.nextMechId++, hp, maxHp: hp, born: this.t, enraged: false, facing: 0, threat: {}, fix: null });
     a.nextBite = this.t + 2; a.homeX = a.x; a.homeY = a.y;
     this.adds.set(a.id, a);
     this.addsDirty = true;
     this.emit({ t: 'addev', k: 'spawn', id: a.id, kind: a.kind, x: Math.round(a.x), y: Math.round(a.y) });
     return a;
   }
-  damageAdd(pid, a, amt) {
+  damageAdd(pid, a, amt, threatMult = 1) {
     a.hp = Math.max(0, a.hp - amt);
     this.stats[pid].damage += amt;
+    a.threat[pid] = (a.threat[pid] || 0) + amt * threatMult;
     this.addsDirty = true;
     if (a.hp <= 0) this.killAdd(a);
   }
@@ -566,8 +625,8 @@ class FightSim {
   updateAdds(dt) {
     for (const a of [...this.adds.values()]) {
       if (!this.adds.has(a.id)) continue;
-      let near = null, nd = Infinity;
-      for (const p of this.alive()) { const d = Math.hypot(p.x - a.x, p.y - a.y); if (d < nd) { nd = d; near = p; } }
+      const near = this.addTarget(a), nd = near ? Math.hypot(near.x - a.x, near.y - a.y) : Infinity;
+      a.target = near ? near.id : null;
       if (near) {
         // leashed adds only chase players who come within `leash` of where they hatched; otherwise they go home and spit
         const chase = !a.leash || a.enraged || Math.hypot(near.x - a.homeX, near.y - a.homeY) < a.leash;
@@ -718,8 +777,20 @@ class FightSim {
     this.emit({ t: 'fb', hp: b.hp, mx: b.maxHp, x: Math.round(b.x), y: Math.round(b.y), f: +b.facing.toFixed(2), tg: b.target,
       u: b.untargetable ? 1 : 0, v: b.vulnEnd > this.t ? b.vuln : 0, ft: Math.round(this.t * 10) / 10, ph: this.phase,
       na: +(b.autoAt - this.t).toFixed(2),  // time to the next auto-attack, so clients can show the wind-up
-      c: +this.t.toFixed(3) });             // the fight clock, so clients can space the boss's moves evenly (interp.js)
+      c: +this.t.toFixed(3),                // the fight clock, so clients can space the boss's moves evenly (interp.js)
+      bs: this.bossStatus() });             // what's on the boss, for the icons under the boss bar (raid-ui.js)
     if (this.adds.size || this.addsDirty) this.broadcastAdds();
+  }
+  // host-side states on the boss, compact: [kind, seconds left (0 = no timer), value, who]
+  //   ['vuln', s, % more damage taken] Hunter's Mark · ['dmg', 0, % more damage dealt] (Gorge and the like)
+  //   ['brand', s, charges, Inquisitor's id] · ['fix', s, 0, taunting tank's id]
+  bossStatus() {
+    const b = this.boss, t = this.t, out = [];
+    if (b.vulnEnd > t && b.vuln) out.push(['vuln', Math.ceil(b.vulnEnd - t), Math.round(b.vuln * 100)]);
+    if (b.dmgUp > 0) out.push(['dmg', 0, Math.round(b.dmgUp * 100)]);
+    if (b.brand && b.brand.end > t && b.brand.charges > 0) out.push(['brand', Math.ceil(b.brand.end - t), b.brand.charges, b.brand.from]);
+    if (b.fix && b.fix.until > t) out.push(['fix', Math.ceil(b.fix.until - t), 0, b.fix.id]);
+    return out.length ? out : undefined;
   }
   // [id, kind, x, y, hp, maxHp, enraged, link, facing]
   broadcastAdds() {

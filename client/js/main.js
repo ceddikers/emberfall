@@ -81,6 +81,7 @@
     if (!player.cls) { actor = null; Hud.hide(); return; }
     actor = new CombatActor(player.cls, player, world, Math.random);
     Hud.setActor(actor, i => pressSlot(i));
+    if ($('help')) updateHelp();
   }
 
   function entById(id) {
@@ -176,7 +177,7 @@
   function healerish() { return actor && actor.abilities.some(a => a.target === 'ally'); }
 
   // --- kit events
-  const SIM_EVENTS = new Set(['damage', 'heal', 'hot', 'shield', 'mit', 'raise', 'rewind', 'selfDamage', 'targetDebuff', 'partyBuff', 'snap', 'pool', 'brand']);
+  const SIM_EVENTS = new Set(['damage', 'heal', 'hot', 'shield', 'mit', 'raise', 'rewind', 'selfDamage', 'targetDebuff', 'partyBuff', 'snap', 'pool', 'brand', 'taunt']);
   const EV_FIELDS = ['type', 'amount', 'crit', 'target', 'ticks', 'interval', 'id', 'dur', 'tag', 'pct', 'kind', 'value', 'secs', 'threat', 'tgt', 'r', 'not'];
   function packEv(ev) {
     const o = {};
@@ -482,7 +483,39 @@
     if (!actor) { toast('Pick a hero first.'); return; }
     if (amDead() || (inArena() && raid.state !== 'live' && raid.state !== 'countdown')) return;
     if (i === 6) { doDash(); return; }
+    if (i === 7) { doTaunt(); return; }
     actor.press(i);
+  }
+
+  // A tank's taunt (T): an oGCD outside the kit. It waits out a short animation lock (like a queued press), never
+  // fires mid-cast, and goes to the enemy you're aiming at (locked, else nearest in reach). The host applies it.
+  let tauntQueued = false;
+  function doTaunt() {
+    if (!actor.taunt || !player.cls) return;
+    const k = actor.kit, lock = k.lockUntil - now;
+    if (k.cast || !actor.tauntReady(now)) { kitFail(k.cast ? 'Not ready' : null); return; }
+    if (lock > 0) { if (lock <= ENGINE.QUEUE_WINDOW && !tauntQueued) { tauntQueued = true; later(lock, () => { tauntQueued = false; if (actor && !amDead()) doTaunt(); }); } return; }
+    const tg = world.findEnemy(actor, { range: TAUNT.range });
+    if (!tg) { kitFail(inArena() && (raid.boss.u || raid.state !== 'live') ? 'No target' : 'Out of range'); return; }
+    actor.useTaunt(now);
+    k.lockUntil = now + TAUNT.lock;
+    const at = tg.dummy ? tg.dummy : (inArena() ? enemyNow(tg.id) : null) || tg;
+    playTaunt(player, at, true);
+    if (inArena()) sendCombat({ type: 'taunt', tgt: tg.id });   // the host shows it to everyone else ('fev' taunt)
+    else Net.send({ t: 'kfx', k: 'taunt', s: 0 });
+  }
+  function kitFail(text) {
+    if (!text || now - failAt < 0.6) return;
+    failAt = now;
+    FX.text(player.x, player.y - 56, text, '#c8c0d8', 12, 0.7);
+  }
+  // the taunt's look: the hero rears up, a shout ring, and a chain of the class's colour to whatever was taunted
+  function playTaunt(ent, at, mine) {
+    if (!ent) return;
+    if (ent.st && !(ent.st.action && ent.st.action.channel)) ent.st.action = { type: 'big', t0: now, dur: ANIM_DUR.big || 0.6 };
+    if (at) faceToward(ent, Math.atan2(at.y - ent.y, at.x - ent.x), 0.4);
+    VFX.setScale(mine ? 1 : 0.6);
+    try { KIT_VFX.taunt(ent, at); } finally { VFX.setScale(1); }
   }
 
   function doDash() {
@@ -767,10 +800,15 @@
     // in a raid the boss bar already names the fight and the party frames name you
     $('hud-tl').classList.toggle('hidden', arena);
     Inventory.showGoldHud(!arena);
-    $('help').innerHTML = arena
-      ? '<kbd>Right-click</kbd> move · <kbd>Left-click</kbd> ally or frame to target · <kbd>1</kbd>-<kbd>4</kbd> target party · <kbd>Shift</kbd>+skill on yourself · <kbd>Space</kbd> dash'
-      : '<kbd>Right-click</kbd> move · <kbd>Left-click</kbd> interact · <kbd>Q</kbd><kbd>W</kbd><kbd>E</kbd><kbd>R</kbd><kbd>D</kbd><kbd>F</kbd> skills · <kbd>Space</kbd> dash · <kbd>Enter</kbd> chat';
+    updateHelp();
     updateHeroName();
+  }
+  // the key line at the bottom (tanks also get their taunt key)
+  function updateHelp() {
+    const tauntKey = player.cls && player.cls.role === 'tank' ? ' · <kbd>T</kbd> taunt' : '';
+    $('help').innerHTML = scene === 'arena'
+      ? `<kbd>Right-click</kbd> move · <kbd>Left-click</kbd> ally or frame to target · <kbd>1</kbd>-<kbd>4</kbd> target party · <kbd>Shift</kbd>+skill on yourself · <kbd>Space</kbd> dash${tauntKey}`
+      : `<kbd>Right-click</kbd> move · <kbd>Left-click</kbd> interact · <kbd>Q</kbd><kbd>W</kbd><kbd>E</kbd><kbd>R</kbd><kbd>D</kbd><kbd>F</kbd> skills · <kbd>Space</kbd> dash${tauntKey} · <kbd>Enter</kbd> chat`;
   }
 
   function clampArena(e) {
@@ -815,14 +853,20 @@
     raid.lastFb = performance.now();   // for the debug overlay
     raid.fightTime = msg.ft;
     if (msg.na != null) raid.nextAutoAt = now + msg.na;
+    raid.bossStatus = Array.isArray(msg.bs) ? msg.bs : [];   // what's on the boss (fight.js bossStatus)
+  });
+  // the boss's next moves, from the host about once a second: [[name, seconds until], ...] (drawn under the cast bar)
+  Net.on('bnext', msg => {
+    if (!raid) return;
+    raid.bnext = Array.isArray(msg.l) ? { at: now, l: msg.l.filter(e => Array.isArray(e) && typeof e[0] === 'string' && Number.isFinite(e[1])).slice(0, 3) } : null;
   });
   Net.on('fps', msg => {
     if (!raid) return;
     const listed = new Set();
-    for (const [id, hp, maxHp, shield, alive, dd, vuln, mit, weak, debuffs, , hots] of msg.ps) {
+    for (const [id, hp, maxHp, shield, alive, dd, vuln, mit, weak, debuffs, threat, hots] of msg.ps) {
       listed.add(id);
       const s = raid.party.get(id);
-      if (s) Object.assign(s, { hp, maxHp, shield, alive: !!alive, dd, vuln, mit, weak, debuffs, hots: hots || [], left: false });
+      if (s) Object.assign(s, { hp, maxHp, shield, alive: !!alive, dd, vuln, mit, weak, debuffs, threat: threat || 0, hots: hots || [], left: false });
     }
     // the host stops listing anyone who left the raid; don't leave their last numbers frozen on the frames
     for (const [id, s] of raid.party) if (!listed.has(id) && !s.left) Object.assign(s, { left: true, alive: false, hp: 0, shield: 0, hots: [], debuffs: [] });
@@ -1086,6 +1130,7 @@
     if (msg.k === 'death') raid.doom.delete(msg.id);
     if (msg.k === 'raised' && e) BOSS_VFX.playerRaised(e);
     if (msg.k === 'brandHit') { VFX.setScale(msg.id === Net.id ? 1 : 0.6); try { KIT_VFX.brandHit(e, { x: raid.boss.x, y: raid.boss.y }); } finally { VFX.setScale(1); } }
+    if (msg.k === 'taunt' && e && msg.id !== Net.id) playTaunt(e, enemyNow(msg.tg), false);   // (your own played when you pressed it)
     if (msg.id !== Net.id || !actor) return;
     if (msg.k === 'perfect') actor.notify('perfect');
     if (msg.k === 'reflect') actor.notify('reflect');
@@ -1168,7 +1213,7 @@
   document.addEventListener('mouseover', e => { const row = e.target.closest && e.target.closest('.pf'); hoverFrame = row ? Number(row.dataset.id) : null; });
 
   const chatInput = $('chat-input');
-  const SLOT_OF = { q: 0, w: 1, e: 2, r: 3, d: 4, f: 5, ' ': 6 };
+  const SLOT_OF = { q: 0, w: 1, e: 2, r: 3, d: 4, f: 5, ' ': 6, t: 7 };   // 7: a tank's taunt
   window.addEventListener('keydown', e => {
     if (!started) return;
     // Tab never moves browser focus once you're in the game; it cycles enemy targets instead
@@ -1197,7 +1242,7 @@
     const idx = SLOT_OF[e.key.toLowerCase()];
     if (idx !== undefined) {
       e.preventDefault();
-      if (e.repeat && idx === 6) return;
+      if (e.repeat && idx >= 6) return;
       if (e.shiftKey && idx < 6 && actor && actor.abilities[idx].target === 'ally') selfCast = { i: idx, until: now + ENGINE.QUEUE_WINDOW + 0.3 };
       else if (!e.repeat && selfCast && selfCast.i === idx) selfCast = null;
       pressSlot(idx);
@@ -1556,6 +1601,7 @@
       heal: healer ? allyTargetId(ab) : null,
       casting: c && c.ab.target === 'ally' && typeof c.target === 'number' ? { id: c.target, frac: Math.min(1, (now - c.start) / Math.max(0.01, c.end - c.start)) } : null,
       aggro: raid.state === 'live' && !raid.boss.u ? raid.boss.tg : null,
+      kit: k || null, cls: player.cls ? player.cls.id : null,   // your own DoTs on the boss (raid-ui.js boss status)
     };
   }
 
@@ -1910,9 +1956,11 @@
       altar.appendChild(col);
     }
   })();
+  // an ability's icon as a CSS background (the taunt layers its own painting over the icon it borrows)
+  const abBg = (cls, a) => (a.taunt ? tauntIconBg(cls.id) : `url(${abilityIcon(cls.id, abilityIconId(a))})`);
   // the shared in-game tooltip for an ability
   function abilityTip(cls, a) {
-    const icon = a.id ? `<i class="ab-icon ${a.type}" style="background-image:url(${abilityIcon(cls.id, abilityIconId(a))})"></i>` : '<i class="ab-icon dash">»</i>';
+    const icon = a.id ? `<i class="ab-icon ${a.type}" style="background-image:${abBg(cls, a)}"></i>` : '<i class="ab-icon dash">»</i>';
     return `<div class="tip-ab">${icon}<div><b>${a.name}</b><em>${abilityMeta(a)}</em></div></div>${a.desc}`;
   }
   // --- specializations on the hero page: the base class and its two specs as tabs. A spec shows what it
@@ -2006,7 +2054,8 @@
     selGrid.classList.add('hidden'); selDetail.classList.remove('hidden');
     loadSpecPortraits(cls.id);
     const kit = KITS[cls.id], guide = HERO_GUIDE[cls.id];
-    const abs = [...kit.abilities, DASH_AB];
+    const tauntAb = tauntAbility(cls.id);   // tanks: the taunt on T after the dash
+    const abs = [...kit.abilities, DASH_AB, ...(tauntAb ? [tauntAb] : [])];
     const takenBy = [...remotes.values()].filter(r => r.cls === cls).map(r => escapeHtml(r.name));
     selDetail.style.setProperty('--a', cls.accent);
     selDetail.style.setProperty('--c', ROLES[cls.role].color);
@@ -2020,11 +2069,11 @@
     const keys = $('sel-keys');
     selSpec = player.cls === cls ? (player.spec || null) : Save.spec(cls.id);
     const renderKit = () => {
-      const kitAbs = [...kitFor(cls.id, selSpec).abilities, DASH_AB];
+      const kitAbs = [...kitFor(cls.id, selSpec).abilities, DASH_AB, ...(tauntAb ? [tauntAb] : [])];
       abs.splice(0, abs.length, ...kitAbs);
-      // the seven keys, with what this specialization changed marked
+      // the seven keys (eight for a tank), with what this specialization changed marked
       keys.innerHTML = abs.map((a, i) => `<button class="key-cell ${a.type}${i < 6 && a !== kit.abilities[i] ? ' changed' : ''}" data-i="${i}">
-        <i class="ab-icon ${a.type}${a.id ? '' : ' dash'}" ${a.id ? `style="background-image:url(${abilityIcon(cls.id, abilityIconId(a))})"` : ''}>${a.id ? '' : '»'}</i>
+        <i class="ab-icon ${a.type}${a.id ? '' : ' dash'}" ${a.id ? `style="background-image:${abBg(cls, a)}"` : ''}>${a.id ? '' : '»'}</i>
         <kbd>${KEYS[i]}</kbd><span>${a.name}</span></button>`).join('');
       keys.querySelectorAll('.key-cell').forEach(b => {
         const i = Number(b.dataset.i);
