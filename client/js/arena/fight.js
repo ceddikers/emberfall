@@ -283,14 +283,23 @@ class FightSim {
         while (h.ticks > 0 && this.t >= h.next) { h.ticks--; h.next += h.interval; if (s.alive) this.applyHeal(h.from, p.id, h.amount); }
       }
       s.hots = s.hots.filter(h => h.ticks > 0);
-      if (s.alive) for (const pl of this.healPools) if (this.t >= pl.next && Math.hypot(p.x - pl.x, p.y - pl.y) <= pl.r) this.applyHeal(pl.from, p.id, pl.amount);
+      if (s.alive) for (const pl of this.healPools) {
+        if (Math.hypot(p.x - pl.x, p.y - pl.y) > pl.r) continue;
+        if (pl.pct) { const m = s.mits.find(x => x.pool === pl); if (m) m.end = this.t + 0.25; else s.mits.push({ pct: pl.pct, start: this.t, end: this.t + 0.25, pool: pl, from: pl.from }); }   // a ward circle (Alembist)
+        if (this.t < pl.next) continue;
+        if (pl.amount) this.applyHeal(pl.from, p.id, pl.amount);
+        if (pl.sh && s.shield < pl.sh) this.giveShield(pl.from, p.id, s, pl.sh, pl.interval + 0.6);
+      }
       if (s.alive) {
         s.hist.push([this.t, s.hp]);
         while (s.hist.length && s.hist[0][0] < this.t - 6) s.hist.shift();
         if (ARENA.sd(p.x, p.y) > 14 && this.t > this.edgeGrace) this.damagePlayer(p, 9999999, { kind: 'fall' });
       }
     }
-    for (const pl of this.healPools) if (this.t >= pl.next) { pl.next += pl.interval; pl.ticks--; }
+    for (const pl of this.healPools) {
+      if (this.t >= pl.next) { pl.next += pl.interval; pl.ticks--; }
+      if (pl.fol != null) { const tp = this.players().find(q => q.id === pl.fol); if (tp) { pl.x = tp.x; pl.y = tp.y; } }   // a cloud that follows its ally
+    }
     this.healPools = this.healPools.filter(pl => pl.ticks > 0);
   }
 
@@ -375,6 +384,7 @@ class FightSim {
         this.healPools.push({ from: pid, x: tp.x, y: tp.y, r: Math.min(200, ev.r || 140), amount: Math.max(0, Math.min(3000, ev.amount | 0)), ticks: Math.min(12, ev.ticks || 6), interval: Math.max(0.5, ev.interval || 1.5), next: this.t + Math.max(0.5, ev.interval || 1.5) });
         break;
       }
+      case 'splash': this.splash(pid, ev); break;   // a thrown vial (Alembist)
       case 'brand': {  // Judgment on the boss: allies' next hits burst for the Inquisitor's damage
         const b = this.boss, old = b.brand && b.brand.from === pid && b.brand.end > this.t ? b.brand.charges : 0;
         b.brand = { from: pid, charges: Math.min(8, old + Math.min(8, ev.ticks | 0)), amount: Math.max(0, Math.min(3000, ev.amount | 0)), end: this.t + 15 };
@@ -383,6 +393,36 @@ class FightSim {
       case 'snap': this.snapReel(pid); break;   // a dash snapped the silk reeling this player in
       case 'taunt': this.taunt(pid, typeof ev.tgt === 'string' ? ev.tgt : 'boss'); break;
     }
+  }
+  // A thrown vial (Alembist) shatters at an ally's feet (target 'party': it reaches everyone). Everyone alive within r
+  // gets its effect: amount heals (up: more on the badly hurt), sh shields for dur, cl cleanses (1 Vulnerability and
+  // Damage Down, 2 slows and roots). ticks leaves a pool there (pr radius, every interval: pa heal, ps shield, pct less
+  // damage while inside, fol: it follows that ally). Everything is clamped here, like any other combat event.
+  splash(pid, ev) {
+    const all = ev.target === 'party';
+    const at = all ? null : (this.players().find(q => q.id === this.resolveTarget(pid, ev.target, ev.not)) || this.players().find(q => q.id === pid));
+    if (!all && !at) return;
+    const r = Math.max(0, Math.min(200, ev.r || 0)), num = v => Math.max(0, Math.min(3000, Number(v) || 0));
+    for (const p of this.alive()) {
+      if (!all && Math.hypot(p.x - at.x, p.y - at.y) > r) continue;
+      const s = p.s;
+      if (ev.amount) this.applyHeal(pid, p.id, num(ev.amount) * (ev.up ? 2 - s.hp / s.maxHp : 1));
+      if (ev.sh) this.giveShield(pid, p.id, s, num(ev.sh), ev.dur || 10);
+      if (ev.cl & 1) { s.vuln = 0; s.vulnEnd = 0; s.dmgDownEnd = 0; }
+      if (ev.cl & 2) { delete s.debuffs.slowed; delete s.debuffs.rooted; }
+    }
+    if (at && ev.ticks) {
+      const mine = this.healPools.filter(pl => pl.from === pid && pl.vial);
+      if (mine.length >= 8) this.healPools.splice(this.healPools.indexOf(mine[0]), 1);
+      const iv = Math.max(0.5, Math.min(3, Number(ev.interval) || 1.5));
+      this.healPools.push({ from: pid, vial: true, x: at.x, y: at.y, fol: ev.fol ? at.id : null, r: Math.max(0, Math.min(200, ev.pr || r || 100)), amount: num(ev.pa), sh: num(ev.ps),
+        pct: Math.max(0, Math.min(0.3, Number(ev.pct) || 0)), ticks: Math.max(1, Math.min(12, ev.ticks | 0)), interval: iv, next: this.t + iv });
+    }
+  }
+  giveShield(from, tid, ts, amount, dur) {
+    if (ts.shield > 0) this.endShield(tid, ts);
+    ts.shield = Math.min(amount | 0, ts.maxHp); ts.shieldMax = ts.shield; ts.shieldEnd = this.t + Math.min(30, dur || 15);
+    ts.shieldFrom = from; ts.shieldTag = null;
   }
   resolveTarget(pid, target, not) {
     if (target === 'lowest') {   // the most hurt ally (by share of HP), for heals that find their own target

@@ -93,3 +93,18 @@ Only moves that are new to a spec need an icon. Changed moves (for example Senti
 16. **Shadowblade · Nightstalker** (crimson): the same assassin, hood pulled lower but eyes visible and narrowed, a deep black-red background, a single red highlight along the dagger's edge.
 17. **Pyromancer · Cataclysm** (deep red): the same fire mage looking up, her face lit warm from above by a falling burning rock, cartoon embers in her hair, her hat brim smoking.
 18. **Pyromancer · Sigilmancer** (amber): the same fire mage standing in a ring of burning glyphs that light her face from below, hands open, calm and powerful.
+
+## Alembist specs (new healer, 2026-10)
+
+**Ability icons** (Alembist palette from `ability-icons.md`: dark walnut background, copper, glass):
+
+**Alembist · Apothecary** (herb green and cream)
+- No new moves. Throw keeps its icon; with Shift it picks which vial goes.
+
+**Alembist · Volatile** (soot black and fuse orange)
+19. **Catalyst** (`alembist/catalyst`), replaces Distill: a stoppered round flask with three small drops (red, blue, white) falling into it at once, a jagged orange star-burst shape at the neck where they meet.
+
+**Portraits** (same woman as `hero-portraits.md` #10):
+
+19. **Alembist · Apothecary** (herb green): the same alchemist, goggles off and hanging at her neck, a **leather satchel of labelled clay jars** at her hip, a sprig of green herbs tucked behind one ear, reading a small handwritten label on a jar with calm, patient focus. Sage-green background with a pale mortar-and-pestle shape behind the head.
+20. **Alembist · Volatile** (soot and orange): the same alchemist with soot smudged across her cheek and coat, goggles pulled down over her eyes with **orange lenses**, a few singed strands loose from her bun, holding up a vial with a **short lit fuse** spitting flat orange star-shaped sparks, a wide, slightly reckless grin. Charcoal background with a bold orange burst shape behind the head.

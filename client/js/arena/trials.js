@@ -259,6 +259,32 @@ const TRIALS = {
   },
 };
 
+// ======================================================================= Alembist (classes-b)
+Object.assign(TRIALS, {
+  apothecary: {
+    cls: 'alembist', spec: 'apothecary', name: 'The Long Vigil',
+    lore: ['Through the siege, the bells were quiet for hours, then rang all at once.', 'The apothecary spent every quiet hour filling her shelves.'],
+    outro: 'The bells are answered. The Apothecary is ready.',
+    allies: ['bastion:base', 'ranger:base'], guard: 'allies', seconds: 60, enrage: 150, regen: 0,
+    script(f, k) {
+      // a long hush, then the Night Bells: three knells two and a half seconds apart, more than anyone can heal live
+      const toll = () => f.mech({ type: 'raidwide', shape: { kind: 'circle', x: 0, y: 0, r: 0 }, delay: 0.1, dmg: 5400, hidden: true, tag: 'knell' });
+      const bells = () => { k.knell(5400, 3, 'Night Bells'); f.after(f.ct(3) + 2.5, toll); f.after(f.ct(3) + 5, toll); };
+      k.loop([[4, () => k.blow(8000, 4)], [10, () => {}], [2, bells], [12, () => k.blow(8000, 4)], [6, () => {}], [2, bells], [10, () => {}]]);
+    },
+  },
+  volatile: {
+    cls: 'alembist', spec: 'volatile', name: 'The Short Fuse',
+    lore: ['The siege engineers mixed what no book allowed.', 'One of them learned to throw it before it learned to wait.'],
+    outro: 'The fuse burns out. The Volatile is lit.',
+    allies: ['bastion:base', 'ranger:base', 'pyromancer:base'], guard: 'allies', seconds: 60, enrage: 150, regen: 0,
+    script(f, k) {
+      // no quiet to brew in: knells and marks one after another, so a vial is never kept long
+      k.loop([[3, () => k.knell(3900, 3)], [4.5, () => k.blow(8500, 4)], [4.5, () => k.knell(3900, 3)], [4.5, () => k.marks(2600, 4)]]);
+    },
+  },
+});
+
 // the boss definition FightSim runs for a trial
 function trialDef(specId) {
   const T = TRIALS[specId];

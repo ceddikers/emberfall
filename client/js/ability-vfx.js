@@ -287,6 +287,158 @@ const KIT_VFX = {
   },
 };
 
+// ======================================================================= Alembist (classes-b)
+// Glassware and liquids after the painted sheets: a small wind-up (a puff at the still, a flick of the wrist), a bold
+// climax (the vial arcs over and shatters: glass, a coloured splash shaped by the recipe), and a slow aftermath (steam,
+// salt glitter, a ward circle that lingers as long as it works). Each reagent puffs its colour out of the copper still.
+(() => {
+  const V = VFX, rand = (a, b) => a + Math.random() * (b - a);
+  const shake = s => { FX.shake = Math.max(FX.shake, s); };
+  // the still on the hero's back (local -x), where brewing shows
+  const still = e => ({ x: e.x - Math.cos(e.angle || 0) * 16, y: e.y - Math.sin(e.angle || 0) * 16 });
+  const puff = (e, color, n = 3, big = 1) => {
+    const s = still(e);
+    for (let i = 0; i < n; i++) V.spawn({ x: s.x + rand(-4, 4), y: s.y + rand(-3, 3), z: 30, vx: rand(-15, 15), vy: rand(-10, 10), vz: rand(30, 60), drag: 0.04, life: rand(0.7, 1.1) * big,
+      size: rand(10, 15) * big, size1: 26 * big, color: i ? '#e8e4dc' : color, kind: 'smoke', add: false, a: i ? 0.45 : 0.7, fadeIn: 0.05 });
+    V.spawn({ x: s.x, y: s.y, z: 26, life: 0.25, size: 18 * big, size1: 4, color });
+  };
+  ABILITY_VFX.alembist = {
+    ember: c => puff(c.ent, ALEMBIC.reagents.E.color),
+    dew: c => puff(c.ent, ALEMBIC.reagents.D.color),
+    salt: c => puff(c.ent, ALEMBIC.reagents.S.color),
+    quicksilver: c => puff(c.ent, ALEMBIC.reagents.Q.color),
+    throw: () => {},   // the vial itself is KIT_VFX.vial (it knows what it carries)
+    // a gush of white steam out of the still, a little rune of glass at the feet
+    distill: c => { puff(c.ent, '#dff4f4', 6, 1.4); V.sigil(c.x, c.y, { r: 34, style: 'hex', color: '#cfeff0', dur: 0.7, spin: 3 }); },
+    catalyst: c => { puff(c.ent, '#ff8a3a', 4, 1.2); const s = still(c.ent); for (let i = 0; i < 3; i++) c.later(i * 0.06, () => { const a = Math.random() * Math.PI * 2; V.lightning(s.x, s.y, s.x + Math.cos(a) * 30, s.y + Math.sin(a) * 20, { color: '#ffb070', jag: 6, dur: 0.18 }); }); },
+    batch: c => { for (let i = 0; i < 4; i++) c.later(i * 0.12, () => puff(c.ent, '#ffd27a', 2, 1)); V.shock(c.x, c.y, { r: 60, color: '#ffd27a', dur: 0.4, w: 3 }); },
+    blend: c => { V.swirl(c.x, c.y, { r: 36, color: '#ffe0a8', dur: 0.7, follow: c.ent, inward: true }); puff(c.ent, '#ffe0a8', 5, 1.3); },
+  };
+
+  // the vial in the air: a little glass bottle in the recipe's colour, spinning end over end, dripping as it goes
+  function lob(sx, sy, tx, ty, cols, onHit) {
+    const d = Math.hypot(tx - sx, ty - sy), dur = ALEMBIC.FLIGHT, arc = 36 + d * 0.18;
+    const pos = p => ({ x: sx + (tx - sx) * p, y: sy + (ty - sy) * p, z: 22 + Math.sin(p * Math.PI) * arc - p * 14 });
+    V.fx({ dur, layer: 'air', tick: () => {}, draw: (c, p, t, e) => {
+      const q = pos(p), y = q.y - q.z;
+      if (Math.random() < 0.5) V.spawn({ x: q.x, y: q.y, z: q.z, vz: -40, g: 300, life: 0.35, size: 6, color: cols[0], kind: 'drop', add: false });
+      V.glowAt(c, q.x, y, 16, cols[0], 0.55 * e.a);
+      c.save(); c.globalAlpha = e.a; c.translate(q.x, y); c.rotate(t * 16);
+      c.fillStyle = cols[0]; c.strokeStyle = OUT; c.lineWidth = 1.4;
+      c.beginPath(); c.ellipse(0, 2, 5, 6, 0, 0, Math.PI * 2); c.fill(); c.stroke();
+      if (cols.length > 1) { c.fillStyle = cols[1]; c.beginPath(); c.ellipse(1.5, 2, 2.5, 5, 0, 0, Math.PI * 2); c.fill(); }
+      c.fillStyle = 'rgba(220,240,250,0.8)'; c.fillRect(-2, -7, 4, 5); c.fillStyle = '#9a6a3a'; c.fillRect(-2.2, -9, 4.4, 2.6);
+      c.fillStyle = 'rgba(255,255,255,0.6)'; c.fillRect(-3, -1, 1.5, 4);
+      c.restore();
+    }, done: () => onHit(tx, ty) });
+  }
+  // glass: shards that skitter and glint, a white flash
+  function glass(x, y) {
+    V.flash(x, y - 10, 30, '#ffffff', 0.12);
+    for (let i = 0; i < 9; i++) { const a = Math.random() * Math.PI * 2, sp = rand(80, 220);
+      V.spawn({ x, y, z: 12, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * 0.6, vz: rand(60, 200), g: 600, bounce: true, life: rand(0.5, 0.9), size: rand(6, 9), color: '#e8f6ff', kind: 'shard', add: false, vr: rand(-14, 14), fadePow: 3 }); }
+  }
+  // the splash of one recipe where it broke. m: strength (bigger, longer); tent: the ally it landed on (clouds follow them)
+  function burst(r, x, y, m, tent, fol) {
+    const info = alemInfo(r), col = info.color, kind = info.kind, big = r.length === 3;
+    V.splash(x, y, { n: big ? 16 : 10, color: col, size: 1.1, speed: 1.1 });
+    if (r === 'DES') {   // Philosopher's Draught: a lilac star that rings out across the whole room
+      V.spikeburst(x, y, { r: 50, n: 14, color: col, core: '#ffffff', ink: '#2a1840', dur: 0.4 });
+      for (let i = 0; i < 3; i++) V.shock(x, y, { r: 260 + i * 90, color: col, dur: 0.8, w: 5 - i, delay: i * 0.12 });
+      V.burst(x, y, { color: col, color2: '#ffffff', n: 22, speed: 300, kind: 'star', flashR: 90 }); V.plus(x, y, { color: '#e6c8ff', n: 8 });
+      return;
+    }
+    switch (kind) {
+      case 'heal': {
+        const R = big ? 150 : 110;
+        V.ink(x, y, { r: R, dur: 0.9 }); V.shock(x, y, { r: R, color: col, dur: 0.55, w: 6 });
+        V.sigil(x, y, { r: R * 0.9, style: 'petals', color: col, dur: 0.9, spin: 1.2 });
+        V.plus(x, y, { color: shade(col, 0.3), n: big ? 9 : 6 }); V.motes(x, y, { color: col, n: 10, r: R * 0.7, rise: 0.8 });
+        if (r === 'DE' || r === 'DDD') steam(x, y, r === 'DDD' ? 150 : 120, r === 'DDD' ? 6 : 9 * m, '#d8f2f2', fol ? tent : null);
+        break;
+      }
+      case 'bomb': {
+        const s = big ? 1.5 : 1;
+        V.spikeburst(x, y, { r: 46 * s, n: 14, color: '#ff6a1a', core: '#ffe08a', ink: '#3a0806', dur: 0.36 });
+        V.flare(x, y, { n: 14 * s, r: 20 * s, color: col === '#fff070' ? '#ffd23a' : '#ff5a1a' });
+        V.debris(x, y, { n: 5, hot: true, color: '#5a3a2a' });
+        V.smoke(x, y, { n: 6, color: '#3a2a2a', size: 30 * s, a: 0.55, speed: 50, life: 1.4 });
+        if (big) V.crater(x, y, { r: 54, color: '#ff4a1a', dur: 3, flames: 4, a: 0.5 });
+        if (r === 'EQ') V.lightning(x - 30, y - 10, x + 30, y + 6, { color: '#fff4c0', jag: 10 });
+        if (r === 'EES') { V.burst(x, y, { color: '#fff070', n: 14, speed: 260, kind: 'star' }); }
+        shake(big ? 5 : 3);
+        break;
+      }
+      case 'ward': {
+        const R = r === 'SSS' ? 160 : 120, dur = (r === 'SSS' ? 8 : 6) * m;
+        V.ink(x, y, { r: R, dur });
+        V.sigil(x, y, { r: R, style: r === 'QQ' ? 'runes' : 'hex', color: r === 'QQ' ? '#dfe6f2' : '#f4ecd2', dur, spin: 0.35 });
+        V.crystals(x, y, { color: r === 'QQ' ? '#dfe6f2' : '#fff8e8', n: 8, r: R * 0.85, h: 26, dur: 0.9 });
+        // salt glitter hanging in the circle for its whole life
+        V.fx({ dur, layer: 'ground', tick: () => { if (Math.random() < 0.35) { const a = Math.random() * Math.PI * 2, d = Math.sqrt(Math.random()) * R; V.spawn({ x: x + Math.cos(a) * d, y: y + Math.sin(a) * d * 0.78, z: rand(0, 20), vz: rand(10, 30), life: 0.9, size: rand(4, 7), color: '#ffffff', kind: 'star' }); } }, draw: () => {} });
+        break;
+      }
+      case 'salve': {
+        const R = big ? 130 : 110;
+        for (let i = 0; i < 3; i++) V.shock(x, y, { r: R * (0.5 + i * 0.25), color: col, dur: 0.6, w: 4, delay: i * 0.08 });
+        V.lightfall(x, y, { color: shade(col, 0.4), r: 34, h: 160, dur: 0.6, feathers: 0 });
+        V.burst(x, y - 10, { color: col, color2: '#ffffff', n: 12, speed: 180, kind: 'star', flash: false });
+        if (tent) V.shield(tent, { shape: 'bubble', color: col, dur: 1.2, r: 34 });
+        break;
+      }
+      case 'quick': {
+        V.burst(x, y, { color: '#ffd23a', color2: '#ffffff', n: 18, speed: 300, kind: 'star' });
+        for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2 + rand(-0.4, 0.4); V.lightning(x, y, x + Math.cos(a) * 90, y + Math.sin(a) * 60, { color: '#fff0a0', jag: 12, dur: 0.22 }); }
+        V.shock(x, y, { r: 120, color: '#ffd23a', dur: 0.4, w: 4 }); V.motes(x, y, { color: '#ffe680', n: 12, r: 80, rise: 1.4 });
+        break;
+      }
+    }
+  }
+  // a lingering healing cloud: soft puffs that billow and drift for its whole life (it can follow an ally)
+  function steam(x, y, R, dur, col, follow) {
+    V.fx({ dur, layer: 'air', tick: () => {
+      const cx = follow ? follow.x : x, cy = follow ? follow.y : y;
+      if (Math.random() < 0.45) { const a = Math.random() * Math.PI * 2, d = Math.sqrt(Math.random()) * R * 0.85;
+        V.spawn({ x: cx + Math.cos(a) * d, y: cy + Math.sin(a) * d * 0.7, z: rand(0, 14), vx: rand(-12, 12), vz: rand(8, 22), drag: 0.03, life: rand(1.2, 1.8), size: rand(26, 40), size1: 56, color: col, kind: 'smoke', add: false, a: 0.32, fadeIn: 0.25, fadePow: 2 }); }
+      if (Math.random() < 0.12) V.plus(cx + rand(-R, R) * 0.5, cy + rand(-R, R) * 0.35, { color: '#9affd8', n: 1 });
+    }, draw: () => {} });
+  }
+
+  Object.assign(KIT_VFX, {
+    // a vial thrown (data: { r, p (a Blend's parts), to, en, self, m, fol }): it arcs to target and shatters there.
+    // self: its fuse ran out (or it spoiled into a spill) in the bandolier, so it bursts right on the hero.
+    vial: (e, target, d) => {
+      if (!d) return;
+      const parts = d.p || [d.r], cols = parts.map(r => alemInfo(r).color), m = d.m || 1;
+      const go = (x, y) => { glass(x, y); for (const r of parts) burst(r, x, y, m, target && target !== e ? target : null, d.fol); };
+      if (d.self) { V.spawn({ x: e.x, y: e.y, z: 20, life: 0.3, size: 50, size1: 10, color: '#ffb040' }); go(e.x, e.y); return; }
+      const hx = e.x + Math.cos(e.angle || 0) * 12, hy = e.y + Math.sin(e.angle || 0) * 12;
+      const t = target || { x: e.x + Math.cos(e.angle || 0) * 140, y: e.y + Math.sin(e.angle || 0) * 140 };
+      if (e.st) e.st.action = { type: 'cast', t0: FX.now, dur: 0.4 };
+      lob(hx, hy, t.x, t.y, cols, (x, y) => go(target ? target.x : x, target ? target.y : y));
+    },
+    // a vial finished brewing: the still pops, a ring and a jet of coloured steam out of the chimney
+    brew: (e, target, d) => {
+      const col = d ? alemInfo(d.r).color : '#ffffff', s = still(e);
+      puff(e, col, 4, 1.15);
+      V.shock(s.x, s.y, { r: 30, color: col, dur: 0.3, w: 3, layer: 'air' });
+      for (let i = 0; i < 6; i++) V.spawn({ x: s.x, y: s.y, z: 30, vx: rand(-60, 60), vy: rand(-40, 40), vz: rand(80, 160), g: 260, life: 0.5, size: rand(4, 6), color: col, kind: 'glow' });
+    },
+    // a Reaction found for the first time: a gold starburst over the still and its name, once
+    discover: (e, target, d) => {
+      const s = still(e), info = d ? alemInfo(d.r) : null;
+      V.burst(s.x, s.y, { color: '#ffd27a', color2: '#ffffff', n: 20, speed: 240, kind: 'star', flashR: 60 });
+      V.sigil(e.x, e.y, { r: 44, style: 'star5', color: '#ffd27a', dur: 1.2, spin: 2 });
+      if (info) FX.text(e.x, e.y - 70, info.name, '#ffe2a0', 16, 1.6);
+    },
+    fizzle: e => { const s = still(e); V.smoke(s.x, s.y, { n: 4, color: '#8a8478', size: 16, a: 0.6, speed: 30 }); },
+    spoil: (e, target, d) => { const s = still(e); V.smoke(s.x, s.y, { n: 3, color: '#6a5a3a', size: 14, a: 0.5, speed: 20 }); V.splash(s.x, s.y, { n: 4, color: '#6a5a3a', size: 0.7, speed: 0.5 }); },
+    kindle: e => { const s = still(e); V.sparks(s.x, s.y, { color: '#ffb040', n: 5, angle: e.angle || 0, spread: 0.5, speed: 240 }); },
+    ricochet: (e, target) => { if (target) { V.hit(target.x, target.y, '#ffb050', 0.8); V.flare(target.x, target.y, { n: 6, r: 12 }); } },
+    leap: (e, target) => { if (target) V.splash(target.x, target.y, { n: 8, color: '#4fe0c0', speed: 1.4 }); },
+  });
+})();
+
 // Auto-attacks: small, quick and frequent, so they stay well below the abilities visually.
 // c: { ent, tx, ty, ang, alt (alternates swing direction), color (class accent) }
 const AUTO_VFX = (() => {

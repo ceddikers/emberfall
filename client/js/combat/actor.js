@@ -37,6 +37,9 @@ class CombatActor {
       isDead: id => world.isDead(id),
       defaultLink: () => world.defaultLink(actor),
       emit: ev => world.onEvent(actor, ev),
+      // hidden recipes this hero has found, and finding a new one (the Volatile's Reactions); null: knows them all (bots)
+      known: () => (world.known ? world.known(actor) : null),
+      discover: id => { if (world.discover) world.discover(actor, id); },
     });
   }
   get abilities() { return this.kit.abilities; }

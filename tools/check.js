@@ -24,6 +24,11 @@ const RAIDS = [   // [boss name, boss id, tank, healer, two DPS]
   ['the Hollow King', 'hollowking', 'bastion:sentinel', 'grovekeeper:lifebinder', 'ranger:base', 'pyromancer:cataclysm'],
   ['the Hollow King', 'hollowking', 'bastion:crusader', 'chronomancer:echoist', 'shadowblade:base', 'ranger:sharpshooter'],
   ['the Hollow King', 'hollowking', 'runeguard:spellwarden', 'cleric:base', 'ranger:venomstrike', 'shadowblade:nightstalker'],
+  // Alembist (classes-b): the base kit and each spec healing a boss
+  ['Grubnak', 'grubnak', 'bastion:base', 'alembist:base', 'ranger:base', 'pyromancer:base'],
+  ['Skitterra', 'skitterra', 'bastion:sentinel', 'alembist:volatile', 'ranger:base', 'shadowblade:base'],
+  ['Volkar', 'volkar', 'bastion:base', 'alembist:apothecary', 'ranger:base', 'pyromancer:base'],
+  ['the Hollow King', 'hollowking', 'bloodreaver:base', 'alembist:base', 'shadowblade:bladedancer', 'pyromancer:base'],
 ];
 // Hard smoke runs: one per boss, with the plain line-up. Bots aren't expected to clear Hard; the script just has to run
 // clean and the longest of 3 fights has to last a while (HARD_MIN seconds) before they wipe
@@ -284,7 +289,11 @@ function talents() {
         if (!t.id.startsWith(c.id + '_')) probs.push(`${where}: id should start with ${c.id}_`);
         if (!t.name || !t.text) probs.push(`${where}: needs a name and text`);
         if (!KITS[c.id].abilities.some(a => a.id === t.ab)) probs.push(`${where}: unknown ability ${t.ab}`);
-        for (const k of Object.keys(t)) if (!['id', 'name', 'ab', 'text', 'spec', 'cd', 'cast', 'specMods'].includes(k)) probs.push(`${where}: unknown field "${k}"`);
+        for (const k of Object.keys(t)) if (!['id', 'name', 'ab', 'text', 'spec', 'cd', 'cast', 'specMods', 'grants'].includes(k)) probs.push(`${where}: unknown field "${k}"`);
+        // a talent that grants a new move: the kit holds it in talentAbilities, in place of the talent's own ability
+        const granted = t.grants && KITS[c.id].talentAbilities && KITS[c.id].talentAbilities[t.id];
+        if (t.grants && (!granted || granted.replaces !== t.ab)) probs.push(`${where}: grants a move the kit doesn't have (talentAbilities.${t.id}, replacing ${t.ab})`);
+        if (granted) used.add(t.id);
         for (const s of Object.keys(t.spec || {})) if (!specIds.includes(s)) probs.push(`${where}: text for unknown spec ${s}`);
         for (const [s, m] of Object.entries(t.specMods || {})) {
           if (!specIds.includes(s)) probs.push(`${where}: specMods for unknown spec ${s}`);

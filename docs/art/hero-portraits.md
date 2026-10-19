@@ -60,3 +60,10 @@ Second pass, 2026-10-19: the first sheet read as AI art. These briefs aim for a 
 - Pick the image with the cleanest, flattest shading and the most character in the face. Skip any with soft airbrushed gradients, glow, or a face that could belong to anyone.
 - Look at them all side by side at 112 px (the hero-select thumbnail). Each should be recognizable by its silhouette and signature piece alone.
 - Files go in `client/portraits/<class>.png`, replacing the current ones.
+
+## New healer: Alembist (2026-10)
+
+No spec portraits exist yet, so this one sets the character; paint it first and use it as the reference for `alembist-apothecary` and `alembist-volatile` (`spec-icons.md`). Until it arrives the game shows the animated sprite.
+
+10. **Alembist (Alchemist).** Accent: copper orange.
+   A wiry woman in her late twenties with light olive skin, a sharp nose with a small burn scar on its bridge, quick hazel eyes and thick auburn hair twisted up into a messy bun, held with a **glass stirring rod pushed through it**. **Brass goggles with round amber lenses** sit pushed up on her forehead. She wears a high-collared olive work coat with rolled sleeves over a stained canvas apron, and a **leather bandolier of corked glass vials** (red, blue, white) slants across her chest. One hand holds a small corked vial up to the light, half full of a flat red liquid, and she squints at it with one eyebrow cocked, a crooked, satisfied half-smile. The copper neck of a **small still** pokes over one shoulder with a single curl of flat white steam. Warm copper-orange background with a pale round flask shape behind the head.

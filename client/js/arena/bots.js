@@ -445,6 +445,7 @@ const BotAI = {
     const nextBuster = (view.next || []).find(([n]) => BUSTER_CASTS.test(n));
     // ... and party-wide damage being cast, or close in the feed
     const raidSoon = (view.next || []).some(([n, s]) => s < 6 && RAID_CASTS.test(n)) || !!(view.bossCast && RAID_CASTS.test(view.bossCast.name));
+    if (bot.cls.id === 'alembist') return BotAI.alembist(bot, k, view);   // brews ahead and throws (below)
     // healers: raise, then keep people up
     if (bot.role === 'healer') {
       if (dead.length) {
@@ -568,6 +569,85 @@ const BotAI = {
     const inst = gcds.filter(i => okToCast(i));
     return inst.length ? inst[0] : null;
   },
+};
+
+// ======================================================================= Alembist (classes-b)
+// Keeps a heal or two brewed for what's coming (a Salve before a tankbuster, a Salt Ward before a raidwide), brews
+// bombs when everyone is well, and throws a vial where its splash catches the most of whoever needs it. Pros' habits:
+// heals held until needed, bombs thrown ripe, Volatile fuses never left to run out, Catalyst on cooldown.
+BotAI.alembist = function (bot, k, view) {
+  const A = k.def.alem, vials = k.g.vials, idx = id => k.abilities.findIndex(a => a.id === id || a.replaces === id);
+  const ready = i => { const a = k.abilities[i]; return i >= 0 && k.usable(a) && k.readyIn(a) <= 0.0001 && k.available(a); };
+  const party = view.players.filter(p => !p.left), alive = party.filter(p => p.alive), dead = party.filter(p => !p.alive);
+  const frac = p => p.hp / p.maxHp, hurt = alive.filter(p => frac(p) < 0.82).sort((a, b) => frac(a) - frac(b));
+  const tank = alive.find(p => p.role === 'tank');
+  const busterSoon = view.mechs.some(m => m.type === 'buster' && m.resolveAt - view.t < 4);
+  const raidwideSoon = view.mechs.some(m => m.type === 'raidwide' && m.resolveAt - view.t < 3.5) ||
+    (view.bossCast && view.bossCast.left < 3.5 && /Grease|Venom Mist|Thunderclap|Knell|Gorge|Dead Wind|Twin Knell|Pulse/.test(view.bossCast.name));
+  const room = vials.length < A.slots, gcdFree = k.gcdRemaining() <= 0 && !k.cast && k.lockUntil <= k.now;
+  const near = (q, r) => alive.filter(o => Math.hypot(o.x - q.x, o.y - q.y) <= r);
+  // where a heal splash does the most: the ally with the most missing health around them
+  const healSpot = () => alive.map(q => ({ q, v: near(q, 105).reduce((s, o) => s + (1 - frac(o)), 0) })).sort((a, b) => b.v - a.v)[0];
+  const crowdSpot = () => alive.map(q => ({ q, n: near(q, 115).length })).sort((a, b) => b.n - a.n)[0];
+  const kindOf = v => (v.parts ? 'blend' : alemInfo(v.r).kind);
+  const enemyNear = !!k.env.target({ target: 'enemy', range: RANGED });
+  const needHeal = hurt.length >= 2 || (hurt[0] && frac(hurt[0]) < 0.62);
+
+  // oGCDs: Catalyst whenever a brew is about to start; Distill when healing is urgent; Grand Batch / Blend in a crunch
+  const di = idx('distill'), bi = idx('batch');
+  if (k.gcdRemaining() > 0.15 && !k.cast) {
+    if (k.abilities[di].id === 'catalyst') { if (ready(di) && !k.g.half.length && room) return di; }
+    else if (ready(di) && !k.g.half.length && room && (needHeal || vials.length === 0)) return di;
+    if (ready(bi)) {
+      if (k.abilities[bi].id === 'blend') { if (vials.length >= 2 && needHeal && vials.some(alemIsHeal)) return bi; }
+      else if (vials.length <= 1 && k.g.last && ((needHeal && alemInfo(k.g.last).kind === 'heal') || (!hurt.length && alemInfo(k.g.last).kind === 'bomb'))) return bi;
+    }
+  }
+  if (!gcdFree) return null;
+  const th = idx('throw');
+  const throwAt = (i, who) => { if (A.pick) k.g.sel = i; bot.healTarget = who; return ready(th) ? th : null; };
+
+  // a fallen ally and a Draught (or anything that raises) ready to go: throw it on them
+  if (dead.length && k.now >= k.g.raiseAt) {
+    const ri = vials.findIndex(v => ['DD', 'DQ', 'DDD'].includes(v.r));
+    if (ri >= 0 && (A.pick || ri === 0)) return throwAt(ri, dead[0].id);
+  }
+  // pick the vial to throw now, if any (only the oldest unless the Apothecary can pick)
+  const cands = A.pick ? vials.map((v, i) => i) : vials.length ? [0] : [];
+  let best = null;
+  for (const i of cands) {
+    const v = vials[i], kind = kindOf(v), ripe = alemStrength(k, v) >= 1 + ALEMBIC.GROW - 0.001;
+    const fuseLow = v.fuse && v.fuse - k.now < 1.4, spoiling = !v.fuse && !v.keep && alemSpoilTime(k) - (k.now - v.born) < 3;
+    let score = 0, who = bot.id;
+    if (kind === 'heal' || kind === 'blend') { const s = healSpot(); if (s && (needHeal || s.v > 0.5)) { score = 5 + s.v * 4; who = s.q.id; } }
+    else if (kind === 'salve') { if (busterSoon && tank) { score = 7; who = tank.id; } else if (hurt.length >= 2) { const s = healSpot(); score = 4; who = s.q.id; } }
+    else if (kind === 'ward') { if (raidwideSoon || (busterSoon && tank)) { const s = raidwideSoon ? crowdSpot() : { q: tank }; score = 6; who = s.q.id; } }
+    else if (kind === 'quick') { score = hurt.length ? 1 : 3; const s = crowdSpot(); who = s.q.id; }
+    else if (kind === 'bomb') { if (enemyNear && (ripe || !room)) score = needHeal ? 1 : 3; who = tank ? tank.id : bot.id; }
+    if (fuseLow || spoiling) { score = Math.max(score, 8); if (who === bot.id) { const s = kind === 'bomb' ? null : (needHeal ? healSpot() : crowdSpot()); if (s) who = s.q.id; } }
+    if (!room && !k.g.half.length && score < 2) { score = 2; if (who === bot.id && kind !== 'bomb') who = (crowdSpot() || { q: { id: bot.id } }).q.id; }
+    if (score > 0 && (!best || score > best.score)) best = { i, who, score };
+  }
+  // a heal is needed and none is brewed: brew one before throwing a bomb
+  if (best && (best.score >= 2 || !room)) return throwAt(best.i, best.who);
+
+  // brew: the plan is set when a brew starts and kept until it's done
+  if (!room) return null;
+  const need = k.has('catalyst') ? 3 : 2, have = k.g.half.length;
+  if (!have || !k.g.botPlan || k.g.botPlan.length !== need) {
+    const heals = vials.filter(alemIsHeal).length, shields = vials.filter(v => ['salve', 'ward'].includes(kindOf(v))).length;
+    const S = idx('salt') >= 0 && k.abilities[idx('salt')].reagent === 'Q' ? 'Q' : 'S';
+    let plan;
+    if (needHeal && heals < 2) plan = need === 3 ? 'DDD' : (hurt.length >= 3 ? 'DE' : 'DD');
+    else if (busterSoon && !shields) plan = need === 3 ? 'DD' + S : 'D' + S;
+    else if (heals < 1) plan = need === 3 ? 'DDD' : 'DD';
+    else if (need === 3 && raidwideSoon && !shields) plan = 'DES';
+    else plan = need === 3 ? 'EEE' : 'EE';
+    k.g.botPlan = plan.replace(/S/g, S);
+  }
+  const letter = k.g.botPlan[have] || 'E';
+  const ri = k.abilities.findIndex(a => a.reagent === letter);
+  return ready(ri) ? ri : null;
 };
 
 if (typeof module !== 'undefined') module.exports = { BotAI };

@@ -106,6 +106,16 @@ Second pass, 2026-10-19, in the same cartoon/anime fantasy style as `hero-portra
 5. **Stasis** (`chronomancer/stasis`): an hourglass with the sand frozen mid-fall, enclosed in a thin shell of pale teal crystal.
 6. **Recall** (`chronomancer/recall`): an open pocket watch on a chain, its glass cracked, the hands moving again.
 
+**Alembist** (new healer, 2026-10): dark walnut background, copper and clear glass, with each reagent's own colour as the accent (Ember red-orange, Dew blue, Salt white). Until a painted file arrives the game draws a simple placeholder icon for each move. When a file is added, also add its id to `client/icons/alembist/manifest.json` (a JSON list of ids, for example `["ember","dew"]`), so the game knows to load it.
+1. **Ember** (`alembist/ember`): a single red-orange coal dropping into the open mouth of a glass flask, a cartoon flame with a curled tip licking up from it.
+2. **Dew** (`alembist/dew`): one fat blue drop falling from a curled green leaf tip, a small round ripple below.
+3. **Salt** (`alembist/salt`): a little heap of chunky white salt crystals poured from a tipped wooden scoop, cubes drawn as flat hexagons.
+4. **Throw** (`alembist/throw`): a corked round vial tumbling through the air on a curved arc, three tapered speed lines behind it, a few flat glass-shard shapes where it is about to land.
+5. **Distill** (`alembist/distill`): a copper still with a coiled pipe, one bright drop forming at the spout, two puffs of flat white steam.
+6. **Grand Batch** (`alembist/batch`): a wooden rack holding a row of corked vials, all different colours, seen front-on.
+7. **Grand Blend** (`alembist/blend`, talent, replaces Grand Batch): one big round-bottom flask with swirled bands of red, blue and white liquid inside, its cork tied down with string.
+8. **Quicksilver** (`alembist/quicksilver`, talent, replaces Salt): a bead of liquid silver rolling off a spoon, its mirrored surface drawn with one hard white highlight and a flat blue-grey shadow.
+
 ## Tips
 
 - Paste the shared style block word for word for every class, and keep the same seed or style reference.

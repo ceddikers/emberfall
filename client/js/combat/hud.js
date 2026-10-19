@@ -1,7 +1,8 @@
 // Combat HUD for the local player: ability bar (Q W E R D F + Space), class gauge, cast bar, buffs.
 
 const SLOT_KEYS = ['Q', 'W', 'E', 'R', 'D', 'F', 'SPC', 'T'];   // 7: a tank's taunt
-const abilityIcon = (classId, abilityId) => `icons/${classId}/${abilityId}.png`;
+// (a class whose icons aren't all painted yet can draw its own until they are: ICON_ART in gauges.js)
+const abilityIcon = (classId, abilityId) => (typeof ICON_ART !== 'undefined' && ICON_ART[classId] && ICON_ART[classId](abilityId)) || `icons/${classId}/${abilityId}.png`;
 
 const BUFF_NAMES = {
   oath: 'Oath of Valor', frenzy: 'Frenzy', gorge: 'Gorged', undying: 'Undying', overload: 'Runic Overload',
@@ -39,6 +40,20 @@ const GAUGE_TIPS = {
   },
 };
 
+// Alembist (classes-b): the bandolier's tooltip lists the recipes (and the Volatile's Reactions, sealed until found)
+Object.assign(BUFF_NAMES, { distill: 'Distill', catalyst: 'Catalyst' });
+Object.assign(BUFF_ICON, { distill: 'distill', catalyst: 'distill' });
+GAUGE_TIPS.alembist = {
+  desc: 'Two reagents brew a vial into your bandolier (three after Catalyst). Throw takes the oldest. Vials grow 30% stronger over their first 10s and spoil after 40s.',
+  state: k => {
+    const i = alemPick(k), v = i >= 0 ? k.g.vials[i] : null, raise = Math.ceil(k.g.raiseAt - k.now);
+    const parts = [v ? `next: ${alemInfo(v.r).name} ${Math.round((alemStrength(k, v) - 1) * 100)}%` : 'empty'];
+    if (raise > 0) parts.push(`raise in ${raise}s`);
+    return parts.join(' · ');
+  },
+  extra: k => `<div class="alem-book">${alemBook(null, false)}${k.def.alem.fuse ? alemBook(alemKnown(k), true) : ''}</div>`,
+};
+
 const Hud = {
   el: null, slots: [], actor: null, gaugeCanvas: null, castFill: null, castName: null, buffRow: null, extra: () => [],
 
@@ -69,6 +84,14 @@ const Hud = {
     this.actor = actor;
     const row = this.el.querySelector('#ability-row');
     const cls = actor.cls;
+    // a gauge can ask for a wider canvas (the Alembist's bandolier)
+    const gw = (actor.kit.def.gauge && actor.kit.def.gauge.w) || 130;
+    if (gw !== this.gw) {
+      this.gw = gw;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      this.gaugeCanvas.width = gw * dpr; this.gaugeCanvas.style.width = gw + 'px';
+      this.el.querySelector('.gauge-wrap').style.width = gw + 'px';
+    }
     const items = [...actor.abilities, { id: 'dash', name: 'Dash', type: 'ogcd', desc: 'Dash in the direction you are moving (or toward the cursor). Two charges.', fx: { color: cls.accent } }];
     // a tank's taunt (slot 7, key T), drawn just before the dash
     const taunt = actor.taunt ? tauntAbility(cls.id) : null;
@@ -109,7 +132,7 @@ const Hud = {
       const val = Math.floor(k.g[g.key] || 0);
       const meta = [`${val} / ${g.max}`];
       if (info.state) meta.push(info.state(k));
-      return `<b>${g.label}</b><em>${meta.join(' · ')}</em>${info.desc}`;
+      return `<b>${g.label}</b><em>${meta.join(' · ')}</em>${info.desc}${info.extra ? info.extra(k) : ''}`;
     });
     this.el.classList.remove('hidden');
   },
@@ -173,10 +196,10 @@ const Hud = {
     } else { this.castBar.classList.add('hidden'); this._castAb = null; }
     // gauge
     const c = this.gaugeCanvas.getContext('2d');
-    const dpr = this.gaugeCanvas.width / 130;
+    const gw = this.gw || 130, dpr = this.gaugeCanvas.width / gw;
     c.setTransform(dpr, 0, 0, dpr, 0, 0);
-    c.clearRect(0, 0, 130, 116);
-    drawGauge(c, k, 130, 116, t);
+    c.clearRect(0, 0, gw, 116);
+    drawGauge(c, k, gw, 116, t);
     // buffs (rebuilt only when the set changes)
     const list = [];
     for (const [id, b] of k.buffs) if (b.end > now && BUFF_NAMES[id]) list.push({ id, name: BUFF_NAMES[id], left: b.end - now, stacks: b.stacks, bad: BAD_BUFFS.has(id) });

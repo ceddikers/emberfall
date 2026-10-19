@@ -60,6 +60,13 @@ const CLASSES = [
   },
 ];
 
+// ---------------------------------------------------------------- Alembist (healer, added with classes-b)
+CLASSES.push({
+  id: 'alembist', name: 'Alembist', title: 'Alchemist', role: 'healer', difficulty: 3, accent: '#d08a3a',
+  tagline: 'Brewed before it\'s needed.',
+  gameplan: 'Three reagents, two presses each: Dew and Dew brews a healing Draught, Ember and Ember a Fire Bomb, Salt a ward. Vials wait in your bandolier and grow stronger, so you brew in the quiet for what\'s coming, then throw the oldest at whoever needs it. A splash catches everyone near where it lands.',
+});
+
 // Boss panel text: flavor only. Nothing here tells you how to deal with an attack.
 const BOSSES = [
   {

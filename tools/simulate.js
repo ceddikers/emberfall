@@ -37,7 +37,7 @@ function runSim(classId, skill, seed, specId, talents) {
   const human = mulberry(seed * 7 + 3); // separate stream for "human" randomness
   const state = { t: 0, moving: false, tookDamage: [], shield: null, mits: [], reflect: null, healDebt: 0, healing: 0, gcdHeals: 0, allyWards: [], petalShields: [] };
   const role = ['bastion', 'bloodreaver', 'runeguard'].includes(classId) ? 'tank'
-    : ['cleric', 'grovekeeper', 'chronomancer'].includes(classId) ? 'healer' : 'dps';
+    : ['cleric', 'grovekeeper', 'chronomancer', 'alembist'].includes(classId) ? 'healer' : 'dps';
   const maxHp = role === 'tank' ? 32000 : 21000;
   let lastPos = 'rear';
   const env = {
@@ -66,6 +66,13 @@ function runSim(classId, skill, seed, specId, talents) {
       }
       // Moonwell: assume three of the four stand in the pool for its whole life
       if (ev.type === 'pool') { state.healing += ev.amount * ev.ticks * 3; state.healDebt = Math.max(0, state.healDebt - ev.amount * ev.ticks * 3); }
+      // a thrown vial (Alembist): a splash usually catches two or three of the four (the whole party if it says so),
+      // a cloud about the same for its whole life; shields count at 80% like an Aegis's
+      if (ev.type === 'splash') {
+        const hits = ev.target === 'party' ? 4 : ev.target === 'lowest' ? 1.2 : (ev.r || 0) >= 110 ? 2.4 : 1.6;
+        const amt = (ev.amount || 0) * hits + (ev.sh || 0) * hits * 0.8 + ((ev.pa || 0) + (ev.ps || 0) * 0.6) * (ev.ticks || 0) * 2.4;
+        state.healing += amt; state.healDebt = Math.max(0, state.healDebt - amt);
+      }
       // Judgment (Inquisitor): the party's hits burst every charge soon after
       if (ev.type === 'brand') k.stats.damage += ev.amount * ev.ticks;
       // a shield on an ally (Aegis): counts as healing; a Petal shield on the tank soaks most of it and comes back now and then
@@ -201,7 +208,31 @@ function genericNewbie(k, ctx) {
   return 0;
 }
 function genericPro(k, ctx) { return genericNewbie(k, ctx); }
-const NEWBIE = {};
+const NEWBIE = {
+  // Alembist: the hints only. Distill and Grand Batch when noticed; throws when the party looks hurt or R glows;
+  // otherwise the glowing reagent (noticed 60% of the time), else Q, now and then a random one. Never picks a slot.
+  alembist(k, ctx) {
+    const n = ctx.state.newbie || (ctx.state.newbie = { gcdSeenAt: null, delay: 0, ogcdSeen: {} });
+    for (const id of ['distill', 'batch']) {
+      const ab = abOf(k, id);
+      if (!k.usable(ab) || k.readyIn(ab) > 0.0001) { n.ogcdSeen[id] = null; continue; }
+      if (n.ogcdSeen[id] == null) n.ogcdSeen[id] = ctx.t + 0.5 + ctx.human() * 2.5;
+      if (ctx.t >= n.ogcdSeen[id]) { n.ogcdSeen[id] = null; return I(k, id); }
+    }
+    if (k.gcdRemaining() > 0.0001 || k.cast || k.lockUntil > k.now) { n.gcdSeenAt = null; return null; }
+    if (n.gcdSeenAt === null) { n.gcdSeenAt = ctx.t; n.delay = k.g.half.length ? 0.05 + ctx.human() * 0.15 : 0.1 + ctx.human() * 0.5; n.noticeGlow = ctx.human() < 0.6; n.roll = ctx.human(); }   // (the second reagent of a brew follows in rhythm)
+    if (ctx.t < n.gcdSeenAt + n.delay) return null;
+    n.gcdSeenAt = null;
+    const th = abOf(k, 'throw');
+    if (k.usable(th) && ((ctx.state.healDebt > 3500 && n.roll < 0.7) || (n.noticeGlow && k.glows(th)))) { ctx.state.gcdHeals++; return I(k, 'throw'); }
+    const reagents = ['ember', 'dew', 'salt'].map(id => abOf(k, id)).filter(a => k.usable(a));
+    if (!reagents.length) return k.usable(th) ? I(k, 'throw') : null;
+    const glowing = reagents.filter(a => k.glows(a));
+    if (n.noticeGlow && glowing.length) return I(k, glowing[0].id);
+    if (n.roll < 0.25) return I(k, reagents[Math.floor(ctx.human() * reagents.length)].id);
+    return k.usable(abOf(k, 'ember')) ? 0 : I(k, reagents[0].id);
+  },
+};
 
 // Each pro policy returns the ability index to press, or null. They weave oGCDs in the first half of the GCD.
 const weaveOk = k => k.gcdRemaining() > 0.7 && !k.cast;
@@ -320,6 +351,39 @@ const PRO = {
     if (k.gcdRemaining() > 0.0001 || k.cast) return null;
     if (debt > 16000 && ready(k, 'recall') && castOk(k, ctx, 2.5)) { ctx.state.gcdHeals++; return I(k, 'recall'); }
     return castOk(k, ctx, 1.5 * k.hasteMult()) || k.has('surge') ? I(k, 'bolt') : null;
+  },
+  // Alembist: keep a heal or two in stock, otherwise brew bombs and throw them ripe; Catalyst for Reactions on cooldown
+  alembist(k, ctx) {
+    const debt = ctx.state.healDebt, A = k.def.alem, vials = k.g.vials, vol = !!A.fuse;
+    const room = vials.length < A.slots, cat = abOf(k, 'distill').id === 'catalyst';
+    const weave = k.gcdRemaining() > 0.2 && !k.cast;   // the short reagent GCD leaves a quarter second to weave
+    if (cat) { if (ready(k, 'distill') && !k.g.half.length && room && weave) return I(k, 'distill'); }
+    else if (ready(k, 'distill') && room && !k.g.half.length && weave) return I(k, 'distill');
+    const batch = abOf(k, 'batch');
+    if (batch.id === 'blend') { if (ready(k, 'batch') && vials.length >= A.slots && weave) return I(k, 'batch'); }
+    else if (ready(k, 'batch') && k.g.last && vials.length <= 1 && weave && ((alemInfo(k.g.last).kind === 'bomb' && ctx.inBurst(ctx.t)) || (alemInfo(k.g.last).kind === 'heal' && debt > 10000))) return I(k, 'batch');
+    if (k.gcdRemaining() > 0.0001 || k.cast) return null;
+    if (A.pick && vials.length) {
+      const h = vials.findIndex(alemIsHeal);
+      let best = 0; vials.forEach((v, i) => { if (alemStrength(k, v) > alemStrength(k, vials[best]) && !alemIsHeal(v)) best = i; });
+      k.g.sel = debt > 5000 && h >= 0 ? h : best;
+    }
+    const i = alemPick(k), v = vials[i];
+    if (v) {
+      const heal = alemIsHeal(v), ripe = alemStrength(k, v) >= 1 + ALEMBIC.GROW - 0.001;
+      if (heal && debt > 5000) return I(k, 'throw');
+      if (v.fuse && v.fuse - k.now < 1.3) return I(k, 'throw');
+      if (!heal && ripe) return I(k, 'throw');
+      if (!room) return I(k, 'throw');
+    }
+    if (!room) return null;
+    const need = k.has('catalyst') ? 3 : 2;
+    if (!k.g.half.length || !k.g.plan || k.g.plan.length !== need) {
+      const healer = debt > 7000 && alemHealStock(k) < 2;
+      k.g.plan = need === 3 ? (healer ? 'DDD' : 'EEE') : (healer ? 'DD' : 'EE');
+    }
+    const letter = k.g.plan[k.g.half.length] || 'E';
+    return I(k, { E: 'ember', D: 'dew', S: 'salt', Q: 'salt' }[letter]);
   },
 };
 

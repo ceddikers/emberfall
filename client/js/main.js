@@ -148,6 +148,8 @@
     allyTarget: (a, ab) => allyTargetId(ab),
     gearMods: () => Inventory.mods(player.cls && player.cls.id),
     talents: () => activeTalents(),
+    known: () => new Set(Save.found(player.cls ? player.cls.id : '')),   // hidden recipes found (Volatile Reactions)
+    discover: (a, id) => { if (player.cls) Save.discover(player.cls.id, id); },
     isDead: id => { if (!inArena()) return false; const s = raid.party.get(id); return !!s && !s.alive; },
     defaultLink: () => (inArena() && raid.boss.tg != null ? raid.boss.tg : Net.id),
     partyMods: () => {
@@ -219,8 +221,9 @@
   function healerish() { return actor && actor.abilities.some(a => a.target === 'ally'); }
 
   // --- kit events
-  const SIM_EVENTS = new Set(['damage', 'heal', 'hot', 'shield', 'mit', 'raise', 'rewind', 'selfDamage', 'targetDebuff', 'partyBuff', 'snap', 'pool', 'brand', 'taunt']);
-  const EV_FIELDS = ['type', 'amount', 'crit', 'target', 'ticks', 'interval', 'id', 'dur', 'tag', 'pct', 'kind', 'value', 'secs', 'threat', 'tgt', 'r', 'not'];
+  const SIM_EVENTS = new Set(['damage', 'heal', 'hot', 'shield', 'mit', 'raise', 'rewind', 'selfDamage', 'targetDebuff', 'partyBuff', 'snap', 'pool', 'brand', 'taunt', 'splash']);
+  const EV_FIELDS = ['type', 'amount', 'crit', 'target', 'ticks', 'interval', 'id', 'dur', 'tag', 'pct', 'kind', 'value', 'secs', 'threat', 'tgt', 'r', 'not',
+    'up', 'sh', 'cl', 'pa', 'ps', 'pr', 'fol'];   // (a thrown vial's splash: fight.js splash())
   function packEv(ev) {
     const o = {};
     for (const k of EV_FIELDS) if (ev[k] !== undefined) o[k] = ev[k];
@@ -242,7 +245,7 @@
           const e = enemyPos(); if (e) { tx = e.x; ty = e.y; } else { const m = mouseWorld(); tx = m.x; ty = m.y; }
         }
         FX.cast(player, ab, tx, ty, { mine: true, tent: ally != null ? entById(ally) : null });
-        Net.send({ t: 'cast', i, x: rnd(player.x), y: rnd(player.y), tx: rnd(tx), ty: rnd(ty), ally, s: scene === 'arena' ? 1 : 0, c: +now.toFixed(3) });
+        Net.send(Object.assign({ t: 'cast', i, x: rnd(player.x), y: rnd(player.y), tx: rnd(tx), ty: rnd(ty), ally, s: scene === 'arena' ? 1 : 0, c: +now.toFixed(3) }, ab.talent ? { a: ab.id } : null));
         break;
       }
       case 'auto': {
@@ -272,13 +275,13 @@
         FX.text(player.x, player.y - 56, ev.reason === 'target' ? (ev.ab.target === 'enemy' ? (inArena() && (raid.boss.u || raid.state !== 'live') ? 'No target' : 'Out of range') : 'No target') : 'Not ready', '#c8c0d8', 12, 0.7);
         break;
       case 'teleport': teleportBehind(); break;
-      case 'fx': kitFx(ev.name); break;
+      case 'fx': kitFx(ev.name, ev.data); break;
       case 'damage': onMyDamage(ev); break;
       default:
         if (SIM_EVENTS.has(ev.type)) {
           if (inArena()) {
             sendCombat(ev);
-            if (ev.type === 'heal') showHeal(ev.target, ev.amount, ev.crit);
+            if (ev.type === 'heal' || (ev.type === 'splash' && ev.amount)) showHeal(ev.target, ev.amount, ev.crit);
           } else townEvent(ev);
         }
     }
@@ -504,19 +507,25 @@
   }
 
   // class moments (Perfect Block, Overheat...): the big effect plays for everyone, the text only for you
-  function kitFx(name) {
+  function kitFx(name, data) {
     const x = player.x, y = player.y;
     const label = { perfect: ['Perfect!', '#ffe27a'], reflect: ['Reflect!', '#e0d4ff'], overheat: ['Overheat', '#ff6a3a'], lag: ['Time Lag', '#9ab8c0'] }[name];
     if (label) FX.text(x, y - 62, label[0], label[1], 17, 1.1);
-    playKitFx(player, name, true);
-    Net.send({ t: 'kfx', k: name, s: scene === 'arena' ? 1 : 0 });
+    playKitFx(player, name, true, data);
+    Net.send(Object.assign({ t: 'kfx', k: name, s: scene === 'arena' ? 1 : 0 }, data ? { d: data } : null));
   }
-  function playKitFx(ent, name, mine) {
+  function playKitFx(ent, name, mine, data) {
     const f = KIT_VFX[name];
     if (!f) return;
-    const target = name === 'reflect' || name === 'dawnstar' || name === 'radiant' || name === 'echo' ? (ent === player ? enemyPos() : (inArena() ? { x: raid.boss.x, y: raid.boss.y } : null)) : null;
+    let target = name === 'reflect' || name === 'dawnstar' || name === 'radiant' || name === 'echo' ? (ent === player ? enemyPos() : (inArena() ? { x: raid.boss.x, y: raid.boss.y } : null)) : null;
+    // a moment aimed somewhere (an Alembist's vial): data.to names an ally, data.en an enemy ('boss', an add, a dummy)
+    if (data && typeof data === 'object') {
+      if (data.en != null) target = inArena() ? (enemyNow(data.en) || { x: raid.boss.x, y: raid.boss.y }) : (ent === player ? enemyPos() : null);
+      else if (data.to != null) { const a = entById(data.to); if (a) target = a; }
+      if (!target && data.self) target = ent;
+    }
     VFX.setScale(mine ? 1 : 0.6);
-    try { f(ent, target); } finally { VFX.setScale(1); }
+    try { f(ent, target, data || null); } finally { VFX.setScale(1); }
   }
 
   // --- pressing buttons
@@ -1310,6 +1319,8 @@
     if (idx !== undefined) {
       e.preventDefault();
       if (e.repeat && idx >= 6) return;
+      // a kit's own Shift move (the Apothecary moves its pick along the bandolier with Shift+R)
+      if (e.shiftKey && idx < 6 && actor && actor.kit.def.shiftPress) { if (e.repeat) return; if (actor.kit.def.shiftPress(actor.kit, idx)) return; }
       if (e.shiftKey && idx < 6 && actor && actor.abilities[idx].target === 'ally') selfCast = { i: idx, until: now + ENGINE.QUEUE_WINDOW + 0.3 };
       else if (!e.repeat && selfCast && selfCast.i === idx) selfCast = null;
       pressSlot(idx);
@@ -2396,7 +2407,9 @@
     // where they cast from goes into their track like any position update (snapping here would fight the smoothing)
     if (!e.bot) { e.tx = msg.x; e.ty = msg.y; if (e.track) e.track.push(e.clock ? e.clock.map(msg.c, now) : now, msg.x, msg.y, e.track.latest().a); }
     if (msg.i === 6) { e.dashUntil = now + 0.2; VFX.setScale(0.6); KIT_VFX.dash(e, e.cls.accent); VFX.setScale(1); return; }
-    const ab = kitFor(e.cls.id, e.spec).abilities[msg.i];
+    const kit = kitFor(e.cls.id, e.spec);
+    // a move a talent granted (msg.a names it) looks like itself, not the move it replaced
+    const ab = (msg.a && kit.talentAbilities && Object.values(kit.talentAbilities).find(t => t.id === msg.a)) || kit.abilities[msg.i];
     if (!ab) return;
     let tx = msg.tx, ty = msg.ty, tent = null;
     if (msg.ally != null) { tent = entById(msg.ally); if (tent) { tx = tent.x; ty = tent.y; } }
@@ -2406,7 +2419,7 @@
   Net.on('kfx', msg => {
     const e = msg.id >= 1000 ? (raid && raid.bots.get(msg.id)) : remotes.get(msg.id);
     if (!e || (msg.s ? 1 : 0) !== (scene === 'arena' ? 1 : 0)) return;
-    playKitFx(e, msg.k, false);
+    playKitFx(e, msg.k, false, msg.d && typeof msg.d === 'object' ? msg.d : null);
   });
   Net.on('castStart', msg => {
     const e = msg.id >= 1000 ? (raid && raid.bots.get(msg.id)) : remotes.get(msg.id);
