@@ -600,6 +600,46 @@ kbd { border-radius: 3px; background: #1d1813; border-color: #4a3d2c; color: var
 .chip.hot u { display: block; width: 14px; height: 14px; background: center / cover no-repeat; border-right: 1px solid #000; }
 .chip.hot.theirs { opacity: .6; }
 
+/* the left column in a raid: party frames, then the threat meter under them */
+#raid-left { position: fixed; left: 14px; top: 14px; width: 244px; z-index: 4; display: grid; gap: 6px; align-content: start; }
+#raid-left #party-frames { position: static; width: auto; }
+#threat-meter { padding: 5px 8px 6px; background: linear-gradient(90deg, #15120fe0, #100e0cc8); border: 1px solid var(--line-soft); border-radius: 3px; pointer-events: none; }
+#threat-meter h6 { margin: 0 0 3px; font-size: 9.5px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; font-variant: small-caps; color: var(--muted); }
+.tm-row { display: grid; grid-template-columns: 12px minmax(0, 1fr) auto; align-items: center; column-gap: 5px; padding: 1px 3px 2px; border-left: 1px solid transparent; }
+.tm-row.me { background: #ffffff08; border-left-color: var(--gold-dim); }
+.tm-row .pf-role svg { width: 9px; height: 9px; }
+.tm-row span { font-size: 11px; color: #d8cdb8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tm-row.me span { color: var(--gold-hi); }
+.tm-row b { font-size: 10.5px; font-weight: 600; color: #cfc5b2; font-variant-numeric: tabular-nums; letter-spacing: .02em; }
+.tm-bar { grid-column: 2 / -1; height: 2px; margin-top: 1px; background: #00000080; }
+.tm-bar i { display: block; height: 100%; background: color-mix(in srgb, var(--rc) 55%, #8a7a60); transition: width .2s; }
+.tm-row.warn b, .tm-row.warn span { color: #e8b070; }
+.tm-row.warn .tm-bar i { background: #c8823a; }
+
+/* under the boss's health: what's on it (icon, seconds), and under the cast bar the moves still to come */
+.bb-status { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 4px; min-height: 0; pointer-events: auto; }
+.bb-status:empty { display: none; }
+.bst { position: relative; display: inline-flex; align-items: center; gap: 3px; height: 18px; padding: 0 4px 0 0; background: #0a0807; border: 1px solid var(--line); border-radius: 2px;
+  font-size: 10px; font-weight: 600; color: #e6dcc8; font-variant-numeric: tabular-nums; }
+.bst u { display: grid; place-items: center; width: 16px; height: 16px; background: center / cover no-repeat; border-right: 1px solid #000; }
+.bst u.g svg { width: 11px; height: 11px; }
+.bst.debuff { border-color: #6e5a30; }
+.bst.debuff.mine { border-color: var(--gold-dim); }
+.bst.buff { border-color: #6a2a22; color: #f0c8bc; }
+.bst.buff u.g { color: #e8907e; }
+.bst.theirs { opacity: .6; }
+.bst s { position: absolute; left: 1px; top: -1px; font-size: 9px; text-decoration: none; color: #fff; text-shadow: 0 0 2px #000, 0 0 2px #000; }
+.bb-next { display: flex; justify-content: center; gap: 14px; margin-top: 5px; }
+.bb-next span { display: inline-flex; align-items: baseline; gap: 5px; font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.bb-next span:first-child { color: #e6dcc8; }
+.bb-next b { font-weight: 600; font-family: var(--fantasy); }
+.bb-next i { font-style: normal; font-variant-numeric: tabular-nums; letter-spacing: .02em; color: #cfc5b2; }
+#target-frame { top: max(96px, calc(var(--bb-bottom, 0px) + 8px)); }
+
+/* a tank's taunt on the bar (T) and on the hero page */
+.slot.taunt { border-color: #7a6238; }
+@media (min-width: 761px) { #sel-keys:has(> :nth-child(8)) { grid-template-columns: repeat(8, 1fr); } }
+
 /* the player's own cast bar */
 #cast-bar { width: 280px; height: 16px; border-radius: 2px; background: #0a0807f0; border: 1px solid var(--gold-dim); box-shadow: 0 0 0 1px #000; }
 #cast-bar .fill { background: linear-gradient(90deg, #6b5634, #c9a45c 75%, #f0d898); }
