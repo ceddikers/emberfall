@@ -53,3 +53,7 @@ Two talents per hero (rows III and V) grant a new move that takes over a button.
 **Chronomancer**: deep teal background, brass, pale teal accent.
 17. **Time Bubble** (`chronomancer/bubble`): a round soap-bubble outline in pale teal holding a small brass hourglass frozen mid-pour, the falling sand stopped in mid-air.
 18. **Time Warp** (`chronomancer/warp`): a large brass clock face tilted in perspective, its two hands bent and swept round like speed lines, a pale teal ring around the rim.
+
+## Threadweaver and Marionettist (2026-10)
+
+The four talent moves for these two (Embroider, Cat's Cradle, Tangle, Red Curtain) are in `ability-icons.md` with the rest of each class, since neither class has painted icons yet.

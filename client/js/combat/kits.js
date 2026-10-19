@@ -2969,4 +2969,465 @@ TALENT_ABILITIES.ironpalm_dragon = { cls: 'ironpalm', ab: ipDragon,
   }) } };
 
 if (typeof module !== 'undefined') Object.assign(module.exports, { IRONPALM, IP_SLOT, IP_INPUT, IP_MOVES, ipMoves, ipLive, ipStep, ipPress, ipDrop, ipGuide, ipPlan, ipNext, ipBreath, ipRead, ipAbId });
+// CLASSES-C: Threadweaver (healer) and Marionettist (DPS). docs/plans/2026-10-new-classes.md
+// The host owns the threads (fight.js, the weave block) and judges which mechanics land on a Doll; the kits own the
+// rest. Both read a few optional world hooks (actor.js): env.threads() (this weaver's threads, { me, l: [[a, b, d]] }),
+// env.aim() (the cursor, or a bot's chosen spot), env.collide(point, r) (push a point out of solid props) and
+// env.dolls(list) (where this player's Dolls are, for the host). The simulator has none of them; the kits cope.
+// ===================================================================================================================
+
+// ---------------------------------------------------------------- Threadweaver: the web between us
+// Threads tie two allies (Tie: your target to you, or press it on two allies in a row to tie them to each other). The
+// host splits any hit on one end evenly along its threads, runs 60% of a heal down them, and snaps a thread whose ends
+// get more than 260 px apart (a small heal to both). The damage threads carry comes back as Spool ('carry' notices).
+const WEAVE = { SNAP: 260, MAX: 3, SPOOL: 1.1, MEND_COST: 35, TIE_GAP: 4 };
+const weaveMax = k => k.def.maxThreads || WEAVE.MAX;
+// is a host keeping the threads? (no: the simulator, or the town, where the kit counts its own ties)
+const weaveHosted = k => !!(k.env.threads && k.env.threads());
+// this weaver's threads: from the host when there is one; otherwise the kit's own count
+function weaveThreads(k) {
+  const w = k.env.threads ? k.env.threads() : null;
+  if (w) return w.l;
+  return Array.from({ length: Math.min(weaveMax(k), k.g.n || 0) }, () => [0, 0, 120]);
+}
+const weaveCount = k => weaveThreads(k).length;
+// threads pulled near their snapping length (for Taut and the gauge)
+const weaveStrained = k => weaveThreads(k).filter(t => t[2] > WEAVE.SNAP * 0.75).length;
+function weaveSpool(k, n) { if (n > 0) k.gain('spool', n, 100); }
+// the damage your threads carried (host notice), as Spool: about 1 Spool per 1% of your HP carried
+function weaveCarry(k, a) {
+  const mx = k.env.maxHp ? k.env.maxHp() : 1000;
+  weaveSpool(k, Math.max(0, a) / Math.max(1, mx) * 100 * WEAVE.SPOOL);
+  k.g.carried = (k.g.carried || 0) + Math.max(0, a);
+}
+// a thread snapped on its own (pulled too far): Knotwork gives the Tie charge back
+function weaveSnapped(k) {
+  if (!weaveHosted(k)) k.g.n = Math.max(0, (k.g.n || 0) - 1);
+  if (k.talent('threadweaver_knotwork')) { const t = abBase(k, 'tie'); if (t) k.refundCharge(t.id); }
+}
+function weaveTie(k, ab, t) {
+  const g = k.g, now = k.now;
+  // a second Tie on another ally soon after the first ties those two allies to each other instead of to you
+  const pair = g.tie && g.tie.t !== t && now - g.tie.at < WEAVE.TIE_GAP ? g.tie.t : undefined;
+  g.tie = pair != null ? null : { t, at: now };
+  const sh = k.healAmount(150, { ab }).amount;
+  k.env.emit({ type: 'tie', target: t, pair, mx: weaveMax(k), amount: sh, st: k.def.store || 1, dp: k.def.deep ? 1 : 0, hm: k.talent('threadweaver_skein') ? 6 : 0, ab });
+  if (!weaveHosted(k) && pair == null) g.n = Math.min(weaveMax(k), (g.n || 0) + 1);
+  if (k.talent('threadweaver_crossstitch')) { k.heal(t, 110, { ab }); if (pair != null) k.heal(pair, 110, { ab }); }
+  if (k.perk('threadweaver_a2')) k.shield(t, 120, 6, { ab });
+}
+// Snap: cut the threads on your target (all of yours if it has none). Each releases what it carried in the last 5s
+// (times the spec's store) as a heal to both ends, never less than a small heal.
+function weaveSnip(k, ab, t) {
+  const n = weaveCount(k);
+  const value = (k.def.store || 1) * (k.perk('threadweaver_w3') ? 1.25 : 1);
+  const amount = k.healAmount(k.def.snipPot || 200, { ab }).amount;
+  const sh = k.talent('threadweaver_thimble') ? Math.round(150 * ENGINE.POT_SCALE * (1 + (k.gear().power || 0))) : 0;
+  k.env.emit({ type: 'snip', target: t, value, amount, sh, ab });
+  // (the simulator has no host: a snip there heals both ends of each thread for its small heal or a bit more)
+  if (!weaveHosted(k)) { k.env.emit({ type: 'heal', target: t, amount: Math.round(amount * 1.6 * Math.max(1, n)), crit: false, ab, sim: true }); k.g.n = 0; }
+  if (k.def.snipSpool) weaveSpool(k, k.def.snipSpool * Math.max(1, n));
+  if (k.talent('threadweaver_tension')) weaveSpool(k, 8 * n);
+  if (k.talent('threadweaver_heartstring') && n) { const e = k.env.target({ target: 'enemy', range: 2000 }); if (e) k.damage(50, { ab, tgt: e.id !== 'dummy' ? e.id : undefined }); }
+}
+// Tighten / Lash: pull your target toward the ally on the far end of its threads (Reel In: both meet in the middle)
+function weaveTighten(k, ab, t, lash) {
+  const both = k.talent('threadweaver_reelin');
+  k.env.emit({ type: 'tighten', target: t, r: 220, both: both ? 1 : 0, mit: both ? 0.1 : 0, ab });
+  if (lash) k.shield(t, 260, 2, { ab });
+}
+
+KITS.threadweaver = {
+  potMult: 1, // balance knob (tools/simulate.js)
+  auto: { kind: 'needle', potency: 25, range: RANGED },
+  gauge: { kind: 'spool', key: 'spool', max: 100, label: 'Spool' },
+  init: () => ({ spool: 0, tie: null, n: 0, carried: 0, ties: 0 }),
+  onNotify(k, type, d) {
+    if (type === 'carry') weaveCarry(k, d.a || 0);
+    if (type === 'snapped') weaveSnapped(k, d);
+    if (type === 'tiefail') { const t = abBase(k, 'tie'); if (t) k.refundCharge(t.id); k.g.tie = null; }   // nobody to tie (yourself, or someone fallen)
+  },
+  signature: 'Threads',
+  floor: 'Press W on the tank to tie them to you, then heal with E. Press Q to attack when nobody needs you. R when your threads have carried a lot.',
+  ceiling: [
+    'A hit on one end of a thread is split evenly along it, and a heal on one end runs 60% of the way down. Tie the person about to be hit to someone healthy.',
+    'Threads snap when their ends get more than 260 px apart: a spread mechanic will tear your web. Snap it yourself just before, for a much bigger heal, and re-tie on the stack.',
+    'Tie twice in a row on two allies to tie them to each other. Each Thread on you makes Needle heal whoever is on the far end.',
+    'Tapestry ties everyone into one web for 8s: a tankbuster or a raidwide split four ways. Save it for the hit that would kill someone.',
+  ],
+  abilities: [
+    {
+      id: 'needle', name: 'Needle', type: 'gcd', target: 'enemy', range: RANGED, anim: 'cast',
+      cast: k => (k.talent('threadweaver_taut') && weaveCount(k) >= 3 ? 1 : 1.5),
+      desc: '1.5s cast attack: a thrust of the long needle. Each Thread on you tugs a small heal to whoever is on its far end.',
+      effect(k) {
+        const r = k.damage(270, { ab: this });
+        const tug = k.healAmount(100 * (k.perk('threadweaver_w1') ? 1.3 : 1), { ab: this }).amount;
+        k.env.emit({ type: 'tug', amount: tug, ab: this });
+        if (!weaveHosted(k) && k.g.n) k.env.emit({ type: 'heal', target: 'self', amount: tug * Math.min(2, k.g.n), crit: false, ab: this, sim: true });
+        if (k.talent('threadweaver_backstitch')) weaveSpool(k, 5);
+        return r;
+      },
+      fx: { type: 'projectile', color: '#d8c8ff', range: RANGED, speed: 1100 },
+    },
+    {
+      id: 'tie', name: 'Tie', type: 'ogcd', target: 'ally', charges: 2, cd: 6, anim: 'cast', lock: 0.4,
+      desc: 'Tie your target to yourself with a glowing thread. Press it on a second ally within 4s and those two are tied to each other instead. Up to 3 threads; tying another drops your oldest. Two charges.',
+      glow: k => weaveCount(k) === 0,
+      effect(k, t) { weaveTie(k, this, t); },
+      fx: { color: '#cbb8ff' },
+    },
+    {
+      id: 'mend', name: 'Mend Seam', type: 'gcd', target: 'ally', anim: 'cast',
+      cast: k => (k.g.spool >= WEAVE.MEND_COST ? 0 : 1.8),
+      desc: '1.8s cast: a heal that runs down every Thread on your target at full strength. With 35 Spool it spends it, is instant and heals a third more.',
+      glow: k => k.g.spool >= 70,
+      effect(k, t) {
+        const sp = k.g.spool >= WEAVE.MEND_COST;
+        if (sp) k.spend('spool', WEAVE.MEND_COST);
+        const m = (sp ? 1.35 * (k.perk('threadweaver_w2') ? 1.2 : 1) : 1) * (k.talent('threadweaver_bobbin') && k.g.spool >= 50 ? 1.2 : 1);
+        const { amount, crit } = k.healAmount(440 * m, { ab: this });
+        k.env.emit({ type: 'heal', target: t, amount, crit, ab: this, seam: 1 });
+        k.itemHook('heal');
+        // (simulator: the seam runs to about one more ally)
+        if (!weaveHosted(k) && k.g.n) k.env.emit({ type: 'heal', target: 'self', amount, crit: false, ab: this, sim: true });
+      },
+      fx: { color: '#e4d8ff' },
+    },
+    {
+      id: 'snip', name: 'Snap', type: 'ogcd', target: 'ally', cd: 25, anim: 'big', lock: 0.4,
+      desc: 'Cut the threads on your target (all of yours, if it has none). Each one releases the damage it carried in the last 5s as a heal to both its ends.',
+      usable: k => weaveCount(k) > 0,
+      glow: k => weaveStrained(k) > 0,
+      effect(k, t) { weaveSnip(k, this, t); },
+      fx: { color: '#ffe0f0' },
+    },
+    {
+      id: 'tighten', name: 'Tighten', type: 'ogcd', target: 'ally', cd: 20, anim: 'cast', lock: 0.4,
+      desc: 'Pull your target up to 220 px along their thread toward the ally on its far end. Yanks someone out of a puddle.',
+      usable: k => weaveCount(k) > 0,
+      effect(k, t) { weaveTighten(k, this, t, false); },
+      fx: { color: '#cbb8ff' },
+    },
+    {
+      id: 'tapestry', name: 'Tapestry', type: 'ogcd', target: 'self', cd: 120, anim: 'big',
+      desc: 'Tie the whole party into one web for 8s: any damage to one of you is split evenly among everyone.',
+      effect(k) {
+        const dur = k.perk('threadweaver_a4') ? 10 : 8, ab = this;
+        k.env.emit({ type: 'tapestry', dur, keep: k.talent('threadweaver_selvedge') ? 1 : 0, ab });
+        if (k.talent('threadweaver_grand')) k.after(dur, () => { k.heal('party', 220, { ab }); k.fx('tapestryEnd'); });
+        // (simulator: the split spares the party roughly a big heal's worth)
+        if (!weaveHosted(k)) k.env.emit({ type: 'heal', target: 'party', amount: k.healAmount(300, { ab }).amount, crit: false, ab, sim: true });
+      },
+      fx: { color: '#b89cff' },
+    },
+  ],
+};
+
+// ---------------------------------------------------------------- Marionettist: strings and a painted Doll
+// The Doll (k.g.dolls; two for the Understudy) lives in the kit: it drifts to a station on the boss's far side (or a
+// flank when the far side is out of reach of the strings), W posts it where you aim, and the attacks come from it.
+// Strings (3): torn when the Doll is pulled past its reach (300 px) or a mechanic lands on it (the host's 'dollhit'
+// notice). At 0 it goes limp for 4s and comes back with 3. Encore (0-5) builds from hits and pays for Grand Finale.
+const MARI = { STRETCH: 300, REACH: 64, SPEED: 360, LIMP: 4, REGEN: 15, YANK: 1.2, RING: 24 };
+const MARI_STRING = { id: 'string', name: 'Bladed String' };
+const MARI_FAR = { target: 'enemy', range: 2000 };
+const mariStretch = k => k.def.stretch || MARI.STRETCH;
+const mariEnemy = k => k.env.target(MARI_FAR);
+const mariER = e => (e && e.r) || (e && e.id && e.id !== 'boss' && e.id !== 'dummy' ? 34 : 70);
+const mariPos = k => (k.env.pos ? k.env.pos() : { x: 0, y: 0 });
+const mariLimp = k => k.now < (k.g.limpUntil || 0);
+// the Doll(s) close enough to hit the enemy
+function mariInReach(k, e = mariEnemy(k)) {
+  if (!e || mariLimp(k)) return [];
+  const R = mariER(e) + MARI.REACH;
+  return k.g.dolls.filter(d => Math.hypot(d.x - e.x, d.y - e.y) <= R);
+}
+const mariReady = k => mariInReach(k).length > 0;
+// where Doll i stands by itself: on the ring round the enemy, as far round to its far side as the strings allow
+function mariStation(k, i, p, e) {
+  const R = mariER(e) + MARI.RING, base = Math.atan2(e.y - p.y, e.x - p.x);
+  const off = k.def.dolls === 2 ? (i ? 0.95 : -0.95) : 0, lim = mariStretch(k) - 30;
+  for (let s = 0; s <= 12; s++) {
+    const da = (s % 2 ? 1 : -1) * Math.ceil(s / 2) * 0.26 * (off < 0 ? -1 : 1);
+    const a = base + off + da, pt = { x: e.x + Math.cos(a) * R, y: e.y + Math.sin(a) * R };
+    if (Math.hypot(pt.x - p.x, pt.y - p.y) <= lim) return pt;
+  }
+  return { x: e.x - Math.cos(base) * R, y: e.y - Math.sin(base) * R };
+}
+// the Doll nearest where you aim (Understudy: W and Swap move that one)
+function mariPick(k, aim) {
+  const ds = k.g.dolls;
+  if (!aim || ds.length < 2) return 0;
+  return Math.hypot(ds[1].x - aim.x, ds[1].y - aim.y) < Math.hypot(ds[0].x - aim.x, ds[0].y - aim.y) ? 1 : 0;
+}
+function mariLose(k, i, why) {
+  const g = k.g, now = k.now;
+  if (mariLimp(k) || now < (g.loseAt || 0)) return;
+  g.loseAt = now + 0.4;   // one blow costs one String, even if it lands on both Dolls
+  if (why === 'hit' && k.talent('marionettist_standin') && now < (g.swapAt || -9) + 3) { k.fx('standin'); return; }
+  g.strings = Math.max(0, g.strings - 1);
+  g.regenAt = now + (k.talent('marionettist_mended') ? MARI.REGEN / 2 : MARI.REGEN);
+  k.stats.strings = (k.stats.strings || 0) + 1;
+  k.fx('strtear', { i, w: why === 'hit' ? 1 : 0 });
+  if (g.strings <= 0) {
+    g.limpUntil = now + MARI.LIMP;
+    for (const d of g.dolls) { d.mode = 'limp'; d.until = g.limpUntil; }
+    k.stats.limps = (k.stats.limps || 0) + 1;
+    k.fx('limp');
+  }
+}
+function mariEncore(k, n) { k.gain('encore', n, 5); }
+function mariTick(k) {
+  const g = k.g, now = k.now, dt = now - (g.lastT ?? now);
+  g.lastT = now;
+  const p = mariPos(k), e = mariEnemy(k);
+  if (!g.dolls.length) for (let i = 0; i < (k.def.dolls || 1); i++) g.dolls.push({ x: p.x + (i ? 40 : -40), y: p.y - 30, mode: 'idle', until: 0, safe: 0 });
+  if (!(dt > 0 && dt < 0.5)) { mariShare(k); return; }
+  // limp: lie where it fell; coming back up with all three Strings
+  if (g.limpUntil && now >= g.limpUntil) { g.limpUntil = 0; g.strings = 3; for (const d of g.dolls) d.mode = 'idle'; k.fx('unlimp'); }
+  if (!mariLimp(k) && g.strings < 3 && now >= (g.regenAt || 0)) { g.strings++; g.regenAt = now + (k.talent('marionettist_mended') ? MARI.REGEN / 2 : MARI.REGEN); }
+  const lim = mariStretch(k);
+  g.dolls.forEach((d, i) => {
+    if (d.mode === 'limp') return;
+    if ((d.mode === 'post' || d.mode === 'finale') && now >= d.until) d.mode = 'idle';
+    let goal = null;
+    if (d.mode === 'idle') {
+      if (e && Math.hypot(e.x - p.x, e.y - p.y) < 720) goal = mariStation(k, i, p, e);
+      else { const a = Math.atan2(d.y - p.y, d.x - p.x); goal = { x: p.x + Math.cos(a) * 56, y: p.y + Math.sin(a) * 56 }; }
+    }
+    if (goal) {
+      const dx = goal.x - d.x, dy = goal.y - d.y, L = Math.hypot(dx, dy), step = MARI.SPEED * dt * (L > 160 ? 1.6 : 1);
+      if (L > 1) { const q = Math.min(1, step / L); d.x += dx * q; d.y += dy * q; d.moving = L > 6; } else d.moving = false;
+    } else d.moving = false;
+    if (k.env.collide) k.env.collide(d, 14);
+    // pulled past the strings' reach: one tears, and the Doll is yanked back toward you
+    const far = Math.hypot(d.x - p.x, d.y - p.y);
+    if (far > lim) {
+      if (now >= (g.yankAt || 0)) { g.yankAt = now + MARI.YANK; mariLose(k, i, 'far'); }
+      const a = Math.atan2(d.y - p.y, d.x - p.x);
+      d.x = p.x + Math.cos(a) * lim * 0.92; d.y = p.y + Math.sin(a) * lim * 0.92;
+    }
+  });
+  // Cutting Line: the strings themselves cut whatever they cross, once a second
+  if (k.def.bladed && e && !mariLimp(k) && now >= (g.lineAt || 0)) {
+    const R = mariER(e) + 10;
+    const n = g.dolls.filter(d => kitSegDist(e.x, e.y, p.x, p.y, d.x, d.y) <= R).length;
+    if (n) { g.lineAt = now + 1; k.damage(48 * n, { ab: MARI_STRING, tgt: e.id, extra: true }); }
+  }
+  // Twin Strings: a Cross-Cut's line lingers and cuts whatever still crosses it
+  if (g.linger && now >= g.linger.next) {
+    const L = g.linger;
+    L.next += 1; L.left--;
+    if (e && L.lines.some(s => kitSegDist(e.x, e.y, s[0], s[1], s[2], s[3]) <= mariER(e) + 10)) k.damage(45 * L.m, { ab: abBase(k, 'cross'), tgt: e.id, extra: true });
+    if (L.left <= 0) g.linger = null;
+  }
+  mariShare(k);
+}
+// tell the world where the Dolls are (the host judges mechanics on them; other players draw them)
+function mariShare(k) {
+  if (!k.env.dolls) return;
+  k.env.dolls(k.g.dolls.map(d => ({ x: Math.round(d.x), y: Math.round(d.y), st: d.mode === 'limp' ? 2 : d.mode === 'finale' ? 3 : k.now < d.safe ? 1 : d.moving ? 4 : 0, s: k.g.strings })));
+}
+// one Doll attack: every Doll in reach hits (each at the Understudy's smaller share)
+function mariHit(k, ab, pot, o = {}) {
+  const e = mariEnemy(k), ds = mariInReach(k, e);
+  if (!e || !ds.length) return 0;
+  const m = k.def.dollMult || 1;
+  let total = 0;
+  ds.forEach(() => { total += k.damage(pot * m, Object.assign({ ab, tgt: e.id !== 'dummy' ? e.id : undefined }, o)).amount; });
+  return ds.length;
+}
+function mariCross(k, ab) {
+  const e = mariEnemy(k), p = mariPos(k);
+  if (!e || mariLimp(k)) return;
+  const R = mariER(e) + 12, m = k.def.dollMult || 1, lines = [];
+  let hits = 0;
+  for (const d of k.g.dolls) {
+    lines.push([p.x, p.y, d.x, d.y]);
+    if (kitSegDist(e.x, e.y, p.x, p.y, d.x, d.y) <= R) { hits++; k.damage(560 * m, { ab, tgt: e.id !== 'dummy' ? e.id : undefined }); }
+  }
+  k.fx('cut', { n: hits });
+  if (hits) { mariEncore(k, 2 + (k.perk('marionettist_w2') ? 1 : 0)); k.stats.cuts = (k.stats.cuts || 0) + 1; }
+  else { k.stats.misses = (k.stats.misses || 0) + 1; if (k.talent('marionettist_counterweight')) k.reduceCooldown(ab.id, (k.recast(ab) || 8) / 2); }
+  if (k.talent('marionettist_twin')) k.g.linger = { lines, next: k.now + 1, left: 2, m };
+}
+// Cross-Cut glows when the line between you and a Doll crosses the enemy
+function mariLineOn(k) {
+  const e = mariEnemy(k), p = mariPos(k);
+  if (!e || mariLimp(k)) return false;
+  return k.g.dolls.some(d => kitSegDist(e.x, e.y, p.x, p.y, d.x, d.y) <= mariER(e) + 12);
+}
+function mariAim(k) {
+  const a = k.env.aim ? k.env.aim() : null;
+  if (a) return a;
+  const e = mariEnemy(k);
+  return e ? { x: e.x, y: e.y } : null;
+}
+
+KITS.marionettist = {
+  potMult: 1.07, // balance knob (tools/simulate.js)
+  auto: { kind: 'doll', potency: 30, range: 640 },
+  gauge: { kind: 'marionette', key: 'encore', max: 5, label: 'Encore' },
+  dolls: 1,
+  init: () => ({ encore: 0, strings: 3, dolls: [], limpUntil: 0, regenAt: 0, jabs: 0 }),
+  tick: k => mariTick(k),
+  onNotify(k, type, d) { if (type === 'dollhit') { const dl = k.g.dolls[d.i | 0]; if (dl && k.now >= dl.safe) mariLose(k, d.i | 0, 'hit'); } },
+  signature: 'The Doll and its Strings',
+  floor: 'Stand back from the boss and press Q: the Doll does the fighting. Press E when it glows, R when it\'s ready, F at full Encore. Keep the Doll out of the red with W.',
+  ceiling: [
+    'Your attacks come from the Doll, not from you. It drifts to the far side of the boss on its own, but you have to keep it out of telegraphs: W sends it where you aim.',
+    'Three Strings tie you together. One tears if the Doll is pulled past 300 px from you or a blow lands on it; at 0 it goes limp for 4s.',
+    'Cross-Cut cuts along the line between you and the Doll: with the boss between you it\'s your biggest hit. Stand where the line crosses the boss.',
+    'Grand Finale spends all your Encore on five hits, but the Doll can\'t move while it plays. Look at what\'s coming before you start the show.',
+  ],
+  abilities: [
+    {
+      id: 'jab', name: 'Jab', type: 'gcd', target: 'enemy', range: 640, anim: 'cast',
+      desc: 'The Doll stabs. Builds 1 Encore.',
+      usable: k => mariReady(k),
+      effect(k) {
+        const flo = k.talent('marionettist_flourish') && ++k.g.jabs % 3 === 0;
+        const n = mariHit(k, this, 250 * (k.perk('marionettist_w1') ? 1.15 : 1));
+        if (flo && n) { k.after(0.25, () => mariHit(k, this, 100, { extra: true })); k.fx('flourish'); }
+        if (n) mariEncore(k, 1);
+      },
+      fx: { color: '#f0c8dc' },
+    },
+    {
+      id: 'pull', name: 'Pull Strings', type: 'ogcd', target: 'none', charges: 2, cd: 10, anim: 'cast', lock: 0.35,
+      desc: 'Fling the Doll to where you aim (within its strings\' reach). It cuts anything it passes through, and holds that spot for 3s. Builds 1 Encore on a hit. Two charges.',
+      usable: k => !mariLimp(k),
+      effect(k) {
+        const p = mariPos(k), aim = mariAim(k), i = mariPick(k, aim), d = k.g.dolls[i];
+        if (!d || !aim) return;
+        let to = { x: aim.x, y: aim.y };
+        const lim = mariStretch(k) - 24, L = Math.hypot(to.x - p.x, to.y - p.y);
+        if (L > lim) to = { x: p.x + (to.x - p.x) / L * lim, y: p.y + (to.y - p.y) / L * lim };
+        if (typeof ARENA !== 'undefined' && ARENA.clamp) ARENA.clamp(to, 20);
+        const e = mariEnemy(k), from = { x: d.x, y: d.y };
+        d.x = to.x; d.y = to.y; d.mode = 'post'; d.until = k.now + 3;
+        if (k.env.collide) k.env.collide(d, 14);
+        k.fx('pull', { i });
+        if (e && kitSegDist(e.x, e.y, from.x, from.y, d.x, d.y) <= mariER(e) + 18) {
+          k.damage(160 * (k.talent('marionettist_lunge') ? 1.4 : 1) * (k.def.dollMult || 1), { ab: this, tgt: e.id !== 'dummy' ? e.id : undefined });
+          mariEncore(k, 1);
+        }
+        mariShare(k);
+      },
+      fx: { color: '#f0a8cc' },
+    },
+    {
+      id: 'cross', name: 'Cross-Cut', type: 'gcd', target: 'enemy', range: 640, cd: 8, anim: 'big',
+      desc: 'Your strings become blades and cut along the line between you and the Doll. With the enemy on that line it\'s a heavy cut and 2 Encore; otherwise it cuts nothing.',
+      usable: k => !mariLimp(k),
+      glow: k => mariLineOn(k),
+      effect(k) { mariCross(k, this); },
+      fx: { color: '#ffd8ec' },
+    },
+    {
+      id: 'pirouette', name: 'Pirouette', type: 'gcd', target: 'enemy', range: 640, cd: 12, anim: 'cast',
+      desc: 'The Doll spins, cutting all around it, and nothing can touch it for 1.5s. Builds 1 Encore.',
+      usable: k => mariReady(k),
+      effect(k) {
+        const safe = k.perk('marionettist_a4') ? 3 : 1.5;
+        for (const d of k.g.dolls) d.safe = k.now + safe;
+        const n = mariHit(k, this, 300);
+        if (n) mariEncore(k, 1);
+        if (k.talent('marionettist_secondact') && k.g.strings < 3) { k.g.strings++; k.fx('mend'); }
+      },
+      fx: { color: '#f0c8dc' },
+    },
+    {
+      id: 'swap', name: 'Swap', type: 'ogcd', target: 'none', cd: 20, anim: 'cast', lock: 0.4,
+      desc: 'You and the Doll trade places in a flutter of silk. It\'s your escape, and the Doll takes your spot.',
+      usable: k => !mariLimp(k),
+      effect(k) {
+        const p = mariPos(k), aim = k.env.aim ? k.env.aim() : null, i = mariPick(k, aim), d = k.g.dolls[i];
+        if (!d) return;
+        kitMove(k, 'point', { x: Math.round(d.x), y: Math.round(d.y), ab: this });
+        d.x = p.x; d.y = p.y; d.mode = 'post'; d.until = k.now + 1.5;
+        k.g.swapAt = k.now;
+        if (k.talent('marionettist_bodydouble')) k.shield('self', 150, 5, { ab: this });
+        if (k.perk('marionettist_a2') && k.g.strings < 3 && !mariLimp(k)) k.g.strings++;
+        if (k.talent('marionettist_cue')) { const c = abBase(k, 'cross'); if (c) k.reduceCooldown(c.id, 3); }
+        k.fx('swap', { i });
+        mariShare(k);
+      },
+      fx: { color: '#f0a8cc' },
+    },
+    {
+      id: 'finale', name: 'Grand Finale', type: 'gcd', target: 'enemy', range: 640, cd: 30, anim: 'big',
+      desc: 'Spend all your Encore (at least 3): the Doll performs a routine of five hits, each harder for every Encore spent. It can\'t move while it plays.',
+      usable: k => k.g.encore >= 3 && mariReady(k),
+      glow: k => k.g.encore >= 5,
+      effect(k) {
+        const E = k.g.encore, ab = this, hits = k.perk('marionettist_w3') ? 6 : 5;
+        k.g.encore = k.talent('marionettist_encore') ? 2 : 0;
+        for (const d of k.g.dolls) { d.mode = 'finale'; d.until = k.now + 0.45 * hits + 0.2; }
+        for (let i = 0; i < hits; i++) k.after(0.45 * i, () => mariHit(k, ab, 60 + 44 * E, { autoCrit: i === hits - 1 && k.talent('marionettist_curtain') }));
+        if (E >= 5 && k.talent('marionettist_bow')) { k.g.strings = 3; for (const d of k.g.dolls) d.safe = k.now + 0.45 * hits + 1; }
+        k.fx('finale', { e: E });
+      },
+      fx: { color: '#ffd27a' },
+    },
+  ],
+};
+
+// the moves the two classes' talents grant (rows III and V)
+talentMoves('threadweaver', {
+  threadweaver_embroider: {
+    id: 'embroider', replaces: 'mend', icon: 'mend', name: 'Embroider', type: 'gcd', target: 'ally', anim: 'cast', talent: true,
+    desc: 'Instant, 20 Spool: a heal that runs down every Thread on your target at full strength, and on through their threads at 60%.',
+    usable: k => k.g.spool >= 20,
+    glow: k => k.g.spool >= 60,
+    effect(k, t) {
+      k.spend('spool', 20);
+      const { amount, crit } = k.healAmount(400, { ab: this });
+      k.env.emit({ type: 'heal', target: t, amount, crit, ab: this, seam: 2 });
+      k.itemHook('heal');
+      if (!weaveHosted(k) && k.g.n) k.env.emit({ type: 'heal', target: 'self', amount: amount * 1.4, crit: false, ab: this, sim: true });
+    },
+    fx: { color: '#f0d8ff' },
+  },
+  threadweaver_cradle: {
+    id: 'cradle', replaces: 'tighten', icon: 'tighten', name: 'Cat\'s Cradle', type: 'ogcd', target: 'self', cd: 30, anim: 'big', talent: true,
+    desc: 'String a cradle of threads at your feet for 9s. Allies inside take 15% less damage and heal every 1.5s.',
+    effect(k) {
+      const pa = k.healAmount(70, { ab: this }).amount;
+      k.env.emit({ type: 'splash', target: 'self', r: 0, pr: 150, ticks: 6, interval: 1.5, pa, pct: 0.15, ab: this });
+    },
+    fx: { color: '#cbb8ff' },
+  },
+});
+talentMoves('marionettist', {
+  marionettist_tangle: {
+    id: 'tangle', replaces: 'pirouette', icon: 'pirouette', name: 'Tangle', type: 'gcd', target: 'enemy', range: 640, cd: 12, anim: 'cast', talent: true,
+    desc: 'The Doll winds its strings round the enemy: a cut now, and it bleeds every 2s for 10s. Builds 1 Encore.',
+    usable: k => mariReady(k),
+    effect(k) {
+      const n = mariHit(k, this, 160);
+      if (!n) return;
+      const e = mariEnemy(k);
+      k.dot('tangle', 55 * (k.def.dollMult || 1) * n, 10, 2, { ab: this, tgt: e && e.id !== 'dummy' ? e.id : undefined });
+      mariEncore(k, 1);
+    },
+    fx: { color: '#f0c8dc' },
+  },
+  marionettist_curtainrise: {
+    id: 'redcurtain', replaces: 'swap', icon: 'swap', name: 'Red Curtain', type: 'ogcd', target: 'self', cd: 45, anim: 'big', talent: true,
+    desc: 'Drop a red curtain round you for 8s: allies inside take 15% less damage. The Doll bows and comes back to you.',
+    effect(k) {
+      k.env.emit({ type: 'splash', target: 'self', r: 0, pr: 140, ticks: 5, interval: 1.6, pct: 0.15, ab: this });
+      const p = mariPos(k);
+      k.g.dolls.forEach((d, i) => { if (d.mode !== 'limp') { d.x = p.x + (i ? 30 : -30); d.y = p.y + 20; d.mode = 'post'; d.until = k.now + 0.6; } });
+      mariShare(k);
+    },
+    fx: { color: '#d03050' },
+  },
+});
+
+if (typeof module !== 'undefined') Object.assign(module.exports, { WEAVE, weaveMax, weaveHosted, weaveThreads, weaveCount, weaveStrained, weaveSpool, weaveCarry, weaveSnapped, weaveTie, weaveSnip, weaveTighten,
+  MARI, MARI_STRING, MARI_FAR, mariStretch, mariEnemy, mariER, mariPos, mariLimp, mariInReach, mariReady, mariStation, mariPick, mariLose, mariEncore, mariTick, mariShare, mariHit, mariCross,
+  mariLineOn, mariAim });
 

@@ -1026,3 +1026,75 @@ SPECS.ironpalm = [
     }),
   },
 ];
+
+// CLASSES-C: the Threadweaver's and the Marionettist's specs (their kits are at the end of kits.js)
+// ===================================================================================================================
+Object.assign(SPECS, {
+  threadweaver: [
+    {
+      id: 'loomwright', name: 'Loomwright', title: 'The Living Web', accent: '#9ab8ff',
+      gaugeTip: 'Fills as your threads carry damage. Up to 5 threads, and a heal runs two links deep: 60% to the far end, 30% on through its threads.',
+      blurb: 'One web over the whole party, every strand known by touch.',
+      focus: 'A network. Up to five threads, and heals travel two links deep, so a web built before the hit heals everyone it touches.',
+      passive: { name: 'Living Web', desc: 'You can hold 5 threads instead of 3, and a heal runs two links deep: 60% to the far end of each thread, then 30% on through that ally\'s own threads.' },
+      build: base => ({
+        potMult: base.potMult * 0.97,
+        maxThreads: 5, deep: true,
+        abilities: {
+          tie: { desc: 'Tie your target to yourself with a glowing thread. Press it on a second ally within 4s and those two are tied to each other instead. Up to 5 threads; tying another drops your oldest. Two charges.' },
+        },
+      }),
+    },
+    {
+      id: 'shears', name: 'Shears', title: 'The Cut Thread', accent: '#ff9ab8',
+      gaugeTip: 'Fills as your threads carry damage. Your threads hold 60% more of what they carry, and every thread Snap cuts gives back 10 Spool.',
+      blurb: 'Tie it, let it take the strain, then cut it loose with a flourish.',
+      focus: 'Burst healing. Threads store more, and Snap is your main heal on a short cooldown that pays you back. Tighten becomes Lash.',
+      passive: { name: 'Sharp Shears', desc: 'Snap recharges in 8s, releases 60% more of what a thread carried, and every thread it cuts gives back 10 Spool. Tighten becomes Lash.' },
+      build: base => ({
+        potMult: base.potMult * 1.06,
+        store: 1.6, snipSpool: 10, snipPot: 170,
+        abilities: {
+          snip: { cd: 8, desc: 'Cut the threads on your target (all of yours, if it has none). Each one releases 60% more than the damage it carried in the last 5s as a heal to both its ends, and gives back 10 Spool.' },
+          tighten: {
+            id: 'lash', replaces: 'tighten', icon: 'tighten', name: 'Lash', type: 'ogcd', target: 'ally', cd: 20, anim: 'cast', lock: 0.4,
+            desc: 'Snap your target along their thread up to 220 px toward the ally on its far end, and wrap them in a shield for 2s.',
+            usable: k => weaveCount(k) > 0,
+            effect(k, t) { weaveTighten(k, this, t, true); },
+            fx: { color: '#ff9ab8' },
+          },
+        },
+      }),
+    },
+  ],
+
+  marionettist: [
+    {
+      id: 'cuttingline', name: 'Cutting Line', title: 'The Bladed String', accent: '#ff6a8a',
+      gaugeTip: 'Builds from the Doll\'s hits; Grand Finale spends it. The strings reach 400 px, and they cut whatever they cross once a second.',
+      blurb: 'Every string a blade. Stand right, and the stage itself bleeds.',
+      focus: 'Positioning. The strings always cut what they cross and reach 400 px, and Cross-Cut is off the global cooldown with two charges.',
+      passive: { name: 'Bladed String', desc: 'The strings reach 400 px before they tear, and they cut whatever enemy they cross, once a second. Cross-Cut is off the global cooldown, with two charges.' },
+      build: base => ({
+        potMult: base.potMult * 0.705,
+        stretch: 400, bladed: true,
+        abilities: {
+          cross: { type: 'ogcd', charges: 2, cd: 9, lock: 0.4, desc: 'Off the global cooldown, two charges: your strings become blades and cut along the line between you and the Doll. With the enemy on that line it\'s a heavy cut and 2 Encore; otherwise it cuts nothing.' },
+        },
+      }),
+    },
+    {
+      id: 'understudy', name: 'Understudy', title: 'Two Dolls on One Bar', accent: '#e8a0ff',
+      gaugeTip: 'Builds from the Dolls\' hits; Grand Finale spends it. The triangle between you and both Dolls is the Stage: an enemy inside it takes 10% more damage from the whole party.',
+      blurb: 'Two dolls, one bar, and a stage the whole party plays on.',
+      focus: 'Teamwork. Two smaller Dolls, and the triangle between you and them is the Stage: an enemy standing in it takes more damage from everyone.',
+      passive: { name: 'The Stage', desc: 'You work two Dolls, each hitting for a little over half. The triangle between you and both Dolls is the Stage: an enemy inside it takes 10% more damage from the whole party. W and Swap move the Doll nearest where you aim.' },
+      // (its own damage is a little lower: the Stage pays the rest to the party)
+      balance: 0.93,
+      build: base => ({
+        potMult: base.potMult * 0.84,
+        dolls: 2, dollMult: 0.58,
+      }),
+    },
+  ],
+});

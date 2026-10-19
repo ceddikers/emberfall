@@ -80,6 +80,8 @@ class RaidHost {
       // the boss's next named moves, as the upcoming-moves feed shows them to players: [[name, seconds until], ...]
       next: sim.upcoming(3).map(e => [e.name, e.t - sim.t]),
       debuffs: id => { const s = sim.ps.get(id); const out = {}; if (s) for (const k in s.debuffs) if (s.debuffs[k] > sim.t) out[k] = true; return out; },
+      // classes-c: the Threadweavers' threads and Tapestry, and every Marionettist's Dolls
+      threads: sim.threads || [], tapestry: sim.tapestry && sim.tapestry.end > sim.t ? sim.tapestry : null, dolls: sim.liveDolls(),
     };
   }
 
@@ -158,6 +160,7 @@ class RaidHost {
         if (msg.k === 'read') bot.actor.notify('read', msg);
         if (msg.k === 'shieldEnd') bot.actor.notify('shieldEnd', msg);
         if (msg.k === 'eat' || msg.k === 'ledger') bot.actor.notify(msg.k, msg);   // (the advanced tanks: fight.js classEvent)
+        if (msg.k === 'carry' || msg.k === 'snapped' || msg.k === 'dollhit' || msg.k === 'tiefail') bot.actor.notify(msg.k, msg);   // classes-c
       }
     }
     if (msg.t === 'pdmg') { const bot = this.bots.find(b => b.id === msg.id); if (bot) bot.taken.push({ t: this.sim.t, a: msg.a }); }
@@ -233,6 +236,15 @@ class RaidHost {
       recentDamage: (actor, secs) => bot.taken.filter(d => d.t > host.sim.t - secs).reduce((a, d) => a + d.a, 0),
       maxHp: () => { const s = host.sim.ps.get(bot.id); return s ? s.maxHp : playerBaseHp(bot.role); },
       hpFrac: () => { const s = host.sim.ps.get(bot.id); return s && s.maxHp ? Math.max(0, s.hp / s.maxHp) : 1; },
+      // classes-c: a bot aims where its AI says (bot.aim), else where it's walking; Dolls collide with the room's props
+      // and go straight to the host; a Threadweaver bot reads its threads from the sim
+      aim: () => bot.aim || bot.plan || null,
+      collide: (actor, o, r) => { ARENA.clamp(o, 16); if (host.sim.props.length) PROPS.collide(o, host.sim.props, r); },
+      dolls: (actor, list) => host.sim.setDoll(bot.id, list),
+      threads: () => ({ me: bot.id, l: (host.sim.threads || []).filter(th => th.from === bot.id).map(th => {
+        const a = host.sim.players().find(p => p.id === th.a), b = host.sim.players().find(p => p.id === th.b);
+        return [th.a, th.b, a && b ? Math.hypot(a.x - b.x, a.y - b.y) : 0];
+      }) }),
       onEvent: (actor, ev) => {
         switch (ev.type) {
           case 'used': {
@@ -261,6 +273,7 @@ class RaidHost {
             break;
           case 'teleport': {
             const b = host.sim.boss, a = b.facing + Math.PI;
+            if (ev.where === 'point') { const to = ARENA.clamp({ x: Number(ev.x) || 0, y: Number(ev.y) || 0 }, 20); bot.x = to.x; bot.y = to.y; break; }   // a spot named by the kit (Swap)
             if (ev.where && ev.where !== 'behind' && typeof kitMoveDest !== 'undefined') {   // a kit move (kits.js): dash, swing round, charge through
               const en = bot.lastEnemy && bot.lastEnemy !== 'boss' ? host.sim.adds.get(bot.lastEnemy) : null;
               const tg = en || (b.untargetable ? null : b), tgt = tg ? { x: tg.x, y: tg.y } : null;
@@ -273,6 +286,7 @@ class RaidHost {
           }
           case 'heal': case 'hot': case 'shield': case 'mit': case 'raise': case 'rewind':
           case 'selfDamage': case 'targetDebuff': case 'partyBuff': case 'pool': case 'brand': case 'splash': case 'maw': case 'ledger':
+          case 'tie': case 'snip': case 'tighten': case 'tapestry': case 'tug':   // classes-c
             host.onPlayerEvent(bot.id, ev);
             break;
         }

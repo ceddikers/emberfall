@@ -436,6 +436,69 @@ Single talents stay under +7% pro DPS; full builds +7 to +17%.
 
 **Art:** no painted icons or portraits yet (`art: { icons: false, portraits: false }`); drawn glyph icons (`ICON_GLYPHS` in `hud.js`) stand in. Briefs in `docs/art/hero-portraits.md`, `ability-icons.md` and `spec-icons.md`.
 <!-- /tanks-2 -->
+<!-- classes-c: Threadweaver (healer) and Marionettist (DPS), 2026-10 -->
+**Threadweaver, Seamstress Witch** (◆◆◆, complexity 4). Signature: **Threads**. Gauge: a spool that winds fuller as your threads carry damage (Spool, 0 to 100). Ranged caster; autos flick a needle-glint (25).
+
+| Key | Skill | Type | What it does |
+|---|---|---|---|
+| Q | Needle | GCD | 1.5 s cast, 270. Each Thread on you tugs a small heal (100) to whoever is on its far end. |
+| W | Tie | oGCD | 2 charges, 6 s. Tie your target to yourself with a thread. Press it on a second ally within 4 s and those two are tied to each other instead. Up to 3 threads; a fourth drops the oldest. |
+| E | Mend Seam | GCD | 1.8 s cast, 440 heal that runs down every thread on the target at full strength. With 35 Spool it spends it, is instant and heals 35% more. |
+| R | Snap | oGCD | 25 s. Cut the threads on your target (all of yours if it has none); each releases what it carried in the last 5 s as a heal to both ends (at least 200). |
+| D | Tighten | oGCD | 20 s. Pull your target up to 220 px along their thread toward the far end. |
+| F | Tapestry | oGCD | 120 s. Ties the whole party into one web for 8 s: any hit on one of you is split evenly among everyone. |
+
+- **A thread** splits a hit on either end evenly between both ends, and a heal on one end runs 60% of the way down. Heals don't split.
+- **Threads snap** when their ends get more than 260 px apart, with a small heal (150) to both ends. A thread whose end dies is simply gone.
+- **Spool** fills from damage your threads carry (1.1 Spool per 1% of your max HP carried) and is spent by Mend Seam.
+
+*Ceiling:* tie the person about to be hit to someone healthy before the hit, read the arena to know which threads a spread mechanic will tear and Snap them yourself first, re-tie on the stack, and keep Tapestry for the hit that would kill. Newbies reach 53% of pro damage, the widest gap of any healer.
+
+**Marionettist, Puppeteer** (◆◆◆, complexity 4). Signature: **the Doll and its Strings**. Gauge: a little stage with five footlights (Encore, 0 to 5) and the three strings above it. The Marionettist stands back; a Doll on three strings does the fighting. Autos are the Doll's slap (30).
+
+| Key | Skill | Type | What it does |
+|---|---|---|---|
+| Q | Jab | GCD | The Doll stabs: 250, +1 Encore. |
+| W | Pull Strings | oGCD | 2 charges, 10 s. Fling the Doll to where you aim (within reach). It cuts what it passes through and holds that spot for 3 s. |
+| E | Cross-Cut | GCD | 8 s. The strings become blades along the line from you to the Doll: 560 and +2 Encore if the enemy is on the line, nothing otherwise. |
+| R | Pirouette | GCD | 12 s. The Doll spins: 300 around it, and nothing can touch it for 1.5 s. +1 Encore. |
+| D | Swap | oGCD | 20 s. You and the Doll trade places. |
+| F | Grand Finale | GCD | 30 s, needs 3 Encore: spends it all on five hits of 60 + 44 per Encore. The Doll can't move while it plays. |
+
+- **The Doll** stations itself on the far side of the boss on its own, and stays where Pull Strings or Swap put it for 3 s.
+- **Strings:** three. One tears if the Doll is dragged past 300 px from you (it gets yanked back) or a boss mechanic lands on it. At 0 the Doll goes limp for 4 s and then all three come back; a torn string regrows after 15 s.
+
+*Ceiling:* the boss's mechanics are aimed at you, but your damage lives somewhere else. Keep the Doll out of the red with Pull and Pirouette, stand so the boss sits on your string line for every Cross-Cut, and start Grand Finale only when you've read the next five seconds. Newbies reach 81% of pro damage: the Doll keeps hitting even when you play badly; the gap is in keeping its Strings.
+
+**Specs.**
+- **Loomwright** (The Living Web): 5 threads, and heals run two links deep (60% to the far end, then 30% on through that ally's threads).
+- **Shears** (The Cut Thread): threads store 60% more, Snap recharges in 8 s and refunds 10 Spool per thread, and Tighten becomes **Lash** (the pull plus a 260 shield for 2 s).
+- **Cutting Line** (The Bladed String): strings reach 400 px and cut any enemy they cross once a second (48), and Cross-Cut is an oGCD with 2 charges on 9 s.
+- **Understudy** (Two Dolls on One Bar): two Dolls at 58% each. The triangle between you and both Dolls is **the Stage**: an enemy inside takes 10% more damage from the whole party.
+
+**Talents.** Threadweaver: Backstitch, Cross Stitch, Taut, Thimble, Reel In, Knotwork, Embroider (replaces Mend Seam), Full Bobbin, Tension, Grand Tapestry, Selvedge, Long Thread, Cat's Cradle (replaces Tighten), Heartstring, Double Knot. Marionettist: Flourish, Lunge, Counterweight, Body Double, Mended Strings, Stand-In, Tangle (replaces Pirouette), Encore! Encore!, Second Act, Curtain Call, On Cue, Quick Change, Red Curtain (replaces Swap), Twin Strings, Final Bow.
+
+**Host-side design.** Both classes need rules no single client can judge, so the host owns them (`fight.js`, the weave and Doll blocks):
+- **Threads live on the host.** Tie, Snap, Tighten and Tapestry are combat events; the host keeps the list, measures lengths every tick, snaps long threads, splits damage in `damagePlayer` (marked `shared` so it never splits twice; enrage, falls and self-damage are never split), runs heals down the threads, and logs what each thread carried for the last 5 s. It sends `thr` (the list) on change and `thrs` (snaps); it tells the weaver `carry` (Spool), `snapped` (Knotwork) and `tiefail` (the charge comes back). Tighten is a knockback toward the partner.
+- **Where the split sits in the damage order.** A hit on a threaded player is split first, on the raw incoming amount, into equal shares for them and everyone threaded to them (Tapestry: everyone). Each share then runs through its own taker's full order (vulnerability and defence, mitigations and parry, the Gorgemaw's jaw, the Oathbroker's Ledger, shields, HP) and is marked shared, so it can never split again. So a tank's cooldown only cuts the tank's own share; an Oathbroker writes the share that reaches them into their Ledger like any other hit; and a share landing on a co-signed ally is co-signed as usual. Never split: enrage, falls, self-inflicted damage, Ledger bills and settles (they were split, if at all, when the hit was first taken, and skip the threads like they skip mitigation), and **a hit an open jaw is about to eat**: the Gorgemaw swallows it to 25% and keeps all of it, rather than handing teammates shares of a hit that was going to shrink.
+- **Dolls and the Gorgemaw.** A mechanic a Gorgemaw swallows whole (a spread circle eaten for a teammate) never resolves, so it can't catch a Doll either; one the jaw only takes a bite of still resolves for everyone else, Doll included. Dolls themselves are never edible.
+- **Dolls are reported by their owner** (10 times a second: position, state, strings) and judged by the host: a mechanic resolving on a Doll that isn't safe, limp or out of date sends the owner `dollhit`. The host rebroadcasts every Doll as `dolls` so everyone draws them, and works out the Stage (an enemy inside an Understudy's triangle takes 10% more from everyone).
+- **The simulator and the town have no host**, so the kits fall back to counting their own threads and Dolls; the sim models thread snaps and Doll hits as part of each class's movement.
+- **On screen** (`arena/stagecraft.js`): threads bow loose when slack and pull straight, brighten and shiver near 260 px; a snap flicks apart; the Doll is a jointed wooden puppet (drawn in `heroes.js`) with one string per String left, reddening as it nears its reach; the Stage is chalked on the floor and lights while the boss is inside.
+
+**Design changes from the plan (`docs/plans/2026-10-new-classes.md`):**
+- **The Stage is +10%**, not 15%: 15% made an Understudy worth more than any DPS in the party.
+- **Snap cuts one ally's threads** (all of yours if the target has none), not every thread at once, so it can be aimed at the one a spread will tear.
+- **Knotwork** gives back a Tie charge when a thread snaps on its own, rather than re-tying automatically (an automatic re-tie fought the player's own pairing).
+- **Mend Seam** is instant only when it spends 35 Spool; there's no Spool-free instant.
+- **The Doll stations itself** on the far side of the boss when you haven't placed it. Without that, every new player's Doll stood on top of them and took every hit.
+- **No raise in the Threadweaver kit**: six keys left no room. Parties with a Threadweaver need another healer's raise or play without one.
+- **Understudy's damage target is 7% under the class** (`balance: 0.93`); the Stage pays the rest to the party.
+- **A thread that snaps on its own heals both ends a little** (150), so a torn web isn't a total loss; only Snap releases what it carried.
+- **Art:** both ship without painted icons or portraits (`art: { icons: false, portraits: false }`): drawn glyph icons and sprites stand in, and briefs are in `docs/art/`.
+
+**Tested (2026-10-20):** `tools/check.js` passes with both classes in the baseline: the Threadweaver deals 1038 pro DPS (Cleric 1038) with 1423 HPS, the Marionettist 2295, specs within 5% (Understudy against its 0.93 target), every talent under +7% and the best full build +17.6%. Seven new bot line-ups clear on Normal 3 of 3: Threadweaver on Grubnak, Volkar (Loomwright) and the Hollow King (Shears); Marionettist on Grubnak, Skitterra (Cutting Line) and the Hollow King (Understudy); and both together on Volkar. A Threadweaver as the only healer on Skitterra cleared 2 of 4 in extra runs. All four spec trials pass with a bot playing the spec (Loomwright's 4 of 4). In the browser at 1280×800 (solo with bots): a Tie drawn host to client, a snap past 260 px with its effect, Tapestry tying the party, the Spool gauge and icons, both Dolls of an Understudy flanking the boss with their strings and the Stage lit on the host, Cross-Cut's string flash, a Doll going limp and recovering, and no script errors. Not yet played by a human or over a real network connection.
+<!-- /classes-c -->
 
 ### Simulation results (`node tools/simulate.js`)
 
@@ -464,6 +527,8 @@ The sim runs a 6-minute fight twice per class. The *pro* follows that class's op
 | Ironpalm | 832 | 1522 | 55% |
 | Gorgemaw | 1076 | 1498 | 72% |
 | Oathbroker | 1197 | 1485 | 81% |
+| Threadweaver | 547 | 1038 | 53% |
+| Marionettist | 1870 | 2295 | 81% |
 
 These numbers include auto-attacks. Each class's `potMult` was lowered when autos were added, so pro damage stayed where it was. Newbies gained a little, because autos keep hitting while they move or hesitate.
 

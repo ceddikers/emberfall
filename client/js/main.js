@@ -172,6 +172,15 @@
     },
     maxHp: () => { const s = myState(); return s ? s.maxHp : playerBaseHp(player.cls ? player.cls.role : 'dps') + (Inventory.mods(player.cls && player.cls.id).hp || 0); },
     onEvent: (a, ev) => onKitEvent(ev),
+    // classes-c (kits.js, stagecraft.js): the cursor, the room's props a Doll bumps into, this weaver's threads (from the
+    // host's 'thr' list; null in town), and where your Dolls are (sent to the host 10 times a second)
+    aim: () => (started && mouse.x != null ? mouseWorld() : null),
+    collide: (a, o, r) => {
+      if (inArena()) { clampArena(o); if (raid.room.props.length) PROPS.collide(o, raid.room.props, r); }
+      else { o.x = clamp(o.x, 40, WORLD.w - 40); o.y = clamp(o.y, 40, WORLD.h - 40); }
+    },
+    threads: () => (inArena() ? Stagecraft.threadsOf(Net.id, entById) : null),
+    dolls: (a, list) => Stagecraft.setMine(list, player.cls && player.cls.id, actor && actor.kit),
   };
 
   // --- ally targeting: party frame under the mouse > clicked ally > ally nearest the cursor > yourself
@@ -230,10 +239,12 @@
 
   // --- kit events
   const SIM_EVENTS = new Set(['damage', 'heal', 'hot', 'shield', 'mit', 'raise', 'rewind', 'selfDamage', 'targetDebuff', 'partyBuff', 'snap', 'pool', 'brand', 'taunt', 'splash',
-    'maw', 'ledger']);   // (the Gorgemaw's jaw and the Oathbroker's Ledger: fight.js classEvent)
+    'maw', 'ledger',   // (the Gorgemaw's jaw and the Oathbroker's Ledger: fight.js classEvent)
+    'tie', 'snip', 'tighten', 'tapestry', 'tug']);   // (the Threadweaver's threads: fight.js weaveEvent)
   const EV_FIELDS = ['type', 'amount', 'crit', 'target', 'ticks', 'interval', 'id', 'dur', 'tag', 'pct', 'kind', 'value', 'secs', 'threat', 'tgt', 'r', 'not',
     'up', 'sh', 'cl', 'pa', 'ps', 'pr', 'fol',   // (a thrown vial's splash: fight.js splash())
-    'all', 'op', 'older', 'mark', 'freeze', 'drop', 'merge', 'hit', 'push', 'due', 'col', 'small', 'tithe', 'mult'];   // (jaw and Ledger orders)
+    'all', 'op', 'older', 'mark', 'freeze', 'drop', 'merge', 'hit', 'push', 'due', 'col', 'small', 'tithe', 'mult',   // (jaw and Ledger orders)
+    'pair', 'mx', 'st', 'dp', 'hm', 'seam', 'both', 'mit', 'keep'];   // (threads)
   function packEv(ev) {
     const o = {};
     for (const k of EV_FIELDS) if (ev[k] !== undefined) o[k] = ev[k];
@@ -779,9 +790,14 @@
     if (!raidHost || !hostRoster.some(h => h.id === pid && !h.left)) return;
     const ev = msg.ev;
     if (!ev || !EV_TYPES.has(ev.type)) return;
-    for (const k of ['amount', 'pct', 'value', 'dur', 'secs', 'ticks', 'interval', 'threat', 'r', 'not']) if (ev[k] !== undefined && !Number.isFinite(ev[k])) return;
+    for (const k of ['amount', 'pct', 'value', 'dur', 'secs', 'ticks', 'interval', 'threat', 'r', 'not', 'pair', 'mx', 'st', 'dp', 'hm', 'seam', 'both', 'mit', 'keep']) if (ev[k] !== undefined && !Number.isFinite(ev[k])) return;
     if (ev.tgt !== undefined && typeof ev.tgt !== 'string') return;
     raidHost.onPlayerEvent(pid, ev);
+  });
+  // a Marionettist's Dolls, from its own client (classes-c): [[x, y, state], ...], at most two
+  Net.onHost('doll', (pid, msg) => {
+    if (!raidHost || !hostRoster.some(h => h.id === pid && !h.left) || !Array.isArray(msg.l)) return;
+    raidHost.sim.setDoll(pid, msg.l.slice(0, 2).map(d => (Array.isArray(d) ? { x: d[0], y: d[1], st: d[2], s: d[3] } : null)).filter(Boolean));
   });
   Net.onHost('rleave', pid => {
     const h = hostRoster.find(x => x.id === pid);
@@ -845,6 +861,7 @@
     town.meter = null; town.meterDone = null; RaidUI.meter(null);
     player.target = null; player.interact = null; player.dashMove = null; player.kb = null; player.angle = -Math.PI / 2;
     lockedAlly = null; lastEnemy = null;
+    Stagecraft.reset();   // threads and Dolls (classes-c)
     makeActor();
     RaidUI.resetRoster();
     RaidUI.setRoster(msg.roster);
@@ -875,6 +892,7 @@
     player.x = TOWN.portal.x + (Math.random() - 0.5) * 80; player.y = TOWN.portal.y + TOWN.portal.r + 30;
     player.target = null; player.dashMove = null; player.kb = null;
     lockedAlly = null; lockedEnemy = null;
+    Stagecraft.reset();
     makeActor();
     setSceneUI();
     updateCamera(0, true);
@@ -922,7 +940,7 @@
     if (!raid) return;
     if (msg.s === 'live') { raid.state = 'live'; return; }
     raid.state = msg.s; raid.result = msg; raid.resultAt = now + 2.2;
-    fadeTelegraphs(); raid.tethers.clear(); raid.lunges = []; raid.eggs = null; raid.rollers.clear(); raid.reels.clear(); player.reel = null;
+    fadeTelegraphs(); raid.tethers.clear(); Stagecraft.endFight(); raid.lunges = []; raid.eggs = null; raid.rollers.clear(); raid.reels.clear(); player.reel = null;
     raid.sweeps.clear(); raid.edgeWarn = null; for (const p of raid.posts.values()) p.end = Math.min(p.end, now + 1);
     raid.doom.clear(); raid.lanterns = raid.lanterns.filter(l => l.last); for (const k of raid.knights.values()) k.gone = k.gone || now;
     if (msg.s === 'clear') raid.night = false;   // the Long Night lifts when he falls
@@ -1259,8 +1277,13 @@
     if (msg.k === 'reflect') actor.notify('reflect');
     if (msg.k === 'read') actor.notify('read', msg);   // an Ironpalm's Read caught a hit (msg.b: it was a tankbuster)
     if (msg.k === 'shieldEnd') actor.notify('shieldEnd', msg);
+    if (msg.k === 'carry' || msg.k === 'snapped' || msg.k === 'dollhit' || msg.k === 'tiefail') actor.notify(msg.k, msg);   // threads and Dolls (classes-c)
     if (msg.k === 'death') { actor.kit.cast = null; actor.kit.queued = null; actor.kit.inbuf.length = 0; player.target = null; player.dashMove = null; }
   });
+  // the Threadweavers' threads, their snaps, and every Marionettist's Dolls (classes-c, stagecraft.js)
+  Net.on('thr', msg => { if (raid) Stagecraft.onThreads(msg, now); });
+  Net.on('thrs', msg => { if (raid) Stagecraft.onSnaps(msg, now, entById); });
+  Net.on('dolls', msg => { if (raid) Stagecraft.onDolls(msg, now, Net.id); });
   Net.on('pbuff', msg => {
     if (!raid) return;
     raid.pbuffs.push({ kind: msg.kind, value: msg.value, end: now + msg.dur });
@@ -1405,6 +1428,12 @@
     updatePlayer(dt);
     if (actor) actor.update();
     sendPos();
+    // your Dolls to the host, 10 times a second (classes-c; the host's own go straight in)
+    if (inArena() && raid.state === 'live' && Stagecraft.dueMine(now)) {
+      const l = Stagecraft.S.mine.l;
+      if (Net.isHost && raidHost) raidHost.sim.setDoll(Net.id, l); else Net.send({ t: 'doll', l: l.map(d => [d.x, d.y, d.st, d.s]) });
+    }
+    Stagecraft.update(now, dt);
     updateRemotes(dt);
     if (scene === 'town') updateTown(dt); else updateArena(dt);
     updateCamera(dt);
@@ -1818,9 +1847,12 @@
     canvas.classList.toggle('hovering', !!hov);
 
     const townRemotes = [...remotes.values()].filter(r => r.scene === 0);
-    const ents = [...lineup, keeper, trainer, ...statues, ...dummies, player, ...townRemotes];
+    const scEnv = { entById, me: Net.id, town: true };   // your Doll(s) follow you round town too (classes-c)
+    Stagecraft.drawFloor(ctx, now, scEnv);
+    const ents = [...lineup, keeper, trainer, ...statues, ...dummies, player, ...townRemotes, ...Stagecraft.entities(now, scEnv)];
     ents.sort((a, b) => a.y - b.y);
-    for (const e of ents) drawEntity(e);
+    for (const e of ents) { if (e.kind === 'stagecraft') e.draw(ctx); else drawEntity(e); }
+    Stagecraft.drawOver(ctx, now, scEnv);
 
     FX.draw(ctx, false);
     VFX.draw(ctx, 'air');
@@ -1885,6 +1917,8 @@
     VFX.draw(ctx, 'ground');
     drawAllyTarget();
     if (raid.pol.size) ArenaView.polarityAuras(ctx, units, raid.pol, now);
+    const scEnv = { entById, me: Net.id, boss: bd, units };   // threads, the Stage and the Dolls (classes-c, stagecraft.js)
+    Stagecraft.drawFloor(ctx, now, scEnv);
 
     const arenaRemotes = [...remotes.values()].filter(r => r.scene === 1 && raid.rosterIds.has(r.id));
     const ents = [player, ...arenaRemotes, ...raid.bots.values()];
@@ -1897,7 +1931,7 @@
     const knights = [...raid.knights.values()].map(k => ({ kind: 'knight', y: k.y, k }));
     const lants = raid.lanterns.filter(l => l.carrier == null).map(l => ({ kind: 'lantern', y: l.y, l }));
     const roomProps = raid.room.props.map(pr => ({ kind: 'prop', y: pr.y + (pr.shape === 'rect' ? 0 : pr.r * 0.4), pr }));
-    const all = [...ents, bossEnt, ...adds, ...husks, ...posts, ...knights, ...lants, ...roomProps].sort((a, b) => a.y - b.y);
+    const all = [...ents, bossEnt, ...adds, ...husks, ...posts, ...knights, ...lants, ...roomProps, ...Stagecraft.entities(now, scEnv)].sort((a, b) => a.y - b.y);
     const bossDef = BOSSES.find(x => x.id === raid.def.id);
     for (const e of all) {
       if (e === bossEnt) {
@@ -1923,6 +1957,7 @@
       }
       else if (e.kind === 'husk') { ctx.save(); ctx.globalAlpha = 0.8; drawBoss(ctx, bossDef, e.h.x, e.h.y, e.h.f, e.h.st, RAID_BOSS_SCALE); ctx.restore(); }
       else if (e.kind === 'post') BossTells.rodPost(ctx, e.p.x, e.p.y, now, Math.min(1, (now - e.p.start) / 0.3, Math.max(0, (e.p.end - now) / 0.5)));
+      else if (e.kind === 'stagecraft') e.draw(ctx);
       else drawEntity(e);
     }
     // the Hollow King: lanterns held up by whoever carries them, and the Doom sigil over each doomed head
@@ -1938,6 +1973,7 @@
       const a = entById(th.a), b = entById(th.b);
       if (a && b && now <= th.end) ArenaView.tether(ctx, a, b, th, now, raid.mode === 'hard');
     }
+    Stagecraft.drawOver(ctx, now, scEnv);
     FX.draw(ctx, false);
     VFX.draw(ctx, 'air');
     // add health bars

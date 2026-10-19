@@ -170,3 +170,25 @@ Only moves that are new to a spec need an icon. Changed moves (for example Senti
 26. **Gorgemaw · Gizzard** (stone and warm gold): the same glutton, calmer, **grey stone plates set into his belly-plate**, one gauntlet patting his stomach, a contented, protective smile. Warm grey background with a gold hearth shape behind the head.
 27. **Oathbroker · Guarantor** (pale blue and gold): the same knight with a **gold chain across her chest to a second seal**, holding the ledger open toward the viewer as if asking you to sign, a faint, reassuring smile. Pale blue background with two overlapping seal shapes behind the head.
 28. **Oathbroker · Collector** (gold and red): the same knight with a **red sash hung with coin pouches and wax seals**, stamp-mace raised over one shoulder, a thin, satisfied smile: the bill is due. Dark gold background with a bold red seal shape behind the head.
+## Threadweaver and Marionettist specs (2026-10)
+
+**Ability icons** (palettes from `ability-icons.md`):
+
+**Threadweaver · Loomwright** (cornflower blue)
+- No new moves. Tie keeps its icon.
+
+**Threadweaver · Shears** (rose pink)
+26. **Lash** (`threadweaver/lash`), replaces Tighten: a lilac thread cracking like a whip in an S-curve, a small hexagon shield shape at its end.
+
+**Marionettist · Cutting Line** (blood red)
+- No new moves. Cross-Cut keeps its icon (it's off the global cooldown now).
+
+**Marionettist · Understudy** (orchid)
+- No new moves.
+
+**Portraits** (same characters as `hero-portraits.md` #16 and #17):
+
+29. **Threadweaver · Loomwright** (cornflower blue): the same witch, hat pushed back, standing before a **small hand loom** strung with blue and lilac threads, several threads running from it off past the frame edges in every direction, a calm, absorbed look. Cornflower background with a pale web pattern behind the head.
+30. **Threadweaver · Shears** (rose pink): the same witch with the spectacles pushed up into her hair, holding up **big silver dressmaker's shears** half open, a cut lilac thread dangling from each blade, a sly, satisfied smile. Rose-pink background with a bold zigzag cut shape behind the head.
+31. **Marionettist · Cutting Line** (blood red): the same puppeteer, hood down to show cropped black hair, the control bar held sideways like a sword hilt, its strings drawn as **taut silver blade edges** running out of frame, eyes narrowed. Dark red background with two crossing pale lines behind the head.
+32. **Marionettist · Understudy** (orchid): the same puppeteer holding a wider control bar, **two smaller Dolls** hanging from it on either side, mirror images in rose and cream, both bowing; the puppeteer looks between them with the faintest smile. Orchid background with a pale chalk triangle behind the three heads.

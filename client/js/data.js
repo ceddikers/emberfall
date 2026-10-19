@@ -112,6 +112,22 @@ CLASSES.push({
   gameplan: 'There is no global cooldown. Light, Heavy and Kick are your keys, and short strings of them pressed in rhythm become named moves: a launching uppercut, a blocking stance, a storm of palms. Breath is the only limit: every press costs some, and it floods back the moment you stop. Read the boss\'s blow in its last instant to take half of it and answer with a free finisher.',
 });
 
+// ---------------------------------------------------------------- Threadweaver and Marionettist (classes-c)
+CLASSES.push(
+  {
+    id: 'threadweaver', name: 'Threadweaver', title: 'Seamstress Witch', role: 'healer', difficulty: 3, complexity: 4, accent: '#b89cff',
+    art: { icons: false, portraits: false },
+    tagline: 'What hurts one, hurts two a little less.',
+    gameplan: 'You tie glowing threads between allies. A hit on one end is shared evenly along the thread, and a heal on one end runs part of the way down it. Pull two allies too far apart and the thread snaps with a small heal. The damage your threads carry fills your Spool, and your biggest heals spend it.',
+  },
+  {
+    id: 'marionettist', name: 'Marionettist', title: 'Puppeteer', role: 'dps', difficulty: 3, complexity: 4, accent: '#c84a8c',
+    art: { icons: false, portraits: false },
+    tagline: 'Stand well back. Let the Doll take the bows.',
+    gameplan: 'A life-sized Doll fights for you, tied to your hands by three strings. You stay back and steer it. The strings tear if the Doll strays too far or a blow lands on it, and with none left it falls limp. The big cut runs along the strings themselves, so stand where the line between you and your Doll crosses the boss.',
+  },
+);
+
 // Boss panel text: flavor only. Nothing here tells you how to deal with an attack.
 const BOSSES = [
   {

@@ -226,6 +226,7 @@ class FightSim {
     this.updateFires();
     for (const fn of this.tickers) fn(dt);
     if (this.updateClass) this.updateClass(dt);   // Ledgers coming due (end of this file)
+    this.weaveTick(dt); this.dollTick(dt);   // classes-c: threads and Dolls (block at the end of this file)
     this.updatePlayers(dt);
     if (this.state !== 'live') return;
     if (this.alive().length === 0) return this.end('wipe');
@@ -247,6 +248,7 @@ class FightSim {
     this.state = result;
     this.mechs.clear(); this.puddles = []; this.tethers.clear(); this.adds.clear(); this.zones = []; this.healPools = [];
     this.rollers.clear(); this.reels.clear(); this.sweeps.clear();
+    this.weaveClear();   // classes-c: threads, Tapestry and Dolls
     this.events = []; this.broadcastNext(true);
     this.broadcastAdds();
     this.broadcastParty();
@@ -336,6 +338,7 @@ class FightSim {
         }
         if (this.boss.untargetable) return;
         if (this.boss.exposedUntil > this.t) amt = Math.round(amt * (1 + (this.boss.exposed || 0)));   // staggered: takes more
+        if (this.stageUntil > this.t) amt = Math.round(amt * (1 + DOLL_HOST.STAGE));   // standing on an Understudy's Stage (classes-c)
         this.boss.hp = Math.max(0, this.boss.hp - amt);
         this.burstBrand(pid);
         st.damage += amt;
@@ -343,7 +346,12 @@ class FightSim {
         if (this.boss.hp <= 0) this.end('clear');
         break;
       }
-      case 'heal': this.applyHeal(pid, ev.target === 'party' ? null : this.resolveTarget(pid, ev.target, ev.not), ev.amount, ev.target === 'party'); break;
+      case 'heal': {
+        const tid = ev.target === 'party' ? null : this.resolveTarget(pid, ev.target, ev.not);
+        this.applyHeal(pid, tid, ev.amount, ev.target === 'party');
+        if (tid != null) this.threadHeal(pid, tid, ev.amount, ev.seam);   // a heal runs down the threads (classes-c)
+        break;
+      }
       case 'hot':
         for (const tid of targetsOf(ev.target)) {
           const ts = this.ps.get(tid); if (!ts || !ts.alive) continue;
@@ -409,6 +417,7 @@ class FightSim {
       case 'snap': this.snapReel(pid); break;   // a dash snapped the silk reeling this player in
       case 'taunt': this.taunt(pid, typeof ev.tgt === 'string' ? ev.tgt : 'boss'); break;
       case 'maw': case 'ledger': if (this.classEvent) this.classEvent(pid, ev); break;   // Gorgemaw, Oathbroker (end of this file)
+      case 'tie': case 'snip': case 'tighten': case 'tapestry': case 'tug': this.weaveEvent(pid, ev); break;   // Threadweaver (classes-c)
     }
   }
   // A thrown vial (Alembist) shatters at an ally's feet (target 'party': it reaches everyone). Everyone alive within r
@@ -493,7 +502,9 @@ class FightSim {
   damagePlayer(p, raw, opts = {}) {
     const s = p.s || this.ps.get(p.id);
     if (!s || !s.alive) return 0;
-    let amt = opts.raw ? raw : raw * this.scale.dmg * (this.hard ? 1.25 : 1) * (1 + this.boss.dmgUp);
+    // (opts.scaled: already in small numbers, e.g. a share passed along a thread, but still mitigated as usual)
+    let amt = opts.raw || opts.scaled ? raw : raw * this.scale.dmg * (this.hard ? 1.25 : 1) * (1 + this.boss.dmgUp);
+    if (!opts.shared) amt = this.threadSplit(p, s, amt, opts);   // threads split the hit evenly along them (classes-c)
     if (s.vulnEnd > this.t && !opts.raw) amt *= 1 + s.vuln;
     if (s.def && !opts.raw) amt *= 1 - s.def;
     let mult = 1, perfect = null, reflect = null, invuln = false, read = null;
@@ -665,6 +676,7 @@ class FightSim {
         break;
     }
     this.emit({ t: 'tgx', id: m.id, hits });
+    this.dollMech(m, cov);   // a Marionettist's Doll caught in it (classes-c)
     if (cov) for (const pr of cov.chip) this.hitProp(pr, 1, m.tag);
     if (m.onResolve) m.onResolve(inside, hits, cov);
   }
@@ -1202,4 +1214,237 @@ Object.assign(FightSim.prototype, {
   },
 });
 
-if (typeof module !== 'undefined') module.exports = { FIGHT, FightSim, segDist, playerBaseHp, MAW_HOST };
+// CLASSES-C: the Threadweaver's threads and the Marionettist's Dolls, host side. One block of FightSim methods; the core
+// calls in with one line each: tick (weaveTick, dollTick), onEvent (weaveEvent, threadHeal), damagePlayer (threadSplit),
+// resolveMech (dollMech), end (weaveClear), and the Stage's bonus in the 'damage' case.
+//
+// Threads: { id, from (the weaver), a, b, at, log: [[t, carried]], sh (heal when it snaps on its own), st (how much of
+// what it carried Snap releases), dp (Loomwright: heals run two links deep), hold (no snapping before) }.
+//   - Any hit on one end is split evenly among it and everyone threaded to it (Tapestry: everyone), before mitigation;
+//     each share then runs through its taker's own damage order (vulnerability, mitigation and parry, the Gorgemaw's
+//     jaw, the Oathbroker's Ledger, shields), marked shared so it never splits again. Enrage, falls, self-inflicted
+//     damage, Ledger bills and a hit an open jaw is about to eat are never split.
+//   - A heal on one end runs 60% down each thread (Mend Seam's `seam`: 100%; Embroider's seam 2 goes a link further).
+//   - Ends more than 260 px apart snap the thread: a small heal to both, and the weaver hears ('snapped').
+//   - The weaver hears what their threads carried ('carry', twice a second), which fills Spool.
+//   - Everyone gets the list ('thr', on change and every second) and draws the threads, and every snap ('thrs').
+// Dolls: each Marionettist reports where its Dolls are (setDoll: a human's client 10 times a second, a bot's kit every
+// tick). A telegraph that resolves over one ('dollhit' to its owner) tears a String, the same shapes that hit a player:
+// circles and cones, spreads, a tankbuster's cleave, a cover blast it isn't sheltered from, rollers and storm walls.
+// Two Dolls and their owner make the Stage: with the boss's centre inside that triangle, it takes 10% more damage.
+// Bosses and bots never target a Doll; it's never in alive() or players().
+// ===================================================================================================================
+const WEAVE_HOST = { SNAP: 260, MAX: 5, SHARE: 0.6, DEEP: 0.3, CARRY_SECS: 5, NO_SPLIT: new Set(['enrage', 'fall', 'self', 'thread', 'ledger', 'settle']) };
+const DOLL_HOST = { STAGE: 0.10, STALE: 1.5, PAD: 12 };
+Object.assign(FightSim.prototype, {
+  // ---------------------------------------------------------------- threads
+  partnersOf(id) {
+    const out = new Set();
+    for (const th of this.threads || []) { if (th.a === id) out.add(th.b); else if (th.b === id) out.add(th.a); }
+    return out;
+  },
+  weaveEvent(pid, ev) {
+    this.threads = this.threads || [];
+    const al = new Map(this.alive().map(p => [p.id, p])), num = (v, lo, hi) => Math.max(lo, Math.min(hi, Number(v) || 0));
+    switch (ev.type) {
+      case 'tie': {
+        const b = this.resolveTarget(pid, ev.target), a = ev.pair != null ? ev.pair : pid;
+        if (a === b || !al.has(a) || !al.has(b)) { this.emit({ t: 'fev', k: 'tiefail', id: pid }); return; }
+        const same = th => (th.a === a && th.b === b) || (th.a === b && th.b === a);
+        // a second Tie re-routes your thread to the first ally into one between the two allies
+        if (ev.pair != null) this.threads = this.threads.filter(th => !(th.from === pid && ((th.a === pid && th.b === ev.pair) || (th.b === pid && th.a === ev.pair))));
+        this.threads = this.threads.filter(th => !same(th));
+        const mine = this.threads.filter(th => th.from === pid), mx = Math.round(num(ev.mx, 1, WEAVE_HOST.MAX));
+        while (mine.length >= mx) { const old = mine.shift(); this.threads.splice(this.threads.indexOf(old), 1); }
+        this.threads.push({ id: this.nextMechId++, from: pid, a, b, at: this.t, log: [], sh: num(ev.amount, 0, 3000), st: num(ev.st, 1, 2), dp: ev.dp ? 1 : 0, hold: this.t + num(ev.hm, 0, 6) });
+        this.weaveDirty = true;
+        return;
+      }
+      case 'snip': {
+        const tid = this.resolveTarget(pid, ev.target);
+        let cut = this.threads.filter(th => th.from === pid && (th.a === tid || th.b === tid));
+        if (!cut.length) cut = this.threads.filter(th => th.from === pid);
+        const value = num(ev.value, 0, 2.5), floor = num(ev.amount, 0, 3000), sh = num(ev.sh, 0, 3000);
+        for (const th of cut) {
+          const carried = th.log.reduce((s, l) => s + (l[0] >= this.t - WEAVE_HOST.CARRY_SECS ? l[1] : 0), 0);
+          const heal = Math.min(3000, Math.max(floor, carried * value));
+          for (const e of [th.a, th.b]) { this.applyHeal(pid, e, heal); const es = this.ps.get(e); if (sh && es && es.alive) this.giveShield(pid, e, es, sh, 6); }
+          this.threads.splice(this.threads.indexOf(th), 1);
+        }
+        if (cut.length) { this.emit({ t: 'thrs', l: cut.map(th => [th.a, th.b, 1]) }); this.weaveDirty = true; }
+        return;
+      }
+      case 'tighten': {
+        const tid = this.resolveTarget(pid, ev.target), me = al.get(tid);
+        if (!me) return;
+        // the nearest ally on the far end of its threads
+        let q = null, qd = Infinity;
+        for (const id of this.partnersOf(tid)) { const o = al.get(id); if (!o) continue; const d = Math.hypot(o.x - me.x, o.y - me.y); if (d < qd) { qd = d; q = o; } }
+        if (!q || qd < 70) return;
+        const pull = Math.min(num(ev.r, 0, 260), qd - 50), ux = (q.x - me.x) / qd, uy = (q.y - me.y) / qd;
+        // a throw toward the partner: 'kb' throws away from a point, so the point sits just behind
+        const throwTo = (p, dx, dy, d) => this.emit({ t: 'kb', id: p.id, x: Math.round(p.x - dx * 20), y: Math.round(p.y - dy * 20), d: Math.round(d) });
+        if (ev.both) { throwTo(me, ux, uy, pull / 2); throwTo(q, -ux, -uy, pull / 2); } else throwTo(me, ux, uy, pull);
+        if (ev.mit) for (const p of [me, q]) p.s.mits.push({ pct: num(ev.mit, 0, 0.2), start: this.t, end: this.t + 4, from: pid });
+        this.emit({ t: 'thrs', l: [[tid, q.id, 2]] });
+        return;
+      }
+      case 'tapestry':
+        this.tapestry = { from: pid, end: this.t + num(ev.dur, 0, 10), keep: !!ev.keep };
+        this.weaveDirty = true;
+        return;
+      case 'tug': {   // Needle: each thread on the weaver heals whoever is on its far end
+        const amt = num(ev.amount, 0, 3000);
+        for (const th of this.threads) if (th.from === pid && (th.a === pid || th.b === pid)) this.applyHeal(pid, th.a === pid ? th.b : th.a, amt);
+        return;
+      }
+    }
+  },
+  // the hit on p (amt, in small numbers) split evenly with everyone threaded to it: returns p's own share
+  threadSplit(p, s, amt, opts) {
+    if ((!this.threads || !this.threads.length) && !(this.tapestry && this.tapestry.end > this.t)) return amt;
+    if (opts.raw || WEAVE_HOST.NO_SPLIT.has(opts.kind) || !(amt > 0) || s.mits.some(m => m.kind === 'invuln')) return amt;
+    // a hit a Gorgemaw's open jaw is about to eat isn't shared: the jaw swallows it (to 25%) and keeps what's left;
+    // Ledger bills and settles are raw, so a debt coming due never splits either (NO_SPLIT names them too)
+    if (opts.eat && this.canEat && this.canEat(p)) return amt;
+    const tp = this.tapestry && this.tapestry.end > this.t ? this.tapestry : null;
+    const ids = tp ? null : this.partnersOf(p.id);
+    const partners = this.alive().filter(q => q.id !== p.id && (tp || ids.has(q.id)));
+    if (!partners.length) return amt;
+    const share = amt / (partners.length + 1);
+    this.carryAcc = this.carryAcc || new Map();
+    for (const q of partners) {
+      const th = (this.threads || []).find(t => (t.a === p.id && t.b === q.id) || (t.b === p.id && t.a === q.id));
+      if (th) th.log.push([this.t, share]);
+      const w = th ? th.from : tp.from;
+      this.carryAcc.set(w, (this.carryAcc.get(w) || 0) + share);
+      this.damagePlayer(q, share, { kind: 'thread', scaled: true, shared: true });
+    }
+    return share;
+  },
+  // a heal on tid runs down its threads (60%; seam 1: all of it; Loomwright and seam 2: a link further)
+  threadHeal(fromId, tid, amount, seam) {
+    if (!this.threads || !this.threads.length) return;
+    const first = this.partnersOf(tid);
+    if (!first.size) return;
+    const amt = Math.max(0, Math.min(8000, amount | 0)), share = seam ? 1 : WEAVE_HOST.SHARE;
+    for (const id of first) this.applyHeal(fromId, id, amt * share);
+    const deep = seam === 2 || this.threads.some(th => th.dp && (th.a === tid || th.b === tid));
+    if (!deep) return;
+    const second = new Set();
+    for (const id of first) for (const o of this.partnersOf(id)) if (o !== tid && !first.has(o)) second.add(o);
+    for (const id of second) this.applyHeal(fromId, id, amt * (seam === 2 ? WEAVE_HOST.SHARE : WEAVE_HOST.DEEP));
+  },
+  weaveTick() {
+    if (!this.threads) return;
+    const al = new Map(this.alive().map(p => [p.id, p])), snaps = [];
+    const keep = this.tapestry && this.tapestry.end > this.t && this.tapestry.keep ? this.tapestry.from : null;
+    for (const th of [...this.threads]) {
+      const a = al.get(th.a), b = al.get(th.b);
+      if (!a || !b) { this.threads.splice(this.threads.indexOf(th), 1); this.weaveDirty = true; continue; }
+      while (th.log.length && th.log[0][0] < this.t - WEAVE_HOST.CARRY_SECS) th.log.shift();
+      if (Math.hypot(a.x - b.x, a.y - b.y) <= WEAVE_HOST.SNAP || this.t < th.hold || th.from === keep) continue;
+      // pulled too far apart: it snaps, with a small heal to both ends
+      this.threads.splice(this.threads.indexOf(th), 1);
+      this.applyHeal(th.from, th.a, th.sh); this.applyHeal(th.from, th.b, th.sh);
+      this.emit({ t: 'fev', k: 'snapped', id: th.from, a: th.a, b: th.b });
+      snaps.push([th.a, th.b, 0]);
+    }
+    if (snaps.length) { this.emit({ t: 'thrs', l: snaps }); this.weaveDirty = true; }
+    if (this.tapestry && this.tapestry.end <= this.t) { this.tapestry = null; this.weaveDirty = true; }
+    if (this.carryAcc && this.carryAcc.size && this.t - (this.carryAt ?? -9) >= 0.5) {
+      this.carryAt = this.t;
+      for (const [w, a] of this.carryAcc) if (a >= 1) this.emit({ t: 'fev', k: 'carry', id: w, a: Math.round(a) });
+      this.carryAcc.clear();
+    }
+    if (this.weaveDirty || this.t - (this.weaveSent ?? -9) >= 1) this.weaveSend();
+  },
+  // the web for everyone: [a, b, weaver] per thread, and the Tapestry as [weaver, seconds left] (0: none)
+  weaveSend() {
+    this.weaveDirty = false; this.weaveSent = this.t;
+    const tp = this.tapestry && this.tapestry.end > this.t ? [this.tapestry.from, +(this.tapestry.end - this.t).toFixed(1)] : 0;
+    this.emit({ t: 'thr', l: (this.threads || []).map(th => [th.a, th.b, th.from]), tp });
+  },
+  weaveClear() {
+    if (this.threads && (this.threads.length || this.tapestry)) { this.threads = []; this.tapestry = null; this.weaveSend(); }
+    this.dollHitMemo = {};
+    if (this.dolls && this.dolls.size) { this.dolls.clear(); this.stageUntil = 0; this.emit({ t: 'dolls', l: [], s: 0 }); }
+  },
+
+  // ---------------------------------------------------------------- Dolls
+  // a Marionettist's Dolls: up to two { x, y, st } (st: 0 standing, 1 can't be touched, 2 limp, 3 in Grand Finale, 4 moving)
+  setDoll(pid, list) {
+    if (!Array.isArray(list) || !this.ps.has(pid)) return;
+    const n = v => Math.max(-2000, Math.min(2000, Math.round(Number(v) || 0)));
+    this.dolls = this.dolls || new Map();
+    this.dolls.set(pid, { l: list.slice(0, 2).map(d => ({ x: n(d && d.x), y: n(d && d.y), st: Math.max(0, Math.min(4, (d && d.st) | 0)), s: Math.max(0, Math.min(3, d && d.s != null ? d.s | 0 : 3)) })), at: this.t });
+  },
+  // the Dolls whose owners are alive and still reporting: [[ownerId, doll, index]]
+  liveDolls() {
+    const out = [];
+    if (!this.dolls) return out;
+    for (const [pid, D] of this.dolls) {
+      const s = this.ps.get(pid);
+      if (!s || !s.alive || this.t - D.at > DOLL_HOST.STALE) continue;
+      D.l.forEach((d, i) => out.push([pid, d, i]));
+    }
+    return out;
+  },
+  dollMech(m, cov) {
+    if (!this.dolls || !this.dolls.size) return;
+    const props = cov ? this.props.filter(pr => pr.cover) : null;
+    for (const [pid, d, i] of this.liveDolls()) {
+      if (d.st === 1 || d.st === 2) continue;
+      const shadowed = cov && PROPS.shadowing(m.src.x, m.src.y, d.x, d.y, props);
+      let hit = false;
+      if (m.type === 'aoe' || m.type === 'spread' || m.type === 'buster') hit = SHAPES.contains(m.shape, d.x, d.y, DOLL_HOST.PAD) && !shadowed;
+      else if (m.type === 'raidwide') hit = !!cov && !shadowed;
+      if (hit) this.emit({ t: 'fev', k: 'dollhit', id: pid, i });
+    }
+  },
+  dollTick() {
+    if (!this.dolls || !this.dolls.size) return;
+    const live = this.liveDolls();
+    // rollers and storm walls run over a Doll as they would a player (once each)
+    this.dollHitMemo = this.dollHitMemo || {};
+    for (const [pid, d, i] of live) {
+      if (d.st === 1 || d.st === 2) continue;
+      for (const [id, r] of this.rollers) {
+        if (this.t < r.rollAt) continue;
+        const pos = this.rollerPos(r, this.t), key = 'r' + id + ':' + pid + ':' + i;
+        if (!this.dollHitMemo[key] && Math.hypot(d.x - pos.x, d.y - pos.y) < r.r + DOLL_HOST.PAD) { this.dollHitMemo[key] = this.t; this.emit({ t: 'fev', k: 'dollhit', id: pid, i }); }
+      }
+      for (const [id, sw] of this.sweeps) {
+        if (this.t < sw.startAt) continue;
+        const a0 = this.sweepAngle(sw, this.t);
+        for (let k = 0; k < sw.arms; k++) {
+          const a = a0 + k * Math.PI * 2 / sw.arms, c = Math.cos(a), sn = Math.sin(a), dx = d.x - sw.x, dy = d.y - sw.y;
+          const key = 's' + id + ':' + k + ':' + pid + ':' + i;
+          if (dx * c + dy * sn < 0 || Math.abs(-dx * sn + dy * c) > sw.w / 2 + DOLL_HOST.PAD || this.t - (this.dollHitMemo[key] ?? -9) < 1.5) continue;
+          if (sw.cover && PROPS.shadowing(sw.x, sw.y, d.x, d.y, this.props, q => q.kind === sw.cover)) continue;
+          this.dollHitMemo[key] = this.t; this.emit({ t: 'fev', k: 'dollhit', id: pid, i });
+        }
+      }
+    }
+    // the Stage: an Understudy and both Dolls (neither limp) round the boss's centre
+    const b = this.boss, tri = (p, q, r) => (q.x - p.x) * (r.y - p.y) - (q.y - p.y) * (r.x - p.x);
+    let stage = 0;
+    for (const [pid, D] of this.dolls) {
+      if (D.l.length < 2 || D.l.some(d => d.st === 2) || this.t - D.at > DOLL_HOST.STALE) continue;
+      const o = this.alive().find(p => p.id === pid);
+      if (!o) continue;
+      const [d1, d2] = D.l, s1 = tri(o, d1, b), s2 = tri(d1, d2, b), s3 = tri(d2, o, b);
+      if (!b.untargetable && ((s1 >= 0 && s2 >= 0 && s3 >= 0) || (s1 <= 0 && s2 <= 0 && s3 <= 0)) && Math.abs(tri(o, d1, d2)) > 2000) { stage = pid; break; }
+    }
+    if (stage) this.stageUntil = this.t + 0.2;
+    // where every Doll is, for everyone to draw (owners draw their own from their kit): [owner, [[x, y, st], ...]]
+    if (this.t - (this.dollSent ?? -9) >= 0.1) {
+      this.dollSent = this.t;
+      const by = new Map();
+      for (const [pid, d] of live) { if (!by.has(pid)) by.set(pid, []); by.get(pid).push([d.x, d.y, d.st, d.s]); }
+      this.emit({ t: 'dolls', l: [...by].map(([pid, l]) => [pid, l]), s: stage || 0, c: +this.t.toFixed(3) });
+    }
+  },
+});
+
+if (typeof module !== 'undefined') module.exports = { FIGHT, FightSim, segDist, playerBaseHp, MAW_HOST, WEAVE_HOST, DOLL_HOST };

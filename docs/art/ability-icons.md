@@ -194,3 +194,26 @@ Talent moves (they borrow the icon above until painted):
 Talent moves (they borrow the icon above until painted):
 8. **Audit** (`oathbroker/audit`): a ledger page with a gold magnifying glass over its top lines.
 9. **Moratorium** (`oathbroker/moratorium`): a parchment-coloured hourglass with its sand stopped mid-fall, a lilac bar across it.
+## Threadweaver and Marionettist (new healer and DPS, 2026-10)
+
+Until these arrive the game draws simple glyph icons for both classes (data.js `art.icons: false`; flip it to `true` once all the icons below, the spec moves and the talent moves are in).
+
+**Threadweaver**: plum background, silver needle, one lilac accent (the thread).
+1. **Needle** (`threadweaver/needle`): a long silver needle diving diagonally down-right, a short lilac thread trailing from its eye, three tapered speed lines.
+2. **Tie** (`threadweaver/tie`): two short ends of lilac thread tied together in one fat, neat knot in the centre, the loose ends curling away.
+3. **Mend Seam** (`threadweaver/mend`): a tear in a strip of cream cloth closed by a neat row of lilac cross-stitches, the needle resting at the end of the seam.
+4. **Snap** (`threadweaver/snip`): open silver dressmaker's shears just closing on a taut lilac thread, the cut ends springing apart.
+5. **Tighten** (`threadweaver/tighten`): a lilac thread pulled into a straight hard line between two small iron rings, one ring tilted as it is yanked, two speed lines.
+6. **Tapestry** (`threadweaver/tapestry`): a small round woven tapestry seen flat-on, gold and lilac threads crossing in a bold over-under pattern, a fringe along the bottom edge.
+7. **Embroider** (`threadweaver/embroider`, talent, replaces Mend Seam): a wooden embroidery hoop holding a bold stitched flower in lilac and gold, the needle stuck in one petal.
+8. **Cat's Cradle** (`threadweaver/cradle`, talent, replaces Tighten): a star-shaped cat's-cradle string figure in lilac, held open in the air by nothing, its crossing points drawn as small knots.
+
+**Marionettist**: deep rose background, pale wood and porcelain, one rose accent.
+1. **Jab** (`marionettist/jab`): a small wooden doll's arm with a ball joint at the elbow, thrusting a slim stiletto up-right, one bright point at the tip.
+2. **Pull Strings** (`marionettist/pull`): a wooden cross-shaped control bar seen from below, three strings snapping taut and pulled hard to one side, speed lines along them.
+3. **Cross-Cut** (`marionettist/cross`): two taut strings crossing in an X, each drawn as a thin silver blade edge, a rose spark where they cross.
+4. **Pirouette** (`marionettist/pirouette`): a doll's porcelain ballet slipper on point, a bold rose spiral of motion lines wrapping round it.
+5. **Swap** (`marionettist/swap`): two curved arrows chasing each other in a circle, one pale wood and one black, a puff of flat grey smoke between them.
+6. **Grand Finale** (`marionettist/finale`): a pair of rose stage curtains drawn back from a small stage with a single bright gold spotlight disc on its floor.
+7. **Tangle** (`marionettist/tangle`, talent, replaces Pirouette): a ball of snarled rose string with a stiletto pushed through it.
+8. **Red Curtain** (`marionettist/redcurtain`, talent, replaces Swap): a heavy red velvet curtain falling closed, gold fringe along its bottom edge.

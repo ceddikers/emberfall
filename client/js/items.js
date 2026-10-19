@@ -166,6 +166,26 @@ Object.assign(ITEM_PERKS, {
   ironpalm_a4: { ab: 'skin', text: 'Iron Skin cuts damage by 50% instead of 40%.' },
 });
 
+// ---------------------------------------------------------------- Threadweaver and Marionettist (classes-c)
+// Weapon shapes: 'needle' (a rapier-long sewing needle trailing thread) and 'controlbar' (a puppeteer's wooden cross).
+Object.assign(CLASS_MAIN, { threadweaver: 'mag', marionettist: 'phys' });
+Object.assign(CLASS_GEAR, {
+  threadweaver: { wtype: 'needle', w: ["Recruit's Needle", 'Trussing Needle', 'Silkspinner Needle', 'Stormstitch Needle', 'Shroudmaker\'s Needle'], a: ['Patchwork Shawl', 'Cobweb-Lace Shawl', 'Windwoven Shawl', 'Shawl of the Last Stitch'] },
+  marionettist: { wtype: 'controlbar', w: ["Recruit's Control Bar", 'Butcher-Twine Control Bar', 'Silk-Strung Control Bar', 'Lightning-Wire Control Bar', 'Control Bar of the Dead Court'], a: ['Stagehand Blacks', 'Gossamer Blacks', 'Stormproof Blacks', 'Blacks of the Final Act'] },
+});
+Object.assign(ITEM_PERKS, {
+  threadweaver_w1: { ab: 'needle', text: 'Needle\'s tug heals 30% more.' },
+  threadweaver_a2: { ab: 'tie', text: 'Tie also shields the ally you tie.' },
+  threadweaver_w2: { ab: 'mend', text: 'A Mend Seam that spends Spool heals 20% more.' },
+  threadweaver_w3: { ab: 'snip', text: 'Snap releases 25% more of what each thread carried.' },
+  threadweaver_a4: { ab: 'tapestry', text: 'Tapestry lasts 10s instead of 8s.' },
+  marionettist_w1: { ab: 'jab', text: 'Jab hits 15% harder.' },
+  marionettist_a2: { ab: 'swap', text: 'Swap also mends a torn String.' },
+  marionettist_w2: { ab: 'cross', text: 'A Cross-Cut that crosses the enemy builds 3 Encore instead of 2.' },
+  marionettist_w3: { ab: 'finale', text: 'Grand Finale\'s routine has six hits instead of five.' },
+  marionettist_a4: { ab: 'pirouette', text: 'Nothing can touch the Doll for 3s after Pirouette instead of 1.5s.' },
+});
+
 // ---------------------------------------------------------------- item effects
 // Effects are data. The combat engine runs them in your own kit (Kit.itemHook / Kit.fxMod in engine.js), like the
 // enhancements; the host only ever sees the ordinary combat events they cause. An effect is either

@@ -313,6 +313,76 @@ Object.assign(GAUGES, {
   },
 });
 
+// ======================================================================= Threadweaver and Marionettist (classes-c)
+Object.assign(GAUGES, {
+  // Threadweaver: a wooden spool on its side, wound fuller as Spool fills. Above it a knot for every thread you could
+  // hold: tied knots glow, and turn pink, then red, as that thread is pulled toward its snapping length.
+  spool(c, k, w, h, t) {
+    const cx = w / 2, cy = 60, g = k.g, v = Math.min(1, (g.spool || 0) / 100);
+    const hw = 30, fr = 26, core = 6, wound = core + v * (fr - core - 3);
+    // the wound thread, a little lighter where the light catches the top of the coil
+    if (v > 0) {
+      rrect(c, cx - hw + 5, cy - wound, (hw - 5) * 2, wound * 2, 4, '#7a66b8', OUT, 1.5);
+      c.save(); c.beginPath(); c.rect(cx - hw + 5, cy - wound, (hw - 5) * 2, wound * 2); c.clip();
+      for (let x = cx - hw + 7; x < cx + hw - 5; x += 3.2) line(c, x, cy - wound, x - 2, cy + wound, 'rgba(230,220,255,0.28)', 1);
+      c.restore();
+      ellipse(c, cx, cy - wound * 0.55, hw - 8, wound * 0.22, 0, 'rgba(255,255,255,0.18)');
+    }
+    rrect(c, cx - hw + 5, cy - core, (hw - 5) * 2, core * 2, 2, '#b88a54', OUT, 1.2);   // the bare core
+    for (const s of [-1, 1]) {   // the two flanges
+      ellipse(c, cx + s * hw, cy, 5, fr, 0, '#a8763e', OUT, 1.8);
+      ellipse(c, cx + s * hw - s * 1.2, cy, 2.4, fr - 4, 0, '#c8965a');
+    }
+    if (v >= 0.35) { const ready = (g.spool || 0) >= 35; glow(c, cx, cy, 34, '#b89cff', (ready ? 0.18 : 0.06) + (v >= 0.7 ? Math.sin(t * 5) * 0.06 : 0)); }
+    label(c, String(Math.floor(g.spool || 0)), cx, cy + 40, '#e8ddff', 13, 'system-ui', 800);
+    // the knots: one per thread you can hold
+    const mx = weaveMax(k), threads = weaveThreads(k);
+    for (let i = 0; i < mx; i++) {
+      const x = cx + (i - (mx - 1) / 2) * 15, y = 18, th = threads[i];
+      if (!th) { circle(c, x, y, 3.2, '#251d30', OUT, 1); continue; }
+      const strain = Math.min(1, (th[2] || 0) / WEAVE.SNAP), col = strain > 0.88 ? '#ff5a7a' : strain > 0.72 ? '#ff9ad8' : '#e8ddff';
+      glow(c, x, y, 7 + strain * 4, col, 0.45 + (strain > 0.88 ? Math.sin(t * 20) * 0.25 : 0));
+      circle(c, x, y, 3.6, col, OUT, 1.1);
+      line(c, x - 2.5, y + 3, x - 4, y + 8, rgba(col, 0.7), 1); line(c, x + 2.5, y + 3, x + 4, y + 8, rgba(col, 0.7), 1);
+    }
+  },
+
+  // Marionettist: the control bar, with its three Strings hanging below (a torn one dangles short and frayed; at 0 the
+  // Doll lies limp and a little count runs down), and a row of five footlights that Encore lights from the left.
+  marionette(c, k, w, h, t) {
+    const cx = w / 2, g = k.g, limp = mariLimp(k), s = limp ? 0 : g.strings;
+    // the bar
+    c.save(); c.translate(cx, 22); c.rotate(Math.sin(t * 1.6) * 0.05);
+    rrect(c, -30, -3.5, 60, 7, 2.5, '#9a6a3c', OUT, 1.6);
+    rrect(c, -3.5, -12, 7, 24, 2.5, '#8a5a32', OUT, 1.5);
+    for (const x of [-26, 0, 26]) circle(c, x, 0, 2.2, '#e2bb58', OUT, 0.8);
+    c.restore();
+    // the strings: whole ones run down to the stage, torn ones hang short
+    for (let i = 0; i < 3; i++) {
+      const x = cx - 26 + i * 26, whole = i < s;
+      c.beginPath(); c.moveTo(x, 24);
+      if (whole) c.quadraticCurveTo(x + Math.sin(t * 2 + i) * 3, 52, x, 76);
+      else c.quadraticCurveTo(x + 3, 32, x - 2, 38 + Math.sin(t * 3 + i) * 1.5);
+      c.strokeStyle = whole ? 'rgba(246,232,240,0.9)' : 'rgba(200,170,180,0.45)'; c.lineWidth = whole ? 1.6 : 1.1; c.stroke();
+      if (whole) circle(c, x, 77, 2.4, '#d0507e', OUT, 0.8);
+    }
+    if (limp) {
+      const left = Math.max(0, g.limpUntil - k.now);
+      label(c, left.toFixed(1), cx, 64, '#ff9ab0', 13, 'system-ui', 800);
+    }
+    // footlights: Encore
+    for (let i = 0; i < 5; i++) {
+      const x = cx - 40 + i * 20, y = 98, on = i < (g.encore || 0);
+      if (on) glow(c, x, y - 3, 12, '#ffcf6a', g.encore >= 5 ? 0.65 + Math.sin(t * 8) * 0.15 : 0.45);
+      ellipse(c, x, y, 7, 4, 0, on ? '#ffe2a0' : '#2a2026', OUT, 1.2);
+      rrect(c, x - 7, y, 14, 4, 1, '#3a2c22', OUT, 1);
+    }
+    // Cutting Line: a red edge on the strings; Understudy: two little Doll heads on the bar
+    if (k.def.bladed) for (let i = 0; i < Math.min(3, s); i++) glow(c, cx - 26 + i * 26, 50, 5, '#ff6a8a', 0.4);
+    if (k.def.dolls === 2) for (const x of [-12, 12]) { circle(c, cx + x, 38, 4, '#f8efe8', OUT, 1); circle(c, cx + x - 1.5, 38, 2.6, '#1a1418'); }
+  },
+});
+
 // ======================================================================= Alembist (classes-b)
 // a small symbol for a recipe, drawn in the liquid of a vial (and on the icons)
 function alemGlyph(c, kind, x, y, s, col = '#ffffff') {

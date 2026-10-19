@@ -1370,3 +1370,130 @@ function windLaneBoost(x, y, vx, vy, now) {
   AUTO_VFX.fist = c => { const d = Math.min(Math.hypot(c.tx - c.ent.x, c.ty - c.ent.y), 50), x = c.ent.x + Math.cos(c.ang) * d, y = c.ent.y + Math.sin(c.ang) * d;
     V.hit(x, y, '#ffe0b0', 0.4); if (c.ent.st) hitStop(c.ent.st, 0.03, FX.now); };
 })();
+// ======================================================================= Threadweaver and Marionettist (classes-c)
+// Threads are lilac light with a running bead, like a needle drawing a seam; a snap flicks the two halves apart. The
+// Doll's moves play on the Doll (stagecraft.js keeps where each one is and plays its pose); the strings flash as blades
+// for Cross-Cut. Big moves keep the three beats: a glyph, a bold shape, a slow aftermath.
+(() => {
+  const V = VFX, TAU = Math.PI * 2, rand = (a, b) => a + Math.random() * (b - a);
+  const shake = s => { FX.shake = Math.max(FX.shake, s); };
+  const idOf = ent => (ent && ent.kind === 'player' ? (typeof Net !== 'undefined' ? Net.id : 0) : ent && ent.id);
+  const dollsOf = ent => (typeof Stagecraft !== 'undefined' ? Stagecraft.dollsOf(idOf(ent), typeof Net !== 'undefined' ? Net.id : 0) : []);
+  const act = (ent, kind) => { if (typeof Stagecraft !== 'undefined') Stagecraft.act(idOf(ent), kind, FX.now || 0); };
+  // a thread drawn out from a to b over `grow` s, then fading
+  const threadOut = (a, b, o = {}) => V.fx({ dur: o.dur ?? 0.7, layer: 'air', draw: (c, p, t, e) => {
+    const q = Math.min(1, t / (o.grow ?? 0.22)), k = Math.min(1, (1 - p) / 0.4) * e.a, ax = a.x, ay = a.y - 14, bx = ax + (b.x - ax) * q, by = ay + (b.y - 14 - ay) * q;
+    V.neonPath(c, o.color || '#cbb8ff', o.w ?? 2, k, () => { c.moveTo(ax, ay); c.quadraticCurveTo((ax + bx) / 2, (ay + by) / 2 + 16 * (1 - q), bx, by); });
+    V.glowAt(c, bx, by, 8, '#f2e6ff', 0.8 * k);
+  } });
+  // a bead of light running along every thread on this ally, out to whoever is on the far end
+  const runDown = (who, col) => {
+    if (typeof Stagecraft === 'undefined' || !who) return;
+    const id = idOf(who);
+    for (const [a, b] of Stagecraft.S.threads) {
+      if (a !== id && b !== id) continue;
+      const env = Stagecraft.S.env, other = env ? env.entById(a === id ? b : a) : null;
+      if (!other) continue;
+      V.fx({ dur: 0.45, layer: 'air', draw: (c, p, t, e) => { const x = who.x + (other.x - who.x) * p, y = who.y - 12 + (other.y - who.y) * p; V.glowAt(c, x, y, 10, col, e.a); V.glowAt(c, x, y, 4, '#ffffff', e.a); },
+        done: () => V.plus(other.x, other.y, { color: col, n: 3 }) });
+    }
+  };
+
+  ABILITY_VFX.threadweaver = {
+    // a thrust of the long needle: a silver sliver, a stitch-cross where it lands
+    needle: c => { V.missile(c.x, c.y, c.tx, c.ty, { style: 'blade', color: '#e8eef4', speed: 1400, size: 0.6, onHit: (x, y) => { V.hit(x, y, '#d8c8ff', 0.55); V.fx({ dur: 0.45, layer: 'air', draw: (cc, p, t, e) => { const k = (1 - p) * e.a; V.neonPath(cc, '#cbb8ff', 1.6, k, () => { cc.moveTo(x - 9, y - 21); cc.lineTo(x + 9, y - 7); cc.moveTo(x + 9, y - 21); cc.lineTo(x - 9, y - 7); }); } }); } }); },
+    // a thread spun out from her hand to the ally, a knot of light tied at their end
+    tie: c => { const w = c.tent || c.ent; threadOut(c.ent, w, { dur: 0.6 }); c.later(0.2, () => { V.glint(w.x, w.y, { color: '#f2e6ff', size: 22, z: 16 }); V.sigil(w.x, w.y, { r: 30, style: 'petals', color: '#cbb8ff', dur: 0.5, spin: 4, follow: w }); }); },
+    // a running stitch of light closes over the ally, then beads run down each of their threads
+    mend: c => { const w = c.tent || c.ent;
+      V.sigil(w.x, w.y, { r: 42, style: 'runes', color: '#e4d8ff', dur: 0.7, spin: 2, follow: w }); V.plus(w.x, w.y, { color: '#e4d8ff', n: 5 });
+      V.fx({ dur: 0.6, layer: 'air', draw: (cc, p, t, e) => { const k = (1 - p) * e.a; cc.save(); cc.setLineDash([5, 4]); cc.lineDashOffset = -t * 40; V.neonPath(cc, '#f2e6ff', 1.6, k, () => cc.ellipse(w.x, w.y - 20, 22, 26, 0, 0, TAU)); cc.restore(); } });
+      c.later(0.15, () => runDown(w, '#e4d8ff')); },
+    // the shears close over the threads: a flash of silver, and the cut threads let go their heal (thrs plays the snaps)
+    snip: c => { const w = c.tent || c.ent;
+      V.fx({ dur: 0.4, layer: 'air', draw: (cc, p, t, e) => { const k = (1 - p) * e.a, o = 0.7 * (1 - Math.min(1, p * 2.5)); for (const s of [-1, 1]) V.neonPath(cc, '#f4f8ff', 2.4, k, () => { const a = -Math.PI / 4 + s * o; cc.moveTo(w.x - Math.cos(a) * 22, w.y - 30 - Math.sin(a) * 22); cc.lineTo(w.x + Math.cos(a) * 22, w.y - 30 + Math.sin(a) * 22); }); } });
+      V.glint(w.x, w.y, { color: '#ffffff', size: 30, z: 30 }); },
+    // a pulse snapping along the ally's thread, the ally pulled after it (the host throws them)
+    tighten: c => { const w = c.tent || c.ent; V.shock(w.x, w.y, { r: 46, color: '#cbb8ff', dur: 0.3, w: 3 }); runDown(w, '#cbb8ff'); },
+    lash: c => { const w = c.tent || c.ent; V.shock(w.x, w.y, { r: 50, color: '#ff9ab8', dur: 0.3, w: 4 }); runDown(w, '#ff9ab8'); c.later(0.25, () => V.shield(w, { shape: 'hex', color: '#ff9ab8', dur: 2, r: 38 })); },
+    // Tapestry: a great woven seal under her, ribbons of thread wheeling out to the whole party
+    tapestry: c => { V.ink(c.x, c.y, { r: 120, dur: 1.4 }); V.sigil(c.x, c.y, { r: 120, style: 'petals', color: '#ffd89a', dur: 1.4, spin: 1 }); V.sigil(c.x, c.y, { r: 80, style: 'runes', color: '#cbb8ff', dur: 1.4, spin: -1.5 });
+      V.ribbons(c.x, c.y, { r: 90, dur: 1.2, follow: c.ent, colors: ['#ffd89a', '#cbb8ff', '#ffffff'] }); V.shock(c.x, c.y, { r: 200, color: '#ffd89a', dur: 0.6, w: 5 }); shake(3); },
+    // Embroider: a flower of stitches blooms over the ally and every thread on them lights up
+    embroider: c => { const w = c.tent || c.ent; V.sigil(w.x, w.y, { r: 56, style: 'petals', color: '#f0d8ff', dur: 0.9, spin: 3, follow: w }); V.burst(w.x, w.y - 20, { color: '#f0d8ff', color2: '#ffffff', n: 12, speed: 180, kind: 'star', flash: false }); V.plus(w.x, w.y, { color: '#f0d8ff', n: 6 }); c.later(0.1, () => runDown(w, '#f0d8ff')); },
+    // Cat's Cradle: a web strung at her feet for 9s, glinting where its strands cross
+    cradle: c => { const x = c.x, y = c.y, r = 150;
+      V.shock(x, y, { r: r + 20, color: '#cbb8ff', dur: 0.5, w: 5 });
+      V.fx({ dur: 9, layer: 'ground', draw: (cc, p, t, e) => {
+        const k = Math.min(1, p / 0.04, (1 - p) / 0.06) * e.a, pts = [];
+        for (let i = 0; i < 8; i++) { const a = i * TAU / 8 + Math.sin(t * 0.5) * 0.04; pts.push([x + Math.cos(a) * r, y + Math.sin(a) * r * 0.78]); }
+        for (let i = 0; i < 8; i++) for (const j of [3, 5]) { const A = pts[i], B = pts[(i + j) % 8]; V.neonPath(cc, '#cbb8ff', 1.2, k * 0.6, () => { cc.moveTo(A[0], A[1]); cc.lineTo(B[0], B[1]); }); }
+        V.neonRing(cc, x, y, r, '#e8deff', 1.4, k * 0.5);
+        for (const [px, py] of pts) V.glowAt(cc, px, py, 6, '#f2e6ff', k * 0.7);
+      } }); },
+  };
+
+  ABILITY_VFX.marionettist = {
+    // the Doll stabs: a quick cut from where it stands
+    jab: c => { act(c.ent, 'jab'); for (const d of dollsOf(c.ent)) { const a = Math.atan2(c.ty - d.y, c.tx - d.x); V.slash(d.x, d.y, a, { r: 46, span: 0.9, color: '#ffd8ec', w: 0.4, dur: 0.2, sparks: 2 }); c.later(0.08, () => V.hit(d.x + Math.cos(a) * 40, d.y + Math.sin(a) * 40, '#ffe8f4', 0.5)); } },
+    // the Doll is flung: silk streaks from the bar, a puff where it lands
+    pull: c => { act(c.ent, 'pull'); c.later(0.03, () => { for (const d of dollsOf(c.ent)) { V.smoke(d.x, d.y, { n: 3, color: '#f0d8e8', size: 18, a: 0.4, speed: 40 }); V.shock(d.x, d.y, { r: 40, color: '#f0a8cc', dur: 0.3, w: 3 }); threadOut(c.ent, d, { color: '#f6e6f0', w: 1.4, grow: 0.12, dur: 0.4 }); } }); },
+    // Cross-Cut: every string goes rigid and bright for a moment, a blade from the bar to the Doll
+    cross: c => { act(c.ent, 'cut'); const ds = dollsOf(c.ent), ox = c.ent.x, oy = c.ent.y;
+      V.fx({ dur: 0.42, layer: 'air', draw: (cc, p, t, e) => { const k = (1 - p) * e.a, w = 4 * (1 - p) + 1; for (const d of ds) { V.neonPath(cc, '#ffd8ec', w, k, () => { cc.moveTo(ox, oy - 12); cc.lineTo(d.x, d.y - 12); }); V.neonPath(cc, '#ffffff', 1, k, () => { cc.moveTo(ox, oy - 12); cc.lineTo(d.x, d.y - 12); }); } } });
+      for (const d of ds) { V.sparks((ox + d.x) / 2, (oy + d.y) / 2, { color: '#ffe8f4', n: 6, angle: Math.atan2(d.y - oy, d.x - ox) + Math.PI / 2, spread: 0.6, speed: 240 }); }
+      c.later(0.05, () => V.hit(c.tx, c.ty, '#ffd8ec', 0.8)); },
+    // Pirouette: the Doll spins in a ring of rose-coloured cuts
+    pirouette: c => { act(c.ent, 'spin'); for (const d of dollsOf(c.ent)) { V.swirl(d.x, d.y, { r: 56, color: '#f0c8dc', dur: 0.6, arms: 3, layer: 'air' }); for (let i = 0; i < 2; i++) c.later(i * 0.12, () => V.slash(d.x, d.y, i * Math.PI, { r: 54, span: 2.6, color: i ? '#ffe8f4' : '#d0507e', w: 0.45, dur: 0.24 })); } },
+    // Swap: a flutter of silk, both of them puff away and appear in each other's place
+    swap: c => { act(c.ent, 'swap'); c.later(0.03, () => { for (const d of dollsOf(c.ent)) { V.smoke(d.x, d.y, { n: 5, color: '#2a2430', size: 22, a: 0.5, speed: 50 }); V.ribbons(d.x, d.y, { r: 36, dur: 0.6, colors: ['#f0a8cc', '#ffffff'] }); } V.smoke(c.ent.x, c.ent.y, { n: 5, color: '#f0d8e8', size: 22, a: 0.45, speed: 50 }); V.ribbons(c.ent.x, c.ent.y, { r: 36, dur: 0.6, follow: c.ent, colors: ['#f0a8cc', '#ffffff'] }); }); },
+    // Grand Finale: the footlights come up round the Doll, five cuts in time, a bow and a burst of petals
+    finale: c => { act(c.ent, 'finale'); const ds = dollsOf(c.ent);
+      for (const d of ds) V.fx({ dur: 2.6, layer: 'ground', draw: (cc, p, t, e) => { const k = Math.min(1, p / 0.05, (1 - p) / 0.1) * e.a; for (let i = 0; i < 7; i++) { const a = Math.PI * 0.15 + i * Math.PI * 0.7 / 6 + Math.PI / 2; V.glowAt(cc, d.x + Math.cos(a) * 60, d.y + Math.sin(a) * 40, 14, '#ffcf6a', k * (0.5 + Math.sin(t * 9 + i) * 0.15)); } } });
+      for (let i = 0; i < 5; i++) c.later(0.45 * i + 0.05, () => { for (const d of dollsOf(c.ent)) { const a = Math.atan2(c.ty - d.y, c.tx - d.x) + (i % 2 ? 0.5 : -0.5); V.slash(d.x, d.y, a, { r: 60, span: 1.6, color: i === 4 ? '#ffd27a' : '#ffd8ec', w: 0.5, dur: 0.24, flip: i % 2 === 1, sparks: 3 }); } V.hit(c.tx, c.ty, '#ffe8f4', i === 4 ? 1.2 : 0.6); if (i === 4) shake(4); });
+      c.later(2.3, () => { for (const d of dollsOf(c.ent)) V.burst(d.x, d.y - 20, { color: '#ffb8d8', color2: '#ffd27a', n: 18, speed: 220, kind: 'petal' }); }); },
+    // Tangle: the Doll lunges and its strings wind round the enemy in loops that tighten
+    tangle: c => { act(c.ent, 'jab'); const tx = c.tx, ty = c.ty;
+      V.fx({ dur: 0.9, layer: 'air', draw: (cc, p, t, e) => { const k = Math.min(1, (1 - p) / 0.3) * e.a; for (let i = 0; i < 4; i++) { const R = 44 * (1 - p * 0.45); V.neonPath(cc, '#f0c8dc', 1.4, k, () => cc.ellipse(tx, ty - 30, R, R * 0.35, i * Math.PI / 4 + t * 2, 0, TAU)); } } });
+      c.later(0.3, () => V.hit(tx, ty, '#ffd8ec', 0.7)); },
+    // Red Curtain: velvet drops in a ring round the puppeteer, gold fringe glinting, for 8s
+    redcurtain: c => { const ent = c.ent;
+      V.fx({ dur: 8, layer: 'ground', draw: (cc, p, t, e) => {
+        const k = Math.min(1, p / 0.04, (1 - p) / 0.06) * e.a, x = ent.x, y = ent.y, r = 140;
+        cc.globalAlpha = 0.18 * k; cc.fillStyle = '#d03050'; cc.beginPath(); cc.ellipse(x, y, r, r * 0.78, 0, 0, TAU); cc.fill(); cc.globalAlpha = 1;
+        for (let i = 0; i < 14; i++) { const a = i * TAU / 14 + Math.sin(t + i) * 0.03; V.neonPath(cc, i % 2 ? '#d03050' : '#a01838', 5, k * 0.8, () => { cc.moveTo(x + Math.cos(a) * r * 0.86, y + Math.sin(a) * r * 0.67); cc.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r * 0.78); }); }
+        V.neonRing(cc, x, y, r, '#ffd27a', 1.4, k * 0.7);
+      } });
+      V.shock(ent.x, ent.y, { r: 160, color: '#d03050', dur: 0.5, w: 6 }); },
+  };
+
+  Object.assign(KIT_VFX, {
+    // a thread snapping: the two halves recoil toward their ends; a cut one lets go a little shower of light (its heal)
+    threadSnap: (a, b, kind) => {
+      const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2 - 14, col = kind === 1 ? '#ffd8f0' : kind === 2 ? '#cbb8ff' : '#f2e6ff';
+      if (kind === 2) { V.fx({ dur: 0.35, layer: 'air', draw: (c, p, t, e) => { const x = a.x + (b.x - a.x) * p, y = a.y - 12 + (b.y - a.y) * p; V.glowAt(c, x, y, 12, '#cbb8ff', e.a); } }); return; }
+      V.fx({ dur: 0.5, layer: 'air', draw: (c, p, t, e) => {
+        const k = (1 - p) * e.a;
+        for (const [ex, ey] of [[a.x, a.y - 14], [b.x, b.y - 14]]) { const q = 0.5 + p * 0.5, sx = mx + (ex - mx) * q, sy = my + (ey - my) * q + Math.sin(p * 20) * 6 * (1 - p); V.neonPath(c, col, 1.6, k, () => { c.moveTo(ex, ey); c.quadraticCurveTo((ex + sx) / 2, (ey + sy) / 2 + 8 * p, sx, sy); }); }
+      } });
+      V.glint(mx, my + 14, { color: '#ffffff', size: kind === 1 ? 30 : 18, z: 14 });
+      V.sparks(mx, my + 14, { color: col, n: kind === 1 ? 10 : 5, speed: 200 });
+      for (const w of [a, b]) V.plus(w.x, w.y, { color: col, n: kind === 1 ? 4 : 2 });
+    },
+    tapestryEnd: e => { V.shock(e.x, e.y, { r: 220, color: '#ffd89a', dur: 0.6, w: 5 }); V.motes(e.x, e.y, { color: '#ffd89a', n: 12, r: 120, kind: 'star' }); },
+    // a String tears: a spark at the bar and the frayed end whipping loose
+    strtear: (e, t, d) => { const a = e.angle || 0, x = e.x + Math.cos(a) * 24, y = e.y + Math.sin(a) * 24; V.sparks(x, y, { color: d && d.w ? '#ff8a9a' : '#f6e6f0', n: 6, speed: 220 }); V.glint(x, y, { color: '#ff9ab0', size: 18, z: 16 }); },
+    limp: e => { for (const dl of dollsOf(e)) { V.smoke(dl.x, dl.y, { n: 5, color: '#8a7a78', size: 20, a: 0.45, speed: 30 }); V.debris(dl.x, dl.y, { n: 3, color: '#c89a64', speed: 0.5 }); } },
+    unlimp: e => { for (const dl of dollsOf(e)) { V.glint(dl.x, dl.y, { color: '#ffffff', size: 22, z: 30 }); threadOut(e, dl, { color: '#f6e6f0', w: 1.2, grow: 0.2, dur: 0.5 }); } },
+    flourish: (e, t) => { for (const dl of dollsOf(e)) V.slash(dl.x, dl.y, (t ? Math.atan2(t.y - dl.y, t.x - dl.x) : 0) + 0.6, { r: 42, span: 1, color: '#ffe8f4', w: 0.35, dur: 0.18, flip: true }); },
+    standin: e => { for (const dl of dollsOf(e)) V.shield(dl, { shape: 'hex', color: '#f0a8cc', dur: 0.5, r: 30 }); },
+    mend: e => { for (const dl of dollsOf(e)) V.glint(dl.x, dl.y, { color: '#ffffff', size: 18, z: 26 }); },
+  });
+  KIT_VFX.flourish.atTarget = true;
+
+  // autos: a needle-glint flicked at the enemy; the Doll's idle slap
+  Object.assign(AUTO_VFX, {
+    needle: c => V.missile(c.ent.x, c.ent.y, c.tx, c.ty, { style: 'blade', color: '#d8c8ff', speed: 1300, size: 0.4, onHit: (x, y) => V.hit(x, y, '#e8ddff', 0.3) }),
+    doll: c => { for (const d of dollsOf(c.ent)) { const a = Math.atan2(c.ty - d.y, c.tx - d.x); V.slash(d.x, d.y, a, { r: 40, span: 1.1, color: '#f0c8dc', dur: 0.18, w: 0.28, flip: c.alt }); } },
+  });
+})();
