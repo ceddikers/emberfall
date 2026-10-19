@@ -1199,7 +1199,7 @@ Object.assign(FightSim.prototype, {
     if (!Array.isArray(list) || !this.ps.has(pid)) return;
     const n = v => Math.max(-2000, Math.min(2000, Math.round(Number(v) || 0)));
     this.dolls = this.dolls || new Map();
-    this.dolls.set(pid, { l: list.slice(0, 2).map(d => ({ x: n(d && d.x), y: n(d && d.y), st: Math.max(0, Math.min(4, (d && d.st) | 0)) })), at: this.t });
+    this.dolls.set(pid, { l: list.slice(0, 2).map(d => ({ x: n(d && d.x), y: n(d && d.y), st: Math.max(0, Math.min(4, (d && d.st) | 0)), s: Math.max(0, Math.min(3, d && d.s != null ? d.s | 0 : 3)) })), at: this.t });
   },
   // the Dolls whose owners are alive and still reporting: [[ownerId, doll, index]]
   liveDolls() {
@@ -1263,7 +1263,7 @@ Object.assign(FightSim.prototype, {
     if (this.t - (this.dollSent ?? -9) >= 0.1) {
       this.dollSent = this.t;
       const by = new Map();
-      for (const [pid, d] of live) { if (!by.has(pid)) by.set(pid, []); by.get(pid).push([d.x, d.y, d.st]); }
+      for (const [pid, d] of live) { if (!by.has(pid)) by.set(pid, []); by.get(pid).push([d.x, d.y, d.st, d.s]); }
       this.emit({ t: 'dolls', l: [...by].map(([pid, l]) => [pid, l]), s: stage || 0, c: +this.t.toFixed(3) });
     }
   },

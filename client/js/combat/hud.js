@@ -267,6 +267,38 @@ const ICON_GLYPHS = {
     tailspin: c => { c.strokeStyle = '#e8fff8'; c.lineWidth = 3; c.lineCap = 'round'; for (let i = 0; i < 3; i++) { const a = i * TAU / 3; c.beginPath(); c.arc(32 + Math.cos(a) * 6, 32 + Math.sin(a) * 6, 16, a, a + 1.6); c.stroke(); } },
   },
 };
+// Threadweaver and Marionettist (classes-c): drawn icons, gauge tooltips
+Object.assign(ICON_GLYPHS, {
+  threadweaver: {
+    needle: c => { c.strokeStyle = '#e8eef4'; c.lineWidth = 3; c.lineCap = 'round'; c.beginPath(); c.moveTo(12, 52); c.lineTo(54, 10); c.stroke(); c.fillStyle = '#c8a24a'; c.beginPath(); c.ellipse(14, 50, 5, 3, -0.78, 0, TAU); c.fill(); c.strokeStyle = '#cbb8ff'; c.lineWidth = 1.6; c.beginPath(); c.moveTo(14, 50); c.bezierCurveTo(30, 58, 20, 30, 42, 36); c.stroke(); },
+    tie: c => { c.strokeStyle = '#cbb8ff'; c.lineWidth = 3; c.lineCap = 'round'; c.beginPath(); c.moveTo(10, 44); c.bezierCurveTo(24, 20, 40, 44, 54, 20); c.stroke(); c.fillStyle = '#f2e6ff'; for (const [x, y] of [[10, 44], [54, 20]]) { c.beginPath(); c.arc(x, y, 5, 0, TAU); c.fill(); } c.strokeStyle = '#ffffff'; c.lineWidth = 2; c.beginPath(); c.arc(32, 32, 5, 0, TAU); c.stroke(); },
+    mend: c => { c.strokeStyle = '#e4d8ff'; c.lineWidth = 3; c.setLineDash([5, 4]); c.beginPath(); c.moveTo(14, 50); c.lineTo(50, 14); c.stroke(); c.setLineDash([]); c.fillStyle = '#b89cff'; c.fillRect(28, 16, 8, 32); c.fillRect(16, 28, 32, 8); },
+    snip: c => { c.strokeStyle = '#e8eef4'; c.lineWidth = 4; c.lineCap = 'round'; c.beginPath(); c.moveTo(14, 14); c.lineTo(46, 46); c.moveTo(14, 50); c.lineTo(46, 18); c.stroke(); c.strokeStyle = '#ff9ab8'; c.lineWidth = 2.5; for (const y of [14, 50]) { c.beginPath(); c.arc(12, y, 6, 0, TAU); c.stroke(); } c.strokeStyle = '#cbb8ff'; c.lineWidth = 1.5; c.beginPath(); c.moveTo(42, 32); c.lineTo(58, 28); c.moveTo(42, 34); c.lineTo(58, 40); c.stroke(); },
+    tighten: c => { c.strokeStyle = '#cbb8ff'; c.lineWidth = 3; c.beginPath(); c.moveTo(12, 32); c.lineTo(52, 32); c.stroke(); c.fillStyle = '#f2e6ff'; for (const [x, d] of [[22, 1], [42, -1]]) { c.beginPath(); c.moveTo(x, 32); c.lineTo(x - 8 * d, 24); c.lineTo(x - 8 * d, 40); c.fill(); } },
+    tapestry: c => { c.strokeStyle = '#ffd89a'; c.lineWidth = 1.6; const p = []; for (let i = 0; i < 5; i++) { const a = -Math.PI / 2 + i * TAU / 5; p.push([32 + Math.cos(a) * 20, 32 + Math.sin(a) * 20]); } for (let i = 0; i < 5; i++) for (let j = i + 1; j < 5; j++) { c.beginPath(); c.moveTo(p[i][0], p[i][1]); c.lineTo(p[j][0], p[j][1]); c.stroke(); } c.fillStyle = '#f2e6ff'; for (const [x, y] of p) { c.beginPath(); c.arc(x, y, 3.5, 0, TAU); c.fill(); } },
+    lash: c => { c.strokeStyle = '#ff9ab8'; c.lineWidth = 3; c.lineCap = 'round'; c.beginPath(); c.moveTo(10, 50); c.bezierCurveTo(20, 10, 40, 60, 54, 16); c.stroke(); c.strokeStyle = '#f2e6ff'; c.lineWidth = 2; c.beginPath(); c.arc(48, 22, 9, 0, TAU); c.stroke(); },
+    embroider: c => { c.strokeStyle = '#f0d8ff'; c.lineWidth = 2; for (let i = 0; i < 6; i++) { const a = i * TAU / 6; c.beginPath(); c.moveTo(32, 32); c.quadraticCurveTo(32 + Math.cos(a + 0.6) * 16, 32 + Math.sin(a + 0.6) * 16, 32 + Math.cos(a) * 22, 32 + Math.sin(a) * 22); c.stroke(); } c.fillStyle = '#b89cff'; c.beginPath(); c.arc(32, 32, 6, 0, TAU); c.fill(); },
+    cradle: c => { c.strokeStyle = '#cbb8ff'; c.lineWidth = 2; for (const [a, b] of [[[12, 20], [52, 44]], [[12, 44], [52, 20]], [[20, 12], [44, 52]], [[44, 12], [20, 52]]]) { c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke(); } c.beginPath(); c.arc(32, 32, 22, 0, TAU); c.stroke(); },
+  },
+  marionettist: {
+    jab: c => { c.fillStyle = '#e8eef4'; c.beginPath(); c.moveTo(10, 54); c.lineTo(54, 10); c.lineTo(16, 58); c.fill(); c.fillStyle = '#c89a64'; c.beginPath(); c.arc(14, 54, 6, 0, TAU); c.fill(); },
+    pull: c => { c.strokeStyle = '#f6e6f0'; c.lineWidth = 1.5; for (const x of [18, 32, 46]) { c.beginPath(); c.moveTo(x, 8); c.lineTo(32 + (x - 32) * 0.3, 40); c.stroke(); } c.fillStyle = '#9a6a3c'; c.fillRect(12, 6, 40, 5); c.fillStyle = '#f8efe8'; c.beginPath(); c.arc(32, 46, 9, 0, TAU); c.fill(); c.strokeStyle = '#d0507e'; c.lineWidth = 3; c.beginPath(); c.moveTo(14, 58); c.lineTo(24, 50); c.stroke(); },
+    cross: c => { c.strokeStyle = '#ffd8ec'; c.lineWidth = 3; c.beginPath(); c.moveTo(8, 50); c.lineTo(56, 14); c.stroke(); c.fillStyle = '#c86a5a'; c.beginPath(); c.arc(32, 32, 8, 0, TAU); c.fill(); c.strokeStyle = '#ffffff'; c.lineWidth = 1.5; c.beginPath(); c.moveTo(10, 46); c.lineTo(54, 12); c.stroke(); },
+    pirouette: c => { c.strokeStyle = '#f0c8dc'; c.lineWidth = 4; c.lineCap = 'round'; c.beginPath(); c.arc(32, 32, 20, -0.3, Math.PI * 1.5); c.stroke(); c.fillStyle = '#f8efe8'; c.beginPath(); c.arc(32, 32, 8, 0, TAU); c.fill(); c.fillStyle = '#d0507e'; c.beginPath(); c.moveTo(50, 20); c.lineTo(56, 32); c.lineTo(44, 30); c.fill(); },
+    swap: c => { c.fillStyle = '#1c1a22'; c.beginPath(); c.arc(20, 32, 9, 0, TAU); c.fill(); c.fillStyle = '#f8efe8'; c.beginPath(); c.arc(44, 32, 9, 0, TAU); c.fill(); c.strokeStyle = '#f0a8cc'; c.lineWidth = 2.5; c.beginPath(); c.arc(32, 32, 18, Math.PI * 1.1, Math.PI * 1.9); c.stroke(); c.beginPath(); c.arc(32, 32, 18, Math.PI * 0.1, Math.PI * 0.9); c.stroke(); },
+    finale: c => { c.fillStyle = '#ffd27a'; for (let i = 0; i < 5; i++) { c.beginPath(); c.ellipse(12 + i * 10, 52, 4, 2.5, 0, 0, TAU); c.fill(); } c.fillStyle = '#d03050'; c.beginPath(); c.moveTo(6, 8); c.quadraticCurveTo(20, 30, 12, 46); c.lineTo(6, 46); c.fill(); c.beginPath(); c.moveTo(58, 8); c.quadraticCurveTo(44, 30, 52, 46); c.lineTo(58, 46); c.fill(); c.fillStyle = '#f8efe8'; c.beginPath(); c.arc(32, 28, 8, 0, TAU); c.fill(); },
+    tangle: c => { c.strokeStyle = '#f0c8dc'; c.lineWidth = 2; for (let i = 0; i < 4; i++) { c.beginPath(); c.ellipse(32, 32, 20, 8, i * Math.PI / 4, 0, TAU); c.stroke(); } c.fillStyle = '#c86a5a'; c.beginPath(); c.arc(32, 32, 6, 0, TAU); c.fill(); },
+    redcurtain: c => { c.fillStyle = '#d03050'; for (const s of [-1, 1]) { c.beginPath(); c.moveTo(32 + s * 26, 6); c.quadraticCurveTo(32 + s * 6, 30, 32 + s * 16, 58); c.lineTo(32 + s * 26, 58); c.fill(); } c.fillStyle = '#ffd27a'; c.fillRect(6, 6, 52, 4); },
+  },
+});
+GAUGE_TIPS.threadweaver = {
+  desc: 'Fills as your threads carry damage: about 1 for every 1% of your health they carry. Mend Seam spends 35 to land at once and stronger. The knots above it are your threads; they redden as their ends pull apart.',
+  state: k => { const n = weaveCount(k); return `${n} thread${n === 1 ? '' : 's'}` + (k.g.spool >= WEAVE.MEND_COST ? ' · Mend Seam instant' : ''); },
+};
+GAUGE_TIPS.marionettist = {
+  desc: 'Strings (top): three tie you to the Doll. One tears if it strays past their reach or a blow lands on it, and grows back after 15s; with none left the Doll lies limp for 4s. Encore (the footlights) builds from the Doll\'s hits; Grand Finale spends it.',
+  state: k => (mariLimp(k) ? 'Limp' : `${k.g.strings} String${k.g.strings === 1 ? '' : 's'}`) + ` · Encore ${k.g.encore || 0} / 5`,
+};
 function drawnIcon(classId, abilityId) {
   if (typeof document === 'undefined' || typeof CLASSES === 'undefined') return null;
   const key = classId + '/' + abilityId;

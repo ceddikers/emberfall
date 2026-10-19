@@ -883,6 +883,191 @@ Object.assign(SPEC_ART, {
 
 CHANNEL.thermist = { focus: [16, 0], color: '#ff9a6a', hot: '#e8f6ff', mote: 'ember' };
 
+// ======================================================================= Threadweaver and Marionettist (classes-c)
+Object.assign(HERO_ART, {
+  // Threadweaver: a seamstress-witch. A wide plum hat with a crooked tip, a lilac shawl over a dark dress, three spools
+  // of thread at her belt, and a needle as long as a rapier in her right hand, a glowing thread run through its eye and
+  // looped back to her left. The needle thrusts on her casts.
+  threadweaver(ctx, st) {
+    const dress = '#3a2a4a', shawl = '#9a86c8', hat = '#2e2140', skin = '#efd0b4', hair = '#d8d0e8', thread = '#cbb8ff';
+    const cast = castAmt(st), pa = actP(st, 'attack'), thrust = Math.max(cast, pa >= 0 ? strikeAmt(pa) : 0);
+    feet(ctx, st, '#1e1626');
+    // three spools on the belt at her back, each a different thread
+    [['#ff9ab8', -9, -7], ['#9ad8ff', -11, 0], ['#ffe08a', -9, 7]].forEach(([c, x, y]) => {
+      ellipse(ctx, x, y, 3.4, 2.4, 0, '#8a5a32', OUT, 1.1);
+      ellipse(ctx, x, y, 2.4, 1.8, 0, c);
+      line(ctx, x - 2.4, y, x + 2.4, y, shade(c, 0.25), 0.7);
+    });
+    torso(ctx, dress, 9, 13.5);
+    // the shawl: a pointed drape over the shoulders, a darker hem stitched in a running line
+    poly(ctx, [-6, -13, 4, -10, 6, 0, 4, 10, -6, 13, -2, 0], shawl, OUT, 1.5);
+    ctx.save(); ctx.setLineDash([1.6, 1.8]); limb(ctx, [-4, -10, 3, -8, 4.5, 0, 3, 8, -4, 10], '#e8deff', 0.7); ctx.restore();
+    // the needle: held low in the right hand, a long silver spike forward, the eye near the grip
+    const nx = 8 + thrust * 9, ny = 9 - thrust * 5, ang = -0.14 - thrust * 0.18;
+    ctx.save(); ctx.translate(nx, ny); ctx.rotate(ang);
+    poly(ctx, [-3, -1.3, 26 + thrust * 4, -0.25, 30 + thrust * 4, 0, 26 + thrust * 4, 0.25, -3, 1.3], '#e8eef4', OUT, 1.1);
+    line(ctx, 0, -0.5, 22, -0.3, '#ffffff', 0.6);
+    ellipse(ctx, -2.5, 0, 2.6, 1.6, 0, '#c8a24a', OUT, 0.9);
+    circle(ctx, -2.5, 0, 0.8, '#1a1226');
+    ctx.restore();
+    // the thread: from the needle's eye back to her left hand, glowing, swaying
+    const ex = nx - 2.5 * Math.cos(ang), ey = ny - 2.5 * Math.sin(ang), lx = 6 + cast * 3, ly = -11;
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    ctx.beginPath(); ctx.moveTo(ex, ey); ctx.bezierCurveTo(ex - 10, ey - 4 + Math.sin(st.t * 3) * 3, lx + 6, ly + 10 + Math.cos(st.t * 2.4) * 3, lx, ly);
+    ctx.strokeStyle = rgba(thread, 0.35); ctx.lineWidth = 3; ctx.stroke(); ctx.strokeStyle = rgba('#efe6ff', 0.9); ctx.lineWidth = 0.9; ctx.stroke();
+    ctx.restore();
+    hand(ctx, nx, ny, skin);
+    hand(ctx, lx, ly, skin);
+    glow(ctx, lx, ly, 5 + cast * 4, thread, 0.3 + cast * 0.3);
+    // pale hair spilling from under the hat, then the hat: a wide brim seen from above, a band, the tip flopped back
+    hairBack(ctx, hair, 8, 7);
+    circle(ctx, 0, 0, 7, skin, OUT, 1.5);
+    ellipse(ctx, -0.5, 0, 12.5, 12, 0, hat, OUT, 1.8);
+    ellipse(ctx, -1.2, -1.2, 9, 8.5, 0, shade(hat, 0.08));
+    circle(ctx, -1, 0, 6, null, '#b89cff', 1.4);   // the hat band
+    ctx.save(); ctx.translate(-2, 0); ctx.rotate(Math.PI + Math.sin(st.t * 1.3) * 0.2);
+    poly(ctx, [0, -4.2, 9, -2, 14, 2.5, 7, 3, 0, 4.2], shade(hat, 0.12), OUT, 1.2);
+    circle(ctx, 14, 2.5, 1.4, '#ffe08a', OUT, 0.7);
+    ctx.restore();
+    circle(ctx, 3.5, -4.5, 1.6, '#ff9ab8', OUT, 0.8);   // a pincushion flower on the brim
+  },
+
+  // Marionettist: a slight puppeteer in stagehand black. A close black hood with a pale face, a black jerkin, and a
+  // wooden control bar held up in both hands in front, its strings running off to the Doll (drawn by stagecraft.js).
+  // The bar tips and twitches on every command.
+  marionettist(ctx, st) {
+    const black = '#1c1a22', black2 = '#2c2834', skin = '#f0dccb', wood = '#9a6a3c', accent = '#c84a8c';
+    const cast = castAmt(st), pa = actP(st, 'attack'), jerk = Math.max(cast, pa >= 0 ? strikeAmt(pa) : 0), big = pulse(actP(st, 'big'));
+    feet(ctx, st, '#121016');
+    torso(ctx, black, 7.5, 12);
+    line(ctx, -5, -8, -5, 8, black2, 1.4);
+    // a red ribbon at the throat, the only colour on them
+    poly(ctx, [3, -2.5, 6.5, 0, 3, 2.5, 4.4, 0], accent, OUT, 0.8);
+    // the control bar: a cross of wood held out in front, tipping with each command
+    const tilt = Math.sin(st.t * 2.2) * 0.06 + jerk * 0.45 * (st.action && st.action.alt ? -1 : 1) + big * Math.sin(st.t * 18) * 0.25;
+    ctx.save(); ctx.translate(13 + jerk * 3, 0); ctx.rotate(tilt);
+    rrect(ctx, -1.8, -11, 3.6, 22, 1.2, wood, OUT, 1.3);
+    rrect(ctx, -6, -1.6, 12, 3.2, 1.2, shade(wood, 0.1), OUT, 1.2);
+    for (const y of [-10, 10]) circle(ctx, 0, y, 1.6, '#e2bb58', OUT, 0.7);
+    circle(ctx, 6, 0, 1.6, '#e2bb58', OUT, 0.7);
+    ctx.restore();
+    hand(ctx, 11 + jerk * 3, -7, skin);
+    hand(ctx, 11 + jerk * 3, 7, skin);
+    // the hood: black all round, a pale face showing at the front
+    circle(ctx, 0, 0, 7.2, black2, OUT, 1.6);
+    ellipse(ctx, 3.2, 0, 3.4, 4.6, 0, skin);
+    poly(ctx, [-6.5, -3, -11.5, 0, -6.5, 3], black2, OUT, 1);   // the hood's point, hanging back
+    circle(ctx, -1.2, -2.5, 1.6, '#3a3644');
+  },
+});
+
+Object.assign(SPEC_ART, {
+  // Loomwright: a little frame of threads strung round her like a loom, slowly turning
+  loomwright(ctx, st) {
+    ctx.save(); ctx.rotate(st.t * 0.4);
+    for (let i = 0; i < 6; i++) {
+      const a = i * TAU / 6, b = a + TAU / 6 * 2;
+      line(ctx, Math.cos(a) * 21, Math.sin(a) * 21, Math.cos(b) * 21, Math.sin(b) * 21, rgba('#9ab8ff', 0.4), 0.8);
+      glow(ctx, Math.cos(a) * 21, Math.sin(a) * 21, 3, '#c8d8ff', 0.6);
+    }
+    ctx.restore();
+  },
+  // Shears: a great pair of silver shears hanging at her hip, opening and closing
+  shears(ctx, st) {
+    const o = 0.18 + Math.max(0, Math.sin(st.t * 1.6)) * 0.25;
+    ctx.save(); ctx.translate(-3, 13); ctx.rotate(Math.PI * 0.85);
+    for (const s of [-1, 1]) {
+      ctx.save(); ctx.rotate(s * o);
+      poly(ctx, [0, -1, 14, -0.4, 16, 0, 14, 0.6, 0, 1], '#e4ecf2', OUT, 1);
+      circle(ctx, -3.5, s * 1.5, 2.6, null, '#ff9ab8', 1.4);
+      ctx.restore();
+    }
+    circle(ctx, 0, 0, 1.2, '#c8a24a', OUT, 0.6);
+    ctx.restore();
+  },
+  // Cutting Line: the strings run red at the bar, and a coil of bright wire hangs at the hip
+  cuttingline(ctx, st) {
+    for (let i = 0; i < 3; i++) circle(ctx, -6, -9 + i * 1.6, 2.6 - i * 0.3, null, rgba('#ff6a8a', 0.7), 0.9);
+    glow(ctx, 14, 0, 9, '#ff6a8a', 0.18 + Math.sin(st.t * 4) * 0.06);
+  },
+  // Understudy: a second, smaller control bar slung across the back
+  understudy(ctx, st) {
+    ctx.save(); ctx.translate(-9, 2); ctx.rotate(0.6);
+    rrect(ctx, -1.4, -8, 2.8, 16, 1, '#8a5a32', OUT, 1.1);
+    rrect(ctx, -4.5, -1.2, 9, 2.4, 1, '#9a6a3c', OUT, 1);
+    ctx.restore();
+    glow(ctx, 0, 0, 22, '#e8a0ff', 0.06 + Math.sin(st.t * 1.4) * 0.03);
+  },
+});
+CHANNEL.threadweaver = { focus: [24, 7], color: '#c8b0ff', hot: '#f6f0ff', mote: 'mote' };
+
+// The Marionettist's Doll: life-sized, painted. A porcelain face with rose cheeks and painted lashes, black lacquered
+// hair with a bow, a white ruff, a harlequin tunic (rose and cream diamonds), wooden arms with ball joints, and a
+// stiletto set in its right hand. Drawn top-down like a hero, facing +x. o: { t, st (0 standing, 1 can't be touched,
+// 2 limp, 3 in the Finale, 4 moving), act: { kind, t0 } (its last move), small (an Understudy's), seed, scale }
+function drawDoll(ctx, x, y, angle, o = {}) {
+  const t = o.t || 0, st = o.st || 0, a = o.act, ap = a ? t - a.t0 : 9;
+  const tunicA = '#d0507e', tunicB = '#f2e6d4', wood = '#c89a64', skin = '#f8efe8', hairC = '#1a1418';
+  ctx.save(); ctx.translate(x, y); ctx.scale(o.scale || 1.5, o.scale || 1.5);
+  const limp = st === 2;
+  ellipse(ctx, 2, 5, limp ? 18 : 14, limp ? 10 : 11, 0, 'rgba(0,0,0,0.28)');
+  // limp: slumped over on its side, faded, no strings holding it up
+  if (limp) { ctx.globalAlpha = 0.78; ctx.rotate(angle + 1.2); ctx.translate(2, 4); ctx.scale(1, 0.82); }
+  else {
+    const hop = st === 4 ? Math.abs(Math.sin(t * 9 + (o.seed || 0))) * 2.5 : Math.sin(t * 2 + (o.seed || 0)) * 0.8;
+    ctx.translate(0, -hop);
+    let spin = 0;
+    if (a && a.kind === 'spin' && ap < 0.7) spin = (ap / 0.7) * TAU * 2;
+    if (a && a.kind === 'finale' && ap < 2.5) spin = Math.sin(ap * 6) * 0.6 + (ap > 2 ? (ap - 2) / 0.5 * TAU : 0);
+    ctx.rotate(angle + spin + Math.sin(t * 1.6 + (o.seed || 0)) * 0.05);
+  }
+  if (st === 1) glow(ctx, 0, 0, 24, '#ffe8f4', 0.35 + Math.sin(t * 12) * 0.1);
+  // its pose for the move it just made: a stab forward, arms flung wide for a cut, a lunge for a fling
+  let reach = 0, spread = 0, lean = 0;
+  if (a && !limp) {
+    if ((a.kind === 'jab' || a.kind === 'finale') && ap < (a.kind === 'finale' ? 2.4 : 0.45)) reach = Math.max(0, Math.sin(((ap % 0.45) / 0.45) * Math.PI));
+    if (a.kind === 'cut' && ap < 0.5) spread = Math.sin(ap / 0.5 * Math.PI);
+    if (a.kind === 'pull' && ap < 0.4) lean = 1 - ap / 0.4;
+  }
+  ctx.translate(lean * 4, 0);
+  // legs: two wooden pegs, swinging a little as it floats
+  for (const s of [-1, 1]) limb(ctx, [-2, s * 4, -9 - Math.sin(t * 3 + s) * 1.5, s * 5.5], wood, 3);
+  // the tunic: harlequin diamonds
+  ellipse(ctx, -1, 0, 9, 12.5, 0, tunicB, OUT, 1.8);
+  ctx.save(); ctx.beginPath(); ctx.ellipse(-1, 0, 8.2, 11.7, 0, 0, TAU); ctx.clip();
+  for (let i = -3; i <= 3; i++) for (let j = -2; j <= 2; j++) if ((i + j) % 2 === 0) poly(ctx, [j * 6 - 3, i * 6, j * 6, i * 6 - 3.5, j * 6 + 3, i * 6, j * 6, i * 6 + 3.5], tunicA);
+  ctx.restore();
+  ellipse(ctx, -1, 0, 9, 12.5, 0, null, OUT, 1.8);
+  // arms: wooden, jointed at the shoulder and elbow; the right one ends in a stiletto
+  const arm = (side, reachK, spreadK) => {
+    const sx = 1, sy = side * 10, ex = 6 + reachK * 8 - spreadK * 2, ey = side * (12 + spreadK * 8 - reachK * 6);
+    const hx = 9 + reachK * 14 - spreadK * 3, hy = side * (9 + spreadK * 12 - reachK * 7);
+    limb(ctx, [sx, sy, ex, ey, hx, hy], wood, 3.2);
+    circle(ctx, sx, sy, 2.4, shade(wood, 0.12), OUT, 1);
+    circle(ctx, ex, ey, 1.8, shade(wood, 0.12), OUT, 0.9);
+    return { hx, hy };
+  };
+  arm(-1, 0, spread);
+  const r = arm(1, reach, spread);
+  ctx.save(); ctx.translate(r.hx, r.hy); ctx.rotate(-0.5 * (1 - reach) + spread * 0.9);
+  poly(ctx, [0, -1, 13 + reach * 3, 0, 0, 1], '#e8eef4', OUT, 1);
+  line(ctx, 2, -0.3, 11, -0.1, '#ffffff', 0.5);
+  ctx.restore();
+  if (reach > 0.3) smear(ctx, 0, 0, 22, -0.25, 0.35, '#ffd8ec', reach * 0.6, 4);
+  circle(ctx, r.hx, r.hy, 2.2, skin, OUT, 1);
+  // the ruff, then the porcelain head: black lacquered hair cap, a rose bow, painted cheeks and lashes at the front
+  for (let i = 0; i < 10; i++) { const q = i / 10 * TAU; circle(ctx, Math.cos(q) * 8.2, Math.sin(q) * 8.2, 2.2, '#fbf6ee', OUT, 0.8); }
+  circle(ctx, 0, 0, 7, skin, OUT, 1.6);
+  ctx.save(); ctx.beginPath(); ctx.arc(0, 0, 6.3, 0, TAU); ctx.clip();
+  ellipse(ctx, -3.2, 0, 6.2, 7.2, 0, hairC);
+  ctx.restore();
+  circle(ctx, 4.4, -2.6, 1.3, rgba('#ff8aa8', 0.65)); circle(ctx, 4.4, 2.6, 1.3, rgba('#ff8aa8', 0.65));
+  line(ctx, 5.2, -1.6, 6.2, -1.2, '#2a1a22', 0.7); line(ctx, 5.2, 1.6, 6.2, 1.2, '#2a1a22', 0.7);
+  poly(ctx, [-6, -4, -9.5, -6, -9, -2], tunicA, OUT, 0.8); poly(ctx, [-6, -4, -9.5, -2.5, -8.5, -6.5], shade(tunicA, 0.1), OUT, 0.8);
+  if (st === 3) glow(ctx, 0, 0, 20, '#ffd27a', 0.25 + Math.sin(t * 9) * 0.1);
+  ctx.restore();
+}
+
 // World-space trails, drawn under the hero (called from drawHero after translate/scale; x, y are the hero's world position).
 const HERO_TRAIL = {
   // the Driftblade's wind: two thin ribbons streaming from where they ran, fading in half a second

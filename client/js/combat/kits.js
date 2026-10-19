@@ -2522,7 +2522,7 @@ function mariTick(k) {
 // tell the world where the Dolls are (the host judges mechanics on them; other players draw them)
 function mariShare(k) {
   if (!k.env.dolls) return;
-  k.env.dolls(k.g.dolls.map(d => ({ x: Math.round(d.x), y: Math.round(d.y), st: d.mode === 'limp' ? 2 : d.mode === 'finale' ? 3 : k.now < d.safe ? 1 : d.moving ? 4 : 0 })));
+  k.env.dolls(k.g.dolls.map(d => ({ x: Math.round(d.x), y: Math.round(d.y), st: d.mode === 'limp' ? 2 : d.mode === 'finale' ? 3 : k.now < d.safe ? 1 : d.moving ? 4 : 0, s: k.g.strings })));
 }
 // one Doll attack: every Doll in reach hits (each at the Understudy's smaller share)
 function mariHit(k, ab, pot, o = {}) {
