@@ -12,6 +12,8 @@ const UPDATE = process.argv.includes('--update-baseline');
 const DPS_TOLERANCE = 0.08;   // a class's pro DPS may drift this far from the baseline before it counts as a change
 const SPEC_TOLERANCE = 0.05;  // a specialization's pro DPS may differ this much from its own base class
 const RAID_RUNS = 2;
+const TALENT_MAX = 7;    // one talent may add at most this much pro DPS (%) to its class or spec (tools/talents.js)
+const BUILD_MAX = 18;    // ... and the strongest pick of every row together at most this much
 // bot raids: every boss, and every spec somewhere, with a fixed line-up so the result doesn't depend on a random spec
 const RAIDS = [   // [boss name, boss id, tank, healer, two DPS]
   ['Grubnak', 'grubnak', 'bastion:base', 'cleric:aegis', 'ranger:sharpshooter', 'pyromancer:cataclysm'],
@@ -41,7 +43,7 @@ function syntax() {
 // ---------------------------------------------------------------- 2. data and shared math
 function data() {
   const load = p => require(path.join(ROOT, 'client/js', p));
-  Object.assign(global, load('arena/shapes.js'), load('data.js'), load('combat/engine.js'), load('combat/kits.js'), load('combat/specs.js'), load('items.js'), load('interp.js'));
+  Object.assign(global, load('arena/shapes.js'), load('data.js'), load('combat/engine.js'), load('combat/kits.js'), load('combat/specs.js'), load('combat/talents.js'), load('items.js'), load('interp.js'));
   global.TAU = Math.PI * 2;
 
   // every class has a kit, gear for each tier and enhancements that point at real abilities
@@ -61,6 +63,7 @@ function data() {
 
   items();
   saveUpgrade();
+  talents();
 
   // party bonuses: nothing for one person, the right totals for groups, junk from clients cleaned out
   const b1 = partyBonus({ 1: 1 }), b4 = partyBonus({ 1: 4, 2: 2 });
@@ -233,10 +236,62 @@ function saveUpgrade() {
   const { Save: S } = require(p);
   delete global.localStorage;
   const inv = S.get('inv'), saved = JSON.parse(store['emberfall-save']);
-  const ok = S.VERSION === 2 && saved.v === 2 && S.gold() === 10 && inv.items.length === 3 && inv.items.every(i => !('q' in i)) &&
+  const ok = S.VERSION === 3 && saved.v === 3 && S.gold() === 10 && inv.items.length === 3 && inv.items.every(i => !('q' in i)) &&
     inv.equip.bastion.weapon === 1 && !!store['emberfall-save-backup-v1'] && Array.isArray(inv.lost);
-  if (ok) pass('Save upgrade keeps items', 'v1 -> v2: Heroic flag dropped, 10 gold per Heroic item, gear still equipped');
+  if (ok) pass('Save upgrade keeps items', 'v1 -> v3: Heroic flag dropped, 10 gold per Heroic item, gear still equipped');
   else fail('Save upgrade keeps items', JSON.stringify({ v: saved.v, gold: S.gold(), inv }));
+
+  // v2 -> v3: every hero gets an empty talent tree; rows cost gold in order, picks only in unlocked rows, reset is free
+  const store2 = { 'emberfall-save': JSON.stringify({ v: 2, name: 'Bo', gold: 130, inv: { next: 1, items: [], equip: {}, lost: [] },
+    heroes: { ranger: { clears: { grubnak: { normal: 1, hard: 0 } }, spec: null } }, settings: {} }) };
+  global.localStorage = { getItem: k => (k in store2 ? store2[k] : null), setItem: (k, v) => { store2[k] = String(v); } };
+  delete require.cache[require.resolve(p)];
+  const { Save: S2 } = require(p);
+  const probs = [], up = JSON.parse(store2['emberfall-save']);
+  if (up.v !== 3 || !up.heroes.ranger.talents || up.heroes.ranger.talents.rows !== 0 || up.heroes.ranger.clears.grubnak.normal !== 1) probs.push(`upgrade: ${JSON.stringify(up.heroes)}`);
+  if (S2.pickTalent('ranger', 0, 1)) probs.push('picked in a locked row');
+  if (!S2.unlockTalentRow('ranger', 60) || !S2.unlockTalentRow('ranger', 60) || S2.unlockTalentRow('ranger', 60) || S2.gold() !== 10) probs.push(`unlocking: gold ${S2.gold()}, rows ${S2.talents('ranger').rows}`);
+  if (!S2.pickTalent('ranger', 1, 2) || S2.pickTalent('ranger', 2, 0) || S2.pickTalent('ranger', 0, 3)) probs.push('picks: wrong rows or columns allowed');
+  const held = talentSet('ranger', S2.talents('ranger'));
+  if (held.size !== 1 || !held.has(TALENTS.ranger[1][2].id)) probs.push(`talentSet: ${[...held]}`);
+  S2.resetTalents('ranger');
+  if (S2.talents('ranger').picks.some(x => x != null) || S2.talents('ranger').rows !== 2) probs.push('reset should clear picks and keep rows');
+  if (S2.talents('cleric').rows !== 0 || talentSet('cleric', S2.talents('cleric')).size) probs.push('a fresh hero should hold no talents');
+  delete global.localStorage;
+  if (probs.length) fail('Save keeps talents', probs.join('\n')); else pass('Save keeps talents', 'v2 -> v3 adds talents; rows cost gold in order, picks free');
+}
+
+// ---------------------------------------------------------------- 2c. talents: shape, links to the kits, code and data agree
+function talents() {
+  const probs = [], ids = new Set(), src = ['combat/kits.js', 'combat/specs.js', 'combat/engine.js'].map(f => fs.readFileSync(path.join(ROOT, 'client/js', f), 'utf8')).join('\n');
+  const used = new Set([...src.matchAll(/talent\('(\w+)'\)/g)].map(m => m[1]));
+  if (JSON.stringify(TALENT_COSTS) !== '[60,120,200,300,400]') probs.push(`row costs ${TALENT_COSTS}`);
+  for (const c of CLASSES) {
+    const rows = TALENTS[c.id];
+    if (!rows || rows.length !== 5) { probs.push(`${c.id}: ${rows ? rows.length : 0} rows (want 5)`); continue; }
+    const specIds = (SPECS[c.id] || []).map(s => s.id);
+    rows.forEach((row, r) => {
+      if (row.length !== 3) probs.push(`${c.id} row ${r + 1}: ${row.length} talents (want 3)`);
+      for (const t of row) {
+        const where = `${c.id} ${t.id}`;
+        if (ids.has(t.id)) probs.push(`${where}: duplicate id`); ids.add(t.id);
+        if (!t.id.startsWith(c.id + '_')) probs.push(`${where}: id should start with ${c.id}_`);
+        if (!t.name || !t.text) probs.push(`${where}: needs a name and text`);
+        if (!KITS[c.id].abilities.some(a => a.id === t.ab)) probs.push(`${where}: unknown ability ${t.ab}`);
+        for (const k of Object.keys(t)) if (!['id', 'name', 'ab', 'text', 'spec', 'cd', 'cast', 'specMods'].includes(k)) probs.push(`${where}: unknown field "${k}"`);
+        for (const s of Object.keys(t.spec || {})) if (!specIds.includes(s)) probs.push(`${where}: text for unknown spec ${s}`);
+        for (const [s, m] of Object.entries(t.specMods || {})) {
+          if (!specIds.includes(s)) probs.push(`${where}: specMods for unknown spec ${s}`);
+          for (const k of Object.keys(m)) if (!['cd', 'cast'].includes(k)) probs.push(`${where}: specMods field "${k}"`);
+        }
+        if (!used.has(t.id) && t.cd == null && t.cast == null) probs.push(`${where}: does nothing (no k.talent('${t.id}') in the kits, no cd/cast)`);
+      }
+    });
+  }
+  for (const id of used) if (!TALENT_BY_ID[id]) probs.push(`k.talent('${id}') in the kits has no talent in talents.js`);
+  // without talents a kit plays exactly as before: the class balance check below compares base kits with the baseline
+  if (probs.length) fail('Talents line up with the kits', probs.join('\n'));
+  else pass('Talents line up with the kits', `${ids.size} talents, ${used.size} read by the kits`);
 }
 
 // ---------------------------------------------------------------- 3 + 4. balance sim and bot raids (run side by side)
@@ -250,8 +305,9 @@ function run(args) {
 }
 async function heavy() {
   const trialIds = Object.values(SPECS).flat().map(s => s.id);
-  const [sim, ...raids] = await Promise.all([
+  const [sim, tal, ...raids] = await Promise.all([
     run([path.join(__dirname, 'simulate.js')]),
+    run([path.join(__dirname, 'talents.js')]),
     ...RAIDS.map(([, boss, ...comp]) => run([path.join(__dirname, 'bot-raid.js'), 'normal', String(RAID_RUNS), boss, comp.join(',')])),
     ...trialIds.map(id => run([path.join(__dirname, 'bot-raid.js'), 'normal', '2', 'trial:' + id])),
   ]);
@@ -287,6 +343,20 @@ async function heavy() {
       .map(r => `${r.c}:${r.s}: pro DPS ${r.pro} vs ${Math.round(want(r))} aimed for`);
     if (off.length) fail('Specializations balanced', off.join('\n'));
     else pass('Specializations balanced', `${specRows.length} specs within ${SPEC_TOLERANCE * 100}% of their class`);
+  }
+
+  // talents: one talent adds a few percent, a full build stays a modest step over the base kit
+  const talRows = tal.out.split('\n').map(l => l.match(/^TALENT (\S+) (\w+) (-?[\d.]+)/)).filter(Boolean);
+  const buildRows = tal.out.split('\n').map(l => l.match(/^BUILD (\S+) (\d+) (\d+) (-?[\d.]+)/)).filter(Boolean);
+  if (tal.code !== 0 || !talRows.length || !buildRows.length) fail('Talents balanced', 'tools/talents.js failed:\n' + tal.out.slice(-800));
+  else {
+    const off = [
+      ...talRows.filter(m => +m[3] > TALENT_MAX).map(m => `${m[1]} ${m[2]}: +${m[3]}% DPS on its own (max ${TALENT_MAX}%)`),
+      ...buildRows.filter(m => +m[4] > BUILD_MAX).map(m => `${m[1]}: full build ${m[2]} -> ${m[3]} pro DPS (+${m[4]}%, max ${BUILD_MAX}%)`),
+    ];
+    const top = Math.max(...buildRows.map(m => +m[4]));
+    if (off.length) fail('Talents balanced', off.join('\n'));
+    else pass('Talents balanced', `${talRows.length} talent runs, every one at most +${TALENT_MAX}%; best full build +${top.toFixed(1)}%`);
   }
 
   // bot raids: a bot party clears each boss on Normal every time
