@@ -51,6 +51,8 @@ function runSim(classId, skill, seed, specId) {
     hpFrac: () => Math.max(0.15, 1 - Math.min(0.85, env.recentDamage(8) / maxHp * 1.3)),
     isDead: () => false,
     defaultLink: () => 'tank',
+    // where you stand: away from your spot while a mechanic moves you (and now and then for a newbie), so a Sigilmancer leaves its circle
+    pos: () => (state.away ? { x: 999, y: 0 } : { x: 0, y: 0 }),
     emit: ev => {
       if (ev.type === 'heal' || ev.type === 'hot') {
         const amt = ev.type === 'hot' ? ev.amount * ev.ticks : ev.amount;
@@ -113,6 +115,7 @@ function runSim(classId, skill, seed, specId) {
   let reaction = 0;
   for (state.t = 0; state.t < FIGHT_LEN; state.t += DT) {
     state.moving = isMoveWindow(state.t);
+    state.away = isMoveWindow(state.t) || (skill !== 'pro' && human() < 0.3);
     // Pros pre-position, so they spend less time moving.
     if (skill === 'pro' && isMoveWindow(state.t) && (state.t % MOVE_EVERY) > MOVE_LEN * 0.6) state.moving = false;
     // Melee lose uptime while moving out of mechanics (out of range); pros keep it with gap closers.
@@ -242,7 +245,7 @@ const PRO = {
     const p = abOf(k, 'pierce');
     if (k.has('barrage')) return I(k, 'quick');
     if (k.has('keen') && k.charges(p) >= 0 && ready(k, 'pierce')) return I(k, 'pierce');
-    if (k.charges(p) === 2 || (k.charges(p) === 1 && k.cdRemaining(p) === 0 && k.cd.pierce.next - k.now < 2.5)) return I(k, 'pierce');
+    if (k.charges(p) === 2 || (k.charges(p) === 1 && k.cdRemaining(p) === 0 && k.cd[p.id].next - k.now < 2.5)) return I(k, 'pierce');
     if (k.has('markself') && k.charges(p) > 0) return I(k, 'pierce');
     return I(k, 'quick');
   },
@@ -253,7 +256,7 @@ const PRO = {
     if (k.gcdRemaining() > 0.0001) return null;
     if (k.dotRemaining('poison') < 7) return I(k, 'venom');
     const behind = true;
-    if (k.g.combo >= 5 || (k.g.combo >= 4 && behind)) { ctx.setPos('flank'); return I(k, 'evis'); }
+    if (k.g.combo >= 5 || (k.g.combo >= 4 && behind)) { ctx.setPos(abOf(k, 'evis').id === 'backstab' ? 'rear' : 'flank'); return I(k, 'evis'); }   // Nightstalker's Backstab wants the back
     ctx.setPos('rear');
     return I(k, 'strike');
   },

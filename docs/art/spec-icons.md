@@ -51,7 +51,23 @@ Only moves that are new to a spec need an icon. Changed moves (for example Senti
 
 ### DPS (batch 3)
 
-Added here when the batch is designed.
+**Ranger · Sharpshooter** (gold and steel)
+12. **Aimed Shot** (`ranger/aimed`), replaces Piercing Arrow: an arrow drawn to the ear on a taut bow, a gold glint at the tip and a thin line of light running ahead to a distant target.
+
+**Ranger · Venomstrike** (acid green)
+13. **Caustic Arrow** (`ranger/caustic`), replaces Piercing Arrow: an arrow with a glowing green head dripping acid, splashing into a hissing green puddle.
+
+**Shadowblade · Bladedancer** (silver and violet)
+14. **Blade Fury** (`shadowblade/fury`), replaces Shadowstep: two curved blades whirling in a ring of silver and violet streaks, seen from above.
+
+**Shadowblade · Nightstalker** (crimson and black)
+15. **Backstab** (`shadowblade/backstab`), replaces Eviscerate: a dagger thrusting out of deep shadow, a single crimson streak and a red flash at the point.
+
+**Pyromancer · Cataclysm** (deep red and orange)
+16. **Meteor** (`pyromancer/meteor`), replaces Pyroblast: a burning rock falling out of a dark sky toward a glowing rune circle on the ground.
+
+**Pyromancer · Sigilmancer** (amber)
+17. **Ember Circle** (`pyromancer/circle`), replaces Combustion: a ring of burning glyphs on dark stone seen from above, a small robed figure standing at its centre in a column of warm light.
 
 ## Portraits (one per spec)
 
@@ -69,3 +85,9 @@ Added here when the batch is designed.
 10. **Grovekeeper · Moonwell** (silver blue): moonlit, a pale crescent moon floating behind the head, silver light catching the face and robe, night-blue background.
 11. **Chronomancer · Echoist** (lilac): a faint, slightly offset second outline of the head trailing behind, as if the portrait echoes, lilac light.
 12. **Chronomancer · Accelerant** (amber): a golden clock-hand ring spinning behind the head, motion streaks, a focused, eager expression.
+13. **Ranger · Sharpshooter** (gold): one eye narrowed down the shaft of a drawn arrow, a gold glint on the arrowhead, very still.
+14. **Ranger · Venomstrike** (acid green): hood up, a green-tipped arrow held beside the face, faint green haze drifting from the quiver.
+15. **Shadowblade · Bladedancer** (silver violet): two curved blades crossed before the chest, silver streaks curling around the shoulders, a light, poised look.
+16. **Shadowblade · Nightstalker** (crimson): mostly in shadow, only the eyes and a dagger's edge lit in red, the hood pulled low.
+17. **Pyromancer · Cataclysm** (deep red): looking up, face lit from above by a falling burning rock, embers in the hair.
+18. **Pyromancer · Sigilmancer** (amber): standing in a ring of burning glyphs that light the face from below, hands open, calm and powerful.

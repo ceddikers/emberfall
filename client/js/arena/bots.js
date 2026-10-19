@@ -257,6 +257,9 @@ const BotAI = {
     }
     // Doom: wherever the lanterns send this bot (lanternJob, worked out once per think in move())
     if (bot.job) pen += Math.min(600, Math.hypot(bot.job.x - px, bot.job.y - py)) * 12;
+    // a Sigilmancer's own Ember Circle: it's only strong inside, so leaving costs (but never more than real danger)
+    const cir = bot.actor && bot.actor.kit.g.circle;
+    if (cir && cir.end > view.t + 1 && Math.hypot(cir.x - px, cir.y - py) > cir.r - 18) pen += 700;
     // a friendly healing pool (Moonwell): worth stepping into if it's close, for everyone but the tank
     if (bot.role !== 'tank') for (const pl of view.pools || []) if (Math.hypot(pl.x - px, pl.y - py) < pl.r - 25 && Math.hypot(pl.x - bot.x, pl.y - bot.y) < pl.r + 260) pen -= 450;
     // the closing edge: be well inside where the wall is about to jump to
@@ -296,6 +299,8 @@ const BotAI = {
     bot.job = this.lanternJob(bot, view);
     const cands = [home, { x: bot.x, y: bot.y }];
     if (bot.job) cands.push({ x: bot.job.x, y: bot.job.y });
+    const cir = bot.actor && bot.actor.kit.g.circle;
+    if (cir && cir.end > view.t + 1) cands.push({ x: cir.x + (bot.x - cir.x) * 0.3, y: cir.y + (bot.y - cir.y) * 0.3 });
     if (bot.role !== 'tank') for (const pl of view.pools || []) cands.push({ x: pl.x + (bot.x - pl.x) * 0.3, y: pl.y + (bot.y - pl.y) * 0.3 });
     for (const c of [{ x: bot.x, y: bot.y }, home]) {
       for (const r of [60, 130, 220, 330]) for (let i = 0; i < 12; i++) {

@@ -498,6 +498,46 @@ const SPEC_ART = {
     circle(ctx, 0, 0, 7.8, null, '#d8c8ff', 1.2);
     ctx.restore();
   },
+  // Sharpshooter: a long gold-trimmed scope-eye glint and a steadier stance (a faint aim line ahead)
+  sharpshooter(ctx, st) {
+    ctx.save(); ctx.globalAlpha = 0.35 + Math.sin(st.t * 2) * 0.1;
+    ctx.setLineDash([3, 5]); line(ctx, 14, 0, 46, 0, '#f2d27a', 1.2); ctx.setLineDash([]);
+    ctx.restore();
+    glow(ctx, 6, -2, 5, '#fff2c0', 0.6); circle(ctx, 6, -2, 1.4, '#fff8e0');
+  },
+  // Venomstrike: green-dripping arrowheads in the quiver and a toxic haze
+  venomstrike(ctx, st) {
+    for (let i = 0; i < 3; i++) { const x = -12 + i * 2.5, y = -9 + i * 2; poly(ctx, [x, y - 3, x + 2, y, x, y + 3, x - 2, y], '#9aff4a', OUT, 0.8); }
+    glow(ctx, -10, -5, 9, '#7adf3a', 0.3 + Math.sin(st.t * 3) * 0.08);
+  },
+  // Bladedancer: a second curved blade in the off hand, both trailing a silver shimmer
+  bladedancer(ctx, st) {
+    const s = swing(actP(st, 'attack'));
+    ctx.save(); ctx.translate(8, -10); ctx.rotate(-0.5 - s * 1.4);
+    ctx.strokeStyle = '#e8ecff'; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.arc(0, 0, 14, -0.2, 1.1); ctx.stroke();
+    ctx.restore();
+    glow(ctx, 0, 0, 22, '#e0c8ff', 0.15);
+  },
+  // Nightstalker: a deep red hood shadow and eyes that glint in the dark
+  nightstalker(ctx, st) {
+    ellipse(ctx, -2, 0, 9, 9.5, 0, rgba('#1a0810', 0.85), OUT, 1.6);
+    const b = 0.6 + Math.sin(st.t * 4) * 0.25;
+    circle(ctx, 5, -2, 1, rgba('#ff3a5a', b)); circle(ctx, 5, 2, 1, rgba('#ff3a5a', b));
+    glow(ctx, 5, 0, 6, '#d0304a', 0.3 * b);
+  },
+  // Cataclysm: a small burning rock orbiting overhead, trailing smoke
+  cataclysm(ctx, st) {
+    const a = st.t * 1.6, x = Math.cos(a) * 20, y = Math.sin(a) * 18;
+    glow(ctx, x, y, 10, '#ff4a2a', 0.5);
+    circle(ctx, x, y, 3.5, '#4a2a22', OUT, 1); circle(ctx, x - 1, y - 1, 1.2, '#ffb050');
+  },
+  // Sigilmancer: a little ring of ember glyphs turning around the hands
+  sigilmancer(ctx, st) {
+    ctx.save(); ctx.translate(8, 0); ctx.rotate(st.t * 1.2);
+    circle(ctx, 0, 0, 13, null, rgba('#ffb347', 0.55), 1.3);
+    for (let i = 0; i < 6; i++) { const a = i * TAU / 6; glow(ctx, Math.cos(a) * 13, Math.sin(a) * 13, 4, '#ffcf7a', 0.7); }
+    ctx.restore();
+  },
   // Accelerant: a golden clock-hand ring spinning fast around them
   accelerant(ctx, st) {
     ctx.save(); ctx.rotate(st.t * 3);

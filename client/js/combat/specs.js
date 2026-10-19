@@ -462,6 +462,205 @@ const SPECS = {
       }),
     },
   ],
+
+  // ======================================================================= DPS
+  ranger: [
+    {
+      id: 'sharpshooter', name: 'Sharpshooter', title: 'The Still Eye', accent: '#f2d27a',
+      blurb: 'Breathe out, then let fly. Every second you stand still sharpens the next shot.',
+      focus: 'Precision. Standing still builds Steady Aim for more damage, and Piercing Arrow becomes Aimed Shot, a slow, huge hit. Weaker while moving.',
+      passive: { name: 'Steady Aim', desc: 'Every second you stand still adds a stack of Steady Aim (up to 5): 4% more damage each. Moving loses them all. Piercing Arrow becomes Aimed Shot.' },
+      build: () => ({
+        potMult: 0.784,
+        tick(k) {
+          const dt = k.now - (k.g.aimT ?? k.now);
+          k.g.aimT = k.now;
+          if (k.env.moving()) { if (k.has('aim')) k.clear('aim'); k.g.still = 0; return; }
+          if (dt <= 0 || dt > 1) return;
+          k.g.still = (k.g.still || 0) + dt;
+          if (k.g.still >= 1) { k.g.still -= 1; k.buff('aim', 30, {}, 5, 1); }
+        },
+        dmgMod: k => k.stacks('aim') * 0.04,
+        abilities: {
+          pierce: {
+            id: 'aimed', replaces: 'pierce', icon: 'pierce', name: 'Aimed Shot', type: 'gcd', target: 'enemy', range: SPEC_RANGED, charges: 2, cd: 12, anim: 'attack',
+            cast: k => (k.has('keen') ? 0 : 2),
+            desc: '2s cast: a heavy, carefully aimed shot, two charges. With Keen Eye it\'s instant, hits harder and gives the charge back.',
+            glow: k => k.has('keen') || k.charges(k.abById('aimed')) === 2,
+            effect(k) {
+              if (k.consume('keen')) {
+                k.damage(760, { ab: this }); k.refundCharge('aimed');
+                if (k.perk('ranger_w2')) { k.damage(250, { ab: this }); k.fx('empower'); }
+              } else k.damage(620, { ab: this });
+            },
+            fx: { type: 'line', color: '#ffe9a0', range: 440 },
+          },
+        },
+      }),
+    },
+    {
+      id: 'venomstrike', name: 'Venomstrike', title: 'The Green Death', accent: '#9aff4a',
+      blurb: 'Every arrow leaves a little acid behind. Then one arrow lets it all out.',
+      focus: 'Damage that ramps. Quick Shot stacks an acid burn on the boss and Caustic Arrow bursts every stack at once.',
+      passive: { name: 'Acid', desc: 'Quick Shot adds a stack of Acid to the target (up to 8): a burn that grows with each stack. Piercing Arrow becomes Caustic Arrow, which bursts every stack.' },
+      build: base => {
+        // one or more stacks of Acid: the burn keeps its rhythm and grows (no pandemic waste from re-applying)
+        function addAcid(k, n, ab) {
+          k.g.acid = Math.min(8, k.g.acid + n);
+          const d = k.dots.get('acid');
+          if (d && d.end > k.now) { d.potency = 14 * k.g.acid; d.end = k.now + 15; }
+          else k.dot('acid', 14 * k.g.acid, 15, 3, { ab });
+        }
+        return {
+          potMult: 1.19,
+          init: () => Object.assign(base.init(), { acid: 0 }),
+          tick(k) { if (k.g.acid && !k.dots.has('acid')) k.g.acid = 0; },
+          abilities: {
+            quick: {
+              desc: 'Fast shot: damage, +10 Focus and a stack of Acid on the target. Sometimes lights up Keen Eye.',
+              effect(k) {
+                const barr = k.consume('barrage');
+                k.damage(barr ? 600 : 200, { ab: this });
+                k.gain('focus', barr ? 30 : 10);
+                addAcid(k, barr ? 3 : 1, this);
+                if (k.rng() < (k.has('markself') ? 0.55 : 0.35) + (k.perk('ranger_w1') ? 0.1 : 0)) k.proc('keen', 15);
+              },
+            },
+            pierce: {
+              id: 'caustic', replaces: 'pierce', icon: 'pierce', name: 'Caustic Arrow', type: 'gcd', target: 'enemy', range: SPEC_RANGED, charges: 2, cd: 12, anim: 'attack',
+              desc: 'Burst every stack of Acid at once: damage that grows with each stack. Two charges. Keen Eye makes it stronger and gives the charge back.',
+              glow: k => k.g.acid >= 6 || (k.g.acid >= 3 && (k.has('keen') || k.charges(k.abById('caustic')) === 2)),   // burst when there's acid worth bursting
+              effect(k) {
+                const n = k.g.acid; k.g.acid = 0; k.dots.delete('acid');
+                const keen = k.consume('keen');
+                k.damage(200 + 60 * n + (keen ? 160 : 0), { ab: this });
+                if (keen) { k.refundCharge('caustic'); if (k.perk('ranger_w2')) { k.damage(250, { ab: this }); k.fx('empower'); } }
+              },
+              fx: { type: 'line', color: '#9aff4a', range: 440 },
+            },
+          },
+        };
+      },
+    },
+  ],
+
+  shadowblade: [
+    {
+      id: 'bladedancer', name: 'Bladedancer', title: 'The Whirling Edge', accent: '#e0c8ff',
+      blurb: 'Steel in every direction. It doesn\'t matter where the boss is looking.',
+      focus: 'Steady damage from anywhere. No positionals to chase, and Blade Fury spins through everything around you, but a lower peak.',
+      passive: { name: 'Whirling Edge', desc: 'Your positionals always land, wherever you stand. Shadowstep becomes Blade Fury, a spinning flurry.' },
+      build: () => ({
+        potMult: 0.944,
+        positionalAlways: () => true,
+        abilities: {
+          step: {
+            id: 'fury', replaces: 'step', icon: 'step', name: 'Blade Fury', type: 'ogcd', target: 'enemy', range: SPEC_MELEE, charges: 2, cd: 15, anim: 'attack',
+            desc: 'Spin through everything around you: damage and +1 combo point. Two charges.',
+            effect(k) { k.damage(260, { ab: this }); k.gain('combo', k.perk('shadowblade_a2') ? 2 : 1, 5); },
+            fx: { type: 'slash', color: '#e0c8ff', r: 60, span: 6.28 },
+          },
+        },
+      }),
+    },
+    {
+      id: 'nightstalker', name: 'Nightstalker', title: 'The Knife Behind', accent: '#d0304a',
+      blurb: 'Wait in the dark behind them. Then end it.',
+      focus: 'Burst from behind. Backstab hits very hard from the rear and Shadow Dance lasts longer, but standing anywhere else costs you more.',
+      passive: { name: 'From the Shadows', desc: 'Eviscerate becomes Backstab: much stronger from behind, weaker from the front. Shadow Dance lasts 14s.' },
+      build: () => ({
+        potMult: 0.954,
+        abilities: {
+          evis: {
+            id: 'backstab', replaces: 'evis', icon: 'evis', name: 'Backstab', type: 'gcd', target: 'enemy', range: SPEC_MELEE, anim: 'attack',
+            desc: 'Spend all combo points for a big hit. Much stronger from behind, weaker from the front, and stronger at 5 points.',
+            usable: k => k.g.combo >= 1,
+            glow: k => k.g.combo >= 5 || (k.g.combo >= 4 && k.env.positional() === 'rear'),
+            effect(k) {
+              const cp = k.g.combo; k.g.combo = 0;
+              const front = k.env.positional() === 'front' && !k.has('truenorth') && !k.has('dance');
+              const mult = (k.dotRemaining('poison') > 0 ? 1.15 : 1) * (k.has('dance') ? 1.25 : 1) * (front ? 0.75 : 1);
+              const pot = 110 + 115 * cp + (cp >= 5 ? 160 : 0);
+              const r = k.damage(pot, { ab: this, positional: 'rear', posBonus: 60 + 30 * cp, mult });
+              if (cp >= 5 && k.perk('shadowblade_w2')) { k.damage((pot + (r.posHit ? 60 + 30 * cp : 0)) * 0.3, { ab: this, mult }); k.fx('empower'); }
+            },
+            fx: { type: 'slash', color: '#ff3a5a', r: 52, span: 1.4 },
+          },
+          dance: { desc: 'Burst: 14s of faster attacks, every positional lands, and Backstab hits 25% harder.', effect(k) { k.buff('dance', 14); if (k.perk('shadowblade_w3')) k.gain('combo', 2, 5); } },
+        },
+      }),
+    },
+  ],
+
+  pyromancer: [
+    {
+      id: 'cataclysm', name: 'Cataclysm', title: 'The Falling Star', accent: '#ff4a2a',
+      blurb: 'Call the sky down. Big, slow, and worth the wait.',
+      focus: 'Huge single hits. Pyroblast becomes Meteor: a rune circle on the boss, then a meteor smashes it 1.5s later and leaves a burning crater.',
+      passive: { name: 'Meteor', desc: 'Pyroblast becomes Meteor: it lands 1.5s after you cast it, hits much harder, and leaves a burning crater. Hot Streak still makes it instant.' },
+      build: base => {
+        // Meteor counts as Pyroblast for crits and Hot Streak (its crater burn doesn't)
+        const asPyro = o => (o && o.ab && o.ab.id === 'meteor' && !o.dot ? Object.assign({}, o, { ab: { id: 'pyro' } }) : o);
+        return {
+          potMult: 0.867,
+          init: () => Object.assign(base.init(), { meteors: [] }),
+          critMod: (k, o) => base.critMod(k, asPyro(o)),
+          onDamage: (k, amt, crit, o) => base.onDamage(k, amt, crit, asPyro(o)),
+          tick(k) {
+            base.tick(k);
+            while (k.g.meteors.length && k.now >= k.g.meteors[0].at) k.g.meteors.shift().fn();
+          },
+          abilities: {
+            pyro: {
+              id: 'meteor', replaces: 'pyro', icon: 'pyro', name: 'Meteor', type: 'gcd', target: 'enemy', range: SPEC_RANGED, anim: 'cast',
+              cast: k => (k.has('hotstreak') ? 0 : 3.0),
+              desc: '3s cast: a rune circle on the target, and 1.5s later a meteor smashes it for huge damage and leaves a burning crater. With Hot Streak it\'s instant.',
+              glow: k => k.has('hotstreak'),
+              effect(k) {
+                const hs = k.consume('hotstreak'), ab = this;
+                k.gain('heat', hs ? 10 : 20, 100);
+                k.g.meteors.push({ at: k.now + 1.5, fn: () => {
+                  k.damage(hs ? 800 : 700, { ab });
+                  k.dot('crater', 50, 9, 3, { ab });
+                  if (hs && k.perk('pyromancer_w2')) { k.dot('pyroburn', 70, 9, 3, { ab }); k.fx('empower'); }
+                } });
+              },
+              fx: { type: 'zone', style: 'meteor', color: '#ff4a2a', r: 90, range: SPEC_RANGED, dur: 1.6 },
+            },
+          },
+        };
+      },
+    },
+    {
+      id: 'sigilmancer', name: 'Sigilmancer', title: 'The Burning Circle', accent: '#ffb347',
+      blurb: 'Draw the circle, stand inside, and burn brighter than anyone. Step out and the fire fades.',
+      focus: 'Positioning. Ember Circle makes you much stronger, but only while you stand in it, so where you plant it is the skill.',
+      passive: { name: 'Ember Circle', desc: 'Combustion becomes Ember Circle: a circle of fire at your feet for 20s. Inside it you cast 20% faster and deal 15% more damage. Outside, nothing.' },
+      build: base => {
+        const inCircle = k => { const c = k.g.circle; if (!c || k.now > c.end || !k.env.pos) return false; const p = k.env.pos(); return Math.hypot(p.x - c.x, p.y - c.y) <= c.r; };
+        return {
+          potMult: 1,
+          init: () => Object.assign(base.init(), { circle: null }),
+          dmgMod: (k, o) => base.dmgMod(k, o) + (inCircle(k) ? 0.15 : 0),
+          haste: k => (inCircle(k) ? 0.8 : 1),
+          // a short buff that stays lit while you stand inside, so the HUD shows it
+          tick(k) { base.tick(k); if (inCircle(k)) k.buff('incircle', 0.3); },
+          abilities: {
+            combust: {
+              id: 'circle', replaces: 'combust', icon: 'combust', name: 'Ember Circle', type: 'ogcd', target: 'self', cd: 45, anim: 'big',
+              desc: 'Plant a circle of fire at your feet for 20s. While you stand in it, you cast 20% faster and deal 15% more damage.',
+              effect(k) {
+                const p = k.env.pos ? k.env.pos() : { x: 0, y: 0 };
+                k.g.circle = { x: p.x, y: p.y, r: 95, end: k.now + (k.perk('pyromancer_a4') ? 26 : 20) };
+                if (k.perk('pyromancer_w3')) k.refill('fireblast');
+              },
+              fx: { type: 'zone', style: 'fire', color: '#ffb347', r: 95, range: 0, dur: 20 },
+            },
+          },
+        };
+      },
+    },
+  ],
 };
 
 // Judgment (Inquisitor): the boss carries n charges; each ally hit bursts one for this much damage (the host

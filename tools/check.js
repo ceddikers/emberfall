@@ -12,15 +12,15 @@ const UPDATE = process.argv.includes('--update-baseline');
 const DPS_TOLERANCE = 0.08;   // a class's pro DPS may drift this far from the baseline before it counts as a change
 const SPEC_TOLERANCE = 0.05;  // a specialization's pro DPS may differ this much from its own base class
 const RAID_RUNS = 2;
-// bot raids: every boss, and every tank and healer spec somewhere, with a fixed line-up so the result doesn't depend on a random spec
-const RAIDS = [
-  ['Grubnak', 'grubnak', 'bastion:base', 'cleric:aegis'],
-  ['Skitterra', 'skitterra', 'runeguard:runeblade', 'grovekeeper:moonwell'],
-  ['Volkar', 'volkar', 'bloodreaver:berserker', 'chronomancer:accelerant'],
-  ['Volkar', 'volkar', 'bloodreaver:hemomancer', 'cleric:inquisitor'],
-  ['the Hollow King', 'hollowking', 'bastion:sentinel', 'grovekeeper:lifebinder'],
-  ['the Hollow King', 'hollowking', 'bastion:crusader', 'chronomancer:echoist'],
-  ['the Hollow King', 'hollowking', 'runeguard:spellwarden', 'cleric:base'],
+// bot raids: every boss, and every spec somewhere, with a fixed line-up so the result doesn't depend on a random spec
+const RAIDS = [   // [boss name, boss id, tank, healer, two DPS]
+  ['Grubnak', 'grubnak', 'bastion:base', 'cleric:aegis', 'ranger:sharpshooter', 'pyromancer:cataclysm'],
+  ['Skitterra', 'skitterra', 'runeguard:runeblade', 'grovekeeper:moonwell', 'shadowblade:bladedancer', 'pyromancer:sigilmancer'],
+  ['Volkar', 'volkar', 'bloodreaver:berserker', 'chronomancer:accelerant', 'ranger:venomstrike', 'pyromancer:base'],
+  ['Volkar', 'volkar', 'bloodreaver:hemomancer', 'cleric:inquisitor', 'shadowblade:nightstalker', 'pyromancer:sigilmancer'],
+  ['the Hollow King', 'hollowking', 'bastion:sentinel', 'grovekeeper:lifebinder', 'ranger:base', 'pyromancer:cataclysm'],
+  ['the Hollow King', 'hollowking', 'bastion:crusader', 'chronomancer:echoist', 'shadowblade:base', 'ranger:sharpshooter'],
+  ['the Hollow King', 'hollowking', 'runeguard:spellwarden', 'cleric:base', 'ranger:venomstrike', 'shadowblade:nightstalker'],
 ];
 
 const results = [];
@@ -128,7 +128,7 @@ function run(args) {
 async function heavy() {
   const [sim, ...raids] = await Promise.all([
     run([path.join(__dirname, 'simulate.js')]),
-    ...RAIDS.map(([, boss, tank, healer]) => run([path.join(__dirname, 'bot-raid.js'), 'normal', String(RAID_RUNS), boss, `${tank},${healer},ranger,pyromancer`])),
+    ...RAIDS.map(([, boss, ...comp]) => run([path.join(__dirname, 'bot-raid.js'), 'normal', String(RAID_RUNS), boss, comp.join(',')])),
   ]);
 
   // balance: each class's pro DPS against the baseline
@@ -164,8 +164,8 @@ async function heavy() {
   }
 
   // bot raids: a bot party clears each boss on Normal every time
-  RAIDS.forEach(([boss, , tank, healer], i) => {
-    const r = raids[i], m = r.out.match(/cleared (\d+) of (\d+)/), name = `Bots clear ${boss} (Normal, ${tank} + ${healer})`;
+  RAIDS.forEach(([boss, , ...comp], i) => {
+    const r = raids[i], m = r.out.match(/cleared (\d+) of (\d+)/), name = `Bots clear ${boss} (Normal, ${comp.join(' ')})`;
     if (r.code === 0 && m && m[1] === m[2]) pass(name, `${m[1]} of ${m[2]}`);
     else fail(name, m ? `${m[1]} of ${m[2]}\n` + r.out.split('\n').filter(l => /^run /.test(l)).join('\n') : r.out.slice(-800));
   });

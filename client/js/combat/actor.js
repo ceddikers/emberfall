@@ -31,6 +31,7 @@ class CombatActor {
       recentDamage: secs => world.recentDamage(actor, secs),
       maxHp: () => world.maxHp(actor),
       hpFrac: () => (world.hpFrac ? world.hpFrac(actor) : 1),   // your health, 0..1 (Berserker)
+      pos: () => ({ x: actor.ent.x, y: actor.ent.y }),            // where you stand (Sigilmancer's circle)
       isDead: id => world.isDead(id),
       defaultLink: () => world.defaultLink(actor),
       emit: ev => world.onEvent(actor, ev),

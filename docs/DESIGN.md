@@ -432,7 +432,7 @@ Stats:
 - One idle human plus three bots: cleared 2 of 3 at about 9:00. The idle hero misses every bell, so everyone gets doomed, and the bots still cured all 22 Dooms.
 - **Hard:** bots reach phase 3 and wipe at 12-20%, at the enrage.
 - Every Doom in every run was cured.
-### Specializations (in progress: tanks and healers built)
+### Specializations (all 18 built)
 
 Each class picks one of two specializations, or keeps the base kit. Rules:
 - **A spec reshapes the kit, it doesn't replace it.** It swaps one or two abilities and gives the signature mechanic a new purpose, still on Q W E R D F + Space.
@@ -467,7 +467,18 @@ The hero page shows the base class and both specs as tabs. A spec shows what it 
 | **Chronomancer · Echoist** (The Second Voice) | Delayed healing | Temporal Bolt and Recall repeat 3 s later at half strength. Accelerando becomes **Echo Chamber**: the same party haste, and echoes are full strength while it lasts. |
 | **Chronomancer · Accelerant** (The Quickened Hour) | Party support | Haste drains Flux 40% slower and its Bolts heal the party more; Accelerando gives 15% for 20 s; Slow heals the link a little less. |
 
-New host support: heals can target `'lowest'` (the most hurt ally, optionally not a given one), healing pools on the floor (`pool` events, ticked in `fight.js`), and the Inquisitor's brand (`brand` events; `burstBrand` credits each burst to the Inquisitor).
+**DPS (design choices made together on 2026-10-19; the Sigilmancer was the user's own idea, a Black Mage-style circle):**
+
+| Spec | Specializes in | What changes |
+|---|---|---|
+| **Ranger · Sharpshooter** (The Still Eye) | Precision | Each second standing still adds Steady Aim (up to 5, +4% damage each); moving loses it. Piercing Arrow becomes **Aimed Shot**: a 2 s cast, a heavy hit (instant with Keen Eye). |
+| **Ranger · Venomstrike** (The Green Death) | Damage that ramps | Quick Shot stacks Acid on the target (up to 8, a growing burn). Piercing Arrow becomes **Caustic Arrow**, which bursts every stack. |
+| **Shadowblade · Bladedancer** (The Whirling Edge) | Steady damage from anywhere | Positionals always land. Shadowstep becomes **Blade Fury**, a spinning flurry (+1 combo point, two charges). |
+| **Shadowblade · Nightstalker** (The Knife Behind) | Burst from behind | Eviscerate becomes **Backstab**: much stronger from behind, 25% weaker from the front. Shadow Dance lasts 14 s. |
+| **Pyromancer · Cataclysm** (The Falling Star) | Huge single hits | Pyroblast becomes **Meteor**: lands 1.5 s after the cast, hits harder, leaves a burning crater. Hot Streak still makes it instant. |
+| **Pyromancer · Sigilmancer** (The Burning Circle) | Positioning | Combustion becomes **Ember Circle**: a 20 s circle at your feet (45 s cooldown). Inside it you cast 20% faster and deal 15% more damage; outside, nothing. Bots stay in theirs. |
+
+New support: kits can ask where their hero stands (`env.pos`, for the Sigilmancer's circle); heals can target `'lowest'` (the most hurt ally, optionally not a given one), healing pools on the floor (`pool` events, ticked in `fight.js`), and the Inquisitor's brand (`brand` events; `burstBrand` credits each burst to the Inquisitor).
 
 **Chronomancer healing raised (2026-10-19):** with the healer specs in the bot line-ups, the base Chronomancer could not heal Volkar (0 of 4 with any tank). Its damage is unchanged, but Bolt now heals the link for 120% (was 85%) and the party for 50% in Haste (was 30%), Recall heals 1,400 (was 1,200), and Haste drains Flux at 4 a second (was 5). A bug where looking up Bolt's cast time spent the free Surge Bolt is fixed. Bots also keep the Chronomancer's link on the tank. Volkar with a Chronomancer now clears 4 of 6 (Bastion), 5 of 6 (Echoist), 6 of 6 (Accelerant); a Runeguard tank with a Chronomancer is still the weakest pairing there (1 of 6), since nothing shields the Runeguard before a buster.
 

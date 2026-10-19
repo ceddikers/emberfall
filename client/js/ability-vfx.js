@@ -160,3 +160,46 @@ const AUTO_VFX = (() => {
     spark: c => V.missile(c.ent.x, c.ent.y, c.tx, c.ty, { style: 'orb', color: c.color, speed: 950, size: 0.5, onHit: (x, y) => V.hit(x, y, c.color, 0.35) }),
   };
 })();
+
+// DPS specialization moves (kept in their own block; the class recipes above stay as they were).
+(() => {
+  const V = VFX;
+  Object.assign(ABILITY_VFX.ranger, {
+    // Sharpshooter: a glint on the string, then a golden spiralling shot and a puff of dust where it lands
+    aimed: c => { V.spawn({ x: c.x + Math.cos(c.ang) * 18, y: c.y + Math.sin(c.ang) * 18, z: 20, life: 0.25, size: 34, size1: 8, color: '#fff2c0', kind: 'star', vr: 6 });
+      V.missile(c.x, c.y, c.tx, c.ty, { style: 'helix', color: '#f2d27a', speed: 1700, size: 1.3, onHit: (x, y) => { V.hit(x, y, '#fff2c0', 1.2); V.shock(x, y, { r: 70, color: '#ffe9a0', dur: 0.35, w: 5 }); V.smoke(x, y, { n: 4, color: '#d8ccb0', size: 22, a: 0.5, speed: 50 }); FX.shake = Math.max(FX.shake, 3); } }); },
+    // Venomstrike: a dripping green arrow that splashes acid, which bubbles for a moment
+    caustic: c => V.missile(c.x, c.y, c.tx, c.ty, { style: 'arrow', color: '#9aff4a', speed: 1400, size: 1.2, onHit: (x, y) => {
+      V.splash(x, y, { color: '#7adf3a', n: 12, speed: 1.2 }); V.hit(x, y, '#c8ff8a', 1); V.shock(x, y, { r: 60, color: '#9aff4a', dur: 0.35, w: 4 });
+      for (let i = 0; i < 10; i++) V.spawn({ x: x + (Math.random() - 0.5) * 50, y: y + (Math.random() - 0.5) * 24, z: 4, vz: 20 + Math.random() * 40, life: 0.8 + Math.random() * 0.6, size: 7, size1: 12, color: '#9adf3a', kind: 'soft' }); } }),
+  });
+  Object.assign(ABILITY_VFX.shadowblade, {
+    // Bladedancer: three silver-violet cuts all the way around, a whirl of steel, sparks flung out
+    fury: c => { for (let i = 0; i < 3; i++) c.later(i * 0.06, () => V.slash(c.x, c.y, c.ang + i * 2.1, { r: 64, span: 2.4, color: i % 2 ? '#c58aff' : '#e8ecff', w: 0.5, dur: 0.26, flip: i % 2 === 1, sparks: 4 }));
+      V.swirl(c.x, c.y, { r: 66, color: '#d8c0ff', dur: 0.5, arms: 4, layer: 'air' }); },
+    // Nightstalker: a deep crimson thrust from behind, a red flash and a spray at the wound
+    backstab: c => { V.slash(c.x, c.y, c.ang, { r: 56, span: 0.9, color: '#ff3a5a', w: 0.7, dur: 0.22 });
+      c.later(0.07, () => { V.spawn({ x: c.tx, y: c.ty, z: 18, life: 0.3, size: 70, size1: 24, color: '#ff3a5a', kind: 'star', vr: 5 }); V.splash(c.tx, c.ty, { n: 10, speed: 1.2 }); V.hit(c.tx, c.ty, '#ff8a9a', 1.2); FX.shake = Math.max(FX.shake, 3); }); },
+  });
+  Object.assign(ABILITY_VFX.pyromancer, {
+    // Cataclysm: a rune circle marks the spot, a meteor falls onto it 1.5s later and leaves a burning crater
+    meteor: c => {
+      V.sigil(c.tx, c.ty, { r: 80, style: 'star5', color: '#ff4a2a', dur: 1.7, spin: 1.2 });
+      c.later(1.0, () => V.missile(c.tx - 170, c.ty - 430, c.tx, c.ty, { style: 'meteor', color: '#ff5a1a', speed: 900, size: 1.6, onHit: (x, y) => {
+        V.flare(x, y, { n: 30, r: 28, size: 1.5, h: 1.6 }); V.shock(x, y, { r: 150, color: '#ff8a3a', dur: 0.55, w: 9 }); V.burst(x, y, { color: '#ffd070', n: 18, speed: 340, flashR: 100 });
+        V.decal(x, y, { style: 'crack', r: 70, dur: 9, a: 0.7, seed: Math.random() * 6 }); V.decal(x, y, { r: 56, embers: true, dur: 9 }); V.smoke(x, y, { n: 8, color: '#4a3a3a', size: 34, a: 0.5, speed: 70, life: 1.4 });
+        FX.shake = Math.max(FX.shake, 8); } }));
+    },
+    // Sigilmancer: a ring of ember glyphs on the floor for the circle's whole life, embers rising off its rim
+    circle: c => {
+      const x = c.x, y = c.y, r = 95;
+      V.sigil(x, y, { r, style: 'runes', color: '#ffb347', dur: 20, spin: 0.25 });
+      V.shock(x, y, { r: r + 20, color: '#ffcf7a', dur: 0.5, w: 6 }); V.flare(x, y, { n: 14, r: 20, color: '#ff9a3a' });
+      V.fx({ dur: 20, layer: 'ground', draw: (ctx, p, t, e) => {
+        const k = Math.min(1, p / 0.05, (1 - p) / 0.05) * e.a;
+        ctx.globalAlpha = 0.35 * k; ctx.strokeStyle = 'rgba(40,16,4,1)'; ctx.lineWidth = 6;
+        ctx.beginPath(); ctx.ellipse(x, y, r + 3, (r + 3) * 0.78, 0, 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = 1;
+      }, tick: () => { if (Math.random() < 0.4) { const a = Math.random() * Math.PI * 2; V.spawn({ x: x + Math.cos(a) * r, y: y + Math.sin(a) * r * 0.78, z: 0, vz: 40 + Math.random() * 60, life: 0.9, size: 7, size1: 0, color: Math.random() < 0.5 ? '#ffb347' : '#ffe08a' }); } } });
+    },
+  });
+})();
