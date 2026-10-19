@@ -4,15 +4,20 @@
 // replacement names the move it took over with `replaces`). Where a spec's version plays very differently the talent
 // says so in `spec` (its text for that spec), and the kit code gives it a fitting variant.
 //
-// Rows, roughly: 1 rotation, 2 survival or utility, 3 the class gauge, 4 big cooldowns, 5 a new part of a move.
-// Each talent is about +2-4% output or a comparable utility gain; a full set stays under about +15%
-// (tools/talents.js measures them, tools/check.js holds the line).
+// Rows, roughly: 1 rotation, 2 survival or utility, 3 the class gauge, 4 big cooldowns, 5 a capstone.
+// The rule (2026-10): talents change how a hero plays, not how big the numbers are. Per class at most one plain number
+// (a flat cooldown or cast change); rows III and V each hold a talent that grants a whole new move in place of one of
+// the six (`grants`); everything else is a new trigger, a follow-up press, a move that now moves you or leaves a zone,
+// an interaction with the gauge, or a reaction to the boss (its casts, Vulnerability). The three in a row should play
+// differently. A single talent stays under +7% pro DPS and a full build under +18% (tools/talents.js, tools/check.js).
 //
 // A talent: { id, name, ab (the base ability it changes: its tooltip shows the talent), text, spec?: { specId: text },
 //   cd?: { baseAbilityId: seconds } (cooldown change), cast?: { baseAbilityId: seconds } (cast time change),
-//   specMods?: { specId: { cd?, cast? } } (a spec's own numbers for those) }.
+//   specMods?: { specId: { cd?, cast? } } (a spec's own numbers for those), grants?: true (the kit's
+//   talentAbilities[id] takes the slot of `ab`, engine.js) }.
 // The kits check k.talent(id) (engine.js); cd / cast changes are applied by the engine from this data.
 // Client-side only: nothing here touches HP or Defense, so the host never needs to know.
+// Saves keep the id of each pick (save.js): a pick whose id leaves its row is cleared, the row stays bought.
 
 const TALENT_COSTS = [60, 120, 200, 300, 400];
 
@@ -20,85 +25,115 @@ const TALENTS = {
   // ======================================================================= TANKS
   bastion: [
     [
-      { id: 'bastion_judgment', name: 'Heavy Judgment', ab: 'blade', text: 'Judgment, the third Blade Chain hit, strikes 15% harder.' },
-      { id: 'bastion_counter', name: 'Counterstrike', ab: 'brace', text: 'The counter after a Perfect Block hits 30% harder.' },
-      { id: 'bastion_lightforged', name: 'Lightforged', ab: 'edge', text: 'Holy Edge hits 8% harder.', spec: { sentinel: 'Shield Bash hits 8% harder.' } },
+      { id: 'bastion_rhythm', name: 'Shield Rhythm', ab: 'blade', text: 'A Blade Chain hit that carries a Perfect Block counter now skips the chain ahead: your next press is Judgment.' },
+      { id: 'bastion_returning', name: 'Returning Edge', ab: 'edge', text: 'Holy Edge now comes back to your hand: a moment later it cuts the boss again on the way home, for a tenth of the damage.',
+        spec: { sentinel: 'Shield Bash now sends a shockwave rolling on: a moment later it strikes the boss again, for a tenth of the damage.' } },
+      { id: 'bastion_read', name: 'Read the Swing', ab: 'blade', text: 'Whenever the boss begins a cast, your next Blade Chain hit counters it (+150), as after a Perfect Block.' },
     ],
     [
-      { id: 'bastion_steadfast', name: 'Steadfast', ab: 'brace', text: 'Brace cuts damage by 35% instead of 25%.' },
-      { id: 'bastion_mercy', name: 'Mercy of the Edge', ab: 'edge', text: 'Holy Edge heals you twice as much.', spec: { sentinel: 'Shield Bash heals you twice as much.' } },
-      { id: 'bastion_sanctuary', name: 'Sanctuary', ab: 'banner', text: 'Rally Banner also heals the whole party every 3s while it stands.' },
+      { id: 'bastion_holdfast', name: 'Hold Fast', ab: 'brace', text: 'A Brace raised while the boss is casting now holds until the cast lands (up to 6s) instead of 3s.' },
+      { id: 'bastion_mercy', name: 'Shared Mercy', ab: 'edge', text: 'While you are above 70% HP, Holy Edge\'s heal goes to the most hurt ally instead of you, twice as strong.',
+        spec: { sentinel: 'While you are above 70% HP, Shield Bash\'s heal goes to the most hurt ally instead of you, twice as strong.' } },
+      { id: 'bastion_laststand', name: 'Last Stand', ab: 'bulwark', text: 'Bulwark now raises itself the moment you drop below 30% HP, if it is ready.',
+        spec: { crusader: 'Zealous Guard now raises itself the moment you drop below 30% HP, if it is ready.' } },
     ],
     [
-      { id: 'bastion_unshaken', name: 'Unshaken', ab: 'brace', text: 'A Perfect Block gives 25 Resolve instead of 20.' },
-      { id: 'bastion_riposte', name: 'Riposte\'s Due', ab: 'blade', text: 'Riposte, the second Blade Chain hit, gives 10 Resolve.' },
-      { id: 'bastion_tithe', name: 'Tithe of Light', ab: 'edge', text: 'Holy Edge gives back 5 Resolve.', spec: { sentinel: 'Shield Bash gives back 5 Resolve.' } },
+      { id: 'bastion_hallowed', name: 'Hallowed Ground', ab: 'banner', grants: true,
+        text: 'Rally Banner becomes Hallowed Ground (30s): pour out all your Resolve (at least 30) to consecrate the ground under you for 10s. The boss burns every 2s, harder the more you poured, and a Perfect Block inside gives 10 more Resolve.' },
+      { id: 'bastion_steady', name: 'Steady Hands', ab: 'edge', text: 'For 6s after a Perfect Block, Holy Edge costs 35 Resolve instead of 50.',
+        spec: { sentinel: 'For 6s after a Perfect Block, Shield Bash costs 35 Resolve instead of 50.' } },
+      { id: 'bastion_overflow', name: 'Overflowing Faith', ab: 'brace', text: 'Resolve that would spill past 100 now hardens into a shield on you for 8s.' },
     ],
     [
-      { id: 'bastion_vigil', name: 'Long Vigil', ab: 'oath', text: 'Oath of Valor lasts 4s longer.' },
-      { id: 'bastion_wall', name: 'Wall of Faith', ab: 'bulwark', text: 'Bulwark also fills 40 Resolve.', spec: { crusader: 'Zealous Guard also fills 40 Resolve.' } },
-      { id: 'bastion_standard', name: 'Standard of Valor', ab: 'banner', text: 'While Rally Banner stands, the whole party also deals 3% more damage.' },
+      { id: 'bastion_unbreakable', name: 'Unbreakable', ab: 'bulwark', text: 'While Bulwark lasts, every Perfect Block gives its Brace charge straight back.',
+        spec: { crusader: 'While Zealous Guard lasts, every Perfect Block gives its Brace charge straight back.' } },
+      { id: 'bastion_shelter', name: 'Shelter', ab: 'bulwark', text: 'Bulwark now covers the party too: for its first 4s everyone takes 10% less damage.',
+        spec: { crusader: 'Zealous Guard now covers the party too: for its first 4s everyone takes 10% less damage.' } },
+      { id: 'bastion_ironwill', name: 'Iron Will', ab: 'brace', cd: { brace: -1.5 }, text: 'Brace recharges 1.5s faster.' },
     ],
     [
+      { id: 'bastion_avatar', name: 'Avatar of Dawn', ab: 'oath', grants: true,
+        text: 'Oath of Valor becomes Avatar of Dawn (60s): wings of light for 15s. Everything Oath of Valor does, and every Perfect Block calls a pillar of light down on the boss.',
+        spec: { crusader: 'Oath of Valor becomes Avatar of Dawn (60s): wings of light for 20s. Everything Oath of Valor does, and every Perfect Block calls a pillar of light down on the boss.' } },
       { id: 'bastion_sunlit', name: 'Sunlit Shield', ab: 'brace', text: 'A Perfect Block now also throws a flash of light into the boss.' },
       { id: 'bastion_echo', name: 'Edge of Judgment', ab: 'blade', text: 'Judgment now also hurls a shard of Holy Edge at the boss, and it heals you a little.' },
-      { id: 'bastion_hallowed', name: 'Hallowed Ground', ab: 'banner', text: 'Rally Banner now consecrates the ground: the boss burns with holy light every 2s while it stands.' },
     ],
   ],
 
   bloodreaver: [
     [
-      { id: 'bloodreaver_maul', name: 'Rending Maul', ab: 'hack', text: 'Maul, the second hit, strikes 12% harder.' },
-      { id: 'bloodreaver_vein', name: 'Open Vein', ab: 'letting', text: 'Bloodletting leaves the boss bleeding for 9s.', spec: { hemomancer: 'Blood Lance leaves the boss bleeding for 9s.' } },
-      { id: 'bloodreaver_glutton', name: 'Gluttony', ab: 'drain', text: 'Crimson Drain hits 7% harder.', spec: { berserker: 'Rampage hits 7% harder.' } },
+      { id: 'bloodreaver_gore', name: 'Gore', ab: 'hack', text: 'Hack & Maul becomes a three-hit combo: Hack > Maul > Gore, a goring blow that gives 15 Blood.',
+        spec: { berserker: 'Hack & Maul becomes a three-hit combo: Hack > Maul > Gore, a goring blow that gives 15 Rage.' } },
+      { id: 'bloodreaver_rend', name: 'Rend', ab: 'hack', text: 'Maul now carves a Wound in the boss (up to 3). Crimson Drain tears every Wound open for extra damage.',
+        spec: { berserker: 'Maul now carves a Wound in the boss (up to 3). Rampage tears every Wound open for extra damage.' } },
+      { id: 'bloodreaver_retaliate', name: 'Retaliation', ab: 'letting', text: 'Bloodletting within 2s of a heavy hit on you (a tenth of your HP or more) cuts twice as deep.',
+        spec: { hemomancer: 'Blood Lance within 2s of a heavy hit on you (a tenth of your HP or more) strikes twice as hard.' } },
     ],
     [
-      { id: 'bloodreaver_thirst', name: 'Thirst', ab: 'drain', text: 'Crimson Drain heals you for 45% of the damage you took instead of 35%.', spec: { berserker: 'Rampage heals you for 26% of the damage you took instead of 20%.' } },
-      { id: 'bloodreaver_iron', name: 'Iron Roar', ab: 'warcry', text: 'War Cry\'s shield is 25% stronger.' },
-      { id: 'bloodreaver_scar', name: 'Scar Tissue', ab: 'undying', text: 'While Undying lasts you also take 15% less damage.' },
+      { id: 'bloodreaver_sanguine', name: 'Sanguine Shield', ab: 'drain', text: 'Crimson Drain\'s healing past your full HP now hardens into a shield (up to 15% of your HP).',
+        spec: { berserker: 'Rampage\'s healing past your full HP now hardens into a shield (up to 15% of your HP).' } },
+      { id: 'bloodreaver_desperate', name: 'Desperate Hunger', ab: 'hack', text: 'While you are below 35% HP, each hit of Hack & Maul heals you for 4% of your HP.' },
+      { id: 'bloodreaver_cauterize', name: 'Cauterize', ab: 'letting', text: 'Bloodletting now sears away Vulnerability: if you carry it, the cut washes it off you (once every 30s).',
+        spec: { hemomancer: 'Blood Lance now sears away Vulnerability: if you carry it, the throw washes it off you (once every 30s).' } },
     ],
     [
-      { id: 'bloodreaver_hunger', name: 'Hunger', ab: 'hack', text: 'Hack and Maul each give 5 more Blood.', spec: { berserker: 'Hack and Maul each give 5 more Rage.' } },
+      { id: 'bloodreaver_scab', name: 'Scab', ab: 'warcry', grants: true,
+        text: 'War Cry becomes Scab (20s): spend 30 Blood to grow a scab over your wounds, a shield worth the damage you took in the last 6s (at least a tenth of your HP) for 8s. Whatever is left of it when it falls off comes back as Blood.',
+        spec: { berserker: 'War Cry becomes Scab (20s): spend 30 Rage to grow a scab over your wounds, a shield worth the damage you took in the last 6s (at least a tenth of your HP) for 8s. Whatever is left of it when it falls off comes back as Rage.' } },
+      { id: 'bloodreaver_second', name: 'Second Helping', ab: 'drain', text: 'A Crimson Drain that heals you for more than 15% of your HP gives back 20 Blood.',
+        spec: { berserker: 'A Rampage that heals you for more than 10% of your HP gives back 20 Rage.' } },
+      { id: 'bloodreaver_boil', name: 'Boiling Blood', ab: 'frenzy', text: 'Blood that would spill past 100 is no longer lost: every 10 of it takes 1s off Frenzy\'s cooldown, or adds 1s to Frenzy while it lasts.',
+        spec: { berserker: 'Rage that would spill past 100 is no longer lost: every 10 of it takes 1s off Frenzy\'s cooldown, or adds 1s to Frenzy while it lasts.' } },
+    ],
+    [
+      { id: 'bloodreaver_frenzied', name: 'Frenzied Letting', ab: 'frenzy', text: 'Frenzy now also opens your veins: it refills Bloodletting\'s charges.',
+        spec: { hemomancer: 'Frenzy now also opens your veins: it refills Blood Lance\'s charges.' } },
       { id: 'bloodreaver_quickvein', name: 'Quickened Vein', ab: 'letting', cd: { letting: -3 }, text: 'Bloodletting recharges 3s faster.', spec: { hemomancer: 'Blood Lance recharges 3s faster.' } },
-      { id: 'bloodreaver_feast', name: 'Feast', ab: 'frenzy', text: 'Frenzy makes four Crimson Drains free instead of three.', spec: { berserker: 'Frenzy makes four Rampages free instead of three.' } },
+      { id: 'bloodreaver_tide', name: 'Crimson Tide', ab: 'drain', text: 'Crimson Drain\'s healing now also flows to the whole party, at a fifth of the strength.',
+        spec: { berserker: 'Rampage\'s healing now also flows to the whole party, at a fifth of the strength.', hemomancer: 'Shared Vein now flows to the party at 40% of the strength instead of 25%.' } },
     ],
     [
-      { id: 'bloodreaver_carnage', name: 'Carnage', ab: 'frenzy', text: 'Frenzy lasts 4s longer.' },
-      { id: 'bloodreaver_roar', name: 'Battle Roar', ab: 'warcry', text: 'War Cry also gives you 40 Blood.', spec: { berserker: 'War Cry also gives you 40 Rage.' } },
-      { id: 'bloodreaver_deathless', name: 'Deathless', ab: 'undying', cd: { undying: -30 }, text: 'Undying recharges 30s faster.' },
-    ],
-    [
-      { id: 'bloodreaver_rend', name: 'Rend', ab: 'hack', text: 'Maul now carves a Wound in the boss (up to 3). Crimson Drain tears every Wound open for extra damage.', spec: { berserker: 'Maul now carves a Wound in the boss (up to 3). Rampage tears every Wound open for extra damage.' } },
-      { id: 'bloodreaver_tide', name: 'Crimson Tide', ab: 'drain', text: 'Crimson Drain\'s healing now also flows to the whole party, at a fifth of the strength.', spec: { berserker: 'Rampage\'s healing now also flows to the whole party, at a fifth of the strength.', hemomancer: 'Shared Vein now flows to the party at 40% of the strength instead of 25%.' } },
-      { id: 'bloodreaver_frenzied', name: 'Frenzied Letting', ab: 'letting', text: 'Frenzy now also opens your veins: it refills Bloodletting\'s charges.', spec: { hemomancer: 'Frenzy now also opens your veins: it refills Blood Lance\'s charges.' } },
+      { id: 'bloodreaver_moon', name: 'Blood Moon', ab: 'undying', grants: true,
+        text: 'Undying becomes Blood Moon (120s): for 10s you cannot drop below 1 HP and your heals on yourself are doubled. When it sets you burst in a tide of blood: the boss takes damage for every hit you took under it, and you heal for a quarter of that.' },
+      { id: 'bloodreaver_hemorrhage', name: 'Hemorrhage', ab: 'drain', text: 'Crimson Drain now opens a Hemorrhage on the boss for 9s. While it bleeds, each hit of Hack & Maul heals you for 2% of your HP.',
+        spec: { berserker: 'Rampage now opens a Hemorrhage on the boss for 9s. While it bleeds, each hit of Hack & Maul heals you for 2% of your HP.' } },
+      { id: 'bloodreaver_bloodlust', name: 'Bloodlust', ab: 'frenzy', text: 'When Frenzy ends you finish with a free Crimson Drain that remembers every hit you took while it lasted.',
+        spec: { berserker: 'When Frenzy ends you finish with a free Rampage that remembers every hit you took while it lasted.' } },
     ],
   ],
 
   runeguard: [
     [
-      { id: 'runeguard_etched', name: 'Etched Gauntlet', ab: 'strike', text: 'Rune Strike hits 10% harder.', spec: { runeblade: 'Rune Blade hits 10% harder.' } },
-      { id: 'runeguard_afterglyph', name: 'Afterglyph', ab: 'glyph', text: 'Glyph Burst leaves its glyph burning on the boss for 9s.', spec: { runeblade: 'Rune Cleave\'s burning rune hits 25% harder.' } },
-      { id: 'runeguard_volatile', name: 'Volatile Wards', ab: 'ward', text: 'Ward blasts hit 20% harder.' },
-    ],
-    [
-      { id: 'runeguard_thick', name: 'Deep Etching', ab: 'ward', text: 'Runic Ward is 15% stronger.' },
-      { id: 'runeguard_sanctum', name: 'Wide Sanctum', ab: 'sanctum', text: 'Sanctum lasts 14s instead of 10s.' },
-      { id: 'runeguard_mirror', name: 'Polished Mirror', ab: 'mirror', text: 'Mirror Aegis waits 5s for a hit instead of 3s.' },
-    ],
-    [
       { id: 'runeguard_overflow', name: 'Overflow', ab: 'strike', text: 'A Rune that would overcap bursts into the boss instead.' },
+      { id: 'runeguard_echo', name: 'Glyph Echo', ab: 'glyph', text: 'Glyph Burst now leaves its glyph hanging on the boss: the next time you raise a Runic Ward, it goes off again for a quarter.',
+        spec: { runeblade: 'Rune Cleave now leaves its rune hanging on the boss: the next time you raise a Runic Ward, it goes off again for a quarter.' } },
+      { id: 'runeguard_answer', name: 'Answering Rune', ab: 'strike', text: 'After a Ward of yours breaks or Mirror Aegis reflects, your next Rune Strike gives an extra Rune.',
+        spec: { runeblade: 'After a Ward of yours breaks or Mirror Aegis reflects, your next Rune Blade hit gives an extra Rune.' } },
+    ],
+    [
+      { id: 'runeguard_leap', name: 'Leaping Ward', ab: 'ward', text: 'A Runic Ward that ends with strength left now leaps: what is left of it jumps to the most hurt ally for 6s.' },
+      { id: 'runeguard_patient', name: 'Patient Mirror', ab: 'mirror', text: 'Mirror Aegis raised while the boss is casting now waits for that cast to land (up to 8s) instead of 3s.' },
+      { id: 'runeguard_emergency', name: 'Emergency Ward', ab: 'ward', text: 'Below 35% HP, Runic Ward costs no Rune (once every 30s).' },
+    ],
+    [
+      { id: 'runeguard_whirl', name: 'Whirling Runes', ab: 'sanctum', grants: true,
+        text: 'Sanctum becomes Whirling Runes (30s): every Rune you hold tears loose and spins around you as a blade for 12s, striking the boss every 2s.' },
       { id: 'runeguard_reclaim', name: 'Reclaim', ab: 'ward', text: 'A Ward that absorbed at least half gives its Rune back.', spec: { spellwarden: 'A Ward gives its Rune back once it has absorbed a third.' } },
-      { id: 'runeguard_thirdmark', name: 'Third Mark', ab: 'strike', text: 'Every third Rune Strike gives an extra Rune.', spec: { runeblade: 'Every third Rune Blade hit gives an extra Rune.' } },
+      { id: 'runeguard_glyphguard', name: 'Glyphguard', ab: 'glyph', text: 'Glyph Burst now also raises a small Ward on you if you have none (once every 20s). It explodes like a Ward, a little smaller.',
+        spec: { runeblade: 'Rune Cleave now also raises a small Ward on you if you have none (once every 20s). It explodes like a Ward, a little smaller.' } },
     ],
     [
-      { id: 'runeguard_long', name: 'Long Overload', ab: 'overload', text: 'Runic Overload lasts 4s longer.' },
-      { id: 'runeguard_mirrorsedge', name: 'Mirror\'s Edge', ab: 'mirror', text: 'Mirror Aegis reflects 25% harder.' },
-      { id: 'runeguard_well', name: 'Rune Well', ab: 'sanctum', text: 'Sanctum also gives 2 Runes.' },
-    ],
-    [
-      { id: 'runeguard_glyphguard', name: 'Glyphguard', ab: 'glyph', text: 'Glyph Burst now also raises a small Ward on you if you have none (once every 20s). It explodes like a Ward, a little smaller.', spec: { runeblade: 'Rune Cleave now also raises a small Ward on you if you have none (once every 20s). It explodes like a Ward, a little smaller.' } },
       { id: 'runeguard_shards', name: 'Mirror Shards', ab: 'mirror', text: 'A reflected hit now shatters the mirror into shards that strike the boss three more times.' },
-      { id: 'runeguard_storm', name: 'Rune Storm', ab: 'overload', text: 'When Runic Overload ends, every Rune you hold now bursts against the boss (you keep them).' },
+      { id: 'runeguard_shatter', name: 'Shatter', ab: 'ward', text: 'Raising a Runic Ward while yours is still up now shatters the old one: it blasts as if it had been broken all the way (but gives no Rune back).' },
+      { id: 'runeguard_polished', name: 'Polished Mirror', ab: 'mirror', cd: { mirror: -30 }, text: 'Mirror Aegis recharges 30s faster.' },
+    ],
+    [
+      { id: 'runeguard_living', name: 'Living Rune', ab: 'overload', grants: true,
+        text: 'Runic Overload becomes Living Rune (60s): a great rune rises behind you for 15s. Everything Runic Overload does, and every Rune you spend makes it fire a bolt at the boss.' },
+      { id: 'runeguard_nova', name: 'Ward Nova', ab: 'ward', text: 'A Runic Ward broken all the way now erupts in a nova: it strikes the boss and heals the whole party for a fifth of the Ward.',
+        spec: { spellwarden: 'A Runic Ward that absorbed at least half now erupts in a nova when it ends: it strikes the boss and heals the whole party for a fifth of the Ward.' } },
+      { id: 'runeguard_binding', name: 'Sigil of Binding', ab: 'glyph', text: 'Glyph Burst now carves a binding sigil under the boss for 8s (once every 20s): your next Rune Strike while it burns gives an extra Rune.',
+        spec: { runeblade: 'Rune Cleave now carves a binding sigil under the boss for 8s (once every 20s): your next Rune Blade hit while it burns gives an extra Rune.' } },
     ],
   ],
 
@@ -106,82 +141,103 @@ const TALENTS = {
   ranger: [
     [
       { id: 'ranger_rhythm', name: 'Fletcher\'s Rhythm', ab: 'quick', text: 'Every fourth Quick Shot looses a second arrow for half damage.' },
-      { id: 'ranger_keen', name: 'Keen Edge', ab: 'pierce', text: 'A Keen Eye Piercing Arrow hits 15% harder.', spec: { sharpshooter: 'A Keen Eye Aimed Shot hits 15% harder.', venomstrike: 'A Keen Eye Caustic Arrow hits 15% harder.' } },
-      { id: 'ranger_markedvolley', name: 'Marked Volley', ab: 'rapid', text: 'During Hunter\'s Mark, Rapid Fire hits 30% harder.' },
+      { id: 'ranger_ricochet', name: 'Ricochet', ab: 'pierce', text: 'A Piercing Arrow that crits ricochets back into your quiver: it gives its charge back.',
+        spec: { sharpshooter: 'An Aimed Shot that crits ricochets back into your quiver: it gives its charge back.', venomstrike: 'A Caustic Arrow that crits ricochets back into your quiver: it gives its charge back.' } },
+      { id: 'ranger_steady', name: 'Steady Breath', ab: 'quick', text: 'A Quick Shot loosed after standing still for 2s lights Keen Eye far more often (60%).' },
     ],
     [
-      { id: 'ranger_shelter', name: 'Hunter\'s Shelter', ab: 'cloak', text: 'Hunter\'s Cloak cuts damage by 15% instead of 10%.' },
-      { id: 'ranger_dressing', name: 'Field Dressing', ab: 'barrage', text: 'Barrage also heals you for 8% of your HP.' },
-      { id: 'ranger_lightfoot', name: 'Light Feet', ab: 'pierce', text: 'Each Piercing Arrow takes 3s off Hunter\'s Cloak\'s cooldown.', spec: { sharpshooter: 'Each Aimed Shot takes 3s off Hunter\'s Cloak\'s cooldown.', venomstrike: 'Each Caustic Arrow takes 3s off Hunter\'s Cloak\'s cooldown.' } },
+      { id: 'ranger_disengage', name: 'Disengage', ab: 'cloak', text: 'Hunter\'s Cloak now also leaps you backwards, clear of whatever is at your feet.' },
+      { id: 'ranger_secondwind', name: 'Second Wind', ab: 'quick', text: 'When you drop below 40% HP, your next Quick Shot also heals you for 15% of your HP (once every 45s).' },
+      { id: 'ranger_lightfoot', name: 'Light Feet', ab: 'pierce', text: 'Each Piercing Arrow takes 3s off Hunter\'s Cloak\'s cooldown.',
+        spec: { sharpshooter: 'Each Aimed Shot takes 3s off Hunter\'s Cloak\'s cooldown.', venomstrike: 'Each Caustic Arrow takes 3s off Hunter\'s Cloak\'s cooldown.' } },
     ],
     [
-      { id: 'ranger_quiver', name: 'Deep Quiver', ab: 'quick', text: 'Quick Shot gives 12 Focus instead of 10 (36 with Barrage).' },
-      { id: 'ranger_keenfocus', name: 'Keen Focus', ab: 'quick', text: 'Lighting up Keen Eye also gives 8 Focus.' },
-      { id: 'ranger_trail', name: 'Blood Trail', ab: 'pierce', text: 'Piercing Arrow gives 5 Focus.', spec: { sharpshooter: 'Aimed Shot gives 5 Focus.', venomstrike: 'Caustic Arrow gives 5 Focus.' } },
+      { id: 'ranger_explosive', name: 'Explosive Shot', ab: 'rapid', grants: true,
+        text: 'Rapid Fire becomes Explosive Shot: spend 50 Focus to plant a charge in the boss that blows 2.5s later. Every Quick Shot or Piercing Arrow that lands before then makes the blast 30% bigger.' },
+      { id: 'ranger_focusfire', name: 'Focus Fire', ab: 'quick', text: 'At full Focus, Quick Shot no longer wastes it: instead of giving Focus it hits twice as hard.' },
+      { id: 'ranger_tracking', name: 'Tracking', ab: 'quick', text: 'Each Quick Shot that doesn\'t light Keen Eye gives 2 more Focus than the one before (up to 10 more). Keen Eye starts the count over.' },
     ],
     [
       { id: 'ranger_longhunt', name: 'Long Hunt', ab: 'mark', text: 'Hunter\'s Mark lasts 3s longer.' },
-      { id: 'ranger_barrage', name: 'Quick Barrage', ab: 'barrage', cd: { barrage: -5 }, text: 'Barrage recharges 5s faster.' },
-      { id: 'ranger_rush', name: 'Quiver Rush', ab: 'barrage', text: 'Barrage also gives 20 Focus.' },
+      { id: 'ranger_pin', name: 'Pinning Shot', ab: 'pierce', text: 'A Keen Eye Piercing Arrow now pins the boss: your next Quick Shot is a critical hit (once every 12s).',
+        spec: { sharpshooter: 'A Keen Eye Aimed Shot now pins the boss: your next Quick Shot is a critical hit (once every 12s).', venomstrike: 'A Keen Eye Caustic Arrow now pins the boss: your next Quick Shot is a critical hit (once every 12s).' } },
+      { id: 'ranger_deathmark', name: 'Marked for Death', ab: 'mark', text: 'When Hunter\'s Mark ends, the mark bursts on the boss, harder for every Keen Eye you lit while it lasted.' },
     ],
     [
-      { id: 'ranger_pin', name: 'Pinning Shot', ab: 'pierce', text: 'A Keen Eye Piercing Arrow now pins the boss: your next Quick Shot is a critical hit (once every 12s).', spec: { sharpshooter: 'A Keen Eye Aimed Shot now pins the boss: your next Quick Shot is a critical hit (once every 12s).', venomstrike: 'A Keen Eye Caustic Arrow now pins the boss: your next Quick Shot is a critical hit (once every 12s).' } },
-      { id: 'ranger_arrowstorm', name: 'Arrowstorm', ab: 'rapid', text: 'Rapid Fire now leaves its arrows in the wound: the boss bleeds for 6s.' },
-      { id: 'ranger_falcon', name: 'Falcon', ab: 'barrage', text: 'Barrage now also sends your falcon: it strikes the boss four times over 6s.' },
+      { id: 'ranger_falcon', name: 'Falcon', ab: 'barrage', grants: true,
+        text: 'Barrage becomes Falcon (30s): your falcon dives onto the boss and harries it for 10s, striking every 2s. Every Keen Eye you light while it hunts sends it into a diving strike at once.' },
+      { id: 'ranger_storm', name: 'Storm Arrow', ab: 'pierce', text: 'A Keen Eye Piercing Arrow now calls down lightning: it arcs into the boss twice more, each strike a tenth as strong.',
+        spec: { sharpshooter: 'A Keen Eye Aimed Shot now calls down lightning: it arcs into the boss twice more, each strike a tenth as strong.', venomstrike: 'A Keen Eye Caustic Arrow now calls down lightning: it arcs into the boss twice more, each strike a tenth as strong.' } },
+      { id: 'ranger_volley', name: 'Wild Volley', ab: 'quick', text: 'Every Quick Shot crit now calls a volley of arrows down on the boss.' },
     ],
   ],
 
   shadowblade: [
     [
-      { id: 'shadowblade_serrated', name: 'Serrated Edge', ab: 'strike', text: 'Strike hits 12% harder.' },
-      { id: 'shadowblade_cruel', name: 'Cruel Finish', ab: 'evis', text: 'An Eviscerate at 4 or more points hits 6% harder.', spec: { nightstalker: 'A Backstab at 4 or more points hits 6% harder.' } },
-      { id: 'shadowblade_lasting', name: 'Lasting Venom', ab: 'venom', text: 'Venom Blade\'s poison lasts 30s instead of 24s and hits 15% harder.' },
+      { id: 'shadowblade_feint', name: 'Feint', ab: 'strike', text: 'A Strike from the front is no longer wasted: it sets up a feint, and your next Eviscerate lands as a hit from the side wherever you stand.',
+        spec: { nightstalker: 'A Strike from the front is no longer wasted: it sets up a feint, and your next Backstab lands as a hit from behind wherever you stand.' } },
+      { id: 'shadowblade_opportunist', name: 'Opportunist', ab: 'evis', text: 'An Eviscerate while the boss is casting is always a critical hit.',
+        spec: { nightstalker: 'A Backstab while the boss is casting is always a critical hit.' } },
+      { id: 'shadowblade_ambush', name: 'Ambush', ab: 'step', text: 'Shadowstep now strikes as you arrive: a stab from behind for a combo point.',
+        spec: { bladedancer: 'Blade Fury\'s spin now gives 2 combo points instead of 1.' } },
     ],
     [
-      { id: 'shadowblade_smoke', name: 'Thick Smoke', ab: 'smoke', text: 'Smoke Bomb lasts 14s instead of 10s.' },
-      { id: 'shadowblade_evasion', name: 'Evasion', ab: 'step', text: 'Shadowstep also makes you take 20% less damage for 3s.', spec: { bladedancer: 'Blade Fury also makes you take 20% less damage for 3s.' } },
-      { id: 'shadowblade_leech', name: 'Leeching Poison', ab: 'venom', text: 'Your poison heals you a little each time it ticks.' },
+      { id: 'shadowblade_dodge', name: 'Shadow Dodge', ab: 'step', text: 'A Shadowstep while the boss is casting also slips the blow: you take 50% less damage for 2s.',
+        spec: { bladedancer: 'A Blade Fury while the boss is casting also slips the blow: you take 50% less damage for 2s.' } },
+      { id: 'shadowblade_recuperate', name: 'Recuperate', ab: 'evis', text: 'While you are below 60% HP, Eviscerate heals you for 3% of your HP per combo point.',
+        spec: { nightstalker: 'While you are below 60% HP, Backstab heals you for 3% of your HP per combo point.' } },
+      { id: 'shadowblade_trail', name: 'Smoke Trail', ab: 'step', text: 'Shadowstep leaves a cloud of smoke where you vanished: allies inside take 10% less damage for 6s.',
+        spec: { bladedancer: 'Blade Fury kicks up a cloud of smoke around you: allies inside take 10% less damage for 6s.' } },
     ],
     [
+      { id: 'shadowblade_rupture', name: 'Rupture', ab: 'venom', grants: true,
+        text: 'Venom Blade becomes Rupture: a finisher that spends all your combo points to open the boss up for 4s per point. While it bleeds, Eviscerate hits 15% harder, as with your poison.',
+        spec: { nightstalker: 'Venom Blade becomes Rupture: a finisher that spends all your combo points to open the boss up for 4s per point. While it bleeds, Backstab hits 15% harder, as with your poison.' } },
       { id: 'shadowblade_relentless', name: 'Relentless', ab: 'evis', text: 'A 5-point Eviscerate has an even chance to give back 1 combo point.', spec: { nightstalker: 'A 5-point Backstab has an even chance to give back 1 combo point.' } },
-      { id: 'shadowblade_envenom', name: 'Envenom', ab: 'venom', text: 'Each tick of your poison has a small chance to give a combo point.' },
-      { id: 'shadowblade_quicken', name: 'Quickening', ab: 'dance', text: 'Your first Strike in Shadow Dance gives 2 extra combo points.' },
+      { id: 'shadowblade_sharpen', name: 'Sharpened Shadows', ab: 'strike', text: 'A combo point that would spill past 5 now sharpens your next Eviscerate instead: 12% harder for each (up to 3).',
+        spec: { nightstalker: 'A combo point that would spill past 5 now sharpens your next Backstab instead: 12% harder for each (up to 3).' } },
     ],
     [
-      { id: 'shadowblade_longdance', name: 'Long Dance', ab: 'dance', text: 'Shadow Dance lasts 3s longer.' },
-      { id: 'shadowblade_sprint', name: 'Shadow Sprint', ab: 'step', cd: { step: -3 }, specMods: { bladedancer: { cd: { step: -1 } } }, text: 'Shadowstep recharges 3s faster.', spec: { bladedancer: 'Blade Fury recharges 1s faster.' } },
-      { id: 'shadowblade_vanish', name: 'Vanish', ab: 'smoke', text: 'Smoke Bomb also refills Shadowstep\'s charges.', spec: { bladedancer: 'Smoke Bomb also refills Blade Fury\'s charges.' } },
-    ],
-    [
-      { id: 'shadowblade_toxic', name: 'Toxic Burst', ab: 'evis', text: 'Eviscerate now bursts your poison: 15% of what it has left lands at once, and the poison keeps going.', spec: { nightstalker: 'Backstab now bursts your poison: 15% of what it has left lands at once, and the poison keeps going.' } },
       { id: 'shadowblade_clone', name: 'Shadow Clone', ab: 'dance', text: 'Shadow Dance now calls a shadow that repeats your Eviscerates at 30%.', spec: { nightstalker: 'Shadow Dance now calls a shadow that repeats your Backstabs at 30%.' } },
-      { id: 'shadowblade_garrote', name: 'Garrote', ab: 'step', text: 'Shadowstep now garrotes: the boss bleeds for 9s.', spec: { bladedancer: 'Blade Fury now leaves the boss bleeding for 9s.' } },
+      { id: 'shadowblade_sprint', name: 'Shadow Sprint', ab: 'step', cd: { step: -3 }, specMods: { bladedancer: { cd: { step: -1 } } }, text: 'Shadowstep recharges 3s faster.', spec: { bladedancer: 'Blade Fury recharges 1s faster.' } },
+      { id: 'shadowblade_endless', name: 'Endless Dance', ab: 'dance', text: 'Each 5-point finisher during Shadow Dance makes it last 1s longer (up to 4s).' },
+    ],
+    [
+      { id: 'shadowblade_blossom', name: 'Death Blossom', ab: 'smoke', grants: true,
+        text: 'Smoke Bomb becomes Death Blossom (120s): you vanish into a storm of knives around the boss, six cuts over 1.5s that each give a combo point. The last is a free Eviscerate with everything you hold.',
+        spec: { nightstalker: 'Smoke Bomb becomes Death Blossom (120s): you vanish into a storm of knives around the boss, six cuts over 1.5s that each give a combo point. The last is a free Backstab with everything you hold.' } },
+      { id: 'shadowblade_toxic', name: 'Toxic Burst', ab: 'evis', text: 'Eviscerate now bursts your poison or Rupture: 15% of what it has left lands at once, and it keeps going.',
+        spec: { nightstalker: 'Backstab now bursts your poison or Rupture: 15% of what it has left lands at once, and it keeps going.' } },
+      { id: 'shadowblade_garrote', name: 'Garrote', ab: 'step', text: 'Shadowstep now garrotes: a wire bites into the boss and it bleeds for 9s.', spec: { bladedancer: 'Blade Fury now leaves the boss bleeding for 9s.' } },
     ],
   ],
 
   pyromancer: [
     [
       { id: 'pyromancer_firestarter', name: 'Firestarter', ab: 'fireball', text: 'A Fireball crit sets the target burning for 6s.' },
-      { id: 'pyromancer_pyroclasm', name: 'Pyroclasm', ab: 'pyro', text: 'A Hot Streak Pyroblast hits 10% harder.', spec: { cataclysm: 'A Hot Streak Meteor hits 10% harder.' } },
-      { id: 'pyromancer_flashfire', name: 'Flashfire', ab: 'fireblast', text: 'Fire Blast hits 30% harder.' },
+      { id: 'pyromancer_chain', name: 'Chain Reaction', ab: 'pyro', text: 'A Hot Streak Pyroblast now leaves you Heating Up (once every 10s).', spec: { cataclysm: 'A Hot Streak Meteor now leaves you Heating Up when it lands (once every 10s).' } },
+      { id: 'pyromancer_hurry', name: 'Overcharged Blast', ab: 'fireblast', text: 'A Fire Blast fired mid-cast now hurries that cast along: it finishes half a second sooner.' },
     ],
     [
-      { id: 'pyromancer_heatshield', name: 'Heat Shield', ab: 'vent', text: 'Vent also wraps you in a small shield of heat for 8s.' },
-      { id: 'pyromancer_tempered', name: 'Tempered', ab: 'vent', text: 'An Overheat leaves you burnt for 2s instead of 5s.' },
-      { id: 'pyromancer_smolder', name: 'Lingering Smolder', ab: 'smolder', text: 'Smolder lasts 14s instead of 10s.' },
+      { id: 'pyromancer_molten', name: 'Molten Armour', ab: 'fireball', text: 'While your Heat is above 70, you take 10% less damage.' },
+      { id: 'pyromancer_cauterize', name: 'Cauterize', ab: 'fireblast', text: 'A Fire Blast that turns Heating Up into Hot Streak also heals you for 5% of your HP.' },
+      { id: 'pyromancer_haze', name: 'Heat Haze', ab: 'fireball', text: 'Whenever the boss begins a cast, your next Fireball is instant.' },
     ],
     [
-      { id: 'pyromancer_heatsink', name: 'Heat Sink', ab: 'vent', text: 'Heat raises your damage by 0.4% a point instead of 0.3% (40% at full).' },
-      { id: 'pyromancer_pressure', name: 'Pressure', ab: 'vent', text: 'Vent gets a third more from every point of Heat.' },
-      { id: 'pyromancer_kindling', name: 'Kindling', ab: 'fireblast', text: 'Fire Blast gives 12 Heat instead of 6.' },
+      { id: 'pyromancer_firestep', name: 'Firestep', ab: 'smolder', grants: true,
+        text: 'Smolder becomes Firestep (20s): blink forward through a burst of flame. It gives 15 Heat and makes your next Fireball instant.' },
+      { id: 'pyromancer_banked', name: 'Banked Embers', ab: 'fireball', text: 'Your Heat no longer cools off on its own.' },
+      { id: 'pyromancer_flashpoint', name: 'Flashpoint', ab: 'fireblast', text: 'A Fire Blast at 85 Heat or more now vents 30 Heat into the boss as a second blast, instead of adding more.' },
     ],
     [
-      { id: 'pyromancer_longburn', name: 'Long Burn', ab: 'combust', text: 'Combustion lasts 3s longer.', spec: { sigilmancer: 'Ember Circle lasts 5s longer.' } },
-      { id: 'pyromancer_fuel', name: 'Fuel the Fire', ab: 'combust', text: 'Combustion also gives up to 30 Heat (never past 95).', spec: { sigilmancer: 'Ember Circle also gives up to 30 Heat (never past 95).' } },
       { id: 'pyromancer_afterburn', name: 'Afterburn', ab: 'combust', text: 'When Combustion ends, you get Hot Streak.', spec: { sigilmancer: 'When Ember Circle fades, you get Hot Streak.' } },
+      { id: 'pyromancer_wildfire', name: 'Wildfire', ab: 'combust', text: 'Every crit during Combustion now leaves a flame on the boss that burns for 6s (up to 5 at once).',
+        spec: { sigilmancer: 'Every crit while you stand in Ember Circle now leaves a flame on the boss that burns for 6s (up to 5 at once).' } },
+      { id: 'pyromancer_longburn', name: 'Long Burn', ab: 'combust', text: 'Combustion lasts 3s longer.', spec: { sigilmancer: 'Ember Circle lasts 5s longer.' } },
     ],
     [
-      { id: 'pyromancer_phoenix', name: 'Phoenix Ash', ab: 'vent', text: 'Vent now scorches the ground: the boss burns for 9s, hotter the more Heat you vented.' },
+      { id: 'pyromancer_phoenix', name: 'Phoenix Flight', ab: 'vent', grants: true,
+        text: 'Vent becomes Phoenix Flight (12s): release all your Heat as a phoenix that sweeps through the boss and wheels back for a second pass, harder the more Heat. At 60 Heat or more it leaves you Hot Streak.' },
       { id: 'pyromancer_twin', name: 'Twin Flame', ab: 'pyro', text: 'A Hot Streak Pyroblast now splits: a second, smaller Pyroblast hits for 10%.', spec: { cataclysm: 'A Hot Streak Meteor now brings a second, smaller meteor down a moment later, for 10%.' } },
       { id: 'pyromancer_bomb', name: 'Living Bomb', ab: 'fireball', text: 'Every fourth Fireball now plants an ember in the boss that bursts 3s later.' },
     ],
@@ -190,85 +246,99 @@ const TALENTS = {
   // ======================================================================= HEALERS
   cleric: [
     [
-      { id: 'cleric_burning', name: 'Burning Light', ab: 'smite', text: 'Smite hits 5% harder (not Dawnstar).' },
-      { id: 'cleric_radiant', name: 'Radiant Dawn', ab: 'smite', text: 'Dawnstar hits 15% harder.' },
+      { id: 'cleric_atonement', name: 'Atonement', ab: 'smite', text: 'Smite now also heals the most hurt ally for 15% of the damage it deals (Dawnstar too).' },
+      { id: 'cleric_held', name: 'Held Dawn', ab: 'smite', text: 'Dawnstar no longer wants spending at once: it grows 2% stronger for every second you hold it, up to 30%.' },
       { id: 'cleric_petalfall', name: 'Petalfall', ab: 'petal', text: 'Dawn Petal also sends a spark of light into the boss.' },
     ],
     [
-      { id: 'cleric_mending', name: 'Mending Words', ab: 'mend', text: 'Mend heals 20% more.', spec: { aegis: 'Divine Barrier\'s dome is 20% stronger.' } },
-      { id: 'cleric_benevolence', name: 'Benevolence', ab: 'bene', cd: { bene: -8 }, text: 'Benediction recharges 8s faster.', spec: { inquisitor: 'Condemn recharges 8s faster.' } },
-      { id: 'cleric_swift', name: 'Swift Intervention', ab: 'intervene', cast: { intervene: -1 }, text: 'Intervention casts in 1.5s instead of 2.5s.' },
+      { id: 'cleric_quickmend', name: 'Quick Mend', ab: 'mend', text: 'After you spend a Petal, your next Mend is instant.', spec: { aegis: 'After you spend a Petal, your next Divine Barrier is instant.' } },
+      { id: 'cleric_purify', name: 'Purify', ab: 'petal', text: 'Dawn Petal now washes Vulnerability and Damage Down off its target (once every 20s).' },
+      { id: 'cleric_wings', name: 'Wings of Dawn', ab: 'petal', text: 'Dawn Petal cast on an ally now carries you toward them on wings of light (up to 160).' },
     ],
     [
-      { id: 'cleric_fresh', name: 'Fresh Petals', ab: 'petal', text: 'Petals regrow 2s sooner.' },
-      { id: 'cleric_dew', name: 'Morning Dew', ab: 'petal', text: 'Dawn Petal\'s regen lasts twice as long.', spec: { aegis: 'Dawn Petal\'s shield is 25% stronger.' } },
+      { id: 'cleric_bloom', name: 'Bloom of Dawn', ab: 'intervene', grants: true,
+        text: 'Intervention becomes Bloom of Dawn (30s, instant): spend all your Petals on one ally. A fallen ally rises at once; a living one is healed for 500 per Petal. Every Petal counts toward Dawnstar.' },
       { id: 'cleric_favour', name: 'Sun\'s Favour', ab: 'smite', text: 'Dawnstar gives back a Petal.' },
+      { id: 'cleric_overgrowth', name: 'Overflowing Petals', ab: 'petal', text: 'A Petal that would grow past 3 now blooms by itself onto the most hurt ally, and counts toward Dawnstar.' },
     ],
     [
-      { id: 'cleric_widecircle', name: 'Wide Circle', ab: 'prayer', text: 'Prayer Circle\'s regen lasts 6s longer.' },
-      { id: 'cleric_devotion', name: 'Devotion', ab: 'prayer', text: 'Prayer Circle also gives you a Petal.' },
-      { id: 'cleric_grace', name: 'Grace', ab: 'bene', text: 'Benediction also heals the whole party for a third as much.', spec: { inquisitor: 'Condemn also heals the whole party a little.' } },
-    ],
-    [
+      { id: 'cleric_twinbless', name: 'Twin Blessing', ab: 'bene', text: 'Benediction can now be pressed again within 5s: the same blessing, at half strength, on the most hurt other ally.',
+        spec: { aegis: 'A second Benediction within 5s now also lands on the most hurt other ally at half strength, and costs no charge.', inquisitor: 'Condemn can now be fired again within 5s, for a third of the damage.' } },
       { id: 'cleric_sunfall', name: 'Sunfall', ab: 'smite', text: 'Dawnstar now leaves a small sun on the boss that burns it for 12s.' },
+      { id: 'cleric_benevolence', name: 'Benevolence', ab: 'bene', cd: { bene: -8 }, text: 'Benediction recharges 8s faster.', spec: { inquisitor: 'Condemn recharges 8s faster.' } },
+    ],
+    [
+      { id: 'cleric_sanctum', name: 'Dawn Sanctum', ab: 'prayer', grants: true,
+        text: 'Prayer Circle becomes Dawn Sanctum (90s): a great circle of dawn at your feet for 12s. Allies standing in it take 15% less damage and heal every 1.5s, and your Smites cast from inside it are instant.' },
       { id: 'cleric_twin', name: 'Twin Petals', ab: 'petal', text: 'Dawn Petal now also lands on the most hurt other ally, at half strength.' },
-      { id: 'cleric_judgment', name: 'Circle of Judgment', ab: 'prayer', text: 'While Prayer Circle lasts, the boss now takes holy damage every 3s.' },
+      { id: 'cleric_chorus', name: 'Dawn Chorus', ab: 'petal', text: 'Every third Petal you spend now sings out: the whole party heals for half of it.' },
     ],
   ],
 
   grovekeeper: [
     [
-      { id: 'grovekeeper_sunwrath', name: 'Sun-Warmed Wrath', ab: 'wrath', text: 'Wrath hits 5% harder.' },
-      { id: 'grovekeeper_awakened', name: 'Awakened Fury', ab: 'wrath', text: 'An Awakened Wrath hits 35% harder.' },
-      { id: 'grovekeeper_deepthorn', name: 'Deep Thorns', ab: 'thorn', text: 'Thornlash\'s thorns hit 18% harder.' },
+      { id: 'grovekeeper_balance', name: 'Nature\'s Balance', ab: 'wrath', text: 'Wrath now also heals everyone under your Rejuvenate for a fifth of its damage.',
+        spec: { lifebinder: 'Wrath now also heals everyone under your Lifebind for a fifth of its damage.' } },
+      { id: 'grovekeeper_moonfire', name: 'Moonfire', ab: 'wrath', text: 'Every third Wrath is instant.' },
+      { id: 'grovekeeper_sprout', name: 'Quick Sprout', ab: 'rejuv', text: 'Once every 30s, Rejuvenate takes only a moment: its global cooldown is 1.2s.', spec: { lifebinder: 'Once every 30s, Lifebind takes only a moment: its global cooldown is 1.2s.' } },
     ],
     [
-      { id: 'grovekeeper_verdant', name: 'Verdant Touch', ab: 'rejuv', text: 'Rejuvenate\'s first heal is 50% stronger.', spec: { lifebinder: 'Lifebind\'s first heal is 50% stronger.' } },
-      { id: 'grovekeeper_bark', name: 'Barkskin', ab: 'growth', text: 'Wild Growth also makes you take 15% less damage for 10s.', spec: { moonwell: 'Moonwell also makes you take 15% less damage for 10s.' } },
-      { id: 'grovekeeper_rebirth', name: 'Quick Rebirth', ab: 'rebirth', cast: { rebirth: -1 }, text: 'Rebirth casts in 1.5s instead of 2.5s.' },
+      { id: 'grovekeeper_ironbark', name: 'Ironbark', ab: 'rejuv', text: 'A Rejuvenate cast while the boss is casting also wraps the ally in bark: 15% less damage for 5s.',
+        spec: { lifebinder: 'A Lifebind cast while the boss is casting also wraps the ally in bark: 15% less damage for 5s.' } },
+      { id: 'grovekeeper_thickbark', name: 'Thick Bark', ab: 'bloom', text: 'When you drop below 40% HP, bark closes over you: 30% less damage for 6s (once every 60s).' },
+      { id: 'grovekeeper_roots', name: 'Shared Roots', ab: 'bloom', text: 'Bloom with nobody under your Rejuvenate now heals the most hurt ally instead of you, and grows a short regen on them.',
+        spec: { lifebinder: 'Bloom now also grows a short regen on the most hurt ally.' } },
     ],
     [
-      { id: 'grovekeeper_fertile', name: 'Fertile Soil', ab: 'rejuv', text: 'Rejuvenate\'s ticks grow 1 more Bloom.', spec: { lifebinder: 'Lifebind\'s ticks grow 1 more Bloom.' } },
-      { id: 'grovekeeper_harvest', name: 'Thorn Harvest', ab: 'thorn', text: 'Thornlash\'s ticks grow 2 Bloom.' },
-      { id: 'grovekeeper_sap', name: 'Sap Surge', ab: 'bloom', cd: { bloom: -4 }, text: 'Bloom recharges 4s faster.' },
+      { id: 'grovekeeper_seed', name: 'Seed of Renewal', ab: 'rebirth', grants: true,
+        text: 'Rebirth becomes Seed of Renewal (30s, instant): spend 40 Bloom to plant a seed on an ally for 20s. If they fall while it grows, they spring back up at once; if not, it blooms into a big heal when it ends. On a fallen ally, it raises them at once.' },
+      { id: 'grovekeeper_spill', name: 'Spillover', ab: 'bloom', text: 'Bloom that would spill past 100 now seeps into a healing patch under the most hurt ally.' },
+      { id: 'grovekeeper_cycle', name: 'Cycle of Life', ab: 'wrath', text: 'An Awakened Wrath gives back 20 Bloom.' },
     ],
     [
-      { id: 'grovekeeper_lush', name: 'Lush Growth', ab: 'growth', text: 'Wild Growth\'s stronger heals last 5s longer.', spec: { moonwell: 'Moonwell\'s stronger heals last 4s longer (the pool doesn\'t).' } },
-      { id: 'grovekeeper_seed', name: 'Seedburst', ab: 'growth', text: 'Wild Growth also Awakens your next Wrath.', spec: { moonwell: 'Moonwell also Awakens your next Wrath.' } },
+      { id: 'grovekeeper_seedburst', name: 'Seedburst', ab: 'growth', text: 'Wild Growth also Awakens your next Wrath.', spec: { moonwell: 'Moonwell also Awakens your next Wrath.' } },
       { id: 'grovekeeper_oldgrowth', name: 'Old Growth', ab: 'growth', cd: { growth: -8 }, text: 'Wild Growth recharges 8s faster.', spec: { moonwell: 'Moonwell recharges 8s faster.' } },
+      { id: 'grovekeeper_blossom', name: 'Last Blossom', ab: 'rejuv', text: 'Rejuvenate now blooms when it ends: one last burst of healing on the ally.', spec: { lifebinder: 'Lifebind now blooms when it ends: one last burst of healing on your chosen ally.' } },
     ],
     [
-      { id: 'grovekeeper_vines', name: 'Strangling Vines', ab: 'thorn', text: 'Wrath now feeds your thorns: each one makes Thornlash hit 5% harder until you plant it again (up to 25%).' },
-      { id: 'grovekeeper_blossom', name: 'Last Blossom', ab: 'rejuv', text: 'Rejuvenate now blooms when it ends: one last burst of healing on the ally.', spec: { lifebinder: 'Lifebind now blooms when it ends: one last burst of healing on your chosen ally.' } },
-      { id: 'grovekeeper_naturewrath', name: 'Nature\'s Wrath', ab: 'bloom', text: 'Bloom now also lashes the boss with roots.' },
+      { id: 'grovekeeper_treant', name: 'Treant', ab: 'thorn', grants: true,
+        text: 'Thornlash becomes Treant (45s): call up a treant beside the boss for 15s. It slams the boss every 3s, and every slam heals your most hurt ally.' },
+      { id: 'grovekeeper_naturewrath', name: 'Nature\'s Wrath', ab: 'bloom', text: 'Bloom now also tears roots up under the boss that lash it.' },
+      { id: 'grovekeeper_pulse', name: 'Verdant Pulse', ab: 'growth', text: 'Wild Growth now pulses every 3s while it lasts, and each pulse grows 8 Bloom.',
+        spec: { moonwell: 'Moonwell now pulses every 3s while it lasts, and each pulse grows 8 Bloom.' } },
     ],
   ],
 
   chronomancer: [
     [
-      { id: 'chronomancer_honed', name: 'Honed Bolt', ab: 'bolt', text: 'In Slow, Temporal Bolt hits 7% harder.' },
-      { id: 'chronomancer_double', name: 'Double Time', ab: 'shift', text: 'Shifting into Haste makes your next two Bolts instant instead of one, and an instant Bolt hits 20% harder.' },
-      { id: 'chronomancer_skip', name: 'Skipped Beat', ab: 'bolt', text: 'Every fifth Temporal Bolt is instant and hits 20% harder.' },
+      { id: 'chronomancer_phase', name: 'Phase Strike', ab: 'shift', text: 'Shift now leaves an afterimage that fires a free Temporal Bolt (once every 10s). It heals like any Bolt.' },
+      { id: 'chronomancer_double', name: 'Double Time', ab: 'shift', text: 'Shifting into Haste now makes your next two Bolts instant instead of one.' },
+      { id: 'chronomancer_skip', name: 'Skipped Beat', ab: 'bolt', text: 'Every fifth Temporal Bolt is instant.' },
     ],
     [
       { id: 'chronomancer_practiced', name: 'Practiced Rewind', ab: 'rewind', cd: { rewind: -6 }, text: 'Rewind recharges 6s faster.' },
-      { id: 'chronomancer_stasis', name: 'Long Stasis', ab: 'stasis', text: 'Stasis lasts 3s instead of 2s.' },
-      { id: 'chronomancer_recall', name: 'Swift Recall', ab: 'recall', cast: { recall: -0.7 }, text: 'Recall casts in 1.8s instead of 2.5s.' },
+      { id: 'chronomancer_dejavu', name: 'Deja Vu', ab: 'rewind', text: 'Rewind now also snaps you back to where you stood when you last pressed Shift (if that was in the last 10s).' },
+      { id: 'chronomancer_lastmoment', name: 'Last Moment', ab: 'recall', text: 'While the boss\'s cast is about to land (1.5s or less left), Recall casts instantly.' },
     ],
     [
-      { id: 'chronomancer_well', name: 'Flux Well', ab: 'shift', text: 'Slow fills Flux a sixth faster.' },
-      { id: 'chronomancer_borrowed', name: 'Borrowed Time', ab: 'bolt', text: 'In Haste, every Temporal Bolt gives back 2 Flux.' },
-      { id: 'chronomancer_paradox', name: 'Paradox', ab: 'shift', text: 'Haste drains Flux 15% slower.' },
+      { id: 'chronomancer_bubble', name: 'Time Bubble', ab: 'stasis', grants: true,
+        text: 'Stasis becomes Time Bubble (40s): spend 30 Flux to wrap an ally in a bubble of slowed time for 6s. It follows them, and everyone inside takes 25% less damage.' },
+      { id: 'chronomancer_borrowed', name: 'Borrowed Time', ab: 'bolt', text: 'In Haste, a Bolt that crits gives back 6 Flux.' },
+      { id: 'chronomancer_overwound', name: 'Overwound', ab: 'shift', text: 'Flux that would spill past 100 in Slow now flows to your linked ally as healing.' },
     ],
     [
-      { id: 'chronomancer_allegro', name: 'Allegro', ab: 'accel', text: 'Accelerando lasts 3s longer.', spec: { echoist: 'Echo Chamber lasts 3s longer.' } },
-      { id: 'chronomancer_fermata', name: 'Fermata', ab: 'stasis', cd: { stasis: -30 }, text: 'Stasis recharges 30s faster.' },
-      { id: 'chronomancer_crescendo', name: 'Crescendo', ab: 'accel', text: 'While Accelerando lasts, your Bolts hit 10% harder.', spec: { echoist: 'While Echo Chamber lasts, your Bolts hit 10% harder.' } },
-    ],
-    [
-      { id: 'chronomancer_phase', name: 'Phase Strike', ab: 'shift', text: 'Shift now leaves an afterimage that fires a free Temporal Bolt (once every 10s). It heals like any Bolt.' },
       { id: 'chronomancer_hourglass', name: 'Hourglass Ward', ab: 'rewind', text: 'Rewind now also slows time around its target: they take 15% less damage for 6s.' },
-      { id: 'chronomancer_second', name: 'Second Hand', ab: 'bolt', text: 'In Haste, Temporal Bolt now strikes again 2s later at 8% strength, healing as a Bolt does.', spec: { echoist: 'Your echoes are 60% strength instead of half.', accelerant: 'In Haste, Temporal Bolt now strikes again 2s later at 6% strength, healing as a Bolt does.' } },
+      { id: 'chronomancer_stopwatch', name: 'Stopwatch', ab: 'shift', text: 'Shift now also stops your Flux for 4s: it neither drains nor fills.' },
+      { id: 'chronomancer_second', name: 'Second Hand', ab: 'bolt', text: 'In Haste, Temporal Bolt now strikes again 2s later at 8% strength, healing as a Bolt does.',
+        spec: { echoist: 'Your echoes are 60% strength instead of half.', accelerant: 'In Haste, Temporal Bolt now strikes again 2s later at 6% strength, healing as a Bolt does.' } },
+    ],
+    [
+      { id: 'chronomancer_warp', name: 'Time Warp', ab: 'accel', grants: true,
+        text: 'Accelerando becomes Time Warp (60s): a great clock hangs over the party for 15s. Everyone acts 10% faster, and every 3s its hands strike the boss and heal the whole party. You gain 40 Flux.',
+        spec: { echoist: 'Echo Chamber becomes Time Warp (60s): a great clock hangs over the party for 15s. Everyone acts 10% faster and your echoes are full strength, and every 3s its hands strike the boss and heal the whole party. You gain 40 Flux.',
+          accelerant: 'Accelerando becomes Time Warp (60s): a great clock hangs over the party for 20s. Everyone acts 15% faster, and every 3s its hands strike the boss and heal the whole party. You gain 40 Flux.' } },
+      { id: 'chronomancer_future', name: 'Future Sight', ab: 'bolt', text: 'Your Bolts now mark the boss with a rune of the future. 6s after the first, it bursts for a tenth of every Bolt that fed it, and a new rune can form 6s later.' },
+      { id: 'chronomancer_secondchance', name: 'Second Chance', ab: 'recall', text: 'An ally Recall raises is healed to full a moment later, and the rest of the party heals a little.' },
     ],
   ],
 };

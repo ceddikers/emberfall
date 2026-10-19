@@ -56,6 +56,12 @@ function runSim(classId, skill, seed, specId, talents) {
     isDead: () => false,
     defaultLink: () => 'tank',
     talents: () => talents || null,
+    // the boss as talents see it (kits.js bossNow): busters and raidwides are 2.5s casts; the tank is its target
+    boss: () => {
+      const nextOf = (first, every) => (state.t < first ? first : first + Math.ceil((state.t - first) / every) * every);
+      const left = Math.min(nextOf(20, BUSTER_EVERY), nextOf(12, RAIDWIDE_EVERY)) - state.t;
+      return { casting: left > 0 && left < 2.5, castLeft: Math.max(0, left), next: Math.max(0, left), onMe: role === 'tank', vuln: 0, selfVuln: role === 'tank' && state.t - lastBusterAt < 8 };
+    },
     // where you stand: away from your spot while a mechanic moves you (and now and then for a newbie), so a Sigilmancer leaves its circle
     pos: () => (state.away ? { x: 999, y: 0 } : { x: 0, y: 0 }),
     emit: ev => {
@@ -97,7 +103,7 @@ function runSim(classId, skill, seed, specId, talents) {
   const moveSoon = (t, within) => { const into = t % MOVE_EVERY; return into > MOVE_LEN && MOVE_EVERY - into < within; };
 
   // incoming damage for tanks (perfect blocks, ward breaks, reflects, drain value)
-  let nextAuto = 3, nextBuster = 20, nextRaidwide = 12;
+  let nextAuto = 3, nextBuster = 20, nextRaidwide = 12, lastBusterAt = -99;
   function hitTank(raw, kind) {
     let mult = 1, perfect = false;
     state.mits = state.mits.filter(m => m.end > state.t);
@@ -126,7 +132,7 @@ function runSim(classId, skill, seed, specId, talents) {
   const policy = (skill === 'pro' ? PRO : NEWBIE)[classId] || (skill === 'pro' ? genericPro : genericNewbie);   // a spec plays with its class's policy
   // a pro who took a talent on a party cooldown the class policy leaves alone (Rally Banner, Smoke Bomb...) uses it
   // before raidwides, and Undying before tankbusters
-  const extras = skill === 'pro' && talents ? [...new Set([...talents].map(id => TALENT_BY_ID[id] && TALENT_BY_ID[id].t.ab).filter(ab => TALENT_EXTRA.includes(ab)))] : [];
+  const extras = skill === 'pro' && talents ? [...new Set([...talents].map(id => TALENT_BY_ID[id] && !TALENT_BY_ID[id].t.grants && TALENT_BY_ID[id].t.ab).filter(ab => TALENT_EXTRA.includes(ab)))] : [];
   let reaction = 0;
   for (state.t = 0; state.t < FIGHT_LEN; state.t += DT) {
     state.moving = isMoveWindow(state.t);
@@ -137,7 +143,7 @@ function runSim(classId, skill, seed, specId, talents) {
     state.outOfRange = state.moving && def.abilities[0].range === 'melee' && skill !== 'pro';
     if (role === 'tank') {
       if (state.t >= nextAuto) { nextAuto += AUTO_EVERY; hitTank(AUTO_DMG, 'auto'); }
-      if (state.t >= nextBuster) { nextBuster += BUSTER_EVERY; hitTank(BUSTER_DMG, 'buster'); }
+      if (state.t >= nextBuster) { nextBuster += BUSTER_EVERY; hitTank(BUSTER_DMG, 'buster'); lastBusterAt = state.t; }
       if (state.t >= nextRaidwide) { nextRaidwide += RAIDWIDE_EVERY; hitTank(RAIDWIDE_DMG, 'raidwide'); }
       for (const w of state.allyWards) if (state.t >= w.end) { w.done = true; k.notify('shieldEnd', { tag: 'ward', frac: 0.55 }); }
       state.allyWards = state.allyWards.filter(w => !w.done);
@@ -246,7 +252,8 @@ const PRO = {
     if (k.charges(brace) > 0 && ((toAuto < 0.45 && toAuto > 0.1 && (k.charges(brace) === 2 || toBuster > 6)) || (toBuster < 0.45 && toBuster > 0.1))) return I(k, 'brace');
     if (toBuster < 1.2 && ready(k, 'bulwark')) return I(k, 'bulwark');
     if (ctx.inBurst(ctx.t) && ready(k, 'oath') && weaveOk(k)) return I(k, 'oath');
-    if (toBuster > 10 && toBuster < 40 && k.cdRemaining(abOf(k, 'bulwark')) > 30 && false) return null;
+    // Hallowed Ground (a talent in Rally Banner's place): pour a full gauge out between bursts
+    if (abOf(k, 'banner').id === 'hallowed' && ready(k, 'banner') && weaveOk(k) && k.g.resolve >= 90 && !k.has('oath') && k.cdRemaining(abOf(k, 'oath')) > 12) return I(k, 'banner');
     if (k.gcdRemaining() > 0.0001) return null;
     const pooling = ctx.burstSoon(ctx.t) || (k.cdRemaining(abOf(k, 'oath')) < 8 && !k.has('oath'));
     if (k.g.resolve >= 50 && (k.has('oath') || k.g.resolve >= 75 && !pooling || (k.g.resolve >= 90 && k.g.step === 2))) return I(k, 'edge');
@@ -254,6 +261,10 @@ const PRO = {
   },
   bloodreaver(k, ctx) {
     if (ready(k, 'frenzy') && ctx.inBurst(ctx.t) && weaveOk(k)) return I(k, 'frenzy');
+    // talent moves: Scab just before a tankbuster, Blood Moon to soak one
+    const toBust = ctx.nextBuster - ctx.t;
+    if (abOf(k, 'warcry').id === 'scab' && ready(k, 'warcry') && toBust < 1.2 && weaveOk(k)) return I(k, 'warcry');
+    if (abOf(k, 'undying').id === 'moon' && ready(k, 'undying') && toBust < 1.5 && weaveOk(k)) return I(k, 'undying');
     const let_ = abOf(k, 'letting');
     if (weaveOk(k) && k.charges(let_) > 0 && k.g.blood <= 80 && (k.charges(let_) === 2 || ctx.inBurst(ctx.t) || k.cdRemaining(let_) < 1)) return I(k, 'letting');
     if (k.gcdRemaining() > 0.0001) return null;
@@ -267,6 +278,8 @@ const PRO = {
     const toBuster = ctx.nextBuster - ctx.t, toRw = ctx.nextRaidwide - ctx.t;
     if (ready(k, 'overload') && ctx.inBurst(ctx.t) && weaveOk(k)) return I(k, 'overload');
     if (toBuster < 0.6 && toBuster > 0.1 && ready(k, 'mirror')) return I(k, 'mirror');
+    // Whirling Runes (a talent in Sanctum's place): three Runes into blades instead of a Glyph Burst
+    if (abOf(k, 'sanctum').id === 'whirl' && ready(k, 'sanctum') && k.g.runes >= 3 && weaveOk(k) && Math.min(toBuster, toRw) > 6) return I(k, 'sanctum');
     if (k.gcdRemaining() > 0.0001) return null;
     const wardFor = (toBuster < 3 && toBuster > 0.3) || (toRw < 3 && toRw > 0.3);
     if (wardFor && k.g.runes >= 1 && !ctx.state.shield) return I(k, 'ward');
@@ -292,10 +305,13 @@ const PRO = {
   },
   shadowblade(k, ctx) {
     if (ready(k, 'dance') && ctx.inBurst(ctx.t) && weaveOk(k) && k.g.combo <= 2) return I(k, 'dance');
+    // Death Blossom (a talent in Smoke Bomb's place): from empty, in the burst
+    if (abOf(k, 'smoke').id === 'blossom' && ready(k, 'smoke') && weaveOk(k) && k.g.combo <= 1 && (ctx.inBurst(ctx.t) || k.cdRemaining(abOf(k, 'dance')) > 20)) return I(k, 'smoke');
     const step = abOf(k, 'step');
     if (weaveOk(k) && k.charges(step) > 0 && (k.charges(step) === 2 || ctx.isMoveWindow(ctx.t))) return I(k, 'step');
     if (k.gcdRemaining() > 0.0001) return null;
-    if (k.dotRemaining('poison') < 7) return I(k, 'venom');
+    const rupture = abOf(k, 'venom').id === 'rupture';
+    if (rupture ? k.g.combo >= 4 && k.dotRemaining('rupture') < 3 : k.dotRemaining('poison') < 7) return I(k, 'venom');
     const behind = true;
     if (k.g.combo >= 5 || (k.g.combo >= 4 && behind)) { ctx.setPos(abOf(k, 'evis').id === 'backstab' ? 'rear' : 'flank'); return I(k, 'evis'); }   // Nightstalker's Backstab wants the back
     ctx.setPos('rear');
@@ -308,10 +324,13 @@ const PRO = {
     if (k.has('combust') && k.charges(fb) > 0 && k.readyIn(fb) <= 0.0001 && !k.has('hotstreak')) return I(k, 'fireblast');
     if (k.charges(fb) === 2 && k.readyIn(fb) <= 0.0001 && !k.cast && weaveOk(k) && !k.has('hotstreak')) return I(k, 'fireblast');
     if (ready(k, 'combust') && ctx.inBurst(ctx.t) && weaveOk(k)) return I(k, 'combust');
+    // Firestep (a talent in Smolder's place): just before a mechanic moves you, for an instant Fireball on the way
+    if (abOf(k, 'smolder').id === 'firestep' && ready(k, 'smolder') && weaveOk(k) && k.g.heat <= 80 && (ctx.moveSoon(ctx.t, 1.5) || ctx.state.moving)) return I(k, 'smolder');
     if (k.gcdRemaining() > 0.0001 || k.cast) return null;
     const moving = ctx.state.moving || ctx.isMoveWindow(ctx.t + 1.4);
     if (k.has('hotstreak') && (moving || !k.has('combust') || true)) return I(k, 'pyro');
     if (k.g.heat >= 84 && ready(k, 'vent')) return I(k, 'vent');
+    if (moving && (k.has('firestep') || k.has('haze')) && k.g.heat <= 88) return I(k, 'fireball');   // an instant Fireball (talents)
     if (moving) { if (ready(k, 'vent') && k.g.heat >= 30) return I(k, 'vent'); return null; }
     if (k.g.heat > 88) return ready(k, 'vent') ? I(k, 'vent') : null; // don't overheat
     return castOk(k, ctx, 1.8) ? I(k, 'fireball') : null;
@@ -321,6 +340,8 @@ const PRO = {
     if (debt > 5000 && ready(k, 'prayer') && weaveOk(k)) return I(k, 'prayer');
     if (abOf(k, 'bene').target === 'enemy' ? ready(k, 'bene') && weaveOk(k) : debt > 6000 && ready(k, 'bene') && weaveOk(k)) return I(k, 'bene');   // Inquisitor's Condemn is an attack
     if (k.gcdRemaining() > 0.0001 || k.cast) return null;
+    // Bloom of Dawn (a talent in Intervention's place): a pile of Petals into one big heal
+    if (abOf(k, 'intervene').id === 'dawnbloom' && ready(k, 'intervene') && k.g.petals >= 2 && debt > 8000) { ctx.state.gcdHeals++; return I(k, 'intervene'); }
     if (k.g.bloom >= 3 && (ctx.inBurst(ctx.t) || ctx.state.moving)) return I(k, 'smite');
     if (k.g.petals >= 1 && (debt > 2500 || k.g.petals >= 3 || ctx.state.moving)) return I(k, 'petal');
     if (debt > 14000) { ctx.state.gcdHeals++; return castOk(k, ctx, 1.8) ? I(k, 'mend') : null; }
@@ -331,8 +352,14 @@ const PRO = {
     const debt = ctx.state.healDebt;
     if (ready(k, 'growth') && (debt > 6000 || ctx.t < 2) && weaveOk(k)) return I(k, 'growth');
     if (ready(k, 'bloom') && weaveOk(k) && (k.g.bloom >= 90 || debt > 7000)) return I(k, 'bloom');
+    // Treant (a talent in Thornlash's place) on cooldown
+    const treant = abOf(k, 'thorn').id === 'treant';
+    if (treant && ready(k, 'thorn') && weaveOk(k)) return I(k, 'thorn');
     if (k.gcdRemaining() > 0.0001 || k.cast) return null;
-    if (k.dotRemaining('thorn') < 9 || ctx.state.moving) return I(k, 'thorn');
+    // Seed of Renewal (a talent in Rebirth's place) when Bloom is spare and the party is hurting
+    if (abOf(k, 'rebirth').id === 'seed' && ready(k, 'rebirth') && k.g.bloom >= 60 && debt > 6000) { ctx.state.gcdHeals++; return I(k, 'rebirth'); }
+    if (treant) { if (ctx.state.moving) return k.has('awaken') ? I(k, 'wrath') : null; }
+    else if (k.dotRemaining('thorn') < 9 || ctx.state.moving) return I(k, 'thorn');
     if (!k.g.rejuvs.length && (debt > 2000 || ctx.nextRaidwide - ctx.t < 6)) { ctx.state.gcdHeals++; return I(k, 'rejuv'); }
     if (debt > 12000) { ctx.state.gcdHeals++; return I(k, 'rejuv'); }
     if (k.has('awaken')) return I(k, 'wrath');
@@ -343,6 +370,8 @@ const PRO = {
     if (debt > 9000 && k.charges(abOf(k, 'rewind')) > 0 && weaveOk(k)) return I(k, 'rewind');
     if (ready(k, 'accel') && ctx.inBurst(ctx.t) && weaveOk(k)) return I(k, 'accel');
     const toRw = ctx.nextRaidwide - ctx.t;
+    // Time Bubble (a talent in Stasis's place) on the tank before a buster
+    if (abOf(k, 'stasis').id === 'bubble' && ready(k, 'stasis') && k.g.flux >= 50 && ctx.nextBuster - ctx.t < 2 && weaveOk(k)) return I(k, 'stasis');
     if (ready(k, 'shift') && weaveOk(k)) {
       if (k.g.stance === 'slow' && k.g.flux >= 95) return I(k, 'shift');
       if (k.g.stance === 'slow' && k.g.flux >= 50 && (ctx.inBurst(ctx.t) || toRw < 2)) return I(k, 'shift');

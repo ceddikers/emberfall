@@ -19,14 +19,16 @@ const KITS = {
     dmgMod: k => (k.has('oath') ? 0.1 : 0),
     onNotify(k, type) {
       if (type === 'perfect') {
-        k.gain('resolve', k.talent('bastion_unshaken') ? 25 : 20);
+        bastionGain(k, 20 + (bastionInHallow(k) ? 10 : 0));
         k.g.counter = 1;
         if (k.perk('bastion_a2')) k.shield('self', 260, 6);
-        if (k.talent('bastion_sunlit')) k.damage(40, { ab: k.abById('brace') });
+        if (k.talent('bastion_sunlit')) { k.damage(40, { ab: k.abById('brace') }); k.fx('sunlit'); }
+        bastionPerfect(k);
         k.stats.perfects = (k.stats.perfects || 0) + 1;
         k.fx('perfect');
       }
     },
+    tick: k => bastionTick(k),
     signature: 'Perfect Block',
     floor: 'Press Q for the combo, W when it glows. Press E right before the boss hits you, and F in an emergency.',
     ceiling: [
@@ -41,62 +43,72 @@ const KITS = {
         desc: 'Three-hit combo on one button: Strike > Riposte > Judgment. Judgment fills 25 Resolve.',
         label: k => ['Strike', 'Riposte', 'Judgment'][k.now < k.g.comboUntil ? k.g.step : 0],
         glow: k => !!k.g.counter,
-        effect(k) {
-          const step = k.now < k.g.comboUntil ? k.g.step : 0;
-          let pot = [220, 300, 400][step] * (step === 2 && k.talent('bastion_judgment') ? 1.15 : 1);
-          if (k.g.counter) { pot += k.talent('bastion_counter') ? 195 : 150; k.g.counter = 0; }
-          k.damage(pot, { ab: this });
-          if (step === 2) { k.gain('resolve', k.has('oath') ? 50 : 25); if (k.perk('bastion_w1')) k.heal('self', 120, { ab: this }); }
-          bastionChain(k, this, step);
-          k.g.step = (step + 1) % 3; k.g.comboUntil = k.now + 15;
-        },
+        effect(k) { bastionBlade(k, this, 25); },
         fx: { type: 'slash', color: '#bcd4ff', r: 52, span: 1.5 },
       },
       {
         id: 'edge', name: 'Holy Edge', type: 'gcd', target: 'enemy', range: 260, anim: 'bash',
         desc: 'Spend 50 Resolve: a radiant blade you can throw from range. Heals you a little.',
-        usable: k => k.g.resolve >= 50,
+        usable: k => k.g.resolve >= bastionCost(k),
         glow: k => k.g.resolve >= 90 || (k.has('oath') && k.g.resolve >= 50),
         effect(k) {
-          k.spend('resolve', 50);
-          const pot = (k.has('oath') ? 720 : 560) * (k.talent('bastion_lightforged') ? 1.08 : 1);
+          bastionSpend(k);
+          const pot = k.has('oath') ? 720 : 560;
           k.damage(pot, { ab: this });
           if (k.perk('bastion_w2')) { k.damage(pot * 0.4, { ab: this }); k.fx('empower'); }
-          bastionEdge(k, this);
+          bastionEdge(k, this, pot);
         },
         fx: { type: 'projectile', color: '#ffe9a0', range: 260, speed: 900 },
       },
       {
         id: 'brace', name: 'Brace', type: 'ogcd', target: 'self', charges: 2, cd: 7, lock: 0.5, anim: 'brace',
         desc: 'Raise your shield: 25% less damage for 3s. Brace just before a hit lands for a Perfect Block.',
-        effect(k) { k.mitigate('self', k.talent('bastion_steadfast') ? 0.35 : 0.25, 3, { kind: 'brace', ab: this }); },
+        effect(k) { k.mitigate('self', 0.25, bastionBraceDur(k), { kind: 'brace', ab: this }); },
         fx: { type: 'shield', color: '#7fb2ff', dur: 1.2 },
       },
       {
         id: 'oath', name: 'Oath of Valor', type: 'ogcd', target: 'self', cd: 60, anim: 'big',
         desc: 'Burst: 15s of +10% damage. Judgment grants double Resolve and Holy Edge hits harder.',
         glow: k => k.g.resolve >= 50,
-        effect(k) { k.buff('oath', 15 + (k.talent('bastion_vigil') ? 4 : 0)); },
+        effect(k) { k.buff('oath', 15); },
         fx: { type: 'aura', color: '#ffd65a', r: 38, dur: 2 },
       },
       {
         id: 'banner', name: 'Rally Banner', type: 'ogcd', target: 'self', cd: 90, anim: 'cast',
         desc: 'Plant a banner: the whole party takes 15% less damage for 12s.',
-        effect(k) {
-          k.mitigate('party', 0.15, 12, { ab: this });
-          if (k.talent('bastion_sanctuary')) k.hot('party', 80, 4, 3, { ab: this, id: 'sanctuary' });
-          if (k.talent('bastion_standard')) k.partyBuff('dmg', 0.03, 12, { ab: this });
-          if (k.talent('bastion_hallowed')) k.dot('hallowed', 100, 12, 2, { ab: this });
-        },
+        effect(k) { k.mitigate('party', 0.15, 12, { ab: this }); },
         fx: { type: 'zone', style: 'banner', color: '#f2c84b', r: 150, range: 0, dur: 3 },
       },
       {
         id: 'bulwark', name: 'Bulwark', type: 'ogcd', target: 'self', cd: 120, anim: 'big',
         desc: 'Big cooldown: 40% less damage for 10s, and Brace\'s charges refill.',
-        effect(k) { k.mitigate('self', k.perk('bastion_a4') ? 0.5 : 0.4, 10, { ab: this }); k.refill('brace'); if (k.perk('bastion_w3')) k.shield('party', 160, 8, { ab: this }); if (k.talent('bastion_wall')) k.gain('resolve', 40); },
+        effect(k) { k.mitigate('self', k.perk('bastion_a4') ? 0.5 : 0.4, 10, { ab: this }); k.refill('brace'); if (k.perk('bastion_w3')) k.shield('party', 160, 8, { ab: this }); bastionGuard(k, this); },
         fx: { type: 'aura', style: 'hex', color: '#9fc4ff', r: 34, dur: 2.5 },
       },
     ],
+    // moves a talent puts in place of one of the six (talents.js `grants`; engine.js swaps them in)
+    talentAbilities: {
+      bastion_hallowed: {
+        id: 'hallowed', replaces: 'banner', icon: 'banner', name: 'Hallowed Ground', type: 'ogcd', target: 'self', cd: 30, anim: 'cast', talent: true,
+        desc: 'Pour out all your Resolve (at least 30) to consecrate the ground under you for 10s. The boss burns every 2s, harder the more Resolve you poured, and a Perfect Block inside the circle gives 10 more Resolve.',
+        usable: k => k.g.resolve >= 30,
+        glow: k => k.g.resolve >= 90 && !k.has('oath'),
+        effect(k) {
+          const n = k.g.resolve; k.g.resolve = 0;
+          k.dot('hallowed', n * 1.2, 10, 2, { ab: this });
+          const p = k.env.pos ? k.env.pos() : null;
+          k.g.hallow = { end: k.now + 10, x: p ? p.x : null, y: p ? p.y : null };
+        },
+        fx: { type: 'zone', color: '#ffd65a', r: 130, range: 0, dur: 10 },
+      },
+      bastion_avatar: {
+        id: 'avatar', replaces: 'oath', icon: 'oath', name: 'Avatar of Dawn', type: 'ogcd', target: 'self', cd: 60, anim: 'big', talent: true,
+        get desc() { return 'Burst: wings of light for 15s (20s as a Crusader). +10% damage, Judgment grants double Resolve and Holy Edge hits harder, and every Perfect Block calls a pillar of light down on the boss.'; },
+        glow: k => k.g.resolve >= 50,
+        effect(k) { const dur = k.def.spec === 'crusader' ? 20 : 15; k.buff('oath', dur); k.buff('avatar', dur); },
+        fx: { type: 'aura', color: '#ffe08a', r: 40, dur: 2 },
+      },
+    },
   },
 
   bloodreaver: {
@@ -118,14 +130,18 @@ const KITS = {
       {
         id: 'hack', name: 'Hack & Maul', type: 'gcd', target: 'enemy', range: MELEE, anim: 'attack',
         desc: 'Two-hit combo on one button. Both hits build Blood.',
-        label: k => (k.now < k.g.comboUntil && k.g.step === 1 ? 'Maul' : 'Hack'),
+        label: k => (k.now < k.g.comboUntil && k.g.step === 1 ? 'Maul' : k.now < k.g.comboUntil && k.g.step === 2 ? 'Gore' : 'Hack'),
         effect(k) {
-          if (k.now < k.g.comboUntil && k.g.step === 1) {
-            k.damage(340 * (k.talent('bloodreaver_maul') ? 1.12 : 1), { ab: this }); k.gain('blood', k.talent('bloodreaver_hunger') ? 20 : 15); k.g.step = 0;
+          if (k.now < k.g.comboUntil && k.g.step === 2) {   // Gore (a talent's third hit)
+            k.damage(320, { ab: this }); reaverGain(k, 15); k.g.step = 0;
+          } else if (k.now < k.g.comboUntil && k.g.step === 1) {
+            k.damage(340, { ab: this }); reaverGain(k, 15); k.g.step = 0;
             if (k.talent('bloodreaver_rend')) k.g.wounds = Math.min(3, (k.g.wounds || 0) + 1);
+            if (k.talent('bloodreaver_gore')) { k.g.step = 2; k.g.comboUntil = k.now + 15; }
           } else {
-            k.damage(240, { ab: this }); k.gain('blood', k.talent('bloodreaver_hunger') ? 15 : 10); k.g.step = 1; k.g.comboUntil = k.now + 15;
+            k.damage(240, { ab: this }); reaverGain(k, 10); k.g.step = 1; k.g.comboUntil = k.now + 15;
           }
+          reaverHackHeal(k, this);
         },
         fx: { type: 'slash', color: '#ff5a5a', r: 62, span: 2.0 },
       },
@@ -142,8 +158,8 @@ const KITS = {
           pot = reaverDrainPot(k, pot);
           k.damage(pot, { ab: this });
           if (k.perk('bloodreaver_w2')) { k.damage(pot * 0.3, { ab: this }); k.fx('empower'); }
-          const heal = k.healRaw('self', Math.max(k.env.maxHp() * 0.08, taken * (k.talent('bloodreaver_thirst') ? 0.45 : 0.35)), { ab: this });
-          if (k.talent('bloodreaver_tide')) k.healRaw('party', heal * 0.2, { ab: this });
+          const heal = k.healRaw('self', Math.max(k.env.maxHp() * 0.08, taken * 0.35), { ab: this });
+          reaverAfterDrain(k, this, heal, 0.2);
         },
         fx: { type: 'slash', color: '#ff2d4b', r: 56, span: 1.4 },
       },
@@ -151,15 +167,14 @@ const KITS = {
         id: 'letting', name: 'Bloodletting', type: 'ogcd', target: 'enemy', range: MELEE, charges: 2, cd: 15, anim: 'attack',
         desc: 'Quick slash between attacks: damage and +20 Blood. Two charges.',
         glow: k => k.charges(k.abById('letting')) === 2,
-        effect(k) { k.damage(220, { ab: this }); k.gain('blood', k.perk('bloodreaver_w1') ? 30 : 20); if (k.perk('bloodreaver_a4')) k.healRaw('self', k.env.maxHp() * 0.05, { ab: this }); reaverLetting(k, this); },
+        effect(k) { k.damage(220 * reaverRetaliate(k), { ab: this }); reaverGain(k, k.perk('bloodreaver_w1') ? 30 : 20); if (k.perk('bloodreaver_a4')) k.healRaw('self', k.env.maxHp() * 0.05, { ab: this }); reaverLetting(k, this); },
         fx: { type: 'slash', color: '#ff7a7a', r: 46, span: 1.2 },
       },
       {
         id: 'frenzy', name: 'Frenzy', type: 'ogcd', target: 'self', cd: 60, anim: 'big',
         desc: 'Burst: 12s of +15% damage, and your next three Crimson Drains are free and stronger.',
         effect(k) {
-          const dur = 12 + (k.talent('bloodreaver_carnage') ? 4 : 0), free = k.talent('bloodreaver_feast') ? 4 : 3;
-          k.buff('frenzy', dur); k.buff('gorge', dur, {}, free, free); if (k.perk('bloodreaver_w3')) k.gain('blood', 30);
+          k.buff('frenzy', 12); k.buff('gorge', 12, {}, 3, 3); if (k.perk('bloodreaver_w3')) k.gain('blood', 30);
           if (k.talent('bloodreaver_frenzied')) { const l = k.abilities.find(a => k.baseId(a) === 'letting'); if (l) k.refill(l.id); }
         },
         fx: { type: 'aura', color: '#ff2020', r: 40, dur: 2.5 },
@@ -168,18 +183,42 @@ const KITS = {
         id: 'warcry', name: 'War Cry', type: 'ogcd', target: 'self', cd: 90, anim: 'big',
         desc: 'Roar: shields the whole party for about 14% of their HP for 15s.',
         effect(k) {
-          k.shield('party', k.talent('bloodreaver_iron') ? 375 : 300, 15, { ab: this }); if (k.perk('bloodreaver_a2')) k.healRaw('self', k.env.maxHp() * 0.1, { ab: this });
-          if (k.talent('bloodreaver_roar')) k.gain('blood', 40);
+          k.shield('party', 300, 15, { ab: this }); if (k.perk('bloodreaver_a2')) k.healRaw('self', k.env.maxHp() * 0.1, { ab: this });
         },
         fx: { type: 'ring', color: '#ff9a7a', r: 160 },
       },
       {
         id: 'undying', name: 'Undying', type: 'ogcd', target: 'self', cd: 150, anim: 'big',
         desc: 'For 8s you cannot drop below 1 HP, and your heals on yourself are doubled.',
-        effect(k) { k.mitigate('self', 0, 8, { kind: 'living', ab: this }); k.buff('undying', 8); if (k.talent('bloodreaver_scar')) k.mitigate('self', 0.15, 8, { ab: this }); },
+        effect(k) { k.mitigate('self', 0, 8, { kind: 'living', ab: this }); k.buff('undying', 8); },
         fx: { type: 'aura', color: '#8a0010', r: 36, dur: 3 },
       },
     ],
+    // a scab coming off gives back what was left of it; Blood Moon setting and Bloodlust (talents)
+    onNotify(k, type, d) {
+      if (type === 'shieldEnd' && d.tag === 'scab') { const back = Math.round(30 * (1 - Math.max(0, Math.min(1, d.frac || 0)))); if (back > 0) reaverGain(k, back); }
+    },
+    onExpire(k, id, b) { reaverExpire(k, id, b); },
+    talentAbilities: {
+      bloodreaver_scab: {
+        id: 'scab', replaces: 'warcry', icon: 'warcry', name: 'Scab', type: 'ogcd', target: 'self', cd: 20, anim: 'big', talent: true,
+        desc: 'Spend 30 Blood: a scab grows over your wounds, a shield worth the damage you took in the last 6s (at least a tenth of your HP) for 8s. Whatever is left of it when it falls off comes back as Blood.',
+        usable: k => k.g.blood >= 30,
+        effect(k) {
+          k.spend('blood', 30);
+          const mx = k.env.maxHp(), amt = Math.min(mx * 0.4, Math.max(mx * 0.1, k.env.recentDamage(6)));
+          k.env.emit({ type: 'shield', target: 'self', amount: Math.round(amt), dur: 8, ab: this, tag: 'scab' });
+          if (k.perk('bloodreaver_a2')) k.healRaw('self', mx * 0.1, { ab: this });
+        },
+        fx: { type: 'aura', color: '#a01028', r: 34, dur: 2 },
+      },
+      bloodreaver_moon: {
+        id: 'moon', replaces: 'undying', icon: 'undying', name: 'Blood Moon', type: 'ogcd', target: 'self', cd: 120, anim: 'big', talent: true,
+        desc: 'For 10s you cannot drop below 1 HP, and your heals on yourself are doubled. When the moon sets you burst in a tide of blood: the boss takes damage for every hit you took under it, and you heal for a quarter of that.',
+        effect(k) { k.mitigate('self', 0, 10, { kind: 'living', ab: this }); k.buff('undying', 10); k.buff('bloodmoon', 10); },
+        fx: { type: 'aura', color: '#c0102a', r: 40, dur: 3 },
+      },
+    },
   },
 
   runeguard: {
@@ -190,15 +229,14 @@ const KITS = {
     dmgMod: k => (k.has('overload') ? 0.1 : 0),
     onNotify(k, type, d) {
       if (type === 'shieldEnd' && d.tag === 'ward') {
-        const frac = Math.max(0, Math.min(1, d.frac || 0));
         k.g.selfWard = false;
-        k.damage((150 + 450 * frac) * (k.has('overload') ? 1.5 : 1) * (k.talent('runeguard_volatile') ? 1.2 : 1), { ab: k.abById('ward') });
-        if (frac >= (k.talent('runeguard_reclaim') ? 0.5 : 0.999)) { k.gain('runes', 1, 3); k.stats.wardBreaks = (k.stats.wardBreaks || 0) + 1; k.fx('rune-echo'); }
+        runeWardEnd(k, d, k.talent('runeguard_reclaim') ? 0.5 : 0.999, 0.95);
       }
       if (type === 'shieldEnd' && d.tag === 'gward') runeGlyphguardEnd(k, d);
       if (type === 'reflect') {
-        k.damage(1500 * (k.talent('runeguard_mirrorsedge') ? 1.25 : 1), { ab: k.abById('mirror') }); k.fx('reflect');
-        if (k.talent('runeguard_shards')) for (let i = 0; i < 3; i++) k.damage(150, { ab: k.abById('mirror') });
+        k.damage(1500, { ab: k.abById('mirror') }); k.fx('reflect');
+        if (k.talent('runeguard_shards')) { for (let i = 0; i < 3; i++) k.damage(150, { ab: k.abById('mirror') }); k.fx('mirrorShards'); }
+        if (k.talent('runeguard_answer')) k.buff('answer', 15);
       }
     },
     signature: 'Ward breaks',
@@ -214,7 +252,7 @@ const KITS = {
         id: 'strike', name: 'Rune Strike', type: 'gcd', target: 'enemy', range: MELEE, anim: 'cast',
         desc: 'Strike with a rune-etched gauntlet: damage and +1 Rune (+2 during Runic Overload).',
         effect(k) {
-          k.damage(270 * (k.talent('runeguard_etched') ? 1.1 : 1), { ab: this });
+          k.damage(270, { ab: this });
           const extra = k.perk('runeguard_w1') && k.rng() < 0.25 ? 1 : 0;
           runeGain(k, this, (k.has('overload') ? 2 : 1) + extra);
           if (extra) k.fx('empower');
@@ -224,8 +262,8 @@ const KITS = {
       {
         id: 'ward', name: 'Runic Ward', type: 'gcd', target: 'self', anim: 'cast',
         desc: 'Spend 1 Rune: shield yourself (about 20% of your HP) for 8s. It explodes when it ends, harder the more it absorbed.',
-        usable: k => k.g.runes >= 1,
-        effect(k) { k.spend('runes', 1); k.shield('self', (k.perk('runeguard_a2') ? 812 : 650) * (k.talent('runeguard_thick') ? 1.15 : 1), k.perk('runeguard_a4') ? 12 : 8, { ab: this, tag: 'ward' }); k.g.selfWard = true; },
+        usable: k => k.g.runes >= 1 || runeEmergency(k),
+        effect(k) { runeWardCost(k); runeWardUp(k, this, 'self'); k.g.wardAmt = k.shield('self', k.perk('runeguard_a2') ? 812 : 650, k.perk('runeguard_a4') ? 12 : 8, { ab: this, tag: 'ward' }); k.g.selfWard = true; },
         fx: { type: 'aura', style: 'hex', color: '#9fd8ff', r: 32, dur: 2 },
       },
       {
@@ -234,9 +272,8 @@ const KITS = {
         usable: k => k.g.runes >= 3,
         glow: k => k.g.runes >= 3,
         effect(k) {
-          k.spend('runes', 3); k.damage(k.has('overload') ? 1080 : 830, { ab: this }); if (k.perk('runeguard_w2')) k.gain('runes', 1, 3);
-          if (k.talent('runeguard_afterglyph')) k.dot('afterglyph', 35, 9, 3, { ab: this });
-          runeGlyphguard(k, this);
+          k.spend('runes', 3); const pot = k.has('overload') ? 1080 : 830; k.damage(pot, { ab: this }); if (k.perk('runeguard_w2')) k.gain('runes', 1, 3);
+          runeGlyph(k, this, pot);
         },
         fx: { type: 'zone', style: 'vortex', color: '#7a55e8', r: 70, range: 260, dur: 0.8 },
       },
@@ -244,25 +281,39 @@ const KITS = {
         id: 'overload', name: 'Runic Overload', type: 'ogcd', target: 'self', cd: 60, anim: 'big',
         desc: 'Burst: 15s of +10% damage. Rune Strike gives 2 Runes, Glyph Burst and Ward blasts hit harder.',
         effect(k) {
-          const dur = 15 + (k.talent('runeguard_long') ? 4 : 0);
-          k.buff('overload', dur); if (k.perk('runeguard_w3')) k.gain('runes', 2, 3);
-          if (k.talent('runeguard_storm')) k.after(dur, () => { for (let i = 0; i < k.g.runes; i++) k.damage(200, { ab: this }); });
+          k.buff('overload', 15); if (k.perk('runeguard_w3')) k.gain('runes', 2, 3);
         },
         fx: { type: 'aura', color: '#b18cff', r: 40, dur: 2 },
       },
       {
         id: 'sanctum', name: 'Sanctum', type: 'ogcd', target: 'self', cd: 90, anim: 'cast',
         desc: 'Draw a sanctum: the whole party takes 15% less damage for 10s.',
-        effect(k) { k.mitigate('party', 0.15, k.talent('runeguard_sanctum') ? 14 : 10, { ab: this }); if (k.talent('runeguard_well')) k.gain('runes', 2, 3); },
+        effect(k) { k.mitigate('party', 0.15, 10, { ab: this }); },
         fx: { type: 'zone', style: 'clock', color: '#9f7aff', r: 150, range: 0, dur: 3 },
       },
       {
         id: 'mirror', name: 'Mirror Aegis', type: 'ogcd', target: 'self', cd: 90, anim: 'big',
         desc: 'For 3s, the next hit you take is reduced by 80% and reflected back for huge damage.',
-        effect(k) { k.mitigate('self', 0.8, k.talent('runeguard_mirror') ? 5 : 3, { kind: 'reflect', ab: this }); },
+        effect(k) { k.mitigate('self', 0.8, castHold(k, k.talent('runeguard_patient'), 3, 8), { kind: 'reflect', ab: this }); },
         fx: { type: 'shield', color: '#e0d4ff', dur: 2 },
       },
     ],
+    talentAbilities: {
+      runeguard_whirl: {
+        id: 'whirl', replaces: 'sanctum', icon: 'sanctum', name: 'Whirling Runes', type: 'ogcd', target: 'self', cd: 30, anim: 'big', talent: true,
+        desc: 'Every Rune you hold tears loose and spins around you as a blade for 12s, striking the boss every 2s.',
+        usable: k => k.g.runes >= 1,
+        glow: k => k.g.runes >= 3 && !k.has('overload'),
+        effect(k) { const n = k.g.runes; k.g.runes = 0; runeSpent(k, n); k.dot('whirl', 35 * n, 12, 2, { ab: this }); k.fx('whirl', { n }); },
+        fx: { type: 'aura', style: 'runes', color: '#b18cff', r: 40, dur: 1 },
+      },
+      runeguard_living: {
+        id: 'living', replaces: 'overload', icon: 'overload', name: 'Living Rune', type: 'ogcd', target: 'self', cd: 60, anim: 'big', talent: true,
+        desc: 'Burst: a great rune rises behind you for 15s. +10% damage, Rune Strike gives 2 Runes, Glyph Burst and Ward blasts hit harder, and every Rune you spend makes the rune fire a bolt at the boss.',
+        effect(k) { k.buff('overload', 15); k.buff('living', 15); if (k.perk('runeguard_w3')) k.gain('runes', 2, 3); },
+        fx: { type: 'aura', color: '#b18cff', r: 40, dur: 2 },
+      },
+    },
   },
 
   // ======================================================================= DPS
@@ -272,6 +323,7 @@ const KITS = {
     gauge: { kind: 'quiver', key: 'focus', max: 100, label: 'Focus' },
     init: () => ({ focus: 0 }),
     critMod: k => (k.has('markself') ? 0.1 : 0),
+    tick: k => rangerTrack(k),
     signature: 'Keen Eye procs',
     floor: 'Press Q, press W when it glows, E when Focus is full. R and F together every minute.',
     ceiling: [
@@ -285,11 +337,12 @@ const KITS = {
         id: 'quick', name: 'Quick Shot', type: 'gcd', target: 'enemy', range: RANGED, anim: 'attack',
         desc: 'Fast shot: damage and +10 Focus. Sometimes lights up Keen Eye.',
         effect(k) {
-          const barr = k.consume('barrage');
-          k.damage(barr ? 690 : 230, rangerShot(k, this));
-          k.gain('focus', rangerFocus(k, barr));
-          if (k.rng() < (k.has('markself') ? 0.55 : 0.35) + (k.perk('ranger_w1') ? 0.1 : 0)) rangerKeen(k);
+          const barr = k.consume('barrage'), ff = !barr && rangerFocusFire(k);
+          const r = k.damage((barr ? 690 : 230) * (ff ? 2 : 1), rangerShot(k, this));
+          if (!ff) k.gain('focus', rangerFocus(k, barr));
+          if (k.rng() < rangerKeenChance(k)) rangerKeen(k); else rangerNoKeen(k);
           rangerRhythm(k, this, barr, 230);
+          rangerQuickAfter(k, this, r);
         },
         fx: { type: 'line', color: '#fff2b0', range: 380 },
       },
@@ -299,12 +352,13 @@ const KITS = {
         glow: k => k.has('keen') || k.charges(k.abById('pierce')) === 2,
         effect(k) {
           const keen = k.consume('keen');
+          let r;
           if (keen) {
-            k.damage(500 * (k.talent('ranger_keen') ? 1.15 : 1), { ab: this }); k.refundCharge('pierce');
+            r = k.damage(500, { ab: this }); k.refundCharge('pierce');
             if (k.perk('ranger_w2')) { k.damage(250, { ab: this }); k.fx('empower'); }
           }
-          else k.damage(340, { ab: this });
-          rangerPierce(k, keen);
+          else r = k.damage(340, { ab: this });
+          rangerPierce(k, keen, r, keen ? 500 : 340);
         },
         fx: { type: 'line', color: '#ffd27a', range: 440 },
       },
@@ -315,8 +369,7 @@ const KITS = {
         glow: k => k.g.focus >= 90 || (k.has('markself') && k.g.focus >= 50),
         effect(k) {
           k.spend('focus', 50);
-          k.damage((k.perk('ranger_a4') ? 483 : 420) * (k.talent('ranger_markedvolley') && k.has('markself') ? 1.3 : 1), { ab: this }); if (k.perk('ranger_a2')) k.gain('focus', 10);
-          if (k.talent('ranger_arrowstorm')) k.dot('arrowstorm', 50, 6, 3, { ab: this });
+          k.damage(k.perk('ranger_a4') ? 483 : 420, { ab: this }); if (k.perk('ranger_a2')) k.gain('focus', 10);
         },
         fx: { type: 'zone', style: 'arrows', color: '#e8d9a0', r: 60, range: RANGED, dur: 0.9 },
       },
@@ -326,13 +379,14 @@ const KITS = {
         effect(k) {
           const dur = 15 + (k.talent('ranger_longhunt') ? 3 : 0);
           k.debuffTarget('vuln', 0.08, dur, { ab: this }); k.buff('markself', dur);
+          rangerMark(k, this, dur);
         },
         fx: { type: 'ring', style: 'mark', color: '#ff9d3d', r: 46, range: RANGED },
       },
       {
         id: 'cloak', name: "Hunter's Cloak", type: 'ogcd', target: 'self', cd: 90, anim: 'cast',
         desc: 'The whole party takes 10% less damage for 10s.',
-        effect(k) { k.mitigate('party', k.talent('ranger_shelter') ? 0.15 : 0.1, 10, { ab: this }); },
+        effect(k) { k.mitigate('party', 0.1, 10, { ab: this }); if (k.talent('ranger_disengage')) kitMove(k, 'back', { d: 150 }); },
         fx: { type: 'ring', color: '#9fdc8a', r: 150 },
       },
       {
@@ -341,13 +395,31 @@ const KITS = {
         glow: k => k.has('markself'),
         effect(k) {
           k.buff('barrage', 15); if (k.perk('ranger_w3')) k.proc('keen', 15);
-          if (k.talent('ranger_dressing')) k.healRaw('self', k.env.maxHp() * 0.08, { ab: this });
-          if (k.talent('ranger_rush')) k.gain('focus', 20);
-          if (k.talent('ranger_falcon')) { k.dot('falcon', 40, 6, 1.5, { ab: this }); k.fx('empower'); }
         },
         fx: { type: 'aura', color: '#ffe27a', r: 30, dur: 1 },
       },
     ],
+    talentAbilities: {
+      ranger_explosive: {
+        id: 'explosive', replaces: 'rapid', icon: 'rapid', name: 'Explosive Shot', type: 'ogcd', target: 'enemy', range: RANGED, cd: 2, anim: 'attack', talent: true,
+        desc: 'Spend 50 Focus: plant a charge in the boss that blows 2.5s later. Every Quick Shot or Piercing Arrow that lands before then makes the blast 30% bigger.',
+        usable: k => k.g.focus >= 50 && !k.g.charge,
+        glow: k => !k.g.charge && (k.g.focus >= 90 || (k.has('markself') && k.g.focus >= 50)),
+        effect(k, t) {
+          k.spend('focus', 50); if (k.perk('ranger_a2')) k.gain('focus', 10);
+          const c = k.g.charge = { pot: k.perk('ranger_a4') ? 390 : 340, n: 0 }, ab = this, en = t && t.id;
+          k.after(2.5, () => { k.damage(c.pot, { ab }); k.fx('explode', { en, n: c.n }); if (k.g.charge === c) k.g.charge = null; });
+        },
+        fx: { type: 'line', color: '#ffb040', range: RANGED },
+      },
+      ranger_falcon: {
+        id: 'falcon', replaces: 'barrage', icon: 'barrage', name: 'Falcon', type: 'ogcd', target: 'enemy', range: RANGED, cd: 30, anim: 'cast', talent: true,
+        desc: 'Your falcon dives onto the boss and harries it for 10s, striking every 2s. Every Keen Eye you light while it hunts sends it into a diving strike at once.',
+        glow: k => k.has('markself'),
+        effect(k) { k.dot('falcon', 90, 10, 2, { ab: this }); k.buff('falconHunt', 10); if (k.perk('ranger_w3')) k.proc('keen', 15); },
+        fx: { type: 'aura', color: '#ffe27a', r: 30, dur: 1 },
+      },
+    },
   },
 
   shadowblade: {
@@ -357,11 +429,6 @@ const KITS = {
     init: () => ({ combo: 0 }),
     haste: k => (k.has('dance') ? 0.8 : 1),
     positionalAlways: k => k.has('dance'),
-    onDamage(k, amt, crit, opts) {   // your poison ticking (Leeching Poison, Envenom)
-      if (!opts.dot || !opts.ab || opts.ab.id !== 'venom') return;
-      if (k.talent('shadowblade_leech')) k.healRaw('self', k.env.maxHp() * 0.01, { ab: opts.ab });
-      if (k.talent('shadowblade_envenom') && k.rng() < 0.08) k.gain('combo', 1, 5);
-    },
     signature: 'Positionals',
     floor: 'Press Q to build combo points, W to spend them. Stand behind the boss. D when its button glows.',
     ceiling: [
@@ -375,8 +442,9 @@ const KITS = {
         id: 'strike', name: 'Strike', type: 'gcd', target: 'enemy', range: MELEE, anim: 'attack',
         desc: 'Stab: damage and +1 combo point. From behind: +2 points and extra damage.',
         effect(k) {
-          const r = k.damage(220 * (k.talent('shadowblade_serrated') ? 1.12 : 1), { ab: this, positional: 'rear', posBonus: 60 });
-          k.gain('combo', (r.posHit ? 2 : 1) + (k.talent('shadowblade_quicken') && k.has('dance') && k.consume('quicken') ? 2 : 0), 5);
+          const r = k.damage(220, { ab: this, positional: 'rear', posBonus: 60 });
+          bladeCombo(k, r.posHit ? 2 : 1);
+          if (!r.posHit && k.talent('shadowblade_feint') && k.env.positional() === 'front') { k.buff('feint', 10); k.fx('feint'); }
         },
         fx: { type: 'slash', color: '#d6b3ff', r: 40, span: 1.1 },
       },
@@ -387,10 +455,11 @@ const KITS = {
         glow: k => k.g.combo >= 5 || (k.g.combo >= 4 && k.env.positional() === 'rear'),
         effect(k) {
           const cp = k.g.combo; k.g.combo = 0;
-          const mult = (k.dotRemaining('poison') > 0 ? 1.15 : 1) * (k.has('dance') ? 1.25 : 1) * (cp >= 4 && k.talent('shadowblade_cruel') ? 1.06 : 1);
-          const r = k.damage(120 + 115 * cp + (cp >= 5 ? 160 : 0), { ab: this, positional: 'flank', posBonus: 80, mult });
-          if (cp >= 5 && k.perk('shadowblade_w2')) { k.damage((120 + 115 * cp + 160 + (r.posHit ? 80 : 0)) * 0.3, { ab: this, mult }); k.fx('empower'); }
-          bladeFinisher(k, this, cp, (120 + 115 * cp + (cp >= 5 ? 160 : 0) + (r.posHit ? 80 : 0)) * mult);
+          const mult = bladeMult(k) * (k.has('dance') ? 1.25 : 1);
+          const o = bladeOpts(k, this, 'flank', 80, mult), pot = 120 + 115 * cp + (cp >= 5 ? 160 : 0);
+          const r = k.damage(pot + (o.feint ? 80 : 0), o), hit = o.feint || r.posHit;
+          if (cp >= 5 && k.perk('shadowblade_w2')) { k.damage((120 + 115 * cp + 160 + (hit ? 80 : 0)) * 0.3, { ab: this, mult }); k.fx('empower'); }
+          bladeFinisher(k, this, cp, (pot + (hit ? 80 : 0)) * mult);
         },
         fx: { type: 'slash', color: '#ff4d8a', r: 50, span: 1.7 },
       },
@@ -403,26 +472,46 @@ const KITS = {
       {
         id: 'dance', name: 'Shadow Dance', type: 'ogcd', target: 'self', cd: 60, anim: 'big',
         desc: 'Burst: 10s of faster attacks, every positional lands, and Eviscerate hits 25% harder.',
-        effect(k) { k.buff('dance', 10 + (k.talent('shadowblade_longdance') ? 3 : 0)); if (k.talent('shadowblade_quicken')) k.buff('quicken', 13); if (k.perk('shadowblade_w3')) k.gain('combo', 2, 5); },
+        effect(k) { k.buff('dance', 10); k.g.endless = 0; if (k.perk('shadowblade_w3')) k.gain('combo', 2, 5); },
         fx: { type: 'aura', color: '#b04dff', r: 36, dur: 2 },
       },
       {
         id: 'venom', name: 'Venom Blade', type: 'gcd', target: 'enemy', range: MELEE, anim: 'attack',
         desc: 'Poison the target (damage over 24s). While poisoned, Eviscerate hits 15% harder.',
-        glow: k => k.dotRemaining('poison') < (k.talent('shadowblade_lasting') ? 9 : 7.2),
-        effect(k) { k.damage(140, { ab: this }); k.dot('poison', (k.perk('shadowblade_w1') ? 88 : 70) * (k.talent('shadowblade_lasting') ? 1.15 : 1), k.talent('shadowblade_lasting') ? 30 : 24, 3, { ab: this }); },
+        glow: k => k.dotRemaining('poison') < 7.2,
+        effect(k) { k.damage(140, { ab: this }); k.dot('poison', k.perk('shadowblade_w1') ? 88 : 70, 24, 3, { ab: this }); },
         fx: { type: 'slash', color: '#8aff6a', r: 42, span: 1.0 },
       },
       {
         id: 'smoke', name: 'Smoke Bomb', type: 'ogcd', target: 'self', cd: 90, anim: 'cast',
         desc: 'The whole party takes 10% less damage for 10s.',
         effect(k) {
-          k.mitigate('party', 0.1, k.talent('shadowblade_smoke') ? 14 : 10, { ab: this });
-          if (k.talent('shadowblade_vanish')) { const st = k.abilities.find(a => k.baseId(a) === 'step'); if (st) k.refill(st.id); }
+          k.mitigate('party', 0.1, 10, { ab: this });
         },
         fx: { type: 'zone', color: '#8a7a9a', r: 140, range: 0, dur: 2 },
       },
     ],
+    talentAbilities: {
+      shadowblade_rupture: {
+        id: 'rupture', replaces: 'venom', icon: 'venom', name: 'Rupture', type: 'gcd', target: 'enemy', range: MELEE, anim: 'attack', talent: true,
+        desc: 'Finisher: spend all your combo points to open the boss up, bleeding for 4s per point. While it bleeds, your finisher hits 15% harder.',
+        usable: k => k.g.combo >= 1,
+        glow: k => k.g.combo >= 4 && k.dotRemaining('rupture') < 4,
+        effect(k) { const cp = k.g.combo; k.g.combo = 0; k.damage(100, { ab: this }); k.dot('rupture', 120 * (k.perk('shadowblade_w1') ? 1.25 : 1), 4 * cp, 2, { ab: this }); },
+        fx: { type: 'slash', color: '#d0203a', r: 50, span: 1.6 },
+      },
+      shadowblade_blossom: {
+        id: 'blossom', replaces: 'smoke', icon: 'smoke', name: 'Death Blossom', type: 'ogcd', target: 'enemy', range: MELEE, cd: 120, anim: 'big', talent: true,
+        desc: 'Vanish into a storm of knives around the boss: six cuts over 1.5s, each giving a combo point. The last is a free finisher with everything you hold.',
+        glow: k => k.g.combo <= 1,
+        effect(k) {
+          const ab = this;
+          for (let i = 0; i < 6; i++) k.after(0.25 * i, () => { k.damage(30, { ab }); bladeCombo(k, 1); });
+          k.after(1.55, () => { const ev = k.abilities.find(a => k.baseId(a) === 'evis'); if (ev && k.g.combo > 0) { ev.effect.call(ev, k); k.fx('blossomEnd'); } });
+        },
+        fx: { type: 'slash', color: '#e0c8ff', r: 70, span: 6.28 },
+      },
+    },
   },
 
   pyromancer: {
@@ -430,26 +519,28 @@ const KITS = {
     auto: { kind: 'spark', potency: 25, range: RANGED },  // passive auto-attack (see ENGINE.AUTO_EVERY)
     gauge: { kind: 'crucible', key: 'heat', max: 100, label: 'Heat' },
     init: () => ({ heat: 0 }),
-    dmgMod: k => k.g.heat * (k.talent('pyromancer_heatsink') ? 0.004 : 0.003) - (k.has('burnt') ? 0.2 : 0),
+    dmgMod: k => k.g.heat * 0.003 - (k.has('burnt') ? 0.2 : 0),
     critMod: (k, opts) => (opts && opts.ab && ['fireball', 'pyro'].includes(opts.ab.id) ? 0.15 : 0) + (k.has('combust') ? 1 : 0) +
       (opts && opts.ab && opts.ab.id === 'fireball' && !opts.dot && k.perk('pyromancer_w1') ? 0.1 : 0),
     tick(k) {
       if (k.g.heat >= 100) {
         k.g.heat = 0;
         k.selfDamage(k.perk('pyromancer_a2') ? 0.075 : 0.15);
-        k.buff('burnt', k.talent('pyromancer_tempered') ? 2 : 5);
+        k.buff('burnt', 5);
         k.stats.overheats = (k.stats.overheats || 0) + 1;
         k.fx('overheat');
       }
       const dt = k.now - (k.g.lastTick ?? k.now);
       k.g.lastTick = k.now;
-      if (dt > 0 && dt < 1 && !k.cast) k.g.heat = Math.max(0, k.g.heat - 2 * dt);
+      if (dt > 0 && dt < 1 && !k.cast && !k.talent('pyromancer_banked')) k.g.heat = Math.max(0, k.g.heat - 2 * dt);
+      pyroTick(k);
     },
     onDamage(k, amt, crit, opts) {
       if (opts.extra || !opts.ab || !['fireball', 'pyro', 'fireblast'].includes(opts.ab.id)) return;   // (a talent's extra hit doesn't feed Hot Streak)
       if (crit && !opts.dot && opts.ab.id === 'fireball' && k.talent('pyromancer_firestarter')) k.dot('firestarter', 40, 6, 3, { ab: opts.ab, extra: true });
+      if (crit && !opts.dot) pyroWildfire(k, opts.ab);
       if (crit) {
-        if (k.has('heating')) { k.clear('heating'); k.proc('hotstreak', 15); }
+        if (k.has('heating')) { k.clear('heating'); k.proc('hotstreak', 15); if (opts.ab.id === 'fireblast' && k.talent('pyromancer_cauterize')) k.healRaw('self', k.env.maxHp() * 0.05, { ab: opts.ab }); }
         else if (!k.has('hotstreak')) k.buff('heating', 15);
       } else if (opts.ab.id !== 'fireblast') k.clear('heating');
     },
@@ -463,11 +554,13 @@ const KITS = {
     ],
     abilities: [
       {
-        id: 'fireball', name: 'Fireball', type: 'gcd', target: 'enemy', range: RANGED, cast: 1.8, anim: 'cast',
+        id: 'fireball', name: 'Fireball', type: 'gcd', target: 'enemy', range: RANGED, anim: 'cast',
+        cast: k => (k.has('haze') || k.has('firestep') ? 0 : 1.8),   // (Heat Haze and Firestep, talents, make it instant)
         desc: '1.8s cast: damage and +12 Heat. Crits warm you up toward Hot Streak.',
         effect(k) {
+          if (!k.consume('firestep')) k.consume('haze');
           k.damage(300, { ab: this }); k.gain('heat', 12, 100);
-          if (k.talent('pyromancer_bomb') && (k.g.fireballs = (k.g.fireballs || 0) + 1) % 4 === 0) k.after(3, () => { k.damage(90, { ab: this, extra: true }); k.fx('empower'); });
+          if (k.talent('pyromancer_bomb') && (k.g.fireballs = (k.g.fireballs || 0) + 1) % 4 === 0) { k.fx('bombPlant'); k.after(3, () => { k.damage(90, { ab: this, extra: true }); k.fx('bomb'); }); }
         },
         fx: { type: 'projectile', style: 'fire', color: '#ff8c2a', range: RANGED, speed: 650 },
       },
@@ -478,10 +571,11 @@ const KITS = {
         glow: k => k.has('hotstreak'),
         effect(k) {
           const hs = k.consume('hotstreak');
-          const pot = hs ? 620 * (k.talent('pyromancer_pyroclasm') ? 1.1 : 1) : 540;
+          const pot = hs ? 620 : 540;
           k.damage(pot, { ab: this });
           if (hs && k.perk('pyromancer_w2')) { k.dot('pyroburn', 70, 9, 3, { ab: this }); k.fx('empower'); }
-          if (hs && k.talent('pyromancer_twin')) k.damage(pot * 0.1, { ab: this, extra: true });
+          if (hs && k.talent('pyromancer_twin')) { const ab = this; k.after(0.35, () => { k.damage(pot * 0.1, { ab, extra: true }); k.fx('twinFlame'); }); }
+          if (hs && k.talent('pyromancer_chain') && !k.has('hotstreak') && k.now >= (k.g.chainAt || 0)) { k.g.chainAt = k.now + 10; k.buff('heating', 15); k.fx('chainReact'); }
           k.gain('heat', hs ? 10 : 20, 100);
         },
         fx: { type: 'projectile', style: 'fire', color: '#ff5a1a', range: RANGED, speed: 520 },
@@ -490,7 +584,12 @@ const KITS = {
         id: 'fireblast', name: 'Fire Blast', type: 'ogcd', target: 'enemy', range: RANGED, charges: 2, cd: 10, duringCast: true, lock: 0.4, anim: 'cast',
         desc: 'Instant blast that always crits, usable even while casting. Two charges.',
         glow: k => k.has('heating'),
-        effect(k) { k.damage(160 * (k.talent('pyromancer_flashfire') ? 1.3 : 1), { ab: this, autoCrit: true }); k.gain('heat', k.talent('pyromancer_kindling') ? 12 : 6, 100); },
+        effect(k) {
+          if (k.talent('pyromancer_hurry') && k.cast) { k.cast.end = Math.max(k.now + 0.05, k.cast.end - 0.5); k.fx('hurry'); }
+          k.damage(160, { ab: this, autoCrit: true });
+          if (k.talent('pyromancer_flashpoint') && k.g.heat >= 85) { k.g.heat -= 30; k.damage(120, { ab: this, extra: true }); k.fx('flashpoint'); }
+          else k.gain('heat', 6, 100);
+        },
         fx: { type: 'ring', color: '#ffb03a', r: 40, range: RANGED },
       },
       {
@@ -509,19 +608,38 @@ const KITS = {
         usable: k => k.g.heat >= 10,
         glow: k => k.g.heat >= 85,
         effect(k) {
-          const h = k.g.heat; k.g.heat = 0; k.damage(150 + (k.talent('pyromancer_pressure') ? 8 : 6) * h, { ab: this });
-          if (k.talent('pyromancer_heatshield')) k.shield('self', 300, 8, { ab: this });
-          if (k.talent('pyromancer_phoenix')) { k.dot('phoenix', h * 0.4, 9, 3, { ab: this }); k.fx('empower'); }
+          const h = k.g.heat; k.g.heat = 0; k.damage(150 + 6 * h, { ab: this });
         },
         fx: { type: 'zone', style: 'meteor', color: '#ff3a1a', r: 80, range: RANGED, dur: 1.1 },
       },
       {
         id: 'smolder', name: 'Smolder', type: 'ogcd', target: 'self', cd: 90, anim: 'cast',
         desc: 'Sap the boss\'s strength: the whole party takes 10% less damage for 10s.',
-        effect(k) { k.mitigate('party', 0.1, k.talent('pyromancer_smolder') ? 14 : 10, { ab: this }); },
+        effect(k) { k.mitigate('party', 0.1, 10, { ab: this }); },
         fx: { type: 'zone', style: 'fire', color: '#ff7a1a', r: 120, range: 0, dur: 1.5 },
       },
     ],
+    talentAbilities: {
+      pyromancer_firestep: {
+        id: 'firestep', replaces: 'smolder', icon: 'smolder', name: 'Firestep', type: 'ogcd', target: 'self', cd: 20, anim: 'cast', lock: 0.3, talent: true,
+        desc: 'Blink forward through a burst of flame. It gives 15 Heat and makes your next Fireball instant.',
+        effect(k) { kitMove(k, 'forward', { d: 150 }); k.gain('heat', 15, 100); k.buff('firestep', 10); },
+        fx: { type: 'ring', color: '#ff8a2a', r: 40 },
+      },
+      pyromancer_phoenix: {
+        id: 'phoenix', replaces: 'vent', icon: 'vent', name: 'Phoenix Flight', type: 'gcd', target: 'enemy', range: RANGED, cd: 12, anim: 'big', talent: true,
+        desc: 'Instant: release all your Heat as a phoenix that sweeps through the boss and wheels back for a second pass, harder the more Heat. At 60 Heat or more it leaves you Hot Streak.',
+        usable: k => k.g.heat >= 10,
+        glow: k => k.g.heat >= 85,
+        effect(k) {
+          const h = k.g.heat, pot = 70 + 2.6 * h, ab = this; k.g.heat = 0;
+          k.damage(pot, { ab, extra: true });
+          k.after(1.1, () => k.damage(pot, { ab, extra: true }));
+          if (h >= 60) k.proc('hotstreak', 15);
+        },
+        fx: { type: 'projectile', style: 'fire', color: '#ff7a1a', range: RANGED, speed: 600 },
+      },
+    },
   },
 
   // ======================================================================= HEALERS
@@ -531,9 +649,10 @@ const KITS = {
     gauge: { kind: 'sundial', key: 'petals', max: 3, label: 'Petals' },
     init: () => ({ petals: 2, bloom: 0, petalAt: null }),
     tick(k) {
-      const every = 15 - (k.talent('cleric_fresh') ? 2 : 0);
+      const every = 15;
       if (k.g.petalAt === null) k.g.petalAt = k.now + every;
-      if (k.now >= k.g.petalAt) { k.gain('petals', 1, 3); k.g.petalAt += every; }
+      if (k.now >= k.g.petalAt) { clericGrow(k); k.g.petalAt += every; }
+      clericTick(k);
     },
     signature: 'Petal economy',
     floor: 'Press Q to attack. Heal with E (instant) or W. D brings dead allies back. R before big party hits.',
@@ -546,20 +665,23 @@ const KITS = {
     abilities: [
       {
         id: 'smite', name: 'Smite', type: 'gcd', target: 'enemy', range: RANGED, anim: 'cast',
-        cast: k => (k.g.bloom >= 3 ? 0 : 1.5),
+        cast: k => (k.g.bloom >= 3 || clericInSanctum(k) ? 0 : 1.5),
         label: k => (k.g.bloom >= 3 ? 'Dawnstar' : 'Smite'),
         desc: '1.5s cast attack. After three Dawn Petals it becomes Dawnstar: instant and huge.',
         glow: k => k.g.bloom >= 3,
         effect(k) {
-          if (k.g.bloom >= 3) { k.g.bloom = 0; k.damage(950 * (k.talent('cleric_radiant') ? 1.15 : 1), { ab: this }); k.fx('dawnstar'); if (k.perk('cleric_w2')) k.heal('party', 180, { ab: this }); clericDawnstar(k, this); }
-          else k.damage(280 * (k.talent('cleric_burning') ? 1.05 : 1), { ab: this });
+          let r;
+          if (k.g.bloom >= 3) { k.g.bloom = 0; r = k.damage(950 * clericHeld(k), { ab: this }); k.fx('dawnstar'); if (k.perk('cleric_w2')) k.heal('party', 180, { ab: this }); clericDawnstar(k, this); }
+          else r = k.damage(280, { ab: this });
+          clericSmite(k, this, r);
         },
         fx: { type: 'projectile', color: '#fff0a8', range: RANGED, speed: 800 },
       },
       {
-        id: 'mend', name: 'Mend', type: 'gcd', target: 'ally', cast: 1.8, anim: 'cast',
+        id: 'mend', name: 'Mend', type: 'gcd', target: 'ally', anim: 'cast',
+        cast: k => (k.has('quickmend') ? 0 : 1.8),   // (Quick Mend, a talent)
         desc: '1.8s cast: a big heal on one ally.',
-        effect(k, t) { k.heal(t, 700 * (k.talent('cleric_mending') ? 1.2 : 1), { ab: this }); },
+        effect(k, t) { k.consume('quickmend'); k.heal(t, 700, { ab: this }); },
         fx: { type: 'ring', color: '#fff0a8', r: 40, onTarget: true },
       },
       {
@@ -570,8 +692,8 @@ const KITS = {
         effect(k, t) {
           k.spend('petals', 1);
           k.heal(t, 450, { ab: this });
-          k.hot(t, k.perk('cleric_w1') ? 90 : 60, k.talent('cleric_dew') ? 10 : 5, 3, { ab: this, id: 'petal' });
-          k.gain('bloom', 1, 3);
+          k.hot(t, k.perk('cleric_w1') ? 90 : 60, 5, 3, { ab: this, id: 'petal' });
+          clericBloom(k, 1);
           clericPetal(k, this, t, 450);
         },
         fx: { type: 'ring', color: '#ffe680', r: 44, onTarget: true },
@@ -580,9 +702,7 @@ const KITS = {
         id: 'prayer', name: 'Prayer Circle', type: 'ogcd', target: 'self', cd: 60, anim: 'cast',
         desc: 'The party takes 10% less damage for 10s and regenerates for 15s.',
         effect(k) {
-          k.mitigate('party', k.perk('cleric_w3') ? 0.15 : 0.1, 10, { ab: this }); k.hot('party', k.perk('cleric_a4') ? 150 : 100, k.talent('cleric_widecircle') ? 7 : 5, 3, { ab: this, id: 'prayer' });
-          if (k.talent('cleric_devotion')) k.gain('petals', 1, 3);
-          if (k.talent('cleric_judgment')) k.dot('judgment', 90, 10, 3, { ab: this });
+          k.mitigate('party', k.perk('cleric_w3') ? 0.15 : 0.1, 10, { ab: this }); k.hot('party', k.perk('cleric_a4') ? 150 : 100, 5, 3, { ab: this, id: 'prayer' });
         },
         fx: { type: 'zone', style: 'holy', color: '#ffe680', r: 160, range: 0, dur: 3 },
       },
@@ -595,10 +715,37 @@ const KITS = {
       {
         id: 'bene', name: 'Benediction', type: 'ogcd', target: 'ally', cd: 40, anim: 'big',
         desc: 'Instant: a strong heal and a shield on one ally.',
-        effect(k, t) { k.heal(t, 800, { ab: this }); k.shield(t, k.perk('cleric_a2') ? 480 : 300, 10, { ab: this }); if (k.talent('cleric_grace')) k.heal('party', 260, { ab: this }); },
+        effect(k, t) {
+          if (clericBless(k, this, t)) { const { amount, crit } = k.healAmount(400, { ab: this }); k.env.emit({ type: 'heal', target: 'lowest', not: k.g.blessT, amount, crit, ab: this }); k.fx('twinBless', { to: t }); return; }
+          k.heal(t, 800, { ab: this }); k.shield(t, k.perk('cleric_a2') ? 480 : 300, 10, { ab: this });
+        },
         fx: { type: 'ring', color: '#fffbe0', r: 52, onTarget: true },
       },
     ],
+    talentAbilities: {
+      cleric_bloom: {
+        id: 'dawnbloom', replaces: 'intervene', icon: 'intervene', name: 'Bloom of Dawn', type: 'gcd', target: 'ally', cd: 30, anim: 'big', allowDead: true, talent: true,
+        desc: 'Instant: spend all your Petals on one ally. A fallen ally rises at once; a living one is healed for 500 per Petal. Every Petal counts toward Dawnstar.',
+        usable: k => k.g.petals >= 1,
+        effect(k, t) {
+          const n = k.g.petals; k.g.petals = 0;
+          if (k.env.isDead(t)) k.raise(t, { ab: this }); else k.heal(t, 500 * n, { ab: this });
+          clericBloom(k, n);
+        },
+        fx: { type: 'ring', color: '#ffe680', r: 50, onTarget: true },
+      },
+      cleric_sanctum: {
+        id: 'dawnsanctum', replaces: 'prayer', icon: 'prayer', name: 'Dawn Sanctum', type: 'ogcd', target: 'self', cd: 90, anim: 'big', talent: true,
+        desc: 'A great circle of dawn at your feet for 12s. Allies standing in it take 15% less damage and heal every 1.5s, and your Smites cast from inside it are instant.',
+        effect(k) {
+          const p = k.env.pos ? k.env.pos() : null;
+          k.g.sanctum = { end: k.now + 12, x: p ? p.x : null, y: p ? p.y : null };
+          const pa = k.healAmount(k.perk('cleric_a4') ? 105 : 70, { ab: this }).amount;
+          k.env.emit({ type: 'splash', target: 'self', r: 0, pr: 160, ticks: 8, interval: 1.5, pa, pct: k.perk('cleric_w3') ? 0.2 : 0.15, ab: this });
+        },
+        fx: { type: 'zone', style: 'holy', color: '#ffe680', r: 160, range: 0, dur: 12 },
+      },
+    },
   },
 
   grovekeeper: {
@@ -610,12 +757,12 @@ const KITS = {
     tick(k) {
       // HoT ticks grow Bloom (tracked locally from our own Rejuvenates)
       for (const r of k.g.rejuvs) {
-        while (r.ticks > 0 && k.now >= r.next) { r.ticks--; r.next += 3; k.gain('bloom', (k.perk('grovekeeper_a2') ? 7 : 5) + (k.talent('grovekeeper_fertile') ? 1 : 0)); }
-        if (r.ticks <= 0 && k.talent('grovekeeper_blossom')) { k.heal(r.t, 300, { ab: k.abilities.find(a => k.baseId(a) === 'rejuv') }); k.fx('empower'); }
+        while (r.ticks > 0 && k.now >= r.next) { r.ticks--; r.next += 3; groveGain(k, k.perk('grovekeeper_a2') ? 7 : 5); }
+        if (r.ticks <= 0 && k.talent('grovekeeper_blossom')) { k.heal(r.t, 300, { ab: k.abilities.find(a => k.baseId(a) === 'rejuv') }); k.fx('lastBlossom', { to: typeof r.t === 'number' ? r.t : null }); }
       }
       k.g.rejuvs = k.g.rejuvs.filter(r => r.ticks > 0);
+      groveTick(k);
     },
-    onDamage(k, amt, crit, opts) { if (opts.dot && opts.ab && opts.ab.id === 'thorn' && k.talent('grovekeeper_harvest')) k.gain('bloom', 2); },
     signature: 'Planting heals early',
     floor: 'Press Q to attack and E to keep thorns on the boss. W on hurt allies; R and D when the whole party is hurt.',
     ceiling: [
@@ -627,25 +774,27 @@ const KITS = {
     abilities: [
       {
         id: 'wrath', name: 'Wrath', type: 'gcd', target: 'enemy', range: RANGED, anim: 'cast',
-        cast: k => (k.has('awaken') ? 0 : 1.5),
+        cast: k => (k.has('awaken') || groveMoonfire(k) ? 0 : 1.5),
         desc: '1.5s cast attack. After Bloom it\'s instant and 50% stronger.',
         glow: k => k.has('awaken'),
         effect(k) {
           const a = k.consume('awaken');
-          k.damage((a ? 390 * (k.talent('grovekeeper_awakened') ? 1.35 : 1) : 260) * (k.talent('grovekeeper_sunwrath') ? 1.05 : 1), { ab: this });
+          const r = k.damage(a ? 390 : 260, { ab: this });
           if (a && k.perk('grovekeeper_w2')) { for (const r of k.g.rejuvs) k.heal(r.t, 160, { ab: this }); k.fx('empower'); }
-          if (k.talent('grovekeeper_vines') && k.dots.has('thorn')) { k.g.vines = Math.min(5, (k.g.vines || 0) + 1); k.dots.get('thorn').potency = groveThornTick(k); }
+          groveWrath(k, this, a, r);
         },
         fx: { type: 'projectile', style: 'leaf', color: '#8fff7a', range: RANGED, speed: 600 },
       },
       {
         id: 'rejuv', name: 'Rejuvenate', type: 'gcd', target: 'ally', anim: 'cast',
         desc: 'Instant: a small heal, then healing every 3s for 15s. Its ticks grow Bloom.',
+        recastGcd: k => groveSproutGcd(k),
         effect(k, t) {
-          k.heal(t, k.talent('grovekeeper_verdant') ? 300 : 200, { ab: this });
+          k.heal(t, 200, { ab: this });
           k.hot(t, 140, 5, 3, { ab: this, id: 'rejuv' });
           k.g.rejuvs = k.g.rejuvs.filter(r => r.t !== t);
           k.g.rejuvs.push({ t, ticks: 5, next: k.now + 3 });
+          groveRejuv(k, this, t);
         },
         fx: { type: 'ring', color: '#8fff7a', r: 40, onTarget: true },
       },
@@ -653,13 +802,13 @@ const KITS = {
         id: 'thorn', name: 'Thornlash', type: 'gcd', target: 'enemy', range: RANGED, anim: 'cast',
         desc: 'Instant: thorns that damage the target over 30s.',
         glow: k => k.dotRemaining('thorn') < 9,
-        effect(k) { k.damage(120, { ab: this }); k.g.vines = 0; k.dot('thorn', groveThornTick(k), 30, 3, { ab: this }); if (k.perk('grovekeeper_a4')) k.gain('bloom', 5); },
+        effect(k) { k.damage(120, { ab: this }); k.dot('thorn', k.perk('grovekeeper_w1') ? 75 : 60, 30, 3, { ab: this }); if (k.perk('grovekeeper_a4')) k.gain('bloom', 5); },
         fx: { type: 'zone', style: 'roots', color: '#4f9f3f', r: 50, range: RANGED, dur: 1.2 },
       },
       {
         id: 'growth', name: 'Wild Growth', type: 'ogcd', target: 'self', cd: 60, anim: 'big',
         desc: 'The whole party regenerates for 15s, and your heals are 25% stronger for 15s.',
-        effect(k) { k.buff('growth', 15 + (k.talent('grovekeeper_lush') ? 5 : 0)); k.hot('party', 90, 5, 3, { ab: this, id: 'growth' }); if (k.perk('grovekeeper_w3')) k.gain('bloom', 25); groveGrowth(k, this); },
+        effect(k) { k.buff('growth', 15); k.hot('party', 90, 5, 3, { ab: this, id: 'growth' }); if (k.perk('grovekeeper_w3')) k.gain('bloom', 25); groveGrowth(k, this); },
         fx: { type: 'cone', color: '#7ee06a', r: 170, span: 6.28 },
       },
       {
@@ -671,9 +820,9 @@ const KITS = {
           k.spend('bloom', 50);
           if (k.has('growth')) k.heal('party', 350, { ab: this });
           for (const r of k.g.rejuvs) k.heal(r.t, 400, { ab: this });
-          if (!k.g.rejuvs.length && !k.has('growth')) k.heal('self', 400, { ab: this });
+          if (!k.g.rejuvs.length && !k.has('growth')) k.heal(k.talent('grovekeeper_roots') ? 'lowest' : 'self', 400, { ab: this });
           k.buff('awaken', 15);
-          if (k.talent('grovekeeper_naturewrath')) k.damage(120, { ab: this });
+          groveBloom(k, this);
         },
         fx: { type: 'ring', color: '#a8ff9a', r: 150 },
       },
@@ -684,6 +833,29 @@ const KITS = {
         fx: { type: 'zone', style: 'roots', color: '#a8ff9a', r: 50, range: 0, dur: 1.6, onTarget: true },
       },
     ],
+    talentAbilities: {
+      grovekeeper_seed: {
+        id: 'seed', replaces: 'rebirth', icon: 'rebirth', name: 'Seed of Renewal', type: 'gcd', target: 'ally', cd: 30, anim: 'big', allowDead: true, talent: true,
+        desc: 'Instant: spend 40 Bloom to plant a seed on an ally for 20s. If they fall while it grows, they spring back up at once; if not, it blooms into a big heal when it ends. On a fallen ally, it raises them at once.',
+        usable: k => k.g.bloom >= 40,
+        effect(k, t) {
+          k.spend('bloom', 40);
+          if (k.env.isDead(t)) { k.raise(t, { ab: this }); return; }
+          k.g.seed = { t, end: k.now + 20 };
+        },
+        fx: { type: 'ring', color: '#a8ff9a', r: 40, onTarget: true },
+      },
+      grovekeeper_treant: {
+        id: 'treant', replaces: 'thorn', icon: 'thorn', name: 'Treant', type: 'ogcd', target: 'enemy', range: RANGED, cd: 45, anim: 'big', talent: true,
+        desc: 'Call up a treant beside the boss for 15s. It slams the boss every 3s, and every slam heals your most hurt ally.',
+        effect(k, tg) {
+          const ab = this, pot = k.perk('grovekeeper_w1') ? 210 : 170, en = tg && tg.id;
+          k.buff('treant', 15);
+          for (let i = 1; i <= 5; i++) k.after(3 * i, () => { k.damage(pot, { ab }); k.heal('lowest', 150, { ab }); if (k.perk('grovekeeper_a4')) groveGain(k, 5); k.fx('treantSlam', { en }); });
+        },
+        fx: { type: 'zone', style: 'roots', color: '#4f9f3f', r: 60, range: RANGED, dur: 1.2 },
+      },
+    },
   },
 
   chronomancer: {
@@ -693,16 +865,7 @@ const KITS = {
     init: () => ({ flux: 50, stance: 'slow', link: null }),
     haste: k => (k.g.stance === 'haste' ? 0.8 : k.has('lag') ? 1.2 : 1),
     dmgMod: k => (k.g.stance === 'haste' ? 0.1 : 0),
-    tick(k) {
-      const dt = k.now - (k.g.lastTick ?? k.now);
-      k.g.lastTick = k.now;
-      if (dt <= 0 || dt > 1) return;
-      if (k.g.stance === 'slow') k.gain('flux', (k.talent('chronomancer_well') ? 3.5 : 3) * dt);
-      else {
-        k.g.flux = Math.max(0, k.g.flux - (k.perk('chronomancer_a2') ? 3 : 4) * (k.talent('chronomancer_paradox') ? 0.85 : 1) * dt);
-        if (k.g.flux <= 0) { k.g.stance = 'slow'; k.buff('lag', 3); k.fx('lag'); k.stats.lags = (k.stats.lags || 0) + 1; }
-      }
-    },
+    tick(k) { chronoFlux(k, k.perk('chronomancer_a2') ? 3 : 4); },
     signature: 'Haste / Slow stance',
     floor: 'Press Q: your attacks heal the tank. E switches to Haste when Flux is full. W on anyone who just took a big hit.',
     ceiling: [
@@ -725,7 +888,11 @@ const KITS = {
       {
         id: 'rewind', name: 'Rewind', type: 'ogcd', target: 'ally', charges: 2, cd: 30, anim: 'cast', allowDead: true,
         desc: 'Set an ally\'s HP back to its highest point in the last 4s (revives them if they died in that time). They become your link.',
-        effect(k, t) { k.rewind(t, k.perk('chronomancer_a4') ? 6 : 4, { ab: this }); k.g.link = t; if (k.perk('chronomancer_w2')) k.shield(t, 250, 8, { ab: this }); if (k.talent('chronomancer_hourglass')) k.mitigate(t, 0.15, 6, { ab: this }); },
+        effect(k, t) {
+          k.rewind(t, k.perk('chronomancer_a4') ? 6 : 4, { ab: this }); k.g.link = t; if (k.perk('chronomancer_w2')) k.shield(t, 250, 8, { ab: this }); if (k.talent('chronomancer_hourglass')) k.mitigate(t, 0.15, 6, { ab: this });
+          const an = k.g.anchor;
+          if (k.talent('chronomancer_dejavu') && an && k.now - an.at <= 10) { k.g.anchor = null; kitMove(k, 'point', { x: an.x, y: an.y }); k.fx('dejavu'); }
+        },
         fx: { type: 'ring', style: 'rewind', color: '#c8fbff', r: 44, onTarget: true },
       },
       {
@@ -737,6 +904,8 @@ const KITS = {
         effect(k) {
           if (k.g.stance === 'slow') { k.g.stance = 'haste'; const n = k.talent('chronomancer_double') ? 2 : 1; k.buff('surge', 10, {}, n, n); if (k.perk('chronomancer_w1')) k.gain('flux', 10); }
           else k.g.stance = 'slow';
+          if (k.talent('chronomancer_dejavu') && k.env.pos) { const p = k.env.pos(); k.g.anchor = { x: p.x, y: p.y, at: k.now }; }
+          if (k.talent('chronomancer_stopwatch')) k.g.stopUntil = k.now + 4;
           if (k.talent('chronomancer_phase') && k.now >= (k.g.phaseAt || 0)) {   // the afterimage's free Bolt
             k.g.phaseAt = k.now + 10;
             const acc = k.def.spec === 'accelerant';
@@ -754,47 +923,208 @@ const KITS = {
       {
         id: 'stasis', name: 'Stasis', type: 'ogcd', target: 'self', cd: 120, anim: 'big',
         desc: 'The whole party is immune to damage for 2 seconds.',
-        effect(k) { k.mitigate('party', 1, k.talent('chronomancer_stasis') ? 3 : 2, { kind: 'invuln', ab: this }); },
+        effect(k) { k.mitigate('party', 1, 2, { kind: 'invuln', ab: this }); },
         fx: { type: 'aura', style: 'stasis', color: '#9ff4ff', r: 110, dur: 2 },
       },
       {
-        id: 'recall', name: 'Recall', type: 'gcd', target: 'ally', cast: 2.5, cd: 30, anim: 'big', allowDead: true,
+        id: 'recall', name: 'Recall', type: 'gcd', target: 'ally', cd: 30, anim: 'big', allowDead: true,
+        cast: k => (k.talent('chronomancer_lastmoment') && chronoLate(k) ? 0 : 2.5),   // (Last Moment, a talent)
         desc: '2.5s cast: bring a fallen ally back, or heal a living one heavily.',
-        effect(k, t) { if (k.env.isDead(t)) k.raise(t, { ab: this }); else k.heal(t, 1400, { ab: this }); },
+        effect(k, t) { if (k.env.isDead(t)) { k.raise(t, { ab: this }); chronoSecondChance(k, this, t); } else k.heal(t, 1400, { ab: this }); },
         fx: { type: 'ring', style: 'rewind', color: '#9ff4ff', r: 50, onTarget: true },
       },
     ],
+    talentAbilities: {
+      chronomancer_bubble: {
+        id: 'bubble', replaces: 'stasis', icon: 'stasis', name: 'Time Bubble', type: 'ogcd', target: 'ally', cd: 40, anim: 'big', talent: true,
+        desc: 'Spend 30 Flux: wrap an ally in a bubble of slowed time for 6s. It follows them, and everyone inside takes 25% less damage.',
+        usable: k => k.g.flux >= 30,
+        effect(k, t) { k.spend('flux', 30); k.env.emit({ type: 'splash', target: t, r: 0, pr: 90, ticks: 4, interval: 1.5, pct: 0.25, fol: 1, ab: this }); },
+        fx: { type: 'ring', style: 'rewind', color: '#9ff4ff', r: 60, onTarget: true },
+      },
+      chronomancer_warp: {
+        id: 'warp', replaces: 'accel', icon: 'accel', name: 'Time Warp', type: 'ogcd', target: 'self', cd: 60, anim: 'big', talent: true,
+        desc: 'Party burst: a great clock hangs over the party for 15s (20s as an Accelerant). Everyone acts 10% faster (15% as an Accelerant; an Echoist\'s echoes are full strength), and every 3s its hands strike the boss and heal the whole party. You gain 40 Flux.',
+        effect(k) {
+          const acc = k.def.spec === 'accelerant', dur = acc ? 20 : 15, ab = this;
+          k.partyBuff('haste', acc ? 0.15 : 0.1, dur, { ab });
+          if (k.def.spec === 'echoist') k.buff('chamber', dur);
+          k.buff('warp', dur);
+          k.gain('flux', 40); if (k.perk('chronomancer_w3')) k.heal('party', 150, { ab });
+          for (let i = 1; i * 3 <= dur; i++) k.after(3 * i, () => { k.damage(70, { ab }); k.heal('party', 40, { ab }); k.fx('clockStrike'); });
+        },
+        fx: { type: 'zone', style: 'clock', color: '#3fd0d0', r: 160, range: 0, dur: 2 },
+      },
+    },
   },
 };
 
 // ======================================================================= talents
 // The parts of talents (talents.js) that a base move and its spec versions share. Each one does nothing unless the
-// hero holds the talent (k.talent), so bots and the balance check see the kits exactly as above.
+// hero holds the talent (k.talent), so bots and the balance check see the kits exactly as above. The moves a talent
+// grants live in each kit's talentAbilities.
 
-// Bastion: Blade Chain's Riposte and Judgment; Holy Edge / Shield Bash's heal and refund
-function bastionChain(k, ab, step) {
-  if (step === 1 && k.talent('bastion_riposte')) k.gain('resolve', 10);
-  if (step === 2 && k.talent('bastion_echo')) { k.damage(75, { ab }); k.heal('self', 60, { ab }); k.fx('empower'); }
+// what the boss is doing, for talents that react to it: env.boss() -> { casting, castLeft, next, onMe, vuln, selfVuln }
+// (null in town and for bots; tools/simulate.js models its busters and raidwides as casts)
+const bossNow = k => (k.env.boss && k.env.boss()) || null;
+const bossCasting = k => { const b = bossNow(k); return !!(b && b.casting); };
+// runs fn once each time the boss starts a cast
+function onBossCast(k, fn) { const c = bossCasting(k); if (c && !k.g.castSeen) fn(); k.g.castSeen = c; }
+// a defensive held until the boss's cast lands: dur normally, up to max while it casts (Hold Fast, Patient Mirror)
+function castHold(k, on, dur, max) { const b = bossNow(k); return on && b && b.casting ? Math.max(dur, Math.min(max, b.castLeft + 0.4)) : dur; }
+const hpOf = k => (k.env.hpFrac ? k.env.hpFrac() : 1);
+const abBase = (k, id) => k.abilities.find(a => k.baseId(a) === id);
+// a move that moves you (main.js kitMove): 'back' (away from the enemy), 'forward', 'ally' (toward ev.to), 'point' (x, y)
+function kitMove(k, where, o = {}) { k.env.emit(Object.assign({ type: 'teleport', where }, o)); }
+
+// ----------------------------------------------------------------- Bastion
+function bastionGain(k, n) {
+  const over = (k.g.resolve || 0) + n - 100;
+  if (over > 0 && k.talent('bastion_overflow')) { k.shield('self', over * 12, 8, { ab: k.abById('brace'), tag: 'faith' }); k.fx('faith'); }
+  k.gain('resolve', n);
 }
-function bastionEdge(k, ab) {
-  k.heal('self', k.talent('bastion_mercy') ? 240 : 120, { ab });
-  if (k.talent('bastion_tithe')) k.gain('resolve', 5);
+const bastionCost = k => (k.talent('bastion_steady') && k.has('steady') ? 35 : 50);
+function bastionSpend(k) { k.spend('resolve', bastionCost(k)); k.clear('steady'); }
+const bastionBraceDur = k => castHold(k, k.talent('bastion_holdfast'), 3, 6);
+function bastionInHallow(k) {
+  const h = k.g.hallow; if (!h || k.now > h.end) return false;
+  if (h.x == null || !k.env.pos) return true;
+  const p = k.env.pos(); return Math.hypot(p.x - h.x, p.y - h.y) <= 150;
 }
-// Bloodreaver: Crimson Drain / Rampage potency (Rend, Gluttony); Bloodletting / Blood Lance (Open Vein)
+// Blade Chain, for the base kit and the Crusader (gain: Judgment's Resolve)
+function bastionBlade(k, ab, gain) {
+  const step = k.now < k.g.comboUntil ? k.g.step : 0;
+  let pot = [220, 300, 400][step];
+  const countered = !!k.g.counter;
+  if (k.g.counter) { pot += 150; k.g.counter = 0; }
+  k.damage(pot, { ab });
+  if (step === 2) { bastionGain(k, k.has('oath') ? gain * 2 : gain); if (k.perk('bastion_w1')) k.heal('self', 120, { ab }); }
+  if (step === 2 && k.talent('bastion_echo')) { k.damage(75, { ab }); k.heal('self', 60, { ab }); k.fx('edgeShard'); }
+  k.g.step = (step + 1) % 3; k.g.comboUntil = k.now + 15;
+  if (countered && step < 2 && k.talent('bastion_rhythm')) k.g.step = 2;
+}
+// after Holy Edge / Shield Bash: its heal (Shared Mercy) and Returning Edge
+function bastionEdge(k, ab, pot) {
+  if (k.talent('bastion_mercy') && hpOf(k) > 0.7) k.heal('lowest', 240, { ab });
+  else k.heal('self', 120, { ab });
+  if (k.talent('bastion_returning')) k.after(0.8, () => { k.damage(pot * 0.1, { ab }); k.fx('edgeReturn'); });
+}
+// Bulwark / Zealous Guard
+function bastionGuard(k, ab) {
+  if (k.talent('bastion_unbreakable')) k.buff('unbreak', 10);
+  if (k.talent('bastion_shelter')) k.mitigate('party', 0.1, 4, { ab });
+}
+// a Perfect Block's talent parts
+function bastionPerfect(k) {
+  if (k.talent('bastion_steady')) k.buff('steady', 6);
+  if (k.talent('bastion_unbreakable') && k.has('unbreak')) k.refundCharge('brace');
+  if (k.has('avatar')) { k.damage(120, { ab: abBase(k, 'oath') }); k.fx('dawnPillar'); }
+}
+function bastionTick(k) {
+  if (k.talent('bastion_read')) onBossCast(k, () => { k.g.counter = 1; k.fx('readSwing'); });
+  if (k.talent('bastion_laststand') && hpOf(k) < 0.3) {
+    const ab = abBase(k, 'bulwark');
+    if (ab && k.cdRemaining(ab) <= 0) { k.startCooldown(ab); k.resolve(ab, null); k.fx('lastStand'); }
+  }
+}
+
+// ----------------------------------------------------------------- Bloodreaver
+function reaverGain(k, n) {
+  const over = (k.g.blood || 0) + n - 100;
+  if (over > 0 && k.talent('bloodreaver_boil')) {
+    const b = k.buffs.get('frenzy');
+    if (b && b.end > k.now) b.end += over / 10; else k.reduceCooldown('frenzy', over / 10);
+  }
+  k.gain('blood', n);
+}
+function reaverHackHeal(k, ab) {
+  const mx = k.env.maxHp ? k.env.maxHp() : 0;
+  if (k.talent('bloodreaver_desperate') && hpOf(k) < 0.35) k.healRaw('self', mx * 0.04, { ab });
+  if (k.talent('bloodreaver_hemorrhage') && k.dots.has('hemorrhage')) k.healRaw('self', mx * 0.02, { ab });
+}
+// Crimson Drain / Rampage potency (Rend)
 function reaverDrainPot(k, pot) {
   if (k.talent('bloodreaver_rend') && k.g.wounds) { pot += 65 * k.g.wounds; k.g.wounds = 0; }
-  return pot * (k.talent('bloodreaver_glutton') ? 1.07 : 1);
+  return pot;
 }
+// after a Drain healed you for `healed`: Crimson Tide (tide: its share), Sanguine Shield, Second Helping, Hemorrhage
+function reaverAfterDrain(k, ab, healed, tide) {
+  const mx = k.env.maxHp();
+  if (tide && k.talent('bloodreaver_tide')) k.healRaw('party', healed * tide, { ab });
+  if (k.talent('bloodreaver_sanguine')) {
+    const over = Math.min(mx * 0.15, healed - (1 - hpOf(k)) * mx);
+    if (over > 1) k.env.emit({ type: 'shield', target: 'self', amount: Math.round(over), dur: 8, ab, tag: 'sanguine' });
+  }
+  if (k.talent('bloodreaver_second') && healed > mx * (k.def.spec === 'berserker' ? 0.1 : 0.15)) { reaverGain(k, 20); k.fx('secondHelping'); }
+  if (k.talent('bloodreaver_hemorrhage')) { k.dot('hemorrhage', 30, 9, 3, { ab }); k.fx('hemorrhage'); }
+}
+// Bloodletting / Blood Lance: Retaliation's strength, then Cauterize
+const reaverRetaliate = k => (k.talent('bloodreaver_retaliate') && k.env.recentDamage(2) >= k.env.maxHp() * 0.1 ? 2 : 1);
 function reaverLetting(k, ab) {
-  if (k.talent('bloodreaver_vein')) k.dot('vein', 30, 9, 3, { ab });
+  const b = bossNow(k);
+  if (k.talent('bloodreaver_cauterize') && b && b.selfVuln && k.now >= (k.g.cautAt || 0)) {
+    k.g.cautAt = k.now + 30;
+    k.env.emit({ type: 'splash', target: 'self', r: 10, cl: 1, ab }); k.fx('cauterize');
+  }
 }
-// Runeguard: Runes from a strike (Third Mark, Overflow); Glyphguard's little Ward
+// a buff running out: Bloodlust's free Drain when Frenzy ends, Blood Moon setting
+function reaverExpire(k, id, b) {
+  if (id === 'frenzy' && k.talent('bloodreaver_bloodlust')) {
+    const taken = k.env.recentDamage(Math.max(1, k.now - b.start)), ab = abBase(k, 'drain');
+    k.damage(330 + Math.min(450, taken / (35 * ENGINE.NUM_SCALE)), { ab });
+    k.healRaw('self', taken * 0.2, { ab }); k.fx('bloodlust');
+  }
+  if (id === 'bloodmoon') {
+    const taken = k.env.recentDamage(10.2), ab = abBase(k, 'undying');
+    if (taken > 0) { k.damage(Math.min(1500, taken / (20 * ENGINE.NUM_SCALE)), { ab }); k.healRaw('self', taken * 0.25, { ab }); }
+    k.fx('moonburst');
+  }
+}
+
+// ----------------------------------------------------------------- Runeguard
+// Runes from a strike (Overflow, Answering Rune, Sigil of Binding)
 function runeGain(k, ab, n) {
-  k.g.strikes = (k.g.strikes || 0) + 1;
-  if (k.talent('runeguard_thirdmark') && k.g.strikes % 3 === 0) n += 1;
+  if (k.talent('runeguard_answer') && k.consume('answer')) n += 1;
+  if (k.talent('runeguard_binding') && k.now < (k.g.bindEnd || 0) && k.g.bindLeft > 0) { k.g.bindLeft--; n += 1; }
   const over = Math.max(0, (k.g.runes || 0) + n - 3);
-  if (over && k.talent('runeguard_overflow')) k.damage(110 * over, { ab });
+  if (over && k.talent('runeguard_overflow')) { k.damage(110 * over, { ab }); k.fx('runeOverflow'); }
   k.gain('runes', n, 3);
+}
+// Runes spent: Living Rune fires a bolt for each
+function runeSpent(k, n) {
+  if (!k.has('living')) return;
+  const ab = abBase(k, 'overload');
+  for (let i = 0; i < n; i++) k.after(0.2 + 0.18 * i, () => { k.damage(90, { ab }); k.fx('runeBolt'); });
+}
+const runeEmergency = k => k.talent('runeguard_emergency') && hpOf(k) < 0.35 && k.now >= (k.g.emAt || 0);
+function runeWardCost(k) {
+  if (k.g.runes >= 1) { k.spend('runes', 1); runeSpent(k, 1); }
+  else { k.g.emAt = k.now + 30; k.fx('emergency'); }
+}
+// a Ward going up (on t: 'self' or an ally): Shatter marks the old one, Glyph Echo goes off
+function runeWardUp(k, ab, t) {
+  if (k.talent('runeguard_shatter') && (t === 'self' ? k.g.selfWard : k.g.allyWardT === t && k.now < (k.g.allyWardEnd || 0))) k.g.shatter = true;
+  if (t !== 'self') { k.g.allyWardT = t; k.g.allyWardEnd = k.now + 8; }
+  if (k.talent('runeguard_echo') && k.g.glyphEcho) { k.damage(k.g.glyphEcho / 4, { ab: abBase(k, 'glyph') }); k.g.glyphEcho = 0; k.fx('glyphEcho'); }
+}
+// a Ward ending: its blast, the Rune back once it soaked refundAt, and the talents (nova at novaAt)
+function runeWardEnd(k, d, refundAt, novaAt) {
+  let frac = Math.max(0, Math.min(1, d.frac || 0));
+  const shattered = k.g.shatter; k.g.shatter = false;
+  if (shattered) { frac = 1; k.fx('shatter'); }
+  k.damage((150 + 450 * frac) * (k.has('overload') ? 1.5 : 1), { ab: k.abById('ward') });
+  if (!shattered && frac >= refundAt) { k.gain('runes', 1, 3); k.stats.wardBreaks = (k.stats.wardBreaks || 0) + 1; k.fx('rune-echo'); }
+  if (k.talent('runeguard_answer') && frac >= 0.95) k.buff('answer', 15);
+  const amt = k.g.wardAmt || 0;
+  if (k.talent('runeguard_leap') && !shattered && frac < 0.97 && amt) { k.env.emit({ type: 'shield', target: 'lowest', amount: Math.round(amt * (1 - frac)), dur: 6, ab: k.abById('ward') }); k.fx('wardLeap'); }
+  if (k.talent('runeguard_nova') && frac >= novaAt && amt) { k.damage(120, { ab: k.abById('ward') }); k.healRaw('party', amt * 0.2, { ab: k.abById('ward') }); k.fx('wardNova'); }
+}
+// after Glyph Burst / Rune Cleave (pot: its strength): Runes spent, Glyph Echo, Sigil of Binding, Glyphguard
+function runeGlyph(k, ab, pot) {
+  runeSpent(k, 3);
+  if (k.talent('runeguard_echo')) k.g.glyphEcho = pot;
+  if (k.talent('runeguard_binding') && k.now >= (k.g.bindAt || 0)) { k.g.bindAt = k.now + 20; k.g.bindEnd = k.now + 8; k.g.bindLeft = 1; k.fx('binding'); }
+  runeGlyphguard(k, ab);
 }
 function runeGlyphguard(k, ab) {
   if (!k.talent('runeguard_glyphguard') || k.g.selfWard || k.g.gward || k.now < (k.g.gwardAt || 0)) return;
@@ -804,79 +1134,258 @@ function runeGlyphguard(k, ab) {
 function runeGlyphguardEnd(k, d) {
   k.g.gward = false;
   const frac = Math.max(0, Math.min(1, d.frac || 0));
-  k.damage((60 + 180 * frac) * (k.has('overload') ? 1.5 : 1) * (k.talent('runeguard_volatile') ? 1.2 : 1), { ab: k.abById('ward') });
+  k.damage((60 + 180 * frac) * (k.has('overload') ? 1.5 : 1), { ab: k.abById('ward') });
 }
-// Ranger: Quick Shot (Pinning Shot's crit, Focus, Keen Focus, Fletcher's Rhythm); Piercing Arrow and its spec versions
+
+// ----------------------------------------------------------------- Ranger
+// moving and standing still (Steady Breath), and Second Wind's trigger; every spec's tick runs it
+function rangerTrack(k) {
+  if (k.env.moving()) k.g.movedAt = k.now;
+  if (k.talent('ranger_secondwind') && hpOf(k) < 0.4 && k.now >= (k.g.windAt || 0) && !k.has('secondwind')) k.buff('secondwind', 20);
+}
+function rangerKeenChance(k) {
+  const c = (k.has('markself') ? 0.55 : 0.35) + (k.perk('ranger_w1') ? 0.1 : 0);
+  return k.talent('ranger_steady') && k.now - (k.g.movedAt ?? -99) >= 2 ? Math.max(c, 0.6) : c;
+}
+const rangerFocusFire = k => k.talent('ranger_focusfire') && k.g.focus >= 100;
 function rangerShot(k, ab) { const o = { ab }; if (k.talent('ranger_pin') && k.consume('pinned')) o.autoCrit = true; return o; }
-const rangerFocus = (k, barr) => (k.talent('ranger_quiver') ? 12 : 10) * (barr ? 3 : 1);
-function rangerKeen(k) { k.proc('keen', 15); if (k.talent('ranger_keenfocus')) k.gain('focus', 8); }
+const rangerFocus = (k, barr) => 10 * (barr ? 3 : 1) + (k.talent('ranger_tracking') ? 2 * Math.min(5, k.g.track || 0) : 0);
+function rangerKeen(k) {
+  k.proc('keen', 15); k.g.track = 0;
+  if (k.has('markself')) k.g.markKeens = (k.g.markKeens || 0) + 1;
+  if (k.has('falconHunt')) { k.damage(200, { ab: abBase(k, 'barrage') }); k.fx('falconDive'); }
+}
+function rangerNoKeen(k) { if (k.talent('ranger_tracking')) k.g.track = (k.g.track || 0) + 1; }
 function rangerRhythm(k, ab, barr, pot) {
   if (barr) return;
   k.g.quicks = (k.g.quicks || 0) + 1;
   if (k.talent('ranger_rhythm') && k.g.quicks % 4 === 0) k.damage(pot * 0.5, { ab });
 }
-function rangerPierce(k, keen) {
-  if (k.talent('ranger_lightfoot')) k.reduceCooldown('cloak', 3);
-  if (k.talent('ranger_trail')) k.gain('focus', 5);
-  if (keen && k.talent('ranger_pin') && k.now >= (k.g.pinAt || 0)) { k.g.pinAt = k.now + 12; k.buff('pinned', 15); }
+// a shot that lands feeds a waiting Explosive Shot
+function rangerFeed(k) { if (k.g.charge) { k.g.charge.pot *= 1.3; k.g.charge.n++; } }
+// after a Quick Shot (r: its hit): Explosive Shot, Second Wind, Wild Volley
+function rangerQuickAfter(k, ab, r) {
+  rangerFeed(k);
+  if (k.consume('secondwind')) { k.g.windAt = k.now + 45; k.healRaw('self', k.env.maxHp() * 0.15, { ab }); k.fx('secondWind'); }
+  if (r.crit && k.talent('ranger_volley')) { k.after(0.3, () => k.damage(90, { ab })); k.fx('volley'); }
 }
-// Shadowblade: after a finisher (Eviscerate / Backstab); after Shadowstep / Blade Fury
+// after Piercing Arrow and its spec versions (r: its hit, pot: its strength)
+function rangerPierce(k, keen, r, pot) {
+  const ab = abBase(k, 'pierce');
+  rangerFeed(k);
+  if (k.talent('ranger_lightfoot')) k.reduceCooldown('cloak', 3);
+  if (!keen && r && r.crit && k.talent('ranger_ricochet')) { k.refundCharge(ab.id); k.fx('ricochetArrow'); }
+  if (keen && k.talent('ranger_pin') && k.now >= (k.g.pinAt || 0)) { k.g.pinAt = k.now + 12; k.buff('pinned', 15); }
+  if (keen && k.talent('ranger_storm')) for (let i = 0; i < 2; i++) k.after(0.15 + 0.2 * i, () => { k.damage((pot || 500) * 0.08, { ab }); k.fx('stormArc'); });
+}
+// Hunter's Mark: Marked for Death's burst when it ends
+function rangerMark(k, ab, dur) {
+  k.g.markKeens = 0;
+  if (k.talent('ranger_deathmark')) k.after(dur, () => { k.damage(120 + 90 * (k.g.markKeens || 0), { ab }); k.fx('deathmark'); });
+}
+
+// ----------------------------------------------------------------- Shadowblade
+function bladeCombo(k, n) {
+  const over = (k.g.combo || 0) + n - 5;
+  if (over > 0 && k.talent('shadowblade_sharpen')) k.buff('sharpen', 20, {}, 3, over);
+  k.gain('combo', n, 5);
+}
+// the finisher's multiplier from your poison or Rupture, and Sharpened Shadows (spent)
+function bladeMult(k) {
+  let m = k.dotRemaining('poison') > 0 || k.dotRemaining('rupture') > 0 ? 1.15 : 1;
+  const s = k.stacks('sharpen'); if (s) { m *= 1 + 0.12 * s; k.clear('sharpen'); }
+  return m;
+}
+// the finisher's damage options: its positional, unless a Feint lands it anyway; Opportunist's crit
+function bladeOpts(k, ab, positional, posBonus, mult) {
+  const o = k.talent('shadowblade_feint') && k.consume('feint') ? { ab, mult, feint: true } : { ab, positional, posBonus, mult };
+  if (k.talent('shadowblade_opportunist') && bossCasting(k)) o.autoCrit = true;
+  return o;
+}
+// after a finisher (Eviscerate / Backstab)
 function bladeFinisher(k, ab, cp, full) {
   if (cp >= 5 && k.talent('shadowblade_relentless') && k.rng() < 0.5) k.gain('combo', 1, 5);
-  const d = k.dots.get('poison');
-  if (k.talent('shadowblade_toxic') && d && d.end > k.now) {
-    const left = Math.max(0, Math.floor((d.end - d.next) / d.interval) + 1);
-    if (left) k.damage(d.potency * left * 0.15, { ab });
+  if (k.talent('shadowblade_toxic')) {
+    let burst = 0;
+    for (const id of ['poison', 'rupture']) {
+      const d = k.dots.get(id);
+      if (d && d.end > k.now) burst += d.potency * Math.max(0, Math.floor((d.end - d.next) / d.interval) + 1) * 0.15;
+    }
+    if (burst) { k.damage(burst, { ab }); k.fx('toxicBurst'); }
   }
-  if (k.talent('shadowblade_clone') && k.has('dance')) k.after(0.35, () => { k.damage(full * 0.3, { ab }); k.fx('empower'); });
+  if (k.talent('shadowblade_clone') && k.has('dance')) k.after(0.35, () => { k.damage(full * 0.3, { ab }); k.fx('shadowClone'); });
+  if (k.talent('shadowblade_recuperate') && hpOf(k) < 0.6) k.healRaw('self', k.env.maxHp() * 0.03 * cp, { ab });
+  if (k.talent('shadowblade_endless') && cp >= 5 && k.has('dance') && (k.g.endless || 0) < 4) { k.g.endless = (k.g.endless || 0) + 1; k.buffs.get('dance').end += 1; }
 }
+// after Shadowstep / Blade Fury
 function bladeStep(k, ab) {
-  if (k.talent('shadowblade_evasion')) k.mitigate('self', 0.2, 3, { ab });
-  if (k.talent('shadowblade_garrote')) k.dot('garrote', 50, 9, 3, { ab });
+  if (k.talent('shadowblade_ambush')) {
+    if (k.def.spec === 'bladedancer') bladeCombo(k, 1);
+    else { k.damage(40, { ab }); bladeCombo(k, 1); k.fx('ambush'); }
+  }
+  if (k.talent('shadowblade_dodge') && bossCasting(k)) { k.mitigate('self', 0.5, 2, { ab }); k.fx('dodge'); }
+  if (k.talent('shadowblade_trail')) k.env.emit({ type: 'splash', target: 'self', r: 0, pr: 90, ticks: 4, interval: 1.5, pct: 0.1, ab });
+  if (k.talent('shadowblade_garrote')) { k.dot('garrote', 50, 9, 3, { ab }); k.fx('garrote'); }
 }
-// Pyromancer: Combustion / Ember Circle (Fuel the Fire, Afterburn)
+
+// ----------------------------------------------------------------- Pyromancer
+function pyroTick(k) {
+  if (k.talent('pyromancer_molten') && k.g.heat > 70 && k.now >= (k.g.armorAt || 0)) { k.g.armorAt = k.now + 1; k.mitigate('self', 0.1, 1.2, { ab: k.abById('fireball') }); }
+  if (k.talent('pyromancer_haze')) onBossCast(k, () => { k.buff('haze', 10); k.fx('haze'); });
+}
+// Wildfire: a crit during Combustion (or in Ember Circle) leaves a flame on the boss
+function pyroWildfire(k, ab) {
+  if (!k.talent('pyromancer_wildfire') || !(k.has('combust') || k.has('incircle'))) return;
+  k.g.wild = ((k.g.wild || 0) + 1) % 5;
+  k.dot('wild' + k.g.wild, 25, 6, 2, { ab, extra: true });
+}
+// Combustion / Ember Circle (Afterburn)
 function pyroBurst(k, dur) {
-  if (k.talent('pyromancer_fuel')) k.gain('heat', Math.max(0, Math.min(30, 95 - k.g.heat)), 100);   // never into an Overheat
   if (k.talent('pyromancer_afterburn')) k.after(dur, () => k.proc('hotstreak', 15));
 }
-// Cleric: Dawnstar; Dawn Petal (Petalfall, Twin Petals) for both Petal versions
+
+// ----------------------------------------------------------------- Cleric
+// a Petal growing back (Overflowing Petals: past 3 it blooms onto the most hurt ally)
+function clericGrow(k) {
+  if (k.talent('cleric_overgrowth') && k.g.petals >= 3) { k.heal('lowest', 450, { ab: abBase(k, 'petal') }); clericBloom(k, 1); k.fx('petalBloom'); }
+  else k.gain('petals', 1, 3);
+}
+// Petals toward Dawnstar (Held Dawn counts from the moment it's ready)
+function clericBloom(k, n) {
+  const was = k.g.bloom || 0;
+  k.gain('bloom', n, 3);
+  if (was < 3 && k.g.bloom >= 3) k.g.dawnAt = k.now;
+}
+const clericHeld = k => (k.talent('cleric_held') ? 1 + Math.min(0.3, 0.02 * Math.max(0, k.now - (k.g.dawnAt ?? k.now))) : 1);
+function clericInSanctum(k) {
+  const s = k.g.sanctum; if (!s || k.now > s.end) return false;
+  if (s.x == null || !k.env.pos) return true;
+  const p = k.env.pos(); return Math.hypot(p.x - s.x, p.y - s.y) <= 160;
+}
+// after a Smite or Dawnstar (r: its hit): Atonement
+function clericSmite(k, ab, r) { if (k.talent('cleric_atonement') && r) k.healRaw('lowest', r.amount * 0.15, { ab }); }
 function clericDawnstar(k, ab) {
   if (k.talent('cleric_favour')) k.gain('petals', 1, 3);
-  if (k.talent('cleric_sunfall')) k.dot('sunfall', 35, 12, 3, { ab });
+  if (k.talent('cleric_sunfall')) { k.dot('sunfall', 35, 12, 3, { ab }); k.fx('sunfall'); }
 }
 function clericPetal(k, ab, t, healPot) {
-  if (k.talent('cleric_petalfall')) k.damage(40, { ab });
+  if (k.talent('cleric_petalfall')) { k.damage(40, { ab }); k.fx('petalfall'); }
   if (k.talent('cleric_twin')) { const { amount, crit } = k.healAmount(healPot * 0.5, { ab }); k.env.emit({ type: 'heal', target: 'lowest', not: t, amount, crit, ab }); }
+  if (k.talent('cleric_quickmend')) k.buff('quickmend', 10);
+  if (k.talent('cleric_purify') && k.now >= (k.g.purAt || 0)) { k.g.purAt = k.now + 20; k.env.emit({ type: 'splash', target: t, r: 10, cl: 1, ab }); k.fx('purify', { to: typeof t === 'number' ? t : null }); }
+  if (k.talent('cleric_wings') && typeof t === 'number') kitMove(k, 'ally', { to: t, d: 160 });
+  if (k.talent('cleric_chorus') && (k.g.spent = (k.g.spent || 0) + 1) % 3 === 0) { k.heal('party', healPot * 0.5, { ab }); k.fx('chorus'); }
 }
-// Grovekeeper: a Thornlash tick (Deep Thorns, and Strangling Vines' growth); Wild Growth / Moonwell extras
-const groveThornTick = k => (k.perk('grovekeeper_w1') ? 75 : 60) * (k.talent('grovekeeper_deepthorn') ? 1.18 : 1) * (1 + 0.05 * (k.talent('grovekeeper_vines') ? k.g.vines || 0 : 0));
+// Twin Blessing: the first press leaves Benediction ready for 5s; true for the second (half-strength) press
+function clericBless(k, ab, t) {
+  if (!k.talent('cleric_twinbless')) return false;
+  if (k.now < (k.g.blessUntil || 0)) {
+    k.g.blessUntil = 0;
+    if (ab.charges) k.refundCharge(ab.id); else k.cd[ab.id] = k.g.blessEnd;
+    return true;
+  }
+  k.g.blessUntil = k.now + 5; k.g.blessT = t;
+  if (!ab.charges) { k.g.blessEnd = k.cd[ab.id]; k.cd[ab.id] = k.now; }
+  return false;
+}
+function clericTick(k) {
+  if (k.g.blessUntil && k.now >= k.g.blessUntil) {
+    k.g.blessUntil = 0;
+    const ab = abBase(k, 'bene');
+    if (ab && !ab.charges) k.cd[ab.id] = Math.max(k.cd[ab.id] || 0, k.g.blessEnd || 0);
+  }
+}
+
+// ----------------------------------------------------------------- Grovekeeper
+function groveGain(k, n) {
+  const over = (k.g.bloom || 0) + n - 100;
+  if (over > 0 && k.talent('grovekeeper_spill')) {
+    k.g.spill = (k.g.spill || 0) + over;
+    if (k.g.spill >= 10 && k.now >= (k.g.spillAt || 0)) {
+      k.g.spill = 0; k.g.spillAt = k.now + 6;
+      const ab = abBase(k, 'bloom');
+      k.env.emit({ type: 'splash', target: 'lowest', r: 0, pr: 80, ticks: 4, interval: 1.5, pa: k.healAmount(60, { ab }).amount, ab }); k.fx('spill');
+    }
+  }
+  k.gain('bloom', n);
+}
+const groveMoonfire = k => k.talent('grovekeeper_moonfire') && (k.g.wraths || 0) % 3 === 2;
+// after a Wrath (a: it was Awakened, r: its hit): Moonfire's count, Nature's Balance, Cycle of Life
+function groveWrath(k, ab, a, r) {
+  k.g.wraths = (k.g.wraths || 0) + 1;
+  if (k.talent('grovekeeper_balance')) for (const x of k.g.rejuvs) k.healRaw(x.t, r.amount * 0.2, { ab });
+  if (a && k.talent('grovekeeper_cycle')) groveGain(k, 20);
+}
+const groveSproutGcd = k => (k.talent('grovekeeper_sprout') && k.now >= (k.g.sproutAt || 0) ? 1.2 : undefined);
+// after Rejuvenate / Lifebind: Quick Sprout's timer, Ironbark
+function groveRejuv(k, ab, t) {
+  if (k.talent('grovekeeper_sprout') && k.now >= (k.g.sproutAt || 0)) k.g.sproutAt = k.now + 30;
+  if (k.talent('grovekeeper_ironbark') && bossCasting(k)) { k.mitigate(t, 0.15, 5, { ab }); k.fx('ironbark', { to: typeof t === 'number' ? t : null }); }
+}
+// Wild Growth / Moonwell extras
 function groveGrowth(k, ab) {
-  if (k.talent('grovekeeper_bark')) k.mitigate('self', 0.15, 10, { ab });
-  if (k.talent('grovekeeper_seed')) k.buff('awaken', 15);
+  if (k.talent('grovekeeper_seedburst')) k.buff('awaken', 15);
+  if (k.talent('grovekeeper_pulse')) for (let i = 1; i <= 5; i++) k.after(3 * i, () => { groveGain(k, 8); k.fx('pulse'); });
 }
-// Chronomancer: one Temporal Bolt hit (share of its strength; the party / link heal shares), and what follows a Bolt
+// after Bloom: Shared Roots' regen, Nature's Wrath
+function groveBloom(k, ab) {
+  if (k.talent('grovekeeper_roots')) { const { amount } = k.healAmount(60, { ab }); k.env.emit({ type: 'hot', target: 'lowest', amount, ticks: 3, interval: 3, ab, id: 'roots' }); }
+  if (k.talent('grovekeeper_naturewrath')) { k.damage(120, { ab }); k.fx('natureWrath'); }
+}
+function groveTick(k) {
+  if (k.talent('grovekeeper_thickbark') && hpOf(k) < 0.4 && k.now >= (k.g.barkAt || 0)) { k.g.barkAt = k.now + 60; k.mitigate('self', 0.3, 6, { ab: k.abById('bloom') }); k.fx('thickBark'); }
+  const s = k.g.seed;
+  if (s) {
+    const ab = abBase(k, 'rebirth'), to = typeof s.t === 'number' ? s.t : null;
+    if (k.env.isDead(s.t)) { k.g.seed = null; k.raise(s.t, { ab }); k.fx('seedBurst', { to }); }
+    else if (k.now >= s.end) { k.g.seed = null; k.heal(s.t, 900, { ab }); k.fx('seedBurst', { to }); }
+  }
+}
+
+// ----------------------------------------------------------------- Chronomancer
+// Flux filling in Slow and draining in Haste (drain: per second); Stopwatch, Overwound
+function chronoFlux(k, drain) {
+  const dt = k.now - (k.g.lastTick ?? k.now);
+  k.g.lastTick = k.now;
+  if (dt <= 0 || dt > 1 || k.now < (k.g.stopUntil || 0)) return;
+  if (k.g.stance === 'slow') {
+    const add = 3 * dt, over = k.g.flux + add - 100;
+    if (over > 0 && k.talent('chronomancer_overwound')) {
+      k.g.wound = (k.g.wound || 0) + over;
+      if (k.g.wound >= 6) { k.g.wound = 0; k.heal(k.g.link ?? k.env.defaultLink(), 160, { ab: k.abById('shift') }); }
+    }
+    k.gain('flux', add);
+  } else {
+    k.g.flux = Math.max(0, k.g.flux - drain * dt);
+    if (k.g.flux <= 0) { k.g.stance = 'slow'; k.buff('lag', 3); k.fx('lag'); k.stats.lags = (k.stats.lags || 0) + 1; }
+  }
+}
+// is the boss's cast about to land? (Last Moment)
+const chronoLate = k => { const b = bossNow(k); return !!(b && b.casting && b.castLeft <= 1.5); };
+// one Temporal Bolt hit (share of its strength; the party / link heal shares)
 function chronoBolt(k, ab, share, party, link) {
-  const mult = (k.talent('chronomancer_honed') && k.g.stance === 'slow' ? 1.07 : 1) * (k.has('crescendo') ? 1.1 : 1);
-  const r = k.damage(280 * share, mult !== 1 ? { ab, mult } : { ab });
+  const r = k.damage(280 * share, { ab });
   if (k.g.stance === 'haste') k.healRaw('party', r.amount * party, { ab });
   else k.healRaw(k.g.link ?? k.env.defaultLink(), r.amount * link, { ab });
+  if (k.g.stance === 'haste' && r.crit && k.talent('chronomancer_borrowed')) k.gain('flux', 6);
+  if (k.talent('chronomancer_future')) {
+    if (!k.g.future && k.now >= (k.g.futureAt || 0)) { const f = k.g.future = { pot: 0 }; k.after(6, () => { k.g.future = null; k.g.futureAt = k.now + 6; k.damage(f.pot * 0.1, { ab }); k.fx('futureBurst'); }); k.fx('futureMark'); }
+    if (k.g.future) k.g.future.pot += 280 * share;
+  }
 }
 function chronoBoltAfter(k, ab, party, link, echoes) {
   k.g.bolts = (k.g.bolts || 0) + 1;
   if (k.talent('chronomancer_skip') && k.g.bolts % 5 === 4) k.buff('beat', 15);
-  if (k.talent('chronomancer_borrowed') && k.g.stance === 'haste') k.gain('flux', 2);
   if (k.talent('chronomancer_second') && !echoes && k.g.stance === 'haste') k.after(2, () => chronoBolt(k, ab, k.def.spec === 'accelerant' ? 0.06 : 0.08, party, link));
 }
-// an instant Bolt (Skipped Beat's, or the one after shifting into Haste): spends it, and its strength (1, or 1.2 with those talents)
-function chronoInstant(k) {
-  if (k.consume('beat')) return 1.2;
-  return k.consume('surge') && k.talent('chronomancer_double') ? 1.2 : 1;
-}
-// Accelerando / Echo Chamber: its length with Allegro, and Crescendo's buff for that long
-function chronoAccel(k, dur) {
-  dur += k.talent('chronomancer_allegro') ? 3 : 0;
-  if (k.talent('chronomancer_crescendo')) k.buff('crescendo', dur);
-  return dur;
+// an instant Bolt (Skipped Beat's, or the one after shifting into Haste) spends it; its strength is 1
+function chronoInstant(k) { if (!k.consume('beat')) k.consume('surge'); return 1; }
+// Accelerando / Echo Chamber's length
+const chronoAccel = (k, dur) => dur;
+// Second Chance: an ally Recall raised is healed to full a moment later, and the party a little
+function chronoSecondChance(k, ab, t) {
+  if (!k.talent('chronomancer_secondchance')) return;
+  k.after(0.6, () => { k.heal(t, 1400, { ab }); k.heal('party', 150, { ab }); k.fx('secondChance', { to: typeof t === 'number' ? t : null }); });
 }
 
 // The shared dash on Space: two charges, no GCD.
@@ -893,12 +1402,12 @@ const TAUNT = {
   bastion: {
     name: 'Challenge', icon: 'banner',
     desc: 'Bang your blade on your shield and call your target out: {hold}. The challenge steadies you like a Perfect Block: +10 Resolve, and your next Blade Chain counters for +150.',
-    use(k) { k.gain('resolve', 10); k.g.counter = 1; },
+    use(k) { bastionGain(k, 10); k.g.counter = 1; },
   },
   bloodreaver: {
     name: 'Reaver\'s Hook', icon: 'letting',
     desc: 'Hurl a hooked chain into your target and rip its attention to you: {hold}. The hook draws blood: +20 Blood.',
-    use(k) { k.gain('blood', 20); },
+    use(k) { reaverGain(k, 20); },
   },
   runeguard: {
     name: 'Binding Rune', icon: 'glyph',
@@ -1237,9 +1746,16 @@ KITS.alembist = {
 };
 
 if (typeof module !== 'undefined') {
-  module.exports = { KITS, DASH, TAUNT, tauntAbility, tauntIconBg, MELEE, RANGED, bastionChain, bastionEdge, reaverDrainPot, reaverLetting, runeGain, runeGlyphguard, runeGlyphguardEnd,
-    rangerShot, rangerFocus, rangerKeen, rangerRhythm, rangerPierce, bladeFinisher, bladeStep, pyroBurst, clericDawnstar, clericPetal, groveThornTick,
-    groveGrowth, chronoBolt, chronoBoltAfter, chronoInstant, chronoAccel };
+  // the talent helpers the specs share (a browser has them as globals)
+  module.exports = { KITS, DASH, TAUNT, tauntAbility, tauntIconBg, MELEE, RANGED, bossNow, bossCasting, onBossCast, castHold, hpOf, abBase, kitMove,
+    bastionGain, bastionCost, bastionSpend, bastionBraceDur, bastionInHallow, bastionBlade, bastionEdge, bastionGuard, bastionPerfect, bastionTick,
+    reaverGain, reaverHackHeal, reaverDrainPot, reaverAfterDrain, reaverRetaliate, reaverLetting, reaverExpire,
+    runeGain, runeSpent, runeEmergency, runeWardCost, runeWardUp, runeWardEnd, runeGlyph, runeGlyphguard, runeGlyphguardEnd,
+    rangerTrack, rangerKeenChance, rangerFocusFire, rangerShot, rangerFocus, rangerKeen, rangerNoKeen, rangerRhythm, rangerFeed, rangerQuickAfter, rangerPierce, rangerMark,
+    bladeCombo, bladeMult, bladeOpts, bladeFinisher, bladeStep, pyroTick, pyroWildfire, pyroBurst,
+    clericGrow, clericBloom, clericHeld, clericInSanctum, clericSmite, clericDawnstar, clericPetal, clericBless, clericTick,
+    groveGain, groveMoonfire, groveWrath, groveSproutGcd, groveRejuv, groveGrowth, groveBloom, groveTick,
+    chronoFlux, chronoLate, chronoBolt, chronoBoltAfter, chronoInstant, chronoAccel, chronoSecondChance };
   // Alembist (classes-b)
   Object.assign(module.exports, { ALEMBIC, alemKey, alemReactionKey, alemInfo, alemIsBomb, alemIsHeal, alemKnown, alemBook, alemSavedKnown, alemRipeTime,
     alemSpoilTime, alemStrength, alemAb, alemPick, alemAdd, alemReagent, alemShieldAmt, alemSplash, alemBomb, alemRaise, alemRecipe, alemGoOff, alemLaunch,

@@ -13,6 +13,8 @@ const DPS_TOLERANCE = 0.08;   // a class's pro DPS may drift this far from the b
 const SPEC_TOLERANCE = 0.05;  // a specialization's pro DPS may differ this much from its own base class
 const TALENT_MAX = 7;    // one talent may add at most this much pro DPS (%) to its class or spec (tools/talents.js)
 const BUILD_MAX = 18;    // ... and the strongest pick of every row together at most this much
+// classes whose trees follow the talent rule (talents.js): at most one plain number, a granted move in rows III and V
+const RULED_TALENTS = ['bastion', 'bloodreaver', 'runeguard', 'ranger', 'shadowblade', 'pyromancer', 'cleric', 'grovekeeper', 'chronomancer', 'alembist'];
 // Normal is meant to take a real group several wipes, so a bot party only has to clear one run in RAID_RUNS
 const RAID_RUNS = 3;
 // bot raids: every boss, and every spec somewhere, with a fixed line-up so the result doesn't depend on a random spec
@@ -247,9 +249,9 @@ function saveUpgrade() {
   const { Save: S } = require(p);
   delete global.localStorage;
   const inv = S.get('inv'), saved = JSON.parse(store['emberfall-save']);
-  const ok = S.VERSION === 3 && saved.v === 3 && S.gold() === 10 && inv.items.length === 3 && inv.items.every(i => !('q' in i)) &&
+  const ok = S.VERSION === 4 && saved.v === 4 && S.gold() === 10 && inv.items.length === 3 && inv.items.every(i => !('q' in i)) &&
     inv.equip.bastion.weapon === 1 && !!store['emberfall-save-backup-v1'] && Array.isArray(inv.lost);
-  if (ok) pass('Save upgrade keeps items', 'v1 -> v3: Heroic flag dropped, 10 gold per Heroic item, gear still equipped');
+  if (ok) pass('Save upgrade keeps items', 'v1 -> v4: Heroic flag dropped, 10 gold per Heroic item, gear still equipped');
   else fail('Save upgrade keeps items', JSON.stringify({ v: saved.v, gold: S.gold(), inv }));
 
   // v2 -> v3: every hero gets an empty talent tree; rows cost gold in order, picks only in unlocked rows, reset is free
@@ -259,7 +261,7 @@ function saveUpgrade() {
   delete require.cache[require.resolve(p)];
   const { Save: S2 } = require(p);
   const probs = [], up = JSON.parse(store2['emberfall-save']);
-  if (up.v !== 3 || !up.heroes.ranger.talents || up.heroes.ranger.talents.rows !== 0 || up.heroes.ranger.clears.grubnak.normal !== 1) probs.push(`upgrade: ${JSON.stringify(up.heroes)}`);
+  if (up.v !== 4 || !up.heroes.ranger.talents || up.heroes.ranger.talents.rows !== 0 || up.heroes.ranger.clears.grubnak.normal !== 1) probs.push(`upgrade: ${JSON.stringify(up.heroes)}`);
   if (S2.pickTalent('ranger', 0, 1)) probs.push('picked in a locked row');
   if (!S2.unlockTalentRow('ranger', 60) || !S2.unlockTalentRow('ranger', 60) || S2.unlockTalentRow('ranger', 60) || S2.gold() !== 10) probs.push(`unlocking: gold ${S2.gold()}, rows ${S2.talents('ranger').rows}`);
   if (!S2.pickTalent('ranger', 1, 2) || S2.pickTalent('ranger', 2, 0) || S2.pickTalent('ranger', 0, 3)) probs.push('picks: wrong rows or columns allowed');
@@ -269,7 +271,27 @@ function saveUpgrade() {
   if (S2.talents('ranger').picks.some(x => x != null) || S2.talents('ranger').rows !== 2) probs.push('reset should clear picks and keep rows');
   if (S2.talents('cleric').rows !== 0 || talentSet('cleric', S2.talents('cleric')).size) probs.push('a fresh hero should hold no talents');
   delete global.localStorage;
-  if (probs.length) fail('Save keeps talents', probs.join('\n')); else pass('Save keeps talents', 'v2 -> v3 adds talents; rows cost gold in order, picks free');
+
+  // v3 -> v4: picks made in the first talent tree follow their talent by id; one that left its row clears, rows stay bought
+  const store3 = { 'emberfall-save': JSON.stringify({ v: 3, name: 'Cy', gold: 0, inv: { next: 1, items: [], equip: {}, lost: [] }, settings: {}, heroes: {
+    ranger: { clears: {}, spec: null, talents: { rows: 5, picks: [0, 0, 2, 1, 2] } },     // rhythm (kept), shelter, trail, barrage (gone), falcon (kept in row V)
+    bastion: { clears: {}, spec: null, talents: { rows: 3, picks: [1, null, 0, null, null] } },   // counter, unshaken (gone)
+    alembist: { clears: {}, spec: null, talents: { rows: 2, picks: [2, 1] } } } }) };      // an unchanged tree keeps everything
+  global.localStorage = { getItem: k => (k in store3 ? store3[k] : null), setItem: (k, v) => { store3[k] = String(v); } };
+  delete require.cache[require.resolve(p)];
+  const { Save: S3 } = require(p);
+  const rg = S3.talents('ranger'), ba = S3.talents('bastion'), al = S3.talents('alembist');
+  const col = (cls, r, id) => TALENTS[cls][r].findIndex(t => t.id === id);
+  if (rg.rows !== 5 || JSON.stringify(rg.picks) !== JSON.stringify([col('ranger', 0, 'ranger_rhythm'), null, null, null, col('ranger', 4, 'ranger_falcon')])) probs.push(`v3 ranger picks: ${JSON.stringify(rg)}`);
+  if (ba.rows !== 3 || ba.picks.some(x => x != null)) probs.push(`v3 bastion picks should all clear: ${JSON.stringify(ba)}`);
+  if (al.rows !== 2 || al.picks[0] !== 2 || al.picks[1] !== 1) probs.push(`v3 alembist picks should stay: ${JSON.stringify(al)}`);
+  if (talentSet('ranger', rg).size !== 2) probs.push(`v3 ranger should hold 2 talents, holds ${[...talentSet('ranger', rg)]}`);
+  // a pick whose talent later leaves its row clears on reading, without touching the rows bought
+  S3.pickTalent('ranger', 1, 0);
+  S3.heroTalents('ranger').ids[1] = 'ranger_gone_talent';
+  if (S3.talents('ranger').picks[1] !== null || S3.talents('ranger').rows !== 5) probs.push('a pick of a removed talent should read as none');
+  delete global.localStorage;
+  if (probs.length) fail('Save keeps talents', probs.join('\n')); else pass('Save keeps talents', 'v2 adds talents; v3 picks follow their talent ids, removed ones clear and rows stay bought; picks free');
 }
 
 // ---------------------------------------------------------------- 2c. talents: shape, links to the kits, code and data agree
@@ -293,7 +315,18 @@ function talents() {
         // a talent that grants a new move: the kit holds it in talentAbilities, in place of the talent's own ability
         const granted = t.grants && KITS[c.id].talentAbilities && KITS[c.id].talentAbilities[t.id];
         if (t.grants && (!granted || granted.replaces !== t.ab)) probs.push(`${where}: grants a move the kit doesn't have (talentAbilities.${t.id}, replacing ${t.ab})`);
-        if (granted) used.add(t.id);
+        if (granted) {
+          used.add(t.id);
+          // a granted move is whole on its own (name, words, effect, an icon to borrow, flagged as a talent's) and has a
+          // slot to take in the base kit and in every spec (a spec's replacement still names the move it took over)
+          for (const f of ['id', 'name', 'desc', 'type', 'effect', 'icon']) if (!granted[f]) probs.push(`${where}: granted move has no ${f}`);
+          if (!granted.talent) probs.push(`${where}: granted move should say talent: true (remote players see it by id)`);
+          for (const s of [null, ...specIds]) {
+            const kit = kitFor(c.id, s), slots = kit.abilities.filter(a => (a.replaces || a.id) === t.ab);
+            if (slots.length !== 1) probs.push(`${where}: ${s || 'base'} kit has ${slots.length} slots for ${t.ab}`);
+            if (kit.abilities.some(a => a.id === granted.id && a !== slots[0])) probs.push(`${where}: ${granted.id} clashes with a move in the ${s || 'base'} kit`);
+          }
+        }
         for (const s of Object.keys(t.spec || {})) if (!specIds.includes(s)) probs.push(`${where}: text for unknown spec ${s}`);
         for (const [s, m] of Object.entries(t.specMods || {})) {
           if (!specIds.includes(s)) probs.push(`${where}: specMods for unknown spec ${s}`);
@@ -302,6 +335,12 @@ function talents() {
         if (!used.has(t.id) && t.cd == null && t.cast == null) probs.push(`${where}: does nothing (no k.talent('${t.id}') in the kits, no cd/cast)`);
       }
     });
+    // the talent rule (2026-10, talents.js): at most one plain number, and a new move in row III and in row V
+    if (RULED_TALENTS.includes(c.id)) {
+      const plain = rows.flat().filter(t => t.cd || t.cast).length;
+      if (plain > 1) probs.push(`${c.id}: ${plain} plain-number talents (at most 1)`);
+      for (const r of [2, 4]) if (!rows[r].some(t => t.grants)) probs.push(`${c.id} row ${r + 1}: no talent grants a new move`);
+    }
   }
   for (const id of used) if (!TALENT_BY_ID[id]) probs.push(`k.talent('${id}') in the kits has no talent in talents.js`);
   // without talents a kit plays exactly as before: the class balance check below compares base kits with the baseline

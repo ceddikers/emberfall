@@ -13,11 +13,30 @@
 //       inv.lost holds items whose key the game doesn't know (kept, never deleted; they come back if the key returns).
 //   v3: + heroes[classId].talents = { rows, picks }: how many talent rows the hero has unlocked with gold (0-5) and
 //       the column picked in each row (null for none). See combat/talents.js.
+//   v4: + talents.ids: the id of the talent picked in each row, so a pick follows its talent when the tree changes. A
+//       pick whose id is no longer in its row is cleared on reading (the row stays bought). v3 picks were columns of the
+//       first talent tree (V3_TALENT_IDS below), so the upgrade names them from that table.
 
 const Save = (() => {
   const KEY = 'emberfall-save';
-  const VERSION = 3;
-  const freshTalents = () => ({ rows: 0, picks: [null, null, null, null, null] });
+  const VERSION = 4;
+  const freshTalents = () => ({ rows: 0, picks: [null, null, null, null, null], ids: [null, null, null, null, null] });
+  // the first talent tree (2026-10-19), row by row, for naming v3 picks (the Alembist's tree hasn't changed since)
+  const V3_TALENT_IDS = {
+    bastion: 'judgment counter lightforged / steadfast mercy sanctuary / unshaken riposte tithe / vigil wall standard / sunlit echo hallowed',
+    bloodreaver: 'maul vein glutton / thirst iron scar / hunger quickvein feast / carnage roar deathless / rend tide frenzied',
+    runeguard: 'etched afterglyph volatile / thick sanctum mirror / overflow reclaim thirdmark / long mirrorsedge well / glyphguard shards storm',
+    ranger: 'rhythm keen markedvolley / shelter dressing lightfoot / quiver keenfocus trail / longhunt barrage rush / pin arrowstorm falcon',
+    shadowblade: 'serrated cruel lasting / smoke evasion leech / relentless envenom quicken / longdance sprint vanish / toxic clone garrote',
+    pyromancer: 'firestarter pyroclasm flashfire / heatshield tempered smolder / heatsink pressure kindling / longburn fuel afterburn / phoenix twin bomb',
+    cleric: 'burning radiant petalfall / mending benevolence swift / fresh dew favour / widecircle devotion grace / sunfall twin judgment',
+    grovekeeper: 'sunwrath awakened deepthorn / verdant bark rebirth / fertile harvest sap / lush seed oldgrowth / vines blossom naturewrath',
+    chronomancer: 'honed double skip / practiced stasis recall / well borrowed paradox / allegro fermata crescendo / phase hourglass second',
+    alembist: 'ricochet scorch kindle / flask cling spill / blend cask echo / flash reserve fume / quicksilver chain residue',
+  };
+  const v3Id = (cls, r, c) => { const t = V3_TALENT_IDS[cls], row = t && t.split(' / ')[r], id = row && row.split(' ')[c]; return id ? `${cls}_${id}` : null; };
+  // the talent tree (combat/talents.js loads after this file; only read when someone asks)
+  const tree = cls => (typeof TALENTS !== 'undefined' ? TALENTS[cls] : null);
   const HEROIC_REFUND = 10;
   const fresh = () => ({ v: VERSION, name: '', gold: 0, inv: { next: 1, items: [], equip: {}, lost: [] }, heroes: {}, settings: {} });
 
@@ -40,7 +59,17 @@ const Save = (() => {
     },
     // 2 -> 3: talents; every hero starts with no rows unlocked
     2: d => {
-      for (const h of Object.values(d.heroes || {})) if (h && typeof h === 'object' && !h.talents) h.talents = freshTalents();
+      for (const h of Object.values(d.heroes || {})) if (h && typeof h === 'object' && !h.talents) h.talents = { rows: 0, picks: [null, null, null, null, null] };
+      return d;
+    },
+    // 3 -> 4: name every pick (columns of the first tree) by its talent id; rows bought are untouched
+    3: d => {
+      for (const [cls, h] of Object.entries(d.heroes || {})) {
+        const t = h && h.talents;
+        if (!t || typeof t !== 'object') continue;
+        const picks = Array.isArray(t.picks) ? t.picks : [];
+        t.ids = [0, 1, 2, 3, 4].map(r => (Number.isInteger(picks[r]) ? v3Id(cls, r, picks[r]) : null));
+      }
       return d;
     },
   };
@@ -105,10 +134,16 @@ const Save = (() => {
     },
     // talents (combat/talents.js): { rows: unlocked rows 0-5, picks: [column or null per row] }. Rows are bought with
     // gold in order; picks are free to change (the game only lets you change them in town).
+    // A pick names its talent (ids): if that talent moved within its row the pick follows it, if it left the row the
+    // pick reads as none. (A pick with no id, from before v4, keeps its column.)
     talents(classId) {
       const t = (data.heroes[classId] || {}).talents || freshTalents();
-      const rows = Math.max(0, Math.min(5, t.rows | 0));
-      const picks = [0, 1, 2, 3, 4].map(r => (Number.isInteger(t.picks && t.picks[r]) && t.picks[r] >= 0 && t.picks[r] < 3 ? t.picks[r] : null));
+      const rows = Math.max(0, Math.min(5, t.rows | 0)), T = tree(classId);
+      const picks = [0, 1, 2, 3, 4].map(r => {
+        const id = Array.isArray(t.ids) ? t.ids[r] : null;
+        if (typeof id === 'string' && T && T[r]) { const c = T[r].findIndex(x => x.id === id); return c >= 0 ? c : null; }
+        return Number.isInteger(t.picks && t.picks[r]) && t.picks[r] >= 0 && t.picks[r] < 3 ? t.picks[r] : null;
+      });
       return { rows, picks };
     },
     heroTalents(classId) {
@@ -128,11 +163,14 @@ const Save = (() => {
       const t = this.heroTalents(classId);
       if (row < 0 || row >= (t.rows | 0) || col < 0 || col > 2) return false;
       if (!Array.isArray(t.picks)) t.picks = freshTalents().picks;
+      if (!Array.isArray(t.ids)) t.ids = freshTalents().ids;
+      const T = tree(classId);
       t.picks[row] = col;
+      t.ids[row] = T && T[row] && T[row][col] ? T[row][col].id : null;
       write();
       return true;
     },
-    resetTalents(classId) { const t = this.heroTalents(classId); t.picks = freshTalents().picks; write(); },
+    resetTalents(classId) { const t = this.heroTalents(classId); t.picks = freshTalents().picks; t.ids = freshTalents().ids; write(); },
     // hidden recipes a hero has found (the Alembist's Volatile Reactions): heroes[classId].found = [ids], added
     // without a version bump (optional; missing means none found)
     found: classId => { const f = (data.heroes[classId] || {}).found; return Array.isArray(f) ? f.filter(x => typeof x === 'string') : []; },
