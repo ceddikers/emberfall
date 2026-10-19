@@ -444,6 +444,66 @@ TALENTS.alembist = [
   ],
 ];
 
+// ======================================================================= THREADWEAVER and MARIONETTIST (classes-c)
+// New behaviour, one plain number each (Long Thread, Quick Change). Rows III and V grant a move (TALENT_ABILITIES in kits.js).
+Object.assign(TALENTS, {
+  threadweaver: [
+    [
+      { id: 'threadweaver_backstitch', name: 'Backstitch', ab: 'needle', text: 'Needle now also adds 5 Spool.' },
+      { id: 'threadweaver_crossstitch', name: 'Cross Stitch', ab: 'tie', text: 'Tying a thread now also heals both its ends a little.' },
+      { id: 'threadweaver_taut', name: 'Taut', ab: 'needle', text: 'Needle now casts in 1s instead of 1.5s while you hold 3 threads or more.' },
+    ],
+    [
+      { id: 'threadweaver_thimble', name: 'Thimble', ab: 'snip', text: 'Every thread Snap cuts now also shields both its ends for 6s.' },
+      { id: 'threadweaver_reelin', name: 'Reel In', ab: 'tighten', text: 'Tighten now pulls both ends together to meet in the middle, and both take 10% less damage for 4s.', spec: { shears: 'Lash now pulls both ends together to meet in the middle, and both take 10% less damage for 4s.' } },
+      { id: 'threadweaver_knotwork', name: 'Knotwork', ab: 'tie', text: 'A thread that snaps on its own now gives back a charge of Tie.' },
+    ],
+    [
+      { id: 'threadweaver_embroider', name: 'Embroider', ab: 'mend', grants: true, text: 'New move on E, in place of Mend Seam. Embroider: instant, 20 Spool. A heal that runs down every thread on your target at full strength, and on through their threads at 60%.' },
+      { id: 'threadweaver_bobbin', name: 'Full Bobbin', ab: 'mend', text: 'While you hold 50 Spool or more, Mend Seam now heals 20% more.' },
+      { id: 'threadweaver_tension', name: 'Tension', ab: 'snip', text: 'Every thread Snap cuts now gives back 8 Spool.' },
+    ],
+    [
+      { id: 'threadweaver_grand', name: 'Grand Tapestry', ab: 'tapestry', text: 'When Tapestry ends, the web now lets go in a heal on the whole party.' },
+      { id: 'threadweaver_selvedge', name: 'Selvedge', ab: 'tapestry', text: 'While Tapestry holds, none of your threads can snap, however far apart their ends are pulled.' },
+      { id: 'threadweaver_longthread', name: 'Long Thread', ab: 'tapestry', cd: { tapestry: -30 }, text: 'Tapestry recharges 30s faster.' },
+    ],
+    [
+      { id: 'threadweaver_cradle', name: 'Cat\'s Cradle', ab: 'tighten', grants: true, text: 'New move on D, in place of Tighten. Cat\'s Cradle: a cradle of threads at your feet for 9s. Allies inside take 15% less damage and heal every 1.5s.', spec: { shears: 'New move on D, in place of Lash. Cat\'s Cradle: a cradle of threads at your feet for 9s. Allies inside take 15% less damage and heal every 1.5s.' } },
+      { id: 'threadweaver_heartstring', name: 'Heartstring', ab: 'snip', text: 'Every thread Snap cuts now also whips the boss.' },
+      { id: 'threadweaver_skein', name: 'Double Knot', ab: 'tie', text: 'A thread you tie can\'t snap for its first 6s, however far apart its ends are pulled.' },
+    ],
+  ],
+
+  marionettist: [
+    [
+      { id: 'marionettist_flourish', name: 'Flourish', ab: 'jab', text: 'Every third Jab now flourishes into a second, lighter stab.' },
+      { id: 'marionettist_lunge', name: 'Lunge', ab: 'pull', text: 'Pull Strings now cuts 40% harder when the Doll passes through an enemy.' },
+      { id: 'marionettist_counterweight', name: 'Counterweight', ab: 'cross', text: 'A Cross-Cut that cuts nothing now gives back half its cooldown.' },
+    ],
+    [
+      { id: 'marionettist_bodydouble', name: 'Body Double', ab: 'swap', text: 'Swap now also wraps you in a shield for 5s.' },
+      { id: 'marionettist_mended', name: 'Mended Strings', ab: 'pull', text: 'A torn String now grows back in 7.5s instead of 15s.' },
+      { id: 'marionettist_standin', name: 'Stand-In', ab: 'swap', text: 'For 3s after a Swap, a blow that lands on the Doll no longer tears a String.' },
+    ],
+    [
+      { id: 'marionettist_tangle', name: 'Tangle', ab: 'pirouette', grants: true, text: 'New move on R, in place of Pirouette. Tangle: the Doll winds its strings round the enemy, a cut now and a bleed every 2s for 10s.' },
+      { id: 'marionettist_encore', name: 'Encore! Encore!', ab: 'finale', text: 'Grand Finale now leaves you 2 Encore when it ends.' },
+      { id: 'marionettist_secondact', name: 'Second Act', ab: 'pirouette', text: 'Pirouette now also mends a torn String.' },
+    ],
+    [
+      { id: 'marionettist_curtain', name: 'Curtain Call', ab: 'finale', text: 'The last hit of Grand Finale is now always a critical hit.' },
+      { id: 'marionettist_cue', name: 'On Cue', ab: 'swap', text: 'Swap now also takes 3s off Cross-Cut\'s cooldown.' },
+      { id: 'marionettist_quickchange', name: 'Quick Change', ab: 'swap', cd: { swap: -6 }, text: 'Swap recharges 6s faster.' },
+    ],
+    [
+      { id: 'marionettist_curtainrise', name: 'Red Curtain', ab: 'swap', grants: true, text: 'New move on D, in place of Swap. Red Curtain: a red curtain round you for 8s; allies inside take 15% less damage, and the Dolls bow and come back to you.' },
+      { id: 'marionettist_twin', name: 'Twin Strings', ab: 'cross', text: 'Cross-Cut\'s line now lingers for 2s and cuts lightly every second whatever still crosses it.' },
+      { id: 'marionettist_bow', name: 'Final Bow', ab: 'finale', text: 'A Grand Finale at 5 Encore now mends every String, and nothing can touch the Doll while it plays.' },
+    ],
+  ],
+});
+
 // id -> { cls, row, col, t }
 const TALENT_BY_ID = {};
 for (const [cls, rows] of Object.entries(TALENTS)) rows.forEach((row, r) => row.forEach((t, c) => { TALENT_BY_ID[t.id] = { cls, row: r, col: c, t }; }));
