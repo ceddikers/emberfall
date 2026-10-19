@@ -7,11 +7,15 @@
 //         heroes: { classId: { clears: { bossId: { normal, hard } }, spec } }, settings: { debug } }
 //   (spec and trials were added later without a version bump: both optional; a missing spec means the base kit,
 //   missing trials mean none passed: heroes[classId].trials = { specId: 1 })
+//   v2: + gold (the account-wide wallet); items lose `q`: rarity is now part of each item (items.js), so a Heroic copy
+//       is simply that item. Each Heroic item you owned pays HEROIC_REFUND gold once, for the bonus it no longer has.
+//       inv.lost holds items whose key the game doesn't know (kept, never deleted; they come back if the key returns).
 
 const Save = (() => {
   const KEY = 'emberfall-save';
-  const VERSION = 1;
-  const fresh = () => ({ v: VERSION, name: '', inv: { next: 1, items: [], equip: {} }, heroes: {}, settings: {} });
+  const VERSION = 2;
+  const HEROIC_REFUND = 10;
+  const fresh = () => ({ v: VERSION, name: '', gold: 0, inv: { next: 1, items: [], equip: {}, lost: [] }, heroes: {}, settings: {} });
 
   // UPGRADES[n] turns a version-n save into a version n+1 save
   const UPGRADES = {
@@ -20,6 +24,14 @@ const Save = (() => {
       const d = fresh();
       try { const inv = JSON.parse(localStorage.getItem('emberfall-inv-v1') || 'null'); if (inv && Array.isArray(inv.items)) d.inv = inv; } catch (e) { /* unreadable */ }
       try { d.name = localStorage.getItem('emberfall-name') || ''; } catch (e) { /* storage unavailable */ }
+      return d;
+    },
+    // 1 -> 2: the gold wallet; the Heroic flag goes (every item keeps its key, uid and place in your gear)
+    1: d => {
+      let heroic = 0;
+      const items = d.inv && Array.isArray(d.inv.items) ? d.inv.items : [];
+      for (const it of items) { if (it && it.q) heroic++; if (it) delete it.q; }
+      d.gold = (Number(d.gold) || 0) + heroic * HEROIC_REFUND;
       return d;
     },
   };
@@ -37,7 +49,9 @@ const Save = (() => {
     d = Object.assign(fresh(), d);
     if (!d.inv || !Array.isArray(d.inv.items)) d.inv = fresh().inv;
     d.inv.equip = d.inv.equip || {};
-    d.inv.next = Math.max(d.inv.next || 1, ...d.inv.items.map(i => (i.uid || 0) + 1));
+    if (!Array.isArray(d.inv.lost)) d.inv.lost = [];
+    d.gold = Math.max(0, Math.floor(Number(d.gold) || 0));
+    d.inv.next = Math.max(d.inv.next || 1, ...d.inv.items.map(i => (i.uid || 0) + 1), ...d.inv.lost.map(i => (i.uid || 0) + 1));
     return { d, upgraded };
   }
 
@@ -51,6 +65,9 @@ const Save = (() => {
     commit: write,
     setting: (k, fallback) => (k in data.settings ? data.settings[k] : fallback),
     setSetting(k, v) { data.settings[k] = v; write(); },
+    // the account-wide wallet (boss clears, salvage and selling add to it; talents will spend it)
+    gold: () => data.gold,
+    addGold(n) { n = Math.floor(Number(n) || 0); data.gold = Math.max(0, data.gold + n); write(); return data.gold; },
     // a boss clear counts for the hero you cleared it with (specializations will unlock from these)
     recordClear(classId, bossId, mode) {
       const h = data.heroes[classId] = data.heroes[classId] || { clears: {} };

@@ -624,31 +624,33 @@
     for (const h of humans) for (const t of hostSources.get(h.id) || []) counts[t] = (counts[t] || 0) + 1;
     return counts;
   }
-  // ---- loot: the host rolls it when a raid is cleared and tells everyone who got what
+  // ---- loot: a clear drops a chest; the humans in the run roll Need / Greed / Pass on it (loot.js), and the host
+  // pays everyone the clear's gold with it. Wipes and trials drop nothing.
   function hostRollLoot() {
     if (hostTrial) return;   // a trial is a memory: nothing drops
-    const drops = [];
-    for (const h of hostRoster) if (!h.left) for (const it of rollLoot(lastRaidOpts.boss, lastRaidOpts.mode, h.cls, Math.random)) drops.push([h.id, it.key, it.q]);
-    if (drops.length) Net.broadcastAll({ t: 'loot', d: drops });
+    const humans = hostRoster.filter(h => !h.left && h.cls).map(h => [h.id, h.cls]);
+    if (humans.length) Loot.hostOpen(lastRaidOpts.boss, lastRaidOpts.mode, humans);
   }
-  Net.on('loot', msg => {
-    if (!Array.isArray(msg.d)) return;
-    for (const [pid, key, q] of msg.d) {
-      if (!ITEMS[key]) continue;
-      const inst = { key, q: q ? 1 : 0 };
-      const who = pid === Net.id ? 'You' : (remotes.get(pid) || {}).name || 'Someone';
-      const log = $('chat-log'), row = document.createElement('div');
-      row.className = 'loot-line';
-      row.innerHTML = `<b>${escapeHtml(who)}</b> received <span style="color:${Inventory.rarityColor(inst)}">[${escapeHtml(ITEMS[key].name)}]</span>`;
-      log.appendChild(row);
-      while (log.children.length > 7) log.firstChild.remove();
-      setTimeout(() => row.classList.add('old'), 15000);
-      if (pid === Net.id) {
-        Inventory.add(key, q);
-        if (scene === 'arena') VFX.burst(player.x, player.y, { color: Inventory.rarityColor(inst), color2: '#ffffff', n: 22, speed: 240 });
-      }
-    }
+  Loot.init({
+    broadcast: m => Net.broadcastAll(m),
+    send: m => (Net.isHost ? Loot.hostChoice(Net.id, m) : Net.send(m)),
+    myId: () => Net.id,
+    nameOf: id => (id === Net.id ? 'You' : (remotes.get(id) || {}).name || 'Someone'),
+    inRaid: () => scene === 'arena',
+    addItem: key => {
+      const inst = Inventory.add(key);
+      if (scene === 'arena') VFX.burst(player.x, player.y, { color: Inventory.rarityColor(inst), color2: '#ffffff', n: 22, speed: 240 });
+    },
+    addGold: n => Inventory.addGold(n),
+    iconURL: key => Inventory.iconURL({ key }),
+    itemTip: (key, cls) => {
+      const inst = { key }, l = cls ? Inventory.loadout(cls) : {}, s = cls && slotsFor(inst).find(x => canEquip(inst, cls, x));
+      return Inventory.itemTip(inst, cls, s ? l[s] : null);
+    },
   });
+  Net.on('chest', m => Loot.onChest(m));
+  Net.on('lootw', m => Loot.onWin(m));
+  Net.onHost('lootc', (pid, m) => Loot.hostChoice(pid, m));
   // combat events from other players
   const EV_TYPES = new Set([...SIM_EVENTS]);
   Net.onHost('cev', (pid, msg) => {
@@ -764,6 +766,7 @@
     FX.heroScale = heroScale();
     // in a raid the boss bar already names the fight and the party frames name you
     $('hud-tl').classList.toggle('hidden', arena);
+    Inventory.showGoldHud(!arena);
     $('help').innerHTML = arena
       ? '<kbd>Right-click</kbd> move · <kbd>Left-click</kbd> ally or frame to target · <kbd>1</kbd>-<kbd>4</kbd> target party · <kbd>Shift</kbd>+skill on yourself · <kbd>Space</kbd> dash'
       : '<kbd>Right-click</kbd> move · <kbd>Left-click</kbd> interact · <kbd>Q</kbd><kbd>W</kbd><kbd>E</kbd><kbd>R</kbd><kbd>D</kbd><kbd>F</kbd> skills · <kbd>Space</kbd> dash · <kbd>Enter</kbd> chat';
@@ -1459,6 +1462,7 @@
         town: () => Net.broadcastAll({ t: 'raidend' }),
         leave: () => leaveRaid(true),
       });
+      Loot.reveal();   // the chest's cards come up with the results
     }
     RaidUI.update(raid, now, Net.id, frameMarks());
   }
@@ -2341,6 +2345,7 @@
     }
     $('join').classList.add('hidden');
     started = true;
+    Inventory.showGoldHud(scene !== 'arena');
     if (!player.cls) openSelect(null);
     else { Net.send({ t: 'cls', id: player.cls.id, spec: player.spec }); sendGear(); }   // back after a lost connection: tell the new room who we are
     updatePartyList();

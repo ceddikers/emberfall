@@ -664,3 +664,43 @@ kbd { border-radius: 3px; background: #1d1813; border-color: #4a3d2c; color: var
 .spec-trial .trial-go { margin-top: 4px; width: auto; padding: 8px 26px; }
 .spec-trial .trial-go[aria-disabled] { opacity: .5; cursor: default; }
 @media (max-width: 700px) { .spec-tabs { grid-template-columns: 1fr; } }
+
+/* ================================================================ items rework: effects, gold, the loot chest */
+.it-fx { margin-top: 6px; padding: 6px 8px; border-left: 2px solid var(--rc); background: color-mix(in srgb, var(--rc) 8%, transparent); font-size: 12px; line-height: 1.4; color: #ece4d4; }
+.it-sell { margin-top: 2px; font-size: 10.5px; color: var(--muted); }
+.coin { display: inline-block; width: 7px; height: 7px; margin: 0 5px 1px 0; vertical-align: middle; transform: rotate(45deg); background: var(--gold); border: 1px solid #00000080; }
+.gold-txt { color: var(--gold-hi); }
+#gold-hud { position: fixed; right: 66px; bottom: 14px; z-index: 5; height: 42px; display: flex; align-items: center; padding: 0 12px; border-radius: 3px;
+  border: 1px solid var(--line); background: #12100de8; color: var(--gold-hi); font-size: 13px; font-variant-numeric: tabular-nums; }
+#gold-hud.hidden { display: none; }
+.inv-gold { margin-left: auto; align-self: center; padding-right: 2px; font-size: 12px; color: var(--gold-hi); font-variant-numeric: tabular-nums; }
+.btn2.sell .coin { margin-left: 2px; }
+
+#loot { position: fixed; right: 16px; top: 50%; transform: translateY(-50%); z-index: 13; width: min(300px, calc(100vw - 32px)); padding: 10px 10px 8px;
+  background: var(--panel); border: 1px solid var(--line); border-top-color: var(--gold-dim); border-radius: 3px; box-shadow: 0 18px 40px #000c; }
+#loot.hidden { display: none; }
+.loot-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid var(--line-soft); }
+.loot-head h4 { margin: 0; font-family: var(--fantasy); font-weight: 700; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--gold); }
+.loot-head small { color: var(--muted); font-size: 11px; }
+.loot-time { margin-left: auto; font-size: 12px; color: var(--gold-hi); font-variant-numeric: tabular-nums; }
+.loot-cards { display: grid; gap: 6px; }
+.loot-card { position: relative; padding: 7px 8px 9px; background: #0f0d0bcc; border: 1px solid var(--line-soft); border-left: 2px solid var(--rc); border-radius: 2px; }
+.loot-card.done { padding-bottom: 7px; }
+.lc-item { display: flex; gap: 8px; align-items: center; cursor: default; min-width: 0; }
+.lc-item img { flex: none; width: 34px; height: 34px; }
+.lc-item div { min-width: 0; }
+.lc-item b { display: block; font-size: 13px; line-height: 1.25; color: var(--rc); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lc-item small { font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.lc-acts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-top: 7px; }
+.lc-btn { padding: 4px 0; font: inherit; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink); background: var(--panel-2);
+  border: 1px solid var(--line); border-radius: 2px; cursor: pointer; }
+.lc-btn:hover:not(:disabled) { background: #26201a; border-color: var(--gold-dim); }
+.lc-btn.need:not(:disabled) { color: var(--gold-hi); border-color: var(--gold-dim); }
+.lc-btn.pass { color: var(--muted); }
+.lc-btn:disabled { opacity: .4; cursor: default; }
+.lc-res { display: flex; justify-content: space-between; gap: 8px; margin-top: 7px; font-size: 12px; color: #d4cab8; font-variant-numeric: tabular-nums; }
+.lc-res b { font-weight: 700; }
+.lc-res.me b { color: var(--gold-hi); }
+.lc-res.wait, .lc-res.salv { color: var(--muted); }
+.lc-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 1px; background: var(--line-soft); }
+.lc-bar i { display: block; height: 100%; width: 100%; background: var(--rc); opacity: .7; }

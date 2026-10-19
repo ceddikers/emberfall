@@ -164,6 +164,7 @@ const Hud = {
     const list = [];
     for (const [id, b] of k.buffs) if (b.end > now && BUFF_NAMES[id]) list.push({ id, name: BUFF_NAMES[id], left: b.end - now, stacks: b.stacks, bad: BAD_BUFFS.has(id) });
     for (const x of this.extra()) list.push(x);
+    for (const x of k.itemBuffs()) list.push(x);   // buffs from item effects
     const key = list.map(b => b.id + ':' + (b.left != null ? Math.ceil(b.left) : '') + ':' + b.stacks).join('|');
     if (key !== this._buffKey) {
       this._buffKey = key;

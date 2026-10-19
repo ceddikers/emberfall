@@ -541,9 +541,10 @@ New support: kits can ask where their hero stands (`env.pos`, for the Sigilmance
 | Ability visuals: particle/effect engine, a recipe per ability, boss impacts and wind-ups | `client/js/vfx.js`, `client/js/ability-vfx.js`, `client/js/boss-vfx.js`, `client/js/fx.js` |
 | Hero select copy (passives, combos) | `client/js/hero-guide.js` |
 | In-game tooltips (no browser `title=` popups) | `client/js/ui-tip.js` |
-| Items, gear stats, enhancements, loot rolls | `client/js/items.js` |
+| Items, rarities, gear stats, item effects, enhancements, loot tables, chest rolls, gold amounts | `client/js/items.js` |
+| Loot chests: Need / Greed / Pass cards, the host's rolls and announcements | `client/js/loot.js` |
 | Inventory screen | `client/js/inventory.js` |
-| The versioned save (name, bag and gear, each hero's boss clears, settings), with step-by-step upgrades for old saves and a backup before each upgrade | `client/js/save.js` |
+| The versioned save (name, gold, bag and gear, each hero's boss clears, settings), with step-by-step upgrades for old saves and a backup before each upgrade | `client/js/save.js` |
 | Debug overlay (F3): frame rate, worst frame, ping to the host, messages per second, scene, arena, party, boss update age | `client/js/debug-overlay.js` |
 | Scenes, input, hero select, tab targeting, ally targeting, raid start/retry/leave, loot | `client/js/main.js` |
 | WebRTC: arena coordinates, combat events, solo mode | `client/js/net.js` |
@@ -596,11 +597,41 @@ New support: kits can ask where their hero stands (`env.pos`, for the Sigilmance
 
 **Gear:** weapon, armor and two accessories, per hero; the bag is shared by every hero you play, saved in the browser.
 - Stats: HP, Physical, Magical (each class reads one), Defense, Haste, Critical. No MP (every class already has its own resource) and no movement speed (mechanics are timed for one run speed).
-- Gear is modest on purpose: best-in-slot is roughly +15-20% output, and everything is capped.
+- Gear is modest on purpose: best-in-slot is roughly +15-25% output, and every stat is capped (`GEAR_CAPS`).
 - Icons are drawn in code until painted ones arrive: briefs and the sheet layout are in `docs/art/item-icons.md`. Painted PNGs go in `client/items/<key>.png` and are listed in `client/items/manifest.json`; the game adds the rarity frame.
-- Class drops can carry an **enhancement** that changes one ability (45 in total, five per class, e.g. Holy Edge strikes twice, Glyph Burst refunds a Rune). Enhanced items are one rarity higher; the enhanced ability gets an orange marker on the bar and a line in its tooltip.
-- Tiers: Recruit, Grubnak, Skitterra, Volkar (Epic, item level 30). Volkar's class weapons put the storm into each class's big cooldown: Bulwark shields the party, Frenzy gives 30 Blood, Runic Overload gives 2 Runes, Barrage lights Keen Eye, Shadow Dance gives 2 combo points, Combustion refills Fire Blast, Prayer Circle cuts 15%, Wild Growth gives 25 Bloom, Accelerando heals the party. Volkar also drops a maul, a scepter, scale mail and three accessories for anyone.
-- The Hollow King's tier (Epic, item level 40) puts the enhancement on the class armour: Bulwark cuts 50%, Bloodletting heals 5%, Runic Ward lasts 12 s, Rapid Fire hits 15% harder, True North lasts 8 s, Combustion lasts 13 s, Prayer Circle's regen is 50% stronger, Thornlash grows 5 Bloom, Rewind reaches back 6 s. He also drops a greatsword, a sceptre, a burial shroud, and a signet, bell and lantern charm for anyone.
+- **Rarity is a property of the item** (October rework): each rarity is its own set of items, and power comes from rarity, not from the boss. There is no ladder between bosses: a Grubnak Legendary is as strong as a Hollow King Legendary. Bosses differ in themes, effects and party bonuses.
+
+  | Rarity | Colour | Stat budget | Item level | What it is | Sells for |
+  |---|---|---|---|---|---|
+  | Common | grey | 0.4 | 1 | Recruit starter gear only | 2 |
+  | Uncommon | blue | 1.0 | 30 | a clean stat line | 8 |
+  | Rare | purple | 1.15 | 33 | stats + a small effect | 15 |
+  | Legendary | orange | 1.3 | 36 | a strong effect; every class enhancement lives here | 30 |
+  | Mythic | red | 1.45 | 40 | a build-defining effect (two per boss) | 60 |
+
+- **Effects** are data on the item (`fx` in `client/js/items.js`) run by a small hook set in the combat engine (`Kit.itemHook` / `Kit.fxMod` in `engine.js`), in the wearer's own kit like enhancements. The host only sees the ordinary damage, heal and shield events they cause; HP and Defense stay host-side and capped.
+  - Triggers: a critical hit or heal, a GCD, an oGCD, a heal or shield you cast, a dash, building your gauge (gauges that fill on their own count every 10 points). Each can have a chance and an internal cooldown.
+  - Conditions (always on while true): always, HP above a fraction, HP below a fraction.
+  - Actions: an extra strike, mend yourself (share of max HP), a ward on yourself, seconds off your other oGCD cooldowns, a timed buff (stacks; shown in the buff row).
+  - Mods (conditions and buffs): damage, healing, crit, haste, shorter oGCD cooldowns (capped at 30%).
+  - An effect's own hits and heals never trigger effects. Bots and the simulator wear no gear, so class balance is untouched.
+- **Class drops:** each boss drops a weapon and an armour for every class. The piece with an **enhancement** that changes one ability is Legendary (45 in total, five per class, e.g. Holy Edge strikes twice, Glyph Burst refunds a Rune; the enhanced ability gets an orange marker on the bar and a line in its tooltip). The other piece is Rare and carries its boss's small effect: Grubnak's armour *Second Helping* (a dash heals 3%), Volkar's armour *Static* (oGCDs crackle for a little damage), the Hollow King's weapon *Court's Favour* (oGCDs give +3% damage for 6 s). Skitterra's weapon and armour are both enhanced.
+  - Volkar's enhanced weapons put the storm into each class's big cooldown: Bulwark shields the party, Frenzy gives 30 Blood, Runic Overload gives 2 Runes, Barrage lights Keen Eye, Shadow Dance gives 2 combo points, Combustion refills Fire Blast, Prayer Circle cuts 15%, Wild Growth gives 25 Bloom, Accelerando heals the party.
+  - The Hollow King's enhanced armour: Bulwark cuts 50%, Bloodletting heals 5%, Runic Ward lasts 12 s, Rapid Fire hits 15% harder, True North lasts 8 s, Combustion lasts 13 s, Prayer Circle's regen is 50% stronger, Thornlash grows 5 Bloom, Rewind reaches back 6 s.
+- **Loot tables** (per boss: general items for anyone plus the class items; every rarity always has something anyone can get):
+
+  | Boss (theme) | Uncommon | Rare | Legendary | Mythic |
+  |---|---|---|---|---|
+  | Grubnak (hearty) | Butcher's Cleaver, Simmering Ladle, Apron of the Kitchen Guard | Peppercorn Ring (crits sting), class armour | Egg Timer Pendant (oGCDs take 2 s off the others), class weapon | The Ogre's Stockpot (every 12 s a GCD hits extra and mends 3%), Head Chef's Whites (+6% damage and healing above 70% HP) |
+  | Skitterra (crits, venom) | Fang Shortblade, Silkspun Wand, Chitin Hauberk | Eightfold Band (GCDs may give +6% crit), Silkguard Charm (healing spins a ward) | Venom Pendant (crits inject venom), class weapon and armour | Eye of the Broodmother (crits stack up to +9% haste), Venomweave Shroud (GCDs may bite) |
+  | Volkar (storm, dashes) | Thunderstone Maul, Lightning Rod Scepter, Slatescale Mail | Polarity Ring (gauge building gives haste), Grounding Charm (a dash wards you), class armour | Eye of the Storm (oGCD cooldowns 8% shorter), class weapon | Stormcaller's Torc (a dash gives Tailwind: +8% haste, +4% damage), Thunderhead Mantle (crits strike and cut oGCD cooldowns) |
+  | the Hollow King (risk, oGCDs) | Hollow Crown Greatsword, Sceptre of the Barrow, Royal Burial Shroud | Signet (+3% crit above 80% HP), Last Lantern Charm (+10% healing below 50% HP), class weapon | Barrow Bell Pendant (an oGCD tolls +10% crit), class armour | Crown of the Barrow (+12% damage and healing below 50% HP), Mantle of the Dead Court (oGCD cooldowns 10% shorter, oGCDs stack +2% damage) |
+
+- **Chests:** a clear drops a chest of 4 items (Normal) or 5 (Hard). Each item rolls its rarity (Normal: Uncommon 55 / Rare 30 / Legendary 12 / Mythic 3 %; Hard: 30 / 40 / 22 / 8), then an item of that rarity from the boss's table (no doubles in one chest while there's a choice). Class items only roll for classes a human in the run plays; bots don't count. Wipes and trials drop nothing.
+- **Need / Greed / Pass** (`client/js/loot.js`): when the results screen opens, each item appears as a card (rarity colour, name, the item tooltip on hover) with Need, Greed and Pass and a 25 s timer; no pick is a Pass. Need is only open if the hero you raided with can use it (class items: that class; weapons: the matching main stat; armour and accessories: anyone). The host rolls 1-100 for everyone who didn't pass: the best Need wins, otherwise the best Greed, and chat says so ("Ava won [Item] (Need 87)"). If everyone passes, the item is salvaged: each player gets a little gold (Uncommon 2, Rare 4, Legendary 8, Mythic 15). Bots don't roll.
+  - Messages: host to all `{ t: 'chest', id, boss, mode, k: [keys], who: [[id, class]], gold, secs }`; player to host `{ t: 'lootc', id, i, c }` (0 pass, 1 greed, 2 need); host to all `{ t: 'lootw', id, i, k, w, c, r, g }` (w = 0: salvaged). The host only accepts a pick for the open chest, a real item index, from a player in the raid, once; a Need the player's hero can't use counts as Greed. Players who stay silent are rolled for after 33 s.
+- **Gold:** one wallet for the account (the save). Shown in the inventory and, quietly, next to the bag button in town. A clear pays everyone in it: Grubnak 40, Skitterra 45, Volkar 50, the Hollow King 60; Hard doubles it. Wipes and trials pay nothing. The host decides the amount and sends it with the chest; each player adds it to their own save. Items sell in the inventory (Common 2, Uncommon 8, Rare 15, Legendary 30, Mythic 60); Legendary and Mythic items, and anything another hero wears, ask to confirm.
+- **Saves:** version 2 adds the wallet and drops the old Heroic flag (`q`): every item keeps its key, uid and place in your gear and is now simply that item, at the item's own rarity; each Heroic item paid 10 gold once for the bonus it lost. Items with a key the game no longer knows are kept aside (`inv.lost`), never deleted.
 - **Party bonuses:** when 2, 3 or 4 people in the group each wear at least one item from the same boss, the whole party (bots too) gets that boss's bonus for the fight. Recruit gear has none, and someone wearing gear from two bosses counts toward both. It rewards playing together rather than solo grinding, and stays small like the rest of gear (`PARTY_BONUS` in `client/js/items.js`).
 
   | Bonus | 2 wearing | 3 wearing | 4 wearing |
@@ -614,7 +645,7 @@ New support: kits can ask where their hero stands (`env.pos`, for the Sigilmance
   - Damage, crit and haste go into everyone's party modifiers; max HP is applied by the host.
   - Shown as a gold chip in the buff row (e.g. "Kitchen Crew 3/4", with a tooltip). Every item's tooltip lists its boss's three tiers.
   - Bots don't wear gear, so solo with bots never triggers a bonus.
-- Multiplayer: your damage/healing/haste/crit bonuses and enhancements run in your own kit and reach the host as normal combat events. HP and Defense are applied by the host, which caps every player's totals. Loot is rolled by the host on a clear and announced to everyone.
+- Multiplayer: your damage/healing/haste/crit bonuses, enhancements and item effects run in your own kit and reach the host as normal combat events. HP and Defense are applied by the host, which caps every player's totals. The host rolls the chest on a clear and settles Need / Greed / Pass.
 
 **In town:**
 - Pick a hero on the hero select screen.
@@ -636,6 +667,7 @@ The host can retry or take everyone back to town.
 **One command checks everything automated:** `npm run check` (`tools/check.js`, about 5 s). It runs:
 - a parse of every script;
 - checks that classes, items and enhancements line up;
+- checks items: every loot table entry exists and sits in the right table, every rarity has something anyone can get at every boss, two Mythics a boss, every effect uses a known hook with sane numbers, chests roll the right sizes and odds and never a class nobody plays, Need beats Greed, the engine runs effects, and a v1 save upgrades without losing an item;
 - the party bonus math, arena clamping and network smoothing;
 - class DPS against `tools/check-baseline.json` (±8%);
 - bot clears of all four bosses on Normal.
