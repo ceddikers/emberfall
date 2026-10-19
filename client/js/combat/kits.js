@@ -1230,14 +1230,14 @@ const tauntAbility = classId => {
   return t && t.name ? { id: 'taunt', icon: t.icon, name: t.name, type: 'ogcd', target: 'enemy', range: TAUNT.range, cd: TAUNT.cd, anim: 'big', taunt: true,
     desc: t.desc.replace('{hold}', TAUNT.hold) } : null;
 };
-// CSS background for the taunt's icon: its own painting once it exists, the borrowed icon underneath until then
+// CSS background for the taunt's icon: its own painting, the borrowed icon underneath
 // (a class with no painted icons yet, data.js art.icons === false, draws its own: hud.js abilityIcon)
 const tauntIconBg = classId => {
   const cls = typeof CLASSES !== 'undefined' && CLASSES.find(c => c.id === classId);
   if (cls && cls.art && cls.art.icons === false && typeof abilityIcon !== 'undefined') return `url(${abilityIcon(classId, 'taunt')})`;
-  // its own painting is asked for once (ArtProbe in draw-util.js); until it's known to exist, only the borrowed icon
+  // every tank's taunt is painted; the borrowed icon stays underneath in case a new tank's isn't yet
   const own = `icons/${classId}/taunt.png`, borrowed = `icons/${classId}/${(TAUNT[classId] || {}).icon}.png`;
-  return typeof ArtProbe !== 'undefined' && ArtProbe.ok(own) === true ? `url(${own}), url(${borrowed})` : `url(${borrowed})`;
+  return `url(${own}), url(${borrowed})`;
 };
 
 // ======================================================================= ALEMBIST (healer, added with classes-b)
