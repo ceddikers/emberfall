@@ -1003,7 +1003,7 @@ const VFX = (() => {
       } });
       fx({ dur: 0.05, delay: toss, layer: 'air', draw: () => {}, done: () => { B.flash(x, y - 20, r * 0.6, '#e8dcf8', 0.2); B.sparks(x, y, { color: '#e8dcf8', n: 5, speed: 300, z: 20 }); B.shock(x, y, { r: r * 1.4, color: o.ring || '#a08ac0', dur: 0.5 }); } });
       fx({ dur, delay: toss, layer: 'air', draw: (c, p, t, e) => {
-        const pop = easeOut(Math.min(1, p / 0.12)), thin = p < 0.25 ? 1 : 1 - (p - 0.25) / 0.75 * 0.7, k = e.a * Math.min(1, (1 - p) / 0.3) * thin, sp = (0.4 + 0.6 * pop) * (1 + p * 0.3);
+        const pop = easeOut(Math.min(1, p / 0.12)), thin = p < 0.25 ? 1 : 1 - (p - 0.25) / 0.75 * 0.7, k = e.a * Math.min(1, (1 - p) / 0.3) * thin * (o.a ?? 1), sp = (0.4 + 0.6 * pop) * (1 + p * 0.3);
         const pr = b => b.r * (0.35 + 0.65 * pop) * (1 + p * 0.25), px = b => x + b.x * sp, py = b => y + b.y * sp - b.z - 16 - p * 14 + Math.sin(t * 2 + b.ph) * 2;
         // ink silhouette, then the body over it (so the ink only shows round the outside), then the light on top
         const blobs = (sc, pad, dx, dy) => { c.beginPath(); for (const b of puffs) { const R = pr(b) * sc + pad, bx = px(b) + R * dx, by = py(b) + R * dy; c.moveTo(bx + R, by); c.arc(bx, by, R, 0, Math.PI * 2); } c.fill(); };

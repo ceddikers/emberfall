@@ -126,7 +126,8 @@ const ABILITY_VFX = (() => {
       // a dripping green cut, and a poison puddle bubbling at the target's feet
       venom: c => { V.slash(c.x, c.y, c.ang, { r: 48, span: 1.6, color: '#8aff4a', dur: 0.24 }); c.later(0.08, () => { const m = between(c, 0.6); V.splash(c.tx, c.ty, { color: '#7adf3a', n: 6 }); V.puddle(m.x, m.y, { r: 26, color: '#7adf3a', dark: '#1e3a0a', dur: 2.6 }); }); },
       // a little bomb tossed down, a pop, and a big cartoon cloud that hangs over the party, then drifts apart
-      smoke: c => V.smokebomb(c.x, c.y, { r: 100, color: '#8a7a9a', dur: 2.6, sx: c.x + Math.cos(c.ang) * 10, sy: c.y - 6 }),
+      smoke: c => V.smokebomb(c.x, c.y, { r: 62, color: '#8a7a9a', dur: 1.8, a: 0.6,   // kept small and see-through: it sits over the floor, where telegraphs are
+        sx: c.x + Math.cos(c.ang) * 10, sy: c.y - 6 }),
     },
     pyromancer: {
       // a flame flickers in the hand, the fireball streaks over, and pops in a small spiky burst
@@ -260,7 +261,7 @@ const AUTO_VFX = (() => {
       V.missile(c.x, c.y, c.tx, c.ty, { style: 'helix', color: '#f2d27a', speed: 1700, size: 1.3, onHit: (x, y) => { V.hit(x, y, '#fff2c0', 1.2); V.shock(x, y, { r: 70, color: '#ffe9a0', dur: 0.35, w: 5 }); V.smoke(x, y, { n: 4, color: '#d8ccb0', size: 22, a: 0.5, speed: 50 }); FX.shake = Math.max(FX.shake, 3); } }); },
     // Venomstrike: a dripping green arrow that splashes acid, which bubbles for a moment
     caustic: c => V.missile(c.x, c.y, c.tx, c.ty, { style: 'arrow', color: '#9aff4a', speed: 1400, size: 1.2, onHit: (x, y) => {
-      V.splash(x, y, { color: '#7adf3a', n: 12, speed: 1.2 }); V.hit(x, y, '#c8ff8a', 1); V.shock(x, y, { r: 60, color: '#9aff4a', dur: 0.35, w: 4 });
+      V.splash(x, y, { color: '#7adf3a', n: 12, speed: 1.2 }); V.puddle(x, y, { r: 40, color: '#9aff4a', dark: '#1e3a0a', dur: 3 }); V.hit(x, y, '#c8ff8a', 1); V.shock(x, y, { r: 60, color: '#9aff4a', dur: 0.35, w: 4 });
       for (let i = 0; i < 10; i++) V.spawn({ x: x + (Math.random() - 0.5) * 50, y: y + (Math.random() - 0.5) * 24, z: 4, vz: 20 + Math.random() * 40, life: 0.8 + Math.random() * 0.6, size: 7, size1: 12, color: '#9adf3a', kind: 'soft' }); } }),
   });
   Object.assign(ABILITY_VFX.shadowblade, {
@@ -272,14 +273,8 @@ const AUTO_VFX = (() => {
       c.later(0.07, () => { V.spawn({ x: c.tx, y: c.ty, z: 18, life: 0.3, size: 70, size1: 24, color: '#ff3a5a', kind: 'star', vr: 5 }); V.splash(c.tx, c.ty, { n: 10, speed: 1.2 }); V.hit(c.tx, c.ty, '#ff8a9a', 1.2); FX.shake = Math.max(FX.shake, 3); }); },
   });
   Object.assign(ABILITY_VFX.pyromancer, {
-    // Cataclysm: a rune circle marks the spot, a meteor falls onto it 1.5s later and leaves a burning crater
-    meteor: c => {
-      V.sigil(c.tx, c.ty, { r: 80, style: 'star5', color: '#ff4a2a', dur: 1.7, spin: 1.2 });
-      c.later(1.0, () => V.missile(c.tx - 170, c.ty - 430, c.tx, c.ty, { style: 'meteor', color: '#ff5a1a', speed: 900, size: 1.6, onHit: (x, y) => {
-        V.flare(x, y, { n: 30, r: 28, size: 1.5, h: 1.6 }); V.shock(x, y, { r: 150, color: '#ff8a3a', dur: 0.55, w: 9 }); V.burst(x, y, { color: '#ffd070', n: 18, speed: 340, flashR: 100 });
-        V.decal(x, y, { style: 'crack', r: 70, dur: 9, a: 0.7, seed: Math.random() * 6 }); V.decal(x, y, { r: 56, embers: true, dur: 9 }); V.smoke(x, y, { n: 8, color: '#4a3a3a', size: 34, a: 0.5, speed: 70, life: 1.4 });
-        FX.shake = Math.max(FX.shake, 8); } }));
-    },
+    // Cataclysm: a big rune circle marks the spot, a meteor falls onto it 1.5s later (when the damage lands) and leaves a crater that burns for the 9s burn
+    meteor: c => V.meteor(c.tx, c.ty, { r: 88, color: '#ff4a2a', wind: 1.15, fall: 0.35, from: 220, onHit: (x, y) => { V.crater(x, y, { r: 62, dur: 9, color: '#ff5a1a' }); FX.shake = Math.max(FX.shake, 9); } }),
     // Sigilmancer: a ring of ember glyphs on the floor for the circle's whole life, embers rising off its rim
     circle: c => {
       const x = c.x, y = c.y, r = 95;
