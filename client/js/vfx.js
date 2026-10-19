@@ -16,6 +16,7 @@ const VFX = (() => {
   const MAX_PARTS = 1800;
   let now = 0;
   let scale = 1;   // alpha multiplier for whatever is being spawned (others' abilities are dimmed)
+  let muted = false;   // a hidden tab spawns nothing (it would all play at once on the way back)
 
   // ---------------------------------------------------------------- sprites (cached canvases)
   const cache = new Map();
@@ -99,28 +100,34 @@ const VFX = (() => {
 
   // ---------------------------------------------------------------- particles
   // p: { x, y, z, vx, vy, vz, g, drag, life, size, size1, color, kind, add, rot, vr, stretch, a, spin, ground, fadeIn }
+  // (full: the new one takes the slot of the oldest still around, instead of shifting the whole list)
+  let oldest = 0;
   function spawn(p) {
-    if (parts.length >= MAX_PARTS) parts.shift();
     p.t0 = now; p.z = p.z || 0; p.vx = p.vx || 0; p.vy = p.vy || 0; p.vz = p.vz || 0;
     p.rot = p.rot ?? Math.random() * Math.PI * 2;
     p.a = (p.a ?? 1) * scale;
-    parts.push(p);
+    if (muted) return p;
+    if (parts.length >= MAX_PARTS) { oldest = (oldest + 1) % parts.length; parts[oldest] = p; }
+    else parts.push(p);
     return p;
   }
   const rand = (a, b) => a + Math.random() * (b - a);
 
   // ---------------------------------------------------------------- effects
   // e: { layer: 'ground'|'air', dur, draw(ctx, p, t, e), add }
-  function fx(e) { e.t0 = now + (e.delay || 0); e.sc = scale; e.a = (e.a ?? 1) * scale; effects.push(e); return e; }
+  function fx(e) { e.t0 = now + (e.delay || 0); e.sc = scale; e.a = (e.a ?? 1) * scale; if (!muted) effects.push(e); return e; }
   // run an effect's callbacks with the dimming it was spawned with
   function withScale(s, fn) { const prev = scale; scale = s; try { fn(); } finally { scale = prev; } }
 
   function update(t, dt) {
     now = t;
-    for (let i = parts.length - 1; i >= 0; i--) {
+    // dead particles are dropped by compacting the list in one pass (keeps the draw order, no per-removal splice)
+    let w = 0;
+    for (let i = 0; i < parts.length; i++) {
       const p = parts[i];
       const age = now - p.t0;
-      if (age > p.life) { parts.splice(i, 1); continue; }
+      if (age > p.life) continue;
+      parts[w++] = p;
       const drag = p.drag ? Math.pow(1 - p.drag, dt * 60) : 1;
       p.vx *= drag; p.vy *= drag; p.vz *= drag;
       p.vz -= (p.g || 0) * dt;
@@ -134,6 +141,8 @@ const VFX = (() => {
         p.x = c.x + Math.cos(p.orbit.a) * p.orbit.r; p.y = c.y + Math.sin(p.orbit.a) * p.orbit.r * (p.orbit.flat ?? 0.55);
       }
     }
+    parts.length = w;
+    if (oldest >= w) oldest = 0;
     for (let i = effects.length - 1; i >= 0; i--) {
       const e = effects[i];
       if (now - e.t0 > e.dur) { effects.splice(i, 1); if (e.done) withScale(e.sc, e.done); continue; }
@@ -1157,6 +1166,7 @@ const VFX = (() => {
 
   function setScale(s) { scale = s; }
   function clear() { parts.length = 0; effects.length = 0; }
+  function mute(on) { muted = !!on; }
 
-  return Object.assign({ update, draw, spawn, fx, sprite, setScale, clear, glowAt, neonRing, neonPath, get count() { return parts.length; } }, B);
+  return Object.assign({ update, draw, spawn, fx, sprite, setScale, clear, mute, glowAt, neonRing, neonPath, get count() { return parts.length; } }, B);
 })();

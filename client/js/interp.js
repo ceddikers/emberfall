@@ -12,6 +12,8 @@ const TRACK = {
   DELAY: 0.15,   // one update interval plus room for a late one, so there's nearly always a newer update to blend toward
   SNAP: 330,     // a jump this big in one update is a teleport: go straight there
   EXTRA: 0.1,    // if updates run late, keep gliding on the last known velocity for at most this long
+  MIN_GAP: 0.05, // the shortest time a velocity is measured over when gliding on
+  KEEP: 32,      // updates kept at most (about three seconds' worth)
 };
 
 // Puts a sender's timestamps on our clock. The offset is the quickest delivery (arrival minus sent) among the last
@@ -37,8 +39,11 @@ class Track {
     // after standing still (no updates are sent then), start the move one interval ago instead of
     // crawling across the whole quiet gap
     if (t - last.t > TRACK.DELAY * 2) s.push({ t: t - 0.1, x: last.x, y: last.y, a: last.a });
-    s.push({ t: Math.max(t, last.t + 0.001), x, y, a });   // a resynced clock must never step back in time
+    // a resynced clock must never step back in time: an update that maps clearly before the newest one is stale
+    if (t < last.t - 0.001 && last.t > -1e8) return;
+    s.push({ t: Math.max(t, last.t + 0.001), x, y, a });
     while (s.length > 3 && s[1].t < t - 1) s.shift();
+    if (s.length > TRACK.KEEP) s.splice(0, s.length - TRACK.KEEP);   // a stalled tab never builds up a backlog
   }
 
   // where it should be drawn at time t
@@ -49,9 +54,11 @@ class Track {
     const p = s[i], q = s[i + 1];
     if (!q) {
       // past the newest update: drift on briefly, then hold
+      // (the speed is taken over at least MIN_GAP: two updates bunched a millisecond apart would otherwise make a
+      // tiny step look like a huge speed and fling it across the room)
       const o = s[i - 1];
       if (!o || p.t - o.t <= 0 || p.t < 0) return p;
-      const k = Math.min(rt - p.t, TRACK.EXTRA) / (p.t - o.t);
+      const k = Math.min(rt - p.t, TRACK.EXTRA) / Math.max(TRACK.MIN_GAP, p.t - o.t);
       return { x: p.x + (p.x - o.x) * k, y: p.y + (p.y - o.y) * k, a: p.a };
     }
     const k = Math.max(0, Math.min(1, (rt - p.t) / Math.max(1e-6, q.t - p.t)));
@@ -63,6 +70,8 @@ class Track {
 
   // the newest known position (for gameplay checks that shouldn't lag)
   latest() { return this.s[this.s.length - 1]; }
+  // forget the history and stand at the newest position (back from a hidden tab: don't replay what was missed)
+  settle() { const l = this.latest(); this.s = [{ t: -1e9, x: l.x, y: l.y, a: l.a }]; }
 }
 
 if (typeof module !== 'undefined') module.exports = { Track, TRACK, SendClock };

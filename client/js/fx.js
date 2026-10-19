@@ -3,10 +3,11 @@
 
 const FX = {
   list: [], pending: [], now: 0, heroScale: 1.5, shake: 0,
+  muted: false,   // a hidden tab spawns nothing (it would all play at once on the way back)
   GROUND: new Set(['zone', 'click', 'ring', 'puff', 'cone', 'aura', 'ghost', 'flash']),
 
-  add(f) { f.t0 = this.now; this.list.push(f); return f; },
-  later(delay, fn) { this.pending.push({ t: this.now + delay, fn }); },
+  add(f) { f.t0 = this.now; if (!this.muted) this.list.push(f); return f; },
+  later(delay, fn) { if (!this.muted) this.pending.push({ t: this.now + delay, fn }); },
   clear() { this.list.length = 0; this.pending.length = 0; },
 
   update(now, dt) {
