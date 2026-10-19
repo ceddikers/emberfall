@@ -679,6 +679,12 @@ kbd { border-radius: 3px; background: #1d1813; border-color: #4a3d2c; color: var
 #loot { position: fixed; right: 16px; top: 50%; transform: translateY(-50%); z-index: 13; width: min(300px, calc(100vw - 32px)); padding: 10px 10px 8px;
   background: var(--panel); border: 1px solid var(--line); border-top-color: var(--gold-dim); border-radius: 3px; box-shadow: 0 18px 40px #000c; }
 #loot.hidden { display: none; }
+/* while the spoils are up, the results card centres in the space left of them instead of sliding under them */
+body:has(#loot:not(.hidden)) #results { padding-right: 332px; }
+@media (max-width: 900px) {
+  #loot { top: auto; bottom: 16px; transform: none; max-height: 45vh; overflow: auto; }
+  body:has(#loot:not(.hidden)) #results { padding-right: 16px; padding-bottom: calc(45vh + 24px); }
+}
 .loot-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid var(--line-soft); }
 .loot-head h4 { margin: 0; font-family: var(--fantasy); font-weight: 700; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--gold); }
 .loot-head small { color: var(--muted); font-size: 11px; }
