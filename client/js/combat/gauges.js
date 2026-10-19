@@ -524,6 +524,8 @@ const ICON_ART = (() => {
     if (!cache.has(id)) cache.set(id, draw(id));
     return cache.get(id);
   };
+  // asked for at load, so the list is in before a hotbar is first drawn (the hotbar keeps the first icon it gets)
+  if (typeof document !== 'undefined') load('alembist');
   return out;
 })();
 

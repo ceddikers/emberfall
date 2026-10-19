@@ -67,13 +67,13 @@ const CLASSES = [
 CLASSES.push(
   {
     id: 'thermist', name: 'Thermist', title: 'Living Thermometer', role: 'dps', difficulty: 3, complexity: 3, accent: '#e0648c',
-    art: { icons: false, portraits: false },
+    art: { portraits: false },
     tagline: 'Frost in one hand, fire in the other. The trick is the swing.',
     gameplan: 'A dial runs from frost to fire, and your spells push it. Each step from the middle makes that side\'s spells hit harder, but past the edge you overload. Swing the dial all the way across the middle and the change of temperature detonates on the boss as a Thermal Shock: the bigger the swing, the bigger the blast.',
   },
   {
     id: 'driftblade', name: 'Driftblade', title: 'Wind Duellist', role: 'dps', difficulty: 2, complexity: 2, accent: '#4fd0b0',
-    art: { icons: false, portraits: false },
+    art: { portraits: false },
     tagline: 'Never stand still.',
     gameplan: 'Moving fills your Drift and standing still drains it, and nearly every cut is stronger with Drift behind it. Run straight through an enemy and you cut it as you pass. Dodging mechanics is how you deal damage: every step you take out of a telegraph can carry you through the boss.',
   },
@@ -91,13 +91,13 @@ CLASSES.push({
 CLASSES.push(
   {
     id: 'gorgemaw', name: 'Gorgemaw', title: 'The Maw That Walks', role: 'tank', difficulty: 2, complexity: 3, accent: '#d0743a',
-    art: { icons: false, portraits: false },
+    art: { portraits: false },
     tagline: 'Boss attacks are food.',
     gameplan: 'Open your jaw just before an attack lands on you and you eat it: a quarter of the damage, and a Morsel shaped like what you swallowed. Spit Morsels back at the boss for your biggest hits, or digest them to heal and harden. Step into a friend\'s circle to eat it for them.',
   },
   {
     id: 'oathbroker', name: 'Oathbroker', title: 'Contract-Knight', role: 'tank', difficulty: 3, complexity: 4, accent: '#a8a0c0',
-    art: { icons: false, portraits: false },
+    art: { portraits: false },
     tagline: 'Damage isn\'t taken. It\'s borrowed.',
     gameplan: 'Most of every blow is written into your Ledger instead of landing, and each entry comes due eight seconds later. Push bills back past the next big hit, settle the book at half when your healer is ready, and make the boss pay its share. Default tears the Ledger up when it\'s about to bury you.',
   },
@@ -107,7 +107,7 @@ CLASSES.push(
 // No global cooldown: Light, Heavy and Kick spell named moves in short strings (kits.js IRONPALM, engine.js pacing).
 CLASSES.push({
   id: 'ironpalm', name: 'Ironpalm', title: 'Monk Brawler', role: 'tank', difficulty: 3, complexity: 3, accent: '#f0a73a',
-  art: { icons: false, portraits: false },
+  art: { portraits: false },
   tagline: 'Every blow is a word. Learn to speak in sentences.',
   gameplan: 'There is no global cooldown. Light, Heavy and Kick are your keys, and short strings of them pressed in rhythm become named moves: a launching uppercut, a blocking stance, a storm of palms. Breath is the only limit: every press costs some, and it floods back the moment you stop. Read the boss\'s blow in its last instant to take half of it and answer with a free finisher.',
 });
@@ -116,13 +116,13 @@ CLASSES.push({
 CLASSES.push(
   {
     id: 'threadweaver', name: 'Threadweaver', title: 'Seamstress Witch', role: 'healer', difficulty: 3, complexity: 4, accent: '#b89cff',
-    art: { icons: false, portraits: false },
+    art: { portraits: false },
     tagline: 'What hurts one, hurts two a little less.',
     gameplan: 'You tie glowing threads between allies. A hit on one end is shared evenly along the thread, and a heal on one end runs part of the way down it. Pull two allies too far apart and the thread snaps with a small heal. The damage your threads carry fills your Spool, and your biggest heals spend it.',
   },
   {
     id: 'marionettist', name: 'Marionettist', title: 'Puppeteer', role: 'dps', difficulty: 3, complexity: 4, accent: '#c84a8c',
-    art: { icons: false, portraits: false },
+    art: { portraits: false },
     tagline: 'Stand well back. Let the Doll take the bows.',
     gameplan: 'A life-sized Doll fights for you, tied to your hands by three strings. You stay back and steer it. The strings tear if the Doll strays too far or a blow lands on it, and with none left it falls limp. The big cut runs along the strings themselves, so stand where the line between you and your Doll crosses the boss.',
   },
