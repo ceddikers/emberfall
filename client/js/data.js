@@ -87,6 +87,22 @@ CLASSES.push({
   gameplan: 'Three reagents, two presses each: Dew and Dew brews a healing Draught, Ember and Ember a Fire Bomb, Salt a ward. Vials wait in your bandolier and grow stronger, so you brew in the quiet for what\'s coming, then throw the oldest at whoever needs it. A splash catches everyone near where it lands.',
 });
 
+// ---------------------------------------------------------------- advanced tanks (tanks-2)
+CLASSES.push(
+  {
+    id: 'gorgemaw', name: 'Gorgemaw', title: 'The Maw That Walks', role: 'tank', difficulty: 2, complexity: 3, accent: '#d0743a',
+    art: { icons: false, portraits: false },
+    tagline: 'Boss attacks are food.',
+    gameplan: 'Open your jaw just before an attack lands on you and you eat it: a quarter of the damage, and a Morsel shaped like what you swallowed. Spit Morsels back at the boss for your biggest hits, or digest them to heal and harden. Step into a friend\'s circle to eat it for them.',
+  },
+  {
+    id: 'oathbroker', name: 'Oathbroker', title: 'Contract-Knight', role: 'tank', difficulty: 3, complexity: 4, accent: '#a8a0c0',
+    art: { icons: false, portraits: false },
+    tagline: 'Damage isn\'t taken. It\'s borrowed.',
+    gameplan: 'Most of every blow is written into your Ledger instead of landing, and each entry comes due eight seconds later. Push bills back past the next big hit, settle the book at half when your healer is ready, and make the boss pay its share. Default tears the Ledger up when it\'s about to bury you.',
+  },
+);
+
 // Boss panel text: flavor only. Nothing here tells you how to deal with an attack.
 const BOSSES = [
   {

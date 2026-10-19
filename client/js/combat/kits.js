@@ -913,7 +913,12 @@ const tauntAbility = classId => {
     desc: t.desc.replace('{hold}', TAUNT.hold) } : null;
 };
 // CSS background for the taunt's icon: its own painting once it exists, the borrowed icon underneath until then
-const tauntIconBg = classId => `url(icons/${classId}/taunt.png), url(icons/${classId}/${(TAUNT[classId] || {}).icon}.png)`;
+const tauntIconBg = classId => {
+  // (a class with no painted icons yet draws its own: never ask for files that aren't there)
+  const c = typeof CLASSES !== 'undefined' && CLASSES.find(x => x.id === classId);
+  if (c && c.art && c.art.icons === false && typeof abilityIcon === 'function') return `url(${abilityIcon(classId, 'taunt')})`;
+  return `url(icons/${classId}/taunt.png), url(icons/${classId}/${(TAUNT[classId] || {}).icon}.png)`;
+};
 
 // ======================================================================= ALEMBIST (healer, added with classes-b)
 // Brewed before it's needed. Three reagents on Q W E: two quick presses brew a vial into the bandolier, and R throws
@@ -1734,4 +1739,440 @@ TALENT_ABILITIES.alembist_quicksilver = { cls: 'alembist', ab: Object.assign(ale
 if (typeof module !== 'undefined') Object.assign(module.exports, { kitMoveDest, kitSegDist, THERMIST, thermSpell, thermMove, thermSettle, thermShock, thermBrink, thermMult, thermAt,
   thermEdgeCast, thermEquil, thermUtility, thermInvert, thermPlan, thermTick, thermOverload, DRIFT, DRIFT_BODY, DRIFT_NEAR, DRIFT_REACH, driftAdd, driftTick, driftPass, driftK, driftMax,
   driftSpend, driftHook, driftRiposte, TALENT_ABILITIES });
+
+// ===================================================================================================================
+// ADVANCED TANKS (tanks-2): Gorgemaw and Oathbroker (docs/plans/2026-10-new-classes.md). Each one leans on the host:
+// the Gorgemaw's open jaw is a window the host checks when a telegraph lands (fight.js classHit / eatInfo), and the
+// Oathbroker's Ledger lives on the host, which owns HP (OATH below holds its rules, shared with tools/simulate.js).
+// ===================================================================================================================
+
+// ---------------------------------------------------------------- Gorgemaw: boss attacks are food
+// Open Wide sends a `maw` event: for its window, an edible telegraph that lands on you deals 25% and the host answers
+// with an 'eat' notice naming the Morsel's shape (circle and donut: Ring, line and cross: Lance, cone: Fang,
+// tankbuster: Spike). The Belly (k.g.belly) is the kit's: Spit fires the oldest back at the boss, Digest eats them all.
+const MAW = {
+  WINDOW: 1.5, BELLY: 3,
+  SPIT: { ring: 420, lance: 460, fang: 490, spike: 800 },   // potency of each shape spat back
+  FUSE: 2.4,                                                 // Glutton: two of a shape spat together
+  HEAL: 0.06, DR: 0.05,                                      // Digest: per Morsel
+  NAMES: { ring: 'Ring', lance: 'Lance', fang: 'Fang', spike: 'Spike' },
+  FUSION: { ring: 'Quake', lance: 'Skewer', fang: 'Maul', spike: 'Impale' },
+  COLOR: { ring: '#ff9a3a', lance: '#7fd0ff', fang: '#ff5a6a', spike: '#ffe27a' },
+};
+const MAW_TYPES = ['ring', 'lance', 'fang', 'spike'];
+const mawMax = k => k.def.bellyMax || MAW.BELLY;
+// open the jaw for dur seconds (o.all: Bottomless, raidwides too). The host owns what lands in it.
+function mawOpen(k, dur, o = {}) {
+  k.env.emit({ type: 'maw', dur, all: o.all ? 1 : 0 });
+  k.buff(o.all ? 'bottomless' : 'jaw', dur);
+  k.g.jawUntil = Math.max(k.g.jawUntil || 0, k.now + dur);
+}
+// the host says something was eaten: a Morsel of that shape goes into the Belly (Stone Belly makes every one a Spike)
+function mawEat(k, d) {
+  let m = MAW_TYPES.includes(d.m) ? d.m : 'ring';
+  if (k.has('stone')) m = 'spike';
+  k.stats.eaten = (k.stats.eaten || 0) + 1;
+  k.g.popAt = k.now; k.g.popM = m;
+  if (k.talent('gorgemaw_cud')) k.healRaw('self', k.env.maxHp() * 0.03, { ab: k.abilities[1] });
+  if (k.talent('gorgemaw_scraps') && typeof d.f === 'number') k.shield(d.f, 200, 6, { ab: k.abilities[1] });
+  if (k.g.belly.length >= mawMax(k)) {
+    // a full Belly: the Morsel is lost, unless Overflow spits it straight back out
+    if (k.talent('gorgemaw_overflow')) { k.g.belly.push({ m, at: k.now }); mawSpit(k, k.abilities[2], { free: true }); }
+    else k.wasted('morsel');
+  } else k.g.belly.push({ m, at: k.now });
+  k.g.count = k.g.belly.length;
+}
+// one Spit: the oldest Morsel (Glutton: with the next if it's the same shape, a Fusion). o.share: Regurgitate's strength
+function mawSpitOne(k, ab, o = {}) {
+  const b = k.g.belly; if (!b.length) return null;
+  const m = b.shift();
+  const fused = !!k.def.fuse && b.length > 0 && b[0].m === m.m;
+  if (fused) b.shift();
+  let pot = MAW.SPIT[m.m] * (fused ? MAW.FUSE : 1) * (o.share || 1);
+  if (k.talent('gorgemaw_sour') && k.now - m.at >= 15) pot *= 1.4;
+  if (k.g.marinade && k.now < k.g.marinade) pot *= 1.25;
+  const r = k.damage(pot, { ab });
+  if (k.talent('gorgemaw_aftertaste')) k.dot('aftertaste', m.m === 'spike' ? 70 : 40, 9, 3, { ab });
+  k.stats.spits = (k.stats.spits || 0) + 1;
+  if (fused) k.stats.fusions = (k.stats.fusions || 0) + 1;
+  k.fx('spit', { m: m.m, f: fused ? 1 : 0, n: o.n || 0 });
+  return r;
+}
+function mawSpit(k, ab, o = {}) {
+  const r = mawSpitOne(k, ab, o);
+  k.g.marinade = 0;
+  k.g.count = k.g.belly.length;
+  return r;
+}
+// Digest's shared part: how many it eats (Rumination keeps the oldest), Bile
+function mawDigestTake(k, ab) {
+  const keep = k.talent('gorgemaw_rumination') && k.g.belly.length > 1 ? [k.g.belly[0]] : [];
+  const eaten = k.g.belly.slice(keep.length);
+  k.g.belly = keep; k.g.count = keep.length;
+  if (eaten.length && k.talent('gorgemaw_bile')) for (let i = 0; i < eaten.length; i++) k.after(0.12 * i, () => k.damage(110, { ab, extra: true }));
+  k.fx('digest', { n: eaten.length, m: eaten.map(e => e.m[0]).join('') });
+  return eaten;
+}
+// the glowing Spit: a full Belly, or a Morsel about to go Sour (talent) is fine to hold; otherwise spend freely past 1
+const mawSpitGlow = k => k.g.belly.length >= mawMax(k) || (k.def.fuse ? k.g.belly.length >= 2 && k.g.belly[0].m === k.g.belly[1].m : k.g.belly.length >= 2);
+
+KITS.gorgemaw = {
+  potMult: 0.7, // balance knob (tools/simulate.js)
+  role: 'tank',
+  eats: true,   // (tools/simulate.js: edible hits land on this kit)
+  auto: { kind: 'maw', potency: 40, range: MELEE },
+  gauge: { kind: 'belly', key: 'count', max: 3, label: 'Belly', w: 150 },
+  init: () => ({ belly: [], count: 0, step: 0, comboUntil: 0, jawUntil: 0, marinade: 0, popAt: -9, popM: null }),
+  onNotify(k, type, d) { if (type === 'eat') mawEat(k, d); },
+  tick(k) {
+    k.g.count = k.g.belly.length;
+    // Iron Lining: every Morsel in the Belly is armour
+    if (k.talent('gorgemaw_lining') && k.g.belly.length && k.now >= (k.g.liningAt || 0)) { k.g.liningAt = k.now + 1; k.mitigate('self', 0.03 * k.g.belly.length, 1.2, { ab: k.abilities[3] }); }
+  },
+  signature: 'Eating mechanics',
+  floor: 'Press Q to bite. Press W just before a tankbuster lands on you to eat it, then E to spit it back. R heals you with whatever you have eaten.',
+  ceiling: [
+    'Open Wide eats whatever lands on you in its window: you take a quarter of it and keep a Morsel shaped like it. Circles make Rings, lines make Lances, cones make Fangs, tankbusters make Spikes.',
+    'Step into a teammate\'s spread circle, or a circle chasing them, with your jaw open: you eat it for them.',
+    'Spit is your big damage and Digest is your big heal. A Spike spat back is the strongest hit you have, but a full Belly digested before a buster saves your life.',
+    'Bottomless eats raidwides for the whole party: they take half, and every hit is a Morsel for you. Save it for the fight\'s worst moment.',
+  ],
+  abilities: [
+    {
+      id: 'gnash', name: 'Gnash', type: 'gcd', target: 'enemy', range: MELEE, anim: 'attack',
+      desc: 'Three bites on one button: Gnash > Rend > Gulp. Gulp swallows a mouthful and heals you a little.',
+      label: k => ['Gnash', 'Rend', 'Gulp'][k.now < k.g.comboUntil ? k.g.step : 0],
+      effect(k) {
+        const step = k.now < k.g.comboUntil ? k.g.step : 0;
+        k.damage([220, 300, 390][step], { ab: this });
+        if (step === 2) {
+          k.healRaw('self', k.env.maxHp() * (k.perk('gorgemaw_w1') ? 0.035 : 0.02), { ab: this });
+          if (k.talent('gorgemaw_crunch')) k.after(0.2, () => k.damage(130, { ab: this, extra: true }));
+          if (k.talent('gorgemaw_marinade')) k.g.marinade = k.now + 10;
+        }
+        k.g.step = (step + 1) % 3; k.g.comboUntil = k.now + 15;
+      },
+      fx: { type: 'slash', color: '#ffb070', r: 50, span: 1.6 },
+    },
+    {
+      id: 'wide', name: 'Open Wide', type: 'ogcd', target: 'self', charges: 2, cd: 14, lock: 0.3, anim: 'big',
+      desc: 'Unhinge your jaw for 1.5s. A boss attack that lands on you in that time is eaten: you take a quarter of it and keep a Morsel shaped like it (circle: Ring, line: Lance, cone: Fang, tankbuster: Spike). Step into a teammate\'s spread circle to eat it for them. Two charges.',
+      effect(k) { mawOpen(k, (k.talent('gorgemaw_widejaw') ? 2.2 : MAW.WINDOW) + (k.perk('gorgemaw_a2') ? 0.4 : 0)); },
+      fx: { color: '#ff8a5a' },
+    },
+    {
+      id: 'spit', name: 'Spit', type: 'gcd', target: 'enemy', range: 300, anim: 'cast',
+      desc: 'Spit your oldest Morsel back at the boss in the shape you ate it: a Ring bursts round it, a Lance runs it through, a Fang bites, and a Spike is one huge blow.',
+      label: k => (k.g.belly.length ? `Spit ${MAW.NAMES[k.g.belly[0].m]}` : 'Spit'),
+      usable: k => k.g.belly.length > 0,
+      glow: k => mawSpitGlow(k),
+      effect(k) { const r = mawSpit(k, this); if (r && k.perk('gorgemaw_w2') && r.crit) { k.damage(120, { ab: this }); k.fx('empower'); } },
+      fx: { color: '#ffb070' },
+    },
+    {
+      id: 'digest', name: 'Digest', type: 'ogcd', target: 'self', cd: 25, anim: 'big',
+      desc: 'Digest every Morsel at once: you heal 6% of your HP and take 5% less damage for 8s for each one.',
+      usable: k => k.g.belly.length > 0,
+      effect(k) {
+        const n = mawDigestTake(k, this).length;
+        if (!n) return;
+        k.healRaw('self', k.env.maxHp() * MAW.HEAL * n, { ab: this });
+        k.mitigate('self', Math.min(0.3, MAW.DR * n), 8, { ab: this });
+      },
+      fx: { color: '#ffd27a' },
+    },
+    {
+      id: 'iron', name: 'Iron Gut', type: 'ogcd', target: 'self', cd: 90, anim: 'big',
+      desc: 'Clench: 40% less damage for 8s.',
+      effect(k) {
+        k.mitigate('self', k.perk('gorgemaw_a4') ? 0.5 : 0.4, 8, { ab: this });
+        if (k.talent('gorgemaw_ironjaw')) mawOpen(k, 2);
+      },
+      fx: { color: '#9fb0c6' },
+    },
+    {
+      id: 'bottomless', name: 'Bottomless', type: 'ogcd', target: 'self', cd: 120, anim: 'big',
+      desc: 'For 4s you eat everything, raidwide attacks too: the whole party takes half from them, and every hit is a Morsel for you.',
+      effect(k) {
+        mawOpen(k, 4, { all: true });
+        if (k.talent('gorgemaw_feast')) k.refill(k.abilities[1].id);
+        if (k.perk('gorgemaw_w3')) k.shield('party', 140, 6, { ab: this });
+      },
+      fx: { color: '#ff6a3a' },
+    },
+  ],
+};
+
+// ---------------------------------------------------------------- Oathbroker: the debt comes due
+// 60% of the damage you take is written into your Ledger instead of hitting you; each entry comes due 8s later and is
+// billed to you then. The Ledger is the host's (HP is). OATH holds its rules as plain functions on a ledger object, so
+// the host (fight.js) and the balance tools (tools/simulate.js) run the same rules. The kit sends `ledger` events
+// ({ op, ... }) and keeps the copy the host sends back (an 'ledger' notice: [[amount, seconds left, co-signed ally]]).
+const OATH = {
+  DUE: 8, SHARE: 0.6, CO: 0.3, SETTLE: 0.5, LIEN: 1 / 3, COL: 0.5, FREEZE: 10, PAY: 0.02, MAX: 24,
+  make() { return { e: [], n: 0, due: OATH.DUE, share: OATH.SHARE, col: 0, small: 0, tithe: 0, frozen: -99, lien: -99, writ: -99, hold: -99, summons: -99, writMark: 0, cosign: null, ver: 0 }; },
+  clamp: (v, a, b, d = a) => (Number.isFinite(+v) ? Math.max(a, Math.min(b, +v)) : d),
+  total: L => L.e.reduce((s, e) => s + e.a, 0),
+  // the terms a kit asks for (talents and spec): clamped. small: entries under this share of max HP are struck off
+  terms(L, ev, maxHp) {
+    L.due = OATH.clamp(ev.due, 6, 10, OATH.DUE); L.col = OATH.clamp(ev.col, 0, 0.6, 0);
+    L.small = OATH.clamp(ev.small, 0, 0.03, 0) * maxHp; L.tithe = OATH.clamp(ev.tithe, 0, 0.25, 0);
+  },
+  // part of a hit goes into the Ledger (o.co: an ally's hit, co-signed). Returns how much of the hit it took.
+  write(L, amt, t, o = {}) {
+    if (t < L.frozen || !(amt > 0)) return 0;
+    let share = o.co ? OATH.CO : L.share, extra = 0;
+    if (!o.co && t < L.summons) { share = 1; extra = 3; L.summons = -99; }   // the taunt: the next blow goes straight on
+    const moved = amt * share, a = moved * (t < L.writ ? 0.5 : 1);
+    if (a >= 0.5) L.e.push({ a, due: t + L.due + extra, id: ++L.n, co: o.co || 0, b: t < L.writ ? L.writMark : 0, born: t });
+    // a very long Ledger folds its two oldest entries together (keeps the message and the column small)
+    if (L.e.length > OATH.MAX) { const [x, y] = L.e.splice(0, 2); L.e.unshift({ a: x.a + y.a, due: Math.min(x.due, y.due), id: ++L.n, co: 0, b: Math.max(x.b, y.b), born: x.born }); }
+    L.ver++;
+    return moved;
+  },
+  // entries that come due now. Each bill: self (billed to you), boss (paid by the boss: Lien, a marked Writ entry, a
+  // Collector's share on top), heal (Tithe: to the most hurt ally). Held (Moratorium): nothing comes due.
+  bills(L, t, dt) {
+    if (t < L.hold) { for (const e of L.e) e.due += dt; return []; }
+    const due = [];
+    L.e = L.e.filter(e => (e.due > t ? true : (due.push(e), false)));
+    if (due.length) L.ver++;
+    return due.map(e => {
+      if (L.small && e.a < L.small) return { a: e.a, self: 0, boss: 0, heal: 0, co: e.co, small: 1 };
+      const bs = Math.min(1, Math.max(t < L.lien ? OATH.LIEN : 0, e.b || 0));
+      return { a: e.a, self: e.a * (1 - bs), boss: e.a * (bs + L.col), heal: e.a * L.tithe, co: e.co };
+    });
+  },
+  // an order from the kit. Returns { self: billed now, boss: struck from the boss now }
+  op(L, ev, t, maxHp) {
+    const r = { self: 0, boss: 0 }, C = OATH.clamp;
+    switch (ev.op) {
+      case 'pay': {   // pay down the oldest entries (o.hit: and strike the boss for it; o.push: the newest comes due later)
+        let left = C(ev.amount, 0, maxHp * 0.06, 0);
+        const paid0 = left;
+        for (const e of L.e) { if (left <= 0) break; const p = Math.min(e.a, left); e.a -= p; left -= p; }
+        L.e = L.e.filter(e => e.a >= 0.5);
+        if (ev.hit) r.boss += paid0 - left;
+        if (ev.push && L.e.length) L.e[L.e.length - 1].due += C(ev.push, 0, 3, 0);
+        break;
+      }
+      case 'reneg': {
+        const s = C(ev.secs, 0, 4, 0);
+        for (const e of L.e) e.due += s;
+        if (ev.drop && L.e.length) { let lo = 0; L.e.forEach((e, i) => { if (e.a < L.e[lo].a) lo = i; }); L.e.splice(lo, 1); }
+        if (ev.merge && L.e.length > 1) { const sum = OATH.total(L), due = Math.max(...L.e.map(e => e.due)); L.e = [{ a: sum, due, id: ++L.n, co: 0, b: 0, born: t }]; }
+        break;
+      }
+      case 'settle': {   // pay what's written at pct of its size (o.older: only entries at least that old)
+        const pct = C(ev.pct, 0.25, 0.6, OATH.SETTLE), older = C(ev.older, 0, 8, 0);
+        const take = L.e.filter(e => t - e.born >= older);
+        r.self += take.reduce((s, e) => s + e.a, 0) * pct;
+        L.e = L.e.filter(e => !take.includes(e));
+        break;
+      }
+      case 'lien': L.lien = t + C(ev.dur, 0, 13, 0); break;
+      case 'writ': L.writ = t + C(ev.dur, 0, 8, 0); L.writMark = C(ev.mark, 0, OATH.LIEN, 0); break;
+      case 'default': L.e = []; L.frozen = t + C(ev.freeze, 4, OATH.FREEZE, OATH.FREEZE); break;
+      case 'foreclose': r.boss += OATH.total(L) * C(ev.mult, 0, 1.2, 1); L.e = []; L.frozen = t + C(ev.freeze, 4, OATH.FREEZE, OATH.FREEZE); break;
+      case 'summons': L.summons = t + 6; break;
+      case 'hold': L.hold = t + C(ev.dur, 0, 6, 0); break;
+    }
+    L.ver++;
+    return r;
+  },
+  // the copy the owner's gauge draws: [[amount, seconds left (0.1), co-signed ally or 0], ...] plus timers
+  pack(L, t) {
+    const left = x => Math.max(0, Math.round((x - t) * 10) / 10);
+    return { l: L.e.map(e => [Math.round(e.a), left(e.due), e.co || 0]), z: left(L.frozen), li: left(L.lien), wr: left(L.writ), ho: left(L.hold), su: t < L.summons ? 1 : 0,
+      co: L.cosign && L.cosign.until > t ? L.cosign.id : null, cl: left(L.cosign ? L.cosign.until : -99) };
+  },
+};
+
+// the kit's side: the host's copy of the Ledger, as entries with due times on this client's clock
+function oathTake(k, d) {
+  const now = k.now;
+  k.g.ledger = (d.l || []).map(([a, s, co]) => ({ a, due: now + s, co }));
+  k.g.frozen = now + (d.z || 0); k.g.lienUntil = now + (d.li || 0); k.g.writUntil = now + (d.wr || 0); k.g.holdUntil = now + (d.ho || 0);
+  k.g.summoned = !!d.su; k.g.cosign = d.co ?? null; k.g.cosignUntil = now + (d.cl || 0);
+  k.g.total = k.g.ledger.reduce((s, e) => s + e.a, 0);
+  k.g.count = k.g.ledger.length;
+  if (d.bill) { k.g.stampAt = now; k.g.stampA = d.bill; }
+}
+const oathTotal = k => k.g.total || 0;
+const oathHp = k => k.env.maxHp() || 1;
+// how much of the Ledger comes due in the next s seconds
+const oathDueSoon = (k, s) => k.g.ledger.filter(e => e.due - k.now <= s).reduce((t, e) => t + e.a, 0);
+function oathSend(k, ev) { k.env.emit(Object.assign({ type: 'ledger' }, ev)); }
+// the terms the host keeps for this hero (sent every few seconds, so a host that missed one has them soon)
+function oathTerms(k) {
+  if (k.now - (k.g.termsAt ?? -99) < 3) return;
+  k.g.termsAt = k.now;
+  oathSend(k, { op: 'terms', due: k.talent('oathbroker_grace') ? 10 : OATH.DUE, col: k.def.collector || 0, small: k.talent('oathbroker_fineprint') ? 0.02 : 0, tithe: k.talent('oathbroker_tithe') ? 0.25 : 0 });
+}
+// Settle's glow: enough written that paying half now beats paying it all later
+const oathSettleGlow = k => oathTotal(k) >= oathHp(k) * 0.22 && k.now >= (k.g.frozen || 0);
+
+KITS.oathbroker = {
+  potMult: 0.71, // balance knob (tools/simulate.js)
+  role: 'tank',
+  ledger: true,   // (tools/simulate.js: hits go through the Ledger)
+  auto: { kind: 'stamp', potency: 40, range: MELEE },
+  gauge: { kind: 'ledger', key: 'count', max: 8, label: 'Ledger', w: 150 },
+  init: () => ({ ledger: [], total: 0, count: 0, step: 0, comboUntil: 0, frozen: 0, lienUntil: 0, writUntil: 0, holdUntil: 0, summoned: false, cosign: null, cosignUntil: 0, stampAt: -9, stampA: 0 }),
+  onNotify(k, type, d) { if (type === 'ledger') oathTake(k, d); },
+  tick(k) {
+    oathTerms(k);
+    // the copy's timers run on between the host's updates; entries past due drop off when the host bills them
+    k.g.ledger = k.g.ledger.filter(e => e.due > k.now - 1.5);
+    k.g.count = k.g.ledger.length;
+    // Escrow: a long Ledger is armour
+    if (k.talent('oathbroker_escrow') && k.g.ledger.length >= 3 && k.now >= (k.g.escrowAt || 0)) { k.g.escrowAt = k.now + 1; k.mitigate('self', 0.1, 1.2, { ab: k.abilities[2] }); }
+  },
+  signature: 'The Ledger',
+  floor: 'Press Q to strike: it pays your debts down. Press E when the Ledger gets long to settle it at half, and F if it\'s about to kill you.',
+  ceiling: [
+    '60% of every hit you take is written into the Ledger and comes due 8s later. The column on your gauge shows each entry and its timer.',
+    'Renegotiate pushes every entry back 4s. Roll a tankbuster\'s bill past the raidwide that follows it.',
+    'Settle pays the whole Ledger now, at half. It turns scary delayed damage into one chunk your healer can see coming.',
+    'Lien makes the boss pay a third of every bill that comes due for 10s. Line it up with the biggest entries.',
+  ],
+  abilities: [
+    {
+      id: 'collect', name: 'Collect', type: 'gcd', target: 'enemy', range: MELEE, anim: 'attack',
+      desc: 'Three strikes of the seal-mace on one button: Dun > Levy > Collect. Every strike pays your oldest entry down by 2% of your HP.',
+      label: k => ['Dun', 'Levy', 'Collect'][k.now < k.g.comboUntil ? k.g.step : 0],
+      effect(k) {
+        const step = k.now < k.g.comboUntil ? k.g.step : 0;
+        let pot = [230, 300, 400][step];
+        if (step === 2 && k.talent('oathbroker_interest')) pot += 28 * Math.min(5, k.g.ledger.length);
+        k.damage(pot, { ab: this });
+        if (k.g.ledger.length) {
+          const amount = oathHp(k) * OATH.PAY * (k.perk('oathbroker_w1') ? 1.5 : 1);
+          oathSend(k, { op: 'pay', amount, hit: k.talent('oathbroker_garnish') ? 1 : 0, push: step === 2 && k.talent('oathbroker_notary') ? 3 : 0 });
+          k.g.payAt = k.now;
+          // the copy pays down too, so the column answers at once
+          let left = amount; for (const e of k.g.ledger) { if (left <= 0) break; const p = Math.min(e.a, left); e.a -= p; left -= p; }
+          k.g.ledger = k.g.ledger.filter(e => e.a >= 0.5); k.g.total = k.g.ledger.reduce((s, e) => s + e.a, 0);
+          if (k.talent('oathbroker_garnish')) k.stats.garnished = (k.stats.garnished || 0) + amount - left;
+        }
+        k.g.step = (step + 1) % 3; k.g.comboUntil = k.now + 15;
+      },
+      fx: { type: 'slash', color: '#d8d0c0', r: 50, span: 1.4 },
+    },
+    {
+      id: 'reneg', name: 'Renegotiate', type: 'ogcd', target: 'self', cd: 20, lock: 0.3, anim: 'cast',
+      desc: 'Push every entry in your Ledger back 4s.',
+      glow: k => oathDueSoon(k, 1.5) >= oathHp(k) * 0.12,
+      effect(k) {
+        oathSend(k, { op: 'reneg', secs: 4, drop: k.talent('oathbroker_amnesty') ? 1 : 0, merge: k.talent('oathbroker_consolidate') ? 1 : 0 });
+        for (const e of k.g.ledger) e.due += 4;
+        if (k.perk('oathbroker_a2')) k.shield('self', 160, 6, { ab: this });
+      },
+      fx: { color: '#c8c0e8' },
+    },
+    {
+      id: 'settle', name: 'Settle', type: 'ogcd', target: 'self', cd: 25, lock: 0.4, anim: 'big',
+      desc: 'Pay the whole Ledger now, at half its size: one chunk of damage your healer can see, instead of a column of bills.',
+      usable: k => k.g.ledger.length > 0,
+      glow: k => oathSettleGlow(k),
+      effect(k) {
+        const tot = oathTotal(k);
+        oathSend(k, { op: 'settle', pct: OATH.SETTLE });
+        if (k.talent('oathbroker_stamp')) k.damage(Math.min(700, tot / ENGINE.POT_SCALE * 0.5), { ab: this });
+        if (k.perk('oathbroker_w2')) k.healRaw('self', oathHp(k) * 0.05, { ab: this });
+        k.g.ledger = []; k.g.total = 0; k.g.settleAt = k.now; k.g.settleA = tot * OATH.SETTLE;
+      },
+      fx: { color: '#e8d8a8' },
+    },
+    {
+      id: 'lien', name: 'Lien', type: 'ogcd', target: 'self', cd: 60, anim: 'big',
+      desc: 'Burst: for 10s, the boss pays a third of every bill that comes due, as damage.',
+      glow: k => oathDueSoon(k, 9) >= oathHp(k) * 0.1,
+      effect(k) { oathSend(k, { op: 'lien', dur: k.perk('oathbroker_w3') ? 13 : 10 }); k.g.lienUntil = k.now + 10; },
+      fx: { color: '#b8a8ff' },
+    },
+    {
+      id: 'writ', name: 'Writ of Protection', type: 'ogcd', target: 'self', cd: 90, anim: 'big',
+      desc: '30% less damage for 8s, and every entry written in that time is halved.',
+      effect(k) {
+        k.mitigate('self', 0.3, 8, { ab: this });
+        oathSend(k, { op: 'writ', dur: 8, mark: k.talent('oathbroker_garnishwrit') ? OATH.LIEN : 0 });
+      },
+      fx: { color: '#e8e0c8' },
+    },
+    {
+      id: 'default', name: 'Default', type: 'ogcd', target: 'self', cd: 120, anim: 'big',
+      desc: 'Tear the Ledger up: every entry is erased. Your credit freezes for 10s after: damage hits you as it lands.',
+      usable: k => k.g.ledger.length > 0,
+      effect(k) {
+        oathSend(k, { op: 'default', freeze: k.perk('oathbroker_a4') ? 7 : OATH.FREEZE });
+        k.g.ledger = []; k.g.total = 0;
+        oathDefaultAfter(k, this);
+      },
+      fx: { color: '#ff7a5a' },
+    },
+  ],
+};
+// what follows a Default or a Foreclose (the talents that don't depend on which one it is)
+function oathDefaultAfter(k, ab) {
+  if (k.talent('oathbroker_receivership')) k.mitigate('party', 0.1, 8, { ab });
+  if (k.talent('oathbroker_slate')) { for (const id of ['reneg', 'settle']) { const a = k.abilities.find(x => k.baseId(x) === id); if (a) k.refill(a.id); } }
+}
+
+// the two tanks' taunts (T): each feeds the class's own mechanic
+Object.assign(TAUNT, {
+  gorgemaw: {
+    name: 'Bellow', icon: 'wide',
+    desc: 'A roar from the bottom of the belly: {hold}. Your jaw hangs open for a second after it: anything that lands on you then is eaten.',
+    use(k) { mawOpen(k, 1); },
+  },
+  oathbroker: {
+    name: 'Summons', icon: 'lien',
+    desc: 'Serve your target with a summons: {hold}. The next blow you take within 6s goes onto the Ledger in full, due 3s later than usual.',
+    use(k) { oathSend(k, { op: 'summons' }); k.g.summoned = true; },
+  },
+});
+
+// Audit's reach: entries written at least 4s ago (on the copy: due within the Ledger's term less 4s)
+const oathAuditable = k => { const due0 = (k.talent('oathbroker_grace') ? 10 : OATH.DUE) - 4; return k.g.ledger.filter(e => e.due - k.now <= due0); };
+
+// talents that grant a new move (TALENT_ABILITIES, the shared system above)
+TALENT_ABILITIES.gorgemaw_regurgitate = { cls: 'gorgemaw', ab: {
+  id: 'regurgitate', replaces: 'spit', icon: 'spit', name: 'Regurgitate', type: 'gcd', target: 'enemy', range: 300, anim: 'big',
+  desc: 'Bring the whole Belly up at once: every Morsel is spat at the boss in its own shape, each at 75% strength.',
+  usable: k => k.g.belly.length > 0,
+  glow: k => k.g.belly.length >= mawMax(k),
+  effect(k) { let n = 0; while (k.g.belly.length) { const i = n++; mawSpitOne(k, this, { share: 0.75, n: i }); } k.g.marinade = 0; k.g.count = 0; },
+  fx: { color: '#ffb070' },
+} };
+TALENT_ABILITIES.gorgemaw_stonebelly = { cls: 'gorgemaw', ab: {
+  id: 'stonebelly', replaces: 'iron', icon: 'iron', name: 'Stone Belly', type: 'ogcd', target: 'self', cd: 90, anim: 'big',
+  desc: 'Swallow a stone: 30% less damage for 8s, and every Morsel you eat in that time is a Spike.',
+  effect(k) { k.mitigate('self', k.perk('gorgemaw_a4') ? 0.4 : 0.3, 8, { ab: this }); k.buff('stone', 8); if (k.talent('gorgemaw_ironjaw')) mawOpen(k, 2); },
+  fx: { color: '#a8a090' },
+} };
+TALENT_ABILITIES.oathbroker_audit = { cls: 'oathbroker', ab: {
+  id: 'audit', replaces: 'settle', icon: 'settle', name: 'Audit', type: 'ogcd', target: 'self', cd: 15, lock: 0.4, anim: 'cast',
+  desc: 'Go through the books: every entry at least 4s old is paid now at 30% of its size. Newer entries stay.',
+  usable: k => k.g.ledger.length > 0,
+  glow: k => oathAuditable(k).reduce((s, e) => s + e.a, 0) >= oathHp(k) * 0.12,
+  effect(k) {
+    oathSend(k, { op: 'settle', pct: 0.3, older: 4 });
+    const take = oathAuditable(k);
+    if (k.talent('oathbroker_stamp')) k.damage(Math.min(500, take.reduce((s, e) => s + e.a, 0) / ENGINE.POT_SCALE * 0.5), { ab: this });
+    k.g.ledger = k.g.ledger.filter(e => !take.includes(e)); k.g.total = k.g.ledger.reduce((s, e) => s + e.a, 0);
+    k.g.settleAt = k.now;
+  },
+  fx: { color: '#e8d8a8' },
+} };
+TALENT_ABILITIES.oathbroker_moratorium = { cls: 'oathbroker', ab: {
+  id: 'moratorium', replaces: 'reneg', icon: 'reneg', name: 'Moratorium', type: 'ogcd', target: 'self', cd: 45, lock: 0.3, anim: 'big',
+  desc: 'Declare a moratorium: for 5s nothing comes due. Every timer in the Ledger stops until it ends.',
+  glow: k => oathDueSoon(k, 2) >= oathHp(k) * 0.15,
+  effect(k) { oathSend(k, { op: 'hold', dur: 5 }); for (const e of k.g.ledger) e.due += 5; k.g.holdUntil = k.now + 5; },
+  fx: { color: '#c8c0e8' },
+} };
+
+if (typeof module !== 'undefined') Object.assign(module.exports, { MAW, MAW_TYPES, mawMax, mawOpen, mawEat, mawSpit, mawSpitOne, mawDigestTake, mawSpitGlow,
+  OATH, oathTake, oathTotal, oathHp, oathDueSoon, oathSend, oathTerms, oathSettleGlow, oathDefaultAfter, oathAuditable });
 
