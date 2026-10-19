@@ -473,6 +473,6 @@ const Inventory = (() => {
     open, close, isOpen, toggle() { if (isOpen()) close(); else open(); }, frame,
     add, equip, unequip, mods, totals, grantStarter, loadout, items: () => data.items,
     itemName: inst => ITEMS[inst.key].name, rarityColor: inst => RARITY[itemRarity(inst)].color, iconURL, itemTip,
-    addGold, showGoldHud(v) { goldHud.classList.toggle('hidden', !v); },
+    addGold, showGoldHud(v) { goldHud.classList.toggle('hidden', !v); }, refreshGold: showGold,
   };
 })();

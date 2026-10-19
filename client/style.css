@@ -704,3 +704,58 @@ kbd { border-radius: 3px; background: #1d1813; border-color: #4a3d2c; color: var
 .lc-res.wait, .lc-res.salv { color: var(--muted); }
 .lc-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 1px; background: var(--line-soft); }
 .lc-bar i { display: block; height: 100%; width: 100%; background: var(--rc); opacity: .7; }
+
+/* ================================================================ talents (talent-panel.js)
+   Five rows of three cards. Open rows read normally, the next row reads dimmed with its price, sealed rows are dark shapes. */
+#talents { position: fixed; inset: 0; z-index: 15; overflow: auto; overflow-x: hidden; padding: 28px 20px; display: grid; place-items: start center;
+  background: radial-gradient(ellipse at 50% 20%, #1f1a14f2, #070605fb 65%); }
+#talents.hidden { display: none; }
+.tal-page { position: relative; width: min(980px, 100%); padding: 18px; }
+.tal-page::before { content: ''; position: absolute; inset: 0; pointer-events: none;
+  background:
+    linear-gradient(var(--gold-dim), var(--gold-dim)) left top / 14px 1px no-repeat, linear-gradient(var(--gold-dim), var(--gold-dim)) left top / 1px 14px no-repeat,
+    linear-gradient(var(--gold-dim), var(--gold-dim)) right top / 14px 1px no-repeat, linear-gradient(var(--gold-dim), var(--gold-dim)) right top / 1px 14px no-repeat,
+    linear-gradient(var(--gold-dim), var(--gold-dim)) left bottom / 14px 1px no-repeat, linear-gradient(var(--gold-dim), var(--gold-dim)) left bottom / 1px 14px no-repeat,
+    linear-gradient(var(--gold-dim), var(--gold-dim)) right bottom / 14px 1px no-repeat, linear-gradient(var(--gold-dim), var(--gold-dim)) right bottom / 1px 14px no-repeat; }
+.tal-close { position: absolute; }
+.tal-top { display: flex; align-items: baseline; gap: 12px; padding: 0 2px 10px; margin-bottom: 10px; border-bottom: 1px solid var(--line-soft); }
+.tal-hero b { font-family: var(--fantasy); font-weight: 700; font-size: 18px; letter-spacing: .06em; color: var(--gold-hi); }
+.tal-hero small { margin-left: 10px; font-size: 12px; color: var(--muted); letter-spacing: .04em; }
+.tal-gold { margin-left: auto; font-size: 13px; color: var(--gold-hi); font-variant-numeric: tabular-nums; }
+.tal-rows { display: grid; gap: 8px; }
+.tal-row { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 10px; align-items: stretch; }
+.tal-tier { display: grid; align-content: center; justify-items: center; gap: 2px; padding: 8px 4px; border-radius: 3px; background: #0f0d0bcc;
+  border: 1px solid var(--line-soft); border-left: 2px solid color-mix(in srgb, var(--a) 55%, var(--line)); }
+.tal-tier b { font-family: var(--fantasy); font-weight: 700; font-size: 17px; color: var(--gold); letter-spacing: .08em; }
+.tal-tier small { min-height: 13px; font-family: var(--fantasy); font-size: 9.5px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
+.tal-unlock { margin-top: 5px; padding: 4px 10px; border-radius: 2px; border: 1px solid var(--gold-dim); background: #1c1813; color: var(--gold-hi);
+  font: inherit; font-size: 12px; font-variant-numeric: tabular-nums; cursor: pointer; }
+.tal-unlock:hover:not(:disabled) { background: #26201a; border-color: var(--gold); }
+.tal-unlock:disabled { opacity: .45; cursor: default; }
+.tal-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.tal-card { display: flex; gap: 9px; align-items: flex-start; min-height: 66px; padding: 8px 9px; text-align: left; border-radius: 3px; cursor: pointer;
+  background: #0f0d0bcc; border: 1px solid var(--line-soft); color: var(--ink); font: inherit; }
+.tal-card .ab-icon { flex: none; width: 34px; height: 34px; border-radius: 3px; background: #15120f center / cover no-repeat; box-shadow: 0 0 0 1px var(--line), 0 2px 6px #000a; }
+.tal-card b { display: block; font-family: var(--fantasy); font-size: 12.5px; font-weight: 700; letter-spacing: .03em; color: #f2e6c8; }
+.tal-card p { margin: 2px 0 0; font-size: 11.5px; line-height: 1.4; color: #cfc5b2; }
+.tal-card:hover:not([aria-disabled]) { background: #1a1612; border-color: var(--gold-dim); }
+.tal-card.picked { background: color-mix(in srgb, var(--a) 10%, #15120f); border-color: color-mix(in srgb, var(--a) 60%, var(--gold-dim)); box-shadow: inset 0 -2px 0 var(--gold); }
+.tal-card.picked b { color: var(--gold-hi); }
+.tal-card[aria-disabled] { cursor: default; }
+.tal-row.next .tal-card { opacity: .62; }
+.tal-row.next .tal-card .ab-icon { filter: grayscale(.6); }
+.tal-row.sealed .tal-tier { border-left-color: var(--line); }
+.tal-row.sealed .tal-tier b { color: #4a3f30; }
+.tal-card.sealed { cursor: default; flex-direction: column; justify-content: center; gap: 6px; background: repeating-linear-gradient(45deg, #0c0a08 0 6px, #0e0c0a 6px 12px); border-color: #201a14; }
+.tal-card.sealed i { display: block; width: 28px; height: 28px; border-radius: 3px; background: #15110d; box-shadow: 0 0 0 1px #241d16; }
+.tal-card.sealed span { display: block; height: 6px; border-radius: 1px; background: #17130f; }
+.tal-card.sealed span:last-child { width: 60%; }
+.tal-foot { display: flex; align-items: center; gap: 12px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line-soft); }
+.tal-count { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.tal-locked { font-size: 12px; color: var(--muted); }
+.tal-reset { margin-left: auto; padding: 7px 14px; font-size: 12px; }
+@media (max-width: 760px) { .tal-row { grid-template-columns: minmax(0, 1fr); } .tal-cards { grid-template-columns: minmax(0, 1fr); } }
+/* a talent on an ability's tooltip, and the small mark on a slot it changes */
+.it-talent { margin-top: 6px; padding: 6px 8px; border-left: 2px solid var(--gold); background: #c9a45c12; font-size: 12px; color: #ece4d4; }
+.it-talent u { text-decoration: none; color: var(--gold-hi); font-weight: 700; }
+.slot.talented::before { content: ''; position: absolute; left: -3px; bottom: -3px; width: 7px; height: 7px; transform: rotate(45deg); background: var(--gold); border: 1px solid #120d06; z-index: 4; }

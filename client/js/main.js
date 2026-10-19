@@ -46,6 +46,7 @@
     return { kind: 'hero', cls, x: p.x, y: p.y, angle: Math.PI / 2, st: newSt(i * 0.7), nextAct: 2 + Math.random() * 6 };
   });
   const keeper = { kind: 'keeper', x: TOWN.keeper.x, y: TOWN.keeper.y, angle: Math.PI / 2, st: newSt() };
+  const trainer = { kind: 'trainer', x: TOWN.trainer.x, y: TOWN.trainer.y, angle: Math.PI / 2, st: newSt(1.3) };   // talents (talent-panel.js)
   const statues = BOSSES.map((boss, i) => ({
     kind: 'boss', boss, x: TOWN.pedestals[i].x, y: TOWN.pedestals[i].y - 6, angle: Math.PI / 2, st: newSt(i), nextAct: 2 + i * 1.5,
   }));
@@ -55,6 +56,7 @@
   const interactables = [
     ...lineup.map(h => ({ x: h.x, y: h.y, r: 24, reach: 80, label: h.cls.name, open: () => openHeroPanel(h.cls) })),
     { x: keeper.x, y: keeper.y, r: 22, reach: 80, label: 'Barkeep', open: () => openSelect(null) },
+    { x: trainer.x, y: trainer.y, r: 22, reach: 80, label: 'Trainer', open: () => openTalents() },
     ...statues.map(b => ({ x: b.x, y: b.y, r: 58, reach: 120, label: b.boss.name, open: () => openBossPanel(b.boss) })),
     { x: TOWN.portal.x, y: TOWN.portal.y, r: TOWN.portal.r, reach: 130, label: 'Raid Portal', open: () => openBossPanel(BOSSES[0]) },
   ];
@@ -76,6 +78,24 @@
   const amDead = () => inArena() && !!myState() && !myState().alive;
   // a debuff the host has put on you ('slowed', 'rooted', ...)
   const myDebuff = k => { const s = inArena() ? myState() : null; return !!(s && s.debuffs && s.debuffs.some(d => d[0] === k)); };
+
+  // the talents your hero holds (talents.js), rebuilt from the save when the hero or the picks change
+  let talentCache = null;
+  function activeTalents() {
+    const id = player.cls && player.cls.id;
+    if (!id) return null;
+    if (!talentCache || talentCache.cls !== id) talentCache = { cls: id, set: talentSet(id, Save.talents(id)) };
+    return talentCache.set;
+  }
+  function openTalents() {
+    if (!player.cls) { toast('Pick a hero first.'); return; }
+    closePanels();
+    TalentPanel.open();
+  }
+  function talentsChanged() {
+    talentCache = null;
+    if (actor && scene === 'town') makeActor();   // a fresh kit, so charges and gauge caps follow the new picks
+  }
 
   function makeActor() {
     if (!player.cls) { actor = null; Hud.hide(); return; }
@@ -126,6 +146,7 @@
     },
     allyTarget: (a, ab) => allyTargetId(ab),
     gearMods: () => Inventory.mods(player.cls && player.cls.id),
+    talents: () => activeTalents(),
     isDead: id => { if (!inArena()) return false; const s = raid.party.get(id); return !!s && !s.alive; },
     defaultLink: () => (inArena() && raid.boss.tg != null ? raid.boss.tg : Net.id),
     partyMods: () => {
@@ -1185,7 +1206,11 @@
     }
     if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
     if (e.key === 'Escape') { if (selOpen()) selBack(); else if (panelOpen()) closePanels(); else { lockedAlly = null; lockedEnemy = null; } return; }
-    if (e.key.toLowerCase() === 'i' && !selOpen() && overlay.classList.contains('hidden')) { Inventory.toggle(); return; }
+    if (e.key.toLowerCase() === 'i' && !selOpen() && overlay.classList.contains('hidden')) { TalentPanel.close(); Inventory.toggle(); return; }
+    if (e.key.toLowerCase() === 'n' && started && !selOpen() && overlay.classList.contains('hidden')) {
+      if (TalentPanel.isOpen()) TalentPanel.close(); else openTalents();
+      return;
+    }
     if (panelOpen()) return;
     if (e.key === 'Enter') { chatInput.classList.remove('hidden'); chatInput.focus(); e.preventDefault(); return; }
     if (/^[1-4]$/.test(e.key)) {
@@ -1351,6 +1376,8 @@
     }
     keeper.st.t = now;
     turnToward(keeper, Math.hypot(player.x - keeper.x, player.y - keeper.y) < 260 ? Math.atan2(player.y - keeper.y, player.x - keeper.x) : Math.PI / 2, dt, 4);
+    trainer.st.t = now;
+    turnToward(trainer, Math.hypot(player.x - trainer.x, player.y - trainer.y) < 260 ? Math.atan2(player.y - trainer.y, player.x - trainer.x) : Math.PI / 2, dt, 3);
     for (const b of statues) {
       b.st.t = now;
       if (now > b.nextAct) {
@@ -1510,6 +1537,7 @@
     switch (e.kind) {
       case 'hero': drawHero(ctx, e.cls, e.x, e.y, e.angle, e.st, HERO_SCALE); break;
       case 'keeper': drawKeeper(ctx, e.x, e.y, e.angle, e.st, HERO_SCALE); break;
+      case 'trainer': drawTrainer(ctx, e.x, e.y, e.angle, e.st, HERO_SCALE); break;
       case 'boss': drawBoss(ctx, e.boss, e.x, e.y, e.angle, e.st, BOSS_SCALE); break;
       case 'dummy': drawDummy(ctx, e.x, e.y, e.st, HERO_SCALE); break;
       case 'player': case 'remote': {
@@ -1636,7 +1664,7 @@
     canvas.classList.toggle('hovering', !!hov);
 
     const townRemotes = [...remotes.values()].filter(r => r.scene === 0);
-    const ents = [...lineup, keeper, ...statues, ...dummies, player, ...townRemotes];
+    const ents = [...lineup, keeper, trainer, ...statues, ...dummies, player, ...townRemotes];
     ents.sort((a, b) => a.y - b.y);
     for (const e of ents) drawEntity(e);
 
@@ -1648,10 +1676,11 @@
     const bob = Math.sin(now * 4) * 3;
     label(ctx, '!', keeper.x, keeper.y - 40 + bob, '#ffd65a', 26, 'Cinzel, Georgia, serif', 800);
     label(ctx, 'Barkeep', keeper.x, keeper.y - 28 + 6, '#f0d48a', 11);
+    label(ctx, 'Trainer', trainer.x, trainer.y - 34, '#f0d48a', 11);
     for (const d of dummies) if (d.spar && Math.hypot(player.x - d.x, player.y - d.y) < 260) label(ctx, 'Sparring Dummy', d.x, d.y - 46, '#ffb0a0', 11);
     for (const r of townRemotes) playerTag(r, false);
     playerTag(player, true);
-    if (hov && !hov.label.match(/Barkeep/) && !lineup.some(h => h.cls.name === hov.label)) {
+    if (hov && !hov.label.match(/Barkeep|Trainer/) &&!lineup.some(h => h.cls.name === hov.label)) {
       label(ctx, hov.label, mouseWorld().x, mouseWorld().y - 18, '#ffe9a8', 13);
     }
   }
@@ -1784,6 +1813,7 @@
     for (const b of statues) dot(b.x, b.y, 3.5, '#ff6a5a');
     dot(TOWN.portal.x, TOWN.portal.y, 4.5, '#b080ff');
     dot(keeper.x, keeper.y, 3.5, '#ffd65a');
+    dot(trainer.x, trainer.y, 3, '#f0d48a');
     for (const r of remotes.values()) if (r.scene === 0) dot(r.x, r.y, 3.5, r.cls ? ROLES[r.cls.role].color : '#dffaff');
     dot(player.x, player.y, 4.5, '#ffffff');
     c.strokeStyle = 'rgba(255,255,255,0.7)'; c.lineWidth = 1;
@@ -1857,11 +1887,12 @@
   const sel = $('select'), selGrid = $('sel-grid'), selDetail = $('sel-detail');
   let preview = null;
   const selOpen = () => !sel.classList.contains('hidden');
-  const panelOpen = () => !overlay.classList.contains('hidden') || selOpen() || Inventory.isOpen();
+  const panelOpen = () => !overlay.classList.contains('hidden') || selOpen() || Inventory.isOpen() || TalentPanel.isOpen();
   function closePanels() {
     overlay.classList.add('hidden'); bossPanel.classList.add('hidden');
     sel.classList.add('hidden');
     Inventory.close();
+    TalentPanel.close();
     preview = null; selPortrait = null;
     Tip.hide();
     if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
@@ -2404,8 +2435,15 @@
   const bagBtn = document.createElement('button');
   bagBtn.id = 'bag-btn'; bagBtn.dataset.tip = 'Inventory (I)';
   bagBtn.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22"><path d="M8 7V6a4 4 0 0 1 8 0v1h2.5l1.5 14H4L5.5 7H8zm2 0h4V6a2 2 0 0 0-4 0v1z" fill="currentColor"/></svg>';
-  bagBtn.addEventListener('click', () => { if (started && !selOpen()) Inventory.toggle(); });
+  bagBtn.addEventListener('click', () => { if (started && !selOpen()) { TalentPanel.close(); Inventory.toggle(); } });
   document.body.appendChild(bagBtn);
+  TalentPanel.init({
+    cls: () => player.cls,
+    spec: () => player.spec,
+    locked: () => scene !== 'town',
+    onChange: talentsChanged,
+    onGold: () => Inventory.refreshGold(),
+  });
 
   // Handy for poking at the game from the browser console.
   window.__game = {
