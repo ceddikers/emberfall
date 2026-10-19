@@ -809,8 +809,8 @@ Object.assign(SPECS, {
         abilities: {
           cinder: { desc: '1s cast: a quick fire bolt. Turns the dial 2 toward Blaze.' },
           rime: { desc: '1s cast: a quick shard of ice. Turns the dial 2 toward Rime.' },
-          flare: { desc: '2s cast: a burst of fire. Turns the dial 3 toward Blaze. At +5 it\'s instant and always crits, but holds you On the Brink: if your next spell is fire too, you overheat.' },
-          lance: { desc: '2s cast: a lance of ice. Turns the dial 3 toward Rime. At -5 it\'s instant and always crits, but holds you On the Brink: if your next spell is frost too, you get frostbite.' },
+          flare: { desc: '2s cast: a burst of fire. Turns the dial 3 toward Blaze. At +5 it\'s instant and always crits, but holds you On the Brink: if your next spell is fire too, you overheat, and waiting it out does the same.' },
+          lance: { desc: '2s cast: a lance of ice. Turns the dial 3 toward Rime. At -5 it\'s instant and always crits, but holds you On the Brink: if your next spell is frost too, you get frostbite, and waiting it out does the same.' },
         },
       }),
     },
@@ -819,7 +819,7 @@ Object.assign(SPECS, {
       gaugeTip: 'Fire spells turn the dial toward Blaze and frost toward Rime; each step from 0 is +8% damage for that side. At ±5 you stay in Redline: +20% damage, your edge spell is instant, and pushing further doesn\'t overload you. Strain builds 11 a second in Redline and fades outside it; at 100 you melt down. A crossing of 0 after reaching 3 or more sets off a Thermal Shock.',
       blurb: 'Hold the edge. Feel it burn. Let go a moment before it takes you.',
       focus: 'Holding the edge. At ±5 you stay in Redline, where every spell is stronger, but Strain builds until you vent it or melt down.',
-      passive: { name: 'Redline', desc: 'At +5 or -5 you stay in Redline instead of overloading: every spell hits 20% harder and your edge spell is instant. Each second there builds Strain; full Strain melts you down (the dial snaps to 0, you burn, and that element is locked for 4s). Equilibrium becomes Bleed Off.' },
+      passive: { name: 'Redline', desc: 'At +5 or -5 you stay in Redline instead of overloading: every spell hits 20% harder and your edge spell is instant. Each second there builds Strain; full Strain melts you down (the dial snaps to 0, you burn, and that element seizes up for 4s: Overheat or Frostbite). Equilibrium becomes Bleed Off.' },
       build: () => ({
         potMult: 0.877,
         redline: true,
@@ -919,7 +919,7 @@ SPECS.ironpalm = [
       abilities: {
         bell: {
           id: 'slide', replaces: 'bell', icon: 'bell', name: 'Landslide', type: 'ogcd', target: 'self', cd: 60, lock: 0.5, anim: 'big',
-          desc: 'Plant your feet like a mountain coming down: the whole party takes 10% less damage for 8s, and for 15s your strings can\'t drop or break, and your Momentum fills and holds.',
+          desc: 'Plant your feet like a mountain coming down: the whole party takes 10% less damage for 8s, and for 15s your strings can\'t drop, a broken one doesn\'t stagger you, and your Momentum fills and holds.',
           effect(k) {
             k.mitigate('party', 0.1, 8, { ab: this });
             const dur = k.perk('ironpalm_w3') ? 20 : 15;

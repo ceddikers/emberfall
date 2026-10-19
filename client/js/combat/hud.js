@@ -32,7 +32,7 @@ const BUFF_ICON = {
 // hover text for each class gauge: what fills it, what spends it, and (state) a live readout under the name
 const GAUGE_TIPS = {
   bastion: { desc: 'Judgment (the third Blade Chain hit) gives 25, or 50 during Oath of Valor. A Perfect Block gives 20. Holy Edge spends 50.' },
-  bloodreaver: { desc: 'Hack gives 10, Maul 15 and Bloodletting 20. Crimson Drain spends 40, or nothing while Frenzy lasts.' },
+  bloodreaver: { desc: 'Hack gives 10, Maul 15 and Bloodletting 20. Crimson Drain spends 40; Frenzy makes your next three Drains free.' },
   runeguard: { desc: 'Rune Strike gives 1 (2 during Runic Overload), and a Ward broken all the way refunds its Rune. Runic Ward spends 1, Glyph Burst spends all 3.' },
   ranger: { desc: 'Quick Shot gives 10, or 30 with Barrage. Rapid Fire spends 50. Anything past 100 is lost.' },
   shadowblade: { desc: 'Strike gives 1 point, or 2 from behind. Eviscerate spends every point and hits harder for each, with a bonus at 5. A sixth point is lost.' },
@@ -90,6 +90,83 @@ GAUGE_TIPS.ironpalm = {
   state: k => (k.has('opening') ? 'Opening: Heavy is Thousand Palms' : k.has('wind') ? 'Second Wind' : (k.g.breath || 0) < IP_INPUT.L.cost ? 'Winded' : 'Steady'),
   extra: k => `<div class="ip-moves">${ipMoves(k).map(e => `<div><b>${[...e.seq].join(' ')}</b> ${e.mv.name}<i> · ${e.mv.desc}</i></div>`).join('')}</div>`,
 };
+
+// talents whose proc shows in the tracker (named after the talent)
+Object.assign(BUFF_NAMES, { answer: 'Answering Rune', beat: 'Skipped Beat', feint: 'Feint', haze: 'Heat Haze', pinned: 'Pinning Shot', quickmend: 'Quick Mend',
+  secondwind: 'Second Wind', sharpen: 'Sharpened Shadows', steady: 'Steady Hands', unbreak: 'Unbreakable' });
+Object.assign(BUFF_ICON, { answer: 'strike', beat: 'bolt', feint: 'strike', haze: 'fireball', pinned: 'quick', quickmend: 'mend', secondwind: 'cloak', sharpen: 'evis', steady: 'brace', unbreak: 'bulwark' });
+
+// what each buff does while it's up, for its hover text. n(id) is the move's name as this hero has it (a spec may rename it).
+const BUFF_TIPS = {
+  oath: n => `You deal 10% more damage. Judgment gives double Resolve and ${n('edge')} hits harder.`,
+  avatar: n => `You deal 10% more damage, Judgment gives double Resolve and ${n('edge')} hits harder. Every Perfect Block calls a pillar of light down on the boss.`,
+  radiant: n => `Your next ${n('edge')} is a beam of light, 50% stronger.`,
+  steady: n => `${n('edge')} costs 35 Resolve instead of 50.`,
+  unbreak: () => 'Every Perfect Block gives its Brace charge straight back.',
+  frenzy: () => 'You deal 15% more damage.',
+  gorge: n => `Your next ${n('drain')} costs no Blood and hits harder.`,
+  undying: () => 'You can\'t drop below 1 HP, and every heal and shield you give is doubled.',
+  bloodmoon: () => 'You can\'t drop below 1 HP and your heals are doubled. When the moon sets, the boss takes damage for the hits you took, and you heal for a quarter of them.',
+  overload: n => `You deal 10% more damage. ${n('strike')} gives 2 Runes, and ${n('glyph')} and Ward blasts hit harder.`,
+  living: n => `You deal 10% more damage, ${n('strike')} gives 2 Runes, and ${n('glyph')} and Ward blasts hit harder. Every Rune you spend fires a bolt at the boss.`,
+  answer: n => `Your next ${n('strike')} gives an extra Rune.`,
+  markself: n => `Keen Eye lights up more often, and your critical chance is 10% higher.`,
+  keen: n => `Your next ${n('pierce')} hits harder and gives its charge back.`,
+  barrage: n => `Your next ${n('quick')} hits three times as hard and gives triple Focus.`,
+  falconHunt: () => 'Your falcon is hunting: every Keen Eye you light sends it diving at the boss.',
+  pinned: n => `Your next ${n('quick')} is a critical hit.`,
+  secondwind: n => `Your next ${n('quick')} also heals you for 15% of your HP.`,
+  aim: () => 'You deal 4% more damage for each stack. Moving loses them all.',
+  truenorth: () => 'Every hit counts as a positional, wherever you stand.',
+  dance: n => `Your attacks are faster, every positional lands, and ${n('evis')} hits 25% harder.`,
+  feint: n => `Your next ${n('evis')} lands as a hit from the side, wherever you stand.`,
+  sharpen: n => `Your next ${n('evis')} hits 12% harder for each stack.`,
+  combust: () => 'Everything you cast is a critical hit.',
+  heating: n => `Your next critical hit gives you Hot Streak. A ${n('fireball')} or ${n('pyro')} that doesn't crit loses it.`,
+  hotstreak: n => `Your next ${n('pyro')} is instant and hits harder.`,
+  burnt: () => 'You overheated: you deal 20% less damage.',
+  haze: n => `Your next ${n('fireball')} is instant.`,
+  firestep: n => `Your next ${n('fireball')} is instant.`,
+  incircle: () => 'While you stand in your circle you cast 20% faster and deal 15% more damage.',
+  quickmend: n => `Your next ${n('mend')} is instant.`,
+  verdict: n => `Your next ${n('smite')} is instant.`,
+  growth: n => `Your heals are 25% stronger, and ${n('bloom')} heals the whole party.`,
+  moonlit: n => `Your heals are 25% stronger, and ${n('bloom')} heals the whole party.`,
+  awaken: n => `Your next ${n('wrath')} is instant and 50% stronger.`,
+  treant: () => 'Your treant slams the boss every 3s, and every slam heals your most hurt ally.',
+  surge: n => `Your next ${n('bolt')} is instant.`,
+  beat: n => `Your next ${n('bolt')} is instant.`,
+  lag: () => 'You ran out of Flux: your casts are 20% slower.',
+  chamber: () => 'Your echoes are full strength.',
+  warp: () => 'A great clock hangs over the party: everyone acts faster, and every 3s it strikes the boss and heals the party.',
+  distill: () => 'Your next two reagents recover almost at once.',
+  catalyst: () => 'Your next brew takes three reagents. Three that make a Reaction brew it; three that don\'t fizzle back to the first two.',
+  brink: () => 'Your next spell must be the other element, or you overload. Wait too long and you overload anyway.',
+  overheat: n => `You can't cast ${n('cinder')} or ${n('flare')}.`,
+  frostbite: () => 'Your casts are 30% slower.',
+  attuned: () => 'Every step from 0 makes both fire and frost spells stronger.',
+  momentum: () => 'You deal 4% more damage for each stack. Cross 0 again within 6s to keep them.',
+  redline: () => 'You\'re at the edge: your spells hit 20% harder and your edge spell is instant. Strain is building.',
+  rebound: () => 'Your next spell is instant.',
+  still: () => 'Your Drift holds instead of draining.',
+  gale: () => 'Your Drift can\'t drain, and Passing Strikes hit three times as hard.',
+  orbit: n => `At 5 stacks, ${n('carve')} cuts on its own every moment or so while you keep circling.`,
+  tailwind: n => `Your next ${n('carve')} is a critical hit.`,
+  read: () => 'You take 20% less damage. A hit in the first 0.4s is read.',
+  wall: () => 'You take 25% less damage.',
+  opening: () => 'Your next Heavy is a free Thousand Palms, 30% stronger.',
+  wind: () => 'Breath refills twice as fast, and you deal 10% more damage.',
+  skin: () => 'You take 40% less damage, and your Breath refills at its resting pace.',
+  rush: () => 'You deal 3% more damage for each stack. Break or drop a string and it\'s gone.',
+  stagger: () => 'You lost your string: you can\'t act for a moment.',
+  guard: () => 'Your Light presses hit 30% harder.',
+  pond: () => 'You take 25% less damage, and Read comes back moments after you use it.',
+  slide: () => 'A broken or dropped string doesn\'t stagger you, and your Momentum holds.',
+  bellows: () => 'You take 30% less damage, Breath refills half again as fast, and every named move you finish sends out a shockwave and gives back 6 Breath.',
+};
+// buffs refreshed every moment while a condition holds (the timer means nothing there)
+const BUFF_UNTIMED = new Set(['incircle', 'redline']);
+const tipAttr = s => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
 
 const Hud = {
   el: null, slots: [], actor: null, gaugeCanvas: null, castFill: null, castName: null, buffRow: null, extra: () => [],
@@ -245,7 +322,12 @@ const Hud = {
     // buffs (rebuilt only when the set changes)
     const list = [];
     const hidden = new Set(Object.entries(BUFF_HIDES).filter(([own]) => k.has(own)).map(([, base]) => base));
-    for (const [id, b] of k.buffs) if (b.end > now && BUFF_NAMES[id] && !hidden.has(id)) list.push({ id, name: BUFF_NAMES[id], left: b.end - now, stacks: b.stacks, bad: BAD_BUFFS.has(id) });
+    const nm = base => { const ab = k.abilities.find(x => (x.replaces || x.id) === base); return ab ? ab.name : base; };
+    for (const [id, b] of k.buffs) {
+      if (!(b.end > now && BUFF_NAMES[id] && !hidden.has(id))) continue;
+      const left = BUFF_UNTIMED.has(id) ? undefined : b.end - now;
+      list.push({ id, name: BUFF_NAMES[id], left, stacks: b.stacks, bad: BAD_BUFFS.has(id), html: BUFF_TIPS[id] && `<b>${BUFF_NAMES[id]}</b>${left != null ? `<em>${Math.ceil(left)}s</em>` : ''}${BUFF_TIPS[id](nm)}` });
+    }
     for (const x of this.extra()) list.push(x);
     for (const x of k.itemBuffs()) list.push(x);   // buffs from item effects
     const key = list.map(b => b.id + ':' + (b.left != null ? Math.ceil(b.left) : '') + ':' + b.stacks).join('|');
@@ -253,7 +335,8 @@ const Hud = {
       this._buffKey = key;
       const icon = b => (BUFF_ICON[b.id] ? `<u class="bf-icon" style="background-image:url(${abilityIcon(a.cls.id, BUFF_ICON[b.id])})"></u>` : '');
       // entries with no timer (left undefined) just show their name
-      this.buffRow.innerHTML = list.map(b => `<span class="buff ${b.bad ? 'bad' : ''}${b.bond ? ' bond' : ''}"${b.tip ? ` data-tip="${b.tip}"` : ''}>${icon(b)}${b.name}${b.stacks > 1 ? ' ×' + b.stacks : ''}${b.left != null ? ` <i>${Math.ceil(b.left)}</i>` : ''}</span>`).join('');
+      this.buffRow.innerHTML = list.map(b => `<span class="buff ${b.bad ? 'bad' : ''}${b.bond ? ' bond' : ''}"${b.tip ? ` data-tip="${tipAttr(b.tip)}"` : ''}>${icon(b)}${b.name}${b.stacks > 1 ? ' ×' + b.stacks : ''}${b.left != null ? ` <i>${Math.ceil(b.left)}</i>` : ''}</span>`).join('');
+      [...this.buffRow.children].forEach((ch, i) => { if (list[i].html) Tip.set(ch, list[i].html); });
     }
   },
 };

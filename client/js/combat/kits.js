@@ -166,7 +166,7 @@ const KITS = {
       },
       {
         id: 'undying', name: 'Undying', type: 'ogcd', target: 'self', cd: 150, anim: 'big',
-        desc: 'For 8s you cannot drop below 1 HP, and your heals on yourself are doubled.',
+        desc: 'For 8s you cannot drop below 1 HP, and every heal and shield you give is doubled.',
         effect(k) { k.mitigate('self', 0, 8, { kind: 'living', ab: this }); k.buff('undying', 8); },
         fx: { type: 'aura', color: '#8a0010', r: 36, dur: 3 },
       },
@@ -316,7 +316,7 @@ const KITS = {
       },
       {
         id: 'mark', name: "Hunter's Mark", type: 'ogcd', target: 'enemy', range: RANGED, cd: 60, anim: 'cast',
-        desc: 'Party burst: the boss takes 8% more damage from everyone for 15s, and Keen Eye triggers more often.',
+        desc: 'Party burst: the boss takes 8% more damage from everyone for 15s. For you, Keen Eye triggers more often and your critical chance is 10% higher.',
         effect(k) {
           const dur = 15 + (k.talent('ranger_longhunt') ? 3 : 0);
           k.debuffTarget('vuln', 0.08, dur, { ab: this }); k.buff('markself', dur);
@@ -493,7 +493,7 @@ const KITS = {
       },
       {
         id: 'combust', name: 'Combustion', type: 'ogcd', target: 'self', cd: 60, anim: 'big',
-        desc: 'Burst: for 10s every Fireball, Pyroblast and Fire Blast crits.',
+        desc: 'Burst: for 10s everything you cast crits.',
         effect(k) {
           const dur = (k.perk('pyromancer_a4') ? 13 : 10) + (k.talent('pyromancer_longburn') ? 3 : 0);
           k.buff('combust', dur); if (k.perk('pyromancer_w3')) k.refill('fireblast');
@@ -729,7 +729,7 @@ const KITS = {
       {
         id: 'shift', name: 'Shift', type: 'ogcd', target: 'self', cd: 2.5, anim: 'cast',
         label: k => (k.g.stance === 'haste' ? 'Shift: Slow' : 'Shift: Haste'),
-        desc: 'Switch between Slow (Flux fills, strong single-target healing) and Haste (fast, party healing, Flux drains). Your first Bolt in Haste is instant.',
+        desc: 'Switch between Slow (Flux fills, strong single-target healing) and Haste (fast, party healing, Flux drains). Shifting into Haste makes your next Bolt instant.',
         usable: k => k.g.stance === 'haste' || k.g.flux >= 20,
         glow: k => k.g.stance === 'slow' && k.g.flux >= 95,
         effect(k) {
@@ -1766,7 +1766,7 @@ KITS.thermist = {
     {
       id: 'flare', name: 'Flare', type: 'gcd', target: 'enemy', range: RANGED, anim: 'cast', el: 1,
       cast: k => thermCast(k, 1, 2, true),
-      desc: '2s cast: a burst of fire. Turns the dial 2 toward Blaze. At +5 it\'s instant and always crits, but holds you On the Brink: if your next spell is fire too, you overheat.',
+      desc: '2s cast: a burst of fire. Turns the dial 2 toward Blaze. At +5 it\'s instant and always crits, but holds you On the Brink: if your next spell is fire too, you overheat, and waiting it out does the same.',
       usable: k => !k.has('overheat'),
       glow: k => thermPlan(k) === 'flare',
       effect(k) { thermSpell(k, this, 1, 2, 400, { edge: true }); },
@@ -1775,7 +1775,7 @@ KITS.thermist = {
     {
       id: 'lance', name: 'Glacier Lance', type: 'gcd', target: 'enemy', range: RANGED, anim: 'cast', el: -1,
       cast: k => thermCast(k, -1, 2, true),
-      desc: '2s cast: a lance of ice. Turns the dial 2 toward Rime. At -5 it\'s instant and always crits, but holds you On the Brink: if your next spell is frost too, you get frostbite.',
+      desc: '2s cast: a lance of ice. Turns the dial 2 toward Rime. At -5 it\'s instant and always crits, but holds you On the Brink: if your next spell is frost too, you get frostbite, and waiting it out does the same.',
       glow: k => thermPlan(k) === 'lance',
       effect(k) { thermSpell(k, this, -1, 2, 400, { edge: true }); },
       fx: { type: 'line', color: '#bfe8ff', range: 440 },
@@ -2531,7 +2531,7 @@ const ipDragon = {
 };
 TALENT_ABILITIES.ironpalm_dragon = { cls: 'ironpalm', ab: ipDragon,
   spec: { avalanche: Object.assign({}, ipDragon, {
-    desc: 'Leap and come down on your target like a dragon: a heavy blow, the whole party deals 5% more damage for 12s, and you get Second Wind for 15s. Your Momentum fills and holds while it lasts.',
+    desc: 'Leap and come down on your target like a dragon: a heavy blow, the whole party deals 5% more damage for 12s, and you get Second Wind for 15s. Your Momentum fills and lasts 15s, unless a string drops.',
     effect(k) { ipDragon.effect.call(this, k); k.buff('rush', 15, {}, IRONPALM.RUSH_MAX, IRONPALM.RUSH_MAX); },
   }) } };
 
