@@ -162,7 +162,8 @@ Talent moves (they borrow the icon above until painted):
 7. **Bellows Stance** (`ironpalm/bellows`): a leather forge bellows mid-squeeze, a thick orange curl of breath and three sparks blowing out of the nozzle.
 8. **Dragon Ascends** (`ironpalm/dragon`): a saffron dragon made of a single brushstroke coiling up round a raised fist.
 
-The taunt, **Beckoning Palm**, uses the Read icon.
+Taunt (on T; until painted it borrows the Read icon):
+9. **Beckoning Palm** (`ironpalm/taunt`): a length of saffron hand-wrap cloth flicking out and curling back into a hook, like a come-here gesture made of cloth, three bold saffron rings pulsing from the curl.
 
 
 ## Advanced tanks (added 2026-10-20)

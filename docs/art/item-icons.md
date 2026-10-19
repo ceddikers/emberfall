@@ -239,3 +239,25 @@ IP-9. **Gravestill Gi** (`ironpalm_a4`): a faded plum-grey gi dusted with grave 
 138. **Gossamer Blacks** (`marionettist_a2`): A black jerkin with a faint silver web pattern, the hood edged in silk.
 139. **Stormproof Blacks** (`marionettist_a3`): A black oilskin jerkin beaded with rain, a high storm collar, copper buckles.
 140. **Blacks of the Final Act** (`marionettist_a4`): A black velvet jerkin with a rose-red lining, tarnished gold buttons, a dried rose pinned at the chest.
+
+## Gorgemaw and Oathbroker sheet (new tanks, 2026-10; rust-bronze and grey-ink accents)
+**Style:** the shared style above and each boss's tier theme. Gorgemaw weapons are **heavy gauntlets** (one huge armoured fist on the diagonal, knuckles forward, a jaw-like hinged plate over the fingers); armour is a **belly-plate** or girth seen front view, broad and round. Oathbroker weapons are **sealing-stamp maces** (a short haft with a heavy stamp head, the seal face showing a sigil); armour is a long **surcoat** front view. Until the art arrives the bag draws a simple fist or stamp. Numbered GO-1 to GO-18; files go in `client/items/<key>.png`.
+
+GO-1. **Recruit's Gauntlets** (`gorgemaw_w0`): a single over-sized iron gauntlet, dented, a strip of leather strapping, one rivet missing.
+GO-2. **Larder-Door Gauntlets** (`gorgemaw_w1`): a gauntlet built from a battered pantry door hinge and a meat-locker latch, brass rivets, a hanging sausage string.
+GO-3. **Silkgut Gauntlets** (`gorgemaw_w2`): a gauntlet of glossy dark chitin plates bound with pale spider silk, two fang-shaped spurs over the knuckles.
+GO-4. **Thunderbelly Gauntlets** (`gorgemaw_w3`): a slate-iron gauntlet with a round blue-glass knuckle stone cracked with a flat lightning bolt, storm-grey fur at the cuff.
+GO-5. **Gauntlets of the Last Feast** (`gorgemaw_w4`): a tarnished gold gauntlet whose finger plates are shaped like a row of teeth, a grave-green gem set in the back of the hand.
+GO-6. **Butcher's Belly-Plate** (`gorgemaw_a1`): a round cast-iron belly-plate like an upturned skillet, a stained butcher's apron hanging below, big rivets.
+GO-7. **Chitin Paunch** (`gorgemaw_a2`): a broad round paunch-guard of overlapping beetle-shell chitin, eight small amber studs, silk lacing at the sides.
+GO-8. **Stormhide Gut-Guard** (`gorgemaw_a3`): a thick grey hide gut-guard with iron bands, a blue lightning-bolt brand burned into the leather, rain beads on top.
+GO-9. **Barrow-Bronze Girth** (`gorgemaw_a4`): a wide bronze girth gone green with age, a jaw-shaped buckle with gold teeth, grave-dust in the engraving.
+GO-10. **Recruit's Seal** (`oathbroker_w0`): a plain wooden haft with a small iron stamp head, its seal face a simple worn square, a drip of red wax on the rim.
+GO-11. **Quartermaster's Seal** (`oathbroker_w1`): a stout stamp mace with a brass head shaped like a tally counter, a pantry-inventory tag tied to the haft.
+GO-12. **Webbed Writ-Seal** (`oathbroker_w2`): a pale bone haft with a chitin stamp head, its seal face a spider-web sigil, a strand of silk wound round the grip.
+GO-13. **Stormsworn Seal** (`oathbroker_w3`): a slate-iron stamp mace with a blue seal face showing a lightning-bolt sigil, a short chain at the pommel.
+GO-14. **Seal of the Last Account** (`oathbroker_w4`): a tarnished gold stamp mace with a crowned seal face, a grave-green wax drip, a tiny ledger key on a chain.
+GO-15. **Pantry-Ledger Surcoat** (`oathbroker_a1`): a grey surcoat with a pantry ledger tucked into a chest pocket, a red wax seal at the collar, a flour smudge on the hem.
+GO-16. **Silk-Bound Surcoat** (`oathbroker_a2`): a dark grey surcoat stitched with pale silk web lines, a chitin clasp, a rolled writ tied at the belt.
+GO-17. **Thunder-Notary Surcoat** (`oathbroker_a3`): a slate-blue surcoat with a high collar, a blue lightning seal on the chest, rain-darkened shoulders.
+GO-18. **Surcoat of the Unpaid Court** (`oathbroker_a4`): a plum-black surcoat edged in tarnished gold, a broken red wax seal on the chest, a short chain of ledger pages at the hip.
