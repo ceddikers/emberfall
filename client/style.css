@@ -847,3 +847,10 @@ body:has(#loot:not(.hidden)) #results { padding-right: 332px; }
   .altar-band .hc-text small { font-size: 10.5px; }
   #sel-grid .sel-head h2 { font-size: 24px; padding: 0 48px; }
 }
+
+/* Alembist (classes-b): the recipe book in the bandolier and Catalyst tooltips; sealed Reactions stay unread */
+.alem-book { margin-top: 6px; display: grid; gap: 2px; }
+.alem-rec { font-size: 12px; line-height: 1.35; color: #d8ccb4; }
+.alem-rec b { color: #f0dcae; font-weight: 700; }
+.alem-rec.sealed { color: #7d7466; font-style: italic; }
+.alem-rec.sealed b { color: #9a8a70; letter-spacing: .04em; }

@@ -1,4 +1,4 @@
-// Boss IV: The Hollow King, Lord of the Barrow — "The Barrow". The final exam: three phases, everything combined.
+// Boss IV: The Hollow King, Lord of the Barrow — "The Barrow". Three phases, everything he has.
 // He is a dead king who walks after his tank like the first bosses did.
 //   Royal Gaze: he lifts his head. Anyone looking at him when it lands is caught: hurt, held in place for a moment,
 //     and left Dreading; caught again while Dreading hurts far more. Turn your back (your hero faces where they walk).
@@ -9,18 +9,26 @@
 //     but close to him).
 //   Phase 2 at 65%, Echoes: two Echo Knights rise by the walls. Each remembers one of his swings as he makes it (it
 //     flashes on the knight) and replays it from where it stands a few seconds later, aimed at the middle of the hall.
-//     Barrow Bells: two bells, two people under each; a missed bell dooms everyone.
+//     Every second cycle a Gaze lands together with the first replay. Barrow Bells: two bells, two people under each;
+//     a missed bell dooms everyone.
 //   Phase 3 at 30%, The Long Night: the lanterns go out. The hall goes dark but for a little light around each hero
 //     and the last lantern, which someone carries; now it's the only cure for Doom. Everything comes back shorter.
 //     The moon finishes setting: hard enrage.
-// Hard: Doom on two players at once; the Gaze lands together with an Echo Knight's replay; replays warn for less time.
+// Hard: Doom on two players at once; every echo cycle brings a Gaze with it; replays warn for less time. Three moves only
+// Hard has:
+//   Royal Audience: his crown blazes. Anyone with their back to the king when it lands is caught, as by the Gaze
+//     (and it Dreads you the same way). Face him.
+//   Funeral March: ranks of his dead march across the hall from one wall to the other, one after another, leaving one
+//     lane open the whole way. Stand in the lane, or step in behind a rank once it has passed.
+//   Gravebind: a grave-chain binds two players; they must stay close until it breaks, while everyone else spreads.
 
 const HOLLOWKING = {
   id: 'hollowking', name: 'The Hollow King', title: 'Lord of the Barrow',
   hp: { normal: 2300000, hard: 3000000 },
-  autoDmg: { normal: 1450, hard: 1450 },
-  enrage: { normal: 540, hard: 480 },
+  autoDmg: { normal: 1650, hard: 1650 },
+  enrage: { normal: 460, hard: 460 },
   enrageName: 'Moonset',
+  vuln: 0.5,
   spawn: { x: 0, y: -80 },
   arena: { theme: 'barrow' },
 
@@ -29,8 +37,8 @@ const HOLLOWKING = {
     const B = f.boss;
     const TAU = Math.PI * 2;
     const dmg = {
-      knell: 6500, cleave: H ? 23000 : 18500, bleed: 700, gaze: 6000, gazeAgain: 12000, swing: 9000, echo: 9000,
-      marks: 5500, bell: 3000, bellFail: 2000,
+      knell: 9000, cleave: 25000, bleed: H ? 900 : 750, gaze: 9000, gazeAgain: 16000, swing: 13000, echo: 13000,
+      marks: 8000, bell: 4500, bellFail: 2000, march: 14000, bind: 16000,
     };
     const GAZE_ARC = 1.2;     // you're looking at him if he's within this angle of where you face (~70° either side)
     const LANT_PICK = 40;     // walk this close to a lantern on the floor to pick it up
@@ -40,7 +48,7 @@ const HOLLOWKING = {
     // shared with the bots and the host's view (raid-host.js)
     f.lanterns = []; f.doomed = new Map(); f.knights = []; f.echoPlan = []; f.night = false;
     const memory = [null, null];   // the swing each knight remembers
-    let memNext = 0, lastSwing = null;
+    let memNext = 0;
 
     const sendLanterns = () => f.emit({ t: 'lant', l: f.lanterns.map(l => [l.id, Math.round(l.x), Math.round(l.y), l.carrier ?? null, l.last ? 1 : 0]) });
     const sendKnights = () => f.emit({ t: 'knights', k: f.knights.map(k => [k.id, k.x, k.y, +k.f.toFixed(2)]) });
@@ -100,7 +108,7 @@ const HOLLOWKING = {
       f.emit({ t: 'doomed', ids, dur });
       if (!f.night) setLanterns(ids.length + 1, f.t + dur + 2);
     };
-    const royalDoom = (dur = H ? 13 : 15) => {
+    const royalDoom = (dur = H ? 13 : 14) => {
       const d = f.ct(3);
       f.cast('Royal Doom', d, 'doom');
       f.afterKeep(d, () => {
@@ -112,22 +120,21 @@ const HOLLOWKING = {
     };
 
     // --- the court ------------------------------------------------------------------------------
-    const looking = p => {
+    const facing = p => {
       let d = Math.atan2(B.y - p.y, B.x - p.x) - (p.a || 0);
       while (d > Math.PI) d -= TAU; while (d < -Math.PI) d += TAU;
       return Math.abs(d) < GAZE_ARC;
     };
+    // caught by the Gaze or the Audience: hurt, held for a moment, and Dreading (caught again while Dreading hurts more)
+    const caught = (p, kind) => {
+      f.damagePlayer(p, f.hasDebuff(p.id, 'dread') ? dmg.gazeAgain : dmg.gaze, { kind, avoidable: true });
+      f.debuff(p.id, 'rooted', 2); f.debuff(p.id, 'dread', 20);
+      f.emit({ t: 'gazed', id: p.id });
+    };
     const gaze = (d = f.ct(4)) => {
       f.cast('Royal Gaze', d, 'gaze');
       f.mech({ type: 'gaze', shape: { kind: 'circle', x: B.x, y: B.y, r: 0 }, delay: d, dmg: 0, tag: 'gaze', avoidable: false,
-        onResolve: () => {
-          for (const p of f.alive()) {
-            if (!looking(p)) continue;
-            f.damagePlayer(p, f.hasDebuff(p.id, 'dread') ? dmg.gazeAgain : dmg.gaze, { kind: 'gaze', avoidable: true });
-            f.debuff(p.id, 'rooted', 2); f.debuff(p.id, 'dread', 20);
-            f.emit({ t: 'gazed', id: p.id });
-          }
-        } });
+        onResolve: () => { for (const p of f.alive()) if (facing(p)) caught(p, 'gaze'); } });
     };
 
     const knell = () => {
@@ -147,9 +154,9 @@ const HOLLOWKING = {
         dmg: dmg.cleave, target: tank.id, aimFromBoss: tank.id, tag: 'buster', onResolve: () => { if (alive(tank.id)) bleed(tank.id); } });
     };
 
-    const marks = (d = f.ct(5)) => {
-      f.cast('Grave Marks', d, 'marks');
-      for (const p of f.alive()) f.mech({ type: 'spread', shape: { kind: 'circle', x: p.x, y: p.y, r: 120 }, delay: d, dmg: dmg.marks, follow: p.id, tag: 'marks' });
+    const marks = (d = f.ct(5), who) => {
+      if (!who) f.cast('Grave Marks', d, 'marks');
+      for (const p of who || f.alive()) f.mech({ type: 'spread', shape: { kind: 'circle', x: p.x, y: p.y, r: 120 }, delay: d, dmg: dmg.marks, follow: p.id, tag: 'marks' });
     };
 
     // --- his swings, and the knights who remember them --------------------------------------------
@@ -158,9 +165,10 @@ const HOLLOWKING = {
         : kind === 'stomp' ? { kind: 'circle', x, y, r: echo ? 290 : 320 }
           : { kind: 'donut', x, y, r: 1100, r2: echo ? 250 : 210 });
     const SWING_NAME = { sweep: 'Sceptre Sweep', stomp: 'Barrow Stomp', ring: 'Crown of Graves' };
+    // the swings are chosen as each loop is laid out (never the same one twice running), so the feed can name them
+    let lastPlanned = null;
+    const nextSwing = () => { const opts = ['sweep', 'stomp', 'ring'].filter(k => k !== lastPlanned); lastPlanned = opts[Math.floor(f.rng() * opts.length)]; return lastPlanned; };
     const swing = kind => {
-      if (!kind) { const opts = ['sweep', 'stomp', 'ring'].filter(k => k !== lastSwing); kind = opts[Math.floor(f.rng() * opts.length)]; }
-      lastSwing = kind;
       const d = f.ct(4.5);
       f.cast(SWING_NAME[kind], d, kind);
       if (kind === 'sweep') B.lockFacing = true;
@@ -177,6 +185,7 @@ const HOLLOWKING = {
         } });
       return kind;
     };
+    const swingStep = (dt, kind = nextSwing()) => [dt, () => swing(kind), SWING_NAME[kind]];
     // a knight replays what it remembers, from where it stands, aimed at the middle of the hall
     const knightSwing = (k, kind) => {
       const shape = swingShape(kind, k.x, k.y, k.f, true);
@@ -185,7 +194,7 @@ const HOLLOWKING = {
       f.mech({ type: 'aoe', shape, delay: ECHO_WARN, dmg: dmg.echo, tag: 'e' + kind });
     };
     // replay what the knights remember: each in turn (or only the last one, in the Long Night). Returns when the
-    // first replay lands, so the Gaze can land with it on Hard.
+    // first replay lands, so a Gaze can land with it.
     const echo = (lead = 1.5, onlyLast) => {
       const order = onlyLast ? [(memNext - 1 + f.knights.length) % f.knights.length] : f.knights.map((_, i) => i);
       let t = lead, first = null;
@@ -231,24 +240,60 @@ const HOLLOWKING = {
       }
     };
 
-    // --- phase 1: the court -------------------------------------------------------------------------
-    const p1 = () => {
-      f.seq([
-        [3, knell],
-        [6, () => swing('sweep')],
-        [7, () => gaze()],
-        [7, graveCleave],
-        [8, () => royalDoom()],
-        [17, () => swing()],
-        [6, () => marks()],
-        [8, () => swing()],
-        [7, () => gaze()],
-        [7, graveCleave],
-        [8, knell],
-        [6, p1],
-      ]);
+    // --- Hard only ------------------------------------------------------------------------------
+    // Royal Audience: his crown blazes; anyone with their back to him when it lands is caught, as by the Gaze
+    const audience = (d = f.ct(4)) => {
+      f.cast('Royal Audience', d, 'audience');
+      f.mech({ type: 'audience', shape: { kind: 'circle', x: B.x, y: B.y, r: 0 }, delay: d, dmg: 0, tag: 'audience', avoidable: false,
+        onResolve: () => { for (const p of f.alive()) if (!facing(p)) caught(p, 'audience'); } });
     };
-    p1();
+    // Funeral March: five ranks of the dead march across the hall, wall to wall, a second apart. One lane stays open all
+    // the way; or wait for a rank to pass and step in behind it.
+    const march = () => {
+      const d = f.ct(5), ranks = 5, depth = ARENA.hw * 2 / ranks, gap = 110;
+      const dir = f.rng() < 0.5 ? 1 : -1, gy = (f.rng() - 0.5) * 2 * (ARENA.hh - 190);
+      f.cast('Funeral March', d, 'march');
+      // the open lane, for the bots
+      const safe = [-420, -210, 0, 210, 420].map(x => ({ x, y: gy }));
+      const rank = i => {
+        const x0 = -dir * ARENA.hw + dir * depth * i, top = -ARENA.hh, bottom = ARENA.hh;
+        return [[top, gy - gap], [gy + gap, bottom]].filter(([a, b]) => b - a > 10)
+          .map(([a, b]) => ({ kind: 'rect', x: x0, y: (a + b) / 2, angle: dir > 0 ? 0 : Math.PI, len: depth, w: b - a }));
+      };
+      for (let i = 0; i < ranks; i++) {
+        const lands = d + i * 1.0, warn = i ? 2.4 : d;
+        f.afterKeep(lands - warn, () => { for (const s of rank(i)) f.aoe(s, warn, dmg.march, { tag: 'march', safe }); });
+      }
+    };
+    // Gravebind: a grave-chain holds two players together (they must stay close when it breaks) while the rest spread
+    const gravebind = () => {
+      const d = f.ct(9), al = f.alive();
+      f.cast('Gravebind', f.ct(3), 'bind');
+      const tank = f.tank(), pool = f.shuffle(al.filter(p => !tank || p.id !== tank.id || al.length < 3));
+      if (pool.length < 2) return marks();
+      const [a, b] = pool;
+      f.tether(a.id, b.id, d, { kind: 'short', len: 160, dmg: dmg.bind, tag: 'bind' });
+      const rest = al.filter(p => p.id !== a.id && p.id !== b.id);
+      if (rest.length) f.afterKeep(d - f.ct(5), () => marks(f.ct(5), rest.filter(p => alive(p.id))));
+    };
+
+    // --- phase 1: the court -------------------------------------------------------------------------
+    f.loop(n => [
+      [3, knell, 'Barrow Knell'],
+      swingStep(6, 'sweep'),
+      [6, () => gaze(), 'Royal Gaze'],
+      H && [6, () => audience(), 'Royal Audience'],
+      [7, graveCleave, 'Grave Cleave'],
+      [7, () => royalDoom(), 'Royal Doom'],
+      swingStep(12),
+      [6, () => marks(), 'Grave Marks'],
+      H && [8, march, 'Funeral March'],
+      swingStep(H ? 10 : 7),
+      [7, () => gaze(), 'Royal Gaze'],
+      [7, graveCleave, 'Grave Cleave'],
+      [7, knell, 'Barrow Knell'],
+      [6],
+    ].filter(Boolean));
 
     // --- phase 2: echoes -------------------------------------------------------------------------------
     f.onHp(0.65, () => {
@@ -257,32 +302,31 @@ const HOLLOWKING = {
       B.cast = null; B.lockFacing = false;
       f.cast('Rise, My Guard', 4, 'rise');
       f.afterKeep(3, placeKnights);
-      f.seq([[6, () => p2(0)]]);
+      f.seq([[6, () => p2()]]);
     });
+    // the knights replay; with a Gaze landing together with the first replay when gazeWith
     const echoCycle = (gazeWith) => {
       const first = echo(1.5);
-      // Hard: the Gaze lands together with the first replay
       if (gazeWith && first != null) gaze(first);
     };
-    const p2 = loop => {
-      f.seq([
-        [2, () => swing()],
-        [6, () => swing()],
-        [5.5, () => echoCycle(H)],
-        [9, graveCleave],
-        [7, bells],
-        [11, () => royalDoom()],
-        [14, knell],
-        [6, () => { if (loop % 2) placeKnights(); }],
-        [2, () => swing()],
-        [6, () => swing()],
-        [5.5, () => echoCycle(H)],
-        [9, () => (H ? marks() : gaze())],
-        [8, graveCleave],
-        [7, () => (H ? gaze() : marks())],
-        [8, () => p2(loop + 1)],
-      ]);
-    };
+    const p2 = () => f.loop(n => [
+      swingStep(2),
+      swingStep(6),
+      [5.5, () => echoCycle(H), H ? 'Royal Gaze' : 'Echo Knights'],
+      [9, graveCleave, 'Grave Cleave'],
+      [7, bells, 'Barrow Bells'],
+      [11, () => royalDoom(), 'Royal Doom'],
+      H && [9, march, 'Funeral March'],
+      [H ? 12 : 13, knell, 'Barrow Knell'],
+      [6, () => { if (n % 2) placeKnights(); }],
+      swingStep(2),
+      swingStep(6),
+      [5.5, () => echoCycle(true), 'Royal Gaze'],
+      [9, H ? gravebind : () => marks(), H ? 'Gravebind' : 'Grave Marks'],
+      [H ? 11 : 8, graveCleave, 'Grave Cleave'],
+      H && [7, () => audience(), 'Royal Audience'],
+      [8],
+    ].filter(Boolean));
 
     // --- phase 3: the Long Night -----------------------------------------------------------------------
     f.onHp(0.3, () => {
@@ -297,24 +341,24 @@ const HOLLOWKING = {
         f.emit({ t: 'night', on: 1 });
         sendLanterns();
       });
-      f.seq([[7, () => p3(0)]]);
+      f.seq([[7, () => p3()]]);
     });
-    const p3 = loop => {
-      f.seq([
-        [2, knell],
-        [6, () => swing()],
-        [5.5, () => { const first = echo(1, true); if (H && first != null) gaze(first); }],
-        [7, () => (H ? graveCleave() : gaze(f.ct(3.5)))],
-        [7, () => royalDoom(H ? 12 : 14)],
-        [10, bells],
-        [11, () => swing()],
-        [5, () => marks(f.ct(4))],
-        [6, () => gaze(f.ct(3.5))],
-        [6, graveCleave],
-        [7, () => (loop % 2 ? placeKnights() : null)],
-        [1, () => p3(loop + 1)],
-      ]);
-    };
+    const p3 = () => f.loop(n => [
+      [2, knell, 'Barrow Knell'],
+      swingStep(6),
+      [5.5, () => { const first = echo(1, true); if (H && first != null) gaze(first); }, H ? 'Royal Gaze' : 'Echo Knights'],
+      [7, () => (H ? graveCleave() : gaze(f.ct(3.5))), H ? 'Grave Cleave' : 'Royal Gaze'],
+      [7, () => royalDoom(H ? 12 : 13), 'Royal Doom'],
+      [10, bells, 'Barrow Bells'],
+      H && [9, march, 'Funeral March'],
+      swingStep(H ? 9 : 10),
+      [5, () => marks(f.ct(4)), 'Grave Marks'],
+      [6, () => gaze(f.ct(3.5)), 'Royal Gaze'],
+      H && [6, () => audience(f.ct(3.5)), 'Royal Audience'],
+      [6, graveCleave, 'Grave Cleave'],
+      [7, () => { if (n % 2) placeKnights(); }],
+      [1],
+    ].filter(Boolean));
   },
 };
 

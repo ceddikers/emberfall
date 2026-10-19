@@ -173,6 +173,38 @@ const BOSS_VFX = (() => {
       for (const q of scatter({ kind: 'circle', x: 0, y: 0, r: AR() - 30 }, 12)) after(rand(0, 0.3), () => VFX.flare(q.x, q.y, { color: '#ff6a1a', n: 12, h: 1.2 }));
       shake(7);
     },
+    // Grubnak, Hard: the belly landing, the cleaver flying out and back, the brandy going up
+    flop(tg) {
+      const s = tg.live;
+      shapeFlash(s, '#ffcf9a', { a: 0.3, dur: 0.45 });
+      VFX.shock(s.x, s.y, { r: s.r * 1.6, color: '#f0e0c8', w: 12, dur: 0.55, flat: 1 });
+      VFX.shock(s.x, s.y, { r: AR() * 0.9, color: '#e8d8c0', w: 5, dur: 0.8, flat: 1, delay: 0.1 });
+      for (const q of ringPts(s.x, s.y, s.r * 0.9, 12)) VFX.smoke(q.x, q.y, { n: 1, color: '#e0d4c0', size: 34, a: 0.6, speed: 140 });
+      VFX.decal(s.x, s.y, { style: 'crack', r: s.r * 0.7, dur: 2.5, a: 0.55, seed: Math.random() * 6 });
+      shake(11);
+    },
+    cleaver(tg) {
+      const s = tg.live;
+      streak(s.x, s.y, s.angle, '#ffe6d0', { w: 14, dur: 0.3 });
+      for (let i = 0; i < 4; i++) { const d = rand(100, AR() * 1.2); VFX.sparks(s.x + Math.cos(s.angle) * d, s.y + Math.sin(s.angle) * d, { color: '#ffffff', n: 4, angle: s.angle, spread: 0.4, speed: 360 }); }
+      shake(5);
+    },
+    cleaverback(tg) {
+      const s = tg.live, L = Math.min(s.len, AR() * 2);
+      streak(s.x + Math.cos(s.angle) * L, s.y + Math.sin(s.angle) * L, s.angle + Math.PI, '#ffffff', { w: 12, dur: 0.3, len: L });
+      VFX.sparks(s.x, s.y, { color: '#ffe6d0', n: 10, speed: 260 });
+      shake(5);
+    },
+    flambe(tg) {
+      const s = tg.live, ca = Math.cos(s.angle), sa = Math.sin(s.angle);
+      shapeFlash(s, '#ff9a3a', { a: 0.4, dur: 0.55 });
+      for (let d = 30; d < s.len; d += 90) {
+        const off = rand(-0.3, 0.3) * s.w, x = s.x + ca * d - sa * off, y = s.y + sa * d + ca * off;
+        if (ARENA.sd(x, y) > -10) continue;
+        after(rand(0, 0.2), () => VFX.flare(x, y, { color: Math.random() < 0.3 ? '#6ab0ff' : '#ff7a1a', n: 8, h: 1.3 }));
+      }
+      shake(4);
+    },
     // Skitterra
     mist(tg) {
       roomTint('#7ae03a', 0.22, 0.9);
@@ -190,6 +222,31 @@ const BOSS_VFX = (() => {
       shapeFlash(s, '#9adf3a', { a: 0.3, dur: 0.4 });
       streak(s.x, s.y, s.angle, '#b8ff5a', { w: 9, dur: 0.35 });
       for (let i = 1; i <= 4; i++) { const d = i * 110; VFX.splash(s.x + Math.cos(s.angle) * d, s.y + Math.sin(s.angle) * d, { color: '#8ad82a', n: 4 }); }
+    },
+    // Skitterra, Hard: a sac bursting, the charge, a glob of silk landing
+    eggsac(tg) {
+      const s = tg.live;
+      VFX.burst(s.x, s.y - 6, { color: '#e8ff9a', color2: '#ffffff', n: 16, speed: 220 });
+      VFX.splash(s.x, s.y, { color: '#8ad82a', n: 10 });
+      VFX.shock(s.x, s.y, { r: s.r * 1.3, color: '#d8ff7a', w: 5, flat: 1 });
+      shake(3);
+    },
+    fang(tg) {
+      const s = tg.live, ca = Math.cos(s.angle), sa = Math.sin(s.angle);
+      shapeFlash(s, '#ff7ac0', { a: 0.3, dur: 0.4 });
+      streak(s.x, s.y, s.angle, '#ffb0dc', { w: 16, dur: 0.3 });
+      for (let d = 40; d < AR() * 2; d += 80) {
+        const x = s.x + ca * d, y = s.y + sa * d;
+        if (ARENA.sd(x, y) > 0) break;
+        VFX.smoke(x, y, { color: '#e8e0f0', n: 2, size: 30, a: 0.5, speed: 60 });
+      }
+      shake(7);
+    },
+    glob(tg) {
+      const s = tg.live;
+      VFX.smoke(s.x, s.y, { color: '#f4f0ff', n: 6, size: 26, a: 0.65, speed: 70 });
+      VFX.burst(s.x, s.y, { color: '#f4f0ff', n: 10, speed: 180, size: 10 });
+      VFX.shock(s.x, s.y, { r: s.r, color: '#ffffff', w: 4, dur: 0.35, flat: 1 });
     },
     // Volkar
     clap() {
@@ -245,6 +302,18 @@ const BOSS_VFX = (() => {
       for (let i = 0; i < 16; i++) streak(s.x, s.y, i * TAU / 16 + rand(-0.1, 0.1), '#eaf4ff', { w: 6, dur: 0.4, len: AR() });
       shake(10);
     },
+    // Volkar, Hard: the storm cell over Chain Lightning's target breaks (the leaps come in their own message), and
+    // the sky falling
+    chain(tg) { const s = tg.live; VFX.shock(s.x, s.y, { r: s.r, color: '#9ff4ff', w: 4, dur: 0.4, flat: 1 }); roomTint('#bfe8ff', 0.1, 0.3); },
+    skyfall(tg) {
+      const s = tg.live;
+      for (let i = 0; i < 4; i++) VFX.lightning(s.x + rand(-50, 50), s.y - 460, s.x + rand(-20, 20), s.y, { color: i % 2 ? '#ffffff' : '#bfe8ff', jag: 30, dur: 0.5 });
+      VFX.pillar(s.x, s.y, { r: 90, h: 420, color: '#dff4ff', dur: 0.8 });
+      for (let i = 0; i < 3; i++) VFX.shock(s.x, s.y, { r: 640, color: '#cfeaff', w: 12 - i * 3, dur: 0.7, flat: 1, delay: i * 0.12 });
+      VFX.decal(s.x, s.y, { style: 'crack', r: 110, dur: 3, a: 0.6, seed: Math.random() * 6 });
+      roomTint('#dff4ff', 0.3, 0.6);
+      shake(12);
+    },
     // the Hollow King
     knell(tg) {
       roomTint('#c8ffdc', 0.2, 0.7);
@@ -271,6 +340,9 @@ const BOSS_VFX = (() => {
       VFX.sparks(s.x, s.y - 100, { color: '#ffe8b0', n: 10, speed: 200 });
       shake(4);
     },
+    // the Hollow King, Hard: the crown's flash, and a rank of the dead tramping through
+    audience() { roomTint('#ffe6a0', 0.18, 0.45); },
+    march(tg) { graveBurst(tg.live, '#7affa8'); sweep(tg.live, '#c8ffd8', 0.4); shake(5); },
   };
   // grave-light bursting up out of an area
   function graveBurst(s, color) {
@@ -280,7 +352,7 @@ const BOSS_VFX = (() => {
 
   function impact(tg, msg, ctx) {
     if (tg.type === 'raidwide') { (IMPACT[tg.tag] || (() => { roomTint('#ffffff', 0.18); shake(6); }))(tg, ctx); return; }
-    if (tg.type === 'proximity') { IMPACT.boil(tg); shake(10); return; }
+    if (tg.type === 'proximity') { (IMPACT[tg.tag] || IMPACT.boil)(tg); shake(10); return; }
     if (tg.type === 'knockback') { const s = tg.live; VFX.shock(s.x, s.y, { r: 380, color: '#bfe6ff', w: 8, dur: 0.6, flat: 1 }); VFX.tornado(s.x, s.y, { r: 50, h: 160, dur: 0.7 }); return; }
     if (tg.type === 'buster') { buster(tg, ctx); return; }
     if (IMPACT[tg.tag]) { IMPACT[tg.tag](tg, ctx); return; }
@@ -319,10 +391,10 @@ const BOSS_VFX = (() => {
 
   // ---------------------------------------------------------------- casts, autos, adds, moments
   const CAST_COLOR = {
-    grubnak: { def: '#ffb050', boil: '#ff6a2a', bell: '#9ffff4', whisk: '#fff0c8', raise: '#ff7a1a' },
-    skitterra: { def: '#d08aff', mist: '#9adf3a', spit: '#9adf3a', wrap: '#f4f0ff', silk: '#f4f0ff', web: '#f4f0ff', lunge: '#ff7ac0' },
-    volkar: { def: '#7fe8ff', surge: '#ffe08a', crash: '#ffe27a', field: '#d79bff', gale: '#e8f4ff', walls: '#e8f4ff', fist: '#9ff4ff' },
-    hollowking: { def: '#6dff9a', gaze: '#f0fff4', doom: '#b46aff', bells: '#ffd88a', cleave: '#ff8a7a', night: '#8aa0ff' },
+    grubnak: { def: '#ffb050', boil: '#ff6a2a', bell: '#9ffff4', whisk: '#fff0c8', raise: '#ff7a1a', flop: '#f0e0c8', throw: '#ffe6d0', flambe: '#6ab0ff' },
+    skitterra: { def: '#d08aff', mist: '#9adf3a', spit: '#9adf3a', wrap: '#f4f0ff', silk: '#f4f0ff', web: '#f4f0ff', lunge: '#ff7ac0', eggs: '#e8ff9a', fang: '#ff7ac0', volley: '#f4f0ff' },
+    volkar: { def: '#7fe8ff', surge: '#ffe08a', crash: '#ffe27a', field: '#d79bff', gale: '#e8f4ff', walls: '#e8f4ff', fist: '#9ff4ff', skyfall: '#dff4ff' },
+    hollowking: { def: '#6dff9a', gaze: '#f0fff4', doom: '#b46aff', bells: '#ffd88a', cleave: '#ff8a7a', night: '#8aa0ff', audience: '#ffe6a0' },
   };
   // the wind-up while the boss casts: motes spiral in, a ring tightens, everything brightens near the end
   function castStart(bossKind, anim, dur, bossDraw) {
@@ -437,6 +509,30 @@ const BOSS_VFX = (() => {
   function pulse(units) {
     for (const u of units) VFX.lightning(u.x + rand(-30, 30), u.y - 150, u.x, u.y - 20, { color: '#9ccfff', jag: 8, dur: 0.2 });
   }
+  // Hard: Ball Lightning gathering at the edge and bursting on whoever touches it; Chain Lightning leaping player to player
+  function orbForm(x, y) {
+    VFX.charge(x, y - 28, { color: '#9ff4ff', n: 10, r: 60, dur: 0.6 });
+    VFX.lightning(x + rand(-40, 40), y - 300, x, y - 28, { color: '#bff6ff', jag: 18, dur: 0.3 });
+  }
+  function orbHit(e) {
+    VFX.burst(e.x, e.y - 16, { color: '#9ff4ff', color2: '#ffffff', n: 16, speed: 260 });
+    for (let i = 0; i < 4; i++) { const a = rand(0, TAU); VFX.lightning(e.x, e.y - 16, e.x + Math.cos(a) * 70, e.y - 16 + Math.sin(a) * 70, { color: '#dffbff', jag: 10, dur: 0.3 }); }
+    VFX.hit(e.x, e.y, '#bff6ff', 1.4);
+    shake(5);
+  }
+  function chain(ents) {
+    if (!ents.length) return;
+    const a = ents[0];
+    VFX.lightning(a.x + rand(-30, 30), a.y - 380, a.x, a.y - 16, { color: '#ffffff', jag: 26, dur: 0.45 });
+    ents.forEach((e, i) => {
+      after(i * 0.08, () => {
+        if (i) for (let n = 0; n < 2; n++) VFX.lightning(ents[i - 1].x, ents[i - 1].y - 16, e.x, e.y - 16, { color: n ? '#ffffff' : '#9ff4ff', jag: 16, dur: 0.4 });
+        VFX.hit(e.x, e.y, '#bff6ff', 1.3);
+        VFX.shock(e.x, e.y, { r: 60, color: '#9ff4ff', w: 4, dur: 0.35, flat: 1 });
+      });
+    });
+    shake(ents.length > 1 ? 7 : 4);
+  }
 
   // the Hollow King: caught by his gaze (grey stone creeps over them), the sentence passed, a cure, a knight
   // remembering a swing, the knights rising, the night falling
@@ -472,5 +568,5 @@ const BOSS_VFX = (() => {
   }
   function wipe() { roomTint('#200810', 0.4, 1.4); }
 
-  return { gazed, doomed, cure, knightMemory, knightRise, nightFall, polarityFlip, edgeClose, pulse, meatballLand, meatballHit, silkSnap, reelBite, impact, castStart, auto, leap, roar, addSpawn, addDeath, addEnrage, fury, spit, husk, tetherSnap, playerDeath, playerRaised, partyBuff, victory, wipe };
+  return { gazed, doomed, cure, knightMemory, knightRise, nightFall, polarityFlip, edgeClose, pulse, orbForm, orbHit, chain, meatballLand, meatballHit, silkSnap, reelBite, impact, castStart, auto, leap, roar, addSpawn, addDeath, addEnrage, fury, spit, husk, tetherSnap, playerDeath, playerRaised, partyBuff, victory, wipe };
 })();

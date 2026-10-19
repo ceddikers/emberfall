@@ -282,15 +282,18 @@ const Net = (() => {
   return net;
 })();
 
-// a class moment's few parameters (a Thermal Shock's size and side...): small numbers and short words only
+// a class moment's few parameters (a Thermal Shock's size and side, an Alembist vial's recipe and target...): small numbers,
+// short words and short lists only
 function fxData(d) {
   if (!d || typeof d !== 'object') return undefined;
   const o = {};
-  for (const k of Object.keys(d).slice(0, 6)) {
+  const val = v => (typeof v === 'number' && Number.isFinite(v) ? Math.max(-1e4, Math.min(1e4, v))
+    : typeof v === 'string' && /^[A-Za-z0-9#_-]{1,16}$/.test(v) ? v : typeof v === 'boolean' || v === null ? v : undefined);
+  for (const k of Object.keys(d).slice(0, 8)) {
     if (!/^[a-z]{1,8}$/.test(k)) continue;
     const v = d[k];
-    if (typeof v === 'number' && Number.isFinite(v)) o[k] = Math.max(-1e4, Math.min(1e4, v));
-    else if (typeof v === 'string' && /^[a-z0-9#]{1,12}$/.test(v)) o[k] = v;
+    if (Array.isArray(v)) { const a = v.slice(0, 8).map(val); if (a.every(x => x !== undefined)) o[k] = a; }   // (a Grand Blend's parts)
+    else if (val(v) !== undefined) o[k] = val(v);
   }
   return o;
 }

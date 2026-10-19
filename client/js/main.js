@@ -149,6 +149,8 @@
     allyTarget: (a, ab) => allyTargetId(ab),
     gearMods: () => Inventory.mods(player.cls && player.cls.id),
     talents: () => activeTalents(),
+    known: () => new Set(Save.found(player.cls ? player.cls.id : '')),   // hidden recipes found (Volatile Reactions)
+    discover: (a, id) => { if (player.cls) Save.discover(player.cls.id, id); },
     isDead: id => { if (!inArena()) return false; const s = raid.party.get(id); return !!s && !s.alive; },
     defaultLink: () => (inArena() && raid.boss.tg != null ? raid.boss.tg : Net.id),
     partyMods: () => {
@@ -220,8 +222,9 @@
   function healerish() { return actor && actor.abilities.some(a => a.target === 'ally'); }
 
   // --- kit events
-  const SIM_EVENTS = new Set(['damage', 'heal', 'hot', 'shield', 'mit', 'raise', 'rewind', 'selfDamage', 'targetDebuff', 'partyBuff', 'snap', 'pool', 'brand', 'taunt']);
-  const EV_FIELDS = ['type', 'amount', 'crit', 'target', 'ticks', 'interval', 'id', 'dur', 'tag', 'pct', 'kind', 'value', 'secs', 'threat', 'tgt', 'r', 'not'];
+  const SIM_EVENTS = new Set(['damage', 'heal', 'hot', 'shield', 'mit', 'raise', 'rewind', 'selfDamage', 'targetDebuff', 'partyBuff', 'snap', 'pool', 'brand', 'taunt', 'splash']);
+  const EV_FIELDS = ['type', 'amount', 'crit', 'target', 'ticks', 'interval', 'id', 'dur', 'tag', 'pct', 'kind', 'value', 'secs', 'threat', 'tgt', 'r', 'not',
+    'up', 'sh', 'cl', 'pa', 'ps', 'pr', 'fol'];   // (a thrown vial's splash: fight.js splash())
   function packEv(ev) {
     const o = {};
     for (const k of EV_FIELDS) if (ev[k] !== undefined) o[k] = ev[k];
@@ -279,7 +282,7 @@
         if (SIM_EVENTS.has(ev.type)) {
           if (inArena()) {
             sendCombat(ev);
-            if (ev.type === 'heal') showHeal(ev.target, ev.amount, ev.crit);
+            if (ev.type === 'heal' || (ev.type === 'splash' && ev.amount)) showHeal(ev.target, ev.amount, ev.crit);
           } else townEvent(ev);
         }
     }
@@ -519,14 +522,20 @@
     const label = { perfect: ['Perfect!', '#ffe27a'], reflect: ['Reflect!', '#e0d4ff'], overheat: ['Overheat', '#ff6a3a'], lag: ['Time Lag', '#9ab8c0'], frostbite: ['Frostbite', '#9ad8ff'], riposte: ['Riposte!', '#e8fff8'] }[name];
     if (label) FX.text(x, y - 62, label[0], label[1], 17, 1.1);
     playKitFx(player, name, true, data);
-    Net.send({ t: 'kfx', k: name, s: scene === 'arena' ? 1 : 0, d: data });
+    Net.send(Object.assign({ t: 'kfx', k: name, s: scene === 'arena' ? 1 : 0 }, data ? { d: data } : null));
   }
   function playKitFx(ent, name, mine, data) {
     const f = KIT_VFX[name];
     if (!f) return;
-    const target = name === 'reflect' || name === 'dawnstar' || name === 'radiant' || name === 'echo' || f.atTarget ? (ent === player ? enemyPos() : (inArena() ? { x: raid.boss.x, y: raid.boss.y } : null)) : null;
+    let target = name === 'reflect' || name === 'dawnstar' || name === 'radiant' || name === 'echo' || f.atTarget ? (ent === player ? enemyPos() : (inArena() ? { x: raid.boss.x, y: raid.boss.y } : null)) : null;
+    // a moment aimed somewhere (an Alembist's vial): data.to names an ally, data.en an enemy ('boss', an add, a dummy)
+    if (data && typeof data === 'object') {
+      if (data.en != null) target = inArena() ? (enemyNow(data.en) || { x: raid.boss.x, y: raid.boss.y }) : (ent === player ? enemyPos() : null);
+      else if (data.to != null) { const a = entById(data.to); if (a) target = a; }
+      if (!target && data.self) target = ent;
+    }
     VFX.setScale(mine ? 1 : 0.6);
-    try { f(ent, target, data); } finally { VFX.setScale(1); }
+    try { f(ent, target, data || null); } finally { VFX.setScale(1); }
   }
 
   // --- pressing buttons
@@ -980,6 +989,18 @@
       case 'stomp': case 'ring': prop('graves', true, end + 0.2); break;
       case 'rise': case 'night': prop('rise', true, end + 0.3); break;
       case 'sweep': prop('raise', true, end - 0.45); break;
+      // Hard-only moves
+      case 'flop': prop('flop', true, end + 0.2); if (msg.then) prop('next', msg.then, end + 0.3); break;
+      case 'throw': prop('toss', true, end + 0.1); break;
+      case 'flambe': prop('brandy', true, end + 0.3); break;
+      case 'eggs': prop('brood', true, end + 0.6); break;
+      case 'fang': prop('rear', true, end + 0.4); prop('venom', true, end + 0.2); break;
+      case 'volley': prop('silk', true, end + 4.5); prop('rear', true, end + 0.5); break;
+      case 'chain': case 'orbs': prop('charge', true, end + 0.4); break;
+      case 'skyfall': prop('sky', true, end + 0.4); break;
+      case 'audience': prop('audience', true, end + 0.3); break;
+      case 'march': prop('rise', true, end + 0.3); break;
+      case 'bind': prop('graves', true, end + 0.3); break;
     }
     if (msg.anim !== 'mince' && msg.anim !== 'boil') st.action = { type: 'attack', t0: end - 0.45, dur: 1.2 };
   });
@@ -1042,7 +1063,7 @@
   });
   Net.on('teth', msg => {
     if (!raid) return;
-    raid.tethers.set(msg.id, { a: msg.a, b: msg.b, kind: msg.kind, len: msg.len, start: now, end: now + msg.dur });
+    raid.tethers.set(msg.id, { a: msg.a, b: msg.b, kind: msg.kind, len: msg.len, tag: msg.tag, start: now, end: now + msg.dur });
   });
   Net.on('tethx', msg => {
     if (!raid) return;
@@ -1074,10 +1095,16 @@
   Net.on('roll', msg => {
     if (!raid) return;
     if (msg.clear) { raid.rollers.clear(); return; }
-    raid.rollers.set(msg.id, { x: msg.x, y: msg.y, a: msg.a, sp: msg.sp, r: msg.r, delay: msg.delay, start: now });
-    later(0.5, () => raid && BOSS_VFX.meatballLand(msg.x, msg.y));
+    raid.rollers.set(msg.id, { x: msg.x, y: msg.y, a: msg.a, sp: msg.sp, r: msg.r, delay: msg.delay, start: now, tag: msg.tag });
+    if (msg.tag === 'orb') BOSS_VFX.orbForm(msg.x, msg.y);
+    else later(0.5, () => raid && BOSS_VFX.meatballLand(msg.x, msg.y));
   });
-  Net.on('rollhit', msg => { const e = raid && entById(msg.pid); if (e) BOSS_VFX.meatballHit(e); });
+  Net.on('rollhit', msg => {
+    const e = raid && entById(msg.pid), r = raid && raid.rollers.get(msg.id);
+    if (e) (r && r.tag === 'orb' ? BOSS_VFX.orbHit : BOSS_VFX.meatballHit)(e);
+  });
+  // Chain Lightning (Volkar, Hard): the bolt's path from player to player
+  Net.on('chain', msg => { if (raid) BOSS_VFX.chain((msg.ids || []).map(id => entById(id)).filter(Boolean)); });
   // Silk Reel: the hooked player is dragged in on their own client; a dash snaps it (see doDash)
   Net.on('reel', msg => {
     if (!raid) return;
@@ -1302,6 +1329,8 @@
     if (idx !== undefined) {
       e.preventDefault();
       if (e.repeat && idx >= 6) return;
+      // a kit's own Shift move (the Apothecary moves its pick along the bandolier with Shift+R)
+      if (e.shiftKey && idx < 6 && actor && actor.kit.def.shiftPress) { if (e.repeat) return; if (actor.kit.def.shiftPress(actor.kit, idx)) return; }
       if (e.shiftKey && idx < 6 && actor && actor.abilities[idx].target === 'ally') selfCast = { i: idx, until: now + ENGINE.QUEUE_WINDOW + 0.3 };
       else if (!e.repeat && selfCast && selfCast.i === idx) selfCast = null;
       pressSlot(idx);
@@ -2291,8 +2320,6 @@
           <h3>${boss.name}</h3>
           <div class="sub"><span class="role-tag" style="--c:#ff7a6a">Boss ${['I', 'II', 'III', 'IV'][i]}</span>${boss.title}</div>
           <p class="tagline">${boss.blurb}</p>
-          <div class="box"><h4>Teaches</h4><p>${boss.teaches}</p></div>
-          <div class="box" style="margin-top:8px"><h4>Favors</h4><p>${boss.favors}</p></div>
         </div>
       </div>
       <ul class="abilities mech">${boss.mechanics.map(m => `<li><kbd>◆</kbd><div><b>${m.name}</b><span>${m.desc}</span></div></li>`).join('')}</ul>
@@ -2311,7 +2338,7 @@
     el.innerHTML = `
       <div class="mode-pick">
         <button data-mode="normal" class="${raidMode === 'normal' ? 'on' : ''}"><b>Normal</b><small>Every attack is telegraphed on the floor.</small></button>
-        <button data-mode="hard" class="${raidMode === 'hard' ? 'on' : ''}"><b>Hard</b><small>Faster, deadlier, and some attacks only show on the boss.</small></button>
+        <button data-mode="hard" class="${raidMode === 'hard' ? 'on' : ''}"><b>Hard</b><small>Faster and deadlier, with attacks Normal never uses. Some only show on the boss.</small></button>
       </div>
       <label class="fill"><input type="checkbox" ${raidFill ? 'checked' : ''} ${Net.isHost ? '' : 'disabled'}> Fill empty slots with bots</label>
       <div class="raid-roster">${humans.map(h => `<span style="--c:${ROLES[h.role].color}">${escapeHtml(h.name)}<small>${CLASSES.find(c => c.id === h.cls).name}</small></span>`).join('')}${
@@ -2399,6 +2426,7 @@
     // where they cast from goes into their track like any position update (snapping here would fight the smoothing)
     if (!e.bot) { e.tx = msg.x; e.ty = msg.y; if (e.track) e.track.push(e.clock ? e.clock.map(msg.c, now) : now, msg.x, msg.y, e.track.latest().a); }
     if (msg.i === 6) { e.dashUntil = now + 0.2; VFX.setScale(0.6); KIT_VFX.dash(e, e.cls.accent); VFX.setScale(1); return; }
+    // a move a talent granted (msg.a names it) looks like itself, not the move it replaced
     const ab = (msg.a && abilityById(e.cls.id, e.spec, msg.a)) || kitFor(e.cls.id, e.spec).abilities[msg.i];
     if (!ab) return;
     let tx = msg.tx, ty = msg.ty, tent = null;
@@ -2409,7 +2437,7 @@
   Net.on('kfx', msg => {
     const e = msg.id >= 1000 ? (raid && raid.bots.get(msg.id)) : remotes.get(msg.id);
     if (!e || (msg.s ? 1 : 0) !== (scene === 'arena' ? 1 : 0)) return;
-    playKitFx(e, msg.k, false, msg.d);
+    playKitFx(e, msg.k, false, msg.d && typeof msg.d === 'object' ? msg.d : null);
   });
   Net.on('castStart', msg => {
     const e = msg.id >= 1000 ? (raid && raid.bots.get(msg.id)) : remotes.get(msg.id);

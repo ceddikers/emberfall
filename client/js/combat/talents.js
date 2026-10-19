@@ -275,7 +275,7 @@ const TALENTS = {
 
 // ======================================================================= ADVANCED CLASSES (Thermist, Driftblade)
 // These trees are mostly new behaviour, not bigger numbers: new triggers, moves that now move you, and two talents
-// per class (rows III and V) that put a whole new move on a key (TALENT_ABILITIES in kits.js).
+// per class (rows III and V) that put a whole new move on a key (grants: true; the move is in TALENT_ABILITIES in kits.js).
 Object.assign(TALENTS, {
   thermist: [
     [
@@ -289,7 +289,7 @@ Object.assign(TALENTS, {
       { id: 'thermist_skin', name: 'Thermal Skin', ab: 'invert', text: 'Every Thermal Shock now also wraps you in a shield worth part of its strength.' },
     ],
     [
-      { id: 'thermist_thermocline', name: 'Thermocline', ab: 'cinder', text: 'New move on Q, in place of Cinder Bolt. Thermocline: instant, swings the dial 2 steps toward the other side and counts as that element. It hits harder the further from 0 you started.', spec: { pendulum: 'New move on Q, in place of Cinder Bolt. Thermocline: instant, swings the dial 3 steps toward the other side and counts as that element. It hits harder the further from 0 you started.' } },
+      { id: 'thermist_thermocline', name: 'Thermocline', ab: 'cinder', grants: true, text: 'New move on Q, in place of Cinder Bolt. Thermocline: instant, swings the dial 2 steps toward the other side and counts as that element. It hits harder the further from 0 you started.', spec: { pendulum: 'New move on Q, in place of Cinder Bolt. Thermocline: instant, swings the dial 3 steps toward the other side and counts as that element. It hits harder the further from 0 you started.' } },
       { id: 'thermist_latent', name: 'Latent Heat', ab: 'flare', text: 'Overloading no longer locks or burns you: the extra heat is banked instead, and your next Thermal Shock releases it half again as strong.', spec: { zenith: 'A meltdown no longer burns you or locks an element: the dial still snaps to 0, and your next Thermal Shock is half again as strong.' } },
       { id: 'thermist_rebound', name: 'Rebound', ab: 'lance', text: 'After a Thermal Shock, your next spell is now instant (within 10s).' },
     ],
@@ -299,7 +299,7 @@ Object.assign(TALENTS, {
       { id: 'thermist_solstice', name: 'Solstice', ab: 'invert', text: 'Inversion now flips the dial back 5s later: a smaller Shock if it\'s still far enough from 0.' },
     ],
     [
-      { id: 'thermist_zero', name: 'Absolute Zero', ab: 'rime', text: 'New move on W, in place of Rime Shard. Absolute Zero: a 2s cast on a 45s cooldown that plunges the dial straight to -5, wherever it was. It hits harder the further it fell.' },
+      { id: 'thermist_zero', name: 'Absolute Zero', ab: 'rime', grants: true, text: 'New move on W, in place of Rime Shard. Absolute Zero: a 2s cast on a 45s cooldown that plunges the dial straight to -5, wherever it was. It hits harder the further it fell.' },
       { id: 'thermist_conduct', name: 'Conduction', ab: 'invert', text: 'Thermal Shock now arcs: a second, smaller Shock strikes the target 1s later.' },
       { id: 'thermist_twin', name: 'Twin Stars', ab: 'flare', text: 'A Flare or Glacier Lance cast at its own edge now fires a second, smaller bolt after it.', spec: { zenith: 'A Flare or Glacier Lance cast in Redline now fires a second, smaller bolt after it.' } },
     ],
@@ -317,7 +317,7 @@ Object.assign(TALENTS, {
       { id: 'driftblade_sidestep', name: 'Sidestep', ab: 'hook', text: 'Hook Turn now also makes you take 30% less damage for 2s.' },
     ],
     [
-      { id: 'driftblade_gyre', name: 'Gyre', ab: 'hook', text: 'New move on E, in place of Hook Turn. Gyre: loop once round your target, one cut for every 25 Drift you have (up to 4). It spends nothing and adds 10 Drift. Two charges.' },
+      { id: 'driftblade_gyre', name: 'Gyre', ab: 'hook', grants: true, text: 'New move on E, in place of Hook Turn. Gyre: loop once round your target, one cut for every 25 Drift you have (up to 4). It spends nothing and adds 10 Drift. Two charges.' },
       { id: 'driftblade_second', name: 'Second Wind', ab: 'cross', text: 'A Crosswind that spends 80 Drift or more now gives 10 back.', spec: { comet: 'An Impact that spends 160 Drift or more now gives 20 back.' } },
       { id: 'driftblade_hover', name: 'Hover', ab: 'still', text: 'Your Drift no longer drains in the first 1.5s you stand still.' },
     ],
@@ -327,12 +327,52 @@ Object.assign(TALENTS, {
       { id: 'driftblade_hurricane', name: 'Hurricane', ab: 'gale', text: 'During Gale Run, each Passing Strike now makes it last 1s longer (up to 6s).' },
     ],
     [
-      { id: 'driftblade_tailspin', name: 'Tailspin', ab: 'still', text: 'New move on D, in place of Stillpoint. Tailspin: whirl in place, parrying like Stillpoint and cutting the nearest enemy three times, then spring 150 px the way you\'re heading.' },
+      { id: 'driftblade_tailspin', name: 'Tailspin', ab: 'still', grants: true, text: 'New move on D, in place of Stillpoint. Tailspin: whirl in place, parrying like Stillpoint and cutting the nearest enemy three times, then spring 150 px the way you\'re heading.' },
       { id: 'driftblade_razor', name: 'Razor Wind', ab: 'carve', text: 'Passing Strikes now leave a cut that bleeds for 6s, deeper with each pass (up to 3).' },
       { id: 'driftblade_after', name: 'Afterimage', ab: 'hook', text: 'Hook Turn now leaves an afterimage that cuts the target again a second later.' },
     ],
   ],
 });
+
+// ======================================================================= ALEMBIST (classes-b)
+// Mostly new behaviour, not bigger numbers. Two talents grant a whole new move (`grants`; the move is in TALENT_ABILITIES in
+// kits.js and takes the slot named in its `replaces`): Grand Blend (row III) and Quicksilver (row V).
+TALENTS.alembist = [
+  [
+    { id: 'alembist_ricochet', name: 'Ricochet', ab: 'throw', text: 'Once every 15s, a Fire Bomb now bounces off its target and bursts again a second later, a quarter as strong.' },
+    { id: 'alembist_scorch', name: 'Scorch', ab: 'throw', text: 'A Fire Bomb now leaves its target scorched for 10s: every heal vial you land in that time also flicks a spark into it.' },
+    { id: 'alembist_kindle', name: 'Kindling', ab: 'ember', text: 'Starting a brew with Ember now flicks an ember at your target.' },
+  ],
+  [
+    { id: 'alembist_flask', name: 'Flask Armour', ab: 'batch', text: 'While your bandolier is full, you take 10% less damage.' },
+    { id: 'alembist_cling', name: 'Clinging Steam', ab: 'throw', text: 'Steam clouds now follow the ally they landed on.' },
+    { id: 'alembist_spill', name: 'Spill', ab: 'throw', text: 'A vial that spoils now spills at your feet at half strength instead of going to waste.',
+      spec: { volatile: 'A vial whose fuse runs out now goes off at full strength, and a bomb no longer burns you.' } },
+  ],
+  [
+    { id: 'alembist_blend', name: 'Grand Blend', ab: 'batch', grants: true,
+      text: 'Grand Batch becomes Grand Blend (90s): pour every vial in your bandolier into one. Thrown, it does all of their effects at once, each at 80%.' },
+    { id: 'alembist_cask', name: 'Oak Cask', ab: 'throw', text: 'Ripe vials now keep ripening, up to 50% stronger at 25s, but spoil at 30s.',
+      spec: { volatile: 'Your fuses burn 2s longer, and a vial keeps heating until it goes off, up to 45% stronger.' } },
+    { id: 'alembist_echo', name: 'Mother Liquor', ab: 'dew', text: 'Brewing the same recipe twice in a row makes the second vial ripen half again as fast.',
+      spec: { volatile: 'Brewing the same recipe twice in a row makes the second vial heat up half again as fast.' } },
+  ],
+  [
+    { id: 'alembist_flash', name: 'Flash Distill', ab: 'distill', text: 'Distill now also drops a copy of your last vial into the bandolier.',
+      spec: { volatile: 'Catalyst now also drops a copy of your last vial into the bandolier (once every 20s).' } },
+    { id: 'alembist_reserve', name: 'Grand Reserve', ab: 'batch', text: 'Grand Batch\'s copies start fully ripe and never spoil. A Grand Blend keeps every effect at full strength.',
+      spec: { volatile: 'Grand Batch\'s copies start fully heated with 10s fuses. A Grand Blend keeps every effect at full strength.' } },
+    { id: 'alembist_fume', name: 'Fume Hood', ab: 'distill', text: 'Distill now also clears the air: the whole party takes 10% less damage for 8s.',
+      spec: { volatile: 'Catalyst now also clears the air: the whole party takes 10% less damage for 8s (once every 30s).' } },
+  ],
+  [
+    { id: 'alembist_quicksilver', name: 'Quicksilver', ab: 'salt', grants: true,
+      text: 'Salt becomes Quicksilver, with recipes of its own: Quicksilver twice is a Silver Mirror (a pool that keeps everyone in it shielded), with Dew a Silver Tonic (a heal that is stronger the more hurt they are), with Ember a Fulminate (a bomb that goes off twice).',
+      spec: { volatile: 'Salt becomes Quicksilver, with recipes of its own: Quicksilver twice is a Silver Mirror (a pool that keeps everyone in it shielded), with Dew a Silver Tonic (a heal that is stronger the more hurt they are), with Ember a Fulminate (a bomb that goes off twice). It counts as Salt in Reactions.' } },
+    { id: 'alembist_chain', name: 'Chain Splash', ab: 'throw', text: 'Every splash heal now leaps on to the most hurt ally and splashes there too, at half strength.' },
+    { id: 'alembist_residue', name: 'Residue', ab: 'throw', text: 'Every vial that breaks on an ally now leaves a puddle that heals whoever stands in it for 6s.' },
+  ],
+];
 
 // id -> { cls, row, col, t }
 const TALENT_BY_ID = {};

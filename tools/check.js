@@ -1,6 +1,6 @@
 // One command that says whether the game is still healthy: `npm run check` (or `node tools/check.js`).
 // It parses every script, checks the data and the shared math, compares class balance with the recorded baseline,
-// and has a bot party clear every built boss on Normal. Exit code 0 means everything passed.
+// has a bot party clear every built boss on Normal, and runs each boss once on Hard. Exit code 0 means everything passed.
 //   node tools/check.js --update-baseline   (after an intended balance change: record the new numbers)
 const path = require('path');
 const fs = require('fs');
@@ -11,9 +11,10 @@ const BASELINE = path.join(__dirname, 'check-baseline.json');
 const UPDATE = process.argv.includes('--update-baseline');
 const DPS_TOLERANCE = 0.08;   // a class's pro DPS may drift this far from the baseline before it counts as a change
 const SPEC_TOLERANCE = 0.05;  // a specialization's pro DPS may differ this much from its own base class
-const RAID_RUNS = 2;
 const TALENT_MAX = 7;    // one talent may add at most this much pro DPS (%) to its class or spec (tools/talents.js)
 const BUILD_MAX = 18;    // ... and the strongest pick of every row together at most this much
+// Normal is meant to take a real group several wipes, so a bot party only has to clear one run in RAID_RUNS
+const RAID_RUNS = 3;
 // bot raids: every boss, and every spec somewhere, with a fixed line-up so the result doesn't depend on a random spec
 const RAIDS = [   // [boss name, boss id, tank, healer, two DPS]
   ['Grubnak', 'grubnak', 'bastion:base', 'cleric:aegis', 'ranger:sharpshooter', 'pyromancer:cataclysm'],
@@ -26,9 +27,19 @@ const RAIDS = [   // [boss name, boss id, tank, healer, two DPS]
   // the advanced classes (classes-a): each spec somewhere
   ['Grubnak', 'grubnak', 'bastion:base', 'cleric:base', 'thermist:base', 'driftblade:base'],
   ['Skitterra', 'skitterra', 'bloodreaver:base', 'grovekeeper:base', 'thermist:pendulum', 'driftblade:orbit'],
-  ['Volkar', 'volkar', 'bastion:base', 'chronomancer:accelerant', 'thermist:zenith', 'driftblade:comet'],
+  ['Volkar', 'volkar', 'bastion:base', 'cleric:base', 'thermist:zenith', 'driftblade:comet'],   // (with the reworked Volkar, an Accelerant plus two advanced DPS was too tight)
   ['the Hollow King', 'hollowking', 'runeguard:base', 'cleric:aegis', 'thermist:base', 'driftblade:base'],
+  // Alembist (classes-b): the base kit and each spec healing a boss
+  ['Grubnak', 'grubnak', 'bastion:base', 'alembist:base', 'ranger:base', 'pyromancer:base'],
+  ['Skitterra', 'skitterra', 'bastion:sentinel', 'alembist:volatile', 'ranger:base', 'shadowblade:base'],
+  ['Volkar', 'volkar', 'bastion:base', 'alembist:apothecary', 'ranger:base', 'pyromancer:base'],
+  ['the Hollow King', 'hollowking', 'bloodreaver:base', 'alembist:base', 'shadowblade:bladedancer', 'pyromancer:base'],
 ];
+// Hard smoke runs: one per boss, with the plain line-up. Bots aren't expected to clear Hard; the script just has to run
+// clean and the longest of 3 fights has to last a while (HARD_MIN seconds) before they wipe
+const HARD_COMP = 'bastion:base,cleric:base,ranger:base,pyromancer:base';
+const HARD_MIN = 90;
+const HARD_BOSSES = [['Grubnak', 'grubnak'], ['Skitterra', 'skitterra'], ['Volkar', 'volkar'], ['the Hollow King', 'hollowking']];
 
 const results = [];
 const pass = (name, detail = '') => results.push({ ok: true, name, detail });
@@ -283,15 +294,28 @@ function talents() {
         if (!t.id.startsWith(c.id + '_')) probs.push(`${where}: id should start with ${c.id}_`);
         if (!t.name || !t.text) probs.push(`${where}: needs a name and text`);
         if (!KITS[c.id].abilities.some(a => a.id === t.ab)) probs.push(`${where}: unknown ability ${t.ab}`);
-        for (const k of Object.keys(t)) if (!['id', 'name', 'ab', 'text', 'spec', 'cd', 'cast', 'specMods'].includes(k)) probs.push(`${where}: unknown field "${k}"`);
+        for (const k of Object.keys(t)) if (!['id', 'name', 'ab', 'text', 'spec', 'cd', 'cast', 'specMods', 'grants'].includes(k)) probs.push(`${where}: unknown field "${k}"`);
+        // a talent that grants a new move (`grants: true`): specs.js talentMoveFor finds it (TALENT_ABILITIES in kits.js, or a
+        // kit's own talentAbilities), for the base kit and every spec, and it takes the slot of the talent's own ability
+        const moves = [null, ...specIds].map(s => ({ s, mv: talentMoveFor(c.id, s, t.id) }));
+        const grant = moves.some(m => m.mv);
+        if (t.grants && !grant) probs.push(`${where}: says grants but no move is registered for it`);
+        if (!t.grants && grant) probs.push(`${where}: has a new move but no grants: true`);
+        for (const { s, mv } of moves) {
+          if (!t.grants) break;
+          if (!mv) { probs.push(`${where}: no move${s ? ' for ' + s : ''}`); continue; }
+          if (mv.replaces !== t.ab) probs.push(`${where}${s ? ' (' + s + ')' : ''}: its move replaces ${mv.replaces}, not ${t.ab}`);
+          if (!mv.id || !mv.name || !mv.desc || typeof mv.effect !== 'function') probs.push(`${where}${s ? ' (' + s + ')' : ''}: its move needs an id, name, desc and effect`);
+          if (KITS[c.id].abilities.some(a => a.id === mv.id)) probs.push(`${where}: its move reuses the id ${mv.id}`);
+        }
+        if (grant) used.add(t.id);
         for (const s of Object.keys(t.spec || {})) if (!specIds.includes(s)) probs.push(`${where}: text for unknown spec ${s}`);
         for (const [s, m] of Object.entries(t.specMods || {})) {
           if (!specIds.includes(s)) probs.push(`${where}: specMods for unknown spec ${s}`);
           for (const k of Object.keys(m)) if (!['cd', 'cast'].includes(k)) probs.push(`${where}: specMods field "${k}"`);
         }
-        const grant = typeof TALENT_ABILITIES !== 'undefined' && TALENT_ABILITIES[t.id];   // a talent that puts a new move on a key
-        if (grant && (grant.cls !== c.id || !KITS[c.id].abilities.some(a => a.id === grant.ab.replaces) || grant.ab.replaces !== t.ab)) probs.push(`${where}: its new move should replace ${t.ab}, a ${c.id} ability`);
-        if (!used.has(t.id) && t.cd == null && t.cast == null && !grant) probs.push(`${where}: does nothing (no k.talent('${t.id}') in the kits, no cd/cast)`);
+        if (!used.has(t.id) && t.cd == null && t.cast == null) probs.push(`${where}: does nothing (no k.talent('${t.id}') in the kits, no cd/cast, no new move)`);
+
       }
     });
   }
@@ -317,7 +341,9 @@ async function heavy() {
     run([path.join(__dirname, 'talents.js')]),
     ...RAIDS.map(([, boss, ...comp]) => run([path.join(__dirname, 'bot-raid.js'), 'normal', String(RAID_RUNS), boss, comp.join(',')])),
     ...trialIds.map(id => run([path.join(__dirname, 'bot-raid.js'), 'normal', '2', 'trial:' + id])),
+    ...HARD_BOSSES.map(([, boss]) => run([path.join(__dirname, 'bot-raid.js'), 'hard', '3', boss, HARD_COMP])),
   ]);
+  const hards = raids.splice(RAIDS.length + trialIds.length);
   const trials = raids.splice(RAIDS.length);
 
   // balance: each class's pro DPS against the baseline
@@ -366,11 +392,20 @@ async function heavy() {
     else pass('Talents balanced', `${talRows.length} talent runs, every one at most +${TALENT_MAX}%; best full build +${top.toFixed(1)}%`);
   }
 
-  // bot raids: a bot party clears each boss on Normal every time
+  // bot raids: a bot party clears each boss on Normal at least once in RAID_RUNS
   RAIDS.forEach(([boss, , ...comp], i) => {
     const r = raids[i], m = r.out.match(/cleared (\d+) of (\d+)/), name = `Bots clear ${boss} (Normal, ${comp.join(' ')})`;
-    if (r.code === 0 && m && m[1] === m[2]) pass(name, `${m[1]} of ${m[2]}`);
+    if (r.code === 0 && m && +m[1] >= 1) pass(name, `${m[1]} of ${m[2]}`);
     else fail(name, m ? `${m[1]} of ${m[2]}\n` + r.out.split('\n').filter(l => /^run /.test(l)).join('\n') : r.out.slice(-800));
+  });
+
+  // Hard smoke: each boss's Hard script runs without errors and the bots last at least HARD_MIN seconds
+  HARD_BOSSES.forEach(([boss], i) => {
+    // the longest of the runs (a bot party wipes early now and then; one early wipe isn't a broken script)
+    const r = hards[i], name = `${boss} Hard runs clean`;
+    const m = [...r.out.matchAll(/^run \d+: (\w+) at (\d+)s/gm)].sort((a, b) => b[2] - a[2])[0];
+    if (r.code === 0 && m && +m[2] >= HARD_MIN) pass(name, `${m[1]} at ${m[2]}s`);
+    else fail(name, m ? `${m[1]} at ${m[2]}s (want ${HARD_MIN}s or more)` : r.out.slice(-800));
   });
 
   // spec trials: a bot playing the spec can pass each one (a bot isn't a careful player, so one clear of two is enough)

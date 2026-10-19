@@ -39,6 +39,9 @@ class CombatActor {
       defaultLink: () => world.defaultLink(actor),
       refundDash: () => actor.refundDash(world.now()),            // a kit giving back a dash charge (Driftblade's Hook Turn)
       emit: ev => world.onEvent(actor, ev),
+      // hidden recipes this hero has found, and finding a new one (the Volatile's Reactions); null: knows them all (bots)
+      known: () => (world.known ? world.known(actor) : null),
+      discover: id => { if (world.discover) world.discover(actor, id); },
     });
   }
   refundDash(now) {

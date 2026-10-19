@@ -65,8 +65,15 @@ Second pass, 2026-10-19: the first sheet read as AI art. These briefs aim for a 
 
 These two have no spec portraits yet, so the base portrait comes first and sets the face. Paint these before their spec portraits (`spec-icons.md`) and use them as the reference there. Until a file arrives the game shows the animated sprite (data.js `art.portraits: false`; flip it to `true` when the file is in).
 
-10. **Thermist (Living Thermometer).** Accent: rose, with frost blue and ember orange.
+11. **Thermist (Living Thermometer).** Accent: rose, with frost blue and ember orange.
    A woman in her early thirties with a long, thoughtful face, light olive skin, a small burn scar on her right wrist and grey eyes. Her **silver-white hair** is cut to the jaw at the front and tied at the back in a short tail with **one red and one blue cord**. She wears a plum-charcoal robe with a high collar, its trim **split down the middle: icy blue on her left side, ember orange on her right**. Her **left hand and forearm are frosted to the elbow** (pale blue skin, a few flat ice shards on the sleeve), and a **small flame sits in her open right palm**, so one side of her face is lit warm and the other cool. A small brass dial hangs from a chain at her collar. Dry, amused, a little tired, like someone checking a recipe she knows by heart. Rose-plum background, the graphic shape behind the head a flat circle split into a blue half and an orange half.
 
-11. **Driftblade (Wind Duellist).** Accent: jade.
+12. **Driftblade (Wind Duellist).** Accent: jade.
    A lean man in his mid-twenties with tanned skin, a narrow face, a chipped front tooth and quick dark eyes. His **dark hair is swept back into a high tail**, with a few strands blown loose across his forehead. He wears a fitted slate-blue duelling coat with a high collar and a jade sash, and a **very long jade ribbon scarf** wound once round his neck, its loose end streaming out of frame to one side as if he has just stopped running. The **curved sabre** rests on his shoulder, its back edge to his neck, one hard white highlight along the curve. A loose, cheerful grin, mid-breath. Pale jade background with a few bold diagonal wind bands behind the head.
+
+## New healer: Alembist (2026-10)
+
+No spec portraits exist yet, so this one sets the character; paint it first and use it as the reference for `alembist-apothecary` and `alembist-volatile` (`spec-icons.md`). Until it arrives the game shows the animated sprite.
+
+10. **Alembist (Alchemist).** Accent: copper orange.
+   A wiry woman in her late twenties with light olive skin, a sharp nose with a small burn scar on its bridge, quick hazel eyes and thick auburn hair twisted up into a messy bun, held with a **glass stirring rod pushed through it**. **Brass goggles with round amber lenses** sit pushed up on her forehead. She wears a high-collared olive work coat with rolled sleeves over a stained canvas apron, and a **leather bandolier of corked glass vials** (red, blue, white) slants across her chest. One hand holds a small corked vial up to the light, half full of a flat red liquid, and she squints at it with one eyebrow cocked, a crooked, satisfied half-smile. The copper neck of a **small still** pokes over one shoulder with a single curl of flat white steam. Warm copper-orange background with a pale round flask shape behind the head.

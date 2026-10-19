@@ -51,6 +51,10 @@ const CLASS_GEAR = {
   chronomancer: { wtype: 'hourglass', w: ["Recruit's Chronoglass", 'Kitchen Timer Chronoglass', 'Eightfold Hourglass', 'Storm-Eye Hourglass', 'Moonset Hourglass'], a: ['Simmering Moment Robes', 'Silken Second Robes', 'Robes of the Still Moment', 'Robes of the Final Hour'] },
 };
 
+// Alembist (classes-b): a retort for a weapon, work coats for armour
+CLASS_MAIN.alembist = 'mag';
+CLASS_GEAR.alembist = { wtype: 'retort', w: ["Recruit's Retort", 'Stockpot Retort', 'Venomglass Retort', 'Stormcatcher Retort', 'Barrow-Lamp Retort'], a: ['Grease-Spattered Apron', 'Silk-Lined Lab Coat', 'Oilskin Coat of the Summit', 'Gravedust Smock'] };
+
 // Enhancements: class drops that change how an ability works (the kits check k.perk(itemKey)).
 // ab: the ability it changes (its tooltip shows the enhancement while the item is equipped).
 const ITEM_PERKS = {
@@ -102,6 +106,14 @@ const ITEM_PERKS = {
   grovekeeper_a4: { ab: 'thorn', text: 'Thornlash also grows 5 Bloom.' },
   chronomancer_a4: { ab: 'rewind', text: 'Rewind reaches back 6 seconds instead of 4.' },
 };
+// Alembist (classes-b): one per drop, like every class (Grubnak w1, Skitterra a2 + w2, Volkar w3, the Hollow King a4)
+Object.assign(ITEM_PERKS, {
+  alembist_w1: { ab: 'dew', text: 'A Mending Draught splashes 20% wider.' },
+  alembist_a2: { ab: 'salt', text: 'A Salt Ward lasts 2s longer.' },
+  alembist_w2: { ab: 'ember', text: 'A Fire Bomb also leaves the enemy burning for 6s.' },
+  alembist_w3: { ab: 'batch', text: 'Grand Batch also brings Distill back.' },
+  alembist_a4: { ab: 'distill', text: 'Distill also makes the next vial you brew start fully ripe.' },
+});
 
 // ---------------------------------------------------------------- advanced classes: Thermist and Driftblade
 // Their class gear follows the same pattern as everyone's: a Common Recruit weapon, Legendary enhanced pieces and Rare

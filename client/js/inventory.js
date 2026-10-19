@@ -243,6 +243,16 @@ const Inventory = (() => {
           shape(() => c.arc(0, -19, 4.5, 0, Math.PI * 2), '#b8ff9a', 1.5);
         }
         break;
+      case 'retort': {   // Alembist: a glass retort with a copper collar, its long neck bent down, a coloured mix inside
+        c.rotate(-0.2);
+        c.fillStyle = rgba(accent || '#d08a3a', 0.3); c.beginPath(); c.arc(-4, 6, 20, 0, Math.PI * 2); c.fill();
+        stroke(() => { c.moveTo(4, -6); c.quadraticCurveTo(14, -22, 24, -12); }, '#cfe6ee', 4);
+        shape(() => c.arc(-4, 6, 14, 0, Math.PI * 2), rgba('#dff6ff', 0.5));
+        c.save(); c.beginPath(); c.arc(-4, 6, 13, 0, Math.PI * 2); c.clip(); c.fillStyle = ['#4fe0c0', '#ff5a1a', '#f4ecd2', '#ffd23a', '#9fe8ff'][it.tier] || '#4fe0c0'; c.fillRect(-20, 6, 32, 16); c.restore();
+        shape(() => c.rect(-1, -10, 9, 6), '#b8743a', 1.8);
+        c.fillStyle = 'rgba(255,255,255,0.6)'; c.beginPath(); c.ellipse(-9, 0, 2.5, 5, 0.4, 0, Math.PI * 2); c.fill();
+        break;
+      }
       case 'hourglass': case 'wand':
         if (it.wtype === 'wand') {
           c.rotate(-Math.PI / 4);

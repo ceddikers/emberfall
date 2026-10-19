@@ -677,6 +677,51 @@ const SPECS = {
   ],
 };
 
+// ======================================================================= ALEMBIST (healer, added with classes-b)
+SPECS.alembist = [
+  {
+    id: 'apothecary', name: 'Apothecary', title: 'The Prepared Hand', accent: '#d8b070',
+    gaugeTip: 'Five slots. Vials ripen to full strength in 5s and spoil after 40s. Shift+R moves which vial Throw takes along the bandolier.',
+    blurb: 'Every shelf labelled, every cure ready before the wound. The planner\'s healer.',
+    focus: 'Planning. A deep bandolier that ripens fast, and Throw takes whichever vial you pick, so the right cure is always at hand.',
+    passive: { name: 'Well-Stocked', desc: 'Your bandolier holds 5 vials, and they ripen in 5s instead of 10s. Throw can take any vial: Shift+R moves the pick along the bandolier.' },
+    build: base => ({
+      potMult: base.potMult * 0.83,
+      alem: { slots: 5, ripe: 5, spoil: 40, pick: true },
+      gauge: Object.assign({}, base.gauge, { max: 5 }),
+      abilities: {
+        throw: { desc: 'Throw the picked vial (the oldest, unless Shift+R moved the pick) at your heal target: it shatters and splashes everyone close by. A bomb flies at the enemy instead. Vials ripen 30% stronger over 5s, and spoil after 40s.' },
+      },
+    }),
+  },
+  {
+    id: 'volatile', name: 'Volatile', title: 'The Unstable Mix', accent: '#ff8a3a',
+    gaugeTip: 'Every vial heats up to full strength in 4s, and its fuse burns out at 6s: still in the bandolier, it goes off on you at 60%. Catalyst makes the next brew take three reagents.',
+    blurb: 'Nothing in the bandolier stays quiet for long. Some mixtures do things no book admits to.',
+    focus: 'Reactions. Three-reagent brews make stronger, stranger vials you find by experimenting, but every vial is on a short fuse.',
+    passive: { name: 'Short Fuse', desc: 'Every vial heats up to full strength in 4s and has a 6s fuse: if it\'s still in your bandolier when the fuse runs out, it goes off on you, weaker, and a bomb burns you. Distill becomes Catalyst.' },
+    build: base => ({
+      potMult: base.potMult * 0.76,
+      alem: { slots: 3, fuse: 6, heat: 4 },
+      abilities: {
+        throw: { desc: 'Throw your oldest vial at your heal target: it shatters and splashes everyone close by. A bomb flies at the enemy instead. Vials heat up 30% stronger over 4s, and go off on you when their 6s fuse runs out.' },
+        distill: {
+          id: 'catalyst', replaces: 'distill', icon: 'distill', name: 'Catalyst', type: 'ogcd', target: 'self', cd: 14, charges: 2, anim: 'cast', lock: 0.3,
+          get desc() { return `Your next brew takes three reagents. Three that make a Reaction brew it; three that don't, fizzle back to the first two.<div class="alem-book">${alemBook(alemSavedKnown(), true)}</div>`; },
+          usable: k => !k.has('catalyst'),
+          effect(k) {
+            k.buff('catalyst', 20);
+            if (k.perk('alembist_a4')) k.g.ripeNext = true;
+            if (k.talent('alembist_flash') && k.g.last && k.now >= (k.g.flashAt || 0)) { k.g.flashAt = k.now + 20; alemAdd(k, k.g.last, { copy: true }); }
+            if (k.talent('alembist_fume') && k.now >= (k.g.fumeAt || 0)) { k.g.fumeAt = k.now + 30; k.mitigate('party', 0.1, 8, { ab: this }); }
+          },
+          fx: { color: '#ff8a3a' },
+        },
+      },
+    }),
+  },
+];
+
 // Judgment (Inquisitor): the boss carries n charges; each ally hit bursts one for this much damage (the host
 // credits it to the Inquisitor). The burst's strength is worked out here so gear and the balance knob count.
 function specBrand(k, n, ab) {
@@ -690,10 +735,15 @@ function specOf(classId, specId) { return (SPECS[classId] || []).find(s => s.id 
 // talents (the third argument: a Set of held talent ids) can grant whole new moves: TALENT_ABILITIES in kits.js maps a
 // talent to the move it puts in a slot (`replaces` names the base ability it takes over, as a spec's replacement does),
 // with an optional per-spec version. The kit then plays that move in that slot, over the spec's own version.
+// The one place a talent's new move is looked up. Two ways to declare one, read the same:
+//   TALENT_ABILITIES[talentId] = { cls, ab, spec?: { specId: ab } }   (kits.js; the main registry)
+//   KITS[classId].talentAbilities[talentId] = ab                       (on the kit itself; a spec's build may override it)
+// Either way the move names the slot it takes (`replaces`), and the talent in talents.js says `grants: true`.
 function talentMoveFor(classId, specId, talentId) {
   const g = typeof TALENT_ABILITIES !== 'undefined' && TALENT_ABILITIES[talentId];
-  if (!g || g.cls !== classId) return null;
-  return (g.spec && specId && g.spec[specId]) || g.ab;
+  if (g && g.cls === classId) return (g.spec && specId && g.spec[specId]) || g.ab;
+  const k = specKit(classId, specId), ta = k && k.talentAbilities;
+  return (ta && ta[talentId]) || null;
 }
 function kitFor(classId, specId, talents) {
   const kit = specKit(classId, specId);
@@ -714,7 +764,8 @@ function abilityById(classId, specId, id) {
   const k = specKit(classId, specId);
   const own = k && k.abilities.find(a => a.id === id);
   if (own || typeof TALENT_ABILITIES === 'undefined') return own || null;
-  for (const tid of Object.keys(TALENT_ABILITIES)) { const m = talentMoveFor(classId, specId, tid); if (m && m.id === id) return m; }
+  const k2 = specKit(classId, specId), tids = [...Object.keys(TALENT_ABILITIES), ...Object.keys((k2 && k2.talentAbilities) || {})];
+  for (const tid of tids) { const m = talentMoveFor(classId, specId, tid); if (m && m.id === id) return m; }
   return null;
 }
 function specKit(classId, specId) {
@@ -727,7 +778,9 @@ function specKit(classId, specId) {
     const o = ch.abilities && ch.abilities[ab.id];
     if (!o) return ab;
     // a full replacement names the ability it replaces; otherwise it's a change to the base ability
-    return o.replaces ? Object.assign({}, o) : Object.assign({}, ab, o);
+    // (copied with their getters intact: a description can be live, like the Volatile's sealed Reactions)
+    const copy = (...src) => src.reduce((to, s) => Object.defineProperties(to, Object.getOwnPropertyDescriptors(s)), {});
+    return o.replaces ? copy(o) : copy(ab, o);
   });
   const kit = Object.assign({}, base, ch, { abilities, spec: spec.id });
   if (spec.gauge) kit.gauge = Object.assign({}, base.gauge, spec.gauge);
@@ -737,7 +790,7 @@ function specKit(classId, specId) {
 // the icon an ability wears (a new spec ability borrows one until its own is painted)
 const abilityIconId = ab => ab.icon || ab.id;
 
-if (typeof module !== 'undefined') module.exports = { SPECS, specOf, kitFor, abilityById, abilityIconId };
+if (typeof module !== 'undefined') module.exports = { SPECS, specOf, kitFor, abilityById, abilityIconId, talentMoveFor };
 
 // ===================================================================================================================
 // ADVANCED CLASSES: the Thermist's and the Driftblade's specs (their kits are at the end of kits.js)

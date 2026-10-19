@@ -915,10 +915,314 @@ const tauntAbility = classId => {
 // CSS background for the taunt's icon: its own painting once it exists, the borrowed icon underneath until then
 const tauntIconBg = classId => `url(icons/${classId}/taunt.png), url(icons/${classId}/${(TAUNT[classId] || {}).icon}.png)`;
 
+// ======================================================================= ALEMBIST (healer, added with classes-b)
+// Brewed before it's needed. Three reagents on Q W E: two quick presses brew a vial into the bandolier, and R throws
+// one at your heal target (a bomb flies at the enemy instead). Vials ripen (+30% over 10s), then spoil at 40s.
+// The bandolier's rules live in k.def.alem, which the specs change: Apothecary { slots 5, ripe 5, pick }, Volatile
+// { fuse 6, heat 4 } (every vial heats up fast and goes off wherever it is) with Catalyst for three-reagent Reactions.
+// A thrown vial is a `splash` event: the host finds who stands within r of the ally it lands on (fight.js), and a
+// lingering cloud or ward is a floor pool there. The look of a throw rides on k.fx('vial', data) to every client.
+const ALEMBIC = {
+  FLIGHT: 0.4,      // seconds from the throw to the shatter
+  GROW: 0.3,        // a fully ripe (or fully heated) vial is 30% stronger
+  RAISE_CD: 30,     // a Mending Draught raises a fallen ally it lands on, once every 30s
+  reagents: {
+    E: { name: 'Ember', color: '#ff7a2a' }, D: { name: 'Dew', color: '#4fc8ff' },
+    S: { name: 'Salt', color: '#efe6cf' }, Q: { name: 'Quicksilver', color: '#c9d4e6' },
+  },
+  // two-reagent recipes, keyed by their reagents in sorted order. kind: heal | bomb | ward | salve | quick
+  recipes: {
+    DD: { name: 'Mending Draught', color: '#4fe0c0', glyph: 'plus', kind: 'heal', text: 'a big splash heal. It raises a fallen ally it lands on (once every 30s).' },
+    EE: { name: 'Fire Bomb', color: '#ff5a1a', glyph: 'flame', kind: 'bomb', text: 'flies at the enemy: a heavy hit and a short burn.' },
+    SS: { name: 'Salt Ward', color: '#f4ecd2', glyph: 'ward', kind: 'ward', text: 'a circle of salt: allies inside take 20% less damage for 6s.' },
+    DE: { name: 'Steam', color: '#bfe8ec', glyph: 'cloud', kind: 'heal', text: 'a healing cloud: everyone inside heals every 1.5s for 9s.' },
+    DS: { name: 'Salve', color: '#7ff0a8', glyph: 'drop', kind: 'salve', text: 'shields everyone it splashes and washes off Vulnerability and Damage Down.' },
+    ES: { name: 'Quickpowder', color: '#ffd23a', glyph: 'bolt', kind: 'quick', text: 'the whole party acts 10% faster for 10s; allies it splashes shake off slows and roots.' },
+    // Quicksilver (a talent: it takes Salt's place)
+    QQ: { name: 'Silver Mirror', color: '#dfe6f2', glyph: 'mirror', kind: 'ward', text: 'a pool of quicksilver: everyone inside keeps a small shield for 6s.' },
+    DQ: { name: 'Silver Tonic', color: '#9fe8ff', glyph: 'plus', kind: 'heal', text: 'a splash heal that is up to twice as strong on the badly hurt.' },
+    EQ: { name: 'Fulminate', color: '#ffe9a0', glyph: 'flame', kind: 'bomb', text: 'flies at the enemy and goes off twice.' },
+  },
+  // Volatile's Reactions: three reagents (Quicksilver counts as Salt). Sealed in the tooltips until you've brewed one.
+  reactions: {
+    EEE: { name: 'Dragon\'s Breath', color: '#ff3a10', glyph: 'flame', kind: 'bomb', text: 'a huge fire bomb that leaves the enemy burning hard.' },
+    DDD: { name: 'Elixir of Life', color: '#6fffd0', glyph: 'plus', kind: 'heal', text: 'a great splash heal that lingers as a healing mist, and raises the fallen.' },
+    SSS: { name: 'Bastion Salt', color: '#fff6dc', glyph: 'ward', kind: 'ward', text: 'a wide salt circle: allies inside take 25% less damage for 8s.' },
+    DES: { name: 'Philosopher\'s Draught', color: '#e6c8ff', glyph: 'star', kind: 'heal', text: 'heals and shields the whole party, wherever they stand.' },
+    DEE: { name: 'Brimstone', color: '#ff9a3a', glyph: 'cloud', kind: 'bomb', text: 'a bomb on the enemy, and a healing cloud at your heal target.' },
+    DDS: { name: 'Living Salve', color: '#6ff0d0', glyph: 'drop', kind: 'salve', text: 'a strong shield, a cleanse of everything it can wash off, and a short regen.' },
+    EES: { name: 'Thunderpowder', color: '#fff070', glyph: 'bolt', kind: 'bomb', text: 'the party acts 15% faster for 12s, and it bursts on the enemy.' },
+  },
+};
+const alemKey = letters => [...letters].sort().join('');
+const alemReactionKey = key => alemKey(key.replace(/Q/g, 'S'));
+// a vial's recipe card (a two-reagent recipe, a Reaction, or a Grand Blend)
+const alemInfo = r => ALEMBIC.recipes[r] || ALEMBIC.reactions[r] || (r === 'BL' ? { name: 'Grand Blend', color: '#ffe0a8', glyph: 'star', kind: 'blend' } : { name: 'Vial', color: '#ffffff', glyph: 'plus', kind: 'heal' });
+const alemIsBomb = v => (v.parts ? v.parts.some(p => alemInfo(p.r).kind === 'bomb') : alemInfo(v.r).kind === 'bomb');
+const alemIsHeal = v => (v.parts ? v.parts.some(p => alemInfo(p.r).kind === 'heal') : alemInfo(v.r).kind === 'heal');
+// the Reactions this hero has found (env.known: null means all of them, for bots and the simulator)
+function alemKnown(k) { const s = k && k.env.known ? k.env.known() : null; return s || null; }
+// the recipe book as tooltip lines: Reactions not yet found are sealed
+function alemBook(known, reactions) {
+  const name = r => [...r].map(x => ALEMBIC.reagents[x].name).join(' + ');
+  if (!reactions) return Object.entries(ALEMBIC.recipes).filter(([r]) => !r.includes('Q')).map(([r, v]) => `<div class="alem-rec"><b>${name(r)}</b>: ${v.name}, ${v.text}</div>`).join('');
+  return Object.entries(ALEMBIC.reactions).map(([r, v]) => (!known || known.has(r)
+    ? `<div class="alem-rec"><b>${name(r)}</b>: ${v.name}, ${v.text}</div>`
+    : '<div class="alem-rec sealed"><b>Sealed</b>: a Reaction you have not found yet.</div>')).join('');
+}
+// the browser's found set for tooltips (the save), or null outside the browser
+function alemSavedKnown() { try { return typeof Save !== 'undefined' && Save.found ? new Set(Save.found('alembist')) : null; } catch (e) { return null; } }
+
+function alemRipeTime(k) { return k.def.alem.fuse ? k.def.alem.heat : k.def.alem.ripe; }
+function alemSpoilTime(k) { return k.talent('alembist_cask') ? 30 : k.def.alem.spoil; }
+// how strong a vial is right now: 1, rising to 1.3 as it ripens (or heats up, for Volatile)
+function alemStrength(k, v) {
+  if (v.parts) return 1;
+  const A = k.def.alem, age = (k.now - v.at) * (v.fast ? 1.5 : 1);
+  if (A.fuse) return 1 + ALEMBIC.GROW * Math.min(k.talent('alembist_cask') ? 1.5 : 1, Math.max(0, age / A.heat));
+  let s = 1 + ALEMBIC.GROW * Math.min(1, Math.max(0, age / A.ripe));
+  if (k.talent('alembist_cask') && age > A.ripe) s += Math.min(0.2, (age - A.ripe) / (25 - A.ripe) * 0.2);
+  return s;
+}
+// the throw slot (the heal events name it, so party frames and tooltips know where a heal came from)
+const alemAb = k => k.abilities[3];
+// which vial Throw takes: the oldest, or the Apothecary's pick
+function alemPick(k) { const n = k.g.vials.length; return n ? Math.max(0, Math.min(n - 1, k.def.alem.pick ? k.g.sel | 0 : 0)) : -1; }
+// a new vial into the bandolier (false if it's full). o: { copy, batch }
+function alemAdd(k, key, o = {}) {
+  const A = k.def.alem;
+  if (k.g.vials.length >= A.slots) return false;
+  const v = { r: key, at: k.now, born: k.now, id: ++k.g.n };
+  if (A.fuse) v.fuse = k.now + A.fuse + (k.talent('alembist_cask') ? 2 : 0);
+  // Mother Liquor: the same recipe twice in a row starts ripe; Grand Reserve: batch copies start ripe and keep
+  if (k.talent('alembist_echo') && !o.copy && k.g.last === key) v.fast = 1;
+  if (o.batch && k.talent('alembist_reserve')) v.at = k.now - alemRipeTime(k);
+  if (k.g.ripeNext && !o.copy) { k.g.ripeNext = false; v.at = k.now - alemRipeTime(k); }   // (an enhancement on Distill)
+  if (o.batch && k.talent('alembist_reserve')) { if (A.fuse) v.fuse = k.now + 10; else v.keep = true; }
+  k.g.vials.push(v);
+  if (!o.copy) k.g.last = key;
+  k.g.popAt = k.now; k.g.popR = key;
+  k.fx('brew', { r: key });
+  return v;
+}
+// one reagent press: into the still; the second (third with Catalyst) brews the vial
+function alemReagent(k, ab, x) {
+  const need = k.has('catalyst') ? 3 : 2;
+  k.consume('distill');
+  if (x === 'E' || x === 'Q') k.engagedAt = k.now;   // a bomb-maker is fighting: autos may swing
+  if (!k.g.half.length && x === 'E' && k.talent('alembist_kindle') && k.env.target({ target: 'enemy', range: RANGED })) { k.damage(20, { ab }); k.fx('kindle'); }
+  k.g.half.push(x);
+  if (k.g.half.length < need) return;
+  const raw = k.g.half; k.g.half = [];
+  let key = alemKey(raw);
+  if (raw.length === 3) {
+    k.consume('catalyst');
+    const rk = alemReactionKey(key);
+    if (ALEMBIC.reactions[rk]) {
+      key = rk;
+      k.stats.reactions = (k.stats.reactions || 0) + 1;
+      const known = alemKnown(k);
+      if (known && !known.has(rk) && k.env.discover) { k.env.discover(rk); k.fx('discover', { r: rk }); }
+    } else { key = alemKey(raw.slice(0, 2)); k.fx('fizzle'); k.wasted('dud reaction'); }
+  }
+  alemAdd(k, key);
+}
+// shield amount for a potency, the way Kit.shield works it out (splash shields go to several allies at once)
+function alemShieldAmt(k, pot) {
+  return Math.round(pot * ENGINE.POT_SCALE * (1 + (k.def.healMod ? k.def.healMod(k, {}) : 0)) * (1 + (k.gear().power || 0)) * (1 + k.fxMod('heal')));
+}
+// a splash where the vial lands. o: { r, heal, up, sh, cl, chain, pool: { r, ticks, interval, heal, sh, pct, fol } }
+function alemSplash(k, t, o) {
+  const ab = alemAb(k), ev = { type: 'splash', target: t, r: o.r || 0, ab };
+  if (o.heal) {
+    const h = k.healAmount(o.heal, { ab }); ev.amount = h.amount; ev.crit = h.crit;
+    if (o.up) ev.up = 1;
+    // Scorch: a heal vial landing while the enemy is scorched flicks a spark into it
+    if (k.talent('alembist_scorch') && k.now < (k.g.scorchUntil || 0)) k.damage(40, { ab });
+  }
+  if (o.sh) { ev.sh = alemShieldAmt(k, o.sh); ev.dur = o.sdur || 10; }
+  if (o.cl) ev.cl = o.cl;
+  if (o.pool) {
+    const p = o.pool;
+    ev.id = 'v' + (++k.g.n); ev.pr = p.r; ev.ticks = p.ticks; ev.interval = p.interval;
+    if (p.heal) ev.pa = k.healAmount(p.heal, { ab }).amount;
+    if (p.sh) ev.ps = alemShieldAmt(k, p.sh);
+    if (p.pct) ev.pct = p.pct;
+    if (p.fol) ev.fol = 1;
+  }
+  k.env.emit(ev);
+  k.itemHook('heal');
+  // Chain Splash: a heal vial leaps on to the most hurt ally and splashes there at half strength
+  if (o.heal && o.chain !== false && k.talent('alembist_chain') && t !== 'party') {
+    const h = k.healAmount(o.heal * 0.5, { ab });
+    k.env.emit({ type: 'splash', target: 'lowest', not: typeof t === 'number' ? t : undefined, r: 80, amount: h.amount, crit: h.crit, ab });
+    k.fx('leap', { to: typeof t === 'number' ? t : null });
+  }
+}
+// a bomb on the enemy (c.en), or on yourself if it went off in the bandolier (Volatile)
+function alemBomb(k, c, pot, dot, dotDur = 9) {
+  const ab = alemAb(k);
+  if (c.self) { if (k.def.alem.fuse && !k.talent('alembist_spill')) k.selfDamage(0.04, { ab }); return; }
+  if (!c.en) { k.wasted('bomb'); return; }   // nothing in reach: it shatters on the floor
+  k.engagedAt = k.now;
+  k.damage(pot, { ab });
+  if (dot) k.dot('burn', dot, dotDur, 3, { ab });
+  if (k.talent('alembist_ricochet') && k.now >= (k.g.ricoAt || 0)) { k.g.ricoAt = k.now + 15; k.after(1, () => { k.damage(pot * 0.25, { ab }); k.fx('ricochet', { en: c.en.id }); }); }
+  if (k.talent('alembist_scorch')) k.g.scorchUntil = k.now + 10;
+}
+function alemRaise(k, c) {
+  if (typeof c.t !== 'number' || !k.env.isDead(c.t) || k.now < k.g.raiseAt) return;
+  k.g.raiseAt = k.now + ALEMBIC.RAISE_CD;
+  k.raise(c.t, { ab: alemAb(k) });
+}
+// one recipe going off. c: { t (ally it lands on, or 'self'), en (enemy, for bombs), self }, m: strength
+function alemRecipe(k, key, c, m) {
+  const t = c.t;
+  switch (key) {
+    case 'DD': alemSplash(k, t, { r: k.perk('alembist_w1') ? 132 : 110, heal: 480 * m }); alemRaise(k, c); break;
+    case 'EE': alemBomb(k, c, 360 * m, k.perk('alembist_w2') ? 45 * m : 0, 6); break;
+    case 'SS': alemSplash(k, t, { pool: { r: 120, ticks: 12, interval: (k.perk('alembist_a2') ? 8 : 6) * m / 12, pct: 0.2 } }); break;
+    case 'DE': alemSplash(k, t, { pool: { r: 120, ticks: 6, interval: 1.5, heal: 80 * m, fol: k.talent('alembist_cling') } }); break;
+    case 'DS': alemSplash(k, t, { r: 110, sh: 280 * m, cl: 1 }); break;
+    case 'ES': k.partyBuff('haste', 0.1, Math.min(13, 10 * m), { ab: alemAb(k) }); alemSplash(k, t, { r: 110, heal: 100 * m, cl: 2, chain: false }); break;
+    case 'QQ': alemSplash(k, t, { pool: { r: 120, ticks: 4, interval: 1.5, sh: 120 * m } }); break;
+    case 'DQ': alemSplash(k, t, { r: 110, heal: 400 * m, up: 1 }); alemRaise(k, c); break;
+    case 'EQ': alemBomb(k, c, 260 * m, 0); if (!c.self && c.en) k.after(1, () => { k.damage(260 * m, { ab: alemAb(k) }); k.fx('ricochet', { en: c.en.id }); }); break;
+    // Reactions
+    case 'EEE': alemBomb(k, c, 560 * m, 70 * m, 12); break;
+    case 'DDD': alemSplash(k, t, { r: 150, heal: 620 * m, pool: { r: 150, ticks: 4, interval: 1.5, heal: 60 * m } }); alemRaise(k, c); break;
+    case 'SSS': alemSplash(k, t, { pool: { r: 160, ticks: 12, interval: 8 * m / 12, pct: 0.25 } }); break;
+    case 'DES': alemSplash(k, 'party', { heal: 300 * m, sh: 180 * m, chain: false }); break;
+    case 'DEE': alemBomb(k, c, 360 * m, 0); alemSplash(k, t, { pool: { r: 130, ticks: 6, interval: 1.5, heal: 70 * m, fol: k.talent('alembist_cling') } }); break;
+    case 'DDS': alemSplash(k, t, { r: 130, sh: 400 * m, cl: 3, pool: { r: 130, ticks: 4, interval: 1.5, heal: 50 * m } }); break;
+    case 'EES': k.partyBuff('haste', 0.15, Math.min(15, 12 * m), { ab: alemAb(k) }); alemBomb(k, c, 220 * m, 0); break;
+  }
+}
+// a vial going off: each part of a Grand Blend in turn, then Residue's puddle where it broke on an ally
+function alemGoOff(k, v, c, m) {
+  if (v.parts) { const share = k.talent('alembist_reserve') ? 1 : 0.8; for (const p of v.parts) alemRecipe(k, p.r, c, p.m * share * m); }
+  else alemRecipe(k, v.r, c, m);
+  if (!c.self && k.talent('alembist_residue') && !(v.parts ? v.parts.every(p => alemInfo(p.r).kind === 'bomb') : alemIsBomb(v))) alemSplash(k, c.t, { pool: { r: 70, ticks: 4, interval: 1.5, heal: 28 } });
+  k.stats.vials = (k.stats.vials || 0) + 1;
+}
+// throw a vial (or let it go off on you: self). The look goes to every client now; the effect lands after the flight.
+function alemLaunch(k, v, t, en, m, self) {
+  k.fx('vial', { r: v.r, p: v.parts ? v.parts.map(p => p.r) : undefined, to: self ? null : t, en: self || !en ? null : en.id, self: self ? 1 : 0, m: +m.toFixed(2), fol: k.talent('alembist_cling') ? 1 : 0 });
+  const c = { t: self ? 'self' : t, en: self ? null : en, self: !!self };
+  if (self) alemGoOff(k, v, c, m); else k.after(ALEMBIC.FLIGHT, () => alemGoOff(k, v, c, m));
+}
+// an enhancement on the 120s: Distill (or Catalyst) comes back
+function alemRestock(k) { if (!k.perk('alembist_w3')) return; const d = k.abilities.find(a => k.baseId(a) === 'distill'); if (d) k.refill(d.id); }
+// the reagent button (Q W E): usable while there's room in the bandolier
+function alemReagentAb(id, x, name, glow, desc) {
+  return {
+    id, name, type: 'gcd', target: 'none', anim: 'cast', lock: 0.3, reagent: x,
+    recastGcd: k => (k.has('distill') ? 0.2 : 0.75),
+    usable: k => k.g.vials.length < k.def.alem.slots,
+    glow, desc,
+    effect(k) { alemReagent(k, this, x); },
+    fx: { color: ALEMBIC.reagents[x].color },
+  };
+}
+// the glows for a mashable floor: keep one heal vial stocked (Dew), otherwise brew bombs (Ember), throw what's ripe
+const alemRoom = k => k.g.vials.length < k.def.alem.slots;
+const alemHealStock = k => k.g.vials.filter(alemIsHeal).length;
+const alemOldestReady = k => {
+  const i = alemPick(k); if (i < 0) return false;
+  const v = k.g.vials[i];
+  return alemStrength(k, v) >= 1 + ALEMBIC.GROW - 0.001 || !alemRoom(k) || (v.fuse && v.fuse - k.now < 2) || (!v.fuse && !v.keep && alemSpoilTime(k) - (k.now - v.born) < 5);
+};
+
+KITS.alembist = {
+  potMult: 0.74, // balance knob (tools/simulate.js)
+  auto: { kind: 'spark', potency: 25, range: RANGED },  // passive auto-attack (see ENGINE.AUTO_EVERY)
+  gauge: { kind: 'bandolier', key: 'count', max: 3, label: 'Bandolier', w: 200 },
+  alem: { slots: 3, ripe: 10, spoil: 40 },
+  init: () => ({ half: [], vials: [], count: 0, sel: 0, n: 0, last: null, raiseAt: 0, popAt: -9, popR: null }),
+  tick(k) {
+    const A = k.def.alem;
+    for (const v of [...k.g.vials]) {
+      if (v.fuse && k.now >= v.fuse) {
+        // the fuse runs out in the bandolier: it goes off on you, weaker (Spill: at full strength)
+        k.g.vials.splice(k.g.vials.indexOf(v), 1);
+        k.stats.fused = (k.stats.fused || 0) + 1;
+        alemLaunch(k, v, null, null, alemStrength(k, v) * (k.talent('alembist_spill') ? 1 : 0.6), true);
+      } else if (!v.fuse && !v.keep && k.now - v.born >= alemSpoilTime(k)) {
+        k.g.vials.splice(k.g.vials.indexOf(v), 1);
+        k.wasted('spoiled');
+        if (k.talent('alembist_spill')) alemLaunch(k, v, null, null, 0.5, true); else k.fx('spoil', { r: v.r });
+      }
+    }
+    k.g.count = k.g.vials.length;
+    // Flask Armour: a full bandolier is armour
+    if (k.talent('alembist_flask') && k.g.vials.length >= A.slots && k.now >= (k.g.armorAt || 0)) { k.g.armorAt = k.now + 1; k.mitigate('self', 0.1, 1.2, { ab: alemAb(k) }); }
+  },
+  // Apothecary: Shift+R moves the pick along the bandolier instead of throwing (main.js asks before a press)
+  shiftPress(k, i) {
+    if (i !== 3 || !k.def.alem.pick) return false;
+    if (k.g.vials.length > 1) k.g.sel = ((k.g.sel | 0) + 1) % k.g.vials.length;
+    return true;
+  },
+  signature: 'Brewing ahead',
+  floor: 'Press W twice to brew a Mending Draught, then R to throw it at whoever is hurt. Brew Fire Bombs with Q when everyone is healthy.',
+  ceiling: [
+    'Two reagents make a vial: Dew + Dew heals, Ember + Ember bombs, Salt + Salt wards, Ember + Dew steams, Dew + Salt shields and cleanses, Ember + Salt hastens the party.',
+    'Vials grow 30% stronger over their first 10s and spoil at 40s. Brew in the quiet, throw ripe vials into the storm.',
+    'Throw takes the oldest vial, so the order you brew in is the order you throw in. Plan two moves ahead.',
+    'A splash catches everyone near the ally it lands on: aim at the middle of the group.',
+  ],
+  abilities: [
+    alemReagentAb('ember', 'E', 'Ember', k => alemRoom(k) && (k.g.half[0] === 'E' || (!k.g.half.length && alemHealStock(k) >= 1)),
+      'A quick reagent (0.75s). Two reagents brew a vial: Ember + Ember is a Fire Bomb, Ember + Dew is Steam, Ember + Salt is Quickpowder.'),
+    alemReagentAb('dew', 'D', 'Dew', k => alemRoom(k) && (k.g.half[0] === 'D' || (!k.g.half.length && alemHealStock(k) < 1)),
+      'A quick reagent (0.75s). Two reagents brew a vial: Dew + Dew is a Mending Draught, Dew + Ember is Steam, Dew + Salt is Salve.'),
+    alemReagentAb('salt', 'S', 'Salt', null,
+      'A quick reagent (0.75s). Two reagents brew a vial: Salt + Salt is a Salt Ward, Salt + Dew is Salve, Salt + Ember is Quickpowder.'),
+    {
+      id: 'throw', name: 'Throw', type: 'gcd', target: 'ally', allowDead: true, anim: 'cast', lock: 0.35, recastGcd: 1,
+      label: k => { const i = alemPick(k); return i < 0 ? 'Throw' : alemInfo(k.g.vials[i].r).name; },
+      usable: k => k.g.vials.length > 0,
+      glow: k => alemOldestReady(k),
+      desc: 'Throw your oldest vial at your heal target: it shatters and splashes everyone close by. A bomb flies at the enemy instead. Vials grow 30% stronger over 10s, and spoil after 40s.',
+      effect(k, t) {
+        const i = alemPick(k); if (i < 0) return;
+        const v = k.g.vials.splice(i, 1)[0];
+        k.g.sel = 0; k.g.count = k.g.vials.length;
+        const en = alemIsBomb(v) ? k.env.target({ target: 'enemy', range: RANGED }) : null;
+        alemLaunch(k, v, t, en, alemStrength(k, v), false);
+      },
+      fx: { color: '#ffd27a' },
+    },
+    {
+      id: 'distill', name: 'Distill', type: 'ogcd', target: 'self', cd: 30, anim: 'cast', lock: 0.3,
+      desc: 'Your next brew is instant: your next two reagents come off the global cooldown at once.',
+      effect(k) {
+        k.buff('distill', 15, {}, 2, 2);
+        if (k.perk('alembist_a4')) k.g.ripeNext = true;
+        if (k.talent('alembist_flash') && k.g.last) alemAdd(k, k.g.last, { copy: true });
+        if (k.talent('alembist_fume')) k.mitigate('party', 0.1, 8, { ab: this });
+      },
+      fx: { color: '#bfe8ec' },
+    },
+    {
+      id: 'batch', name: 'Grand Batch', type: 'ogcd', target: 'self', cd: 120, anim: 'big', lock: 0.3,
+      desc: 'Fill every empty slot in your bandolier with copies of the last vial you brewed.',
+      usable: k => !!k.g.last && alemRoom(k),
+      effect(k) { while (alemAdd(k, k.g.last, { copy: true, batch: true })); alemRestock(k); },
+      fx: { color: '#ffb84a' },
+    },
+  ],
+
+};
+
 if (typeof module !== 'undefined') {
   module.exports = { KITS, DASH, TAUNT, tauntAbility, tauntIconBg, MELEE, RANGED, bastionChain, bastionEdge, reaverDrainPot, reaverLetting, runeGain, runeGlyphguard, runeGlyphguardEnd,
     rangerShot, rangerFocus, rangerKeen, rangerRhythm, rangerPierce, bladeFinisher, bladeStep, pyroBurst, clericDawnstar, clericPetal, groveThornTick,
     groveGrowth, chronoBolt, chronoBoltAfter, chronoInstant, chronoAccel };
+  // Alembist (classes-b)
+  Object.assign(module.exports, { ALEMBIC, alemKey, alemReactionKey, alemInfo, alemIsBomb, alemIsHeal, alemKnown, alemBook, alemSavedKnown, alemRipeTime,
+    alemSpoilTime, alemStrength, alemAb, alemPick, alemAdd, alemReagent, alemShieldAmt, alemSplash, alemBomb, alemRaise, alemRecipe, alemGoOff, alemLaunch,
+    alemReagentAb, alemRoom, alemHealStock, alemOldestReady });
 }
 
 // ===================================================================================================================
@@ -1404,6 +1708,28 @@ const TALENT_ABILITIES = {};
     fx: { type: 'slash', color: '#dffff6', r: 66, span: 6.28 },
   } };
 })();
+
+// The Alembist's two (classes-b). They began in the kit's own talentAbilities table; when the two talent-move systems
+// became one they moved here. (A kit can still list moves in talentAbilities: specs.js talentMoveFor reads both.)
+TALENT_ABILITIES.alembist_blend = { cls: 'alembist', ab: {
+    id: 'blend', replaces: 'batch', icon: 'batch', name: 'Grand Blend', type: 'ogcd', target: 'self', cd: 90, anim: 'big', lock: 0.3, talent: true,
+    desc: 'Pour every vial in your bandolier into one Grand Blend. Thrown, it does all of their effects at once where it lands, each at 80% of the strength it had.',
+    usable: k => k.g.vials.length >= 2,
+    effect(k) {
+      const parts = [];
+      for (const v of k.g.vials) { if (v.parts) parts.push(...v.parts); else parts.push({ r: v.r, m: alemStrength(k, v) }); }
+      const v = { r: 'BL', parts, at: k.now, born: k.now, id: ++k.g.n, keep: true };
+      if (k.def.alem.fuse) v.fuse = k.now + k.def.alem.fuse + (k.talent('alembist_cask') ? 2 : 0);
+      k.g.vials = [v]; k.g.sel = 0; k.g.count = 1;
+      k.g.popAt = k.now; k.g.popR = 'BL';
+      k.fx('brew', { r: 'BL' });
+      alemRestock(k);
+    },
+    fx: { color: '#ffe0a8' },
+  } };
+TALENT_ABILITIES.alembist_quicksilver = { cls: 'alembist', ab: Object.assign(alemReagentAb('quicksilver', 'Q', 'Quicksilver', null,
+    'A quick reagent (0.75s) that takes Salt\'s place. Quicksilver + Quicksilver is a Silver Mirror, Quicksilver + Dew a Silver Tonic, Quicksilver + Ember a Fulminate.'),
+  { replaces: 'salt', icon: 'salt', talent: true }) };
 
 if (typeof module !== 'undefined') Object.assign(module.exports, { kitMoveDest, kitSegDist, THERMIST, thermSpell, thermMove, thermSettle, thermShock, thermBrink, thermMult, thermAt,
   thermEdgeCast, thermEquil, thermUtility, thermInvert, thermPlan, thermTick, thermOverload, DRIFT, DRIFT_BODY, DRIFT_NEAR, DRIFT_REACH, driftAdd, driftTick, driftPass, driftK, driftMax,

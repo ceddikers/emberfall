@@ -39,6 +39,7 @@ class Kit {
     this.def = def;
     this.env = env;
     this.abilities = def.abilities;
+    // (moves a talent grants are already in place: specs.js kitFor(classId, specId, talents) builds the def)
     this.g = def.init ? def.init() : {};
     this.buffs = new Map();
     this.cd = {};
@@ -284,7 +285,7 @@ class Kit {
     if (ab.target === 'enemy') this.engagedAt = this.now;
     const ct = this.castTime(ab);
     if (ab.type === 'gcd') {
-      this.gcdLen = (ab.recastGcd || ENGINE.GCD) * this.hasteMult();
+      this.gcdLen = ((typeof ab.recastGcd === 'function' ? ab.recastGcd(this) : ab.recastGcd) || ENGINE.GCD) * this.hasteMult();
       this.gcdReady = this.now + this.gcdLen;
       this.stats.gcds++;
       this.stats.gcdTime += this.gcdLen;

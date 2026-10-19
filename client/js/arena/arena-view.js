@@ -957,6 +957,7 @@ const ArenaView = {
       const k = Math.min(1, (t - z.start) / 1.2, Math.max(0, (z.end - t) / 1));
       if (k <= 0) continue;
       const s = z.shape;
+      if (z.tag === 'trail') { this.silkTrail(ctx, s, k, t); continue; }
       ctx.save();
       ARENA.trace(ctx, 2); ctx.clip();   // the web stops at the walls, whatever shape they are
       SHAPES.trace(ctx, s);
@@ -974,11 +975,31 @@ const ArenaView = {
     }
   },
 
+  // the silk Skitterra drags behind her on a Fang Rush (Hard): a sticky strip of tangled threads along her path
+  silkTrail(ctx, s, k, t) {
+    const ca = Math.cos(s.angle), sa = Math.sin(s.angle), hw = s.w / 2;
+    ctx.save();
+    ARENA.trace(ctx, 2); ctx.clip();
+    SHAPES.trace(ctx, s);
+    ctx.fillStyle = `rgba(230,230,245,${0.14 * k})`; ctx.fill();
+    ctx.globalAlpha = k;
+    for (let i = 0; i < 9; i++) {
+      const off = -hw + (i + 0.5) * s.w / 9, wob = Math.sin(i * 2.7) * 10;
+      ctx.beginPath(); ctx.moveTo(s.x - sa * off, s.y + ca * off);
+      ctx.quadraticCurveTo(s.x + ca * s.len / 2 - sa * (off + wob), s.y + sa * s.len / 2 + ca * (off + wob), s.x + ca * s.len - sa * off, s.y + sa * s.len + ca * off);
+      ctx.strokeStyle = 'rgba(240,240,255,0.32)'; ctx.lineWidth = 1.5; ctx.stroke();
+    }
+    for (let d = 20; d < s.len; d += 34) line(ctx, s.x + ca * d - sa * hw, s.y + sa * d + ca * hw, s.x + ca * (d + 14) + sa * hw, s.y + sa * (d + 14) - ca * hw, 'rgba(240,240,255,0.2)', 1.2);
+    for (let i = 0; i < 6; i++) { const d = ((i * 97) % 100) / 100 * s.len, off = (((i * 53) % 100) / 100 - 0.5) * s.w * 0.8; circle(ctx, s.x + ca * d - sa * off, s.y + sa * d + ca * off, 2, `rgba(255,255,255,${0.4 + Math.sin(t * 3 + i) * 0.3})`); }
+    ctx.restore();
+  },
+
   // a tether between two players: a silk thread. Long ones (green on Hard) want stretching, short ones (red, thick) want
   // keeping close. The thread goes taut and bright once the distance is right.
   tether(ctx, a, b, th, t, hard) {
     const d = Math.hypot(b.x - a.x, b.y - a.y);
     const ok = th.kind === 'long' ? d >= th.len : d <= th.len;
+    if (th.tag === 'bind') return this.graveChain(ctx, a, b, th, t, d, ok);
     const color = !hard ? '#f0eaff' : th.kind === 'long' ? '#6dff7a' : '#ff4a4a';
     const w = th.kind === 'short' ? 6 : 3;
     const left = Math.max(0, th.end - t), p = 1 - left / Math.max(0.1, th.end - th.start);
@@ -997,6 +1018,24 @@ const ArenaView = {
     glow(ctx, bx, by, 12, color, 0.8);
     for (const e of [a, b]) circle(ctx, e.x, e.y - 20, 5, rgba(color, 0.9), OUT, 1.5);
     ctx.restore();
+  },
+
+  // Gravebind (the Hollow King, Hard): an iron grave-chain between two heroes, drawn tight and burning green when it's
+  // stretched too far, hanging slack once they're close
+  graveChain(ctx, a, b, th, t, d, ok) {
+    const left = Math.max(0, th.end - t), p = 1 - left / Math.max(0.1, th.end - th.start);
+    const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2 - 20, nx = -(b.y - a.y) / (d || 1), ny = (b.x - a.x) / (d || 1);
+    const sag = ok ? 18 : 0, n = Math.max(4, Math.floor(d / 16));
+    const at = q => { const s = 1 - q, cx = mx + nx * sag, cy = my + ny * sag + sag; return [s * s * a.x + 2 * s * q * cx + q * q * b.x, s * s * (a.y - 20) + 2 * s * q * cy + q * q * (b.y - 20)]; };
+    if (!ok) { ctx.save(); ctx.lineCap = 'round'; line(ctx, a.x, a.y - 20, b.x, b.y - 20, rgba('#5adf8a', 0.25 + 0.15 * Math.sin(t * 10)), 12); ctx.restore(); }
+    for (let i = 0; i < n; i++) {
+      const [x, y] = at((i + 0.5) / n), [x2, y2] = at((i + 1) / n), ang = Math.atan2(y2 - y, x2 - x);
+      ellipse(ctx, x, y, 9, i % 2 ? 2.5 : 5, ang, null, i % 2 ? '#4a5258' : '#6a747c', 2.5);
+      if (!ok) ellipse(ctx, x, y, 9, i % 2 ? 2.5 : 5, ang, null, rgba('#9affc0', 0.6), 1);
+    }
+    const q = (t * (0.6 + p * 2.5)) % 1, [gx, gy] = at(q);
+    glow(ctx, gx, gy, 14, '#6dff9a', 0.7);
+    for (const e of [a, b]) { circle(ctx, e.x, e.y - 20, 7, null, '#6a747c', 3); glow(ctx, e.x, e.y - 20, 12, '#6dff9a', 0.5); }
   },
 
   // the burning beam between a linked pair of adds (Hard brood)

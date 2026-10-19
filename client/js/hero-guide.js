@@ -99,3 +99,15 @@ const HERO_GUIDE = {
     ],
   },
 };
+
+// Alembist (classes-b)
+HERO_GUIDE.alembist = {
+  passive: { name: 'Ripening', icon: 'throw', desc: 'Two reagents brew a vial into your bandolier. Vials grow 30% stronger over their first 10s and spoil after 40s, and Throw always takes the oldest one, so you brew in the order you will need them.' },
+  combos: [
+    { keys: ['w', 'w', 'r'], text: 'Dew and Dew: a Mending Draught. Throw it into the middle of the hurt.' },
+    { keys: ['q', 'q', 'w', 'w', 'r'], text: 'A bomb now, a Draught behind it: the oldest vial goes first.' },
+    { keys: ['e', 'e', 'r'], text: 'A Salt Ward under the party just before a raidwide lands.' },
+    { keys: ['d', 'w', 'w', 'r'], text: 'Distill makes the next brew instant: an emergency Draught.' },
+    { keys: ['f'], text: 'Grand Batch fills the bandolier with copies of your last vial.' },
+  ],
+};

@@ -102,13 +102,13 @@ Only moves that are new to a spec need an icon. Changed moves (for example Senti
 - No new moves. Every spell swings the dial a step further; the icons stay.
 
 **Thermist · Zenith** (crimson and white-hot)
-18. **Bleed Off** (`thermist/bleed`), replaces Equilibrium: a brass pressure valve on a pipe, wrenched open, three thick curls of white steam blasting out of it, a small red needle gauge on the pipe sitting in the red.
+20. **Bleed Off** (`thermist/bleed`), replaces Equilibrium: a brass pressure valve on a pipe, wrenched open, three thick curls of white steam blasting out of it, a small red needle gauge on the pipe sitting in the red.
 
 **Driftblade · Orbit** (mint)
 - No new moves. Passing Strikes and laps round the target do the work; the icons stay.
 
 **Driftblade · Comet** (gold)
-19. **Impact** (`driftblade/impact`), replaces Crosswind: a sabre point-first at the head of a long, straight gold streak, punching through a cracked round stone target, the streak continuing out the other side.
+21. **Impact** (`driftblade/impact`), replaces Crosswind: a sabre point-first at the head of a long, straight gold streak, punching through a cracked round stone target, the streak continuing out the other side.
 
 ### Portraits
 
@@ -116,3 +116,18 @@ Only moves that are new to a spec need an icon. Changed moves (for example Senti
 20. **Thermist · Zenith** (crimson): the same Thermist with her silver hair loose and lifted by heat, a small crown of flat flame and frost shards over her brow, sweat on her temple, eyes narrowed and teeth set: someone holding a lid down on a pot.
 21. **Driftblade · Orbit** (mint): the same duellist mid-turn, his scarf drawn round him in a full loop, a single white feather caught in it, looking back over his shoulder.
 22. **Driftblade · Comet** (gold): the same duellist leaning forward into a charge, sabre held low and level, his scarf and tail streaming straight back, a gold streak of speed lines behind him.
+
+## Alembist specs (new healer, 2026-10)
+
+**Ability icons** (Alembist palette from `ability-icons.md`: dark walnut background, copper, glass):
+
+**Alembist · Apothecary** (herb green and cream)
+- No new moves. Throw keeps its icon; with Shift it picks which vial goes.
+
+**Alembist · Volatile** (soot black and fuse orange)
+19. **Catalyst** (`alembist/catalyst`), replaces Distill: a stoppered round flask with three small drops (red, blue, white) falling into it at once, a jagged orange star-burst shape at the neck where they meet.
+
+**Portraits** (same woman as `hero-portraits.md` #10):
+
+19. **Alembist · Apothecary** (herb green): the same alchemist, goggles off and hanging at her neck, a **leather satchel of labelled clay jars** at her hip, a sprig of green herbs tucked behind one ear, reading a small handwritten label on a jar with calm, patient focus. Sage-green background with a pale mortar-and-pestle shape behind the head.
+20. **Alembist · Volatile** (soot and orange): the same alchemist with soot smudged across her cheek and coat, goggles pulled down over her eyes with **orange lenses**, a few singed strands loose from her bun, holding up a vial with a **short lit fuse** spitting flat orange star-shaped sparks, a wide, slightly reckless grin. Charcoal background with a bold orange burst shape behind the head.
