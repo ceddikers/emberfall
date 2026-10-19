@@ -2,7 +2,7 @@
 
 ## Ability icons
 
-**Style:** the same as the current ability sheet (`ability-icons-sheet.jpg`): painted, one bold subject, on a background glowing in the class's colour, with no frame, border or text. The game adds the slot frame.
+**Style:** the hand-painted gouache style in `ability-icons.md`: use its shared style block, its avoid list and the class's background and palette. Where a line below says "glowing" or "light", paint it as a flat, bright shape of colour, not an actual glow. No frame, border or text; the game adds the slot frame.
 
 **Sheet:** one row per spec, in the order below. Files end up in `client/icons/<class>/<id>.png`. The id is given for each icon.
 
@@ -38,7 +38,7 @@ Only moves that are new to a spec need an icon. Changed moves (for example Senti
 8. **Condemn** (`cleric/condemn`), replaces Benediction: a lance of holy fire striking down, a blazing four-pointed brand seared into the ground where it hits.
 
 **Grovekeeper · Lifebinder** (spring green and blossom pink)
-9. **Lifebind** (`grovekeeper/lifebind`), replaces Rejuvenate: two hands joined by a curling green vine, small pink blossoms opening along it.
+9. **Lifebind** (`grovekeeper/lifebind`), replaces Rejuvenate: two separate saplings joined by one curling green vine, small pink blossoms opening along it.
 
 **Grovekeeper · Moonwell** (silver blue)
 10. **Moonwell** (`grovekeeper/moonwell`), replaces Wild Growth: a still pool of moonlight seen from above, a crescent moon reflected in it, vines curling around its rim.
@@ -67,11 +67,11 @@ Only moves that are new to a spec need an icon. Changed moves (for example Senti
 16. **Meteor** (`pyromancer/meteor`), replaces Pyroblast: a burning rock falling out of a dark sky toward a glowing rune circle on the ground.
 
 **Pyromancer · Sigilmancer** (amber)
-17. **Ember Circle** (`pyromancer/circle`), replaces Combustion: a ring of burning glyphs on dark stone seen from above, a small robed figure standing at its centre in a column of warm light.
+17. **Ember Circle** (`pyromancer/circle`), replaces Combustion: a ring of burning glyphs on dark stone seen from above, a pair of scorched boot prints at its centre.
 
 ## Portraits (one per spec)
 
-**Format:** the same as `hero-portraits.md`: a square head-and-shoulders bust, about 512 × 512, on a dark background with a rim light in the spec's colour. Keep the class's face and design recognizable; the spec changes the gear and mood. These show on the hero page when the spec is picked. Files go in `client/portraits/<class>-<spec>.png` (for example `bastion-sentinel.png`). Until one arrives, the hero page shows the animated sprite in the spec's look.
+**Format:** the same as `hero-portraits.md` (the second, hand-painted gouache pass): a square head-and-shoulders bust, about 512 × 512, using its shared style block and avoid list. The spec's colour goes in the background wash and one piece of gear, not a glow, so read "light" in the lines below as painted colour. Keep the class's new face and design from `hero-portraits.md`; the spec changes the gear and mood. These show on the hero page when the spec is picked. Files go in `client/portraits/<class>-<spec>.png` (for example `bastion-sentinel.png`). Until one arrives, the hero page shows the animated sprite in the spec's look.
 
 1. **Bastion · Sentinel** (silver-blue): the same great-helm, now with a broad silver tower shield raised to the chin, heavier plate pauldrons, a calm and immovable stance.
 2. **Bastion · Crusader** (gold): the helm with its visor raised to show determined eyes, a gold tabard with a sun emblem over the plate, a glowing sword hilt at the shoulder, warm dawn light from one side.
