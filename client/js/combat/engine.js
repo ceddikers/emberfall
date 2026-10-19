@@ -63,6 +63,7 @@ class Kit {
     const v = (this.g[key] || 0) + n;
     if (v > max) this.stats.overcap[key] = (this.stats.overcap[key] || 0) + (v - max);
     this.g[key] = Math.min(max, v);
+    if (n > 0) this.fxGain(n);
   }
   spend(key, n) { if ((this.g[key] || 0) < n) return false; this.g[key] -= n; return true; }
   wasted(what, n = 1) { this.stats.wasted[what] = (this.stats.wasted[what] || 0) + n; }
@@ -99,7 +100,10 @@ class Kit {
 
   // ---------------------------------------------------------------- cooldowns
   abById(id) { return this.abilities.find(a => a.id === id); }
-  recast(ab) { return typeof ab.cd === 'function' ? ab.cd(this) : (ab.cd || 0); }
+  recast(ab) {
+    const r = typeof ab.cd === 'function' ? ab.cd(this) : (ab.cd || 0);
+    return r && ab.type === 'ogcd' ? r * (1 - Math.min(0.3, this.fxMod('recast'))) : r;   // item effects: shorter oGCD cooldowns
+  }
   refreshCharges(ab) {
     const c = this.cd[ab.id];
     while (c.charges < ab.charges && c.next && this.now >= c.next) {
@@ -151,12 +155,67 @@ class Kit {
     if (party && party.haste) h *= 1 - party.haste;
     const gear = this.gear();
     if (gear.haste) h *= 1 - gear.haste;
+    const fh = this.fxMod('haste');
+    if (fh) h *= 1 - fh;
     return h;
   }
   // equipment bonuses: { power, crit, haste } (bots and the simulator have none)
   gear() { return (this.env.gearMods && this.env.gearMods()) || {}; }
   // is an item enhancement (see ITEM_PERKS in items.js) equipped?
   perk(id) { const p = this.gear().perks; return !!(p && p.has(id)); }
+
+  // ---------------------------------------------------------------- item effects (data: ITEMS[key].fx in items.js)
+  // Triggers: crit, gcd, ogcd, heal, dash, gain. Conditions: always, hpAbove, hpBelow. Actions: strike, mend, ward,
+  // cdr, buff. Mods: dmg, heal, crit, haste, recast. Everything an effect does reaches the host as an ordinary combat
+  // event (damage, heal, shield), so it needs nothing new there. Bots and the simulator wear no gear: no effects.
+  itemHook(trigger, ab) {
+    const list = this.gear().fx;
+    if (!list || !list.length || this._inFx) return;
+    this._inFx = true;   // an effect's own hits and heals never trigger effects
+    try {
+      const ready = this.fxReady || (this.fxReady = new Map());
+      for (const e of list) {
+        if (e.on !== trigger || this.now < (ready.get(e.id) || 0)) continue;
+        if (e.chance != null && this.rng() >= e.chance) continue;
+        if (e.icd) ready.set(e.id, this.now + e.icd);
+        if (e.strike) this.damage(e.strike, { item: true });
+        if (e.mend) this.env.emit({ type: 'heal', target: 'self', amount: Math.round((this.env.maxHp ? this.env.maxHp() : 0) * e.mend), crit: false });
+        if (e.ward) this.shield('self', e.ward, e.dur || 6);
+        if (e.cdr) for (const a of this.abilities) if (a.type === 'ogcd' && a !== ab) this.reduceCooldown(a.id, e.cdr);
+        if (e.buff) {
+          const bs = this.fxBuffs || (this.fxBuffs = new Map()), b = bs.get(e.id);
+          if (b && b.end > this.now) { b.stacks = Math.min(e.stacks || 1, b.stacks + 1); b.end = this.now + e.dur; }
+          else bs.set(e.id, { end: this.now + e.dur, stacks: 1, mods: e.buff, name: e.name || 'Item' });
+        }
+      }
+    } finally { this._inFx = false; }
+  }
+  // gauges that fill on their own (a little every frame) count once per 10 points
+  fxGain(n) {
+    if (n >= 1) { this.itemHook('gain'); return; }
+    this._gainAcc = (this._gainAcc || 0) + n;
+    if (this._gainAcc >= 10) { this._gainAcc -= 10; this.itemHook('gain'); }
+  }
+  // the sum of one item modifier right now: conditions that hold, plus item buffs (times their stacks)
+  fxMod(stat) {
+    const list = this.gear().fx;
+    let v = 0;
+    if (list && list.length) {
+      for (const e of list) {
+        if (!e.while || !e[stat]) continue;
+        const hp = e.while === 'always' ? 0 : (this.env.hpFrac ? this.env.hpFrac() : 1);
+        if (e.while === 'always' || (e.while === 'hpAbove' && hp > e.frac) || (e.while === 'hpBelow' && hp < e.frac)) v += e[stat];
+      }
+    }
+    if (this.fxBuffs) for (const b of this.fxBuffs.values()) if (b.end > this.now && b.mods[stat]) v += b.mods[stat] * b.stacks;
+    return v;
+  }
+  // item buffs for the buff row
+  itemBuffs() {
+    const out = [];
+    if (this.fxBuffs) for (const [id, b] of this.fxBuffs) if (b.end > this.now) out.push({ id: 'fx-' + id, name: b.name, left: b.end - this.now, stacks: b.stacks });
+    return out;
+  }
   castTime(ab) {
     let t = typeof ab.cast === 'function' ? ab.cast(this) : (ab.cast || 0);
     return t > 0 ? t * this.hasteMult() : 0;
@@ -222,6 +281,7 @@ class Kit {
     this.env.emit({ type: 'used', ab, target });
     ab.effect(this, target);
     if (this.def.afterUse) this.def.afterUse(this, ab);
+    this.itemHook(ab.type === 'gcd' ? 'gcd' : 'ogcd', ab);
   }
 
   update() {
@@ -288,16 +348,18 @@ class Kit {
     const self = this.env.selfMods ? this.env.selfMods() : {};
     const kitDmg = this.def.dmgMod ? this.def.dmgMod(this, opts) : 0;
     const gear = this.gear();
-    const critChance = opts.autoCrit ? 1 : ENGINE.BASE_CRIT + (gear.crit || 0) + (opts.crit || 0) + (party.crit || 0) + (this.def.critMod ? this.def.critMod(this, opts) : 0);
+    const critChance = opts.autoCrit ? 1 : ENGINE.BASE_CRIT + (gear.crit || 0) + (opts.crit || 0) + (party.crit || 0) + (this.def.critMod ? this.def.critMod(this, opts) : 0) + this.fxMod('crit');
     const crit = this.rng() < critChance;
     const variance = 0.95 + this.rng() * 0.1;
     const amount = Math.round(pot * ENGINE.POT_SCALE * (this.def.potMult || 1) * (1 + kitDmg) * (1 + (gear.power || 0)) * (1 + (party.dmg || 0)) * (1 + (tgt.vuln || 0)) *
-      (1 - (self.dmgDown || 0)) * (opts.mult || 1) * (crit ? ENGINE.CRIT_MULT : 1) * variance);
+      (1 - (self.dmgDown || 0)) * (opts.mult || 1) * (crit ? ENGINE.CRIT_MULT : 1) * variance * (1 + this.fxMod('dmg')));
     this.stats.damage += amount;
     if (party.dmg || tgt.vuln) this.stats.burstDamage += amount;
     this.stats.last = this.now;
     this.env.emit({ type: 'damage', amount, crit, potency: pot, positional: posHit, ab: opts.ab, dot: !!opts.dot, auto: !!opts.auto, threat: opts.threat || 1 });
+    if (opts.item) return { amount, crit, posHit };   // an item's extra hit doesn't feed the kit or other items
     if (this.def.onDamage) this.def.onDamage(this, amount, crit, opts);
+    if (crit) this.itemHook('crit');
     return { amount, crit, posHit };
   }
   // Damage over time, ticking every `interval`. Re-applying keeps up to 30% of the old duration (pandemic).
@@ -316,27 +378,32 @@ class Kit {
   healAmount(potency, opts = {}) {
     const self = this.def.healMod ? this.def.healMod(this, opts) : 0;
     const gear = this.gear();
-    const crit = this.rng() < ENGINE.BASE_CRIT + (gear.crit || 0) + (opts.crit || 0);
-    return { amount: Math.round(potency * ENGINE.POT_SCALE * (1 + self) * (1 + (gear.power || 0)) * (crit ? ENGINE.CRIT_MULT : 1) * (0.95 + this.rng() * 0.1)), crit };
+    const crit = this.rng() < ENGINE.BASE_CRIT + (gear.crit || 0) + (opts.crit || 0) + this.fxMod('crit');
+    if (crit) this.itemHook('crit');
+    return { amount: Math.round(potency * ENGINE.POT_SCALE * (1 + self) * (1 + (gear.power || 0)) * (crit ? ENGINE.CRIT_MULT : 1) * (0.95 + this.rng() * 0.1) * (1 + this.fxMod('heal'))), crit };
   }
   heal(target, potency, opts = {}) {
     const { amount, crit } = this.healAmount(potency, opts);
     this.env.emit({ type: 'heal', target, amount, crit, ab: opts.ab });
+    this.itemHook('heal');
     return amount;
   }
   // Heal a fixed number of HP (for heals based on damage taken / dealt rather than potency).
   healRaw(target, amount, opts = {}) {
-    amount = Math.round(amount * (1 + (this.def.healMod ? this.def.healMod(this, opts) : 0)) * (1 + (this.gear().power || 0)));
+    amount = Math.round(amount * (1 + (this.def.healMod ? this.def.healMod(this, opts) : 0)) * (1 + (this.gear().power || 0)) * (1 + this.fxMod('heal')));
     this.env.emit({ type: 'heal', target, amount, crit: false, ab: opts.ab });
+    this.itemHook('heal');
     return amount;
   }
   hot(target, potencyPerTick, ticks, interval = 3, opts = {}) {
     const { amount } = this.healAmount(potencyPerTick, opts);
     this.env.emit({ type: 'hot', target, amount, ticks, interval, ab: opts.ab, id: opts.id || (opts.ab && opts.ab.id) });
+    this.itemHook('heal');
   }
   shield(target, potency, dur, opts = {}) {
-    const amount = Math.round(potency * ENGINE.POT_SCALE * (1 + (this.def.healMod ? this.def.healMod(this, opts) : 0)) * (1 + (this.gear().power || 0)));
+    const amount = Math.round(potency * ENGINE.POT_SCALE * (1 + (this.def.healMod ? this.def.healMod(this, opts) : 0)) * (1 + (this.gear().power || 0)) * (1 + this.fxMod('heal')));
     this.env.emit({ type: 'shield', target, amount, dur, ab: opts.ab, tag: opts.tag });
+    this.itemHook('heal');
     return amount;
   }
   // Damage reduction on a player (or 'party'). kind: undefined | 'brace' | 'reflect' | 'living' | 'invuln'

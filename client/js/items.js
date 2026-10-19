@@ -3,17 +3,29 @@
 // Slots: weapon, armor, two accessories. Stats:
 //   hp     flat max HP (host applies it)              phys / mag  main stat; each class reads one (1 pt = +0.1% damage and healing)
 //   def    1 pt = 0.1% less damage taken (host)       haste / crit  percent
-// Gear is deliberately modest (best-in-slot is roughly +15-20% output) so fights stay about mechanics.
+// Gear is deliberately modest (best-in-slot is roughly +15-25% output) so fights stay about mechanics.
+//
+// Rarity is a property of the item: each rarity is its own set of items. Power comes from rarity, not from which
+// boss dropped it, so a Grubnak Legendary is as strong as a Hollow King Legendary.
+//   Common     starter (Recruit) gear only          Uncommon   a clean stat line
+//   Rare       stats + a small effect               Legendary  a strong effect (class enhancements live here)
+//   Mythic     a build-defining effect (two per boss)
 
 const GEAR_CAPS = { hp: 150, phys: 150, mag: 150, def: 100, haste: 10, crit: 10 };
 const CLASS_MAIN = {
   bastion: 'phys', bloodreaver: 'phys', ranger: 'phys', shadowblade: 'phys',
   runeguard: 'mag', pyromancer: 'mag', cleric: 'mag', grovekeeper: 'mag', chronomancer: 'mag',
 };
+// power: the stat budget; ilvl: shown in tooltips; sell: gold in the inventory; salvage: gold each human gets when
+// everyone passes on a chest item
 const RARITY = [
-  { name: 'Common', color: '#c8c2b4' }, { name: 'Uncommon', color: '#6fd06a' }, { name: 'Rare', color: '#5aa8ff' },
-  { name: 'Epic', color: '#c27aff' }, { name: 'Legendary', color: '#ff9a3a' },
+  { name: 'Common', color: '#b3aea3', power: 0.4, ilvl: 1, sell: 2, salvage: 1 },
+  { name: 'Uncommon', color: '#4f9cff', power: 1.0, ilvl: 30, sell: 8, salvage: 2 },
+  { name: 'Rare', color: '#b06cff', power: 1.15, ilvl: 33, sell: 15, salvage: 4 },
+  { name: 'Legendary', color: '#ff9a3a', power: 1.3, ilvl: 36, sell: 30, salvage: 8 },
+  { name: 'Mythic', color: '#ff4f4a', power: 1.45, ilvl: 40, sell: 60, salvage: 15 },
 ];
+const R_COMMON = 0, R_UNCOMMON = 1, R_RARE = 2, R_LEGENDARY = 3, R_MYTHIC = 4;
 const STAT_INFO = {
   hp: { name: 'HP', fmt: v => `+${v}` },
   phys: { name: 'Physical', fmt: v => `+${v}` },
@@ -23,17 +35,9 @@ const STAT_INFO = {
   crit: { name: 'Critical', fmt: v => `+${v}%` },
 };
 
-// Where an item comes from. Every boss drops gear of the same strength: there is no ladder where one fight's loot
-// replaces the last. Bosses differ in what they drop (stat mixes, enhancements, party bonuses), not in how good it is.
-// Hard drops (q = 1) are one rarity up and 25% stronger.
-const TIERS = {
-  0: { name: 'Recruit', power: 0.4, rarity: 0, ilvl: 1 },
-  1: { name: 'Grubnak', power: 1, rarity: 2, ilvl: 30 },
-  2: { name: 'Skitterra', power: 1, rarity: 2, ilvl: 30 },
-  3: { name: 'Volkar', power: 1, rarity: 2, ilvl: 30 },
-  4: { name: 'Hollow King', power: 1, rarity: 2, ilvl: 30 },
-};
-const HARD_MULT = 1.25;
+// Where an item comes from (an item's `tier`). Every boss drops gear of the same strength: there is no ladder where one
+// fight's loot replaces the last. Bosses differ in themes, effects and party bonuses, not in how good their gear is.
+const TIERS = { 0: { name: 'Recruit' }, 1: { name: 'Grubnak' }, 2: { name: 'Skitterra' }, 3: { name: 'Volkar' }, 4: { name: 'Hollow King' } };
 
 const CLASS_GEAR = {
   bastion: { wtype: 'sword', w: ["Recruit's Arming Sword", 'Cleaverguard Sword', 'Silkrend Oathblade', 'Stormward Oathblade', 'Barrowking Oathblade'], a: ['Iron Skillet Plate', 'Broodwarden Plate', 'Thunderforged Plate', 'Gravewarden Plate'] },
@@ -99,10 +103,34 @@ const ITEM_PERKS = {
   chronomancer_a4: { ab: 'rewind', text: 'Rewind reaches back 6 seconds instead of 4.' },
 };
 
-// Base stat lines at power 1.0. General drops are as strong as class drops overall: each spends the same budget, just
-// on a different mix (main stat, crit, haste, HP, defence). A class drop's edge is its enhancement, plus 5% on its stats.
-// Budgets: weapon 80 main + 3 points of crit/haste; armour 125 HP + defence; accessory 12 main + 3 crit/haste, or a
-// defensive charm of 75 HP + defence.
+// ---------------------------------------------------------------- item effects
+// Effects are data. The combat engine runs them in your own kit (Kit.itemHook / Kit.fxMod in engine.js), like the
+// enhancements; the host only ever sees the ordinary combat events they cause. An effect is either
+//   a trigger:   { on: <FX_TRIGGERS>, chance?, icd? (seconds between procs), ...actions }
+//   a condition: { while: <FX_CONDITIONS>, frac?, ...mods }   (always on while it holds)
+// Actions: strike (extra hit, potency), mend (heal yourself, share of max HP), ward (shield yourself, potency, `dur`),
+//          cdr (seconds off your other oGCD cooldowns), buff ({ mods } for `dur` s, up to `stacks`, shown as `name`).
+// Mods (conditions and buffs): dmg, heal (healing and shields), crit, haste (fractions), recast (oGCD cooldowns shorter).
+const FX_TRIGGERS = {
+  crit: 'a critical hit or heal', gcd: 'a GCD', ogcd: 'an oGCD', heal: 'a heal or shield you cast',
+  dash: 'a dash', gain: 'building your gauge (every 10 points of a gauge that fills on its own)',
+};
+const FX_CONDITIONS = { always: 'always', hpAbove: 'your HP above frac', hpBelow: 'your HP below frac' };
+const FX_ACTIONS = ['strike', 'mend', 'ward', 'cdr', 'buff'];
+const FX_MODS = ['dmg', 'heal', 'crit', 'haste', 'recast'];
+const FX_KEYS = new Set(['on', 'while', 'frac', 'chance', 'icd', 'dur', 'stacks', 'name', 'id', ...FX_ACTIONS, ...FX_MODS]);
+
+// the small effect every Rare class item of a boss shares (only bosses whose class drops include a non-enhanced piece)
+const CLASS_FX = {
+  1: { fx: [{ on: 'dash', icd: 10, mend: 0.03 }], fxText: 'Second Helping: after you dash, recover 3% of your HP (once every 10 s).' },
+  3: { fx: [{ on: 'ogcd', icd: 2, strike: 60 }], fxText: 'Static: each oGCD you use crackles for about 30 extra damage.' },
+  4: { fx: [{ on: 'ogcd', buff: { dmg: 0.03 }, dur: 6, name: "Court's Favour" }], fxText: "Court's Favour: each oGCD you use gives +3% damage for 6 s." },
+};
+
+// Base stat lines at power 1.0 (an Uncommon). Rarity scales the whole line (RARITY[r].power), so the budget grows
+// 1.0 / 1.15 / 1.3 / 1.45. General drops are as strong as class drops overall: each spends the same budget, just on a
+// different mix. A class drop's edge is 5% on its stats. Budgets: weapon 80 main + 3 points of crit/haste; armour
+// 125 HP + defence; accessory 12 main + 3 crit/haste, or a defensive charm of 75 HP + defence.
 const BASE = {
   weapon: { main: 80, crit: 2, haste: 1 },
   armor: { hp: 75, def: 50 },
@@ -112,46 +140,86 @@ const CLASS_EDGE = 1.05;
 const ITEMS = {};
 (function buildItems() {
   const edge = b => Object.fromEntries(Object.entries(b).map(([k, v]) => [k, v * CLASS_EDGE]));
+  // class items: Recruit weapons are Common; an enhanced piece is Legendary; the other piece is Rare with its boss's effect
+  const classRarity = (key, tier) => (tier === 0 ? R_COMMON : ITEM_PERKS[key] ? R_LEGENDARY : R_RARE);
+  const classFx = (key, tier) => (tier && !ITEM_PERKS[key] && CLASS_FX[tier] ? { fx: CLASS_FX[tier].fx.map(e => Object.assign({}, e)), fxText: CLASS_FX[tier].fxText } : {});
   for (const [cls, g] of Object.entries(CLASS_GEAR)) {
-    g.w.forEach((name, tier) => { ITEMS[`${cls}_w${tier}`] = { key: `${cls}_w${tier}`, name, slot: 'weapon', cls, main: CLASS_MAIN[cls], wtype: g.wtype, tier, base: edge(BASE.weapon) }; });
-    g.a.forEach((name, i) => { const tier = i + 1; ITEMS[`${cls}_a${tier}`] = { key: `${cls}_a${tier}`, name, slot: 'armor', cls, tier, atype: 'class', base: edge(BASE.armor) }; });
+    g.w.forEach((name, tier) => { const key = `${cls}_w${tier}`; ITEMS[key] = Object.assign({ key, name, slot: 'weapon', cls, main: CLASS_MAIN[cls], wtype: g.wtype, tier, rarity: classRarity(key, tier), base: edge(BASE.weapon) }, classFx(key, tier)); });
+    g.a.forEach((name, i) => { const tier = i + 1, key = `${cls}_a${tier}`; ITEMS[key] = Object.assign({ key, name, slot: 'armor', cls, tier, atype: 'class', rarity: classRarity(key, tier), base: edge(BASE.armor) }, classFx(key, tier)); });
   }
+  const U = R_UNCOMMON, R = R_RARE, L = R_LEGENDARY, M = R_MYTHIC;
   const gen = [
-    // general weapons: one main stat, any class that reads it; each boss leans a different way
-    { key: 'g_cleaver', name: "Butcher's Cleaver", slot: 'weapon', main: 'phys', wtype: 'cleaver', tier: 1, base: { main: 84, crit: 3 } },
-    { key: 'g_ladle', name: 'Simmering Ladle', slot: 'weapon', main: 'mag', wtype: 'ladle', tier: 1, base: { main: 84, crit: 3 } },
-    { key: 'g_fang', name: 'Fang Shortblade', slot: 'weapon', main: 'phys', wtype: 'fang', tier: 2, base: { main: 80, haste: 4 } },
-    { key: 'g_wand', name: 'Silkspun Wand', slot: 'weapon', main: 'mag', wtype: 'wand', tier: 2, base: { main: 80, haste: 4 } },
-    { key: 'g_maul', name: 'Thunderstone Maul', slot: 'weapon', main: 'phys', wtype: 'maul', tier: 3, base: { main: 76, crit: 2, haste: 3 } },
-    { key: 'g_rod', name: 'Lightning Rod Scepter', slot: 'weapon', main: 'mag', wtype: 'scepter', tier: 3, base: { main: 76, crit: 2, haste: 3 } },
-    { key: 'g_crown', name: 'Hollow Crown Greatsword', slot: 'weapon', main: 'phys', wtype: 'greatsword', tier: 4, base: { main: 92, crit: 1 } },
-    { key: 'g_sceptre', name: 'Sceptre of the Barrow', slot: 'weapon', main: 'mag', wtype: 'royal', tier: 4, base: { main: 92, haste: 1 } },
-    // general armor: anyone
-    { key: 'g_coat', name: "Traveler's Coat", slot: 'armor', tier: 0, atype: 'coat', base: { hp: 75, def: 50 } },
-    { key: 'g_apron', name: 'Apron of the Kitchen Guard', slot: 'armor', tier: 1, atype: 'apron', base: { hp: 95, def: 35 } },
-    { key: 'g_hauberk', name: 'Chitin Hauberk', slot: 'armor', tier: 2, atype: 'chitin', base: { hp: 60, def: 65 } },
-    { key: 'g_slate', name: 'Slatescale Mail', slot: 'armor', tier: 3, atype: 'scale', base: { hp: 70, def: 45, haste: 1 } },
-    { key: 'g_shroud', name: 'Royal Burial Shroud', slot: 'armor', tier: 4, atype: 'shroud', base: { hp: 70, def: 45, crit: 1 } },
-    // accessories: anyone, two at a time
-    { key: 'g_pepper', name: 'Peppercorn Ring', slot: 'accessory', atype: 'ring', tier: 1, base: { crit: 3, main: 12 } },
-    { key: 'g_timer', name: 'Egg Timer Pendant', slot: 'accessory', atype: 'amulet', tier: 1, base: { haste: 3, main: 12 } },
-    { key: 'g_band', name: 'Eightfold Band', slot: 'accessory', atype: 'ring', tier: 2, base: { haste: 3, main: 12 } },
-    { key: 'g_venom', name: 'Venom Pendant', slot: 'accessory', atype: 'amulet', tier: 2, base: { crit: 3, main: 12 } },
-    { key: 'g_silk', name: 'Silkguard Charm', slot: 'accessory', atype: 'charm', tier: 2, base: { hp: 45, def: 30 } },
-    { key: 'g_polar', name: 'Polarity Ring', slot: 'accessory', atype: 'ring', tier: 3, base: { crit: 2, haste: 2, main: 8 } },
-    { key: 'g_eye', name: 'Eye of the Storm', slot: 'accessory', atype: 'amulet', tier: 3, base: { haste: 4, main: 6 } },
-    { key: 'g_iron', name: 'Grounding Charm', slot: 'accessory', atype: 'charm', tier: 3, base: { hp: 35, def: 40 } },
-    { key: 'g_signet', name: 'Signet of the Hollow King', slot: 'accessory', atype: 'ring', tier: 4, base: { crit: 4, main: 6 } },
-    { key: 'g_bell', name: 'Barrow Bell Pendant', slot: 'accessory', atype: 'amulet', tier: 4, base: { main: 20, crit: 1 } },
-    { key: 'g_lantern', name: 'Last Lantern Charm', slot: 'accessory', atype: 'lantern', tier: 4, base: { hp: 55, def: 20 } },
+    // Recruit
+    { key: 'g_coat', name: "Traveler's Coat", slot: 'armor', tier: 0, rarity: R_COMMON, atype: 'coat', base: { hp: 75, def: 50 } },
+
+    // Grubnak: the ogre's kitchen. Hearty: healing yourself, staying well fed.
+    { key: 'g_cleaver', name: "Butcher's Cleaver", slot: 'weapon', main: 'phys', wtype: 'cleaver', tier: 1, rarity: U, base: { main: 84, crit: 3 } },
+    { key: 'g_ladle', name: 'Simmering Ladle', slot: 'weapon', main: 'mag', wtype: 'ladle', tier: 1, rarity: U, base: { main: 84, crit: 3 } },
+    { key: 'g_apron', name: 'Apron of the Kitchen Guard', slot: 'armor', tier: 1, rarity: U, atype: 'apron', base: { hp: 95, def: 35 } },
+    { key: 'g_pepper', name: 'Peppercorn Ring', slot: 'accessory', atype: 'ring', tier: 1, rarity: R, base: { crit: 3, main: 12 },
+      fx: [{ on: 'crit', icd: 4, strike: 40 }], fxText: 'Your critical hits add a peppery sting: about 20 extra damage, once every 4 s.' },
+    { key: 'g_timer', name: 'Egg Timer Pendant', slot: 'accessory', atype: 'amulet', tier: 1, rarity: L, base: { haste: 3, main: 12 },
+      fx: [{ on: 'ogcd', cdr: 2 }], fxText: 'Every oGCD you use takes 2 s off your other oGCD cooldowns.' },
+    { key: 'm_stockpot', name: "The Ogre's Stockpot", slot: 'accessory', atype: 'pot', tier: 1, rarity: M, base: { main: 12, crit: 3 },
+      fx: [{ on: 'gcd', icd: 12, strike: 120, mend: 0.03 }], fxText: 'Seconds: every 12 s, your next GCD deals about 60 extra damage and you recover 3% of your HP.' },
+    { key: 'm_whites', name: "Head Chef's Whites", slot: 'armor', atype: 'whites', tier: 1, rarity: M, base: { hp: 75, def: 50 },
+      fx: [{ while: 'hpAbove', frac: 0.7, dmg: 0.06, heal: 0.06 }], fxText: 'Well Fed: while above 70% HP, +6% damage and healing.' },
+
+    // Skitterra: the brood. Critical hits, venom, quickness.
+    { key: 'g_fang', name: 'Fang Shortblade', slot: 'weapon', main: 'phys', wtype: 'fang', tier: 2, rarity: U, base: { main: 80, haste: 4 } },
+    { key: 'g_wand', name: 'Silkspun Wand', slot: 'weapon', main: 'mag', wtype: 'wand', tier: 2, rarity: U, base: { main: 80, haste: 4 } },
+    { key: 'g_hauberk', name: 'Chitin Hauberk', slot: 'armor', tier: 2, rarity: U, atype: 'chitin', base: { hp: 60, def: 65 } },
+    { key: 'g_band', name: 'Eightfold Band', slot: 'accessory', atype: 'ring', tier: 2, rarity: R, base: { haste: 3, main: 12 },
+      fx: [{ on: 'gcd', chance: 0.15, buff: { crit: 0.06 }, dur: 8, name: 'Eightfold Eye' }], fxText: 'Your GCDs have a 15% chance to give +6% critical chance for 8 s.' },
+    { key: 'g_silk', name: 'Silkguard Charm', slot: 'accessory', atype: 'charm', tier: 2, rarity: R, base: { hp: 45, def: 30 },
+      fx: [{ on: 'heal', icd: 12, ward: 120, dur: 8 }], fxText: 'Healing or shielding anyone spins you a silk ward of about 60 for 8 s (once every 12 s).' },
+    { key: 'g_venom', name: 'Venom Pendant', slot: 'accessory', atype: 'amulet', tier: 2, rarity: L, base: { crit: 3, main: 12 },
+      fx: [{ on: 'crit', icd: 3, strike: 60 }], fxText: 'Your critical hits inject venom: about 30 extra damage, once every 3 s.' },
+    { key: 'm_broodeye', name: 'Eye of the Broodmother', slot: 'accessory', atype: 'broodeye', tier: 2, rarity: M, base: { main: 12, haste: 3 },
+      fx: [{ on: 'crit', buff: { haste: 0.015 }, dur: 10, stacks: 6, name: 'Brood Frenzy' }], fxText: 'Each critical hit gives Brood Frenzy: +1.5% haste for 10 s, stacking up to 6 times.' },
+    { key: 'm_venomweave', name: 'Venomweave Shroud', slot: 'armor', atype: 'venomweave', tier: 2, rarity: M, base: { hp: 75, def: 50 },
+      fx: [{ on: 'gcd', chance: 0.3, strike: 70 }], fxText: 'Each GCD has a 30% chance to bite for about 35 extra damage.' },
+
+    // Volkar: the storm. Dashing, cooldowns, lightning.
+    { key: 'g_maul', name: 'Thunderstone Maul', slot: 'weapon', main: 'phys', wtype: 'maul', tier: 3, rarity: U, base: { main: 76, crit: 2, haste: 3 } },
+    { key: 'g_rod', name: 'Lightning Rod Scepter', slot: 'weapon', main: 'mag', wtype: 'scepter', tier: 3, rarity: U, base: { main: 76, crit: 2, haste: 3 } },
+    { key: 'g_slate', name: 'Slatescale Mail', slot: 'armor', tier: 3, rarity: U, atype: 'scale', base: { hp: 70, def: 45, haste: 1 } },
+    { key: 'g_polar', name: 'Polarity Ring', slot: 'accessory', atype: 'ring', tier: 3, rarity: R, base: { crit: 2, haste: 2, main: 8 },
+      fx: [{ on: 'gain', icd: 6, buff: { haste: 0.03 }, dur: 6, name: 'Charged' }], fxText: 'Building your gauge charges you: +3% haste for 6 s (at most once every 6 s).' },
+    { key: 'g_iron', name: 'Grounding Charm', slot: 'accessory', atype: 'charm', tier: 3, rarity: R, base: { hp: 35, def: 40 },
+      fx: [{ on: 'dash', icd: 8, ward: 100, dur: 5 }], fxText: 'After you dash, a grounding ward absorbs about 50 damage for 5 s (once every 8 s).' },
+    { key: 'g_eye', name: 'Eye of the Storm', slot: 'accessory', atype: 'amulet', tier: 3, rarity: L, base: { haste: 4, main: 6 },
+      fx: [{ while: 'always', recast: 0.08 }], fxText: 'Your oGCD cooldowns are 8% shorter.' },
+    { key: 'm_torc', name: "Stormcaller's Torc", slot: 'accessory', atype: 'torc', tier: 3, rarity: M, base: { main: 12, haste: 3 },
+      fx: [{ on: 'dash', buff: { haste: 0.08, dmg: 0.04 }, dur: 5, name: 'Tailwind' }], fxText: 'Tailwind: each dash gives +8% haste and +4% damage for 5 s.' },
+    { key: 'm_thunderhead', name: 'Thunderhead Mantle', slot: 'armor', atype: 'thunderhead', tier: 3, rarity: M, base: { hp: 75, def: 50 },
+      fx: [{ on: 'crit', icd: 5, strike: 80, cdr: 1 }], fxText: 'Lightning answers your critical hits: about 40 extra damage and 1 s off your oGCD cooldowns (once every 5 s).' },
+
+    // the Hollow King: the dead court. Risk, crowns, oGCDs.
+    { key: 'g_crown', name: 'Hollow Crown Greatsword', slot: 'weapon', main: 'phys', wtype: 'greatsword', tier: 4, rarity: U, base: { main: 92, crit: 1 } },
+    { key: 'g_sceptre', name: 'Sceptre of the Barrow', slot: 'weapon', main: 'mag', wtype: 'royal', tier: 4, rarity: U, base: { main: 92, haste: 1 } },
+    { key: 'g_shroud', name: 'Royal Burial Shroud', slot: 'armor', tier: 4, rarity: U, atype: 'shroud', base: { hp: 70, def: 45, crit: 1 } },
+    { key: 'g_signet', name: 'Signet of the Hollow King', slot: 'accessory', atype: 'ring', tier: 4, rarity: R, base: { crit: 4, main: 6 },
+      fx: [{ while: 'hpAbove', frac: 0.8, crit: 0.03 }], fxText: 'While above 80% HP: +3% critical chance.' },
+    { key: 'g_lantern', name: 'Last Lantern Charm', slot: 'accessory', atype: 'lantern', tier: 4, rarity: R, base: { hp: 55, def: 20 },
+      fx: [{ while: 'hpBelow', frac: 0.5, heal: 0.1 }], fxText: 'While below 50% HP, your healing and shields are 10% stronger.' },
+    { key: 'g_bell', name: 'Barrow Bell Pendant', slot: 'accessory', atype: 'amulet', tier: 4, rarity: L, base: { main: 20, crit: 1 },
+      fx: [{ on: 'ogcd', icd: 15, buff: { crit: 0.1 }, dur: 6, name: 'Barrow Toll' }], fxText: 'The bell tolls: an oGCD gives +10% critical chance for 6 s (once every 15 s).' },
+    { key: 'm_crown', name: 'Crown of the Barrow', slot: 'accessory', atype: 'crown', tier: 4, rarity: M, base: { main: 12, crit: 3 },
+      fx: [{ while: 'hpBelow', frac: 0.5, dmg: 0.12, heal: 0.12 }], fxText: 'Kneel to No One: while below 50% HP, +12% damage and healing.' },
+    { key: 'm_deadcourt', name: 'Mantle of the Dead Court', slot: 'armor', atype: 'deadcourt', tier: 4, rarity: M, base: { hp: 75, def: 50 },
+      fx: [{ while: 'always', recast: 0.1 }, { on: 'ogcd', buff: { dmg: 0.02 }, dur: 10, stacks: 3, name: 'Dead Court' }],
+      fxText: 'Your oGCD cooldowns are 10% shorter, and each oGCD you use gives +2% damage for 10 s, stacking 3 times.' },
   ];
   for (const it of gen) ITEMS[it.key] = it;
+  // every effect gets an id (its proc cooldowns and buffs are tracked by it)
+  for (const it of Object.values(ITEMS)) (it.fx || []).forEach((e, i) => { e.id = `${it.key}:${i}`; });
 })();
 
-// the actual numbers on an item instance { key, q }, for a given class (class/general 'main' becomes phys or mag)
+// the actual numbers on an item instance { key }, for a given class (class/general 'main' becomes phys or mag)
 function itemStats(inst, clsId) {
   const it = ITEMS[inst.key]; if (!it) return {};
-  const k = TIERS[it.tier].power * (inst.q ? HARD_MULT : 1);
+  const k = RARITY[it.rarity].power;
   const out = {};
   for (const [s, v] of Object.entries(it.base)) {
     const stat = s === 'main' ? (it.main || CLASS_MAIN[clsId] || 'phys') : s;
@@ -160,9 +228,9 @@ function itemStats(inst, clsId) {
   }
   return out;
 }
-// enhanced class items are one rarity higher (a Heroic Skitterra enhancement is Legendary)
-const itemRarity = inst => { const it = ITEMS[inst.key]; return Math.min(4, TIERS[it.tier].rarity + (inst.q ? 1 : 0) + (ITEM_PERKS[inst.key] ? 1 : 0)); };
-const itemLevel = inst => { const it = ITEMS[inst.key]; return TIERS[it.tier].ilvl + (inst.q ? 5 : 0); };
+const itemRarity = inst => (ITEMS[inst.key] ? ITEMS[inst.key].rarity : 0);
+const itemLevel = inst => RARITY[itemRarity(inst)].ilvl;
+const sellPrice = inst => RARITY[itemRarity(inst)].sell;
 
 // can this class put this item in this slot?  slot: weapon | armor | acc1 | acc2
 function canEquip(inst, clsId, slot) {
@@ -188,7 +256,10 @@ function gearTotals(clsId, insts) {
 function gearMods(clsId, t, insts = []) {
   const main = CLASS_MAIN[clsId] || 'phys';
   const perks = new Set(insts.filter(i => i && ITEM_PERKS[i.key] && ITEMS[i.key].cls === clsId).map(i => i.key));
-  return { power: (t[main] || 0) / 1000, crit: (t.crit || 0) / 100, haste: (t.haste || 0) / 100, hp: t.hp || 0, def: (t.def || 0) / 1000, perks };
+  // item effects (run by the kit: Kit.itemHook / Kit.fxMod); the same ring in both slots only counts once
+  const seen = new Set(), fx = [];
+  for (const i of insts) if (i && ITEMS[i.key] && ITEMS[i.key].fx && !seen.has(i.key)) { seen.add(i.key); fx.push(...ITEMS[i.key].fx); }
+  return { power: (t[main] || 0) / 1000, crit: (t.crit || 0) / 100, haste: (t.haste || 0) / 100, hp: t.hp || 0, def: (t.def || 0) / 1000, perks, fx };
 }
 // host side: never trust a client's numbers beyond the caps
 function sanitizeGear(s) {
@@ -233,25 +304,60 @@ function partyBonus(counts) {
   return out;
 }
 
-// Loot from a clear: whatever that boss drops. Sometimes it's made for your class (a lucky find with an
-// enhancement); otherwise a general piece that's every bit as strong. Hard gives two drops of higher quality.
+// ---------------------------------------------------------------- loot chests
+// A clear drops a chest: 4 items on Normal, 5 on Hard. Each item rolls its rarity first, then picks an item of that
+// rarity from the boss's table. Class items only roll for classes a human in the run plays (bots don't count).
+// Then everyone rolls Need / Greed / Pass on each (main.js + loot.js).
 const BOSS_TIER = { grubnak: 1, skitterra: 2, volkar: 3, hollowking: 4 };
-const CLASS_DROP = 0.35;
-function rollLoot(bossId, mode, clsId, rng) {
-  const tier = BOSS_TIER[bossId] || 1, q = mode === 'hard' ? 1 : 0, out = [];
-  const general = Object.values(ITEMS).filter(it => !it.cls && it.tier === tier);
-  for (let n = 0; n < (q ? 2 : 1); n++) {
-    let key;
-    const classKeys = [`${clsId}_w${tier}`, `${clsId}_a${tier}`].filter(k => ITEMS[k]);
-    if (classKeys.length && rng() < CLASS_DROP) key = classKeys[Math.floor(rng() * classKeys.length)];
-    else {
-      const usable = general.filter(it => it.slot !== 'weapon' || it.main === CLASS_MAIN[clsId]);
-      key = usable[Math.floor(rng() * usable.length)].key;
-    }
-    out.push({ key, q });
+const CHEST_SIZE = { normal: 4, hard: 5 };
+const CHEST_ODDS = {   // percent by rarity: [Uncommon, Rare, Legendary, Mythic]
+  normal: [55, 30, 12, 3],
+  hard: [30, 40, 22, 8],
+};
+// each boss's table: { rarity: [item keys] }, everything that boss drops (Recruit gear never drops)
+const LOOT_TABLES = {};
+for (const [boss, tier] of Object.entries(BOSS_TIER)) {
+  const t = LOOT_TABLES[boss] = { [R_UNCOMMON]: [], [R_RARE]: [], [R_LEGENDARY]: [], [R_MYTHIC]: [] };
+  for (const it of Object.values(ITEMS)) if (it.tier === tier && t[it.rarity]) t[it.rarity].push(it.key);
+}
+// gold for clearing a boss (Hard doubles it; wipes and trials give nothing)
+const CLEAR_GOLD = { grubnak: 40, skitterra: 45, volkar: 50, hollowking: 60 };
+const clearGold = (bossId, mode) => (CLEAR_GOLD[bossId] || 0) * (mode === 'hard' ? 2 : 1);
+
+// classes: the classes the humans in the run play. -> [item keys]
+function rollChest(bossId, mode, classes, rng) {
+  const table = LOOT_TABLES[bossId] || LOOT_TABLES.grubnak, odds = CHEST_ODDS[mode] || CHEST_ODDS.normal;
+  const ok = key => !ITEMS[key].cls || classes.includes(ITEMS[key].cls);
+  const out = [];
+  for (let n = 0; n < (CHEST_SIZE[mode] || CHEST_SIZE.normal); n++) {
+    let roll = rng() * 100, r = R_UNCOMMON;
+    for (let i = 0; i < odds.length; i++) { if (roll < odds[i]) { r = R_UNCOMMON + i; break; } roll -= odds[i]; }
+    let pool = [];
+    for (let rr = r; rr >= R_UNCOMMON && !pool.length; rr--) pool = table[rr].filter(ok);   // (every table has general items in each rarity)
+    const fresh = pool.filter(k => !out.includes(k));   // no doubles in one chest while there's a choice
+    const from = fresh.length ? fresh : pool;
+    out.push(from[Math.floor(rng() * from.length)]);
   }
   return out;
 }
+// Need / Greed / Pass: picks are [[playerId, choice]] with choice 0 pass, 1 greed, 2 need. Everyone who didn't pass
+// rolls 1-100; the best Need wins, otherwise the best Greed (ties roll again). -> { w: id, c, r } or null (all passed)
+const LOOT_PASS = 0, LOOT_GREED = 1, LOOT_NEED = 2;
+function lootWinner(picks, rng) {
+  for (const c of [LOOT_NEED, LOOT_GREED]) {
+    const ids = picks.filter(p => p[1] === c).map(p => p[0]);
+    if (!ids.length) continue;
+    for (let tries = 0; tries < 20; tries++) {
+      const rolls = ids.map(id => [id, 1 + Math.floor(rng() * 100)]);
+      const best = Math.max(...rolls.map(x => x[1])), top = rolls.filter(x => x[1] === best);
+      if (top.length === 1 || tries === 19) return { w: top[0][0], c, r: best };
+    }
+  }
+  return null;
+}
+// can this hero Need it? class items: that class; weapons: the matching main stat; armour and accessories: anyone
+const canNeed = (key, clsId) => !!ITEMS[key] && slotsFor({ key }).some(s => canEquip({ key }, clsId, s));
 
-if (typeof module !== 'undefined') module.exports = { ITEMS, GEAR_CAPS, CLASS_MAIN, RARITY, itemStats, canEquip, gearTotals, gearMods, sanitizeGear, rollLoot,
-  PARTY_BONUS, gearSources, sanitizeSources, partyBonus, ITEM_PERKS, TIERS };
+if (typeof module !== 'undefined') module.exports = { ITEMS, GEAR_CAPS, CLASS_MAIN, RARITY, itemStats, itemRarity, canEquip, gearTotals, gearMods, sanitizeGear,
+  PARTY_BONUS, gearSources, sanitizeSources, partyBonus, ITEM_PERKS, TIERS, FX_TRIGGERS, FX_CONDITIONS, FX_ACTIONS, FX_MODS, FX_KEYS,
+  BOSS_TIER, LOOT_TABLES, CHEST_ODDS, CHEST_SIZE, rollChest, lootWinner, canNeed, clearGold, sellPrice, LOOT_PASS, LOOT_GREED, LOOT_NEED };

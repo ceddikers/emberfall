@@ -53,6 +53,7 @@ class CombatActor {
     if (!this.dashReady(now)) return false;
     this.dash.charges--;
     if (!this.dash.next) this.dash.next = now + DASH.cd;
+    this.kit.itemHook('dash');   // item effects that fire on a dash
     return true;
   }
   dashFraction(now) { return this.dash.next ? Math.max(0, (this.dash.next - now) / DASH.cd) : 0; }
