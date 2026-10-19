@@ -214,7 +214,7 @@ const BotAI = {
   home(bot, view) {
     const b = view.boss, idx = bot.slot || 0;
     const own = typeof BOT_CLASS !== 'undefined' && BOT_CLASS[bot.cls.id] && BOT_CLASS[bot.cls.id].home;   // a class with its own footwork
-    if (own && !bot.wantEnemy) { const h = own(bot, view); if (h) return h; }
+    if (own) { const h = own(bot, view); if (h) return h; }
     // on an add: melee hug it, ranged stand off to one side of it (out of any beam to its sibling)
     const homeId = bot.wantEnemy === 'hold' ? bot.addHome : bot.wantEnemy;
     const add = homeId && (view.adds || []).find(a => a.id === homeId);
@@ -744,11 +744,27 @@ const BOT_CLASS = {
   // Passing Strike), Hook Turn from a flank (so it lands on the other flank, not in front), Crosswind when full.
   driftblade: {
     home(bot, view) {
-      // only while it's calm: with a telegraph on the floor, stand where a melee would and let the dodging take over
-      if (view.mechs.some(m => m.type !== 'raidwide' && m.resolveAt - view.t < 2.5) || (view.rollers || []).length || (view.sweeps || []).some(s => view.t < s.end)) return null;
-      // a long, thin loop through its middle (it never slows to a stop), aimed a little ahead so the bot is always walking
-      const b = view.boss, f = b.facing || 0, th = (view.t + 0.8) * 1.5 + bot.id * 1.7, s = Math.sin(th) * 140, u = Math.cos(th) * 45 - 25;
-      return { x: b.x + Math.cos(f) * u - Math.sin(f) * s, y: b.y + Math.sin(f) * u + Math.cos(f) * s };
+      const b = view.boss, f = b.facing || 0, busy = view.mechs.some(m => m.type !== 'raidwide' && m.resolveAt - view.t < (m.type === 'aoe' ? 2.5 : 5)) || (view.rollers || []).length || (view.sweeps || []).some(s => view.t < s.end);
+      const side = (bot.slot || 0) % 2 ? 40 : -40;
+      // on an add: sweep back and forth round its near side (Passing Strikes through it now and then)
+      const addId = bot.wantEnemy === 'hold' ? bot.addHome : bot.wantEnemy, add = addId && (view.adds || []).find(a => a.id === addId);
+      if (bot.wantEnemy && !add) return null;
+      const at = ahead => {
+        const th = (view.t + ahead) * 1.5 + bot.id * 1.7;
+        if (add) { const a = Math.atan2(-add.y, -add.x) + Math.sin(th) * 1.1, d = add.r + 30 + Math.cos(th * 2) * 25; return { x: add.x + Math.cos(a) * d, y: add.y + Math.sin(a) * d }; }
+        // with a telegraph on the floor: a short shuffle round where a melee would stand (still walking, so Drift holds;
+        // the dodging scores pull it wherever is safe), instead of standing still and bleeding Drift
+        if (busy) return { x: b.x + side + Math.sin(th * 1.4) * 55, y: b.y + 110 + Math.cos(th * 1.4) * 20 };
+        // a long, thin loop through its middle, wide enough to run clean through the body, never so wide that the far
+        // ends are out of sabre reach
+        const s = Math.sin(th) * 115, u = Math.cos(th) * 40 - 20;
+        return { x: b.x + Math.cos(f) * u - Math.sin(f) * s, y: b.y + Math.sin(f) * u + Math.cos(f) * s };
+      };
+      // aimed far enough ahead along the loop that the bot never catches the point and stops (it walks faster than the
+      // loop turns at its ends)
+      let p = at(0.8);
+      for (let ahead = 1.2; ahead <= 2.4 && Math.hypot(p.x - bot.x, p.y - bot.y) < 75; ahead += 0.4) p = at(ahead);
+      return p;
     },
     act(bot, k, view, moving) {
       const idx = id => k.abilities.findIndex(a => a.id === id || a.replaces === id);
