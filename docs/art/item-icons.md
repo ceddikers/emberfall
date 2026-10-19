@@ -6,7 +6,9 @@
 
 **Avoid (negative prompt):** glow, neon, bloom, lens flare, sparkles, particles, soft gradients, airbrushing, realistic rendering, photo textures, chrome shine, hands, people, busy fine detail, frame, border, text, watermark.
 
-**Layout:** weapons are diagonal (handle bottom-left, tip top-right); books, foci and hourglasses stand upright; armour is shown on its own, front view. Items 1-57 have old AI-style art in the game; redo them in this style so the bag matches. Items 58-105 have no art yet.
+**Layout:** weapons are diagonal (handle bottom-left, tip top-right); books, foci and hourglasses stand upright; armour is shown on its own, front view. Items 1-57 have old AI-style art in the game; redo them in this style so the bag matches. Items 58-113 have no art yet.
+
+**Rarity** (Common grey, Uncommon blue, Rare purple, Legendary orange, Mythic red) is drawn by the game as the icon's frame, so the paintings themselves don't need it. Mythics (106-113) can be a touch grander: richer materials and one bold flat accent colour.
 
 **Tiers:**
 - **Recruit** items are plain and worn.
@@ -153,3 +155,15 @@
 103. **Signet of the Hollow King**: A heavy tarnished-gold signet ring with a small crown engraved on a dark green stone.
 104. **Barrow Bell Pendant**: A gold chain with a tiny bronze bell pendant, a pale green shine inside its mouth.
 105. **Last Lantern Charm**: A small iron lantern charm on a ring, a warm golden flame burning inside its glass.
+
+## Mythic sheet (items 106-113)
+**Style:** each boss's tier style above (kitchen, spider, storm, royal-and-dead), but grander: these are the rarest drops in the game. Same layout rules. Files: `client/items/<key>.png` (key in brackets).
+
+106. **The Ogre's Stockpot** (`m_stockpot`, Grubnak, accessory): A squat, battered iron cooking pot on a short chain loop, thick orange stew bubbling over the rim, a wooden spoon handle sticking out, and one big ogre tooth hanging from the chain.
+107. **Head Chef's Whites** (`m_whites`, Grubnak, armour): A tall, crisp white double-breasted chef's coat with gold buttons, a red neckerchief, a cleaver tucked through a leather belt, and a few proud splashes of sauce.
+108. **Eye of the Broodmother** (`m_broodeye`, Skitterra, accessory): A gold pendant holding a cluster of six glossy red spider eyes of different sizes set in black chitin, hung on a chain of pale silk thread.
+109. **Venomweave Shroud** (`m_venomweave`, Skitterra, armour): A dark green-black hooded shroud woven from thick spider silk in a web pattern, bright venom-green drops beaded along its threads and hem.
+110. **Stormcaller's Torc** (`m_torc`, Volkar, accessory): An open neck-ring of twisted dark iron, its two ends capped with round slate stones that each hold a bright blue lightning rune, a small flat zigzag bolt arcing between them.
+111. **Thunderhead Mantle** (`m_thunderhead`, Volkar, armour): Heavy slate-grey shoulder plates with a short storm-cloud-grey cape, a flat bright blue lightning bolt running down the chest plate, and rain beading on the iron.
+112. **Crown of the Barrow** (`m_crown`, the Hollow King, accessory): A tarnished gold crown with tall, thin spikes, one spike broken off, a grave-green gem at the front and a few strands of old cobweb between the points.
+113. **Mantle of the Dead Court** (`m_deadcourt`, the Hollow King, armour): A deep plum-black royal mantle with a high stiff collar, a tarnished gold chain of office across the chest, a small grave-green brooch, and a frayed, grave-dusted hem.
