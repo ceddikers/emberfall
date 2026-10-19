@@ -14,8 +14,10 @@ const Net = (() => {
   function steadyInterval(fn, ms) {
     try {
       const src = `setInterval(() => postMessage(0), ${ms});`;
-      const w = new Worker(URL.createObjectURL(new Blob([src], { type: 'text/javascript' })));
-      w.onmessage = fn;
+      let url = URL.createObjectURL(new Blob([src], { type: 'text/javascript' }));
+      const w = new Worker(url);
+      // (once it ticks the worker has its script, and the blob needn't live on)
+      w.onmessage = e => { if (url) { URL.revokeObjectURL(url); url = null; } fn(e); };
       return () => w.terminate();
     } catch (e) {
       const id = setInterval(fn, ms);
@@ -46,7 +48,7 @@ const Net = (() => {
     host, join, startSolo, steadyInterval,
   };
 
-  let peer = null, hostConn = null, hostPlayer = null, players = new Map(), nextId = 1;
+  let peer = null, hostConn = null, hostPlayer = null, players = new Map(), nextId = 1, stopHostTimeouts = null;
 
   // A handler error must never break the caller (on the host that caller can be the fight sim itself).
   const dispatch = msg => { const fn = net.handlers[msg.t]; if (fn) try { fn(msg); } catch (e) { console.error(e); } };
@@ -179,6 +181,7 @@ const Net = (() => {
 
   // a fresh start after a lost connection: drop the old peer so it stops answering for us
   function reset() {
+    if (stopHostTimeouts) { stopHostTimeouts(); stopHostTimeouts = null; }
     if (peer && !peer.destroyed) peer.destroy();
     peer = null; hostConn = null; hostPlayer = null;
     net.isHost = false; net.solo = false; net.online = false; net.room = null; net.stats.rtt = null;
@@ -195,7 +198,7 @@ const Net = (() => {
           players = new Map(); nextId = 1;
           const { p, welcome } = addPlayer(name, null);
           hostPlayer = p; net.id = p.id;
-          steadyInterval(() => {
+          stopHostTimeouts = steadyInterval(() => {
             for (const pl of players.values()) {
               if (pl.conn && Date.now() - pl.seen > TIMEOUT_MS) { removePlayer(pl); pl.conn.close(); }
             }

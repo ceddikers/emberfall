@@ -319,8 +319,13 @@
     }
   }
 
+  const PRE_PULL = new Set(['hot', 'shield', 'mit', 'partyBuff', 'pool']);
   function sendCombat(ev) {
-    if (!inArena() || raid.state !== 'live') return;
+    if (!inArena()) return;
+    // a shield, mitigation or heal over time put up in the countdown lands at the pull (what's left of it), instead of
+    // its cooldown being spent for nothing; damage before the pull has nothing to hit
+    if (raid.state === 'countdown' && PRE_PULL.has(ev.type)) { (raid.prePull || (raid.prePull = [])).push({ ev, at: now }); return; }
+    if (raid.state !== 'live') return;
     const e = packEv(ev);
     if (Net.isHost && raidHost) raidHost.onPlayerEvent(Net.id, e);
     else Net.send({ t: 'cev', ev: e });
@@ -799,6 +804,13 @@
     if (!ev || !EV_TYPES.has(ev.type)) return;
     for (const k of ['amount', 'pct', 'value', 'dur', 'secs', 'ticks', 'interval', 'threat', 'r', 'not']) if (ev[k] !== undefined && !Number.isFinite(ev[k])) return;
     if (ev.tgt !== undefined && typeof ev.tgt !== 'string') return;
+    // a bad heal over time (thousands of ticks, no interval) could freeze the host; a party buff is one of the known
+    // kinds, in sane bounds
+    if (ev.type === 'hot' && (!(ev.ticks >= 1 && ev.ticks <= 20) || !(ev.interval >= 0.5 && ev.interval <= 10))) return;
+    if (ev.type === 'partyBuff') {
+      if (!['dmg', 'crit', 'haste'].includes(ev.kind)) return;
+      ev.value = Math.max(0, Math.min(0.2, ev.value || 0)); ev.dur = Math.max(0, Math.min(30, ev.dur || 0));
+    }
     raidHost.onPlayerEvent(pid, ev);
   });
   Net.onHost('rleave', pid => {
@@ -938,7 +950,17 @@
   });
   Net.on('fight', msg => {
     if (!raid) return;
-    if (msg.s === 'live') { raid.state = 'live'; return; }
+    if (msg.s === 'live') {
+      raid.state = 'live';
+      for (const { ev, at } of raid.prePull || []) {
+        const gone = now - at, e = Object.assign({}, ev);
+        if (typeof e.dur === 'number') { e.dur -= gone; if (e.dur <= 0.2) continue; }
+        if (typeof e.ticks === 'number' && e.interval > 0) { e.ticks -= Math.floor(gone / e.interval); if (e.ticks <= 0) continue; }
+        sendCombat(e);
+      }
+      raid.prePull = null;
+      return;
+    }
     raid.state = msg.s; raid.result = msg; raid.resultAt = now + 2.2;
     fadeTelegraphs(); raid.tethers.clear(); raid.lunges = []; raid.eggs = null; raid.rollers.clear(); raid.reels.clear(); player.reel = null;
     raid.sweeps.clear(); raid.edgeWarn = null; for (const p of raid.posts.values()) p.end = Math.min(p.end, now + 1);
