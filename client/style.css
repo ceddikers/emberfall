@@ -854,3 +854,7 @@ body:has(#loot:not(.hidden)) #results { padding-right: 332px; }
 .alem-rec b { color: #f0dcae; font-weight: 700; }
 .alem-rec.sealed { color: #7d7466; font-style: italic; }
 .alem-rec.sealed b { color: #9a8a70; letter-spacing: .04em; }
+/* Ironpalm: the move list in the Breath tooltip */
+.ip-moves { margin-top: 6px; display: grid; gap: 3px; font-size: 12px; line-height: 1.35; color: #e8dcc4; }
+.ip-moves b { display: inline-block; min-width: 62px; color: #f0c070; font-family: ui-monospace, Consolas, monospace; font-size: 11px; letter-spacing: .04em; }
+.ip-moves i { color: #b0a690; font-style: normal; }

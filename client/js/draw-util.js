@@ -106,8 +106,20 @@ function jagged(ctx, x1, y1, x2, y2, seed, color, lw) {
 function actP(st, type) {
   const a = st.action;
   if (!a || (type && a.type !== type)) return -1;
-  const p = (st.t - a.t0) / a.dur;
+  const p = (actT(st) - a.t0) / a.dur;
   return p >= 0 && p <= 1 ? p : -1;
+}
+// the clock the current action runs on: frozen during a hit-stop, then carrying on from the same pose
+function actT(st) {
+  const h = st.hold;
+  if (!h || h.a !== st.action) return st.t;
+  return st.t < h.until ? h.at - h.base : st.t - (h.until - h.at) - h.base;
+}
+// Hit-stop: freeze the hero's current swing for a beat where it connects (cosmetic; several stack up on one swing)
+function hitStop(st, secs, now) {
+  if (!st || !st.action) return;
+  const h = st.hold, base = h && h.a === st.action ? h.base + (Math.min(now, h.until) - h.at) : 0;
+  st.hold = { a: st.action, at: now, until: now + secs, base };
 }
 // Weapon swing curve: wind up (0 -> 1), strike (1 -> -1.2), recover (-> 0).
 function swing(p) {

@@ -6,6 +6,19 @@
 //  - Casts are interrupted by moving, except during the last SLIDECAST seconds.
 // It also records the numbers the post-fight report shows (uptime, overcap, wasted procs...).
 // Pure logic, no DOM: the same code runs in the game, for bots, and in tools/simulate.js.
+//
+// Pacing. The GCD is how a kit is paced by default ("cadence"). A kit can pace itself another way with `pacing`:
+//   pacing: { kind: 'combo', gcd: false, buffer, bufferSize, repeat: false, pool: { key, max, regen, rest, delay }, itemGcd(k, ab) }
+//  - gcd: false   no global cooldown. Its 'gcd' moves are limited only by their own animation lock (ab.lock) and the pool.
+//  - pool         the kit's limiter, kept in k.g[key]: each move's `cost` (number or fn) is paid when it fires; it refills
+//                 `regen` a second, or `rest` a second once nothing has been spent for `delay` s (def.poolRate(k) scales
+//                 both, def.poolRest(k) forces the resting pace). A move you can't pay for fails ('winded').
+//  - buffer       presses up to this early are buffered (instead of QUEUE_WINDOW), up to `bufferSize` of them, in order.
+//  - repeat:false a held key doesn't auto-repeat presses (main.js).
+//  - itemGcd      which presses count as a "GCD" for item effects (fast presses would otherwise proc them far more often).
+// def.moveFor(k, ab) may turn a press into the move it completes (a named string): that move is what fires, is shown
+// and is sent to everyone ('used' carries it; it names its button in `slot`). k.input says how the press came in.
+// Kits without `pacing` behave exactly as before.
 
 const ENGINE = {
   GCD: 2.5,
@@ -54,6 +67,31 @@ class Kit {
     this.engagedAt = -99; this.nextAuto = 0;
     this.stats = { damage: 0, gcds: 0, gcdTime: 0, casts: {}, start: null, last: 0, overcap: {}, wasted: {},
       posHit: 0, posMiss: 0, interrupts: 0, burstDamage: 0, deadTime: 0 };
+    // pacing (see the top of this file): no GCD, a buffer of presses, and the kit's own pool
+    this.pace = def.pacing || null;
+    this.inbuf = [];             // buffered presses, oldest first: { ab, at }
+    this.input = null;           // how the press now firing came in: { at, buffered, idle (seconds you'd been free to act) }
+    this.lockLen = 0;            // the length of the current animation lock (the bar's recovery sweep)
+    this.lastSpend = -99;
+    const pool = this.pace && this.pace.pool;
+    if (pool && this.g[pool.key] == null) this.g[pool.key] = this.poolMax();
+  }
+  // ---------------------------------------------------------------- pacing
+  gcdFree() { return !!this.pace && this.pace.gcd === false; }
+  poolMax() { const p = this.pace && this.pace.pool; return p ? (typeof p.max === 'function' ? p.max(this) : p.max) : 0; }
+  costOf(ab) { return typeof ab.cost === 'function' ? ab.cost(this) : (ab.cost || 0); }
+  // can the pool pay for this move?
+  affords(ab) { const p = this.pace && this.pace.pool; return !p || this.costOf(ab) <= (this.g[p.key] || 0) + 1e-9; }
+  // the pool refills on its own (every update)
+  refillPool(now) {
+    const p = this.pace && this.pace.pool;
+    if (!p) return;
+    const dt = now - (this._poolT ?? now);
+    this._poolT = now;
+    if (!(dt > 0 && dt < 1)) return;
+    const resting = now - this.lastSpend >= (p.delay || 0) || (this.def.poolRest && this.def.poolRest(this));
+    const rate = (resting ? (p.rest ?? p.regen) : p.regen) * (this.def.poolRate ? this.def.poolRate(this) : 1);
+    this.g[p.key] = Math.min(this.poolMax(), (this.g[p.key] || 0) + rate * dt);
   }
 
   get now() { return this.env.now(); }
@@ -246,7 +284,7 @@ class Kit {
     return t > 0 ? t * this.hasteMult() : 0;
   }
   gcdRemaining() { return Math.max(0, this.gcdReady - this.now); }
-  usable(ab) { return !ab.usable || ab.usable(this); }
+  usable(ab) { return (!ab.usable || ab.usable(this)) && this.affords(ab); }
   needsTarget(ab) { return ab.target && ab.target !== 'self' && ab.target !== 'none'; }
   available(ab) {
     if (!this.usable(ab)) return false;
@@ -270,33 +308,49 @@ class Kit {
   press(index) {
     const ab = this.abilities[index];
     if (!ab) return false;
-    if (!this.usable(ab)) { this.env.emit({ type: 'fail', reason: 'unusable', ab }); return false; }
+    if (!this.usable(ab)) { this.env.emit({ type: 'fail', reason: this.affords(ab) ? 'unusable' : 'winded', ab }); return false; }
     const wait = this.readyIn(ab);
-    if (wait <= 0.0001) return this.execute(ab);
-    if (wait <= ENGINE.QUEUE_WINDOW) { this.queued = { ab, at: this.now }; return true; }
+    const size = (this.pace && this.pace.bufferSize) || 1;
+    // a paced kit keeps its presses in order: while some wait in the buffer, a new one goes behind them
+    if (size > 1 && this.inbuf.length) {
+      if (this.inbuf.length < size) { this.inbuf.push({ ab, at: this.now }); return true; }
+      this.env.emit({ type: 'fail', reason: 'cooldown', ab });
+      return false;
+    }
+    if (wait <= 0.0001) { this.input = { at: this.now, buffered: false, idle: this.now - this.lockUntil }; return this.execute(ab); }
+    if (wait <= ((this.pace && this.pace.buffer) || ENGINE.QUEUE_WINDOW)) {
+      if (size > 1) this.inbuf.push({ ab, at: this.now }); else this.queued = { ab, at: this.now };
+      return true;
+    }
     this.env.emit({ type: 'fail', reason: 'cooldown', ab });
     return false;
   }
 
   execute(ab) {
-    if (!this.available(ab)) { this.env.emit({ type: 'fail', reason: this.needsTarget(ab) ? 'target' : 'unusable', ab }); return false; }
+    if (!this.available(ab)) { this.env.emit({ type: 'fail', reason: this.needsTarget(ab) ? 'target' : this.affords(ab) ? 'unusable' : 'winded', ab }); return false; }
     const target = this.needsTarget(ab) ? this.env.target(ab) : null;
     if (this.stats.start === null && (ab.target === 'enemy' || ab.startsCombat)) this.stats.start = this.now;
     if (ab.target === 'enemy') this.engagedAt = this.now;
     const ct = this.castTime(ab);
-    if (ab.type === 'gcd') {
+    // (a paced kit: the press may complete a named move, which brings its own animation lock)
+    const mv = ct > 0 || !this.def.moveFor ? ab : (this.def.moveFor(this, ab) || ab);
+    const lock = mv.lock ?? ab.lock ?? ENGINE.ANIM_LOCK;
+    if (ab.type === 'gcd' && !this.gcdFree()) {
       this.gcdLen = ((typeof ab.recastGcd === 'function' ? ab.recastGcd(this) : ab.recastGcd) || ENGINE.GCD) * this.hasteMult();
       this.gcdReady = this.now + this.gcdLen;
       this.stats.gcds++;
       this.stats.gcdTime += this.gcdLen;
-    }
+    } else if (ab.type === 'gcd') { this.stats.gcds++; this.stats.gcdTime += ct || lock; }   // no GCD: uptime is time spent in your moves
     if (ab.type === 'ogcd' || ab.cd) this.startCooldown(ab);
+    const pool = this.pace && this.pace.pool, cost = pool ? this.costOf(ab) : 0;
+    if (cost) { this.g[pool.key] = Math.max(0, (this.g[pool.key] || 0) - cost); this.lastSpend = this.now; }
     if (ct > 0) {
       this.cast = { ab, target, start: this.now, end: this.now + ct };
       this.env.emit({ type: 'castStart', ab, dur: ct, target });
     } else {
-      this.lockUntil = this.now + (ab.lock ?? ENGINE.ANIM_LOCK);
-      this.resolve(ab, target);
+      this.lockLen = lock;
+      this.lockUntil = this.now + lock;
+      this.resolve(mv, target);
     }
     return true;
   }
@@ -306,7 +360,8 @@ class Kit {
     this.env.emit({ type: 'used', ab, target });
     ab.effect(this, target);
     if (this.def.afterUse) this.def.afterUse(this, ab);
-    this.itemHook(ab.type === 'gcd' ? 'gcd' : 'ogcd', ab);
+    const asGcd = ab.type === 'gcd' && !(this.pace && this.pace.itemGcd && !this.pace.itemGcd(this, ab));
+    if (ab.type !== 'gcd' || asGcd) this.itemHook(asGcd ? 'gcd' : 'ogcd', ab);
   }
 
   update() {
@@ -327,9 +382,21 @@ class Kit {
     }
     if (this.queued) {
       const q = this.queued;
-      if (now - q.at > ENGINE.QUEUE_WINDOW + 0.25) this.queued = null;
-      else if (this.readyIn(q.ab) <= 0.0001) { this.queued = null; this.execute(q.ab); }
+      if (now - q.at > ((this.pace && this.pace.buffer) || ENGINE.QUEUE_WINDOW) + 0.25) this.queued = null;
+      else if (this.readyIn(q.ab) <= 0.0001) { this.queued = null; this.input = { at: q.at, buffered: true, idle: 0 }; this.execute(q.ab); }
     }
+    if (this.inbuf.length) {
+      // the oldest buffered press fires the moment it can; the next one's wait starts counting then
+      const q = this.inbuf[0];
+      if (now - q.at > (this.pace.buffer || ENGINE.QUEUE_WINDOW) + 0.25) this.inbuf.shift();
+      else if (this.readyIn(q.ab) <= 0.0001) {
+        this.inbuf.shift();
+        if (this.inbuf.length) this.inbuf[0].at = now;
+        this.input = { at: q.at, buffered: true, idle: 0 };
+        this.execute(q.ab);
+      }
+    }
+    this.refillPool(now);
     for (const [id, d] of this.dots) {
       while (now >= d.next && d.next <= d.end + 0.001) {
         d.next += d.interval;

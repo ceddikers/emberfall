@@ -985,3 +985,160 @@ function windLaneBoost(x, y, vx, vy, now) {
     sabre: c => { V.slash(c.ent.x, c.ent.y, c.ang, { r: 50, span: 1.5, color: windCol(c.ent), dur: 0.2, w: 0.3, flip: c.alt, sparks: 2 }); },
   });
 })();
+// ======================================================================= Ironpalm (tank)
+// Barehanded impact, after the painted sheets: no wind-up glyphs on the small hits (they come several a second), just a
+// knuckle flash and a ring where they land, and a hit-stop that freezes the swing for a beat (hitStop, draw-util.js).
+// The named moves get the show: a launch and a column of dust for Rising Gate, a cracked crater for Heaven's Drop, a
+// storm of palm prints for Thousand Palms. Saffron by default; Still Water is pale water-blue, Avalanche Fist is earth.
+(() => {
+  const V = VFX, rand = (a, b) => a + Math.random() * (b - a);
+  const shake = s => { FX.shake = Math.max(FX.shake, s); };
+  const col = e => (e && e.spec === 'stillwater' ? '#9fd8f0' : e && e.spec === 'avalanche' ? '#e09a5a' : '#ffb84a');
+  const hot = e => (e && e.spec === 'stillwater' ? '#e8fbff' : '#fff0c8');
+  // where a blow lands: toward the target, no further than an arm (or a leg) reaches past the boss's edge
+  const at = (c, d = 52) => { const a = Math.atan2(c.ty - c.y, c.tx - c.x), dist = Math.hypot(c.tx - c.x, c.ty - c.y), r = Math.min(dist, d); return { x: c.x + Math.cos(a) * r, y: c.y + Math.sin(a) * r, a }; };
+  const stop = (c, s) => { if (c.ent && c.ent.st) hitStop(c.ent.st, s, FX.now); };
+  // one blow connecting: a white-hot flash, a ring, a few sparks thrown back along the line of the strike
+  function impact(c, size, o = {}) {
+    const p = at(c, o.reach), k = col(c.ent);
+    V.spawn({ x: p.x, y: p.y, z: 16, life: 0.16 + size * 0.06, size: 30 + size * 30, size1: 8, color: hot(c.ent), kind: 'star', vr: 6 });
+    V.shock(p.x, p.y, { r: 26 + size * 26, color: k, dur: 0.22 + size * 0.08, w: 2 + size * 2 });
+    V.sparks(p.x, p.y, { color: k, n: 3 + Math.round(size * 5), angle: p.a, spread: 0.7, speed: 220 + size * 160 });
+    stop(c, 0.04 + size * 0.05);
+    if (size >= 1) shake(1.5 + size * 1.5);
+    return p;
+  }
+  // an open palm: a five-fingered print of light pressed into the air where it lands
+  function print(x, y, a, color, size = 1, dur = 0.35) {
+    V.fx({ dur, layer: 'air', draw: (ctx, p, t, e) => {
+      const k = (1 - p) * e.a, s = size * (1 + p * 0.4);
+      ctx.save(); ctx.translate(x, y - 18); ctx.rotate(a); ctx.globalCompositeOperation = 'lighter';
+      V.neonPath(ctx, color, 2.2, k, () => {
+        ctx.moveTo(6 * s, 0); ctx.ellipse(0, 0, 6 * s, 7 * s, 0, 0, Math.PI * 2);
+        for (let i = 0; i < 4; i++) { const fy = (-4.5 + i * 3) * s; ctx.moveTo(6 * s, fy); ctx.lineTo((12 - Math.abs(i - 1.5) * 1.5) * s, fy); }
+        ctx.moveTo(2 * s, -6 * s); ctx.lineTo(6 * s, -10 * s);   // the thumb
+      });
+      ctx.restore();
+    } });
+  }
+
+  ABILITY_VFX.ironpalm = {
+    // the three inputs: tiny and quick (they come several a second)
+    palm: c => c.later(0.08, () => { const p = impact(c, 0.25); print(p.x, p.y, p.a, col(c.ent), 0.8, 0.25); }),
+    fist: c => c.later(0.13, () => { const p = impact(c, 0.55); V.smoke(p.x, p.y, { n: 1, color: '#d8ccb8', size: 14, a: 0.4, speed: 30, life: 0.5 }); }),
+    kick: c => { V.slash(c.x, c.y, c.ang, { r: 46, span: 1.5, color: col(c.ent), w: 0.35, dur: 0.18, flip: true }); c.later(0.1, () => impact(c, 0.4, { reach: 58 })); },
+    // Crane Step: a hop (a puff of dust where you left the ground), a flicked palm, breath drawn back in as a pale swirl
+    crane: c => { V.smoke(c.x, c.y, { n: 3, color: '#d8ccb8', size: 16, a: 0.5, speed: 40 });
+      c.later(0.08, () => { const p = impact(c, 0.45); print(p.x, p.y, p.a, col(c.ent), 1, 0.35); });
+      c.later(0.15, () => V.swirl(c.ent.x, c.ent.y, { r: 34, color: '#e8f4ff', dur: 0.45, inward: true, follow: c.ent })); },
+    // Flowing Palms: three prints in a row, the last one pushed through
+    flow: c => { for (let i = 0; i < 3; i++) c.later(0.03 + i * 0.05, () => { const p = at(c), o = (i - 1) * 9; print(p.x + Math.sin(p.a) * o, p.y - Math.cos(p.a) * o, p.a, col(c.ent), 0.8 + i * 0.15, 0.3); });
+      c.later(0.14, () => impact(c, 0.7)); },
+    // Rising Gate: an uppercut; a column of dust and light lifts off the boss, rings climbing it
+    gate: c => c.later(0.14, () => {
+      const p = impact(c, 1.1), k = col(c.ent);
+      V.pillar(c.tx, c.ty, { r: 26, h: 130, color: k, dur: 0.5 });
+      for (let i = 0; i < 3; i++) V.sigil(c.tx, c.ty - 20 - i * 26, { r: 26 - i * 4, style: 'star4', color: k, dur: 0.45, spin: 5, flat: 0.35, layer: 'air', delay: i * 0.06 });
+      V.smoke(c.tx, c.ty, { n: 4, color: '#c8b8a0', size: 22, a: 0.45, speed: 60 });
+      V.debris(c.tx, c.ty, { n: 4, color: '#8a7a68', speed: 0.6 });
+    }),
+    // Heaven's Drop: an axe kick down onto the airborne boss: a slash from above, a crater, the floor cracks, a big stop
+    drop: c => { V.slash(c.x, c.y, c.ang, { r: 70, span: 2.2, color: hot(c.ent), w: 0.6, dur: 0.24 });
+      c.later(0.18, () => {
+        const k = col(c.ent); impact(c, 1.6, { reach: 60 }); stop(c, 0.14);
+        V.spikeburst(c.tx, c.ty, { r: 64, n: 14, color: k, core: hot(c.ent), ink: '#2a1408', dur: 0.36 });
+        V.decal(c.tx, c.ty, { style: 'crack', r: 60, dur: 2.4, a: 0.6, seed: Math.random() * 6 });
+        V.shock(c.tx, c.ty, { r: 120, color: k, dur: 0.45, w: 7 });
+        V.debris(c.tx, c.ty, { n: 8, color: '#7a6a58' }); V.smoke(c.tx, c.ty, { n: 6, r: 30, color: '#a89880', size: 30, a: 0.45, speed: 60, life: 1.4 });
+        shake(6);
+      }); },
+    // Tiger Wall: a low stance; a shield of striped light across the front, dust swept out to the sides
+    wall: c => { c.later(0.12, () => impact(c, 0.5)); V.shield(c.ent, { shape: 'front', color: col(c.ent), dur: 5, r: 40 });
+      V.smoke(c.x, c.y, { n: 4, color: '#d8ccb8', size: 18, a: 0.45, speed: 50 }); V.glint(c.x + Math.cos(c.ang) * 30, c.y + Math.sin(c.ang) * 30, { color: hot(c.ent), size: 24 }); },
+    // Stone Breaker: a crushing low kick; stone shards and a dark bruise ring on the boss
+    breaker: c => c.later(0.12, () => {
+      const p = impact(c, 0.9, { reach: 58 });
+      V.crystals(c.tx, c.ty, { color: '#a89480', n: 5, r: 26, h: 28, dur: 0.6 });
+      V.sigil(c.tx, c.ty, { r: 40, style: 'runes', color: '#b05a5a', dur: 1, spin: 1.5 });
+      V.debris(p.x, p.y, { n: 4, color: '#6a5a48', speed: 0.6 });
+    }),
+    // Iron Ox: a heavy straight with the whole body: a fat ring, a dust cone thrown out behind the boss
+    ox: c => c.later(0.16, () => {
+      const p = impact(c, 1.3), k = col(c.ent);
+      V.shock(c.tx, c.ty, { r: 90, color: k, dur: 0.4, w: 6, delay: 0.04 });
+      for (let i = 0; i < 6; i++) { const a = p.a + rand(-0.6, 0.6), sp = rand(120, 240); V.spawn({ x: c.tx, y: c.ty, z: 10, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * 0.7, vz: rand(20, 60), drag: 0.06, life: 0.8, size: 18, size1: 34, color: '#c8b8a0', kind: 'smoke', add: false, a: 0.4 }); }
+    }),
+    // Thousand Palms: a storm of palm prints round the boss, each landing with a flash and a stop, then a gold star
+    palms: c => {
+      const k = col(c.ent), n = 6;
+      for (let i = 0; i < n; i++) c.later(0.05 + i * 0.07, () => {
+        const a = Math.atan2(c.ty - c.y, c.tx - c.x) + rand(-0.8, 0.8), x = c.tx - Math.cos(a) * rand(10, 26) + rand(-10, 10), y = c.ty - Math.sin(a) * rand(10, 26) + rand(-8, 8);
+        print(x, y, a, i % 2 ? hot(c.ent) : k, rand(0.9, 1.3), 0.4);
+        V.spawn({ x, y, z: 16, life: 0.14, size: 36, size1: 8, color: hot(c.ent), kind: 'star', vr: 6 });
+        stop(c, 0.04); shake(1.5);
+      });
+      c.later(0.05 + n * 0.07, () => { V.spikeburst(c.tx, c.ty, { r: 70, n: 16, color: k, core: hot(c.ent), ink: '#2a1408', dur: 0.4 }); V.shock(c.tx, c.ty, { r: 110, color: k, dur: 0.45, w: 6 });
+        V.burst(c.tx, c.ty, { color: k, color2: '#ffffff', n: 14, speed: 260, kind: 'star', flashR: 60 }); stop(c, 0.1); shake(5); });
+    },
+    // Read: eyes half closed; a thin ring of still air closes round the monk
+    read: c => { V.shock(c.x, c.y, { r: 50, color: '#e8f4ff', dur: 0.4, w: 2 }); V.sigil(c.x, c.y, { r: 36, style: 'hex', color: col(c.ent), dur: 1.2, spin: 0.6, follow: c.ent, a: 0.6 }); },
+    // Iron Skin: the skin goes dark iron: a metal sheen ring, rivet sparks, a grey aura that stays the 10s
+    skin: c => { V.glint(c.x, c.y, { color: '#e8eef6', size: 30, z: 30 }); V.aura(c.ent, { color: '#9aa8b8', dur: 10, r: 28, rate: 0.15 });
+      V.shock(c.x, c.y, { r: 70, color: '#c8d4e2', dur: 0.4, w: 5 }); V.sparks(c.x, c.y - 16, { color: '#ffffff', n: 8, speed: 220 }); shake(2); },
+    // Temple Bell: the chest struck like a bell: three gold rings of sound roll out over the party
+    bell: c => { V.glint(c.x, c.y, { color: '#ffe08a', size: 32, z: 34 });
+      for (let i = 0; i < 3; i++) V.shock(c.x, c.y, { r: 150 + i * 40, color: '#ffd27a', dur: 0.7, w: 6 - i * 1.5, delay: i * 0.18 });
+      V.sigil(c.x, c.y, { r: 120, style: 'star5', color: '#ffd27a', dur: 1.6, spin: 0.6 }); V.aura(c.ent, { color: '#ffd27a', dur: 15, r: 28, rate: 0.12 }); shake(2); },
+    // Still Pond: the floor goes still as water: a pale pool spreads, rings on it, the monk calm in the middle
+    pond: c => { V.ink(c.x, c.y, { r: 90, dur: 8, follow: c.ent, a: 0.25 }); V.sigil(c.x, c.y, { r: 90, style: 'hex', color: '#9fd8f0', dur: 8, spin: 0.2, follow: c.ent });
+      for (let i = 0; i < 3; i++) V.shock(c.x, c.y, { r: 60 + i * 30, color: '#cfeeff', dur: 0.9, w: 3, delay: i * 0.25 }); },
+    // Landslide: the floor heaves; boulders, a rolling dust wall over the party, the earth aura
+    slide: c => { V.crater(c.x, c.y, { r: 70, color: '#c07a3a', dur: 2.4, flames: 0, a: 0.4 }); V.debris(c.x, c.y, { n: 10, color: '#7a6a58' });
+      V.shock(c.x, c.y, { r: 170, color: '#e09a5a', dur: 0.6, w: 7 }); V.smoke(c.x, c.y, { n: 8, r: 80, color: '#a89070', size: 34, a: 0.4, speed: 60, life: 1.6 });
+      V.aura(c.ent, { color: '#e09a5a', dur: 15, r: 30, rate: 0.2 }); shake(6); },
+    // Bellows Stance (talent): a great breath in, heat rising off the monk, an orange aura
+    bellows: c => { V.swirl(c.x, c.y, { r: 50, color: '#ffb070', dur: 0.6, inward: true, follow: c.ent }); V.aura(c.ent, { color: '#ff9a4a', style: 'flame', dur: 10, r: 28, rate: 0.2 }); V.shock(c.x, c.y, { r: 80, color: '#ffb070', dur: 0.4, w: 4, delay: 0.5 }); },
+    // Dragon Ascends (talent): a leap, a coiling streak of gold up and over, and a great blow on the target
+    dragon: c => { V.smoke(c.x, c.y, { n: 4, color: '#d8ccb8', size: 20, a: 0.5, speed: 50 }); V.tornado(c.x, c.y, { color: '#ffd27a', h: 120, r: 18, dur: 0.5 });
+      c.later(0.3, () => { V.lightfall(c.tx, c.ty, { color: '#ffd27a', r: 30, h: 260, dur: 0.6, feathers: 0 }); V.spikeburst(c.tx, c.ty, { r: 70, n: 16, color: '#ffb84a', core: '#fff6d0', ink: '#3a2408', dur: 0.4 });
+        V.shock(c.tx, c.ty, { r: 140, color: '#ffd27a', dur: 0.5, w: 7 }); V.debris(c.tx, c.ty, { n: 6, color: '#7a6a58' }); stop(c, 0.12); shake(6); }); },
+  };
+
+  Object.assign(KIT_VFX, {
+    // a Crisp press (only you see it): a thin bright ring snapping shut on the hand
+    crisp: e => { const x = e.x + Math.cos(e.angle || 0) * 22, y = e.y + Math.sin(e.angle || 0) * 22; V.shock(x, y, { r: 22, color: '#fff6d8', dur: 0.16, w: 2 }); V.spawn({ x, y, z: 18, life: 0.12, size: 22, size1: 4, color: '#ffffff', kind: 'star' }); },
+    // Read: the blow is caught. A white flash in front, a still ring, and on a tankbuster a gold star and a long stop
+    read: (e, target, d) => {
+      const b = d && d.b, x = e.x + Math.cos(e.angle || 0) * 24, y = e.y + Math.sin(e.angle || 0) * 24;
+      V.spawn({ x, y, z: 20, life: 0.25, size: b ? 90 : 60, size1: 20, color: '#ffffff', kind: 'star', vr: 5 });
+      V.shock(e.x, e.y, { r: b ? 110 : 70, color: b ? '#ffd27a' : '#e8f4ff', dur: 0.4, w: b ? 7 : 4 });
+      V.sparks(x, y, { color: '#fff2c8', n: b ? 14 : 8, angle: e.angle || 0, spread: 1, speed: 360 });
+      if (e.st) hitStop(e.st, b ? 0.18 : 0.08, FX.now);
+      if (b) { V.sigil(e.x, e.y, { r: 70, style: 'star4', color: '#ffd27a', dur: 0.8, spin: 3 }); FX.shake = Math.max(FX.shake, 4); }
+    },
+    // Avalanche Fist: a dropped string staggers you: grit and a dull ring
+    stagger: e => { V.smoke(e.x, e.y, { n: 4, color: '#8a7a68', size: 18, a: 0.5, speed: 30 }); V.shock(e.x, e.y, { r: 40, color: '#8a6a50', dur: 0.3, w: 3 }); },
+    // Heaven's Drop (Mountain Falls talent): the ground under the boss gives a second later
+    aftershock: Object.assign((e, target) => { const t = target || e; V.shock(t.x, t.y, { r: 110, color: '#c8a070', dur: 0.5, w: 6 }); V.debris(t.x, t.y, { n: 6, color: '#7a6a58' }); V.decal(t.x, t.y, { style: 'crack', r: 50, dur: 1.8, a: 0.5, seed: Math.random() * 6 }); shake(3); }, { atTarget: true }),
+    // Thousand Palms (Echoing Palm talent): three faint palm prints, half a second behind
+    'echo-palm': Object.assign((e, target) => { const t = target || e; for (let i = 0; i < 3; i++) FX.later(i * 0.08, () => print(t.x + rand(-16, 16), t.y + rand(-10, 10), Math.atan2(t.y - e.y, t.x - e.x), '#ffe0b0', 0.9, 0.35)); }, { atTarget: true }),
+    // Temple Bell (Resounding Gong talent): the bell rings again 8s later
+    gong: e => { for (let i = 0; i < 2; i++) V.shock(e.x, e.y, { r: 140 + i * 40, color: '#ffd27a', dur: 0.6, w: 5 - i * 2, delay: i * 0.15 }); },
+  });
+
+  // the taunt: Beckoning Palm. A palm print held out toward the target, a line of breath to it, the print pressed on it
+  const baseTaunt = KIT_VFX.taunt;
+  KIT_VFX.taunt = (e, target) => {
+    if (!(e.cls && e.cls.id === 'ironpalm')) return baseTaunt(e, target);
+    const a = target ? Math.atan2(target.y - e.y, target.x - e.x) : (e.angle || 0);
+    print(e.x + Math.cos(a) * 22, e.y + Math.sin(a) * 22, a, '#ffd9a0', 1.3, 0.6);
+    V.shock(e.x, e.y, { r: 70, color: '#ffb84a', w: 3, dur: 0.35 });
+    if (!target) return;
+    V.beam(e.x, e.y - 4, target.x, target.y - 12, { color: '#ffe0b0', w: 4, dur: 0.3 });
+    FX.later(0.12, () => { print(target.x, target.y, a, '#ffb84a', 2, 0.7); V.shock(target.x, target.y, { r: 60, color: '#ffb84a', w: 3, dur: 0.35 }); });
+  };
+
+  // autos: a quick knuckle flash where the jab lands
+  AUTO_VFX.fist = c => { const d = Math.min(Math.hypot(c.tx - c.ent.x, c.ty - c.ent.y), 50), x = c.ent.x + Math.cos(c.ang) * d, y = c.ent.y + Math.sin(c.ang) * d;
+    V.hit(x, y, '#ffe0b0', 0.4); if (c.ent.st) hitStop(c.ent.st, 0.03, FX.now); };
+})();

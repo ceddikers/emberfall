@@ -11,7 +11,7 @@
 const path = require('path');
 const { ENGINE, Kit } = require(path.join(__dirname, '../client/js/combat/engine.js'));
 const kitsModule = require(path.join(__dirname, '../client/js/combat/kits.js'));
-const { KITS } = kitsModule;
+const { KITS, IP_INPUT, IP_SLOT, ipLive, ipMoves } = kitsModule;
 Object.assign(global, kitsModule);   // KITS and the talent helpers the specs share
 const { SPECS, kitFor } = require(path.join(__dirname, '../client/js/combat/specs.js'));
 const { TALENT_BY_ID } = require(path.join(__dirname, '../client/js/combat/talents.js'));
@@ -36,7 +36,7 @@ function runSim(classId, skill, seed, specId, talents) {
   const rng = mulberry(seed);
   const human = mulberry(seed * 7 + 3); // separate stream for "human" randomness
   const state = { t: 0, moving: false, tookDamage: [], shield: null, mits: [], reflect: null, healDebt: 0, healing: 0, gcdHeals: 0, allyWards: [], petalShields: [] };
-  const role = ['bastion', 'bloodreaver', 'runeguard'].includes(classId) ? 'tank'
+  const role = ['bastion', 'bloodreaver', 'runeguard', 'ironpalm'].includes(classId) ? 'tank'
     : ['cleric', 'grovekeeper', 'chronomancer', 'alembist'].includes(classId) ? 'healer' : 'dps';
   const maxHp = role === 'tank' ? 32000 : 21000;
   let lastPos = 'rear';
@@ -108,15 +108,17 @@ function runSim(classId, skill, seed, specId, talents) {
   // incoming damage for tanks (perfect blocks, ward breaks, reflects, drain value)
   let nextAuto = 3, nextBuster = 20, nextRaidwide = 12, lastBusterAt = -99;
   function hitTank(raw, kind) {
-    let mult = 1, perfect = false;
+    let mult = 1, perfect = false, read = null;
     state.mits = state.mits.filter(m => m.end > state.t);
     for (const m of state.mits) {
       if (m.kind === 'brace' && state.t - m.start <= 0.8) { perfect = true; mult *= 0.4; }
+      else if (m.kind === 'parry' && state.t - m.start <= 0.4 && !read) { read = m; mult *= 0.5; }   // an Ironpalm's Read (fight.js READ_WINDOW)
       else if (m.kind === 'reflect') { mult *= 0.2; }
       else if (m.kind !== 'living' && m.kind !== 'invuln') mult *= 1 - m.pct;
     }
     if (state.reflect && state.t <= state.reflect) { state.reflect = null; state.mits = state.mits.filter(m => m.kind !== 'reflect'); k.notify('reflect'); }
     if (perfect) { state.mits = state.mits.filter(m => !(m.kind === 'brace' && state.t - m.start <= 0.8)); k.notify('perfect'); }
+    if (read) { state.mits = state.mits.filter(m => m !== read); k.notify('read', { b: kind === 'buster' ? 1 : 0 }); }
     let amt = raw * mult;
     if (state.shield) {
       const used = Math.min(state.shield.amt, amt); state.shield.amt -= used; amt -= used;
@@ -494,6 +496,80 @@ Object.assign(PRO, {
     const cross = abOf(k, 'cross');
     if (k.usable(cross) && k.readyIn(cross) <= 0.0001 && (k.g.drift >= full * 0.92 || (ctx.inBurst(ctx.t) && k.g.drift >= full * 0.7))) return I(k, 'cross');
     return I(k, 'carve');
+  },
+});
+
+// ---------------------------------------------------------------- Ironpalm (no GCD: the combo pacing, engine.js)
+// The newbie is the generic one, which already fits: it waits for the recovery to end (it never buffers), reacts 0.1-0.6s
+// late, follows the glowing key 60% of the time and otherwise presses Q, so its strings break now and then and few of
+// its presses land Crisp. The pro reads tankbusters and autos (keeping Read for the buster when one is close), waits
+// out each recovery so every press is Crisp, keeps the Bruise up, raises Tiger Wall before tankbusters, runs Rising
+// Gate into Heaven's Drop (through Crane Step with Swallow's Return), cashes every Opening, and stops to breathe
+// rather than run dry mid-string. Temple Bell (or its replacement) goes with the party's burst.
+const IP_COST = { L: IP_INPUT.L.cost, H: IP_INPUT.H.cost, K: IP_INPUT.K.cost };
+// The newbie mashes at its own pace (with the usual 0.25s reaction after each press that works, a press every 0.3-0.6s),
+// so presses that come during a recovery are buffered and never Crisp. It follows the glowing key 60% of the time,
+// otherwise presses Q, now and then a random key, and keeps pressing when it's out of Breath. oGCDs as every newbie:
+// a little after they come up, Read included, so its Reads land on a hit only by luck.
+Object.assign(NEWBIE, {
+  ironpalm(k, ctx) {
+    const n = ctx.state.newbie || (ctx.state.newbie = { ogcdSeen: {}, next: 0 });
+    for (const ab of k.abilities) {
+      if (ab.type !== 'ogcd') continue;
+      if (!k.usable(ab) || k.readyIn(ab) > 0.0001) { n.ogcdSeen[ab.id] = null; continue; }
+      if (n.ogcdSeen[ab.id] == null) n.ogcdSeen[ab.id] = ctx.t + 0.5 + ctx.human() * 2.5;
+      if (ctx.t >= n.ogcdSeen[ab.id]) { n.ogcdSeen[ab.id] = null; return I(k, ab.id); }
+    }
+    if (ctx.t < n.next) return null;
+    n.next = ctx.t + 0.05 + ctx.human() * 0.3;
+    const glow = [0, 1, 2].find(i => k.glows(k.abilities[i]));
+    if (glow != null && ctx.human() < 0.6) return glow;
+    if (ctx.human() < 0.25) return Math.floor(ctx.human() * 3);
+    return 0;
+  },
+});
+Object.assign(PRO, {
+  ironpalm(k, ctx) {
+    const P = ctx.state.ip || (ctx.state.ip = { plan: null, resting: false });
+    const toAuto = ctx.nextAuto - ctx.t, toBuster = ctx.nextBuster - ctx.t, read = abOf(k, 'read');
+    const readUp = k.readyIn(read) <= 0.0001 || (read.charges && k.charges(read) > 0 && k.lockUntil - k.now < 0.05);
+    const spare = !!read.charges && k.charges(read) === 2;
+    // the next hit worth reading, and when it lands (an auto only when Read will be back for the next buster)
+    const hitIn = toBuster < 0.6 ? toBuster : toAuto < toBuster && (spare || toBuster > 6.6 || k.has('pond')) ? toAuto : toBuster;
+    if (readUp && hitIn < 0.32 && hitIn > 0.02 && k.lockUntil <= k.now) return I(k, 'read');
+    if (toBuster < 2.5 && ready(k, 'skin') && k.lockUntil <= k.now) return I(k, 'skin');
+    const bell = abOf(k, 'bell');
+    if (ready(k, 'bell') && k.lockUntil <= k.now && (ctx.inBurst(ctx.t) || bell.id === 'slide')) return I(k, 'bell');
+    if (k.lockUntil > k.now) return null;   // wait out the recovery: the next press lands Crisp
+    // don't start a press whose recovery would still be running when a hit worth reading lands
+    const g = k.g, live = ipLive(k) ? g.str : '';
+    const wantKey = () => {
+      if (k.has('opening')) return 'H';
+      if (!P.plan || !(P.plan.startsWith(live) && P.plan.length > live.length) || (!live && P.done)) {
+        P.done = false;
+        if (live && !g.clean) { const on = ipMoves(k).filter(e => e.seq.startsWith(live) && e.seq.length > live.length).sort((a, b) => b.seq.length - a.seq.length); P.plan = on.length ? on[0].seq : null; }
+        else {
+          const swallow = k.talent('ironpalm_swallow');
+          const cost = s => [...s].reduce((a, x) => a + IP_COST[x] * (k.talent('ironpalm_clean') ? 0 : 0.6), 0);
+          const main = swallow ? 'KLHKK' : 'LLHKK';
+          if (toBuster < 7 && toBuster > 1.6 && !k.has('wall')) P.plan = 'HKK';
+          else if (k.dotRemaining('bruise') < 2.5) P.plan = 'HHK';
+          else P.plan = main;
+          if (g.breath < cost(P.plan) + 2) {
+            if (g.breath >= cost('KL') && !swallow) P.plan = 'KL';
+            else { P.resting = true; P.plan = null; }
+          }
+        }
+      }
+      return P.plan ? P.plan[live.length] : null;
+    };
+    if (P.resting) { if (g.breath < 75 && !k.has('opening')) return null; P.resting = false; }
+    const x = wantKey();
+    if (!x) return null;
+    if (live.length + 1 >= (P.plan || '').length) P.done = true;
+    const lock = IP_INPUT[x].lock;
+    if (readUp && hitIn > 0.02 && hitIn < lock + 0.05) return null;
+    return IP_SLOT[x];
   },
 });
 

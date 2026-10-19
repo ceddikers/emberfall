@@ -1231,7 +1231,12 @@ const tauntAbility = classId => {
     desc: t.desc.replace('{hold}', TAUNT.hold) } : null;
 };
 // CSS background for the taunt's icon: its own painting once it exists, the borrowed icon underneath until then
-const tauntIconBg = classId => `url(icons/${classId}/taunt.png), url(icons/${classId}/${(TAUNT[classId] || {}).icon}.png)`;
+// (a class with no painted icons yet, data.js art.icons === false, draws its own: hud.js abilityIcon)
+const tauntIconBg = classId => {
+  const cls = typeof CLASSES !== 'undefined' && CLASSES.find(c => c.id === classId);
+  if (cls && cls.art && cls.art.icons === false && typeof abilityIcon !== 'undefined') return `url(${abilityIcon(classId, 'taunt')})`;
+  return `url(icons/${classId}/taunt.png), url(icons/${classId}/${(TAUNT[classId] || {}).icon}.png)`;
+};
 
 // ======================================================================= ALEMBIST (healer, added with classes-b)
 // Brewed before it's needed. Three reagents on Q W E: two quick presses brew a vial into the bandolier, and R throws
@@ -2262,4 +2267,271 @@ TALENT_ABILITIES.alembist_quicksilver = { cls: 'alembist', ab: Object.assign(ale
 if (typeof module !== 'undefined') Object.assign(module.exports, { kitMoveDest, kitSegDist, THERMIST, thermSpell, thermMove, thermSettle, thermShock, thermBrink, thermMult, thermAt,
   thermEdgeCast, thermEquil, thermUtility, thermInvert, thermPlan, thermTick, thermOverload, DRIFT, DRIFT_BODY, DRIFT_NEAR, DRIFT_REACH, driftAdd, driftTick, driftPass, driftK, driftMax,
   driftSpend, driftHook, driftRiposte, TALENT_ABILITIES });
+
+// ===================================================================================================================
+// IRONPALM (tank; the combo-paced class from docs/plans/2026-10-pacing-and-class-ideas.md). Its own block, so the
+// classes above stay exactly as they were.
+// ===================================================================================================================
+// No global cooldown (`pacing`, engine.js). Light / Heavy / Kick on Q W E are inputs: every press is a quick hit with its
+// own recovery, costs Breath, and adds a letter (L H K) to the string. A string that spells a named move fires it on
+// its last press (IP_MOVES). Strings branch (H H, then H is Iron Ox and K is Stone Breaker) and some carry on past a
+// finished move (Rising Gate is L L H; K K after it is Heaven's Drop). A press that fits no string breaks it and starts
+// a new one, and so does waiting longer than WINDOW after the last recovery ends; after a finished move any key just
+// starts the next string. A press made in the first moment after the recovery ends (pressed then, not buffered early)
+// is Crisp: harder and cheaper, so mashing works but rhythm wins. Breath refills slowly while you press, fast once you
+// stop for a moment. R Read is a parry stance (mitigate kind 'parry'): a hit caught in its first 0.4 s (fight.js
+// READ_WINDOW) lands at half strength and the kit hears 'read'; a caught tankbuster opens a free Thousand Palms.
+const IRONPALM = {
+  WINDOW: 0.8,       // after a press's recovery ends, the string waits this long for the next input
+  JUGGLE: 1.3,       // ... after Rising Gate (the boss is in the air)
+  CRISP: 0.18,       // a press made in this first moment after the recovery ends (not buffered early) is Crisp
+  CRISP_SAVE: 0.4,   // ... it costs 40% less Breath
+  CRISP_HIT: 0.1,    // ... and hits 10% harder
+  STAGGER: 0.7,      // Avalanche Fist: a dropped or broken string locks you this long
+  RUSH: 0.03, RUSH_MAX: 8, RUSH_FADE: 2.5,   // Avalanche Fist's Momentum: +3% a named move, up to 8, gone 2.5s after the last
+  OPENING: 4,        // a read tankbuster: the next Heavy within 4s is a free Thousand Palms
+  READ: { pct: 0.2, dur: 1.2, counter: 63 },
+  pool: { key: 'breath', max: 100, regen: 6, rest: 36, delay: 0.45 },
+};
+const IP_SLOT = { L: 0, H: 1, K: 2 };
+const IP_ANIM = { L: 'palm', H: 'fist', K: 'kick' };
+// the inputs: the press's own potency, the Breath it costs, and its recovery (animation lock)
+const IP_INPUT = { L: { pot: 40, cost: 12, lock: 0.38 }, H: { pot: 64, cost: 18, lock: 0.6 }, K: { pot: 52, cost: 15, lock: 0.48 } };
+const IP_NAME = { L: 'Light', H: 'Heavy', K: 'Kick' };
+
+// a named move: what a string fires on its last press (that press's hit, plus `bonus`, or a flurry of `flurry` hits)
+function ipMove(id, name, seq, o) {
+  const x = seq[seq.length - 1];
+  return Object.assign({ id, name, seq, input: x, slot: IP_SLOT[x], named: true, type: 'gcd', target: 'enemy', range: MELEE, anim: IP_ANIM[x],
+    bonus: 0, threat: 1, effect(k) { ipPress(k, this); } }, o);
+}
+const IP_MOVES = [
+  ipMove('crane', 'Crane Step', 'KL', { bonus: 24, desc: 'A hop and a flicked palm. It gives back 22 Breath.',
+    finish(k) { ipBreath(k, k.perk('ironpalm_w1') ? 30 : 22); } }),
+  ipMove('flow', 'Flowing Palms', 'LLL', { bonus: 50, desc: 'Three quick open palms, the last one pushed through. Cheap and simple.' }),
+  ipMove('gate', 'Rising Gate', 'LLH', { bonus: 60, threat: 3, anim: 'uppercut', alt: { ironpalm_swallow: 'KLH' },
+    desc: 'A launching uppercut that draws the boss to you (triple threat). The boss is in the air: the next input has longer to come.' }),
+  ipMove('drop', 'Heaven\'s Drop', 'LLHKK', { bonus: 140, anim: 'axe', lock: 0.62, alt: { ironpalm_swallow: 'KLHKK' },
+    desc: 'Rising Gate, then two kicks: an axe kick brought down on the airborne boss.',
+    finish(k, mv) { if (k.talent('ironpalm_mountain')) k.after(1, () => { k.damage(40, { ab: mv }); k.fx('aftershock'); }); } }),
+  ipMove('wall', 'Tiger Wall', 'HKK', { bonus: 18, anim: 'guard', desc: 'A low blocking stance: 25% less damage for 5s.',
+    finish(k, mv) { k.mitigate('self', 0.25, 5, { ab: mv }); k.buff('wall', 5); if (k.talent('ironpalm_shirt')) k.shield('self', 130, 5, { ab: mv }); } }),
+  ipMove('breaker', 'Stone Breaker', 'HHK', { bonus: 55, desc: 'A crushing kick to the knee: the boss is Bruised and takes damage every 3s for 15s.',
+    finish(k, mv) { k.dot('bruise', 20, 15, 3, { ab: mv }); } }),
+  ipMove('ox', 'Iron Ox', 'HHH', { bonus: 90, threat: 2, desc: 'Three heavy blows, the last driven home with the whole body (double threat).' }),
+  ipMove('palms', 'Thousand Palms', 'LKHH', { flurry: 5, bonus: 170, anim: 'flurry', lock: 0.75, desc: 'The finisher: a storm of open palms, five strikes on top of the blow.',
+    finish(k, mv, st) {
+      if (k.talent('ironpalm_hundred')) k.buff('guard', 6);
+      if (k.talent('ironpalm_echo')) k.after(0.6, () => { for (let i = 0; i < 3; i++) k.after(i * 0.08, () => k.damage(mv.bonus * (st.open ? 1.3 : 1) / 9, { ab: mv })); k.fx('echo-palm'); });
+    } }),
+];
+
+// every string this kit knows: [{ seq, mv }] (a talent can add another way to spell a move: Swallow's Return)
+function ipMoves(k) {
+  const key = (k.def.spec || '') + (k.talent('ironpalm_swallow') ? '+swallow' : '');
+  if (k._ipKey === key && k._ipList) return k._ipList;
+  const list = [];
+  for (const mv of k.def.moves) {
+    list.push({ seq: mv.seq, mv });
+    for (const [tid, seq] of Object.entries(mv.alt || {})) if (k.talent(tid)) list.push({ seq, mv });
+  }
+  k._ipKey = key;
+  return (k._ipList = list);
+}
+// Unbroken (talent): while your D cooldown's buff lasts, strings never drop or break
+const ipUnbroken = k => k.talent('ironpalm_unbroken') && (k.has('skin') || k.has('pond') || k.has('bellows'));
+// is the string still open (pressed in time)?
+const ipLive = k => !!k.g.str && (k.now <= k.g.strUntil || k.has('slide') || ipUnbroken(k));
+// the string after pressing x: { s, move (the named move it fires, or null), broke (it broke a string), open (a free finisher), ends }
+function ipStep(k, x) {
+  const list = ipMoves(k), fits = s => list.some(e => e.seq.startsWith(s));
+  const base = ipLive(k) ? k.g.str : '';
+  let s = base + x, broke = false, open = false;
+  if (x === 'H' && k.has('opening')) { s = 'LKHH'; open = true; }   // a read tankbuster: this Heavy is the finisher
+  else if (!fits(s)) { broke = base.length > 0 && !k.g.clean; s = fits(x) ? x : ''; }
+  const hit = list.find(e => e.seq === s) || null;
+  const ends = !!hit && !list.some(e => e.seq.length > s.length && e.seq.startsWith(s));
+  return { s, move: hit ? hit.mv : null, broke, open, ends };
+}
+// Breath straight back (a refund, not the gauge filling on its own: no item triggers)
+function ipBreath(k, n) { k.g.breath = Math.min(k.poolMax(), (k.g.breath || 0) + n); }
+// a string broken or let go mid-way. Avalanche Fist staggers and loses its Momentum.
+function ipDrop(k, why) {
+  const g = k.g;
+  g.dropAt = k.now; g.dropWhy = why; g.plan = null;
+  k.stats.drops = (k.stats.drops || 0) + 1;
+  if (!k.def.avalanche || k.has('slide') || ipUnbroken(k)) return;
+  k.clear('rush');
+  k.lockUntil = Math.max(k.lockUntil, k.now + IRONPALM.STAGGER); k.lockLen = Math.max(0.1, k.lockUntil - k.now);
+  k.buff('stagger', IRONPALM.STAGGER);
+  k.fx('stagger');
+}
+// one press of Light, Heavy or Kick (ab is the input, or the named move it completed)
+function ipPress(k, ab) {
+  const g = k.g, x = ab.input, inp = IP_INPUT[x], now = k.now;
+  const st = ipStep(k, x), mv = st.move;
+  // Crisp: pressed (not buffered) in the first moment after the last recovery ended, while you're in the rhythm
+  const crisp = !!k.input && !k.input.buffered && k.input.idle <= IRONPALM.CRISP && now - g.lastPress < 3;
+  if (st.broke) ipDrop(k, 'broke');
+  if (!g.str || st.s.length <= 1 || st.open || st.broke || !ipLive(k)) g.keys = [];
+  g.keys.push({ x, crisp, t: now });
+  g.str = st.s; g.lastPress = now;
+  k.stats.presses = (k.stats.presses || 0) + 1;
+  if (st.open) { ipBreath(k, inp.cost); k.consume('opening'); k.stats.openings = (k.stats.openings || 0) + 1; }
+  else if (crisp) ipBreath(k, inp.cost * (k.talent('ironpalm_clean') ? 1 : IRONPALM.CRISP_SAVE));
+  if (crisp) { k.stats.crisp = (k.stats.crisp || 0) + 1; k.env.emit({ type: 'fxLocal', name: 'crisp', data: { x } }); }
+  let pot = inp.pot * (x === 'L' && k.has('guard') ? 1.3 : 1);
+  const bonusMult = (st.open ? 1.3 : 1) * (k.def.avalanche && mv && mv.seq.length >= 4 ? 1.2 : 1);
+  if (mv && !mv.flurry) pot += mv.bonus * bonusMult;
+  const mult = crisp ? 1 + IRONPALM.CRISP_HIT : 1;
+  k.damage(pot, { ab, mult, threat: (mv && mv.threat) || 1 });
+  g.clean = !!mv;
+  if (mv) {
+    g.flash = { id: mv.id, name: mv.name, at: now, keys: g.keys.slice(), open: st.open };
+    k.stats.moves = (k.stats.moves || 0) + 1;
+    if (mv.flurry) {
+      const n = mv.flurry + (k.perk('ironpalm_w2') ? 1 : 0);
+      for (let i = 0; i < n; i++) k.after(0.07 * (i + 1), () => k.damage(mv.bonus * bonusMult / mv.flurry * (i >= mv.flurry ? 0.3 : 1), { ab: mv, mult }));
+    }
+    if (k.def.avalanche) k.buff('rush', k.has('slide') ? 30 : IRONPALM.RUSH_FADE, {}, IRONPALM.RUSH_MAX, 1);
+    if (mv.finish) mv.finish(k, mv, st);
+    if (k.has('bellows')) { k.damage(54, { ab: k.abilities[4] }); ipBreath(k, 6); }
+    if (ipUnbroken(k)) ipBreath(k, 4);
+    if (k.talent('ironpalm_quiet')) k.lastSpend = now - IRONPALM.pool.delay;   // the resting refill starts at once
+  }
+  g.juggle = !!mv && mv.id === 'gate';
+  g.strUntil = k.lockUntil + (g.juggle ? IRONPALM.JUGGLE : IRONPALM.WINDOW);
+  if (st.ends || !g.str) { g.str = ''; g.keys = []; g.plan = null; }
+}
+// every frame: a string left hanging drops (a finished move just ends quietly)
+function ipTick(k) {
+  const g = k.g;
+  if (g.str && !ipLive(k)) {
+    if (!g.clean) ipDrop(k, 'late');
+    g.str = ''; g.keys = []; g.plan = null;
+  }
+}
+// The glowing key: the next input of a planned string. It picks a plan when a string starts (Crane Step when Breath is
+// low, Stone Breaker when the Bruise is wearing off, otherwise Rising Gate into Heaven's Drop or Thousand Palms in turn)
+// and follows it; a press off the plan re-plans from wherever the string is now.
+function ipGuide(k) {
+  if (k.has('opening')) return 'H';
+  const g = k.g, live = ipLive(k) ? g.str : '';
+  if (!g.plan || !g.plan.startsWith(live) || g.plan.length <= live.length) g.plan = ipPlan(k, live);
+  return g.plan ? g.plan[live.length] : null;
+}
+function ipPlan(k, live) {
+  const g = k.g, list = ipMoves(k);
+  if (!live || g.clean) {
+    if (g.breath < 30 && list.some(e => e.mv.id === 'crane')) return 'KL';
+    if (k.dotRemaining('bruise') < 4 && list.some(e => e.mv.id === 'breaker')) return 'HHK';
+    g.alt = !g.alt;
+    return g.alt ? 'LLHKK' : 'LKHH';
+  }
+  const on = list.filter(e => e.seq.startsWith(live) && e.seq.length > live.length).sort((a, b) => b.seq.length - a.seq.length);
+  return on.length ? on[0].seq : null;
+}
+// the slot of the next input of a plan from where the string is now, or null if it doesn't fit (bots and the simulator)
+function ipNext(k, plan) {
+  const g = k.g, live = ipLive(k) ? g.str : '';
+  if (k.has('opening')) return IP_SLOT.H;
+  if (plan.startsWith(live) && plan.length > live.length) return IP_SLOT[plan[live.length]];
+  if (!live || g.clean) return IP_SLOT[plan[0]];
+  return null;
+}
+function ipInputAb(x, id, desc) {
+  const I = IP_INPUT[x];
+  return { id, name: IP_NAME[x], input: x, type: 'gcd', target: 'enemy', range: MELEE, anim: IP_ANIM[x], lock: I.lock, cost: I.cost,
+    meta: `${x} · no GCD · ${I.lock}s recovery · ${I.cost} Breath`, glow: k => ipGuide(k) === x, desc, effect(k) { ipPress(k, this); } };
+}
+// the base ability (by the id a spec or talent replaced) and its current id, for cooldown changes
+const ipAbId = (k, base) => (k.abilities.find(a => k.baseId(a) === base) || {}).id;
+function ipRead(k, d) {
+  const b = !!(d && d.b), ab = k.abilities[3];
+  k.stats.reads = (k.stats.reads || 0) + 1;
+  if (b) k.stats.readBusters = (k.stats.readBusters || 0) + 1;
+  k.damage(IRONPALM.READ.counter + (!b && k.talent('ironpalm_deflect') ? 60 : 0), { ab, threat: 2 });
+  ipBreath(k, k.def.stillWater ? k.poolMax() : 15);
+  if (b) k.buff('opening', IRONPALM.OPENING);
+  if (k.perk('ironpalm_a2')) k.shield('self', 160, 6, { ab });
+  if (b && k.talent('ironpalm_answer')) { k.reduceCooldown(ipAbId(k, 'skin'), 20); k.reduceCooldown(ipAbId(k, 'bell'), 20); }
+  k.fx('read', { b: b ? 1 : 0 });
+}
+
+KITS.ironpalm = {
+  potMult: 0.67, // balance knob (tools/simulate.js)
+  pacing: { kind: 'combo', gcd: false, buffer: 0.45, bufferSize: 2, repeat: false, pool: IRONPALM.pool, itemGcd: (k, ab) => !!ab.named },
+  auto: { kind: 'fist', potency: 40, range: MELEE },  // passive auto-attack (see ENGINE.AUTO_EVERY)
+  gauge: { kind: 'breath', key: 'breath', max: 100, label: 'Breath', w: 250 },
+  init: () => ({ breath: IRONPALM.pool.max, str: '', strUntil: 0, keys: [], plan: null, flash: null, dropAt: -9, lastPress: -9, clean: false, juggle: false, alt: false }),
+  moves: IP_MOVES,
+  moveFor(k, ab) { if (!ab.input) return ab; const st = ipStep(k, ab.input); return st.move || ab; },
+  tick: k => ipTick(k),
+  dmgMod: k => (k.has('wind') ? 0.1 : 0) + (k.def.avalanche ? IRONPALM.RUSH * k.stacks('rush') : 0),
+  poolRate: k => (k.has('wind') ? 2 : 1) * (k.talent('ironpalm_lungs') ? 1.2 : 1) * (k.has('bellows') ? 1.5 : 1),
+  poolRest: k => k.has('skin'),
+  onNotify(k, type, d) { if (type === 'read') ipRead(k, d); },
+  signature: 'Strings and Reads',
+  floor: 'Press the glowing key: Q, W and E spell named moves on their own. Stop for a breath when the ring runs low. Press R just as a big hit lands, D when you\'re in trouble, and F when the party is about to be hit.',
+  ceiling: [
+    'Every move is a string of Light, Heavy and Kick (L H K). Rising Gate is L L H, and two Kicks after it bring Heaven\'s Drop down on the airborne boss. Thousand Palms is L K H H. The gauge shows what you have pressed and every move still in reach.',
+    'There is no GCD. Breath is the limit: every press costs some, it creeps back while you fight and floods back once you stop for half a second. Crane Step (K L) gives Breath back without stopping.',
+    'Rhythm: a press made just as the last one\'s recovery ends is Crisp, 10% harder for 40% less Breath. Mashing still works, because early presses are buffered, but they are never Crisp.',
+    'Read (R) in the last moment before a hit lands catches it: half the damage, a counter and Breath. Read a tankbuster and your next Heavy is a free, stronger Thousand Palms.',
+  ],
+  abilities: [
+    ipInputAb('L', 'palm', 'An open-palm strike, quick to recover. Adds L to your string.'),
+    ipInputAb('H', 'fist', 'An iron-wrapped punch, slow to recover and heavy. Adds H to your string.'),
+    ipInputAb('K', 'kick', 'A snapping kick. Adds K to your string.'),
+    {
+      id: 'read', name: 'Read', type: 'ogcd', target: 'self', cd: 6, lock: 0.25, anim: 'guard',
+      desc: 'Drop into a reading stance for 1.2s: 20% less damage. A hit that lands in its first 0.4s is read: it lands at half strength, you counter, and you get 15 Breath. Read a tankbuster and your next Heavy is a free Thousand Palms, 30% stronger. It doesn\'t break your string.',
+      effect(k) {
+        k.mitigate('self', IRONPALM.READ.pct, IRONPALM.READ.dur, { kind: 'parry', ab: this }); k.buff('read', IRONPALM.READ.dur);
+        if (k.has('pond')) { const id = this.id; k.after(0.8, () => k.refundCharge(id)); }   // Still Water's Still Pond: Read is back at once
+      },
+    },
+    {
+      id: 'skin', name: 'Iron Skin', type: 'ogcd', target: 'self', cd: 120, lock: 0.5, anim: 'big',
+      desc: 'Harden like forged iron: 40% less damage for 10s, and your Breath refills at its resting pace the whole time.',
+      effect(k) { k.mitigate('self', k.perk('ironpalm_a4') ? 0.5 : 0.4, 10, { ab: this }); k.buff('skin', 10); },
+    },
+    {
+      id: 'bell', name: 'Temple Bell', type: 'ogcd', target: 'self', cd: 60, lock: 0.5, anim: 'big',
+      desc: 'Strike your chest like a temple bell: the whole party takes 10% less damage for 8s, and you get Second Wind for 15s: Breath refills twice as fast and you deal 10% more damage.',
+      effect(k) {
+        k.mitigate('party', 0.1, 8, { ab: this });
+        k.buff('wind', k.perk('ironpalm_w3') ? 20 : 15);
+        if (k.talent('ironpalm_bellecho')) k.heal('party', 130, { ab: this });
+        if (k.talent('ironpalm_gong')) k.after(8, () => { k.mitigate('party', 0.1, 4, { ab: this }); k.fx('gong'); });
+      },
+    },
+  ],
+};
+
+// the taunt (T): a beckoning palm. It steadies your breathing.
+TAUNT.ironpalm = {
+  name: 'Beckoning Palm', icon: 'read',
+  desc: 'Hold out an open palm and curl two fingers at your target: {hold}. Calling it out steadies your breathing: +30 Breath.',
+  use(k) { ipBreath(k, 30); },
+};
+
+// Ironpalm's talent moves (the shared system above): Bellows Stance takes Iron Skin's key, Dragon Ascends Temple Bell's
+TALENT_ABILITIES.ironpalm_bellows = { cls: 'ironpalm', ab: {
+  id: 'bellows', replaces: 'skin', icon: 'skin', name: 'Bellows Stance', type: 'ogcd', target: 'self', cd: 90, lock: 0.5, anim: 'big',
+  desc: 'Breathe like a forge bellows for 10s: 30% less damage, Breath refills half again as fast, and every named move you finish breathes out a shockwave (a hit of its own) and gives back 6 Breath.',
+  effect(k) { k.mitigate('self', 0.3, 10, { ab: this }); k.buff('bellows', 10); },
+} };
+const ipDragon = {
+  id: 'dragon', replaces: 'bell', icon: 'bell', name: 'Dragon Ascends', type: 'ogcd', target: 'enemy', range: 300, cd: 60, lock: 0.6, anim: 'big',
+  desc: 'Leap and come down on your target like a dragon: a heavy blow, the whole party deals 5% more damage for 12s, and you get Second Wind for 15s.',
+  effect(k) { k.damage(170, { ab: this, threat: 2 }); k.partyBuff('dmg', 0.05, 12, { ab: this }); k.buff('wind', k.perk('ironpalm_w3') ? 20 : 15); },
+};
+TALENT_ABILITIES.ironpalm_dragon = { cls: 'ironpalm', ab: ipDragon,
+  spec: { avalanche: Object.assign({}, ipDragon, {
+    desc: 'Leap and come down on your target like a dragon: a heavy blow, the whole party deals 5% more damage for 12s, and you get Second Wind for 15s. Your Momentum fills and holds while it lasts.',
+    effect(k) { ipDragon.effect.call(this, k); k.buff('rush', 15, {}, IRONPALM.RUSH_MAX, IRONPALM.RUSH_MAX); },
+  }) } };
+
+if (typeof module !== 'undefined') Object.assign(module.exports, { IRONPALM, IP_SLOT, IP_INPUT, IP_MOVES, ipMoves, ipLive, ipStep, ipPress, ipDrop, ipGuide, ipPlan, ipNext, ipBreath, ipRead, ipAbId });
 

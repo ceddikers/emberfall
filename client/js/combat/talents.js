@@ -444,6 +444,40 @@ TALENTS.alembist = [
   ],
 ];
 
+// ======================================================================= IRONPALM (tank)
+// Its own block. Built to the newer rule: new behaviour, not bigger numbers (Deep Lungs is the one plain number), and two
+// talents put a new move on a key (`grants`; the moves are in TALENT_ABILITIES at the end of kits.js): Bellows Stance
+// (row III, on D) and Dragon Ascends (row V, on F). Named strings belong to the key their last input is on.
+TALENTS.ironpalm = [
+  [
+    { id: 'ironpalm_swallow', name: 'Swallow\'s Return', ab: 'kick', text: 'Crane Step now flows on: Crane Step then Heavy (K L H) is a Rising Gate too, so it can carry on into Heaven\'s Drop.' },
+    { id: 'ironpalm_echo', name: 'Echoing Palm', ab: 'fist', text: 'Thousand Palms now echoes: three more strikes land a moment after the flurry, a third as strong.' },
+    { id: 'ironpalm_clean', name: 'Clean Hands', ab: 'palm', text: 'A Crisp press now costs no Breath at all.' },
+  ],
+  [
+    { id: 'ironpalm_shirt', name: 'Iron Shirt', ab: 'kick', text: 'Tiger Wall now also wraps you in a shield for 5s.' },
+    { id: 'ironpalm_deflect', name: 'Deflect', ab: 'read', text: 'Reading anything but a tankbuster now also throws the blow back into the boss: your counter hits about twice as hard.' },
+    { id: 'ironpalm_bellecho', name: 'Bell\'s Echo', ab: 'bell', text: 'Temple Bell now also heals the whole party a little.', spec: { avalanche: 'Landslide now also heals the whole party a little.' } },
+  ],
+  [
+    { id: 'ironpalm_bellows', name: 'Bellows Stance', ab: 'skin', grants: true, text: 'New move on D, in place of Iron Skin. Bellows Stance (90s): for 10s you take 30% less damage, your Breath refills half again as fast, and every named move you finish breathes out a shockwave and gives back 6 Breath.',
+      spec: { stillwater: 'New move on D, in place of Still Pond. Bellows Stance (90s): for 10s you take 30% less damage, your Breath refills half again as fast, and every named move you finish breathes out a shockwave and gives back 6 Breath.' } },
+    { id: 'ironpalm_lungs', name: 'Deep Lungs', ab: 'palm', text: 'Your Breath refills 20% faster.' },
+    { id: 'ironpalm_quiet', name: 'Quiet Mind', ab: 'read', text: 'Finishing a named move now lets your Breath catch at once: it refills at its resting pace right away, until your next press.' },
+  ],
+  [
+    { id: 'ironpalm_gong', name: 'Gong of Ages', ab: 'bell', text: 'Temple Bell now tolls again 8s later: the whole party takes 10% less damage for another 4s.', spec: { avalanche: 'Landslide now tolls again 8s later: the whole party takes 10% less damage for another 4s.' } },
+    { id: 'ironpalm_unbroken', name: 'Unbroken', ab: 'skin', text: 'While Iron Skin lasts, your strings never drop or break, and every named move gives 4 Breath.', spec: { stillwater: 'While Still Pond lasts, your strings never drop or break, and every named move gives 4 Breath.' } },
+    { id: 'ironpalm_answer', name: 'Answering Fist', ab: 'read', text: 'Reading a tankbuster now takes 20s off Iron Skin and Temple Bell.', spec: { stillwater: 'Reading a tankbuster now takes 20s off Still Pond and Temple Bell.', avalanche: 'Reading a tankbuster now takes 20s off Iron Skin and Landslide.' } },
+  ],
+  [
+    { id: 'ironpalm_dragon', name: 'Dragon Ascends', ab: 'bell', grants: true, text: 'New move on F, in place of Temple Bell. Dragon Ascends (60s): leap down on your target with a heavy blow; the whole party deals 5% more damage for 12s, and you get Second Wind.',
+      spec: { avalanche: 'New move on F, in place of Landslide. Dragon Ascends (60s): leap down on your target with a heavy blow; the whole party deals 5% more damage for 12s, you get Second Wind, and your Momentum fills and holds.' } },
+    { id: 'ironpalm_mountain', name: 'Falling Mountain', ab: 'kick', text: 'Heaven\'s Drop now shakes the ground: an aftershock strikes the boss a second later.' },
+    { id: 'ironpalm_hundred', name: 'Hundred Hands', ab: 'fist', text: 'Thousand Palms now leaves the boss\'s guard open for 6s: your Light presses hit 30% harder.' },
+  ],
+];
+
 // id -> { cls, row, col, t }
 const TALENT_BY_ID = {};
 for (const [cls, rows] of Object.entries(TALENTS)) rows.forEach((row, r) => row.forEach((t, c) => { TALENT_BY_ID[t.id] = { cls, row: r, col: c, t }; }));
