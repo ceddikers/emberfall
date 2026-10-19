@@ -840,8 +840,9 @@ body:has(#loot:not(.hidden)) #results { padding-right: 332px; }
   .altar-band { grid-template-columns: minmax(0, 1fr); gap: 6px; padding: 8px 10px 10px 0; }
   .altar-band h3 { display: flex; gap: 8px; align-items: baseline; margin: 0; }
   .band-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
-  .altar-band .hero-card canvas { width: 52px !important; height: 52px !important; }
-  .altar-band .hc-text b { font-size: 13.5px; }
+  .altar-band .hero-card { gap: 7px; }
+  .altar-band .hero-card canvas { width: 50px !important; height: 50px !important; }
+  .altar-band .hc-text b { font-size: 13px; }
 }
 .hc-cx { position: absolute; right: 8px; bottom: 7px; display: flex; gap: 3px; }
 .hc-cx i { width: 4px; height: 4px; transform: rotate(45deg); background: color-mix(in srgb, var(--a) 70%, #f2e6c8); opacity: .75; }
