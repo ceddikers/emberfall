@@ -2,6 +2,7 @@
 // and gives a rough idea of clear times and death counts.
 //   node tools/bot-raid.js [normal|hard] [runs] [classes comma-separated] [boss id]
 //   e.g. node tools/bot-raid.js normal 5 skitterra   (arguments can come in any order; the boss defaults to grubnak)
+//   seed=N uses another set of seeds; WHY=1 prints the last hits before each death, NEXT=1 the upcoming-moves feed
 const path = require('path');
 const load = (p) => require(path.join(__dirname, '../client/js', p));
 Object.assign(global, load('arena/shapes.js'), load('data.js'), load('combat/engine.js'), load('combat/kits.js'), load('combat/specs.js'),
@@ -14,9 +15,10 @@ const { HOLLOWKING } = load('arena/bosses/hollowking.js');
 const DEFS = { grubnak: GRUBNAK, skitterra: SKITTERRA, volkar: VOLKAR, hollowking: HOLLOWKING };
 const { TRIALS, trialDef } = load('arena/trials.js');
 
-let mode = 'normal', runs = 3, comp = 'bastion,cleric,ranger,pyromancer'.split(','), def = GRUBNAK;
+let mode = 'normal', runs = 3, comp = 'bastion,cleric,ranger,pyromancer'.split(','), def = GRUBNAK, seed0 = 1000;
 for (const a of process.argv.slice(2)) {
   if (a === 'normal' || a === 'hard') mode = a;
+  else if (/^seed=\d+$/.test(a)) seed0 = Number(a.slice(5));   // a different set of seeds (default 1000)
   else if (/^\d+$/.test(a)) runs = Number(a);
   else if (DEFS[a]) def = DEFS[a];
   // trial:<spec> runs that spec's trial, with a bot taking it (or 'trial:<spec>:base' to try it with the base kit)
@@ -29,8 +31,10 @@ console.log(`${def.name}, ${mode}, ${comp.join('/')}`);
 let clears = 0;
 for (let r = 0; r < runs; r++) {
   const casts = [];
-  const host = new RaidHost({ def, mode, humans: () => [], bots: comp, seed: 1000 + r * 77, emit: msg => {
+  const host = new RaidHost({ def, mode, humans: () => [], bots: comp, seed: seed0 + r * 77, emit: msg => {
     if (msg.t === 'bcast') casts.push(msg.name);
+    // NEXT=1: print the upcoming-moves feed whenever it changes
+    if (msg.t === 'bnext' && process.env.NEXT) console.log(`   ${host.sim.t.toFixed(1)} next: ${msg.l.map(([n, s]) => `${n} ${s}s`).join(', ')}`);
   } });
   let deaths = [];
   const origEmit = host.emitOut;
