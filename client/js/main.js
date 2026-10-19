@@ -1873,8 +1873,13 @@
   // Optional painted portraits (client/portraits/<classId>.png, front-facing). Missing ones fall back to the sprite.
   const PORTRAITS = {};
   for (const c of CLASSES) { const img = new Image(); img.onload = () => { PORTRAITS[c.id] = img; }; img.src = `portraits/${c.id}.png`; }
-  const SPEC_PORTRAITS = {};
-  for (const [cid, list] of Object.entries(SPECS)) for (const sp of list) { const key = `${cid}-${sp.id}`, img = new Image(); img.onload = () => { SPEC_PORTRAITS[key] = img; }; img.src = `portraits/${key}.png`; }
+  // spec portraits are big, so a hero's are fetched the first time its page opens, not at startup
+  const SPEC_PORTRAITS = {}, specPortraitsAsked = new Set();
+  function loadSpecPortraits(cid) {
+    if (specPortraitsAsked.has(cid)) return;
+    specPortraitsAsked.add(cid);
+    for (const sp of SPECS[cid] || []) { const key = `${cid}-${sp.id}`, img = new Image(); img.onload = () => { SPEC_PORTRAITS[key] = img; }; img.src = `portraits/${key}.png`; }
+  }
   // Portraits are square head-and-shoulders busts. Fill a square box with one, breathing a little; zoom > 1 moves in
   // on the face (kept anchored at the top so the head stays in frame).
   function drawBust(c, img, x, y, size, zoom = 1) {
@@ -1995,6 +2000,7 @@
   }
   function showDetail(cls) {
     selGrid.classList.add('hidden'); selDetail.classList.remove('hidden');
+    loadSpecPortraits(cls.id);
     const kit = KITS[cls.id], guide = HERO_GUIDE[cls.id];
     const abs = [...kit.abilities, DASH_AB];
     const takenBy = [...remotes.values()].filter(r => r.cls === cls).map(r => escapeHtml(r.name));
