@@ -23,13 +23,15 @@ const STAT_INFO = {
   crit: { name: 'Critical', fmt: v => `+${v}%` },
 };
 
-// where an item comes from: tier power scales its stats; Hard drops (q = 1) are one rarity up and 25% stronger
+// Where an item comes from. Every boss drops gear of the same strength: there is no ladder where one fight's loot
+// replaces the last. Bosses differ in what they drop (stat mixes, enhancements, party bonuses), not in how good it is.
+// Hard drops (q = 1) are one rarity up and 25% stronger.
 const TIERS = {
-  0: { name: 'Recruit', power: 0.3, rarity: 0, ilvl: 1 },
-  1: { name: 'Grubnak', power: 0.55, rarity: 1, ilvl: 10 },
-  2: { name: 'Skitterra', power: 0.8, rarity: 2, ilvl: 20 },
-  3: { name: 'Volkar', power: 1.05, rarity: 3, ilvl: 30 },
-  4: { name: 'Hollow King', power: 1.3, rarity: 3, ilvl: 40 },
+  0: { name: 'Recruit', power: 0.4, rarity: 0, ilvl: 1 },
+  1: { name: 'Grubnak', power: 1, rarity: 2, ilvl: 30 },
+  2: { name: 'Skitterra', power: 1, rarity: 2, ilvl: 30 },
+  3: { name: 'Volkar', power: 1, rarity: 2, ilvl: 30 },
+  4: { name: 'Hollow King', power: 1, rarity: 2, ilvl: 30 },
 };
 const HARD_MULT = 1.25;
 
@@ -97,46 +99,51 @@ const ITEM_PERKS = {
   chronomancer_a4: { ab: 'rewind', text: 'Rewind reaches back 6 seconds instead of 4.' },
 };
 
-// base stat lines at power 1.0 (class items get a little more than general ones)
+// Base stat lines at power 1.0. General drops are as strong as class drops overall: each spends the same budget, just
+// on a different mix (main stat, crit, haste, HP, defence). A class drop's edge is its enhancement, plus 5% on its stats.
+// Budgets: weapon 80 main + 3 points of crit/haste; armour 125 HP + defence; accessory 12 main + 3 crit/haste, or a
+// defensive charm of 75 HP + defence.
 const BASE = {
-  weapon: { main: 80, crit: 2 },
+  weapon: { main: 80, crit: 2, haste: 1 },
   armor: { hp: 75, def: 50 },
 };
+const CLASS_EDGE = 1.05;
 
 const ITEMS = {};
 (function buildItems() {
+  const edge = b => Object.fromEntries(Object.entries(b).map(([k, v]) => [k, v * CLASS_EDGE]));
   for (const [cls, g] of Object.entries(CLASS_GEAR)) {
-    g.w.forEach((name, tier) => { ITEMS[`${cls}_w${tier}`] = { key: `${cls}_w${tier}`, name, slot: 'weapon', cls, main: CLASS_MAIN[cls], wtype: g.wtype, tier, base: { main: BASE.weapon.main * 1.1, crit: BASE.weapon.crit } }; });
-    g.a.forEach((name, i) => { const tier = i + 1; ITEMS[`${cls}_a${tier}`] = { key: `${cls}_a${tier}`, name, slot: 'armor', cls, tier, atype: 'class', base: { hp: BASE.armor.hp * 1.1, def: BASE.armor.def * 1.1 } }; });
+    g.w.forEach((name, tier) => { ITEMS[`${cls}_w${tier}`] = { key: `${cls}_w${tier}`, name, slot: 'weapon', cls, main: CLASS_MAIN[cls], wtype: g.wtype, tier, base: edge(BASE.weapon) }; });
+    g.a.forEach((name, i) => { const tier = i + 1; ITEMS[`${cls}_a${tier}`] = { key: `${cls}_a${tier}`, name, slot: 'armor', cls, tier, atype: 'class', base: edge(BASE.armor) }; });
   }
   const gen = [
-    // general weapons: one main stat, any class that reads it
-    { key: 'g_cleaver', name: "Butcher's Cleaver", slot: 'weapon', main: 'phys', wtype: 'cleaver', tier: 1, base: { main: 80, crit: 2 } },
-    { key: 'g_ladle', name: 'Simmering Ladle', slot: 'weapon', main: 'mag', wtype: 'ladle', tier: 1, base: { main: 80, crit: 2 } },
-    { key: 'g_fang', name: 'Fang Shortblade', slot: 'weapon', main: 'phys', wtype: 'fang', tier: 2, base: { main: 80, haste: 2 } },
-    { key: 'g_wand', name: 'Silkspun Wand', slot: 'weapon', main: 'mag', wtype: 'wand', tier: 2, base: { main: 80, haste: 2 } },
-    { key: 'g_maul', name: 'Thunderstone Maul', slot: 'weapon', main: 'phys', wtype: 'maul', tier: 3, base: { main: 80, crit: 1, haste: 1 } },
-    { key: 'g_rod', name: 'Lightning Rod Scepter', slot: 'weapon', main: 'mag', wtype: 'scepter', tier: 3, base: { main: 80, crit: 1, haste: 1 } },
-    { key: 'g_crown', name: 'Hollow Crown Greatsword', slot: 'weapon', main: 'phys', wtype: 'greatsword', tier: 4, base: { main: 80, crit: 2 } },
-    { key: 'g_sceptre', name: 'Sceptre of the Barrow', slot: 'weapon', main: 'mag', wtype: 'royal', tier: 4, base: { main: 80, haste: 2 } },
+    // general weapons: one main stat, any class that reads it; each boss leans a different way
+    { key: 'g_cleaver', name: "Butcher's Cleaver", slot: 'weapon', main: 'phys', wtype: 'cleaver', tier: 1, base: { main: 84, crit: 3 } },
+    { key: 'g_ladle', name: 'Simmering Ladle', slot: 'weapon', main: 'mag', wtype: 'ladle', tier: 1, base: { main: 84, crit: 3 } },
+    { key: 'g_fang', name: 'Fang Shortblade', slot: 'weapon', main: 'phys', wtype: 'fang', tier: 2, base: { main: 80, haste: 4 } },
+    { key: 'g_wand', name: 'Silkspun Wand', slot: 'weapon', main: 'mag', wtype: 'wand', tier: 2, base: { main: 80, haste: 4 } },
+    { key: 'g_maul', name: 'Thunderstone Maul', slot: 'weapon', main: 'phys', wtype: 'maul', tier: 3, base: { main: 76, crit: 2, haste: 3 } },
+    { key: 'g_rod', name: 'Lightning Rod Scepter', slot: 'weapon', main: 'mag', wtype: 'scepter', tier: 3, base: { main: 76, crit: 2, haste: 3 } },
+    { key: 'g_crown', name: 'Hollow Crown Greatsword', slot: 'weapon', main: 'phys', wtype: 'greatsword', tier: 4, base: { main: 92, crit: 1 } },
+    { key: 'g_sceptre', name: 'Sceptre of the Barrow', slot: 'weapon', main: 'mag', wtype: 'royal', tier: 4, base: { main: 92, haste: 1 } },
     // general armor: anyone
     { key: 'g_coat', name: "Traveler's Coat", slot: 'armor', tier: 0, atype: 'coat', base: { hp: 75, def: 50 } },
-    { key: 'g_apron', name: 'Apron of the Kitchen Guard', slot: 'armor', tier: 1, atype: 'apron', base: { hp: 85, def: 40 } },
-    { key: 'g_hauberk', name: 'Chitin Hauberk', slot: 'armor', tier: 2, atype: 'chitin', base: { hp: 65, def: 60 } },
-    { key: 'g_slate', name: 'Slatescale Mail', slot: 'armor', tier: 3, atype: 'scale', base: { hp: 80, def: 55 } },
-    { key: 'g_shroud', name: 'Royal Burial Shroud', slot: 'armor', tier: 4, atype: 'shroud', base: { hp: 70, def: 60 } },
+    { key: 'g_apron', name: 'Apron of the Kitchen Guard', slot: 'armor', tier: 1, atype: 'apron', base: { hp: 95, def: 35 } },
+    { key: 'g_hauberk', name: 'Chitin Hauberk', slot: 'armor', tier: 2, atype: 'chitin', base: { hp: 60, def: 65 } },
+    { key: 'g_slate', name: 'Slatescale Mail', slot: 'armor', tier: 3, atype: 'scale', base: { hp: 70, def: 45, haste: 1 } },
+    { key: 'g_shroud', name: 'Royal Burial Shroud', slot: 'armor', tier: 4, atype: 'shroud', base: { hp: 70, def: 45, crit: 1 } },
     // accessories: anyone, two at a time
-    { key: 'g_pepper', name: 'Peppercorn Ring', slot: 'accessory', atype: 'ring', tier: 1, base: { crit: 3, main: 10 } },
-    { key: 'g_timer', name: 'Egg Timer Pendant', slot: 'accessory', atype: 'amulet', tier: 1, base: { haste: 3, main: 10 } },
-    { key: 'g_band', name: 'Eightfold Band', slot: 'accessory', atype: 'ring', tier: 2, base: { haste: 3, main: 15 } },
-    { key: 'g_venom', name: 'Venom Pendant', slot: 'accessory', atype: 'amulet', tier: 2, base: { crit: 3, main: 15 } },
-    { key: 'g_silk', name: 'Silkguard Charm', slot: 'accessory', atype: 'charm', tier: 2, base: { hp: 40, def: 25 } },
-    { key: 'g_polar', name: 'Polarity Ring', slot: 'accessory', atype: 'ring', tier: 3, base: { crit: 2, haste: 2, main: 12 } },
-    { key: 'g_eye', name: 'Eye of the Storm', slot: 'accessory', atype: 'amulet', tier: 3, base: { haste: 3, main: 15 } },
-    { key: 'g_iron', name: 'Grounding Charm', slot: 'accessory', atype: 'charm', tier: 3, base: { hp: 45, def: 30 } },
-    { key: 'g_signet', name: 'Signet of the Hollow King', slot: 'accessory', atype: 'ring', tier: 4, base: { crit: 3, main: 12 } },
-    { key: 'g_bell', name: 'Barrow Bell Pendant', slot: 'accessory', atype: 'amulet', tier: 4, base: { haste: 2, crit: 1, main: 12 } },
-    { key: 'g_lantern', name: 'Last Lantern Charm', slot: 'accessory', atype: 'lantern', tier: 4, base: { hp: 50, def: 30 } },
+    { key: 'g_pepper', name: 'Peppercorn Ring', slot: 'accessory', atype: 'ring', tier: 1, base: { crit: 3, main: 12 } },
+    { key: 'g_timer', name: 'Egg Timer Pendant', slot: 'accessory', atype: 'amulet', tier: 1, base: { haste: 3, main: 12 } },
+    { key: 'g_band', name: 'Eightfold Band', slot: 'accessory', atype: 'ring', tier: 2, base: { haste: 3, main: 12 } },
+    { key: 'g_venom', name: 'Venom Pendant', slot: 'accessory', atype: 'amulet', tier: 2, base: { crit: 3, main: 12 } },
+    { key: 'g_silk', name: 'Silkguard Charm', slot: 'accessory', atype: 'charm', tier: 2, base: { hp: 45, def: 30 } },
+    { key: 'g_polar', name: 'Polarity Ring', slot: 'accessory', atype: 'ring', tier: 3, base: { crit: 2, haste: 2, main: 8 } },
+    { key: 'g_eye', name: 'Eye of the Storm', slot: 'accessory', atype: 'amulet', tier: 3, base: { haste: 4, main: 6 } },
+    { key: 'g_iron', name: 'Grounding Charm', slot: 'accessory', atype: 'charm', tier: 3, base: { hp: 35, def: 40 } },
+    { key: 'g_signet', name: 'Signet of the Hollow King', slot: 'accessory', atype: 'ring', tier: 4, base: { crit: 4, main: 6 } },
+    { key: 'g_bell', name: 'Barrow Bell Pendant', slot: 'accessory', atype: 'amulet', tier: 4, base: { main: 20, crit: 1 } },
+    { key: 'g_lantern', name: 'Last Lantern Charm', slot: 'accessory', atype: 'lantern', tier: 4, base: { hp: 55, def: 20 } },
   ];
   for (const it of gen) ITEMS[it.key] = it;
 })();
@@ -226,14 +233,17 @@ function partyBonus(counts) {
   return out;
 }
 
-// loot from a clear: more for your own class, Hard gives two drops of higher quality
+// Loot from a clear: whatever that boss drops. Sometimes it's made for your class (a lucky find with an
+// enhancement); otherwise a general piece that's every bit as strong. Hard gives two drops of higher quality.
 const BOSS_TIER = { grubnak: 1, skitterra: 2, volkar: 3, hollowking: 4 };
+const CLASS_DROP = 0.35;
 function rollLoot(bossId, mode, clsId, rng) {
   const tier = BOSS_TIER[bossId] || 1, q = mode === 'hard' ? 1 : 0, out = [];
   const general = Object.values(ITEMS).filter(it => !it.cls && it.tier === tier);
   for (let n = 0; n < (q ? 2 : 1); n++) {
     let key;
-    if (rng() < 0.55) key = `${clsId}_${rng() < 0.5 ? 'w' : 'a'}${tier}`;
+    const classKeys = [`${clsId}_w${tier}`, `${clsId}_a${tier}`].filter(k => ITEMS[k]);
+    if (classKeys.length && rng() < CLASS_DROP) key = classKeys[Math.floor(rng() * classKeys.length)];
     else {
       const usable = general.filter(it => it.slot !== 'weapon' || it.main === CLASS_MAIN[clsId]);
       key = usable[Math.floor(rng() * usable.length)].key;
