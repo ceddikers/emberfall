@@ -696,7 +696,7 @@ function windLaneBoost(x, y, vx, vy, now) {
     const cx = s.x, cy = s.y, R = Math.min(260, s.r || s.len || 120);
     for (let i = 0; i < 14; i++) { const a = Math.random() * Math.PI * 2, d = R * rand(0.4, 1);
       FX.later(rand(0, 0.18), () => { const m = mouth(e), x = cx + Math.cos(a) * d, y = cy + Math.sin(a) * d * 0.7;
-        V.spawn({ x, y, z: 4, vx: (m.x - x) * 3.2, vy: (m.y - y) * 3.2, vz: m.z * 3, life: 0.3, size: rand(7, 11), size1: 2, color: i % 2 ? col : '#ffffff', stretch: 3 }); }); }
+        V.spawn({ x, y, z: 4, vx: (m.x - x) * 3.2, vy: (m.y - y) * 3.2, vz: m.z * 1.5, life: 0.3, size: rand(5, 8), size1: 2, color: i % 2 ? col : '#ffffff', stretch: i % 3 ? 2 : 0 }); }); }
   };
   const gulp = (e, m, big) => {
     const col = MCOL(m);
