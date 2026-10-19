@@ -664,6 +664,35 @@ function drawKeeper(ctx, x, y, angle, st, scale) {
   ctx.restore();
 }
 
+// The Talent Trainer at the Training Yard gate: an old weapons-master in a long blue coat with a red sash and a
+// staff, beside a lectern with his open book of talents (talent-panel.js).
+function drawTrainer(ctx, x, y, angle, st, scale) {
+  ctx.save(); ctx.translate(x, y); ctx.scale(scale, scale);
+  // lectern, to his right as you face him, with the open book
+  ellipse(ctx, 24, 9, 9, 6, 0, 'rgba(0,0,0,0.24)');
+  rrect(ctx, 21, -2, 6, 12, 1, '#5a3c24', OUT, 1.3);
+  poly(ctx, [14, -6, 34, -6, 32, 4, 16, 4], '#6b4a2b', OUT, 1.5);
+  poly(ctx, [17, -4.5, 24, -3.5, 24, 2.5, 17, 1.5], '#efe2c0', OUT, 1);
+  poly(ctx, [24, -3.5, 31, -4.5, 31, 1.5, 24, 2.5], '#e6d6b0', OUT, 1);
+  glow(ctx, 24, -1, 9, '#ffd98a', 0.22 + Math.sin(st.t * 1.4) * 0.06);
+  ellipse(ctx, 2, 5, 15, 11, 0, 'rgba(0,0,0,0.28)');
+  ctx.rotate(angle + Math.sin(st.t * 0.5) * 0.18);
+  feet(ctx, st, '#2a2018');
+  torso(ctx, '#2f4a78', 10, 14);
+  line(ctx, -9, -8, -9, 8, '#d8b25a', 1.4);                       // gold hem of the coat
+  line(ctx, -4, -13, 4, 12, '#a8322a', 3);                        // red sash
+  // staff in the right hand, the left hand resting on the belt
+  limb(ctx, [14, 16, -12, 16], '#7a5432', 2.4);
+  circle(ctx, 15, 16, 2.2, '#d8b25a', OUT, 1);
+  hand(ctx, 5, 15, '#e0b48c');
+  hand(ctx, 5, -11, '#e0b48c');
+  // head: grey hair, long grey beard in front
+  circle(ctx, 0, 0, 7.5, '#bdb6aa', OUT, 2);
+  circle(ctx, -1.5, -2.5, 2.5, '#d6d0c4');
+  ellipse(ctx, 6.5, 0, 5, 5.5, 0, '#d8d2c6', OUT, 1.5);
+  ctx.restore();
+}
+
 function drawDummy(ctx, x, y, st, scale) {
   const since = st.t - st.hit;
   const w = since < 0.5 ? Math.sin(since * 25) * (1 - since * 2) * 0.3 : 0;

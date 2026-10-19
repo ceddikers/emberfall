@@ -18,6 +18,7 @@ const TOWN = {
   terrace: { x: 680, y: 470, w: 1040, h: 180 },
   deck: { x: 240, y: 780, w: 470, h: 340 },
   keeper: { x: 560, y: 805 },
+  trainer: { x: 1664, y: 1112 },   // the Talent Trainer, just inside the Training Yard gate
   yard: { x: 1600, y: 1060, w: 520, h: 300 },
   dummies: [{ x: 1730, y: 1210 }, { x: 1870, y: 1170 }, { x: 2010, y: 1230 }],
   pedestals: [{ x: 780, y: 560 }, { x: 1020, y: 560 }, { x: 1380, y: 560 }, { x: 1620, y: 560 }],

@@ -96,7 +96,10 @@ const Hud = {
       if (ab.charges) meta.push(`${ab.charges} charges · ${ab.cd}s`); else if (typeof ab.cd === 'number' && ab.cd) meta.push(`${ab.cd}s cooldown`);
       const perks = k ? [...(k.gear().perks || [])].filter(p => ITEM_PERKS[p] && ITEM_PERKS[p].ab === (ab.replaces || ab.id)) : [];
       const enh = perks.map(p => `<div class="it-perk"><span><u>Enhanced (${ITEMS[p].name}):</u> ${ITEM_PERKS[p].text}</span></div>`).join('');
-      return `<div class="tip-ab">${icon}<div><b>${name}</b><em>${meta.join(' · ')}</em></div></div>${ab.desc || ''}${enh}`;
+      // talents (talents.js) that change this move, or the move its spec version replaced
+      const held = k && k.env.talents && typeof TALENT_BY_ID !== 'undefined' ? [...(k.env.talents() || [])].map(id => TALENT_BY_ID[id]).filter(d => d && d.t.ab === (ab.replaces || ab.id)) : [];
+      const tal = held.map(d => `<div class="it-talent"><span><u>Talent · ${d.t.name}:</u> ${talentText(d.t, this.actor.spec)}</span></div>`).join('');
+      return `<div class="tip-ab">${icon}<div><b>${name}</b><em>${meta.join(' · ')}</em></div></div>${ab.desc || ''}${enh}${tal}`;
     }));
     this.slots.forEach((s, i) => s.el.addEventListener('mousedown', e => { e.stopPropagation(); onPress(i); }));
     Tip.set(this.el.querySelector('.gauge-wrap'), () => {
@@ -118,9 +121,11 @@ const Hud = {
     if (!a) return;
     const k = a.kit;
     const enhanced = new Set([...(k.gear().perks || [])].map(p => ITEM_PERKS[p] && ITEM_PERKS[p].ab));
+    const talented = new Set(k.env.talents && typeof TALENT_BY_ID !== 'undefined' ? [...(k.env.talents() || [])].map(id => TALENT_BY_ID[id] && TALENT_BY_ID[id].t.ab) : []);
     a.abilities.forEach((ab, i) => {
       const s = this.slots[i];
       s.el.classList.toggle('enhanced', enhanced.has(ab.replaces || ab.id));
+      s.el.classList.toggle('talented', talented.has(ab.replaces || ab.id));
       const usable = k.usable(ab);
       let frac = 0, txt = '';
       const cdLeft = k.cdRemaining(ab);

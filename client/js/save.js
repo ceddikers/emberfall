@@ -10,10 +10,13 @@
 //   v2: + gold (the account-wide wallet); items lose `q`: rarity is now part of each item (items.js), so a Heroic copy
 //       is simply that item. Each Heroic item you owned pays HEROIC_REFUND gold once, for the bonus it no longer has.
 //       inv.lost holds items whose key the game doesn't know (kept, never deleted; they come back if the key returns).
+//   v3: + heroes[classId].talents = { rows, picks }: how many talent rows the hero has unlocked with gold (0-5) and
+//       the column picked in each row (null for none). See combat/talents.js.
 
 const Save = (() => {
   const KEY = 'emberfall-save';
-  const VERSION = 2;
+  const VERSION = 3;
+  const freshTalents = () => ({ rows: 0, picks: [null, null, null, null, null] });
   const HEROIC_REFUND = 10;
   const fresh = () => ({ v: VERSION, name: '', gold: 0, inv: { next: 1, items: [], equip: {}, lost: [] }, heroes: {}, settings: {} });
 
@@ -32,6 +35,11 @@ const Save = (() => {
       const items = d.inv && Array.isArray(d.inv.items) ? d.inv.items : [];
       for (const it of items) { if (it && it.q) heroic++; if (it) delete it.q; }
       d.gold = (Number(d.gold) || 0) + heroic * HEROIC_REFUND;
+      return d;
+    },
+    // 2 -> 3: talents; every hero starts with no rows unlocked
+    2: d => {
+      for (const h of Object.values(d.heroes || {})) if (h && typeof h === 'object' && !h.talents) h.talents = freshTalents();
       return d;
     },
   };
@@ -65,7 +73,7 @@ const Save = (() => {
     commit: write,
     setting: (k, fallback) => (k in data.settings ? data.settings[k] : fallback),
     setSetting(k, v) { data.settings[k] = v; write(); },
-    // the account-wide wallet (boss clears, salvage and selling add to it; talents will spend it)
+    // the account-wide wallet (boss clears, salvage and selling add to it; talent rows spend it)
     gold: () => data.gold,
     addGold(n) { n = Math.floor(Number(n) || 0); data.gold = Math.max(0, data.gold + n); write(); return data.gold; },
     // a boss clear counts for the hero you cleared it with (specializations will unlock from these)
@@ -94,6 +102,36 @@ const Save = (() => {
       h.spec = specId || null;
       write();
     },
+    // talents (combat/talents.js): { rows: unlocked rows 0-5, picks: [column or null per row] }. Rows are bought with
+    // gold in order; picks are free to change (the game only lets you change them in town).
+    talents(classId) {
+      const t = (data.heroes[classId] || {}).talents || freshTalents();
+      const rows = Math.max(0, Math.min(5, t.rows | 0));
+      const picks = [0, 1, 2, 3, 4].map(r => (Number.isInteger(t.picks && t.picks[r]) && t.picks[r] >= 0 && t.picks[r] < 3 ? t.picks[r] : null));
+      return { rows, picks };
+    },
+    heroTalents(classId) {
+      const h = data.heroes[classId] = data.heroes[classId] || { clears: {} };
+      if (!h.talents) h.talents = freshTalents();
+      return h.talents;
+    },
+    // unlock the next row for `cost` gold; false if the wallet is short or every row is open
+    unlockTalentRow(classId, cost) {
+      const t = this.heroTalents(classId);
+      if ((t.rows | 0) >= 5 || data.gold < cost) return false;
+      data.gold -= cost; t.rows = (t.rows | 0) + 1;
+      write();
+      return true;
+    },
+    pickTalent(classId, row, col) {
+      const t = this.heroTalents(classId);
+      if (row < 0 || row >= (t.rows | 0) || col < 0 || col > 2) return false;
+      if (!Array.isArray(t.picks)) t.picks = freshTalents().picks;
+      t.picks[row] = col;
+      write();
+      return true;
+    },
+    resetTalents(classId) { const t = this.heroTalents(classId); t.picks = freshTalents().picks; write(); },
   };
 })();
 

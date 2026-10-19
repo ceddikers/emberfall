@@ -54,7 +54,7 @@ Four ideas from the research shaped every kit.
 - **Auto-attacks** play a lighter version that alternates forehand and backhand, with small effects and small, muted damage numbers.
 - **Channeling** a real cast: a rune circle under the caster fills with the cast's progress, and motes in the class's style (embers, light motes, leaves, clock ticks) spiral into the staff, orb or hands, which swell until the release. Interrupting a cast stops it for everyone. While casting, the hero keeps turned toward the target (the enemy, or the ally being healed), following it if it moves.
 
-**Controls:** right-click to move. Left-click interacts in town, or picks an ally to heal in the arena. **Q W E R D F** are the six skills, **Space** is a shared dash (2 charges, 12 s each), **T** is a tank's taunt, and **1–4** target party members.
+**Controls:** right-click to move. Left-click interacts in town, or picks an ally to heal in the arena. **Q W E R D F** are the six skills, **Space** is a shared dash (2 charges, 12 s each), **T** is a tank's taunt, **1–4** target party members, and **`** locks the most hurt ally (again to cycle). **I** opens the inventory and **N** your talents.
 
 **Threat and taunt** (host-side, `client/js/arena/fight.js`):
 - Threat is damage dealt × 2.75 for tanks (× 1 for everyone else), plus 20% of healing done. It fades by 5% a second, so what counts is roughly the last 20 seconds. A tank who keeps hitting holds the boss through normal play; a tank who stops for a few seconds (or a newbie tank against a bursting DPS) loses it.
@@ -65,12 +65,14 @@ Four ideas from the research shaped every kit.
 - Tuning test (bot raids, the bot tank stops attacking and never taunts while idle): inside the party's 60 s burst windows it loses the boss after 3–6 s; outside them after 7–11 s. In normal play the top DPS sits at about 70–75% of the tank's threat and the bot tank taunts 1–3 times a fight; with taunts switched off a DPS held the boss for 8–33 s of a fight. With the old setting (× 5, no fade) the top DPS sat near 40% and an idle tank never lost it.
 
 **Ally targeting** (for healers), in order of priority:
-1. the party frame under your mouse;
-2. the ally you clicked;
-3. the ally nearest your cursor;
-4. yourself.
+1. Shift + the heal key: yourself;
+2. the party frame under your mouse;
+3. the ally your mouse is right on top of in the world (mouseover);
+4. the ally you locked (clicked, 1–4, or **`** for the most hurt);
+5. the ally nearest your cursor;
+6. yourself.
 
-A green dashed ring always shows who your heal will land on.
+A green dashed ring always shows who your heal will land on. Healers get the party frames docked above the skill bar by default; the small button on the frames moves them to the top-left corner (remembered per role).
 
 **Authority:** each player runs their own kit locally and reports damage and heals to the host. The host's fight sim owns boss HP, player HP, threat, mechanics, deaths, and the HP history Rewind needs.
 
@@ -530,6 +532,215 @@ New support: kits can ask where their hero stands (`env.pos`, for the Sigilmance
 **How it's built:** `client/js/combat/specs.js` holds `SPECS` and `kitFor(classId, specId)`, which lays a spec's changes over the base kit (cached). A replacement ability names the one it replaces (`replaces`), keeps its slot, borrows its icon until a painted one arrives, and honours that ability's gear enhancements. `CombatActor` builds from `kitFor`; the spec rides on the `cls` message and the raid roster, so every client draws the right look and cast effects.
 
 **Tested:** pro DPS within 1% of the base class for all six tank specs and within 3% for the healers (the Inquisitor at its 112%); bot parties with each tank spec cleared Volkar and the Hollow King on Normal 24 of 24; each healer spec cleared the Hollow King 4 of 4, and in those raids every new mechanic fired (pools healed ~2 players a tick, ~200 brand bursts a fight, 12 Petals refunded, 135 echoes). In the browser: the picker, switching spec, the HUD, a Spellwarden Ward on an ally, Condemn's brand and credit, and a Moonwell pool with a bot stepping in.
+
+### Talents (all 135 built; design agreed 2026-10-19)
+
+Each hero has a small talent tree: **5 rows of 3 talents, one pick per row**. Talents belong to the hero (not the spec) and work in both of its specs: a talent on a move a spec replaces applies to the replacement, with its own wording where the effect differs (shown in italics below).
+
+- **Unlocking rows:** rows open in order with account gold: **60 / 120 / 200 / 300 / 400** (1,080 for a full tree). You can read the row you could unlock next; rows past it are sealed shapes with no text, so the tree reveals itself as you go.
+- **Picking:** picks are free and can be changed or reset ("Reset picks") any time **in town**; the panel is read-only during a raid. Unlocked rows are kept on reset.
+- **Row themes:** I rotation (a stronger hit or a twist on the core loop), II survival or utility, III the class gauge, IV the big cooldowns, V a capstone that adds a new part to an ability.
+- **Numbers:** each damage talent is worth about +2 to +4% pro DPS; the best pick of every row together about +10 to +17%. The check (`tools/check.js`, via `tools/talents.js`) fails if one talent is worth more than +7% or a full build more than +18%. Survival and utility talents show 0 in the simulator by design. Without talents every kit plays exactly as before (the class balance baseline is unchanged).
+- **Where:** the **Talent Trainer**, an old weapons-master with a lectern, stands just inside the Training Yard gate; **N** opens the same panel anywhere. Ability tooltips list the talents you hold on that move, and a talented ability gets a small gold mark on its slot.
+- **Bots take no talents.** Talents are client-side only: they change what your kit does (damage, heals, shields, gauge, cooldowns), never the host's HP or defence rules.
+- **Icons:** each talent shows the icon of the ability it changes.
+
+**How it's built:** `client/js/combat/talents.js` holds `TALENTS[classId][row][col] = { id, name, ab, text, spec?, cd?, cast?, specMods? }` (`ab` is the base ability it changes; `spec` holds per-spec wording; `cd` / `cast` are flat cooldown and cast-time changes the engine applies itself, with `specMods[specId]` overrides). Kits ask `k.talent('id')` (engine.js), which reads the hero's held set through `env.talents()`; `main.js` builds that set from the save. `client/js/talent-panel.js` is the screen. The save went to **v3**: `heroes[classId].talents = { rows, picks }`.
+
+| Pro DPS (5 runs) | Base | Full build | Change |
+|---|---|---|---|
+| Bastion / Sentinel / Crusader | 1,498 / 1,485 / 1,500 | 1,656 / 1,619 / 1,699 | +10.5% / +9.0% / +13.3% |
+| Bloodreaver / Berserker / Hemomancer | 1,512 / 1,512 / 1,503 | 1,679 / 1,675 / 1,681 | +11.1% / +10.7% / +11.8% |
+| Runeguard / Spellwarden / Runeblade | 1,550 / 1,538 / 1,556 | 1,774 / 1,774 / 1,751 | +14.5% / +15.4% / +12.5% |
+| Ranger / Sharpshooter / Venomstrike | 2,147 / 2,147 / 2,148 | 2,358 / 2,403 / 2,412 | +9.8% / +11.9% / +12.3% |
+| Shadowblade / Bladedancer / Nightstalker | 2,397 / 2,397 / 2,397 | 2,725 / 2,748 / 2,681 | +13.7% / +14.7% / +11.8% |
+| Pyromancer / Cataclysm / Sigilmancer | 2,381 / 2,381 / 2,368 | 2,526 / 2,784 / 2,649 | +6.1% / +16.9% / +11.9% |
+| Cleric / Aegis / Inquisitor | 1,038 / 1,026 / 1,167 | 1,128 / 1,141 / 1,370 | +8.6% / +11.3% / +17.4% |
+| Grovekeeper / Lifebinder / Moonwell | 1,044 / 1,041 / 1,051 | 1,194 / 1,139 / 1,198 | +14.4% / +9.5% / +14.0% |
+| Chronomancer / Echoist / Accelerant | 1,142 / 1,141 / 1,155 | 1,299 / 1,303 / 1,352 | +13.8% / +14.3% / +17.1% |
+
+The base Pyromancer gains least because the pro's Hot Streak and Heat handling leaves little room; its specs gain normally.
+
+#### Bastion
+
+| Row | Talent | Effect |
+|---|---|---|
+| I | **Heavy Judgment** | Judgment, the third Blade Chain hit, strikes 15% harder. |
+| I | **Counterstrike** | The counter after a Perfect Block hits 30% harder. |
+| I | **Lightforged** | Holy Edge hits 8% harder. *Sentinel:* Shield Bash hits 8% harder. |
+| II | **Steadfast** | Brace cuts damage by 35% instead of 25%. |
+| II | **Mercy of the Edge** | Holy Edge heals you twice as much. *Sentinel:* Shield Bash heals you twice as much. |
+| II | **Sanctuary** | Rally Banner also heals the whole party every 3s while it stands. |
+| III | **Unshaken** | A Perfect Block gives 25 Resolve instead of 20. |
+| III | **Riposte's Due** | Riposte, the second Blade Chain hit, gives 10 Resolve. |
+| III | **Tithe of Light** | Holy Edge gives back 5 Resolve. *Sentinel:* Shield Bash gives back 5 Resolve. |
+| IV | **Long Vigil** | Oath of Valor lasts 4s longer. |
+| IV | **Wall of Faith** | Bulwark also fills 40 Resolve. *Crusader:* Zealous Guard also fills 40 Resolve. |
+| IV | **Standard of Valor** | While Rally Banner stands, the whole party also deals 3% more damage. |
+| V | **Sunlit Shield** | A Perfect Block now also throws a flash of light into the boss. |
+| V | **Edge of Judgment** | Judgment now also hurls a shard of Holy Edge at the boss, and it heals you a little. |
+| V | **Hallowed Ground** | Rally Banner now consecrates the ground: the boss burns with holy light every 2s while it stands. |
+
+#### Bloodreaver
+
+| Row | Talent | Effect |
+|---|---|---|
+| I | **Rending Maul** | Maul, the second hit, strikes 12% harder. |
+| I | **Open Vein** | Bloodletting leaves the boss bleeding for 9s. *Hemomancer:* Blood Lance leaves the boss bleeding for 9s. |
+| I | **Gluttony** | Crimson Drain hits 7% harder. *Berserker:* Rampage hits 7% harder. |
+| II | **Thirst** | Crimson Drain heals you for 45% of the damage you took instead of 35%. *Berserker:* Rampage heals you for 26% of the damage you took instead of 20%. |
+| II | **Iron Roar** | War Cry's shield is 25% stronger. |
+| II | **Scar Tissue** | While Undying lasts you also take 15% less damage. |
+| III | **Hunger** | Hack and Maul each give 5 more Blood. *Berserker:* Hack and Maul each give 5 more Rage. |
+| III | **Quickened Vein** | Bloodletting recharges 3s faster. *Hemomancer:* Blood Lance recharges 3s faster. |
+| III | **Feast** | Frenzy makes four Crimson Drains free instead of three. *Berserker:* Frenzy makes four Rampages free instead of three. |
+| IV | **Carnage** | Frenzy lasts 4s longer. |
+| IV | **Battle Roar** | War Cry also gives you 40 Blood. *Berserker:* War Cry also gives you 40 Rage. |
+| IV | **Deathless** | Undying recharges 30s faster. |
+| V | **Rend** | Maul now carves a Wound in the boss (up to 3). Crimson Drain tears every Wound open for extra damage. *Berserker:* Maul now carves a Wound in the boss (up to 3). Rampage tears every Wound open for extra damage. |
+| V | **Crimson Tide** | Crimson Drain's healing now also flows to the whole party, at a fifth of the strength. *Berserker:* Rampage's healing now also flows to the whole party, at a fifth of the strength. *Hemomancer:* Shared Vein now flows to the party at 40% of the strength instead of 25%. |
+| V | **Frenzied Letting** | Frenzy now also opens your veins: it refills Bloodletting's charges. *Hemomancer:* Frenzy now also opens your veins: it refills Blood Lance's charges. |
+
+#### Runeguard
+
+| Row | Talent | Effect |
+|---|---|---|
+| I | **Etched Gauntlet** | Rune Strike hits 10% harder. *Runeblade:* Rune Blade hits 10% harder. |
+| I | **Afterglyph** | Glyph Burst leaves its glyph burning on the boss for 9s. *Runeblade:* Rune Cleave's burning rune hits 25% harder. |
+| I | **Volatile Wards** | Ward blasts hit 20% harder. |
+| II | **Deep Etching** | Runic Ward is 15% stronger. |
+| II | **Wide Sanctum** | Sanctum lasts 14s instead of 10s. |
+| II | **Polished Mirror** | Mirror Aegis waits 5s for a hit instead of 3s. |
+| III | **Overflow** | A Rune that would overcap bursts into the boss instead. |
+| III | **Reclaim** | A Ward that absorbed at least half gives its Rune back. *Spellwarden:* A Ward gives its Rune back once it has absorbed a third. |
+| III | **Third Mark** | Every third Rune Strike gives an extra Rune. *Runeblade:* Every third Rune Blade hit gives an extra Rune. |
+| IV | **Long Overload** | Runic Overload lasts 4s longer. |
+| IV | **Mirror's Edge** | Mirror Aegis reflects 25% harder. |
+| IV | **Rune Well** | Sanctum also gives 2 Runes. |
+| V | **Glyphguard** | Glyph Burst now also raises a small Ward on you if you have none (once every 20s). It explodes like a Ward, a little smaller. *Runeblade:* Rune Cleave now also raises a small Ward on you if you have none (once every 20s). It explodes like a Ward, a little smaller. |
+| V | **Mirror Shards** | A reflected hit now shatters the mirror into shards that strike the boss three more times. |
+| V | **Rune Storm** | When Runic Overload ends, every Rune you hold now bursts against the boss (you keep them). |
+
+#### Ranger
+
+| Row | Talent | Effect |
+|---|---|---|
+| I | **Fletcher's Rhythm** | Every fourth Quick Shot looses a second arrow for half damage. |
+| I | **Keen Edge** | A Keen Eye Piercing Arrow hits 15% harder. *Sharpshooter:* A Keen Eye Aimed Shot hits 15% harder. *Venomstrike:* A Keen Eye Caustic Arrow hits 15% harder. |
+| I | **Marked Volley** | During Hunter's Mark, Rapid Fire hits 30% harder. |
+| II | **Hunter's Shelter** | Hunter's Cloak cuts damage by 15% instead of 10%. |
+| II | **Field Dressing** | Barrage also heals you for 8% of your HP. |
+| II | **Light Feet** | Each Piercing Arrow takes 3s off Hunter's Cloak's cooldown. *Sharpshooter:* Each Aimed Shot takes 3s off Hunter's Cloak's cooldown. *Venomstrike:* Each Caustic Arrow takes 3s off Hunter's Cloak's cooldown. |
+| III | **Deep Quiver** | Quick Shot gives 12 Focus instead of 10 (36 with Barrage). |
+| III | **Keen Focus** | Lighting up Keen Eye also gives 8 Focus. |
+| III | **Blood Trail** | Piercing Arrow gives 5 Focus. *Sharpshooter:* Aimed Shot gives 5 Focus. *Venomstrike:* Caustic Arrow gives 5 Focus. |
+| IV | **Long Hunt** | Hunter's Mark lasts 3s longer. |
+| IV | **Quick Barrage** | Barrage recharges 5s faster. |
+| IV | **Quiver Rush** | Barrage also gives 20 Focus. |
+| V | **Pinning Shot** | A Keen Eye Piercing Arrow now pins the boss: your next Quick Shot is a critical hit (once every 12s). *Sharpshooter:* A Keen Eye Aimed Shot now pins the boss: your next Quick Shot is a critical hit (once every 12s). *Venomstrike:* A Keen Eye Caustic Arrow now pins the boss: your next Quick Shot is a critical hit (once every 12s). |
+| V | **Arrowstorm** | Rapid Fire now leaves its arrows in the wound: the boss bleeds for 6s. |
+| V | **Falcon** | Barrage now also sends your falcon: it strikes the boss four times over 6s. |
+
+#### Shadowblade
+
+| Row | Talent | Effect |
+|---|---|---|
+| I | **Serrated Edge** | Strike hits 12% harder. |
+| I | **Cruel Finish** | An Eviscerate at 4 or more points hits 6% harder. *Nightstalker:* A Backstab at 4 or more points hits 6% harder. |
+| I | **Lasting Venom** | Venom Blade's poison lasts 30s instead of 24s and hits 15% harder. |
+| II | **Thick Smoke** | Smoke Bomb lasts 14s instead of 10s. |
+| II | **Evasion** | Shadowstep also makes you take 20% less damage for 3s. *Bladedancer:* Blade Fury also makes you take 20% less damage for 3s. |
+| II | **Leeching Poison** | Your poison heals you a little each time it ticks. |
+| III | **Relentless** | A 5-point Eviscerate has an even chance to give back 1 combo point. *Nightstalker:* A 5-point Backstab has an even chance to give back 1 combo point. |
+| III | **Envenom** | Each tick of your poison has a small chance to give a combo point. |
+| III | **Quickening** | Your first Strike in Shadow Dance gives 2 extra combo points. |
+| IV | **Long Dance** | Shadow Dance lasts 3s longer. |
+| IV | **Shadow Sprint** | Shadowstep recharges 3s faster. *Bladedancer:* Blade Fury recharges 1s faster. |
+| IV | **Vanish** | Smoke Bomb also refills Shadowstep's charges. *Bladedancer:* Smoke Bomb also refills Blade Fury's charges. |
+| V | **Toxic Burst** | Eviscerate now bursts your poison: 15% of what it has left lands at once, and the poison keeps going. *Nightstalker:* Backstab now bursts your poison: 15% of what it has left lands at once, and the poison keeps going. |
+| V | **Shadow Clone** | Shadow Dance now calls a shadow that repeats your Eviscerates at 30%. *Nightstalker:* Shadow Dance now calls a shadow that repeats your Backstabs at 30%. |
+| V | **Garrote** | Shadowstep now garrotes: the boss bleeds for 9s. *Bladedancer:* Blade Fury now leaves the boss bleeding for 9s. |
+
+#### Pyromancer
+
+| Row | Talent | Effect |
+|---|---|---|
+| I | **Firestarter** | A Fireball crit sets the target burning for 6s. |
+| I | **Pyroclasm** | A Hot Streak Pyroblast hits 10% harder. *Cataclysm:* A Hot Streak Meteor hits 10% harder. |
+| I | **Flashfire** | Fire Blast hits 30% harder. |
+| II | **Heat Shield** | Vent also wraps you in a small shield of heat for 8s. |
+| II | **Tempered** | An Overheat leaves you burnt for 2s instead of 5s. |
+| II | **Lingering Smolder** | Smolder lasts 14s instead of 10s. |
+| III | **Heat Sink** | Heat raises your damage by 0.4% a point instead of 0.3% (40% at full). |
+| III | **Pressure** | Vent gets a third more from every point of Heat. |
+| III | **Kindling** | Fire Blast gives 12 Heat instead of 6. |
+| IV | **Long Burn** | Combustion lasts 3s longer. *Sigilmancer:* Ember Circle lasts 5s longer. |
+| IV | **Fuel the Fire** | Combustion also gives up to 30 Heat (never past 95). *Sigilmancer:* Ember Circle also gives up to 30 Heat (never past 95). |
+| IV | **Afterburn** | When Combustion ends, you get Hot Streak. *Sigilmancer:* When Ember Circle fades, you get Hot Streak. |
+| V | **Phoenix Ash** | Vent now scorches the ground: the boss burns for 9s, hotter the more Heat you vented. |
+| V | **Twin Flame** | A Hot Streak Pyroblast now splits: a second, smaller Pyroblast hits for 10%. *Cataclysm:* A Hot Streak Meteor now brings a second, smaller meteor down a moment later, for 10%. |
+| V | **Living Bomb** | Every fourth Fireball now plants an ember in the boss that bursts 3s later. |
+
+#### Cleric
+
+| Row | Talent | Effect |
+|---|---|---|
+| I | **Burning Light** | Smite hits 5% harder (not Dawnstar). |
+| I | **Radiant Dawn** | Dawnstar hits 15% harder. |
+| I | **Petalfall** | Dawn Petal also sends a spark of light into the boss. |
+| II | **Mending Words** | Mend heals 20% more. *Aegis:* Divine Barrier's dome is 20% stronger. |
+| II | **Benevolence** | Benediction recharges 8s faster. *Inquisitor:* Condemn recharges 8s faster. |
+| II | **Swift Intervention** | Intervention casts in 1.5s instead of 2.5s. |
+| III | **Fresh Petals** | Petals regrow 2s sooner. |
+| III | **Morning Dew** | Dawn Petal's regen lasts twice as long. *Aegis:* Dawn Petal's shield is 25% stronger. |
+| III | **Sun's Favour** | Dawnstar gives back a Petal. |
+| IV | **Wide Circle** | Prayer Circle's regen lasts 6s longer. |
+| IV | **Devotion** | Prayer Circle also gives you a Petal. |
+| IV | **Grace** | Benediction also heals the whole party for a third as much. *Inquisitor:* Condemn also heals the whole party a little. |
+| V | **Sunfall** | Dawnstar now leaves a small sun on the boss that burns it for 12s. |
+| V | **Twin Petals** | Dawn Petal now also lands on the most hurt other ally, at half strength. |
+| V | **Circle of Judgment** | While Prayer Circle lasts, the boss now takes holy damage every 3s. |
+
+#### Grovekeeper
+
+| Row | Talent | Effect |
+|---|---|---|
+| I | **Sun-Warmed Wrath** | Wrath hits 5% harder. |
+| I | **Awakened Fury** | An Awakened Wrath hits 35% harder. |
+| I | **Deep Thorns** | Thornlash's thorns hit 18% harder. |
+| II | **Verdant Touch** | Rejuvenate's first heal is 50% stronger. *Lifebinder:* Lifebind's first heal is 50% stronger. |
+| II | **Barkskin** | Wild Growth also makes you take 15% less damage for 10s. *Moonwell:* Moonwell also makes you take 15% less damage for 10s. |
+| II | **Quick Rebirth** | Rebirth casts in 1.5s instead of 2.5s. |
+| III | **Fertile Soil** | Rejuvenate's ticks grow 1 more Bloom. *Lifebinder:* Lifebind's ticks grow 1 more Bloom. |
+| III | **Thorn Harvest** | Thornlash's ticks grow 2 Bloom. |
+| III | **Sap Surge** | Bloom recharges 4s faster. |
+| IV | **Lush Growth** | Wild Growth's stronger heals last 5s longer. *Moonwell:* Moonwell's stronger heals last 4s longer (the pool doesn't). |
+| IV | **Seedburst** | Wild Growth also Awakens your next Wrath. *Moonwell:* Moonwell also Awakens your next Wrath. |
+| IV | **Old Growth** | Wild Growth recharges 8s faster. *Moonwell:* Moonwell recharges 8s faster. |
+| V | **Strangling Vines** | Wrath now feeds your thorns: each one makes Thornlash hit 5% harder until you plant it again (up to 25%). |
+| V | **Last Blossom** | Rejuvenate now blooms when it ends: one last burst of healing on the ally. *Lifebinder:* Lifebind now blooms when it ends: one last burst of healing on your chosen ally. |
+| V | **Nature's Wrath** | Bloom now also lashes the boss with roots. |
+
+#### Chronomancer
+
+| Row | Talent | Effect |
+|---|---|---|
+| I | **Honed Bolt** | In Slow, Temporal Bolt hits 7% harder. |
+| I | **Double Time** | Shifting into Haste makes your next two Bolts instant instead of one, and an instant Bolt hits 20% harder. |
+| I | **Skipped Beat** | Every fifth Temporal Bolt is instant and hits 20% harder. |
+| II | **Practiced Rewind** | Rewind recharges 6s faster. |
+| II | **Long Stasis** | Stasis lasts 3s instead of 2s. |
+| II | **Swift Recall** | Recall casts in 1.8s instead of 2.5s. |
+| III | **Flux Well** | Slow fills Flux a sixth faster. |
+| III | **Borrowed Time** | In Haste, every Temporal Bolt gives back 2 Flux. |
+| III | **Paradox** | Haste drains Flux 15% slower. |
+| IV | **Allegro** | Accelerando lasts 3s longer. *Echoist:* Echo Chamber lasts 3s longer. |
+| IV | **Fermata** | Stasis recharges 30s faster. |
+| IV | **Crescendo** | While Accelerando lasts, your Bolts hit 10% harder. *Echoist:* While Echo Chamber lasts, your Bolts hit 10% harder. |
+| V | **Phase Strike** | Shift now leaves an afterimage that fires a free Temporal Bolt (once every 10s). It heals like any Bolt. |
+| V | **Hourglass Ward** | Rewind now also slows time around its target: they take 15% less damage for 6s. |
+| V | **Second Hand** | In Haste, Temporal Bolt now strikes again 2s later at 8% strength, healing as a Bolt does. *Echoist:* Your echoes are 60% strength instead of half. *Accelerant:* In Haste, Temporal Bolt now strikes again 2s later at 6% strength, healing as a Bolt does. |
+
 ## 5. What's built (code map)
 
 | Area | Files |
@@ -555,12 +766,13 @@ New support: kits can ask where their hero stands (`env.pos`, for the Sigilmance
 | Items, rarities, gear stats, item effects, enhancements, loot tables, chest rolls, gold amounts | `client/js/items.js` |
 | Loot chests: Need / Greed / Pass cards, the host's rolls and announcements | `client/js/loot.js` |
 | Inventory screen | `client/js/inventory.js` |
-| The versioned save (name, gold, bag and gear, each hero's boss clears, settings), with step-by-step upgrades for old saves and a backup before each upgrade | `client/js/save.js` |
+| Talents (5 rows x 3 per hero, row costs, held set) and the talent screen | `client/js/combat/talents.js`, `client/js/talent-panel.js` |
+| The versioned save (name, gold, bag and gear, each hero's boss clears and talents, settings), with step-by-step upgrades for old saves and a backup before each upgrade | `client/js/save.js` |
 | Debug overlay (F3): frame rate, worst frame, ping to the host, messages per second, scene, arena, party, boss update age | `client/js/debug-overlay.js` |
 | Scenes, input, hero select, tab targeting, ally targeting, raid start/retry/leave, loot | `client/js/main.js` |
 | WebRTC: arena coordinates, combat events, solo mode | `client/js/net.js` |
 | Hosting: every push to `main` publishes `client/` to https://ceddikers.github.io/emberfall/ | `.github/workflows/pages.yml` |
-| Rotation sim, headless bot raid | `tools/simulate.js`, `tools/bot-raid.js` |
+| Rotation sim, headless bot raid, talent balance | `tools/simulate.js`, `tools/bot-raid.js`, `tools/talents.js` |
 
 **Hero select:** opens right after joining (and from the barkeep, a hero on the deck, or your hero name top-left).
 - The altar grid: nine heroes in three role columns.

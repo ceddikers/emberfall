@@ -29,6 +29,7 @@ class CombatActor {
       targetMods: () => world.targetMods(actor),
       selfMods: () => world.selfMods(actor),
       gearMods: () => (world.gearMods ? world.gearMods(actor) : null),
+      talents: () => (world.talents ? world.talents(actor) : null),   // the talents this hero holds (talents.js); bots hold none
       recentDamage: secs => world.recentDamage(actor, secs),
       maxHp: () => world.maxHp(actor),
       hpFrac: () => (world.hpFrac ? world.hpFrac(actor) : 1),   // your health, 0..1 (Berserker)
