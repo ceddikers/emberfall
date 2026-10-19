@@ -442,6 +442,11 @@ function drawnIcon(classId, abilityId, force = false) {
 // ======================================================================= Gorgemaw, Oathbroker (tanks-2)
 Object.assign(BUFF_NAMES, { jaw: 'Open Wide', bottomless: 'Bottomless', stone: 'Stone Belly', ironjaw: 'Iron Gut', digest: 'Digest' });
 Object.assign(BUFF_ICON, { jaw: 'wide', bottomless: 'bottomless', stone: 'stonebelly', ironjaw: 'iron', digest: 'digest' });
+Object.assign(BUFF_TIPS, {
+  jaw: () => 'Your jaw is open: an edible hit that lands on you deals a quarter of its damage and goes into your Belly. Step into a teammate\'s circle to swallow it for them.',
+  bottomless: () => 'Your jaw is open, raidwides too: they go into your Belly like any other edible hit.',
+  stone: () => 'You take less damage, and everything you eat becomes a Spike.',
+});
 GAUGE_TIPS.gorgemaw = {
   desc: 'An edible hit that lands in your open jaw deals a quarter of its damage and goes in as a Morsel of its shape: circles are Rings, lines Lances, cones Fangs, a tankbuster a Spike. Spit fires the oldest back at the boss; Digest heals you on all of them. A full Belly wastes what you eat next.',
   state: k => (k.g.belly.length ? 'next Spit: ' + MAW.NAMES[k.g.belly[0].m] + (k.def.fuse && k.g.belly.length > 1 && k.g.belly[0].m === k.g.belly[1].m ? ' (' + MAW.FUSION[k.g.belly[0].m] + ')' : '') : 'empty'),

@@ -798,7 +798,7 @@ Object.assign(SPECS, {
   thermist: [
     {
       id: 'pendulum', name: 'Pendulum', title: 'The Swinging Weight', accent: '#ffb08a',
-      gaugeTip: 'Fire spells turn the dial toward Blaze and frost toward Rime, one step further than usual. Each step from 0 is +8% damage for that side\'s spells. A crossing of 0 after reaching 3 or more sets off a Thermal Shock, and every crossing adds Momentum (+4% damage each, up to 5), lost after 6s without one. Past Â±5 you overload.',
+      gaugeTip: 'Fire spells turn the dial toward Blaze and frost toward Rime, one step further than usual. Each step from 0 is +8% damage for that side\'s spells. A crossing of 0 after reaching 3 or more sets off a Thermal Shock, and every crossing adds Momentum (+4% damage each, up to 5), lost after 6s without one. Past ±5 you overload.',
       blurb: 'Back and forth, faster each time. Never let it settle.',
       focus: 'Fast swings. Every spell moves the dial a step further and every crossing of 0 builds Momentum, so you play back and forth like a metronome.',
       passive: { name: 'Momentum', desc: 'Your spells move the dial one step further. Every crossing of 0 adds a stack of Momentum (up to 5, +4% damage each); 6s without a crossing and they\'re gone.' },
@@ -816,7 +816,7 @@ Object.assign(SPECS, {
     },
     {
       id: 'zenith', name: 'Zenith', title: 'The Burning Edge', accent: '#ff5a6a',
-      gaugeTip: 'Fire spells turn the dial toward Blaze and frost toward Rime; each step from 0 is +8% damage for that side. At Â±5 you stay in Redline: +20% damage, your edge spell is instant, and pushing further doesn\'t overload you. Strain builds 11 a second in Redline and fades outside it; at 100 you melt down. A crossing of 0 after reaching 3 or more sets off a Thermal Shock.',
+      gaugeTip: 'Fire spells turn the dial toward Blaze and frost toward Rime; each step from 0 is +8% damage for that side. At ±5 you stay in Redline: +20% damage, your edge spell is instant, and pushing further doesn\'t overload you. Strain builds 11 a second in Redline and fades outside it; at 100 you melt down. A crossing of 0 after reaching 3 or more sets off a Thermal Shock.',
       blurb: 'Hold the edge. Feel it burn. Let go a moment before it takes you.',
       focus: 'Holding the edge. At ±5 you stay in Redline, where every spell is stronger, but Strain builds until you vent it or melt down.',
       passive: { name: 'Redline', desc: 'At +5 or -5 you stay in Redline instead of overloading: every spell hits 20% harder and your edge spell is instant. Each second there builds Strain; full Strain melts you down (the dial snaps to 0, you burn, and that element seizes up for 4s: Overheat or Frostbite). Equilibrium becomes Bleed Off.' },
