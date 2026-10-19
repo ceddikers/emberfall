@@ -230,7 +230,7 @@ class RaidHost {
             break;
           }
           case 'damage':
-            host.onPlayerEvent(bot.id, Object.assign({}, ev, { tgt: bot.lastEnemy || 'boss' }));
+            host.onPlayerEvent(bot.id, Object.assign({}, ev, { tgt: ev.tgt != null ? ev.tgt : bot.lastEnemy || 'boss' }));
             break;
           case 'castStart':
             host.emit({ t: 'castStart', id: bot.id, i: actor.abilities.indexOf(ev.ab), dur: ev.dur });
@@ -243,10 +243,17 @@ class RaidHost {
             break;
           }
           case 'fx':  // class moments (perfect block, overheat...) so every client can show them
-            host.emit({ t: 'kfx', id: bot.id, k: ev.name, s: 1 });
+            host.emit({ t: 'kfx', id: bot.id, k: ev.name, s: 1, d: ev.data });
             break;
           case 'teleport': {
             const b = host.sim.boss, a = b.facing + Math.PI;
+            if (ev.where && ev.where !== 'behind' && typeof kitMoveDest !== 'undefined') {   // a kit move (kits.js): dash, swing round, charge through
+              const en = bot.lastEnemy && bot.lastEnemy !== 'boss' ? host.sim.adds.get(bot.lastEnemy) : null;
+              const tg = en || (b.untargetable ? null : b), tgt = tg ? { x: tg.x, y: tg.y } : null;
+              const to = kitMoveDest(ev.where, bot, tgt, BotAI.isMelee(bot.cls) ? tgt : bot.plan, ev.d);
+              ARENA.clamp(to, 40); bot.x = to.x; bot.y = to.y;
+              break;
+            }
             bot.x = b.x + Math.cos(a) * (FIGHT.BOSS_R + 45); bot.y = b.y + Math.sin(a) * (FIGHT.BOSS_R + 45);
             break;
           }

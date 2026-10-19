@@ -34,5 +34,13 @@
   "chronomancer": {
     "newbie": 834,
     "pro": 1122
+  },
+  "thermist": {
+    "newbie": 1422,
+    "pro": 2356
+  },
+  "driftblade": {
+    "newbie": 1433,
+    "pro": 2407
   }
 }

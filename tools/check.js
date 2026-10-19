@@ -23,6 +23,11 @@ const RAIDS = [   // [boss name, boss id, tank, healer, two DPS]
   ['the Hollow King', 'hollowking', 'bastion:sentinel', 'grovekeeper:lifebinder', 'ranger:base', 'pyromancer:cataclysm'],
   ['the Hollow King', 'hollowking', 'bastion:crusader', 'chronomancer:echoist', 'shadowblade:base', 'ranger:sharpshooter'],
   ['the Hollow King', 'hollowking', 'runeguard:spellwarden', 'cleric:base', 'ranger:venomstrike', 'shadowblade:nightstalker'],
+  // the advanced classes (classes-a): each spec somewhere
+  ['Grubnak', 'grubnak', 'bastion:base', 'cleric:base', 'thermist:base', 'driftblade:base'],
+  ['Skitterra', 'skitterra', 'bloodreaver:base', 'grovekeeper:base', 'thermist:pendulum', 'driftblade:orbit'],
+  ['Volkar', 'volkar', 'bastion:base', 'chronomancer:accelerant', 'thermist:zenith', 'driftblade:comet'],
+  ['the Hollow King', 'hollowking', 'runeguard:base', 'cleric:aegis', 'thermist:base', 'driftblade:base'],
 ];
 
 const results = [];
@@ -284,7 +289,9 @@ function talents() {
           if (!specIds.includes(s)) probs.push(`${where}: specMods for unknown spec ${s}`);
           for (const k of Object.keys(m)) if (!['cd', 'cast'].includes(k)) probs.push(`${where}: specMods field "${k}"`);
         }
-        if (!used.has(t.id) && t.cd == null && t.cast == null) probs.push(`${where}: does nothing (no k.talent('${t.id}') in the kits, no cd/cast)`);
+        const grant = typeof TALENT_ABILITIES !== 'undefined' && TALENT_ABILITIES[t.id];   // a talent that puts a new move on a key
+        if (grant && (grant.cls !== c.id || !KITS[c.id].abilities.some(a => a.id === grant.ab.replaces) || grant.ab.replaces !== t.ab)) probs.push(`${where}: its new move should replace ${t.ab}, a ${c.id} ability`);
+        if (!used.has(t.id) && t.cd == null && t.cast == null && !grant) probs.push(`${where}: does nothing (no k.talent('${t.id}') in the kits, no cd/cast)`);
       }
     });
   }

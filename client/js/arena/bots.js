@@ -127,6 +127,8 @@ const BotAI = {
 
   home(bot, view) {
     const b = view.boss, idx = bot.slot || 0;
+    const own = typeof BOT_CLASS !== 'undefined' && BOT_CLASS[bot.cls.id] && BOT_CLASS[bot.cls.id].home;   // a class with its own footwork
+    if (own && !bot.wantEnemy) { const h = own(bot, view); if (h) return h; }
     // on an add: melee hug it, ranged stand off to one side of it (out of any beam to its sibling)
     const homeId = bot.wantEnemy === 'hold' ? bot.addHome : bot.wantEnemy;
     const add = homeId && (view.adds || []).find(a => a.id === homeId);
@@ -454,6 +456,9 @@ const BotAI = {
         }
       }
     }
+    // a class with its own priority (BOT_CLASS, end of this file)
+    const own = typeof BOT_CLASS !== 'undefined' && BOT_CLASS[bot.cls.id] && BOT_CLASS[bot.cls.id].act;
+    if (own) return own(bot, k, view, moving);
     // a Ward that can go on an ally (Spellwarden): put it on whoever a heavy blow is about to land on
     const wardI = idx('ward');
     if (wardI >= 0 && k.abilities[wardI].target === 'ally' && readyIdx(wardI) && k.gcdRemaining() <= 0 && !k.cast) {
@@ -500,6 +505,69 @@ const BotAI = {
     if (gcds.includes(0) && okToCast(0)) return 0;
     const inst = gcds.filter(i => okToCast(i));
     return inst.length ? inst[0] : null;
+  },
+};
+
+// ---------------------------------------------------------------- advanced classes: their own footwork and priorities
+// BOT_CLASS[classId] = { home(bot, view) -> where to stand (optional), act(bot, k, view, moving) -> ability index or null }
+const BOT_CLASS = {
+  // Thermist: follow the swing (thermPlan, the glowing button), never cast into an overload, Inversion far out
+  thermist: {
+    act(bot, k, view, moving) {
+      const idx = id => k.abilities.findIndex(a => a.id === id || a.replaces === id);
+      const ok = i => { const a = k.abilities[i]; return !!a && k.usable(a) && k.readyIn(a) <= 0.0001 && k.available(a); };
+      const t = k.g.temp, weave = k.gcdRemaining() > 0.65 && !k.cast;
+      const inv = idx('invert'), eq = idx('equil');
+      if (weave && ok(inv) && Math.abs(t) >= 4) return inv;
+      if (k.def.redline) { if (weave && ok(eq) && (k.g.strain || 0) >= 50 && Math.abs(t) >= 5) return eq; }
+      else if (weave && ok(eq)) {
+        // Equilibrium as mitigation: a big hit on the way and the dial near 0 anyway (or in real trouble)
+        const big = view.bossCast && view.bossCast.left < 2.5 && /Knell|Boil|Thunderclap|Eye of the Storm|Skybreak|Moonset|Last Call|Devour/.test(view.bossCast.name);
+        const me = view.players.find(p => p.id === bot.id);
+        if ((big && Math.abs(t) <= 2) || (me && me.hp / me.maxHp < 0.35)) return eq;
+      }
+      if (k.gcdRemaining() > 0 || k.cast || k.lockUntil > k.now) return null;
+      const plan = thermPlan(k), dir = plan === 'cinder' || plan === 'flare' ? 1 : -1;
+      const brink = k.has('brink') ? k.buffs.get('brink').data.el : 0, sb = k.def.stepBonus || 0;
+      for (const id of [...new Set([plan, dir > 0 ? 'cinder' : 'rime', 'rime', 'cinder', 'lance', 'flare'])]) {
+        const i = idx(id), a = k.abilities[i];
+        if (!ok(i) || (moving && k.castTime(a))) continue;
+        const el = a.el || 0, big = id === 'flare' || id === 'lance';
+        if (el && brink === el) continue;
+        if (el && !(big && thermEdgeCast(k, el)) && !k.def.redline && Math.abs(t + el * ((big ? 2 : 1) + sb)) > 5) continue;
+        return i;
+      }
+      return null;
+    },
+  },
+  // Driftblade: never stand still. Weave back and forth through the boss's body across its flanks (every pass is a
+  // Passing Strike), Hook Turn from a flank (so it lands on the other flank, not in front), Crosswind when full.
+  driftblade: {
+    home(bot, view) {
+      // only while it's calm: with a telegraph on the floor, stand where a melee would and let the dodging take over
+      if (view.mechs.some(m => m.type !== 'raidwide' && m.resolveAt - view.t < 4) || (view.rollers || []).length || (view.sweeps || []).some(s => view.t < s.end)) return null;
+      // a long, thin loop through its middle (it never slows to a stop), aimed a little ahead so the bot is always walking
+      const b = view.boss, f = b.facing || 0, th = (view.t + 0.8) * 1.5 + bot.id * 1.7, s = Math.sin(th) * 140, u = Math.cos(th) * 45 - 25;
+      return { x: b.x + Math.cos(f) * u - Math.sin(f) * s, y: b.y + Math.sin(f) * u + Math.cos(f) * s };
+    },
+    act(bot, k, view, moving) {
+      const idx = id => k.abilities.findIndex(a => a.id === id || a.replaces === id);
+      const ok = i => { const a = k.abilities[i]; return !!a && k.usable(a) && k.readyIn(a) <= 0.0001 && k.available(a); };
+      const weave = k.gcdRemaining() > 0.65 && !k.cast, full = driftMax(k), flank = k.env.positional() === 'flank';
+      const gale = idx('gale'), hook = idx('hook'), slip = idx('slip'), still = idx('still');
+      const myHit = view.mechs.some(m => m.type === 'buster' && (m.target ?? m.follow) === bot.id && m.resolveAt - view.t < 0.7);
+      // no flashy moves while there's something on the floor to dodge: a dash or a swing round can land you in it
+      const calm = !view.mechs.some(m => m.type !== 'raidwide' && m.resolveAt - view.t < 3) && !(view.rollers || []).length && !(view.sweeps || []).some(s => view.t < s.end) && !view.puddles.some(p => Math.hypot(p.x - view.boss.x, p.y - view.boss.y) < p.r + 240);
+      if (weave && ok(still) && (myHit || k.abilities[still].id === 'tailspin')) return still;
+      if (weave && ok(gale)) return gale;
+      if (weave && ok(hook) && (k.abilities[hook].id === 'gyre' ? k.g.drift >= 50 : k.g.drift >= 70 && flank && calm)) return hook;
+      if (weave && calm && ok(slip) && (k.charges(k.abilities[slip]) === 2 || k.g.drift < full * 0.5)) return slip;
+      if (k.gcdRemaining() > 0 || k.cast || k.lockUntil > k.now) return null;
+      const cross = idx('cross'), impact = k.abilities[cross].id === 'impact';
+      if (ok(cross) && (k.g.drift >= full * 0.92 && (!impact || (flank && calm)))) return cross;
+      if (ok(0)) return 0;
+      return ok(cross) && k.g.drift >= full * 0.6 && (!impact || calm) ? cross : null;
+    },
   },
 };
 

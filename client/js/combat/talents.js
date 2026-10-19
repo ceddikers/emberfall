@@ -273,6 +273,67 @@ const TALENTS = {
   ],
 };
 
+// ======================================================================= ADVANCED CLASSES (Thermist, Driftblade)
+// These trees are mostly new behaviour, not bigger numbers: new triggers, moves that now move you, and two talents
+// per class (rows III and V) that put a whole new move on a key (TALENT_ABILITIES in kits.js).
+Object.assign(TALENTS, {
+  thermist: [
+    [
+      { id: 'thermist_embers', name: 'Banked Embers', ab: 'cinder', text: 'A Cinder Bolt cast at +3 or hotter now leaves an ember in the target (up to 3). Your next Thermal Shock sets every ember off.' },
+      { id: 'thermist_flicker', name: 'Flicker', ab: 'rime', text: 'Rime Shard is now instant while the dial is cold, and Cinder Bolt while it is hot.' },
+      { id: 'thermist_afterglow', name: 'Afterglow', ab: 'flare', text: 'A Flare or Glacier Lance cast at its own edge now leaves the target burning or freezing for 9s.' },
+    ],
+    [
+      { id: 'thermist_front', name: 'Cold Front', ab: 'equil', text: 'An Equilibrium that drops the dial 4 or more steps now also gives the whole party 10% less damage for 6s.', spec: { zenith: 'A Bleed Off that vents 40 or more Strain now also gives the whole party 10% less damage for 6s.' } },
+      { id: 'thermist_phase', name: 'Phase Step', ab: 'equil', text: 'Equilibrium now also blinks you 150 px the way you\'re heading.', spec: { zenith: 'Bleed Off now also blinks you 150 px the way you\'re heading.' } },
+      { id: 'thermist_skin', name: 'Thermal Skin', ab: 'invert', text: 'Every Thermal Shock now also wraps you in a shield worth part of its strength.' },
+    ],
+    [
+      { id: 'thermist_thermocline', name: 'Thermocline', ab: 'cinder', text: 'New move on Q, in place of Cinder Bolt. Thermocline: instant, swings the dial 2 steps toward the other side and counts as that element. It hits harder the further from 0 you started.', spec: { pendulum: 'New move on Q, in place of Cinder Bolt. Thermocline: instant, swings the dial 3 steps toward the other side and counts as that element. It hits harder the further from 0 you started.' } },
+      { id: 'thermist_latent', name: 'Latent Heat', ab: 'flare', text: 'Overloading no longer locks or burns you: the extra heat is banked instead, and your next Thermal Shock releases it half again as strong.', spec: { zenith: 'A meltdown no longer burns you or locks an element: the dial still snaps to 0, and your next Thermal Shock is half again as strong.' } },
+      { id: 'thermist_rebound', name: 'Rebound', ab: 'lance', text: 'After a Thermal Shock, your next spell is now instant (within 10s).' },
+    ],
+    [
+      { id: 'thermist_vortex', name: 'Polar Vortex', ab: 'invert', text: 'Inversion now leaves a vortex on the target that strikes every 1.5s for 6s.' },
+      { id: 'thermist_pulse', name: 'Equilibrium Pulse', ab: 'equil', text: 'Equilibrium now sets off the heat it snaps away: from 3 or more steps out, a Thermal Shock as if you had swung that far.', spec: { zenith: 'Bleed Off in Redline now also sets off a Thermal Shock as if you had swung 3.' } },
+      { id: 'thermist_solstice', name: 'Solstice', ab: 'invert', text: 'Inversion now flips the dial back 5s later: a smaller Shock if it\'s still far enough from 0.' },
+    ],
+    [
+      { id: 'thermist_zero', name: 'Absolute Zero', ab: 'rime', text: 'New move on W, in place of Rime Shard. Absolute Zero: a 2s cast on a 45s cooldown that plunges the dial straight to -5, wherever it was. It hits harder the further it fell.' },
+      { id: 'thermist_conduct', name: 'Conduction', ab: 'invert', text: 'Thermal Shock now arcs: a second, smaller Shock strikes the target 1s later.' },
+      { id: 'thermist_twin', name: 'Twin Stars', ab: 'flare', text: 'A Flare or Glacier Lance cast at its own edge now fires a second, smaller bolt after it.', spec: { zenith: 'A Flare or Glacier Lance cast in Redline now fires a second, smaller bolt after it.' } },
+    ],
+  ],
+
+  driftblade: [
+    [
+      { id: 'driftblade_crescent', name: 'Crescent', ab: 'carve', text: 'Every third Carve you make while moving now also throws a crescent of wind at the target.' },
+      { id: 'driftblade_eddies', name: 'Eddies', ab: 'slip', text: 'A Slipstream lane laid through an enemy now cuts it when you lay it, and again when the lane fades.' },
+      { id: 'driftblade_tailwind', name: 'Tailwind', ab: 'hook', text: 'Hook Turn now also gives 20 Drift, and your next Carve is a critical hit.' },
+    ],
+    [
+      { id: 'driftblade_calm', name: 'Eye of the Storm', ab: 'still', text: 'While you hold Stillpoint, the whole party now takes 10% less damage too.' },
+      { id: 'driftblade_gust', name: 'Gust Guard', ab: 'slip', text: 'Slipstream now wraps you in a shield of wind for 6s.' },
+      { id: 'driftblade_sidestep', name: 'Sidestep', ab: 'hook', text: 'Hook Turn now also makes you take 30% less damage for 2s.' },
+    ],
+    [
+      { id: 'driftblade_gyre', name: 'Gyre', ab: 'hook', text: 'New move on E, in place of Hook Turn. Gyre: loop once round your target, one cut for every 25 Drift you have (up to 4). It spends nothing and adds 10 Drift. Two charges.' },
+      { id: 'driftblade_second', name: 'Second Wind', ab: 'cross', text: 'A Crosswind that spends 80 Drift or more now gives 10 back.', spec: { comet: 'An Impact that spends 160 Drift or more now gives 20 back.' } },
+      { id: 'driftblade_hover', name: 'Hover', ab: 'still', text: 'Your Drift no longer drains in the first 1.5s you stand still.' },
+    ],
+    [
+      { id: 'driftblade_galeforce', name: 'Galeforce', ab: 'gale', text: 'When Gale Run ends, it now looses a free Crosswind at whatever Drift you hold (it spends nothing).' },
+      { id: 'driftblade_jet', name: 'Jetstream', ab: 'slip', text: 'A Slipstream through an enemy now gives its charge back (once every 8s).' },
+      { id: 'driftblade_hurricane', name: 'Hurricane', ab: 'gale', text: 'During Gale Run, each Passing Strike now makes it last 1s longer (up to 6s).' },
+    ],
+    [
+      { id: 'driftblade_tailspin', name: 'Tailspin', ab: 'still', text: 'New move on D, in place of Stillpoint. Tailspin: whirl in place, parrying like Stillpoint and cutting the nearest enemy three times, then spring 150 px the way you\'re heading.' },
+      { id: 'driftblade_razor', name: 'Razor Wind', ab: 'carve', text: 'Passing Strikes now leave a cut that bleeds for 6s, deeper with each pass (up to 3).' },
+      { id: 'driftblade_after', name: 'Afterimage', ab: 'hook', text: 'Hook Turn now leaves an afterimage that cuts the target again a second later.' },
+    ],
+  ],
+});
+
 // id -> { cls, row, col, t }
 const TALENT_BY_ID = {};
 for (const [cls, rows] of Object.entries(TALENTS)) rows.forEach((row, r) => row.forEach((t, c) => { TALENT_BY_ID[t.id] = { cls, row: r, col: c, t }; }));

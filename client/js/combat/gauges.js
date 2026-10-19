@@ -225,6 +225,92 @@ const GAUGES = {
   },
 };
 
+// ---------------------------------------------------------------- the advanced DPS (Thermist, Driftblade)
+Object.assign(GAUGES, {
+  // Thermist: a two-sided dial, frost blue on the left and ember orange on the right, a centre mark at 0.
+  // The needle is the Temperature; a bright bead marks the peak reached since the last crossing (lit once a Shock is armed).
+  dial(c, k, w, h, t) {
+    const cx = w / 2, cy = 66, R = 46, g = k.g, max = 5;
+    const ang = v => -Math.PI / 2 + (v / max) * (Math.PI * 0.42);
+    const arc = (v0, v1, r, col, lw) => { c.beginPath(); c.arc(cx, cy, r, ang(v0), ang(v1)); c.lineWidth = lw; c.strokeStyle = col; c.stroke(); };
+    c.lineCap = 'butt';
+    arc(-max, 0, R, '#1a2433', 11); arc(0, max, R, '#2e1d17', 11);
+    // the filled side, step by step
+    const tv = g.temp || 0;
+    for (let i = 0; i < Math.abs(tv); i++) {
+      const s = Math.sign(tv), v0 = s * i + s * 0.06, v1 = s * (i + 1) - s * 0.06;
+      const col = s < 0 ? ['#3a78b8', '#4f94d8', '#6fb2f0', '#9ad0ff', '#d8f0ff'][i] : ['#b8501f', '#d8662a', '#f08236', '#ffa64a', '#ffe08a'][i];
+      arc(Math.min(v0, v1), Math.max(v0, v1), R, col, 11);
+    }
+    // step ticks; the ±5 edges drawn heavier
+    for (let v = -max; v <= max; v++) {
+      const a = ang(v), r0 = R - 8, r1 = v === 0 || Math.abs(v) === max ? R + 10 : R + 6;
+      line(c, cx + Math.cos(a) * r0, cy + Math.sin(a) * r0, cx + Math.cos(a) * r1, cy + Math.sin(a) * r1, v === 0 ? '#f2e6c8' : 'rgba(10,12,20,0.85)', v === 0 ? 2 : 1.5);
+    }
+    // the Shock bead: where the dial peaked since it last crossed 0
+    if (g.peak >= 1 && g.side) {
+      const pv = g.side * Math.min(max, g.peak), a = ang(pv), x = cx + Math.cos(a) * (R + 13), y = cy + Math.sin(a) * (R + 13);
+      const armed = g.peak >= 3;
+      if (armed) glow(c, x, y, 10, g.side > 0 ? '#ffb05a' : '#9ad8ff', 0.6 + Math.sin(t * 8) * 0.2);
+      circle(c, x, y, armed ? 3.4 : 2.4, armed ? '#ffffff' : '#7a7068', OUT, 1);
+    }
+    // the needle
+    const na = ang(Math.max(-max - 0.4, Math.min(max + 0.4, tv)));
+    line(c, cx, cy, cx + Math.cos(na) * (R + 4), cy + Math.sin(na) * (R + 4), OUT, 4);
+    line(c, cx, cy, cx + Math.cos(na) * (R + 4), cy + Math.sin(na) * (R + 4), '#f2e6c8', 2);
+    circle(c, cx, cy, 5, '#3d2b40', '#f2e6c8', 1.5);
+    // edge states: On the Brink rims the edge, Overheat/Frostbite cross the dial out
+    if (k.has('brink')) { const s = Math.sign(tv) || 1; c.save(); c.globalAlpha = 0.6 + Math.sin(t * 12) * 0.3; arc(s * 4.1, s * 5, R + 9, s > 0 ? '#ffe08a' : '#d8f0ff', 2); arc(s * 5, s * 4.1, R + 9, s > 0 ? '#ffe08a' : '#d8f0ff', 2); c.restore(); }
+    if (k.has('overheat') || k.has('frostbite')) label(c, k.has('overheat') ? 'OVERHEAT' : 'FROSTBITE', cx, cy + 22, k.has('overheat') ? '#ff7a4a' : '#9ad8ff', 10, 'Cinzel, Georgia, serif', 800);
+    else label(c, (tv > 0 ? '+' : '') + tv, cx, cy + 22, tv > 0 ? '#ffc890' : tv < 0 ? '#bfe2ff' : '#f2e6c8', 14, 'system-ui', 800);
+    if (k.has('attuned')) { c.save(); c.globalAlpha = 0.5 + Math.sin(t * 5) * 0.2; arc(-max, max, R - 10, '#e8d8ff', 1.5); c.restore(); }
+    // Zenith: Strain fills a thin red arc under the dial; Redline lights it
+    if (k.def.redline) {
+      const sv = Math.min(1, (g.strain || 0) / 100);
+      c.beginPath(); c.arc(cx, cy, R - 14, Math.PI * 0.75, Math.PI * 0.25, true); c.lineWidth = 3; c.strokeStyle = '#2a1418'; c.stroke();
+      if (sv > 0) { c.beginPath(); c.arc(cx, cy, R - 14, Math.PI * 0.75, Math.PI * 0.75 - sv * Math.PI * 1.5, true); c.strokeStyle = sv > 0.6 ? (Math.sin(t * 14) > 0 ? '#ff4a5a' : '#ffb0a0') : '#ff5a6a'; c.stroke(); }
+    }
+    // Pendulum: Momentum pips
+    if (k.def.momentum) { const m = k.stacks('momentum'); for (let i = 0; i < 3; i++) circle(c, cx - 12 + i * 12, cy + 38, 3, i < m ? '#ffb08a' : '#2a2026', OUT, 1); }
+    // banked embers (talent) and a banked overload (talent)
+    for (let i = 0; i < (g.embers || 0); i++) { glow(c, 14 + i * 9, 16, 5, '#ff8a3a', 0.7); circle(c, 14 + i * 9, 16, 1.8, '#ffd27a'); }
+    if (g.latent) { glow(c, w - 16, 16, 8, '#e8d8ff', 0.6); circle(c, w - 16, 16, 2.6, '#ffffff', OUT, 1); }
+  },
+
+  // Driftblade: a crescent of wind that fills while you move and drains while you stand. Streaks run through it at speed.
+  drift(c, k, w, h, t) {
+    const cx = w / 2, cy = 62, R = 42, g = k.g, max = (k.def.gauge && k.def.gauge.max) || 100, v = Math.min(1, (g.drift || 0) / max);
+    const a0 = Math.PI * 0.8, a1 = Math.PI * 2.2, comet = max > 100;
+    const col = comet ? '#ffd08a' : k.def.orbit ? '#a8f0c8' : '#7fe8cc';
+    c.lineCap = 'round';
+    c.beginPath(); c.arc(cx, cy, R, a0, a1); c.lineWidth = 12; c.strokeStyle = '#16232a'; c.stroke();
+    if (v > 0) {
+      c.beginPath(); c.arc(cx, cy, R, a0, a0 + (a1 - a0) * v); c.lineWidth = 9; c.strokeStyle = col; c.stroke();
+      // streaks racing along the filled arc while the gauge is rising
+      if (k._driftSeen != null && g.drift > k._driftSeen) k._driftUpT = t;
+      const moving = t - (k._driftUpT || -9) < 0.4;
+      for (let i = 0; i < 4; i++) {
+        const q = ((t * (moving ? 1.6 : 0.35) + i / 4) % 1) * v, a = a0 + (a1 - a0) * q;
+        c.beginPath(); c.arc(cx, cy, R + (i % 2 ? 2 : -2), a, a + 0.18); c.lineWidth = 1.6; c.strokeStyle = 'rgba(255,255,255,0.75)'; c.stroke();
+      }
+    }
+    k._driftSeen = g.drift;
+    // 100-marks (Comet runs to 200, the halfway mark is a full normal gauge)
+    if (comet) { const a = a0 + (a1 - a0) * 0.5; line(c, cx + Math.cos(a) * (R - 8), cy + Math.sin(a) * (R - 8), cx + Math.cos(a) * (R + 8), cy + Math.sin(a) * (R + 8), '#f2e6c8', 1.5); }
+    if (v >= 0.8) glow(c, cx, cy, 30, col, 0.25 + Math.sin(t * 7) * 0.1);
+    // a feather in the middle, tilting with the fill
+    c.save(); c.translate(cx, cy); c.rotate(-0.6 + v * 1.2 + Math.sin(t * 3) * 0.05);
+    ellipse(c, 0, 0, 5, 15, 0, v >= 0.8 ? '#f4fff8' : '#9fb8b0', OUT, 1.5);
+    line(c, 0, -13, 0, 17, '#2a3a3a', 1);
+    c.restore();
+    label(c, String(Math.floor(g.drift || 0)), cx, cy + 34, '#d8fff0', 13, 'system-ui', 800);
+    // Orbit: stacks as five beads on a ring; Stillpoint holds the gauge (a line across it); Gale Run doubles the rim
+    if (k.def.orbit) { const n = k.stacks('orbit'); for (let i = 0; i < 5; i++) { const a = -Math.PI / 2 + i * TAU / 5 + t * 0.6; circle(c, cx + Math.cos(a) * 22, cy + Math.sin(a) * 22, 2.6, i < n ? '#e8fff2' : '#22343a', OUT, 0.8); } }
+    if (k.has('still')) line(c, cx - R - 6, cy, cx + R + 6, cy, '#f2e6c8', 1.5);
+    if (k.has('gale')) { c.save(); c.globalAlpha = 0.5 + Math.sin(t * 9) * 0.25; c.beginPath(); c.arc(cx, cy, R + 9, a0, a1); c.lineWidth = 1.5; c.strokeStyle = col; c.stroke(); c.restore(); }
+    if (k.has('tailwind')) { glow(c, w - 18, 18, 9, '#ffffff', 0.5); poly(c, [w - 24, 14, w - 12, 18, w - 24, 22], '#e8fff8', OUT, 1); }
+  },
+});
 function drawGauge(c, kit, w, h, t) {
   const g = kit.def.gauge;
   if (g && GAUGES[g.kind]) GAUGES[g.kind](c, kit, w, h, t);

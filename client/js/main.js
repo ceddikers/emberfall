@@ -328,7 +328,7 @@
     const txt = rnd(ev.amount) + (ev.crit ? '!' : '') + (ev.positional ? ' ◆' : '');
     if (inArena()) {
       // damage goes to whatever you last aimed at (DoTs keep ticking on your current target)
-      const tgt = lastEnemy && lastEnemy.id != null && lastEnemy.id !== 'dummy' ? lastEnemy.id : 'boss';
+      const tgt = ev.tgt != null ? ev.tgt : lastEnemy && lastEnemy.id != null && lastEnemy.id !== 'dummy' ? lastEnemy.id : 'boss';
       sendCombat(Object.assign({}, ev, { tgt }));
       const at = enemyNow(tgt) || { x: raid.boss.x, y: raid.boss.y };
       FX.text(at.x + (Math.random() - 0.5) * 40, at.y - (tgt === 'boss' ? 70 : 34), txt, col, tgt === 'boss' ? big : big - 2);
@@ -1977,11 +1977,13 @@
   let selPortrait = null, selFromGrid = false;
   // Optional painted portraits (client/portraits/<classId>.png, front-facing). Missing ones fall back to the sprite.
   const PORTRAITS = {};
-  for (const c of CLASSES) { const img = new Image(); img.onload = () => { PORTRAITS[c.id] = img; }; img.src = `portraits/${c.id}.png`; }
+  // (classes flagged art.portraits === false in data.js have none yet: skip them rather than ask for files that 404)
+  const hasPortraits = c => !(c.art && c.art.portraits === false);
+  for (const c of CLASSES.filter(hasPortraits)) { const img = new Image(); img.onload = () => { PORTRAITS[c.id] = img; }; img.src = `portraits/${c.id}.png`; }
   // spec portraits are big, so a hero's are fetched the first time its page opens, not at startup
   const SPEC_PORTRAITS = {}, specPortraitsAsked = new Set();
   function loadSpecPortraits(cid) {
-    if (specPortraitsAsked.has(cid)) return;
+    if (specPortraitsAsked.has(cid) || !hasPortraits(CLASSES.find(c => c.id === cid) || {})) return;
     specPortraitsAsked.add(cid);
     for (const sp of SPECS[cid] || []) { const key = `${cid}-${sp.id}`, img = new Image(); img.onload = () => { SPEC_PORTRAITS[key] = img; }; img.src = `portraits/${key}.png`; }
   }
@@ -1992,23 +1994,30 @@
     c.drawImage(img, (img.width - sw) / 2, (img.height - sh) * 0.15, sw, sh, x, y, size, size);
   }
   (function buildAltar() {
+    // one band per role (rows, so the roster can grow), compact tiles flowing inside each band
     const altar = $('altar');
-    for (const role of ['tank', 'dps', 'healer']) {
-      const col = document.createElement('div');
-      col.className = 'altar-col'; col.style.setProperty('--c', ROLES[role].color);
-      col.innerHTML = `<h3>${role === 'dps' ? 'Damage' : ROLES[role].name + 's'}</h3>`;
-      for (const cls of CLASSES.filter(c => c.role === role)) {
+    const COMPLEXITY = { 2: 'More moving parts than most', 3: 'Many moving parts' };
+    for (const role of Object.keys(ROLES)) {
+      const list = CLASSES.filter(c => c.role === role);
+      if (!list.length) continue;
+      const band = document.createElement('section');
+      band.className = 'altar-col altar-band'; band.style.setProperty('--c', ROLES[role].color);
+      band.innerHTML = `<h3>${role === 'dps' ? 'Damage' : ROLES[role].name + 's'}<i>${list.length}</i></h3><div class="band-grid"></div>`;
+      const grid = band.querySelector('.band-grid');
+      for (const cls of list) {
         const b = document.createElement('button');
         b.className = 'hero-card'; b.dataset.id = cls.id; b.style.setProperty('--a', cls.accent);
         const cv = document.createElement('canvas'); setupCanvas(cv, 112, 112);
         b.appendChild(cv);
-        b.insertAdjacentHTML('beforeend', `<span class="hc-text"><b>${cls.name}</b><small>${cls.title}</small><span class="diff">${diamonds(cls.difficulty)}</span></span><em class="hc-taken"></em>`);
+        // complexity pips: only on the classes that ask more of you (data.js `complexity` 2 or 3)
+        const cx = cls.complexity >= 2 ? `<span class="hc-cx" data-tip="${COMPLEXITY[cls.complexity] || COMPLEXITY[3]}">${'<i></i>'.repeat(cls.complexity)}</span>` : '';
+        b.insertAdjacentHTML('beforeend', `<span class="hc-text"><b>${cls.name}</b><small>${cls.title}</small><span class="diff">${diamonds(cls.difficulty)}</span></span>${cx}<em class="hc-taken"></em>`);
         Tip.set(b, () => `<b>${cls.name}</b><em>${ROLES[cls.role].name} · ${cls.title}</em>“${cls.tagline}”`);
         b.addEventListener('click', () => { selFromGrid = true; showDetail(cls); });
-        col.appendChild(b);
+        grid.appendChild(b);
         selThumbs.push({ cv, cls, b, st: newSt(Math.random() * 3) });
       }
-      altar.appendChild(col);
+      altar.appendChild(band);
     }
   })();
   // an ability's icon as a CSS background (the taunt layers its own painting over the icon it borrows)

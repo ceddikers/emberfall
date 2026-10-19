@@ -259,6 +259,51 @@ const TRIALS = {
   },
 };
 
+// ======================================================================= ADVANCED CLASSES (Thermist, Driftblade)
+Object.assign(TRIALS, {
+  pendulum: {
+    cls: 'thermist', spec: 'pendulum', name: 'The Swinging Weight',
+    lore: ['The Barrow\'s great clock ran on a pendulum of frost and fire.', 'Its keeper never let it rest, and it never missed a beat.'],
+    outro: 'The clock strikes. The Pendulum swings on.',
+    allies: ['bastion:base', 'cleric:base'], seconds: 55, enrage: 66, regen: 0,
+    script(f, k) {
+      // the court never stands still for long: short stretches between the marks, no room for long, slow casts
+      k.loop([[3, () => k.marks(3500, 4)], [4.5, () => k.blow(9000, 3.5)], [4, () => k.swing('stomp', 5000, 3.5)], [4.5, () => k.marks(3500, 4)], [5, () => k.knell(2500)]]);
+    },
+  },
+  zenith: {
+    cls: 'thermist', spec: 'zenith', name: 'The Burning Edge',
+    lore: ['One mage held the Barrow\'s gate at the edge of burning.', 'She let go a moment before it took her, every time.'],
+    outro: 'The edge holds. The Zenith burns bright.',
+    allies: ['bastion:base', 'cleric:base'], seconds: 60, enrage: 70, regen: 0,
+    script(f, k) {
+      // long, quiet stretches where nothing makes you move: the time to hold the edge
+      f.boss.anchor = true;
+      k.loop([[5, () => k.blow(9000, 4)], [9, () => k.knell(2500)], [9, () => k.swing('stomp', 5000, 4)]]);
+    },
+  },
+  orbit: {
+    cls: 'driftblade', spec: 'orbit', name: 'The Circling Hawk',
+    lore: ['The King\'s falconer was a swordswoman first.', 'She circled her quarry like her hawks did, and never landed.'],
+    outro: 'The quarry falls. The Orbit circles on.',
+    allies: ['bastion:base', 'cleric:base'], seconds: 52, enrage: 72, regen: 0,
+    script(f, k) {
+      // his sceptre sweeps one side, then the other: whoever keeps circling round him stays out of it
+      k.loop([[3, () => k.swing('sweep', 6500, 4, 0)], [6, () => k.swing('sweep', 6500, 4, Math.PI / 2)], [6, () => k.swing('sweep', 6500, 4, Math.PI)], [6, () => k.knell(2500)]]);
+    },
+  },
+  comet: {
+    cls: 'driftblade', spec: 'comet', name: 'The Long Charge',
+    lore: ['A rider crossed the whole Barrow in one charge.', 'Nothing in the hall was standing when she reached the far wall.'],
+    outro: 'The charge lands. The Comet burns out, and rises again.',
+    allies: ['bastion:base', 'cleric:base'], seconds: 52, enrage: 72, regen: 0,
+    script(f, k) {
+      // in close, then far out, then in again: long straight runs across the hall
+      k.loop([[3, () => k.swing('ring', 6000, 4)], [5.5, () => k.swing('stomp', 6000, 4)], [5.5, () => k.blow(9000, 4)], [5, () => k.swing('ring', 6000, 4)], [5.5, () => k.knell(2500)]]);
+    },
+  },
+});
+
 // the boss definition FightSim runs for a trial
 function trialDef(specId) {
   const T = TRIALS[specId];

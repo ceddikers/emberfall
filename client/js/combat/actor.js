@@ -14,7 +14,8 @@ class CombatActor {
     this.dash = { charges: DASH.charges, next: 0 };
     this.taunt = cls.role === 'tank' && typeof TAUNT !== 'undefined' ? { next: 0 } : null;   // tanks' taunt on T (kits.js)
     const actor = this;
-    this.kit = new Kit(kitFor(cls.id, this.spec), {
+    // the kit with this hero's spec, and any moves its talents grant (TALENT_ABILITIES in kits.js)
+    this.kit = new Kit(kitFor(cls.id, this.spec, world.talents ? world.talents(this) : null), {
       now: () => world.now(),
       rng,
       moving: () => world.moving(actor),
@@ -36,8 +37,16 @@ class CombatActor {
       pos: () => ({ x: actor.ent.x, y: actor.ent.y }),            // where you stand (Sigilmancer's circle)
       isDead: id => world.isDead(id),
       defaultLink: () => world.defaultLink(actor),
+      refundDash: () => actor.refundDash(world.now()),            // a kit giving back a dash charge (Driftblade's Hook Turn)
       emit: ev => world.onEvent(actor, ev),
     });
+  }
+  refundDash(now) {
+    this.dashReady(now);
+    if (this.dash.charges >= DASH.charges) return false;
+    this.dash.charges++;
+    if (this.dash.charges >= DASH.charges) this.dash.next = 0;
+    return true;
   }
   get abilities() { return this.kit.abilities; }
   press(i) { return this.kit.press(i); }

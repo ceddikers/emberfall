@@ -384,7 +384,8 @@ class Kit {
     this.stats.damage += amount;
     if (party.dmg || tgt.vuln) this.stats.burstDamage += amount;
     this.stats.last = this.now;
-    this.env.emit({ type: 'damage', amount, crit, potency: pot, positional: posHit, ab: opts.ab, dot: !!opts.dot, auto: !!opts.auto, threat: opts.threat || 1 });
+    // (opts.tgt: an enemy id when a hit lands on something other than what you last aimed at: a Passing Strike)
+    this.env.emit({ type: 'damage', amount, crit, potency: pot, positional: posHit, ab: opts.ab, dot: !!opts.dot, auto: !!opts.auto, threat: opts.threat || 1, tgt: opts.tgt });
     if (opts.item) return { amount, crit, posHit };   // an item's extra hit doesn't feed the kit or other items
     if (this.def.onDamage) this.def.onDamage(this, amount, crit, opts);
     if (crit) this.itemHook('crit');
@@ -441,7 +442,9 @@ class Kit {
   selfDamage(pctMaxHp, opts = {}) { this.env.emit({ type: 'selfDamage', pct: pctMaxHp, ab: opts.ab }); }
   raise(target, opts = {}) { this.env.emit({ type: 'raise', target, ab: opts.ab }); }
   rewind(target, secs, opts = {}) { this.env.emit({ type: 'rewind', target, secs, ab: opts.ab }); }
-  teleport(where, opts = {}) { this.env.emit({ type: 'teleport', where, ab: opts.ab }); }
+  // where: 'behind' (the target's back), or a kit move: 'dash' (d px toward where you're heading), 'around' (to the far
+  // side of the target), 'through' (a charge through the target, d px past it). The world moves you (kitMoveDest).
+  teleport(where, opts = {}) { this.env.emit({ type: 'teleport', where, ab: opts.ab, d: opts.d }); }
   fx(name, data) { this.env.emit({ type: 'fx', name, data }); }
 }
 
