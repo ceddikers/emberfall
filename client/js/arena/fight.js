@@ -131,7 +131,8 @@ class FightSim {
     this.updatePlayers(dt);
     if (this.state !== 'live') return;
     if (this.alive().length === 0) return this.end('wipe');
-    if (this.t - this.lastBroadcast >= 0.1) { this.lastBroadcast = this.t; this.broadcastBoss(); }
+    // a steady 10/s: stepping the mark by 0.1 (not to "now") stops 33 ms ticks rounding every gap up to 133 ms
+    if (this.t - this.lastBroadcast >= 0.1) { this.lastBroadcast = Math.max(this.lastBroadcast + 0.1, this.t - 0.05); this.broadcastBoss(); }
     if (this.t - this.lastPartyBroadcast >= 0.2) { this.lastPartyBroadcast = this.t; this.broadcastParty(); }
   }
 
@@ -641,14 +642,15 @@ class FightSim {
     const b = this.boss;
     this.emit({ t: 'fb', hp: b.hp, mx: b.maxHp, x: Math.round(b.x), y: Math.round(b.y), f: +b.facing.toFixed(2), tg: b.target,
       u: b.untargetable ? 1 : 0, v: b.vulnEnd > this.t ? b.vuln : 0, ft: Math.round(this.t * 10) / 10, ph: this.phase,
-      na: +(b.autoAt - this.t).toFixed(2) });  // time to the next auto-attack, so clients can show the wind-up
+      na: +(b.autoAt - this.t).toFixed(2),  // time to the next auto-attack, so clients can show the wind-up
+      c: +this.t.toFixed(3) });             // the fight clock, so clients can space the boss's moves evenly (interp.js)
     if (this.adds.size || this.addsDirty) this.broadcastAdds();
   }
   // [id, kind, x, y, hp, maxHp, enraged, link, facing]
   broadcastAdds() {
     this.addsDirty = false;
     this.emit({ t: 'adds', l: [...this.adds.values()].map(a => [a.id, a.kind, Math.round(a.x), Math.round(a.y), Math.round(a.hp), a.maxHp,
-      a.enraged ? 1 : 0, a.link && this.adds.has(a.link) ? a.link : null, +a.facing.toFixed(2)]) });
+      a.enraged ? 1 : 0, a.link && this.adds.has(a.link) ? a.link : null, +a.facing.toFixed(2)]), c: +this.t.toFixed(3) });
   }
   broadcastParty() {
     const list = [];

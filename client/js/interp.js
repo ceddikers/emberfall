@@ -4,12 +4,29 @@
 // blended between the two updates on either side of that moment ("entity interpolation", as in the Source
 // engine and Gabriel Gambetta's Fast-Paced Multiplayer articles). It moves at an even speed, at the cost of being
 // shown about a tenth of a second late.
+// Updates are timed by the sender's clock where they carry one (SendClock below): arrival times wobble with the
+// network, and both ends only notice anything once a frame, so a 100 ms gap can arrive as 83 or 117 ms. Blending by
+// arrival time turns that wobble into speed changes.
 
 const TRACK = {
-  DELAY: 0.13,   // a bit more than one update interval, so there's nearly always a newer update to blend toward
+  DELAY: 0.15,   // one update interval plus room for a late one, so there's nearly always a newer update to blend toward
   SNAP: 330,     // a jump this big in one update is a teleport: go straight there
   EXTRA: 0.1,    // if updates run late, keep gliding on the last known velocity for at most this long
 };
+
+// Puts a sender's timestamps on our clock. The offset is the quickest delivery (arrival minus sent) among the last
+// 20 updates, about two seconds' worth: quick ones show the true travel time, and a short memory means a stall
+// (a frozen tab, a slow patch of network, clock drift) is forgotten within a couple of seconds.
+class SendClock {
+  constructor() { this.recent = []; }
+  map(sent, arrived) {
+    if (!Number.isFinite(sent)) return arrived;
+    const r = this.recent;
+    r.push(arrived - sent);
+    if (r.length > 20) r.shift();
+    return sent + Math.min(...r);
+  }
+}
 
 class Track {
   constructor(x, y, a = 0) { this.s = [{ t: -1e9, x, y, a }]; }
@@ -20,7 +37,7 @@ class Track {
     // after standing still (no updates are sent then), start the move one interval ago instead of
     // crawling across the whole quiet gap
     if (t - last.t > TRACK.DELAY * 2) s.push({ t: t - 0.1, x: last.x, y: last.y, a: last.a });
-    s.push({ t, x, y, a });
+    s.push({ t: Math.max(t, last.t + 0.001), x, y, a });   // a resynced clock must never step back in time
     while (s.length > 3 && s[1].t < t - 1) s.shift();
   }
 
@@ -48,4 +65,4 @@ class Track {
   latest() { return this.s[this.s.length - 1]; }
 }
 
-if (typeof module !== 'undefined') module.exports = { Track, TRACK };
+if (typeof module !== 'undefined') module.exports = { Track, TRACK, SendClock };

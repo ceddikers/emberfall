@@ -187,7 +187,7 @@
           const e = enemyPos(); if (e) { tx = e.x; ty = e.y; } else { const m = mouseWorld(); tx = m.x; ty = m.y; }
         }
         FX.cast(player, ab, tx, ty, { mine: true, tent: ally != null ? entById(ally) : null });
-        Net.send({ t: 'cast', i, x: rnd(player.x), y: rnd(player.y), tx: rnd(tx), ty: rnd(ty), ally, s: scene === 'arena' ? 1 : 0 });
+        Net.send({ t: 'cast', i, x: rnd(player.x), y: rnd(player.y), tx: rnd(tx), ty: rnd(ty), ally, s: scene === 'arena' ? 1 : 0, c: +now.toFixed(3) });
         break;
       }
       case 'auto': {
@@ -491,7 +491,7 @@
     player.dashMove = { sx: player.x, sy: player.y, tx: dest.x, ty: dest.y, t0: now };
     player.angle = a;
     if (player.target && Math.hypot(player.target.x - dest.x, player.target.y - dest.y) < 20) player.target = null;
-    Net.send({ t: 'cast', i: 6, x: rnd(player.x), y: rnd(player.y), tx: rnd(dest.x), ty: rnd(dest.y), s: scene === 'arena' ? 1 : 0 });
+    Net.send({ t: 'cast', i: 6, x: rnd(player.x), y: rnd(player.y), tx: rnd(dest.x), ty: rnd(dest.y), s: scene === 'arena' ? 1 : 0, c: +now.toFixed(3) });
   }
 
   // ---------------------------------------------------------------- the raid (client side; every player)
@@ -645,6 +645,7 @@
       boss: { x: 0, y: -40, f: Math.PI / 2, hp: 1, mx: 1, u: 0, v: 0, tg: null },
       bossDraw: { x: 0, y: -40, f: Math.PI / 2, st: newSt(), lastX: 0, lastY: -40, fade: 1 },
       bossTrack: new Track(0, -40, Math.PI / 2), ghosts: [],
+      fightClock: new SendClock(), botClock: new SendClock(),   // the host's fight and bot clocks (see interp.js)
       nextAutoAt: 0, cast: null, props: {}, propsUntil: {},
       tgs: new Map(), puddles: new Map(), party: new Map(), bots: new Map(), pbuffs: [], taken: [], result: null, resultAt: 0,
       adds: new Map(), tethers: new Map(), zones: new Map(), lunges: [], husks: [], eggs: null,
@@ -722,7 +723,10 @@
 
   // --- messages from the host's fight
   Net.on('raid', enterArena);
-  Net.on('raidend', () => leaveRaid(false));
+  Net.on('raidend', () => {
+    if (!Net.isHost && raid && (raid.state === 'live' || raid.state === 'countdown')) toast('The host ended the raid.');
+    leaveRaid(false);
+  });
   Net.on('fight', msg => {
     if (!raid) return;
     if (msg.s === 'live') { raid.state = 'live'; return; }
@@ -738,17 +742,21 @@
   Net.on('fb', msg => {
     if (!raid) return;
     Object.assign(raid.boss, { x: msg.x, y: msg.y, f: msg.f, hp: msg.hp, mx: msg.mx, u: msg.u, v: msg.v, tg: msg.tg });
-    raid.bossTrack.push(now, msg.x, msg.y, msg.f);
+    raid.bossTrack.push(raid.fightClock.map(msg.c, now), msg.x, msg.y, msg.f);
     raid.lastFb = performance.now();   // for the debug overlay
     raid.fightTime = msg.ft;
     if (msg.na != null) raid.nextAutoAt = now + msg.na;
   });
   Net.on('fps', msg => {
     if (!raid) return;
+    const listed = new Set();
     for (const [id, hp, maxHp, shield, alive, dd, vuln, mit, weak, debuffs, , hots] of msg.ps) {
+      listed.add(id);
       const s = raid.party.get(id);
-      if (s) Object.assign(s, { hp, maxHp, shield, alive: !!alive, dd, vuln, mit, weak, debuffs, hots: hots || [] });
+      if (s) Object.assign(s, { hp, maxHp, shield, alive: !!alive, dd, vuln, mit, weak, debuffs, hots: hots || [], left: false });
     }
+    // the host stops listing anyone who left the raid; don't leave their last numbers frozen on the frames
+    for (const [id, s] of raid.party) if (!listed.has(id) && !s.left) Object.assign(s, { left: true, alive: false, hp: 0, shield: 0, hots: [], debuffs: [] });
   });
   Net.on('tg', msg => {
     if (!raid) return;
@@ -811,12 +819,12 @@
   // --- adds, tethers, zones and Skitterra's legs (all host-driven)
   Net.on('adds', msg => {
     if (!raid) return;
-    const seen = new Set();
+    const seen = new Set(), at = raid.fightClock.map(msg.c, now);
     for (const [id, kind, x, y, hp, mx, enr, link, f] of msg.l) {
       seen.add(id);
       let a = raid.adds.get(id);
       if (!a) { a = { id, kind, x, y, f, born: now, track: new Track(x, y, f), st: newSt(Math.random() * 3) }; raid.adds.set(id, a); }
-      else a.track.push(now, x, y, f);
+      else a.track.push(at, x, y, f);
       Object.assign(a, { tx: x, ty: y, hp, mx, enr: !!enr, link, tf: f });
     }
     for (const id of [...raid.adds.keys()]) if (!seen.has(id)) removeAdd(id, 0.45);
@@ -940,11 +948,12 @@
   });
   Net.on('bots', msg => {
     if (!raid) return;
+    const at = raid.botClock.map(msg.c, now);
     for (const [id, x, y, a, m] of msg.b) {
       const b = raid.bots.get(id);
       if (!b) continue;
       if (!b.track) b.track = new Track(b.x, b.y, b.angle);
-      b.track.push(now, x, y, a);
+      b.track.push(at, x, y, a);
       b.tx = x; b.ty = y; b.ta = a; b.m = m;
     }
   });
@@ -1152,7 +1161,7 @@
     const s = scene === 'arena' ? 1 : 0;
     const key = `${rnd(player.x)},${rnd(player.y)},${player.angle.toFixed(2)},${player.st.moving ? 1 : 0},${rnd(player.lift)},${s}`;
     if (key !== lastSentKey) {
-      Net.send({ t: 'pos', x: rnd(player.x), y: rnd(player.y), a: +player.angle.toFixed(2), m: player.st.moving ? 1 : 0, l: rnd(player.lift), s });
+      Net.send({ t: 'pos', x: rnd(player.x), y: rnd(player.y), a: +player.angle.toFixed(2), m: player.st.moving ? 1 : 0, l: rnd(player.lift), s, c: +now.toFixed(3) });
       lastSentKey = key;
     }
     lastSent = now;
@@ -1947,13 +1956,14 @@
     if (raidHost) { const h = hostRoster.find(x => x.id === msg.id); if (h) { h.left = true; raidHost.sim.removePlayer(msg.id); } }
   });
   Net.on('snap', msg => {
-    for (const [id, x, y, a, m, l, s] of msg.ps) {
+    for (const [id, x, y, a, m, l, s, c] of msg.ps) {
       const r = remotes.get(id);
       if (!r) continue;
       const sc = s ? 1 : 0;
       if (sc !== r.scene) { r.scene = sc; r.x = x; r.y = y; r.track = new Track(x, y, a); updatePartyList(); }
       if (!r.track) r.track = new Track(r.x, r.y, r.angle);
-      r.track.push(now, x, y, a);   // big jumps (teleports, scene changes) snap inside the track
+      if (!r.clock) r.clock = new SendClock();
+      r.track.push(r.clock.map(c, now), x, y, a);   // big jumps (teleports, scene changes) snap inside the track
       r.tx = x; r.ty = y; r.ta = a; r.m = m; r.tl = l;
     }
   });
@@ -1974,7 +1984,7 @@
     const eScene = e.bot ? 1 : (msg.s ? 1 : 0);
     if (eScene !== (scene === 'arena' ? 1 : 0)) return;
     // where they cast from goes into their track like any position update (snapping here would fight the smoothing)
-    if (!e.bot) { e.tx = msg.x; e.ty = msg.y; if (e.track) e.track.push(now, msg.x, msg.y, e.track.latest().a); }
+    if (!e.bot) { e.tx = msg.x; e.ty = msg.y; if (e.track) e.track.push(e.clock ? e.clock.map(msg.c, now) : now, msg.x, msg.y, e.track.latest().a); }
     if (msg.i === 6) { e.dashUntil = now + 0.2; VFX.setScale(0.6); KIT_VFX.dash(e, e.cls.accent); VFX.setScale(1); return; }
     const ab = KITS[e.cls.id].abilities[msg.i];
     if (!ab) return;
@@ -2003,10 +2013,16 @@
     playAuto(e, msg.tx, msg.ty, msg.k, false, !!msg.a);
   });
   Net.on('chat', msg => { const r = remotes.get(msg.id); if (r) showChat(r, msg.text); });
+  // the host is gone: back to the join screen (hero and bags kept) so you can rejoin, host or go solo at once
   Net.on('disconnect', () => {
     remotes.clear(); updatePartyList();
     if (scene === 'arena') leaveRaid(false);
-    toast('Lost connection to the host.');
+    closePanels(); if (Inventory.isOpen()) Inventory.toggle();
+    started = false;
+    joinErr.textContent = 'Lost connection to the host.';
+    hostBtn.disabled = joinBtn.disabled = soloBtn.disabled = false;
+    for (const b of [hostBtn, joinBtn, soloBtn]) b.textContent = b.dataset.label;
+    $('join').classList.remove('hidden');
   });
 
   // ---------------------------------------------------------------- join screen
@@ -2016,6 +2032,7 @@
   const hashCode = location.hash.replace('#', '').toUpperCase();
   if (/^[A-Z]{4}$/.test(hashCode)) codeInput.value = hashCode; // invite links look like ...#ABCD
   codeInput.addEventListener('input', () => { codeInput.value = codeInput.value.toUpperCase().replace(/[^A-Z]/g, ''); });
+  for (const b of [hostBtn, joinBtn, soloBtn]) b.dataset.label = b.textContent;
 
   async function enter(mode) {
     const name = nameInput.value.trim().slice(0, 16) || 'Adventurer';
@@ -2039,6 +2056,7 @@
     $('join').classList.add('hidden');
     started = true;
     if (!player.cls) openSelect(null);
+    else { Net.send({ t: 'cls', id: player.cls.id }); sendGear(); }   // back after a lost connection: tell the new room who we are
     updatePartyList();
     toast(Net.solo ? `Welcome to Emberfall, ${player.name}! Bots will fill your party.` : Net.isHost ? `You're hosting! Room code: ${Net.room}` : `Welcome to Emberfall, ${player.name}!`);
   }

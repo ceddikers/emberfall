@@ -239,7 +239,10 @@ Shared rules for every fight:
   - Kitchen: burners flicker, pots steam, lamp light breathes on the tiles, flour dust drifts, and now and then a rat runs along the bottom wall.
   - Web cave: dew twinkles on the threads, drips fall into the pools and ripple, small spiders creep along the spokes, spores drift up, and cold fog slides along the walls.
 - **Everything moves smoothly.**
-  - Other players, bots, the boss and adds are drawn about 0.13 s in the past and blended between network updates (entity interpolation, `client/js/interp.js`), so they glide instead of lurching after each update. In a test, the old easing peaked at more than twice walking speed; interpolated movement stays within about 15% of it.
+  - Other players, bots, the boss and adds are drawn about 0.15 s in the past and blended between network updates (entity interpolation, `client/js/interp.js`), so they glide instead of lurching after each update. In a test, the old easing peaked at more than twice walking speed; interpolated movement stays within about 15% of it.
+  - Every update carries the sender's own clock (player positions, casts, the boss, adds, bots), and updates are spaced by that clock, not by when they arrive. Over a simulated wobbly connection this keeps speed within 2% where arrival timing alone swung from 75% to 150%. The boss and bots send a steady 10 updates a second.
+  - If the host's tab is in the background, the fight keeps running (it ticks off a worker timer); only the host's own hero stands still.
+  - If the host disappears, guests go back to the join screen ("Lost connection to the host."), keeping their hero, and can rejoin, host or go solo straight away. Someone who leaves mid-raid shows as "Left" on the party frames.
   - Heroes turn quickly toward what they attack instead of snapping.
   - Telegraphs fade out over a quarter second after they land.
   - Adds fade in when they hatch and out when they die.

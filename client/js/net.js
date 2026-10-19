@@ -51,6 +51,7 @@ const Net = (() => {
   // A handler error must never break the caller (on the host that caller can be the fight sim itself).
   const dispatch = msg => { const fn = net.handlers[msg.t]; if (fn) try { fn(msg); } catch (e) { console.error(e); } };
   const num = (v, lo, hi, fallback) => (Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : fallback);
+  const clock = v => (Number.isFinite(v) && v >= 0 ? Math.round(v * 1000) / 1000 : null);   // a sender's game clock, in seconds
   const pub = p => ({ id: p.id, name: p.name, cls: p.cls, x: p.x, y: p.y, a: p.a });
 
   function describe(err) {
@@ -103,7 +104,8 @@ const Net = (() => {
         p.x = num(msg.x, -3000, 3000, p.x); p.y = num(msg.y, -3000, 3000, p.y); p.s = msg.s ? 1 : 0;
         p.a = num(msg.a, -10, 10, p.a); p.m = msg.m ? 1 : 0; p.l = num(msg.l, 0, 60, 0);
         // Relay right away (not on a timer) so it keeps working even if the host's tab is in the background.
-        broadcast({ t: 'snap', ps: [[p.id, Math.round(p.x), Math.round(p.y), +p.a.toFixed(2), p.m, Math.round(p.l), p.s]] }, p.id);
+        // The sender's clock rides along so everyone can space their moves evenly (interp.js).
+        broadcast({ t: 'snap', ps: [[p.id, Math.round(p.x), Math.round(p.y), +p.a.toFixed(2), p.m, Math.round(p.l), p.s, clock(msg.c)]] }, p.id);
         break;
       case 'cls':
         if (CLASS_IDS.has(msg.id)) { p.cls = msg.id; broadcast({ t: 'cls', id: p.id, cls: p.cls }, p.id); }
@@ -112,7 +114,7 @@ const Net = (() => {
         if (!p.cls || !Number.isInteger(msg.i) || msg.i < 0 || msg.i > 6) return;
         p.x = num(msg.x, -3000, 3000, p.x); p.y = num(msg.y, -3000, 3000, p.y);
         broadcast({ t: 'cast', id: p.id, i: msg.i, x: p.x, y: p.y, tx: num(msg.tx, -3000, 3000, p.x), ty: num(msg.ty, -3000, 3000, p.y),
-          ally: Number.isInteger(msg.ally) ? msg.ally : null, s: msg.s ? 1 : 0 }, p.id);
+          ally: Number.isInteger(msg.ally) ? msg.ally : null, s: msg.s ? 1 : 0, c: clock(msg.c) }, p.id);
         break;
       case 'castStart':
         if (!p.cls || !Number.isInteger(msg.i) || msg.i < 0 || msg.i > 5) return;
@@ -173,7 +175,15 @@ const Net = (() => {
     return s;
   }
 
+  // a fresh start after a lost connection: drop the old peer so it stops answering for us
+  function reset() {
+    if (peer && !peer.destroyed) peer.destroy();
+    peer = null; hostConn = null; hostPlayer = null;
+    net.isHost = false; net.solo = false; net.online = false; net.room = null; net.stats.rtt = null;
+  }
+
   function host(name) {
+    reset();
     return new Promise((resolve, reject) => {
       const attempt = n => {
         const code = makeCode();
@@ -204,6 +214,7 @@ const Net = (() => {
 
   // Play alone without any network: we are the host of a room nobody else can join.
   function startSolo(name) {
+    reset();
     net.isHost = true; net.solo = true; net.online = false; net.room = null; net.id = 1;
     return Promise.resolve({ t: 'welcome', id: 1, name: String(name || 'Adventurer').slice(0, 16), spawn: { x: SPAWN.x, y: SPAWN.y }, players: [] });
   }
@@ -211,6 +222,7 @@ const Net = (() => {
   // ------------------------------------------------------------- client side
 
   function join(rawCode, name) {
+    reset();
     return new Promise((resolve, reject) => {
       const code = String(rawCode || '').trim().toUpperCase();
       let settled = false;
@@ -224,10 +236,10 @@ const Net = (() => {
       const timer = setTimeout(() => fail('Could not connect. Check the code; your network may also block peer-to-peer.'), 15000);
       peer = new Peer({ debug: 0 });
       peer.on('open', () => {
-        hostConn = peer.connect(PREFIX + code, { reliable: true, serialization: 'json' });
-        hostConn.on('open', () => hostConn.send({ t: 'hello', name }));
-        hostConn.on('data', msg => {
-          if (!msg || typeof msg.t !== 'string') return;
+        const conn = hostConn = peer.connect(PREFIX + code, { reliable: true, serialization: 'json' });
+        conn.on('open', () => conn.send({ t: 'hello', name }));
+        conn.on('data', msg => {
+          if (!msg || typeof msg.t !== 'string' || conn !== hostConn) return;   // ignore a connection we've moved on from
           lastHeard = Date.now();
           net.stats.in++;
           if (msg.t === 'pong') { if (Number.isFinite(msg.c)) net.stats.rtt = performance.now() - msg.c; return; }
@@ -235,16 +247,17 @@ const Net = (() => {
             settled = true; clearTimeout(timer);
             net.id = msg.id; net.room = code; net.online = true;
             const stop = steadyInterval(() => {
-              if (!net.online) { stop(); return; }
-              if (Date.now() - lastHeard > TIMEOUT_MS) { stop(); hostConn.close(); return; }
-              hostConn.send({ t: 'ping', c: performance.now() });
+              if (!net.online || conn !== hostConn) { stop(); return; }
+              if (Date.now() - lastHeard > TIMEOUT_MS) { stop(); conn.close(); return; }
+              conn.send({ t: 'ping', c: performance.now() });
             }, PING_MS);
             resolve(msg);
           } else if (msg.t === 'full') fail(msg.msg);
-          else if (msg.t === 'hostleft') { net.online = false; dispatch({ t: 'disconnect' }); hostConn.close(); return; }
+          else if (msg.t === 'hostleft') { net.online = false; dispatch({ t: 'disconnect' }); conn.close(); return; }
           dispatch(msg);
         });
-        hostConn.on('close', () => {
+        conn.on('close', () => {
+          if (conn !== hostConn) return;
           if (net.online) { net.online = false; dispatch({ t: 'disconnect' }); }
           else fail('The host closed the connection.');
         });

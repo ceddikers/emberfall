@@ -139,7 +139,7 @@ const RaidUI = (() => {
       // healers read the missing health (what a heal would fill); everyone else reads current health
       const missing = p.maxHp - p.hp;
       // (maxHp is 1 until the host's first party update arrives)
-      const txt = p.maxHp <= 1 ? '' : !p.alive ? 'Down' : marks.healer && missing >= 1 ? '−' + fmt(missing) : fmt(p.hp);
+      const txt = p.left ? 'Left' : p.maxHp <= 1 ? '' : !p.alive ? 'Down' : marks.healer && missing >= 1 ? '−' + fmt(missing) : fmt(p.hp);
       if (txt !== f.txtKey) { f.txtKey = txt; f.txt.textContent = txt; f.txt.classList.toggle('def', txt[0] === '−'); }
       f.row.classList.toggle('dead', !p.alive);
       f.row.classList.toggle('me', id === myId);

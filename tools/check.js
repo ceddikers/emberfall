@@ -75,6 +75,34 @@ function data() {
   const spread = Math.max(...steps) - Math.min(...steps);
   if (!overshoot && spread < 0.05) pass('Network smoothing is even', `step ${steps[0].toFixed(2)} ± ${(spread / 2).toFixed(3)}`);
   else fail('Network smoothing is even', `spread ${spread.toFixed(3)}, overshoot ${overshoot}`);
+
+  // ... and stays even over a wobbly connection: 40-75 ms delivery, noticed only on the receiver's next frame,
+  // timed by the sender's clock (SendClock). Speed should hold within 10% once the first second has passed.
+  // With `stall`, the sender's tab freezes for 0.6 s at the 3 s mark (its clock stops, then carries on from there):
+  // it should be smooth again 2.5 s later.
+  const wob = (stamp, stall) => {
+    const tw = new Track(0, 0, 0), clk = new SendClock();
+    let js = 3, k = 0; const jit = () => ((js = (js * 16807) % 2147483647) / 2147483647) * 0.035;
+    const msgs = [];
+    for (let i = 0; i <= 90; i++) {
+      const real = i * 0.1;
+      if (stall && real > 3 && real < 3.6) continue;
+      msgs.push({ sent: 50 + real - (stall && real >= 3.6 ? 0.6 : 0), x: i * 20, arrive: Math.ceil((real + 0.04 + jit()) * 60) / 60 });
+    }
+    const speeds = []; let lx = null;
+    const from = stall ? 6.1 : 1.5;
+    for (let t = 0; t < 8.5; t += 1 / 60) {
+      while (k < msgs.length && msgs[k].arrive <= t + 1e-9) { const m = msgs[k++]; tw.push(stamp ? clk.map(m.sent, t) : t, m.x, 0, 0); }
+      const x = tw.at(t).x;
+      if (lx != null && t > from && t < 8.5) speeds.push((x - lx) * 60);
+      lx = x;
+    }
+    return { lo: Math.min(...speeds), hi: Math.max(...speeds) };
+  };
+  const ws = wob(true), wa = wob(false), wst = wob(true, true);
+  const okRange = w => w.lo > 180 && w.hi < 220;
+  if (okRange(ws) && okRange(wst)) pass('Smoothing holds over a wobbly connection', `speed ${ws.lo.toFixed(0)}-${ws.hi.toFixed(0)}, ${wst.lo.toFixed(0)}-${wst.hi.toFixed(0)} after a stall; by arrival time alone ${wa.lo.toFixed(0)}-${wa.hi.toFixed(0)}`);
+  else fail('Smoothing holds over a wobbly connection', `speed ${ws.lo.toFixed(0)}-${ws.hi.toFixed(0)}, after a stall ${wst.lo.toFixed(0)}-${wst.hi.toFixed(0)}; want 180-220`);
 }
 
 // ---------------------------------------------------------------- 3 + 4. balance sim and bot raids (run side by side)

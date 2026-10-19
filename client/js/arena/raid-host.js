@@ -44,8 +44,8 @@ class RaidHost {
     this.partyBuffs = this.partyBuffs.filter(b => b.end > this.sim.t);
     if (this.sim.state === 'live') this.tickBots(dt);
     if (this.t - this.lastBotBroadcast >= 0.1 && this.bots.length) {
-      this.lastBotBroadcast = this.t;
-      this.emit({ t: 'bots', b: this.bots.map(b => [b.id, Math.round(b.x), Math.round(b.y), +b.a.toFixed(2), b.moving ? 1 : 0]) });
+      this.lastBotBroadcast = Math.max(this.lastBotBroadcast + 0.1, this.t - 0.05);   // steady 10/s (see fight.js)
+      this.emit({ t: 'bots', b: this.bots.map(b => [b.id, Math.round(b.x), Math.round(b.y), +b.a.toFixed(2), b.moving ? 1 : 0]), c: +this.t.toFixed(3) });
     }
   }
 
