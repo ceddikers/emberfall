@@ -202,6 +202,21 @@ const Inventory = (() => {
         shape(() => c.rect(-2.2, -2, 4.4, 14), '#2a1d14', 2);
         stroke(() => { c.moveTo(0, 12); c.quadraticCurveTo(8, 18, 4, 26); }, accent || '#4fd0b0', 2.5);
         break;
+      case 'needle':   // Threadweaver: a rapier-long needle, a glowing thread looped through its eye
+        c.rotate(-Math.PI / 4);
+        shape(() => { c.moveTo(-2.2, 14); c.lineTo(-1.6, -22); c.lineTo(0, -30); c.lineTo(1.6, -22); c.lineTo(2.2, 14); c.closePath(); }, metal, 2);
+        shape(() => c.ellipse(0, 18, 4, 6, 0, 0, Math.PI * 2), gold, 2);
+        c.fillStyle = '#0d0b09'; c.beginPath(); c.ellipse(0, 18, 1.6, 3.2, 0, 0, Math.PI * 2); c.fill();
+        stroke(() => { c.moveTo(0, 15); c.bezierCurveTo(14, 10, -12, -4, 10, -14); }, accent || '#b89cff', 1.6);
+        break;
+      case 'controlbar':   // Marionettist: a wooden cross-bar with three strings hanging off it
+        c.rotate(-0.25);
+        for (const x of [-12, 0, 12]) { c.strokeStyle = rgba('#f4e8d8', 0.85); c.lineWidth = 1; c.beginPath(); c.moveTo(x, -6); c.lineTo(x * 0.7, 26); c.stroke(); }
+        shape(() => c.rect(-18, -10, 36, 6), wood, 2);
+        shape(() => c.rect(-3, -24, 6, 30), wood, 2);
+        shape(() => c.arc(0, -24, 3.5, 0, Math.PI * 2), accent || '#c84a8c', 1.5);
+        for (const x of [-15, 15]) shape(() => c.arc(x, -7, 2.5, 0, Math.PI * 2), gold, 1.2);
+        break;
       case 'focus':
         c.fillStyle = rgba('#a98bff', 0.35); c.beginPath(); c.arc(0, 0, 24, 0, Math.PI * 2); c.fill();
         shape(() => { for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3 + Math.PI / 6; c.lineTo(Math.cos(a) * 20, Math.sin(a) * 20); } c.closePath(); }, '#5b3fa0');
@@ -262,6 +277,20 @@ const Inventory = (() => {
         c.fillStyle = 'rgba(255,255,255,0.6)'; c.beginPath(); c.ellipse(-9, 0, 2.5, 5, 0.4, 0, Math.PI * 2); c.fill();
         break;
       }
+      case 'gauntlet':   // Gorgemaw: a great bronze fist, knuckles studded, a band of hide at the wrist
+        c.rotate(-0.25);
+        shape(() => c.rect(-9, 6, 18, 14), '#7a4a30', 2);
+        shape(() => { c.moveTo(-15, 8); c.lineTo(-17, -12); c.quadraticCurveTo(0, -26, 17, -12); c.lineTo(15, 8); c.closePath(); }, '#b8743a', 2);
+        for (let i = 0; i < 4; i++) shape(() => c.arc(-10.5 + i * 7, -12, 2.6, 0, Math.PI * 2), i % 2 ? gold : metal, 1.2);
+        stroke(() => { c.moveTo(-12, -2); c.lineTo(12, -2); }, '#5a3420', 1.5);
+        break;
+      case 'stampmace':   // Oathbroker: a mace whose head is a square seal, a dab of red wax on its face
+        c.rotate(-Math.PI / 4);
+        shape(() => c.rect(-2.5, -6, 5, 32), '#5a4a3a', 2);
+        shape(() => c.rect(-10, -26, 20, 20), metal, 2);
+        shape(() => c.rect(-7, -29, 14, 4), '#c04a5a', 1.5);
+        stroke(() => { c.moveTo(-6, -16); c.lineTo(6, -16); c.moveTo(0, -22); c.lineTo(0, -10); }, '#2a2034', 1.5);
+        break;
       case 'hourglass': case 'wand':
         if (it.wtype === 'wand') {
           c.rotate(-Math.PI / 4);

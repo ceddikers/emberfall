@@ -44,6 +44,12 @@ class CombatActor {
       // hidden recipes this hero has found, and finding a new one (the Volatile's Reactions); null: knows them all (bots)
       known: () => (world.known ? world.known(actor) : null),
       discover: id => { if (world.discover) world.discover(actor, id); },
+      // classes-c (kits.js): where you aim (the cursor, or a bot's chosen spot), pushing a point out of solid props, a
+      // Threadweaver's threads ({ me, l: [[a, b, length]] }, null without a host) and reporting a Marionettist's Dolls
+      aim: () => (world.aim ? world.aim(actor) : null),
+      collide: (o, r) => { if (world.collide) world.collide(actor, o, r); },
+      threads: () => (world.threads ? world.threads(actor) : null),
+      dolls: list => { if (world.dolls) world.dolls(actor, list); },
     });
   }
   refundDash(now) {

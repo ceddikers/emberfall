@@ -580,6 +580,7 @@ const BotAI = {
     // ... and party-wide damage being cast, or close in the feed
     const raidSoon = (view.next || []).some(([n, s]) => s < 6 && RAID_CASTS.test(n)) || !!(view.bossCast && RAID_CASTS.test(view.bossCast.name));
     if (bot.cls.id === 'alembist') return BotAI.alembist(bot, k, view);   // brews ahead and throws (below)
+    if (bot.cls.id === 'threadweaver') return BotAI.threadweaver(bot, k, view);   // keeps a web (classes-c, below)
     // healers: raise, then keep people up
     if (bot.role === 'healer') {
       if (dead.length) {
@@ -912,6 +913,256 @@ BotAI.alembist = function (bot, k, view) {
   const letter = k.g.botPlan[have] || 'E';
   const ri = k.abilities.findIndex(a => a.reagent === letter);
   return ready(ri) ? ri : null;
+};
+
+// ======================================================================= advanced tanks (tanks-2)
+// Gorgemaw: the jaw opens just before anything edible lands on it (its busters above all; Bottomless on a raidwide),
+// Spits what it eats, Digests to heal or (Gizzard) before party damage. Oathbroker: Writ on its busters, Renegotiate a
+// big bill about to land with more damage, Settle once it's healthy, Lien while bills come in, Default before it drowns.
+const botEdible = (bot, m) => {
+  if (typeof MAW_HOST === 'undefined' || !MAW_HOST.typeOf(m) || m.cover || m.throwDist || m.type === 'raidwide') return false;
+  if (m.type === 'buster') return (m.target ?? m.follow) === bot.id;
+  if (m.type === 'proximity') return true;
+  if (m.follow != null && m.follow !== bot.id && m.type === 'spread') return false;
+  return SHAPES.contains(m.shape, bot.x, bot.y, 8);
+};
+Object.assign(BOT_CLASS, {
+  gorgemaw: {
+    act(bot, k, view) {
+      const idx = id => k.abilities.findIndex(a => a.id === id || a.replaces === id);
+      const ok = i => { const a = k.abilities[i]; return !!a && k.usable(a) && k.readyIn(a) <= 0.0001 && k.available(a); };
+      const me = view.players.find(p => p.id === bot.id), hp = me ? me.hp / me.maxHp : 1, b = k.g.belly, max = mawMax(k);
+      const wide = idx('wide'), open = (k.g.jawUntil || 0) > k.now + 0.05;
+      const soon = view.mechs.filter(m => m.resolveAt - view.t < 0.6 && m.resolveAt - view.t > 0.03);
+      if (!open && ok(wide) && soon.some(m => botEdible(bot, m))) return wide;
+      const bott = idx('bottomless');
+      if (ok(bott) && soon.some(m => m.type === 'raidwide')) return bott;
+      const myBuster = view.mechs.find(m => m.type === 'buster' && (m.target ?? m.follow) === bot.id && m.resolveAt - view.t < 2.5);
+      const iron = idx('iron');
+      if (myBuster && ok(iron) && (k.abilities[iron].id === 'stonebelly' || k.charges(k.abilities[wide]) === 0 || hp < 0.55)) return iron;
+      const dig = idx('digest'), giz = k.def.spec === 'gizzard';
+      const partySoon = view.mechs.some(m => (m.type === 'raidwide' || m.type === 'buster') && m.resolveAt - view.t < 3) || (view.next || []).some(([n, s]) => s < 4 && (RAID_CASTS.test(n) || BUSTER_CASTS.test(n)));
+      if (ok(dig) && b.length && k.gcdRemaining() > 0.4 && (hp < 0.45 || (giz ? (b.length >= 2 && partySoon) || b.length >= max : b.length >= max && hp < 0.85))) return dig;
+      if (k.gcdRemaining() > 0 || k.cast || k.lockUntil > k.now) return null;
+      const sp = idx('spit'), regur = k.abilities[sp].id === 'regurgitate';
+      if (ok(sp) && (regur ? b.length >= Math.min(3, max) : giz ? b.length >= max : k.def.fuse ? (b.length >= 2 && b[0].m === b[1].m) || b.length >= max - 1 : b.length >= 1)) return sp;
+      return ok(0) ? 0 : null;
+    },
+  },
+  oathbroker: {
+    act(bot, k, view) {
+      const idx = id => k.abilities.findIndex(a => a.id === id || a.replaces === id);
+      const ok = i => { const a = k.abilities[i]; return !!a && k.usable(a) && k.readyIn(a) <= 0.0001 && k.available(a); };
+      const me = view.players.find(p => p.id === bot.id), H = me ? me.maxHp : 1, hp = me ? me.hp : 1, tot = oathTotal(k);
+      const weave = k.gcdRemaining() > 0.5 && !k.cast;
+      const myBuster = view.mechs.find(m => m.type === 'buster' && (m.target ?? m.follow) === bot.id && m.resolveAt - view.t < 2.5);
+      const partySoon = view.mechs.some(m => m.type === 'raidwide' && m.resolveAt - view.t < 3) || (view.next || []).some(([n, s]) => s < 4 && RAID_CASTS.test(n));
+      const df = idx('default'), fore = k.abilities[df].id === 'foreclose';
+      if (ok(df) && (tot > hp * 0.8 || (fore && tot > H * 0.32))) return df;
+      const writ = idx('writ');
+      if (myBuster && ok(writ)) return writ;
+      const rn = idx('reneg');
+      if (ok(rn) && weave && oathDueSoon(k, 1.5) > H * 0.1 && (partySoon || myBuster || hp < H * 0.6)) return rn;
+      const st = idx('settle'), audit = k.abilities[st].id === 'audit';
+      if (ok(st) && weave && !fore && !partySoon && !myBuster && (audit ? oathAuditable(k).reduce((s, e) => s + e.a, 0) > H * 0.1 : (tot > H * 0.22 && hp > H * 0.6) || tot > H * 0.4)) return st;
+      const li = idx('lien');
+      if (k.abilities[li].id === 'cosign') {
+        if (ok(li) && weave && !(k.g.cosign != null && k.g.cosignUntil > k.now + 2)) {
+          // the one about to take a heavy blow, else the healer, else whoever is most hurt
+          const others = view.players.filter(p => p.alive && !p.left && p.id !== bot.id);
+          const hitId = (view.mechs.find(m => m.type === 'buster' && (m.target ?? m.follow) !== bot.id && (m.target ?? m.follow) != null) || {}).target;
+          const pick = others.find(p => p.id === hitId) || others.find(p => p.role === 'healer') || others.sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
+          bot.healTarget = pick ? pick.id : null;
+          if (pick) return li;
+        }
+      } else if (ok(li) && weave && oathDueSoon(k, 9) > H * 0.08) return li;
+      if (k.gcdRemaining() > 0 || k.cast || k.lockUntil > k.now) return null;
+      return ok(0) ? 0 : null;
+    },
+  },
+});
+// ======================================================================= Threadweaver and Marionettist (classes-c)
+// is something about to land on this spot that would catch a Doll? (the shapes the host judges on a Doll: fight.js dollMech)
+// everyone threaded to this player (any weaver's threads)
+BotAI.partnersOf = function (view, id) {
+  const out = new Set();
+  for (const th of view.threads || []) { if (th.a === id) out.add(th.b); else if (th.b === id) out.add(th.a); }
+  return out;
+};
+BotAI.dollDanger = function (view, x, y, within = 2.6) {
+  const props = (view.props || []).filter(p => p.cover);
+  for (const m of view.mechs) {
+    const dt = m.resolveAt - view.t;
+    if (dt > within) continue;
+    if ((m.type === 'aoe' || m.type === 'spread' || m.type === 'buster') && SHAPES.contains(m.shape, x, y, 34) && !(m.cover && PROPS.shadowing(m.src.x, m.src.y, x, y, props))) return true;
+    if (m.type === 'raidwide' && m.cover && !PROPS.shadowing(m.src.x, m.src.y, x, y, props)) return true;
+  }
+  for (const rl of view.rollers || []) {
+    const from = Math.max(0, view.t - rl.rollAt), to = view.t + 1.6 - rl.rollAt;
+    if (to <= 0 || view.t > rl.end) continue;
+    const c = Math.cos(rl.angle), s = Math.sin(rl.angle);
+    if (segDist(x, y, rl.x + c * from * rl.speed, rl.y + s * from * rl.speed, rl.x + c * to * rl.speed, rl.y + s * to * rl.speed) < rl.r + 40) return true;
+  }
+  for (const sw of view.sweeps || []) {
+    for (const look of [0, 0.6, 1.2]) {
+      const tt = view.t + look;
+      if (tt < sw.startAt - 0.5 || tt > sw.end) continue;
+      const a0 = sw.a0 + Math.max(0, tt - sw.startAt) * sw.spin;
+      for (let k = 0; k < sw.arms; k++) {
+        const a = a0 + k * Math.PI * 2 / sw.arms, c = Math.cos(a), sn = Math.sin(a), dx = x - sw.x, dy = y - sw.y;
+        if (dx * c + dy * sn > -20 && Math.abs(-dx * sn + dy * c) < sw.w / 2 + 40 && !(sw.cover && PROPS.shadowing(sw.x, sw.y, x, y, view.props || [], q => q.kind === sw.cover))) return true;
+      }
+    }
+  }
+  return false;
+};
+
+// Threadweaver: the tank tied to her and the web kept full while it's calm; her threads cut on purpose just before a
+// spread or a knockback would tear them (a big heal instead of a small one) and re-tied once the party gathers again;
+// Tapestry for a tankbuster or a raidwide, Tighten to pull a tied ally out of what's about to land on them; Mend Seam
+// (instant on Spool) on whoever is low, aimed at a tied ally so it runs down the web; Needle the rest of the time.
+BotAI.threadweaver = function (bot, k, view) {
+  const idx = id => k.abilities.findIndex(a => a.id === id || a.replaces === id);
+  const ready = i => { const a = k.abilities[i]; return i >= 0 && k.usable(a) && k.readyIn(a) <= 0.0001 && k.available(a); };
+  const alive = view.players.filter(p => p.alive && !p.left), frac = p => p.hp / p.maxHp;
+  const me = alive.find(p => p.id === bot.id);
+  if (!me) return null;
+  const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+  const tank = alive.find(p => p.role === 'tank' && p.id !== bot.id);
+  const hurt = [...alive].sort((a, b) => frac(a) - frac(b)), low = hurt[0];
+  const mine = (view.threads || []).filter(th => th.from === bot.id);
+  const linked = id => mine.some(th => th.a === id || th.b === id);
+  const lenOf = th => { const a = alive.find(p => p.id === th.a), b = alive.find(p => p.id === th.b); return a && b ? dist(a, b) : 0; };
+  const soon = (type, s) => view.mechs.some(m => m.type === type && m.resolveAt - view.t < s);
+  const tearing = soon('spread', 2.2) || soon('knockback', 1.6) || view.mechs.some(m => m.tag === 'chain' && m.resolveAt - view.t < 2.2) || (view.sweeps || []).some(sw => view.t > sw.startAt - 1.5 && view.t < sw.end);
+  const busterSoon = view.mechs.some(m => m.type === 'buster' && m.resolveAt - view.t < 2.5) || !!(view.bossCast && BUSTER_CASTS.test(view.bossCast.name) && view.bossCast.left < 2.5);
+  const raidSoon = soon('raidwide', 2.5) || soon('proximity', 2.5) || !!(view.bossCast && RAID_CASTS.test(view.bossCast.name) && view.bossCast.left < 2.5);
+  // (urgent answers go in whenever she isn't mid-cast, even if it clips the next GCD; the rest weave)
+  const free = !k.cast && k.lockUntil <= k.now, weave = free && k.gcdRemaining() > 0.45;
+  const tie = idx('tie'), snip = idx('snip'), tight = idx('tighten'), tap = idx('tapestry'), mend = idx('mend'), needle = idx('needle');
+  const shears = (k.def.store || 1) > 1, cradle = k.abilities[tight].id === 'cradle';
+  // a heavy blow about to land on someone who isn't the tank (or on a tank already low): that's what Tapestry is for
+  const sentence = view.mechs.find(m => m.type === 'buster' && m.resolveAt - view.t < 2.2 && (() => { const t = alive.find(p => p.id === (m.target ?? m.follow)); return t && (t.role !== 'tank' || frac(t) < 0.7); })());
+  if (free && ready(tap) && (sentence || busterSoon || (raidSoon && hurt.filter(p => frac(p) < 0.85).length >= 2))) return tap;
+  if (weave) {
+    if (cradle && ready(tight) && raidSoon) return tight;
+    // cut the web ourselves before a spread tears it (or when a thread is about to snap anyway, or someone tied is low)
+    if (ready(snip) && mine.length) {
+      const strained = mine.some(th => lenOf(th) > 225);
+      const lowTied = low && frac(low) < (shears ? 0.8 : 0.55) && linked(low.id);
+      if (tearing || strained || lowTied) { bot.healTarget = lowTied ? low.id : bot.id; return snip; }
+    }
+    // pull a tied ally out of what's about to land on them
+    if (!cradle && ready(tight)) {
+      for (const p of alive) {
+        if (p.id === bot.id || !linked(p.id)) continue;
+        const inIt = view.mechs.some(m => m.type === 'aoe' && m.resolveAt - view.t < 1.4 && m.follow !== p.id && SHAPES.contains(m.shape, p.x, p.y, 10)) || view.puddles.some(pd => Math.hypot(pd.x - p.x, pd.y - p.y) < pd.r);
+        if (inIt) { bot.healTarget = p.id; return tight; }
+      }
+    }
+  }
+  if (free) {
+    // a heavy blow aimed at someone: tie them to us, or (too far from us) to whoever stands nearest them, two Ties in a row
+    if (bot.tiePair && view.t - bot.tiePair.at < 3 && ready(tie)) { bot.healTarget = bot.tiePair.b; bot.tiePair = null; return tie; }
+    if (ready(tie)) {
+      for (const m of view.mechs) {
+        if (m.type !== 'buster' || m.resolveAt - view.t > 4.5) continue;
+        const t = alive.find(p => p.id === (m.target ?? m.follow));
+        if (!t || (tank && t.id === tank.id) || linked(t.id) || [...this.partnersOf(view, t.id)].length) continue;
+        if (t.id === bot.id) { if (tank && dist(me, tank) < 245) { bot.healTarget = tank.id; k.g.tie = null; return tie; } continue; }
+        if (dist(me, t) < 200) { bot.healTarget = t.id; k.g.tie = null; return tie; }
+        const near = alive.filter(p => p.id !== t.id && p.id !== bot.id && dist(p, t) < 200).sort((a, b) => dist(a, t) - dist(b, t))[0];
+        if (near && k.charges(k.abilities[tie]) >= 2) { bot.tiePair = { b: t.id, at: view.t }; bot.healTarget = near.id; k.g.tie = null; return tie; }
+      }
+    }
+    // keep the tank tied to us, then whoever stands closest (never while a spread is coming, nor with a Tie owed to a blow)
+  }
+  if (weave) {
+    const owed = view.mechs.some(m => m.type === 'buster' && m.resolveAt - view.t < 4.5 && (m.target ?? m.follow) !== bot.id && !linked(m.target ?? m.follow) && !(tank && (m.target ?? m.follow) === tank.id));
+    if (!tearing && !owed && weave && ready(tie)) {
+      if (tank && !linked(tank.id) && dist(me, tank) < 240) { bot.healTarget = tank.id; k.g.tie = null; return tie; }
+      const loose = alive.filter(p => p.id !== bot.id && !linked(p.id) && dist(me, p) < 215).sort((a, b) => frac(a) - frac(b))[0];
+      if (loose && mine.length < weaveMax(k) && (k.charges(k.abilities[tie]) === 2 || frac(loose) < 0.7)) { bot.healTarget = loose.id; k.g.tie = null; return tie; }
+    }
+  }
+  if (k.gcdRemaining() > 0 || k.cast || k.lockUntil > k.now) return null;
+  const moving = bot.moving;
+  // heal: whoever is low (the tank first before a buster), aimed through the web
+  let want = low && frac(low) < (raidSoon ? 0.85 : 0.72) ? low : null;
+  if (busterSoon && tank && frac(tank) < 0.92) want = tank;
+  if (want && ready(mend)) {
+    const a = k.abilities[mend], instant = !k.castTime(a);
+    if (instant || !moving) {
+      // a heal on a tied ally runs down the web: pick the tied ally whose threads reach the most hurt
+      bot.healTarget = want.id;
+      return mend;
+    }
+  }
+  if (ready(needle) && (!moving || !k.castTime(k.abilities[needle]))) return needle;
+  return null;
+};
+
+// (her threads reach 260 px: she stands off the boss's flank, close enough to the tank to keep them tied)
+BOT_CLASS.threadweaver = {
+  home(bot, view) {
+    const b = view.boss, f = b.facing || 0, side = (bot.slot || 0) % 2 ? 1 : -1, a = f + side * 1.6;
+    // a heavy blow coming at someone she can't reach: go and stand just behind them, outside its cone, to tie them
+    const me = view.players.find(p => p.id === bot.id);
+    for (const m of view.mechs) {
+      if (m.type !== 'buster' || m.resolveAt - view.t > 4.5 || (m.target ?? m.follow) === bot.id) continue;
+      const t = view.players.find(p => p.id === (m.target ?? m.follow) && p.alive);
+      if (!t || t.role === 'tank' || !me) continue;
+      const o = m.shape, ta = Math.atan2(t.y - o.y, t.x - o.x), back = Math.max((o.r || 320) + 70, Math.hypot(t.x - o.x, t.y - o.y) + 80);
+      return ARENA.clamp({ x: o.x + Math.cos(ta) * back, y: o.y + Math.sin(ta) * back }, 60);
+    }
+    return { x: b.x + Math.cos(a) * 165, y: b.y + Math.sin(a) * 165 };
+  },
+};
+
+// Marionettist: stands off a flank of the boss at a comfortable reach (so the Doll's station is across it and the line
+// crosses the boss), keeps the Doll out of telegraphs with Pull Strings (Pirouette at the last moment when no charge is
+// left), never starts Grand Finale with something about to land on the Doll, and Cross-Cuts whenever the line is on.
+BOT_CLASS.marionettist = {
+  home(bot, view) {
+    const b = view.boss, f = b.facing || 0, side = (bot.slot || 0) % 2 ? 1 : -1;
+    const k = bot.actor && bot.actor.kit, far = k && k.def.stretch > 300 ? 230 : 175;
+    const a = f + side * 1.6;
+    return { x: b.x + Math.cos(a) * far, y: b.y + Math.sin(a) * far };
+  },
+  act(bot, k, view, moving) {
+    const idx = id => k.abilities.findIndex(a => a.id === id || a.replaces === id);
+    const ok = i => { const a = k.abilities[i]; return i >= 0 && !!a && k.usable(a) && k.readyIn(a) <= 0.0001 && k.available(a); };
+    const weave = k.gcdRemaining() > 0.55 && !k.cast;
+    const pull = idx('pull'), cross = idx('cross'), pir = idx('pirouette'), fin = idx('finale'), jab = idx('jab');
+    const e = mariEnemy(k), me = { x: bot.x, y: bot.y };
+    bot.aim = null;
+    // keep every Doll out of the red
+    if (e && !mariLimp(k)) {
+      for (let i = 0; i < k.g.dolls.length; i++) {
+        const d = k.g.dolls[i];
+        if (!BotAI.dollDanger(view, d.x, d.y)) continue;
+        if (ok(pull)) {
+          const R = mariER(e), lim = mariStretch(k) - 40, cands = [];
+          for (const r of [R + 24, R + 55]) for (let s = 0; s < 16; s++) { const a = s * Math.PI / 8; cands.push({ x: e.x + Math.cos(a) * r, y: e.y + Math.sin(a) * r }); }
+          for (let s = 0; s < 8; s++) { const a = s * Math.PI / 4; cands.push({ x: me.x + Math.cos(a) * 60, y: me.y + Math.sin(a) * 60 }); }
+          const safe = cands.filter(c => Math.hypot(c.x - me.x, c.y - me.y) <= lim && ARENA.sd(c.x, c.y) < -30 && !BotAI.dollDanger(view, c.x, c.y, 4.5))
+            .sort((a, b) => Math.hypot(a.x - d.x, a.y - d.y) - Math.hypot(b.x - d.x, b.y - d.y));
+          // (W moves the Doll nearest the aim: aim from beside this one)
+          if (safe.length) { bot.aim = safe[0]; if (k.g.dolls.length > 1 && mariPick(k, safe[0]) !== i) bot.aim = { x: (safe[0].x + d.x * 3) / 4, y: (safe[0].y + d.y * 3) / 4 }; return pull; }
+        }
+        const land = view.mechs.some(m => m.resolveAt - view.t < 1);
+        if (land && ok(pir) && k.gcdRemaining() <= 0 && !k.cast && k.abilities[pir].id === 'pirouette') return pir;
+      }
+    }
+    if (weave && ok(cross) && k.abilities[cross].type === 'ogcd' && mariLineOn(k)) return cross;
+    if (k.gcdRemaining() > 0 || k.cast || k.lockUntil > k.now) return null;
+    const dollsSafe = k.g.dolls.every(d => !BotAI.dollDanger(view, d.x, d.y, 3.2));
+    if (ok(fin) && k.g.encore >= 5 && dollsSafe) return fin;
+    if (ok(cross) && k.abilities[cross].type === 'gcd' && mariLineOn(k)) return cross;
+    if (ok(pir)) return pir;
+    if (ok(jab)) return jab;
+    return null;
+  },
 };
 
 if (typeof module !== 'undefined') module.exports = { BotAI };

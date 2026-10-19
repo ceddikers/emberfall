@@ -136,6 +136,25 @@ Object.assign(ITEM_PERKS, {
   driftblade_a4: { ab: 'slip', text: 'Slipstream gives 25 Drift instead of 15.' },
 });
 
+// ---------------------------------------------------------------- advanced tanks: Gorgemaw and Oathbroker (tanks-2)
+// Weapon shapes: 'gauntlet' (a great bronze fist) and 'stampmace' (a mace with a square seal for a head).
+Object.assign(CLASS_MAIN, { gorgemaw: 'phys', oathbroker: 'phys' });
+Object.assign(CLASS_GEAR, {
+  gorgemaw: { wtype: 'gauntlet', w: ["Recruit's Gauntlets", 'Larder-Door Gauntlets', 'Silkgut Gauntlets', 'Thunderbelly Gauntlets', 'Gauntlets of the Last Feast'], a: ["Butcher's Belly-Plate", 'Chitin Paunch', 'Stormhide Gut-Guard', 'Barrow-Bronze Girth'] },
+  oathbroker: { wtype: 'stampmace', w: ["Recruit's Seal", "Quartermaster's Seal", 'Webbed Writ-Seal', 'Stormsworn Seal', 'Seal of the Last Account'], a: ['Pantry-Ledger Surcoat', 'Silk-Bound Surcoat', 'Thunder-Notary Surcoat', 'Surcoat of the Unpaid Court'] },
+});
+Object.assign(ITEM_PERKS, {
+  gorgemaw_w1: { ab: 'gnash', text: 'Gulp heals 3.5% of your HP instead of 2%.' },
+  gorgemaw_a2: { ab: 'wide', text: 'Open Wide stays open 0.4s longer.' },
+  gorgemaw_w2: { ab: 'spit', text: 'A critical Spit hits again for about 60.' },
+  gorgemaw_w3: { ab: 'bottomless', text: 'Bottomless also shields the party.' },
+  gorgemaw_a4: { ab: 'iron', text: 'Iron Gut takes 50% off instead of 40%.' },
+  oathbroker_w1: { ab: 'collect', text: 'Your combo pays down 50% more of the Ledger.' },
+  oathbroker_a2: { ab: 'reneg', text: 'Renegotiate also shields you.' },
+  oathbroker_w2: { ab: 'settle', text: 'Settle also heals you for 5% of your HP.' },
+  oathbroker_w3: { ab: 'lien', text: 'Lien lasts 13s instead of 10s (a Guarantor\'s bond 24s instead of 20s).' },
+  oathbroker_a4: { ab: 'default', text: 'After Default the Ledger is closed for 7s instead of 10s.' },
+});
 // ---------------------------------------------------------------- Ironpalm (tank): iron knuckle wraps for a weapon, gis for armour
 CLASS_MAIN.ironpalm = 'phys';
 CLASS_GEAR.ironpalm = { wtype: 'wraps', w: ["Recruit's Knuckle Wraps", 'Butcher-Twine Wraps', 'Silk-Bound Iron Wraps', 'Thunder-Iron Wraps', 'Wraps of the Barrow Monk'], a: ['Scullery Gi', 'Webweave Gi', 'Stormcloud Gi', 'Gravestill Gi'] };
@@ -145,6 +164,26 @@ Object.assign(ITEM_PERKS, {
   ironpalm_w2: { ab: 'fist', text: 'Thousand Palms strikes a sixth time, for 30% of a strike.' },
   ironpalm_w3: { ab: 'bell', text: 'Temple Bell\'s Second Wind lasts 20s instead of 15s.' },
   ironpalm_a4: { ab: 'skin', text: 'Iron Skin cuts damage by 50% instead of 40%.' },
+});
+
+// ---------------------------------------------------------------- Threadweaver and Marionettist (classes-c)
+// Weapon shapes: 'needle' (a rapier-long sewing needle trailing thread) and 'controlbar' (a puppeteer's wooden cross).
+Object.assign(CLASS_MAIN, { threadweaver: 'mag', marionettist: 'phys' });
+Object.assign(CLASS_GEAR, {
+  threadweaver: { wtype: 'needle', w: ["Recruit's Needle", 'Trussing Needle', 'Silkspinner Needle', 'Stormstitch Needle', 'Shroudmaker\'s Needle'], a: ['Patchwork Shawl', 'Cobweb-Lace Shawl', 'Windwoven Shawl', 'Shawl of the Last Stitch'] },
+  marionettist: { wtype: 'controlbar', w: ["Recruit's Control Bar", 'Butcher-Twine Control Bar', 'Silk-Strung Control Bar', 'Lightning-Wire Control Bar', 'Control Bar of the Dead Court'], a: ['Stagehand Blacks', 'Gossamer Blacks', 'Stormproof Blacks', 'Blacks of the Final Act'] },
+});
+Object.assign(ITEM_PERKS, {
+  threadweaver_w1: { ab: 'needle', text: 'Needle\'s tug heals 30% more.' },
+  threadweaver_a2: { ab: 'tie', text: 'Tie also shields the ally you tie.' },
+  threadweaver_w2: { ab: 'mend', text: 'A Mend Seam that spends Spool heals 20% more.' },
+  threadweaver_w3: { ab: 'snip', text: 'Snap releases 25% more of what each thread carried.' },
+  threadweaver_a4: { ab: 'tapestry', text: 'Tapestry lasts 10s instead of 8s.' },
+  marionettist_w1: { ab: 'jab', text: 'Jab hits 15% harder.' },
+  marionettist_a2: { ab: 'swap', text: 'Swap also mends a torn String.' },
+  marionettist_w2: { ab: 'cross', text: 'A Cross-Cut that crosses the enemy builds 3 Encore instead of 2.' },
+  marionettist_w3: { ab: 'finale', text: 'Grand Finale\'s routine has six hits instead of five.' },
+  marionettist_a4: { ab: 'pirouette', text: 'Nothing can touch the Doll for 3s after Pirouette instead of 1.5s.' },
 });
 
 // ---------------------------------------------------------------- item effects

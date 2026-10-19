@@ -124,3 +124,47 @@ HERO_GUIDE.alembist = {
     { keys: ['f'], text: 'Grand Batch fills the bandolier with copies of your last vial.' },
   ],
 };
+
+// Gorgemaw, Oathbroker (tanks-2)
+Object.assign(HERO_GUIDE, {
+  gorgemaw: {
+    passive: { name: 'The Belly', icon: 'wide', desc: 'Open Wide just before an attack lands on you and you eat it: a quarter of the damage, and a Morsel in the shape of what you ate. Spit it back at the boss, or Digest them all to heal.' },
+    combos: [
+      { keys: ['w', 'e'], text: 'Open Wide as the tankbuster lands, then Spit the Spike straight back.' },
+      { keys: ['w', 'w', 'r'], text: 'Eat two hits back to back, then Digest both: a big heal and armour.' },
+      { keys: ['w'], text: 'Stand in a teammate\'s spread circle and eat it for them.' },
+      { keys: ['f'], text: 'Bottomless on the fight\'s worst raidwide: the party takes half.' },
+    ],
+  },
+  oathbroker: {
+    passive: { name: 'The Ledger', icon: 'settle', desc: '60% of every hit you take is written into the Ledger and billed to you 8s later. Pay it down with your combo, push it back, settle it cheap, or make the boss pay.' },
+    combos: [
+      { keys: ['q', 'q', 'q'], text: 'Dun, Levy, Collect: every hit pays the oldest lines down.' },
+      { keys: ['r'], text: 'Lien while the bills pile up: the boss pays a third of each.' },
+      { keys: ['w'], text: 'Renegotiate when a big line is about to land on top of a raidwide.' },
+      { keys: ['e'], text: 'Settle a long Ledger for half while your healer has you topped.' },
+      { keys: ['f'], text: 'Default when the Ledger would bury you: torn up, but closed for 10s.' },
+    ],
+  },
+});
+// Threadweaver and Marionettist (classes-c)
+HERO_GUIDE.threadweaver = {
+  passive: { name: 'Threads', icon: 'tie', desc: 'Allies you Tie share what lands on them: a hit on one end is split evenly along the thread, and a heal on one end runs 60% of the way down. A thread snaps past 260 px.' },
+  combos: [
+    { keys: ['w', 'e'], text: 'Tie the tank, then Mend Seam: the heal runs down the thread to you.' },
+    { keys: ['w', 'w'], text: 'Tie twice on two allies to tie them to each other. Pair the one about to be hit with someone healthy.' },
+    { keys: ['r', 'w'], text: 'Snap the web just before a spread mechanic tears it, then re-tie on the stack.' },
+    { keys: ['d'], text: 'Tighten pulls an ally out of the fire along their thread.' },
+    { keys: ['f'], text: 'Tapestry on the hit that would kill someone: for 8s it is split four ways.' },
+  ],
+};
+HERO_GUIDE.marionettist = {
+  passive: { name: 'Strings', icon: 'pull', desc: 'The Doll does the fighting. Three Strings hold it: one tears if it is pulled past 300 px from you or a blow lands on it, and with none left it goes limp for 4s.' },
+  combos: [
+    { keys: ['q', 'q', 'e'], text: 'Jab, then Cross-Cut with the boss between you and the Doll.' },
+    { keys: ['w', 'e'], text: 'Pull the Doll to the far side of the boss to line up the cut.' },
+    { keys: ['r'], text: 'Pirouette when a telegraph lands on the Doll: it spins clear of the blow.' },
+    { keys: ['d', 'e'], text: 'Swap places with the Doll to dodge, and the line is already drawn.' },
+    { keys: ['f'], text: 'Grand Finale at full Encore, once you know nothing is coming for the next few seconds.' },
+  ],
+};

@@ -34,11 +34,28 @@ const RAIDS = [   // [boss name, boss id, tank, healer, two DPS]
   ['Skitterra', 'skitterra', 'bastion:sentinel', 'alembist:volatile', 'ranger:base', 'shadowblade:base'],
   ['Volkar', 'volkar', 'bastion:base', 'alembist:apothecary', 'ranger:base', 'pyromancer:base'],
   ['the Hollow King', 'hollowking', 'bloodreaver:base', 'alembist:base', 'shadowblade:bladedancer', 'pyromancer:base'],
+  // Gorgemaw and Oathbroker (tanks-2): the base kit and each spec tanking a boss
+  ['Grubnak', 'grubnak', 'gorgemaw:base', 'cleric:base', 'ranger:base', 'pyromancer:base'],
+  ['Skitterra', 'skitterra', 'gorgemaw:glutton', 'grovekeeper:base', 'ranger:base', 'shadowblade:base'],
+  ['Volkar', 'volkar', 'gorgemaw:gizzard', 'cleric:base', 'ranger:base', 'pyromancer:base'],
+  ['Grubnak', 'grubnak', 'oathbroker:guarantor', 'cleric:base', 'ranger:base', 'pyromancer:base'],
+  ['Volkar', 'volkar', 'oathbroker:base', 'grovekeeper:base', 'ranger:base', 'pyromancer:base'],
+  ['the Hollow King', 'hollowking', 'oathbroker:collector', 'cleric:base', 'shadowblade:base', 'pyromancer:base'],
+  ['the Hollow King', 'hollowking', 'gorgemaw:base', 'grovekeeper:base', 'ranger:base', 'pyromancer:base'],
+
   // Ironpalm (the combo-paced tank): the base kit and each spec tanking a boss
   ['Grubnak', 'grubnak', 'ironpalm:base', 'cleric:base', 'ranger:base', 'pyromancer:base'],
   ['Skitterra', 'skitterra', 'ironpalm:stillwater', 'grovekeeper:base', 'ranger:base', 'shadowblade:base'],
   ['Volkar', 'volkar', 'ironpalm:avalanche', 'cleric:base', 'ranger:base', 'pyromancer:base'],
   ['the Hollow King', 'hollowking', 'ironpalm:base', 'cleric:aegis', 'ranger:base', 'pyromancer:base'],
+  // Threadweaver and Marionettist (classes-c): the base kit and each spec, and the two together
+  ['Grubnak', 'grubnak', 'bastion:base', 'threadweaver:base', 'ranger:base', 'pyromancer:base'],
+  ['Volkar', 'volkar', 'bastion:base', 'threadweaver:loomwright', 'ranger:base', 'pyromancer:base'],
+  ['the Hollow King', 'hollowking', 'bloodreaver:base', 'threadweaver:shears', 'shadowblade:base', 'pyromancer:base'],
+  ['Grubnak', 'grubnak', 'bastion:base', 'cleric:base', 'marionettist:base', 'ranger:base'],
+  ['Skitterra', 'skitterra', 'runeguard:base', 'grovekeeper:base', 'marionettist:cuttingline', 'shadowblade:base'],
+  ['the Hollow King', 'hollowking', 'bastion:base', 'cleric:aegis', 'marionettist:understudy', 'ranger:base'],
+  ['Volkar', 'volkar', 'bastion:base', 'threadweaver:base', 'marionettist:base', 'pyromancer:base'],
 ];
 // Hard smoke runs: one per boss, with the plain line-up. Bots aren't expected to clear Hard; the script just has to run
 // clean and the longest of 3 fights has to last a while (HARD_MIN seconds) before they wipe

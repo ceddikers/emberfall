@@ -36,8 +36,8 @@ function runSim(classId, skill, seed, specId, talents) {
   const rng = mulberry(seed);
   const human = mulberry(seed * 7 + 3); // separate stream for "human" randomness
   const state = { t: 0, moving: false, tookDamage: [], shield: null, mits: [], reflect: null, healDebt: 0, healing: 0, gcdHeals: 0, allyWards: [], petalShields: [] };
-  const role = ['bastion', 'bloodreaver', 'runeguard', 'ironpalm'].includes(classId) ? 'tank'
-    : ['cleric', 'grovekeeper', 'chronomancer', 'alembist'].includes(classId) ? 'healer' : 'dps';
+  const role = ['bastion', 'bloodreaver', 'runeguard', 'ironpalm'].includes(classId) || def.role === 'tank' ? 'tank'
+    : ['cleric', 'grovekeeper', 'chronomancer', 'alembist', 'threadweaver'].includes(classId) ? 'healer' : 'dps';
   const maxHp = role === 'tank' ? 32000 : 21000;
   let lastPos = 'rear';
   const env = {
@@ -93,6 +93,7 @@ function runSim(classId, skill, seed, specId, talents) {
       // a Ward on an ally (Spellwarden): assume it soaks a bit over half before it ends (an ally isn't tanking)
       if (ev.type === 'shield' && ev.tag === 'ward' && ev.target !== 'self') state.allyWards.push({ end: state.t + ev.dur });
       if (ev.type === 'shield' && ev.target === 'party') state.healDebt = Math.max(0, state.healDebt - ev.amount * 4);
+      if (TANK_SIM.emit(state, k, ev)) return;   // the advanced tanks' jaw and Ledger (below)
       if (ev.type === 'mit' && ev.target === 'self') {
         if (ev.kind === 'reflect') state.reflect = state.t + ev.dur;
         state.mits.push({ pct: ev.pct, end: state.t + ev.dur, start: state.t, kind: ev.kind });
@@ -100,6 +101,7 @@ function runSim(classId, skill, seed, specId, talents) {
     },
   };
   const k = new Kit(def, env);
+  state.kit = k;
   const inBurst = t => t % BURST_EVERY < BURST_LEN;
   const burstSoon = t => (BURST_EVERY - (t % BURST_EVERY)) % BURST_EVERY < 6 && !inBurst(t);
   const isMoveWindow = t => t > 5 && (t % MOVE_EVERY) < MOVE_LEN;
@@ -120,6 +122,7 @@ function runSim(classId, skill, seed, specId, talents) {
     if (perfect) { state.mits = state.mits.filter(m => !(m.kind === 'brace' && state.t - m.start <= 0.8)); k.notify('perfect'); }
     if (read) { state.mits = state.mits.filter(m => m !== read); k.notify('read', { b: kind === 'buster' ? 1 : 0 }); }
     let amt = raw * mult;
+    amt = TANK_SIM.hit(state, k, amt, kind);
     if (state.shield) {
       const used = Math.min(state.shield.amt, amt); state.shield.amt -= used; amt -= used;
       if (state.shield.amt <= 0) { k.notify('shieldEnd', { tag: state.shield.tag, frac: 1 }); state.shield = null; }
@@ -129,9 +132,12 @@ function runSim(classId, skill, seed, specId, talents) {
 
   // healer workload: party damage that needs healing
   function healerIncoming() {
+    const before = state.healDebt;
     if (state.t >= nextAuto) { nextAuto += AUTO_EVERY; state.healDebt += AUTO_DMG * 0.75; }
     if (state.t >= nextRaidwide) { nextRaidwide += RAIDWIDE_EVERY; state.healDebt += RAIDWIDE_DMG * 4 * 0.85; }
     if (state.t >= nextBuster) { nextBuster += BUSTER_EVERY; state.healDebt += BUSTER_DMG * 0.45; }
+    // Threadweaver: about a third of the party's damage runs along the threads (the host's 'carry' notices), more with more threads
+    if (classId === 'threadweaver' && state.healDebt > before && k.g.n) k.notify('carry', { a: (state.healDebt - before) * 0.3 * Math.min(1, k.g.n / 2) });
   }
 
   const policy = (skill === 'pro' ? PRO : NEWBIE)[classId] || (skill === 'pro' ? genericPro : genericNewbie);   // a spec plays with its class's policy
@@ -152,6 +158,7 @@ function runSim(classId, skill, seed, specId, talents) {
       if (state.t >= nextAuto) { nextAuto += AUTO_EVERY; hitTank(AUTO_DMG, 'auto'); }
       if (state.t >= nextBuster) { nextBuster += BUSTER_EVERY; hitTank(BUSTER_DMG, 'buster'); lastBusterAt = state.t; }
       if (state.t >= nextRaidwide) { nextRaidwide += RAIDWIDE_EVERY; hitTank(RAIDWIDE_DMG, 'raidwide'); }
+      TANK_SIM.tick(state, k, hitTank);
       for (const w of state.allyWards) if (state.t >= w.end) { w.done = true; k.notify('shieldEnd', { tag: 'ward', frac: 0.55 }); }
       state.allyWards = state.allyWards.filter(w => !w.done);
       if (state.shield && state.t >= state.shield.end) { k.notify('shieldEnd', { tag: state.shield.tag, frac: 1 - state.shield.amt / state.shield.max }); state.shield = null; }
@@ -444,6 +451,24 @@ const MOVERS = {
     state.posFn = tt => ({ x: Math.sin(tt * 0.9) * 160, y: Math.cos(tt * 0.6) * 60 });
     state.inBody = state.moving && t % 7 < 0.12;
   },
+  // Marionettist (classes-c): stands off the boss so the Doll's far-side station is in reach and the line crosses it. A
+  // mechanic now and then lands on the Doll (a String): a pro rarely lets it, a newbie often does, and a newbie also
+  // drifts too far back now and then (the Doll slides round to a flank and Cross-Cut misses)
+  marionettist(state, skill, human) {
+    const t = state.t;
+    if (skill === 'pro') { state.posFn = () => ({ x: -160, y: 0 }); if (state.hitBlock !== Math.floor(t / 45)) { state.hitBlock = Math.floor(t / 45); state.dollHitAt = t + 10 + human() * 30; } }
+    else {
+      if (state.walkBlock !== Math.floor(t / 6)) { state.walkBlock = Math.floor(t / 6); state.farOff = human() < 0.35; }
+      state.posFn = () => ({ x: state.farOff ? -250 : -165, y: state.farOff ? 90 : 0 });
+      if (state.hitBlock !== Math.floor(t / 15)) { state.hitBlock = Math.floor(t / 15); state.dollHitAt = t + human() * 15; }
+    }
+    if (state.dollHitAt != null && t >= state.dollHitAt) { state.dollHitAt = null; state.kit.notify('dollhit', { i: 0 }); }
+  },
+  // Threadweaver: every mechanic that moves the party pulls a thread apart
+  threadweaver(state) {
+    const block = Math.floor(state.t / MOVE_EVERY);
+    if (state.t > 5 && state.snapBlock !== block) { state.snapBlock = block; if (state.kit.g.n) state.kit.notify('snapped', {}); }
+  },
 };
 const thermStepOf = (k, id) => {
   // the element and dial change of a Thermist spell right now (for the planner): el +1 fire / -1 frost
@@ -499,6 +524,81 @@ Object.assign(PRO, {
   },
 });
 
+// ---------------------------------------------------------------- advanced tanks (Gorgemaw, Oathbroker)
+// TANK_SIM stands in for the host: the Gorgemaw's jaw (an edible telegraph lands on the tank every EDIBLE_EVERY s, on
+// top of the busters; the tank dodges it unless the jaw is open) and the Oathbroker's Ledger (OATH, the host's rules).
+const EDIBLE_EVERY = 12, EDIBLE_DMG = 6500;
+const TANK_SIM = {
+  emit(state, k, ev) {
+    if (ev.type === 'maw') { state.mawUntil = state.t + ev.dur; state.mawAll = !!ev.all; return true; }
+    if (ev.type === 'ledger') {
+      const L = state.led || (state.led = OATH.make());
+      if (ev.op === 'terms') OATH.terms(L, ev, 32000);
+      else if (ev.op !== 'cosign') { const r = OATH.op(L, ev, state.t, 32000); if (r.self) state.tookDamage.push({ t: state.t, a: r.self }); k.stats.damage += r.boss; }
+      k.notify('ledger', OATH.pack(L, state.t));
+      return true;
+    }
+    return false;
+  },
+  hit(state, k, amt, kind) {
+    if (k.def.eats && state.t < (state.mawUntil || 0)) {
+      if (kind === 'raidwide') { if (state.mawAll) { k.notify('eat', { m: 'ring' }); return amt * 0.5; } }
+      else if (kind !== 'auto') { k.notify('eat', { m: kind === 'buster' ? 'spike' : kind }); return amt * 0.25; }
+    }
+    if (k.def.ledger && state.led) amt -= OATH.write(state.led, amt, state.t);
+    return amt;
+  },
+  tick(state, k, hitTank) {
+    if (k.def.eats) {
+      if (state.nextEdible == null) state.nextEdible = 6;
+      if (state.t >= state.nextEdible) {
+        const m = ['ring', 'lance', 'fang'][Math.floor(state.t / EDIBLE_EVERY) % 3];
+        state.nextEdible += EDIBLE_EVERY;
+        if (state.t < (state.mawUntil || 0)) hitTank(EDIBLE_DMG, m);   // dodged otherwise
+      }
+    }
+    const L = state.led;
+    if (L) {
+      const bills = OATH.bills(L, state.t, DT);
+      for (const b of bills) { state.tookDamage.push({ t: state.t, a: b.self }); k.stats.damage += b.boss; }
+      if (bills.length || state.t - (state.ledAt || 0) > 1) { state.ledAt = state.t; k.notify('ledger', OATH.pack(L, state.t)); }
+    }
+  },
+};
+Object.assign(PRO, {
+  // Gorgemaw: the jaw open just before every buster and edible hit (Bottomless on raidwides), Spit what you eat
+  // (pairs together for the Glutton), Digest when the Belly is full and nothing is about to land, Iron Gut on busters
+  gorgemaw(k, ctx) {
+    const s = ctx.state, toB = ctx.nextBuster - ctx.t, toE = (s.nextEdible ?? 6) - ctx.t, toR = ctx.nextRaidwide - ctx.t;
+    const wide = abOf(k, 'wide'), max = mawMax(k), b = k.g.belly;
+    if (ready(k, 'bottomless') && toR < 0.5 && toR > 0.05) return I(k, 'bottomless');
+    if (k.charges(wide) > 0 && k.readyIn(wide) <= 0.0001 && !(ctx.t < (s.mawUntil || 0)) && ((toB < 0.5 && toB > 0.05) || (toE < 0.5 && toE > 0.05))) return I(k, 'wide');
+    if (toB < 1.2 && ready(k, 'iron') && abOf(k, 'iron').id === 'iron' && k.charges(wide) === 0) return I(k, 'iron');
+    if (abOf(k, 'iron').id === 'stonebelly' && ready(k, 'iron') && toB < 1.2) return I(k, 'iron');
+    if (weaveOk(k) && ready(k, 'digest') && (k.def.spec === 'gizzard' ? b.length >= 2 && (toR < 4 || toB < 4 || b.length >= max) : b.length >= max && k.gcdRemaining() > 0.7)) return I(k, 'digest');
+    if (k.gcdRemaining() > 0.0001) return null;
+    const spit = abOf(k, 'spit');
+    if (spit.id === 'regurgitate') { if (b.length >= Math.min(3, max) && k.usable(spit)) return I(k, 'spit'); }
+    else if (k.usable(spit) && k.def.spec !== 'gizzard' && (k.def.fuse ? (b.length >= 2 && b[0].m === b[1].m) || b.length >= max || (b.length && ctx.inBurst(ctx.t)) : b.length >= 1)) return I(k, 'spit');
+    else if (k.usable(spit) && k.def.spec === 'gizzard' && b.length >= max) return I(k, 'spit');
+    return I(k, 'gnash');
+  },
+  // Oathbroker: Lien in the burst window (Co-Sign kept up), Writ on busters, Renegotiate a big bill that's about to
+  // land, Settle at a fifth of your HP, Default (Foreclose) when the Ledger gets heavy
+  oathbroker(k, ctx) {
+    const hp = 32000, toB = ctx.nextBuster - ctx.t, tot = oathTotal(k);
+    const lien = abOf(k, 'lien');
+    if (lien.id === 'cosign') { if (ready(k, 'lien') && weaveOk(k)) return I(k, 'lien'); }
+    else if (ready(k, 'lien') && weaveOk(k) && (ctx.inBurst(ctx.t) || oathDueSoon(k, 9) > hp * 0.15)) return I(k, 'lien');
+    if (toB < 1 && ready(k, 'writ')) return I(k, 'writ');
+    const def = abOf(k, 'default');
+    if (ready(k, 'default') && weaveOk(k) && tot > hp * (def.id === 'foreclose' ? 0.32 : 0.45)) return I(k, 'default');
+    if (ready(k, 'reneg') && weaveOk(k) && oathDueSoon(k, 1.2) > hp * 0.12) return I(k, 'reneg');
+    if (ready(k, 'settle') && weaveOk(k) && def.id !== 'foreclose' && (abOf(k, 'settle').id === 'audit' ? oathAuditable(k).reduce((s, e) => s + e.a, 0) > hp * 0.12 : tot > hp * 0.22)) return I(k, 'settle');
+    if (k.gcdRemaining() > 0.0001) return null;
+    return I(k, 'collect');
+  },
+});
 // ---------------------------------------------------------------- Ironpalm (no GCD: the combo pacing, engine.js)
 // The newbie is the generic one, which already fits: it waits for the recovery to end (it never buffers), reacts 0.1-0.6s
 // late, follows the glowing key 60% of the time and otherwise presses Q, so its strings break now and then and few of
@@ -570,6 +670,38 @@ Object.assign(PRO, {
     const lock = IP_INPUT[x].lock;
     if (readUp && hitIn > 0.02 && hitIn < lock + 0.05) return null;
     return IP_SLOT[x];
+  },
+});
+
+// ---------------------------------------------------------------- classes-c (Threadweaver, Marionettist)
+Object.assign(PRO, {
+  // Threadweaver: keep the web full, Tapestry and the Cradle before raidwides, Snap when the threads have carried a lot
+  // (Shears: on cooldown), Mend Seam on Spool, and Needle the rest of the time
+  threadweaver(k, ctx) {
+    const debt = ctx.state.healDebt, n = k.g.n, toRw = ctx.nextRaidwide - ctx.t, shears = k.def.store > 1;
+    if (weaveOk(k) && ready(k, 'tie') && n < weaveMax(k)) return I(k, 'tie');
+    if (weaveOk(k) && ready(k, 'tapestry') && toRw < 2) return I(k, 'tapestry');
+    if (abOf(k, 'tighten').id === 'cradle' && weaveOk(k) && ready(k, 'tighten') && toRw < 2.5) return I(k, 'tighten');
+    if (weaveOk(k) && ready(k, 'snip') && n > 0 && (shears ? n >= 2 || debt > 4000 : debt > 7000)) return I(k, 'snip');
+    if (k.gcdRemaining() > 0.0001 || k.cast) return null;
+    const mend = abOf(k, 'mend');
+    if (mend.id === 'embroider') { if (ready(k, 'mend') && (debt > 5000 || k.g.spool >= 80)) { ctx.state.gcdHeals++; return I(k, 'mend'); } }
+    else if (k.g.spool >= WEAVE.MEND_COST && (debt > 4000 || k.g.spool >= 90)) { ctx.state.gcdHeals++; return I(k, 'mend'); }
+    if (debt > 14000 && mend.id === 'mend' && castOk(k, ctx, 1.8)) { ctx.state.gcdHeals++; return I(k, 'mend'); }
+    return castOk(k, ctx, k.castTime(abOf(k, 'needle'))) ? I(k, 'needle') : null;
+  },
+  // Marionettist: Finale at full Encore (or 3+ in a burst), Cross-Cut whenever the line is on, Pirouette / Tangle on
+  // cooldown, Pull Strings at two charges, Jab the rest
+  marionettist(k, ctx) {
+    const cross = abOf(k, 'cross');
+    if (cross.type === 'ogcd' && weaveOk(k) && ready(k, 'cross') && mariLineOn(k)) return I(k, 'cross');
+    if (weaveOk(k) && ready(k, 'pull') && k.charges(abOf(k, 'pull')) === 2) return I(k, 'pull');
+    if (abOf(k, 'swap').id === 'swap' && k.talent('marionettist_cue') && weaveOk(k) && ready(k, 'swap') && k.cdRemaining(cross) > 3) return I(k, 'swap');
+    if (k.gcdRemaining() > 0.0001 || k.cast) return null;
+    if (ready(k, 'finale') && (k.g.encore >= 5 || (ctx.inBurst(ctx.t) && k.g.encore >= 3))) return I(k, 'finale');
+    if (cross.type === 'gcd' && ready(k, 'cross') && mariLineOn(k)) return I(k, 'cross');
+    if (ready(k, 'pirouette')) return I(k, 'pirouette');
+    return ready(k, 'jab') ? I(k, 'jab') : null;
   },
 });
 

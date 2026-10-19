@@ -359,6 +359,147 @@ Other engine pieces: named moves live on the kit (`kit.moves`) and `abilityById`
 **Tested (2026-10-20):** `tools/check.js` passes with the other 12 classes' baseline unchanged (Ironpalm added at pro 1,522, newbie 832), both specs within 1% of the class, every talent at most +5.8% and full builds +13.5 to +16.9%, four new bot line-ups clearing Normal (Grubnak base 2/3, Skitterra Still Water 2/3, Volkar Avalanche 2/3, the Hollow King base 3/3) and both trials passed by the bot. In the browser (own static server, scripted key events since the preview pane runs no animation frames when hidden): hero select and hero page with the drawn icons and no missing-file requests, strings played with real key events (L L H K K landed Rising Gate then Heaven's Drop, every timed press Crisp), the string display (chips, rhythm bar, reachable moves with the plan marker), hit-stop on a Heavy, held keys not repeating, running dry into Winded, a Read on the sparring dummy's heavy swing opening a free Thousand Palms, and both trials cleared by scripted play (Still Water: 10 Reads, 8 of them tankbusters). No console errors. Not yet played by a human with a real keyboard, or over a real network connection.
 <!-- /ironpalm -->
 
+<!-- tanks-2: Gorgemaw and Oathbroker (advanced tanks, 2026-10) -->
+### Advanced tanks (added 2026-10-20)
+
+Two tanks whose survival is a plan rather than a cooldown rotation. Both carry tank threat (the shared tank multiplier) and the usual taunt on T, tied to their gauge.
+
+**Gorgemaw, the Glutton Knight** (◆◆◇, complexity 3). Signature: **eating mechanics**. Gauge: the Belly, a row of hollows holding Morsels in their shape's colour, with a jaw over it that gapes while Open Wide is up. Melee; autos are a gauntlet cuff (40).
+
+| Key | Skill | Type | What it does |
+|---|---|---|---|
+| Q | Gnash > Rend > Gulp | GCD | 220 / 300 / 390. Gulp heals 2% of your HP. |
+| W | Open Wide | oGCD | 2 charges, 14 s: the jaw is open for 1.5 s. An edible hit that lands on you deals 25% and becomes a Morsel. |
+| E | Spit | GCD | Range 300: the oldest Morsel back at the boss. Ring 420, Lance 460, Fang 490, Spike 800. The button names what it will spit. |
+| R | Digest | oGCD | 25 s: eat every Morsel. Each heals 6% of your HP and gives 5% less damage taken for 8 s (at most 30%). |
+| D | Iron Gut | oGCD | 90 s: 40% less damage for 8 s. |
+| F | Bottomless | oGCD | 120 s: for 4 s you eat everything, raidwides too. The whole party takes half from a raidwide, and each one is a Morsel for you. |
+| T | Bellow | taunt | Takes the boss and opens the jaw for 1 s. |
+
+- **What's edible** (host rule, `MAW_HOST.typeOf` in `fight.js`): any boss telegraph by its shape (circle or donut: Ring; line or cross: Lance; cone: Fang), every tankbuster (Spike), spread and proximity marks (Ring), raidwides (Ring, Bottomless only). A boss file can override with `eat: '<shape>'` or `eat: false` on a mechanic, or pass `eat` on its own `damagePlayer` calls. **Not edible:** room blasts you hide from behind a prop (`cover`: Gut Blast, the Hollow King's knell-behind-a-tomb moves), stacks and towers (the party's soak would be pointless), floor puddles, adds' hits, enrage. Volkar's Rod Strike in the open and Chain Lightning are edible as Lances (a chain swallowed ends in the mouth).
+- **Across the four bosses** the rule above decides it, so every tankbuster (Tenderize, Silk Wrap, Titan Fist, Grave Cleave) is a Spike, every plain telegraph you stand in is food by its shape (the Hollow King's sweeps are Fangs, his stomp and Crown of Graves Rings), and a teammate's circle (Larder Toss casks, Grave Marks) can be eaten whole. Room moves are not: cover blasts (Gut Blast), Lights Out, stacks and towers (Barrow Bells), custom mechanics (gaze, polarity, gale, hooks). Volkar's Rod Strike in the open and Chain Lightning are opted in.
+- **A teammate's spread or follow circle** (Grave Marks, Larder Toss casks, Spice Rack jars) that lands with an open-jawed Gorgemaw inside is swallowed whole: the owner takes nothing, the Gorgemaw takes a quarter, and the circle never goes off for anyone (the host sends `tgx` with only the eater; clients mark the telegraph gone before its impact plays).
+- **Host side:** Open Wide sends a `maw` event (`dur`, `all`); the host keeps `s.maw = { until, all }` (window capped at 4.2 s) and, when a mechanic resolves, `eatInfo` decides who eats what. `classHit` cuts the hit to 25%, marks it unavoidable and sends `fev 'eat'` (`m` shape, `mid` telegraph, `w` whole, `r` raidwide, `f` whose circle). One Morsel per mechanic per eater. The owning client's kit takes the Morsel; everyone draws the swallow.
+- **Order in the damage pipeline** (`fight.js` `damagePlayer`): vulnerability and defence, then every mitigation (Perfect Block, an Ironpalm's parry Read, reflects, cooldowns), then `classHit` (the jaw cuts the mitigated hit to 25%, then the Ledger takes its 60% of what's left), then shields, then HP. A parry or cooldown and an eat stack, the Ledger records the already-reduced hit, and a bill coming due (`raw`, `nomit`) skips mitigation and the Ledger, since it was mitigated when it was written.
+
+*Ceiling:* every buster is food, so a good Gorgemaw is never surprised by one: a charge is always ready when it lands, the Spike goes straight back, and Digest is held for when the healer is busy. Newbies reach 72% of pro damage, mostly by never spitting.
+
+**Oathbroker, the Contract Knight** (◆◆◆, complexity 4). Signature: **the Ledger**. Gauge: a page of lines, each an entry's amount and the seconds until it's due (red in the last 2 s), the total above, and the terms in force in the margin (Lien chain, Writ scroll, Moratorium hourglass, Co-Sign link, VOID while closed). Melee; autos are a tap of the stamp-mace (40).
+
+| Key | Skill | Type | What it does |
+|---|---|---|---|
+| Q | Dun > Levy > Collect | GCD | 230 / 300 / 400. Every strike pays the oldest entry down by 2% of your HP. |
+| W | Renegotiate | oGCD | 20 s: every entry comes due 4 s later. |
+| E | Settle | oGCD | 25 s: pay the whole Ledger now at half its size. |
+| R | Lien | oGCD | 60 s: for 10 s the boss pays a third of every bill that comes due. |
+| D | Writ of Protection | oGCD | 90 s: 30% less damage for 8 s, and what's written in that time is halved. |
+| F | Default | oGCD | 120 s: tear the Ledger up. It is closed for 10 s after (hits land on you in full). |
+| T | Summons | taunt | Takes the boss; its next blow on you goes 100% into the Ledger, due 3 s later than usual. |
+
+- **The Ledger** takes 60% of every hit after mitigation and bills it 8 s later as raw damage (no mitigation twice). It is **host-owned** (`s.led` in `fight.js`, rules in `OATH` in `kits.js`, shared with `tools/simulate.js`). The kit sends `ledger` events (`op`: `pay`, `reneg`, `settle`, `lien`, `writ`, `default`, `foreclose`, `summons`, `hold`, `cosign`, and `terms` every 3 s for talents and spec); every value is clamped on the host. The host sends `fev 'ledger'` with the packed page (`[[amount, seconds left, co-signer]]` plus timers) whenever it changes (at most 10 a second, and once a second while it holds anything), and `fev 'bill'` when a bill lands, so the owner's column stays exact and everyone else sees the stamp. A late joiner gets the next page within a second. A very long Ledger folds its two oldest lines together (24 at most).
+
+*Ceiling:* the Ledger is time you buy, not damage you avoid. Push the big lines past the raidwide, Settle while the healer has you topped, Lien when the bills stack, pay down with the combo, and keep Default for the moment the Ledger would bury you. Newbies reach 81% of pro damage (most of its damage is the combo either way); the gap is in survival, which the sim doesn't score.
+
+**Specializations.**
+- **Glutton** (Gorgemaw): the Belly holds 5. A Spit whose next Morsel is the same shape fires both as a **Fusion** at 2.4× (two Rings a Quake, two Lances a Skewer, two Fangs a Maul, two Spikes an Impale).
+- **Gizzard** (Gorgemaw): Digest feeds the party by shape: Ring a shield on everyone (150 each), Lance a big shield on the most hurt (360 each), Fang the party takes 15% less per Fang for 6 s (at most 30%), Spike the most hurt ally is immune for 2 s. You heal 3% per Morsel.
+- **Guarantor** (Oathbroker): Lien becomes **Co-Sign** (20 s cooldown): for 20 s, 30% of what an ally takes goes into your Ledger instead (marked lines on the page). Picks your locked ally, or the most hurt other ally.
+- **Collector** (Oathbroker): every bill also strikes the boss for half its size, and Default becomes **Foreclose**: the whole Ledger in one blow on the boss, then closed for 10 s.
+
+**Talents** (15 each; one plain number each: Wide Jaw, Grace Period). New moves: Regurgitate (III, Spit) and Stone Belly (V, Iron Gut); Audit (III, Settle) and Moratorium (V, Renegotiate). The rest change behaviour (`client/js/combat/talents.js`, tanks-2 block).
+
+| Row | Gorgemaw | Oathbroker |
+|---|---|---|
+| I | Marinade (Gulp makes the next Spit +25%), Aftertaste (Spit leaves a burn), Crunch (Gulp bites twice) | Interest (Collect scales with entries), Garnish (part of what you pay down hits the boss), Rubber Stamp (Settle hits the boss) |
+| II | Chew the Cud (Morsels heal 3%), **Wide Jaw** (2.2 s window), Table Scraps (eating a teammate's attack shields them) | **Grace Period** (due after 10 s), Amnesty (Renegotiate erases the smallest line), Escrow (3+ lines: 10% less damage) |
+| III | **Regurgitate** (the whole Belly at 75%), Iron Lining (3% less damage per Morsel held), Sour Stomach (a Morsel kept 15 s hits 40% harder) | **Audit** (15 s: lines 4 s old paid at 30%), Consolidate (Renegotiate folds the page into one line), Fine Print (lines under 2% of HP are struck off) |
+| IV | Feast (Bottomless refills Open Wide), Iron Jaw (Iron Gut opens the jaw 2 s), Overflow (a Morsel into a full Belly is spat out, not lost) | Receivership (Default: party 10% less damage), Writ of Execution (lines written under Writ are a third paid by the boss), Clean Slate (Default refreshes Renegotiate and Settle) |
+| V | **Stone Belly** (30% for 8 s, every Morsel a Spike), Bile (Digest scalds the boss per Morsel), Rumination (Digest keeps the oldest Morsel) | **Moratorium** (45 s: nothing comes due for 5 s), Tithe (every bill heals your most hurt ally for a quarter), Notary (Collect pushes the newest line 3 s) |
+
+Single talents stay under +7% pro DPS; full builds +7 to +17%.
+
+**Design changes from the plan (`docs/plans/2026-10-new-classes.md`):**
+- Gnash's pull was dropped (no boss in the game can be moved); **Gulp heals** instead, which keeps the Gorgemaw self-sufficient between meals.
+- **Digest and Settle are oGCDs with cooldowns** (25 s each): as free GCDs they were spammable answers to everything.
+- **Bellow and Summons** are the class taunts (the plan named none): one opens the jaw, the other sends the next blow straight onto the Ledger.
+- **Gizzard's party effects are by shape** rather than one flat shield, so what you chose to eat decides what the party gets.
+- **Guarantor's Co-Sign replaces Lien** (the plan had it as an extra button; there wasn't one). 30% of the ally's hit, not 60%: the Guarantor's own Ledger is already full.
+- **Collector** bills the boss for half of each bill on top (not instead of) paying it, and Foreclose replaces Default.
+- **Edibility is host-side by shape** with a per-mechanic override, so new bosses are edible by default; room blasts behind cover are inedible by rule (`cover`).
+- Rod Strike in the open and Chain Lightning were made edible (`eat: 'lance'` in `volkar.js`); nothing else in the boss files changed.
+
+**Simulator** (`tools/simulate.js`, `TANK_SIM`: an edible hit every 12 s, a buster-sized blow through the Ledger): pro DPS Gorgemaw 1498 (Glutton 1489, Gizzard 1488), Oathbroker 1485 (Guarantor 1485, Collector 1490), against the Bastion's 1498. Newbies: Gorgemaw 72%, Gizzard 80%, Oathbroker 79-81%.
+
+**Bots** (`BOT_CLASS.gorgemaw` / `.oathbroker` in `bots.js`): the Gorgemaw opens its jaw for anything edible landing on it within 0.6 s (its busters first), uses Bottomless on raidwides, Iron Gut on a buster with no charge, Spits whenever there's a Morsel (Glutton waits for a pair, Gizzard keeps them for Digest before party damage). The Oathbroker uses Writ on its busters, Renegotiates a big line due inside 1.5 s when a raidwide or buster is coming, Settles over 22% when healthy, Liens while bills are coming, and Defaults (or Forecloses) before the Ledger buries it; a Guarantor co-signs whoever a buster is aimed at, else the healer. Normal clears, 3 runs each with a Cleric, Ranger and Pyromancer: Gorgemaw Grubnak 3/3, Skitterra 2/3, Volkar 3/3, Hollow King 3/3; Oathbroker 3/3 on all four. Over 6-8 seeded runs on Grubnak: Gorgemaw 6/6 and 7/8, Glutton 3/6 and 8/8, Gizzard 6/6, Oathbroker 7/8, Guarantor 5/6, Collector 6/6 (the Bastion 6/6 and 7/8 on the same seeds; the misses are the party failing to hide from Gut Blast).
+
+**Spec trials:** Glutton *The Last Banquet* (every dish served twice: fusions win it in time), Gizzard *The Lean Winter* (two allies to keep alive through knells; only what you digest feeds them), Guarantor *The Debtor's Daughter* (the Shade's sentences fall on your ally), Collector *The Debt Called In* (a short enrage: the bills have to pay). A bot playing the spec passes all four.
+
+**Art:** no painted icons or portraits yet (`art: { icons: false, portraits: false }`); drawn glyph icons (`ICON_GLYPHS` in `hud.js`) stand in. Briefs in `docs/art/hero-portraits.md`, `ability-icons.md` and `spec-icons.md`.
+<!-- /tanks-2 -->
+<!-- classes-c: Threadweaver (healer) and Marionettist (DPS), 2026-10 -->
+**Threadweaver, Seamstress Witch** (◆◆◆, complexity 4). Signature: **Threads**. Gauge: a spool that winds fuller as your threads carry damage (Spool, 0 to 100). Ranged caster; autos flick a needle-glint (25).
+
+| Key | Skill | Type | What it does |
+|---|---|---|---|
+| Q | Needle | GCD | 1.5 s cast, 270. Each Thread on you tugs a small heal (100) to whoever is on its far end. |
+| W | Tie | oGCD | 2 charges, 6 s. Tie your target to yourself with a thread. Press it on a second ally within 4 s and those two are tied to each other instead. Up to 3 threads; a fourth drops the oldest. |
+| E | Mend Seam | GCD | 1.8 s cast, 440 heal that runs down every thread on the target at full strength. With 35 Spool it spends it, is instant and heals 35% more. |
+| R | Snap | oGCD | 25 s. Cut the threads on your target (all of yours if it has none); each releases what it carried in the last 5 s as a heal to both ends (at least 200). |
+| D | Tighten | oGCD | 20 s. Pull your target up to 220 px along their thread toward the far end. |
+| F | Tapestry | oGCD | 120 s. Ties the whole party into one web for 8 s: any hit on one of you is split evenly among everyone. |
+
+- **A thread** splits a hit on either end evenly between both ends, and a heal on one end runs 60% of the way down. Heals don't split.
+- **Threads snap** when their ends get more than 260 px apart, with a small heal (150) to both ends. A thread whose end dies is simply gone.
+- **Spool** fills from damage your threads carry (1.1 Spool per 1% of your max HP carried) and is spent by Mend Seam.
+
+*Ceiling:* tie the person about to be hit to someone healthy before the hit, read the arena to know which threads a spread mechanic will tear and Snap them yourself first, re-tie on the stack, and keep Tapestry for the hit that would kill. Newbies reach 53% of pro damage, the widest gap of any healer.
+
+**Marionettist, Puppeteer** (◆◆◆, complexity 4). Signature: **the Doll and its Strings**. Gauge: a little stage with five footlights (Encore, 0 to 5) and the three strings above it. The Marionettist stands back; a Doll on three strings does the fighting. Autos are the Doll's slap (30).
+
+| Key | Skill | Type | What it does |
+|---|---|---|---|
+| Q | Jab | GCD | The Doll stabs: 250, +1 Encore. |
+| W | Pull Strings | oGCD | 2 charges, 10 s. Fling the Doll to where you aim (within reach). It cuts what it passes through and holds that spot for 3 s. |
+| E | Cross-Cut | GCD | 8 s. The strings become blades along the line from you to the Doll: 560 and +2 Encore if the enemy is on the line, nothing otherwise. |
+| R | Pirouette | GCD | 12 s. The Doll spins: 300 around it, and nothing can touch it for 1.5 s. +1 Encore. |
+| D | Swap | oGCD | 20 s. You and the Doll trade places. |
+| F | Grand Finale | GCD | 30 s, needs 3 Encore: spends it all on five hits of 60 + 44 per Encore. The Doll can't move while it plays. |
+
+- **The Doll** stations itself on the far side of the boss on its own, and stays where Pull Strings or Swap put it for 3 s.
+- **Strings:** three. One tears if the Doll is dragged past 300 px from you (it gets yanked back) or a boss mechanic lands on it. At 0 the Doll goes limp for 4 s and then all three come back; a torn string regrows after 15 s.
+
+*Ceiling:* the boss's mechanics are aimed at you, but your damage lives somewhere else. Keep the Doll out of the red with Pull and Pirouette, stand so the boss sits on your string line for every Cross-Cut, and start Grand Finale only when you've read the next five seconds. Newbies reach 81% of pro damage: the Doll keeps hitting even when you play badly; the gap is in keeping its Strings.
+
+**Specs.**
+- **Loomwright** (The Living Web): 5 threads, and heals run two links deep (60% to the far end, then 30% on through that ally's threads).
+- **Shears** (The Cut Thread): threads store 60% more, Snap recharges in 8 s and refunds 10 Spool per thread, and Tighten becomes **Lash** (the pull plus a 260 shield for 2 s).
+- **Cutting Line** (The Bladed String): strings reach 400 px and cut any enemy they cross once a second (48), and Cross-Cut is an oGCD with 2 charges on 9 s.
+- **Understudy** (Two Dolls on One Bar): two Dolls at 58% each. The triangle between you and both Dolls is **the Stage**: an enemy inside takes 10% more damage from the whole party.
+
+**Talents.** Threadweaver: Backstitch, Cross Stitch, Taut, Thimble, Reel In, Knotwork, Embroider (replaces Mend Seam), Full Bobbin, Tension, Grand Tapestry, Selvedge, Long Thread, Cat's Cradle (replaces Tighten), Heartstring, Double Knot. Marionettist: Flourish, Lunge, Counterweight, Body Double, Mended Strings, Stand-In, Tangle (replaces Pirouette), Encore! Encore!, Second Act, Curtain Call, On Cue, Quick Change, Red Curtain (replaces Swap), Twin Strings, Final Bow.
+
+**Host-side design.** Both classes need rules no single client can judge, so the host owns them (`fight.js`, the weave and Doll blocks):
+- **Threads live on the host.** Tie, Snap, Tighten and Tapestry are combat events; the host keeps the list, measures lengths every tick, snaps long threads, splits damage in `damagePlayer` (marked `shared` so it never splits twice; enrage, falls and self-damage are never split), runs heals down the threads, and logs what each thread carried for the last 5 s. It sends `thr` (the list) on change and `thrs` (snaps); it tells the weaver `carry` (Spool), `snapped` (Knotwork) and `tiefail` (the charge comes back). Tighten is a knockback toward the partner.
+- **Where the split sits in the damage order.** A hit on a threaded player is split first, on the raw incoming amount, into equal shares for them and everyone threaded to them (Tapestry: everyone). Each share then runs through its own taker's full order (vulnerability and defence, mitigations and parry, the Gorgemaw's jaw, the Oathbroker's Ledger, shields, HP) and is marked shared, so it can never split again. So a tank's cooldown only cuts the tank's own share; an Oathbroker writes the share that reaches them into their Ledger like any other hit; and a share landing on a co-signed ally is co-signed as usual. Never split: enrage, falls, self-inflicted damage, Ledger bills and settles (they were split, if at all, when the hit was first taken, and skip the threads like they skip mitigation), and **a hit an open jaw is about to eat**: the Gorgemaw swallows it to 25% and keeps all of it, rather than handing teammates shares of a hit that was going to shrink.
+- **Dolls and the Gorgemaw.** A mechanic a Gorgemaw swallows whole (a spread circle eaten for a teammate) never resolves, so it can't catch a Doll either; one the jaw only takes a bite of still resolves for everyone else, Doll included. Dolls themselves are never edible.
+- **Dolls are reported by their owner** (10 times a second: position, state, strings) and judged by the host: a mechanic resolving on a Doll that isn't safe, limp or out of date sends the owner `dollhit`. The host rebroadcasts every Doll as `dolls` so everyone draws them, and works out the Stage (an enemy inside an Understudy's triangle takes 10% more from everyone).
+- **The simulator and the town have no host**, so the kits fall back to counting their own threads and Dolls; the sim models thread snaps and Doll hits as part of each class's movement.
+- **On screen** (`arena/stagecraft.js`): threads bow loose when slack and pull straight, brighten and shiver near 260 px; a snap flicks apart; the Doll is a jointed wooden puppet (drawn in `heroes.js`) with one string per String left, reddening as it nears its reach; the Stage is chalked on the floor and lights while the boss is inside.
+
+**Design changes from the plan (`docs/plans/2026-10-new-classes.md`):**
+- **The Stage is +10%**, not 15%: 15% made an Understudy worth more than any DPS in the party.
+- **Snap cuts one ally's threads** (all of yours if the target has none), not every thread at once, so it can be aimed at the one a spread will tear.
+- **Knotwork** gives back a Tie charge when a thread snaps on its own, rather than re-tying automatically (an automatic re-tie fought the player's own pairing).
+- **Mend Seam** is instant only when it spends 35 Spool; there's no Spool-free instant.
+- **The Doll stations itself** on the far side of the boss when you haven't placed it. Without that, every new player's Doll stood on top of them and took every hit.
+- **No raise in the Threadweaver kit**: six keys left no room. Parties with a Threadweaver need another healer's raise or play without one.
+- **Understudy's damage target is 7% under the class** (`balance: 0.93`); the Stage pays the rest to the party.
+- **A thread that snaps on its own heals both ends a little** (150), so a torn web isn't a total loss; only Snap releases what it carried.
+- **Art:** both ship without painted icons or portraits (`art: { icons: false, portraits: false }`): drawn glyph icons and sprites stand in, and briefs are in `docs/art/`.
+
+**Tested (2026-10-20):** `tools/check.js` passes with both classes in the baseline: the Threadweaver deals 1038 pro DPS (Cleric 1038) with 1423 HPS, the Marionettist 2295, specs within 5% (Understudy against its 0.93 target), every talent under +7% and the best full build +17.6%. Seven new bot line-ups clear on Normal 3 of 3: Threadweaver on Grubnak, Volkar (Loomwright) and the Hollow King (Shears); Marionettist on Grubnak, Skitterra (Cutting Line) and the Hollow King (Understudy); and both together on Volkar. A Threadweaver as the only healer on Skitterra cleared 2 of 4 in extra runs. All four spec trials pass with a bot playing the spec (Loomwright's 4 of 4). In the browser at 1280×800 (solo with bots): a Tie drawn host to client, a snap past 260 px with its effect, Tapestry tying the party, the Spool gauge and icons, both Dolls of an Understudy flanking the boss with their strings and the Stage lit on the host, Cross-Cut's string flash, a Doll going limp and recovering, and no script errors. Not yet played by a human or over a real network connection.
+<!-- /classes-c -->
+
 ### Simulation results (`node tools/simulate.js`)
 
 The sim runs a 6-minute fight twice per class. The *pro* follows that class's optimal priorities. The *newbie* model:
@@ -384,6 +525,10 @@ The sim runs a 6-minute fight twice per class. The *pro* follows that class's op
 | Driftblade | 1433 | 2407 | 60% |
 | Alembist | 632 | 1090 | 58% |
 | Ironpalm | 832 | 1522 | 55% |
+| Gorgemaw | 1076 | 1498 | 72% |
+| Oathbroker | 1197 | 1485 | 81% |
+| Threadweaver | 547 | 1038 | 53% |
+| Marionettist | 1870 | 2295 | 81% |
 
 These numbers include auto-attacks. Each class's `potMult` was lowered when autos were added, so pro damage stayed where it was. Newbies gained a little, because autos keep hitting while they move or hesitate.
 

@@ -330,6 +330,52 @@ Object.assign(TRIALS, {
   },
 });
 
+// ======================================================================= Gorgemaw, Oathbroker (tanks-2)
+Object.assign(TRIALS, {
+  glutton: {
+    cls: 'gorgemaw', spec: 'glutton', name: 'The Last Banquet',
+    lore: ['The King\'s last feast ran seven courses and no one left the table.', 'One guest ate the cooks\' every trick, twice over, and asked for more.'],
+    outro: 'The table is bare. The Glutton is not full.',
+    allies: ['ranger:base'], seconds: 58, enrage: 64, regen: 0.01,
+    script(f, k, me) {
+      // the courses come in pairs: the same dish twice, and the second is always worse
+      const twice = (fn) => { fn(); f.after(2.2, fn); };
+      k.loop([[3, () => twice(() => k.swing('stomp', 7500, 3.5))], [8, () => twice(() => k.blow(8500, 3.5, 'Carving Knife', me.id))], [8, () => k.knell(3000)], [5, () => {}]]);
+    },
+  },
+  gizzard: {
+    cls: 'gorgemaw', spec: 'gizzard', name: 'The Lean Winter',
+    lore: ['The winter the Barrow was sealed, the stores ran dry by midwinter.', 'One soldier ate the frost itself and kept the others warm with it.'],
+    outro: 'The thaw comes. The Gizzard feeds them all.',
+    allies: ['ranger:base', 'pyromancer:base'], guard: 'allies', seconds: 58, enrage: 150, regen: 0.004,
+    script(f, k, me) {
+      // the cold bites the whole line, and only what the tank swallows comes back as warmth
+      k.loop([[3, () => k.swing('stomp', 6000, 3.5)], [5, () => k.knell(4400)], [4, () => k.blow(8000, 3.5, 'Frostbite', me.id)], [5, () => k.knell(4400)], [4, () => k.swing('stomp', 6000, 3.5)]]);
+    },
+  },
+  guarantor: {
+    cls: 'oathbroker', spec: 'guarantor', name: 'The Debtor\'s Daughter',
+    lore: ['The King sentenced a debtor\'s child for her father\'s bond.', 'A knight signed his own name under hers.'],
+    outro: 'The bond is honoured. The Guarantor stands surety.',
+    allies: ['pyromancer:base'], guard: 'allies', seconds: 60, enrage: 150, regen: 0.018,
+    script(f, k, me) {
+      // the Shade keeps reaching past the knight for the girl
+      const her = () => f.alive().find(p => p.id !== me.id);
+      const sentence = () => { const h = her(); if (h) k.blow(12500, 4.5, 'Debtor\'s Sentence', h.id); };
+      k.loop([[4, sentence], [7, () => k.blow(6000, 3)], [6, sentence], [7, () => k.knell(2500)], [3, () => {}]]);
+    },
+  },
+  collector: {
+    cls: 'oathbroker', spec: 'collector', name: 'The Debt Called In',
+    lore: ['The Shade owed the realm a crown\'s worth of blood.', 'A collector came to the Barrow with the ledger, and every page was due.'],
+    outro: 'The account is closed. The Collector moves on.',
+    allies: [], seconds: 62, enrage: 75, regen: 0.01,
+    script(f, k, me) {
+      // heavy, steady blows: everything the Shade lands goes in the book, and the book gets paid
+      k.loop([[3, () => k.blow(7500, 3.2, 'Grave Strike', me.id)], [5, () => k.swing('stomp', 4500, 3.5)], [5, () => k.blow(7500, 3.2, 'Grave Strike', me.id)], [6, () => k.knell(2500)]]);
+    },
+  },
+});
 // ======================================================================= Ironpalm
 Object.assign(TRIALS, {
   stillwater: {
@@ -352,6 +398,57 @@ Object.assign(TRIALS, {
       // long, open stretches at the boss's side, broken only by a stomp to step out of: strings that never stop
       f.boss.anchor = true;
       k.loop([[6, () => k.blow(9000, 4, 'Grave Cleave', me.id)], [9, () => k.swing('stomp', 5000, 4)], [8, () => k.knell(2500)]]);
+    },
+  },
+});
+
+// ======================================================================= Threadweaver and Marionettist (classes-c)
+Object.assign(TRIALS, {
+  loomwright: {
+    cls: 'threadweaver', spec: 'loomwright', name: 'The Living Web',
+    lore: ['The King passed sentence on one courtier at a time, and each blow was meant to kill.', 'The weaver tied the whole court together, so no one stood alone.'],
+    outro: 'The sentence falls on everyone, and no one falls. The Loomwright\'s web holds.',
+    allies: ['bastion:base', 'ranger:base', 'pyromancer:base'], guard: 'allies', seconds: 60, enrage: 150, regen: 0,
+    script(f, k) {
+      // a Royal Sentence on someone who isn't the tank: more than one person can take, spread along a web it's nothing
+      const sentence = () => {
+        const al = f.alive().filter(p => p.role !== 'tank');
+        const t = al.length ? f.pick(al) : null;
+        if (t) k.blow(21000, 4, 'Royal Sentence', t.id);
+      };
+      k.loop([[3, sentence], [6, () => k.knell(3000)], [5, sentence], [6, () => k.blow(9000, 4)], [5, sentence], [5, () => k.knell(3000)]]);
+    },
+  },
+  shears: {
+    cls: 'threadweaver', spec: 'shears', name: 'The Cut Thread',
+    lore: ['In the Barrow\'s last winter, the court wore down a little every hour.', 'Then the marks came, and the seamstress cut every thread at once.'],
+    outro: 'Every thread cut on time. The Shears close.',
+    allies: ['bastion:base', 'ranger:base', 'shadowblade:base'], guard: 'allies', seconds: 60, enrage: 150, regen: 0,
+    script(f, k) {
+      // the knells wear everyone down while the web carries it; then the Grave Marks pull everyone apart
+      k.loop([[3, () => k.knell(3400, 3)], [4, () => k.blow(9000, 3.5)], [3.5, () => k.knell(3400, 3)], [3.5, () => k.marks(4200, 4.5)], [5, () => k.knell(3000, 3)], [3, () => {}]]);
+    },
+  },
+  cuttingline: {
+    cls: 'marionettist', spec: 'cuttingline', name: 'The Bladed String',
+    lore: ['The court puppeteer strung her doll with wire.', 'She never came within reach of the King, and he never escaped her lines.'],
+    outro: 'The lines are drawn. The Cutting Line holds.',
+    allies: ['bastion:base', 'cleric:base'], seconds: 55, enrage: 68, regen: 0,
+    script(f, k) {
+      // he holds the middle and stamps the ground around him again and again: stand well back and reach in with long strings
+      f.boss.anchor = true;
+      k.loop([[3, () => k.swing('stomp', 6500, 3.5)], [5, () => k.blow(9000, 3.5)], [4, () => k.swing('stomp', 6500, 3.5)], [5, () => k.knell(2500)]]);
+    },
+  },
+  understudy: {
+    cls: 'marionettist', spec: 'understudy', name: 'Two Dolls on One Bar',
+    lore: ['The King\'s players staged one last performance as the Barrow fell.', 'Two dolls on one bar, and the whole court dancing between them.'],
+    outro: 'The curtain falls to applause. The Understudy takes the stage.',
+    allies: ['bastion:base', 'cleric:base', 'ranger:base'], seconds: 50, enrage: 62, regen: 0,
+    script(f, k) {
+      // a party racing the memory's end: he holds his ground, and every second he stands on the Stage counts
+      f.boss.anchor = true;
+      k.loop([[3, () => k.blow(9000, 4)], [6, () => k.swing('sweep', 6000, 4, Math.PI / 2)], [6, () => k.knell(2800)], [5, () => k.swing('sweep', 6000, 4, -Math.PI / 2)]]);
     },
   },
 });

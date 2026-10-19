@@ -163,3 +163,57 @@ Talent moves (they borrow the icon above until painted):
 8. **Dragon Ascends** (`ironpalm/dragon`): a saffron dragon made of a single brushstroke coiling up round a raised fist.
 
 The taunt, **Beckoning Palm**, uses the Read icon.
+
+
+## Advanced tanks (added 2026-10-20)
+
+Until these arrive the game draws simple glyph icons for both classes (data.js `art.icons: false`; flip it to `true` once the six icons, the taunt, the two talent moves and the spec moves from `spec-icons.md` are all in).
+
+**Gorgemaw**: warm brown background, bronze and old iron, burnt-orange accent (the Morsel colours where a shape is shown: Ring orange, Lance pale blue, Fang red, Spike yellow).
+1. **Gnash** (`gorgemaw/gnash`): a bronze jaw-plate with blunt teeth, half shut, biting down on a chunk of something, two short bite marks beside it.
+2. **Open Wide** (`gorgemaw/wide`): the same jaw-plate hinged wide open, dark inside, a few curved speed lines being sucked into it.
+3. **Spit** (`gorgemaw/spit`): the jaw-plate in profile, a fat orange glob flying out of it to the upper right with a short tail.
+4. **Digest** (`gorgemaw/digest`): a round leather belly with a bronze plate, a flat cartoon spiral on it, three small coloured shapes (ring, bar, wedge) sinking into the spiral.
+5. **Iron Gut** (`gorgemaw/iron`): a hexagonal bronze plate studded with rivets, two small dents in it.
+6. **Bottomless** (`gorgemaw/bottomless`): a whirlpool spiral seen from above, rimmed with blunt teeth, small debris pulled into the middle.
+7. **Bellow** (`gorgemaw/taunt`): the open jaw-plate with two pairs of bold curved sound arcs coming out of it.
+
+Talent moves (they borrow the icon above until painted):
+8. **Regurgitate** (`gorgemaw/regurgitate`): the open jaw-plate with three coloured globs (orange, blue, yellow) bursting out of it in a fan.
+9. **Stone Belly** (`gorgemaw/stonebelly`): a round grey stone belly with cracks, a single yellow spike shape set into it.
+
+**Oathbroker**: dark slate background, grey vellum and steel, lilac accent, seal-wax red for the action.
+1. **Collect** (`oathbroker/collect`): a mace with a square seal-stamp head, coming down on a red wax seal, three short impact lines.
+2. **Renegotiate** (`oathbroker/reneg`): a ledger page with a lilac curved arrow round it pointing backward, the lines on the page shifting down.
+3. **Settle** (`oathbroker/settle`): a big gold wax seal with a cross stamped in it, a few flat gold coins round it.
+4. **Lien** (`oathbroker/lien`): a short lilac chain ending in a padlock that is also a red seal.
+5. **Writ of Protection** (`oathbroker/writ`): a parchment scroll unrolled upright like a shield, two wooden rollers top and bottom.
+6. **Default** (`oathbroker/default`): a ledger book torn in two down the middle, a jagged red tear line, a few loose pages.
+7. **Summons** (`oathbroker/taunt`): a red wax seal on a lilac ribbon, a flat line under it like a signature line.
+
+Talent moves (they borrow the icon above until painted):
+8. **Audit** (`oathbroker/audit`): a ledger page with a gold magnifying glass over its top lines.
+9. **Moratorium** (`oathbroker/moratorium`): a parchment-coloured hourglass with its sand stopped mid-fall, a lilac bar across it.
+## Threadweaver and Marionettist (new healer and DPS, 2026-10)
+
+Until these arrive the game draws simple glyph icons for both classes (data.js `art.icons: false`; flip it to `true` once all the icons below, the spec moves and the talent moves are in).
+
+**Threadweaver**: plum background, silver needle, one lilac accent (the thread).
+1. **Needle** (`threadweaver/needle`): a long silver needle diving diagonally down-right, a short lilac thread trailing from its eye, three tapered speed lines.
+2. **Tie** (`threadweaver/tie`): two short ends of lilac thread tied together in one fat, neat knot in the centre, the loose ends curling away.
+3. **Mend Seam** (`threadweaver/mend`): a tear in a strip of cream cloth closed by a neat row of lilac cross-stitches, the needle resting at the end of the seam.
+4. **Snap** (`threadweaver/snip`): open silver dressmaker's shears just closing on a taut lilac thread, the cut ends springing apart.
+5. **Tighten** (`threadweaver/tighten`): a lilac thread pulled into a straight hard line between two small iron rings, one ring tilted as it is yanked, two speed lines.
+6. **Tapestry** (`threadweaver/tapestry`): a small round woven tapestry seen flat-on, gold and lilac threads crossing in a bold over-under pattern, a fringe along the bottom edge.
+7. **Embroider** (`threadweaver/embroider`, talent, replaces Mend Seam): a wooden embroidery hoop holding a bold stitched flower in lilac and gold, the needle stuck in one petal.
+8. **Cat's Cradle** (`threadweaver/cradle`, talent, replaces Tighten): a star-shaped cat's-cradle string figure in lilac, held open in the air by nothing, its crossing points drawn as small knots.
+
+**Marionettist**: deep rose background, pale wood and porcelain, one rose accent.
+1. **Jab** (`marionettist/jab`): a small wooden doll's arm with a ball joint at the elbow, thrusting a slim stiletto up-right, one bright point at the tip.
+2. **Pull Strings** (`marionettist/pull`): a wooden cross-shaped control bar seen from below, three strings snapping taut and pulled hard to one side, speed lines along them.
+3. **Cross-Cut** (`marionettist/cross`): two taut strings crossing in an X, each drawn as a thin silver blade edge, a rose spark where they cross.
+4. **Pirouette** (`marionettist/pirouette`): a doll's porcelain ballet slipper on point, a bold rose spiral of motion lines wrapping round it.
+5. **Swap** (`marionettist/swap`): two curved arrows chasing each other in a circle, one pale wood and one black, a puff of flat grey smoke between them.
+6. **Grand Finale** (`marionettist/finale`): a pair of rose stage curtains drawn back from a small stage with a single bright gold spotlight disc on its floor.
+7. **Tangle** (`marionettist/tangle`, talent, replaces Pirouette): a ball of snarled rose string with a stiletto pushed through it.
+8. **Red Curtain** (`marionettist/redcurtain`, talent, replaces Swap): a heavy red velvet curtain falling closed, gold fringe along its bottom edge.

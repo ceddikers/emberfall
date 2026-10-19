@@ -313,6 +313,76 @@ Object.assign(GAUGES, {
   },
 });
 
+// ======================================================================= Threadweaver and Marionettist (classes-c)
+Object.assign(GAUGES, {
+  // Threadweaver: a wooden spool on its side, wound fuller as Spool fills. Above it a knot for every thread you could
+  // hold: tied knots glow, and turn pink, then red, as that thread is pulled toward its snapping length.
+  spool(c, k, w, h, t) {
+    const cx = w / 2, cy = 60, g = k.g, v = Math.min(1, (g.spool || 0) / 100);
+    const hw = 30, fr = 26, core = 6, wound = core + v * (fr - core - 3);
+    // the wound thread, a little lighter where the light catches the top of the coil
+    if (v > 0) {
+      rrect(c, cx - hw + 5, cy - wound, (hw - 5) * 2, wound * 2, 4, '#7a66b8', OUT, 1.5);
+      c.save(); c.beginPath(); c.rect(cx - hw + 5, cy - wound, (hw - 5) * 2, wound * 2); c.clip();
+      for (let x = cx - hw + 7; x < cx + hw - 5; x += 3.2) line(c, x, cy - wound, x - 2, cy + wound, 'rgba(230,220,255,0.28)', 1);
+      c.restore();
+      ellipse(c, cx, cy - wound * 0.55, hw - 8, wound * 0.22, 0, 'rgba(255,255,255,0.18)');
+    }
+    rrect(c, cx - hw + 5, cy - core, (hw - 5) * 2, core * 2, 2, '#b88a54', OUT, 1.2);   // the bare core
+    for (const s of [-1, 1]) {   // the two flanges
+      ellipse(c, cx + s * hw, cy, 5, fr, 0, '#a8763e', OUT, 1.8);
+      ellipse(c, cx + s * hw - s * 1.2, cy, 2.4, fr - 4, 0, '#c8965a');
+    }
+    if (v >= 0.35) { const ready = (g.spool || 0) >= 35; glow(c, cx, cy, 34, '#b89cff', (ready ? 0.18 : 0.06) + (v >= 0.7 ? Math.sin(t * 5) * 0.06 : 0)); }
+    label(c, String(Math.floor(g.spool || 0)), cx, cy + 40, '#e8ddff', 13, 'system-ui', 800);
+    // the knots: one per thread you can hold
+    const mx = weaveMax(k), threads = weaveThreads(k);
+    for (let i = 0; i < mx; i++) {
+      const x = cx + (i - (mx - 1) / 2) * 15, y = 18, th = threads[i];
+      if (!th) { circle(c, x, y, 3.2, '#251d30', OUT, 1); continue; }
+      const strain = Math.min(1, (th[2] || 0) / WEAVE.SNAP), col = strain > 0.88 ? '#ff5a7a' : strain > 0.72 ? '#ff9ad8' : '#e8ddff';
+      glow(c, x, y, 7 + strain * 4, col, 0.45 + (strain > 0.88 ? Math.sin(t * 20) * 0.25 : 0));
+      circle(c, x, y, 3.6, col, OUT, 1.1);
+      line(c, x - 2.5, y + 3, x - 4, y + 8, rgba(col, 0.7), 1); line(c, x + 2.5, y + 3, x + 4, y + 8, rgba(col, 0.7), 1);
+    }
+  },
+
+  // Marionettist: the control bar, with its three Strings hanging below (a torn one dangles short and frayed; at 0 the
+  // Doll lies limp and a little count runs down), and a row of five footlights that Encore lights from the left.
+  marionette(c, k, w, h, t) {
+    const cx = w / 2, g = k.g, limp = mariLimp(k), s = limp ? 0 : g.strings;
+    // the bar
+    c.save(); c.translate(cx, 22); c.rotate(Math.sin(t * 1.6) * 0.05);
+    rrect(c, -30, -3.5, 60, 7, 2.5, '#9a6a3c', OUT, 1.6);
+    rrect(c, -3.5, -12, 7, 24, 2.5, '#8a5a32', OUT, 1.5);
+    for (const x of [-26, 0, 26]) circle(c, x, 0, 2.2, '#e2bb58', OUT, 0.8);
+    c.restore();
+    // the strings: whole ones run down to the stage, torn ones hang short
+    for (let i = 0; i < 3; i++) {
+      const x = cx - 26 + i * 26, whole = i < s;
+      c.beginPath(); c.moveTo(x, 24);
+      if (whole) c.quadraticCurveTo(x + Math.sin(t * 2 + i) * 3, 52, x, 76);
+      else c.quadraticCurveTo(x + 3, 32, x - 2, 38 + Math.sin(t * 3 + i) * 1.5);
+      c.strokeStyle = whole ? 'rgba(246,232,240,0.9)' : 'rgba(200,170,180,0.45)'; c.lineWidth = whole ? 1.6 : 1.1; c.stroke();
+      if (whole) circle(c, x, 77, 2.4, '#d0507e', OUT, 0.8);
+    }
+    if (limp) {
+      const left = Math.max(0, g.limpUntil - k.now);
+      label(c, left.toFixed(1), cx, 64, '#ff9ab0', 13, 'system-ui', 800);
+    }
+    // footlights: Encore
+    for (let i = 0; i < 5; i++) {
+      const x = cx - 40 + i * 20, y = 98, on = i < (g.encore || 0);
+      if (on) glow(c, x, y - 3, 12, '#ffcf6a', g.encore >= 5 ? 0.65 + Math.sin(t * 8) * 0.15 : 0.45);
+      ellipse(c, x, y, 7, 4, 0, on ? '#ffe2a0' : '#2a2026', OUT, 1.2);
+      rrect(c, x - 7, y, 14, 4, 1, '#3a2c22', OUT, 1);
+    }
+    // Cutting Line: a red edge on the strings; Understudy: two little Doll heads on the bar
+    if (k.def.bladed) for (let i = 0; i < Math.min(3, s); i++) glow(c, cx - 26 + i * 26, 50, 5, '#ff6a8a', 0.4);
+    if (k.def.dolls === 2) for (const x of [-12, 12]) { circle(c, cx + x, 38, 4, '#f8efe8', OUT, 1); circle(c, cx + x - 1.5, 38, 2.6, '#1a1418'); }
+  },
+});
+
 // ======================================================================= Alembist (classes-b)
 // a small symbol for a recipe, drawn in the liquid of a vial (and on the icons)
 function alemGlyph(c, kind, x, y, s, col = '#ffffff') {
@@ -456,6 +526,88 @@ const ICON_ART = (() => {
   };
   return out;
 })();
+
+// ======================================================================= Gorgemaw, Oathbroker (tanks-2)
+// a Morsel's shape as a small glyph (the Belly, the icons): Ring a hoop, Lance a bar, Fang a wedge, Spike a star
+function mawGlyph(c, m, x, y, s, col) {
+  const ink = OUT;
+  if (m === 'ring') { c.beginPath(); c.arc(x, y, 6 * s, 0, TAU); c.lineWidth = 3.4 * s; c.strokeStyle = ink; c.stroke(); c.lineWidth = 2.2 * s; c.strokeStyle = col; c.stroke(); }
+  else if (m === 'lance') { rrect(c, x - 8 * s, y - 2.4 * s, 16 * s, 4.8 * s, 2 * s, col, ink, 1.2); }
+  else if (m === 'fang') poly(c, [x - 7 * s, y - 5 * s, x + 7 * s, y - 5 * s, x, y + 7 * s], col, ink, 1.2);
+  else { const p = []; for (let i = 0; i < 8; i++) { const a = -Math.PI / 2 + i * Math.PI / 4, r = (i % 2 ? 3 : 8) * s; p.push(x + Math.cos(a) * r, y + Math.sin(a) * r); } poly(c, p, col, ink, 1.2); }
+}
+Object.assign(GAUGES, {
+  // Gorgemaw: the Belly. Its Morsels sit in a row of hollows (oldest on the left: that's what Spit fires), each in its
+  // shape's colour. A jaw over the row opens while Open Wide is up; a Glutton's matching pair is bracketed (a Fusion).
+  belly(c, k, w, h, t) {
+    const g = k.g, max = (k.def.gauge && k.def.gauge.max) || 3, b = g.belly || [], cx = w / 2, cy = 70;
+    const R = max > 3 ? 54 : 46;
+    ellipse(c, cx, cy, R + 6, 34, 0, '#3a2018', OUT, 2.2);
+    ellipse(c, cx, cy - 4, R, 27, 0, '#5a3020');
+    const gap = (R * 2 - 12) / max;
+    for (let i = 0; i < max; i++) {
+      const x = cx - R + 6 + gap * (i + 0.5), y = cy;
+      circle(c, x, y, Math.min(12, gap * 0.42), '#24120c', 'rgba(255,220,180,0.2)', 1);
+      const m = b[i];
+      if (!m) continue;
+      const col = MAW.COLOR[m.m] || '#ff9a3a', fresh = i === b.length - 1 && k.now - (g.popAt ?? -9) < 0.35;
+      glow(c, x, y, 13, col, fresh ? 0.9 : 0.35);
+      mawGlyph(c, m.m, x, y, fresh ? 1.25 : 1, col);
+    }
+    // a Glutton's Fusion: the oldest two match
+    if (k.def.fuse && b.length >= 2 && b[0].m === b[1].m) {
+      const x0 = cx - R + 6 + gap * 0.1, x1 = cx - R + 6 + gap * 1.9;
+      c.save(); c.globalAlpha = 0.7 + Math.sin(t * 8) * 0.25; rrect(c, x0, cy - 15, x1 - x0, 30, 8, null, '#fff0c8', 1.6); c.restore();
+    }
+    // the jaw over it: shut, or gaping while Open Wide is up (Bottomless: wider, and red)
+    const open = (g.jawUntil || 0) > k.now, all = k.has('bottomless'), gape = open ? (all ? 16 : 11) : 2;
+    const jc = all ? '#ff6a3a' : '#ffd0a0';
+    c.lineCap = 'round';
+    c.beginPath(); c.moveTo(cx - 40, 26); c.quadraticCurveTo(cx, 26 - gape * 1.4, cx + 40, 26); c.lineWidth = 4; c.strokeStyle = OUT; c.stroke(); c.lineWidth = 2; c.strokeStyle = open ? jc : '#8a6a58'; c.stroke();
+    c.beginPath(); c.moveTo(cx - 40, 30); c.quadraticCurveTo(cx, 30 + gape * 0.6, cx + 40, 30); c.lineWidth = 4; c.strokeStyle = OUT; c.stroke(); c.lineWidth = 2; c.strokeStyle = open ? jc : '#8a6a58'; c.stroke();
+    if (open) { for (let i = 0; i < 6; i++) { const x = cx - 30 + i * 12; poly(c, [x - 3, 26 - gape * 0.9, x + 3, 26 - gape * 0.9, x, 26 - gape * 0.9 + 5], '#fff4e0', OUT, 0.8); }
+      glow(c, cx, 28, 26, jc, 0.3 + Math.sin(t * 10) * 0.1); }
+    label(c, String(b.length), cx, cy + 32, '#ffe0c0', 13, 'system-ui', 800);
+    if (k.has('stone')) { c.save(); c.globalAlpha = 0.55; ellipse(c, cx, cy, R + 9, 37, 0, null, '#c8c0b0', 2); c.restore(); }
+  },
+
+  // Oathbroker: the Ledger, as a page. Every entry is a line: its amount (a bar and the number) and the seconds until it
+  // comes due, oldest at the top; a line is red in its last 2s. The total is written above. Terms show in the margin:
+  // Lien (a chain), Writ (a scroll), Moratorium (an hourglass: everything held), Default (the page crossed out and void),
+  // a Guarantor's bond (a link, with its seconds).
+  ledger(c, k, w, h, t) {
+    const g = k.g, L = (g.ledger || []).slice().sort((a, b) => a.due - b.due), now = k.now;
+    const x0 = 22, x1 = w - 8, top = 22, rowH = 10.5, rows = 8;
+    rrect(c, x0 - 4, top - 18, x1 - x0 + 8, h - top + 12, 4, '#e8e0cc', OUT, 1.6);
+    rrect(c, x0 - 4, top - 18, x1 - x0 + 8, 14, 4, '#d4c8ae');
+    const maxHp = (k.env && k.env.maxHp && k.env.maxHp()) || 1, tot = g.total || 0;
+    label(c, String(Math.round(tot)), (x0 + x1) / 2, top - 11, tot > maxHp * 0.35 ? '#a01828' : '#2a2034', 12, 'system-ui', 800);
+    const frozen = (g.frozen || 0) > now;
+    for (let i = 0; i < rows; i++) { const y = top + i * rowH; line(c, x0, y + rowH - 1, x1, y + rowH - 1, 'rgba(60,40,60,0.18)', 1); }
+    const shown = L.slice(0, rows);
+    shown.forEach((e, i) => {
+      const y = top + i * rowH, left = Math.max(0, e.due - now), late = left < 2;
+      const bw = Math.min(1, e.a / (maxHp * 0.12)) * 46;
+      c.fillStyle = e.co ? 'rgba(120,100,180,0.55)' : late ? 'rgba(190,40,56,0.6)' : 'rgba(60,44,70,0.35)'; c.fillRect(x0 + 2, y + 2, Math.max(2, bw), rowH - 4);
+      label(c, String(Math.round(e.a)), x0 + 66, y + rowH / 2 + 0.5, late ? '#a01828' : '#2a2034', 10, 'system-ui', 700);
+      label(c, (g.holdUntil || 0) > now ? '—' : left.toFixed(left < 10 ? 1 : 0), x1 - 14, y + rowH / 2 + 0.5, late ? '#a01828' : '#5a4a6a', 10, 'system-ui', 700);
+    });
+    if (L.length > rows) label(c, '+' + (L.length - rows), x1 - 14, top + rows * rowH + 4, '#5a4a6a', 9, 'system-ui', 700);
+    // the margin: the terms in force
+    let my = top + 4;
+    const pip = (draw, lit) => { c.save(); c.globalAlpha = lit ? 1 : 0; draw(8, my); c.restore(); if (lit) my += 18; };
+    pip((x, y) => { circle(c, x, y, 3.5, null, '#b8a8e0', 1.6); circle(c, x, y + 6, 3.5, null, '#b8a8e0', 1.6); }, (g.lienUntil || 0) > now);
+    pip((x, y) => { rrect(c, x - 5, y - 4, 10, 10, 2, '#f0e8d8', OUT, 1); line(c, x - 3, y, x + 3, y, '#6a5a4a', 1); line(c, x - 3, y + 3, x + 3, y + 3, '#6a5a4a', 1); }, (g.writUntil || 0) > now);
+    pip((x, y) => { poly(c, [x - 4, y - 4, x + 4, y - 4, x, y + 1], '#e8dcc0', OUT, 1); poly(c, [x - 4, y + 6, x + 4, y + 6, x, y + 1], '#e8dcc0', OUT, 1); }, (g.holdUntil || 0) > now);
+    pip((x, y) => { ellipse(c, x - 2, y + 1, 4, 3, 0, null, '#b8a8e0', 1.6); ellipse(c, x + 2, y + 1, 4, 3, 0, null, '#b8a8e0', 1.6); label(c, String(Math.ceil(Math.max(0, g.cosignUntil - now))), x, y + 11, '#b8a8e0', 8, 'system-ui', 700); }, g.cosign != null && (g.cosignUntil || 0) > now);
+    if (frozen) {
+      c.save(); c.globalAlpha = 0.85; line(c, x0, top + 2, x1, top + rows * rowH - 4, '#a01828', 2.5); line(c, x1, top + 2, x0, top + rows * rowH - 4, '#a01828', 2.5); c.restore();
+      label(c, 'VOID ' + Math.ceil(g.frozen - now), (x0 + x1) / 2, top + rows * rowH / 2, '#a01828', 12, 'Cinzel, Georgia, serif', 800);
+    }
+    // a bill just stamped: a red seal flashes in the corner
+    if (g.stampAt != null && now - g.stampAt < 0.5) { const k2 = 1 - (now - g.stampAt) / 0.5; c.save(); c.globalAlpha = k2; circle(c, x1 - 6, top - 11, 7 + (1 - k2) * 4, '#c04a5a', OUT, 1.2); c.restore(); }
+  },
+});
 
 // ======================================================================= Ironpalm (tank)
 // The three inputs as small glyphs: Light an open palm (a round pad), Heavy a fist (a squared block), Kick a foot (a wedge)

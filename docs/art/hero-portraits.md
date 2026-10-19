@@ -84,3 +84,23 @@ No spec portraits exist yet, so this one sets the character; paint it first and 
 
 13. **Ironpalm (Monk Brawler).** Accent: saffron.
    A broad, compact man in his late thirties with warm brown skin, a **shaved head with a short black topknot** at the back, a nose that has clearly been broken more than once, a notch out of one ear and calm, heavy-lidded dark eyes. He wears a **sleeveless saffron gi** crossed at the chest and tied with a **maroon sash**, a string of dark wooden **prayer beads** round his neck, and he is barefoot. His forearms are bound in off-white **cloth wraps**, and over the knuckles of each fist the wraps hold a **flat plate of dull iron**, scuffed bright at the edges. He stands side-on in a loose guard: the lead hand open and raised at chin height, palm out, the rear fist low at his hip. A slow, almost sleepy half-smile, like a man who has already seen your swing coming. Warm saffron-ochre background with a single flat dark circle behind the head, like a temple bell seen end-on.
+
+
+## Advanced tanks (added 2026-10-20)
+
+No spec portraits yet, so these set the faces; paint them first and use them as the reference for the spec portraits (`spec-icons.md`). Until a file arrives the game shows the animated sprite (data.js `art.portraits: false`).
+
+14. **Gorgemaw (Glutton Knight).** Accent: burnt orange.
+   A huge, round man in his fifties with a ruddy, cheerful face, heavy jowls, a broken nose and small bright eyes under thick ginger brows; a short ginger beard with crumbs in it. He wears banded leather over an enormous belly with a **bronze belly-plate** riveted on top, iron pauldrons, and **two enormous bronze gauntlets**, one of them resting on his stomach. His **iron helm has a hinged bronze jaw-plate at the front, swung open** so his grinning mouth shows, its plate edged with blunt bronze teeth. A napkin is tucked into his collar. He looks pleased with himself, mid-chew. Burnt-orange background with a pale round plate shape behind the head.
+
+15. **Oathbroker (Contract Knight).** Accent: grey-lilac, with seal-wax red.
+   A tall, thin woman in her forties with a long, severe face, ash-blonde hair cut short under a **grey hood worn over a steel half-helm**, pale skin, ink stains on two fingers and cool grey eyes. She wears a long **grey surcoat over plate**, a lilac line down its front. A **thick ledger book hangs from a chain at her hip**, a red wax seal on its cover, and she holds a **mace whose head is a square seal-stamp**, a dab of red wax on its face, tapping it against her palm. One eyebrow raised, as if you owe her something and she knows exactly how much. Grey-lilac background with a flat red seal shape behind the head.
+## New healer and DPS: Threadweaver and Marionettist (2026-10)
+
+As with the Alembist, these two set the characters: paint them first and use them for the spec portraits in `spec-icons.md`. Until they arrive the game shows the animated sprite.
+
+16. **Threadweaver (Seamstress Witch).** Accent: lilac.
+   A tall, bony woman in her fifties with pale skin, a long nose, deep laugh lines and sharp grey eyes behind **small round spectacles on a chain**. Grey-streaked black hair falls loose from under a **wide plum witch's hat with a crooked, drooping tip**, a few pins and a threaded needle stuck in its band. She wears a **lilac crocheted shawl** over a high-necked dark dress, three wooden spools of thread (lilac, gold, white) hanging at her belt. She holds a **needle as long as a rapier** upright beside her face, a single lilac thread run through its eye and looped once round her other hand, drawn taut. A knowing, crooked half-smile, as if she already knows who will need stitching next. Pale lilac background with a loose loop of thread drawn behind the head.
+
+17. **Marionettist (Puppeteer).** Accent: rose.
+   A slight, androgynous young puppeteer with pale skin, a narrow chin and large, dark, unblinking eyes, all in **stagehand black**: a close black hood and a fitted black jerkin, black gloves. Both hands hold up a **wooden cross-shaped control bar** in front of the chest, three pale strings running down out of frame. Just behind one shoulder, smaller and nearer the viewer, hangs the **Doll**: a porcelain face with rose cheeks and painted lashes, black lacquered hair with a rose bow, a white ruff, a rose-and-cream harlequin tunic, wooden ball-jointed arms, a slim stiletto in its hand. The puppeteer's expression is blank and still; the Doll's painted face smiles. Deep rose background with a pale proscenium-arch shape behind the two heads.

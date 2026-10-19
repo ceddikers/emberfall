@@ -225,6 +225,8 @@ class FightSim {
     this.updateSweeps();
     this.updateFires();
     for (const fn of this.tickers) fn(dt);
+    if (this.updateClass) this.updateClass(dt);   // Ledgers coming due (end of this file)
+    this.weaveTick(dt); this.dollTick(dt);   // classes-c: threads and Dolls (block at the end of this file)
     this.updatePlayers(dt);
     if (this.state !== 'live') return;
     if (this.alive().length === 0) return this.end('wipe');
@@ -246,6 +248,7 @@ class FightSim {
     this.state = result;
     this.mechs.clear(); this.puddles = []; this.tethers.clear(); this.adds.clear(); this.zones = []; this.healPools = [];
     this.rollers.clear(); this.reels.clear(); this.sweeps.clear();
+    this.weaveClear();   // classes-c: threads, Tapestry and Dolls
     this.events = []; this.broadcastNext(true);
     this.broadcastAdds();
     this.broadcastParty();
@@ -335,6 +338,7 @@ class FightSim {
         }
         if (this.boss.untargetable) return;
         if (this.boss.exposedUntil > this.t) amt = Math.round(amt * (1 + (this.boss.exposed || 0)));   // staggered: takes more
+        if (this.stageUntil > this.t) amt = Math.round(amt * (1 + DOLL_HOST.STAGE));   // standing on an Understudy's Stage (classes-c)
         this.boss.hp = Math.max(0, this.boss.hp - amt);
         this.burstBrand(pid);
         st.damage += amt;
@@ -342,7 +346,12 @@ class FightSim {
         if (this.boss.hp <= 0) this.end('clear');
         break;
       }
-      case 'heal': this.applyHeal(pid, ev.target === 'party' ? null : this.resolveTarget(pid, ev.target, ev.not), ev.amount, ev.target === 'party'); break;
+      case 'heal': {
+        const tid = ev.target === 'party' ? null : this.resolveTarget(pid, ev.target, ev.not);
+        this.applyHeal(pid, tid, ev.amount, ev.target === 'party');
+        if (tid != null) this.threadHeal(pid, tid, ev.amount, ev.seam);   // a heal runs down the threads (classes-c)
+        break;
+      }
       case 'hot':
         for (const tid of targetsOf(ev.target)) {
           const ts = this.ps.get(tid); if (!ts || !ts.alive) continue;
@@ -407,6 +416,8 @@ class FightSim {
       }
       case 'snap': this.snapReel(pid); break;   // a dash snapped the silk reeling this player in
       case 'taunt': this.taunt(pid, typeof ev.tgt === 'string' ? ev.tgt : 'boss'); break;
+      case 'maw': case 'ledger': if (this.classEvent) this.classEvent(pid, ev); break;   // Gorgemaw, Oathbroker (end of this file)
+      case 'tie': case 'snip': case 'tighten': case 'tapestry': case 'tug': this.weaveEvent(pid, ev); break;   // Threadweaver (classes-c)
     }
   }
   // A thrown vial (Alembist) shatters at an ally's feet (target 'party': it reaches everyone). Everyone alive within r
@@ -491,11 +502,13 @@ class FightSim {
   damagePlayer(p, raw, opts = {}) {
     const s = p.s || this.ps.get(p.id);
     if (!s || !s.alive) return 0;
-    let amt = opts.raw ? raw : raw * this.scale.dmg * (this.hard ? 1.25 : 1) * (1 + this.boss.dmgUp);
+    // (opts.scaled: already in small numbers, e.g. a share passed along a thread, but still mitigated as usual)
+    let amt = opts.raw || opts.scaled ? raw : raw * this.scale.dmg * (this.hard ? 1.25 : 1) * (1 + this.boss.dmgUp);
+    if (!opts.shared) amt = this.threadSplit(p, s, amt, opts);   // threads split the hit evenly along them (classes-c)
     if (s.vulnEnd > this.t && !opts.raw) amt *= 1 + s.vuln;
     if (s.def && !opts.raw) amt *= 1 - s.def;
     let mult = 1, perfect = null, reflect = null, invuln = false, read = null;
-    for (const m of s.mits) {
+    for (const m of (opts.nomit ? [] : s.mits)) {   // (nomit: a bill from the Ledger, mitigated when it was written)
       if (m.kind === 'invuln') { invuln = true; break; }
       if (m.kind === 'living') continue;
       if (m.kind === 'brace' && this.t - m.start <= FIGHT.PERFECT_WINDOW && !perfect) { perfect = m; mult *= 0.4; continue; }
@@ -518,6 +531,7 @@ class FightSim {
     }
     const before = amt;
     amt *= mult;
+    if (this.classHit) amt = this.classHit(p, s, amt, opts);   // a Gorgemaw's open jaw, an Oathbroker's Ledger (end of this file)
     const st = this.stats[p.id];
     st.mitigated += Math.round(before - amt);
     if (s.shield > 0 && amt > 0) {
@@ -539,6 +553,7 @@ class FightSim {
     this.emit({ t: 'pdmg', id: p.id, a: amt, k: opts.kind || 'hit', hp: Math.max(0, s.hp), dd: opts.avoidable ? 1 : 0 });
     if (s.hp <= 0) {
       s.hp = 0; s.alive = false; s.shield = 0; s.mits = []; s.hots = []; s.threat = 0; s.diedAt = this.t; this.dropThreat(p.id);
+      if (this.classDeath) this.classDeath(p, s);
       st.deaths++;
       this.emit({ t: 'fev', k: 'death', id: p.id });
     }
@@ -604,10 +619,26 @@ class FightSim {
     const inside = this.alive().filter(p => SHAPES.contains(m.shape, p.x, p.y, pad) && !(cov && cov.safe.has(p.id)));
     const hits = [];
     let fail = 0;   // a stack or soak nobody (or too few) answered: the clients play it as a failure
-    const hit = (p, dmg, kind, avoidable) => { this.damagePlayer(p, dmg, { kind, avoidable }); hits.push(p.id); };
+    // a Gorgemaw with its jaw open eats what lands on it (eatInfo, end of this file): eat.on take it as a Morsel,
+    // eat.whole swallows the whole mechanic for everyone (a teammate's spread circle), eat.raid halves a raidwide
+    const eat = this.eatInfo ? this.eatInfo(m, inside) : null;
+    const hit = (p, dmg, kind, avoidable) => {
+      const ea = eat && eat.on && eat.on.some(q => q.id === p.id) ? eat.type : null;
+      this.damagePlayer(p, dmg, { kind, avoidable: avoidable && !ea, eat: ea, mid: m.id }); hits.push(p.id);
+    };
+    if (eat && eat.whole) {
+      this.damagePlayer(eat.whole, m.dmg, { kind: m.tag || m.type, eat: eat.type, mid: m.id, whole: 1, owner: eat.owner });
+      this.emit({ t: 'tgx', id: m.id, hits: [eat.whole.id] });
+      if (cov) for (const pr of cov.chip) this.hitProp(pr, 1, m.tag);
+      if (m.onResolve) m.onResolve([eat.whole], [eat.whole.id], cov);
+      return;
+    }
     switch (m.type) {
       case 'aoe': for (const p of inside) hit(p, m.dmg, m.tag || 'aoe', m.avoidable); break;
-      case 'raidwide': for (const p of this.alive()) if (!(cov && cov.safe.has(p.id))) hit(p, m.dmg, 'raidwide', false); break;
+      case 'raidwide':
+        for (const p of this.alive()) if (!(cov && cov.safe.has(p.id))) hit(p, m.dmg * (eat && eat.raid ? MAW_HOST.RAID : 1), 'raidwide', false);
+        if (eat && eat.raid) for (const p of eat.raid) this.eaten(p, eat.type, { mid: m.id, raid: 1 });
+        break;
       case 'stack': {
         // m.dmg is the total, split among everyone inside; too few people and it hits harder
         const need = Math.min(m.need || 1, this.alive().length);
@@ -647,6 +678,7 @@ class FightSim {
         break;
     }
     this.emit(fail ? { t: 'tgx', id: m.id, hits, fail } : { t: 'tgx', id: m.id, hits });
+    this.dollMech(m, cov);   // a Marionettist's Doll caught in it (classes-c)
     if (cov) for (const pr of cov.chip) this.hitProp(pr, 1, m.tag);
     if (m.onResolve) m.onResolve(inside, hits, cov);
   }
@@ -1036,4 +1068,385 @@ class FightSim {
   }
 }
 
-if (typeof module !== 'undefined') module.exports = { FIGHT, FightSim, segDist, playerBaseHp };
+// ===================================================================================================================
+// ADVANCED TANKS (tanks-2): the host's side of the Gorgemaw's jaw and the Oathbroker's Ledger. Both classes run their
+// kits on their own clients like everyone else; these are the parts that touch HP, which only the host owns.
+// ===================================================================================================================
+// Gorgemaw: an open jaw (a `maw` event, at most WIN s) eats what lands on it. What's edible, and as which Morsel:
+//   aoe: by shape (circle / donut: ring, rect / cross: lance, cone: fang)   spread: ring   buster: spike   proximity: ring
+//   raidwide: only through Bottomless (`all`), which halves it for everyone and gives a ring per hit
+// Not edible: towers and stacks (they want bodies), tethers, gazes, knockbacks and gales, Lights Out, rollers, sweeps,
+// puddles and fire, adds, autos, the enrage. A mechanic can say otherwise with `eat: false` or `eat: '<shape>'`, and a
+// boss's own hit can be edible with damagePlayer(p, dmg, { eat: '<shape>', mid }) (Volkar's Rod Strike and Chain Lightning).
+const MAW_HOST = { EAT: 0.25, RAID: 0.5, WIN: 4.2 };
+MAW_HOST.typeOf = m => {
+  if (m.eat === false) return null;
+  if (typeof m.eat === 'string') return m.eat;
+  if (m.cover) return null;   // a blast you hide from (Gut Blast, Dead Wind...) fills the room: nothing to bite
+  switch (m.type) {
+    case 'aoe': { const k = m.shape && m.shape.kind; return k === 'circle' || k === 'donut' ? 'ring' : k === 'rect' || k === 'cross' ? 'lance' : k === 'cone' ? 'fang' : null; }
+    case 'spread': case 'proximity': case 'raidwide': return 'ring';
+    case 'buster': return 'spike';
+  }
+  return null;
+};
+Object.assign(FightSim.prototype, {
+  // can this player eat right now? (raid: only Bottomless eats raidwides)
+  canEat(p, raid) { const s = p.s || this.ps.get(p.id); return !!(s && s.alive && s.maw && s.maw.until > this.t && (!raid || s.maw.all)); },
+  eatInfo(m, inside) {
+    let anyone = false;
+    for (const s of this.ps.values()) if (s.maw && s.maw.until > this.t && s.alive) { anyone = true; break; }
+    if (!anyone) return null;
+    const type = MAW_HOST.typeOf(m);
+    if (!type) return null;
+    const eaters = this.alive().filter(p => this.canEat(p));
+    if (!eaters.length) return null;
+    if (m.type === 'raidwide') { const r = eaters.filter(p => p.s.maw.all); return r.length ? { type, raid: r } : null; }
+    // a circle on one person (a spread, a jar or a cask chasing them): whoever eats it takes it for them
+    if (m.type === 'spread' || (m.type === 'aoe' && m.follow != null && m.shape.kind === 'circle')) {
+      const e = eaters.find(p => inside.some(q => q.id === p.id));
+      if (e) return { type, whole: e, owner: m.follow !== e.id ? m.follow : null };
+      return null;
+    }
+    if (m.type === 'buster') { const tg = m.target ?? m.follow, e = eaters.find(p => p.id === tg); return e ? { type, on: [e] } : null; }
+    const on = m.type === 'proximity' ? eaters : eaters.filter(p => inside.some(q => q.id === p.id));
+    return on.length ? { type, on } : null;
+  },
+  // a Morsel for p: the owner's kit takes it (fev 'eat'); every client draws the mechanic going down (w: all of it)
+  eaten(p, type, o = {}) {
+    const s = p.s || this.ps.get(p.id);
+    if (!s) return;
+    const key = o.mid != null ? String(o.mid) : null;
+    if (key && s.ateKey === key) return;   // one Morsel per mechanic
+    if (key) s.ateKey = key;
+    s.ate = (s.ate || 0) + 1;
+    this.emit({ t: 'fev', k: 'eat', id: p.id, m: type, mid: typeof o.mid === 'number' ? o.mid : null, w: o.whole ? 1 : 0, r: o.raid ? 1 : 0, f: o.owner ?? null });
+  },
+  // every hit on a player passes through here (damagePlayer, after mitigation): the jaw, then the Ledger
+  classHit(p, s, amt, opts) {
+    if (amt <= 0 || opts.kind === 'enrage' || opts.kind === 'fall') return amt;
+    if (opts.eat && this.canEat(p)) {
+      amt *= MAW_HOST.EAT;
+      opts.avoidable = false;
+      this.eaten(p, opts.eat, { mid: opts.mid, whole: opts.whole, owner: opts.owner });
+    }
+    if (opts.raw || opts.nomit) return amt;
+    if (s.led) amt -= OATH.write(s.led, amt, this.t);
+    // co-signed by a Guarantor: part of the hit goes onto their Ledger
+    for (const g of this.ps.values()) {
+      const L = g.led;
+      if (!L || g === s || !g.alive || !L.cosign || L.cosign.id !== p.id || L.cosign.until <= this.t) continue;
+      amt -= OATH.write(L, amt, this.t, { co: p.id });
+      break;
+    }
+    return amt;
+  },
+  classDeath(p, s) {
+    s.maw = null;
+    if (s.led) { s.led.e = []; s.led.cosign = null; s.led.ver++; }
+  },
+  classEvent(pid, ev) {
+    const s = this.ps.get(pid), me = this.players().find(q => q.id === pid);
+    if (!s || !me) return;
+    if (ev.type === 'maw') {
+      if (me.cls !== 'gorgemaw') return;
+      const dur = Math.max(0, Math.min(MAW_HOST.WIN, Number(ev.dur) || 0));
+      s.maw = { until: this.t + dur, all: !!ev.all && dur > 1 };
+      return;
+    }
+    if (me.cls !== 'oathbroker') return;
+    const L = s.led || (s.led = OATH.make());
+    if (ev.op === 'terms') { OATH.terms(L, ev, s.maxHp); return; }
+    if (ev.op === 'cosign') {
+      // a Guarantor's bond: the ally named (yourself or nobody: the most hurt other ally)
+      let tid = typeof ev.target === 'number' ? ev.target : null;
+      const ok = id => { const q = this.ps.get(id); return q && q.alive && !q.left && id !== pid; };
+      if (!ok(tid)) { tid = null; let bf = Infinity; for (const q of this.alive()) { if (q.id === pid) continue; const f = q.s.hp / q.s.maxHp; if (f < bf) { bf = f; tid = q.id; } } }
+      L.cosign = tid != null ? { id: tid, until: this.t + Math.max(0, Math.min(24, Number(ev.dur) || 0)) } : null;
+      L.ver++;
+      this.sendLedger(pid, true);
+      return;
+    }
+    const r = OATH.op(L, ev, this.t, s.maxHp);
+    const p = this.alive().find(q => q.id === pid);
+    if (r.self > 0 && p) { this.damagePlayer(p, r.self, { kind: 'settle', raw: true, nomit: true }); this.emit({ t: 'fev', k: 'bill', id: pid, a: Math.round(r.self), s: 1 }); }
+    if (r.boss > 0) this.ledgerStrike(pid, r.boss);
+    if (ev.op === 'default' || ev.op === 'foreclose') this.emit({ t: 'fev', k: 'default', id: pid, b: Math.round(r.boss) });
+    this.sendLedger(pid, true);
+  },
+  // the boss pays: damage credited to the Oathbroker, with a tank's threat
+  ledgerStrike(pid, amt) {
+    const s = this.ps.get(pid), b = this.boss;
+    if (!s || b.untargetable || this.state !== 'live' || !(amt > 0)) return;
+    amt = Math.round(Math.min(amt, 15000));
+    b.hp = Math.max(0, b.hp - amt);
+    this.stats[pid].damage += amt;
+    s.threat += amt * this.threatMult(s, null);
+    if (b.hp <= 0) this.end('clear');
+  },
+  // the owner's copy of a Ledger (and every client's, for the stamps): on every change, and each second while it holds
+  sendLedger(pid, force, bill) {
+    const s = this.ps.get(pid), L = s && s.led;
+    if (!L) return;
+    const busy = L.e.length || this.t < L.frozen || this.t < L.lien || this.t < L.hold || (L.cosign && L.cosign.until > this.t);
+    if (!force && L.sentVer === L.ver && !(busy && this.t - (L.sentAt ?? -99) >= 1)) return;
+    if (!force && L.sentVer !== L.ver && this.t - (L.sentAt ?? -99) < 0.1) return;   // at most ten a second
+    L.sentVer = L.ver; L.sentAt = this.t;
+    this.emit(Object.assign({ t: 'fev', k: 'ledger', id: pid }, OATH.pack(L, this.t), bill ? { bill: Math.round(bill) } : null));
+  },
+  updateClass(dt) {
+    for (const [pid, s] of this.ps) {
+      const L = s.led;
+      if (!L || s.left) continue;
+      if (!s.alive) { if (L.e.length) { L.e = []; L.ver++; } this.sendLedger(pid); continue; }
+      const due = OATH.bills(L, this.t, dt);
+      let billed = 0;
+      for (const b of due) {
+        const p = this.alive().find(q => q.id === pid);
+        if (!p) break;
+        if (b.self > 0) { this.damagePlayer(p, b.self, { kind: 'ledger', raw: true, nomit: true }); billed += b.self; }
+        if (b.boss > 0) this.ledgerStrike(pid, b.boss);
+        if (b.heal > 0) this.applyHeal(pid, this.resolveTarget(pid, 'lowest'), b.heal);
+        this.emit({ t: 'fev', k: 'bill', id: pid, a: Math.round(b.self), b: Math.round(b.boss), sm: b.small ? 1 : 0 });
+        if (this.state !== 'live') return;
+      }
+      if (L.cosign && L.cosign.until <= this.t) { L.cosign = null; L.ver++; }
+      this.sendLedger(pid, false, billed || null);
+    }
+  },
+});
+
+// CLASSES-C: the Threadweaver's threads and the Marionettist's Dolls, host side. One block of FightSim methods; the core
+// calls in with one line each: tick (weaveTick, dollTick), onEvent (weaveEvent, threadHeal), damagePlayer (threadSplit),
+// resolveMech (dollMech), end (weaveClear), and the Stage's bonus in the 'damage' case.
+//
+// Threads: { id, from (the weaver), a, b, at, log: [[t, carried]], sh (heal when it snaps on its own), st (how much of
+// what it carried Snap releases), dp (Loomwright: heals run two links deep), hold (no snapping before) }.
+//   - Any hit on one end is split evenly among it and everyone threaded to it (Tapestry: everyone), before mitigation;
+//     each share then runs through its taker's own damage order (vulnerability, mitigation and parry, the Gorgemaw's
+//     jaw, the Oathbroker's Ledger, shields), marked shared so it never splits again. Enrage, falls, self-inflicted
+//     damage, Ledger bills and a hit an open jaw is about to eat are never split.
+//   - A heal on one end runs 60% down each thread (Mend Seam's `seam`: 100%; Embroider's seam 2 goes a link further).
+//   - Ends more than 260 px apart snap the thread: a small heal to both, and the weaver hears ('snapped').
+//   - The weaver hears what their threads carried ('carry', twice a second), which fills Spool.
+//   - Everyone gets the list ('thr', on change and every second) and draws the threads, and every snap ('thrs').
+// Dolls: each Marionettist reports where its Dolls are (setDoll: a human's client 10 times a second, a bot's kit every
+// tick). A telegraph that resolves over one ('dollhit' to its owner) tears a String, the same shapes that hit a player:
+// circles and cones, spreads, a tankbuster's cleave, a cover blast it isn't sheltered from, rollers and storm walls.
+// Two Dolls and their owner make the Stage: with the boss's centre inside that triangle, it takes 10% more damage.
+// Bosses and bots never target a Doll; it's never in alive() or players().
+// ===================================================================================================================
+const WEAVE_HOST = { SNAP: 260, MAX: 5, SHARE: 0.6, DEEP: 0.3, CARRY_SECS: 5, NO_SPLIT: new Set(['enrage', 'fall', 'self', 'thread', 'ledger', 'settle']) };
+const DOLL_HOST = { STAGE: 0.10, STALE: 1.5, PAD: 12 };
+Object.assign(FightSim.prototype, {
+  // ---------------------------------------------------------------- threads
+  partnersOf(id) {
+    const out = new Set();
+    for (const th of this.threads || []) { if (th.a === id) out.add(th.b); else if (th.b === id) out.add(th.a); }
+    return out;
+  },
+  weaveEvent(pid, ev) {
+    this.threads = this.threads || [];
+    const al = new Map(this.alive().map(p => [p.id, p])), num = (v, lo, hi) => Math.max(lo, Math.min(hi, Number(v) || 0));
+    switch (ev.type) {
+      case 'tie': {
+        const b = this.resolveTarget(pid, ev.target), a = ev.pair != null ? ev.pair : pid;
+        if (a === b || !al.has(a) || !al.has(b)) { this.emit({ t: 'fev', k: 'tiefail', id: pid }); return; }
+        const same = th => (th.a === a && th.b === b) || (th.a === b && th.b === a);
+        // a second Tie re-routes your thread to the first ally into one between the two allies
+        if (ev.pair != null) this.threads = this.threads.filter(th => !(th.from === pid && ((th.a === pid && th.b === ev.pair) || (th.b === pid && th.a === ev.pair))));
+        this.threads = this.threads.filter(th => !same(th));
+        const mine = this.threads.filter(th => th.from === pid), mx = Math.round(num(ev.mx, 1, WEAVE_HOST.MAX));
+        while (mine.length >= mx) { const old = mine.shift(); this.threads.splice(this.threads.indexOf(old), 1); }
+        this.threads.push({ id: this.nextMechId++, from: pid, a, b, at: this.t, log: [], sh: num(ev.amount, 0, 3000), st: num(ev.st, 1, 2), dp: ev.dp ? 1 : 0, hold: this.t + num(ev.hm, 0, 6) });
+        this.weaveDirty = true;
+        return;
+      }
+      case 'snip': {
+        const tid = this.resolveTarget(pid, ev.target);
+        let cut = this.threads.filter(th => th.from === pid && (th.a === tid || th.b === tid));
+        if (!cut.length) cut = this.threads.filter(th => th.from === pid);
+        const value = num(ev.value, 0, 2.5), floor = num(ev.amount, 0, 3000), sh = num(ev.sh, 0, 3000);
+        for (const th of cut) {
+          const carried = th.log.reduce((s, l) => s + (l[0] >= this.t - WEAVE_HOST.CARRY_SECS ? l[1] : 0), 0);
+          const heal = Math.min(3000, Math.max(floor, carried * value));
+          for (const e of [th.a, th.b]) { this.applyHeal(pid, e, heal); const es = this.ps.get(e); if (sh && es && es.alive) this.giveShield(pid, e, es, sh, 6); }
+          this.threads.splice(this.threads.indexOf(th), 1);
+        }
+        if (cut.length) { this.emit({ t: 'thrs', l: cut.map(th => [th.a, th.b, 1]) }); this.weaveDirty = true; }
+        return;
+      }
+      case 'tighten': {
+        const tid = this.resolveTarget(pid, ev.target), me = al.get(tid);
+        if (!me) return;
+        // the nearest ally on the far end of its threads
+        let q = null, qd = Infinity;
+        for (const id of this.partnersOf(tid)) { const o = al.get(id); if (!o) continue; const d = Math.hypot(o.x - me.x, o.y - me.y); if (d < qd) { qd = d; q = o; } }
+        if (!q || qd < 70) return;
+        const pull = Math.min(num(ev.r, 0, 260), qd - 50), ux = (q.x - me.x) / qd, uy = (q.y - me.y) / qd;
+        // a throw toward the partner: 'kb' throws away from a point, so the point sits just behind
+        const throwTo = (p, dx, dy, d) => this.emit({ t: 'kb', id: p.id, x: Math.round(p.x - dx * 20), y: Math.round(p.y - dy * 20), d: Math.round(d) });
+        if (ev.both) { throwTo(me, ux, uy, pull / 2); throwTo(q, -ux, -uy, pull / 2); } else throwTo(me, ux, uy, pull);
+        if (ev.mit) for (const p of [me, q]) p.s.mits.push({ pct: num(ev.mit, 0, 0.2), start: this.t, end: this.t + 4, from: pid });
+        this.emit({ t: 'thrs', l: [[tid, q.id, 2]] });
+        return;
+      }
+      case 'tapestry':
+        this.tapestry = { from: pid, end: this.t + num(ev.dur, 0, 10), keep: !!ev.keep };
+        this.weaveDirty = true;
+        return;
+      case 'tug': {   // Needle: each thread on the weaver heals whoever is on its far end
+        const amt = num(ev.amount, 0, 3000);
+        for (const th of this.threads) if (th.from === pid && (th.a === pid || th.b === pid)) this.applyHeal(pid, th.a === pid ? th.b : th.a, amt);
+        return;
+      }
+    }
+  },
+  // the hit on p (amt, in small numbers) split evenly with everyone threaded to it: returns p's own share
+  threadSplit(p, s, amt, opts) {
+    if ((!this.threads || !this.threads.length) && !(this.tapestry && this.tapestry.end > this.t)) return amt;
+    if (opts.raw || WEAVE_HOST.NO_SPLIT.has(opts.kind) || !(amt > 0) || s.mits.some(m => m.kind === 'invuln')) return amt;
+    // a hit a Gorgemaw's open jaw is about to eat isn't shared: the jaw swallows it (to 25%) and keeps what's left;
+    // Ledger bills and settles are raw, so a debt coming due never splits either (NO_SPLIT names them too)
+    if (opts.eat && this.canEat && this.canEat(p)) return amt;
+    const tp = this.tapestry && this.tapestry.end > this.t ? this.tapestry : null;
+    const ids = tp ? null : this.partnersOf(p.id);
+    const partners = this.alive().filter(q => q.id !== p.id && (tp || ids.has(q.id)));
+    if (!partners.length) return amt;
+    const share = amt / (partners.length + 1);
+    this.carryAcc = this.carryAcc || new Map();
+    for (const q of partners) {
+      const th = (this.threads || []).find(t => (t.a === p.id && t.b === q.id) || (t.b === p.id && t.a === q.id));
+      if (th) th.log.push([this.t, share]);
+      const w = th ? th.from : tp.from;
+      this.carryAcc.set(w, (this.carryAcc.get(w) || 0) + share);
+      this.damagePlayer(q, share, { kind: 'thread', scaled: true, shared: true });
+    }
+    return share;
+  },
+  // a heal on tid runs down its threads (60%; seam 1: all of it; Loomwright and seam 2: a link further)
+  threadHeal(fromId, tid, amount, seam) {
+    if (!this.threads || !this.threads.length) return;
+    const first = this.partnersOf(tid);
+    if (!first.size) return;
+    const amt = Math.max(0, Math.min(8000, amount | 0)), share = seam ? 1 : WEAVE_HOST.SHARE;
+    for (const id of first) this.applyHeal(fromId, id, amt * share);
+    const deep = seam === 2 || this.threads.some(th => th.dp && (th.a === tid || th.b === tid));
+    if (!deep) return;
+    const second = new Set();
+    for (const id of first) for (const o of this.partnersOf(id)) if (o !== tid && !first.has(o)) second.add(o);
+    for (const id of second) this.applyHeal(fromId, id, amt * (seam === 2 ? WEAVE_HOST.SHARE : WEAVE_HOST.DEEP));
+  },
+  weaveTick() {
+    if (!this.threads) return;
+    const al = new Map(this.alive().map(p => [p.id, p])), snaps = [];
+    const keep = this.tapestry && this.tapestry.end > this.t && this.tapestry.keep ? this.tapestry.from : null;
+    for (const th of [...this.threads]) {
+      const a = al.get(th.a), b = al.get(th.b);
+      if (!a || !b) { this.threads.splice(this.threads.indexOf(th), 1); this.weaveDirty = true; continue; }
+      while (th.log.length && th.log[0][0] < this.t - WEAVE_HOST.CARRY_SECS) th.log.shift();
+      if (Math.hypot(a.x - b.x, a.y - b.y) <= WEAVE_HOST.SNAP || this.t < th.hold || th.from === keep) continue;
+      // pulled too far apart: it snaps, with a small heal to both ends
+      this.threads.splice(this.threads.indexOf(th), 1);
+      this.applyHeal(th.from, th.a, th.sh); this.applyHeal(th.from, th.b, th.sh);
+      this.emit({ t: 'fev', k: 'snapped', id: th.from, a: th.a, b: th.b });
+      snaps.push([th.a, th.b, 0]);
+    }
+    if (snaps.length) { this.emit({ t: 'thrs', l: snaps }); this.weaveDirty = true; }
+    if (this.tapestry && this.tapestry.end <= this.t) { this.tapestry = null; this.weaveDirty = true; }
+    if (this.carryAcc && this.carryAcc.size && this.t - (this.carryAt ?? -9) >= 0.5) {
+      this.carryAt = this.t;
+      for (const [w, a] of this.carryAcc) if (a >= 1) this.emit({ t: 'fev', k: 'carry', id: w, a: Math.round(a) });
+      this.carryAcc.clear();
+    }
+    if (this.weaveDirty || this.t - (this.weaveSent ?? -9) >= 1) this.weaveSend();
+  },
+  // the web for everyone: [a, b, weaver] per thread, and the Tapestry as [weaver, seconds left] (0: none)
+  weaveSend() {
+    this.weaveDirty = false; this.weaveSent = this.t;
+    const tp = this.tapestry && this.tapestry.end > this.t ? [this.tapestry.from, +(this.tapestry.end - this.t).toFixed(1)] : 0;
+    this.emit({ t: 'thr', l: (this.threads || []).map(th => [th.a, th.b, th.from]), tp });
+  },
+  weaveClear() {
+    if (this.threads && (this.threads.length || this.tapestry)) { this.threads = []; this.tapestry = null; this.weaveSend(); }
+    this.dollHitMemo = {};
+    if (this.dolls && this.dolls.size) { this.dolls.clear(); this.stageUntil = 0; this.emit({ t: 'dolls', l: [], s: 0 }); }
+  },
+
+  // ---------------------------------------------------------------- Dolls
+  // a Marionettist's Dolls: up to two { x, y, st } (st: 0 standing, 1 can't be touched, 2 limp, 3 in Grand Finale, 4 moving)
+  setDoll(pid, list) {
+    if (!Array.isArray(list) || !this.ps.has(pid)) return;
+    const n = v => Math.max(-2000, Math.min(2000, Math.round(Number(v) || 0)));
+    this.dolls = this.dolls || new Map();
+    this.dolls.set(pid, { l: list.slice(0, 2).map(d => ({ x: n(d && d.x), y: n(d && d.y), st: Math.max(0, Math.min(4, (d && d.st) | 0)), s: Math.max(0, Math.min(3, d && d.s != null ? d.s | 0 : 3)) })), at: this.t });
+  },
+  // the Dolls whose owners are alive and still reporting: [[ownerId, doll, index]]
+  liveDolls() {
+    const out = [];
+    if (!this.dolls) return out;
+    for (const [pid, D] of this.dolls) {
+      const s = this.ps.get(pid);
+      if (!s || !s.alive || this.t - D.at > DOLL_HOST.STALE) continue;
+      D.l.forEach((d, i) => out.push([pid, d, i]));
+    }
+    return out;
+  },
+  dollMech(m, cov) {
+    if (!this.dolls || !this.dolls.size) return;
+    const props = cov ? this.props.filter(pr => pr.cover) : null;
+    for (const [pid, d, i] of this.liveDolls()) {
+      if (d.st === 1 || d.st === 2) continue;
+      const shadowed = cov && PROPS.shadowing(m.src.x, m.src.y, d.x, d.y, props);
+      let hit = false;
+      if (m.type === 'aoe' || m.type === 'spread' || m.type === 'buster') hit = SHAPES.contains(m.shape, d.x, d.y, DOLL_HOST.PAD) && !shadowed;
+      else if (m.type === 'raidwide') hit = !!cov && !shadowed;
+      if (hit) this.emit({ t: 'fev', k: 'dollhit', id: pid, i });
+    }
+  },
+  dollTick() {
+    if (!this.dolls || !this.dolls.size) return;
+    const live = this.liveDolls();
+    // rollers and storm walls run over a Doll as they would a player (once each)
+    this.dollHitMemo = this.dollHitMemo || {};
+    for (const [pid, d, i] of live) {
+      if (d.st === 1 || d.st === 2) continue;
+      for (const [id, r] of this.rollers) {
+        if (this.t < r.rollAt) continue;
+        const pos = this.rollerPos(r, this.t), key = 'r' + id + ':' + pid + ':' + i;
+        if (!this.dollHitMemo[key] && Math.hypot(d.x - pos.x, d.y - pos.y) < r.r + DOLL_HOST.PAD) { this.dollHitMemo[key] = this.t; this.emit({ t: 'fev', k: 'dollhit', id: pid, i }); }
+      }
+      for (const [id, sw] of this.sweeps) {
+        if (this.t < sw.startAt) continue;
+        const a0 = this.sweepAngle(sw, this.t);
+        for (let k = 0; k < sw.arms; k++) {
+          const a = a0 + k * Math.PI * 2 / sw.arms, c = Math.cos(a), sn = Math.sin(a), dx = d.x - sw.x, dy = d.y - sw.y;
+          const key = 's' + id + ':' + k + ':' + pid + ':' + i;
+          if (dx * c + dy * sn < 0 || Math.abs(-dx * sn + dy * c) > sw.w / 2 + DOLL_HOST.PAD || this.t - (this.dollHitMemo[key] ?? -9) < 1.5) continue;
+          if (sw.cover && PROPS.shadowing(sw.x, sw.y, d.x, d.y, this.props, q => q.kind === sw.cover)) continue;
+          this.dollHitMemo[key] = this.t; this.emit({ t: 'fev', k: 'dollhit', id: pid, i });
+        }
+      }
+    }
+    // the Stage: an Understudy and both Dolls (neither limp) round the boss's centre
+    const b = this.boss, tri = (p, q, r) => (q.x - p.x) * (r.y - p.y) - (q.y - p.y) * (r.x - p.x);
+    let stage = 0;
+    for (const [pid, D] of this.dolls) {
+      if (D.l.length < 2 || D.l.some(d => d.st === 2) || this.t - D.at > DOLL_HOST.STALE) continue;
+      const o = this.alive().find(p => p.id === pid);
+      if (!o) continue;
+      const [d1, d2] = D.l, s1 = tri(o, d1, b), s2 = tri(d1, d2, b), s3 = tri(d2, o, b);
+      if (!b.untargetable && ((s1 >= 0 && s2 >= 0 && s3 >= 0) || (s1 <= 0 && s2 <= 0 && s3 <= 0)) && Math.abs(tri(o, d1, d2)) > 2000) { stage = pid; break; }
+    }
+    if (stage) this.stageUntil = this.t + 0.2;
+    // where every Doll is, for everyone to draw (owners draw their own from their kit): [owner, [[x, y, st], ...]]
+    if (this.t - (this.dollSent ?? -9) >= 0.1) {
+      this.dollSent = this.t;
+      const by = new Map();
+      for (const [pid, d] of live) { if (!by.has(pid)) by.set(pid, []); by.get(pid).push([d.x, d.y, d.st, d.s]); }
+      this.emit({ t: 'dolls', l: [...by].map(([pid, l]) => [pid, l]), s: stage || 0, c: +this.t.toFixed(3) });
+    }
+  },
+});
+
+if (typeof module !== 'undefined') module.exports = { FIGHT, FightSim, segDist, playerBaseHp, MAW_HOST, WEAVE_HOST, DOLL_HOST };

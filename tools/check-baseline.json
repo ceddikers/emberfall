@@ -4,36 +4,40 @@
     "pro": 1498
   },
   "bloodreaver": {
-    "newbie": 1172,
+    "newbie": 1205,
     "pro": 1512
   },
   "runeguard": {
-    "newbie": 1070,
+    "newbie": 1044,
     "pro": 1550
   },
   "ranger": {
-    "newbie": 1850,
+    "newbie": 1828,
     "pro": 2147
   },
   "shadowblade": {
-    "newbie": 1739,
+    "newbie": 1737,
     "pro": 2397
   },
   "pyromancer": {
-    "newbie": 1945,
+    "newbie": 1982,
     "pro": 2381
   },
   "cleric": {
     "newbie": 658,
-    "pro": 1037
+    "pro": 1038
   },
   "grovekeeper": {
-    "newbie": 744,
+    "newbie": 745,
     "pro": 1044
   },
   "chronomancer": {
-    "newbie": 834,
-    "pro": 1122
+    "newbie": 843,
+    "pro": 1142
+  },
+  "alembist": {
+    "newbie": 632,
+    "pro": 1090
   },
   "thermist": {
     "newbie": 1422,
@@ -42,14 +46,29 @@
   "driftblade": {
     "newbie": 1433,
     "pro": 2407
-
   },
   "alembist": {
     "newbie": 632,
     "pro": 1090
   },
+  "gorgemaw": {
+    "newbie": 1076,
+    "pro": 1498
+  },
+  "oathbroker": {
+    "newbie": 1197,
+    "pro": 1485
+  },
   "ironpalm": {
     "newbie": 832,
     "pro": 1522
+  },
+  "threadweaver": {
+    "newbie": 547,
+    "pro": 1038
+  },
+  "marionettist": {
+    "newbie": 1870,
+    "pro": 2295
   }
 }
