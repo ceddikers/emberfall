@@ -202,6 +202,21 @@ const Inventory = (() => {
         shape(() => c.rect(-2.2, -2, 4.4, 14), '#2a1d14', 2);
         stroke(() => { c.moveTo(0, 12); c.quadraticCurveTo(8, 18, 4, 26); }, accent || '#4fd0b0', 2.5);
         break;
+      case 'needle':   // Threadweaver: a rapier-long needle, a glowing thread looped through its eye
+        c.rotate(-Math.PI / 4);
+        shape(() => { c.moveTo(-2.2, 14); c.lineTo(-1.6, -22); c.lineTo(0, -30); c.lineTo(1.6, -22); c.lineTo(2.2, 14); c.closePath(); }, metal, 2);
+        shape(() => c.ellipse(0, 18, 4, 6, 0, 0, Math.PI * 2), gold, 2);
+        c.fillStyle = '#0d0b09'; c.beginPath(); c.ellipse(0, 18, 1.6, 3.2, 0, 0, Math.PI * 2); c.fill();
+        stroke(() => { c.moveTo(0, 15); c.bezierCurveTo(14, 10, -12, -4, 10, -14); }, accent || '#b89cff', 1.6);
+        break;
+      case 'controlbar':   // Marionettist: a wooden cross-bar with three strings hanging off it
+        c.rotate(-0.25);
+        for (const x of [-12, 0, 12]) { c.strokeStyle = rgba('#f4e8d8', 0.85); c.lineWidth = 1; c.beginPath(); c.moveTo(x, -6); c.lineTo(x * 0.7, 26); c.stroke(); }
+        shape(() => c.rect(-18, -10, 36, 6), wood, 2);
+        shape(() => c.rect(-3, -24, 6, 30), wood, 2);
+        shape(() => c.arc(0, -24, 3.5, 0, Math.PI * 2), accent || '#c84a8c', 1.5);
+        for (const x of [-15, 15]) shape(() => c.arc(x, -7, 2.5, 0, Math.PI * 2), gold, 1.2);
+        break;
       case 'focus':
         c.fillStyle = rgba('#a98bff', 0.35); c.beginPath(); c.arc(0, 0, 24, 0, Math.PI * 2); c.fill();
         shape(() => { for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3 + Math.PI / 6; c.lineTo(Math.cos(a) * 20, Math.sin(a) * 20); } c.closePath(); }, '#5b3fa0');
