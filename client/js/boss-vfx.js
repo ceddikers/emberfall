@@ -25,15 +25,19 @@ const BOSS_VFX = (() => {
   }
   const ringPts = (x, y, r, n) => Array.from({ length: n }, (_, i) => { const a = i * TAU / n + rand(-0.1, 0.1); return { x: x + Math.cos(a) * r, y: y + Math.sin(a) * r, a }; });
 
-  // the whole shape flashes and its rim burns white, then fades (replaces the old flat flash)
+  // the whole shape flashes and its rim burns white, then fades (replaces the old flat flash).
+  // The fill is screened, not added: on a pale floor (Grubnak's cream tiles) an additive fill clips to flat white and
+  // washes the floor out for a moment; screen lifts dark floors about as much and leaves light ones readable. The
+  // punch comes from the rim, which stays additive.
   function shapeFlash(s, color, o = {}) {
     const dur = o.dur ?? 0.5, a = o.a ?? 0.45;
     VFX.fx({ dur, layer: 'ground', draw: (c, p, t, e) => {
       const k = (1 - p) * (1 - p) * e.a;
       c.save(); clipArena(c);
-      c.globalCompositeOperation = 'lighter';
       SHAPES.trace(c, s);
+      c.globalCompositeOperation = 'screen';
       c.globalAlpha = a * k; c.fillStyle = color; c.fill();
+      c.globalCompositeOperation = 'lighter';
       c.globalAlpha = Math.min(1, 0.8 * k); c.strokeStyle = color; c.lineWidth = 10 * (1 - p) + 2; c.stroke();
       c.globalAlpha = Math.min(1, 1.2 * k); c.strokeStyle = '#ffffff'; c.lineWidth = 2.5; c.stroke();
       c.restore();
@@ -59,10 +63,13 @@ const BOSS_VFX = (() => {
       c.restore();
     } });
   }
-  // a whole-room tint (raidwides)
+  // a whole-room tint (raidwides). Bright colours are screened (see shapeFlash: never a white-out on the pale floors);
+  // dark ones (nightfall, a wipe) are laid over normally so they actually darken the room
+  const isDark = col => { const [r, g, b] = hexToRgb(col); return r * 0.3 + g * 0.59 + b * 0.11 < 60; };
   function roomTint(color, a = 0.28, dur = 0.7) {
+    const mode = isDark(color) ? 'source-over' : 'screen';
     VFX.fx({ dur, layer: 'ground', draw: (c, p, t, e) => {
-      c.save(); clipArena(c); c.globalCompositeOperation = 'lighter';
+      c.save(); clipArena(c); c.globalCompositeOperation = mode;
       c.globalAlpha = a * (1 - p) * e.a; c.fillStyle = color; c.fillRect(-AR() - 10, -AR() - 10, AR() * 2 + 20, AR() * 2 + 20);
       c.restore();
     } });
@@ -251,6 +258,7 @@ const BOSS_VFX = (() => {
       VFX.shock(s.x, s.y, { r: s.r * 1.6, color: '#f0e0c8', w: 12, dur: 0.55, flat: 1 });
       VFX.shock(s.x, s.y, { r: AR() * 0.9, color: '#e8d8c0', w: 5, dur: 0.8, flat: 1, delay: 0.1 });
       for (const q of ringPts(s.x, s.y, s.r * 0.9, 12)) VFX.smoke(q.x, q.y, { n: 1, color: '#e0d4c0', size: 34, a: 0.6, speed: 140 });
+      for (const q of ringPts(s.x, s.y, s.r * 0.55, 6)) VFX.debris(q.x, q.y, { color: '#8a6a4a', n: 3, speed: 1.1, up: 1.2 });
       VFX.decal(s.x, s.y, { style: 'crack', r: s.r * 0.7, dur: 2.5, a: 0.55, seed: Math.random() * 6 });
       shake(11);
     },
