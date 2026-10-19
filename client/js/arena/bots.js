@@ -7,6 +7,12 @@ function segsCross(ax, ay, bx, by, cx, cy, dx, dy) {
   return o(ax, ay, bx, by, cx, cy) !== o(ax, ay, bx, by, dx, dy) && o(cx, cy, dx, dy, ax, ay) !== o(cx, cy, dx, dy, bx, by);
 }
 
+// the bosses' tankbusters by cast name, and the tank cooldowns that answer them
+const BUSTER_CASTS = /^(Tenderize|Silk Wrap|Titan Fist|Grave Cleave)$/;
+const TANK_CDS = ['bulwark', 'zeal', 'undying', 'banner', 'sanctum', 'warcry'];
+// ... and the casts that hurt the whole party, which healers top people up for
+const RAID_CASTS = /^(Grease Fire|Simmer|Venom Mist|Tightening Web|Thunderclap|Thunder Crash|Static Field|Polarity Surge|Skyfall|Barrow Knell|Grave Marks)$/;
+
 const BotAI = {
   isMelee(cls) { return KITS[cls.id].abilities[0].range === 'melee'; },
 
@@ -64,6 +70,23 @@ const BotAI = {
     const order = view.players.filter(p => p.alive).sort((a, b) => deb(a.id) - deb(b.id) || human(a) - human(b) || (a.role === 'tank') - (b.role === 'tank') || a.id - b.id);
     // nearest free rod for each catcher in turn
     const free = [...rods], mine = {};
+    for (const p of order) {
+      if (!free.length) break;
+      let bi = 0;
+      for (let i = 1; i < free.length; i++) if (Math.hypot(free[i].shape.x - p.x, free[i].shape.y - p.y) < Math.hypot(free[bi].shape.x - p.x, free[bi].shape.y - p.y)) bi = i;
+      mine[p.id] = free.splice(bi, 1)[0].id;
+    }
+    return mine[me] ?? null;
+  },
+
+  // any other one-person towers (Order Up!'s plates, Egg Sacs): the players take the nearest free one in turn, the
+  // tank last (it holds the boss) and anyone Stuffed after everyone else
+  towerFor(me, view) {
+    const towers = view.mechs.filter(m => m.type === 'tower' && m.tag !== 'rod' && m.tag !== 'bell').sort((a, b) => a.id - b.id);
+    if (!towers.length) return null;
+    const stuffed = id => (view.debuffs(id).stuffed ? 1 : 0);
+    const order = view.players.filter(p => p.alive).sort((a, b) => stuffed(a.id) - stuffed(b.id) || (a.role === 'tank') - (b.role === 'tank') || a.id - b.id);
+    const free = [...towers], mine = {};
     for (const p of order) {
       if (!free.length) break;
       let bi = 0;
@@ -146,8 +169,6 @@ const BotAI = {
     if (wall > 0) pen += 8000 + wall * 100;
     const me = bot.id;
     const alive = view.players.filter(p => p.alive);
-    const myIdx = alive.map(p => p.id).sort((a, b) => a - b).indexOf(me);
-    const towers = view.mechs.filter(m => m.type === 'tower').sort((a, b) => Math.atan2(a.shape.y, a.shape.x) - Math.atan2(b.shape.y, b.shape.x));
     // Waves (Simmer etc.): the area the next hit covers is safe right after it lands. Waiting just outside it,
     // ready to step in, beats standing somewhere that gets hit later and having to cross waves to escape.
     let first = null;
@@ -165,14 +186,21 @@ const BotAI = {
             pen += Math.max(0, ARENA.inner - 70 - Math.hypot(px - view.boss.x, py - view.boss.y)) * 6;
             break;
           }
+          // a circle that follows me (Spice Rack's jar) goes wherever I go until it locks: nothing to dodge yet
+          if (m.follow === me && dt > (m.lockAt || 0) + 0.1) break;
+          // Funeral March: the open lane (m.safe, a row of spots) is the place to be until the last rank has passed
+          if (m.safe) { const d = Math.min(...m.safe.map(q => Math.hypot(q.x - px, q.y - py))); if (d > 100) pen += (d - 100) * 15 * urgency; }
           if (SHAPES.contains(s, px, py, 22)) {
             const waitIn = besideFirst && m !== first && m.resolveAt - first.resolveAt > 1;
-            pen += 6000 * urgency * (waitIn ? 0.15 : 1);
+            // (about to land: nothing else, not even a lantern errand, is worth standing in it)
+            pen += 6000 * urgency * (waitIn ? 0.15 : 1) + (dt < 2.5 && !waitIn ? 5000 : 0);
           }
           break;
         case 'buster':
           if ((m.target ?? m.follow) !== me && SHAPES.contains(s, px, py, 30)) pen += 6000 * urgency;
           break;
+        // Chain Lightning leaps from its target to anyone within its reach (s.r): like a spread, only much wider
+        case 'chain':
         case 'spread': {
           if (m.follow === me) {
             for (const o of alive) if (o.id !== me && Math.hypot(o.x - px, o.y - py) < s.r + 50) pen += 2500 * urgency;
@@ -206,11 +234,11 @@ const BotAI = {
           break;
         }
         case 'tower': {
-          const ti = towers.indexOf(m);
           const mine = m.tag === 'rod' ? this.rodFor(me, view) === m.id : m.tag === 'bell' ? this.bellFor(me, view) === m.id
-            : ti === myIdx % Math.max(1, towers.length) && !(view.debuffs(me).stuffed);
+            : this.towerFor(me, view) === m.id;
           const inside = Math.hypot(s.x - px, s.y - py) < s.r - 18;
-          if (mine && !inside) pen += (Math.hypot(s.x - px, s.y - py)) * 12 * urgency;
+          // head for your own tower early: it may be across the room
+          if (mine && !inside) pen += (Math.hypot(s.x - px, s.y - py)) * 12 * Math.max(urgency, 0.3);
           if (!mine && inside) pen += 2500 * urgency;
           break;
         }
@@ -308,11 +336,17 @@ const BotAI = {
         cands.push({ x: c.x + Math.cos(a) * r, y: c.y + Math.sin(a) * r });
       }
     }
+    // cones out of the boss (Eightfold Lunge, the swings): a ring of spots close around it, where a safe side is
+    // only a short walk away when it turns
+    if (view.mechs.some(m => m.shape.kind === 'cone' && m.type === 'aoe' && Math.hypot(m.shape.x - view.boss.x, m.shape.y - view.boss.y) < 60)) {
+      for (const r of [125, 190]) for (let i = 0; i < 16; i++) { const a = i * Math.PI / 8; cands.push(ARENA.clamp({ x: view.boss.x + Math.cos(a) * r, y: view.boss.y + Math.sin(a) * r }, 50)); }
+    }
     // tower centers and the stack target are good candidates too
     for (const m of view.mechs) {
       if (m.type === 'tower') cands.push({ x: m.shape.x, y: m.shape.y });
       if (m.type === 'stack') { const o = view.players.find(p => p.id === m.follow); if (o) cands.push({ x: o.x, y: o.y }); }
       if (m.shape.kind === 'donut') cands.push({ x: m.shape.x + (bot.x - m.shape.x) * 0.3, y: m.shape.y + (bot.y - m.shape.y) * 0.3 });
+      if (m.safe) for (const q of m.safe) cands.push({ x: q.x, y: q.y });
       // Volkar: beside your polarity partner, and in the still air behind each rod (also the half of a rod's circle
       // away from him, for catching a rod and sheltering behind it at once)
       if (m.type === 'polarity' || m.tag === 'crash') { const pt = this.partner(bot.id, view); if (pt) cands.push({ x: pt.x + (bot.x > pt.x ? 30 : -30), y: pt.y }); }
@@ -349,8 +383,16 @@ const BotAI = {
       }
       return false;
     });
+    // floor hits landing in the next few seconds: where along the way we'd be when each lands
+    const speed = 230 * (view.debuffs(bot.id).slowed ? FIGHT.SLOWED : 1);
+    const landing = view.mechs.filter(m => m.type === 'aoe' && m.resolveAt - view.t < 2.5 && !(m.follow === bot.id && m.resolveAt - view.t > (m.lockAt || 0)));
     const pathCost = c => {
       let pen = 0;
+      const dist = Math.hypot(c.x - bot.x, c.y - bot.y);
+      for (const m of landing) {
+        const q = Math.min(1, Math.max(0, m.resolveAt - view.t) * speed / Math.max(1, dist));
+        if (SHAPES.contains(m.shape, bot.x + (c.x - bot.x) * q, bot.y + (c.y - bot.y) * q, 22)) pen += 6000;
+      }
       for (const [a, o] of beams) if (segsCross(bot.x, bot.y, c.x, c.y, a.x, a.y, o.x, o.y)) pen += 3000;
       for (const pd of view.puddles) if (Math.hypot(pd.x - bot.x, pd.y - bot.y) > pd.r + 20 && segDist(pd.x, pd.y, bot.x, bot.y, c.x, c.y) < pd.r + 20) pen += 1200;
       if (sweeps.length) {
@@ -360,10 +402,16 @@ const BotAI = {
       }
       return pen;
     };
-    let best = null, bs = Infinity;
-    for (const c of cands) {
-      const s = this.danger(bot, c.x, c.y, view) + pathCost(c) + Math.hypot(c.x - home.x, c.y - home.y) * 1.2 + Math.hypot(c.x - bot.x, c.y - bot.y) * 0.6;
-      if (s < bs) { bs = s; best = c; }
+    let best = null, bs = Infinity, bd = 0;
+    const score = c => {
+      const d = this.danger(bot, c.x, c.y, view), s = d + pathCost(c) + Math.hypot(c.x - home.x, c.y - home.y) * 1.2 + Math.hypot(c.x - bot.x, c.y - bot.y) * 0.6;
+      if (s < bs) { bs = s; best = c; bd = d; }
+    };
+    for (const c of cands) score(c);
+    // nowhere close is safe (a knight's replayed sweep from the far wall covers everything near): look farther out
+    if (bd > 4000) for (const r of [460, 600]) for (let i = 0; i < 12; i++) {
+      const a = i * Math.PI / 6 + 0.26;
+      score(ARENA.clamp({ x: bot.x + Math.cos(a) * r, y: bot.y + Math.sin(a) * r }, 50));
     }
     return best;
   },
@@ -377,6 +425,10 @@ const BotAI = {
     const hurt = party.filter(p => p.alive).map(p => ({ p, f: p.hp / p.maxHp })).sort((a, b) => a.f - b.f);
     const dead = party.filter(p => !p.alive);
     const moving = bot.moving;
+    // the boss's next tankbuster in the upcoming-moves feed: [name, seconds until its cast starts]
+    const nextBuster = (view.next || []).find(([n]) => BUSTER_CASTS.test(n));
+    // ... and party-wide damage being cast, or close in the feed
+    const raidSoon = (view.next || []).some(([n, s]) => s < 6 && RAID_CASTS.test(n)) || !!(view.bossCast && RAID_CASTS.test(view.bossCast.name));
     // healers: raise, then keep people up
     if (bot.role === 'healer') {
       if (dead.length) {
@@ -386,10 +438,10 @@ const BotAI = {
         if (rw >= 0 && readyIdx(rw)) { bot.healTarget = dead[0].id; return rw; }
       }
       let low = hurt[0];
-      // a tankbuster is coming: get the tank topped first
-      const busterSoon = view.mechs.some(m => m.type === 'buster' && m.resolveAt - view.t < 4);
+      // a tankbuster is coming (being cast, or next in the feed): get the tank topped first
+      const busterSoon = view.mechs.some(m => m.type === 'buster' && m.resolveAt - view.t < 4) || (nextBuster && nextBuster[1] < 4);
       const tankH = hurt.find(h => h.p.role === 'tank');
-      if (busterSoon && tankH && tankH.f < 0.85 && (!low || low.f > 0.4)) low = { p: tankH.p, f: Math.min(tankH.f, 0.5) };
+      if (busterSoon && tankH && tankH.f < 0.85 && (!low || low.f > 0.3)) low = { p: tankH.p, f: Math.min(tankH.f, 0.5) };
       // Grovekeeper plants Rejuvenate ahead of damage: always on the tank, and on anyone a bit hurt
       if (bot.cls.id === 'grovekeeper' && k.gcdRemaining() <= 0 && !k.cast) {
         const ri = idx('rejuv'), has = id => k.g.rejuvs.some(r => r.t === id);
@@ -411,10 +463,15 @@ const BotAI = {
       if (bot.cls.id === 'chronomancer' && tankH) {
         const rw = idx('rewind');
         if (rw >= 0 && readyIdx(rw) && k.g.link !== tankH.p.id && (busterSoon || tankH.f < 0.7 || (low && low.f > 0.45))) { bot.healTarget = tankH.p.id; return rw; }
+        // Rewind is also the big heal (it turns the tank back to how healthy it was a few seconds ago), and on the tank
+        // it keeps the link where it belongs
+        if (rw >= 0 && readyIdx(rw) && tankH.f < 0.35) { bot.healTarget = tankH.p.id; return rw; }
         if (low && low.p.id !== tankH.p.id && low.f >= 0.4) low = tankH.f < 0.8 ? tankH : low;
       }
       if (bot.cls.id === 'grovekeeper' && readyIdx(idx('bloom')) && hurt.some(h => h.f < 0.8 && k.g.rejuvs.some(r => r.t === h.p.id))) return idx('bloom');
-      if (low && low.f < 0.8) {
+      // party-wide damage due soon: heal people up further ahead of it
+      const top = raidSoon ? 0.15 : 0;
+      if (low && low.f < 0.8 + top) {
         bot.healTarget = low.p.id;
         const avgLow = hurt.filter(h => h.f < 0.8).length >= 3;
         for (let i = 0; i < k.abilities.length; i++) {
@@ -433,8 +490,8 @@ const BotAI = {
           // (Recall raises the dead but also heals the living heavily, so it counts as a heal here)
           const heals = k.abilities.map((a, i) => i).filter(i => ab(i).type === 'gcd' && ab(i).target === 'ally' && (!ab(i).allowDead || ab(i).id === 'recall') && readyIdx(i));
           const instant = heals.filter(i => !k.castTime(ab(i)));
-          if (low.f < 0.55 && heals.length) return (moving && instant.length) ? instant[0] : (moving ? null : heals[0]);
-          if (low.f < 0.75 && instant.length) return instant[0];
+          if (low.f < 0.55 + top && heals.length) return (moving && instant.length) ? instant[0] : (moving ? null : heals[0]);
+          if (low.f < 0.75 + top && instant.length) return instant[0];
         }
       }
     }
@@ -455,28 +512,38 @@ const BotAI = {
         if (a.id === 'brace' && left < 0.6) return i;
         if (a.id === 'mirror' && left < 0.9) return i;
         if (a.id === 'ward' && left < 3 && k.gcdRemaining() <= 0 && !k.cast) return i;
-        if (!mitigated && left < 3 && ['bulwark', 'zeal', 'undying', 'banner', 'sanctum', 'warcry'].includes(a.id)) { bot.mitUntil = view.t + 4; return i; }
+        if (!mitigated && left < 3 && TANK_CDS.includes(a.id)) { bot.mitUntil = view.t + 4; return i; }
       }
     }
+    // a Pyromancer near overheating while badly hurt (the burn costs 15% of its HP): Vent, or let the Heat cool
+    const meP = party.find(p => p.id === bot.id);
+    const hotAndHurt = bot.cls.id === 'pyromancer' && k.g.heat >= 80 && meP && meP.hp / meP.maxHp < 0.35;
     // oGCDs: burst and damage when ready; mitigation when the tank is getting hit or a raidwide is coming
-    const castingBig = view.bossCast && /Grease|Tenderize|Boil|Gorge|Last Call|Venom Mist|Silk Wrap|Tightening Web|Devour|Thunderclap|Titan Fist|Eye of the Storm|Skybreak|Barrow Knell|Grave Cleave|Moonset/.test(view.bossCast.name);
+    const castingBig = view.bossCast && /Grease|Tenderize|Boil|Gorge|Last Call|Venom Mist|Silk Wrap|Tightening Web|Devour|Thunderclap|Titan Fist|Eye of the Storm|Skybreak|Skyfall|Barrow Knell|Grave Cleave|Moonset/.test(view.bossCast.name);
     for (let i = 0; i < k.abilities.length; i++) {
       const a = ab(i);
       if (a.type !== 'ogcd' || !readyIdx(i)) continue;
       if (k.gcdRemaining() < 0.65 && !k.cast) continue;
-      if (a.target === 'ally') continue;
+      if (a.target === 'ally' || (hotAndHurt && a.id === 'fireblast')) continue;
       const defensive = /mitigate|party takes|less damage|immune|shield/i.test(a.desc) && !/Burst/.test(a.desc);
-      if (a.id === 'stasis' || a.id === 'undying' || a.id === 'mirror') { if (castingBig && view.bossCast.left < 1.2 && (a.id === 'stasis' ? /Last Call|Devour|Skybreak|Moonset/.test(view.bossCast.name) : bot.role === 'tank')) return i; continue; }
+      // Stasis is for the enrage; a tank's Undying and Mirror Aegis wait for the busters aimed at it (the tank branch above)
+      if (a.id === 'stasis' || a.id === 'undying' || a.id === 'mirror') { if (a.id === 'stasis' && castingBig && view.bossCast.left < 1.2 && /Last Call|Devour|Skybreak|Moonset/.test(view.bossCast.name)) return i; continue; }
+      // Brace is worth most as a Perfect Block: only right before a hit lands, and never spent while a buster is on the way
+      if (a.id === 'brace') { if (!myBuster && castingBig && view.bossCast.left < 0.6) return i; continue; }
       if (defensive && !(castingBig && view.bossCast.left < 3)) continue;
+      // a tank keeps what it answers busters with when the feed shows the next buster close
+      if (bot.role === 'tank' && TANK_CDS.includes(a.id) && nextBuster && nextBuster[1] < 15) continue;
       if (a.id === 'shift') {
         const groupHurt = hurt.filter(h => h.f < 0.8).length >= 2;
-        if (k.g.stance === 'slow' && (k.g.flux >= 95 || (groupHurt && k.g.flux >= 40))) return i;
+        // (Haste heals the whole party: go early when party-wide damage is coming and people are already hurt)
+        if (k.g.stance === 'slow' && (k.g.flux >= 95 || (groupHurt && k.g.flux >= (raidSoon ? 25 : 40)))) return i;
         if (k.g.stance === 'haste' && (k.g.flux < 10 || (!groupHurt && k.g.flux < 45 && hurt[0] && hurt[0].f < 0.6))) return i;
         continue;
       }
       return i;
     }
     if (k.gcdRemaining() > 0 || k.cast || k.lockUntil > k.now) return null;
+    if (hotAndHurt) { const v = idx('vent'); return readyIdx(v) ? v : null; }
     const gcds = k.abilities.map((a, i) => i).filter(i => ab(i).type === 'gcd' && ab(i).target !== 'ally' && readyIdx(i));
     const okToCast = i => !moving || !k.castTime(ab(i));
     const glowing = gcds.filter(i => k.glows(ab(i)) && okToCast(i));

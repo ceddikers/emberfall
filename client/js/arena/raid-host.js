@@ -72,6 +72,8 @@ class RaidHost {
       polarity: sim.polarity || null, posts: (sim.posts || []).filter(c => c.end > sim.t), edgeNext: sim.edgeNext || null,
       // the Hollow King: lanterns, who is doomed (and when it kills), and the knights' replays still to come
       lanterns: sim.lanterns || [], doomed: sim.doomed || null, echoPlan: sim.echoPlan || [], night: !!sim.night, pools: sim.healPools,
+      // the boss's next named moves, as the upcoming-moves feed shows them to players: [[name, seconds until], ...]
+      next: sim.upcoming(3).map(e => [e.name, e.t - sim.t]),
       debuffs: id => { const s = sim.ps.get(id); const out = {}; if (s) for (const k in s.debuffs) if (s.debuffs[k] > sim.t) out[k] = true; return out; },
     };
   }
@@ -111,8 +113,8 @@ class RaidHost {
       ARENA.clamp(bot, 12);   // walls can move (Volkar's closing edge)
       const b = this.sim.boss;
       bot.a = Math.atan2(b.y - bot.y, b.x - bot.x);
-      // Royal Gaze: turn your back on him just before it lands
-      if (view.mechs.some(m => m.type === 'gaze' && m.resolveAt - this.sim.t < 1.1)) bot.a += Math.PI;
+      // Royal Gaze: turn your back on him just before it lands (Royal Audience wants the opposite: keep facing him)
+      if (view.mechs.some(m => m.type === 'gaze' && m.resolveAt - this.sim.t < 1.1) && !view.mechs.some(m => m.type === 'audience' && m.resolveAt - this.sim.t < 1.1)) bot.a += Math.PI;
       bot.actor.update();
       if (this.sim.t >= bot.nextAct) {
         const i = BotAI.act(bot, bot.actor.kit, view);
