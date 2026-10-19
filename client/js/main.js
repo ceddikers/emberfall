@@ -968,7 +968,8 @@
       case 'gale': prop('inhale', true, end + 0.1); break;
       case 'walls': prop('spin', true, end + 10); break;
       // the Hollow King
-      case 'gaze': prop('gaze', true, end + 0.3); break;
+      case 'gaze': case 'lightsout': prop('gaze', true, end + 0.3); break;
+      case 'lids': case 'decree': prop('raise', true, end - 0.3); break;
       case 'doom': prop('doom', true, end + 0.4); break;
       case 'knell': case 'bells': prop('knell', true, end + 0.3); break;
       case 'stomp': case 'ring': prop('graves', true, end + 0.2); break;
@@ -1800,6 +1801,7 @@
       if (raid.nightK > 0.01) {
         const lights = raidUnits().map(u => ({ x: u.x, y: u.y, r: 120 }));
         for (const l of raid.lanterns) { const c = l.carrier != null ? entById(l.carrier) : null; lights.push({ x: c ? c.x : l.x, y: c ? c.y : l.y, r: l.last ? 300 : 190 }); }
+        for (const pr of raid.room.props) if (pr.kind === 'brazier' && pr.state === 1) lights.push({ x: pr.x, y: pr.y, r: 200 });
         ArenaView.drawNight(ctx, lights, raid.nightK, { W, H, DPR, zoom, cam });
       }
       ArenaView.drawMoon(ctx, raid.def.enrage ? raid.fightTime / raid.def.enrage[raid.mode] : 0, now);

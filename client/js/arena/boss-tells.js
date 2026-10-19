@@ -965,6 +965,53 @@ const BossTells = (() => {
         ctx.restore();
       },
     },
+    // Coffin Lids: a groove scored across the flagstones where the lid will skid, grit jumping along it, and the lid
+    // itself shaking loose on its coffin by the wall
+    lid: {
+      color: '#c8ffd8',
+      ground(ctx, tg, s, p, k, t) {
+        const ca = Math.cos(s.angle), sa = Math.sin(s.angle);
+        ctx.save(); SHAPES.trace(ctx, s); ctx.fillStyle = rgba('#0c1412', (0.15 + 0.25 * p) * k); ctx.fill(); ctx.restore();
+        for (const side of [-0.3, 0.3]) line(ctx, s.x - sa * s.w * side, s.y + ca * s.w * side, s.x + ca * s.len * Math.min(1, p * 1.3) - sa * s.w * side, s.y + sa * s.len * Math.min(1, p * 1.3) + ca * s.w * side, rgba('#0a0e0c', 0.6 * k), 3);
+        for (let i = 0; i < 6; i++) { const q = (t * (0.8 + p * 2) + i / 6) % 1; ctx.save(); ctx.translate(s.x + ca * q * s.len, s.y + sa * q * s.len); ctx.rotate(s.angle); poly(ctx, [-8, -12, 8, 0, -8, 12, -3, 0], rgba('#c8ffd8', (0.25 + 0.45 * p) * (1 - q) * k), null); ctx.restore(); }
+        // the lid on its coffin, juddering loose (and where it'll stop)
+        const j = Math.sin(t * 40) * 2 * p, end = s.len - 65;
+        ctx.save(); ctx.globalAlpha = k * (0.5 + 0.5 * p); ctx.translate(s.x + ca * 70 + j, s.y + sa * 70); ctx.rotate(s.angle + Math.PI / 2);
+        rrect(ctx, -23, -60, 46, 120, 6, '#525a5e', OUT, 2.5); line(ctx, 0, -40, 0, 30, 'rgba(10,12,12,0.6)', 3); line(ctx, -12, -22, 12, -22, 'rgba(10,12,12,0.6)', 3);
+        ctx.restore();
+        ctx.save(); ctx.setLineDash([8, 7]); rrect(ctx, s.x + ca * end - 65, s.y - 23, 130, 46, 6, null, rgba('#c8ffd8', (0.25 + 0.4 * p) * k), 1.5); ctx.restore();
+      },
+    },
+    // Royal Decree: grave-light rolls down the hall from the throne in a wall, and every solid thing's shadow is cut
+    // out of it (they run straight down the hall)
+    decree: {
+      color: '#9affc0', outline: false,
+      ground(ctx, tg, s, p, k, t) {
+        const top = -ARENA.hh - 20, front = top + (ARENA.hh * 2 + 40) * easeOut(p);
+        const g = ctx.createLinearGradient(0, top, 0, ARENA.hh);
+        g.addColorStop(0, rgba('#3aff7a', (0.3 + 0.15 * p) * k)); g.addColorStop(1, rgba('#3aff7a', (0.1 + 0.12 * p) * k));
+        ctx.fillStyle = g; ctx.fillRect(-ARENA.hw - 20, top, ARENA.hw * 2 + 40, ARENA.hh * 2 + 40);
+        // the front of the wave, reaching further as the cast goes on
+        ctx.fillStyle = rgba('#c8ffd8', 0.12 * k); ctx.fillRect(-ARENA.hw - 20, top, ARENA.hw * 2 + 40, front - top);
+        line(ctx, -ARENA.hw - 20, front, ARENA.hw + 20, front, rgba('#e8fff0', (0.4 + 0.4 * p) * k), 3);
+        for (let i = 0; i < 16; i++) { const x = -ARENA.hw + (i + 0.5) / 16 * ARENA.hw * 2, q = (t * 0.8 + hash(i, 4)) % 1; glow(ctx, x, top + q * (front - top), 18, '#7affa8', 0.4 * (1 - q) * k); }
+      },
+    },
+    // Falling Masonry (Hard): dust and grit sift down where a chunk of the vault is about to fall, its shadow tightening
+    masonry: {
+      color: '#d8e0dc',
+      ground(ctx, tg, s, p, k, t) {
+        shadow(ctx, s.x, s.y, s.r * (0.5 + 0.5 * p), (0.3 + 0.35 * p) * k);
+        for (let i = 0; i < 8; i++) { const q = (t * 1.4 + hash(i, tg.id)) % 1, a = hash(i + 3, tg.id) * TAU, d = hash(i + 6, tg.id) * s.r; circle(ctx, s.x + Math.cos(a) * d, s.y + Math.sin(a) * d - (1 - q) * 120, 1.5, rgba('#d8e0dc', 0.7 * q * k)); }
+      },
+      air(ctx, tg, s, p, k) {
+        if (p < 0.7) return;
+        const h = (1 - (p - 0.7) / 0.3) * 320;
+        ctx.save(); ctx.globalAlpha = k; ctx.translate(s.x, s.y - h - 20); ctx.rotate(p * 3);
+        poly(ctx, [-30, -14, -6, -28, 26, -18, 32, 10, 4, 26, -26, 16], '#4a5054', OUT, 2.5);
+        ctx.restore();
+      },
+    },
   };
   for (const kind of ['sweep', 'stomp', 'ring']) {
     // the knights' replays: the same thing in the brighter green of the dead

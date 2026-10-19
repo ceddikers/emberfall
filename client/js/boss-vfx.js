@@ -150,6 +150,26 @@ const BOSS_VFX = (() => {
       VFX.shock(s.x, s.y, { r: AR(), color: '#ffb070', w: 10, dur: 0.7, flat: 1 });
       roomTint('#ff6a2a', 0.22);
     },
+    // the Hollow King: a lid grinding to a stop, the Decree washing down the hall, the vault coming down, his eyes in the dark
+    lid(tg) {
+      const s = tg.live;
+      sweep(s, '#c8ffd8', 0.4);
+      for (let d = 30; d < s.len; d += 60) VFX.smoke(s.x + Math.cos(s.angle) * d, s.y, { color: '#a8b0ac', n: 1, size: 28, a: 0.5, speed: 50 });
+      shake(5);
+    },
+    decree() {
+      roomTint('#3aff7a', 0.2, 0.6);
+      for (let i = 0; i < 12; i++) { const x = -ARENA.hw + (i + 0.5) / 12 * ARENA.hw * 2; after(i * 0.02, () => VFX.pillar(x, -ARENA.hh + 40 + Math.random() * ARENA.hh * 1.6, { r: 14, h: 110, color: '#7affa8', dur: 0.45 })); }
+      shake(8);
+    },
+    masonry(tg) {
+      const s = tg.live;
+      VFX.debris(s.x, s.y - 10, { color: '#4a5054', n: 14, speed: 1.3, up: 1.1 });
+      VFX.smoke(s.x, s.y, { color: '#a8b0ac', n: 8, size: 36, a: 0.6, speed: 120 });
+      VFX.shock(s.x, s.y, { r: s.r * 1.6, color: '#d8e0dc', w: 6, dur: 0.4, flat: 1 });
+      shake(7);
+    },
+    dark() { roomTint('#e8fff0', 0.12, 0.35); shake(4); },
     // Skitterra: the acid comes down everywhere the shadows don't reach; a strand snaps taut
     deluge(tg) {
       roomTint('#7ad83a', 0.22, 0.7);
@@ -447,7 +467,8 @@ const BOSS_VFX = (() => {
     skitterra: { def: '#d08aff', mist: '#9adf3a', spit: '#9adf3a', wrap: '#f4f0ff', silk: '#f4f0ff', web: '#f4f0ff', lunge: '#ff7ac0', eggs: '#e8ff9a', fang: '#ff7ac0', volley: '#f4f0ff',
       deluge: '#9adf3a', strand: '#f4f0ff', ambush: '#b090ff', cocoon: '#f4f0ff' },
     volkar: { def: '#7fe8ff', surge: '#ffe08a', crash: '#ffe27a', field: '#d79bff', gale: '#e8f4ff', walls: '#e8f4ff', fist: '#9ff4ff', skyfall: '#dff4ff' },
-    hollowking: { def: '#6dff9a', gaze: '#f0fff4', doom: '#b46aff', bells: '#ffd88a', cleave: '#ff8a7a', night: '#8aa0ff', audience: '#ffe6a0' },
+    hollowking: { def: '#6dff9a', gaze: '#f0fff4', doom: '#b46aff', bells: '#ffd88a', cleave: '#ff8a7a', night: '#8aa0ff', audience: '#ffe6a0',
+      lightsout: '#f0fff4', lids: '#c8ffd8', decree: '#7affa8' },
   };
   // the wind-up while the boss casts: motes spiral in, a ring tightens, everything brightens near the end
   function castStart(bossKind, anim, dur, bossDraw) {
@@ -648,6 +669,14 @@ const BOSS_VFX = (() => {
       const e = msg.pid != null && entById ? entById(msg.pid) : null;
       if (e) { VFX.hit(e.x, e.y, '#ffe0c0', 1.5); VFX.aura(e, { style: 'ring', color: '#f0e8d8', r: 26, dur: 0.6, rate: 0.6 }); }
       shake(boss ? 12 : 5);
+    } else if (msg.k === 'flare') {
+      // braziers flaring back up after Lights Out
+      for (const id of msg.ids || []) {
+        const pr = room && room.props.find(p => p.id === id);
+        if (!pr) continue;
+        VFX.flare(pr.x, pr.y - 24, { color: '#3aff7a', n: 18, r: 18, h: 1.6 });
+        VFX.shock(pr.x, pr.y, { r: 160, color: '#7affa8', w: 5, dur: 0.5, flat: 1 });
+      }
     } else if (msg.k === 'ignite') {
       VFX.flare(msg.x, msg.y, { color: '#ff7a1a', n: 16, r: (msg.r || 60) * 0.6 });
       VFX.smoke(msg.x, msg.y, { color: '#3a2a20', n: 5, size: 30, a: 0.5, speed: 60 });

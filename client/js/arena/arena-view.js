@@ -363,14 +363,8 @@ const ArenaView = {
         }
       }
     }
-    // candles along the bottom wall, and grave-light braziers in the four corners
+    // candles along the bottom wall (the grave-light braziers stand in the hall itself, as props he snuffs and relights)
     for (let i = 0; i < 9; i++) candles.push({ x: -hw + 80 + i * ((hw * 2 - 160) / 8), y: hh + 26, ph: r() * 9 });
-    for (const [x, y] of [[-hw - 40, -hh - 30], [hw + 40, -hh - 30], [-hw - 40, hh + 40], [hw + 40, hh + 40]]) {
-      braziers.push({ x, y, ph: r() * 9 });
-      ellipse(c, x + 4, y + 10, 26, 12, 0, 'rgba(0,0,0,0.5)');
-      poly(c, [x - 22, y - 6, x + 22, y - 6, x + 14, y + 12, x - 14, y + 12], '#2f3337', OUT, 2.5);
-      for (const dx of [-10, 0, 10]) line(c, x + dx, y + 12, x + dx * 1.4, y + 30, '#202326', 3);
-    }
     for (const cd of candles) {
       for (let k = 0; k < 3; k++) {
         const x = cd.x + (k - 1) * 8, h = 8 + ((cd.ph * 7 + k * 3) % 6);
@@ -1410,6 +1404,16 @@ const ArenaView = {
         poly(ctx, [0, -8, 2.5, -2.5, 8, 0, 2.5, 2.5, 0, 8, -2.5, 2.5, -8, 0, -2.5, -2.5], '#ffe27a', OUT, 1.2);
         ctx.restore();
       }
+    }
+    // Court of Bones: grave-light leaks from each waiting coffin, brighter as it's about to open, with its time burning down
+    const court = room.ev.court;
+    if (court && t < court.end) for (const [x, y, secs] of court.l || []) {
+      const at = court.start + secs, left = at - t;
+      if (left < 0) continue;
+      const hot = clamp(1 - left / 4, 0, 1);
+      glow(ctx, x, y, 34 + 30 * hot, '#6dff9a', 0.15 + 0.45 * hot);
+      ctx.beginPath(); ctx.arc(x, y, 46, -Math.PI / 2, -Math.PI / 2 + TAU * clamp(left / secs, 0, 1));
+      ctx.strokeStyle = rgba('#9affc0', 0.5 + 0.5 * hot); ctx.lineWidth = 2.5; ctx.stroke();
     }
     const rs = room.ev.rodmark;
     if (rs && t < rs.end) for (const id of rs.ids || []) {

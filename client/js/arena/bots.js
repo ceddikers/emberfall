@@ -230,6 +230,12 @@ const BotAI = {
         if (!ok) pen += (PROPS.shadowing(m.src.x, m.src.y, px, py, props) ? 1500 : 6000) * urgency + (dt < 2.5 ? 5000 : 0);
         continue;
       }
+      // Lights Out (the Hollow King): be inside a light when it lands
+      if (m.type === 'dark') {
+        const L = m.lights ? m.lights() : [];
+        if (!L.some(l => Math.hypot(l.x - px, l.y - py) <= m.lightR - 30)) pen += (L.length ? 6000 : 0) * urgency + (dt < 2 && L.length ? 5000 : 0);
+        continue;
+      }
       // a throw coming (m.throwDist): stand where it doesn't slam you into a wall or a prop
       if (m.throwDist && dt < 5) {
         const a = Math.atan2(py - s.y, px - s.x), to = { x: px + Math.cos(a) * m.throwDist, y: py + Math.sin(a) * m.throwDist };
@@ -421,6 +427,7 @@ const BotAI = {
         }
       }
       if (m.tag === 'charge' && m.aimFromBoss === bot.id) { const bt = this.chargeBait(view); if (bt) cands.push(bt); }
+      if (m.type === 'dark' && m.lights) for (const l of m.lights()) for (let i = 0; i < 6; i++) cands.push({ x: l.x + Math.cos(i * 1.05 + bot.id) * 60, y: l.y + Math.sin(i * 1.05 + bot.id) * 60 });
       // Volkar: beside your polarity partner, and in the still air behind each rod (also the half of a rod's circle
       // away from him, for catching a rod and sheltering behind it at once)
       if (m.type === 'polarity' || m.tag === 'crash') { const pt = this.partner(bot.id, view); if (pt) cands.push({ x: pt.x + (bot.x > pt.x ? 30 : -30), y: pt.y }); }
