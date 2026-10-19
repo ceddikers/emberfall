@@ -225,6 +225,7 @@ class FightSim {
     this.updateSweeps();
     this.updateFires();
     for (const fn of this.tickers) fn(dt);
+    if (this.updateClass) this.updateClass(dt);   // Ledgers coming due (end of this file)
     this.updatePlayers(dt);
     if (this.state !== 'live') return;
     if (this.alive().length === 0) return this.end('wipe');
@@ -407,6 +408,7 @@ class FightSim {
       }
       case 'snap': this.snapReel(pid); break;   // a dash snapped the silk reeling this player in
       case 'taunt': this.taunt(pid, typeof ev.tgt === 'string' ? ev.tgt : 'boss'); break;
+      case 'maw': case 'ledger': if (this.classEvent) this.classEvent(pid, ev); break;   // Gorgemaw, Oathbroker (end of this file)
     }
   }
   // A thrown vial (Alembist) shatters at an ally's feet (target 'party': it reaches everyone). Everyone alive within r
@@ -495,7 +497,7 @@ class FightSim {
     if (s.vulnEnd > this.t && !opts.raw) amt *= 1 + s.vuln;
     if (s.def && !opts.raw) amt *= 1 - s.def;
     let mult = 1, perfect = null, reflect = null, invuln = false, read = null;
-    for (const m of s.mits) {
+    for (const m of (opts.nomit ? [] : s.mits)) {   // (nomit: a bill from the Ledger, mitigated when it was written)
       if (m.kind === 'invuln') { invuln = true; break; }
       if (m.kind === 'living') continue;
       if (m.kind === 'brace' && this.t - m.start <= FIGHT.PERFECT_WINDOW && !perfect) { perfect = m; mult *= 0.4; continue; }
@@ -518,6 +520,7 @@ class FightSim {
     }
     const before = amt;
     amt *= mult;
+    if (this.classHit) amt = this.classHit(p, s, amt, opts);   // a Gorgemaw's open jaw, an Oathbroker's Ledger (end of this file)
     const st = this.stats[p.id];
     st.mitigated += Math.round(before - amt);
     if (s.shield > 0 && amt > 0) {
@@ -539,6 +542,7 @@ class FightSim {
     this.emit({ t: 'pdmg', id: p.id, a: amt, k: opts.kind || 'hit', hp: Math.max(0, s.hp), dd: opts.avoidable ? 1 : 0 });
     if (s.hp <= 0) {
       s.hp = 0; s.alive = false; s.shield = 0; s.mits = []; s.hots = []; s.threat = 0; s.diedAt = this.t; this.dropThreat(p.id);
+      if (this.classDeath) this.classDeath(p, s);
       st.deaths++;
       this.emit({ t: 'fev', k: 'death', id: p.id });
     }
@@ -603,10 +607,26 @@ class FightSim {
     const cov = m.cover ? this.coverCheck(m) : null;
     const inside = this.alive().filter(p => SHAPES.contains(m.shape, p.x, p.y, pad) && !(cov && cov.safe.has(p.id)));
     const hits = [];
-    const hit = (p, dmg, kind, avoidable) => { this.damagePlayer(p, dmg, { kind, avoidable }); hits.push(p.id); };
+    // a Gorgemaw with its jaw open eats what lands on it (eatInfo, end of this file): eat.on take it as a Morsel,
+    // eat.whole swallows the whole mechanic for everyone (a teammate's spread circle), eat.raid halves a raidwide
+    const eat = this.eatInfo ? this.eatInfo(m, inside) : null;
+    const hit = (p, dmg, kind, avoidable) => {
+      const ea = eat && eat.on && eat.on.some(q => q.id === p.id) ? eat.type : null;
+      this.damagePlayer(p, dmg, { kind, avoidable: avoidable && !ea, eat: ea, mid: m.id }); hits.push(p.id);
+    };
+    if (eat && eat.whole) {
+      this.damagePlayer(eat.whole, m.dmg, { kind: m.tag || m.type, eat: eat.type, mid: m.id, whole: 1, owner: eat.owner });
+      this.emit({ t: 'tgx', id: m.id, hits: [eat.whole.id] });
+      if (cov) for (const pr of cov.chip) this.hitProp(pr, 1, m.tag);
+      if (m.onResolve) m.onResolve([eat.whole], [eat.whole.id], cov);
+      return;
+    }
     switch (m.type) {
       case 'aoe': for (const p of inside) hit(p, m.dmg, m.tag || 'aoe', m.avoidable); break;
-      case 'raidwide': for (const p of this.alive()) if (!(cov && cov.safe.has(p.id))) hit(p, m.dmg, 'raidwide', false); break;
+      case 'raidwide':
+        for (const p of this.alive()) if (!(cov && cov.safe.has(p.id))) hit(p, m.dmg * (eat && eat.raid ? MAW_HOST.RAID : 1), 'raidwide', false);
+        if (eat && eat.raid) for (const p of eat.raid) this.eaten(p, eat.type, { mid: m.id, raid: 1 });
+        break;
       case 'stack': {
         // m.dmg is the total, split among everyone inside; too few people and it hits harder
         const need = Math.min(m.need || 1, this.alive().length);
@@ -1034,4 +1054,152 @@ class FightSim {
   }
 }
 
-if (typeof module !== 'undefined') module.exports = { FIGHT, FightSim, segDist, playerBaseHp };
+// ===================================================================================================================
+// ADVANCED TANKS (tanks-2): the host's side of the Gorgemaw's jaw and the Oathbroker's Ledger. Both classes run their
+// kits on their own clients like everyone else; these are the parts that touch HP, which only the host owns.
+// ===================================================================================================================
+// Gorgemaw: an open jaw (a `maw` event, at most WIN s) eats what lands on it. What's edible, and as which Morsel:
+//   aoe: by shape (circle / donut: ring, rect / cross: lance, cone: fang)   spread: ring   buster: spike   proximity: ring
+//   raidwide: only through Bottomless (`all`), which halves it for everyone and gives a ring per hit
+// Not edible: towers and stacks (they want bodies), tethers, gazes, knockbacks and gales, Lights Out, rollers, sweeps,
+// puddles and fire, adds, autos, the enrage. A mechanic can say otherwise with `eat: false` or `eat: '<shape>'`, and a
+// boss's own hit can be edible with damagePlayer(p, dmg, { eat: '<shape>', mid }) (Volkar's Rod Strike and Chain Lightning).
+const MAW_HOST = { EAT: 0.25, RAID: 0.5, WIN: 4.2 };
+MAW_HOST.typeOf = m => {
+  if (m.eat === false) return null;
+  if (typeof m.eat === 'string') return m.eat;
+  if (m.cover) return null;   // a blast you hide from (Gut Blast, Dead Wind...) fills the room: nothing to bite
+  switch (m.type) {
+    case 'aoe': { const k = m.shape && m.shape.kind; return k === 'circle' || k === 'donut' ? 'ring' : k === 'rect' || k === 'cross' ? 'lance' : k === 'cone' ? 'fang' : null; }
+    case 'spread': case 'proximity': case 'raidwide': return 'ring';
+    case 'buster': return 'spike';
+  }
+  return null;
+};
+Object.assign(FightSim.prototype, {
+  // can this player eat right now? (raid: only Bottomless eats raidwides)
+  canEat(p, raid) { const s = p.s || this.ps.get(p.id); return !!(s && s.alive && s.maw && s.maw.until > this.t && (!raid || s.maw.all)); },
+  eatInfo(m, inside) {
+    let anyone = false;
+    for (const s of this.ps.values()) if (s.maw && s.maw.until > this.t && s.alive) { anyone = true; break; }
+    if (!anyone) return null;
+    const type = MAW_HOST.typeOf(m);
+    if (!type) return null;
+    const eaters = this.alive().filter(p => this.canEat(p));
+    if (!eaters.length) return null;
+    if (m.type === 'raidwide') { const r = eaters.filter(p => p.s.maw.all); return r.length ? { type, raid: r } : null; }
+    // a circle on one person (a spread, a jar or a cask chasing them): whoever eats it takes it for them
+    if (m.type === 'spread' || (m.type === 'aoe' && m.follow != null && m.shape.kind === 'circle')) {
+      const e = eaters.find(p => inside.some(q => q.id === p.id));
+      if (e) return { type, whole: e, owner: m.follow !== e.id ? m.follow : null };
+      return null;
+    }
+    if (m.type === 'buster') { const tg = m.target ?? m.follow, e = eaters.find(p => p.id === tg); return e ? { type, on: [e] } : null; }
+    const on = m.type === 'proximity' ? eaters : eaters.filter(p => inside.some(q => q.id === p.id));
+    return on.length ? { type, on } : null;
+  },
+  // a Morsel for p: the owner's kit takes it (fev 'eat'); every client draws the mechanic going down (w: all of it)
+  eaten(p, type, o = {}) {
+    const s = p.s || this.ps.get(p.id);
+    if (!s) return;
+    const key = o.mid != null ? String(o.mid) : null;
+    if (key && s.ateKey === key) return;   // one Morsel per mechanic
+    if (key) s.ateKey = key;
+    s.ate = (s.ate || 0) + 1;
+    this.emit({ t: 'fev', k: 'eat', id: p.id, m: type, mid: typeof o.mid === 'number' ? o.mid : null, w: o.whole ? 1 : 0, r: o.raid ? 1 : 0, f: o.owner ?? null });
+  },
+  // every hit on a player passes through here (damagePlayer, after mitigation): the jaw, then the Ledger
+  classHit(p, s, amt, opts) {
+    if (amt <= 0 || opts.kind === 'enrage' || opts.kind === 'fall') return amt;
+    if (opts.eat && this.canEat(p)) {
+      amt *= MAW_HOST.EAT;
+      opts.avoidable = false;
+      this.eaten(p, opts.eat, { mid: opts.mid, whole: opts.whole, owner: opts.owner });
+    }
+    if (opts.raw || opts.nomit) return amt;
+    if (s.led) amt -= OATH.write(s.led, amt, this.t);
+    // co-signed by a Guarantor: part of the hit goes onto their Ledger
+    for (const g of this.ps.values()) {
+      const L = g.led;
+      if (!L || g === s || !g.alive || !L.cosign || L.cosign.id !== p.id || L.cosign.until <= this.t) continue;
+      amt -= OATH.write(L, amt, this.t, { co: p.id });
+      break;
+    }
+    return amt;
+  },
+  classDeath(p, s) {
+    s.maw = null;
+    if (s.led) { s.led.e = []; s.led.cosign = null; s.led.ver++; }
+  },
+  classEvent(pid, ev) {
+    const s = this.ps.get(pid), me = this.players().find(q => q.id === pid);
+    if (!s || !me) return;
+    if (ev.type === 'maw') {
+      if (me.cls !== 'gorgemaw') return;
+      const dur = Math.max(0, Math.min(MAW_HOST.WIN, Number(ev.dur) || 0));
+      s.maw = { until: this.t + dur, all: !!ev.all && dur > 1 };
+      return;
+    }
+    if (me.cls !== 'oathbroker') return;
+    const L = s.led || (s.led = OATH.make());
+    if (ev.op === 'terms') { OATH.terms(L, ev, s.maxHp); return; }
+    if (ev.op === 'cosign') {
+      // a Guarantor's bond: the ally named (yourself or nobody: the most hurt other ally)
+      let tid = typeof ev.target === 'number' ? ev.target : null;
+      const ok = id => { const q = this.ps.get(id); return q && q.alive && !q.left && id !== pid; };
+      if (!ok(tid)) { tid = null; let bf = Infinity; for (const q of this.alive()) { if (q.id === pid) continue; const f = q.s.hp / q.s.maxHp; if (f < bf) { bf = f; tid = q.id; } } }
+      L.cosign = tid != null ? { id: tid, until: this.t + Math.max(0, Math.min(24, Number(ev.dur) || 0)) } : null;
+      L.ver++;
+      this.sendLedger(pid, true);
+      return;
+    }
+    const r = OATH.op(L, ev, this.t, s.maxHp);
+    const p = this.alive().find(q => q.id === pid);
+    if (r.self > 0 && p) { this.damagePlayer(p, r.self, { kind: 'settle', raw: true, nomit: true }); this.emit({ t: 'fev', k: 'bill', id: pid, a: Math.round(r.self), s: 1 }); }
+    if (r.boss > 0) this.ledgerStrike(pid, r.boss);
+    if (ev.op === 'default' || ev.op === 'foreclose') this.emit({ t: 'fev', k: 'default', id: pid, b: Math.round(r.boss) });
+    this.sendLedger(pid, true);
+  },
+  // the boss pays: damage credited to the Oathbroker, with a tank's threat
+  ledgerStrike(pid, amt) {
+    const s = this.ps.get(pid), b = this.boss;
+    if (!s || b.untargetable || this.state !== 'live' || !(amt > 0)) return;
+    amt = Math.round(Math.min(amt, 15000));
+    b.hp = Math.max(0, b.hp - amt);
+    this.stats[pid].damage += amt;
+    s.threat += amt * this.threatMult(s, null);
+    if (b.hp <= 0) this.end('clear');
+  },
+  // the owner's copy of a Ledger (and every client's, for the stamps): on every change, and each second while it holds
+  sendLedger(pid, force, bill) {
+    const s = this.ps.get(pid), L = s && s.led;
+    if (!L) return;
+    const busy = L.e.length || this.t < L.frozen || this.t < L.lien || this.t < L.hold || (L.cosign && L.cosign.until > this.t);
+    if (!force && L.sentVer === L.ver && !(busy && this.t - (L.sentAt ?? -99) >= 1)) return;
+    if (!force && L.sentVer !== L.ver && this.t - (L.sentAt ?? -99) < 0.1) return;   // at most ten a second
+    L.sentVer = L.ver; L.sentAt = this.t;
+    this.emit(Object.assign({ t: 'fev', k: 'ledger', id: pid }, OATH.pack(L, this.t), bill ? { bill: Math.round(bill) } : null));
+  },
+  updateClass(dt) {
+    for (const [pid, s] of this.ps) {
+      const L = s.led;
+      if (!L || s.left) continue;
+      if (!s.alive) { if (L.e.length) { L.e = []; L.ver++; } this.sendLedger(pid); continue; }
+      const due = OATH.bills(L, this.t, dt);
+      let billed = 0;
+      for (const b of due) {
+        const p = this.alive().find(q => q.id === pid);
+        if (!p) break;
+        if (b.self > 0) { this.damagePlayer(p, b.self, { kind: 'ledger', raw: true, nomit: true }); billed += b.self; }
+        if (b.boss > 0) this.ledgerStrike(pid, b.boss);
+        if (b.heal > 0) this.applyHeal(pid, this.resolveTarget(pid, 'lowest'), b.heal);
+        this.emit({ t: 'fev', k: 'bill', id: pid, a: Math.round(b.self), b: Math.round(b.boss), sm: b.small ? 1 : 0 });
+        if (this.state !== 'live') return;
+      }
+      if (L.cosign && L.cosign.until <= this.t) { L.cosign = null; L.ver++; }
+      this.sendLedger(pid, false, billed || null);
+    }
+  },
+});
+
+if (typeof module !== 'undefined') module.exports = { FIGHT, FightSim, segDist, playerBaseHp, MAW_HOST };

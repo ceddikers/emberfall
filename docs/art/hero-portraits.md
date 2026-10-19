@@ -84,3 +84,14 @@ No spec portraits exist yet, so this one sets the character; paint it first and 
 
 13. **Ironpalm (Monk Brawler).** Accent: saffron.
    A broad, compact man in his late thirties with warm brown skin, a **shaved head with a short black topknot** at the back, a nose that has clearly been broken more than once, a notch out of one ear and calm, heavy-lidded dark eyes. He wears a **sleeveless saffron gi** crossed at the chest and tied with a **maroon sash**, a string of dark wooden **prayer beads** round his neck, and he is barefoot. His forearms are bound in off-white **cloth wraps**, and over the knuckles of each fist the wraps hold a **flat plate of dull iron**, scuffed bright at the edges. He stands side-on in a loose guard: the lead hand open and raised at chin height, palm out, the rear fist low at his hip. A slow, almost sleepy half-smile, like a man who has already seen your swing coming. Warm saffron-ochre background with a single flat dark circle behind the head, like a temple bell seen end-on.
+
+
+## Advanced tanks (added 2026-10-20)
+
+No spec portraits yet, so these set the faces; paint them first and use them as the reference for the spec portraits (`spec-icons.md`). Until a file arrives the game shows the animated sprite (data.js `art.portraits: false`).
+
+14. **Gorgemaw (Glutton Knight).** Accent: burnt orange.
+   A huge, round man in his fifties with a ruddy, cheerful face, heavy jowls, a broken nose and small bright eyes under thick ginger brows; a short ginger beard with crumbs in it. He wears banded leather over an enormous belly with a **bronze belly-plate** riveted on top, iron pauldrons, and **two enormous bronze gauntlets**, one of them resting on his stomach. His **iron helm has a hinged bronze jaw-plate at the front, swung open** so his grinning mouth shows, its plate edged with blunt bronze teeth. A napkin is tucked into his collar. He looks pleased with himself, mid-chew. Burnt-orange background with a pale round plate shape behind the head.
+
+15. **Oathbroker (Contract Knight).** Accent: grey-lilac, with seal-wax red.
+   A tall, thin woman in her forties with a long, severe face, ash-blonde hair cut short under a **grey hood worn over a steel half-helm**, pale skin, ink stains on two fingers and cool grey eyes. She wears a long **grey surcoat over plate**, a lilac line down its front. A **thick ledger book hangs from a chain at her hip**, a red wax seal on its cover, and she holds a **mace whose head is a square seal-stamp**, a dab of red wax on its face, tapping it against her palm. One eyebrow raised, as if you owe her something and she knows exactly how much. Grey-lilac background with a flat red seal shape behind the head.

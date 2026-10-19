@@ -136,6 +136,25 @@ Object.assign(ITEM_PERKS, {
   driftblade_a4: { ab: 'slip', text: 'Slipstream gives 25 Drift instead of 15.' },
 });
 
+// ---------------------------------------------------------------- advanced tanks: Gorgemaw and Oathbroker (tanks-2)
+// Weapon shapes: 'gauntlet' (a great bronze fist) and 'stampmace' (a mace with a square seal for a head).
+Object.assign(CLASS_MAIN, { gorgemaw: 'phys', oathbroker: 'phys' });
+Object.assign(CLASS_GEAR, {
+  gorgemaw: { wtype: 'gauntlet', w: ["Recruit's Gauntlets", 'Larder-Door Gauntlets', 'Silkgut Gauntlets', 'Thunderbelly Gauntlets', 'Gauntlets of the Last Feast'], a: ["Butcher's Belly-Plate", 'Chitin Paunch', 'Stormhide Gut-Guard', 'Barrow-Bronze Girth'] },
+  oathbroker: { wtype: 'stampmace', w: ["Recruit's Seal", "Quartermaster's Seal", 'Webbed Writ-Seal', 'Stormsworn Seal', 'Seal of the Last Account'], a: ['Pantry-Ledger Surcoat', 'Silk-Bound Surcoat', 'Thunder-Notary Surcoat', 'Surcoat of the Unpaid Court'] },
+});
+Object.assign(ITEM_PERKS, {
+  gorgemaw_w1: { ab: 'gnash', text: 'Gulp heals 3.5% of your HP instead of 2%.' },
+  gorgemaw_a2: { ab: 'wide', text: 'Open Wide stays open 0.4s longer.' },
+  gorgemaw_w2: { ab: 'spit', text: 'A critical Spit hits again for about 60.' },
+  gorgemaw_w3: { ab: 'bottomless', text: 'Bottomless also shields the party.' },
+  gorgemaw_a4: { ab: 'iron', text: 'Iron Gut takes 50% off instead of 40%.' },
+  oathbroker_w1: { ab: 'collect', text: 'Your combo pays down 50% more of the Ledger.' },
+  oathbroker_a2: { ab: 'reneg', text: 'Renegotiate also shields you.' },
+  oathbroker_w2: { ab: 'settle', text: 'Settle also heals you for 5% of your HP.' },
+  oathbroker_w3: { ab: 'lien', text: 'Lien lasts 13s instead of 10s (a Guarantor\'s bond 24s instead of 20s).' },
+  oathbroker_a4: { ab: 'default', text: 'After Default the Ledger is closed for 7s instead of 10s.' },
+});
 // ---------------------------------------------------------------- Ironpalm (tank): iron knuckle wraps for a weapon, gis for armour
 CLASS_MAIN.ironpalm = 'phys';
 CLASS_GEAR.ironpalm = { wtype: 'wraps', w: ["Recruit's Knuckle Wraps", 'Butcher-Twine Wraps', 'Silk-Bound Iron Wraps', 'Thunder-Iron Wraps', 'Wraps of the Barrow Monk'], a: ['Scullery Gi', 'Webweave Gi', 'Stormcloud Gi', 'Gravestill Gi'] };

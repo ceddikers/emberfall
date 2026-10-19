@@ -444,6 +444,67 @@ TALENTS.alembist = [
   ],
 ];
 
+// ======================================================================= ADVANCED TANKS (tanks-2: Gorgemaw, Oathbroker)
+// The same rule: new triggers and changed behaviour, one plain number at most (Wide Jaw, Grace Period), and two talents
+// per class that put a new move on a key (grants: true; the moves are in TALENT_ABILITIES in kits.js).
+Object.assign(TALENTS, {
+  gorgemaw: [
+    [
+      { id: 'gorgemaw_marinade', name: 'Marinade', ab: 'gnash', text: 'Gulp, the third bite of Gnash, now marinates the boss: your next Spit within 10s hits 25% harder.' },
+      { id: 'gorgemaw_aftertaste', name: 'Aftertaste', ab: 'spit', text: 'A Spit now leaves the taste behind: the boss burns for 9s, harder after a Spike.' },
+      { id: 'gorgemaw_crunch', name: 'Crunch', ab: 'gnash', text: 'Gulp, the third bite of Gnash, now bites twice.' },
+    ],
+    [
+      { id: 'gorgemaw_cud', name: 'Chew the Cud', ab: 'wide', text: 'Every Morsel you eat now heals you for 3% of your HP.' },
+      { id: 'gorgemaw_widejaw', name: 'Wide Jaw', ab: 'wide', text: 'Open Wide stays open 2.2s instead of 1.5s.' },
+      { id: 'gorgemaw_scraps', name: 'Table Scraps', ab: 'wide', text: 'Eating an attack meant for a teammate now also shields them for 6s.' },
+    ],
+    [
+      { id: 'gorgemaw_regurgitate', name: 'Regurgitate', ab: 'spit', grants: true, text: 'New move on E, in place of Spit. Regurgitate: bring the whole Belly up at once, every Morsel spat in its own shape at 75% strength.', spec: { glutton: 'New move on E, in place of Spit. Regurgitate: bring the whole Belly up at once, every Morsel spat in its own shape at 75% strength. Pairs of a shape still fuse.' } },
+      { id: 'gorgemaw_lining', name: 'Iron Lining', ab: 'digest', text: 'Every Morsel in your Belly now makes you take 3% less damage.' },
+      { id: 'gorgemaw_sour', name: 'Sour Stomach', ab: 'spit', text: 'A Morsel you have kept for 15s or more turns sour: spat, it hits 40% harder.' },
+    ],
+    [
+      { id: 'gorgemaw_feast', name: 'Feast', ab: 'bottomless', text: 'Bottomless now also refills Open Wide\'s charges.' },
+      { id: 'gorgemaw_ironjaw', name: 'Iron Jaw', ab: 'iron', text: 'Iron Gut now also opens your jaw for its first 2s.' },
+      { id: 'gorgemaw_overflow', name: 'Overflow', ab: 'spit', text: 'A Morsel eaten into a full Belly is now spat straight back out instead of lost.' },
+    ],
+    [
+      { id: 'gorgemaw_stonebelly', name: 'Stone Belly', ab: 'iron', grants: true, text: 'New move on D, in place of Iron Gut. Stone Belly: 30% less damage for 8s, and every Morsel you eat in that time is a Spike.' },
+      { id: 'gorgemaw_bile', name: 'Bile', ab: 'digest', text: 'Digest now also scalds the boss: one hit for every Morsel it digests.' },
+      { id: 'gorgemaw_rumination', name: 'Rumination', ab: 'digest', text: 'Digest now leaves your oldest Morsel in the Belly, to spit later.' },
+    ],
+  ],
+
+  oathbroker: [
+    [
+      { id: 'oathbroker_interest', name: 'Interest', ab: 'collect', text: 'Collect, the third strike, now hits harder for every entry in your Ledger (up to 5).' },
+      { id: 'oathbroker_garnish', name: 'Garnish', ab: 'collect', text: 'Part of whatever your strikes pay down is now also struck from the boss.' },
+      { id: 'oathbroker_stamp', name: 'Rubber Stamp', ab: 'settle', text: 'Settle now also stamps the boss: a blow sized by what you settled.' },
+    ],
+    [
+      { id: 'oathbroker_grace', name: 'Grace Period', ab: 'reneg', text: 'Entries now come due after 10s instead of 8s.' },
+      { id: 'oathbroker_amnesty', name: 'Amnesty', ab: 'reneg', text: 'Renegotiate now also erases your smallest entry.' },
+      { id: 'oathbroker_escrow', name: 'Escrow', ab: 'settle', text: 'While your Ledger holds 3 entries or more, you take 10% less damage.' },
+    ],
+    [
+      { id: 'oathbroker_audit', name: 'Audit', ab: 'settle', grants: true, text: 'New move on E, in place of Settle. Audit (15s): every entry at least 4s old is paid now at 30% of its size; newer ones stay.' },
+      { id: 'oathbroker_consolidate', name: 'Consolidate', ab: 'reneg', text: 'Renegotiate now also folds the whole Ledger into one entry, due when the last one would have been.' },
+      { id: 'oathbroker_fineprint', name: 'Fine Print', ab: 'lien', text: 'Entries smaller than 2% of your HP are now struck off when they come due instead of billed.' },
+    ],
+    [
+      { id: 'oathbroker_receivership', name: 'Receivership', ab: 'default', text: 'Default now also gives the whole party 10% less damage for 8s.', spec: { collector: 'Foreclose now also gives the whole party 10% less damage for 8s.' } },
+      { id: 'oathbroker_garnishwrit', name: 'Writ of Execution', ab: 'writ', text: 'Entries written during Writ of Protection are now a third paid by the boss when they come due.' },
+      { id: 'oathbroker_slate', name: 'Clean Slate', ab: 'default', text: 'Default now also brings Renegotiate and Settle straight back.', spec: { collector: 'Foreclose now also brings Renegotiate and Settle straight back.' } },
+    ],
+    [
+      { id: 'oathbroker_moratorium', name: 'Moratorium', ab: 'reneg', grants: true, text: 'New move on W, in place of Renegotiate. Moratorium (45s): for 5s nothing comes due; every timer in the Ledger stops.' },
+      { id: 'oathbroker_tithe', name: 'Tithe', ab: 'lien', text: 'Every bill you pay now heals your most hurt ally for a quarter of it.' },
+      { id: 'oathbroker_notary', name: 'Notary', ab: 'collect', text: 'Collect, the third strike, now stamps your newest entry: it comes due 3s later.' },
+    ],
+  ],
+});
+
 // ======================================================================= IRONPALM (tank)
 // Its own block. Built to the newer rule: new behaviour, not bigger numbers (Deep Lungs is the one plain number), and two
 // talents put a new move on a key (`grants`; the moves are in TALENT_ABILITIES at the end of kits.js): Bellows Stance

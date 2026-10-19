@@ -36,7 +36,7 @@ function runSim(classId, skill, seed, specId, talents) {
   const rng = mulberry(seed);
   const human = mulberry(seed * 7 + 3); // separate stream for "human" randomness
   const state = { t: 0, moving: false, tookDamage: [], shield: null, mits: [], reflect: null, healDebt: 0, healing: 0, gcdHeals: 0, allyWards: [], petalShields: [] };
-  const role = ['bastion', 'bloodreaver', 'runeguard', 'ironpalm'].includes(classId) ? 'tank'
+  const role = ['bastion', 'bloodreaver', 'runeguard', 'ironpalm'].includes(classId) || def.role === 'tank' ? 'tank'
     : ['cleric', 'grovekeeper', 'chronomancer', 'alembist'].includes(classId) ? 'healer' : 'dps';
   const maxHp = role === 'tank' ? 32000 : 21000;
   let lastPos = 'rear';
@@ -93,6 +93,7 @@ function runSim(classId, skill, seed, specId, talents) {
       // a Ward on an ally (Spellwarden): assume it soaks a bit over half before it ends (an ally isn't tanking)
       if (ev.type === 'shield' && ev.tag === 'ward' && ev.target !== 'self') state.allyWards.push({ end: state.t + ev.dur });
       if (ev.type === 'shield' && ev.target === 'party') state.healDebt = Math.max(0, state.healDebt - ev.amount * 4);
+      if (TANK_SIM.emit(state, k, ev)) return;   // the advanced tanks' jaw and Ledger (below)
       if (ev.type === 'mit' && ev.target === 'self') {
         if (ev.kind === 'reflect') state.reflect = state.t + ev.dur;
         state.mits.push({ pct: ev.pct, end: state.t + ev.dur, start: state.t, kind: ev.kind });
@@ -120,6 +121,7 @@ function runSim(classId, skill, seed, specId, talents) {
     if (perfect) { state.mits = state.mits.filter(m => !(m.kind === 'brace' && state.t - m.start <= 0.8)); k.notify('perfect'); }
     if (read) { state.mits = state.mits.filter(m => m !== read); k.notify('read', { b: kind === 'buster' ? 1 : 0 }); }
     let amt = raw * mult;
+    amt = TANK_SIM.hit(state, k, amt, kind);
     if (state.shield) {
       const used = Math.min(state.shield.amt, amt); state.shield.amt -= used; amt -= used;
       if (state.shield.amt <= 0) { k.notify('shieldEnd', { tag: state.shield.tag, frac: 1 }); state.shield = null; }
@@ -152,6 +154,7 @@ function runSim(classId, skill, seed, specId, talents) {
       if (state.t >= nextAuto) { nextAuto += AUTO_EVERY; hitTank(AUTO_DMG, 'auto'); }
       if (state.t >= nextBuster) { nextBuster += BUSTER_EVERY; hitTank(BUSTER_DMG, 'buster'); lastBusterAt = state.t; }
       if (state.t >= nextRaidwide) { nextRaidwide += RAIDWIDE_EVERY; hitTank(RAIDWIDE_DMG, 'raidwide'); }
+      TANK_SIM.tick(state, k, hitTank);
       for (const w of state.allyWards) if (state.t >= w.end) { w.done = true; k.notify('shieldEnd', { tag: 'ward', frac: 0.55 }); }
       state.allyWards = state.allyWards.filter(w => !w.done);
       if (state.shield && state.t >= state.shield.end) { k.notify('shieldEnd', { tag: state.shield.tag, frac: 1 - state.shield.amt / state.shield.max }); state.shield = null; }
@@ -499,6 +502,81 @@ Object.assign(PRO, {
   },
 });
 
+// ---------------------------------------------------------------- advanced tanks (Gorgemaw, Oathbroker)
+// TANK_SIM stands in for the host: the Gorgemaw's jaw (an edible telegraph lands on the tank every EDIBLE_EVERY s, on
+// top of the busters; the tank dodges it unless the jaw is open) and the Oathbroker's Ledger (OATH, the host's rules).
+const EDIBLE_EVERY = 12, EDIBLE_DMG = 6500;
+const TANK_SIM = {
+  emit(state, k, ev) {
+    if (ev.type === 'maw') { state.mawUntil = state.t + ev.dur; state.mawAll = !!ev.all; return true; }
+    if (ev.type === 'ledger') {
+      const L = state.led || (state.led = OATH.make());
+      if (ev.op === 'terms') OATH.terms(L, ev, 32000);
+      else if (ev.op !== 'cosign') { const r = OATH.op(L, ev, state.t, 32000); if (r.self) state.tookDamage.push({ t: state.t, a: r.self }); k.stats.damage += r.boss; }
+      k.notify('ledger', OATH.pack(L, state.t));
+      return true;
+    }
+    return false;
+  },
+  hit(state, k, amt, kind) {
+    if (k.def.eats && state.t < (state.mawUntil || 0)) {
+      if (kind === 'raidwide') { if (state.mawAll) { k.notify('eat', { m: 'ring' }); return amt * 0.5; } }
+      else if (kind !== 'auto') { k.notify('eat', { m: kind === 'buster' ? 'spike' : kind }); return amt * 0.25; }
+    }
+    if (k.def.ledger && state.led) amt -= OATH.write(state.led, amt, state.t);
+    return amt;
+  },
+  tick(state, k, hitTank) {
+    if (k.def.eats) {
+      if (state.nextEdible == null) state.nextEdible = 6;
+      if (state.t >= state.nextEdible) {
+        const m = ['ring', 'lance', 'fang'][Math.floor(state.t / EDIBLE_EVERY) % 3];
+        state.nextEdible += EDIBLE_EVERY;
+        if (state.t < (state.mawUntil || 0)) hitTank(EDIBLE_DMG, m);   // dodged otherwise
+      }
+    }
+    const L = state.led;
+    if (L) {
+      const bills = OATH.bills(L, state.t, DT);
+      for (const b of bills) { state.tookDamage.push({ t: state.t, a: b.self }); k.stats.damage += b.boss; }
+      if (bills.length || state.t - (state.ledAt || 0) > 1) { state.ledAt = state.t; k.notify('ledger', OATH.pack(L, state.t)); }
+    }
+  },
+};
+Object.assign(PRO, {
+  // Gorgemaw: the jaw open just before every buster and edible hit (Bottomless on raidwides), Spit what you eat
+  // (pairs together for the Glutton), Digest when the Belly is full and nothing is about to land, Iron Gut on busters
+  gorgemaw(k, ctx) {
+    const s = ctx.state, toB = ctx.nextBuster - ctx.t, toE = (s.nextEdible ?? 6) - ctx.t, toR = ctx.nextRaidwide - ctx.t;
+    const wide = abOf(k, 'wide'), max = mawMax(k), b = k.g.belly;
+    if (ready(k, 'bottomless') && toR < 0.5 && toR > 0.05) return I(k, 'bottomless');
+    if (k.charges(wide) > 0 && k.readyIn(wide) <= 0.0001 && !(ctx.t < (s.mawUntil || 0)) && ((toB < 0.5 && toB > 0.05) || (toE < 0.5 && toE > 0.05))) return I(k, 'wide');
+    if (toB < 1.2 && ready(k, 'iron') && abOf(k, 'iron').id === 'iron' && k.charges(wide) === 0) return I(k, 'iron');
+    if (abOf(k, 'iron').id === 'stonebelly' && ready(k, 'iron') && toB < 1.2) return I(k, 'iron');
+    if (weaveOk(k) && ready(k, 'digest') && (k.def.spec === 'gizzard' ? b.length >= 2 && (toR < 4 || toB < 4 || b.length >= max) : b.length >= max && k.gcdRemaining() > 0.7)) return I(k, 'digest');
+    if (k.gcdRemaining() > 0.0001) return null;
+    const spit = abOf(k, 'spit');
+    if (spit.id === 'regurgitate') { if (b.length >= Math.min(3, max) && k.usable(spit)) return I(k, 'spit'); }
+    else if (k.usable(spit) && k.def.spec !== 'gizzard' && (k.def.fuse ? (b.length >= 2 && b[0].m === b[1].m) || b.length >= max || (b.length && ctx.inBurst(ctx.t)) : b.length >= 1)) return I(k, 'spit');
+    else if (k.usable(spit) && k.def.spec === 'gizzard' && b.length >= max) return I(k, 'spit');
+    return I(k, 'gnash');
+  },
+  // Oathbroker: Lien in the burst window (Co-Sign kept up), Writ on busters, Renegotiate a big bill that's about to
+  // land, Settle at a fifth of your HP, Default (Foreclose) when the Ledger gets heavy
+  oathbroker(k, ctx) {
+    const hp = 32000, toB = ctx.nextBuster - ctx.t, tot = oathTotal(k);
+    const lien = abOf(k, 'lien');
+    if (lien.id === 'cosign') { if (ready(k, 'lien') && weaveOk(k)) return I(k, 'lien'); }
+    else if (ready(k, 'lien') && weaveOk(k) && (ctx.inBurst(ctx.t) || oathDueSoon(k, 9) > hp * 0.15)) return I(k, 'lien');
+    if (toB < 1 && ready(k, 'writ')) return I(k, 'writ');
+    const def = abOf(k, 'default');
+    if (ready(k, 'default') && weaveOk(k) && tot > hp * (def.id === 'foreclose' ? 0.32 : 0.45)) return I(k, 'default');
+    if (ready(k, 'reneg') && weaveOk(k) && oathDueSoon(k, 1.2) > hp * 0.12) return I(k, 'reneg');
+    if (ready(k, 'settle') && weaveOk(k) && def.id !== 'foreclose' && (abOf(k, 'settle').id === 'audit' ? oathAuditable(k).reduce((s, e) => s + e.a, 0) > hp * 0.12 : tot > hp * 0.22)) return I(k, 'settle');
+    if (k.gcdRemaining() > 0.0001) return null;
+    return I(k, 'collect');
+  },
+});
 // ---------------------------------------------------------------- Ironpalm (no GCD: the combo pacing, engine.js)
 // The newbie is the generic one, which already fits: it waits for the recovery to end (it never buffers), reacts 0.1-0.6s
 // late, follows the glowing key 60% of the time and otherwise presses Q, so its strings break now and then and few of

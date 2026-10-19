@@ -1,4 +1,4 @@
-// Specializations: two per class. A spec reshapes the base kit (KITS in kits.js); it doesn't replace it.
+﻿// Specializations: two per class. A spec reshapes the base kit (KITS in kits.js); it doesn't replace it.
 // It swaps one or two abilities, gives the signature mechanic a new purpose, and keeps the role and the seven keys.
 // Free to swap in town, saved per hero, and both specs of a class are balanced against each other (tools/simulate.js).
 //
@@ -798,7 +798,7 @@ Object.assign(SPECS, {
   thermist: [
     {
       id: 'pendulum', name: 'Pendulum', title: 'The Swinging Weight', accent: '#ffb08a',
-      gaugeTip: 'Fire spells turn the dial toward Blaze and frost toward Rime, one step further than usual. Each step from 0 is +8% damage for that side\'s spells. A crossing of 0 after reaching 3 or more sets off a Thermal Shock, and every crossing adds Momentum (+4% damage each, up to 5), lost after 6s without one. Past ±5 you overload.',
+      gaugeTip: 'Fire spells turn the dial toward Blaze and frost toward Rime, one step further than usual. Each step from 0 is +8% damage for that side\'s spells. A crossing of 0 after reaching 3 or more sets off a Thermal Shock, and every crossing adds Momentum (+4% damage each, up to 5), lost after 6s without one. Past Â±5 you overload.',
       blurb: 'Back and forth, faster each time. Never let it settle.',
       focus: 'Fast swings. Every spell moves the dial a step further and every crossing of 0 builds Momentum, so you play back and forth like a metronome.',
       passive: { name: 'Momentum', desc: 'Your spells move the dial one step further. Every crossing of 0 adds a stack of Momentum (up to 5, +4% damage each); 6s without a crossing and they\'re gone.' },
@@ -816,9 +816,9 @@ Object.assign(SPECS, {
     },
     {
       id: 'zenith', name: 'Zenith', title: 'The Burning Edge', accent: '#ff5a6a',
-      gaugeTip: 'Fire spells turn the dial toward Blaze and frost toward Rime; each step from 0 is +8% damage for that side. At ±5 you stay in Redline: +20% damage, your edge spell is instant, and pushing further doesn\'t overload you. Strain builds 11 a second in Redline and fades outside it; at 100 you melt down. A crossing of 0 after reaching 3 or more sets off a Thermal Shock.',
+      gaugeTip: 'Fire spells turn the dial toward Blaze and frost toward Rime; each step from 0 is +8% damage for that side. At Â±5 you stay in Redline: +20% damage, your edge spell is instant, and pushing further doesn\'t overload you. Strain builds 11 a second in Redline and fades outside it; at 100 you melt down. A crossing of 0 after reaching 3 or more sets off a Thermal Shock.',
       blurb: 'Hold the edge. Feel it burn. Let go a moment before it takes you.',
-      focus: 'Holding the edge. At ±5 you stay in Redline, where every spell is stronger, but Strain builds until you vent it or melt down.',
+      focus: 'Holding the edge. At Â±5 you stay in Redline, where every spell is stronger, but Strain builds until you vent it or melt down.',
       passive: { name: 'Redline', desc: 'At +5 or -5 you stay in Redline instead of overloading: every spell hits 20% harder and your edge spell is instant. Each second there builds Strain; full Strain melts you down (the dial snaps to 0, you burn, and that element is locked for 4s). Equilibrium becomes Bleed Off.' },
       build: () => ({
         potMult: 0.877,
@@ -885,6 +885,100 @@ Object.assign(SPECS, {
 });
 
 // ===================================================================================================================
+// ADVANCED TANKS (tanks-2): the Gorgemaw's and the Oathbroker's specs (their kits are at the end of kits.js)
+// ===================================================================================================================
+Object.assign(SPECS, {
+  gorgemaw: [
+    {
+      id: 'glutton', name: 'Glutton', title: 'The Endless Appetite', accent: '#ff9a4a',
+      gauge: { max: 5 },
+      gaugeTip: 'Holds up to 5 Morsels: Ring (circles), Lance (lines), Fang (cones), Spike (tankbusters). Spit fires the oldest; two of the same shape in a row go together as a Fusion. Digest eats them all.',
+      blurb: 'There is always room for more. And more of the same is better.',
+      focus: 'Eating the same thing twice. A deeper Belly, and two Morsels of one shape spat together fuse into something far worse for the boss.',
+      passive: { name: 'Endless Appetite', desc: 'Your Belly holds 5 Morsels. When the next Morsel after the one you spit is the same shape, both go at once as a Fusion: two Rings a Quake, two Lances a Skewer, two Fangs a Maul, two Spikes an Impale.' },
+      build: () => ({
+        potMult: 0.9,   // balance knob (tools/simulate.js)
+        bellyMax: 5, fuse: true,
+        abilities: {
+          spit: { desc: 'Spit your oldest Morsel back at the boss in the shape you ate it. If the next one is the same shape, both go together as a Fusion, far stronger than two apart.' },
+        },
+      }),
+    },
+    {
+      id: 'gizzard', name: 'Gizzard', title: 'The Iron Stomach', accent: '#c8b070',
+      gaugeTip: 'Holds up to 3 Morsels: Ring (circles), Lance (lines), Fang (cones), Spike (tankbusters). Digest turns each into protection for the party, by its shape.',
+      blurb: 'Whatever it swallows comes back out as armour for everyone else.',
+      focus: 'Protecting the party. Digest turns every Morsel into a shield or a ward for your allies, each shape its own kind.',
+      passive: { name: 'Iron Stomach', desc: 'Digest feeds the party instead of you: a Ring shields everyone, a Lance puts a big shield on whoever is hurt most, a Fang cuts the party\'s damage taken, a Spike makes the most hurt ally immune for 2s. You still heal a little for each.' },
+      build: () => ({
+        potMult: 1.0,
+        abilities: {
+          digest: {
+            desc: 'Digest every Morsel at once into protection for the party. Ring: a shield on everyone. Lance: a big shield on whoever is hurt most. Fang: the party takes 15% less damage for 6s. Spike: the most hurt ally is immune for 2s. You heal 3% of your HP for each.',
+            effect(k) {
+              const eaten = mawDigestTake(k, this);
+              if (!eaten.length) return;
+              k.healRaw('self', k.env.maxHp() * 0.03 * eaten.length, { ab: this });
+              const n = m => eaten.filter(e => e.m === m).length;
+              if (n('ring')) k.shield('party', 150 * n('ring'), 10, { ab: this });
+              if (n('lance')) k.shield('lowest', 360 * n('lance'), 10, { ab: this });
+              if (n('fang')) k.mitigate('party', Math.min(0.3, 0.15 * n('fang')), 6, { ab: this });
+              if (n('spike')) k.mitigate('lowest', 1, 2, { kind: 'invuln', ab: this });
+            },
+          },
+        },
+      }),
+    },
+  ],
+
+  oathbroker: [
+    {
+      id: 'guarantor', name: 'Guarantor', title: 'The Co-Signer', accent: '#c8d8f0',
+      gaugeTip: '60% of the damage you take is written into the Ledger, due 8s later. A co-signed ally\'s Ledger share (30% of what they take) is written into yours, marked with a seal.',
+      blurb: 'Your word is good for two. Their wounds go on your account.',
+      focus: 'Protecting one ally. Co-sign a friend and part of everything that hits them goes onto your Ledger instead.',
+      passive: { name: 'Co-Signer', desc: 'Lien becomes Co-Sign: for 20s, 30% of the damage an ally takes is written into your Ledger instead, and Settle pays it with the rest.' },
+      build: () => ({
+        potMult: 1.0,
+        abilities: {
+          lien: {
+            id: 'cosign', replaces: 'lien', icon: 'lien', name: 'Co-Sign', type: 'ogcd', target: 'ally', cd: 20, anim: 'cast', lock: 0.4,
+            desc: 'Co-sign an ally (the one you\'ve picked, or whoever is hurt most): for 20s, 30% of the damage they take is written into your Ledger instead, due 8s later.',
+            glow: k => !(k.g.cosign != null && k.g.cosignUntil > k.now + 2),
+            effect(k, t) { oathSend(k, { op: 'cosign', target: t, dur: k.perk('oathbroker_w3') ? 24 : 20 }); k.g.cosignUntil = k.now + 20; },
+            fx: { color: '#c8d8f0' },
+          },
+        },
+      }),
+    },
+    {
+      id: 'collector', name: 'Collector', title: 'The Debt Comes Due', accent: '#d8b05a',
+      gaugeTip: '60% of the damage you take is written into the Ledger, due 8s later. Every bill that comes due also strikes the boss for half its size.',
+      blurb: 'Every debt is owed twice: once by you, and once by whoever made you take it.',
+      focus: 'A big Ledger. Every bill that comes due strikes the boss for half its size, so the more you owe, the harder you hit.',
+      passive: { name: 'Due With Interest', desc: 'Every entry that comes due also strikes the boss for half its size. Default becomes Foreclose: the whole Ledger turned into one blow on the boss.' },
+      build: () => ({
+        potMult: 0.9,
+        collector: OATH.COL,
+        abilities: {
+          default: {
+            id: 'foreclose', replaces: 'default', icon: 'default', name: 'Foreclose', type: 'ogcd', target: 'enemy', range: 300, cd: 120, anim: 'big',
+            desc: 'Call in every debt at once: the whole Ledger is erased and strikes the boss in one blow, as big as everything that was written. Your credit freezes for 10s after.',
+            usable: k => k.g.ledger.length > 0,
+            glow: k => oathTotal(k) >= oathHp(k) * 0.3,
+            effect(k) {
+              oathSend(k, { op: 'foreclose', mult: 1, freeze: k.perk('oathbroker_a4') ? 7 : OATH.FREEZE });
+              k.g.ledger = []; k.g.total = 0;
+              oathDefaultAfter(k, this);
+            },
+            fx: { color: '#ffd27a' },
+          },
+        },
+      }),
+    },
+  ],
+});
+
 // IRONPALM's specs (its kit is the last block of kits.js)
 // ===================================================================================================================
 SPECS.ironpalm = [

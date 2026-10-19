@@ -36,6 +36,15 @@ const RAIDS = [   // [boss name, boss id, tank, healer, two DPS]
   ['Skitterra', 'skitterra', 'bastion:sentinel', 'alembist:volatile', 'ranger:base', 'shadowblade:base'],
   ['Volkar', 'volkar', 'bastion:base', 'alembist:apothecary', 'ranger:base', 'pyromancer:base'],
   ['the Hollow King', 'hollowking', 'bloodreaver:base', 'alembist:base', 'shadowblade:bladedancer', 'pyromancer:base'],
+  // Gorgemaw and Oathbroker (tanks-2): the base kit and each spec tanking a boss
+  ['Grubnak', 'grubnak', 'gorgemaw:base', 'cleric:base', 'ranger:base', 'pyromancer:base'],
+  ['Skitterra', 'skitterra', 'gorgemaw:glutton', 'grovekeeper:base', 'ranger:base', 'shadowblade:base'],
+  ['Volkar', 'volkar', 'gorgemaw:gizzard', 'cleric:base', 'ranger:base', 'pyromancer:base'],
+  ['Grubnak', 'grubnak', 'oathbroker:guarantor', 'cleric:base', 'ranger:base', 'pyromancer:base'],
+  ['Volkar', 'volkar', 'oathbroker:base', 'grovekeeper:base', 'ranger:base', 'pyromancer:base'],
+  ['the Hollow King', 'hollowking', 'oathbroker:collector', 'cleric:base', 'shadowblade:base', 'pyromancer:base'],
+  ['the Hollow King', 'hollowking', 'gorgemaw:base', 'grovekeeper:base', 'ranger:base', 'pyromancer:base'],
+
   // Ironpalm (the combo-paced tank): the base kit and each spec tanking a boss
   ['Grubnak', 'grubnak', 'ironpalm:base', 'cleric:base', 'ranger:base', 'pyromancer:base'],
   ['Skitterra', 'skitterra', 'ironpalm:stillwater', 'grovekeeper:base', 'ranger:base', 'shadowblade:base'],

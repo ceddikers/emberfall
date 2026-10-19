@@ -229,9 +229,11 @@
   function healerish() { return actor && actor.abilities.some(a => a.target === 'ally'); }
 
   // --- kit events
-  const SIM_EVENTS = new Set(['damage', 'heal', 'hot', 'shield', 'mit', 'raise', 'rewind', 'selfDamage', 'targetDebuff', 'partyBuff', 'snap', 'pool', 'brand', 'taunt', 'splash']);
+  const SIM_EVENTS = new Set(['damage', 'heal', 'hot', 'shield', 'mit', 'raise', 'rewind', 'selfDamage', 'targetDebuff', 'partyBuff', 'snap', 'pool', 'brand', 'taunt', 'splash',
+    'maw', 'ledger']);   // (the Gorgemaw's jaw and the Oathbroker's Ledger: fight.js classEvent)
   const EV_FIELDS = ['type', 'amount', 'crit', 'target', 'ticks', 'interval', 'id', 'dur', 'tag', 'pct', 'kind', 'value', 'secs', 'threat', 'tgt', 'r', 'not',
-    'up', 'sh', 'cl', 'pa', 'ps', 'pr', 'fol'];   // (a thrown vial's splash: fight.js splash())
+    'up', 'sh', 'cl', 'pa', 'ps', 'pr', 'fol',   // (a thrown vial's splash: fight.js splash())
+    'all', 'op', 'older', 'mark', 'freeze', 'drop', 'merge', 'hit', 'push', 'due', 'col', 'small', 'tithe', 'mult'];   // (jaw and Ledger orders)
   function packEv(ev) {
     const o = {};
     for (const k of EV_FIELDS) if (ev[k] !== undefined) o[k] = ev[k];
@@ -371,6 +373,7 @@
           const a = actor; later(ev.dur || 8, () => { if (actor === a) a.notify('shieldEnd', { tag: 'ward', frac: 0 }); });
         }
         break;
+      case 'maw': case 'ledger': if (typeof CLASS_TOWN !== 'undefined') CLASS_TOWN.event(town, ev, now, actor); break;   // the advanced tanks on the sparring dummy
     }
   }
   function endTownShield() {
@@ -392,6 +395,7 @@
       if (m.kind === 'invuln') { amt = 0; break; }
       if (m.kind !== 'living') amt *= 1 - (m.pct || 0);
     }
+    if (typeof CLASS_TOWN !== 'undefined') amt = CLASS_TOWN.hit(town, amt, now, actor, player);   // an open jaw, a Ledger
     if (town.shield) {
       const used = Math.min(town.shield.amount, amt);
       town.shield.amount -= used; amt -= used;
@@ -1247,7 +1251,10 @@
     if (msg.k === 'raised' && e) BOSS_VFX.playerRaised(e);
     if (msg.k === 'brandHit') { VFX.setScale(msg.id === Net.id ? 1 : 0.6); try { KIT_VFX.brandHit(e, { x: raid.boss.x, y: raid.boss.y }); } finally { VFX.setScale(1); } }
     if (msg.k === 'taunt' && e && msg.id !== Net.id) playTaunt(e, enemyNow(msg.tg), false);   // (your own played when you pressed it)
+    // the advanced tanks' moments (something eaten, a bill stamped): CLASS_FEV in ability-vfx.js
+    if (typeof CLASS_FEV !== 'undefined' && CLASS_FEV[msg.k] && e) { VFX.setScale(msg.id === Net.id ? 1 : 0.6); try { CLASS_FEV[msg.k](msg, e, { mine: msg.id === Net.id, tgs: raid.tgs, now, boss: raid.bossDraw }); } finally { VFX.setScale(1); } }
     if (msg.id !== Net.id || !actor) return;
+    if (msg.k === 'eat' || msg.k === 'ledger') actor.notify(msg.k, msg);
     if (msg.k === 'perfect') actor.notify('perfect');
     if (msg.k === 'reflect') actor.notify('reflect');
     if (msg.k === 'read') actor.notify('read', msg);   // an Ironpalm's Read caught a hit (msg.b: it was a tankbuster)
@@ -1542,6 +1549,7 @@
     }
     town.buffs = town.buffs.filter(b => b.end > now);
     if (town.shield && town.shield.end <= now) endTownShield();
+    if (typeof CLASS_TOWN !== 'undefined') CLASS_TOWN.tick(town, now, actor, player);
     town.taken = town.taken.filter(x => x.t > now - 10);
     updateMeter();
   }
@@ -2078,7 +2086,7 @@
   (function buildAltar() {
     // one band per role (rows, so the roster can grow), compact tiles flowing inside each band
     const altar = $('altar');
-    const COMPLEXITY = { 2: 'More moving parts than most', 3: 'Many moving parts' };
+    const COMPLEXITY = { 2: 'More moving parts than most', 3: 'Many moving parts', 4: 'The most moving parts' };
     for (const role of Object.keys(ROLES)) {
       const list = CLASSES.filter(c => c.role === role);
       if (!list.length) continue;

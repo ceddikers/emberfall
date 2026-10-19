@@ -157,6 +157,7 @@ class RaidHost {
         if (msg.k === 'reflect') bot.actor.notify('reflect');
         if (msg.k === 'read') bot.actor.notify('read', msg);
         if (msg.k === 'shieldEnd') bot.actor.notify('shieldEnd', msg);
+        if (msg.k === 'eat' || msg.k === 'ledger') bot.actor.notify(msg.k, msg);   // (the advanced tanks: fight.js classEvent)
       }
     }
     if (msg.t === 'pdmg') { const bot = this.bots.find(b => b.id === msg.id); if (bot) bot.taken.push({ t: this.sim.t, a: msg.a }); }
@@ -271,7 +272,7 @@ class RaidHost {
             break;
           }
           case 'heal': case 'hot': case 'shield': case 'mit': case 'raise': case 'rewind':
-          case 'selfDamage': case 'targetDebuff': case 'partyBuff': case 'pool': case 'brand': case 'splash':
+          case 'selfDamage': case 'targetDebuff': case 'partyBuff': case 'pool': case 'brand': case 'splash': case 'maw': case 'ledger':
             host.onPlayerEvent(bot.id, ev);
             break;
         }

@@ -124,3 +124,26 @@ HERO_GUIDE.alembist = {
     { keys: ['f'], text: 'Grand Batch fills the bandolier with copies of your last vial.' },
   ],
 };
+
+// Gorgemaw, Oathbroker (tanks-2)
+Object.assign(HERO_GUIDE, {
+  gorgemaw: {
+    passive: { name: 'The Belly', icon: 'wide', desc: 'Open Wide just before an attack lands on you and you eat it: a quarter of the damage, and a Morsel in the shape of what you ate. Spit it back at the boss, or Digest them all to heal.' },
+    combos: [
+      { keys: ['w', 'e'], text: 'Open Wide as the tankbuster lands, then Spit the Spike straight back.' },
+      { keys: ['w', 'w', 'r'], text: 'Eat two hits back to back, then Digest both: a big heal and armour.' },
+      { keys: ['w'], text: 'Stand in a teammate\'s spread circle and eat it for them.' },
+      { keys: ['f'], text: 'Bottomless on the fight\'s worst raidwide: the party takes half.' },
+    ],
+  },
+  oathbroker: {
+    passive: { name: 'The Ledger', icon: 'settle', desc: '60% of every hit you take is written into the Ledger and billed to you 8s later. Pay it down with your combo, push it back, settle it cheap, or make the boss pay.' },
+    combos: [
+      { keys: ['q', 'q', 'q'], text: 'Dun, Levy, Collect: every hit pays the oldest lines down.' },
+      { keys: ['r'], text: 'Lien while the bills pile up: the boss pays a third of each.' },
+      { keys: ['w'], text: 'Renegotiate when a big line is about to land on top of a raidwide.' },
+      { keys: ['e'], text: 'Settle a long Ledger for half while your healer has you topped.' },
+      { keys: ['f'], text: 'Default when the Ledger would bury you: torn up, but closed for 10s.' },
+    ],
+  },
+});
