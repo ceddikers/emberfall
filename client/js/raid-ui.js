@@ -262,6 +262,7 @@ const RaidUI = (() => {
     if (raid.state === 'live') {
       for (const [kind, secs, val, who] of raid.bossStatus || []) {
         if (kind === 'vuln') items.push({ k: kind, c: 'debuff', bg: iconBg('ranger', 'mark'), n: secs, tip: `<b>Hunter's Mark</b><em>${secs}s</em>Takes ${val}% more damage from everyone.` });
+        else if (kind === 'stun') items.push({ k: kind, c: 'debuff', glyph: GLYPH.vuln, n: secs, tip: `<b>Staggered</b><em>${secs}s</em>Stuck in the wall: takes ${val}% more damage.` });
         else if (kind === 'dmg') items.push({ k: kind, c: 'buff', glyph: GLYPH.fury, n: `+${val}%`, tip: `<b>Fury</b><em>+${val}% damage</em>Every blow from the boss lands harder.` });
         else if (kind === 'brand') {
           const mine = who === myId;

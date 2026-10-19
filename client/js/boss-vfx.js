@@ -150,6 +150,36 @@ const BOSS_VFX = (() => {
       VFX.shock(s.x, s.y, { r: AR(), color: '#ffb070', w: 10, dur: 0.7, flat: 1 });
       roomTint('#ff6a2a', 0.22);
     },
+    // Butcher's Charge: a trail of dust and broken grout along his path (the impact at the end comes as a 'slam')
+    charge(tg) {
+      const s = tg.live, ca = Math.cos(s.angle), sa = Math.sin(s.angle);
+      shapeFlash(s, '#ff9a5a', { a: 0.28, dur: 0.4 });
+      for (let d = 40; d < s.len; d += 60) {
+        const x = s.x + ca * d, y = s.y + sa * d;
+        if (ARENA.sd(x, y) > -20) break;
+        after(d / 1150, () => { VFX.smoke(x, y, { color: '#d8c4a4', n: 2, size: 30, a: 0.55, speed: 70 }); VFX.debris(x, y, { color: '#c9b48e', n: 2, speed: 0.6, size: 0.7 }); });
+      }
+      shake(5);
+    },
+    cask(tg) {
+      const s = tg.live;
+      VFX.shock(s.x, s.y, { r: s.r * 1.2, color: '#ffd8a0', w: 6, dur: 0.4, flat: 1 });
+      VFX.smoke(s.x, s.y, { color: '#d8c4a4', n: 6, size: 30, a: 0.6, speed: 90 });
+      VFX.debris(s.x, s.y, { color: '#c9b48e', n: 6, speed: 0.9 });
+      shake(5);
+    },
+    gut(tg) {
+      const s = tg.live;
+      for (let i = 0; i < 3; i++) VFX.shock(s.x, s.y, { r: AR() * 1.6, color: '#d8e89a', w: 14, dur: 0.7, flat: 1, delay: i * 0.1 });
+      roomTint('#a8b84a', 0.22, 0.7);
+      steam(s.x, s.y, 12, 420, '#c8d08a');
+      shake(9);
+    },
+    hook(tg) {
+      const s = tg.live;
+      VFX.sparks(s.x, s.y - 20, { color: '#e8eef4', n: 10, angle: s.angle, spread: 0.5, speed: 380 });
+      streak(s.x, s.y, s.angle, '#e8eef4', { len: s.len, w: 8, dur: 0.3 });
+    },
     rush(tg) {
       const s = tg.live, ca = Math.cos(s.angle), sa = Math.sin(s.angle), len = Math.min(s.len, AR() * 2);
       shapeFlash(s, '#ff8a3a', { a: 0.34 });
@@ -391,7 +421,8 @@ const BOSS_VFX = (() => {
 
   // ---------------------------------------------------------------- casts, autos, adds, moments
   const CAST_COLOR = {
-    grubnak: { def: '#ffb050', boil: '#ff6a2a', bell: '#9ffff4', whisk: '#fff0c8', raise: '#ff7a1a', flop: '#f0e0c8', throw: '#ffe6d0', flambe: '#6ab0ff' },
+    grubnak: { def: '#ffb050', boil: '#ff6a2a', bell: '#9ffff4', whisk: '#fff0c8', raise: '#ff7a1a', flop: '#f0e0c8', throw: '#ffe6d0', flambe: '#6ab0ff',
+      charge: '#ff8a4a', larder: '#ffd8a0', gut: '#c8d87a', hook: '#e8eef4', drains: '#b89a5a' },
     skitterra: { def: '#d08aff', mist: '#9adf3a', spit: '#9adf3a', wrap: '#f4f0ff', silk: '#f4f0ff', web: '#f4f0ff', lunge: '#ff7ac0', eggs: '#e8ff9a', fang: '#ff7ac0', volley: '#f4f0ff' },
     volkar: { def: '#7fe8ff', surge: '#ffe08a', crash: '#ffe27a', field: '#d79bff', gale: '#e8f4ff', walls: '#e8f4ff', fist: '#9ff4ff', skyfall: '#dff4ff' },
     hollowking: { def: '#6dff9a', gaze: '#f0fff4', doom: '#b46aff', bells: '#ffd88a', cleave: '#ff8a7a', night: '#8aa0ff', audience: '#ffe6a0' },
@@ -562,11 +593,66 @@ const BOSS_VFX = (() => {
   }
   function nightFall() { roomTint('#05060c', 0.6, 1.2); shake(6); }
 
+  // ---------------------------------------------------------------- the room's props
+  // propFx: a prop chipped, a prop broken (debris by what it's made of), someone (or the boss) slammed into a wall or
+  // prop, grease catching fire
+  const PROP_STUFF = {
+    cask: { color: '#8a5a2e', dust: '#c8a878', size: 1.1 }, pillar: { color: '#4a4156', dust: '#8a8098', size: 1.3 },
+    lid: { color: '#565d61', dust: '#a8b0ac', size: 1.2 }, stone: { color: '#5a6270', dust: '#b8c4d4', size: 1.3 },
+    boulder: { color: '#6a6460', dust: '#c8c0b0', size: 1.4 }, brazier: { color: '#2f3337', dust: '#7a8a80', size: 0.9 },
+  };
+  function propFx(msg, room, entById) {
+    const st = PROP_STUFF[msg.kind] || { color: '#6a6a72', dust: '#b0b0b8', size: 1 };
+    if (msg.k === 'chip') {
+      VFX.debris(msg.x, msg.y - 20, { color: st.color, n: 5, speed: 0.8, size: st.size * 0.8 });
+      VFX.smoke(msg.x, msg.y - 10, { color: st.dust, n: 3, size: 22, a: 0.5, speed: 50 });
+      shake(2);
+    } else if (msg.k === 'break') {
+      const r = msg.r || 30;
+      VFX.debris(msg.x, msg.y - 18, { color: st.color, n: 16, speed: 1.3, size: st.size * 1.2, up: 1.2 });
+      VFX.smoke(msg.x, msg.y, { color: st.dust, n: 10, size: 34, a: 0.6, speed: 110, r: r * 0.6 });
+      VFX.shock(msg.x, msg.y, { r: r * 2.4, color: st.dust, w: 6, dur: 0.45, flat: 1 });
+      if (msg.kind === 'cask') VFX.splash(msg.x, msg.y, { color: '#6a1018', n: 14, speed: 1.3 });
+      if (msg.kind === 'boulder' || msg.how === 'storm') VFX.sparks(msg.x, msg.y - 20, { color: '#dff4ff', n: 10, speed: 320 });
+      shake(5);
+    } else if (msg.k === 'slam') {
+      // dust bursting off the wall (or the prop) where they hit, and a ring of grit
+      const back = (msg.a || 0) + Math.PI, boss = msg.boss;
+      VFX.smoke(msg.x, msg.y, { color: '#cfc4b0', n: boss ? 14 : 7, size: boss ? 44 : 30, a: 0.65, speed: boss ? 160 : 100 });
+      VFX.debris(msg.x, msg.y - 10, { color: '#7a6a5a', n: boss ? 14 : 6, speed: boss ? 1.4 : 1 });
+      VFX.shock(msg.x, msg.y, { r: boss ? 220 : 90, color: '#f0e0c8', w: boss ? 10 : 5, dur: 0.45, flat: 1 });
+      VFX.sparks(msg.x, msg.y - 14, { color: '#fff0d0', n: boss ? 14 : 6, angle: back, spread: 1.4, speed: 300 });
+      if (boss) VFX.decal(msg.x, msg.y, { style: 'crack', r: 90, dur: 4, a: 0.6, seed: Math.random() * 6 });
+      const e = msg.pid != null && entById ? entById(msg.pid) : null;
+      if (e) { VFX.hit(e.x, e.y, '#ffe0c0', 1.5); VFX.aura(e, { style: 'ring', color: '#f0e8d8', r: 26, dur: 0.6, rate: 0.6 }); }
+      shake(boss ? 12 : 5);
+    } else if (msg.k === 'ignite') {
+      VFX.flare(msg.x, msg.y, { color: '#ff7a1a', n: 16, r: (msg.r || 60) * 0.6 });
+      VFX.smoke(msg.x, msg.y, { color: '#3a2a20', n: 5, size: 30, a: 0.5, speed: 60 });
+    }
+    void room;
+  }
+
+  // the stove line erupting along the top wall: every burner throws up fire and sparks, smoke rolls off it
+  function stoveBurst(hitX) {
+    const y = -ARENA.hh - 30;
+    for (let i = 0; i < 6; i++) {
+      const x = -ARENA.hw + 130 + i * (ARENA.hw * 2 - 260) / 5;
+      after(0.08 * Math.abs(x - hitX) / 160, () => {
+        VFX.flare(x, y + 30, { color: '#ff6a1a', n: 22, r: 40, h: 1.8, size: 1.5 });
+        VFX.sparks(x, y + 20, { color: '#ffd080', n: 10, angle: Math.PI / 2, spread: 1.2, speed: 420 });
+        VFX.smoke(x, y + 10, { color: '#3a2a20', n: 4, size: 40, a: 0.5, speed: 70 });
+      });
+    }
+    roomTint('#ff6a1a', 0.12, 0.6);
+    shake(8);
+  }
+
   function victory(ents) {
     for (const e of ents) { VFX.confetti(e.x, e.y, { n: 50 }); VFX.burst(e.x, e.y, { color: '#ffe27a', color2: '#ffffff', n: 16, speed: 260 }); }
     roomTint('#fff2b0', 0.2, 1);
   }
   function wipe() { roomTint('#200810', 0.4, 1.4); }
 
-  return { gazed, doomed, cure, knightMemory, knightRise, nightFall, polarityFlip, edgeClose, pulse, orbForm, orbHit, chain, meatballLand, meatballHit, silkSnap, reelBite, impact, castStart, auto, leap, roar, addSpawn, addDeath, addEnrage, fury, spit, husk, tetherSnap, playerDeath, playerRaised, partyBuff, victory, wipe };
+  return { propFx, stoveBurst, gazed, doomed, cure, knightMemory, knightRise, nightFall, polarityFlip, edgeClose, pulse, orbForm, orbHit, chain, meatballLand, meatballHit, silkSnap, reelBite, impact, castStart, auto, leap, roar, addSpawn, addDeath, addEnrage, fury, spit, husk, tetherSnap, playerDeath, playerRaised, partyBuff, victory, wipe };
 })();

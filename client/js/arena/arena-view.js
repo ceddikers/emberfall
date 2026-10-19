@@ -1,6 +1,8 @@
 // Drawing for the raid arena: the floor, telegraphs, ground hazards and the boss's hitbox ring.
 // Telegraphs show WHERE something will land. They never say what to do about it.
 
+const hash01 = i => { const x = Math.sin(i * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
+
 const ArenaView = {
   floor: null, floorFor: null,
 
@@ -497,6 +499,12 @@ const ArenaView = {
           rrect(c, jx - 6, y + 5, 12, 5, 2, '#8a7a6a', OUT, 1);
         }
       }
+      // the larder casks he throws, racked on their sides along the shelf
+      for (const yy of [-hh * 0.5, -hh * 0.1, hh * 0.3]) {
+        ellipse(c, x0 + 27, yy, 22, 15, 0, '#9a6a36', OUT, 2.5);
+        ellipse(c, x0 + 27, yy, 13, 8, 0, '#b8844a', '#3a3a42', 2);
+        line(c, x0 + 12, yy - 13, x0 + 12, yy + 13, '#3a3a42', 2.5); line(c, x0 + 42, yy - 13, x0 + 42, yy + 13, '#3a3a42', 2.5);
+      }
       for (let k = 0; k < 4; k++) {
         const y = -hh + 90 + k * (hh * 2 - 180) / 3, px = sx > 0 ? x0 + 74 : x0 - 20;
         line(c, px, y - 34, px, y - 16, '#2a1a10', 2);
@@ -958,6 +966,8 @@ const ArenaView = {
       if (k <= 0) continue;
       const s = z.shape;
       if (z.tag === 'trail') { this.silkTrail(ctx, s, k, t); continue; }
+      if (z.tag === 'stovefire') { this.stoveFire(ctx, z, t); continue; }
+      if (z.tag === 'acid') { this.acidFloor(ctx, z, k, t); continue; }
       ctx.save();
       ARENA.trace(ctx, 2); ctx.clip();   // the web stops at the walls, whatever shape they are
       SHAPES.trace(ctx, s);
@@ -991,6 +1001,57 @@ const ArenaView = {
     }
     for (let d = 20; d < s.len; d += 34) line(ctx, s.x + ca * d - sa * hw, s.y + sa * d + ca * hw, s.x + ca * (d + 14) + sa * hw, s.y + sa * (d + 14) - ca * hw, 'rgba(240,240,255,0.2)', 1.2);
     for (let i = 0; i < 6; i++) { const d = ((i * 97) % 100) / 100 * s.len, off = (((i * 53) % 100) / 100 - 0.5) * s.w * 0.8; circle(ctx, s.x + ca * d - sa * off, s.y + sa * d + ca * off, 2, `rgba(255,255,255,${0.4 + Math.sin(t * 3 + i) * 0.3})`); }
+    ctx.restore();
+  },
+
+  // the stove line erupting (Grubnak's charge into it): first the burners flare and heat shimmers over the top of the
+  // room, then it's a wall of fire until it dies down
+  stoveFire(ctx, z, t) {
+    const s = z.shape, x0 = s.x, x1 = s.x + s.len, y0 = s.y - s.w / 2, y1 = s.y + s.w / 2;
+    const warm = clamp((t - z.start) / Math.max(0.1, z.at - z.start), 0, 1), on = t >= z.at, k = Math.min(1, Math.max(0, (z.end - t) / 1.2));
+    ctx.save();
+    ARENA.trace(ctx, 2); ctx.clip();
+    const g = ctx.createLinearGradient(0, y0, 0, y1);
+    g.addColorStop(0, rgba('#ff5a1a', (on ? 0.5 : 0.25 * warm) * k)); g.addColorStop(1, rgba('#ff8a2a', (on ? 0.14 : 0.04 * warm) * k));
+    ctx.fillStyle = g; ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
+    if (!on) {
+      for (let i = 0; i < 14; i++) { const x = x0 + (i + 0.5) / 14 * (x1 - x0), q = (t * 1.3 + hash01(i)) % 1; ctx.beginPath(); ctx.moveTo(x, y1 - q * (y1 - y0)); ctx.quadraticCurveTo(x + 6, y1 - q * (y1 - y0) - 10, x, y1 - q * (y1 - y0) - 20); ctx.strokeStyle = rgba('#ffd0a0', 0.4 * warm * (1 - q)); ctx.lineWidth = 1.5; ctx.stroke(); }
+      ctx.setLineDash([14, 10]); ctx.lineDashOffset = -t * 30; line(ctx, x0, y1, x1, y1, rgba('#ffb070', 0.4 + 0.5 * warm), 3);
+    } else {
+      // rows of fire tongues, the back rows taller (the stove line behind them is the hottest)
+      for (let row = 0; row < 3; row++) for (let i = 0; i < 18; i++) {
+        const x = x0 + (i + 0.5 + (row % 2) * 0.5) / 18 * (x1 - x0), y = y0 + (y1 - y0) * (0.3 + row * 0.3), h = 0.6 + 0.4 * Math.sin(t * 6 + i * 1.7 + row);
+        this.fireTongue(ctx, x + Math.sin(t * 3 + i) * 4, y, (46 - row * 10) * h * k, 13 - row * 2, t + i * 0.37 + row);
+      }
+      glow(ctx, (x0 + x1) / 2, y0 + 40, (x1 - x0) * 0.4, '#ff7a1a', 0.18 * k);
+      line(ctx, x0, y1, x1, y1, rgba('#ffe0a0', 0.55 * k), 2.5);
+    }
+    ctx.restore();
+  },
+  // one licking tongue of fire standing on (x, y): dark red outside, orange, a yellow core
+  fireTongue(ctx, x, y, h, w, t) {
+    if (h <= 1) return;
+    const sw = Math.sin(t * 7) * w * 0.5;
+    const tongue = (hh, ww, col) => {
+      ctx.beginPath(); ctx.moveTo(x - ww, y);
+      ctx.quadraticCurveTo(x - ww * 1.1, y - hh * 0.5, x + sw, y - hh);
+      ctx.quadraticCurveTo(x + ww * 1.1, y - hh * 0.5, x + ww, y);
+      ctx.quadraticCurveTo(x, y + ww * 0.5, x - ww, y); ctx.fillStyle = col; ctx.fill();
+    };
+    tongue(h, w, 'rgba(170,40,10,0.75)'); tongue(h * 0.78, w * 0.72, 'rgba(255,120,30,0.9)'); tongue(h * 0.45, w * 0.4, 'rgba(255,225,120,0.95)');
+  },
+  // Acid Deluge (Skitterra, Hard): the floor the acid fell on stays sticky for a while; the shadows it missed stay clean
+  acidFloor(ctx, z, k, t) {
+    const s = z.shape;
+    ctx.save();
+    ARENA.trace(ctx, 2); ctx.clip();
+    for (const [cx, cy, r] of s.covers || []) {
+      const sh = PROPS.shadowPoly(s.x, s.y, { shape: 'circle', x: cx, y: cy, r });
+      if (!sh) continue;
+      ctx.beginPath(); ctx.rect(-4000, -4000, 8000, 8000); sh.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.closePath(); ctx.clip('evenodd');
+    }
+    ctx.fillStyle = rgba('#7ad83a', 0.13 * k); ctx.fillRect(-ARENA.R - 20, -ARENA.R - 20, ARENA.R * 2 + 40, ARENA.R * 2 + 40);
+    for (let i = 0; i < 40; i++) { const a = hash01(i) * TAU, d = Math.sqrt(hash01(i + 40)) * ARENA.R, q = (t * 0.5 + hash01(i + 80)) % 1; circle(ctx, Math.cos(a) * d, Math.sin(a) * d, 3 + q * 7, null, rgba('#c8ff8a', 0.35 * (1 - q) * k), 1.2); }
     ctx.restore();
   },
 
@@ -1220,6 +1281,333 @@ const ArenaView = {
       poly(ctx, [-8, -10, 10, 0, -8, 10, -3, 0], '#d0f0ff', OUT, 1);
       ctx.restore();
     }
+  },
+
+  // ------------------------------------------------------------------ the room's props and floor state
+  // The host owns them (fight.js): a 'props' message carries every prop, the floor changes and the burning grease.
+  // Floor changes are drawn once into their own cached layer; props are drawn with the units, sorted by depth.
+  newRoom() { return { props: [], floor: [], fv: -1, lit: new Map(), layer: null, layerFor: '', born: new Map(), ev: {} }; },
+  roomProps(room, msg, now) {
+    const seen = new Set();
+    room.props = (msg.p || []).map(a => {
+      const pr = PROPS.unpack(a);
+      seen.add(pr.id);
+      if (!room.born.has(pr.id)) room.born.set(pr.id, now);
+      pr.born = room.born.get(pr.id);
+      return pr;
+    });
+    for (const id of [...room.born.keys()]) if (!seen.has(id)) room.born.delete(id);
+    if (msg.fv !== room.fv && Array.isArray(msg.f)) {
+      room.fv = msg.fv; room.floor = msg.f; room.layerFor = '';
+      // a round room's broken-off wedges move its wall (Volkar, Hard)
+      if (ARENA.kind === 'circle') ARENA.cuts = room.floor.filter(f => f.kind === 'wedge').map(f => ({ a0: f.a0, a1: f.a1, r: f.r }));
+    }
+    room.lit = new Map((msg.lit || []).map(([id, s]) => [id, now + s]));
+  },
+  // moments the room shows that aren't props: { k: 'lightsout' | 'ambush' | ... } (see each boss)
+  roomEvent(room, msg, now) {
+    room.ev[msg.k] = Object.assign({}, msg, { start: now, end: now + (msg.dur || 0) });
+    if (msg.k === 'stove' && typeof BOSS_VFX !== 'undefined') BOSS_VFX.stoveBurst(msg.x || 0);
+  },
+
+  // the floor layer: rubble, grease, broken ground. Same size and scale as the floor, rebuilt only when it changes
+  drawRoomFloor(ctx, room) {
+    if (!room.floor.length || !this.floor) return;
+    const key = room.fv + '@' + this.floorFor;
+    if (room.layerFor !== key) {
+      const cv = room.layer && room.layer.width === this.floor.width && room.layer.height === this.floor.height ? room.layer : document.createElement('canvas');
+      cv.width = this.floor.width; cv.height = this.floor.height;
+      const c = cv.getContext('2d'), { bx, by } = this.floorBox;
+      c.clearRect(0, 0, cv.width, cv.height);
+      c.setTransform(cv.width / (bx * 2), 0, 0, cv.height / (by * 2), 0, 0); c.translate(bx, by);
+      for (const fl of room.floor) this.floorMark(c, fl);
+      room.layer = cv; room.layerFor = key;
+    }
+    const { bx, by } = this.floorBox;
+    ctx.drawImage(room.layer, -bx, -by, bx * 2, by * 2);
+  },
+  floorMark(c, fl) {
+    const r = rng(fl.id * 7 + 3);
+    if (fl.kind === 'grease') {
+      // dark, glossy grease backed up out of the drains
+      c.save();
+      c.beginPath();
+      for (let i = 0; i <= 22; i++) { const a = i * TAU / 22, w = fl.r * (0.85 + 0.15 * Math.sin(a * 3 + fl.id) + 0.05 * Math.sin(a * 7)); i ? c.lineTo(fl.x + Math.cos(a) * w, fl.y + Math.sin(a) * w * 0.86) : c.moveTo(fl.x + Math.cos(a) * w, fl.y + Math.sin(a) * w * 0.86); }
+      c.closePath();
+      const g = c.createRadialGradient(fl.x - fl.r * 0.2, fl.y - fl.r * 0.25, fl.r * 0.1, fl.x, fl.y, fl.r);
+      g.addColorStop(0, 'rgba(92,70,30,0.9)'); g.addColorStop(0.7, 'rgba(48,34,12,0.88)'); g.addColorStop(1, 'rgba(30,20,6,0.8)');
+      c.fillStyle = g; c.fill(); c.strokeStyle = 'rgba(150,120,60,0.55)'; c.lineWidth = 2; c.stroke();
+      for (let i = 0; i < 4; i++) ellipse(c, fl.x + (r() - 0.6) * fl.r * 0.9, fl.y + (r() - 0.6) * fl.r * 0.7, fl.r * (0.12 + r() * 0.14), fl.r * 0.04, -0.3, 'rgba(255,240,200,0.18)');
+      c.restore();
+    } else if (fl.kind === 'rubble') this.rubble(c, fl, r);
+    else if (fl.kind === 'wedge') this.brokenWedge(c, fl, r);
+    else if (fl.kind === 'scorch') { glow(c, fl.x, fl.y, fl.r, '#140a04', 0.6); }
+  },
+  // what a broken prop leaves on the floor
+  rubble(c, fl, r) {
+    const wood = fl.of === 'cask', silk = fl.of === 'pillar', green = fl.of === 'lid';
+    glow(c, fl.x, fl.y, fl.r * 1.2, wood ? '#3a1e08' : '#0a0a0c', 0.45);
+    if (wood) {   // staves, a hoop and a wine-dark stain
+      ellipse(c, fl.x, fl.y + 4, fl.r * 1.1, fl.r * 0.7, 0, 'rgba(70,14,20,0.45)');
+      for (let i = 0; i < 7; i++) { const a = r() * TAU, d = r() * fl.r; c.save(); c.translate(fl.x + Math.cos(a) * d, fl.y + Math.sin(a) * d * 0.7); c.rotate(r() * TAU); rrect(c, -12, -3, 24, 6, 2, '#8a5a2e', OUT, 1.5); line(c, -9, 0, 9, 0, 'rgba(40,20,6,0.5)', 1); c.restore(); }
+      ellipse(c, fl.x + (r() - 0.5) * 10, fl.y + 6, fl.r * 0.55, fl.r * 0.3, r(), null, '#4a4a52', 3);
+      return;
+    }
+    const col = silk ? '#4a4156' : green ? '#4a5156' : fl.of === 'stone' ? '#5a6270' : fl.of === 'boulder' ? '#6a6460' : '#4a4652';
+    for (let i = 0; i < 9; i++) {
+      const a = r() * TAU, d = Math.sqrt(r()) * fl.r * 0.9, x = fl.x + Math.cos(a) * d, y = fl.y + Math.sin(a) * d * 0.75, s = 5 + r() * fl.r * 0.28, pts = [];
+      for (let k = 0; k < 5; k++) { const q = k * TAU / 5 + r() * 0.5; pts.push(x + Math.cos(q) * s, y + Math.sin(q) * s * 0.8); }
+      poly(c, pts, shade(col, (r() - 0.5) * 0.3), OUT, 1.5);
+      line(c, pts[0], pts[1], pts[2], pts[3], 'rgba(255,255,255,0.14)', 1.2);
+    }
+    if (silk) for (let i = 0; i < 4; i++) { const a = r() * TAU; line(c, fl.x, fl.y, fl.x + Math.cos(a) * fl.r * 1.3, fl.y + Math.sin(a) * fl.r, 'rgba(235,235,250,0.3)', 1.2); }
+  },
+  // Volkar (Hard): a wedge of the summit has broken away: cloud and empty air below a jagged lip
+  brokenWedge(c, fl, r) {
+    const R = ARENA.full + 60, steps = 28;
+    c.save();
+    c.beginPath(); c.moveTo(Math.cos(fl.a0) * fl.r, Math.sin(fl.a0) * fl.r);
+    const lip = [];
+    for (let i = 0; i <= steps; i++) { const a = fl.a0 + (fl.a1 - fl.a0) * i / steps, rr = fl.r + (i && i < steps ? (r() - 0.5) * 14 : 0); lip.push([a, rr]); c.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); }
+    c.arc(0, 0, R, fl.a1, fl.a0, true); c.closePath();
+    const g = c.createRadialGradient(0, 0, fl.r, 0, 0, R);
+    g.addColorStop(0, '#0c1018'); g.addColorStop(0.3, '#18202c'); g.addColorStop(1, '#202a38');
+    c.fillStyle = g; c.fill();
+    c.clip();
+    for (let i = 0; i < 10; i++) { const a = fl.a0 + r() * (fl.a1 - fl.a0), d = fl.r + 60 + r() * (R - fl.r); glow(c, Math.cos(a) * d, Math.sin(a) * d, 50 + r() * 50, '#3a4658', 0.4); }
+    c.restore();
+    // the broken lip: dark rock face and a lit edge
+    c.beginPath(); lip.forEach(([a, rr], i) => (i ? c.lineTo(Math.cos(a) * rr, Math.sin(a) * rr) : c.moveTo(Math.cos(a) * rr, Math.sin(a) * rr)));
+    c.strokeStyle = '#151a22'; c.lineWidth = 9; c.stroke();
+    c.strokeStyle = 'rgba(200,215,235,0.35)'; c.lineWidth = 1.6; c.stroke();
+  },
+
+  // under everything that stands: the floor layer, burning grease, and the darkness of Lights Out
+  drawRoomUnder(ctx, room, t, v) {
+    this.drawRoomFloor(ctx, room);
+    for (const fl of room.floor) {
+      const until = room.lit.get(fl.id);
+      if (fl.kind !== 'grease' || !(until > t)) continue;
+      const k = Math.min(1, (until - t) / 0.6);
+      glow(ctx, fl.x, fl.y, fl.r * 1.5, '#ff7a1a', 0.35 * k);
+      for (let i = 0; i < 9; i++) {
+        const a = i * 2.39 + fl.id, d = fl.r * (0.2 + (i % 3) * 0.28);
+        this.fireTongue(ctx, fl.x + Math.cos(a) * d, fl.y + Math.sin(a) * d * 0.8, (22 + (i % 4) * 7) * k * (0.75 + 0.25 * Math.sin(t * 8 + i)), 9, t + i * 0.7);
+      }
+    }
+    const lo = room.ev.lightsout;
+    if (lo && t < lo.end + 0.6) this.drawLightsOut(ctx, room, lo, t, v);
+    const amb = room.ev.ambush;
+    if (amb && t < amb.end + 0.3) this.ambushShadow(ctx, amb, t);
+  },
+  // over the units: marks that belong over heads (Volkar's rod strike) and the like
+  drawRoomOver(ctx, room, t, env) {
+    // Grubnak stuck in the wall after a charge: stars turning round his head
+    const st = room.ev.stuck;
+    if (st && t < st.end && env.boss) {
+      const b = env.boss, k = Math.min(1, (st.end - t) / 0.4);
+      for (let i = 0; i < 5; i++) {
+        const a = t * 3 + i * TAU / 5, x = b.x + Math.cos(a) * 46, y = b.y - 150 + Math.sin(a) * 14;
+        ctx.save(); ctx.globalAlpha = k * (0.6 + 0.4 * Math.sin(a)); ctx.translate(x, y); ctx.rotate(t * 4 + i);
+        poly(ctx, [0, -8, 2.5, -2.5, 8, 0, 2.5, 2.5, 0, 8, -2.5, 2.5, -8, 0, -2.5, -2.5], '#ffe27a', OUT, 1.2);
+        ctx.restore();
+      }
+    }
+    const rs = room.ev.rodmark;
+    if (rs && t < rs.end) for (const id of rs.ids || []) {
+      const e = env.entById(id); if (!e) continue;
+      const p = clamp((t - rs.start) / Math.max(0.1, rs.end - rs.start), 0, 1);
+      ctx.save(); ctx.translate(e.x, e.y - 96);
+      glow(ctx, 0, 0, 26, '#9ff4ff', 0.4 + 0.4 * p);
+      ctx.beginPath(); ctx.arc(0, 0, 13, -Math.PI / 2, -Math.PI / 2 + TAU * (1 - p)); ctx.strokeStyle = rgba('#dffbff', 0.9); ctx.lineWidth = 2.5; ctx.stroke();
+      jagged(ctx, -4, -9, 3, 9, Math.floor(t * 10), '#bff6ff', 1.5);
+      ctx.restore();
+    }
+  },
+
+  // one prop, in the room's style. Every prop: a contact shadow and a clean outline. On its last hit it shows cracks.
+  drawProp(ctx, pr, t, room) {
+    const k = Math.min(1, (t - (pr.born ?? t - 1)) / 0.25), last = pr.maxHp > 1 && pr.hp <= 1, worn = pr.maxHp > 2 && pr.hp === pr.maxHp - 1;
+    ctx.save(); ctx.globalAlpha = k;
+    switch (pr.kind) {
+      case 'cask': this.cask(ctx, pr, last, t); break;
+      case 'pillar': this.rockPillar(ctx, pr, last, worn, t); break;
+      case 'brazier': this.brazier(ctx, pr, t, room); break;
+      case 'lid': this.coffinLid(ctx, pr, last); break;
+      case 'masonry': this.masonry(ctx, pr); break;
+      case 'stone': this.standingStone(ctx, pr, t); break;
+      case 'boulder': this.boulder(ctx, pr, t); break;
+      default: ellipse(ctx, pr.x + 4, pr.y + 6, pr.r * 1.1, pr.r * 0.6, 0, 'rgba(0,0,0,0.4)'); circle(ctx, pr.x, pr.y, pr.r, '#6a6a72', OUT, 2.5);
+    }
+    ctx.restore();
+  },
+  // cracks running over a prop that's about to give (drawn in the prop's own coordinates)
+  cracks(ctx, x, y, s, seed, color = 'rgba(12,8,6,0.85)') {
+    const r = rng(seed);
+    ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    for (let i = 0; i < 4; i++) {
+      let px = x + (r() - 0.5) * s * 0.6, py = y + (r() - 0.5) * s * 0.6, a = r() * TAU;
+      ctx.beginPath(); ctx.moveTo(px, py);
+      for (let j = 0; j < 4; j++) { a += (r() - 0.5) * 1.3; px += Math.cos(a) * s * 0.22; py += Math.sin(a) * s * 0.22; ctx.lineTo(px, py); }
+      ctx.strokeStyle = color; ctx.lineWidth = 2.2; ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,240,220,0.25)'; ctx.lineWidth = 0.8; ctx.stroke();
+    }
+    ctx.restore();
+  },
+  // Grubnak's larder casks: an oak barrel standing on end, iron hoops, a bung
+  cask(ctx, pr, last, t) {
+    const { x, y, r } = pr, h = r * 1.15;
+    ellipse(ctx, x + 5, y + 6, r * 1.15, r * 0.62, 0, 'rgba(10,4,0,0.45)');
+    ctx.beginPath(); ctx.ellipse(x, y, r, r * 0.55, 0, 0, Math.PI); ctx.lineTo(x - r, y - h); ctx.ellipse(x, y - h, r, r * 0.55, 0, Math.PI, 0, true); ctx.closePath();
+    const g = ctx.createLinearGradient(x - r, 0, x + r, 0);
+    g.addColorStop(0, '#5a3418'); g.addColorStop(0.35, '#a4703c'); g.addColorStop(0.7, '#8a5a2c'); g.addColorStop(1, '#4a2a12');
+    ctx.fillStyle = g; ctx.fill(); ctx.strokeStyle = OUT; ctx.lineWidth = 2.5; ctx.stroke();
+    for (let i = 1; i < 5; i++) { const sx = x - r + i * r * 0.4; line(ctx, sx, y - h + r * 0.5 * Math.sin(Math.acos((sx - x) / r)) * 0.9, sx, y + r * 0.5 * Math.sin(Math.acos((sx - x) / r)), 'rgba(40,20,6,0.45)', 1.2); }
+    for (const q of [0.22, 0.78]) { ctx.beginPath(); ctx.ellipse(x, y - h * q, r * 1.02, r * 0.55, 0, 0, Math.PI); ctx.strokeStyle = '#3a3a42'; ctx.lineWidth = 4; ctx.stroke(); ctx.strokeStyle = 'rgba(200,200,210,0.35)'; ctx.lineWidth = 1; ctx.stroke(); }
+    ellipse(ctx, x, y - h, r, r * 0.55, 0, '#b8844a', OUT, 2.5);
+    for (let i = -2; i <= 2; i++) line(ctx, x + i * r * 0.36, y - h - r * 0.5 * Math.sqrt(Math.max(0, 1 - (i * 0.36) ** 2)) * 0.95, x + i * r * 0.36, y - h + r * 0.5 * Math.sqrt(Math.max(0, 1 - (i * 0.36) ** 2)) * 0.95, 'rgba(60,32,10,0.35)', 1);
+    ellipse(ctx, x, y - h, r * 0.86, r * 0.46, 0, null, '#3a3a42', 2.5);
+    circle(ctx, x + r * 0.25, y - h, 4, '#5a3418', OUT, 1.2);
+    if (last) { this.cracks(ctx, x, y - h * 0.5, r * 1.6, pr.id); poly(ctx, [x + r * 0.2, y - h - 2, x + r * 0.62, y - h + 3, x + r * 0.45, y - h * 0.55], '#2a1408', OUT, 1.5); }
+  },
+  // Skitterra's pillars: a rough column of cave rock with her silk wound round it
+  rockPillar(ctx, pr, last, worn, t) {
+    const { x, y, r } = pr, h = 58;
+    ellipse(ctx, x + 6, y + 8, r * 1.25, r * 0.66, 0, 'rgba(0,0,0,0.5)');
+    ctx.beginPath(); ctx.ellipse(x, y, r, r * 0.55, 0, 0, Math.PI); ctx.lineTo(x - r * 0.88, y - h); ctx.ellipse(x, y - h, r * 0.88, r * 0.48, 0, Math.PI, 0, true); ctx.closePath();
+    const g = ctx.createLinearGradient(x - r, 0, x + r, 0);
+    g.addColorStop(0, '#2c2634'); g.addColorStop(0.4, '#4e4459'); g.addColorStop(1, '#241e2a');
+    ctx.fillStyle = g; ctx.fill(); ctx.strokeStyle = OUT; ctx.lineWidth = 3; ctx.stroke();
+    for (let k = 0; k < 3; k++) line(ctx, x - r * 0.5 + k * r * 0.45, y - h + 8, x - r * 0.55 + k * r * 0.5, y - 4, 'rgba(14,11,18,0.45)', 2);
+    ellipse(ctx, x, y - h, r * 0.88, r * 0.48, 0, '#5a4e66', OUT, 2.5);
+    ellipse(ctx, x - r * 0.25, y - h - r * 0.1, r * 0.3, r * 0.14, 0, 'rgba(255,255,255,0.1)');
+    // silk tied off round it, and a thread running up into the dark
+    for (let k = 0; k < 3; k++) { ctx.beginPath(); ctx.ellipse(x, y - h * (0.3 + k * 0.22), r * (0.98 - k * 0.04), r * 0.5, 0.12 * (k - 1), 0, Math.PI); ctx.strokeStyle = 'rgba(235,235,250,0.5)'; ctx.lineWidth = 1.6; ctx.stroke(); }
+    line(ctx, x, y - h, x * 1.3, y * 1.3 - h - 30, 'rgba(235,235,250,0.22)', 1.2);
+    if (worn) this.cracks(ctx, x, y - h * 0.5, r * 0.9, pr.id, 'rgba(10,8,12,0.6)');
+    if (last) { this.cracks(ctx, x, y - h * 0.5, r * 1.9, pr.id + 1); poly(ctx, [x - r * 0.9, y - h * 0.8, x - r * 0.45, y - h * 0.6, x - r * 0.88, y - h * 0.35], '#141018', OUT, 1.5); }
+  },
+  // the Hollow King's braziers: an iron bowl on three legs. Lit, grave-green fire; snuffed, cold embers and smoke
+  brazier(ctx, pr, t, room) {
+    const { x, y, r } = pr, lit = pr.state === 1;
+    if (lit) glow(ctx, x, y - 10, 90, '#3aff7a', 0.28);
+    ellipse(ctx, x + 5, y + 8, r * 1.1, r * 0.5, 0, 'rgba(0,0,0,0.5)');
+    for (const dx of [-0.6, 0, 0.6]) line(ctx, x + dx * r * 0.6, y - 10, x + dx * r, y + 8, '#1c1f22', 4);
+    poly(ctx, [x - r, y - 22, x + r, y - 22, x + r * 0.62, y - 6, x - r * 0.62, y - 6], '#2f3337', OUT, 2.5);
+    ellipse(ctx, x, y - 22, r, r * 0.34, 0, '#202326', OUT, 2);
+    for (let i = -2; i <= 2; i++) circle(ctx, x + i * r * 0.36, y - 14, 2, '#4a5056');
+    if (lit) {
+      for (let i = 0; i < 6; i++) {
+        const q = (t * 1.4 + i / 6 + pr.id * 0.1) % 1;
+        ctx.save(); ctx.globalAlpha *= (1 - q);
+        ellipse(ctx, x + Math.sin(t * 3 + i * 2) * 7, y - 26 - q * 40, 8 * (1 - q * 0.6), 13 * (1 - q * 0.5), 0, i % 2 ? '#7affa8' : '#3adf7a');
+        ctx.restore();
+      }
+      ellipse(ctx, x, y - 24, r * 0.6, 4, 0, '#d8ffe0');
+    } else {
+      for (let i = 0; i < 5; i++) circle(ctx, x + (i - 2) * 6, y - 23, 2.2, i % 2 ? '#5a2a1a' : '#8a3a1a');
+      for (let i = 0; i < 3; i++) { const q = (t * 0.5 + i / 3 + pr.id * 0.2) % 1; circle(ctx, x + Math.sin(t + i) * 6, y - 30 - q * 46, 5 + q * 10, `rgba(150,160,155,${0.25 * (1 - q)})`); }
+    }
+    void room;
+  },
+  // a coffin lid torn off and skidded across the hall: a carved stone slab
+  coffinLid(ctx, pr, last) {
+    const cs = PROPS.corners(pr), cs2 = PROPS.corners(pr, -7);
+    ctx.save(); ctx.translate(5, 7); poly(ctx, cs.flat(), 'rgba(0,0,0,0.45)'); ctx.restore();
+    poly(ctx, cs.flat(), '#4a5054', OUT, 3);
+    poly(ctx, cs2.flat(), '#565d61', 'rgba(10,12,12,0.5)', 1.5);
+    ctx.save(); ctx.translate(pr.x, pr.y); ctx.rotate(pr.a || 0);
+    line(ctx, -pr.w * 0.3, 0, pr.w * 0.3, 0, 'rgba(10,12,12,0.55)', 3); line(ctx, -pr.w * 0.12, -pr.h * 0.3, -pr.w * 0.12, pr.h * 0.3, 'rgba(10,12,12,0.55)', 3);
+    line(ctx, -pr.w * 0.45, -pr.h * 0.42, pr.w * 0.45, -pr.h * 0.42, 'rgba(220,235,225,0.12)', 1.5);
+    if (last) this.cracks(ctx, 0, 0, pr.h * 1.6, pr.id);
+    ctx.restore();
+  },
+  // a chunk of the ceiling that came down (the Hollow King, Hard): it stays where it fell
+  masonry(ctx, pr) {
+    const r = rng(pr.id * 13), pts = [];
+    for (let k = 0; k < 7; k++) { const q = k * TAU / 7 + r() * 0.4, d = pr.r * (0.8 + r() * 0.3); pts.push(pr.x + Math.cos(q) * d, pr.y + Math.sin(q) * d * 0.8 - 10); }
+    ellipse(ctx, pr.x + 6, pr.y + 6, pr.r * 1.15, pr.r * 0.6, 0, 'rgba(0,0,0,0.5)');
+    ctx.save(); ctx.translate(0, 10); poly(ctx, pts, '#2c3134', OUT, 2.5); ctx.restore();
+    poly(ctx, pts, '#4a5054', OUT, 2.5);
+    line(ctx, pts[0], pts[1], pts[2], pts[3], 'rgba(230,240,235,0.16)', 2);
+    rrect(ctx, pr.x - pr.r * 0.4, pr.y - pr.r * 0.4 - 10, pr.r * 0.8, pr.r * 0.3, 3, null, 'rgba(10,12,12,0.4)', 1.5);   // a carved course of the old vault
+  },
+  // Volkar's standing stones: tall grey menhirs; their runes take the charge of every bolt they catch
+  standingStone(ctx, pr, t) {
+    const { x, y, r } = pr, h = 92, charged = pr.state > 0;
+    ellipse(ctx, x + 8, y + 6, r * 1.3, r * 0.6, 0, 'rgba(0,0,0,0.45)');
+    const pts = [x - r, y + 2, x - r * 0.9, y - h * 0.7, x - r * 0.45, y - h, x + r * 0.5, y - h * 0.95, x + r * 0.95, y - h * 0.6, x + r, y + 2];
+    poly(ctx, pts, '#5a6270', OUT, 3);
+    poly(ctx, [x - r * 0.9, y - h * 0.7, x - r * 0.45, y - h, x - r * 0.1, y - h * 0.96, x - r * 0.4, y - h * 0.62, x - r * 0.55, y], 'rgba(255,255,255,0.08)');
+    line(ctx, x + r * 0.3, y - h * 0.8, x + r * 0.5, y - h * 0.3, 'rgba(14,16,22,0.5)', 2);
+    const glowA = charged ? 0.6 + 0.4 * Math.sin(t * 14) : 0.15;
+    for (let i = 0; i < 3; i++) { const yy = y - h * (0.3 + i * 0.18); line(ctx, x - 6, yy, x + 6, yy - 6, rgba('#9ff4ff', glowA), 2); line(ctx, x, yy - 8, x, yy + 4, rgba('#9ff4ff', glowA), 2); }
+    if (charged) { glow(ctx, x, y - h * 0.5, 50, '#9ff4ff', 0.35); if (Math.floor(t * 10) % 3 === 0) jagged(ctx, x, y - h, x + Math.sin(t * 7) * 20, y - h - 30, Math.floor(t * 12), '#bff6ff', 1.2); }
+  },
+  // Avalanche boulders that came to rest on the summit
+  boulder(ctx, pr) {
+    const { x, y, r } = pr, rr = rng(pr.id * 5), pts = [];
+    for (let k = 0; k < 9; k++) { const q = k * TAU / 9, d = r * (0.88 + rr() * 0.18); pts.push(x + Math.cos(q) * d, y - r * 0.6 + Math.sin(q) * d * 0.85); }
+    ellipse(ctx, x + 6, y + 6, r * 1.2, r * 0.58, 0, 'rgba(0,0,0,0.5)');
+    poly(ctx, pts, '#6a6460', OUT, 3);
+    ellipse(ctx, x - r * 0.3, y - r * 0.95, r * 0.4, r * 0.22, -0.4, 'rgba(255,255,255,0.14)');
+    line(ctx, x - r * 0.2, y - r * 0.2, x + r * 0.4, y - r * 0.7, 'rgba(14,12,10,0.45)', 2);
+    for (let i = 0; i < 4; i++) circle(ctx, x + (rr() - 0.5) * r, y - r * 0.6 + (rr() - 0.5) * r * 0.8, 2, 'rgba(120,150,100,0.5)');
+  },
+  // Lights Out (the Hollow King): the hall goes black but for a ring of light round each lit brazier (and, in the
+  // Long Night, the last lantern). The ring is the rule: inside it, the Gaze can't find you.
+  drawLightsOut(ctx, room, lo, t, v) {
+    const k = clamp((t - lo.start) / 0.5, 0, 1) * clamp((lo.end + 0.6 - t) / 0.6, 0, 1);
+    if (k <= 0) return;
+    const lights = [];
+    for (const pr of room.props) if (pr.kind === 'brazier' && pr.state === 1) lights.push({ x: pr.x, y: pr.y, r: lo.r + 30 });
+    for (const L of lo.extra || []) { const e = L.id != null && v.entById ? v.entById(L.id) : null; lights.push({ x: e ? e.x : L.x, y: e ? e.y : L.y, r: lo.r + 30 }); }
+    // the dark, with a soft edge just outside each ring
+    const cw = Math.max(1, Math.ceil(v.W * v.DPR)), ch = Math.max(1, Math.ceil(v.H * v.DPR));
+    let c = this.loCv;
+    if (!c || c.width !== cw || c.height !== ch) { c = this.loCv = document.createElement('canvas'); c.width = cw; c.height = ch; }
+    const n = c.getContext('2d');
+    n.setTransform(1, 0, 0, 1, 0, 0); n.globalCompositeOperation = 'source-over'; n.clearRect(0, 0, cw, ch);
+    n.fillStyle = `rgba(2,4,8,${0.86 * k})`; n.fillRect(0, 0, cw, ch);
+    const s = v.DPR * v.zoom;
+    n.setTransform(s, 0, 0, s, -v.cam.x * s, -v.cam.y * s);
+    n.globalCompositeOperation = 'destination-out';
+    for (const L of lights) {
+      const g = n.createRadialGradient(L.x, L.y, lo.r * 0.75, L.x, L.y, L.r);
+      g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+      n.fillStyle = g; n.beginPath(); n.arc(L.x, L.y, L.r, 0, TAU); n.fill();
+    }
+    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(c, 0, 0); ctx.restore();
+    // the edge of each light, so it reads exactly
+    for (const L of lights) {
+      ctx.save(); ctx.setLineDash([10, 8]); ctx.lineDashOffset = -t * 20;
+      circle(ctx, L.x, L.y, lo.r, null, rgba('#9affc0', 0.55 * k), 2);
+      ctx.restore();
+      glow(ctx, L.x, L.y, lo.r, '#3aff7a', 0.12 * k);
+    }
+  },
+  // Ceiling Ambush (Skitterra, Hard): only her shadow crosses the floor, gathering speed, until it stops and she drops
+  ambushShadow(ctx, amb, t) {
+    const pts = amb.pts || [];
+    if (pts.length < 2) return;
+    const p = clamp((t - amb.start) / Math.max(0.1, amb.end - amb.start), 0, 1), u = Math.pow(p, amb.ease || 1.7);
+    let total = 0; const seg = [];
+    for (let i = 1; i < pts.length; i++) { const d = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); seg.push(d); total += d; }
+    let want = u * total, i = 0;
+    while (i < seg.length - 1 && want > seg[i]) { want -= seg[i]; i++; }
+    const q = seg[i] ? Math.min(1, want / seg[i]) : 1, x = pts[i][0] + (pts[i + 1][0] - pts[i][0]) * q, y = pts[i][1] + (pts[i + 1][1] - pts[i][1]) * q;
+    const r = 120 + 40 * p, fade = clamp((amb.end + 0.3 - t) / 0.3, 0, 1);
+    ctx.save(); ctx.globalAlpha = fade;
+    const g = ctx.createRadialGradient(x, y, r * 0.1, x, y, r);
+    g.addColorStop(0, `rgba(4,2,8,${0.55 + 0.25 * p})`); g.addColorStop(0.7, `rgba(4,2,8,${0.35 + 0.2 * p})`); g.addColorStop(1, 'rgba(4,2,8,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(x, y, r, r * 0.8, 0, 0, TAU); ctx.fill();
+    // her legs' shadows, splayed
+    for (let k = 0; k < 8; k++) {
+      const a = k * TAU / 8 + Math.sin(t * 9 + k) * 0.08, l = r * 0.95;
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo(x + Math.cos(a) * l * 0.6, y + Math.sin(a) * l * 0.5 - 10, x + Math.cos(a) * l, y + Math.sin(a) * l * 0.8);
+      ctx.strokeStyle = `rgba(4,2,8,${0.4 + 0.3 * p})`; ctx.lineWidth = 7; ctx.stroke();
+    }
+    ctx.restore();
   },
 
   // overhead icon on whoever a tankbuster is aimed at

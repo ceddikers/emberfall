@@ -96,6 +96,45 @@ const BotAI = {
     return mine[me] ?? null;
   },
 
+  // --- the room's props -----------------------------------------------------------------------
+  // a cover mechanic: which prop this bot hides behind. Everyone takes a prop in id order, healthiest and nearest
+  // first, at most `cap` to a prop (the mechanic's own cap, or enough to fit everyone, two at least)
+  coverFor(me, view, m) {
+    const props = (view.props || []).filter(p => p.cover);
+    if (!props.length) return null;
+    const al = view.players.filter(p => p.alive).sort((a, b) => a.id - b.id);
+    const cap = m.coverCap || Math.max(2, Math.ceil(al.length / props.length));
+    const room = new Map(props.map(p => [p, cap])), mine = {};
+    for (const p of al) {
+      let best = null, bs = Infinity;
+      for (const pr of props) {
+        if (!room.get(pr)) continue;
+        const spot = PROPS.shadowSpot(m.src.x, m.src.y, pr, 30), s = Math.hypot(spot.x - p.x, spot.y - p.y) - (pr.maxHp ? pr.hp * 90 : 200);
+        if (ARENA.sd(spot.x, spot.y) > -16) continue;
+        if (s < bs) { bs = s; best = pr; }
+      }
+      if (best) { mine[p.id] = best; room.set(best, room.get(best) - 1); }
+    }
+    return mine[me] || null;
+  },
+  // Butcher's Charge (Grubnak): where the tank stands so the charge runs into a brick wall, past no cask and away from
+  // the stove line along the top wall
+  chargeBait(view) {
+    const b = view.boss;
+    let best = null, bs = -Infinity;
+    for (let i = 0; i < 16; i++) {
+      const a = i * Math.PI / 8, c = Math.cos(a), s = Math.sin(a);
+      let L = 0; while (L < 1400 && ARENA.sd(b.x + c * L, b.y + s * L) < -60) L += 20;
+      const end = { x: b.x + c * L, y: b.y + s * L };
+      if (end.y < -ARENA.hh + 90) continue;   // the stove line
+      if (PROPS.ray(b.x, b.y, end.x, end.y, view.props || [], 50)) continue;
+      const spot = { x: b.x + c * 170, y: b.y + s * 170 }, sc = Math.min(L, 500) - Math.hypot(spot.x - b.x, spot.y - (b.y + 125)) * 0.1;
+      if (ARENA.sd(spot.x, spot.y) > -40) continue;
+      if (sc > bs) { bs = sc; best = spot; }
+    }
+    return best;
+  },
+
   // --- the Hollow King -------------------------------------------------------------------------
   // Barrow Bells: people go to the bell they're nearest, then the bots fill whatever is still short, nearest first
   bellFor(me, view) {
@@ -179,6 +218,25 @@ const BotAI = {
       if (dt > 11) continue;
       const urgency = 1 / (0.4 + dt);
       const s = m.shape;
+      // a blast you hide from behind a prop: be in your own prop's shadow (in someone else's will do, at a pinch)
+      if (m.cover && (m.type === 'raidwide' || SHAPES.contains(s, px, py, 22))) {
+        const pr = this.coverFor(me, view, m), props = view.props || [];
+        const ok = pr && PROPS.blocks(pr, m.src.x, m.src.y, px, py, PROPS.COVER_SHRINK + 8);
+        if (!ok) pen += (PROPS.shadowing(m.src.x, m.src.y, px, py, props) ? 1500 : 6000) * urgency + (dt < 2.5 ? 5000 : 0);
+        continue;
+      }
+      // a throw coming (m.throwDist): stand where it doesn't slam you into a wall or a prop
+      if (m.throwDist && dt < 5) {
+        const a = Math.atan2(py - s.y, px - s.x), to = { x: px + Math.cos(a) * m.throwDist, y: py + Math.sin(a) * m.throwDist };
+        const over = ARENA.sd(to.x, to.y) + 30, hit = PROPS.ray(px, py, to.x, to.y, view.props || [], 14);
+        if (over > 0 || hit) pen += (2500 + Math.max(0, over) * 8) * urgency;
+      }
+      // Butcher's Charge aimed at this bot (the tank): stand where it runs into a brick wall, then step aside at the lock
+      if (m.tag === 'charge' && m.aimFromBoss === me && dt > (m.lockAt || 0.6) + 0.2) {
+        const bait = this.chargeBait(view);
+        if (bait) pen += Math.hypot(bait.x - px, bait.y - py) * 30 * urgency;
+        continue;
+      }
       switch (m.type) {
         case 'aoe':
           // a cone aimed at me (Venom Spit): bait it out at the edge, then step aside once it locks
@@ -314,7 +372,10 @@ const BotAI = {
       if (th.kind === 'short' && d > th.len - 50) pen += (d - th.len + 50) * 25;
     }
     // sticky floor slows you down; beams between linked adds burn
-    for (const z of view.zones || []) if (SHAPES.contains(z.shape, px, py, 10)) pen += 350;
+    for (const z of view.zones || []) if (SHAPES.contains(z.shape, px, py, 10)) pen += z.effect === 'burn' ? (view.t > z.startAt - 2 ? 6000 : 400) : 350;
+    // the room: nobody stands inside a solid prop; grease is best kept clear of, and burning grease avoided
+    for (const pr of view.props || []) if (pr.solid && PROPS.sd(pr, px, py) < 16) pen += 9000;
+    for (const fl of view.floor || []) if (fl.kind === 'grease' && Math.hypot(fl.x - px, fl.y - py) < fl.r + 26) pen += view.burning(fl) ? 5000 : 250;
     for (const a of view.adds || []) {
       const o = a.link && a.linkDmg ? view.adds.find(x => x.id === a.link) : null;
       if (o && segDist(px, py, a.x, a.y, o.x, o.y) < 50) pen += 5000;
@@ -347,6 +408,14 @@ const BotAI = {
       if (m.type === 'stack') { const o = view.players.find(p => p.id === m.follow); if (o) cands.push({ x: o.x, y: o.y }); }
       if (m.shape.kind === 'donut') cands.push({ x: m.shape.x + (bot.x - m.shape.x) * 0.3, y: m.shape.y + (bot.y - m.shape.y) * 0.3 });
       if (m.safe) for (const q of m.safe) cands.push({ x: q.x, y: q.y });
+      // cover: spots in the shadow of the prop this bot takes (and of the others, in case it's full)
+      if (m.cover) {
+        const mine = this.coverFor(bot.id, view, m);
+        for (const pr of (view.props || []).filter(p => p.cover && (p === mine || Math.hypot(p.x - bot.x, p.y - bot.y) < 500))) {
+          for (const back of [24, 55]) for (const side of [-0.5, 0, 0.5]) cands.push(PROPS.shadowSpot(m.src.x, m.src.y, pr, back, side));
+        }
+      }
+      if (m.tag === 'charge' && m.aimFromBoss === bot.id) { const bt = this.chargeBait(view); if (bt) cands.push(bt); }
       // Volkar: beside your polarity partner, and in the still air behind each rod (also the half of a rod's circle
       // away from him, for catching a rod and sheltering behind it at once)
       if (m.type === 'polarity' || m.tag === 'crash') { const pt = this.partner(bot.id, view); if (pt) cands.push({ x: pt.x + (bot.x > pt.x ? 30 : -30), y: pt.y }); }

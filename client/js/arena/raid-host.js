@@ -16,6 +16,8 @@ class RaidHost {
     const rngSeed = opts.seed || 1;
     let s = rngSeed >>> 0;
     this.rng = () => { s = (s + 0x6D2B79F5) >>> 0; let t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+    ARENA.use(this.def.id);
+    this.spawnR = Math.min(330, ARENA.inner - 70);   // bots start in a ring below the boss, clear of the walls
     this.bots = (opts.bots || []).map((cid, i) => this.makeBot(cid, i));
     this.sim = new FightSim(this.def, this.mode, () => this.allPlayers(), msg => this.onSimMsg(msg), rngSeed, { hpPct: this.bond.hp });
     this.lastBotBroadcast = -1;
@@ -31,7 +33,7 @@ class RaidHost {
       : (specs.length ? [null, ...specs.map(s => s.id)][Math.floor(this.rng() * (specs.length + 1))] : null);
     const spawnA = Math.PI / 2 + (i - 1) * 0.5;
     const bot = { id: 1000 + i, name: BOT_NAMES[i % BOT_NAMES.length], cls, spec, role: cls.role, bot: true, slot: i,
-      x: Math.cos(spawnA) * 330, y: Math.sin(spawnA) * 330, a: -Math.PI / 2, moving: false, plan: null, nextThink: 0,
+      x: Math.cos(spawnA) * this.spawnR, y: Math.sin(spawnA) * this.spawnR, a: -Math.PI / 2, moving: false, plan: null, nextThink: 0,
       taken: [], healTarget: null, nextAct: 0 };
     bot.actor = new CombatActor(cls, bot, this.botWorld(bot), this.rng);
     return bot;
@@ -72,6 +74,8 @@ class RaidHost {
       polarity: sim.polarity || null, posts: (sim.posts || []).filter(c => c.end > sim.t), edgeNext: sim.edgeNext || null,
       // the Hollow King: lanterns, who is doomed (and when it kills), and the knights' replays still to come
       lanterns: sim.lanterns || [], doomed: sim.doomed || null, echoPlan: sim.echoPlan || [], night: !!sim.night, pools: sim.healPools,
+      // the room: solid props (cover, walls to bait a charge into), burning grease, and boss-specific room state
+      props: sim.props, floor: sim.floor, burning: fl => sim.burning(fl), room: sim.room || null,
       // the boss's next named moves, as the upcoming-moves feed shows them to players: [[name, seconds until], ...]
       next: sim.upcoming(3).map(e => [e.name, e.t - sim.t]),
       debuffs: id => { const s = sim.ps.get(id); const out = {}; if (s) for (const k in s.debuffs) if (s.debuffs[k] > sim.t) out[k] = true; return out; },
@@ -104,13 +108,16 @@ class RaidHost {
       }
       if (bot.plan && rooted) bot.moving = false;
       else if (bot.plan) {
-        const dx = bot.plan.x - bot.x, dy = bot.plan.y - bot.y, d = Math.hypot(dx, dy);
+        // walk round any solid prop in the way
+        const goal = this.sim.props.length ? PROPS.steer(bot, bot.plan, this.sim.props, 14) : bot.plan;
+        const dx = goal.x - bot.x, dy = goal.y - bot.y, d = Math.hypot(dx, dy);
         if (d > 6) {
           const step = Math.min(d, 230 * (slowed ? FIGHT.SLOWED : 1) * (bot.reel && this.sim.t >= bot.reel.pullAt ? 0.4 : 1) * dt);
           bot.x += dx / d * step; bot.y += dy / d * step; bot.moving = true;
         } else bot.moving = false;
       }
       ARENA.clamp(bot, 12);   // walls can move (Volkar's closing edge)
+      PROPS.collide(bot, this.sim.props, 14);
       const b = this.sim.boss;
       bot.a = Math.atan2(b.y - bot.y, b.x - bot.x);
       // Royal Gaze: turn your back on him just before it lands (Royal Audience wants the opposite: keep facing him)
@@ -161,8 +168,9 @@ class RaidHost {
       const bot = this.bots.find(b => b.id === msg.id);
       if (bot) {
         const a = Math.atan2(bot.y - msg.y, bot.x - msg.x);
-        bot.x += Math.cos(a) * msg.d; bot.y += Math.sin(a) * msg.d;
-        ARENA.clamp(bot, 12);  // the arena has a wall, same as for players
+        const to = ARENA.clamp({ x: bot.x + Math.cos(a) * msg.d, y: bot.y + Math.sin(a) * msg.d }, 12);  // the arena has a wall, same as for players
+        PROPS.clipMove(bot, to, this.sim.props, 14);   // ... and a throw stops at a solid prop
+        bot.x = to.x; bot.y = to.y;
       }
     }
     this.emit(msg);

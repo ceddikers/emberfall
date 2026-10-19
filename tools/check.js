@@ -86,6 +86,7 @@ function data() {
     for (let a = 0; a < TAU; a += 0.37) { const e = ARENA.edge(a); if (Math.abs(ARENA.sd(Math.cos(a) * e, Math.sin(a) * e)) > 1) { shapeProbs.push(`${id}: edge() off at angle ${a.toFixed(2)}`); break; } }
   }
   if (shapeProbs.length) fail('Arena shapes hold players in', shapeProbs.join('\n')); else pass('Arena shapes hold players in', Object.keys(ARENA_DEFS).join(', ') + ', circle');
+  props();
 
   // smoothing: a unit moving at a steady speed is drawn at a steady speed, never past where it really is
   // updates arrive 10 times a second as time passes (like the host's boss updates); frames run at 60 fps
@@ -126,6 +127,50 @@ function data() {
   const okRange = w => w.lo > 180 && w.hi < 220;
   if (okRange(ws) && okRange(wst)) pass('Smoothing holds over a wobbly connection', `speed ${ws.lo.toFixed(0)}-${ws.hi.toFixed(0)}, ${wst.lo.toFixed(0)}-${wst.hi.toFixed(0)} after a stall; by arrival time alone ${wa.lo.toFixed(0)}-${wa.hi.toFixed(0)}`);
   else fail('Smoothing holds over a wobbly connection', `speed ${ws.lo.toFixed(0)}-${ws.hi.toFixed(0)}, after a stall ${wst.lo.toFixed(0)}-${wst.hi.toFixed(0)}; want 180-220`);
+}
+
+// ---------------------------------------------------------------- 2a. arena props: solid, cover, throws, chipping
+function props() {
+  const probs = [];
+  const { FightSim } = require(path.join(ROOT, 'client/js', 'arena/fight.js'));
+  global.FIGHT = global.FIGHT || require(path.join(ROOT, 'client/js', 'arena/fight.js')).FIGHT;
+  const ps = [{ id: 1, name: 'behind', role: 'dps', x: 0, y: 220 }, { id: 2, name: 'open', role: 'dps', x: 220, y: 0 }, { id: 3, name: 'beside', role: 'dps', x: 70, y: 200 }];
+  const sent = [];
+  const def = { id: 'grubnak', name: 'test', hp: { normal: 1e6 }, autoDmg: { normal: 0 }, script() {} };
+  const sim = new FightSim(def, 'normal', () => ps, m => sent.push(m), 1);
+  sim.state = 'live'; sim.boss.x = 0; sim.boss.y = 0;
+  const cask = sim.addProp({ kind: 'cask', x: 0, y: 110, r: 30, hp: 2, solid: true, cover: true });
+  // a blast from the boss: the hero straight behind the cask is spared, the one in the open and the one just beside its shadow are hit
+  sim.mech({ type: 'aoe', shape: { kind: 'circle', x: 0, y: 0, r: 2000 }, delay: 0, dmg: 10000, cover: true, chip: 'all' });
+  sim.updateMechs();
+  const hp = id => sim.ps.get(id).hp, full = id => sim.ps.get(id).hp === sim.ps.get(id).maxHp;
+  if (!full(1)) probs.push('cover: the hero behind the cask was hit');
+  if (full(2)) probs.push('cover: the hero in the open was spared');
+  if (full(3)) probs.push('cover: the hero beside the shadow was spared');
+  if (cask.hp !== 1) probs.push(`cover: the cask has ${cask.hp} hits left after one blast (want 1)`);
+  // ... a cap of one: only the nearer of two behind it is spared
+  ps[2].x = 0; ps[2].y = 300;
+  const before = [hp(1), hp(3)];
+  sim.mech({ type: 'aoe', shape: { kind: 'circle', x: 0, y: 0, r: 2000 }, delay: 0, dmg: 4000, cover: true, coverCap: 1 });
+  sim.updateMechs();
+  if (hp(1) !== before[0] || hp(3) === before[1]) probs.push('cover cap: want the nearer hero spared and the farther one hit');
+  // the shadow drawn for a prop is the same area the host spares
+  const sh = PROPS.shadowPoly(0, 0, cask), inPoly = (x, y) => { let c = false; for (let i = 0, j = sh.length - 1; i < sh.length; j = i++) { const [xi, yi] = sh[i], [xj, yj] = sh[j]; if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) c = !c; } return c; };
+  for (const [x, y] of [[0, 220], [15, 300], [60, 260], [-40, 200], [0, 500]]) if (inPoly(x, y) !== !!PROPS.shadowing(0, 0, x, y, [cask])) probs.push(`shadow drawn and shadow judged disagree at (${x}, ${y})`);
+  // solid: walking into it pushes you out; a throw stops at it (and a throw into it is a wall slam)
+  const e = { x: 4, y: 104 }; PROPS.collide(e, sim.props, 14);
+  if (PROPS.sd(cask, e.x, e.y) < 13.5) probs.push('collide left a hero inside the cask');
+  const thrown = sim.players().find(p => p.id === 1);
+  thrown.y = 220; ps[0].y = 220;
+  const res = sim.knock(thrown, 0, 400, 250, { slam: 1000 });
+  if (!res.slam || res.dest.y < 110 + 30 - 1) probs.push(`a throw through the cask ended at (${res.dest.x | 0}, ${res.dest.y | 0}) without a slam`);
+  sim.hitProp(cask, 1);
+  if (sim.props.length || !sim.floor.some(f => f.kind === 'rubble') || !sent.some(m => m.t === 'propfx' && m.k === 'break')) probs.push('a cask on its last hit should break and leave rubble');
+  sim.broadcastProps();
+  const msg = sent.filter(m => m.t === 'props').pop();
+  if (!msg || msg.p.length !== 0 || !msg.f.length) probs.push('the props message should carry the (empty) props and the rubble');
+  if (probs.length) fail('Arena props: solid, cover, throws', probs.join('\n'));
+  else pass('Arena props: solid, cover, throws', 'cover spares the hero behind a cask and hits the open; caps, shadows, collisions, slams and breaking hold');
 }
 
 // ---------------------------------------------------------------- 2b. items: rarities, effects, loot tables, chests
