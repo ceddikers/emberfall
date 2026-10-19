@@ -1,4 +1,4 @@
-// The nine class kits. Design rules (see docs/DESIGN.md for the reasoning):
+﻿// The nine class kits. Design rules (see docs/DESIGN.md for the reasoning):
 //  - Easy to learn: the main combo/filler is ONE button, and buttons glow when they're a good press.
 //    Mashing the glowing buttons is a complete, working rotation.
 //  - Hard to master: every class has a resource that can overcap and is worth pooling, a 60s burst to line up
@@ -1259,7 +1259,7 @@ function kitSegDist(px, py, ax, ay, bx, by) {
 // k.g.temp runs from -5 (Rime) to +5 (Blaze). k.g.side is the side of 0 it last stood on, and k.g.peak the furthest it
 // got on that side since it last crossed. A spell that carries the dial across 0 after a peak of 3 or more detonates
 // a Thermal Shock sized by the whole swing (the peak plus how far past 0 it landed): +5 down to -1 is a swing of 6.
-// Pushing past ±5 overloads you: Overheat (fire locked for 3s, and you burn) or Frostbite (casts 30% slower for 3s).
+// Pushing past Â±5 overloads you: Overheat (fire locked for 3s, and you burn) or Frostbite (casts 30% slower for 3s).
 // Zenith (k.def.redline) holds the edge instead, building Strain. Pendulum (k.def.stepBonus) moves it a step further.
 const THERMIST = { STEP: 0.08, EDGE: 5, SHOCK_MIN: 3, SHOCK_BASE: -120, SHOCK_PER: 105, REDLINE: 0.2, STRAIN: 11 };
 const THERM_SHOCK = { id: 'shock', name: 'Thermal Shock' };
@@ -1416,7 +1416,7 @@ KITS.thermist = {
     'Swing the whole dial: build to +5 with fire, then carry it across 0 with frost. The swing that crosses 0 detonates a Thermal Shock, and the further you swung (from +5 down to -1 is 6), the bigger it is.',
     'Every step from 0 is +8% damage for that side\'s spells, so a spell at the far end of a swing hits hardest. Spells that move you toward 0 gain nothing.',
     'At +5 Flare is instant and always crits, but leaves you On the Brink: the next spell must be frost or you overheat. Glacier Lance is the same at -5. Use the edge spells as your movement.',
-    'Inversion flips the dial: at ±5 that is a swing of 10, half again as strong, and Attunement lets both elements count for 10s. Save it for burst windows. Equilibrium is your mitigation: it snaps the dial back to 0, so it costs you the swing.',
+    'Inversion flips the dial: at Â±5 that is a swing of 10, half again as strong, and Attunement lets both elements count for 10s. Save it for burst windows. Equilibrium is your mitigation: it snaps the dial back to 0, so it costs you the swing.',
   ],
   abilities: [
     {
@@ -1817,7 +1817,7 @@ function mawDigestTake(k, ab) {
 const mawSpitGlow = k => k.g.belly.length >= mawMax(k) || (k.def.fuse ? k.g.belly.length >= 2 && k.g.belly[0].m === k.g.belly[1].m : k.g.belly.length >= 2);
 
 KITS.gorgemaw = {
-  potMult: 0.7, // balance knob (tools/simulate.js)
+  potMult: 0.9, // balance knob (tools/simulate.js)
   role: 'tank',
   eats: true,   // (tools/simulate.js: edible hits land on this kit)
   auto: { kind: 'maw', potency: 40, range: MELEE },
@@ -2013,7 +2013,7 @@ function oathTerms(k) {
 const oathSettleGlow = k => oathTotal(k) >= oathHp(k) * 0.22 && k.now >= (k.g.frozen || 0);
 
 KITS.oathbroker = {
-  potMult: 0.71, // balance knob (tools/simulate.js)
+  potMult: 1.0, // balance knob (tools/simulate.js)
   role: 'tank',
   ledger: true,   // (tools/simulate.js: hits go through the Ledger)
   auto: { kind: 'stamp', potency: 40, range: MELEE },

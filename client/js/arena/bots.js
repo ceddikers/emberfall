@@ -850,4 +850,68 @@ BotAI.alembist = function (bot, k, view) {
   return ready(ri) ? ri : null;
 };
 
+// ======================================================================= advanced tanks (tanks-2)
+// Gorgemaw: the jaw opens just before anything edible lands on it (its busters above all; Bottomless on a raidwide),
+// Spits what it eats, Digests to heal or (Gizzard) before party damage. Oathbroker: Writ on its busters, Renegotiate a
+// big bill about to land with more damage, Settle once it's healthy, Lien while bills come in, Default before it drowns.
+const botEdible = (bot, m) => {
+  if (typeof MAW_HOST === 'undefined' || !MAW_HOST.typeOf(m) || m.cover || m.throwDist || m.type === 'raidwide') return false;
+  if (m.type === 'buster') return (m.target ?? m.follow) === bot.id;
+  if (m.type === 'proximity') return true;
+  if (m.follow != null && m.follow !== bot.id && m.type === 'spread') return false;
+  return SHAPES.contains(m.shape, bot.x, bot.y, 8);
+};
+Object.assign(BOT_CLASS, {
+  gorgemaw: {
+    act(bot, k, view) {
+      const idx = id => k.abilities.findIndex(a => a.id === id || a.replaces === id);
+      const ok = i => { const a = k.abilities[i]; return !!a && k.usable(a) && k.readyIn(a) <= 0.0001 && k.available(a); };
+      const me = view.players.find(p => p.id === bot.id), hp = me ? me.hp / me.maxHp : 1, b = k.g.belly, max = mawMax(k);
+      const wide = idx('wide'), open = (k.g.jawUntil || 0) > k.now + 0.05;
+      const soon = view.mechs.filter(m => m.resolveAt - view.t < 0.6 && m.resolveAt - view.t > 0.03);
+      if (!open && ok(wide) && soon.some(m => botEdible(bot, m))) return wide;
+      const bott = idx('bottomless');
+      if (ok(bott) && soon.some(m => m.type === 'raidwide')) return bott;
+      const myBuster = view.mechs.find(m => m.type === 'buster' && (m.target ?? m.follow) === bot.id && m.resolveAt - view.t < 2.5);
+      const iron = idx('iron');
+      if (myBuster && ok(iron) && (k.abilities[iron].id === 'stonebelly' || k.charges(k.abilities[wide]) === 0 || hp < 0.55)) return iron;
+      const dig = idx('digest'), giz = k.def.spec === 'gizzard';
+      const partySoon = view.mechs.some(m => (m.type === 'raidwide' || m.type === 'buster') && m.resolveAt - view.t < 3) || (view.next || []).some(([n, s]) => s < 4 && (RAID_CASTS.test(n) || BUSTER_CASTS.test(n)));
+      if (ok(dig) && b.length && k.gcdRemaining() > 0.4 && (hp < 0.45 || (giz ? (b.length >= 2 && partySoon) || b.length >= max : b.length >= max && hp < 0.85))) return dig;
+      if (k.gcdRemaining() > 0 || k.cast || k.lockUntil > k.now) return null;
+      const sp = idx('spit'), regur = k.abilities[sp].id === 'regurgitate';
+      if (ok(sp) && (regur ? b.length >= Math.min(3, max) : giz ? b.length >= max : k.def.fuse ? (b.length >= 2 && b[0].m === b[1].m) || b.length >= max - 1 : b.length >= 1)) return sp;
+      return ok(0) ? 0 : null;
+    },
+  },
+  oathbroker: {
+    act(bot, k, view) {
+      const idx = id => k.abilities.findIndex(a => a.id === id || a.replaces === id);
+      const ok = i => { const a = k.abilities[i]; return !!a && k.usable(a) && k.readyIn(a) <= 0.0001 && k.available(a); };
+      const me = view.players.find(p => p.id === bot.id), H = me ? me.maxHp : 1, hp = me ? me.hp : 1, tot = oathTotal(k);
+      const weave = k.gcdRemaining() > 0.5 && !k.cast;
+      const myBuster = view.mechs.find(m => m.type === 'buster' && (m.target ?? m.follow) === bot.id && m.resolveAt - view.t < 2.5);
+      const partySoon = view.mechs.some(m => m.type === 'raidwide' && m.resolveAt - view.t < 3) || (view.next || []).some(([n, s]) => s < 4 && RAID_CASTS.test(n));
+      const df = idx('default'), fore = k.abilities[df].id === 'foreclose';
+      if (ok(df) && (tot > hp * 0.8 || (fore && tot > H * 0.32))) return df;
+      const writ = idx('writ');
+      if (myBuster && ok(writ)) return writ;
+      const rn = idx('reneg');
+      if (ok(rn) && weave && oathDueSoon(k, 1.5) > H * 0.1 && (partySoon || myBuster || hp < H * 0.6)) return rn;
+      const st = idx('settle'), audit = k.abilities[st].id === 'audit';
+      if (ok(st) && weave && !fore && !partySoon && !myBuster && (audit ? oathAuditable(k).reduce((s, e) => s + e.a, 0) > H * 0.1 : (tot > H * 0.22 && hp > H * 0.6) || tot > H * 0.4)) return st;
+      const li = idx('lien');
+      if (k.abilities[li].id === 'cosign') {
+        if (ok(li) && weave && !(k.g.cosign != null && k.g.cosignUntil > k.now + 2)) {
+          const heal = view.players.find(p => p.alive && p.role === 'healer' && p.id !== bot.id);
+          bot.healTarget = heal ? heal.id : null;
+          if (heal) return li;
+        }
+      } else if (ok(li) && weave && oathDueSoon(k, 9) > H * 0.08) return li;
+      if (k.gcdRemaining() > 0 || k.cast || k.lockUntil > k.now) return null;
+      return ok(0) ? 0 : null;
+    },
+  },
+});
+
 if (typeof module !== 'undefined') module.exports = { BotAI };

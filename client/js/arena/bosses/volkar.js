@@ -216,7 +216,7 @@ const VOLKAR = {
       for (const s of stones()) { const d = PROPS.sd(s, p.x, p.y); if (d < sd) { sd = d; st = s; } }
       if (!st || sd > STONE_REACH) {
         f.emit({ t: 'propfx', k: 'bolt', x: Math.round(p.x), y: Math.round(p.y), pid: p.id });
-        f.damagePlayer(p, dmg.strikeOpen, { kind: 'strike', avoidable: true });
+        f.damagePlayer(p, dmg.strikeOpen, { kind: 'strike', avoidable: true, eat: 'lance' });   // (a Gorgemaw can swallow the bolt)
         return;
       }
       f.emit({ t: 'propfx', k: 'bolt', kind: 'stone', id: st.id, x: st.x, y: st.y });
@@ -341,13 +341,16 @@ const VOLKAR = {
       const target = f.pick(pool);
       if (!target) return;
       f.cast('Chain Lightning', d, 'chain');
-      f.mech({ type: 'chain', shape: { kind: 'circle', x: target.x, y: target.y, r: CHAIN }, delay: d, dmg: 0, follow: target.id, tag: 'chain', avoidable: false,
+      const cm = f.mech({ type: 'chain', shape: { kind: 'circle', x: target.x, y: target.y, r: CHAIN }, delay: d, dmg: 0, follow: target.id, tag: 'chain', avoidable: false,
         onResolve: () => {
           let from = f.alive().find(p => p.id === target.id);
           const struck = new Set(), path = [];
           for (let jump = 0; from && jump < 4; jump++) {
             struck.add(from.id); path.push(from.id);
-            f.damagePlayer(from, dmg.chain, { kind: 'chain', avoidable: jump > 0 });
+            // (a Gorgemaw with its jaw open swallows the bolt: the chain ends in its mouth)
+            const ate = f.canEat && f.canEat(from);
+            f.damagePlayer(from, dmg.chain, { kind: 'chain', avoidable: jump > 0 && !ate, eat: 'lance', mid: cm && cm.id });
+            if (ate) break;
             let next = null, nd = CHAIN + 14;
             for (const p of f.alive()) { if (struck.has(p.id)) continue; const dd = Math.hypot(p.x - from.x, p.y - from.y); if (dd < nd) { nd = dd; next = p; } }
             from = next;

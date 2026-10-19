@@ -605,7 +605,7 @@ class FightSim {
     // eat.whole swallows the whole mechanic for everyone (a teammate's spread circle), eat.raid halves a raidwide
     const eat = this.eatInfo ? this.eatInfo(m, inside) : null;
     const hit = (p, dmg, kind, avoidable) => {
-      const ea = eat && eat.on && eat.on.includes(p) ? eat.type : null;
+      const ea = eat && eat.on && eat.on.some(q => q.id === p.id) ? eat.type : null;
       this.damagePlayer(p, dmg, { kind, avoidable: avoidable && !ea, eat: ea, mid: m.id }); hits.push(p.id);
     };
     if (eat && eat.whole) {
@@ -1062,6 +1062,7 @@ const MAW_HOST = { EAT: 0.25, RAID: 0.5, WIN: 4.2 };
 MAW_HOST.typeOf = m => {
   if (m.eat === false) return null;
   if (typeof m.eat === 'string') return m.eat;
+  if (m.cover) return null;   // a blast you hide from (Gut Blast, Dead Wind...) fills the room: nothing to bite
   switch (m.type) {
     case 'aoe': { const k = m.shape && m.shape.kind; return k === 'circle' || k === 'donut' ? 'ring' : k === 'rect' || k === 'cross' ? 'lance' : k === 'cone' ? 'fang' : null; }
     case 'spread': case 'proximity': case 'raidwide': return 'ring';
@@ -1083,12 +1084,12 @@ Object.assign(FightSim.prototype, {
     if (m.type === 'raidwide') { const r = eaters.filter(p => p.s.maw.all); return r.length ? { type, raid: r } : null; }
     // a circle on one person (a spread, a jar or a cask chasing them): whoever eats it takes it for them
     if (m.type === 'spread' || (m.type === 'aoe' && m.follow != null && m.shape.kind === 'circle')) {
-      const e = eaters.find(p => inside.includes(p));
+      const e = eaters.find(p => inside.some(q => q.id === p.id));
       if (e) return { type, whole: e, owner: m.follow !== e.id ? m.follow : null };
       return null;
     }
     if (m.type === 'buster') { const tg = m.target ?? m.follow, e = eaters.find(p => p.id === tg); return e ? { type, on: [e] } : null; }
-    const on = m.type === 'proximity' ? eaters : eaters.filter(p => inside.includes(p));
+    const on = m.type === 'proximity' ? eaters : eaters.filter(p => inside.some(q => q.id === p.id));
     return on.length ? { type, on } : null;
   },
   // a Morsel for p: the owner's kit takes it (fev 'eat'); every client draws the mechanic going down (w: all of it)
@@ -1141,7 +1142,7 @@ Object.assign(FightSim.prototype, {
       let tid = typeof ev.target === 'number' ? ev.target : null;
       const ok = id => { const q = this.ps.get(id); return q && q.alive && !q.left && id !== pid; };
       if (!ok(tid)) { tid = null; let bf = Infinity; for (const q of this.alive()) { if (q.id === pid) continue; const f = q.s.hp / q.s.maxHp; if (f < bf) { bf = f; tid = q.id; } } }
-      L.cosign = tid != null ? { id: tid, until: this.t + Math.max(0, Math.min(20, Number(ev.dur) || 0)) } : null;
+      L.cosign = tid != null ? { id: tid, until: this.t + Math.max(0, Math.min(24, Number(ev.dur) || 0)) } : null;
       L.ver++;
       this.sendLedger(pid, true);
       return;
