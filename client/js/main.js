@@ -395,7 +395,7 @@
     if (amt > 0) FX.text(player.x, player.y - 46, '-' + amt, '#ff7a6a', 14);
     if (perfect) actor.notify('perfect');
     if (reflect) actor.notify('reflect');
-    if (read) actor.notify('read', { b: d.heavy ? 1 : 0 });   // (the sparring dummy's every third swing counts as a tankbuster)
+    if (read) actor.notify('read', { b: d.heavy ? 1 : 0 });   // (the sparring dummy's every fourth swing counts as a tankbuster)
   }
 
   const ADD_R = 30;

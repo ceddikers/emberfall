@@ -205,3 +205,16 @@ TD-18. **Barrowwind Leathers** (`driftblade_a4`): a near-black duelling coat wit
 120. **Silk-Lined Lab Coat** (`alembist_a2`): An olive lab coat lined with pale spider silk showing at the open front and cuffs, a row of chitin buttons and a small vial loop on the chest.
 121. **Oilskin Coat of the Summit** (`alembist_a3`): A long slate-grey oilskin coat with a high storm collar, rain beading on its shoulders, a bandolier of three blue-tinted vials across it.
 122. **Gravedust Smock** (`alembist_a4`): A plum-grey smock dusted pale with grave dust, a tarnished gold clasp at the throat, a few small labelled jars hanging from a cord belt.
+
+## Ironpalm sheet (new tank, 2026-10; saffron accent)
+**Style:** the shared style above and each boss's tier theme. Ironpalm weapons are **knuckle wraps**: a pair of cloth hand-wraps with a plate over the knuckles, drawn as one wrapped fist on the diagonal like the other weapons, the trailing end of cloth hanging down-left. Armour is a sleeveless **gi** standing front view. Until the art arrives the bag draws a simple wrapped fist. Numbered IP-1 to IP-9; files go in `client/items/<key>.png`.
+
+IP-1. **Recruit's Knuckle Wraps** (`ironpalm_w0`): plain off-white cloth wraps gone grey at the knuckles, a thin scuffed iron plate, a frayed loose end.
+IP-2. **Butcher-Twine Wraps** (`ironpalm_w1`): wraps bound with red-and-white butcher's twine, the knuckle plate a small dented meat tenderiser head, a grease stain on the cloth.
+IP-3. **Silk-Bound Iron Wraps** (`ironpalm_w2`): pale spider silk wound tight over dark iron knuckles, two curved chitin spurs at the wrist.
+IP-4. **Thunder-Iron Wraps** (`ironpalm_w3`): slate-grey wraps with a blue lightning stitch down the back of the hand, the knuckle plate dark iron with a bright blue crack across it.
+IP-5. **Wraps of the Barrow Monk** (`ironpalm_w4`): near-black wraps with a tarnished gold plate over the knuckles, a grave-green bead tied into the loose end.
+IP-6. **Scullery Gi** (`ironpalm_a1`): a saffron gi with a kitchen apron tied over it, the sleeves cut off ragged, a dish cloth tucked in the sash.
+IP-7. **Webweave Gi** (`ironpalm_a2`): a saffron gi overlaid with pale web-patterned silk at the shoulders, a maroon sash with a chitin clasp.
+IP-8. **Stormcloud Gi** (`ironpalm_a3`): a slate-grey and saffron gi, rain-darkened at the hem, a blue lightning stitch along the sash.
+IP-9. **Gravestill Gi** (`ironpalm_a4`): a faded plum-grey gi dusted with grave dust, a tarnished gold sash knot, a string of grey stone prayer beads.

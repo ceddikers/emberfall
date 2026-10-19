@@ -131,3 +131,18 @@ Only moves that are new to a spec need an icon. Changed moves (for example Senti
 
 19. **Alembist · Apothecary** (herb green): the same alchemist, goggles off and hanging at her neck, a **leather satchel of labelled clay jars** at her hip, a sprig of green herbs tucked behind one ear, reading a small handwritten label on a jar with calm, patient focus. Sage-green background with a pale mortar-and-pestle shape behind the head.
 20. **Alembist · Volatile** (soot and orange): the same alchemist with soot smudged across her cheek and coat, goggles pulled down over her eyes with **orange lenses**, a few singed strands loose from her bun, holding up a vial with a **short lit fuse** spitting flat orange star-shaped sparks, a wide, slightly reckless grin. Charcoal background with a bold orange burst shape behind the head.
+
+## Ironpalm specs (new tank, 2026-10)
+
+**Ability icons** (Ironpalm palette from `ability-icons.md`: deep maroon background, saffron, off-white wraps and dull iron):
+
+**Ironpalm · Still Water** (pale water-blue)
+22. **Still Pond** (`ironpalm/pond`), replaces Iron Skin: an open palm held flat, face down, a hand's breadth above still water, three perfect rings spreading out from the point under it, no splash.
+
+**Ironpalm · Avalanche Fist** (earth orange)
+23. **Landslide** (`ironpalm/slide`), replaces Temple Bell: an iron-wrapped fist driving down into the ground, the earth around it heaving up in three thick broken slabs, a few stones flying.
+
+**Portraits** (same man as `hero-portraits.md` #13):
+
+23. **Ironpalm · Still Water** (pale blue): the same monk with his eyes closed, standing ankle-deep in still water, one open palm held out flat in front of him with a single drop falling from his fingertips, the rings from it spreading round his feet; his gi is a faded water-blue and his sash deep navy. Pale blue-grey background with a flat circle of ripples behind the head.
+24. **Ironpalm · Avalanche Fist** (earth orange): the same monk mid-charge down a slope, leaning hard forward, both fists cased in **rough stone gauntlets** over the wraps, grit and small stones tumbling off them, his gi a dusty clay orange. Teeth showing, delighted. Burnt-orange background with bold diagonal rock slabs behind him.
