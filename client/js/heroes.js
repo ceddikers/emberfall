@@ -617,6 +617,68 @@ const SPEC_ART = {
   },
 };
 
+// ======================================================================= Alembist (classes-b)
+// A goggled alchemist: brass goggles over the eyes, a messy bun with a glass stirring rod through it, an olive work
+// coat under a leather apron, a bandolier of coloured vials across the chest, and a smoking copper still on her back.
+// The right hand flicks a vial out on a throw; the left steadies the strap.
+HERO_ART.alembist = function (ctx, st) {
+  const coat = '#56603e', apron = '#8a5a34', copper = '#b8743a', skin = '#e8c4a0', hair = '#3e2a22', brass = '#d8a84a';
+  const cast = castAmt(st);
+  // the still on her back: a copper pot, a coiled swan neck over the shoulder, a chimney puffing steam
+  for (let i = 0; i < 3; i++) {
+    const q = (st.t * 0.45 + i / 3) % 1;
+    circle(ctx, -23 - q * 10, -6 - q * 4 + Math.sin(st.t * 2 + i) * 1.5, 2 + q * 3.5, `rgba(226,230,226,${0.55 * (1 - q)})`);
+  }
+  limb(ctx, [-12, -5, -8, -12, -1, -13], copper, 2.2);
+  ellipse(ctx, -15, 0, 8, 8.5, 0, copper, OUT, 1.8);
+  ellipse(ctx, -17, -2.5, 3.4, 2.4, -0.5, '#e0a068');
+  rrect(ctx, -23, -8, 6, 5, 1.2, '#8a5428', OUT, 1.3);   // the chimney
+  circle(ctx, -15, 0, 3, null, 'rgba(70,30,10,0.6)', 1);  // a rivet ring
+  feet(ctx, st, '#3a2a1e');
+  torso(ctx, coat, 9.5, 14);
+  ellipse(ctx, 1.5, 0, 6.5, 10.5, 0, apron, OUT, 1.5);           // the apron front
+  line(ctx, 4, -6, 4, 6, 'rgba(40,20,10,0.4)', 1);
+  // the bandolier, corner to corner, with four vials in its loops
+  line(ctx, -7, -12, 8, 11, OUT, 4.6); line(ctx, -7, -12, 8, 11, '#6b4424', 3);
+  const vials = ['#4fe0c0', '#ff5a1a', '#f4ecd2', '#ffd23a'];
+  vials.forEach((col, i) => { const q = 0.18 + i * 0.22, x = -7 + 15 * q, y = -12 + 23 * q; rrect(ctx, x - 1.8, y - 2.4, 3.6, 4.8, 1.2, col, OUT, 1); circle(ctx, x, y - 2.6, 0.9, '#9a6a3a'); });
+  // hands: the left on the strap, the right holding a vial out (further on a throw)
+  hand(ctx, 7, -10, '#6b4a30');
+  const vx = 9 + cast * 8, vy = 11 - cast * 4;
+  glow(ctx, vx + 3, vy, 6 + cast * 5, '#4fe0c0', 0.25 + cast * 0.4);
+  rrect(ctx, vx + 1, vy - 2.6, 5, 5.2, 1.6, '#4fe0c0', OUT, 1.1);
+  hand(ctx, vx, vy, '#6b4a30');
+  // the bun with a glass rod through it, then the head, then the goggles
+  circle(ctx, -7.5, 0, 4, hair, OUT, 1.5);
+  line(ctx, -9.5, -4.5, -5, 4.5, '#cfe8ee', 1.2);
+  hairHead(ctx, hair, skin, 7.4);
+  ctx.strokeStyle = '#5a3a24'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(0.5, 0, 7.2, -1.25, 1.25); ctx.stroke();   // the goggle strap
+  for (const sy of [-1, 1]) {
+    circle(ctx, 6, 2.5 * sy, 2.3, HERO_SPEC === 'volatile' ? '#ffb070' : '#7fd8c0', OUT, 1);
+    circle(ctx, 6, 2.5 * sy, 2.3, null, brass, 1);
+    circle(ctx, 5.4, 2.5 * sy - 0.8, 0.7, 'rgba(255,255,255,0.8)');
+  }
+};
+// Apothecary: a second strap of vials crossing the first, dried herbs bundled on the still, a label tag
+SPEC_ART.apothecary = function (ctx, st) {
+  line(ctx, -7, 12, 8, -11, OUT, 4.2); line(ctx, -7, 12, 8, -11, '#7a5434', 2.6);
+  for (const [q, col] of [[0.3, '#7ff0a8'], [0.62, '#bfe8ec']]) { const x = -7 + 15 * q, y = 12 - 23 * q; rrect(ctx, x - 1.7, y - 2.3, 3.4, 4.6, 1.1, col, OUT, 1); }
+  for (let i = 0; i < 3; i++) ellipse(ctx, -19 + i * 1.5, 5 + i * 1.2, 3.2, 1.3, 0.8 + i * 0.3, i % 2 ? '#7aa04a' : '#9ab85a', OUT, 0.7);
+  rrect(ctx, -12, 6, 4, 3, 0.6, '#efe2c0', OUT, 0.8);
+  glow(ctx, 0, 0, 20, '#d8b070', 0.08 + Math.sin(st.t * 1.5) * 0.03);
+};
+// Volatile: soot on the apron, sparks spitting off the still, a lit fuse on one vial of the bandolier
+SPEC_ART.volatile = function (ctx, st) {
+  circle(ctx, 3, 3, 2.4, 'rgba(30,20,16,0.45)'); circle(ctx, -1, -4, 1.6, 'rgba(30,20,16,0.4)');
+  for (let i = 0; i < 3; i++) {
+    const q = (st.t * 1.8 + i / 3) % 1, a = i * 2.1 + st.t;
+    glow(ctx, -15 + Math.cos(a) * (6 + q * 8), Math.sin(a) * (6 + q * 8), 3.5, '#ffb040', 0.9 * (1 - q));
+  }
+  const fx = -7 + 15 * 0.4, fy = -12 + 23 * 0.4;
+  line(ctx, fx, fy - 2.6, fx - 1.5, fy - 6, '#d8c8a8', 0.9);
+  glow(ctx, fx - 1.5, fy - 6, 4 + Math.sin(st.t * 30), '#ffd070', 0.9);
+};
+
 // the spec of the hero being drawn right now, for the few class looks a spec changes underneath (the Berserker's helm)
 let HERO_SPEC = null;
 // cls may be null (wisp). opts: { ring, noShadow, lift, spec }

@@ -997,6 +997,7 @@ function alemAdd(k, key, o = {}) {
   // Mother Liquor: the same recipe twice in a row starts ripe; Grand Reserve: batch copies start ripe and keep
   if (k.talent('alembist_echo') && !o.copy && k.g.last === key) v.fast = 1;
   if (o.batch && k.talent('alembist_reserve')) v.at = k.now - alemRipeTime(k);
+  if (k.g.ripeNext && !o.copy) { k.g.ripeNext = false; v.at = k.now - alemRipeTime(k); }   // (an enhancement on Distill)
   if (o.batch && k.talent('alembist_reserve')) { if (A.fuse) v.fuse = k.now + 10; else v.keep = true; }
   k.g.vials.push(v);
   if (!o.copy) k.g.last = key;
@@ -1066,7 +1067,7 @@ function alemBomb(k, c, pot, dot, dotDur = 9) {
   k.engagedAt = k.now;
   k.damage(pot, { ab });
   if (dot) k.dot('burn', dot, dotDur, 3, { ab });
-  if (k.talent('alembist_ricochet') && k.now >= (k.g.ricoAt || 0)) { k.g.ricoAt = k.now + 15; k.after(1, () => { k.damage(pot * 0.25, { ab }); k.fx('ricochet'); }); }
+  if (k.talent('alembist_ricochet') && k.now >= (k.g.ricoAt || 0)) { k.g.ricoAt = k.now + 15; k.after(1, () => { k.damage(pot * 0.25, { ab }); k.fx('ricochet', { en: c.en.id }); }); }
   if (k.talent('alembist_scorch')) k.g.scorchUntil = k.now + 10;
 }
 function alemRaise(k, c) {
@@ -1078,15 +1079,15 @@ function alemRaise(k, c) {
 function alemRecipe(k, key, c, m) {
   const t = c.t;
   switch (key) {
-    case 'DD': alemSplash(k, t, { r: 110, heal: 480 * m }); alemRaise(k, c); break;
-    case 'EE': alemBomb(k, c, 360 * m, 0); break;
-    case 'SS': alemSplash(k, t, { pool: { r: 120, ticks: 12, interval: 6 * m / 12, pct: 0.2 } }); break;
+    case 'DD': alemSplash(k, t, { r: k.perk('alembist_w1') ? 132 : 110, heal: 480 * m }); alemRaise(k, c); break;
+    case 'EE': alemBomb(k, c, 360 * m, k.perk('alembist_w2') ? 45 * m : 0, 6); break;
+    case 'SS': alemSplash(k, t, { pool: { r: 120, ticks: 12, interval: (k.perk('alembist_a2') ? 8 : 6) * m / 12, pct: 0.2 } }); break;
     case 'DE': alemSplash(k, t, { pool: { r: 120, ticks: 6, interval: 1.5, heal: 80 * m, fol: k.talent('alembist_cling') } }); break;
     case 'DS': alemSplash(k, t, { r: 110, sh: 280 * m, cl: 1 }); break;
     case 'ES': k.partyBuff('haste', 0.1, Math.min(13, 10 * m), { ab: alemAb(k) }); alemSplash(k, t, { r: 110, heal: 100 * m, cl: 2, chain: false }); break;
     case 'QQ': alemSplash(k, t, { pool: { r: 120, ticks: 4, interval: 1.5, sh: 120 * m } }); break;
     case 'DQ': alemSplash(k, t, { r: 110, heal: 400 * m, up: 1 }); alemRaise(k, c); break;
-    case 'EQ': alemBomb(k, c, 260 * m, 0); if (!c.self && c.en) k.after(1, () => { k.damage(260 * m, { ab: alemAb(k) }); k.fx('ricochet'); }); break;
+    case 'EQ': alemBomb(k, c, 260 * m, 0); if (!c.self && c.en) k.after(1, () => { k.damage(260 * m, { ab: alemAb(k) }); k.fx('ricochet', { en: c.en.id }); }); break;
     // Reactions
     case 'EEE': alemBomb(k, c, 560 * m, 70 * m, 12); break;
     case 'DDD': alemSplash(k, t, { r: 150, heal: 620 * m, pool: { r: 150, ticks: 4, interval: 1.5, heal: 60 * m } }); alemRaise(k, c); break;
@@ -1110,6 +1111,8 @@ function alemLaunch(k, v, t, en, m, self) {
   const c = { t: self ? 'self' : t, en: self ? null : en, self: !!self };
   if (self) alemGoOff(k, v, c, m); else k.after(ALEMBIC.FLIGHT, () => alemGoOff(k, v, c, m));
 }
+// an enhancement on the 120s: Distill (or Catalyst) comes back
+function alemRestock(k) { if (!k.perk('alembist_w3')) return; const d = k.abilities.find(a => k.baseId(a) === 'distill'); if (d) k.refill(d.id); }
 // the reagent button (Q W E): usable while there's room in the bandolier
 function alemReagentAb(id, x, name, glow, desc) {
   return {
@@ -1195,6 +1198,7 @@ KITS.alembist = {
       desc: 'Your next brew is instant: your next two reagents come off the global cooldown at once.',
       effect(k) {
         k.buff('distill', 15, {}, 2, 2);
+        if (k.perk('alembist_a4')) k.g.ripeNext = true;
         if (k.talent('alembist_flash') && k.g.last) alemAdd(k, k.g.last, { copy: true });
         if (k.talent('alembist_fume')) k.mitigate('party', 0.1, 8, { ab: this });
       },
@@ -1204,7 +1208,7 @@ KITS.alembist = {
       id: 'batch', name: 'Grand Batch', type: 'ogcd', target: 'self', cd: 120, anim: 'big', lock: 0.3,
       desc: 'Fill every empty slot in your bandolier with copies of the last vial you brewed.',
       usable: k => !!k.g.last && alemRoom(k),
-      effect(k) { while (alemAdd(k, k.g.last, { copy: true, batch: true })); },
+      effect(k) { while (alemAdd(k, k.g.last, { copy: true, batch: true })); alemRestock(k); },
       fx: { color: '#ffb84a' },
     },
   ],
@@ -1222,6 +1226,7 @@ KITS.alembist = {
         k.g.vials = [v]; k.g.sel = 0; k.g.count = 1;
         k.g.popAt = k.now; k.g.popR = 'BL';
         k.fx('brew', { r: 'BL' });
+        alemRestock(k);
       },
       fx: { color: '#ffe0a8' },
     },

@@ -34,5 +34,9 @@
   "chronomancer": {
     "newbie": 834,
     "pro": 1122
+  },
+  "alembist": {
+    "newbie": 632,
+    "pro": 1090
   }
 }

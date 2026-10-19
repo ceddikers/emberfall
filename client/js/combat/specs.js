@@ -707,10 +707,11 @@ SPECS.alembist = [
         throw: { desc: 'Throw your oldest vial at your heal target: it shatters and splashes everyone close by. A bomb flies at the enemy instead. Vials heat up 30% stronger over 4s, and go off on you when their 6s fuse runs out.' },
         distill: {
           id: 'catalyst', replaces: 'distill', icon: 'distill', name: 'Catalyst', type: 'ogcd', target: 'self', cd: 14, charges: 2, anim: 'cast', lock: 0.3,
-          get desc() { return `Your next brew takes three reagents. Three that make a Reaction brew it; three that don't, fizzle back to the first two.${alemBook(alemSavedKnown(), true)}`; },
+          get desc() { return `Your next brew takes three reagents. Three that make a Reaction brew it; three that don't, fizzle back to the first two.<div class="alem-book">${alemBook(alemSavedKnown(), true)}</div>`; },
           usable: k => !k.has('catalyst'),
           effect(k) {
             k.buff('catalyst', 20);
+            if (k.perk('alembist_a4')) k.g.ripeNext = true;
             if (k.talent('alembist_flash') && k.g.last && k.now >= (k.g.flashAt || 0)) { k.g.flashAt = k.now + 20; alemAdd(k, k.g.last, { copy: true }); }
             if (k.talent('alembist_fume') && k.now >= (k.g.fumeAt || 0)) { k.g.fumeAt = k.now + 30; k.mitigate('party', 0.1, 8, { ab: this }); }
           },
