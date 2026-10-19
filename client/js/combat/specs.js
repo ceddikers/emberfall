@@ -1,4 +1,4 @@
-﻿// Specializations: two per class. A spec reshapes the base kit (KITS in kits.js); it doesn't replace it.
+// Specializations: two per class. A spec reshapes the base kit (KITS in kits.js); it doesn't replace it.
 // It swaps one or two abilities, gives the signature mechanic a new purpose, and keeps the role and the seven keys.
 // Free to swap in town, saved per hero, and both specs of a class are balanced against each other (tools/simulate.js).
 //
@@ -23,7 +23,7 @@ const SPECS = {
         abilities: {
           brace: { charges: 3, desc: 'Raise your shield: 25% less damage for 3s. Brace just before a hit lands for a Perfect Block, which also steadies the party. Three charges.' },
           edge: {
-            id: 'bash', replaces: 'edge', icon: 'edge', name: 'Shield Bash', type: 'gcd', target: 'enemy', range: SPEC_MELEE, anim: 'bash',
+            id: 'bash', replaces: 'edge', name: 'Shield Bash', type: 'gcd', target: 'enemy', range: SPEC_MELEE, anim: 'bash',
             desc: 'Spend 50 Resolve: slam your shield into the boss. For 4s you take 30% less damage, and it heals you a little.',
             usable: k => k.g.resolve >= bastionCost(k),
             glow: k => k.g.resolve >= 90 || (k.has('oath') && k.g.resolve >= 50),
@@ -71,7 +71,7 @@ const SPECS = {
           },
           oath: { desc: 'Burst: 20s of +10% damage. Judgment grants double Resolve and Holy Edge hits harder.', effect(k) { k.buff('oath', 20); } },
           bulwark: {
-            id: 'zeal', replaces: 'bulwark', icon: 'bulwark', name: 'Zealous Guard', type: 'ogcd', target: 'self', cd: 120, anim: 'big',
+            id: 'zeal', replaces: 'bulwark', name: 'Zealous Guard', type: 'ogcd', target: 'self', cd: 120, anim: 'big',
             desc: 'Big cooldown: 30% less damage for 10s, Brace\'s charges refill, and your next Holy Edge is Radiant.',
             effect(k) {
               k.mitigate('self', k.perk('bastion_a4') ? 0.4 : 0.3, 10, { ab: this });
@@ -103,7 +103,7 @@ const SPECS = {
         haste: k => (k.has('frenzy') ? 0.9 : 1),
         abilities: {
           drain: {
-            id: 'rampage', replaces: 'drain', icon: 'drain', name: 'Rampage', type: 'gcd', target: 'enemy', range: SPEC_MELEE, anim: 'attack',
+            id: 'rampage', replaces: 'drain', name: 'Rampage', type: 'gcd', target: 'enemy', range: SPEC_MELEE, anim: 'attack',
             desc: 'Spend 40 Rage: a wild blow that hits harder the lower your HP (up to 70% harder near death) and heals you for 20% of the damage you took in the last 6s.',
             usable: k => k.g.blood >= 40 || k.stacks('gorge') > 0,
             glow: k => k.stacks('gorge') > 0 || k.g.blood >= 90 || k.env.hpFrac() < 0.5,
@@ -151,7 +151,7 @@ const SPECS = {
             },
           },
           letting: {
-            id: 'lance', replaces: 'letting', icon: 'letting', name: 'Blood Lance', type: 'ogcd', target: 'enemy', range: 300, charges: 2, cd: 15, anim: 'cast',
+            id: 'lance', replaces: 'letting', name: 'Blood Lance', type: 'ogcd', target: 'enemy', range: 300, charges: 2, cd: 15, anim: 'cast',
             desc: 'Throw a lance of blood between attacks: damage and +20 Blood, from range. Two charges.',
             glow: k => k.charges(k.abById('lance')) === 2,
             effect(k) { k.damage(210 * reaverRetaliate(k), { ab: this }); reaverGain(k, k.perk('bloodreaver_w1') ? 30 : 20); if (k.perk('bloodreaver_a4')) k.healRaw('self', k.env.maxHp() * 0.05, { ab: this }); reaverLetting(k, this); },
@@ -196,7 +196,7 @@ const SPECS = {
         init: () => ({ runes: 0, step: 0, comboUntil: 0 }),
         abilities: {
           strike: {
-            id: 'cut', replaces: 'strike', icon: 'strike', name: 'Rune Blade', type: 'gcd', target: 'enemy', range: SPEC_MELEE, anim: 'attack',
+            id: 'cut', replaces: 'strike', name: 'Rune Blade', type: 'gcd', target: 'enemy', range: SPEC_MELEE, anim: 'attack',
             desc: 'Two-hit combo on one button: Cut > Carve. Each hit gives 1 Rune (2 during Runic Overload).',
             label: k => (k.now < k.g.comboUntil && k.g.step === 1 ? 'Carve' : 'Cut'),
             effect(k) {
@@ -214,7 +214,7 @@ const SPECS = {
             effect(k) { runeWardCost(k); runeWardUp(k, this, 'self'); k.g.wardAmt = k.shield('self', k.perk('runeguard_a2') ? 750 : 600, k.perk('runeguard_a4') ? 12 : 8, { ab: this, tag: 'ward' }); k.g.selfWard = true; },
           },
           glyph: {
-            id: 'cleave', replaces: 'glyph', icon: 'glyph', name: 'Rune Cleave', type: 'gcd', target: 'enemy', range: SPEC_MELEE, anim: 'attack',
+            id: 'cleave', replaces: 'glyph', name: 'Rune Cleave', type: 'gcd', target: 'enemy', range: SPEC_MELEE, anim: 'attack',
             desc: 'Spend 3 Runes: a cleaving cut that leaves a burning rune on the target for 12s.',
             usable: k => k.g.runes >= 3,
             glow: k => k.g.runes >= 3,
@@ -247,7 +247,7 @@ const SPECS = {
         init: () => Object.assign(base.init(), { refundAt: 0 }),
         abilities: {
           mend: {
-            id: 'barrier', replaces: 'mend', icon: 'mend', name: 'Divine Barrier', type: 'gcd', target: 'ally', anim: 'cast',
+            id: 'barrier', replaces: 'mend', name: 'Divine Barrier', type: 'gcd', target: 'ally', anim: 'cast',
             cast: k => (k.has('quickmend') ? 0 : 1.5),   // (Quick Mend, a talent)
             desc: '1.5s cast: a golden dome on one ally that absorbs a big hit for 12s, and heals them a little.',
             effect(k, t) { k.consume('quickmend'); k.heal(t, 250, { ab: this }); k.shield(t, 650, 12, { ab: this, tag: 'barrier' }); },
@@ -301,7 +301,7 @@ const SPECS = {
             },
           },
           bene: {
-            id: 'condemn', replaces: 'bene', icon: 'bene', name: 'Condemn', type: 'ogcd', target: 'enemy', range: SPEC_RANGED, cd: 30, anim: 'big',
+            id: 'condemn', replaces: 'bene', name: 'Condemn', type: 'ogcd', target: 'enemy', range: SPEC_RANGED, cd: 30, anim: 'big',
             desc: 'Instant: a lance of holy fire that brands the boss for 4 hits, and your next Smite is instant.',
             effect(k) {
               if (clericBless(k, this, null)) { k.damage(140, { ab: this }); k.fx('twinBless'); return; }
@@ -325,7 +325,7 @@ const SPECS = {
         potMult: 0.87,
         abilities: {
           rejuv: {
-            id: 'lifebind', replaces: 'rejuv', icon: 'rejuv', name: 'Lifebind', type: 'gcd', target: 'ally', anim: 'cast',
+            id: 'lifebind', replaces: 'rejuv', name: 'Lifebind', type: 'gcd', target: 'ally', anim: 'cast',
             desc: 'Instant: a small heal, then healing every 3s for 15s, on this ally and on the most hurt other ally. Its ticks grow Bloom.',
             recastGcd: k => groveSproutGcd(k),
             effect(k, t) {
@@ -374,7 +374,7 @@ const SPECS = {
             },
           },
           growth: {
-            id: 'moonwell', replaces: 'growth', icon: 'growth', name: 'Moonwell', type: 'ogcd', target: 'ally', cd: 45, anim: 'big',
+            id: 'moonwell', replaces: 'growth', name: 'Moonwell', type: 'ogcd', target: 'ally', cd: 45, anim: 'big',
             desc: 'A pool of moonlight at an ally\'s feet for 12s: everyone standing in it heals every 1.5s, and your heals are 25% stronger while it lasts.',
             effect(k, t) {
               k.buff('moonlit', 12);
@@ -422,7 +422,7 @@ const SPECS = {
               },
             },
             accel: {
-              id: 'chamber', replaces: 'accel', icon: 'accel', name: 'Echo Chamber', type: 'ogcd', target: 'self', cd: 60, anim: 'big',
+              id: 'chamber', replaces: 'accel', name: 'Echo Chamber', type: 'ogcd', target: 'self', cd: 60, anim: 'big',
               desc: 'Burst: everyone attacks 10% faster for 15s, and your echoes are full strength while it lasts. You gain 40 Flux.',
               effect(k) { const dur = chronoAccel(k, 15); k.partyBuff('haste', 0.1, dur, { ab: this }); k.buff('chamber', dur); k.gain('flux', 40); if (k.perk('chronomancer_w3')) k.heal('party', 150, { ab: this }); },
               fx: { type: 'zone', style: 'clock', color: '#c4a8ff', r: 160, range: 0, dur: 2 },
@@ -478,7 +478,7 @@ const SPECS = {
         dmgMod: k => k.stacks('aim') * 0.04,
         abilities: {
           pierce: {
-            id: 'aimed', replaces: 'pierce', icon: 'pierce', name: 'Aimed Shot', type: 'gcd', target: 'enemy', range: SPEC_RANGED, charges: 2, cd: 12, anim: 'attack',
+            id: 'aimed', replaces: 'pierce', name: 'Aimed Shot', type: 'gcd', target: 'enemy', range: SPEC_RANGED, charges: 2, cd: 12, anim: 'attack',
             cast: k => (k.has('keen') ? 0 : 2),
             desc: '2s cast: a heavy, carefully aimed shot, two charges. With Keen Eye it\'s instant, hits harder and gives the charge back.',
             glow: k => k.has('keen') || k.charges(k.abById('aimed')) === 2,
@@ -527,7 +527,7 @@ const SPECS = {
               },
             },
             pierce: {
-              id: 'caustic', replaces: 'pierce', icon: 'pierce', name: 'Caustic Arrow', type: 'gcd', target: 'enemy', range: SPEC_RANGED, charges: 2, cd: 12, anim: 'attack',
+              id: 'caustic', replaces: 'pierce', name: 'Caustic Arrow', type: 'gcd', target: 'enemy', range: SPEC_RANGED, charges: 2, cd: 12, anim: 'attack',
               desc: 'Burst every stack of Acid at once: damage that grows with each stack. Two charges. Keen Eye makes it stronger and gives the charge back.',
               glow: k => k.g.acid >= 6 || (k.g.acid >= 3 && (k.has('keen') || k.charges(k.abById('caustic')) === 2)),   // burst when there's acid worth bursting
               effect(k) {
@@ -556,7 +556,7 @@ const SPECS = {
         positionalAlways: () => true,
         abilities: {
           step: {
-            id: 'fury', replaces: 'step', icon: 'step', name: 'Blade Fury', type: 'ogcd', target: 'enemy', range: SPEC_MELEE, charges: 2, cd: 15, anim: 'attack',
+            id: 'fury', replaces: 'step', name: 'Blade Fury', type: 'ogcd', target: 'enemy', range: SPEC_MELEE, charges: 2, cd: 15, anim: 'attack',
             desc: 'Spin through everything around you: damage and +1 combo point. Two charges.',
             effect(k) { k.damage(260, { ab: this }); k.gain('combo', k.perk('shadowblade_a2') ? 2 : 1, 5); bladeStep(k, this); },
             fx: { type: 'slash', color: '#e0c8ff', r: 60, span: 6.28 },
@@ -573,7 +573,7 @@ const SPECS = {
         potMult: 0.954,
         abilities: {
           evis: {
-            id: 'backstab', replaces: 'evis', icon: 'evis', name: 'Backstab', type: 'gcd', target: 'enemy', range: SPEC_MELEE, anim: 'attack',
+            id: 'backstab', replaces: 'evis', name: 'Backstab', type: 'gcd', target: 'enemy', range: SPEC_MELEE, anim: 'attack',
             desc: 'Spend all combo points for a big hit. Much stronger from behind, weaker from the front, and stronger at 5 points.',
             usable: k => k.g.combo >= 1,
             glow: k => k.g.combo >= 5 || (k.g.combo >= 4 && k.env.positional() === 'rear'),
@@ -616,7 +616,7 @@ const SPECS = {
           },
           abilities: {
             pyro: {
-              id: 'meteor', replaces: 'pyro', icon: 'pyro', name: 'Meteor', type: 'gcd', target: 'enemy', range: SPEC_RANGED, anim: 'cast',
+              id: 'meteor', replaces: 'pyro', name: 'Meteor', type: 'gcd', target: 'enemy', range: SPEC_RANGED, anim: 'cast',
               cast: k => (k.has('hotstreak') ? 0 : 3.0),
               desc: '3s cast: a rune circle on the target, and 1.5s later a meteor smashes it for huge damage and leaves a burning crater. With Hot Streak it\'s instant.',
               glow: k => k.has('hotstreak'),
@@ -654,7 +654,7 @@ const SPECS = {
           tick(k) { base.tick(k); if (inCircle(k)) k.buff('incircle', 0.3); },
           abilities: {
             combust: {
-              id: 'circle', replaces: 'combust', icon: 'combust', name: 'Ember Circle', type: 'ogcd', target: 'self', cd: 45, anim: 'big',
+              id: 'circle', replaces: 'combust', name: 'Ember Circle', type: 'ogcd', target: 'self', cd: 45, anim: 'big',
               desc: 'Plant a circle of fire at your feet for 20s. While you stand in it, you cast 20% faster and deal 15% more damage.',
               effect(k) {
                 const p = k.env.pos ? k.env.pos() : { x: 0, y: 0 };
@@ -701,7 +701,7 @@ SPECS.alembist = [
       abilities: {
         throw: { desc: 'Throw your oldest vial at your heal target: it shatters and splashes everyone close by. A bomb flies at the enemy instead. Vials heat up 30% stronger over 4s, and go off on you when their 6s fuse runs out.' },
         distill: {
-          id: 'catalyst', replaces: 'distill', icon: 'distill', name: 'Catalyst', type: 'ogcd', target: 'self', cd: 14, charges: 2, anim: 'cast', lock: 0.3,
+          id: 'catalyst', replaces: 'distill', name: 'Catalyst', type: 'ogcd', target: 'self', cd: 14, charges: 2, anim: 'cast', lock: 0.3,
           get desc() { return `Your next brew takes three reagents. Three that make a Reaction brew it; three that don't, fizzle back to the first two.<div class="alem-book">${alemBook(alemSavedKnown(), true)}</div>`; },
           usable: k => !k.has('catalyst'),
           effect(k) {
@@ -783,7 +783,7 @@ function specKit(classId, specId) {
   SPEC_CACHE[key] = kit;
   return kit;
 }
-// the icon an ability wears (a new spec ability borrows one until its own is painted). A move a talent grants wears its
+// the icon an ability wears (icons/<class>/<icon or id>.png; every spec ability has its own painting). A move a talent grants wears its
 // own icon (icons/<class>/<id>.png) once icons/talent-icons.json lists its id, the one it borrows until then.
 const PAINTED_TALENT_ICONS = new Set();
 if (typeof fetch !== 'undefined' && typeof document !== 'undefined') fetch('icons/talent-icons.json').then(r => (r.ok ? r.json() : [])).then(l => { for (const id of l) PAINTED_TALENT_ICONS.add(id); }).catch(() => {});
@@ -827,7 +827,7 @@ Object.assign(SPECS, {
           flare: { desc: '2s cast: a burst of fire. Turns the dial 2 toward Blaze. In Redline at +5 it\'s instant and keeps you there.' },
           lance: { desc: '2s cast: a lance of ice. Turns the dial 2 toward Rime. In Redline at -5 it\'s instant and keeps you there.' },
           equil: {
-            id: 'bleed', replaces: 'equil', icon: 'equil', name: 'Bleed Off', type: 'ogcd', target: 'self', cd: 15, anim: 'cast',
+            id: 'bleed', replaces: 'equil', name: 'Bleed Off', type: 'ogcd', target: 'self', cd: 15, anim: 'cast',
             desc: 'Vent 60 Strain without leaving the edge. The heat you let go wraps you in a small shield.',
             glow: k => (k.g.strain || 0) >= 55,
             effect(k) {
@@ -865,7 +865,7 @@ Object.assign(SPECS, {
         driftMax: 200, straight: true,
         abilities: {
           cross: {
-            id: 'impact', replaces: 'cross', icon: 'cross', name: 'Impact', type: 'gcd', target: 'enemy', range: SPEC_RANGED, anim: 'big',
+            id: 'impact', replaces: 'cross', name: 'Impact', type: 'gcd', target: 'enemy', range: SPEC_RANGED, anim: 'big',
             desc: 'Spend all your Drift: charge clean through your target and out the far side, releasing it all at once. The more you spend, the harder it hits; from 160 it always crits.',
             usable: k => k.g.drift >= 40,
             glow: k => k.g.drift >= 180,
@@ -942,7 +942,7 @@ Object.assign(SPECS, {
         potMult: 1.0,
         abilities: {
           lien: {
-            id: 'cosign', replaces: 'lien', icon: 'lien', name: 'Co-Sign', type: 'ogcd', target: 'ally', cd: 20, anim: 'cast', lock: 0.4,
+            id: 'cosign', replaces: 'lien', name: 'Co-Sign', type: 'ogcd', target: 'ally', cd: 20, anim: 'cast', lock: 0.4,
             desc: 'Co-sign an ally (the one you\'ve picked, or whoever is hurt most): for 20s, 30% of the damage they take is written into your Ledger instead, due 8s later.',
             glow: k => !(k.g.cosign != null && k.g.cosignUntil > k.now + 2),
             effect(k, t) { oathSend(k, { op: 'cosign', target: t, dur: k.perk('oathbroker_w3') ? 24 : 20 }); k.g.cosignUntil = k.now + 20; },
@@ -962,7 +962,7 @@ Object.assign(SPECS, {
         collector: OATH.COL,
         abilities: {
           default: {
-            id: 'foreclose', replaces: 'default', icon: 'default', name: 'Foreclose', type: 'ogcd', target: 'enemy', range: 300, cd: 120, anim: 'big',
+            id: 'foreclose', replaces: 'default', name: 'Foreclose', type: 'ogcd', target: 'enemy', range: 300, cd: 120, anim: 'big',
             desc: 'Call in every debt at once: the whole Ledger is erased and strikes the boss in one blow, as big as everything that was written. Your credit freezes for 10s after.',
             usable: k => k.g.ledger.length > 0,
             glow: k => oathTotal(k) >= oathHp(k) * 0.3,
@@ -994,7 +994,7 @@ SPECS.ironpalm = [
       abilities: {
         read: { charges: 2, desc: 'Drop into a reading stance for 1.2s: 20% less damage. A hit that lands in its first 0.4s is read: it lands at half strength, you counter, and your Breath fills to the top. Read a tankbuster and your next Heavy is a free Thousand Palms, 30% stronger. Two charges.' },
         skin: {
-          id: 'pond', replaces: 'skin', icon: 'skin', name: 'Still Pond', type: 'ogcd', target: 'self', cd: 90, lock: 0.5, anim: 'big',
+          id: 'pond', replaces: 'skin', name: 'Still Pond', type: 'ogcd', target: 'self', cd: 90, lock: 0.5, anim: 'big',
           desc: 'Settle like still water for 8s: 25% less damage, and Read comes back 0.8s after you use it. Read every blow.',
           effect(k) { k.mitigate('self', k.perk('ironpalm_a4') ? 0.35 : 0.25, 8, { ab: this }); k.buff('pond', 8); k.refill(ipAbId(k, 'read')); },
         },
@@ -1012,7 +1012,7 @@ SPECS.ironpalm = [
       avalanche: true,
       abilities: {
         bell: {
-          id: 'slide', replaces: 'bell', icon: 'bell', name: 'Landslide', type: 'ogcd', target: 'self', cd: 60, lock: 0.5, anim: 'big',
+          id: 'slide', replaces: 'bell', name: 'Landslide', type: 'ogcd', target: 'self', cd: 60, lock: 0.5, anim: 'big',
           desc: 'Plant your feet like a mountain coming down: the whole party takes 10% less damage for 8s, and for 15s your strings can\'t drop, a broken one doesn\'t stagger you, and your Momentum fills and holds.',
           effect(k) {
             k.mitigate('party', 0.1, 8, { ab: this });
@@ -1057,7 +1057,7 @@ Object.assign(SPECS, {
         abilities: {
           snip: { cd: 8, desc: 'Cut the threads on your target (all of yours, if it has none). Each one releases 60% more than the damage it carried in the last 5s as a heal to both its ends, and gives back 10 Spool.' },
           tighten: {
-            id: 'lash', replaces: 'tighten', icon: 'tighten', name: 'Lash', type: 'ogcd', target: 'ally', cd: 20, anim: 'cast', lock: 0.4,
+            id: 'lash', replaces: 'tighten', name: 'Lash', type: 'ogcd', target: 'ally', cd: 20, anim: 'cast', lock: 0.4,
             desc: 'Snap your target along their thread up to 220 px toward the ally on its far end, and wrap them in a shield for 2s.',
             usable: k => weaveCount(k) > 0,
             effect(k, t) { weaveTighten(k, this, t, true); },
