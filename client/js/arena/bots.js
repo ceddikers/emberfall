@@ -772,6 +772,47 @@ const BOT_CLASS = {
   },
 };
 
+// Ironpalm (no GCD, kits.js): Read a tankbuster aimed at it in the last moment, Iron Skin a little before, Tiger Wall
+// strung ahead of busters, the Bruise kept up, Rising Gate into Heaven's Drop otherwise. Waits out each recovery so its
+// presses land Crisp, cashes an Opening at once, and stops for breath rather than run dry mid-string.
+BOT_CLASS.ironpalm = {
+  act(bot, k, view) {
+    const idx = id => k.abilities.findIndex(a => a.id === id || a.replaces === id);
+    const ok = i => { const a = k.abilities[i]; return i >= 0 && !!a && k.usable(a) && k.readyIn(a) <= 0.0001 && k.available(a); };
+    const P = bot.ip || (bot.ip = { plan: null, resting: false, done: false });
+    const g = k.g, free = k.lockUntil <= k.now;
+    const mine = view.mechs.filter(m => m.type === 'buster' && (m.target ?? m.follow) === bot.id).sort((a, b) => a.resolveAt - b.resolveAt)[0];
+    const hitIn = mine ? mine.resolveAt - view.t : Infinity;
+    const next = (view.next || []).find(([n]) => BUSTER_CASTS.test(n)), toBuster = Math.min(hitIn, next ? next[1] + 3 : Infinity);
+    const ri = idx('read'), si = idx('skin'), bi = idx('bell');
+    if (free && ok(ri) && hitIn < 0.32 && hitIn > 0.06) return ri;
+    if (free && ok(si) && hitIn < 3) return si;
+    const raid = view.bossCast && RAID_CASTS.test(view.bossCast.name) && view.bossCast.left < 3;
+    if (free && ok(bi) && (raid || k.abilities[bi].id === 'slide' || k.abilities[bi].id === 'dragon')) return bi;
+    if (!free) return null;
+    const live = ipLive(k) ? g.str : '';
+    if (k.has('opening')) return IP_SLOT.H;
+    if (P.resting) { if (g.breath < 75) return null; P.resting = false; }
+    if (!P.plan || !(P.plan.startsWith(live) && P.plan.length > live.length) || (!live && P.done)) {
+      P.done = false;
+      if (live && !g.clean) { const on = ipMoves(k).filter(e => e.seq.startsWith(live) && e.seq.length > live.length).sort((a, b) => b.seq.length - a.seq.length); P.plan = on.length ? on[0].seq : null; }
+      else {
+        const swallow = k.talent('ironpalm_swallow'), cost = s => [...s].reduce((a, x) => a + IP_INPUT[x].cost * 0.6, 0);
+        if (toBuster < 7 && toBuster > 1.6 && !k.has('wall')) P.plan = 'HKK';
+        else if (k.dotRemaining('bruise') < 2.5) P.plan = 'HHK';
+        else P.plan = swallow ? 'KLHKK' : 'LLHKK';
+        if (g.breath < cost(P.plan) + 2) { if (g.breath >= cost('KL') && !swallow) P.plan = 'KL'; else { P.resting = true; P.plan = null; return null; } }
+      }
+    }
+    if (!P.plan) return null;
+    const x = P.plan[live.length];
+    if (live.length + 1 >= P.plan.length) P.done = true;
+    // don't start a press whose recovery would still be running when the buster lands
+    if (ok(ri) && hitIn > 0.06 && hitIn < IP_INPUT[x].lock + 0.05) return null;
+    return ok(IP_SLOT[x]) ? IP_SLOT[x] : null;
+  },
+};
+
 // ======================================================================= Alembist (classes-b)
 // Keeps a heal or two brewed for what's coming (a Salve before a tankbuster, a Salt Ward before a raidwide), brews
 // bombs when everyone is well, and throws a vial where its splash catches the most of whoever needs it. Pros' habits:
@@ -851,6 +892,72 @@ BotAI.alembist = function (bot, k, view) {
   return ready(ri) ? ri : null;
 };
 
+// ======================================================================= advanced tanks (tanks-2)
+// Gorgemaw: the jaw opens just before anything edible lands on it (its busters above all; Bottomless on a raidwide),
+// Spits what it eats, Digests to heal or (Gizzard) before party damage. Oathbroker: Writ on its busters, Renegotiate a
+// big bill about to land with more damage, Settle once it's healthy, Lien while bills come in, Default before it drowns.
+const botEdible = (bot, m) => {
+  if (typeof MAW_HOST === 'undefined' || !MAW_HOST.typeOf(m) || m.cover || m.throwDist || m.type === 'raidwide') return false;
+  if (m.type === 'buster') return (m.target ?? m.follow) === bot.id;
+  if (m.type === 'proximity') return true;
+  if (m.follow != null && m.follow !== bot.id && m.type === 'spread') return false;
+  return SHAPES.contains(m.shape, bot.x, bot.y, 8);
+};
+Object.assign(BOT_CLASS, {
+  gorgemaw: {
+    act(bot, k, view) {
+      const idx = id => k.abilities.findIndex(a => a.id === id || a.replaces === id);
+      const ok = i => { const a = k.abilities[i]; return !!a && k.usable(a) && k.readyIn(a) <= 0.0001 && k.available(a); };
+      const me = view.players.find(p => p.id === bot.id), hp = me ? me.hp / me.maxHp : 1, b = k.g.belly, max = mawMax(k);
+      const wide = idx('wide'), open = (k.g.jawUntil || 0) > k.now + 0.05;
+      const soon = view.mechs.filter(m => m.resolveAt - view.t < 0.6 && m.resolveAt - view.t > 0.03);
+      if (!open && ok(wide) && soon.some(m => botEdible(bot, m))) return wide;
+      const bott = idx('bottomless');
+      if (ok(bott) && soon.some(m => m.type === 'raidwide')) return bott;
+      const myBuster = view.mechs.find(m => m.type === 'buster' && (m.target ?? m.follow) === bot.id && m.resolveAt - view.t < 2.5);
+      const iron = idx('iron');
+      if (myBuster && ok(iron) && (k.abilities[iron].id === 'stonebelly' || k.charges(k.abilities[wide]) === 0 || hp < 0.55)) return iron;
+      const dig = idx('digest'), giz = k.def.spec === 'gizzard';
+      const partySoon = view.mechs.some(m => (m.type === 'raidwide' || m.type === 'buster') && m.resolveAt - view.t < 3) || (view.next || []).some(([n, s]) => s < 4 && (RAID_CASTS.test(n) || BUSTER_CASTS.test(n)));
+      if (ok(dig) && b.length && k.gcdRemaining() > 0.4 && (hp < 0.45 || (giz ? (b.length >= 2 && partySoon) || b.length >= max : b.length >= max && hp < 0.85))) return dig;
+      if (k.gcdRemaining() > 0 || k.cast || k.lockUntil > k.now) return null;
+      const sp = idx('spit'), regur = k.abilities[sp].id === 'regurgitate';
+      if (ok(sp) && (regur ? b.length >= Math.min(3, max) : giz ? b.length >= max : k.def.fuse ? (b.length >= 2 && b[0].m === b[1].m) || b.length >= max - 1 : b.length >= 1)) return sp;
+      return ok(0) ? 0 : null;
+    },
+  },
+  oathbroker: {
+    act(bot, k, view) {
+      const idx = id => k.abilities.findIndex(a => a.id === id || a.replaces === id);
+      const ok = i => { const a = k.abilities[i]; return !!a && k.usable(a) && k.readyIn(a) <= 0.0001 && k.available(a); };
+      const me = view.players.find(p => p.id === bot.id), H = me ? me.maxHp : 1, hp = me ? me.hp : 1, tot = oathTotal(k);
+      const weave = k.gcdRemaining() > 0.5 && !k.cast;
+      const myBuster = view.mechs.find(m => m.type === 'buster' && (m.target ?? m.follow) === bot.id && m.resolveAt - view.t < 2.5);
+      const partySoon = view.mechs.some(m => m.type === 'raidwide' && m.resolveAt - view.t < 3) || (view.next || []).some(([n, s]) => s < 4 && RAID_CASTS.test(n));
+      const df = idx('default'), fore = k.abilities[df].id === 'foreclose';
+      if (ok(df) && (tot > hp * 0.8 || (fore && tot > H * 0.32))) return df;
+      const writ = idx('writ');
+      if (myBuster && ok(writ)) return writ;
+      const rn = idx('reneg');
+      if (ok(rn) && weave && oathDueSoon(k, 1.5) > H * 0.1 && (partySoon || myBuster || hp < H * 0.6)) return rn;
+      const st = idx('settle'), audit = k.abilities[st].id === 'audit';
+      if (ok(st) && weave && !fore && !partySoon && !myBuster && (audit ? oathAuditable(k).reduce((s, e) => s + e.a, 0) > H * 0.1 : (tot > H * 0.22 && hp > H * 0.6) || tot > H * 0.4)) return st;
+      const li = idx('lien');
+      if (k.abilities[li].id === 'cosign') {
+        if (ok(li) && weave && !(k.g.cosign != null && k.g.cosignUntil > k.now + 2)) {
+          // the one about to take a heavy blow, else the healer, else whoever is most hurt
+          const others = view.players.filter(p => p.alive && !p.left && p.id !== bot.id);
+          const hitId = (view.mechs.find(m => m.type === 'buster' && (m.target ?? m.follow) !== bot.id && (m.target ?? m.follow) != null) || {}).target;
+          const pick = others.find(p => p.id === hitId) || others.find(p => p.role === 'healer') || others.sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
+          bot.healTarget = pick ? pick.id : null;
+          if (pick) return li;
+        }
+      } else if (ok(li) && weave && oathDueSoon(k, 9) > H * 0.08) return li;
+      if (k.gcdRemaining() > 0 || k.cast || k.lockUntil > k.now) return null;
+      return ok(0) ? 0 : null;
+    },
+  },
+});
 // ======================================================================= Threadweaver and Marionettist (classes-c)
 // is something about to land on this spot that would catch a Doll? (the shapes the host judges on a Doll: fight.js dollMech)
 // everyone threaded to this player (any weaver's threads)

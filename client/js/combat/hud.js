@@ -75,6 +75,17 @@ GAUGE_TIPS.alembist = {
   extra: k => `<div class="alem-book">${alemBook(null, false)}${k.def.alem.fuse ? alemBook(alemKnown(k), true) : ''}</div>`,
 };
 
+// Ironpalm: Breath, and the move list (every string the kit knows, with its talent-made alternatives)
+Object.assign(BUFF_NAMES, { read: 'Read', wall: 'Tiger Wall', opening: 'Opening', wind: 'Second Wind', skin: 'Iron Skin', rush: 'Momentum', stagger: 'Staggered',
+  guard: 'Guard Open', pond: 'Still Pond', slide: 'Landslide', bellows: 'Bellows Stance' });
+BAD_BUFFS.add('stagger');
+Object.assign(BUFF_ICON, { read: 'read', wall: 'kick', opening: 'fist', wind: 'bell', skin: 'skin', rush: 'fist', stagger: 'kick', guard: 'palm', pond: 'pond', slide: 'slide', bellows: 'bellows' });
+GAUGE_TIPS.ironpalm = {
+  desc: 'Every press costs Breath: Light 12, Heavy 18, Kick 15 (40% less when Crisp). It refills slowly while you fight and fast once you stop for half a moment. Crane Step gives some back, and a Read gives 15.',
+  state: k => (k.has('opening') ? 'Opening: Heavy is Thousand Palms' : k.has('wind') ? 'Second Wind' : (k.g.breath || 0) < IP_INPUT.L.cost ? 'Winded' : 'Steady'),
+  extra: k => `<div class="ip-moves">${ipMoves(k).map(e => `<div><b>${[...e.seq].join(' ')}</b> ${e.mv.name}<i> · ${e.mv.desc}</i></div>`).join('')}</div>`,
+};
+
 const Hud = {
   el: null, slots: [], actor: null, gaugeCanvas: null, castFill: null, castName: null, buffRow: null, extra: () => [],
 
@@ -135,7 +146,7 @@ const Hud = {
       const ab = items[i], k = this.actor && this.actor.kit;
       const name = k && i < 6 ? k.label(ab) : ab.name;
       const icon = art(ab, i) ? `<i class="ab-icon ${ab.type}" style="background-image:${art(ab, i)}"></i>` : '<i class="ab-icon dash">»</i>';
-      const meta = [ab.type === 'gcd' ? 'GCD' : 'oGCD'];
+      const meta = [ab.meta || (ab.type === 'gcd' ? 'GCD' : 'oGCD')];   // (a paced kit's moves say what limits them instead)
       if (typeof ab.cast === 'number' && ab.cast) meta.push(`${ab.cast}s cast`);
       if (ab.charges) meta.push(`${ab.charges} charges · ${ab.cd}s`); else if (typeof ab.cd === 'number' && ab.cd) meta.push(`${ab.cd}s cooldown`);
       const perks = k ? [...(k.gear().perks || [])].filter(p => ITEM_PERKS[p] && ITEM_PERKS[p].ab === (ab.replaces || ab.id)) : [];
@@ -187,11 +198,13 @@ const Hud = {
         txt = cdLeft < 1 ? cdLeft.toFixed(1) : Math.ceil(cdLeft);
       }
       if (ab.type === 'gcd' && k.gcdRemaining() > 0 && cdLeft <= 0) frac = Math.max(frac, k.gcdRemaining() / k.gcdLen);
+      // no GCD (a paced kit): its moves show the recovery of the last press instead
+      if (ab.type === 'gcd' && k.gcdFree() && cdLeft <= 0 && k.lockUntil > now) frac = Math.max(frac, (k.lockUntil - now) / Math.max(0.1, k.lockLen));
       s.sweep.style.setProperty('--cd', frac.toFixed(3));
       s.cd.textContent = txt;
       s.el.classList.toggle('glow', usable && cdLeft <= 0 && k.glows(ab));
       s.el.classList.toggle('dim', !usable);
-      s.el.classList.toggle('queued', !!(k.queued && k.queued.ab === ab));
+      s.el.classList.toggle('queued', !!(k.queued && k.queued.ab === ab) || k.inbuf.some(q => q.ab === ab));
       s.el.classList.toggle('casting', !!(k.cast && k.cast.ab === ab));
       const lbl = k.label(ab);
       if (s.name.textContent !== lbl) s.name.textContent = lbl;
@@ -267,6 +280,24 @@ const ICON_GLYPHS = {
     tailspin: c => { c.strokeStyle = '#e8fff8'; c.lineWidth = 3; c.lineCap = 'round'; for (let i = 0; i < 3; i++) { const a = i * TAU / 3; c.beginPath(); c.arc(32 + Math.cos(a) * 6, 32 + Math.sin(a) * 6, 16, a, a + 1.6); c.stroke(); } },
   },
 };
+// Ironpalm: iron, cloth wraps, saffron light
+ICON_GLYPHS.ironpalm = (() => {
+  const wrap = '#d8c0a0', iron = '#9aa6b4', saf = '#f0a73a';
+  const knuckles = (c, x, y, s = 1) => { for (let i = 0; i < 4; i++) { c.fillStyle = iron; c.beginPath(); c.arc(x + (i - 1.5) * 7 * s, y, 3.4 * s, 0, TAU); c.fill(); } };
+  return {
+    palm: c => { c.fillStyle = wrap; c.beginPath(); c.ellipse(32, 36, 13, 15, 0, 0, TAU); c.fill(); for (let i = 0; i < 4; i++) { c.beginPath(); c.ellipse(21 + i * 7, 18, 3.2, 8, 0, 0, TAU); c.fill(); } c.strokeStyle = saf; c.lineWidth = 2; c.beginPath(); c.arc(32, 36, 22, -0.6, 0.6); c.stroke(); c.beginPath(); c.arc(32, 36, 27, -0.4, 0.4); c.stroke(); },
+    fist: c => { c.fillStyle = wrap; c.beginPath(); c.roundRect(16, 22, 32, 26, 7); c.fill(); c.strokeStyle = 'rgba(90,60,40,0.6)'; c.lineWidth = 1.5; for (const y of [32, 38, 44]) { c.beginPath(); c.moveTo(16, y); c.lineTo(48, y); c.stroke(); } knuckles(c, 32, 22); c.fillStyle = saf; c.beginPath(); c.moveTo(52, 14); c.lineTo(58, 8); c.lineTo(56, 18); c.fill(); },
+    kick: c => { c.fillStyle = wrap; c.beginPath(); c.moveTo(10, 44); c.lineTo(34, 40); c.lineTo(50, 26); c.lineTo(56, 32); c.lineTo(40, 50); c.lineTo(10, 52); c.closePath(); c.fill(); c.strokeStyle = saf; c.lineWidth = 3; c.lineCap = 'round'; c.beginPath(); c.arc(22, 54, 30, -1.4, -0.5); c.stroke(); },
+    read: c => { c.strokeStyle = '#f2e6c8'; c.lineWidth = 2; c.beginPath(); c.arc(32, 32, 20, 0, TAU); c.stroke(); c.fillStyle = wrap; c.beginPath(); c.ellipse(32, 34, 9, 12, 0, 0, TAU); c.fill(); c.fillStyle = saf; c.beginPath(); c.arc(32, 12, 4, 0, TAU); c.fill(); c.strokeStyle = saf; c.lineWidth = 3; c.beginPath(); c.moveTo(32, 16); c.lineTo(32, 22); c.stroke(); },
+    skin: c => { c.fillStyle = '#6a7684'; c.beginPath(); c.moveTo(32, 8); c.lineTo(52, 18); c.lineTo(48, 44); c.lineTo(32, 56); c.lineTo(16, 44); c.lineTo(12, 18); c.closePath(); c.fill(); c.strokeStyle = '#c8d2dc'; c.lineWidth = 2; c.stroke(); knuckles(c, 32, 30, 0.8); },
+    bell: c => { c.fillStyle = '#c8943a'; c.beginPath(); c.moveTo(20, 44); c.quadraticCurveTo(20, 16, 32, 14); c.quadraticCurveTo(44, 16, 44, 44); c.closePath(); c.fill(); c.fillStyle = '#8a5a20'; c.fillRect(17, 43, 30, 4); c.strokeStyle = saf; c.lineWidth = 2; for (const r of [26, 31]) { c.beginPath(); c.arc(32, 34, r, -0.5, 0.5); c.stroke(); c.beginPath(); c.arc(32, 34, r, Math.PI - 0.5, Math.PI + 0.5); c.stroke(); } },
+    pond: c => { c.strokeStyle = '#8fc8e8'; for (const [r, w] of [[8, 3], [15, 2], [22, 1.5]]) { c.lineWidth = w; c.beginPath(); c.ellipse(32, 38, r, r * 0.55, 0, 0, TAU); c.stroke(); } c.fillStyle = '#e8f6ff'; c.beginPath(); c.arc(32, 22, 4, 0, TAU); c.fill(); },
+    slide: c => { c.fillStyle = '#8a6a50'; for (const [x, y, r] of [[22, 44, 9], [36, 40, 11], [46, 50, 7], [28, 26, 6]]) { c.beginPath(); c.arc(x, y, r, 0, TAU); c.fill(); } c.strokeStyle = '#d08a5a'; c.lineWidth = 3; c.beginPath(); c.moveTo(10, 14); c.lineTo(54, 56); c.stroke(); },
+    bellows: c => { c.fillStyle = '#7a5434'; c.beginPath(); c.moveTo(14, 20); c.lineTo(40, 26); c.lineTo(40, 38); c.lineTo(14, 44); c.closePath(); c.fill(); c.fillStyle = '#ff9a4a'; for (let i = 0; i < 3; i++) { c.beginPath(); c.arc(46 + i * 5, 32 + (i - 1) * 5, 3 - i * 0.6, 0, TAU); c.fill(); } },
+    dragon: c => { c.strokeStyle = saf; c.lineWidth = 5; c.lineCap = 'round'; c.beginPath(); for (let i = 0; i <= 20; i++) { const q = i / 20; c.lineTo(12 + q * 40, 52 - q * 40 + Math.sin(q * 9) * 6); } c.stroke(); c.fillStyle = '#ffe0a0'; c.beginPath(); c.arc(52, 12, 5, 0, TAU); c.fill(); },
+    taunt: c => { c.fillStyle = wrap; c.beginPath(); c.ellipse(30, 38, 12, 13, 0, 0, TAU); c.fill(); c.lineCap = 'round'; c.strokeStyle = wrap; c.lineWidth = 5; for (let i = 0; i < 2; i++) { c.beginPath(); c.moveTo(24 + i * 7, 28); c.quadraticCurveTo(26 + i * 7, 14, 34 + i * 7, 16); c.stroke(); } c.strokeStyle = saf; c.lineWidth = 2; c.beginPath(); c.arc(30, 36, 24, -2.2, -1.2); c.stroke(); },
+  };
+})();
 // Threadweaver and Marionettist (classes-c): drawn icons, gauge tooltips
 Object.assign(ICON_GLYPHS, {
   threadweaver: {
@@ -316,3 +347,46 @@ function drawnIcon(classId, abilityId) {
   c.strokeStyle = rgba(cls.accent, 0.6); c.lineWidth = 2; c.strokeRect(1, 1, 62, 62);
   return (DRAWN_ICONS[key] = cv.toDataURL());
 }
+
+// ======================================================================= Gorgemaw, Oathbroker (tanks-2)
+Object.assign(BUFF_NAMES, { jaw: 'Open Wide', bottomless: 'Bottomless', stone: 'Stone Belly', ironjaw: 'Iron Gut', digest: 'Digest' });
+Object.assign(BUFF_ICON, { jaw: 'wide', bottomless: 'bottomless', stone: 'stonebelly', ironjaw: 'iron', digest: 'digest' });
+GAUGE_TIPS.gorgemaw = {
+  desc: 'An edible hit that lands in your open jaw deals a quarter of its damage and goes in as a Morsel of its shape: circles are Rings, lines Lances, cones Fangs, a tankbuster a Spike. Spit fires the oldest back at the boss; Digest heals you on all of them. A full Belly wastes what you eat next.',
+  state: k => (k.g.belly.length ? 'next Spit: ' + MAW.NAMES[k.g.belly[0].m] + (k.def.fuse && k.g.belly.length > 1 && k.g.belly[0].m === k.g.belly[1].m ? ' (' + MAW.FUSION[k.g.belly[0].m] + ')' : '') : 'empty'),
+};
+GAUGE_TIPS.oathbroker = {
+  desc: '60% of every hit you take is written here instead, and billed to you when it comes due. Your combo pays the oldest lines down. Lines in the last 2s are red.',
+  state: k => `${Math.round(k.g.total || 0)} owed · ${Math.round(oathDueSoon(k, 3))} due in 3s`,
+};
+(() => {
+  const ink = (c, w = 3, col = '#f2e6c8') => { c.strokeStyle = col; c.lineWidth = w; c.lineCap = 'round'; c.lineJoin = 'round'; };
+  const teeth = (c, y, dir, x0 = 14, x1 = 50, n = 5, col = '#fff4e0') => { c.fillStyle = col; const s = (x1 - x0) / n; for (let i = 0; i < n; i++) { c.beginPath(); c.moveTo(x0 + i * s, y); c.lineTo(x0 + (i + 1) * s, y); c.lineTo(x0 + (i + 0.5) * s, y + dir * 9); c.closePath(); c.fill(); } };
+  const jaw = (c, gape, col = '#d0743a') => { c.fillStyle = '#2a0e08'; c.beginPath(); c.ellipse(32, 32, 20, 4 + gape, 0, 0, TAU); c.fill(); ink(c, 4, col); c.beginPath(); c.ellipse(32, 32, 20, 4 + gape, 0, 0, TAU); c.stroke(); teeth(c, 32 - 4 - gape + 1, 1, 16, 48, 4); teeth(c, 32 + 4 + gape - 1, -1, 16, 48, 4); };
+  const sealG = (c, x, y, r, col) => { c.fillStyle = col; c.beginPath(); for (let i = 0; i < 14; i++) { const a = i * Math.PI / 7, rr = r * (i % 2 ? 0.88 : 1); c.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); } c.closePath(); c.fill(); ink(c, 2, '#2a1424'); c.beginPath(); c.arc(x, y, r * 0.6, 0, TAU); c.moveTo(x - r * 0.35, y); c.lineTo(x + r * 0.35, y); c.moveTo(x, y - r * 0.35); c.lineTo(x, y + r * 0.35); c.stroke(); };
+  const page = (c, x, y, w, h) => { c.fillStyle = '#e8e0cc'; c.fillRect(x, y, w, h); ink(c, 1.5, '#5a4a6a'); for (let i = 1; i < 5; i++) { c.beginPath(); c.moveTo(x + 4, y + i * h / 5); c.lineTo(x + w - 4, y + i * h / 5); c.stroke(); } };
+  ICON_GLYPHS.gorgemaw = {
+    gnash: c => jaw(c, 3, '#e8c8a0'),
+    wide: c => jaw(c, 14),
+    spit: c => { jaw(c, 6); c.fillStyle = '#ff9a3a'; c.beginPath(); c.arc(54, 18, 7, 0, TAU); c.fill(); c.fillStyle = '#ffe0b0'; c.beginPath(); c.arc(52, 16, 3, 0, TAU); c.fill(); },
+    regurgitate: c => { jaw(c, 9); for (const [x, y, col] of [[50, 12, '#ff9a3a'], [56, 26, '#7fd0ff'], [46, 22, '#ffe27a']]) { c.fillStyle = col; c.beginPath(); c.arc(x, y, 4.5, 0, TAU); c.fill(); } },
+    digest: c => { c.fillStyle = '#5a3020'; c.beginPath(); c.ellipse(32, 36, 20, 16, 0, 0, TAU); c.fill(); ink(c, 3, '#ffc070'); c.beginPath(); for (let i = 0; i < 30; i++) { const a = i * 0.42, r = 2 + i * 0.5; c.lineTo(32 + Math.cos(a) * r, 36 + Math.sin(a) * r * 0.8); } c.stroke(); },
+    iron: c => { c.fillStyle = '#b8743a'; c.beginPath(); for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3 + Math.PI / 6; c.lineTo(32 + Math.cos(a) * 22, 32 + Math.sin(a) * 22); } c.closePath(); c.fill(); ink(c, 2.5, '#ffd8a0'); c.stroke(); c.fillStyle = '#ffd8a0'; for (const [x, y] of [[24, 26], [40, 26], [32, 40]]) { c.beginPath(); c.arc(x, y, 2.5, 0, TAU); c.fill(); } },
+    stonebelly: c => { c.fillStyle = '#8a8278'; c.beginPath(); c.ellipse(32, 34, 20, 17, 0, 0, TAU); c.fill(); ink(c, 2, '#d8d0c4'); c.beginPath(); c.moveTo(18, 28); c.lineTo(28, 34); c.lineTo(26, 44); c.moveTo(38, 22); c.lineTo(36, 34); c.lineTo(46, 40); c.stroke(); },
+    bottomless: c => { ink(c, 3, '#ff8a3a'); c.beginPath(); for (let i = 0; i < 50; i++) { const a = i * 0.36, r = 24 - i * 0.45; c.lineTo(32 + Math.cos(a) * r, 32 + Math.sin(a) * r); } c.stroke(); teeth(c, 10, 1, 12, 52, 6); teeth(c, 54, -1, 12, 52, 6); },
+    taunt: c => { jaw(c, 10); ink(c, 2.5, '#ffb070'); for (const r of [24, 29]) { c.beginPath(); c.arc(32, 32, r, -0.6, 0.6); c.stroke(); c.beginPath(); c.arc(32, 32, r, Math.PI - 0.6, Math.PI + 0.6); c.stroke(); } },
+  };
+  ICON_GLYPHS.oathbroker = {
+    collect: c => { c.fillStyle = '#8a8098'; c.fillRect(30, 26, 4, 30); c.fillStyle = '#b8a8e0'; c.fillRect(20, 12, 24, 16); ink(c, 2, '#2a1424'); c.strokeRect(20, 12, 24, 16); sealG(c, 32, 44, 8, '#c04a5a'); },
+    reneg: c => { page(c, 16, 14, 30, 38); ink(c, 3, '#b8a8e0'); c.beginPath(); c.arc(32, 33, 12, -2.6, 1.2); c.stroke(); c.fillStyle = '#b8a8e0'; c.beginPath(); c.moveTo(18, 22); c.lineTo(24, 30); c.lineTo(14, 30); c.fill(); },
+    settle: c => sealG(c, 32, 32, 20, '#ffd27a'),
+    audit: c => { page(c, 14, 12, 28, 36); ink(c, 3.5, '#ffd27a'); c.beginPath(); c.arc(38, 36, 9, 0, TAU); c.moveTo(45, 43); c.lineTo(54, 52); c.stroke(); },
+    lien: c => { ink(c, 3.5, '#b8a8e0'); for (let i = 0; i < 4; i++) { c.beginPath(); c.ellipse(14 + i * 11, 44 - i * 8, 7, 4, -0.6, 0, TAU); c.stroke(); } sealG(c, 50, 16, 8, '#c04a5a'); },
+    cosign: c => { page(c, 12, 14, 24, 32); page(c, 28, 20, 24, 32); ink(c, 3, '#b8a8e0'); c.beginPath(); c.moveTo(18, 52); c.bezierCurveTo(26, 40, 34, 58, 48, 46); c.stroke(); },
+    writ: c => { c.fillStyle = '#f0e8d8'; c.fillRect(18, 12, 28, 40); c.fillStyle = '#c8b898'; c.beginPath(); c.ellipse(32, 12, 16, 4, 0, 0, TAU); c.fill(); c.beginPath(); c.ellipse(32, 52, 16, 4, 0, 0, TAU); c.fill(); ink(c, 1.5, '#5a4a6a'); for (let i = 1; i < 6; i++) { c.beginPath(); c.moveTo(22, 12 + i * 7); c.lineTo(42, 12 + i * 7); c.stroke(); } },
+    default: c => { page(c, 14, 14, 18, 36); page(c, 34, 16, 18, 34); ink(c, 3, '#c04a5a'); c.beginPath(); c.moveTo(32, 10); c.lineTo(28, 22); c.lineTo(36, 32); c.lineTo(30, 44); c.lineTo(34, 56); c.stroke(); },
+    foreclose: c => { c.fillStyle = '#8a8098'; c.fillRect(29, 8, 6, 18); c.fillStyle = '#c04a5a'; c.fillRect(16, 24, 32, 12); sealG(c, 32, 48, 10, '#c04a5a'); },
+    moratorium: c => { c.fillStyle = '#e8dcc0'; c.beginPath(); c.moveTo(18, 12); c.lineTo(46, 12); c.lineTo(32, 32); c.closePath(); c.fill(); c.beginPath(); c.moveTo(18, 52); c.lineTo(46, 52); c.lineTo(32, 32); c.closePath(); c.fill(); ink(c, 2.5, '#b8a8e0'); c.beginPath(); c.moveTo(14, 12); c.lineTo(50, 12); c.moveTo(14, 52); c.lineTo(50, 52); c.stroke(); },
+    taunt: c => { sealG(c, 32, 30, 16, '#c04a5a'); ink(c, 2.5, '#b8a8e0'); c.beginPath(); c.moveTo(10, 54); c.lineTo(54, 54); c.stroke(); },
+  };
+})();

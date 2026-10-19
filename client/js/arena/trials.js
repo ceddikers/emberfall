@@ -330,6 +330,78 @@ Object.assign(TRIALS, {
   },
 });
 
+// ======================================================================= Gorgemaw, Oathbroker (tanks-2)
+Object.assign(TRIALS, {
+  glutton: {
+    cls: 'gorgemaw', spec: 'glutton', name: 'The Last Banquet',
+    lore: ['The King\'s last feast ran seven courses and no one left the table.', 'One guest ate the cooks\' every trick, twice over, and asked for more.'],
+    outro: 'The table is bare. The Glutton is not full.',
+    allies: ['ranger:base'], seconds: 58, enrage: 64, regen: 0.01,
+    script(f, k, me) {
+      // the courses come in pairs: the same dish twice, and the second is always worse
+      const twice = (fn) => { fn(); f.after(2.2, fn); };
+      k.loop([[3, () => twice(() => k.swing('stomp', 7500, 3.5))], [8, () => twice(() => k.blow(8500, 3.5, 'Carving Knife', me.id))], [8, () => k.knell(3000)], [5, () => {}]]);
+    },
+  },
+  gizzard: {
+    cls: 'gorgemaw', spec: 'gizzard', name: 'The Lean Winter',
+    lore: ['The winter the Barrow was sealed, the stores ran dry by midwinter.', 'One soldier ate the frost itself and kept the others warm with it.'],
+    outro: 'The thaw comes. The Gizzard feeds them all.',
+    allies: ['ranger:base', 'pyromancer:base'], guard: 'allies', seconds: 58, enrage: 150, regen: 0.004,
+    script(f, k, me) {
+      // the cold bites the whole line, and only what the tank swallows comes back as warmth
+      k.loop([[3, () => k.swing('stomp', 6000, 3.5)], [5, () => k.knell(4400)], [4, () => k.blow(8000, 3.5, 'Frostbite', me.id)], [5, () => k.knell(4400)], [4, () => k.swing('stomp', 6000, 3.5)]]);
+    },
+  },
+  guarantor: {
+    cls: 'oathbroker', spec: 'guarantor', name: 'The Debtor\'s Daughter',
+    lore: ['The King sentenced a debtor\'s child for her father\'s bond.', 'A knight signed his own name under hers.'],
+    outro: 'The bond is honoured. The Guarantor stands surety.',
+    allies: ['pyromancer:base'], guard: 'allies', seconds: 60, enrage: 150, regen: 0.018,
+    script(f, k, me) {
+      // the Shade keeps reaching past the knight for the girl
+      const her = () => f.alive().find(p => p.id !== me.id);
+      const sentence = () => { const h = her(); if (h) k.blow(12500, 4.5, 'Debtor\'s Sentence', h.id); };
+      k.loop([[4, sentence], [7, () => k.blow(6000, 3)], [6, sentence], [7, () => k.knell(2500)], [3, () => {}]]);
+    },
+  },
+  collector: {
+    cls: 'oathbroker', spec: 'collector', name: 'The Debt Called In',
+    lore: ['The Shade owed the realm a crown\'s worth of blood.', 'A collector came to the Barrow with the ledger, and every page was due.'],
+    outro: 'The account is closed. The Collector moves on.',
+    allies: [], seconds: 62, enrage: 75, regen: 0.01,
+    script(f, k, me) {
+      // heavy, steady blows: everything the Shade lands goes in the book, and the book gets paid
+      k.loop([[3, () => k.blow(7500, 3.2, 'Grave Strike', me.id)], [5, () => k.swing('stomp', 4500, 3.5)], [5, () => k.blow(7500, 3.2, 'Grave Strike', me.id)], [6, () => k.knell(2500)]]);
+    },
+  },
+});
+// ======================================================================= Ironpalm
+Object.assign(TRIALS, {
+  stillwater: {
+    cls: 'ironpalm', spec: 'stillwater', name: 'The Quiet Water',
+    lore: ['The King\'s sword-master struck faster than any shield could rise.', 'A monk met every stroke with an open hand, and breathed.'],
+    outro: 'The sword is still. The Still Water is calm.',
+    allies: [], seconds: 60, enrage: 80, regen: 0.012,
+    script(f, k, me) {
+      // quick strokes at the tank, one after another, each plain to see: every one a chance to Read
+      const stroke = () => k.blow(6600, 1.8, 'Sword Stroke', me.id);
+      k.loop([[2.5, stroke], [3.1, stroke], [3.1, stroke], [3.4, () => k.blow(10000, 3, 'Grave Cleave', me.id)], [4.5, () => k.swing('stomp', 4500, 3.5)]]);
+    },
+  },
+  avalanche: {
+    cls: 'ironpalm', spec: 'avalanche', name: 'The Mountain Road',
+    lore: ['The Barrow sits under a mountain, and a monk once came down it.', 'He did not stop once on the way, and neither did the mountain.'],
+    outro: 'The road ends at the throne. The Avalanche Fist arrives.',
+    allies: ['cleric:base'], seconds: 55, enrage: 66, regen: 0,
+    script(f, k, me) {
+      // long, open stretches at the boss's side, broken only by a stomp to step out of: strings that never stop
+      f.boss.anchor = true;
+      k.loop([[6, () => k.blow(9000, 4, 'Grave Cleave', me.id)], [9, () => k.swing('stomp', 5000, 4)], [8, () => k.knell(2500)]]);
+    },
+  },
+});
+
 // ======================================================================= Threadweaver and Marionettist (classes-c)
 Object.assign(TRIALS, {
   loomwright: {

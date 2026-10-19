@@ -304,6 +304,138 @@ Two DPS built for players who want more to juggle. On the hero select their tile
 - **Apothecary** picks which vial to throw with Shift+R (Shift is self-cast for every other healer).
 <!-- /classes-b -->
 
+<!-- ironpalm -->
+### Ironpalm: the combo-paced tank (added 2026-10-20)
+
+**Ironpalm, Monk Brawler** (◆◆◆, complexity 3). Signature: **Strings and Reads**. Gauge: **Breath**, a ring round an iron fist, with the string you're pressing shown under it. A barefoot monk with iron plates bound over his knuckles; melee, autos are a quick jab (40).
+
+The first class built on a different **pacing**: there is **no GCD**. Light, Heavy and Kick are inputs, each a quick hit with its own short recovery that costs Breath, and strings of them pressed in rhythm become named moves. The limit is Breath and each press's recovery, not a global timer.
+
+| Key | Skill | Type | What it does |
+|---|---|---|---|
+| Q | Light (palm) | input | 40, 0.38 s recovery, 12 Breath. Adds **L** to the string. |
+| W | Heavy (fist) | input | 64, 0.6 s recovery, 18 Breath. Adds **H**. |
+| E | Kick | input | 52, 0.48 s recovery, 15 Breath. Adds **K**. |
+| R | Read | oGCD | 6 s: a 1.2 s reading stance (20% less damage). A hit landing in its first 0.4 s is **read**: half damage, a counter (63, double threat) and 15 Breath. A read **tankbuster** gives an **Opening**: the next Heavy within 4 s is a free Thousand Palms, 30% stronger. Doesn't break the string. |
+| D | Iron Skin | oGCD | 120 s: 40% less damage for 10 s, and Breath refills at its resting pace the whole time. |
+| F | Temple Bell | oGCD | 60 s: the party takes 10% less damage for 8 s; you get **Second Wind** for 15 s (Breath refills twice as fast, +10% damage). |
+| T | Beckoning Palm | taunt | The shared taunt; calling it out steadies your breathing (+30 Breath). |
+
+**The move list** (a string fires its move on its last press: that press's hit plus a bonus):
+
+| Move | String | Bonus | Effect |
+|---|---|---|---|
+| Crane Step | K L | 24 | Gives back 22 Breath without stopping. |
+| Flowing Palms | L L L | 50 | Cheap and simple. |
+| Rising Gate | L L H | 60 | A launcher, triple threat. The next input gets 1.3 s instead of 0.8 s. |
+| Heaven's Drop | L L H K K | 140 | Rising Gate carried on: an axe kick onto the airborne boss. |
+| Tiger Wall | H K K | 18 | 25% less damage for 5 s (strung before a buster). |
+| Stone Breaker | H H K | 55 | Bruise: a 20-potency tick every 3 s for 15 s. |
+| Iron Ox | H H H | 90 | Double threat. |
+| Thousand Palms | L K H H | 170 | The finisher: five extra strikes in a flurry. |
+
+- **Strings.** A press that continues a known string adds to it; one that fits no string **breaks** it and starts a new one. Waiting longer than the **window** (0.8 s after the last recovery ends, 1.3 s after Rising Gate) **drops** it. After a finished move any key just starts the next string (no break). Strings branch: H H, then H is Iron Ox and K is Stone Breaker; L L H is a move on its own and also the start of Heaven's Drop.
+- **Crisp.** A press made in the first 0.18 s after the last recovery ends, pressed then and not buffered early, is Crisp: +10% damage and 40% of its Breath back. Early presses are buffered (0.45 s, two deep), so mashing still works, but a masher is never Crisp. Held keys don't repeat.
+- **Breath** (0 to 100) refills 6 a second while you press and 36 a second once you've stopped for 0.45 s. Pressing at 0 fails ("Winded"). A pro runs dry about once a minute and stops for a breath at a safe moment.
+- **The display** (the gauge): the Breath ring, the string so far as key chips (Crisp ones rimmed), the name of the move you just landed, a rhythm bar for the current recovery with the Crisp notch, and every move still in reach with its pressed letters lit and a ring on the next one. The glowing key follows a planned string, so a new player can press the glow and play real moves.
+- **Hit-stop and impact.** Every hit freezes the monk's swing for a beat where it connects (`hitStop` in `draw-util.js`, purely cosmetic; longer for the big moves and a read buster), with a knuckle flash, a ring and sparks. Named moves get their own: Rising Gate's column of dust, Heaven's Drop's crater, Thousand Palms' storm of palm prints.
+
+*Ceiling:* keep every press Crisp, run Rising Gate into Heaven's Drop as the main string, keep the Bruise up, string Tiger Wall ahead of each buster, Read the buster itself (and spend the Opening at once), Read autos with a spare charge, and time the breaths so you never run dry mid-string. Newbies reach 55% of pro damage (45% as Avalanche Fist).
+
+**The pacing system (`engine.js`, general, any kit can use it).** A kit may set `pacing: { kind: 'combo', gcd: false, buffer, bufferSize, repeat, pool: { key, max, regen, rest, delay }, itemGcd(k, ab) }`:
+- `gcd: false`: GCD abilities start no GCD; each locks the kit for its own `lock` (a named move may set its own via `moveFor`).
+- `buffer` / `bufferSize`: presses made during a lock are queued (up to `bufferSize`) and fire in order as it ends; `k.input = { at, buffered, idle }` tells the kit how each press was made.
+- `pool`: a resource that abilities spend through `cost`; it refills at `regen` while pressing and `rest` after `delay` seconds without spending (`def.poolRate` / `def.poolRest` let the kit scale it). An unaffordable press fails as 'winded'.
+- `repeat: false`: held keys don't auto-repeat (main.js).
+- `itemGcd`: which presses count as a "GCD" for item triggers (Ironpalm: named moves only), so gear tuned for a 2.5 s GCD isn't fired four times as often.
+- Kits without `pacing` run exactly as before (the class balance baseline didn't move).
+
+Other engine pieces: named moves live on the kit (`kit.moves`) and `abilityById` finds them, so a cast carries the move's id over the network and every client draws Heaven's Drop, not "Kick"; the host has a new mitigation kind `parry` (`FIGHT.READ_WINDOW` 0.4 s: half damage, and the kit hears `read` with `b` set for a buster); the sparring dummy swings heavy every fourth blow so Read can be practised in town.
+
+**Design notes:**
+- **Threat** uses the tank multiplier as usual; Rising Gate (×3), Iron Ox (×2), the Read counter and Dragon Ascends (×2) carry extra so a tank who strings well holds the boss.
+- **The newbie model** for this class mashes at its own pace (presses buffered, rarely Crisp), follows the glow 60% of the time and otherwise presses Q, and uses Read when it comes up, so its Reads land on a hit by luck.
+- **Art:** ships without painted icons or portraits (data.js `art: { icons: false, portraits: false }`): drawn glyph icons and the animated sprite. Briefs in `docs/art/`.
+**Tested (2026-10-20):** `tools/check.js` passes with the other 12 classes' baseline unchanged (Ironpalm added at pro 1,522, newbie 832), both specs within 1% of the class, every talent at most +5.8% and full builds +13.5 to +16.9%, four new bot line-ups clearing Normal (Grubnak base 2/3, Skitterra Still Water 2/3, Volkar Avalanche 2/3, the Hollow King base 3/3) and both trials passed by the bot. In the browser (own static server, scripted key events since the preview pane runs no animation frames when hidden): hero select and hero page with the drawn icons and no missing-file requests, strings played with real key events (L L H K K landed Rising Gate then Heaven's Drop, every timed press Crisp), the string display (chips, rhythm bar, reachable moves with the plan marker), hit-stop on a Heavy, held keys not repeating, running dry into Winded, a Read on the sparring dummy's heavy swing opening a free Thousand Palms, and both trials cleared by scripted play (Still Water: 10 Reads, 8 of them tankbusters). No console errors. Not yet played by a human with a real keyboard, or over a real network connection.
+<!-- /ironpalm -->
+
+<!-- tanks-2: Gorgemaw and Oathbroker (advanced tanks, 2026-10) -->
+### Advanced tanks (added 2026-10-20)
+
+Two tanks whose survival is a plan rather than a cooldown rotation. Both carry tank threat (the shared tank multiplier) and the usual taunt on T, tied to their gauge.
+
+**Gorgemaw, the Glutton Knight** (◆◆◇, complexity 3). Signature: **eating mechanics**. Gauge: the Belly, a row of hollows holding Morsels in their shape's colour, with a jaw over it that gapes while Open Wide is up. Melee; autos are a gauntlet cuff (40).
+
+| Key | Skill | Type | What it does |
+|---|---|---|---|
+| Q | Gnash > Rend > Gulp | GCD | 220 / 300 / 390. Gulp heals 2% of your HP. |
+| W | Open Wide | oGCD | 2 charges, 14 s: the jaw is open for 1.5 s. An edible hit that lands on you deals 25% and becomes a Morsel. |
+| E | Spit | GCD | Range 300: the oldest Morsel back at the boss. Ring 420, Lance 460, Fang 490, Spike 800. The button names what it will spit. |
+| R | Digest | oGCD | 25 s: eat every Morsel. Each heals 6% of your HP and gives 5% less damage taken for 8 s (at most 30%). |
+| D | Iron Gut | oGCD | 90 s: 40% less damage for 8 s. |
+| F | Bottomless | oGCD | 120 s: for 4 s you eat everything, raidwides too. The whole party takes half from a raidwide, and each one is a Morsel for you. |
+| T | Bellow | taunt | Takes the boss and opens the jaw for 1 s. |
+
+- **What's edible** (host rule, `MAW_HOST.typeOf` in `fight.js`): any boss telegraph by its shape (circle or donut: Ring; line or cross: Lance; cone: Fang), every tankbuster (Spike), spread and proximity marks (Ring), raidwides (Ring, Bottomless only). A boss file can override with `eat: '<shape>'` or `eat: false` on a mechanic, or pass `eat` on its own `damagePlayer` calls. **Not edible:** room blasts you hide from behind a prop (`cover`: Gut Blast, the Hollow King's knell-behind-a-tomb moves), stacks and towers (the party's soak would be pointless), floor puddles, adds' hits, enrage. Volkar's Rod Strike in the open and Chain Lightning are edible as Lances (a chain swallowed ends in the mouth).
+- **Across the four bosses** the rule above decides it, so every tankbuster (Tenderize, Silk Wrap, Titan Fist, Grave Cleave) is a Spike, every plain telegraph you stand in is food by its shape (the Hollow King's sweeps are Fangs, his stomp and Crown of Graves Rings), and a teammate's circle (Larder Toss casks, Grave Marks) can be eaten whole. Room moves are not: cover blasts (Gut Blast), Lights Out, stacks and towers (Barrow Bells), custom mechanics (gaze, polarity, gale, hooks). Volkar's Rod Strike in the open and Chain Lightning are opted in.
+- **A teammate's spread or follow circle** (Grave Marks, Larder Toss casks, Spice Rack jars) that lands with an open-jawed Gorgemaw inside is swallowed whole: the owner takes nothing, the Gorgemaw takes a quarter, and the circle never goes off for anyone (the host sends `tgx` with only the eater; clients mark the telegraph gone before its impact plays).
+- **Host side:** Open Wide sends a `maw` event (`dur`, `all`); the host keeps `s.maw = { until, all }` (window capped at 4.2 s) and, when a mechanic resolves, `eatInfo` decides who eats what. `classHit` cuts the hit to 25%, marks it unavoidable and sends `fev 'eat'` (`m` shape, `mid` telegraph, `w` whole, `r` raidwide, `f` whose circle). One Morsel per mechanic per eater. The owning client's kit takes the Morsel; everyone draws the swallow.
+- **Order in the damage pipeline** (`fight.js` `damagePlayer`): vulnerability and defence, then every mitigation (Perfect Block, an Ironpalm's parry Read, reflects, cooldowns), then `classHit` (the jaw cuts the mitigated hit to 25%, then the Ledger takes its 60% of what's left), then shields, then HP. A parry or cooldown and an eat stack, the Ledger records the already-reduced hit, and a bill coming due (`raw`, `nomit`) skips mitigation and the Ledger, since it was mitigated when it was written.
+
+*Ceiling:* every buster is food, so a good Gorgemaw is never surprised by one: a charge is always ready when it lands, the Spike goes straight back, and Digest is held for when the healer is busy. Newbies reach 72% of pro damage, mostly by never spitting.
+
+**Oathbroker, the Contract Knight** (◆◆◆, complexity 4). Signature: **the Ledger**. Gauge: a page of lines, each an entry's amount and the seconds until it's due (red in the last 2 s), the total above, and the terms in force in the margin (Lien chain, Writ scroll, Moratorium hourglass, Co-Sign link, VOID while closed). Melee; autos are a tap of the stamp-mace (40).
+
+| Key | Skill | Type | What it does |
+|---|---|---|---|
+| Q | Dun > Levy > Collect | GCD | 230 / 300 / 400. Every strike pays the oldest entry down by 2% of your HP. |
+| W | Renegotiate | oGCD | 20 s: every entry comes due 4 s later. |
+| E | Settle | oGCD | 25 s: pay the whole Ledger now at half its size. |
+| R | Lien | oGCD | 60 s: for 10 s the boss pays a third of every bill that comes due. |
+| D | Writ of Protection | oGCD | 90 s: 30% less damage for 8 s, and what's written in that time is halved. |
+| F | Default | oGCD | 120 s: tear the Ledger up. It is closed for 10 s after (hits land on you in full). |
+| T | Summons | taunt | Takes the boss; its next blow on you goes 100% into the Ledger, due 3 s later than usual. |
+
+- **The Ledger** takes 60% of every hit after mitigation and bills it 8 s later as raw damage (no mitigation twice). It is **host-owned** (`s.led` in `fight.js`, rules in `OATH` in `kits.js`, shared with `tools/simulate.js`). The kit sends `ledger` events (`op`: `pay`, `reneg`, `settle`, `lien`, `writ`, `default`, `foreclose`, `summons`, `hold`, `cosign`, and `terms` every 3 s for talents and spec); every value is clamped on the host. The host sends `fev 'ledger'` with the packed page (`[[amount, seconds left, co-signer]]` plus timers) whenever it changes (at most 10 a second, and once a second while it holds anything), and `fev 'bill'` when a bill lands, so the owner's column stays exact and everyone else sees the stamp. A late joiner gets the next page within a second. A very long Ledger folds its two oldest lines together (24 at most).
+
+*Ceiling:* the Ledger is time you buy, not damage you avoid. Push the big lines past the raidwide, Settle while the healer has you topped, Lien when the bills stack, pay down with the combo, and keep Default for the moment the Ledger would bury you. Newbies reach 81% of pro damage (most of its damage is the combo either way); the gap is in survival, which the sim doesn't score.
+
+**Specializations.**
+- **Glutton** (Gorgemaw): the Belly holds 5. A Spit whose next Morsel is the same shape fires both as a **Fusion** at 2.4× (two Rings a Quake, two Lances a Skewer, two Fangs a Maul, two Spikes an Impale).
+- **Gizzard** (Gorgemaw): Digest feeds the party by shape: Ring a shield on everyone (150 each), Lance a big shield on the most hurt (360 each), Fang the party takes 15% less per Fang for 6 s (at most 30%), Spike the most hurt ally is immune for 2 s. You heal 3% per Morsel.
+- **Guarantor** (Oathbroker): Lien becomes **Co-Sign** (20 s cooldown): for 20 s, 30% of what an ally takes goes into your Ledger instead (marked lines on the page). Picks your locked ally, or the most hurt other ally.
+- **Collector** (Oathbroker): every bill also strikes the boss for half its size, and Default becomes **Foreclose**: the whole Ledger in one blow on the boss, then closed for 10 s.
+
+**Talents** (15 each; one plain number each: Wide Jaw, Grace Period). New moves: Regurgitate (III, Spit) and Stone Belly (V, Iron Gut); Audit (III, Settle) and Moratorium (V, Renegotiate). The rest change behaviour (`client/js/combat/talents.js`, tanks-2 block).
+
+| Row | Gorgemaw | Oathbroker |
+|---|---|---|
+| I | Marinade (Gulp makes the next Spit +25%), Aftertaste (Spit leaves a burn), Crunch (Gulp bites twice) | Interest (Collect scales with entries), Garnish (part of what you pay down hits the boss), Rubber Stamp (Settle hits the boss) |
+| II | Chew the Cud (Morsels heal 3%), **Wide Jaw** (2.2 s window), Table Scraps (eating a teammate's attack shields them) | **Grace Period** (due after 10 s), Amnesty (Renegotiate erases the smallest line), Escrow (3+ lines: 10% less damage) |
+| III | **Regurgitate** (the whole Belly at 75%), Iron Lining (3% less damage per Morsel held), Sour Stomach (a Morsel kept 15 s hits 40% harder) | **Audit** (15 s: lines 4 s old paid at 30%), Consolidate (Renegotiate folds the page into one line), Fine Print (lines under 2% of HP are struck off) |
+| IV | Feast (Bottomless refills Open Wide), Iron Jaw (Iron Gut opens the jaw 2 s), Overflow (a Morsel into a full Belly is spat out, not lost) | Receivership (Default: party 10% less damage), Writ of Execution (lines written under Writ are a third paid by the boss), Clean Slate (Default refreshes Renegotiate and Settle) |
+| V | **Stone Belly** (30% for 8 s, every Morsel a Spike), Bile (Digest scalds the boss per Morsel), Rumination (Digest keeps the oldest Morsel) | **Moratorium** (45 s: nothing comes due for 5 s), Tithe (every bill heals your most hurt ally for a quarter), Notary (Collect pushes the newest line 3 s) |
+
+Single talents stay under +7% pro DPS; full builds +7 to +17%.
+
+**Design changes from the plan (`docs/plans/2026-10-new-classes.md`):**
+- Gnash's pull was dropped (no boss in the game can be moved); **Gulp heals** instead, which keeps the Gorgemaw self-sufficient between meals.
+- **Digest and Settle are oGCDs with cooldowns** (25 s each): as free GCDs they were spammable answers to everything.
+- **Bellow and Summons** are the class taunts (the plan named none): one opens the jaw, the other sends the next blow straight onto the Ledger.
+- **Gizzard's party effects are by shape** rather than one flat shield, so what you chose to eat decides what the party gets.
+- **Guarantor's Co-Sign replaces Lien** (the plan had it as an extra button; there wasn't one). 30% of the ally's hit, not 60%: the Guarantor's own Ledger is already full.
+- **Collector** bills the boss for half of each bill on top (not instead of) paying it, and Foreclose replaces Default.
+- **Edibility is host-side by shape** with a per-mechanic override, so new bosses are edible by default; room blasts behind cover are inedible by rule (`cover`).
+- Rod Strike in the open and Chain Lightning were made edible (`eat: 'lance'` in `volkar.js`); nothing else in the boss files changed.
+
+**Simulator** (`tools/simulate.js`, `TANK_SIM`: an edible hit every 12 s, a buster-sized blow through the Ledger): pro DPS Gorgemaw 1498 (Glutton 1489, Gizzard 1488), Oathbroker 1485 (Guarantor 1485, Collector 1490), against the Bastion's 1498. Newbies: Gorgemaw 72%, Gizzard 80%, Oathbroker 79-81%.
+
+**Bots** (`BOT_CLASS.gorgemaw` / `.oathbroker` in `bots.js`): the Gorgemaw opens its jaw for anything edible landing on it within 0.6 s (its busters first), uses Bottomless on raidwides, Iron Gut on a buster with no charge, Spits whenever there's a Morsel (Glutton waits for a pair, Gizzard keeps them for Digest before party damage). The Oathbroker uses Writ on its busters, Renegotiates a big line due inside 1.5 s when a raidwide or buster is coming, Settles over 22% when healthy, Liens while bills are coming, and Defaults (or Forecloses) before the Ledger buries it; a Guarantor co-signs whoever a buster is aimed at, else the healer. Normal clears, 3 runs each with a Cleric, Ranger and Pyromancer: Gorgemaw Grubnak 3/3, Skitterra 2/3, Volkar 3/3, Hollow King 3/3; Oathbroker 3/3 on all four. Over 6-8 seeded runs on Grubnak: Gorgemaw 6/6 and 7/8, Glutton 3/6 and 8/8, Gizzard 6/6, Oathbroker 7/8, Guarantor 5/6, Collector 6/6 (the Bastion 6/6 and 7/8 on the same seeds; the misses are the party failing to hide from Gut Blast).
+
+**Spec trials:** Glutton *The Last Banquet* (every dish served twice: fusions win it in time), Gizzard *The Lean Winter* (two allies to keep alive through knells; only what you digest feeds them), Guarantor *The Debtor's Daughter* (the Shade's sentences fall on your ally), Collector *The Debt Called In* (a short enrage: the bills have to pay). A bot playing the spec passes all four.
+
+**Art:** no painted icons or portraits yet (`art: { icons: false, portraits: false }`); drawn glyph icons (`ICON_GLYPHS` in `hud.js`) stand in. Briefs in `docs/art/hero-portraits.md`, `ability-icons.md` and `spec-icons.md`.
+<!-- /tanks-2 -->
 <!-- classes-c: Threadweaver (healer) and Marionettist (DPS), 2026-10 -->
 **Threadweaver, Seamstress Witch** (◆◆◆, complexity 4). Signature: **Threads**. Gauge: a spool that winds fuller as your threads carry damage (Spool, 0 to 100). Ranged caster; autos flick a needle-glint (25).
 
@@ -348,6 +480,8 @@ Two DPS built for players who want more to juggle. On the hero select their tile
 
 **Host-side design.** Both classes need rules no single client can judge, so the host owns them (`fight.js`, the weave and Doll blocks):
 - **Threads live on the host.** Tie, Snap, Tighten and Tapestry are combat events; the host keeps the list, measures lengths every tick, snaps long threads, splits damage in `damagePlayer` (marked `shared` so it never splits twice; enrage, falls and self-damage are never split), runs heals down the threads, and logs what each thread carried for the last 5 s. It sends `thr` (the list) on change and `thrs` (snaps); it tells the weaver `carry` (Spool), `snapped` (Knotwork) and `tiefail` (the charge comes back). Tighten is a knockback toward the partner.
+- **Where the split sits in the damage order.** A hit on a threaded player is split first, on the raw incoming amount, into equal shares for them and everyone threaded to them (Tapestry: everyone). Each share then runs through its own taker's full order (vulnerability and defence, mitigations and parry, the Gorgemaw's jaw, the Oathbroker's Ledger, shields, HP) and is marked shared, so it can never split again. So a tank's cooldown only cuts the tank's own share; an Oathbroker writes the share that reaches them into their Ledger like any other hit; and a share landing on a co-signed ally is co-signed as usual. Never split: enrage, falls, self-inflicted damage, Ledger bills and settles (they were split, if at all, when the hit was first taken, and skip the threads like they skip mitigation), and **a hit an open jaw is about to eat**: the Gorgemaw swallows it to 25% and keeps all of it, rather than handing teammates shares of a hit that was going to shrink.
+- **Dolls and the Gorgemaw.** A mechanic a Gorgemaw swallows whole (a spread circle eaten for a teammate) never resolves, so it can't catch a Doll either; one the jaw only takes a bite of still resolves for everyone else, Doll included. Dolls themselves are never edible.
 - **Dolls are reported by their owner** (10 times a second: position, state, strings) and judged by the host: a mechanic resolving on a Doll that isn't safe, limp or out of date sends the owner `dollhit`. The host rebroadcasts every Doll as `dolls` so everyone draws them, and works out the Stage (an enemy inside an Understudy's triangle takes 10% more from everyone).
 - **The simulator and the town have no host**, so the kits fall back to counting their own threads and Dolls; the sim models thread snaps and Doll hits as part of each class's movement.
 - **On screen** (`arena/stagecraft.js`): threads bow loose when slack and pull straight, brighten and shiver near 260 px; a snap flicks apart; the Doll is a jointed wooden puppet (drawn in `heroes.js`) with one string per String left, reddening as it nears its reach; the Stage is chalked on the floor and lights while the boss is inside.
@@ -390,6 +524,9 @@ The sim runs a 6-minute fight twice per class. The *pro* follows that class's op
 | Thermist | 1422 | 2356 | 60% |
 | Driftblade | 1433 | 2407 | 60% |
 | Alembist | 632 | 1090 | 58% |
+| Ironpalm | 832 | 1522 | 55% |
+| Gorgemaw | 1076 | 1498 | 72% |
+| Oathbroker | 1197 | 1485 | 81% |
 | Threadweaver | 547 | 1038 | 53% |
 | Marionettist | 1870 | 2295 | 81% |
 
@@ -721,6 +858,8 @@ The user picked: **story vignettes**, **one per spec**, **built so the spec's tr
 | Comet | The Long Charge | In close, then far out, then in again (rings and stomps): long straight runs across the hall. |
 | Apothecary | The Long Vigil | The bells stay quiet for a long while, then ring three times in a row. A deep bandolier brewed in the quiet. |
 | Volatile | The Short Fuse | Short, sharp knells with little time between. Reactions brewed and thrown fast. |
+| Still Water | The Quiet Water | Alone; quick, plain sword strokes at you, one after another. Reading every one (two charges, and Breath refilled on each). |
+| Avalanche Fist | The Mountain Road | With a Cleric; long open stretches at the boss's side, broken only by a stomp: strings that never stop. |
 
 **How it's built:** `client/js/arena/trials.js` holds `TRIALS` (name, lore, outro, allies, target length, enrage, regen, who must live, script) and `trialDef(specId)`, which turns one into a boss definition. It keeps the Hollow King's id, so his hall, art and telegraphs all apply, and sizes the Shade's health for the party. The raid id is `trial:<spec>`; `main.js` (`startTrial`, `raidDef`) runs it as a one-human raid, skips loot and clear records, and calls `Save.recordTrial`. `save.js` adds `trialsOpen`, `trialDone`, `recordTrial` and `specState` ('locked', 'trial' or 'open'); `Save.spec` reads a spec that isn't unlocked as none.
 
@@ -736,6 +875,8 @@ The user picked: **story vignettes**, **one per spec**, **built so the spec's tr
 | **Bloodreaver · Hemomancer** (The Blood Mage) | Helping the healer | Crimson Drain's healing also heals the whole party at a quarter strength. Bloodletting becomes **Blood Lance**, thrown from range. |
 | **Runeguard · Spellwarden** (The Warding Circle) | Shielding allies | Runic Ward goes on an ally (yourself if none is picked), explodes from them, and refunds its Rune once it absorbed half. |
 | **Runeguard · Runeblade** (The Carved Edge) | Melee damage | Rune Strike becomes the **Rune Blade** combo (Cut > Carve), Glyph Burst becomes **Rune Cleave** (leaves a burning rune for 12 s), Mirror Aegis has two charges, Wards a little smaller. |
+| **Ironpalm · Still Water** (The Unmoving Pond) | Parrying | A perfect Read fills Breath to the top, on any hit; Read has two charges. Iron Skin becomes **Still Pond** (90 s): 25% less damage for 8 s, and Read comes back 0.8 s after each use. |
+| **Ironpalm · Avalanche Fist** (The Falling Mountain) | Long strings | Every named move adds **Momentum** (+3% damage, up to 8, gone 2.5 s after the last); moves of four inputs or more hit 20% harder. A broken or dropped string **staggers** you (0.7 s) and loses it all. Temple Bell becomes **Landslide**: the party mitigation, and 15 s in which strings can't drop and Momentum fills and holds. |
 
 **Healers (design choices made together on 2026-10-19):**
 
@@ -809,6 +950,7 @@ Each hero has a small talent tree: **5 rows of 3 talents, one pick per row**. Ta
 | Thermist / Pendulum / Zenith | 2,356 / 2,355 / 2,357 | 2,675 / 2,718 / 2,707 | +13.5% / +15.4% / +14.8% |
 | Driftblade / Orbit / Comet | 2,407 / 2,408 / 2,407 | 2,740 / 2,701 / 2,783 | +13.8% / +12.2% / +15.6% |
 | Alembist / Apothecary / Volatile | 1,090 / 1,091 / 1,092 | 1,278 / 1,236 / 1,236 | +17.2% / +13.3% / +13.3% |
+| Ironpalm / Still Water / Avalanche | 1,522 / 1,522 / 1,516 | 1,735 / 1,779 / 1,721 | +14.0% / +16.9% / +13.5% |
 
 The base Cleric gains least in damage because its talents mostly change healing and protection (Bloom of Dawn, Dawn Sanctum, Wings of Dawn); the Inquisitor, which heals by Smiting, gains the most.
 
@@ -1077,6 +1219,32 @@ Single talents stay under +5% pro DPS (Ricochet +4.3%, Kindling +4.3%, Mother Li
 - `ICON_ART` in `gauges.js`: drawn placeholder icons for the Alembist's moves until painted ones are listed in `client/icons/alembist/manifest.json`.
 - Bots: `BotAI.alembist` in `bots.js` (brew plans, ripe-vial scoring, Reactions, raising with a Draught).
 <!-- /classes-b -->
+
+<!-- ironpalm talents -->
+#### Ironpalm
+
+The same rule as the Alembist: moves and behaviour, one plain number (Deep Lungs). Two talents grant a new move (`grants: true`): Bellows Stance (row III, on D) and Dragon Ascends (row V, on F); both work in either spec.
+
+| Row | Talent | Effect |
+|---|---|---|
+| I | **Swallow's Return** | Crane Step flows on: K L H is a Rising Gate too, so it carries on into Heaven's Drop. |
+| I | **Echoing Palm** | Thousand Palms echoes: three more strikes a moment after the flurry, a third as strong. |
+| I | **Clean Hands** | A Crisp press costs no Breath at all. |
+| II | **Iron Shirt** | Tiger Wall also wraps you in a shield for 5 s. |
+| II | **Deflect** | Reading anything but a tankbuster throws the blow back: your counter hits about twice as hard. |
+| II | **Bell's Echo** | Temple Bell (*Avalanche:* Landslide) also heals the party a little. |
+| III | **Bellows Stance** (new move) | Iron Skin becomes Bellows Stance (90 s): 30% less damage for 10 s, Breath refills half again as fast, and every named move breathes out a shockwave and gives 6 Breath. |
+| III | **Deep Lungs** | Breath refills 20% faster. (The one number talent.) |
+| III | **Quiet Mind** | Finishing a named move lets your Breath refill at its resting pace at once, until your next press. |
+| IV | **Gong of Ages** | Temple Bell tolls again 8 s later: another 4 s of 10% party mitigation. |
+| IV | **Unbroken** | While Iron Skin (*Still Water:* Still Pond) lasts, strings never drop or break, and every named move gives 4 Breath. |
+| IV | **Answering Fist** | Reading a tankbuster takes 20 s off Iron Skin and Temple Bell (or their spec versions). |
+| V | **Dragon Ascends** (new move) | Temple Bell becomes Dragon Ascends (60 s): a heavy leaping blow, the party deals 5% more damage for 12 s, and you get Second Wind. *Avalanche:* Momentum fills and holds for 15 s. |
+| V | **Falling Mountain** | Heaven's Drop shakes the ground: an aftershock a second later. |
+| V | **Hundred Hands** | Thousand Palms leaves the guard open for 6 s: Light presses hit 30% harder. |
+
+Single talents stay at or under +5.8% pro DPS (Falling Mountain +5.8%, Deflect +5.0% in Still Water, Swallow's Return +2.7 to +3.5%); Clean Hands, Deep Lungs and Quiet Mind read near 0 for the pro, whose Read pauses already refill it, but they carry a player who presses faster than the pro model.
+<!-- /ironpalm talents -->
 
 ## 5. What's built (code map)
 

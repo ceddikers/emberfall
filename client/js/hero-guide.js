@@ -100,6 +100,19 @@ const HERO_GUIDE = {
   },
 };
 
+// Ironpalm: the combos are its named strings (Light Q, Heavy W, Kick E)
+HERO_GUIDE.ironpalm = {
+  passive: { name: 'Strings', icon: 'fist', desc: 'No global cooldown. Every press of Light, Heavy or Kick is a quick hit that costs Breath, and strings of them pressed in rhythm become named moves. A press made just as the last one recovers is Crisp: harder, and cheaper in Breath.' },
+  combos: [
+    { keys: ['q', 'q', 'w'], text: 'Rising Gate: a launcher that draws the boss to you.' },
+    { keys: ['q', 'q', 'w', 'e', 'e'], text: 'Rising Gate, then two Kicks: Heaven\'s Drop on the airborne boss.' },
+    { keys: ['q', 'e', 'w', 'w'], text: 'Thousand Palms, the finisher.' },
+    { keys: ['w', 'e', 'e'], text: 'Tiger Wall, a blocking stance, before a heavy blow. W W E is Stone Breaker, W W W Iron Ox.' },
+    { keys: ['e', 'q'], text: 'Crane Step gives Breath back without stopping. Q Q Q is Flowing Palms.' },
+    { keys: ['r', 'w'], text: 'Read a tankbuster as it lands, and the next Heavy is a free Thousand Palms.' },
+  ],
+};
+
 // Alembist (classes-b)
 HERO_GUIDE.alembist = {
   passive: { name: 'Ripening', icon: 'throw', desc: 'Two reagents brew a vial into your bandolier. Vials grow 30% stronger over their first 10s and spoil after 40s, and Throw always takes the oldest one, so you brew in the order you will need them.' },
@@ -112,6 +125,28 @@ HERO_GUIDE.alembist = {
   ],
 };
 
+// Gorgemaw, Oathbroker (tanks-2)
+Object.assign(HERO_GUIDE, {
+  gorgemaw: {
+    passive: { name: 'The Belly', icon: 'wide', desc: 'Open Wide just before an attack lands on you and you eat it: a quarter of the damage, and a Morsel in the shape of what you ate. Spit it back at the boss, or Digest them all to heal.' },
+    combos: [
+      { keys: ['w', 'e'], text: 'Open Wide as the tankbuster lands, then Spit the Spike straight back.' },
+      { keys: ['w', 'w', 'r'], text: 'Eat two hits back to back, then Digest both: a big heal and armour.' },
+      { keys: ['w'], text: 'Stand in a teammate\'s spread circle and eat it for them.' },
+      { keys: ['f'], text: 'Bottomless on the fight\'s worst raidwide: the party takes half.' },
+    ],
+  },
+  oathbroker: {
+    passive: { name: 'The Ledger', icon: 'settle', desc: '60% of every hit you take is written into the Ledger and billed to you 8s later. Pay it down with your combo, push it back, settle it cheap, or make the boss pay.' },
+    combos: [
+      { keys: ['q', 'q', 'q'], text: 'Dun, Levy, Collect: every hit pays the oldest lines down.' },
+      { keys: ['r'], text: 'Lien while the bills pile up: the boss pays a third of each.' },
+      { keys: ['w'], text: 'Renegotiate when a big line is about to land on top of a raidwide.' },
+      { keys: ['e'], text: 'Settle a long Ledger for half while your healer has you topped.' },
+      { keys: ['f'], text: 'Default when the Ledger would bury you: torn up, but closed for 10s.' },
+    ],
+  },
+});
 // Threadweaver and Marionettist (classes-c)
 HERO_GUIDE.threadweaver = {
   passive: { name: 'Threads', icon: 'tie', desc: 'Allies you Tie share what lands on them: a hit on one end is split evenly along the thread, and a heal on one end runs 60% of the way down. A thread snaps past 260 px.' },

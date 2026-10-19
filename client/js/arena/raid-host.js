@@ -157,7 +157,9 @@ class RaidHost {
       if (bot) {
         if (msg.k === 'perfect') bot.actor.notify('perfect');
         if (msg.k === 'reflect') bot.actor.notify('reflect');
+        if (msg.k === 'read') bot.actor.notify('read', msg);
         if (msg.k === 'shieldEnd') bot.actor.notify('shieldEnd', msg);
+        if (msg.k === 'eat' || msg.k === 'ledger') bot.actor.notify(msg.k, msg);   // (the advanced tanks: fight.js classEvent)
         if (msg.k === 'carry' || msg.k === 'snapped' || msg.k === 'dollhit' || msg.k === 'tiefail') bot.actor.notify(msg.k, msg);   // classes-c
       }
     }
@@ -248,7 +250,8 @@ class RaidHost {
           case 'used': {
             const en = ev.ab.target === 'enemy' && ev.target && typeof ev.target === 'object' ? ev.target : null;
             if (en) bot.lastEnemy = en.id;
-            host.emit({ t: 'cast', id: bot.id, i: actor.abilities.indexOf(ev.ab), x: Math.round(bot.x), y: Math.round(bot.y),
+            // (a: the move's id, so a talent's move or a paced kit's named string shows as itself; slot: its button)
+            host.emit({ t: 'cast', id: bot.id, i: actor.abilities.includes(ev.ab) ? actor.abilities.indexOf(ev.ab) : (ev.ab.slot ?? -1), a: ev.ab.id, x: Math.round(bot.x), y: Math.round(bot.y),
               tx: Math.round(en ? en.x : host.sim.boss.x), ty: Math.round(en ? en.y : host.sim.boss.y), ally: typeof ev.target === 'number' ? ev.target : null });
             break;
           }
@@ -282,7 +285,7 @@ class RaidHost {
             break;
           }
           case 'heal': case 'hot': case 'shield': case 'mit': case 'raise': case 'rewind':
-          case 'selfDamage': case 'targetDebuff': case 'partyBuff': case 'pool': case 'brand': case 'splash':
+          case 'selfDamage': case 'targetDebuff': case 'partyBuff': case 'pool': case 'brand': case 'splash': case 'maw': case 'ledger':
           case 'tie': case 'snip': case 'tighten': case 'tapestry': case 'tug':   // classes-c
             host.onPlayerEvent(bot.id, ev);
             break;

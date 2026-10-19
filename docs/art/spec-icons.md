@@ -132,6 +132,44 @@ Only moves that are new to a spec need an icon. Changed moves (for example Senti
 19. **Alembist · Apothecary** (herb green): the same alchemist, goggles off and hanging at her neck, a **leather satchel of labelled clay jars** at her hip, a sprig of green herbs tucked behind one ear, reading a small handwritten label on a jar with calm, patient focus. Sage-green background with a pale mortar-and-pestle shape behind the head.
 20. **Alembist · Volatile** (soot and orange): the same alchemist with soot smudged across her cheek and coat, goggles pulled down over her eyes with **orange lenses**, a few singed strands loose from her bun, holding up a vial with a **short lit fuse** spitting flat orange star-shaped sparks, a wide, slightly reckless grin. Charcoal background with a bold orange burst shape behind the head.
 
+## Ironpalm specs (new tank, 2026-10)
+
+**Ability icons** (Ironpalm palette from `ability-icons.md`: deep maroon background, saffron, off-white wraps and dull iron):
+
+**Ironpalm · Still Water** (pale water-blue)
+22. **Still Pond** (`ironpalm/pond`), replaces Iron Skin: an open palm held flat, face down, a hand's breadth above still water, three perfect rings spreading out from the point under it, no splash.
+
+**Ironpalm · Avalanche Fist** (earth orange)
+23. **Landslide** (`ironpalm/slide`), replaces Temple Bell: an iron-wrapped fist driving down into the ground, the earth around it heaving up in three thick broken slabs, a few stones flying.
+
+**Portraits** (same man as `hero-portraits.md` #13):
+
+23. **Ironpalm · Still Water** (pale blue): the same monk with his eyes closed, standing ankle-deep in still water, one open palm held out flat in front of him with a single drop falling from his fingertips, the rings from it spreading round his feet; his gi is a faded water-blue and his sash deep navy. Pale blue-grey background with a flat circle of ripples behind the head.
+24. **Ironpalm · Avalanche Fist** (earth orange): the same monk mid-charge down a slope, leaning hard forward, both fists cased in **rough stone gauntlets** over the wraps, grit and small stones tumbling off them, his gi a dusty clay orange. Teeth showing, delighted. Burnt-orange background with bold diagonal rock slabs behind him.
+
+
+## Advanced tank specs (2026-10-20)
+
+**Ability icons** (class palettes from `ability-icons.md`):
+
+**Gorgemaw · Glutton** (burnt orange and gold)
+- No new moves. Spit keeps its icon; matching Morsels fuse.
+
+**Gorgemaw · Gizzard** (stone grey and warm gold)
+- No new moves. Digest keeps its icon; it feeds the party now.
+
+**Oathbroker · Guarantor** (pale blue and gold)
+24. **Co-Sign** (`oathbroker/cosign`), replaces Lien: two overlapping ledger pages joined by one lilac signature line running across both.
+
+**Oathbroker · Collector** (gold and seal-wax red)
+25. **Foreclose** (`oathbroker/foreclose`), replaces Default: a huge red seal-stamp coming down from above onto a cracked round stone, loose pages flying out from under it.
+
+**Portraits** (same people as `hero-portraits.md` #14 and #15):
+
+25. **Gorgemaw · Glutton** (orange and gold): the same glutton with a fat **gold belt** round the belly and a feast-napkin flapping, holding a whole roast leg in one gauntlet, jaw-plate wide open, eyes shut in bliss. Orange background with a gold plate-and-fork shape behind the head.
+26. **Gorgemaw · Gizzard** (stone and warm gold): the same glutton, calmer, **grey stone plates set into his belly-plate**, one gauntlet patting his stomach, a contented, protective smile. Warm grey background with a gold hearth shape behind the head.
+27. **Oathbroker · Guarantor** (pale blue and gold): the same knight with a **gold chain across her chest to a second seal**, holding the ledger open toward the viewer as if asking you to sign, a faint, reassuring smile. Pale blue background with two overlapping seal shapes behind the head.
+28. **Oathbroker · Collector** (gold and red): the same knight with a **red sash hung with coin pouches and wax seals**, stamp-mace raised over one shoulder, a thin, satisfied smile: the bill is due. Dark gold background with a bold red seal shape behind the head.
 ## Threadweaver and Marionettist specs (2026-10)
 
 **Ability icons** (palettes from `ability-icons.md`):
@@ -140,7 +178,7 @@ Only moves that are new to a spec need an icon. Changed moves (for example Senti
 - No new moves. Tie keeps its icon.
 
 **Threadweaver · Shears** (rose pink)
-23. **Lash** (`threadweaver/lash`), replaces Tighten: a lilac thread cracking like a whip in an S-curve, a small hexagon shield shape at its end.
+26. **Lash** (`threadweaver/lash`), replaces Tighten: a lilac thread cracking like a whip in an S-curve, a small hexagon shield shape at its end.
 
 **Marionettist · Cutting Line** (blood red)
 - No new moves. Cross-Cut keeps its icon (it's off the global cooldown now).
@@ -148,9 +186,9 @@ Only moves that are new to a spec need an icon. Changed moves (for example Senti
 **Marionettist · Understudy** (orchid)
 - No new moves.
 
-**Portraits** (same characters as `hero-portraits.md` #11 and #12):
+**Portraits** (same characters as `hero-portraits.md` #16 and #17):
 
-23. **Threadweaver · Loomwright** (cornflower blue): the same witch, hat pushed back, standing before a **small hand loom** strung with blue and lilac threads, several threads running from it off past the frame edges in every direction, a calm, absorbed look. Cornflower background with a pale web pattern behind the head.
-24. **Threadweaver · Shears** (rose pink): the same witch with the spectacles pushed up into her hair, holding up **big silver dressmaker's shears** half open, a cut lilac thread dangling from each blade, a sly, satisfied smile. Rose-pink background with a bold zigzag cut shape behind the head.
-25. **Marionettist · Cutting Line** (blood red): the same puppeteer, hood down to show cropped black hair, the control bar held sideways like a sword hilt, its strings drawn as **taut silver blade edges** running out of frame, eyes narrowed. Dark red background with two crossing pale lines behind the head.
-26. **Marionettist · Understudy** (orchid): the same puppeteer holding a wider control bar, **two smaller Dolls** hanging from it on either side, mirror images in rose and cream, both bowing; the puppeteer looks between them with the faintest smile. Orchid background with a pale chalk triangle behind the three heads.
+29. **Threadweaver · Loomwright** (cornflower blue): the same witch, hat pushed back, standing before a **small hand loom** strung with blue and lilac threads, several threads running from it off past the frame edges in every direction, a calm, absorbed look. Cornflower background with a pale web pattern behind the head.
+30. **Threadweaver · Shears** (rose pink): the same witch with the spectacles pushed up into her hair, holding up **big silver dressmaker's shears** half open, a cut lilac thread dangling from each blade, a sly, satisfied smile. Rose-pink background with a bold zigzag cut shape behind the head.
+31. **Marionettist · Cutting Line** (blood red): the same puppeteer, hood down to show cropped black hair, the control bar held sideways like a sword hilt, its strings drawn as **taut silver blade edges** running out of frame, eyes narrowed. Dark red background with two crossing pale lines behind the head.
+32. **Marionettist · Understudy** (orchid): the same puppeteer holding a wider control bar, **two smaller Dolls** hanging from it on either side, mirror images in rose and cream, both bowing; the puppeteer looks between them with the faintest smile. Orchid background with a pale chalk triangle behind the three heads.

@@ -444,6 +444,67 @@ TALENTS.alembist = [
   ],
 ];
 
+// ======================================================================= ADVANCED TANKS (tanks-2: Gorgemaw, Oathbroker)
+// The same rule: new triggers and changed behaviour, one plain number at most (Wide Jaw, Grace Period), and two talents
+// per class that put a new move on a key (grants: true; the moves are in TALENT_ABILITIES in kits.js).
+Object.assign(TALENTS, {
+  gorgemaw: [
+    [
+      { id: 'gorgemaw_marinade', name: 'Marinade', ab: 'gnash', text: 'Gulp, the third bite of Gnash, now marinates the boss: your next Spit within 10s hits 25% harder.' },
+      { id: 'gorgemaw_aftertaste', name: 'Aftertaste', ab: 'spit', text: 'A Spit now leaves the taste behind: the boss burns for 9s, harder after a Spike.' },
+      { id: 'gorgemaw_crunch', name: 'Crunch', ab: 'gnash', text: 'Gulp, the third bite of Gnash, now bites twice.' },
+    ],
+    [
+      { id: 'gorgemaw_cud', name: 'Chew the Cud', ab: 'wide', text: 'Every Morsel you eat now heals you for 3% of your HP.' },
+      { id: 'gorgemaw_widejaw', name: 'Wide Jaw', ab: 'wide', text: 'Open Wide stays open 2.2s instead of 1.5s.' },
+      { id: 'gorgemaw_scraps', name: 'Table Scraps', ab: 'wide', text: 'Eating an attack meant for a teammate now also shields them for 6s.' },
+    ],
+    [
+      { id: 'gorgemaw_regurgitate', name: 'Regurgitate', ab: 'spit', grants: true, text: 'New move on E, in place of Spit. Regurgitate: bring the whole Belly up at once, every Morsel spat in its own shape at 75% strength.', spec: { glutton: 'New move on E, in place of Spit. Regurgitate: bring the whole Belly up at once, every Morsel spat in its own shape at 75% strength. Pairs of a shape still fuse.' } },
+      { id: 'gorgemaw_lining', name: 'Iron Lining', ab: 'digest', text: 'Every Morsel in your Belly now makes you take 3% less damage.' },
+      { id: 'gorgemaw_sour', name: 'Sour Stomach', ab: 'spit', text: 'A Morsel you have kept for 15s or more turns sour: spat, it hits 40% harder.' },
+    ],
+    [
+      { id: 'gorgemaw_feast', name: 'Feast', ab: 'bottomless', text: 'Bottomless now also refills Open Wide\'s charges.' },
+      { id: 'gorgemaw_ironjaw', name: 'Iron Jaw', ab: 'iron', text: 'Iron Gut now also opens your jaw for its first 2s.' },
+      { id: 'gorgemaw_overflow', name: 'Overflow', ab: 'spit', text: 'A Morsel eaten into a full Belly is now spat straight back out instead of lost.' },
+    ],
+    [
+      { id: 'gorgemaw_stonebelly', name: 'Stone Belly', ab: 'iron', grants: true, text: 'New move on D, in place of Iron Gut. Stone Belly: 30% less damage for 8s, and every Morsel you eat in that time is a Spike.' },
+      { id: 'gorgemaw_bile', name: 'Bile', ab: 'digest', text: 'Digest now also scalds the boss: one hit for every Morsel it digests.' },
+      { id: 'gorgemaw_rumination', name: 'Rumination', ab: 'digest', text: 'Digest now leaves your oldest Morsel in the Belly, to spit later.' },
+    ],
+  ],
+
+  oathbroker: [
+    [
+      { id: 'oathbroker_interest', name: 'Interest', ab: 'collect', text: 'Collect, the third strike, now hits harder for every entry in your Ledger (up to 5).' },
+      { id: 'oathbroker_garnish', name: 'Garnish', ab: 'collect', text: 'Part of whatever your strikes pay down is now also struck from the boss.' },
+      { id: 'oathbroker_stamp', name: 'Rubber Stamp', ab: 'settle', text: 'Settle now also stamps the boss: a blow sized by what you settled.' },
+    ],
+    [
+      { id: 'oathbroker_grace', name: 'Grace Period', ab: 'reneg', text: 'Entries now come due after 10s instead of 8s.' },
+      { id: 'oathbroker_amnesty', name: 'Amnesty', ab: 'reneg', text: 'Renegotiate now also erases your smallest entry.' },
+      { id: 'oathbroker_escrow', name: 'Escrow', ab: 'settle', text: 'While your Ledger holds 3 entries or more, you take 10% less damage.' },
+    ],
+    [
+      { id: 'oathbroker_audit', name: 'Audit', ab: 'settle', grants: true, text: 'New move on E, in place of Settle. Audit (15s): every entry at least 4s old is paid now at 30% of its size; newer ones stay.' },
+      { id: 'oathbroker_consolidate', name: 'Consolidate', ab: 'reneg', text: 'Renegotiate now also folds the whole Ledger into one entry, due when the last one would have been.' },
+      { id: 'oathbroker_fineprint', name: 'Fine Print', ab: 'lien', text: 'Entries smaller than 2% of your HP are now struck off when they come due instead of billed.' },
+    ],
+    [
+      { id: 'oathbroker_receivership', name: 'Receivership', ab: 'default', text: 'Default now also gives the whole party 10% less damage for 8s.', spec: { collector: 'Foreclose now also gives the whole party 10% less damage for 8s.' } },
+      { id: 'oathbroker_garnishwrit', name: 'Writ of Execution', ab: 'writ', text: 'Entries written during Writ of Protection are now a third paid by the boss when they come due.' },
+      { id: 'oathbroker_slate', name: 'Clean Slate', ab: 'default', text: 'Default now also brings Renegotiate and Settle straight back.', spec: { collector: 'Foreclose now also brings Renegotiate and Settle straight back.' } },
+    ],
+    [
+      { id: 'oathbroker_moratorium', name: 'Moratorium', ab: 'reneg', grants: true, text: 'New move on W, in place of Renegotiate. Moratorium (45s): for 5s nothing comes due; every timer in the Ledger stops.' },
+      { id: 'oathbroker_tithe', name: 'Tithe', ab: 'lien', text: 'Every bill you pay now heals your most hurt ally for a quarter of it.' },
+      { id: 'oathbroker_notary', name: 'Notary', ab: 'collect', text: 'Collect, the third strike, now stamps your newest entry: it comes due 3s later.' },
+    ],
+  ],
+});
+
 // ======================================================================= THREADWEAVER and MARIONETTIST (classes-c)
 // New behaviour, one plain number each (Long Thread, Quick Change). Rows III and V grant a move (TALENT_ABILITIES in kits.js).
 Object.assign(TALENTS, {
@@ -503,6 +564,40 @@ Object.assign(TALENTS, {
     ],
   ],
 });
+
+// ======================================================================= IRONPALM (tank)
+// Its own block. Built to the newer rule: new behaviour, not bigger numbers (Deep Lungs is the one plain number), and two
+// talents put a new move on a key (`grants`; the moves are in TALENT_ABILITIES at the end of kits.js): Bellows Stance
+// (row III, on D) and Dragon Ascends (row V, on F). Named strings belong to the key their last input is on.
+TALENTS.ironpalm = [
+  [
+    { id: 'ironpalm_swallow', name: 'Swallow\'s Return', ab: 'kick', text: 'Crane Step now flows on: Crane Step then Heavy (K L H) is a Rising Gate too, so it can carry on into Heaven\'s Drop.' },
+    { id: 'ironpalm_echo', name: 'Echoing Palm', ab: 'fist', text: 'Thousand Palms now echoes: three more strikes land a moment after the flurry, a third as strong.' },
+    { id: 'ironpalm_clean', name: 'Clean Hands', ab: 'palm', text: 'A Crisp press now costs no Breath at all.' },
+  ],
+  [
+    { id: 'ironpalm_shirt', name: 'Iron Shirt', ab: 'kick', text: 'Tiger Wall now also wraps you in a shield for 5s.' },
+    { id: 'ironpalm_deflect', name: 'Deflect', ab: 'read', text: 'Reading anything but a tankbuster now also throws the blow back into the boss: your counter hits about twice as hard.' },
+    { id: 'ironpalm_bellecho', name: 'Bell\'s Echo', ab: 'bell', text: 'Temple Bell now also heals the whole party a little.', spec: { avalanche: 'Landslide now also heals the whole party a little.' } },
+  ],
+  [
+    { id: 'ironpalm_bellows', name: 'Bellows Stance', ab: 'skin', grants: true, text: 'New move on D, in place of Iron Skin. Bellows Stance (90s): for 10s you take 30% less damage, your Breath refills half again as fast, and every named move you finish breathes out a shockwave and gives back 6 Breath.',
+      spec: { stillwater: 'New move on D, in place of Still Pond. Bellows Stance (90s): for 10s you take 30% less damage, your Breath refills half again as fast, and every named move you finish breathes out a shockwave and gives back 6 Breath.' } },
+    { id: 'ironpalm_lungs', name: 'Deep Lungs', ab: 'palm', text: 'Your Breath refills 20% faster.' },
+    { id: 'ironpalm_quiet', name: 'Quiet Mind', ab: 'read', text: 'Finishing a named move now lets your Breath catch at once: it refills at its resting pace right away, until your next press.' },
+  ],
+  [
+    { id: 'ironpalm_gong', name: 'Gong of Ages', ab: 'bell', text: 'Temple Bell now tolls again 8s later: the whole party takes 10% less damage for another 4s.', spec: { avalanche: 'Landslide now tolls again 8s later: the whole party takes 10% less damage for another 4s.' } },
+    { id: 'ironpalm_unbroken', name: 'Unbroken', ab: 'skin', text: 'While Iron Skin lasts, your strings never drop or break, and every named move gives 4 Breath.', spec: { stillwater: 'While Still Pond lasts, your strings never drop or break, and every named move gives 4 Breath.' } },
+    { id: 'ironpalm_answer', name: 'Answering Fist', ab: 'read', text: 'Reading a tankbuster now takes 20s off Iron Skin and Temple Bell.', spec: { stillwater: 'Reading a tankbuster now takes 20s off Still Pond and Temple Bell.', avalanche: 'Reading a tankbuster now takes 20s off Iron Skin and Landslide.' } },
+  ],
+  [
+    { id: 'ironpalm_dragon', name: 'Dragon Ascends', ab: 'bell', grants: true, text: 'New move on F, in place of Temple Bell. Dragon Ascends (60s): leap down on your target with a heavy blow; the whole party deals 5% more damage for 12s, and you get Second Wind.',
+      spec: { avalanche: 'New move on F, in place of Landslide. Dragon Ascends (60s): leap down on your target with a heavy blow; the whole party deals 5% more damage for 12s, you get Second Wind, and your Momentum fills and holds.' } },
+    { id: 'ironpalm_mountain', name: 'Falling Mountain', ab: 'kick', text: 'Heaven\'s Drop now shakes the ground: an aftershock strikes the boss a second later.' },
+    { id: 'ironpalm_hundred', name: 'Hundred Hands', ab: 'fist', text: 'Thousand Palms now leaves the boss\'s guard open for 6s: your Light presses hit 30% harder.' },
+  ],
+];
 
 // id -> { cls, row, col, t }
 const TALENT_BY_ID = {};

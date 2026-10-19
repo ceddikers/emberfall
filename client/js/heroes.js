@@ -1,7 +1,10 @@
 // Hero art, drawn in code ("paper doll" style). Each hero is drawn in local space
 // facing +x, with the left hand at -y and the right hand at +y, ~16px radius at scale 1.
 
-const ANIM_DUR = { attack: 0.45, bash: 0.4, brace: 1.2, cast: 0.55, big: 0.9, dash: 0.2 };
+const ANIM_DUR = { attack: 0.45, bash: 0.4, brace: 1.2, cast: 0.55, big: 0.9, dash: 0.2,
+  // Ironpalm's strikes (its presses recover in 0.38-0.75s, so its animations are quick)
+  palm: 0.3, fist: 0.42, kick: 0.38, uppercut: 0.5, axe: 0.55, flurry: 0.7, guard: 0.6 };
+const IP_STRIKES = ['palm', 'fist', 'kick', 'uppercut', 'axe', 'flurry'];
 
 function feet(ctx, st, color) {
   const w = st.moving ? Math.sin(st.t * 12) * 5 : 0;
@@ -465,7 +468,7 @@ function drawChannelFocus(ctx, cls, st, p) {
 
 // Body motion for attacks: a little wind-up lean back, then a lunge and twist into the strike.
 function attackBody(st) {
-  const p = Math.max(actP(st, 'attack'), actP(st, 'bash'));
+  const p = Math.max(actP(st, 'attack'), actP(st, 'bash'), st.action && IP_STRIKES.includes(st.action.type) ? actP(st) : -1);
   if (p < 0) return { lunge: 0, twist: 0 };
   const v = p < 0.3 ? -0.5 * easeOut(p / 0.3) : p < 0.55 ? -0.5 + 1.5 * easeOut((p - 0.3) / 0.25) : 1 - easeOut((p - 0.55) / 0.45);
   return { lunge: v * 3.5, twist: v * 0.13 * swingDir(st) };
@@ -883,6 +886,111 @@ Object.assign(SPEC_ART, {
 
 CHANNEL.thermist = { focus: [16, 0], color: '#ff9a6a', hot: '#e8f6ff', mote: 'ember' };
 
+// ---------------------------------------------------------------- the advanced tanks (Gorgemaw, Oathbroker)
+Object.assign(HERO_ART, {
+  // Gorgemaw: a huge armoured glutton. A great round belly in banded leather under bronze plates, two enormous
+  // gauntlets, and a helm whose jaw-plate hinges open at the front (wide while Open Wide is up, a snap when it eats).
+  gorgemaw(ctx, st) {
+    const bronze = '#b8743a', iron = '#4a3f3a', hide = '#7a4a30', skin = '#c88a64';
+    const s = swing(actP(st, 'attack')), dir = swingDir(st), pa = actP(st, 'attack');
+    const open = Math.max(0, Math.min(1, ((st.jawUntil || 0) - st.t) / 0.15)), chomp = st.chompAt != null && st.t - st.chompAt < 0.25 ? 1 - (st.t - st.chompAt) / 0.25 : 0;
+    const gape = Math.max(open * (st.jawAll > st.t ? 1.4 : 1), chomp * 0.6);
+    feet(ctx, st, '#3a2a22');
+    // the belly: wider than any other hero, bands of hide and a bronze plate on top
+    ellipse(ctx, -1, 0, 13, 18, 0, hide, OUT, 2.2);
+    for (const k of [-0.55, 0, 0.55]) ellipse(ctx, -1 + 2, k * 14, 10, 2.2, 0, shade(hide, -0.18));
+    ellipse(ctx, 1, 0, 8, 11, 0, bronze, OUT, 1.8);
+    ellipse(ctx, 2.5, -3, 3.5, 5, 0, shade(bronze, 0.25));
+    for (const sy of [-1, 1]) circle(ctx, 4, 7 * sy, 1.2, '#ffd8a0', OUT, 0.6);
+    // pauldrons
+    for (const sy of [-1, 1]) { ellipse(ctx, -2, 15 * sy, 7, 5.5, 0, iron, OUT, 1.8); ellipse(ctx, -1, 15 * sy, 4, 3, 0, bronze); }
+    // the gauntlets: the left braced, the right swinging in a cuff (and both forward at the mouth when it eats)
+    const rot = 0.2 + dir * s * 1.1;
+    if (pa >= 0) smear(ctx, 4, 14, 20, 0.2 + dir * 1.1, rot, '#ffd0a0', strikeAmt(pa), 8);
+    ctx.save(); ctx.translate(4, 14); ctx.rotate(rot);
+    limb(ctx, [0, 0, 9, 1], iron, 6);
+    circle(ctx, 13, 1, 6, bronze, OUT, 1.8); for (let i = 0; i < 3; i++) line(ctx, 15, -3 + i * 3, 18, -3 + i * 3, OUT, 1.2);
+    ctx.restore();
+    const lf = gape * 4;
+    limb(ctx, [2, -14, 9 + lf, -15 + lf * 0.5], iron, 6);
+    circle(ctx, 12 + lf, -15 + lf * 0.5, 6, bronze, OUT, 1.8);
+    // the helm: a domed iron bowl and the hinged jaw-plate in front, its teeth showing when it opens
+    circle(ctx, 1, 0, 8.6, iron, OUT, 2);
+    circle(ctx, -1, -2.5, 3, shade(iron, 0.2));
+    const ja = 0.15 + gape * 0.75;
+    for (const sy of [-1, 1]) {
+      ctx.save(); ctx.translate(5, 0); ctx.rotate(sy * ja);
+      poly(ctx, [0, 0, 7, sy * 1, 8.5, sy * 6.5, 1, sy * 7.5], bronze, OUT, 1.4);
+      for (let i = 0; i < 3; i++) poly(ctx, [2 + i * 2.2, sy * 1.2, 3.1 + i * 2.2, sy * 3.4, 4.2 + i * 2.2, sy * 1.2], '#fff4e0');
+      ctx.restore();
+    }
+    if (gape > 0.1) { glow(ctx, 9, 0, 6 + gape * 6, st.jawAll > st.t ? '#ff6a3a' : '#ffb070', 0.35 * gape); ellipse(ctx, 8, 0, 2 + gape * 2, 2 + gape * 4, 0, '#2a0e08'); }
+    line(ctx, 3, -5.5, 3, 5.5, '#2a2422', 1.2);
+    circle(ctx, 4.5, -3, 1, '#ffb070'); circle(ctx, 4.5, 3, 1, '#ffb070');
+  },
+
+  // Oathbroker: a grey-robed contract-knight. A long grey surcoat over plate, a hooded half-helm, a ledger book
+  // chained at the left hip, and a sealing-stamp mace in the right hand (its square head stamps on every hit).
+  oathbroker(ctx, st) {
+    const robe = '#7a7684', plate = '#a8a8b4', wax = '#c04a5a', vellum = '#e8e0cc', lil = '#b8a8e0', skin = '#e0c0a4';
+    const s = swing(actP(st, 'attack')), dir = swingDir(st), pa = actP(st, 'attack'), big = pulse(actP(st, 'big'));
+    const wave = Math.sin(st.t * 3.5) * 1.2 + (st.moving ? Math.sin(st.t * 11) * 2 : 0);
+    // the surcoat's long tails
+    poly(ctx, [-4, -11, -18, -11 + wave * 0.4, -21 + wave, -3, -21 + wave, 3, -18, 11 - wave * 0.4, -4, 11], robe, OUT, 2);
+    line(ctx, -6, 0, -20 + wave, 0, shade(robe, -0.25), 1.2);
+    feet(ctx, st, '#3a3844');
+    torso(ctx, plate, 9, 14);
+    ellipse(ctx, -1.5, 0, 6.5, 12, 0, robe, OUT, 1.4);
+    line(ctx, 3.5, -8, 3.5, 8, lil, 1.4);
+    for (const sy of [-1, 1]) { ellipse(ctx, -0.5, 12.5 * sy, 6, 4.5, 0, plate, OUT, 1.5); line(ctx, -4, 12.5 * sy, 2.5, 12.5 * sy, shade(plate, -0.3), 1); }
+    // the ledger: a thick book on a chain at the left hip, swaying
+    const bs = Math.sin(st.t * 2.2) * 1.2;
+    ctx.save(); ctx.setLineDash([1.6, 1.2]); line(ctx, -2, -12, -7, -17 + bs, '#c8c8d0', 1.4); ctx.setLineDash([]); ctx.restore();
+    ctx.save(); ctx.translate(-8, -18 + bs); ctx.rotate(-0.25);
+    rrect(ctx, -5, -3.5, 10, 7, 1.2, '#4a3a4a', OUT, 1.4); rrect(ctx, -4, -2.6, 8, 5.2, 0.8, vellum); circle(ctx, 0, 0, 1.6, wax, OUT, 0.6);
+    ctx.restore();
+    // the stamp-mace: a shaft and a square seal head, brought down on every hit (and raised high for the big ones)
+    const rot = 0.25 + dir * s * 1.15 - big * 1.2;
+    if (pa >= 0) smear(ctx, 7, 11, 22, 0.25 + dir * 1.15, rot, lil, strikeAmt(pa), 6);
+    ctx.save(); ctx.translate(7, 11); ctx.rotate(rot);
+    rrect(ctx, -3, -1.3, 22, 2.6, 1, '#5a4a3a', OUT, 1.2);
+    rrect(ctx, 18, -5, 7, 10, 1.5, plate, OUT, 1.6); rrect(ctx, 24, -4, 2, 8, 0.6, wax);
+    ctx.restore();
+    hand(ctx, 7, 11, plate);
+    hand(ctx, 6, -10, plate);
+    // hood over a steel half-helm, a sliver of face
+    circle(ctx, 0.5, 0, 7.8, robe, OUT, 2);
+    ellipse(ctx, 3, 0, 4.5, 5.5, 0, plate, OUT, 1.2);
+    ellipse(ctx, 6.4, 0, 1.8, 3.2, 0, skin);
+    line(ctx, 3, -4.5, 3, 4.5, '#3a3844', 1);
+    circle(ctx, -2, -2.2, 2, shade(robe, 0.18));
+  },
+});
+Object.assign(SPEC_ART, {
+  // Glutton: a feast-napkin tied under the helm, and a fat gold belt round the belly
+  glutton(ctx) {
+    ellipse(ctx, -1, 0, 13.5, 18.5, 0, null, '#e8c15a', 2.2);
+    poly(ctx, [8, -5, 14, 0, 8, 5], '#f4f0e4', OUT, 1.2);
+    circle(ctx, -1, 13, 1.8, '#ffd27a', OUT, 0.8);
+  },
+  // Gizzard: grey stone plates set into the belly, glowing warm while it digests
+  gizzard(ctx, st) {
+    for (const [x, y] of [[-4, -8], [-4, 8], [-7, 0]]) poly(ctx, [x - 3, y - 3, x + 3, y - 3.5, x + 3.5, y + 3, x - 3, y + 3.5], '#9a948a', OUT, 1);
+    glow(ctx, 0, 0, 16, '#ffc070', 0.12 + Math.sin(st.t * 3) * 0.05);
+  },
+  // Guarantor: a gold chain across the chest to a second seal, gold trim on the pauldrons
+  guarantor(ctx) {
+    ctx.save(); ctx.setLineDash([1.6, 1.2]); line(ctx, 3, -11, 3, 11, '#e8c15a', 1.4); ctx.setLineDash([]); ctx.restore();
+    circle(ctx, 4, 0, 2.4, '#ffd27a', OUT, 0.9);
+    for (const sy of [-1, 1]) ellipse(ctx, -0.5, 12.5 * sy, 6, 4.5, 0, null, '#e8c15a', 1.2);
+  },
+  // Collector: a red sash hung with coin pouches and wax seals
+  collector(ctx) {
+    line(ctx, -6, -10, 3, 10, '#a02838', 2.6);
+    for (const [x, y] of [[-3, -4], [0, 3]]) circle(ctx, x, y, 1.9, '#d8a040', OUT, 0.8);
+    circle(ctx, -5, 7, 1.6, '#c04a5a', OUT, 0.7);
+  },
+});
 // ======================================================================= Threadweaver and Marionettist (classes-c)
 Object.assign(HERO_ART, {
   // Threadweaver: a seamstress-witch. A wide plum hat with a crooked tip, a lilac shawl over a dark dress, three spools
@@ -1096,3 +1204,77 @@ const HERO_TRAIL = {
     ctx.restore();
   },
 };
+
+// ---------------------------------------------------------------- Ironpalm (tank)
+// A barefoot monk-brawler: shaved head with a short topknot, a saffron sleeveless gi over a maroon sash, prayer beads
+// round the neck, bare arms and iron plates bound over the knuckles with cloth wraps. Guard up at rest; the lead hand
+// jabs open-palmed (Light), the rear hand drives a straight (Heavy), a leg snaps out (Kick); uppercut, axe kick, a
+// flurry of palms, and forearms crossed for guard. Hits freeze for a beat (hitStop in draw-util.js).
+HERO_ART.ironpalm = function (ctx, st) {
+  const gi = HERO_SPEC === 'stillwater' ? '#9cc4dc' : HERO_SPEC === 'avalanche' ? '#c8875a' : '#f0a73a';
+  const sash = HERO_SPEC === 'stillwater' ? '#2e4a66' : '#7a2430', skin = '#d9a07a', wrap = '#ece0c8', iron = '#8e9aa8';
+  const p = actP(st), raw = p >= 0 && st.action ? st.action.type : null;
+  const type = raw === 'attack' ? (st.action.alt ? 'fist' : 'palm') : raw;   // auto-attacks: a jab, then a straight
+  const ease = q => (q < 0 ? 0 : q < 0.35 ? easeOut(q / 0.35) : 1 - easeOut((q - 0.35) / 0.65));   // out fast, back slower
+  const k = type && p >= 0 ? ease(p) : 0;
+  const bob = st.moving ? Math.sin(st.t * 12) * 1.2 : Math.sin(st.t * 3) * 0.5;
+  // bare feet: wider stance; Kick and axe kick swing the rear leg out
+  const legOut = (type === 'kick' || type === 'axe') ? k : 0;
+  const w = st.moving ? Math.sin(st.t * 12) * 3 : 0;
+  ellipse(ctx, 2 + w, -7.5, 4.6, 3, 0, skin, OUT, 1.4);
+  if (legOut > 0) {
+    const fx = 4 + legOut * 20, fy = 7 - legOut * 5;
+    limb(ctx, [-1, 6, fx * 0.6, fy * 0.9 + 1, fx, fy], sash, 4.2);
+    ellipse(ctx, fx + 2, fy, 4.8, 3.2, -0.3, skin, OUT, 1.4);
+    if (type === 'axe') smear(ctx, 0, 0, 22, -1.2, 0.3, '#ffe0a0', Math.sin(p * Math.PI) * 0.9, 6);
+    else smear(ctx, 0, 4, 20, 1.2, -0.1, '#ffffff', strikeAmt(p) * 1.2, 5);
+  } else ellipse(ctx, 0 - w, 7.5, 4.6, 3, 0, skin, OUT, 1.4);
+  // the body: a sleeveless gi crossed at the chest, tied with the sash
+  torso(ctx, gi, 9, 13);
+  line(ctx, -2, -9, 4, 3, shade(gi, -0.25), 1.6);
+  rrect(ctx, -4.5, -11, 3, 22, 1, sash, OUT, 1.1);
+  poly(ctx, [-4, 10, -11, 13 + Math.sin(st.t * 4) * 1.5, -9, 8], sash, OUT, 1);
+  // prayer beads
+  for (let i = 0; i < 9; i++) { const a = -1.3 + i * 0.32; circle(ctx, 1 + Math.cos(a) * 7.5, Math.sin(a) * 7.5, 1.1, '#4a2a1e', null); }
+  // arms: guard up; which hand moves depends on the strike
+  let L = [8, -8], R = [7, 9], open = false;
+  if (type === 'palm') { L = [8 + k * 16, -8 + k * 6]; open = true; }
+  else if (type === 'fist') R = [7 + k * 19, 9 - k * 8];
+  else if (type === 'uppercut') { R = [7 + k * 12, 9 - k * 6]; }
+  else if (type === 'flurry' && p >= 0) { const s = Math.sin(p * Math.PI * 7); L = [10 + Math.max(0, s) * 14, -6 + Math.max(0, s) * 4]; R = [10 + Math.max(0, -s) * 14, 6 - Math.max(0, -s) * 4]; open = true; }
+  else if (type === 'guard' || type === 'brace') { L = [13, -3]; R = [12, 4]; }
+  else if (type === 'big') { L = [6 - k * 2, -12 - k * 6]; R = [6 - k * 2, 12 + k * 6]; }
+  const arm = (sx, sy, [hx, hy], up) => {
+    limb(ctx, [sx, sy, (sx + hx) / 2 + 1, (sy + hy) / 2 + (sy < 0 ? -1.5 : 1.5), hx, hy], skin, 3.6);
+    limb(ctx, [(sx + hx * 2) / 3, (sy + hy * 2) / 3, hx, hy], wrap, 3.2);   // the cloth wraps up the forearm
+    const r = up ? 4.4 + k * 1.6 : 3.8;
+    if (open && sy < 0 || (type === 'flurry' && p >= 0)) { ellipse(ctx, hx + 1, hy, r * 1.1, r * 1.3, 0, wrap, OUT, 1.4); line(ctx, hx + 2.5, hy - 2, hx + 2.5, hy + 2, 'rgba(90,60,40,0.4)', 0.8); }
+    else { circle(ctx, hx, hy, r, wrap, OUT, 1.4); rrect(ctx, hx + r * 0.2, hy - r * 0.8, r * 0.7, r * 1.6, 1, iron, OUT, 0.9); }   // iron over the knuckles
+  };
+  arm(1, -10, L, type === 'palm');
+  arm(1, 10, R, type === 'fist' || type === 'uppercut');
+  if (type === 'fist') smear(ctx, 7, 9, 18, 0.6, -0.1, '#ffd8a0', strikeAmt(p), 5);
+  if (type === 'uppercut') { const a = Math.sin(Math.min(1, p * 1.6) * Math.PI); glow(ctx, R[0], R[1], 10, '#ffb84a', a * 0.6); smear(ctx, 4, 6, 16, 1.4, -0.4, '#ffd27a', a, 6); }
+  // shaved head, a short topknot at the back, a strip of brow
+  ctx.save(); ctx.translate(0, bob * 0.2);
+  circle(ctx, 0.5, 0, 7.4, skin, OUT, 2);
+  circle(ctx, -1.5, -2.2, 2.4, shade(skin, 0.18));
+  ellipse(ctx, 5.4, 0, 1.4, 4.6, 0, shade(skin, -0.2));
+  circle(ctx, -7, 0, 2.6, '#2a1c16', OUT, 1.2);
+  line(ctx, -9.5, 0, -12, Math.sin(st.t * 5) * 1.2, '#2a1c16', 1.6);
+  ctx.restore();
+};
+CHANNEL.ironpalm = { focus: [12, 0], color: '#ffb84a', hot: '#fff0c8', mote: 'mote' };
+
+Object.assign(SPEC_ART, {
+  // Still Water: ripples spreading under the feet while they stand still, and a pale blue band round the brow
+  stillwater(ctx, st) {
+    if (!st.moving) for (let i = 0; i < 2; i++) { const q = (st.t * 0.6 + i * 0.5) % 1; ctx.save(); ctx.globalAlpha = (1 - q) * 0.5; ellipse(ctx, 0, 2, 12 + q * 16, (12 + q * 16) * 0.75, 0, null, '#bfe4f6', 1.2); ctx.restore(); }
+    ctx.save(); ctx.lineWidth = 1.6; ctx.strokeStyle = '#8fc8e8'; ctx.beginPath(); ctx.arc(0.5, 0, 6.8, -1.2, 1.2); ctx.stroke(); ctx.restore();
+  },
+  // Avalanche Fist: stone gauntlets over the wraps, grit falling off them, a smoulder of momentum
+  avalanche(ctx, st) {
+    for (const sy of [-1, 1]) { const x = 9, y = 8.5 * sy; glow(ctx, x, y, 8, '#d08a5a', 0.15 + Math.sin(st.t * 4 + sy) * 0.05); }
+    for (let i = 0; i < 3; i++) { const q = (st.t * 1.3 + i / 3) % 1; circle(ctx, 6 - q * 6, (i - 1) * 9, 1 - q * 0.6, '#8a6a50'); }
+  },
+});
