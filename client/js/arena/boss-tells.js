@@ -579,6 +579,36 @@ const BossTells = (() => {
         ctx.restore();
       },
     },
+    // Acid Deluge: acid rains out over the whole cave from her raised abdomen, beading and hissing on the stone. Every
+    // pillar's shadow is cut out of it
+    deluge: {
+      color: '#c8ff8a', outline: false,
+      ground(ctx, tg, s, p, k, t) {
+        const R = AR() * 1.4;
+        ctx.fillStyle = rgba('#5ab82a', (0.16 + 0.18 * p) * k); ctx.fillRect(-R, -R, R * 2, R * 2);
+        for (let i = 0; i < 60; i++) {
+          const a = hash(i, tg.id) * TAU, d = Math.sqrt(hash(i + 7, tg.id)) * AR(), q = (t * (0.8 + p * 1.6) + hash(i, 3)) % 1;
+          const x = s.x + Math.cos(a) * d, y = s.y + Math.sin(a) * d;
+          circle(ctx, x, y, 2 + q * 8 * (0.5 + p), null, rgba('#d8ff9a', (0.25 + 0.4 * p) * (1 - q) * k), 1.4);
+        }
+        for (let i = 0; i < 3; i++) { const q = (t * 0.6 + i / 3) % 1; circle(ctx, s.x, s.y, 80 + q * AR(), null, rgba('#c8ff8a', 0.3 * (1 - q) * k), 3); }
+      },
+    },
+    // Strand Reel: a strand shot to a pillar; it goes taut and the floor along it is churned with webbing
+    strand: {
+      color: '#f4f0ff',
+      ground(ctx, tg, s, p, k, t) {
+        const ca = Math.cos(s.angle), sa = Math.sin(s.angle);
+        ctx.save(); SHAPES.trace(ctx, s); ctx.fillStyle = rgba('#e8e4f4', (0.08 + 0.14 * p) * k); ctx.fill(); ctx.restore();
+        const sag = (1 - p) * 26 * Math.sin(t * 5);
+        for (const off of [-8, 0, 8]) {
+          ctx.beginPath(); ctx.moveTo(s.x - sa * off, s.y + ca * off - 30);
+          ctx.quadraticCurveTo(s.x + ca * s.len / 2 - sa * (off + sag), s.y + sa * s.len / 2 + ca * (off + sag) - 40, s.x + ca * s.len - sa * off * 0.3, s.y + sa * s.len + ca * off * 0.3 - 40);
+          ctx.strokeStyle = rgba('#f4f0ff', (0.4 + 0.5 * p) * k); ctx.lineWidth = 1.6; ctx.stroke();
+        }
+        for (let i = 0; i < 5; i++) { const q = (t * (1 + 2 * p) + i / 5) % 1; glow(ctx, s.x + ca * q * s.len, s.y + sa * q * s.len - 36, 10, '#ffffff', 0.5 * p * k); }
+      },
+    },
   };
 
   // ------------------------------------------------------------------ Volkar

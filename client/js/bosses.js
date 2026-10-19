@@ -332,6 +332,39 @@ const ADD_ART = {
     circle(ctx, 5 + bite * 4, 0, 6.5, shade(body, -0.2), OUT, 2);
     circle(ctx, 8 + bite * 4, -2, 1.3, '#ff5a4a'); circle(ctx, 8 + bite * 4, 2, 1.3, '#ff5a4a');
   },
+  // Skitterra's cocoon (Hard): a pale bundle of silk bound round someone, stuck to a pillar; it twitches as they struggle
+  cocoon(ctx, st) {
+    const tw = Math.sin(st.t * 9) * 0.06;
+    ctx.save(); ctx.rotate(tw);
+    ellipse(ctx, 0, -6, 13, 20, 0, '#e8e4f0', OUT, 2.2);
+    for (let i = 0; i < 6; i++) { const y = -22 + i * 6.5; ctx.beginPath(); ctx.ellipse(0, y, 13 - Math.abs(y + 6) * 0.25, 3, 0.3 * (i % 2 ? 1 : -1), 0, Math.PI); ctx.strokeStyle = 'rgba(150,140,170,0.7)'; ctx.lineWidth = 1.2; ctx.stroke(); }
+    ellipse(ctx, -4, -14, 4, 7, -0.3, 'rgba(255,255,255,0.5)');
+    ctx.restore();
+  },
+  // the Hollow King's coffins (Court of Bones): a stone coffin by the wall, its lid grinding open as its time comes
+  coffin(ctx, st) {
+    const open = st.props && st.props.open ? Math.min(1, st.props.open) : 0;
+    rrect(ctx, -11, -24, 22, 48, 5, '#3a3f43', OUT, 2.2);
+    rrect(ctx, -8, -21, 16, 42, 4, '#24282b');
+    if (open > 0) glow(ctx, 0, 0, 22 + open * 10, '#6dff9a', 0.4 * open);
+    ctx.save(); ctx.translate(open * 6, -open * 3); ctx.rotate(open * 0.25);
+    rrect(ctx, -12, -25, 24, 50, 5, '#525a5e', OUT, 2.2);
+    line(ctx, 0, -17, 0, 10, 'rgba(10,12,12,0.6)', 2.5); line(ctx, -6, -10, 6, -10, 'rgba(10,12,12,0.6)', 2.5);
+    ctx.restore();
+  },
+  // a skeleton out of a coffin: old bones in a rusted helm, a notched sword
+  skeleton(ctx, st, enraged) {
+    const sw = swing(actP(st, 'attack')), bone = '#e6e0cc';
+    glow(ctx, 0, 0, 22, '#6dff9a', 0.15);
+    for (const sy of [-1, 1]) limb(ctx, [-2, 5 * sy, -9, 9 * sy + Math.sin(st.t * 8) * 2 * sy], bone, 2);
+    ellipse(ctx, -2, 0, 7, 9, 0, 'rgba(30,30,28,0.6)', OUT, 1.5);
+    for (let i = -1; i <= 1; i++) line(ctx, -5, i * 3.5, 1, i * 3.5, bone, 1.6);
+    ctx.save(); ctx.translate(4, 9); ctx.rotate(0.5 + sw * 1.3);
+    poly(ctx, [2, -1.8, 26, -1.8, 30, 0, 26, 1.8, 2, 1.8], '#8a8070', OUT, 1.3);
+    ctx.restore();
+    circle(ctx, 5, 0, 6.5, bone, OUT, 1.8);
+    circle(ctx, 7, -2.2, 1.6, enraged ? '#ff4a2a' : '#6dff9a'); circle(ctx, 7, 2.2, 1.6, enraged ? '#ff4a2a' : '#6dff9a');
+  },
 };
 function drawAdd(ctx, kind, x, y, angle, st, enraged, scale = 1) {
   ctx.save();

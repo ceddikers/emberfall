@@ -982,6 +982,8 @@
       case 'eggs': prop('brood', true, end + 0.6); break;
       case 'fang': prop('rear', true, end + 0.4); prop('venom', true, end + 0.2); break;
       case 'volley': prop('silk', true, end + 4.5); prop('rear', true, end + 0.5); break;
+      case 'deluge': prop('venom', true, end + 0.3); prop('rear', true, end + 0.3); break;
+      case 'strand': case 'cocoon': case 'ambush': prop('silk', true, end + 0.4); prop('rear', true, end + 0.3); break;
       case 'chain': case 'orbs': prop('charge', true, end + 0.4); break;
       case 'skyfall': prop('sky', true, end + 0.4); break;
       case 'audience': prop('audience', true, end + 0.3); break;

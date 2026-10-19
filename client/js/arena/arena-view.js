@@ -118,17 +118,15 @@ const ArenaView = {
       poly(c, [x - s, y + s * 0.5, x, y - s * 1.4, x + s, y + s * 0.5], '#3a3240', OUT, 2);
       line(c, x - s * 0.2, y - s * 0.8, x + s * 0.1, y + s * 0.2, 'rgba(255,255,255,0.12)', 2);
     }
-    // the eight pillars the web hangs from, with anchor threads running off them into the dark
+    // the web's anchors: rock spurs in the corners, silk tied off round them and running into the dark (the eight
+    // pillars themselves stand inside the web as props: they're solid, they're cover, and they break)
     for (const [cx, cy] of ARENA.corners(20)) {
       const a = Math.atan2(cy, cx);
       for (const da of [-0.35, 0, 0.35]) line(c, cx, cy, cx + Math.cos(a + da) * 110, cy + Math.sin(a + da) * 110, 'rgba(225,225,240,0.2)', 1.2);
-      ellipse(c, cx + 6, cy + 10, 40, 22, 0, 'rgba(0,0,0,0.45)');
-      circle(c, cx, cy, 34, '#3b3344', OUT, 3);
-      circle(c, cx - 4, cy - 6, 25, '#4a4156');
-      circle(c, cx - 10, cy - 13, 10, 'rgba(255,255,255,0.09)');
-      for (let k = 0; k < 3; k++) { const q = a + Math.PI + (k - 1) * 0.5; line(c, cx + Math.cos(q) * 12, cy + Math.sin(q) * 12, cx + Math.cos(q) * 30, cy + Math.sin(q) * 30, 'rgba(14,11,18,0.55)', 2); }
-      // silk wound around the pillar where the web is tied off
-      for (let k = 0; k < 3; k++) ellipse(c, cx, cy + 2 - k * 6, 30 - k * 2, 9, 0.15 * (k - 1), null, 'rgba(235,235,250,0.4)', 1.6);
+      ellipse(c, cx + 4, cy + 7, 24, 13, 0, 'rgba(0,0,0,0.45)');
+      circle(c, cx, cy, 19, '#3b3344', OUT, 2.5);
+      circle(c, cx - 3, cy - 4, 13, '#4a4156');
+      for (let k = 0; k < 2; k++) ellipse(c, cx, cy + 1 - k * 5, 17 - k * 2, 6, 0.15 * (k - 0.5), null, 'rgba(235,235,250,0.4)', 1.4);
     }
     // where the live details go (drawAmbient): dew on the threads, drips into the pools, spiders on the spokes, spores
     const dew = [];
@@ -1472,18 +1470,25 @@ const ArenaView = {
   },
   // Skitterra's pillars: a rough column of cave rock with her silk wound round it
   rockPillar(ctx, pr, last, worn, t) {
-    const { x, y, r } = pr, h = 58;
-    ellipse(ctx, x + 6, y + 8, r * 1.25, r * 0.66, 0, 'rgba(0,0,0,0.5)');
-    ctx.beginPath(); ctx.ellipse(x, y, r, r * 0.55, 0, 0, Math.PI); ctx.lineTo(x - r * 0.88, y - h); ctx.ellipse(x, y - h, r * 0.88, r * 0.48, 0, Math.PI, 0, true); ctx.closePath();
+    const { x, y, r } = pr, h = 64, rr = rng(pr.id * 31 + 7);
+    ellipse(ctx, x + 6, y + 8, r * 1.3, r * 0.66, 0, 'rgba(0,0,0,0.5)');
+    // a rough column of cave rock, wider at the foot, with a broken top that runs up out of sight
+    const L = [], R = [];
+    for (let i = 0; i <= 6; i++) { const q = i / 6, w = r * (1.05 - q * 0.25); L.push([x - w + (rr() - 0.5) * 7, y - q * h]); R.push([x + w + (rr() - 0.5) * 7, y - q * h]); }
+    ctx.beginPath(); ctx.moveTo(...L[0]); for (const p of L) ctx.lineTo(...p);
+    ctx.lineTo(x - r * 0.3, y - h - 10); ctx.lineTo(x + r * 0.15, y - h - 4); ctx.lineTo(x + r * 0.5, y - h - 12);
+    for (let i = R.length - 1; i >= 0; i--) ctx.lineTo(...R[i]);
+    ctx.quadraticCurveTo(x, y + r * 0.5, L[0][0], L[0][1]); ctx.closePath();
     const g = ctx.createLinearGradient(x - r, 0, x + r, 0);
-    g.addColorStop(0, '#2c2634'); g.addColorStop(0.4, '#4e4459'); g.addColorStop(1, '#241e2a');
+    g.addColorStop(0, '#2a2232'); g.addColorStop(0.35, '#54485e'); g.addColorStop(0.7, '#3a3144'); g.addColorStop(1, '#1e1824');
     ctx.fillStyle = g; ctx.fill(); ctx.strokeStyle = OUT; ctx.lineWidth = 3; ctx.stroke();
-    for (let k = 0; k < 3; k++) line(ctx, x - r * 0.5 + k * r * 0.45, y - h + 8, x - r * 0.55 + k * r * 0.5, y - 4, 'rgba(14,11,18,0.45)', 2);
-    ellipse(ctx, x, y - h, r * 0.88, r * 0.48, 0, '#5a4e66', OUT, 2.5);
-    ellipse(ctx, x - r * 0.25, y - h - r * 0.1, r * 0.3, r * 0.14, 0, 'rgba(255,255,255,0.1)');
-    // silk tied off round it, and a thread running up into the dark
-    for (let k = 0; k < 3; k++) { ctx.beginPath(); ctx.ellipse(x, y - h * (0.3 + k * 0.22), r * (0.98 - k * 0.04), r * 0.5, 0.12 * (k - 1), 0, Math.PI); ctx.strokeStyle = 'rgba(235,235,250,0.5)'; ctx.lineWidth = 1.6; ctx.stroke(); }
-    line(ctx, x, y - h, x * 1.3, y * 1.3 - h - 30, 'rgba(235,235,250,0.22)', 1.2);
+    // strata and a lit edge
+    for (let k = 1; k < 5; k++) { const yy = y - h * k / 5 + (rr() - 0.5) * 6; line(ctx, x - r * 0.8, yy, x + r * (0.3 + rr() * 0.5), yy + (rr() - 0.5) * 8, 'rgba(14,11,18,0.5)', 1.8); }
+    line(ctx, L[1][0] + 5, L[1][1], L[5][0] + 5, L[5][1], 'rgba(220,210,240,0.16)', 2);
+    for (let i = 0; i < 3; i++) glow(ctx, x + (rr() - 0.5) * r, y - rr() * h * 0.4, 10, '#5a7a4a', 0.35);   // cave moss at the foot
+    // silk wound round it where the web is tied off, and threads running up into the dark
+    for (let k = 0; k < 2; k++) { const yy = y - h * (0.45 + k * 0.25); ctx.beginPath(); ctx.moveTo(x - r * 0.95, yy - 4); ctx.quadraticCurveTo(x, yy + 8, x + r * 0.95, yy - 6 + k * 3); ctx.strokeStyle = 'rgba(235,235,250,0.55)'; ctx.lineWidth = 1.4; ctx.stroke(); }
+    for (const d of [-0.3, 0.25]) line(ctx, x + r * d, y - h - 6, x + r * d + Math.sign(x || 1) * 40, y - h - 120, 'rgba(235,235,250,0.18)', 1.1);
     if (worn) this.cracks(ctx, x, y - h * 0.5, r * 0.9, pr.id, 'rgba(10,8,12,0.6)');
     if (last) { this.cracks(ctx, x, y - h * 0.5, r * 1.9, pr.id + 1); poly(ctx, [x - r * 0.9, y - h * 0.8, x - r * 0.45, y - h * 0.6, x - r * 0.88, y - h * 0.35], '#141018', OUT, 1.5); }
   },

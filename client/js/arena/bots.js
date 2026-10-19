@@ -22,6 +22,11 @@ const BotAI = {
   pickEnemy(bot, view) {
     const adds = view.adds || [];
     if (!adds.length || bot.role !== 'dps') return null;
+    // something holding a party member (Skitterra's cocoon) comes first; then whatever the room asks for (adds.prio)
+    const coc = adds.find(a => a.kind === 'cocoon');
+    if (coc) return coc.id;
+    const pri = adds.filter(a => a.prio).sort((a, b) => b.prio - a.prio)[0];
+    if (pri) return pri.id;
     const enr = adds.find(a => a.enraged);
     if (enr) return enr.id;
     const frac = a => a.hp / a.maxHp;

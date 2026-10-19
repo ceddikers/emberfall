@@ -150,6 +150,27 @@ const BOSS_VFX = (() => {
       VFX.shock(s.x, s.y, { r: AR(), color: '#ffb070', w: 10, dur: 0.7, flat: 1 });
       roomTint('#ff6a2a', 0.22);
     },
+    // Skitterra: the acid comes down everywhere the shadows don't reach; a strand snaps taut
+    deluge(tg) {
+      roomTint('#7ad83a', 0.22, 0.7);
+      for (const q of scatter({ kind: 'circle', x: 0, y: 0, r: AR() }, 16)) VFX.splash(q.x, q.y, { color: '#9adf3a', n: 5, speed: 1.1 });
+      VFX.shock(tg.live.x, tg.live.y, { r: AR(), color: '#c8ff8a', w: 10, dur: 0.6, flat: 1 });
+      shake(7);
+    },
+    strand(tg) {
+      const s = tg.live;
+      shapeFlash(s, '#f4f0ff', { a: 0.3, dur: 0.4 });
+      streak(s.x, s.y, s.angle, '#ffffff', { len: s.len, w: 8, dur: 0.35 });
+      shake(4);
+    },
+    ambush(tg) {
+      const s = tg.live;
+      VFX.shock(s.x, s.y, { r: s.r * 1.4, color: '#d8c8ff', w: 12, dur: 0.5, flat: 1 });
+      VFX.debris(s.x, s.y, { color: '#4a4156', n: 14, speed: 1.4 });
+      VFX.smoke(s.x, s.y, { color: '#8a8098', n: 10, size: 40, a: 0.6, speed: 140 });
+      VFX.decal(s.x, s.y, { style: 'crack', r: s.r * 0.8, dur: 3, a: 0.6, seed: Math.random() * 6 });
+      shake(12);
+    },
     // Butcher's Charge: a trail of dust and broken grout along his path (the impact at the end comes as a 'slam')
     charge(tg) {
       const s = tg.live, ca = Math.cos(s.angle), sa = Math.sin(s.angle);
@@ -423,7 +444,8 @@ const BOSS_VFX = (() => {
   const CAST_COLOR = {
     grubnak: { def: '#ffb050', boil: '#ff6a2a', bell: '#9ffff4', whisk: '#fff0c8', raise: '#ff7a1a', flop: '#f0e0c8', throw: '#ffe6d0', flambe: '#6ab0ff',
       charge: '#ff8a4a', larder: '#ffd8a0', gut: '#c8d87a', hook: '#e8eef4', drains: '#b89a5a' },
-    skitterra: { def: '#d08aff', mist: '#9adf3a', spit: '#9adf3a', wrap: '#f4f0ff', silk: '#f4f0ff', web: '#f4f0ff', lunge: '#ff7ac0', eggs: '#e8ff9a', fang: '#ff7ac0', volley: '#f4f0ff' },
+    skitterra: { def: '#d08aff', mist: '#9adf3a', spit: '#9adf3a', wrap: '#f4f0ff', silk: '#f4f0ff', web: '#f4f0ff', lunge: '#ff7ac0', eggs: '#e8ff9a', fang: '#ff7ac0', volley: '#f4f0ff',
+      deluge: '#9adf3a', strand: '#f4f0ff', ambush: '#b090ff', cocoon: '#f4f0ff' },
     volkar: { def: '#7fe8ff', surge: '#ffe08a', crash: '#ffe27a', field: '#d79bff', gale: '#e8f4ff', walls: '#e8f4ff', fist: '#9ff4ff', skyfall: '#dff4ff' },
     hollowking: { def: '#6dff9a', gaze: '#f0fff4', doom: '#b46aff', bells: '#ffd88a', cleave: '#ff8a7a', night: '#8aa0ff', audience: '#ffe6a0' },
   };
