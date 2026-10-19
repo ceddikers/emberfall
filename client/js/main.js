@@ -163,11 +163,32 @@
     }
     return best;
   }
+  // the ally the cursor is right on top of (a tight hit test, unlike softAlly's nearest-within-reach), or null
+  function hoverAlly(ab) {
+    if (!started || mouse.x == null) return null;
+    const id = allyUnderMouse();
+    return id != null && validAlly(id, ab) ? id : null;
+  }
+  // ` locks the most hurt ally; pressing it again quickly moves on to the next most hurt
+  let hurtCycleAt = -9;
+  function lockMostHurt() {
+    const list = partyOrder().filter(id => validAlly(id)).map(id => {
+      const s = inArena() ? raid.party.get(id) : null;
+      return { id, f: s && s.maxHp > 1 ? s.hp / s.maxHp : 1 };
+    }).sort((a, b) => a.f - b.f || a.id - b.id);
+    if (!list.length) return;
+    const i = list.findIndex(x => x.id === lockedAlly);
+    lockedAlly = now - hurtCycleAt < 1.5 && i >= 0 ? list[(i + 1) % list.length].id : list[0].id;
+    hurtCycleAt = now;
+  }
   // Shift + a heal key casts it on yourself (kept until that press fires, since presses can queue)
   let selfCast = null;
   function allyTargetId(ab) {
     if (selfCast && now < selfCast.until && actor && actor.abilities[selfCast.i] === ab && validAlly(Net.id, ab)) return Net.id;
     if (hoverFrame != null && validAlly(hoverFrame, ab)) return hoverFrame;
+    // mouseover: pointing straight at an ally in the world sends the heal there, ahead of your locked ally
+    const under = hoverAlly(ab);
+    if (under != null) return under;
     if (lockedAlly != null && validAlly(lockedAlly, ab)) return lockedAlly;
     // a tank (Spellwarden) is usually pointing at the boss, not an ally: only a frame or a locked ally counts
     if (player.cls && player.cls.role === 'tank') return Net.id;
@@ -758,6 +779,7 @@
     makeActor();
     RaidUI.resetRoster();
     RaidUI.setRoster(msg.roster);
+    applyFrameDock();
     RaidUI.show(true);
     setSceneUI();
     updateCamera(0, true);
@@ -806,8 +828,9 @@
   // the key line at the bottom (tanks also get their taunt key)
   function updateHelp() {
     const tauntKey = player.cls && player.cls.role === 'tank' ? ' · <kbd>T</kbd> taunt' : '';
+    const hurtKey = healerish() ? ' · <kbd>&#96;</kbd> most hurt' : '';
     $('help').innerHTML = scene === 'arena'
-      ? `<kbd>Right-click</kbd> move · <kbd>Left-click</kbd> ally or frame to target · <kbd>1</kbd>-<kbd>4</kbd> target party · <kbd>Shift</kbd>+skill on yourself · <kbd>Space</kbd> dash${tauntKey}`
+      ? `<kbd>Right-click</kbd> move · <kbd>Left-click</kbd> ally or frame to target · <kbd>1</kbd>-<kbd>4</kbd> target party${hurtKey} · <kbd>Shift</kbd>+skill on yourself · <kbd>Space</kbd> dash${tauntKey}`
       : `<kbd>Right-click</kbd> move · <kbd>Left-click</kbd> interact · <kbd>Q</kbd><kbd>W</kbd><kbd>E</kbd><kbd>R</kbd><kbd>D</kbd><kbd>F</kbd> skills · <kbd>Space</kbd> dash${tauntKey} · <kbd>Enter</kbd> chat`;
   }
 
@@ -1233,6 +1256,7 @@
     if (e.key.toLowerCase() === 'i' && !selOpen() && overlay.classList.contains('hidden')) { Inventory.toggle(); return; }
     if (panelOpen()) return;
     if (e.key === 'Enter') { chatInput.classList.remove('hidden'); chatInput.focus(); e.preventDefault(); return; }
+    if (e.code === 'Backquote') { e.preventDefault(); lockMostHurt(); return; }
     if (/^[1-4]$/.test(e.key)) {
       const list = partyOrder();
       const pick = list[Number(e.key) - 1];
@@ -1614,7 +1638,7 @@
     const id = c && c.ab.target === 'ally' && typeof c.target === 'number' ? c.target : allyTargetId(ab);
     const e = entById(id);
     if (!e) return;
-    const locked = id === lockedAlly || id === hoverFrame || (selfCast && id === Net.id);
+    const locked = id === lockedAlly || id === hoverFrame || id === hoverAlly(ab) || (selfCast && id === Net.id);
     const col = '#8dffa0', k = heroScale() / HERO_SCALE;
     ctx.save(); ctx.translate(e.x, e.y + 4);
     if (locked || c) {
@@ -2413,7 +2437,10 @@
   });
 
   // clicking your locked ally's frame again lets go of them
-  RaidUI.init({ onFrame: id => { lockedAlly = lockedAlly === id ? null : id; }, onLeave: () => leaveRaid(true) });
+  RaidUI.init({ onFrame: id => { lockedAlly = lockedAlly === id ? null : id; }, onLeave: () => leaveRaid(true),
+    onDock: where => { if (player.cls) Save.setSetting(`frames-${player.cls.role}`, where); } });
+  // where the party frames sit for your role: healers start with them above the hotbar
+  const applyFrameDock = () => { if (player.cls) RaidUI.dock(Save.setting(`frames-${player.cls.role}`, player.cls.role === 'healer' ? 'strip' : 'left')); };
 
   // inventory: the hero figure uses the painted portrait if there is one, else the sprite on a sigil
   const invSt = newSt();

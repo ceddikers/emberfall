@@ -42,6 +42,7 @@ const RaidUI = (() => {
   // heals over time wear their ability's icon: [class, ability, name]
   const HOT_ICON = { petal: ['cleric', 'petal', 'Dawn Petal'], prayer: ['cleric', 'prayer', 'Prayer Circle'], rejuv: ['grovekeeper', 'rejuv', 'Rejuvenate'], growth: ['grovekeeper', 'growth', 'Wild Growth'] };
 
+  let docked = 'left', onDock = null, hudObserved = false;
   let root, frames = {}, onFrame = null, rosterKey = '', lastT = 0, bossTrail = 1, roster = [], threatKey = '', nextKey = '', statusKey = '';
 
   function init(handlers) {
@@ -57,7 +58,8 @@ const RaidUI = (() => {
         <div class="bb-cast hidden"><div class="fill"></div><span></span></div>
         <div class="bb-next hidden"></div>
       </div>
-      <div id="raid-left"><div id="party-frames"></div><div id="threat-meter" class="hidden"></div></div>
+      <div id="raid-left"><div id="pf-wrap"><button id="pf-dock" class="pf-dock" type="button"></button><div id="party-frames"></div></div><div id="threat-meter" class="hidden"></div></div>
+      <div id="party-strip"></div>
       <div id="countdown" class="hidden"></div>
       <div id="trial-lore" class="hidden"><b></b><p></p><p></p></div>
       <div id="down-veil" class="hidden"><span>Down</span></div>
@@ -68,6 +70,11 @@ const RaidUI = (() => {
       const row = e.target.closest('.pf');
       if (row) { e.stopPropagation(); onFrame(Number(row.dataset.id)); }
     });
+    // the frames live top-left or in a strip just above the hotbar (healers start there); the little button swaps
+    onDock = handlers.onDock || null;
+    $('pf-dock').addEventListener('mousedown', e => e.stopPropagation());
+    $('pf-dock').addEventListener('click', () => { dock(docked === 'strip' ? 'left' : 'strip'); if (onDock) onDock(docked); });
+    dock('left');
     // the boss plate grows with its status row and upcoming moves: keep the target frame just below it (style.css)
     if (typeof ResizeObserver !== 'undefined') {
       const bb = $('boss-bar');
@@ -87,7 +94,32 @@ const RaidUI = (() => {
     document.body.appendChild(res);
   }
 
-  function show(v) { root.classList.toggle('hidden', !v); if (!v) { $('countdown').classList.add('hidden'); $('down-veil').classList.add('hidden'); $('trial-lore').classList.add('hidden'); } }
+  // 'left' (under the corner, with the threat meter) or 'strip' (a row above the hotbar, close to where you look)
+  const DOCK_ICON = {
+    left: svg('<path d="M1.5 9.5h9M3.5 7.5l2.5 2 2.5-2M6 2v7.5" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>'),
+    strip: svg('<path d="M1.5 2.5h9M3.5 4.5 6 2.5l2.5 2M6 10V2.5" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>'),
+  };
+  function dock(where) {
+    docked = where === 'strip' ? 'strip' : 'left';
+    const wrap = $('pf-wrap'), home = docked === 'strip' ? $('party-strip') : $('raid-left');
+    if (wrap.parentNode !== home) home.insertBefore(wrap, home.firstChild);
+    root.classList.toggle('pf-strip', docked === 'strip');
+    const btn = $('pf-dock');
+    btn.innerHTML = DOCK_ICON[docked];
+    btn.dataset.tip = docked === 'strip' ? 'Move the party frames back to the corner' : 'Move the party frames above your skills';
+  }
+  // keep the strip just above the hotbar, however tall the hotbar's rows get
+  function trackHud() {
+    const hud = document.getElementById('combat-hud');
+    if (!hud || hudObserved || typeof ResizeObserver === 'undefined') return;
+    hudObserved = true;
+    new ResizeObserver(() => {
+      const r = hud.getBoundingClientRect();
+      if (r.height > 0) document.documentElement.style.setProperty('--hud-top', Math.round(window.innerHeight - r.top) + 'px');
+    }).observe(hud);
+  }
+
+  function show(v) { if (v) trackHud(); root.classList.toggle('hidden', !v); if (!v) { $('countdown').classList.add('hidden'); $('down-veil').classList.add('hidden'); $('trial-lore').classList.add('hidden'); } }
 
   function setRoster(list0) {
     const key = list0.map(r => r.id).join(',');
@@ -373,5 +405,5 @@ const RaidUI = (() => {
       `<div class="rr ${cls}"><b>${n}</b><span>${esc(v)}</span><small>${esc(tip)}</small></div>`).join('')}</div>`;
   }
 
-  return { init, show, setRoster, update, meter, showResults, hideResults, resetRoster: () => { rosterKey = ''; } };
+  return { init, show, setRoster, update, meter, showResults, hideResults, dock, resetRoster: () => { rosterKey = ''; } };
 })();
