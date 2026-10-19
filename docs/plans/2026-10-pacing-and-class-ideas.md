@@ -1,5 +1,7 @@
 # Pacing models and more class ideas (draft, 2026-10-19)
 
+> **Mostly shelved.** The user felt these don't fit the game, except **Ironpalm** (the fighting-game combo tank), which they liked: it joins wave 2 of the new classes alongside the seven in `2026-10-new-classes.md`. The rest are kept for reference only.
+
 ## GCD or not: have both
 
 The 2.5s global cooldown is one way to pace a class, not a rule of the game. It's why the current nine read well and balance easily: every class does about one "real" action per 2.5s, so damage per second is easy to compare, bots are simple, and nobody wins by mashing.
