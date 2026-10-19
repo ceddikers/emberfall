@@ -2293,7 +2293,7 @@ const IRONPALM = {
   RUSH: 0.03, RUSH_MAX: 8, RUSH_FADE: 2.5,   // Avalanche Fist's Momentum: +3% a named move, up to 8, gone 2.5s after the last
   OPENING: 4,        // a read tankbuster: the next Heavy within 4s is a free Thousand Palms
   READ: { pct: 0.2, dur: 1.2, counter: 63 },
-  pool: { key: 'breath', max: 100, regen: 6, rest: 36, delay: 0.45 },
+  pool: { key: 'breath', max: 100, regen: 11, rest: 36, delay: 0.45 },   // (delay: counted from the end of the last press's recovery, engine.js)
 };
 const IP_SLOT = { L: 0, H: 1, K: 2 };
 const IP_ANIM = { L: 'palm', H: 'fist', K: 'kick' };
@@ -2461,7 +2461,7 @@ function ipRead(k, d) {
 }
 
 KITS.ironpalm = {
-  potMult: 0.67, // balance knob (tools/simulate.js)
+  potMult: 0.68, // balance knob (tools/simulate.js)
   pacing: { kind: 'combo', gcd: false, buffer: 0.45, bufferSize: 2, repeat: false, pool: IRONPALM.pool, itemGcd: (k, ab) => !!ab.named },
   auto: { kind: 'fist', potency: 40, range: MELEE },  // passive auto-attack (see ENGINE.AUTO_EVERY)
   gauge: { kind: 'breath', key: 'breath', max: 100, label: 'Breath', w: 250 },
