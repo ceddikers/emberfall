@@ -167,3 +167,16 @@
 111. **Thunderhead Mantle** (`m_thunderhead`, Volkar, armour): Heavy slate-grey shoulder plates with a short storm-cloud-grey cape, a flat bright blue lightning bolt running down the chest plate, and rain beading on the iron.
 112. **Crown of the Barrow** (`m_crown`, the Hollow King, accessory): A tarnished gold crown with tall, thin spikes, one spike broken off, a grave-green gem at the front and a few strands of old cobweb between the points.
 113. **Mantle of the Dead Court** (`m_deadcourt`, the Hollow King, armour): A deep plum-black royal mantle with a high stiff collar, a tarnished gold chain of office across the chest, a small grave-green brooch, and a frayed, grave-dusted hem.
+
+## Alembist sheet (new healer, 2026-10; copper orange accent)
+**Style:** the shared style above and each boss's tier theme. A retort (the Alembist's weapon) is a glass flask with a long bent neck; draw it diagonal like the other weapons, the bulb bottom-left and the neck rising to the top-right. Coats stand front view. Until the art arrives the bag draws a simple retort shape. Files: `client/items/<key>.png` (key in brackets).
+
+114. **Recruit's Retort** (`alembist_w0`): A plain, slightly cloudy glass retort with a chipped neck, a cork stopper and a frayed cord tied round the bulb.
+115. **Stockpot Retort** (`alembist_w1`): A squat copper-bottomed retort like a little stockpot with a glass neck, a dented ladle handle soldered on as a grip, thick orange broth sloshing inside.
+116. **Venomglass Retort** (`alembist_w2`): A retort of dark green glass with a silver web etched round the bulb, two curved spider-fang clasps holding the neck, a bright venom-green liquid inside.
+117. **Stormcatcher Retort** (`alembist_w3`): A clear glass retort caged in twisted dark iron wire, a tiny storm cloud trapped in the bulb with a flat blue zigzag bolt.
+118. **Barrow-Lamp Retort** (`alembist_w4`): A tarnished gold and glass retort shaped like a grave lantern, a small crown-shaped stopper, a pale grave-green liquid with one flat green flame floating on it.
+119. **Grease-Spattered Apron** (`alembist_a1`): A heavy canvas apron splashed with sauce and grease, a wooden spoon and a corked vial in its front pocket, copper buckles.
+120. **Silk-Lined Lab Coat** (`alembist_a2`): An olive lab coat lined with pale spider silk showing at the open front and cuffs, a row of chitin buttons and a small vial loop on the chest.
+121. **Oilskin Coat of the Summit** (`alembist_a3`): A long slate-grey oilskin coat with a high storm collar, rain beading on its shoulders, a bandolier of three blue-tinted vials across it.
+122. **Gravedust Smock** (`alembist_a4`): A plum-grey smock dusted pale with grave dust, a tarnished gold clasp at the throat, a few small labelled jars hanging from a cord belt.

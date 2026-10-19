@@ -212,6 +212,44 @@ The highest ceiling: newbies reach 70% of pro damage. The boss's hitbox ring sho
 
 *Ceiling:* plan Haste for raidwides and burst windows, fire Rewind right after a tankbuster, and land Stasis on the boss's biggest attack.
 
+<!-- classes-b: Alembist (new healer, 2026-10) -->
+**Alembist, Alchemist** (◆◆◆). Signature: **brewing ahead**. Gauge: a copper still with a bandolier of vials. Healing comes from vials you brewed earlier, so you heal now with what you planned 10 seconds ago.
+
+| Key | Skill | Type | What it does |
+|---|---|---|---|
+| Q | Ember | GCD (0.75 s) | Add Ember to the brew. Two reagents make a vial. |
+| W | Dew | GCD (0.75 s) | Add Dew. |
+| E | Salt | GCD (0.75 s) | Add Salt. |
+| R | Throw | GCD (1.0 s) | Throw the oldest vial at your heal target: it shatters and splashes everyone close by. Bombs fly at the enemy instead. |
+| D | Distill | oGCD | Your next two reagents come off the GCD at once (30 s cooldown). |
+| F | Grand Batch | oGCD | Fill every empty slot with copies of the last vial you brewed (120 s cooldown). |
+
+| Recipe | Vial | Effect |
+|---|---|---|
+| Dew + Dew | Mending Draught | Big splash heal (480). Raises a fallen ally it lands on (once every 30 s). |
+| Ember + Ember | Fire Bomb | Flies at the enemy: 360. |
+| Salt + Salt | Salt Ward | A salt circle: allies inside take 20% less damage for 6 s. |
+| Dew + Ember | Steam | A healing cloud: 80 every 1.5 s for 9 s to everyone inside. |
+| Dew + Salt | Salve | Shields everyone splashed (280) and washes off Vulnerability and Damage Down. |
+| Ember + Salt | Quickpowder | The party acts 10% faster for 10 s; splashed allies shake off slows and roots. |
+
+- **The bandolier** holds 3 vials. A vial grows 30% stronger over 10 s (ripe), and spoils at 40 s (wasted).
+- Reagent order doesn't matter (Dew + Ember = Ember + Dew). A brew left half done stays in the still.
+- The gauge shows each vial's colour, ripeness and spoiling; its tooltip lists the recipes.
+
+*Ceiling:* keep the bandolier full of ripe vials of the right kind before the damage lands (Salt Ward before the buster, Steam before the raidwide), throw bombs only when nobody needs healing, and never let a vial spoil.
+
+**Design changes from the plan (`docs/plans/2026-10-new-classes.md`):**
+- **Throw lands at your heal target** (the healer ally-targeting rules: locked ally, mouse-over, or yourself), not at a raw cursor point. Bombs fly at your enemy target. This works the same over the network and for bots.
+- **Quickpowder** gives party haste and cleanses slows and roots, since the engine has no movement-speed buff.
+- **Salve** cleanses Vulnerability and Damage Down (the debuffs the bosses actually apply).
+- **The Mending Draught raises** a fallen ally it lands on (once every 30 s): six buttons left no room for a raise.
+- **Distill** makes the next two reagents free of the GCD (an instant brew), rather than brewing a vial itself.
+- Reagents have a 0.75 s GCD and Throw 1.0 s, so a brew-and-throw takes about as long as one normal GCD heal.
+- **Volatile's Reactions** need a third reagent, which comes from **Catalyst** (replacing Distill, 2 charges, 14 s): while it lasts, a brew takes three reagents.
+- **Apothecary** picks which vial to throw with Shift+R (Shift is self-cast for every other healer).
+<!-- /classes-b -->
+
 ### Simulation results (`node tools/simulate.js`)
 
 The sim runs a 6-minute fight twice per class. The *pro* follows that class's optimal priorities. The *newbie* model:
@@ -233,6 +271,7 @@ The sim runs a 6-minute fight twice per class. The *pro* follows that class's op
 | Cleric | 658 | 1037 | 63% |
 | Grovekeeper | 744 | 1044 | 71% |
 | Chronomancer | 834 | 1122 | 74% |
+| Alembist | 632 | 1090 | 58% |
 
 These numbers include auto-attacks. Each class's `potMult` was lowered when autos were added, so pro damage stayed where it was. Newbies gained a little, because autos keep hitting while they move or hesitate.
 
@@ -487,6 +526,8 @@ The user picked: **story vignettes**, **one per spec**, **built so the spec's tr
 | Nightstalker | The Knife Behind | His Royal Gaze, again and again: look away, stay behind. Backstab. |
 | Cataclysm | The Falling Star | He holds the middle of the hall and barely moves. Meteor. |
 | Sigilmancer | The Burning Circle | His sceptre sweeps one side of the hall, then the other; straight behind him never burns. A circle that stays safe. |
+| Apothecary | The Long Vigil | The bells stay quiet for a long while, then ring three times in a row. A deep bandolier brewed in the quiet. |
+| Volatile | The Short Fuse | Short, sharp knells with little time between. Reactions brewed and thrown fast. |
 
 **How it's built:** `client/js/arena/trials.js` holds `TRIALS` (name, lore, outro, allies, target length, enrage, regen, who must live, script) and `trialDef(specId)`, which turns one into a boss definition. It keeps the Hollow King's id, so his hall, art and telegraphs all apply, and sizes the Shade's health for the party. The raid id is `trial:<spec>`; `main.js` (`startTrial`, `raidDef`) runs it as a one-human raid, skips loot and clear records, and calls `Save.recordTrial`. `save.js` adds `trialsOpen`, `trialDone`, `recordTrial` and `specState` ('locked', 'trial' or 'open'); `Save.spec` reads a spec that isn't unlocked as none.
 
@@ -513,6 +554,8 @@ The user picked: **story vignettes**, **one per spec**, **built so the spec's tr
 | **Grovekeeper · Moonwell** (The Silver Pool) | Placed healing | Wild Growth becomes **Moonwell**: a 12 s pool of moonlight at an ally's feet that heals everyone standing in it every 1.5 s (45 s cooldown). Bots step into it. |
 | **Chronomancer · Echoist** (The Second Voice) | Delayed healing | Temporal Bolt and Recall repeat 3 s later at half strength. Accelerando becomes **Echo Chamber**: the same party haste, and echoes are full strength while it lasts. |
 | **Chronomancer · Accelerant** (The Quickened Hour) | Party support | Haste drains Flux 40% slower and its Bolts heal the party more; Accelerando gives 15% for 20 s; Slow heals the link a little less. |
+| **Alembist · Apothecary** (The Prepared Hand) | A deep, planned stock | The bandolier holds 5 vials and they ripen in 5 s. Shift+R picks which vial Throw sends next (a chevron marks it). A little less potent per vial. |
+| **Alembist · Volatile** (The Short Fuse) | Hidden recipes | Distill becomes **Catalyst** (2 charges, 14 s): your next brew takes three reagents and makes a **Reaction**. The seven Reactions are hidden: the Catalyst tooltip shows them sealed until you brew one, and found ones are saved per hero. Vials heat up in 4 s and then their **fuse** burns: 6 s later an unthrown vial goes off on you at 60% (bombs burn you). A wrong three-reagent mix fizzles. |
 
 **DPS (design choices made together on 2026-10-19; the Sigilmancer was the user's own idea, a Black Mage-style circle):**
 
@@ -558,6 +601,7 @@ Each hero has a small talent tree: **5 rows of 3 talents, one pick per row**. Ta
 | Cleric / Aegis / Inquisitor | 1,038 / 1,026 / 1,167 | 1,128 / 1,141 / 1,370 | +8.6% / +11.3% / +17.4% |
 | Grovekeeper / Lifebinder / Moonwell | 1,044 / 1,041 / 1,051 | 1,194 / 1,139 / 1,198 | +14.4% / +9.5% / +14.0% |
 | Chronomancer / Echoist / Accelerant | 1,142 / 1,141 / 1,155 | 1,299 / 1,303 / 1,352 | +13.8% / +14.3% / +17.1% |
+| Alembist / Apothecary / Volatile | 1,090 / 1,091 / 1,092 | 1,278 / 1,236 / 1,236 | +17.2% / +13.3% / +13.3% |
 
 The base Pyromancer gains least because the pro's Hot Streak and Heat handling leaves little room; its specs gain normally.
 
@@ -740,6 +784,41 @@ The base Pyromancer gains least because the pro's Hot Streak and Heat handling l
 | V | **Phase Strike** | Shift now leaves an afterimage that fires a free Temporal Bolt (once every 10s). It heals like any Bolt. |
 | V | **Hourglass Ward** | Rewind now also slows time around its target: they take 15% less damage for 6s. |
 | V | **Second Hand** | In Haste, Temporal Bolt now strikes again 2s later at 8% strength, healing as a Bolt does. *Echoist:* Your echoes are 60% strength instead of half. *Accelerant:* In Haste, Temporal Bolt now strikes again 2s later at 6% strength, healing as a Bolt does. |
+
+<!-- classes-b: Alembist talents -->
+#### Alembist
+
+Built to a new rule (2026-10): mostly new moves and changed behaviour, at most one plain number. Two talents **grant a new move** that takes over a button (`grants: true`; the kit's `talentAbilities[id]` takes the slot of the move in its `replaces`, like a spec replacement): Grand Blend (row III) and Quicksilver (row V). Both work in either spec.
+
+| Row | Talent | Effect |
+|---|---|---|
+| I | **Ricochet** | Once every 15s, a Fire Bomb bounces off its target and bursts again a second later, a quarter as strong. |
+| I | **Scorch** | A Fire Bomb leaves its target scorched for 10s: every heal vial you land in that time also flicks a spark into it. |
+| I | **Kindling** | Starting a brew with Ember flicks an ember at your target. (The one number talent.) |
+| II | **Flask Armour** | While your bandolier is full, you take 10% less damage. |
+| II | **Clinging Steam** | Steam clouds follow the ally they landed on. |
+| II | **Spill** | A spoiled vial spills at your feet at half strength instead of going to waste. *Volatile:* a vial whose fuse runs out goes off at full strength, and bombs no longer burn you. |
+| III | **Grand Blend** (new move) | Grand Batch becomes Grand Blend (90s): pour every vial into one. Thrown, it does all of their effects at once, each at 80%. |
+| III | **Oak Cask** | Ripe vials keep ripening, up to 50% stronger at 25s, but spoil at 30s. *Volatile:* fuses burn 2s longer and a vial keeps heating, up to 45% stronger. |
+| III | **Mother Liquor** | Brewing the same recipe twice in a row makes the second vial ripen half again as fast (*Volatile:* heat up). |
+| IV | **Flash Distill** | Distill also drops a copy of your last vial into the bandolier. *Volatile:* Catalyst does, once every 20s. |
+| IV | **Grand Reserve** | Grand Batch's copies start fully ripe and never spoil; a Grand Blend keeps every effect at full strength. *Volatile:* copies start heated with 10s fuses. |
+| IV | **Fume Hood** | Distill also gives the whole party 10% less damage for 8s. *Volatile:* Catalyst does, once every 30s. |
+| V | **Quicksilver** (new move) | Salt becomes Quicksilver, with its own recipes: twice is a Silver Mirror (a pool that keeps everyone in it shielded), with Dew a Silver Tonic (a heal stronger on the badly hurt), with Ember a Fulminate (a bomb that goes off twice). *Volatile:* it counts as Salt in Reactions. |
+| V | **Chain Splash** | Every splash heal leaps on to the most hurt ally and splashes there too, at half strength. |
+| V | **Residue** | Every vial that breaks on an ally leaves a puddle that heals whoever stands in it for 6s. |
+
+Single talents stay under +5% pro DPS (Ricochet +4.3%, Kindling +4.3%, Mother Liquor +4.8%, Flash Distill +4.6% Volatile); Chain Splash and Residue add 10-21% healing.
+
+**How the Alembist is built:** the kit, recipes, Reactions and helpers are the `ALEMBIST` block in `client/js/combat/kits.js`; specs in `specs.js`; talents in `talents.js`. New engine pieces, all generic:
+- `splash` events (kits.js `alemSplash` → `fight.js` `splash()`): a heal, shield, cleanse (bit 1 Vulnerability/Damage Down, bit 2 slowed/rooted) or party effect on every ally within a radius of a point; a vial can also leave a `pool` (heal, shield or damage-reduction ward, optionally following an ally; at most 8 per player).
+- `talentAbilities` + `grants` (engine.js Kit constructor, checked by `tools/check.js`); remote players see a granted move's cast through `a: <ability id>` on the cast message.
+- `recastGcd` may be a function of the kit (Distill makes reagents free of the GCD).
+- `kitFx` messages carry data (`d`), so a vial's arc, colour and target travel with the effect.
+- `Save.found(cls)` / `Save.discover(cls, id)`: `heroes[cls].found`, the Reactions a hero has found (optional field, no version bump).
+- `ICON_ART` in `gauges.js`: drawn placeholder icons for the Alembist's moves until painted ones are listed in `client/icons/alembist/manifest.json`.
+- Bots: `BotAI.alembist` in `bots.js` (brew plans, ripe-vial scoring, Reactions, raising with a Draught).
+<!-- /classes-b -->
 
 ## 5. What's built (code map)
 
