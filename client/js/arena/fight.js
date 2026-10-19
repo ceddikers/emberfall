@@ -49,6 +49,8 @@ class FightSim {
     this.healPools = [];  // players' healing pools on the floor (Moonwell): { from, x, y, r, amount, ticks, next, interval }
     this.tickers = [];    // per-tick hooks a boss script adds with ticker() (the Hollow King's lanterns and Doom)
     this.phase = 1; this.hpTriggers = [];
+    // Vulnerability per avoidable hit: a boss can make it bite harder (def.vuln)
+    this.vulnStep = def.vuln || FIGHT.VULN;
     this.ps = new Map();
     const n = Math.max(1, Math.min(4, getPlayers().length));
     this.scale = { hp: [0.42, 0.62, 0.82, 1][n - 1] * FIGHT.NUM_SCALE, dmg: [0.6, 0.8, 0.92, 1][n - 1] * FIGHT.NUM_SCALE, n };
@@ -82,13 +84,37 @@ class FightSim {
   removePlayer(id) { const s = this.ps.get(id); if (s) { s.alive = false; s.left = true; } }
 
   // ---------------------------------------------------------------- scheduling
-  at(t, fn) { this.events.push({ t, fn, phase: this.phase }); this.events.sort((a, b) => a.t - b.t); }
-  after(dt, fn) { this.at(this.t + dt, fn); }
+  // name: the step's player-facing name (its cast name), for the upcoming-moves feed (bnext); unnamed steps don't show
+  at(t, fn, name) { this.events.push({ t, fn, phase: this.phase, name }); this.events.sort((a, b) => a.t - b.t); }
+  after(dt, fn, name) { this.at(this.t + dt, fn, name); }
   // scheduled event that survives phase changes (enrage timer, follow-ups of a running mechanic)
-  atKeep(t, fn) { this.events.push({ t, fn, phase: this.phase, keep: true }); this.events.sort((a, b) => a.t - b.t); }
-  afterKeep(dt, fn) { this.atKeep(this.t + dt, fn); }
-  // run a list of [delay, fn] steps one after another, starting at the current time
-  seq(steps) { let t = this.t; for (const [dt, fn] of steps) { t += dt; this.at(t, fn); } return t - this.t; }
+  atKeep(t, fn, name) { this.events.push({ t, fn, phase: this.phase, keep: true, name }); this.events.sort((a, b) => a.t - b.t); }
+  afterKeep(dt, fn, name) { this.atKeep(this.t + dt, fn, name); }
+  // run a list of [delay, fn, name] steps one after another, starting at `from` (now); a step without fn is just a gap
+  seq(steps, from = this.t) { let t = from; for (const [dt, fn, name] of steps) { t += dt; if (fn) this.at(t, fn, name); } return t - this.t; }
+  // a phase's repeating rotation: build(n) gives loop n's steps (the last delay is the gap before the next loop). The next
+  // loop is laid out 20 s before this one ends, so the upcoming-moves feed sees across the seam.
+  loop(build, n = 0, from = this.t) {
+    const end = this.t + this.seq(build(n), from);
+    this.at(Math.max(from, end - 20), () => this.loop(build, n + 1, end));
+  }
+  // the next few named steps still to come in this phase (and kept ones, like the enrage)
+  upcoming(n = 3) {
+    const out = [];
+    for (const e of this.events) {
+      if (!e.name || e.t < this.t || !(e.phase === this.phase || e.keep)) continue;
+      out.push(e);
+      if (out.length >= n) break;
+    }
+    return out;
+  }
+  // the upcoming-moves feed: [[name, seconds until], ...], about once a second and whenever the list changes
+  broadcastNext(force) {
+    const up = this.upcoming(3), key = up.map(e => e.name + '@' + e.t.toFixed(2)).join('|');
+    if (!force && key === this.nextKey && (!up.length || this.t - this.lastNext < 1)) return;
+    this.nextKey = key; this.lastNext = this.t;
+    this.emit({ t: 'bnext', l: up.map(e => [e.name, Math.max(0, Math.round((e.t - this.t) * 10) / 10)]) });
+  }
   onHp(frac, fn) { this.hpTriggers.push({ frac, fn }); this.hpTriggers.sort((a, b) => b.frac - a.frac); }
   // start a new phase: drops everything still scheduled for the old one
   setPhase(n) { this.phase = n; this.events = this.events.filter(e => e.phase === n || e.keep); }
@@ -113,7 +139,7 @@ class FightSim {
       if (this.countdown <= 0) {
         this.state = 'live'; this.t = 0;
         this.def.script(this);
-        if (this.def.enrage) this.atKeep(this.def.enrage[this.mode], () => this.enrage());
+        if (this.def.enrage) this.atKeep(this.def.enrage[this.mode], () => this.enrage(), this.def.enrageName || 'Enrage');
         this.emit({ t: 'fight', s: 'live' });
       }
       return;
@@ -138,6 +164,7 @@ class FightSim {
     this.updatePlayers(dt);
     if (this.state !== 'live') return;
     if (this.alive().length === 0) return this.end('wipe');
+    this.broadcastNext();
     // a steady 10/s: stepping the mark by 0.1 (not to "now") stops 33 ms ticks rounding every gap up to 133 ms
     if (this.t - this.lastBroadcast >= 0.1) { this.lastBroadcast = Math.max(this.lastBroadcast + 0.1, this.t - 0.05); this.broadcastBoss(); }
     if (this.t - this.lastPartyBroadcast >= 0.2) { this.lastPartyBroadcast = this.t; this.broadcastParty(); }
@@ -153,6 +180,7 @@ class FightSim {
     this.state = result;
     this.mechs.clear(); this.puddles = []; this.tethers.clear(); this.adds.clear(); this.zones = []; this.healPools = [];
     this.rollers.clear(); this.reels.clear(); this.sweeps.clear();
+    this.events = []; this.broadcastNext(true);
     this.broadcastAdds();
     this.broadcastParty();
     this.emit({ t: 'fight', s: result, time: Math.round(this.t * 10) / 10, stats: this.stats, hp: this.boss.hp, maxHp: this.boss.maxHp, mode: this.mode });
@@ -388,7 +416,7 @@ class FightSim {
       st.avoidable++;
       s.dmgDownEnd = this.t + FIGHT.DMG_DOWN_DUR;
       // lingering ground ticks give Damage Down but don't stack Vulnerability (it would snowball per tick)
-      if (!opts.noVuln) { s.vuln = Math.min(1, (s.vulnEnd > this.t ? s.vuln : 0) + FIGHT.VULN); s.vulnEnd = this.t + FIGHT.VULN_DUR; }
+      if (!opts.noVuln) { s.vuln = Math.min(1, (s.vulnEnd > this.t ? s.vuln : 0) + this.vulnStep); s.vulnEnd = this.t + FIGHT.VULN_DUR; }
     }
     if (s.hp <= 0 && s.mits.some(m => m.kind === 'living') && opts.kind !== 'enrage' && opts.kind !== 'fall') s.hp = 1;
     this.emit({ t: 'pdmg', id: p.id, a: amt, k: opts.kind || 'hit', hp: Math.max(0, s.hp), dd: opts.avoidable ? 1 : 0 });
@@ -515,7 +543,7 @@ class FightSim {
   tether(aId, bId, delay, opts) {
     const th = Object.assign({ id: this.nextMechId++, a: aId, b: bId, start: this.t, resolveAt: this.t + delay, kind: 'long', len: 400, dmg: 10000 }, opts);
     this.tethers.set(th.id, th);
-    this.emit({ t: 'teth', id: th.id, a: aId, b: bId, dur: delay, kind: th.kind, len: th.len });
+    this.emit({ t: 'teth', id: th.id, a: aId, b: bId, dur: delay, kind: th.kind, len: th.len, tag: th.tag || null });
     return th;
   }
   clearTethers() { this.tethers.clear(); this.emit({ t: 'tethx', clear: true }); }
