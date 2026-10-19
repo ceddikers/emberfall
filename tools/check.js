@@ -59,6 +59,9 @@ function data() {
   }
   if (probs.length) fail('Classes, items and enhancements line up', probs.join('\n')); else pass('Classes, items and enhancements line up', `${CLASSES.length} classes, ${Object.keys(ITEMS).length} items, ${Object.keys(ITEM_PERKS).length} enhancements`);
 
+  items();
+  saveUpgrade();
+
   // party bonuses: nothing for one person, the right totals for groups, junk from clients cleaned out
   const b1 = partyBonus({ 1: 1 }), b4 = partyBonus({ 1: 4, 2: 2 });
   const bondOk = !b1.active.length && b4.hp === 0.05 && b4.dmg === 0.03 && b4.crit === 0.02 && b4.active.length === 2 &&
@@ -114,6 +117,126 @@ function data() {
   const okRange = w => w.lo > 180 && w.hi < 220;
   if (okRange(ws) && okRange(wst)) pass('Smoothing holds over a wobbly connection', `speed ${ws.lo.toFixed(0)}-${ws.hi.toFixed(0)}, ${wst.lo.toFixed(0)}-${wst.hi.toFixed(0)} after a stall; by arrival time alone ${wa.lo.toFixed(0)}-${wa.hi.toFixed(0)}`);
   else fail('Smoothing holds over a wobbly connection', `speed ${ws.lo.toFixed(0)}-${ws.hi.toFixed(0)}, after a stall ${wst.lo.toFixed(0)}-${wst.hi.toFixed(0)}; want 180-220`);
+}
+
+// ---------------------------------------------------------------- 2b. items: rarities, effects, loot tables, chests
+function items() {
+  const probs = [];
+  const RARITY_N = RARITY.length;
+  // every item: a known rarity, Common only for Recruit gear, effects only from known hooks, text for every effect
+  for (const it of Object.values(ITEMS)) {
+    if (!Number.isInteger(it.rarity) || it.rarity < 0 || it.rarity >= RARITY_N) probs.push(`${it.key}: bad rarity ${it.rarity}`);
+    if ((it.rarity === 0) !== (it.tier === 0)) probs.push(`${it.key}: Common is for Recruit gear only (tier ${it.tier}, rarity ${it.rarity})`);
+    if (ITEM_PERKS[it.key] && it.rarity !== 3) probs.push(`${it.key}: an enhancement should be Legendary`);
+    if (it.rarity === 1 && it.fx) probs.push(`${it.key}: Uncommon items are a clean stat line (no effect)`);
+    if (it.rarity >= 2 && !it.fx && !ITEM_PERKS[it.key]) probs.push(`${it.key}: a ${RARITY[it.rarity].name} item needs an effect or an enhancement`);
+    if (it.fx && !it.fxText) probs.push(`${it.key}: has effects but no fxText for its tooltip`);
+    for (const e of it.fx || []) {
+      const where = `${it.key} effect ${e.id}`;
+      for (const k of Object.keys(e)) if (!FX_KEYS.has(k)) probs.push(`${where}: unknown field "${k}"`);
+      if (!!e.on === !!e.while) { probs.push(`${where}: needs exactly one of on / while`); continue; }
+      if (e.on) {
+        if (!FX_TRIGGERS[e.on]) probs.push(`${where}: unknown trigger "${e.on}"`);
+        if (!FX_ACTIONS.some(a => e[a])) probs.push(`${where}: a trigger needs an action (${FX_ACTIONS.join(', ')})`);
+        if (FX_MODS.some(m => e[m])) probs.push(`${where}: mods belong in a condition or a buff`);
+        if (e.buff) {
+          if (!(e.dur > 0) || !e.name) probs.push(`${where}: a buff needs dur and name`);
+          for (const m of Object.keys(e.buff)) if (!FX_MODS.includes(m)) probs.push(`${where}: unknown buff mod "${m}"`);
+        }
+        if (e.chance != null && !(e.chance > 0 && e.chance <= 1)) probs.push(`${where}: chance must be in (0, 1]`);
+      } else {
+        if (!FX_CONDITIONS[e.while]) probs.push(`${where}: unknown condition "${e.while}"`);
+        if (!FX_MODS.some(m => e[m])) probs.push(`${where}: a condition needs a mod (${FX_MODS.join(', ')})`);
+        if (FX_ACTIONS.some(a => e[a])) probs.push(`${where}: actions need a trigger`);
+        if (e.while !== 'always' && !(e.frac > 0 && e.frac < 1)) probs.push(`${where}: ${e.while} needs a frac between 0 and 1`);
+      }
+      // modest numbers: effects stay small next to the stat line
+      for (const m of FX_MODS) { const v = (e[m] || 0) + ((e.buff && e.buff[m]) || 0) * (e.stacks || 1); if (v > 0.15) probs.push(`${where}: ${m} ${v} is more than +15%`); }
+    }
+  }
+  // loot tables: every entry exists and belongs there; every rarity has something anyone can get; two Mythics a boss
+  for (const [boss, table] of Object.entries(LOOT_TABLES)) {
+    for (const r of [1, 2, 3, 4]) {
+      const keys = table[r] || [];
+      for (const k of keys) {
+        if (!ITEMS[k]) probs.push(`${boss}: loot table has unknown item ${k}`);
+        else if (ITEMS[k].rarity !== r || ITEMS[k].tier !== BOSS_TIER[boss]) probs.push(`${boss}: ${k} is in the wrong table`);
+      }
+      if (!keys.length) probs.push(`${boss}: no ${RARITY[r].name} items`);
+      else if (!keys.some(k => ITEMS[k] && !ITEMS[k].cls)) probs.push(`${boss}: every ${RARITY[r].name} item is class-locked (a party could roll an empty pool)`);
+    }
+    if ((table[4] || []).length !== 2) probs.push(`${boss}: ${(table[4] || []).length} Mythics (want 2)`);
+  }
+  for (const it of Object.values(ITEMS)) if (it.tier > 0 && !Object.values(LOOT_TABLES).some(t => (t[it.rarity] || []).includes(it.key))) probs.push(`${it.key} never drops`);
+  // chests: the right size, real items, class items only for the classes in the run, rarities about as advertised
+  let seed = 11; const rng = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  for (const boss of Object.keys(LOOT_TABLES)) for (const mode of ['normal', 'hard']) {
+    const counts = [0, 0, 0, 0, 0]; let n = 0;
+    for (let i = 0; i < 1500; i++) {
+      const classes = i % 3 ? ['bastion'] : ['cleric', 'ranger', 'pyromancer'];
+      const chest = rollChest(boss, mode, classes, rng);
+      if (chest.length !== CHEST_SIZE[mode]) { probs.push(`${boss} ${mode}: chest of ${chest.length}`); break; }
+      for (const k of chest) {
+        if (!ITEMS[k]) { probs.push(`${boss} ${mode}: chest rolled ${k}`); continue; }
+        if (ITEMS[k].cls && !classes.includes(ITEMS[k].cls)) probs.push(`${boss} ${mode}: ${k} rolled for ${classes.join('/')}`);
+        counts[ITEMS[k].rarity]++; n++;
+      }
+    }
+    CHEST_ODDS[mode].forEach((pct, i) => { const got = counts[i + 1] / n * 100; if (Math.abs(got - pct) > 4) probs.push(`${boss} ${mode}: ${RARITY[i + 1].name} ${got.toFixed(1)}% (want about ${pct}%)`); });
+  }
+  // Need / Greed / Pass: Need beats Greed, all passing salvages, and who may Need what
+  const w1 = lootWinner([[1, LOOT_GREED], [2, LOOT_NEED], [3, LOOT_PASS]], rng), w0 = lootWinner([[1, LOOT_PASS], [2, LOOT_PASS]], rng), wg = lootWinner([[4, LOOT_GREED]], rng);
+  if (!w1 || w1.w !== 2 || w1.c !== LOOT_NEED || !(w1.r >= 1 && w1.r <= 100) || w0 !== null || !wg || wg.w !== 4) probs.push(`lootWinner: ${JSON.stringify({ w1, w0, wg })}`);
+  const needs = [['bastion_w1', 'bastion', true], ['bastion_w1', 'cleric', false], ['g_cleaver', 'ranger', true], ['g_cleaver', 'cleric', false],
+    ['g_apron', 'cleric', true], ['m_crown', 'bastion', true], ['cleric_a2', 'grovekeeper', false]];
+  for (const [k, c, want] of needs) if (canNeed(k, c) !== want) probs.push(`canNeed(${k}, ${c}) should be ${want}`);
+  // gold: per boss, doubled on Hard; selling follows rarity
+  if (clearGold('grubnak', 'normal') !== 40 || clearGold('hollowking', 'hard') !== 120 || clearGold('nobody', 'normal') !== 0) probs.push('clear gold is off');
+  if (RARITY.map(r => r.sell).join() !== '2,8,15,30,60') probs.push('sell prices are off');
+
+  // the engine runs effects: a Mythic's shorter oGCD cooldowns, its buff on an oGCD, and a crit's strike
+  const fakeEnv = (keys, hp = 1) => {
+    let t = 0; const events = [];
+    const mods = gearMods('bastion', gearTotals('bastion', keys.map(key => ({ key }))), keys.map(key => ({ key })));
+    return { events, tick: d => { t += d; }, env: { now: () => t, emit: e => events.push(e), rng: () => 0.05, moving: () => false, target: () => ({ id: 'boss', x: 0, y: 0 }),
+      positional: () => 'rear', partyMods: () => ({}), targetMods: () => ({}), selfMods: () => ({}), recentDamage: () => 0, maxHp: () => 1000, hpFrac: () => hp,
+      gearMods: () => mods, isDead: () => false, defaultLink: () => 1, pos: () => ({ x: 0, y: 0 }) } };
+  };
+  const og = KITS.bastion.abilities.find(a => a.type === 'ogcd' && typeof a.cd === 'number' && !a.charges);
+  const plain = new Kit(KITS.bastion, fakeEnv([]).env), court = new Kit(KITS.bastion, fakeEnv(['m_deadcourt']).env);
+  if (Math.abs(court.recast(og) - plain.recast(og) * 0.9) > 1e-9) probs.push(`Dead Court: ${og.id} recast ${court.recast(og)} vs ${plain.recast(og)}`);
+  court.itemHook('ogcd', og); court.itemHook('ogcd', og); court.itemHook('ogcd', og); court.itemHook('ogcd', og);
+  if (Math.abs(court.fxMod('dmg') - 0.06) > 1e-9) probs.push(`Dead Court: 4 oGCDs give +${court.fxMod('dmg')} damage (want 0.06, 3 stacks)`);
+  const fv = fakeEnv(['g_venom']), venom = new Kit(KITS.bastion, fv.env);
+  venom.damage(100); const hits = fv.events.filter(e => e.type === 'damage').length;
+  venom.damage(100); const hits2 = fv.events.filter(e => e.type === 'damage').length;
+  if (hits !== 2 || hits2 !== 3) probs.push(`Venom Pendant: crit strikes ${hits}, then ${hits2} (want 2 then 3: once every 3 s)`);
+  const low = new Kit(KITS.bastion, fakeEnv(['m_crown'], 0.3).env), high = new Kit(KITS.bastion, fakeEnv(['m_crown'], 0.9).env);
+  if (low.fxMod('dmg') !== 0.12 || high.fxMod('dmg') !== 0) probs.push('Crown of the Barrow: hpBelow is off');
+
+  if (probs.length) fail('Items, loot tables and effects', probs.join('\n'));
+  else {
+    const per = Object.entries(LOOT_TABLES).map(([b, t]) => `${b} ${[1, 2, 3, 4].map(r => t[r].length).join('/')}`).join(', ');
+    pass('Items, loot tables and effects', `U/R/L/M per boss: ${per}`);
+  }
+}
+
+// the save upgrade keeps every item, drops the Heroic flag and pays for it
+function saveUpgrade() {
+  const store = {
+    'emberfall-save': JSON.stringify({ v: 1, name: 'Ava', inv: { next: 4, items: [{ uid: 1, key: 'bastion_w1', q: 1 }, { uid: 2, key: 'g_coat', q: 0 }, { uid: 3, key: 'gone_item' }],
+      equip: { bastion: { weapon: 1, armor: 2 } } }, heroes: {}, settings: {} }),
+  };
+  global.localStorage = { getItem: k => (k in store ? store[k] : null), setItem: (k, v) => { store[k] = String(v); } };
+  const p = path.join(ROOT, 'client/js/save.js');
+  delete require.cache[require.resolve(p)];
+  const { Save: S } = require(p);
+  delete global.localStorage;
+  const inv = S.get('inv'), saved = JSON.parse(store['emberfall-save']);
+  const ok = S.VERSION === 2 && saved.v === 2 && S.gold() === 10 && inv.items.length === 3 && inv.items.every(i => !('q' in i)) &&
+    inv.equip.bastion.weapon === 1 && !!store['emberfall-save-backup-v1'] && Array.isArray(inv.lost);
+  if (ok) pass('Save upgrade keeps items', 'v1 -> v2: Heroic flag dropped, 10 gold per Heroic item, gear still equipped');
+  else fail('Save upgrade keeps items', JSON.stringify({ v: saved.v, gold: S.gold(), inv }));
 }
 
 // ---------------------------------------------------------------- 3 + 4. balance sim and bot raids (run side by side)

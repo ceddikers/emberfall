@@ -5,7 +5,11 @@
 const Inventory = (() => {
   const SLOTS = [['weapon', 'Weapon'], ['armor', 'Armor'], ['acc1', 'Accessory'], ['acc2', 'Accessory']];
   const data = Save.get('inv');   // changed in place; save() writes the whole save
-  data.items = data.items.filter(i => ITEMS[i.key]);
+  // items whose key this version doesn't know wait in inv.lost (never deleted) and come back if the key returns
+  const known = i => i && ITEMS[i.key];
+  data.lost = data.lost.concat(data.items.filter(i => !known(i)));
+  data.items = data.items.filter(known).concat(data.lost.filter(known));
+  data.lost = data.lost.filter(i => !known(i));
   const save = () => Save.commit();
 
   let deps = null;           // from main: { cls(), locked(), drawFigure(ctx, cls, w, h), onChange(), toast(msg) }
@@ -19,7 +23,7 @@ const Inventory = (() => {
     for (const [s] of SLOTS) { const it = e[s] != null ? byUid(e[s]) : null; out[s] = it && canEquip(it, clsId, s) ? it : null; }
     return out;
   }
-  function add(key, q = 0) { const inst = { uid: data.next++, key, q: q ? 1 : 0 }; data.items.push(inst); changed(); return inst; }
+  function add(key) { const inst = { uid: data.next++, key }; data.items.push(inst); changed(); return inst; }
   function equip(clsId, slot, inst) {
     if (!canEquip(inst, clsId, slot)) return false;
     const e = data.equip[clsId] = data.equip[clsId] || {};
@@ -28,11 +32,27 @@ const Inventory = (() => {
     e[slot] = inst.uid; changed(); return true;
   }
   function unequip(clsId, slot) { const e = data.equip[clsId]; if (e) { e[slot] = null; changed(); } }
-  function discard(inst) {
+  // sell an item for gold (RARITY[r].sell); anyone wearing it takes it off first
+  function sell(inst) {
+    if (!data.items.includes(inst)) return;
     data.items = data.items.filter(i => i !== inst);
     for (const e of Object.values(data.equip)) for (const s in e) if (e[s] === inst.uid) e[s] = null;
-    changed();
+    Save.addGold(sellPrice(inst));
+    changed(); showGold();
   }
+  const wornBy = inst => Object.entries(data.equip).filter(([, e]) => Object.values(e).includes(inst.uid)).map(([c]) => c);
+
+  // ---------------------------------------------------------------- gold: in the bag, and quietly on the town HUD
+  const coin = '<i class="coin" aria-hidden="true"></i>';
+  const goldHud = document.createElement('div');
+  goldHud.id = 'gold-hud'; goldHud.className = 'hidden'; goldHud.dataset.tip = 'Gold';
+  document.body.appendChild(goldHud);
+  function showGold() {
+    const g = Save.gold().toLocaleString('en-US');
+    goldHud.innerHTML = `${coin}${g}`;
+    if (isOpen()) { const b = el.querySelector('.inv-gold'); if (b) b.innerHTML = `${coin}${g}`; }
+  }
+  function addGold(n) { if (n > 0) { Save.addGold(n); showGold(); } }
   function totals(clsId) { const l = loadout(clsId); return gearTotals(clsId, Object.values(l)); }
   function mods(clsId) {
     if (!clsId) return {};
@@ -222,14 +242,40 @@ const Inventory = (() => {
           c.fillStyle = rgba('#5ff0ff', 0.5); c.beginPath(); c.arc(0, 0, 4, 0, Math.PI * 2); c.fill();
         }
         break;
-      case 'class': case 'coat': case 'apron': case 'chitin': case 'scale': {
-        const col = { coat: '#7a5a3a', apron: '#e8e2d4', chitin: '#3d5a3a', scale: '#5a6676' }[it.atype] || accent || '#888';
+      // the Mythics (drawn until their painted icons arrive)
+      case 'pot':   // The Ogre's Stockpot: a squat iron pot, soup bubbling over
+        shape(() => c.ellipse(0, 4, 20, 16, 0, 0, Math.PI * 2), '#3a3430');
+        shape(() => c.ellipse(0, -8, 18, 6, 0, 0, Math.PI * 2), '#ff8a3a', 2);
+        for (const [x, r] of [[-7, 3], [3, 4], [10, 2.5]]) shape(() => c.arc(x, -10, r, 0, Math.PI * 2), '#ffb066', 1.2);
+        for (const x of [-22, 22]) stroke(() => { c.moveTo(x, -4); c.lineTo(x * 1.15, -10); }, '#3a3430', 3);
+        break;
+      case 'broodeye':   // Eye of the Broodmother: a gold pendant set with a cluster of red spider eyes
+        stroke(() => { c.moveTo(-14, -24); c.quadraticCurveTo(0, -4, 14, -24); }, gold, 2);
+        shape(() => c.arc(0, 6, 14, 0, Math.PI * 2), '#1c1418', 2);
+        for (const [x, y, r] of [[0, 2, 4.5], [-6, 9, 3], [6, 9, 3], [-8, 1, 2], [8, 1, 2], [0, 12, 2]]) shape(() => c.arc(x, y, r, 0, Math.PI * 2), '#ff3a3a', 1.2);
+        break;
+      case 'torc':   // Stormcaller's Torc: an open neck-ring of twisted iron with lightning-blue ends
+        stroke(() => c.arc(0, 2, 18, Math.PI * 0.65, Math.PI * 2.35), '#8a96a4', 5);
+        for (const a of [Math.PI * 0.65, Math.PI * 2.35]) shape(() => c.arc(Math.cos(a) * 18, 2 + Math.sin(a) * 18, 5, 0, Math.PI * 2), '#7fe8ff', 1.5);
+        stroke(() => { c.moveTo(-4, -10); c.lineTo(2, -2); c.lineTo(-2, 0); c.lineTo(4, 8); }, '#7fe8ff', 1.5);
+        break;
+      case 'crown':   // Crown of the Barrow: a tarnished gold crown with a grave-green gem
+        shape(() => { c.moveTo(-20, 12); c.lineTo(-20, -8); c.lineTo(-10, 2); c.lineTo(0, -16); c.lineTo(10, 2); c.lineTo(20, -8); c.lineTo(20, 12); c.closePath(); }, '#c9a04a');
+        shape(() => c.rect(-20, 8, 40, 7), '#a8823a', 2);
+        shape(() => c.arc(0, 2, 4.5, 0, Math.PI * 2), '#6dff9a', 1.5);
+        break;
+      case 'class': case 'coat': case 'apron': case 'chitin': case 'scale': case 'whites': case 'venomweave': case 'thunderhead': case 'deadcourt': {
+        const col = { coat: '#7a5a3a', apron: '#e8e2d4', chitin: '#3d5a3a', scale: '#5a6676', whites: '#f2eee4', venomweave: '#2f4a30', thunderhead: '#4a5666', deadcourt: '#3a2f4a' }[it.atype] || accent || '#888';
         shape(() => { c.moveTo(-12, -20); c.lineTo(-4, -16); c.lineTo(4, -16); c.lineTo(12, -20); c.lineTo(22, -12); c.lineTo(16, -2); c.lineTo(12, -6); c.lineTo(12, 22); c.lineTo(-12, 22); c.lineTo(-12, -6); c.lineTo(-16, -2); c.lineTo(-22, -12); c.closePath(); }, col);
         c.strokeStyle = rgba('#000000', 0.35); c.lineWidth = 1.5; c.beginPath(); c.moveTo(0, -16); c.lineTo(0, 22); c.stroke();
         if (it.atype === 'class') { c.strokeStyle = gold; c.lineWidth = 2; c.beginPath(); c.moveTo(-12, 8); c.lineTo(12, 8); c.stroke(); shape(() => c.arc(0, -4, 4, 0, Math.PI * 2), gold, 1.5); }
         if (it.atype === 'apron') { c.fillStyle = '#c0353d'; c.fillRect(-12, 6, 24, 3); }
         if (it.atype === 'scale') for (const y of [-8, -1, 6, 13]) for (const x of [-7, 0, 7]) { c.strokeStyle = '#2a323e'; c.lineWidth = 1.2; c.beginPath(); c.arc(x, y, 3.5, 0, Math.PI); c.stroke(); }
         if (it.atype === 'chitin') for (const y of [-6, 2, 10]) { c.strokeStyle = '#1d2a1c'; c.lineWidth = 1.5; c.beginPath(); c.moveTo(-11, y); c.quadraticCurveTo(0, y + 4, 11, y); c.stroke(); }
+        if (it.atype === 'whites') { shape(() => { c.moveTo(-6, -16); c.lineTo(6, -16); c.lineTo(0, -6); c.closePath(); }, '#c0353d', 1.5); for (const y of [-2, 6, 14]) shape(() => c.arc(-5, y, 1.6, 0, Math.PI * 2), gold, 1); }
+        if (it.atype === 'venomweave') for (const x of [-7, 0, 7]) stroke(() => { c.moveTo(x, -10); c.lineTo(x, 4 + Math.abs(x) / 2); }, '#7ae03a', 1.5);
+        if (it.atype === 'thunderhead') stroke(() => { c.moveTo(-4, -12); c.lineTo(3, -2); c.lineTo(-2, 0); c.lineTo(5, 12); }, '#7fe8ff', 2);
+        if (it.atype === 'deadcourt') { c.fillStyle = gold; c.fillRect(-12, 4, 24, 3); shape(() => c.arc(0, -6, 3.5, 0, Math.PI * 2), '#6dff9a', 1.5); }
         break;
       }
       case 'ring':
@@ -263,6 +309,7 @@ const Inventory = (() => {
       return `<div class="st-line">${v ? STAT_INFO[s].fmt(v) : '—'} ${STAT_INFO[s].name}${diff}</div>`;
     }).join('');
     const ok = clsId && slotsFor(inst).some(s => canEquip(inst, clsId, s));
+    const fxLine = it.fxText ? `<div class="it-fx" style="--rc:${rar.color}">${it.fxText}</div>` : '';
     const perk = ITEM_PERKS[inst.key];
     // your specialization may have replaced that move: name both
     const baseAb = perk && KITS[it.cls].abilities.find(a => a.id === perk.ab);
@@ -272,7 +319,7 @@ const Inventory = (() => {
     // the boss's party bonus: what 2, 3 and 4 people wearing its gear give the whole group
     const pb = PARTY_BONUS[it.tier];
     const bondLine = pb ? `<div class="it-bond"><u>Party bonus: ${pb.name}</u>${[2, 3, 4].map(n => `<span><i>${n}</i> ${bonusText(pb.tiers[n])}</span>`).join('')}<small>When that many in your group wear ${pb.boss} gear.</small></div>` : '';
-    return `<b style="color:${rar.color}">${it.name}</b><em>${rar.name}${inst.q ? ' · Heroic' : ''} · ${it.slot === 'accessory' ? 'Accessory' : it.slot === 'weapon' ? 'Weapon' : 'Armor'} · Item level ${itemLevel(inst)}</em>${lines}${perkLine}${bondLine}<div class="it-who ${ok ? '' : 'no'}">${who}</div>`;
+    return `<b style="color:${rar.color}">${it.name}</b><em><span style="color:${rar.color}">${rar.name}</span> · ${it.slot === 'accessory' ? 'Accessory' : it.slot === 'weapon' ? 'Weapon' : 'Armor'} · Item level ${itemLevel(inst)}</em>${lines}${fxLine}${perkLine}${bondLine}<div class="it-who ${ok ? '' : 'no'}">${who}</div><div class="it-sell">Sells for ${sellPrice(inst)} gold</div>`;
   }
 
   // ---------------------------------------------------------------- the screen
@@ -354,11 +401,14 @@ const Inventory = (() => {
     }).join('');
     // bag
     const tabs = [['all', 'All'], ['weapon', 'Weapons'], ['armor', 'Armor'], ['accessory', 'Accessories']];
-    $q('.inv-tabs').innerHTML = tabs.map(([k, n]) => `<button class="${filter === k ? 'on' : ''}" data-f="${k}">${n}</button>`).join('');
+    $q('.inv-tabs').innerHTML = tabs.map(([k, n]) => `<button class="${filter === k ? 'on' : ''}" data-f="${k}">${n}</button>`).join('') +
+      `<span class="inv-gold" data-tip="Gold">${coin}${Save.gold().toLocaleString('en-US')}</span>`;
     $q('.inv-tabs').querySelectorAll('button').forEach(b => b.addEventListener('click', () => { filter = b.dataset.f; render(); }));
     const eqUids = new Set(Object.values(l).filter(Boolean).map(i => i.uid));
+    // best first: rarity, then weapon / armour / accessory, then name
+    const SLOT_ORDER = { weapon: 0, armor: 1, accessory: 2 };
     const list = data.items.filter(i => filter === 'all' || ITEMS[i.key].slot === filter)
-      .sort((a, b) => itemRarity(b) - itemRarity(a) || itemLevel(b) - itemLevel(a) || ITEMS[a.key].name.localeCompare(ITEMS[b.key].name));
+      .sort((a, b) => itemRarity(b) - itemRarity(a) || SLOT_ORDER[ITEMS[a.key].slot] - SLOT_ORDER[ITEMS[b.key].slot] || ITEMS[a.key].name.localeCompare(ITEMS[b.key].name));
     const cells = $q('.inv-cells');
     const n = Math.max(24, Math.ceil(list.length / 6) * 6);
     cells.innerHTML = Array.from({ length: n }, (_, i) => {
@@ -383,16 +433,20 @@ const Inventory = (() => {
     if (worn.length) btns.push(`<button class="btn2" data-act="unequip" data-slot="${worn[0]}" ${locked ? 'disabled' : ''}>Unequip</button>`);
     else if (slots.length === 1) btns.push(`<button class="cta" data-act="equip" data-slot="${slots[0]}" ${locked ? 'disabled' : ''}>Equip</button>`);
     else if (slots.length === 2) btns.push(...slots.map((s, i) => `<button class="cta" data-act="equip" data-slot="${s}" ${locked ? 'disabled' : ''}>Equip ${i + 1}</button>`));
-    btns.push(`<button class="btn2 danger" data-act="discard" ${locked || worn.length ? 'disabled' : ''}>Discard</button>`);
+    // selling: a second press confirms for Legendary and Mythic items, or anything another hero is wearing
+    const others = wornBy(inst).filter(c => c !== clsId);
+    const careful = itemRarity(inst) >= R_LEGENDARY || others.length;
+    const sellTip = others.length ? `Worn by your ${others.map(c => CLASSES.find(x => x.id === c).name).join(', ')}` : '';
+    btns.push(`<button class="btn2 sell" data-act="sell" ${locked || worn.length ? 'disabled' : ''}${sellTip ? ` data-tip="${sellTip}"` : ''}>Sell ${coin}${sellPrice(inst)}</button>`);
     det.innerHTML = `<img src="${iconURL(inst)}" alt=""><div class="det-text">${itemTip(inst, clsId)}</div><div class="det-btns">${btns.join('')}</div>
       ${locked ? '<p class="inv-hint">Gear is locked during a raid.</p>' : ''}`;
     det.querySelectorAll('button[data-act]').forEach(b => b.addEventListener('click', () => {
       const act = b.dataset.act;
       if (act === 'equip') equip(clsId, b.dataset.slot, inst);
       else if (act === 'unequip') { unequip(clsId, b.dataset.slot); }
-      else if (act === 'discard') {
-        if (b.dataset.confirm) { discard(inst); selected = null; render(); }
-        else { b.dataset.confirm = '1'; b.textContent = 'Discard?'; b.classList.add('armed'); }
+      else if (act === 'sell') {
+        if (!careful || b.dataset.confirm) { selected = null; sell(inst); }
+        else { b.dataset.confirm = '1'; b.innerHTML = `Sell for ${coin}${sellPrice(inst)}?`; b.classList.add('armed'); }
       }
     }));
   }
@@ -412,10 +466,13 @@ const Inventory = (() => {
     deps.drawFigure(c, CLASSES.find(x => x.id === clsId), 220, 220, now);
   }
 
+  showGold();
+
   return {
     init(d) { deps = d; },
     open, close, isOpen, toggle() { if (isOpen()) close(); else open(); }, frame,
     add, equip, unequip, mods, totals, grantStarter, loadout, items: () => data.items,
     itemName: inst => ITEMS[inst.key].name, rarityColor: inst => RARITY[itemRarity(inst)].color, iconURL, itemTip,
+    addGold, showGoldHud(v) { goldHud.classList.toggle('hidden', !v); },
   };
 })();
