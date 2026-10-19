@@ -206,4 +206,4 @@ function rollLoot(bossId, mode, clsId, rng) {
 }
 
 if (typeof module !== 'undefined') module.exports = { ITEMS, GEAR_CAPS, CLASS_MAIN, RARITY, itemStats, canEquip, gearTotals, gearMods, sanitizeGear, rollLoot,
-  PARTY_BONUS, gearSources, sanitizeSources, partyBonus };
+  PARTY_BONUS, gearSources, sanitizeSources, partyBonus, ITEM_PERKS, TIERS };

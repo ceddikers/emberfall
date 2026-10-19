@@ -4,6 +4,7 @@
   "private": true,
   "description": "A four-player co-op raid game.",
   "scripts": {
-    "start": "node server/server.js"
+    "start": "node server/server.js",
+    "check": "node tools/check.js"
   }
 }
