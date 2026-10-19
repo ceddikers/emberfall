@@ -1,23 +1,30 @@
 // Boss II: Queen Skitterra, the Spider Broodmother — "The Web Cave".
-// Tethers, killing adds together, and rotating danger. She holds the middle of her web; the floor is the hazard.
+// She holds the middle of her web; her threads, her brood and the floor itself are the danger.
 //   Phase 1 (100% → 50%): Venom Mist (raidwide), Silk Wrap (tankbuster that roots the tank where it lands),
 //     Eightfold Lunge (her legs light up in order; each lit leg and its opposite strike in turn, so the safe
-//     side rotates), Silk Lines (a tether that must be stretched), Venom Spit (cones at the two farthest
-//     players, leaving slowing pools), Brood (two spiderlings on opposite sides; when one dies the other
-//     must die within 5 s or it enrages).
+//     side rotates), Silk Lines (a tether that must be stretched) with Venom Spit straight after (cones at the two
+//     farthest players, leaving slowing pools), Brood (two spiderlings on opposite sides; when one dies the other
+//     must die within 5 s or it enrages), Silk Reel (a thread drags the farthest player in; a dash snaps it).
 //   Phase 2 at 50%: the web tightens. She returns to the middle and the outer ring turns sticky (slowing).
 //     Silk Wrap now lands just before a Lunge, so the tank must stand somewhere safe before being rooted.
 //     Brood comes with Silk Lines. Devour at the hard enrage timer.
 // Hard: Lunge telegraphs are not drawn (read her legs) and run six strikes; Silk Lines become two tethers,
 // green (stretch it) and red (keep it short); the brood pair is joined by a beam that burns anyone across it;
 // in phase 2 she Molts, and the husk replays her last Lunge while she starts a new one. Faster casts, 25% more damage.
+// Three moves only Hard has:
+//   Egg Sacs: three sacs drop around her web, one person each. Stomping one sticks you in the goo for a moment; a sac
+//     nobody stomps bursts over everyone and leaves a pool of venom.
+//   Fang Rush: she charges the farthest player across the web and leaves a trail of sticky silk behind her.
+//   Spinneret Volley: four globs of silk fall one after another on everyone but the tank, each where its target stood
+//     a moment before. Keep walking.
 
 const SKITTERRA = {
   id: 'skitterra', name: 'Queen Skitterra', title: 'Spider Broodmother',
   hp: { normal: 1300000, hard: 1750000 },
-  autoDmg: { normal: 1250, hard: 1250 },
-  enrage: { normal: 450, hard: 400 },
+  autoDmg: { normal: 1550, hard: 1550 },
+  enrage: { normal: 360, hard: 380 },
   enrageName: 'Devour',
+  vuln: 0.5,
   arena: { theme: 'webcave' },
 
   script(f) {
@@ -25,8 +32,9 @@ const SKITTERRA = {
     const B = f.boss;
     const TAU = Math.PI * 2;
     const dmg = {
-      mist: 6000, wrap: H ? 21000 : 18000, lunge: 9000, tether: 14000, spit: 8000, pool: 1500,
-      bite: H ? 1500 : 1200, fury: 4000, beam: 5000, reel: H ? 15000 : 13000,
+      mist: 8500, wrap: 26000, lunge: H ? 11000 : 13000, tether: 16000, spit: H ? 10500 : 12000, pool: 2200,
+      bite: H ? 2000 : 1600, fury: 5500, beam: 6000, reel: H ? 15000 : 17000,
+      sac: 5000, sacFail: 10000, fang: 15000, glob: 11000,
     };
     const LONG = 420, SHORT = 150;
 
@@ -42,7 +50,7 @@ const SKITTERRA = {
     const lunge = (opts = {}) => {
       const src = opts.src || { x: B.x, y: B.y };
       const a0 = opts.a0 ?? f.rng() * TAU, dir = opts.dir ?? (f.rng() < 0.5 ? 1 : -1);
-      const steps = H ? 6 : 4, step = H ? 1.05 : 1.35, d = opts.delay ?? f.ct(5), win = Math.min(d, H ? 2.2 : 2.6);
+      const steps = H ? 6 : 4, step = H ? 1.15 : 1.3, d = opts.delay ?? f.ct(5), win = Math.min(d, H ? 2.0 : 2.5);
       if (!opts.husk) {
         lastLunge = { a0, dir };
         B.lockFacing = true;
@@ -93,10 +101,11 @@ const SKITTERRA = {
       }
     };
 
+    const farthest = (pool, n) => [...pool].sort((a, b) => Math.hypot(b.x - B.x, b.y - B.y) - Math.hypot(a.x - B.x, a.y - B.y)).slice(0, n);
     // Venom Spit: a narrow cone at each of the two farthest players; a slowing pool stays where it lands.
     const venomSpit = () => {
       const d = f.ct(5);
-      const far = [...f.alive()].sort((a, b) => Math.hypot(b.x - B.x, b.y - B.y) - Math.hypot(a.x - B.x, a.y - B.y)).slice(0, 2);
+      const far = farthest(f.alive(), 2);
       if (!far.length) return;
       f.cast('Venom Spit', d, 'spit');
       for (const p of far) {
@@ -111,6 +120,7 @@ const SKITTERRA = {
           } });
       }
     };
+    const linesThenSpit = () => { silkLines(); f.after(f.ct(3.5), venomSpit); };
 
     // Brood: two spiderlings on opposite sides. Kill one and the other has 5 s to die before it enrages.
     const enrageAdd = a => {
@@ -170,30 +180,77 @@ const SKITTERRA = {
       f.cast('Silk Reel', d, 'reel');
       f.after(d - 0.9, () => {
         const pool = f.nonTanks().length ? f.nonTanks() : f.alive();
-        const far = [...pool].sort((a, b) => Math.hypot(b.x - B.x, b.y - B.y) - Math.hypot(a.x - B.x, a.y - B.y)).slice(0, H ? 2 : 1);
-        for (const p of far) f.reel(p.id, { speed: H ? 210 : 170, dur: 4, windup: 0.9, dmg: dmg.reel });
+        for (const p of farthest(pool, H ? 2 : 1)) f.reel(p.id, { speed: H ? 210 : 180, dur: 4, windup: 0.9, dmg: dmg.reel });
       });
     };
 
-    // --- phase 1 ----------------------------------------------------------------------------
-    const p1 = (loop) => {
-      f.seq([
-        [5, venomMist],
-        [8, () => silkWrap()],
-        [9, () => lunge()],
-        [11, () => silkLines()],
-        [11, venomSpit],
-        [9, brood],
-        [13, silkReel],
-        [11, venomMist],
-        [8, () => lunge()],
-        [11, () => { silkLines(); if (H || loop > 0) f.after(f.ct(3.5), venomSpit); }],
-        [12, () => silkWrap()],
-        [9, venomSpit],
-        [10, () => p1(loop + 1)],
-      ]);
+    // --- Hard only ------------------------------------------------------------------------------
+    // Egg Sacs: three sacs drop around the web, each wanting one person to stomp it. Stomping sticks you in the goo for
+    // a moment; a sac nobody stomps bursts over everyone and leaves venom where it lay.
+    const eggSacs = () => {
+      const d = f.ct(7);
+      f.cast('Egg Sacs', d, 'eggs');
+      const a0 = f.rng() * TAU;
+      for (let i = 0; i < 3; i++) {
+        const a = a0 + i * TAU / 3, x = Math.cos(a) * 290, y = Math.sin(a) * 290;
+        f.mech({ type: 'tower', shape: { kind: 'circle', x, y, r: 70 }, delay: d, dmg: dmg.sac, failDmg: dmg.sacFail, need: 1, tag: 'eggsac',
+          onResolve: inside => {
+            for (const p of inside) f.debuff(p.id, 'rooted', 1.5);
+            if (!inside.length) f.puddle(x, y, 110, 30, dmg.pool, 1, 'venom', { slow: true });
+          } });
+      }
     };
-    p1(0);
+    // Fang Rush: she charges the farthest player across the web (the line follows them until just before), then the
+    // silk she drags behind her stays on the floor, sticky, for a while.
+    const fangRush = () => {
+      const far = farthest(f.alive(), 1)[0];
+      if (!far) return;
+      const d = f.ct(4.5);
+      B.lockFacing = true;
+      f.cast('Fang Rush', d, 'fang');
+      const m = f.mech({ type: 'aoe', shape: { kind: 'rect', x: B.x, y: B.y, angle: 0, len: 1300, w: 160 }, delay: d, dmg: dmg.fang, tag: 'fang', aimFromBoss: far.id, lockAt: 0.8 });
+      f.afterKeep(d, () => {
+        const a = m.shape.angle, len = Math.max(150, Math.min(ARENA.edge(a) - 140, Math.hypot(far.x - B.x, far.y - B.y) + 60));
+        f.zone({ shape: { kind: 'rect', x: m.shape.x, y: m.shape.y, angle: a, len, w: 130 }, dur: 16, tag: 'trail', effect: 'slow' });
+        f.moveBoss(m.shape.x + Math.cos(a) * len, m.shape.y + Math.sin(a) * len, 1000);
+        f.anim('leap', 0.4);
+        B.lockFacing = false;
+      });
+    };
+    // Spinneret Volley: four globs of silk fall in turn on everyone but the tank; each follows its target, then
+    // stops a second before it lands
+    const volley = () => {
+      const d = f.ct(3);
+      f.cast('Spinneret Volley', d, 'volley');
+      const targets = f.nonTanks().length ? f.nonTanks() : f.alive();
+      for (let k = 0; k < 4; k++) {
+        f.afterKeep(d - 1.0 + k * 1.15, () => {
+          for (const p of targets) if (f.alive().some(q => q.id === p.id)) {
+            const q = f.players().find(z => z.id === p.id);
+            f.mech({ type: 'aoe', shape: { kind: 'circle', x: q.x, y: q.y, r: 100 }, delay: 1.9, dmg: dmg.glob, tag: 'glob', follow: p.id, lockAt: 0.9 });
+          }
+        });
+      }
+    };
+
+    // --- phase 1 ----------------------------------------------------------------------------
+    f.loop(n => [
+      [5, venomMist, 'Venom Mist'],
+      [7, () => silkWrap(), 'Silk Wrap'],
+      [8, () => lunge(), 'Eightfold Lunge'],
+      [10, () => silkLines(), 'Silk Lines'],
+      [10, venomSpit, 'Venom Spit'],
+      [8, brood, 'Brood'],
+      [12, silkReel, 'Silk Reel'],
+      H && [8, fangRush, 'Fang Rush'],
+      [H ? 9 : 10, venomMist, 'Venom Mist'],
+      [7, () => lunge(), 'Eightfold Lunge'],
+      [10, linesThenSpit, 'Silk Lines'],
+      H && [11, eggSacs, 'Egg Sacs'],   // once the brood is dead
+      [11, () => silkWrap(), 'Silk Wrap'],
+      [8, venomSpit, 'Venom Spit'],
+      [9],
+    ].filter(Boolean));
 
     // --- phase 2: the web tightens ------------------------------------------------------------
     f.onHp(0.5, () => {
@@ -203,35 +260,37 @@ const SKITTERRA = {
       f.clearTethers();
       f.clearAdds();
       f.clearReels();
+      f.clearZones();
       B.untargetable = true; B.lockFacing = false; B.cast = null;
       f.anim('leap', 1.4);
       f.moveBoss(0, 0, 700);
       f.seq([
-        [1.6, () => f.cast('Tightening Web', 4, 'web')],
+        [1.6, () => f.cast('Tightening Web', 4, 'web'), 'Tightening Web'],
         [4, () => {
           f.zone({ shape: { kind: 'donut', x: 0, y: 0, r: ARENA.R + 40, r2: 390 }, tag: 'sticky', effect: 'slow' });
           f.raidwide(dmg.mist * 0.8, 0);
         }],
-        [1.5, () => { B.untargetable = false; f.anim('roar', 1); p2(0); }],
+        [1.5, () => { B.untargetable = false; f.anim('roar', 1); p2(); }],
       ]);
     });
 
-    const p2 = (loop) => {
-      f.seq([
-        [2, venomMist],
-        [7, wrapLunge],
-        [13, () => { brood(); f.after(f.ct(3) + 1, () => silkLines()); }],
-        [13, silkReel],
-        [12, venomSpit],
-        [9, () => (H ? molt() : lunge())],
-        [H ? 18 : 10, () => silkWrap()],
-        [9, () => { silkLines(); f.after(f.ct(3.5), venomSpit); }],
-        [13, venomMist],
-        [8, () => lunge()],
-        [11, brood],
-        [24, () => p2(loop + 1)],
-      ]);
-    };
+    const p2 = () => f.loop(n => [
+      [2, venomMist, 'Venom Mist'],
+      [7, wrapLunge, 'Eightfold Lunge'],
+      [13, () => { brood(); f.after(f.ct(3) + 1, () => silkLines()); }, 'Brood'],
+      H && [11, volley, 'Spinneret Volley'],
+      [12, silkReel, 'Silk Reel'],
+      [11, venomSpit, 'Venom Spit'],
+      [9, () => (H ? molt() : lunge()), H ? 'Molt' : 'Eightfold Lunge'],
+      [H ? 18 : 10, () => silkWrap(), 'Silk Wrap'],
+      [9, linesThenSpit, 'Silk Lines'],
+      H && [12, n % 2 ? eggSacs : fangRush, n % 2 ? 'Egg Sacs' : 'Fang Rush'],
+      [12, venomMist, 'Venom Mist'],
+      [8, () => lunge(), 'Eightfold Lunge'],
+      [11, brood, 'Brood'],
+      H && [13, volley, 'Spinneret Volley'],
+      [H ? 12 : 22],
+    ].filter(Boolean));
   },
 };
 

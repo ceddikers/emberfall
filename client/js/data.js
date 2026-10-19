@@ -60,13 +60,11 @@ const CLASSES = [
   },
 ];
 
-// Boss panel text: flavor only. Nothing here tells you how to deal with an attack; the fights teach that.
+// Boss panel text: flavor only. Nothing here tells you how to deal with an attack.
 const BOSSES = [
   {
     id: 'grubnak', name: 'Grubnak', title: 'The Ogre Chef', color: '#7fa650', playable: true,
-    blurb: 'Grubnak has been cooking adventurers for years and is not happy about the reviews. The first raid, and a fair teacher: everything he does, he shows you first.',
-    teaches: 'Reading the boss, frontal cleaves, in/out, stacking and spreading, soaking.',
-    favors: 'Anyone. A good first fight for every class.',
+    blurb: 'Grubnak has been cooking adventurers for years and is not happy about the reviews. His scullery runs hot, his cleavers run sharp, and nobody has ever sent a dish back.',
     mechanics: [
       { name: 'Tenderize', desc: 'A heavy cleaver blow for whoever holds his attention.' },
       { name: 'Mince', desc: 'One of his cleavers catches the light before it falls.' },
@@ -74,13 +72,12 @@ const BOSSES = [
       { name: 'Meat Toss / Family Meal', desc: 'Portions for one, and portions for the table. The grease lingers.' },
       { name: 'Order Up!', desc: 'Plates on the counter. Every order must be collected.' },
       { name: 'Simmer', desc: 'Halfway through, the whole kitchen comes to a boil.' },
+      { name: 'Hard: Belly Flop, Cleaver Toss, Flambé', desc: 'He stops holding back. He throws his weight around, throws his cleavers, and sets the brandy alight.' },
     ],
   },
   {
     id: 'skitterra', name: 'Queen Skitterra', title: 'Spider Broodmother', color: '#7b4a9a', playable: true,
     blurb: 'Deep in the webbed caves, the Broodmother never fights alone, and she never forgets who hurt her children.',
-    teaches: 'Tethers, killing adds together, rotating danger.',
-    favors: 'Pyromancer, Runeguard',
     mechanics: [
       { name: 'Silk Lines', desc: 'Threads strung between her chosen prey.' },
       { name: 'Brood', desc: 'Her children hatch in pairs and do not like dying alone.' },
@@ -88,13 +85,12 @@ const BOSSES = [
       { name: 'Venom Spit', desc: 'She spits at whoever keeps their distance. The venom stays.' },
       { name: 'Silk Wrap', desc: 'Her favourite holds very still afterwards.' },
       { name: 'Tightening Web', desc: 'Halfway through, the edges of her web grow sticky.' },
+      { name: 'Hard: Egg Sacs, Fang Rush, Spinneret Volley', desc: 'Her clutch is laid in the open, she runs her prey down herself, and silk falls like rain.' },
     ],
   },
   {
     id: 'volkar', name: 'Volkar', title: 'The Storm Titan', color: '#5b8ab0', playable: true,
     blurb: 'A living mountain crackling with the fury of the sky. He never moves from the summit. He has never needed to.',
-    teaches: 'Polarity, knockbacks, a shrinking arena, healer pressure.',
-    favors: 'Ranger, Grovekeeper',
     mechanics: [
       { name: 'Polarity', desc: 'Positive and negative charges, and what happens when they meet. Opposites attract.' },
       { name: 'Lightning Rods', desc: 'Something has to catch the strike. Nothing catches two in a row and walks away.' },
@@ -102,13 +98,12 @@ const BOSSES = [
       { name: 'Storm Walls', desc: 'Walls of wind, turning slowly around the titan.' },
       { name: 'The Storm', desc: 'It never stops, and it only grows.' },
       { name: 'Eye of the Storm', desc: 'In the second half, the sky closes in.' },
+      { name: 'Hard: Chain Lightning, Ball Lightning, Skyfall', desc: 'The storm leaps from hero to hero, wanders the summit on its own, and at last the sky itself comes down.' },
     ],
   },
   {
     id: 'hollowking', name: 'The Hollow King', title: 'Lord of the Barrow', color: '#4a9a6a', playable: true,
-    blurb: 'A king who refused to stay dead, holding court in his own tomb. The final raid: everything the others taught you, in three acts.',
-    teaches: 'Everything combined, across three phases.',
-    favors: 'Cleric, Chronomancer',
+    blurb: 'A king who refused to stay dead, holding court in his own tomb. His guard still stands watch, his bells still toll, and the moon over the Barrow is sinking.',
     mechanics: [
       { name: 'Royal Gaze', desc: 'It is not wise to look a king in the eye.' },
       { name: 'Royal Doom', desc: 'A sentence passed. Light has always been the cure for it.' },
@@ -116,6 +111,7 @@ const BOSSES = [
       { name: 'Echo Knights', desc: 'His old guard remember every swing they ever saw.' },
       { name: 'Barrow Bells', desc: 'Every bell must be rung. Unrung bells toll for everyone.' },
       { name: 'The Long Night', desc: 'At the end, the lanterns go out, and the moon is setting.' },
+      { name: 'Hard: Royal Audience, Funeral March, Gravebind', desc: 'The king will be faced, his dead march from wall to wall, and the grave takes the living two at a time.' },
     ],
   },
 ];
