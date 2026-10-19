@@ -516,7 +516,7 @@ const KIT_VFX_AIMED = new Set(['sunlit', 'edgeShard', 'edgeReturn', 'dawnPillar'
       const k = fade(p, 0.06, 0.12) * e.a, open = Math.min(1, p * dur / 0.4), bx = ent.x, by = ent.y - 30, flap = Math.sin(t * 2.4) * 0.12;
       V.glowAt(c, bx, by - 6, 60, color, 0.3 * k);
       for (const sd of [-1, 1]) for (let i = 0; i < 6; i++) {
-        const a = -Math.PI / 2 + sd * (0.45 + i * 0.24 * open + flap), L = (26 + i * 7) * (0.5 + 0.5 * open);
+        const a = -Math.PI / 2 + sd * (0.3 + i * 0.18 * open + flap), L = (34 - i * 2) * (0.5 + 0.5 * open);
         c.save(); c.translate(bx + sd * 5, by); c.rotate(a);
         c.globalAlpha = 0.4 * k; c.fillStyle = i % 2 ? '#fff6d8' : color; c.beginPath(); c.ellipse(L / 2, 0, L / 2, 4.5 + i * 0.4, 0, 0, TAU); c.fill();
         V.neonPath(c, color, 1.3, k * 0.8, () => c.ellipse(L / 2, 0, L / 2, 4.5 + i * 0.4, 0, 0, TAU));
