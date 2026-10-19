@@ -25,7 +25,7 @@ const GAUGES = {
     c.restore();
     shape(); c.lineWidth = 3; c.strokeStyle = k.g.resolve >= 50 ? '#ffe28a' : '#7a8aa8'; c.stroke();
     line(c, cx, top + 4, cx, top + sh - 6, 'rgba(255,255,255,0.12)', 2);
-    if (k.g.counter) { glow(c, cx, top + 28, 22, '#bfe0ff', 0.6 + Math.sin(t * 10) * 0.2); label(c, '⚔', cx, top + 34, '#ffffff', 18, 'system-ui'); }
+    if (k.g.counter) { glow(c, cx, top + 28, 22, '#bfe0ff', 0.6 + Math.sin(t * 10) * 0.2); label(c, 'âš”', cx, top + 34, '#ffffff', 18, 'system-ui'); }
     label(c, String(Math.floor(k.g.resolve)), cx, top + sh + 16, '#f2e6c8', 14, 'system-ui', 800);
   },
 
@@ -95,7 +95,7 @@ const GAUGES = {
       ellipse(c, ex, ey, 12, 7, 0, '#fff3c8', OUT, 1.5);
       circle(c, ex, ey, 4, '#a8641a');
     }
-    if (k.has('barrage')) label(c, '×3', w - 26, 62, '#ffe27a', 14, 'system-ui', 800);
+    if (k.has('barrage')) label(c, 'Ã—3', w - 26, 62, '#ffe27a', 14, 'system-ui', 800);
     label(c, String(Math.floor(k.g.focus)), cx, top + 80, '#f2e6c8', 13, 'system-ui', 800);
   },
 
@@ -117,7 +117,7 @@ const GAUGES = {
       poly(c, [cx, cy - 22, cx + 9, cy - 4, cx, cy + 4, cx - 9, cy - 4], f < 0.3 ? '#4a7a3a' : '#8aff6a', OUT, 1.5);
       label(c, Math.ceil(k.dotRemaining('poison')) + 's', cx, cy + 22, '#bfffaa', 12, 'system-ui', 700);
     }
-    if (k.has('dance')) label(c, '✦', cx, cy - 34, '#e0a8ff', 18, 'system-ui');
+    if (k.has('dance')) label(c, 'âœ¦', cx, cy - 34, '#e0a8ff', 18, 'system-ui');
   },
 
   // Pyromancer: a glass crucible that fills with Heat; the top band is the danger zone; sparks = procs.
@@ -139,7 +139,7 @@ const GAUGES = {
     c.restore();
     shape(); c.lineWidth = 2.5; c.strokeStyle = k.g.heat >= 85 ? (Math.sin(t * 14) > 0 ? '#ff4030' : '#ffd060') : '#b07050'; c.stroke();
     line(c, cx - 16, 10 + (bottom - 10) * 0.15, cx + 16, 10 + (bottom - 10) * 0.15, '#ff5040', 1.5);
-    if (k.has('burnt')) label(c, '✖', cx, bottom - 18, '#202020', 20, 'system-ui', 800);
+    if (k.has('burnt')) label(c, 'âœ–', cx, bottom - 18, '#202020', 20, 'system-ui', 800);
     const sparks = k.has('hotstreak') ? 2 : k.has('heating') ? 1 : 0;
     for (let i = 0; i < 2; i++) {
       const x = cx + 32, y = 30 + i * 26, on = i < sparks;
@@ -194,7 +194,7 @@ const GAUGES = {
       circle(c, tx, ty, 4, '#ffe27a', OUT, 1);
       if (k.g.bloom >= 90) glow(c, tx, ty, 18, '#ffb0d0', 0.5 + Math.sin(t * 6) * 0.2);
     } else circle(c, tx, ty, 4, '#8fdc6a', OUT, 1);
-    if (k.dotRemaining('thorn') > 0) label(c, '❦ ' + Math.ceil(k.dotRemaining('thorn')), w - 22, 20, k.dotRemaining('thorn') < 9 ? '#ffb070' : '#a8e08a', 11, 'system-ui', 700);
+    if (k.dotRemaining('thorn') > 0) label(c, 'â¦ ' + Math.ceil(k.dotRemaining('thorn')), w - 22, 20, k.dotRemaining('thorn') < 9 ? '#ffb070' : '#a8e08a', 11, 'system-ui', 700);
     label(c, String(Math.floor(k.g.bloom)), 18, 20, '#d8f5c8', 13, 'system-ui', 800);
   },
 
@@ -220,7 +220,7 @@ const GAUGES = {
     c.lineWidth = 2; c.strokeStyle = frame; c.stroke();
     rrect(c, cx - 32, top, 64, 7, 3, '#5a4a6a', frame, 1.5);
     rrect(c, cx - 32, bot - 7, 64, 7, 3, '#5a4a6a', frame, 1.5);
-    if (k.has('lag')) label(c, '…', cx, mid + 6, '#ff8a7a', 22, 'system-ui', 800);
+    if (k.has('lag')) label(c, 'â€¦', cx, mid + 6, '#ff8a7a', 22, 'system-ui', 800);
     label(c, haste ? 'HASTE' : 'SLOW', cx, bot + 12, haste ? '#5ff0ff' : '#c8d4dc', 11, 'Cinzel, Georgia, serif', 800);
   },
 };
@@ -283,7 +283,7 @@ GAUGES.bandolier = (c, k, w, h, t) => {
   if (k.has('distill')) for (let i = 0; i < 3; i++) { const q = (t * 0.8 + i / 3) % 1; circle(c, sx + Math.sin(t * 3 + i) * 3, sy - 38 - q * 22, 3 + q * 4, `rgba(230,240,245,${0.5 * (1 - q)})`); }
   // the reagent sockets on the hopper: filled as you press them (a third socket after Catalyst)
   for (let i = 0; i < need; i++) {
-    const x = sx + (i - (need - 1) / 2) * 15, y = 18, r = g.half[i];
+    const x = sx + (i - (need - 1) / 2) * 15, y = 36, r = g.half[i];
     if (r) { glow(c, x, y, 13, ALEMBIC.reagents[r].color, 0.6); poly(c, [x, y - 7, x + 5, y + 2, x, y + 6, x - 5, y + 2], ALEMBIC.reagents[r].color, OUT, 1.3); }
     else poly(c, [x, y - 7, x + 5, y + 2, x, y + 6, x - 5, y + 2], 'rgba(30,24,20,0.8)', need === 3 && i === 2 ? '#ff9a4a' : 'rgba(200,170,120,0.55)', 1.2);
   }
