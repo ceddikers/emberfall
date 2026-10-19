@@ -75,8 +75,8 @@ Only moves that are new to a spec need an icon. Changed moves (for example Senti
 
 **Format:** paste the shared style block and avoid list from `hero-portraits.md`. A square head-and-shoulders bust, about 512 × 512. Keep the class's character from `hero-portraits.md` (same person, same face); the spec changes the gear, mood and background colour. These show on the hero page when the spec is picked. Files go in `client/portraits/<class>-<spec>.png` (for example `bastion-sentinel.png`). Until one arrives, the hero page shows the animated sprite in the spec's look.
 
-1. **Bastion · Sentinel** (silver-blue): the same knight, visor up, a broad silver tower shield raised to her chin, heavier plate pauldrons, calm and immovable.
-2. **Bastion · Crusader** (gold): the same knight with a fierce, determined look, a gold tabard with a sun emblem over her plate, a sword hilt over her shoulder with a hard gold shine, a warm dawn-coloured background.
+1. **Bastion · Sentinel** (silver-blue): the same knight, visor up, a broad silver tower shield raised to the chin, heavier plate pauldrons, calm and immovable.
+2. **Bastion · Crusader** (gold): the same knight with a fierce, determined look, a gold tabard with a sun emblem over their plate, a sword hilt over their shoulder with a hard gold shine, a warm dawn-coloured background.
 3. **Bloodreaver · Berserker** (orange-red): the same man with his helm off, his red-brown mane loose from its braids, orange war-paint stripes across his face, bare scarred shoulders, a few cartoon ember shapes floating up, mid roaring laugh.
 4. **Bloodreaver · Hemomancer** (crimson): the same man in a dark red hooded cowl over the horned helm, calm, heavy-lidded eyes, dark robes over mail, three small orbs of blood floating beside his head.
 5. **Runeguard · Spellwarden** (pale blue): the same warder, his violet hood trimmed in pale ice blue, a ring of pale blue runes behind his head as a flat graphic shape, eyes open now, one hand raised outward as if shielding someone.
