@@ -49,6 +49,11 @@ Second pass, 2026-10-19, in the same cartoon/anime fantasy style as `hero-portra
 5. **Sanctum** (`runeguard/sanctum`): a ring of seven small rune stones on the ground, seen from slightly above, joined by thin lilac lines.
 6. **Mirror Aegis** (`runeguard/mirror`): a round, polished silver mirror-shield. A red bolt strikes its face and bends straight back the way it came, in a sharp V.
 
+**Taunts** (each tank's seventh button, on T; one icon per tank in that class's background and palette). Until one is painted, the game shows the icon it borrows (Rally Banner, Bloodletting, Glyph Burst); dropping the PNG in place is enough.
+7. **Challenge** (`bastion/taunt`): a sword's flat striking the face of a round shield, three bold gold rings bursting outward from the point of impact.
+8. **Reaver's Hook** (`bloodreaver/taunt`): a barbed iron hook on a length of heavy chain, flung diagonally across the frame, red drops flicking off the barb.
+9. **Binding Rune** (`runeguard/taunt`): a lilac rune of summons stamped on a slate disc, a short chain of three slate links pulled taut from its centre toward the viewer.
+
 ## DPS
 
 **Ranger**: moss-green background, wood and leather, pale straw accent.

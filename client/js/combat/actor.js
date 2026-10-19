@@ -59,7 +59,15 @@ class CombatActor {
   dashFraction(now) { return this.dash.next ? Math.max(0, (this.dash.next - now) / DASH.cd) : 0; }
 
   tauntReady(now) { return !!this.taunt && now >= this.taunt.next; }
-  useTaunt(now) { if (!this.tauntReady(now)) return false; this.taunt.next = now + TAUNT.cd; return true; }
+  // starts the cooldown and gives the class's own part of it (Resolve and a counter, Blood, a Rune: TAUNT in kits.js)
+  useTaunt(now) {
+    if (!this.tauntReady(now)) return false;
+    this.taunt.next = now + TAUNT.cd;
+    const t = TAUNT[this.cls.id];
+    if (t && t.use) t.use(this.kit);
+    this.kit.stats.taunts = (this.kit.stats.taunts || 0) + 1;
+    return true;
+  }
   tauntLeft(now) { return this.taunt ? Math.max(0, this.taunt.next - now) : 0; }
 }
 

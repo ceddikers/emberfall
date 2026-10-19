@@ -234,6 +234,57 @@ const KIT_VFX = {
   // Inquisitor: an ally's hit bursts a charge of the brand on the boss
   brandHit: (e, target) => { if (target) { VFX.flare(target.x, target.y, { n: 5, r: 12, color: '#ff9a3c', size: 0.6, h: 0.7 }); VFX.hit(target.x, target.y, '#ffc070', 0.5); } },
   dash: (e, color) => { VFX.smoke(e.x, e.y, { n: 4, color: '#d8ccb8', size: 18, a: 0.6, speed: 40 }); VFX.shock(e.x, e.y, { r: 36, color: color || '#ffffff', dur: 0.3, w: 3 }); },
+  // the tanks' taunts, one per class (TAUNT in kits.js), built from each class's own look:
+  //   Bastion's Challenge: steel on the shield, gold rings of sound and a line of gold light that lands as a star
+  //   Bloodreaver's Reaver's Hook: a red chain thrown out to the target, a hook-bite of blood, then it snaps back
+  //   Runeguard's Binding Rune: a lilac rune stamped on the target, its light running back to the warder
+  taunt: (e, target) => {
+    const id = e.cls && e.cls.id, col = (e.cls && e.cls.accent) || '#ffd27a';
+    const sx = e.x, sy = e.y - 18, tx = target ? target.x : e.x, ty = target ? target.y - 26 : e.y;
+    const L = Math.hypot(tx - sx, ty - sy), ang = Math.atan2(ty - sy, tx - sx);
+    if (id === 'bloodreaver') {
+      VFX.shock(e.x, e.y, { r: 60, color: '#ff5a5a', w: 4, dur: 0.3 });
+      if (!target || L < 10) return;
+      const n = Math.max(4, Math.floor(L / 18));
+      // out in 0.2s, holds, then reels back in toward the hero
+      VFX.fx({ dur: 0.75, layer: 'air', draw: (c, p, t, fx) => {
+        const reach = p < 0.22 ? p / 0.22 : p < 0.5 ? 1 : 1 - (p - 0.5) / 0.5, k = (p < 0.7 ? 1 : (1 - p) / 0.3) * fx.a;
+        c.save(); c.translate(sx, sy); c.rotate(ang);
+        VFX.neonPath(c, '#ff3a3a', 2.2, k, () => {
+          for (let i = 0; i < n * reach; i++) {
+            const x = (i + 0.5) * L / n;
+            if (i % 2) { c.moveTo(x - 6, 0); c.lineTo(x + 6, 0); } else { c.moveTo(x + 8, 0); c.ellipse(x, 0, 8, 4, 0, 0, Math.PI * 2); }
+          }
+          const hx = L * reach;   // the hook at the chain's head
+          c.moveTo(hx - 4, -9); c.quadraticCurveTo(hx + 10, -6, hx + 6, 4); c.lineTo(hx - 2, 2);
+        });
+        c.restore();
+      } });
+      FX.later(0.17, () => { VFX.hit(tx, ty, '#ff4a4a', 0.8); VFX.sparks(tx, ty, { color: '#c0101a', n: 9, angle: ang + Math.PI, spread: 0.8, speed: 260 }); });
+      return;
+    }
+    if (id === 'runeguard') {
+      VFX.crystals(e.x, e.y, { color: '#b18cff', n: 5, r: 30, h: 30 });
+      if (!target) return;
+      VFX.lightning(sx, sy + 16, tx, ty + 16, { color: '#c8a8ff', jag: 8, dur: 0.3 });
+      FX.later(0.1, () => {
+        VFX.sigil(target.x, target.y, { r: 64, style: 'runes', color: '#b18cff', dur: 1.3, spin: 2 });
+        VFX.sigil(target.x, target.y - 70, { r: 22, style: 'runes', color: '#e0d0ff', dur: 1, spin: -3, flat: 1, layer: 'air' });
+        VFX.shock(target.x, target.y, { r: 70, color: '#b18cff', w: 3, dur: 0.35 });
+      });
+      return;
+    }
+    // Bastion (and the fallback)
+    VFX.shock(e.x, e.y, { r: 72, color: '#ffe27a', w: 4, dur: 0.35 });
+    VFX.shock(e.x, e.y, { r: 112, color: col, w: 2.5, dur: 0.45, delay: 0.08 });
+    VFX.sparks(e.x + Math.cos(e.angle || 0) * 24, e.y + Math.sin(e.angle || 0) * 24, { color: '#fff2b0', n: 8, speed: 300 });
+    if (!target || L < 10) return;
+    VFX.beam(sx, sy + 14, tx, ty + 14, { color: '#ffe9a0', w: 5, dur: 0.35 });
+    FX.later(0.12, () => {
+      VFX.spawn({ x: tx, y: ty, z: 10, life: 0.35, size: 56, size1: 18, color: '#ffe27a', kind: 'star', vr: 4 });
+      VFX.shock(tx, target.y, { r: 50, color: '#ffe27a', w: 3, dur: 0.3 });
+    });
+  },
 };
 
 // Auto-attacks: small, quick and frequent, so they stay well below the abilities visually.

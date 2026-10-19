@@ -1,6 +1,6 @@
 // Combat HUD for the local player: ability bar (Q W E R D F + Space), class gauge, cast bar, buffs.
 
-const SLOT_KEYS = ['Q', 'W', 'E', 'R', 'D', 'F', 'SPC'];
+const SLOT_KEYS = ['Q', 'W', 'E', 'R', 'D', 'F', 'SPC', 'T'];   // 7: a tank's taunt
 const abilityIcon = (classId, abilityId) => `icons/${classId}/${abilityId}.png`;
 
 const BUFF_NAMES = {
@@ -70,10 +70,14 @@ const Hud = {
     const row = this.el.querySelector('#ability-row');
     const cls = actor.cls;
     const items = [...actor.abilities, { id: 'dash', name: 'Dash', type: 'ogcd', desc: 'Dash in the direction you are moving (or toward the cursor). Two charges.', fx: { color: cls.accent } }];
+    // a tank's taunt (slot 7, key T), drawn just before the dash
+    const taunt = actor.taunt ? tauntAbility(cls.id) : null;
+    if (taunt) items.push(taunt);
     // painted icons live in icons/<class>/<ability id>.png; the dash (and anything without art) shows its letter
+    const art = (ab, i) => (i < 6 ? `url(${abilityIcon(cls.id, abilityIconId(ab))})` : ab.taunt ? tauntIconBg(cls.id) : '');
     row.innerHTML = items.map((ab, i) => `
-      <div class="slot ${ab.type}${i < 6 ? ' has-art' : ''}" data-i="${i}" style="--a:${cls.accent};--fx:${(ab.fx && ab.fx.color) || cls.accent}">
-        <div class="icon"${i < 6 ? ` style="background-image:url(${abilityIcon(cls.id, abilityIconId(ab))})"` : ''}>${i < 6 ? '' : ab.name.replace(/^The /, '')[0]}</div>
+      <div class="slot ${ab.type}${art(ab, i) ? ' has-art' : ''}${ab.taunt ? ' taunt' : ''}" data-i="${i}" style="--a:${cls.accent};--fx:${(ab.fx && ab.fx.color) || cls.accent}">
+        <div class="icon"${art(ab, i) ? ` style="background-image:${art(ab, i)}"` : ''}>${art(ab, i) ? '' : ab.name.replace(/^The /, '')[0]}</div>
         <kbd>${SLOT_KEYS[i]}</kbd>
         <div class="sweep"></div>
         <div class="cdtext"></div>
@@ -81,11 +85,12 @@ const Hud = {
         <div class="name">${ab.name}</div>
       </div>`).join('');
     this.slots = [...row.children].map(el => ({ el, sweep: el.querySelector('.sweep'), cd: el.querySelector('.cdtext'), ch: el.querySelector('.charges'), name: el.querySelector('.name'), icon: el.querySelector('.icon') }));
+    if (taunt) row.insertBefore(this.slots[7].el, this.slots[6].el);
     // in-game tooltips (shows the current label, e.g. Riposte / Dawnstar)
     this.slots.forEach((s, i) => Tip.set(s.el, () => {
       const ab = items[i], k = this.actor && this.actor.kit;
       const name = k && i < 6 ? k.label(ab) : ab.name;
-      const icon = i < 6 ? `<i class="ab-icon ${ab.type}" style="background-image:url(${abilityIcon(cls.id, abilityIconId(ab))})"></i>` : '<i class="ab-icon dash">»</i>';
+      const icon = art(ab, i) ? `<i class="ab-icon ${ab.type}" style="background-image:${art(ab, i)}"></i>` : '<i class="ab-icon dash">»</i>';
       const meta = [ab.type === 'gcd' ? 'GCD' : 'oGCD'];
       if (typeof ab.cast === 'number' && ab.cast) meta.push(`${ab.cast}s cast`);
       if (ab.charges) meta.push(`${ab.charges} charges · ${ab.cd}s`); else if (typeof ab.cd === 'number' && ab.cd) meta.push(`${ab.cd}s cooldown`);
@@ -145,6 +150,13 @@ const Hud = {
     ds.ch.textContent = a.dash.charges;
     ds.sweep.style.setProperty('--cd', a.dash.charges === 0 ? a.dashFraction(now).toFixed(3) : 0);
     ds.cd.textContent = a.dash.charges === 0 ? Math.ceil(a.dash.next - now) : '';
+    // taunt (tanks)
+    const ts = a.taunt && this.slots[7];
+    if (ts) {
+      const left = a.tauntLeft(now);
+      ts.sweep.style.setProperty('--cd', (left / TAUNT.cd).toFixed(3));
+      ts.cd.textContent = left > 0 ? (left < 1 ? left.toFixed(1) : Math.ceil(left)) : '';
+    }
     // cast bar
     if (k.cast) {
       this.castBar.classList.remove('hidden');
