@@ -130,6 +130,25 @@ function swing(p) {
 }
 function pulse(p) { return p < 0 ? 0 : Math.sin(p * Math.PI); }
 
+// Painted art that may not be in yet (a tank's own taunt icon, say). The server is asked once per file per session
+// and the answer kept: ok(path) is true once the file has loaded, false once it's known to be missing, null while
+// the one request is out. Callers draw their fallback until it says true, so a missing file is never asked again.
+const ArtProbe = (() => {
+  const known = new Map();
+  function ok(path) {
+    if (typeof Image === 'undefined') return false;
+    if (!known.has(path)) {
+      known.set(path, null);
+      const im = new Image();
+      im.onload = () => known.set(path, true);
+      im.onerror = () => known.set(path, false);
+      im.src = path;
+    }
+    return known.get(path);
+  }
+  return { ok };
+})();
+
 // Text with a dark outline, for name tags and damage numbers.
 function label(ctx, text, x, y, color, size = 12, family = 'Cinzel, Georgia, serif', weight = 700) {
   ctx.font = `${weight} ${size}px ${family}`;

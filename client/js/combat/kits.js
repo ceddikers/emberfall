@@ -1235,7 +1235,9 @@ const tauntAbility = classId => {
 const tauntIconBg = classId => {
   const cls = typeof CLASSES !== 'undefined' && CLASSES.find(c => c.id === classId);
   if (cls && cls.art && cls.art.icons === false && typeof abilityIcon !== 'undefined') return `url(${abilityIcon(classId, 'taunt')})`;
-  return `url(icons/${classId}/taunt.png), url(icons/${classId}/${(TAUNT[classId] || {}).icon}.png)`;
+  // its own painting is asked for once (ArtProbe in draw-util.js); until it's known to exist, only the borrowed icon
+  const own = `icons/${classId}/taunt.png`, borrowed = `icons/${classId}/${(TAUNT[classId] || {}).icon}.png`;
+  return typeof ArtProbe !== 'undefined' && ArtProbe.ok(own) === true ? `url(${own}), url(${borrowed})` : `url(${borrowed})`;
 };
 
 // ======================================================================= ALEMBIST (healer, added with classes-b)

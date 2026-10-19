@@ -3,7 +3,12 @@
 const SLOT_KEYS = ['Q', 'W', 'E', 'R', 'D', 'F', 'SPC', 'T'];   // 7: a tank's taunt
 // a class whose icons aren't all painted yet draws its own: ICON_ART in gauges.js (the Alembist), or drawnIcon below
 // for classes flagged art.icons === false in data.js (Thermist, Driftblade)
-const abilityIcon = (classId, abilityId) => (typeof ICON_ART !== 'undefined' && ICON_ART[classId] && ICON_ART[classId](abilityId)) || drawnIcon(classId, abilityId) || `icons/${classId}/${abilityId}.png`;
+const abilityIcon = (classId, abilityId) => (typeof ICON_ART !== 'undefined' && ICON_ART[classId] && ICON_ART[classId](abilityId)) || drawnIcon(classId, abilityId) || paintedIcon(classId, abilityId);
+// a painted class's icon file, or (once ArtProbe knows it's missing) its drawn letter, so a gap never 404s twice
+function paintedIcon(classId, abilityId) {
+  const path = `icons/${classId}/${abilityId}.png`;
+  return typeof ArtProbe === 'undefined' || ArtProbe.ok(path) !== false ? path : drawnIcon(classId, abilityId, true);
+}
 
 const BUFF_NAMES = {
   oath: 'Oath of Valor', frenzy: 'Frenzy', gorge: 'Gorged', undying: 'Undying', overload: 'Runic Overload',
@@ -298,12 +303,12 @@ ICON_GLYPHS.ironpalm = (() => {
     taunt: c => { c.fillStyle = wrap; c.beginPath(); c.ellipse(30, 38, 12, 13, 0, 0, TAU); c.fill(); c.lineCap = 'round'; c.strokeStyle = wrap; c.lineWidth = 5; for (let i = 0; i < 2; i++) { c.beginPath(); c.moveTo(24 + i * 7, 28); c.quadraticCurveTo(26 + i * 7, 14, 34 + i * 7, 16); c.stroke(); } c.strokeStyle = saf; c.lineWidth = 2; c.beginPath(); c.arc(30, 36, 24, -2.2, -1.2); c.stroke(); },
   };
 })();
-function drawnIcon(classId, abilityId) {
+function drawnIcon(classId, abilityId, force = false) {
   if (typeof document === 'undefined' || typeof CLASSES === 'undefined') return null;
-  const key = classId + '/' + abilityId;
+  const key = classId + '/' + abilityId + (force ? '!' : '');
   if (key in DRAWN_ICONS) return DRAWN_ICONS[key];
   const cls = CLASSES.find(x => x.id === classId);
-  if (!cls || !cls.art || cls.art.icons !== false) return (DRAWN_ICONS[key] = null);
+  if (!cls || (!force && (!cls.art || cls.art.icons !== false))) return (DRAWN_ICONS[key] = null);
   const cv = document.createElement('canvas'); cv.width = cv.height = 64;
   const c = cv.getContext('2d');
   const bg = c.createRadialGradient(32, 26, 4, 32, 32, 46);

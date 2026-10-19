@@ -226,7 +226,7 @@ const RaidUI = (() => {
       const chips = [];
       for (const [hid, secs, from] of p.hots || []) {
         const h = HOT_ICON[hid];
-        if (h) chips.push(`<b class="chip hot${from === myId ? '' : ' theirs'}" data-tip="${h[2]}: healing over time"><u style="background-image:url(icons/${h[0]}/${h[1]}.png)"></u>${secs}</b>`);
+        if (h) chips.push(`<b class="chip hot${from === myId ? '' : ' theirs'}" data-tip="${h[2]}: healing over time"><u style="background-image:url(${abilityIcon(h[0], h[1])})"></u>${secs}</b>`);
       }
       if (p.mit) chips.push(`<b class="chip mit" data-tip="Taking ${p.mit}% less damage">${GLYPH.shield}${p.mit}%</b>`);
       if (p.dd) chips.push(`<b class="chip bad" data-tip="Damage Down: dealing 10% less damage">${GLYPH.down}${p.dd}</b>`);
