@@ -84,6 +84,24 @@ const BotAI = {
     return mine[me] ?? null;
   },
 
+  // Rod Strike: which standing stone this marked bot brings its bolt down on. The marked take the nearest uncharged
+  // stone in turn (a charged one would discharge); null if this bot isn't marked
+  stoneFor(me, view) {
+    const marks = view.mechs.filter(m => m.tag === 'rodstrike').sort((a, b) => a.id - b.id);
+    if (!marks.some(m => m.follow === me)) return null;
+    const free = (view.props || []).filter(p => p.kind === 'stone').sort((a, b) => (a.state > 0) - (b.state > 0));
+    const mine = {};
+    for (const m of marks) {
+      const p = view.players.find(q => q.id === m.follow && q.alive);
+      if (!p || !free.length) continue;
+      const cool = free.filter(s => !(s.state > 0)), pool = cool.length ? cool : free;
+      let best = pool[0];
+      for (const s of pool) if (Math.hypot(s.x - p.x, s.y - p.y) < Math.hypot(best.x - p.x, best.y - p.y)) best = s;
+      mine[m.follow] = best; free.splice(free.indexOf(best), 1);
+    }
+    return mine[me] || null;
+  },
+
   // any other one-person towers (Order Up!'s plates, Egg Sacs): the players take the nearest free one in turn, the
   // tank last (it holds the boss) and anyone Stuffed after everyone else
   towerFor(me, view) {
@@ -328,14 +346,31 @@ const BotAI = {
         case 'gale': {
           if (dt > 7 || this.sheltered(px, py, view)) break;
           const a = Math.atan2(py - view.boss.y, px - view.boss.x), dist = m.dist || 300;
-          const over = ARENA.sd(px + Math.cos(a) * dist, py + Math.sin(a) * dist) + 20;
+          const tx = px + Math.cos(a) * dist, ty = py + Math.sin(a) * dist;
+          const over = ARENA.sd(tx, ty) + 20;
           if (over > 0) pen += (3000 + over * 10) * urgency;
+          else if (PROPS.ray(px, py, tx, ty, view.props || [], 16)) pen += 3000 * urgency;   // thrown into a standing stone
+          break;
+        }
+        // Rod Strike: the marked stand at their own stone; nobody else stands at a stone that's about to be struck
+        case 'rodstrike': {
+          if (m.follow === me) {
+            const st = this.stoneFor(me, view);
+            if (st) { const d = PROPS.sd(st, px, py); if (d > 40) pen += (d - 40) * 30 * Math.max(urgency, 0.3); }
+          } else {
+            const owner = alive.find(o => o.id === m.follow);
+            const st = owner && this.stoneFor(m.follow, view);
+            if (st && PROPS.sd(st, px, py) < 110) pen += 3000 * urgency;
+            if (owner && Math.hypot(owner.x - px, owner.y - py) < 60) pen += 1500 * urgency;
+          }
           break;
         }
       }
     }
     // Storm Walls: stay off where each wall will be over the next second
     for (const sw of view.sweeps || []) {
+      // behind a boulder (Avalanche) the wall passes over you, once
+      if (sw.cover && PROPS.shadowing(sw.x, sw.y, px, py, view.props || [], q => q.kind === sw.cover && PROPS.blocks(q, sw.x, sw.y, px, py, PROPS.COVER_SHRINK + 10))) continue;
       for (const look of [0, 0.5, 1]) {
         const tt = view.t + look;
         if (tt < sw.startAt - 0.8 || tt > sw.end) continue;
@@ -362,6 +397,13 @@ const BotAI = {
     // the closing edge: be well inside where the wall is about to jump to
     const en = view.edgeNext;
     if (en && en.at - view.t < 6) { const over = Math.hypot(px, py) - (en.r - 60); if (over > 0) pen += 5000 + over * 50; }
+    // (Hard) a wedge of the summit about to break away: off it
+    const pc = view.pendingCut;
+    if (pc && pc.at - view.t < 7) {
+      let d = Math.atan2(py, px) - pc.a0; d -= Math.floor(d / (Math.PI * 2)) * Math.PI * 2;
+      const over = Math.hypot(px, py) - (pc.r - 60);
+      if (d <= pc.a1 - pc.a0 + 0.08 && over > 0) pen += 5000 + over * 50;
+    }
     for (const pd of view.puddles) if (Math.hypot(pd.x - px, pd.y - py) < pd.r + 28) pen += 4000;
     // rolling meatballs: stay off the stretch of path each one covers in the next second and a half
     for (const rl of view.rollers || []) {
@@ -431,6 +473,10 @@ const BotAI = {
       // Volkar: beside your polarity partner, and in the still air behind each rod (also the half of a rod's circle
       // away from him, for catching a rod and sheltering behind it at once)
       if (m.type === 'polarity' || m.tag === 'crash') { const pt = this.partner(bot.id, view); if (pt) cands.push({ x: pt.x + (bot.x > pt.x ? 30 : -30), y: pt.y }); }
+      if (m.tag === 'rodstrike' && m.follow === bot.id) {
+        const st = this.stoneFor(bot.id, view);
+        if (st) for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4; cands.push({ x: st.x + Math.cos(a) * (st.r + 28), y: st.y + Math.sin(a) * (st.r + 28) }); }
+      }
       if (m.type === 'gale') {
         for (const c of this.covers(view)) {
           const a = Math.atan2(c.y - view.boss.y, c.x - view.boss.x);
@@ -438,6 +484,8 @@ const BotAI = {
         }
       }
     }
+    // Storm Walls with boulders down: the still air behind each one
+    for (const sw of view.sweeps || []) if (sw.cover) for (const pr of (view.props || []).filter(p => p.kind === sw.cover)) for (const back of [26, 50]) cands.push(PROPS.shadowSpot(sw.x, sw.y, pr, back));
     // tether partner: right next to them, or straight away from them
     for (const th of view.tethers || []) {
       if (th.a !== bot.id && th.b !== bot.id) continue;

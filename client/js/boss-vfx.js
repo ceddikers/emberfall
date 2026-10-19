@@ -385,6 +385,17 @@ const BOSS_VFX = (() => {
       roomTint('#dff4ff', 0.3, 0.6);
       shake(12);
     },
+    // Rod Strike: the bolts come in their own message (propfx 'bolt'); Avalanche: the boulder thuds down where it stops
+    rodstrike() {},
+    avalanche(tg) {
+      const s = tg.live, d = s.len - 40, x = s.x + Math.cos(s.angle) * d, y = s.y + Math.sin(s.angle) * d;
+      VFX.smoke(x, y, { color: '#c8c0b0', n: 10, size: 40, a: 0.6, speed: 120 });
+      VFX.debris(x, y - 10, { color: '#6a6460', n: 10, speed: 1.1 });
+      VFX.shock(x, y, { r: 120, color: '#e0d6c4', w: 6, dur: 0.45, flat: 1 });
+      VFX.decal(x, y, { style: 'crack', r: 60, dur: 3, a: 0.5, seed: Math.random() * 6 });
+      for (let i = 0; i < 6; i++) { const q = i / 6; VFX.smoke(s.x + Math.cos(s.angle) * d * q, s.y + Math.sin(s.angle) * d * q, { color: '#b8ae9c', n: 2, size: 30, a: 0.4, speed: 50 }); }
+      shake(6);
+    },
     // the Hollow King
     knell(tg) {
       roomTint('#c8ffdc', 0.2, 0.7);
@@ -466,7 +477,7 @@ const BOSS_VFX = (() => {
       charge: '#ff8a4a', larder: '#ffd8a0', gut: '#c8d87a', hook: '#e8eef4', drains: '#b89a5a' },
     skitterra: { def: '#d08aff', mist: '#9adf3a', spit: '#9adf3a', wrap: '#f4f0ff', silk: '#f4f0ff', web: '#f4f0ff', lunge: '#ff7ac0', eggs: '#e8ff9a', fang: '#ff7ac0', volley: '#f4f0ff',
       deluge: '#9adf3a', strand: '#f4f0ff', ambush: '#b090ff', cocoon: '#f4f0ff' },
-    volkar: { def: '#7fe8ff', surge: '#ffe08a', crash: '#ffe27a', field: '#d79bff', gale: '#e8f4ff', walls: '#e8f4ff', fist: '#9ff4ff', skyfall: '#dff4ff' },
+    volkar: { def: '#7fe8ff', surge: '#ffe08a', crash: '#ffe27a', field: '#d79bff', gale: '#e8f4ff', walls: '#e8f4ff', fist: '#9ff4ff', skyfall: '#dff4ff', avalanche: '#d8c8a8' },
     hollowking: { def: '#6dff9a', gaze: '#f0fff4', doom: '#b46aff', bells: '#ffd88a', cleave: '#ff8a7a', night: '#8aa0ff', audience: '#ffe6a0',
       lightsout: '#f0fff4', lids: '#c8ffd8', decree: '#7affa8' },
   };
@@ -677,6 +688,45 @@ const BOSS_VFX = (() => {
         VFX.flare(pr.x, pr.y - 24, { color: '#3aff7a', n: 18, r: 18, h: 1.6 });
         VFX.shock(pr.x, pr.y, { r: 160, color: '#7affa8', w: 5, dur: 0.5, flat: 1 });
       }
+    } else if (msg.k === 'bolt') {
+      // Rod Strike: the bolt comes down on a standing stone (its runes take it), or on someone caught in the open
+      const top = msg.kind === 'stone' ? 92 : 16, e = msg.pid != null && entById ? entById(msg.pid) : null;
+      const x = e ? e.x : msg.x, y = e ? e.y : msg.y;
+      VFX.lightning(x + rand(-30, 30), y - 460, x, y - top, { color: '#ffffff', jag: 28, dur: 0.4 });
+      VFX.lightning(x + rand(-30, 30), y - 460, x, y - top, { color: '#9ff4ff', jag: 24, dur: 0.5 });
+      VFX.shock(x, y, { r: msg.kind === 'stone' ? 110 : 80, color: '#9ff4ff', w: 6, dur: 0.4, flat: 1 });
+      VFX.sparks(x, y - top, { color: '#dffbff', n: 12, speed: 300 });
+      if (e) VFX.hit(e.x, e.y, '#bff6ff', 2);
+      roomTint('#bfe8ff', 0.1, 0.25);
+      shake(msg.kind === 'stone' ? 5 : 8);
+    } else if (msg.k === 'discharge') {
+      // a stone that was still charged lets it all go into everyone near it
+      const r = msg.r || 180;
+      for (let i = 0; i < 10; i++) { const a = i * TAU / 10 + rand(-0.2, 0.2); VFX.lightning(msg.x, msg.y - 50, msg.x + Math.cos(a) * r, msg.y + Math.sin(a) * r * 0.9, { color: i % 2 ? '#ffffff' : '#ff9a7a', jag: 16, dur: 0.45 }); }
+      VFX.shock(msg.x, msg.y, { r, color: '#ffb09a', w: 8, dur: 0.5, flat: 1 });
+      VFX.burst(msg.x, msg.y - 40, { color: '#ffd0c0', color2: '#9ff4ff', n: 18, speed: 300 });
+      roomTint('#ffd0c0', 0.16, 0.35);
+      shake(9);
+    } else if (msg.k === 'arc') {
+      // Grounded (Hard): the discharge leaps on to the nearest player
+      const e = msg.pid != null && entById ? entById(msg.pid) : null;
+      if (e) { for (let n = 0; n < 2; n++) VFX.lightning(msg.x, msg.y - 60, e.x, e.y - 16, { color: n ? '#ffffff' : '#ff9a7a', jag: 18, dur: 0.45 }); VFX.hit(e.x, e.y, '#ffb09a', 1.8); }
+      shake(5);
+    } else if (msg.k === 'fall') {
+      // off the broken edge (Hard): a gust of grit where they went over, and the wind hauling them back up
+      const e = msg.pid != null && entById ? entById(msg.pid) : null, x = e ? e.x : msg.x, y = e ? e.y : msg.y;
+      VFX.smoke(x, y, { color: '#c8d0dc', n: 12, size: 36, a: 0.6, speed: 140 });
+      VFX.debris(x, y, { color: '#5a6270', n: 10, speed: 1.2 });
+      if (e) { VFX.tornado(e.x, e.y, { r: 30, h: 120, dur: 1.2 }); VFX.aura(e, { style: 'ring', color: '#e8f4ff', r: 30, dur: 5, rate: 0.5 }); }
+      shake(7);
+    } else if (msg.k === 'crumble') {
+      // a wedge of the summit breaks away: rock and dust spill off the new lip
+      for (let i = 0; i < 12; i++) {
+        const a = msg.a0 + (msg.a1 - msg.a0) * (i + 0.5) / 12, x = Math.cos(a) * msg.r, y = Math.sin(a) * msg.r;
+        after(i * 0.04, () => { VFX.debris(x, y, { color: '#5a6270', n: 6, speed: 1.3, up: 1.1 }); VFX.smoke(x, y, { color: '#b8c4d4', n: 3, size: 44, a: 0.55, speed: 90 }); });
+      }
+      roomTint('#1a2230', 0.25, 0.8);
+      shake(14);
     } else if (msg.k === 'ignite') {
       VFX.flare(msg.x, msg.y, { color: '#ff7a1a', n: 16, r: (msg.r || 60) * 0.6 });
       VFX.smoke(msg.x, msg.y, { color: '#3a2a20', n: 5, size: 30, a: 0.5, speed: 60 });

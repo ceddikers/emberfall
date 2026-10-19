@@ -72,6 +72,7 @@ class RaidHost {
       rollers: [...sim.rollers.values()], reels: [...sim.reels.values()], sweeps: [...sim.sweeps.values()],
       // Volkar: everyone's charge, the rods' posts, and where the closing wall is about to jump
       polarity: sim.polarity || null, posts: (sim.posts || []).filter(c => c.end > sim.t), edgeNext: sim.edgeNext || null,
+      pendingCut: sim.pendingCut || null,   // (Hard) the wedge of the summit about to break away
       // the Hollow King: lanterns, who is doomed (and when it kills), and the knights' replays still to come
       lanterns: sim.lanterns || [], doomed: sim.doomed || null, echoPlan: sim.echoPlan || [], night: !!sim.night, pools: sim.healPools,
       // the room: solid props (cover, walls to bait a charge into), burning grease, and boss-specific room state

@@ -1391,6 +1391,41 @@ const ArenaView = {
     if (lo && t < lo.end + 0.6) this.drawLightsOut(ctx, room, lo, t, v);
     const amb = room.ev.ambush;
     if (amb && t < amb.end + 0.3) this.ambushShadow(ctx, amb, t);
+    const cr = room.ev.crumble;
+    if (cr && t < cr.end + 0.1) this.crumbleWarn(ctx, cr, t);
+  },
+  // Crumbling Summit (Volkar, Hard): the wedge about to go shudders and darkens, and a crack runs along where it'll break
+  crumbleWarn(ctx, cr, t) {
+    const p = clamp((t - cr.start) / Math.max(0.1, cr.end - cr.start), 0, 1), R = ARENA.full + 10, r = rng(Math.round(cr.a0 * 1000));
+    const jx = p > 0.75 ? Math.sin(t * 60) * 2 * (p - 0.75) * 4 : 0;
+    ctx.save(); ctx.translate(jx, 0);
+    ctx.beginPath(); ctx.arc(0, 0, R, cr.a0, cr.a1); ctx.arc(0, 0, cr.r, cr.a1, cr.a0, true); ctx.closePath();
+    ctx.fillStyle = `rgba(8,10,18,${0.12 + 0.3 * p + 0.06 * Math.sin(t * 8)})`; ctx.fill();
+    // the crack along the new lip, running out from the middle of the wedge as the time runs down
+    const steps = 30, pts = [];
+    for (let i = 0; i <= steps; i++) { const a = cr.a0 + (cr.a1 - cr.a0) * i / steps; pts.push([a, cr.r + (i && i < steps ? (r() - 0.5) * 14 : 0)]); }
+    const show = Math.min(1, p * 1.6), mid = steps / 2, half = Math.ceil(mid * show);
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    for (const [w, col] of [[5, 'rgba(10,12,18,0.85)'], [1.5, rgba('#cfe0f4', 0.5 + 0.4 * p)]]) {
+      ctx.beginPath();
+      for (let i = Math.max(0, mid - half); i <= Math.min(steps, mid + half); i++) { const [a, rr] = pts[i]; i === Math.max(0, mid - half) ? ctx.moveTo(Math.cos(a) * rr, Math.sin(a) * rr) : ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); }
+      ctx.strokeStyle = col; ctx.lineWidth = w; ctx.stroke();
+    }
+    // and up each side toward the cliff
+    if (p > 0.35) for (const a of [cr.a0, cr.a1]) {
+      const q = clamp((p - 0.35) / 0.5, 0, 1);
+      let x = Math.cos(a) * cr.r, y = Math.sin(a) * cr.r;
+      ctx.beginPath(); ctx.moveTo(x, y);
+      for (let i = 1; i <= 6; i++) { const d = cr.r + (R - cr.r) * q * i / 6; x = Math.cos(a + (r() - 0.5) * 0.03) * d; y = Math.sin(a + (r() - 0.5) * 0.03) * d; ctx.lineTo(x, y); }
+      ctx.strokeStyle = 'rgba(10,12,18,0.8)'; ctx.lineWidth = 4; ctx.stroke();
+      ctx.strokeStyle = rgba('#cfe0f4', 0.4); ctx.lineWidth = 1.2; ctx.stroke();
+    }
+    // grit jumping on it
+    for (let i = 0; i < 14; i++) {
+      const a = cr.a0 + (cr.a1 - cr.a0) * hash01(i * 3 + 1), d = cr.r + 20 + (R - cr.r - 30) * hash01(i * 3 + 2), hop = Math.abs(Math.sin(t * (9 + i) + i)) * 8 * p;
+      circle(ctx, Math.cos(a) * d, Math.sin(a) * d - hop, 2 + hash01(i * 3 + 3) * 2, 'rgba(150,160,175,0.7)');
+    }
+    ctx.restore();
   },
   // over the units: marks that belong over heads (Volkar's rod strike) and the like
   drawRoomOver(ctx, room, t, env) {

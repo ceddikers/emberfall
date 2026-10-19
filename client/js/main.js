@@ -962,7 +962,7 @@
       case 'meatballs': prop('meat', true, end + 0.3); break;
       // Volkar: the titan shows what's coming
       case 'clap': case 'storm': prop('sky', true, end + 0.4); break;
-      case 'fist': prop('fist', true, end + 0.2); break;
+      case 'fist': case 'avalanche': prop('fist', true, end + 0.2); break;
       case 'surge': prop('polar', true, end + 0.3); break;
       case 'rods': case 'crash': case 'field': prop('charge', true, end + 0.4); break;
       case 'gale': prop('inhale', true, end + 0.1); break;
@@ -1126,7 +1126,7 @@
   Net.on('sweep', msg => {
     if (!raid) return;
     if (msg.clear) { raid.sweeps.clear(); return; }
-    raid.sweeps.set(msg.id, { x: msg.x, y: msg.y, arms: msg.arms, a0: msg.a0, spin: msg.spin, w: msg.w, start: now, at: now + msg.delay, end: now + msg.delay + msg.dur });
+    raid.sweeps.set(msg.id, { x: msg.x, y: msg.y, arms: msg.arms, a0: msg.a0, spin: msg.spin, w: msg.w, start: now, at: now + msg.delay, end: now + msg.delay + msg.dur, cover: msg.cover || null });
   });
   // the closing edge: sparks mark where the wall will be, then it jumps there and pushes anyone outside back in
   Net.on('edgewarn', msg => { if (raid) raid.edgeWarn = { r: msg.r, from: ARENA.r, start: now, end: now + msg.dur }; });

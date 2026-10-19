@@ -169,8 +169,18 @@ function props() {
   sim.broadcastProps();
   const msg = sent.filter(m => m.t === 'props').pop();
   if (!msg || msg.p.length !== 0 || !msg.f.length) probs.push('the props message should carry the (empty) props and the rubble');
+  // a round room with a wedge broken off (Volkar, Hard): the wall follows the break, and a throw stops at the new lip
+  const saved = Object.assign({}, ARENA);
+  ARENA.use('volkar'); ARENA.cuts.push({ a0: -0.6, a1: 0.6, r: 300 });
+  if (Math.abs(ARENA.sd(300, 0)) > 1 || Math.abs(ARENA.sd(0, 540)) > 1) probs.push('broken edge: the wall should be 300 out inside the wedge and 540 elsewhere');
+  const lip = ARENA.clamp({ x: 500, y: 0 }, 10);
+  if (Math.hypot(lip.x, lip.y) > 291) probs.push('broken edge: clamp left a hero out over the break');
+  thrown.x = 100; thrown.y = 0;
+  const off = sim.knock(thrown, 0, 0, 300);
+  if (!off.slam || off.dest.x > 300 - 11) probs.push('broken edge: a throw off the lip should stop at it');
+  Object.assign(ARENA, saved);
   if (probs.length) fail('Arena props: solid, cover, throws', probs.join('\n'));
-  else pass('Arena props: solid, cover, throws', 'cover spares the hero behind a cask and hits the open; caps, shadows, collisions, slams and breaking hold');
+  else pass('Arena props: solid, cover, throws', 'cover spares the hero behind a cask and hits the open; caps, shadows, collisions, slams, breaking and broken edges hold');
 }
 
 // ---------------------------------------------------------------- 2b. items: rarities, effects, loot tables, chests

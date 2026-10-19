@@ -744,6 +744,54 @@ const BossTells = (() => {
         }
       },
     },
+    // Rod Strike: a thread of charge runs from each marked player to the stone nearest them, and that stone's runes
+    // wake; within reach the thread holds steady, out of reach it frays. A stone still holding a charge glows red.
+    rodstrike: {
+      outline: false,
+      ground(ctx, tg, s, p, k, t, env) {
+        let st = null, sd = Infinity;
+        for (const pr of env.props || []) if (pr.kind === 'stone') { const d = PROPS.sd(pr, s.x, s.y); if (d < sd) { sd = d; st = pr; } }
+        if (!st) return;
+        const near = sd <= 70, hot = st.state > 0, col = hot ? '#ff8a6a' : '#9ff4ff';
+        glow(ctx, st.x, st.y, st.r + 70, hot ? '#ff5a3a' : '#4fa8e0', (0.12 + 0.2 * p) * k);
+        ctx.save(); ctx.setLineDash([8, 8]); ctx.lineDashOffset = -t * 30;
+        circle(ctx, st.x, st.y, st.r + 70, null, rgba(col, (0.3 + 0.4 * p) * k), 2);
+        ctx.restore();
+        ctx.save(); ctx.globalAlpha = (near ? 0.55 + 0.4 * p : 0.25 + 0.2 * p) * k;
+        if (near || Math.floor(t * 10 + tg.id) % 2) jagged(ctx, s.x, s.y - 16, st.x, st.y - 70, Math.floor(t * (near ? 8 : 16)) + tg.id, col, near ? 1.6 + p : 1);
+        ctx.restore();
+      },
+      air(ctx, tg, s, p, k, t, env) {
+        let st = null, sd = Infinity;
+        for (const pr of env.props || []) if (pr.kind === 'stone') { const d = PROPS.sd(pr, s.x, s.y); if (d < sd) { sd = d; st = pr; } }
+        const x = st && sd <= 70 ? st.x : s.x, y = st && sd <= 70 ? st.y : s.y;
+        stormCloud(ctx, x, y - 200, 55 + p * 30, (0.3 + 0.5 * p) * k, t, tg.id);
+      },
+    },
+    // Avalanche: the lane rumbles, grit jumping along it, and the boulder comes rolling in from the edge to where it stops
+    avalanche: {
+      color: '#d8c8a8',
+      ground(ctx, tg, s, p, k, t) {
+        const c = Math.cos(s.angle), sn = Math.sin(s.angle);
+        ctx.save(); SHAPES.trace(ctx, s); ctx.fillStyle = rgba('#5a4a3a', (0.12 + 0.18 * p) * k); ctx.fill(); ctx.clip();
+        for (let i = 0; i < 18; i++) {
+          const q = (t * (0.8 + 1.6 * p) + hash(i, tg.id)) % 1, along = q * s.len, off = (hash(i, tg.id + 3) - 0.5) * s.w * 0.8;
+          const x = s.x + c * along - sn * off, y = s.y + sn * along + c * off, hop = Math.abs(Math.sin(t * 14 + i)) * 6 * p;
+          circle(ctx, x, y - hop, 2 + hash(i, 5) * 2.5, rgba('#a89880', 0.7 * k));
+        }
+        // ruts where it will run
+        for (const side of [-0.28, 0.28]) line(ctx, s.x - sn * s.w * side, s.y + c * s.w * side, s.x + c * s.len - sn * s.w * side, s.y + sn * s.len + c * s.w * side, rgba('#2a2018', 0.35 * p * k), 3);
+        ctx.restore();
+      },
+      air(ctx, tg, s, p, k, t) {
+        const q = clamp((p - 0.72) / 0.28, 0, 1);
+        if (q <= 0) return;
+        const c = Math.cos(s.angle), sn = Math.sin(s.angle), d = (s.len - 40) * easeIn(q);
+        const x = s.x + c * d, y = s.y + sn * d - Math.abs(Math.sin(q * 9)) * 14 * (1 - q);
+        ArenaView.boulder(ctx, { x, y, r: 40, id: tg.id });
+        void t; void k;
+      },
+    },
     // Chain Lightning (Hard): a storm cell gathers over its target, and the air crackles out to as far as the bolt can
     // leap; sparks already jump to anyone else inside that ring
     chain: {
@@ -1274,6 +1322,11 @@ const BossTells = (() => {
       const k = Math.min(form, Math.max(0, (sw.end - t) / 0.5));
       if (k <= 0) continue;
       const live = t >= sw.at, a0 = sw.a0 + Math.max(0, t - sw.at) * sw.spin, dir = Math.sign(sw.spin) || 1;
+      // still air behind the boulders (Avalanche): the walls are drawn with each one's shadow cut out
+      const shadows = [];
+      if (sw.cover) for (const pr of env.props || []) if (pr.kind === sw.cover) { const sh = PROPS.shadowPoly(sw.x, sw.y, pr); if (sh) shadows.push(sh); }
+      ctx.save();
+      if (shadows.length) clipOut(ctx, shadows);
       for (let n = 0; n < sw.arms; n++) {
         const a = a0 + n * TAU / sw.arms, c = Math.cos(a), s = Math.sin(a), hw = sw.w / 2;
         const shape = { kind: 'rect', x: sw.x - c * 10, y: sw.y - s * 10, angle: a, len: L, w: sw.w };
@@ -1300,6 +1353,8 @@ const BossTells = (() => {
           circle(ctx, sw.x + c * along - s * off, sw.y + s * along + c * off, 2.5, rgba('#8a96a8', 0.8 * k));
         }
       }
+      ctx.restore();
+      if (shadows.length) shadowRims(ctx, shadows, live ? 1 : 0.4, k, t, '#e8f4ff');
     }
     ctx.restore();
   }
