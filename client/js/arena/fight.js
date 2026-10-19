@@ -46,6 +46,7 @@ class FightSim {
     this.tethers = new Map(); this.adds = new Map(); this.zones = []; this.addsDirty = false;
     this.rollers = new Map(); this.reels = new Map(); this.sweeps = new Map();
     this.edgeGrace = 0;   // a moving wall (Volkar) leaves people outside it for a moment; don't count that as a fall
+    this.healPools = [];  // players' healing pools on the floor (Moonwell): { from, x, y, r, amount, ticks, next, interval }
     this.tickers = [];    // per-tick hooks a boss script adds with ticker() (the Hollow King's lanterns and Doom)
     this.phase = 1; this.hpTriggers = [];
     this.ps = new Map();
@@ -150,7 +151,7 @@ class FightSim {
   end(result) {
     if (this.state !== 'live') return;
     this.state = result;
-    this.mechs.clear(); this.puddles = []; this.tethers.clear(); this.adds.clear(); this.zones = [];
+    this.mechs.clear(); this.puddles = []; this.tethers.clear(); this.adds.clear(); this.zones = []; this.healPools = [];
     this.rollers.clear(); this.reels.clear(); this.sweeps.clear();
     this.broadcastAdds();
     this.broadcastParty();
@@ -198,12 +199,15 @@ class FightSim {
         while (h.ticks > 0 && this.t >= h.next) { h.ticks--; h.next += h.interval; if (s.alive) this.applyHeal(h.from, p.id, h.amount); }
       }
       s.hots = s.hots.filter(h => h.ticks > 0);
+      if (s.alive) for (const pl of this.healPools) if (this.t >= pl.next && Math.hypot(p.x - pl.x, p.y - pl.y) <= pl.r) this.applyHeal(pl.from, p.id, pl.amount);
       if (s.alive) {
         s.hist.push([this.t, s.hp]);
         while (s.hist.length && s.hist[0][0] < this.t - 6) s.hist.shift();
         if (ARENA.sd(p.x, p.y) > 14 && this.t > this.edgeGrace) this.damagePlayer(p, 9999999, { kind: 'fall' });
       }
     }
+    for (const pl of this.healPools) if (this.t >= pl.next) { pl.next += pl.interval; pl.ticks--; }
+    this.healPools = this.healPools.filter(pl => pl.ticks > 0);
   }
 
   // ---------------------------------------------------------------- incoming combat events from players
@@ -211,7 +215,7 @@ class FightSim {
     const s = this.ps.get(pid), st = this.stats[pid];
     if (!s || this.state !== 'live') return;
     if (!s.alive) return;
-    const targetsOf = target => (target === 'party' ? this.alive().map(p => p.id) : [this.resolveTarget(pid, target)]);
+    const targetsOf = target => (target === 'party' ? this.alive().map(p => p.id) : [this.resolveTarget(pid, target, ev.not)]);
     switch (ev.type) {
       case 'damage': {
         let amt = Math.max(0, Math.min(15000, ev.amount | 0));
@@ -224,12 +228,13 @@ class FightSim {
         }
         if (this.boss.untargetable) return;
         this.boss.hp = Math.max(0, this.boss.hp - amt);
+        this.burstBrand(pid);
         st.damage += amt;
         s.threat += amt * (s.role === 'tank' ? FIGHT.TANK_THREAT : 1) * (ev.threat || 1);
         if (this.boss.hp <= 0) this.end('clear');
         break;
       }
-      case 'heal': this.applyHeal(pid, ev.target === 'party' ? null : this.resolveTarget(pid, ev.target), ev.amount, ev.target === 'party'); break;
+      case 'heal': this.applyHeal(pid, ev.target === 'party' ? null : this.resolveTarget(pid, ev.target, ev.not), ev.amount, ev.target === 'party'); break;
       case 'hot':
         for (const tid of targetsOf(ev.target)) {
           const ts = this.ps.get(tid); if (!ts || !ts.alive) continue;
@@ -279,10 +284,39 @@ class FightSim {
       case 'targetDebuff':
         if (ev.kind === 'vuln') { this.boss.vuln = Math.min(0.2, ev.value); this.boss.vulnEnd = this.t + Math.min(20, ev.dur); }
         break;
+      case 'pool': {   // a healing pool at an ally's feet (Moonwell)
+        const tp = this.players().find(q => q.id === this.resolveTarget(pid, ev.target)) || this.players().find(q => q.id === pid);
+        if (!tp) break;
+        this.healPools = this.healPools.filter(pl => pl.from !== pid);
+        this.healPools.push({ from: pid, x: tp.x, y: tp.y, r: Math.min(200, ev.r || 140), amount: Math.max(0, Math.min(3000, ev.amount | 0)), ticks: Math.min(12, ev.ticks || 6), interval: Math.max(0.5, ev.interval || 1.5), next: this.t + Math.max(0.5, ev.interval || 1.5) });
+        break;
+      }
+      case 'brand': {  // Judgment on the boss: allies' next hits burst for the Inquisitor's damage
+        const b = this.boss, old = b.brand && b.brand.from === pid && b.brand.end > this.t ? b.brand.charges : 0;
+        b.brand = { from: pid, charges: Math.min(8, old + Math.min(8, ev.ticks | 0)), amount: Math.max(0, Math.min(3000, ev.amount | 0)), end: this.t + 15 };
+        break;
+      }
       case 'snap': this.snapReel(pid); break;   // a dash snapped the silk reeling this player in
     }
   }
-  resolveTarget(pid, target) { return (target === undefined || target === null || target === 'self') ? pid : target; }
+  resolveTarget(pid, target, not) {
+    if (target === 'lowest') {   // the most hurt ally (by share of HP), for heals that find their own target
+      let best = pid, bf = Infinity;
+      for (const p of this.alive()) { if (p.id === not) continue; const f = p.s.hp / p.s.maxHp; if (f < bf) { bf = f; best = p.id; } }
+      return best;
+    }
+    return (target === undefined || target === null || target === 'self') ? pid : target;
+  }
+  // an ally's hit on a branded boss bursts one Judgment charge, credited to the Inquisitor who placed it
+  burstBrand(pid) {
+    const b = this.boss, br = b.brand;
+    if (!br || br.from === pid || br.end <= this.t || br.charges <= 0) return;
+    br.charges--;
+    b.hp = Math.max(0, b.hp - br.amount);
+    const st = this.stats[br.from]; if (st) st.damage += br.amount;
+    this.emit({ t: 'fev', k: 'brandHit', id: br.from, left: br.charges });
+    if (br.charges <= 0) b.brand = null;
+  }
 
   revive(tid, ts, frac, by, rewound) {
     ts.alive = true; ts.hp = Math.round(ts.maxHp * Math.max(0.1, Math.min(1, frac)));

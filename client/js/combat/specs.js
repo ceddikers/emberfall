@@ -7,7 +7,7 @@
 // and any hooks (onNotify, dmgMod, haste...). kitFor(classId, specId) merges it over the base kit (cached).
 // A replacement ability keeps the slot, and honours the enhancements of the ability it replaced where it makes sense.
 
-const SPEC_MELEE = 'melee';
+const SPEC_MELEE = 'melee', SPEC_RANGED = 420;   // the same reach as MELEE / RANGED in kits.js
 
 const SPECS = {
   // ======================================================================= TANKS
@@ -238,7 +238,238 @@ const SPECS = {
       }),
     },
   ],
+
+  // ======================================================================= HEALERS
+  cleric: [
+    {
+      id: 'aegis', name: 'Aegis', title: 'The Golden Wall', accent: '#ffe9a8',
+      gaugeTip: 'A Petal regrows every 15s (up to 3). A Petal shield that soaks most of its strength gives its Petal back (once every 10s). Three Petals spent make Dawnstar.',
+      blurb: 'Stop the damage before it lands. Light that hardens into armour.',
+      focus: 'Shields. Your Petals and Divine Barrier stop damage before it lands, so you plan ahead instead of healing after.',
+      passive: { name: 'Hardened Light', desc: 'Dawn Petal leaves a shield instead of a regen, and a Petal shield that soaks most of its strength gives the Petal back. Benediction has two charges. Mend becomes Divine Barrier.' },
+      build: base => ({
+        potMult: 0.9,
+        init: () => Object.assign(base.init(), { refundAt: 0 }),
+        abilities: {
+          mend: {
+            id: 'barrier', replaces: 'mend', icon: 'mend', name: 'Divine Barrier', type: 'gcd', target: 'ally', cast: 1.5, anim: 'cast',
+            desc: '1.5s cast: a golden dome on one ally that absorbs a big hit for 12s, and heals them a little.',
+            effect(k, t) { k.heal(t, 250, { ab: this }); k.shield(t, 650, 12, { ab: this, tag: 'barrier' }); },
+            fx: { type: 'ring', color: '#ffe9a8', r: 46, onTarget: true },
+          },
+          petal: {
+            desc: 'Spend a Petal: an instant heal and a shield for 10s. If the shield soaks most of its strength, the Petal comes back (once every 10s). Three Petals make Dawnstar.',
+            effect(k, t) {
+              k.spend('petals', 1);
+              k.heal(t, 330, { ab: this });
+              k.shield(t, k.perk('cleric_w1') ? 330 : 260, 10, { ab: this, tag: 'petal' });
+              k.gain('bloom', 1, 3);
+            },
+          },
+          bene: { charges: 2, desc: 'Instant: a strong heal and a shield on one ally. Two charges.' },
+        },
+        onNotify(k, type, d) {
+          if (type === 'shieldEnd' && d.tag === 'petal' && d.frac >= 0.75 && k.now >= k.g.refundAt) {
+            k.g.refundAt = k.now + 10;
+            k.gain('petals', 1, 3); k.fx('petal-back');
+          }
+        },
+      }),
+    },
+    {
+      id: 'inquisitor', name: 'Inquisitor', title: 'The Burning Verdict', accent: '#ff9a3c',
+      gaugeTip: 'A Petal regrows every 20s (up to 3). Three Petals spent make Dawnstar.',
+      blurb: 'Judgment first, mercy after. Every blow your allies strike carries your verdict.',
+      focus: 'Damage. Smite brands the boss so your allies\' hits burst for extra damage. Less healing: Petals regrow slower and Benediction becomes an attack.',
+      balance: 1.12,   // a damage spec: aims for this share of the base Cleric's damage (tools/check.js)
+      passive: { name: 'Judgment', desc: 'Smite brands the boss: your allies\' next 2 hits on it burst with holy fire, counted as your damage. Dawn Petals regrow every 20s. Benediction becomes Condemn.' },
+      build: base => ({
+        potMult: 0.71,
+        tick(k) {
+          if (k.g.petalAt === null) k.g.petalAt = k.now + 20;
+          if (k.now >= k.g.petalAt) { k.gain('petals', 1, 3); k.g.petalAt += 20; }
+        },
+        abilities: {
+          smite: {
+            cast: k => (k.g.bloom >= 3 || k.has('verdict') ? 0 : 1.5),
+            desc: '1.5s cast attack that brands the boss: your allies\' next 2 hits burst for extra damage. After three Dawn Petals it becomes Dawnstar: instant, huge, and a brand of 4.',
+            effect(k) {
+              k.consume('verdict');
+              if (k.g.bloom >= 3) { k.g.bloom = 0; k.damage(950, { ab: this }); k.fx('dawnstar'); specBrand(k, 4, this); if (k.perk('cleric_w2')) k.heal('party', 180, { ab: this }); }
+              else { k.damage(280, { ab: this }); specBrand(k, 2, this); }
+            },
+          },
+          bene: {
+            id: 'condemn', replaces: 'bene', icon: 'bene', name: 'Condemn', type: 'ogcd', target: 'enemy', range: SPEC_RANGED, cd: 30, anim: 'big',
+            desc: 'Instant: a lance of holy fire that brands the boss for 4 hits, and your next Smite is instant.',
+            effect(k) { k.damage(420, { ab: this }); specBrand(k, k.perk('cleric_a2') ? 6 : 4, this); k.buff('verdict', 15); },
+            fx: { type: 'projectile', color: '#ffb04a', range: SPEC_RANGED, speed: 1100 },
+          },
+        },
+      }),
+    },
+  ],
+
+  grovekeeper: [
+    {
+      id: 'lifebinder', name: 'Lifebinder', title: 'The Deep Roots', accent: '#6fffb0',
+      gaugeTip: 'Each Lifebind tick on your chosen ally grows 5 Bloom. Bloom spends 50.',
+      blurb: 'Roots under the whole party. Heal before the hit, not after.',
+      focus: 'Healing over time. Lifebind covers two allies at once and Bloom bursts harder, so planning ahead keeps everyone topped up.',
+      passive: { name: 'Deep Roots', desc: 'Rejuvenate becomes Lifebind: it also takes root on the most hurt other ally. Bloom heals 30% more.' },
+      build: () => ({
+        potMult: 0.87,
+        abilities: {
+          rejuv: {
+            id: 'lifebind', replaces: 'rejuv', icon: 'rejuv', name: 'Lifebind', type: 'gcd', target: 'ally', anim: 'cast',
+            desc: 'Instant: a small heal, then healing every 3s for 15s, on this ally and on the most hurt other ally. Its ticks grow Bloom.',
+            effect(k, t) {
+              k.heal(t, 200, { ab: this });
+              k.hot(t, 120, 5, 3, { ab: this, id: 'rejuv' });
+              const { amount } = k.healAmount(110, { ab: this });
+              k.env.emit({ type: 'hot', target: 'lowest', not: t, amount, ticks: 5, interval: 3, ab: this, id: 'rejuv2' });
+              k.g.rejuvs = k.g.rejuvs.filter(r => r.t !== t);
+              k.g.rejuvs.push({ t, ticks: 5, next: k.now + 3 });
+            },
+            fx: { type: 'ring', color: '#6fffb0', r: 40, onTarget: true },
+          },
+          bloom: {
+            desc: 'Spend 50 Bloom: instantly and strongly heal everyone with your Lifebind and the most hurt ally (the whole party during Wild Growth). Your next Wrath is instant.',
+            effect(k) {
+              k.spend('bloom', 50);
+              if (k.has('growth')) k.heal('party', 450, { ab: this });
+              for (const r of k.g.rejuvs) k.heal(r.t, 520, { ab: this });
+              k.heal(k.g.rejuvs.length ? 'lowest' : 'self', 520, { ab: this });
+              k.buff('awaken', 15);
+            },
+          },
+        },
+      }),
+    },
+    {
+      id: 'moonwell', name: 'Moonwell', title: 'The Silver Pool', accent: '#a9c4ff',
+      blurb: 'Call the moon down into a pool. Everyone who stands in it is mended.',
+      focus: 'Placed healing. Moonwell heals everyone standing in it, so it is strongest when the party stacks together and weakest when it spreads.',
+      passive: { name: 'Moonlit Ground', desc: 'Wild Growth becomes Moonwell: a pool of moonlight at an ally\'s feet that heals everyone inside, on a shorter cooldown. Your heals are still 25% stronger while it lasts.' },
+      build: () => ({
+        potMult: 0.92,
+        healMod: k => (k.has('moonlit') ? 0.25 : 0),
+        abilities: {
+          bloom: {
+            desc: 'Spend 50 Bloom: instantly heal everyone with your Rejuvenate (and the whole party while Moonwell lasts). Your next Wrath is instant.',
+            effect(k) {
+              k.spend('bloom', 50);
+              if (k.has('moonlit')) k.heal('party', 350, { ab: this });
+              for (const r of k.g.rejuvs) k.heal(r.t, 400, { ab: this });
+              if (!k.g.rejuvs.length && !k.has('moonlit')) k.heal('self', 400, { ab: this });
+              k.buff('awaken', 15);
+            },
+          },
+          growth: {
+            id: 'moonwell', replaces: 'growth', icon: 'growth', name: 'Moonwell', type: 'ogcd', target: 'ally', cd: 45, anim: 'big',
+            desc: 'A pool of moonlight at an ally\'s feet for 12s: everyone standing in it heals every 1.5s, and your heals are 25% stronger while it lasts.',
+            effect(k, t) {
+              k.buff('moonlit', 12);
+              const { amount } = k.healAmount(80, { ab: this });
+              k.env.emit({ type: 'pool', target: t, r: 150, amount, ticks: 8, interval: 1.5, ab: this });
+              if (k.perk('grovekeeper_w3')) k.gain('bloom', 25);
+            },
+            fx: { type: 'ring', color: '#a9c4ff', r: 150, onTarget: true },
+          },
+        },
+      }),
+    },
+  ],
+
+  chronomancer: [
+    {
+      id: 'echoist', name: 'Echoist', title: 'The Second Voice', accent: '#c4a8ff',
+      blurb: 'Everything you do happens twice. The second time, a little softer.',
+      focus: 'Delayed healing. Your Bolts and Recalls repeat 3s later at half strength, so you heal for damage you can see coming.',
+      passive: { name: 'Echo', desc: 'Temporal Bolt and Recall repeat 3s later at half strength (full strength during Echo Chamber). Accelerando becomes Echo Chamber.' },
+      build: base => {
+        // one Bolt hit, at a share of its strength: damage, then the stance's heal
+        function bolt(k, ab, share) {
+          const r = k.damage(280 * share, { ab });
+          if (k.g.stance === 'haste') k.healRaw('party', r.amount * 0.5, { ab });
+          else k.healRaw(k.g.link ?? k.env.defaultLink(), r.amount * 1.2, { ab });
+        }
+        const echo = (k, fn) => k.g.echoes.push({ at: k.now + 3, fn });
+        const share = k => (k.has('chamber') ? 1 : 0.5);
+        return {
+          potMult: 0.53,
+          init: () => Object.assign(base.init(), { echoes: [] }),
+          tick(k) {
+            base.tick(k);
+            while (k.g.echoes.length && k.now >= k.g.echoes[0].at) { const e = k.g.echoes.shift(); e.fn(); }
+          },
+          abilities: {
+            bolt: {
+              desc: '1.5s cast attack that repeats 3s later at half strength. Slow: heals your linked ally for 120% of its damage. Haste: heals everyone for 50%.',
+              effect(k) { k.consume('surge'); bolt(k, this, 1); echo(k, () => { bolt(k, this, share(k)); k.fx('echo'); }); },
+            },
+            recall: {
+              desc: '2.5s cast: bring a fallen ally back, or heal a living one heavily. A heal repeats 3s later at half strength.',
+              effect(k, t) {
+                if (k.env.isDead(t)) { k.raise(t, { ab: this }); return; }
+                k.heal(t, 1400, { ab: this });
+                echo(k, () => { if (!k.env.isDead(t)) { k.heal(t, 1400 * share(k), { ab: this }); k.fx('echo'); } });
+              },
+            },
+            accel: {
+              id: 'chamber', replaces: 'accel', icon: 'accel', name: 'Echo Chamber', type: 'ogcd', target: 'self', cd: 60, anim: 'big',
+              desc: 'Burst: everyone attacks 10% faster for 15s, and your echoes are full strength while it lasts. You gain 40 Flux.',
+              effect(k) { k.partyBuff('haste', 0.1, 15, { ab: this }); k.buff('chamber', 15); k.gain('flux', 40); if (k.perk('chronomancer_w3')) k.heal('party', 150, { ab: this }); },
+              fx: { type: 'zone', style: 'clock', color: '#c4a8ff', r: 160, range: 0, dur: 2 },
+            },
+          },
+        };
+      },
+    },
+    {
+      id: 'accelerant', name: 'Accelerant', title: 'The Quickened Hour', accent: '#ffd36a',
+      gaugeTip: 'Slow fills Flux; Haste drains it 40% slower than usual. Accelerando gives 40.',
+      blurb: 'Live in fast time. The whole party moves to your beat.',
+      focus: 'Party support. Haste lasts longer and heals the party more, and Accelerando is stronger, but Slow heals your link less.',
+      passive: { name: 'Overclock', desc: 'Haste drains Flux 40% slower and its Bolts heal the party for 62% (not 50%). Accelerando gives 15% for 20s. In Slow, Bolt heals your link for 100%.' },
+      build: () => ({
+        potMult: 0.80,
+        tick(k) {
+          const dt = k.now - (k.g.lastTick ?? k.now);
+          k.g.lastTick = k.now;
+          if (dt <= 0 || dt > 1) return;
+          if (k.g.stance === 'slow') k.gain('flux', 3 * dt);
+          else {
+            k.g.flux = Math.max(0, k.g.flux - (k.perk('chronomancer_a2') ? 1.8 : 2.4) * dt);
+            if (k.g.flux <= 0) { k.g.stance = 'slow'; k.buff('lag', 3); k.fx('lag'); k.stats.lags = (k.stats.lags || 0) + 1; }
+          }
+        },
+        abilities: {
+          bolt: {
+            desc: '1.5s cast attack. Slow: heals your linked ally for 100% of its damage. Haste: heals everyone for 62%.',
+            effect(k) {
+              k.consume('surge');
+              const r = k.damage(280, { ab: this });
+              if (k.g.stance === 'haste') k.healRaw('party', r.amount * 0.62, { ab: this });
+              else k.healRaw(k.g.link ?? k.env.defaultLink(), r.amount * 1.0, { ab: this });
+            },
+          },
+          accel: {
+            desc: 'Party burst: everyone attacks 15% faster for 20s. You gain 40 Flux.',
+            effect(k) { k.partyBuff('haste', 0.15, 20, { ab: this }); k.gain('flux', 40); if (k.perk('chronomancer_w3')) k.heal('party', 150, { ab: this }); },
+          },
+        },
+      }),
+    },
+  ],
 };
+
+// Judgment (Inquisitor): the boss carries n charges; each ally hit bursts one for this much damage (the host
+// credits it to the Inquisitor). The burst's strength is worked out here so gear and the balance knob count.
+function specBrand(k, n, ab) {
+  const amount = Math.round(70 * ENGINE.POT_SCALE * (k.def.potMult || 1) * (1 + (k.gear().power || 0)));
+  k.env.emit({ type: 'brand', ticks: n, amount, ab });
+}
 
 // the kit a hero plays with this spec (or the base kit for none / an unknown spec)
 const SPEC_CACHE = {};

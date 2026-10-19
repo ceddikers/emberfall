@@ -7,14 +7,14 @@ const BUFF_NAMES = {
   oath: 'Oath of Valor', frenzy: 'Frenzy', gorge: 'Gorged', undying: 'Undying', overload: 'Runic Overload',
   markself: "Hunter's Mark", keen: 'Keen Eye', barrage: 'Barrage', truenorth: 'Shadowstep', dance: 'Shadow Dance',
   combust: 'Combustion', heating: 'Heating Up', hotstreak: 'Hot Streak', burnt: 'Burnt Out', growth: 'Wild Growth',
-  awaken: 'Awakened', surge: 'Surge', lag: 'Time Lag', radiant: 'Radiant',
+  awaken: 'Awakened', surge: 'Surge', lag: 'Time Lag', radiant: 'Radiant', verdict: 'Swift Verdict', chamber: 'Echo Chamber', moonlit: 'Moonlit',
 };
 const BAD_BUFFS = new Set(['burnt', 'lag']);
 // which ability's icon a buff wears
 const BUFF_ICON = {
   oath: 'oath', frenzy: 'frenzy', gorge: 'drain', undying: 'undying', overload: 'overload', markself: 'mark', keen: 'pierce',
   barrage: 'barrage', truenorth: 'step', dance: 'dance', combust: 'combust', heating: 'fireblast', hotstreak: 'pyro', burnt: 'vent',
-  growth: 'growth', awaken: 'bloom', surge: 'shift', lag: 'shift', radiant: 'edge',
+  growth: 'growth', awaken: 'bloom', surge: 'shift', lag: 'shift', radiant: 'edge', verdict: 'smite', chamber: 'accel', moonlit: 'growth',
 };
 
 // hover text for each class gauge: what fills it, what spends it, and (state) a live readout under the name

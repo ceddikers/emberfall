@@ -432,13 +432,13 @@ Stats:
 - One idle human plus three bots: cleared 2 of 3 at about 9:00. The idle hero misses every bell, so everyone gets doomed, and the bots still cured all 22 Dooms.
 - **Hard:** bots reach phase 3 and wipe at 12-20%, at the enrage.
 - Every Doom in every run was cured.
-### Specializations (in progress: tanks built)
+### Specializations (in progress: tanks and healers built)
 
 Each class picks one of two specializations, or keeps the base kit. Rules:
 - **A spec reshapes the kit, it doesn't replace it.** It swaps one or two abilities and gives the signature mechanic a new purpose, still on Q W E R D F + Space.
 - **The role stays the same:** a tank spec is still a tank, so party building stays simple.
 - **No lock-in:** switch freely on the hero page in town; the choice is saved per hero and sent to the group.
-- **Balanced against the base class:** both specs' pro DPS stay within 5% of their class in `tools/simulate.js` (a check enforces it).
+- **Balanced against the base class:** both specs' pro DPS stay within 5% of their class in `tools/simulate.js` (a check enforces it). A spec can aim off on purpose with `balance` (the Inquisitor aims for 112% of the Cleric's damage, paid for with less healing).
 - **A new look:** each spec draws extra gear or effects on the hero (`SPEC_ART` in `heroes.js`); painted portraits and icons come from `docs/art/spec-icons.md`.
 - **Bots play them too:** a bot fills its slot with the base kit or either spec, a third of the time each.
 - Still to come: the unlock (a Hollow King clear with that hero plus a short solo trial that teaches the spec's mechanic). Until the trials exist, every spec is open so it can be tested.
@@ -454,11 +454,26 @@ The hero page shows the base class and both specs as tabs. A spec shows what it 
 | **Bloodreaver · Berserker** (The Red Storm) | Risky damage | Blood becomes **Rage**. Crimson Drain becomes **Rampage**: up to 70% harder at low HP, heals for 20% of recent damage. Frenzy also makes you 10% faster. |
 | **Bloodreaver · Hemomancer** (The Blood Mage) | Helping the healer | Crimson Drain's healing also heals the whole party at a quarter strength. Bloodletting becomes **Blood Lance**, thrown from range. |
 | **Runeguard · Spellwarden** (The Warding Circle) | Shielding allies | Runic Ward goes on an ally (yourself if none is picked), explodes from them, and refunds its Rune once it absorbed half. |
-| **Runeguard · Runeblade** (The Carved Edge) | Melee damage | Rune Strike becomes the **Rune Blade** combo (Cut > Carve), Glyph Burst becomes **Rune Cleave** (leaves a burning rune for 12 s), Mirror Aegis has two charges, Wards are 20% smaller. |
+| **Runeguard · Runeblade** (The Carved Edge) | Melee damage | Rune Strike becomes the **Rune Blade** combo (Cut > Carve), Glyph Burst becomes **Rune Cleave** (leaves a burning rune for 12 s), Mirror Aegis has two charges, Wards a little smaller. |
+
+**Healers (design choices made together on 2026-10-19):**
+
+| Spec | Specializes in | What changes |
+|---|---|---|
+| **Cleric · Aegis** (The Golden Wall) | Shields | Dawn Petal leaves a shield instead of a regen; a Petal shield that soaks most of its strength gives the Petal back (once every 10 s). Benediction has two charges. Mend becomes **Divine Barrier**: a 1.5 s cast, a big golden dome on one ally for 12 s. |
+| **Cleric · Inquisitor** (The Burning Verdict) | Damage | Smite brands the boss: allies' next 2 hits on it burst for extra damage, counted as the Inquisitor's (4 after Dawnstar). Petals regrow every 20 s. Benediction becomes **Condemn**: a holy-fire lance that brands for 4 and makes the next Smite instant. |
+| **Grovekeeper · Lifebinder** (The Deep Roots) | Healing over time | Rejuvenate becomes **Lifebind**: it also takes root on the most hurt other ally. Bloom heals 30% more. |
+| **Grovekeeper · Moonwell** (The Silver Pool) | Placed healing | Wild Growth becomes **Moonwell**: a 12 s pool of moonlight at an ally's feet that heals everyone standing in it every 1.5 s (45 s cooldown). Bots step into it. |
+| **Chronomancer · Echoist** (The Second Voice) | Delayed healing | Temporal Bolt and Recall repeat 3 s later at half strength. Accelerando becomes **Echo Chamber**: the same party haste, and echoes are full strength while it lasts. |
+| **Chronomancer · Accelerant** (The Quickened Hour) | Party support | Haste drains Flux 40% slower and its Bolts heal the party more; Accelerando gives 15% for 20 s; Slow heals the link a little less. |
+
+New host support: heals can target `'lowest'` (the most hurt ally, optionally not a given one), healing pools on the floor (`pool` events, ticked in `fight.js`), and the Inquisitor's brand (`brand` events; `burstBrand` credits each burst to the Inquisitor).
+
+**Chronomancer healing raised (2026-10-19):** with the healer specs in the bot line-ups, the base Chronomancer could not heal Volkar (0 of 4 with any tank). Its damage is unchanged, but Bolt now heals the link for 120% (was 85%) and the party for 50% in Haste (was 30%), Recall heals 1,400 (was 1,200), and Haste drains Flux at 4 a second (was 5). A bug where looking up Bolt's cast time spent the free Surge Bolt is fixed. Bots also keep the Chronomancer's link on the tank. Volkar with a Chronomancer now clears 4 of 6 (Bastion), 5 of 6 (Echoist), 6 of 6 (Accelerant); a Runeguard tank with a Chronomancer is still the weakest pairing there (1 of 6), since nothing shields the Runeguard before a buster.
 
 **How it's built:** `client/js/combat/specs.js` holds `SPECS` and `kitFor(classId, specId)`, which lays a spec's changes over the base kit (cached). A replacement ability names the one it replaces (`replaces`), keeps its slot, borrows its icon until a painted one arrives, and honours that ability's gear enhancements. `CombatActor` builds from `kitFor`; the spec rides on the `cls` message and the raid roster, so every client draws the right look and cast effects.
 
-**Tested:** pro DPS within 1% of the base class for all six; bot parties with each tank spec cleared Volkar and the Hollow King on Normal 24 of 24 with no deaths; in the browser, the picker, switching spec, the HUD, and a Spellwarden Ward landing on an ally in a raid.
+**Tested:** pro DPS within 1% of the base class for all six tank specs and within 3% for the healers (the Inquisitor at its 112%); bot parties with each tank spec cleared Volkar and the Hollow King on Normal 24 of 24; each healer spec cleared the Hollow King 4 of 4, and in those raids every new mechanic fired (pools healed ~2 players a tick, ~200 brand bursts a fight, 12 Petals refunded, 135 echoes). In the browser: the picker, switching spec, the HUD, a Spellwarden Ward on an ally, Condemn's brand and credit, and a Moonwell pool with a bot stepping in.
 ## 5. What's built (code map)
 
 | Area | Files |

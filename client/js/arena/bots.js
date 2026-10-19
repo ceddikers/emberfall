@@ -257,6 +257,8 @@ const BotAI = {
     }
     // Doom: wherever the lanterns send this bot (lanternJob, worked out once per think in move())
     if (bot.job) pen += Math.min(600, Math.hypot(bot.job.x - px, bot.job.y - py)) * 12;
+    // a friendly healing pool (Moonwell): worth stepping into if it's close, for everyone but the tank
+    if (bot.role !== 'tank') for (const pl of view.pools || []) if (Math.hypot(pl.x - px, pl.y - py) < pl.r - 25 && Math.hypot(pl.x - bot.x, pl.y - bot.y) < pl.r + 260) pen -= 450;
     // the closing edge: be well inside where the wall is about to jump to
     const en = view.edgeNext;
     if (en && en.at - view.t < 6) { const over = Math.hypot(px, py) - (en.r - 60); if (over > 0) pen += 5000 + over * 50; }
@@ -294,6 +296,7 @@ const BotAI = {
     bot.job = this.lanternJob(bot, view);
     const cands = [home, { x: bot.x, y: bot.y }];
     if (bot.job) cands.push({ x: bot.job.x, y: bot.job.y });
+    if (bot.role !== 'tank') for (const pl of view.pools || []) cands.push({ x: pl.x + (bot.x - pl.x) * 0.3, y: pl.y + (bot.y - pl.y) * 0.3 });
     for (const c of [{ x: bot.x, y: bot.y }, home]) {
       for (const r of [60, 130, 220, 330]) for (let i = 0; i < 12; i++) {
         const a = i * Math.PI / 6 + r * 0.01;
@@ -364,7 +367,7 @@ const BotAI = {
   act(bot, k, view) {
     const ab = i => k.abilities[i];
     const readyIdx = i => { const a = ab(i); return a && k.usable(a) && k.readyIn(a) <= 0.0001 && k.available(a); };
-    const idx = id => k.abilities.findIndex(a => a.id === id);
+    const idx = id => k.abilities.findIndex(a => a.id === id || a.replaces === id);   // a spec's replacement answers to the base id
     const party = view.players.filter(p => !p.left);
     const hurt = party.filter(p => p.alive).map(p => ({ p, f: p.hp / p.maxHp })).sort((a, b) => a.f - b.f);
     const dead = party.filter(p => !p.alive);
@@ -389,6 +392,13 @@ const BotAI = {
         const want = (tank && !has(tank.p.id)) ? tank : hurt.find(h => h.f < 0.85 && !has(h.p.id));
         if (want && readyIdx(ri)) { bot.healTarget = want.p.id; return ri; }
       }
+      // Chronomancer: Bolts heal the link, and Rewind moves the link. Keep it on the tank: re-link before a buster
+      // or when the tank sags, and only spend Rewind on someone else when they're in real danger.
+      if (bot.cls.id === 'chronomancer' && tankH) {
+        const rw = idx('rewind');
+        if (rw >= 0 && readyIdx(rw) && k.g.link !== tankH.p.id && (busterSoon || tankH.f < 0.7 || (low && low.f > 0.45))) { bot.healTarget = tankH.p.id; return rw; }
+        if (low && low.p.id !== tankH.p.id && low.f >= 0.4) low = tankH.f < 0.8 ? tankH : low;
+      }
       if (bot.cls.id === 'grovekeeper' && readyIdx(idx('bloom')) && hurt.some(h => h.f < 0.8 && k.g.rejuvs.some(r => r.t === h.p.id))) return idx('bloom');
       if (low && low.f < 0.8) {
         bot.healTarget = low.p.id;
@@ -396,8 +406,14 @@ const BotAI = {
         for (let i = 0; i < k.abilities.length; i++) {
           const a = ab(i);
           if (a.type !== 'ogcd' || !readyIdx(i)) continue;
+          if ((a.replaces || a.id) === 'growth' && a.id !== 'growth') {   // Moonwell: on whoever has the most of the party around them
+            if (!avgLow) continue;
+            const near = q => party.filter(o => o.alive && Math.hypot(o.x - q.x, o.y - q.y) < 150).length;
+            bot.healTarget = party.filter(q => q.alive).sort((x, y) => near(y) - near(x))[0].id;
+            return i;
+          }
           if (a.target === 'ally' && low.f < 0.6) return i;
-          if (['prayer', 'growth', 'bloom', 'accel'].includes(a.id) && avgLow) return i;
+          if (['prayer', 'growth', 'bloom', 'accel'].includes(a.replaces || a.id) && avgLow) return i;
         }
         if (k.gcdRemaining() <= 0 && !k.cast) {
           // (Recall raises the dead but also heals the living heavily, so it counts as a heal here)

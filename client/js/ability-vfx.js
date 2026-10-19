@@ -13,6 +13,15 @@ const ABILITY_VFX = (() => {
       oath: c => { V.sigil(c.x, c.y, { r: 56, style: 'star4', color: '#ffd65a', dur: 1.4, spin: 1.5 }); V.pillar(c.x, c.y, { r: 30, h: 160, color: '#ffe08a', dur: 1, follow: c.ent }); V.aura(c.ent, { color: '#ffd65a', dur: 15, r: 30, rate: 0.12 }); V.burst(c.x, c.y - 30, { color: '#fff2b0', n: 12, speed: 160 }); },
       banner: c => { V.sigil(c.x, c.y, { r: 150, style: 'star5', color: '#f2c84b', dur: 3, spin: 0.4 }); V.pillar(c.x, c.y, { r: 26, h: 220, color: '#ffe08a', dur: 1.4 }); V.shock(c.x, c.y, { r: 160, color: '#ffe08a', dur: 0.6, w: 6 }); },
       bulwark: c => { V.shield(c.ent, { shape: 'hex', color: '#8fc0ff', dur: 3, r: 42 }); V.shock(c.x, c.y, { r: 110, color: '#9fc4ff', dur: 0.5, w: 7 }); V.burst(c.x, c.y - 20, { color: '#cfe0ff', n: 16, speed: 240, kind: 'star' }); },
+      // Sentinel: the tower shield slams forward, a blue shockwave off its face, dust kicked up
+      bash: c => {
+        const fx = c.x + Math.cos(c.ang) * 34, fy = c.y + Math.sin(c.ang) * 34;
+        V.shield(c.ent, { shape: 'front', color: '#bcd8ff', dur: 0.5, r: 42 });
+        c.later(0.06, () => { V.spawn({ x: fx, y: fy, z: 18, life: 0.25, size: 70, size1: 26, color: '#dbe9ff', kind: 'star', vr: 4 }); V.shock(fx, fy, { r: 80, color: '#7fb2ff', dur: 0.35, w: 6 });
+          V.sparks(fx, fy, { color: '#ffffff', n: 8, angle: c.ang, spread: 0.8, speed: 360 }); V.smoke(fx, fy, { n: 4, color: '#c8c0b0', size: 20, a: 0.5, speed: 50 }); FX.shake = Math.max(FX.shake, 3); });
+      },
+      // Crusader: a consecrated dome of dawn light over a rune circle
+      zeal: c => { V.dome(c.ent, { color: '#ffd65a', r: 46, dur: 2.6 }); V.sigil(c.x, c.y, { r: 70, style: 'star4', color: '#ffe27a', dur: 1, spin: 2 }); V.burst(c.x, c.y - 30, { color: '#fff2b0', color2: '#ffffff', n: 14, speed: 200, kind: 'star' }); },
     },
     bloodreaver: {
       hack: c => { V.slash(c.x, c.y, c.ang, { r: 66, span: 2.4, color: '#ff3a3a', w: 0.55, flip: Math.random() < 0.5 }); c.later(0.08, () => { V.splash(c.tx, c.ty, { n: 6 }); V.hit(c.tx, c.ty, '#ff5a5a', 0.6); }); },
@@ -21,6 +30,14 @@ const ABILITY_VFX = (() => {
       frenzy: c => { V.aura(c.ent, { color: '#ff2a1a', style: 'flame', dur: 12, r: 30, rate: 0.35 }); V.shock(c.x, c.y, { r: 120, color: '#ff3a2a', dur: 0.45, w: 8 }); V.flare(c.x, c.y, { color: '#ff3a1a', n: 18 }); },
       warcry: c => { for (let i = 0; i < 3; i++) V.shock(c.x, c.y, { r: 140 + i * 50, color: '#ff8a5a', dur: 0.6, w: 7 - i * 2, delay: i * 0.12 }); V.burst(c.x, c.y - 30, { color: '#ffb08a', n: 12, speed: 260 }); FX.shake = Math.max(FX.shake, 4); },
       undying: c => { V.sigil(c.x, c.y, { r: 60, style: 'runes', color: '#c01a2a', dur: 8, spin: -0.8, follow: c.ent }); V.aura(c.ent, { color: '#8a0010', style: 'shadow', dur: 8, r: 30, rate: 0.3 }); V.shield(c.ent, { color: '#ff2a3a', dur: 1, r: 44 }); },
+      // Berserker: a wild double swing of burning orange, the floor cracking and smoking where it lands
+      rampage: c => {
+        V.slash(c.x, c.y, c.ang + 0.3, { r: 80, span: 2.8, color: '#ff7a2a', w: 0.7, dur: 0.34 });
+        c.later(0.1, () => V.slash(c.x, c.y, c.ang - 0.3, { r: 84, span: 2.8, color: '#ffb050', w: 0.6, dur: 0.34, flip: true }));
+        c.later(0.16, () => { V.flare(c.tx, c.ty, { n: 16, r: 18, color: '#ff5a1a' }); V.hit(c.tx, c.ty, '#ffb060', 1.2); V.decal(c.tx, c.ty, { style: 'crack', r: 50, dur: 2.5, a: 0.6, seed: Math.random() * 6 }); V.decal(c.tx, c.ty, { r: 36, embers: true, dur: 2 }); FX.shake = Math.max(FX.shake, 4); });
+      },
+      // Hemomancer: a spear of liquid blood, droplets trailing, a splash where it strikes
+      lance: c => V.missile(c.x, c.y, c.tx, c.ty, { style: 'blade', color: '#ff2d4b', speed: 1000, onHit: (x, y) => { V.splash(x, y, { n: 12, speed: 1.2 }); V.hit(x, y, '#ff5a6a', 0.9); V.spawn({ x, y, z: 16, life: 0.3, size: 54, size1: 18, color: '#c0204a', kind: 'star', vr: 6 }); } }),
     },
     runeguard: {
       strike: c => c.later(0.06, () => { V.hit(c.tx, c.ty, '#b18cff', 0.75); V.sigil(c.tx, c.ty, { r: 26, style: 'runes', color: '#c8a8ff', dur: 0.4, spin: 6 }); }),
@@ -29,6 +46,15 @@ const ABILITY_VFX = (() => {
       overload: c => { V.aura(c.ent, { color: '#a070ff', style: 'runes', dur: 15, r: 32, rate: 0.25 }); V.sigil(c.x, c.y, { r: 70, style: 'runes', color: '#a070ff', dur: 1.2, spin: 3 }); for (let i = 0; i < 4; i++) c.later(i * 0.12, () => { const a = Math.random() * Math.PI * 2; V.lightning(c.ent.x, c.ent.y, c.ent.x + Math.cos(a) * 60, c.ent.y + Math.sin(a) * 40, { color: '#d0b8ff', jag: 10 }); }); },
       sanctum: c => { V.sigil(c.x, c.y, { r: 150, style: 'runes', color: '#9f7aff', dur: 3, spin: 0.5 }); V.pillar(c.x, c.y, { r: 50, h: 160, color: '#b8a0ff', dur: 1.2 }); },
       mirror: c => { V.shield(c.ent, { shape: 'front', color: '#e0d4ff', dur: 3, r: 44 }); V.crystals(c.x + Math.cos(c.ang) * 30, c.y + Math.sin(c.ang) * 30, { color: '#e8e0ff', n: 5, r: 18, h: 40, dur: 0.6 }); },
+      // Runeblade: a rune-etched sword cut with a lavender trail (Carve, the second hit, cuts wider)
+      cut: c => { const carve = Math.random() < 0.5; V.slash(c.x, c.y, c.ang, { r: carve ? 64 : 54, span: carve ? 2.2 : 1.6, color: '#c58cff', w: 0.5, dur: 0.24, flip: carve });
+        c.later(0.07, () => { V.hit(c.tx, c.ty, '#e0c8ff', 0.7); V.sigil(c.tx, c.ty, { r: 22, style: 'runes', color: '#d8b8ff', dur: 0.35, spin: 8 }); }); },
+      // Rune Cleave: a wide sweep that leaves a burning rune hanging in the air
+      cleave: c => {
+        V.slash(c.x, c.y, c.ang, { r: 76, span: 2.8, color: '#e0b8ff', w: 0.65, dur: 0.32 });
+        c.later(0.12, () => { V.sigil(c.tx, c.ty - 30, { r: 34, style: 'runes', color: '#b070ff', dur: 1.6, spin: 1.5, flat: 1, layer: 'air' }); V.burst(c.tx, c.ty - 20, { color: '#d8c4ff', n: 14, speed: 220 });
+          for (let i = 0; i < 8; i++) V.spawn({ x: c.tx + (Math.random() - 0.5) * 40, y: c.ty, z: 20, vz: 40 + Math.random() * 50, life: 1.2, size: 7, size1: 0, color: '#c58cff' }); FX.shake = Math.max(FX.shake, 3); });
+      },
     },
     ranger: {
       quick: c => V.missile(c.x, c.y, c.tx, c.ty, { style: 'arrow', color: '#bfff9a', speed: 1300, onHit: (x, y) => V.hit(x, y, '#d8ffc0', 0.5) }),
@@ -55,9 +81,20 @@ const ABILITY_VFX = (() => {
       smolder: c => { V.smoke(c.x, c.y, { n: 12, color: '#5a3a5a', size: 34, speed: 110, a: 0.6 }); V.shock(c.x, c.y, { r: 130, color: '#ff8a5a', dur: 0.6 }); for (let i = 0; i < 12; i++) V.spawn({ x: c.x + (Math.random() - 0.5) * 160, y: c.y + (Math.random() - 0.5) * 100, z: 0, vz: 30 + Math.random() * 40, life: 1.4, size: 6, size1: 0, color: '#ff8a3a' }); },
     },
     cleric: {
-      smite: c => { V.beam(c.tx, c.ty - 260, c.tx, c.ty, { color: '#fff0a8', w: 9, dur: 0.35 }); c.later(0.05, () => V.burst(c.tx, c.ty, { color: '#fff4c0', n: 10, speed: 160 })); },
+      smite: c => {
+        V.beam(c.tx, c.ty - 260, c.tx, c.ty, { color: '#fff0a8', w: 9, dur: 0.35 }); c.later(0.05, () => V.burst(c.tx, c.ty, { color: '#fff4c0', n: 10, speed: 160 }));
+        // Inquisitor: the strike leaves a burning brand on the boss
+        if (c.ent.spec === 'inquisitor') c.later(0.1, () => { V.sigil(c.tx, c.ty, { r: 36, style: 'star4', color: '#ff9a3c', dur: 1.2, spin: 2 }); V.flare(c.tx, c.ty, { n: 6, r: 10, color: '#ff8a2a', size: 0.7 }); });
+      },
+      // Aegis: holy light falls on the ally and hardens into a golden dome
+      barrier: c => { V.lightfall(c.tx, c.ty, { color: '#ffe9a8', r: 30, h: 220, dur: 0.9, feathers: 5 }); const w = c.tent || c.ent; c.later(0.25, () => V.dome(w, { color: '#ffd86a', r: 52, dur: 2.6 })); },
+      // Inquisitor: a lance of holy fire that scorches a brand into the boss
+      condemn: c => V.missile(c.x, c.y, c.tx, c.ty, { style: 'fire', color: '#ffb04a', speed: 1100, size: 1.2, onHit: (x, y) => {
+        V.flare(x, y, { n: 18, r: 16, color: '#ff9a3c' }); V.sigil(x, y, { r: 54, style: 'star4', color: '#ff9a3c', dur: 1.6, spin: 1.5 }); V.shock(x, y, { r: 90, color: '#ffc070', dur: 0.4, w: 5 });
+        V.burst(x, y, { color: '#ffe0a0', color2: '#ffffff', n: 14, speed: 260, flashR: 60 }); V.decal(x, y, { r: 40, embers: true, dur: 3 }); FX.shake = Math.max(FX.shake, 4); } }),
       mend: c => { V.sigil(c.tx, c.ty, { r: 40, style: 'petals', color: '#ffe680', dur: 0.9, spin: 2 }); V.motes(c.tx, c.ty, { color: '#fff4c0', n: 10, r: 22 }); V.plus(c.tx, c.ty, { color: '#ffe680', n: 4 }); },
-      petal: c => { for (let i = 0; i < 10; i++) V.spawn({ x: c.tx, y: c.ty, z: 8 + i * 3, life: 1, size: 12, color: i % 2 ? '#ffd0e0' : '#fff0a8', kind: 'petal', add: false, vr: 5, flutter: 6, orbit: { x: c.tx, y: c.ty, a: i * 0.63, r: 30, w: 4, dr: -20, flat: 0.55 } }); V.plus(c.tx, c.ty, { color: '#ffe680', n: 3 }); },
+      petal: c => { for (let i = 0; i < 10; i++) V.spawn({ x: c.tx, y: c.ty, z: 8 + i * 3, life: 1, size: 12, color: i % 2 ? '#ffd0e0' : '#fff0a8', kind: 'petal', add: false, vr: 5, flutter: 6, orbit: { x: c.tx, y: c.ty, a: i * 0.63, r: 30, w: 4, dr: -20, flat: 0.55 } }); V.plus(c.tx, c.ty, { color: '#ffe680', n: 3 });
+        if (c.ent.spec === 'aegis' && c.tent) c.later(0.3, () => V.shield(c.tent, { color: '#ffe9a8', dur: 1.4, r: 38 })); },
       prayer: c => { V.sigil(c.x, c.y, { r: 160, style: 'hex', color: '#ffe680', dur: 3, spin: 0.4 }); V.pillar(c.x, c.y, { r: 60, h: 240, color: '#fff0b0', dur: 1.4 }); },
       intervene: c => { V.pillar(c.tx, c.ty, { r: 44, h: 320, color: '#fff6c8', dur: 1.8 }); for (let i = 0; i < 12; i++) V.spawn({ x: c.tx + (Math.random() - 0.5) * 80, y: c.ty + (Math.random() - 0.5) * 30, z: 160 + Math.random() * 80, vz: -60, vx: (Math.random() - 0.5) * 30, life: 2, size: 12, color: '#ffffff', kind: 'petal', add: false, vr: 2, flutter: 3 }); c.later(0.2, () => V.burst(c.tx, c.ty - 40, { color: '#ffffff', color2: '#ffe680', n: 20, speed: 200, flashR: 80 })); },
       bene: c => { if (c.tent) V.shield(c.tent, { color: '#ffe680', dur: 1.6, r: 40 }); V.burst(c.tx, c.ty - 10, { color: '#fff0a8', color2: '#ffffff', n: 18, speed: 220, kind: 'star' }); V.shock(c.tx, c.ty, { r: 70, color: '#ffe680', dur: 0.4 }); V.plus(c.tx, c.ty, { color: '#ffe680', n: 6 }); },
@@ -69,6 +106,10 @@ const ABILITY_VFX = (() => {
       growth: c => { V.sigil(c.x, c.y, { r: 170, style: 'petals', color: '#7ee06a', dur: 2.4, spin: 0.5 }); for (let i = 0; i < 18; i++) V.spawn({ x: c.x, y: c.y, z: 10 + Math.random() * 20, life: 1.4, size: 13, color: i % 2 ? '#8fff7a' : '#c8ff8a', kind: 'leaf', add: false, vr: 6, orbit: { x: c.x, y: c.y, a: i * 0.35, r: 10, w: 3, dr: 130, flat: 0.6 } }); V.plus(c.x, c.y, { n: 8 }); },
       bloom: c => { V.sigil(c.x, c.y, { r: 60, style: 'petals', color: '#c8ff8a', dur: 0.9, spin: 3 }); V.burst(c.x, c.y - 10, { color: '#d8ffb0', color2: '#fff0a8', n: 20, speed: 240, kind: 'star', flashR: 70 }); V.shock(c.x, c.y, { r: 140, color: '#a8ff9a', dur: 0.5 }); },
       rebirth: c => { V.pillar(c.tx, c.ty, { r: 40, h: 260, color: '#a8ff9a', dur: 1.6 }); V.swirl(c.tx, c.ty, { r: 50, color: '#8fff7a', dur: 1.4 }); V.motes(c.tx, c.ty, { kind: 'leaf', color: '#8fff7a', n: 10 }); },
+      // Lifebinder: a small blooming circle under the ally, vines curling, flowers opening
+      lifebind: c => { V.grove(c.tx, c.ty, { r: 44, dur: 1.8, color: '#6fffb0', color2: '#ffd0e8', flowers: 4, follow: c.tent, rate: 0.5 }); V.plus(c.tx, c.ty, { color: '#7dff9a', n: 3 }); },
+      // Moonwell: a pool of moonlight on the floor where the ally stood, for its whole 12s
+      moonwell: c => { V.lightfall(c.tx, c.ty, { color: '#c8d8ff', r: 50, h: 300, dur: 0.8, feathers: 0 }); V.grove(c.tx, c.ty, { r: 150, dur: 12, color: '#a9c4ff', color2: '#eef2ff', moon: true, flowers: 8, mist: '#c8d4ff', rate: 0.5, tint: '#1c2a66' }); V.shock(c.tx, c.ty, { r: 160, color: '#c8d8ff', dur: 0.5, w: 5 }); },
     },
     chronomancer: {
       bolt: c => V.missile(c.x, c.y, c.tx, c.ty, { style: 'orb', color: '#5ff0ff', speed: 900, onHit: (x, y) => { V.hit(x, y, '#a0f8ff', 0.8); V.spawn({ x, y, z: 14, life: 0.3, size: 50, size1: 20, color: '#5ff0ff', kind: 'star', vr: -5 }); } }),
@@ -77,6 +118,8 @@ const ABILITY_VFX = (() => {
       accel: c => { V.sigil(c.x, c.y, { r: 160, style: 'clock', color: '#3fd0d0', dur: 2.2, spin: 3 }); for (let i = 0; i < 16; i++) V.spawn({ x: c.x + (Math.random() - 0.5) * 220, y: c.y + (Math.random() - 0.5) * 140, z: 0, vz: 260 + Math.random() * 120, life: 0.6, size: 9, color: '#9ff4ff', stretch: 5 }); },
       stasis: c => { V.shock(c.x, c.y, { r: 180, color: '#c8fbff', dur: 0.7, w: 9 }); V.sigil(c.x, c.y, { r: 120, style: 'hex', color: '#9ff4ff', dur: 2, spin: 0 }); V.crystals(c.x, c.y, { color: '#c8f4ff', n: 10, r: 110, h: 50, dur: 2 }); },
       recall: c => { V.swirl(c.tx, c.ty, { r: 60, color: '#5ff0ff', dur: 1.6, arms: 5 }); V.pillar(c.tx, c.ty, { r: 34, h: 220, color: '#9ff4ff', dur: 1.4 }); },
+      // Echoist: the clock face rings out three times, each ring a softer echo of the last
+      chamber: c => { V.sigil(c.x, c.y, { r: 160, style: 'clock', color: '#c4a8ff', dur: 2.2, spin: 2 }); for (let i = 0; i < 3; i++) V.shock(c.x, c.y, { r: 150 + i * 30, color: '#d8c8ff', dur: 0.6, w: 6 - i * 1.5, delay: i * 0.35 }); V.burst(c.x, c.y - 20, { color: '#e8dcff', n: 12, speed: 180, kind: 'star' }); },
     },
   };
 })();
@@ -93,6 +136,12 @@ const KIT_VFX = {
   overheat: e => { VFX.flare(e.x, e.y, { n: 24, color: '#ff2a1a', r: 18 }); VFX.shock(e.x, e.y, { r: 90, color: '#ff3a1a', dur: 0.4 }); },
   dawnstar: (e, target) => { const t = target || e; VFX.beam(t.x, t.y - 300, t.x, t.y, { color: '#fff6c8', w: 18, dur: 0.5 }); VFX.burst(t.x, t.y, { color: '#ffe680', color2: '#ffffff', n: 26, speed: 320, kind: 'star', flashR: 110 }); VFX.sigil(t.x, t.y, { r: 90, style: 'star4', color: '#ffe680', dur: 0.9, spin: 4 }); FX.shake = Math.max(FX.shake, 5); },
   lag: e => { VFX.smoke(e.x, e.y, { n: 6, color: '#8aa0a8', size: 22, a: 0.5 }); },
+  // Aegis: a Petal shield that held comes back as a petal drifting home
+  'petal-back': e => { for (let i = 0; i < 6; i++) VFX.spawn({ x: e.x, y: e.y, z: 30 + i * 4, life: 0.9, size: 12, color: i % 2 ? '#ffd0e0' : '#fff0a8', kind: 'petal', add: false, vr: 5, flutter: 6, orbit: { x: e.x, y: e.y, a: i, r: 40, w: 5, dr: -40, flat: 0.55 } }); VFX.flash(e.x, e.y - 20, 30, '#ffe9a8', 0.25); },
+  // Echoist: a fainter copy of the Bolt, three seconds late
+  echo: (e, target) => { if (target) VFX.missile(e.x, e.y, target.x, target.y, { style: 'orb', color: '#c4a8ff', speed: 800, size: 0.75, onHit: (x, y) => VFX.hit(x, y, '#e0d4ff', 0.6) }); },
+  // Inquisitor: an ally's hit bursts a charge of the brand on the boss
+  brandHit: (e, target) => { if (target) { VFX.flare(target.x, target.y, { n: 5, r: 12, color: '#ff9a3c', size: 0.6, h: 0.7 }); VFX.hit(target.x, target.y, '#ffc070', 0.5); } },
   dash: (e, color) => { VFX.smoke(e.x, e.y, { n: 4, color: '#d8ccb8', size: 18, a: 0.6, speed: 40 }); VFX.shock(e.x, e.y, { r: 36, color: color || '#ffffff', dur: 0.3, w: 3 }); },
 };
 

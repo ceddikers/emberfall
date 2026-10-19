@@ -81,6 +81,16 @@ const VFX = (() => {
         x.beginPath(); x.moveTo(0, -s * 0.4); x.quadraticCurveTo(s * 0.28, s * 0.05, 0, s * 0.32); x.quadraticCurveTo(-s * 0.28, s * 0.05, 0, -s * 0.4); x.fill();
         x.fillStyle = 'rgba(255,255,255,0.5)'; x.beginPath(); x.arc(-s * 0.06, s * 0.04, s * 0.06, 0, Math.PI * 2); x.fill();
       }); break;
+      case 'feather': c = makeCanvas(40, (x, s) => {
+        // a soft quill: tinted vane, white spine, a few cuts in the edge
+        x.translate(s / 2, s / 2); x.rotate(-0.5);
+        x.fillStyle = col(0.95); x.beginPath(); x.moveTo(0, -s * 0.44); x.quadraticCurveTo(s * 0.2, -s * 0.1, s * 0.05, s * 0.36); x.lineTo(-s * 0.04, s * 0.36);
+        x.quadraticCurveTo(-s * 0.2, -s * 0.1, 0, -s * 0.44); x.fill();
+        x.globalCompositeOperation = 'destination-out'; x.lineWidth = 1.5;
+        for (const yy of [-0.12, 0.05, 0.18]) { x.beginPath(); x.moveTo(s * 0.16, yy * s); x.lineTo(s * 0.04, (yy + 0.06) * s); x.stroke(); }
+        x.globalCompositeOperation = 'source-over';
+        x.strokeStyle = 'rgba(255,255,255,0.9)'; x.lineWidth = 1.2; x.beginPath(); x.moveTo(0, -s * 0.4); x.lineTo(0, s * 0.44); x.stroke();
+      }); break;
       default: return sprite('glow', color);
     }
     cache.set(key, c);
@@ -248,10 +258,10 @@ const VFX = (() => {
     // magic circle on the floor: rings, ticks, a rotating star/runes. style: star4 | star5 | hex | runes | clock | petals | gears
     sigil(x, y, o = {}) {
       const r = o.r ?? 70, color = o.color || '#ffffff', style = o.style || 'star4', spin = o.spin ?? 1;
-      return fx({ dur: o.dur ?? 1.2, layer: 'ground', follow: o.follow, draw: (c, p, t, e) => {
+      return fx({ dur: o.dur ?? 1.2, layer: o.layer || 'ground', follow: o.follow, draw: (c, p, t, e) => {
         const cx = e.follow ? e.follow.x : x, cy = e.follow ? e.follow.y : y;
         const k = env(p, 0.15, 0.3) * e.a, grow = easeOut(Math.min(1, p / 0.2));
-        const R = r * (0.6 + 0.4 * grow), flat = 0.78;
+        const R = r * (0.6 + 0.4 * grow), flat = o.flat ?? 0.78;   // flat 1 + layer 'air': a rune standing up in the air
         c.save(); c.translate(cx, cy); c.scale(1, flat);
         c.globalCompositeOperation = 'source-over';
         c.globalAlpha = 0.18 * k; c.fillStyle = color; c.beginPath(); c.arc(0, 0, R, 0, Math.PI * 2); c.fill();
@@ -620,6 +630,98 @@ const VFX = (() => {
           neonPath(c, color, 2.5 * (1 - q * 0.5), k * (0.4 + 0.6 * (1 - q)), () => c.ellipse(x + Math.sin(t * 3 + q * 3) * 8 * q, yy, rr, rr * 0.28, 0, a, a + Math.PI * 1.4));
         }
       } });
+    },
+
+    // ---- painted-style pieces (after the reference sheets in docs/art/vfx-reference): a small wind-up, a bold
+    // shape with a hot core and dark edges, then a slow aftermath (dust, motes, mist) that outlives the effect.
+
+    // a golden dome over a rune circle on the floor, on an entity (Divine Barrier)
+    dome(ent, o = {}) {
+      const color = o.color || '#ffd86a', r = o.r ?? 46, dur = o.dur ?? 2.4;
+      const pos = () => ({ x: ent.x, y: ent.y + 4 });
+      fx({ dur, layer: 'ground', draw: (c, p, t, e) => {
+        const k = env(p, 0.15, 0.3) * e.a, { x, y } = pos(), R = r * 1.25;
+        ringStroke(c, x, y, R + 2, 'rgba(30,20,5,0.35)', 6, k, 0.5);
+        glowAt(c, x, y, R * 1.3, color, 0.35 * k);
+        neonRing(c, x, y, R, color, 2.5, k, 0.5); neonRing(c, x, y, R * 0.8, color, 1.2, k * 0.8, 0.5);
+        c.save(); c.translate(x, y); c.scale(1, 0.5); c.rotate(t * 0.6);
+        neonPath(c, color, 1.4, k * 0.8, () => { for (let i = 0; i <= 6; i++) { const a = i * Math.PI * 4 / 6; c.lineTo(Math.cos(a) * R * 0.78, Math.sin(a) * R * 0.78); } });
+        for (let i = 0; i < 12; i++) { const a = i * Math.PI / 6; c.globalAlpha = k * 0.9; c.fillStyle = '#fff6d8'; c.fillRect(Math.cos(a) * R * 0.9 - 2, Math.sin(a) * R * 0.9 - 2, 4, 4); }
+        c.restore(); c.globalAlpha = 1;
+      } });
+      fx({ dur, layer: 'air', draw: (c, p, t, e) => {
+        const rise = easeOut(Math.min(1, p / 0.18)), k = env(p, 0.1, 0.3) * e.a, { x, y } = pos(), H = r * 1.15 * rise;
+        c.save(); c.globalCompositeOperation = 'lighter';
+        const g = c.createLinearGradient(x, y - H, x, y);
+        g.addColorStop(0, rgba('#ffffff', 0.22 * k)); g.addColorStop(0.5, rgba(color, 0.1 * k)); g.addColorStop(1, rgba(color, 0.32 * k));
+        c.fillStyle = g; c.beginPath(); c.ellipse(x, y, r, H, 0, Math.PI, 0); c.ellipse(x, y, r, r * 0.5, 0, 0, Math.PI, false); c.fill();
+        c.restore();
+        neonPath(c, color, 2.2, k, () => c.ellipse(x, y, r, H, 0, Math.PI, 0));
+        for (const f of [0.35, 0.7]) neonPath(c, color, 1, k * 0.5, () => c.ellipse(x, y - H * f * 0.9, r * Math.sqrt(1 - f * f * 0.8), r * 0.5 * (1 - f) + 2, 0, Math.PI, 0));
+        neonPath(c, color, 1, k * 0.45, () => c.ellipse(x, y, r * 0.45, H, 0, Math.PI, 0));
+        const ga = t * 2.2; glowAt(c, x + Math.cos(ga) * r * 0.6, y - H * (0.5 + Math.sin(ga) * 0.3), 14, '#ffffff', 0.7 * k);
+      }, tick: () => { if (Math.random() < 0.25) { const { x, y } = pos(), a = Math.random() * Math.PI; spawn({ x: x + Math.cos(a) * r * 0.9, y: y - Math.sin(a) * r * 0.5, z: 4, vz: rand(30, 70), life: 0.9, size: rand(6, 10), size1: 0, color, kind: 'star' }); } },
+      done: () => { const { x, y } = pos(); for (let i = 0; i < 14; i++) { const a = Math.random() * Math.PI * 2; spawn({ x: x + Math.cos(a) * r * 0.8, y: y + Math.sin(a) * r * 0.4 - 20, z: rand(10, 50), vx: Math.cos(a) * 40, vy: Math.sin(a) * 20, vz: rand(-10, 20), drag: 0.04, life: rand(0.7, 1.2), size: rand(6, 11), size1: 0, color: i % 3 ? color : '#ffffff', kind: 'star' }); } } });
+    },
+
+    // a column of holy light: shafts falling onto a spot, feathers drifting down, a golden ring that lingers
+    lightfall(x, y, o = {}) {
+      const color = o.color || '#ffe680', r = o.r ?? 34, h = o.h ?? 260, dur = o.dur ?? 1.2;
+      const shafts = Array.from({ length: 7 }, () => ({ dx: rand(-1, 1) * r * 0.8, w: rand(3, 9), ph: rand(0, 6), len: rand(0.6, 1) }));
+      B.charge(x, y, { color, r: r * 1.6, n: 8, dur: 0.25, z: 10 });
+      fx({ dur, layer: 'air', add: true, draw: (c, p, t, e) => {
+        const k = env(p, 0.1, 0.45) * e.a;
+        glowAt(c, x, y - 20, r * 2.2, color, 0.55 * k);
+        for (const s of shafts) {
+          const top = y - h * s.len, a = k * (0.5 + 0.5 * Math.sin(t * 9 + s.ph));
+          const g = c.createLinearGradient(0, top, 0, y);
+          g.addColorStop(0, rgba(color, 0)); g.addColorStop(0.7, rgba(color, 0.55 * a)); g.addColorStop(1, rgba('#ffffff', 0.9 * a));
+          c.fillStyle = g; c.fillRect(x + s.dx - s.w / 2, top, s.w, y - top);
+        }
+      } });
+      for (let i = 0; i < (o.feathers ?? 6); i++) spawn({ x: x + rand(-r, r), y: y + rand(-6, 6), z: rand(90, 180), vz: rand(-70, -40), vx: rand(-20, 20), life: rand(1.2, 1.7), size: rand(12, 16), color: '#fff8e6', kind: 'feather', add: false, vr: rand(-2, 2), flutter: 3, fadeIn: 0.1 });
+      fx({ dur: dur + 1.2, layer: 'ground', draw: (c, p, t, e) => {
+        const k = env(p, 0.1, 0.6) * e.a;
+        neonRing(c, x, y, r * (1 + p * 0.3), color, 2, k * 0.8, 0.5);
+        glowAt(c, x, y, r * 1.6, color, 0.3 * k);
+      }, tick: () => { if (Math.random() < 0.3) spawn({ x: x + rand(-r, r), y: y + rand(-r, r) * 0.5, z: 0, vz: rand(20, 50), life: 0.9, size: rand(3, 6), size1: 0, color }); } });
+    },
+
+    // an ornate floor circle that grows vines and flowers and lingers (druid heals, Moonwell)
+    grove(x, y, o = {}) {
+      const color = o.color || '#7ee06a', color2 = o.color2 || '#fff0a8', r = o.r ?? 120, dur = o.dur ?? 3, follow = o.follow;
+      const at = () => (follow ? { x: follow.x, y: follow.y } : { x, y });
+      const blooms = Array.from({ length: o.flowers ?? 6 }, (_, i) => ({ a: i / (o.flowers ?? 6) * Math.PI * 2 + rand(-0.3, 0.3), d: rand(0.55, 0.85) }));
+      fx({ dur, layer: 'ground', draw: (c, p, t, e) => {
+        const grow = easeOut(Math.min(1, p / 0.2)), k = env(p, 0.12, 0.3) * e.a, { x: cx, y: cy } = at(), R = r * grow;
+        // the pool itself (a deep tint first, so light colours don't wash out on grass), an ink edge, then the rim
+        if (o.tint) { c.globalAlpha = 0.28 * k; c.fillStyle = o.tint; c.beginPath(); c.ellipse(cx, cy, R, R * 0.55, 0, 0, Math.PI * 2); c.fill(); c.globalAlpha = 1; }
+        ringStroke(c, cx, cy, R + 2, 'rgba(10,16,30,0.4)', 7, k, 0.55);
+        c.save(); c.globalCompositeOperation = 'lighter';
+        const g = c.createRadialGradient(cx, cy, 0, cx, cy, R);
+        g.addColorStop(0, rgba(color, 0.05 * k)); g.addColorStop(0.75, rgba(color, 0.14 * k)); g.addColorStop(1, rgba(color, 0.3 * k));
+        c.fillStyle = g; c.beginPath(); c.ellipse(cx, cy, R, R * 0.55, 0, 0, Math.PI * 2); c.fill();
+        c.restore();
+        neonRing(c, cx, cy, R, color, 3, k, 0.55); neonRing(c, cx, cy, R * 0.9, color, 1.2, k * 0.7, 0.55);
+        // vine scrollwork turning slowly: S-curls around the ring
+        c.save(); c.translate(cx, cy); c.scale(1, 0.55);
+        for (let i = 0; i < 8; i++) {
+          const a0 = i * Math.PI / 4 + t * 0.25;
+          neonPath(c, color, 1.6, k * 0.85, () => { for (let s = 0; s <= 14; s++) { const q = s / 14, a = a0 + q * 0.7, rr = R * (0.62 + 0.18 * Math.sin(q * Math.PI * 2)); s ? c.lineTo(Math.cos(a) * rr, Math.sin(a) * rr) : c.moveTo(Math.cos(a) * rr, Math.sin(a) * rr); } });
+          const a = a0 + 0.7, cr = R * 0.62;
+          neonPath(c, color, 1.3, k * 0.8, () => { for (let s = 0; s <= 10; s++) { const q = s / 10, aa = a + q * 4, rr = 9 * (1 - q * 0.8); c.lineTo(Math.cos(a) * cr + Math.cos(aa) * rr, Math.sin(a) * cr + Math.sin(aa) * rr); } });
+        }
+        if (o.moon) for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2 - t * 0.2, mx = Math.cos(a) * R * 0.35, my = Math.sin(a) * R * 0.35;
+          neonPath(c, color2, 1.6, k, () => { c.arc(mx, my, 10, 0.6, Math.PI * 2 - 0.6); c.arc(mx + 5, my, 8, Math.PI * 2 - 0.9, 0.9, true); }); }
+        c.restore();
+        for (const b of blooms) { const bx = cx + Math.cos(b.a) * R * b.d, by = cy + Math.sin(b.a) * R * b.d * 0.55, bk = k * Math.min(1, Math.max(0, (p - 0.08) / 0.15));
+          for (let j = 0; j < 5; j++) { const pa = j * Math.PI * 2 / 5 + t * 0.4; glowAt(c, bx + Math.cos(pa) * 4, by + Math.sin(pa) * 2.5, 6, color2, bk * 0.8); }
+          glowAt(c, bx, by, 3, '#ffffff', bk); }
+      }, tick: () => {
+        const { x: cx, y: cy } = at();
+        if (Math.random() < (o.rate ?? 0.35)) { const a = Math.random() * Math.PI * 2, d = Math.sqrt(Math.random()) * r * 0.9;
+          spawn({ x: cx + Math.cos(a) * d, y: cy + Math.sin(a) * d * 0.55, z: 0, vz: rand(25, 60), vx: rand(-12, 12), life: rand(1, 1.6), size: rand(8, 12), color: Math.random() < 0.5 ? color : color2, kind: o.moon ? (Math.random() < 0.5 ? 'star' : 'glow') : 'leaf', add: o.moon ? undefined : false, vr: rand(-3, 3), flutter: o.moon ? 0 : 5 }); }
+      }, done: () => { const { x: cx, y: cy } = at(); B.smoke(cx, cy, { n: 6, r: r * 0.5, color: o.mist || '#cfe8d0', size: 34, a: 0.22, speed: 30, life: 1.4 }); } });
     },
   };
 

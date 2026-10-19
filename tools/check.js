@@ -12,15 +12,15 @@ const UPDATE = process.argv.includes('--update-baseline');
 const DPS_TOLERANCE = 0.08;   // a class's pro DPS may drift this far from the baseline before it counts as a change
 const SPEC_TOLERANCE = 0.05;  // a specialization's pro DPS may differ this much from its own base class
 const RAID_RUNS = 2;
-// bot raids: every boss, and every tank spec somewhere, with a fixed line-up so the result doesn't depend on a random spec
+// bot raids: every boss, and every tank and healer spec somewhere, with a fixed line-up so the result doesn't depend on a random spec
 const RAIDS = [
-  ['Grubnak', 'grubnak', 'bastion:base'],
-  ['Skitterra', 'skitterra', 'runeguard:runeblade'],
-  ['Volkar', 'volkar', 'bloodreaver:berserker'],
-  ['Volkar', 'volkar', 'bloodreaver:hemomancer'],
-  ['the Hollow King', 'hollowking', 'bastion:sentinel'],
-  ['the Hollow King', 'hollowking', 'bastion:crusader'],
-  ['the Hollow King', 'hollowking', 'runeguard:spellwarden'],
+  ['Grubnak', 'grubnak', 'bastion:base', 'cleric:aegis'],
+  ['Skitterra', 'skitterra', 'runeguard:runeblade', 'grovekeeper:moonwell'],
+  ['Volkar', 'volkar', 'bloodreaver:berserker', 'chronomancer:accelerant'],
+  ['Volkar', 'volkar', 'bloodreaver:hemomancer', 'cleric:inquisitor'],
+  ['the Hollow King', 'hollowking', 'bastion:sentinel', 'grovekeeper:lifebinder'],
+  ['the Hollow King', 'hollowking', 'bastion:crusader', 'chronomancer:echoist'],
+  ['the Hollow King', 'hollowking', 'runeguard:spellwarden', 'cleric:base'],
 ];
 
 const results = [];
@@ -128,7 +128,7 @@ function run(args) {
 async function heavy() {
   const [sim, ...raids] = await Promise.all([
     run([path.join(__dirname, 'simulate.js')]),
-    ...RAIDS.map(([, boss, tank]) => run([path.join(__dirname, 'bot-raid.js'), 'normal', String(RAID_RUNS), boss, `${tank},cleric,ranger,pyromancer`])),
+    ...RAIDS.map(([, boss, tank, healer]) => run([path.join(__dirname, 'bot-raid.js'), 'normal', String(RAID_RUNS), boss, `${tank},${healer},ranger,pyromancer`])),
   ]);
 
   // balance: each class's pro DPS against the baseline
@@ -155,15 +155,17 @@ async function heavy() {
   const specRows = [];
   for (const line of sim.out.split('\n')) { const m = line.match(/^(\w+):(\w+)\s+(\d+)\s+(\d+)/); if (m) specRows.push({ c: m[1], s: m[2], pro: +m[4] }); }
   if (specRows.length) {
-    const off = specRows.filter(r => now[r.c] && Math.abs(r.pro - now[r.c].pro) / now[r.c].pro > SPEC_TOLERANCE)
-      .map(r => `${r.c}:${r.s}: pro DPS ${r.pro} vs ${now[r.c].pro} for the base class`);
+    // a spec can aim off its class on purpose (a damage-leaning healer): spec.balance is the share it aims for
+    const want = r => now[r.c].pro * ((specOf(r.c, r.s) || {}).balance || 1);
+    const off = specRows.filter(r => now[r.c] && Math.abs(r.pro - want(r)) / want(r) > SPEC_TOLERANCE)
+      .map(r => `${r.c}:${r.s}: pro DPS ${r.pro} vs ${Math.round(want(r))} aimed for`);
     if (off.length) fail('Specializations balanced', off.join('\n'));
     else pass('Specializations balanced', `${specRows.length} specs within ${SPEC_TOLERANCE * 100}% of their class`);
   }
 
   // bot raids: a bot party clears each boss on Normal every time
-  RAIDS.forEach(([boss, , tank], i) => {
-    const r = raids[i], m = r.out.match(/cleared (\d+) of (\d+)/), name = `Bots clear ${boss} (Normal, ${tank})`;
+  RAIDS.forEach(([boss, , tank, healer], i) => {
+    const r = raids[i], m = r.out.match(/cleared (\d+) of (\d+)/), name = `Bots clear ${boss} (Normal, ${tank} + ${healer})`;
     if (r.code === 0 && m && m[1] === m[2]) pass(name, `${m[1]} of ${m[2]}`);
     else fail(name, m ? `${m[1]} of ${m[2]}\n` + r.out.split('\n').filter(l => /^run /.test(l)).join('\n') : r.out.slice(-800));
   });

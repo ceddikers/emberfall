@@ -621,14 +621,14 @@ const KITS = {
       if (dt <= 0 || dt > 1) return;
       if (k.g.stance === 'slow') k.gain('flux', 3 * dt);
       else {
-        k.g.flux = Math.max(0, k.g.flux - (k.perk('chronomancer_a2') ? 3.75 : 5) * dt);
+        k.g.flux = Math.max(0, k.g.flux - (k.perk('chronomancer_a2') ? 3 : 4) * dt);
         if (k.g.flux <= 0) { k.g.stance = 'slow'; k.buff('lag', 3); k.fx('lag'); k.stats.lags = (k.stats.lags || 0) + 1; }
       }
     },
     signature: 'Haste / Slow stance',
     floor: 'Press Q: your attacks heal the tank. E switches to Haste when Flux is full. W on anyone who just took a big hit.',
     ceiling: [
-      'Slow stance: Temporal Bolt heals your linked ally (the tank) for 85% of its damage, and Flux fills. Haste stance: 20% faster casts, +10% damage, and every Bolt heals the WHOLE party a little, but Flux drains.',
+      'Slow stance: Temporal Bolt heals your linked ally (the tank) for 120% of its damage, and Flux fills. Haste stance: 20% faster casts, +10% damage, and every Bolt heals the WHOLE party a little, but Flux drains.',
       'Run out of Flux in Haste and you stumble (3s of slow casts). Switch back before that, and plan Haste for raidwides and burst windows.',
       'Rewind sets an ally\'s HP back to what it was 4s ago, and even revives someone who died in the last 4s. Fire it right after a tankbuster for a massive heal.',
       'Stasis makes the whole party immune for 2s. One perfectly timed press can erase the boss\'s biggest attack.',
@@ -636,12 +636,13 @@ const KITS = {
     abilities: [
       {
         id: 'bolt', name: 'Temporal Bolt', type: 'gcd', target: 'enemy', range: RANGED, anim: 'cast',
-        cast: k => (k.consume('surge') ? 0 : 1.5),
-        desc: '1.5s cast attack. Slow: heals your linked ally for 85% of its damage. Haste: heals everyone for 30%.',
+        cast: k => (k.has('surge') ? 0 : 1.5),   // (only looks: asking for the cast time must not spend the free Bolt)
+        desc: '1.5s cast attack. Slow: heals your linked ally for 120% of its damage. Haste: heals everyone for 50%.',
         effect(k) {
+          k.consume('surge');
           const r = k.damage(280, { ab: this });
-          if (k.g.stance === 'haste') k.healRaw('party', r.amount * 0.3, { ab: this });
-          else k.healRaw(k.g.link ?? k.env.defaultLink(), r.amount * 0.85, { ab: this });
+          if (k.g.stance === 'haste') k.healRaw('party', r.amount * 0.5, { ab: this });
+          else k.healRaw(k.g.link ?? k.env.defaultLink(), r.amount * 1.2, { ab: this });
         },
         fx: { type: 'projectile', color: '#5ff0ff', range: RANGED, speed: 800 },
       },
@@ -678,7 +679,7 @@ const KITS = {
       {
         id: 'recall', name: 'Recall', type: 'gcd', target: 'ally', cast: 2.5, cd: 30, anim: 'big', allowDead: true,
         desc: '2.5s cast: bring a fallen ally back, or heal a living one heavily.',
-        effect(k, t) { if (k.env.isDead(t)) k.raise(t, { ab: this }); else k.heal(t, 1200, { ab: this }); },
+        effect(k, t) { if (k.env.isDead(t)) k.raise(t, { ab: this }); else k.heal(t, 1400, { ab: this }); },
         fx: { type: 'ring', style: 'rewind', color: '#9ff4ff', r: 50, onTarget: true },
       },
     ],

@@ -31,7 +31,7 @@ function runSim(classId, skill, seed, specId) {
   const def = kitFor(classId, specId);
   const rng = mulberry(seed);
   const human = mulberry(seed * 7 + 3); // separate stream for "human" randomness
-  const state = { t: 0, moving: false, tookDamage: [], shield: null, mits: [], reflect: null, healDebt: 0, healing: 0, gcdHeals: 0, allyWards: [] };
+  const state = { t: 0, moving: false, tookDamage: [], shield: null, mits: [], reflect: null, healDebt: 0, healing: 0, gcdHeals: 0, allyWards: [], petalShields: [] };
   const role = ['bastion', 'bloodreaver', 'runeguard'].includes(classId) ? 'tank'
     : ['cleric', 'grovekeeper', 'chronomancer'].includes(classId) ? 'healer' : 'dps';
   const maxHp = role === 'tank' ? 32000 : 21000;
@@ -56,6 +56,15 @@ function runSim(classId, skill, seed, specId) {
         const amt = ev.type === 'hot' ? ev.amount * ev.ticks : ev.amount;
         state.healing += ev.target === 'party' ? amt * 4 : amt;
         state.healDebt = Math.max(0, state.healDebt - (ev.target === 'party' ? amt * 4 : amt));
+      }
+      // Moonwell: assume three of the four stand in the pool for its whole life
+      if (ev.type === 'pool') { state.healing += ev.amount * ev.ticks * 3; state.healDebt = Math.max(0, state.healDebt - ev.amount * ev.ticks * 3); }
+      // Judgment (Inquisitor): the party's hits burst every charge soon after
+      if (ev.type === 'brand') k.stats.damage += ev.amount * ev.ticks;
+      // a shield on an ally (Aegis): counts as healing; a Petal shield on the tank soaks most of it and comes back now and then
+      if (ev.type === 'shield' && role === 'healer') {
+        state.healing += ev.amount * 0.8; state.healDebt = Math.max(0, state.healDebt - ev.amount * 0.8);
+        if (ev.tag === 'petal') state.petalShields.push({ at: state.t + 3 });
       }
       if (ev.type === 'shield' && ev.target === 'self') state.shield = { amt: ev.amount, max: ev.amount, end: state.t + ev.dur, tag: ev.tag };
       // a Ward on an ally (Spellwarden): assume it soaks a bit over half before it ends (an ally isn't tanking)
@@ -116,7 +125,11 @@ function runSim(classId, skill, seed, specId) {
       state.allyWards = state.allyWards.filter(w => !w.done);
       if (state.shield && state.t >= state.shield.end) { k.notify('shieldEnd', { tag: state.shield.tag, frac: 1 - state.shield.amt / state.shield.max }); state.shield = null; }
     }
-    if (role === 'healer') healerIncoming();
+    if (role === 'healer') {
+      healerIncoming();
+      for (const p of state.petalShields) if (state.t >= p.at) { p.done = true; k.notify('shieldEnd', { tag: 'petal', frac: 0.8 }); }
+      state.petalShields = state.petalShields.filter(p => !p.done);
+    }
     // positional: pros are where they want to be most of the time; newbies wander
     if (skill === 'pro') lastPos = human() < 0.9 ? 'want' : 'front';
     else lastPos = ['rear', 'flank', 'front', 'front'][Math.floor(human() * 4)];
@@ -262,7 +275,7 @@ const PRO = {
   cleric(k, ctx) {
     const debt = ctx.state.healDebt;
     if (debt > 5000 && ready(k, 'prayer') && weaveOk(k)) return I(k, 'prayer');
-    if (debt > 6000 && ready(k, 'bene') && weaveOk(k)) return I(k, 'bene');
+    if (abOf(k, 'bene').target === 'enemy' ? ready(k, 'bene') && weaveOk(k) : debt > 6000 && ready(k, 'bene') && weaveOk(k)) return I(k, 'bene');   // Inquisitor's Condemn is an attack
     if (k.gcdRemaining() > 0.0001 || k.cast) return null;
     if (k.g.bloom >= 3 && (ctx.inBurst(ctx.t) || ctx.state.moving)) return I(k, 'smite');
     if (k.g.petals >= 1 && (debt > 2500 || k.g.petals >= 3 || ctx.state.moving)) return I(k, 'petal');

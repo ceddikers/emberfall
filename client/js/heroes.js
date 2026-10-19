@@ -462,6 +462,49 @@ const SPEC_ART = {
     rrect(ctx, -0.5, -5, 3, 10, 1, '#7b5cf0', OUT, 1.1);
     ctx.restore();
   },
+  // Aegis: a small golden half-dome of light hovering over the shoulders
+  aegis(ctx, st) {
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = 0.5 + Math.sin(st.t * 2) * 0.1;
+    ctx.strokeStyle = '#ffe9a8'; ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.arc(-2, 0, 15, -1.9, 1.9); ctx.stroke();
+    ctx.beginPath(); ctx.arc(-2, 0, 11, -1.6, 1.6); ctx.stroke();
+    ctx.restore();
+    glow(ctx, 10, 0, 7, '#fff6d8', 0.4);
+  },
+  // Inquisitor: a burning orange sash, and a brand-mark glowing on the hand
+  inquisitor(ctx, st) {
+    line(ctx, -9, -8, 6, 8, '#ff8a2a', 3); line(ctx, -9, -8, 6, 8, '#ffd27a', 1);
+    glow(ctx, 9, 9.5, 8, '#ff8a2a', 0.45 + Math.sin(st.t * 5) * 0.12);
+    circle(ctx, 9, 9.5, 2.2, null, '#ffc070', 1.2);
+  },
+  // Lifebinder: a crown of leaves and two blossoms
+  lifebinder(ctx) {
+    for (let i = 0; i < 7; i++) { const a = -1.4 + i * 0.47; ellipse(ctx, Math.cos(a) * 8.5, Math.sin(a) * 8.5, 2.8, 1.3, a, i % 2 ? '#5fdf8a' : '#8fffb0', OUT, 0.6); }
+    circle(ctx, -6, -6, 2, '#ffd0e8', OUT, 0.6); circle(ctx, -6, 6, 2, '#ffd0e8', OUT, 0.6);
+  },
+  // Moonwell: a pale crescent moon floating behind the head, silver light on the robe
+  moonwell(ctx, st) {
+    ctx.save(); ctx.translate(-14, -10 + Math.sin(st.t * 1.5) * 1.2);
+    glow(ctx, 0, 0, 10, '#a9c4ff', 0.45);
+    ctx.fillStyle = '#eef2ff'; ctx.beginPath(); ctx.arc(0, 0, 4.5, 0, TAU); ctx.arc(1.8, -0.8, 3.8, 0, TAU, true); ctx.fill('evenodd');
+    ctx.restore();
+    ellipse(ctx, -2, 0, 8, 12, 0, null, rgba('#a9c4ff', 0.6), 1.2);
+  },
+  // Echoist: a faint second outline that trails a moment behind
+  echoist(ctx, st) {
+    ctx.save(); ctx.globalAlpha = 0.35; ctx.translate(-5 - Math.sin(st.t * 2) * 1.5, 0);
+    ellipse(ctx, -2, 0, 10.5, 14.5, 0, null, '#c4a8ff', 1.4);
+    circle(ctx, 0, 0, 7.8, null, '#d8c8ff', 1.2);
+    ctx.restore();
+  },
+  // Accelerant: a golden clock-hand ring spinning fast around them
+  accelerant(ctx, st) {
+    ctx.save(); ctx.rotate(st.t * 3);
+    circle(ctx, 0, 0, 21, null, rgba('#ffd36a', 0.45), 1.2);
+    line(ctx, 0, 0, 0, -18, rgba('#ffe9a0', 0.7), 1.6); line(ctx, 0, 0, 12, 0, rgba('#ffe9a0', 0.7), 1.6);
+    ctx.restore();
+  },
 };
 
 // cls may be null (wisp). opts: { ring, noShadow, lift, spec }

@@ -29,9 +29,29 @@ Only moves that are new to a spec need an icon. Changed moves (for example Senti
 5. **Rune Blade** (`runeguard/cut`), replaces Rune Strike: a straight sword etched with glowing violet runes, slashing diagonally with a lavender trail.
 6. **Rune Cleave** (`runeguard/cleave`), replaces Glyph Burst: a wide sweeping cut, a burning violet rune left hanging in the air where it passed.
 
-### Healers and DPS (batches 2 and 3)
+### Healers (batch 2)
 
-Added here as each batch is designed.
+**Cleric · Aegis** (pale gold and white)
+7. **Divine Barrier** (`cleric/barrier`), replaces Mend: a translucent golden dome over a glowing rune circle, a single white feather drifting down onto it.
+
+**Cleric · Inquisitor** (burning orange and gold)
+8. **Condemn** (`cleric/condemn`), replaces Benediction: a lance of holy fire striking down, a blazing four-pointed brand seared into the ground where it hits.
+
+**Grovekeeper · Lifebinder** (spring green and blossom pink)
+9. **Lifebind** (`grovekeeper/lifebind`), replaces Rejuvenate: two hands joined by a curling green vine, small pink blossoms opening along it.
+
+**Grovekeeper · Moonwell** (silver blue)
+10. **Moonwell** (`grovekeeper/moonwell`), replaces Wild Growth: a still pool of moonlight seen from above, a crescent moon reflected in it, vines curling around its rim.
+
+**Chronomancer · Echoist** (lilac)
+11. **Echo Chamber** (`chronomancer/chamber`), replaces Accelerando: a clock face with three fading copies of itself rippling outward, like an echo.
+
+**Chronomancer · Accelerant** (amber gold)
+- No new moves. Temporal Bolt and Accelerando keep their icons; they just do more.
+
+### DPS (batch 3)
+
+Added here when the batch is designed.
 
 ## Portraits (one per spec)
 
@@ -43,3 +63,9 @@ Added here as each batch is designed.
 4. **Bloodreaver · Hemomancer** (crimson): a dark hooded cowl over the horned helm, red eyes, dark robes over mail, small orbs of blood floating beside the head.
 5. **Runeguard · Spellwarden** (pale blue): the violet hood edged in pale ice-blue light, a circle of pale runes turning behind the head, one hand raised as if warding someone else.
 6. **Runeguard · Runeblade** (violet): the hood pushed back a little, the hilt of a rune-carved sword held upright before the face, its runes glowing lavender.
+7. **Cleric · Aegis** (pale gold): the same calm face under a white hood, a faint golden half-dome of light arching over the shoulders, serene and watchful.
+8. **Cleric · Inquisitor** (orange): a sterner look, a burning orange sash across white robes, one hand raised with a glowing brand-mark in the palm.
+9. **Grovekeeper · Lifebinder** (green and pink): a crown of fresh leaves, small pink blossoms in the hair, a soft green glow from below, a warm smile.
+10. **Grovekeeper · Moonwell** (silver blue): moonlit, a pale crescent moon floating behind the head, silver light catching the face and robe, night-blue background.
+11. **Chronomancer · Echoist** (lilac): a faint, slightly offset second outline of the head trailing behind, as if the portrait echoes, lilac light.
+12. **Chronomancer · Accelerant** (amber): a golden clock-hand ring spinning behind the head, motion streaks, a focused, eager expression.

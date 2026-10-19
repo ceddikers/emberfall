@@ -176,8 +176,8 @@
   function healerish() { return actor && actor.abilities.some(a => a.target === 'ally'); }
 
   // --- kit events
-  const SIM_EVENTS = new Set(['damage', 'heal', 'hot', 'shield', 'mit', 'raise', 'rewind', 'selfDamage', 'targetDebuff', 'partyBuff', 'snap']);
-  const EV_FIELDS = ['type', 'amount', 'crit', 'target', 'ticks', 'interval', 'id', 'dur', 'tag', 'pct', 'kind', 'value', 'secs', 'threat', 'tgt'];
+  const SIM_EVENTS = new Set(['damage', 'heal', 'hot', 'shield', 'mit', 'raise', 'rewind', 'selfDamage', 'targetDebuff', 'partyBuff', 'snap', 'pool', 'brand']);
+  const EV_FIELDS = ['type', 'amount', 'crit', 'target', 'ticks', 'interval', 'id', 'dur', 'tag', 'pct', 'kind', 'value', 'secs', 'threat', 'tgt', 'r', 'not'];
   function packEv(ev) {
     const o = {};
     for (const k of EV_FIELDS) if (ev[k] !== undefined) o[k] = ev[k];
@@ -271,7 +271,7 @@
   }
 
   function showHeal(target, amount, crit) {
-    const ids = target === 'party' ? allyList().map(c => c.id) : [target === 'self' || target == null ? Net.id : target];
+    const ids = target === 'party' ? allyList().map(c => c.id) : [target === 'self' || target === 'lowest' || target == null ? Net.id : target];
     for (const id of ids) {
       const e = entById(id);
       if (e && amount >= 1) FX.text(e.x, e.y - 50, '+' + rnd(amount), crit ? '#b6ff9a' : '#7dff8a', crit ? 17 : 14);
@@ -471,7 +471,7 @@
   function playKitFx(ent, name, mine) {
     const f = KIT_VFX[name];
     if (!f) return;
-    const target = name === 'reflect' || name === 'dawnstar' || name === 'radiant' ? (ent === player ? enemyPos() : (inArena() ? { x: raid.boss.x, y: raid.boss.y } : null)) : null;
+    const target = name === 'reflect' || name === 'dawnstar' || name === 'radiant' || name === 'echo' ? (ent === player ? enemyPos() : (inArena() ? { x: raid.boss.x, y: raid.boss.y } : null)) : null;
     VFX.setScale(mine ? 1 : 0.6);
     try { f(ent, target); } finally { VFX.setScale(1); }
   }
@@ -624,7 +624,7 @@
     if (!raidHost || !hostRoster.some(h => h.id === pid && !h.left)) return;
     const ev = msg.ev;
     if (!ev || !EV_TYPES.has(ev.type)) return;
-    for (const k of ['amount', 'pct', 'value', 'dur', 'secs', 'ticks', 'interval', 'threat']) if (ev[k] !== undefined && !Number.isFinite(ev[k])) return;
+    for (const k of ['amount', 'pct', 'value', 'dur', 'secs', 'ticks', 'interval', 'threat', 'r', 'not']) if (ev[k] !== undefined && !Number.isFinite(ev[k])) return;
     if (ev.tgt !== undefined && typeof ev.tgt !== 'string') return;
     raidHost.onPlayerEvent(pid, ev);
   });
@@ -1039,6 +1039,7 @@
     if (msg.k === 'death' && e) BOSS_VFX.playerDeath(e);
     if (msg.k === 'death') raid.doom.delete(msg.id);
     if (msg.k === 'raised' && e) BOSS_VFX.playerRaised(e);
+    if (msg.k === 'brandHit') { VFX.setScale(msg.id === Net.id ? 1 : 0.6); try { KIT_VFX.brandHit(e, { x: raid.boss.x, y: raid.boss.y }); } finally { VFX.setScale(1); } }
     if (msg.id !== Net.id || !actor) return;
     if (msg.k === 'perfect') actor.notify('perfect');
     if (msg.k === 'reflect') actor.notify('reflect');

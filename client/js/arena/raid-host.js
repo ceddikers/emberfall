@@ -71,7 +71,7 @@ class RaidHost {
       // Volkar: everyone's charge, the rods' posts, and where the closing wall is about to jump
       polarity: sim.polarity || null, posts: (sim.posts || []).filter(c => c.end > sim.t), edgeNext: sim.edgeNext || null,
       // the Hollow King: lanterns, who is doomed (and when it kills), and the knights' replays still to come
-      lanterns: sim.lanterns || [], doomed: sim.doomed || null, echoPlan: sim.echoPlan || [], night: !!sim.night,
+      lanterns: sim.lanterns || [], doomed: sim.doomed || null, echoPlan: sim.echoPlan || [], night: !!sim.night, pools: sim.healPools,
       debuffs: id => { const s = sim.ps.get(id); const out = {}; if (s) for (const k in s.debuffs) if (s.debuffs[k] > sim.t) out[k] = true; return out; },
     };
   }
@@ -241,7 +241,7 @@ class RaidHost {
             break;
           }
           case 'heal': case 'hot': case 'shield': case 'mit': case 'raise': case 'rewind':
-          case 'selfDamage': case 'targetDebuff': case 'partyBuff':
+          case 'selfDamage': case 'targetDebuff': case 'partyBuff': case 'pool': case 'brand':
             host.onPlayerEvent(bot.id, ev);
             break;
         }

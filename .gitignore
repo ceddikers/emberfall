@@ -3,3 +3,5 @@ node_modules/
 .claude/settings.local.json
 Thumbs.db
 desktop.ini
+# the user's VFX reference sheets (style targets for the code-drawn effects; kept local, not published)
+docs/art/vfx-reference/
