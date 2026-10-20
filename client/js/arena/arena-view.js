@@ -1160,7 +1160,7 @@ const ArenaView = {
         case 'aoe': case 'buster': this.areaWarning(ctx, s, p, fadeIn, tg.type === 'buster' ? '#ff2a3a' : '#ff6a3a', t); break;
         case 'stack': this.stackMarker(ctx, s, p, fadeIn, t); break;
         case 'spread': this.spreadMarker(ctx, s, p, fadeIn, t); break;
-        case 'tower': this.tower(ctx, s, p, fadeIn, t, tg.need); break;
+        case 'tower': this.tower(ctx, s, p, fadeIn, t, tg.need, tg.color); break;
         case 'proximity': this.proximity(ctx, s, p, fadeIn, t); break;
         case 'knockback': this.knockback(ctx, s, p, fadeIn, t); break;
       }
@@ -1235,14 +1235,14 @@ const ArenaView = {
     circle(ctx, x, y, r * (1 - p) + 4, null, rgba('#f2dcff', 0.7 * k), 1.5);
   },
 
-  tower(ctx, s, p, k, t, need) {
-    const { x, y, r } = s;
-    glow(ctx, x, y, r * 1.6, '#4fe0d0', 0.35 * k);
-    circle(ctx, x, y, r, rgba('#4fe0d0', 0.18 * k), rgba('#9ffff4', 0.95 * k), 3);
-    circle(ctx, x, y, r * 0.78, null, rgba('#9ffff4', 0.4 * k), 1.5);
+  tower(ctx, s, p, k, t, need, color) {
+    const { x, y, r } = s, base = color || '#4fe0d0', hi = color || '#9ffff4';
+    glow(ctx, x, y, r * 1.6, base, 0.35 * k);
+    circle(ctx, x, y, r, rgba(base, 0.18 * k), rgba(hi, 0.95 * k), 3);
+    circle(ctx, x, y, r * 0.78, null, rgba(hi, 0.4 * k), 1.5);
     // light column
     const g = ctx.createLinearGradient(0, y - 150, 0, y);
-    g.addColorStop(0, rgba('#9ffff4', 0)); g.addColorStop(1, rgba('#9ffff4', 0.35 * k));
+    g.addColorStop(0, rgba(hi, 0)); g.addColorStop(1, rgba(hi, 0.35 * k));
     ctx.fillStyle = g; ctx.fillRect(x - r * 0.5, y - 150, r, 150);
     // one pip per person it wants
     for (let i = 0; i < Math.max(1, need); i++) {
@@ -1469,6 +1469,10 @@ const ArenaView = {
     }
     const lo = room.ev.lightsout;
     if (lo && t < lo.end + 0.6) this.drawLightsOut(ctx, room, lo, t, v);
+    const sq = room.ev.squall;
+    if (sq && t < sq.end + 0.5) this.squallDraw(ctx, sq, t);
+    const ey = room.ev.eye;
+    if (ey && t < ey.end) this.eyeCalm(ctx, ey, t);
     const brd = room.ev.brood;
     if (brd && t < brd.end) this.broodClock(ctx, brd, t);
     const col = room.ev.collapse;
@@ -1673,9 +1677,17 @@ const ArenaView = {
     poly(ctx, pts, '#5a6270', OUT, 3);
     poly(ctx, [x - r * 0.9, y - h * 0.7, x - r * 0.45, y - h, x - r * 0.1, y - h * 0.96, x - r * 0.4, y - h * 0.62, x - r * 0.55, y], 'rgba(255,255,255,0.08)');
     line(ctx, x + r * 0.3, y - h * 0.8, x + r * 0.5, y - h * 0.3, 'rgba(14,16,22,0.5)', 2);
-    const glowA = charged ? 0.6 + 0.4 * Math.sin(t * 14) : 0.15;
-    for (let i = 0; i < 3; i++) { const yy = y - h * (0.3 + i * 0.18); line(ctx, x - 6, yy, x + 6, yy - 6, rgba('#9ff4ff', glowA), 2); line(ctx, x, yy - 8, x, yy + 4, rgba('#9ff4ff', glowA), 2); }
-    if (charged) { glow(ctx, x, y - h * 0.5, 50, '#9ff4ff', 0.35); if (Math.floor(t * 10) % 3 === 0) jagged(ctx, x, y - h, x + Math.sin(t * 7) * 20, y - h - 30, Math.floor(t * 12), '#bff6ff', 1.2); }
+    // state 1: holding a bolt (cyan). Still Air (the Eye): 2 lit + (gold), 3 lit − (blue), with the sign on its face
+    const col = pr.state === 2 ? '#ffd84a' : pr.state === 3 ? '#6ab8ff' : '#9ff4ff';
+    const glowA = charged ? 0.6 + 0.4 * Math.sin(t * (pr.state > 1 ? 4 : 14)) : 0.15;
+    for (let i = 0; i < 3; i++) { const yy = y - h * (0.3 + i * 0.18); line(ctx, x - 6, yy, x + 6, yy - 6, rgba(col, glowA), 2); line(ctx, x, yy - 8, x, yy + 4, rgba(col, glowA), 2); }
+    if (charged) { glow(ctx, x, y - h * 0.5, pr.state > 1 ? 70 : 50, col, 0.35); if (pr.state === 1 && Math.floor(t * 10) % 3 === 0) jagged(ctx, x, y - h, x + Math.sin(t * 7) * 20, y - h - 30, Math.floor(t * 12), '#bff6ff', 1.2); }
+    if (pr.state > 1) {
+      const sy = y - h - 22;
+      circle(ctx, x, sy, 12, rgba('#0a0e18', 0.7), rgba(col, 0.95), 2.5);
+      line(ctx, x - 6, sy, x + 6, sy, col, 3);
+      if (pr.state === 2) line(ctx, x, sy - 6, x, sy + 6, col, 3);
+    }
   },
   // Grubnak's stockpot, dragged to the middle after the Flare-Up: a squat copper pot on its own fire, slopping and
   // steaming. Solid, and cover from Gut Blast.
@@ -1701,6 +1713,40 @@ const ArenaView = {
       ctx.beginPath(); ctx.moveTo(sx, sy); ctx.quadraticCurveTo(sx + 10, sy - 12, sx, sy - 24);
       ctx.strokeStyle = `rgba(240,235,225,${0.35 * (1 - q)})`; ctx.lineWidth = 4; ctx.stroke();
     }
+  },
+  // Squall Line (Volkar): the safe circle drifts round him. Outside it the storm is live (dark, crackling); a dashed
+  // ghost shows where the circle will be in a moment. During the cast it pulses where it will start.
+  squallDraw(ctx, q, t) {
+    const begin = q.start + q.at, p = clamp((t - begin) / Math.max(0.1, q.sdur), 0, 1);
+    const at = u => { const a = q.a0 + q.dir * TAU * clamp(u, 0, 1); return { x: Math.cos(a) * q.D, y: Math.sin(a) * q.D }; };
+    const c = at(p), g = at((t + 1.5 - begin) / q.sdur), warm = t < begin;
+    const k = clamp((t - q.start) / 0.4, 0, 1) * clamp((q.end - t) / 0.5, 0, 1);
+    if (k <= 0) return;
+    ctx.save(); ctx.globalAlpha = k;
+    ARENA.trace(ctx, 2); ctx.clip();
+    ctx.beginPath(); ctx.rect(-3000, -3000, 6000, 6000); ctx.arc(c.x, c.y, q.R, 0, TAU, true);
+    ctx.fillStyle = `rgba(8,16,34,${warm ? 0.25 + 0.15 * Math.sin(t * 6) : 0.55})`; ctx.fill('evenodd');
+    ctx.beginPath(); ctx.arc(c.x, c.y, q.R, 0, TAU);
+    ctx.strokeStyle = rgba('#5ac8ff', 0.3); ctx.lineWidth = 14; ctx.stroke();
+    ctx.strokeStyle = rgba('#bff0ff', 0.8 + Math.sin(t * 13) * 0.15); ctx.lineWidth = 2.5; ctx.stroke();
+    if (!warm) {
+      const n = 22;
+      for (let i = 0; i < n; i++) {
+        if ((Math.floor(t * 9) + i * 7) % 3 === 0) continue;
+        const a0 = i * TAU / n + Math.floor(t * 9) * 0.07, a1 = a0 + TAU / n;
+        jagged(ctx, c.x + Math.cos(a0) * q.R, c.y + Math.sin(a0) * q.R, c.x + Math.cos(a1) * q.R, c.y + Math.sin(a1) * q.R, Math.floor(t * 12) * 7 + i, '#7fe8ff', 1.4);
+      }
+    }
+    if (p < 1) { ctx.setLineDash([12, 10]); ctx.lineDashOffset = -t * 30; ctx.beginPath(); ctx.arc(g.x, g.y, q.R, 0, TAU); ctx.strokeStyle = rgba('#dff6ff', 0.45); ctx.lineWidth = 2; ctx.stroke(); ctx.setLineDash([]); }
+    ctx.restore();
+  },
+  // the Eye of the Storm: the clouds part over the summit and a pale, still light falls on it
+  eyeCalm(ctx, e, t) {
+    const k = clamp((t - e.start) / 2, 0, 1) * clamp((e.end - t) / 2, 0, 1);
+    if (k <= 0) return;
+    ctx.save(); ARENA.trace(ctx, 2); ctx.clip();
+    glow(ctx, 0, 0, ARENA.r * 1.1, '#dff0ff', 0.16 * k);
+    ctx.restore();
   },
   // Mise en Place (Grubnak, Hard): three tools laid out on the pass along the bottom wall, left to right in the order
   // he'll serve them. The cleaver lies on the side of its board that gets chopped. Once Service! is called, each one

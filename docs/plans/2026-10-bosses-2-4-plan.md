@@ -198,6 +198,16 @@ New pieces:
    - **A (recommended):** Heavens Fall: the shared soak, again and again, until he drops.
    - **B:** one giant soak at a fixed time, then a plain burn to Skybreak.
 
+### Volkar as built (2026-10-20)
+
+- **HP 3.35M / 3.8M** (the plan said 3.6M on Normal). The slowest `check.js` line-up (Bastion / Cleric / Thermist / Driftblade) ran out of time at 3.6M with 1–7% left. At 3.35M it clears 2 of 3, and the fastest (Berserker) kills in 7:33–7:51, a little under eight minutes.
+- **Lighter hits and a gentler Pulse.** Over a 9-minute fight the old numbers out-damaged any healer (110–150 damage a second taken against about 110 healed). Thunderclap, Thunder Crash, Static Field and his autos all came down, and the Pulse ramps 5% a minute rather than 20%.
+- **The doubled sets were re-paired.** Rods with a Crash, and Rod Strike with a Field, so no two moves ask for opposite things at the same beat. The back half's Squall Line runs 24 s, so the rods after it don't land inside it.
+- **The finale is Heavens Fall alone**, every 15 s (Hard 13 s), ramping 10% a pass, not 15%. Each one is 1,400 split between those in it. A Field and a Surge between the falls, and the heavier fall, made the last minute a coin flip. The first fall comes 10 s in, so it never overlaps the last Crash.
+- **The Eye's stones and towers are gold (+) and blue (−)**, with the sign on each stone's face.
+- **Bots no longer cut back through the Storm Walls' last turn** (their path check now looks at the next half second, not only quarter-points of a long walk). This was most of the bots' damage taken on Volkar, and it lifted every Grubnak and Skitterra line-up too.
+- **Measured:** the script runs 8:25 (Normal) and 9:04 (Hard). Bots clear 12 of 12 Normal pulls (Berserker / Accelerant / Venomstrike / Pyromancer) in 7:33–7:51, 6 of 6 with Hemomancer / Inquisitor / Nightstalker / Sigilmancer in 8:18–8:43, and every `check.js` line-up at least once. Hard runs clean with every move firing (kept alive, the kill lands at 8:47–9:22).
+
 ---
 
 ## The Hollow King: the court of the dead

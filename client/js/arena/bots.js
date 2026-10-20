@@ -109,7 +109,7 @@ const BotAI = {
   // Towers that land one after another (Order Up!'s rail) are handed out in the order they land: each goes to whoever
   // can be standing in it in time (free by then, and not still Stuffed from an earlier one: m.stuff), nearest first.
   towerFor(me, view) {
-    const towers = view.mechs.filter(m => m.type === 'tower' && m.tag !== 'rod' && m.tag !== 'bell').sort((a, b) => a.resolveAt - b.resolveAt || a.id - b.id);
+    const towers = view.mechs.filter(m => m.type === 'tower' && m.tag !== 'rod' && m.tag !== 'bell' && m.tag !== 'still').sort((a, b) => a.resolveAt - b.resolveAt || a.id - b.id);
     if (!towers.length) return null;
     const SPEED = 230;
     const al = view.players.filter(p => p.alive);
@@ -152,6 +152,24 @@ const BotAI = {
       if (best) { mine[p.id] = best; room.set(best, room.get(best) - 1); }
     }
     return mine[me] || null;
+  },
+  // Still Air (Volkar's Eye): each lit stone wants one person of its own charge. People keep the stone they're nearest
+  // (of their charge); the bots take what's left of their charge, nearest first.
+  stillFor(me, view) {
+    const pol = view.polarity, stones = view.mechs.filter(m => m.tag === 'still');
+    if (!pol || !stones.length) return null;
+    const mine = {}, taken = new Set(), al = view.players.filter(p => p.alive);
+    const order = [...al.filter(p => p.id < 1000), ...al.filter(p => p.id >= 1000).sort((a, b) => a.id - b.id)];
+    for (const p of order) {
+      let best = null, bd = Infinity;
+      for (const m of stones) {
+        if (taken.has(m.id) || m.charge !== pol.get(p.id)) continue;
+        const d = Math.hypot(m.shape.x - p.x, m.shape.y - p.y);
+        if (d < bd) { bd = d; best = m; }
+      }
+      if (best) { mine[p.id] = best.id; taken.add(best.id); }
+    }
+    return mine[me] ?? null;
   },
   // Butcher's Charge (Grubnak): where the tank stands so the charge runs into a brick wall, past no cask and away from
   // the stove line along the top wall
@@ -339,7 +357,7 @@ const BotAI = {
         }
         case 'tower': {
           const mine = m.tag === 'rod' ? this.rodFor(me, view) === m.id : m.tag === 'bell' ? this.bellFor(me, view) === m.id
-            : this.towerFor(me, view) === m.id;
+            : m.tag === 'still' ? this.stillFor(me, view) === m.id : this.towerFor(me, view) === m.id;
           const inside = Math.hypot(s.x - px, s.y - py) < s.r - 18;
           // head for your own tower early: it may be across the room
           if (mine && !inside) pen += (Math.hypot(s.x - px, s.y - py)) * 12 * Math.max(urgency, 0.3);
@@ -388,9 +406,10 @@ const BotAI = {
     for (const sw of view.sweeps || []) {
       // behind a boulder (Avalanche) the wall passes over you, once
       if (sw.cover && PROPS.shadowing(sw.x, sw.y, px, py, view.props || [], q => q.kind === sw.cover && PROPS.blocks(q, sw.x, sw.y, px, py, PROPS.COVER_SHRINK + 10))) continue;
+      if (view.t > sw.end + 0.2) continue;
       for (const look of [0, 0.5, 1]) {
-        const tt = view.t + look;
-        if (tt < sw.startAt - 0.8 || tt > sw.end) continue;
+        const tt = Math.min(view.t + look, sw.end);   // the walls hold their last place until they're gone: don't cut back in early
+        if (tt < sw.startAt - 0.8) continue;
         const a0 = sw.a0 + Math.max(0, tt - sw.startAt) * sw.spin;
         for (let k = 0; k < sw.arms; k++) {
           const a = a0 + k * Math.PI * 2 / sw.arms, c = Math.cos(a), sn = Math.sin(a), dx = px - sw.x, dy = py - sw.y;
@@ -445,6 +464,8 @@ const BotAI = {
     for (const z of view.zones || []) if (SHAPES.contains(z.shape, px, py, 10)) pen += z.effect === 'burn' ? (view.t > z.startAt - 2 ? 6000 : 400) : 350;
     // the room: nobody stands inside a solid prop; grease is best kept clear of, and burning grease avoided
     for (const pr of view.props || []) if (pr.solid && PROPS.sd(pr, px, py) < 16) pen += 9000;
+    // Squall Line (Volkar): stay inside the safe circle as it drifts, where it will be in a moment
+    if (view.room && view.room.inSquall && !(view.room.inSquall(px, py, view.t + 0.7, 40) && view.room.inSquall(px, py, view.t, 20))) pen += 7000;
     // floor that has fallen away, or is about to (Skitterra's collapse): stay on the silk
     if (view.room && view.room.safe && !view.room.safe(px, py, true)) pen += view.room.safe(px, py) ? 9000 : 20000;
     for (const th of (view.room && view.room.threads) || []) if (!th.cut && segDist(px, py, th.x1, th.y1, th.x2, th.y2) < 26 && Math.hypot(px - th.kx, py - th.ky) > 50) pen += 3000;
@@ -557,6 +578,8 @@ const BotAI = {
       if (sweeps.length) {
         const d = Math.hypot(c.x - bot.x, c.y - bot.y), arrive = d / 230;
         for (const q of [0.25, 0.5, 0.75, 1]) if (inWall(bot.x + (c.x - bot.x) * q, bot.y + (c.y - bot.y) * q, view.t + arrive * q)) pen += 5000;
+        // and the next half second by the clock (a long walk's quarter marks can all fall after the walls' last turn)
+        for (const dt of [0.15, 0.3, 0.5]) { const q = dt / Math.max(0.01, arrive); if (q < 0.25 && inWall(bot.x + (c.x - bot.x) * q, bot.y + (c.y - bot.y) * q, view.t + dt)) pen += 5000; }
         for (const extra of [0.4, 0.9]) if (inWall(c.x, c.y, view.t + arrive + extra)) pen += 3000;
       }
       return pen;
@@ -1029,9 +1052,10 @@ BotAI.dollDanger = function (view, x, y, within = 2.6) {
     if (segDist(x, y, rl.x + c * from * rl.speed, rl.y + s * from * rl.speed, rl.x + c * to * rl.speed, rl.y + s * to * rl.speed) < rl.r + 40) return true;
   }
   for (const sw of view.sweeps || []) {
+    if (view.t > sw.end + 0.2) continue;
     for (const look of [0, 0.6, 1.2]) {
-      const tt = view.t + look;
-      if (tt < sw.startAt - 0.5 || tt > sw.end) continue;
+      const tt = Math.min(view.t + look, sw.end);
+      if (tt < sw.startAt - 0.5) continue;
       const a0 = sw.a0 + Math.max(0, tt - sw.startAt) * sw.spin;
       for (let k = 0; k < sw.arms; k++) {
         const a = a0 + k * Math.PI * 2 / sw.arms, c = Math.cos(a), sn = Math.sin(a), dx = x - sw.x, dy = y - sw.y;
