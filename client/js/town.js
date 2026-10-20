@@ -30,7 +30,7 @@ const TOWN = {
 const COLLIDERS = { rects: [], circles: [] };
 
 // where the col-th of n heroes of a role waits on the deck: three spread out, more packed closer so they all fit
-function lineupSpot(roleIdx, col, n = 3) { const gap = n <= 3 ? 110 : Math.min(110, 330 / (n - 1)); return { x: 390 + col * gap - (n > 3 ? 50 : 0), y: 870 + roleIdx * 90 }; }
+function lineupSpot(roleIdx, col, n = 3) { const gap = n <= 3 ? 110 : Math.min(110, 330 / (n - 1)); return { x: 500 + (col - (n - 1) / 2) * gap, y: 870 + roleIdx * 90 }; }
 
 function initTown() {
   const r = rng(42);
@@ -233,14 +233,11 @@ function buildTownLayer(scale) {
   for (let y = D.y + 18; y < D.y + D.h; y += 18) line(g, D.x + 4, y, D.x + D.w - 4, y, 'rgba(60,40,20,0.45)', 1.5);
   for (let y = D.y + 9; y < D.y + D.h; y += 18) for (let x = D.x + 20 + (y % 36) * 2; x < D.x + D.w; x += 90) line(g, x, y - 9, x, y + 9, 'rgba(60,40,20,0.35)', 1.2);
   ['tank', 'dps', 'healer'].forEach((role, i) => {
-    const s = lineupSpot(i, 0), n = Math.max(3, CLASSES.filter(c => c.role === role).length);
-    for (let col = 0; col < n; col++) {
-      const p = lineupSpot(i, col, n);
-      ellipse(g, p.x, p.y + 4, n > 3 ? 24 : 28, n > 3 ? 17 : 20, 0, 'rgba(120,30,30,0.55)', 'rgba(230,190,110,0.6)', 2);
-    }
+    // (each hero's pad is drawn under them each frame by drawDeckPad: the deck shows only the heroes waiting on it)
+    const s = lineupSpot(i, 0);
     g.font = '700 13px Cinzel, Georgia, serif'; g.textAlign = 'left'; g.textBaseline = 'middle';
     g.fillStyle = ROLES[role].color;
-    g.fillText(role === 'dps' ? 'DPS' : ROLES[role].name.toUpperCase() + 'S', D.x + 16, s.y - (n > 3 ? 30 : 0));
+    g.fillText(role === 'dps' ? 'DPS' : ROLES[role].name.toUpperCase() + 'S', D.x + 16, s.y - 30);
     g.textBaseline = 'alphabetic';
   });
 
@@ -394,4 +391,9 @@ function drawPlaque(g, pd, text) {
   g.fillStyle = '#f0d48a'; g.textAlign = 'center'; g.textBaseline = 'middle';
   g.fillText(text, pd.x, pd.y + 78);
   g.restore();
+}
+
+// a hero's pad on the tavern deck (packed rows get smaller pads)
+function drawDeckPad(g, x, y, packed) {
+  ellipse(g, x, y + 4, packed ? 24 : 28, packed ? 17 : 20, 0, 'rgba(120,30,30,0.55)', 'rgba(230,190,110,0.6)', 2);
 }

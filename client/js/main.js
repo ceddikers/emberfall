@@ -59,7 +59,7 @@
     lineup.push(...shown.map((cls, i) => {
     const roleIdx = ['tank', 'dps', 'healer'].indexOf(cls.role);
     const same = shown.filter(c => c.role === cls.role), col = same.indexOf(cls);
-    const p = lineupSpot(roleIdx, col, Math.max(3, same.length));
+    const p = lineupSpot(roleIdx, col, same.length);   // (each row centred on the deck, however many wait in it)
     // labelUp: in a packed row every other name sits higher, so neighbours' names don't run together
     return { kind: 'hero', cls, x: p.x, y: p.y, angle: Math.PI / 2, st: newSt(i * 0.7), nextAct: 2 + Math.random() * 6, labelUp: same.length > 3 && col % 2 === 1 };
     }));
@@ -2433,6 +2433,7 @@
     Pastimes.drawGround(ctx, now);
     TownLife.drawGround(ctx, now, TOWN.pedestals, BOSSES.map(b => b.id));
     TOWN.pedestals.forEach((pd, i) => { if (BOSSES[i]) drawPlaque(ctx, pd, bossOpen(BOSSES[i]) ? BOSSES[i].name : 'Sealed'); });
+    for (const h of lineup) drawDeckPad(ctx, h.home ? h.home.x : h.x, h.home ? h.home.y : h.y, lineup.filter(o => o.cls.role === h.cls.role).length > 3);
     const ents = [...lineup, keeper, trainer, ...statues, ...dummies, player, ...townRemotes, ...Stagecraft.entities(now, scEnv), ...TownLife.entities(HERO_SCALE)];
     ents.sort((a, b) => a.y - b.y);
     for (const e of ents) { if (e.kind === 'stagecraft') e.draw(ctx); else drawEntity(e); }
