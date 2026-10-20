@@ -1,42 +1,37 @@
-// Boss IV: The Hollow King, Lord of the Barrow — "The Barrow". Three phases, everything he has.
-// He is a dead king who walks after his tank like the first bosses did.
-//   Royal Gaze: he lifts his head. Anyone looking at him when it lands is caught: hurt, held in place for a moment,
-//     and left Dreading; caught again while Dreading hurts far more. Turn your back (your hero faces where they walk).
-//   Royal Doom: a sentence on one player (two on Hard) that kills when it runs out. Lanterns are set down around
-//     the hall; the doomed walk into one's light, or anyone picks one up (walk over it) and carries it to them.
-//   Grave Cleave: tankbuster that leaves the tank bleeding. Barrow Knell: raidwide. Grave Marks: spread out.
-//   His swings: Sceptre Sweep (a wide cone in front), Barrow Stomp (around him) and Crown of Graves (everywhere
-//     but close to him).
-//   Phase 2 at 65%, Echoes: two Echo Knights rise by the walls. Each remembers one of his swings as he makes it (it
-//     flashes on the knight) and replays it from where it stands a few seconds later, aimed at the middle of the hall.
-//     Every second cycle a Gaze lands together with the first replay. Barrow Bells: two bells, two people under each;
-//     a missed bell dooms everyone.
-//   Phase 3 at 30%, The Long Night: the lanterns go out. The hall goes dark but for a little light around each hero
-//     and the last lantern, which someone carries; now it's the only cure for Doom. Everything comes back shorter.
-//     The moon finishes setting: hard enrage.
-// Hard: Doom on two players at once; every echo cycle brings a Gaze with it; replays warn for less time. Three moves only
-// Hard has:
-//   Royal Audience: his crown blazes. Anyone with their back to the king when it lands is caught, as by the Gaze
-//     (and it Dreads you the same way). Face him.
-//   Funeral March: ranks of his dead march across the hall from one wall to the other, one after another, leaving one
-//     lane open the whole way. Stand in the lane, or step in behind a rank once it has passed.
+// Boss IV: The Hollow King, Lord of the Barrow — "The Barrow". The court of the dead.
+// One authored hearing, the same on every pull: call and response. He calls (a swing, a Gaze, a decree) and the court
+// answers a fixed beat later (the knights replay it, the coffins stir, the bells toll). The question he keeps asking:
+// what did I just see? He walks after his tank like the first bosses did.
+//   I. The Summons (100% → 80%): his calls, one at a time. Barrow Knell, Sceptre Sweep (a wide cone in front), Royal
+//     Gaze (turn your back), Grave Cleave (tankbuster + bleed), Barrow Stomp (around him), Royal Doom (carry a lantern
+//     to the doomed), Crown of Graves (everywhere but close to him).
+//   II. Testimony (80% → 62%): two Echo Knights rise by the walls. Each remembers one of his swings as he makes it (it
+//     flashes on the knight) and replays it from where it stands. The Charge Sheet: three banners above the throne light
+//     in turn, each with the sigil of one of his swings, then go dark. Coffin Lids → Royal Decree (hide behind a lid),
+//     Stomp → its echo with a Gaze, Barrow Bells (two to a bell), Lights Out (stand in a brazier's light).
+//   III. Court of Bones (at 62%, 38 s): he sits on the throne, out of reach, and six coffins wake one by one down the
+//     walls. Break each before it opens; an opened one sends out a skeleton. Then the knights move, and he rises.
+//   IV. The Verdict (62% → 25%): calls and their answers overlap: two swings at once and two echoes, Doom with Grave
+//     Marks, the lids and the Decree again. Then Judgement: the Charge Sheet's three swings land in that order, from him
+//     and both knights at once, each shown on the floor for only 1.6 s.
+//   V. The Long Night (25% → dead): the braziers die; one lantern is left. Doom passes from player to player in a fixed
+//     order (the next one's sigil glows 6 s ahead) and the lantern passes on touch: whoever it cures carries it to the
+//     next. Swings, echoes, Gazes and Knells between, until he falls or the moon sets.
+// A slow party runs each part's last set again, +10% each pass (f.course in fight.js). Every telegraph shows on the
+// floor on every difficulty.
+// Hard: casts 15% faster, 25% more damage; Judgement shown for 1.2 s; the Charge Sheet has four sigils (one is Royal
+// Audience: face him); Grave Cleave on the tank as Gravebind lands on the healer and a DPS; Doom on two in the Verdict;
+// two lanterns and two dooms at once in the Long Night; Falling Masonry with each Knell; and his three moves:
+//   Royal Audience: his crown blazes. Anyone with their back to the king when it lands is caught, as by the Gaze.
+//   Funeral March: ranks of his dead march across the hall, wall to wall, leaving one lane open the whole way.
 //   Gravebind: a grave-chain binds two players; they must stay close until it breaks, while everyone else spreads.
-// The room (arena props): six grave-light braziers stand down the hall, lit or snuffed.
-//   Lights Out: he snuffs the hall. Two braziers flare back up (the two nearest him when he calls it), and his Dread
-//     Gaze finds anyone outside their light. In the Long Night the last lantern's light counts too.
-//   Coffin Lids: he tears the lids off two coffins and sends them skidding across the hall from the side walls. Each
-//     stops where it lands, solid, and is the only cover from the Royal Decree that follows: a wave of grave-light
-//     rolling down the hall from the throne. The Decree smashes the lids.
-//   Court of Bones (at 65%): from the throne he wakes the coffins along the walls; they open one by one and send out
-//     skeletons. A coffin broken before it opens sends nothing.
-//   Hard: Falling Masonry (each Knell brings two chunks of the vault down; they stay, solid, blocking lids and the
-//     Decree alike); Last Ember (in the Long Night no brazier comes back for Lights Out: only the lantern's light).
+// The room (arena props): six grave-light braziers down the hall, coffins in the bays along the walls.
 
 const HOLLOWKING = {
   id: 'hollowking', name: 'The Hollow King', title: 'Lord of the Barrow',
-  hp: { normal: 2300000, hard: 3000000 },
+  hp: { normal: 3300000, hard: 3650000 },
   autoDmg: { normal: 1650, hard: 1650 },
-  enrage: { normal: 460, hard: 460 },
+  enrage: { normal: 622, hard: 632 },   // the cast starts here and lands 8 s later (10:30 / 10:40)
   enrageName: 'Moonset',
   vuln: 0.5,
   spawn: { x: 0, y: -80 },
@@ -55,13 +50,19 @@ const HOLLOWKING = {
       marks: 8000, bell: 4500, bellFail: 2000, march: 14000, bind: 16000,
       lid: 12000, decree: H ? 16000 : 15000, masonry: 12000, coffinHp: 7000, skelHp: 9000, skelBite: 1300,
     };
+    const S = (...steps) => steps.filter(Boolean);
     const GAZE_ARC = 1.2;     // you're looking at him if he's within this angle of where you face (~70° either side)
     const LANT_PICK = 40;     // walk this close to a lantern on the floor to pick it up
     const LANT_CURE = 85;     // a lantern's light cures Doom this far out
     const ECHO_WARN = H ? 1.8 : 2.6;
+    const JUDGE_WARN = H ? 1.2 : 1.6;
+    // the Charge Sheet: the swings Judgement brings back, in order
+    const CHARGES = H ? ['stomp', 'audience', 'sweep', 'ring'] : ['stomp', 'sweep', 'ring'];
+    // where the Echo Knights stand: by the side walls, facing the middle (they move after the Court of Bones)
+    const KNIGHTS = [[[-505, -170], [505, 170]], [[-505, 170], [505, -170]]];
 
     // shared with the bots and the host's view (raid-host.js)
-    f.lanterns = []; f.doomed = new Map(); f.knights = []; f.echoPlan = []; f.night = false;
+    f.lanterns = []; f.doomed = new Map(); f.knights = []; f.echoPlan = []; f.night = false; f.doomNext = null;
     const memory = [null, null];   // the swing each knight remembers
     let memNext = 0;
 
@@ -71,7 +72,7 @@ const HOLLOWKING = {
 
     // --- lanterns and Doom ------------------------------------------------------------------
     // a lantern on the floor goes to whoever walks over it (not the doomed, one each); the light cures Doom, and a
-    // cure uses the lantern up, except the last lantern of the Long Night
+    // cure uses the lantern up, except the last lanterns of the Long Night, which pass to whoever they cure
     f.ticker(() => {
       let dirty = false;
       const al = f.alive();
@@ -88,6 +89,7 @@ const HOLLOWKING = {
           f.doomed.delete(id); delete p.s.debuffs.doom;
           f.emit({ t: 'cure', id, l: l.id });
           if (!l.last) f.lanterns = f.lanterns.filter(o => o !== l);
+          else if (!f.lanterns.some(o => o !== l && o.carrier === id)) l.carrier = id;   // the relay: it's theirs now
           dirty = true;
         } else if (f.t >= end) {
           f.doomed.delete(id);
@@ -123,13 +125,13 @@ const HOLLOWKING = {
       f.emit({ t: 'doomed', ids, dur });
       if (!f.night) setLanterns(ids.length + 1, f.t + dur + 2);
     };
-    const royalDoom = (dur = H ? 13 : 14) => {
+    const royalDoom = (n = 1, dur = H ? 13 : 14) => {
       const d = f.ct(3);
       f.cast('Royal Doom', d, 'doom');
       f.afterKeep(d, () => {
         const tank = f.tank();
         const pool = f.shuffle(f.alive().filter(p => (!tank || p.id !== tank.id) && !f.doomed.has(p.id)));
-        const ids = pool.slice(0, H ? 2 : 1).map(p => p.id);
+        const ids = pool.slice(0, n).map(p => p.id);
         if (ids.length) doomOn(ids, dur);
       });
     };
@@ -146,8 +148,8 @@ const HOLLOWKING = {
       f.debuff(p.id, 'rooted', 2); f.debuff(p.id, 'dread', 20);
       f.emit({ t: 'gazed', id: p.id });
     };
-    const gaze = (d = f.ct(4)) => {
-      f.cast('Royal Gaze', d, 'gaze');
+    const gaze = (d = f.ct(4), quiet) => {
+      if (!quiet) f.cast('Royal Gaze', d, 'gaze');
       f.mech({ type: 'gaze', shape: { kind: 'circle', x: B.x, y: B.y, r: 0 }, delay: d, dmg: 0, tag: 'gaze', avoidable: false,
         onResolve: () => { for (const p of f.alive()) if (facing(p)) caught(p, 'gaze'); } });
     };
@@ -181,17 +183,14 @@ const HOLLOWKING = {
         : kind === 'stomp' ? { kind: 'circle', x, y, r: echo ? 290 : 320 }
           : { kind: 'donut', x, y, r: 1100, r2: echo ? 250 : 210 });
     const SWING_NAME = { sweep: 'Sceptre Sweep', stomp: 'Barrow Stomp', ring: 'Crown of Graves' };
-    // the swings are chosen as each loop is laid out (never the same one twice running), so the feed can name them
-    let lastPlanned = null;
-    const nextSwing = () => { const opts = ['sweep', 'stomp', 'ring'].filter(k => k !== lastPlanned); lastPlanned = opts[Math.floor(f.rng() * opts.length)]; return lastPlanned; };
-    const swing = kind => {
+    // a swing; a risen knight remembers it as it lands. (quiet: a second swing in the same breath, no cast bar of its own)
+    const swing = (kind, quiet) => {
       const d = f.ct(4.5);
-      f.cast(SWING_NAME[kind], d, kind);
+      if (!quiet) f.cast(SWING_NAME[kind], d, kind);
       if (kind === 'sweep') B.lockFacing = true;
       f.mech({ type: 'aoe', shape: swingShape(kind, B.x, B.y, B.facing, false), delay: d, dmg: dmg.swing, tag: kind,
         onResolve: () => {
           if (kind === 'sweep') B.lockFacing = false;
-          // a risen knight remembers it
           if (f.knights.length) {
             const k = f.knights[memNext % f.knights.length];
             memory[memNext % f.knights.length] = kind;
@@ -201,7 +200,6 @@ const HOLLOWKING = {
         } });
       return kind;
     };
-    const swingStep = (dt, kind = nextSwing()) => [dt, () => swing(kind), SWING_NAME[kind]];
     // a knight replays what it remembers, from where it stands, aimed at the middle of the hall
     const knightSwing = (k, kind) => {
       const shape = swingShape(kind, k.x, k.y, k.f, true);
@@ -209,8 +207,8 @@ const HOLLOWKING = {
       f.emit({ t: 'kswing', id: k.id, kind, dur: ECHO_WARN });
       f.mech({ type: 'aoe', shape, delay: ECHO_WARN, dmg: dmg.echo, tag: 'e' + kind });
     };
-    // replay what the knights remember: each in turn (or only the last one, in the Long Night). Returns when the
-    // first replay lands, so a Gaze can land with it.
+    // replay what the knights remember: each in turn (or only the last one). Returns when the first replay lands, so a
+    // Gaze can land with it.
     const echo = (lead = 1.5, onlyLast) => {
       const order = onlyLast ? [(memNext - 1 + f.knights.length) % f.knights.length] : f.knights.map((_, i) => i);
       let t = lead, first = null;
@@ -219,30 +217,27 @@ const HOLLOWKING = {
         if (!k || !kind) continue;
         // the bots "remember" too: where each replay will land, before it shows
         f.echoPlan.push({ knight: k.id, kind, at: f.t + t + ECHO_WARN, shape: swingShape(kind, k.x, k.y, k.f, true) });
-        f.after(t, () => knightSwing(k, kind));   // (dropped if the phase changes first)
+        f.afterKeep(t, () => { if (f.knights.includes(k)) knightSwing(k, kind); });
         if (first == null) first = t + ECHO_WARN;
         t += 3.4;
       }
       for (const i of order) memory[i] = null;
       return first;
     };
-    // knights stand by the side walls, one each side, facing the middle
-    const placeKnights = () => {
-      const ys = [[-170, 170], [170, -170], [0, 0], [-200, -200], [200, 200]][Math.floor(f.rng() * 5)];
-      const flip = f.rng() < 0.5 ? 1 : -1;
-      f.knights = [-1, 1].map((sx, i) => {
-        const x = sx * flip * 505, y = ys[i];
-        return { id: f.nextMechId++, x, y, f: Math.atan2(-y, -x) };
-      });
+    const echoGaze = (lead = 1.5, onlyLast) => { const first = echo(lead, onlyLast); gaze(first ?? f.ct(4)); };
+    const placeKnights = layout => {
+      f.knights = KNIGHTS[layout].map(([x, y]) => ({ id: f.nextMechId++, x, y, f: Math.atan2(-y, -x) }));
       memory[0] = memory[1] = null; memNext = 0;
+      f.echoPlan = [];
       sendKnights();
     };
+    const knightsRise = () => { f.cast('Echo Knights', 3, 'rise'); f.afterKeep(2, () => placeKnights(0)); };
 
     // --- Barrow Bells: two people under each bell, or everyone is doomed --------------------------
-    const bells = () => {
+    const bells = a => {
       const d = f.ct(8);
       f.cast('Barrow Bells', f.ct(3), 'bells');
-      const a = f.rng() * TAU, need = f.alive().length >= 4 ? 2 : 1;
+      const need = f.alive().length >= 4 ? 2 : 1;
       let missed = false;
       for (const s of [1, -1]) {
         const x = Math.cos(a) * 300 * s, y = Math.sin(a) * 210 * s;
@@ -258,16 +253,15 @@ const HOLLOWKING = {
 
     // --- Hard only ------------------------------------------------------------------------------
     // Royal Audience: his crown blazes; anyone with their back to him when it lands is caught, as by the Gaze
-    const audience = (d = f.ct(4)) => {
-      f.cast('Royal Audience', d, 'audience');
+    const audience = (d = f.ct(4), quiet) => {
+      if (!quiet) f.cast('Royal Audience', d, 'audience');
       f.mech({ type: 'audience', shape: { kind: 'circle', x: B.x, y: B.y, r: 0 }, delay: d, dmg: 0, tag: 'audience', avoidable: false,
         onResolve: () => { for (const p of f.alive()) if (!facing(p)) caught(p, 'audience'); } });
     };
     // Funeral March: five ranks of the dead march across the hall, wall to wall, a second apart. One lane stays open all
     // the way; or wait for a rank to pass and step in behind it.
-    const march = () => {
+    const march = (dir, gy) => {
       const d = f.ct(5), ranks = 5, depth = ARENA.hw * 2 / ranks, gap = 110;
-      const dir = f.rng() < 0.5 ? 1 : -1, gy = (f.rng() - 0.5) * 2 * (ARENA.hh - 190);
       f.cast('Funeral March', d, 'march');
       // the open lane, for the bots
       const safe = [-420, -210, 0, 210, 420].map(x => ({ x, y: gy }));
@@ -281,48 +275,49 @@ const HOLLOWKING = {
         f.afterKeep(lands - warn, () => { for (const s of rank(i)) f.aoe(s, warn, dmg.march, { tag: 'march', safe }); });
       }
     };
-    // Gravebind: a grave-chain holds two players together (they must stay close when it breaks) while the rest spread
+    // Gravebind: a grave-chain holds the healer and a DPS together (they must stay close when it breaks) while the rest
+    // spread. It comes as Grave Cleave lands on the tank: three roles, three jobs.
     const gravebind = () => {
-      const d = f.ct(9), al = f.alive();
-      f.cast('Gravebind', f.ct(3), 'bind');
-      const tank = f.tank(), pool = f.shuffle(al.filter(p => !tank || p.id !== tank.id || al.length < 3));
-      if (pool.length < 2) return marks();
-      const [a, b] = pool;
+      const d = f.ct(9), al = f.alive(), tank = f.tank();
+      f.afterKeep(0.3, () => f.cast('Gravebind', f.ct(3), 'bind'));
+      const healer = al.find(p => p.s && p.s.role === 'healer' && (!tank || p.id !== tank.id));
+      const others = al.filter(p => (!tank || p.id !== tank.id) && p !== healer).sort((a, b) => a.id - b.id);
+      const pair = [healer, ...others].filter(Boolean).slice(0, 2);
+      if (pair.length < 2) return;
+      const [a, b] = pair;
       f.tether(a.id, b.id, d, { kind: 'short', len: 160, dmg: dmg.bind, tag: 'bind' });
-      const rest = al.filter(p => p.id !== a.id && p.id !== b.id);
+      const rest = al.filter(p => p.id !== a.id && p.id !== b.id && (!tank || p.id !== tank.id));
       if (rest.length) f.afterKeep(d - f.ct(5), () => marks(f.ct(5), rest.filter(p => alive(p.id))));
     };
 
     // --- the hall: braziers, coffin lids, the Decree, the vault coming down ----------------------------
     const braziers = () => f.props.filter(p => p.kind === 'brazier');
     const LIGHT_R = 140;
-    // Lights Out: every brazier goes out; a moment later the two nearest him flare back up (in the Long Night on Hard,
-    // none: only the last lantern). When it lands his Dread Gaze finds anyone outside a light.
+    // Lights Out: every brazier goes out; a moment later the two nearest him flare back up. When it lands his Dread
+    // Gaze finds anyone outside a light.
     const lightsOut = (d = f.ct(5)) => {
       f.cast('Lights Out', d, 'lightsout');
       for (const b of braziers()) f.setPropState(b, 0);
-      const near = braziers().sort((a, b) => Math.hypot(a.x - B.x, a.y - B.y) - Math.hypot(b.x - B.x, b.y - B.y)).slice(0, H && f.night ? 0 : 2);
-      const lant = f.night ? f.lanterns.find(l => l.last) : null;
-      f.emit({ t: 'roomev', k: 'lightsout', dur: d, r: LIGHT_R, extra: lant ? [{ id: lant.carrier ?? null, x: Math.round(lant.x), y: Math.round(lant.y) }] : [] });
+      const near = braziers().sort((a, b) => Math.hypot(a.x - B.x, a.y - B.y) - Math.hypot(b.x - B.x, b.y - B.y)).slice(0, 2);
+      f.emit({ t: 'roomev', k: 'lightsout', dur: d, r: LIGHT_R, extra: [] });
       f.afterKeep(Math.min(1.2, d * 0.3), () => { for (const b of near) f.setPropState(b, 1); f.emit({ t: 'propfx', k: 'flare', kind: 'brazier', x: 0, y: 0, ids: near.map(b => b.id) }); });
-      const lit = () => [...braziers().filter(b => b.state === 1).map(b => ({ x: b.x, y: b.y })), ...(f.night ? f.lanterns.filter(l => l.last).map(l => ({ x: l.x, y: l.y })) : [])];
+      const lit = () => braziers().filter(b => b.state === 1).map(b => ({ x: b.x, y: b.y }));
       f.mech({ type: 'dark', shape: { kind: 'circle', x: B.x, y: B.y, r: 0 }, delay: d, dmg: 0, tag: 'dark', avoidable: false, lightR: LIGHT_R, lights: lit,
         onResolve: () => {
           const L = lit();
           for (const p of f.alive()) if (!L.some(l => Math.hypot(l.x - p.x, l.y - p.y) <= LIGHT_R + 10)) caught(p, 'dark');
-          // the hall comes back to light a little later (in the Long Night it stays dark)
           f.afterKeep(2.5, () => { for (const b of braziers()) f.setPropState(b, f.night ? 0 : 1); });
         } });
     };
     // coffins down the side walls: where the lids come from, and Court of Bones' coffins
     const COFFIN_Y = [-285, -95, 95, 285];   // the sarcophagi in the bays between the pillars
-    // Coffin Lids: he tears the lids off two coffins, one each side, and sends them skidding into the hall (anyone in
-    // the way is hit). Each comes to rest where it stops, solid: the cover for the Royal Decree that follows.
-    const coffinLids = () => {
+    // Coffin Lids: he tears the lids off two coffins, one each side (left from bay l, right from bay r), and sends them
+    // skidding into the hall (anyone in the way is hit). Each comes to rest where it stops, solid: the cover for the
+    // Royal Decree that follows.
+    const coffinLids = (l, r) => {
       const d = f.ct(4.5);
       f.cast('Coffin Lids', d, 'lids');
-      const ys = f.shuffle(COFFIN_Y);
-      for (const [sx, y] of [[-1, ys[0]], [1, ys[1]]]) {
+      for (const [sx, y] of [[-1, COFFIN_Y[l]], [1, COFFIN_Y[r]]]) {
         const x0 = sx * (ARENA.hw - 10), len = 470, a = sx < 0 ? 0 : Math.PI;
         f.aoe({ kind: 'rect', x: x0, y, angle: a, len, w: 100 }, d, dmg.lid, { tag: 'lid',
           onResolve: () => {
@@ -341,6 +336,7 @@ const HOLLOWKING = {
       f.cast('Royal Decree', d, 'decree');
       f.mech({ type: 'aoe', shape: { kind: 'circle', x: 0, y: -2600, r: 4000 }, delay: d, dmg: dmg.decree, tag: 'decree', cover: true, src: { x: 0, y: -2600 }, chip: 'all' });
     };
+    const crumbleLids = why => { for (const p of f.props.filter(q => q.kind === 'lid')) f.breakProp(p, why); };
     // Falling Masonry (Hard): with each Knell two chunks of the vault come down, and stay
     const masonry = () => {
       if (!H) return;
@@ -357,11 +353,45 @@ const HOLLOWKING = {
           onResolve: () => f.addProp({ kind: 'masonry', x: Math.round(at.x), y: Math.round(at.y), r: 42, solid: true, cover: true }) });
       }
     };
-    // Court of Bones (at 65%): from the throne he wakes the coffins down the walls. They open one by one, each sending
-    // out a skeleton; a coffin broken first sends nothing.
+
+    // --- the Charge Sheet, and Judgement --------------------------------------------------------------
+    // He reads out the charges: the banners above the throne light in turn, each with one of his swings' sigils, and go
+    // dark again. Nothing lands; it's a thing to remember.
+    const chargeSheet = () => {
+      const step = 2, d = 1 + CHARGES.length * step;
+      f.cast('The Charge Sheet', d, 'charges');
+      f.emit({ t: 'roomev', k: 'charges', l: CHARGES, step, lead: 1, dur: d + 0.5 });
+    };
+    // Judgement: the charges land in that order, 1.5 s apart, from him and both knights at once (a Crown of Graves from
+    // him only: there's no standing close to three people at once). Each is shown on the floor for only a moment.
+    const judgement = () => {
+      const d = f.ct(5), gapS = 1.5, face = B.facing;
+      f.cast('Judgement', d, 'judgement');
+      B.lockFacing = true;
+      f.emit({ t: 'roomev', k: 'judgement', l: CHARGES, at: d, step: gapS, warn: JUDGE_WARN, dur: d + CHARGES.length * gapS + 0.6 });
+      CHARGES.forEach((kind, i) => {
+        const land = d + i * gapS;
+        if (kind === 'audience') { f.afterKeep(land - JUDGE_WARN, () => audience(JUDGE_WARN, true)); return; }
+        const shapes = [[swingShape(kind, B.x, B.y, face, false), kind]];
+        // (the knights' sweeps narrower than their echoes: with his own as well, two full ones would leave no floor)
+        if (kind !== 'ring') for (const k of f.knights) shapes.push([Object.assign(swingShape(kind, k.x, k.y, k.f, true), kind === 'sweep' ? { arc: 0.8 } : {}), 'e' + kind]);
+        for (const [shape] of shapes) f.echoPlan.push({ knight: -1, kind, at: f.t + land, shape });
+        f.afterKeep(land - JUDGE_WARN, () => { for (const [shape, tag] of shapes) f.mech({ type: 'aoe', shape, delay: JUDGE_WARN, dmg: dmg.swing, tag }); });
+      });
+      f.afterKeep(d + CHARGES.length * gapS, () => { B.lockFacing = false; f.echoPlan = f.echoPlan.filter(e => e.knight !== -1); });
+    };
+
+    // --- Court of Bones: a recess --------------------------------------------------------------------
+    // He goes back to his throne, out of reach, and wakes the coffins down the walls in a set order, 3 s apart. Each
+    // glows as it nears opening; break it first and it sends nothing, or a skeleton climbs out.
+    const COURT = [[-1, 0], [1, 3], [-1, 2], [1, 1], [-1, 3], [1, 0]];
     const courtOfBones = () => {
-      const spots = f.shuffle([-1, 1].flatMap(sx => COFFIN_Y.map(y => ({ x: sx * (ARENA.hw - 40), y })))).slice(0, 6);
-      // every client sees which coffin wakes next (grave-light leaking out, a ring burning down)
+      f.cast('Court of Bones', 4, 'rise');
+      crumbleLids('court');
+      f.echoPlan = [];
+      B.untargetable = true; B.lockFacing = true;
+      f.moveBoss(0, -ARENA.hh + 110, 520);
+      const spots = COURT.map(([sx, i]) => ({ x: sx * (ARENA.hw - 40), y: COFFIN_Y[i] }));
       f.emit({ t: 'roomev', k: 'court', l: spots.map((s, i) => [s.x, s.y, 7 + i * 3]), dur: 7 + spots.length * 3 });
       spots.forEach((s, i) => {
         const opensAt = f.t + 7 + i * 3;
@@ -373,100 +403,164 @@ const HOLLOWKING = {
           } });
       });
     };
-
-    // --- phase 1: the court -------------------------------------------------------------------------
-    // (the room: Coffin Lids takes Grave Marks' place, Royal Decree the third swing's, Lights Out the second Gaze's)
-    f.loop(n => [
-      [3, knell, 'Barrow Knell'],
-      swingStep(6, 'sweep'),
-      [6, () => gaze(), 'Royal Gaze'],
-      H && [6, () => audience(), 'Royal Audience'],
-      [7, graveCleave, 'Grave Cleave'],
-      [7, () => royalDoom(), 'Royal Doom'],
-      swingStep(12),
-      [6, coffinLids, 'Coffin Lids'],
-      H && [7, march, 'Funeral March'],
-      [H ? 7 : 6, decree, 'Royal Decree'],
-      [8, () => lightsOut(), 'Lights Out'],
-      [7, graveCleave, 'Grave Cleave'],
-      [7, knell, 'Barrow Knell'],
-      [6],
-    ].filter(Boolean));
-
-    // --- phase 2: echoes -------------------------------------------------------------------------------
-    f.onHp(0.65, () => {
-      f.setPhase(2);
-      f.mechs.clear(); f.emit({ t: 'tgclear' });
-      B.cast = null; B.lockFacing = false;
-      for (const p of f.props.filter(q => q.kind === 'lid')) f.breakProp(p, 'court');   // lids still lying about crumble
-      // he goes back to his throne and holds court: the coffins wake, and his guard rises by the walls
-      f.moveBoss(0, -ARENA.hh + 110, 520);
-      f.cast('Court of Bones', 5, 'rise');
-      B.holdUntil = f.t + 8;
-      courtOfBones();
-      f.afterKeep(4, placeKnights);
-      f.seq([[8, () => p2()]]);
-    });
-    // the knights replay; with a Gaze landing together with the first replay when gazeWith
-    const echoCycle = (gazeWith) => {
-      const first = echo(1.5);
-      if (gazeWith && first != null) gaze(first);
+    const kingRises = () => {
+      const d = 3;
+      f.cast('The King Rises', d, 'rise');
+      f.afterKeep(1, () => placeKnights(1));
+      f.afterKeep(d, () => { B.untargetable = false; B.lockFacing = false; });
     };
-    const p2 = () => f.loop(n => [
-      swingStep(2),
-      swingStep(6),
-      [5.5, () => echoCycle(H), H ? 'Royal Gaze' : 'Echo Knights'],
-      [9, graveCleave, 'Grave Cleave'],
-      [7, bells, 'Barrow Bells'],
-      [11, () => royalDoom(), 'Royal Doom'],
-      H && [9, march, 'Funeral March'],
-      [H ? 12 : 13, knell, 'Barrow Knell'],
-      [6, () => { if (n % 2) placeKnights(); }],
-      swingStep(2),
-      swingStep(6),
-      [5.5, () => echoCycle(true), 'Royal Gaze'],
-      [9, H ? gravebind : () => marks(), H ? 'Gravebind' : 'Grave Marks'],
-      [H ? 11 : 8, graveCleave, 'Grave Cleave'],
-      H && [7, () => audience(), 'Royal Audience'],
-      [8],
-    ].filter(Boolean));
 
-    // --- phase 3: the Long Night -----------------------------------------------------------------------
-    f.onHp(0.3, () => {
-      f.setPhase(3);
-      f.mechs.clear(); f.emit({ t: 'tgclear' });
-      B.cast = null; B.lockFacing = false;
-      f.echoPlan = [];
-      for (const p of f.props.filter(q => q.kind === 'lid')) f.breakProp(p, 'night');
-      f.cast('The Long Night', 5, 'night');
-      f.afterKeep(5, () => {
+    // --- the Long Night: the relay ---------------------------------------------------------------------
+    // One lantern (two on Hard) and Doom passing round the party in a fixed order (the tank last of all, and only when
+    // nobody else is left). The next doomed's sigil glows 6 s before it lands; whoever a lantern cures carries it on.
+    let relay = { k: 0 };
+    const relayOrder = () => {
+      const al = f.alive().map(p => p.id).sort((a, b) => a - b), tank = f.tank();
+      const non = al.filter(id => !tank || id !== tank.id);
+      return non.length >= (H ? 2 : 1) + 1 ? non : al;
+    };
+    const pickNext = () => {
+      const order = relayOrder(), n = Math.min(H ? 2 : 1, order.length), out = [];
+      const carrying = new Set(f.lanterns.map(l => l.carrier).filter(c => c != null));
+      for (let i = 0; i < order.length * 2 && out.length < n; i++) {
+        const id = order[relay.k % order.length]; relay.k++;
+        if (out.includes(id) || f.doomed.has(id) || (carrying.has(id) && order.length > n + 1)) continue;
+        out.push(id);
+      }
+      return out;
+    };
+    const announce = () => {
+      f.doomNext = pickNext();
+      if (f.doomNext.length) f.emit({ t: 'roomev', k: 'doomnext', ids: f.doomNext, dur: 6.5 });
+    };
+    const longNight = () => {
+      const d = 5;
+      f.cast('The Long Night', d, 'night');
+      crumbleLids('night');
+      f.afterKeep(d, () => {
         f.night = true;
         for (const b of braziers()) f.setPropState(b, 0);   // the braziers die with the lanterns
-        f.lanterns = [{ id: f.nextMechId++, x: 0, y: 200, carrier: null, last: true, fade: Infinity }];
+        f.lanterns = (H ? [-110, 110] : [0]).map(x => ({ id: f.nextMechId++, x, y: 200, carrier: null, last: true, fade: Infinity }));
         f.emit({ t: 'night', on: 1 });
         sendLanterns();
+        announce();
       });
-      f.seq([[7, () => p3()]]);
-    });
-    // (the room: Coffin Lids takes the second swing's place, Royal Decree Grave Marks', Lights Out the last Gaze's)
-    const p3 = () => f.loop(n => [
-      [2, knell, 'Barrow Knell'],
-      swingStep(6),
-      [5.5, () => { const first = echo(1, true); if (H && first != null) gaze(first); }, H ? 'Royal Gaze' : 'Echo Knights'],
-      [7, () => (H ? graveCleave() : gaze(f.ct(3.5))), H ? 'Grave Cleave' : 'Royal Gaze'],
-      [7, () => royalDoom(H ? 12 : 13), 'Royal Doom'],
-      [10, bells, 'Barrow Bells'],
-      H && [9, march, 'Funeral March'],
-      [H ? 9 : 10, coffinLids, 'Coffin Lids'],
-      [6, decree, 'Royal Decree'],
-      [7, () => lightsOut(f.ct(4.5)), 'Lights Out'],
-      H && [6, () => audience(f.ct(3.5)), 'Royal Audience'],
-      [6, graveCleave, 'Grave Cleave'],
-      [7, () => { if (n % 2) placeKnights(); }],
-      [1],
-    ].filter(Boolean));
+    };
+    const doomPass = () => {
+      const d = f.ct(3);
+      f.cast('Royal Doom', d, 'doom');
+      f.afterKeep(d, () => {
+        let ids = (f.doomNext || []).filter(id => alive(id) && !f.doomed.has(id));
+        if (!ids.length) ids = pickNext();
+        f.doomNext = null;
+        if (ids.length) doomOn(ids, H ? 10 : 11);
+        f.afterKeep(12 - 6, announce);
+      });
+    };
 
-    f.moves = { knell, gaze, audience, graveCleave, royalDoom, marks, swing, bells, march, gravebind, lightsOut, coffinLids, decree, masonry, courtOfBones, placeKnights };
+    // --- the hearing ------------------------------------------------------------------------------------
+    // I. The Summons: his calls, one at a time
+    const summons = at => f.course({
+      until: 0.8,
+      sets: [
+        S([5, knell, 'Barrow Knell']),
+        S([12, () => swing('sweep'), 'Sceptre Sweep']),
+        S([13, () => gaze(), 'Royal Gaze']),
+        H && S([8, () => audience(), 'Royal Audience']),
+        S([H ? 9 : 13, graveCleave, 'Grave Cleave']),
+        S([13, () => swing('stomp'), 'Barrow Stomp']),
+        S([13, () => royalDoom(), 'Royal Doom']),
+        S([16, () => swing('ring'), 'Crown of Graves']),
+        S([12, knell, 'Barrow Knell']),
+      ].filter(Boolean),
+      closing: [[10, () => swing('sweep'), 'Sceptre Sweep'], [10, knell, 'Barrow Knell']],
+      next: testimony,
+    }, at);
+
+    // II. Testimony: the knights rise and answer every call; the charges are read out
+    const testimony = at => f.course({
+      until: 0.62,
+      sets: [
+        S([3, knightsRise, 'Echo Knights']),
+        S([6, chargeSheet, 'The Charge Sheet']),
+        S([H ? 12 : 13, () => swing('sweep'), 'Sceptre Sweep'], [5.5, () => echo(1.5), 'Echo Knights']),
+        S([11, () => coffinLids(1, 2), 'Coffin Lids'], [8, decree, 'Royal Decree']),
+        H && S([10, () => march(1, -120), 'Funeral March']),
+        S([12, () => swing('stomp'), 'Barrow Stomp'], [5.5, () => echoGaze(1.5), 'Royal Gaze']),
+        S([12, graveCleave, 'Grave Cleave']),
+        S([12, () => bells(0.6), 'Barrow Bells']),
+        S([13, () => lightsOut(), 'Lights Out']),
+        S([11, knell, 'Barrow Knell']),
+      ].filter(Boolean),
+      closing: [[10, graveCleave, 'Grave Cleave'], [10, () => swing('sweep'), 'Sceptre Sweep'], [10, knell, 'Barrow Knell']],
+      next: court,
+    }, at);
+
+    // III. Court of Bones: a recess on the throne while the coffins wake
+    const court = at => f.course({
+      sets: [
+        S([2, courtOfBones, 'Court of Bones']),
+        S([12, knell, 'Barrow Knell']),
+        S([11, () => marks(), 'Grave Marks']),
+        S([9, kingRises, 'The King Rises']),
+        S([5]),
+      ],
+      next: verdict,
+    }, at);
+
+    // IV. The Verdict: the calls and their answers overlap; Judgement opens its second half, whatever the pace
+    const verdict = at => f.course({
+      until: 0.46,
+      sets: [
+        S([4, () => swing('sweep'), 'Sceptre Sweep'], [0, () => swing('stomp', true), 'Barrow Stomp'], [5.5, () => echo(1.5), 'Echo Knights']),
+        S([12, () => royalDoom(H ? 2 : 1), 'Royal Doom'], [4, () => marks(), 'Grave Marks']),
+        S([12, () => coffinLids(0, 3), 'Coffin Lids'], [8, decree, 'Royal Decree']),
+        S([12, () => { graveCleave(); if (H) gravebind(); }, 'Grave Cleave']),
+        S([13, () => swing('ring'), 'Crown of Graves'], [5.5, () => echoGaze(1.5), 'Royal Gaze']),
+        H && S([10, () => march(-1, 140), 'Funeral March']),
+        S([12, knell, 'Barrow Knell']),
+      ].filter(Boolean),
+      closing: [[10, graveCleave, 'Grave Cleave'], [10, () => swing('sweep'), 'Sceptre Sweep'], [10, knell, 'Barrow Knell']],
+      next: judged,
+    }, at);
+    const judged = at => f.course({
+      until: 0.25,
+      sets: [
+        S([3, judgement, 'Judgement']),
+        S([15, knell, 'Barrow Knell']),
+        S([12, () => bells(2.2), 'Barrow Bells']),
+        S([12, () => lightsOut(), 'Lights Out']),
+        S([11, () => swing('stomp'), 'Barrow Stomp'], [5, () => swing('sweep'), 'Sceptre Sweep'], [5.5, () => echo(1.5), 'Echo Knights']),
+        S([12, () => { graveCleave(); if (H) gravebind(); }, 'Grave Cleave']),
+        H && S([10, () => audience(), 'Royal Audience']),
+        S([10, () => coffinLids(2, 1), 'Coffin Lids'], [8, decree, 'Royal Decree']),
+        S([12, () => swing('ring'), 'Crown of Graves'], [5.5, () => echoGaze(1.5), 'Royal Gaze']),
+        S([11, knell, 'Barrow Knell']),
+      ].filter(Boolean),
+      closing: [[10, graveCleave, 'Grave Cleave'], [10, () => swing('sweep'), 'Sceptre Sweep'], [10, knell, 'Barrow Knell']],
+      next: night,
+    }, at);
+
+    // V. Sentence: the Long Night. Doom passes on every 12 s; the lantern goes with it
+    const night = at => f.course({
+      sets: [
+        S([2, longNight, 'The Long Night']),
+        S([10, doomPass, 'Royal Doom']),
+        S([6, () => swing('sweep'), 'Sceptre Sweep']),
+        S([6, doomPass, 'Royal Doom']),
+        S([6, () => echoGaze(1, true), 'Royal Gaze']),
+        S([6, doomPass, 'Royal Doom']),
+        S([6, knell, 'Barrow Knell']),
+        S([6, doomPass, 'Royal Doom']),
+        S([6, graveCleave, 'Grave Cleave']),
+      ],
+      closing: [[6, doomPass, 'Royal Doom'], [6, () => swing('stomp'), 'Barrow Stomp'], [6, doomPass, 'Royal Doom'], [6, knell, 'Barrow Knell']],
+    }, at);
+
+    summons(0);
+
+    f.moves = { knell, gaze, audience, graveCleave, royalDoom, marks, swing, echo, bells, march, gravebind, lightsOut, coffinLids, decree, masonry,
+      courtOfBones, kingRises, placeKnights, chargeSheet, judgement, longNight, doomPass };
   },
 };
 

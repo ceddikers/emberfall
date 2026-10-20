@@ -1457,6 +1457,7 @@ const ArenaView = {
   // under everything that stands: the floor layer, burning grease, and the darkness of Lights Out
   drawRoomUnder(ctx, room, t, v) {
     this.drawRoomFloor(ctx, room);
+    if (this.amb && this.amb.kind === 'barrow') this.chargeBanners(ctx, room, t);
     for (const fl of room.floor) {
       const until = room.lit.get(fl.id);
       if (fl.kind !== 'grease' || !(until > t)) continue;
@@ -1540,6 +1541,18 @@ const ArenaView = {
       glow(ctx, x, y, 34 + 30 * hot, '#6dff9a', 0.15 + 0.45 * hot);
       ctx.beginPath(); ctx.arc(x, y, 46, -Math.PI / 2, -Math.PI / 2 + TAU * clamp(left / secs, 0, 1));
       ctx.strokeStyle = rgba('#9affc0', 0.5 + 0.5 * hot); ctx.lineWidth = 2.5; ctx.stroke();
+    }
+    // the Long Night: the next doomed's sigil fading in over their head before Doom passes to them
+    const cs = room.ev.charges;
+    if (cs && t < cs.end && env.boss) cs.l.forEach((kind, i) => {
+      const k = this.chargeLit(cs, i, t);
+      if (k > 0) { ctx.save(); ctx.globalAlpha = k; this.sigil(ctx, kind, env.boss.x, env.boss.y - 250 - (1 - k) * 14, '#fff2c8', 1.9); ctx.restore(); }
+    });
+    const dn = room.ev.doomnext;
+    if (dn && t < dn.end && env.entById) for (const id of dn.ids || []) {
+      const e = env.entById(id); if (!e) continue;
+      const k = clamp((t - dn.start) / 1.5, 0, 1) * (0.45 + 0.25 * Math.sin(t * 6));
+      ctx.save(); ctx.globalAlpha = k; this.doomMark(ctx, e.x, e.y - (e.lift || 0) - 92, 1, t); ctx.restore();
     }
     const rs = room.ev.rodmark;
     if (rs && t < rs.end) for (const id of rs.ids || []) {
@@ -1746,6 +1759,65 @@ const ArenaView = {
     if (k <= 0) return;
     ctx.save(); ARENA.trace(ctx, 2); ctx.clip();
     glow(ctx, 0, 0, ARENA.r * 1.1, '#dff0ff', 0.16 * k);
+    ctx.restore();
+  },
+  // the Hollow King's banners, standards planted either side of the dais below the throne, four of them (the Charge Sheet uses the
+  // first three, or all four on Hard). The Charge Sheet lights them in turn, each showing a swing's sigil (and the same
+  // sigil over his head as he reads it out), then they go dark; at Judgement each one blazes grave-green as its swing
+  // comes, with no sigil: that's for you to remember.
+  chargeLit(cs, i, t) {
+    if (!cs || i >= cs.l.length) return 0;
+    const a = cs.start + (cs.lead || 0) + i * cs.step, b = a + cs.step * 0.9;
+    return clamp((t - a) / 0.25, 0, 1) * clamp((b - t) / 0.35, 0, 1);
+  },
+  chargeBanners(ctx, room, t) {
+    const hh = ARENA.hh, y0 = -hh + 14, cs = room.ev.charges, jd = room.ev.judgement;
+    [-330, -245, 245, 330].forEach((x, i) => {
+      const lit = this.chargeLit(cs, i, t), sig = lit > 0 ? cs.l[i] : null;
+      let blaze = 0;
+      if (jd && i < jd.l.length && t < jd.end) {
+        const land = jd.start + jd.at + i * jd.step;
+        blaze = Math.max(0.25 * clamp((t - jd.start) / 1, 0, 1), clamp((t - (land - jd.warn)) / 0.15, 0, 1) * clamp((land + 0.5 - t) / 0.5, 0, 1));
+      }
+      // the pole, its foot, the crossbar and the cloth
+      ellipse(ctx, x, y0 + 112, 14, 5, 0, 'rgba(0,0,0,0.35)');
+      line(ctx, x, y0 - 14, x, y0 + 112, '#4a3b22', 4);
+      line(ctx, x - 34, y0, x + 34, y0, '#4a3b22', 4);
+      circle(ctx, x - 36, y0, 4, '#b89a4a', OUT, 1.5); circle(ctx, x + 36, y0, 4, '#b89a4a', OUT, 1.5);
+      const sway = Math.sin(t * 0.9 + i * 1.7) * 2;
+      const cloth = [x - 26, y0 + 4, x + 26, y0 + 4, x + 26 + sway, y0 + 82, x + sway, y0 + 98, x - 26 + sway, y0 + 82];
+      if (lit > 0) glow(ctx, x, y0 + 50, 90, '#ffd88a', 0.4 * lit);
+      if (blaze > 0) glow(ctx, x, y0 + 50, 100, '#6dff9a', 0.55 * blaze);
+      poly(ctx, cloth, i === 3 && !(cs && cs.l.length > 3) && !(jd && jd.l.length > 3) ? '#1e171a' : '#2c1d24', OUT, 2.5);
+      poly(ctx, [x - 20, y0 + 10, x + 20, y0 + 10, x + 20 + sway, y0 + 78, x + sway, y0 + 91, x - 20 + sway, y0 + 78], null, rgba('#b89a4a', 0.45 + 0.5 * lit), 1.5);
+      if (lit > 0) poly(ctx, cloth, rgba('#ffcf70', 0.22 * lit));
+      if (blaze > 0) {
+        poly(ctx, cloth, rgba('#4dff8a', 0.25 * blaze));
+        // grave-fire licking up the cloth
+        for (let k = 0; k < 4; k++) glow(ctx, x - 18 + k * 12 + sway, y0 + 96 - ((t * 60 + k * 23) % 40), 9, '#8dffb0', 0.5 * blaze);
+      }
+      if (sig) { ctx.save(); ctx.globalAlpha = lit; this.sigil(ctx, sig, x + sway * 0.5, y0 + 48, '#fff2c8'); ctx.restore(); }
+    });
+  },
+  // a swing's sigil: sceptre (Sceptre Sweep), boot (Barrow Stomp), crown (Crown of Graves), open eye (Royal Audience)
+  sigil(ctx, kind, x, y, col, size = 1) {
+    ctx.save(); ctx.translate(x, y); ctx.scale(size, size);
+    glow(ctx, 0, 0, 34, col, 0.4);
+    if (size > 1) circle(ctx, 0, 0, 22, 'rgba(20,12,18,0.8)', rgba('#b89a4a', 0.9), 2);
+    if (kind === 'sweep') {
+      line(ctx, -11, 15, 9, -9, col, 4);
+      circle(ctx, 11, -11, 6, col, OUT, 1.5);
+      poly(ctx, [-6, 6, 0, 12, -3, 9], col);
+    } else if (kind === 'stomp') {
+      poly(ctx, [-7, -16, 5, -16, 5, 2, 15, 6, 15, 14, -9, 14, -9, 4], col, OUT, 1.5);
+    } else if (kind === 'ring') {
+      poly(ctx, [-15, 10, -15, -6, -8, 2, 0, -14, 8, 2, 15, -6, 15, 10], col, OUT, 1.5);
+      line(ctx, -15, 13, 15, 13, col, 3);
+    } else {
+      ellipse(ctx, 0, 0, 16, 9, 0, col, OUT, 1.5);
+      circle(ctx, 0, 0, 5.5, '#2a1830');
+      circle(ctx, 1.5, -1.5, 1.6, col);
+    }
     ctx.restore();
   },
   // Mise en Place (Grubnak, Hard): three tools laid out on the pass along the bottom wall, left to right in the order

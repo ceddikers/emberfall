@@ -282,3 +282,14 @@ New pieces:
 3. **The Long Night.**
    - **A (recommended):** the relay: one lantern, Doom moving in a fixed order.
    - **B:** as now: the last lantern cures, carried by one player, with Doom on random targets.
+
+### The Hollow King as built (2026-10-20)
+
+- **HP 3.3M / 3.65M** (the plan said 3.5M on Hard). At 3.5M the Hard kill with the party kept alive came a minute before Moonset; at 3.65M it's about 45 s, the Hard slack the prompt asks for.
+- **The Verdict is two courses.** Judgement opens the second at 46%, so a fast party can't skip it at a seam.
+- **Judgement's knights sweep narrower** (0.8 rad, not their echoes' 1.25), and **they don't join the Crown of Graves**. With his sweep and two full ones there was no floor left (every bot wiped there), and a Crown from three places at once can't be stood in.
+- **The Charge Sheet shows over his head as well.** The camera only reaches the throne end of the hall when you stand there, so each sigil also hangs over his head as he reads it out. The banners are four standards either side of the dais.
+- **The Court of Bones runs 38 s** with a Knell and Grave Marks during it. The Verdict opens with the swings, not a Knell (a Knell, Marks and a Knell inside 30 s killed the weaker line-ups' DPS).
+- **Closing passes are Cleave → Sweep → Knell**: a raidwide every 30 s, not every 20 s.
+- **The relay passes the lantern to whoever it cures.** The order is the party by id, the tank only when nobody else is left; Doom has 11 s on the clock (Hard 10 s).
+- **Measured:** the script runs 8:32 (Normal) and 9:05 (Hard). Bots clear 12 of 12 Normal pulls (Sentinel / Lifebinder / Ranger / Cataclysm) in 8:47–9:26, and every `check.js` line-up at least 2 of 3. Hard runs clean with every move firing (kept alive, the kill lands at 9:48–10:12; the base Hard line-up kills him at 10:03).
