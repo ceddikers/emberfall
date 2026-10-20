@@ -644,14 +644,14 @@ Stats:
 - **The script itself** (the timeline lint, each course ending as its sets do): 8:09 on Normal, 8:38 on Hard.
 - Bot changes for the longer fight: towers that land one after another are handed out in landing order (one each where possible, nobody while Stuffed), and grease a fire is about to reach counts as burning.
 
-### Boss II: Queen Skitterra, the Spider Broodmother (built, playable on Normal and Hard)
+### Boss II: Queen Skitterra, the Spider Broodmother (built, playable on Normal and Hard; rebuilt as a choreographed fight 2026-10-20)
 
-She holds the middle of her web; her threads, her brood and the floor itself are the danger. The arena is an octagonal web cave: cracked flagstones and standing pools under a huge web strung between eight rock pillars, bones and old egg sacs, stalagmites beyond the rim.
+The hunt in the web: one authored script, the same on every pull. It's long dread, then sudden swarms, and the question she keeps asking is **what do I break?** That means egg clutches, the knots of her threads, and the pillars you hide behind. Plan and choices: `docs/plans/2026-10-bosses-2-4-plan.md`. The arena is an octagonal web cave: cracked flagstones and standing pools under a huge web strung between eight rock pillars, bones and old egg sacs, stalagmites beyond the rim.
 
 Stats:
-- HP: 1.3M (Normal) / 1.75M (Hard).
+- HP: 3.0M (Normal) / 3.2M (Hard). The bots' line-up kills in 8:17–9:21.
 - Auto-attacks: 78 every 2.8 s, with the same visible wind-up as Grubnak.
-- Enrage: "Devour" at 6:00 (Normal) / 6:20 (Hard).
+- Enrage: "Devour", cast at 10:02 and landing at 10:10 (Normal), or 10:12 and 10:20 (Hard).
 
 | Mechanic | Normal | Hard |
 |---|---|---|
@@ -660,9 +660,11 @@ Stats:
 | **Eightfold Lunge** | Her legs light up around her (glowing leg lines, brightest = next). Each step strikes a leg's direction and the opposite one (two 70° cones, 650), turning 45° per step, so the safe side rotates. 4 steps, 1.3 s apart; each floor telegraph appears 2.5 s before it lands. | 6 steps, 1.15 s apart, 687 (the floor telegraph shows too: telegraphs are never hidden) |
 | **Silk Lines** | A silk thread ties two non-tanks. It must be stretched past 420 when it resolves, or both take 800 and Vulnerability. Slack threads sag and wobble; a stretched one runs straight and bright. The second one each loop comes with Venom Spit straight after. | Two threads on four players: green (stretch past 420) and thick red (stay within 150) |
 | **Venom Spit** | A narrow cone at each of the two farthest players (600). It tracks them until 1.2 s before it lands, then a slowing venom pool (110 a second, 45 s) is left where it hits. | 656; bigger pools that last 60 s |
-| **Brood** | Eggs glow on the floor, then two spiderlings hatch on opposite sides. They stay near their nest (leash 240) and spit at whoever is closest, biting anyone who comes near. When one dies the other must die within 5 s or it **enrages**: heals 30%, chases anyone, bites 3× harder and pulses a raidwide every 3 s. Left alone for 45 s, both enrage. | 30k HP each instead of 26k; a burning beam joins the pair while both live and hurts anyone standing across it |
+| **The brood clock** | Six egg clutches sit in the web from the pull (1,200 HP each, breakable), glowing brighter and pulsing faster as they near hatching. **Brood** (Act I): the two ripest, opposite each other, hatch one spiderling each. **The Swarm** (Act II): every clutch still standing hatches two. Spiderlings stay near their nest (leash 240) and spit at whoever is closest, biting anyone who comes near. When one of a pair dies the other must die within 5 s or it **enrages**: heals 30%, chases anyone, bites 3× harder and pulses a raidwide every 3 s. Left alone for 45 s, both enrage. Every clutch broken costs damage on her now and saves two spiderlings later. | 30k HP for the Brood pair; three to a clutch in the Swarm; a burning beam joins each pair while both live |
+| **Spin** | Four threads strung pillar to pillar, a square round the middle. Walking through one stings (150) and roots you for 0.7 s, so the room is cut into sectors. Each has a knot by its first pillar (1,200 HP): break it and the thread is cut for good. A pillar that falls cuts its threads. | same |
 | **Silk Reel** | She rears up and shoots a thread at the farthest non-tank. After a short wind-up it goes taut and drags them toward her (and slows their walking). **Dashing snaps the thread.** If she reels them all the way in, she bites: 850 plus a slow. | Two players reeled at once, pulled faster |
-| **Tightening Web** (50%) | She returns to the middle, untargetable briefly, and the outer ring (radius 390 to the wall) turns sticky: standing in it slows you. In phase 2 the Wrap lands just before a Lunge starts. | none |
+| **The Dark Between** (70%) | She climbs into the dark for 40 s (untargetable). The cave falls to pools of light round the pillars. Her shadow runs along each uncut thread in turn and she drops at its far end (a circle of 190, 650, on the floor for 6 s). A thread whose knot is broken before she gets to it is a drop that never comes. Venom Drip (spread, 350) falls mid-way. She comes back down into the middle with **Tightening Web**: the outer ring (390 to the wall) turns sticky for the rest of the fight. | Two drops per uncut thread (the far end, then the near) |
+| **The Collapse** (28%) | The cave floor falls away ring by ring from the walls (430, then 330, then 260 out), each shuddering for 6 s first with the silk cut out of the warning. What stays: the hub, the eight spokes, and every thread nobody cut. Anyone on fallen floor drops (700), is held 2 s, then hauled back onto the floor nearer the middle. Pillars on falling floor go with it. | same |
 | **Molt** (phase 2) | none | She sheds a pale husk and skitters 240 away. She starts a new Lunge while the husk replays her previous one: two rotations from two centers at once |
 
 **Hard-only moves:**
@@ -685,11 +687,19 @@ Stats:
 - `FightSim.roller()` (Grubnak's meatballs): one `roll` message, then every client computes the position from its own clock; the host checks hits against reported player positions and sends `rollhit` and a knockback.
 - `FightSim.reel()` (Silk Reel): `reel` / `reelx` messages. The reeled client drags and slows its own movement; a dash sends a `snap` combat event. The host bites if the player reaches her, and bots snap after a random reaction time.
 
-**Timeline** (each phase loops):
-- **Phase 1** (100–50%), about 2 minutes a loop: Mist, Wrap, Lunge, Silk Lines, Strand Reel (in the first Venom Spit's place), Brood, Silk Reel, (Hard: Fang Rush), Mist, Lunge, Silk Lines + Venom Spit, (Hard: Egg Sacs, once the brood should be dead, then Cocoon), Wrap, Acid Deluge (in the last Venom Spit's place).
-- **Phase 2:** Mist, then Wrap + Lunge together (the wrap lands just before the first strike, so the rooted tank must already stand somewhere the first two strikes miss), Brood with Silk Lines, (Hard: Spinneret Volley), Silk Reel, (Hard: Ceiling Ambush), Strand Reel (in Venom Spit's place), Lunge (Hard: Molt), Wrap, Silk Lines + Spit, (Hard: Egg Sacs and Fang Rush in turn), Mist, (Hard: Cocoon), Acid Deluge (in the last Lunge's place), Brood, (Hard: Spinneret Volley).
+**The hunt** (times for the bots' line-up; each act ends at its HP gate at the next set seam, and a slow party runs its last set again, +10% each pass):
+- **Act I, The Web** (100% → 70%, about 2:30), 14–15 s apart, one thing at a time: Venom Mist, Silk Wrap, Eightfold Lunge, Silk Lines, **Spin**, Venom Spit (Hard: Egg Sacs), Strand Reel (Hard: Fang Rush), Venom Mist, Wrap + Lunge, **Brood** with Silk Reel, Acid Deluge.
+- **The Dark Between** (70%, 40 s): Into the Dark, then From the Dark along each uncut thread in turn, Venom Drip, Tightening Web.
+- **Act II, The Brood** (70% → 28%, about 3:20): Venom Mist, Wrap + Lunge, Silk Lines + Spit, (Hard: Spinneret Volley), Silk Reel (Hard: on the healer, as Silk Wrap lands on the tank), Lunge (Hard: Molt), Strand Reel (along a thread still standing), (Hard: Ceiling Ambush), Venom Mist, Acid Deluge, **The Swarm**, Silk Wrap, Silk Lines, (Hard: Egg Sacs, Fang Rush), Venom Mist, Lunge, Lines + Spit, Silk Reel.
+- **Act III, The Collapse** (28% → dead): the first ring gives way, Venom Mist, the second ring with a Lunge, Silk Lines, the third ring with a Silk Wrap, (Hard: Spinneret Volley), Silk Lines, Venom Mist, Lunge. Then Venom Mist and Lunge in turn, each pass 6% harder, until Devour.
+
+**Cocoon is gone** (2026-10-20, the "never cocoon a player" rule).
 
 **Bot test results:**
+- **Rebuilt (2026-10-20), Runeblade / Moonwell / Bladedancer / Sigilmancer**, twelve seeds: **11 of 12, in 8:17–9:21**. The bots break the next knot she's heading for in the dark, break eggs while more than two clutches stand and nothing has hatched, keep off the threads (crossing one costs them), and stay on the silk in the collapse.
+- **Every Skitterra line-up in `check.js`** (six, three seeds each): 13 of 18, every line-up at least once (the Gorgemaw line-up 1 of 3).
+- **Hard, rebuilt:** runs clean. With the party kept alive, every Hard move fires on six seeds and the kill lands at 8:39–9:09.
+- *Before the rebuild:*
 - **Normal, Runeblade / Moonwell / Bladedancer / Sigilmancer** (the `check.js` line-up): cleared 15 of 18 over six seed sets, in 3:46–4:18. The wipes come when both spiderlings enrage.
 - **Hard, Bastion / Cleric / Ranger / Pyromancer:** 1 of 8 (with one death); the rest reach 21–73% and last 1:43–5:37, usually after the healer falls to venom pools, the beam and a bite.
 - **With the pillars** (October 2026, six seeds): Normal (the `check.js` line-up) 4 of 6 in 3:59–4:56 (the wipes at 3% and 53%); Hard (base specs) 2 of 6, the rest reaching 20–74%.
@@ -705,9 +715,8 @@ Stats:
 | **Strand Reel** | She shoots a strand to a pillar at least 260 away and reels herself across to it: the lane under the strand hits and roots for 2 s, and she holds there for 4 s. | Both |
 | **Fang Rush** | Now stops at the first pillar in its way and chips it. | Hard |
 | **Ceiling Ambush** | She vanishes up into the dark; her shadow crosses the ceiling, then she drops (230 around her, drawn on the floor as well as her shadow) and the shock throws everyone 380 away, slamming anyone who hits a pillar or the wall. | Hard |
-| **Cocoon** | One player is wrapped in a cocoon (an add, rooted, silk eating at them every second); after 10 s it crushes them. Breaking it costs the nearest pillar a hit. | Hard |
 
-Merges: Strand Reel sits beside Silk Reel and Fang Rush rather than replacing either (one pulls you to her, one throws her at you, this one moves her across the room). Acid Deluge comes once or twice a phase and both Venom Mists stay, because the fight got too easy with the Deluge in a Mist's place. **Cocoon** was built although this document used to rule out a "cocooned and broken out" mechanic: the arena-mechanics plan asked for it on Hard, it's tied to the pillars, and it's easy to drop if you'd rather keep it parked.
+Merges: Strand Reel sits beside Silk Reel and Fang Rush rather than replacing either (one pulls you to her, one throws her at you, this one moves her across the room). Acid Deluge comes once or twice a phase and both Venom Mists stay, because the fight got too easy with the Deluge in a Mist's place. Cocoon was removed in the 2026-10-20 rebuild.
 
 ### Boss III: Volkar, the Storm Titan (built, playable on Normal and Hard)
 

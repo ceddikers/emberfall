@@ -461,7 +461,7 @@ function run(args) {
 //   shows for less than WARN_MIN s; the gap between named steps stays under GAP_MAX s; a raidwide at least every
 //   RAID_MAX s and a tankbuster every BUSTER_MAX s; the upcoming-moves feed always shows three steps; and the script
 //   from the pull to the end of its last set lasts LEN_MIN..LEN_MAX s.
-const CHOREO = [['Grubnak', 'grubnak', 'GRUBNAK']];
+const CHOREO = [['Grubnak', 'grubnak', 'GRUBNAK'], ['Skitterra', 'skitterra', 'SKITTERRA']];
 const TL = { WARN_MIN: 1.2, GAP_MAX: 16, RAID_MAX: 150, BUSTER_MAX: 180, LEN_MIN: 480, LEN_MAX: 600 };
 function timelines() {
   const load = p => require(path.join(ROOT, 'client/js', p));

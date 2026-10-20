@@ -1336,6 +1336,74 @@ const ArenaView = {
     } else if (fl.kind === 'rubble') this.rubble(c, fl, r);
     else if (fl.kind === 'wedge') this.brokenWedge(c, fl, r);
     else if (fl.kind === 'scorch') { glow(c, fl.x, fl.y, fl.r, '#140a04', 0.6); }
+    else if (fl.kind === 'thread') this.webThread(c, fl);
+    else if (fl.kind === 'pit') this.webPit(c, fl);
+  },
+  // Skitterra's Spin: a thick strand of silk strung pillar to pillar, low across the floor (crossing it stings)
+  webThread(c, fl) {
+    c.save(); c.lineCap = 'round';
+    c.beginPath(); c.moveTo(fl.x1, fl.y1); c.lineTo(fl.x2, fl.y2);
+    c.strokeStyle = 'rgba(10,8,14,0.5)'; c.lineWidth = 10; c.stroke();
+    c.strokeStyle = 'rgba(232,230,248,0.85)'; c.lineWidth = 4; c.stroke();
+    c.strokeStyle = 'rgba(255,255,255,0.9)'; c.lineWidth = 1.2; c.stroke();
+    const n = Math.max(2, Math.round(Math.hypot(fl.x2 - fl.x1, fl.y2 - fl.y1) / 40));
+    for (let i = 1; i < n; i++) { const q = i / n; circle(c, fl.x1 + (fl.x2 - fl.x1) * q, fl.y1 + (fl.y2 - fl.y1) * q, 2.2, 'rgba(255,255,255,0.85)'); }
+    c.restore();
+  },
+  // Skitterra's collapse: the floor between r2 and r has fallen into the dark; the silk paths across it stay
+  webPit(c, fl) {
+    c.save();
+    ARENA.trace(c, 0); c.clip();   // the dark stops at the cave's walls
+    c.beginPath(); c.arc(0, 0, fl.r, 0, TAU); c.arc(0, 0, fl.r2, 0, TAU, true);
+    const g = c.createRadialGradient(0, 0, fl.r2, 0, 0, Math.min(fl.r, fl.r2 + 160));
+    g.addColorStop(0, '#05030a'); g.addColorStop(1, '#0b0814');
+    c.fillStyle = g; c.fill('evenodd');
+    c.strokeStyle = 'rgba(120,110,150,0.45)'; c.lineWidth = 3;
+    c.beginPath(); c.arc(0, 0, fl.r2, 0, TAU); c.stroke();
+    c.beginPath(); c.arc(0, 0, fl.r, 0, TAU); c.arc(0, 0, fl.r2, 0, TAU, true);
+    c.clip('evenodd');
+    for (const [x1, y1, x2, y2, w] of fl.paths || []) this.silkPath(c, x1, y1, x2, y2, w);
+    c.restore();
+  },
+  // a strip of web you can still walk on, over the dark
+  silkPath(c, x1, y1, x2, y2, w) {
+    const L = Math.hypot(x2 - x1, y2 - y1), ux = (x2 - x1) / L, uy = (y2 - y1) / L, nx = -uy, ny = ux;
+    c.save();
+    c.beginPath(); c.moveTo(x1 + nx * w / 2, y1 + ny * w / 2); c.lineTo(x2 + nx * w / 2, y2 + ny * w / 2); c.lineTo(x2 - nx * w / 2, y2 - ny * w / 2); c.lineTo(x1 - nx * w / 2, y1 - ny * w / 2); c.closePath();
+    c.fillStyle = 'rgba(70,64,86,0.92)'; c.fill();
+    for (let k = -2; k <= 2; k++) { c.beginPath(); c.moveTo(x1 + nx * k * w / 5, y1 + ny * k * w / 5); c.lineTo(x2 + nx * k * w / 5, y2 + ny * k * w / 5); c.strokeStyle = 'rgba(232,230,248,0.55)'; c.lineWidth = k ? 1.2 : 2.2; c.stroke(); }
+    for (let d = 20; d < L; d += 34) { c.beginPath(); c.moveTo(x1 + ux * d + nx * w / 2, y1 + uy * d + ny * w / 2); c.lineTo(x1 + ux * (d + 12) - nx * w / 2, y1 + uy * (d + 12) - ny * w / 2); c.strokeStyle = 'rgba(232,230,248,0.3)'; c.lineWidth = 1; c.stroke(); }
+    c.strokeStyle = 'rgba(255,255,255,0.6)'; c.lineWidth = 1.5;
+    c.beginPath(); c.moveTo(x1 + nx * w / 2, y1 + ny * w / 2); c.lineTo(x2 + nx * w / 2, y2 + ny * w / 2); c.moveTo(x1 - nx * w / 2, y1 - ny * w / 2); c.lineTo(x2 - nx * w / 2, y2 - ny * w / 2); c.stroke();
+    c.restore();
+  },
+  // The brood clock: a sickly glow under each egg clutch that swells and quickens as it nears hatching
+  broodClock(ctx, b, t) {
+    for (const [x, y, at] of b.l || []) {
+      const left = at > 0 ? at - (t - b.start) : Infinity;
+      const q = left === Infinity ? 0.15 : clamp(1 - left / 60, 0.15, 1);
+      const beat = 0.5 + 0.5 * Math.sin(t * (2 + q * 10));
+      glow(ctx, x, y, 34 + q * 30, '#c8ff8a', (0.12 + 0.3 * q) * (0.6 + 0.4 * beat));
+      if (left < 60) { ctx.beginPath(); ctx.arc(x, y, 40, -Math.PI / 2, -Math.PI / 2 + TAU * Math.max(0, Math.min(1, 1 - left / 60))); ctx.strokeStyle = rgba('#d8ff9a', 0.55); ctx.lineWidth = 3; ctx.stroke(); }
+    }
+  },
+  // The Web Gives Way: the ring about to fall shudders and darkens, the silk across it bright, for 6 s
+  collapseWarn(ctx, cv, t) {
+    const p = clamp((t - cv.start) / Math.max(0.1, cv.end - cv.start), 0, 1);
+    const jx = p > 0.6 ? Math.sin(t * 60) * 2 * (p - 0.6) * 2.5 : 0;
+    ctx.save(); ctx.translate(jx, 0);
+    ARENA.trace(ctx, 2); ctx.clip();
+    ctx.beginPath(); ctx.arc(0, 0, Math.min(cv.r, 3000), 0, TAU); ctx.arc(0, 0, cv.r2, 0, TAU, true);
+    for (const [x1, y1, x2, y2, w] of cv.paths || []) {   // the silk is safe: cut it out of the warning
+      const L = Math.hypot(x2 - x1, y2 - y1), nx = -(y2 - y1) / L * w / 2, ny = (x2 - x1) / L * w / 2;
+      ctx.moveTo(x1 + nx, y1 + ny); ctx.lineTo(x1 - nx, y1 - ny); ctx.lineTo(x2 - nx, y2 - ny); ctx.lineTo(x2 + nx, y2 + ny); ctx.closePath();
+    }
+    ctx.fillStyle = `rgba(6,4,12,${0.25 + 0.4 * p + 0.06 * Math.sin(t * 9)})`; ctx.fill('evenodd');
+    ctx.strokeStyle = rgba('#ff6a3a', 0.5 + 0.4 * p); ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.arc(0, 0, cv.r2, 0, TAU); ctx.stroke();
+    const r = rng(Math.round(cv.r2));
+    for (let i = 0; i < 18; i++) { const a = r() * TAU, d = cv.r2 + r() * Math.min(200, cv.r - cv.r2); line(ctx, Math.cos(a) * d, Math.sin(a) * d, Math.cos(a + 0.05) * (d + 30), Math.sin(a + 0.05) * (d + 30), rgba('#1a1222', 0.5 + 0.4 * p), 2); }
+    ctx.restore();
   },
   // what a broken prop leaves on the floor
   rubble(c, fl, r) {
@@ -1401,6 +1469,10 @@ const ArenaView = {
     }
     const lo = room.ev.lightsout;
     if (lo && t < lo.end + 0.6) this.drawLightsOut(ctx, room, lo, t, v);
+    const brd = room.ev.brood;
+    if (brd && t < brd.end) this.broodClock(ctx, brd, t);
+    const col = room.ev.collapse;
+    if (col && t < col.end + 0.2) this.collapseWarn(ctx, col, t);
     const mise = room.ev.mise;
     if (mise && t < mise.end) this.misePass(ctx, mise, t);
     const amb = room.ev.ambush;

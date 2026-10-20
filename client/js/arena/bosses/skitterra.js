@@ -1,37 +1,29 @@
-// Boss II: Queen Skitterra, the Spider Broodmother — "The Web Cave".
-// She holds the middle of her web; her threads, her brood and the floor itself are the danger.
-//   Phase 1 (100% → 50%): Venom Mist (raidwide), Silk Wrap (tankbuster that roots the tank where it lands),
-//     Eightfold Lunge (her legs light up in order; each lit leg and its opposite strike in turn, so the safe
-//     side rotates), Silk Lines (a tether that must be stretched) with Venom Spit straight after (cones at the two
-//     farthest players, leaving slowing pools), Brood (two spiderlings on opposite sides; when one dies the other
-//     must die within 5 s or it enrages), Silk Reel (a thread drags the farthest player in; a dash snaps it).
-//   Phase 2 at 50%: the web tightens. She returns to the middle and the outer ring turns sticky (slowing).
-//     Silk Wrap now lands just before a Lunge, so the tank must stand somewhere safe before being rooted.
-//     Brood comes with Silk Lines. Devour at the hard enrage timer.
-// Hard: Lunge telegraphs are not drawn (read her legs) and run six strikes; Silk Lines become two tethers,
-// green (stretch it) and red (keep it short); the brood pair is joined by a beam that burns anyone across it;
-// in phase 2 she Molts, and the husk replays her last Lunge while she starts a new one. Faster casts, 25% more damage.
-// Three moves only Hard has:
-//   Egg Sacs: three sacs drop around her web, one person each. Stomping one sticks you in the goo for a moment; a sac
-//     nobody stomps bursts over everyone and leaves a pool of venom.
-//   Fang Rush: she charges the farthest player across the web and leaves a trail of sticky silk behind her.
-//   Spinneret Volley: four globs of silk fall one after another on everyone but the tank, each where its target stood
-//     a moment before. Keep walking.
-// The room (arena props): eight rock pillars hold up the web. They're solid and they're cover, and each takes three
-// hits before it comes down.
-//   Acid Deluge: she rears up in the middle and sprays the whole cave. Hide in a pillar's shadow; every pillar that
-//     sheltered someone takes a hit, so spread over the pillars. Losing pillars is the fight's real timer.
-//   Strand Reel: she shoots a strand to a pillar and reels herself to it; anyone on the line is hit and webbed. She
-//     hangs on that pillar for a few seconds.
-//   Hard: Ceiling Ambush (she's in the ceiling web; only her shadow crosses the floor, gathering speed, and she drops
-//     where it stops, throwing everyone near into the walls); Cocoon (a player is bound to the nearest pillar until the
-//     party cuts them free, and the pillar takes a hit when they do); Acid Deluge leaves the floor it reached sticky.
+// Boss II: Queen Skitterra, the Spider Broodmother — "The Web Cave". The hunt in the web.
+// One authored hunt, the same on every pull: long dread, then sudden swarms. The question is always what to break:
+// egg clutches (each one broken costs damage on her now, and is two fewer spiderlings later), the knots of her threads
+// (each one cut is one less drop in the dark, and one less strip of floor at the end), and her pillars (every Acid
+// Deluge chips the ones you hide behind).
+//   Act I, The Web (100% → 70%): one thing at a time, 14–15 s apart. Venom Mist, Silk Wrap (buster, roots), Eightfold
+//     Lunge (the safe side rotates), Silk Lines (stretch), Spin (four threads pillar to pillar: crossing one stings and
+//     roots), Venom Spit, Strand Reel, Brood (the two ripest of the six clutches in the web hatch: kill them together),
+//     Silk Reel, Acid Deluge (hide behind a pillar).
+//   The Dark Between (70%): she climbs into the dark for 40 s. The cave falls to pools of light; her shadow runs along
+//     each uncut thread in turn and she drops where it ends. Breaking a thread's knot before she gets there spares you
+//     that drop, and the eggs can be broken meanwhile too. She comes back down and the outer web turns sticky.
+//   Act II, The Brood (68% → 28%): pairs, then the Swarm: every clutch still standing hatches at once.
+//   Act III, The Collapse (28% → 0%): the cave floor falls away ring by ring from the walls. The hub, the eight spokes
+//     and the threads nobody cut stay; anyone on falling floor drops (heavy damage, held, then hauled back up the silk).
+// A slow party runs each act's last set again, +10% each pass (f.course in fight.js). Devour is the hard enrage.
+// Every telegraph shows on the floor on every difficulty. Hard: casts 15% faster, 25% more damage, six-step Lunges,
+// green and red Silk Lines, a burning beam on the brood pair, three spiderlings to a clutch, two drops per uncut thread
+// in the dark, Molt (the husk replays her last Lunge), Silk Wrap on the tank as Silk Reel takes the healer, Ceiling
+// Ambush, sticky acid; and her three moves: Egg Sacs, Fang Rush, Spinneret Volley.
 
 const SKITTERRA = {
   id: 'skitterra', name: 'Queen Skitterra', title: 'Spider Broodmother',
-  hp: { normal: 1300000, hard: 1750000 },
+  hp: { normal: 3000000, hard: 3200000 },
   autoDmg: { normal: 1550, hard: 1550 },
-  enrage: { normal: 360, hard: 380 },
+  enrage: { normal: 602, hard: 612 },   // the cast starts here and lands 8 s later (10:10 / 10:20)
   enrageName: 'Devour',
   vuln: 0.5,
   arena: { theme: 'webcave' },
@@ -51,9 +43,13 @@ const SKITTERRA = {
       mist: 8500, wrap: 26000, lunge: H ? 11000 : 13000, tether: 16000, spit: H ? 10500 : 12000, pool: 2200,
       bite: H ? 2000 : 1600, fury: 5500, beam: 6000, reel: H ? 15000 : 17000,
       sac: 5000, sacFail: 10000, fang: 15000, glob: 11000,
-      deluge: H ? 16000 : 15000, strand: 11000, ambush: 16000, slam: 5000, cocoonHp: 18000, cocoonTick: 1200, cocoonCrush: 14000,
+      deluge: H ? 16000 : 15000, strand: 11000, ambush: 16000, slam: 5000,
+      clutchHp: 24000, knotHp: 24000, broodHp: H ? 30000 : 26000, swarmHp: H ? 16000 : 18000,
+      sting: 3000, drop: 13000, drip: 7000, fall: 14000,
     };
     const LONG = 420, SHORT = 150;
+    const S = (...steps) => steps.filter(Boolean);
+    const room = f.room = { threads: [], dark: false, fallen: Infinity, warn: null, safe: null };
 
     // --- building blocks ------------------------------------------------------------------
     const venomMist = () => {
@@ -139,39 +135,6 @@ const SKITTERRA = {
     };
     const linesThenSpit = () => { silkLines(); f.after(f.ct(3.5), venomSpit); };
 
-    // Brood: two spiderlings on opposite sides. Kill one and the other has 5 s to die before it enrages.
-    const enrageAdd = a => {
-      if (a.enraged) return;
-      a.enraged = true; a.speed = 140; a.bite *= 3; a.furyAt = f.t + 1;
-      a.hp = Math.min(a.maxHp, a.hp + Math.round(a.maxHp * 0.3));
-      f.addsDirty = true;
-      f.emit({ t: 'addev', k: 'enrage', id: a.id, x: Math.round(a.x), y: Math.round(a.y) });
-    };
-    const brood = () => {
-      const d = f.ct(3);
-      const a = f.rng() * TAU;
-      const spots = [0, 1].map(i => ({ x: Math.cos(a + i * Math.PI) * 400, y: Math.sin(a + i * Math.PI) * 400 }));
-      f.cast('Brood', d, 'brood');
-      f.emit({ t: 'eggs', pts: spots.map(s => [Math.round(s.x), Math.round(s.y)]), dur: d });
-      f.after(d, () => {
-        const pair = spots.map(s => f.spawnAdd({
-          kind: 'spiderling', x: s.x, y: s.y, hp: H ? 30000 : 26000, r: 30, speed: 60, bite: dmg.bite, biteEvery: 2,
-          leash: 240, spit: dmg.bite * 0.6,
-          linkDmg: H ? dmg.beam : 0,
-          onDeath: dead => { const o = f.adds.get(dead.link); if (o && !o.deadline) o.deadline = f.t + 5; },
-          onTick: ad => {
-            if (!ad.enraged && ((ad.deadline && f.t >= ad.deadline) || f.t - ad.born > 45)) enrageAdd(ad);
-            if (ad.enraged && f.t >= ad.furyAt) {
-              ad.furyAt = f.t + 3;
-              f.emit({ t: 'addev', k: 'fury', id: ad.id, x: Math.round(ad.x), y: Math.round(ad.y) });
-              for (const p of f.alive()) f.damagePlayer(p, dmg.fury, { kind: 'fury' });
-            }
-          },
-        }));
-        pair[0].link = pair[1].id; pair[1].link = pair[0].id;
-      });
-    };
-
     // Molt (Hard, phase 2): she leaves her husk behind, which replays her last Lunge while she starts a new one.
     const molt = () => {
       if (!lastLunge) return lunge();
@@ -192,12 +155,15 @@ const SKITTERRA = {
 
     // Silk Reel: she hooks whoever is farthest away (two on Hard) and drags them in. Struggling slows it;
     // a dash snaps the thread. Dragged all the way in: a venomous bite that slows.
-    const silkReel = () => {
+    const silkReel = (role = null) => {
       const d = f.ct(2.5);
       f.cast('Silk Reel', d, 'reel');
       f.after(d - 0.9, () => {
         const pool = f.nonTanks().length ? f.nonTanks() : f.alive();
-        for (const p of farthest(pool, H ? 2 : 1)) f.reel(p.id, { speed: H ? 210 : 180, dur: 4, windup: 0.9, dmg: dmg.reel });
+        // Hard's role split: the healer is always one of the two
+        const healer = role && pool.find(p => p.role === role);
+        const picks = healer ? [healer, ...farthest(pool.filter(p => p !== healer), H ? 1 : 0)] : farthest(pool, H ? 2 : 1);
+        for (const p of picks) f.reel(p.id, { speed: H ? 210 : 180, dur: 4, windup: 0.9, dmg: dmg.reel });
       });
     };
 
@@ -272,7 +238,9 @@ const SKITTERRA = {
     // Strand Reel: a strand to a pillar (one well away from her), and she reels herself to it in a straight line. Anyone
     // on the line is hit and webbed; she hangs on the pillar for a few seconds, so her melee have to follow.
     const strandReel = () => {
-      const opts = pillars().filter(p => Math.hypot(p.x - B.x, p.y - B.y) > 260);
+      // along a thread still standing if there is one
+      const far = pillars().filter(p => Math.hypot(p.x - B.x, p.y - B.y) > 260), tied = far.filter(p => room.threads.some(th => !th.cut && (th.a === p || th.b === p)));
+      const opts = tied.length ? tied : far;
       if (!opts.length) return venomSpit();
       const pr = f.pick(opts), a = Math.atan2(pr.y - B.y, pr.x - B.x), len = Math.hypot(pr.x - B.x, pr.y - B.y) - pr.r;
       const d = f.ct(4);
@@ -308,110 +276,291 @@ const SKITTERRA = {
           } });
       });
     };
-    // Cocoon (Hard): she wraps someone (not the tank) and sticks them to the nearest pillar. They're held, and the
-    // silk eats at them, until the party cuts the cocoon open; cutting it costs that pillar a hit.
-    const cocoon = () => {
-      const d = f.ct(3.5);
-      const pool = f.nonTanks().length ? f.nonTanks() : f.alive(), p = f.pick(pool);
-      if (!p || !pillars().length) return;
-      f.cast('Cocoon', d, 'cocoon');
-      f.afterKeep(d, () => {
-        const q = f.alive().find(z => z.id === p.id), list = pillars();
-        if (!q || !list.length) return;
-        const pr = list.reduce((m, o) => (Math.hypot(o.x - q.x, o.y - q.y) < Math.hypot(m.x - q.x, m.y - q.y) ? o : m));
-        const a = Math.atan2(q.y - pr.y, q.x - pr.x), at = { x: pr.x + Math.cos(a) * (pr.r + 26), y: pr.y + Math.sin(a) * (pr.r + 26) };
-        // dragged against the pillar
-        const dist = Math.hypot(q.x - at.x, q.y - at.y);
-        if (dist > 4) f.emit({ t: 'kb', id: q.id, x: q.x + (q.x - at.x) / dist * 20, y: q.y + (q.y - at.y) / dist * 20, d: dist });
-        f.debuff(q.id, 'rooted', 1.5);
-        const until = f.t + 10;
-        let nextTick = f.t + 1;
-        const c = f.spawnAdd({ kind: 'cocoon', x: at.x, y: at.y, hp: dmg.cocoonHp, r: 30, inert: true,
-          onDeath: () => { const s = f.ps.get(q.id); if (s) delete s.debuffs.rooted; f.hitProp(pr, 1, 'cocoon'); },
-          onTick: ad => {
-            if (f.t >= until) {   // nobody cut it open: it crushes them, and lets go
-              f.adds.delete(ad.id); f.addsDirty = true; f.emit({ t: 'addev', k: 'gone', id: ad.id });
-              const s = f.ps.get(q.id); if (s) delete s.debuffs.rooted;
-              const z = f.alive().find(o => o.id === q.id); if (z) f.damagePlayer(z, dmg.cocoonCrush, { kind: 'cocoon' });
-              return;
-            }
-            if (f.t >= nextTick) {
-              nextTick += 1;
-              const z = f.alive().find(o => o.id === q.id);
-              if (z) { f.damagePlayer(z, dmg.cocoonTick, { kind: 'cocoon' }); f.debuff(q.id, 'rooted', 1.5); }
-              else { f.adds.delete(ad.id); f.addsDirty = true; f.emit({ t: 'addev', k: 'gone', id: ad.id }); }   // they died in it
-            }
-          } });
-        void c;
+
+    // --- the brood clock: six egg clutches in the web from the pull ------------------------------
+    // Inert, breakable things (adds with HP). The two ripest (opposite each other) hatch as the Brood pair in Act I; every
+    // clutch still standing hatches in the Swarm in Act II. A clutch broken first sends nothing.
+    const CLUTCH = [0, 1, 3, 4, 5, 7].map(i => { const a = Math.PI / 2 + i * Math.PI / 4; return { x: Math.round(Math.cos(a) * 250), y: Math.round(Math.sin(a) * 250), ripe: i === 1 || i === 5 }; });
+    const clutches = CLUTCH.map(c => f.spawnAdd({ kind: 'clutch', x: c.x, y: c.y, hp: dmg.clutchHp, r: 30, inert: true, ripe: c.ripe }));
+    const liveClutches = () => clutches.filter(c => f.adds.has(c.id));
+    // every client sees how ripe each clutch is: [x, y, seconds until it hatches (0: not yet known)]
+    const broodClock = (ripeIn, swarmIn) => f.emit({ t: 'roomev', k: 'brood', dur: 9999,
+      l: liveClutches().map(c => [c.x, c.y, Math.round(((c.ripe ? ripeIn : swarmIn) || 0) * 10) / 10]) });
+    const enrageAdd = a => {
+      if (a.enraged) return;
+      a.enraged = true; a.speed = 140; a.bite *= 3; a.furyAt = f.t + 1;
+      a.hp = Math.min(a.maxHp, a.hp + Math.round(a.maxHp * 0.3));
+      f.addsDirty = true;
+      f.emit({ t: 'addev', k: 'enrage', id: a.id, x: Math.round(a.x), y: Math.round(a.y) });
+    };
+    // spiderlings in pairs: when one dies the other has 5 s to die, or it enrages; left 45 s, both do
+    const spiderlings = (spots, hp) => {
+      const made = spots.map(s => f.spawnAdd({
+        kind: 'spiderling', x: s.x, y: s.y, hp, r: 30, speed: 60, bite: dmg.bite, biteEvery: 2, leash: 240, spit: dmg.bite * 0.6,
+        linkDmg: H ? dmg.beam : 0,
+        onDeath: dead => { const o = f.adds.get(dead.link); if (o && !o.deadline) o.deadline = f.t + 5; },
+        onTick: ad => {
+          if (!ad.enraged && ((ad.deadline && f.t >= ad.deadline) || f.t - ad.born > 45)) enrageAdd(ad);
+          if (ad.enraged && f.t >= ad.furyAt) {
+            ad.furyAt = f.t + 3;
+            f.emit({ t: 'addev', k: 'fury', id: ad.id, x: Math.round(ad.x), y: Math.round(ad.y) });
+            for (const p of f.alive()) f.damagePlayer(p, dmg.fury, { kind: 'fury' });
+          }
+        },
+      }));
+      for (let i = 0; i + 1 < made.length; i += 2) { made[i].link = made[i + 1].id; made[i + 1].link = made[i].id; }
+      return made;
+    };
+    // a clutch splits: it goes, and its spiderlings come out on the far side of it
+    const hatch = (c, perClutch) => {
+      f.adds.delete(c.id); f.addsDirty = true; f.emit({ t: 'addev', k: 'gone', id: c.id });
+      f.emit({ t: 'eggs', pts: [[c.x, c.y]], dur: 0.6 });
+      const out = Math.atan2(c.y, c.x), spots = [];
+      for (let k = 0; k < perClutch; k++) { const a = out + (k - (perClutch - 1) / 2) * 0.9; spots.push({ x: c.x + Math.cos(a) * 40, y: c.y + Math.sin(a) * 40 }); }
+      return spots;
+    };
+    let swarmAt = null;
+    // Brood (Act I): the two ripest clutches hatch, one spiderling each: a pair across the web
+    const brood = () => {
+      const d = f.ct(3);
+      f.cast('Brood', d, 'brood');
+      f.after(d, () => {
+        spiderlings(liveClutches().filter(c => c.ripe).flatMap(c => hatch(c, 1)), dmg.broodHp);
+        broodClock(0, swarmAt != null ? swarmAt - f.t : 0);
+      });
+    };
+    // the Swarm (Act II): every clutch still standing hatches at once, two to a clutch (three on Hard)
+    const swarm = () => {
+      const d = f.ct(3);
+      f.cast('The Swarm', d, 'brood');
+      f.after(d, () => {
+        for (const c of liveClutches()) spiderlings(hatch(c, H ? 3 : 2), dmg.swarmHp);
+        f.emit({ t: 'roomev', k: 'brood', dur: 0, l: [] });
       });
     };
 
-    // --- phase 1 ----------------------------------------------------------------------------
-    // (the room: Strand Reel takes the first Venom Spit's place, Acid Deluge the last one's)
-    f.loop(n => [
-      [5, venomMist, 'Venom Mist'],
-      [7, () => silkWrap(), 'Silk Wrap'],
-      [8, () => lunge(), 'Eightfold Lunge'],
-      [10, () => silkLines(), 'Silk Lines'],
-      [10, strandReel, 'Strand Reel'],
-      [8, brood, 'Brood'],
-      [12, silkReel, 'Silk Reel'],
-      H && [8, fangRush, 'Fang Rush'],
-      [H ? 9 : 10, venomMist, 'Venom Mist'],
-      [7, () => lunge(), 'Eightfold Lunge'],
-      [10, linesThenSpit, 'Silk Lines'],
-      H && [11, eggSacs, 'Egg Sacs'],   // once the brood is dead
-      H && [9, cocoon, 'Cocoon'],
-      [11, () => silkWrap(), 'Silk Wrap'],
-      [8, deluge, 'Acid Deluge'],
-      [9],
-    ].filter(Boolean));
-
-    // --- phase 2: the web tightens ------------------------------------------------------------
-    f.onHp(0.5, () => {
-      f.setPhase(2);
-      f.mechs.clear();
-      f.emit({ t: 'tgclear' });
-      f.clearTethers();
-      f.clearAdds();
-      f.clearReels();
-      f.clearZones();
-      B.untargetable = true; B.lockFacing = false; B.cast = null;
-      f.anim('leap', 1.4);
-      f.moveBoss(0, 0, 700);
-      f.seq([
-        [1.6, () => f.cast('Tightening Web', 4, 'web'), 'Tightening Web'],
-        [4, () => {
-          f.zone({ shape: { kind: 'donut', x: 0, y: 0, r: ARENA.R + 40, r2: 390 }, tag: 'sticky', effect: 'slow' });
-          f.raidwide(dmg.mist * 0.8, 0);
-        }],
-        [1.5, () => { B.untargetable = false; f.anim('roar', 1); p2(); }],
-      ]);
+    // --- the threads: Spin, and the knots that cut them ------------------------------------------
+    // Four threads pillar to pillar, a square round the middle. Crossing one stings and roots you for a moment. Each
+    // has a knot by its first pillar (an inert add): break it and the thread is cut for good. A pillar that falls cuts
+    // its threads too. In the dark she runs along the uncut ones in turn; in the collapse they're floor.
+    const PILLAR_A = i => Math.PI / 2 + Math.PI / 8 + i * Math.PI / 4;
+    const pillarAt = i => f.props.find(p => p.kind === 'pillar' && Math.hypot(p.x - Math.cos(PILLAR_A(i)) * 375, p.y - Math.sin(PILLAR_A(i)) * 375) < 5);
+    const cutThread = th => {
+      if (th.cut) return;
+      th.cut = true;
+      if (th.fl) f.removeFloor(th.fl);
+      if (th.knot && f.adds.has(th.knot.id)) { f.adds.delete(th.knot.id); f.addsDirty = true; f.emit({ t: 'addev', k: 'gone', id: th.knot.id }); }
+      f.emit({ t: 'propfx', k: 'chip', x: Math.round(th.kx), y: Math.round(th.ky), kind: 'pillar' });
+    };
+    const spin = () => {
+      const d = f.ct(3.5);
+      f.cast('Spin', d, 'silk');
+      f.after(d, () => {
+        [[0, 2], [2, 4], [4, 6], [6, 0]].forEach(([i, j], n) => {
+          const a = pillarAt(i), b = pillarAt(j);
+          if (!a || !b) return;
+          const L = Math.hypot(b.x - a.x, b.y - a.y), ux = (b.x - a.x) / L, uy = (b.y - a.y) / L;
+          const x1 = a.x + ux * (a.r + 4), y1 = a.y + uy * (a.r + 4), x2 = b.x - ux * (b.r + 4), y2 = b.y - uy * (b.r + 4);
+          const th = { id: n, order: n, a, b, x1, y1, x2, y2, kx: a.x + ux * (a.r + 44), ky: a.y + uy * (a.r + 44), cut: false, last: {} };
+          th.fl = f.addFloor({ kind: 'thread', x: Math.round((x1 + x2) / 2), y: Math.round((y1 + y2) / 2), r: Math.round(L / 2), x1: Math.round(x1), y1: Math.round(y1), x2: Math.round(x2), y2: Math.round(y2) });
+          th.knot = f.spawnAdd({ kind: 'knot', x: th.kx, y: th.ky, hp: dmg.knotHp, r: 24, inert: true, onDeath: () => cutThread(th) });
+          room.threads.push(th);
+        });
+      });
+    };
+    const uncut = () => room.threads.filter(th => !th.cut);
+    f.ticker(() => {
+      for (const th of room.threads) {
+        if (th.cut) continue;
+        // a fallen pillar cuts its threads
+        if (!f.props.includes(th.a) || !f.props.includes(th.b)) { cutThread(th); continue; }
+        // walking through one stings and roots (the knots themselves are safe to stand by)
+        for (const p of f.alive()) {
+          if (PROPS.segDist(p.x, p.y, th.x1, th.y1, th.x2, th.y2) > 14 || f.t - (th.last[p.id] ?? -9) < 2) continue;
+          if (Math.hypot(p.x - th.kx, p.y - th.ky) < 50) continue;
+          th.last[p.id] = f.t;
+          f.damagePlayer(p, dmg.sting, { kind: 'thread', avoidable: true, noVuln: true });
+          f.debuff(p.id, 'rooted', 0.7);
+        }
+      }
+      // what the bots break (once no spiderling is loose): in the dark, the knot she's running to next, then the eggs; in the light, eggs while
+      // more than two clutches stand and nothing has hatched
+      const hostile = [...f.adds.values()].some(a => !a.inert);
+      const next = room.dark ? uncut().find(th => th.order >= room.runAt) : null;
+      for (const th of room.threads) if (th.knot && f.adds.has(th.knot.id)) th.knot.prio = next === th && !hostile ? 6 : 0;
+      for (const c of liveClutches()) c.prio = !hostile && (room.dark || liveClutches().length > 2) ? 2 : 0;
     });
 
-    // (the room: Strand Reel takes the Venom Spit's place, Acid Deluge the last Eightfold Lunge's; Hard adds Ceiling
-    // Ambush and Cocoon)
-    const p2 = () => f.loop(n => [
-      [2, venomMist, 'Venom Mist'],
-      [7, wrapLunge, 'Eightfold Lunge'],
-      [13, () => { brood(); f.after(f.ct(3) + 1, () => silkLines()); }, 'Brood'],
-      H && [11, volley, 'Spinneret Volley'],
-      [12, silkReel, 'Silk Reel'],
-      H && [10, ambush, 'Ceiling Ambush'],
-      [H ? 10 : 11, strandReel, 'Strand Reel'],
-      [9, () => (H ? molt() : lunge()), H ? 'Molt' : 'Eightfold Lunge'],
-      [H ? 18 : 10, () => silkWrap(), 'Silk Wrap'],
-      [9, linesThenSpit, 'Silk Lines'],
-      H && [12, n % 2 ? eggSacs : fangRush, n % 2 ? 'Egg Sacs' : 'Fang Rush'],
-      [12, venomMist, 'Venom Mist'],
-      H && [10, cocoon, 'Cocoon'],
-      [8, deluge, 'Acid Deluge'],
-      [11, brood, 'Brood'],
-      H && [13, volley, 'Spinneret Volley'],
-      [H ? 12 : 22],
-    ].filter(Boolean));
+    // --- The Dark Between: she's gone into the dark for 40 s --------------------------------------
+    let from = { x: 0, y: 0 };
+    const intoDark = () => {
+      f.cast('Into the Dark', 2, 'ambush');
+      f.afterKeep(2, () => {
+        B.untargetable = true; B.lockFacing = true;
+        room.dark = true; room.runAt = 0; from = { x: B.x, y: B.y };
+        f.emit({ t: 'roomev', k: 'lightsout', r: 120, extra: f.props.filter(p => p.kind === 'pillar').map(p => ({ x: p.x, y: p.y })), dur: 37 });
+      });
+    };
+    // she runs the length of a thread overhead and drops at its far end (Hard: then back to the near end); a thread
+    // already cut, she can't use
+    const dropFrom = k => {
+      room.runAt = k + 1;
+      const th = room.threads.find(t => t.order === k);
+      if (!th || th.cut) return;
+      f.cast('From the Dark', 6, 'ambush');
+      const ends = H ? [[th.x2, th.y2], [th.x1, th.y1]] : [[th.x2, th.y2]];
+      ends.forEach(([ex, ey], i) => {
+        const at = ARENA.clamp({ x: ex * 0.86, y: ey * 0.86 }, 90), land = 6 + i * 2.5;
+        f.afterKeep(i * 2.5, () => {
+          f.emit({ t: 'roomev', k: 'ambush', pts: [[Math.round(from.x), Math.round(from.y)], [Math.round(at.x), Math.round(at.y)]], dur: land - i * 2.5, ease: 1.2 });
+          from = at;
+        });
+        f.aoe({ kind: 'circle', x: at.x, y: at.y, r: 190 }, land, dmg.drop, { tag: 'ambush' });
+      });
+    };
+    const venomDrip = () => {
+      const d = f.ct(4);
+      f.cast('Venom Drip', d, 'spit');
+      for (const p of f.alive()) f.mech({ type: 'spread', shape: { kind: 'circle', x: p.x, y: p.y, r: 100 }, delay: d, dmg: dmg.drip, follow: p.id, tag: 'spread' });
+    };
+    // she comes back down into the middle, and the outer web turns sticky for the rest of the fight
+    const comeBack = () => {
+      const d = 4;
+      room.dark = false;
+      f.emit({ t: 'roomev', k: 'ambush', pts: [[Math.round(from.x), Math.round(from.y)], [0, 0]], dur: d, ease: 1.2 });
+      f.cast('Tightening Web', d, 'web');
+      f.afterKeep(d, () => {
+        B.x = 0; B.y = 0; B.untargetable = false; B.lockFacing = false;
+        f.anim('leap', 0.4);
+        f.zone({ shape: { kind: 'donut', x: 0, y: 0, r: ARENA.R + 40, r2: 390 }, tag: 'sticky', effect: 'slow' });
+        f.raidwide(dmg.mist * 0.8, 0);
+      });
+    };
 
-    f.moves = { venomMist, lunge, silkWrap, wrapLunge, silkLines, venomSpit, brood, molt, silkReel, eggSacs, fangRush, volley, deluge, strandReel, ambush, cocoon };
+    // --- The Collapse: the floor falls away to the silk ------------------------------------------
+    // Rings fall from the wall inward. What stays: the hub, the eight spokes (center to each pillar's place) and every
+    // thread nobody cut. Each ring shudders for 6 s first, drawn with the silk cut out of it.
+    const RINGS = [[430, 2000], [330, 430], [260, 330]];
+    const SPOKE_W = 80;
+    const paths = () => {
+      const out = [];
+      for (let i = 0; i < 8; i++) out.push([0, 0, Math.round(Math.cos(PILLAR_A(i)) * 600), Math.round(Math.sin(PILLAR_A(i)) * 600), SPOKE_W]);
+      for (const th of uncut()) out.push([Math.round(th.x1), Math.round(th.y1), Math.round(th.x2), Math.round(th.y2), SPOKE_W]);
+      return out;
+    };
+    const onSilk = (x, y, list) => list.some(([x1, y1, x2, y2, w]) => PROPS.segDist(x, y, x1, y1, x2, y2) < w / 2);
+    // for the bots: is this spot floor now, and will it still be once the ring that's shuddering goes?
+    room.safe = (x, y, soon) => { const r = Math.hypot(x, y), edge = soon && room.warn ? Math.min(room.fallen, room.warn.r2) : room.fallen; return r < edge || onSilk(x, y, paths()); };
+    const giveWay = k => {
+      const [r2, r] = RINGS[k], warn = 6;
+      f.cast('The Web Gives Way', warn, 'web');
+      const list = paths();
+      room.warn = { r2 };
+      f.emit({ t: 'roomev', k: 'collapse', r2, r, paths: list, dur: warn });
+      f.afterKeep(warn, () => {
+        room.fallen = r2; room.warn = null;
+        f.addFloor({ kind: 'pit', x: 0, y: 0, r, r2, paths: list });
+        for (const pr of [...f.props]) if (Math.hypot(pr.x, pr.y) > r2 - pr.r) f.breakProp(pr, 'fall');
+      });
+    };
+    // anyone on fallen floor drops: hurt, held, and hauled back up onto the floor nearer the middle
+    const fellAt = {};
+    f.ticker(() => {
+      if (room.fallen === Infinity) return;
+      const list = paths();
+      for (const p of f.alive()) {
+        if (Math.hypot(p.x, p.y) < room.fallen || onSilk(p.x, p.y, list) || f.t - (fellAt[p.id] ?? -9) < 3) continue;
+        fellAt[p.id] = f.t;
+        f.damagePlayer(p, dmg.fall, { kind: 'fall', avoidable: true, noVuln: true });
+        f.debuff(p.id, 'rooted', 2);
+        f.emit({ t: 'propfx', k: 'fall', x: Math.round(p.x), y: Math.round(p.y), pid: p.id });
+        const back = Math.max(0, Math.hypot(p.x, p.y) - room.fallen + 40);
+        f.afterKeep(2.1, () => { const q = f.alive().find(z => z.id === p.id); if (q && back > 0) f.knock(q, q.x * 2, q.y * 2, back); });
+      }
+    });
+
+    // --- the hunt ---------------------------------------------------------------------------------
+    broodClock(137 + f.ct(3), 0);   // the Brood step's time, plus its cast
+    const actOne = at => f.course({
+      until: 0.7,
+      sets: [
+        S([5, venomMist, 'Venom Mist']),
+        S([13, () => silkWrap(), 'Silk Wrap']),
+        S([14, () => lunge(), 'Eightfold Lunge']),
+        S([15, () => silkLines(), 'Silk Lines']),
+        S([15, spin, 'Spin']),
+        S([15, venomSpit, 'Venom Spit'], H && [8, eggSacs, 'Egg Sacs']),
+        S([15, strandReel, 'Strand Reel'], H && [9, fangRush, 'Fang Rush']),
+        S([H ? 10 : 15, venomMist, 'Venom Mist']),
+        S([15, wrapLunge, 'Eightfold Lunge']),
+        S([15, brood, 'Brood'], [10, () => silkReel(), 'Silk Reel']),
+        S([15, deluge, 'Acid Deluge']),
+      ].filter(Boolean),
+      closing: [[10, venomMist, 'Venom Mist'], [12, () => lunge(), 'Eightfold Lunge']],
+      next: dark,
+    }, at);
+
+    const dark = at => f.course({
+      onStart: () => { f.clearTethers(); f.clearReels(); },
+      sets: [
+        S([2, intoDark, 'Into the Dark']),
+        S([4, () => dropFrom(0), 'From the Dark']),
+        S([7, () => dropFrom(1), 'From the Dark']),
+        S([7, () => dropFrom(2), 'From the Dark'], [3, venomDrip, 'Venom Drip']),
+        S([4, () => dropFrom(3), 'From the Dark']),
+        S([8, comeBack, 'Tightening Web']),
+        S([6]),
+      ],
+      next: actTwo,
+    }, at);
+
+    const actTwo = at => f.course({
+      until: 0.28,
+      onStart: () => { swarmAt = f.t + (H ? 108 : 124) + f.ct(3); broodClock(0, swarmAt - f.t); },
+      sets: [
+        S([3, venomMist, 'Venom Mist']),
+        S([12, wrapLunge, 'Eightfold Lunge']),
+        S([15, linesThenSpit, 'Silk Lines']),
+        H && S([12, volley, 'Spinneret Volley']),
+        S([H ? 12 : 15, () => { silkReel(H ? 'healer' : null); if (H) silkWrap(); }, 'Silk Reel']),
+        S([13, () => (H ? molt() : lunge()), H ? 'Molt' : 'Eightfold Lunge']),
+        S([H ? 15 : 14, strandReel, 'Strand Reel']),
+        H && S([10, ambush, 'Ceiling Ambush']),
+        S([H ? 10 : 14, venomMist, 'Venom Mist']),
+        S([14, deluge, 'Acid Deluge']),
+        S([H ? 6 : 15, swarm, 'The Swarm']),
+        S([14, () => silkWrap(), 'Silk Wrap']),
+        S([14, () => silkLines(), 'Silk Lines']),
+        H && S([12, eggSacs, 'Egg Sacs'], [10, fangRush, 'Fang Rush']),
+        S([14, venomMist, 'Venom Mist']),
+        S([14, () => lunge(), 'Eightfold Lunge']),
+        S([12, linesThenSpit, 'Silk Lines']),
+        S([12, () => silkReel(), 'Silk Reel']),
+      ].filter(Boolean),
+      closing: [[10, venomMist, 'Venom Mist'], [12, () => lunge(), 'Eightfold Lunge']],
+      next: actThree,
+    }, at);
+
+    const actThree = at => f.course({
+      sets: [
+        S([2, () => giveWay(0), 'The Web Gives Way']),
+        S([8, venomMist, 'Venom Mist']),
+        S([12, () => giveWay(1), 'The Web Gives Way'], [7, () => lunge(), 'Eightfold Lunge']),
+        S([12, () => silkLines(), 'Silk Lines']),
+        S([6, () => giveWay(2), 'The Web Gives Way'], [7, () => silkWrap(), 'Silk Wrap']),
+        H && S([10, volley, 'Spinneret Volley']),
+        S([11, () => silkLines(), 'Silk Lines']),
+        S([12, venomMist, 'Venom Mist']),
+        S([10, () => lunge(), 'Eightfold Lunge']),
+      ].filter(Boolean),
+      closing: [[12, venomMist, 'Venom Mist'], [9, () => lunge(), 'Eightfold Lunge']],
+      ramp: 0.06,   // the burn: gentler, it never ends
+    }, at);
+
+    actOne(0);
+
+    f.moves = { venomMist, lunge, silkWrap, wrapLunge, silkLines, venomSpit, brood, swarm, molt, silkReel, eggSacs, fangRush, volley, deluge,
+      strandReel, ambush, spin, intoDark, dropFrom, venomDrip, comeBack, giveWay };
   },
 };
 

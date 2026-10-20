@@ -341,6 +341,27 @@ const ADD_ART = {
     ellipse(ctx, -4, -14, 4, 7, -0.3, 'rgba(255,255,255,0.5)');
     ctx.restore();
   },
+  // Skitterra's egg clutches: a heap of pale eggs bound in silk, twitching (break them before they hatch)
+  clutch(ctx, st) {
+    const tw = Math.sin(st.t * 7) * 0.05;
+    ctx.save(); ctx.rotate(tw);
+    ellipse(ctx, 0, 2, 24, 17, 0, 'rgba(230,226,240,0.35)', 'rgba(240,240,255,0.6)', 1.5);
+    for (const [x, y, r] of [[-9, 2, 8], [8, 3, 8], [0, -7, 8], [-2, 9, 7], [11, -6, 6]]) {
+      ellipse(ctx, x, y, r, r * 0.82, 0.3, '#ece6d6', OUT, 1.6);
+      ellipse(ctx, x - r * 0.3, y - r * 0.3, r * 0.3, r * 0.2, -0.4, 'rgba(255,255,255,0.6)');
+    }
+    for (let i = 0; i < 4; i++) { ctx.beginPath(); ctx.arc(0, 2, 20 - i * 2, i * 1.3, i * 1.3 + 2.2); ctx.strokeStyle = 'rgba(240,240,255,0.55)'; ctx.lineWidth = 1; ctx.stroke(); }
+    ctx.restore();
+  },
+  // a thread's knot by its pillar: a fat wad of silk the thread runs out of (break it and the thread is cut)
+  knot(ctx, st) {
+    const tw = Math.sin(st.t * 5) * 0.08;
+    ctx.save(); ctx.rotate(tw);
+    circle(ctx, 0, 0, 15, '#e4e0ee', OUT, 2);
+    for (let i = 0; i < 5; i++) { ctx.beginPath(); ctx.ellipse(0, 0, 14, 5, i * 0.63, 0, TAU); ctx.strokeStyle = 'rgba(150,140,175,0.6)'; ctx.lineWidth = 1.2; ctx.stroke(); }
+    ellipse(ctx, -5, -5, 4, 3, -0.5, 'rgba(255,255,255,0.7)');
+    ctx.restore();
+  },
   // the Hollow King's coffins (Court of Bones): a stone coffin by the wall, its lid grinding open as its time comes
   coffin(ctx, st) {
     const open = st.props && st.props.open ? Math.min(1, st.props.open) : 0;

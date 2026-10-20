@@ -20,7 +20,8 @@ const BotAI = {
   // Which enemy to hit: tanks and healers stay on the boss. DPS split over a pair of adds (one each),
   // easing off when theirs gets well ahead of its sibling so the pair dies together. null = the boss.
   pickEnemy(bot, view) {
-    const adds = view.adds || [];
+    // things you break (eggs, knots) only count while the room asks for them (prio); a coffin or cocoon always does
+    const adds = (view.adds || []).filter(a => !a.inert || a.prio || a.kind === 'cocoon');
     if (!adds.length || bot.role !== 'dps') return null;
     // something holding a party member (Skitterra's cocoon) comes first; then whatever the room asks for (adds.prio)
     const coc = adds.find(a => a.kind === 'cocoon');
@@ -444,6 +445,9 @@ const BotAI = {
     for (const z of view.zones || []) if (SHAPES.contains(z.shape, px, py, 10)) pen += z.effect === 'burn' ? (view.t > z.startAt - 2 ? 6000 : 400) : 350;
     // the room: nobody stands inside a solid prop; grease is best kept clear of, and burning grease avoided
     for (const pr of view.props || []) if (pr.solid && PROPS.sd(pr, px, py) < 16) pen += 9000;
+    // floor that has fallen away, or is about to (Skitterra's collapse): stay on the silk
+    if (view.room && view.room.safe && !view.room.safe(px, py, true)) pen += view.room.safe(px, py) ? 9000 : 20000;
+    for (const th of (view.room && view.room.threads) || []) if (!th.cut && segDist(px, py, th.x1, th.y1, th.x2, th.y2) < 26 && Math.hypot(px - th.kx, py - th.ky) > 50) pen += 3000;
     // (grease a fire is about to reach counts as burning: a Flambé stripe, the stove line catching)
     const fires = view.mechs.filter(m => m.tag === 'flambe' && m.resolveAt - view.t < 4);
     for (const z of view.zones || []) if (z.tag === 'stovefire' && view.t > z.startAt - 3) fires.push(z);
@@ -537,6 +541,7 @@ const BotAI = {
     // floor hits landing in the next few seconds: where along the way we'd be when each lands
     const speed = 230 * (view.debuffs(bot.id).slowed ? FIGHT.SLOWED : 1);
     const landing = view.mechs.filter(m => m.type === 'aoe' && m.resolveAt - view.t < 2.5 && !(m.follow === bot.id && m.resolveAt - view.t > (m.lockAt || 0)));
+    const threads = (view.room && view.room.threads || []).filter(th => !th.cut);
     const pathCost = c => {
       let pen = 0;
       const dist = Math.hypot(c.x - bot.x, c.y - bot.y);
@@ -545,6 +550,9 @@ const BotAI = {
         if (SHAPES.contains(m.shape, bot.x + (c.x - bot.x) * q, bot.y + (c.y - bot.y) * q, 22)) pen += 6000;
       }
       for (const [a, o] of beams) if (segsCross(bot.x, bot.y, c.x, c.y, a.x, a.y, o.x, o.y)) pen += 3000;
+      // Skitterra's threads sting and root whoever walks through them; her collapse leaves only the silk to walk on
+      for (const th of threads) if (segsCross(bot.x, bot.y, c.x, c.y, th.x1, th.y1, th.x2, th.y2)) pen += 2500;
+      if (view.room && view.room.safe && view.room.fallen !== Infinity) for (const q of [0.2, 0.4, 0.6, 0.8]) if (!view.room.safe(bot.x + (c.x - bot.x) * q, bot.y + (c.y - bot.y) * q)) pen += 15000;
       for (const pd of view.puddles) if (Math.hypot(pd.x - bot.x, pd.y - bot.y) > pd.r + 20 && segDist(pd.x, pd.y, bot.x, bot.y, c.x, c.y) < pd.r + 20) pen += 1200;
       if (sweeps.length) {
         const d = Math.hypot(c.x - bot.x, c.y - bot.y), arrive = d / 230;
