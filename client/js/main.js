@@ -609,7 +609,8 @@
   const focusFrame = $('focus-frame');
   let ffKey = '';
   function updateTargetFrame() {
-    const t = started && !panelOpen() ? lockedTarget() : null;
+    let t = started && !panelOpen() ? lockedTarget() : null;
+    if (t && !t.dummy && (t.hp <= 0 || (t.boss && raid && raid.state === 'clear'))) t = null;   // (a fallen boss or add drops off the frame)
     const key = t ? `${t.name}|${t.dummy ? '' : Math.round(1000 * t.hp / Math.max(1, t.mx))}|${t.tg}` : '';
     if (key !== tfKey) {
       tfKey = key;
@@ -621,7 +622,8 @@
     }
     // the focus frame (gone when its enemy is)
     if (focusEnemy != null && (!inArena() || !lockedTarget(focusEnemy))) focusEnemy = null;
-    const ft = started && !panelOpen() && focusEnemy != null ? lockedTarget(focusEnemy) : null;
+    let ft = started && !panelOpen() && focusEnemy != null ? lockedTarget(focusEnemy) : null;
+    if (ft && (ft.hp <= 0 || (ft.boss && raid && raid.state === 'clear'))) ft = null;
     const fk = ft ? `${ft.name}|${Math.round(1000 * ft.hp / Math.max(1, ft.mx))}|${ft.tg}` : '';
     if (fk === ffKey) return;
     ffKey = fk;
@@ -1197,6 +1199,7 @@
     }
     raid = null;
     scene = 'town';
+    townObjective();
     sceneFade();
     FX.clear(); VFX.clear(); clearTimers();
     RaidUI.show(false);
@@ -2429,6 +2432,7 @@
     Stagecraft.drawFloor(ctx, now, scEnv);
     Pastimes.drawGround(ctx, now);
     TownLife.drawGround(ctx, now, TOWN.pedestals, BOSSES.map(b => b.id));
+    TOWN.pedestals.forEach((pd, i) => { if (BOSSES[i]) drawPlaque(ctx, pd, bossOpen(BOSSES[i]) ? BOSSES[i].name : 'Sealed'); });
     const ents = [...lineup, keeper, trainer, ...statues, ...dummies, player, ...townRemotes, ...Stagecraft.entities(now, scEnv), ...TownLife.entities(HERO_SCALE)];
     ents.sort((a, b) => a.y - b.y);
     for (const e of ents) { if (e.kind === 'stagecraft') e.draw(ctx); else drawEntity(e); }
@@ -2677,6 +2681,14 @@
     clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove('show'), 2800);
   }
   function setObjective(html) { $('objective').innerHTML = html; }
+  // the hint in the corner follows the road: the yard and the portal at first, then the next boss still standing
+  function townObjective() {
+    if (!player.cls) return;
+    const next = BOSSES.find(b => !(unlockAll || Save.bossBeaten(b.id)));
+    if (!BOSSES.some(b => Save.bossBeaten(b.id))) setObjective('Try your skills on the <b>Training Yard</b> dummies (east). The red one swings back. When you\'re ready, step into the <b>Raid Portal</b> (north).');
+    else if (next) setObjective(`Next on the King's Road: <b>${next.name}</b>. Step into the <b>Raid Portal</b> (north) when your party is ready.`);
+    else setObjective('The road is quiet, for now. Try a boss on <b>Hard</b>, or look around town: not everything in Emberfall is out in the open.');
+  }
   function updateHeroName() {
     $('hero-name').innerHTML = player.cls
       ? `<span style="color:${ROLES[player.cls.role].color}">${player.cls.name}</span> · ${player.cls.title}`
@@ -3027,7 +3039,7 @@
     town.meter = null; town.meterDone = null;
     updateHeroName(); updatePartyList();
     toast(`You are now the ${cls.name}, ${cls.title}.`);
-    setObjective('Try your skills on the <b>Training Yard</b> dummies (east). The red one swings back. When you\'re ready, step into the <b>Raid Portal</b> (north).');
+    townObjective();
     Net.send({ t: 'cls', id: cls.id, spec: player.spec });
     sendGear();
   }
@@ -3053,7 +3065,7 @@
       const t = bossThumbs[i], open = bossOpen(boss);
       t.b.classList.toggle('sealed', !open);
       t.b.querySelector('b').textContent = open ? boss.name : 'Sealed';
-      t.b.querySelector('small').textContent = open ? `Boss ${['I', 'II', 'III', 'IV'][i]} · ${boss.title}` : `Boss ${['I', 'II', 'III', 'IV'][i]} · beat ${BOSSES[i - 1].name} to open`;
+      t.b.querySelector('small').textContent = open ? `Boss ${['I', 'II', 'III', 'IV'][i]} · ${boss.title}` : `Boss ${['I', 'II', 'III', 'IV'][i]} · beat ${bossOpen(BOSSES[i - 1]) ? BOSSES[i - 1].name : `Boss ${['I', 'II', 'III', 'IV'][i - 1]}`} to open`;
     });
   }
   let raidMode = 'normal', raidFill = true;

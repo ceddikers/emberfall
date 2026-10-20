@@ -3,12 +3,19 @@
 // Any key or click opens the way in (the join card); it fades out on its own once you're in.
 
 const Title = (() => {
+  // the road so far: each boss is named once the one before it has fallen (the rest stay a surprise)
+  function road() {
+    const all = [['grubnak', 'Grubnak'], ['skitterra', 'Skitterra'], ['volkar', 'Volkar'], ['hollowking', 'the Hollow King']];
+    let open = true;
+    try { if (localStorage.getItem('emberfall.unlockAll') === '1') return all.map(b => b[1]).join(' · '); } catch (e) { /* no storage */ }
+    return all.map(([id, name]) => { const show = open; open = open && typeof Save !== 'undefined' && Save.bossBeaten(id); return show ? name : '?'; }).join(' · ');
+  }
   const el = document.createElement('div');
   el.id = 'title';
   el.innerHTML = `<canvas></canvas>
     <div class="ti-mark"><small>A raid for four</small><h1>Emberfall</h1><i class="ti-rule"></i></div>
     <p class="ti-press">Press any key</p>
-    <p class="ti-foot">Grubnak · Skitterra · Volkar · the Hollow King</p>`;
+    <p class="ti-foot">${road()}</p>`;
   document.body.appendChild(el);
   const cv = el.querySelector('canvas'), ctx = cv.getContext('2d');
   let W = 0, H = 0, dpr = 1, on = true, t0 = performance.now(), mx = 0, my = 0, raf = 0;

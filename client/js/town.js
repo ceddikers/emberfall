@@ -268,13 +268,7 @@ function buildTownLayer(scale) {
     circle(g, pd.x, pd.y, 60, '#9a9384', '#5f5a50', 3);
     circle(g, pd.x, pd.y, 48, '#aba493');
     circle(g, pd.x, pd.y, 54, null, 'rgba(201,166,90,0.6)', 1.5);
-    const boss = BOSSES[i];
-    g.font = '700 13px Cinzel, Georgia, serif';
-    const tw = g.measureText(boss.name).width + 28;
-    rrect(g, pd.x - tw / 2, pd.y + 66, tw, 24, 4, '#3a3226', '#c9a65a', 1.5);
-    g.fillStyle = '#f0d48a'; g.textAlign = 'center'; g.textBaseline = 'middle';
-    g.fillText(boss.name, pd.x, pd.y + 78);
-    g.textBaseline = 'alphabetic';
+    void i;   // (the name plaque is drawn each frame by drawPlaque: a boss you haven't reached reads "Sealed")
   });
 
   // raid portal ring
@@ -389,4 +383,15 @@ function drawSmoke(ctx, t) {
       circle(ctx, b.smoke.x + q * 34 + Math.sin(t + i) * 4, b.smoke.y - q * 90, 7 + q * 16, rgba(dark ? '#8a8a8a' : '#e0e0e0', 0.45 * (1 - q)));
     }
   }
+}
+
+// a pedestal's name plaque (drawn every frame, so a newly reached boss gets its name)
+function drawPlaque(g, pd, text) {
+  g.save();
+  g.font = '700 13px Cinzel, Georgia, serif';
+  const tw = g.measureText(text).width + 28;
+  rrect(g, pd.x - tw / 2, pd.y + 66, tw, 24, 4, '#3a3226', '#c9a65a', 1.5);
+  g.fillStyle = '#f0d48a'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillText(text, pd.x, pd.y + 78);
+  g.restore();
 }

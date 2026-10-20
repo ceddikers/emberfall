@@ -601,6 +601,25 @@ class FightSim {
   damagePlayer(p, raw, opts = {}) {
     const s = p.s || this.ps.get(p.id);
     if (!s || !s.alive) return 0;
+    // Royal Doom running out, the enrage and falling off the edge are sentences, not hits: no invulnerability, shield,
+    // mitigation or cheat-death saves you (only the mechanic's own answer does)
+    // (Skitterra's and Volkar's survivable drops are 'fall' too: only the outright kills take this path)
+    if (raw >= 9999999 && (opts.kind === 'doom' || opts.kind === 'enrage' || opts.kind === 'fall')) {
+      // (the whole sentence lands on health, past any shield: certain death for a real hero, while the tools' test
+      // parties with huge health still run on to the end of the script)
+      const amt = Math.min(raw, Math.max(1, Math.round(s.hp)));
+      s.hp -= raw;
+      this.stats[p.id].taken += amt;
+      const pd = { t: 'pdmg', id: p.id, a: amt, k: opts.kind, hp: Math.max(0, s.hp), dd: 0 };
+      if (opts.n) pd.n = opts.n;
+      this.emit(pd);
+      if (s.hp > 0) return amt;
+      s.hp = 0; s.shield = 0; s.alive = false; s.mits = []; s.hots = []; s.threat = 0; s.diedAt = this.t; this.dropThreat(p.id);
+      if (this.classDeath) this.classDeath(p, s);
+      this.stats[p.id].deaths++;
+      this.emit({ t: 'fev', k: 'death', id: p.id });
+      return amt;
+    }
     // (opts.scaled: already in small numbers, e.g. a share passed along a thread, but still mitigated as usual)
     let amt = opts.raw || opts.scaled ? raw : raw * this.scale.dmg * (this.hard ? 1.25 : 1) * (1 + this.boss.dmgUp);
     if (!opts.shared) amt = this.threadSplit(p, s, amt, opts);   // threads split the hit evenly along them (classes-c)

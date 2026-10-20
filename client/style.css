@@ -482,7 +482,7 @@ kbd { border-radius: 3px; background: #1d1813; border-color: #4a3d2c; color: var
 .stat-row small { grid-column: 1 / -1; font-size: 11px; color: var(--muted); }
 .stat-row.dim span, .stat-row.dim b { color: #5f584c; }
 .inv-tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line-soft); margin: -4px 0 10px; }
-.inv-tabs button { padding: 6px 12px; background: none; border: none; border-bottom: 2px solid transparent; color: var(--muted); font: inherit; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; cursor: pointer; }
+.inv-tabs button { padding: 6px 10px; white-space: nowrap; background: none; border: none; border-bottom: 2px solid transparent; color: var(--muted); font: inherit; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; cursor: pointer; }
 .inv-tabs button:hover { color: var(--ink); }
 .inv-tabs button.on { color: var(--gold-hi); border-bottom-color: var(--gold); }
 .inv-cells { display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; max-height: 300px; overflow: auto; padding-right: 2px; }
@@ -750,7 +750,7 @@ kbd { border-radius: 3px; background: #1d1813; border-color: #4a3d2c; color: var
 #gold-hud { position: fixed; right: 66px; bottom: 14px; z-index: 5; height: 42px; display: flex; align-items: center; padding: 0 12px; border-radius: 3px;
   border: 1px solid var(--line); background: #12100de8; color: var(--gold-hi); font-size: 13px; font-variant-numeric: tabular-nums; }
 #gold-hud.hidden { display: none; }
-.inv-gold { margin-left: auto; align-self: center; padding-right: 2px; font-size: 12px; color: var(--gold-hi); font-variant-numeric: tabular-nums; }
+.inv-gold { margin-left: auto; align-self: center; padding-right: 2px; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; flex: none; font-size: 12px; color: var(--gold-hi); font-variant-numeric: tabular-nums; }
 .btn2.sell .coin { margin-left: 2px; }
 
 #loot { position: fixed; right: 16px; top: 50%; transform: translateY(-50%); z-index: 13; width: min(300px, calc(100vw - 32px)); padding: 10px 10px 8px;
@@ -1217,7 +1217,7 @@ body.placing-mark canvas { cursor: crosshair; }
 #dialogue .dl-feast .coin { grid-area: c; }
 #dialogue .dl-feast u { grid-area: u; text-decoration: none; font-weight: 700; color: #f2e6c8; }
 /* an unlock moment */
-#town-banner { position: fixed; left: 50%; top: 90px; transform: translateX(-50%); z-index: 17; width: min(560px, calc(100vw - 32px)); padding: 12px 18px 14px; text-align: center; background: linear-gradient(#1a140ef4, #0d0b0af4); border: 1px solid #c89a5a; border-radius: 3px; box-shadow: 0 10px 30px #000c; pointer-events: none; opacity: 0; }
+#town-banner { position: fixed; left: 50%; top: 150px; transform: translateX(-50%); z-index: 17; width: min(560px, calc(100vw - 32px)); padding: 12px 18px 14px; text-align: center; background: linear-gradient(#1a140ef4, #0d0b0af4); border: 1px solid #c89a5a; border-radius: 3px; box-shadow: 0 10px 30px #000c; pointer-events: none; opacity: 0; }
 #town-banner.hidden { display: none; }
 #town-banner.in { animation: banner-in .9s ease-out forwards; }
 #town-banner.out { animation: banner-out .9s ease-in forwards; }
