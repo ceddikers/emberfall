@@ -516,6 +516,7 @@ const HOLLOWKING = {
     const tithe = () => {
       const d = f.ct(5);
       f.cast('Royal Tithe', d, 'knell');
+      f.healCheck(d + 8.6);   // to just after the Dirge lands
       // the Verdict waits for this set (Tithe, Dirge) to play out whole before the Judgement can follow
       const c = f.curCourse;
       if (c) { c.o.seam = 20; f.afterKeep(d + 8.5, () => { c.o.seam = 8; }); }

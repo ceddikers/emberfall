@@ -30,6 +30,11 @@ const FIGHT = {
   // The boss files are written in "big" numbers; this brings boss HP, player HP and every hit down to the
   // game's small-number scale (same factor as ENGINE.NUM_SCALE, which scales potency).
   NUM_SCALE: 0.05,
+  // Limit Break: a shared party gauge of three bars (BAR each). A mechanic that resolves with no avoidable hits and
+  // nothing failed adds CLEAN; a damage check met, or a heal check with nobody lost, adds CHECK. Raw damage adds nothing.
+  //   TANK: party damage taken down by this much for TANK_DUR s   HEAL: party healed by this share of max health
+  //   (three bars also raise the fallen at RAISE)   DPS: a blow worth this share of the boss's max health
+  LB: { BAR: 100, CLEAN: 4, CHECK: 70, TANK: [0, 0.2, 0.35, 0.5], TANK_DUR: 8, HEAL: [0, 0.3, 0.6, 1], RAISE: 0.5, DPS: [0, 0.008, 0.018, 0.03] },
   TANK_HP: 32000, HP: 21000,   // before NUM_SCALE
 };
 const playerBaseHp = role => Math.round((role === 'tank' ? FIGHT.TANK_HP : FIGHT.HP) * FIGHT.NUM_SCALE);
@@ -52,6 +57,7 @@ class FightSim {
     this.rngState = (seed >>> 0) || 1;
     // opts.waitPull: no countdown; the party has the room to itself until someone hits the boss ('prepull', see pull())
     this.t = 0; this.state = opts.waitPull ? 'prepull' : 'countdown'; this.countdown = 8;
+    this.lb = 0; this.lbUsedAt = -99; this.avoidCount = 0;   // the Limit Break gauge (FIGHT.LB), and avoidable hits so far
     this.events = []; this.mechs = new Map(); this.nextMechId = 1; this.puddles = [];
     this.tethers = new Map(); this.adds = new Map(); this.zones = []; this.addsDirty = false;
     this.rollers = new Map(); this.reels = new Map(); this.sweeps = new Map();
@@ -392,6 +398,11 @@ class FightSim {
     if (!s.alive) return;
     const targetsOf = target => (target === 'party' ? this.alive().map(p => p.id) : [this.resolveTarget(pid, target, ev.not)]);
     switch (ev.type) {
+      case 'lb': {
+        const lv = Math.floor(this.lb / FIGHT.LB.BAR);
+        if (lv >= 1 && this.t - this.lbUsedAt >= 1) this.limitBreak(pid, s, lv);
+        break;
+      }
       case 'damage': {
         let amt = Math.max(0, Math.min(15000, ev.amount | 0));
         if (s.weakEnd > this.t) amt = Math.round(amt * (1 - FIGHT.RAISE_WEAKNESS));
@@ -609,7 +620,7 @@ class FightSim {
     s.hp -= amt;
     st.taken += amt;
     if (opts.avoidable) {
-      st.avoidable++;
+      st.avoidable++; this.avoidCount++;
       s.dmgDownEnd = this.t + FIGHT.DMG_DOWN_DUR;
       // lingering ground ticks give Damage Down but don't stack Vulnerability (it would snowball per tick)
       if (!opts.noVuln) { s.vuln = Math.min(1, (s.vulnEnd > this.t ? s.vuln : 0) + this.vulnStep); s.vulnEnd = this.t + FIGHT.VULN_DUR; }
@@ -636,15 +647,39 @@ class FightSim {
   dpsCheck(name, dur, frac, o = {}) {
     const b = this.boss, goal = Math.max(0, b.hp / b.maxHp - frac), end = this.t + dur;
     this.cast(name, dur, o.anim || 'cast', { goal: +goal.toFixed(4) });
+    this.dpsCheckEnd = end;   // (bots save a Limit Break for this)
     let done = false;
     this.ticker(() => {
       if (done || this.state !== 'live') return;
       if (b.hp / b.maxHp <= goal) {
         done = true; if (b.cast && b.cast.name === name) b.cast = null;
+        this.dpsCheckEnd = 0; this.lbGain(FIGHT.LB.CHECK);
         this.emit({ t: 'bcastend', name, ok: 1 });
         if (o.onPass) o.onPass(end - this.t);
-      } else if (this.t >= end) { done = true; this.emit({ t: 'bcastend', name, ok: 0 }); if (o.onFail) o.onFail(); }
+      } else if (this.t >= end) { done = true; this.dpsCheckEnd = 0; this.emit({ t: 'bcastend', name, ok: 0 }); if (o.onFail) o.onFail(); }
     });
+  }
+  // A heal check: the next `dur` s. If nobody falls in it, the gauge fills (FIGHT.LB.CHECK). Bots read healCheckEnd.
+  healCheck(dur) {
+    const deaths = () => Object.values(this.stats).reduce((n, st) => n + st.deaths, 0), d0 = deaths();
+    this.healCheckEnd = this.t + dur;
+    this.afterKeep(dur, () => { this.healCheckEnd = 0; if (this.state === 'live' && deaths() === d0) this.lbGain(FIGHT.LB.CHECK); });
+  }
+  lbGain(n) { this.lb = Math.min(FIGHT.LB.BAR * 3, this.lb + n); }
+  // A Limit Break: every whole bar spent at once (lv 1-3), its effect set by the role of whoever pressed it
+  limitBreak(pid, s, lv) {
+    const L = FIGHT.LB;
+    this.lb -= lv * L.BAR; this.lbUsedAt = this.t;
+    this.emit({ t: 'lb', id: pid, lv, role: s.role });
+    if (s.role === 'tank') {
+      for (const p of this.alive()) { const ts = this.ps.get(p.id); ts.mits.push({ pct: L.TANK[lv], start: this.t, end: this.t + L.TANK_DUR, kind: 'lb', from: pid }); }
+    } else if (s.role === 'healer') {
+      if (lv >= 3) for (const [tid, ts] of this.ps) if (!ts.alive && !ts.left) this.revive(tid, ts, L.RAISE, pid);
+      for (const p of this.alive()) { const ts = this.ps.get(p.id); this.applyHeal(pid, p.id, ts.maxHp * L.HEAL[lv], true); }
+    } else if (!this.boss.untargetable) {
+      this.onEvent(pid, { type: 'damage', amount: Math.round(this.boss.maxHp * L.DPS[lv]), tgt: 'boss' });
+    }
+    this.broadcastParty();
   }
   anim(name, dur = 1, extra = {}) { this.boss.anim = { name, start: this.t, end: this.t + dur }; this.emit(Object.assign({ t: 'banim', name, dur }, extra)); }
   ticker(fn) { this.tickers.push(fn); }
@@ -698,7 +733,7 @@ class FightSim {
     }
   }
   resolveMech(m) {
-    const pad = 14;
+    const pad = 14, av0 = this.avoidCount;
     const cov = m.cover ? this.coverCheck(m) : null;
     const inside = this.alive().filter(p => SHAPES.contains(m.shape, p.x, p.y, pad) && !(cov && cov.safe.has(p.id)));
     const hits = [];
@@ -762,6 +797,8 @@ class FightSim {
         break;
     }
     this.emit(fail ? { t: 'tgx', id: m.id, hits, fail } : { t: 'tgx', id: m.id, hits });
+    // answered cleanly (nobody caught by something they could avoid, nothing failed): the gauge fills a little
+    if (!fail && this.avoidCount === av0 && m.type !== 'raidwide' && m.type !== 'knockback') this.lbGain(FIGHT.LB.CLEAN);
     this.dollMech(m, cov);   // a Marionettist's Doll caught in it (classes-c)
     if (cov) for (const pr of cov.chip) this.hitProp(pr, 1, m.tag);
     if (m.onResolve) m.onResolve(inside, hits, cov);
@@ -1148,7 +1185,7 @@ class FightSim {
         s.dmgDownEnd > this.t ? Math.ceil(s.dmgDownEnd - this.t) : 0, s.vulnEnd > this.t ? Math.round(s.vuln * 100) : 0,
         Math.round((1 - mit) * 100), s.weakEnd > this.t ? 1 : 0, debuffs, Math.round(s.threat), hots]);
     }
-    this.emit({ t: 'fps', ps: list });
+    this.emit({ t: 'fps', ps: list, lb: Math.round(this.lb) });
   }
 }
 

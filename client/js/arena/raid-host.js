@@ -86,7 +86,30 @@ class RaidHost {
     };
   }
 
+  // A bot spending the Limit Break (the first press spends it, so one bot at most): a DPS saves it for a damage check
+  // (or spends a full gauge in the last fifth of the fight); a tank takes the edge off a heal check's last hits, or a
+  // tankbuster when the gauge is full; a healer raises a fallen party with three bars, or saves a sinking one.
+  botLimit() {
+    const sim = this.sim, L = FIGHT.LB, lv = Math.floor(sim.lb / L.BAR), t = sim.t;
+    if (lv < 1 || t - sim.lbUsedAt < 3) return;
+    const ps = [...sim.ps.values()].filter(q => !q.left), alive = ps.filter(q => q.alive), dead = ps.length - alive.length;
+    const low = alive.filter(q => q.hp / q.maxHp < 0.35).length;
+    const busterSoon = [...sim.mechs.values()].some(m => m.type === 'buster' && m.resolveAt - t < 1.5);
+    const want = {
+      dps: (sim.dpsCheckEnd > t && sim.dpsCheckEnd - t < 20) || (lv === 3 && sim.boss.hp / sim.boss.maxHp < 0.2),
+      tank: (sim.healCheckEnd > t && sim.healCheckEnd - t < L.TANK_DUR - 1) || (lv === 3 && busterSoon),
+      healer: (lv === 3 && dead >= 2) || (lv >= 2 && low >= 3),
+    };
+    for (const bot of this.bots) {
+      const s = sim.ps.get(bot.id);
+      if (!s || !s.alive || !want[bot.role]) continue;
+      sim.onEvent(bot.id, { type: 'lb' });
+      return;
+    }
+  }
+
   tickBots(dt) {
+    this.botLimit();
     const view = this.view();
     for (const bot of this.bots) {
       const s = this.sim.ps.get(bot.id);

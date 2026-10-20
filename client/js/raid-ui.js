@@ -60,7 +60,7 @@ const RaidUI = (() => {
         <div class="bb-next hidden"></div>
       </div>
       <div id="boss-cast" class="hidden"><i class="bc-icon"></i><div class="bc-body"><small>Next</small><b class="bc-name"></b><div class="bc-bar"><div class="fill"></div></div></div><em class="bc-left"></em></div>
-      <div id="raid-left"><div id="pf-wrap"><button id="pf-dock" class="pf-dock" type="button"></button><div id="party-frames"></div></div><div id="threat-meter" class="hidden"></div></div>
+      <div id="raid-left"><div id="pf-wrap"><button id="pf-dock" class="pf-dock" type="button"></button><div id="party-frames"></div><div id="lb-gauge" class="hidden"><small>Limit</small><div class="lb-bars"><i><b></b></i><i><b></b></i><i><b></b></i></div><kbd>G</kbd></div></div><div id="threat-meter" class="hidden"></div></div>
       <div id="party-strip"></div>
       <div id="countdown" class="hidden"></div>
       <div id="trial-lore" class="hidden"><b></b><p></p><p></p></div>
@@ -85,6 +85,7 @@ const RaidUI = (() => {
     $('pf-dock').addEventListener('mousedown', e => e.stopPropagation());
     $('pf-dock').addEventListener('click', () => { dock(docked === 'strip' ? 'left' : 'strip'); if (onDock) onDock(docked); });
     dock('left');
+    Tip.set($('lb-gauge'), () => limitTip());
     // the boss plate grows with its status row and upcoming moves: keep the target frame just below it (style.css)
     if (typeof ResizeObserver !== 'undefined') {
       const bb = $('boss-bar');
@@ -187,6 +188,7 @@ const RaidUI = (() => {
     upcoming(raid, now);
     bossStatus(raid, now, myId, marks);
     threatMeter(raid, myId);
+    limitGauge(raid, myId);
 
     // countdown before the pull
     const cd = $('countdown');
@@ -260,6 +262,33 @@ const RaidUI = (() => {
     el.classList.toggle('hidden', !marks);
     if (!marks) return;
     for (const b of el.children) { b.classList.toggle('on', !!marks[b.dataset.k]); b.classList.toggle('placing', b.dataset.k === placing); }
+  }
+
+  // ---------------------------------------------------------------- Limit Break
+  // the party's gauge under the frames: three bars, each lit as it fills (the effect is your role's: see limitTip)
+  let lbKey = '', lbRole = 'dps', lbBars = 0;
+  function limitGauge(raid, myId) {
+    const el = $('lb-gauge'), show = !raid.def.trial && (raid.state === 'live' || raid.state === 'prepull');
+    const me = roster.find(r => r.id === myId); if (me) lbRole = me.role;
+    const v = Math.max(0, Math.min(300, raid.lb || 0)), key = show ? String(Math.round(v)) : '-';
+    if (key === lbKey) return;
+    lbKey = key;
+    el.classList.toggle('hidden', !show);
+    if (!show) return;
+    lbBars = Math.floor(v / 100);
+    el.classList.toggle('ready', lbBars >= 1);
+    [...el.querySelectorAll('.lb-bars i')].forEach((seg, i) => {
+      const f = Math.max(0, Math.min(1, (v - i * 100) / 100));
+      seg.classList.toggle('full', f >= 1);
+      seg.firstChild.style.width = (f * 100).toFixed(1) + '%';
+    });
+  }
+  function limitTip() {
+    const L = FIGHT.LB, pct = a => a.slice(1).map(x => Math.round(x * 1000) / 10).join(' / ') + '%';
+    const what = lbRole === 'tank' ? `<b>Stand Fast</b>The party takes ${pct(L.TANK)} less damage for ${L.TANK_DUR}s.`
+      : lbRole === 'healer' ? `<b>Rekindle</b>Heals the party for ${pct(L.HEAL)} of their health. Three bars also raise the fallen.`
+      : `<b>Emberfall</b>One blow worth ${pct(L.DPS)} of the boss's health.`;
+    return `<b>Limit Break</b><em>${lbBars} of 3 bars · G</em>Every whole bar is spent at once, by whoever presses first. Filled by mechanics met cleanly and checks passed.<br><br>${what}`;
   }
 
   // ---------------------------------------------------------------- boss plate extras

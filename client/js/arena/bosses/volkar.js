@@ -488,6 +488,7 @@ const VOLKAR = {
     const gatheringStorm = () => {
       const d = f.ct(3), N = 8, EVERY = 1.5, end = f.t + d + N * EVERY;
       f.cast('Gathering Storm', d, 'clap');
+      f.healCheck(d + N * EVERY + 0.6);   // to just after the Thunderhead lands
       f.afterKeep(d, () => { for (const p of f.alive()) { const s = f.ps.get(p.id); if (s) s.debuffs.static = end; } });
       // (kept: the ticks run out even if the course moves on meanwhile)
       for (let i = 0; i < N; i++) f.afterKeep(d + i * EVERY, () => {

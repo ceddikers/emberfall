@@ -265,7 +265,8 @@
   // --- kit events
   const SIM_EVENTS = new Set(['damage', 'heal', 'hot', 'shield', 'mit', 'raise', 'rewind', 'selfDamage', 'targetDebuff', 'partyBuff', 'snap', 'pool', 'brand', 'taunt', 'splash',
     'maw', 'ledger',   // (the Gorgemaw's jaw and the Oathbroker's Ledger: fight.js classEvent)
-    'tie', 'snip', 'tighten', 'tapestry', 'tug']);   // (the Threadweaver's threads: fight.js weaveEvent)
+    'tie', 'snip', 'tighten', 'tapestry', 'tug',   // (the Threadweaver's threads: fight.js weaveEvent)
+    'lb']);   // (a Limit Break: fight.js limitBreak)
   const EV_FIELDS = ['type', 'amount', 'crit', 'target', 'ticks', 'interval', 'id', 'dur', 'tag', 'pct', 'kind', 'value', 'secs', 'threat', 'tgt', 'r', 'not',
     'up', 'sh', 'cl', 'pa', 'ps', 'pr', 'fol',   // (a thrown vial's splash: fight.js splash())
     'all', 'op', 'older', 'mark', 'freeze', 'drop', 'merge', 'hit', 'push', 'due', 'col', 'small', 'tithe', 'mult',   // (jaw and Ledger orders)
@@ -818,6 +819,25 @@
   Net.on('chest', m => Loot.onChest(m));
   Net.on('lootw', m => Loot.onWin(m));
   Net.onHost('lootc', (pid, m) => Loot.hostChoice(pid, m));
+  // ---------------------------------------------------------------- Limit Break (G)
+  // The party's shared gauge (the host's, fight.js): every whole bar is spent at once by whoever presses first, with the
+  // effect of their role. Tank: Stand Fast (the party takes less damage). Healer: Rekindle (heals the party; three bars
+  // raise the fallen). DPS: Emberfall (one great blow).
+  const LB_NAME = { tank: 'Stand Fast', healer: 'Rekindle', dps: 'Emberfall' };
+  function useLimit() {
+    if (!raid || raid.state !== 'live' || amDead() || raid.def.trial) return;
+    if ((raid.lb || 0) < FIGHT.LB.BAR) { FX.text(player.x, player.y - 56, 'Not ready', '#c8c0d8', 12, 0.7); return; }
+    sendCombat({ type: 'lb' });
+  }
+  Net.on('lb', msg => {
+    if (!raid) return;
+    const who = entById(msg.id), units = raidUnits(), b = raid.bossDraw, lv = Math.max(1, Math.min(3, msg.lv | 0));
+    if (who) FX.text(who.x, who.y - 64, LB_NAME[msg.role] || 'Limit Break', '#f2d38a', 14 + lv * 2, 1.6);
+    if (msg.role === 'tank') for (const u of units) { VFX.shock(u.x, u.y, { r: 46 + lv * 12, color: '#f2d38a', w: 3 + lv, dur: 0.7, flat: 1 }); VFX.shock(u.x, u.y, { r: 30, color: '#ffffff', w: 2, dur: 0.4, flat: 1 }); }
+    else if (msg.role === 'healer') for (const u of units) { VFX.burst(u.x, u.y - 24, { color: '#c8f5d0', n: 6 + lv * 3, speed: 120, size: 8 }); VFX.shock(u.x, u.y, { r: 40 + lv * 10, color: '#9fe8b0', w: 3, dur: 0.6, flat: 1 }); }
+    else if (b) { VFX.hit(b.x, b.y - 30, '#fff0c8', 1.4 + lv * 0.6); VFX.shock(b.x, b.y, { r: 140 + lv * 60, color: '#f2b060', w: 4 + lv * 2, dur: 0.7, flat: 1 }); FX.shake = Math.max(FX.shake, 4 + lv * 3); }
+  });
+
   // ---------------------------------------------------------------- waymarks
   // A B C D (circles) and 1 2 3 4 (squares) on the floor. Anyone in the raid can put one down or pick one up; the
   // host keeps the set, remembers it per boss (this browser) and sends it to everyone.
@@ -1079,6 +1099,7 @@
   });
   Net.on('fps', msg => {
     if (!raid) return;
+    if (Number.isFinite(msg.lb)) raid.lb = msg.lb;
     const listed = new Set();
     for (const [id, hp, maxHp, shield, alive, dd, vuln, mit, weak, debuffs, threat, hots] of msg.ps) {
       listed.add(id);
@@ -1521,6 +1542,7 @@
       if (pick != null) lockedAlly = pick;
       return;
     }
+    if (e.key.toLowerCase() === 'g' && inArena()) { e.preventDefault(); if (!e.repeat) useLimit(); return; }
     const idx = SLOT_OF[e.key.toLowerCase()];
     if (idx !== undefined) {
       e.preventDefault();

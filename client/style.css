@@ -948,3 +948,14 @@ body:has(#loot:not(.hidden)) #results { padding-right: 332px; }
 #waymarks .wm-clear svg { width: 11px; height: 11px; }
 #waymarks .wm:hover { filter: brightness(1.25); }
 body.placing-mark canvas { cursor: crosshair; }
+/* Limit Break: the party's three bars, under the frames */
+#lb-gauge { display: flex; align-items: center; gap: 7px; margin-top: 4px; padding: 4px 8px; background: linear-gradient(90deg, #15120fea, #100e0cd8); border: 1px solid #ffffff1a; border-radius: 3px; cursor: default; }
+#lb-gauge.hidden { display: none; }
+#lb-gauge small { font-size: 9.5px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
+#lb-gauge .lb-bars { flex: 1; display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; }
+#lb-gauge .lb-bars i { position: relative; height: 7px; background: #050403; border: 1px solid #3a2a1c; overflow: hidden; }
+#lb-gauge .lb-bars b { position: absolute; inset: 0 auto 0 0; width: 0; background: linear-gradient(90deg, #5a3e18, #a9803a); }
+#lb-gauge .lb-bars i.full { border-color: #8a6a34; }
+#lb-gauge .lb-bars i.full b { background: linear-gradient(90deg, #c9973f, #f2d38a); }
+#lb-gauge kbd { font-size: 9px; line-height: 13px; padding: 0 4px; border: 1px solid #3a2a1c; border-radius: 2px; color: var(--muted); background: #0a0807; }
+#lb-gauge.ready kbd { color: #f2d38a; border-color: #8a6a34; }
