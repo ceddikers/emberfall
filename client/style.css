@@ -1431,3 +1431,29 @@ ul.mech .mech-dot { flex: none; width: 6px; height: 6px; margin-top: 6px; transf
 #story .sy-next { flex: none; width: auto; min-width: 120px; padding: 7px 20px; }
 #story .sy-skip { flex: none; width: 60px; text-align: left; }
 .kb-wipe.armed { color: #ff8a7a; border-color: #a04a3a; }
+/* exact numbers in move text (numbers.js) */
+.num { font-weight: 700; color: #ffe2a0; font-variant-numeric: tabular-nums; }
+.num-h { color: #9fe08a; } .num-s { color: #9ad8ff; } .num-b { color: #ff9a7a; }
+.num-hard { font-size: .9em; color: var(--muted); }
+
+/* the way into the settings, always in the corner */
+#menu-chip { position: fixed; left: 16px; bottom: 14px; z-index: 5; display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px 5px 6px; font: inherit; font-size: 12px; color: #e9dfc8; background: #0d0b12c8; border: 1px solid var(--line-soft); border-radius: 6px; cursor: pointer; }
+#menu-chip:hover { color: var(--gold-hi); border-color: var(--gold-dim); }
+#menu-chip kbd { font-size: 11px; }
+#help { bottom: 50px; }
+/* the party strip above the skills, slim: no wider than the skill bar, so the arena above stays open */
+#party-strip #party-frames { grid-auto-columns: 148px; gap: 4px; }
+#party-strip .pf { padding: 3px 6px 3px 4px; }
+#party-strip .pf-name { font-size: 11.5px; }
+@media (max-width: 900px) { #party-strip #party-frames { grid-template-columns: repeat(2, 148px); } }
+/* Options: party and healing */
+.kb-pref select { padding: 4px 8px; font: inherit; font-size: 12.5px; color: #f2e6c8; background: var(--panel-2); border: 1px solid var(--line); border-radius: 2px; }
+.kb-pref > label { min-width: 110px; font-size: 12.5px; color: #e6dcc8; }
+.kb-check { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.kb-check input { accent-color: var(--gold); }
+.kb-pref.hidden { display: none; }
+
+.bb-tot { margin-left: 10px; font-style: normal; font-size: 12px; color: var(--rc, var(--muted)); }
+.kb-check { white-space: nowrap; flex: none; }
+/* (numbers sit in the sentence, whatever the panel does with its own bold headings) */
+b.num, #tip b.num, .pt-panel b.num, .tu-body b.num, #sel-detail b.num { display: inline; margin: 0; font-family: inherit; font-size: inherit; letter-spacing: 0; text-transform: none; }

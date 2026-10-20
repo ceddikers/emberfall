@@ -206,7 +206,7 @@ const GRUBNAK = {
         f.aoe({ kind: 'donut', x: at.x, y: at.y, r: 1300, r2: RUSH_LID }, RUSH_FIRST + RUSH_BEAT, dmg.ladle, { tag: 'lid' });
       };
       for (const p of al) {
-        const m = f.mech({ type: 'drop', shape: { kind: 'circle', x: p.x, y: p.y, r: 72 }, delay: d, dmg: 0, follow: p.id, tag: 'platedrop', avoidable: false, color: '#ffd23a',
+        const m = f.mech({ type: 'drop', shape: { kind: 'circle', x: p.x, y: p.y, r: 72 }, delay: d, dmg: 0, follow: p.id, tag: 'platedrop', avoidable: false, color: '#3d8bff',
           onResolve: () => {
             if (f.alive().some(q => q.id === p.id)) down.push({ x: Math.round(m.shape.x), y: Math.round(m.shape.y) });
             if (--left === 0) lay();

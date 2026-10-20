@@ -33,7 +33,7 @@ const Tip = (() => {
     // live tips (functions) are rebuilt while hovered so readouts like gauge values stay current
     if (n !== cur || (n && typeof fns.get(n) === 'function')) {
       cur = n;
-      const html = n ? content(n) : '';
+      const html = n ? (typeof Num !== 'undefined' ? Num.fill(content(n)) : content(n)) : '';   // (move text: exact numbers, numbers.js)
       el.classList.toggle('hidden', !html);
       if (html && html !== shown) el.innerHTML = html;
       shown = html;

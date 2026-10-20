@@ -223,7 +223,7 @@ const SKITTERRA = {
     };
 
     // Snare Weave (Hard, Act II): she scuttles to the hub and weaves the whole web full of spring-snares, two layers of
-    // them, with only three pockets of floor (drawn blue) clear in each: one close in by her (for her shield and anyone
+    // them, with only three pockets of floor (not painted: read from the snares) clear in each: one close in by her (for her shield and anyone
     // who fights up close) and two out at range. The pockets are the same every time, and the second layer's are the
     // first's turned a sixth of the way round her, so the whole party steps round with her, pocket to pocket, in one
     // turn. The second layer is drawn from early on, faint until the first lands. A snare that catches you hits and
@@ -241,7 +241,7 @@ const SKITTERRA = {
         const r = Math.min(SNARE_R, ...gaps.map(g => Math.hypot(g.x - x, g.y - y) - SNARE_GAP - 6));
         if (r >= 70) out.push({ x, y, r: Math.round(r) });
       }
-      // then fill any hole the grid left away from the pockets (under her, mostly) with smaller snares, so the blue
+      // then fill any hole the grid left away from the pockets (under her, mostly) with smaller snares, so the
       // pockets are the only clear floor that matters
       const gapD = (x, y) => Math.min(...gaps.map(g => Math.hypot(g.x - x, g.y - y)));
       for (let n = 0; n < 12; n++) {

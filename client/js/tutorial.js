@@ -27,9 +27,9 @@ const Tutorial = (() => {
     if (!d || !b) return '';
     const icon = n => (typeof BossIcons !== 'undefined' ? `<i class="tu-ic" style="background-image:${BossIcons.css(id, n)}"></i>` : '');
     const moves = Object.entries(d.moves);
-    return `<h3>${esc(b.name)}</h3><p class="tu-intro">${esc(d.intro)}</p>
-      <h4>How it goes</h4><ol class="tu-phases">${d.phases.map(p => `<li><b>${esc(p.name)}</b><span>${esc(p.body)}</span></li>`).join('')}</ol>
-      <h4>Every move</h4><div class="tu-moves">${moves.map(([n, m]) => `<div class="tu-move">${icon(n)}<div><h5>${esc(n)}${m.hard ? '<em>Hard</em>' : ''}</h5><p>${esc(m.what)}</p><p class="tu-ans">${esc(m.answer)}</p>${m.hardNote ? `<p class="tu-hard"><u>Hard</u> ${esc(m.hardNote)}</p>` : ''}</div></div>`).join('')}</div>`;
+    return `<h3>${esc(b.name)}</h3><p class="tu-intro">${Num.fill(esc(d.intro))}</p>
+      <h4>How it goes</h4><ol class="tu-phases">${d.phases.map(p => `<li><b>${esc(p.name)}</b><span>${Num.fill(esc(p.body))}</span></li>`).join('')}</ol>
+      <h4>Every move</h4><div class="tu-moves">${moves.map(([n, m]) => `<div class="tu-move">${icon(n)}<div><h5>${esc(n)}${m.hard ? '<em>Hard</em>' : ''}</h5><p>${Num.fill(esc(m.what))}</p><p class="tu-ans">${Num.fill(esc(m.answer))}</p>${m.hardNote ? `<p class="tu-hard"><u>Hard</u> ${Num.fill(esc(m.hardNote))}</p>` : ''}</div></div>`).join('')}</div>`;
   }
   function render() {
     const page = at.kind === 'boss' ? bossHtml(at.id) : lessonHtml(T.lessons.find(l => l.id === at.id) || T.lessons[0]);

@@ -24,18 +24,20 @@ const BossTells = (() => {
   }
   // One colour language for every boss: the rim and wash say what the floor means, the art inside (its edges, textures
   // and motion) says whose it is. Red: danger (keep out, or keep it off the others: a spread, a line on you, a pool
-  // you carry); a deeper red for a tankbuster. Blue: safe floor (a pocket, a donut's middle, a shadow behind cover).
-  // Yellow: share it (stand in together, soak it). A circle in a player's own colour (FIGHT.SLOTS) is theirs.
-  // (raidwides have no rim: the whole room is the warning)
-  const COL = { danger: '#ff3b2f', dangerHi: '#ffb4a8', buster: '#ff1f48', safe: '#3d8bff', safeHi: '#b4d4ff', share: '#ffd23a', shareHi: '#fff0a8' };
+  // you carry); a deeper red for a tankbuster. Blue: share it (stand in together: a stack, a tower, a soak).
+  // Nothing is painted to say "stand here": safe floor is simply the floor the red doesn't cover, and the players work
+  // it out. A circle in a player's own colour (FIGHT.SLOTS) is theirs.
+  // (raidwides have no rim: the whole room is the warning; 'safe' mechs are sim data only and draw nothing)
+  const COL = { danger: '#ff3b2f', dangerHi: '#ffb4a8', buster: '#ff1f48', share: '#3d8bff', shareHi: '#b4d4ff' };
   const ROLE_RIM = { aoe: COL.danger, proximity: COL.danger, knockback: COL.danger, hook: COL.danger, spread: COL.danger, chain: COL.danger, bait: COL.danger, drop: COL.danger,
-    buster: COL.buster, stack: COL.share, tower: COL.share, safe: COL.safe };
-  // (a drop can name its own rim: the Dinner Rush's plates are yellow, since each will be a plate to share)
+    buster: COL.buster, stack: COL.share, tower: COL.share };
+  // (a drop can name its own rim: the Dinner Rush's plates are blue, since each will be a plate to share)
   const roleColor = (tg, tell) => ((tg.type === 'own' || tg.type === 'drop') && tg.color) || ROLE_RIM[tg.type] || (tell && tell.color) || '#ffffff';
   // The fair-play outline: a solid rim in the role colour and a faint wash sweeping out from the origin as the cast
   // runs, with a bright leading edge. In the last 0.6s the rim pulses; a shape that follows someone flashes white the
   // moment it locks in place. The same on every difficulty.
   function outline(ctx, tg, s, p, k, t, env, tell) {
+    if (tg.type === 'safe') return;   // safe floor is never outlined
     const col = roleColor(tg, tell), left = (1 - p) * tg.dur;
     const late = clamp(1 - left / 0.6, 0, 1), landed = tg.gone != null;
     ctx.save();
@@ -46,15 +48,7 @@ const BossTells = (() => {
         ctx.strokeStyle = rgba(col, 0.5 * k * (1 - late)); ctx.lineWidth = 2; ctx.stroke();
       }
     }
-    SHAPES.trace(ctx, s);
-    if (s.kind === 'donut') {
-      // the safe circle reads as safe: a blue lift inside it and a clean blue edge
-      ctx.save(); ctx.beginPath(); ctx.arc(s.x, s.y, s.r2, 0, TAU);
-      ctx.fillStyle = rgba(COL.safe, 0.1 * k); ctx.fill();
-      ctx.strokeStyle = rgba(COL.safeHi, (0.5 + 0.35 * late) * k); ctx.lineWidth = 2.5; ctx.stroke();
-      ctx.restore();
-      SHAPES.trace(ctx, s);
-    }
+    SHAPES.trace(ctx, s);   // (a donut's hole is left unpainted: only its red ring is drawn)
     ctx.setLineDash([12, 10]); ctx.lineDashOffset = -t * 24; ctx.strokeStyle = rgba(col, 0.28 * k); ctx.lineWidth = 6; ctx.stroke(); ctx.setLineDash([]);
     ctx.strokeStyle = rgba(col, (0.55 + 0.4 * late) * k); ctx.lineWidth = 2 + late * 1.5; ctx.stroke();
     if (late > 0 && !landed) {
@@ -72,7 +66,7 @@ const BossTells = (() => {
     ctx.save();
     ARENA.trace(ctx, 4); ctx.clip();
     for (const tg of tgs.values()) {
-      if (tg.hidden || tg.type === 'raidwide' || tg.gone != null) continue;
+      if (tg.hidden || tg.type === 'raidwide' || tg.type === 'safe' || tg.gone != null) continue;
       const tell = get(tg, env);
       if (tell && tell.outline === false) continue;
       const k = fade(tg, t) * ghost(tg, env);
@@ -191,7 +185,7 @@ const BossTells = (() => {
         ctx.restore();
       },
     },
-    // Lid Slam: the lid's shadow is the only safe floor; outside it, the tiles shiver
+    // Lid Slam: the lid's shadow is the only floor it spares; outside it, the tiles shiver and the floor reads red
     lid: {
       color: '#cfe0ff',
       ground(ctx, tg, s, p, k, t) {
@@ -201,7 +195,7 @@ const BossTells = (() => {
           circle(ctx, s.x, s.y, rr, null, rgba(COL.dangerHi, 0.28 * (1 - q) * k), 2 + 2 * p);
         }
         shadow(ctx, s.x, s.y, r2 * (0.75 + 0.25 * easeIn(p)), (0.3 + 0.25 * p) * k);
-        circle(ctx, s.x, s.y, r2, null, rgba(COL.safeHi, (0.45 + 0.45 * p) * k), 3);
+        circle(ctx, s.x, s.y, r2, null, rgba(COL.danger, (0.45 + 0.45 * p) * k), 3);   // the red edge of the hit
         for (let i = 0; i < 3; i++) { const a = t * 0.8 + i * 2.1; glow(ctx, s.x + Math.cos(a) * r2, s.y + Math.sin(a) * r2, 14, '#ffffff', 0.6 * k); }
       },
     },
@@ -219,14 +213,14 @@ const BossTells = (() => {
     },
     // Family Meal: a huge silver cloche comes down over the target; get under it together
     stack: {
-      color: '#ffe27a',
+      color: '#3d8bff',
       ground(ctx, tg, s, p, k, t) {
         shadow(ctx, s.x, s.y, s.r * (0.5 + 0.5 * p), (0.25 + 0.3 * p) * k);
         ctx.save(); ctx.setLineDash([8, 8]); ctx.lineDashOffset = t * 20;
-        circle(ctx, s.x, s.y, s.r, null, rgba('#ffd84a', (0.5 + 0.4 * p) * k), 2.5);
+        circle(ctx, s.x, s.y, s.r, null, rgba(COL.share, (0.5 + 0.4 * p) * k), 2.5);
         ctx.restore();
         const need = Math.max(1, tg.need || 1);
-        for (let i = 0; i < need; i++) { const a = -Math.PI / 2 + (i - (need - 1) / 2) * 0.42; circle(ctx, s.x + Math.cos(a) * (s.r + 14), s.y + Math.sin(a) * (s.r + 14), 6, rgba('#fff6d8', k), OUT, 1.5); }
+        for (let i = 0; i < need; i++) { const a = -Math.PI / 2 + (i - (need - 1) / 2) * 0.42; circle(ctx, s.x + Math.cos(a) * (s.r + 14), s.y + Math.sin(a) * (s.r + 14), 6, rgba(COL.shareHi, k), OUT, 1.5); }
       },
       air(ctx, tg, s, p, k) { cloche(ctx, s.x, s.y - 230 * (1 - easeIn(p)), s.r * 0.8, k * (0.55 + 0.45 * p), false); },
     },
@@ -239,9 +233,9 @@ const BossTells = (() => {
         circle(ctx, s.x, s.y, s.r, '#f6f3ea', OUT, 3);
         circle(ctx, s.x, s.y, s.r * 0.72, null, '#d8d2c2', 2);
         ctx.setLineDash([6, 7]); circle(ctx, s.x, s.y, s.r * 0.88, null, COL.share, 3); ctx.setLineDash([]);
-        circle(ctx, s.x, s.y, s.r + 1, null, rgba(COL.share, 0.85), 2.5);   // (a soak: the yellow rim)
-        // the rim fills with gold as the order comes up
-        ctx.beginPath(); ctx.arc(s.x, s.y, s.r + 5, -Math.PI / 2, -Math.PI / 2 + TAU * p); ctx.strokeStyle = '#e8c15a'; ctx.lineWidth = 4; ctx.stroke();
+        circle(ctx, s.x, s.y, s.r + 1, null, rgba(COL.share, 0.85), 2.5);   // (a soak: the blue rim)
+        // the rim fills in as the order comes up
+        ctx.beginPath(); ctx.arc(s.x, s.y, s.r + 5, -Math.PI / 2, -Math.PI / 2 + TAU * p); ctx.strokeStyle = COL.shareHi; ctx.lineWidth = 4; ctx.stroke();
         const need = Math.max(1, tg.need || 1);
         for (let i = 0; i < need; i++) circle(ctx, s.x + (i - (need - 1) / 2) * 14, s.y - s.r - 14, 5, '#e8fffa', OUT, 1.5);
         ctx.restore();
@@ -252,9 +246,9 @@ const BossTells = (() => {
       },
     },
     // Dinner Rush (Hard): a hot plate held up over the hero, a cloche on it, steaming harder as it nears; under them,
-    // the ring where it will be set down (yellow: it will be a plate someone serves), a dish shadow growing in it
+    // the ring where it will be set down (blue: it will be a plate someone serves), a dish shadow growing in it
     platedrop: {
-      color: '#ffd23a',
+      color: '#3d8bff',
       ground(ctx, tg, s, p, k, t) {
         shadow(ctx, s.x, s.y, s.r * (0.35 + 0.55 * p), (0.2 + 0.3 * p) * k);
         ctx.save(); ctx.setLineDash([6, 7]); ctx.lineDashOffset = -t * 18;
@@ -368,9 +362,11 @@ const BossTells = (() => {
             ctx.strokeStyle = rgba(col, k); ctx.lineWidth = 5; ctx.stroke();
           }
         }
-        // the exact edge in red (the coils are the art), and the cool middle in blue
+        // the exact edges in red and a faint red wash over the coils (they're the art); the cool middle is left unpainted
+        ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, TAU); if (r2) ctx.arc(s.x, s.y, r2, 0, TAU, true);
+        ctx.fillStyle = rgba(COL.danger, (0.05 + 0.07 * p) * k); ctx.fill();
         circle(ctx, s.x, s.y, s.r - 2, null, rgba(COL.danger, (0.45 + 0.4 * p) * k), 2.5);
-        if (r2) circle(ctx, s.x, s.y, r2, null, rgba(COL.safeHi, (0.4 + 0.4 * p) * k), 2);
+        if (r2) circle(ctx, s.x, s.y, r2, null, rgba(COL.danger, (0.4 + 0.4 * p) * k), 2);
         if (heat > 0.35) {
           ctx.save(); ctx.globalCompositeOperation = 'lighter';
           ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, TAU); if (r2) ctx.arc(s.x, s.y, r2, 0, TAU, true);
@@ -507,9 +503,9 @@ const BossTells = (() => {
       ground(ctx, tg, s, p, k, t) {
         const R = AR() * 2.2, rr = 80 + R * easeOut(p);
         const g = ctx.createRadialGradient(s.x, s.y, 40, s.x, s.y, rr);
-        g.addColorStop(0, rgba('#8a9a3a', (0.34 + 0.2 * p) * k)); g.addColorStop(0.75, rgba('#6a7a2a', (0.22 + 0.16 * p) * k)); g.addColorStop(1, rgba('#c8d87a', 0.05 * k));
+        g.addColorStop(0, rgba('#8a9a3a', (0.2 + 0.14 * p) * k)); g.addColorStop(0.75, rgba('#6a7a2a', (0.1 + 0.1 * p) * k)); g.addColorStop(1, rgba('#c8d87a', 0.04 * k));
         ctx.fillStyle = g; ctx.fillRect(-R, -R, R * 2, R * 2);
-        ctx.fillStyle = rgba(COL.danger, (0.06 + 0.08 * p) * k); ctx.fillRect(-R, -R, R * 2, R * 2);   // danger everywhere but the shadows
+        ctx.fillStyle = rgba(COL.danger, (0.16 + 0.12 * p) * k); ctx.fillRect(-R, -R, R * 2, R * 2);   // damage (red) everywhere but the shadows
         for (let i = 0; i < 4; i++) { const q = (t * 0.7 + i / 4) % 1; circle(ctx, s.x, s.y, 60 + q * R * 0.5, null, rgba('#e8f0b0', 0.28 * (1 - q) * k), 3); }
         if (p > 0.7) for (let i = 0; i < 18; i++) { const a = hash(i, tg.id) * TAU, d = 120 + hash(i + 2, tg.id) * 600; circle(ctx, s.x + Math.cos(a) * d, s.y + Math.sin(a) * d, 3 + hash(i, 5) * 4, rgba('#f0f8c0', 0.5 * (p - 0.7) / 0.3 * k)); }
       },
@@ -726,8 +722,8 @@ const BossTells = (() => {
       color: '#c8ff8a', outline: false,
       ground(ctx, tg, s, p, k, t) {
         const R = AR() * 1.4;
-        ctx.fillStyle = rgba('#5ab82a', (0.12 + 0.14 * p) * k); ctx.fillRect(-R, -R, R * 2, R * 2);
-        ctx.fillStyle = rgba(COL.danger, (0.06 + 0.08 * p) * k); ctx.fillRect(-R, -R, R * 2, R * 2);   // danger everywhere but the shadows
+        ctx.fillStyle = rgba('#5ab82a', (0.05 + 0.06 * p) * k); ctx.fillRect(-R, -R, R * 2, R * 2);
+        ctx.fillStyle = rgba(COL.danger, (0.16 + 0.12 * p) * k); ctx.fillRect(-R, -R, R * 2, R * 2);   // damage (red) everywhere but the shadows
         // acid coming down at a slant: streaked drops falling onto the lit floor, a ring where each lands
         const n = 70 + Math.round(60 * p), sp = 0.9 + 1.4 * p;
         ctx.save(); ctx.lineCap = 'round';
@@ -818,18 +814,8 @@ const BossTells = (() => {
         }
       },
     },
-    // ... and the pockets she leaves clear: blue, the floor under them swept bare of silk, a calm ring breathing slowly
-    snaregap: {
-      color: '#3d8bff',
-      ground(ctx, tg, s, p, k, t) {
-        glow(ctx, s.x, s.y, s.r * 1.3, COL.safe, (0.14 + 0.12 * p) * k);
-        circle(ctx, s.x, s.y, s.r, rgba(COL.safe, 0.16 * k), null);
-        circle(ctx, s.x, s.y, s.r * (0.55 + 0.08 * Math.sin(t * 2 + tg.id)), null, rgba(COL.safeHi, 0.4 * k), 1.5);
-        // a countdown round it: when the snares round it will spring
-        ctx.beginPath(); ctx.arc(s.x, s.y, s.r + 6, -Math.PI / 2, -Math.PI / 2 + TAU * (1 - p));
-        ctx.strokeStyle = rgba('#ffffff', 0.6 * k); ctx.lineWidth = 2; ctx.stroke();
-      },
-    },
+    // (the pockets she leaves clear, 'snaregap', are sim data only: nothing is drawn there, the red snares round them
+    // show the way)
     // Egg-Laden: a pale clutch hangs on the carrier's back, swelling; the circle under them is where its pool will lie,
     // venom beading in it as it nears, and a ring counts down to the drop
     eggdrop: {
@@ -942,7 +928,7 @@ const BossTells = (() => {
     },
     // Thunder Crash: a storm cloud gathers over each + player, and its shadow is where the pair stands together
     crash: {
-      color: '#ffd84a', outline: false,
+      color: '#3d8bff', outline: false,
       ground(ctx, tg, s, p, k, t) { shadow(ctx, s.x, s.y, s.r * 0.9, (0.2 + 0.25 * p) * k); ArenaView.stackMarker(ctx, s, p, k, t); },
       air(ctx, tg, s, p, k, t) {
         stormCloud(ctx, s.x, s.y - 170 + p * 40, 70 + p * 20, (0.5 + 0.4 * p) * k, t, tg.id);
@@ -990,8 +976,8 @@ const BossTells = (() => {
         stormCloud(ctx, s.x, s.y - 190, 60 + p * 30, (0.3 + 0.5 * p) * k, t, tg.id);
       },
     },
-    // Gale Slam: the wind pours in toward him (he's drawing breath). On Normal the still air behind each rod
-    // shows faintly, a pale calm strip running out to the wall.
+    // Gale Slam: the wind pours in toward him (he's drawing breath). Where the still air lies behind the rods is not
+    // painted: that's for the players to work out.
     gale: {
       outline: false,
       ground(ctx, tg, s, p, k, t, env) {
@@ -1008,16 +994,6 @@ const BossTells = (() => {
           ctx.beginPath(); ctx.moveTo(x1 - ux * 9 - uy * 6, y1 - uy * 9 + ux * 6); ctx.lineTo(x1, y1); ctx.lineTo(x1 - ux * 9 + uy * 6, y1 - uy * 9 - ux * 6); ctx.stroke();
         }
         ctx.restore();
-        for (const c of env.covers || []) {
-          const cx = c.x - b.x, cy = c.y - b.y, cd = Math.hypot(cx, cy);
-          if (cd < 1) continue;
-          const ang = Math.atan2(cy, cx);
-          const strip = { kind: 'rect', x: c.x - Math.cos(ang) * 20, y: c.y - Math.sin(ang) * 20, angle: ang, len: R * 2, w: 92 };
-          ctx.save(); SHAPES.trace(ctx, strip);
-          ctx.fillStyle = rgba(COL.safe, 0.14 * k); ctx.fill();
-          ctx.setLineDash([10, 10]); ctx.lineDashOffset = t * 12; ctx.strokeStyle = rgba(COL.safeHi, 0.55 * k); ctx.lineWidth = 2; ctx.stroke();
-          ctx.restore();
-        }
       },
     },
     // Grounding Rods (Hard): an iron rod hangs point-down over the hero, swaying, sparks running down it; under them a
@@ -1060,23 +1036,7 @@ const BossTells = (() => {
         ctx.restore();
       },
     },
-    // ... and the still air past a rod while its front passes: a calm blue lane, chevrons drifting along it away from
-    // the rod
-    stilllane: {
-      color: '#3d8bff',
-      ground(ctx, tg, s, p, k, t) {
-        ctx.save(); ARENA.trace(ctx, 4); ctx.clip();
-        SHAPES.trace(ctx, s); ctx.fillStyle = rgba(COL.safe, 0.12 * k); ctx.fill();
-        const ca = Math.cos(s.angle), sa = Math.sin(s.angle);
-        for (let i = 0; i < 6; i++) {
-          const q = (t * 0.25 + i / 6) % 1, d = 30 + q * Math.min(s.len, AR() * 1.2);
-          ctx.save(); ctx.translate(s.x + ca * d, s.y + sa * d); ctx.rotate(s.angle);
-          poly(ctx, [-6, -10, 6, 0, -6, 10, -2, 0], rgba(COL.safeHi, 0.35 * (1 - q) * k), null);
-          ctx.restore();
-        }
-        ctx.restore();
-      },
-    },
+    // (the still air past a rod while its front passes, 'stilllane', is sim data only: the red cells show the gap)
     // Rod Strike: a thread of charge runs from each marked player to the stone nearest them, and that stone's runes
     // wake; within reach the thread holds steady, out of reach it frays. A stone still holding a charge glows red.
     rodstrike: {
@@ -1086,7 +1046,7 @@ const BossTells = (() => {
         for (const pr of env.props || []) if (pr.kind === 'stone') { const d = PROPS.sd(pr, s.x, s.y); if (d < sd) { sd = d; st = pr; } }
         if (!st) return;
         const near = sd <= 70, hot = st.state > 0, col = hot ? COL.danger : COL.share;
-        glow(ctx, st.x, st.y, st.r + 70, hot ? COL.danger : '#c8a03a', (0.12 + 0.2 * p) * k);
+        glow(ctx, st.x, st.y, st.r + 70, hot ? COL.danger : COL.share, (0.12 + 0.2 * p) * k);
         ctx.save(); ctx.setLineDash([8, 8]); ctx.lineDashOffset = -t * 30;
         circle(ctx, st.x, st.y, st.r + 70, null, rgba(col, (0.3 + 0.4 * p) * k), 2);
         ctx.restore();
@@ -1168,11 +1128,11 @@ const BossTells = (() => {
     // Heavens Fall: a rune circle for the column of sky, four great arrowheads pointing in, and the clouds over it
     // opening as it comes down
     heavens: {
-      color: '#ffd84a', outline: false,
+      color: '#3d8bff', outline: false,
       ground(ctx, tg, s, p, k, t) {
         ArenaView.stackMarker(ctx, s, p, k, t);
         const R = s.r + 36, spin = t * 0.3;
-        glow(ctx, s.x, s.y, R * 1.2, '#c8a03a', (0.1 + 0.2 * p) * k);
+        glow(ctx, s.x, s.y, R * 1.2, COL.share, (0.1 + 0.2 * p) * k);
         circle(ctx, s.x, s.y, R, null, rgba(COL.share, (0.45 + 0.4 * p) * k), 2.5);
         circle(ctx, s.x, s.y, R + 14, null, rgba(COL.shareHi, (0.25 + 0.3 * p) * k), 1.2);
         for (let i = 0; i < 24; i++) { const a = spin + i * TAU / 24, l = i % 6 ? 5 : 14; line(ctx, s.x + Math.cos(a) * R, s.y + Math.sin(a) * R, s.x + Math.cos(a) * (R + l), s.y + Math.sin(a) * (R + l), rgba('#cff2ff', (0.45 + 0.4 * p) * k), 1.5); }
@@ -1248,7 +1208,8 @@ const BossTells = (() => {
       if (u.a == null) continue;
       let d = Math.atan2(b.y - u.y, b.x - u.x) - u.a;
       while (d > Math.PI) d -= TAU; while (d < -Math.PI) d += TAU;
-      const caught = (Math.abs(d) < 1.2) === caughtFacing, col = caught ? COL.danger : COL.safeHi;
+      // (not caught: a plain pale cone, only showing the way they face; it says nothing about where to stand)
+      const caught = (Math.abs(d) < 1.2) === caughtFacing, col = caught ? COL.danger : '#d8d4cc';
       const R = 95, kk = k * (0.55 + 0.45 * p);
       ctx.save(); ctx.translate(u.x, u.y);
       ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, R, u.a - 1.2, u.a + 1.2); ctx.closePath();
@@ -1390,8 +1351,8 @@ const BossTells = (() => {
           if (ARENA.sd(x, y) > -20) continue;
           graveHand(ctx, x, y, 16 + 22 * easeIn(p), k * Math.min(1, p * 2), tg.tag[0] === 'e' ? '#cfe8ff' : '#d0b0ff');
         }
-        // the safe ring round him, its edge lit blue
-        circle(ctx, s.x, s.y, s.r2, null, rgba(COL.safeHi, (0.4 + 0.4 * p) * k), 2.5);
+        // the inner edge of the hit, in red (the ring round him it spares is left unpainted)
+        circle(ctx, s.x, s.y, s.r2, null, rgba(COL.danger, (0.4 + 0.4 * p) * k), 2.5);
       },
     },
     // Grave Marks: a rune burns under each hero; keep out of each other's
@@ -1413,7 +1374,7 @@ const BossTells = (() => {
         ctx.beginPath(); ctx.arc(s.x, s.y, s.r + 5, -Math.PI / 2, -Math.PI / 2 + TAU * (1 - p));
         ctx.strokeStyle = rgba('#ffffff', 0.7 * k); ctx.lineWidth = 2; ctx.stroke();
         const n = tg.need || 1;
-        for (let i = 0; i < n; i++) circle(ctx, s.x + (i - (n - 1) / 2) * 16, s.y + s.r + 16, 4.5, rgba('#ffe2a0', 0.9 * k), OUT, 1.5);
+        for (let i = 0; i < n; i++) circle(ctx, s.x + (i - (n - 1) / 2) * 16, s.y + s.r + 16, 4.5, rgba(COL.shareHi, 0.9 * k), OUT, 1.5);
       },
       air(ctx, tg, s, p, k, t) {
         const sw = Math.sin(t * (2 + p * 6)) * (0.1 + 0.35 * p), hy = s.y - 150;
@@ -1452,7 +1413,7 @@ const BossTells = (() => {
         const g = ctx.createLinearGradient(0, top, 0, ARENA.hh);
         g.addColorStop(0, rgba('#3aff7a', (0.3 + 0.15 * p) * k)); g.addColorStop(1, rgba('#3aff7a', (0.1 + 0.12 * p) * k));
         ctx.fillStyle = g; ctx.fillRect(-ARENA.hw - 20, top, ARENA.hw * 2 + 40, ARENA.hh * 2 + 40);
-        ctx.fillStyle = rgba(COL.danger, (0.06 + 0.08 * p) * k); ctx.fillRect(-ARENA.hw - 20, top, ARENA.hw * 2 + 40, ARENA.hh * 2 + 40);   // danger but the shadows
+        ctx.fillStyle = rgba(COL.danger, (0.12 + 0.1 * p) * k); ctx.fillRect(-ARENA.hw - 20, top, ARENA.hw * 2 + 40, ARENA.hh * 2 + 40);   // damage (red) but the shadows
         // the front of the wave, reaching further as the cast goes on
         ctx.fillStyle = rgba('#c8ffd8', 0.12 * k); ctx.fillRect(-ARENA.hw - 20, top, ARENA.hw * 2 + 40, front - top);
         line(ctx, -ARENA.hw - 20, front, ARENA.hw + 20, front, rgba(COL.danger, (0.5 + 0.4 * p) * k), 3);
@@ -1500,7 +1461,8 @@ const BossTells = (() => {
       },
     },
     // Writ of Execution (Hard): a grave-chain from him to the hero it names, and the lane the writ's grave-light will
-    // run down, out through them. Red (the outline); the Pardoned's is blue, its chain hanging broken.
+    // run down, out through them. Red (the outline); the Pardoned's lane isn't painted at all, only its chain hanging
+    // broken. (The pardon is a 'safe' mech: sim data, with no rim.)
     writ: {
       ground(ctx, tg, s, p, k, t, env) { writLane(ctx, tg, s, p, k, t, env, false); },
     },
@@ -1511,7 +1473,7 @@ const BossTells = (() => {
   function writLane(ctx, tg, s, p, k, t, env, free) {
     const ca = Math.cos(s.angle), sa = Math.sin(s.angle), L = toWall(s.x, s.y, s.angle, s.len);
     ctx.save(); SHAPES.trace(ctx, s); ctx.clip();
-    ctx.fillStyle = free ? rgba(COL.safe, (0.06 + 0.08 * p) * k) : `rgba(4,10,8,${(0.2 + 0.25 * p) * k})`; ctx.fillRect(-AR() * 2, -AR() * 2, AR() * 4, AR() * 4);
+    if (!free) { ctx.fillStyle = `rgba(4,10,8,${(0.2 + 0.25 * p) * k})`; ctx.fillRect(-AR() * 2, -AR() * 2, AR() * 4, AR() * 4); }
     // runes of the sentence running down it (none on a torn writ)
     if (!free) for (let d = 120 + (t * 90) % 90; d < L; d += 90) {
       const x = s.x + ca * d, y = s.y + sa * d;
@@ -1532,14 +1494,14 @@ const BossTells = (() => {
       ellipse(ctx, x, y, 7, i % 2 ? 2 : 4, Math.atan2(ey - by, ex - bx), null, rgba(i % 2 ? '#4a5258' : '#6a747c', k), 2.2);
     }
     if (!free) glow(ctx, bx + (ex - bx) * ((t * (0.6 + 2 * p)) % 1), by + (ey - by) * ((t * (0.6 + 2 * p)) % 1), 10, '#6dff9a', 0.7 * k);
-    else glow(ctx, ex, ey, 18, COL.safe, 0.5 * k);
+    else glow(ctx, ex, ey, 18, '#e8e4dc', 0.4 * k);
   }
   for (const kind of ['sweep', 'stomp', 'ring']) {
-    // the knights' replays: the same thing in the brighter green of the dead
+    // the knights' replays: the same red, with the pale grey of a memory over it (blue is for stacks)
     const base = K[kind];
-    K['e' + kind] = { color: '#9fd0ff', ground(ctx, tg, s, p, k, t, env) {
+    K['e' + kind] = { color: '#d8d4cc', ground(ctx, tg, s, p, k, t, env) {
       base.ground(ctx, tg, s, p, k, t, env);
-      ctx.save(); SHAPES.trace(ctx, s); ctx.fillStyle = rgba('#6ab8ff', (0.05 + 0.1 * p) * k); ctx.fill(); ctx.restore();
+      ctx.save(); SHAPES.trace(ctx, s); ctx.fillStyle = rgba('#d8d4cc', (0.05 + 0.1 * p) * k); ctx.fill(); ctx.restore();
     } };
   }
 
@@ -1652,8 +1614,8 @@ const BossTells = (() => {
     const tell = get(tg, env);
     if (!tell) return false;
     k *= ghost(tg, env);
-    // a blast you can hide from: drawn with every cover prop's shadow cut out of it, so the safe floor shows as the
-    // room's own lit tiles behind each prop
+    // a blast you can hide from: drawn with every cover prop's shadow cut out of it, so the floor behind each prop is
+    // simply left unpainted (no colour of its own: the players read it from the red around it)
     const shadows = tg.cover ? coverShadows(tg, env) : null;
     if (shadows) { ctx.save(); clipOut(ctx, shadows); }
     if (tg.type === 'raidwide') { if (tell.ground) tell.ground(ctx, tg, s, p, k, t, env); }
@@ -1661,7 +1623,7 @@ const BossTells = (() => {
       if (tell.ground) tell.ground(ctx, tg, s, p, k, t, env);
       if (tell.outline !== false) outline(ctx, tg, s, p, k, t, env, tell);
     }
-    if (shadows) { ctx.restore(); shadowRims(ctx, shadows, p, k, t, tell.color || '#ffffff'); }
+    if (shadows) ctx.restore();
     return true;
   }
   // the shadows behind every cover prop, seen from the blast's source
@@ -1690,20 +1652,6 @@ const BossTells = (() => {
   }
   function ghostK(ahead) {
     return ahead === 0 ? 1 : ahead === 1 ? 0.45 : 0.22;
-  }
-  // the safe patch behind each prop: a blue lift on the floor and bright blue edges along the shadow's sides
-  function shadowRims(ctx, shadows, p, k, t, color) {
-    ctx.save();
-    for (const sh of shadows) {
-      ctx.beginPath(); sh.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.closePath();
-      ctx.fillStyle = rgba(COL.safe, (0.08 + 0.08 * p) * k); ctx.fill();
-      for (const [a, b] of [[0, 1], [3, 2]]) {
-        ctx.beginPath(); ctx.moveTo(sh[a][0], sh[a][1]); ctx.lineTo(sh[b][0], sh[b][1]);
-        ctx.strokeStyle = rgba(COL.safeHi, (0.45 + 0.4 * p) * k); ctx.lineWidth = 2; ctx.stroke();
-      }
-    }
-    ctx.restore();
-    void t;
   }
   // how visible a telegraph is: fades in over its first quarter second, and out over a quarter second once it has
   // landed (tg.gone is set when the host resolves it)
@@ -1911,8 +1859,7 @@ const BossTells = (() => {
           circle(ctx, sw.x + c * along - s * off, sw.y + s * along + c * off, 2.5, rgba('#8a96a8', 0.8 * k));
         }
       }
-      ctx.restore();
-      if (shadows.length) shadowRims(ctx, shadows, live ? 1 : 0.4, k, t, '#e8f4ff');
+      ctx.restore();   // (the still air behind each boulder is left unpainted)
     }
     ctx.restore();
   }

@@ -38,7 +38,7 @@ const GAUGE_TIPS = {
   bloodreaver: { desc: 'Hack gives 10, Maul 15 and Bloodletting 20. Crimson Drain spends 40; Frenzy makes your next three Drains free.' },
   runeguard: { desc: 'Rune Strike gives 1 (2 during Runic Overload), and a Ward broken all the way refunds its Rune. Runic Ward spends 1, Glyph Burst spends all 3.' },
   ranger: { desc: 'Quick Shot gives 10, or 30 with Barrage. Rapid Fire spends 50. Anything past 100 is lost.' },
-  shadowblade: { desc: 'Strike gives 1 point, or 2 from behind. Eviscerate spends every point and hits harder for each, with a bonus at 5. A sixth point is lost.' },
+  shadowblade: { desc: 'Strike gives 1 point, or 2 from behind. Eviscerate spends every point and hits for {d:115} more for each, with a {d:160} bonus at 5. A sixth point is lost.' },
   pyromancer: {
     desc: 'Fireball gives 12, Pyroblast 20 (10 with Hot Streak) and Fire Blast 6. Every point of Heat adds 0.3% damage. At 100 you overheat: you lose 15% of your HP, Heat resets and you deal 20% less damage for 5s. Heat cools slowly while you aren\'t casting. Vent spends it all.',
     state: k => `+${Math.round(k.g.heat * 0.3)}% damage`,

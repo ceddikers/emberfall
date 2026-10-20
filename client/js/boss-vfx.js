@@ -193,10 +193,10 @@ const BOSS_VFX = (() => {
     },
     stack(tg) {
       const s = tg.live;
-      shapeFlash(s, '#ffd84a', { a: 0.45 });
-      VFX.pillar(s.x, s.y, { r: s.r * 0.5, h: 240, color: '#ffe27a', dur: 0.75 });
-      VFX.burst(s.x, s.y, { color: '#ffe27a', color2: '#ffffff', n: 22, speed: 300, size: 16 });
-      VFX.shock(s.x, s.y, { r: s.r * 1.25, color: '#ffd84a', w: 6, flat: 1 });
+      shapeFlash(s, '#3d8bff', { a: 0.45 });   // (a stack lands in its own blue)
+      VFX.pillar(s.x, s.y, { r: s.r * 0.5, h: 240, color: '#8cc0ff', dur: 0.75 });
+      VFX.burst(s.x, s.y, { color: '#8cc0ff', color2: '#ffffff', n: 22, speed: 300, size: 16 });
+      VFX.shock(s.x, s.y, { r: s.r * 1.25, color: '#3d8bff', w: 6, flat: 1 });
       shake(5);
     },
     // Order Up! / Service!: the cloche flies off the plate and a column of heat and steam goes up; a ring of steam hangs

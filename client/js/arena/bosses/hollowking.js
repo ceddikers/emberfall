@@ -323,7 +323,7 @@ const HOLLOWKING = {
     };
     // Writ of Execution (Hard): a grave-chain runs from him to every hero, and when the writ is read a line of
     // grave-light runs out from him through each of them. Each takes their own; anyone else it crosses takes more, so
-    // the lines go out to the sides, away from each other. One hero's writ is torn up (Pardoned, the blue line): theirs
+    // the lines go out to the sides, away from each other. One hero's writ is torn up (Pardoned, the broken chain): theirs
     // does nothing, so they're the one free to stand anywhere off the others' lines. The thinking part: a fired line
     // stays burning as a spoke out from him until the graves close, so the lines must point between the graves (the
     // hall's corners), never at one; then the way in for the Crown and out to every grave stays open. The Pardoned is always the second

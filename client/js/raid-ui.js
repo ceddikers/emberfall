@@ -54,7 +54,7 @@ const RaidUI = (() => {
     root.className = 'hidden';
     root.innerHTML = `
       <div id="boss-bar">
-        <div class="bb-top"><b class="bb-name"></b><span class="bb-mode"></span><span class="bb-time"></span></div>
+        <div class="bb-top"><b class="bb-name"></b><span class="bb-mode"></span><em class="bb-tot"></em><span class="bb-time"></span></div>
         <div class="bb-hp"><div class="trail"></div><div class="fill"></div><div class="ticks"></div><div class="vuln"></div><div class="goal hidden"></div><span></span></div>
         <div class="bb-status"></div>
         <div class="bb-next hidden"></div>
@@ -186,6 +186,10 @@ const RaidUI = (() => {
     const mode = q('.bb-mode');
     setText(mode, raid.mode === 'hard' ? 'Hard' : 'Normal');
     mode.classList.toggle('hard', raid.mode === 'hard');
+    // who the boss is on, right in its bar (so targeting the boss needs no second frame)
+    const totR = raid.state === 'live' && b.tg != null ? raid.roster.find(x => x.id === b.tg) : null, tot = q('.bb-tot');
+    setText(tot, totR ? `→ ${totR.id === myId ? 'You' : totR.name}` : '');
+    if (totR) tot.style.setProperty('--rc', ROLES[totR.role].color);
     setText(q('.bb-time'), raid.state === 'live' || raid.state === 'clear' || raid.state === 'wipe' ? mmss(raid.fightTime || 0) : raid.state === 'prepull' ? 'Waiting for the pull' : '');
     const frac = b.mx ? b.hp / b.mx : 1;
     bossTrail = frac > bossTrail ? frac : Math.max(frac, bossTrail - dt * 0.08 - (bossTrail - frac) * dt * 1.5);

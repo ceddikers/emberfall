@@ -272,7 +272,7 @@
     'Order Up!': { hard: false, learned: {
       bastion: "Plates round the kitchen, one for each of us, served one after another. Each took their own plate and stood on it until it was served. None left on the counter. Held.",
       bloodreaver: "A plate for each of us, served in turn round the room. I took mine and stood on it when its rim was full. A plate left alone hurts everyone, and that's not a scar worth having.",
-      runeguard: "The omen: cloches round the kitchen, their gold rims filling at different rates. The answer: each claims one plate; the fullest rim is served next, round from the top left. As foreseen.",
+      runeguard: "The omen: cloches round the kitchen, their rims filling at different rates. The answer: each claims one plate; the fullest rim is served next, round from the top left. As foreseen.",
       gorgemaw: "My host laid out plates for each guest. I took mine, of course, as did my friends, each standing on our own until served. A plate left on the counter is an insult to everyone.",
       oathbroker: "Order Up!: one plate per co-signatory, served in sequence round the room, the fullest rim next. The fine print: an unclaimed plate is charged to all of us. So we each signed for one.",
       ironpalm: "Plates around the room, one for each. Each of us stood on our own until it was served. None went unanswered.",

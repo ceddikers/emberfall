@@ -40,7 +40,7 @@ const KITS = {
     abilities: [
       {
         id: 'blade', name: 'Blade Chain', type: 'gcd', target: 'enemy', range: MELEE, anim: 'attack',
-        desc: 'Three-hit combo on one button: Strike > Riposte > Judgment. Judgment fills 25 Resolve.',
+        desc: 'Three-hit combo on one button: Strike ({d:220}) > Riposte ({d:300}) > Judgment ({d:400}). Judgment fills 25 Resolve.',
         label: k => ['Strike', 'Riposte', 'Judgment'][k.now < k.g.comboUntil ? k.g.step : 0],
         glow: k => !!k.g.counter,
         effect(k) { bastionBlade(k, this, 25); },
@@ -48,7 +48,7 @@ const KITS = {
       },
       {
         id: 'edge', name: 'Holy Edge', type: 'gcd', target: 'enemy', range: 260, anim: 'bash',
-        desc: 'Spend 50 Resolve: a radiant blade you can throw from range. Heals you a little.',
+        desc: 'Spend 50 Resolve: a radiant blade you can throw from range for {d:560}. Heals you for {h:120}.',
         usable: k => k.g.resolve >= bastionCost(k),
         glow: k => k.g.resolve >= 90 || (k.has('oath') && k.g.resolve >= 50),
         effect(k) {
@@ -68,7 +68,7 @@ const KITS = {
       },
       {
         id: 'oath', name: 'Oath of Valor', type: 'ogcd', target: 'self', cd: 60, anim: 'big',
-        desc: 'Burst: 15s of +10% damage. Judgment grants double Resolve and Holy Edge hits harder.',
+        desc: 'Burst: 15s of +10% damage. Judgment grants double Resolve and Holy Edge hits for {d:720} instead of {d:560}.',
         glow: k => k.g.resolve >= 50,
         effect(k) { k.buff('oath', 15); },
         fx: { type: 'aura', color: '#ffd65a', r: 38, dur: 2 },
@@ -106,7 +106,7 @@ const KITS = {
     abilities: [
       {
         id: 'hack', name: 'Hack & Maul', type: 'gcd', target: 'enemy', range: MELEE, anim: 'attack',
-        desc: 'Two-hit combo on one button. Both hits build Blood.',
+        desc: 'Two-hit combo on one button: Hack ({d:240}) > Maul ({d:340}). Both hits build Blood.',
         label: k => (k.now < k.g.comboUntil && k.g.step === 1 ? 'Maul' : k.now < k.g.comboUntil && k.g.step === 2 ? 'Gore' : 'Hack'),
         effect(k) {
           if (k.now < k.g.comboUntil && k.g.step === 2) {   // Gore (a talent's third hit)
@@ -124,7 +124,7 @@ const KITS = {
       },
       {
         id: 'drain', name: 'Crimson Drain', type: 'gcd', target: 'enemy', range: MELEE, anim: 'attack',
-        desc: 'Spend 40 Blood: a heavy hit that heals you for 35% of the damage you took in the last 6s and hits harder the more you took.',
+        desc: 'Spend 40 Blood: hits for {d:330} and heals you for 35% of the damage you took in the last 6s. It hits up to {d:450} more the more you took.',
         usable: k => k.g.blood >= 40 || k.stacks('gorge') > 0,
         glow: k => k.stacks('gorge') > 0 || k.g.blood >= 90 || k.env.recentDamage(6) > 9000 * ENGINE.NUM_SCALE,
         effect(k) {
@@ -142,14 +142,14 @@ const KITS = {
       },
       {
         id: 'letting', name: 'Bloodletting', type: 'ogcd', target: 'enemy', range: MELEE, charges: 2, cd: 15, anim: 'attack',
-        desc: 'Quick slash between attacks: damage and +20 Blood. Two charges.',
+        desc: 'Quick slash between attacks: {d:220} and +20 Blood. Two charges.',
         glow: k => k.charges(k.abById('letting')) === 2,
         effect(k) { k.damage(220 * reaverRetaliate(k), { ab: this }); reaverGain(k, k.perk('bloodreaver_w1') ? 30 : 20); if (k.perk('bloodreaver_a4')) k.healRaw('self', k.env.maxHp() * 0.05, { ab: this }); reaverLetting(k, this); },
         fx: { type: 'slash', color: '#ff7a7a', r: 46, span: 1.2 },
       },
       {
         id: 'frenzy', name: 'Frenzy', type: 'ogcd', target: 'self', cd: 60, anim: 'big',
-        desc: 'Burst: 12s of +15% damage, and your next three Crimson Drains are free and stronger.',
+        desc: 'Burst: 12s of +15% damage, and your next three Crimson Drains are free and hit for {d:120} more.',
         effect(k) {
           k.buff('frenzy', 12); k.buff('gorge', 12, {}, 3, 3); if (k.perk('bloodreaver_w3')) k.gain('blood', 30);
           if (k.talent('bloodreaver_frenzied')) { const l = k.abilities.find(a => k.baseId(a) === 'letting'); if (l) k.refill(l.id); }
@@ -158,7 +158,7 @@ const KITS = {
       },
       {
         id: 'warcry', name: 'War Cry', type: 'ogcd', target: 'self', cd: 90, anim: 'big',
-        desc: 'Roar: shields the whole party for about 14% of their HP for 15s.',
+        desc: 'Roar: shields the whole party for {s:300} for 15s.',
         effect(k) {
           k.shield('party', 300, 15, { ab: this }); if (k.perk('bloodreaver_a2')) k.healRaw('self', k.env.maxHp() * 0.1, { ab: this });
         },
@@ -201,13 +201,13 @@ const KITS = {
     ceiling: [
       'A Ward explodes when it ends. The more damage it absorbed, the bigger the blast, and a fully broken Ward refunds its Rune. Put Wards up right before tankbusters and raidwides.',
       'Ward or Glyph Burst? Every Rune is a choice between defence-that-becomes-damage and raw damage now.',
-      'Mirror Aegis reflects the next hit for a huge counter. Save it for the boss\'s biggest swing.',
+      'Mirror Aegis reflects the next hit for a {d:1500} counter. Save it for the boss\'s biggest swing.',
       'Pool 3 Runes before Runic Overload; Wards also explode 50% harder during it.',
     ],
     abilities: [
       {
         id: 'strike', name: 'Rune Strike', type: 'gcd', target: 'enemy', range: MELEE, anim: 'cast',
-        desc: 'Strike with a rune-etched gauntlet: damage and +1 Rune (+2 during Runic Overload).',
+        desc: 'Strike with a rune-etched gauntlet: {d:270} and +1 Rune (+2 during Runic Overload).',
         effect(k) {
           k.damage(270, { ab: this });
           const extra = k.perk('runeguard_w1') && k.rng() < 0.25 ? 1 : 0;
@@ -218,14 +218,14 @@ const KITS = {
       },
       {
         id: 'ward', name: 'Runic Ward', type: 'gcd', target: 'self', anim: 'cast',
-        desc: 'Spend 1 Rune: shield yourself (about 20% of your HP) for 8s. It explodes when it ends, harder the more it absorbed.',
+        desc: 'Spend 1 Rune: shield yourself for {s:650} for 8s. It explodes when it ends, for {d:150} up to {d:600} the more it absorbed.',
         usable: k => k.g.runes >= 1 || runeEmergency(k),
         effect(k) { runeWardCost(k); runeWardUp(k, this, 'self'); k.g.wardAmt = k.shield('self', k.perk('runeguard_a2') ? 812 : 650, k.perk('runeguard_a4') ? 12 : 8, { ab: this, tag: 'ward' }); k.g.selfWard = true; },
         fx: { type: 'aura', style: 'hex', color: '#9fd8ff', r: 32, dur: 2 },
       },
       {
         id: 'glyph', name: 'Glyph Burst', type: 'gcd', target: 'enemy', range: 260, anim: 'cast',
-        desc: 'Spend 3 Runes: detonate a glyph on the target for heavy damage.',
+        desc: 'Spend 3 Runes: detonate a glyph on the target for {d:830}.',
         usable: k => k.g.runes >= 3,
         glow: k => k.g.runes >= 3,
         effect(k) {
@@ -236,7 +236,7 @@ const KITS = {
       },
       {
         id: 'overload', name: 'Runic Overload', type: 'ogcd', target: 'self', cd: 60, anim: 'big',
-        desc: 'Burst: 15s of +10% damage. Rune Strike gives 2 Runes, Glyph Burst and Ward blasts hit harder.',
+        desc: 'Burst: 15s of +10% damage. Rune Strike gives 2 Runes, Glyph Burst hits for {d:1080} instead of {d:830}, and Ward blasts hit 50% harder.',
         effect(k) {
           k.buff('overload', 15); if (k.perk('runeguard_w3')) k.gain('runes', 2, 3);
         },
@@ -250,7 +250,7 @@ const KITS = {
       },
       {
         id: 'mirror', name: 'Mirror Aegis', type: 'ogcd', target: 'self', cd: 90, anim: 'big',
-        desc: 'For 3s, the next hit you take is reduced by 80% and reflected back for huge damage.',
+        desc: 'For 3s, the next hit you take is reduced by 80% and reflected back for {d:1500}.',
         effect(k) { k.mitigate('self', 0.8, castHold(k, k.talent('runeguard_patient'), 3, 8), { kind: 'reflect', ab: this }); },
         fx: { type: 'shield', color: '#e0d4ff', dur: 2 },
       },
@@ -276,7 +276,7 @@ const KITS = {
     abilities: [
       {
         id: 'quick', name: 'Quick Shot', type: 'gcd', target: 'enemy', range: RANGED, anim: 'attack',
-        desc: 'Fast shot: damage and +10 Focus. Sometimes lights up Keen Eye.',
+        desc: 'Fast shot: {d:230} and +10 Focus. Sometimes lights up Keen Eye.',
         effect(k) {
           const barr = k.consume('barrage'), ff = !barr && rangerFocusFire(k);
           const r = k.damage((barr ? 690 : 230) * (ff ? 2 : 1), rangerShot(k, this));
@@ -289,7 +289,7 @@ const KITS = {
       },
       {
         id: 'pierce', name: 'Piercing Arrow', type: 'gcd', target: 'enemy', range: RANGED, charges: 2, cd: 12, anim: 'attack',
-        desc: 'Heavy piercing shot, two charges. With Keen Eye it hits harder and gives the charge back.',
+        desc: 'Piercing shot for {d:340}, two charges. With Keen Eye it hits for {d:500} and gives the charge back.',
         glow: k => k.has('keen') || k.charges(k.abById('pierce')) === 2,
         effect(k) {
           const keen = k.consume('keen');
@@ -305,7 +305,7 @@ const KITS = {
       },
       {
         id: 'rapid', name: 'Rapid Fire', type: 'ogcd', target: 'enemy', range: RANGED, cd: 2, anim: 'attack',
-        desc: 'Spend 50 Focus: a volley between your other shots.',
+        desc: 'Spend 50 Focus: a volley for {d:420} between your other shots.',
         usable: k => k.g.focus >= 50,
         glow: k => k.g.focus >= 90 || (k.has('markself') && k.g.focus >= 50),
         effect(k) {
@@ -332,7 +332,7 @@ const KITS = {
       },
       {
         id: 'barrage', name: 'Barrage', type: 'ogcd', target: 'self', cd: 30, anim: 'big',
-        desc: 'Your next Quick Shot fires three times and gives triple Focus.',
+        desc: 'Your next Quick Shot fires three times ({d:690}) and gives triple Focus.',
         glow: k => k.has('markself'),
         effect(k) {
           k.buff('barrage', 15); if (k.perk('ranger_w3')) k.proc('keen', 15);
@@ -360,7 +360,7 @@ const KITS = {
     abilities: [
       {
         id: 'strike', name: 'Strike', type: 'gcd', target: 'enemy', range: MELEE, anim: 'attack',
-        desc: 'Stab: damage and +1 combo point. From behind: +2 points and extra damage.',
+        desc: 'Stab: {d:220} and +1 combo point. From behind: {d:280} and +2 points.',
         effect(k) {
           const r = k.damage(220, { ab: this, positional: 'rear', posBonus: 60 });
           bladeCombo(k, r.posHit ? 2 : 1);
@@ -370,7 +370,7 @@ const KITS = {
       },
       {
         id: 'evis', name: 'Eviscerate', type: 'gcd', target: 'enemy', range: MELEE, anim: 'attack',
-        desc: 'Spend all combo points for a big hit. Stronger at 5 points and from the side.',
+        desc: 'Spend all combo points: {d:120} plus {d:115} per point, {d:160} more at 5 points, and {d:80} more from the side.',
         usable: k => k.g.combo >= 1,
         glow: k => k.g.combo >= 5 || (k.g.combo >= 4 && k.env.positional() === 'rear'),
         effect(k) {
@@ -397,7 +397,7 @@ const KITS = {
       },
       {
         id: 'venom', name: 'Venom Blade', type: 'gcd', target: 'enemy', range: MELEE, anim: 'attack',
-        desc: 'Poison the target (damage over 24s). While poisoned, Eviscerate hits 15% harder.',
+        desc: 'Poison the target: {d:140}, then {d:70} every 3s for 24s. While poisoned, Eviscerate hits 15% harder.',
         glow: k => k.dotRemaining('poison') < 7.2,
         effect(k) { k.damage(140, { ab: this }); k.dot('poison', k.perk('shadowblade_w1') ? 88 : 70, 24, 3, { ab: this }); },
         fx: { type: 'slash', color: '#8aff6a', r: 42, span: 1.0 },
@@ -455,7 +455,7 @@ const KITS = {
       {
         id: 'fireball', name: 'Fireball', type: 'gcd', target: 'enemy', range: RANGED, anim: 'cast',
         cast: k => (k.has('haze') || k.has('firestep') ? 0 : 1.8),   // (Heat Haze and Firestep, talents, make it instant)
-        desc: '1.8s cast: damage and +12 Heat. Crits warm you up toward Hot Streak.',
+        desc: '1.8s cast: {d:300} and +12 Heat. Crits warm you up toward Hot Streak.',
         effect(k) {
           if (!k.consume('firestep')) k.consume('haze');
           k.damage(300, { ab: this }); k.gain('heat', 12, 100);
@@ -466,7 +466,7 @@ const KITS = {
       {
         id: 'pyro', name: 'Pyroblast', type: 'gcd', target: 'enemy', range: RANGED, anim: 'cast',
         cast: k => (k.has('hotstreak') ? 0 : 3.0),
-        desc: '3s cast for big damage. With Hot Streak it\'s instant and stronger.',
+        desc: '3s cast for {d:540}. With Hot Streak it\'s instant and hits for {d:620}.',
         glow: k => k.has('hotstreak'),
         effect(k) {
           const hs = k.consume('hotstreak');
@@ -481,7 +481,7 @@ const KITS = {
       },
       {
         id: 'fireblast', name: 'Fire Blast', type: 'ogcd', target: 'enemy', range: RANGED, charges: 2, cd: 10, duringCast: true, lock: 0.4, anim: 'cast',
-        desc: 'Instant blast that always crits, usable even while casting. Two charges.',
+        desc: 'Instant blast for {d:160} that always crits, usable even while casting. Two charges.',
         glow: k => k.has('heating'),
         effect(k) {
           if (k.talent('pyromancer_hurry') && k.cast) { k.cast.end = Math.max(k.now + 0.05, k.cast.end - 0.5); k.fx('hurry'); }
@@ -503,7 +503,7 @@ const KITS = {
       },
       {
         id: 'vent', name: 'Vent', type: 'gcd', target: 'enemy', range: RANGED, cd: 12, anim: 'big',
-        desc: 'Instant: release all your Heat as an explosion. More Heat, more damage.',
+        desc: 'Instant: release all your Heat as an explosion: {d:150}, plus {d:60} for every 10 Heat.',
         usable: k => k.g.heat >= 10,
         glow: k => k.g.heat >= 85,
         effect(k) {
@@ -535,7 +535,7 @@ const KITS = {
     signature: 'Petal economy',
     floor: 'Press Q to attack. Heal with E (instant) or W. D brings dead allies back. R before big party hits.',
     ceiling: [
-      'Dawn Petals are free, instant heals that regrow every 15s. Every third Petal blooms into Dawnstar, a huge instant attack. Healing with Petals literally turns into damage.',
+      'Dawn Petals are free, instant heals that regrow every 15s. Every third Petal blooms into Dawnstar, an instant attack for {d:950}. Healing with Petals literally turns into damage.',
       'Petals overcap at 3, so spend one before the next grows. Save Dawnstar for the party\'s burst window.',
       'Every GCD you spend on Mend is an attack you didn\'t cast. Heal with Petals, Benediction and Prayer Circle first; Mend is the last resort.',
       'Prayer Circle before a raidwide (not after) gives both the mitigation and the regen.',
@@ -545,7 +545,7 @@ const KITS = {
         id: 'smite', name: 'Smite', type: 'gcd', target: 'enemy', range: RANGED, anim: 'cast',
         cast: k => (k.g.bloom >= 3 || clericInSanctum(k) ? 0 : 1.5),
         label: k => (k.g.bloom >= 3 ? 'Dawnstar' : 'Smite'),
-        desc: '1.5s cast attack. After three Dawn Petals it becomes Dawnstar: instant and huge.',
+        desc: '1.5s cast attack for {d:280}. After three Dawn Petals it becomes Dawnstar: instant, for {d:950}.',
         glow: k => k.g.bloom >= 3,
         effect(k) {
           let r;
@@ -558,13 +558,13 @@ const KITS = {
       {
         id: 'mend', name: 'Mend', type: 'gcd', target: 'ally', anim: 'cast',
         cast: k => (k.has('quickmend') ? 0 : 1.8),   // (Quick Mend, a talent)
-        desc: '1.8s cast: a big heal on one ally.',
+        desc: '1.8s cast: heals one ally for {h:700}.',
         effect(k, t) { k.consume('quickmend'); k.heal(t, 700, { ab: this }); },
         fx: { type: 'ring', color: '#fff0a8', r: 40, onTarget: true },
       },
       {
         id: 'petal', name: 'Dawn Petal', type: 'gcd', target: 'ally', anim: 'cast',
-        desc: 'Spend a Petal: instant heal plus a small regen. Petals regrow every 15s. Three Petals make Dawnstar.',
+        desc: 'Spend a Petal: an instant {h:450} heal plus {h:60} every 3s for 15s. Petals regrow every 15s. Three Petals make Dawnstar.',
         usable: k => k.g.petals >= 1,
         glow: k => k.g.petals >= 3 || (k.g.petals >= 2 && k.g.petalAt - k.now < 4),
         effect(k, t) {
@@ -578,7 +578,7 @@ const KITS = {
       },
       {
         id: 'prayer', name: 'Prayer Circle', type: 'ogcd', target: 'self', cd: 60, anim: 'cast',
-        desc: 'The party takes 10% less damage for 10s and regenerates for 15s.',
+        desc: 'The party takes 10% less damage for 10s and heals {h:100} every 3s for 15s.',
         effect(k) {
           k.mitigate('party', k.perk('cleric_w3') ? 0.15 : 0.1, 10, { ab: this }); k.hot('party', k.perk('cleric_a4') ? 150 : 100, 5, 3, { ab: this, id: 'prayer' });
         },
@@ -586,13 +586,13 @@ const KITS = {
       },
       {
         id: 'intervene', name: 'Intervention', type: 'gcd', target: 'ally', cast: 2.5, cd: 30, anim: 'big', allowDead: true,
-        desc: '2.5s cast: bring a fallen ally back to life, or fully heal a living one.',
+        desc: '2.5s cast: bring a fallen ally back to life, or heal a living one for {h:1200}.',
         effect(k, t) { if (k.env.isDead(t)) k.raise(t, { ab: this }); else k.heal(t, 1200, { ab: this }); },
         fx: { type: 'zone', style: 'pillar', color: '#fff6c8', r: 50, range: 0, dur: 1.6, onTarget: true },
       },
       {
         id: 'bene', name: 'Benediction', type: 'ogcd', target: 'ally', cd: 40, anim: 'big',
-        desc: 'Instant: a strong heal and a shield on one ally.',
+        desc: 'Instant: heals one ally for {h:800} and gives them a shield of {s:300}.',
         effect(k, t) {
           if (clericBless(k, this, t)) { const { amount, crit } = k.healAmount(400, { ab: this }); k.env.emit({ type: 'heal', target: 'lowest', not: k.g.blessT, amount, crit, ab: this }); k.fx('twinBless', { to: t }); return; }
           k.heal(t, 800, { ab: this }); k.shield(t, k.perk('cleric_a2') ? 480 : 300, 10, { ab: this });
@@ -629,7 +629,7 @@ const KITS = {
       {
         id: 'wrath', name: 'Wrath', type: 'gcd', target: 'enemy', range: RANGED, anim: 'cast',
         cast: k => (k.has('awaken') || groveMoonfire(k) ? 0 : 1.5),
-        desc: '1.5s cast attack. After Bloom it\'s instant and 50% stronger.',
+        desc: '1.5s cast attack for {d:260}. After Bloom it\'s instant and hits for {d:390}.',
         glow: k => k.has('awaken'),
         effect(k) {
           const a = k.consume('awaken');
@@ -641,7 +641,7 @@ const KITS = {
       },
       {
         id: 'rejuv', name: 'Rejuvenate', type: 'gcd', target: 'ally', anim: 'cast',
-        desc: 'Instant: a small heal, then healing every 3s for 15s. Its ticks grow Bloom.',
+        desc: 'Instant: heals for {h:200}, then {h:140} every 3s for 15s. Its ticks grow Bloom.',
         recastGcd: k => groveSproutGcd(k),
         effect(k, t) {
           k.heal(t, 200, { ab: this });
@@ -654,20 +654,20 @@ const KITS = {
       },
       {
         id: 'thorn', name: 'Thornlash', type: 'gcd', target: 'enemy', range: RANGED, anim: 'cast',
-        desc: 'Instant: thorns that damage the target over 30s.',
+        desc: 'Instant: thorns that hit the target for {d:120}, then {d:60} every 3s for 30s.',
         glow: k => k.dotRemaining('thorn') < 9,
         effect(k) { k.damage(120, { ab: this }); k.dot('thorn', k.perk('grovekeeper_w1') ? 75 : 60, 30, 3, { ab: this }); if (k.perk('grovekeeper_a4')) k.gain('bloom', 5); },
         fx: { type: 'zone', style: 'roots', color: '#4f9f3f', r: 50, range: RANGED, dur: 1.2 },
       },
       {
         id: 'growth', name: 'Wild Growth', type: 'ogcd', target: 'self', cd: 60, anim: 'big',
-        desc: 'The whole party regenerates for 15s, and your heals are 25% stronger for 15s.',
+        desc: 'The whole party heals {h:90} every 3s for 15s, and your heals are 25% stronger for 15s.',
         effect(k) { k.buff('growth', 15); k.hot('party', 90, 5, 3, { ab: this, id: 'growth' }); if (k.perk('grovekeeper_w3')) k.gain('bloom', 25); groveGrowth(k, this); },
         fx: { type: 'cone', color: '#7ee06a', r: 170, span: 6.28 },
       },
       {
         id: 'bloom', name: 'Bloom', type: 'ogcd', target: 'self', cd: 15, anim: 'big',
-        desc: 'Spend 50 Bloom: instantly heal everyone with your Rejuvenate (and the whole party during Wild Growth). Your next Wrath is instant.',
+        desc: 'Spend 50 Bloom: instantly heal everyone with your Rejuvenate for {h:400} (and the whole party for {h:350} during Wild Growth). Your next Wrath is instant.',
         usable: k => k.g.bloom >= 50,
         glow: k => k.g.bloom >= 90,
         effect(k) {
@@ -682,7 +682,7 @@ const KITS = {
       },
       {
         id: 'rebirth', name: 'Rebirth', type: 'gcd', target: 'ally', cast: 2.5, cd: 30, anim: 'big', allowDead: true,
-        desc: '2.5s cast: bring a fallen ally back, or heal and cleanse a living one.',
+        desc: '2.5s cast: bring a fallen ally back, or heal a living one for {h:1100}.',
         effect(k, t) { if (k.env.isDead(t)) k.raise(t, { ab: this }); else k.heal(t, 1100, { ab: this }); },
         fx: { type: 'zone', style: 'roots', color: '#a8ff9a', r: 50, range: 0, dur: 1.6, onTarget: true },
       },
@@ -709,7 +709,7 @@ const KITS = {
       {
         id: 'bolt', name: 'Temporal Bolt', type: 'gcd', target: 'enemy', range: RANGED, anim: 'cast',
         cast: k => (k.has('surge') || k.has('beat') ? 0 : 1.5),   // (only looks: asking for the cast time must not spend the free Bolt)
-        desc: '1.5s cast attack. Slow: heals your linked ally for 120% of its damage. Haste: heals everyone for 50%.',
+        desc: '1.5s cast attack for {d:280}. Slow: heals your linked ally for 120% of its damage. Haste: heals everyone for 50%.',
         effect(k) {
           chronoBolt(k, this, chronoInstant(k), 0.5, 1.2);
           chronoBoltAfter(k, this, 0.5, 1.2);
@@ -760,7 +760,7 @@ const KITS = {
       {
         id: 'recall', name: 'Recall', type: 'gcd', target: 'ally', cd: 30, anim: 'big', allowDead: true,
         cast: k => (k.talent('chronomancer_lastmoment') && chronoLate(k) ? 0 : 2.5),   // (Last Moment, a talent)
-        desc: '2.5s cast: bring a fallen ally back, or heal a living one heavily.',
+        desc: '2.5s cast: bring a fallen ally back, or heal a living one for {h:1400}.',
         effect(k, t) { if (k.env.isDead(t)) { k.raise(t, { ab: this }); chronoSecondChance(k, this, t); } else k.heal(t, 1400, { ab: this }); },
         fx: { type: 'ring', style: 'rewind', color: '#9ff4ff', r: 50, onTarget: true },
       },
@@ -1257,26 +1257,26 @@ const ALEMBIC = {
   },
   // two-reagent recipes, keyed by their reagents in sorted order. kind: heal | bomb | ward | salve | quick
   recipes: {
-    DD: { name: 'Mending Draught', color: '#4fe0c0', glyph: 'plus', kind: 'heal', text: 'a big splash heal. It raises a fallen ally it lands on (once every 30s).' },
-    EE: { name: 'Fire Bomb', color: '#ff5a1a', glyph: 'flame', kind: 'bomb', text: 'flies at the enemy: a heavy hit and a short burn.' },
+    DD: { name: 'Mending Draught', color: '#4fe0c0', glyph: 'plus', kind: 'heal', text: 'a {h:480} splash heal. It raises a fallen ally it lands on (once every 30s).' },
+    EE: { name: 'Fire Bomb', color: '#ff5a1a', glyph: 'flame', kind: 'bomb', text: 'flies at the enemy and hits for {d:360}.' },
     SS: { name: 'Salt Ward', color: '#f4ecd2', glyph: 'ward', kind: 'ward', text: 'a circle of salt: allies inside take 20% less damage for 6s.' },
-    DE: { name: 'Steam', color: '#bfe8ec', glyph: 'cloud', kind: 'heal', text: 'a healing cloud: everyone inside heals every 1.5s for 9s.' },
-    DS: { name: 'Salve', color: '#7ff0a8', glyph: 'drop', kind: 'salve', text: 'shields everyone it splashes and washes off Vulnerability and Damage Down.' },
-    ES: { name: 'Quickpowder', color: '#ffd23a', glyph: 'bolt', kind: 'quick', text: 'the whole party acts 10% faster for 10s; allies it splashes shake off slows and roots.' },
+    DE: { name: 'Steam', color: '#bfe8ec', glyph: 'cloud', kind: 'heal', text: 'a healing cloud: everyone inside heals {h:80} every 1.5s for 9s.' },
+    DS: { name: 'Salve', color: '#7ff0a8', glyph: 'drop', kind: 'salve', text: 'shields everyone it splashes for {s:280} and washes off Vulnerability and Damage Down.' },
+    ES: { name: 'Quickpowder', color: '#ffd23a', glyph: 'bolt', kind: 'quick', text: 'the whole party acts 10% faster for 10s; allies it splashes heal {h:100} and shake off slows and roots.' },
     // Quicksilver (a talent: it takes Salt's place)
-    QQ: { name: 'Silver Mirror', color: '#dfe6f2', glyph: 'mirror', kind: 'ward', text: 'a pool of quicksilver: everyone inside keeps a small shield for 6s.' },
-    DQ: { name: 'Silver Tonic', color: '#9fe8ff', glyph: 'plus', kind: 'heal', text: 'a splash heal that is up to twice as strong on the badly hurt.' },
-    EQ: { name: 'Fulminate', color: '#ffe9a0', glyph: 'flame', kind: 'bomb', text: 'flies at the enemy and goes off twice.' },
+    QQ: { name: 'Silver Mirror', color: '#dfe6f2', glyph: 'mirror', kind: 'ward', text: 'a pool of quicksilver: everyone inside keeps a {s:120} shield for 6s.' },
+    DQ: { name: 'Silver Tonic', color: '#9fe8ff', glyph: 'plus', kind: 'heal', text: 'a {h:400} splash heal that is up to twice as strong on the badly hurt.' },
+    EQ: { name: 'Fulminate', color: '#ffe9a0', glyph: 'flame', kind: 'bomb', text: 'flies at the enemy and goes off twice, {d:260} each.' },
   },
   // Volatile's Reactions: three reagents (Quicksilver counts as Salt). Sealed in the tooltips until you've brewed one.
   reactions: {
-    EEE: { name: 'Dragon\'s Breath', color: '#ff3a10', glyph: 'flame', kind: 'bomb', text: 'a huge fire bomb that leaves the enemy burning hard.' },
-    DDD: { name: 'Elixir of Life', color: '#6fffd0', glyph: 'plus', kind: 'heal', text: 'a great splash heal that lingers as a healing mist, and raises the fallen.' },
+    EEE: { name: 'Dragon\'s Breath', color: '#ff3a10', glyph: 'flame', kind: 'bomb', text: 'a {d:560} fire bomb that leaves the enemy burning for {d:70} every 3s for 12s.' },
+    DDD: { name: 'Elixir of Life', color: '#6fffd0', glyph: 'plus', kind: 'heal', text: 'a {h:620} splash heal that lingers as a healing mist ({h:60} every 1.5s), and raises the fallen.' },
     SSS: { name: 'Bastion Salt', color: '#fff6dc', glyph: 'ward', kind: 'ward', text: 'a wide salt circle: allies inside take 25% less damage for 8s.' },
-    DES: { name: 'Philosopher\'s Draught', color: '#e6c8ff', glyph: 'star', kind: 'heal', text: 'heals and shields the whole party, wherever they stand.' },
-    DEE: { name: 'Brimstone', color: '#ff9a3a', glyph: 'cloud', kind: 'bomb', text: 'a bomb on the enemy, and a healing cloud at your heal target.' },
-    DDS: { name: 'Living Salve', color: '#6ff0d0', glyph: 'drop', kind: 'salve', text: 'a strong shield, a cleanse of everything it can wash off, and a short regen.' },
-    EES: { name: 'Thunderpowder', color: '#fff070', glyph: 'bolt', kind: 'bomb', text: 'the party acts 15% faster for 12s, and it bursts on the enemy.' },
+    DES: { name: 'Philosopher\'s Draught', color: '#e6c8ff', glyph: 'star', kind: 'heal', text: 'heals the whole party for {h:300} and shields them for {s:180}, wherever they stand.' },
+    DEE: { name: 'Brimstone', color: '#ff9a3a', glyph: 'cloud', kind: 'bomb', text: 'a {d:360} bomb on the enemy, and a healing cloud ({h:70} every 1.5s) at your heal target.' },
+    DDS: { name: 'Living Salve', color: '#6ff0d0', glyph: 'drop', kind: 'salve', text: 'a {s:400} shield, a cleanse of everything it can wash off, and a short regen ({h:50} every 1.5s).' },
+    EES: { name: 'Thunderpowder', color: '#fff070', glyph: 'bolt', kind: 'bomb', text: 'the party acts 15% faster for 12s, and it bursts on the enemy for {d:220}.' },
   },
 };
 const alemKey = letters => [...letters].sort().join('');
@@ -1749,7 +1749,7 @@ KITS.thermist = {
     {
       id: 'cinder', name: 'Cinder Bolt', type: 'gcd', target: 'enemy', range: RANGED, anim: 'cast', el: 1,
       cast: k => thermCast(k, 1, 1),
-      desc: '1s cast: a quick fire bolt. Turns the dial 1 toward Blaze.',
+      desc: '1s cast: a quick fire bolt for {d:210}. Turns the dial 1 toward Blaze.',
       usable: k => !k.has('overheat'),
       glow: k => thermPlan(k) === 'cinder',
       effect(k) { thermSpell(k, this, 1, 1, 210); },
@@ -1758,7 +1758,7 @@ KITS.thermist = {
     {
       id: 'rime', name: 'Rime Shard', type: 'gcd', target: 'enemy', range: RANGED, anim: 'cast', el: -1,
       cast: k => thermCast(k, -1, 1),
-      desc: '1s cast: a quick shard of ice. Turns the dial 1 toward Rime.',
+      desc: '1s cast: a quick shard of ice for {d:210}. Turns the dial 1 toward Rime.',
       glow: k => thermPlan(k) === 'rime',
       effect(k) { thermSpell(k, this, -1, 1, 210); },
       fx: { type: 'projectile', color: '#8fd8ff', range: RANGED, speed: 900 },
@@ -1766,7 +1766,7 @@ KITS.thermist = {
     {
       id: 'flare', name: 'Flare', type: 'gcd', target: 'enemy', range: RANGED, anim: 'cast', el: 1,
       cast: k => thermCast(k, 1, 2, true),
-      desc: '2s cast: a burst of fire. Turns the dial 2 toward Blaze. At +5 it\'s instant and always crits, but holds you On the Brink: if your next spell is fire too, you overheat, and waiting it out does the same.',
+      desc: '2s cast: a burst of fire for {d:400}. Turns the dial 2 toward Blaze. At +5 it\'s instant and always crits, but holds you On the Brink: if your next spell is fire too, you overheat, and waiting it out does the same.',
       usable: k => !k.has('overheat'),
       glow: k => thermPlan(k) === 'flare',
       effect(k) { thermSpell(k, this, 1, 2, 400, { edge: true }); },
@@ -1775,14 +1775,14 @@ KITS.thermist = {
     {
       id: 'lance', name: 'Glacier Lance', type: 'gcd', target: 'enemy', range: RANGED, anim: 'cast', el: -1,
       cast: k => thermCast(k, -1, 2, true),
-      desc: '2s cast: a lance of ice. Turns the dial 2 toward Rime. At -5 it\'s instant and always crits, but holds you On the Brink: if your next spell is frost too, you get frostbite, and waiting it out does the same.',
+      desc: '2s cast: a lance of ice for {d:400}. Turns the dial 2 toward Rime. At -5 it\'s instant and always crits, but holds you On the Brink: if your next spell is frost too, you get frostbite, and waiting it out does the same.',
       glow: k => thermPlan(k) === 'lance',
       effect(k) { thermSpell(k, this, -1, 2, 400, { edge: true }); },
       fx: { type: 'line', color: '#bfe8ff', range: 440 },
     },
     {
       id: 'equil', name: 'Equilibrium', type: 'ogcd', target: 'self', cd: 30, anim: 'cast',
-      desc: 'Snap the dial back to 0 behind a shield: about 3% of your HP for every step it fell. It also clears On the Brink.',
+      desc: 'Snap the dial back to 0 behind a shield: {s:70} for every step it fell. It also clears On the Brink.',
       effect(k) { thermEquil(k, this); },
       fx: { type: 'shield', color: '#e8d8ff', dur: 1.2 },
     },
@@ -1906,7 +1906,7 @@ KITS.driftblade = {
   abilities: [
     {
       id: 'carve', name: 'Carve', type: 'gcd', target: 'enemy', range: MELEE, anim: 'attack',
-      desc: 'A sabre cut, stronger with Drift. At 50 Drift or more a second cut follows through.',
+      desc: 'A sabre cut for {d:240}, up to 30% stronger with Drift. At 50 Drift or more a second cut, 30% as strong, follows through.',
       effect(k) {
         const m = 1 + 0.3 * driftK(k), crit = k.consume('tailwind');
         k.damage(240 * m, { ab: this, autoCrit: crit });
@@ -1940,7 +1940,7 @@ KITS.driftblade = {
     },
     {
       id: 'hook', name: 'Hook Turn', type: 'ogcd', target: 'enemy', range: 220, cd: 12, lock: 0.45, anim: 'attack',
-      desc: 'Swing round your target to its far side with a cut, stronger with Drift. Above 70 Drift it always crits. Gives back a dash charge.',
+      desc: 'Swing round your target to its far side with a cut for {d:260}, up to 40% stronger with Drift. Above 70 Drift it always crits. Gives back a dash charge.',
       glow: k => k.g.drift >= 70,
       effect(k) {
         const crit = k.g.drift >= 70;
@@ -1953,7 +1953,7 @@ KITS.driftblade = {
     },
     {
       id: 'cross', name: 'Crosswind', type: 'gcd', target: 'enemy', range: 300, anim: 'big',
-      desc: 'Spend all your Drift on a blade of wind: the more you spend, the harder it hits (about four times as hard at full).',
+      desc: 'Spend all your Drift on a blade of wind: {d:120}, plus {d:70} for every 10 Drift you spend.',
       usable: k => k.g.drift >= 20,
       glow: k => k.g.drift >= 80,
       effect(k) {
@@ -1967,7 +1967,7 @@ KITS.driftblade = {
     },
     {
       id: 'still', name: 'Stillpoint', type: 'ogcd', target: 'self', cd: 25, lock: 0.5, anim: 'brace',
-      desc: 'Stop and parry for 2s: 50% less damage, and your Drift holds instead of draining. Catch a hit in the first moment and you riposte.',
+      desc: 'Stop and parry for 2s: 50% less damage, and your Drift holds instead of draining. Catch a hit in the first moment and you riposte for {d:320} (up to 50% more with Drift).',
       effect(k) {
         k.mitigate('self', 0.5, 2, { kind: 'brace', ab: this }); k.buff('still', 2);
         if (k.perk('driftblade_a2')) driftAdd(k, 20);
@@ -1995,16 +1995,16 @@ const TALENT_ABILITIES = {};
 (() => {
   const thermocline = {
     id: 'thermocline', replaces: 'cinder', icon: 'cinder', name: 'Thermocline', type: 'gcd', target: 'enemy', range: RANGED, anim: 'cast',
-    desc: 'Instant: a bolt that swings the dial 2 steps toward the other side (toward Rime from 0). It counts as the element it swings toward, and hits harder the further from 0 you started.',
+    desc: 'Instant: a {d:170} bolt that swings the dial 2 steps toward the other side (toward Rime from 0). It counts as the element it swings toward, and hits 8% harder for every step from 0 you started.',
     glow: k => thermAt(k, 3) && !(k.has('brink') && k.buffs.get('brink').data.el === -Math.sign(k.g.temp)),
     effect(k) { const t = k.g.temp, el = t > 0 ? -1 : t < 0 ? 1 : -1; thermSpell(k, this, el, 2, 170, { mult: 1 + THERMIST.STEP * Math.abs(t) }); },
     fx: { type: 'projectile', color: '#e4a8ff', range: RANGED, speed: 1000 },
   };
   TALENT_ABILITIES.thermist_thermocline = { cls: 'thermist', ab: thermocline,
-    spec: { pendulum: Object.assign({}, thermocline, { desc: 'Instant: a bolt that swings the dial 3 steps toward the other side (toward Rime from 0). It counts as the element it swings toward, and hits harder the further from 0 you started.' }) } };
+    spec: { pendulum: Object.assign({}, thermocline, { desc: 'Instant: a {d:170} bolt that swings the dial 3 steps toward the other side (toward Rime from 0). It counts as the element it swings toward, and hits 8% harder for every step from 0 you started.' }) } };
   TALENT_ABILITIES.thermist_zero = { cls: 'thermist', ab: {
     id: 'zero', replaces: 'rime', icon: 'rime', name: 'Absolute Zero', type: 'gcd', target: 'enemy', range: RANGED, cast: 2, cd: 45, anim: 'big', el: -1,
-    desc: '2s cast, 45s cooldown: the dial plunges straight to -5, wherever it was. It hits harder the further it fell, and from 3 or more on the hot side that crossing is a Thermal Shock of up to 10.',
+    desc: '2s cast, 45s cooldown: the dial plunges straight to -5, wherever it was. It hits for {d:100}, plus {d:15} for every step it fell, and from 3 or more on the hot side that crossing is a Thermal Shock of up to 10.',
     glow: k => k.g.temp >= 3,
     effect(k) {
       const fell = k.g.temp + THERMIST.EDGE;
@@ -2016,7 +2016,7 @@ const TALENT_ABILITIES = {};
   } };
   TALENT_ABILITIES.driftblade_gyre = { cls: 'driftblade', ab: {
     id: 'gyre', replaces: 'hook', icon: 'hook', name: 'Gyre', type: 'ogcd', target: 'enemy', range: MELEE, charges: 2, cd: 10, lock: 0.5, anim: 'attack',
-    desc: 'Loop once round your target, cutting it once for every 25 Drift you have (up to 4 cuts). It spends nothing, and the loop adds 10 Drift. Two charges.',
+    desc: 'Loop once round your target, cutting it for {d:105} once for every 25 Drift you have (up to 4 cuts). It spends nothing, and the loop adds 10 Drift. Two charges.',
     glow: k => k.g.drift >= 75,
     effect(k) {
       const n = Math.max(1, Math.min(4, Math.floor((k.g.drift || 0) / 25)));
@@ -2028,7 +2028,7 @@ const TALENT_ABILITIES = {};
   } };
   TALENT_ABILITIES.driftblade_tailspin = { cls: 'driftblade', ab: {
     id: 'tailspin', replaces: 'still', icon: 'still', name: 'Tailspin', type: 'ogcd', target: 'self', cd: 25, lock: 0.5, anim: 'big',
-    desc: 'Whirl in place for a moment: you parry like Stillpoint, cut the nearest enemy three times (stronger with Drift), then spring 150 px the way you\'re heading. Your Drift holds while you spin.',
+    desc: 'Whirl in place for a moment: you parry like Stillpoint, cut the nearest enemy three times for {d:115} each (up to 50% more with Drift), then spring 150 px the way you\'re heading. Your Drift holds while you spin.',
     effect(k) {
       const ab = this, m = 1 + 0.5 * driftK(k);
       k.mitigate('self', 0.5, 1, { kind: 'brace', ab }); k.buff('still', 1);
@@ -2048,7 +2048,7 @@ const talentMoves = (cls, moves) => { for (const [id, ab] of Object.entries(move
 talentMoves('bastion', {
   bastion_hallowed: {
     id: 'hallowed', replaces: 'banner', icon: 'banner', name: 'Hallowed Ground', type: 'ogcd', target: 'self', cd: 30, anim: 'cast', talent: true,
-    desc: 'Pour out all your Resolve (at least 30) to consecrate the ground under you for 10s. The boss burns every 2s, harder the more Resolve you poured, and a Perfect Block inside the circle gives 10 more Resolve.',
+    desc: 'Pour out all your Resolve (at least 30) to consecrate the ground under you for 10s. The boss burns every 2s, for {d:36} at 30 Resolve up to {d:120} at 100, and a Perfect Block inside the circle gives 10 more Resolve.',
     usable: k => k.g.resolve >= 30,
     glow: k => k.g.resolve >= 90 && !k.has('oath'),
     effect(k) {
@@ -2061,7 +2061,7 @@ talentMoves('bastion', {
   },
   bastion_avatar: {
     id: 'avatar', replaces: 'oath', icon: 'oath', name: 'Avatar of Dawn', type: 'ogcd', target: 'self', cd: 60, anim: 'big', talent: true,
-    get desc() { return 'Burst: wings of light for 15s (20s as a Crusader). +10% damage, Judgment grants double Resolve and Holy Edge hits harder, and every Perfect Block calls a pillar of light down on the boss.'; },
+    get desc() { return 'Burst: wings of light for 15s (20s as a Crusader). +10% damage, Judgment grants double Resolve and Holy Edge hits for {d:720} instead of {d:560}, and every Perfect Block calls a pillar of light down on the boss for {d:120}.'; },
     glow: k => k.g.resolve >= 50,
     effect(k) { const dur = k.def.spec === 'crusader' ? 20 : 15; k.buff('oath', dur); k.buff('avatar', dur); },
     fx: { type: 'aura', color: '#ffe08a', r: 40, dur: 2 },
@@ -2083,7 +2083,7 @@ talentMoves('bloodreaver', {
   },
   bloodreaver_moon: {
     id: 'moon', replaces: 'undying', icon: 'undying', name: 'Blood Moon', type: 'ogcd', target: 'self', cd: 120, anim: 'big', talent: true,
-    desc: 'For 10s you cannot drop below 1 HP, and your heals on yourself are doubled. When the moon sets you burst in a tide of blood: the boss takes damage for every hit you took under it, and you heal for a quarter of that.',
+    desc: 'For 10s you cannot drop below 1 HP, and your heals on yourself are doubled. When the moon sets you burst in a tide of blood: the boss takes damage for every hit you took under it (up to {d:1500}), and you heal for a quarter of that.',
     effect(k) { k.mitigate('self', 0, 10, { kind: 'living', ab: this }); k.buff('undying', 10); k.buff('bloodmoon', 10); },
     fx: { type: 'aura', color: '#c0102a', r: 40, dur: 3 },
   },
@@ -2092,7 +2092,7 @@ talentMoves('bloodreaver', {
 talentMoves('runeguard', {
   runeguard_whirl: {
     id: 'whirl', replaces: 'sanctum', icon: 'sanctum', name: 'Whirling Runes', type: 'ogcd', target: 'self', cd: 30, anim: 'big', talent: true,
-    desc: 'Every Rune you hold tears loose and spins around you as a blade for 12s, striking the boss every 2s.',
+    desc: 'Every Rune you hold tears loose and spins around you as a blade for 12s, striking the boss every 2s for {d:35} per Rune.',
     usable: k => k.g.runes >= 1,
     glow: k => k.g.runes >= 3 && !k.has('overload'),
     effect(k) { const n = k.g.runes; k.g.runes = 0; runeSpent(k, n); k.dot('whirl', 35 * n, 12, 2, { ab: this }); k.fx('whirl', { n }); },
@@ -2100,7 +2100,7 @@ talentMoves('runeguard', {
   },
   runeguard_living: {
     id: 'living', replaces: 'overload', icon: 'overload', name: 'Living Rune', type: 'ogcd', target: 'self', cd: 60, anim: 'big', talent: true,
-    desc: 'Burst: a great rune rises behind you for 15s. +10% damage, Rune Strike gives 2 Runes, Glyph Burst and Ward blasts hit harder, and every Rune you spend makes the rune fire a bolt at the boss.',
+    desc: 'Burst: a great rune rises behind you for 15s. +10% damage, Rune Strike gives 2 Runes, Glyph Burst hits for {d:1080} and Ward blasts 50% harder, and every Rune you spend makes the rune fire a bolt at the boss for {d:90}.',
     effect(k) { k.buff('overload', 15); k.buff('living', 15); if (k.perk('runeguard_w3')) k.gain('runes', 2, 3); },
     fx: { type: 'aura', color: '#b18cff', r: 40, dur: 2 },
   },
@@ -2109,7 +2109,7 @@ talentMoves('runeguard', {
 talentMoves('ranger', {
   ranger_explosive: {
     id: 'explosive', replaces: 'rapid', icon: 'rapid', name: 'Explosive Shot', type: 'ogcd', target: 'enemy', range: RANGED, cd: 2, anim: 'attack', talent: true,
-    desc: 'Spend 50 Focus: plant a charge in the boss that blows 2.5s later. Every Quick Shot or Piercing Arrow that lands before then makes the blast 30% bigger.',
+    desc: 'Spend 50 Focus: plant a charge in the boss that blows 2.5s later for {d:340}. Every Quick Shot or Piercing Arrow that lands before then makes the blast 30% bigger.',
     usable: k => k.g.focus >= 50 && !k.g.charge,
     glow: k => !k.g.charge && (k.g.focus >= 90 || (k.has('markself') && k.g.focus >= 50)),
     effect(k, t) {
@@ -2121,7 +2121,7 @@ talentMoves('ranger', {
   },
   ranger_falcon: {
     id: 'falcon', replaces: 'barrage', icon: 'barrage', name: 'Falcon', type: 'ogcd', target: 'enemy', range: RANGED, cd: 30, anim: 'cast', talent: true,
-    desc: 'Your falcon dives onto the boss and harries it for 10s, striking every 2s. Every Keen Eye you light while it hunts sends it into a diving strike at once.',
+    desc: 'Your falcon dives onto the boss and harries it for 10s, striking every 2s for {d:90}. Every Keen Eye you light while it hunts sends it into a diving strike for {d:200} at once.',
     glow: k => k.has('markself'),
     effect(k) { k.dot('falcon', 90, 10, 2, { ab: this }); k.buff('falconHunt', 10); if (k.perk('ranger_w3')) k.proc('keen', 15); },
     fx: { type: 'aura', color: '#ffe27a', r: 30, dur: 1 },
@@ -2131,7 +2131,7 @@ talentMoves('ranger', {
 talentMoves('shadowblade', {
   shadowblade_rupture: {
     id: 'rupture', replaces: 'venom', icon: 'venom', name: 'Rupture', type: 'gcd', target: 'enemy', range: MELEE, anim: 'attack', talent: true,
-    desc: 'Finisher: spend all your combo points to open the boss up, bleeding for 4s per point. While it bleeds, your finisher hits 15% harder.',
+    desc: 'Finisher: spend all your combo points to cut the boss open for {d:100}, bleeding {d:120} every 2s for 4s per point. While it bleeds, your finisher hits 15% harder.',
     usable: k => k.g.combo >= 1,
     glow: k => k.g.combo >= 4 && k.dotRemaining('rupture') < 4,
     effect(k) { const cp = k.g.combo; k.g.combo = 0; k.damage(100, { ab: this }); k.dot('rupture', 120 * (k.perk('shadowblade_w1') ? 1.25 : 1), 4 * cp, 2, { ab: this }); },
@@ -2139,7 +2139,7 @@ talentMoves('shadowblade', {
   },
   shadowblade_blossom: {
     id: 'blossom', replaces: 'smoke', icon: 'smoke', name: 'Death Blossom', type: 'ogcd', target: 'enemy', range: MELEE, cd: 120, anim: 'big', talent: true,
-    desc: 'Vanish into a storm of knives around the boss: six cuts over 1.5s, each giving a combo point. The last is a free finisher with everything you hold.',
+    desc: 'Vanish into a storm of knives around the boss: six cuts of {d:30} over 1.5s, each giving a combo point. The last is a free finisher with everything you hold.',
     glow: k => k.g.combo <= 1,
     effect(k) {
       const ab = this;
@@ -2159,7 +2159,7 @@ talentMoves('pyromancer', {
   },
   pyromancer_phoenix: {
     id: 'phoenix', replaces: 'vent', icon: 'vent', name: 'Phoenix Flight', type: 'gcd', target: 'enemy', range: RANGED, cd: 12, anim: 'big', talent: true,
-    desc: 'Instant: release all your Heat as a phoenix that sweeps through the boss and wheels back for a second pass, harder the more Heat. At 60 Heat or more it leaves you Hot Streak.',
+    desc: 'Instant: release all your Heat as a phoenix that sweeps through the boss and wheels back for a second pass, each pass {d:70} plus {d:26} for every 10 Heat. At 60 Heat or more it leaves you Hot Streak.',
     usable: k => k.g.heat >= 10,
     glow: k => k.g.heat >= 85,
     effect(k) {
@@ -2175,7 +2175,7 @@ talentMoves('pyromancer', {
 talentMoves('cleric', {
   cleric_bloom: {
     id: 'dawnbloom', replaces: 'intervene', icon: 'intervene', name: 'Bloom of Dawn', type: 'gcd', target: 'ally', cd: 30, anim: 'big', allowDead: true, talent: true,
-    desc: 'Instant: spend all your Petals on one ally. A fallen ally rises at once; a living one is healed for 500 per Petal. Every Petal counts toward Dawnstar.',
+    desc: 'Instant: spend all your Petals on one ally. A fallen ally rises at once; a living one is healed for {h:500} per Petal. Every Petal counts toward Dawnstar.',
     usable: k => k.g.petals >= 1,
     effect(k, t) {
       const n = k.g.petals; k.g.petals = 0;
@@ -2186,7 +2186,7 @@ talentMoves('cleric', {
   },
   cleric_sanctum: {
     id: 'dawnsanctum', replaces: 'prayer', icon: 'prayer', name: 'Dawn Sanctum', type: 'ogcd', target: 'self', cd: 90, anim: 'big', talent: true,
-    desc: 'A great circle of dawn at your feet for 12s. Allies standing in it take 15% less damage and heal every 1.5s, and your Smites cast from inside it are instant.',
+    desc: 'A great circle of dawn at your feet for 12s. Allies standing in it take 15% less damage and heal {h:70} every 1.5s, and your Smites cast from inside it are instant.',
     effect(k) {
       const p = k.env.pos ? k.env.pos() : null;
       k.g.sanctum = { end: k.now + 12, x: p ? p.x : null, y: p ? p.y : null };
@@ -2200,7 +2200,7 @@ talentMoves('cleric', {
 talentMoves('grovekeeper', {
   grovekeeper_seed: {
     id: 'seed', replaces: 'rebirth', icon: 'rebirth', name: 'Seed of Renewal', type: 'gcd', target: 'ally', cd: 30, anim: 'big', allowDead: true, talent: true,
-    desc: 'Instant: spend 40 Bloom to plant a seed on an ally for 20s. If they fall while it grows, they spring back up at once; if not, it blooms into a big heal when it ends. On a fallen ally, it raises them at once.',
+    desc: 'Instant: spend 40 Bloom to plant a seed on an ally for 20s. If they fall while it grows, they spring back up at once; if not, it blooms into a {h:900} heal when it ends. On a fallen ally, it raises them at once.',
     usable: k => k.g.bloom >= 40,
     effect(k, t) {
       k.spend('bloom', 40);
@@ -2211,7 +2211,7 @@ talentMoves('grovekeeper', {
   },
   grovekeeper_treant: {
     id: 'treant', replaces: 'thorn', icon: 'thorn', name: 'Treant', type: 'ogcd', target: 'enemy', range: RANGED, cd: 45, anim: 'big', talent: true,
-    desc: 'Call up a treant beside the boss for 15s. It slams the boss every 3s, and every slam heals your most hurt ally.',
+    desc: 'Call up a treant beside the boss for 15s. It slams the boss for {d:170} every 3s, and every slam heals your most hurt ally for {h:150}.',
     effect(k, tg) {
       const ab = this, pot = k.perk('grovekeeper_w1') ? 210 : 170, en = tg && tg.id;
       k.buff('treant', 15);
@@ -2231,7 +2231,7 @@ talentMoves('chronomancer', {
   },
   chronomancer_warp: {
     id: 'warp', replaces: 'accel', icon: 'accel', name: 'Time Warp', type: 'ogcd', target: 'self', cd: 60, anim: 'big', talent: true,
-    desc: 'Party burst: a great clock hangs over the party for 15s (20s as an Accelerant). Everyone acts 10% faster (15% as an Accelerant; an Echoist\'s echoes are full strength), and every 3s its hands strike the boss and heal the whole party. You gain 40 Flux.',
+    desc: 'Party burst: a great clock hangs over the party for 15s (20s as an Accelerant). Everyone acts 10% faster (15% as an Accelerant; an Echoist\'s echoes are full strength), and every 3s its hands strike the boss for {d:70} and heal the whole party for {h:40}. You gain 40 Flux.',
     effect(k) {
       const acc = k.def.spec === 'accelerant', dur = acc ? 20 : 15, ab = this;
       k.partyBuff('haste', acc ? 0.15 : 0.1, dur, { ab });
@@ -2370,7 +2370,7 @@ KITS.gorgemaw = {
   abilities: [
     {
       id: 'gnash', name: 'Gnash', type: 'gcd', target: 'enemy', range: MELEE, anim: 'attack',
-      desc: 'Three bites on one button: Gnash > Rend > Gulp. Gulp swallows a mouthful and heals you a little.',
+      desc: 'Three bites on one button: Gnash ({d:220}) > Rend ({d:300}) > Gulp ({d:390}). Gulp swallows a mouthful and heals you for 2% of your HP.',
       label: k => ['Gnash', 'Rend', 'Gulp'][k.now < k.g.comboUntil ? k.g.step : 0],
       effect(k) {
         const step = k.now < k.g.comboUntil ? k.g.step : 0;
@@ -2392,7 +2392,7 @@ KITS.gorgemaw = {
     },
     {
       id: 'spit', name: 'Spit', type: 'gcd', target: 'enemy', range: 300, anim: 'cast',
-      desc: 'Spit your oldest Morsel back at the boss in the shape you ate it: a Ring bursts round it, a Lance runs it through, a Fang bites, and a Spike is one huge blow.',
+      desc: 'Spit your oldest Morsel back at the boss in the shape you ate it: a Ring bursts round it ({d:420}), a Lance runs it through ({d:460}), a Fang bites ({d:490}), and a Spike is one huge blow ({d:800}).',
       label: k => (k.g.belly.length ? `Spit ${MAW.NAMES[k.g.belly[0].m]}` : 'Spit'),
       usable: k => k.g.belly.length > 0,
       glow: k => mawSpitGlow(k),
@@ -2569,7 +2569,7 @@ KITS.oathbroker = {
   abilities: [
     {
       id: 'collect', name: 'Collect', type: 'gcd', target: 'enemy', range: MELEE, anim: 'attack',
-      desc: 'Three strikes of the seal-mace on one button: Dun > Levy > Collect. Every strike pays your oldest entry down by 2% of your HP.',
+      desc: 'Three strikes of the seal-mace on one button: Dun ({d:230}) > Levy ({d:300}) > Collect ({d:400}). Every strike pays your oldest entry down by 2% of your HP.',
       label: k => ['Dun', 'Levy', 'Collect'][k.now < k.g.comboUntil ? k.g.step : 0],
       effect(k) {
         const step = k.now < k.g.comboUntil ? k.g.step : 0;
@@ -2743,20 +2743,20 @@ function ipMove(id, name, seq, o) {
     bonus: 0, threat: 1, effect(k) { ipPress(k, this); } }, o);
 }
 const IP_MOVES = [
-  ipMove('crane', 'Crane Step', 'KL', { bonus: 24, desc: 'A hop and a flicked palm. It gives back 22 Breath.',
+  ipMove('crane', 'Crane Step', 'KL', { bonus: 24, desc: 'A hop and a flicked palm for {d:64}. It gives back 22 Breath.',
     finish(k) { ipBreath(k, k.perk('ironpalm_w1') ? 30 : 22); } }),
-  ipMove('flow', 'Flowing Palms', 'LLL', { bonus: 50, desc: 'Three quick open palms, the last one pushed through. Cheap and simple.' }),
+  ipMove('flow', 'Flowing Palms', 'LLL', { bonus: 50, desc: 'Three quick open palms, the last one pushed through for {d:90}. Cheap and simple.' }),
   ipMove('gate', 'Rising Gate', 'LLH', { bonus: 60, threat: 3, anim: 'uppercut', alt: { ironpalm_swallow: 'KLH' },
-    desc: 'A launching uppercut that draws the boss to you (triple threat). The boss is in the air: the next input has longer to come.' }),
+    desc: 'A launching uppercut for {d:124} that draws the boss to you (triple threat). The boss is in the air: the next input has longer to come.' }),
   ipMove('drop', 'Heaven\'s Drop', 'LLHKK', { bonus: 140, anim: 'axe', lock: 0.62, alt: { ironpalm_swallow: 'KLHKK' },
-    desc: 'Rising Gate, then two kicks: an axe kick brought down on the airborne boss.',
+    desc: 'Rising Gate, then two kicks: an axe kick brought down on the airborne boss for {d:192}.',
     finish(k, mv) { if (k.talent('ironpalm_mountain')) k.after(1, () => { k.damage(40, { ab: mv }); k.fx('aftershock'); }); } }),
-  ipMove('wall', 'Tiger Wall', 'HKK', { bonus: 18, anim: 'guard', desc: 'A low blocking stance: 25% less damage for 5s.',
+  ipMove('wall', 'Tiger Wall', 'HKK', { bonus: 18, anim: 'guard', desc: 'A low blocking kick for {d:70}, then a stance: 25% less damage for 5s.',
     finish(k, mv) { k.mitigate('self', 0.25, 5, { ab: mv }); k.buff('wall', 5); if (k.talent('ironpalm_shirt')) k.shield('self', 130, 5, { ab: mv }); } }),
-  ipMove('breaker', 'Stone Breaker', 'HHK', { bonus: 55, desc: 'A crushing kick to the knee: the boss is Bruised and takes damage every 3s for 15s.',
+  ipMove('breaker', 'Stone Breaker', 'HHK', { bonus: 55, desc: 'A crushing kick to the knee for {d:107}: the boss is Bruised and takes {d:20} every 3s for 15s.',
     finish(k, mv) { k.dot('bruise', 20, 15, 3, { ab: mv }); } }),
-  ipMove('ox', 'Iron Ox', 'HHH', { bonus: 90, threat: 2, desc: 'Three heavy blows, the last driven home with the whole body (double threat).' }),
-  ipMove('palms', 'Thousand Palms', 'LKHH', { flurry: 5, bonus: 170, anim: 'flurry', lock: 0.75, desc: 'The finisher: a storm of open palms, five strikes on top of the blow.',
+  ipMove('ox', 'Iron Ox', 'HHH', { bonus: 90, threat: 2, desc: 'Three heavy blows, the last driven home with the whole body for {d:154} (double threat).' }),
+  ipMove('palms', 'Thousand Palms', 'LKHH', { flurry: 5, bonus: 170, anim: 'flurry', lock: 0.75, desc: 'The finisher: a storm of open palms, five strikes of {d:34} on top of the blow ({d:64}).',
     finish(k, mv, st) {
       if (k.talent('ironpalm_hundred')) k.buff('guard', 6);
       if (k.talent('ironpalm_echo')) k.after(0.6, () => { for (let i = 0; i < 3; i++) k.after(i * 0.08, () => k.damage(mv.bonus * (st.open ? 1.3 : 1) / 9, { ab: mv })); k.fx('echo-palm'); });
@@ -2917,12 +2917,12 @@ KITS.ironpalm = {
     'Read (R) in the last moment before a hit lands catches it: half the damage, a counter and Breath. Read a tankbuster and your next Heavy is a free, stronger Thousand Palms.',
   ],
   abilities: [
-    ipInputAb('L', 'palm', 'An open-palm strike, quick to recover. Adds L to your string.'),
-    ipInputAb('H', 'fist', 'An iron-wrapped punch, slow to recover and heavy. Adds H to your string.'),
-    ipInputAb('K', 'kick', 'A snapping kick. Adds K to your string.'),
+    ipInputAb('L', 'palm', 'An open-palm strike for {d:40}, quick to recover. Adds L to your string.'),
+    ipInputAb('H', 'fist', 'An iron-wrapped punch for {d:64}, slow to recover. Adds H to your string.'),
+    ipInputAb('K', 'kick', 'A snapping kick for {d:52}. Adds K to your string.'),
     {
       id: 'read', name: 'Read', type: 'ogcd', target: 'self', cd: 6, lock: 0.25, anim: 'guard',
-      desc: 'Drop into a reading stance for 1.2s: 20% less damage. A hit that lands in its first 0.4s is read: it lands at half strength, you counter, and you get 15 Breath. Read a tankbuster and your next Heavy is a free Thousand Palms, 30% stronger. It doesn\'t break your string.',
+      desc: 'Drop into a reading stance for 1.2s: 20% less damage. A hit that lands in its first 0.4s is read: it lands at half strength, you counter for {d:63}, and you get 15 Breath. Read a tankbuster and your next Heavy is a free Thousand Palms, 30% stronger. It doesn\'t break your string.',
       effect(k) {
         k.mitigate('self', IRONPALM.READ.pct, IRONPALM.READ.dur, { kind: 'parry', ab: this }); k.buff('read', IRONPALM.READ.dur);
         if (k.has('pond')) { const id = this.id; k.after(0.8, () => k.refundCharge(id)); }   // Still Water's Still Pond: Read is back at once
@@ -2956,17 +2956,17 @@ TAUNT.ironpalm = {
 // Ironpalm's talent moves (the shared system above): Bellows Stance takes Iron Skin's key, Dragon Ascends Temple Bell's
 TALENT_ABILITIES.ironpalm_bellows = { cls: 'ironpalm', ab: {
   id: 'bellows', replaces: 'skin', icon: 'skin', name: 'Bellows Stance', type: 'ogcd', target: 'self', cd: 90, lock: 0.5, anim: 'big',
-  desc: 'Breathe like a forge bellows for 10s: 30% less damage, Breath refills half again as fast, and every named move you finish breathes out a shockwave (a hit of its own) and gives back 6 Breath.',
+  desc: 'Breathe like a forge bellows for 10s: 30% less damage, Breath refills half again as fast, and every named move you finish breathes out a shockwave ({d:54}) and gives back 6 Breath.',
   effect(k) { k.mitigate('self', 0.3, 10, { ab: this }); k.buff('bellows', 10); },
 } };
 const ipDragon = {
   id: 'dragon', replaces: 'bell', icon: 'bell', name: 'Dragon Ascends', type: 'ogcd', target: 'enemy', range: 300, cd: 60, lock: 0.6, anim: 'big',
-  desc: 'Leap and come down on your target like a dragon: a heavy blow, the whole party deals 5% more damage for 12s, and you get Second Wind for 15s.',
+  desc: 'Leap and come down on your target like a dragon: a {d:170} blow, the whole party deals 5% more damage for 12s, and you get Second Wind for 15s.',
   effect(k) { k.damage(170, { ab: this, threat: 2 }); k.partyBuff('dmg', 0.05, 12, { ab: this }); k.buff('wind', k.perk('ironpalm_w3') ? 20 : 15); },
 };
 TALENT_ABILITIES.ironpalm_dragon = { cls: 'ironpalm', ab: ipDragon,
   spec: { avalanche: Object.assign({}, ipDragon, {
-    desc: 'Leap and come down on your target like a dragon: a heavy blow, the whole party deals 5% more damage for 12s, and you get Second Wind for 15s. Your Momentum fills and lasts 15s, unless a string drops.',
+    desc: 'Leap and come down on your target like a dragon: a {d:170} blow, the whole party deals 5% more damage for 12s, and you get Second Wind for 15s. Your Momentum fills and lasts 15s, unless a string drops.',
     effect(k) { ipDragon.effect.call(this, k); k.buff('rush', 15, {}, IRONPALM.RUSH_MAX, IRONPALM.RUSH_MAX); },
   }) } };
 
@@ -3061,7 +3061,7 @@ KITS.threadweaver = {
     {
       id: 'needle', name: 'Needle', type: 'gcd', target: 'enemy', range: RANGED, anim: 'cast',
       cast: k => (k.talent('threadweaver_taut') && weaveCount(k) >= 3 ? 1 : 1.5),
-      desc: '1.5s cast attack: a thrust of the long needle. Each Thread on you tugs a small heal to whoever is on its far end.',
+      desc: '1.5s cast attack: a thrust of the long needle for {d:270}. Each Thread on you tugs a {h:100} heal to whoever is on its far end.',
       effect(k) {
         const r = k.damage(270, { ab: this });
         const tug = k.healAmount(100 * (k.perk('threadweaver_w1') ? 1.3 : 1), { ab: this }).amount;
@@ -3082,7 +3082,7 @@ KITS.threadweaver = {
     {
       id: 'mend', name: 'Mend Seam', type: 'gcd', target: 'ally', anim: 'cast',
       cast: k => (k.g.spool >= WEAVE.MEND_COST ? 0 : 1.8),
-      desc: '1.8s cast: a heal that runs down every Thread on your target at full strength. With 35 Spool it spends it, is instant and heals a third more.',
+      desc: '1.8s cast: a {h:440} heal that runs down every Thread on your target at full strength. With 35 Spool it spends it, is instant and heals 35% more.',
       glow: k => k.g.spool >= 70,
       effect(k, t) {
         const sp = k.g.spool >= WEAVE.MEND_COST;
@@ -3098,7 +3098,7 @@ KITS.threadweaver = {
     },
     {
       id: 'snip', name: 'Snap', type: 'ogcd', target: 'ally', cd: 25, anim: 'big', lock: 0.4,
-      desc: 'Cut the threads on your target (all of yours, if it has none). Each one releases the damage it carried in the last 5s as a heal to both its ends.',
+      desc: 'Cut the threads on your target (all of yours, if it has none). Each one releases the damage it carried in the last 5s as a heal to both its ends (at least {h:200}).',
       usable: k => weaveCount(k) > 0,
       glow: k => weaveStrained(k) > 0,
       effect(k, t) { weaveSnip(k, this, t); },
@@ -3292,7 +3292,7 @@ KITS.marionettist = {
   abilities: [
     {
       id: 'jab', name: 'Jab', type: 'gcd', target: 'enemy', range: 640, anim: 'cast',
-      desc: 'The Doll stabs. Builds 1 Encore.',
+      desc: 'The Doll stabs for {d:250}. Builds 1 Encore.',
       usable: k => mariReady(k),
       effect(k) {
         const flo = k.talent('marionettist_flourish') && ++k.g.jabs % 3 === 0;
@@ -3304,7 +3304,7 @@ KITS.marionettist = {
     },
     {
       id: 'pull', name: 'Pull Strings', type: 'ogcd', target: 'none', charges: 2, cd: 10, anim: 'cast', lock: 0.35,
-      desc: 'Fling the Doll to where you aim (within its strings\' reach). It cuts anything it passes through, and stays there until you pull it again or pick another target. Builds 1 Encore on a hit. Two charges.',
+      desc: 'Fling the Doll to where you aim (within its strings\' reach). It cuts anything it passes through for {d:160}, and stays there until you pull it again or pick another target. Builds 1 Encore on a hit. Two charges.',
       usable: k => !mariLimp(k),
       effect(k) {
         const p = mariPos(k), aim = mariAim(k), i = mariPick(k, aim), d = k.g.dolls[i];
@@ -3327,7 +3327,7 @@ KITS.marionettist = {
     },
     {
       id: 'cross', name: 'Cross-Cut', type: 'gcd', target: 'enemy', range: 640, cd: 8, anim: 'big',
-      desc: 'Your strings become blades and cut along the line between you and the Doll. With the enemy on that line it\'s a heavy cut and 2 Encore; otherwise it cuts nothing.',
+      desc: 'Your strings become blades and cut along the line between you and the Doll. With the enemy on that line it\'s a {d:560} cut and 2 Encore; otherwise it cuts nothing.',
       usable: k => !mariLimp(k),
       glow: k => mariLineOn(k),
       effect(k) { mariCross(k, this); },
@@ -3335,7 +3335,7 @@ KITS.marionettist = {
     },
     {
       id: 'pirouette', name: 'Pirouette', type: 'gcd', target: 'enemy', range: 640, cd: 12, anim: 'cast',
-      desc: 'The Doll spins, cutting all around it, and nothing can touch it for 1.5s. Builds 1 Encore.',
+      desc: 'The Doll spins, cutting all around it for {d:300}, and nothing can touch it for 1.5s. Builds 1 Encore.',
       usable: k => mariReady(k),
       effect(k) {
         const safe = k.perk('marionettist_a4') ? 3 : 1.5;
@@ -3366,7 +3366,7 @@ KITS.marionettist = {
     },
     {
       id: 'finale', name: 'Grand Finale', type: 'gcd', target: 'enemy', range: 640, cd: 30, anim: 'big',
-      desc: 'Spend all your Encore (at least 3): the Doll performs a routine of five hits, each harder for every Encore spent. It can\'t move while it plays.',
+      desc: 'Spend all your Encore (at least 3): the Doll performs a routine of five hits, each {d:60} plus {d:44} for every Encore spent. It can\'t move while it plays.',
       usable: k => k.g.encore >= 3 && mariReady(k),
       glow: k => k.g.encore >= 5,
       effect(k) {
@@ -3386,7 +3386,7 @@ KITS.marionettist = {
 talentMoves('threadweaver', {
   threadweaver_embroider: {
     id: 'embroider', replaces: 'mend', icon: 'mend', name: 'Embroider', type: 'gcd', target: 'ally', anim: 'cast', talent: true,
-    desc: 'Instant, 20 Spool: a heal that runs down every Thread on your target at full strength, and on through their threads at 60%.',
+    desc: 'Instant, 20 Spool: a {h:400} heal that runs down every Thread on your target at full strength, and on through their threads at 60%.',
     usable: k => k.g.spool >= 20,
     glow: k => k.g.spool >= 60,
     effect(k, t) {
@@ -3400,7 +3400,7 @@ talentMoves('threadweaver', {
   },
   threadweaver_cradle: {
     id: 'cradle', replaces: 'tighten', icon: 'tighten', name: 'Cat\'s Cradle', type: 'ogcd', target: 'self', cd: 30, anim: 'big', talent: true,
-    desc: 'String a cradle of threads at your feet for 9s. Allies inside take 15% less damage and heal every 1.5s.',
+    desc: 'String a cradle of threads at your feet for 9s. Allies inside take 15% less damage and heal {h:70} every 1.5s.',
     effect(k) {
       const pa = k.healAmount(70, { ab: this }).amount;
       k.env.emit({ type: 'splash', target: 'self', r: 0, pr: 150, ticks: 6, interval: 1.5, pa, pct: 0.15, ab: this });
@@ -3411,7 +3411,7 @@ talentMoves('threadweaver', {
 talentMoves('marionettist', {
   marionettist_tangle: {
     id: 'tangle', replaces: 'pirouette', icon: 'pirouette', name: 'Tangle', type: 'gcd', target: 'enemy', range: 640, cd: 12, anim: 'cast', talent: true,
-    desc: 'The Doll winds its strings round the enemy: a cut now, and it bleeds every 2s for 10s. Builds 1 Encore.',
+    desc: 'The Doll winds its strings round the enemy: a {d:160} cut now, and it bleeds {d:55} every 2s for 10s. Builds 1 Encore.',
     usable: k => mariReady(k),
     effect(k) {
       const n = mariHit(k, this, 160);
@@ -3434,6 +3434,9 @@ talentMoves('marionettist', {
     fx: { color: '#d03050' },
   },
 });
+// (the Understudy's two Dolls each hit at 58%: its Tangle says so in numbers)
+TALENT_ABILITIES.marionettist_tangle.spec = { understudy: Object.assign({}, TALENT_ABILITIES.marionettist_tangle.ab, {
+  desc: 'Each Doll in reach winds its strings round the enemy: a {d:92.8} cut now, and it bleeds {d:31.9} every 2s for 10s. Builds 1 Encore.' }) };
 
 if (typeof module !== 'undefined') Object.assign(module.exports, { WEAVE, weaveMax, weaveHosted, weaveThreads, weaveCount, weaveStrained, weaveSpool, weaveCarry, weaveSnapped, weaveTie, weaveSnip, weaveTighten,
   MARI, MARI_STRING, MARI_FAR, mariStretch, mariEnemy, mariER, mariPos, mariLimp, mariInReach, mariReady, mariStation, mariPick, mariLose, mariEncore, mariTick, mariShare, mariHit, mariCross,

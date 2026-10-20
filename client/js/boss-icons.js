@@ -89,12 +89,12 @@ const BossIcons = (() => {
     'Whisk': (c, A) => { stroke(c, '#8a5a2e', 5, [[32, 56], [32, 40]]); for (const w of [6, 11, 16]) { c.beginPath(); c.ellipse(32, 24, w, 18, 0, 0, TAU); c.strokeStyle = L; c.lineWidth = 2; c.stroke(); } motion(c, A, [[[6, 14], [12, 20]], [[58, 14], [52, 20]]]); },
     'Spice Rack': (c, A) => { for (const [x, col] of [[18, '#c0503a'], [32, '#e8c15a'], [46, '#7aa04a']]) { fill(c, col, [[x - 6, 24], [x + 6, 24], [x + 6, 50], [x - 6, 50]]); fill(c, L, [[x - 7, 18], [x + 7, 18], [x + 7, 24], [x - 7, 24]]); } for (const x of [24, 40]) disc(c, x, 10, 2.5, A); },
     'Service!': (c, A) => { c.beginPath(); c.arc(32, 40, 16, Math.PI, 0); c.closePath(); c.fillStyle = L; c.fill(); fill(c, L, [[10, 40], [54, 40], [54, 45], [10, 45]]); disc(c, 32, 22, 3.5, L); fill(c, A, [[29, 6], [35, 6], [33, 16], [31, 16]]); disc(c, 32, 19, 1.5, A); },
-    // four plates set down round a cleaver, the nearest with a full gold rim, the others filling less (the order)
+    // four plates set down round a cleaver, the nearest with a full blue rim (a soak), the others filling less (the order)
     'Dinner Rush': (c, A) => {
       cleaver(c, 32, 30, -0.5, 0.75, L);
       for (const [x, y, f] of [[18, 46, 1], [46, 46, 0.66], [12, 18, 0.33], [52, 16, 0.33]]) {
         disc(c, x, y, 7, L); ring(c, x, y, 7, INK, 1.2);
-        c.beginPath(); c.arc(x, y, 9, -Math.PI / 2, -Math.PI / 2 + TAU * f); c.strokeStyle = '#ffd23a'; c.lineWidth = 2.5; c.stroke();
+        c.beginPath(); c.arc(x, y, 9, -Math.PI / 2, -Math.PI / 2 + TAU * f); c.strokeStyle = '#3d8bff'; c.lineWidth = 2.5; c.stroke();
       }
     },
     'Flare-Up': (c, A) => { flame(c, 32, 36, 24, A, '#ffe08a'); stroke(c, L, 2.5, [[12, 54], [52, 54]]); },
@@ -123,10 +123,10 @@ const BossIcons = (() => {
     'Spinneret Volley': (c, A) => { for (const [x, y] of [[18, 22], [34, 14], [46, 30]]) { stroke(c, L, 1.5, [[x, 0], [x, y - 8]]); disc(c, x, y, 7, L); } for (const x of [18, 34, 46]) ring(c, x, 52, 5, A, 2); },
     'Acid Deluge': (c, A) => { for (const [x, y] of [[14, 14], [30, 10], [46, 16], [22, 32], [40, 30], [54, 38], [12, 44], [32, 48]]) { stroke(c, A, 2, [[x + 4, y - 9], [x, y]]); disc(c, x, y + 1, 3, A); } },
     'Strand': (c, A) => { stroke(c, L, 2.5, [[8, 34], [56, 30]]); },
-    // a field of overlapping snares with three blue holes, and a clutch hanging at the side
+    // a field of overlapping snares with three holes left clear, and a clutch hanging at the side
     'Snare Weave': (c, A) => {
       for (const [x, y] of [[14, 14], [32, 12], [50, 14], [12, 32], [52, 32], [22, 50], [42, 52], [32, 36]]) ring(c, x, y, 10, L, 1.8);
-      for (const [x, y] of [[24, 26], [40, 26], [32, 50]]) disc(c, x, y, 6, '#3d8bff');
+      for (const [x, y] of [[24, 26], [40, 26], [32, 50]]) disc(c, x, y, 6, INK);
       stroke(c, L, 1.2, [[56, 4], [56, 18]]); egg(c, 56, 22, 0.55, '#efeedc');
     },
     'Ceiling Ambush': (c, A) => { stroke(c, L, 1.5, [[32, 0], [32, 20]]); spider(c, 32, 30, 0.9, L); c.beginPath(); c.ellipse(32, 54, 16, 4, 0, 0, TAU); c.fillStyle = A; c.fill(); },
@@ -151,10 +151,10 @@ const BossIcons = (() => {
       fill(c, '#8a939e', [[22, 10], [42, 10], [42, 15], [22, 15]]);
       bolt(c, A, 46, 30, 0.45); bolt(c, A, 18, 34, 0.35);
     },
-    // a squall front marching across in three bands, broken by a rod with a blue lane behind it
+    // a squall front marching across in three bands, broken by a rod with a clear lane behind it
     'Supercell': (c, A) => {
       for (const x of [14, 26, 38]) fill(c, '#3a4a64', [[x - 5, 8], [x + 5, 8], [x + 5, 56], [x - 5, 56]]);
-      fill(c, '#3d8bff', [[18, 28], [56, 28], [56, 36], [18, 36]]);
+      fill(c, INK, [[18, 28], [56, 28], [56, 36], [18, 36]]);
       stroke(c, L, 3.5, [[16, 18], [16, 34]]); fill(c, L, [[12, 32], [16, 40], [20, 32]]);
       bolt(c, A, 50, 16, 0.4);
     },
@@ -169,7 +169,7 @@ const BossIcons = (() => {
     'Chain Lightning': (c, A) => { for (const [x, y] of [[10, 44], [28, 20], [42, 46], [56, 22]]) disc(c, x, y, 4, L); stroke(c, A, 2.5, [[10, 44], [18, 30], [28, 20], [34, 34], [42, 46], [50, 32], [56, 22]]); },
     'Ball Lightning': (c, A) => { disc(c, 32, 32, 16, 'rgba(127,232,255,0.35)'); disc(c, 32, 32, 9, A); disc(c, 32, 32, 4, '#ffffff'); for (let i = 0; i < 4; i++) { const a = i * TAU / 4 + 0.4; stroke(c, L, 2, [[32 + Math.cos(a) * 16, 32 + Math.sin(a) * 16], [32 + Math.cos(a + 0.3) * 24, 32 + Math.sin(a + 0.3) * 24]]); } },
     'Skyfall': (c, A) => { fill(c, 'rgba(223,244,255,0.85)', [[24, 0], [40, 0], [44, 48], [20, 48]]); c.beginPath(); c.ellipse(32, 50, 20, 6, 0, 0, TAU); c.strokeStyle = A; c.lineWidth = 3; c.stroke(); },
-    'Heavens Fall': (c, A) => { fill(c, 'rgba(223,244,255,0.85)', [[22, 0], [42, 0], [42, 40], [22, 40]]); for (const x of [18, 28, 36, 46]) disc(c, x, 50, 4, L); ring(c, 32, 50, 16, '#ffd84a', 2.5); },
+    'Heavens Fall': (c, A) => { fill(c, 'rgba(223,244,255,0.85)', [[22, 0], [42, 0], [42, 40], [22, 40]]); for (const x of [18, 28, 36, 46]) disc(c, x, 50, 4, L); ring(c, 32, 50, 16, '#3d8bff', 2.5); },
     'Skybreak': (c, A) => { cloud(c, 32, 20, 1.1, '#3a4660'); stroke(c, '#ffffff', 3, [[14, 18], [26, 24], [34, 16], [48, 22]]); bolt(c, A, 26, 44, 0.7); bolt(c, A, 44, 46, 0.55); },
     'Gathering Storm': (c, A) => { cloud(c, 32, 20, 1, '#4a5874'); for (const [x, y] of [[18, 44], [32, 50], [46, 44]]) bolt(c, A, x, y, 0.42); ring(c, 32, 46, 22, 'rgba(127,232,255,0.4)', 2); },
     'Thunderhead': (c, A) => { cloud(c, 32, 18, 1.3, '#2e3850'); bolt(c, '#ffffff', 32, 44, 1); bolt(c, A, 32, 44, 0.75); },
@@ -192,7 +192,7 @@ const BossIcons = (() => {
     // a sealed writ, three chains out from it and a fourth hanging broken
     'Writ of Execution': (c, A) => {
       for (const a of [-2.4, -0.7, 0.9]) stroke(c, '#8a939e', 2.5, [[32, 32], [32 + Math.cos(a) * 28, 32 + Math.sin(a) * 28]]);
-      stroke(c, '#3d8bff', 2.5, [[32, 32], [32 + Math.cos(2.4) * 12, 32 + Math.sin(2.4) * 12]]); stroke(c, '#3d8bff', 2.5, [[32 + Math.cos(2.4) * 18, 32 + Math.sin(2.4) * 18], [32 + Math.cos(2.4) * 28, 32 + Math.sin(2.4) * 28]]);
+      stroke(c, '#8a939e', 2.5, [[32, 32], [32 + Math.cos(2.4) * 12, 32 + Math.sin(2.4) * 12]]); stroke(c, '#8a939e', 2.5, [[32 + Math.cos(2.4) * 18, 32 + Math.sin(2.4) * 18], [32 + Math.cos(2.4) * 28, 32 + Math.sin(2.4) * 28]]);
       fill(c, L, [[22, 22], [42, 22], [42, 42], [22, 42]]); disc(c, 32, 36, 5, '#b8322a');
     },
     'Gravebind': (c, A) => { for (const x of [22, 42]) { c.beginPath(); c.ellipse(x, 32, 10, 7, 0, 0, TAU); c.strokeStyle = L; c.lineWidth = 4; c.stroke(); } stroke(c, '#ff5a4a', 2, [[30, 32], [34, 32]]); },

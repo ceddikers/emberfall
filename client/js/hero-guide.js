@@ -3,7 +3,7 @@
 
 const HERO_GUIDE = {
   bastion: {
-    passive: { name: 'Perfect Block', icon: 'brace', desc: 'Brace in the instant before a hit lands to block it perfectly: +20 Resolve, and your next Blade Chain hit becomes a counterattack.' },
+    passive: { name: 'Perfect Block', icon: 'brace', desc: 'Brace in the instant before a hit lands to block it perfectly: +20 Resolve, and your next Blade Chain hit becomes a counterattack (+{d:150}).' },
     combos: [
       { keys: ['q', 'q', 'q', 'w'], text: 'Blade Chain to Judgment, then throw Holy Edge once Resolve passes 50.' },
       { keys: ['e', 'q'], text: 'Brace on the boss\'s swing, then cash the counter with Blade Chain.' },
@@ -11,7 +11,7 @@ const HERO_GUIDE = {
     ],
   },
   bloodreaver: {
-    passive: { name: 'Blood for Blood', icon: 'drain', desc: 'Crimson Drain heals you for 35% of the damage you took in the last 6s and hits harder the more you took. Getting hit is fuel.' },
+    passive: { name: 'Blood for Blood', icon: 'drain', desc: 'Crimson Drain heals you for 35% of the damage you took in the last 6s and hits up to {d:450} more the more you took. Getting hit is fuel.' },
     combos: [
       { keys: ['q', 'q', 'e'], text: 'Hack, Maul, Bloodletting between hits: the fastest way to fill Blood.' },
       { keys: ['w'], text: 'Drain right after a tankbuster lands, not before.' },
@@ -20,7 +20,7 @@ const HERO_GUIDE = {
     ],
   },
   runeguard: {
-    passive: { name: 'Ward Break', icon: 'ward', desc: 'Runic Wards explode when they end. The more they absorbed, the bigger the blast, and a fully broken Ward refunds its Rune.' },
+    passive: { name: 'Ward Break', icon: 'ward', desc: 'Runic Wards explode when they end. The more they absorbed, the bigger the blast ({d:150} up to {d:600}), and a fully broken Ward refunds its Rune.' },
     combos: [
       { keys: ['q', 'q', 'q', 'e'], text: 'Three Rune Strikes into Glyph Burst: steady damage.' },
       { keys: ['q', 'w'], text: 'Ward right before a tankbuster: it breaks, refunds, and explodes.' },
@@ -29,7 +29,7 @@ const HERO_GUIDE = {
     ],
   },
   ranger: {
-    passive: { name: 'Keen Eye', icon: 'pierce', desc: 'Quick Shot can light up Keen Eye: your next Piercing Arrow hits harder and gives its charge back. A new proc while one waits is wasted.' },
+    passive: { name: 'Keen Eye', icon: 'pierce', desc: 'Quick Shot can light up Keen Eye: your next Piercing Arrow hits for {d:500} instead of {d:340} and gives its charge back. A new proc while one waits is wasted.' },
     combos: [
       { keys: ['q', 'w'], text: 'Cash every Keen Eye proc straight away.' },
       { keys: ['f', 'q', 'e'], text: 'Barrage, Quick Shot (fires three times, triple Focus), then Rapid Fire.' },
@@ -37,7 +37,7 @@ const HERO_GUIDE = {
     ],
   },
   shadowblade: {
-    passive: { name: 'Positionals', icon: 'step', desc: 'Strike from behind for 2 combo points; Eviscerate from the side for bonus damage. The boss faces the tank, so pick your side.' },
+    passive: { name: 'Positionals', icon: 'step', desc: 'Strike from behind for 2 combo points; Eviscerate from the side for {d:80} more. The boss faces the tank, so pick your side.' },
     combos: [
       { keys: ['q', 'q', 'w'], text: 'From behind: two Strikes give 4 points, then Eviscerate.' },
       { keys: ['d', 'q', 'q', 'q', 'w'], text: 'Venom Blade first: poisoned targets take 15% more from Eviscerate.' },
@@ -46,7 +46,7 @@ const HERO_GUIDE = {
     ],
   },
   pyromancer: {
-    passive: { name: 'Heat & Hot Streak', icon: 'pyro', desc: 'Heat raises all your damage (+30% at full) but burns you at 100. Two crits in a row light up Hot Streak: an instant, empowered Pyroblast.' },
+    passive: { name: 'Heat & Hot Streak', icon: 'pyro', desc: 'Heat raises all your damage (+30% at full) but burns you at 100. Two crits in a row light up Hot Streak: an instant, empowered Pyroblast ({d:620}).' },
     combos: [
       { keys: ['q', 'e', 'w'], text: 'Fireball crits, Fire Blast mid-cast (always crits), then instant Hot Streak Pyroblast.' },
       { keys: ['d'], text: 'Vent at 85-95 Heat, ideally right before you have to move.' },
@@ -54,7 +54,7 @@ const HERO_GUIDE = {
     ],
   },
   cleric: {
-    passive: { name: 'Dawnstar', icon: 'petal', desc: 'Dawn Petals regrow every 15s. Every third Petal you spend turns your next Smite into Dawnstar, a huge instant attack. Healing becomes damage.' },
+    passive: { name: 'Dawnstar', icon: 'petal', desc: 'Dawn Petals regrow every 15s. Every third Petal you spend turns your next Smite into Dawnstar, an instant attack for {d:950}. Healing becomes damage.' },
     combos: [
       { keys: ['e', 'e', 'e', 'q'], text: 'Three Petals on hurt allies, then fire Dawnstar.' },
       { keys: ['r'], text: 'Prayer Circle before a raidwide (not after) for mitigation plus regen.' },
@@ -62,7 +62,7 @@ const HERO_GUIDE = {
     ],
   },
   grovekeeper: {
-    passive: { name: 'Bloom', icon: 'bloom', desc: 'Every Rejuvenate tick grows Bloom. Spend it on Bloom for a burst of healing that also makes your next Wrath instant and stronger.' },
+    passive: { name: 'Bloom', icon: 'bloom', desc: 'Every Rejuvenate tick grows Bloom. Spend it on Bloom for a burst of healing ({h:400} on each ally under Rejuvenate) that also makes your next Wrath instant and 50% stronger.' },
     combos: [
       { keys: ['w', 'q', 'q'], text: 'Rejuvenate before damage lands, then attack while it works.' },
       { keys: ['d', 'q'], text: 'Bloom at 50+, then the free instant Wrath.' },
@@ -72,7 +72,7 @@ const HERO_GUIDE = {
   },
   // the advanced classes
   thermist: {
-    passive: { name: 'Thermal Shock', icon: 'invert', desc: 'Each step from 0 makes that side\'s spells 8% stronger. Carry the dial across 0 after reaching 3 or more and the swing detonates on the target: the bigger the swing, the bigger the Shock. Past ±5 you overload.' },
+    passive: { name: 'Thermal Shock', icon: 'invert', desc: 'Each step from 0 makes that side\'s spells 8% stronger. Carry the dial across 0 after reaching 3 or more and the swing detonates on the target: the bigger the swing, the bigger the Shock (a swing of 3 is {d:195}, 6 is {d:510}, 10 is {d:930}). Past ±5 you overload.' },
     combos: [
       { keys: ['e', 'e', 'q', 'e'], text: 'Climb to +5 with Flare and a Cinder Bolt, then the instant, sure-crit Flare at the edge.' },
       { keys: ['r', 'r', 'r'], text: 'On the Brink: go frost. Three Glacier Lances carry you from +5 across 0: a swing of 6.' },
@@ -81,7 +81,7 @@ const HERO_GUIDE = {
     ],
   },
   driftblade: {
-    passive: { name: 'Drift', icon: 'cross', desc: 'Moving fills Drift and standing still drains it; nearly every cut hits harder with Drift behind it. Run clean through an enemy and you cut it as you pass: a Passing Strike.' },
+    passive: { name: 'Drift', icon: 'cross', desc: 'Moving fills Drift and standing still drains it; nearly every cut hits harder with Drift behind it. Run clean through an enemy and you cut it as you pass: a Passing Strike, {d:90} and up to twice that with full Drift.' },
     combos: [
       { keys: ['q', 'q', 'r'], text: 'Keep moving while you Carve, then spend a full gauge on Crosswind.' },
       { keys: ['w', 'e', 'space'], text: 'Slipstream through the boss, Hook Turn round it (it gives the dash back), then dash again.' },
@@ -102,7 +102,7 @@ const HERO_GUIDE = {
 
 // Ironpalm: the combos are its named strings (Light Q, Heavy W, Kick E)
 HERO_GUIDE.ironpalm = {
-  passive: { name: 'Strings', icon: 'fist', desc: 'No global cooldown. Every press of Light, Heavy or Kick is a quick hit that costs Breath, and strings of them pressed in rhythm become named moves. A press made just as the last one recovers is Crisp: harder, and cheaper in Breath.' },
+  passive: { name: 'Strings', icon: 'fist', desc: 'No global cooldown. Every press of Light, Heavy or Kick is a quick hit that costs Breath, and strings of them pressed in rhythm become named moves. A press made just as the last one recovers is Crisp: 10% harder, and 40% cheaper in Breath.' },
   combos: [
     { keys: ['q', 'q', 'w'], text: 'Rising Gate: a launcher that draws the boss to you.' },
     { keys: ['q', 'q', 'w', 'e', 'e'], text: 'Rising Gate, then two Kicks: Heaven\'s Drop on the airborne boss.' },

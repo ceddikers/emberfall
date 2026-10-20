@@ -51,10 +51,11 @@
     const h = Save.get('heroes') && Save.get('heroes')[id];
     if (!h) return false;
     const c = h.clears || {};
-    return Object.values(c).some(b => b && (b.normal || b.hard)) || (h.talents && h.talents.rows > 0) || (h.journal && Object.keys(h.journal.met || {}).length > 0) || !!h.spec;
+    return Object.values(c).some(b => b && (b.normal || b.hard)) || (h.talents && ((h.talents.rows | 0) > 1 || (h.talents.picks || []).some(x => x != null))) || (h.journal && Object.keys(h.journal.met || {}).length > 0) || !!h.spec;
   }
   function refreshLineup() {
-    const shown = CLASSES.filter(c => c.difficulty === 1 || playedHero(c.id) || (player.cls && player.cls.id === c.id));
+    // (not the hero you're playing: you're already the one walking round town)
+    const shown = CLASSES.filter(c => (c.difficulty === 1 || playedHero(c.id)) && !(player.cls && player.cls.id === c.id));
     lineup.length = 0;
     lineup.push(...shown.map((cls, i) => {
     const roleIdx = ['tank', 'dps', 'healer'].indexOf(cls.role);
@@ -271,16 +272,19 @@
   let selfCast = null;
   function allyTargetId(ab) {
     if (selfCast && now < selfCast.until && actor && actor.abilities[selfCast.i] === ab && validAlly(Net.id, ab)) return Net.id;
-    if (hoverFrame != null && validAlly(hoverFrame, ab)) return hoverFrame;
-    // mouseover: pointing straight at an ally in the world sends the heal there, ahead of your locked ally
-    const under = hoverAlly(ab);
-    if (under != null) return under;
+    // mouseover (a setting, on unless turned off): a party frame or an ally you point at takes the heal, ahead of your locked ally
+    if (mouseoverOn()) {
+      if (hoverFrame != null && validAlly(hoverFrame, ab)) return hoverFrame;
+      const under = hoverAlly(ab);
+      if (under != null) return under;
+    }
     if (lockedAlly != null && validAlly(lockedAlly, ab)) return lockedAlly;
     // a tank (Spellwarden) is usually pointing at the boss, not an ally: only a frame or a locked ally counts
     if (player.cls && player.cls.role === 'tank') return Net.id;
     const s = softAlly(ab);
     return s != null ? s : Net.id;
   }
+  function mouseoverOn() { return Save.setting('mouseover', true) !== false; }
   function healerish() { return actor && actor.abilities.some(a => a.target === 'ally'); }
 
   // --- kit events
@@ -610,7 +614,8 @@
   let ffKey = '';
   function updateTargetFrame() {
     let t = started && !panelOpen() ? lockedTarget() : null;
-    if (t && !t.dummy && (t.hp <= 0 || (t.boss && raid && raid.state === 'clear'))) t = null;   // (a fallen boss or add drops off the frame)
+    if (t && !t.dummy && (t.hp <= 0 || (t.boss && raid && raid.state === 'clear'))) t = null;
+    if (t && t.boss) t = null;   // (the boss bar already shows its health and who it's on: no second frame under it)   // (a fallen boss or add drops off the frame)
     const key = t ? `${t.name}|${t.dummy ? '' : Math.round(1000 * t.hp / Math.max(1, t.mx))}|${t.tg}` : '';
     if (key !== tfKey) {
       tfKey = key;
@@ -1768,6 +1773,10 @@
     Keybinds.openPanel({
       namer: i => (i < 6 && actor && actor.abilities[i] ? actor.abilities[i].name : null),
       onChange: () => { document.querySelectorAll('#ability-row .slot').forEach(el => { const k = el.querySelector('kbd'); if (k) k.textContent = SLOT_KEYS[Number(el.dataset.i)]; }); updateHelp(); },
+      prefs: player.cls ? {
+        get: () => ({ frames: frameDock(), role: ROLES[player.cls.role].name.toLowerCase(), mouseover: mouseoverOn() }),
+        set: (k, v) => { if (k === 'frames') { Save.setSetting(`frames-${player.cls.role}`, v === 'strip' ? 'strip' : 'left'); applyFrameDock(); } if (k === 'mouseover') Save.setSetting('mouseover', !!v); },
+      } : null,
     });
   }
   // ---- town life: the townsfolk, unlock moments and feasts (town-life.js)
@@ -1858,6 +1867,8 @@
   const openTutorial = boss => Tutorial.open({ bosses: () => BOSSES.filter(b => b.playable && bossOpen(b)), boss });
   $('tutorial-btn').addEventListener('click', () => openTutorial(null));
   $('opt-btn').addEventListener('click', () => (Keybinds.panelOpen() ? Keybinds.closePanel() : openOptions()));
+  $('menu-chip').addEventListener('click', () => (Keybinds.panelOpen() ? Keybinds.closePanel() : openOptions()));
+  $('menu-chip').addEventListener('mousedown', e => e.stopPropagation());
   // a bound action that isn't a panel (keyboard or a mouse's side button)
   function runAction(a, e) {
     if (a === 'meter') { if (inArena()) RaidUI.toggleMeter(); return; }
@@ -1902,7 +1913,8 @@
     }
     if (document.activeElement && document.activeElement.closest && document.activeElement.closest('input, textarea, select, [contenteditable="true"]')) return;
     if (e.key === 'Escape' && placingMark) { placeMark(null); return; }
-    if (e.key === 'Escape') { if (selOpen()) selBack(); else if (panelOpen()) closePanels(); else { lockedAlly = null; lockedEnemy = null; } return; }
+    // Esc: back out of a page, close a panel, drop your targets, and with nothing left to close, open the menu
+    if (e.key === 'Escape') { if (selOpen()) selBack(); else if (panelOpen()) closePanels(); else if (lockedAlly != null || lockedEnemy != null) { lockedAlly = null; lockedEnemy = null; } else if (started && !e.repeat) openOptions(); return; }
     // (Shift turns 5 into %, ; into :, ...: a bound symbol key still works with Shift through its physical key)
     const SHIFTED = { Digit0: '0', Digit1: '1', Digit2: '2', Digit3: '3', Digit4: '4', Digit5: '5', Digit6: '6', Digit7: '7', Digit8: '8', Digit9: '9', Semicolon: ';', Quote: "'", Comma: ',', Period: '.', Slash: '/', BracketLeft: '[', BracketRight: ']', Backslash: '\\', Minus: '-', Equal: '=' };
     const kname = String(e.key || '').toLowerCase();
@@ -2448,6 +2460,8 @@
     label(ctx, '!', keeper.x, keeper.y - 40 + bob, '#ffd65a', 26, 'Cinzel, Georgia, serif', 800);
     label(ctx, 'Barkeep', keeper.x, keeper.y - 28 + 6, '#f0d48a', 11);
     label(ctx, 'Trainer', trainer.x, trainer.y - 34, '#f0d48a', 11);
+    // the Trainer calls you over while your hero has an open talent row with nothing picked in it (row I is free)
+    if (player.cls) { const tt = Save.talents(player.cls.id); if (tt.picks.some((p, r) => r < tt.rows && p == null)) label(ctx, '!', trainer.x, trainer.y - 52 + bob, '#ffd65a', 26, 'Cinzel, Georgia, serif', 800); }
     for (const d of dummies) if (d.spar && Math.hypot(player.x - d.x, player.y - d.y) < 260) label(ctx, 'Sparring Dummy', d.x, d.y - 46, '#ffb0a0', 11);
     Pastimes.drawOver(ctx, now);
     TownLife.drawLabels(ctx, label, f => Math.hypot(player.x - f.x, player.y - f.y) < 220);
@@ -2810,7 +2824,10 @@
   }
   // --- specializations on the hero page: the base class and its two specs as tabs. A spec shows what it
   // specializes in, its passive, and every move it adds or changes (with the move it replaced).
-  let selSpec = null, tipsTab = 'first';
+  let selSpec = null, tipsTab = 'first', selShown = null;
+  // move text shows exact numbers (numbers.js) for the hero a page is about: the one on the hero page, else yours
+  Num.setContext(() => (!sel.classList.contains('hidden') && !selDetail.classList.contains('hidden') && selShown
+    ? { cls: selShown.id, spec: selSpec } : { cls: player.cls && player.cls.id, spec: player.spec }));
   function renderSpecBox(cls, kit, rerender) {
     const box = $('sel-spec'), specs = SPECS[cls.id] || [];
     box.classList.toggle('hidden', !specs.length || !specsRevealed());
@@ -2832,7 +2849,7 @@
           <div><b><kbd>${KEYS[c.i]}</kbd>${c.a.name}${c.a.id !== c.was.id ? `<em>New, replaces ${c.was.name}</em>` : '<em>Changed</em>'}</b><p>${c.a.desc}</p></div></div>`).join('')}</div>`;
       body += trialCard(cls, spec, Save.specState(cls.id, spec.id));
     }
-    box.innerHTML = `<h4>Specialization</h4><div class="spec-tabs">${tabs}</div>${body}`;
+    box.innerHTML = Num.fill(`<h4>Specialization</h4><div class="spec-tabs">${tabs}</div>${body}`);
     box.querySelectorAll('.spec-tab').forEach(b => b.addEventListener('click', () => { selSpec = b.dataset.spec || null; rerender(); }));
     const tb = box.querySelector('.trial-go');
     if (tb) tb.addEventListener('click', () => {
@@ -2896,6 +2913,7 @@
     Tip.hide();
   }
   function showDetail(cls) {
+    selShown = cls;
     selGrid.classList.add('hidden'); selDetail.classList.remove('hidden');
     loadSpecPortraits(cls.id);
     const kit = KITS[cls.id], guide = HERO_GUIDE[cls.id];
@@ -2931,7 +2949,7 @@
       // tips are written for the base class; under a spec the key chips show its moves and it adds its own line first
       const spec = specOf(cls.id, selSpec);
       $('sel-passive').innerHTML = `<i class="ab-icon passive" style="background-image:url(${abilityIcon(cls.id, guide.passive.icon)})"></i>
-        <div><h4>Passive · ${guide.passive.name}</h4><p>${(spec && spec.classPassive) || guide.passive.desc}</p></div>`;
+        <div><h4>Passive · ${guide.passive.name}</h4><p>${Num.fill((spec && spec.classPassive) || guide.passive.desc)}</p></div>`;
       // one page of tips at a time (tabs), so the hero page fits on one screen
       const tabs = [
         ...(spec ? [{ k: 'spec', name: spec.name, html: `<p>${spec.blurb}</p>` }] : []),
@@ -2941,7 +2959,7 @@
       ];
       if (!tabs.some(t => t.k === tipsTab)) tipsTab = 'first';
       $('sel-tips').innerHTML = `<div class="tips-head"><h4>Tips &amp; Combos</h4><nav>${tabs.map(t => `<button type="button" data-k="${t.k}" class="${t.k === tipsTab ? 'on' : ''}">${t.name}</button>`).join('')}</nav></div>
-        <div class="tips-page">${tabs.find(t => t.k === tipsTab).html}</div>`;
+        <div class="tips-page">${Num.fill(tabs.find(t => t.k === tipsTab).html)}</div>`;
       $('sel-tips').querySelectorAll('.tips-head button').forEach(b => b.addEventListener('click', () => { tipsTab = b.dataset.k; renderKit(); }));
       $('sel-tips').querySelectorAll('.kchip').forEach(ch => { const i = Number(ch.dataset.i); Tip.set(ch, () => abilityTip(cls, abs[i])); });
     };
@@ -3028,7 +3046,7 @@
     VFX.burst(e.x, e.y, { color: cls.accent, color2: '#ffffff', n: 18, speed: 220 });
   }
   function chooseHero(cls, specId) {
-    setTimeout(refreshLineup, 0);   // (the deck shows the hero you just picked)
+    setTimeout(refreshLineup, 0);   // (the hero you just picked steps off the deck; the one you left steps back on)
     player.cls = cls;
     // the spec picked on the hero page, or the one this hero last played
     if (specId !== undefined) Save.setSpec(cls.id, specOf(cls.id, specId) ? specId : null);
@@ -3090,7 +3108,7 @@
           <p class="tagline">${boss.blurb}</p>${typeof STORY !== 'undefined' && STORY.bossLore && STORY.bossLore[boss.id] ? `<p class="lore">${escapeHtml(STORY.bossLore[boss.id])}</p>` : ''}
         </div>
       </div>
-      <ul class="abilities mech">${boss.mechanics.map(m => `<li><i class="mech-dot"></i><div><b>${m.name}</b><span>${m.desc}</span></div></li>`).join('')}</ul>
+      <ul class="abilities mech">${boss.mechanics.map(m => `<li><i class="mech-dot"></i><div><b>${m.name}</b><span>${Num.fill(m.desc)}</span></div></li>`).join('')}</ul>
       ${boss.playable && typeof TUTORIAL !== 'undefined' && TUTORIAL.bosses[boss.id] ? `<button type="button" class="linkish brief-btn">Read the briefing: every move, and what to do</button>` : ''}
       <div class="raid-setup"></div>`;
     const bb = det.querySelector('.brief-btn');
@@ -3355,7 +3373,9 @@
     onPlaceMark: k => placeMark(k), onWaymark: msg => sendWaymark(msg), onCallouts: () => Pings.openPanel(), onPullIn: () => startPullCountdown(),
     onDock: where => { if (player.cls) Save.setSetting(`frames-${player.cls.role}`, where); } });
   // where the party frames sit for your role: healers start with them above the hotbar
-  const applyFrameDock = () => { if (player.cls) RaidUI.dock(Save.setting(`frames-${player.cls.role}`, player.cls.role === 'healer' ? 'strip' : 'left')); };
+  // party frames sit in the corner unless you moved them above your skills (Options, or the dock button on them)
+  const frameDock = () => (player.cls ? Save.setting(`frames-${player.cls.role}`, 'left') : 'left');
+  const applyFrameDock = () => { if (player.cls) RaidUI.dock(frameDock()); };
 
   // inventory: the hero figure uses the painted portrait if there is one, else the sprite on a sigil
   const invSt = newSt();

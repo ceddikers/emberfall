@@ -84,6 +84,7 @@ const Save = (() => {
     catch (e) { if (!failed && typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('emberfall-save-failed')); failed = true; }   // storage unavailable or full
   }
 
+  let upgradedFree = false;
   function load() {
     let d = read();
     let v = d && Number.isInteger(d.v) ? d.v : 0;
@@ -101,12 +102,17 @@ const Save = (() => {
     if (!d.heroes || typeof d.heroes !== 'object') d.heroes = {};
     if (!d.settings || typeof d.settings !== 'object') d.settings = {};
     d.gold = Math.max(0, Math.floor(Number(d.gold) || 0));
+    // the first talent row became free (2026-10-21): heroes who paid 60 for it get that gold back, once
+    if (!d.talentRowFree) {
+      for (const h of Object.values(d.heroes)) if (h && h.talents && (h.talents.rows | 0) >= 1) d.gold += 60;
+      d.talentRowFree = 1; upgradedFree = true;
+    }
     d.inv.next = Math.max(d.inv.next || 1, ...d.inv.items.map(i => (i.uid || 0) + 1), ...d.inv.lost.map(i => (i.uid || 0) + 1), ...(d.inv.escrow || []).map(i => (i.uid || 0) + 1));
     return { d, upgraded };
   }
 
   const { d: data, upgraded } = load();
-  if (upgraded) write();
+  if (upgraded || upgradedFree) write();
 
   return {
     VERSION,
@@ -180,7 +186,7 @@ const Save = (() => {
     // pick reads as none. (A pick with no id, from before v4, keeps its column.)
     talents(classId) {
       const t = (data.heroes[classId] || {}).talents || freshTalents();
-      const rows = Math.max(0, Math.min(5, t.rows | 0)), T = tree(classId);
+      const rows = Math.max(1, Math.min(5, t.rows | 0)), T = tree(classId);   // (row I is free: always open)
       const picks = [0, 1, 2, 3, 4].map(r => {
         const id = Array.isArray(t.ids) ? t.ids[r] : null;
         if (typeof id === 'string' && T && T[r]) { const c = T[r].findIndex(x => x.id === id); return c >= 0 ? c : null; }
@@ -191,6 +197,7 @@ const Save = (() => {
     heroTalents(classId) {
       const h = data.heroes[classId] = data.heroes[classId] || { clears: {} };
       if (!h.talents) h.talents = freshTalents();
+      if ((h.talents.rows | 0) < 1) h.talents.rows = 1;   // (the first row is free: every hero starts with it open)
       return h.talents;
     },
     // unlock the next row for `cost` gold; false if the wallet is short or every row is open

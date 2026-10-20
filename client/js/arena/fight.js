@@ -37,8 +37,8 @@ const FIGHT = {
   LB: { BAR: 100, CLEAN: 4, CHECK: 70, TANK: [0, 0.2, 0.35, 0.5], TANK_DUR: 8, HEAL: [0, 0.3, 0.6, 1], RAISE: 0.5, DPS: [0, 0.008, 0.018, 0.03] },
   TANK_HP: 32000, HP: 21000,   // before NUM_SCALE
   // Each party slot's own colour (Hard's own-colour circles: Burial Rites), in the order the party frames list
-  // everyone (tank, healer, then the rest by id: FightSim.slotOf). None of them is red, blue or yellow, which say
-  // danger, safe and share on the floor.
+  // everyone (tank, healer, then the rest by id: FightSim.slotOf). None of them is red or blue, which say
+  // danger and share on the floor (safe floor has no colour).
   SLOTS: ['#5fe36a', '#b26cff', '#ff6fd2', '#f2eee4'],
 };
 const playerBaseHp = role => Math.round((role === 'tank' ? FIGHT.TANK_HP : FIGHT.HP) * FIGHT.NUM_SCALE);
@@ -818,7 +818,7 @@ class FightSim {
         if (owner && !inside.some(p => p.id === owner.id)) { fail = 1; hit(owner, m.dmg, m.tag || 'own', true); }
         break;
       }
-      // 'safe' (a harmless area, drawn blue) and 'drop' (a marker on a player; its onResolve does the work) hit nobody
+      // 'safe' (a harmless area, not drawn: sim data for bots) and 'drop' (a marker on a player; its onResolve does the work) hit nobody
       case 'raidwide':
         for (const p of this.alive()) if (!(cov && cov.safe.has(p.id))) hit(p, m.dmg * (eat && eat.raid ? MAW_HOST.RAID : 1), 'raidwide', false);
         if (eat && eat.raid) for (const p of eat.raid) this.eaten(p, eat.type, { mid: m.id, raid: 1 });

@@ -22,9 +22,10 @@ const SPECS = {
         potMult: 0.73,   // balance knob (tools/simulate.js)
         abilities: {
           brace: { charges: 3, desc: 'Raise your shield: 25% less damage for 3s. Brace just before a hit lands for a Perfect Block, which also steadies the party. Three charges.' },
+          oath: { desc: 'Burst: 15s of +10% damage. Judgment grants double Resolve and Shield Bash hits for {d:680} instead of {d:530}.' },
           edge: {
             id: 'bash', replaces: 'edge', name: 'Shield Bash', type: 'gcd', target: 'enemy', range: SPEC_MELEE, anim: 'bash',
-            desc: 'Spend 50 Resolve: slam your shield into the boss. For 4s you take 30% less damage, and it heals you a little.',
+            desc: 'Spend 50 Resolve: slam your shield into the boss for {d:530}. For 4s you take 30% less damage, and it heals you for {h:120}.',
             usable: k => k.g.resolve >= bastionCost(k),
             glow: k => k.g.resolve >= 90 || (k.has('oath') && k.g.resolve >= 50),
             effect(k) {
@@ -54,11 +55,11 @@ const SPECS = {
         potMult: 0.6,
         abilities: {
           blade: {
-            desc: 'Three-hit combo on one button: Strike > Riposte > Judgment. Judgment fills 35 Resolve.',
+            desc: 'Three-hit combo on one button: Strike ({d:220}) > Riposte ({d:300}) > Judgment ({d:400}). Judgment fills 35 Resolve.',
             effect(k) { bastionBlade(k, this, 35); },
           },
           edge: {
-            desc: 'Spend 50 Resolve: a radiant blade you can throw from range. Heals you a little. After a Perfect Block it becomes a beam, 50% stronger.',
+            desc: 'Spend 50 Resolve: a radiant blade you can throw from range for {d:560}. Heals you for {h:120}. After a Perfect Block it becomes a beam, 50% stronger.',
             glow: k => k.g.resolve >= 90 || (k.g.resolve >= 50 && (k.has('oath') || k.has('radiant'))),
             effect(k) {
               bastionSpend(k);
@@ -69,7 +70,7 @@ const SPECS = {
               bastionEdge(k, this, pot);
             },
           },
-          oath: { desc: 'Burst: 20s of +10% damage. Judgment grants double Resolve and Holy Edge hits harder.', effect(k) { k.buff('oath', 20); } },
+          oath: { desc: 'Burst: 20s of +10% damage. Judgment grants double Resolve and Holy Edge hits for {d:720} instead of {d:560}.', effect(k) { k.buff('oath', 20); } },
           bulwark: {
             id: 'zeal', replaces: 'bulwark', name: 'Zealous Guard', type: 'ogcd', target: 'self', cd: 120, anim: 'big',
             desc: 'Big cooldown: 30% less damage for 10s, Brace\'s charges refill, and your next Holy Edge is Radiant.',
@@ -104,7 +105,7 @@ const SPECS = {
         abilities: {
           drain: {
             id: 'rampage', replaces: 'drain', name: 'Rampage', type: 'gcd', target: 'enemy', range: SPEC_MELEE, anim: 'attack',
-            desc: 'Spend 40 Rage: a wild blow that hits harder the lower your HP (up to 70% harder near death) and heals you for 20% of the damage you took in the last 6s.',
+            desc: 'Spend 40 Rage: a wild blow for {d:350}, up to {d:250} more the more damage you took in the last 6s. It hits harder the lower your HP (up to 70% harder near death) and heals you for 20% of the damage you took in the last 6s.',
             usable: k => k.g.blood >= 40 || k.stacks('gorge') > 0,
             glow: k => k.stacks('gorge') > 0 || k.g.blood >= 90 || k.env.hpFrac() < 0.5,
             effect(k) {
@@ -121,7 +122,7 @@ const SPECS = {
             },
             fx: { type: 'slash', color: '#ff7a2a', r: 60, span: 1.8 },
           },
-          frenzy: { desc: 'Burst: 12s of +15% damage and 10% faster attacks, and your next three Rampages are free and stronger.' },
+          frenzy: { desc: 'Burst: 12s of +15% damage and 10% faster attacks, and your next three Rampages are free and hit for {d:120} more.' },
         },
       }),
     },
@@ -135,7 +136,7 @@ const SPECS = {
         potMult: 0.74,
         abilities: {
           drain: {
-            desc: 'Spend 40 Blood: a heavy hit that heals you for 35% of the damage you took in the last 6s, and the whole party for 25% of that.',
+            desc: 'Spend 40 Blood: hits for {d:300}, up to {d:400} more the more damage you took, and heals you for 35% of the damage you took in the last 6s, and the whole party for 25% of that.',
             effect(k) {
               let pot = 300;
               if (k.stacks('gorge') > 0) { k.consume('gorge'); pot += 110; } else k.spend('blood', 40);
@@ -150,9 +151,10 @@ const SPECS = {
               reaverAfterDrain(k, this, healed, 0);
             },
           },
+          frenzy: { desc: 'Burst: 12s of +15% damage, and your next three Crimson Drains are free and hit for {d:110} more.' },
           letting: {
             id: 'lance', replaces: 'letting', name: 'Blood Lance', type: 'ogcd', target: 'enemy', range: 300, charges: 2, cd: 15, anim: 'cast',
-            desc: 'Throw a lance of blood between attacks: damage and +20 Blood, from range. Two charges.',
+            desc: 'Throw a lance of blood between attacks: {d:210} and +20 Blood, from range. Two charges.',
             glow: k => k.charges(k.abById('lance')) === 2,
             effect(k) { k.damage(210 * reaverRetaliate(k), { ab: this }); reaverGain(k, k.perk('bloodreaver_w1') ? 30 : 20); if (k.perk('bloodreaver_a4')) k.healRaw('self', k.env.maxHp() * 0.05, { ab: this }); reaverLetting(k, this); },
             fx: { type: 'projectile', color: '#ff2d4b', range: 300, speed: 1000 },
@@ -169,13 +171,13 @@ const SPECS = {
       blurb: 'Your Wards go where they\'re needed. When they break, they break for you.',
       focus: 'Shielding allies. Your Ward goes on whoever needs it, and pays its Rune back more easily.',
       passive: { name: 'Shared Ward', desc: 'Runic Ward goes on an ally (yourself if none is picked). It explodes from them when it ends, and refunds its Rune once it has absorbed half.' },
-      classPassive: 'Runic Wards explode when they end. The more they absorbed, the bigger the blast, and one that absorbed at least half refunds its Rune.',
+      classPassive: 'Runic Wards explode when they end. The more they absorbed, the bigger the blast ({d:150} up to {d:600}), and one that absorbed at least half refunds its Rune.',
       build: base => ({
         potMult: 0.70,
         abilities: {
           ward: {
             target: 'ally',
-            desc: 'Spend 1 Rune: shield an ally (about 20% of your HP) for 8s. It explodes when it ends, harder the more it absorbed, and gives the Rune back once it has taken half.',
+            desc: 'Spend 1 Rune: shield an ally for {s:650} for 8s. It explodes when it ends, for {d:150} up to {d:600} the more it absorbed, and gives the Rune back once it has taken half.',
             effect(k, t) { runeWardCost(k); runeWardUp(k, this, t); k.g.wardAmt = k.shield(t, k.perk('runeguard_a2') ? 812 : 650, k.perk('runeguard_a4') ? 12 : 8, { ab: this, tag: 'ward' }); },
           },
         },
@@ -190,14 +192,14 @@ const SPECS = {
       gaugeTip: 'Each Rune Blade hit gives 1 (2 during Runic Overload), and a Ward broken all the way refunds its Rune. Runic Ward spends 1, Rune Cleave spends all 3.',
       blurb: 'Runes cut into steel. Lighter Wards, a sharper blade.',
       focus: 'Melee damage. A sword combo, a cleave that leaves a burning rune, and two reflects; smaller Wards.',
-      passive: { name: 'Rune-Carved', desc: 'Rune Strike becomes a two-hit combo, Glyph Burst a cleave that leaves a burning rune, and Mirror Aegis has two charges. Wards are a little smaller.' },
+      passive: { name: 'Rune-Carved', desc: 'Rune Strike becomes a two-hit combo, Glyph Burst a cleave that leaves a burning rune, and Mirror Aegis has two charges. Wards are a little smaller ({s:600} instead of {s:650}).' },
       build: () => ({
         potMult: 0.59,
         init: () => ({ runes: 0, step: 0, comboUntil: 0 }),
         abilities: {
           strike: {
             id: 'cut', replaces: 'strike', name: 'Rune Blade', type: 'gcd', target: 'enemy', range: SPEC_MELEE, anim: 'attack',
-            desc: 'Two-hit combo on one button: Cut > Carve. Each hit gives 1 Rune (2 during Runic Overload).',
+            desc: 'Two-hit combo on one button: Cut ({d:240}) > Carve ({d:315}). Each hit gives 1 Rune (2 during Runic Overload).',
             label: k => (k.now < k.g.comboUntil && k.g.step === 1 ? 'Carve' : 'Cut'),
             effect(k) {
               const second = k.now < k.g.comboUntil && k.g.step === 1;
@@ -210,12 +212,12 @@ const SPECS = {
             fx: { type: 'slash', color: '#c58cff', r: 54, span: 1.6 },
           },
           ward: {
-            desc: 'Spend 1 Rune: shield yourself (about 18% of your HP) for 8s. It explodes when it ends, harder the more it absorbed.',
+            desc: 'Spend 1 Rune: shield yourself for {s:600} for 8s. It explodes when it ends, for {d:150} up to {d:600} the more it absorbed.',
             effect(k) { runeWardCost(k); runeWardUp(k, this, 'self'); k.g.wardAmt = k.shield('self', k.perk('runeguard_a2') ? 750 : 600, k.perk('runeguard_a4') ? 12 : 8, { ab: this, tag: 'ward' }); k.g.selfWard = true; },
           },
           glyph: {
             id: 'cleave', replaces: 'glyph', name: 'Rune Cleave', type: 'gcd', target: 'enemy', range: SPEC_MELEE, anim: 'attack',
-            desc: 'Spend 3 Runes: a cleaving cut that leaves a burning rune on the target for 12s.',
+            desc: 'Spend 3 Runes: a cleaving cut for {d:660} that leaves a burning rune on the target, {d:85} every 3s for 12s.',
             usable: k => k.g.runes >= 3,
             glow: k => k.g.runes >= 3,
             effect(k) {
@@ -228,7 +230,8 @@ const SPECS = {
             },
             fx: { type: 'slash', color: '#e0b8ff', r: 64, span: 2.2 },
           },
-          mirror: { charges: 2, desc: 'For 3s, the next hit you take is reduced by 80% and reflected back for huge damage. Two charges.' },
+          mirror: { charges: 2, desc: 'For 3s, the next hit you take is reduced by 80% and reflected back for {d:1500}. Two charges.' },
+          overload: { desc: 'Burst: 15s of +10% damage. Rune Blade hits give 2 Runes, Rune Cleave hits for {d:860} and burns for {d:110}, and Ward blasts hit 50% harder.' },
         },
       }),
     },
@@ -249,12 +252,12 @@ const SPECS = {
           mend: {
             id: 'barrier', replaces: 'mend', name: 'Divine Barrier', type: 'gcd', target: 'ally', anim: 'cast',
             cast: k => (k.has('quickmend') ? 0 : 1.5),   // (Quick Mend, a talent)
-            desc: '1.5s cast: a golden dome on one ally that absorbs a big hit for 12s, and heals them a little.',
+            desc: '1.5s cast: a golden dome on one ally that absorbs {s:650} for 12s, and heals them for {h:250}.',
             effect(k, t) { k.consume('quickmend'); k.heal(t, 250, { ab: this }); k.shield(t, 650, 12, { ab: this, tag: 'barrier' }); },
             fx: { type: 'ring', color: '#ffe9a8', r: 46, onTarget: true },
           },
           petal: {
-            desc: 'Spend a Petal: an instant heal and a shield for 10s. If the shield soaks most of its strength, the Petal comes back (once every 10s). Three Petals make Dawnstar.',
+            desc: 'Spend a Petal: an instant {h:330} heal and a shield of {s:260} for 10s. If the shield soaks most of its strength, the Petal comes back (once every 10s). Three Petals make Dawnstar.',
             effect(k, t) {
               k.spend('petals', 1);
               k.heal(t, 330, { ab: this });
@@ -263,7 +266,7 @@ const SPECS = {
               clericPetal(k, this, t, 330);
             },
           },
-          bene: { charges: 2, desc: 'Instant: a strong heal and a shield on one ally. Two charges.' },
+          bene: { charges: 2, desc: 'Instant: heals one ally for {h:800} and gives them a shield of {s:300}. Two charges.' },
         },
         onNotify(k, type, d) {
           if (type === 'shieldEnd' && d.tag === 'petal' && d.frac >= 0.75 && k.now >= k.g.refundAt) {
@@ -279,7 +282,7 @@ const SPECS = {
       blurb: 'Judgment first, mercy after. Every blow your allies strike carries your verdict.',
       focus: 'Damage. Smite brands the boss so your allies\' hits burst for extra damage. Less healing: Petals regrow slower and Benediction becomes an attack.',
       balance: 1.12,   // a damage spec: aims for this share of the base Cleric's damage (tools/check.js)
-      passive: { name: 'Judgment', desc: 'Smite brands the boss: your allies\' next 2 hits on it burst with holy fire, counted as your damage. Dawn Petals regrow every 20s. Benediction becomes Condemn.' },
+      passive: { name: 'Judgment', desc: 'Smite brands the boss: your allies\' next 2 hits on it burst with holy fire ({d:70} each), counted as your damage. Dawn Petals regrow every 20s. Benediction becomes Condemn.' },
       build: base => ({
         potMult: 0.71,
         tick(k) {
@@ -291,7 +294,7 @@ const SPECS = {
         abilities: {
           smite: {
             cast: k => (k.g.bloom >= 3 || k.has('verdict') || clericInSanctum(k) ? 0 : 1.5),
-            desc: '1.5s cast attack that brands the boss: your allies\' next 2 hits burst for extra damage. After three Dawn Petals it becomes Dawnstar: instant, huge, and a brand of 4.',
+            desc: '1.5s cast attack for {d:280} that brands the boss: your allies\' next 2 hits burst for {d:70} each. After three Dawn Petals it becomes Dawnstar: instant, {d:950}, and a brand of 4.',
             effect(k) {
               k.consume('verdict');
               let r;
@@ -302,7 +305,7 @@ const SPECS = {
           },
           bene: {
             id: 'condemn', replaces: 'bene', name: 'Condemn', type: 'ogcd', target: 'enemy', range: SPEC_RANGED, cd: 30, anim: 'big',
-            desc: 'Instant: a lance of holy fire that brands the boss for 4 hits, and your next Smite is instant.',
+            desc: 'Instant: a lance of holy fire for {d:420} that brands the boss for 4 hits, and your next Smite is instant.',
             effect(k) {
               if (clericBless(k, this, null)) { k.damage(140, { ab: this }); k.fx('twinBless'); return; }
               k.damage(420, { ab: this }); specBrand(k, k.perk('cleric_a2') ? 6 : 4, this); k.buff('verdict', 15);
@@ -326,7 +329,7 @@ const SPECS = {
         abilities: {
           rejuv: {
             id: 'lifebind', replaces: 'rejuv', name: 'Lifebind', type: 'gcd', target: 'ally', anim: 'cast',
-            desc: 'Instant: a small heal, then healing every 3s for 15s, on this ally and on the most hurt other ally. Its ticks grow Bloom.',
+            desc: 'Instant: heals for {h:200}, then {h:120} every 3s for 15s, on this ally, and {h:110} every 3s on the most hurt other ally. Its ticks grow Bloom.',
             recastGcd: k => groveSproutGcd(k),
             effect(k, t) {
               groveRejuv(k, this, t);
@@ -340,7 +343,7 @@ const SPECS = {
             fx: { type: 'ring', color: '#6fffb0', r: 40, onTarget: true },
           },
           bloom: {
-            desc: 'Spend 50 Bloom: instantly and strongly heal everyone with your Lifebind and the most hurt ally (the whole party during Wild Growth). Your next Wrath is instant.',
+            desc: 'Spend 50 Bloom: instantly heal everyone with your Lifebind and the most hurt ally for {h:520} (the whole party for {h:450} during Wild Growth). Your next Wrath is instant.',
             effect(k) {
               k.spend('bloom', 50);
               if (k.has('growth')) k.heal('party', 450, { ab: this });
@@ -363,7 +366,7 @@ const SPECS = {
         healMod: k => (k.has('moonlit') ? 0.25 : 0),
         abilities: {
           bloom: {
-            desc: 'Spend 50 Bloom: instantly heal everyone with your Rejuvenate (and the whole party while Moonwell lasts). Your next Wrath is instant.',
+            desc: 'Spend 50 Bloom: instantly heal everyone with your Rejuvenate for {h:400} (and the whole party for {h:350} while Moonwell lasts). Your next Wrath is instant.',
             effect(k) {
               k.spend('bloom', 50);
               if (k.has('moonlit')) k.heal('party', 350, { ab: this });
@@ -375,7 +378,7 @@ const SPECS = {
           },
           growth: {
             id: 'moonwell', replaces: 'growth', name: 'Moonwell', type: 'ogcd', target: 'ally', cd: 45, anim: 'big',
-            desc: 'A pool of moonlight at an ally\'s feet for 12s: everyone standing in it heals every 1.5s, and your heals are 25% stronger while it lasts.',
+            desc: 'A pool of moonlight at an ally\'s feet for 12s: everyone standing in it heals {h:80} every 1.5s, and your heals are 25% stronger while it lasts.',
             effect(k, t) {
               k.buff('moonlit', 12);
               const { amount } = k.healAmount(80, { ab: this });
@@ -410,11 +413,11 @@ const SPECS = {
           },
           abilities: {
             bolt: {
-              desc: '1.5s cast attack that repeats 3s later at half strength. Slow: heals your linked ally for 120% of its damage. Haste: heals everyone for 50%.',
+              desc: '1.5s cast attack for {d:280} that repeats 3s later at half strength. Slow: heals your linked ally for 120% of its damage. Haste: heals everyone for 50%.',
               effect(k) { bolt(k, this, chronoInstant(k)); echo(k, () => { bolt(k, this, share(k)); k.fx('echo'); }); chronoBoltAfter(k, this, 0.5, 1.2, true); },
             },
             recall: {
-              desc: '2.5s cast: bring a fallen ally back, or heal a living one heavily. A heal repeats 3s later at half strength.',
+              desc: '2.5s cast: bring a fallen ally back, or heal a living one for {h:1400}. A heal repeats 3s later at half strength.',
               effect(k, t) {
                 if (k.env.isDead(t)) { k.raise(t, { ab: this }); chronoSecondChance(k, this, t); return; }
                 k.heal(t, 1400, { ab: this });
@@ -442,7 +445,7 @@ const SPECS = {
         tick(k) { chronoFlux(k, k.perk('chronomancer_a2') ? 1.8 : 2.4); },
         abilities: {
           bolt: {
-            desc: '1.5s cast attack. Slow: heals your linked ally for 100% of its damage. Haste: heals everyone for 62%.',
+            desc: '1.5s cast attack for {d:280}. Slow: heals your linked ally for 100% of its damage. Haste: heals everyone for 62%.',
             effect(k) {
               chronoBolt(k, this, chronoInstant(k), 0.62, 1.0);
               chronoBoltAfter(k, this, 0.62, 1.0);
@@ -480,7 +483,7 @@ const SPECS = {
           pierce: {
             id: 'aimed', replaces: 'pierce', name: 'Aimed Shot', type: 'gcd', target: 'enemy', range: SPEC_RANGED, charges: 2, cd: 12, anim: 'attack',
             cast: k => (k.has('keen') ? 0 : 2),
-            desc: '2s cast: a heavy, carefully aimed shot, two charges. With Keen Eye it\'s instant, hits harder and gives the charge back.',
+            desc: '2s cast: a carefully aimed shot for {d:620}, two charges. With Keen Eye it\'s instant, hits for {d:760} and gives the charge back.',
             glow: k => k.has('keen') || k.charges(k.abById('aimed')) === 2,
             effect(k) {
               const keen = k.consume('keen');
@@ -500,7 +503,7 @@ const SPECS = {
       id: 'venomstrike', name: 'Venomstrike', title: 'The Green Death', accent: '#9aff4a',
       blurb: 'Every arrow leaves a little acid behind. Then one arrow lets it all out.',
       focus: 'Damage that ramps. Quick Shot stacks an acid burn on the boss and Caustic Arrow bursts every stack at once.',
-      passive: { name: 'Acid', desc: 'Quick Shot adds a stack of Acid to the target (up to 8): a burn that grows with each stack. Piercing Arrow becomes Caustic Arrow, which bursts every stack.' },
+      passive: { name: 'Acid', desc: 'Quick Shot adds a stack of Acid to the target (up to 8): a burn that grows with each stack, {d:14} per stack every 3s. Piercing Arrow becomes Caustic Arrow, which bursts every stack.' },
       build: base => {
         // one or more stacks of Acid: the burn keeps its rhythm and grows (no pandemic waste from re-applying)
         function addAcid(k, n, ab) {
@@ -515,7 +518,7 @@ const SPECS = {
           tick(k) { rangerTrack(k); if (k.g.acid && !k.dots.has('acid')) k.g.acid = 0; },
           abilities: {
             quick: {
-              desc: 'Fast shot: damage, +10 Focus and a stack of Acid on the target. Sometimes lights up Keen Eye.',
+              desc: 'Fast shot: {d:200}, +10 Focus and a stack of Acid on the target. Sometimes lights up Keen Eye.',
               effect(k) {
                 const barr = k.consume('barrage'), ff = !barr && rangerFocusFire(k);
                 const r = k.damage((barr ? 600 : 200) * (ff ? 2 : 1), rangerShot(k, this));
@@ -528,7 +531,7 @@ const SPECS = {
             },
             pierce: {
               id: 'caustic', replaces: 'pierce', name: 'Caustic Arrow', type: 'gcd', target: 'enemy', range: SPEC_RANGED, charges: 2, cd: 12, anim: 'attack',
-              desc: 'Burst every stack of Acid at once: damage that grows with each stack. Two charges. Keen Eye makes it stronger and gives the charge back.',
+              desc: 'Burst every stack of Acid at once: {d:200} plus {d:60} per stack. Two charges. Keen Eye adds {d:160} and gives the charge back.',
               glow: k => k.g.acid >= 6 || (k.g.acid >= 3 && (k.has('keen') || k.charges(k.abById('caustic')) === 2)),   // burst when there's acid worth bursting
               effect(k) {
                 const n = k.g.acid; k.g.acid = 0; k.dots.delete('acid');
@@ -539,6 +542,7 @@ const SPECS = {
               },
               fx: { type: 'line', color: '#9aff4a', range: 440 },
             },
+            barrage: { desc: 'Your next Quick Shot fires three times ({d:600}), gives triple Focus and three stacks of Acid.' },
           },
         };
       },
@@ -557,7 +561,7 @@ const SPECS = {
         abilities: {
           step: {
             id: 'fury', replaces: 'step', name: 'Blade Fury', type: 'ogcd', target: 'enemy', range: SPEC_MELEE, charges: 2, cd: 15, anim: 'attack',
-            desc: 'Spin through everything around you: damage and +1 combo point. Two charges.',
+            desc: 'Spin through everything around you: {d:260} and +1 combo point. Two charges.',
             effect(k) { k.damage(260, { ab: this }); k.gain('combo', k.perk('shadowblade_a2') ? 2 : 1, 5); bladeStep(k, this); },
             fx: { type: 'slash', color: '#e0c8ff', r: 60, span: 6.28 },
           },
@@ -574,7 +578,7 @@ const SPECS = {
         abilities: {
           evis: {
             id: 'backstab', replaces: 'evis', name: 'Backstab', type: 'gcd', target: 'enemy', range: SPEC_MELEE, anim: 'attack',
-            desc: 'Spend all combo points for a big hit. Much stronger from behind, weaker from the front, and stronger at 5 points.',
+            desc: 'Spend all combo points: {d:110} plus {d:115} per point, and {d:160} more at 5 points. From behind it hits {d:60} plus {d:30} per point harder; from the front, 25% weaker.',
             usable: k => k.g.combo >= 1,
             glow: k => k.g.combo >= 5 || (k.g.combo >= 4 && k.env.positional() === 'rear'),
             effect(k) {
@@ -601,7 +605,7 @@ const SPECS = {
       id: 'cataclysm', name: 'Cataclysm', title: 'The Falling Star', accent: '#ff4a2a',
       blurb: 'Call the sky down. Big, slow, and worth the wait.',
       focus: 'Huge single hits. Pyroblast becomes Meteor: a rune circle on the boss, then a meteor smashes it 1.5s later and leaves a burning crater.',
-      passive: { name: 'Meteor', desc: 'Pyroblast becomes Meteor: it lands 1.5s after you cast it, hits much harder, and leaves a burning crater. Hot Streak still makes it instant.' },
+      passive: { name: 'Meteor', desc: 'Pyroblast becomes Meteor: it lands 1.5s after you cast it, hits for {d:700}, and leaves a burning crater. Hot Streak still makes it instant.' },
       build: base => {
         // Meteor counts as Pyroblast for crits and Hot Streak (its crater burn doesn't)
         const asPyro = o => (o && o.ab && o.ab.id === 'meteor' && !o.dot ? Object.assign({}, o, { ab: { id: 'pyro' } }) : o);
@@ -618,7 +622,7 @@ const SPECS = {
             pyro: {
               id: 'meteor', replaces: 'pyro', name: 'Meteor', type: 'gcd', target: 'enemy', range: SPEC_RANGED, anim: 'cast',
               cast: k => (k.has('hotstreak') ? 0 : 3.0),
-              desc: '3s cast: a rune circle on the target, and 1.5s later a meteor smashes it for huge damage and leaves a burning crater. With Hot Streak it\'s instant.',
+              desc: '3s cast: a rune circle on the target, and 1.5s later a meteor smashes it for {d:700} and leaves a burning crater ({d:50} every 3s for 9s). With Hot Streak it\'s instant and hits for {d:800}.',
               glow: k => k.has('hotstreak'),
               effect(k) {
                 const hs = k.consume('hotstreak'), ab = this;
@@ -807,10 +811,10 @@ Object.assign(SPECS, {
         stepBonus: 1, momentum: true,
         dmgMod: k => 0.04 * k.stacks('momentum'),
         abilities: {
-          cinder: { desc: '1s cast: a quick fire bolt. Turns the dial 2 toward Blaze.' },
-          rime: { desc: '1s cast: a quick shard of ice. Turns the dial 2 toward Rime.' },
-          flare: { desc: '2s cast: a burst of fire. Turns the dial 3 toward Blaze. At +5 it\'s instant and always crits, but holds you On the Brink: if your next spell is fire too, you overheat, and waiting it out does the same.' },
-          lance: { desc: '2s cast: a lance of ice. Turns the dial 3 toward Rime. At -5 it\'s instant and always crits, but holds you On the Brink: if your next spell is frost too, you get frostbite, and waiting it out does the same.' },
+          cinder: { desc: '1s cast: a quick fire bolt for {d:210}. Turns the dial 2 toward Blaze.' },
+          rime: { desc: '1s cast: a quick shard of ice for {d:210}. Turns the dial 2 toward Rime.' },
+          flare: { desc: '2s cast: a burst of fire for {d:400}. Turns the dial 3 toward Blaze. At +5 it\'s instant and always crits, but holds you On the Brink: if your next spell is fire too, you overheat, and waiting it out does the same.' },
+          lance: { desc: '2s cast: a lance of ice for {d:400}. Turns the dial 3 toward Rime. At -5 it\'s instant and always crits, but holds you On the Brink: if your next spell is frost too, you get frostbite, and waiting it out does the same.' },
         },
       }),
     },
@@ -824,11 +828,11 @@ Object.assign(SPECS, {
         potMult: 0.877,
         redline: true,
         abilities: {
-          flare: { desc: '2s cast: a burst of fire. Turns the dial 2 toward Blaze. In Redline at +5 it\'s instant and keeps you there.' },
-          lance: { desc: '2s cast: a lance of ice. Turns the dial 2 toward Rime. In Redline at -5 it\'s instant and keeps you there.' },
+          flare: { desc: '2s cast: a burst of fire for {d:400}. Turns the dial 2 toward Blaze. In Redline at +5 it\'s instant and keeps you there.' },
+          lance: { desc: '2s cast: a lance of ice for {d:400}. Turns the dial 2 toward Rime. In Redline at -5 it\'s instant and keeps you there.' },
           equil: {
             id: 'bleed', replaces: 'equil', name: 'Bleed Off', type: 'ogcd', target: 'self', cd: 15, anim: 'cast',
-            desc: 'Vent 60 Strain without leaving the edge. The heat you let go wraps you in a small shield.',
+            desc: 'Vent 60 Strain without leaving the edge. The heat you let go wraps you in a shield of {s:160}.',
             glow: k => (k.g.strain || 0) >= 55,
             effect(k) {
               const vented = Math.min(60, k.g.strain || 0);
@@ -866,7 +870,7 @@ Object.assign(SPECS, {
         abilities: {
           cross: {
             id: 'impact', replaces: 'cross', name: 'Impact', type: 'gcd', target: 'enemy', range: SPEC_RANGED, anim: 'big',
-            desc: 'Spend all your Drift: charge clean through your target and out the far side, releasing it all at once. The more you spend, the harder it hits; from 160 it always crits.',
+            desc: 'Spend all your Drift: charge clean through your target and out the far side, releasing it all at once: {d:120}, plus {d:40} for every 10 Drift you spend. From 160 it always crits.',
             usable: k => k.g.drift >= 40,
             glow: k => k.g.drift >= 180,
             effect(k) {
@@ -900,7 +904,7 @@ Object.assign(SPECS, {
         potMult: 0.9,   // balance knob (tools/simulate.js)
         bellyMax: 5, fuse: true,
         abilities: {
-          spit: { desc: 'Spit your oldest Morsel back at the boss in the shape you ate it. If the next one is the same shape, both go together as a Fusion, far stronger than two apart.' },
+          spit: { desc: 'Spit your oldest Morsel back at the boss in the shape you ate it. If the next one is the same shape, both go together as a Fusion, 2.4 times as strong as one: Ring {d:420}, Lance {d:460}, Fang {d:490}, Spike {d:800} alone.' },
         },
       }),
     },
@@ -909,12 +913,12 @@ Object.assign(SPECS, {
       gaugeTip: 'Holds up to 3 Morsels: Ring (circles), Lance (lines), Fang (cones), Spike (tankbusters). Digest turns each into protection for the party, by its shape.',
       blurb: 'Whatever it swallows comes back out as armour for everyone else.',
       focus: 'Protecting the party. Digest turns every Morsel into a shield or a ward for your allies, each shape its own kind.',
-      passive: { name: 'Iron Stomach', desc: 'Digest feeds the party instead of you: a Ring shields everyone, a Lance puts a big shield on whoever is hurt most, a Fang cuts the party\'s damage taken, a Spike makes the most hurt ally immune for 2s. You still heal a little for each.' },
+      passive: { name: 'Iron Stomach', desc: 'Digest feeds the party instead of you: a Ring shields everyone for {s:150}, a Lance puts a {s:360} shield on whoever is hurt most, a Fang cuts the party\'s damage taken, a Spike makes the most hurt ally immune for 2s. You still heal 3% of your HP for each.' },
       build: () => ({
         potMult: 1.0,
         abilities: {
           digest: {
-            desc: 'Digest every Morsel at once into protection for the party. Ring: a shield on everyone. Lance: a big shield on whoever is hurt most. Fang: the party takes 15% less damage for 6s. Spike: the most hurt ally is immune for 2s. You heal 3% of your HP for each.',
+            desc: 'Digest every Morsel at once into protection for the party. Ring: a {s:150} shield on everyone. Lance: a {s:360} shield on whoever is hurt most. Fang: the party takes 15% less damage for 6s. Spike: the most hurt ally is immune for 2s. You heal 3% of your HP for each.',
             effect(k) {
               const eaten = mawDigestTake(k, this);
               if (!eaten.length) return;
@@ -992,7 +996,7 @@ SPECS.ironpalm = [
       potMult: base.potMult * 1.01,   // balance knob (tools/simulate.js)
       stillWater: true,
       abilities: {
-        read: { charges: 2, desc: 'Drop into a reading stance for 1.2s: 20% less damage. A hit that lands in its first 0.4s is read: it lands at half strength, you counter, and your Breath fills to the top. Read a tankbuster and your next Heavy is a free Thousand Palms, 30% stronger. Two charges.' },
+        read: { charges: 2, desc: 'Drop into a reading stance for 1.2s: 20% less damage. A hit that lands in its first 0.4s is read: it lands at half strength, you counter for {d:63}, and your Breath fills to the top. Read a tankbuster and your next Heavy is a free Thousand Palms, 30% stronger. Two charges.' },
         skin: {
           id: 'pond', replaces: 'skin', name: 'Still Pond', type: 'ogcd', target: 'self', cd: 90, lock: 0.5, anim: 'big',
           desc: 'Settle like still water for 8s: 25% less damage, and Read comes back 0.8s after you use it. Read every blow.',
@@ -1055,10 +1059,10 @@ Object.assign(SPECS, {
         potMult: base.potMult * 1.06,
         store: 1.6, snipSpool: 10, snipPot: 170,
         abilities: {
-          snip: { cd: 8, desc: 'Cut the threads on your target (all of yours, if it has none). Each one releases 60% more than the damage it carried in the last 5s as a heal to both its ends, and gives back 10 Spool.' },
+          snip: { cd: 8, desc: 'Cut the threads on your target (all of yours, if it has none). Each one releases 60% more than the damage it carried in the last 5s as a heal to both its ends (at least {h:170}), and gives back 10 Spool.' },
           tighten: {
             id: 'lash', replaces: 'tighten', name: 'Lash', type: 'ogcd', target: 'ally', cd: 20, anim: 'cast', lock: 0.4,
-            desc: 'Snap your target along their thread up to 220 px toward the ally on its far end, and wrap them in a shield for 2s.',
+            desc: 'Snap your target along their thread up to 220 px toward the ally on its far end, and wrap them in a {s:260} shield for 2s.',
             usable: k => weaveCount(k) > 0,
             effect(k, t) { weaveTighten(k, this, t, true); },
             fx: { color: '#ff9ab8' },
@@ -1074,12 +1078,12 @@ Object.assign(SPECS, {
       gaugeTip: 'Builds from the Doll\'s hits; Grand Finale spends it. The strings reach 400 px, and they cut whatever they cross once a second.',
       blurb: 'Every string a blade. Stand right, and the stage itself bleeds.',
       focus: 'Positioning. The strings always cut what they cross and reach 400 px, and Cross-Cut is off the global cooldown with two charges.',
-      passive: { name: 'Bladed String', desc: 'The strings reach 400 px before they tear, and they cut whatever enemy they cross, once a second. Cross-Cut is off the global cooldown, with two charges.' },
+      passive: { name: 'Bladed String', desc: 'The strings reach 400 px before they tear, and they cut whatever enemy they cross for {d:48}, once a second. Cross-Cut is off the global cooldown, with two charges.' },
       build: base => ({
         potMult: base.potMult * 0.705,
         stretch: 400, bladed: true,
         abilities: {
-          cross: { type: 'ogcd', charges: 2, cd: 9, lock: 0.4, desc: 'Off the global cooldown, two charges: your strings become blades and cut along the line between you and the Doll. With the enemy on that line it\'s a heavy cut and 2 Encore; otherwise it cuts nothing.' },
+          cross: { type: 'ogcd', charges: 2, cd: 9, lock: 0.4, desc: 'Off the global cooldown, two charges: your strings become blades and cut along the line between you and the Doll. With the enemy on that line it\'s a {d:560} cut and 2 Encore; otherwise it cuts nothing.' },
         },
       }),
     },
@@ -1094,6 +1098,14 @@ Object.assign(SPECS, {
       build: base => ({
         potMult: base.potMult * 0.84,
         dolls: 2, dollMult: 0.58,
+        // (each Doll hits at 58%: the numbers here are per Doll)
+        abilities: {
+          jab: { desc: 'Each Doll in reach stabs for {d:145}. Builds 1 Encore.' },
+          pull: { desc: 'Fling the Doll nearest where you aim to that spot (within its strings\' reach). It cuts anything it passes through for {d:92.8}, and stays there until you pull it again or pick another target. Builds 1 Encore on a hit. Two charges.' },
+          cross: { desc: 'Your strings become blades and cut along the lines between you and the Dolls. Each line with the enemy on it cuts for {d:324.8}, and a cut gives 2 Encore; otherwise it cuts nothing.' },
+          pirouette: { desc: 'The Dolls spin, each cutting all around it for {d:174}, and nothing can touch them for 1.5s. Builds 1 Encore.' },
+          finale: { desc: 'Spend all your Encore (at least 3): each Doll in reach performs a routine of five hits, each {d:34.8} plus {d:25.52} for every Encore spent. They can\'t move while it plays.' },
+        },
       }),
     },
   ],

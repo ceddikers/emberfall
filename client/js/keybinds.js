@@ -120,6 +120,8 @@ const Keybinds = (() => {
 
   // ---------------------------------------------------------------- the Options panel
   let panel = null, capturing = null, namer = () => null, onChange = () => {};
+  // game settings shown here (main.js): { get() -> { frames, role, mouseover }, set(key, value) }
+  let prefs = null;
   function render() {
     panel.querySelector('.kb-list').innerHTML = ACTIONS.map(a => {
       const n = a.name || namer(Number(a.id.slice(1))) || `Skill ${Number(a.id.slice(1)) + 1}`;
@@ -143,7 +145,7 @@ const Keybinds = (() => {
     else { const b = panel.querySelector(`[data-a="${capturing}"]`); if (b) b.textContent = `${label(k)} is kept`; }
   }
   function openPanel(opts = {}) {
-    namer = opts.namer || namer; onChange = opts.onChange || onChange;
+    namer = opts.namer || namer; onChange = opts.onChange || onChange; prefs = opts.prefs || prefs;
     if (!panel) {
       panel = document.createElement('div');
       panel.id = 'options'; panel.className = 'hidden';
@@ -153,9 +155,12 @@ const Keybinds = (() => {
         <div class="kb-foot"><button type="button" class="btn2 kb-reset">Reset keys</button></div>
         <h4>Interface</h4>
         <div class="kb-foot"><button type="button" class="btn2 kb-arrange">Arrange the HUD</button><span class="kb-note">Best done in a raid, where every piece shows.</span></div>
+        <div class="kb-foot kb-scale"><label for="kb-scale">Interface size</label><input id="kb-scale" type="range" min="80" max="140" step="5"><b class="kb-scale-v"></b></div>
+        <h4>Party and healing</h4>
+        <div class="kb-foot kb-pref"><label for="kb-frames">Party frames</label><select id="kb-frames"><option value="left">In the corner</option><option value="strip">Above your skills</option></select><span class="kb-note kb-frames-note"></span></div>
+        <div class="kb-foot kb-pref"><label class="kb-check"><input type="checkbox" id="kb-mouseover"> Mouseover casting</label><span class="kb-note">Point at a party frame or an ally and press a heal: it goes to them. Off: heals go to the ally you selected, or to you.</span></div>
         <h4>Your data</h4>
-        <div class="kb-foot"><button type="button" class="btn2 kb-wipe">Delete all data</button><span class="kb-note">Heroes, gear, gold, journals, progress and settings in this browser. It can't be undone.</span></div>
-        <div class="kb-foot kb-scale"><label for="kb-scale">Interface size</label><input id="kb-scale" type="range" min="80" max="140" step="5"><b class="kb-scale-v"></b></div>`;
+        <div class="kb-foot"><button type="button" class="btn2 kb-wipe">Delete all data</button><span class="kb-note">Heroes, gear, gold, journals, progress and settings in this browser. It can't be undone.</span></div>`;
       document.body.appendChild(panel);
       panel.addEventListener('mousedown', e => {
         e.stopPropagation();
@@ -181,6 +186,16 @@ const Keybinds = (() => {
       sc.value = Math.round(uiScale * 100);
       panel.querySelector('.kb-scale-v').textContent = sc.value + '%';
       sc.addEventListener('input', () => { setScale(Number(sc.value) / 100); panel.querySelector('.kb-scale-v').textContent = sc.value + '%'; });
+      panel.querySelector('#kb-frames').addEventListener('change', e => { if (prefs) prefs.set('frames', e.target.value); });
+      panel.querySelector('#kb-mouseover').addEventListener('change', e => { if (prefs) prefs.set('mouseover', e.target.checked); });
+    }
+    // the settings as they stand now (the frames are kept per role: a healer's and a tank's can differ)
+    const pv = prefs ? prefs.get() : null;
+    panel.querySelectorAll('.kb-pref').forEach(el => el.classList.toggle('hidden', !pv));
+    if (pv) {
+      panel.querySelector('#kb-frames').value = pv.frames;
+      panel.querySelector('.kb-frames-note').textContent = pv.role ? `For your ${pv.role} heroes.` : '';
+      panel.querySelector('#kb-mouseover').checked = !!pv.mouseover;
     }
     capturing = null;
     render();

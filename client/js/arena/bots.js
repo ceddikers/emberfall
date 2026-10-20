@@ -606,7 +606,7 @@ const BotAI = {
       if (m.type === 'stack') { const o = view.players.find(p => p.id === m.follow); if (o) cands.push({ x: o.x, y: o.y }); }
       if (m.shape.kind === 'donut') cands.push({ x: m.shape.x + (bot.x - m.shape.x) * 0.3, y: m.shape.y + (bot.y - m.shape.y) * 0.3 });
       if (m.safe) for (const q of m.safe) cands.push({ x: q.x, y: q.y });
-      // Hard's dance: the blue pockets, your own grave, your corner for the Writ
+      // Hard's dance: the snare pockets, your own grave, your corner for the Writ
       if (m.type === 'safe' && m.shape.kind === 'circle') for (const [dx, dy] of [[0, 0], [0.45, 0], [-0.45, 0], [0, 0.45], [0, -0.45]]) cands.push({ x: m.shape.x + dx * m.shape.r, y: m.shape.y + dy * m.shape.r });
       // ... the Supercell's lanes of still air (a strip from a rod out to the wall): spots along it, near the rod first
       if (m.type === 'safe' && m.shape.kind === 'rect') for (const d of [30, 75, 130, 200, 290]) for (const off of [-0.2, 0.2]) {

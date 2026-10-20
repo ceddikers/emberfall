@@ -334,7 +334,7 @@ function saveUpgrade() {
   if (ok) pass('Save upgrade keeps items', 'v1 -> v4: Heroic flag dropped, 10 gold per Heroic item, gear still equipped');
   else fail('Save upgrade keeps items', JSON.stringify({ v: saved.v, gold: S.gold(), inv }));
 
-  // v2 -> v3: every hero gets an empty talent tree; rows cost gold in order, picks only in unlocked rows, reset is free
+  // v2 -> v3: every hero gets an empty talent tree; row I is free, the rest cost gold in order, picks only in open rows, reset is free
   const store2 = { 'emberfall-save': JSON.stringify({ v: 2, name: 'Bo', gold: 130, inv: { next: 1, items: [], equip: {}, lost: [] },
     heroes: { ranger: { clears: { grubnak: { normal: 1, hard: 0 } }, spec: null } }, settings: {} }) };
   global.localStorage = { getItem: k => (k in store2 ? store2[k] : null), setItem: (k, v) => { store2[k] = String(v); } };
@@ -342,14 +342,15 @@ function saveUpgrade() {
   const { Save: S2 } = require(p);
   const probs = [], up = JSON.parse(store2['emberfall-save']);
   if (up.v !== 4 || !up.heroes.ranger.talents || up.heroes.ranger.talents.rows !== 0 || up.heroes.ranger.clears.grubnak.normal !== 1) probs.push(`upgrade: ${JSON.stringify(up.heroes)}`);
-  if (S2.pickTalent('ranger', 0, 1)) probs.push('picked in a locked row');
-  if (!S2.unlockTalentRow('ranger', 60) || !S2.unlockTalentRow('ranger', 60) || S2.unlockTalentRow('ranger', 60) || S2.gold() !== 10) probs.push(`unlocking: gold ${S2.gold()}, rows ${S2.talents('ranger').rows}`);
+  if (S2.pickTalent('ranger', 1, 1)) probs.push('picked in a locked row');
+  if (!S2.pickTalent('ranger', 0, 1)) probs.push('row I should be free to pick in');
+  if (!S2.unlockTalentRow('ranger', TALENT_COSTS[1]) || S2.unlockTalentRow('ranger', TALENT_COSTS[2]) || S2.gold() !== 30) probs.push(`unlocking: gold ${S2.gold()}, rows ${S2.talents('ranger').rows}`);
   if (!S2.pickTalent('ranger', 1, 2) || S2.pickTalent('ranger', 2, 0) || S2.pickTalent('ranger', 0, 3)) probs.push('picks: wrong rows or columns allowed');
   const held = talentSet('ranger', S2.talents('ranger'));
-  if (held.size !== 1 || !held.has(TALENTS.ranger[1][2].id)) probs.push(`talentSet: ${[...held]}`);
+  if (held.size !== 2 || !held.has(TALENTS.ranger[1][2].id) || !held.has(TALENTS.ranger[0][1].id)) probs.push(`talentSet: ${[...held]}`);
   S2.resetTalents('ranger');
   if (S2.talents('ranger').picks.some(x => x != null) || S2.talents('ranger').rows !== 2) probs.push('reset should clear picks and keep rows');
-  if (S2.talents('cleric').rows !== 0 || talentSet('cleric', S2.talents('cleric')).size) probs.push('a fresh hero should hold no talents');
+  if (S2.talents('cleric').rows !== 1 || talentSet('cleric', S2.talents('cleric')).size) probs.push('a fresh hero should have row I open and hold no talents');
   delete global.localStorage;
 
   // v3 -> v4: picks made in the first talent tree follow their talent by id; one that left its row clears, rows stay bought
@@ -384,7 +385,7 @@ function saveUpgrade() {
 function talents() {
   const probs = [], ids = new Set(), src = ['combat/kits.js', 'combat/specs.js', 'combat/engine.js'].map(f => fs.readFileSync(path.join(ROOT, 'client/js', f), 'utf8')).join('\n');
   const used = new Set([...src.matchAll(/talent\('(\w+)'\)/g)].map(m => m[1]));
-  if (JSON.stringify(TALENT_COSTS) !== '[60,120,200,300,400]') probs.push(`row costs ${TALENT_COSTS}`);
+  if (JSON.stringify(TALENT_COSTS) !== '[0,100,180,280,400]') probs.push(`row costs ${TALENT_COSTS}`);
   for (const c of CLASSES) {
     const rows = TALENTS[c.id];
     if (!rows || rows.length !== 5) { probs.push(`${c.id}: ${rows ? rows.length : 0} rows (want 5)`); continue; }

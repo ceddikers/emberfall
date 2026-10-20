@@ -1229,7 +1229,7 @@ const ArenaView = {
       if (env && BossTells.ground(ctx, tg, s, p, fadeIn, t, env)) continue;
       switch (tg.type) {
         case 'aoe': case 'buster': case 'bait': case 'hook': this.areaWarning(ctx, s, p, fadeIn, tg.type === 'buster' ? BossTells.COL.buster : BossTells.COL.danger, t); break;
-        case 'safe': this.areaWarning(ctx, s, p, fadeIn, BossTells.COL.safe, t); break;
+        case 'safe': break;   // safe floor is sim data only: nothing is painted to say "stand here"
         case 'own': this.areaWarning(ctx, s, p, fadeIn, tg.color || '#ffffff', t); break;
         case 'stack': this.stackMarker(ctx, s, p, fadeIn, t); break;
         case 'spread': this.spreadMarker(ctx, s, p, fadeIn, t); break;
@@ -1292,7 +1292,7 @@ const ArenaView = {
       ctx.restore();
     }
     // closing ring shows when it lands
-    circle(ctx, x, y, r * (1 - p) + 6, null, rgba('#fff2b0', 0.8 * k), 2);
+    circle(ctx, x, y, r * (1 - p) + 6, null, rgba(BossTells.COL.shareHi, 0.8 * k), 2);
   },
 
   spreadMarker(ctx, s, p, k, t) {
@@ -1312,8 +1312,8 @@ const ArenaView = {
   },
 
   tower(ctx, s, p, k, t, need, color) {
-    // a soak: the rim is yellow (share it); a charge's own colour (Volkar's gold or blue) only lights the column inside
-    const Y = BossTells.COL.share, base = color || '#e8c15a', hi = color || BossTells.COL.shareHi;
+    // a soak: the rim is blue (share it); a charge's own colour (Volkar's gold or blue) only lights the column inside
+    const { x, y, r } = s, Y = BossTells.COL.share, base = color || BossTells.COL.share, hi = color || BossTells.COL.shareHi;
     glow(ctx, x, y, r * 1.6, base, 0.3 * k);
     circle(ctx, x, y, r, rgba(Y, 0.14 * k), rgba(Y, 0.95 * k), 3);
     circle(ctx, x, y, r * 0.78, null, rgba(hi, 0.5 * k), 2);
@@ -1844,8 +1844,9 @@ const ArenaView = {
       ctx.strokeStyle = `rgba(240,235,225,${0.35 * (1 - q)})`; ctx.lineWidth = 4; ctx.stroke();
     }
   },
-  // Squall Line (Volkar): the safe circle drifts round him. Outside it the storm is live (dark, crackling); a dashed
-  // ghost shows where the circle will be in a moment. During the cast it pulses where it will start.
+  // Squall Line (Volkar): the quiet circle drifts round him. Outside it the storm is live (dark, crackling, washed red:
+  // it's the damage) and its edge is red; the circle itself is left unpainted. A dashed red line shows where that edge
+  // will be in a moment. During the cast it pulses where it will start.
   squallDraw(ctx, q, t) {
     const begin = q.start + q.at, p = clamp((t - begin) / Math.max(0.1, q.sdur), 0, 1);
     const at = u => { const a = q.a0 + q.dir * TAU * clamp(u, 0, 1); return { x: Math.cos(a) * q.D, y: Math.sin(a) * q.D }; };
@@ -1856,6 +1857,7 @@ const ArenaView = {
     ARENA.trace(ctx, 2); ctx.clip();
     ctx.beginPath(); ctx.rect(-3000, -3000, 6000, 6000); ctx.arc(c.x, c.y, q.R, 0, TAU, true);
     ctx.fillStyle = `rgba(8,16,34,${warm ? 0.25 + 0.15 * Math.sin(t * 6) : 0.55})`; ctx.fill('evenodd');
+    ctx.fillStyle = rgba(BossTells.COL.danger, warm ? 0.06 + 0.04 * Math.sin(t * 6) : 0.12); ctx.fill('evenodd');   // the damage, in red
     if (!warm) {
       // the storm out there: dark cloud drifting low over the rock, and a web of lightning crawling across it
       ctx.save(); ctx.beginPath(); ctx.rect(-3000, -3000, 6000, 6000); ctx.arc(c.x, c.y, q.R + 8, 0, TAU, true); ctx.clip('evenodd');
@@ -1869,9 +1871,13 @@ const ArenaView = {
       }
       ctx.restore();
     }
+    // the storm's edge, in red (drawn on the storm side, so the quiet circle stays clean)
+    ctx.save(); ctx.beginPath(); ctx.rect(-3000, -3000, 6000, 6000); ctx.arc(c.x, c.y, q.R, 0, TAU, true); ctx.clip('evenodd');
     ctx.beginPath(); ctx.arc(c.x, c.y, q.R, 0, TAU);
-    ctx.strokeStyle = rgba('#5ac8ff', 0.3); ctx.lineWidth = 14; ctx.stroke();
-    ctx.strokeStyle = rgba('#bff0ff', 0.8 + Math.sin(t * 13) * 0.15); ctx.lineWidth = 2.5; ctx.stroke();
+    ctx.strokeStyle = rgba(BossTells.COL.danger, 0.35); ctx.lineWidth = 14; ctx.stroke();
+    ctx.restore();
+    ctx.beginPath(); ctx.arc(c.x, c.y, q.R, 0, TAU);
+    ctx.strokeStyle = rgba(BossTells.COL.danger, 0.8 + Math.sin(t * 13) * 0.15); ctx.lineWidth = 2.5; ctx.stroke();
     if (!warm) {
       const n = 22;
       for (let i = 0; i < n; i++) {
@@ -1880,7 +1886,7 @@ const ArenaView = {
         jagged(ctx, c.x + Math.cos(a0) * q.R, c.y + Math.sin(a0) * q.R, c.x + Math.cos(a1) * q.R, c.y + Math.sin(a1) * q.R, Math.floor(t * 12) * 7 + i, '#7fe8ff', 1.4);
       }
     }
-    if (p < 1) { ctx.setLineDash([12, 10]); ctx.lineDashOffset = -t * 30; ctx.beginPath(); ctx.arc(g.x, g.y, q.R, 0, TAU); ctx.fillStyle = rgba(BossTells.COL.safe, 0.07); ctx.fill(); ctx.strokeStyle = rgba(BossTells.COL.safeHi, 0.6); ctx.lineWidth = 2; ctx.stroke(); ctx.setLineDash([]); }
+    if (p < 1) { ctx.setLineDash([12, 10]); ctx.lineDashOffset = -t * 30; ctx.beginPath(); ctx.arc(g.x, g.y, q.R, 0, TAU); ctx.strokeStyle = rgba(BossTells.COL.dangerHi, 0.55); ctx.lineWidth = 2; ctx.stroke(); ctx.setLineDash([]); }
     ctx.restore();
   },
   // the Eye of the Storm: the clouds part over the summit and a pale, still light falls on it
@@ -2011,18 +2017,14 @@ const ArenaView = {
     n.setTransform(s, 0, 0, s, -v.cam.x * s, -v.cam.y * s);
     n.globalCompositeOperation = 'destination-out';
     for (const L of lights) {
-      const g = n.createRadialGradient(L.x, L.y, lo.r * 0.75, L.x, L.y, L.r);
+      const g = n.createRadialGradient(L.x, L.y, lo.r, L.x, L.y, L.r);   // fully lit right out to the ring's edge
       g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(1, 'rgba(0,0,0,0)');
       n.fillStyle = g; n.beginPath(); n.arc(L.x, L.y, L.r, 0, TAU); n.fill();
     }
     ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(c, 0, 0); ctx.restore();
-    // the edge of each light, so it reads exactly
-    for (const L of lights) {
-      ctx.save(); ctx.setLineDash([10, 8]); ctx.lineDashOffset = -t * 20;
-      circle(ctx, L.x, L.y, lo.r, null, rgba(BossTells.COL.safeHi, 0.7 * k), 2);   // safe floor reads blue
-      ctx.restore();
-      glow(ctx, L.x, L.y, lo.r, '#3aff7a', 0.12 * k);
-    }
+    // (no painted edge: the light itself is the rule, lit fully out to lo.r, then the dark closes in)
+    for (const L of lights) glow(ctx, L.x, L.y, lo.r, '#3aff7a', 0.12 * k);
+    void t;
   },
   // Ceiling Ambush (Skitterra, Hard): only her shadow crosses the floor, gathering speed, until it stops and she drops
   ambushShadow(ctx, amb, t) {
