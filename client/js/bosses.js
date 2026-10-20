@@ -10,6 +10,37 @@ const BOSS_ART = {
     const w = st.moving ? Math.sin(st.t * 7) * 6 : 0;
     // Belly Flop (Hard): he crouches and swells, bouncing on his heels, before he drops
     if (props.flop) { const q = 1.08 + Math.sin(st.t * 14) * 0.04; ctx.scale(q, q); }
+    // ...and then he's down: sprawled flat on his belly, arms and legs flung out, his hat knocked off, seeing stars
+    if (props.flat) {
+      ellipse(ctx, -2, 0, 58, 52, 0, 'rgba(0,0,0,0.22)');
+      for (const sy of [-1, 1]) {
+        line(ctx, -16, 16 * sy, -46, 40 * sy, OUT, 17); line(ctx, -16, 16 * sy, -46, 40 * sy, '#5a4636', 12);
+        ellipse(ctx, -50, 44 * sy, 12, 8, 0.6 * sy, '#4a3524', OUT, 2.5);
+        line(ctx, 10, 26 * sy, 40, 50 * sy, OUT, 17); line(ctx, 10, 26 * sy, 40, 50 * sy, skin, 12);
+        circle(ctx, 43, 53 * sy, 9, skin, OUT, 2.5);
+      }
+      // the cleaver, dropped by his hand
+      ctx.save(); ctx.translate(58, 50); ctx.rotate(0.4); rrect(ctx, -6, -2.5, 10, 5, 2, '#5a3d22', OUT, 2); rrect(ctx, 3, -5, 28, 20, [2, 6, 6, 2], '#c7ccd4', OUT, 2.5); ctx.restore();
+      // his back, squashed flat, the apron strings tied in a bow
+      ellipse(ctx, -4, 0, 38, 37, 0, skin, OUT, 3);
+      ellipse(ctx, -12, -12, 15, 13, 0, shade(skin, 0.12));
+      line(ctx, -4, -36, -4, 36, '#f1ede2', 3);
+      for (const sy of [-1, 1]) ellipse(ctx, -12, 7 * sy, 7, 4, 0.5 * sy, '#f1ede2', OUT, 1.5);
+      // his head, face down; the hat off to one side
+      circle(ctx, 28, 0, 14, skin, OUT, 2.5);
+      ellipse(ctx, 22, 0, 6, 10, 0, shade(skin, -0.12));
+      ctx.save(); ctx.translate(30, -48); ctx.rotate(-0.7);
+      for (const [hx, hy] of [[-6, -6], [-6, 6], [0, 0], [-12, 0]]) circle(ctx, hx, hy, 6.5, '#ffffff', OUT, 2);
+      rrect(ctx, 2, -8, 4, 16, 1.5, '#e6e2d8', OUT, 1.5);
+      ctx.restore();
+      for (let i = 0; i < 3; i++) {
+        const a = st.t * 4 + i * TAU / 3, x = 30 + Math.cos(a) * 22, y = Math.sin(a) * 22;
+        ctx.save(); ctx.translate(x, y); ctx.rotate(st.t * 5 + i);
+        poly(ctx, [0, -6, 1.8, -1.8, 6, 0, 1.8, 1.8, 0, 6, -1.8, 1.8, -6, 0, -1.8, -1.8], '#ffe27a', OUT, 1);
+        ctx.restore();
+      }
+      return;
+    }
     // raid props (the arena sets st.props from the boss's cast): held tools tell you what's coming
     if (props.held === 'ladle' && props.spin) {
       for (let i = 0; i < 3; i++) {

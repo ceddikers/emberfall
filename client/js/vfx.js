@@ -195,7 +195,10 @@ const VFX = (() => {
       const p = Math.min(1, (now - e.t0) / e.dur);
       ctx.globalAlpha = 1;
       ctx.globalCompositeOperation = e.add ? 'lighter' : 'source-over';
-      e.draw(ctx, p, now - e.t0, e);
+      // one effect that throws is dropped, not allowed to stop the frame (its own save/restore is unwound here)
+      ctx.save();
+      try { e.draw(ctx, p, now - e.t0, e); } catch (err) { e.dur = 0; if (!e.warned) { e.warned = true; console.warn('effect dropped:', err); } }
+      ctx.restore();
     }
     base = ctx.getTransform(); curOp = null;
     for (const pt of parts) if (!!pt.ground === (layer === 'ground')) drawPart(ctx, pt);
@@ -893,6 +896,129 @@ const VFX = (() => {
         if (Math.random() < 0.1 * (1 - p)) { const f = flames[Math.floor(Math.random() * flames.length)] || { x, y };
           spawn({ x: f.x, y: f.y, z: 10, vx: rand(-8, 8), vz: rand(18, 40), drag: 0.02, life: rand(1, 1.6), size: rand(12, 18), size1: 34, color: '#4a3c38', kind: 'smoke', add: false, a: 0.3, fadeIn: 0.2 });
           if (Math.random() < 0.5) spawn({ x: f.x, y: f.y, z: 8, vx: rand(-15, 15), vz: rand(40, 90), life: rand(0.6, 1), size: rand(3, 5), size1: 0, color: '#ffb040' }); }
+      } });
+    },
+
+    // ---- painted floor scars (boss hits). Each is cut once, sits on the floor under the heroes with an ink edge, and
+    // fades over its last second or two. They last a while on purpose: the floor remembers what just happened.
+    // gouge: a long cut in the floor (a cleaver blow): a tapered black slit with a brown lip, short side cracks, and
+    // embers cooling inside it
+    gouge(x1, y1, x2, y2, o = {}) {
+      const dur = o.dur ?? 9, w = o.w ?? 18, len = Math.max(1, Math.hypot(x2 - x1, y2 - y1)), ang = Math.atan2(y2 - y1, x2 - x1);
+      const ca = Math.cos(ang), sa = Math.sin(ang), n = Math.max(6, Math.round(len / 22)), heatT = o.heatT ?? 3;
+      const prof = Array.from({ length: n + 1 }, (_, i) => ({ q: i / n, w: Math.pow(Math.sin(Math.PI * i / n), 0.55) * w * rand(0.7, 1.15), j: rand(-0.2, 0.2) * w }));
+      const at = (q, off) => [x1 + ca * len * q - sa * off, y1 + sa * len * q + ca * off];
+      const cracks = Array.from({ length: Math.round(len / 55) + 2 }, () => {
+        const q = rand(0.08, 0.92), side = Math.random() < 0.5 ? -1 : 1, base = prof[Math.round(q * n)].w * 0.5 * side;
+        const pts = [[0, base]]; let u = 0, v = base;
+        for (let s = 0; s < 3; s++) { u += rand(4, 14); v += side * rand(5, 12); pts.push([u, v]); }
+        return { q, pts };
+      });
+      const embers = Array.from({ length: Math.round(len / 35) + 2 }, () => ({ q: rand(0.06, 0.94), ph: rand(0, 6), s: rand(0.7, 1.3) }));
+      const trace = (c, s) => {
+        c.beginPath();
+        for (const pt of prof) { const [x, y] = at(pt.q, pt.j - pt.w * 0.5 * s); c.lineTo(x, y); }
+        for (let i = prof.length - 1; i >= 0; i--) { const pt = prof[i], [x, y] = at(pt.q, pt.j + pt.w * 0.5 * s); c.lineTo(x, y); }
+        c.closePath(); c.fill();
+      };
+      fx({ dur, layer: 'ground', draw: (c, p, t, e) => {
+        c.save(); if (typeof ARENA !== 'undefined') { ARENA.trace(c, 2); c.clip(); }
+        const life = p * dur, k = e.a * Math.min(1, life / 0.08) * Math.min(1, (dur - life) / 1.6), heat = Math.max(0, 1 - life / heatT);
+        c.globalAlpha = k * 0.5; c.fillStyle = o.lip || '#5a3418'; trace(c, 1.9);
+        c.globalAlpha = k * 0.95; c.fillStyle = '#120804'; trace(c, 1);
+        c.strokeStyle = '#1a0e08'; c.lineWidth = 2; c.lineCap = 'round'; c.globalAlpha = k * 0.85;
+        for (const cr of cracks) { c.beginPath(); cr.pts.forEach(([u, v], i) => { const [x, y] = at(cr.q, 0); const px = x + ca * u - sa * v, py = y + sa * u + ca * v; i ? c.lineTo(px, py) : c.moveTo(px, py); }); c.stroke(); }
+        if (heat > 0.01) {
+          c.globalCompositeOperation = 'lighter'; c.globalAlpha = k * heat * 0.8; c.fillStyle = o.heat || '#ff5a14'; trace(c, 0.45);
+          c.globalCompositeOperation = 'source-over';
+          for (const em of embers) { const [x, y] = at(em.q, 0); glowAt(c, x, y, 9 * em.s, '#ffb040', k * heat * (0.55 + 0.45 * Math.sin(t * 7 + em.ph))); }
+        }
+        c.globalAlpha = 1;
+        c.restore();
+      }, tick: (p) => {
+        if (Math.random() < 0.12 * Math.max(0, 1 - p * dur / heatT)) { const [x, y] = at(rand(0.1, 0.9), 0); spawn({ x, y, z: 2, vx: rand(-10, 10), vz: rand(25, 50), life: rand(0.5, 0.9), size: rand(2, 4), size1: 0, color: '#ffc060' }); }
+      } });
+    },
+    // smear: something heavy rolled through sauce (a meatball's gravy trail): a lumpy brown band with an ink edge, a
+    // wet highlight, chunks and red sauce flecks; o.splat makes a wider splash at the far end
+    smear(x1, y1, x2, y2, o = {}) {
+      const dur = o.dur ?? 9, w = o.w ?? 30, len = Math.hypot(x2 - x1, y2 - y1), ang = Math.atan2(y2 - y1, x2 - x1);
+      const ca = Math.cos(ang), sa = Math.sin(ang), color = o.color || '#7a4620', dark = o.dark || '#2e1808', hi = o.hi || '#c08a52';
+      const blobs = [];
+      let off = 0;
+      for (let d = 0; d <= len; d += w * 0.3) { const q = len ? d / len : 0, taper = 0.55 + 0.45 * Math.min(1, q * 4); off = Math.max(-0.2, Math.min(0.2, off / w + rand(-0.05, 0.05))) * w; blobs.push({ x: x1 + ca * d - sa * off, y: y1 + sa * d + ca * off, r: w * 0.5 * rand(0.82, 1.02) * taper }); }
+      if (o.splat) for (let i = 0; i < 7; i++) { const a = ang + Math.PI + rand(-1.4, 1.4), d = rand(0.2, 1.1) * w; blobs.push({ x: x2 + Math.cos(a) * d, y: y2 + Math.sin(a) * d * 0.7, r: w * rand(0.3, 0.6) }); }
+      const chunks = Array.from({ length: Math.round(len / 50) + (o.splat ? 6 : 2) }, () => { const b = blobs[Math.floor(Math.random() * blobs.length)], a = rand(0, 6.28), d = b.r * rand(0.6, 1.6); return { x: b.x + Math.cos(a) * d, y: b.y + Math.sin(a) * d * 0.7, s: rand(3, 6.5), r: rand(0, 6), pts: [rand(0.7, 1), rand(0.7, 1), rand(0.7, 1), rand(0.7, 1), rand(0.7, 1)] }; });
+      const flecks = Array.from({ length: Math.round(len / 40) + 4 }, () => { const b = blobs[Math.floor(Math.random() * blobs.length)], a = rand(0, 6.28), d = b.r * rand(0.9, 2); return { x: b.x + Math.cos(a) * d, y: b.y + Math.sin(a) * d * 0.7, r: rand(1.5, 3.5) }; });
+      const shape = (c, pad, s = 1) => { c.beginPath(); for (const b of blobs) { const r = b.r * s + pad; if (r <= 0.5) continue; c.moveTo(b.x + r, b.y); c.ellipse(b.x, b.y, r, r * 0.7, 0, 0, Math.PI * 2); } c.fill(); };
+      fx({ dur, layer: 'ground', draw: (c, p, t, e) => {
+        c.save(); if (typeof ARENA !== 'undefined') { ARENA.trace(c, 2); c.clip(); }
+        const life = p * dur, k = e.a * Math.min(1, life / 0.1) * Math.min(1, (dur - life) / 1.8), dry = Math.min(1, life / dur * 1.4);
+        c.globalAlpha = k * 0.8; c.fillStyle = dark; shape(c, 3);
+        c.globalAlpha = k * 0.9; c.fillStyle = color; shape(c, 0);
+        c.globalAlpha = k * 0.35 * (1 - dry * 0.7); c.fillStyle = hi; shape(c, -w * 0.18, 0.55);
+        c.globalAlpha = k * 0.85;
+        for (const f of flecks) circle(c, f.x, f.y, f.r, o.sauce || '#a8281a');
+        for (const ch of chunks) {
+          c.save(); c.translate(ch.x, ch.y); c.rotate(ch.r); c.fillStyle = '#5a3016'; c.strokeStyle = '#1a0c04'; c.lineWidth = 1.2; c.beginPath();
+          for (let i = 0; i < 5; i++) { const a = i * Math.PI * 2 / 5; c.lineTo(Math.cos(a) * ch.s * ch.pts[i], Math.sin(a) * ch.s * ch.pts[i]); }
+          c.closePath(); c.fill(); c.stroke(); c.restore();
+        }
+        c.globalAlpha = 1;
+        c.restore();
+      } });
+    },
+    // scorch: a charred streak (or, with no length, a blot) left by fire: a soft black band with a darker cracked core,
+    // embers dying in it and thin smoke curling up for a while
+    scorch(x1, y1, x2, y2, o = {}) {
+      const dur = o.dur ?? 8, w = o.w ?? 50, len = Math.hypot(x2 - x1, y2 - y1), ang = Math.atan2(y2 - y1, x2 - x1);
+      const ca = Math.cos(ang), sa = Math.sin(ang), step = Math.max(12, w * 0.45);
+      const blobs = [];
+      for (let d = 0; d <= len; d += step) { const off = rand(-0.15, 0.15) * w; blobs.push({ x: x1 + ca * d - sa * off, y: y1 + sa * d + ca * off, r: w * 0.5 * rand(0.75, 1.15) }); }
+      if (!len) for (let i = 0; i < 5; i++) { const a = rand(0, 6.28), d = rand(0.2, 0.5) * w; blobs.push({ x: x1 + Math.cos(a) * d, y: y1 + Math.sin(a) * d * 0.7, r: w * rand(0.3, 0.5) }); }
+      const embers = Array.from({ length: Math.round(len / 45) + 3 }, () => { const b = blobs[Math.floor(Math.random() * blobs.length)]; return { x: b.x + rand(-0.4, 0.4) * b.r, y: b.y + rand(-0.3, 0.3) * b.r, ph: rand(0, 6), life: rand(0.35, 0.8) }; });
+      fx({ dur, layer: 'ground', draw: (c, p, t, e) => {
+        c.save(); if (typeof ARENA !== 'undefined') { ARENA.trace(c, 2); c.clip(); }
+        const life = p * dur, k = e.a * Math.min(1, life / 0.15) * Math.min(1, (dur - life) / 2) * (o.a ?? 1);
+        for (const b of blobs) {
+          const g = c.createRadialGradient(b.x, b.y, 0, b.x, b.y, b.r);
+          g.addColorStop(0, `rgba(16,9,5,${0.78 * k})`); g.addColorStop(0.65, `rgba(28,16,9,${0.5 * k})`); g.addColorStop(1, 'rgba(28,16,9,0)');
+          c.fillStyle = g; c.beginPath(); c.ellipse(b.x, b.y, b.r, b.r * 0.72, 0, 0, Math.PI * 2); c.fill();
+        }
+        for (const em of embers) { const ek = Math.max(0, 1 - p / em.life); if (ek > 0.02) glowAt(c, em.x, em.y, 8, o.ember || '#ff7a1a', k * ek * (0.5 + 0.5 * Math.sin(t * 6 + em.ph))); }
+        c.restore();
+      }, tick: (p) => {
+        if (o.smoke !== false && Math.random() < (o.smokeRate ?? 0.18) * (1 - p)) { const b = blobs[Math.floor(Math.random() * blobs.length)]; spawn({ x: b.x + rand(-0.3, 0.3) * b.r, y: b.y, z: 4, vx: rand(-6, 6), vz: rand(14, 30), drag: 0.02, life: rand(1.4, 2.2), size: rand(8, 13), size1: 30, color: '#5a4c48', kind: 'smoke', add: false, a: 0.28, fadeIn: 0.25 }); }
+      } });
+    },
+    // flameWall: fire going up along a line (brandy, a gut of flame): rows of flame tongues, ink-edged, orange body,
+    // yellow-white heart, catching along the line over o.travel seconds, roaring and dying down over o.dur
+    flameWall(x1, y1, x2, y2, o = {}) {
+      const dur = o.dur ?? 1.3, h = o.h ?? 70, spread = o.w ?? 40, len = Math.hypot(x2 - x1, y2 - y1), ang = Math.atan2(y2 - y1, x2 - x1);
+      const ca = Math.cos(ang), sa = Math.sin(ang), step = o.step ?? 46, rows = Math.max(1, Math.round(spread / 50) + 1), travel = o.travel ?? 0;
+      const fl = [];
+      for (let d = 0; d <= len; d += step) for (let r = 0; r < rows; r++) {
+        const off = rows > 1 ? (r / (rows - 1) - 0.5) * spread : 0, jd = d + rand(-0.3, 0.3) * step;
+        const lo = off + rand(-0.35, 0.35) * Math.min(spread / Math.max(1, rows - 1), 60);
+        fl.push({ x: x1 + ca * jd - sa * lo, y: y1 + sa * jd + ca * lo, h: h * rand(0.5, 1.1), w: rand(18, 28) * (o.size ?? 1), at: (len ? jd / len : 0) * travel + rand(0, 0.12), life: dur * rand(0.55, 0.95) - travel * (len ? jd / len : 0) * 0.5, ph: rand(0, 6), lean: rand(-0.35, 0.35) });
+      }
+      fl.sort((a, b) => a.y - b.y);
+      fx({ dur, layer: 'air', draw: (c, p, t, e) => {
+        const life = p * dur;
+        for (const f of fl) {
+          const q = (life - f.at) / Math.max(0.2, f.life); if (q <= 0 || q >= 1) continue;
+          const k = e.a * Math.min(1, q / 0.12) * Math.min(1, (1 - q) / 0.35), hh = f.h * (0.4 + 0.6 * Math.sin(Math.PI * Math.min(1, q * 1.3))) * (0.85 + 0.15 * Math.sin(t * 14 + f.ph)), sw = (f.lean + Math.sin(t * 9 + f.ph) * 0.35) * hh * 0.5;
+          glowAt(c, f.x, f.y - hh * 0.3, f.w * 3, '#ff7a1a', k * 0.35);
+          c.globalAlpha = k * 0.9; tongue(c, f.x, f.y, hh * 1.08, f.w * 1.25, sw, o.ink || '#4a1206');
+          c.globalAlpha = k; tongue(c, f.x, f.y - 1, hh, f.w, sw, o.color || '#ff6a14');
+          tongue(c, f.x, f.y - 1, hh * 0.62, f.w * 0.62, sw * 0.7, o.mid || '#ffb428');
+          c.globalCompositeOperation = 'lighter'; c.globalAlpha = k * 0.85; tongue(c, f.x, f.y - 1, hh * 0.3, f.w * 0.3, sw * 0.4, '#fff4c8');
+          c.globalCompositeOperation = 'source-over';
+        }
+        c.globalAlpha = 1;
+      }, tick: (p) => {
+        if (Math.random() < 0.6 * (1 - p)) { const f = fl[Math.floor(Math.random() * fl.length)]; spawn({ x: f.x + rand(-8, 8), y: f.y, z: f.h * 0.5, vx: rand(-25, 25), vz: rand(90, 180), drag: 0.04, life: rand(0.5, 0.9), size: rand(3, 5), size1: 0, color: Math.random() < 0.5 ? '#ffd070' : '#ff8a2a' }); }
+        if (Math.random() < 0.25 * p) { const f = fl[Math.floor(Math.random() * fl.length)]; spawn({ x: f.x, y: f.y, z: f.h * 0.6, vx: rand(-10, 10), vz: rand(30, 60), drag: 0.03, life: rand(1, 1.6), size: rand(14, 20), size1: 42, color: '#3a2a26', kind: 'smoke', add: false, a: 0.35, fadeIn: 0.15 }); }
       } });
     },
 

@@ -1328,6 +1328,8 @@ const BossTells = (() => {
         continue;
       }
       const d = (t - rollAt) * m.sp, x = m.x + ca * d, y = m.y + sa * d;
+      // it reaches the far wall: it bursts there and leaves its gravy trail (once)
+      if (!m.walled && d > 120 && ARENA.sd(x, y) > -m.r * 0.8) { m.walled = true; if (typeof BOSS_VFX !== 'undefined') BOSS_VFX.meatballWall(x, y, m.a, m.x, m.y); }
       if (ARENA.sd(x, y) > m.r + 40) continue;
       // a greasy streak behind it
       ctx.save(); ARENA.trace(ctx); ctx.clip(); ctx.lineCap = 'round';

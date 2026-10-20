@@ -646,6 +646,15 @@ const ArenaView = {
     ctx.restore();
   },
 
+  // Stuffed: a soft gold belly of light round the hero and a gold outline, breathing slowly
+  stuffedMark(ctx, x, y, t) {
+    const q = 1 + Math.sin(t * 3) * 0.05;
+    glow(ctx, x, y - 22, 46 * q, '#ffc860', 0.28);
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    ellipse(ctx, x, y - 20, 30 * q, 34 * q, 0, null, rgba('#ffd27a', 0.55), 3);
+    ctx.restore();
+    ellipse(ctx, x, y - 20, 33 * q, 37 * q, 0, null, rgba('#5a3a0a', 0.35), 1.5);
+  },
   // Royal Doom: a violet sigil turns over the doomed player's head, its ring burning down as the time runs out
   doomMark(ctx, x, y, frac, t) {
     const hot = frac < 0.3, k = hot ? 0.75 + Math.sin(t * 14) * 0.25 : 1;
@@ -1292,6 +1301,11 @@ const ArenaView = {
     });
     for (const id of [...room.born.keys()]) if (!seen.has(id)) room.born.delete(id);
     if (msg.fv !== room.fv && Array.isArray(msg.f)) {
+      // grease that has just burnt off leaves a charred blot for a while
+      if (typeof BOSS_VFX !== 'undefined' && room.lit) {
+        const keep = new Set(msg.f.map(fl => fl.id));
+        for (const fl of room.floor) if (fl.kind === 'grease' && !keep.has(fl.id) && (room.lit.get(fl.id) || 0) > now - 1) BOSS_VFX.scorchPool(fl.x, fl.y, fl.r);
+      }
       room.fv = msg.fv; room.floor = msg.f; room.layerFor = '';
       // a round room's broken-off wedges move its wall (Volkar, Hard)
       if (ARENA.kind === 'circle') ARENA.cuts = room.floor.filter(f => f.kind === 'wedge').map(f => ({ a0: f.a0, a1: f.a1, r: f.r }));

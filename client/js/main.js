@@ -1037,7 +1037,7 @@
     const tg = raid.tgs.get(msg.id);
     if (!tg || tg.gone != null) return;
     tg.gone = now;
-    BOSS_VFX.impact(tg, msg, { entById, boss: raid.def.id, pol: raid.pol, units: raidUnits() });
+    BOSS_VFX.impact(tg, msg, { entById, boss: raid.def.id, pol: raid.pol, units: raidUnits(), props: raid.room.props, room: raid.room, bossDraw: raid.bossDraw });
     if (msg.fail) BOSS_VFX.failed(tg);
     if (msg.hits && msg.hits.includes(Net.id) && tg.type === 'aoe') FX.shake = Math.max(FX.shake, 5);
   });
@@ -1086,7 +1086,7 @@
       case 'rise': case 'night': prop('rise', true, end + 0.3); break;
       case 'sweep': prop('raise', true, end - 0.45); break;
       // Hard-only moves
-      case 'flop': prop('flop', true, end + 0.2); if (msg.then) prop('next', msg.then, end + 0.3); break;
+      case 'flop': prop('flop', true, end); if (msg.then) prop('next', msg.then, end + 1.6); later(msg.dur, () => raid && prop('flat', true, now + 1.3)); break;
       case 'throw': case 'larder': case 'hook': prop('toss', true, end + 0.1); break;
       case 'gut': prop('steam', true, end + 0.3); break;
       case 'flambe': prop('brandy', true, end + 0.3); break;
@@ -2036,6 +2036,8 @@
     }
     // the Hollow King: lanterns held up by whoever carries them, and the Doom sigil over each doomed head
     for (const l of raid.lanterns) { const c = l.carrier != null ? entById(l.carrier) : null; if (c) ArenaView.lantern(ctx, c.x + 14, c.y - (c.lift || 0), now, true, l.last); }
+    // Stuffed (Grubnak, Hard): a gold, bloated glow round whoever can't take another plate
+    for (const [id, st] of raid.party) if (st.alive && st.debuffs && st.debuffs.some(d => d[0] === 'stuffed')) { const e = entById(id); if (e) ArenaView.stuffedMark(ctx, e.x, e.y - (e.lift || 0), now); }
     for (const [id, d] of raid.doom) {
       const e = entById(id); if (!e) continue;
       ArenaView.doomMark(ctx, e.x, e.y - (e.lift || 0) - 92 * heroScale() / HERO_SCALE, (d.end - now) / Math.max(0.1, d.end - d.start), now);

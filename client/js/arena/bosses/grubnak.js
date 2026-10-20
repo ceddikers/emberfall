@@ -438,7 +438,7 @@ const GRUBNAK = {
     // Gorge: he eats, hitting everyone and getting stronger each time
     const gorge = () => {
       f.cast('Gorge', 2, 'gorge');
-      f.raidwide(dmg.gorge, 2);
+      f.mech({ type: 'raidwide', shape: { kind: 'circle', x: B.x, y: B.y, r: 0 }, delay: 2, dmg: dmg.gorge, hidden: true, tag: 'gorge' });
       B.dmgUp += 0.1;
     };
 
