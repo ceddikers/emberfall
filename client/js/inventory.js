@@ -3,7 +3,14 @@
 // (your own damage/healing/haste/crit, computed on your machine) and the host (HP and Defense, capped there).
 
 const Inventory = (() => {
-  const SLOTS = [['weapon', 'Weapon'], ['armor', 'Armor'], ['acc1', 'Accessory'], ['acc2', 'Accessory']];
+  const SLOTS = [['weapon', 'Weapon'], ['armor', 'Armor'], ['acc1', 'Accessory I'], ['acc2', 'Accessory II']];
+  // an empty slot's outline: a blade, a breastplate, a ring
+  const svg = d => `<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="${d}" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  const EMPTY_ICON = {
+    weapon: svg('M17.5 3.5h3v3L10 17l-3-3zM6 15l3 3M4.5 16.5l3 3M3.5 20.5l2-2'),
+    armor: svg('M8 3.5 4 5.5v5c0 5 3.5 8 8 10 4.5-2 8-5 8-10v-5l-4-2-4 2.5z'),
+    acc: svg('M12 9.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11zM9.5 9.8 12 4.5l2.5 5.3'),
+  };
   const data = Save.get('inv');   // changed in place; save() writes the whole save
   // items whose key this version doesn't know wait in inv.lost (never deleted) and come back if the key returns
   const known = i => i && ITEMS[i.key];
@@ -29,12 +36,43 @@ const Inventory = (() => {
     }
     if (any) save();
   })();
+  // unclaimed items go to the first hero who could use them: a class's own gear to that class, a weapon only to a hero
+  // who can wield it, anything else to whoever opens their bags first
   function claim(clsId) {
     if (!clsId) return;
     let any = false;
-    for (const i of data.items) if (!i.owner) { i.owner = clsId; any = true; }
+    for (const i of data.items) {
+      if (i.owner || !ITEMS[i.key]) continue;
+      const it = ITEMS[i.key];
+      if (it.cls) { i.owner = it.cls; any = true; continue; }
+      if (it.slot === 'weapon' && !slotsFor(i).some(sl => canEquip(i, clsId, sl))) continue;
+      i.owner = clsId; any = true;
+    }
     if (any) save();
   }
+  // move an item to another of your heroes' bags (taken off first)
+  function sendTo(inst, clsId) {
+    if (!data.items.includes(inst) || !CLASSES.some(c => c.id === clsId)) return;
+    for (const e of Object.values(data.equip)) for (const sl in e) if (e[sl] === inst.uid) e[sl] = null;
+    inst.owner = clsId; selected = null; changed();
+  }
+  // the chest: an item put in waits here (still in the save) until someone takes it, or it comes back
+  if (!Array.isArray(data.escrow)) data.escrow = [];
+  function escrow(uid) {
+    const inst = byUid(uid);
+    if (!inst) return;
+    data.items = data.items.filter(i => i !== inst);
+    for (const e of Object.values(data.equip)) for (const sl in e) if (e[sl] === uid) e[sl] = null;
+    data.escrow.push(inst);
+    if (selected && selected.inst === inst) selected = null;
+    changed();
+  }
+  // someone else took it: gone for good. (Returns whether there was one.)
+  function settle(key) { const i = data.escrow.findIndex(x => x.key === key); if (i < 0) return false; data.escrow.splice(i, 1); changed(); return true; }
+  // it came back (or the chest is gone): back in the bags
+  function unescrow(key) { const i = data.escrow.findIndex(x => x.key === key); if (i < 0) return false; data.items.push(data.escrow.splice(i, 1)[0]); changed(); return true; }
+  function unescrowAll() { if (!data.escrow.length) return; data.items.push(...data.escrow); data.escrow = []; changed(); }
+  unescrowAll();   // (a page closed with something in a chest: it's back on the next visit)
   const mine = clsId => data.items.filter(i => i.owner === clsId);
   function loadout(clsId) {
     const e = data.equip[clsId] || {};
@@ -427,7 +465,7 @@ const Inventory = (() => {
   el.id = 'inventory'; el.className = 'hidden';
   el.innerHTML = `
     <div class="inv-page">
-      <button class="sel-close inv-close" aria-label="Close" data-tip="Close (I / Esc)">×</button>
+      <button class="sel-close inv-close" aria-label="Close" data-tip="Close (Esc)">×</button>
       <header class="sel-head"><h2>Inventory</h2><div class="sel-rule"></div></header>
       <div class="inv-grid">
         <section class="inv-char box">
@@ -450,6 +488,7 @@ const Inventory = (() => {
   function open() { if (!deps || !deps.cls()) return; el.classList.remove('hidden'); selected = null; render(); }
   function close() { el.classList.add('hidden'); Tip.hide(); }
   $q('.inv-close').addEventListener('click', close);
+  el.addEventListener('mousedown', e => { if (e.target === el) close(); });   // (a click beside the page closes it, like the talents)
   const fig = $q('#inv-figure'); fig.width = 220 * 2; fig.height = 220 * 2; fig.style.width = '220px'; fig.style.height = '220px';
 
   const STAT_ROWS = [
@@ -463,7 +502,7 @@ const Inventory = (() => {
   function statValue(key, clsId, t) {
     const main = CLASS_MAIN[clsId], role = CLASSES.find(c => c.id === clsId).role;
     switch (key) {
-      case 'hp': return [`${(playerBaseHp(role) + t.hp).toLocaleString()}`, t.hp ? `+${t.hp} from gear` : 'Base'];
+      case 'hp': return [`${(playerBaseHp(role) + t.hp).toLocaleString('en-US')}`, t.hp ? `+${t.hp} from gear` : 'Base'];
       case 'phys': case 'mag': {
         const v = (key === main ? 100 : 0) + t[key];
         return [String(v), key === main ? `+${(t[key] / 10).toFixed(1)}% damage & healing` : 'Not used by this hero'];
@@ -486,8 +525,8 @@ const Inventory = (() => {
     eq.innerHTML = SLOTS.map(([s, label]) => {
       const inst = l[s];
       return `<button class="eq-slot ${inst ? 'filled' : ''} ${selected && selected.slot === s ? 'sel' : ''}" data-slot="${s}">
-        ${inst ? `<img src="${iconURL(inst)}" alt="">` : `<span class="eq-empty">${label === 'Accessory' ? '◇' : label === 'Weapon' ? '⚔' : '⛨'}</span>`}
-        <small>${label}</small></button>`;
+        ${inst ? `<img src="${iconURL(inst)}" alt="">` : `<span class="eq-empty">${EMPTY_ICON[s.startsWith('acc') ? 'acc' : s]}</span>`}
+        <small>${label.replace('Accessory', 'Acc.')}</small></button>`;
     }).join('');
     eq.querySelectorAll('.eq-slot').forEach(b => {
       const s = b.dataset.slot, inst = l[s];
@@ -533,14 +572,17 @@ const Inventory = (() => {
     const btns = [];
     if (worn.length) btns.push(`<button class="btn2" data-act="unequip" data-slot="${worn[0]}" ${locked ? 'disabled' : ''}>Unequip</button>`);
     else if (slots.length === 1) btns.push(`<button class="cta" data-act="equip" data-slot="${slots[0]}" ${locked ? 'disabled' : ''}>Equip</button>`);
-    else if (slots.length === 2) btns.push(...slots.map((s, i) => `<button class="cta" data-act="equip" data-slot="${s}" ${locked ? 'disabled' : ''}>Equip ${i + 1}</button>`));
+    else if (slots.length === 2) btns.push(...slots.map((s, i) => `<button class="cta" data-act="equip" data-slot="${s}" ${locked ? 'disabled' : ''}>Equip in ${['I', 'II'][i]}</button>`));
     // selling: a second press confirms for Legendary and Mythic items, or anything another hero is wearing
     const others = wornBy(inst).filter(c => c !== clsId);
     const careful = itemRarity(inst) >= R_LEGENDARY || others.length;
     const sellTip = others.length ? `Worn by your ${others.map(c => CLASSES.find(x => x.id === c).name).join(', ')}` : '';
+    btns.push(`<select class="send-to" ${locked || worn.length ? 'disabled' : ''} aria-label="Send to another hero"><option value="">Send to…</option>${CLASSES.filter(c => c.id !== clsId).map(c => `<option value="${c.id}">${c.name}</option>`).join('')}</select>`);
     btns.push(`<button class="btn2 sell" data-act="sell" ${locked || worn.length ? 'disabled' : ''}${sellTip ? ` data-tip="${sellTip}"` : ''}>Sell ${coin}${sellPrice(inst)}</button>`);
     det.innerHTML = `<img src="${iconURL(inst)}" alt=""><div class="det-text">${itemTip(inst, clsId)}</div><div class="det-btns">${btns.join('')}</div>
       ${locked ? '<p class="inv-hint">Gear is locked during a raid.</p>' : ''}`;
+    const st = det.querySelector('.send-to');
+    if (st) st.addEventListener('change', () => { if (st.value) { const c = CLASSES.find(x => x.id === st.value); sendTo(inst, st.value); deps.toast && deps.toast(`Sent to your ${c ? c.name : 'hero'}.`); } });
     det.querySelectorAll('button[data-act]').forEach(b => b.addEventListener('click', () => {
       const act = b.dataset.act;
       if (act === 'equip') equip(clsId, b.dataset.slot, inst);
@@ -573,7 +615,7 @@ const Inventory = (() => {
     init(d) { deps = d; },
     open, close, isOpen, toggle() { if (isOpen()) close(); else open(); }, frame,
     setExtra(fn) { extra = fn; modsCache.clear(); }, refresh() { modsCache.clear(); if (deps) deps.onChange(); },
-    add, drop, spare, equip, unequip, mods, totals, grantStarter, loadout, items: () => data.items,
+    add, drop, spare, sendTo, escrow, settle, unescrow, unescrowAll, equip, unequip, mods, totals, grantStarter, loadout, items: () => data.items,
     itemName: inst => ITEMS[inst.key].name, rarityColor: inst => RARITY[itemRarity(inst)].color, iconURL, itemTip,
     addGold, showGoldHud(v) { goldHud.classList.toggle('hidden', !v); }, refreshGold: showGold,
   };

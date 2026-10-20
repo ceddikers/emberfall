@@ -22,10 +22,10 @@ const TUTORIAL = {
             'Every hero has a dash on Space: two charges, each back 12 seconds after use. It goes where you are heading, or toward the cursor.',
             'A dash snaps a silk thread that is reeling you in. You cannot dash while rooted.',
           ] },
-        { h: 'Panels and chat', keys: ['Enter', 'G', 'M', 'V', 'K', 'I', 'N', 'J', 'Esc'],
+        { h: 'Panels and chat', keys: ['Enter', 'G', 'M', 'V', 'K', 'I', 'N', 'J', 'L', 'Esc'],
           body: [
             'Enter: chat. G: Limit Break. M: live damage meter (click its header for healing). V: set focus.',
-            'K: options. I: bags. N: talents. J: journal. Esc closes a panel, or clears your targets.',
+            'K: options. I: bags. N: talents. J: journal. L: Logbook (feats, titles, secrets, your catch). Esc closes a panel, or clears your targets.',
           ] },
         { h: 'Options', keys: ['K'],
           body: [
@@ -54,7 +54,7 @@ const TUTORIAL = {
             'A heal goes, in order, to: the party frame under your mouse, the ally under your cursor, your locked ally, the nearest ally to your cursor, then yourself. Shift + the key always means yourself.',
           ] },
         { h: 'Positionals', body: [
-          'The ring round the boss shows his front (red arc and a pointer), his rear (purple arc) and his flanks (white arcs).',
+          'The ring round the boss shows its front (red arc and a pointer), its rear (purple arc) and its flanks (white arcs).',
           'Some moves hit harder from the rear or a flank; their tooltips say which.',
         ] },
         { h: 'Facing', body: [
@@ -89,9 +89,9 @@ const TUTORIAL = {
       id: 'roles', title: 'Roles',
       pages: [
         { h: 'Tank', body: [
-          'Hold the boss: keep the most threat, all fight. He auto-attacks his target every few seconds if they are near him, and walks after them.',
+          'Hold the boss: keep the most threat, all fight. It auto-attacks its target every few seconds if they are near it, and walks after them.',
           'Tankbusters (red casts) hit whoever he is attacking: use a defensive as the cast starts.',
-          'Face him away from the party: his busters are cones, and anyone else caught in one takes most of it.',
+          'Face it away from the party: its busters are cones, and anyone else caught in one takes most of it.',
           'Place him: where the boss stands decides where many mechanics land.',
         ] },
         { h: 'Healer', body: [
@@ -199,15 +199,15 @@ const TUTORIAL = {
           'No colour: a mechanic. Read the floor.',
         ] },
         { h: 'Upcoming moves', body: [
-          'Under the boss bar: his next three named moves and the seconds until each. It reads across phase changes, and shows the enrage when it is near.',
+          'Under the boss bar: its next three named moves and the seconds until each. It reads across phase changes, and shows the enrage when it is near.',
           'Every fight is the same authored sequence on every pull; nothing is random except who gets picked, and some sides and angles.',
         ] },
         { h: 'The boss bar', body: [
           'Health, a trail of recent damage, the difficulty and the fight clock ("Unengaged" before the pull). It dims while he is out of reach.',
-          'Icons under it: Staggered (he takes more damage), Fury (his hits land harder), a taunt\'s fixation, debuffs your party put on him, and the enrage timer in the last minute.',
+          'Icons under it: Staggered (it takes more damage), Fury (its hits land harder), a taunt\'s fixation, debuffs your party put on him, and the enrage timer in the last minute.',
         ] },
         { h: 'Auto-attacks', body: [
-          'He winds up just before each auto-attack on his target.',
+          'It winds up just before each auto-attack on its target.',
         ] },
       ],
     },
@@ -223,10 +223,10 @@ const TUTORIAL = {
           'Some last phases ramp on their own as well: they get worse every pass until he dies.',
         ] },
         { h: 'Phase changes', body: [
-          'When his health reaches the mark, the move set already running finishes (up to about 8 seconds) before the next phase starts. Pushing faster never cuts a combo in half.',
+          'When its health reaches the mark, the move set already running finishes (up to about 8 seconds) before the next phase starts. Pushing faster never cuts a combo in half.',
         ] },
         { h: 'Damage checks', body: [
-          'A gold cast with a goal mark on the boss bar: get his health below the mark before the cast ends.',
+          'A gold cast with a goal mark on the boss bar: get its health below the mark before the cast ends.',
           'Make it and the cast breaks, usually leaving him staggered and open. Miss it and it is usually a wipe.',
           'Passing one fills most of a Limit Break bar.',
         ] },
@@ -349,7 +349,7 @@ const TUTORIAL = {
         { name: 'Appetiser', body: '100% to 80%. One tool at a time, with room between: Grease Fire, Mince, Ladle Spin, Lid Slam, Tenderize, Meat Toss with Family Meal, Larder Toss into Gut Blast. Hard opens with Clogged Drains.' },
         { name: 'Mains', body: '80% to 50%. Everything in pairs: Butcher\'s Charge, Chop Chop, Order Up!, Meat Toss into Family Meal, casks then the charge then Gut Blast, and Order Up! under Rolling Meatballs.' },
         { name: 'Flare-Up', body: 'At 50%, no break: the Flare-Up sets the top third of the kitchen burning for the rest of the fight, a Flambé sweeps the room, he drags the Stockpot to the middle and it Simmers out, then in.' },
-        { name: 'Second Sitting', body: '50% to 18%. The smaller kitchen with the pot in the middle: Whisk, Spice Rack and Boil Over join his tools, now landing two at a time. On Hard: Mise en Place, later Service!.' },
+        { name: 'Second Sitting', body: '50% to 18%. The smaller kitchen with the pot in the middle: Whisk, Spice Rack and Boil Over join his tools, now landing two at a time. On Hard: Mise en Place, later Service!, and the order rail between them is the Dinner Rush.' },
         { name: 'Dessert', body: '18% to 0%. Flambé, Meat Toss, Rolling Meatballs, Mince, Ladle Spin or Lid Slam, Spice Rack, Family Meal and Whisk back to back, each landing as the next is called; Last Orders; then Gorge every 15 seconds until he dies or calls Last Call.' },
       ],
       moves: {
@@ -371,7 +371,7 @@ const TUTORIAL = {
           hardNote: 'Only two people can hide behind each cask.' },
         "Butcher's Charge": { what: 'A line from him at his tank, following them until a second before; then he charges until he hits something. Anyone on the line is run over.', answer: 'Tank: aim him at a brick wall (stuck 4 s, taking 20% more damage). Not the stove before the Flare-Up (the top third erupts for 10 s), not a cask you need.' },
         'Order Up!': { what: 'A plate (tower) for each player round the kitchen, served one after another clockwise from the top left. The next one due has the fullest gold rim. An empty plate hits everyone.', answer: 'One person per plate, in serving order.',
-          hardNote: 'Six plates for four players, and each leaves you Stuffed for 4 s: a plate while Stuffed hurts. Nobody takes two in a row.' },
+          hardNote: 'Six plates for four players, and each leaves you Stuffed for 4 s: a plate while Stuffed hurts. Nobody takes two in a row. In the Second Sitting the rail is the Dinner Rush instead.' },
         'Rolling Meatballs': { what: 'Three meatballs land against the walls, wobble a moment with their lane shown, then roll straight across the kitchen. Each hits once and shoves you aside.', answer: 'Stand outside every lane. In the Mains the lanes run between the plates.',
           hardNote: 'Four, faster.' },
         'Flare-Up': { what: 'He heaves the stockpot onto the stove. The top third of the kitchen burns for the rest of the fight and lights any grease in it. A raidwide blast of heat with it.', answer: 'Out of the top third for good. Heal through the blast.' },
@@ -390,6 +390,7 @@ const TUTORIAL = {
         'Cleaver Toss': { what: 'A cleaver flies along a line at each of the two farthest non-tanks (following them until a second before), then comes back along the same line.', answer: 'The two aim it away from the party, then stay off the line for the return.', hard: true },
         'Mise en Place': { what: 'Three tools laid out on the pass along the bottom wall, left to right: a cleaver on one side of its board (that half will be chopped), the ladle, the lid.', answer: 'Remember the order and the cleaver\'s side.', hard: true },
         'Service!': { what: 'The Mise en Place tools come out in that order, 2 s apart: a half-room chop, Ladle Spin, Lid Slam.', answer: 'Move through the three in the order you remembered.', hard: true },
+        'Dinner Rush': { what: 'In the Second Sitting, in place of the order rail. He plants himself just south of the stockpot, facing it, and a hot plate hangs over every player; where you stand when it comes down, your plate is set down. Then three beats about 2 s apart, the plates coming up nearest him first: the first with Double Chop\'s west half, the second with its east half and a Lid Slam at once (only the west side of his quiet circle is safe), the last two together with a Ladle Spin. Each plate wants one person and leaves them Stuffed. The chop is drawn from the cast; the lid and ladle as the plates go down.', answer: 'Set the first plate nearest him on his east side, the second a little farther out on his west side but inside the lid\'s circle (at its edge, so the one who served the first has room to stand there), the other two well out of the ladle\'s reach. Then: east, in to the west, out. Two serve at his side and never leave him.', hard: true },
       },
     },
 
@@ -439,7 +440,7 @@ const TUTORIAL = {
     volkar: {
       intro: 'Four parts on a round summit under a Storm Pulse that hits everyone every 4 s and grows each minute: The Front to 55%, The Eye (40 s, no Pulse), the Back of the Storm to 15% while the edge closes in, then Heavens Fall until he dies or Skybreak lands at about 10:00 (10:15 on Hard). Everyone carries + (gold) or − (blue) all fight; groups die to wrong pairings, to bolts with no stone, and to being thrown into walls or off the edge.',
       phases: [
-        { name: 'The Front', body: '100% to 55%. Gaps tighten from about 15 s to 8 s: Thunderclap, Titan Fist, Polarity Surge, Thunder Crash into Static Field, Rod Strike, Gale Slam, Storm Walls, Lightning Rods with Gale Slam, Avalanche into Storm Walls, Surge with Crash, then a Squall Line with Static Field and Surge inside it.' },
+        { name: 'The Front', body: '100% to 55%. Gaps tighten from about 15 s to 8 s: Thunderclap, Titan Fist, Polarity Surge, Thunder Crash into Static Field, Rod Strike, Gale Slam, Storm Walls, Lightning Rods with Gale Slam, Avalanche into Storm Walls, Surge with Crash, then a Squall Line with Static Field and Surge inside it. On Hard, the second Lightning Rods is the Supercell instead.' },
         { name: 'The Eye', body: 'At 55%, 40 s. The Pulse stops and he stays targetable. Still Air lights the stones; Distant Thunder does nothing; Eye Closes, and the stones resolve.' },
         { name: 'Back of the Storm', body: '55% to 15%. The Front again from the other side, doubled up, with Gathering Storm and Thunderhead. The edge closes in twice (Normal); on Hard, wedges of the summit break away one by one.' },
         { name: 'Heavens Fall', body: 'At 15% the summit closes to its last ring. Heavens Fall every 15 s, each harder, until he dies.' },
@@ -458,7 +459,7 @@ const TUTORIAL = {
         'Storm Walls': { what: 'Two walls of wind from him turn slowly round the summit for about 10 s. Each hits as it passes and shoves you along. A boulder shelters you once, then breaks.', answer: 'Walk ahead of the turning walls, or behind a boulder.',
           hardNote: 'Three walls, turning faster, for longer.' },
         'Lightning Rods': { what: 'Two rods (towers) round him, each wanting one. A soak leaves you Conductive: a second rod while Conductive hurts more. An empty rod hits everyone. Each leaves a post that stands 30 s.', answer: 'One person per rod, not anyone already Conductive. Gale Slam follows: get behind a post.',
-          hardNote: 'Three rods, and the Gale Slam lands with them: shelter behind the rod you soak.' },
+          hardNote: 'Three rods, and the Gale Slam lands with them: shelter behind the rod you soak. In the Front the second set is the Supercell instead.' },
         'Avalanche': { what: 'Boulders roll in from one side in lanes and stop past the middle; each lane hits and throws you aside. The boulders stay, solid. Storm Walls follow.', answer: 'Out of the lanes, then behind a boulder for the walls.',
           hardNote: 'Four lanes.' },
         'Squall Line': { what: 'For about 30 s the safe circle drifts once round him; outside it, a jolt every second. It shows from the cast, with a ghost of where it is going.', answer: 'Walk with the circle. Other mechanics land inside it.' },
@@ -473,6 +474,8 @@ const TUTORIAL = {
         'Chain Lightning': { what: 'A bolt on the healer (as Titan Fist lands): it strikes them, then leaps to the nearest player close by, up to three more times.', answer: 'The healer stays well clear of everyone; everyone clear of each other.', hard: true },
         'Ball Lightning': { what: 'Four orbs gather at the edge, then drift slowly across the summit. Touch one and it bursts, throwing you.', answer: 'Step round them.', hard: true },
         'Skyfall': { what: 'The sky falls where a player stood when he called it: huge damage close in, falling off with distance.', answer: 'Everyone far from that spot.', hard: true },
+        'Grounding Rods': { what: 'In the Front, in place of a Lightning Rods. An iron rod hangs over each + player; where they stand when it comes down, it is driven into the rock and stands until the fronts have passed. Supercell comes straight after.', answer: 'The two + players plant theirs a stride either side of him, east and west, in the row that runs through him.', hard: true },
+        'Supercell': { what: 'Three squall fronts march across the summit a strip at a time, always in this order: from the west, then from the north, then from the east, each starting before the last is through. A front\'s bolt runs along each row of the grid until it strikes a rod: the rod\'s own square is hit, and every square past it stays dry, a lane of still air drawn blue while that front passes. As the last front passes, a Thunderclap.', answer: 'Round your rod with your partner: east of it for the first front, south of it for the second, west of it for the third. With the rods either side of him, those lanes run past his flanks and nobody has to leave him. Be healed up for the Thunderclap at the end.', hard: true },
       },
     },
 

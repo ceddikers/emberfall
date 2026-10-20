@@ -24,6 +24,8 @@
 //   lines at the farthest, then back), Flambé in alternate stripes, Tenderized, two to a cask, toss and meal at once,
 //   six plates for four on the rail with Stuffed for 4 s (no two in a row), Meat Hook on the healer as the tank takes
 //   Tenderize, and Mise en Place: three tools laid out on the pass, served in that order much later (Service!).
+//   The Dinner Rush (the Second Sitting's rail): the party sets the plates down itself, and they come up nearest him
+//   first on his three beats (west chop, east chop with the lid, the ladle), so where each goes decides the order.
 
 const GRUBNAK = {
   id: 'grubnak', name: 'Grubnak', title: 'The Ogre Chef',
@@ -156,22 +158,62 @@ const GRUBNAK = {
       for (let i = 0; i < n; i++) { const a = base + i * Math.PI * 2 / Math.max(n, 2); out.push([Math.round(Math.cos(a) * rx), Math.round(cy + Math.sin(a) * ry)]); }
       return out;
     };
+    // one plate on the rail: a cloche that wants one person when it comes up (Hard: and leaves them Stuffed)
+    const plate = (x, y, delay) => f.mech({ type: 'tower', shape: { kind: 'circle', x, y, r: 72 }, delay, dmg: dmg.tower, failDmg: dmg.towerFail, need: 1, tag: 'plate',
+      stuff: H ? STUFF : 0,
+      onResolve: inside => {
+        if (!H) return;
+        for (const p of inside) {
+          if (f.hasDebuff(p.id, 'stuffed')) f.damagePlayer(p, dmg.stuffed, { kind: 'stuffed' });
+          f.debuff(p.id, 'stuffed', STUFF);
+        }
+      } });
     const orderUp = () => {
       const k = Math.max(1, f.alive().length), n = H ? k + (k === 4 ? 2 : k === 3 ? 1 : 0) : k;
       const d = f.ct(7.5), gap = H ? 1.5 : 1.6;
       f.cast('Order Up!', d, 'bell');
-      plateSpots(n).forEach(([x, y], i) => {
-        f.mech({ type: 'tower', shape: { kind: 'circle', x, y, r: 72 }, delay: d + i * gap, dmg: dmg.tower, failDmg: dmg.towerFail, need: 1, tag: 'plate',
-          stuff: H ? STUFF : 0,
-          onResolve: inside => {
-            if (!H) return;
-            for (const p of inside) {
-              if (f.hasDebuff(p.id, 'stuffed')) f.damagePlayer(p, dmg.stuffed, { kind: 'stuffed' });
-              f.debuff(p.id, 'stuffed', STUFF);
-            }
-          } });
-      });
+      plateSpots(n).forEach(([x, y], i) => plate(x, y, d + i * gap));
       return d + (n - 1) * gap;   // when the last plate lands
+    };
+    // Dinner Rush (Hard, the Second Sitting): the rail again, but the party lays it. He plants himself south of the
+    // stockpot, facing it, and a hot plate hangs over every hero; where each stands when it comes down, the plate is
+    // set down. Then he works the line in three beats, RUSH_BEAT apart, and the plates come up with them, nearest him
+    // first: the first with Double Chop's west half, the second with its east half and a Lid Slam at once (only the
+    // west side of the quiet circle by him is safe), the last two together with a Ladle Spin (well out).
+    // The thinking: the plate for the first beat goes nearest him, on his east side; the second a little farther, on
+    // his west side but inside the lid's reach, at its edge (whoever served the first is Stuffed and needs room there);
+    // the other two out of the ladle's reach. The order follows the distances, so setting them down decides it: a
+    // plate set nearer than it should be comes up on the wrong beat. Known, it is a short walk: two serve at his side
+    // and never leave him, two serve from range. The same spot, facing and beats every pull.
+    const RUSH_AT = { x: 0, y: 175 }, RUSH_BEAT = 2.2, RUSH_FIRST = 4, RUSH_LID = 230;   // (a wider quiet circle than the plain Lid Slam's: a plate has to fit in its west half with room beside it)
+    const rushHalf = side => ({ kind: 'rect', x: RUSH_AT.x, y: RUSH_AT.y, angle: side === 'west' ? Math.PI : 0, len: 1300, w: 2600 });
+    const dinnerRush = () => {
+      const d = f.ct(4), at = RUSH_AT, al = f.alive();
+      f.moveBoss(at.x, at.y, 700);
+      B.lockFacing = true; B.facing = -Math.PI / 2;
+      hold(d + RUSH_FIRST + RUSH_BEAT * 2 + 0.3);
+      f.afterKeep(d + RUSH_FIRST + RUSH_BEAT * 2 + 0.3, () => { B.lockFacing = false; });
+      f.cast('Dinner Rush', d, 'bell');
+      // the double chop is drawn from the cast: the west half with the first plate, the east half with the second
+      f.aoe(rushHalf('west'), d + RUSH_FIRST, dmg.mince, { tag: 'mince' });
+      f.aoe(rushHalf('east'), d + RUSH_FIRST + RUSH_BEAT, dmg.mince, { tag: 'mince' });
+      // once every plate is down (the last drop to land lays the rail): nearest him first, the last two together
+      const down = [];
+      let left = al.length;
+      const lay = () => {
+        down.sort((a, b) => Math.hypot(a.x - at.x, a.y - at.y) - Math.hypot(b.x - at.x, b.y - at.y));
+        down.forEach((q, i) => plate(q.x, q.y, RUSH_FIRST + Math.min(i, 2) * RUSH_BEAT));
+        f.aoe({ kind: 'donut', x: at.x, y: at.y, r: 1300, r2: RUSH_LID }, RUSH_FIRST + RUSH_BEAT, dmg.ladle, { tag: 'lid' });
+      };
+      for (const p of al) {
+        const m = f.mech({ type: 'drop', shape: { kind: 'circle', x: p.x, y: p.y, r: 72 }, delay: d, dmg: 0, follow: p.id, tag: 'platedrop', avoidable: false, color: '#ffd23a',
+          onResolve: () => {
+            if (f.alive().some(q => q.id === p.id)) down.push({ x: Math.round(m.shape.x), y: Math.round(m.shape.y) });
+            if (--left === 0) lay();
+          } });
+      }
+      // the ladle shows as the first half lands
+      f.afterKeep(d + RUSH_FIRST, () => f.aoe({ kind: 'circle', x: at.x, y: at.y, r: 240 }, RUSH_BEAT * 2, dmg.ladle, { tag: 'ladle' }));
     };
     // Spice Rack: jars pour onto set spots (a pattern for each time he uses it), and one locks under each DPS / healer
     const SPICE = { a: [[-300, 40], [0, 220], [300, 40]], b: [[-220, 210], [220, 210]], c: [[-340, 190], [0, 10], [340, 190]] };
@@ -495,7 +537,11 @@ const GRUBNAK = {
         S([14, larderToss, 'Larder Toss'], [6, boilOver, 'Boil Over']),
         S([10, () => { tenderize(); if (H) meatHook(); }, 'Tenderize'], [8, gutBlast, 'Gut Blast']),
         H && S([8, mise, 'Mise en Place']),
-        S([10, () => { const last = orderUp(); f.afterKeep(Math.max(0.5, last - f.ct(5.5) + 1), () => meatToss()); }, 'Order Up!']),   // the toss lands just after the last plate
+        // the rail with Meat Toss landing just after the last plate (Hard: the Dinner Rush instead, the plates set by the
+        // party, served on his three beats; the cast names come with each beat)
+        H ? S([10, dinnerRush, 'Dinner Rush'], [f.ct(4), () => f.cast('Double Chop', RUSH_FIRST, 'mince', { side: 'left', second: 'right' }), 'Double Chop'],
+          [RUSH_FIRST + 0.05, () => f.cast('Lid Slam', RUSH_BEAT - 0.1, 'lid'), 'Lid Slam'], [RUSH_BEAT, () => { f.cast('Ladle Spin', RUSH_BEAT - 0.1, 'ladle'); f.anim('ladle', RUSH_BEAT); }, 'Ladle Spin'])
+          : S([10, () => { const last = orderUp(); f.afterKeep(Math.max(0.5, last - f.ct(5.5) + 1), () => meatToss()); }, 'Order Up!']),   // the toss lands just after the last plate
         S([15, butcherCharge, "Butcher's Charge"]),
         S([12, grease, 'Grease Fire']),
         H && S([8, service, 'Service!']),
@@ -535,7 +581,7 @@ const GRUBNAK = {
     // every move by name, for tools and testing (window.__game.raidHost.sim.moves.gutBlast())
     f.moves = { grease, tenderize, mince, ladleOrLid, chopChop, meatToss, tossThenMeal, familyMeal, orderUp, spiceRack, whisk, boilOver,
       meatballs, bellyFlop, cleaverToss, flambe, butcherCharge, larderToss, gutBlast, drains, meatHook, charge, flareUp, potToMiddle,
-      mise, service, lastOrders, gorge, simmerCast };
+      mise, service, dinnerRush, lastOrders, gorge, simmerCast };
   },
 };
 

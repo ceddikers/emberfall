@@ -160,6 +160,7 @@ const Pings = (() => {
   // a sheet of emotes on a plain background: cut along the empty rows and columns between them
   function cutSheet(im) {
     const W = im.naturalWidth, H = im.naturalHeight;
+    if (W * H > 4096 * 4096) return [];   // (too big to scan without freezing the page)
     const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
     const c = cv.getContext('2d'); c.drawImage(im, 0, 0);
     const px = c.getImageData(0, 0, W, H).data;
@@ -199,7 +200,7 @@ const Pings = (() => {
         <span class="co-prev">${slotHtml(c)}</span>
         <input class="co-text" maxlength="24" value="${c.img ? '' : esc(c.text)}" placeholder="${c.img ? 'Image' : 'Text'}" autocomplete="off">
         <button type="button" class="btn2 co-img">Image</button>
-        <button type="button" class="btn2 co-reset" data-tip="Back to “${DEFAULTS[i].text}”">↺</button>
+        <button type="button" class="btn2 co-reset" data-tip="Back to “${DEFAULTS[i].text}”" aria-label="Reset"><svg viewBox="0 0 12 12" width="11" height="11"><path d="M3 4.2A3.6 3.6 0 1 1 2.6 7.6" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M1.6 2.2 3.1 4.6 5.6 3.6" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       </div>`).join('');
     const pick = panel.querySelector('.co-pick');
     pick.classList.toggle('hidden', picking < 0);
@@ -207,13 +208,15 @@ const Pings = (() => {
       (lib.length ? `<div class="co-lib">${lib.map((u, j) => `<u data-j="${j}" style="background-image:url(${u})"></u>`).join('')}</div>`
         : `<p class="co-note">No emotes yet: load a sheet, or pick a file.</p>`);
     panel.querySelector('.co-libn').textContent = lib.length ? `${lib.length} emote${lib.length === 1 ? '' : 's'}` : '';
+    const clr = panel.querySelector('.co-lib-clear');
+    clr.classList.toggle('hidden', !lib.length); delete clr.dataset.confirm; clr.classList.remove('armed'); clr.textContent = 'Clear emotes';
   }
   function openPanel() {
     if (!panel) {
       panel = document.createElement('div');
       panel.id = 'callouts'; panel.className = 'hidden';
       panel.innerHTML = `<header><h3>Callouts</h3><button type="button" class="close" aria-label="Close">×</button></header>
-        <p class="co-note">The ping wheel's eight slots, clockwise from the top. Images stay in this browser; they go to the party inside your pings.</p>
+        <p class="co-note">The ping wheel's eight slots, clockwise from the top. Images stay in this browser and travel only inside your pings.</p>
         <div class="co-sheet"><button type="button" class="btn2 co-sheet-btn">Load a sheet</button><span class="co-libn"></span><button type="button" class="btn2 co-lib-clear">Clear emotes</button></div>
         <div class="co-list"></div>
         <div class="co-pick hidden"></div>
@@ -233,7 +236,10 @@ const Pings = (() => {
       panel.addEventListener('click', e => {
         const t = e.target;
         if (t.classList.contains('co-sheet-btn')) { panel.querySelector('.co-sheet-file').click(); return; }
-        if (t.classList.contains('co-lib-clear')) { lib = []; saveLib(); render(); return; }
+        if (t.classList.contains('co-lib-clear')) {
+          if (!t.dataset.confirm) { t.dataset.confirm = '1'; t.textContent = `Clear ${lib.length} emote${lib.length === 1 ? '' : 's'}?`; t.classList.add('armed'); return; }
+          lib = []; saveLib(); render(); return;
+        }
         if (t.classList.contains('co-file-btn')) { panel.querySelector('.co-file').click(); return; }
         if (t.dataset.j != null && picking >= 0) { slots[picking] = { img: lib[Number(t.dataset.j)] }; save(); picking = -1; render(); return; }
         const row = t.closest('.co-row');
@@ -251,7 +257,8 @@ const Pings = (() => {
         }
         if (e.target.classList.contains('co-sheet-file')) {
           loadImageFile(f, im => {
-            if (im) for (const u of cutSheet(im)) if (!lib.includes(u) && lib.length < LIB_MAX) lib.push(u);
+            const room = () => 600000 - lib.reduce((n, u) => n + u.length, 0);   // (~600 KB of this browser's storage at most)
+            if (im) for (const u of cutSheet(im)) if (!lib.includes(u) && lib.length < LIB_MAX && room() > u.length) lib.push(u);
             saveLib(); render();
           });
         }

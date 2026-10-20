@@ -8,11 +8,11 @@ const Keybinds = (() => {
     { id: 's0', def: 'q' }, { id: 's1', def: 'w' }, { id: 's2', def: 'e' }, { id: 's3', def: 'r' },
     { id: 's4', def: 'd' }, { id: 's5', def: 'f' }, { id: 's6', def: ' ', name: 'Dash' }, { id: 's7', def: 't', name: 'Taunt' },
     { id: 'focus', def: 'v', name: 'Set focus' }, { id: 'limit', def: 'g', name: 'Limit Break' }, { id: 'meter', def: 'm', name: 'Damage meter' },
-    { id: 'bags', def: 'i', name: 'Bags' }, { id: 'talents', def: 'n', name: 'Talents' },
-    { id: 'journal', def: 'j', name: 'Journal' }, { id: 'options', def: 'k', name: 'Options' },
+    { id: 'bags', def: 'i', name: 'Inventory' }, { id: 'talents', def: 'n', name: 'Talents' },
+    { id: 'journal', def: 'j', name: 'Journal' }, { id: 'logbook', def: 'l', name: 'Logbook' }, { id: 'options', def: 'k', name: 'Options' },
   ];
   // keys the game keeps for itself (chat, targeting, menus)
-  const RESERVED = new Set(['enter', 'escape', 'tab', '`', '1', '2', '3', '4', 'shift', 'alt', 'control', 'meta', 'mouse0', 'mouse1', 'mouse2']);
+  const RESERVED = new Set(['enter', 'escape', 'tab', '`', '1', '2', '3', '4', 'shift', 'alt', 'control', 'meta', 'mouse0', 'mouse1', 'mouse2', 'f3', 'f5', 'f11', 'f12']);
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
   let binds = {};
@@ -57,7 +57,7 @@ const Keybinds = (() => {
   const PIECES = [
     { sel: '#combat-hud', name: 'Hotbar' }, { sel: '#pf-wrap', name: 'Party frames' }, { sel: '#boss-bar', name: 'Boss bar' },
     { sel: '#raid-left', name: 'Threat & progress' }, { sel: '#live-meter', name: 'Damage meter' }, { sel: '#waymarks', name: 'Markers' },
-    { sel: '#lb-gauge', name: 'Limit Break' }, { sel: '#minimap', name: 'Minimap' }, { sel: '#target-frame', name: 'Target' }, { sel: '#focus-frame', name: 'Focus' }, { sel: '#boss-cast', name: 'Boss cast' },
+    { sel: '#lb-gauge', name: 'Limit Break' }, { sel: '#minimap', name: 'Minimap' }, { sel: '#target-frame', name: 'Target' }, { sel: '#focus-frame', name: 'Focus' },
   ];
   let layout = {};
   try { const v = JSON.parse(localStorage.getItem(LAYOUT_KEY) || '{}'); if (v && typeof v === 'object') layout = v; } catch (e) { /* none */ }
@@ -65,11 +65,21 @@ const Keybinds = (() => {
   let arranging = false, ghosts = [];
   // called every frame: keeps each piece where it was put (pieces can be rebuilt by the game)
   function applyLayout() {
+    applyScale();
     for (const p of PIECES) {
       const el = document.querySelector(p.sel);
       if (!el) continue;
       const o = layout[p.sel], v = o ? `${Math.round(o[0])}px ${Math.round(o[1])}px` : '';
       if (el.style.translate !== v) el.style.translate = v;
+      // (a smaller window never leaves a piece off-screen: it's nudged back until 24 px of it shows)
+      if (o && !arranging) {
+        const r = el.getBoundingClientRect();
+        if (r.width && r.height) {
+          const dx = r.right < 24 ? 24 - r.right : r.left > innerWidth - 24 ? innerWidth - 24 - r.left : 0;
+          const dy = r.bottom < 24 ? 24 - r.bottom : r.top > innerHeight - 24 ? innerHeight - 24 - r.top : 0;
+          if (dx || dy) { o[0] += dx; o[1] += dy; el.style.translate = `${Math.round(o[0])}px ${Math.round(o[1])}px`; }
+        }
+      }
     }
     if (arranging) for (const g of ghosts) {
       const el = document.querySelector(g.dataset.sel), r = el && el.getBoundingClientRect();
@@ -130,6 +140,7 @@ const Keybinds = (() => {
     const k = keyOf(e);
     if (k === 'escape') { capturing = null; render(); return; }
     if (bind(capturing, k)) { capturing = null; render(); }
+    else { const b = panel.querySelector(`[data-a="${capturing}"]`); if (b) b.textContent = `${label(k)} is kept`; }
   }
   function openPanel(opts = {}) {
     namer = opts.namer || namer; onChange = opts.onChange || onChange;
@@ -139,9 +150,12 @@ const Keybinds = (() => {
       panel.innerHTML = `<header><h3>Options</h3><button type="button" class="close" aria-label="Close">×</button></header>
         <h4>Keys</h4><p class="kb-note">Click a key, then press the new one (a mouse's side buttons work too). Taking a key another action had swaps them.</p>
         <div class="kb-list"></div>
-        <div class="kb-foot"><button type="button" class="btn2 kb-reset">Default keys</button></div>
+        <div class="kb-foot"><button type="button" class="btn2 kb-reset">Reset keys</button></div>
         <h4>Interface</h4>
-        <div class="kb-foot"><button type="button" class="btn2 kb-arrange">Arrange the HUD</button><span class="kb-note">Best done in a raid, where every piece shows.</span></div>`;
+        <div class="kb-foot"><button type="button" class="btn2 kb-arrange">Arrange the HUD</button><span class="kb-note">Best done in a raid, where every piece shows.</span></div>
+        <h4>Your data</h4>
+        <div class="kb-foot"><button type="button" class="btn2 kb-wipe">Delete all data</button><span class="kb-note">Heroes, gear, gold, journals, progress and settings in this browser. It can't be undone.</span></div>
+        <div class="kb-foot kb-scale"><label for="kb-scale">Interface size</label><input id="kb-scale" type="range" min="80" max="140" step="5"><b class="kb-scale-v"></b></div>`;
       document.body.appendChild(panel);
       panel.addEventListener('mousedown', e => {
         e.stopPropagation();
@@ -152,9 +166,21 @@ const Keybinds = (() => {
         if (t.classList.contains('close')) { closePanel(); return; }
         if (t.classList.contains('kb-reset')) { for (const a of ACTIONS) binds[a.id] = a.def; save(); labels(); onChange(); render(); return; }
         if (t.classList.contains('kb-arrange')) { closePanel(); arrange(true); return; }
+        if (t.classList.contains('kb-wipe')) {
+          // two presses, the second within five seconds, and a last browser confirm
+          if (!t.dataset.armed || Date.now() - Number(t.dataset.armed) > 5000) { t.dataset.armed = String(Date.now()); t.textContent = 'Press again to delete everything'; t.classList.add('armed'); return; }
+          if (!confirm('Delete every hero, item, gold, journal and setting in this browser and start over?')) { delete t.dataset.armed; t.textContent = 'Delete all data'; t.classList.remove('armed'); return; }
+          try { for (const k of Object.keys(localStorage)) if (k.startsWith('emberfall')) localStorage.removeItem(k); } catch (e) { /* storage unavailable */ }
+          location.reload();
+          return;
+        }
         if (t.dataset.a) { capturing = capturing === t.dataset.a ? null : t.dataset.a; render(); }
       });
       addEventListener('keydown', capture, true);
+      const sc = panel.querySelector('#kb-scale');
+      sc.value = Math.round(uiScale * 100);
+      panel.querySelector('.kb-scale-v').textContent = sc.value + '%';
+      sc.addEventListener('input', () => { setScale(Number(sc.value) / 100); panel.querySelector('.kb-scale-v').textContent = sc.value + '%'; });
     }
     capturing = null;
     render();
@@ -163,6 +189,17 @@ const Keybinds = (() => {
   function closePanel() { if (panel) panel.classList.add('hidden'); capturing = null; }
   const panelOpen = () => !!panel && !panel.classList.contains('hidden');
 
+  // the interface size (HUD and raid frames), for small laptops and big screens
+  let uiScale = 1;
+  try { uiScale = Math.max(0.8, Math.min(1.4, Number(localStorage.getItem('emberfall.uiscale')) || 1)); } catch (e) { /* 100% */ }
+  function setScale(v) {
+    uiScale = Math.max(0.8, Math.min(1.4, v));
+    try { localStorage.setItem('emberfall.uiscale', String(uiScale)); } catch (e) { /* not remembered */ }
+    applyScale();
+  }
+  function applyScale() {
+    for (const sel of ['#combat-hud', '#raid-ui', '#hud-tl', '#party']) { const el = document.querySelector(sel); if (el && el.style.zoom !== String(uiScale)) el.style.zoom = uiScale === 1 ? '' : String(uiScale); }
+  }
   load();
   return { ACTIONS, keyOf, actionOf, keyFor, label, openPanel, closePanel, panelOpen, applyLayout, arrange, isArranging: () => arranging, isCapturing: () => !!capturing };
 })();

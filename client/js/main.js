@@ -45,13 +45,26 @@
   };
   const remotes = new Map(); // id -> remote player
 
-  const lineup = CLASSES.map((cls, i) => {
+  const lineup = [];
+  // who waits on the tavern deck: the heroes you've played (and the three easy starters); the rest are at the Barkeep
+  function playedHero(id) {
+    const h = Save.get('heroes') && Save.get('heroes')[id];
+    if (!h) return false;
+    const c = h.clears || {};
+    return Object.values(c).some(b => b && (b.normal || b.hard)) || (h.talents && h.talents.rows > 0) || (h.journal && Object.keys(h.journal.met || {}).length > 0) || !!h.spec;
+  }
+  function refreshLineup() {
+    const shown = CLASSES.filter(c => c.difficulty === 1 || playedHero(c.id) || (player.cls && player.cls.id === c.id));
+    lineup.length = 0;
+    lineup.push(...shown.map((cls, i) => {
     const roleIdx = ['tank', 'dps', 'healer'].indexOf(cls.role);
-    const same = CLASSES.filter(c => c.role === cls.role), col = same.indexOf(cls);
+    const same = shown.filter(c => c.role === cls.role), col = same.indexOf(cls);
     const p = lineupSpot(roleIdx, col, Math.max(3, same.length));
     // labelUp: in a packed row every other name sits higher, so neighbours' names don't run together
     return { kind: 'hero', cls, x: p.x, y: p.y, angle: Math.PI / 2, st: newSt(i * 0.7), nextAct: 2 + Math.random() * 6, labelUp: same.length > 3 && col % 2 === 1 };
-  });
+    }));
+  }
+  refreshLineup();
   const keeper = { kind: 'keeper', x: TOWN.keeper.x, y: TOWN.keeper.y, angle: Math.PI / 2, st: newSt() };
   const trainer = { kind: 'trainer', x: TOWN.trainer.x, y: TOWN.trainer.y, angle: Math.PI / 2, st: newSt(1.3) };   // talents (talent-panel.js)
   // A boss stays sealed (unnamed, under a shroud) until someone on this account has beaten the one before it.
@@ -68,7 +81,6 @@
   const dummies = TOWN.dummies.map((d, i) => ({ kind: 'dummy', x: d.x, y: d.y, st: { t: 0, hit: -10 }, spar: i === 0, nextSwing: 0, windup: 0 }));
 
   const interactables = [
-    ...lineup.map(h => ({ x: h.x, y: h.y, r: 24, reach: 80, label: h.cls.name, open: () => openHeroPanel(h.cls) })),
     { x: keeper.x, y: keeper.y, r: 22, reach: 80, label: 'Barkeep', open: () => openSelect(null) },
     { x: trainer.x, y: trainer.y, r: 22, reach: 80, label: 'Trainer', open: () => openTalents() },
     ...statues.map(b => ({ x: b.x, y: b.y, r: 58, reach: 120, get label() { return bossOpen(b.boss) ? b.boss.name : 'Sealed'; }, open: () => openBossPanel(b.boss) })),
@@ -883,6 +895,7 @@
     iconURL: key => Inventory.iconURL({ key }),
     myItems: () => (player.cls ? Inventory.spare(player.cls.id) : []),
     dropItem: uid => Inventory.drop(uid),
+    escrow: uid => Inventory.escrow(uid), settle: key => Inventory.settle(key), unescrow: key => Inventory.unescrow(key), unescrowAll: () => Inventory.unescrowAll(),
     itemTip: (key, cls) => {
       const inst = { key }, l = cls ? Inventory.loadout(cls) : {}, s = cls && slotsFor(inst).find(x => canEquip(inst, cls, x));
       return Inventory.itemTip(inst, cls, s ? l[s] : null);
@@ -957,10 +970,10 @@
     const ids = Object.keys(PRACTICE_PHASES).filter(id => bossOpen(BOSSES.find(b => b.id === id))), pk = practicePick;
     if (!ids.includes(pk.boss)) pk.boss = ids[0];
     practicePanel.innerHTML = `<header><h3>Practice Hall</h3><button type="button" class="close" aria-label="Close">×</button></header>
-      <p class="pr-note">Any fight, from any phase. No loot, no clears; the progression record doesn't see it.</p>
-      <div class="pr-row">${ids.map(id => `<button type="button" class="btn2${pk.boss === id ? ' on' : ''}" data-boss="${id}">${escapeHtml(RAID_DEFS[id] ? RAID_DEFS[id].name : id)}</button>`).join('')}</div>
-      <div class="pr-row">${['normal', 'hard'].map(m => `<button type="button" class="btn2${pk.mode === m ? ' on' : ''}" data-mode="${m}">${m === 'hard' ? 'Hard' : 'Normal'}</button>`).join('')}</div>
-      <div class="pr-phases">${PRACTICE_PHASES[pk.boss].map((n, i) => `<button type="button" class="pr-ph" data-ph="${i + 1}"><i>${['I', 'II', 'III', 'IV', 'V', 'VI'][i]}</i><b>${escapeHtml(n)}</b></button>`).join('')}</div>`;
+      <p class="pr-note">Any fight, from any phase. No loot, no clears; the progression record doesn't see it.${Net.isHost ? '' : ' Only the host can start one.'}</p>
+      <h4>Fight</h4><div class="pr-row">${ids.map(id => `<button type="button" class="btn2${pk.boss === id ? ' on' : ''}" data-boss="${id}">${escapeHtml(RAID_DEFS[id] ? RAID_DEFS[id].name : id)}</button>`).join('')}</div>
+      <h4>Difficulty</h4><div class="pr-row">${['normal', 'hard'].map(m => `<button type="button" class="btn2${pk.mode === m ? ' on' : ''}" data-mode="${m}">${m === 'hard' ? 'Hard' : 'Normal'}</button>`).join('')}</div>
+      <h4>Start from</h4><div class="pr-phases">${PRACTICE_PHASES[pk.boss].map((n, i) => `<button type="button" class="pr-ph" data-ph="${i + 1}"${Net.isHost ? '' : ' aria-disabled="true"'}><i>${['I', 'II', 'III', 'IV', 'V', 'VI'][i]}</i><b>${escapeHtml(n)}</b></button>`).join('')}</div>`;
   }
   function closePractice() { if (practicePanel) practicePanel.classList.add('hidden'); }
   const practiceOpen = () => !!practicePanel && !practicePanel.classList.contains('hidden');
@@ -1085,7 +1098,8 @@
   // a Marionettist's Dolls, from its own client (classes-c): [[x, y, state], ...], at most two
   Net.onHost('doll', (pid, msg) => {
     if (!raidHost || !hostRoster.some(h => h.id === pid && !h.left) || !Array.isArray(msg.l)) return;
-    raidHost.sim.setDoll(pid, msg.l.slice(0, 2).map(d => (Array.isArray(d) ? { x: d[0], y: d[1], st: d[2], s: d[3] } : null)).filter(Boolean));
+    const ok = d => Array.isArray(d) && Number.isFinite(d[0]) && Number.isFinite(d[1]) && Math.abs(d[0]) < 2000 && Math.abs(d[1]) < 2000;
+    raidHost.sim.setDoll(pid, msg.l.slice(0, 2).filter(ok).map(d => ({ x: d[0], y: d[1], st: Number(d[2]) || 0, s: Number(d[3]) || 0 })));
   });
   Net.onHost('rleave', pid => {
     const h = hostRoster.find(x => x.id === pid);
@@ -1138,7 +1152,7 @@
       room: ArenaView.newRoom(),    // the room's props and floor state (host-owned, 'props' / 'propfx' / 'roomev')
     };
     player.reel = null;
-    lockedEnemy = null;
+    lockedEnemy = null; focusEnemy = null;
     // a trial lends you its spec for the length of the memory
     if (def.trial) { if (trialPrevSpec === undefined) trialPrevSpec = player.spec || null; player.spec = def.trial; }
     for (const r of msg.roster) {
@@ -1168,7 +1182,9 @@
   // nothing half-done carries from one raid to the next (or into town)
   function resetRaidInput() { placeMark(null); Pings.wheelClose(); pingFrom = null; Pings.clear(); Loot.leave(); }
   function leaveRaid(byMe) {
+    if (byMe && Net.isHost) Loot.hostClose();   // (settled first, so the host's own salvage still lands)
     resetRaidInput();
+    focusEnemy = null;
     if (byMe) {
       if (Net.isHost) { Loot.hostClose(); Net.broadcastAll({ t: 'raidend' }); return; }  // the host leaving ends it for everyone
       Net.send({ t: 'rleave' });
@@ -1245,11 +1261,14 @@
       raid.prePull = null;
       // the journal: a first meeting, and the moves to watch from here
       Journal.fightStart();
-      if (player.cls && !raid.def.trial) Journal.met(player.cls.id, raid.def.id);
+      if (player.cls && !raid.def.trial && !raid.practice) Journal.met(player.cls.id, raid.def.id);
+      if (!raid.def.trial) Pastimes.event('pull', { boss: raid.def.id, practice: !!raid.practice });
       return;
     }
     raid.state = msg.s; raid.result = msg; raid.resultAt = now + 2.2;
-    if (player.cls && !raid.def.trial && msg.s === 'clear') Journal.won(player.cls.id, raid.def.id);
+    if (player.cls && !raid.def.trial && !raid.practice && msg.s === 'clear') Journal.won(player.cls.id, raid.def.id);
+    if (!raid.def.trial && msg.s === 'clear') Pastimes.event('clear', { boss: raid.def.id, mode: raid.mode, secs: Number(msg.time) || 0, practice: !!raid.practice,
+      deaths: Object.values(msg.stats || {}).reduce((n, x) => n + (x.deaths | 0), 0), avoidable: Object.values(msg.stats || {}).reduce((n, x) => n + (x.avoidable | 0), 0) });
     // a real pull (not a trial or a practice run) goes on the progression record
     if ((msg.s === 'clear' || msg.s === 'wipe') && !raid.def.trial && !raid.practice && msg.maxHp > 0) {
       const pct = msg.s === 'clear' ? 0 : Math.max(0, Math.min(100, Math.round(msg.hp / msg.maxHp * 1000) / 10));
@@ -1332,7 +1351,7 @@
   Net.on('bcast', msg => {
     if (!raid) return;
     raid.cast = { name: msg.name, dur: msg.dur, start: now, goal: Number.isFinite(msg.goal) ? msg.goal : null };
-    if (raid.state === 'live' && player.cls && !raid.def.trial) Journal.castStart(player.cls.id, raid.def.id, String(msg.name), msg.dur, now);
+    if (raid.state === 'live' && player.cls && !raid.def.trial && !raid.practice) Journal.castStart(player.cls.id, raid.def.id, String(msg.name), msg.dur, now);
     if (raid.state === 'live' && raid.tl.casts.length < 400) raid.tl.casts.push([raid.fightTime || 0, String(msg.name).slice(0, 40), raid.cast.goal != null ? 1 : 0]);
     BOSS_VFX.castStart(raid.def.id, msg.anim, msg.dur, raid.bossDraw);
     const end = now + msg.dur, st = raid.bossDraw.st;
@@ -1666,7 +1685,7 @@
     if (scene !== 'town') return null;
     const m = mouseWorld();
     let best = null, bd = Infinity;
-    for (const it of [...interactables, ...TownLife.interactables()]) {
+    for (const it of [...interactables, ...lineup.map(h => ({ x: h.x, y: h.y, r: 24, reach: 80, label: h.cls.name, open: () => openHeroPanel(h.cls) })), ...TownLife.interactables(), ...Pastimes.interactables()]) {
       const d = Math.hypot(m.x - it.x, m.y - it.y);
       if (d < it.r && d < bd) { best = it; bd = d; }
     }
@@ -1706,6 +1725,7 @@
     }
     if (e.button === 2) { mouse.rightDown = true; player.interact = null; moveTo(mouseWorld(), true); return; }
     if (e.button !== 0) return;
+    if (scene === 'town' && Pastimes.pondClick(mouseWorld(), now)) return;   // (fishing: cast, strike, reel)
     const ch = inArena() && Loot.chestAt();
     if (ch && Math.hypot(mouseWorld().x - ch.x, mouseWorld().y - ch.y) < 40) { Loot.open(); return; }
     const it = hoverTarget();
@@ -1757,18 +1777,75 @@
     gold: () => Save.gold(),
     spendGold: n => { Save.addGold(-n); Inventory.refreshGold(); },
     toast: msg => toast(msg),
-    orderFeast: id => { if (Net.isHost) hostFeast(Net.id, { id }); else Net.send({ t: 'feastreq', id }); },
+    orderFeast: id => {
+      if (!Net.isHost && !Net.online) { toast('Not connected: nobody to cook for.'); return false; }
+      if (Net.isHost) hostFeast(Net.id, { id }); else Net.send({ t: 'feastreq', id });
+      return true;
+    },
+    blocked: (x, y) => COLLIDERS.rects.some(r => x > r.x - 14 && x < r.x + r.w + 14 && y > r.y - 14 && y < r.y + r.h + 14) || COLLIDERS.circles.some(c => Math.hypot(x - c.x, y - c.y) < c.r + 12),
+    collide: e => resolveCollisions(e, 12),
+    fishShop: () => Pastimes.openFishShop(),
     focusCamera: f => { camFocus = f ? { f, until: now + 5 } : null; },   // (a few seconds at most; moving takes it back)
     onFeast: () => { Inventory.refresh(); sendGear(); },
   });
   Inventory.setExtra(clsId => TownLife.feastTotals(clsId));
+  const feastAt = new Map();
   function hostFeast(pid, m) {
-    if (!m || typeof m.id !== 'string' || m.id.length > 20) return;
+    if (!m || typeof m.id !== 'string' || !(typeof FEASTS !== 'undefined' && FEASTS.some(f => f.id === m.id))) return;
+    if (now - (feastAt.get(pid) || -99) < 30) return;   // (one order per person every half minute)
+    feastAt.set(pid, now);
     const who = pid === Net.id ? (player.name || 'Someone') : (remotes.get(pid) || {}).name || 'Someone';
     Net.broadcastAll({ t: 'feast', id: m.id, by: who, from: pid });
   }
   Net.onHost('feastreq', hostFeast);
-  Net.on('feast', m => { if (scene === 'town' || m.from === Net.id) TownLife.eat(m.id, m.from === Net.id ? null : m.by); });
+  Net.on('feast', m => { if (scene === 'town' || m.from === Net.id) { TownLife.eat(m.id, m.from === Net.id ? null : m.by); Pastimes.event('feast', { id: m.id }); } });
+  // leaving the page while online in a raid asks first (an unbound mouse Back, Ctrl+W, F5)
+  window.addEventListener('beforeunload', e => { if (started && !Net.solo && (scene === 'arena' || Net.isHost)) { e.preventDefault(); e.returnValue = ''; } });
+  window.addEventListener('mouseup', e => { if (started && e.button >= 3) e.preventDefault(); });
+  window.addEventListener('emberfall-save-failed', () => toast("Couldn't save: this browser's storage is full."));
+  // two tabs of the game share one save; the newer one warns
+  try {
+    const bc = new BroadcastChannel('emberfall');
+    bc.onmessage = ev => { if (ev.data === 'hello') bc.postMessage('here'); else if (ev.data === 'here') toast('Emberfall is open in another tab: both share one save, so play in one.'); };
+    bc.postMessage('hello');
+  } catch (e) { /* no BroadcastChannel */ }
+  // a clicked button lets go of focus, so Space and Enter never press it again
+  document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('button'); if (b && b !== chatInput) b.blur(); }, true);
+  // ---- pastimes: feats & titles, secrets, the bounty board, fishing, emotes, the Logbook, the prologue (pastimes.js)
+  function giveGift(id) {
+    if (!player.cls || typeof TOWN_GIFTS === 'undefined' || !TOWN_GIFTS[id]) return false;
+    const t = Save.get('town') || {}; t.gifts = t.gifts || {}; const mine = t.gifts[player.cls.id] = t.gifts[player.cls.id] || {};
+    if (mine[id]) return false;
+    mine[id] = 1; Save.set('town', t);
+    Inventory.add('gift_' + id, player.cls.id);
+    return true;
+  }
+  function whenOk(w) {
+    const flags = (Save.get('town') || {}).flags || {}, b = id => unlockAll || Save.bossBeaten(id);
+    if (w.beaten && !w.beaten.every(b)) return false;
+    if (w.notBeaten && w.notBeaten.some(b)) return false;
+    if (w.flags && !w.flags.every(f => flags[f])) return false;
+    if (w.notFlags && w.notFlags.some(f => flags[f])) return false;
+    return true;
+  }
+  Pastimes.init({
+    player, toast: m => toast(m), addGold: n => Inventory.addGold(n), giveGift, matches: whenOk,
+    bossOpen: id => bossOpen(BOSSES.find(b => b.id === id) || BOSSES[0]), beaten: id => unlockAll || Save.bossBeaten(id),
+    items: () => Inventory.items(), iconURL: key => Inventory.iconURL({ key }),
+    onTitle: t => sendTitle(t), later: (s2, fn) => later(s2, fn),
+  });
+  // every piece you ever hold goes in the Armory
+  { const add0 = Inventory.add; Inventory.add = (k, o) => { const i = add0(k, o); Pastimes.event('item', { key: k }); return i; }; }
+  function sendTitle(t) {
+    t = typeof t === 'string' ? t.slice(0, 40) : null;
+    player.title = t;
+    if (!Net.online) return;
+    if (Net.isHost) Net.broadcastAll({ t: 'ttl', id: Net.id, title: t }); else Net.send({ t: 'ttlreq', title: t });
+  }
+  Net.onHost('ttlreq', (pid, m) => Net.broadcastAll({ t: 'ttl', id: pid, title: typeof m.title === 'string' ? m.title.slice(0, 40) : null }));
+  Net.on('ttl', m => { const r = remotes.get(m.id); if (r) r.title = typeof m.title === 'string' ? m.title.slice(0, 40) : null; });
+  Net.on('join', () => setTimeout(() => sendTitle(Pastimes.title()), 400));   // (someone new: they hear your title)
+  player.title = Pastimes.title();
   // the journal shows the heroes you've played (the current one first)
   Journal.setOpener(() => ({
     bosses: BOSSES, open: bossOpen, hero: player.cls ? player.cls.id : null, boss: raid && !raid.def.trial ? raid.def.id : null,
@@ -1785,6 +1862,7 @@
     if (a === 'limit') { if (inArena() && !e.repeat) useLimit(); return; }
     if (a === 'options') { if (Keybinds.panelOpen()) Keybinds.closePanel(); else openOptions(); return; }
     if (a === 'journal') { Journal.toggle(); return; }
+    if (a === 'logbook') { if (Pastimes.anyOpen()) Pastimes.closeAll(); else Pastimes.openBook(); return; }
     if (a[0] !== 's') return;
     const idx = Number(a.slice(1));
     if (e.repeat && idx >= 6) return;
@@ -1803,6 +1881,9 @@
     if (e.key === 'Escape' && Keybinds.panelOpen()) { Keybinds.closePanel(); return; }
     if (e.key === 'Escape' && Journal.isOpen()) { Journal.close(); return; }
     if (e.key === 'Escape' && Tutorial.isOpen()) { Tutorial.close(); return; }
+    if (e.key === 'Escape' && TownLife.isTalking()) { TownLife.endTalk(); return; }
+    if (e.key === 'Escape' && Loot.isOpen()) { Loot.close(); return; }
+    if (e.key === 'Escape' && Pastimes.anyOpen()) { Pastimes.closeAll(); return; }
     if (e.key === 'Escape' && Keybinds.isArranging()) { Keybinds.arrange(false); return; }
     // Tab never moves browser focus once you're in the game; it cycles enemy targets instead
     if (e.key === 'Tab') {
@@ -1816,14 +1897,18 @@
       if (e.key === 'Escape') { chatInput.value = ''; chatInput.blur(); chatInput.classList.add('hidden'); }
       return;
     }
-    if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
+    if (document.activeElement && document.activeElement.closest && document.activeElement.closest('input, textarea, select, [contenteditable="true"]')) return;
     if (e.key === 'Escape' && placingMark) { placeMark(null); return; }
     if (e.key === 'Escape') { if (selOpen()) selBack(); else if (panelOpen()) closePanels(); else { lockedAlly = null; lockedEnemy = null; } return; }
-    const act = Keybinds.actionOf(e.key.toLowerCase());
-    if (act === 'options') { e.preventDefault(); runAction(act, e); return; }
-    if (act === 'bags' && !selOpen() && overlay.classList.contains('hidden')) { TalentPanel.close(); Inventory.toggle(); return; }
+    // (Shift turns 5 into %, ; into :, ...: a bound symbol key still works with Shift through its physical key)
+    const SHIFTED = { Digit0: '0', Digit1: '1', Digit2: '2', Digit3: '3', Digit4: '4', Digit5: '5', Digit6: '6', Digit7: '7', Digit8: '8', Digit9: '9', Semicolon: ';', Quote: "'", Comma: ',', Period: '.', Slash: '/', BracketLeft: '[', BracketRight: ']', Backslash: '\\', Minus: '-', Equal: '=' };
+    const kname = String(e.key || '').toLowerCase();
+    const act = Keybinds.actionOf(kname) || (e.shiftKey && SHIFTED[e.code] ? Keybinds.actionOf(SHIFTED[e.code]) : null);
+    if (act === 'options' || act === 'journal' || act === 'logbook') { e.preventDefault(); if (!e.repeat) runAction(act, e); return; }
+    const floating = () => { Journal.close(); Tutorial.close(); Keybinds.closePanel(); };   // (a full page never opens behind them)
+    if (act === 'bags' && !selOpen() && overlay.classList.contains('hidden')) { TalentPanel.close(); floating(); Inventory.toggle(); return; }
     if (act === 'talents' && started && !selOpen() && overlay.classList.contains('hidden')) {
-      if (TalentPanel.isOpen()) TalentPanel.close(); else openTalents();
+      if (TalentPanel.isOpen()) TalentPanel.close(); else { floating(); openTalents(); }
       return;
     }
     if (panelOpen()) return;
@@ -1870,7 +1955,8 @@
     Stagecraft.update(now, dt);
     updateRemotes(dt);
     if (scene === 'town') updateTown(dt); else updateArena(dt);
-    TownLife.update(dt, now, scene === 'town');
+    TownLife.update(dt, now, scene === 'town' && started);
+    Pastimes.update(now, scene === 'town' && started);
     if (scene === 'town') TownLife.checkDistance(); else if (TownLife.isTalking()) TownLife.endTalk();
     updateCamera(dt);
   }
@@ -2130,7 +2216,7 @@
   let camFocus = null;   // an arrival in town borrows the camera while they walk in (TownLife)
   function updateCamera(dt, snap) {
     if (snap) dt = 10;  // jump straight there (scene changes)
-    if (camFocus && (scene !== 'town' || now > camFocus.until || mouse.rightDown)) camFocus = null;
+    if (camFocus && (scene !== 'town' || now > camFocus.until || mouse.rightDown || player.target || player.dashMove)) camFocus = null;
     if (camFocus) {
       const k = Math.min(1, dt * 2.5);
       cam.x += (camFocus.f.x - cam.x) * k; cam.y += (camFocus.f.y - cam.y) * k;
@@ -2208,7 +2294,10 @@
       case 'player': case 'remote': {
         const dead = inArena() && raid.party.get(e.id === undefined ? Net.id : e.id) && !raid.party.get(e.id === undefined ? Net.id : e.id).alive;
         if (dead) { ctx.save(); ctx.globalAlpha = 0.4; }
+        const em = !dead && Pastimes.emoteLook(e, now);
+        if (em) { ctx.save(); ctx.translate(e.x + em.dx, e.y + em.dy); ctx.rotate(em.rot); ctx.scale(1, em.squash); ctx.translate(-e.x, -e.y); }
         drawHero(ctx, e.cls, e.x, e.y, e.angle, dead ? { t: 0, moving: false, action: null } : e.st, heroScale(), { lift: e.lift, spec: e.spec });
+        if (em) ctx.restore();
         if (dead) ctx.restore();
         break;
       }
@@ -2219,6 +2308,8 @@
     const y = e.y - (e.lift || 0) - (e.cls ? 36 : 26) * heroScale() / HERO_SCALE;
     const color = e.cls ? ROLES[e.cls.role].color : '#dffaff';
     label(ctx, e.name + (isMe ? ' (you)' : ''), e.x, y, isMe ? '#fff3d8' : color, 12);
+    if (e.title && !inArena()) label(ctx, e.title, e.x, y - 13, '#d8b46a', 10);
+    if (e.emote && now - e.emote.t0 < 2.2) label(ctx, Pastimes.EMOTES[e.emote.kind], e.x, y - (e.title && !inArena() ? 26 : 14), '#e6dcc8', 10.5);
     if (hp && !isMe) {
       // over-head bar: health, then any shield in pale white after it
       const w = 44, f = hp.maxHp ? clamp(hp.hp / hp.maxHp, 0, 1) : 0, sf = hp.maxHp ? clamp((hp.shield || 0) / hp.maxHp, 0, 1 - f) : 0;
@@ -2336,6 +2427,7 @@
     const townRemotes = [...remotes.values()].filter(r => r.scene === 0);
     const scEnv = { entById, me: Net.id, town: true };   // your Doll(s) follow you round town too (classes-c)
     Stagecraft.drawFloor(ctx, now, scEnv);
+    Pastimes.drawGround(ctx, now);
     TownLife.drawGround(ctx, now, TOWN.pedestals, BOSSES.map(b => b.id));
     const ents = [...lineup, keeper, trainer, ...statues, ...dummies, player, ...townRemotes, ...Stagecraft.entities(now, scEnv), ...TownLife.entities(HERO_SCALE)];
     ents.sort((a, b) => a.y - b.y);
@@ -2352,6 +2444,7 @@
     label(ctx, 'Barkeep', keeper.x, keeper.y - 28 + 6, '#f0d48a', 11);
     label(ctx, 'Trainer', trainer.x, trainer.y - 34, '#f0d48a', 11);
     for (const d of dummies) if (d.spar && Math.hypot(player.x - d.x, player.y - d.y) < 260) label(ctx, 'Sparring Dummy', d.x, d.y - 46, '#ffb0a0', 11);
+    Pastimes.drawOver(ctx, now);
     TownLife.drawLabels(ctx, label, f => Math.hypot(player.x - f.x, player.y - f.y) < 220);
     for (const r of townRemotes) playerTag(r, false);
     playerTag(player, true);
@@ -2602,6 +2695,14 @@
   function sendChat(text) {
     text = text.trim().slice(0, 120);
     if (!text) return;
+    const em = text.match(/^\/(\w+)$/);
+    if (em && Pastimes.EMOTES[em[1].toLowerCase()]) {
+      const k = em[1].toLowerCase();
+      Pastimes.emote(player, k, now); Pastimes.event('emote', { k });
+      emoteLine(player.name, k);
+      Net.send({ t: 'chat', text: '*' + k });
+      return;
+    }
     showChat(player, text);
     Net.send({ t: 'chat', text });
   }
@@ -2622,6 +2723,7 @@
   const selOpen = () => !sel.classList.contains('hidden');
   const panelOpen = () => !overlay.classList.contains('hidden') || selOpen() || Inventory.isOpen() || TalentPanel.isOpen();
   function closePanels() {
+    Tutorial.close();
     overlay.classList.add('hidden'); bossPanel.classList.add('hidden');
     sel.classList.add('hidden');
     Inventory.close();
@@ -2754,7 +2856,7 @@
     const spec = specOf(player.cls.id, player.spec);
     heroPickFx(player, spec ? { accent: spec.accent } : player.cls);
     makeActor();
-    toast(spec ? `You are now a ${spec.name}, ${spec.title}.` : `You are a ${player.cls.name} again.`);
+    toast(spec ? `You are now the ${spec.name}, ${spec.title}.` : `You are the ${player.cls.name} again.`);
     Net.send({ t: 'cls', id: player.cls.id, spec: player.spec });
   }
   const slotIndex = k => (k === 'space' ? 6 : SLOT_OF[k]);
@@ -2913,6 +3015,7 @@
     VFX.burst(e.x, e.y, { color: cls.accent, color2: '#ffffff', n: 18, speed: 220 });
   }
   function chooseHero(cls, specId) {
+    setTimeout(refreshLineup, 0);   // (the deck shows the hero you just picked)
     player.cls = cls;
     // the spec picked on the hero page, or the one this hero last played
     if (specId !== undefined) Save.setSpec(cls.id, specOf(cls.id, specId) ? specId : null);
@@ -2971,12 +3074,12 @@
         <div class="detail-info">
           <h3>${boss.name}</h3>
           <div class="sub"><span class="role-tag" style="--c:#ff7a6a">Boss ${['I', 'II', 'III', 'IV'][i]}</span>${boss.title}</div>
-          <p class="tagline">${boss.blurb}</p>
+          <p class="tagline">${boss.blurb}</p>${typeof STORY !== 'undefined' && STORY.bossLore && STORY.bossLore[boss.id] ? `<p class="lore">${escapeHtml(STORY.bossLore[boss.id])}</p>` : ''}
         </div>
       </div>
-      <ul class="abilities mech">${boss.mechanics.map(m => `<li><kbd>◆</kbd><div><b>${m.name}</b><span>${m.desc}</span></div></li>`).join('')}</ul>
+      <ul class="abilities mech">${boss.mechanics.map(m => `<li><i class="mech-dot"></i><div><b>${m.name}</b><span>${m.desc}</span></div></li>`).join('')}</ul>
       ${boss.playable && typeof TUTORIAL !== 'undefined' && TUTORIAL.bosses[boss.id] ? `<button type="button" class="linkish brief-btn">Read the briefing: every move, and what to do</button>` : ''}
-      <div class="raid-setup">${boss.playable ? '' : '<button class="cta" disabled>Designed, not built yet · coming soon</button>'}</div>`;
+      <div class="raid-setup"></div>`;
     const bb = det.querySelector('.brief-btn');
     if (bb) bb.addEventListener('click', () => openTutorial(boss.id));
     const cv = det.querySelector('canvas');
@@ -2993,7 +3096,7 @@
     el.innerHTML = `
       <div class="mode-pick">
         <button data-mode="normal" class="${raidMode === 'normal' ? 'on' : ''}"><b>Normal</b><small>Every attack is telegraphed on the floor.</small></button>
-        <button data-mode="hard" class="${raidMode === 'hard' ? 'on' : ''}"><b>Hard</b><small>Faster and deadlier, with attacks Normal never uses. Some only show on the boss.</small></button>
+        <button data-mode="hard" class="${raidMode === 'hard' ? 'on' : ''}"><b>Hard</b><small>Faster and deadlier, with attacks Normal never uses.</small></button>
       </div>
       <label class="fill"><input type="checkbox" ${raidFill ? 'checked' : ''} ${Net.isHost ? '' : 'disabled'}> Fill empty slots with bots</label>
       <div class="raid-roster">${humans.map(h => `<span style="--c:${ROLES[h.role].color}">${escapeHtml(h.name)}<small>${CLASSES.find(c => c.id === h.cls).name}</small></span>`).join('')}${
@@ -3028,8 +3131,9 @@
       if (Math.abs(z - z0) > 0.01) p.style.zoom = z.toFixed(3);
     }
   }
+  let fitAt = 0;
   function renderPanels() {
-    fitMenus();
+    if (performance.now() - fitAt > 250) { fitAt = performance.now(); fitMenus(); }
     Keybinds.applyLayout();
     renderSelect();
     Inventory.frame(now);
@@ -3156,12 +3260,27 @@
     if (!e || !e.cls || (msg.s ? 1 : 0) !== (scene === 'arena' ? 1 : 0)) return;
     playAuto(e, msg.tx, msg.ty, msg.k, false, !!msg.a);
   });
-  Net.on('chat', msg => { const r = remotes.get(msg.id); if (r) showChat(r, msg.text); });
+  Net.on('chat', msg => {
+    const r = remotes.get(msg.id);
+    if (!r) return;
+    const em = /^\*(\w+)$/.exec(msg.text || '');
+    if (em && Pastimes.EMOTES[em[1]]) { Pastimes.emote(r, em[1], now); emoteLine(r.name, em[1]); return; }
+    showChat(r, msg.text);
+  });
+  function emoteLine(name, k) {
+    const log = $('chat-log'), row = document.createElement('div');
+    row.className = 'emote-line'; row.textContent = `${name} ${Pastimes.EMOTES[k]}.`;
+    log.appendChild(row); while (log.children.length > 7) log.firstChild.remove();
+    setTimeout(() => row.classList.add('old'), 15000);
+  }
   // the host is gone: back to the join screen (hero and bags kept) so you can rejoin, host or go solo at once
   Net.on('disconnect', () => {
     remotes.clear(); updatePartyList();
     if (scene === 'arena') leaveRaid(false);
     closePanels(); if (Inventory.isOpen()) Inventory.toggle();
+    Journal.close(); Tutorial.close(); Keybinds.closePanel(); Keybinds.arrange(false); Pings.closePanel(); closePractice();
+    TownLife.endTalk(); Loot.leave(); TalentPanel.close();
+    chatInput.classList.add('hidden'); chatInput.blur();
     started = false;
     joinErr.textContent = 'Lost connection to the host.';
     hostBtn.disabled = joinBtn.disabled = soloBtn.disabled = false;
@@ -3198,12 +3317,13 @@
       return;
     }
     $('join').classList.add('hidden');
+    Title.hide();
     started = true;
     Inventory.showGoldHud(scene !== 'arena');
     if (!player.cls) openSelect(null);
     else { Net.send({ t: 'cls', id: player.cls.id, spec: player.spec }); sendGear(); }   // back after a lost connection: tell the new room who we are
     updatePartyList();
-    toast(Net.solo ? `Welcome to Emberfall, ${player.name}! Bots will fill your party.` : Net.isHost ? `You're hosting! Room code: ${Net.room}` : `Welcome to Emberfall, ${player.name}!`);
+    toast(Net.solo ? `Welcome to Emberfall, ${player.name}. Bots fill the empty slots.` : Net.isHost ? `Hosting · room code ${Net.room}` : `Welcome to Emberfall, ${player.name}.`);
   }
   hostBtn.addEventListener('click', () => enter('host'));
   soloBtn.addEventListener('click', () => enter('solo'));
@@ -3213,7 +3333,7 @@
     if (!e.target.closest('.copy-room')) return;
     const link = /^https?:/.test(location.protocol) ? `${location.origin}${location.pathname}#${Net.room}` : Net.room;
     navigator.clipboard.writeText(link).then(
-      () => toast(link === Net.room ? `Copied room code ${Net.room}` : 'Invite link copied!'),
+      () => toast(link === Net.room ? `Room code copied: ${Net.room}.` : 'Invite link copied.'),
       () => toast(`Room code: ${Net.room}`));
   });
 
@@ -3260,7 +3380,7 @@
     },
   });
   const bagBtn = document.createElement('button');
-  bagBtn.id = 'bag-btn'; bagBtn.dataset.tip = 'Inventory (I)';
+  bagBtn.id = 'bag-btn'; bagBtn.dataset.tip = 'Inventory';
   bagBtn.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22"><path d="M8 7V6a4 4 0 0 1 8 0v1h2.5l1.5 14H4L5.5 7H8zm2 0h4V6a2 2 0 0 0-4 0v1z" fill="currentColor"/></svg>';
   bagBtn.addEventListener('click', () => { if (started && !selOpen()) { TalentPanel.close(); Inventory.toggle(); } });
   document.body.appendChild(bagBtn);
@@ -3286,11 +3406,13 @@
 
   // ---------------------------------------------------------------- boot
   function frame(ts) {
-    const raw = (ts - last) / 1000, dt = Math.min(0.05, raw);
+    const raw = (ts - last) / 1000;
     last = ts;
     rnow = realNow();
-    DebugOverlay.frame(raw);   // the real frame time, before the 50 ms cap
-    if (!paused) { now += dt; update(dt); }
+    DebugOverlay.frame(raw);   // the real frame time
+    // a slow frame is caught up in steps of at most 50 ms (up to a quarter second), so cast bars and timers keep
+    // the host's real time
+    if (!paused) { let left = Math.min(0.25, raw); while (left > 1e-4) { const dt = Math.min(0.05, left); now += dt; update(dt); left -= dt; } }
     render();
     renderPanels();
     updateTargetFrame();

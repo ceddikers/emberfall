@@ -22,13 +22,6 @@ const TownLife = (() => {
   }
   const commit = () => Save.commit();
 
-  // gifts are real items: registered with the rest (items.js) as gift_<id>
-  const GIFT_BASE = { hp: { hp: 30, main: 8 }, power: { main: 14 }, heal: { main: 10, crit: 2 }, speed: { haste: 3, main: 6 } };
-  if (typeof ITEMS !== 'undefined') for (const [id, g] of Object.entries(GIFTS)) {
-    const key = 'gift_' + id;
-    if (!ITEMS[key]) ITEMS[key] = { key, name: g.name, slot: 'accessory', atype: 'amulet', tier: 1, rarity: R_RARE, base: GIFT_BASE[g.stat] || GIFT_BASE.power, fxText: `<i>${esc(g.flavor || '')}</i>`, gift: true };
-  }
-
   // ---------------------------------------------------------------- the townsfolk
   const folk = NPCS.map((d, i) => ({ d, x: d.at.x, y: d.at.y, angle: Math.PI / 2, st: { t: 0, moving: false, action: null }, home: d.at, goal: null, rest: 1 + i * 0.7, walk: null, bubble: null }));
   const present = f => !f.d.arrives || (deps && deps.beaten(f.d.arrives) && (state().seen[f.d.arrives] || f.walk));
@@ -80,6 +73,7 @@ const TownLife = (() => {
     if (!el) { el = document.createElement('div'); el.id = 'fed-chip'; el.className = 'hidden'; document.body.appendChild(el); }
     const f = feast(), key = f ? f.meal.id + Math.ceil(f.left / 60000) : '';
     if (key === chipKey) return;
+    if (chipKey && !key && deps) deps.onFeast();   // (the meal ran out: gear numbers and the host's copy drop it)
     chipKey = key;
     el.classList.toggle('hidden', !f);
     if (f) { el.innerHTML = `Well fed<b>${Math.ceil(f.left / 60000)}m</b>`; Tip.set(el, `<b>${esc(f.meal.name)}</b><em>+${f.meal.buff.pct}% ${{ hp: 'health', power: 'power', heal: 'healing', speed: 'speed' }[f.meal.buff.stat] || ''}</em>${esc(f.meal.desc)}`); }
@@ -97,15 +91,25 @@ const TownLife = (() => {
       if (f.walk) {
         const dx = f.walk.to.x - f.x, dy = f.walk.to.y - f.y, d = Math.hypot(dx, dy);
         if (d < 4) { f.walk = null; if (scene && scene.f === f) deps.focusCamera(null); }
-        else { const st = Math.min(d, 95 * dt); f.x += dx / d * st; f.y += dy / d * st; f.angle = Math.atan2(dy, dx); moving = true; }
+        else { const st = Math.min(d, 95 * dt); f.x += dx / d * st; f.y += dy / d * st; f.angle = Math.atan2(dy, dx); moving = true; deps.collide(f); }
       } else if (f.d.wander > 0 && !talking(f)) {
         if (f.goal) {
           const dx = f.goal.x - f.x, dy = f.goal.y - f.y, d = Math.hypot(dx, dy);
           if (d < 3) { f.goal = null; f.rest = now + 2 + Math.random() * 5; }
-          else { const st = Math.min(d, 40 * dt); f.x += dx / d * st; f.y += dy / d * st; f.angle = Math.atan2(dy, dx); moving = true; }
+          else {
+            const st = Math.min(d, 40 * dt), nx = f.x + dx / d * st, ny = f.y + dy / d * st;
+            if (deps.blocked(nx, ny)) { f.goal = null; f.rest = now + 1; }   // (a wall or a tree in the way: stop and pick again)
+            else { f.x = nx; f.y = ny; f.angle = Math.atan2(dy, dx); moving = true; }
+          }
         } else if (now > f.rest) {
-          const a = Math.random() * Math.PI * 2, r = Math.random() * f.d.wander;
-          f.goal = { x: f.home.x + Math.cos(a) * r, y: f.home.y + Math.sin(a) * r };
+          // somewhere new nearby, on open ground, with nothing in the way
+          for (let k = 0; k < 6; k++) {
+            const a = Math.random() * Math.PI * 2, r = Math.random() * f.d.wander, g = { x: f.home.x + Math.cos(a) * r, y: f.home.y + Math.sin(a) * r };
+            let clear = true;
+            for (let j = 1; j <= 6 && clear; j++) if (deps.blocked(f.x + (g.x - f.x) * j / 6, f.y + (g.y - f.y) * j / 6)) clear = false;
+            if (clear) { f.goal = g; break; }
+          }
+          if (!f.goal) f.rest = now + 2;
         }
       }
       f.st.moving = moving;
@@ -262,6 +266,7 @@ const TownLife = (() => {
     if (n.give) give(n.give);
     render();
     if (n.action === 'feast' && !(n.lines && n.lines.length)) openFeasts();
+    if (n.action === 'fish-shop' && !(n.lines && n.lines.length)) { endTalk(); deps.fishShop(); }
   }
   function give(id) {
     const g = GIFTS[id], hero = deps.hero(), s = state();
@@ -276,6 +281,7 @@ const TownLife = (() => {
     if (!talk) return;
     if (talk.i < talk.lines.length - 1) { talk.i += 1; render(); return; }
     if (talk.node && talk.node.action === 'feast') { openFeasts(); return; }
+    if (talk.node && talk.node.action === 'fish-shop') { endTalk(); deps.fishShop(); return; }
     if (!talk.choices || !talk.choices.length) endTalk();
   }
   function choose(i) {
@@ -290,7 +296,7 @@ const TownLife = (() => {
     const last = talk.i >= talk.lines.length - 1, d = talk.f.d;
     const choices = last && talk.choices && talk.choices.length ? `<div class="dl-choices">${talk.choices.map((c, i) => `<button type="button" data-c="${i}">${esc(c.text)}</button>`).join('')}</div>` : '';
     el.innerHTML = `<header><b>${esc(d.name)}</b><small>${esc(d.title || '')}</small><button type="button" class="dl-x" aria-label="Close">×</button></header>
-      <p class="dl-line">${esc(talk.lines[talk.i] || '')}</p>${choices || `<button type="button" class="dl-next">${last ? (talk.node && talk.node.action === 'feast' ? 'See the board' : 'Goodbye') : 'Next'}</button>`}`;
+      <p class="dl-line">${esc(talk.lines[talk.i] || '')}</p>${choices || `<button type="button" class="dl-next">${last ? (talk.node && talk.node.action === 'feast' ? 'See the board' : talk.node && talk.node.action === 'fish-shop' ? 'Show the catch' : 'Goodbye') : 'Next'}</button>`}`;
     el.classList.remove('hidden');
   }
   const isTalking = () => !!talk;
@@ -306,16 +312,16 @@ const TownLife = (() => {
   }
   function openFeasts() {
     const el = box(), g = deps.gold(), cur = feast();
-    el.innerHTML = `<header><b>Gaspard's board</b><small>One order feeds everyone in town, for an hour</small><button type="button" class="dl-x" aria-label="Close">×</button></header>
-      ${cur ? `<p class="dl-line">You've eaten: <b>${esc(cur.meal.name)}</b>, ${Math.ceil(cur.left / 60000)} more minutes.</p>` : ''}
-      <div class="dl-feasts">${MEALS.map(m => `<button type="button" class="dl-feast" data-f="${m.id}"${g < m.cost ? ' disabled' : ''}>
+    el.innerHTML = `<header><b>Gaspard's board</b><small>One order feeds everyone in town, for an hour · <i class="coin"></i>${g}</small><button type="button" class="dl-x" aria-label="Close">×</button></header>
+      ${cur ? `<p class="dl-line">Well fed: <b>${esc(cur.meal.name)}</b> · ${Math.ceil(cur.left / 60000)}m left. A new order replaces it.</p>` : ''}
+      <div class="dl-feasts">${MEALS.map(m => `<button type="button" class="dl-feast" data-f="${m.id}"${g < m.cost ? ` disabled data-tip="${m.cost - g} gold short"` : ''}>
         <b>${esc(m.name)}</b><span>${esc(m.desc)}</span><em>+${m.buff.pct}% ${{ hp: 'health', power: 'power', heal: 'healing', speed: 'speed' }[m.buff.stat] || ''}</em><i class="coin"></i><u>${m.cost}</u></button>`).join('')}</div>`;
     el.classList.remove('hidden');
     el.querySelectorAll('.dl-feast').forEach(b => b.addEventListener('click', () => {
       const m = MEALS.find(x => x.id === b.dataset.f);
       if (!m || deps.gold() < m.cost) return;
+      if (deps.orderFeast(m.id) === false) return;
       deps.spendGold(m.cost);
-      deps.orderFeast(m.id);
       endTalk();
     }));
   }

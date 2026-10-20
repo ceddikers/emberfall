@@ -12,7 +12,7 @@ const TalentPanel = (() => {
   el.id = 'talents'; el.className = 'hidden';
   el.innerHTML = `
     <div class="tal-page">
-      <button class="sel-close tal-close" aria-label="Close" data-tip="Close (N / Esc)">×</button>
+      <button class="sel-close tal-close" aria-label="Close" data-tip="Close (Esc)">×</button>
       <header class="sel-head"><h2>Talents</h2><div class="sel-rule"></div></header>
       <div class="tal-top"><div class="tal-hero"></div><span class="tal-gold" data-tip="Gold"></span></div>
       <div class="tal-rows"></div>

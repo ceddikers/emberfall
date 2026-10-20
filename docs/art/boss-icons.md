@@ -1,6 +1,6 @@
 # Boss move icons (the cast frame)
 
-96 icons: one for every move a boss casts. They show in the cast frame near the middle of the screen, 46 px while the boss is casting and 34 px for the "Next" move, so each icon has to read at a glance at that size. The game draws a coded placeholder for each one until the painted icon arrives.
+99 icons: one for every move a boss casts. They show in the cast frame near the middle of the screen, 46 px while the boss is casting and 34 px for the "Next" move, so each icon has to read at a glance at that size. The game draws a coded placeholder for each one until the painted icon arrives.
 
 Same cartoon style as `ability-icons.md`, so the boss moves sit next to the hotbar without clashing.
 
@@ -176,10 +176,13 @@ Use each boss's own background and palette from above; one 3 × 3 sheet is fine 
 
 ---
 
-## New Hard moves (the dance sets): 3 icons, one partial sheet
+## New Hard moves (the dance sets): 6 icons, one partial sheet
 
 Each boss's own background and palette from above.
 
 1. **Snare Weave** (`skitterra/snare-weave`): a web seen from above made of many small overlapping silk rings, packed edge to edge, with three round holes left clear in it (the holes a plain dark blue). A small pale egg clutch hangs from one strand at the side. (The shape to read: a field of rings with gaps.)
 2. **Burial Rites** (`hollowking/burial-rites`): four small open graves in a square around a crown, each grave's rim a different flat colour (green, violet, pink, white), a headstone at the head of each.
 3. **Writ of Execution** (`hollowking/writ-of-execution`): an unrolled parchment writ with a heavy wax seal, three iron chains running from it out to the edges of the square, and a fourth chain hanging broken. (Lines going out from one point, one of them harmless.)
+4. **Dinner Rush** (`grubnak/dinner-rush`): a cleaver stuck upright in a board in the middle, four white plates set down round it at different distances, each with a gold rim: the nearest plate's rim complete, the next two-thirds round, the farthest two only a third. Steam off the nearest. (The shape to read: plates laid out round him, filling in order.)
+5. **Grounding Rods** (`volkar/grounding-rods`): an iron lightning rod hanging point-down, crown of spikes at the top, sparks crawling down its length and a small burst of blue-white at the point where it's about to bite into the rock.
+6. **Supercell** (`volkar/supercell`): three dark bands of driving rain marching across the square with lightning in them, and one iron rod standing in their path with a clean strip of calm, plain blue air running out behind it. (Walls of storm, and the lane a rod leaves.)

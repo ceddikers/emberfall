@@ -14,13 +14,13 @@
 
 <div id="hud-tl">
   <div class="town">Emberfall</div>
-  <div id="hero-name"></div><button type="button" id="opt-btn" aria-label="Options" data-tip="Options: keys and HUD (K)">⚙</button>
+  <div id="hero-name"></div><button type="button" id="opt-btn" aria-label="Options" data-tip="Options: keys and HUD"><svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path fill="currentColor" d="M6.9 1h2.2l.4 1.9 1.3.6 1.7-1 1.5 1.5-1 1.7.6 1.3 1.9.4v2.2l-1.9.4-.6 1.3 1 1.7-1.5 1.5-1.7-1-1.3.6-.4 1.9H6.9l-.4-1.9-1.3-.6-1.7 1-1.5-1.5 1-1.7-.6-1.3L1 9.1V6.9l1.9-.4.6-1.3-1-1.7 1.5-1.5 1.7 1 1.3-.6zM8 5.6a2.4 2.4 0 1 0 0 4.8 2.4 2.4 0 0 0 0-4.8z"/></svg></button>
   <div id="objective"></div>
 </div>
 <canvas id="minimap"></canvas>
 <div id="party"></div>
 <div id="chat-log"></div>
-<input id="chat-input" class="hidden" maxlength="120" placeholder="Say something... (Enter to send)" autocomplete="off">
+<input id="chat-input" class="hidden" maxlength="120" placeholder="Say something… (Enter to send)" autocomplete="off">
 <div id="help"><kbd>Right-click</kbd> move · <kbd>Left-click</kbd> interact · <kbd>Q</kbd><kbd>W</kbd><kbd>E</kbd><kbd>R</kbd><kbd>D</kbd><kbd>F</kbd> skills · <kbd>Space</kbd> dash · <kbd>Enter</kbd> chat</div>
 <div id="toast"></div>
 <div id="target-frame" class="hidden"></div>
@@ -64,7 +64,7 @@
 <div id="join">
   <form id="join-form" class="join-card">
     <h1>Emberfall</h1>
-    <p class="join-sub">A four-player raid adventure</p>
+    <p class="join-sub">A raid for four</p>
     <label for="name-input">Your name</label>
     <input id="name-input" maxlength="16" placeholder="Adventurer" autocomplete="off">
     <button id="host-btn" class="cta" type="button">Host a game</button>
@@ -74,7 +74,7 @@
       <button id="join-btn" class="btn2" type="submit">Join</button>
     </div>
     <p id="join-error"></p>
-    <p id="join-note">The host shares a 4-letter room code. Players connect directly to the host, peer-to-peer.</p>
+    <p id="join-note">The host shares a four-letter room code.</p>
     <button id="solo-btn" class="linkish" type="button">Play solo with bots (works offline)</button>
   </form>
 </div>
@@ -113,6 +113,7 @@
 <script src="js/boss-vfx.js"></script>
 <script src="js/hero-guide.js"></script>
 <script src="js/items.js"></script>
+<script src="js/town-npcs.js"></script>
 <script src="js/inventory.js"></script>
 <script src="js/talent-panel.js"></script>
 <script src="js/loot.js"></script>
@@ -124,13 +125,19 @@
 <script src="js/journal/volkar.js"></script>
 <script src="js/journal/hollowking.js"></script>
 <script src="js/journal.js"></script>
-<script src="js/town-npcs.js"></script>
 <script src="js/town-life.js"></script>
 <script src="js/tutorial-data.js"></script>
 <script src="js/tutorial.js"></script>
 <script src="js/raid-ui.js"></script>
 <script src="js/net.js"></script>
 <script src="js/debug-overlay.js"></script>
+<script src="js/story-data.js"></script>
+<script src="js/town-secrets.js"></script>
+<script src="js/feats-data.js"></script>
+<script src="js/bounty-data.js"></script>
+<script src="js/fish-data.js"></script>
+<script src="js/pastimes.js"></script>
+<script src="js/title.js"></script>
 <script src="js/main.js"></script>
 </body>
 </html>

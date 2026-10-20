@@ -6,6 +6,12 @@ const Tutorial = (() => {
   const T = typeof TUTORIAL !== 'undefined' ? TUTORIAL : { lessons: [], bosses: {} };
   let panel = null, at = { kind: 'lesson', id: (T.lessons[0] || {}).id }, opts = { bosses: () => [] };
 
+  // a key written in the data is the default; the page shows whatever the player has bound to that action now
+  function boundKey(k) {
+    if (typeof Keybinds === 'undefined') return k;
+    const a = Keybinds.ACTIONS.find(x => String(x.def).toLowerCase() === k.toLowerCase());
+    return a ? Keybinds.label(Keybinds.keyFor(a.id)) : k;
+  }
   function navHtml() {
     const bosses = opts.bosses().filter(b => T.bosses[b.id]);
     return `<h6>Lessons</h6>${T.lessons.map((l, i) => `<button type="button" class="tu-nav${at.kind === 'lesson' && at.id === l.id ? ' on' : ''}" data-l="${l.id}"><i>${i + 1}</i>${esc(l.title)}</button>`).join('')}
@@ -13,7 +19,7 @@ const Tutorial = (() => {
   }
   function lessonHtml(l) {
     const i = T.lessons.indexOf(l), nx = T.lessons[i + 1];
-    return `<h3>${esc(l.title)}</h3>${l.pages.map(p => `<section><h4>${esc(p.h)}</h4>${p.keys && p.keys.length ? `<div class="tu-keys">${p.keys.map(k => `<kbd>${esc(k)}</kbd>`).join('')}</div>` : ''}${p.body.map(b => `<p>${esc(b)}</p>`).join('')}</section>`).join('')}
+    return `<h3>${esc(l.title)}</h3>${l.pages.map(p => `<section><h4>${esc(p.h)}</h4>${p.keys && p.keys.length ? `<div class="tu-keys">${p.keys.map(k => `<kbd>${esc(boundKey(k))}</kbd>`).join('')}</div>` : ''}${p.body.map(b => `<p>${esc(b.replace(/(^|\. )([A-Z]): /g, (m, pre, k) => pre + boundKey(k) + ': '))}</p>`).join('')}</section>`).join('')}
       ${nx ? `<button type="button" class="btn2 tu-next" data-l="${nx.id}">Next: ${esc(nx.title)}</button>` : ''}`;
   }
   function bossHtml(id) {

@@ -220,7 +220,7 @@ const Hud = {
       this.gaugeCanvas.width = gw * dpr; this.gaugeCanvas.style.width = gw + 'px';
       this.el.querySelector('.gauge-wrap').style.width = gw + 'px';
     }
-    const items = [...actor.abilities, { id: 'dash', name: 'Dash', type: 'ogcd', desc: 'Dash in the direction you are moving (or toward the cursor). Two charges.', fx: { color: cls.accent } }];
+    const items = [...actor.abilities, { id: 'dash', name: 'Dash', type: 'ogcd', desc: 'A quick dash toward where you\'re heading (or the cursor). Two charges, 12s each.', fx: { color: cls.accent } }];
     // a tank's taunt (slot 7, key T), drawn just before the dash
     const taunt = actor.taunt ? tauntAbility(cls.id) : null;
     if (taunt) items.push(taunt);

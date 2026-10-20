@@ -273,6 +273,25 @@ const BotAI = {
     return ARENA.clamp({ x: b.x + Math.cos(mine.a) * mine.r, y: b.y + Math.sin(mine.a) * mine.r }, 60);
   },
 
+  // the Dinner Rush (Grubnak, Hard): where this bot sets its plate. The plates come up nearest him first, on his three
+  // beats: west chop (so the first is on his east side), east chop with the lid (the second on his west side, in close
+  // but at the edge of the lid's quiet circle), then the ladle (the last two well out). By party place: the shield's plate nearest,
+  // on his east flank; the third place's at his west flank; the healer's and the fourth's out east and west.
+  rushSpot(me, view) {
+    const half = view.mechs.find(m => m.tag === 'mince' && m.shape.kind === 'rect');
+    const at = half ? { x: half.shape.x, y: half.shape.y } : view.boss;
+    const OFF = [[95, 0], [320, -45], [-165, 30], [-320, -45]], [dx, dy] = OFF[this.slotOf(me, view) % OFF.length];
+    return ARENA.clamp({ x: at.x + dx, y: at.y + dy }, 60);
+  },
+  // the Grounding Rods (Volkar, Hard): the + players plant theirs a cell either side of him, in the row through him
+  // (the lower id west, the other east), so every lane of still air the fronts leave runs past his flanks
+  rodSpot(me, view) {
+    const carriers = view.mechs.filter(m => m.tag === 'groundrod').map(m => m.follow).sort((a, b) => a - b);
+    const i = carriers.indexOf(me), b = view.boss;
+    if (i < 0) return null;
+    return { x: b.x + (i ? 135 : -135), y: b.y };
+  },
+
   home(bot, view) {
     const b = view.boss, idx = bot.slot || 0;
     const own = typeof BOT_CLASS !== 'undefined' && BOT_CLASS[bot.cls.id] && BOT_CLASS[bot.cls.id].home;   // a class with its own footwork
@@ -330,6 +349,18 @@ const BotAI = {
         const d = Math.hypot(s.x - px, s.y - py);
         if (m.target === me) { if (d > s.r - 28) pen += (d - s.r + 28) * (dt < 3.9 ? 45 : 1.5); }
         else if (d < s.r + 30 && dt < 3.5) pen += 5000;
+        continue;
+      }
+      // Hard's placements with one right answer: the Dinner Rush's plates (rushSpot) and the Grounding Rods (rodSpot).
+      // The carrier walks to its spot of the plan; everyone else keeps off a carrier as it sets down
+      if (m.type === 'drop' && (m.tag === 'platedrop' || m.tag === 'groundrod')) {
+        if (m.follow === me) {
+          const sp = m.tag === 'platedrop' ? this.rushSpot(me, view) : this.rodSpot(me, view);
+          if (sp) pen += Math.hypot(sp.x - px, sp.y - py) * 40 * Math.max(urgency, 0.5);
+        } else {
+          const owner = alive.find(o => o.id === m.follow);
+          if (owner && dt < 1.5 && Math.hypot(owner.x - px, owner.y - py) < s.r + 20) pen += 1500 * urgency;
+        }
         continue;
       }
       // Egg-Laden (Snare Weave): the carrier drops its pool in the pocket it has just left (where it stood when the first
@@ -424,7 +455,11 @@ const BotAI = {
           const inside = Math.hypot(s.x - px, s.y - py) < s.r - 18;
           // head for your own tower early: it may be across the room
           if (mine && !inside) pen += (Math.hypot(s.x - px, s.y - py)) * 12 * Math.max(urgency, 0.3);
-          if (!mine && inside) pen += 2500 * urgency;
+          // (a plate coming up in a moment is yours to serve: a later blow round it can wait until it has)
+          if (mine && !inside && m.tag === 'plate' && dt < 2.5 && m.stuff) pen += dt < 1.2 ? 9000 : 4000;
+          // (a plate that leaves you Stuffed is worse than useless if it isn't yours: you can't take your own after it)
+          // (the host counts anyone touching it, so keep well clear)
+          if (!mine && (m.stuff ? Math.hypot(s.x - px, s.y - py) < s.r + 30 : inside)) pen += (m.stuff ? 6000 : 2500) * urgency;
           break;
         }
         case 'proximity':
@@ -573,6 +608,12 @@ const BotAI = {
       if (m.safe) for (const q of m.safe) cands.push({ x: q.x, y: q.y });
       // Hard's dance: the blue pockets, your own grave, your corner for the Writ
       if (m.type === 'safe' && m.shape.kind === 'circle') for (const [dx, dy] of [[0, 0], [0.45, 0], [-0.45, 0], [0, 0.45], [0, -0.45]]) cands.push({ x: m.shape.x + dx * m.shape.r, y: m.shape.y + dy * m.shape.r });
+      // ... the Supercell's lanes of still air (a strip from a rod out to the wall): spots along it, near the rod first
+      if (m.type === 'safe' && m.shape.kind === 'rect') for (const d of [30, 75, 130, 200, 290]) for (const off of [-0.2, 0.2]) {
+        const s = m.shape, c = Math.cos(s.angle), sn = Math.sin(s.angle);
+        cands.push({ x: s.x + c * d - sn * off * s.w, y: s.y + sn * d + c * off * s.w });
+      }
+      if (m.type === 'drop' && m.follow === bot.id && (m.tag === 'platedrop' || m.tag === 'groundrod')) { const sp = m.tag === 'platedrop' ? this.rushSpot(bot.id, view) : this.rodSpot(bot.id, view); if (sp) cands.push(sp); }
       if (m.type === 'own' && m.target === bot.id) cands.push({ x: m.shape.x, y: m.shape.y });
       if (m.type === 'bait' && m.aimFromBoss === bot.id) cands.push(this.writSpot(bot.id, view));
       // cover: spots in the shadow of the prop this bot takes (and of the others, in case it's full)
@@ -798,6 +839,8 @@ const BotAI = {
       if (a.type !== 'ogcd' || !readyIdx(i)) continue;
       if (k.gcdRemaining() < 0.65 && !k.cast) continue;
       if (a.target === 'ally' || (hotAndHurt && a.id === 'fireblast')) continue;
+      // a step that puts you behind the boss (Shadowstep) isn't taken with floor about to land: it could land you in it
+      if (a.id === 'step' && view.mechs.some(m => m.type === 'aoe' && m.resolveAt - view.t < 2.5)) continue;
       const defensive = /mitigate|party takes|less damage|immune|shield/i.test(a.desc) && !/Burst/.test(a.desc);
       // Stasis is for the enrage; a tank's Undying and Mirror Aegis wait for the busters aimed at it (the tank branch above)
       if (a.id === 'stasis' || a.id === 'undying' || a.id === 'mirror') { if (a.id === 'stasis' && castingBig && view.bossCast.left < 1.2 && /Last Call|Devour|Skybreak|Moonset/.test(view.bossCast.name)) return i; continue; }

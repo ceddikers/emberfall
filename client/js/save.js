@@ -78,7 +78,11 @@ const Save = (() => {
   };
 
   function read() { try { return JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { return null; } }
-  function write() { try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (e) { /* storage unavailable or full */ } }
+  let failed = false;
+  function write() {
+    try { localStorage.setItem(KEY, JSON.stringify(data)); failed = false; }
+    catch (e) { if (!failed && typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('emberfall-save-failed')); failed = true; }   // storage unavailable or full
+  }
 
   function load() {
     let d = read();
@@ -89,10 +93,15 @@ const Save = (() => {
     // fill in anything missing (a newer save keeps fields this version doesn't know about)
     d = Object.assign(fresh(), d);
     if (!d.inv || !Array.isArray(d.inv.items)) d.inv = fresh().inv;
-    d.inv.equip = d.inv.equip || {};
+    d.inv.items = d.inv.items.filter(i => i && typeof i === 'object');
+    d.inv.equip = d.inv.equip && typeof d.inv.equip === 'object' ? d.inv.equip : {};
     if (!Array.isArray(d.inv.lost)) d.inv.lost = [];
+    d.inv.lost = d.inv.lost.filter(i => i && typeof i === 'object');
+    if (Array.isArray(d.inv.escrow)) d.inv.escrow = d.inv.escrow.filter(i => i && typeof i === 'object');
+    if (!d.heroes || typeof d.heroes !== 'object') d.heroes = {};
+    if (!d.settings || typeof d.settings !== 'object') d.settings = {};
     d.gold = Math.max(0, Math.floor(Number(d.gold) || 0));
-    d.inv.next = Math.max(d.inv.next || 1, ...d.inv.items.map(i => (i.uid || 0) + 1), ...d.inv.lost.map(i => (i.uid || 0) + 1));
+    d.inv.next = Math.max(d.inv.next || 1, ...d.inv.items.map(i => (i.uid || 0) + 1), ...d.inv.lost.map(i => (i.uid || 0) + 1), ...(d.inv.escrow || []).map(i => (i.uid || 0) + 1));
     return { d, upgraded };
   }
 

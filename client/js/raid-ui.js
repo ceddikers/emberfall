@@ -60,7 +60,7 @@ const RaidUI = (() => {
         <div class="bb-next hidden"></div>
       </div>
       <div id="boss-cast" class="hidden"><i class="bc-icon"></i><div class="bc-body"><small>Next</small><b class="bc-name"></b><div class="bc-bar"><div class="fill"></div></div></div><em class="bc-left"></em></div>
-      <div id="raid-left"><div id="pf-wrap"><button id="pf-dock" class="pf-dock" type="button"></button><div id="party-frames"></div><div id="lb-gauge" class="hidden"><small>Limit</small><div class="lb-bars"><i><b></b></i><i><b></b></i><i><b></b></i></div><kbd>G</kbd></div></div><div id="threat-meter" class="hidden"></div><div id="prog" class="hidden"></div></div>
+      <div id="raid-left"><div id="pf-wrap"><button id="pf-dock" class="pf-dock" type="button"></button><div id="party-frames"></div><div id="lb-gauge" class="hidden"><small>Limit</small><div class="lb-bars"><i><b></b></i><i><b></b></i><i><b></b></i></div><kbd class="lb-key">G</kbd></div></div><div id="threat-meter" class="hidden"></div><div id="prog" class="hidden"></div></div>
       <div id="party-strip"></div>
       <div id="countdown" class="hidden"></div>
       <div id="boss-intro" class="hidden"><small></small><b></b><i></i><q></q></div>
@@ -186,7 +186,7 @@ const RaidUI = (() => {
     const mode = q('.bb-mode');
     setText(mode, raid.mode === 'hard' ? 'Hard' : 'Normal');
     mode.classList.toggle('hard', raid.mode === 'hard');
-    setText(q('.bb-time'), raid.state === 'live' || raid.state === 'clear' || raid.state === 'wipe' ? mmss(raid.fightTime || 0) : raid.state === 'prepull' ? 'Unengaged' : '');
+    setText(q('.bb-time'), raid.state === 'live' || raid.state === 'clear' || raid.state === 'wipe' ? mmss(raid.fightTime || 0) : raid.state === 'prepull' ? 'Waiting for the pull' : '');
     const frac = b.mx ? b.hp / b.mx : 1;
     bossTrail = frac > bossTrail ? frac : Math.max(frac, bossTrail - dt * 0.08 - (bossTrail - frac) * dt * 1.5);
     setW(q('.bb-hp .fill'), (frac * 100).toFixed(2) + '%');
@@ -333,9 +333,11 @@ const RaidUI = (() => {
     const el = $('lb-gauge'), show = !raid.def.trial && (raid.state === 'live' || raid.state === 'prepull');
     const me = roster.find(r => r.id === myId); if (me) lbRole = me.role;
     const v = Math.max(0, Math.min(300, raid.lb || 0)), key = show ? String(Math.round(v)) : '-';
-    if (key === lbKey) return;
-    lbKey = key;
+    const kk = typeof Keybinds !== 'undefined' ? Keybinds.label(Keybinds.keyFor('limit')) : 'G';
+    if (key + kk === lbKey) return;
+    lbKey = key + kk;
     el.classList.toggle('hidden', !show);
+    const kb = el.querySelector('.lb-key'); if (kb) kb.textContent = kk;
     if (!show) return;
     lbBars = Math.floor(v / 100);
     el.classList.toggle('ready', lbBars >= 1);
@@ -350,7 +352,7 @@ const RaidUI = (() => {
     const what = lbRole === 'tank' ? `<b>Stand Fast</b>The party takes ${pct(L.TANK)} less damage for ${L.TANK_DUR}s.`
       : lbRole === 'healer' ? `<b>Rekindle</b>Heals the party for ${pct(L.HEAL)} of their health. Three bars also raise the fallen.`
       : `<b>Emberfall</b>One blow worth ${pct(L.DPS)} of the boss's health.`;
-    return `<b>Limit Break</b><em>${lbBars} of 3 bars · G</em>Every whole bar is spent at once, by whoever presses first. Filled by mechanics met cleanly and checks passed.<br><br>${what}`;
+    return `<b>Limit Break</b><em>${lbBars} of 3 bars · ${typeof Keybinds !== 'undefined' ? Keybinds.label(Keybinds.keyFor('limit')) : 'G'}</em>Every whole bar is spent at once, by whoever presses first. Filled by mechanics met cleanly and checks passed.<br><br>${what}`;
   }
 
   // ---------------------------------------------------------------- the live meter (M)
@@ -427,7 +429,7 @@ const RaidUI = (() => {
         : typeof BUSTER_CASTS !== 'undefined' && BUSTER_CASTS.test(name) ? 'buster'
         : typeof RAID_CASTS !== 'undefined' && RAID_CASTS.test(name) ? 'raid' : '';
       el.className = mode + (kind ? ' k-' + kind : '');
-      el.dataset.kind = { check: 'Burn it', enrage: 'Enrage', buster: 'Tank hit', raid: 'Hits everyone' }[kind] || '';
+      el.dataset.kind = { check: 'Damage check', enrage: 'Enrage', buster: 'Tank hit', raid: 'Hits everyone' }[kind] || '';
       el.querySelector('.bc-icon').style.backgroundImage = typeof BossIcons !== 'undefined' ? BossIcons.css(raid.def.id, name) : '';
       setText(el.querySelector('.bc-name'), name);
     }
@@ -562,18 +564,18 @@ const RaidUI = (() => {
     const best = !clear && lastPull && lastPull.prev != null && lastPull.pct < lastPull.prev ? `<p class="res-best">New best: ${lastPull.pct.toFixed(1)}%<span>was ${lastPull.prev.toFixed(1)}%</span></p>` : '';
     el.innerHTML = `
       <div class="res-card">
-        <h2 class="${clear ? 'win' : 'lose'}">${clear ? 'Cleared!' : 'Wiped'}</h2>
+        <h2 class="${clear ? 'win' : 'lose'}">${clear ? 'Cleared' : 'Wiped'}</h2>
         <p class="res-sub">${esc(raid.def.name)} · ${msg.mode === 'hard' ? 'Hard' : 'Normal'} · ${mmss(dur)}${clear ? '' : ` · boss at ${(msg.hp / msg.maxHp * 100).toFixed(1)}%`}</p>
         <table class="res-table">
           <thead><tr><th>Player</th><th>Class</th><th>DPS</th><th>HPS</th><th>Taken</th><th data-tip="Hits from attacks that could have been avoided">Avoidable</th><th>Deaths</th></tr></thead>
           <tbody>${table}</tbody>
         </table>
         ${best}${pullTimeline(raid, dur, deaths, deathName)}${deathLog}
-        ${raid.newPages && raid.newPages.length ? `<p class="res-pages">New in your journal: ${raid.newPages.map(n => `<b>${esc(n)}</b>`).join(', ')}<span>J</span></p>` : ''}
+        ${raid.newPages && raid.newPages.length ? `<p class="res-pages">New in your journal: ${raid.newPages.map(n => `<b>${esc(n)}</b>`).join(', ')}<kbd>${typeof Keybinds !== 'undefined' ? Keybinds.label(Keybinds.keyFor('journal')) : 'J'}</kbd></p>` : ''}
         ${report}
         <div class="res-actions">
           ${isHost ? '<button class="cta" data-a="retry">Try again</button><button class="btn2" data-a="town">Back to town</button>'
-                   : '<p class="res-wait">Waiting for the host to choose: try again or head back to town.</p><button class="btn2" data-a="leave">Leave to town</button>'}
+                   : '<p class="res-wait">Waiting for the host to choose: try again or head back to town.</p><button class="btn2" data-a="leave">Back to town</button>'}
         </div>
       </div>`;
     el.classList.remove('hidden');
@@ -625,7 +627,7 @@ const RaidUI = (() => {
       gcdUp >= 92 ? 'Always casting. Great.' : 'Time with nothing on the GCD is lost damage. Keep pressing through the mechanics, and press the next button early: inputs queue up to half a second ahead.']);
     if (k.posHit + k.posMiss > 0) {
       const r = k.posHit / (k.posHit + k.posMiss) * 100;
-      out.push(['Positionals', `${r.toFixed(0)}%`, r >= 85 ? 'good' : r >= 65 ? 'ok' : 'bad', r >= 85 ? 'Sharp footwork.' : 'Watch the ring around the boss: the purple arc is his back, the white arcs his sides.']);
+      out.push(['Positionals', `${r.toFixed(0)}%`, r >= 85 ? 'good' : r >= 65 ? 'ok' : 'bad', r >= 85 ? 'Sharp footwork.' : 'Watch the ring around the boss: the purple arc is its back, the white arcs its sides.']);
     }
     const over = Object.entries(k.overcap).filter(([, v]) => v >= 5);
     if (over.length) out.push(['Overcapped', over.map(([key, v]) => `${Math.round(v)} ${key}`).join(', '), 'bad', 'Resource gained past the cap is thrown away. Spend just before you\'d hit the top.']);

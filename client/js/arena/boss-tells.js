@@ -30,7 +30,8 @@ const BossTells = (() => {
   const COL = { danger: '#ff3b2f', dangerHi: '#ffb4a8', buster: '#ff1f48', safe: '#3d8bff', safeHi: '#b4d4ff', share: '#ffd23a', shareHi: '#fff0a8' };
   const ROLE_RIM = { aoe: COL.danger, proximity: COL.danger, knockback: COL.danger, hook: COL.danger, spread: COL.danger, chain: COL.danger, bait: COL.danger, drop: COL.danger,
     buster: COL.buster, stack: COL.share, tower: COL.share, safe: COL.safe };
-  const roleColor = (tg, tell) => (tg.type === 'own' && tg.color) || ROLE_RIM[tg.type] || (tell && tell.color) || '#ffffff';
+  // (a drop can name its own rim: the Dinner Rush's plates are yellow, since each will be a plate to share)
+  const roleColor = (tg, tell) => ((tg.type === 'own' || tg.type === 'drop') && tg.color) || ROLE_RIM[tg.type] || (tell && tell.color) || '#ffffff';
   // The fair-play outline: a solid rim in the role colour and a faint wash sweeping out from the origin as the cast
   // runs, with a bright leading edge. In the last 0.6s the rim pulses; a shape that follows someone flashes white the
   // moment it locks in place. The same on every difficulty.
@@ -248,6 +249,28 @@ const BossTells = (() => {
       air(ctx, tg, s, p, k, t) {
         for (let i = 0; i < 3; i++) { const q = (t * 0.7 + i / 3 + tg.id * 0.1) % 1; circle(ctx, s.x + (i - 1) * 14 + Math.sin(t * 2 + i) * 5, s.y - 30 - q * 60, 6 + q * 8, `rgba(240,240,240,${0.35 * (1 - q) * k})`); }
         cloche(ctx, s.x, s.y - 4, s.r * 0.78, 0.9 * k, true);
+      },
+    },
+    // Dinner Rush (Hard): a hot plate held up over the hero, a cloche on it, steaming harder as it nears; under them,
+    // the ring where it will be set down (yellow: it will be a plate someone serves), a dish shadow growing in it
+    platedrop: {
+      color: '#ffd23a',
+      ground(ctx, tg, s, p, k, t) {
+        shadow(ctx, s.x, s.y, s.r * (0.35 + 0.55 * p), (0.2 + 0.3 * p) * k);
+        ctx.save(); ctx.setLineDash([6, 7]); ctx.lineDashOffset = -t * 18;
+        circle(ctx, s.x, s.y, s.r * 0.72, null, rgba('#efe6cf', (0.3 + 0.4 * p) * k), 2);
+        ctx.restore();
+        ctx.beginPath(); ctx.arc(s.x, s.y, s.r + 7, -Math.PI / 2, -Math.PI / 2 + TAU * (1 - p));
+        ctx.strokeStyle = rgba('#ffffff', 0.8 * k); ctx.lineWidth = 2.5; ctx.stroke();
+      },
+      air(ctx, tg, s, p, k, t) {
+        const lift = 74 + Math.sin(t * 3 + tg.id) * 3 - 34 * easeIn(p), x = s.x, y = s.y - lift;
+        ctx.save(); ctx.globalAlpha = k;
+        ellipse(ctx, x, y + 6, 30, 9, 0, '#f6f3ea', OUT, 2.5);
+        ellipse(ctx, x, y + 6, 20, 5, 0, '#d8d2c2');
+        ctx.restore();
+        cloche(ctx, x, y + 4, 22, k, false);
+        for (let i = 0; i < 2; i++) { const q = (t * (0.8 + p) + i / 2 + tg.id * 0.2) % 1; circle(ctx, x + (i ? 8 : -8) + Math.sin(t * 2 + i) * 4, y - 22 - q * 34, 4 + q * 6, `rgba(245,245,240,${0.4 * (1 - q) * k})`); }
       },
     },
     // Spice Rack: jars spin overhead, shake out spice and drop
@@ -995,6 +1018,63 @@ const BossTells = (() => {
           ctx.setLineDash([10, 10]); ctx.lineDashOffset = t * 12; ctx.strokeStyle = rgba(COL.safeHi, 0.55 * k); ctx.lineWidth = 2; ctx.stroke();
           ctx.restore();
         }
+      },
+    },
+    // Grounding Rods (Hard): an iron rod hangs point-down over the hero, swaying, sparks running down it; under them a
+    // red ring (keep it off the others) where it will be driven in
+    groundrod: {
+      color: '#ff3b2f',
+      ground(ctx, tg, s, p, k, t) {
+        shadow(ctx, s.x, s.y, 16 + 14 * p, (0.25 + 0.3 * p) * k);
+        ctx.beginPath(); ctx.arc(s.x, s.y, s.r + 7, -Math.PI / 2, -Math.PI / 2 + TAU * (1 - p));
+        ctx.strokeStyle = rgba('#ffffff', 0.8 * k); ctx.lineWidth = 2.5; ctx.stroke();
+      },
+      air(ctx, tg, s, p, k, t) {
+        const sway = Math.sin(t * 2.2 + tg.id) * 0.08 * (1 - p), y = s.y - 130 + 70 * easeIn(p);
+        ctx.save(); ctx.translate(s.x, y); ctx.rotate(sway);
+        rodPole(ctx, 0, 0, t, k, 0.3 + 0.7 * p);
+        ctx.restore();
+        if (Math.floor(t * 12 + tg.id) % 3 !== 0) { ctx.save(); ctx.globalAlpha = k * (0.3 + 0.6 * p); jagged(ctx, s.x, y - 86, s.x + (hash(Math.floor(t * 12), tg.id) - 0.5) * 40, y - 150, Math.floor(t * 12) + tg.id, '#9ff4ff', 1.4); ctx.restore(); }
+      },
+    },
+    // Supercell (Hard): a cell of a squall front: a dark sheet of rain driving across it, lightning flickering in it as
+    // it lands (the red rim is the outline; the step landing next is drawn full, the ones after it faint)
+    squallcell: {
+      color: '#ff3b2f',
+      ground(ctx, tg, s, p, k, t) {
+        ctx.save(); SHAPES.trace(ctx, s); ctx.clip();
+        ctx.fillStyle = rgba('#0a1220', (0.18 + 0.3 * p) * k); ctx.fill();
+        const len = s.len, w = s.w, ca = Math.cos(s.angle), sa = Math.sin(s.angle);
+        ctx.strokeStyle = rgba('#bcd6ee', (0.12 + 0.3 * p) * k); ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        for (let i = 0; i < Math.round(len / 22); i++) {
+          const d = hash(i, tg.id) * len, o = (hash(i + 3, tg.id) - 0.5) * w, q = (t * 1.6 + hash(i, 9)) % 1;
+          const x = s.x + ca * d - sa * o, y = s.y + sa * d + ca * o + q * 24;
+          ctx.moveTo(x - 4, y - 12); ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+        if (p > 0.7 && Math.floor(t * 14 + tg.id) % 3 === 0) {
+          const d = hash(Math.floor(t * 14), tg.id) * len;
+          jagged(ctx, s.x + ca * d, s.y + sa * d - 40, s.x + ca * d + (hash(tg.id, 4) - 0.5) * 30, s.y + sa * d + 10, Math.floor(t * 14) + tg.id, '#dffbff', 1.6);
+        }
+        ctx.restore();
+      },
+    },
+    // ... and the still air past a rod while its front passes: a calm blue lane, chevrons drifting along it away from
+    // the rod
+    stilllane: {
+      color: '#3d8bff',
+      ground(ctx, tg, s, p, k, t) {
+        ctx.save(); ARENA.trace(ctx, 4); ctx.clip();
+        SHAPES.trace(ctx, s); ctx.fillStyle = rgba(COL.safe, 0.12 * k); ctx.fill();
+        const ca = Math.cos(s.angle), sa = Math.sin(s.angle);
+        for (let i = 0; i < 6; i++) {
+          const q = (t * 0.25 + i / 6) % 1, d = 30 + q * Math.min(s.len, AR() * 1.2);
+          ctx.save(); ctx.translate(s.x + ca * d, s.y + sa * d); ctx.rotate(s.angle);
+          poly(ctx, [-6, -10, 6, 0, -6, 10, -2, 0], rgba(COL.safeHi, 0.35 * (1 - q) * k), null);
+          ctx.restore();
+        }
+        ctx.restore();
       },
     },
     // Rod Strike: a thread of charge runs from each marked player to the stone nearest them, and that stone's runes

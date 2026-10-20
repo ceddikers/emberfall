@@ -499,6 +499,25 @@ const BOSS_VFX = (() => {
     grave(tg) { const s = tg.live; shapeFlash(s, tg.color || '#ffffff', { a: 0.3, dur: 0.5 }); VFX.pillar(s.x, s.y, { r: 40, h: 160, color: tg.color || '#ffffff', dur: 0.6 }); },
     writ(tg) { const s = tg.live; streak(s.x, s.y, s.angle, '#9affc0', { len: s.len, w: 14, dur: 0.4 }); sweep(s, '#7affa8', 0.3); shake(5); },
     pardon() {},
+    // the Dinner Rush (Grubnak, Hard): a hot plate set down with a clink and a puff of steam (it becomes a plate on
+    // the rail, which has its own tell)
+    platedrop(tg) { const s = tg.live; VFX.shock(s.x, s.y, { r: s.r * 0.8, color: '#fff2c8', w: 3, dur: 0.3, flat: 1 }); steam(s.x, s.y, 3, 70); },
+    // Supercell (Volkar, Hard): a rod driven into the rock; each cell of a front as it breaks: a bolt and a sheet of
+    // rain hitting the floor (light: a whole front lands a strip at a time); the lanes go quietly
+    groundrod(tg) {
+      const s = tg.live;
+      bang(s.x, s.y, 40, { n: 8, color: '#5ab8ff', core: '#ffffff', ink: '#0a1a3a', layer: 'ground' });
+      VFX.debris(s.x, s.y, { color: '#5a6270', n: 5, speed: 0.8 });
+      VFX.decal(s.x, s.y, { style: 'crack', r: 45, dur: 8, a: 0.6, seed: Math.random() * 6 });
+      shake(4);
+    },
+    squallcell(tg) {
+      const s = tg.live, ca = Math.cos(s.angle), sa = Math.sin(s.angle), d = s.len * (0.3 + Math.random() * 0.4);
+      shapeFlash(s, '#cfe6ff', { a: 0.18, dur: 0.3 });
+      VFX.lightning(s.x + ca * d + rand(-20, 20), s.y + sa * d - 380, s.x + ca * d, s.y + sa * d, { color: '#dffbff', jag: 22, dur: 0.3 });
+      shake(2);
+    },
+    stilllane() {},
     // Skitterra, Hard: a sac bursting, the charge, a glob of silk landing
     eggsac(tg) {
       const s = tg.live;
@@ -1295,14 +1314,15 @@ const BOSS_VFX = (() => {
       }
     } else if (msg.k === 'bolt') {
       // Rod Strike: the bolt comes down on a standing stone (its runes take it), or on someone caught in the open
-      const top = msg.kind === 'stone' ? 92 : 16, e = msg.pid != null && entById ? entById(msg.pid) : null;
+      // (Supercell: a front's bolt taking a planted rod: kind 'post')
+      const top = msg.kind === 'stone' ? 92 : msg.kind === 'post' ? 84 : 16, e = msg.pid != null && entById ? entById(msg.pid) : null;
       const x = e ? e.x : msg.x, y = e ? e.y : msg.y;
       VFX.lightning(x + rand(-30, 30), y - 460, x, y - top, { color: '#ffffff', jag: 28, dur: 0.4 });
       VFX.lightning(x + rand(-30, 30), y - 460, x, y - top, { color: '#9ff4ff', jag: 24, dur: 0.5 });
       VFX.shock(x, y, { r: msg.kind === 'stone' ? 110 : 80, color: '#9ff4ff', w: 6, dur: 0.4, flat: 1 });
       VFX.sparks(x, y - top, { color: '#dffbff', n: 12, speed: 300 });
       if (e) VFX.hit(e.x, e.y, '#bff6ff', 2);
-      if (msg.kind !== 'stone') { VFX.scorch(x, y, x, y, { w: 70, dur: 6, ember: '#7fe8ff', smokeRate: 0.12 }); VFX.decal(x, y, { style: 'crack', r: 50, dur: 6, a: 0.6, seed: Math.random() * 6 }); }
+      if (msg.kind !== 'stone' && msg.kind !== 'post') { VFX.scorch(x, y, x, y, { w: 70, dur: 6, ember: '#7fe8ff', smokeRate: 0.12 }); VFX.decal(x, y, { style: 'crack', r: 50, dur: 6, a: 0.6, seed: Math.random() * 6 }); }
       roomTint('#bfe8ff', 0.1, 0.25);
       shake(msg.kind === 'stone' ? 5 : 8);
     } else if (msg.k === 'discharge') {

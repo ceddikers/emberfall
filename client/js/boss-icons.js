@@ -89,6 +89,14 @@ const BossIcons = (() => {
     'Whisk': (c, A) => { stroke(c, '#8a5a2e', 5, [[32, 56], [32, 40]]); for (const w of [6, 11, 16]) { c.beginPath(); c.ellipse(32, 24, w, 18, 0, 0, TAU); c.strokeStyle = L; c.lineWidth = 2; c.stroke(); } motion(c, A, [[[6, 14], [12, 20]], [[58, 14], [52, 20]]]); },
     'Spice Rack': (c, A) => { for (const [x, col] of [[18, '#c0503a'], [32, '#e8c15a'], [46, '#7aa04a']]) { fill(c, col, [[x - 6, 24], [x + 6, 24], [x + 6, 50], [x - 6, 50]]); fill(c, L, [[x - 7, 18], [x + 7, 18], [x + 7, 24], [x - 7, 24]]); } for (const x of [24, 40]) disc(c, x, 10, 2.5, A); },
     'Service!': (c, A) => { c.beginPath(); c.arc(32, 40, 16, Math.PI, 0); c.closePath(); c.fillStyle = L; c.fill(); fill(c, L, [[10, 40], [54, 40], [54, 45], [10, 45]]); disc(c, 32, 22, 3.5, L); fill(c, A, [[29, 6], [35, 6], [33, 16], [31, 16]]); disc(c, 32, 19, 1.5, A); },
+    // four plates set down round a cleaver, the nearest with a full gold rim, the others filling less (the order)
+    'Dinner Rush': (c, A) => {
+      cleaver(c, 32, 30, -0.5, 0.75, L);
+      for (const [x, y, f] of [[18, 46, 1], [46, 46, 0.66], [12, 18, 0.33], [52, 16, 0.33]]) {
+        disc(c, x, y, 7, L); ring(c, x, y, 7, INK, 1.2);
+        c.beginPath(); c.arc(x, y, 9, -Math.PI / 2, -Math.PI / 2 + TAU * f); c.strokeStyle = '#ffd23a'; c.lineWidth = 2.5; c.stroke();
+      }
+    },
     'Flare-Up': (c, A) => { flame(c, 32, 36, 24, A, '#ffe08a'); stroke(c, L, 2.5, [[12, 54], [52, 54]]); },
     'Ladle Spin': (c, A) => { c.beginPath(); c.arc(32, 32, 22, 0.2, 5.2); c.strokeStyle = A; c.lineWidth = 3; c.stroke(); stroke(c, L, 4, [[18, 18], [36, 36]]); c.beginPath(); c.arc(40, 40, 8, 0, Math.PI); c.fillStyle = L; c.fill(); },
     'Lid Slam': (c, A) => { c.beginPath(); c.ellipse(32, 30, 22, 8, 0, Math.PI, 0); c.closePath(); c.fillStyle = '#c8ced4'; c.fill(); disc(c, 32, 20, 4, '#c8ced4'); motion(c, A, [[[10, 48], [54, 48]], [[16, 56], [48, 56]]]); },
@@ -137,6 +145,19 @@ const BossIcons = (() => {
     'Static Field': (c, A) => { ring(c, 32, 32, 18, '#d79bff', 3); bolt(c, '#d79bff', 32, 32, 0.6); },
     'Polarity Surge': (c, A) => { disc(c, 20, 32, 12, '#ffc24a'); disc(c, 44, 32, 12, '#4ad8ff'); stroke(c, INK, 3, [[14, 32], [26, 32]]); stroke(c, INK, 3, [[20, 26], [20, 38]]); stroke(c, INK, 3, [[38, 32], [50, 32]]); },
     'Lightning Rods': (c, A) => { stroke(c, L, 4, [[32, 56], [32, 16]]); fill(c, L, [[26, 18], [32, 6], [38, 18]]); bolt(c, A, 46, 22, 0.5); ring(c, 32, 56, 10, A, 2); },
+    // a rod held point-down over a hand, sparks on its tip
+    'Grounding Rods': (c, A) => {
+      stroke(c, L, 4, [[32, 8], [32, 44]]); fill(c, L, [[26, 42], [32, 56], [38, 42]]);
+      fill(c, '#8a939e', [[22, 10], [42, 10], [42, 15], [22, 15]]);
+      bolt(c, A, 46, 30, 0.45); bolt(c, A, 18, 34, 0.35);
+    },
+    // a squall front marching across in three bands, broken by a rod with a blue lane behind it
+    'Supercell': (c, A) => {
+      for (const x of [14, 26, 38]) fill(c, '#3a4a64', [[x - 5, 8], [x + 5, 8], [x + 5, 56], [x - 5, 56]]);
+      fill(c, '#3d8bff', [[18, 28], [56, 28], [56, 36], [18, 36]]);
+      stroke(c, L, 3.5, [[16, 18], [16, 34]]); fill(c, L, [[12, 32], [16, 40], [20, 32]]);
+      bolt(c, A, 50, 16, 0.4);
+    },
     'Still Air': (c, A) => { fill(c, '#ffd84a', [[10, 18], [26, 18], [24, 52], [12, 52]]); fill(c, '#6ab8ff', [[38, 18], [54, 18], [52, 52], [40, 52]]); stroke(c, INK, 3, [[18, 28], [18, 40]]); stroke(c, INK, 3, [[12, 34], [24, 34]]); stroke(c, INK, 3, [[40, 34], [52, 34]]); },
     'Rod Strike': (c, A) => { fill(c, '#8a9ab0', [[22, 22], [42, 22], [40, 56], [24, 56]]); bolt(c, A, 32, 14, 0.7); },
     'Gale Slam': (c, A) => { for (let i = 0; i < 3; i++) { c.beginPath(); c.arc(32, 32, 8 + i * 8, -2.4 + i * 0.4, 0.4 + i * 0.4); c.strokeStyle = i ? L : A; c.lineWidth = 3; c.stroke(); } },

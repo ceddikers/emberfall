@@ -34,7 +34,8 @@ const TOWN_NPCS = [
     ],
     nodes: {
       news: { lines: ["Pip's moping about something. Hask's been standing at that portal so long he's growing moss.",
-        "And old Tobble's talking to the fountain again. It hasn't answered yet, which is a mercy."] },
+        "And old Tobble's talking to the fountain again. It hasn't answered yet, which is a mercy.",
+        "And someone's been hiding coins behind the Tankard for years. Don't look at me, dear. Look behind the Tankard."] },
       summit: { lines: ["Oh, you didn't hear it from me. Old Corwin, on his barrel by the deck. He went up the storm mountain once.",
         "Came down with his hair standing straight up and never said a word about the top. Ask him. Don't say I sent you."],
         set: 'heard-summit' },
@@ -50,6 +51,9 @@ const TOWN_NPCS = [
     arrives: null,
     entrance: null,
     talk: [
+      { when: { flags: ['found-pip-stash'], notFlags: ['pip-stash-told'] },
+        lines: ["Somebody's been in my hidey-hole! There was a TOOTH in there. A painted one, but still."],
+        choices: [{ text: 'It was me. Sorry, Pip.', next: 'stash' }] },
       { when: { flags: ['pip-done'] },
         lines: ["My marble's safe in my sock now. Nobody looks in socks. Is the button still lucky? Rub it if it isn't."] },
       { when: { flags: ['got-marble'] },
@@ -83,6 +87,9 @@ const TOWN_NPCS = [
       thanks: { lines: ["My marble! With the bubble and everything!",
         "Here. My second-best thing. It's a lucky button. I found it in the fountain, so it's been wished on loads."],
         give: 'pip-button', set: 'pip-done' },
+      stash: { lines: ["...You can keep the coppers. Not the tooth. Never the tooth.",
+        "And don't tell Hask where it is. He'd only fill it with rules."],
+        set: 'pip-stash-told' },
     },
   },
 
@@ -95,6 +102,12 @@ const TOWN_NPCS = [
     arrives: null,
     entrance: null,
     talk: [
+      { when: { flags: ['found-hask-purse'], notFlags: ['hask-purse-told'] },
+        lines: ["That purse. Under the terrace, was it? My first year's pay. I hid it in case I lost my nerve and ran."],
+        choices: [{ text: 'You never ran', next: 'purse' }] },
+      { when: { flags: ['read-kings-road'], notFlags: ['hask-road-told'] },
+        lines: ["You've been round the back of the ring. I can tell. Everyone comes back from there looking like that."],
+        choices: [{ text: 'Who chipped off the last words?', next: 'road' }] },
       { when: { flags: ['pip-marble'], notFlags: ['got-marble'] },
         lines: ["You've the look of someone on an errand. Somebody small sent you, I'd wager."],
         choices: [{ text: 'Pip wants her marble back', next: 'marble' }, { text: 'Goodbye' }] },
@@ -109,9 +122,16 @@ const TOWN_NPCS = [
       { when: { beaten: ['grubnak'] },
         lines: ["The ogre's gone quiet. Good. Mind the next one. Caves don't care how brave you were yesterday."] },
       { when: {},
-        lines: ["Portal's open. I don't stop anyone going in. I count who comes out."] },
+        lines: ["Portal's open. I don't stop anyone going in. I count who comes out."],
+        choices: [{ text: "What's behind the portal?", next: 'ring' }, { text: 'Goodbye' }] },
     ],
     nodes: {
+      ring: { lines: ["Behind it? Stone and trees. Go round the back of the ring if you've the patience. Someone cut words there, long before my time."] },
+      road: { lines: ["Nobody knows. Some say a king did it, so nobody would follow him any further.",
+        "Kitchen, silver, beacon, barrow. I read it every morning. I try not to wonder about the rest."],
+        set: 'hask-road-told' },
+      purse: { lines: ["No. Seventeen years. Keep it. A man who stays doesn't need running money."],
+        set: 'hask-purse-told' },
       marble: { lines: ["She was rolling it into the portal. Things that go in there don't always come back. Not as marbles, anyway.",
         "Fine. Take it. And tell her the portal is not a game."],
         set: 'got-marble' },
@@ -127,6 +147,9 @@ const TOWN_NPCS = [
     arrives: null,
     entrance: null,
     talk: [
+      { when: { flags: ['found-corwin-tin'], notFlags: ['corwin-tin-told'] },
+        lines: ["You found my tin. Behind the Tankard. I can see it in your face; you look like someone who's been bought a drink."],
+        choices: [{ text: "Who's the next round for?", next: 'tin' }] },
       { when: { flags: ['corwin-done'] },
         lines: ["That compass points at storms. Useless, now there aren't any. Keep it anyway. It liked you."] },
       { when: { flags: ['heard-summit'], beaten: ['volkar'] },
@@ -153,6 +176,9 @@ const TOWN_NPCS = [
       compass: { lines: ["Clouds below you, and the whole sky crackling? Aye. That's what I saw, right before I turned round.",
         "Here. I carried this up there. It's been spinning ever since, looking for a storm. Take it. You earned the top."],
         give: 'corwin-compass', set: 'corwin-done' },
+      tin: { lines: ["Whoever came back. I put a coin in for every party that went through. Most of it's still there.",
+        "Keep it. You came back. That was always the deal."],
+        set: 'corwin-tin-told' },
     },
   },
 
@@ -165,6 +191,9 @@ const TOWN_NPCS = [
     arrives: null,
     entrance: null,
     talk: [
+      { when: { flags: ['found-storm-glass'], notFlags: ['fennick-glass-told'] },
+        lines: ["Is that real storm-glass? Where did you... no. Don't tell me. If I know where it is, I'll have to sell it."],
+        choices: [{ text: 'Is yours real?', next: 'glass' }] },
       { when: { hero: 'oathbroker', beaten: ['grubnak'] },
         lines: ["A contract-knight. I've read your sort's fine print. I'll be paid in coin, thank you, not in promises."] },
       { when: { beaten: ['hollowking'] },
@@ -183,6 +212,8 @@ const TOWN_NPCS = [
       rumour: { lines: ["One rumour, free, since you're going in anyway.",
         "Grubnak keeps a kitchen hand chained by the potato sacks. Eleven years peeling. Find him, and he owes me eleven silver."],
         set: 'heard-scullion' },
+      glass: { lines: ["Mostly. Now put that away before somebody sees the real thing next to my stall."],
+        set: 'fennick-glass-told' },
     },
   },
 
@@ -214,7 +245,7 @@ const TOWN_NPCS = [
         choices: [{ text: 'Ask about the caves', next: 'silk' }, { text: 'Goodbye' }] },
       { when: {},
         lines: ["Shh. The fountain's thinking."],
-        choices: [{ text: 'Ask about the caves', next: 'silk' }, { text: 'Goodbye' }] },
+        choices: [{ text: 'Ask about the caves', next: 'silk' }, { text: 'Ask about the gate', next: 'gate' }, { text: 'Goodbye' }] },
     ],
     nodes: {
       silk: { lines: ["The caves. I lived there once, before her. Before the eggs.",
@@ -223,6 +254,8 @@ const TOWN_NPCS = [
         set: 'tobble-silk' },
       barrow: { lines: ["Fighters went into that Barrow and never came out. Their ways of fighting didn't come out either.",
         "When the King goes, those ways will want new hands. Mind you're holding yours open."] },
+      gate: { lines: ["The gate's older than the town. The kings ran their road through it: kitchen, caves, beacon, Barrow.",
+        "And further. Round the back of the ring there are words. Read them, then wonder about the ones somebody chipped away."] },
     },
   },
 
@@ -235,6 +268,9 @@ const TOWN_NPCS = [
     arrives: null,
     entrance: null,
     talk: [
+      { when: { flags: ['found-bluebells'], notFlags: ['osric-bells-told'] },
+        lines: ["You found the bluebells, out in the south-west trees. Nobody goes in there but me."],
+        choices: [{ text: 'Who are they for?', next: 'bluebells' }] },
       { when: { flags: ['aldric-thanks'] },
         lines: ["He said that? Aldric said that? Well. Well, then.", "I'll plant something on that stone. Something that lives."] },
       { when: { hero: 'chronomancer' },
@@ -259,6 +295,9 @@ const TOWN_NPCS = [
       oath: { lines: ["That one? Empty. Sir Aldric's. One of the Hollow King's own guard, from before the King went wrong.",
         "He swore to stand by his king till the end. Still standing, I expect. I keep his stone clean in case he wants it."],
         set: 'osric-oath' },
+      bluebells: { lines: ["Everyone who went through that gate and never came back to be counted. No bodies to bury, so: flowers.",
+        "Hask counts them out. I count them gone. Between us we keep the town's books."],
+        set: 'osric-bells-told' },
     },
   },
 
@@ -271,6 +310,9 @@ const TOWN_NPCS = [
     arrives: null,
     entrance: null,
     talk: [
+      { when: { flags: ['found-cleaver-mark'], notFlags: ['hilde-mark-told'] },
+        lines: ["You've been through my slag heap. Found the blank with the crowned anvil on it, did you."],
+        choices: [{ text: 'Whose mark is that?', next: 'mark' }] },
       { when: { flags: ['hilde-done'] },
         lines: ["The band holding up? It'll outlast you. That's not a threat. That's craftsmanship."] },
       { when: { flags: ['tobble-silk'], beaten: ['skitterra'] },
@@ -294,6 +336,53 @@ const TOWN_NPCS = [
       band: { lines: ["A week of tempering, and it's still cold as moonlight. Here. A band of it. It's yours; you fetched it.",
         "Tell Tobble I said thank you. No, don't. He'll be unbearable."],
         give: 'moonthread-band', set: 'hilde-done' },
+      mark: { lines: ["My grandfather's. This forge made the knives for the King's kitchens, back when there was a king worth cooking for.",
+        "The ogre kept them sharp. I'll give him that. I won't give him anything else."],
+        set: 'hilde-mark-told' },
+    },
+  },
+
+  {
+    id: 'bram',
+    name: 'Bram', title: 'Angler',
+    look: { skin: '#c89a74', hair: '#8a8478', coat: '#4a6a5a', apron: null, hat: 'cap', beard: true, build: 'broad' },
+    at: { x: 600, y: 1290 },
+    wander: 0,
+    arrives: null,
+    entrance: null,
+    talk: [
+      { when: { flags: ['found-lure'], notFlags: ['bram-lure-told'] },
+        lines: ["Is that... my moth? Off the far bank? Ten years she's been sulking in those reeds."],
+        choices: [{ text: 'Give it back', next: 'lure' }] },
+      { when: { hero: 'driftblade' },
+        lines: ["You never stand still, do you. Fish can hear that, you know. Sit. Try it. It won't kill you."],
+        choices: [{ text: "I've got fish", next: 'shop' }, { text: 'Lose anything out here?', next: 'lost' }, { text: 'Goodbye' }] },
+      { when: { beaten: ['hollowking'] },
+        lines: ["Something new in the pond since the bells stopped. Grey, and you can see the reeds through it.",
+          "I threw it back. Then I caught it again. It sells."],
+        choices: [{ text: "I've got fish", next: 'shop' }, { text: 'Lose anything out here?', next: 'lost' }, { text: 'Goodbye' }] },
+      { when: { beaten: ['volkar'] },
+        lines: ["Eels in the pond since the storm broke. They bite like a spark. I've stopped holding them with wet hands."],
+        choices: [{ text: "I've got fish", next: 'shop' }, { text: 'Lose anything out here?', next: 'lost' }, { text: 'Goodbye' }] },
+      { when: { beaten: ['skitterra'] },
+        lines: ["Pulled up a loach trailing silk this morning. Something up the stream is still unravelling."],
+        choices: [{ text: "I've got fish", next: 'shop' }, { text: 'Lose anything out here?', next: 'lost' }, { text: 'Goodbye' }] },
+      { when: { beaten: ['grubnak'] },
+        lines: ["The Scullery drains run clean now, and the greasefin have come down with them. Fry them in their own coats."],
+        choices: [{ text: "I've got fish", next: 'shop' }, { text: 'Lose anything out here?', next: 'lost' }, { text: 'Goodbye' }] },
+      { when: {},
+        lines: ["Shh. Old Whiskers is down there. Twenty years I've been after her, and twenty years she's been after my bait."],
+        choices: [{ text: "I've got fish", next: 'shop' }, { text: 'Lose anything out here?', next: 'lost' }, { text: 'Goodbye' }] },
+    ],
+    nodes: {
+      shop: { lines: ["Let's see what you've got. Fair prices. Fairer than Fennick's, anyway."],
+        action: 'fish-shop' },
+      lost: { lines: ["Only my lucky lure. A little silver moth. She went into the reeds on the far bank, years back.",
+        "The pond keeps what it takes. Mostly."] },
+      lure: { lines: ["No. No, you keep her. She went looking for someone better at this than me, and she found you.",
+        "Fish still bite at her. Mind your fingers."],
+        set: 'bram-lure-told',
+        choices: [{ text: "I've got fish", next: 'shop' }, { text: 'Goodbye' }] },
     },
   },
 
@@ -311,6 +400,9 @@ const TOWN_NPCS = [
       "Come and eat together before you go in. Nobody fights well on an empty stomach. I would know.",
     ] },
     talk: [
+      { when: { flags: ['found-recipe'], notFlags: ['gaspard-recipe-told'] },
+        lines: ["Is that... my grandmother's card? Out of the hedge? The lid of that cart has never once shut properly."],
+        choices: [{ text: 'Hand it over', next: 'recipe' }] },
       { when: { flags: ['heard-scullion'], notFlags: ['gaspard-done'] },
         lines: ["Fennick told you about me? That weasel. He owes me eleven silver, not the other way round."],
         choices: [{ text: "He says it's the other way round", next: 'spoon' }, { text: "What's cooking?", next: 'menu' }] },
@@ -336,6 +428,10 @@ const TOWN_NPCS = [
       spoon: { lines: ["Ha! Never mind Fennick. You came looking for me in that kitchen. That's what matters.",
           "Take my tasting spoon. Eleven years it told me when the soup was right, and it has never once been wrong."],
         give: 'gaspard-spoon', set: 'gaspard-done',
+        choices: [{ text: "What's cooking?", next: 'menu' }, { text: 'Goodbye' }] },
+      recipe: { lines: ["Eleven years I cooked her broth from memory and never once got it right. Now I can. Thank you.",
+          "It's on the board. For you, it will taste better. I cannot prove this."],
+        set: 'gaspard-recipe-told',
         choices: [{ text: "What's cooking?", next: 'menu' }, { text: 'Goodbye' }] },
     },
   },
@@ -448,6 +544,8 @@ const TOWN_GIFTS = {
   'moonthread-band': { name: 'Moonthread Band', slot: 'accessory', flavor: 'One thread from the heart of a queen\'s web. It would not burn.', stat: 'power' },
   'tamsin-verse': { name: 'Tamsin\'s Folded Verse', slot: 'accessory', flavor: 'Four lines, written on the back of a bar bill. Better read in your head.', stat: 'power' },
   'aldric-ring': { name: 'Ring of the Last Guard', slot: 'accessory', flavor: 'It held an oath for a hundred years, and has not forgotten how.', stat: 'hp' },
+  // found, not given: the town secret 'moth-lure' (town-secrets.js) hands this one over
+  'moth-lure': { name: 'Silver Moth Lure', slot: 'accessory', flavor: 'Ten years in the reeds and still bright. Fish still bite at it.', stat: 'speed' },
 };
 
 // What each boss's first defeat changes in town (besides any NPCs with `arrives`). Short, concrete, drawable things.
@@ -468,3 +566,15 @@ const FEASTS = [
   { id: 'broth', name: 'Honeyroot Broth', desc: 'Sweet, slow and kind to the hands that mend. Healers ask for seconds.', cost: 35, buff: { stat: 'heal', pct: 3 } },
   { id: 'tarts', name: 'Quickfoot Tarts', desc: 'Little and crisp, eaten standing up. You\'re out the door before the plate is.', cost: 25, buff: { stat: 'speed', pct: 2 } },
 ];
+
+// Gifts are real items: registered with the rest (items.js) as gift_<id> before the bags load (inventory.js), so a gift
+// you own is still known on the next visit. Tier 0: no boss's party bonus.
+(function registerGifts() {
+  if (typeof ITEMS === 'undefined') return;
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  const BASE = { hp: { hp: 30, main: 8 }, power: { main: 14 }, heal: { main: 10, crit: 2 }, speed: { haste: 3, main: 6 } };
+  for (const [id, g] of Object.entries(TOWN_GIFTS)) {
+    const key = 'gift_' + id;
+    if (!ITEMS[key]) ITEMS[key] = { key, name: g.name, slot: 'accessory', atype: 'amulet', tier: 0, rarity: R_RARE, base: BASE[g.stat] || BASE.power, fxText: `<i>${esc(g.flavor || '')}</i>`, gift: true };
+  }
+})();

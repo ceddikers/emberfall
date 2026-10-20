@@ -18,6 +18,8 @@
 // leaves the tank Conductive; Chain Lightning on the healer as Titan Fist lands on the tank; the summit breaks away a
 // wedge at a time late in the back half; Heavens Fall comes faster; and his three moves: Chain Lightning, Ball Lightning,
 // Skyfall. The summit's four standing stones are solid, and Rod Strike and Still Air use them.
+// Hard's dance, in the Front (in place of the first Rods + Gale): Grounding Rods (the + players plant them), Supercell
+// (three squall fronts march past them; the cells past a rod stay dry), then a Thunderclap.
 
 const VOLKAR = {
   id: 'volkar', name: 'Volkar', title: 'The Storm Titan',
@@ -47,7 +49,7 @@ const VOLKAR = {
       crash: 13000, field: 5500, rod: 5000, rodAgain: 12000, rodFail: 12000, slam: 9000, wall: H ? 9500 : 11000, edge: 12000, pulse: H ? 300 : 260,
       chain: 7000, orb: 12000, skyfall: 36000,
       strike: H ? 9000 : 8000, strikeOpen: H ? 18000 : 15000, discharge: 12000, grounded: 9000, boulder: H ? 12000 : 11000, fall: 15000,
-      squall: 6000, still: 9000, stillWrong: 12000, heavens: 28000,
+      squall: 6000, still: 9000, stillWrong: 12000, heavens: 28000, front: 7500,
     };
     const S = (...steps) => steps.filter(Boolean);
     const room = f.room = { squall: null, eye: false };
@@ -394,6 +396,72 @@ const VOLKAR = {
     });
     room.inSquall = (x, y, t, pad = 0) => { const q = room.squall; if (!q || t < q.start - 1 || t > q.end) return true; const c = squallAt(q, t); return Math.hypot(x - c.x, y - c.y) <= q.R - pad; };
 
+    // --- Supercell (Hard, the Front): the party plants the rods, and the storm fronts march past them ---------------
+    // Grounding Rods: an iron rod hangs over each + player; where they stand when it comes down, it's driven into the
+    // rock (a post: it stands to the end of the set). Then Supercell: three
+    // squall fronts march across the summit in a fixed order every pull, a wall of lightning a cell at a time (cells
+    // CELL across, on one grid round him): from the west (marching east), then the north (marching south), then the east
+    // (marching west), each starting before the last has finished. A front's bolt runs along each row (or column) of
+    // cells until it strikes a rod; it strikes the rod's own cell, then goes to ground, so every cell past a rod, on
+    // the far side from where the front comes, stays dry: a lane of still air (drawn blue while its front passes).
+    // The dance: in the lane east of a rod for the first front, south of it for the second, west of it for the third:
+    // round your rod with your partner. The thinking is where the rods go: planted in the row through him, a cell
+    // either side, the first and last lanes run past his flanks and the middle ones down beside him, so nobody leaves
+    // him; planted anywhere else the lanes run off to the edge. As the last front passes the cell breaks over the
+    // whole summit (a Thunderclap).
+    const CELL = 135, FRONT_STEP = 0.5, FRONT_N = 9;
+    let rodsDown = [];
+    const groundingRods = () => {
+      const d = f.ct(4.5), al = f.alive(), plus = al.filter(p => charge(p.id) > 0);
+      f.cast('Grounding Rods', d, 'rods');
+      rodsDown = [];
+      for (const p of (plus.length ? plus : al).slice(0, 2)) {
+        const m = f.mech({ type: 'drop', shape: { kind: 'circle', x: p.x, y: p.y, r: 60 }, delay: d, dmg: 0, follow: p.id, tag: 'groundrod', avoidable: false,
+          onResolve: () => { const at = ARENA.clamp({ x: m.shape.x, y: m.shape.y }, 40); rodsDown.push(at); post(at.x, at.y, 18); } });
+      }
+    };
+    // the fronts: { axis, dir, at } — axis 'x' marches along x (a column of cells at a time), 'y' along y
+    const FRONTS = [{ axis: 'x', dir: 1, at: 0 }, { axis: 'y', dir: 1, at: 3 }, { axis: 'x', dir: -1, at: 6.5 }];
+    const supercell = () => {
+      const d = f.ct(3), R = ARENA.r;
+      f.cast('Supercell', d, 'storm');
+      const rods = rodsDown.map(r => ({ x: r.x, y: r.y, c: Math.round(r.x / CELL), r: Math.round(r.y / CELL) }));
+      const H2 = CELL / 2, reach = v => Math.sqrt(Math.max(0, R * R - Math.max(0, Math.abs(v) - H2) ** 2));   // how far a strip at v runs
+      FRONTS.forEach((fr, fi) => {
+        const group = new Set(), along = fr.axis;   // one hit a front at most
+        // each front is laid (drawn) a little before it starts, so the three read as three waves, not one lattice
+        const show = Math.max(0, d + fr.at - 2.5), last = d + fr.at + (FRONT_N - 1) * FRONT_STEP;
+        f.afterKeep(show, () => { for (let k = 0; k < FRONT_N; k++) {
+          const i = fr.dir > 0 ? k - 4 : 4 - k, at = d + fr.at + k * FRONT_STEP - show;
+          // rows (or columns) a rod has already grounded: past the rod, on the far side from where the front came
+          const cut = new Set(rods.filter(rd => (along === 'x' ? (fr.dir > 0 ? rd.c < i : rd.c > i) : rd.r < i)).map(rd => (along === 'x' ? rd.r : rd.c)));
+          const lim = reach(i * CELL);
+          let j0 = null;
+          for (let j = -4; j <= 5; j++) {
+            const open = j <= 4 && !cut.has(j) && Math.abs(j * CELL) - H2 < lim;
+            if (open && j0 == null) j0 = j;
+            if (!open && j0 != null) {
+              const a = Math.max((j0 - 0.5) * CELL, -lim), b = Math.min((j - 0.5) * CELL, lim);
+              const shape = along === 'x' ? { kind: 'rect', x: i * CELL, y: a, angle: Math.PI / 2, len: b - a, w: CELL }
+                : { kind: 'rect', x: a, y: i * CELL, angle: 0, len: b - a, w: CELL };
+              f.aoe(shape, at, dmg.front, { tag: 'squallcell', group });
+              j0 = null;
+            }
+          }
+          // a rod in this file takes the bolt
+          for (const rd of rods) if ((along === 'x' ? rd.c : rd.r) === i) f.afterKeep(at, () => f.emit({ t: 'propfx', k: 'bolt', kind: 'post', x: Math.round(rd.x), y: Math.round(rd.y) }));
+        } });
+        // the still air behind each rod, shown blue while its front passes (laid with the front)
+        for (const rd of rods) {
+          const shape = along === 'x'
+            ? { kind: 'rect', x: (rd.c + 0.5 * fr.dir) * CELL, y: rd.r * CELL, angle: fr.dir > 0 ? 0 : Math.PI, len: R * 2, w: CELL }
+            : { kind: 'rect', x: rd.c * CELL, y: (rd.r + 0.5) * CELL, angle: Math.PI / 2, len: R * 2, w: CELL };
+          f.afterKeep(show, () => f.mech({ type: 'safe', shape, delay: last - show, dmg: 0, tag: 'stilllane' }));
+        }
+        void fi;
+      });
+    };
+
     // --- The Eye: Still Air ------------------------------------------------------------------------
     // The wind drops and the Pulse stops. The four stones light up, two + (gold) and two − (blue), opposite stones alike.
     // When the Eye closes each lit stone wants one person of its own charge at it: a wrong charge there is struck, and a
@@ -457,8 +525,11 @@ const VOLKAR = {
         H && S([12, () => { titanFist(); chainLightning('healer'); }, 'Chain Lightning']),
         S([H ? 10 : 14, thunderclap, 'Thunderclap']),
         S([12, titanFist, 'Titan Fist']),
-        S([12, () => rodsGale(RODS), 'Lightning Rods']),
-        S([14, () => avalanche(AV), 'Avalanche'], [5, () => stormWalls(WALL + 1, -1), 'Storm Walls']),
+        // (Hard: the Supercell instead: the + players plant the rods, three fronts march past them, and the cell breaks
+        // over the summit as the last one passes)
+        H ? S([12, groundingRods, 'Grounding Rods'], [f.ct(4.5) + 0.6, supercell, 'Supercell'], [f.ct(3) + 11, thunderclap, 'Thunderclap'])
+          : S([12, () => rodsGale(RODS), 'Lightning Rods']),
+        S([H ? 13 : 14, () => avalanche(AV), 'Avalanche'], [5, () => stormWalls(WALL + 1, -1), 'Storm Walls']),
         S([14, () => { surge(); crash(f.ct(6)); }, 'Polarity Surge']),
         S([11, () => squall(1, Math.PI / 2, 360, 150), 'Squall Line'], [12, () => field(), 'Static Field'], [12, surge, 'Polarity Surge']),
         H && S([12, () => ballLightning(0.3), 'Ball Lightning']),
@@ -546,7 +617,7 @@ const VOLKAR = {
     front(0);
 
     f.moves = { thunderclap, titanFist, surge, crash, field, rods, galeSlam, rodsGale, stormWalls, chainLightning, ballLightning, skyfall, rodStrike, avalanche, crumble,
-      edgeStep, squall, eyeOpen, stillAir, eyeCloses, heavensFall };
+      edgeStep, squall, eyeOpen, stillAir, eyeCloses, heavensFall, groundingRods, supercell };
   },
 };
 
