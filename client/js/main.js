@@ -1142,7 +1142,7 @@
     if (!raid) return;
     const a = raid.adds.get(msg.id);
     switch (msg.k) {
-      case 'spawn': BOSS_VFX.addSpawn(msg.x, msg.y); break;
+      case 'spawn': BOSS_VFX.addSpawn(msg.x, msg.y, msg.kind); break;
       case 'death':
         BOSS_VFX.addDeath(a ? a.x : msg.x, a ? a.y : msg.y);
         removeAdd(msg.id, 0.3);
@@ -1189,7 +1189,12 @@
     raid.husks.push({ x: msg.x, y: msg.y, f: msg.f, end: now + msg.dur, st: Object.assign(newSt(), { props: { husk: true } }) });
     BOSS_VFX.husk(msg.x, msg.y);
   });
-  Net.on('eggs', msg => { if (raid) raid.eggs = { pts: msg.pts, start: now, end: now + msg.dur }; });
+  Net.on('eggs', msg => {
+    if (!raid) return;
+    raid.eggs = { pts: msg.pts, start: now, end: now + msg.dur };
+    // the clutch splitting open once the shells have shaken a moment
+    later(msg.dur, () => raid && msg.pts.forEach(([x, y]) => BOSS_VFX.hatch(x, y)));
+  });
   // Rolling Meatballs: one message each; every client rolls them on its own clock
   Net.on('roll', msg => {
     if (!raid) return;
@@ -1258,7 +1263,7 @@
   Net.on('pulse', () => { if (raid) BOSS_VFX.pulse(raidUnits()); });
   // the room: props and floor state (the whole list), a prop chipped / broken / slammed into, and room moments
   Net.on('props', msg => { if (raid) ArenaView.roomProps(raid.room, msg, now); });
-  Net.on('propfx', msg => { if (raid) BOSS_VFX.propFx(msg, raid.room, entById); });
+  Net.on('propfx', msg => { if (raid) BOSS_VFX.propFx(msg, raid.room, entById, raid.def.id); });
   Net.on('roomev', msg => { if (raid) ArenaView.roomEvent(raid.room, msg, now, entById); });
 
   // --- the Hollow King
@@ -1269,7 +1274,7 @@
     for (const id of msg.ids || []) { raid.doom.set(id, { start: now, end: now + (msg.dur || 14) }); const e = entById(id); if (e) BOSS_VFX.doomed(e); }
   });
   Net.on('cure', msg => { if (!raid) return; raid.doom.delete(msg.id); const e = entById(msg.id); if (e) BOSS_VFX.cure(e); });
-  Net.on('gazed', msg => { const e = raid && entById(msg.id); if (e) BOSS_VFX.gazed(e); });
+  Net.on('gazed', msg => { const e = raid && entById(msg.id); if (e) BOSS_VFX.gazed(e, raid.bossDraw); });
   // the Echo Knights: where they stand; one remembering a swing; one raising its blade to replay it
   Net.on('knights', msg => {
     if (!raid) return;
@@ -2765,7 +2770,7 @@
     // testing aid: advance the game clock by hand (for screenshots in throttled preview panes)
     // (it also unmutes FX/VFX: a hidden preview pane is still being watched through screenshots)
     step(sec = 0.5) { FX.muted = false; VFX.mute(false); for (let t = 0; t < sec; t += 1 / 60) { now += 1 / 60; rOff += 1 / 60; rnow = realNow(); update(1 / 60); } render(); renderPanels(); updateTargetFrame(); Hud.update(now, now); },
-    cycleTarget, get lockedEnemy() { return lockedEnemy; },
+    cycleTarget, get lockedEnemy() { return lockedEnemy; }, get now() { return now; },
     pause(on = true) { paused = on; },
   };
   let paused = false;

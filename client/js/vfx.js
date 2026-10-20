@@ -882,7 +882,7 @@ const VFX = (() => {
         if (heat > 0.02) {
           c.globalCompositeOperation = 'lighter'; c.globalAlpha = k * heat;
           c.strokeStyle = glow; c.lineWidth = 2; c.beginPath(); trace(c); c.stroke();
-          c.strokeStyle = '#ffe08a'; c.lineWidth = 0.8; c.beginPath(); trace(c); c.stroke();
+          c.strokeStyle = o.core || '#ffe08a'; c.lineWidth = 0.8; c.beginPath(); trace(c); c.stroke();
           c.globalCompositeOperation = 'source-over';
           glowAt(c, x, y, r * 0.7, glow, 0.4 * k * heat);
         }

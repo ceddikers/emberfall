@@ -1176,8 +1176,13 @@ const ArenaView = {
       for (let i = 0; i < 5; i++) {
         const a = i * TAU / 5, d = i ? 14 : 0;
         const wob = Math.sin(t * (6 + p * 14) + i) * (1 + p * 2);
-        ellipse(ctx, x + Math.cos(a) * d + wob, y + Math.sin(a) * d, 9, 7, a, '#f2f0dc', OUT, 1.5);
+        const ex = x + Math.cos(a) * d + wob, ey = y + Math.sin(a) * d;
+        ellipse(ctx, ex, ey, 9, 7, a, '#f2f0dc', OUT, 1.5);
+        // splitting: a green-lit crack across each shell
+        ctx.beginPath(); ctx.moveTo(ex - 7, ey - 1); ctx.lineTo(ex - 3, ey + 2); ctx.lineTo(ex, ey - 2); ctx.lineTo(ex + 3, ey + 2); ctx.lineTo(ex + 7, ey - 1);
+        ctx.strokeStyle = rgba('#c8ff6a', Math.min(1, p * 1.6)); ctx.lineWidth = 1.5 + p; ctx.stroke();
       }
+      glow(ctx, x, y, 22, '#f0ffb0', 0.5 * p);
     }
   },
 
@@ -1341,6 +1346,13 @@ const ArenaView = {
         const keep = new Set(msg.f.map(fl => fl.id));
         for (const fl of room.floor) if (fl.kind === 'grease' && !keep.has(fl.id) && (room.lit.get(fl.id) || 0) > now - 1) BOSS_VFX.scorchPool(fl.x, fl.y, fl.r);
       }
+      // Skitterra's threads shot taut or snapping loose, and the floor falling away (not on a first sync mid-fight)
+      if (typeof BOSS_VFX !== 'undefined' && room.floorSynced) {
+        const was = new Set(room.floor.map(fl => fl.id)), now2 = new Set(msg.f.map(fl => fl.id));
+        for (const fl of room.floor) if (fl.kind === 'thread' && !now2.has(fl.id)) BOSS_VFX.threadSnap(fl);
+        for (const fl of msg.f) if (!was.has(fl.id)) { if (fl.kind === 'thread') BOSS_VFX.threadShoot(fl); else if (fl.kind === 'pit') BOSS_VFX.floorFalls(fl); }
+      }
+      room.floorSynced = true;
       room.fv = msg.fv; room.floor = msg.f; room.layerFor = '';
       // a round room's broken-off wedges move its wall (Volkar, Hard)
       if (ARENA.kind === 'circle') ARENA.cuts = room.floor.filter(f => f.kind === 'wedge').map(f => ({ a0: f.a0, a1: f.a1, r: f.r }));
@@ -1351,6 +1363,7 @@ const ArenaView = {
   roomEvent(room, msg, now) {
     room.ev[msg.k] = Object.assign({}, msg, { start: now, end: now + (msg.dur || 0) });
     if (msg.k === 'stove' && typeof BOSS_VFX !== 'undefined') BOSS_VFX.stoveBurst(msg.x || 0);
+    if (msg.k === 'lightsout' && typeof BOSS_VFX !== 'undefined') BOSS_VFX.snuff(room);
   },
 
   // the floor layer: rubble, grease, broken ground. Same size and scale as the floor, rebuilt only when it changes
@@ -1407,8 +1420,13 @@ const ArenaView = {
     const g = c.createRadialGradient(0, 0, fl.r2, 0, 0, Math.min(fl.r, fl.r2 + 160));
     g.addColorStop(0, '#05030a'); g.addColorStop(1, '#0b0814');
     c.fillStyle = g; c.fill('evenodd');
-    c.strokeStyle = 'rgba(120,110,150,0.45)'; c.lineWidth = 3;
-    c.beginPath(); c.arc(0, 0, fl.r2, 0, TAU); c.stroke();
+    // a faint violet glow far down in it, and the broken lip of the floor that stayed
+    const rr = rng(Math.round(fl.r2) + 5);
+    for (let i = 0; i < 10; i++) { const a = rr() * TAU, d = fl.r2 + 30 + rr() * Math.min(160, fl.r - fl.r2 - 30); glow(c, Math.cos(a) * d, Math.sin(a) * d, 60 + rr() * 40, '#6a2a8a', 0.18); }
+    c.beginPath();
+    for (let i = 0; i <= 120; i++) { const a = i * TAU / 120, d = fl.r2 + 3 + (rr() - 0.5) * 9; i ? c.lineTo(Math.cos(a) * d, Math.sin(a) * d) : c.moveTo(Math.cos(a) * d, Math.sin(a) * d); }
+    c.lineJoin = 'round'; c.strokeStyle = 'rgba(20,14,26,0.9)'; c.lineWidth = 7; c.stroke();
+    c.strokeStyle = 'rgba(150,120,170,0.55)'; c.lineWidth = 2; c.stroke();
     c.beginPath(); c.arc(0, 0, fl.r, 0, TAU); c.arc(0, 0, fl.r2, 0, TAU, true);
     c.clip('evenodd');
     for (const [x1, y1, x2, y2, w] of fl.paths || []) this.silkPath(c, x1, y1, x2, y2, w);
@@ -1442,16 +1460,37 @@ const ArenaView = {
     const jx = p > 0.6 ? Math.sin(t * 60) * 2 * (p - 0.6) * 2.5 : 0;
     ctx.save(); ctx.translate(jx, 0);
     ARENA.trace(ctx, 2); ctx.clip();
-    ctx.beginPath(); ctx.arc(0, 0, Math.min(cv.r, 3000), 0, TAU); ctx.arc(0, 0, cv.r2, 0, TAU, true);
-    for (const [x1, y1, x2, y2, w] of cv.paths || []) {   // the silk is safe: cut it out of the warning
+    // the silk is safe: each strip is cut out of the warning on its own (so where two cross, it stays cut)
+    for (const [x1, y1, x2, y2, w] of cv.paths || []) {
       const L = Math.hypot(x2 - x1, y2 - y1), nx = -(y2 - y1) / L * w / 2, ny = (x2 - x1) / L * w / 2;
+      ctx.beginPath(); ctx.rect(-4000, -4000, 8000, 8000);
       ctx.moveTo(x1 + nx, y1 + ny); ctx.lineTo(x1 - nx, y1 - ny); ctx.lineTo(x2 - nx, y2 - ny); ctx.lineTo(x2 + nx, y2 + ny); ctx.closePath();
+      ctx.clip('evenodd');
     }
-    ctx.fillStyle = `rgba(6,4,12,${0.25 + 0.4 * p + 0.06 * Math.sin(t * 9)})`; ctx.fill('evenodd');
-    ctx.strokeStyle = rgba('#ff6a3a', 0.5 + 0.4 * p); ctx.lineWidth = 2.5;
-    ctx.beginPath(); ctx.arc(0, 0, cv.r2, 0, TAU); ctx.stroke();
-    const r = rng(Math.round(cv.r2));
-    for (let i = 0; i < 18; i++) { const a = r() * TAU, d = cv.r2 + r() * Math.min(200, cv.r - cv.r2); line(ctx, Math.cos(a) * d, Math.sin(a) * d, Math.cos(a + 0.05) * (d + 30), Math.sin(a + 0.05) * (d + 30), rgba('#1a1222', 0.5 + 0.4 * p), 2); }
+    ctx.beginPath(); ctx.arc(0, 0, Math.min(cv.r, 3000), 0, TAU); ctx.arc(0, 0, cv.r2, 0, TAU, true);
+    ctx.fillStyle = `rgba(6,4,12,${0.25 + 0.4 * p + 0.06 * Math.sin(t * 9)})`; ctx.fill();
+    ctx.beginPath(); ctx.arc(0, 0, Math.min(cv.r, 3000), 0, TAU); ctx.arc(0, 0, cv.r2 - 12, 0, TAU, true); ctx.clip();
+    // the break line: a jagged crack round the inner edge glowing pink-hot, and cracks splitting out across the ring
+    const r = rng(Math.round(cv.r2)), N = 90, jag = [];
+    for (let i = 0; i < N; i++) { const a = i * TAU / N, d = cv.r2 + (r() - 0.5) * 14 + (i % 2 ? 5 : -3); jag.push([Math.cos(a) * d, Math.sin(a) * d]); }
+    const cracks = [];
+    for (let i = 0; i < 26; i++) {
+      const a = r() * TAU, d0 = cv.r2 + 4, d1 = cv.r2 + (0.35 + r() * 0.6) * Math.min(220, cv.r - cv.r2), pts = [[Math.cos(a) * d0, Math.sin(a) * d0]];
+      for (let s = 1; s <= 3; s++) { const d = d0 + (d1 - d0) * s / 3, aa = a + (r() - 0.5) * 0.12; pts.push([Math.cos(aa) * d, Math.sin(aa) * d]); }
+      cracks.push(pts);
+    }
+    const trace = () => {
+      ctx.beginPath(); jag.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.closePath();
+      for (const pts of cracks) pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+    };
+    const hot = (0.45 + 0.55 * p) * (0.85 + 0.15 * Math.sin(t * (6 + p * 14)));
+    ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    trace(); ctx.strokeStyle = rgba('#1a0814', 0.75); ctx.lineWidth = 7; ctx.stroke();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.strokeStyle = rgba('#ff3aa8', 0.55 * hot); ctx.lineWidth = 6; ctx.stroke();
+    ctx.strokeStyle = rgba('#ffd0ec', 0.8 * hot); ctx.lineWidth = 1.8; ctx.stroke();
+    ctx.globalCompositeOperation = 'source-over';
+    for (let i = 0; i < 14; i++) { const a = i * TAU / 14 + t * 0.05; glow(ctx, Math.cos(a) * cv.r2, Math.sin(a) * cv.r2, 30, '#ff4ab0', 0.18 * hot); }
     ctx.restore();
   },
   // what a broken prop leaves on the floor
@@ -1788,6 +1827,19 @@ const ArenaView = {
     ARENA.trace(ctx, 2); ctx.clip();
     ctx.beginPath(); ctx.rect(-3000, -3000, 6000, 6000); ctx.arc(c.x, c.y, q.R, 0, TAU, true);
     ctx.fillStyle = `rgba(8,16,34,${warm ? 0.25 + 0.15 * Math.sin(t * 6) : 0.55})`; ctx.fill('evenodd');
+    if (!warm) {
+      // the storm out there: dark cloud drifting low over the rock, and a web of lightning crawling across it
+      ctx.save(); ctx.beginPath(); ctx.rect(-3000, -3000, 6000, 6000); ctx.arc(c.x, c.y, q.R + 8, 0, TAU, true); ctx.clip('evenodd');
+      const fr = Math.floor(t * 10), R = ARENA.R;
+      for (let i = 0; i < 14; i++) { const a = hash01(i * 5 + 3) * TAU + t * 0.03, d = Math.sqrt(hash01(i * 11 + 2)) * R; glow(ctx, Math.cos(a) * d, Math.sin(a) * d, 100, '#1a2438', 0.4); }
+      for (let i = 0; i < 26; i++) {
+        if ((fr + i) % 3 === 0) continue;
+        const a = hash01(i * 7 + (fr % 5)) * TAU, d = Math.sqrt(hash01(i * 13 + 1)) * R, x = Math.cos(a) * d, y = Math.sin(a) * d, b = hash01(i + fr) * TAU, L = 50 + hash01(i * 3) * 70;
+        jagged(ctx, x, y, x + Math.cos(b) * L, y + Math.sin(b) * L, fr * 31 + i, '#5ab8ff', 1.3);
+        jagged(ctx, x + Math.cos(b) * L * 0.6, y + Math.sin(b) * L * 0.6, x + Math.cos(b + 0.8) * L * 0.9, y + Math.sin(b + 0.8) * L * 0.9, fr * 37 + i, '#bff0ff', 0.9);
+      }
+      ctx.restore();
+    }
     ctx.beginPath(); ctx.arc(c.x, c.y, q.R, 0, TAU);
     ctx.strokeStyle = rgba('#5ac8ff', 0.3); ctx.lineWidth = 14; ctx.stroke();
     ctx.strokeStyle = rgba('#bff0ff', 0.8 + Math.sin(t * 13) * 0.15); ctx.lineWidth = 2.5; ctx.stroke();

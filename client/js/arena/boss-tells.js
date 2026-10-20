@@ -695,12 +695,56 @@ const BossTells = (() => {
       ground(ctx, tg, s, p, k, t) {
         const R = AR() * 1.4;
         ctx.fillStyle = rgba('#5ab82a', (0.16 + 0.18 * p) * k); ctx.fillRect(-R, -R, R * 2, R * 2);
-        for (let i = 0; i < 60; i++) {
-          const a = hash(i, tg.id) * TAU, d = Math.sqrt(hash(i + 7, tg.id)) * AR(), q = (t * (0.8 + p * 1.6) + hash(i, 3)) % 1;
-          const x = s.x + Math.cos(a) * d, y = s.y + Math.sin(a) * d;
-          circle(ctx, x, y, 2 + q * 8 * (0.5 + p), null, rgba('#d8ff9a', (0.25 + 0.4 * p) * (1 - q) * k), 1.4);
+        // acid coming down at a slant: streaked drops falling onto the lit floor, a ring where each lands
+        const n = 70 + Math.round(60 * p), sp = 0.9 + 1.4 * p;
+        ctx.save(); ctx.lineCap = 'round';
+        for (let i = 0; i < n; i++) {
+          const a = hash(i, tg.id) * TAU, d = Math.sqrt(hash(i + 7, tg.id)) * AR(), q = (t * sp + hash(i, 3)) % 1;
+          const gx = s.x + Math.cos(a) * d, gy = s.y + Math.sin(a) * d, fall = (1 - q) * 70, x = gx + fall * 0.45, y = gy - fall;
+          if (q < 0.82) {
+            ctx.beginPath(); ctx.moveTo(x + 13, y - 28); ctx.lineTo(x, y);
+            ctx.strokeStyle = rgba('#b8ff6a', (0.3 + 0.4 * p) * k); ctx.lineWidth = 2.5; ctx.stroke();
+            ellipse(ctx, x, y, 4.2, 5.6, -0.45, rgba('#9aef4a', (0.6 + 0.3 * p) * k), rgba('#1e4a0e', 0.7 * k), 1);
+          } else {
+            const u = (q - 0.82) / 0.18;
+            ellipse(ctx, gx, gy, 3 + u * 9, (3 + u * 9) * 0.6, 0, null, rgba('#d8ff9a', (0.7 - 0.7 * u) * k), 1.4);
+          }
         }
-        for (let i = 0; i < 3; i++) { const q = (t * 0.6 + i / 3) % 1; circle(ctx, s.x, s.y, 80 + q * AR(), null, rgba('#c8ff8a', 0.3 * (1 - q) * k), 3); }
+        ctx.restore();
+      },
+    },
+    // From the Dark / Ceiling Ambush: a thorny ring of silk where she'll land, and a thread let down from the dark
+    // into its middle, shortening as she comes down it
+    ambush: {
+      color: '#e8dcff',
+      ground(ctx, tg, s, p, k, t) {
+        const R = s.r, n = 28, spin = t * 0.15;
+        glow(ctx, s.x, s.y, R * 0.9, '#b8a0ff', (0.06 + 0.12 * p) * k);
+        ctx.save(); ctx.lineJoin = 'round';
+        ctx.beginPath();
+        for (let i = 0; i <= n * 2; i++) {
+          const a = spin + i * Math.PI / n, spike = i % 2 ? 1 : 0, r = R + (spike ? (i % 4 === 1 ? 16 : -12) * (0.6 + 0.4 * p) : 0);
+          i ? ctx.lineTo(s.x + Math.cos(a) * r, s.y + Math.sin(a) * r) : ctx.moveTo(s.x + Math.cos(a) * r, s.y + Math.sin(a) * r);
+        }
+        ctx.closePath();
+        ctx.strokeStyle = rgba('#1a1028', 0.6 * k); ctx.lineWidth = 6; ctx.stroke();
+        ctx.strokeStyle = rgba('#d8c8ff', (0.5 + 0.4 * p) * k); ctx.lineWidth = 3; ctx.stroke();
+        ctx.strokeStyle = rgba('#ffffff', (0.6 + 0.4 * p) * k); ctx.lineWidth = 1.2; ctx.stroke();
+        ctx.restore();
+        // the big spike at the front, where her shadow comes in from
+        for (let j = 0; j < 4; j++) {
+          const a = spin + j * TAU / 4 + Math.PI / 4, x = s.x + Math.cos(a) * R, y = s.y + Math.sin(a) * R, ux = Math.cos(a), uy = Math.sin(a);
+          poly(ctx, [x - uy * 7, y + ux * 7, x + ux * 26, y + uy * 26, x + uy * 7, y - ux * 7, x - ux * 10, y - uy * 10], rgba('#f0e8ff', 0.85 * k), rgba('#1a1028', 0.7 * k), 1.5);
+        }
+      },
+      air(ctx, tg, s, p, k, t) {
+        const top = s.y - 700, bot = s.y - 40 - (1 - p) * 300, sw = Math.sin(t * 2) * 6 * (1 - p);
+        ctx.save(); ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(s.x, top); ctx.quadraticCurveTo(s.x + sw, (top + bot) / 2, s.x, bot);
+        ctx.strokeStyle = rgba('#f4f0ff', 0.25 * k); ctx.lineWidth = 5; ctx.stroke();
+        ctx.strokeStyle = rgba('#ffffff', 0.8 * k); ctx.lineWidth = 1.5; ctx.stroke();
+        ctx.restore();
+        glow(ctx, s.x, bot, 10, '#ffffff', 0.6 * k);
       },
     },
     // Strand Reel: a strand shot to a pillar; it goes taut and the floor along it is churned with webbing
@@ -757,6 +801,16 @@ const BossTells = (() => {
           const a = i * TAU / 14 + t * 0.15, d = R * (0.25 + hash(i, 3) * 0.7) * (1.2 - 0.3 * p);
           glow(ctx, Math.cos(a) * d, Math.sin(a) * d, 90 + hash(i, 5) * 80, '#05070d', 0.35 * k);
         }
+        // lightning crawling over the rock: branching veins flickering on and off, more of them as it builds
+        const nv = Math.round(4 + 12 * p), fr = Math.floor(t * 10);
+        ctx.globalAlpha = k * (0.35 + 0.55 * p);
+        for (let i = 0; i < nv; i++) {
+          if ((fr + i * 3) % 4 === 0) continue;
+          const a = hash(i, 11) * TAU, d = Math.sqrt(hash(i, 13)) * (R - 80), x = Math.cos(a) * d, y = Math.sin(a) * d, b = hash(i, fr % 7 + 17) * TAU, L = 60 + hash(i, 19) * 90;
+          jagged(ctx, x, y, x + Math.cos(b) * L, y + Math.sin(b) * L, fr * 13 + i, '#7fd8ff', 1.5);
+          jagged(ctx, x + Math.cos(b) * L * 0.5, y + Math.sin(b) * L * 0.5, x + Math.cos(b + 0.7) * L, y + Math.sin(b + 0.7) * L, fr * 17 + i, '#bff0ff', 1);
+        }
+        ctx.globalAlpha = 1;
         if (p > 0.7 && Math.floor(t * 18) % 4 === 0) { ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = `rgba(160,210,255,${0.06 * k})`; ctx.fillRect(-R - 60, -R - 60, R * 2 + 120, R * 2 + 120); }
         ctx.restore();
       },
@@ -799,7 +853,15 @@ const BossTells = (() => {
     crash: {
       color: '#ffd84a', outline: false,
       ground(ctx, tg, s, p, k, t) { shadow(ctx, s.x, s.y, s.r * 0.9, (0.2 + 0.25 * p) * k); ArenaView.stackMarker(ctx, s, p, k, t); },
-      air(ctx, tg, s, p, k, t) { stormCloud(ctx, s.x, s.y - 170 + p * 40, 70 + p * 20, (0.5 + 0.4 * p) * k, t, tg.id); },
+      air(ctx, tg, s, p, k, t) {
+        stormCloud(ctx, s.x, s.y - 170 + p * 40, 70 + p * 20, (0.5 + 0.4 * p) * k, t, tg.id);
+        // it starts to spit lightning at the ring below as it nears
+        if (p > 0.55 && Math.floor(t * 14 + tg.id) % 3 === 0) {
+          ctx.save(); ctx.globalAlpha = k * Math.min(1, (p - 0.45) * 2);
+          jagged(ctx, s.x, s.y - 150 + p * 40, s.x + (hash(Math.floor(t * 14), tg.id) - 0.5) * s.r * 1.2, s.y, Math.floor(t * 14) * 5 + tg.id, '#fff2b0', 1.8);
+          ctx.restore();
+        }
+      },
     },
     // Static Field: everyone's own crackling ring; stay out of each other's
     static: {
@@ -822,6 +884,14 @@ const BossTells = (() => {
         circle(ctx, s.x, s.y, s.r, rgba('#9ff4ff', 0.08 * k), rgba('#bff6ff', (0.45 + 0.4 * p) * k), 2);
         ctx.beginPath(); ctx.arc(s.x, s.y, s.r + 5, -Math.PI / 2, -Math.PI / 2 + TAU * (1 - p));
         ctx.strokeStyle = rgba('#ffffff', 0.7 * k); ctx.lineWidth = 2; ctx.stroke();
+        // a rune ring round it: ticks turning slowly, and four arrowheads pointing in at the rod
+        const R2 = s.r + 22, spin = t * 0.4;
+        circle(ctx, s.x, s.y, R2, null, rgba('#7fd8ff', (0.35 + 0.35 * p) * k), 1.5);
+        for (let i = 0; i < 16; i++) { const a = spin + i * TAU / 16, l = i % 4 ? 6 : 12; line(ctx, s.x + Math.cos(a) * R2, s.y + Math.sin(a) * R2, s.x + Math.cos(a) * (R2 + l), s.y + Math.sin(a) * (R2 + l), rgba('#bff6ff', (0.4 + 0.4 * p) * k), 1.5); }
+        for (let i = 0; i < 4; i++) {
+          const a = -spin + i * TAU / 4 + Math.PI / 4, x = s.x + Math.cos(a) * (R2 + 24), y = s.y + Math.sin(a) * (R2 + 24), ux = -Math.cos(a), uy = -Math.sin(a);
+          poly(ctx, [x + ux * 12, y + uy * 12, x - uy * 9, y + ux * 9, x + uy * 9, y - ux * 9], rgba('#bff6ff', (0.5 + 0.4 * p) * k), rgba('#0a1a2a', 0.7 * k), 1.5);
+        }
       },
       air(ctx, tg, s, p, k, t) {
         const drop = Math.min(1, (t - tg.start) / 0.35);   // driven in from above
@@ -835,11 +905,18 @@ const BossTells = (() => {
       outline: false,
       ground(ctx, tg, s, p, k, t, env) {
         const R = AR(), b = env.boss;
-        for (let i = 0; i < 28; i++) {
-          const q = (t * 0.9 + hash(i, 7)) % 1, a = i * TAU / 28 + q * 0.6, d = R - (R - 110) * q;
-          ctx.beginPath(); ctx.arc(b.x, b.y, d, a, a + 0.18 + 0.1 * p);
-          ctx.strokeStyle = rgba('#d8ecff', (0.15 + 0.35 * p) * k * (1 - q * 0.5)); ctx.lineWidth = 2; ctx.stroke();
+        // air pouring in to him in curling streams, each with its head pointing the way it's going
+        ctx.save(); ctx.lineCap = 'round';
+        for (let i = 0; i < 32; i++) {
+          const q = (t * (0.7 + 0.6 * p) + hash(i, 7)) % 1, a = i * TAU / 32 + q * 0.9, r1 = R - (R - 120) * q, r0 = r1 + 90, a0 = a - 0.25;
+          const x0 = b.x + Math.cos(a0) * r0, y0 = b.y + Math.sin(a0) * r0, x1 = b.x + Math.cos(a) * r1, y1 = b.y + Math.sin(a) * r1;
+          const cx = b.x + Math.cos(a0 + 0.06) * (r0 + r1) / 2, cy = b.y + Math.sin(a0 + 0.06) * (r0 + r1) / 2, al = (0.2 + 0.45 * p) * k * Math.sin(q * Math.PI);
+          ctx.beginPath(); ctx.moveTo(x0, y0); ctx.quadraticCurveTo(cx, cy, x1, y1);
+          ctx.strokeStyle = rgba('#e8f4ff', al); ctx.lineWidth = 2.5; ctx.stroke();
+          const d = Math.hypot(x1 - cx, y1 - cy) || 1, ux = (x1 - cx) / d, uy = (y1 - cy) / d;
+          ctx.beginPath(); ctx.moveTo(x1 - ux * 9 - uy * 6, y1 - uy * 9 + ux * 6); ctx.lineTo(x1, y1); ctx.lineTo(x1 - ux * 9 + uy * 6, y1 - uy * 9 - ux * 6); ctx.stroke();
         }
+        ctx.restore();
         for (const c of env.covers || []) {
           const cx = c.x - b.x, cy = c.y - b.y, cd = Math.hypot(cx, cy);
           if (cd < 1) continue;
@@ -890,6 +967,20 @@ const BossTells = (() => {
         // ruts where it will run
         for (const side of [-0.28, 0.28]) line(ctx, s.x - sn * s.w * side, s.y + c * s.w * side, s.x + c * s.len - sn * s.w * side, s.y + sn * s.len + c * s.w * side, rgba('#2a2018', 0.35 * p * k), 3);
         ctx.restore();
+        // lightning running along the lane's edges, and the outline of the boulder where it will come to rest
+        const fr = Math.floor(t * 12);
+        ctx.save(); ctx.globalAlpha = (0.3 + 0.5 * p) * k;
+        for (const side of [-0.5, 0.5]) for (let j = 0; j < 4; j++) {
+          if ((fr + j + (side > 0 ? 2 : 0)) % 3 === 0) continue;
+          const d0 = j * s.len / 4, d1 = d0 + s.len / 4, ox = -sn * s.w * side, oy = c * s.w * side;
+          jagged(ctx, s.x + ox + c * d0, s.y + oy + sn * d0, s.x + ox + c * d1, s.y + oy + sn * d1, fr * 7 + j + tg.id, '#9fd8ff', 1.3);
+        }
+        ctx.restore();
+        const ex = s.x + c * (s.len - 40), ey = s.y + sn * (s.len - 40), rock = [];
+        for (let i = 0; i < 8; i++) { const a = i * TAU / 8 + 0.2, m = 38 * (0.85 + 0.2 * hash(i, tg.id)); rock.push(ex + Math.cos(a) * m, ey + Math.sin(a) * m * 0.85); }
+        ctx.save(); ctx.setLineDash([7, 6]); ctx.lineDashOffset = -t * 20;
+        poly(ctx, rock, rgba('#9fd0ff', (0.08 + 0.12 * p) * k), rgba('#cfe8ff', (0.45 + 0.4 * p) * k), 2);
+        ctx.restore();
       },
       air(ctx, tg, s, p, k, t) {
         const q = clamp((p - 0.72) / 0.28, 0, 1);
@@ -925,6 +1016,31 @@ const BossTells = (() => {
         }
       },
       air(ctx, tg, s, p, k, t) { stormCloud(ctx, s.x, s.y - 170 + p * 30, 60 + p * 25, (0.5 + 0.4 * p) * k, t, tg.id); },
+    },
+    // Heavens Fall: a rune circle for the column of sky, four great arrowheads pointing in, and the clouds over it
+    // opening as it comes down
+    heavens: {
+      color: '#ffd84a', outline: false,
+      ground(ctx, tg, s, p, k, t) {
+        ArenaView.stackMarker(ctx, s, p, k, t);
+        const R = s.r + 36, spin = t * 0.3;
+        glow(ctx, s.x, s.y, R * 1.2, '#7fd8ff', (0.1 + 0.2 * p) * k);
+        circle(ctx, s.x, s.y, R, null, rgba('#9fe4ff', (0.45 + 0.4 * p) * k), 2.5);
+        circle(ctx, s.x, s.y, R + 14, null, rgba('#9fe4ff', (0.25 + 0.3 * p) * k), 1.2);
+        for (let i = 0; i < 24; i++) { const a = spin + i * TAU / 24, l = i % 6 ? 5 : 14; line(ctx, s.x + Math.cos(a) * R, s.y + Math.sin(a) * R, s.x + Math.cos(a) * (R + l), s.y + Math.sin(a) * (R + l), rgba('#cff2ff', (0.45 + 0.4 * p) * k), 1.5); }
+        for (let i = 0; i < 4; i++) {
+          const a = -spin + i * TAU / 4, x = s.x + Math.cos(a) * (R + 30), y = s.y + Math.sin(a) * (R + 30), ux = -Math.cos(a), uy = -Math.sin(a);
+          poly(ctx, [x + ux * 20, y + uy * 20, x - uy * 14, y + ux * 14, x - ux * 2, y - uy * 2, x + uy * 14, y - ux * 14], rgba('#dff6ff', (0.55 + 0.4 * p) * k), rgba('#0a1a2a', 0.7 * k), 1.5);
+        }
+      },
+      air(ctx, tg, s, p, k, t) {
+        stormCloud(ctx, s.x, s.y - 250, 110 + 40 * p, (0.4 + 0.5 * p) * k, t, tg.id);
+        if (p > 0.45) {
+          const w = s.r * 0.7 * (p - 0.45) / 0.55, g = ctx.createLinearGradient(0, s.y - 240, 0, s.y);
+          g.addColorStop(0, rgba('#dff4ff', 0)); g.addColorStop(1, rgba('#dff4ff', 0.35 * (p - 0.45) / 0.55 * k));
+          ctx.fillStyle = g; ctx.fillRect(s.x - w, s.y - 240, w * 2, 240);
+        }
+      },
     },
     // Skyfall (Hard): the clouds open over one spot; the light thickens there and rings of falling air close in on it.
     // The fainter the floor, the safer.
@@ -965,13 +1081,18 @@ const BossTells = (() => {
     ctx.restore();
   }
   // a ghostly hand reaching up out of the floor (Crown of Graves)
-  function graveHand(ctx, x, y, h, a) {
+  function graveHand(ctx, x, y, h, a, col = '#aaf0c8') {
     if (a <= 0) return;
     ctx.save(); ctx.globalAlpha = a;
-    limb(ctx, [x, y, x + 2, y - h * 0.6], 'rgba(170,240,200,0.75)', 5);
-    for (let f = -2; f <= 2; f++) line(ctx, x + 2, y - h * 0.6, x + 2 + f * 3, y - h * 0.6 - 8 - (2 - Math.abs(f)) * 3, 'rgba(200,255,220,0.8)', 2);
+    glow(ctx, x, y - h * 0.5, 16, col, 0.35);
+    limb(ctx, [x, y, x + 2, y - h * 0.6], rgba(col, 0.8), 5);
+    for (let f = -2; f <= 2; f++) line(ctx, x + 2, y - h * 0.6, x + 2 + f * 3, y - h * 0.6 - 8 - (2 - Math.abs(f)) * 3, rgba(col, 0.9), 2);
     ctx.restore();
   }
+  // his three swings each have a colour of their own, so they can be told apart at a glance: the Sceptre Sweep gold,
+  // the Barrow Stomp cold teal, the Crown of Graves violet. The knights' replays are the pale blue of a memory.
+  const SWING = { sweep: '#e8c15a', stomp: '#4fe0d0', ring: '#a070ff' }, ECHO = '#9fd0ff';
+  const swingCol = tg => tg.tag[0] === 'e' ? ECHO : SWING[tg.tag] || '#5adf8a';
   // under every hero, a cone the way they face; red if they're caught: facing him (the Gaze), or not (the Audience)
   function facingArcs(ctx, p, k, env, caughtFacing) {
     const b = env.boss;
@@ -1002,6 +1123,17 @@ const BossTells = (() => {
           const q = (t * 0.6 + i / 3) % 1;
           ellipse(ctx, b.x, b.y, 80 + q * R, (80 + q * R) * 0.9, 0, null, rgba('#c8ffdc', 0.22 * (1 - q) * k * (0.4 + 0.6 * p)), 3);
         }
+      },
+      // a ghost bell of grave-light over him, swinging harder as the toll nears
+      air(ctx, tg, s, p, k, t, env) {
+        const b = env.boss, sw = Math.sin(t * (2 + p * 5)) * (0.12 + 0.35 * p);
+        ctx.save(); ctx.globalAlpha = k * (0.4 + 0.5 * p); ctx.translate(b.x + 110, b.y - 150); ctx.rotate(sw);
+        glow(ctx, 0, 40, 70, '#5adf8a', 0.35 + 0.3 * p);
+        poly(ctx, [-10, 0, 10, 0, 24, 48, 34, 64, -34, 64, -24, 48], 'rgba(120,255,170,0.35)', 'rgba(200,255,220,0.9)', 2.5);
+        poly(ctx, [-6, 6, 2, 6, 7, 48, -12, 48], 'rgba(230,255,240,0.3)');
+        ellipse(ctx, 0, 64, 34, 8, 0, null, 'rgba(220,255,230,0.8)', 2);
+        circle(ctx, 0, 72, 7, 'rgba(160,255,200,0.6)', 'rgba(220,255,230,0.9)', 1.5);
+        ctx.restore();
       },
     },
     // Royal Gaze: an eye opens over him; under every hero, the way they're facing, red if they'd meet his eyes
@@ -1045,6 +1177,14 @@ const BossTells = (() => {
         graveLight(ctx, s, p, k, t, '#5adf8a', tg.id);
         const ca = Math.cos(s.angle), sa = Math.sin(s.angle), n = Math.max(1, Math.floor(s.w / 46));
         const front = s.len * (0.3 + 0.4 * easeIn(p));
+        // pale chevrons marching down the lane the way the rank will tramp
+        ctx.save(); SHAPES.trace(ctx, s); ctx.clip();
+        for (let d = (t * 120) % 110, row = 0; d < s.len; d += 110, row++) for (let j = 0; j < Math.max(1, Math.floor(s.w / 80)); j++) {
+          const off = -s.w / 2 + (j + 0.5) * s.w / Math.max(1, Math.floor(s.w / 80)), x = s.x + ca * d - sa * off, y = s.y + sa * d + ca * off;
+          const P = (u, v) => [x + ca * u - sa * v, y + sa * u + ca * v];
+          poly(ctx, [...P(14, 0), ...P(-6, 16), ...P(-2, 0), ...P(-6, -16)], rgba('#9affd8', (0.2 + 0.4 * p) * k), rgba('#0a1a14', 0.5 * k), 1.2);
+        }
+        ctx.restore();
         ctx.save(); ctx.globalAlpha = (0.3 + 0.55 * p) * k;
         for (let i = 0; i < n; i++) {
           const off = -s.w / 2 + (i + 0.5) * s.w / n, bob = Math.sin(t * 8 + i * 1.3) * 2;
@@ -1056,13 +1196,27 @@ const BossTells = (() => {
         ctx.restore();
       },
     },
-    // Sceptre Sweep: the floor in front of him goes dark and grave-light streams along it
-    sweep: { color: '#c8ffd8', ground(ctx, tg, s, p, k, t) { graveLight(ctx, s, p, k, t, '#5adf8a', tg.id); } },
+    // Sceptre Sweep: the floor in front of him goes dark, gold light streams along it and arcs of it sweep across
+    sweep: {
+      color: '#c8ffd8',
+      ground(ctx, tg, s, p, k, t) {
+        const col = swingCol(tg);
+        graveLight(ctx, s, p, k, t, col, tg.id);
+        ctx.save(); SHAPES.trace(ctx, s); ctx.clip(); ctx.lineCap = 'round';
+        for (let i = 0; i < 4; i++) {
+          const q = (t * 0.5 + i / 4) % 1, r = 90 + q * Math.min(s.r, AR());
+          ctx.beginPath(); ctx.arc(s.x, s.y, r, s.angle - s.arc / 2, s.angle + s.arc / 2);
+          ctx.strokeStyle = rgba(col, (0.15 + 0.4 * p) * Math.sin(q * Math.PI) * k); ctx.lineWidth = 3; ctx.stroke();
+        }
+        ctx.restore();
+      },
+    },
     // Barrow Stomp: the stone around him cracks and green fire licks at the rim
     stomp: {
       color: '#c8ffd8',
       ground(ctx, tg, s, p, k, t) {
-        graveLight(ctx, s, p, k, t, '#5adf8a', tg.id);
+        const col = swingCol(tg);
+        graveLight(ctx, s, p, k, t, col, tg.id);
         // cracks spreading out through the flagstones
         ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
         for (let i = 0; i < 10; i++) {
@@ -1071,7 +1225,7 @@ const BossTells = (() => {
           ctx.beginPath(); ctx.moveTo(x, y);
           for (let n = 1; n <= 5; n++) { a += (hash(i * 7 + n, tg.id) - 0.5) * 0.7; x += Math.cos(a) * len / 5; y += Math.sin(a) * len / 5; ctx.lineTo(x, y); }
           ctx.strokeStyle = `rgba(6,14,10,${0.75 * k})`; ctx.lineWidth = 4; ctx.stroke();
-          ctx.strokeStyle = rgba('#7affa8', 0.35 * k * p); ctx.lineWidth = 1.5; ctx.stroke();
+          ctx.strokeStyle = rgba(col, 0.55 * k * p); ctx.lineWidth = 1.8; ctx.stroke();
         }
         ctx.restore();
       },
@@ -1080,13 +1234,16 @@ const BossTells = (() => {
     ring: {
       color: '#c8ffd8',
       ground(ctx, tg, s, p, k, t) {
-        graveLight(ctx, s, p, k, t, '#5adf8a', tg.id);
+        const col = swingCol(tg);
+        graveLight(ctx, s, p, k, t, col, tg.id);
         for (let i = 0; i < 18; i++) {
           const a = hash(i, tg.id + 3) * TAU, d = s.r2 + 40 + hash(i, tg.id + 4) * (AR() - s.r2 - 40);
           const x = s.x + Math.cos(a) * d, y = s.y + Math.sin(a) * d;
           if (ARENA.sd(x, y) > -20) continue;
-          graveHand(ctx, x, y, 16 + 22 * easeIn(p), k * Math.min(1, p * 2));
+          graveHand(ctx, x, y, 16 + 22 * easeIn(p), k * Math.min(1, p * 2), tg.tag[0] === 'e' ? '#cfe8ff' : '#d0b0ff');
         }
+        // the safe ring round him, its edge lit
+        circle(ctx, s.x, s.y, s.r2, null, rgba(col, (0.35 + 0.4 * p) * k), 2.5);
       },
     },
     // Grave Marks: a rune burns under each hero; keep out of each other's
@@ -1172,12 +1329,26 @@ const BossTells = (() => {
   for (const kind of ['sweep', 'stomp', 'ring']) {
     // the knights' replays: the same thing in the brighter green of the dead
     const base = K[kind];
-    K['e' + kind] = { color: '#7affa8', ground(ctx, tg, s, p, k, t, env) {
+    K['e' + kind] = { color: '#9fd0ff', ground(ctx, tg, s, p, k, t, env) {
       base.ground(ctx, tg, s, p, k, t, env);
-      ctx.save(); SHAPES.trace(ctx, s); ctx.fillStyle = rgba('#3aff7a', (0.05 + 0.12 * p) * k); ctx.fill(); ctx.restore();
+      ctx.save(); SHAPES.trace(ctx, s); ctx.fillStyle = rgba('#6ab8ff', (0.05 + 0.1 * p) * k); ctx.fill(); ctx.restore();
     } };
   }
 
+  // Titan Fist's mark: the outline of a great stone fist on the floor, knuckles toward where it's headed
+  function fistMark(ctx, x, y, ang, a) {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(ang); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    const trace = () => {
+      ctx.beginPath(); ctx.moveTo(-26, -20); ctx.lineTo(14, -22);
+      for (let i = 0; i < 4; i++) { const y0 = -22 + i * 11; ctx.quadraticCurveTo(28, y0, 26, y0 + 5.5); ctx.quadraticCurveTo(28, y0 + 11, 14, y0 + 11); }
+      ctx.lineTo(-26, 22); ctx.closePath();
+      ctx.moveTo(-6, 22); ctx.quadraticCurveTo(-2, 30, 8, 26);   // the thumb
+      for (let i = 1; i < 4; i++) { ctx.moveTo(14, -22 + i * 11); ctx.lineTo(2, -22 + i * 11); }
+    };
+    trace(); ctx.strokeStyle = rgba('#0a1a2a', 0.6 * a); ctx.lineWidth = 5; ctx.stroke();
+    ctx.strokeStyle = rgba('#7fe8ff', a); ctx.lineWidth = 2.2; ctx.stroke();
+    ctx.restore();
+  }
   // tankbusters: Grubnak's chop lines, or Skitterra's silk gathering on the tank
   const buster = {
     color: '#ff6a5a',
@@ -1191,6 +1362,19 @@ const BossTells = (() => {
           if (Math.floor(t * 12 + i) % 3) jagged(ctx, s.x + Math.cos(a) * d0, s.y + Math.sin(a) * d0, s.x + Math.cos(a) * (d0 + 50), s.y + Math.sin(a) * (d0 + 50), Math.floor(t * 12) + i, '#7fe8ff', 1.2);
         }
         if (tgt && p > 0.6) glow(ctx, tgt.x, tgt.y - 10, 30, '#7fe8ff', (p - 0.6) * 1.5 * k);
+        // lightning running down both edges of the cone, and the fist's outline on the floor under the tank
+        const fr = Math.floor(t * 12);
+        ctx.save(); ctx.globalAlpha = (0.35 + 0.5 * p) * k;
+        for (const side of [-1, 1]) {
+          const a = s.angle + side * s.arc / 2;
+          for (let j = 0; j < 3; j++) {
+            if ((fr + j + side) % 3 === 0) continue;
+            const d0 = 60 + j * (s.r - 60) / 3, d1 = d0 + (s.r - 60) / 3;
+            jagged(ctx, s.x + Math.cos(a) * d0, s.y + Math.sin(a) * d0, s.x + Math.cos(a) * d1, s.y + Math.sin(a) * d1, fr * 5 + j + side, '#7fe8ff', 1.6);
+          }
+        }
+        ctx.restore();
+        if (tgt) fistMark(ctx, tgt.x, tgt.y, s.angle, (0.35 + 0.55 * p) * k);
         return;
       }
       if (env.bossId === 'hollowking') {
@@ -1200,6 +1384,20 @@ const BossTells = (() => {
           glow(ctx, s.x + Math.cos(a) * d, s.y + Math.sin(a) * d, 16, '#5adf8a', 0.5 * (1 - q) * k);
         }
         if (tgt && p > 0.5) glow(ctx, tgt.x, tgt.y, 40, '#ff5a4a', (p - 0.5) * k);
+        // the cone's edges traced in violet, runes burning along its middle
+        ctx.save(); ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(s.x + Math.cos(s.angle - s.arc / 2) * 60, s.y + Math.sin(s.angle - s.arc / 2) * 60); ctx.lineTo(s.x + Math.cos(s.angle - s.arc / 2) * s.r, s.y + Math.sin(s.angle - s.arc / 2) * s.r);
+        ctx.moveTo(s.x + Math.cos(s.angle + s.arc / 2) * 60, s.y + Math.sin(s.angle + s.arc / 2) * 60); ctx.lineTo(s.x + Math.cos(s.angle + s.arc / 2) * s.r, s.y + Math.sin(s.angle + s.arc / 2) * s.r);
+        ctx.strokeStyle = rgba('#b46aff', (0.4 + 0.5 * p) * k); ctx.lineWidth = 3; ctx.stroke();
+        for (let i = 0; i < 6; i++) {
+          const d = 80 + i * (s.r - 110) / 5, x = s.x + Math.cos(s.angle) * d, y = s.y + Math.sin(s.angle) * d, on = (p * 8 - i) > 0;
+          if (!on) continue;
+          ctx.save(); ctx.translate(x, y); ctx.rotate(s.angle + i);
+          ctx.strokeStyle = rgba('#d8b0ff', (0.5 + 0.4 * p) * k); ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.moveTo(-8, -8); ctx.lineTo(0, 8); ctx.lineTo(8, -8); ctx.moveTo(-6, 0); ctx.lineTo(6, 0); ctx.stroke();
+          ctx.restore();
+        }
+        ctx.restore();
         return;
       }
       if (env.bossId === 'skitterra') {
@@ -1485,6 +1683,16 @@ const BossTells = (() => {
         ctx.beginPath(); ctx.moveTo(sw.x + ex, sw.y + ey); ctx.lineTo(sw.x + ex + c * L, sw.y + ey + s * L);
         ctx.strokeStyle = rgba('#e8f4ff', (live ? 0.7 : 0.3) * k); ctx.lineWidth = live ? 3 : 1.5; ctx.stroke();
         { ctx.save(); ctx.setLineDash([12, 10]); ctx.lineDashOffset = -t * 30; SHAPES.trace(ctx, shape); ctx.strokeStyle = rgba('#cfe6ff', 0.35 * k); ctx.lineWidth = 1.5; ctx.stroke(); ctx.restore(); }
+        // the wall's body: storm cloud boiling along it, and lightning curtains standing up off its leading edge
+        if (live) {
+          for (let i = 0; i < 10; i++) { const along = 90 + (i + 0.5) / 10 * (AR() - 90), wob = Math.sin(t * 3 + i * 1.7) * hw * 0.3; glow(ctx, sw.x + c * along - s * wob, sw.y + s * along + c * wob, hw * 0.95, '#6a7894', 0.32 * k); }
+          const fr = Math.floor(t * 14);
+          for (let i = 0; i < 8; i++) {
+            if ((fr + i) % 3 === 0) continue;
+            const along = 100 + hash(i, Math.floor(t * 7) + n) * (AR() - 120), x = sw.x + ex + c * along, y = sw.y + ey + s * along;
+            jagged(ctx, x, y, x + (hash(i, 3) - 0.5) * 16, y - 60 - hash(i, 5) * 50, fr * 11 + i + n, '#9fe8ff', 1.6);
+          }
+        }
         // grit tumbling in it
         if (live) for (let i = 0; i < 6; i++) {
           const q = (t * 0.9 + hash(i, n + 20)) % 1, along = 120 + q * (AR() - 140), off = Math.sin(t * 5 + i) * hw * 0.6;
