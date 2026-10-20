@@ -60,7 +60,8 @@ class Kit {
     this.gcdReady = 0; this.gcdLen = ENGINE.GCD;
     this.lockUntil = 0;        // animation lock from the last instant action
     this.cast = null;          // { ab, target, start, end }
-    this.queued = null;
+    this.queued = null;        // the early press waiting on the GCD (one slot per kind, so a weave doesn't bump a GCD press)
+    this.queuedO = null;       // the early press waiting on an off-GCD move
     this.dots = new Map();     // id -> { potency, interval, next, end, ab, opts }
     // auto-attacks: a pseudo-ability so the world's target lookup can apply its range
     this.autoAb = def.auto ? { id: 'auto', name: 'Attack', target: 'enemy', range: def.auto.range, auto: true } : null;
@@ -319,7 +320,7 @@ class Kit {
     }
     if (wait <= 0.0001) { this.input = { at: this.now, buffered: false, idle: this.now - this.lockUntil }; return this.execute(ab); }
     if (wait <= ((this.pace && this.pace.buffer) || ENGINE.QUEUE_WINDOW)) {
-      if (size > 1) this.inbuf.push({ ab, at: this.now }); else this.queued = { ab, at: this.now };
+      if (size > 1) this.inbuf.push({ ab, at: this.now }); else if (ab.type === 'ogcd') this.queuedO = { ab, at: this.now }; else this.queued = { ab, at: this.now };
       return true;
     }
     this.env.emit({ type: 'fail', reason: 'cooldown', ab });
@@ -327,7 +328,12 @@ class Kit {
   }
 
   execute(ab) {
-    if (!this.available(ab)) { this.env.emit({ type: 'fail', reason: this.needsTarget(ab) ? 'target' : this.affords(ab) ? 'unusable' : 'winded', ab }); return false; }
+    if (!this.available(ab)) {
+      // say what is actually wrong: a queued press that went off while the move had stopped being usable is "not ready", not "no target"
+      const reason = !this.usable(ab) ? (this.affords(ab) ? 'unusable' : 'winded') : this.cdRemaining(ab) > 0 ? 'cooldown' : 'target';
+      this.env.emit({ type: 'fail', reason, ab });
+      return false;
+    }
     const target = this.needsTarget(ab) ? this.env.target(ab) : null;
     if (this.stats.start === null && (ab.target === 'enemy' || ab.startsCombat)) this.stats.start = this.now;
     if (ab.target === 'enemy') this.engagedAt = this.now;
@@ -382,10 +388,11 @@ class Kit {
         this.resolve(c.ab, this.needsTarget(c.ab) ? (this.env.target(c.ab) || c.target) : null);
       }
     }
-    if (this.queued) {
-      const q = this.queued;
-      if (now - q.at > ((this.pace && this.pace.buffer) || ENGINE.QUEUE_WINDOW) + 0.25) this.queued = null;
-      else if (this.readyIn(q.ab) <= 0.0001) { this.queued = null; this.input = { at: q.at, buffered: true, idle: 0 }; this.execute(q.ab); }
+    for (const slot of ['queued', 'queuedO']) {
+      const q = this[slot];
+      if (!q) continue;
+      if (now - q.at > ((this.pace && this.pace.buffer) || ENGINE.QUEUE_WINDOW) + 0.25) this[slot] = null;
+      else if (this.readyIn(q.ab) <= 0.0001) { this[slot] = null; this.input = { at: q.at, buffered: true, idle: 0 }; this.execute(q.ab); }
     }
     if (this.inbuf.length) {
       // the oldest buffered press fires the moment it can; the next one's wait starts counting then

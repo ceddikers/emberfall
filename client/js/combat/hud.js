@@ -289,7 +289,7 @@ const Hud = {
       hudText(s.cd, txt);
       s.el.classList.toggle('glow', usable && cdLeft <= 0 && k.glows(ab));
       s.el.classList.toggle('dim', !usable);
-      s.el.classList.toggle('queued', !!(k.queued && k.queued.ab === ab) || k.inbuf.some(q => q.ab === ab));
+      s.el.classList.toggle('queued', !!((k.queued && k.queued.ab === ab) || (k.queuedO && k.queuedO.ab === ab)) || k.inbuf.some(q => q.ab === ab));
       s.el.classList.toggle('casting', !!(k.cast && k.cast.ab === ab));
       const lbl = k.label(ab);
       if (s.name.textContent !== lbl) s.name.textContent = lbl;

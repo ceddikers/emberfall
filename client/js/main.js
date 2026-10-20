@@ -197,6 +197,8 @@
     // classes-c (kits.js, stagecraft.js): the cursor, the room's props a Doll bumps into, this weaver's threads (from the
     // host's 'thr' list; null in town), and where your Dolls are (sent to the host 10 times a second)
     aim: () => (started && mouse.x != null ? mouseWorld() : null),
+    // the enemy you have chosen (clicked or tabbed to), or null: a Marionettist's Doll only goes to work on that one
+    picked: () => { const t = lockedTarget(); return t ? { id: t.dummy ? 'dummy' : lockedEnemy, x: t.x, y: t.y, r: t.r } : null; },
     collide: (a, o, r) => {
       if (inArena()) { clampArena(o); if (raid.room.props.length) PROPS.collide(o, raid.room.props, r); }
       else { o.x = clamp(o.x, 40, WORLD.w - 40); o.y = clamp(o.y, 40, WORLD.h - 40); }
@@ -1328,7 +1330,7 @@
     if (msg.k === 'read') actor.notify('read', msg);   // an Ironpalm's Read caught a hit (msg.b: it was a tankbuster)
     if (msg.k === 'shieldEnd') actor.notify('shieldEnd', msg);
     if (msg.k === 'carry' || msg.k === 'snapped' || msg.k === 'dollhit' || msg.k === 'tiefail') actor.notify(msg.k, msg);   // threads and Dolls (classes-c)
-    if (msg.k === 'death') { actor.kit.cast = null; actor.kit.queued = null; actor.kit.inbuf.length = 0; player.target = null; player.dashMove = null; }
+    if (msg.k === 'death') { actor.kit.cast = null; actor.kit.queued = null; actor.kit.queuedO = null; actor.kit.inbuf.length = 0; player.target = null; player.dashMove = null; }
   });
   // the Threadweavers' threads, their snaps, and every Marionettist's Dolls (classes-c, stagecraft.js)
   Net.on('thr', msg => { if (raid) Stagecraft.onThreads(msg, now); });
@@ -2186,7 +2188,7 @@
   // ---------------------------------------------------------------- hero select: the altar grid, then a detail page
   const DASH_AB = { name: 'Dash', type: 'ogcd', desc: 'A quick dash toward where you\'re heading (or the cursor). Two charges, 12s each. Every hero has it.', anim: 'cast' };
   const diamonds = n => `${'◆'.repeat(n)}${'◇'.repeat(3 - n)}`;
-  const selThumbs = [];
+  const selThumbs = [], TILE = 200;
   let selPortrait = null, selFromGrid = false;
   // Optional painted portraits (client/portraits/<classId>.png, front-facing). Missing ones fall back to the sprite.
   const PORTRAITS = {};
@@ -2209,7 +2211,8 @@
   (function buildAltar() {
     // one band per role (rows, so the roster can grow), compact tiles flowing inside each band
     const altar = $('altar');
-    const COMPLEXITY = { 2: 'More moving parts than most', 3: 'Many moving parts', 4: 'The most moving parts' };
+    const COMPLEXITY = { 2: 'More than most', 3: 'Many', 4: 'The most' };
+    const DIFFICULTY = ['', 'Gentle', 'Moderate', 'Demanding'];
     for (const role of Object.keys(ROLES)) {
       const list = CLASSES.filter(c => c.role === role);
       if (!list.length) continue;
@@ -2220,12 +2223,14 @@
       for (const cls of list) {
         const b = document.createElement('button');
         b.className = 'hero-card'; b.dataset.id = cls.id; b.style.setProperty('--a', cls.accent);
-        const cv = document.createElement('canvas'); setupCanvas(cv, 112, 112);
+        // just the portrait: the name, difficulty and play style are in the tooltip
+        const cv = document.createElement('canvas'); setupCanvas(cv, TILE, TILE);
+        b.setAttribute('aria-label', `${cls.name}, ${cls.title}`);
         b.appendChild(cv);
-        // complexity pips: only on the classes that ask more of you (data.js `complexity` 2 or 3)
-        const cx = cls.complexity >= 2 ? `<span class="hc-cx" data-tip="${COMPLEXITY[cls.complexity] || COMPLEXITY[3]}">${'<i></i>'.repeat(cls.complexity)}</span>` : '';
-        b.insertAdjacentHTML('beforeend', `<span class="hc-text"><b>${cls.name}</b><small>${cls.title}</small><span class="diff">${diamonds(cls.difficulty)}</span></span>${cx}<em class="hc-taken"></em>`);
-        Tip.set(b, () => `<b>${cls.name}</b><em>${ROLES[cls.role].name} · ${cls.title}</em>“${cls.tagline}”`);
+        b.insertAdjacentHTML('beforeend', '<em class="hc-taken"></em>');
+        const style = cls.gameplan.split(/(?<=\.)\s+/).slice(0, 2).join(' ');
+        Tip.set(b, () => `<b>${cls.name}</b><em>${ROLES[cls.role].name} · ${cls.title}</em>“${cls.tagline}”
+          <div class="hc-tip"><span><u>Difficulty</u> ${diamonds(cls.difficulty)} ${DIFFICULTY[cls.difficulty] || ''}</span>${cls.complexity >= 2 ? `<span><u>Moving parts</u> ${'◆'.repeat(cls.complexity)}${'◇'.repeat(4 - cls.complexity)} ${COMPLEXITY[cls.complexity]}</span>` : ''}</div>${style}`);
         b.addEventListener('click', () => { selFromGrid = true; showDetail(cls); });
         grid.appendChild(b);
         selThumbs.push({ cv, cls, b, st: newSt(Math.random() * 3) });
@@ -2393,10 +2398,12 @@
         const hov = th.b.matches(':hover');
         th.st.t = now; th.st.moving = hov;
         const c = prep(th.cv);
-        if (PORTRAITS[th.cls.id]) drawBust(c, PORTRAITS[th.cls.id], 0, 0, 112, hov ? 1.16 : 1.1);
+        if (PORTRAITS[th.cls.id]) drawBust(c, PORTRAITS[th.cls.id], 0, 0, TILE, hov ? 1.06 : 1);
         else {
+          c.save(); c.scale(TILE / 112, TILE / 112);
           if (hov) { VFX.glowAt(c, 56, 70, 50, th.cls.accent, 0.5); VFX.neonRing(c, 56, 92, 34 + Math.sin(now * 4) * 2, th.cls.accent, 2, 0.8, 0.4); }
           drawHero(c, th.cls, 56, 62, hov ? 0.6 + Math.sin(now * 2) * 0.5 : 0.6, th.st, 1.6, { ring: false });
+          c.restore();
         }
       }
     }

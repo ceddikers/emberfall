@@ -3195,8 +3195,14 @@ function mariTick(k) {
     if ((d.mode === 'post' || d.mode === 'finale') && now >= d.until) d.mode = 'idle';
     let goal = null;
     if (d.mode === 'idle') {
-      if (e && Math.hypot(e.x - p.x, e.y - p.y) < 720) goal = mariStation(k, i, p, e);
-      else { const a = Math.atan2(d.y - p.y, d.x - p.x); goal = { x: p.x + Math.cos(a) * 56, y: p.y + Math.sin(a) * 56 }; }
+      // it only works a target you have chosen; with none it stays where it was put, and is only brought along when you
+      // walk it to the end of its strings
+      const c = k.env.picked ? k.env.picked() : e;
+      const here = Math.hypot(d.x - p.x, d.y - p.y);
+      if (c && c.id !== g.pickId) { g.pickId = c.id; for (const o of g.dolls) o.manual = false; }   // a new target sends them back to work
+      if (d.manual) { /* put there by Pull Strings: it stays */ }
+      else if (c && Math.hypot(c.x - p.x, c.y - p.y) < 720) goal = mariStation(k, i, p, c);
+      else if (here > lim - 10) { const a = Math.atan2(d.y - p.y, d.x - p.x); goal = { x: p.x + Math.cos(a) * lim * 0.8, y: p.y + Math.sin(a) * lim * 0.8 }; }
     }
     if (goal) {
       const dx = goal.x - d.x, dy = goal.y - d.y, L = Math.hypot(dx, dy), step = MARI.SPEED * dt * (L > 160 ? 1.6 : 1);
@@ -3298,7 +3304,7 @@ KITS.marionettist = {
     },
     {
       id: 'pull', name: 'Pull Strings', type: 'ogcd', target: 'none', charges: 2, cd: 10, anim: 'cast', lock: 0.35,
-      desc: 'Fling the Doll to where you aim (within its strings\' reach). It cuts anything it passes through, and holds that spot for 3s. Builds 1 Encore on a hit. Two charges.',
+      desc: 'Fling the Doll to where you aim (within its strings\' reach). It cuts anything it passes through, and stays there until you pull it again or pick another target. Builds 1 Encore on a hit. Two charges.',
       usable: k => !mariLimp(k),
       effect(k) {
         const p = mariPos(k), aim = mariAim(k), i = mariPick(k, aim), d = k.g.dolls[i];
@@ -3308,7 +3314,7 @@ KITS.marionettist = {
         if (L > lim) to = { x: p.x + (to.x - p.x) / L * lim, y: p.y + (to.y - p.y) / L * lim };
         if (typeof ARENA !== 'undefined' && ARENA.clamp) ARENA.clamp(to, 20);
         const e = mariEnemy(k), from = { x: d.x, y: d.y };
-        d.x = to.x; d.y = to.y; d.mode = 'post'; d.until = k.now + 3;
+        d.x = to.x; d.y = to.y; d.mode = 'post'; d.until = k.now + 3; d.manual = !!(k.env.human && k.env.human());   // a player's Doll stays put; a bot's goes back to work
         if (k.env.collide) k.env.collide(d, 14);
         k.fx('pull', { i });
         if (e && kitSegDist(e.x, e.y, from.x, from.y, d.x, d.y) <= mariER(e) + 18) {
@@ -3348,7 +3354,7 @@ KITS.marionettist = {
         const p = mariPos(k), aim = k.env.aim ? k.env.aim() : null, i = mariPick(k, aim), d = k.g.dolls[i];
         if (!d) return;
         kitMove(k, 'point', { x: Math.round(d.x), y: Math.round(d.y), ab: this });
-        d.x = p.x; d.y = p.y; d.mode = 'post'; d.until = k.now + 1.5;
+        d.x = p.x; d.y = p.y; d.mode = 'post'; d.until = k.now + 1.5; d.manual = false;
         k.g.swapAt = k.now;
         if (k.talent('marionettist_bodydouble')) k.shield('self', 150, 5, { ab: this });
         if (k.perk('marionettist_a2') && k.g.strings < 3 && !mariLimp(k)) k.g.strings++;

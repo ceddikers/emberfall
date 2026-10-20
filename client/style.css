@@ -867,3 +867,15 @@ body:has(#loot:not(.hidden)) #results { padding-right: 332px; }
 .ip-moves { margin-top: 6px; display: grid; gap: 3px; font-size: 12px; line-height: 1.35; color: #e8dcc4; }
 .ip-moves b { display: inline-block; min-width: 62px; color: #f0c070; font-family: ui-monospace, Consolas, monospace; font-size: 11px; letter-spacing: .04em; }
 .ip-moves i { color: #b0a690; font-style: normal; }
+
+/* hero select, portrait tiles: one big painting each, grouped by role; name, difficulty and play style live in the tooltip */
+#altar .altar-band .band-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+#altar .altar-band .hero-card { display: block; min-height: 0; padding: 0; gap: 0; overflow: hidden; border-radius: 4px; aspect-ratio: 1; }
+#altar .altar-band .hero-card canvas { display: block; width: 100% !important; height: 100% !important; border-radius: 0; }
+#altar .altar-band .hero-card:hover { transform: translateY(-2px); box-shadow: 0 0 0 1px var(--a), 0 6px 22px color-mix(in srgb, var(--a) 40%, transparent); }
+#altar .altar-band .hc-taken { top: auto; bottom: 0; left: 0; right: 0; padding: 14px 6px 4px; text-align: center; font-size: 11px; color: var(--gold-hi, #f4dfa0); background: linear-gradient(transparent, #000c); }
+#altar .altar-band .hc-taken:empty { display: none; }
+.hc-tip { display: grid; gap: 2px; margin: 6px 0; font-size: 12px; }
+.hc-tip u { text-decoration: none; color: var(--muted); margin-right: 4px; }
+@media (min-width: 1100px) { #altar .altar-band .band-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+@media (max-width: 760px) { #altar .altar-band .band-grid { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); } }

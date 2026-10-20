@@ -459,13 +459,13 @@ Single talents stay under +7% pro DPS; full builds +7 to +17%.
 | Key | Skill | Type | What it does |
 |---|---|---|---|
 | Q | Jab | GCD | The Doll stabs: 250, +1 Encore. |
-| W | Pull Strings | oGCD | 2 charges, 10 s. Fling the Doll to where you aim (within reach). It cuts what it passes through and holds that spot for 3 s. |
+| W | Pull Strings | oGCD | 2 charges, 10 s. Fling the Doll to where you aim (within reach). It cuts what it passes through and stays there until you pull it again or pick another target. |
 | E | Cross-Cut | GCD | 8 s. The strings become blades along the line from you to the Doll: 560 and +2 Encore if the enemy is on the line, nothing otherwise. |
 | R | Pirouette | GCD | 12 s. The Doll spins: 300 around it, and nothing can touch it for 1.5 s. +1 Encore. |
 | D | Swap | oGCD | 20 s. You and the Doll trade places. |
 | F | Grand Finale | GCD | 30 s, needs 3 Encore: spends it all on five hits of 60 + 44 per Encore. The Doll can't move while it plays. |
 
-- **The Doll** stations itself on the far side of the boss on its own, and stays where Pull Strings or Swap put it for 3 s.
+- **The Doll** works only the enemy you have picked (click or Tab): it stations itself on that enemy's far side. With none picked it stays where it is. Pull Strings parks it until you pull again or pick another target; Swap leaves it for 1.5 s. Bots keep the old 3 s hold.
 - **Strings:** three. One tears if the Doll is dragged past 300 px from you (it gets yanked back) or a boss mechanic lands on it. At 0 the Doll goes limp for 4 s and then all three come back; a torn string regrows after 15 s.
 
 *Ceiling:* the boss's mechanics are aimed at you, but your damage lives somewhere else. Keep the Doll out of the red with Pull and Pirouette, stand so the boss sits on your string line for every Cross-Cut, and start Grand Finale only when you've read the next five seconds. Newbies reach 81% of pro damage: the Doll keeps hitting even when you play badly; the gap is in keeping its Strings.
