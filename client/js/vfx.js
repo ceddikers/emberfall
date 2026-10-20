@@ -931,12 +931,12 @@ const VFX = (() => {
         if (heat > 0.01) {
           c.globalCompositeOperation = 'lighter'; c.globalAlpha = k * heat * 0.8; c.fillStyle = o.heat || '#ff5a14'; trace(c, 0.45);
           c.globalCompositeOperation = 'source-over';
-          for (const em of embers) { const [x, y] = at(em.q, 0); glowAt(c, x, y, 9 * em.s, '#ffb040', k * heat * (0.55 + 0.45 * Math.sin(t * 7 + em.ph))); }
+          for (const em of embers) { const [x, y] = at(em.q, 0); glowAt(c, x, y, 9 * em.s, o.ember || '#ffb040', k * heat * (0.55 + 0.45 * Math.sin(t * 7 + em.ph))); }
         }
         c.globalAlpha = 1;
         c.restore();
       }, tick: (p) => {
-        if (Math.random() < 0.12 * Math.max(0, 1 - p * dur / heatT)) { const [x, y] = at(rand(0.1, 0.9), 0); spawn({ x, y, z: 2, vx: rand(-10, 10), vz: rand(25, 50), life: rand(0.5, 0.9), size: rand(2, 4), size1: 0, color: '#ffc060' }); }
+        if (Math.random() < 0.12 * Math.max(0, 1 - p * dur / heatT)) { const [x, y] = at(rand(0.1, 0.9), 0); spawn({ x, y, z: 2, vx: rand(-10, 10), vz: rand(25, 50), life: rand(0.5, 0.9), size: rand(2, 4), size1: 0, color: o.ember || '#ffc060' }); }
       } });
     },
     // smear: something heavy rolled through sauce (a meatball's gravy trail): a lumpy brown band with an ink edge, a

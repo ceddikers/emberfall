@@ -2038,6 +2038,13 @@
     for (const l of raid.lanterns) { const c = l.carrier != null ? entById(l.carrier) : null; if (c) ArenaView.lantern(ctx, c.x + 14, c.y - (c.lift || 0), now, true, l.last); }
     // Stuffed (Grubnak, Hard): a gold, bloated glow round whoever can't take another plate
     for (const [id, st] of raid.party) if (st.alive && st.debuffs && st.debuffs.some(d => d[0] === 'stuffed')) { const e = entById(id); if (e) ArenaView.stuffedMark(ctx, e.x, e.y - (e.lift || 0), now); }
+    // Skitterra's silk: whoever is rooted is wound in a cocoon, which shreds when it lets go
+    if (raid.def.id === 'skitterra') for (const [id, st] of raid.party) {
+      const on = st.alive && st.debuffs && st.debuffs.some(d => d[0] === 'rooted'), e = entById(id);
+      if (on && !st.wrapAt) st.wrapAt = now;
+      if (!on && st.wrapAt) { st.wrapAt = 0; if (e && st.alive) BOSS_VFX.silkFree(e); }
+      if (on && e) ArenaView.cocoon(ctx, e.x, e.y - (e.lift || 0), now - st.wrapAt, now);
+    }
     for (const [id, d] of raid.doom) {
       const e = entById(id); if (!e) continue;
       ArenaView.doomMark(ctx, e.x, e.y - (e.lift || 0) - 92 * heroScale() / HERO_SCALE, (d.end - now) / Math.max(0.1, d.end - d.start), now);

@@ -419,29 +419,44 @@ const BOSS_VFX = (() => {
       shake(4);
     },
     // Skitterra
+    // Venom Mist: the fog front breaks over everyone: green clouds roll in and fill the cave, then thin to a haze
     mist(tg) {
-      roomTint('#7ae03a', 0.22, 0.9);
-      for (const q of scatter({ kind: 'circle', x: 0, y: 0, r: AR() - 30 }, 18)) VFX.smoke(q.x, q.y, { color: '#8ad84a', n: 2, size: 40, a: 0.45, speed: 40, life: 1.4 });
+      roomTint('#7ae03a', 0.12, 0.6);
+      venomFog();
       shake(5);
     },
+    // Eightfold Lunge: the leg rakes down the cone and drives in: a pink claw burst where its tip lands, rock thrown up
+    // along it, and a trench torn in the floor that glows pink while it cools
     lunge(tg) {
-      const s = tg.live;
-      shapeFlash(s, '#ff7ac0', { a: 0.22, dur: 0.35 });
-      streak(s.x, s.y, s.angle, '#ffb0dc', { w: 12, dur: 0.28 });
-      for (let i = 0; i < 3; i++) { const d = rand(120, AR() * 1.2); VFX.sparks(s.x + Math.cos(s.angle) * d, s.y + Math.sin(s.angle) * d, { color: '#ffd0ec', n: 3, angle: s.angle, spread: 0.5, speed: 300 }); }
-      // where the leg's tip drives into the floor: a burst of chitin spikes and broken stone
-      const tip = Math.min(500, s.len || 500), tx = s.x + Math.cos(s.angle) * tip, ty = s.y + Math.sin(s.angle) * tip;
-      if (ARENA.sd(tx, ty) < -20) {
-        VFX.spikeburst(tx, ty, { r: 46, n: 9, color: '#ff7ac0', core: '#ffe0f0', ink: '#2a0a20', layer: 'ground' });
-        VFX.debris(tx, ty, { color: '#4a4156', n: 6, speed: 0.9 });
+      const s = tg.live, ca = Math.cos(s.angle), sa = Math.sin(s.angle);
+      shapeFlash(s, '#ff7ac0', { a: 0.2, dur: 0.35 });
+      streak(s.x, s.y, s.angle, '#ffb0dc', { w: 8, dur: 0.24 });
+      const end = reach(s.x, s.y, s.angle).d - 30, d1 = Math.min(600, end), d0 = Math.max(110, Math.min(320, d1 - 120));
+      if (d1 > d0 + 40) {
+        VFX.gouge(s.x + ca * d0, s.y + sa * d0, s.x + ca * d1, s.y + sa * d1, { w: 30, dur: 8, heat: '#ff3aa8', lip: '#3a1030', ember: '#ff9ad8', heatT: 6.5 });
+        const tip = Math.min(500, d1 - 30), tx = s.x + ca * tip, ty = s.y + sa * tip;
+        bang(tx, ty, 82, { n: 11, color: '#ff5ab4', core: '#ffe4f4', ink: '#2a0a20' });
+        VFX.sparks(tx, ty, { color: '#ffd0ec', n: 8, angle: s.angle, spread: 0.9, speed: 320 });
+        for (const q of [0.15, 0.5, 0.85]) { const d = d0 + (d1 - d0) * q; VFX.debris(s.x + ca * d, s.y + sa * d, { color: '#4a4156', n: 4, speed: 0.9 }); }
       }
       shake(4);
     },
-    venom(tg) {
-      const s = tg.live;
-      shapeFlash(s, '#9adf3a', { a: 0.3, dur: 0.4 });
-      streak(s.x, s.y, s.angle, '#b8ff5a', { w: 9, dur: 0.35 });
-      for (let i = 1; i <= 4; i++) { const d = i * 110; VFX.splash(s.x + Math.cos(s.angle) * d, s.y + Math.sin(s.angle) * d, { color: '#8ad82a', n: 4 }); }
+    // Venom Spit: a glob lobbed from her fangs bursts in an acid splash where the pool will be
+    venom(tg, ctx) {
+      const s = tg.live, ca = Math.cos(s.angle), sa = Math.sin(s.angle), e = tg.aim != null ? ctx.entById(tg.aim) : null;
+      shapeFlash(s, '#9adf3a', { a: 0.18, dur: 0.35 });
+      const L = Math.max(200, e ? Math.hypot(e.x - s.x, e.y - s.y) : 380);
+      const { x, y } = ARENA.clamp({ x: s.x + ca * L, y: s.y + sa * L }, 60), ox = s.x + ca * 70, oy = s.y + sa * 70;
+      VFX.fx({ dur: 0.18, layer: 'air', draw: (c, p, t, ef) => {
+        const gx = ox + (x - ox) * p, gy = oy + (y - oy) * p - 30 * (1 - p) - Math.sin(p * Math.PI) * 60;
+        VFX.glowAt(c, gx, gy, 24, '#8aff4a', ef.a * 0.6);
+        circle(c, gx, gy, 10, '#8adf2a', '#14300a', 2); circle(c, gx - 3, gy - 3.5, 3.5, '#f0ffd0');
+      }, done: () => {
+        bang(x, y, 95, { n: 16, color: '#8adf2a', core: '#f4ffc8', ink: '#123008', dur: 0.45 });
+        VFX.splash(x, y, { color: '#8ad82a', n: 16, speed: 1.2 });
+        VFX.smoke(x, y, { color: '#8ad84a', n: 5, size: 30, a: 0.45, speed: 50, life: 1.2 });
+        shake(4);
+      } });
     },
     // Skitterra, Hard: a sac bursting, the charge, a glob of silk landing
     eggsac(tg) {
@@ -451,16 +466,33 @@ const BOSS_VFX = (() => {
       VFX.shock(s.x, s.y, { r: s.r * 1.3, color: '#d8ff7a', w: 5, flat: 1 });
       shake(3);
     },
-    fang(tg) {
-      const s = tg.live, ca = Math.cos(s.angle), sa = Math.sin(s.angle);
-      shapeFlash(s, '#ff7ac0', { a: 0.3, dur: 0.4 });
-      streak(s.x, s.y, s.angle, '#ffb0dc', { w: 16, dur: 0.3 });
-      for (let d = 40; d < AR() * 2; d += 80) {
-        const x = s.x + ca * d, y = s.y + sa * d;
-        if (ARENA.sd(x, y) > 0) break;
-        VFX.smoke(x, y, { color: '#e8e0f0', n: 2, size: 30, a: 0.5, speed: 60 });
-      }
-      shake(7);
+    // Fang Rush: a pink smear down the lane behind her as she charges, claw bursts and rock kicked up where she passes,
+    // and a heavier burst where she stops (the silk she drags is the trail zone)
+    fang(tg, ctx) {
+      const s = tg.live, ca = Math.cos(s.angle), sa = Math.sin(s.angle), b = ctx.bossDraw;
+      shapeFlash(s, '#ff7ac0', { a: 0.26, dur: 0.4 });
+      let last = 0, stillFor = 0, prev = 0, done = false;
+      const along = () => b ? Math.max(0, (b.x - s.x) * ca + (b.y - s.y) * sa) : 0;
+      VFX.fx({ dur: 2.2, layer: 'ground', tick: (p, dt) => {
+        if (done) return;
+        const d = along();
+        if (d - last > 100) { last = d; const x = s.x + ca * d, y = s.y + sa * d; bang(x, y, 46, { n: 9, color: '#ff5ab4', core: '#ffe4f4', ink: '#2a0a20', dur: 0.3 }); VFX.debris(x, y, { color: '#4a4156', n: 3, speed: 1 }); }
+        stillFor = d - prev < 1 && d > 60 ? stillFor + dt : 0; prev = d;
+        if (stillFor > 0.08) {
+          done = true; const x = s.x + ca * d, y = s.y + sa * d;
+          bang(x, y, 90, { n: 13, color: '#ff5ab4', core: '#ffe4f4', ink: '#2a0a20' }); VFX.debris(x, y, { color: '#4a4156', n: 8, speed: 1.2 }); shake(7);
+        }
+      }, draw: (c, p, t, e) => {
+        const d = Math.max(prev, 1), k = e.a * Math.min(1, (1 - p) / 0.5), hw = 70;
+        c.save(); clipArena(c);
+        const g = c.createLinearGradient(s.x, s.y, s.x + ca * d, s.y + sa * d);
+        g.addColorStop(0, 'rgba(255,90,180,0)'); g.addColorStop(0.6, `rgba(255,90,180,${0.5 * k})`); g.addColorStop(1, `rgba(255,220,240,${0.7 * k})`);
+        c.beginPath(); c.moveTo(s.x - sa * 12, s.y + ca * 12); c.lineTo(s.x + ca * d - sa * hw, s.y + sa * d + ca * hw);
+        c.lineTo(s.x + ca * d + sa * hw, s.y + sa * d - ca * hw); c.lineTo(s.x + sa * 12, s.y - ca * 12); c.closePath();
+        c.globalCompositeOperation = 'screen'; c.fillStyle = g; c.fill();
+        c.restore();
+      } });
+      shake(4);
     },
     glob(tg) {
       const s = tg.live;
@@ -609,9 +641,12 @@ const BOSS_VFX = (() => {
       VFX.hit(x, y, '#ff4a3a', 2.3);
       VFX.splash(x, y, { color: '#a01a1a', n: 10 });
     } else if (ctx.boss === 'skitterra') {
-      for (let i = 0; i < 4; i++) VFX.lightning(s.x, s.y, x + rand(-14, 14), y + rand(-10, 10), { color: '#f4f0ff', jag: 10, dur: 0.5 });
-      VFX.smoke(x, y, { color: '#f4f0ff', n: 8, size: 26, a: 0.7, speed: 50 });
+      // Silk Wrap: the cage snaps shut, strands whipping in round the tank, and a web left stuck to the floor (the
+      // cocoon itself is drawn while they're rooted)
+      silkWhip(x, y);
       VFX.hit(x, y, '#e8dcff', 2);
+      VFX.burst(x, y - 20, { color: '#f4f0ff', n: 14, speed: 220, size: 9 });
+      webDecal(x, y, 120, 7);
     } else {
       // Tenderize: the ghost cleaver comes down flat along the cone, out from him through the tank, and cuts the floor
       // the length of it
@@ -772,6 +807,69 @@ const BOSS_VFX = (() => {
     for (let i = 0; i < 6; i++) VFX.spawn({ x: mx + rand(-40, 40), y: my + rand(-40, 40), z: 20, vx: rand(-120, 120), vy: rand(-90, 90), vz: rand(40, 140), g: 300,
       life: 0.6, size: 12, color: '#ffffff', stretch: 4, vr: rand(-8, 8) });
     VFX.shock(e.x, e.y, { r: 50, color: '#ffffff', w: 3, dur: 0.3 });
+  }
+  // a cocoon letting go: shreds of silk flying off
+  function silkFree(e) {
+    VFX.burst(e.x, e.y - 20, { color: '#f4f0ff', n: 8, speed: 150, size: 8 });
+    for (let i = 0; i < 6; i++) VFX.spawn({ x: e.x + rand(-14, 14), y: e.y + rand(-6, 6), z: rand(10, 40), vx: rand(-110, 110), vy: rand(-60, 60), vz: rand(40, 120), g: 300,
+      life: 0.5, size: 10, color: '#ffffff', stretch: 4, vr: rand(-8, 8) });
+  }
+  // Silk Wrap landing: strands whipping in from all round and cinching on the tank
+  function silkWhip(x, y) {
+    const st = Array.from({ length: 9 }, (_, i) => ({ a: i * TAU / 9 + rand(-0.2, 0.2), r: rand(110, 150), bend: rand(-0.9, 0.9) }));
+    VFX.fx({ dur: 0.35, layer: 'air', draw: (c, p, t, e) => {
+      const q = easeOut(Math.min(1, p / 0.6)), k = e.a * (1 - Math.max(0, p - 0.5) / 0.5);
+      c.save(); c.lineCap = 'round';
+      for (const s of st) {
+        const r0 = s.r * (1 - q) + 18, r1 = r0 + 60 * (1 - q) + 20, a0 = s.a + s.bend * (1 - q), cy = y - 24;
+        c.beginPath(); c.moveTo(x + Math.cos(s.a) * r1, cy + Math.sin(s.a) * r1 * 0.8);
+        c.quadraticCurveTo(x + Math.cos(a0 + 0.5) * (r0 + r1) / 2, cy + Math.sin(a0 + 0.5) * (r0 + r1) / 2 * 0.8, x + Math.cos(a0) * r0, cy + Math.sin(a0) * r0 * 0.8);
+        c.globalAlpha = k * 0.35; c.strokeStyle = '#f4f0ff'; c.lineWidth = 6; c.stroke();
+        c.globalAlpha = k; c.strokeStyle = '#ffffff'; c.lineWidth = 2; c.stroke();
+      }
+      c.restore(); c.globalAlpha = 1;
+    } });
+  }
+  // a web stuck to the floor where the wrap landed: crooked spokes and sagging rings, fading out
+  function webDecal(x, y, r, dur) {
+    const n = 11, spokes = Array.from({ length: n }, (_, i) => ({ a: i * TAU / n + rand(-0.15, 0.15), l: r * rand(0.75, 1.1) }));
+    const P = (s, f) => [x + Math.cos(s.a) * s.l * f, y + Math.sin(s.a) * s.l * f * 0.75];
+    VFX.fx({ dur, layer: 'ground', draw: (c, p, t, e) => {
+      const life = p * dur, k = e.a * Math.min(1, life / 0.2) * Math.min(1, (dur - life) / 1.5);
+      c.save(); c.lineCap = 'round'; c.strokeStyle = `rgba(240,238,255,${0.5 * k})`; c.lineWidth = 1.5;
+      c.beginPath();
+      for (const s of spokes) { c.moveTo(x, y); c.lineTo(...P(s, 1)); }
+      for (const f of [0.3, 0.55, 0.8]) for (let i = 0; i < n; i++) {
+        const a = spokes[i], b = spokes[(i + 1) % n], [ax, ay] = P(a, f), [bx, by] = P(b, f);
+        c.moveTo(ax, ay); c.quadraticCurveTo((ax + bx) / 2 * 0.92 + x * 0.08, (ay + by) / 2 * 0.92 + y * 0.08, bx, by);
+      }
+      c.stroke();
+      c.restore();
+    } });
+  }
+  // Venom Mist breaking: clouds rolling in from the walls to fill the cave, then a thin haze with motes drifting up
+  function venomFog() {
+    const R = AR(), puffs = [];
+    for (let i = 0; i < 48; i++) { const a = rand(0, TAU), wall = ARENA.edge(a); puffs.push({ a, wall, d: Math.sqrt(rand(0.02, 1)) * (wall - 40), r: rand(60, 100) }); }
+    puffs.sort((p, q) => Math.sin(p.a) * p.d - Math.sin(q.a) * q.d);
+    VFX.fx({ dur: 1.8, layer: 'ground', draw: (c, p, t, e) => {
+      const k = e.a * Math.min(1, p / 0.12) * Math.min(1, (1 - p) / 0.55), q = easeOut(Math.min(1, p / 0.4));
+      c.save(); clipArena(c);
+      for (const f of puffs) {
+        const d = f.wall + (f.d - f.wall) * q, x = Math.cos(f.a) * d, y = Math.sin(f.a) * d, r = f.r * (0.8 + 0.35 * q + 0.2 * p);
+        // a soft puff: lit pale green on top, deep green underneath, thinning out to nothing at its edge
+        const g = c.createRadialGradient(x - r * 0.2, y - r * 0.3, r * 0.05, x, y, r * 1.1);
+        g.addColorStop(0, 'rgba(196,255,120,0.55)'); g.addColorStop(0.45, 'rgba(98,184,40,0.45)'); g.addColorStop(0.8, 'rgba(36,90,16,0.28)'); g.addColorStop(1, 'rgba(36,90,16,0)');
+        c.globalAlpha = k; c.fillStyle = g; c.beginPath(); c.ellipse(x, y, r * 1.1, r * 0.78, 0, 0, TAU); c.fill();
+      }
+      c.restore(); c.globalAlpha = 1;
+    } });
+    VFX.fx({ dur: 5, delay: 0.9, layer: 'ground', draw: (c, p, t, e) => {
+      const k = e.a * Math.min(1, p / 0.1) * (1 - p);
+      c.save(); clipArena(c); c.globalAlpha = 0.14 * k; c.fillStyle = '#6ac82a'; c.fillRect(-R - 10, -R - 10, R * 2 + 20, R * 2 + 20); c.restore(); c.globalAlpha = 1;
+    }, tick: (p) => {
+      if (Math.random() < 0.8 * (1 - p)) { const q = scatter({ kind: 'circle', x: 0, y: 0, r: R - 40 }, 1)[0]; if (q) VFX.spawn({ x: q.x, y: q.y, z: rand(0, 30), vz: rand(10, 30), vx: rand(-8, 8), life: rand(1.2, 2), size: rand(3, 5), size1: 0, color: '#c8ff7a' }); }
+    } });
   }
   function reelBite(e) {
     VFX.hit(e.x, e.y, '#9adf3a', 1.8);
@@ -971,5 +1069,5 @@ const BOSS_VFX = (() => {
     shake(8);
   }
 
-  return { failed, propFx, stoveBurst, gazed, doomed, cure, knightMemory, knightRise, nightFall, polarityFlip, edgeClose, pulse, orbForm, orbHit, chain, meatballLand, meatballWall, meatballHit, scorchPool, silkSnap, reelBite, impact, castStart, auto, leap, roar, addSpawn, addDeath, addEnrage, fury, spit, husk, tetherSnap, playerDeath, playerRaised, partyBuff, victory, wipe };
+  return { failed, propFx, stoveBurst, gazed, doomed, cure, knightMemory, knightRise, nightFall, polarityFlip, edgeClose, pulse, orbForm, orbHit, chain, meatballLand, meatballWall, meatballHit, scorchPool, silkSnap, silkFree, reelBite, impact, castStart, auto, leap, roar, addSpawn, addDeath, addEnrage, fury, spit, husk, tetherSnap, playerDeath, playerRaised, partyBuff, victory, wipe };
 })();

@@ -531,12 +531,31 @@ const BossTells = (() => {
     mist: {
       raidwide: true,
       ground(ctx, tg, s, p, k, t) {
-        // creeps in from every wall: each puff sits between the wall and a line closing in on the centre
-        const fill = 1 - 0.75 * easeOut(p);
+        // creeps in from every wall: a wavy bright front closing in on the centre, fog behind it, arrows pointing in
+        const fill = 1 - 0.75 * easeOut(p), N = 72, front = [];
+        for (let i = 0; i < N; i++) {
+          const a = i * TAU / N, d = ARENA.edge(a) * fill + Math.sin(a * 9 + t * 2.2) * 9 + Math.sin(a * 4 - t * 1.3) * 6;
+          front.push([Math.cos(a) * d, Math.sin(a) * d]);
+        }
+        const trace = () => { ctx.beginPath(); front.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.closePath(); };
+        ctx.save();
+        ctx.beginPath(); ctx.rect(-4000, -4000, 8000, 8000); front.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.closePath();
+        ctx.fillStyle = rgba('#3f8a16', (0.12 + 0.14 * p) * k); ctx.fill('evenodd');
+        ctx.restore();
         for (let i = 0; i < 46; i++) {
           const a = i * TAU / 46 + Math.sin(t * 0.4 + i) * 0.05, wall = ARENA.edge(a), inner = wall * fill;
-          const d = inner + hash(i, 2) * (wall - inner);
-          glow(ctx, Math.cos(a) * d, Math.sin(a) * d, 40 + hash(i, 4) * 40, '#7ae03a', 0.16 * k);
+          const d = inner + 20 + hash(i, 2) * Math.max(0, wall - inner - 20);
+          glow(ctx, Math.cos(a) * d, Math.sin(a) * d, 40 + hash(i, 4) * 40, '#7ae03a', 0.18 * k);
+        }
+        ctx.save(); ctx.lineJoin = 'round';
+        trace(); ctx.strokeStyle = rgba('#14300a', 0.6 * k); ctx.lineWidth = 10; ctx.stroke();
+        ctx.strokeStyle = rgba('#7aff3a', 0.6 * k); ctx.lineWidth = 6; ctx.stroke();
+        ctx.strokeStyle = rgba('#eaffb8', 0.9 * k); ctx.lineWidth = 2; ctx.stroke();
+        ctx.restore();
+        for (let i = 0; i < 8; i++) {
+          const a = (i + 0.5) * TAU / 8, d = ARENA.edge(a) * fill - 50 - (t * 30) % 24, ux = -Math.cos(a), uy = -Math.sin(a);
+          const x = -ux * d, y = -uy * d, P = (u, v) => [x + ux * u - uy * v, y + uy * u + ux * v];
+          poly(ctx, [...P(14, 0), ...P(-8, 13), ...P(-2, 0), ...P(-8, -13)], rgba('#a8ff5a', 0.85 * k), rgba('#14300a', 0.8 * k), 2);
         }
       },
     },
@@ -551,6 +570,17 @@ const BossTells = (() => {
         g.addColorStop(0, `rgba(20,6,24,${(0.3 + 0.25 * p) * k})`); g.addColorStop(1, `rgba(20,6,24,${0.12 * k})`);
         ctx.fillStyle = g; ctx.fill();
         ctx.fillStyle = rgba('#ff7ac0', (0.08 + 0.1 * p) * k); ctx.fill();
+        // a jagged pink tear down the middle: the line the leg rakes
+        const R0 = 90, R1 = Math.min(AR(), 900), n = 10, Lt = [], Rt = [];
+        for (let i = 0; i <= n; i++) {
+          const r = R0 + (R1 - R0) * i / n, z = i % 2 ? 1 : 0.3, w = s.arc * (0.05 + 0.13 * i / n);
+          const al = s.angle - w * z - s.arc * 0.02, ar = s.angle + w * (1.3 - z) + s.arc * 0.02;
+          Lt.push([s.x + Math.cos(al) * r, s.y + Math.sin(al) * r]); Rt.push([s.x + Math.cos(ar) * r, s.y + Math.sin(ar) * r]);
+        }
+        const band = [...Lt, ...Rt.reverse()].flat();
+        poly(ctx, band, rgba('#ff5ab4', (0.22 + 0.4 * p) * k), rgba('#3a0a2a', 0.6 * k), 2);
+        ctx.beginPath(); ctx.moveTo(s.x + ca * R0, s.y + sa * R0); ctx.lineTo(s.x + ca * R1, s.y + sa * R1);
+        ctx.strokeStyle = rgba('#ffe0f2', (0.2 + 0.5 * p) * k); ctx.lineWidth = 1.5; ctx.stroke();
         ctx.restore();
       },
       air(ctx, tg, s, p, k, t) {
@@ -567,14 +597,30 @@ const BossTells = (() => {
     // Venom Spit: venom beads string out along the line it will travel, brightening once it's locked
     venom: {
       color: '#b8ff5a',
-      ground(ctx, tg, s, p, k, t) {
+      ground(ctx, tg, s, p, k, t, env) {
         const ca = Math.cos(s.angle), sa = Math.sin(s.angle), locked = p > 1 - (tg.lockAt || 1.2) / tg.dur;
-        for (let i = 0; i < 16; i++) {
-          if (i / 16 > p * 1.2) continue;
-          const d = 90 + i * 34, wob = Math.sin(t * 6 + i) * 3;
-          glow(ctx, s.x + ca * d - sa * wob, s.y + sa * d + ca * wob, locked ? 16 : 11, '#8aff4a', (locked ? 0.7 : 0.4) * k);
-          circle(ctx, s.x + ca * d - sa * wob, s.y + sa * d + ca * wob, locked ? 4.5 : 3, rgba('#d8ffb0', k));
+        // beads swelling along the line out to the target's distance, where the glob will land
+        const e = tg.aim != null ? env.entById(tg.aim) : null;
+        const L = Math.max(200, e ? Math.hypot(e.x - s.x, e.y - s.y) : 380), n = Math.max(6, Math.round((L - 90) / 40));
+        for (let i = 0; i < n; i++) {
+          const q = i / (n - 1); if (q > p * 1.25) continue;
+          const d = 90 + q * (L - 130), wob = Math.sin(t * 6 + i) * 3 * (1 - q), x = s.x + ca * d - sa * wob, y = s.y + sa * d + ca * wob;
+          const r = (2.5 + q * 4.5) * (locked ? 1.25 : 1);
+          glow(ctx, x, y, r * 3.2, '#8aff4a', (locked ? 0.6 : 0.35) * k);
+          circle(ctx, x, y, r, rgba('#8adf2a', k), rgba('#14300a', 0.8 * k), 1.5);
+          circle(ctx, x - r * 0.3, y - r * 0.35, r * 0.35, rgba('#f0ffd0', 0.9 * k));
         }
+        const x = s.x + ca * L, y = s.y + sa * L, R = 50 - 10 * p, spin = locked ? 0.4 : t * 1.6;
+        circle(ctx, x, y, R, rgba('#8adf2a', (0.08 + 0.1 * p) * k), rgba('#c8ff6a', 0.85 * k), 2);
+        ctx.save(); ctx.lineCap = 'round';
+        for (let j = 0; j < 4; j++) {
+          const a = spin + j * TAU / 4;
+          ctx.beginPath(); ctx.arc(x, y, R + 9, a - 0.42, a + 0.42); ctx.strokeStyle = rgba('#14300a', 0.7 * k); ctx.lineWidth = 6; ctx.stroke();
+          ctx.strokeStyle = rgba('#b8ff5a', k); ctx.lineWidth = 3; ctx.stroke();
+          const b = a + TAU / 8;
+          line(ctx, x + Math.cos(b) * (R - 2), y + Math.sin(b) * (R - 2), x + Math.cos(b) * (R - 12), y + Math.sin(b) * (R - 12), rgba('#eaffb8', 0.9 * k), 2.5);
+        }
+        ctx.restore();
       },
     },
     // Egg Sacs (Hard): a pale sac bound in silk sits in each circle, twitching faster as it ripens; one pip, one foot
@@ -595,20 +641,34 @@ const BossTells = (() => {
         circle(ctx, s.x, s.y + s.r + 14, 4.5, rgba('#f0ffc8', 0.9 * k), OUT, 1.5);
       },
     },
-    // Fang Rush (Hard): threads of silk snap taut along her path, slack while she aims, straight once she's set
+    // Fang Rush (Hard): pink chevrons running down her lane, a thread shot to her mark, slack while she aims and
+    // pulled taut down the lane once she's set
     fang: {
       color: '#ffb0dc',
-      ground(ctx, tg, s, p, k, t) {
+      ground(ctx, tg, s, p, k, t, env) {
         const ca = Math.cos(s.angle), sa = Math.sin(s.angle), L = toWall(s.x, s.y, s.angle, s.len);
         const locked = p > 1 - (tg.lockAt || 0.8) / tg.dur;
-        ctx.save(); SHAPES.trace(ctx, s); ctx.fillStyle = rgba('#24082a', (0.15 + 0.25 * p) * k); ctx.fill(); ctx.restore();
-        for (const f of [-0.38, 0, 0.38]) {
-          const ox = -sa * s.w * f, oy = ca * s.w * f, sag = locked ? 0 : 14 + Math.sin(t * 5 + f * 9) * 5;
-          ctx.beginPath(); ctx.moveTo(s.x + ox, s.y + oy);
-          ctx.quadraticCurveTo(s.x + ox + ca * L / 2 - sa * sag, s.y + oy + sa * L / 2 + ca * sag, s.x + ox + ca * L, s.y + oy + sa * L);
-          ctx.strokeStyle = rgba('#f4f0ff', (locked ? 0.85 : 0.4) * k); ctx.lineWidth = locked ? 2.5 : 1.5; ctx.stroke();
+        ctx.save(); SHAPES.trace(ctx, s); ctx.fillStyle = rgba('#24082a', (0.18 + 0.25 * p) * k); ctx.fill(); ctx.clip();
+        const gap = 120, hw = s.w * 0.4, h = hw * 0.75, th = 26, run = (t * (locked ? 280 : 90)) % gap;
+        for (let d = 40 + run; d < L + h; d += gap) {
+          const x = s.x + ca * d, y = s.y + sa * d, P = (u, v) => [x + ca * u - sa * v, y + sa * u + ca * v];
+          const a = (0.5 + 0.5 * Math.min(1, d / 200)) * (locked ? 0.85 : 0.45) * k;
+          poly(ctx, [...P(0, 0), ...P(-h, hw), ...P(-h - th, hw), ...P(-th, 0), ...P(-h - th, -hw), ...P(-h, -hw)], rgba('#ff5ab4', a), rgba('#2a0820', 0.8 * k), 2.5);
+          line(ctx, ...P(-h, hw), ...P(0, 0), rgba('#ffe0f2', a), 1.5); line(ctx, ...P(0, 0), ...P(-h, -hw), rgba('#ffe0f2', a), 1.5);
         }
-        if (locked) for (let i = 0; i < 5; i++) { const q = (t * 2.2 + i / 5) % 1; glow(ctx, s.x + ca * q * L, s.y + sa * q * L, 14, '#ff6ab0', 0.5 * k); }
+        ctx.restore();
+        const e = tg.aim != null ? env.entById(tg.aim) : null, mx = s.x + ca * 70, my = s.y + sa * 70 - 24;
+        const ex = locked || !e ? s.x + ca * L : e.x, ey = locked || !e ? s.y + sa * L : e.y - 18;
+        const sag = locked ? 0 : 22 + Math.sin(t * 4) * 6, nx = -(ey - my), ny = ex - mx, nd = Math.hypot(nx, ny) || 1;
+        ctx.save(); ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(mx, my); ctx.quadraticCurveTo((mx + ex) / 2 + nx / nd * sag, (my + ey) / 2 + ny / nd * sag, ex, ey);
+        ctx.strokeStyle = rgba('#f4f0ff', 0.25 * k); ctx.lineWidth = 6; ctx.stroke();
+        ctx.strokeStyle = rgba('#ffffff', (locked ? 0.9 : 0.6) * k); ctx.lineWidth = 1.8; ctx.stroke();
+        ctx.restore();
+        if (e && !locked) {
+          circle(ctx, e.x, e.y, 28, null, rgba('#ffffff', 0.75 * k), 2);
+          circle(ctx, e.x, e.y, 36 + Math.sin(t * 5) * 3, null, rgba('#ff7ac0', 0.6 * k), 1.5);
+        }
       },
     },
     // Spinneret Volley (Hard): a glob of silk drops on its target on a thread; its shadow tightens as it falls
@@ -1144,11 +1204,26 @@ const BossTells = (() => {
       }
       if (env.bossId === 'skitterra') {
         if (!tgt) return;
-        for (let i = 0; i < 9; i++) {
-          const a = s.angle - s.arc / 2 + (i / 8) * s.arc, x0 = s.x + Math.cos(a) * s.r, y0 = s.y + Math.sin(a) * s.r;
-          const q = Math.min(1, p * 1.4);
-          line(ctx, x0 + (tgt.x - x0) * (1 - q), y0 + (tgt.y - y0) * (1 - q), tgt.x, tgt.y - 14, rgba('#f4f0ff', 0.5 * k), 1.5);
+        // Silk Wrap: a cage of silk spun round the tank on two threads from her fangs, tightening as the cast runs out
+        const b = env.boss, cx = tgt.x, cy = tgt.y - 24, R = 74 - 28 * easeOut(p), RY = R * 1.25, spin = t * (1.2 + p * 3);
+        const mx = b.x + Math.cos(b.f) * 70, my = b.y + Math.sin(b.f) * 70 - 30;
+        ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+        for (const side of [-1, 1]) {
+          ctx.beginPath(); ctx.moveTo(mx, my);
+          ctx.quadraticCurveTo((mx + cx) / 2 + side * 16 * Math.sin(t * 3), (my + cy - RY) / 2 - 20, cx, cy - RY);
+          ctx.strokeStyle = rgba('#f4f0ff', (0.4 + 0.4 * p) * k); ctx.lineWidth = 1.6; ctx.stroke();
         }
+        glow(ctx, cx, cy, R * 1.3, '#f4f0ff', (0.08 + 0.2 * p) * k);
+        for (const dir of [1, -1]) for (let i = 0; i < 6; i++) {
+          ctx.beginPath();
+          for (let j = 0; j <= 16; j++) {
+            const u = j / 16, ph = spin * dir + i * TAU / 6 + dir * u * 2.4, w = R * Math.sin(Math.PI * u);
+            const x = cx + w * Math.sin(ph), y = cy - RY + 2 * RY * u + w * 0.22 * Math.cos(ph);
+            j ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+          }
+          ctx.strokeStyle = rgba('#f4f0ff', (0.3 + 0.55 * p) * k); ctx.lineWidth = 1.6; ctx.stroke();
+        }
+        ctx.restore();
         return;
       }
       for (let i = 0; i < 7; i++) {
@@ -1364,6 +1439,9 @@ const BossTells = (() => {
       }
       ctx.restore();
       if (shoot >= 1) {
+        // the hook landing: a white ring snapping out from them
+        const hk = (t - rl.start - 0.35) / 0.3;
+        if (hk < 1) { glow(ctx, e.x, e.y - 18, 34, '#ffffff', 0.6 * (1 - hk)); circle(ctx, e.x, e.y - 10, 16 + hk * 34, null, `rgba(255,255,255,${0.85 * (1 - hk)})`, 2.5); }
         // silk bundling around the hooked player's feet
         for (let i = 0; i < 3; i++) ellipse(ctx, e.x, e.y + 2 - i * 5, 20 - i * 3, 8 - i, Math.sin(t * 3 + i) * 0.3, null, `rgba(240,240,255,${pulling ? 0.75 : 0.4})`, 2);
       }

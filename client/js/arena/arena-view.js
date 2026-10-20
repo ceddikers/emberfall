@@ -655,6 +655,22 @@ const ArenaView = {
     ctx.restore();
     ellipse(ctx, x, y - 20, 33 * q, 37 * q, 0, null, rgba('#5a3a0a', 0.35), 1.5);
   },
+  // Skitterra's silk holding someone fast: a cocoon wound round them (winding on over a moment), anchored to the floor
+  cocoon(ctx, x, y, age, t) {
+    const wind = clamp(age / 0.3, 0, 1), cy = y - 24, rx = 22, ry = 32;
+    ctx.save(); ctx.lineCap = 'round';
+    for (let i = 0; i < 4; i++) { const a = 0.5 + i * (Math.PI - 1) / 3; line(ctx, x + Math.cos(a) * 14, y - 4, x + Math.cos(a) * 34, y + 8 - Math.sin(a) * 4, rgba('#f4f0ff', 0.55 * wind), 1.3); }
+    ellipse(ctx, x, cy, rx, ry, 0, rgba('#f0ecfa', 0.42 * wind), rgba('#2a2438', 0.6 * wind), 2);
+    const n = Math.round(9 * wind);
+    for (let i = 0; i < n; i++) {
+      const u = (i + 0.5) / 9, yy = cy - ry + 2 * ry * u, w = rx * Math.sqrt(Math.max(0, 1 - Math.pow((yy - cy) / ry, 2)));
+      ctx.beginPath(); ctx.ellipse(x, yy, w + 1, 4.5, (i % 2 ? 0.28 : -0.28), 0, Math.PI);
+      ctx.strokeStyle = 'rgba(40,34,58,0.55)'; ctx.lineWidth = 4.5; ctx.stroke();
+      ctx.strokeStyle = 'rgba(252,250,255,0.95)'; ctx.lineWidth = 2.2; ctx.stroke();
+    }
+    for (let i = 0; i < 2; i++) glow(ctx, x + (i ? 8 : -9), cy - 10 + i * 18, 6, '#ffffff', 0.3 + 0.3 * Math.sin(t * 4 + i * 2));
+    ctx.restore();
+  },
   // Royal Doom: a violet sigil turns over the doomed player's head, its ring burning down as the time runs out
   doomMark(ctx, x, y, frac, t) {
     const hot = frac < 0.3, k = hot ? 0.75 + Math.sin(t * 14) * 0.25 : 1;
@@ -944,7 +960,7 @@ const ArenaView = {
     glow(ctx, p.x, p.y, r * 1.3, '#7aff3a', 0.16 * k);
     ctx.save(); ctx.globalAlpha = k;
     const g = ctx.createRadialGradient(p.x, p.y, r * 0.1, p.x, p.y, r);
-    g.addColorStop(0, '#9adf3a'); g.addColorStop(0.65, '#3f7a1a'); g.addColorStop(1, '#1e3a0c');
+    g.addColorStop(0, '#86cc30'); g.addColorStop(0.6, '#3a7418'); g.addColorStop(1, '#183a0a');
     ctx.fillStyle = g;
     ctx.beginPath();
     for (let i = 0; i <= 20; i++) {
@@ -952,11 +968,25 @@ const ArenaView = {
       const x = p.x + Math.cos(a) * r * w, y = p.y + Math.sin(a) * r * w;
       i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
     }
-    ctx.closePath(); ctx.fill();
-    ctx.strokeStyle = 'rgba(190,255,120,0.75)'; ctx.lineWidth = 2; ctx.stroke();
-    for (let i = 0; i < 6; i++) {
-      const q = (t * 0.6 + i / 6 + p.id * 0.17) % 1, a = i * 2.3 + p.id, d = r * (0.2 + (i % 3) * 0.22);
-      circle(ctx, p.x + Math.cos(a) * d, p.y + Math.sin(a) * d, 2 + q * 6, `rgba(210,255,150,${0.5 * (1 - q)})`, `rgba(230,255,190,${0.7 * (1 - q)})`, 1);
+    ctx.closePath();
+    // a dark crust round the edge, then the pool, then its bright acid rim
+    ctx.lineJoin = 'round'; ctx.strokeStyle = 'rgba(16,30,6,0.85)'; ctx.lineWidth = 12; ctx.stroke();
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(214,255,90,0.85)'; ctx.lineWidth = 2.5; ctx.stroke();
+    for (let i = 0; i < 9; i++) {
+      const a = i * TAU / 9 + p.id, w = 1.06 + Math.sin(a * 4 + p.id) * 0.07;
+      ellipse(ctx, p.x + Math.cos(a) * r * w, p.y + Math.sin(a) * r * w, 7 + (i % 3) * 3, 4 + (i % 2) * 2, a, 'rgba(26,36,12,0.9)', 'rgba(170,230,70,0.5)', 1);
+    }
+    // bubbles swelling and popping
+    for (let i = 0; i < 7; i++) {
+      const q = (t * 0.7 + i / 7 + p.id * 0.17) % 1, a = i * 2.3 + p.id, d = r * (0.15 + (i % 3) * 0.24), bx = p.x + Math.cos(a) * d, by = p.y + Math.sin(a) * d;
+      if (q < 0.85) { const br = 2 + q * 7; circle(ctx, bx, by, br, 'rgba(150,230,60,0.9)', 'rgba(20,48,10,0.9)', 1); circle(ctx, bx - br * 0.35, by - br * 0.35, br * 0.3, 'rgba(240,255,210,0.9)'); }
+      else circle(ctx, bx, by, 8 + (q - 0.85) * 60, null, `rgba(220,255,160,${(1 - q) * 5})`, 1.2);
+    }
+    // fumes curling up off it
+    for (let i = 0; i < 3; i++) {
+      const q = (t * 0.35 + i / 3 + p.id * 0.29) % 1, fx = p.x + Math.cos(i * 2.1 + p.id) * r * 0.4 + Math.sin(t * 2 + i) * 6;
+      glow(ctx, fx, p.y - q * 60, 14 + q * 14, '#a8f060', 0.3 * Math.sin(q * Math.PI));
     }
     ctx.restore();
   },
@@ -1004,6 +1034,11 @@ const ArenaView = {
       ctx.strokeStyle = 'rgba(240,240,255,0.32)'; ctx.lineWidth = 1.5; ctx.stroke();
     }
     for (let d = 20; d < s.len; d += 34) line(ctx, s.x + ca * d - sa * hw, s.y + sa * d + ca * hw, s.x + ca * (d + 14) + sa * hw, s.y + sa * (d + 14) - ca * hw, 'rgba(240,240,255,0.2)', 1.2);
+    // clumps of tangled silk along it
+    for (let d = 40, i = 0; d < s.len; d += 70, i++) {
+      const off = Math.sin(i * 2.3) * hw * 0.5, x = s.x + ca * d - sa * off, y = s.y + sa * d + ca * off;
+      for (let j = 0; j < 3; j++) ellipse(ctx, x + Math.sin(i + j) * 5, y + Math.cos(i * 2 + j) * 3, 16 - j * 3, 6 - j, s.angle + (j - 1) * 0.5, null, 'rgba(245,242,255,0.45)', 1.3);
+    }
     for (let i = 0; i < 6; i++) { const d = ((i * 97) % 100) / 100 * s.len, off = (((i * 53) % 100) / 100 - 0.5) * s.w * 0.8; circle(ctx, s.x + ca * d - sa * off, s.y + sa * d + ca * off, 2, `rgba(255,255,255,${0.4 + Math.sin(t * 3 + i) * 0.3})`); }
     ctx.restore();
   },
