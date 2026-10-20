@@ -555,6 +555,29 @@ kbd { border-radius: 3px; background: #1d1813; border-color: #4a3d2c; color: var
 .bb-cast.done { border-color: #e0b070; transition: opacity .25s; opacity: .55; }
 .bb-cast.done .fill { background: #f6d6a4; }
 .bb-cast.done .fill::after { display: none; }
+/* the boss's cast, near the middle of the screen (draggable) */
+#boss-cast { position: fixed; left: 50%; top: 26%; transform: translate(-50%, -50%); z-index: 5; display: flex; align-items: center; gap: 10px;
+  width: 320px; padding: 7px 12px 7px 7px; background: #0a0807e8; border: 1px solid #6e4426; border-radius: 3px; box-shadow: 0 0 0 1px #000, 0 6px 18px #0009;
+  pointer-events: auto; cursor: grab; user-select: none; transition: opacity .2s, border-color .15s; }
+#boss-cast.hidden { display: none; }
+#boss-cast.dragging { cursor: grabbing; border-color: #c89a5a; }
+#boss-cast .bc-icon { flex: none; width: 46px; height: 46px; background-size: cover; border-radius: 2px; box-shadow: 0 0 0 1px #000, inset 0 0 0 1px #ffffff14; }
+#boss-cast .bc-body { flex: 1; min-width: 0; }
+#boss-cast small { display: none; font-size: 9.5px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
+#boss-cast .bc-name { display: block; font-family: var(--fantasy); font-weight: 700; font-size: 13px; letter-spacing: .1em; text-transform: uppercase; color: #fff3e0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 3px #000; }
+#boss-cast .bc-bar { position: relative; height: 9px; margin-top: 5px; background: #000; border: 1px solid #3a2414; border-radius: 1px; overflow: hidden; }
+#boss-cast .bc-bar .fill { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, #5a2410, #b85a26 75%, #f0a066); }
+#boss-cast .bc-bar .fill::after { content: ''; position: absolute; right: 0; top: 0; bottom: 0; width: 2px; background: #fff0d0; box-shadow: 0 0 6px 1px #ffb070; }
+#boss-cast .bc-left { flex: none; min-width: 34px; text-align: right; font-style: normal; font-variant-numeric: tabular-nums; font-size: 15px; font-weight: 700; color: #f0d8b0; }
+#boss-cast.done { border-color: #f0c080; }
+#boss-cast.done .bc-bar .fill { background: #f6d6a4; }
+#boss-cast.done .bc-bar .fill::after { display: none; }
+#boss-cast.next { width: 250px; opacity: .72; padding: 5px 10px 5px 5px; }
+#boss-cast.next .bc-icon { width: 34px; height: 34px; filter: saturate(.6); }
+#boss-cast.next small { display: block; }
+#boss-cast.next .bc-name { font-size: 11.5px; color: #e6dcc8; }
+#boss-cast.next .bc-bar { display: none; }
+#boss-cast.next .bc-left { font-size: 13px; color: var(--muted); }
 .bb-cast.done span { color: #2a1608; text-shadow: none; }
 
 /* party frames: number key, role mark, name, aggro eye, class; a tall health bar; your cast toward them; buffs and debuffs */

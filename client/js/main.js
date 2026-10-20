@@ -1385,7 +1385,8 @@
     if (marker) FX.add({ type: 'click', x: p.x, y: p.y, dur: 0.45 });
   }
 
-  canvas.addEventListener('contextmenu', e => e.preventDefault());
+  // right-click is the game's anywhere on the page (the browser's menu only in a text box)
+  document.addEventListener('contextmenu', e => { if (!(e.target.closest && e.target.closest('input, textarea'))) e.preventDefault(); });
   canvas.addEventListener('mousemove', e => {
     mouse.x = e.clientX; mouse.y = e.clientY;
     if (mouse.rightDown && !player.dashMove) moveTo(mouseWorld(), false);

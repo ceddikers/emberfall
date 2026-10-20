@@ -55,9 +55,9 @@ const RaidUI = (() => {
         <div class="bb-top"><b class="bb-name"></b><span class="bb-mode"></span><span class="bb-time"></span></div>
         <div class="bb-hp"><div class="trail"></div><div class="fill"></div><div class="ticks"></div><div class="vuln"></div><span></span></div>
         <div class="bb-status"></div>
-        <div class="bb-cast hidden"><div class="fill"></div><span></span></div>
         <div class="bb-next hidden"></div>
       </div>
+      <div id="boss-cast" class="hidden"><i class="bc-icon"></i><div class="bc-body"><small>Next</small><b class="bc-name"></b><div class="bc-bar"><div class="fill"></div></div></div><em class="bc-left"></em></div>
       <div id="raid-left"><div id="pf-wrap"><button id="pf-dock" class="pf-dock" type="button"></button><div id="party-frames"></div></div><div id="threat-meter" class="hidden"></div></div>
       <div id="party-strip"></div>
       <div id="countdown" class="hidden"></div>
@@ -66,6 +66,7 @@ const RaidUI = (() => {
       <button id="raid-leave" class="btn2" type="button">Leave raid</button>`;
     document.body.appendChild(root);
     $('raid-leave').addEventListener('click', handlers.onLeave);
+    castFrameDrag();
     $('party-frames').addEventListener('mousedown', e => {
       const row = e.target.closest('.pf');
       if (row) { e.stopPropagation(); onFrame(Number(row.dataset.id)); }
@@ -169,15 +170,7 @@ const RaidUI = (() => {
     q('.bb-hp .vuln').classList.toggle('on', !!b.v);
     setText(q('.bb-hp span'), `${(frac * 100).toFixed(1)}%`);
     q('#boss-bar').classList.toggle('untargetable', !!b.u);
-    // the boss's cast bar; it flashes for a moment when the cast goes off
-    const cb = q('.bb-cast');
-    const c = raid.cast;
-    if (c && now < c.start + c.dur + 0.25) {
-      cb.classList.remove('hidden');
-      cb.classList.toggle('done', now >= c.start + c.dur);
-      setW(q('.bb-cast .fill'), (Math.min(1, (now - c.start) / c.dur) * 100).toFixed(1) + '%');
-      setText(q('.bb-cast span'), c.name);
-    } else cb.classList.add('hidden');
+    castFrame(raid, now);
     upcoming(raid, now);
     bossStatus(raid, now, myId, marks);
     threatMeter(raid, myId);
@@ -247,6 +240,51 @@ const RaidUI = (() => {
   // ---------------------------------------------------------------- boss plate extras
   // the boss's next moves (the host's 'bnext' feed: [[name, seconds until], ...]), counting down between updates.
   // Nothing shows without fresh data (none yet, or older than 3s).
+  // The boss's cast, big and near the middle of the screen: the move's icon, its name, and a bar with the seconds left;
+  // it flashes as the cast goes off. Between casts it shows the next move coming, dimmed, counting down. Drag it
+  // anywhere (it remembers); double-click puts it back.
+  let castKey = '';
+  function castFrame(raid, now) {
+    const el = $('boss-cast'), c = raid.cast, n = raid.bnext;
+    let mode = '', name = '', frac = 0, left = 0;
+    if (c && now < c.start + c.dur + 0.25) { mode = now >= c.start + c.dur ? 'done' : 'cast'; name = c.name; frac = Math.min(1, (now - c.start) / c.dur); left = Math.max(0, c.start + c.dur - now); }
+    else if (raid.state === 'live' && n && n.l.length && now - n.at <= 3) {
+      const [nm, sec] = n.l[0]; left = Math.max(0, sec - (now - n.at));
+      if (left <= 15) { mode = 'next'; name = nm; }
+    }
+    el.classList.toggle('hidden', !mode);
+    if (!mode) { castKey = ''; return; }
+    const key = mode + '|' + name;
+    if (key !== castKey) {
+      castKey = key;
+      el.className = mode;
+      el.querySelector('.bc-icon').style.backgroundImage = typeof BossIcons !== 'undefined' ? BossIcons.css(raid.def.id, name) : '';
+      setText(el.querySelector('.bc-name'), name);
+    }
+    setW(el.querySelector('.bc-bar .fill'), (frac * 100).toFixed(1) + '%');
+    setText(el.querySelector('.bc-left'), mode === 'cast' ? left.toFixed(1) : mode === 'next' ? Math.ceil(left) + 's' : '');
+  }
+  function castFrameDrag() {
+    const el = $('boss-cast'), KEY = 'emberfall.castFrame';
+    const place = pos => { el.style.left = pos ? (pos.x * 100).toFixed(2) + '%' : ''; el.style.top = pos ? (pos.y * 100).toFixed(2) + '%' : ''; };
+    let pos = null;
+    try { const v = JSON.parse(localStorage.getItem(KEY)); if (v && Number.isFinite(v.x) && Number.isFinite(v.y)) pos = v; } catch (e) { /* no storage: the default spot */ }
+    place(pos);
+    el.addEventListener('mousedown', e => {
+      if (e.button !== 0) return;
+      e.stopPropagation(); e.preventDefault();
+      const r = el.getBoundingClientRect(), ox = e.clientX - (r.left + r.width / 2), oy = e.clientY - (r.top + r.height / 2);
+      el.classList.add('dragging');
+      const move = ev => { pos = { x: clamp((ev.clientX - ox) / innerWidth, 0.06, 0.94), y: clamp((ev.clientY - oy) / innerHeight, 0.05, 0.95) }; place(pos); };
+      const up = () => {
+        removeEventListener('mousemove', move); removeEventListener('mouseup', up); el.classList.remove('dragging');
+        try { if (pos) localStorage.setItem(KEY, JSON.stringify(pos)); } catch (err) { /* it just won't be remembered */ }
+      };
+      addEventListener('mousemove', move); addEventListener('mouseup', up);
+    });
+    el.addEventListener('dblclick', e => { e.stopPropagation(); pos = null; place(null); try { localStorage.removeItem(KEY); } catch (err) { /* nothing kept */ } });
+  }
+
   function upcoming(raid, now) {
     const el = root.querySelector('.bb-next'), n = raid.bnext;
     const fresh = n && raid.state === 'live' && now - n.at <= 3;
