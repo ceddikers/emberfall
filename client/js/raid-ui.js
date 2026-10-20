@@ -44,7 +44,7 @@ const RaidUI = (() => {
   // heals over time wear their ability's icon: [class, ability, name]
   const HOT_ICON = { petal: ['cleric', 'petal', 'Dawn Petal'], prayer: ['cleric', 'prayer', 'Prayer Circle'], rejuv: ['grovekeeper', 'rejuv', 'Rejuvenate'], growth: ['grovekeeper', 'growth', 'Wild Growth'] };
 
-  let docked = 'left', onDock = null, hudObserved = false;
+  let docked = 'left', onDock = null, hudObserved = false, lastState = '';
   let root, frames = {}, onFrame = null, rosterKey = '', lastT = 0, bossTrail = 1, roster = [], threatKey = '', nextKey = '', statusKey = '';
 
   function init(handlers) {
@@ -60,21 +60,33 @@ const RaidUI = (() => {
         <div class="bb-next hidden"></div>
       </div>
       <div id="boss-cast" class="hidden"><i class="bc-icon"></i><div class="bc-body"><small>Next</small><b class="bc-name"></b><div class="bc-bar"><div class="fill"></div></div></div><em class="bc-left"></em></div>
-      <div id="raid-left"><div id="pf-wrap"><button id="pf-dock" class="pf-dock" type="button"></button><div id="party-frames"></div><div id="lb-gauge" class="hidden"><small>Limit</small><div class="lb-bars"><i><b></b></i><i><b></b></i><i><b></b></i></div><kbd>G</kbd></div></div><div id="threat-meter" class="hidden"></div></div>
+      <div id="raid-left"><div id="pf-wrap"><button id="pf-dock" class="pf-dock" type="button"></button><div id="party-frames"></div><div id="lb-gauge" class="hidden"><small>Limit</small><div class="lb-bars"><i><b></b></i><i><b></b></i><i><b></b></i></div><kbd>G</kbd></div></div><div id="threat-meter" class="hidden"></div><div id="prog" class="hidden"></div></div>
       <div id="party-strip"></div>
       <div id="countdown" class="hidden"></div>
+      <div id="boss-intro" class="hidden"><small></small><b></b><i></i><q></q></div>
       <div id="trial-lore" class="hidden"><b></b><p></p><p></p></div>
-      <div id="down-veil" class="hidden"><span>Down</span></div>
-      <div id="waymarks" class="hidden">${['A', 'B', 'C', 'D', '1', '2', '3', '4'].map(k => `<button type="button" class="wm wm-${/\d/.test(k) ? 'sq' : 'ci'}" data-k="${k}">${k}</button>`).join('')}<button type="button" class="wm wm-clear" data-k="*">${svg('<path d="M3 3l6 6M9 3 3 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>')}</button></div>
+      <div id="down-veil" class="hidden"><span>Down</span><div class="recap"></div></div>
+      <div id="waymarks" class="hidden">${['A', 'B', 'C', 'D', '1', '2', '3', '4'].map(k => `<button type="button" class="wm wm-${/\d/.test(k) ? 'sq' : 'ci'}" data-k="${k}">${k}</button>`).join('')}<button type="button" class="wm wm-clear" data-k="*">${svg('<path d="M3 3l6 6M9 3 3 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>')}</button><button type="button" class="wm wm-pull" data-k="#">${svg('<circle cx="6" cy="6.6" r="4.2" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M6 4.2v2.6l1.6 1M4.6 1.2h2.8" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>')}</button><button type="button" class="wm wm-callouts" data-k="@">${svg('<path d="M2 2.5h8v5H5.5L3 9.5v-2H2Z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>')}</button></div>
       <button id="raid-leave" class="btn2" type="button">Leave raid</button>`;
     document.body.appendChild(root);
-    $('raid-leave').addEventListener('click', handlers.onLeave);
+    // in a live fight, leaving takes a second click (so a stray click doesn't walk you out of a pull)
+    let leaveArmed = 0;
+    $('raid-leave').addEventListener('click', () => {
+      const btn = $('raid-leave');
+      if (lastState === 'live' && performance.now() - leaveArmed > 3000) {
+        leaveArmed = performance.now(); btn.textContent = 'Leave? Click again'; btn.classList.add('armed');
+        setTimeout(() => { if (performance.now() - leaveArmed >= 2900) { btn.textContent = 'Leave raid'; btn.classList.remove('armed'); } }, 3000);
+        return;
+      }
+      leaveArmed = 0; btn.textContent = 'Leave raid'; btn.classList.remove('armed');
+      handlers.onLeave();
+    });
     // waymarks: click one, then the floor; right-click one to pick it up; the cross picks them all up
     const wm = $('waymarks');
     wm.addEventListener('mousedown', e => e.stopPropagation());
-    wm.addEventListener('click', e => { const b = e.target.closest('.wm'); if (!b) return; if (b.dataset.k === '*') handlers.onWaymark({ all: 'clear' }); else handlers.onPlaceMark(b.dataset.k); });
-    wm.addEventListener('contextmenu', e => { const b = e.target.closest('.wm'); if (b && b.dataset.k !== '*') { e.preventDefault(); handlers.onWaymark({ k: b.dataset.k, clear: true }); } });
-    for (const b of wm.children) b.dataset.tip = b.dataset.k === '*' ? 'Pick up every waymark' : `Waymark ${b.dataset.k}: click, then click the floor. Right-click to pick it up.`;
+    wm.addEventListener('click', e => { const b = e.target.closest('.wm'); if (!b) return; if (b.dataset.k === '*') handlers.onWaymark({ all: 'clear' }); else if (b.dataset.k === '@') handlers.onCallouts(); else if (b.dataset.k === '#') handlers.onPullIn(); else handlers.onPlaceMark(b.dataset.k); });
+    wm.addEventListener('contextmenu', e => { const b = e.target.closest('.wm'); if (b && !'*@#'.includes(b.dataset.k)) { e.preventDefault(); handlers.onWaymark({ k: b.dataset.k, clear: true }); } });
+    for (const b of wm.children) b.dataset.tip = b.dataset.k === '*' ? 'Pick up every waymark' : b.dataset.k === '@' ? 'Callouts: the ping wheel (Alt + drag). Middle-click pings.' : b.dataset.k === '#' ? 'Pull in 5: the boss engages when the count runs out' : `Waymark ${b.dataset.k}: click, then click the floor. Right-click to pick it up.`;
     castFrameDrag();
     $('party-frames').addEventListener('mousedown', e => {
       const row = e.target.closest('.pf');
@@ -167,6 +179,8 @@ const RaidUI = (() => {
   const setW = (el, v) => { if (el._w !== v) { el._w = v; el.style.width = v; } };
   function update(raid, now, myId, marks = {}) {
     const dt = Math.min(0.1, Math.max(0, now - lastT)); lastT = now;
+    lastState = raid.state;
+    liveMeter(raid, myId);
     const b = raid.boss;
     setText(q('.bb-name'), raid.def.name);
     const mode = q('.bb-mode');
@@ -192,7 +206,11 @@ const RaidUI = (() => {
 
     // countdown before the pull
     const cd = $('countdown');
-    if (raid.state === 'countdown') {
+    if (raid.state === 'prepull' && raid.pullAt) {
+      const left = Math.ceil(raid.pullAt - now);
+      cd.classList.toggle('hidden', left <= 0);
+      setText(cd, String(Math.max(1, left)));
+    } else if (raid.state === 'countdown') {
       const left = Math.ceil(raid.countdownEnd - now);
       cd.classList.toggle('hidden', left > 5 || left <= 0);
       setText(cd, String(left));
@@ -250,7 +268,51 @@ const RaidUI = (() => {
       if (key !== f.key) { f.key = key; f.st.innerHTML = key; }
     }
     const me = raid.party.get(myId);
-    $('down-veil').classList.toggle('hidden', !me || me.alive || raid.state !== 'live');
+    const down = !!me && !me.alive && raid.state === 'live';
+    $('down-veil').classList.toggle('hidden', !down);
+    deathRecap(down ? raid : null, now);
+  }
+
+  // the progression record for this boss and difficulty: pull count, the best pull, and the last pulls as bars
+  // (taller = further; a clear is full and gold). prog null: hidden (a trial, a practice run)
+  let progKey = '';
+  function prog(r) {
+    const el = $('prog'), key = r ? r.n + ':' + (r.best ? r.best.pct : '-') : '-';
+    if (key === progKey) return;
+    progKey = key;
+    el.classList.toggle('hidden', !r);
+    if (!r) return;
+    const b = r.best, last = r.pulls.slice(-24);
+    const head = !r.n ? 'First pull' : b && b.clear ? `Cleared · pull ${b.n}` : `Best ${b.pct.toFixed(1)}% · phase ${b.ph}`;
+    el.innerHTML = `<h6>Progress<span>Pull ${r.n + 1}</span></h6><b>${head}</b>` +
+      (last.length ? `<div class="pg-bars">${last.map(p => `<i class="${p.clear ? 'clear' : ''}${b && p.n === b.n ? ' best' : ''}" style="height:${Math.max(6, 100 - p.pct).toFixed(0)}%"></i>`).join('')}</div>` : '');
+    [...el.querySelectorAll('.pg-bars i')].forEach((bar, i) => {
+      const p = last[i];
+      Tip.set(bar, `<b>Pull ${p.n}</b><em>${p.clear ? 'Cleared' : p.pct.toFixed(1) + '% · phase ' + p.ph} · ${mmss(p.time)}</em>`);
+    });
+  }
+
+  // the boss's title card as the room loads: its name, its title, and (the first time you ever meet it) a line from it
+  const INTRO_LINES = {
+    grubnak: "Service started an hour ago. You're late, and you're the special.",
+    skitterra: 'Hush now. The web hears every step you take.',
+    volkar: 'You climbed all this way to stand in my storm?',
+    hollowking: 'The court is in session. Kneel, or be judged standing.',
+  };
+  let introTimer = null;
+  function intro(def, mode, firstMeet) {
+    const el = $('boss-intro');
+    clearTimeout(introTimer);
+    el.querySelector('small').textContent = mode === 'hard' ? 'Hard' : '';
+    el.querySelector('b').textContent = def.name;
+    el.querySelector('i').textContent = def.title || '';
+    const line = firstMeet && INTRO_LINES[def.id];
+    el.querySelector('q').textContent = line || '';
+    el.classList.toggle('line', !!line);
+    el.classList.remove('hidden', 'out');
+    void el.offsetWidth;   // restart the fade-in
+    el.classList.add('in');
+    introTimer = setTimeout(() => { el.classList.add('out'); introTimer = setTimeout(() => el.classList.add('hidden'), 900); }, line ? 4200 : 2600);
   }
 
   // the waymark bar: lit for each marker on the floor, and for the one being placed (marks null: hidden, e.g. a trial)
@@ -289,6 +351,54 @@ const RaidUI = (() => {
       : lbRole === 'healer' ? `<b>Rekindle</b>Heals the party for ${pct(L.HEAL)} of their health. Three bars also raise the fallen.`
       : `<b>Emberfall</b>One blow worth ${pct(L.DPS)} of the boss's health.`;
     return `<b>Limit Break</b><em>${lbBars} of 3 bars · G</em>Every whole bar is spent at once, by whoever presses first. Filled by mechanics met cleanly and checks passed.<br><br>${what}`;
+  }
+
+  // ---------------------------------------------------------------- the live meter (M)
+  // Everyone's damage (or healing) per second so far, from the host once a second. Click the header to switch.
+  let meterOn = false, meterHeal = false, meterKey = '';
+  try { meterOn = localStorage.getItem('emberfall.meter') === '1'; } catch (e) { /* off */ }
+  function toggleMeter() { meterOn = !meterOn; meterKey = ''; try { localStorage.setItem('emberfall.meter', meterOn ? '1' : '0'); } catch (e) { /* not remembered */ } }
+  function liveMeter(raid, myId) {
+    let el = $('live-meter');
+    if (!el) {
+      el = document.createElement('div'); el.id = 'live-meter'; el.className = 'hidden'; root.appendChild(el);
+      el.addEventListener('mousedown', e => { e.stopPropagation(); if (e.target.closest('h6')) { meterHeal = !meterHeal; meterKey = ''; } });
+    }
+    const m = raid.meter, show = meterOn && !!m && (raid.state === 'live' || raid.state === 'clear' || raid.state === 'wipe');
+    el.classList.toggle('hidden', !show);
+    if (!show) return;
+    const ft = Math.max(1, m.ft), rows = m.d.map(([id, d, h]) => ({ id, v: (meterHeal ? h : d) / ft, r: roster.find(x => x.id === id) })).filter(x => x.r && (x.v > 0 || !meterHeal)).sort((a, b) => b.v - a.v);
+    const top = rows.length ? Math.max(1, rows[0].v) : 1;
+    const key = (meterHeal ? 'h' : 'd') + rows.map(x => x.id + ':' + Math.round(x.v)).join('|');
+    if (key === meterKey) return;
+    meterKey = key;
+    el.innerHTML = `<h6>${meterHeal ? 'Healing' : 'Damage'}<span>per second</span></h6>` + rows.map(x => `
+      <div class="lm-row${x.id === myId ? ' me' : ''}" style="--rc:${ROLES[x.r.role].color}"><i style="width:${(x.v / top * 100).toFixed(1)}%"></i><span>${esc(x.r.name)}</span><b>${fmt(x.v)}</b></div>`).join('');
+  }
+
+  // ---------------------------------------------------------------- the death recap
+  // On the Down screen: the hits in the last 10 s before you fell, the killing blow on top. Each is named by the move it
+  // came from; hits that aren't part of a move are named by what they are.
+  const HIT_KIND = { auto: 'Auto-attack', pulse: 'Storm Pulse', static: 'Static', bite: 'Spiderling', addspit: 'Spit', silkbeam: 'Silk Beam',
+    bleed: 'Bleed', thread: 'Shared Thread', tithe: 'Royal Tithe', fall: 'The Fall', burn: 'Fire', grease: 'Grease Fire', fury: 'Fury',
+    skeleton: 'Skeleton', spiderling: 'Spiderling', edge: 'The Edge', pit: 'Acid Pit', 'stack-miss': 'Missed Stack', 'tower-fail': 'Missed Tower' };
+  let recapKey = '';
+  function deathRecap(raid, now) {
+    const el = root.querySelector('#down-veil .recap');
+    if (!raid) { if (recapKey) { recapKey = ''; el.innerHTML = ''; } return; }
+    const hits = raid.hits || [];
+    const last = hits.length ? hits[hits.length - 1].t : 0;
+    const key = hits.length + ':' + last;
+    if (key === recapKey) return;
+    recapKey = key;
+    const list = hits.filter(h => h.t >= last - 10).slice(-5).reverse();
+    if (!list.length) { el.innerHTML = ''; return; }
+    const name = h => h.k === 'enrage' ? (raid.def.enrageName || 'Enrage') : h.n || HIT_KIND[h.k] || h.cast || (h.k ? h.k[0].toUpperCase() + h.k.slice(1) : 'A hit');
+    el.innerHTML = `<h6>What hit you</h6>` + list.map((h, i) => `
+      <div class="rc-row${i === 0 ? ' kill' : ''}${h.dd ? ' dd' : ''}">
+        <b>${esc(name(h))}</b><i>${fmt(h.a)}</i><small>${i === 0 ? 'killing blow' : (h.hp != null ? fmt(h.hp) + ' left' : '')}</small><em>${(h.t - last).toFixed(1)}s</em>
+      </div>`).join('');
+    [...el.querySelectorAll('.rc-row.dd')].forEach(r => Tip.set(r, '<b>Avoidable</b>This one could have been dodged.'));
   }
 
   // ---------------------------------------------------------------- boss plate extras
@@ -437,6 +547,13 @@ const RaidUI = (() => {
         <td>${fmt(s.taken)}</td><td>${s.avoidable}</td><td>${s.deaths}</td>
       </tr>`).join('');
     const report = mine ? personalReport(mine, msg.stats[myId], dur) : '';
+    // who fell, when, and to what
+    const deathName = d => d.k === 'enrage' ? (raid.def.enrageName || 'Enrage') : d.n || HIT_KIND[d.k] || d.cast || (d.k ? d.k[0].toUpperCase() + d.k.slice(1) : 'A hit');
+    const deaths = (raid.deaths || []).map(d => ({ d, s: msg.stats[d.id] })).filter(x => x.s);
+    const deathLog = deaths.length ? `<div class="res-deaths"><h6>Deaths</h6>${deaths.map(({ d, s }) => `<p><em>${mmss(d.t)}</em><i style="background:${ROLES[s.role].color}"></i><b>${esc(s.name)}</b><span>${esc(deathName(d))}</span></p>`).join('')}</div>` : '';
+    // a pull that beat the record
+    const lastPull = raid.prog && raid.prog.pulls && raid.prog.pulls[raid.prog.pulls.length - 1];
+    const best = !clear && lastPull && lastPull.prev != null && lastPull.pct < lastPull.prev ? `<p class="res-best">New best: ${lastPull.pct.toFixed(1)}%<span>was ${lastPull.prev.toFixed(1)}%</span></p>` : '';
     el.innerHTML = `
       <div class="res-card">
         <h2 class="${clear ? 'win' : 'lose'}">${clear ? 'Cleared!' : 'Wiped'}</h2>
@@ -445,6 +562,7 @@ const RaidUI = (() => {
           <thead><tr><th>Player</th><th>Class</th><th>DPS</th><th>HPS</th><th>Taken</th><th data-tip="Hits from attacks that could have been avoided">Avoidable</th><th>Deaths</th></tr></thead>
           <tbody>${table}</tbody>
         </table>
+        ${best}${deathLog}
         ${report}
         <div class="res-actions">
           ${isHost ? '<button class="cta" data-a="retry">Try again</button><button class="btn2" data-a="town">Back to town</button>'
@@ -503,5 +621,5 @@ const RaidUI = (() => {
       `<div class="rr ${cls}"><b>${n}</b><span>${esc(v)}</span><small>${esc(tip)}</small></div>`).join('')}</div>`;
   }
 
-  return { waymarks, init, show, setRoster, update, meter, showResults, hideResults, dock, resetRoster: () => { rosterKey = ''; } };
+  return { waymarks, prog, intro, toggleMeter, init, show, setRoster, update, meter, showResults, hideResults, dock, resetRoster: () => { rosterKey = ''; } };
 })();

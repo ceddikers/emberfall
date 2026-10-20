@@ -57,6 +57,8 @@ class FightSim {
     this.rngState = (seed >>> 0) || 1;
     // opts.waitPull: no countdown; the party has the room to itself until someone hits the boss ('prepull', see pull())
     this.t = 0; this.state = opts.waitPull ? 'prepull' : 'countdown'; this.countdown = 8;
+    // practice: start at this course (phase) number; the ones before it are passed over at the pull (course())
+    this.skipTo = opts.practiceFrom > 1 ? Math.floor(opts.practiceFrom) : 0;
     this.lb = 0; this.lbUsedAt = -99; this.avoidCount = 0;   // the Limit Break gauge (FIGHT.LB), and avoidable hits so far
     this.events = []; this.mechs = new Map(); this.nextMechId = 1; this.puddles = [];
     this.tethers = new Map(); this.adds = new Map(); this.zones = []; this.addsDirty = false;
@@ -131,6 +133,15 @@ class FightSim {
   // A course without `until` or `closing` ends with its last step and goes straight on to next().
   course(o, from = this.t) {
     const ph = this.courseN = (this.courseN || 0) + 1;
+    // practice from a later phase: this course is passed over at once. Its onStart still runs (the room is set as it
+    // would be by then), and the boss will start at the health the asked-for course begins at.
+    if (this.skipTo && ph < this.skipTo && o.next) {
+      if (o.onStart) o.onStart();
+      if (o.until != null) this.skipHp = o.until;
+      this.phase = ph;
+      this.layPhase = null;
+      return o.next(from);
+    }
     const cur = { ph, seams: [], o, done: false };
     this.layPhase = ph;
     if (ph > this.phase) this.atKeep(from - 0.001, () => this.startCourse(cur));
@@ -163,6 +174,7 @@ class FightSim {
   }
   startCourse(cur, now) {
     if (!now) this.setPhase(cur.ph);
+    if (this.skipTo && cur.ph === this.skipTo && this.skipHp) { this.boss.hp = Math.min(this.boss.hp, Math.floor(this.boss.maxHp * this.skipHp) - 1); this.skipHp = 0; }
     this.curCourse = cur;
     if (cur.o.onStart) cur.o.onStart();
     if (cur.o.until != null) this.onHp(cur.o.until, () => this.gate(cur));
@@ -321,7 +333,7 @@ class FightSim {
     this.events = []; this.broadcastNext(true);
     this.broadcastAdds();
     this.broadcastParty();
-    this.emit({ t: 'fight', s: result, time: Math.round(this.t * 10) / 10, stats: this.stats, hp: this.boss.hp, maxHp: this.boss.maxHp, mode: this.mode });
+    this.emit({ t: 'fight', s: result, time: Math.round(this.t * 10) / 10, stats: this.stats, hp: this.boss.hp, maxHp: this.boss.maxHp, mode: this.mode, ph: this.phase || 1 });
   }
 
   updateBoss(dt) {
@@ -626,7 +638,9 @@ class FightSim {
       if (!opts.noVuln) { s.vuln = Math.min(1, (s.vulnEnd > this.t ? s.vuln : 0) + this.vulnStep); s.vulnEnd = this.t + FIGHT.VULN_DUR; }
     }
     if (s.hp <= 0 && s.mits.some(m => m.kind === 'living') && opts.kind !== 'enrage' && opts.kind !== 'fall') s.hp = 1;
-    this.emit({ t: 'pdmg', id: p.id, a: amt, k: opts.kind || 'hit', hp: Math.max(0, s.hp), dd: opts.avoidable ? 1 : 0 });
+    const pd = { t: 'pdmg', id: p.id, a: amt, k: opts.kind || 'hit', hp: Math.max(0, s.hp), dd: opts.avoidable ? 1 : 0 };
+    if (opts.n) pd.n = opts.n;   // the move it came from (the death recap)
+    this.emit(pd);
     if (s.hp <= 0) {
       s.hp = 0; s.alive = false; s.shield = 0; s.mits = []; s.hots = []; s.threat = 0; s.diedAt = this.t; this.dropThreat(p.id);
       if (this.classDeath) this.classDeath(p, s);
@@ -639,6 +653,7 @@ class FightSim {
   // ---------------------------------------------------------------- primitives for boss scripts
   cast(name, dur, anim = 'cast', extra = {}) {
     this.boss.cast = { name, start: this.t, end: this.t + dur, anim };
+    this.lastCast = name;
     this.emit(Object.assign({ t: 'bcast', name, dur, anim }, extra));
   }
   // A hard damage check: the boss must lose `frac` of its health before this `dur` s cast ends. Get there first and the
@@ -693,6 +708,8 @@ class FightSim {
   mech(opts) {
     const id = this.nextMechId++;
     const m = Object.assign({ id, start: this.t, resolveAt: this.t + opts.delay, type: 'aoe', avoidable: true }, opts);
+    // the move it belongs to, for the death recap: the cast it was laid with (opts.from names it otherwise)
+    if (m.from == null) m.from = (this.boss.cast && this.t <= this.boss.cast.end ? this.boss.cast.name : this.lastCast) || null;
     // every avoidable hit shows its area on the floor from the cast to the hit, on every difficulty (only a raidwide,
     // which is the whole room, has nothing to draw)
     m.hidden = m.type === 'raidwide' && !!m.hidden;
@@ -743,10 +760,10 @@ class FightSim {
     const eat = this.eatInfo ? this.eatInfo(m, inside) : null;
     const hit = (p, dmg, kind, avoidable) => {
       const ea = eat && eat.on && eat.on.some(q => q.id === p.id) ? eat.type : null;
-      this.damagePlayer(p, dmg, { kind, avoidable: avoidable && !ea, eat: ea, mid: m.id }); hits.push(p.id);
+      this.damagePlayer(p, dmg, { kind, avoidable: avoidable && !ea, eat: ea, mid: m.id, n: m.from }); hits.push(p.id);
     };
     if (eat && eat.whole) {
-      this.damagePlayer(eat.whole, m.dmg, { kind: m.tag || m.type, eat: eat.type, mid: m.id, whole: 1, owner: eat.owner });
+      this.damagePlayer(eat.whole, m.dmg, { kind: m.tag || m.type, eat: eat.type, mid: m.id, whole: 1, owner: eat.owner, n: m.from });
       this.emit({ t: 'tgx', id: m.id, hits: [eat.whole.id] });
       if (cov) for (const pr of cov.chip) this.hitProp(pr, 1, m.tag);
       if (m.onResolve) m.onResolve([eat.whole], [eat.whole.id], cov);

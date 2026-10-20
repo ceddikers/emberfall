@@ -3,7 +3,8 @@
 //
 // opts: { def, mode, humans: () => [{ id, name, cls, role, x, y, a }], bots: [classId...], emit(msg), seed,
 //         bond: partyBonus() result (items.js), the gear party bonus for this fight,
-//         waitPull: the fight starts on the first blow on the boss instead of after a countdown }
+//         waitPull: the fight starts on the first blow on the boss instead of after a countdown,
+//         practiceFrom: a practice run starting at this phase (course) number }
 // emit() should broadcast to every player (including the host's own client code).
 
 const BOT_NAMES = ['Brom', 'Ilsa', 'Tamsin', 'Oswin', 'Mira', 'Corvin'];
@@ -20,7 +21,7 @@ class RaidHost {
     ARENA.use(this.def.id);
     this.spawnR = Math.min(330, ARENA.inner - 70);   // bots start in a ring below the boss, clear of the walls
     this.bots = (opts.bots || []).map((cid, i) => this.makeBot(cid, i));
-    this.sim = new FightSim(this.def, this.mode, () => this.allPlayers(), msg => this.onSimMsg(msg), rngSeed, { hpPct: this.bond.hp, waitPull: !!opts.waitPull });
+    this.sim = new FightSim(this.def, this.mode, () => this.allPlayers(), msg => this.onSimMsg(msg), rngSeed, { hpPct: this.bond.hp, waitPull: !!opts.waitPull, practiceFrom: opts.practiceFrom || 0 });
     this.lastBotBroadcast = -1;
   }
 
@@ -45,11 +46,25 @@ class RaidHost {
   }
 
   emit(msg) { this.emitOut(msg); }
+  // anyone can start a pull countdown before the pull (once)
+  pullIn(secs = 5) {
+    if (this.sim.state !== 'prepull' || this.pullAt != null) return false;
+    this.pullAt = secs;
+    this.emit({ t: 'pcd', n: secs });
+    return true;
+  }
 
   // ---------------------------------------------------------------- per-frame
   tick(dt) {
     this.t += dt;
+    // a pull countdown someone started (pullIn): the boss engages when it runs out, if nobody hit it first
+    if (this.pullAt != null) { this.pullAt -= dt; if (this.pullAt <= 0) { this.pullAt = null; this.sim.pull(); } }
     this.sim.tick(dt);
+    // the live meter: everyone's damage and healing so far, once a second
+    if (this.sim.state === 'live' && this.t - (this.lastMeter || -9) >= 1) {
+      this.lastMeter = this.t;
+      this.emit({ t: 'mtr', ft: +this.sim.t.toFixed(1), d: Object.entries(this.sim.stats).map(([id, st]) => [Number(id), Math.round(st.damage), Math.round(st.healing)]) });
+    }
     this.partyBuffs = this.partyBuffs.filter(b => b.end > this.sim.t);
     if (this.sim.state === 'live') this.tickBots(dt);
     if (this.t - this.lastBotBroadcast >= 0.1 && this.bots.length) {

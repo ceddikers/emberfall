@@ -9,7 +9,7 @@ const TOWN = {
     { x: 160, y: 1250, w: 210, h: 170, roof: '#4f6e9a', wall: '#d8cbb0' },
     { x: 820, y: 1300, w: 230, h: 170, roof: '#7a5a3a', wall: '#d8cbb0', chimney: 0.7 },
     { x: 1420, y: 1400, w: 210, h: 160, roof: '#8a3b2a', wall: '#d8cbb0' },
-    { x: 2050, y: 380, w: 200, h: 160, roof: '#4f6e9a', wall: '#d8cbb0', chimney: 0.25 },
+    { x: 2050, y: 380, w: 200, h: 160, roof: '#3e5a48', wall: '#cfc3a6', chimney: 0.25, name: 'Practice Hall', hall: true },
     { x: 170, y: 150, w: 200, h: 160, roof: '#7a5a3a', wall: '#d8cbb0' },
   ],
   plaza: { x: 1200, y: 960, r: 240 },

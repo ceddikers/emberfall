@@ -65,6 +65,7 @@
     { x: trainer.x, y: trainer.y, r: 22, reach: 80, label: 'Trainer', open: () => openTalents() },
     ...statues.map(b => ({ x: b.x, y: b.y, r: 58, reach: 120, label: b.boss.name, open: () => openBossPanel(b.boss) })),
     { x: TOWN.portal.x, y: TOWN.portal.y, r: TOWN.portal.r, reach: 130, label: 'Raid Portal', open: () => openBossPanel(BOSSES[0]) },
+    ...TOWN.houses.filter(b => b.hall).map(b => ({ x: b.x + b.w / 2, y: b.y + b.h + 8, r: 26, reach: 90, label: 'Practice Hall', open: () => openPractice() })),
   ];
 
   // small game-logic timers (FX.later is for visuals only)
@@ -730,12 +731,12 @@
     return [me, ...others].filter(h => h.cls).slice(0, 4);
   }
 
-  function startRaid(mode, fill, bossId = lastRaidOpts.boss) {
+  function startRaid(mode, fill, bossId = lastRaidOpts.boss, practiceFrom = 0) {
     if (!Net.isHost || !player.cls) return;
     stopRaidHost();
     hostTrial = null;
     const def = RAID_DEFS[bossId] || GRUBNAK;
-    lastRaidOpts = { mode, fill, boss: def.id };
+    lastRaidOpts = { mode, fill, boss: def.id, practice: practiceFrom || 0 };
     const humans = raidHumans();
     const spawns = {};
     ARENA.use(def.id);
@@ -743,10 +744,10 @@
     humans.forEach((h, i) => { const a = Math.PI / 2 + (i - (humans.length - 1) / 2) * 0.35; spawns[h.id] = [rnd(Math.cos(a) * sr), rnd(Math.sin(a) * sr)]; });
     hostRoster = humans.map(h => Object.assign({}, h, { spawn: spawns[h.id] }));
     const bond = bondCounts(humans);   // gear party bonuses, fixed for the fight (gear is locked inside a raid)
-    raidHost = new RaidHost({ def, mode, humans: hostHumans, bots: fill ? pickBots(humans) : [], seed: (Math.random() * 1e9) | 0, emit: m => Net.broadcastAll(m), bond: partyBonus(bond), waitPull: true });
+    raidHost = new RaidHost({ def, mode, humans: hostHumans, bots: fill ? pickBots(humans) : [], seed: (Math.random() * 1e9) | 0, emit: m => Net.broadcastAll(m), bond: partyBonus(bond), waitPull: true, practiceFrom });
     const roster = [...humans, ...raidHost.bots.map(b => ({ id: b.id, name: b.name, cls: b.cls.id, spec: b.spec, role: b.role, bot: true }))];
     for (const b of raidHost.bots) spawns[b.id] = [rnd(b.x), rnd(b.y)];
-    Net.broadcastAll({ t: 'raid', boss: def.id, mode, roster, spawns, bond, pull: 1 });
+    Net.broadcastAll({ t: 'raid', boss: def.id, mode, roster, spawns, bond, pull: 1, practice: practiceFrom || 0 });
     hostMarks = loadMarks(def.id);
     Net.broadcastAll({ t: 'wms', m: hostMarks });
     // tick the fight off a worker timer so it keeps running if the host's tab is in the background
@@ -757,7 +758,7 @@
       let dt = Math.min(0.25, (t - lastT) / 1000); lastT = t;
       while (dt > 0) { const step = Math.min(0.05, dt); raidHost.tick(step); dt -= step; }
       const st = raidHost.sim.state;
-      if (st === 'clear' && !endedAt) hostRollLoot();
+      if (st === 'clear' && !endedAt && !lastRaidOpts.practice) hostRollLoot();   // (practice runs drop nothing)
       if (st === 'clear' || st === 'wipe') { endedAt = endedAt || t; if (t - endedAt > 3000) stopRaidHost(true); }
     }, 33);
   }
@@ -838,6 +839,70 @@
     else if (b) { VFX.hit(b.x, b.y - 30, '#fff0c8', 1.4 + lv * 0.6); VFX.shock(b.x, b.y, { r: 140 + lv * 60, color: '#f2b060', w: 4 + lv * 2, dur: 0.7, flat: 1 }); FX.shake = Math.max(FX.shake, 4 + lv * 3); }
   });
 
+  // ---------------------------------------------------------------- the Practice Hall
+  // Any boss, either difficulty, from any phase. No loot, no clears, nothing on the progression record.
+  const PRACTICE_PHASES = {
+    grubnak: ['Appetiser', 'Mains', 'Flare-Up', 'Second Sitting', 'Dessert'],
+    skitterra: ['The Web', 'The Dark Between', 'The Brood', 'The Collapse'],
+    volkar: ['The Front', 'The Eye', 'Back of the Storm', 'Heavens Fall'],
+    hollowking: ['The Summons', 'Testimony', 'Court of Bones', 'The Verdict', 'Judgement', 'The Long Night'],
+  };
+  let practicePanel = null, practicePick = { boss: 'grubnak', mode: 'normal' };
+  function openPractice() {
+    if (!practicePanel) {
+      practicePanel = document.createElement('div');
+      practicePanel.id = 'practice'; practicePanel.className = 'hidden';
+      document.body.appendChild(practicePanel);
+      practicePanel.addEventListener('mousedown', e => e.stopPropagation());
+      practicePanel.addEventListener('click', e => {
+        const t = e.target.closest('button');
+        if (!t) return;
+        if (t.classList.contains('close')) { closePractice(); return; }
+        if (t.dataset.boss) practicePick.boss = t.dataset.boss;
+        if (t.dataset.mode) practicePick.mode = t.dataset.mode;
+        if (t.dataset.ph) {
+          if (!Net.isHost) { toast('Only the host can start a practice run.'); return; }
+          if (!player.cls) { toast('Pick a hero first.'); return; }
+          closePractice();
+          startRaid(practicePick.mode, true, practicePick.boss, Number(t.dataset.ph));
+          return;
+        }
+        renderPractice();
+      });
+    }
+    renderPractice();
+    practicePanel.classList.remove('hidden');
+  }
+  function renderPractice() {
+    const ids = Object.keys(PRACTICE_PHASES), pk = practicePick;
+    practicePanel.innerHTML = `<header><h3>Practice Hall</h3><button type="button" class="close" aria-label="Close">×</button></header>
+      <p class="pr-note">Any fight, from any phase. No loot, no clears; the progression record doesn't see it.</p>
+      <div class="pr-row">${ids.map(id => `<button type="button" class="btn2${pk.boss === id ? ' on' : ''}" data-boss="${id}">${escapeHtml(RAID_DEFS[id] ? RAID_DEFS[id].name : id)}</button>`).join('')}</div>
+      <div class="pr-row">${['normal', 'hard'].map(m => `<button type="button" class="btn2${pk.mode === m ? ' on' : ''}" data-mode="${m}">${m === 'hard' ? 'Hard' : 'Normal'}</button>`).join('')}</div>
+      <div class="pr-phases">${PRACTICE_PHASES[pk.boss].map((n, i) => `<button type="button" class="pr-ph" data-ph="${i + 1}"><i>${['I', 'II', 'III', 'IV', 'V', 'VI'][i]}</i><b>${escapeHtml(n)}</b></button>`).join('')}</div>`;
+  }
+  function closePractice() { if (practicePanel) practicePanel.classList.add('hidden'); }
+  const practiceOpen = () => !!practicePanel && !practicePanel.classList.contains('hidden');
+
+  // ---------------------------------------------------------------- progression (this browser)
+  // Every pull of a boss on a difficulty: where its health ended, the phase reached and how long it went. Kept for the
+  // last 40 pulls; the best is the lowest health ever reached (a clear is 0).
+  const PROG_KEY = 'emberfall.prog';
+  const progAll = () => { try { const v = JSON.parse(localStorage.getItem(PROG_KEY) || '{}'); return v && typeof v === 'object' ? v : {}; } catch (e) { return {}; } };
+  const progOf = (bossId, mode) => { const r = progAll()[bossId + ':' + mode]; return r && Array.isArray(r.pulls) ? r : { n: 0, best: null, pulls: [] }; };
+  function progRecord(bossId, mode, pull) {
+    const all = progAll(), k = bossId + ':' + mode, r = all[k] && Array.isArray(all[k].pulls) ? all[k] : { n: 0, best: null, pulls: [] };
+    r.n = (r.n || 0) + 1;
+    pull.n = r.n;
+    if (r.best) pull.prev = r.best.pct;   // (the results screen says so when this one beats it)
+    r.pulls.push(pull);
+    if (r.pulls.length > 40) r.pulls.shift();
+    if (!r.best || pull.pct < r.best.pct) r.best = pull;
+    all[k] = r;
+    try { localStorage.setItem(PROG_KEY, JSON.stringify(all)); } catch (e) { /* not remembered */ }
+    return r;
+  }
+
   // ---------------------------------------------------------------- waymarks
   // A B C D (circles) and 1 2 3 4 (squares) on the floor. Anyone in the raid can put one down or pick one up; the
   // host keeps the set, remembers it per boss (this browser) and sends it to everyone.
@@ -871,15 +936,42 @@
     for (const k of WAYMARKS) if (Array.isArray(msg.m[k]) && msg.m[k].every(Number.isFinite)) m[k] = msg.m[k];
     raid.marks = m;
   });
+  // pings: { x, y, c } from a player in the raid; the host checks it (and keeps anyone from flooding the floor)
+  const lastPing = new Map();
+  function hostPing(pid, msg) {
+    if (!raidHost || !hostRoster.some(h => h.id === pid && !h.left)) return;
+    if (!Number.isFinite(msg.x) || !Number.isFinite(msg.y)) return;
+    const t = performance.now();
+    if (t - (lastPing.get(pid) || -1e9) < 250) return;
+    lastPing.set(pid, t);
+    const q = ARENA.clamp({ x: msg.x, y: msg.y }, 0);
+    Net.broadcastAll({ t: 'pg', id: pid, x: Math.round(q.x), y: Math.round(q.y), c: Pings.clean(msg.c) });
+  }
+  Net.onHost('pg', hostPing);
+  Net.on('mtr', msg => { if (raid && Array.isArray(msg.d)) raid.meter = msg; });
+  // the pull countdown: anyone in the raid can start it before the pull; the host runs it
+  function hostPullIn(pid) { if (raidHost && hostRoster.some(h => h.id === pid && !h.left)) raidHost.pullIn(5); }
+  Net.onHost('pci', hostPullIn);
+  Net.on('pcd', msg => { if (raid && raid.state === 'prepull') raid.pullAt = now + (Number(msg.n) || 5); });
+  function startPullCountdown() { if (!raid || raid.state !== 'prepull' || raid.pullAt) return; if (Net.isHost) hostPullIn(Net.id); else Net.send({ t: 'pci' }); }
+  Net.on('pg', msg => {
+    if (!raid || !Number.isFinite(msg.x) || !Number.isFinite(msg.y)) return;
+    const r = raid.roster.find(x => x.id === msg.id);
+    Pings.add({ x: msg.x, y: msg.y, c: msg.c, name: r ? r.name : '', color: r && ROLES[r.role] ? ROLES[r.role].color : null }, now);
+  });
+  function sendPing(x, y, c) { const msg = { x: Math.round(x), y: Math.round(y), c: c || null }; if (Net.isHost) hostPing(Net.id, msg); else Net.send(Object.assign({ t: 'pg' }, msg)); }
+  let pingFrom = null;   // where an Alt-drag began (the wheel is open)
+
   function sendWaymark(msg) { if (Net.isHost) hostWaymark(Net.id, msg); else Net.send(Object.assign({ t: 'wm' }, msg)); }
   function placeMark(k) { placingMark = placingMark === k ? null : k; document.body.classList.toggle('placing-mark', !!placingMark); }
   function drawWaymarks(ctx) {
-    const m = raid.marks;
+    const m = placingMark ? Object.assign({}, raid.marks, { [placingMark]: (() => { const w = mouseWorld(); return [w.x, w.y]; })() }) : raid.marks;
     if (!m) return;
     ctx.save();
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = '700 25px Cinzel, Georgia, serif'; ctx.lineJoin = 'round';
     for (const k of WAYMARKS) {
       if (!m[k]) continue;
+      ctx.globalAlpha = k === placingMark ? 0.55 : 1;
       const [x, y] = m[k], col = WM_COLOR[k], R = 30, sq = k >= '0' && k <= '9';
       ctx.beginPath();
       if (sq) ctx.rect(x - R * 0.88, y - R * 0.88, R * 1.76, R * 1.76); else ctx.arc(x, y, R, 0, Math.PI * 2);
@@ -937,6 +1029,7 @@
     }
     closePanels();
     RaidUI.hideResults();
+    resetRaidInput();
     FX.clear(); VFX.clear(); clearTimers();
     ARENA.use(def.id);
     sceneFade();
@@ -945,6 +1038,8 @@
       def, mode: msg.mode, roster: msg.roster, rosterIds: new Set(msg.roster.map(r => r.id)),
       // pull: no countdown, the fight starts on the first blow on the boss ('prepull' till then)
       state: msg.pull ? 'prepull' : 'countdown', countdownEnd: now + 8, fightTime: 0, marks: {},
+      prog: null, practice: Number(msg.practice) || 0, deaths: [], meter: null, pullAt: null,
+      introAt: now + 0.6,   // the title card, once the room has faded in
       boss: { x: sp.x, y: sp.y, f: Math.PI / 2, hp: 1, mx: 1, u: 0, v: 0, tg: null },
       bossDraw: { x: sp.x, y: sp.y, f: Math.PI / 2, st: newSt(), lastX: sp.x, lastY: sp.y, fade: 1 },
       bossTrack: new Track(sp.x, sp.y, Math.PI / 2), ghosts: [],
@@ -954,6 +1049,7 @@
       lanterns: [], doom: new Map(), knights: new Map(), night: false, nightK: 0,
       fightClock: new SendClock(), botClock: new SendClock(),   // the host's fight and bot clocks (see interp.js)
       nextAutoAt: 0, cast: null, props: {}, propsUntil: {},
+      hits: [],
       tgs: new Map(), puddles: new Map(), party: new Map(), bots: new Map(), pbuffs: [], taken: [], result: null, resultAt: 0,
       adds: new Map(), tethers: new Map(), zones: new Map(), lunges: [], husks: [], eggs: null,
       rollers: new Map(), reels: new Map(),
@@ -988,7 +1084,10 @@
     lastSentKey = '';
   }
 
+  // nothing half-done carries from one raid to the next (or into town)
+  function resetRaidInput() { placeMark(null); Pings.wheelClose(); pingFrom = null; Pings.clear(); }
   function leaveRaid(byMe) {
+    resetRaidInput();
     if (byMe) {
       if (Net.isHost) { Net.broadcastAll({ t: 'raidend' }); return; }  // the host leaving ends it for everyone
       Net.send({ t: 'rleave' });
@@ -1066,6 +1165,11 @@
       return;
     }
     raid.state = msg.s; raid.result = msg; raid.resultAt = now + 2.2;
+    // a real pull (not a trial or a practice run) goes on the progression record
+    if ((msg.s === 'clear' || msg.s === 'wipe') && !raid.def.trial && !raid.practice && msg.maxHp > 0) {
+      const pct = msg.s === 'clear' ? 0 : Math.max(0, Math.min(100, Math.round(msg.hp / msg.maxHp * 1000) / 10));
+      raid.prog = progRecord(raid.def.id, raid.mode, { pct, ph: Number(msg.ph) || 1, time: Math.round(msg.time || 0), clear: msg.s === 'clear' ? 1 : 0, at: Date.now() });
+    }
     fadeTelegraphs(); raid.tethers.clear(); Stagecraft.endFight(); raid.lunges = []; raid.eggs = null; raid.rollers.clear(); raid.reels.clear(); player.reel = null;
     raid.sweeps.clear(); raid.edgeWarn = null; for (const p of raid.posts.values()) p.end = Math.min(p.end, now + 1);
     raid.doom.clear(); raid.lanterns = raid.lanterns.filter(l => l.last); for (const k of raid.knights.values()) k.gone = k.gone || now;
@@ -1079,7 +1183,7 @@
       Save.setSpec(player.cls.id, raid.def.trial);
       const sp = specOf(player.cls.id, raid.def.trial);
       if (sp) { heroPickFx(player, { accent: sp.accent }); toast(`${sp.name} unlocked.`); }
-    } else if (msg.s === 'clear' && player.cls) Save.recordClear(player.cls.id, raid.def.id, raid.mode);
+    } else if (msg.s === 'clear' && player.cls && !raid.practice) Save.recordClear(player.cls.id, raid.def.id, raid.mode);
     if (msg.s === 'clear') BOSS_VFX.victory([...raid.rosterIds].map(entById).filter(Boolean));
     else BOSS_VFX.wipe();
   });
@@ -1395,8 +1499,19 @@
     // party frames react to the hit right away instead of waiting for the next party update
     const ps = raid.party.get(msg.id);
     if (ps && msg.hp != null) { ps.hp = msg.hp; if (msg.a > 0) ps.hitAt = now; }
+    // a blow that left them at 0: the death log on the results screen
+    if (msg.hp === 0 && msg.a > 0 && raid.state === 'live' && raid.deaths.length < 60) {
+      const c = raid.cast && now <= raid.cast.start + raid.cast.dur + 0.3 ? raid.cast.name : null;
+      raid.deaths.push({ id: msg.id, t: raid.fightTime || 0, n: typeof msg.n === 'string' ? msg.n.slice(0, 40) : null, k: String(msg.k || ''), cast: c });
+    }
     if (msg.id !== Net.id) return;
     raid.taken.push({ t: now, a: msg.a });
+    // the death recap: your last few hits, named by the move they came from (or what kind of hit it was)
+    if (msg.a > 0) {
+      const c = raid.cast && now <= raid.cast.start + raid.cast.dur + 0.3 ? raid.cast.name : null;
+      (raid.hits || (raid.hits = [])).push({ t: now, a: msg.a, n: typeof msg.n === 'string' ? msg.n.slice(0, 40) : null, k: String(msg.k || ''), cast: c, hp: msg.hp, dd: !!msg.dd });
+      if (raid.hits.length > 12) raid.hits.shift();
+    }
     if (msg.a > 0) FX.text(player.x, player.y - 46, '-' + rnd(msg.a), msg.dd ? '#ff4a3a' : '#ff8a7a', msg.a > 400 ? 18 : 14);
     if (msg.dd) FX.shake = Math.max(FX.shake, 4);
     // the screen's edge flushes red, harder the bigger the bite out of your health
@@ -1476,6 +1591,7 @@
   document.addEventListener('contextmenu', e => { if (!(e.target.closest && e.target.closest('input, textarea'))) e.preventDefault(); });
   canvas.addEventListener('mousemove', e => {
     mouse.x = e.clientX; mouse.y = e.clientY;
+    if (Pings.wheelIsOpen()) Pings.wheelMove(e.clientX, e.clientY);
     if (mouse.rightDown && !player.dashMove) moveTo(mouseWorld(), false);
   });
   canvas.addEventListener('mousedown', e => {
@@ -1483,6 +1599,8 @@
     // clicking the world takes keyboard focus back from any UI button
     if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
     mouse.x = e.clientX; mouse.y = e.clientY;
+    if (inArena() && e.button === 1) { e.preventDefault(); const m = mouseWorld(); sendPing(m.x, m.y, null); return; }
+    if (inArena() && e.button === 0 && e.altKey) { e.preventDefault(); pingFrom = mouseWorld(); Pings.wheelOpen(e.clientX, e.clientY); return; }
     if (placingMark && inArena()) {
       if (e.button === 0) { const m = mouseWorld(); sendWaymark({ k: placingMark, x: m.x, y: m.y }); }
       placeMark(null);   // (right-click just puts it away)
@@ -1506,13 +1624,26 @@
     }
     player.interact = null; moveTo(mouseWorld(), true);
   });
-  window.addEventListener('mouseup', e => { if (e.button === 2) mouse.rightDown = false; });
+  window.addEventListener('mouseup', e => {
+    if (e.button === 2) mouse.rightDown = false;
+    if (e.button === 0 && Pings.wheelIsOpen()) { const c = Pings.wheelClose(); if (c && pingFrom && inArena()) sendPing(pingFrom.x, pingFrom.y, c); pingFrom = null; }
+  });
+  // (the wheel follows the cursor even over the HUD while it's open)
+  window.addEventListener('mousemove', e => { if (Pings.wheelIsOpen() && e.target !== canvas) Pings.wheelMove(e.clientX, e.clientY); });
+  // the middle button never starts the browser's autoscroll
+  canvas.addEventListener('auxclick', e => { if (e.button === 1) e.preventDefault(); });
+  window.addEventListener('keyup', e => { if (e.key === 'Alt') e.preventDefault(); });
+  // the window loses focus mid-drag (Alt+Tab, a click outside): the wheel closes without pinging
+  window.addEventListener('blur', () => { if (Pings.wheelIsOpen()) { Pings.wheelClose(); pingFrom = null; } });
   document.addEventListener('mouseover', e => { const row = e.target.closest && e.target.closest('.pf'); hoverFrame = row ? Number(row.dataset.id) : null; });
 
   const chatInput = $('chat-input');
   const SLOT_OF = { q: 0, w: 1, e: 2, r: 3, d: 4, f: 5, ' ': 6, t: 7 };   // 7: a tank's taunt
   window.addEventListener('keydown', e => {
+    if (e.key === 'Alt') e.preventDefault();   // (Alt is the ping wheel: it must never pull focus to the browser's menu)
     if (!started) return;
+    if (e.key === 'Escape' && Pings.panelOpen()) { Pings.closePanel(); return; }
+    if (e.key === 'Escape' && practiceOpen()) { closePractice(); return; }
     // Tab never moves browser focus once you're in the game; it cycles enemy targets instead
     if (e.key === 'Tab') {
       e.preventDefault();
@@ -1542,6 +1673,7 @@
       if (pick != null) lockedAlly = pick;
       return;
     }
+    if (e.key.toLowerCase() === 'm' && inArena()) { RaidUI.toggleMeter(); return; }
     if (e.key.toLowerCase() === 'g' && inArena()) { e.preventDefault(); if (!e.repeat) useLimit(); return; }
     const idx = SLOT_OF[e.key.toLowerCase()];
     if (idx !== undefined) {
@@ -1819,7 +1951,7 @@
     if (raid.result && raid.resultAt && now >= raid.resultAt) {
       raid.resultAt = 0;
       RaidUI.showResults(raid.result, raid, Net.id, actor ? { stats: actor.kit.stats, cls: player.cls } : null, Net.isHost, {
-        retry: () => raid.def.trial ? startTrial(raid.def.trial) : startRaid(lastRaidOpts.mode, lastRaidOpts.fill),
+        retry: () => raid.def.trial ? startTrial(raid.def.trial) : startRaid(lastRaidOpts.mode, lastRaidOpts.fill, lastRaidOpts.boss, lastRaidOpts.practice || 0),
         town: () => Net.broadcastAll({ t: 'raidend' }),
         leave: () => leaveRaid(true),
       });
@@ -1827,6 +1959,18 @@
     }
     RaidUI.update(raid, now, Net.id, frameMarks());
     RaidUI.waymarks(raid.def.trial ? null : raid.marks, placingMark);
+    if (raid.introAt && now >= raid.introAt) {
+      raid.introAt = 0;
+      if (!raid.def.trial) {
+        let met = {};
+        try { met = JSON.parse(localStorage.getItem('emberfall.met') || '{}') || {}; } catch (e) { /* first time for everything */ }
+        RaidUI.intro(raid.def, raid.mode, !met[raid.def.id]);
+        met[raid.def.id] = 1;
+        try { localStorage.setItem('emberfall.met', JSON.stringify(met)); } catch (e) { /* the line again next time */ }
+      }
+    }
+    if (!raid.prog && !raid.def.trial && !raid.practice) raid.prog = progOf(raid.def.id, raid.mode);
+    RaidUI.prog(raid.def.trial || raid.practice ? null : raid.prog);
   }
 
   function updateCamera(dt, snap) {
@@ -2173,6 +2317,7 @@
     for (const tg of raid.tgs.values()) if (tg.type === 'buster' && tg.target != null && tg.gone == null) { const e = entById(tg.target); if (e) ArenaView.busterIcon(ctx, e.x, e.y, now); }
     for (const e of [...arenaRemotes, ...raid.bots.values()]) playerTag(e, false, raid.party.get(e.id));
     playerTag(player, true);
+    Pings.draw(ctx, now);
     hurtVignette();
   }
   // a red flush round the screen's edge for a moment when you're hit (stronger for a bigger hit)
@@ -2210,6 +2355,7 @@
     const dot = (x, y, r, col) => circle(c, x * s, y * s, r, col, OUT, 1);
     for (const b of statues) dot(b.x, b.y, 3.5, '#ff6a5a');
     dot(TOWN.portal.x, TOWN.portal.y, 4.5, '#b080ff');
+    for (const b of TOWN.houses) if (b.hall) dot(b.x + b.w / 2, b.y + b.h / 2, 4, '#7fd0a0');
     dot(keeper.x, keeper.y, 3.5, '#ffd65a');
     dot(trainer.x, trainer.y, 3, '#f0d48a');
     for (const r of remotes.values()) if (r.scene === 0) dot(r.x, r.y, 3.5, r.cls ? ROLES[r.cls.role].color : '#dffaff');
@@ -2810,7 +2956,7 @@
 
   // clicking your locked ally's frame again lets go of them
   RaidUI.init({ onFrame: id => { lockedAlly = lockedAlly === id ? null : id; }, onLeave: () => leaveRaid(true),
-    onPlaceMark: k => placeMark(k), onWaymark: msg => sendWaymark(msg),
+    onPlaceMark: k => placeMark(k), onWaymark: msg => sendWaymark(msg), onCallouts: () => Pings.openPanel(), onPullIn: () => startPullCountdown(),
     onDock: where => { if (player.cls) Save.setSetting(`frames-${player.cls.role}`, where); } });
   // where the party frames sit for your role: healers start with them above the hotbar
   const applyFrameDock = () => { if (player.cls) RaidUI.dock(Save.setting(`frames-${player.cls.role}`, player.cls.role === 'healer' ? 'strip' : 'left')); };
