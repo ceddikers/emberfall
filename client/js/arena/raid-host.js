@@ -2,7 +2,8 @@
 // Works in the browser (host tab) and in Node (tools/bot-raid.js).
 //
 // opts: { def, mode, humans: () => [{ id, name, cls, role, x, y, a }], bots: [classId...], emit(msg), seed,
-//         bond: partyBonus() result (items.js), the gear party bonus for this fight }
+//         bond: partyBonus() result (items.js), the gear party bonus for this fight,
+//         waitPull: the fight starts on the first blow on the boss instead of after a countdown }
 // emit() should broadcast to every player (including the host's own client code).
 
 const BOT_NAMES = ['Brom', 'Ilsa', 'Tamsin', 'Oswin', 'Mira', 'Corvin'];
@@ -19,7 +20,7 @@ class RaidHost {
     ARENA.use(this.def.id);
     this.spawnR = Math.min(330, ARENA.inner - 70);   // bots start in a ring below the boss, clear of the walls
     this.bots = (opts.bots || []).map((cid, i) => this.makeBot(cid, i));
-    this.sim = new FightSim(this.def, this.mode, () => this.allPlayers(), msg => this.onSimMsg(msg), rngSeed, { hpPct: this.bond.hp });
+    this.sim = new FightSim(this.def, this.mode, () => this.allPlayers(), msg => this.onSimMsg(msg), rngSeed, { hpPct: this.bond.hp, waitPull: !!opts.waitPull });
     this.lastBotBroadcast = -1;
   }
 

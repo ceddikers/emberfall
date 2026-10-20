@@ -119,6 +119,7 @@ const BossIcons = (() => {
     'Molt': (c, A) => { spider(c, 32, 32, 1.1, 'rgba(242,230,200,0.35)'); stroke(c, L, 2, [[22, 20], [28, 30], [24, 40], [30, 50]]); },
     'Tightening Web': (c, A) => { web(c, 32, 32, 24, L, 1.8); ring(c, 32, 32, 24, A, 3); },
     'The Web Gives Way': (c, A) => { ring(c, 32, 32, 24, '#ff4ab0', 4); web(c, 32, 32, 14, L, 1.6); stroke(c, '#ff4ab0', 2, [[48, 16], [54, 10]]); stroke(c, '#ff4ab0', 2, [[12, 48], [8, 56]]); },
+    'Chrysalis': (c, A) => { c.beginPath(); c.ellipse(32, 32, 14, 22, 0, 0, TAU); c.fillStyle = L; c.fill(); for (let i = 0; i < 6; i++) stroke(c, INK, 1.6, [[19, 14 + i * 7], [32, 18 + i * 7], [45, 13 + i * 7]]); stroke(c, A, 2, [[32, 2], [32, 10]]); for (const x of [20, 44]) stroke(c, '#ff4ab0', 2.5, [[x, 30], [x + (x < 32 ? -8 : 8), 26]]); },
     'Devour': (c, A) => { c.beginPath(); c.arc(32, 30, 22, 0, Math.PI); c.closePath(); c.fillStyle = '#2a1424'; c.fill(); for (const sd of [-1, 1]) fill(c, '#ff7ac0', [[32 + sd * 14, 26], [32 + sd * 6, 26], [32 + sd * 9, 50]]); for (const x of [20, 44]) drop(c, x, 54, 0.5, A); },
     // Volkar
     'Thunderclap': (c, A) => { cloud(c, 32, 22, 1.1, '#5a6a84'); bolt(c, A, 32, 42, 0.9); },
@@ -141,6 +142,8 @@ const BossIcons = (() => {
     'Skyfall': (c, A) => { fill(c, 'rgba(223,244,255,0.85)', [[24, 0], [40, 0], [44, 48], [20, 48]]); c.beginPath(); c.ellipse(32, 50, 20, 6, 0, 0, TAU); c.strokeStyle = A; c.lineWidth = 3; c.stroke(); },
     'Heavens Fall': (c, A) => { fill(c, 'rgba(223,244,255,0.85)', [[22, 0], [42, 0], [42, 40], [22, 40]]); for (const x of [18, 28, 36, 46]) disc(c, x, 50, 4, L); ring(c, 32, 50, 16, '#ffd84a', 2.5); },
     'Skybreak': (c, A) => { cloud(c, 32, 20, 1.1, '#3a4660'); stroke(c, '#ffffff', 3, [[14, 18], [26, 24], [34, 16], [48, 22]]); bolt(c, A, 26, 44, 0.7); bolt(c, A, 44, 46, 0.55); },
+    'Gathering Storm': (c, A) => { cloud(c, 32, 20, 1, '#4a5874'); for (const [x, y] of [[18, 44], [32, 50], [46, 44]]) bolt(c, A, x, y, 0.42); ring(c, 32, 46, 22, 'rgba(127,232,255,0.4)', 2); },
+    'Thunderhead': (c, A) => { cloud(c, 32, 18, 1.3, '#2e3850'); bolt(c, '#ffffff', 32, 44, 1); bolt(c, A, 32, 44, 0.75); },
     // the Hollow King
     'Sceptre Sweep': (c, A) => { c.beginPath(); c.moveTo(14, 50); c.arc(14, 50, 40, -1.4, -0.1); c.closePath(); c.fillStyle = 'rgba(232,193,90,0.55)'; c.fill(); stroke(c, '#e8c15a', 4, [[14, 50], [40, 18]]); disc(c, 40, 18, 5, '#e8c15a'); },
     'Barrow Stomp': (c, A) => { ring(c, 32, 40, 18, '#4fe0d0', 3); for (let i = 0; i < 6; i++) { const a = i * TAU / 6; stroke(c, '#4fe0d0', 2, [[32, 40], [32 + Math.cos(a) * 16, 40 + Math.sin(a) * 12]]); } fill(c, L, [[24, 6], [40, 6], [40, 24], [46, 28], [24, 28]]); },
@@ -164,6 +167,8 @@ const BossIcons = (() => {
     'The Charge Sheet': (c, A) => { fill(c, L, [[16, 8], [48, 8], [48, 56], [16, 56]]); for (const y of [18, 30, 42]) { disc(c, 22, y, 2.5, A); stroke(c, INK, 2, [[28, y], [42, y]]); } },
     'Judgement': (c, A) => { stroke(c, L, 3, [[32, 10], [32, 52]]); stroke(c, L, 3, [[14, 18], [50, 18]]); for (const x of [14, 50]) { c.beginPath(); c.arc(x, 30, 8, 0, Math.PI); c.fillStyle = A; c.fill(); } stroke(c, L, 3, [[22, 54], [42, 54]]); },
     'The Long Night': (c, A) => { disc(c, 32, 32, 26, '#05060c'); fill(c, '#c89a4a', [[26, 24], [38, 24], [40, 44], [24, 44]]); disc(c, 32, 34, 5, '#ffe2a0'); stroke(c, '#c89a4a', 2, [[32, 24], [32, 16]]); },
+    'Royal Tithe': (c, A) => { crown(c, 32, 16, 0.8, '#e8c15a'); c.beginPath(); c.moveTo(18, 30); c.lineTo(46, 30); c.lineTo(40, 50); c.lineTo(24, 50); c.closePath(); c.fillStyle = '#5a6266'; c.fill(); for (const [x, y] of [[26, 54], [38, 56]]) drop(c, x, y, 0.5, '#d6304a'); disc(c, 32, 38, 4, A); },
+    'Dirge': (c, A) => { bell(c, 32, 26, 0.9, '#7a8488'); for (const r of [20, 27]) { c.beginPath(); c.arc(32, 30, r, 0.15 * Math.PI, 0.85 * Math.PI); c.strokeStyle = A; c.lineWidth = 2.5; c.stroke(); } },
     'Moonset': (c, A) => { disc(c, 32, 34, 18, '#cfe2ff'); disc(c, 40, 28, 15, '#0e1218'); fill(c, '#0e1218', [[0, 44], [64, 44], [64, 64], [0, 64]]); stroke(c, A, 3, [[6, 44], [58, 44]]); },
     'Doom Pass': (c, A) => { skull(c, 22, 32, 0.6, '#efe2ff'); stroke(c, L, 2.5, [[34, 32], [52, 32]]); fill(c, L, [[50, 26], [58, 32], [50, 38]]); },
   };

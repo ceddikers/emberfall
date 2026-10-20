@@ -17,6 +17,8 @@
 //   V. The Long Night (25% → dead): the braziers die; one lantern is left. Doom passes from player to player in a fixed
 //     order (the next one's sigil glows 6 s ahead) and the lantern passes on touch: whoever it cures carries it to the
 //     next. Swings, echoes, Gazes and Knells between, until he falls or the moon sets.
+//   Royal Tithe (in the Verdict): a heal check you prepare for. Everyone drops to a third of their health (shields
+//     stay), and the Dirge tolls everyone 8 s later; he holds his blows on the tank meanwhile.
 // A slow party runs each part's last set again, +10% each pass (f.course in fight.js). Every telegraph shows on the
 // floor on every difficulty.
 // Hard: casts 15% faster, 25% more damage; Judgement shown for 1.2 s; the Charge Sheet has four sigils (one is Royal
@@ -47,6 +49,7 @@ const HOLLOWKING = {
     const TAU = Math.PI * 2;
     const dmg = {
       knell: 9000, cleave: 25000, bleed: H ? 900 : 750, gaze: 9000, gazeAgain: 16000, swing: 13000, echo: 13000,
+      dirge: 3000,
       marks: 8000, bell: 4500, bellFail: 2000, march: 14000, bind: 16000,
       lid: 12000, decree: H ? 16000 : 15000, masonry: 12000, coffinHp: 7000, skelHp: 9000, skelBite: 1300,
     };
@@ -508,6 +511,34 @@ const HOLLOWKING = {
       next: verdict,
     }, at);
 
+    // Royal Tithe (a heal check you prepare for): he takes his tithe of life: everyone falls to a third of their health. Shields
+    // aren't life, so they stay; then the Dirge tolls 8 s later. He stays his hand (no blows on the tank) till then.
+    const tithe = () => {
+      const d = f.ct(5);
+      f.cast('Royal Tithe', d, 'knell');
+      // the Verdict waits for this set (Tithe, Dirge) to play out whole before the Judgement can follow
+      const c = f.curCourse;
+      if (c) { c.o.seam = 20; f.afterKeep(d + 8.5, () => { c.o.seam = 8; }); }
+      f.afterKeep(d, () => {
+        B.noAutoUntil = f.t + 9;
+        f.emit({ t: 'roomev', k: 'tithe' });
+        for (const p of f.alive()) {
+          const s = f.ps.get(p.id);
+          if (!s || s.mits.some(m => m.kind === 'invuln')) continue;
+          // (all your health above a third of a full bar)
+          const a = Math.round(s.hp - s.maxHp * 0.33);
+          if (a <= 0) continue;
+          s.hp -= a; f.stats[p.id].taken += a;
+          f.emit({ t: 'pdmg', id: p.id, a, k: 'tithe', hp: Math.round(s.hp), dd: 0 });
+        }
+      });
+    };
+    // ... and the Dirge, 3 s after the Tithe lands (laid out in the same set, so it comes whatever the pace)
+    const dirge = () => {
+      f.cast('Dirge', 5, 'knell');
+      f.mech({ type: 'raidwide', shape: { kind: 'circle', x: 0, y: 0, r: 0 }, delay: 5, dmg: dmg.dirge, hidden: true, tag: 'knell' });
+    };
+
     // IV. The Verdict: the calls and their answers overlap; Judgement opens its second half, whatever the pace
     const verdict = at => f.course({
       until: 0.46,
@@ -516,7 +547,8 @@ const HOLLOWKING = {
         S([12, () => royalDoom(H ? 2 : 1), 'Royal Doom'], [4, () => marks(), 'Grave Marks']),
         S([12, () => coffinLids(0, 3), 'Coffin Lids'], [8, decree, 'Royal Decree']),
         S([12, () => { graveCleave(); if (H) gravebind(); }, 'Grave Cleave']),
-        S([13, () => swing('ring'), 'Crown of Graves'], [5.5, () => echoGaze(1.5), 'Royal Gaze']),
+        S([13, tithe, 'Royal Tithe'], [f.ct(5) + 3, dirge, 'Dirge']),
+        S([7, () => swing('ring'), 'Crown of Graves'], [5.5, () => echoGaze(1.5), 'Royal Gaze']),
         H && S([10, () => march(-1, 140), 'Funeral March']),
         S([12, knell, 'Barrow Knell']),
       ].filter(Boolean),

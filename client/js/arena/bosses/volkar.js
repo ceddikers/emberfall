@@ -10,6 +10,8 @@
 //   The Back of the Storm (55% → 15%): the Front again, mirrored and doubled, while the electrified edge closes in.
 //   Heavens Fall (15% → 0%): the summit closes to its last ring and the sky comes down on set spots round him; the whole
 //     party holds each one up together, both charges in it, each a little harder, until he falls or calls Skybreak.
+//   Gathering Storm (in the back half): a heal check. Static ticks on everyone every 1.5 s for 12 s, then one
+//     Thunderhead: more than a whole health bar each in all, so it has to be healed through as it lands.
 // The storm's Pulse hits everyone every 4 s, a twentieth harder each minute. A slow party runs each part's last set again,
 // +10% each pass (f.course in fight.js). Every telegraph shows on the floor on every difficulty.
 // Hard: casts 15% faster, 25% more damage; the charges flip as the Eye opens; three rods and three walls; Titan Fist
@@ -41,6 +43,7 @@ const VOLKAR = {
     const TAU = Math.PI * 2;
     const dmg = {
       clap: 6500, fist: H ? 22000 : 20000, surgeAlone: 8500, surgeSame: 15000, surgePair: 2000,
+      storm: 1600, thunderhead: 5000,
       crash: 13000, field: 5500, rod: 5000, rodAgain: 12000, rodFail: 12000, slam: 9000, wall: H ? 9500 : 11000, edge: 12000, pulse: H ? 300 : 260,
       chain: 7000, orb: 12000, skyfall: 36000,
       strike: H ? 9000 : 8000, strikeOpen: H ? 18000 : 15000, discharge: 12000, grounded: 9000, boulder: H ? 12000 : 11000, fall: 15000,
@@ -480,6 +483,24 @@ const VOLKAR = {
       next: back,
     }, at);
 
+    // Gathering Storm (a heal check): static builds on everyone, a tick every 1.5 s for 12 s, then breaks as one
+    // Thunderhead. More than anyone's whole health in all: it is healed through as it lands, or it isn't.
+    const gatheringStorm = () => {
+      const d = f.ct(3), N = 8, EVERY = 1.5, end = f.t + d + N * EVERY;
+      f.cast('Gathering Storm', d, 'clap');
+      f.afterKeep(d, () => { for (const p of f.alive()) { const s = f.ps.get(p.id); if (s) s.debuffs.static = end; } });
+      // (kept: the ticks run out even if the course moves on meanwhile)
+      for (let i = 0; i < N; i++) f.afterKeep(d + i * EVERY, () => {
+        f.emit({ t: 'pulse', k: 1 });
+        for (const p of f.alive()) f.damagePlayer(p, dmg.storm, { kind: 'static' });
+      });
+    };
+    // ... and it breaks: laid out in the same set, 12 s after the storm begins (it lands 3 s later)
+    const thunderhead = () => {
+      f.cast('Thunderhead', 3, 'clap');
+      f.mech({ type: 'raidwide', shape: { kind: 'circle', x: 0, y: 0, r: 0 }, delay: 3, dmg: dmg.thunderhead, hidden: true, tag: 'clap' });
+    };
+
     // the back of the storm: the front again, mirrored and doubled, while the room closes in
     const back = at => f.course({
       until: 0.15,
@@ -495,8 +516,8 @@ const VOLKAR = {
         S([15, () => avalanche(AV + Math.PI), 'Avalanche'], [5, () => stormWalls(WALL + Math.PI, -1), 'Storm Walls']),
         H && S([12, skyfall, 'Skyfall']),
         S([H ? 10 : 14, () => { rodStrike(); titanFist(); }, 'Rod Strike']),
-        S([14, thunderclap, 'Thunderclap']),
-        S([10, () => { if (H) { titanFist(); chainLightning('healer'); } else field(); }, H ? 'Titan Fist' : 'Static Field']),
+        S([14, gatheringStorm, 'Gathering Storm'], [f.ct(3) + 9, thunderhead, 'Thunderhead']),
+        S([7, () => { if (H) { titanFist(); chainLightning('healer'); } else field(); }, H ? 'Titan Fist' : 'Static Field']),
         S([10, () => squall(-1, -Math.PI / 2, 320, 120, 24), 'Squall Line'], [13, surge, 'Polarity Surge']),
         S([11, () => rodsGale(RODS + 2), 'Lightning Rods']),
         H && S([12, () => ballLightning(2.2), 'Ball Lightning']),

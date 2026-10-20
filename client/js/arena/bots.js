@@ -11,7 +11,7 @@ function segsCross(ax, ay, bx, by, cx, cy, dx, dy) {
 const BUSTER_CASTS = /^(Tenderize|Silk Wrap|Titan Fist|Grave Cleave)$/;
 const TANK_CDS = ['bulwark', 'zeal', 'undying', 'banner', 'sanctum', 'warcry'];
 // ... and the casts that hurt the whole party, which healers top people up for
-const RAID_CASTS = /^(Grease Fire|Simmer|Venom Mist|Tightening Web|Thunderclap|Thunder Crash|Static Field|Polarity Surge|Skyfall|Barrow Knell|Grave Marks)$/;
+const RAID_CASTS = /^(Grease Fire|Simmer|Venom Mist|Tightening Web|Thunderclap|Thunder Crash|Static Field|Polarity Surge|Skyfall|Barrow Knell|Grave Marks|Gathering Storm|Thunderhead|Royal Tithe|Dirge)$/;
 
 const BotAI = {
   isMelee(cls) { return KITS[cls.id].abilities[0].range === 'melee'; },

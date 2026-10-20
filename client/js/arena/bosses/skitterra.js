@@ -13,6 +13,8 @@
 //   Act II, The Brood (68% → 28%): pairs, then the Swarm: every clutch still standing hatches at once.
 //   Act III, The Collapse (28% → 0%): the cave floor falls away ring by ring from the walls. The hub, the eight spokes
 //     and the threads nobody cut stay; anyone on falling floor drops (heavy damage, held, then hauled back up the silk).
+//   The Chrysalis (at 28%): a hard damage check. She cocoons at the hub for 25 s; take 5% of her health off in that
+//     time and she tears free, staggered (+25% damage taken, 8 s). Fail and she devours the party.
 // A slow party runs each act's last set again, +10% each pass (f.course in fight.js). Devour is the hard enrage.
 // Every telegraph shows on the floor on every difficulty. Hard: casts 15% faster, 25% more damage, six-step Lunges,
 // green and red Silk Lines, a burning beam on the brood pair, three spiderlings to a clutch, two drops per uncut thread
@@ -418,9 +420,9 @@ const SKITTERRA = {
         f.aoe({ kind: 'circle', x: at.x, y: at.y, r: 190 }, land, dmg.drop, { tag: 'ambush' });
       });
     };
-    const venomDrip = () => {
+    const venomDrip = noCast => {
       const d = f.ct(4);
-      f.cast('Venom Drip', d, 'spit');
+      if (!noCast) f.cast('Venom Drip', d, 'spit');
       for (const p of f.alive()) f.mech({ type: 'spread', shape: { kind: 'circle', x: p.x, y: p.y, r: 100 }, delay: d, dmg: dmg.drip, follow: p.id, tag: 'spread' });
     };
     // she comes back down into the middle, and the outer web turns sticky for the rest of the fight
@@ -481,6 +483,15 @@ const SKITTERRA = {
 
     // --- the hunt ---------------------------------------------------------------------------------
     broodClock(137 + f.ct(3), 0);   // the Brood step's time, plus its cast
+    // The Chrysalis (a hard damage check): as the Collapse begins she wraps herself in silk at the hub. Tear 5% of her
+    // health off before it closes and she falls out of it, staggered and open for 8 s; let it close and she devours.
+    const chrysalis = () => {
+      f.dpsCheck('Chrysalis', H ? 24 : 25, 0.05, { anim: 'chrysalis',
+        onPass: () => { B.stunUntil = f.t + 8; B.exposedUntil = f.t + 8; B.exposed = 0.25; f.emit({ t: 'roomev', k: 'torn', dur: 8 }); },
+        onFail: () => f.enrage(),
+      });
+    };
+
     const actOne = at => f.course({
       until: 0.7,
       sets: [
@@ -543,7 +554,8 @@ const SKITTERRA = {
 
     const actThree = at => f.course({
       sets: [
-        S([2, () => giveWay(0), 'The Web Gives Way']),
+        S([2, chrysalis, 'Chrysalis'], [12, () => venomDrip(true), 'Venom Drip']),   // venom drips from the cocoon as it closes
+        S([H ? 14 : 15, () => giveWay(0), 'The Web Gives Way']),
         S([8, venomMist, 'Venom Mist']),
         S([12, () => giveWay(1), 'The Web Gives Way'], [7, () => lunge(), 'Eightfold Lunge']),
         S([12, () => silkLines(), 'Silk Lines']),

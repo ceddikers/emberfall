@@ -21,6 +21,7 @@ const RaidUI = (() => {
     doom: svg('<path d="M6 1.5c-2.3 0-4 1.6-4 3.8 0 1.3.6 2.2 1.5 2.8V10h5V8.1c.9-.6 1.5-1.5 1.5-2.8 0-2.2-1.7-3.8-4-3.8Z" fill="none" stroke="currentColor" stroke-width="1.2"/><circle cx="4.4" cy="5.5" r="1" fill="currentColor"/><circle cx="7.6" cy="5.5" r="1" fill="currentColor"/>'),
     dread: svg('<path d="M1 6c1.6-2.6 3.2-3.6 5-3.6S9.4 3.4 11 6c-1.6 2.6-3.2 3.6-5 3.6S2.6 8.6 1 6Z" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M3 9 9 3" stroke="currentColor" stroke-width="1.2"/>'),
     bleed: svg('<path d="M6 1.5C4.5 4 3 5.6 3 7.4a3 3 0 0 0 6 0C9 5.6 7.5 4 6 1.5Z" fill="none" stroke="currentColor" stroke-width="1.3"/>'),
+    static: svg('<path d="M7 1 3 6.5h3L5 11l4-5.5H6Z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M1.5 3.5h1.5M9 8.5h1.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/>'),
     aggro: svg('<path d="M1 6c1.6-2.6 3.2-3.6 5-3.6S9.4 3.4 11 6c-1.6 2.6-3.2 3.6-5 3.6S2.6 8.6 1 6Z" fill="none" stroke="currentColor" stroke-width="1.2"/><circle cx="6" cy="6" r="1.7" fill="currentColor"/>'),
     // on the boss: hitting harder, and the enrage
     fury: svg('<path d="M6 1.2 7.4 4.6 11 6 7.4 7.4 6 10.8 4.6 7.4 1 6 4.6 4.6Z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M6 4.4v3.2" stroke="currentColor" stroke-width="1.2"/>'),
@@ -38,7 +39,8 @@ const RaidUI = (() => {
   const DEBUFF_INFO = { tenderized: 'Tenderized: the next cleaver blow hits much harder', stuffed: 'Stuffed: you can\'t eat another plate',
     slowed: 'Slowed: stuck in silk or venom', rooted: 'Rooted: you can\'t move',
     conductive: 'Conductive: the next strike you catch hurts far more', doom: 'Royal Doom: when this runs out, so do you',
-    dread: 'Dread: you met his eyes. Meeting them again hurts far more', bleed: 'Bleeding: losing health over time' };
+    dread: 'Dread: you met his eyes. Meeting them again hurts far more', bleed: 'Bleeding: losing health over time',
+    static: 'Static: the storm is building on you, a jolt every 1.5s' };
   // heals over time wear their ability's icon: [class, ability, name]
   const HOT_ICON = { petal: ['cleric', 'petal', 'Dawn Petal'], prayer: ['cleric', 'prayer', 'Prayer Circle'], rejuv: ['grovekeeper', 'rejuv', 'Rejuvenate'], growth: ['grovekeeper', 'growth', 'Wild Growth'] };
 
@@ -53,7 +55,7 @@ const RaidUI = (() => {
     root.innerHTML = `
       <div id="boss-bar">
         <div class="bb-top"><b class="bb-name"></b><span class="bb-mode"></span><span class="bb-time"></span></div>
-        <div class="bb-hp"><div class="trail"></div><div class="fill"></div><div class="ticks"></div><div class="vuln"></div><span></span></div>
+        <div class="bb-hp"><div class="trail"></div><div class="fill"></div><div class="ticks"></div><div class="vuln"></div><div class="goal hidden"></div><span></span></div>
         <div class="bb-status"></div>
         <div class="bb-next hidden"></div>
       </div>
@@ -63,9 +65,16 @@ const RaidUI = (() => {
       <div id="countdown" class="hidden"></div>
       <div id="trial-lore" class="hidden"><b></b><p></p><p></p></div>
       <div id="down-veil" class="hidden"><span>Down</span></div>
+      <div id="waymarks" class="hidden">${['A', 'B', 'C', 'D', '1', '2', '3', '4'].map(k => `<button type="button" class="wm wm-${/\d/.test(k) ? 'sq' : 'ci'}" data-k="${k}">${k}</button>`).join('')}<button type="button" class="wm wm-clear" data-k="*">${svg('<path d="M3 3l6 6M9 3 3 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>')}</button></div>
       <button id="raid-leave" class="btn2" type="button">Leave raid</button>`;
     document.body.appendChild(root);
     $('raid-leave').addEventListener('click', handlers.onLeave);
+    // waymarks: click one, then the floor; right-click one to pick it up; the cross picks them all up
+    const wm = $('waymarks');
+    wm.addEventListener('mousedown', e => e.stopPropagation());
+    wm.addEventListener('click', e => { const b = e.target.closest('.wm'); if (!b) return; if (b.dataset.k === '*') handlers.onWaymark({ all: 'clear' }); else handlers.onPlaceMark(b.dataset.k); });
+    wm.addEventListener('contextmenu', e => { const b = e.target.closest('.wm'); if (b && b.dataset.k !== '*') { e.preventDefault(); handlers.onWaymark({ k: b.dataset.k, clear: true }); } });
+    for (const b of wm.children) b.dataset.tip = b.dataset.k === '*' ? 'Pick up every waymark' : `Waymark ${b.dataset.k}: click, then click the floor. Right-click to pick it up.`;
     castFrameDrag();
     $('party-frames').addEventListener('mousedown', e => {
       const row = e.target.closest('.pf');
@@ -162,12 +171,16 @@ const RaidUI = (() => {
     const mode = q('.bb-mode');
     setText(mode, raid.mode === 'hard' ? 'Hard' : 'Normal');
     mode.classList.toggle('hard', raid.mode === 'hard');
-    setText(q('.bb-time'), raid.state === 'live' || raid.state === 'clear' || raid.state === 'wipe' ? mmss(raid.fightTime || 0) : '');
+    setText(q('.bb-time'), raid.state === 'live' || raid.state === 'clear' || raid.state === 'wipe' ? mmss(raid.fightTime || 0) : raid.state === 'prepull' ? 'Unengaged' : '');
     const frac = b.mx ? b.hp / b.mx : 1;
     bossTrail = frac > bossTrail ? frac : Math.max(frac, bossTrail - dt * 0.08 - (bossTrail - frac) * dt * 1.5);
     setW(q('.bb-hp .fill'), (frac * 100).toFixed(2) + '%');
     setW(q('.bb-hp .trail'), (bossTrail * 100).toFixed(2) + '%');
     q('.bb-hp .vuln').classList.toggle('on', !!b.v);
+    // a damage check running: where her health has to be when the cast ends
+    const goal = raid.cast && raid.cast.goal != null && now < raid.cast.start + raid.cast.dur ? raid.cast.goal : null, gEl = q('.bb-hp .goal');
+    gEl.classList.toggle('hidden', goal == null);
+    if (goal != null) { const v = (goal * 100).toFixed(2) + '%'; if (gEl._l !== v) { gEl._l = v; gEl.style.left = v; } }
     setText(q('.bb-hp span'), `${(frac * 100).toFixed(1)}%`);
     q('#boss-bar').classList.toggle('untargetable', !!b.u);
     castFrame(raid, now);
@@ -238,6 +251,17 @@ const RaidUI = (() => {
     $('down-veil').classList.toggle('hidden', !me || me.alive || raid.state !== 'live');
   }
 
+  // the waymark bar: lit for each marker on the floor, and for the one being placed (marks null: hidden, e.g. a trial)
+  let wmKey = '';
+  function waymarks(marks, placing) {
+    const el = $('waymarks'), key = marks ? Object.keys(marks).sort().join('') + '|' + (placing || '') : '-';
+    if (key === wmKey) return;
+    wmKey = key;
+    el.classList.toggle('hidden', !marks);
+    if (!marks) return;
+    for (const b of el.children) { b.classList.toggle('on', !!marks[b.dataset.k]); b.classList.toggle('placing', b.dataset.k === placing); }
+  }
+
   // ---------------------------------------------------------------- boss plate extras
   // the boss's next moves (the host's 'bnext' feed: [[name, seconds until], ...]), counting down between updates.
   // Nothing shows without fresh data (none yet, or older than 3s).
@@ -306,7 +330,7 @@ const RaidUI = (() => {
     if (raid.state === 'live') {
       for (const [kind, secs, val, who] of raid.bossStatus || []) {
         if (kind === 'vuln') items.push({ k: kind, c: 'debuff', bg: iconBg('ranger', 'mark'), n: secs, tip: `<b>Hunter's Mark</b><em>${secs}s</em>Takes ${val}% more damage from everyone.` });
-        else if (kind === 'stun') items.push({ k: kind, c: 'debuff', glyph: GLYPH.vuln, n: secs, tip: `<b>Staggered</b><em>${secs}s</em>Stuck in the wall: takes ${val}% more damage.` });
+        else if (kind === 'stun') items.push({ k: kind, c: 'debuff', glyph: GLYPH.vuln, n: secs, tip: `<b>Staggered</b><em>${secs}s</em>${raid.def.id === 'skitterra' ? 'Torn out of her chrysalis' : 'Stuck in the wall'}: takes ${val}% more damage.` });
         else if (kind === 'dmg') items.push({ k: kind, c: 'buff', glyph: GLYPH.fury, n: `+${val}%`, tip: `<b>Fury</b><em>+${val}% damage</em>Every blow from the boss lands harder.` });
         else if (kind === 'brand') {
           const mine = who === myId;
@@ -450,5 +474,5 @@ const RaidUI = (() => {
       `<div class="rr ${cls}"><b>${n}</b><span>${esc(v)}</span><small>${esc(tip)}</small></div>`).join('')}</div>`;
   }
 
-  return { init, show, setRoster, update, meter, showResults, hideResults, dock, resetRoster: () => { rosterKey = ''; } };
+  return { waymarks, init, show, setRoster, update, meter, showResults, hideResults, dock, resetRoster: () => { rosterKey = ''; } };
 })();

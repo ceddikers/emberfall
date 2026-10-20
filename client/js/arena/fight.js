@@ -50,7 +50,8 @@ class FightSim {
     ARENA.use(def.id);
     this.getPlayers = getPlayers; this.emit = emit;
     this.rngState = (seed >>> 0) || 1;
-    this.t = 0; this.state = 'countdown'; this.countdown = 8;
+    // opts.waitPull: no countdown; the party has the room to itself until someone hits the boss ('prepull', see pull())
+    this.t = 0; this.state = opts.waitPull ? 'prepull' : 'countdown'; this.countdown = 8;
     this.events = []; this.mechs = new Map(); this.nextMechId = 1; this.puddles = [];
     this.tethers = new Map(); this.adds = new Map(); this.zones = []; this.addsDirty = false;
     this.rollers = new Map(); this.reels = new Map(); this.sweeps = new Map();
@@ -254,14 +255,8 @@ class FightSim {
 
   // ---------------------------------------------------------------- lifecycle
   tick(dt) {
-    if (this.state === 'countdown') {
-      this.countdown -= dt;
-      if (this.countdown <= 0) {
-        this.state = 'live'; this.t = 0;
-        this.def.script(this);
-        if (this.def.enrage) this.atKeep(this.def.enrage[this.mode], () => this.enrage(), this.def.enrageName || 'Enrage');
-        this.emit({ t: 'fight', s: 'live' });
-      }
+    if (this.state === 'countdown' || this.state === 'prepull') {
+      if (this.state === 'countdown') { this.countdown -= dt; if (this.countdown <= 0) this.pull(); }
       if (this.propsDirty || (this.t - this.lastPropsSend >= 3 && (this.props.length || this.floor.length))) this.broadcastProps();
       return;
     }
@@ -295,6 +290,15 @@ class FightSim {
     // a steady 10/s: stepping the mark by 0.1 (not to "now") stops 33 ms ticks rounding every gap up to 133 ms
     if (this.t - this.lastBroadcast >= 0.1) { this.lastBroadcast = Math.max(this.lastBroadcast + 0.1, this.t - 0.05); this.broadcastBoss(); }
     if (this.t - this.lastPartyBroadcast >= 0.2) { this.lastPartyBroadcast = this.t; this.broadcastParty(); }
+  }
+
+  // the fight begins: the script and the enrage clock start now
+  pull() {
+    if (this.state !== 'countdown' && this.state !== 'prepull') return;
+    this.state = 'live'; this.t = 0;
+    this.def.script(this);
+    if (this.def.enrage) this.atKeep(this.def.enrage[this.mode], () => this.enrage(), this.def.enrageName || 'Enrage');
+    this.emit({ t: 'fight', s: 'live' });
   }
 
   enrage() {
@@ -338,7 +342,7 @@ class FightSim {
         PROPS.collide(b, this.props, FIGHT.BOSS_R * 0.7);
       }
     }
-    if (tank && !b.untargetable && !stunned && this.t >= b.autoAt) {
+    if (tank && !b.untargetable && !stunned && !(b.noAutoUntil > this.t) && this.t >= b.autoAt) {
       b.autoAt = this.t + FIGHT.AUTO_EVERY;
       const d = Math.hypot(tank.x - b.x, tank.y - b.y);
       if (d < FIGHT.MELEE * 1.5) {
@@ -382,6 +386,8 @@ class FightSim {
   // ---------------------------------------------------------------- incoming combat events from players
   onEvent(pid, ev) {
     const s = this.ps.get(pid), st = this.stats[pid];
+    // before the pull, the first blow on the boss starts the fight (and lands)
+    if (s && s.alive && this.state === 'prepull' && ev.type === 'damage' && (ev.tgt == null || ev.tgt === 'boss')) this.pull();
     if (!s || this.state !== 'live') return;
     if (!s.alive) return;
     const targetsOf = target => (target === 'party' ? this.alive().map(p => p.id) : [this.resolveTarget(pid, target, ev.not)]);
@@ -623,6 +629,22 @@ class FightSim {
   cast(name, dur, anim = 'cast', extra = {}) {
     this.boss.cast = { name, start: this.t, end: this.t + dur, anim };
     this.emit(Object.assign({ t: 'bcast', name, dur, anim }, extra));
+  }
+  // A hard damage check: the boss must lose `frac` of its health before this `dur` s cast ends. Get there first and the
+  // cast breaks (o.onPass(secs the cast had left): a stagger, an opening); let it finish and o.onFail runs (a wipe).
+  // The goal shows as a mark on the boss bar while the cast runs.
+  dpsCheck(name, dur, frac, o = {}) {
+    const b = this.boss, goal = Math.max(0, b.hp / b.maxHp - frac), end = this.t + dur;
+    this.cast(name, dur, o.anim || 'cast', { goal: +goal.toFixed(4) });
+    let done = false;
+    this.ticker(() => {
+      if (done || this.state !== 'live') return;
+      if (b.hp / b.maxHp <= goal) {
+        done = true; if (b.cast && b.cast.name === name) b.cast = null;
+        this.emit({ t: 'bcastend', name, ok: 1 });
+        if (o.onPass) o.onPass(end - this.t);
+      } else if (this.t >= end) { done = true; this.emit({ t: 'bcastend', name, ok: 0 }); if (o.onFail) o.onFail(); }
+    });
   }
   anim(name, dur = 1, extra = {}) { this.boss.anim = { name, start: this.t, end: this.t + dur }; this.emit(Object.assign({ t: 'banim', name, dur }, extra)); }
   ticker(fn) { this.tickers.push(fn); }

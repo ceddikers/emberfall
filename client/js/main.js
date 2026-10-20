@@ -150,8 +150,9 @@
     findEnemy: (a, ab) => {
       const range = ab.range === 'melee' ? 75 : (ab.range || 420);
       if (inArena()) {
-        // the enemy you clicked if it's in range, otherwise the nearest one in range (boss or add)
-        if (raid.state !== 'live') return null;
+        // the enemy you clicked if it's in range, otherwise the nearest one in range (boss or add); before the pull
+        // the boss can be hit too (that's what pulls it)
+        if (raid.state !== 'live' && raid.state !== 'prepull') return null;
         const inRange = c => Math.hypot(c.x - player.x, c.y - player.y) - c.r <= range;
         const cands = arenaEnemies().filter(inRange);
         const pick = cands.find(c => c.id === lockedEnemy) ||
@@ -318,7 +319,7 @@
       case 'fail':
         if (now - failAt < 0.6 || ev.reason === 'cooldown') break;
         failAt = now;
-        FX.text(player.x, player.y - 56, ev.reason === 'target' ? (ev.ab.target === 'enemy' ? (inArena() && (raid.boss.u || raid.state !== 'live') ? 'No target' : 'Out of range') : 'No target') : ev.reason === 'winded' ? 'Winded' : 'Not ready', '#c8c0d8', 12, 0.7);
+        FX.text(player.x, player.y - 56, ev.reason === 'target' ? (ev.ab.target === 'enemy' ? (inArena() && (raid.boss.u || (raid.state !== 'live' && raid.state !== 'prepull')) ? 'No target' : 'Out of range') : 'No target') : ev.reason === 'winded' ? 'Winded' : 'Not ready', '#c8c0d8', 12, 0.7);
         break;
       case 'fxLocal': playKitFx(player, ev.name, true, ev.data); break;   // a class moment only you see (an Ironpalm's Crisp press)
       case 'teleport': if (ev.where && ev.where !== 'behind') kitMove(ev); else teleportBehind(); break;
@@ -339,9 +340,11 @@
     if (!inArena()) return;
     // a shield, mitigation or heal over time put up in the countdown lands at the pull (what's left of it), instead of
     // its cooldown being spent for nothing; damage before the pull has nothing to hit
-    if (raid.state === 'countdown' && PRE_PULL.has(ev.type)) { (raid.prePull || (raid.prePull = [])).push({ ev, at: now }); return; }
-    if (raid.state !== 'live') return;
+    if ((raid.state === 'countdown' || raid.state === 'prepull') && PRE_PULL.has(ev.type)) { (raid.prePull || (raid.prePull = [])).push({ ev, at: now }); return; }
     const e = packEv(ev);
+    // before the pull only a blow on the boss goes out: it's what starts the fight
+    const pullHit = raid.state === 'prepull' && e.type === 'damage' && (e.tgt == null || e.tgt === 'boss');
+    if (raid.state !== 'live' && !pullHit) return;
     if (Net.isHost && raidHost) raidHost.onPlayerEvent(Net.id, e);
     else Net.send({ t: 'cev', ev: e });
   }
@@ -608,7 +611,7 @@
   function pressSlot(i) {
     if (!started || panelOpen()) return;
     if (!actor) { toast('Pick a hero first.'); return; }
-    if (amDead() || (inArena() && raid.state !== 'live' && raid.state !== 'countdown')) return;
+    if (amDead() || (inArena() && raid.state !== 'live' && raid.state !== 'countdown' && raid.state !== 'prepull')) return;
     if (i === 6) { doDash(); return; }
     if (i === 7) { doTaunt(); return; }
     actor.press(i);
@@ -623,7 +626,7 @@
     if (k.cast || !actor.tauntReady(now)) { kitFail(k.cast ? 'Not ready' : null); return; }
     if (lock > 0) { if (lock <= ENGINE.QUEUE_WINDOW && !tauntQueued) { tauntQueued = true; later(lock, () => { tauntQueued = false; if (actor && !amDead()) doTaunt(); }); } return; }
     const tg = world.findEnemy(actor, { range: TAUNT.range });
-    if (!tg) { kitFail(inArena() && (raid.boss.u || raid.state !== 'live') ? 'No target' : 'Out of range'); return; }
+    if (!tg) { kitFail(inArena() && (raid.boss.u || (raid.state !== 'live' && raid.state !== 'prepull')) ? 'No target' : 'Out of range'); return; }
     actor.useTaunt(now);
     k.lockUntil = now + TAUNT.lock;
     const at = tg.dummy ? tg.dummy : (inArena() ? enemyNow(tg.id) : null) || tg;
@@ -739,10 +742,12 @@
     humans.forEach((h, i) => { const a = Math.PI / 2 + (i - (humans.length - 1) / 2) * 0.35; spawns[h.id] = [rnd(Math.cos(a) * sr), rnd(Math.sin(a) * sr)]; });
     hostRoster = humans.map(h => Object.assign({}, h, { spawn: spawns[h.id] }));
     const bond = bondCounts(humans);   // gear party bonuses, fixed for the fight (gear is locked inside a raid)
-    raidHost = new RaidHost({ def, mode, humans: hostHumans, bots: fill ? pickBots(humans) : [], seed: (Math.random() * 1e9) | 0, emit: m => Net.broadcastAll(m), bond: partyBonus(bond) });
+    raidHost = new RaidHost({ def, mode, humans: hostHumans, bots: fill ? pickBots(humans) : [], seed: (Math.random() * 1e9) | 0, emit: m => Net.broadcastAll(m), bond: partyBonus(bond), waitPull: true });
     const roster = [...humans, ...raidHost.bots.map(b => ({ id: b.id, name: b.name, cls: b.cls.id, spec: b.spec, role: b.role, bot: true }))];
     for (const b of raidHost.bots) spawns[b.id] = [rnd(b.x), rnd(b.y)];
-    Net.broadcastAll({ t: 'raid', boss: def.id, mode, roster, spawns, bond });
+    Net.broadcastAll({ t: 'raid', boss: def.id, mode, roster, spawns, bond, pull: 1 });
+    hostMarks = loadMarks(def.id);
+    Net.broadcastAll({ t: 'wms', m: hostMarks });
     // tick the fight off a worker timer so it keeps running if the host's tab is in the background
     let lastT = performance.now(), endedAt = null;
     stopHostTick = Net.steadyInterval(() => {
@@ -813,6 +818,60 @@
   Net.on('chest', m => Loot.onChest(m));
   Net.on('lootw', m => Loot.onWin(m));
   Net.onHost('lootc', (pid, m) => Loot.hostChoice(pid, m));
+  // ---------------------------------------------------------------- waymarks
+  // A B C D (circles) and 1 2 3 4 (squares) on the floor. Anyone in the raid can put one down or pick one up; the
+  // host keeps the set, remembers it per boss (this browser) and sends it to everyone.
+  const WAYMARKS = ['A', 'B', 'C', 'D', '1', '2', '3', '4'];
+  const WM_COLOR = { A: '#ff6a5a', B: '#ffd84a', C: '#5ab4ff', D: '#c98aff', 1: '#ff6a5a', 2: '#ffd84a', 3: '#5ab4ff', 4: '#c98aff' };
+  let hostMarks = {}, placingMark = null;
+  const marksKey = id => 'emberfall.marks.' + id;
+  function loadMarks(id) {
+    const out = {};
+    try {
+      const v = JSON.parse(localStorage.getItem(marksKey(id)) || '{}');
+      for (const k of WAYMARKS) if (Array.isArray(v[k]) && v[k].every(Number.isFinite)) out[k] = [Math.round(v[k][0]), Math.round(v[k][1])];
+    } catch (e) { /* nothing saved: no markers */ }
+    return out;
+  }
+  function hostWaymark(pid, msg) {
+    if (!raidHost || !hostRoster.some(h => h.id === pid && !h.left)) return;
+    if (msg.all === 'clear') hostMarks = {};
+    else if (WAYMARKS.includes(msg.k)) {
+      if (msg.clear) delete hostMarks[msg.k];
+      else if (Number.isFinite(msg.x) && Number.isFinite(msg.y)) { const q = ARENA.clamp({ x: msg.x, y: msg.y }, 24); hostMarks[msg.k] = [Math.round(q.x), Math.round(q.y)]; }
+      else return;
+    } else return;
+    try { localStorage.setItem(marksKey(raidHost.def.id), JSON.stringify(hostMarks)); } catch (e) { /* not remembered */ }
+    Net.broadcastAll({ t: 'wms', m: hostMarks });
+  }
+  Net.onHost('wm', hostWaymark);
+  Net.on('wms', msg => {
+    if (!raid || !msg.m || typeof msg.m !== 'object') return;
+    const m = {};
+    for (const k of WAYMARKS) if (Array.isArray(msg.m[k]) && msg.m[k].every(Number.isFinite)) m[k] = msg.m[k];
+    raid.marks = m;
+  });
+  function sendWaymark(msg) { if (Net.isHost) hostWaymark(Net.id, msg); else Net.send(Object.assign({ t: 'wm' }, msg)); }
+  function placeMark(k) { placingMark = placingMark === k ? null : k; document.body.classList.toggle('placing-mark', !!placingMark); }
+  function drawWaymarks(ctx) {
+    const m = raid.marks;
+    if (!m) return;
+    ctx.save();
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = '700 25px Cinzel, Georgia, serif'; ctx.lineJoin = 'round';
+    for (const k of WAYMARKS) {
+      if (!m[k]) continue;
+      const [x, y] = m[k], col = WM_COLOR[k], R = 30, sq = k >= '0' && k <= '9';
+      ctx.beginPath();
+      if (sq) ctx.rect(x - R * 0.88, y - R * 0.88, R * 1.76, R * 1.76); else ctx.arc(x, y, R, 0, Math.PI * 2);
+      ctx.fillStyle = rgba(col, 0.2); ctx.fill();
+      ctx.lineWidth = 5; ctx.strokeStyle = 'rgba(0,0,0,0.55)'; ctx.stroke();
+      ctx.lineWidth = 2.5; ctx.strokeStyle = col; ctx.stroke();
+      ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,0.8)'; ctx.strokeText(k, x, y + 1);
+      ctx.fillStyle = col; ctx.fillText(k, x, y + 1);
+    }
+    ctx.restore();
+  }
+
   // combat events from other players
   const EV_TYPES = new Set([...SIM_EVENTS]);
   Net.onHost('cev', (pid, msg) => {
@@ -864,7 +923,8 @@
     const sp = def.spawn || { x: 0, y: -40 };
     raid = {
       def, mode: msg.mode, roster: msg.roster, rosterIds: new Set(msg.roster.map(r => r.id)),
-      state: 'countdown', countdownEnd: now + 8, fightTime: 0,
+      // pull: no countdown, the fight starts on the first blow on the boss ('prepull' till then)
+      state: msg.pull ? 'prepull' : 'countdown', countdownEnd: now + 8, fightTime: 0, marks: {},
       boss: { x: sp.x, y: sp.y, f: Math.PI / 2, hp: 1, mx: 1, u: 0, v: 0, tg: null },
       bossDraw: { x: sp.x, y: sp.y, f: Math.PI / 2, st: newSt(), lastX: sp.x, lastY: sp.y, fade: 1 },
       bossTrack: new Track(sp.x, sp.y, Math.PI / 2), ghosts: [],
@@ -1051,7 +1111,7 @@
   });
   Net.on('bcast', msg => {
     if (!raid) return;
-    raid.cast = { name: msg.name, dur: msg.dur, start: now };
+    raid.cast = { name: msg.name, dur: msg.dur, start: now, goal: Number.isFinite(msg.goal) ? msg.goal : null };
     BOSS_VFX.castStart(raid.def.id, msg.anim, msg.dur, raid.bossDraw);
     const end = now + msg.dur, st = raid.bossDraw.st;
     const prop = (k, v, until) => { raid.props[k] = v; raid.propsUntil[k] = until; };
@@ -1261,6 +1321,12 @@
   });
   // the storm's constant pulse: a faint bolt touches everyone
   Net.on('pulse', () => { if (raid) BOSS_VFX.pulse(raidUnits()); });
+  // a damage check met before its cast ran out (ok) or not: the cast ends here, and the cocoon (Skitterra) tears or shuts
+  Net.on('bcastend', msg => {
+    if (!raid) return;
+    if (raid.cast && raid.cast.name === msg.name && now < raid.cast.start + raid.cast.dur) { raid.cast.dur = Math.max(0.01, now - raid.cast.start); raid.cast.goal = null; }
+    BOSS_VFX.cocoonEnd(raid.bossDraw, !!msg.ok);
+  });
   // the room: props and floor state (the whole list), a prop chipped / broken / slammed into, and room moments
   Net.on('props', msg => { if (raid) ArenaView.roomProps(raid.room, msg, now); });
   Net.on('propfx', msg => { if (raid) BOSS_VFX.propFx(msg, raid.room, entById, raid.def.id); });
@@ -1396,6 +1462,11 @@
     // clicking the world takes keyboard focus back from any UI button
     if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
     mouse.x = e.clientX; mouse.y = e.clientY;
+    if (placingMark && inArena()) {
+      if (e.button === 0) { const m = mouseWorld(); sendWaymark({ k: placingMark, x: m.x, y: m.y }); }
+      placeMark(null);   // (right-click just puts it away)
+      return;
+    }
     if (e.button === 2) { mouse.rightDown = true; player.interact = null; moveTo(mouseWorld(), true); return; }
     if (e.button !== 0) return;
     const it = hoverTarget();
@@ -1434,6 +1505,7 @@
       return;
     }
     if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
+    if (e.key === 'Escape' && placingMark) { placeMark(null); return; }
     if (e.key === 'Escape') { if (selOpen()) selBack(); else if (panelOpen()) closePanels(); else { lockedAlly = null; lockedEnemy = null; } return; }
     if (e.key.toLowerCase() === 'i' && !selOpen() && overlay.classList.contains('hidden')) { TalentPanel.close(); Inventory.toggle(); return; }
     if (e.key.toLowerCase() === 'n' && started && !selOpen() && overlay.classList.contains('hidden')) {
@@ -1732,6 +1804,7 @@
       Loot.reveal();   // the chest's cards come up with the results
     }
     RaidUI.update(raid, now, Net.id, frameMarks());
+    RaidUI.waymarks(raid.def.trial ? null : raid.marks, placingMark);
   }
 
   function updateCamera(dt, snap) {
@@ -1975,6 +2048,7 @@
       }
       ArenaView.drawMoon(ctx, raid.def.enrage ? raid.fightTime / raid.def.enrage[raid.mode] : 0, now);
     }
+    drawWaymarks(ctx);
     ArenaView.drawZones(ctx, raid.zones, now);
     ArenaView.drawPuddles(ctx, raid.puddles, now);
     if (raid.eggs) ArenaView.eggs(ctx, raid.eggs.pts, clamp((now - raid.eggs.start) / Math.max(0.1, raid.eggs.end - raid.eggs.start), 0, 1), now);
@@ -2714,6 +2788,7 @@
 
   // clicking your locked ally's frame again lets go of them
   RaidUI.init({ onFrame: id => { lockedAlly = lockedAlly === id ? null : id; }, onLeave: () => leaveRaid(true),
+    onPlaceMark: k => placeMark(k), onWaymark: msg => sendWaymark(msg),
     onDock: where => { if (player.cls) Save.setSetting(`frames-${player.cls.role}`, where); } });
   // where the party frames sit for your role: healers start with them above the hotbar
   const applyFrameDock = () => { if (player.cls) RaidUI.dock(Save.setting(`frames-${player.cls.role}`, player.cls.role === 'healer' ? 'strip' : 'left')); };

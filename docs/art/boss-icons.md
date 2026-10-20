@@ -161,3 +161,15 @@ Background: dark barrow green-black. Objects: dark iron, bone, tarnished gold. A
 20. **Judgement** (`judgement`): a set of iron scales, one pan pulled down hard by a green weight.
 21. **The Long Night** (`the-long-night`): a single lantern with a small warm flame, in the middle of a field of black.
 22. **Moonset** (`moonset`): his enrage. A pale crescent moon sinking below a black horizon, a thin green line along the edge.
+
+---
+
+## New casts (damage and heal checks): 5 icons, one partial sheet
+
+Use each boss's own background and palette from above; one 3 × 3 sheet is fine (the rest of the grid left empty).
+
+1. **Chrysalis** (`skitterra/chrysalis`): a tall silk cocoon hanging at the centre of a web, wound tight, a faint glow of her shape inside, a few strands still pulling round it. (Her damage check: it should look like it's about to close.)
+2. **Gathering Storm** (`volkar/gathering-storm`): a low storm cloud with three short bolts already crackling out of its underside at once, small cyan sparks round them.
+3. **Thunderhead** (`volkar/thunderhead`): one huge anvil-shaped storm cloud, dark, with a single thick white bolt splitting it down the middle.
+4. **Royal Tithe** (`hollowking/royal-tithe`): a tarnished gold offering bowl under a floating crown, a stream of green life-light pouring up out of the bowl into the crown.
+5. **Dirge** (`hollowking/dirge`): an old iron funeral bell, still, with wide slow rings of sound spreading out beneath it in green.

@@ -929,3 +929,22 @@ body:has(#loot:not(.hidden)) #results { padding-right: 332px; }
 /* a debuff you can wash off: a teal edge on the frame (only for a hero carrying a cleanse) */
 .pf.cleanse { border-color: #4fd8c8; box-shadow: inset 0 0 0 1px #4fd8c855; }
 .pf.cleanse .pf-st .chip.bad { border-color: #4fd8c8; }
+/* a damage check: where the boss's health has to be by the end of the cast */
+.bb-hp .goal { position: absolute; top: -3px; bottom: -3px; width: 2px; margin-left: -1px; background: #fff0c8; box-shadow: 0 0 0 1px #000, 0 0 6px #ffd27a; pointer-events: none; z-index: 2; }
+.bb-hp .goal.hidden { display: none; }
+/* waymarks: A B C D (circles) and 1 2 3 4 (squares), under the Leave button */
+#waymarks { position: fixed; right: 16px; top: 52px; z-index: 4; display: grid; grid-template-columns: repeat(4, 24px) 20px; gap: 3px; padding: 4px; background: #0a0807d8; border: 1px solid #3a2a1c; border-radius: 3px; }
+#waymarks.hidden { display: none; }
+#waymarks .wm { width: 24px; height: 24px; padding: 0; display: grid; place-items: center; font-family: var(--fantasy); font-weight: 700; font-size: 12px; color: var(--c); background: #14100c; border: 1px solid #3a2a1c; cursor: pointer; }
+#waymarks .wm-ci { border-radius: 50%; }
+#waymarks .wm-sq { border-radius: 2px; }
+#waymarks .wm[data-k="A"], #waymarks .wm[data-k="1"] { --c: #ff6a5a; }
+#waymarks .wm[data-k="B"], #waymarks .wm[data-k="2"] { --c: #ffd84a; }
+#waymarks .wm[data-k="C"], #waymarks .wm[data-k="3"] { --c: #5ab4ff; }
+#waymarks .wm[data-k="D"], #waymarks .wm[data-k="4"] { --c: #c98aff; }
+#waymarks .wm.on { border-color: var(--c); background: color-mix(in srgb, var(--c) 18%, #14100c); }
+#waymarks .wm.placing { box-shadow: 0 0 0 2px var(--c); color: #fff; }
+#waymarks .wm-clear { grid-column: 5; grid-row: 1 / span 2; width: 20px; height: auto; color: var(--muted); border-radius: 2px; }
+#waymarks .wm-clear svg { width: 11px; height: 11px; }
+#waymarks .wm:hover { filter: brightness(1.25); }
+body.placing-mark canvas { cursor: crosshair; }

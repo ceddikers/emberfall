@@ -816,8 +816,41 @@ const BOSS_VFX = (() => {
         VFX.spawn({ x, y, z: 20, vx: (b.x - x) * 2.2, vy: (b.y - y) * 2.2, vz: rand(0, 30), drag: 0.01, life: 0.45, size: rand(5, 9), size1: 2, color: Math.random() < 0.5 ? '#7a4620' : '#c0401a', kind: 'drop', add: false }); }
     } });
   }
+  // the Chrysalis: silk winds up round her from the floor as the cast runs, thickening into a cocoon. If the party tears
+  // enough off her first it bursts open (cocoonEnd); if not, it closes and the enrage follows.
+  let cocoon = null;
+  function chrysalis(b, dur) {
+    const bands = Array.from({ length: 16 }, (_, i) => ({ ph: rand(0, 6), tilt: rand(-0.25, 0.25), w: 1.5 + (i % 3) }));
+    cocoon = VFX.fx({ dur, layer: 'air', draw: (c, p, t, e) => {
+      if (e.gone) return;
+      const k = e.a * Math.min(1, p / 0.05), R = 92, cy = b.y - 34, H = R * 1.2;
+      c.save();
+      c.fillStyle = `rgba(236,230,250,${(0.06 + 0.3 * p) * k})`;
+      c.beginPath(); c.ellipse(b.x, cy, R * (1 - 0.18 * p), H, 0, 0, TAU); c.fill();
+      c.lineCap = 'round';
+      const n = Math.min(bands.length, 2 + Math.floor(p * 15));
+      for (let i = 0; i < n; i++) {
+        const q = bands[i], y = cy + H * 0.85 - i * (H * 1.7 / bands.length), u = (y - cy) / H, w = R * (1 - 0.18 * p) * Math.sqrt(Math.max(0, 1 - u * u));
+        c.strokeStyle = `rgba(250,246,255,${(0.35 + 0.5 * p) * k})`; c.lineWidth = q.w;
+        c.beginPath(); c.moveTo(b.x - w, y + w * q.tilt); c.quadraticCurveTo(b.x, y + 9 + 3 * Math.sin(t * 2 + q.ph), b.x + w, y - w * q.tilt); c.stroke();
+      }
+      // the last few seconds: it pulses, nearly shut
+      if (p > 0.8) VFX.neonRing(c, b.x, cy, R * 0.9, '#f4f0ff', 2, k * (p - 0.8) * 3 * (0.6 + 0.4 * Math.sin(t * 14)), 0.5);
+      c.restore();
+    } });
+  }
+  function cocoonEnd(b, torn) {
+    if (cocoon) { cocoon.gone = true; cocoon = null; }
+    if (!torn) return;
+    VFX.burst(b.x, b.y - 34, { color: '#f4f0ff', n: 26, speed: 300, size: 12 });
+    for (let i = 0; i < 16; i++) VFX.spawn({ x: b.x + rand(-60, 60), y: b.y - 34 + rand(-70, 50), z: 30, vx: rand(-260, 260), vy: rand(-160, 160), vz: rand(60, 220), g: 320,
+      life: 0.9, size: 14, color: '#ffffff', stretch: 4, vr: rand(-8, 8) });
+    VFX.shock(b.x, b.y, { r: 200, color: '#f4f0ff', w: 5, dur: 0.5, flat: 1 });
+    shake(6);
+  }
   function castStart(bossKind, anim, dur, bossDraw) {
     if (bossKind === 'grubnak' && anim === 'gorge') gorgeVortex(bossDraw, dur);
+    if (bossKind === 'skitterra' && anim === 'chrysalis') chrysalis(bossDraw, dur);
     const pal = CAST_COLOR[bossKind] || {}, color = pal[anim] || pal.def || '#ffffff';
     VFX.fx({ dur, layer: 'ground', tick: (p) => {
       if (Math.random() < 0.25 + p * 0.6) VFX.charge(bossDraw.x, bossDraw.y - 30, { color, n: 1, r: 120 - p * 40, dur: 0.5, z: 30 });
@@ -1338,5 +1371,5 @@ const BOSS_VFX = (() => {
     shake(8);
   }
 
-  return { failed, propFx, stoveBurst, gazed, doomed, cure, knightMemory, knightRise, nightFall, polarityFlip, edgeClose, pulse, orbForm, orbHit, chain, meatballLand, meatballWall, meatballHit, scorchPool, silkSnap, silkFree, reelBite, snuff, hatch, threadShoot, threadSnap, floorFalls, impact, castStart, auto, leap, roar, addSpawn, addDeath, addEnrage, fury, spit, husk, tetherSnap, playerDeath, playerRaised, partyBuff, victory, wipe };
+  return { failed, propFx, stoveBurst, gazed, doomed, cure, knightMemory, knightRise, nightFall, polarityFlip, edgeClose, pulse, orbForm, orbHit, chain, meatballLand, meatballWall, meatballHit, scorchPool, silkSnap, silkFree, reelBite, snuff, hatch, threadShoot, threadSnap, floorFalls, impact, castStart, cocoonEnd, auto, leap, roar, addSpawn, addDeath, addEnrage, fury, spit, husk, tetherSnap, playerDeath, playerRaised, partyBuff, victory, wipe };
 })();
