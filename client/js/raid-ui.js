@@ -120,7 +120,7 @@ const RaidUI = (() => {
     }).observe(hud);
   }
 
-  function show(v) { if (v) trackHud(); root.classList.toggle('hidden', !v); if (!v) { $('countdown').classList.add('hidden'); $('down-veil').classList.add('hidden'); $('trial-lore').classList.add('hidden'); } }
+  function show(v) { if (v) trackHud(); root.classList.toggle('hidden', !v); document.body.classList.toggle('in-raid', !!v); if (!v) { $('countdown').classList.add('hidden'); $('down-veil').classList.add('hidden'); $('trial-lore').classList.add('hidden'); } }
 
   function setRoster(list0) {
     const key = list0.map(r => r.id).join(',');
@@ -150,7 +150,7 @@ const RaidUI = (() => {
   }
 
   // raid: the client raid state from main.js
-  // marks: { healer, locked, heal, casting: { id, frac }, aggro } (see frameMarks in main.js)
+  // marks: { healer, locked, heal, casting: { id, frac }, aggro, cleanse } (see frameMarks in main.js)
   // (this runs every frame: elements are looked up once, and text and widths are written only when they change)
   const els = {}, q = sel => els[sel] || (els[sel] = root.querySelector(sel));
   const setText = (el, v) => { if (el._t !== v) { el._t = v; el.textContent = v; } };
@@ -217,6 +217,7 @@ const RaidUI = (() => {
       f.row.classList.toggle('mid', p.alive && hpF < 0.6 && hpF >= 0.35);
       f.row.classList.toggle('low', p.alive && hpF < 0.35);
       f.row.classList.toggle('hit', p.alive && now - (p.hitAt || -9) < 0.2);
+      f.row.classList.toggle('cleanse', !!marks.cleanse && p.alive && !!(p.dd || p.vuln || (p.debuffs || []).some(([k]) => k === 'slowed' || k === 'rooted')));
       const casting = marks.casting && marks.casting.id === id;
       setW(f.cast, casting ? (marks.casting.frac * 100).toFixed(1) + '%' : '0%');
       f.row.classList.toggle('casting', !!casting);
@@ -293,7 +294,8 @@ const RaidUI = (() => {
     if (key === nextKey) return;
     nextKey = key;
     el.classList.toggle('hidden', !rows.length);
-    el.innerHTML = rows.map(([name, s]) => `<span><b>${esc(name)}</b><i>${Math.max(0, Math.ceil(s))}</i></span>`).join('');
+    const icon = name => (typeof BossIcons !== 'undefined' ? `<u style="background-image:${BossIcons.css(raid.def.id, name)}"></u>` : '');
+    el.innerHTML = rows.map(([name, s]) => `<span>${icon(name)}<b>${esc(name)}</b><i>${Math.max(0, Math.ceil(s))}</i></span>`).join('');
   }
 
   // icons under the boss's health: Hunter's Mark, a damage-up, a taunt's fixation, the Inquisitor's brand and the last

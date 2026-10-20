@@ -169,6 +169,17 @@ const BUFF_TIPS = {
 };
 // buffs refreshed every moment while a condition holds (the timer means nothing there)
 const BUFF_UNTIMED = new Set(['incircle', 'redline']);
+// status icons for entries with no ability art: drawn line glyphs (12x12, in the icon's text colour)
+const bfSvg = d => `<svg viewBox="0 0 12 12" aria-hidden="true">${d}</svg>`;
+const BUFF_GLYPH = {
+  dd: bfSvg('<path d="M6 1.5v8M2.5 6 6 9.5 9.5 6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>'),
+  vuln: bfSvg('<path d="M6 1 10.5 2.6V6c0 2.6-2 4.2-4.5 5C3.5 10.2 1.5 8.6 1.5 6V2.6Z" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M6.6 2.5 5 5.6l2 .8-1.4 3" fill="none" stroke="currentColor" stroke-width="1.3"/>'),
+  'p-dmg': bfSvg('<path d="M10.5 1.5 9.8 4 4.6 9.2 2.8 7.4 8 2.2ZM2.8 7.4 1.5 10.5l3.1-1.3" fill="currentColor"/>'),
+  'p-crit': bfSvg('<path d="M6 1.2 7.4 4.6 11 6 7.4 7.4 6 10.8 4.6 7.4 1 6 4.6 4.6Z" fill="currentColor"/>'),
+  'p-haste': bfSvg('<path d="M2 2.5 5.5 6 2 9.5M6 2.5 9.5 6 6 9.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>'),
+  bond: bfSvg('<circle cx="4.3" cy="6" r="2.8" fill="none" stroke="currentColor" stroke-width="1.3"/><circle cx="7.7" cy="6" r="2.8" fill="none" stroke="currentColor" stroke-width="1.3"/>'),
+  fx: bfSvg('<path d="M6 1.2 10 4.6 6 10.8 2 4.6Z M2 4.6h8" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>'),
+};
 const tipAttr = s => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
 
 const Hud = {
@@ -333,13 +344,22 @@ const Hud = {
     }
     for (const x of this.extra()) list.push(x);
     for (const x of k.itemBuffs()) list.push(x);   // buffs from item effects
-    const key = list.map(b => b.id + ':' + (b.left != null ? Math.ceil(b.left) : '') + ':' + b.stacks).join('|');
+    const key = list.map(b => b.id + ':' + (b.left != null ? Math.ceil(b.left) : '') + ':' + b.stacks + ':' + (b.label || '')).join('|');
     if (key !== this._buffKey) {
       this._buffKey = key;
-      const icon = b => (BUFF_ICON[b.id] ? `<u class="bf-icon" style="background-image:url(${abilityIcon(a.cls.id, BUFF_ICON[b.id])})"></u>` : '');
-      // entries with no timer (left undefined) just show their name
-      this.buffRow.innerHTML = list.map(b => `<span class="buff ${b.bad ? 'bad' : ''}${b.bond ? ' bond' : ''}"${b.tip ? ` data-tip="${tipAttr(b.tip)}"` : ''}>${icon(b)}${b.name}${b.stacks > 1 ? ' ×' + b.stacks : ''}${b.left != null ? ` <i>${Math.ceil(b.left)}</i>` : ''}</span>`).join('');
-      [...this.buffRow.children].forEach((ch, i) => { if (list[i].html) Tip.set(ch, list[i].html); });
+      const icon = b => {
+        if (BUFF_ICON[b.id]) return `<u class="bf-icon" style="background-image:url(${abilityIcon(a.cls.id, BUFF_ICON[b.id])})"></u>`;
+        const g = BUFF_GLYPH[b.id] || BUFF_GLYPH[b.bond ? 'bond' : String(b.id).startsWith('fx-') ? 'fx' : ''];
+        return `<u class="bf-icon g">${g || `<em>${(b.name || '?')[0]}</em>`}</u>`;
+      };
+      // under each icon: the seconds left, or a short label (2/4, +50%) for the ones with no timer
+      const under = b => (b.left != null ? Math.ceil(b.left) : b.label || '');
+      this.buffRow.innerHTML = list.map(b => `<span class="buff${b.bad ? ' bad' : ''}${b.bond ? ' bond' : ''}">${icon(b)}${b.stacks > 1 ? `<s>${b.stacks}</s>` : ''}<i>${under(b)}</i></span>`).join('');
+      // the name lives in the tooltip
+      [...this.buffRow.children].forEach((ch, i) => {
+        const b = list[i], head = `<b>${b.name}${b.stacks > 1 ? ` ×${b.stacks}` : ''}</b>${b.left != null ? `<em>${Math.ceil(b.left)}s</em>` : b.label ? `<em>${b.label}</em>` : ''}`;
+        Tip.set(ch, b.html || head + (b.tip ? tipAttr(b.tip) : ''));
+      });
     }
   },
 };

@@ -1826,6 +1826,8 @@
       heal: healer ? allyTargetId(ab) : null,
       casting: c && c.ab.target === 'ally' && typeof c.target === 'number' ? { id: c.target, frac: Math.min(1, (now - c.start) / Math.max(0.01, c.end - c.start)) } : null,
       aggro: raid.state === 'live' && !raid.boss.u ? raid.boss.tg : null,
+      // you carry a cleanse (the Alembist's vials, the Cleric's Purify): frames with something to wash off are marked
+      cleanse: !!(k && ((player.cls && player.cls.id === 'alembist') || (k.talent && k.talent('cleric_purify')))),
       kit: k || null, cls: player.cls ? player.cls.id : null,   // your own DoTs on the boss (raid-ui.js boss status)
     };
   }
@@ -2134,12 +2136,12 @@
     for (const b of list) if (b.end > now && !seen.has(b.kind)) { seen.add(b.kind); out.push({ id: 'p-' + b.kind, name: PBUFF_NAMES[b.kind] || b.kind, left: b.end - now, stacks: 1 }); }
     const s = myState();
     if (inArena() && s) {
-      if (s.dd) out.push({ id: 'dd', name: 'Damage Down', left: s.dd, stacks: 1, bad: true });
-      if (s.vuln) out.push({ id: 'vuln', name: `Vulnerability +${s.vuln}%`, left: 1, stacks: 1, bad: true });
+      if (s.dd) out.push({ id: 'dd', name: 'Damage Down', left: s.dd, stacks: 1, bad: true, tip: 'Dealing 10% less damage.' });
+      if (s.vuln) out.push({ id: 'vuln', name: 'Vulnerability', label: `+${s.vuln}%`, stacks: 1, bad: true, tip: `Taking ${s.vuln}% more damage.` });
     }
     // gear party bonuses last the whole fight (no timer)
     if (inArena() && raid.bond) for (const b of raid.bond.active) {
-      out.push({ id: 'bond' + b.tier, name: `${b.name} ${b.n}/4`, stacks: 1, bond: true, tip: `${b.name}: ${b.n} in your group wear ${PARTY_BONUS[b.tier].boss} gear. Everyone gets ${b.text}.` });
+      out.push({ id: 'bond' + b.tier, name: b.name, label: `${b.n}/4`, stacks: 1, bond: true, tip: `${b.name}: ${b.n} in your group wear ${PARTY_BONUS[b.tier].boss} gear. Everyone gets ${b.text}.` });
     }
     return out;
   };
