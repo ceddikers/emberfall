@@ -63,6 +63,8 @@ const BossIcons = (() => {
   };
   const coffin = (c, x, y, s, col) => fill(c, col, [[x - 6 * s, y - 20 * s], [x + 6 * s, y - 20 * s], [x + 11 * s, y - 8 * s], [x + 7 * s, y + 20 * s], [x - 7 * s, y + 20 * s], [x - 11 * s, y - 8 * s]]);
   const motion = (c, col, lines) => { for (const l of lines) stroke(c, col, 2.5, l); };
+  // the party slots' own colours (FIGHT.SLOTS in fight.js; a copy so the icons draw before a fight is loaded)
+  const FIGHT_SLOTS = typeof FIGHT !== 'undefined' && FIGHT.SLOTS ? FIGHT.SLOTS : ['#5fe36a', '#b26cff', '#ff6fd2', '#f2eee4'];
 
   // ---- the glyphs, by cast name. A = the boss's accent colour
   const G = {
@@ -113,6 +115,12 @@ const BossIcons = (() => {
     'Spinneret Volley': (c, A) => { for (const [x, y] of [[18, 22], [34, 14], [46, 30]]) { stroke(c, L, 1.5, [[x, 0], [x, y - 8]]); disc(c, x, y, 7, L); } for (const x of [18, 34, 46]) ring(c, x, 52, 5, A, 2); },
     'Acid Deluge': (c, A) => { for (const [x, y] of [[14, 14], [30, 10], [46, 16], [22, 32], [40, 30], [54, 38], [12, 44], [32, 48]]) { stroke(c, A, 2, [[x + 4, y - 9], [x, y]]); disc(c, x, y + 1, 3, A); } },
     'Strand': (c, A) => { stroke(c, L, 2.5, [[8, 34], [56, 30]]); },
+    // a field of overlapping snares with three blue holes, and a clutch hanging at the side
+    'Snare Weave': (c, A) => {
+      for (const [x, y] of [[14, 14], [32, 12], [50, 14], [12, 32], [52, 32], [22, 50], [42, 52], [32, 36]]) ring(c, x, y, 10, L, 1.8);
+      for (const [x, y] of [[24, 26], [40, 26], [32, 50]]) disc(c, x, y, 6, '#3d8bff');
+      stroke(c, L, 1.2, [[56, 4], [56, 18]]); egg(c, 56, 22, 0.55, '#efeedc');
+    },
     'Ceiling Ambush': (c, A) => { stroke(c, L, 1.5, [[32, 0], [32, 20]]); spider(c, 32, 30, 0.9, L); c.beginPath(); c.ellipse(32, 54, 16, 4, 0, 0, TAU); c.fillStyle = A; c.fill(); },
     'Into the Dark': (c, A) => { disc(c, 32, 32, 22, '#05040a'); spider(c, 32, 28, 0.7, '#3a3448'); disc(c, 27, 24, 2, A); disc(c, 37, 24, 2, A); },
     'From the Dark': (c, A) => { stroke(c, L, 1.5, [[32, 0], [32, 22]]); spider(c, 32, 32, 0.9, '#5a4a6a'); ring(c, 32, 52, 10, L, 2.5); },
@@ -155,6 +163,17 @@ const BossIcons = (() => {
     'Grave Cleave': (c, A) => { sword(c, 30, 30, 0.6, 26, L); fill(c, '#b46aff', [[40, 44], [56, 56], [44, 58]]); },
     'Royal Doom': (c, A) => { ring(c, 32, 32, 24, '#b46aff', 3); skull(c, 32, 32, 1, '#efe2ff'); },
     'Grave Marks': (c, A) => { ring(c, 32, 32, 18, A, 3); for (let i = 0; i < 4; i++) { const a = i * TAU / 4 + 0.78; stroke(c, L, 3, [[32 + Math.cos(a) * 6, 32 + Math.sin(a) * 6], [32 + Math.cos(a) * 14, 32 + Math.sin(a) * 14]]); } },
+    // four graves round a crown, each rim in a party colour
+    'Burial Rites': (c, A) => {
+      crown(c, 32, 33, 0.55, '#e8c15a');
+      for (const [x, y, col] of [[32, 10, FIGHT_SLOTS[0]], [32, 54, FIGHT_SLOTS[1]], [10, 32, FIGHT_SLOTS[2]], [54, 32, FIGHT_SLOTS[3]]]) { fill(c, '#060807', [[x - 6, y - 4], [x + 6, y - 4], [x + 6, y + 5], [x - 6, y + 5]]); stroke(c, col, 2.2, [[x - 6, y - 4], [x + 6, y - 4], [x + 6, y + 5], [x - 6, y + 5]], true); }
+    },
+    // a sealed writ, three chains out from it and a fourth hanging broken
+    'Writ of Execution': (c, A) => {
+      for (const a of [-2.4, -0.7, 0.9]) stroke(c, '#8a939e', 2.5, [[32, 32], [32 + Math.cos(a) * 28, 32 + Math.sin(a) * 28]]);
+      stroke(c, '#3d8bff', 2.5, [[32, 32], [32 + Math.cos(2.4) * 12, 32 + Math.sin(2.4) * 12]]); stroke(c, '#3d8bff', 2.5, [[32 + Math.cos(2.4) * 18, 32 + Math.sin(2.4) * 18], [32 + Math.cos(2.4) * 28, 32 + Math.sin(2.4) * 28]]);
+      fill(c, L, [[22, 22], [42, 22], [42, 42], [22, 42]]); disc(c, 32, 36, 5, '#b8322a');
+    },
     'Gravebind': (c, A) => { for (const x of [22, 42]) { c.beginPath(); c.ellipse(x, 32, 10, 7, 0, 0, TAU); c.strokeStyle = L; c.lineWidth = 4; c.stroke(); } stroke(c, '#ff5a4a', 2, [[30, 32], [34, 32]]); },
     'Funeral March': (c, A) => { for (const x of [16, 30, 44]) { stroke(c, L, 2.5, [[x, 54], [x + 10, 12]]); fill(c, L, [[x + 8, 14], [x + 13, 6], [x + 13, 16]]); } motion(c, A, [[[6, 58], [56, 58]]]); },
     'Lights Out': (c, A) => { fill(c, '#3a3f43', [[20, 40], [44, 40], [38, 56], [26, 56]]); for (const [x, y] of [[28, 30], [34, 22], [30, 12]]) disc(c, x, y, 5, '#24282b'); },

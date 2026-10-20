@@ -22,11 +22,15 @@ const BossTells = (() => {
     g.addColorStop(0, `rgba(10,5,2,${a})`); g.addColorStop(0.75, `rgba(10,5,2,${a * 0.7})`); g.addColorStop(1, 'rgba(10,5,2,0)');
     ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(x, y, r, r * 0.92, 0, 0, TAU); ctx.fill();
   }
-  // One colour language for every boss: the rim says what the mechanic wants of you, the art inside says whose it is.
-  // Orange-red: get out. Red: a tankbuster. Yellow: stack in. Purple: spread out. Cyan: soak it.
+  // One colour language for every boss: the rim and wash say what the floor means, the art inside (its edges, textures
+  // and motion) says whose it is. Red: danger (keep out, or keep it off the others: a spread, a line on you, a pool
+  // you carry); a deeper red for a tankbuster. Blue: safe floor (a pocket, a donut's middle, a shadow behind cover).
+  // Yellow: share it (stand in together, soak it). A circle in a player's own colour (FIGHT.SLOTS) is theirs.
   // (raidwides have no rim: the whole room is the warning)
-  const ROLE_RIM = { aoe: '#ff6a3a', proximity: '#ff6a3a', knockback: '#ff6a3a', buster: '#ff2a3a', stack: '#ffd84a', spread: '#c070ff', chain: '#c070ff', tower: '#4ff0e8' };
-  const roleColor = (tg, tell) => ROLE_RIM[tg.type] || (tell && tell.color) || '#ffffff';
+  const COL = { danger: '#ff3b2f', dangerHi: '#ffb4a8', buster: '#ff1f48', safe: '#3d8bff', safeHi: '#b4d4ff', share: '#ffd23a', shareHi: '#fff0a8' };
+  const ROLE_RIM = { aoe: COL.danger, proximity: COL.danger, knockback: COL.danger, hook: COL.danger, spread: COL.danger, chain: COL.danger, bait: COL.danger, drop: COL.danger,
+    buster: COL.buster, stack: COL.share, tower: COL.share, safe: COL.safe };
+  const roleColor = (tg, tell) => (tg.type === 'own' && tg.color) || ROLE_RIM[tg.type] || (tell && tell.color) || '#ffffff';
   // The fair-play outline: a solid rim in the role colour and a faint wash sweeping out from the origin as the cast
   // runs, with a bright leading edge. In the last 0.6s the rim pulses; a shape that follows someone flashes white the
   // moment it locks in place. The same on every difficulty.
@@ -43,10 +47,10 @@ const BossTells = (() => {
     }
     SHAPES.trace(ctx, s);
     if (s.kind === 'donut') {
-      // the safe circle reads as safe: a soft lift inside it and a clean bright edge
+      // the safe circle reads as safe: a blue lift inside it and a clean blue edge
       ctx.save(); ctx.beginPath(); ctx.arc(s.x, s.y, s.r2, 0, TAU);
-      ctx.fillStyle = rgba('#fff6e0', 0.05 * k); ctx.fill();
-      ctx.strokeStyle = rgba('#fff6e0', (0.45 + 0.35 * late) * k); ctx.lineWidth = 2.5; ctx.stroke();
+      ctx.fillStyle = rgba(COL.safe, 0.1 * k); ctx.fill();
+      ctx.strokeStyle = rgba(COL.safeHi, (0.5 + 0.35 * late) * k); ctx.lineWidth = 2.5; ctx.stroke();
       ctx.restore();
       SHAPES.trace(ctx, s);
     }
@@ -193,10 +197,10 @@ const BossTells = (() => {
         const r2 = s.r2;
         for (let i = 0; i < 5; i++) {
           const q = (t * (0.5 + p) + i / 5) % 1, rr = r2 + 10 + q * (AR() * 1.1 - r2);
-          circle(ctx, s.x, s.y, rr, null, rgba('#dbe6f4', 0.28 * (1 - q) * k), 2 + 2 * p);
+          circle(ctx, s.x, s.y, rr, null, rgba(COL.dangerHi, 0.28 * (1 - q) * k), 2 + 2 * p);
         }
         shadow(ctx, s.x, s.y, r2 * (0.75 + 0.25 * easeIn(p)), (0.3 + 0.25 * p) * k);
-        circle(ctx, s.x, s.y, r2, null, rgba('#e8eef6', (0.45 + 0.45 * p) * k), 3);
+        circle(ctx, s.x, s.y, r2, null, rgba(COL.safeHi, (0.45 + 0.45 * p) * k), 3);
         for (let i = 0; i < 3; i++) { const a = t * 0.8 + i * 2.1; glow(ctx, s.x + Math.cos(a) * r2, s.y + Math.sin(a) * r2, 14, '#ffffff', 0.6 * k); }
       },
     },
@@ -233,7 +237,8 @@ const BossTells = (() => {
         ctx.save(); ctx.globalAlpha = k;
         circle(ctx, s.x, s.y, s.r, '#f6f3ea', OUT, 3);
         circle(ctx, s.x, s.y, s.r * 0.72, null, '#d8d2c2', 2);
-        ctx.setLineDash([6, 7]); circle(ctx, s.x, s.y, s.r * 0.88, null, '#5a7ac8', 3); ctx.setLineDash([]);
+        ctx.setLineDash([6, 7]); circle(ctx, s.x, s.y, s.r * 0.88, null, COL.share, 3); ctx.setLineDash([]);
+        circle(ctx, s.x, s.y, s.r + 1, null, rgba(COL.share, 0.85), 2.5);   // (a soak: the yellow rim)
         // the rim fills with gold as the order comes up
         ctx.beginPath(); ctx.arc(s.x, s.y, s.r + 5, -Math.PI / 2, -Math.PI / 2 + TAU * p); ctx.strokeStyle = '#e8c15a'; ctx.lineWidth = 4; ctx.stroke();
         const need = Math.max(1, tg.need || 1);
@@ -295,7 +300,7 @@ const BossTells = (() => {
       ground(ctx, tg, s, p, k, t) {
         const max = 760;
         const g = ctx.createRadialGradient(s.x, s.y, 30, s.x, s.y, max);
-        g.addColorStop(0, rgba('#ff5a1a', (0.2 + 0.25 * p) * k)); g.addColorStop(0.5, rgba('#ff8a3a', 0.08 * k)); g.addColorStop(1, 'rgba(255,138,58,0)');
+        g.addColorStop(0, rgba(COL.danger, (0.22 + 0.25 * p) * k)); g.addColorStop(0.5, rgba(COL.danger, 0.08 * k)); g.addColorStop(1, 'rgba(255,59,47,0)');
         ctx.fillStyle = g; ctx.beginPath(); ctx.arc(s.x, s.y, max, 0, TAU); ctx.fill();
         for (let i = 0; i < 70; i++) {
           const a = hash(i, 1) * TAU, d = 40 + Math.sqrt(hash(i, 2)) * 680, f = Math.max(0, 1 - d / max);
@@ -340,6 +345,9 @@ const BossTells = (() => {
             ctx.strokeStyle = rgba(col, k); ctx.lineWidth = 5; ctx.stroke();
           }
         }
+        // the exact edge in red (the coils are the art), and the cool middle in blue
+        circle(ctx, s.x, s.y, s.r - 2, null, rgba(COL.danger, (0.45 + 0.4 * p) * k), 2.5);
+        if (r2) circle(ctx, s.x, s.y, r2, null, rgba(COL.safeHi, (0.4 + 0.4 * p) * k), 2);
         if (heat > 0.35) {
           ctx.save(); ctx.globalCompositeOperation = 'lighter';
           ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, TAU); if (r2) ctx.arc(s.x, s.y, r2, 0, TAU, true);
@@ -478,6 +486,7 @@ const BossTells = (() => {
         const g = ctx.createRadialGradient(s.x, s.y, 40, s.x, s.y, rr);
         g.addColorStop(0, rgba('#8a9a3a', (0.34 + 0.2 * p) * k)); g.addColorStop(0.75, rgba('#6a7a2a', (0.22 + 0.16 * p) * k)); g.addColorStop(1, rgba('#c8d87a', 0.05 * k));
         ctx.fillStyle = g; ctx.fillRect(-R, -R, R * 2, R * 2);
+        ctx.fillStyle = rgba(COL.danger, (0.06 + 0.08 * p) * k); ctx.fillRect(-R, -R, R * 2, R * 2);   // danger everywhere but the shadows
         for (let i = 0; i < 4; i++) { const q = (t * 0.7 + i / 4) % 1; circle(ctx, s.x, s.y, 60 + q * R * 0.5, null, rgba('#e8f0b0', 0.28 * (1 - q) * k), 3); }
         if (p > 0.7) for (let i = 0; i < 18; i++) { const a = hash(i, tg.id) * TAU, d = 120 + hash(i + 2, tg.id) * 600; circle(ctx, s.x + Math.cos(a) * d, s.y + Math.sin(a) * d, 3 + hash(i, 5) * 4, rgba('#f0f8c0', 0.5 * (p - 0.7) / 0.3 * k)); }
       },
@@ -628,7 +637,7 @@ const BossTells = (() => {
       color: '#e8ff9a', outline: false,
       ground(ctx, tg, s, p, k, t) {
         glow(ctx, s.x, s.y, s.r * 1.4, '#c8ff6a', 0.18 * k);
-        circle(ctx, s.x, s.y, s.r, rgba('#e8ff9a', 0.06 * k), rgba('#f0ffc8', (0.45 + 0.4 * p) * k), 2);
+        circle(ctx, s.x, s.y, s.r, rgba(COL.share, 0.08 * k), rgba(COL.share, (0.55 + 0.4 * p) * k), 2.5);
         ctx.beginPath(); ctx.arc(s.x, s.y, s.r + 5, -Math.PI / 2, -Math.PI / 2 + TAU * (1 - p));
         ctx.strokeStyle = rgba('#ffffff', 0.7 * k); ctx.lineWidth = 2; ctx.stroke();
         const wob = Math.sin(t * (4 + p * 16) + tg.id) * (1 + p * 3);
@@ -694,7 +703,8 @@ const BossTells = (() => {
       color: '#c8ff8a', outline: false,
       ground(ctx, tg, s, p, k, t) {
         const R = AR() * 1.4;
-        ctx.fillStyle = rgba('#5ab82a', (0.16 + 0.18 * p) * k); ctx.fillRect(-R, -R, R * 2, R * 2);
+        ctx.fillStyle = rgba('#5ab82a', (0.12 + 0.14 * p) * k); ctx.fillRect(-R, -R, R * 2, R * 2);
+        ctx.fillStyle = rgba(COL.danger, (0.06 + 0.08 * p) * k); ctx.fillRect(-R, -R, R * 2, R * 2);   // danger everywhere but the shadows
         // acid coming down at a slant: streaked drops falling onto the lit floor, a ring where each lands
         const n = 70 + Math.round(60 * p), sp = 0.9 + 1.4 * p;
         ctx.save(); ctx.lineCap = 'round';
@@ -728,7 +738,7 @@ const BossTells = (() => {
         }
         ctx.closePath();
         ctx.strokeStyle = rgba('#1a1028', 0.6 * k); ctx.lineWidth = 6; ctx.stroke();
-        ctx.strokeStyle = rgba('#d8c8ff', (0.5 + 0.4 * p) * k); ctx.lineWidth = 3; ctx.stroke();
+        ctx.strokeStyle = rgba(COL.danger, (0.5 + 0.4 * p) * k); ctx.lineWidth = 3; ctx.stroke();
         ctx.strokeStyle = rgba('#ffffff', (0.6 + 0.4 * p) * k); ctx.lineWidth = 1.2; ctx.stroke();
         ctx.restore();
         // the big spike at the front, where her shadow comes in from
@@ -760,6 +770,64 @@ const BossTells = (() => {
           ctx.strokeStyle = rgba('#f4f0ff', (0.4 + 0.5 * p) * k); ctx.lineWidth = 1.6; ctx.stroke();
         }
         for (let i = 0; i < 5; i++) { const q = (t * (1 + 2 * p) + i / 5) % 1; glow(ctx, s.x + ca * q * s.len, s.y + sa * q * s.len - 36, 10, '#ffffff', 0.5 * p * k); }
+      },
+    },
+    // Snare Weave (Hard): a spring-snare of silk, a little web wound tight in its circle, pale chevrons on its rim
+    // pointing out (it flings you out when it springs). The rim and wash are red (the outline); the silk is hers.
+    snare: {
+      color: '#f4f0ff',
+      ground(ctx, tg, s, p, k, t) {
+        ctx.save(); ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, TAU); ctx.clip();
+        const spin = (tg.id % 2 ? 1 : -1) * t * (0.2 + 0.8 * p), a = (0.22 + 0.35 * p) * k;
+        for (let i = 0; i < 8; i++) { const ang = spin + i * TAU / 8; line(ctx, s.x, s.y, s.x + Math.cos(ang) * s.r, s.y + Math.sin(ang) * s.r, rgba('#f4f0ff', a), 1.2); }
+        // the spiral winds in tighter as it's set
+        ctx.beginPath();
+        for (let q = 0; q <= 1; q += 0.02) { const ang = spin * 1.5 + q * TAU * 3, rr = s.r * (0.92 - q * 0.8) * (1 - 0.15 * p); const x = s.x + Math.cos(ang) * rr, y = s.y + Math.sin(ang) * rr; q ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
+        ctx.strokeStyle = rgba('#e8e4f4', a * 0.9); ctx.lineWidth = 1.2; ctx.stroke();
+        ctx.restore();
+        // the spring: chevrons on the rim, pointing out, twitching harder near the end
+        const n = Math.max(4, Math.round(s.r / 30)), kick = Math.sin(t * (6 + p * 18)) * 3 * p;
+        for (let i = 0; i < n; i++) {
+          const ang = i * TAU / n + tg.id * 0.37, x = s.x + Math.cos(ang) * (s.r - 14 + kick), y = s.y + Math.sin(ang) * (s.r - 14 + kick);
+          ctx.save(); ctx.translate(x, y); ctx.rotate(ang);
+          poly(ctx, [-5, -7, 6, 0, -5, 7, -2, 0], rgba(COL.dangerHi, (0.35 + 0.45 * p) * k), null);
+          ctx.restore();
+        }
+      },
+    },
+    // ... and the pockets she leaves clear: blue, the floor under them swept bare of silk, a calm ring breathing slowly
+    snaregap: {
+      color: '#3d8bff',
+      ground(ctx, tg, s, p, k, t) {
+        glow(ctx, s.x, s.y, s.r * 1.3, COL.safe, (0.14 + 0.12 * p) * k);
+        circle(ctx, s.x, s.y, s.r, rgba(COL.safe, 0.16 * k), null);
+        circle(ctx, s.x, s.y, s.r * (0.55 + 0.08 * Math.sin(t * 2 + tg.id)), null, rgba(COL.safeHi, 0.4 * k), 1.5);
+        // a countdown round it: when the snares round it will spring
+        ctx.beginPath(); ctx.arc(s.x, s.y, s.r + 6, -Math.PI / 2, -Math.PI / 2 + TAU * (1 - p));
+        ctx.strokeStyle = rgba('#ffffff', 0.6 * k); ctx.lineWidth = 2; ctx.stroke();
+      },
+    },
+    // Egg-Laden: a pale clutch hangs on the carrier's back, swelling; the circle under them is where its pool will lie,
+    // venom beading in it as it nears, and a ring counts down to the drop
+    eggdrop: {
+      color: '#ff3b2f',
+      ground(ctx, tg, s, p, k, t) {
+        for (let i = 0; i < 14; i++) {
+          if (hash(tg.id, i) > p * 1.1) continue;
+          const a = hash(i, tg.id) * TAU, d = Math.sqrt(hash(i + 5, tg.id)) * s.r * 0.9, x = s.x + Math.cos(a) * d, y = s.y + Math.sin(a) * d;
+          circle(ctx, x, y, 2.5 + hash(i, 2) * 3, rgba('#8adf2a', 0.75 * k), rgba('#14300a', 0.7 * k), 1);
+        }
+        ctx.beginPath(); ctx.arc(s.x, s.y, s.r + 7, -Math.PI / 2, -Math.PI / 2 + TAU * (1 - p));
+        ctx.strokeStyle = rgba('#ffffff', 0.85 * k); ctx.lineWidth = 3; ctx.stroke();
+      },
+      air(ctx, tg, s, p, k, t) {
+        const sw = 1 + 0.25 * p + Math.sin(t * (4 + p * 10)) * 0.04 * p, x = s.x - 10, y = s.y - 46;
+        ctx.save(); ctx.globalAlpha = k;
+        glow(ctx, x, y, 22 * sw, '#c8ff6a', 0.25 + 0.4 * p);
+        for (let i = 0; i < 5; i++) { const a = i * TAU / 5 + 0.3, d = i ? 8 * sw : 0; ellipse(ctx, x + Math.cos(a) * d, y + Math.sin(a) * d, 7 * sw, 6 * sw, a, '#efeedc', OUT, 1.5); }
+        for (let i = 0; i < 3; i++) line(ctx, x - 14, y - 10 + i * 8, x + 14, y - 6 + i * 8, 'rgba(220,220,235,0.7)', 1);
+        if (p > 0.7) { const q = (t * 2) % 1; circle(ctx, x, y + 12 + q * 30, 2.5, rgba('#8adf2a', (1 - q) * k)); }
+        ctx.restore();
       },
     },
   };
@@ -881,12 +949,12 @@ const BossTells = (() => {
       color: '#9ff4ff',
       ground(ctx, tg, s, p, k, t) {
         glow(ctx, s.x, s.y, s.r * 1.4, '#4fa8e0', 0.22 * k);
-        circle(ctx, s.x, s.y, s.r, rgba('#9ff4ff', 0.08 * k), rgba('#bff6ff', (0.45 + 0.4 * p) * k), 2);
+        circle(ctx, s.x, s.y, s.r, rgba(COL.share, 0.08 * k), rgba(COL.share, (0.5 + 0.4 * p) * k), 2.5);
         ctx.beginPath(); ctx.arc(s.x, s.y, s.r + 5, -Math.PI / 2, -Math.PI / 2 + TAU * (1 - p));
         ctx.strokeStyle = rgba('#ffffff', 0.7 * k); ctx.lineWidth = 2; ctx.stroke();
         // a rune ring round it: ticks turning slowly, and four arrowheads pointing in at the rod
         const R2 = s.r + 22, spin = t * 0.4;
-        circle(ctx, s.x, s.y, R2, null, rgba('#7fd8ff', (0.35 + 0.35 * p) * k), 1.5);
+        circle(ctx, s.x, s.y, R2, null, rgba(COL.shareHi, (0.3 + 0.3 * p) * k), 1.5);
         for (let i = 0; i < 16; i++) { const a = spin + i * TAU / 16, l = i % 4 ? 6 : 12; line(ctx, s.x + Math.cos(a) * R2, s.y + Math.sin(a) * R2, s.x + Math.cos(a) * (R2 + l), s.y + Math.sin(a) * (R2 + l), rgba('#bff6ff', (0.4 + 0.4 * p) * k), 1.5); }
         for (let i = 0; i < 4; i++) {
           const a = -spin + i * TAU / 4 + Math.PI / 4, x = s.x + Math.cos(a) * (R2 + 24), y = s.y + Math.sin(a) * (R2 + 24), ux = -Math.cos(a), uy = -Math.sin(a);
@@ -923,8 +991,8 @@ const BossTells = (() => {
           const ang = Math.atan2(cy, cx);
           const strip = { kind: 'rect', x: c.x - Math.cos(ang) * 20, y: c.y - Math.sin(ang) * 20, angle: ang, len: R * 2, w: 92 };
           ctx.save(); SHAPES.trace(ctx, strip);
-          ctx.fillStyle = rgba('#bfe6ff', 0.1 * k); ctx.fill();
-          ctx.setLineDash([10, 10]); ctx.lineDashOffset = t * 12; ctx.strokeStyle = rgba('#d8f0ff', 0.3 * k); ctx.lineWidth = 1.5; ctx.stroke();
+          ctx.fillStyle = rgba(COL.safe, 0.14 * k); ctx.fill();
+          ctx.setLineDash([10, 10]); ctx.lineDashOffset = t * 12; ctx.strokeStyle = rgba(COL.safeHi, 0.55 * k); ctx.lineWidth = 2; ctx.stroke();
           ctx.restore();
         }
       },
@@ -937,8 +1005,8 @@ const BossTells = (() => {
         let st = null, sd = Infinity;
         for (const pr of env.props || []) if (pr.kind === 'stone') { const d = PROPS.sd(pr, s.x, s.y); if (d < sd) { sd = d; st = pr; } }
         if (!st) return;
-        const near = sd <= 70, hot = st.state > 0, col = hot ? '#ff8a6a' : '#9ff4ff';
-        glow(ctx, st.x, st.y, st.r + 70, hot ? '#ff5a3a' : '#4fa8e0', (0.12 + 0.2 * p) * k);
+        const near = sd <= 70, hot = st.state > 0, col = hot ? COL.danger : COL.share;
+        glow(ctx, st.x, st.y, st.r + 70, hot ? COL.danger : '#c8a03a', (0.12 + 0.2 * p) * k);
         ctx.save(); ctx.setLineDash([8, 8]); ctx.lineDashOffset = -t * 30;
         circle(ctx, st.x, st.y, st.r + 70, null, rgba(col, (0.3 + 0.4 * p) * k), 2);
         ctx.restore();
@@ -979,7 +1047,7 @@ const BossTells = (() => {
         const ex = s.x + c * (s.len - 40), ey = s.y + sn * (s.len - 40), rock = [];
         for (let i = 0; i < 8; i++) { const a = i * TAU / 8 + 0.2, m = 38 * (0.85 + 0.2 * hash(i, tg.id)); rock.push(ex + Math.cos(a) * m, ey + Math.sin(a) * m * 0.85); }
         ctx.save(); ctx.setLineDash([7, 6]); ctx.lineDashOffset = -t * 20;
-        poly(ctx, rock, rgba('#9fd0ff', (0.08 + 0.12 * p) * k), rgba('#cfe8ff', (0.45 + 0.4 * p) * k), 2);
+        poly(ctx, rock, rgba('#e8dcc8', (0.08 + 0.12 * p) * k), rgba('#f2ead8', (0.45 + 0.4 * p) * k), 2);
         ctx.restore();
       },
       air(ctx, tg, s, p, k, t) {
@@ -996,9 +1064,9 @@ const BossTells = (() => {
     chain: {
       color: '#9ff4ff', outline: false,
       ground(ctx, tg, s, p, k, t, env) {
-        glow(ctx, s.x, s.y, s.r, '#4fa8e0', (0.06 + 0.1 * p) * k);
+        glow(ctx, s.x, s.y, s.r, COL.danger, (0.05 + 0.08 * p) * k);
         ctx.save(); ctx.setLineDash([6, 10]); ctx.lineDashOffset = -t * 40;
-        circle(ctx, s.x, s.y, s.r, null, rgba('#bff6ff', (0.3 + 0.45 * p) * k), 2);
+        circle(ctx, s.x, s.y, s.r, null, rgba(COL.danger, (0.4 + 0.45 * p) * k), 2.5);
         ctx.restore();
         for (let i = 0; i < 3; i++) {
           if ((Math.floor(t * 12) + i) % 3 === 0) continue;
@@ -1024,9 +1092,9 @@ const BossTells = (() => {
       ground(ctx, tg, s, p, k, t) {
         ArenaView.stackMarker(ctx, s, p, k, t);
         const R = s.r + 36, spin = t * 0.3;
-        glow(ctx, s.x, s.y, R * 1.2, '#7fd8ff', (0.1 + 0.2 * p) * k);
-        circle(ctx, s.x, s.y, R, null, rgba('#9fe4ff', (0.45 + 0.4 * p) * k), 2.5);
-        circle(ctx, s.x, s.y, R + 14, null, rgba('#9fe4ff', (0.25 + 0.3 * p) * k), 1.2);
+        glow(ctx, s.x, s.y, R * 1.2, '#c8a03a', (0.1 + 0.2 * p) * k);
+        circle(ctx, s.x, s.y, R, null, rgba(COL.share, (0.45 + 0.4 * p) * k), 2.5);
+        circle(ctx, s.x, s.y, R + 14, null, rgba(COL.shareHi, (0.25 + 0.3 * p) * k), 1.2);
         for (let i = 0; i < 24; i++) { const a = spin + i * TAU / 24, l = i % 6 ? 5 : 14; line(ctx, s.x + Math.cos(a) * R, s.y + Math.sin(a) * R, s.x + Math.cos(a) * (R + l), s.y + Math.sin(a) * (R + l), rgba('#cff2ff', (0.45 + 0.4 * p) * k), 1.5); }
         for (let i = 0; i < 4; i++) {
           const a = -spin + i * TAU / 4, x = s.x + Math.cos(a) * (R + 30), y = s.y + Math.sin(a) * (R + 30), ux = -Math.cos(a), uy = -Math.sin(a);
@@ -1049,7 +1117,7 @@ const BossTells = (() => {
       ground(ctx, tg, s, p, k, t) {
         const R = 520;   // its falloff (volkar.js)
         const g = ctx.createRadialGradient(s.x, s.y, 10, s.x, s.y, R);
-        g.addColorStop(0, rgba('#cfeaff', (0.25 + 0.35 * p) * k)); g.addColorStop(0.35, rgba('#7fb8e8', (0.1 + 0.12 * p) * k)); g.addColorStop(1, 'rgba(60,110,170,0)');
+        g.addColorStop(0, rgba(COL.danger, (0.28 + 0.35 * p) * k)); g.addColorStop(0.35, rgba(COL.danger, (0.1 + 0.12 * p) * k)); g.addColorStop(1, 'rgba(255,59,47,0)');
         ctx.fillStyle = g; ctx.beginPath(); ctx.arc(s.x, s.y, R, 0, TAU); ctx.fill();
         for (let i = 0; i < 4; i++) {
           const q = 1 - ((t * (0.5 + p) + i / 4) % 1);
@@ -1100,7 +1168,7 @@ const BossTells = (() => {
       if (u.a == null) continue;
       let d = Math.atan2(b.y - u.y, b.x - u.x) - u.a;
       while (d > Math.PI) d -= TAU; while (d < -Math.PI) d += TAU;
-      const caught = (Math.abs(d) < 1.2) === caughtFacing, col = caught ? '#ff5a4a' : '#d8ffe4';
+      const caught = (Math.abs(d) < 1.2) === caughtFacing, col = caught ? COL.danger : COL.safeHi;
       const R = 95, kk = k * (0.55 + 0.45 * p);
       ctx.save(); ctx.translate(u.x, u.y);
       ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, R, u.a - 1.2, u.a + 1.2); ctx.closePath();
@@ -1242,8 +1310,8 @@ const BossTells = (() => {
           if (ARENA.sd(x, y) > -20) continue;
           graveHand(ctx, x, y, 16 + 22 * easeIn(p), k * Math.min(1, p * 2), tg.tag[0] === 'e' ? '#cfe8ff' : '#d0b0ff');
         }
-        // the safe ring round him, its edge lit
-        circle(ctx, s.x, s.y, s.r2, null, rgba(col, (0.35 + 0.4 * p) * k), 2.5);
+        // the safe ring round him, its edge lit blue
+        circle(ctx, s.x, s.y, s.r2, null, rgba(COL.safeHi, (0.4 + 0.4 * p) * k), 2.5);
       },
     },
     // Grave Marks: a rune burns under each hero; keep out of each other's
@@ -1261,7 +1329,7 @@ const BossTells = (() => {
       color: '#ffd88a',
       ground(ctx, tg, s, p, k, t) {
         glow(ctx, s.x, s.y, s.r * 1.4, '#c89a4a', 0.2 * k);
-        circle(ctx, s.x, s.y, s.r, rgba('#ffd88a', 0.07 * k), rgba('#ffe2a0', (0.45 + 0.4 * p) * k), 2);
+        circle(ctx, s.x, s.y, s.r, rgba(COL.share, 0.08 * k), rgba(COL.share, (0.5 + 0.4 * p) * k), 2.5);
         ctx.beginPath(); ctx.arc(s.x, s.y, s.r + 5, -Math.PI / 2, -Math.PI / 2 + TAU * (1 - p));
         ctx.strokeStyle = rgba('#ffffff', 0.7 * k); ctx.lineWidth = 2; ctx.stroke();
         const n = tg.need || 1;
@@ -1304,9 +1372,10 @@ const BossTells = (() => {
         const g = ctx.createLinearGradient(0, top, 0, ARENA.hh);
         g.addColorStop(0, rgba('#3aff7a', (0.3 + 0.15 * p) * k)); g.addColorStop(1, rgba('#3aff7a', (0.1 + 0.12 * p) * k));
         ctx.fillStyle = g; ctx.fillRect(-ARENA.hw - 20, top, ARENA.hw * 2 + 40, ARENA.hh * 2 + 40);
+        ctx.fillStyle = rgba(COL.danger, (0.06 + 0.08 * p) * k); ctx.fillRect(-ARENA.hw - 20, top, ARENA.hw * 2 + 40, ARENA.hh * 2 + 40);   // danger but the shadows
         // the front of the wave, reaching further as the cast goes on
         ctx.fillStyle = rgba('#c8ffd8', 0.12 * k); ctx.fillRect(-ARENA.hw - 20, top, ARENA.hw * 2 + 40, front - top);
-        line(ctx, -ARENA.hw - 20, front, ARENA.hw + 20, front, rgba('#e8fff0', (0.4 + 0.4 * p) * k), 3);
+        line(ctx, -ARENA.hw - 20, front, ARENA.hw + 20, front, rgba(COL.danger, (0.5 + 0.4 * p) * k), 3);
         for (let i = 0; i < 16; i++) { const x = -ARENA.hw + (i + 0.5) / 16 * ARENA.hw * 2, q = (t * 0.8 + hash(i, 4)) % 1; glow(ctx, x, top + q * (front - top), 18, '#7affa8', 0.4 * (1 - q) * k); }
       },
     },
@@ -1325,7 +1394,66 @@ const BossTells = (() => {
         ctx.restore();
       },
     },
+    // Burial Rites (Hard): an open grave for each hero, in their own colour (the rim is theirs too: outline), a
+    // headstone at its head with their place in the party in pips, earth heaped round it, a countdown ring, and the
+    // same colour in a ring under their feet so they can find it at a glance
+    grave: {
+      ground(ctx, tg, s, p, k, t, env) {
+        const col = tg.color || '#ffffff', n = Math.max(1, tg.slot || 1);
+        glow(ctx, s.x, s.y, s.r * 1.25, col, (0.1 + 0.12 * p) * k);
+        circle(ctx, s.x, s.y, s.r, rgba(col, 0.1 * k), null);
+        // the pit, and the heaped earth round it
+        ctx.save(); ctx.globalAlpha = k;
+        for (let i = 0; i < 9; i++) { const a = i * TAU / 9 + 0.2; ellipse(ctx, s.x + Math.cos(a) * 34, s.y + 10 + Math.sin(a) * 26, 9, 6, a, '#2e2a24', 'rgba(10,8,6,0.7)', 1); }
+        rrect(ctx, s.x - 22, s.y - 6, 44, 34, 5, '#060807', rgba(col, 0.8), 2);
+        // the headstone, its pips
+        rrect(ctx, s.x - 17, s.y - 46, 34, 38, [12, 12, 3, 3], '#4a5054', OUT, 2.5);
+        for (let i = 0; i < n; i++) circle(ctx, s.x + (i - (n - 1) / 2) * 9, s.y - 30, 3.2, col, OUT, 1);
+        ctx.restore();
+        ctx.beginPath(); ctx.arc(s.x, s.y, s.r + 7, -Math.PI / 2, -Math.PI / 2 + TAU * (1 - p));
+        ctx.strokeStyle = rgba('#ffffff', 0.8 * k); ctx.lineWidth = 2.5; ctx.stroke();
+        const e = tg.target != null ? env.entById(tg.target) : null;
+        if (e) {
+          ellipse(ctx, e.x, e.y + 4, 30, 20, 0, null, rgba(col, 0.9 * k), 3);
+          ellipse(ctx, e.x, e.y + 4, 36, 25, 0, null, rgba(col, 0.35 * k), 1.5);
+        }
+      },
+    },
+    // Writ of Execution (Hard): a grave-chain from him to the hero it names, and the lane the writ's grave-light will
+    // run down, out through them. Red (the outline); the Pardoned's is blue, its chain hanging broken.
+    writ: {
+      ground(ctx, tg, s, p, k, t, env) { writLane(ctx, tg, s, p, k, t, env, false); },
+    },
+    pardon: {
+      ground(ctx, tg, s, p, k, t, env) { writLane(ctx, tg, s, p, k, t, env, true); },
+    },
   };
+  function writLane(ctx, tg, s, p, k, t, env, free) {
+    const ca = Math.cos(s.angle), sa = Math.sin(s.angle), L = toWall(s.x, s.y, s.angle, s.len);
+    ctx.save(); SHAPES.trace(ctx, s); ctx.clip();
+    ctx.fillStyle = free ? rgba(COL.safe, (0.06 + 0.08 * p) * k) : `rgba(4,10,8,${(0.2 + 0.25 * p) * k})`; ctx.fillRect(-AR() * 2, -AR() * 2, AR() * 4, AR() * 4);
+    // runes of the sentence running down it (none on a torn writ)
+    if (!free) for (let d = 120 + (t * 90) % 90; d < L; d += 90) {
+      const x = s.x + ca * d, y = s.y + sa * d;
+      ctx.save(); ctx.translate(x, y); ctx.rotate(s.angle);
+      ctx.strokeStyle = rgba('#9affc0', (0.3 + 0.5 * p) * k); ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(-6, -10); ctx.lineTo(6, 0); ctx.lineTo(-6, 10); ctx.moveTo(-2, -5); ctx.lineTo(-2, 5); ctx.stroke();
+      ctx.restore();
+    }
+    ctx.restore();
+    // the chain from his hand to them: taut and green-lit, or broken and slack
+    const e = tg.target != null ? env.entById(tg.target) : null;
+    if (!e) return;
+    const bx = s.x + ca * 60, by = s.y + sa * 60 - 30, ex = e.x, ey = e.y - 20, d = Math.hypot(ex - bx, ey - by), n = Math.max(4, Math.floor(d / 18));
+    for (let i = 0; i < n; i++) {
+      const q = (i + 0.5) / n;
+      if (free && q > 0.4 && q < 0.62) continue;   // the break
+      const sag = free ? Math.sin(q * Math.PI) * 26 : 0, x = bx + (ex - bx) * q, y = by + (ey - by) * q + sag;
+      ellipse(ctx, x, y, 7, i % 2 ? 2 : 4, Math.atan2(ey - by, ex - bx), null, rgba(i % 2 ? '#4a5258' : '#6a747c', k), 2.2);
+    }
+    if (!free) glow(ctx, bx + (ex - bx) * ((t * (0.6 + 2 * p)) % 1), by + (ey - by) * ((t * (0.6 + 2 * p)) % 1), 10, '#6dff9a', 0.7 * k);
+    else glow(ctx, ex, ey, 18, COL.safe, 0.5 * k);
+  }
   for (const kind of ['sweep', 'stomp', 'ring']) {
     // the knights' replays: the same thing in the brighter green of the dead
     const base = K[kind];
@@ -1475,19 +1603,23 @@ const BossTells = (() => {
   function ghost(tg, env) {
     if (!env.tgs) return 1;
     const at = tg.start + tg.dur;
-    let ahead = 0;
-    for (const o of env.tgs.values()) if (o !== tg && o.tag === tg.tag && o.gone == null && o.start + o.dur < at - 0.05) ahead++;
+    // (steps, not telegraphs: a layer of many circles landing together counts once)
+    const ahead = new Set();
+    for (const o of env.tgs.values()) if (o !== tg && o.tag === tg.tag && o.gone == null && o.start + o.dur < at - 0.05) ahead.add(Math.round((o.start + o.dur) * 10));
+    return ghostK(ahead.size);
+  }
+  function ghostK(ahead) {
     return ahead === 0 ? 1 : ahead === 1 ? 0.45 : 0.22;
   }
-  // the safe patch behind each prop: a faint warm lift on the floor and bright edges along the shadow's sides
+  // the safe patch behind each prop: a blue lift on the floor and bright blue edges along the shadow's sides
   function shadowRims(ctx, shadows, p, k, t, color) {
     ctx.save();
     for (const sh of shadows) {
       ctx.beginPath(); sh.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.closePath();
-      ctx.fillStyle = rgba('#fff2d0', (0.05 + 0.05 * p) * k); ctx.fill();
+      ctx.fillStyle = rgba(COL.safe, (0.08 + 0.08 * p) * k); ctx.fill();
       for (const [a, b] of [[0, 1], [3, 2]]) {
         ctx.beginPath(); ctx.moveTo(sh[a][0], sh[a][1]); ctx.lineTo(sh[b][0], sh[b][1]);
-        ctx.strokeStyle = rgba(color, (0.35 + 0.4 * p) * k); ctx.lineWidth = 2; ctx.stroke();
+        ctx.strokeStyle = rgba(COL.safeHi, (0.45 + 0.4 * p) * k); ctx.lineWidth = 2; ctx.stroke();
       }
     }
     ctx.restore();
@@ -1559,7 +1691,7 @@ const BossTells = (() => {
           {
             ctx.save(); ARENA.trace(ctx); ctx.clip();
             ctx.setLineDash([10, 12]); ctx.lineDashOffset = -t * 30;
-            for (const side of [-1, 1]) line(ctx, m.x - sa * m.r * side, m.y + ca * m.r * side, m.x - sa * m.r * side + ca * AR() * 2, m.y + ca * m.r * side + sa * AR() * 2, rgba('#9ff4ff', 0.28), 2);
+            for (const side of [-1, 1]) line(ctx, m.x - sa * m.r * side, m.y + ca * m.r * side, m.x - sa * m.r * side + ca * AR() * 2, m.y + ca * m.r * side + sa * AR() * 2, rgba(COL.danger, 0.45), 2);
             ctx.restore();
           }
           for (let i = 0; i < 3; i++) {
@@ -1586,8 +1718,8 @@ const BossTells = (() => {
         {
           ctx.save(); ARENA.trace(ctx); ctx.clip();
           ctx.setLineDash([14, 12]); ctx.lineDashOffset = -t * 40;
-          line(ctx, m.x - sa * m.r, m.y + ca * m.r, m.x - sa * m.r + ca * AR() * 2, m.y + ca * m.r + sa * AR() * 2, rgba('#ffb070', 0.3), 2);
-          line(ctx, m.x + sa * m.r, m.y - ca * m.r, m.x + sa * m.r + ca * AR() * 2, m.y - ca * m.r + sa * AR() * 2, rgba('#ffb070', 0.3), 2);
+          line(ctx, m.x - sa * m.r, m.y + ca * m.r, m.x - sa * m.r + ca * AR() * 2, m.y + ca * m.r + sa * AR() * 2, rgba(COL.danger, 0.45), 2);
+          line(ctx, m.x + sa * m.r, m.y - ca * m.r, m.x + sa * m.r + ca * AR() * 2, m.y - ca * m.r + sa * AR() * 2, rgba(COL.danger, 0.45), 2);
           ctx.restore();
         }
         for (let i = 0; i < 3; i++) {
@@ -1668,7 +1800,7 @@ const BossTells = (() => {
         const shape = { kind: 'rect', x: sw.x - c * 10, y: sw.y - s * 10, angle: a, len: L, w: sw.w };
         ctx.save();
         SHAPES.trace(ctx, shape);
-        ctx.fillStyle = rgba('#cfe6ff', (live ? 0.13 : 0.06) * k); ctx.fill();
+        ctx.fillStyle = rgba(COL.danger, (live ? 0.12 : 0.06) * k); ctx.fill();
         ctx.clip();
         // streaks of wind blowing outward along the wall
         for (let i = 0; i < 22; i++) {
@@ -1681,8 +1813,8 @@ const BossTells = (() => {
         // the leading edge, where it hits
         const ex = -s * hw * dir, ey = c * hw * dir;
         ctx.beginPath(); ctx.moveTo(sw.x + ex, sw.y + ey); ctx.lineTo(sw.x + ex + c * L, sw.y + ey + s * L);
-        ctx.strokeStyle = rgba('#e8f4ff', (live ? 0.7 : 0.3) * k); ctx.lineWidth = live ? 3 : 1.5; ctx.stroke();
-        { ctx.save(); ctx.setLineDash([12, 10]); ctx.lineDashOffset = -t * 30; SHAPES.trace(ctx, shape); ctx.strokeStyle = rgba('#cfe6ff', 0.35 * k); ctx.lineWidth = 1.5; ctx.stroke(); ctx.restore(); }
+        ctx.strokeStyle = rgba(COL.danger, (live ? 0.85 : 0.45) * k); ctx.lineWidth = live ? 3 : 2; ctx.stroke();
+        { ctx.save(); ctx.setLineDash([12, 10]); ctx.lineDashOffset = -t * 30; SHAPES.trace(ctx, shape); ctx.strokeStyle = rgba(COL.danger, 0.5 * k); ctx.lineWidth = 1.8; ctx.stroke(); ctx.restore(); }
         // the wall's body: storm cloud boiling along it, and lightning curtains standing up off its leading edge
         if (live) {
           for (let i = 0; i < 10; i++) { const along = 90 + (i + 0.5) / 10 * (AR() - 90), wob = Math.sin(t * 3 + i * 1.7) * hw * 0.3; glow(ctx, sw.x + c * along - s * wob, sw.y + s * along + c * wob, hw * 0.95, '#6a7894', 0.32 * k); }
@@ -1705,5 +1837,5 @@ const BossTells = (() => {
     ctx.restore();
   }
 
-  return { get, ground, air, fade, rims, roleColor, drawRollers, drawReels, drawSweeps, rodPost: (ctx, x, y, t, a) => rodPole(ctx, x, y, t, a, 0.15) };
+  return { COL, get, ground, air, fade, rims, roleColor, drawRollers, drawReels, drawSweeps, rodPost: (ctx, x, y, t, a) => rodPole(ctx, x, y, t, a, 0.15) };
 })();

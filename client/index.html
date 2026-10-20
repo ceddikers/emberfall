@@ -14,7 +14,7 @@
 
 <div id="hud-tl">
   <div class="town">Emberfall</div>
-  <div id="hero-name"></div>
+  <div id="hero-name"></div><button type="button" id="opt-btn" aria-label="Options" data-tip="Options: keys and HUD (K)">⚙</button>
   <div id="objective"></div>
 </div>
 <canvas id="minimap"></canvas>
@@ -24,11 +24,12 @@
 <div id="help"><kbd>Right-click</kbd> move · <kbd>Left-click</kbd> interact · <kbd>Q</kbd><kbd>W</kbd><kbd>E</kbd><kbd>R</kbd><kbd>D</kbd><kbd>F</kbd> skills · <kbd>Space</kbd> dash · <kbd>Enter</kbd> chat</div>
 <div id="toast"></div>
 <div id="target-frame" class="hidden"></div>
+<div id="focus-frame" class="hidden"></div>
 
 <div id="overlay" class="hidden">
   <div class="panel hidden" id="boss-panel">
     <button class="close" aria-label="Close">×</button>
-    <header><h2>Raid Board</h2><p>Four bosses stand between you and the Hollow King.</p></header>
+    <header><h2>Raid Board</h2><p>Four bosses stand between you and the Hollow King.</p><button type="button" class="btn2" id="tutorial-btn">Tutorial</button></header>
     <div class="panel-body">
       <nav class="list" id="boss-list"></nav>
       <section class="detail" id="boss-detail"></section>
@@ -44,15 +45,19 @@
   </div>
   <div class="sel-page hidden" id="sel-detail">
     <button class="sel-back" aria-label="Back" data-tip="Back (Esc)">←</button>
-    <div class="sel-top">
-      <div class="sel-portrait"><canvas id="sel-portrait"></canvas></div>
-      <div class="box" id="sel-flavor"></div>
+    <div class="sel-col">
+      <div class="sel-top">
+        <div class="sel-portrait"><canvas id="sel-portrait"></canvas></div>
+        <div class="box" id="sel-flavor"></div>
+      </div>
+      <div class="box" id="sel-passive"></div>
+      <div class="box hidden" id="sel-spec"></div>
     </div>
-    <div class="box" id="sel-passive"></div>
-    <div class="box hidden" id="sel-spec"></div>
-    <div id="sel-keys"></div>
-    <div class="box" id="sel-tips"></div>
-    <button class="cta" id="sel-choose"></button>
+    <div class="sel-col">
+      <div id="sel-keys"></div>
+      <div class="box" id="sel-tips"></div>
+      <button class="cta" id="sel-choose"></button>
+    </div>
   </div>
 </div>
 
@@ -113,6 +118,16 @@
 <script src="js/loot.js"></script>
 <script src="js/boss-icons.js"></script>
 <script src="js/pings.js"></script>
+<script src="js/keybinds.js"></script>
+<script src="js/journal/grubnak.js"></script>
+<script src="js/journal/skitterra.js"></script>
+<script src="js/journal/volkar.js"></script>
+<script src="js/journal/hollowking.js"></script>
+<script src="js/journal.js"></script>
+<script src="js/town-npcs.js"></script>
+<script src="js/town-life.js"></script>
+<script src="js/tutorial-data.js"></script>
+<script src="js/tutorial.js"></script>
 <script src="js/raid-ui.js"></script>
 <script src="js/net.js"></script>
 <script src="js/debug-overlay.js"></script>

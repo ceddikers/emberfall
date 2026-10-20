@@ -36,7 +36,7 @@ const RaidUI = (() => {
     healer: svg('<path d="M4.5 1.5h3v3h3v3h-3v3h-3v-3h-3v-3h3Z" fill="currentColor"/>'),
     dps: svg('<path d="M10.5 1.5 9.8 4 4.6 9.2 2.8 7.4 8 2.2ZM2.8 7.4 1.5 10.5l3.1-1.3" fill="currentColor"/>'),
   };
-  const DEBUFF_INFO = { tenderized: 'Tenderized: the next cleaver blow hits much harder', stuffed: 'Stuffed: you can\'t eat another plate',
+  const DEBUFF_INFO = { laden: 'Egg-Laden: when it runs out, a venom pool drops where you stand', pardoned: 'Pardoned: your writ is torn up; your line does nothing', tenderized: 'Tenderized: the next cleaver blow hits much harder', stuffed: 'Stuffed: you can\'t eat another plate',
     slowed: 'Slowed: stuck in silk or venom', rooted: 'Rooted: you can\'t move',
     conductive: 'Conductive: the next strike you catch hurts far more', doom: 'Royal Doom: when this runs out, so do you',
     dread: 'Dread: you met his eyes. Meeting them again hurts far more', bleed: 'Bleeding: losing health over time',
@@ -152,7 +152,7 @@ const RaidUI = (() => {
     const list = [...roster].sort((a, b) => order[a.role] - order[b.role] || a.id - b.id);
     $('party-frames').innerHTML = list.map((r, i) => `
       <div class="pf" data-id="${r.id}" style="--rc:${ROLES[r.role].color}">
-        <kbd class="pf-key">${i + 1}</kbd>
+        <kbd class="pf-key" style="color:${FIGHT.SLOTS[i % 4]};border-color:${FIGHT.SLOTS[i % 4]}">${i + 1}</kbd>
         <div class="pf-main">
           <div class="pf-name"><i class="pf-role">${ROLE_GLYPH[r.role] || ''}</i><span>${esc(r.name)}</span><b class="pf-aggro" data-tip="The boss is attacking them">${GLYPH.aggro}</b><small>${esc(CLASSES.find(c => c.id === r.cls)?.name || '')}${r.bot ? ' · bot' : ''}</small></div>
           <div class="pf-hp"><div class="trail"></div><div class="hp"></div><div class="sh"></div><span></span></div>
@@ -421,7 +421,13 @@ const RaidUI = (() => {
     const key = mode + '|' + name;
     if (key !== castKey) {
       castKey = key;
-      el.className = mode;
+      // what kind of move: a damage check (a goal on the boss bar), the enrage, a hit for the tank, a hit for everyone
+      const kind = mode === 'cast' && c && c.goal != null ? 'check'
+        : name === (raid.def.enrageName || 'Enrage') ? 'enrage'
+        : typeof BUSTER_CASTS !== 'undefined' && BUSTER_CASTS.test(name) ? 'buster'
+        : typeof RAID_CASTS !== 'undefined' && RAID_CASTS.test(name) ? 'raid' : '';
+      el.className = mode + (kind ? ' k-' + kind : '');
+      el.dataset.kind = { check: 'Burn it', enrage: 'Enrage', buster: 'Tank hit', raid: 'Hits everyone' }[kind] || '';
       el.querySelector('.bc-icon').style.backgroundImage = typeof BossIcons !== 'undefined' ? BossIcons.css(raid.def.id, name) : '';
       setText(el.querySelector('.bc-name'), name);
     }
@@ -562,7 +568,8 @@ const RaidUI = (() => {
           <thead><tr><th>Player</th><th>Class</th><th>DPS</th><th>HPS</th><th>Taken</th><th data-tip="Hits from attacks that could have been avoided">Avoidable</th><th>Deaths</th></tr></thead>
           <tbody>${table}</tbody>
         </table>
-        ${best}${deathLog}
+        ${best}${pullTimeline(raid, dur, deaths, deathName)}${deathLog}
+        ${raid.newPages && raid.newPages.length ? `<p class="res-pages">New in your journal: ${raid.newPages.map(n => `<b>${esc(n)}</b>`).join(', ')}<span>J</span></p>` : ''}
         ${report}
         <div class="res-actions">
           ${isHost ? '<button class="cta" data-a="retry">Try again</button><button class="btn2" data-a="town">Back to town</button>'
@@ -571,6 +578,26 @@ const RaidUI = (() => {
       </div>`;
     el.classList.remove('hidden');
     el.querySelectorAll('button[data-a]').forEach(b => b.addEventListener('click', () => actions[b.dataset.a] && actions[b.dataset.a]()));
+    el.querySelectorAll('.res-tl [data-t]').forEach(m => Tip.set(m, m.dataset.t));
+  }
+  // the pull at a glance: the boss's health over time, every cast he made (coloured by kind), and every death
+  function castKind(raid, name, goal) {
+    if (goal) return 'check';
+    if (name === (raid.def.enrageName || 'Enrage')) return 'enrage';
+    if (typeof BUSTER_CASTS !== 'undefined' && BUSTER_CASTS.test(name)) return 'buster';
+    if (typeof RAID_CASTS !== 'undefined' && RAID_CASTS.test(name)) return 'raid';
+    return 'mech';
+  }
+  function pullTimeline(raid, dur, deaths, deathName) {
+    const tl = raid.tl;
+    if (!tl || (!tl.hp.length && !tl.casts.length)) return '';
+    const W = 600, X = t => (Math.max(0, Math.min(dur, t)) / dur * W).toFixed(1), Y = f => (8 + (1 - f) * 40).toFixed(1);
+    const line = tl.hp.length ? `<polyline class="tl-hp" points="0,${Y(1)} ${tl.hp.map(([t, f]) => `${X(t)},${Y(f)}`).join(' ')}"/>` : '';
+    const ticks = [];
+    for (let m = 60; m < dur; m += 60) ticks.push(`<line class="tl-min" x1="${X(m)}" x2="${X(m)}" y1="4" y2="66"/><text class="tl-lbl" x="${X(m)}" y="78">${m / 60}:00</text>`);
+    const casts = tl.casts.map(([t, n, g]) => `<circle class="tl-c k-${castKind(raid, n, g)}" cx="${X(t)}" cy="58" r="3.4" data-t="${esc(`<b>${esc(n)}</b><em>${mmss(t)}</em>`)}"/>`).join('');
+    const dead = deaths.map(({ d, s }) => `<g class="tl-d" transform="translate(${X(d.t)},8)" data-t="${esc(`<b>${esc(s.name)} fell</b><em>${mmss(d.t)} · ${esc(deathName(d))}</em>`)}"><rect x="-5" y="-5" width="10" height="10" fill="transparent"/><path d="M-3.5 -3.5 L3.5 3.5 M3.5 -3.5 L-3.5 3.5"/></g>`).join('');
+    return `<div class="res-tl"><h6>The pull</h6><svg viewBox="-6 0 612 82" preserveAspectRatio="none">${ticks.join('')}${line}${casts}${dead}</svg></div>`;
   }
   // a specialization trial ends on its memory, not a damage table
   function trialResults(el, def, clear, actions) {

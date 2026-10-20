@@ -1,4 +1,4 @@
-// Inventory: your bag (shared by every hero you play), each hero's equipped gear, and the screen for it.
+// Inventory: each hero's own bags and equipped gear, and the screen for it. (Gold is the account's.)
 // Saved in this browser as part of the versioned save (save.js). Gear numbers reach the fight through Inventory.mods()
 // (your own damage/healing/haste/crit, computed on your machine) and the host (HP and Defense, capped there).
 
@@ -17,15 +17,45 @@ const Inventory = (() => {
   const changed = () => { modsCache.clear(); save(); if (deps) deps.onChange(); if (isOpen()) render(); };
 
   const byUid = uid => data.items.find(i => i.uid === uid) || null;
+  // Every hero has their own bags (item.owner = class id). Gear a hero was already wearing is theirs (a piece two
+  // heroes shared is copied for the second); anything else waits, unclaimed, for the first hero to open their bags.
+  (function ownership() {
+    let any = false;
+    for (const [cls, e] of Object.entries(data.equip)) for (const sl in e) {
+      const it = e[sl] != null ? byUid(e[sl]) : null;
+      if (!it) continue;
+      if (!it.owner) { it.owner = cls; any = true; }
+      else if (it.owner !== cls) { const copy = { uid: data.next++, key: it.key, owner: cls }; data.items.push(copy); e[sl] = copy.uid; any = true; }
+    }
+    if (any) save();
+  })();
+  function claim(clsId) {
+    if (!clsId) return;
+    let any = false;
+    for (const i of data.items) if (!i.owner) { i.owner = clsId; any = true; }
+    if (any) save();
+  }
+  const mine = clsId => data.items.filter(i => i.owner === clsId);
   function loadout(clsId) {
     const e = data.equip[clsId] || {};
     const out = {};
-    for (const [s] of SLOTS) { const it = e[s] != null ? byUid(e[s]) : null; out[s] = it && canEquip(it, clsId, s) ? it : null; }
+    for (const [s] of SLOTS) { const it = e[s] != null ? byUid(e[s]) : null; out[s] = it && it.owner === clsId && canEquip(it, clsId, s) ? it : null; }
     return out;
   }
-  function add(key) { const inst = { uid: data.next++, key }; data.items.push(inst); changed(); return inst; }
+  function add(key, owner) { const inst = { uid: data.next++, key, owner: owner || (deps && deps.cls()) || null }; data.items.push(inst); changed(); return inst; }
+  // take an item out of the bags for good (it went into a chest)
+  function drop(uid) {
+    const inst = byUid(uid);
+    if (!inst) return;
+    data.items = data.items.filter(i => i !== inst);
+    for (const e of Object.values(data.equip)) for (const sl in e) if (e[sl] === uid) e[sl] = null;
+    if (selected && selected.inst === inst) selected = null;
+    changed();
+  }
+  // a hero's items that aren't being worn (what they can trade)
+  function spare(clsId) { claim(clsId); const worn = new Set(Object.values(loadout(clsId)).filter(Boolean).map(i => i.uid)); return mine(clsId).filter(i => !worn.has(i.uid)); }
   function equip(clsId, slot, inst) {
-    if (!canEquip(inst, clsId, slot)) return false;
+    if (!canEquip(inst, clsId, slot) || inst.owner !== clsId) return false;
     const e = data.equip[clsId] = data.equip[clsId] || {};
     // the same ring can't be in both accessory slots
     for (const s of ['acc1', 'acc2']) if (s !== slot && e[s] === inst.uid) e[s] = null;
@@ -53,7 +83,13 @@ const Inventory = (() => {
     if (isOpen()) { const b = el.querySelector('.inv-gold'); if (b) b.innerHTML = `${coin}${g}`; }
   }
   function addGold(n) { if (n > 0) { Save.addGold(n); showGold(); } }
-  function totals(clsId) { const l = loadout(clsId); return gearTotals(clsId, Object.values(l)); }
+  // (extra: something besides gear adding to the totals, like a feast; main sets it)
+  let extra = () => null;
+  function totals(clsId) {
+    const l = loadout(clsId), t = gearTotals(clsId, Object.values(l)), x = extra(clsId);
+    if (x) { const main = CLASS_MAIN[clsId] || 'phys'; for (const [k, v] of Object.entries(x)) { const kk = k === 'main' ? main : k; t[kk] = (t[kk] || 0) + v; } }
+    return t;
+  }
   function mods(clsId) {
     if (!clsId) return {};
     if (!modsCache.has(clsId)) modsCache.set(clsId, gearMods(clsId, totals(clsId), Object.values(loadout(clsId))));
@@ -61,9 +97,10 @@ const Inventory = (() => {
   }
   // a new hero gets their recruit weapon and a coat, put on right away
   function grantStarter(clsId) {
-    const own = k => data.items.find(i => i.key === k);
-    const w = own(`${clsId}_w0`) || add(`${clsId}_w0`);
-    const c = own('g_coat') || add('g_coat');
+    claim(clsId);
+    const own = k => data.items.find(i => i.key === k && i.owner === clsId);
+    const w = own(`${clsId}_w0`) || add(`${clsId}_w0`, clsId);
+    const c = own('g_coat') || add('g_coat', clsId);
     const l = loadout(clsId);
     if (!l.weapon) equip(clsId, 'weapon', w);
     if (!l.armor) equip(clsId, 'armor', c);
@@ -440,6 +477,7 @@ const Inventory = (() => {
 
   function render() {
     const clsId = deps.cls(); if (!clsId) return;
+    claim(clsId);
     const cls = CLASSES.find(c => c.id === clsId), l = loadout(clsId), t = totals(clsId), locked = deps.locked();
     el.style.setProperty('--a', cls.accent);
     $q('.inv-name').innerHTML = `${cls.name}<small>${cls.title}</small>`;
@@ -470,7 +508,7 @@ const Inventory = (() => {
     const eqUids = new Set(Object.values(l).filter(Boolean).map(i => i.uid));
     // best first: rarity, then weapon / armour / accessory, then name
     const SLOT_ORDER = { weapon: 0, armor: 1, accessory: 2 };
-    const list = data.items.filter(i => filter === 'all' || ITEMS[i.key].slot === filter)
+    const list = mine(clsId).filter(i => filter === 'all' || ITEMS[i.key].slot === filter)
       .sort((a, b) => itemRarity(b) - itemRarity(a) || SLOT_ORDER[ITEMS[a.key].slot] - SLOT_ORDER[ITEMS[b.key].slot] || ITEMS[a.key].name.localeCompare(ITEMS[b.key].name));
     const cells = $q('.inv-cells');
     const n = Math.max(24, Math.ceil(list.length / 6) * 6);
@@ -534,7 +572,8 @@ const Inventory = (() => {
   return {
     init(d) { deps = d; },
     open, close, isOpen, toggle() { if (isOpen()) close(); else open(); }, frame,
-    add, equip, unequip, mods, totals, grantStarter, loadout, items: () => data.items,
+    setExtra(fn) { extra = fn; modsCache.clear(); }, refresh() { modsCache.clear(); if (deps) deps.onChange(); },
+    add, drop, spare, equip, unequip, mods, totals, grantStarter, loadout, items: () => data.items,
     itemName: inst => ITEMS[inst.key].name, rarityColor: inst => RARITY[itemRarity(inst)].color, iconURL, itemTip,
     addGold, showGoldHud(v) { goldHud.classList.toggle('hidden', !v); }, refreshGold: showGold,
   };

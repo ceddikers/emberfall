@@ -485,6 +485,20 @@ const BOSS_VFX = (() => {
         shake(4);
       } });
     },
+    // Snare Weave (Hard): each snare springs shut in a flick of silk (light: there are dozens at once); the pockets go
+    // quietly; an Egg-Laden clutch splits and its venom spills out
+    snare(tg) { const s = tg.live; shapeFlash(s, '#f4f0ff', { a: 0.16, dur: 0.35 }); VFX.shock(s.x, s.y, { r: s.r, color: '#f4f0ff', w: 3, dur: 0.3, flat: 1 }); shake(3); },
+    snaregap() {},
+    eggdrop(tg) {
+      const s = tg.live;
+      VFX.burst(s.x, s.y - 30, { color: '#e8ff9a', color2: '#ffffff', n: 12, speed: 180 });
+      VFX.splash(s.x, s.y, { color: '#8ad82a', n: 12 });
+    },
+    // Burial Rites and the Writ (the Hollow King, Hard): the grave closes in its owner's colour; a writ's line of
+    // grave-light runs out from him; a torn writ goes nowhere
+    grave(tg) { const s = tg.live; shapeFlash(s, tg.color || '#ffffff', { a: 0.3, dur: 0.5 }); VFX.pillar(s.x, s.y, { r: 40, h: 160, color: tg.color || '#ffffff', dur: 0.6 }); },
+    writ(tg) { const s = tg.live; streak(s.x, s.y, s.angle, '#9affc0', { len: s.len, w: 14, dur: 0.4 }); sweep(s, '#7affa8', 0.3); shake(5); },
+    pardon() {},
     // Skitterra, Hard: a sac bursting, the charge, a glob of silk landing
     eggsac(tg) {
       const s = tg.live;

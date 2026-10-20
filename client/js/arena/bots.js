@@ -147,6 +147,7 @@ const BotAI = {
         if (!room.get(pr)) continue;
         const spot = PROPS.shadowSpot(m.src.x, m.src.y, pr, 30), s = Math.hypot(spot.x - p.x, spot.y - p.y) - (pr.maxHp ? pr.hp * 90 : 200);
         if (ARENA.sd(spot.x, spot.y) > -16) continue;
+        if ((view.puddles || []).some(pd => Math.hypot(pd.x - spot.x, pd.y - spot.y) < pd.r + 25)) continue;   // a pool in its shadow
         if (s < bs) { bs = s; best = pr; }
       }
       if (best) { mine[p.id] = best; room.set(best, room.get(best) - 1); }
@@ -241,6 +242,37 @@ const BotAI = {
     return { x: l.x, y: l.y };
   },
 
+  // --- Hard's dance pieces (Snare Weave, Burial Rites, the Writ) ---------------------------------
+  // a player's party slot (0-3), as FightSim.slotOf and the party frames count it
+  slotOf(id, view) {
+    const order = { tank: 0, healer: 1, dps: 2 };
+    const list = view.players.filter(p => !p.left).sort((a, b) => (order[a.role] ?? 3) - (order[b.role] ?? 3) || a.id - b.id);
+    return Math.max(0, list.findIndex(p => p.id === id));
+  },
+  // the Writ: the plan. A fired line stays burning as a spoke out from him, so each line has to point between the
+  // graves as seen from where he stands (with him held in the middle, the hall's corners), and away from the lines
+  // already placed. In slot order (the shield first, staying close so he doesn't wander), each baited player takes the
+  // direction farthest from every grave and every line placed before theirs, leaning toward where they already are.
+  writSpot(me, view) {
+    const b = view.boss, ad = (a, c) => { let d = Math.abs(a - c) % (Math.PI * 2); return d > Math.PI ? Math.PI * 2 - d : d; };
+    const used = view.mechs.filter(m => m.type === 'own').map(m => Math.atan2(m.shape.y - b.y, m.shape.x - b.x));
+    const baits = view.mechs.filter(m => m.type === 'bait').sort((x, y) => this.slotOf(x.target, view) - this.slotOf(y.target, view));
+    let mine = null;
+    for (const m of baits) {
+      const p = view.players.find(q => q.id === m.target);
+      const cur = p ? Math.atan2(p.y - b.y, p.x - b.x) : 0;
+      let best = 0, bs = -Infinity;
+      for (let i = 0; i < 36; i++) {
+        const a = i * Math.PI / 18, sc = Math.min(Math.PI, ...used.map(u => ad(a, u))) - 0.12 * ad(a, cur);
+        if (sc > bs) { bs = sc; best = a; }
+      }
+      used.push(best);
+      if (m.target === me) mine = { a: best, r: p && p.role === 'tank' ? 175 : 250 };
+    }
+    if (!mine) return { x: b.x, y: b.y + 200 };
+    return ARENA.clamp({ x: b.x + Math.cos(mine.a) * mine.r, y: b.y + Math.sin(mine.a) * mine.r }, 60);
+  },
+
   home(bot, view) {
     const b = view.boss, idx = bot.slot || 0;
     const own = typeof BOT_CLASS !== 'undefined' && BOT_CLASS[bot.cls.id] && BOT_CLASS[bot.cls.id].home;   // a class with its own footwork
@@ -281,6 +313,37 @@ const BotAI = {
         // (a cover across the room has to be set off for early: "too late" starts a walk and a second before it lands)
         const walk = pr ? Math.hypot(pr.x - bot.x, pr.y - bot.y) / 230 + 1 : 0;
         if (!ok) pen += (PROPS.shadowing(m.src.x, m.src.y, px, py, props) ? 1500 : 6000) * urgency + (dt < Math.max(2.5, walk) ? 5000 : 0);
+        continue;
+      }
+      // the Writ (the Hollow King, Hard): bait your own line out to your corner (writSpot); keep out of everyone else's
+      if (m.type === 'bait' || (m.type === 'safe' && m.aimFromBoss != null)) {
+        if (m.aimFromBoss === me) {
+          if (m.type === 'bait' && dt > (m.lockAt || 0.6) + 0.15) { const sp = this.writSpot(me, view); pen += Math.hypot(sp.x - px, sp.y - py) * 30 * Math.max(urgency, 0.4); }
+          else if (m.type === 'bait' && SHAPES.contains(s, px, py, 22)) pen += 3000 * urgency;   // locked: step off it before it fires
+        } else if (m.type === 'bait' && SHAPES.contains(s, px, py, 30)) pen += 6000 * urgency + (dt < 1.5 ? 5000 : 0);
+        // (close to him, every line runs over you)
+        if (m.type === 'bait' && dt < 2 && Math.hypot(px - view.boss.x, py - view.boss.y) < 120) pen += 6000;
+        continue;
+      }
+      // Burial Rites: in your own grave when it closes (after the Crown of Graves has landed), out of everyone else's
+      if (m.type === 'own') {
+        const d = Math.hypot(s.x - px, s.y - py);
+        if (m.target === me) { if (d > s.r - 28) pen += (d - s.r + 28) * (dt < 3.9 ? 45 : 1.5); }
+        else if (d < s.r + 30 && dt < 3.5) pen += 5000;
+        continue;
+      }
+      // Egg-Laden (Snare Weave): the carrier drops its pool in the pocket it has just left (where it stood when the first
+      // layer landed); everyone else keeps clear of a carrier about to drop
+      if (m.type === 'drop') {
+        if (m.follow === me) {
+          bot.dropAt = bot.dropAt || {};
+          if (dt < 1.1 && !bot.dropAt[m.id]) bot.dropAt[m.id] = { x: bot.x, y: bot.y };
+          const at = bot.dropAt[m.id];
+          if (at) pen += Math.hypot(at.x - px, at.y - py) * 40;
+        } else {
+          const owner = alive.find(o => o.id === m.follow);
+          if (owner && dt < 2.2 && Math.hypot(owner.x - px, owner.y - py) < s.r + 40) pen += 3000 * urgency;
+        }
         continue;
       }
       // Lights Out (the Hollow King): be inside a light when it lands
@@ -508,6 +571,10 @@ const BotAI = {
       if (m.type === 'stack') { const o = view.players.find(p => p.id === m.follow); if (o) cands.push({ x: o.x, y: o.y }); }
       if (m.shape.kind === 'donut') cands.push({ x: m.shape.x + (bot.x - m.shape.x) * 0.3, y: m.shape.y + (bot.y - m.shape.y) * 0.3 });
       if (m.safe) for (const q of m.safe) cands.push({ x: q.x, y: q.y });
+      // Hard's dance: the blue pockets, your own grave, your corner for the Writ
+      if (m.type === 'safe' && m.shape.kind === 'circle') for (const [dx, dy] of [[0, 0], [0.45, 0], [-0.45, 0], [0, 0.45], [0, -0.45]]) cands.push({ x: m.shape.x + dx * m.shape.r, y: m.shape.y + dy * m.shape.r });
+      if (m.type === 'own' && m.target === bot.id) cands.push({ x: m.shape.x, y: m.shape.y });
+      if (m.type === 'bait' && m.aimFromBoss === bot.id) cands.push(this.writSpot(bot.id, view));
       // cover: spots in the shadow of the prop this bot takes (and of the others, in case it's full)
       if (m.cover) {
         const mine = this.coverFor(bot.id, view, m);
@@ -563,6 +630,7 @@ const BotAI = {
     const speed = 230 * (view.debuffs(bot.id).slowed ? FIGHT.SLOWED : 1);
     const landing = view.mechs.filter(m => m.type === 'aoe' && m.resolveAt - view.t < 2.5 && !(m.follow === bot.id && m.resolveAt - view.t > (m.lockAt || 0)));
     const threads = (view.room && view.room.threads || []).filter(th => !th.cut);
+    const burns = (view.zones || []).filter(z => z.effect === 'burn' && z.tag === 'writburn' && view.t > z.startAt - 1);
     const pathCost = c => {
       let pen = 0;
       const dist = Math.hypot(c.x - bot.x, c.y - bot.y);
@@ -575,6 +643,8 @@ const BotAI = {
       for (const th of threads) if (segsCross(bot.x, bot.y, c.x, c.y, th.x1, th.y1, th.x2, th.y2)) pen += 2500;
       if (view.room && view.room.safe && view.room.fallen !== Infinity) for (const q of [0.2, 0.4, 0.6, 0.8]) if (!view.room.safe(bot.x + (c.x - bot.x) * q, bot.y + (c.y - bot.y) * q)) pen += 15000;
       for (const pd of view.puddles) if (Math.hypot(pd.x - bot.x, pd.y - bot.y) > pd.r + 20 && segDist(pd.x, pd.y, bot.x, bot.y, c.x, c.y) < pd.r + 20) pen += 1200;
+      // burning strips (the Writ's spokes): don't walk through one
+      for (const z of burns) for (const q of [0.25, 0.5, 0.75]) if (SHAPES.contains(z.shape, bot.x + (c.x - bot.x) * q, bot.y + (c.y - bot.y) * q, 16)) { pen += 3000; break; }
       if (sweeps.length) {
         const d = Math.hypot(c.x - bot.x, c.y - bot.y), arrive = d / 230;
         for (const q of [0.25, 0.5, 0.75, 1]) if (inWall(bot.x + (c.x - bot.x) * q, bot.y + (c.y - bot.y) * q, view.t + arrive * q)) pen += 5000;

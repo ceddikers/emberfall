@@ -116,6 +116,36 @@ const Save = (() => {
       b[mode === 'hard' ? 'hard' : 'normal'] += 1;
       write();
     },
+    // the boss journal (journal.js), per hero: { met: {boss: 1}, won: {boss: 1}, moves: {boss: {cast name: {seen, pass}}} }
+    journal(classId) {
+      const h = data.heroes[classId];
+      const j = h && h.journal && typeof h.journal === 'object' ? h.journal : {};
+      return { met: j.met || {}, won: j.won || {}, moves: j.moves || {} };
+    },
+    _jr(classId) {
+      const h = data.heroes[classId] = data.heroes[classId] || { clears: {} };
+      const j = h.journal = h.journal && typeof h.journal === 'object' ? h.journal : {};
+      j.met = j.met || {}; j.won = j.won || {}; j.moves = j.moves || {};
+      return j;
+    },
+    // first meeting / first win: true when it's new
+    journalMark(classId, bossId, kind) {
+      const j = this._jr(classId), m = kind === 'won' ? j.won : j.met;
+      if (m[bossId]) return false;
+      m[bossId] = 1; write(); return true;
+    },
+    // a move seen (true the first time) / lived through (true the first time)
+    journalSeen(classId, bossId, name) {
+      const j = this._jr(classId), b = j.moves[bossId] = j.moves[bossId] || {}, e = b[name] = b[name] || { seen: 0, pass: 0 };
+      e.seen += 1; write(); return e.seen === 1;
+    },
+    journalPass(classId, bossId, name) {
+      const j = this._jr(classId), b = j.moves[bossId] = j.moves[bossId] || {}, e = b[name] = b[name] || { seen: 1, pass: 0 };
+      e.pass += 1; write(); return e.pass === 1;
+    },
+    // has any hero on this account cleared this boss (either difficulty)? The next boss opens on it, and the Hollow
+    // King's first fall reveals the specializations.
+    bossBeaten: bossId => Object.values(data.heroes).some(h => h && h.clears && h.clears[bossId] && (h.clears[bossId].normal | 0) + (h.clears[bossId].hard | 0) > 0),
     clears: (classId, bossId) => ((data.heroes[classId] || { clears: {} }).clears[bossId] || { normal: 0, hard: 0 }),
     // specializations: a hero's trials open once it has cleared the Hollow King (any difficulty), and passing a
     // spec's trial unlocks that spec for the hero (trials.js)

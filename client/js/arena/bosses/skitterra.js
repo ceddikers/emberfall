@@ -44,7 +44,7 @@ const SKITTERRA = {
     const dmg = {
       mist: 8500, wrap: 26000, lunge: H ? 11000 : 13000, tether: 16000, spit: H ? 10500 : 12000, pool: 2200,
       bite: H ? 2000 : 1600, fury: 5500, beam: 6000, reel: H ? 15000 : 17000,
-      sac: 5000, sacFail: 10000, fang: 15000, glob: 11000,
+      sac: 5000, sacFail: 10000, fang: 15000, glob: 11000, snare: 10000,
       deluge: H ? 16000 : 15000, strand: 11000, ambush: 16000, slam: 5000,
       clutchHp: 24000, knotHp: 24000, broodHp: H ? 30000 : 26000, swarmHp: H ? 16000 : 18000,
       sting: 3000, drop: 13000, drip: 7000, fall: 14000,
@@ -219,6 +219,65 @@ const SKITTERRA = {
             f.mech({ type: 'aoe', shape: { kind: 'circle', x: q.x, y: q.y, r: 100 }, delay: 1.9, dmg: dmg.glob, tag: 'glob', follow: p.id, lockAt: 0.9 });
           }
         });
+      }
+    };
+
+    // Snare Weave (Hard, Act II): she scuttles to the hub and weaves the whole web full of spring-snares, two layers of
+    // them, with only three pockets of floor (drawn blue) clear in each: one close in by her (for her shield and anyone
+    // who fights up close) and two out at range. The pockets are the same every time, and the second layer's are the
+    // first's turned a sixth of the way round her, so the whole party steps round with her, pocket to pocket, in one
+    // turn. The second layer is drawn from early on, faint until the first lands. A snare that catches you hits and
+    // flings you out of it. As she weaves, the two farthest from her shield are Egg-Laden: a clutch hangs on them, and it
+    // drops (a venom pool that stays) between the two layers. The pocket you have just left is the place for it: the
+    // second layer covers it anyway, and nobody's way to a pillar for the Acid Deluge that follows runs through it.
+    const SNARE_R = 190, SNARE_GAP = 75, LADEN_R = 110;
+    // a layer: snares on a close grid over the whole web, each shrunk where it nears a pocket, so the pockets (and a
+    // little round them) are the only clear floor
+    const snareLayer = (gaps, delay, group) => {
+      const step = 200, out = [];
+      for (let row = -4; row <= 4; row++) for (let col = -4; col <= 4; col++) {
+        const x = col * step + (row & 1 ? step / 2 : 0), y = row * step * 0.866;
+        if (ARENA.sd(x, y) > 70) continue;   // (the ones just past the wall still reach in)
+        const r = Math.min(SNARE_R, ...gaps.map(g => Math.hypot(g.x - x, g.y - y) - SNARE_GAP - 6));
+        if (r >= 70) out.push({ x, y, r: Math.round(r) });
+      }
+      // then fill any hole the grid left away from the pockets (under her, mostly) with smaller snares, so the blue
+      // pockets are the only clear floor that matters
+      const gapD = (x, y) => Math.min(...gaps.map(g => Math.hypot(g.x - x, g.y - y)));
+      for (let n = 0; n < 12; n++) {
+        let worst = null;
+        for (let x = -540; x <= 540; x += 40) for (let y = -540; y <= 540; y += 40) {
+          if (ARENA.sd(x, y) > -10 || out.some(c => Math.hypot(c.x - x, c.y - y) < c.r)) continue;
+          const dg = gapD(x, y);
+          if (dg > SNARE_GAP + 75 && (!worst || dg > worst.dg)) worst = { x, y, dg };
+        }
+        if (!worst) break;
+        out.push({ x: worst.x, y: worst.y, r: Math.round(Math.min(SNARE_R * 0.7, worst.dg - SNARE_GAP - 6)) });
+      }
+      for (const c of out) f.aoe({ kind: 'circle', x: c.x, y: c.y, r: c.r }, delay, dmg.snare, { tag: 'snare', group,
+        onResolve: (inside, hits) => { for (const id of hits) { const q = f.alive().find(z => z.id === id); if (q) f.knock(q, c.x, c.y, 200, { slam: dmg.slam }); } } });
+      for (const g of gaps) f.mech({ type: 'safe', shape: { kind: 'circle', x: g.x, y: g.y, r: SNARE_GAP }, delay, dmg: 0, tag: 'snaregap' });
+    };
+    const snareWeave = () => {
+      const d = f.ct(7), between = 3.4, a0 = Math.PI / 2;   // the near pocket first south of her, toward the way in
+      f.moveBoss(0, 0, 600);
+      f.cast('Snare Weave', d, 'silk');
+      const ring = off => [[0, 140], [1, 320], [2, 320]].map(([k, R0]) => ({ x: Math.round(Math.cos(a0 + off + k * TAU / 3) * R0), y: Math.round(Math.sin(a0 + off + k * TAU / 3) * R0) }));
+      snareLayer(ring(0), d, new Set());
+      // the second layer shows a little later (still well before the first lands), pockets turned a sixth of the way
+      f.afterKeep(2.5, () => snareLayer(ring(Math.PI / 3), d - 2.5 + between, new Set()));
+      // the Egg-Laden: the two farthest from her tank (one if only two are standing)
+      const tank = f.tank(), pool = f.alive().filter(p => !tank || p.id !== tank.id);
+      const far = [...pool].sort((a, b) => (tank ? Math.hypot(b.x - tank.x, b.y - tank.y) - Math.hypot(a.x - tank.x, a.y - tank.y) : 0)).slice(0, f.alive().length > 2 ? 2 : 1);
+      const drop = d + 1.0;   // (between the layers, with time to step out of it and on to the next pocket)
+      for (const p of far) {
+        f.debuff(p.id, 'laden', drop);
+        f.mech({ type: 'drop', shape: { kind: 'circle', x: p.x, y: p.y, r: LADEN_R }, delay: drop, dmg: 0, follow: p.id, tag: 'eggdrop', avoidable: false,
+          onResolve: () => {
+            const q = f.alive().find(z => z.id === p.id);
+            const at = q ? { x: q.x, y: q.y } : null;
+            if (at) f.puddle(at.x, at.y, LADEN_R, 26, dmg.pool * 1.6, 1, 'venom');
+          } });
       }
     };
 
@@ -538,7 +597,8 @@ const SKITTERRA = {
         S([H ? 15 : 14, strandReel, 'Strand Reel']),
         H && S([10, ambush, 'Ceiling Ambush']),
         S([H ? 10 : 14, venomMist, 'Venom Mist']),
-        S([14, deluge, 'Acid Deluge']),
+        H && S([11, snareWeave, 'Snare Weave']),
+        S([H ? 15 : 14, deluge, 'Acid Deluge']),
         S([H ? 6 : 15, swarm, 'The Swarm']),
         S([14, () => silkWrap(), 'Silk Wrap']),
         S([14, () => silkLines(), 'Silk Lines']),
@@ -572,7 +632,7 @@ const SKITTERRA = {
     actOne(0);
 
     f.moves = { venomMist, lunge, silkWrap, wrapLunge, silkLines, venomSpit, brood, swarm, molt, silkReel, eggSacs, fangRush, volley, deluge,
-      strandReel, ambush, spin, intoDark, dropFrom, venomDrip, comeBack, giveWay };
+      strandReel, ambush, snareWeave, spin, intoDark, dropFrom, venomDrip, comeBack, giveWay };
   },
 };
 

@@ -51,7 +51,7 @@ const HOLLOWKING = {
       knell: 9000, cleave: 25000, bleed: H ? 900 : 750, gaze: 9000, gazeAgain: 16000, swing: 13000, echo: 13000,
       dirge: 3000,
       marks: 8000, bell: 4500, bellFail: 2000, march: 14000, bind: 16000,
-      lid: 12000, decree: H ? 16000 : 15000, masonry: 12000, coffinHp: 7000, skelHp: 9000, skelBite: 1300,
+      lid: 12000, decree: H ? 16000 : 15000, masonry: 12000, writ: 9000, scorch: 4000, unburied: 15000, grave: 10000, restless: 2500, coffinHp: 7000, skelHp: 9000, skelBite: 1300,
     };
     const S = (...steps) => steps.filter(Boolean);
     const GAZE_ARC = 1.2;     // you're looking at him if he's within this angle of where you face (~70° either side)
@@ -187,14 +187,15 @@ const HOLLOWKING = {
           : { kind: 'donut', x, y, r: 1100, r2: echo ? 250 : 210 });
     const SWING_NAME = { sweep: 'Sceptre Sweep', stomp: 'Barrow Stomp', ring: 'Crown of Graves' };
     // a swing; a risen knight remembers it as it lands. (quiet: a second swing in the same breath, no cast bar of its own)
-    const swing = (kind, quiet) => {
+    // (noMemory: the knights don't take this one in: Burial Rites' Crown of Graves)
+    const swing = (kind, quiet, noMemory) => {
       const d = f.ct(4.5);
       if (!quiet) f.cast(SWING_NAME[kind], d, kind);
       if (kind === 'sweep') B.lockFacing = true;
       f.mech({ type: 'aoe', shape: swingShape(kind, B.x, B.y, B.facing, false), delay: d, dmg: dmg.swing, tag: kind,
         onResolve: () => {
           if (kind === 'sweep') B.lockFacing = false;
-          if (f.knights.length) {
+          if (f.knights.length && !noMemory) {
             const k = f.knights[memNext % f.knights.length];
             memory[memNext % f.knights.length] = kind;
             f.emit({ t: 'kmem', id: k.id, kind });
@@ -291,6 +292,61 @@ const HOLLOWKING = {
       f.tether(a.id, b.id, d, { kind: 'short', len: 160, dmg: dmg.bind, tag: 'bind' });
       const rest = al.filter(p => p.id !== a.id && p.id !== b.id && (!tank || p.id !== tank.id));
       if (rest.length) f.afterKeep(d - f.ct(5), () => marks(f.ct(5), rest.filter(p => alive(p.id))));
+    };
+
+    // Burial Rites (Hard, the Verdict): he allots each hero a grave of their own, a circle in their own colour (the
+    // colour of their place in the party), open in a corner of the hall for 20 s. When it closes, each must be lying in
+    // their own: a hero out of theirs is Unburied (a heavy blow, and the hall's dead strike everyone); a hero in someone
+    // else's is struck instead. Between the opening and the closing come the Writ and a Crown of Graves (in close to
+    // him), so the graves are a walk away with a few seconds left.
+    // Always the same graves for the same places in the party (the dance): the first (the shield) north toward the
+    // throne, the second south, the third west, the fourth east. The Writ's lines go out the same ways, so each hero
+    // walks one line all through: out to their side for the Writ, in to him for the Crown, out to their grave.
+    const GRAVES = [[0, -290], [0, 300], [-410, 20], [410, 20]];
+    const burialRites = () => {
+      const d = f.ct(3), open = 19.5;
+      // he takes his place in the middle of the hall to read the rites (the graves round him, the writ's spokes out
+      // from him), and stays there until they're read
+      f.moveBoss(0, -20, 520);
+      f.cast('Burial Rites', d, 'doom');
+      f.alive().forEach(p => {
+        const slot = f.slotOf(p.id), [x, y] = GRAVES[slot % GRAVES.length];
+        f.mech({ type: 'own', shape: { kind: 'circle', x, y, r: 95 }, delay: open, dmg: dmg.unburied, otherDmg: dmg.grave, target: p.id, tag: 'grave',
+          slot: slot + 1, color: FIGHT.SLOTS[slot % FIGHT.SLOTS.length],
+          onResolve: (inside, hits) => {
+            if (!alive(p.id) || inside.some(q => q.id === p.id)) return;
+            // Unburied: the dead of the hall rise for them, and strike everyone
+            f.afterKeep(0.4, () => { for (const q of f.alive()) f.damagePlayer(q, dmg.restless, { kind: 'restless', n: 'Burial Rites' }); });
+            void hits;
+          } });
+      });
+    };
+    // Writ of Execution (Hard): a grave-chain runs from him to every hero, and when the writ is read a line of
+    // grave-light runs out from him through each of them. Each takes their own; anyone else it crosses takes more, so
+    // the lines go out to the sides, away from each other. One hero's writ is torn up (Pardoned, the blue line): theirs
+    // does nothing, so they're the one free to stand anywhere off the others' lines. The thinking part: a fired line
+    // stays burning as a spoke out from him until the graves close, so the lines must point between the graves (the
+    // hall's corners), never at one; then the way in for the Crown and out to every grave stays open. The Pardoned is always the second
+    // place in the party (the healer, who can keep mending from wherever they like).
+    const WRIT_BURN = 12;
+    const writ = () => {
+      const d = f.ct(5.5), al = f.alive();
+      if (!al.length) return;
+      f.cast('Writ of Execution', d, 'judgement');
+      const bySlot = [...al].sort((a, b) => f.slotOf(a.id) - f.slotOf(b.id));
+      const pardoned = (bySlot[1] || bySlot[0]).id;
+      for (const p of al) {
+        const free = p.id === pardoned;
+        const m = f.mech({ type: free ? 'safe' : 'bait', shape: { kind: 'rect', x: B.x, y: B.y, angle: 0, len: 1400, w: 110 }, delay: d, dmg: free ? 0 : dmg.writ,
+          target: p.id, aimFromBoss: p.id, lockAt: 0.6, tag: free ? 'pardon' : 'writ',
+          // a read writ leaves its line burning on the floor (from a stride off him out to the wall) until the graves
+          // close: spokes round him. Aimed at a grave, it bars the way to it; aimed between the graves, it doesn't.
+          onResolve: free ? null : () => {
+            const s = m.shape, c = Math.cos(s.angle), sn = Math.sin(s.angle);
+            f.zone({ shape: { kind: 'rect', x: s.x + c * 95, y: s.y + sn * 95, angle: s.angle, len: 1400, w: 100 }, delay: 0.8, dur: WRIT_BURN - 0.8, effect: 'burn', dmg: dmg.scorch, tag: 'writburn' });
+          } });
+      }
+      f.debuff(pardoned, 'pardoned', d);
     };
 
     // --- the hall: braziers, coffin lids, the Decree, the vault coming down ----------------------------
@@ -545,6 +601,8 @@ const HOLLOWKING = {
       until: 0.46,
       sets: [
         S([4, () => swing('sweep'), 'Sceptre Sweep'], [0, () => swing('stomp', true), 'Barrow Stomp'], [5.5, () => echo(1.5), 'Echo Knights']),
+        // (Hard) the graves open, the Writ is read with them, then in close for a Crown of Graves and out to your grave
+        H && S([10, burialRites, 'Burial Rites'], [3.5, writ, 'Writ of Execution'], [8.5, () => swing('ring', false, true), 'Crown of Graves']),
         S([12, () => royalDoom(H ? 2 : 1), 'Royal Doom'], [4, () => marks(), 'Grave Marks']),
         S([12, () => coffinLids(0, 3), 'Coffin Lids'], [8, decree, 'Royal Decree']),
         S([12, () => { graveCleave(); if (H) gravebind(); }, 'Grave Cleave']),
@@ -593,7 +651,7 @@ const HOLLOWKING = {
     summons(0);
 
     f.moves = { knell, gaze, audience, graveCleave, royalDoom, marks, swing, echo, bells, march, gravebind, lightsOut, coffinLids, decree, masonry,
-      courtOfBones, kingRises, placeKnights, chargeSheet, judgement, longNight, doomPass };
+      courtOfBones, kingRises, placeKnights, burialRites, writ, chargeSheet, judgement, longNight, doomPass };
   },
 };
 

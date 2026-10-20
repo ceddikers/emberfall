@@ -20,6 +20,7 @@
   const ARENA_HERO_SCALE = 1.85;
   const heroScale = () => (scene === 'arena' ? ARENA_HERO_SCALE : HERO_SCALE);
   const MOVE_SPEED = 230, DASH_DIST = 170, DASH_TIME = 0.18;
+  const TOWN_PACE = 1.35;
   const $ = id => document.getElementById(id);
   const rnd = Math.round;
   let now = 0, last = performance.now(), started = false;
@@ -53,6 +54,13 @@
   });
   const keeper = { kind: 'keeper', x: TOWN.keeper.x, y: TOWN.keeper.y, angle: Math.PI / 2, st: newSt() };
   const trainer = { kind: 'trainer', x: TOWN.trainer.x, y: TOWN.trainer.y, angle: Math.PI / 2, st: newSt(1.3) };   // talents (talent-panel.js)
+  // A boss stays sealed (unnamed, under a shroud) until someone on this account has beaten the one before it.
+  // (localStorage 'emberfall.unlockAll' = '1' opens everything, for testing.)
+  const unlockAll = (() => { try { return localStorage.getItem('emberfall.unlockAll') === '1'; } catch (e) { return false; } })();
+  function bossOpen(boss) { const i = BOSSES.indexOf(boss); return unlockAll || i <= 0 || Save.bossBeaten(BOSSES[i - 1].id); }
+  const lastOpenBoss = () => [...BOSSES].reverse().find(b => b.playable && bossOpen(b)) || BOSSES[0];
+  // the specializations stay a secret until the Hollow King has fallen once on this account
+  const specsRevealed = () => unlockAll || Save.bossBeaten('hollowking');
   const statues = BOSSES.map((boss, i) => ({
     kind: 'boss', boss, x: TOWN.pedestals[i].x, y: TOWN.pedestals[i].y - 6, angle: Math.PI / 2, st: newSt(i), nextAct: 2 + i * 1.5,
   }));
@@ -63,8 +71,8 @@
     ...lineup.map(h => ({ x: h.x, y: h.y, r: 24, reach: 80, label: h.cls.name, open: () => openHeroPanel(h.cls) })),
     { x: keeper.x, y: keeper.y, r: 22, reach: 80, label: 'Barkeep', open: () => openSelect(null) },
     { x: trainer.x, y: trainer.y, r: 22, reach: 80, label: 'Trainer', open: () => openTalents() },
-    ...statues.map(b => ({ x: b.x, y: b.y, r: 58, reach: 120, label: b.boss.name, open: () => openBossPanel(b.boss) })),
-    { x: TOWN.portal.x, y: TOWN.portal.y, r: TOWN.portal.r, reach: 130, label: 'Raid Portal', open: () => openBossPanel(BOSSES[0]) },
+    ...statues.map(b => ({ x: b.x, y: b.y, r: 58, reach: 120, get label() { return bossOpen(b.boss) ? b.boss.name : 'Sealed'; }, open: () => openBossPanel(b.boss) })),
+    { x: TOWN.portal.x, y: TOWN.portal.y, r: TOWN.portal.r, reach: 130, label: 'Raid Portal', open: () => openBossPanel(lastOpenBoss()) },
     ...TOWN.houses.filter(b => b.hall).map(b => ({ x: b.x + b.w / 2, y: b.y + b.h + 8, r: 26, reach: 90, label: 'Practice Hall', open: () => openPractice() })),
   ];
 
@@ -311,10 +319,11 @@
       case 'castStart':
         // a real cast: the hero channels it (see drawChannel in heroes.js)
         player.st.action = { type: 'cast', t0: now, dur: Math.max(0.55, ev.dur), channel: true };
+        player.castBar = { ab: ev.ab, t0: now, dur: ev.dur };
         Net.send({ t: 'castStart', i: actor.abilities.indexOf(ev.ab), dur: +ev.dur.toFixed(2) });
         break;
       case 'interrupted':
-        player.st.action = null;
+        player.st.action = null; player.castBar = null;
         Net.send({ t: 'castStop' });
         FX.text(player.x, player.y - 56, 'Interrupted', '#ff9a8a', 13);
         break;
@@ -516,15 +525,59 @@
     VFX.shock(next.x, next.y, { r0: next.r + 40, r: next.r + 8, color: '#ff6a5a', w: 3, dur: 0.25 });
   }
   // where the locked target is right now (null if it's gone)
-  function lockedTarget() {
-    if (lockedEnemy == null) return null;
+  function lockedTarget(id = lockedEnemy) {
+    if (id == null) return null;
     if (inArena()) {
-      if (lockedEnemy === 'boss') return raid.boss.u ? null : { x: raid.bossDraw.x, y: raid.bossDraw.y, r: FIGHT.BOSS_R * 0.9, name: raid.def.name, hp: raid.boss.hp, mx: raid.boss.mx, boss: true };
-      const a = raid.adds.get(lockedEnemy);
+      if (id === 'boss') return raid.boss.u ? null : { x: raid.bossDraw.x, y: raid.bossDraw.y, r: FIGHT.BOSS_R * 0.9, name: raid.def.name, hp: raid.boss.hp, mx: raid.boss.mx, boss: true, tg: raid.state === 'live' ? raid.boss.tg : null };
+      const a = raid.adds.get(id);
       return a ? { x: a.x, y: a.y, r: ADD_R, name: a.enr ? 'Enraged Spiderling' : 'Spiderling', hp: a.hp, mx: a.mx } : null;
     }
+    if (id !== lockedEnemy) return null;   // (the focus is a raid thing)
     const d = lockedDummy();
     return d ? { x: d.x, y: d.y, r: 22, name: d.spar ? 'Sparring Dummy' : 'Training Dummy', hp: 1, mx: 1, dummy: true } : null;
+  }
+  // the focus (V): a second enemy kept in its own frame (an add to watch while you hit the boss, or the reverse)
+  let focusEnemy = null;
+  function setFocus() {
+    if (!inArena()) return;
+    focusEnemy = lockedEnemy != null && lockedEnemy !== focusEnemy ? lockedEnemy : null;
+    toast(focusEnemy == null ? 'Focus cleared.' : `Focus: ${(lockedTarget(focusEnemy) || {}).name || 'target'}.`);
+  }
+  // who an enemy is hitting, as a line for its frame
+  function totHtml(t) {
+    if (!t || t.tg == null || !inArena()) return '';
+    const r = raid.roster.find(x => x.id === t.tg);
+    if (!r) return '';
+    return `<em class="tf-tot" style="--rc:${ROLES[r.role].color}">→ ${t.tg === Net.id ? 'You' : escapeHtml(r.name)}</em>`;
+  }
+  // the boss's chest where he fell: it drops in with a bounce, glows while there's anything in it
+  function drawChest() {
+    const c = Loot.chestAt();
+    if (!c) return;
+    const age = (performance.now() - c.born) / 1000, drop = Math.max(0, 1 - age / 0.5), y = c.y - drop * drop * 120;
+    const glow = c.n > 0 ? 0.35 + Math.sin(now * 3) * 0.12 : 0.08;
+    ctx.save();
+    VFX.glowAt(ctx, c.x, c.y, 70, '#ffd65a', glow);
+    ctx.translate(c.x, y);
+    ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.beginPath(); ctx.ellipse(0, 16, 30, 9, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#5a3418'; ctx.fillRect(-26, -6, 52, 22);                       // the box
+    ctx.fillStyle = '#7a4a22'; ctx.beginPath(); ctx.moveTo(-26, -6); ctx.quadraticCurveTo(0, -30, 26, -6); ctx.closePath(); ctx.fill();   // the lid
+    ctx.strokeStyle = '#c89a3a'; ctx.lineWidth = 3;                                  // bands
+    ctx.beginPath(); ctx.moveTo(-14, -16); ctx.lineTo(-14, 16); ctx.moveTo(14, -16); ctx.lineTo(14, 16); ctx.stroke();
+    ctx.strokeStyle = '#2a1608'; ctx.lineWidth = 2; ctx.strokeRect(-26, -6, 52, 22);
+    ctx.fillStyle = '#ffd65a'; ctx.fillRect(-4, -4, 8, 8);                           // the lock
+    ctx.restore();
+    if (Math.hypot(mouseWorld().x - c.x, mouseWorld().y - c.y) < 40) label(ctx, c.n ? `Chest · ${c.n}` : 'Chest (empty)', c.x, c.y - 42, '#ffe9a8', 12);
+  }
+  // a small diamond over the focused enemy
+  function drawFocusMark() {
+    const t = focusEnemy != null && focusEnemy !== lockedEnemy ? lockedTarget(focusEnemy) : null;
+    if (!t) return;
+    const y = t.y - t.r - 26 + Math.sin(now * 3) * 2;
+    ctx.save(); ctx.translate(t.x, y); ctx.rotate(Math.PI / 4);
+    ctx.fillStyle = '#7fc8ff'; ctx.strokeStyle = '#06121c'; ctx.lineWidth = 2;
+    ctx.fillRect(-6, -6, 12, 12); ctx.strokeRect(-6, -6, 12, 12);
+    ctx.restore();
   }
   // rotating corner brackets around the locked target
   function drawReticle(t) {
@@ -541,15 +594,29 @@
   }
   const targetFrame = $('target-frame');
   let tfKey = '';
+  const focusFrame = $('focus-frame');
+  let ffKey = '';
   function updateTargetFrame() {
     const t = started && !panelOpen() ? lockedTarget() : null;
-    const key = t ? `${t.name}|${t.dummy ? '' : Math.round(1000 * t.hp / Math.max(1, t.mx))}` : '';
-    if (key === tfKey) return;
-    tfKey = key;
-    targetFrame.classList.toggle('hidden', !t);
-    if (!t) return;
-    const f = t.dummy ? 1 : clamp(t.hp / Math.max(1, t.mx), 0, 1);
-    targetFrame.innerHTML = `<b>${t.name}</b><div class="tf-bar"><i style="width:${(f * 100).toFixed(1)}%"></i><span>${t.dummy ? '∞' : (f * 100).toFixed(1) + '%'}</span></div>`;
+    const key = t ? `${t.name}|${t.dummy ? '' : Math.round(1000 * t.hp / Math.max(1, t.mx))}|${t.tg}` : '';
+    if (key !== tfKey) {
+      tfKey = key;
+      targetFrame.classList.toggle('hidden', !t);
+      if (t) {
+        const f = t.dummy ? 1 : clamp(t.hp / Math.max(1, t.mx), 0, 1);
+        targetFrame.innerHTML = `<b>${t.name}</b><div class="tf-bar"><i style="width:${(f * 100).toFixed(1)}%"></i><span>${t.dummy ? '∞' : (f * 100).toFixed(1) + '%'}</span></div>${totHtml(t)}`;
+      }
+    }
+    // the focus frame (gone when its enemy is)
+    if (focusEnemy != null && (!inArena() || !lockedTarget(focusEnemy))) focusEnemy = null;
+    const ft = started && !panelOpen() && focusEnemy != null ? lockedTarget(focusEnemy) : null;
+    const fk = ft ? `${ft.name}|${Math.round(1000 * ft.hp / Math.max(1, ft.mx))}|${ft.tg}` : '';
+    if (fk === ffKey) return;
+    ffKey = fk;
+    focusFrame.classList.toggle('hidden', !ft);
+    if (!ft) return;
+    const f = clamp(ft.hp / Math.max(1, ft.mx), 0, 1);
+    focusFrame.innerHTML = `<small>Focus</small><b>${ft.name}</b><div class="tf-bar"><i style="width:${(f * 100).toFixed(1)}%"></i><span>${(f * 100).toFixed(1)}%</span></div>${totHtml(ft)}`;
   }
 
   function teleportBehind() {
@@ -732,6 +799,7 @@
   }
 
   function startRaid(mode, fill, bossId = lastRaidOpts.boss, practiceFrom = 0) {
+    Loot.hostClose();   // a chest from the last pull is settled first
     if (!Net.isHost || !player.cls) return;
     stopRaidHost();
     hostTrial = null;
@@ -793,33 +861,45 @@
     for (const h of humans) for (const t of hostSources.get(h.id) || []) counts[t] = (counts[t] || 0) + 1;
     return counts;
   }
-  // ---- loot: a clear drops a chest; the humans in the run roll Need / Greed / Pass on it (loot.js), and the host
-  // pays everyone the clear's gold with it. Wipes and trials drop nothing.
+  // ---- loot: a clear bursts the boss into a chest where he fell; the humans in the run take from it (and put things in
+  // to trade) until the raid ends (loot.js). The host pays everyone the clear's gold with it. Wipes and trials drop nothing.
   function hostRollLoot() {
     if (hostTrial) return;   // a trial is a memory: nothing drops
     const humans = hostRoster.filter(h => !h.left && h.cls).map(h => [h.id, h.cls]);
-    if (humans.length) Loot.hostOpen(lastRaidOpts.boss, lastRaidOpts.mode, humans);
+    const b = raidHost && raidHost.sim.boss;
+    if (humans.length) Loot.hostOpen(lastRaidOpts.boss, lastRaidOpts.mode, humans, b ? { x: b.x, y: b.y } : null);
   }
   Loot.init({
     broadcast: m => Net.broadcastAll(m),
-    send: m => (Net.isHost ? Loot.hostChoice(Net.id, m) : Net.send(m)),
+    send: m => (!Net.isHost ? Net.send(m) : m.t === 'ctake' ? Loot.hostTake(Net.id, m) : m.t === 'cput' ? Loot.hostPut(Net.id, m) : null),
     myId: () => Net.id,
     nameOf: id => (id === Net.id ? 'You' : (remotes.get(id) || {}).name || 'Someone'),
     inRaid: () => scene === 'arena',
-    addItem: key => {
-      const inst = Inventory.add(key);
+    addItem: (key, cls) => {
+      const inst = Inventory.add(key, cls || (player.cls && player.cls.id));
       if (scene === 'arena') VFX.burst(player.x, player.y, { color: Inventory.rarityColor(inst), color2: '#ffffff', n: 22, speed: 240 });
     },
     addGold: n => Inventory.addGold(n),
     iconURL: key => Inventory.iconURL({ key }),
+    myItems: () => (player.cls ? Inventory.spare(player.cls.id) : []),
+    dropItem: uid => Inventory.drop(uid),
     itemTip: (key, cls) => {
       const inst = { key }, l = cls ? Inventory.loadout(cls) : {}, s = cls && slotsFor(inst).find(x => canEquip(inst, cls, x));
       return Inventory.itemTip(inst, cls, s ? l[s] : null);
     },
   });
-  Net.on('chest', m => Loot.onChest(m));
-  Net.on('lootw', m => Loot.onWin(m));
-  Net.onHost('lootc', (pid, m) => Loot.hostChoice(pid, m));
+  // the boss bursts into the chest
+  Net.on('chest', m => {
+    Loot.onChest(m);
+    const c = raid && Loot.chestAt();
+    if (c) { VFX.burst(c.x, c.y, { color: '#ffd65a', color2: '#ffffff', n: 46, speed: 340 }); FX.add({ type: 'ring', x: c.x, y: c.y, r: 90, color: '#ffd65a', dur: 0.6 }); FX.shake = Math.max(FX.shake || 0, 6); }
+  });
+  Net.on('cst', m => Loot.onState(m));
+  Net.on('cgot', m => Loot.onGot(m));
+  Net.on('cputok', m => Loot.onPutOk(m));
+  Net.on('csalv', m => Loot.onSalvage(m));
+  Net.onHost('ctake', (pid, m) => Loot.hostTake(pid, m));
+  Net.onHost('cput', (pid, m) => Loot.hostPut(pid, m));
   // ---------------------------------------------------------------- Limit Break (G)
   // The party's shared gauge (the host's, fight.js): every whole bar is spent at once by whoever presses first, with the
   // effect of their role. Tank: Stand Fast (the party takes less damage). Healer: Rekindle (heals the party; three bars
@@ -874,7 +954,8 @@
     practicePanel.classList.remove('hidden');
   }
   function renderPractice() {
-    const ids = Object.keys(PRACTICE_PHASES), pk = practicePick;
+    const ids = Object.keys(PRACTICE_PHASES).filter(id => bossOpen(BOSSES.find(b => b.id === id))), pk = practicePick;
+    if (!ids.includes(pk.boss)) pk.boss = ids[0];
     practicePanel.innerHTML = `<header><h3>Practice Hall</h3><button type="button" class="close" aria-label="Close">×</button></header>
       <p class="pr-note">Any fight, from any phase. No loot, no clears; the progression record doesn't see it.</p>
       <div class="pr-row">${ids.map(id => `<button type="button" class="btn2${pk.boss === id ? ' on' : ''}" data-boss="${id}">${escapeHtml(RAID_DEFS[id] ? RAID_DEFS[id].name : id)}</button>`).join('')}</div>
@@ -1038,7 +1119,7 @@
       def, mode: msg.mode, roster: msg.roster, rosterIds: new Set(msg.roster.map(r => r.id)),
       // pull: no countdown, the fight starts on the first blow on the boss ('prepull' till then)
       state: msg.pull ? 'prepull' : 'countdown', countdownEnd: now + 8, fightTime: 0, marks: {},
-      prog: null, practice: Number(msg.practice) || 0, deaths: [], meter: null, pullAt: null,
+      prog: null, practice: Number(msg.practice) || 0, deaths: [], meter: null, pullAt: null, tl: { hp: [], casts: [] },
       introAt: now + 0.6,   // the title card, once the room has faded in
       boss: { x: sp.x, y: sp.y, f: Math.PI / 2, hp: 1, mx: 1, u: 0, v: 0, tg: null },
       bossDraw: { x: sp.x, y: sp.y, f: Math.PI / 2, st: newSt(), lastX: sp.x, lastY: sp.y, fade: 1 },
@@ -1085,11 +1166,11 @@
   }
 
   // nothing half-done carries from one raid to the next (or into town)
-  function resetRaidInput() { placeMark(null); Pings.wheelClose(); pingFrom = null; Pings.clear(); }
+  function resetRaidInput() { placeMark(null); Pings.wheelClose(); pingFrom = null; Pings.clear(); Loot.leave(); }
   function leaveRaid(byMe) {
     resetRaidInput();
     if (byMe) {
-      if (Net.isHost) { Net.broadcastAll({ t: 'raidend' }); return; }  // the host leaving ends it for everyone
+      if (Net.isHost) { Loot.hostClose(); Net.broadcastAll({ t: 'raidend' }); return; }  // the host leaving ends it for everyone
       Net.send({ t: 'rleave' });
     }
     if (Net.isHost) { stopRaidHost(); hostRoster = []; }
@@ -1129,11 +1210,11 @@
   }
   // the key line at the bottom (tanks also get their taunt key)
   function updateHelp() {
-    const tauntKey = player.cls && player.cls.role === 'tank' ? ' · <kbd>T</kbd> taunt' : '';
+    const tauntKey = player.cls && player.cls.role === 'tank' ? ` · <kbd>${KEYS[7]}</kbd> taunt` : '';
     const hurtKey = healerish() ? ' · <kbd>&#96;</kbd> most hurt' : '';
     $('help').innerHTML = scene === 'arena'
-      ? `<kbd>Right-click</kbd> move · <kbd>Left-click</kbd> ally or frame to target · <kbd>1</kbd>-<kbd>4</kbd> target party${hurtKey} · <kbd>Shift</kbd>+skill on yourself · <kbd>Space</kbd> dash${tauntKey}`
-      : `<kbd>Right-click</kbd> move · <kbd>Left-click</kbd> interact · <kbd>Q</kbd><kbd>W</kbd><kbd>E</kbd><kbd>R</kbd><kbd>D</kbd><kbd>F</kbd> skills · <kbd>Space</kbd> dash${tauntKey} · <kbd>Enter</kbd> chat`;
+      ? `<kbd>Right-click</kbd> move · <kbd>Left-click</kbd> ally or frame to target · <kbd>1</kbd>-<kbd>4</kbd> target party${hurtKey} · <kbd>Shift</kbd>+skill on yourself · <kbd>${KEYS[6]}</kbd> dash${tauntKey}`
+      : `<kbd>Right-click</kbd> move · <kbd>Left-click</kbd> interact · ${KEYS.slice(0, 6).map(k => `<kbd>${k}</kbd>`).join('')} skills · <kbd>${KEYS[6]}</kbd> dash${tauntKey} · <kbd>Enter</kbd> chat · <kbd>${Keybinds.label(Keybinds.keyFor('options'))}</kbd> options`;
   }
 
   function clampArena(e) {
@@ -1162,9 +1243,13 @@
         sendCombat(e);
       }
       raid.prePull = null;
+      // the journal: a first meeting, and the moves to watch from here
+      Journal.fightStart();
+      if (player.cls && !raid.def.trial) Journal.met(player.cls.id, raid.def.id);
       return;
     }
     raid.state = msg.s; raid.result = msg; raid.resultAt = now + 2.2;
+    if (player.cls && !raid.def.trial && msg.s === 'clear') Journal.won(player.cls.id, raid.def.id);
     // a real pull (not a trial or a practice run) goes on the progression record
     if ((msg.s === 'clear' || msg.s === 'wipe') && !raid.def.trial && !raid.practice && msg.maxHp > 0) {
       const pct = msg.s === 'clear' ? 0 : Math.max(0, Math.min(100, Math.round(msg.hp / msg.maxHp * 1000) / 10));
@@ -1183,7 +1268,15 @@
       Save.setSpec(player.cls.id, raid.def.trial);
       const sp = specOf(player.cls.id, raid.def.trial);
       if (sp) { heroPickFx(player, { accent: sp.accent }); toast(`${sp.name} unlocked.`); }
-    } else if (msg.s === 'clear' && player.cls && !raid.practice) Save.recordClear(player.cls.id, raid.def.id, raid.mode);
+    } else if (msg.s === 'clear' && player.cls && !raid.practice) {
+      const first = !Save.bossBeaten(raid.def.id);
+      Save.recordClear(player.cls.id, raid.def.id, raid.mode);
+      if (first) {
+        const i = BOSSES.findIndex(b => b.id === raid.def.id), next = BOSSES[i + 1];
+        if (next && next.playable) later(3.5, () => toast(`Somewhere past the portal, ${next.name} stirs.`));
+        if (raid.def.id === 'hollowking') later(3.5, () => toast('Every hero feels it: something new has woken in them. Look again at your hero.'));
+      }
+    }
     if (msg.s === 'clear') BOSS_VFX.victory([...raid.rosterIds].map(entById).filter(Boolean));
     else BOSS_VFX.wipe();
   });
@@ -1193,6 +1286,8 @@
     raid.bossTrack.push(raid.fightClock.map(msg.c, rnow), msg.x, msg.y, msg.f);
     raid.lastFb = performance.now();   // for the debug overlay
     raid.fightTime = msg.ft;
+    // the pull's timeline (results screen): the boss's health once a second
+    if (raid.state === 'live' && msg.mx > 0 && (!raid.tl.hp.length || msg.ft - raid.tl.hp[raid.tl.hp.length - 1][0] >= 1) && raid.tl.hp.length < 1200) raid.tl.hp.push([msg.ft, msg.hp / msg.mx]);
     if (msg.na != null) raid.nextAutoAt = now + msg.na;
     raid.bossStatus = Array.isArray(msg.bs) ? msg.bs : [];   // what's on the boss (fight.js bossStatus)
   });
@@ -1237,6 +1332,8 @@
   Net.on('bcast', msg => {
     if (!raid) return;
     raid.cast = { name: msg.name, dur: msg.dur, start: now, goal: Number.isFinite(msg.goal) ? msg.goal : null };
+    if (raid.state === 'live' && player.cls && !raid.def.trial) Journal.castStart(player.cls.id, raid.def.id, String(msg.name), msg.dur, now);
+    if (raid.state === 'live' && raid.tl.casts.length < 400) raid.tl.casts.push([raid.fightTime || 0, String(msg.name).slice(0, 40), raid.cast.goal != null ? 1 : 0]);
     BOSS_VFX.castStart(raid.def.id, msg.anim, msg.dur, raid.bossDraw);
     const end = now + msg.dur, st = raid.bossDraw.st;
     const prop = (k, v, until) => { raid.props[k] = v; raid.propsUntil[k] = until; };
@@ -1569,7 +1666,7 @@
     if (scene !== 'town') return null;
     const m = mouseWorld();
     let best = null, bd = Infinity;
-    for (const it of interactables) {
+    for (const it of [...interactables, ...TownLife.interactables()]) {
       const d = Math.hypot(m.x - it.x, m.y - it.y);
       if (d < it.r && d < bd) { best = it; bd = d; }
     }
@@ -1599,6 +1696,7 @@
     // clicking the world takes keyboard focus back from any UI button
     if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
     mouse.x = e.clientX; mouse.y = e.clientY;
+    if (e.button >= 3) { const a = Keybinds.actionOf('mouse' + e.button); if (a) { e.preventDefault(); runAction(a, e); } return; }
     if (inArena() && e.button === 1) { e.preventDefault(); const m = mouseWorld(); sendPing(m.x, m.y, null); return; }
     if (inArena() && e.button === 0 && e.altKey) { e.preventDefault(); pingFrom = mouseWorld(); Pings.wheelOpen(e.clientX, e.clientY); return; }
     if (placingMark && inArena()) {
@@ -1608,6 +1706,8 @@
     }
     if (e.button === 2) { mouse.rightDown = true; player.interact = null; moveTo(mouseWorld(), true); return; }
     if (e.button !== 0) return;
+    const ch = inArena() && Loot.chestAt();
+    if (ch && Math.hypot(mouseWorld().x - ch.x, mouseWorld().y - ch.y) < 40) { Loot.open(); return; }
     const it = hoverTarget();
     if (it) { player.interact = it; player.target = { x: it.x, y: it.y }; return; }
     const ally = healerish() ? allyUnderMouse() : null;
@@ -1625,6 +1725,7 @@
     player.interact = null; moveTo(mouseWorld(), true);
   });
   window.addEventListener('mouseup', e => {
+    if (e.button >= 3 && Keybinds.actionOf('mouse' + e.button)) e.preventDefault();   // (a bound side button never goes Back)
     if (e.button === 2) mouse.rightDown = false;
     if (e.button === 0 && Pings.wheelIsOpen()) { const c = Pings.wheelClose(); if (c && pingFrom && inArena()) sendPing(pingFrom.x, pingFrom.y, c); pingFrom = null; }
   });
@@ -1638,12 +1739,71 @@
   document.addEventListener('mouseover', e => { const row = e.target.closest && e.target.closest('.pf'); hoverFrame = row ? Number(row.dataset.id) : null; });
 
   const chatInput = $('chat-input');
-  const SLOT_OF = { q: 0, w: 1, e: 2, r: 3, d: 4, f: 5, ' ': 6, t: 7 };   // 7: a tank's taunt
+  const SLOT_OF = { q: 0, w: 1, e: 2, r: 3, d: 4, f: 5, ' ': 6, t: 7 };   // the default keys (the guides' combos name these)
+  // Options (K): keys and the HUD (keybinds.js)
+  function openOptions() {
+    Keybinds.openPanel({
+      namer: i => (i < 6 && actor && actor.abilities[i] ? actor.abilities[i].name : null),
+      onChange: () => { document.querySelectorAll('#ability-row .slot').forEach(el => { const k = el.querySelector('kbd'); if (k) k.textContent = SLOT_KEYS[Number(el.dataset.i)]; }); updateHelp(); },
+    });
+  }
+  // ---- town life: the townsfolk, unlock moments and feasts (town-life.js)
+  TownLife.init({
+    beaten: id => unlockAll || Save.bossBeaten(id),
+    hero: () => (player.cls ? player.cls.id : null),
+    role: () => (player.cls ? player.cls.role : null),
+    player,
+    addItem: key => { const inst = Inventory.add(key, player.cls && player.cls.id); VFX.burst(player.x, player.y, { color: Inventory.rarityColor(inst), color2: '#ffffff', n: 20, speed: 220 }); },
+    gold: () => Save.gold(),
+    spendGold: n => { Save.addGold(-n); Inventory.refreshGold(); },
+    toast: msg => toast(msg),
+    orderFeast: id => { if (Net.isHost) hostFeast(Net.id, { id }); else Net.send({ t: 'feastreq', id }); },
+    focusCamera: f => { camFocus = f ? { f, until: now + 5 } : null; },   // (a few seconds at most; moving takes it back)
+    onFeast: () => { Inventory.refresh(); sendGear(); },
+  });
+  Inventory.setExtra(clsId => TownLife.feastTotals(clsId));
+  function hostFeast(pid, m) {
+    if (!m || typeof m.id !== 'string' || m.id.length > 20) return;
+    const who = pid === Net.id ? (player.name || 'Someone') : (remotes.get(pid) || {}).name || 'Someone';
+    Net.broadcastAll({ t: 'feast', id: m.id, by: who, from: pid });
+  }
+  Net.onHost('feastreq', hostFeast);
+  Net.on('feast', m => { if (scene === 'town' || m.from === Net.id) TownLife.eat(m.id, m.from === Net.id ? null : m.by); });
+  // the journal shows the heroes you've played (the current one first)
+  Journal.setOpener(() => ({
+    bosses: BOSSES, open: bossOpen, hero: player.cls ? player.cls.id : null, boss: raid && !raid.def.trial ? raid.def.id : null,
+    heroes: () => CLASSES.filter(c => (player.cls && c.id === player.cls.id) || Object.keys(Save.journal(c.id).met).length).sort((a, b) => (player.cls && b.id === player.cls.id) - (player.cls && a.id === player.cls.id)),
+  }));
+  // the Tutorial (Raid Board): the lessons, and the briefing for each boss that's open
+  const openTutorial = boss => Tutorial.open({ bosses: () => BOSSES.filter(b => b.playable && bossOpen(b)), boss });
+  $('tutorial-btn').addEventListener('click', () => openTutorial(null));
+  $('opt-btn').addEventListener('click', () => (Keybinds.panelOpen() ? Keybinds.closePanel() : openOptions()));
+  // a bound action that isn't a panel (keyboard or a mouse's side button)
+  function runAction(a, e) {
+    if (a === 'meter') { if (inArena()) RaidUI.toggleMeter(); return; }
+    if (a === 'focus') { if (!e.repeat) setFocus(); return; }
+    if (a === 'limit') { if (inArena() && !e.repeat) useLimit(); return; }
+    if (a === 'options') { if (Keybinds.panelOpen()) Keybinds.closePanel(); else openOptions(); return; }
+    if (a === 'journal') { Journal.toggle(); return; }
+    if (a[0] !== 's') return;
+    const idx = Number(a.slice(1));
+    if (e.repeat && idx >= 6) return;
+    if (e.repeat && actor && actor.kit.pace && actor.kit.pace.repeat === false) return;   // a paced kit counts presses, not a held key
+    // a kit's own Shift move (the Apothecary moves its pick along the bandolier with Shift+R)
+    if (e.shiftKey && idx < 6 && actor && actor.kit.def.shiftPress) { if (e.repeat) return; if (actor.kit.def.shiftPress(actor.kit, idx)) return; }
+    if (e.shiftKey && idx < 6 && actor && actor.abilities[idx] && actor.abilities[idx].target === 'ally') selfCast = { i: idx, until: now + ENGINE.QUEUE_WINDOW + 0.3 };
+    else if (!e.repeat && selfCast && selfCast.i === idx) selfCast = null;
+    pressSlot(idx);
+  }
   window.addEventListener('keydown', e => {
     if (e.key === 'Alt') e.preventDefault();   // (Alt is the ping wheel: it must never pull focus to the browser's menu)
     if (!started) return;
     if (e.key === 'Escape' && Pings.panelOpen()) { Pings.closePanel(); return; }
     if (e.key === 'Escape' && practiceOpen()) { closePractice(); return; }
+    if (e.key === 'Escape' && Keybinds.panelOpen()) { Keybinds.closePanel(); return; }
+    if (e.key === 'Escape' && Journal.isOpen()) { Journal.close(); return; }
+    if (e.key === 'Escape' && Tutorial.isOpen()) { Tutorial.close(); return; }
+    if (e.key === 'Escape' && Keybinds.isArranging()) { Keybinds.arrange(false); return; }
     // Tab never moves browser focus once you're in the game; it cycles enemy targets instead
     if (e.key === 'Tab') {
       e.preventDefault();
@@ -1659,8 +1819,10 @@
     if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
     if (e.key === 'Escape' && placingMark) { placeMark(null); return; }
     if (e.key === 'Escape') { if (selOpen()) selBack(); else if (panelOpen()) closePanels(); else { lockedAlly = null; lockedEnemy = null; } return; }
-    if (e.key.toLowerCase() === 'i' && !selOpen() && overlay.classList.contains('hidden')) { TalentPanel.close(); Inventory.toggle(); return; }
-    if (e.key.toLowerCase() === 'n' && started && !selOpen() && overlay.classList.contains('hidden')) {
+    const act = Keybinds.actionOf(e.key.toLowerCase());
+    if (act === 'options') { e.preventDefault(); runAction(act, e); return; }
+    if (act === 'bags' && !selOpen() && overlay.classList.contains('hidden')) { TalentPanel.close(); Inventory.toggle(); return; }
+    if (act === 'talents' && started && !selOpen() && overlay.classList.contains('hidden')) {
       if (TalentPanel.isOpen()) TalentPanel.close(); else openTalents();
       return;
     }
@@ -1673,19 +1835,7 @@
       if (pick != null) lockedAlly = pick;
       return;
     }
-    if (e.key.toLowerCase() === 'm' && inArena()) { RaidUI.toggleMeter(); return; }
-    if (e.key.toLowerCase() === 'g' && inArena()) { e.preventDefault(); if (!e.repeat) useLimit(); return; }
-    const idx = SLOT_OF[e.key.toLowerCase()];
-    if (idx !== undefined) {
-      e.preventDefault();
-      if (e.repeat && idx >= 6) return;
-      if (e.repeat && actor && actor.kit.pace && actor.kit.pace.repeat === false) return;   // a paced kit counts presses, not a held key
-      // a kit's own Shift move (the Apothecary moves its pick along the bandolier with Shift+R)
-      if (e.shiftKey && idx < 6 && actor && actor.kit.def.shiftPress) { if (e.repeat) return; if (actor.kit.def.shiftPress(actor.kit, idx)) return; }
-      if (e.shiftKey && idx < 6 && actor && actor.abilities[idx].target === 'ally') selfCast = { i: idx, until: now + ENGINE.QUEUE_WINDOW + 0.3 };
-      else if (!e.repeat && selfCast && selfCast.i === idx) selfCast = null;
-      pressSlot(idx);
-    }
+    if (act) { e.preventDefault(); runAction(act, e); }
   });
   // same order as the party frames: tank, healer, dps
   function partyOrder() {
@@ -1720,6 +1870,8 @@
     Stagecraft.update(now, dt);
     updateRemotes(dt);
     if (scene === 'town') updateTown(dt); else updateArena(dt);
+    TownLife.update(dt, now, scene === 'town');
+    if (scene === 'town') TownLife.checkDistance(); else if (TownLife.isTalking()) TownLife.endTalk();
     updateCamera(dt);
   }
 
@@ -1748,7 +1900,7 @@
       else {
         const reeled = inArena() && player.reel && now >= player.reel.pullAt;
         const slow = (actP(player.st, 'brace') >= 0 ? 0.4 : 1) * (myDebuff('slowed') ? FIGHT.SLOWED : 1) * (reeled ? 0.4 : 1) * windLaneBoost(player.x, player.y, dx, dy, FX.now);   // a Driftblade's Slipstream lane
-        const step = Math.min(d, MOVE_SPEED * slow * dt);
+        const step = Math.min(d, MOVE_SPEED * slow * (scene === 'town' ? TOWN_PACE : 1) * dt);   // (town is walked a little quicker)
         const ox = player.x, oy = player.y;
         player.x += dx / d * step; player.y += dy / d * step;
         if (scene === 'town') {
@@ -1793,7 +1945,7 @@
     }
     // stepping into the portal opens the raid board (once per visit)
     const inPortal = Math.hypot(player.x - TOWN.portal.x, player.y - TOWN.portal.y) < TOWN.portal.r - 10;
-    if (inPortal && !wasInPortal) openBossPanel(BOSSES[0]);
+    if (inPortal && !wasInPortal) openBossPanel(lastOpenBoss());
     wasInPortal = inPortal;
   }
 
@@ -1845,7 +1997,7 @@
     turnToward(trainer, Math.hypot(player.x - trainer.x, player.y - trainer.y) < 260 ? Math.atan2(player.y - trainer.y, player.x - trainer.x) : Math.PI / 2, dt, 3);
     for (const b of statues) {
       b.st.t = now;
-      if (now > b.nextAct) {
+      if (now > b.nextAct && bossOpen(b.boss)) {
         b.st.action = { type: 'attack', t0: now, dur: BOSS_ATTACK_DUR };
         b.nextAct = now + 6 + Math.random() * 3;
         FX.later(BOSS_ATTACK_DUR * 0.5, () => bossImpact(b));
@@ -1952,13 +2104,15 @@
       raid.resultAt = 0;
       RaidUI.showResults(raid.result, raid, Net.id, actor ? { stats: actor.kit.stats, cls: player.cls } : null, Net.isHost, {
         retry: () => raid.def.trial ? startTrial(raid.def.trial) : startRaid(lastRaidOpts.mode, lastRaidOpts.fill, lastRaidOpts.boss, lastRaidOpts.practice || 0),
-        town: () => Net.broadcastAll({ t: 'raidend' }),
+        town: () => { Loot.hostClose(); Net.broadcastAll({ t: 'raidend' }); },
         leave: () => leaveRaid(true),
       });
       Loot.reveal();   // the chest's cards come up with the results
     }
     RaidUI.update(raid, now, Net.id, frameMarks());
     RaidUI.waymarks(raid.def.trial ? null : raid.marks, placingMark);
+    Journal.tick(now, raid.state === 'live' && !amDead());
+    if ((raid.state === 'clear' || raid.state === 'wipe') && !raid.pagesTaken) { raid.pagesTaken = true; raid.newPages = Journal.newPages(); }
     if (raid.introAt && now >= raid.introAt) {
       raid.introAt = 0;
       if (!raid.def.trial) {
@@ -1973,8 +2127,15 @@
     RaidUI.prog(raid.def.trial || raid.practice ? null : raid.prog);
   }
 
+  let camFocus = null;   // an arrival in town borrows the camera while they walk in (TownLife)
   function updateCamera(dt, snap) {
     if (snap) dt = 10;  // jump straight there (scene changes)
+    if (camFocus && (scene !== 'town' || now > camFocus.until || mouse.rightDown)) camFocus = null;
+    if (camFocus) {
+      const k = Math.min(1, dt * 2.5);
+      cam.x += (camFocus.f.x - cam.x) * k; cam.y += (camFocus.f.y - cam.y) * k;
+      return;
+    }
     if (scene === 'arena') {
       // About 82% of the arena's height fits on screen. The camera leans toward you but stops where the rim
       // would leave empty space at the screen edge, so as much of the room as possible stays in view.
@@ -2014,12 +2175,35 @@
   }
 
   // ---------------------------------------------------------------- rendering
+  // a sealed boss's statue: a dark cloth over a tall shape, roped at the base, a faint glow underneath
+  function drawShroud(c, x, y) {
+    c.save();
+    const g = c.createRadialGradient(x, y + 4, 4, x, y + 4, 56);
+    g.addColorStop(0, 'rgba(150,110,255,0.20)'); g.addColorStop(1, 'rgba(150,110,255,0)');
+    c.fillStyle = g; c.beginPath(); c.ellipse(x, y + 4, 56, 20, 0, 0, Math.PI * 2); c.fill();
+    const sway = Math.sin(now * 0.8) * 1.5;
+    c.beginPath();
+    c.moveTo(x - 34, y + 6);
+    c.quadraticCurveTo(x - 40, y - 40, x - 18 + sway, y - 78);
+    c.quadraticCurveTo(x, y - 96, x + 18 + sway, y - 78);
+    c.quadraticCurveTo(x + 40, y - 40, x + 34, y + 6);
+    c.quadraticCurveTo(x, y + 14, x - 34, y + 6);
+    const cl = c.createLinearGradient(x - 34, 0, x + 34, 0);
+    cl.addColorStop(0, '#1b1624'); cl.addColorStop(0.45, '#2c2438'); cl.addColorStop(1, '#141019');
+    c.fillStyle = cl; c.fill();
+    c.strokeStyle = '#0a080d'; c.lineWidth = 2; c.stroke();
+    c.strokeStyle = 'rgba(255,255,255,0.07)'; c.lineWidth = 1.5;   // folds
+    for (const [a, b] of [[-16, -60], [0, -70], [14, -58]]) { c.beginPath(); c.moveTo(x + a * 0.6, y + b); c.quadraticCurveTo(x + a * 1.3, y - 24, x + a * 1.6, y + 4); c.stroke(); }
+    c.strokeStyle = '#8a6a3a'; c.lineWidth = 2.5;   // the rope
+    c.beginPath(); c.moveTo(x - 31, y - 10); c.quadraticCurveTo(x, y - 2, x + 31, y - 10); c.stroke();
+    c.restore();
+  }
   function drawEntity(e) {
     switch (e.kind) {
       case 'hero': drawHero(ctx, e.cls, e.x, e.y, e.angle, e.st, HERO_SCALE); break;
       case 'keeper': drawKeeper(ctx, e.x, e.y, e.angle, e.st, HERO_SCALE); break;
       case 'trainer': drawTrainer(ctx, e.x, e.y, e.angle, e.st, HERO_SCALE); break;
-      case 'boss': drawBoss(ctx, e.boss, e.x, e.y, e.angle, e.st, BOSS_SCALE); break;
+      case 'boss': if (bossOpen(e.boss)) drawBoss(ctx, e.boss, e.x, e.y, e.angle, e.st, BOSS_SCALE); else drawShroud(ctx, e.x, e.y); break;
       case 'dummy': drawDummy(ctx, e.x, e.y, e.st, HERO_SCALE); break;
       case 'player': case 'remote': {
         const dead = inArena() && raid.party.get(e.id === undefined ? Net.id : e.id) && !raid.party.get(e.id === undefined ? Net.id : e.id).alive;
@@ -2043,6 +2227,7 @@
       if (f > 0) rrect(ctx, x0, y0, w * f, 5, 1.5, f < 0.35 ? '#e8503f' : f < 0.7 ? '#c9c45a' : '#5fcf78');
       if (sf > 0) rrect(ctx, x0 + w * f, y0, w * sf, 5, 1.5, 'rgba(236,244,255,0.85)');
     } else if (e.cls && !inArena()) label(ctx, e.cls.name, e.x, y + 12, color, 10);
+    drawCastBar(e);
     if (e.chat && now < e.chatUntil) {
       ctx.font = '600 13px system-ui, sans-serif';
       const tw = Math.min(260, ctx.measureText(e.chat).width) + 18, bx = e.x - tw / 2, by = y - 38;
@@ -2151,7 +2336,8 @@
     const townRemotes = [...remotes.values()].filter(r => r.scene === 0);
     const scEnv = { entById, me: Net.id, town: true };   // your Doll(s) follow you round town too (classes-c)
     Stagecraft.drawFloor(ctx, now, scEnv);
-    const ents = [...lineup, keeper, trainer, ...statues, ...dummies, player, ...townRemotes, ...Stagecraft.entities(now, scEnv)];
+    TownLife.drawGround(ctx, now, TOWN.pedestals, BOSSES.map(b => b.id));
+    const ents = [...lineup, keeper, trainer, ...statues, ...dummies, player, ...townRemotes, ...Stagecraft.entities(now, scEnv), ...TownLife.entities(HERO_SCALE)];
     ents.sort((a, b) => a.y - b.y);
     for (const e of ents) { if (e.kind === 'stagecraft') e.draw(ctx); else drawEntity(e); }
     Stagecraft.drawOver(ctx, now, scEnv);
@@ -2166,6 +2352,7 @@
     label(ctx, 'Barkeep', keeper.x, keeper.y - 28 + 6, '#f0d48a', 11);
     label(ctx, 'Trainer', trainer.x, trainer.y - 34, '#f0d48a', 11);
     for (const d of dummies) if (d.spar && Math.hypot(player.x - d.x, player.y - d.y) < 260) label(ctx, 'Sparring Dummy', d.x, d.y - 46, '#ffb0a0', 11);
+    TownLife.drawLabels(ctx, label, f => Math.hypot(player.x - f.x, player.y - f.y) < 220);
     for (const r of townRemotes) playerTag(r, false);
     playerTag(player, true);
     if (hov && !hov.label.match(/Barkeep|Trainer/) &&!lineup.some(h => h.cls.name === hov.label)) {
@@ -2237,6 +2424,8 @@
     if (lt) drawReticle(lt);
     else if (tAdd) ellipse(ctx, tAdd.x, tAdd.y + 4, 34, 26, 0, null, rgba('#ff6a5a', 0.5 + Math.sin(now * 6) * 0.2), 2);
     for (const a of raid.adds.values()) { const o = a.link && raid.adds.get(a.link); if (o && a.id < o.id && raid.mode === 'hard') ArenaView.addBeam(ctx, a, o, now); }
+    drawFocusMark();
+    drawChest();
     FX.draw(ctx, true);
     VFX.draw(ctx, 'ground');
     BossTells.rims(ctx, raid.tgs, now, tellEnv);   // telegraph rims stay readable over the floor effects
@@ -2353,7 +2542,7 @@
     const c = prep(mini), s = MW / WORLD.w;
     c.drawImage(minimapBase, 0, 0, MW, MH);
     const dot = (x, y, r, col) => circle(c, x * s, y * s, r, col, OUT, 1);
-    for (const b of statues) dot(b.x, b.y, 3.5, '#ff6a5a');
+    for (const b of statues) dot(b.x, b.y, 3.5, bossOpen(b.boss) ? '#ff6a5a' : '#6a5a80');
     dot(TOWN.portal.x, TOWN.portal.y, 4.5, '#b080ff');
     for (const b of TOWN.houses) if (b.hall) dot(b.x + b.w / 2, b.y + b.h / 2, 4, '#7fd0a0');
     dot(keeper.x, keeper.y, 3.5, '#ffd65a');
@@ -2506,11 +2695,11 @@
   }
   // --- specializations on the hero page: the base class and its two specs as tabs. A spec shows what it
   // specializes in, its passive, and every move it adds or changes (with the move it replaced).
-  let selSpec = null;
+  let selSpec = null, tipsTab = 'first';
   function renderSpecBox(cls, kit, rerender) {
     const box = $('sel-spec'), specs = SPECS[cls.id] || [];
-    box.classList.toggle('hidden', !specs.length);
-    if (!specs.length) return;
+    box.classList.toggle('hidden', !specs.length || !specsRevealed());
+    if (!specs.length || !specsRevealed()) return;
     const spec = specOf(cls.id, selSpec), sk = kitFor(cls.id, selSpec);
     // a spec is sealed until this hero clears the Hollow King, then opens through its trial
     const stateOf = s => (s.id ? Save.specState(cls.id, s.id) : 'open');
@@ -2628,11 +2817,17 @@
       const spec = specOf(cls.id, selSpec);
       $('sel-passive').innerHTML = `<i class="ab-icon passive" style="background-image:url(${abilityIcon(cls.id, guide.passive.icon)})"></i>
         <div><h4>Passive · ${guide.passive.name}</h4><p>${(spec && spec.classPassive) || guide.passive.desc}</p></div>`;
-      $('sel-tips').innerHTML = `<h4>Tips &amp; Combos</h4>
-        <div class="tips-grid">
-          <div>${spec ? `<h5>As a ${spec.name}</h5><p>${spec.blurb}</p>` : ''}<h5>First steps</h5><p>${kit.floor}</p><h5>Mastery · ${kit.signature}</h5><ul class="ceiling">${kit.ceiling.map(c => `<li>${c}</li>`).join('')}</ul></div>
-          <div><h5>Combos</h5>${guide.combos.map(c => `<div class="combo"><div class="chain">${c.keys.map(k => keyChip(cls, k)).join('<b class="arrow">›</b>')}</div><p>${c.text}</p></div>`).join('')}</div>
-        </div>`;
+      // one page of tips at a time (tabs), so the hero page fits on one screen
+      const tabs = [
+        ...(spec ? [{ k: 'spec', name: spec.name, html: `<p>${spec.blurb}</p>` }] : []),
+        { k: 'first', name: 'First steps', html: `<p>${kit.floor}</p>` },
+        { k: 'mastery', name: 'Mastery', html: `<h5>${kit.signature}</h5><ul class="ceiling">${kit.ceiling.map(c => `<li>${c}</li>`).join('')}</ul>` },
+        { k: 'combos', name: 'Combos', html: guide.combos.map(c => `<div class="combo"><div class="chain">${c.keys.map(k => keyChip(cls, k)).join('<b class="arrow">›</b>')}</div><p>${c.text}</p></div>`).join('') },
+      ];
+      if (!tabs.some(t => t.k === tipsTab)) tipsTab = 'first';
+      $('sel-tips').innerHTML = `<div class="tips-head"><h4>Tips &amp; Combos</h4><nav>${tabs.map(t => `<button type="button" data-k="${t.k}" class="${t.k === tipsTab ? 'on' : ''}">${t.name}</button>`).join('')}</nav></div>
+        <div class="tips-page">${tabs.find(t => t.k === tipsTab).html}</div>`;
+      $('sel-tips').querySelectorAll('.tips-head button').forEach(b => b.addEventListener('click', () => { tipsTab = b.dataset.k; renderKit(); }));
       $('sel-tips').querySelectorAll('.kchip').forEach(ch => { const i = Number(ch.dataset.i); Tip.set(ch, () => abilityTip(cls, abs[i])); });
     };
     renderKit();
@@ -2742,17 +2937,34 @@
       b.className = 'item'; b.dataset.id = boss.id;
       const cv = document.createElement('canvas'); setupCanvas(cv, 56, 56);
       b.appendChild(cv);
-      b.insertAdjacentHTML('beforeend', `<span><b>${boss.name}</b><small>Boss ${['I', 'II', 'III', 'IV'][i]} · ${boss.title}</small></span>`);
+      b.insertAdjacentHTML('beforeend', `<span><b></b><small></small></span>`);
       b.addEventListener('click', () => showBoss(boss));
       list.appendChild(b);
-      bossThumbs.push({ cv, boss });
+      bossThumbs.push({ cv, boss, b });
     });
+    refreshBossList();
   })();
+  // names and thumbnails for the bosses that are open; the rest read as sealed
+  function refreshBossList() {
+    BOSSES.forEach((boss, i) => {
+      const t = bossThumbs[i], open = bossOpen(boss);
+      t.b.classList.toggle('sealed', !open);
+      t.b.querySelector('b').textContent = open ? boss.name : 'Sealed';
+      t.b.querySelector('small').textContent = open ? `Boss ${['I', 'II', 'III', 'IV'][i]} · ${boss.title}` : `Boss ${['I', 'II', 'III', 'IV'][i]} · beat ${BOSSES[i - 1].name} to open`;
+    });
+  }
   let raidMode = 'normal', raidFill = true;
   function showBoss(boss) {
     document.querySelectorAll('#boss-list .item').forEach(b => b.classList.toggle('active', b.dataset.id === boss.id));
     const i = BOSSES.indexOf(boss);
     const det = $('boss-detail');
+    if (!bossOpen(boss)) {
+      det.innerHTML = `<div class="boss-sealed"><canvas></canvas><h3>Sealed</h3><p>Something waits past ${escapeHtml(BOSSES[i - 1].name)}. Beat ${escapeHtml(BOSSES[i - 1].name)} to see what.</p></div>`;
+      const cv = det.querySelector('canvas'); setupCanvas(cv, 160, 160);
+      const c = prep(cv); c.save(); c.translate(80, 128); c.scale(1.1, 1.1); drawShroud(c, 0, 0); c.restore();
+      preview = null;
+      return;
+    }
     det.innerHTML = `
       <div class="detail-top">
         <canvas></canvas>
@@ -2763,7 +2975,10 @@
         </div>
       </div>
       <ul class="abilities mech">${boss.mechanics.map(m => `<li><kbd>◆</kbd><div><b>${m.name}</b><span>${m.desc}</span></div></li>`).join('')}</ul>
+      ${boss.playable && typeof TUTORIAL !== 'undefined' && TUTORIAL.bosses[boss.id] ? `<button type="button" class="linkish brief-btn">Read the briefing: every move, and what to do</button>` : ''}
       <div class="raid-setup">${boss.playable ? '' : '<button class="cta" disabled>Designed, not built yet · coming soon</button>'}</div>`;
+    const bb = det.querySelector('.brief-btn');
+    if (bb) bb.addEventListener('click', () => openTutorial(boss.id));
     const cv = det.querySelector('canvas');
     setupCanvas(cv, 260, 260);
     preview = { kind: 'boss', boss, cv, st: newSt(), nextDemo: now + 0.8 };
@@ -2791,18 +3006,36 @@
   }
   function openBossPanel(boss) {
     if (scene !== 'town') return;
+    refreshBossList();
     sel.classList.add('hidden');
     overlay.classList.remove('hidden'); bossPanel.classList.remove('hidden');
     player.target = null;
     showBoss(boss);
   }
 
+  // Menus fit the window: a page taller than the screen is scaled down to fit (to 70% at most; past that it scrolls)
+  function fitMenus() {
+    const pages = [
+      ...document.querySelectorAll('#select > .sel-page:not(.hidden)'),
+      ...document.querySelectorAll('#overlay:not(.hidden) > .panel:not(.hidden)'),
+      ...['talents', 'inventory'].map(id => $(id)).filter(e => e && !e.classList.contains('hidden')).map(e => e.firstElementChild).filter(Boolean),
+    ];
+    for (const p of pages) {
+      p.classList.add('fit');
+      const z0 = Number(p.style.zoom) || 1, h = p.getBoundingClientRect().height / z0;
+      if (!h) continue;
+      const z = Math.max(0.7, Math.min(1, (innerHeight - 40) / h));
+      if (Math.abs(z - z0) > 0.01) p.style.zoom = z.toFixed(3);
+    }
+  }
   function renderPanels() {
+    fitMenus();
+    Keybinds.applyLayout();
     renderSelect();
     Inventory.frame(now);
     if (overlay.classList.contains('hidden')) return;
     const idle = { t: now, moving: false, action: null };
-    for (const { cv, boss } of bossThumbs) drawBoss(prep(cv), boss, 28, 28, Math.PI / 2, idle, 0.34);
+    for (const { cv, boss } of bossThumbs) { const c = prep(cv); if (bossOpen(boss)) drawBoss(c, boss, 28, 28, Math.PI / 2, idle, 0.34); else { c.save(); c.translate(28, 40); c.scale(0.42, 0.42); drawShroud(c, 0, 0); c.restore(); } }
     if (!preview || preview.kind !== 'boss') return;
     const st = preview.st;
     st.t = now;
@@ -2882,11 +3115,41 @@
   Net.on('castStart', msg => {
     const e = msg.id >= 1000 ? (raid && raid.bots.get(msg.id)) : remotes.get(msg.id);
     if (e) e.st.action = { type: 'cast', t0: now, dur: Math.max(0.55, msg.dur || 1), channel: true };
+    // the bar under them: the skill's icon and name, and the seconds left
+    const ab = e && e.cls && Number.isInteger(msg.i) && msg.i >= 0 ? kitFor(e.cls.id, e.spec).abilities[msg.i] : null;
+    if (e) e.castBar = ab ? { ab, t0: now, dur: Math.max(0.3, msg.dur || 1) } : null;
   });
   Net.on('castStop', msg => {
     const e = msg.id >= 1000 ? (raid && raid.bots.get(msg.id)) : remotes.get(msg.id);
     if (e && e.st.action && e.st.action.channel) e.st.action = null;
+    if (e) e.castBar = null;
   });
+  // a cast under a hero's feet: icon, name, a bar filling, "1.9 / 5.9"
+  const castIcons = new Map();
+  function castIcon(cls, ab) {
+    const k = cls.id + ':' + ab.id;
+    if (!castIcons.has(k)) { const im = new Image(); im.src = abilityIcon(cls.id, abilityIconId(ab)); castIcons.set(k, im); }
+    return castIcons.get(k);
+  }
+  function drawCastBar(e) {
+    const c = e.castBar;
+    if (!c || !e.cls) return;
+    const el = now - c.t0;
+    if (el > c.dur + 0.15) { e.castBar = null; return; }
+    const w = 74, x0 = Math.round(e.x - w / 2 + 9), y0 = Math.round(e.y + 22), f = clamp(el / c.dur, 0, 1);
+    const im = castIcon(e.cls, c.ab);
+    rrect(ctx, x0 - 20, y0 - 3, w + 22, 14, 2, 'rgba(10,8,6,0.82)');
+    if (im.complete && im.naturalWidth) ctx.drawImage(im, x0 - 19, y0 - 2, 12, 12);
+    rrect(ctx, x0, y0, w, 8, 1.5, 'rgba(255,255,255,0.08)');
+    rrect(ctx, x0, y0, w * f, 8, 1.5, e.cls.accent || '#e8c15a');
+    ctx.save();
+    ctx.font = '600 9.5px system-ui, sans-serif'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#fff'; ctx.textAlign = 'right';
+    ctx.fillText(`${Math.min(el, c.dur).toFixed(1)} / ${c.dur.toFixed(1)}`, x0 + w - 2, y0 + 4.5);
+    ctx.textAlign = 'left'; ctx.fillStyle = '#f2e6c8';
+    ctx.fillText(c.ab.name, x0 - 19, y0 - 9);
+    ctx.restore();
+  }
   // someone else's auto-attack (a friend's or a bot's)
   Net.on('auto', msg => {
     const e = msg.id >= 1000 ? (raid && raid.bots.get(msg.id)) : remotes.get(msg.id);

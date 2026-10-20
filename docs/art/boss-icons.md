@@ -1,6 +1,6 @@
 # Boss move icons (the cast frame)
 
-93 icons: one for every move a boss casts. They show in the cast frame near the middle of the screen, 46 px while the boss is casting and 34 px for the "Next" move, so each icon has to read at a glance at that size. The game draws a coded placeholder for each one until the painted icon arrives.
+96 icons: one for every move a boss casts. They show in the cast frame near the middle of the screen, 46 px while the boss is casting and 34 px for the "Next" move, so each icon has to read at a glance at that size. The game draws a coded placeholder for each one until the painted icon arrives.
 
 Same cartoon style as `ability-icons.md`, so the boss moves sit next to the hotbar without clashing.
 
@@ -173,3 +173,13 @@ Use each boss's own background and palette from above; one 3 × 3 sheet is fine 
 3. **Thunderhead** (`volkar/thunderhead`): one huge anvil-shaped storm cloud, dark, with a single thick white bolt splitting it down the middle.
 4. **Royal Tithe** (`hollowking/royal-tithe`): a tarnished gold offering bowl under a floating crown, a stream of green life-light pouring up out of the bowl into the crown.
 5. **Dirge** (`hollowking/dirge`): an old iron funeral bell, still, with wide slow rings of sound spreading out beneath it in green.
+
+---
+
+## New Hard moves (the dance sets): 3 icons, one partial sheet
+
+Each boss's own background and palette from above.
+
+1. **Snare Weave** (`skitterra/snare-weave`): a web seen from above made of many small overlapping silk rings, packed edge to edge, with three round holes left clear in it (the holes a plain dark blue). A small pale egg clutch hangs from one strand at the side. (The shape to read: a field of rings with gaps.)
+2. **Burial Rites** (`hollowking/burial-rites`): four small open graves in a square around a crown, each grave's rim a different flat colour (green, violet, pink, white), a headstone at the head of each.
+3. **Writ of Execution** (`hollowking/writ-of-execution`): an unrolled parchment writ with a heavy wax seal, three iron chains running from it out to the edges of the square, and a fourth chain hanging broken. (Lines going out from one point, one of them harmless.)

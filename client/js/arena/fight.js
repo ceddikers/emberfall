@@ -36,6 +36,10 @@ const FIGHT = {
   //   (three bars also raise the fallen at RAISE)   DPS: a blow worth this share of the boss's max health
   LB: { BAR: 100, CLEAN: 4, CHECK: 70, TANK: [0, 0.2, 0.35, 0.5], TANK_DUR: 8, HEAL: [0, 0.3, 0.6, 1], RAISE: 0.5, DPS: [0, 0.008, 0.018, 0.03] },
   TANK_HP: 32000, HP: 21000,   // before NUM_SCALE
+  // Each party slot's own colour (Hard's own-colour circles: Burial Rites), in the order the party frames list
+  // everyone (tank, healer, then the rest by id: FightSim.slotOf). None of them is red, blue or yellow, which say
+  // danger, safe and share on the floor.
+  SLOTS: ['#5fe36a', '#b26cff', '#ff6fd2', '#f2eee4'],
 };
 const playerBaseHp = role => Math.round((role === 'tank' ? FIGHT.TANK_HP : FIGHT.HP) * FIGHT.NUM_SCALE);
 
@@ -270,6 +274,13 @@ class FightSim {
   }
   dropThreat(pid) { for (const a of this.adds.values()) delete a.threat[pid]; }
   nonTanks() { const t = this.tank(); return this.alive().filter(p => !t || p.id !== t.id); }
+  // a player's party slot (0-3): the order the party frames list everyone (tank, healer, then the rest by id), so the
+  // slot's colour (FIGHT.SLOTS) and the frame's number match
+  slotOf(id) {
+    const order = { tank: 0, healer: 1, dps: 2 };
+    const list = [...this.ps.values()].filter(s => !s.left).sort((a, b) => (order[a.role] ?? 3) - (order[b.role] ?? 3) || a.id - b.id);
+    return Math.max(0, list.findIndex(s => s.id === id));
+  }
 
   // ---------------------------------------------------------------- lifecycle
   tick(dt) {
@@ -717,7 +728,7 @@ class FightSim {
     this.mechs.set(id, m);
     this.emit({ t: 'tg', id, shape: m.shape, dur: m.delay, type: m.type, hidden: !!m.hidden, follow: m.follow ?? null,
       target: m.target ?? null, aim: m.aimFromBoss ?? null, lockAt: m.lockAt || (m.aimFromBoss ? 0.6 : 0),
-      need: m.need || 0, tag: m.tag || null, color: m.color || null,
+      need: m.need || 0, tag: m.tag || null, color: m.color || null, slot: m.slot || 0,
       cover: m.cover ? [Math.round(m.src.x), Math.round(m.src.y)] : null, cap: m.coverCap || 0 });
     return m;
   }
@@ -770,7 +781,25 @@ class FightSim {
       return;
     }
     switch (m.type) {
-      case 'aoe': for (const p of inside) hit(p, m.dmg, m.tag || 'aoe', m.avoidable); break;
+      case 'aoe':
+        // m.group (a Set shared by many overlapping circles that land together, Snare Weave): one hit each at most
+        for (const p of inside) { if (m.group) { if (m.group.has(p.id)) continue; m.group.add(p.id); } hit(p, m.dmg, m.tag || 'aoe', m.avoidable); }
+        break;
+      // a line from the boss through the player it's aimed at (m.target): they take it; anyone else in it takes more
+      case 'bait': {
+        const tg = m.target ?? m.aimFromBoss;
+        for (const p of inside) hit(p, p.id === tg ? m.dmg : m.dmg * 1.25, m.tag || 'bait', p.id !== tg);
+        break;
+      }
+      // a circle that belongs to one player (m.target): they must be in it when it lands, and nobody else may be.
+      // Missing it: m.dmg on them (and it counts as failed); someone else in it: m.otherDmg on them.
+      case 'own': {
+        const owner = this.alive().find(p => p.id === m.target);
+        for (const p of inside) if (p.id !== m.target) hit(p, m.otherDmg ?? m.dmg * 0.6, m.tag || 'own', true);
+        if (owner && !inside.some(p => p.id === owner.id)) { fail = 1; hit(owner, m.dmg, m.tag || 'own', true); }
+        break;
+      }
+      // 'safe' (a harmless area, drawn blue) and 'drop' (a marker on a player; its onResolve does the work) hit nobody
       case 'raidwide':
         for (const p of this.alive()) if (!(cov && cov.safe.has(p.id))) hit(p, m.dmg * (eat && eat.raid ? MAW_HOST.RAID : 1), 'raidwide', false);
         if (eat && eat.raid) for (const p of eat.raid) this.eaten(p, eat.type, { mid: m.id, raid: 1 });
@@ -815,7 +844,8 @@ class FightSim {
     }
     this.emit(fail ? { t: 'tgx', id: m.id, hits, fail } : { t: 'tgx', id: m.id, hits });
     // answered cleanly (nobody caught by something they could avoid, nothing failed): the gauge fills a little
-    if (!fail && this.avoidCount === av0 && m.type !== 'raidwide' && m.type !== 'knockback') this.lbGain(FIGHT.LB.CLEAN);
+    if (!fail && this.avoidCount === av0 && m.type !== 'raidwide' && m.type !== 'knockback' && m.type !== 'safe' && m.type !== 'drop' && !(m.group && m.group.lb)) this.lbGain(FIGHT.LB.CLEAN);
+    if (m.group) m.group.lb = true;   // (a group of circles fills the gauge once)
     this.dollMech(m, cov);   // a Marionettist's Doll caught in it (classes-c)
     if (cov) for (const pr of cov.chip) this.hitProp(pr, 1, m.tag);
     if (m.onResolve) m.onResolve(inside, hits, cov);

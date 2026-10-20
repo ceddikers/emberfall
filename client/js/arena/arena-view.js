@@ -785,7 +785,7 @@ const ArenaView = {
       const p = clamp((t - warn.start) / Math.max(0.1, warn.end - warn.start), 0, 1);
       const pulseA = 0.5 + 0.5 * Math.sin(t * (6 + p * 16));
       ctx.save();
-      band(warn.r, r); ctx.fillStyle = rgba('#3a8cff', (0.06 + 0.2 * p) * (0.7 + 0.3 * pulseA)); ctx.fill();
+      band(warn.r, r); ctx.fillStyle = rgba(BossTells.COL.danger, (0.06 + 0.2 * p) * (0.7 + 0.3 * pulseA)); ctx.fill();   // the ground about to go: danger
       ctx.restore();
       // sparks crawling along the new line, thicker as the step nears
       const n = Math.round(24 + p * 40);
@@ -793,7 +793,7 @@ const ArenaView = {
         const a = i * TAU / n + t * (i % 2 ? 0.5 : -0.4), len = 0.05 + 0.04 * p;
         ctx.save(); ctx.globalAlpha = 0.45 + 0.5 * p;
         ctx.beginPath(); ctx.arc(0, 0, warn.r, a, a + len);
-        ctx.strokeStyle = '#bff0ff'; ctx.lineWidth = 2 + p * 2; ctx.stroke();
+        ctx.strokeStyle = BossTells.COL.dangerHi; ctx.lineWidth = 2 + p * 2; ctx.stroke();
         ctx.restore();
         if ((i + Math.floor(t * 10)) % 5 === 0) glow(ctx, Math.cos(a) * warn.r, Math.sin(a) * warn.r, 10 + p * 10, '#7fe8ff', 0.6 * p + 0.2);
       }
@@ -933,7 +933,7 @@ const ArenaView = {
       if (k <= 0) continue;
       const r = p.r * (0.7 + 0.3 * life);
       if (p.tag === 'venom') { this.venomPool(ctx, p, r, k, t); continue; }
-      glow(ctx, p.x, p.y, r * 1.25, '#ff9a2a', 0.18 * k);
+      glow(ctx, p.x, p.y, r * 1.25, '#ff6a2a', 0.18 * k);
       ctx.save(); ctx.globalAlpha = k;
       const g = ctx.createRadialGradient(p.x - r * 0.3, p.y - r * 0.3, r * 0.1, p.x, p.y, r);
       g.addColorStop(0, '#d89a3a'); g.addColorStop(0.6, '#8a4e14'); g.addColorStop(1, '#4a2408');
@@ -945,7 +945,7 @@ const ArenaView = {
         i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
       }
       ctx.closePath(); ctx.fill();
-      ctx.strokeStyle = 'rgba(255,190,90,0.7)'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.strokeStyle = rgba(BossTells.COL.danger, 0.85); ctx.lineWidth = 2.5; ctx.stroke();   // a lasting hazard: red rim
       for (let i = 0; i < 4; i++) {
         const q = (t * 0.7 + i / 4 + p.id * 0.13) % 1, a = i * 1.9 + p.id;
         circle(ctx, p.x + Math.cos(a) * r * 0.5, p.y + Math.sin(a) * r * 0.5, 2 + q * 5, null, `rgba(255,220,150,${0.6 * (1 - q)})`, 1.5);
@@ -972,7 +972,8 @@ const ArenaView = {
     // a dark crust round the edge, then the pool, then its bright acid rim
     ctx.lineJoin = 'round'; ctx.strokeStyle = 'rgba(16,30,6,0.85)'; ctx.lineWidth = 12; ctx.stroke();
     ctx.fill();
-    ctx.strokeStyle = 'rgba(214,255,90,0.85)'; ctx.lineWidth = 2.5; ctx.stroke();
+    ctx.strokeStyle = rgba(BossTells.COL.danger, 0.8); ctx.lineWidth = 3; ctx.stroke();   // a lasting hazard: red rim
+    ctx.strokeStyle = 'rgba(214,255,90,0.6)'; ctx.lineWidth = 1.2; ctx.stroke();
     for (let i = 0; i < 9; i++) {
       const a = i * TAU / 9 + p.id, w = 1.06 + Math.sin(a * 4 + p.id) * 0.07;
       ellipse(ctx, p.x + Math.cos(a) * r * w, p.y + Math.sin(a) * r * w, 7 + (i % 3) * 3, 4 + (i % 2) * 2, a, 'rgba(26,36,12,0.9)', 'rgba(170,230,70,0.5)', 1);
@@ -1002,6 +1003,7 @@ const ArenaView = {
       if (z.tag === 'trail') { this.silkTrail(ctx, s, k, t); continue; }
       if (z.tag === 'stovefire') { this.stoveFire(ctx, z, t); continue; }
       if (z.tag === 'acid') { this.acidFloor(ctx, z, k, t); continue; }
+      if (z.tag === 'writburn') { this.writBurn(ctx, z, t); continue; }
       ctx.save();
       ARENA.trace(ctx, 2); ctx.clip();   // the web stops at the walls, whatever shape they are
       SHAPES.trace(ctx, s);
@@ -1065,6 +1067,26 @@ const ArenaView = {
       glow(ctx, (x0 + x1) / 2, y0 + 40, (x1 - x0) * 0.4, '#ff7a1a', 0.18 * k);
       line(ctx, x0, y1, x1, y1, rgba('#ffe0a0', 0.55 * k), 2.5);
     }
+    ctx.restore();
+  },
+  // the Writ of Execution's spokes (the Hollow King, Hard): the line a writ ran down stays burning in grave-fire, red
+  // edged, until the graves close; it flares up a moment after the writ is read
+  writBurn(ctx, z, t) {
+    const s = z.shape, on = t >= z.at, k = Math.min(1, Math.max(0, (z.end - t) / 0.8)) * (on ? 1 : clamp((t - z.start) / Math.max(0.1, z.at - z.start), 0, 1) * 0.6);
+    if (k <= 0) return;
+    const ca = Math.cos(s.angle), sa = Math.sin(s.angle);
+    ctx.save(); ARENA.trace(ctx, 2); ctx.clip();
+    SHAPES.trace(ctx, s); ctx.fillStyle = rgba('#0a1a10', 0.45 * k); ctx.fill();
+    ctx.fillStyle = rgba(BossTells.COL.danger, 0.14 * k); ctx.fill();
+    ctx.save(); ctx.clip();
+    for (let i = 0; i < 26; i++) {
+      const d = hash01(i * 7 + Math.round(s.angle * 100)) * Math.min(s.len, ARENA.R * 2), off = (hash01(i * 13 + Math.round(s.angle * 100)) - 0.5) * s.w * 0.8, q = (t * 1.1 + hash01(i)) % 1;
+      const x = s.x + ca * d - sa * off, y = s.y + sa * d + ca * off;
+      if (on) this.fireTongue(ctx, x, y, (16 + 14 * Math.sin(t * 6 + i)) * k, 6, t + i);
+      glow(ctx, x, y - q * 20, 14, '#5adf8a', 0.35 * (1 - q) * k);
+    }
+    ctx.restore();
+    SHAPES.trace(ctx, s); ctx.strokeStyle = rgba(BossTells.COL.danger, 0.8 * k); ctx.lineWidth = 2.5; ctx.stroke();
     ctx.restore();
   },
   // one licking tongue of fire standing on (x, y): dark red outside, orange, a yellow core
@@ -1206,7 +1228,9 @@ const ArenaView = {
       if (tg.hidden) continue;
       if (env && BossTells.ground(ctx, tg, s, p, fadeIn, t, env)) continue;
       switch (tg.type) {
-        case 'aoe': case 'buster': this.areaWarning(ctx, s, p, fadeIn, tg.type === 'buster' ? '#ff2a3a' : '#ff6a3a', t); break;
+        case 'aoe': case 'buster': case 'bait': case 'hook': this.areaWarning(ctx, s, p, fadeIn, tg.type === 'buster' ? BossTells.COL.buster : BossTells.COL.danger, t); break;
+        case 'safe': this.areaWarning(ctx, s, p, fadeIn, BossTells.COL.safe, t); break;
+        case 'own': this.areaWarning(ctx, s, p, fadeIn, tg.color || '#ffffff', t); break;
         case 'stack': this.stackMarker(ctx, s, p, fadeIn, t); break;
         case 'spread': this.spreadMarker(ctx, s, p, fadeIn, t); break;
         case 'tower': this.tower(ctx, s, p, fadeIn, t, tg.need, tg.color); break;
@@ -1256,14 +1280,15 @@ const ArenaView = {
 
   stackMarker(ctx, s, p, k, t) {
     const { x, y, r } = s;
-    circle(ctx, x, y, r, rgba('#ffd84a', 0.12 * k), rgba('#ffd84a', 0.7 * k), 2);
+    const Y = BossTells.COL.share;
+    circle(ctx, x, y, r, rgba(Y, 0.12 * k), rgba(Y, 0.8 * k), 2.5);
     // chevrons closing in on the target
     const pull = (t * 0.9) % 1;
     for (let i = 0; i < 4; i++) {
       const a = i * TAU / 4 + Math.PI / 4, d = r * (1.15 - pull * 0.45);
       ctx.save(); ctx.translate(x + Math.cos(a) * d, y + Math.sin(a) * d); ctx.rotate(a + Math.PI);
       ctx.globalAlpha = k * (0.35 + 0.65 * (1 - pull));
-      poly(ctx, [-6, -12, 8, 0, -6, 12, -1, 0], '#ffd84a', OUT, 1.5);
+      poly(ctx, [-6, -12, 8, 0, -6, 12, -1, 0], Y, OUT, 1.5);
       ctx.restore();
     }
     // closing ring shows when it lands
@@ -1272,23 +1297,26 @@ const ArenaView = {
 
   spreadMarker(ctx, s, p, k, t) {
     const { x, y, r } = s;
-    circle(ctx, x, y, r, rgba('#c070ff', 0.16 * k), rgba('#d79bff', 0.85 * k), 2.5);
+    // a spread: on you, danger to anyone else in it (red), chevrons pushing out
+    const D = BossTells.COL.danger;
+    circle(ctx, x, y, r, rgba(D, 0.14 * k), rgba(D, 0.85 * k), 2.5);
     const push = (t * 0.9) % 1;
     for (let i = 0; i < 6; i++) {
       const a = i * TAU / 6 + t * 0.5, d = r * (0.35 + push * 0.5);
       ctx.save(); ctx.translate(x + Math.cos(a) * d, y + Math.sin(a) * d); ctx.rotate(a);
       ctx.globalAlpha = k * (1 - push);
-      poly(ctx, [-5, -8, 7, 0, -5, 8], '#e6c2ff', OUT, 1);
+      poly(ctx, [-5, -8, 7, 0, -5, 8], BossTells.COL.dangerHi, OUT, 1);
       ctx.restore();
     }
-    circle(ctx, x, y, r * (1 - p) + 4, null, rgba('#f2dcff', 0.7 * k), 1.5);
+    circle(ctx, x, y, r * (1 - p) + 4, null, rgba(BossTells.COL.dangerHi, 0.7 * k), 1.5);
   },
 
   tower(ctx, s, p, k, t, need, color) {
-    const { x, y, r } = s, base = color || '#4fe0d0', hi = color || '#9ffff4';
-    glow(ctx, x, y, r * 1.6, base, 0.35 * k);
-    circle(ctx, x, y, r, rgba(base, 0.18 * k), rgba(hi, 0.95 * k), 3);
-    circle(ctx, x, y, r * 0.78, null, rgba(hi, 0.4 * k), 1.5);
+    // a soak: the rim is yellow (share it); a charge's own colour (Volkar's gold or blue) only lights the column inside
+    const Y = BossTells.COL.share, base = color || '#e8c15a', hi = color || BossTells.COL.shareHi;
+    glow(ctx, x, y, r * 1.6, base, 0.3 * k);
+    circle(ctx, x, y, r, rgba(Y, 0.14 * k), rgba(Y, 0.95 * k), 3);
+    circle(ctx, x, y, r * 0.78, null, rgba(hi, 0.5 * k), 2);
     // light column
     const g = ctx.createLinearGradient(0, y - 150, 0, y);
     g.addColorStop(0, rgba(hi, 0)); g.addColorStop(1, rgba(hi, 0.35 * k));
@@ -1296,7 +1324,7 @@ const ArenaView = {
     // one pip per person it wants
     for (let i = 0; i < Math.max(1, need); i++) {
       const a = -Math.PI / 2 + (i - (need - 1) / 2) * 0.45;
-      circle(ctx, x + Math.cos(a) * (r + 12), y + Math.sin(a) * (r + 12), 4.5, rgba('#d8fffa', k), OUT, 1.5);
+      circle(ctx, x + Math.cos(a) * (r + 12), y + Math.sin(a) * (r + 12), 4.5, rgba(BossTells.COL.shareHi, k), OUT, 1.5);
     }
     // countdown ring
     ctx.beginPath(); ctx.arc(x, y, r + 4, -Math.PI / 2, -Math.PI / 2 + TAU * (1 - p));
@@ -1307,7 +1335,7 @@ const ArenaView = {
     // heat waves rolling out from the source: hottest close in
     const max = ARENA.R * 1.1;
     const g = ctx.createRadialGradient(s.x, s.y, 20, s.x, s.y, max);
-    g.addColorStop(0, rgba('#ff3a1a', 0.42 * k)); g.addColorStop(0.45, rgba('#ff7a1a', 0.16 * k)); g.addColorStop(1, rgba('#ff7a1a', 0));
+    g.addColorStop(0, rgba(BossTells.COL.danger, 0.45 * k)); g.addColorStop(0.45, rgba(BossTells.COL.danger, 0.16 * k)); g.addColorStop(1, rgba(BossTells.COL.danger, 0));
     ctx.fillStyle = g; ctx.beginPath(); ctx.arc(s.x, s.y, max, 0, TAU); ctx.fill();
     for (let i = 0; i < 4; i++) {
       const q = (t * 0.5 + i / 4) % 1;
@@ -1316,12 +1344,12 @@ const ArenaView = {
   },
 
   knockback(ctx, s, p, k, t) {
-    circle(ctx, s.x, s.y, 60, rgba('#a0d8ff', 0.2 * k), rgba('#d0f0ff', 0.8 * k), 2);
+    circle(ctx, s.x, s.y, 60, rgba(BossTells.COL.danger, 0.2 * k), rgba(BossTells.COL.dangerHi, 0.85 * k), 2);
     for (let i = 0; i < 12; i++) {
       const a = i * TAU / 12, q = (t * 1.2 + (i % 2) * 0.5) % 1, d = 80 + q * 260;
       ctx.save(); ctx.translate(s.x + Math.cos(a) * d, s.y + Math.sin(a) * d); ctx.rotate(a);
       ctx.globalAlpha = k * (1 - q);
-      poly(ctx, [-8, -10, 10, 0, -8, 10, -3, 0], '#d0f0ff', OUT, 1);
+      poly(ctx, [-8, -10, 10, 0, -8, 10, -3, 0], BossTells.COL.dangerHi, OUT, 1);
       ctx.restore();
     }
   },
@@ -1487,10 +1515,10 @@ const ArenaView = {
     ctx.lineJoin = 'round'; ctx.lineCap = 'round';
     trace(); ctx.strokeStyle = rgba('#1a0814', 0.75); ctx.lineWidth = 7; ctx.stroke();
     ctx.globalCompositeOperation = 'lighter';
-    ctx.strokeStyle = rgba('#ff3aa8', 0.55 * hot); ctx.lineWidth = 6; ctx.stroke();
-    ctx.strokeStyle = rgba('#ffd0ec', 0.8 * hot); ctx.lineWidth = 1.8; ctx.stroke();
+    ctx.strokeStyle = rgba(BossTells.COL.danger, 0.6 * hot); ctx.lineWidth = 6; ctx.stroke();
+    ctx.strokeStyle = rgba(BossTells.COL.dangerHi, 0.8 * hot); ctx.lineWidth = 1.8; ctx.stroke();
     ctx.globalCompositeOperation = 'source-over';
-    for (let i = 0; i < 14; i++) { const a = i * TAU / 14 + t * 0.05; glow(ctx, Math.cos(a) * cv.r2, Math.sin(a) * cv.r2, 30, '#ff4ab0', 0.18 * hot); }
+    for (let i = 0; i < 14; i++) { const a = i * TAU / 14 + t * 0.05; glow(ctx, Math.cos(a) * cv.r2, Math.sin(a) * cv.r2, 30, BossTells.COL.danger, 0.18 * hot); }
     ctx.restore();
   },
   // what a broken prop leaves on the floor
@@ -1580,7 +1608,8 @@ const ArenaView = {
     ctx.save(); ctx.translate(jx, 0);
     ctx.beginPath(); ctx.arc(0, 0, R, cr.a0, cr.a1); ctx.arc(0, 0, cr.r, cr.a1, cr.a0, true); ctx.closePath();
     ctx.fillStyle = `rgba(8,10,18,${0.2 + 0.35 * p + 0.07 * Math.sin(t * 8)})`; ctx.fill();
-    ctx.strokeStyle = rgba('#cfe0f4', 0.12 + 0.2 * p); ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = rgba(BossTells.COL.danger, 0.06 + 0.12 * p); ctx.fill();
+    ctx.strokeStyle = rgba(BossTells.COL.danger, 0.35 + 0.45 * p); ctx.lineWidth = 2.5; ctx.stroke();
     // the crack along the new lip, running out from the middle of the wedge as the time runs down
     const steps = 30, pts = [];
     for (let i = 0; i <= steps; i++) { const a = cr.a0 + (cr.a1 - cr.a0) * i / steps; pts.push([a, cr.r + (i && i < steps ? (r() - 0.5) * 14 : 0)]); }
@@ -1851,7 +1880,7 @@ const ArenaView = {
         jagged(ctx, c.x + Math.cos(a0) * q.R, c.y + Math.sin(a0) * q.R, c.x + Math.cos(a1) * q.R, c.y + Math.sin(a1) * q.R, Math.floor(t * 12) * 7 + i, '#7fe8ff', 1.4);
       }
     }
-    if (p < 1) { ctx.setLineDash([12, 10]); ctx.lineDashOffset = -t * 30; ctx.beginPath(); ctx.arc(g.x, g.y, q.R, 0, TAU); ctx.strokeStyle = rgba('#dff6ff', 0.45); ctx.lineWidth = 2; ctx.stroke(); ctx.setLineDash([]); }
+    if (p < 1) { ctx.setLineDash([12, 10]); ctx.lineDashOffset = -t * 30; ctx.beginPath(); ctx.arc(g.x, g.y, q.R, 0, TAU); ctx.fillStyle = rgba(BossTells.COL.safe, 0.07); ctx.fill(); ctx.strokeStyle = rgba(BossTells.COL.safeHi, 0.6); ctx.lineWidth = 2; ctx.stroke(); ctx.setLineDash([]); }
     ctx.restore();
   },
   // the Eye of the Storm: the clouds part over the summit and a pale, still light falls on it
@@ -1990,7 +2019,7 @@ const ArenaView = {
     // the edge of each light, so it reads exactly
     for (const L of lights) {
       ctx.save(); ctx.setLineDash([10, 8]); ctx.lineDashOffset = -t * 20;
-      circle(ctx, L.x, L.y, lo.r, null, rgba('#9affc0', 0.55 * k), 2);
+      circle(ctx, L.x, L.y, lo.r, null, rgba(BossTells.COL.safeHi, 0.7 * k), 2);   // safe floor reads blue
       ctx.restore();
       glow(ctx, L.x, L.y, lo.r, '#3aff7a', 0.12 * k);
     }
