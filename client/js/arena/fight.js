@@ -99,7 +99,7 @@ class FightSim {
 
   // ---------------------------------------------------------------- scheduling
   // name: the step's player-facing name (its cast name), for the upcoming-moves feed (bnext); unnamed steps don't show
-  at(t, fn, name) { this.events.push({ t, fn, phase: this.phase, name }); this.events.sort((a, b) => a.t - b.t); }
+  at(t, fn, name) { this.events.push({ t, fn, phase: this.layPhase ?? this.phase, name }); this.events.sort((a, b) => a.t - b.t); }
   after(dt, fn, name) { this.at(this.t + dt, fn, name); }
   // scheduled event that survives phase changes (enrage timer, follow-ups of a running mechanic)
   atKeep(t, fn, name) { this.events.push({ t, fn, phase: this.phase, keep: true, name }); this.events.sort((a, b) => a.t - b.t); }
@@ -112,11 +112,70 @@ class FightSim {
     const end = this.t + this.seq(build(n), from);
     this.at(Math.max(from, end - 20), () => this.loop(build, n + 1, end));
   }
-  // the next few named steps still to come in this phase (and kept ones, like the enrage)
+  // An authored, non-looping fight is a chain of courses (acts). A course lays all its steps out at once, so the
+  // upcoming-moves feed sees every one of them.
+  //   o.sets: [[[delay, fn, name], ...], ...]   steps in sets; the gap before a set's first step is the calm between sets
+  //   o.until: the boss HP fraction that ends it. It moves on at the next set seam (o.seam s at most, default 8), so a
+  //     set never stops half-way; the next course is laid out at once, so the feed reads across the join.
+  //   o.closing: a slow party's soft enrage. Once the sets run out, these steps run again and again, each pass with
+  //     o.ramp (default +10%) more boss damage, shown under the boss bar. (Without `until`, the course just ends.)
+  //   o.next(from): lays out what follows (another course), starting at `from`
+  //   o.onStart(): runs as the course begins (clearing the floor, moving the boss...)
+  // A course without `until` or `closing` ends with its last step and goes straight on to next().
+  course(o, from = this.t) {
+    const ph = this.courseN = (this.courseN || 0) + 1;
+    const cur = { ph, seams: [], o, done: false };
+    this.layPhase = ph;
+    if (ph > this.phase) this.atKeep(from - 0.001, () => this.startCourse(cur));
+    else this.startCourse(cur, true);
+    let t = from;
+    for (const set of o.sets) {
+      if (!set || !set.length) continue;
+      cur.seams.push(t + set[0][0]);
+      for (const [dt, fn, name] of set) { t += dt; if (fn) this.at(t, fn, name); }
+    }
+    cur.end = t;
+    const closing = o.closing && o.closing.length ? o.closing : null;
+    if (closing) {
+      // each pass lays out the next one 20 s before it ends, so the feed sees across the join
+      const pass = (start, k) => {
+        this.layPhase = ph;
+        cur.seams.push(start + closing[0][0]);
+        const ramp = o.ramp ?? 0.1;
+        if (ramp) this.at(start + closing[0][0] - 0.01, () => { this.boss.dmgUp += ramp; this.emit({ t: 'fev', k: 'behind', n: k }); });
+        const len = this.seq(closing, start) - (start - this.t);
+        this.at(Math.max(start, start + len - 20), () => pass(start + len, k + 1));
+        this.layPhase = null;
+      };
+      pass(t, 1);
+    }
+    this.layPhase = null;
+    // no gate to wait for: it ends with its last step, so what follows is laid out now (the feed reads across the join)
+    if (!closing && o.until == null && o.next) { cur.done = true; o.next(t); }
+    return cur;
+  }
+  startCourse(cur, now) {
+    if (!now) this.setPhase(cur.ph);
+    this.curCourse = cur;
+    if (cur.o.onStart) cur.o.onStart();
+    if (cur.o.until != null) this.onHp(cur.o.until, () => this.gate(cur));
+  }
+  // the boss HP gate is reached: finish the set that's running (up to o.seam s), then go on
+  gate(cur) {
+    if (cur.done || this.phase !== cur.ph || !cur.o.next) return;
+    cur.done = true;
+    const seam = cur.seams.find(s => s > this.t + 0.05);
+    const at = seam != null && seam - this.t <= (cur.o.seam ?? 8) ? seam - 0.02 : this.t;
+    // what this course still had after the seam is dropped now, so the feed already shows what comes next
+    this.events = this.events.filter(e => e.keep || e.phase !== cur.ph || e.t <= at);
+    cur.o.next(at);
+  }
+  // the next few named steps still to come in this phase (and kept ones, like the enrage), and in courses already
+  // laid out after it
   upcoming(n = 3) {
     const out = [];
     for (const e of this.events) {
-      if (!e.name || e.t < this.t || !(e.phase === this.phase || e.keep)) continue;
+      if (!e.name || e.t < this.t || !(e.phase >= this.phase || e.keep)) continue;
       out.push(e);
       if (out.length >= n) break;
     }
@@ -130,8 +189,8 @@ class FightSim {
     this.emit({ t: 'bnext', l: up.map(e => [e.name, Math.max(0, Math.round((e.t - this.t) * 10) / 10)]) });
   }
   onHp(frac, fn) { this.hpTriggers.push({ frac, fn }); this.hpTriggers.sort((a, b) => b.frac - a.frac); }
-  // start a new phase: drops everything still scheduled for the old one
-  setPhase(n) { this.phase = n; this.events = this.events.filter(e => e.phase === n || e.keep); }
+  // start a new phase: drops everything still scheduled for the old one (a course already laid out after it stays)
+  setPhase(n) { this.phase = n; this.events = this.events.filter(e => e.phase >= n || e.keep); }
 
   players() {
     const out = [];
@@ -569,7 +628,7 @@ class FightSim {
   ticker(fn) { this.tickers.push(fn); }
   moveBoss(x, y, speed = 500) { const p = ARENA.clamp({ x, y }, 110); this.boss.moveTo = { x: p.x, y: p.y, speed }; }
 
-  // Generic telegraph. opts: { shape, delay, dmg, type, hidden, follow, need, tag, onResolve, avoidable, failDmg }
+  // Generic telegraph. opts: { shape, delay, dmg, type, follow, need, tag, onResolve, avoidable, failDmg }
   // type: 'aoe' | 'raidwide' | 'stack' | 'spread' | 'tower' | 'buster' | 'knockback' | 'proximity'
   // Cover: opts.cover makes the blast come from opts.src (default: where the boss stands now); anyone whose line to it
   // passes through a cover prop is spared. coverCap: at most this many people behind one prop (the nearest to it).
@@ -577,6 +636,9 @@ class FightSim {
   mech(opts) {
     const id = this.nextMechId++;
     const m = Object.assign({ id, start: this.t, resolveAt: this.t + opts.delay, type: 'aoe', avoidable: true }, opts);
+    // every avoidable hit shows its area on the floor from the cast to the hit, on every difficulty (only a raidwide,
+    // which is the whole room, has nothing to draw)
+    m.hidden = m.type === 'raidwide' && !!m.hidden;
     if (m.cover && !m.src) m.src = { x: this.boss.x, y: this.boss.y };
     this.mechs.set(id, m);
     this.emit({ t: 'tg', id, shape: m.shape, dur: m.delay, type: m.type, hidden: !!m.hidden, follow: m.follow ?? null,

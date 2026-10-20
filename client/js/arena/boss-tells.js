@@ -1,8 +1,8 @@
 // Boss "tells": each mechanic shows up as something in the world instead of a colored shape on the floor.
 // Grubnak's kitchen throws meat, drops cloches, shakes spice jars, heats the stove coils and swings a ghost
 // cleaver; Skitterra's web strikes with legs, creeps in as fog and reels you in on silk.
-// On Normal a faint dashed outline still marks the exact area, so it's fair; Hard hides some mechanics
-// entirely (they only show on the boss), same as before.
+// A dashed outline and a sweeping wash always mark the exact area, on every difficulty: telegraphs are never hidden.
+// The art is the extra clue, never the only one.
 //
 // Every tell gets (ctx, tg, s, p, k, t, env): s = the live shape, p = 0..1 progress to impact,
 // k = fade-in, env = { boss: the boss's drawn position/facing, bossId, entById, hard }.
@@ -27,15 +27,14 @@ const BossTells = (() => {
   // (raidwides have no rim: the whole room is the warning)
   const ROLE_RIM = { aoe: '#ff6a3a', proximity: '#ff6a3a', knockback: '#ff6a3a', buster: '#ff2a3a', stack: '#ffd84a', spread: '#c070ff', chain: '#c070ff', tower: '#4ff0e8' };
   const roleColor = (tg, tell) => ROLE_RIM[tg.type] || (tell && tell.color) || '#ffffff';
-  // The fair-play outline: a solid rim in the role colour; on Normal also a faint wash sweeping out from the origin as
-  // the cast runs, with a bright leading edge. In the last 0.6s the rim pulses; a shape that follows someone flashes
-  // white the moment it locks in place. Hard keeps the rim, the pulse and the lock (no sweep), and hides the hidden mechs
-  // entirely (they never reach here).
+  // The fair-play outline: a solid rim in the role colour and a faint wash sweeping out from the origin as the cast
+  // runs, with a bright leading edge. In the last 0.6s the rim pulses; a shape that follows someone flashes white the
+  // moment it locks in place. The same on every difficulty.
   function outline(ctx, tg, s, p, k, t, env, tell) {
     const col = roleColor(tg, tell), left = (1 - p) * tg.dur;
     const late = clamp(1 - left / 0.6, 0, 1), landed = tg.gone != null;
     ctx.save();
-    if (!env.hard && !landed && p < 0.995) {
+    if (!landed && p < 0.995) {
       const g = ArenaView.grown(s, p);
       if (g) {
         SHAPES.trace(ctx, g); ctx.fillStyle = rgba(col, 0.1 * k); ctx.fill();
@@ -45,15 +44,14 @@ const BossTells = (() => {
     SHAPES.trace(ctx, s);
     if (s.kind === 'donut') {
       // the safe circle reads as safe: a soft lift inside it and a clean bright edge
-      if (env.hard) { ctx.fillStyle = rgba(col, 0.06 * k); ctx.fill('evenodd'); }
       ctx.save(); ctx.beginPath(); ctx.arc(s.x, s.y, s.r2, 0, TAU);
       ctx.fillStyle = rgba('#fff6e0', 0.05 * k); ctx.fill();
       ctx.strokeStyle = rgba('#fff6e0', (0.45 + 0.35 * late) * k); ctx.lineWidth = 2.5; ctx.stroke();
       ctx.restore();
       SHAPES.trace(ctx, s);
     }
-    if (!env.hard) { ctx.setLineDash([12, 10]); ctx.lineDashOffset = -t * 24; ctx.strokeStyle = rgba(col, 0.28 * k); ctx.lineWidth = 6; ctx.stroke(); ctx.setLineDash([]); }
-    ctx.strokeStyle = rgba(col, ((env.hard ? 0.4 : 0.55) + 0.4 * late) * k); ctx.lineWidth = 2 + late * 1.5; ctx.stroke();
+    ctx.setLineDash([12, 10]); ctx.lineDashOffset = -t * 24; ctx.strokeStyle = rgba(col, 0.28 * k); ctx.lineWidth = 6; ctx.stroke(); ctx.setLineDash([]);
+    ctx.strokeStyle = rgba(col, (0.55 + 0.4 * late) * k); ctx.lineWidth = 2 + late * 1.5; ctx.stroke();
     if (late > 0 && !landed) {
       ctx.globalCompositeOperation = 'lighter';
       ctx.strokeStyle = rgba(col, late * (0.3 + 0.3 * Math.sin(t * 26)) * k); ctx.lineWidth = 9; ctx.stroke();
@@ -782,7 +780,6 @@ const BossTells = (() => {
           ctx.beginPath(); ctx.arc(b.x, b.y, d, a, a + 0.18 + 0.1 * p);
           ctx.strokeStyle = rgba('#d8ecff', (0.15 + 0.35 * p) * k * (1 - q * 0.5)); ctx.lineWidth = 2; ctx.stroke();
         }
-        if (env.hard) return;
         for (const c of env.covers || []) {
           const cx = c.x - b.x, cy = c.y - b.y, cd = Math.hypot(cx, cy);
           if (cd < 1) continue;
@@ -1286,7 +1283,7 @@ const BossTells = (() => {
         const form = clamp((t - m.start) / 0.6, 0, 1);
         if (t < rollAt) {
           const q = (t - m.start) / Math.max(0.1, m.delay);
-          if (!env.hard) {
+          {
             ctx.save(); ARENA.trace(ctx); ctx.clip();
             ctx.setLineDash([10, 12]); ctx.lineDashOffset = -t * 30;
             for (const side of [-1, 1]) line(ctx, m.x - sa * m.r * side, m.y + ca * m.r * side, m.x - sa * m.r * side + ca * AR() * 2, m.y + ca * m.r * side + sa * AR() * 2, rgba('#9ff4ff', 0.28), 2);
@@ -1312,8 +1309,8 @@ const BossTells = (() => {
           continue;
         }
         const q = (t - m.start - 0.5) / Math.max(0.1, m.delay - 0.5);
-        // which way it'll roll: a grease streak in front; Normal also gets a faint lane across the room
-        if (!env.hard) {
+        // which way it'll roll: a grease streak in front and a faint lane across the room
+        {
           ctx.save(); ARENA.trace(ctx); ctx.clip();
           ctx.setLineDash([14, 12]); ctx.lineDashOffset = -t * 40;
           line(ctx, m.x - sa * m.r, m.y + ca * m.r, m.x - sa * m.r + ca * AR() * 2, m.y + ca * m.r + sa * AR() * 2, rgba('#ffb070', 0.3), 2);
@@ -1407,7 +1404,7 @@ const BossTells = (() => {
         const ex = -s * hw * dir, ey = c * hw * dir;
         ctx.beginPath(); ctx.moveTo(sw.x + ex, sw.y + ey); ctx.lineTo(sw.x + ex + c * L, sw.y + ey + s * L);
         ctx.strokeStyle = rgba('#e8f4ff', (live ? 0.7 : 0.3) * k); ctx.lineWidth = live ? 3 : 1.5; ctx.stroke();
-        if (!env.hard) { ctx.save(); ctx.setLineDash([12, 10]); ctx.lineDashOffset = -t * 30; SHAPES.trace(ctx, shape); ctx.strokeStyle = rgba('#cfe6ff', 0.35 * k); ctx.lineWidth = 1.5; ctx.stroke(); ctx.restore(); }
+        { ctx.save(); ctx.setLineDash([12, 10]); ctx.lineDashOffset = -t * 30; SHAPES.trace(ctx, shape); ctx.strokeStyle = rgba('#cfe6ff', 0.35 * k); ctx.lineWidth = 1.5; ctx.stroke(); ctx.restore(); }
         // grit tumbling in it
         if (live) for (let i = 0; i < 6; i++) {
           const q = (t * 0.9 + hash(i, n + 20)) % 1, along = 120 + q * (AR() - 140), off = Math.sin(t * 5 + i) * hw * 0.6;

@@ -105,17 +105,28 @@ const BotAI = {
 
   // any other one-person towers (Order Up!'s plates, Egg Sacs): the players take the nearest free one in turn, the
   // tank last (it holds the boss) and anyone Stuffed after everyone else
+  // Towers that land one after another (Order Up!'s rail) are handed out in the order they land: each goes to whoever
+  // can be standing in it in time (free by then, and not still Stuffed from an earlier one: m.stuff), nearest first.
   towerFor(me, view) {
-    const towers = view.mechs.filter(m => m.type === 'tower' && m.tag !== 'rod' && m.tag !== 'bell').sort((a, b) => a.id - b.id);
+    const towers = view.mechs.filter(m => m.type === 'tower' && m.tag !== 'rod' && m.tag !== 'bell').sort((a, b) => a.resolveAt - b.resolveAt || a.id - b.id);
     if (!towers.length) return null;
-    const stuffed = id => (view.debuffs(id).stuffed ? 1 : 0);
-    const order = view.players.filter(p => p.alive).sort((a, b) => stuffed(a.id) - stuffed(b.id) || (a.role === 'tank') - (b.role === 'tank') || a.id - b.id);
-    const free = [...towers], mine = {};
-    for (const p of order) {
-      if (!free.length) break;
-      let bi = 0;
-      for (let i = 1; i < free.length; i++) if (Math.hypot(free[i].shape.x - p.x, free[i].shape.y - p.y) < Math.hypot(free[bi].shape.x - p.x, free[bi].shape.y - p.y)) bi = i;
-      mine[p.id] = free.splice(bi, 1)[0].id;
+    const SPEED = 230;
+    const al = view.players.filter(p => p.alive);
+    const st = new Map(al.map(p => [p.id, { x: p.x, y: p.y, free: view.t, full: view.t + (view.debuffs(p.id).stuffed || 0), tank: p.role === 'tank', n: 0 }]));
+    const mine = {};
+    for (const m of towers) {
+      let best = null, bs = Infinity;
+      for (const p of al) {
+        const s = st.get(p.id);
+        if (s.full > m.resolveAt - 0.05) continue;   // still Stuffed when it lands
+        const arrive = s.free + Math.hypot(m.shape.x - s.x, m.shape.y - s.y) / SPEED, late = Math.max(0, arrive - (m.resolveAt - 0.35));
+        const sc = late * 1000 + arrive + (s.tank ? 1.5 : 0) + s.n * 4;   // one each where it can be
+        if (sc < bs) { bs = sc; best = p; }
+      }
+      if (!best) continue;
+      const s = st.get(best.id);
+      if (mine[best.id] == null) mine[best.id] = m.id;
+      s.x = m.shape.x; s.y = m.shape.y; s.free = m.resolveAt; s.full = m.resolveAt + (m.stuff || 0); s.n++;
     }
     return mine[me] ?? null;
   },
@@ -433,7 +444,13 @@ const BotAI = {
     for (const z of view.zones || []) if (SHAPES.contains(z.shape, px, py, 10)) pen += z.effect === 'burn' ? (view.t > z.startAt - 2 ? 6000 : 400) : 350;
     // the room: nobody stands inside a solid prop; grease is best kept clear of, and burning grease avoided
     for (const pr of view.props || []) if (pr.solid && PROPS.sd(pr, px, py) < 16) pen += 9000;
-    for (const fl of view.floor || []) if (fl.kind === 'grease' && Math.hypot(fl.x - px, fl.y - py) < fl.r + 26) pen += view.burning(fl) ? 5000 : 250;
+    // (grease a fire is about to reach counts as burning: a Flambé stripe, the stove line catching)
+    const fires = view.mechs.filter(m => m.tag === 'flambe' && m.resolveAt - view.t < 4);
+    for (const z of view.zones || []) if (z.tag === 'stovefire' && view.t > z.startAt - 3) fires.push(z);
+    for (const fl of view.floor || []) {
+      if (fl.kind !== 'grease' || Math.hypot(fl.x - px, fl.y - py) >= fl.r + 26) continue;
+      pen += view.burning(fl) || fires.some(m => SHAPES.contains(m.shape, fl.x, fl.y, fl.r)) ? 5000 : 250;
+    }
     for (const a of view.adds || []) {
       const o = a.link && a.linkDmg ? view.adds.find(x => x.id === a.link) : null;
       if (o && segDist(px, py, a.x, a.y, o.x, o.y) < 50) pen += 5000;

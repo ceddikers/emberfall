@@ -1,35 +1,35 @@
-// Boss I: Grubnak, the Ogre Chef — "The Scullery".
-// A kitchen brawl: everything he does is told by his tools, and it comes fast and in pairs from the first minute.
-//   Phase 1 (100% → 55%): Grease Fire (raidwide), Tenderize (tankbuster cleave), Mince (left/right half-room,
-//     told by which cleaver glows), Ladle Spin (out) / Lid Slam (in), Meat Toss (spread, leaves grease puddles) and
-//     Family Meal (stack) back to back, Chop Chop (cleave + in/out combo), Order Up! (plate towers) with Rolling
-//     Meatballs launched while the plates are served.
-//   Intermission at 55%: he dives into the stockpot; Simmer waves ripple out, then back in.
-//   Phase 2: Whisk (rotating cross), Spice Rack (delayed circles) into Ladle/Lid, Boil Over (get far away), Family Meal
-//     under falling spice, remixes of phase 1, Gorge below 15% (soft enrage), Last Call at the hard enrage timer.
-// Hard: telegraphs for Mince / Ladle / Lid are not drawn (read his cleavers and pots), Mince becomes a double
-// chop, Tenderize leaves a vulnerability for the next one, plates leave "Stuffed", spread + stack overlap, Kitchen Rush
-// replaces a Boil Over, faster casts and 25% more damage. Three moves only Hard has:
-//   Belly Flop: he flops down (out of the circle under him), throwing everyone away; the tool on his back says whether
-//     the Ladle Spin or Lid Slam that follows wants you out or back under him.
-//   Cleaver Toss: a cleaver flies at each of the two farthest players along a line, then flies back along it.
-//   Flambé: brandy in stripes across the kitchen catches fire, every other stripe first, then the rest.
-// The room (arena props, see PROPS in shapes.js): the kitchen is cramped, the stove line runs along the top wall.
-//   Butcher's Charge: he lowers his head at his tank and charges until he hits something. A brick wall sticks him
-//     there for 4 s, taking 20% more damage; the stove line bursts into a wall of fire over the top of the room; a cask
-//     he smashes. The tank decides where it goes by where they stand.
-//   Larder Toss: he throws casks off the side shelves at the two farthest players; each stays where it lands, solid,
-//     and Gut Blast (a roar across the whole kitchen) has to be hidden from behind one. Casks crack after one Gut
-//     Blast and break after two. Hard: a cask only shelters two.
-//   Flambé (Normal too): the stripes go up one after another from one side; walk behind the fire.
-//   Hard: Clogged Drains spill grease that stays; any fire (Flambé, the stove, a charge into it) sets the grease it
-//     touches alight, and the fire runs through every puddle touching it. Meat Hook drags a player toward the stove.
+// Boss I: Grubnak, the Ogre Chef — "The Scullery". The dinner rush.
+// One authored service, the same on every pull, that never lets up: four courses, each faster than the last, and a
+// kitchen that catches fire half-way through. He never leaves the floor. The question is always where to stand: where
+// your puddle goes down, where the casks land, which wall his charge hits, which plate is yours.
+//   Appetiser (100% → 80%): his tools one at a time, with room to breathe. Grease Fire, Mince (half the room, told by
+//     which cleaver glints), Ladle Spin (out), Lid Slam (in), Tenderize (tankbuster), Meat Toss (spread; each puddle
+//     leaves a grease stain for good), Family Meal (stack), Larder Toss (casks land on the farthest two) and Gut Blast
+//     (hide behind a cask).
+//   Mains (80% → 50%): everything comes back in pairs. Butcher's Charge (bait it into brick), Chop Chop (Mince then
+//     Ladle/Lid), the order rail (Order Up!: plates served one after another, the order shown by how fast each gold rim
+//     fills), toss into meal, the charge with the casks already down, the rail again under Rolling Meatballs.
+//   Flare-Up (50%): he heaves the stockpot onto the stove. The top third of the kitchen burns for the rest of the
+//     fight and Flambé lights the grease stains you left; he drags the pot to the middle (solid, cover, and something
+//     the charge can stop on) and it simmers over, out then in.
+//   Second Sitting (50% → 18%): the smaller, burning kitchen. Whisk, Spice Rack, Boil Over arrive and pair at once.
+//     Butcher's Charge into the pot is the short way (he's scalded and stuck, but the pot boils over).
+//   Dessert (18% → 0%): the Dessert Trolley, a gauntlet of everything; silence; Last Orders; then he eats (Gorge)
+//     until he drops or calls Last Call.
+// A course ends at its HP gate, at the next set seam. If a slow party runs a course out, its last set runs again
+// with +10% boss damage each time ("Behind on Orders", f.course in fight.js).
+// Every telegraph shows on the floor on every difficulty. Hard: casts 15% faster, 25% more damage, and:
+//   Double Chop (both halves, the second drawn from the cast), Clogged Drains (grease round the drains for good), Belly
+//   Flop (out from under him, thrown away; the tool on his back and the floor say what follows), Cleaver Toss (two
+//   lines at the farthest, then back), Flambé in alternate stripes, Tenderized, two to a cask, toss and meal at once,
+//   six plates for four on the rail with Stuffed for 4 s (no two in a row), Meat Hook on the healer as the tank takes
+//   Tenderize, and Mise en Place: three tools laid out on the pass, served in that order much later (Service!).
 
 const GRUBNAK = {
   id: 'grubnak', name: 'Grubnak', title: 'The Ogre Chef',
-  hp: { normal: 1250000, hard: 1700000 },
+  hp: { normal: 3100000, hard: 3300000 },
   autoDmg: { normal: 1600, hard: 1600 },
-  enrage: { normal: 330, hard: 360 },
+  enrage: { normal: 592, hard: 607 },   // the cast starts here and lands 8 s later (10:00 / 10:15)
   enrageName: 'Last Call',
   vuln: 0.5,   // every avoidable hit leaves you taking half again as much for a while
   arena: { theme: 'kitchen' },
@@ -39,13 +39,18 @@ const GRUBNAK = {
     const B = f.boss;
     const dmg = {
       grease: 8500, buster: 26000, mince: 13000, ladle: 13000, spread: H ? 6500 : 7500, stack: H ? 20000 : 22000,
-      puddle: 2600, tower: 5000, towerFail: 14000, simmer: 13000, whisk: 13000, spice: 13000, boil: H ? 46000 : 40000, rush: 15000, gorge: 6500,
-      meatball: 13000, flop: 13000, cleaver: 13000, flambe: 14000,
+      puddle: 2600, tower: 5000, towerFail: 14000, stuffed: 14000, simmer: 13000, whisk: 13000, spice: 13000, boil: H ? 46000 : 40000,
+      gorge: 6500, heat: 6500, orders: 11000, meatball: 13000, flop: 13000, cleaver: 13000, flambe: 14000,
       charge: 14000, cask: 9000, gut: H ? 16000 : 15000, stove: 4500, burn: 4000, slam: 5000, hook: 7000,
     };
     const HW = ARENA.hw, HH = ARENA.hh;
     const LL = { ladle: 'Ladle Spin', lid: 'Lid Slam' };
+    const MINCE = H ? 'Double Chop' : 'Mince';
+    const STUFF = 4;   // Hard: Stuffed after a plate, so nobody takes two in a row
     const coin = (a, b) => (f.rng() < 0.5 ? a : b);
+    const S = (...steps) => steps.filter(Boolean);
+    let hot = false;   // the Flare-Up has set the stove line burning for good
+    let pot = null;    // the stockpot in the middle, after the Flare-Up
 
     // --- building blocks ------------------------------------------------------------------
     const grease = () => {
@@ -66,40 +71,48 @@ const GRUBNAK = {
       const a = B.facing + (side === 'left' ? -Math.PI / 2 : Math.PI / 2);
       return { kind: 'rect', x: B.x, y: B.y, angle: a, len: 1300, w: 2600 };
     };
-    // Mince: one cleaver glows; that side of the room gets chopped. Hard: two chops, glowing side first.
-    const mince = (delay = f.ct(4.5), then) => {
-      const first = coin('left', 'right');
-      const second = first === 'left' ? 'right' : 'left';
+    // he stands his ground until a combo he's started has landed, so what's drawn round him stays true
+    const hold = d => { B.holdUntil = Math.max(B.holdUntil || 0, f.t + d); };
+    // Mince: one cleaver glints; that side of the room gets chopped. Hard (Double Chop): the other side 2.2 s later,
+    // drawn from the start as a ghost behind the first.
+    const mince = (delay = f.ct(4.5), side = coin('left', 'right')) => {
+      const second = side === 'left' ? 'right' : 'left';
       B.lockFacing = true;
-      f.cast(H ? 'Double Chop' : 'Mince', delay, 'mince', { side: first, second: H ? second : null });
-      f.aoe(halfRoom(first), delay, dmg.mince, { hidden: H, tag: 'mince' });
-      if (H) f.afterKeep(delay - 0.01, () => f.aoe(halfRoom(second), 2.2, dmg.mince, { hidden: true, tag: 'mince' }));
-      f.afterKeep(delay + (H ? 2.3 : 0.1), () => { B.lockFacing = false; if (then) then(); });
-      return delay + (H ? 2.2 : 0);
+      f.cast(MINCE, delay, 'mince', { side, second: H ? second : null });
+      f.aoe(halfRoom(side), delay, dmg.mince, { tag: 'mince' });
+      if (H) f.aoe(halfRoom(second), delay + 2.2, dmg.mince, { tag: 'mince' });
+      hold(delay + (H ? 2.2 : 0));
+      f.afterKeep(delay + (H ? 2.3 : 0.1), () => { B.lockFacing = false; });
     };
     // Ladle Spin: stay out (point-blank circle). Lid Slam: get in (donut, safe under him).
     const ladleShape = () => ({ kind: 'circle', x: B.x, y: B.y, r: 240 });
     const lidShape = () => ({ kind: 'donut', x: B.x, y: B.y, r: 1300, r2: 190 });
-    const ladleOrLid = (delay = f.ct(4), which) => {
-      which = which || coin('ladle', 'lid');
+    const ladleOrLid = (delay = f.ct(4), which = coin('ladle', 'lid')) => {
       f.cast(LL[which], delay, which);
-      f.aoe(which === 'ladle' ? ladleShape() : lidShape(), delay, dmg.ladle, { hidden: H, tag: which });
-      return delay;
+      f.aoe(which === 'ladle' ? ladleShape() : lidShape(), delay, dmg.ladle, { tag: which });
+      hold(delay);
     };
-    // Chop Chop: Mince, then Ladle/Lid right after
+    // Chop Chop: Mince, then the tool on his back right after (both drawn from the cast)
     const chopChop = (second = coin('ladle', 'lid')) => {
-      const d = f.ct(5);
-      const first = coin('left', 'right');
+      const d = f.ct(5), side = coin('left', 'right');
       B.lockFacing = true;
-      f.cast('Chop Chop', d, 'mince', { side: first, then: second });
-      f.aoe(halfRoom(first), d, dmg.mince, { hidden: H, tag: 'mince' });
-      f.afterKeep(d - 0.01, () => {
-        B.lockFacing = false;
-        f.anim(second, 2.4);
-        f.aoe(second === 'ladle' ? ladleShape() : lidShape(), 2.4, dmg.ladle, { hidden: H, tag: second });
-      });
+      f.cast('Chop Chop', d, 'mince', { side, then: second });
+      f.aoe(halfRoom(side), d, dmg.mince, { tag: 'mince' });
+      f.aoe(second === 'ladle' ? ladleShape() : lidShape(), d + 2.4, dmg.ladle, { tag: second });
+      hold(d + 2.4);
+      f.afterKeep(d - 0.01, () => { B.lockFacing = false; f.anim(second, 2.4); });
     };
-    // Meat Toss: spread circles on players; where they land, a grease puddle stays for a while.
+    // where a Meat Toss puddle was stays greasy: harmless, until fire reaches it and burns it off
+    const stain = (x, y) => {
+      const stains = f.floor.filter(fl => fl.stain);
+      if (stains.length >= 8) f.removeFloor(stains[0]);
+      f.addFloor({ kind: 'grease', stain: 1, x: Math.round(x), y: Math.round(y), r: 62, dmg: dmg.burn });
+    };
+    // a stain that has burnt is gone (the drains' grease, on Hard, stays and burns again)
+    f.ticker(() => {
+      for (const fl of f.floor) if (fl.stain) { if (f.burning(fl)) fl.burnt = 1; else if (fl.burnt) { f.removeFloor(fl); break; } }
+    });
+    // Meat Toss: spread circles on players; where they land, a grease puddle stays for a while, then a stain.
     const meatToss = (targets) => {
       const d = f.ct(5.5);
       targets = targets || (f.alive().length > 1 ? f.nonTanks() : f.alive());
@@ -107,7 +120,13 @@ const GRUBNAK = {
       f.cast('Meat Toss', d, 'toss');
       for (const p of targets) {
         f.mech({ type: 'spread', shape: { kind: 'circle', x: p.x, y: p.y, r: 120 }, delay: d, dmg: dmg.spread, follow: p.id, tag: 'spread',
-          onResolve: () => { const q = f.alive().find(z => z.id === p.id); if (q) f.puddle(q.x, q.y, H ? 95 : 80, H ? 28 : 24, dmg.puddle, 1, 'grease'); } });
+          onResolve: () => {
+            const q = f.alive().find(z => z.id === p.id);
+            if (!q) return;
+            const dur = H ? 28 : 24, x = q.x, y = q.y;
+            f.puddle(x, y, H ? 95 : 80, dur, dmg.puddle, 1, 'grease');
+            f.afterKeep(dur, () => stain(x, y));
+          } });
       }
     };
     const familyMeal = (target, delay = f.ct(5.5)) => {
@@ -127,38 +146,45 @@ const GRUBNAK = {
       if (H) f.afterKeep(0.01, () => familyMeal(f.alive().length > 1 ? f.tank() : null, f.ct(5.5) + 2.5));
       else f.afterKeep(f.ct(5.5) + 0.2, () => familyMeal(null, f.ct(3.5)));
     };
-    // Order Up!: one plate (tower) per player around the room. Hard: soaking makes you Stuffed; soaking again hurts.
+    // Order Up! — the order rail: a plate (tower) per player round the kitchen, served one after another clockwise
+    // from the top left. Every cloche's gold rim fills toward its own moment, so the next one up is always the fullest.
+    // Hard: six plates for four (five for three), and a plate leaves you Stuffed for 4 s: a second one while Stuffed
+    // hurts, so nobody takes two in a row and the party works out who takes the extra ones.
+    const plateSpots = n => {
+      const cy = hot ? 120 : 0, rx = hot ? HW - 170 : HW - 210, ry = hot ? 175 : HH - 120, base = -Math.PI / 2 - Math.PI / Math.max(n, 1);
+      const out = [];
+      for (let i = 0; i < n; i++) { const a = base + i * Math.PI * 2 / Math.max(n, 2); out.push([Math.round(Math.cos(a) * rx), Math.round(cy + Math.sin(a) * ry)]); }
+      return out;
+    };
     const orderUp = () => {
-      const n = Math.max(1, f.alive().length);
-      const d = f.ct(7.5);
+      const k = Math.max(1, f.alive().length), n = H ? k + (k === 4 ? 2 : k === 3 ? 1 : 0) : k;
+      const d = f.ct(7.5), gap = H ? 1.5 : 1.6;
       f.cast('Order Up!', d, 'bell');
-      const base = f.rng() < 0.5 ? Math.PI / 4 : 0;
-      for (let i = 0; i < n; i++) {
-        const a = base + i * Math.PI * 2 / Math.max(n, 2) + (n === 1 ? Math.PI / 2 : 0);
-        const x = Math.cos(a) * (HW - 210), y = Math.sin(a) * (HH - 120);   // an oval round the kitchen, clear of the walls
-        f.mech({ type: 'tower', shape: { kind: 'circle', x, y, r: 72 }, delay: d, dmg: dmg.tower, failDmg: dmg.towerFail, need: 1, tag: 'plate',
+      plateSpots(n).forEach(([x, y], i) => {
+        f.mech({ type: 'tower', shape: { kind: 'circle', x, y, r: 72 }, delay: d + i * gap, dmg: dmg.tower, failDmg: dmg.towerFail, need: 1, tag: 'plate',
+          stuff: H ? STUFF : 0,
           onResolve: inside => {
+            if (!H) return;
             for (const p of inside) {
-              if (H && f.hasDebuff(p.id, 'stuffed')) f.damagePlayer(p, 14000, { kind: 'stuffed' });
-              if (H) f.debuff(p.id, 'stuffed', 40);
+              if (f.hasDebuff(p.id, 'stuffed')) f.damagePlayer(p, dmg.stuffed, { kind: 'stuffed' });
+              f.debuff(p.id, 'stuffed', STUFF);
             }
           } });
-      }
+      });
+      return d + (n - 1) * gap;   // when the last plate lands
     };
-    const spiceRack = (count = 3) => {
+    // Spice Rack: jars pour onto set spots (a pattern for each time he uses it), and one locks under each DPS / healer
+    const SPICE = { a: [[-300, 40], [0, 220], [300, 40]], b: [[-220, 210], [220, 210]], c: [[-340, 190], [0, 10], [340, 190]] };
+    const spiceRack = (spots, count = spots.length) => {
       const d = f.ct(6);
       f.cast('Spice Rack', d, 'toss');
-      for (let i = 0; i < count; i++) {
-        const a = f.rng() * Math.PI * 2, r = 100 + f.rng() * 260, at = ARENA.clamp({ x: Math.cos(a) * r * 1.3, y: Math.sin(a) * r }, 110);
-        f.aoe({ kind: 'circle', x: at.x, y: at.y, r: 140 }, d, dmg.spice, { tag: 'spice' });
-      }
-      // one lands on each DPS / healer, so nobody can stand still
+      for (const [x, y] of spots.slice(0, count)) f.aoe({ kind: 'circle', x, y, r: 140 }, d, dmg.spice, { tag: 'spice' });
       for (const p of f.nonTanks()) f.mech({ type: 'aoe', shape: { kind: 'circle', x: p.x, y: p.y, r: 110 }, delay: d, dmg: dmg.spice, tag: 'spice', follow: p.id, lockAt: 2.5 });
     };
-    // Whisk: a cross of beams through the boss that turns 30° four times. Walk with it.
-    const whisk = () => {
-      const dir = f.rng() < 0.5 ? 1 : -1, a0 = f.rng() * Math.PI / 2;
+    // Whisk: a cross of beams through him that turns 30° four times. Walk with it. (dir and start angle are set)
+    const whisk = (dir, a0) => {
       f.cast('Whisk', f.ct(3), 'whisk');
+      hold(f.ct(3) + 4.5);
       for (let i = 0; i < 4; i++) {
         f.afterKeep(i * 1.5, () => f.aoe({ kind: 'cross', x: B.x, y: B.y, angle: a0 + dir * i * Math.PI / 6, len: 1300, w: 130 }, f.ct(3), dmg.whisk, { tag: 'whisk' }));
       }
@@ -176,6 +202,7 @@ const GRUBNAK = {
     // Butcher's Charge: he lowers his head at his tank (the line follows them until a second before) and charges until
     // he hits something. Anyone on the line is run over. A brick wall: stuck for 4 s, taking 20% more damage. The stove
     // line: the burners erupt into a wall of fire across the top of the room for 10 s. A cask: smashed to splinters.
+    // The stockpot (after the Flare-Up): he's scalded and stuck the same, but the pot boils over round itself.
     const butcherCharge = () => {
       const tank = f.tank(); if (!tank) return;
       const d = f.ct(4.5);
@@ -184,6 +211,7 @@ const GRUBNAK = {
       const m = f.mech({ type: 'aoe', shape: { kind: 'rect', x: B.x, y: B.y, angle: B.facing, len: 1400, w: 150 }, delay: d, dmg: dmg.charge, tag: 'charge',
         aimFromBoss: tank.id, lockAt: 1.0, onResolve: () => charge(m.shape.angle) });
     };
+    const stuck = () => { B.stunUntil = f.t + 4; B.exposedUntil = f.t + 4; B.exposed = 0.2; f.emit({ t: 'roomev', k: 'stuck', dur: 4 }); };
     const charge = a => {
       const c = Math.cos(a), s = Math.sin(a);
       let L = 0; while (L < 1500 && ARENA.sd(B.x + c * (L + 10), B.y + s * (L + 10)) < -FIGHT.BOSS_R) L += 10;
@@ -193,19 +221,23 @@ const GRUBNAK = {
       B.moveTo = { x: end.x, y: end.y, speed: 1150, done: () => {
         B.lockFacing = false;
         const wx = end.x + c * FIGHT.BOSS_R, wy = end.y + s * FIGHT.BOSS_R;
-        if (hit) { f.breakProp(hit.prop, 'charge'); f.emit({ t: 'propfx', k: 'slam', x: Math.round(wx), y: Math.round(wy), a: +a.toFixed(2), boss: 1 }); return; }
-        if (wy < -HH + 40) {
+        f.emit({ t: 'propfx', k: 'slam', x: Math.round(wx), y: Math.round(wy), a: +a.toFixed(2), boss: 1 });
+        if (hit && hit.prop.kind === 'pot') {
+          // scalded: stuck, and the pot slops over in a ring round itself
+          stuck();
+          f.aoe({ kind: 'circle', x: hit.prop.x, y: hit.prop.y, r: 230 }, 2.4, dmg.simmer, { tag: 'simmer' });
+          return;
+        }
+        if (hit) { f.breakProp(hit.prop, 'charge'); return; }
+        if (wy < -HH + 40 && !hot) {
           // the stove line: every burner erupts
-          f.emit({ t: 'propfx', k: 'slam', x: Math.round(wx), y: Math.round(wy), a: +a.toFixed(2), boss: 1 });
           f.emit({ t: 'roomev', k: 'stove', x: Math.round(wx), dur: 11.2 });
           f.zone({ shape: stoveZone(), dur: 10, delay: 1.2, effect: 'burn', dmg: dmg.stove, tag: 'stovefire' });
           f.afterKeep(1.2, () => f.ignite(stoveZone()));
           return;
         }
-        // a brick wall: he's stuck in it, dazed
-        B.stunUntil = f.t + 4; B.exposedUntil = f.t + 4; B.exposed = 0.2;
-        f.emit({ t: 'roomev', k: 'stuck', dur: 4 });
-        f.emit({ t: 'propfx', k: 'slam', x: Math.round(wx), y: Math.round(wy), a: +a.toFixed(2), boss: 1 });
+        // a brick wall (or the burning stove line, after the Flare-Up): he's stuck in it, dazed
+        stuck();
       } };
     };
     // Larder Toss: he rips casks off the side shelves and throws them at the two farthest players (each circle follows
@@ -221,6 +253,7 @@ const GRUBNAK = {
           onResolve: () => {
             // it rolls to a stop well off the wall, so there's room to stand behind it
             const at = ARENA.clamp({ x: m.shape.x, y: m.shape.y }, 120);
+            if (hot) at.y = Math.max(at.y, -60);   // not into the fire
             for (let i = 0; i < 3; i++) for (const o of f.props) {   // not on top of another cask
               const dd = Math.hypot(o.x - at.x, o.y - at.y), min = (o.r || 40) + 30 + 26;
               if (dd >= min) continue;
@@ -233,7 +266,7 @@ const GRUBNAK = {
           } });
       }
     };
-    // Gut Blast: a roar across the whole kitchen. Hide behind a cask (Hard: two to a cask). Every cask takes a hit.
+    // Gut Blast: a roar across the whole kitchen. Hide behind a cask or the pot (Hard: two to each). Every cask takes a hit.
     const gutBlast = () => {
       const d = f.ct(5);
       f.cast('Gut Blast', d, 'gut');
@@ -252,13 +285,12 @@ const GRUBNAK = {
         }
       });
     };
-    // Meat Hook (Hard): a chain off the ceiling rail hooks a player (not the tank) and drags them 210 toward the stove.
-    // Through burning grease, or into the burners at the end of it, they catch fire.
+    // Meat Hook (Hard): a chain off the ceiling rail hooks a player (the healer, as the tank takes Tenderize) and drags
+    // them 210 toward the stove. Through burning grease, or into the burners at the end of it, they catch fire.
     const meatHook = () => {
-      const d = f.ct(4);
-      const pool = f.nonTanks().length ? f.nonTanks() : f.alive(), p = f.pick(pool);
+      const d = f.ct(4.5);
+      const pool = f.nonTanks().length ? f.nonTanks() : f.alive(), p = pool.find(q => q.role === 'healer') || pool[0];
       if (!p) return;
-      f.cast('Meat Hook', d, 'hook');
       const m = f.mech({ type: 'hook', shape: { kind: 'rect', x: p.x, y: p.y, angle: -Math.PI / 2, len: 210, w: 80 }, delay: d, dmg: 0, follow: p.id, lockAt: 1.2,
         tag: 'hook', avoidable: false,
         onResolve: () => {
@@ -266,48 +298,54 @@ const GRUBNAK = {
           if (!q) return;
           const from = { x: q.x, y: q.y }, res = f.knock(q, q.x, q.y + 20, 210, { slam: dmg.hook, slamAt: 30 });
           const burnt = f.floor.some(fl => fl.kind === 'grease' && f.burning(fl) && PROPS.segDist(fl.x, fl.y, from.x, from.y, res.dest.x, res.dest.y) < fl.r);
-          if (burnt || (res.slam && res.dest.y < -HH + 50)) { f.damagePlayer(q, dmg.burn * 2, { kind: 'burn', avoidable: true }); f.emit({ t: 'propfx', k: 'ignite', x: Math.round(res.dest.x), y: Math.round(res.dest.y), r: 40 }); }
+          const inFire = hot && res.dest.y < -HH + HH * 2 / 3;
+          if (burnt || inFire || (res.slam && res.dest.y < -HH + 50)) { f.damagePlayer(q, dmg.burn * 2, { kind: 'burn', avoidable: true }); f.emit({ t: 'propfx', k: 'ignite', x: Math.round(res.dest.x), y: Math.round(res.dest.y), r: 40 }); }
           void m;
         } });
     };
-    const simmer = (outward) => {
-      // the last coil reaches the far corners, whatever shape the room is
+    // the stockpot's rings: the coils go dull, red, white-hot, ring by ring out from the pot (or in to it)
+    const simmer = (outward, at = { x: 0, y: 0 }) => {
       const rings = [[0, 130], [130, 260], [260, 390], [390, Math.max(560, ARENA.R + 20)]];
       if (!outward) rings.reverse();
       const step = H ? 1.15 : 1.35;
       rings.forEach(([r2, r], i) => {
-        const shape = r2 === 0 ? { kind: 'circle', x: 0, y: 0, r } : { kind: 'donut', x: 0, y: 0, r, r2 };
+        const shape = r2 === 0 ? { kind: 'circle', x: at.x, y: at.y, r } : { kind: 'donut', x: at.x, y: at.y, r, r2 };
         f.aoe(shape, 3 + i * step, dmg.simmer, { tag: 'simmer' });
       });
-      return 3 + 3 * step;
     };
+    const simmerCast = outward => { f.cast('Simmer', 3, 'boil'); simmer(outward, pot || { x: 0, y: 0 }); };
 
-    // Rolling Meatballs: he lobs giant meatballs against the walls. Each one wobbles where it landed, then rolls
-    // straight across the kitchen. No floor marker: the meatball and the way it faces are the warning.
-    const meatballs = () => {
+    // Rolling Meatballs: he lobs giant meatballs against the walls. Each one wobbles where it landed (chevrons and a
+    // lane across the room), then rolls straight across the kitchen. The lanes are set for each time he does it.
+    const LANES = {
+      rail: [-Math.PI / 2, 0, Math.PI, Math.PI / 2],             // between the plates
+      b: [0.6, Math.PI - 0.6, Math.PI / 2, 0],
+      c: [Math.PI, 0.35, Math.PI / 2 + 0.9, -0.35],
+    };
+    const meatballs = lanes => {
       const d = f.ct(3);
       f.cast('Rolling Meatballs', d, 'meatballs');
-      const n = H ? 4 : 3, a0 = f.rng() * Math.PI * 2;
-      for (let i = 0; i < n; i++) {
-        const a = a0 + i * Math.PI * 2 / n + (f.rng() - 0.5) * 0.5, R = ARENA.edge(a) - 50;
-        const dir = a + Math.PI + (f.rng() - 0.5) * 0.8;   // across the room, not quite through the middle
-        f.afterKeep(d - 1.4 + i * (H ? 0.5 : 0.7), () => f.roller({ x: Math.cos(a) * R, y: Math.sin(a) * R, angle: dir,
+      lanes.slice(0, H ? 4 : 3).forEach((a, i) => {
+        const R = ARENA.edge(a) - 50;
+        f.afterKeep(d - 1.4 + i * (H ? 0.5 : 0.7), () => f.roller({ x: Math.cos(a) * R, y: Math.sin(a) * R, angle: a + Math.PI,
           speed: H ? 330 : 300, delay: 1.7, dmg: dmg.meatball, r: 44 }));
-      }
+      });
     };
 
     // --- Hard only ------------------------------------------------------------------------------
     // Belly Flop: he flops down where he stands (get out from under him), and the shock throws everyone away from him.
-    // The tool on his back says what comes straight after: the Ladle Spin (stay out) or the Lid Slam (run back in).
+    // The tool on his back says what comes straight after, and it's drawn on the floor from the start: the Ladle Spin
+    // (stay out) or the Lid Slam (run back in).
     const bellyFlop = (then = coin('ladle', 'lid')) => {
       const d = f.ct(4);
       f.cast('Belly Flop', d, 'flop', { then });
+      hold(d + 2.8);
+      f.aoe(then === 'ladle' ? ladleShape() : lidShape(), d + 2.8, dmg.ladle, { tag: then });
       f.mech({ type: 'aoe', shape: { kind: 'circle', x: B.x, y: B.y, r: 230 }, delay: d, dmg: dmg.flop, tag: 'flop', throwDist: 200,
         onResolve: () => {
           // thrown into a wall or a cask, it hurts
           for (const p of f.alive()) f.knock(p, B.x, B.y, 200, { slam: dmg.slam });
           f.anim(then, 2.8);
-          f.aoe(then === 'ladle' ? ladleShape() : lidShape(), 2.8, dmg.ladle, { hidden: true, tag: then });
         } });
     };
     // Cleaver Toss: a cleaver flies along a line at each of the two farthest players (the line follows them until a
@@ -323,120 +361,181 @@ const GRUBNAK = {
           onResolve: () => f.aoe(Object.assign({}, m.shape), 1.5, dmg.cleaver, { tag: 'cleaverback' }) });
       }
     };
-    // Flambé: brandy splashes in stripes across the kitchen and goes up in flames, every other stripe first, then the rest.
-    // The second set shows once the first has burnt, so you step into a burnt stripe.
-    // Normal: the stripes run down from the stove and catch one after another, from one side to the other; stay behind
-    // the fire. Hard: every other stripe goes up, then the rest. Any stripe that burns sets the grease in it alight.
-    const flambe = () => {
+    // Flambé: brandy splashes in stripes across the kitchen and goes up in flames. Any stripe that burns sets the grease
+    // in it alight. Normal: six stripes from the stove down, catching one after another from one side (dir); stay behind
+    // the fire. Hard: every other stripe (first: which set), then the rest 2.2 s later; step into a burnt stripe.
+    const flambe = ({ dir = 1, tall = true, first = 0 } = {}) => {
       const d = f.ct(5);
       f.cast('Flambé', d, 'flambe');
-      const burn = s => ({ tag: 'flambe', onResolve: () => f.ignite(s) });
+      const burn = s => ({ tag: 'flambe', onResolve: () => f.ignite(s, 4) });
       if (!H) {
-        const n = 6, w = ARENA.hw * 2 / n, dir = f.rng() < 0.5 ? 1 : -1;
+        const n = 6, w = ARENA.hw * 2 / n;
         for (let k = 0; k < n; k++) {
           const i = dir > 0 ? k : n - 1 - k, s = { kind: 'rect', x: -ARENA.hw + w * (i + 0.5), y: -ARENA.hh, angle: Math.PI / 2, len: ARENA.hh * 2, w };
           f.aoe(s, d + k * 0.85, dmg.flambe, burn(s));
         }
         return;
       }
-      const tall = f.rng() < 0.5;   // stripes running top to bottom (6 of them) or side to side (4)
       const n = tall ? 6 : 4, span = tall ? ARENA.hw * 2 : ARENA.hh * 2, len = tall ? ARENA.hh * 2 : ARENA.hw * 2, w = span / n;
-      const first = f.rng() < 0.5 ? 0 : 1;
       const lane = i => (tall ? { kind: 'rect', x: -ARENA.hw + w * (i + 0.5), y: -ARENA.hh, angle: Math.PI / 2, len, w }
         : { kind: 'rect', x: -ARENA.hw, y: -ARENA.hh + w * (i + 0.5), angle: 0, len, w });
-      for (let i = 0; i < n; i++) {
-        if (i % 2 === first) f.aoe(lane(i), d, dmg.flambe, burn(lane(i)));
-        else f.afterKeep(d, () => f.aoe(lane(i), 2.2, dmg.flambe, burn(lane(i))));
-      }
+      for (let i = 0; i < n; i++) f.aoe(lane(i), i % 2 === first ? d : d + 2.2, dmg.flambe, burn(lane(i)));
+    };
+    // Mise en Place (Hard): he lays three tools out on the pass, left to right: a cleaver lying on one side of its board
+    // (that half gets chopped), the ladle, the lid. Much later, Service! brings them out in that order, 2 s apart.
+    let plan = null;
+    const mise = () => {
+      const d = f.ct(3);
+      f.cast('Mise en Place', d, 'serve');
+      plan = { tools: f.shuffle(['cleaver', 'ladle', 'lid']), side: coin('left', 'right') };
+      f.afterKeep(d, () => f.emit({ t: 'roomev', k: 'mise', tools: plan.tools, side: plan.side, dur: 120 }));
+    };
+    const service = () => {
+      if (!plan) return;
+      const d = f.ct(3.5), beat = 2;
+      f.cast('Service!', d, 'bell');
+      f.emit({ t: 'roomev', k: 'mise', tools: plan.tools, side: plan.side, dur: d + beat * 2 + 0.6, serve: d, beat });
+      B.lockFacing = true;
+      hold(d + beat * 2 + 0.2);
+      plan.tools.forEach((tool, i) => {
+        const at = d + i * beat;
+        if (tool === 'cleaver') f.aoe(halfRoom(plan.side), at, dmg.mince, { tag: 'mince' });
+        else f.aoe(tool === 'ladle' ? ladleShape() : lidShape(), at, dmg.ladle, { tag: tool });
+      });
+      f.afterKeep(d + beat * 2 + 0.2, () => { B.lockFacing = false; });
+      plan = null;
     };
 
-    // --- phase 1 ----------------------------------------------------------------------------
-    // (the room: Larder Toss takes the solo Ladle/Lid's place, Butcher's Charge the first Chop Chop's, and Gut Blast the
-    // middle Grease Fire's, so the loop runs as long as it did)
-    f.loop(n => {
-      return [
-        [4, grease, 'Grease Fire'],
-        H && n === 0 && [3, drains, 'Clogged Drains'],
-        [H && n === 0 ? 5 : 7, tenderize, 'Tenderize'],
-        [7.5, () => mince(), H ? 'Double Chop' : 'Mince'],
-        [H ? 10 : 8, larderToss, 'Larder Toss'],
-        H && [8.5, () => bellyFlop(), 'Belly Flop'],
-        [H ? 10 : 8, tossThenMeal, 'Meat Toss'],
-        [12, butcherCharge, "Butcher's Charge"],
-        [9.5, gutBlast, 'Gut Blast'],
-        H && [7, meatHook, 'Meat Hook'],
-        [7, orderUp, 'Order Up!'],
-        [6, meatballs, 'Rolling Meatballs'],   // launched while the plates are served; they roll once the plates are done
-        [9, tenderize, 'Tenderize'],
-        H && [8, cleaverToss, 'Cleaver Toss'],
-        [8, tossThenMeal, 'Meat Toss'],
-        [12, () => chopChop(), 'Chop Chop'],
-        [10, grease, 'Grease Fire'],
-        [7],
-      ].filter(Boolean);
-    });
+    // --- set pieces -----------------------------------------------------------------------------
+    // Flare-Up: he heaves the stockpot onto the stove; the burners catch and the top third of the kitchen burns for the
+    // rest of the fight, lighting any grease it touches.
+    const flareUp = () => {
+      const d = f.ct(6);
+      f.cast('Flare-Up', d, 'boil');
+      f.zone({ shape: stoveZone(), dur: 9999, delay: d, effect: 'burn', dmg: dmg.stove, tag: 'stovefire' });
+      // the blast of heat as it catches reaches the whole kitchen
+      f.mech({ type: 'raidwide', shape: { kind: 'circle', x: 0, y: 0, r: 0 }, delay: d, dmg: dmg.heat, hidden: true, tag: 'grease' });
+      f.afterKeep(d, () => {
+        hot = true;
+        f.emit({ t: 'roomev', k: 'stove', x: 0, dur: 9999 });
+        f.ignite(stoveZone(), 8);
+      });
+    };
+    // then he drags the pot down to the middle of what's left: solid, cover, and something to charge into
+    const potToMiddle = () => {
+      const at = { x: 0, y: 60 };
+      f.anim('leap', 1.2);
+      f.moveBoss(at.x, at.y + 48 + FIGHT.BOSS_R * 0.7 + 8, 700);
+      f.afterKeep(0.9, () => {
+        pot = f.addProp({ kind: 'pot', x: at.x, y: at.y, r: 48, hp: 0, solid: true, cover: true, rubble: false });
+        f.emit({ t: 'propfx', k: 'slam', x: at.x, y: at.y + 40, a: Math.PI / 2, boss: 1 });
+      });
+    };
+    const lastOrders = () => {
+      f.cast('Last Orders', f.ct(5), 'raise');
+      f.mech({ type: 'raidwide', shape: { kind: 'circle', x: 0, y: 0, r: 0 }, delay: f.ct(5), dmg: dmg.orders, hidden: true, tag: 'grease' });
+    };
+    // Gorge: he eats, hitting everyone and getting stronger each time
+    const gorge = () => {
+      f.cast('Gorge', 2, 'gorge');
+      f.raidwide(dmg.gorge, 2);
+      B.dmgUp += 0.1;
+    };
 
-    // --- intermission + phase 2 ---------------------------------------------------------------
-    f.onHp(0.55, () => {
-      f.setPhase(2);
-      f.mechs.clear();
-      f.emit({ t: 'tgclear' });
-      f.clearPuddles();
-      f.clearRollers();
-      B.untargetable = true; B.lockFacing = false; B.cast = null;
-      f.anim('leap', 1.4);
-      f.moveBoss(0, 0, 700);
-      f.seq([
-        [1.6, () => { f.cast('Simmer', 3, 'boil'); simmer(true); }, 'Simmer'],
-        [7.2, () => { f.cast('Simmer', 3, 'boil'); simmer(false); }, 'Simmer'],
-        [7.8, () => { B.untargetable = false; f.anim('roar', 1); p2(); }],
-      ]);
-    });
+    // --- the service ----------------------------------------------------------------------------
+    const appetiser = from => f.course({
+      until: 0.8,
+      sets: [
+        S(H && [3, drains, 'Clogged Drains'], [H ? 3 : 6, grease, 'Grease Fire'],
+          [10, () => mince(), MINCE], [H ? 12 : 11, () => ladleOrLid(f.ct(4), 'ladle'), 'Ladle Spin'], [10, () => ladleOrLid(f.ct(4), 'lid'), 'Lid Slam']),
+        S([11, tenderize, 'Tenderize']),
+        S([12, () => meatToss(), 'Meat Toss'], [12, () => familyMeal(), 'Family Meal']),
+        S([12, larderToss, 'Larder Toss'], [10, gutBlast, 'Gut Blast']),
+        S([11, grease, 'Grease Fire']),
+      ],
+      closing: [[9, larderToss, 'Larder Toss'], [10, gutBlast, 'Gut Blast'], [10, grease, 'Grease Fire']],
+      next: mains,
+    }, from);
 
-    // (the room: Larder Toss opens the phase, Gut Blast takes Order Up!'s place, Butcher's Charge the second Boil Over's
-    // and Flambé the second Whisk's. Hard: Butcher's Charge replaces Kitchen Rush, and Order Up! with its Meat Toss
-    // stays on top)
-    const p2 = () => f.loop(n => {
-      const w = coin('ladle', 'lid');
-      return [
-        [2, larderToss, 'Larder Toss'],
-        H && [6, drains, 'Clogged Drains'],
-        [7, tenderize, 'Tenderize'],
-        [8, whisk, 'Whisk'],
-        [9, () => { spiceRack(); f.afterKeep(f.ct(6) + 0.3, () => ladleOrLid(f.ct(3), w)); }, 'Spice Rack'],
-        [11, gutBlast, 'Gut Blast'],
-        H && [8, () => { orderUp(); f.afterKeep(1.0, () => meatToss()); }, 'Order Up!'],
-        [10, boilOver, 'Boil Over'],
-        H && [8, flambe, 'Flambé'],
-        [8, tenderize, 'Tenderize'],
-        [8, () => (H ? mince() : chopChop()), H ? 'Double Chop' : 'Chop Chop'],
-        H && [9, () => bellyFlop(), 'Belly Flop'],
-        // the jars lock on everyone while they share the meal, and fall two seconds after it lands
-        [9, () => { familyMeal(); f.afterKeep(1.5, () => spiceRack(2)); }, 'Family Meal'],
-        [10, butcherCharge, "Butcher's Charge"],
-        H && [9, meatHook, 'Meat Hook'],
-        [9, () => { meatballs(); if (H) f.afterKeep(2.5, cleaverToss); }, 'Rolling Meatballs'],
-        [11, grease, 'Grease Fire'],
-        [8, flambe, 'Flambé'],
-        [9],
-      ].filter(Boolean);
-    });
+    const mains = from => f.course({
+      until: 0.5,
+      sets: [
+        S([5, butcherCharge, "Butcher's Charge"]),
+        S([13, () => chopChop(), 'Chop Chop']),
+        S([13, tenderize, 'Tenderize']),
+        S([12, orderUp, 'Order Up!']),
+        S([15, tossThenMeal, 'Meat Toss']),
+        S(H && [10, () => bellyFlop(), 'Belly Flop'], [H ? 12 : 15, larderToss, 'Larder Toss'], [8, butcherCharge, "Butcher's Charge"], [10, gutBlast, 'Gut Blast']),
+        S([12, grease, 'Grease Fire']),
+        S([12, orderUp, 'Order Up!'], [6, () => meatballs(LANES.rail), 'Rolling Meatballs'], H && [2.5, cleaverToss, 'Cleaver Toss']),
+        S([H ? 11.5 : 14, tenderize, 'Tenderize']),
+        S([10, () => chopChop(), 'Chop Chop']),
+        S([12, tossThenMeal, 'Meat Toss']),
+      ],
+      closing: [[10, orderUp, 'Order Up!'], [6, () => meatballs(LANES.rail), 'Rolling Meatballs'], [16, () => chopChop(), 'Chop Chop'], [10, grease, 'Grease Fire']],
+      next: flare,
+    }, from);
+
+    // no downtime: he stays on the floor while the kitchen catches
+    const flare = from => f.course({
+      sets: [
+        S([6, flareUp, 'Flare-Up']),
+        S([8, () => flambe({ dir: 1, tall: true, first: 0 }), 'Flambé']),
+        S([12, potToMiddle, 'Stockpot'], [2.5, () => simmerCast(true), 'Simmer'], [7.2, () => simmerCast(false), 'Simmer']),
+        S([9]),
+      ],
+      next: secondSitting,
+    }, from);
+
+    const secondSitting = from => f.course({
+      until: 0.18,
+      sets: [
+        S([4, () => whisk(1, 0.3), 'Whisk']),
+        S([10, () => { spiceRack(SPICE.a); f.afterKeep(f.ct(6) + 0.3, () => ladleOrLid(f.ct(3))); }, 'Spice Rack']),
+        S([14, larderToss, 'Larder Toss'], [6, boilOver, 'Boil Over']),
+        S([10, () => { tenderize(); if (H) meatHook(); }, 'Tenderize'], [8, gutBlast, 'Gut Blast']),
+        H && S([8, mise, 'Mise en Place']),
+        S([10, () => { const last = orderUp(); f.afterKeep(Math.max(0.5, last - f.ct(5.5) + 1), () => meatToss()); }, 'Order Up!']),   // the toss lands just after the last plate
+        S([15, butcherCharge, "Butcher's Charge"]),
+        S([12, grease, 'Grease Fire']),
+        H && S([8, service, 'Service!']),
+        S([12, () => whisk(-1, 0.9), 'Whisk'], [3, () => meatballs(LANES.b), 'Rolling Meatballs']),
+        S([10, () => { familyMeal(); f.afterKeep(1.5, () => spiceRack(SPICE.b, 2)); }, 'Family Meal']),
+        S([14, () => (H ? mince() : chopChop()), H ? 'Double Chop' : 'Chop Chop'], H && [9, () => bellyFlop(), 'Belly Flop']),
+        S([10, tenderize, 'Tenderize']),
+      ].filter(Boolean),
+      closing: [[10, () => whisk(1, 0.3), 'Whisk'], [3, () => meatballs(LANES.b), 'Rolling Meatballs'], [14, () => chopChop(), 'Chop Chop'], [10, grease, 'Grease Fire']],
+      next: dessert,
+    }, from);
+
+    // the Dessert Trolley: everything at once, then quiet, then Last Orders, then he eats until he drops
+    const dessert = from => {
+      const k = H ? 0.85 : 1, w = coin('ladle', 'lid');
+      return f.course({
+        sets: [
+          // each beat lands just as the next is called: the fire passes, then the toss, the balls, the chop...
+          S([3, () => flambe({ dir: -1, tall: false, first: 1 }), 'Flambé'],
+            [7 * k, () => meatToss(), 'Meat Toss'],
+            [2.5 * k, () => meatballs(LANES.c), 'Rolling Meatballs'],
+            H && [1.5, cleaverToss, 'Cleaver Toss'],
+            [H ? 2.5 : 4, () => mince(), MINCE],
+            [3.5 * k, () => ladleOrLid(f.ct(4), w), LL[w]],
+            [4 * k, () => spiceRack(SPICE.c), 'Spice Rack'],
+            [4 * k, () => familyMeal(), 'Family Meal'],
+            [4 * k, () => whisk(H ? -1 : 1, 0), 'Whisk']),
+          S([12, lastOrders, 'Last Orders']),
+        ],
+        closing: [[15, gorge, 'Gorge']],
+        ramp: 0,   // Gorge brings its own
+      }, from);
+    };
+
+    appetiser(0);
 
     // every move by name, for tools and testing (window.__game.raidHost.sim.moves.gutBlast())
     f.moves = { grease, tenderize, mince, ladleOrLid, chopChop, meatToss, tossThenMeal, familyMeal, orderUp, spiceRack, whisk, boilOver,
-      meatballs, bellyFlop, cleaverToss, flambe, butcherCharge, larderToss, gutBlast, drains, meatHook, charge };
-
-    // soft enrage: below 15% he starts eating, hitting everyone and getting stronger each time
-    f.onHp(0.15, () => {
-      const gorge = () => {
-        if (f.state !== 'live') return;
-        f.anim('gorge', 2);
-        f.raidwide(dmg.gorge, 2);
-        B.dmgUp += 0.1;
-        f.afterKeep(18, gorge, 'Gorge');
-      };
-      f.afterKeep(3, gorge, 'Gorge');
-    });
+      meatballs, bellyFlop, cleaverToss, flambe, butcherCharge, larderToss, gutBlast, drains, meatHook, charge, flareUp, potToMiddle,
+      mise, service, lastOrders, gorge, simmerCast };
   },
 };
 

@@ -79,7 +79,7 @@ class RaidHost {
       props: sim.props, floor: sim.floor, burning: fl => sim.burning(fl), room: sim.room || null,
       // the boss's next named moves, as the upcoming-moves feed shows them to players: [[name, seconds until], ...]
       next: sim.upcoming(3).map(e => [e.name, e.t - sim.t]),
-      debuffs: id => { const s = sim.ps.get(id); const out = {}; if (s) for (const k in s.debuffs) if (s.debuffs[k] > sim.t) out[k] = true; return out; },
+      debuffs: id => { const s = sim.ps.get(id); const out = {}; if (s) for (const k in s.debuffs) if (s.debuffs[k] > sim.t) out[k] = Math.max(0.01, s.debuffs[k] - sim.t); return out; },   // seconds left
       // classes-c: the Threadweavers' threads and Tapestry, and every Marionettist's Dolls
       threads: sim.threads || [], tapestry: sim.tapestry && sim.tapestry.end > sim.t ? sim.tapestry : null, dolls: sim.liveDolls(),
     };

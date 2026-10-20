@@ -1401,6 +1401,8 @@ const ArenaView = {
     }
     const lo = room.ev.lightsout;
     if (lo && t < lo.end + 0.6) this.drawLightsOut(ctx, room, lo, t, v);
+    const mise = room.ev.mise;
+    if (mise && t < mise.end) this.misePass(ctx, mise, t);
     const amb = room.ev.ambush;
     if (amb && t < amb.end + 0.3) this.ambushShadow(ctx, amb, t);
     const cr = room.ev.crumble;
@@ -1488,6 +1490,7 @@ const ArenaView = {
       case 'masonry': this.masonry(ctx, pr); break;
       case 'stone': this.standingStone(ctx, pr, t); break;
       case 'boulder': this.boulder(ctx, pr, t); break;
+      case 'pot': this.stockpot(ctx, pr, t); break;
       default: ellipse(ctx, pr.x + 4, pr.y + 6, pr.r * 1.1, pr.r * 0.6, 0, 'rgba(0,0,0,0.4)'); circle(ctx, pr.x, pr.y, pr.r, '#6a6a72', OUT, 2.5);
     }
     ctx.restore();
@@ -1601,6 +1604,63 @@ const ArenaView = {
     const glowA = charged ? 0.6 + 0.4 * Math.sin(t * 14) : 0.15;
     for (let i = 0; i < 3; i++) { const yy = y - h * (0.3 + i * 0.18); line(ctx, x - 6, yy, x + 6, yy - 6, rgba('#9ff4ff', glowA), 2); line(ctx, x, yy - 8, x, yy + 4, rgba('#9ff4ff', glowA), 2); }
     if (charged) { glow(ctx, x, y - h * 0.5, 50, '#9ff4ff', 0.35); if (Math.floor(t * 10) % 3 === 0) jagged(ctx, x, y - h, x + Math.sin(t * 7) * 20, y - h - 30, Math.floor(t * 12), '#bff6ff', 1.2); }
+  },
+  // Grubnak's stockpot, dragged to the middle after the Flare-Up: a squat copper pot on its own fire, slopping and
+  // steaming. Solid, and cover from Gut Blast.
+  stockpot(ctx, pr, t) {
+    const { x, y, r } = pr, h = r * 1.05;
+    ellipse(ctx, x + 6, y + 8, r * 1.3, r * 0.6, 0, 'rgba(10,4,0,0.5)');
+    glow(ctx, x, y + 4, r * 1.4, '#ff7a1a', 0.3 + 0.08 * Math.sin(t * 9));
+    ctx.beginPath(); ctx.ellipse(x, y, r, r * 0.5, 0, 0, Math.PI); ctx.lineTo(x - r, y - h); ctx.ellipse(x, y - h, r, r * 0.5, 0, Math.PI, 0, true); ctx.closePath();
+    const g = ctx.createLinearGradient(x - r, 0, x + r, 0);
+    g.addColorStop(0, '#5a2a12'); g.addColorStop(0.35, '#c4743a'); g.addColorStop(0.6, '#a85a28'); g.addColorStop(1, '#3e1a0a');
+    ctx.fillStyle = g; ctx.fill(); ctx.strokeStyle = OUT; ctx.lineWidth = 3; ctx.stroke();
+    for (const q of [0.25, 0.7]) { ctx.beginPath(); ctx.ellipse(x, y - h * q, r * 1.01, r * 0.5, 0, 0, Math.PI); ctx.strokeStyle = 'rgba(40,16,4,0.6)'; ctx.lineWidth = 3; ctx.stroke(); }
+    for (const sd of [-1, 1]) { ctx.beginPath(); ctx.arc(x + sd * (r + 6), y - h * 0.7, 8, 0, TAU); ctx.strokeStyle = '#3a3a42'; ctx.lineWidth = 3.5; ctx.stroke(); }
+    // the broth, bubbling
+    ellipse(ctx, x, y - h, r, r * 0.5, 0, '#3e1a0a', OUT, 2.5);
+    ellipse(ctx, x, y - h + 2, r * 0.86, r * 0.4, 0, '#c8803a');
+    for (let i = 0; i < 5; i++) {
+      const q = (t * 1.4 + hash01(i + pr.id)) % 1, a = i * 1.3, bx = x + Math.cos(a) * r * 0.5, by = y - h + Math.sin(a) * r * 0.2;
+      circle(ctx, bx, by, 2 + q * 4, `rgba(255,220,160,${0.7 * (1 - q)})`);
+    }
+    for (let i = 0; i < 4; i++) {
+      const q = (t * 0.6 + hash01(i * 3 + pr.id)) % 1, sx = x + (hash01(i) - 0.5) * r, sy = y - h - 10 - q * 60;
+      ctx.beginPath(); ctx.moveTo(sx, sy); ctx.quadraticCurveTo(sx + 10, sy - 12, sx, sy - 24);
+      ctx.strokeStyle = `rgba(240,235,225,${0.35 * (1 - q)})`; ctx.lineWidth = 4; ctx.stroke();
+    }
+  },
+  // Mise en Place (Grubnak, Hard): three tools laid out on the pass along the bottom wall, left to right in the order
+  // he'll serve them. The cleaver lies on the side of its board that gets chopped. Once Service! is called, each one
+  // lights as it comes out and goes dark once it has.
+  misePass(ctx, m, t) {
+    const k = clamp((t - m.start) / 0.4, 0, 1) * clamp((m.end - t) / 0.4, 0, 1);
+    if (k <= 0) return;
+    const y = ARENA.hh - 38, gap = 92;
+    ctx.save(); ctx.globalAlpha = k;
+    rrect(ctx, -gap * 1.5 - 10, y - 26, gap * 3 + 20, 52, 8, '#5a3a22', OUT, 2.5);
+    line(ctx, -gap * 1.5 - 4, y - 20, gap * 1.5 + 4, y - 20, 'rgba(255,230,190,0.18)', 2);
+    m.tools.forEach((tool, i) => {
+      const x = (i - 1) * gap, at = m.serve != null ? m.start + m.serve + i * m.beat : null;
+      const live = at != null && t > at - m.beat && t < at + 0.3, done = at != null && t >= at + 0.3;
+      if (live) glow(ctx, x, y, 46, '#ffd27a', 0.55 + 0.3 * Math.sin(t * 14));
+      ctx.globalAlpha = k * (done ? 0.3 : 1);
+      if (tool === 'cleaver') {
+        rrect(ctx, x - 34, y - 18, 68, 36, 5, '#b48a5a', OUT, 2);
+        line(ctx, x, y - 14, x, y + 14, 'rgba(60,32,10,0.45)', 1.5);
+        const sx = x + (m.side === 'left' ? -17 : 17);
+        rrect(ctx, sx - 13, y - 12, 26, 18, 2, '#d8dde6', OUT, 2);
+        rrect(ctx, sx - 4, y + 5, 8, 12, 2, '#4a2a12', OUT, 1.5);
+      } else if (tool === 'ladle') {
+        circle(ctx, x - 8, y + 4, 14, '#9aa2ae', OUT, 2); circle(ctx, x - 8, y + 4, 9, '#c8803a');
+        line(ctx, x + 2, y - 4, x + 26, y - 18, OUT, 6); line(ctx, x + 2, y - 4, x + 26, y - 18, '#b8c0cc', 3);
+      } else {
+        ellipse(ctx, x, y + 2, 26, 15, 0, '#a8b0bc', OUT, 2.5); ellipse(ctx, x, y, 18, 9, 0, null, 'rgba(255,255,255,0.35)', 1.5);
+        circle(ctx, x, y - 4, 5, '#3a3a42', OUT, 1.5);
+      }
+      ctx.globalAlpha = k;
+    });
+    ctx.restore();
   },
   // Avalanche boulders that came to rest on the summit
   boulder(ctx, pr) {

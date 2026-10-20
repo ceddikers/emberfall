@@ -453,6 +453,74 @@ function run(args) {
     p.on('close', code => resolve({ code, out }));
   });
 }
+// ---------------------------------------------------------------- 3. choreographed timelines
+// Bosses rebuilt as one authored, non-looping fight (f.course in fight.js). The script is played with a party that
+// can't die and doesn't fight; whenever a course's sets run out the boss drops to that course's gate, so the run shows
+// the whole script at the pace a good party sees it. Checked on Normal and Hard:
+//   no f.loop and no hidden telegraph in the source; every step that does something has a name; nothing avoidable
+//   shows for less than WARN_MIN s; the gap between named steps stays under GAP_MAX s; a raidwide at least every
+//   RAID_MAX s and a tankbuster every BUSTER_MAX s; the upcoming-moves feed always shows three steps; and the script
+//   from the pull to the end of its last set lasts LEN_MIN..LEN_MAX s.
+const CHOREO = [['Grubnak', 'grubnak', 'GRUBNAK']];
+const TL = { WARN_MIN: 1.2, GAP_MAX: 16, RAID_MAX: 150, BUSTER_MAX: 180, LEN_MIN: 480, LEN_MAX: 600 };
+function timelines() {
+  const load = p => require(path.join(ROOT, 'client/js', p));
+  Object.assign(global, load('combat/actor.js'), load('arena/fight.js'));
+  for (const [boss, id, sym] of CHOREO) {
+    const file = path.join(ROOT, 'client/js/arena/bosses', id + '.js'), src = fs.readFileSync(file, 'utf8'), probs = [], notes = [];
+    const code = src.split('\n').filter(l => !/^\s*\/\//.test(l)).join('\n');
+    if (/f\.loop\(/.test(code)) probs.push('still uses f.loop');
+    for (const l of code.split('\n')) if (/hidden:/.test(l) && !/raidwide/.test(l)) probs.push(`hidden telegraph: ${l.trim().slice(0, 90)}`);
+    const def = load(`arena/bosses/${id}.js`)[sym];
+    for (const mode of ['normal', 'hard']) {
+      const players = [['tank', 0, 120], ['healer', -200, 200], ['dps', 200, 200], ['dps', 0, 260]].map(([role, x, y], i) => ({ id: i + 1, name: role + i, role, cls: 'x', x, y, a: 0 }));
+      const sim = new FightSim(def, mode, () => players, () => {}, 4242);
+      for (const s of sim.ps.values()) { s.hp = s.maxHp = 1e12; }
+      const named = [], raid = [], buster = [];
+      let short = 0, lastCourse = null;
+      // every course: its steps must all have names
+      const course = sim.course.bind(sim);
+      sim.course = (o, from) => {
+        for (const st of [...o.sets.flat(), ...(o.closing || [])]) if (st && st[1] && !st[2]) probs.push(`${mode}: an unnamed step`);
+        const cur = course(o, from); lastCourse = cur; return cur;
+      };
+      sim.emit = msg => {
+        if (msg.t === 'tg') {
+          if (msg.hidden && msg.type !== 'raidwide') probs.push(`${mode}: hidden ${msg.tag} at ${sim.t.toFixed(0)}s`);
+          if (msg.type !== 'raidwide' && msg.dur < TL.WARN_MIN - 1e-6 && msg.tag !== 'cleaverback') probs.push(`${mode}: ${msg.tag} shows for only ${msg.dur.toFixed(2)} s at ${sim.t.toFixed(0)}s`);
+          if (msg.type === 'raidwide') raid.push(sim.t + msg.dur);
+          if (msg.type === 'buster') buster.push(sim.t + msg.dur);
+        }
+      };
+      const fire = [];   // named steps as they happen
+      const step = sim.at.bind(sim);
+      sim.at = (t, fn, name) => step(t, name ? () => { fire.push([sim.t, name]); fn(); } : fn, name);
+      let end = null;
+      for (let i = 0; i < 20 * 1200 && sim.state !== 'clear'; i++) {
+        sim.tick(0.05);
+        if (sim.state !== 'live') { if (sim.state !== 'countdown') break; continue; }
+        if (sim.upcoming(3).length < 3) short++;
+        const c = sim.curCourse;
+        // the course's sets are done: a good party is at its gate now
+        if (c && c.o.until != null && !c.done && sim.t >= c.end) sim.boss.hp = Math.min(sim.boss.hp, sim.boss.maxHp * c.o.until - 1);
+        if (c && c.o.until == null && !c.o.next && sim.t >= c.end && end == null) end = sim.t;
+        if (end != null && sim.t > end + 1) break;
+      }
+      for (let i = 1; i < fire.length; i++) if (fire[i][0] - fire[i - 1][0] > TL.GAP_MAX && (end == null || fire[i][0] < end)) probs.push(`${mode}: ${(fire[i][0] - fire[i - 1][0]).toFixed(0)} s with nothing named before ${fire[i][1]} at ${fire[i][0].toFixed(0)}s`);
+      const gaps = (list, max, what) => { for (let i = 1; i < list.length; i++) if (list[i] - list[i - 1] > max) probs.push(`${mode}: ${(list[i] - list[i - 1]).toFixed(0)} s between ${what}s (${list[i - 1].toFixed(0)}s to ${list[i].toFixed(0)}s)`); };
+      gaps(raid.filter(t => end == null || t <= end + 10), TL.RAID_MAX, 'raidwide');
+      gaps(buster.filter(t => end == null || t <= end), TL.BUSTER_MAX, 'tankbuster');
+      if (short) probs.push(`${mode}: the upcoming-moves feed showed fewer than three steps for ${(short * 0.05).toFixed(1)} s`);
+      if (end == null) probs.push(`${mode}: the script never reached the end of its last set`);
+      else if (end < TL.LEN_MIN || end > TL.LEN_MAX) probs.push(`${mode}: the script lasts ${end.toFixed(0)} s (want ${TL.LEN_MIN}-${TL.LEN_MAX})`);
+      else notes.push(`${mode} ${Math.floor(end / 60)}:${String(Math.round(end % 60)).padStart(2, '0')}`);
+      void lastCourse;
+    }
+    if (probs.length) fail(`${boss}'s timeline`, [...new Set(probs)].slice(0, 14).join('\n'));
+    else pass(`${boss}'s timeline`, `no loops, nothing hidden, all named, cadence and feed OK; scripted ${notes.join(', ')}`);
+  }
+}
+
 async function heavy() {
   const trialIds = Object.values(SPECS).flat().map(s => s.id);
   const [sim, tal, ...raids] = await Promise.all([
@@ -537,6 +605,7 @@ async function heavy() {
   const t0 = Date.now();
   syntax();
   try { data(); } catch (e) { fail('Data checks ran', e.stack); }
+  try { timelines(); } catch (e) { fail('Timelines checked', e.stack); }
   await heavy();
   console.log('');
   for (const r of results) {

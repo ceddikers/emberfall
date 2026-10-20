@@ -79,7 +79,7 @@ const SKITTERRA = {
         const a = a0 + dir * k * Math.PI / 4;
         f.after(d + k * step - win, () => {
           for (const ang of [a, a + Math.PI]) {
-            f.aoe({ kind: 'cone', x: src.x, y: src.y, r: 1300, arc: 1.22, angle: ang }, win, dmg.lunge, { hidden: H, tag: 'lunge' });
+            f.aoe({ kind: 'cone', x: src.x, y: src.y, r: 1300, arc: 1.22, angle: ang }, win, dmg.lunge, { tag: 'lunge' });
           }
         });
       }
@@ -299,8 +299,8 @@ const SKITTERRA = {
         const mid = ARENA.clamp({ x: (f.rng() - 0.5) * 500, y: (f.rng() - 0.5) * 400 }, 160), end = ARENA.clamp({ x: who.x, y: who.y }, 120);
         const pts = [[Math.round(B.x), Math.round(B.y)], [Math.round(mid.x), Math.round(mid.y)], [Math.round(end.x), Math.round(end.y)]];
         f.emit({ t: 'roomev', k: 'ambush', pts, dur, ease: 1.7 });
-        // no floor telegraph for players (watch the shadow); the bots read it as a hidden circle
-        f.mech({ type: 'aoe', shape: { kind: 'circle', x: end.x, y: end.y, r: 230 }, delay: dur, dmg: dmg.ambush, tag: 'ambush', hidden: true, throwDist: 380,
+        // the landing circle shows on the floor as well as her shadow (telegraphs are never hidden)
+        f.mech({ type: 'aoe', shape: { kind: 'circle', x: end.x, y: end.y, r: 230 }, delay: dur, dmg: dmg.ambush, tag: 'ambush', throwDist: 380,
           onResolve: inside => {
             B.x = end.x; B.y = end.y; B.untargetable = false; B.lockFacing = false;
             f.anim('leap', 0.3);
