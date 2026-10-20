@@ -7,7 +7,7 @@ const BossIcons = (() => {
   const ACCENT = { grubnak: '#ff9a3a', skitterra: '#b8ef5a', volkar: '#7fe8ff', hollowking: '#6dff9a' };
   const L = '#f2e6c8', INK = '#14111a';
   const cache = new Map();
-  const PAINTED = new Set(['grubnak']);
+  const PAINTED = new Set(['grubnak', 'skitterra', 'volkar', 'hollowking']);
   // 'Order Up!' -> order-up, 'Flambé' -> flambe, "Butcher's Charge" -> butchers-charge
   const slug = name => String(name).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/'/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
