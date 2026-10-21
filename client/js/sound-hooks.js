@@ -26,7 +26,7 @@ const SoundHooks = (() => {
   function ability(classId, ab, mine, at, who) {
     if (!has() || !ab) return;
     safe(() => {
-      for (const n of abilityNames(classId, ab.id, ab.anim)) play(n, mine ? { vol: 0.7 } : { vol: 0.7, remote: true, at, key: 'ab:' + who + ':' + n, minGap: 0.06 });
+      for (const n of abilityNames(classId, ab.id, ab.anim)) play(n, mine ? { vol: 1 } : { vol: 0.45, remote: true, at, key: 'ab:' + who + ':' + n, minGap: 0.06 });
       if (ab.ult) play('ult-fire', mine ? { vol: 0.95 } : { vol: 0.9, remote: true, at });
     });
   }
@@ -36,7 +36,14 @@ const SoundHooks = (() => {
   }
   // your own cast bar's quiet hum
   let castHum = null;
-  function castStart() { if (!has()) return; castEnd(0.05); castHum = Sound.loop('ab-cast-loop', { vol: 0.35, fade: 0.15 }); }
+  // (a cast gets a soft, higher 'gathering' blip of its own sound at the press, a very quiet hum under the bar, and the full
+  // sound at release: the bar used to be only the hum, which read as the sound of the ability)
+  function castStart(classId, ab) {
+    if (!has()) return;
+    castEnd(0.05);
+    if (ab) safe(() => { const n = abilityNames(classId, ab.id, ab.anim)[0]; if (n) play(n, { vol: 0.3, rate: 1.3, key: 'castbegin', minGap: 0.1 }); });
+    castHum = Sound.loop('ab-cast-loop', { vol: 0.12, fade: 0.25 });
+  }
   function castEnd(fade = 0.18) { if (castHum) { castHum.stop(fade); castHum = null; } }
 
   // ---------------------------------------------------------------- the boss

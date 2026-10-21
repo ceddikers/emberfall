@@ -64,6 +64,20 @@ for (const [cls, m] of Object.entries(abil)) for (const [id, a] of m) {
   if (SfxMap.CLASS[cls] && Object.prototype.hasOwnProperty.call(SfxMap.CLASS[cls], id)) mapped++;
   else fall.push(`${cls}.${id} (${a.name}, ${a.from}, anim ${a.anim}) -> ${[].concat(ans).join(' + ')}`);
 }
+// every ability in a class sounds different: no two resolve to the same answer (the taunt and the shared Ultimate
+// parts excepted), and every per-ability voice is built from a recipe spec of its own across all classes
+const dupes = [];
+for (const [cls, m] of Object.entries(abil)) {
+  const seen = new Map();
+  for (const [id, a] of m) {
+    const ans = SfxMap.forAbility(cls, id, a.anim);
+    if (id === 'taunt' || [].concat(ans)[0] === 'ult-fire') continue;
+    const key = JSON.stringify(ans);
+    if (seen.has(key)) dupes.push(`${cls}: ${seen.get(key)} and ${id} both -> ${key}`); else seen.set(key, id);
+  }
+}
+const specSeen = new Map(), A = global.SfxSynth.ABIL || {};
+for (const cls in A) for (const id in A[cls]) { const k = JSON.stringify(A[cls][id]); if (specSeen.has(k)) dupes.push(`identical voice spec: ${specSeen.get(k)} and ${cls}.${id}`); else specSeen.set(k, cls + '.' + id); }
 // dash and taunt are shared
 for (const cls of Object.keys(SfxMap.CLASS)) { check(`${cls}.dash`, SfxMap.forAbility(cls, 'dash')); check(`${cls}.taunt`, SfxMap.forAbility(cls, 'taunt')); }
 
@@ -95,5 +109,8 @@ if (fall.length) for (const f of fall) console.log('  fallback  ' + f);
 console.log(`boss moves: ${mTotal} found, ${mTotal - mFall.length} mapped, ${mFall.length} fall back to the telegraph cue`);
 for (const f of mFall) console.log('  no signature  ' + f);
 if (verbose) for (const [cls, m] of Object.entries(abil)) console.log(cls + ': ' + [...m.keys()].join(' '));
-if (missing.length) { console.log(`\nMISSING recipes (${missing.length}):`); for (const m of missing) console.log('  ' + m); process.exit(1); }
+if (dupes.length) { console.log(`
+IDENTICAL ability sounds (${dupes.length}):`); for (const d of dupes) console.log('  ' + d); }
+else console.log(`every ability in a class sounds different (${specSeen.size} per-ability voices, all specs distinct)`);
+if (missing.length || dupes.length) { console.log(`\nMISSING recipes (${missing.length}):`); for (const m of missing) console.log('  ' + m); process.exit(1); }
 console.log('every mapped name is a defined recipe');

@@ -202,11 +202,21 @@
     const S = { ctx, out, t0, p, v, r, rate, end: t0, tail: 0, verbs: {}, revDefault: 0, verbType: 'room', name };
     S.rr = (a, b) => a + (b - a) * r();
     S.pick = a => a[Math.floor(r() * a.length)];
-    S.vi = n => Math.min(n - 1, Math.floor(v * n));
+    S.vi = n => (S.forceV != null ? S.forceV % n : Math.min(n - 1, Math.floor(v * n)));   // (forceV: a layer pinned to one variant)
     S.k = rate * st((r() - 0.5) * 0.5);           // +-25 cents per play
-    S.T = at => t0 + (at || 0);
+    S.t0 = t0;
+    S.T = at => S.t0 + (at || 0);
     S.mark = t => { if (t > S.end) S.end = t; };
-    S.bus = ctx.createGain(); S.bus.gain.value = dbg(TRIM[name] || 0); S.bus.connect(out);
+    // bus -> gentle glue compressor (Chrome's has a 6 ms lookahead, so it catches the click transients) -> trim -> out.
+    // The trim sits after the compressor so the measured level trims (TRIM) stay linear.
+    S.bus = ctx.createGain();
+    const dcb = ctx.createBiquadFilter(); dcb.type = 'highpass'; dcb.frequency.value = 25; dcb.Q.value = 0;   // DC / sub-rumble blocker
+    const trim = ctx.createGain(); trim.gain.value = dbg(TRIM[name] || 0); trim.connect(out);
+    if (ctx.createDynamicsCompressor && !NOCOMP[name]) {
+      const c = ctx.createDynamicsCompressor();
+      c.threshold.value = -24; c.knee.value = 12; c.ratio.value = 4; c.attack.value = 0.002; c.release.value = 0.12;
+      S.bus.connect(dcb); dcb.connect(c); c.connect(trim); S.tail += 0.01;
+    } else { S.bus.connect(dcb); dcb.connect(trim); }
     S.space = (type, amount) => { S.verbType = type; S.revDefault = amount; };
     for (const k in TOOLS) S[k] = o => TOOLS[k](S, o || {});
     return S;
@@ -222,7 +232,7 @@
   function verbIn(S, type) {
     if (!S.verbs[type]) {
       const c = S.ctx.createConvolver(); c.buffer = irBuf(S.ctx, type);
-      c.connect(S.bus); S.verbs[type] = c; S.tail = Math.max(S.tail, IR[type][0]);
+      c.connect(S.bus); S.verbs[type] = c; S.tail = Math.max(S.tail, IR[type][0] + 0.01);
     }
     return S.verbs[type];
   }
@@ -563,13 +573,114 @@
 
   // ---------------------------------------------------------------------------------------------- registry
   const DEFS = [], LOOPS = [], CAT = {};
-  function def(name, cat, fn) { DEFS.push([name, fn]); CAT[name] = cat; }
+  const FN = {};
+  function def(name, cat, fn) { DEFS.push([name, fn]); CAT[name] = cat; FN[name] = fn; }
   function loop(name, cat, fn, fadeIn) { LOOPS.push([name, fn, fadeIn]); CAT[name] = cat; }
 
   // per-recipe level trims in dB, measured by tools/audio/render.js against the loudness targets of each category
   // (node tools/audio/render.js --write-trim rewrites this block; hand edits are fine too)
+  // recipes left uncompressed (long tonal tails where pumping would show)
+  const NOCOMP = {};
   // @@TRIM-BEGIN
-  const TRIM = {};
+  const TRIM = {
+    'ab-alembist-auto': 6.5, 'ab-alembist-batch': -1.5, 'ab-alembist-blend': 0.5, 'ab-alembist-dew': -1,
+    'ab-alembist-distill': -1, 'ab-alembist-ember': -1.5, 'ab-alembist-quicksilver': 0.5, 'ab-alembist-salt': 1,
+    'ab-alembist-throw': 1, 'ab-bastion-auto': 1.5, 'ab-bastion-avatar': -2, 'ab-bastion-banner': -0.5,
+    'ab-bastion-bash': -2, 'ab-bastion-blade': -0.5, 'ab-bastion-brace': 1.5, 'ab-bastion-bulwark': -1.5,
+    'ab-bastion-edge': -1.5, 'ab-bastion-hallowed': -2, 'ab-bastion-oath': -1, 'ab-bastion-zeal': -2.5,
+    'ab-bloodreaver-auto': 1.5, 'ab-bloodreaver-drain': -1.5, 'ab-bloodreaver-frenzy': -2, 'ab-bloodreaver-hack': -0.5,
+    'ab-bloodreaver-lance': 1.5, 'ab-bloodreaver-moon': 1, 'ab-bloodreaver-rampage': -1.5, 'ab-bloodreaver-scab': 2,
+    'ab-bloodreaver-undying': 0.5, 'ab-bloodreaver-warcry': -1, 'ab-buff': 2, 'ab-cast-loop': -16,
+    'ab-chronomancer-accel': -2, 'ab-chronomancer-auto': 4, 'ab-chronomancer-bolt': -0.5, 'ab-chronomancer-bubble': -1,
+    'ab-chronomancer-chamber': -1, 'ab-chronomancer-recall': -3.5, 'ab-chronomancer-rewind': -1.5, 'ab-chronomancer-shift': -0.5,
+    'ab-chronomancer-stasis': -1, 'ab-chronomancer-warp': -1, 'ab-cleric-auto': 1.5, 'ab-cleric-barrier': -2,
+    'ab-cleric-bene': -3, 'ab-cleric-condemn': -3.5, 'ab-cleric-dawnbloom': -3, 'ab-cleric-dawnsanctum': -2,
+    'ab-cleric-intervene': -2.5, 'ab-cleric-mend': -1.5, 'ab-cleric-petal': -2.5, 'ab-cleric-prayer': -2,
+    'ab-cleric-smite': -2, 'ab-dot': 7, 'ab-driftblade-auto': 1.5, 'ab-driftblade-carve': 0.5,
+    'ab-driftblade-cross': 1.5, 'ab-driftblade-eyestep': 0.5, 'ab-driftblade-gale': 1.5, 'ab-driftblade-galeline': 1,
+    'ab-driftblade-gyre': 1, 'ab-driftblade-hook': 0.5, 'ab-driftblade-impact': -2.5, 'ab-driftblade-slip': 5,
+    'ab-driftblade-still': -0.5, 'ab-driftblade-tailspin': 0.5, 'ab-fire': -1.5, 'ab-gorgemaw-auto': 4.5,
+    'ab-gorgemaw-bottomless': -0.5, 'ab-gorgemaw-gnash': 3.5, 'ab-gorgemaw-iron': 1.5, 'ab-gorgemaw-regurgitate': -1.5,
+    'ab-gorgemaw-spit': 3.5, 'ab-gorgemaw-stonebelly': -0.5, 'ab-gorgemaw-wide': -0.5, 'ab-grovekeeper-auto': 8.5,
+    'ab-grovekeeper-bloom': -1.5, 'ab-grovekeeper-growth': -1, 'ab-grovekeeper-lifebind': -2, 'ab-grovekeeper-moonwell': -2,
+    'ab-grovekeeper-rebirth': -1.5, 'ab-grovekeeper-rejuv': -1.5, 'ab-grovekeeper-seed': -1, 'ab-grovekeeper-thorn': 1.5,
+    'ab-grovekeeper-treant': -1.5, 'ab-heal': -1.5, 'ab-heavy': -1, 'ab-holy': -2,
+    'ab-ironpalm-auto': 0.5, 'ab-ironpalm-bell': -1.5, 'ab-ironpalm-bellows': 1, 'ab-ironpalm-breaker': -1,
+    'ab-ironpalm-crane': -0.5, 'ab-ironpalm-dragon': -2.5, 'ab-ironpalm-drop': -2.5, 'ab-ironpalm-flow': -0.5,
+    'ab-ironpalm-gate': -1, 'ab-ironpalm-kick': 0.5, 'ab-ironpalm-ox': -1.5, 'ab-ironpalm-palm': -0.5,
+    'ab-ironpalm-palms': -1.5, 'ab-ironpalm-pond': -0.5, 'ab-ironpalm-slide': -1, 'ab-ironpalm-wall': -0.5,
+    'ab-ledger': 0.5, 'ab-magic-generic': 0.5, 'ab-marionettist-auto': 8.5, 'ab-marionettist-cross': 2.5,
+    'ab-marionettist-finale': -1.5, 'ab-marionettist-jab': 2, 'ab-marionettist-pirouette': 1, 'ab-marionettist-pull': 5,
+    'ab-marionettist-redcurtain': 2, 'ab-marionettist-string': 4.5, 'ab-marionettist-swap': 0.5, 'ab-marionettist-tangle': 5,
+    'ab-maw': 1, 'ab-melee-generic': 0.5, 'ab-nature': 3.5, 'ab-oathbroker-audit': 1.5,
+    'ab-oathbroker-auto': 8, 'ab-oathbroker-cosign': 0.5, 'ab-oathbroker-default': -1, 'ab-oathbroker-foreclose': -2.5,
+    'ab-oathbroker-moratorium': -1.5, 'ab-oathbroker-reneg': 4.5, 'ab-oathbroker-writ': -1.5, 'ab-pyromancer-auto': 2,
+    'ab-pyromancer-circle': -1.5, 'ab-pyromancer-combust': -2, 'ab-pyromancer-fireball': -2.5, 'ab-pyromancer-fireblast': -2,
+    'ab-pyromancer-meteor': -3, 'ab-pyromancer-phoenix': -2, 'ab-pyromancer-phoenixblast': -2.5, 'ab-pyromancer-phoenixflame': -2,
+    'ab-pyromancer-pyro': -3.5, 'ab-pyromancer-vent': -1.5, 'ab-ranged-generic': 1, 'ab-ranger-aimed': 0.5,
+    'ab-ranger-auto': 8, 'ab-ranger-barrage': 1, 'ab-ranger-caustic': 6, 'ab-ranger-cloak': 0.5,
+    'ab-ranger-explosive': -3.5, 'ab-ranger-falcon': 1.5, 'ab-ranger-mark': 3.5, 'ab-ranger-pierce': 0.5,
+    'ab-ranger-quick': 5.5, 'ab-ranger-rapid': 1.5, 'ab-rune': 0.5, 'ab-runeguard-cleave': -3,
+    'ab-runeguard-glyph': -2.5, 'ab-runeguard-living': -2.5, 'ab-runeguard-mirror': -1.5, 'ab-runeguard-overload': -2.5,
+    'ab-runeguard-sanctum': -2, 'ab-runeguard-strike': -1, 'ab-runeguard-ward': -2, 'ab-runeguard-whirl': -1.5,
+    'ab-shadowblade-auto': 2.5, 'ab-shadowblade-backstab': -0.5, 'ab-shadowblade-blossom': 1, 'ab-shadowblade-dance': 1.5,
+    'ab-shadowblade-evis': 1, 'ab-shadowblade-fury': 0.5, 'ab-shadowblade-rupture': 1.5, 'ab-shadowblade-shadowcut': 1.5,
+    'ab-shadowblade-shadowedge': 0.5, 'ab-shadowblade-smoke': 1, 'ab-shadowblade-step': 2, 'ab-shadowblade-strike': 2,
+    'ab-shadowblade-venom': 2, 'ab-shield': 1.5, 'ab-shot': 6, 'ab-slash': 0.5,
+    'ab-stab': 1.5, 'ab-taunt': 4, 'ab-thermist-auto': 2, 'ab-thermist-bleed': 1,
+    'ab-thermist-cinder': -1.5, 'ab-thermist-equil': -0.5, 'ab-thermist-flare': -2.5, 'ab-thermist-invert': -1.5,
+    'ab-thermist-lance': -1, 'ab-thermist-shock': -2.5, 'ab-thermist-thermocline': -1.5, 'ab-thermist-zero': -2,
+    'ab-thread': 4, 'ab-threadweaver-auto': 8, 'ab-threadweaver-cradle': -0.5, 'ab-threadweaver-embroider': 0.5,
+    'ab-threadweaver-mend': -1, 'ab-threadweaver-needle': 3.5, 'ab-threadweaver-shuttle': 0.5, 'ab-threadweaver-snip': 5,
+    'ab-threadweaver-tapestry': 1, 'ab-threadweaver-tie': 1, 'ab-time': -0.5, 'ab-wind': 5.5,
+    'amb-fountain': -11, 'amb-pond': -16.5, 'amb-tavern': -13, 'amb-town': -18.5,
+    'arrival': -8, 'bm-grubnak-belly-flop': -1, 'bm-grubnak-butchers-charge': -0.5, 'bm-grubnak-chop-chop': 1,
+    'bm-grubnak-cleaver-toss': 1.5, 'bm-grubnak-clogged-drains': 3.5, 'bm-grubnak-dinner-rush': 3.5, 'bm-grubnak-double-chop': 1,
+    'bm-grubnak-family-meal': 0.5, 'bm-grubnak-flambe': -0.5, 'bm-grubnak-flare-up': -1.5, 'bm-grubnak-gorge': 2,
+    'bm-grubnak-grease-fire': 0.5, 'bm-grubnak-intro': -1, 'bm-grubnak-ladle-spin': 4, 'bm-grubnak-larder-toss': 2.5,
+    'bm-grubnak-lid-slam': -1.5, 'bm-grubnak-meat-toss': 1.5, 'bm-grubnak-mince': 1.5, 'bm-grubnak-mise-en-place': 4,
+    'bm-grubnak-order-up': -3, 'bm-grubnak-rolling-meatballs': 2.5, 'bm-grubnak-service': -1, 'bm-grubnak-simmer': 2,
+    'bm-grubnak-spice-rack': 0.5, 'bm-grubnak-stockpot': 1.5, 'bm-grubnak-tenderize': 1, 'bm-grubnak-whisk': 7,
+    'bm-hollowking-barrow-bells': -1.5, 'bm-hollowking-barrow-knell': 1.5, 'bm-hollowking-coffin-lids': 2, 'bm-hollowking-court-of-bones': 1.5,
+    'bm-hollowking-crown-of-graves': 3.5, 'bm-hollowking-dirge': 0.5, 'bm-hollowking-echo-knights': 4.5, 'bm-hollowking-funeral-march': 0.5,
+    'bm-hollowking-grave-cleave': 0.5, 'bm-hollowking-grave-marks': 4, 'bm-hollowking-gravebind': 2.5, 'bm-hollowking-intro': 1.5,
+    'bm-hollowking-judgement': 0.5, 'bm-hollowking-lantern': 8.5, 'bm-hollowking-lights-out': 2, 'bm-hollowking-royal-audience': -1.5,
+    'bm-hollowking-royal-decree': -1, 'bm-hollowking-royal-doom': 1, 'bm-hollowking-royal-gaze': -1.5, 'bm-hollowking-sceptre-sweep': 3.5,
+    'bm-hollowking-the-charge-sheet': 1.5, 'bm-hollowking-the-king-rises': -1, 'bm-hollowking-the-long-night': 1.5, 'bm-hollowking-writ-of-execution': 1.5,
+    'bm-skitterra-acid-deluge': 0.5, 'bm-skitterra-brood': 4.5, 'bm-skitterra-ceiling-ambush': 1, 'bm-skitterra-chrysalis': 4,
+    'bm-skitterra-egg-sacs': 1.5, 'bm-skitterra-eightfold-lunge': 1.5, 'bm-skitterra-fang-rush': 2, 'bm-skitterra-from-the-dark': 2,
+    'bm-skitterra-into-the-dark': 2, 'bm-skitterra-intro': -1, 'bm-skitterra-molt': 3, 'bm-skitterra-silk-lines': 3.5,
+    'bm-skitterra-silk-reel': 3.5, 'bm-skitterra-silk-wrap': 2.5, 'bm-skitterra-snare-weave': 2, 'bm-skitterra-spiderlings': 11,
+    'bm-skitterra-spin': 8, 'bm-skitterra-spinneret-volley': 16, 'bm-skitterra-strand-reel': 5.5, 'bm-skitterra-the-swarm': 11.5,
+    'bm-skitterra-the-web-gives-way': 0.5, 'bm-skitterra-tightening-web': 2, 'bm-skitterra-venom-drip': 4, 'bm-skitterra-venom-mist': -1.5,
+    'bm-skitterra-venom-spit': 4, 'bm-volkar-avalanche': 0.5, 'bm-volkar-ball-lightning': 1.5, 'bm-volkar-chain-lightning': 3,
+    'bm-volkar-distant-thunder': 4, 'bm-volkar-eye-closes': 2, 'bm-volkar-eye-of-the-storm': 4.5, 'bm-volkar-gale-slam': 4,
+    'bm-volkar-gathering-storm': 0.5, 'bm-volkar-grounding-rods': 3, 'bm-volkar-heavens-fall': -1, 'bm-volkar-intro': -1.5,
+    'bm-volkar-lightning-rods': 9, 'bm-volkar-polarity-minus': 3, 'bm-volkar-polarity-plus': 3, 'bm-volkar-polarity-surge': 1.5,
+    'bm-volkar-pulse': 4.5, 'bm-volkar-rod-strike': 1.5, 'bm-volkar-skyfall': -0.5, 'bm-volkar-squall-line': 3,
+    'bm-volkar-static-field': 5, 'bm-volkar-still-air': 3, 'bm-volkar-storm-walls': 2, 'bm-volkar-supercell': 2,
+    'bm-volkar-thunder-crash': 1, 'bm-volkar-thunderclap': 1.5, 'bm-volkar-thunderhead': 2.5, 'bm-volkar-titan-fist': -1.5,
+    'boss-death': -2.5, 'boss-enrage': -2.5, 'boss-impact-heavy': 0.5, 'boss-impact-light': 7,
+    'boss-intro': -1.5, 'buff-on': -0.5, 'chest-drop': 3.5, 'chest-open': -5,
+    'cleanse': -5, 'clear': -4.5, 'crit': 4, 'dash': 6.5,
+    'debuff-on': -1, 'dummy-hit': 3, 'emote-cheer': -6.5, 'emote-laugh': -2,
+    'emote-wave': 2, 'fish-bite': 3, 'fish-cast': 1.5, 'fish-catch': -3,
+    'fish-lost': -0.5, 'fish-reel': -0.5, 'heal-land': -2.5, 'hit-heavy': 5,
+    'hit-light': 9, 'lb-fire': -1.5, 'lb-ready': -5, 'loot-take': -2,
+    'low-hp': -4.5, 'npc-talk': -6, 'ping': 2.5, 'portal-enter': -3,
+    'portal-hum': -22.5, 'pull-count': 0.5, 'pull-count-last': -3.5, 'pull-go': -2,
+    'revive': -2, 'shield-break': 5, 'shield-up': -4, 'step-grass': 8,
+    'step-stone': 8.5, 'step-wood': 1.5, 'story-page': 3.5, 'tg-aoe': 1.5,
+    'tg-buster': 1, 'tg-charge': 0.5, 'tg-gaze': 0.5, 'tg-knockback': 2.5,
+    'tg-raidwide': -0.5, 'tg-spread': 5.5, 'tg-stack': 1.5, 'title-sting': -3,
+    'ui-bounty': 0.5, 'ui-buy': -6, 'ui-click': 2, 'ui-close': -0.5,
+    'ui-equip': -2.5, 'ui-error': -3, 'ui-feat': -7, 'ui-gold': -4,
+    'ui-hover': 13, 'ui-secret': -6, 'ult-alembist': 0.5, 'ult-bastion': 1.5,
+    'ult-bloodreaver': 1, 'ult-driftblade': 6.5, 'ult-fire': -1.5, 'ult-gorgemaw': 1,
+    'ult-grovekeeper': 2.5, 'ult-marionettist': 0.5, 'ult-oathbroker': -1, 'ult-pyromancer': -1,
+    'ult-ranger': 3, 'ult-ready': -4, 'ult-runeguard': -1, 'ult-shadowblade': 4,
+    'ult-thermist': -1, 'ult-threadweaver': -1, 'waymark': 11.5, 'wipe': -2,
+  };
   // @@TRIM-END
 
   // ============================================================================================== 1. interface
@@ -1111,7 +1222,7 @@
     S.partials({ at: 0.2, set: 'hand', f: mf(86), dur: 0.6, peak: 0.08 });
   });
   def('ab-dot', 'ab', S => {
-    S.noise({ color: 'pink', bp: 900, q: 3, dur: 0.3, grain: 0.6, pts: [[0.03, 1], [0.3, 0]], peak: 0.2 });
+    S.noise({ color: 'pink', bp: 900, q: 3, dur: 0.45, grain: 0.6, pts: [[0.05, 1], [0.45, 0]], peak: 0.35 });
     S.tone({ type: 'saw', f: 60, lp: 250, dur: 0.3, am: [9, 0.7], peak: 0.2 });
     S.bubbles({ n: 1, f: 300, f1: 500, peak: 0.1 });
   });
@@ -1126,10 +1237,297 @@
     S.noise({ at: 0.1, color: 'pink', lp: 1500, dur: 0.05, peak: 0.2 });
   });
   def('ab-ranged-generic', 'ab', S => {
-    S.whoosh({ f: 1800, f1: 4500, q: 2, dur: 0.2, peak: 0.28 });
+    S.whoosh({ f: 1800, f1: 4500, q: 2, dur: 0.25, peak: 0.45 });
     S.thud({ at: 0.17, f: 200, f1: 90, dur: 0.08, peak: 0.3 });
     S.noise({ at: 0.17, hp: 2500, dur: 0.04, peak: 0.12 });
   });
+
+  // ---------------------------------------------------------------------------------------------- per-ability voices
+  // Every ability has its own recipe, ab-<class>-<ability id>: one or more family layers above, each at its own pitch,
+  // offset, level and pinned variant, plus accent layers below for the part of the move that is its own (a meteor's
+  // fall, a palm flurry, a rewind's reverse rush). Layer: [name, pitch, at (s), gain, variant]; name is an accent
+  // (ACC) or a family ('fire' = ab-fire) or any recipe.
+  const ACC = {
+    boom: S => { S.thud({ f: 90, f1: 35, dur: 0.4, drive: 2, peak: 0.55 }); S.rumble({ dur: 0.5, f: 160, peak: 0.18, a: 0.01 }); },
+    sparkle: S => { for (let i = 0; i < 5; i++) S.glass({ at: S.rr(0, 0.25), f: S.rr(3000, 6000), dur: 0.35, peak: 0.07, pan: S.rr(-0.4, 0.4) }); },
+    chime: S => S.partials({ set: 'hand', f: mf(79), dur: 0.8, peak: 0.16 }),
+    bell: S => S.bell({ set: 'hand', f: mf(64), dur: 1.2, peak: 0.2 }),
+    sizzle: S => S.sizzle({ dur: 0.5, pts: [[0.05, 1], [0.5, 0]], peak: 0.2 }),
+    crackle: S => S.crackle({ f: 2500, dens: 1.4, dur: 0.6, pts: [[0.05, 1], [0.6, 0]], peak: 0.22 }),
+    roar: S => S.tone({ type: 'saw', f: 60, f1: 52, lp: 420, am: [17, 0.4], drive: 2.5, dur: 0.6, pts: [[0.1, 1], [0.6, 0]], peak: 0.2 }),
+    'whoosh-up': S => S.whoosh({ f: 400, f1: 2400, dur: 0.35, peakAt: 0.8, peak: 0.3 }),
+    'whoosh-down': S => S.whoosh({ f: 2400, f1: 400, dur: 0.35, peakAt: 0.3, peak: 0.3 }),
+    swirl: S => S.whoosh({ f: 600, f1: 1500, dur: 0.7, peakAt: 0.5, am: [7, 0.6], peak: 0.28 }),
+    tick: S => { for (let i = 0; i < 3; i++) S.tick({ at: i * 0.07, f: 2200, peak: 0.18 }); },
+    clock: S => { for (let i = 0; i < 5; i++) S.tick({ at: i * 0.13, f: i % 2 ? 1500 : 1800, peak: 0.18 }); S.partials({ at: 0.65, set: 'hand', f: mf(57), dur: 0.9, peak: 0.14 }); },
+    ring: S => S.metal({ set: 'bar', f: 1500, dur: 0.5, peak: 0.12 }),
+    clang: S => S.metal({ set: 'plate', f: 400, dur: 0.6, peak: 0.22, strike: 0.4 }),
+    snap: S => B.snap(S, 0, 1),
+    zing: S => B.zing(S, 0, 1, 0),
+    creak: S => S.creak({ dur: 0.5, f: 26, f1: 14, res: [500, 1100], q: 10, peak: 0.14 }),
+    leaves: S => S.noise({ color: 'pink', bp: 2500, q: 0.8, grain: 0.8, dur: 0.5, pts: [[0.1, 1], [0.5, 0]], peak: 0.2 }),
+    drip: S => [0, 0.09, 0.2].forEach((at, i) => S.tone({ at, f: 1100 + i * 260, f1: 2200 + i * 400, glide: 0.03, dur: 0.07, peak: 0.18 })),
+    bubble: S => S.bubbles({ n: 8, f: 300, f1: 1200, spread: 0.45, peak: 0.14 }),
+    wet: S => S.splat({ peak: 0.4, dur: 0.25 }),
+    glassbreak: S => { S.noise({ hp: 3000, dur: 0.05, a: 0.0005, peak: 0.25 }); for (let i = 0; i < 6; i++) S.glass({ at: S.rr(0, 0.15), f: S.rr(2200, 5500), dur: 0.35, peak: 0.07 }); },
+    choir: S => S.choir({ notes: [mf(60), mf(67)], vowel: 'a', a: 0.15, dur: 0.9, peak: 0.12 }),
+    drone: S => S.tone({ f: mf(38), fm: [1.5, 2, 0.6], dur: 0.9, a: 0.3, swell: true, lp: 900, peak: 0.16 }),
+    pulse: S => { S.thud({ f: 70, f1: 42, dur: 0.18, peak: 0.4, click: 0.1, lp: 300 }); S.thud({ at: 0.24, f: 80, f1: 46, dur: 0.15, peak: 0.3, click: 0.1, lp: 300 }); },
+    coin: S => S.coins({ n: 2, f: 3600, spread: 0.08, peak: 0.2 }),
+    stamp: S => B.stamp(S, 0, 0.9),
+    quill: S => { for (let i = 0; i < 2; i++) S.scrape({ at: i * 0.08, f: 4600, q: 3, rate: 85, dur: 0.06, pts: [[0.01, 1], [0.06, 0]], peak: 0.14 }); },
+    growl: S => S.tone({ type: 'saw', f: 72, f1: 64, lp: 520, am: [33, 0.6], drive: 2, dur: 0.45, pts: [[0.05, 1], [0.45, 0]], peak: 0.18 }),
+    gulp: S => { S.tone({ f: 200, f1: 80, dur: 0.28, lp: 600, peak: 0.28 }); S.noise({ color: 'brown', lp: 300, dur: 0.2, peak: 0.15 }); },
+    shimmer: S => S.noise({ hp: 6000, dur: 0.6, pts: [[0.3, 1], [0.6, 0]], peak: 0.1 }),
+    frostcrack: S => { S.crackle({ f: 3500, dens: 1.8, dur: 0.3, pts: [[0.01, 1], [0.3, 0]], peak: 0.25 }); S.glass({ f: 4200, dur: 0.4, peak: 0.08 }); },
+    thunk: S => S.wood({ f: 420, dur: 0.14, peak: 0.3 }),
+    flutter: S => S.whoosh({ f: 700, f1: 1600, dur: 0.4, am: [22, 0.7], peak: 0.25 }),
+    puff: S => S.noise({ color: 'pink', lp: 1800, lp1: 600, dur: 0.3, pts: [[0.02, 1], [0.3, 0]], peak: 0.3 }),
+    hum: S => S.tone({ f: 220, fm: [2, 0.8, 0.2], dur: 0.8, a: 0.25, swell: true, peak: 0.12, vib: [5, 0.006] }),
+    tear: S => S.noise({ bp: 2600, bp1: 700, q: 3, grain: 0.8, grainRate: 0.6, dur: 0.3, pts: [[0.02, 1], [0.3, 0]], peak: 0.25 }),
+    string: S => S.pluck({ f: 440, type: 'tri', dur: 0.45, peak: 0.16 }),
+    breath: S => S.noise({ color: 'pink', bp: 800, bp1: 1400, q: 1.2, dur: 0.45, pts: [[0.35, 1], [0.45, 0]], peak: 0.25 }),
+  };
+  function layer(S, l) {
+    const [name, p, at, g, v] = Array.isArray(l) ? l : [l];
+    const fn = ACC[name] || FN['ab-' + name] || FN[name];
+    if (!fn) throw new Error('no layer ' + name);
+    const save = { k: S.k, t0: S.t0, fv: S.forceV, bus: S.bus, rev: S.revDefault, vt: S.verbType };
+    const sub = gain(S, g == null ? 1 : g); sub.connect(S.bus);
+    S.k = save.k * (p || 1); S.t0 = save.t0 + (at || 0); S.forceV = v; S.bus = sub;
+    try { fn(S, S.p); } finally { S.k = save.k; S.t0 = save.t0; S.forceV = save.fv; S.bus = save.bus; S.revDefault = save.rev; S.verbType = save.vt; }
+  }
+  const ABIL = {
+    bastion: {
+      blade: [['slash', 1, 0, 1, 0], ['ring', 1.1, 0.1, 0.6]],
+      edge: [['holy', 1, 0, 0.8, 0], ['slash', 0.9, 0, 0.8, 1], ['chime', 1.2, 0.1]],
+      brace: [['shield', 0.8], ['clang', 0.9, 0, 0.8]],
+      oath: [['buff', 0.9, 0, 1, 0], ['choir', 1, 0.05, 0.7], ['bell', 1, 0.1, 0.6]],
+      banner: [['buff', 1.1, 0, 1, 1], ['flutter', 0.8], ['boom', 1.2, 0.15, 0.6]],
+      bulwark: [['shield', 0.7], ['boom', 0.8, 0, 0.8], ['hum', 0.7, 0.05]],
+      bash: [['heavy', 1.2, 0, 1, 0], ['clang', 1.1, 0.2]],
+      zeal: [['holy', 0.85, 0, 1, 1], ['shield', 1], ['hum', 1.2, 0, 0.6]],
+      hallowed: [['holy', 0.75, 0, 1, 1], ['boom', 1, 0, 0.6], ['shimmer', 1]],
+      avatar: [['holy', 1.1, 0, 1, 2], ['choir', 1.25], ['whoosh-up', 1]],
+      auto: [['slash', 0.95, 0, 0.8, 1]],
+    },
+    bloodreaver: {
+      hack: [['slash', 0.85, 0, 1, 2], ['thunk', 0.8, 0.1]],
+      drain: [['heavy', 0.9, 0, 1, 0], ['pulse', 1], ['wet', 1, 0.25, 0.6]],
+      letting: [['slash', 1.1, 0, 1, 0], ['tear', 1, 0.08]],
+      frenzy: [['buff', 0.8, 0, 1, 2], ['growl', 1], ['pulse', 1.3, 0.1]],
+      warcry: [['taunt', 1], ['growl', 0.8], ['boom', 1, 0.05, 0.7]],
+      undying: [['dot', 0.8], ['drone', 0.6], ['pulse', 0.8, 0.2]],
+      rampage: [['heavy', 0.8, 0, 1, 1], ['growl', 1.2, 0, 0.6], ['wet', 1, 0.28]],
+      lance: [['shot', 0.8, 0, 1, 0], ['wet', 1.3, 0.15], ['whoosh-down', 1.4, 0.05, 0.6]],
+      scab: [['shield', 0.7], ['crackle', 0.6], ['wet', 0.8, 0, 0.5]],
+      moon: [['buff', 0.7, 0, 1, 1], ['drone', 0.8], ['choir', 0.7, 0.1, 0.6]],
+      auto: [['slash', 0.8, 0, 0.8, 0]],
+    },
+    runeguard: {
+      strike: [['rune', 1, 0, 1, 0], ['punch', 1, 0, 0.8, 0]],
+      ward: [['rune', 1.1, 0, 1, 1], ['shield', 1.2], ['hum', 1]],
+      glyph: [['rune', 0.9, 0, 1, 2], ['heavy', 1, 0.05, 0.8, 0], ['crackle', 1.2, 0.1]],
+      overload: [['rune', 0.8, 0, 1, 0], ['buff', 1, 0, 1, 2], ['hum', 1.4, 0.1]],
+      sanctum: [['rune', 1.2, 0, 1, 0], ['shield', 0.9], ['bell', 0.8, 0.1, 0.6]],
+      mirror: [['shield', 1.3], ['rune', 1.3, 0, 0.7, 1], ['sparkle', 0.8, 0.1]],
+      cut: [['rune', 1.15, 0, 0.8, 2], ['slash', 1.05, 0, 1, 1]],
+      cleave: [['rune', 0.75, 0, 0.8, 0], ['heavy', 0.9, 0, 1, 2], ['ring', 0.7, 0.25]],
+      whirl: [['rune', 1.25, 0, 1, 1], ['swirl', 1], ['sparkle', 1.1, 0.2]],
+      living: [['rune', 0.7, 0, 1, 2], ['heavy', 0.7, 0, 1, 1], ['boom', 0.7, 0.3]],
+      auto: [['rune', 1.4, 0, 0.6, 1], ['punch', 1.2, 0, 0.6, 1]],
+    },
+    ranger: {
+      quick: [['shot', 1.1, 0, 1, 0]],
+      pierce: [['shot', 0.9, 0, 1, 1], ['whoosh-up', 1.5, 0.05, 0.7], ['thunk', 1, 0.25]],
+      rapid: [['shot', 1.2, 0, 1, 2], ['shot', 1.25, 0.09, 0.7, 0], ['shot', 1.15, 0.18, 0.6, 1]],
+      barrage: [['buff', 1, 0, 1, 0], ['string', 1, 0, 0.7], ['flutter', 1.2, 0.1]],
+      mark: [['shot', 1.05, 0, 0.6, 2], ['chime', 0.8, 0.1, 0.6], ['dot', 1.2, 0.1, 0.5]],
+      cloak: [['nature', 1, 0, 1, 0], ['shield', 0.9], ['leaves', 1.2]],
+      aimed: [['breath', 1, 0, 0.6], ['shot', 0.8, 0.3, 1, 0], ['thunk', 0.8, 0.6]],
+      caustic: [['shot', 1, 0, 1, 2], ['sizzle', 1, 0.2, 0.7]],
+      explosive: [['shot', 0.95, 0, 1, 1], ['fire', 1, 0.2, 0.8, 2], ['boom', 1, 0.22]],
+      falcon: [['wind', 1.2, 0, 1, 0], ['flutter', 0.7], ['shot', 1.3, 0.15, 0.6, 2]],
+      auto: [['shot', 1.15, 0, 0.7, 1]],
+    },
+    shadowblade: {
+      strike: [['stab', 1, 0, 1, 0]],
+      evis: [['slash', 1.1, 0, 1, 2], ['stab', 0.9, 0.12, 0.8, 1], ['tear', 1.2, 0.15, 0.6]],
+      step: [['dash', 1.2, 0, 1, 0], ['stab', 1.1, 0.18, 0.8, 2], ['puff', 0.8]],
+      dance: [['buff', 1.2, 0, 1, 1], ['swirl', 1.3], ['zing', 1.2, 0.1, 0.5]],
+      venom: [['stab', 0.9, 0, 1, 2], ['drip', 1], ['sizzle', 1.3, 0.1, 0.5]],
+      smoke: [['alchemy', 0.8, 0, 0.6, 2], ['puff', 1], ['whoosh-down', 0.7]],
+      fury: [['slash', 1.2, 0, 1, 0], ['slash', 1.3, 0.1, 0.8, 1], ['slash', 1.15, 0.2, 0.7, 2]],
+      backstab: [['stab', 0.8, 0, 1, 1], ['wet', 1.2, 0.08]],
+      rupture: [['stab', 1.15, 0, 1, 1], ['tear', 0.8, 0.06], ['pulse', 1.4, 0.2, 0.5]],
+      blossom: [['slash', 0.95, 0, 1, 0], ['swirl', 1.5], ['sparkle', 0.9, 0.15]],
+      shadowcut: [['dash', 0.9, 0, 1, 1], ['stab', 1.2, 0.15, 1, 0], ['puff', 1.2, 0.1]],
+      shadowedge: [['slash', 0.9, 0, 1, 1], ['stab', 1.3, 0.1, 0.8, 0], ['ring', 0.8, 0.15]],
+      auto: [['stab', 1.25, 0, 0.7, 2]],
+    },
+    pyromancer: {
+      fireball: [['fire', 1, 0, 1, 0], ['whoosh-up', 0.9, 0, 0.7], ['boom', 1.1, 0.25, 0.7]],
+      pyro: [['fire', 0.8, 0, 1, 1], ['roar', 1], ['boom', 0.8, 0.35]],
+      fireblast: [['fire', 1.25, 0, 1, 0], ['crackle', 1.3], ['thunk', 0.6, 0.02]],
+      combust: [['fire', 0.9, 0, 0.7, 1], ['buff', 0.8, 0, 1, 0], ['roar', 1.3, 0.1, 0.6]],
+      vent: [['fire', 0.7, 0, 1, 1], ['breath', 0.7], ['sizzle', 0.8, 0.1]],
+      smolder: [['fire', 1.1, 0, 0.6, 1], ['crackle', 0.7], ['drone', 1, 0, 0.6]],
+      meteor: [['whoosh-down', 0.7], ['fire', 0.85, 0.3, 1, 2], ['boom', 0.7, 0.35]],
+      circle: [['fire', 1, 0, 0.8, 1], ['rune', 1.2, 0, 0.7, 0], ['swirl', 0.9]],
+      firestep: [['dash', 0.9, 0, 1, 0], ['fire', 1.3, 0, 0.7, 0], ['crackle', 1.5, 0.1]],
+      phoenix: [['fire', 1.2, 0, 1, 1], ['flutter', 0.9], ['whoosh-up', 1.2, 0.1]],
+      phoenixflame: [['fire', 1.4, 0, 1, 0], ['zing', 0.6], ['sizzle', 1.2, 0.1]],
+      phoenixblast: [['fire', 0.75, 0, 1, 2], ['roar', 0.8], ['flutter', 0.7, 0.05]],
+      auto: [['fire', 1.5, 0, 0.5, 0], ['crackle', 1.2, 0, 0.5]],
+    },
+    cleric: {
+      smite: [['holy', 1, 0, 1, 0], ['thunk', 1.2, 0.1, 0.6], ['ring', 1.3, 0.05, 0.5]],
+      mend: [['heal', 1, 0, 1, 0]],
+      petal: [['heal', 1.12, 0, 1, 1], ['holy', 1.2, 0, 0.6, 1], ['leaves', 1.5, 0.1, 0.4]],
+      prayer: [['heal', 0.9, 0, 1, 2], ['choir', 1], ['bell', 1.2, 0.1, 0.5]],
+      intervene: [['holy', 0.8, 0, 1, 1], ['shield', 1], ['whoosh-down', 1.1]],
+      bene: [['heal', 1.25, 0, 1, 0], ['buff', 1.2, 0, 1, 1], ['chime', 1.4, 0.1]],
+      barrier: [['shield', 1.1], ['holy', 1.3, 0, 0.6, 2], ['hum', 1.3]],
+      condemn: [['holy', 0.9, 0, 1, 2], ['fire', 1.2, 0.1, 0.7, 0], ['boom', 1.2, 0.2, 0.6]],
+      dawnbloom: [['heal', 1.2, 0, 1, 2], ['holy', 1.05, 0, 0.8, 0], ['sparkle', 1.3]],
+      dawnsanctum: [['holy', 0.7, 0, 1, 0], ['shield', 0.8], ['choir', 0.85]],
+      auto: [['holy', 1.4, 0, 0.5, 1]],
+    },
+    grovekeeper: {
+      wrath: [['nature', 1, 0, 1, 0], ['thunk', 1, 0.1], ['whoosh-up', 1.1, 0, 0.6]],
+      rejuv: [['nature', 1.1, 0, 1, 1], ['heal', 1, 0, 0.7, 1], ['drip', 1.3, 0.1]],
+      thorn: [['nature', 0.9, 0, 1, 2], ['slash', 0.9, 0.05, 0.8, 1], ['creak', 1.3]],
+      growth: [['nature', 0.8, 0, 1, 0], ['heal', 0.85, 0, 0.8, 2], ['creak', 0.8]],
+      bloom: [['nature', 1.2, 0, 1, 0], ['heal', 1.15, 0, 0.8, 0], ['sparkle', 1]],
+      rebirth: [['nature', 0.7, 0, 1, 1], ['holy', 0.85, 0, 1, 0], ['choir', 0.9]],
+      lifebind: [['nature', 1.05, 0, 1, 2], ['heal', 0.95, 0, 1, 1], ['string', 0.8, 0.05]],
+      moonwell: [['heal', 0.8, 0, 1, 1], ['holy', 0.75, 0, 0.6, 0], ['bubble', 0.7]],
+      seed: [['nature', 1.3, 0, 1, 1], ['heal', 1.3, 0, 0.7, 2], ['thunk', 1.4, 0.15]],
+      treant: [['nature', 0.65, 0, 1, 2], ['heavy', 0.7, 0, 1, 0], ['creak', 0.6], ['boom', 0.6, 0.3]],
+      auto: [['nature', 1.5, 0, 0.5, 0]],
+    },
+    chronomancer: {
+      bolt: [['time', 1, 0, 1, 0], ['zing', 1, 0.05, 0.6]],
+      rewind: [['time', 1.1, 0, 1, 1], ['heal', 1, 0, 0.7, 0], ['whoosh-up', 0.8]],
+      shift: [['time', 0.9, 0, 1, 2], ['dash', 1.3, 0, 0.6, 1]],
+      accel: [['time', 1.25, 0, 1, 0], ['buff', 1.1, 0, 1, 2], ['tick', 1.4, 0, 0.7]],
+      stasis: [['time', 0.7, 0, 1, 1], ['shield', 0.9], ['hum', 0.7]],
+      recall: [['time', 0.8, 0, 1, 2], ['heal', 0.9, 0.05, 0.8, 1], ['bell', 1, 0.2]],
+      chamber: [['time', 1.15, 0, 0.8, 1], ['buff', 0.9, 0, 1, 1], ['ring', 1.2, 0.05]],
+      bubble: [['time', 1.3, 0, 0.8, 2], ['shield', 1.2], ['bubble', 1.5]],
+      warp: [['time', 0.75, 0, 1, 0], ['swirl', 0.8], ['clock', 0.9]],
+      auto: [['time', 1.4, 0, 0.5, 1]],
+    },
+    thermist: {
+      cinder: [['fire', 1.15, 0, 1, 1], ['crackle', 1.4, 0.05, 0.6]],
+      rime: [['frost', 1, 0, 1, 0], ['zing', 1.4, 0, 0.5]],
+      flare: [['fire', 1.05, 0, 1, 2], ['whoosh-up', 1.3], ['boom', 1.3, 0.18, 0.5]],
+      lance: [['frost', 0.85, 0, 1, 1], ['shot', 0.85, 0, 0.8, 1], ['frostcrack', 1, 0.2]],
+      equil: [['shield', 0.95], ['fire', 1.3, 0, 0.4, 0], ['frost', 1.3, 0, 0.4, 0]],
+      invert: [['fire', 0.85, 0, 0.8, 0], ['frost', 0.85, 0.1, 0.8, 2], ['swirl', 0.8]],
+      shock: [['fire', 1, 0, 0.8, 2], ['frost', 1.15, 0, 0.8, 1], ['glassbreak', 1, 0.1]],
+      bleed: [['frost', 1.2, 0, 0.7, 2], ['breath', 1.1], ['sizzle', 1.1, 0.05, 0.6]],
+      thermocline: [['fire', 0.95, 0, 0.8, 1], ['frost', 0.95, 0, 0.8, 0], ['zing', 0.7, 0.05, 0.5]],
+      zero: [['frost', 0.7, 0, 1, 2], ['frostcrack', 0.7], ['boom', 0.8, 0.15]],
+      auto: [['frost', 1.4, 0, 0.5, 1], ['fire', 1.4, 0, 0.4, 0]],
+    },
+    driftblade: {
+      carve: [['slash', 1.05, 0, 1, 0], ['wind', 1.3, 0, 0.5, 0]],
+      slip: [['dash', 1, 0, 1, 1], ['wind', 1.1, 0, 0.6, 2]],
+      hook: [['slash', 0.95, 0, 1, 2], ['wind', 0.9, 0, 0.8, 1], ['swirl', 1.2, 0, 0.5]],
+      cross: [['wind', 0.8, 0, 1, 0], ['slash', 0.85, 0.1, 0.8, 1], ['whoosh-up', 0.7]],
+      still: [['shield', 1.05], ['breath', 0.9], ['ring', 1.4, 0.05]],
+      gale: [['wind', 0.7, 0, 1, 2], ['buff', 0.85, 0, 1, 0], ['swirl', 0.7]],
+      pass: [['slash', 1.2, 0, 1, 1], ['dash', 1.1, 0, 0.5, 0], ['whoosh-down', 1.3]],
+      impact: [['wind', 0.75, 0, 1, 1], ['heavy', 0.85, 0.1, 1, 0], ['boom', 0.9, 0.3]],
+      gyre: [['wind', 1.2, 0, 1, 1], ['slash', 1.25, 0, 0.8, 2], ['swirl', 1.5]],
+      tailspin: [['wind', 1.4, 0, 1, 0], ['slash', 1.1, 0.1, 0.8, 0], ['flutter', 1.3]],
+      galeline: [['wind', 0.85, 0, 1, 2], ['slash', 0.75, 0.05, 1, 2], ['whoosh-up', 0.9, 0.1]],
+      eyestep: [['dash', 0.8, 0, 1, 0], ['slash', 1.35, 0.15, 0.9, 0], ['wind', 1.5, 0, 0.5, 1]],
+      auto: [['slash', 1.15, 0, 0.7, 2], ['wind', 1.6, 0, 0.3, 0]],
+    },
+    alembist: {
+      throw: [['alchemy', 1, 0, 1, 0], ['whoosh-up', 1.2, 0, 0.6]],
+      distill: [['alchemy', 0.85, 0, 1, 1], ['drip', 0.9], ['hum', 1.1]],
+      batch: [['alchemy', 0.7, 0, 1, 2], ['buff', 1, 0, 1, 0], ['bubble', 0.6]],
+      catalyst: [['alchemy', 1.2, 0, 1, 1], ['sparkle', 1.2], ['sizzle', 1, 0.1, 0.6]],
+      blend: [['alchemy', 0.9, 0, 1, 0], ['swirl', 1.1], ['bubble', 1]],
+      ember: [['alchemy', 1.1, 0, 0.8, 0], ['fire', 1.3, 0.05, 0.7, 1]],
+      dew: [['alchemy', 1.3, 0, 0.8, 1], ['drip', 1.4], ['heal', 1.4, 0.1, 0.5, 1]],
+      salt: [['alchemy', 0.95, 0, 0.8, 0], ['crackle', 0.9], ['shield', 1.4, 0, 0.6]],
+      quicksilver: [['alchemy', 1.4, 0, 0.8, 2], ['tick', 1.2], ['zing', 1.1, 0.05, 0.5]],
+      auto: [['alchemy', 1.5, 0, 0.5, 0]],
+    },
+    gorgemaw: {
+      gnash: [['maw', 1, 0, 1, 0]],
+      wide: [['maw', 0.8, 0, 1, 1], ['growl', 0.7], ['breath', 0.6]],
+      spit: [['maw', 1.1, 0, 0.7, 0], ['wet', 1], ['shot', 0.9, 0.05, 0.6, 2]],
+      digest: [['maw', 0.7, 0, 0.8, 2], ['gulp', 0.8], ['heal', 0.8, 0.2, 0.6, 2]],
+      iron: [['shield', 0.6], ['clang', 0.6], ['maw', 1.2, 0, 0.5, 0]],
+      bottomless: [['maw', 0.6, 0, 1, 1], ['gulp', 0.6, 0.2], ['drone', 0.5]],
+      regurgitate: [['maw', 0.9, 0, 1, 2], ['wet', 0.7, 0.1], ['heavy', 0.9, 0.15, 0.7, 1]],
+      stonebelly: [['shield', 0.75], ['boom', 0.7], ['gulp', 1.1, 0.1]],
+      auto: [['maw', 1.25, 0, 0.7, 0]],
+    },
+    oathbroker: {
+      collect: [['ledger', 1, 0, 0.8, 2], ['slash', 1, 0, 1, 0]],
+      reneg: [['ledger', 1.1, 0, 1, 1], ['taunt', 1.1, 0, 0.6]],
+      settle: [['ledger', 0.9, 0, 1, 0], ['coin', 1], ['boom', 1.2, 0.1, 0.5]],
+      lien: [['ledger', 1.2, 0, 1, 2], ['dot', 1.1], ['quill', 1.1]],
+      writ: [['ledger', 0.85, 0, 1, 1], ['shield', 1], ['stamp', 0.9, 0.3]],
+      default: [['ledger', 0.7, 0, 1, 0], ['heavy', 0.8, 0.05, 1, 0], ['clang', 0.8, 0.3]],
+      audit: [['ledger', 1.3, 0, 1, 1], ['quill', 0.9], ['tick', 1, 0.2]],
+      moratorium: [['ledger', 0.8, 0, 1, 2], ['shield', 0.8], ['hum', 0.8]],
+      cosign: [['ledger', 1.15, 0, 1, 0], ['shield', 1.15], ['quill', 1.3, 0.2]],
+      foreclose: [['ledger', 0.75, 0, 1, 1], ['heavy', 0.7, 0, 1, 2], ['stamp', 0.7, 0.3], ['coin', 0.8, 0.35]],
+      auto: [['ledger', 1.4, 0, 0.6, 0]],
+    },
+    ironpalm: {
+      palm: [['punch', 1.2, 0, 1, 2]],
+      fist: [['punch', 0.9, 0, 1, 0], ['thunk', 0.8, 0.07, 0.5]],
+      kick: [['punch', 0.75, 0, 1, 1], ['whoosh-up', 1, 0, 0.6]],
+      crane: [['punch', 1.3, 0, 1, 0], ['wind', 1.3, 0, 0.6, 0], ['flutter', 1.4]],
+      flow: [['punch', 1.15, 0, 1, 2], ['punch', 1.25, 0.1, 0.8, 2], ['punch', 1.05, 0.2, 1, 0]],
+      gate: [['punch', 0.95, 0, 1, 0], ['heavy', 1.1, 0, 0.6, 0], ['whoosh-up', 0.8, 0.05]],
+      drop: [['heavy', 0.85, 0, 1, 0], ['punch', 0.7, 0.2, 0.8, 1], ['boom', 0.85, 0.3]],
+      wall: [['punch', 0.8, 0, 1, 1], ['shield', 0.85], ['thunk', 0.6, 0.1]],
+      breaker: [['heavy', 1.05, 0, 1, 1], ['crackle', 0.8, 0.25]],
+      ox: [['heavy', 0.75, 0, 1, 2], ['punch', 0.8, 0.1, 0.8, 0], ['growl', 0.9, 0.05, 0.5]],
+      palms: [['punch', 1.1, 0, 0.8, 2], ['punch', 1.2, 0.06, 0.7, 0], ['punch', 1, 0.12, 0.8, 2], ['punch', 1.3, 0.18, 0.7, 0], ['punch', 0.95, 0.24, 1, 1]],
+      read: [['shield', 1.25], ['breath', 1.2], ['thunk', 1.1, 0.05]],
+      skin: [['shield', 0.65], ['clang', 0.7, 0.05], ['buff', 0.7, 0, 1, 1]],
+      bell: [['buff', 0.95, 0, 1, 2], ['bell', 0.8], ['boom', 1.1, 0, 0.4]],
+      bellows: [['buff', 0.75, 0, 1, 0], ['breath', 0.8], ['roar', 1.2, 0.1, 0.4]],
+      dragon: [['heavy', 0.95, 0, 1, 2], ['whoosh-up', 0.6], ['roar', 0.9, 0.15, 0.6]],
+      pond: [['shield', 0.9], ['drip', 0.7], ['hum', 0.9]],
+      slide: [['heavy', 0.7, 0, 1, 1], ['punch', 0.85, 0.15, 0.8, 2], ['crackle', 0.6, 0.2]],
+      auto: [['punch', 1.35, 0, 0.7, 1]],
+    },
+    threadweaver: {
+      needle: [['thread', 1.2, 0, 1, 0], ['stab', 1.4, 0.05, 0.6, 0]],
+      tie: [['thread', 0.9, 0, 1, 1], ['string', 1, 0.1]],
+      mend: [['thread', 1.05, 0, 0.8, 2], ['heal', 1.05, 0, 0.8, 2]],
+      snip: [['thread', 1.3, 0, 1, 2], ['snap', 1]],
+      shuttle: [['thread', 0.8, 0, 1, 0], ['shot', 1.1, 0, 0.7, 0], ['thunk', 1.2, 0.2]],
+      tapestry: [['thread', 0.7, 0, 1, 2], ['shield', 1.05], ['string', 0.7]],
+      embroider: [['thread', 1.15, 0, 1, 1], ['heal', 1.2, 0, 0.6, 0], ['quill', 1.5]],
+      cradle: [['thread', 0.95, 0, 1, 0], ['shield', 0.75], ['string', 1.3, 0.1]],
+      auto: [['thread', 1.4, 0, 0.6, 1]],
+    },
+    marionettist: {
+      jab: [['stab', 1.1, 0, 1, 1], ['string', 1.5, 0, 0.5]],
+      pull: [['thread', 1, 0, 1, 2], ['creak', 1.2], ['whoosh-down', 0.9]],
+      cross: [['thread', 0.85, 0, 1, 1], ['stab', 0.95, 0.1, 0.9, 2], ['tear', 1.1, 0.15, 0.5]],
+      pirouette: [['slash', 1.15, 0, 1, 1], ['thread', 1.1, 0, 0.6, 0], ['swirl', 1.3]],
+      swap: [['thread', 1.25, 0, 0.8, 0], ['dash', 1.15, 0, 1, 1], ['thunk', 1.5, 0.2]],
+      finale: [['thread', 0.75, 0, 1, 0], ['heavy', 0.9, 0.05, 1, 1], ['bell', 1.1, 0.3, 0.5]],
+      tangle: [['thread', 0.9, 0, 1, 2], ['creak', 0.9], ['dot', 1, 0.1, 0.6]],
+      redcurtain: [['thread', 0.8, 0, 0.7, 1], ['buff', 0.85, 0, 1, 2], ['flutter', 0.6]],
+      string: [['thread', 1.35, 0, 1, 0], ['zing', 1.2]],
+      auto: [['thread', 1.2, 0, 0.6, 2], ['thunk', 1.6, 0, 0.5]],
+    },
+  };
+  for (const cls in ABIL) for (const id in ABIL[cls]) { const spec = ABIL[cls][id]; def('ab-' + cls + '-' + id, 'ab', S => { for (const l of spec) layer(S, l); }); }
 
   // ---------------------------------------------------------------------------------------------- Ultimate signatures
   // Played together with ult-fire: a short layer in each class's own idiom.
@@ -1321,7 +1719,7 @@
     S.thud({ at: 0.58, f: 120, f1: 45, dur: 0.3, drive: 2, peak: 0.5 }); S.splat({ at: 0.58, peak: 0.32 });
   });
   def('bm-grubnak-mince', 'bm', S => { B.cleaver(S, 0, 0.8); B.cleaver(S, 0.22, 0.9); B.cleaver(S, 0.44, 1); });
-  def('bm-grubnak-double-chop', 'bm', S => { B.cleaver(S, 0, 1.1); B.cleaver(S, 0.35, 1.25); S.rumble({ at: 0.55, dur: 0.6, f: 150, peak: 0.15, a: 0.01 }); });
+  def('bm-grubnak-double-chop', 'bm', S => { B.cleaver(S, 0, 1.1); B.cleaver(S, 0.35, 1.25); S.rumble({ at: 0.55, dur: 0.7, f: 150, peak: 0.3, a: 0.01 }); S.whoosh({ f: 300, f1: 1200, dur: 0.55, peak: 0.3 }); });
   def('bm-grubnak-chop-chop', 'bm', S => { [0, 0.16, 0.32, 0.48].forEach((at, i) => B.cleaver(S, at, 0.75 + i * 0.08)); });
   def('bm-grubnak-ladle-spin', 'bm', S => {
     S.whoosh({ f: 250, f1: 700, dur: 1.3, peakAt: 0.5, peak: 0.4, q: 0.8, am: [3.2, 0.8] });
@@ -1337,8 +1735,9 @@
     S.thud({ at: 0.22, f: 90, f1: 40, dur: 0.4, peak: 0.5 });
   });
   def('bm-grubnak-meat-toss', 'bm', S => {
-    S.whoosh({ f: 250, f1: 700, dur: 0.45, peakAt: 0.7, peak: 0.35, am: [6, 0.3] });
+    S.whoosh({ f: 250, f1: 700, dur: 0.45, peakAt: 0.7, peak: 0.6, am: [6, 0.3] });
     S.splat({ at: 0.45, peak: 0.7, dur: 0.4 });
+    S.noise({ at: 0.47, color: 'pink', bp: 700, q: 2, grain: 0.5, dur: 0.5, pts: [[0.03, 1], [0.5, 0]], peak: 0.25 });
     S.thud({ at: 0.45, f: 80, f1: 40, dur: 0.3, peak: 0.45 });
   });
   def('bm-grubnak-family-meal', 'bm', S => {
@@ -1443,7 +1842,8 @@
     S.rumble({ at: 0.45, dur: 1.3, f: 140, peak: 0.35, a: 0.02 });
   });
   def('bm-grubnak-cleaver-toss', 'bm', S => {
-    S.whoosh({ f: 2000, f1: 3000, dur: 0.6, am: [17, 0.8], peak: 0.3 });
+    S.whoosh({ f: 2000, f1: 3000, dur: 0.6, am: [17, 0.8], peak: 0.55 });
+    S.whoosh({ f: 600, f1: 1100, dur: 0.6, am: [17, 0.7], peak: 0.3 });
     S.wood({ at: 0.58, f: 300, dur: 0.2, peak: 0.45 }); S.metal({ at: 0.58, set: 'bar', f: 1700, dur: 0.5, peak: 0.15 });
     S.thud({ at: 0.58, f: 150, f1: 70, dur: 0.15, peak: 0.4 });
   });
@@ -1485,8 +1885,9 @@
   });
   def('bm-skitterra-eightfold-lunge', 'bm', S => {
     S.skitter({ n: 30, dur: 0.45, bias: 0.6, f: 2000, peak: 0.3 });
-    S.whoosh({ at: 0.4, f: 400, f1: 1800, dur: 0.25, peak: 0.35 });
+    S.whoosh({ at: 0.35, f: 400, f1: 1800, dur: 0.3, peak: 0.55 });
     B.bite(S, 0.62, 1.1);
+    S.tone({ at: 0.62, type: 'saw', f: 70, lp: 400, am: [30, 0.6], dur: 0.4, peak: 0.15 });
   });
   def('bm-skitterra-silk-lines', 'bm', S => {
     for (let i = 0; i < 5; i++) { B.zing(S, i * 0.12, 1, i % 2 ? 0.5 : -0.5); S.pluck({ at: i * 0.12 + 0.12, f: S.rr(500, 900), type: 'tri', dur: 0.3, peak: 0.1 }); }
@@ -1550,7 +1951,9 @@
     S.rumble({ dur: 1.8, f: 250, peak: 0.08, sub: 0 });
   });
   def('bm-skitterra-spiderlings', 'bm', S => {
-    for (let i = 0; i < 3; i++) S.skitter({ at: i * 0.08, n: 20, dur: 1.1, f: 2500 + i * 400, peak: 0.2, pan: -0.5 + i * 0.5 });
+    for (let i = 0; i < 3; i++) S.skitter({ at: i * 0.08, n: 26, dur: 1.1, f: 2200 + i * 400, peak: 0.2, pan: -0.5 + i * 0.5 });
+    S.noise({ color: 'pink', bp: 2600, q: 1.2, grain: 0.9, grainRate: 2.2, dur: 1.2, pts: [[0.3, 1], [0.9, 0.8], [1.2, 0]], peak: 0.25 });
+    S.noise({ bp: 4500, q: 3, am: [34, 0.8], dur: 1.2, pts: [[0.3, 1], [1.2, 0]], peak: 0.1 });
   });
   def('bm-skitterra-chrysalis', 'bm', S => {
     [0, 0.35, 0.7].forEach(at => { B.silk(S, at, 0.5, 0.9, 0.9); S.whoosh({ at, f: 900, f1: 2200, dur: 0.4, am: [8, 0.5], peak: 0.15 }); });
@@ -1575,7 +1978,8 @@
     for (let i = 0; i < 5; i++) { B.zing(S, i * 0.13, 0.9, S.rr(-0.6, 0.6)); S.noise({ at: i * 0.13, bp: 1000, dur: 0.04, a: 0.001, peak: 0.2 }); }
   });
   def('bm-skitterra-molt', 'bm', S => {
-    S.crackle({ f: 1500, dens: 0.8, dur: 0.9, pts: [[0.2, 1], [0.9, 0]], peak: 0.3 });
+    S.crackle({ f: 1500, dens: 0.8, dur: 0.9, pts: [[0.2, 1], [0.9, 0]], peak: 0.5 });
+    S.noise({ color: 'pink', bp: 900, q: 1.5, grain: 0.8, dur: 0.9, pts: [[0.2, 1], [0.9, 0]], peak: 0.2 });
     for (let i = 0; i < 4; i++) S.wood({ at: S.rr(0, 0.6), f: S.rr(900, 1500), dur: 0.06, peak: 0.25 });
     S.splat({ at: 0.7, peak: 0.35, dur: 0.4 });
     S.creak({ at: 0.6, dur: 0.5, f: 25, f1: 10, res: [500, 1100], q: 6, peak: 0.08 });
@@ -1588,8 +1992,9 @@
     S.wood({ at: 0.88, f: 700, dur: 0.06, peak: 0.25 });
   });
   def('bm-skitterra-snare-weave', 'bm', S => {
-    [0, 0.12, 0.24, 0.36].forEach((at, i) => B.zing(S, at, 1, i % 2 ? 0.6 : -0.6));
-    B.silk(S, 0.4, 0.8, 1);
+    [0, 0.12, 0.24, 0.36].forEach((at, i) => { B.zing(S, at, 1, i % 2 ? 0.6 : -0.6); S.pluck({ at: at + 0.14, f: S.rr(300, 450), type: 'tri', dur: 0.4, peak: 0.12 }); });
+    B.silk(S, 0.4, 0.8, 1.6);
+    S.tone({ at: 0.4, f: 110, f1: 140, dur: 0.8, a: 0.5, swell: true, lp: 600, type: 'saw', peak: 0.12 });
   });
 
   // ---------------------------------------------------------------------------------------------- Volkar, the Storm Titan
@@ -1701,7 +2106,9 @@
     S.rumble({ dur: 2.5, f: 130, peak: 0.4, a: 0.05 });
   });
   def('bm-volkar-chain-lightning', 'bm', S => {
-    for (let i = 0; i < 4; i++) { const pan = -0.6 + i * 0.4; S.zap({ at: i * 0.12, f: 100, dur: 0.12, peak: 0.25, pan }); S.crack({ at: i * 0.12, peak: 0.25, dur: 0.15, pan }); }
+    for (let i = 0; i < 4; i++) { const pan = -0.6 + i * 0.4; S.zap({ at: i * 0.12, f: 100, dur: 0.18, peak: 0.3, pan }); S.crack({ at: i * 0.12, peak: 0.25, dur: 0.15, pan }); }
+    S.zap({ f: 55, dur: 0.7, bf: 900, a: 0.02, peak: 0.25, pts: [[0.05, 1], [0.45, 0.8], [0.7, 0]] });
+    S.rumble({ at: 0.1, dur: 1.0, f: 180, peak: 0.3, a: 0.05, grain: 0.5 });
   });
   def('bm-volkar-ball-lightning', 'bm', S => {
     S.zap({ f: 70, f1: 110, dur: 1.2, bf: 1800, am: [9, 0.5], a: 0.1, peak: 0.22 });
@@ -1767,7 +2174,8 @@
     S.echo({ time: 0.28, fb: 0.5, lp: 1500, kill: 2.5 });
     S.creak({ dur: 0.8, f: 20, f1: 35, res: [900, 2200, 3400], q: 15, peak: 0.2 });
     for (let i = 0; i < 3; i++) S.metal({ at: S.rr(0, 0.6), set: 'plate', f: S.rr(700, 1100), dur: 0.2, peak: 0.08 });
-    S.whoosh({ at: 0.6, f: 300, f1: 1200, dur: 0.4, peak: 0.3, ech: 0.6 });
+    S.whoosh({ at: 0.6, f: 300, f1: 1200, dur: 0.45, peak: 0.55, ech: 0.6 });
+    S.choir({ at: 0.5, notes: [mf(45), mf(52)], vowel: 'u', dur: 1.4, a: 0.3, peak: 0.12 });
   });
   def('bm-hollowking-barrow-bells', 'bm', S => {
     S.space('hall', 0.5);
@@ -1945,7 +2353,7 @@
   }, 0.25);
 
   // ---------------------------------------------------------------------------------------------- install
-  const API = { mf, st, CAT, TRIM, strict: false, names: () => DEFS.map(d => d[0]), loops: () => LOOPS.map(d => d[0]), installed: false };
+  const API = { mf, st, CAT, TRIM, ABIL, ACC, strict: false, names: () => DEFS.map(d => d[0]), loops: () => LOOPS.map(d => d[0]), installed: false };
   function install(Snd) {
     for (const [name, fn] of DEFS) {
       Snd.define(name, (ctx, out, t0, p) => {

@@ -145,6 +145,14 @@
       curtaincall: ULT('marionettist'), auto: 'ab-thread',
     },
   };
+  // Every ability has its own voice, ab-<class>-<id> (sfx-synth.js ABIL: the families above layered at their own
+  // pitch, timing and variant, plus accents), so the table above now documents each one's character; the taunt and
+  // the Ultimate (ult-fire + ult-<class>) stay shared.
+  for (const cls in CLASS) for (const id in CLASS[cls]) {
+    const a = CLASS[cls][id];
+    if (id === 'taunt' || (Array.isArray(a) && a[0] === 'ult-fire')) continue;
+    CLASS[cls][id] = 'ab-' + cls + '-' + id;
+  }
   // ids that mean the same thing in every class
   const SHARED = { dash: 'dash', taunt: 'ab-taunt', limit: 'lb-fire', lb: 'lb-fire', crit: 'crit' };
   const FAMILIES = new Set(['slash', 'heavy', 'stab', 'punch', 'shot', 'fire', 'frost', 'holy', 'nature', 'time', 'rune', 'thread', 'alchemy', 'wind', 'maw', 'ledger', 'taunt', 'heal', 'shield', 'buff', 'dot', 'magic-generic', 'melee-generic', 'ranged-generic']);
@@ -160,7 +168,7 @@
   function forAbility(classId, abilityId, kind) {
     const c = CLASS[classId], id = abilityId == null ? '' : String(abilityId);
     // the auto-attack: its own kind (kits.js auto.kind) first, the class's table entry second
-    if (id === 'auto' && kind && Object.prototype.hasOwnProperty.call(KIND, String(kind).toLowerCase()) && typeof KIND[String(kind).toLowerCase()] === 'string') return KIND[String(kind).toLowerCase()];
+    if (id === 'auto' && kind && String(kind).toLowerCase() !== 'spark' && Object.prototype.hasOwnProperty.call(KIND, String(kind).toLowerCase()) && typeof KIND[String(kind).toLowerCase()] === 'string') return KIND[String(kind).toLowerCase()];   // ('spark' is shared by five casters: their own table entry decides)
     if (c && Object.prototype.hasOwnProperty.call(c, id)) return c[id];
     if (/^ult(-|$)|^ultimate$/.test(id) && IDIOM[classId]) return ULT(classId);
     if (Object.prototype.hasOwnProperty.call(SHARED, id)) return SHARED[id];

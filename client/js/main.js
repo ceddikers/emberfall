@@ -375,7 +375,7 @@
         player.castBar = { ab: ev.ab, t0: now, dur: ev.dur, to: ev.h > 0 ? ev.target : null, h: ev.h > 0 ? ev.h : 0 };
         Net.send(Object.assign({ t: 'castStart', i: actor.abilities.indexOf(ev.ab), dur: +ev.dur.toFixed(2) }, ev.h > 0 ? { h: ev.h, to: ev.target } : null));
         if (typeof CAST_VFX !== 'undefined') CAST_VFX.start(player, ev.dur, ev.ab);   // the gathering (it follows castBar to its end)
-        if (SH) SH.castStart();
+        if (SH) SH.castStart(player.cls.id, ev.ab);
         break;
       case 'interrupted':
         player.st.action = null; if (player.castBar && player.castBar.stop == null) player.castBar.stop = now;   // (its bar shows the interrupt: drawCastBar)
