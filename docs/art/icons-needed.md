@@ -618,7 +618,7 @@
 - **Mantle of the Dead Court** — `items/m_deadcourt.png`
   *(the Hollow King, armour)* A deep plum-black royal mantle with a high stiff collar, a tarnished gold chain of office across the chest, a small grave-green brooch, and a frayed, grave-dusted hem.
 
-## Ultimate icons (17)
+## Ultimate icons (17): painted 2026-10-22 and in client/icons/<class>/<id>.png (briefs kept for reference)
 
 Each class's Ultimate (the T key). Until these arrive the hotbar borrows one of the class's other icons. Same style as the ability icons, but each is the biggest moment in the class's kit: one bold subject filling more of the frame, in the class's own colours, with a single gold rim-light to set it apart from the everyday buttons.
 
