@@ -1634,7 +1634,8 @@
   Net.on('roll', msg => {
     if (!raid) return;
     if (msg.clear) { raid.rollers.clear(); return; }
-    raid.rollers.set(msg.id, { x: msg.x, y: msg.y, a: msg.a, sp: msg.sp, r: msg.r, delay: msg.delay, start: now, tag: msg.tag });
+    raid.rollers.set(msg.id, { x: msg.x, y: msg.y, a: msg.a, sp: msg.sp, r: msg.r, delay: msg.delay, start: now, tag: msg.tag, pre: !!msg.pre });
+    if (msg.pre) return;   // (a lane preview: just the path, the ball comes with its own message)
     if (msg.tag === 'orb') BOSS_VFX.orbForm(msg.x, msg.y);
     else later(0.5, () => raid && BOSS_VFX.meatballLand(msg.x, msg.y));
   });

@@ -1100,6 +1100,12 @@ class FightSim {
     this.emit({ t: 'roll', id: r.id, x: Math.round(r.x), y: Math.round(r.y), a: +r.angle.toFixed(3), sp: r.speed, r: r.r, delay: r.delay, tag: r.tag });
     return r;
   }
+  // Visual only (never a hazard): the lane a roller will take, sent when the cast starts so the path shows from the first
+  // moment of the cast; `delay` is the time from now until that roller starts to roll
+  rollerPreview(opts) {
+    this.rollPre = (this.rollPre || 0) + 1;
+    this.emit({ t: 'roll', pre: 1, id: 'p' + this.rollPre, x: Math.round(opts.x), y: Math.round(opts.y), a: +opts.angle.toFixed(3), sp: opts.speed, r: opts.r, delay: opts.delay, tag: opts.tag || 'meatball' });
+  }
   rollerPos(r, t) { const d = Math.max(0, t - r.rollAt) * r.speed; return { x: r.x + Math.cos(r.angle) * d, y: r.y + Math.sin(r.angle) * d }; }
   clearRollers() { this.rollers.clear(); this.emit({ t: 'roll', clear: true }); }
   updateRollers() {

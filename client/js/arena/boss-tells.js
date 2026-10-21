@@ -2024,9 +2024,19 @@ const BossTells = (() => {
     const hw = m.r + ROLL_PAD, L = AR() * 2;
     ctx.save(); ARENA.trace(ctx); ctx.clip();
     const shape = { kind: 'rect', x: m.x - ca * hw, y: m.y - sa * hw, angle: m.a, len: L + hw, w: hw * 2 };
-    SHAPES.trace(ctx, shape); ctx.fillStyle = rgba(COL.danger, 0.06 * a); ctx.fill();
-    ctx.setLineDash([14, 12]); ctx.lineDashOffset = -t * 40;
-    for (const side of [-1, 1]) line(ctx, m.x - sa * hw * side, m.y + ca * hw * side, m.x - sa * hw * side + ca * L, m.y + ca * hw * side + sa * L, rgba(COL.danger, a), 2);
+    SHAPES.trace(ctx, shape); ctx.fillStyle = rgba(COL.danger, 0.17 * a); ctx.fill();
+    // bold edges (a glow under a crisp dashed line) and chevrons marching down the whole lane to the far wall,
+    // so the path reads as clearly as the gravy trail it leaves behind
+    for (const side of [-1, 1]) line(ctx, m.x - sa * hw * side, m.y + ca * hw * side, m.x - sa * hw * side + ca * L, m.y + ca * hw * side + sa * L, rgba(COL.danger, 0.22 * a), 8);
+    ctx.setLineDash([16, 10]); ctx.lineDashOffset = -t * 40;
+    for (const side of [-1, 1]) line(ctx, m.x - sa * hw * side, m.y + ca * hw * side, m.x - sa * hw * side + ca * L, m.y + ca * hw * side + sa * L, rgba(COL.danger, Math.min(1, a * 1.15)), 3);
+    ctx.setLineDash([]);
+    const step = 110, off = (t * 130) % step, ch = Math.min(hw * 0.55, 30);
+    for (let d = m.r + 30 + off; d < L; d += step) {
+      ctx.save(); ctx.translate(m.x + ca * d, m.y + sa * d); ctx.rotate(m.a);
+      poly(ctx, [-ch * 0.5, -ch, ch * 0.5, 0, -ch * 0.5, ch, -ch * 0.15, 0], rgba(COL.danger, 0.34 * a * Math.max(0.25, 1 - d / L)), null);
+      ctx.restore();
+    }
     ctx.restore();
   }
   // r: { x, y, a, sp, r, delay, start, tag } (client clock)
@@ -2035,6 +2045,11 @@ const BossTells = (() => {
       const rollAt = m.start + m.delay, end = rollAt + (2 * AR() + 300) / m.sp;
       if (t > end) { rollers.delete(id); continue; }
       const ca = Math.cos(m.a), sa = Math.sin(m.a);
+      if (m.pre) {   // the lane shown ahead of the lob: it fades in over the cast, and the real roller takes over at rollAt
+        if (t >= rollAt) { rollers.delete(id); continue; }
+        rollLane(ctx, m, ca, sa, t, 0.3 + 0.4 * clamp((t - m.start) / Math.max(0.5, m.delay), 0, 1));
+        continue;
+      }
       if (m.tag === 'orb') {
         // it gathers out of the air at the cliff edge, crackles in place (chevrons show its heading), then drifts
         const d = Math.max(0, t - rollAt) * m.sp, x = m.x + ca * d, y = m.y + sa * d;

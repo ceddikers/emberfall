@@ -370,6 +370,7 @@ const GRUBNAK = {
       f.cast('Rolling Meatballs', d, 'meatballs');
       lanes.slice(0, H ? 4 : 3).forEach((a, i) => {
         const R = ARENA.edge(a) - 50;
+        f.rollerPreview({ x: Math.cos(a) * R, y: Math.sin(a) * R, angle: a + Math.PI, speed: H ? 330 : 300, r: 44, delay: d - 1.4 + i * (H ? 0.5 : 0.7) + 1.7 });   // (the lane shows from the cast start)
         f.afterKeep(d - 1.4 + i * (H ? 0.5 : 0.7), () => f.roller({ x: Math.cos(a) * R, y: Math.sin(a) * R, angle: a + Math.PI,
           speed: H ? 330 : 300, delay: 1.7, dmg: dmg.meatball, r: 44 }));
       });
