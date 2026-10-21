@@ -118,11 +118,13 @@ const Net = (() => {
         p.x = num(msg.x, -3000, 3000, p.x); p.y = num(msg.y, -3000, 3000, p.y);
         // a: the move's id, so a move a talent swapped onto a button is found by others (specs.js abilityById)
         broadcast({ t: 'cast', id: p.id, i: msg.i, a: /^[a-z]{1,16}$/.test(msg.a) ? msg.a : undefined, x: p.x, y: p.y, tx: num(msg.tx, -3000, 3000, p.x), ty: num(msg.ty, -3000, 3000, p.y),
-          ally: Number.isInteger(msg.ally) ? msg.ally : null, s: msg.s ? 1 : 0, c: clock(msg.c) }, p.id);
+          ally: Number.isInteger(msg.ally) ? msg.ally : null, s: msg.s ? 1 : 0, c: clock(msg.c), st: Number.isInteger(msg.st) && msg.st >= 0 && msg.st < 8 ? msg.st : undefined }, p.id);   // (st: a combo's step)
         break;
       case 'castStart':
         if (!p.cls || !Number.isInteger(msg.i) || msg.i < 0 || msg.i > 5) return;
-        broadcast({ t: 'castStart', id: p.id, i: msg.i, dur: num(msg.dur, 0, 5, 1) }, p.id);
+        // h, to: a heal's expected size and the ally it's aimed at (the party frames' incoming-heal preview)
+        broadcast(Object.assign({ t: 'castStart', id: p.id, i: msg.i, dur: num(msg.dur, 0, 5, 1) },
+          Number.isFinite(msg.h) && msg.h >= 1 && Number.isInteger(msg.to) && msg.to >= 0 && msg.to < 1e6 ? { h: Math.round(Math.min(msg.h, 1e5)), to: msg.to } : null), p.id);
         break;
       case 'castStop':
         if (p.cls) broadcast({ t: 'castStop', id: p.id }, p.id);

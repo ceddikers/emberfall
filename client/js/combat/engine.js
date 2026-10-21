@@ -48,6 +48,7 @@ const ENGINE = {
   // enemy skill in the last AUTO_ENGAGE seconds. Each kit sets its own { kind, potency, range } in `auto`.
   AUTO_EVERY: 2.6,
   AUTO_ENGAGE: 8,
+  ULT_THREAT: 0.5,   // the threat multiplier on a non-tank's Ultimate hits (a burst should not take the boss off its tank)
 };
 
 // Buffs a healer puts on ONE chosen ally (Kit.allyBuff): what each one does and how long, and its look (cls/icon: the
@@ -171,6 +172,8 @@ class Kit {
     this.ultSteadyUntil = this.now + lock + 0.2;
     if (ab.dr) this.mitigate('self', ab.dr, lock + 0.2, { ab, kind: 'ult' });
     this.stats.ults = (this.stats.ults || 0) + 1;
+    // a non-tank's Ultimate is a big burst: for its hits (a window's too, plus a moment after it) the threat is halved (ENGINE.ULT_THREAT)
+    this._ultThrUntil = this.now + (ab.mode === 'window' && ab.window ? ab.window.dur + 1.5 : 4);
     if (ab.mode === 'window' && ab.window) {
       const w = ab.window;
       this.ultWin = { start: this.now, end: this.now + w.dur, dur: w.dur, ab };
@@ -452,7 +455,7 @@ class Kit {
     if (cost) { this.g[pool.key] = Math.max(0, (this.g[pool.key] || 0) - cost); this.lastSpend = this.now + (ct > 0 ? 0 : lock); }
     if (ct > 0) {
       this.cast = { ab, target, start: this.now, end: this.now + ct };
-      this.env.emit({ type: 'castStart', ab, dur: ct, target });
+      this.env.emit({ type: 'castStart', ab, dur: ct, target, h: this.healPreview(ab, target) });
     } else {
       this.lockLen = lock;
       this.lockUntil = this.now + lock;
@@ -463,7 +466,9 @@ class Kit {
 
   resolve(ab, target) {
     this.stats.casts[ab.id] = (this.stats.casts[ab.id] || 0) + 1;
-    this.env.emit({ type: 'used', ab, target });
+    // st: which step of its combo this press is (ab.fxStep, read before the effect moves it on), so its look on every
+    // client matches the hit the kit really made (ability-vfx.js: Blade Chain, Hack & Maul)
+    this.env.emit({ type: 'used', ab, target, st: ab.fxStep ? ab.fxStep(this) : undefined });
     // a tank's taunt rides on this button (kits.js TAUNT_CARRY): the world taunts only if it's ready and wanted
     if (this.def.tauntOn && this.env.taunt && this.baseId(ab) === this.def.tauntOn) this.env.taunt(target);
     if (ab.ult) this.ultFire(ab);
@@ -564,7 +569,7 @@ class Kit {
     if (party.dmg || tgt.vuln || self.dmg) this.stats.burstDamage += amount;
     this.stats.last = this.now;
     // (opts.tgt: an enemy id when a hit lands on something other than what you last aimed at: a Passing Strike)
-    this.env.emit({ type: 'damage', amount, crit, potency: pot, positional: posHit, ab: opts.ab, dot: !!opts.dot, auto: !!opts.auto, threat: opts.threat || 1, tgt: opts.tgt });
+    this.env.emit({ type: 'damage', amount, crit, potency: pot, positional: posHit, ab: opts.ab, dot: !!opts.dot, auto: !!opts.auto, threat: opts.threat || (this.now < (this._ultThrUntil || 0) && this.def.role !== 'tank' ? ENGINE.ULT_THREAT : 1), tgt: opts.tgt });
     if (opts.item) return { amount, crit, posHit };   // an item's extra hit doesn't feed the kit or other items
     if (this.def.onDamage) this.def.onDamage(this, amount, crit, opts);
     if (crit) this.itemHook('crit');
@@ -602,6 +607,16 @@ class Kit {
     this.env.emit({ type: 'heal', target, amount, crit: false, ab: opts.ab });
     this.itemHook('heal');
     return amount;
+  }
+  // What a cast heal on an ally should land for (the party frames' incoming-heal preview): ab.healPot (a number or
+  // fn(k)) or the {h:N} its text names, worked out the way healAmount does but without its crit and spread (no rng, so
+  // the fight is unchanged). 0 for a move that heals nothing, or for a fallen ally (a raise, not a heal).
+  healPreview(ab, target) {
+    if (!ab || ab.target !== 'ally' || typeof target !== 'number' || (this.env.isDead && this.env.isDead(target))) return 0;
+    let pot = typeof ab.healPot === 'function' ? ab.healPot(this) : ab.healPot;
+    if (pot == null) { const m = typeof ab.desc === 'string' && /\{h:(\d+)\}/.exec(ab.desc); pot = m ? +m[1] : 0; }
+    if (!(pot > 0)) return 0;
+    return Math.round(pot * ENGINE.POT_SCALE * (1 + (this.def.healMod ? this.def.healMod(this, { ab }) : 0)) * (1 + (this.gear().power || 0)) * (1 + this.fxMod('heal')));
   }
   hot(target, potencyPerTick, ticks, interval = 3, opts = {}) {
     const { amount } = this.healAmount(potencyPerTick, opts);

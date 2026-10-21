@@ -661,7 +661,7 @@ function ipGlyph(c, x, y, key, s, o = {}) {
 GAUGES.breath = function (c, k, w, h, t) {
   const g = k.g, now = k.now, max = k.poolMax(), v = Math.max(0, Math.min(1, (g.breath || 0) / max));
   const cx = 50, cy = 52, R = 36;
-  const winded = !!g.winded;   // (below 18 until it's back to 60: resting pace, the keys don't glow, presses are taps)
+  const winded = !!g.winded;   // (below 18 until it's back to 45: resting pace, the keys don't glow, presses are taps)
   const resting = now - k.lastSpend >= IRONPALM.pool.delay || k.has('skin') || winded;
   const shake = k.has('stagger') ? Math.sin(t * 60) * 2 : 0;
   c.save(); c.translate(shake, 0);

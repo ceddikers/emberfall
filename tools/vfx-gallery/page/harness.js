@@ -350,6 +350,9 @@
         lunges: [], husks: [], knights: new Map(), doom: new Map(), pol: new Map(), adds: new Map(), lanterns: [], eggs: null, edgeWarn: null, night: false, mode: 'normal' };
       S.room = ArenaView.newRoom();
       if (typeof Stagecraft !== 'undefined') Stagecraft.reset();
+      // his body's state (BOSS_VFX.drawBody: poses, flinch, enrage, entrance, fall) runs on the stage clock, new per row
+      S.boss.show = null; S.boss.st = newSt(); S.props = {}; S.propsUntil = {};
+      if (BOSS_VFX.setClock) BOSS_VFX.setClock(() => S.now);
     };
     S.applyCtx = (c) => {
       const R = S.raid;
@@ -373,6 +376,8 @@
         if (now > end + 1.5) R.tgs.delete(id);
       }
       for (const [id, p] of R.puddles) if (now > p.end) R.puddles.delete(id);
+      for (const key of Object.keys(S.propsUntil)) if (now > S.propsUntil[key]) { delete S.props[key]; delete S.propsUntil[key]; }
+      bd.st.props = S.props;
       for (const a of R.adds.values()) a.st.t = now;
       for (const k of R.knights.values()) k.st.t = now;
       for (const [id, th] of R.tethers) if (now > th.end + 1) R.tethers.delete(id);
@@ -404,11 +409,69 @@
         if (msg.fail) BOSS_VFX.failed(tg);
         break;
       }
-      case 'bcast':
-        BOSS_VFX.castStart(S.floorId, msg.anim, msg.dur, bd);
+      case 'bcast': {
+        const castPose = BOSS_VFX.castStart(S.floorId, msg.anim, msg.dur, bd, msg.name);
+        // what the cast shows on his body (main.js Net.on('bcast'): the same props, held the same time)
+        const end = now + msg.dur, prop = (k, v, until) => { S.props[k] = v; S.propsUntil[k] = until; };
+        switch (msg.anim) {
+          case 'mince': prop('mince', { side: msg.side, second: msg.second || null }, end + (msg.second ? 2.2 : 0.2)); if (msg.then) prop('next', msg.then, end + 0.3); break;
+          case 'ladle': prop('held', 'ladle', end + 0.4); later(msg.dur - 0.5, () => prop('spin', true, S.now + 0.9)); break;
+          case 'lid': prop('held', 'lid', end + 0.2); break;
+          case 'boil': prop('steam', true, end + 0.5); break;
+          case 'spit': case 'mist': prop('venom', true, end + 0.3); break;
+          case 'wrap': case 'silk': case 'web': prop('silk', true, end + 0.3); break;
+          case 'brood': prop('brood', true, end + 0.6); break;
+          case 'lunge': case 'molt': prop('rear', true, end + 0.5); break;
+          case 'reel': prop('silk', true, end + 4.5); prop('rear', true, end + 0.5); break;
+          case 'meatballs': prop('meat', true, end + 0.3); break;
+          case 'clap': case 'storm': prop('sky', true, end + 0.4); break;
+          case 'fist': case 'avalanche': prop('fist', true, end + 0.2); break;
+          case 'surge': prop('polar', true, end + 0.3); break;
+          case 'rods': case 'crash': case 'field': prop('charge', true, end + 0.4); break;
+          case 'gale': prop('inhale', true, end + 0.1); break;
+          case 'walls': prop('spin', true, end + 10); break;
+          case 'gaze': case 'lightsout': prop('gaze', true, end + 0.3); break;
+          case 'lids': case 'decree': prop('raise', true, end - 0.3); break;
+          case 'doom': prop('doom', true, end + 0.4); break;
+          case 'knell': case 'bells': prop('knell', true, end + 0.3); break;
+          case 'stomp': case 'ring': prop('graves', true, end + 0.2); break;
+          case 'rise': case 'night': prop('rise', true, end + 0.3); break;
+          case 'sweep': prop('raise', true, end - 0.45); break;
+          case 'flop': prop('flop', true, end); if (msg.then) prop('next', msg.then, end + 1.6); later(msg.dur, () => prop('flat', true, S.now + 1.3)); break;
+          case 'throw': case 'larder': case 'hook': prop('toss', true, end + 0.1); break;
+          case 'gut': prop('steam', true, end + 0.3); break;
+          case 'flambe': prop('brandy', true, end + 0.3); break;
+          case 'eggs': prop('brood', true, end + 0.6); break;
+          case 'fang': prop('rear', true, end + 0.4); prop('venom', true, end + 0.2); break;
+          case 'volley': prop('silk', true, end + 4.5); prop('rear', true, end + 0.5); break;
+          case 'deluge': prop('venom', true, end + 0.3); prop('rear', true, end + 0.3); break;
+          case 'strand': case 'cocoon': case 'ambush': prop('silk', true, end + 0.4); prop('rear', true, end + 0.3); break;
+          case 'chain': case 'orbs': prop('charge', true, end + 0.4); break;
+          case 'skyfall': prop('sky', true, end + 0.4); break;
+          case 'audience': prop('audience', true, end + 0.3); break;
+          case 'march': prop('rise', true, end + 0.3); break;
+          case 'bind': prop('graves', true, end + 0.3); break;
+        }
+        for (const [k, aft] of castPose || []) prop(k, true, end + aft);
+        bd.st.props = S.props;
         if (msg.anim !== 'mince' && msg.anim !== 'boil') bd.st.action = { type: 'attack', t0: now + msg.dur - 0.45, dur: 1.2 };
         break;
+      }
+      // the boss's presentation moments (main.js: pdmg 'enrage', fev 'behind', the fight's end, the title card)
+      case 'show':
+        if (msg.k === 'intro') BOSS_VFX.intro(S.floorId, bd);
+        else if (msg.k === 'death') { BOSS_VFX.bossDeath(S.floorId, bd); BOSS_VFX.victory(S.units, 2.2); }
+        else if (msg.k === 'wipe') BOSS_VFX.wipe(bd, S.floorId);
+        else if (msg.k === 'enrageLand') BOSS_VFX.enrageLand(S.floorId, bd);
+        else if (msg.k === 'behind') BOSS_VFX.behind(bd, msg.n || 1);
+        else if (msg.k === 'hit') BOSS_VFX.bossHit(bd, msg.v || 0.45);
+        break;
       case 'banim':
+        if (msg.name === 'ladle') { S.props.held = 'ladle'; S.propsUntil.held = now + msg.dur + 0.3; later(msg.dur - 0.5, () => { S.props.spin = true; S.propsUntil.spin = S.now + 0.9; }); }
+        else if (msg.name === 'lid') { S.props.held = 'lid'; S.propsUntil.held = now + msg.dur + 0.2; }
+        else if (msg.name === 'wrap') { S.props.silk = true; S.propsUntil.silk = now + msg.dur + 0.3; }
+        else if (msg.name === 'field') { S.props.charge = true; S.propsUntil.charge = now + msg.dur + 0.3; }
+        else if (msg.name === 'leap' && S.floorId === 'grubnak' && !S.room.props.some(p => p.kind === 'pot')) { S.props.carry = true; S.propsUntil.carry = now + 0.9; }
         if (msg.name === 'auto') { bd.st.action = { type: 'attack', t0: now - 0.45, dur: 1.0 }; const tgt = bd.tg != null ? S.entById(bd.tg) : S.units[0]; later(0.08, () => BOSS_VFX.auto(bd, tgt)); }
         else if (msg.name === 'leap') later(msg.dur || 0.6, () => BOSS_VFX.leap(bd.x, bd.y));
         else if (msg.name === 'gorge' || msg.name === 'roar') { bd.st.action = { type: 'attack', t0: now, dur: 1.4 }; BOSS_VFX.roar(bd.x, bd.y, S.floorId); }
@@ -430,7 +493,9 @@
       case 'husk': R.husks.push({ x: msg.x, y: msg.y, f: msg.f, end: now + msg.dur, st: Object.assign(newSt(), { props: { husk: true } }) }); BOSS_VFX.husk(msg.x, msg.y); break;
       case 'eggs': R.eggs = { pts: msg.pts, start: now, end: now + msg.dur }; later(msg.dur, () => msg.pts.forEach(([x, y]) => BOSS_VFX.hatch(x, y))); break;
       case 'roll':
-        R.rollers.set(msg.id, { x: msg.x, y: msg.y, a: msg.a, sp: msg.sp, r: msg.r, delay: msg.delay, start: now, tag: msg.tag });
+        if (msg.clear) { R.rollers.clear(); break; }
+        R.rollers.set(msg.id, { x: msg.x, y: msg.y, a: msg.a, sp: msg.sp, r: msg.r, delay: msg.delay, start: now, tag: msg.tag, pre: !!msg.pre });
+        if (msg.pre) break;   // (a lane preview: just the path; the ball comes with its own message)
         if (msg.tag === 'orb') BOSS_VFX.orbForm(msg.x, msg.y); else later(0.5, () => BOSS_VFX.meatballLand(msg.x, msg.y));
         break;
       case 'rollhit': { const e = S.entById(msg.pid), r = R.rollers.get(msg.id); if (e) (r && r.tag === 'orb' ? BOSS_VFX.orbHit : BOSS_VFX.meatballHit)(e); break; }
@@ -478,22 +543,25 @@
     ArenaView.drawEdge(ctx, now, R.edgeWarn);
     if (!S.lite) ArenaView.drawRoomUnder(ctx, S.room, now, { W: view.fw * S.zoom * scale, H: view.fh * S.zoom * scale, DPR: 1, zoom: S.zoom * scale, cam: { x: view.cx - view.fw / 2, y: view.cy - view.fh / 2 }, units: S.units, entById: S.entById, boss: bd });
     const tellEnv = { tgs: R.tgs, boss: bd, bossId: S.floorId, entById: S.entById, hard: R.mode === 'hard', pol: R.pol, units: S.units, covers: [...R.posts.values()].map(p => ({ x: p.x, y: p.y })), props: S.room.props, room: S.room };
+    // (the same order as main.js renderArena: the floor effects go under the telegraphs, the rims over everything)
     counted(() => {
       ArenaView.drawZones(ctx, R.zones, now);
       ArenaView.drawPuddles(ctx, R.puddles, now);
       if (R.eggs) ArenaView.eggs(ctx, R.eggs.pts, clamp((now - R.eggs.start) / Math.max(0.1, R.eggs.end - R.eggs.start), 0, 1), now);
+      FX.draw(ctx, true); VFX.draw(ctx, 'ground');
       ArenaView.drawTelegraphs(ctx, R.tgs, now, tellEnv);
       BossTells.drawRollers(ctx, R.rollers, now, tellEnv);
       BossTells.drawSweeps(ctx, R.sweeps, now, tellEnv);
       BossTells.air(ctx, R.tgs, now, tellEnv);
     });
-    if (!S.lite) ArenaView.drawBossRing(ctx, { x: bd.x, y: bd.y, f: bd.f });
-    counted(() => { FX.draw(ctx, true); VFX.draw(ctx, 'ground'); BossTells.rims(ctx, R.tgs, now, tellEnv); if (R.pol.size) ArenaView.polarityAuras(ctx, S.units, R.pol, now); });
+    const ringA = BOSS_VFX.presence ? BOSS_VFX.presence(bd) : 1;
+    if (!S.lite && ringA > 0.02) { ctx.save(); ctx.globalAlpha = ringA; ArenaView.drawBossRing(ctx, { x: bd.x, y: bd.y, f: bd.f }); ctx.restore(); }
+    counted(() => { BossTells.rims(ctx, R.tgs, now, tellEnv); if (R.pol.size) ArenaView.polarityAuras(ctx, S.units, R.pol, now); });
     const all = [...S.units.map(u => ({ y: u.y, u })), { y: bd.y, boss: true }, ...[...R.adds.values()].map(a => ({ y: a.y, a })), ...R.husks.filter(h => now < h.end).map(h => ({ y: h.y, h })),
       ...[...R.posts.values()].filter(p => now < p.end).map(p => ({ y: p.y, p })), ...[...R.knights.values()].map(k => ({ y: k.y, k })),
       ...R.lanterns.filter(l => l.carrier == null).map(l => ({ y: l.y, l })), ...S.room.props.map(pr => ({ y: pr.y + (pr.shape === 'rect' ? 0 : pr.r * 0.4), pr }))].sort((a, b) => a.y - b.y);
     for (const e of all) { if (S.lite) break;
-      if (e.boss) drawBoss(ctx, S.bossDef, bd.x, bd.y, bd.f, bd.st, 1.3);
+      if (e.boss) { if (BOSS_VFX.drawBody) BOSS_VFX.drawBody(ctx, S.bossDef, bd, { scale: 1.3, alpha: 1 }); else drawBoss(ctx, S.bossDef, bd.x, bd.y, bd.f, bd.st, 1.3); }
       else if (e.u) drawHero(ctx, e.u.cls, e.u.x, e.u.y, e.u.angle, e.u.st, 1.85, { lift: e.u.lift, spec: e.u.spec });
       else if (e.a) drawAdd(ctx, e.a.kind, e.a.x, e.a.y, e.a.f, e.a.st, e.a.enr, 1.5);
       else if (e.h) { ctx.save(); ctx.globalAlpha = 0.8; drawBoss(ctx, S.bossDef, e.h.x, e.h.y, e.h.f, e.h.st, 1.3); ctx.restore(); }
@@ -536,7 +604,34 @@
         plan: S2 => { S2.applyCtx(ev.ctx); return items.map(([dt, m]) => [dt, () => handle(S2, m)]); },
       });
     }
+    // rollers: the lane previews from the cast start, the hand-over to each ball, and the floor once they've all gone
+    for (const r of rows) {
+      if (r.kind !== 'roll') continue;
+      const ev = job.events.find(e => e.key === r.name.split(' · ')[0]);
+      const real = ev ? ev.items.filter(([, m]) => m.t === 'roll' && !m.pre && !m.clear) : [];
+      if (!real.length) continue;
+      const first = real[0][0], last = real[real.length - 1][0] + real[real.length - 1][1].delay;
+      r.impact = first; r.times = () => [Math.max(0.3, first * 0.4), first - 0.05, real[0][0] + real[0][1].delay + 0.4, last + 0.05, last + 1.6];
+    }
+    // his presentation (BOSS_VFX.drawBody): the entrance, the fall, the wipe, the enrage to its lethal moment, a soft
+    // enrage pass, his flinch. main.js plays these off the title card, the fight's end, pdmg 'enrage', fev 'behind', hits.
+    const def0 = (typeof BOSSES !== 'undefined' && BOSSES.find(b => b.id === job.id)) || {};
+    const SHOWS = [
+      ['show:intro', 'the entrance (title card)', [[0, { t: 'show', k: 'intro' }]], [0.15, 0.55, 0.95, 1.4, 2.4]],
+      ['show:death', 'his fall (fight clear), then the confetti', [[0, { t: 'show', k: 'death' }]], [0.4, 0.85, 1.3, 2.1, 3.2]],
+      ['show:wipe', 'the wipe', [[0, { t: 'show', k: 'wipe' }]], [0.3, 1.0, 2.2, 4, 8.7]],
+      ['show:enrage', 'the enrage cast (8 s), its lethal moment, then the wipe', [[0, { t: 'bcast', anim: 'enrage', dur: 8, name: def0.enrageName || 'Enrage' }], [8, { t: 'show', k: 'enrageLand' }], [9, { t: 'show', k: 'wipe' }]], [1.2, 5, 7.9, 8.2, 10.5]],
+      ['show:behind', 'the soft enrage pass', [[0, { t: 'show', k: 'behind', n: 2 }]], [0.1, 0.3, 0.6, 1.5, 3]],
+      ['show:hit', 'flinches: a hit, a crit, an Ultimate', [[0, { t: 'show', k: 'hit', v: 0.45 }], [0.5, { t: 'show', k: 'hit', v: 0.75 }], [1.0, { t: 'show', k: 'hit', v: 1 }]], [0.02, 0.1, 0.52, 1.02, 1.3]],
+    ];
+    for (const [name, note, items, ts] of SHOWS) {
+      rows.push({
+        name, kind: 'show', note, impact: ts[1], times: () => ts,
+        plan: S2 => { const ev0 = job.events.find(e => e.ctx); if (ev0) S2.applyCtx(ev0.ctx); return items.map(([dt, m]) => [dt, () => handle(S2, m)]); },
+      });
+    }
     // BOSS_VFX exports the fight never reached: called directly with stand-in arguments
+    for (const n of ['intro', 'bossDeath', 'wipe', 'enrageLand', 'behind', 'bossHit', 'bossHp', 'victory']) used.add(n);   // (the show rows above)
     const reached = new Set();
     for (const name of Object.keys(BOSS_VFX)) {
       if (used.has(name)) continue;
@@ -561,11 +656,14 @@
           if (ev0) S2.applyCtx(ev0.ctx);
           const hero = S2.units[0] || S2.addUnit(1000, 'bastion', null, 0, 160, -Math.PI / 2), bd = S2.boss;
           const arg = p => {
+            // (exports whose parameters mean something else than the names suggest: the real call sites' values)
+            if (name === 'edgeClose') return p === 'from' ? ARENA.r + 80 : ARENA.r;
+            if (name === 'meatballWall') return { x: ARENA.hw - 40, y: hero.y, a: 0, sx: -ARENA.hw + 60, sy: hero.y }[p];
             if (/^(x|sx|hitX)$/.test(p)) return hero.x; if (/^(y|sy)$/.test(p)) return hero.y;
             if (/^(e|ent|target|a|k|from)$/.test(p)) return hero; if (/^(ents|units|pts)$/.test(p)) return p === 'pts' ? S2.units.map(u => ({ x: u.x, y: u.y })) : S2.units;
             if (/^(b|boss|bossDraw)$/.test(p)) return bd; if (/^(dur|sec)$/.test(p)) return 2; if (/^r$/.test(p)) return 120; if (/^(to)$/.test(p)) return { x: hero.x + 120, y: hero.y };
             if (p === 'room') return S2.room; if (p === 'bossKind') return S2.floorId; if (p === 'ok' || p === 'torn') return true; if (p === 's') return 1;
-            if (p === 'color') return '#ffffff'; if (p === 'fl') return { id: 1, kind: 'thread', x: hero.x, y: hero.y, x1: hero.x - 100, y1: hero.y, x2: hero.x + 100, y2: hero.y, r: 60 };
+            if (p === 'color') return '#ffffff'; if (p === 'fl') return { id: 1, kind: 'thread', x: hero.x, y: hero.y, x1: hero.x - 100, y1: hero.y, x2: hero.x + 100, y2: hero.y, r: name === 'floorFalls' ? ARENA.R : 60, r2: ARENA.R * 0.62, paths: [] };
             return undefined;
           };
           return [[0, () => handle(S2, { t: 'call', fn: () => fn(...params.map(arg)) })]];

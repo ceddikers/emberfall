@@ -153,7 +153,7 @@ const TALENTS = {
     ],
     [
       { id: 'ranger_explosive', name: 'Explosive Shot', ab: 'rapid', grants: true,
-        text: 'Rapid Fire becomes Explosive Shot: spend 50 Focus to plant a charge in the boss that blows 2.5s later for {d:340}. Every Quick Shot or Piercing Arrow that lands before then makes the blast 30% bigger.' },
+        text: 'Rapid Fire becomes Explosive Shot: spend 50 Focus to plant a charge in the boss that blows 2.5s later for {d:300} ({d:640} if planted in your Hunter\'s Mark). Every Quick Shot or Piercing Arrow that lands before then makes the blast 30% bigger.' },
       { id: 'ranger_focusfire', name: 'Focus Fire', ab: 'quick', text: 'At full Focus, Quick Shot no longer wastes it: instead of giving Focus it hits twice as hard.' },
       { id: 'ranger_tracking', name: 'Tracking', ab: 'quick', text: 'Each Quick Shot that doesn\'t light Keen Eye gives 2 more Focus than the one before (up to 10 more). Keen Eye starts the count over.' },
     ],
@@ -166,8 +166,8 @@ const TALENTS = {
     [
       { id: 'ranger_falcon', name: 'Falcon', ab: 'barrage', grants: true,
         text: 'Barrage becomes Falcon (30s): your falcon dives onto the boss and harries it for 10s, striking every 2s for {d:90}. Every Keen Eye you light while it hunts sends it into a diving strike for {d:200} at once.' },
-      { id: 'ranger_storm', name: 'Storm Arrow', ab: 'pierce', text: 'A Keen Eye Piercing Arrow now calls down lightning: it arcs into the boss twice more, each strike a tenth as strong.',
-        spec: { sharpshooter: 'A Keen Eye Aimed Shot now calls down lightning: it arcs into the boss twice more, each strike a tenth as strong.', venomstrike: 'A Keen Eye Caustic Arrow now calls down lightning: it arcs into the boss twice more, each strike a tenth as strong.' } },
+      { id: 'ranger_storm', name: 'Storm Arrow', ab: 'pierce', text: 'A Keen Eye Piercing Arrow now calls down lightning: it arcs into the boss twice more, each strike 6% as strong.',
+        spec: { sharpshooter: 'A Keen Eye Aimed Shot now calls down lightning: it arcs into the boss twice more, each strike 6% as strong.', venomstrike: 'A Keen Eye Caustic Arrow now calls down lightning: it arcs into the boss twice more, each strike 6% as strong.' } },
       { id: 'ranger_volley', name: 'Wild Volley', ab: 'quick', text: 'Every Quick Shot crit now calls a volley of arrows down on the boss for {d:90}.' },
     ],
   ],

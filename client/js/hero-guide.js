@@ -14,10 +14,10 @@ const HERO_GUIDE = {
     ],
   },
   bloodreaver: {
-    passive: { name: 'Blood for Blood', icon: 'drain', desc: 'Every hit you take goes into the bank. Crimson Drain cashes it (the damage since your last Drain, 6s at most): it heals you for 35% of it and hits up to {d:700} more the more it holds. Getting hit is fuel.' },
+    passive: { name: 'Blood for Blood', icon: 'drain', desc: 'Every hit you take goes into the bank. Crimson Drain cashes it (the damage since your last Drain, 6s at most): it heals you for 35% of it and hits up to {d:700} more the more it holds. Cash it while the blood is warm, within 1.2s of a big hit, or the bank goes cold. Getting hit is fuel.' },
     combos: [
       { keys: ['q', 'q', 'e'], text: 'Hack, Maul, Bloodletting between hits: the fastest way to fill Blood.' },
-      { keys: ['w'], text: 'Drain right after a tankbuster lands, not before.' },
+      { keys: ['w'], text: 'Hold your GCD as a tankbuster comes in, then Drain the instant it lands, while the blood is warm.' },
       { keys: ['r', 'w', 'q', 'w', 'q', 'w'], text: 'Frenzy, then three free Drains spread out, so each one has a bank to cash.' },
       { keys: ['d', 'w'], text: 'War Cry before a tankbuster, then the free Drain after it: the party heals with you.' },
       { keys: ['w', 'f', 'w', 'w'], text: 'Empty your Blood, then Undying into a tankbuster: the hit refills it, and doubled, free Drains pull you back up.' },
@@ -40,7 +40,7 @@ const HERO_GUIDE = {
     combos: [
       { keys: ['q', 'w'], text: 'Cash Keen Eye procs before a third one is lost.' },
       { keys: ['f', 'q', 'e'], text: 'Barrage, Quick Shot (fires three times, triple Focus), then Rapid Fire.' },
-      { keys: ['r', 'f', 'q', 'e', 'e', 'e'], text: 'Pool 100 Focus, then Hunter\'s Mark and Barrage: Rapid Fire costs 25 in the Mark, so it all goes out in volleys.' },
+      { keys: ['r', 'f', 'q', 'e', 'e', 'e'], text: 'Pool 100 Focus, then Hunter\'s Mark and Barrage: Rapid Fire costs 25 in the Mark and hits twice as hard, so it all goes out in volleys there.' },
       { keys: ['r', 'w', 'f', 'q'], text: 'In the Mark, cash a Keen Eye while a second is banked: it readies Barrage again.' },
       { keys: ['d', 't', 'q', 'w'], text: 'Pool Focus, Hunter\'s Cloak, then Starfall Volley: every volley also mends the party, and each Quick Shot under the stars lights Keen Eye.' },
     ],
@@ -123,10 +123,10 @@ const HERO_GUIDE = {
 
 // Ironpalm: the combos are its named strings (Light Q, Heavy W, Kick E)
 HERO_GUIDE.ironpalm = {
-  passive: { name: 'Strings', icon: 'fist', desc: 'No global cooldown. Every press of Light, Heavy or Kick is a quick hit that costs Breath, and strings of them pressed in rhythm become named moves. A press made just as the last one recovers is Crisp: 10% harder, and 40% cheaper in Breath.' },
+  passive: { name: 'Strings', icon: 'fist', desc: 'No global cooldown. Every press of Light, Heavy or Kick is a quick hit that costs Breath, and strings of them pressed in rhythm become named moves. A press made just as the last one recovers is Crisp: 10% harder, and 40% cheaper in Breath. The glowing key lights on that beat.' },
   combos: [
     { keys: ['q', 'q', 'w'], text: 'Rising Gate: a launcher that draws the boss to you.' },
-    { keys: ['q', 'q', 'w', 'e', 'e'], text: 'Rising Gate, then two Kicks: Heaven\'s Drop on the airborne boss.' },
+    { keys: ['q', 'q', 'w', 'e', 'e'], text: 'Rising Gate, then two Kicks: Heaven\'s Drop on the airborne boss. While it is in the air any key carries on.' },
     { keys: ['q', 'e', 'w', 'w'], text: 'Thousand Palms, the finisher.' },
     { keys: ['w', 'e', 'e'], text: 'Tiger Wall, a blocking stance, before a heavy blow. W W E is Stone Breaker, W W W Iron Ox.' },
     { keys: ['e', 'q'], text: 'Crane Step gives Breath back without stopping.' },
@@ -168,10 +168,10 @@ Object.assign(HERO_GUIDE, {
     passive: { name: 'The Ledger', icon: 'settle', desc: '60% of every hit you take is written into the Ledger and billed to you 8s later. Pay it down with your combo, push it back, settle it cheap, or make the boss pay.' },
     combos: [
       { keys: ['q', 'q', 'q'], text: 'Dun, Levy, Collect: every hit pays the oldest lines down.' },
-      { keys: ['r', 'q', 'q', 'q'], text: 'Lien on a long Ledger, then Collect: the boss pays a third of each bill, and every payment strikes it too.' },
-      { keys: ['w', 'r'], text: 'Renegotiate the lines about to fall due, then Lien: the boss pays two thirds of every pushed line.' },
+      { keys: ['r', 'q', 'q', 'q'], text: 'Lien on a long Ledger, then Collect: the boss pays half of each bill, and every payment strikes it too.' },
+      { keys: ['w', 'r'], text: 'Renegotiate the lines about to fall due, then Lien: the boss pays every pushed line in full.' },
       { keys: ['e'], text: 'Settle a long Ledger for half while your healer has you topped.' },
-      { keys: ['w', 'f'], text: 'Let the Ledger grow, Renegotiate it, then Default: torn up, the boss struck for every pushed line in full, but your credit closed for 10s.' },
+      { keys: ['w', 'f'], text: 'Take a tankbuster without Writ, Renegotiate the Ledger past 30% of your HP, then Default: a debt that size strikes the boss for more than it held, but your credit closes for 10s.' },
       { keys: ['w', 't'], text: 'Renegotiate to keep a long Ledger open, then Final Reckoning: it all comes due on the boss, and the party is shielded from the proceeds.' },
     ],
   },

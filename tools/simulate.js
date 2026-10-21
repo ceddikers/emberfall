@@ -97,7 +97,7 @@ function runSim(classId, skill, seed, specId, talents) {
       }
       if (ev.type === 'shield' && ev.target === 'self') state.shield = { amt: ev.amount, max: ev.amount, end: state.t + ev.dur, tag: ev.tag };
       // a Ward on an ally (Spellwarden): assume it soaks a bit over half before it ends (an ally isn't tanking)
-      if (ev.type === 'shield' && ev.tag === 'ward' && ev.target !== 'self') state.allyWards.push({ end: state.t + ev.dur });
+      if (ev.type === 'shield' && ev.tag === 'ward' && ev.target !== 'self') state.allyWards.push({ start: state.t, end: state.t + ev.dur });
       if (ev.type === 'shield' && ev.target === 'party') { state.eff += Math.min(state.healDebt, ev.amount * 4); state.healDebt = Math.max(0, state.healDebt - ev.amount * 4); }
       if (TANK_SIM.emit(state, k, ev)) return;   // the advanced tanks' jaw and Ledger (below)
       if (ev.type === 'mit' && ev.target === 'self') {
@@ -165,7 +165,9 @@ function runSim(classId, skill, seed, specId, talents) {
       if (state.t >= nextBuster) { nextBuster += BUSTER_EVERY; hitTank(BUSTER_DMG, 'buster'); lastBusterAt = state.t; }
       if (state.t >= nextRaidwide) { nextRaidwide += RAIDWIDE_EVERY; hitTank(RAIDWIDE_DMG, 'raidwide'); }
       TANK_SIM.tick(state, k, hitTank);
-      for (const w of state.allyWards) if (state.t >= w.end) { w.done = true; k.notify('shieldEnd', { tag: 'ward', frac: 0.55 }); }
+      // (an ally's Ward breaks all the way if a tankbuster or raidwide landed while it was up; otherwise it soaks a little)
+      const lastRw = nextRaidwide - RAIDWIDE_EVERY, during = (w, at) => at >= w.start && at <= w.end;
+      for (const w of state.allyWards) if (state.t >= w.end) { w.done = true; k.notify('shieldEnd', { tag: 'ward', frac: during(w, lastBusterAt) || during(w, lastRw) ? 1 : 0.3 }); }
       state.allyWards = state.allyWards.filter(w => !w.done);
       if (state.shield && state.t >= state.shield.end) { k.notify('shieldEnd', { tag: state.shield.tag, frac: 1 - state.shield.amt / state.shield.max }); state.shield = null; }
     }
@@ -246,6 +248,22 @@ function newbieGlowOgcd(k, ctx, id) {
 }
 const NEWBIE = {
   bastion(k, ctx) { const g = newbieGlowOgcd(k, ctx, 'brace'); return g != null ? (g < 0 ? null : g) : genericNewbie(k, ctx); },
+  // Runeguard: the generic newbie, but a Spellwarden's glowing Ward (an ally-target GCD the generic one skips) is
+  // answered like any glowing button: noticed 60% of the time, pressed 0.1-0.6s after the GCD is ready
+  runeguard(k, ctx) {
+    const n = ctx.state.newbie || (ctx.state.newbie = { gcdSeenAt: null, delay: 0, ogcdSeen: {} });
+    const w = abOf(k, 'ward');
+    if (k.def.spec === 'spellwarden' && k.glows(w) && k.usable(w)) {
+      if (n.wardGo == null) { n.wardGo = ctx.human() < 0.6; n.wardAt = null; }
+      if (n.wardGo) {
+        if (k.gcdRemaining() > 0.0001 || k.cast) { n.wardAt = null; return genericNewbie(k, ctx); }
+        if (n.wardAt == null) n.wardAt = ctx.t + 0.1 + ctx.human() * 0.5;
+        if (ctx.t < n.wardAt) return null;
+        n.wardGo = false; return I(k, 'ward');
+      }
+    } else n.wardGo = null;
+    return genericNewbie(k, ctx);
+  },
   // Alembist: the hints only. Distill and Grand Batch when noticed; throws when the party looks hurt or R glows;
   // otherwise the glowing reagent (noticed 60% of the time), else Q, now and then a random one. Never picks a slot.
   alembist(k, ctx) {
@@ -308,6 +326,11 @@ const PRO = {
     // it (one Hack between), and one is held for a tankbuster that lands while they last
     const bank = reaverBank(k), mx = k.env.maxHp(), G = ENGINE.GCD;
     const gorge = k.stacks('gorge');
+    // the open wound: a Drain right after a tankbuster or raidwide lands hits much harder, so with a Drain in hand the
+    // GCD is held for the last moment before the hit, and the Drain goes in as soon as it lands
+    const toHit = Math.min(toBust, ctx.nextRaidwide - ctx.t), drainable = reaverDrainOk(k);
+    if (drainable && reaverWound(k)) return I(k, 'drain');
+    if (drainable && toHit > 0 && toHit < 0.8) return null;
     if (gorge > 0) {
       const left = k.remaining('gorge'), must = left <= gorge * G + 0.4;
       const busterIn = toBust < left - 0.4 && toBust > 0;
@@ -360,6 +383,8 @@ const PRO = {
     }
     if (keen && ready(k, 'pierce') && (inMark ? keen >= 2 || k.remaining('markself') < 2.5 : keen >= 2 && (!pooling || markCd > 3) || (!pooling && markCd > 20))) return I(k, 'pierce');
     if (pooling && k.g.focus >= 95 && k.charges(p) > 0 && !keen && (spec !== 'sharpshooter' || castOk(k, ctx, 2))) return I(k, 'pierce');   // (no Focus past 100)
+    // (inside the Mark a Sharpshooter keeps to instant shots while it has Focus for Rapid Fire: a 2s cast leaves no room to weave)
+    if (spec === 'sharpshooter' && inMark && !keen && k.g.focus >= 25) return I(k, 'quick');
     if (spec === 'sharpshooter' && !keen && k.charges(p) > 0 && k.stacks('aim') >= 5 && castOk(k, ctx, 2)) return I(k, 'pierce');
     if (!keen && (k.charges(p) === 2 || (k.charges(p) === 1 && k.cdRemaining(p) === 0 && k.cd[p.id].next - k.now < 2.5))) return spec === 'sharpshooter' && !castOk(k, ctx, 2) ? I(k, 'quick') : I(k, 'pierce');
     if (inMark && k.charges(p) > 0 && (spec !== 'sharpshooter' || castOk(k, ctx, 2))) return I(k, 'pierce');
@@ -668,16 +693,18 @@ Object.assign(PRO, {
     const hp = 32000, toB = ctx.nextBuster - ctx.t, tot = oathTotal(k);
     const lien = abOf(k, 'lien');
     if (lien.id === 'cosign') { if (ready(k, 'lien') && weaveOk(k)) return I(k, 'lien'); }
-    else if (ready(k, 'lien') && weaveOk(k) && (ctx.inBurst(ctx.t) || oathDueSoon(k, 9) > hp * 0.15)) return I(k, 'lien');
-    if (toB < 1 && ready(k, 'writ')) return I(k, 'writ');
+    // (Lien waits, inside the burst, for a tankbuster about to land: its bill then comes due under the Lien)
+    else if (ready(k, 'lien') && weaveOk(k) && (oathDueSoon(k, 9.5) > hp * 0.15 || (ctx.inBurst(ctx.t) && !(toB > 0 && toB < 9) && ctx.t % BURST_EVERY > 0) || (ctx.inBurst(ctx.t) && ctx.t % BURST_EVERY > BURST_LEN - 3))) return I(k, 'lien');
     const def = abOf(k, 'default'), reneg = abOf(k, 'reneg').id === 'reneg';
+    // (Writ is kept off a tankbuster you mean to Default or Foreclose on: the full bill is the blow)
+    if (toB < 1 && ready(k, 'writ') && !(k.cdRemaining(def) < 4)) return I(k, 'writ');
     const plain = k.g.ledger.filter(e => !e.rn).reduce((s, e) => s + e.a, 0);
     // Renegotiate as a setup: a big Ledger about to be torn up is renegotiated first (Default strikes for those lines
     // in full, Foreclose at 1.5x), and lines about to fall due just before Lien are pushed into it
-    const defSoon = k.cdRemaining(def) < 2 && tot > hp * (def.id === 'foreclose' ? 0.28 : 0.38);
+    const defSoon = k.cdRemaining(def) < 2 && tot > hp * (def.id === 'foreclose' ? 0.28 : OATH.BIG + 0.01);
     if (reneg && ready(k, 'reneg') && weaveOk(k) && defSoon && plain > tot * 0.5) return I(k, 'reneg');
     if (reneg && ready(k, 'reneg') && weaveOk(k) && lien.id === 'lien' && !oathLien(k) && k.cdRemaining(lien) < 3 && oathDueSoon(k, 2.5) > hp * 0.05) return I(k, 'reneg');
-    if (ready(k, 'default') && weaveOk(k) && tot > hp * (def.id === 'foreclose' ? 0.32 : 0.4) && (!reneg || plain < tot * 0.5 || k.cdRemaining(abOf(k, 'reneg')) > 3)) return I(k, 'default');
+    if (ready(k, 'default') && weaveOk(k) && tot > hp * (def.id === 'foreclose' ? 0.32 : OATH.BIG + 0.01) && (!reneg || plain < tot * 0.5 || k.cdRemaining(abOf(k, 'reneg')) > 3)) return I(k, 'default');
     if (ready(k, 'reneg') && weaveOk(k) && oathDueSoon(k, 1.2) > hp * 0.12) return I(k, 'reneg');
     // (the Ledger is left to grow for a Default that's nearly back)
     const hoard = def.id === 'default' && k.cdRemaining(def) < 10 && tot < hp * 0.5;
@@ -704,15 +731,24 @@ Object.assign(NEWBIE, {
     const gr = newbieGlowOgcd(k, ctx, 'read');   // (Read glows as a tankbuster comes in)
     if (gr != null) return gr < 0 ? null : gr;
     for (const ab of k.abilities) {
-      if (ab.type !== 'ogcd') continue;
+      if (ab.type !== 'ogcd' || k.baseId(ab) === 'read') continue;   // (Read only when it glows, as the floor says)
       if (!k.usable(ab) || k.readyIn(ab) > 0.0001) { n.ogcdSeen[ab.id] = null; continue; }
       if (n.ogcdSeen[ab.id] == null) n.ogcdSeen[ab.id] = ctx.t + 0.5 + ctx.human() * 2.5;
       if (ctx.t >= n.ogcdSeen[ab.id]) { n.ogcdSeen[ab.id] = null; return I(k, ab.id); }
     }
     if (ctx.t < n.next) return null;
-    n.next = ctx.t + 0.05 + ctx.human() * 0.3;
+    // the keys glow on the beat (as a recovery ends): 60% of the time it waits for the light and presses that key a
+    // moment after it comes on; otherwise it mashes as before (Q, now and then a random key), and always while winded
+    if (n.follow == null) { n.follow = ctx.human() < 0.6; n.since = ctx.t; n.seen = null; }
     const glow = [0, 1, 2].find(i => k.glows(k.abilities[i]));
-    if (glow != null && ctx.human() < 0.6) return glow;
+    if (n.follow && !ipWinded(k) && ctx.t - n.since < 2) {
+      if (glow == null) { n.seen = null; return null; }
+      if (n.seen == null) n.seen = ctx.t + 0.1 + ctx.human() * 0.4;
+      if (ctx.t < n.seen) return null;
+    }
+    n.follow = null;
+    n.next = ctx.t + 0.05 + ctx.human() * 0.3;
+    if (glow != null && n.seen != null) return glow;
     if (ctx.human() < 0.25) return Math.floor(ctx.human() * 3);
     return 0;
   },

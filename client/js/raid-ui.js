@@ -156,13 +156,13 @@ const RaidUI = (() => {
         <kbd class="pf-key" style="color:${FIGHT.SLOTS[i % 4]};border-color:${FIGHT.SLOTS[i % 4]}">${i + 1}</kbd>
         <div class="pf-main">
           <div class="pf-name"><i class="pf-role">${ROLE_GLYPH[r.role] || ''}</i><span>${esc(r.name)}</span><b class="pf-aggro" data-tip="The boss is attacking them">${GLYPH.aggro}</b><i class="pf-ult" data-tip="Their Ultimate is ready"></i><small>${esc(CLASSES.find(c => c.id === r.cls)?.name || '')}${r.bot ? ' · bot' : ''}</small></div>
-          <div class="pf-hp"><div class="trail"></div><div class="hp"></div><div class="sh"></div><div class="hl"></div><span></span></div>
+          <div class="pf-hp"><div class="trail"></div><div class="hp"></div><div class="inc"></div><div class="sh"></div><div class="hl"></div><span></span></div>
           <div class="pf-cast"><i></i></div>
           <div class="pf-st"></div>
         </div>
       </div>`).join('');
     frames = {};
-    for (const row of $('party-frames').children) frames[row.dataset.id] = { row, hp: row.querySelector('.hp'), sh: row.querySelector('.sh'), trail: row.querySelector('.trail'),
+    for (const row of $('party-frames').children) frames[row.dataset.id] = { row, hp: row.querySelector('.hp'), sh: row.querySelector('.sh'), inc: row.querySelector('.inc'), trail: row.querySelector('.trail'),
       hl: row.querySelector('.hl'), bar: row.querySelector('.pf-hp'), txt: row.querySelector('.pf-hp span'), cast: row.querySelector('.pf-cast i'), st: row.querySelector('.pf-st'), key: '', trailV: 1, txtKey: '',
       hpV: null, alive: null, healAt: -9 };
   }
@@ -257,6 +257,11 @@ const RaidUI = (() => {
       setW(f.sh, (shF * 100).toFixed(1) + '%');
       const shL = Math.min(100 - shF * 100, hpF * 100).toFixed(1) + '%';
       if (f.sh._l !== shL) { f.sh._l = shL; f.sh.style.left = shL; }
+      // a heal being cast on them: a lighter green run on from their health, its expected size (up to full)
+      const incF = p.alive && p.maxHp > 1 && marks.incoming ? Math.max(0, Math.min(1 - hpF, (marks.incoming.get(id) || 0) / p.maxHp)) : 0;
+      setW(f.inc, (incF * 100).toFixed(1) + '%');
+      const incL = (hpF * 100).toFixed(1) + '%';
+      if (f.inc._l !== incL) { f.inc._l = incL; f.inc.style.left = incL; }
       // healers read the missing health (what a heal would fill); everyone else reads current health
       const missing = p.maxHp - p.hp;
       // (maxHp is 1 until the host's first party update arrives)

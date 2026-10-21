@@ -615,6 +615,7 @@ kbd { border-radius: 3px; background: #1d1813; border-color: #4a3d2c; color: var
 .pf.low .pf-hp .hp { background: linear-gradient(#ee6a52, #a82c20); }
 .pf-hp .trail { position: absolute; inset: 0 auto 0 0; background: #ffe2c4; opacity: .65; }
 .pf-hp .sh { background: repeating-linear-gradient(-45deg, #eef4ffe0 0 3px, #c6d6eecc 3px 6px); box-shadow: inset 0 0 0 1px #ffffff55; }
+.pf-hp .inc { position: absolute; top: 0; bottom: 0; width: 0; background: linear-gradient(#b4f5c2b8, #6cc884a0); box-shadow: inset -1px 0 0 #e8ffeecc; pointer-events: none; transition: width .12s, left .12s; }
 .pf-hp span { right: 5px; font-size: 11px; line-height: 16px; font-variant-numeric: tabular-nums; letter-spacing: .02em; }
 .pf-hp span.def { color: #ffc8bc; }
 .pf.dead .pf-hp span { color: var(--muted); letter-spacing: .12em; text-transform: uppercase; font-size: 9.5px; }

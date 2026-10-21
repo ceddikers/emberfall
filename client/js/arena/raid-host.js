@@ -87,7 +87,7 @@ class RaidHost {
       bossCast: b.cast ? { name: b.cast.name, left: b.cast.end - sim.t } : null,
       mechs: [...sim.mechs.values()], puddles: sim.puddles, players,
       adds: [...sim.adds.values()], tethers: [...sim.tethers.values()], zones: sim.zones,
-      rollers: [...sim.rollers.values()], reels: [...sim.reels.values()], sweeps: [...sim.sweeps.values()],
+      rollers: [...sim.rollers.values()], rollPre: (this.rollPre || []).filter(r => r.end > sim.t), lungePlan: (this.lungePlan || []).filter(e => e.at > sim.t - 0.2), tauntAt: id => (this.tauntAt || {})[id] ?? -99, reels: [...sim.reels.values()], sweeps: [...sim.sweeps.values()],
       // Volkar: everyone's charge, the rods' posts, and where the closing wall is about to jump
       polarity: sim.polarity || null, posts: (sim.posts || []).filter(c => c.end > sim.t), edgeNext: sim.edgeNext || null,
       pendingCut: sim.pendingCut || null,   // (Hard) the wedge of the summit about to break away
@@ -138,7 +138,10 @@ class RaidHost {
       const s = this.sim.ps.get(bot.id);
       if (!s || !s.alive) { if (!bot.down) { bot.down = true; bot.actor.onDeath(); } bot.moving = false; continue; }   // (a fall keeps half the Ultimate)
       bot.down = false;
-      if (this.sim.t >= bot.nextThink) {
+      // (a pool or a telegraph that has just appeared or landed: look again now, as a player would on seeing it)
+      const seen = sim.puddles.length + ':' + sim.mechs.size + ':' + sim.rollers.size;
+      if (this.sim.t >= bot.nextThink || (bot.seen !== seen && this.sim.t >= bot.nextThink - 0.15)) {
+        bot.seen = seen;
         bot.wantEnemy = BotAI.pickEnemy(bot, view);
         bot.plan = BotAI.move(bot, view);
         bot.nextThink = this.sim.t + 0.2 + this.rng() * 0.1;
@@ -227,6 +230,23 @@ class RaidHost {
       if (bot) bot.reel = { pullAt: this.sim.t + msg.windup, speed: msg.sp, snapAt: this.sim.t + msg.windup + 0.35 + this.rng() * 0.9 };
     }
     if (msg.t === 'reelx') { const bot = this.bots.find(b => b.id === msg.pid); if (bot) bot.reel = null; }
+    // what the floor shows players ahead of time, for the bots: a meatball's lane from the start of the cast, and the
+    // whole order of an Eightfold Lunge (her lit legs) before each strike's own telegraph appears
+    if (msg.t === 'roll') {
+      const t = this.sim.t;
+      this.rollPre = (this.rollPre || []).filter(r => r.end > t);
+      if (msg.clear) this.rollPre = [];
+      else if (msg.pre) this.rollPre.push({ x: msg.x, y: msg.y, angle: msg.a, speed: msg.sp, r: msg.r, rollAt: t + msg.delay, end: t + msg.delay + (2 * ARENA.R + 300) / msg.sp });
+    }
+    if (msg.t === 'fev' && msg.k === 'taunt') (this.tauntAt = this.tauntAt || {})[msg.id] = this.sim.t;   // (everyone sees a taunt go out)
+    if (msg.t === 'lunge') {
+      const t = this.sim.t;
+      this.lungePlan = (this.lungePlan || []).filter(e => e.at > t - 0.5);
+      for (let k = 0; k < msg.n; k++) {
+        const a = msg.a0 + msg.dir * k * Math.PI / 4;
+        for (const ang of [a, a + Math.PI]) this.lungePlan.push({ at: t + msg.delay + k * msg.step, shape: { kind: 'cone', x: msg.x, y: msg.y, r: 1300, arc: 1.22, angle: ang } });
+      }
+    }
     if (msg.t === 'kb') {
       const bot = this.bots.find(b => b.id === msg.id);
       if (bot && !bot.actor.kit.ultSteady()) {   // (an Ultimate's animation lock can't be knocked out of)
@@ -333,14 +353,14 @@ class RaidHost {
             if (en) bot.lastEnemy = en.id;
             // (a: the move's id, so a talent's move or a paced kit's named string shows as itself; slot: its button)
             host.emit({ t: 'cast', id: bot.id, i: actor.abilities.includes(ev.ab) ? actor.abilities.indexOf(ev.ab) : (ev.ab.slot ?? -1), a: ev.ab.fxId || ev.ab.id, x: Math.round(bot.x), y: Math.round(bot.y),
-              tx: Math.round(en ? en.x : host.sim.boss.x), ty: Math.round(en ? en.y : host.sim.boss.y), ally: typeof ev.target === 'number' ? ev.target : null });
+              tx: Math.round(en ? en.x : host.sim.boss.x), ty: Math.round(en ? en.y : host.sim.boss.y), ally: typeof ev.target === 'number' ? ev.target : null, st: ev.st });
             break;
           }
           case 'damage':
             host.onPlayerEvent(bot.id, Object.assign({}, ev, { tgt: ev.tgt != null ? ev.tgt : bot.lastEnemy || 'boss' }));
             break;
           case 'castStart':
-            host.emit({ t: 'castStart', id: bot.id, i: actor.abilities.indexOf(ev.ab), dur: ev.dur });
+            host.emit(Object.assign({ t: 'castStart', id: bot.id, i: actor.abilities.indexOf(ev.ab), dur: ev.dur }, ev.h > 0 && typeof ev.target === 'number' ? { h: ev.h, to: ev.target } : null));
             break;
           case 'auto': {
             const t = ev.target && typeof ev.target === 'object' ? ev.target : null;
@@ -369,6 +389,11 @@ class RaidHost {
           case 'selfDamage': case 'targetDebuff': case 'partyBuff': case 'allyBuff': case 'pool': case 'brand': case 'splash': case 'maw': case 'ledger':
           case 'tie': case 'snip': case 'tighten': case 'tapestry': case 'tug':   // classes-c
             host.onPlayerEvent(bot.id, ev);
+            // a shield or damage cut on the whole party: its flash on every member (KIT_VFX.partyWard; once for a move that does both)
+            if ((ev.type === 'shield' || ev.type === 'mit') && ev.target === 'party' && !(host.sim.t - (bot.wardAt ?? -9) < 0.3)) {
+              bot.wardAt = host.sim.t;
+              host.emit(Object.assign({ t: 'kfx', id: bot.id, k: 'partyWard', s: 1 }, ev.type === 'mit' ? { d: { m: 1 } } : null));
+            }
             break;
         }
       },

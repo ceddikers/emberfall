@@ -464,10 +464,11 @@ const BossTells = (() => {
         const b = env.boss, rr = 60 + (AR() - 40) * easeOut(p);
         ctx.save();
         ctx.beginPath();
-        for (let i = 0; i <= 28; i++) { const a = i * TAU / 28, w = 1 + Math.sin(a * 5 + tg.id) * 0.08 + Math.sin(a * 3 + t) * 0.04; i ? ctx.lineTo(b.x + Math.cos(a) * rr * w, b.y + Math.sin(a) * rr * w) : ctx.moveTo(b.x + Math.cos(a) * rr * w, b.y + Math.sin(a) * rr * w); }
+        // (enough points that the spill's edge stays a smooth wobble even when it's the size of the room, no facets)
+        for (let i = 0; i <= 72; i++) { const a = i * TAU / 72, w = 1 + Math.sin(a * 5 + tg.id) * 0.08 + Math.sin(a * 3 + t) * 0.04; i ? ctx.lineTo(b.x + Math.cos(a) * rr * w, b.y + Math.sin(a) * rr * w) : ctx.moveTo(b.x + Math.cos(a) * rr * w, b.y + Math.sin(a) * rr * w); }
         ctx.closePath();
-        const g = ctx.createRadialGradient(b.x, b.y, 10, b.x, b.y, rr);
-        g.addColorStop(0, `rgba(120,80,20,${0.3 * k})`); g.addColorStop(0.8, `rgba(150,100,30,${0.22 * k})`); g.addColorStop(1, `rgba(255,200,90,${0.3 * k})`);
+        const g = ctx.createRadialGradient(b.x, b.y, 10, b.x, b.y, rr * 1.1);
+        g.addColorStop(0, `rgba(120,80,20,${0.3 * k})`); g.addColorStop(0.72, `rgba(150,100,30,${0.22 * k})`); g.addColorStop(0.9, `rgba(230,170,70,${0.26 * k})`); g.addColorStop(1, `rgba(255,200,90,${0.12 * k})`);
         ctx.fillStyle = g; ctx.fill();
         ctx.restore();
         if (p > 0.75) for (let i = 0; i < 14; i++) { const a = hash(i, tg.id) * TAU, d = Math.sqrt(hash(i + 5, tg.id)) * rr * 0.95; flame(ctx, b.x + Math.cos(a) * d, b.y + Math.sin(a) * d, 4 + (p - 0.75) * 30, t + i); }
@@ -1842,7 +1843,9 @@ const BossTells = (() => {
       lid(tg) {
         mark(AFTER.tier.short, tg.live, (ctx, s, k, age, seed) => {
           const r = s.r2 + 34;
-          ctx.beginPath(); ctx.arc(s.x, s.y, r, 0, TAU); ctx.strokeStyle = rgba('#140a06', k * 0.6); ctx.lineWidth = 26; ctx.stroke();
+          // (the dent soft-edged: a wide faint band with a slightly darker heart, not one hard dark ring)
+          ctx.beginPath(); ctx.arc(s.x, s.y, r, 0, TAU); ctx.strokeStyle = rgba('#140a06', k * 0.22); ctx.lineWidth = 32; ctx.stroke();
+          ctx.strokeStyle = rgba('#140a06', k * 0.22); ctx.lineWidth = 16; ctx.stroke();
           ctx.beginPath(); ctx.arc(s.x, s.y, r - 12, 0, TAU); ctx.strokeStyle = rgba('#e8eef4', k * 0.5); ctx.lineWidth = 1.5; ctx.stroke();
           ctx.lineCap = 'round';
           for (let i = 0; i < 18; i++) {
@@ -2047,6 +2050,11 @@ const BossTells = (() => {
       const ca = Math.cos(m.a), sa = Math.sin(m.a);
       if (m.pre) {   // the lane shown ahead of the lob: it fades in over the cast, and the real roller takes over at rollAt
         if (t >= rollAt) { rollers.delete(id); continue; }
+        // the real roller for this lane is drawing its own lane now (a meatball once it has landed): it takes over from
+        // here, so the lane never doubles up and never blinks out
+        let real = false;
+        for (const o of rollers.values()) if (!o.pre && o.tag === m.tag && t - o.start >= (o.tag === 'orb' ? 0 : 0.5) && Math.abs(o.x - m.x) < 2 && Math.abs(o.y - m.y) < 2 && Math.abs(o.a - m.a) < 0.01) { real = true; break; }
+        if (real) { rollers.delete(id); continue; }
         rollLane(ctx, m, ca, sa, t, 0.3 + 0.4 * clamp((t - m.start) / Math.max(0.5, m.delay), 0, 1));
         continue;
       }

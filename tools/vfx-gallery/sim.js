@@ -47,6 +47,8 @@ function keyOf(m) {
     default: return '';
   }
 }
+// rollers get a row per difficulty (Hard sends more of them, faster); everything else is kept once, from the first fight
+const modeKey = (m, mode) => { const k = keyOf(m); return k && k.startsWith('roll:') && mode === 'hard' ? k + ' (hard)' : k; };
 // a later message that belongs to an earlier moment (its impact, its hit): the id it answers
 function answers(m) {
   if (m.t === 'tgx') return 'tg#' + m.id;
@@ -86,7 +88,13 @@ function captureBoss(root, bossId, o = {}) {
       tickMsgs.push(m);
       const ans = answers(m);
       if (ans && open.has(ans)) { const ev = open.get(ans); ev.items.push([+(t - ev.t0).toFixed(3), m]); open.delete(ans); return; }
-      const k = keyOf(m);
+      // a cast's rollers come one after another (each with its lane preview sent at the cast start): they all go in the
+      // first one's row, so the row shows the previews handing over to the real balls
+      if (m.t === 'roll' && !m.clear) {
+        const ev = events.find(e => e.mode === mode && e.key === modeKey(m, mode) && t - e.t0 < 8);
+        if (ev && ev.items.length < 16) { ev.items.push([+(t - ev.t0).toFixed(3), m]); const id = idKey(m); if (id) open.set(id, ev); return; }
+      }
+      const k = modeKey(m, mode);
       if (!k || seen.has(k)) return;
       // a cast that comes with a telegraph is drawn with it (the tg row), not on its own
       const ev = { key: k, t0: t, mode, items: [[0, m]], ctx: snap() };

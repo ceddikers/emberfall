@@ -45,6 +45,7 @@ const KITS = {
         id: 'blade', name: 'Blade Chain', type: 'gcd', target: 'enemy', range: MELEE, anim: 'attack',
         desc: 'Three-hit combo on one button: Strike ({d:220}) > Riposte ({d:300}) > Judgment ({d:400}). Judgment fills 25 Resolve.',
         label: k => ['Strike', 'Riposte', 'Judgment'][k.now < k.g.comboUntil ? k.g.step : 0],
+        fxStep: k => (k.now < k.g.comboUntil ? k.g.step : 0),   // (its look: engine.js resolve)
         glow: k => !!k.g.counter,
         effect(k) { bastionBlade(k, this, 25); },
         fx: { type: 'slash', color: '#bcd4ff', r: 52, span: 1.5 },
@@ -67,7 +68,8 @@ const KITS = {
         id: 'brace', name: 'Brace', type: 'ogcd', target: 'self', charges: 2, cd: 7, lock: 0.5, anim: 'brace',
         desc: 'Raise your shield: 25% less damage for 3s. Brace just before a hit lands for a Perfect Block. A Perfect Block on a tankbuster gives the charge straight back and makes your next Holy Edge free.',
         glow: k => { const b = bossNow(k); return !!(b && b.casting && b.onMe && b.castLeft < 0.8); },   // (a tankbuster about to land: the block worth most)
-        effect(k) { k.mitigate('self', 0.25, bastionBraceDur(k), { kind: 'brace', ab: this }); },
+        // (a guard Hold Fast stretched past 3s tells its look how long it really holds: KIT_VFX.braceHold)
+        effect(k) { const d = bastionBraceDur(k); k.mitigate('self', 0.25, d, { kind: 'brace', ab: this }); if (d !== 3) k.fx('braceHold', { d: Math.round(d * 10) / 10 }); },
         fx: { type: 'shield', color: '#7fb2ff', dur: 1.2 },
       },
       {
@@ -104,6 +106,7 @@ const KITS = {
     floor: 'Press Q for the combo, W when it glows. R every minute, D before big party hits, F when it glows as a tankbuster comes.',
     ceiling: [
       'Blood for blood: Crimson Drain cashes the bank, the damage you took since your last Drain (6s at most, the number under the heart). It heals for 35% of it and hits harder the more it holds. Fire it right after a tankbuster, never just before one.',
+      'Strike while the blood is warm: for 1.2s after a tankbuster or raidwide lands your blood is warm (Drain glows), and a Drain then hits much harder and cashes the bank in full. Later the bank has gone cold. With a Drain in hand, hold your GCD for the hit so it is ready the instant it lands.',
       'Pool Blood near 100 before Frenzy, then spread the three free Drains through it so each has a bank behind it. Hold one for a tankbuster that lands inside Frenzy.',
       'Don\'t overcap Blood, but don\'t dump it on a quiet moment either. A Drain on an empty bank is your weakest spend.',
       'War Cry makes your next Drain free and spreads its heal to the party: roar before a tankbuster, Drain after it.',
@@ -114,6 +117,7 @@ const KITS = {
         id: 'hack', name: 'Hack & Maul', type: 'gcd', target: 'enemy', range: MELEE, anim: 'attack',
         desc: 'Two-hit combo on one button: Hack ({d:240}) > Maul ({d:340}). Both hits build Blood.',
         label: k => (k.now < k.g.comboUntil && k.g.step === 1 ? 'Maul' : k.now < k.g.comboUntil && k.g.step === 2 ? 'Gore' : 'Hack'),
+        fxStep: k => (k.now < k.g.comboUntil ? k.g.step : 0),   // 0 Hack, 1 Maul, 2 Gore (its look: engine.js resolve)
         effect(k) {
           if (k.now < k.g.comboUntil && k.g.step === 2) {   // Gore (a talent's third hit)
             k.damage(320, { ab: this }); reaverGain(k, 15); k.g.step = 0;
@@ -130,13 +134,13 @@ const KITS = {
       },
       {
         id: 'drain', name: 'Crimson Drain', type: 'gcd', target: 'enemy', range: MELEE, anim: 'attack',
-        desc: 'Spend 40 Blood: hits for {d:300} and cashes the bank, the damage you took since your last Drain (6s at most): it heals you for 35% of it, and hits up to {d:700} more the more it holds.',
+        desc: 'Spend 40 Blood: hits for {d:270} and cashes the bank, the damage you took since your last Drain (6s at most): it heals you for 35% of it, and hits up to {d:700} more the more it holds. Within 1.2s of a hit that took a tenth of your HP your blood is warm: {d:340} more. After that the bank has gone cold and its bonus is cut to 30%.',
         usable: k => reaverDrainOk(k),
         glow: k => reaverDrainGlow(k),
         effect(k) {
           let pot = REAVER.POT + reaverDrainCost(k, 120);
           const taken = reaverCash(k);
-          pot += Math.min(REAVER.CAP, taken / (REAVER.SLOPE * ENGINE.NUM_SCALE));
+          pot += Math.min(REAVER.CAP, taken / (REAVER.SLOPE * ENGINE.NUM_SCALE)) * reaverWarm(k);
           pot = reaverDrainPot(k, pot);
           k.damage(pot, { ab: this });
           if (k.perk('bloodreaver_w2')) { k.damage(pot * 0.3, { ab: this }); k.fx('empower'); }
@@ -270,7 +274,7 @@ const KITS = {
 
   // ======================================================================= DPS
   ranger: {
-    potMult: 0.976, // balance knob (tools/simulate.js)
+    potMult: 0.86, // balance knob (tools/simulate.js)
     auto: { kind: 'shot', potency: 40, range: RANGED },  // passive auto-attack (see ENGINE.AUTO_EVERY)
     gauge: { kind: 'quiver', key: 'focus', max: 100, label: 'Focus' },
     init: () => ({ focus: 0 }),
@@ -281,7 +285,7 @@ const KITS = {
     ceiling: [
       'Quick Shot can light up Keen Eye: your next Piercing Arrow hits harder and doesn\'t use a charge. You can bank two; a third is wasted. Inside Hunter\'s Mark, cash a Keen Eye only while a second is banked: each one readies Barrage again.',
       'Never sit on 2 Piercing Arrow charges: a full charge bar is lost damage.',
-      'Rapid Fire costs half inside Hunter\'s Mark, so pool Focus to 100 before it (without overcapping) and spend it all in the Mark. Hunter\'s Cloak gives 40 Focus: a Cloak just before the Mark or Starfall Volley is never wasted.',
+      'Rapid Fire costs half inside Hunter\'s Mark and hits more than twice as hard, so pool Focus to 100 before it (without overcapping) and spend it all in the Mark. Hunter\'s Cloak gives 40 Focus: a Cloak just before the Mark or Starfall Volley is never wasted.',
       'Everything is instant, so you never have to stop attacking to dodge. Perfect uptime is your edge.',
     ],
     abilities: [
@@ -290,7 +294,7 @@ const KITS = {
         desc: 'Fast shot: {d:230} and +10 Focus. Sometimes lights up Keen Eye.',
         effect(k) {
           const barr = k.consume('barrage'), ff = !barr && rangerFocusFire(k);
-          const r = k.damage((barr ? 690 : 230) * (ff ? 2 : 1), rangerShot(k, this));
+          const r = k.damage((barr ? 840 : 230) * (ff ? 2 : 1), rangerShot(k, this));
           if (!ff) k.gain('focus', rangerFocus(k, barr));
           if (k.rng() < rangerKeenChance(k)) rangerKeen(k); else rangerNoKeen(k);
           rangerRhythm(k, this, barr, 230);
@@ -316,18 +320,18 @@ const KITS = {
       },
       {
         id: 'rapid', name: 'Rapid Fire', type: 'ogcd', target: 'enemy', range: RANGED, cd: 2, anim: 'attack',
-        desc: 'Spend 50 Focus: a volley for {d:420} between your other shots. While Hunter\'s Mark is up it costs only 25 Focus.',
+        desc: 'Spend 50 Focus: a volley for {d:360} between your other shots. While Hunter\'s Mark is up it costs only 25 Focus and hits for {d:760}: Focus pooled for the Mark is worth far more.',
         usable: k => k.g.focus >= rangerRapidCost(k),
         glow: k => k.g.focus >= 90 || (k.has('markself') && k.g.focus >= 25),
         effect(k) {
           k.spend('focus', rangerRapidCost(k));
-          k.damage(k.perk('ranger_a4') ? 483 : 420, { ab: this }); if (k.perk('ranger_a2')) k.gain('focus', 10);
+          k.damage((k.has('markself') ? 760 : 360) * (k.perk('ranger_a4') ? 1.15 : 1), { ab: this }); if (k.perk('ranger_a2')) k.gain('focus', 10);
         },
         fx: { type: 'zone', style: 'arrows', color: '#e8d9a0', r: 60, range: RANGED, dur: 0.9 },
       },
       {
         id: 'mark', name: "Hunter's Mark", type: 'ogcd', target: 'enemy', range: RANGED, cd: 60, anim: 'cast',
-        desc: 'Party burst: the boss takes 8% more damage from everyone for 15s. For you, Keen Eye triggers more often, your critical chance is 10% higher and Rapid Fire costs only 25 Focus. A Keen Eye you cash in it while a second is still banked readies Barrage again.',
+        desc: 'Party burst: the boss takes 8% more damage from everyone for 15s. For you, Keen Eye triggers more often, your critical chance is 10% higher and Rapid Fire costs only 25 Focus and hits for {d:760}. A Keen Eye you cash in it while a second is still banked readies Barrage again.',
         effect(k) {
           const dur = 15 + (k.talent('ranger_longhunt') ? 3 : 0);
           k.debuffTarget('vuln', 0.08, dur, { ab: this }); k.buff('markself', dur);
@@ -343,7 +347,7 @@ const KITS = {
       },
       {
         id: 'barrage', name: 'Barrage', type: 'ogcd', target: 'self', cd: 30, anim: 'big',
-        desc: 'Your next Quick Shot fires three times ({d:690}) and gives triple Focus.',
+        desc: 'Your next Quick Shot fires three times ({d:840}) and gives triple Focus.',
         glow: k => k.has('markself'),
         effect(k) {
           k.buff('barrage', 15); if (k.perk('ranger_w3')) k.proc('keen', 15);
@@ -903,12 +907,17 @@ function reaverGain(k, n) {
   k.gain('blood', n);
 }
 // The bank: the damage you took since your last Drain (6s at most). A Drain cashes it (reaverCash); the heart shows it.
-const REAVER = { BANK: 6, GLOW: 0.2, DL_PER: 100, POT: 300, CAP: 700, SLOPE: 25 };   // (Crimson Drain: POT, and up to CAP more, 1 per SLOPE of the bank)   // (GLOW: a bank this share of your HP lights Drain; DL_PER: Undying's Blood per max HP taken)
+const REAVER = { BANK: 6, GLOW: 0.2, DL_PER: 100, POT: 270, CAP: 700, SLOPE: 25, WOUND: 1.2, WOUND_HIT: 0.1, WOUND_POT: 340, COLD: 0.3 };   // (Crimson Drain: POT, and up to CAP more, 1 per SLOPE of the bank)   // (GLOW: a bank this share of your HP lights Drain; DL_PER: Undying's Blood per max HP taken)
 const reaverBank = k => k.env.recentDamage(Math.max(0, Math.min(REAVER.BANK, k.now - (k.g.drainAt ?? -99))));
-function reaverCash(k) { const t = reaverBank(k); k.g.drainAt = k.now; k.g.cashed = t; k.g.bank = 0; return t; }
+// The open wound: a hit of WOUND_HIT of your max HP or more in the last WOUND seconds, not yet cashed. A Drain into it
+// hits for WOUND_POT more (reaverDrainPot), and Drain glows while it's open.
+const reaverWound = k => k.env.recentDamage(Math.max(0, Math.min(REAVER.WOUND, k.now - (k.g.drainAt ?? -99)))) >= k.env.maxHp() * REAVER.WOUND_HIT;
+// (a bank cashed after its wound has closed has gone cold: its bonus counts for COLD of its worth)
+const reaverWarm = k => (k.g.wound ? 1 : REAVER.COLD);
+function reaverCash(k) { const t = reaverBank(k); k.g.wound = reaverWound(k); k.g.drainAt = k.now; k.g.cashed = t; k.g.bank = 0; return t; }
 // a Drain's price: a free one (Frenzy's Gorged: +bonus), Undying's, War Cry's, or 40 Blood
 const reaverDrainOk = k => k.g.blood >= 40 || k.stacks('gorge') > 0 || k.has('deathless') || k.has('roar');
-const reaverDrainGlow = k => k.stacks('gorge') > 0 || k.has('deathless') || k.has('roar') || k.g.blood >= 90 || (k.g.blood >= 40 && reaverBank(k) >= k.env.maxHp() * REAVER.GLOW);
+const reaverDrainGlow = k => k.stacks('gorge') > 0 || k.has('deathless') || k.has('roar') || k.g.blood >= 90 || (k.g.blood >= 40 && (reaverBank(k) >= k.env.maxHp() * REAVER.GLOW || reaverWound(k)));
 function reaverDrainCost(k, bonus) {
   if (k.stacks('gorge') > 0) { k.consume('gorge'); return bonus; }
   if (k.has('deathless')) return 0;
@@ -931,6 +940,7 @@ function reaverHackHeal(k, ab) {
 }
 // Crimson Drain / Rampage potency (Rend)
 function reaverDrainPot(k, pot) {
+  if (k.g.wound) { pot += REAVER.WOUND_POT; k.g.wound = false; }
   if (k.talent('bloodreaver_rend') && k.g.wounds) { pot += 65 * k.g.wounds; k.g.wounds = 0; }
   return pot;
 }
@@ -1061,7 +1071,7 @@ const rangerFocusFire = k => k.talent('ranger_focusfire') && k.g.focus >= 100;
 function rangerShot(k, ab) { const o = { ab }; if (k.talent('ranger_pin') && k.consume('pinned')) o.autoCrit = true; return o; }
 const rangerFocus = (k, barr) => 10 * (barr ? 3 : 1) + (k.talent('ranger_tracking') ? 2 * Math.min(5, k.g.track || 0) : 0);
 // Rapid Fire's (and Explosive Shot's) price: half inside Hunter's Mark, so Focus pooled for the Mark buys twice the volleys
-const rangerRapidCost = k => (k.has('markself') ? 25 : 50);
+const rangerRapidCost = k => (k.has('markself') ? k.def.markRapid || 25 : 50);   // (Sharpshooter: 20)
 // Keen Eye banks up to 2 procs (a third is wasted)
 function rangerKeen(k) {
   if (k.stacks('keen') >= 2) k.wasted('keen');
@@ -1093,7 +1103,7 @@ function rangerPierce(k, keen, r, pot) {
   if (keen && k.has('keen') && k.has('markself')) { const bar = abBase(k, 'barrage'); if (bar) { if (k.cdRemaining(bar) <= 0) k.wasted('barrage'); k.resetCooldown(bar); k.fx('empower'); } }
   if (!keen && r && r.crit && k.talent('ranger_ricochet')) { k.refundCharge(ab.id); k.fx('ricochetArrow'); }
   if (keen && k.talent('ranger_pin') && k.now >= (k.g.pinAt || 0)) { k.g.pinAt = k.now + 12; k.buff('pinned', 15); }
-  if (keen && k.talent('ranger_storm')) for (let i = 0; i < 2; i++) k.after(0.15 + 0.2 * i, () => { k.damage((pot || 500) * 0.08, { ab }); k.fx('stormArc'); });
+  if (keen && k.talent('ranger_storm')) for (let i = 0; i < 2; i++) k.after(0.15 + 0.2 * i, () => { k.damage((pot || 500) * 0.06, { ab }); k.fx('stormArc'); });
 }
 // Hunter's Mark: Marked for Death's burst when it ends
 function rangerMark(k, ab, dur) {
@@ -1944,7 +1954,7 @@ if (typeof module !== 'undefined') {
   // the talent helpers the specs share (a browser has them as globals)
   module.exports = { KITS, DASH, TAUNT, TAUNT_CARRY, tauntNote, tauntIconBg, ULTIMATES, ultIconBg, ultMeta, bastionUltHits, MELEE, RANGED, bossNow, bossCasting, onBossCast, castHold, hpOf, abBase, targetDown, kitMove,
     BASTION, bastionCanEdge, bastionTurned, bastionBanner, bastionGain, bastionCost, bastionSpend, bastionBraceDur, bastionInHallow, bastionBlade, bastionEdge, bastionGuard, bastionPerfect, bastionTick,
-    REAVER, reaverBank, reaverCash, reaverDrainOk, reaverDrainGlow, reaverDrainCost, reaverTick, reaverGain, reaverHackHeal, reaverDrainPot, reaverAfterDrain, reaverRetaliate, reaverLetting, reaverExpire,
+    REAVER, reaverBank, reaverWound, reaverWarm, reaverCash, reaverDrainOk, reaverDrainGlow, reaverDrainCost, reaverTick, reaverGain, reaverHackHeal, reaverDrainPot, reaverAfterDrain, reaverRetaliate, reaverLetting, reaverExpire,
     runeGain, runeSpent, runeEmergency, runeWardCost, runeWardUp, runeWardEnd, runeGlyph, runeGlyphguard, runeGlyphguardEnd,
     rangerTrack, rangerKeenChance, rangerFocusFire, rangerShot, rangerFocus, rangerKeen, rangerNoKeen, rangerRhythm, rangerFeed, rangerQuickAfter, rangerPierce, rangerMark,
     bladeCombo, bladeMult, bladeOpts, bladeFinisher, bladeStep, bladePoise, rangerRapidCost, pyroStoke, pyroVent, pyroTick, pyroWildfire, pyroBurst,
@@ -2240,7 +2250,7 @@ function driftTick(k) {
   } else {
     g.stillT = (g.stillT || 0) + dt;
     // (Eye of the Gale, the Ultimate: no 1.5s hold, and standing still drains twice as fast)
-    const eye = driftEye(k), held = k.has('gale') || k.has('still') || (!eye && g.stillT < DRIFT.HOLD);
+    const eye = driftEye(k), held = k.has('gale') || k.has('still') || (!eye && g.stillT < (k.def.driftHold || DRIFT.HOLD));
     if (!held) g.drift = Math.max(0, (g.drift || 0) - DRIFT.DRAIN * (eye ? 2 : 1) * dt);
   }
   // your own Slipstream lanes: stepping back onto one gives Drift
@@ -2327,6 +2337,7 @@ KITS.driftblade = {
           k.g.cres = 0; k.after(0.25, () => { k.damage(210 * m, { ab: this, extra: true }); k.fx('crescent'); });
         }
         if (k.talent('driftblade_hover') && !k.env.moving()) driftAdd(k, 10);   // Hover: cutting in place keeps the wind up
+        if (k.def.carveDrift) driftAdd(k, k.def.carveDrift);   // (Comet: every cut winds the charge a little)
       },
       fx: { type: 'slash', color: '#bff8e8', r: 56, span: 1.8 },
     },
@@ -2523,12 +2534,12 @@ talentMoves('runeguard', {
 talentMoves('ranger', {
   ranger_explosive: {
     id: 'explosive', replaces: 'rapid', icon: 'rapid', name: 'Explosive Shot', type: 'ogcd', target: 'enemy', range: RANGED, cd: 2, anim: 'attack', talent: true,
-    desc: 'Spend 50 Focus (25 while Hunter\'s Mark is up): plant a charge in the boss that blows 2.5s later for {d:340}. Every Quick Shot or Piercing Arrow that lands before then makes the blast 30% bigger.',
+    desc: 'Spend 50 Focus (25 while Hunter\'s Mark is up): plant a charge in the boss that blows 2.5s later for {d:300} ({d:640} if planted in the Mark). Every Quick Shot or Piercing Arrow that lands before then makes the blast 30% bigger.',
     usable: k => k.g.focus >= rangerRapidCost(k) && !k.g.charge,
     glow: k => !k.g.charge && (k.g.focus >= 90 || (k.has('markself') && k.g.focus >= 25)),
     effect(k, t) {
       k.spend('focus', rangerRapidCost(k)); if (k.perk('ranger_a2')) k.gain('focus', 10);
-      const c = k.g.charge = { pot: k.perk('ranger_a4') ? 390 : 340, n: 0 }, ab = this, en = t && t.id;
+      const c = k.g.charge = { pot: (k.has('markself') ? 640 : 300) * (k.perk('ranger_a4') ? 1.15 : 1), n: 0 }, ab = this, en = t && t.id;
       k.after(2.5, () => { k.damage(c.pot, { ab }); k.fx('explode', { en, n: c.n }); if (k.g.charge === c) k.g.charge = null; });
     },
     fx: { type: 'line', color: '#ffb040', range: RANGED },
@@ -2920,11 +2931,11 @@ ULTIMATES.gorgemaw = {
 // the host (fight.js) and the balance tools (tools/simulate.js) run the same rules. The kit sends `ledger` events
 // ({ op, ... }) and keeps the copy the host sends back (an 'ledger' notice: [[amount, seconds left, co-signed ally]]).
 const OATH = {
-  DUE: 8, SHARE: 0.6, CO: 0.3, SETTLE: 0.5, LIEN: 1 / 3, COL: 0.5, FREEZE: 10, PAY: 0.02, MAX: 24,
+  DUE: 8, SHARE: 0.6, CO: 0.3, SETTLE: 0.5, LIEN: 1 / 2, COL: 0.5, FREEZE: 10, PAY: 0.02, MAX: 24,
   ULT_PAY: 1.6, ULT_SETTLE: 15, ULT_SETTLE_MAX: 5,   // Final Reckoning's charge: a Collect strike that pays, a Settle (per share of HP settled)
   // a renegotiated entry (pushed back by Renegotiate: e.rn): the boss pays LIEN_RN of it under Lien, Writ halves what
   // you pay of it, and Foreclose counts it FORE_RN times. DEFAULT: the share of the Ledger a Default strikes the boss for.
-  LIEN_RN: 2 / 3, WRIT_RN: 0.5, FORE_RN: 1.5, DEFAULT: 0.5,
+  LIEN_RN: 1, WRIT_RN: 0.5, FORE_RN: 1.5, DEFAULT: 0.5, BIG: 0.3, FORE_BIG: 1.25, FORE_SMALL: 0.3,
   make() { return { e: [], n: 0, due: OATH.DUE, share: OATH.SHARE, col: 0, small: 0, tithe: 0, frozen: -99, lien: -99, writ: -99, hold: -99, summons: -99, writMark: 0, cosign: null, ver: 0 }; },
   clamp: (v, a, b, d = a) => (Number.isFinite(+v) ? Math.max(a, Math.min(b, +v)) : d),
   total: L => L.e.reduce((s, e) => s + e.a, 0),
@@ -2990,8 +3001,14 @@ const OATH = {
       case 'lien': L.lien = t + C(ev.dur, 0, 13, 0); break;
       case 'writ': L.writ = t + C(ev.dur, 0, 8, 0); L.writMark = C(ev.mark, 0, OATH.LIEN, 0); break;
       // Default strikes the boss for part of what it tears up; Foreclose for all of it, a renegotiated line at FORE_RN
-      case 'default': r.boss += L.e.reduce((s, e) => s + e.a * (e.rn ? 1 / OATH.DEFAULT : 1), 0) * C(ev.mult, 0, OATH.DEFAULT, 0);   // (a renegotiated line in full) L.e = []; L.frozen = t + C(ev.freeze, 4, OATH.FREEZE, OATH.FREEZE); break;
-      case 'foreclose': r.boss += L.e.reduce((s, e) => s + e.a * (e.rn ? OATH.FORE_RN : 1), 0) * C(ev.mult, 0, 1.2, 1); L.e = []; L.frozen = t + C(ev.freeze, 4, OATH.FREEZE, OATH.FREEZE); break;
+      // (a renegotiated line in full; a Ledger of BIG of your HP or more is a debt worth defaulting on: every line in full,
+      // a renegotiated one at FORE_RN)
+      case 'default': {
+        const big = OATH.total(L) >= maxHp * OATH.BIG;
+        r.boss += L.e.reduce((s, e) => s + e.a * (big ? (e.rn ? OATH.FORE_RN : 1) * OATH.FORE_BIG : (e.rn ? 1 : OATH.DEFAULT)), 0) * C(ev.mult, 0, OATH.DEFAULT, 0) / OATH.DEFAULT;
+        L.e = []; L.frozen = t + C(ev.freeze, 4, OATH.FREEZE, OATH.FREEZE); break;
+      }
+      case 'foreclose': r.boss += L.e.reduce((s, e) => s + e.a * (e.rn ? OATH.FORE_RN : 1), 0) * C(ev.mult, 0, 1.2, 1) * (OATH.total(L) >= maxHp * OATH.BIG ? OATH.FORE_BIG : OATH.FORE_SMALL); L.e = []; L.frozen = t + C(ev.freeze, 4, OATH.FREEZE, OATH.FREEZE); break;
       case 'summons': L.summons = t + 6; break;
       case 'reckon': L.e = []; break;   // Final Reckoning (the Ultimate): every entry comes due on the boss; the kit strikes for it
       case 'hold': L.hold = t + C(ev.dur, 0, 6, 0); break;
@@ -3033,7 +3050,7 @@ function oathTerms(k) {
 const oathSettleGlow = k => oathTotal(k) >= oathHp(k) * 0.22 && k.now >= (k.g.frozen || 0);
 
 KITS.oathbroker = {
-  potMult: 0.94, // balance knob (tools/simulate.js)
+  potMult: 0.865, // balance knob (tools/simulate.js)
   role: 'tank',
   ledger: true,   // (tools/simulate.js: hits go through the Ledger)
   auto: { kind: 'stamp', potency: 40, range: MELEE },
@@ -3052,9 +3069,9 @@ KITS.oathbroker = {
   floor: 'Press Q to strike: it pays your debts down. Press E when the Ledger gets long to settle it at half, and F if it\'s about to kill you.',
   ceiling: [
     '60% of every hit you take is written into the Ledger and comes due 8s later. The column on your gauge shows each entry and its timer.',
-    'Renegotiate pushes every entry back 4s and marks it ». Roll a tankbuster\'s bill past the raidwide that follows it, and into a window that pays for it: under Lien the boss pays two thirds of a marked line, under Writ you pay half, and Default strikes for it in full.',
-    'Settle pays the whole Ledger now, at half. It turns scary delayed damage into one chunk your healer can see coming. Or let it grow for Default, which strikes the boss for half of what it tears up.',
-    'Lien makes the boss pay a third of every bill that comes due for 10s, and every Collect strike that pays the Ledger down also strikes the boss for what it paid. Line it up with a long Ledger.',
+    'Renegotiate pushes every entry back 4s and marks it ». Roll a tankbuster\'s bill past the raidwide that follows it, and into a window that pays for it: under Lien the boss pays all of a marked line, under Writ you pay half, and Default strikes for it in full.',
+    'Settle pays the whole Ledger now, at half. It turns scary delayed damage into one chunk your healer can see coming. Or let it grow for Default: a small Ledger torn up strikes the boss for half, but one holding 30% of your HP or more is a debt worth defaulting on and strikes for a quarter more than it held. Keep Writ off the tankbuster you mean to Default on.',
+    'Lien makes the boss pay half of every bill that comes due for 10s, and every Collect strike that pays the Ledger down also strikes the boss for what it paid. Line it up with a tankbuster\'s bill: hold it a few seconds past the burst if one is about to land.',
   ],
   abilities: [
     {
@@ -3083,7 +3100,7 @@ KITS.oathbroker = {
     },
     {
       id: 'reneg', name: 'Renegotiate', type: 'ogcd', target: 'self', cd: 20, lock: 0.3, anim: 'cast',
-      desc: 'Push every entry in your Ledger back 4s. A renegotiated entry is a setup: if it comes due under Lien the boss pays two thirds of it (not a third), under Writ of Protection you pay only half of it, and Default strikes for it at full.',
+      desc: 'Push every entry in your Ledger back 4s. A renegotiated entry is a setup: if it comes due under Lien the boss pays all of it (not half), under Writ of Protection you pay only half of it, and Default strikes for it at full.',
       glow: k => oathDueSoon(k, 1.5) >= oathHp(k) * 0.12,
       effect(k) {
         oathSend(k, { op: 'reneg', secs: 4, drop: k.talent('oathbroker_amnesty') ? 1 : 0, merge: k.talent('oathbroker_consolidate') ? 1 : 0 });
@@ -3109,7 +3126,7 @@ KITS.oathbroker = {
     },
     {
       id: 'lien', name: 'Lien', type: 'ogcd', target: 'self', cd: 60, anim: 'big',
-      desc: 'Burst: for 10s, the boss pays a third of every bill that comes due (two thirds of a renegotiated one), as damage, and every Collect strike that pays your Ledger down also strikes the boss for what it paid.',
+      desc: 'Burst: for 10s, the boss pays half of every bill that comes due (all of a renegotiated one), as damage, and every Collect strike that pays your Ledger down also strikes the boss for what it paid.',
       glow: k => oathDueSoon(k, 9) >= oathHp(k) * 0.1,
       effect(k) { oathSend(k, { op: 'lien', dur: k.perk('oathbroker_w3') ? 13 : 10 }); k.g.lienUntil = k.now + 10; },
       fx: { color: '#b8a8ff' },
@@ -3119,15 +3136,15 @@ KITS.oathbroker = {
       desc: '30% less damage for 8s, and every entry written in that time is halved. A renegotiated entry that comes due in that time is billed to you at half.',
       effect(k) {
         k.mitigate('self', 0.3, 8, { ab: this });
-        oathSend(k, { op: 'writ', dur: 8, mark: k.talent('oathbroker_garnishwrit') ? OATH.LIEN : 0 });
+        oathSend(k, { op: 'writ', dur: 8, mark: k.talent('oathbroker_garnishwrit') ? 1 / 3 : 0 });
       },
       fx: { color: '#e8e0c8' },
     },
     {
       id: 'default', name: 'Default', type: 'ogcd', target: 'self', cd: 120, anim: 'big',
-      desc: 'Tear the Ledger up: every entry is erased, and the boss is struck for half of what it held (a renegotiated entry in full). Your credit freezes for 10s after: damage hits you as it lands.',
+      desc: 'Tear the Ledger up: every entry is erased, and the boss is struck for half of what it held (a renegotiated entry in full). A Ledger holding 30% of your HP or more is a debt worth defaulting on: it strikes for a quarter more than it held, a renegotiated entry at nearly twice its size. Your credit freezes for 10s after: damage hits you as it lands.',
       usable: k => k.g.ledger.length > 0,
-      glow: k => oathTotal(k) >= oathHp(k) * 0.4,
+      glow: k => oathTotal(k) >= oathHp(k) * OATH.BIG,
       effect(k) {
         oathSend(k, { op: 'default', mult: OATH.DEFAULT, freeze: k.perk('oathbroker_a4') ? 7 : OATH.FREEZE });
         k.g.ledger = []; k.g.total = 0;
@@ -3239,15 +3256,15 @@ if (typeof module !== 'undefined') Object.assign(module.exports, { MAW, MAW_TYPE
 const IRONPALM = {
   WINDOW: 0.8,       // after a press's recovery ends, the string waits this long for the next input
   JUGGLE: 1.3,       // ... after Rising Gate (the boss is in the air)
-  CRISP: 0.18,       // a press made in this first moment after the recovery ends (not buffered early) is Crisp
+  CRISP: 0.3,        // a press made in this first moment after the recovery ends (not buffered early) is Crisp
   CRISP_SAVE: 0.4,   // ... it costs 40% less Breath
   CRISP_HIT: 0.1,    // ... and hits 10% harder
-  STAGGER: 0.3,      // Avalanche Fist: a dropped or broken string locks you this long
-  WINDED: 18, RECOVER: 60,   // below 18 Breath you're winded until it's back to 60: the resting pace (TAP_REFILL of it while you keep tapping)
+  STAGGER: 0.2,      // Avalanche Fist: a broken string locks you this long
+  WINDED: 18, RECOVER: 45,   // below 18 Breath you're winded until it's back to 45: the resting pace (TAP_REFILL of it while you keep tapping)
   TAP: 0.5,          // ... and every press is a weak tap at half the input's hit: no string, no named move, no Breath
-  CRISP_BUFFER: 0.1, // a press buffered no more than this early still lands Crisp
-  LONG: 1.2,         // Avalanche Fist: a named move of four inputs or more, its bonus this much stronger
-  RUSH: 0.03, RUSH_MAX: 8, RUSH_FADE: 2.5,   // Avalanche Fist's Momentum: +3% a named move, up to 8, gone 2.5s after the last
+  CRISP_BUFFER: 0.25, // a press buffered no more than this early still lands Crisp
+  LONG: 1.15,        // Avalanche Fist: a named move of four inputs or more, its bonus this much stronger
+  RUSH: 0.02, RUSH_MAX: 8, RUSH_FADE: 4,   // Avalanche Fist's Momentum: +2% a named move, up to 8, gone 4s after the last
   OPENING: 4,        // a read tankbuster: the next Heavy within 4s is a free Thousand Palms
   OFFBAL: 4,         // Iron Ox: Read back at once, and a blow read within 4s opens like a tankbuster
   FLOW_BREATH: 12, FLOW_LOW: 40,   // Flowing Palms with all three palms Crisp, finished under 40 Breath, gives 12 back
@@ -3273,7 +3290,7 @@ const IP_MOVES = [
   ipMove('flow', 'Flowing Palms', 'LLL', { bonus: 70, desc: 'Three quick open palms, the last one pushed through for {d:122}. Cheap and simple, and a way to breathe without stopping: if all three palms land Crisp and leave you under 40 Breath, they give 12 back.',
     finish(k) { const ks = k.g.keys.slice(-3); if (ks.length === 3 && ks.every(e => e.crisp) && k.g.breath < IRONPALM.FLOW_LOW) { ipBreath(k, IRONPALM.FLOW_BREATH); k.stats.flowCrisp = (k.stats.flowCrisp || 0) + 1; k.fx('flowBreath'); } } }),
   ipMove('gate', 'Rising Gate', 'LLH', { bonus: 42, threat: 3, anim: 'uppercut', alt: { ironpalm_swallow: 'KLH' },
-    desc: 'A launching uppercut for {d:125} that draws the boss to you (triple threat). The boss is in the air: the next input has longer to come.' }),
+    desc: 'A launching uppercut for {d:125} that draws the boss to you (triple threat). The boss is in the air: the next input has longer to come, and any key you press carries the string on to Heaven\'s Drop.' }),
   ipMove('drop', 'Heaven\'s Drop', 'LLHKK', { bonus: 98, anim: 'axe', lock: 0.62, alt: { ironpalm_swallow: 'KLHKK' },
     desc: 'Rising Gate, then two kicks: an axe kick brought down on the airborne boss for {d:166}.',
     finish(k, mv) { if (k.talent('ironpalm_mountain')) k.after(1, () => { k.damage(40, { ab: mv }); k.fx('aftershock'); }); } }),
@@ -3321,7 +3338,10 @@ function ipStep(k, x) {
   const list = ipMoves(k), fits = s => list.some(e => e.seq.startsWith(s));
   const base = ipLive(k) ? k.g.str : '';
   let s = base + x, broke = false, open = false;
+  // the boss in the air after Rising Gate: any key carries on to Heaven's Drop (the juggle can't break)
+  const air = !fits(s) && base.length >= 3 && list.find(e => e.mv.id === 'drop' && e.seq.length > base.length && e.seq.startsWith(base));
   if (x === 'H' && k.has('opening')) { s = 'LKHH'; open = true; }   // a read tankbuster: this Heavy is the finisher
+  else if (air) s = base + air.seq[base.length];
   else if (!fits(s)) { broke = base.length > 0 && !k.g.clean; s = fits(x) ? x : ''; }
   const hit = list.find(e => e.seq === s) || null;
   const ends = !!hit && !list.some(e => e.seq.length > s.length && e.seq.startsWith(s));
@@ -3335,7 +3355,10 @@ function ipDrop(k, why) {
   g.dropAt = k.now; g.dropWhy = why; g.plan = null;
   k.stats.drops = (k.stats.drops || 0) + 1;
   if (!k.def.avalanche || k.has('slide') || ipUnbroken(k)) return;
-  k.clear('rush');
+  // a broken string costs you 2 Momentum and staggers you (one let go just ends)
+  if (why !== 'broke') return;
+  const rb = k.buffs.get('rush');
+  if (rb && rb.end > k.now) { rb.stacks = Math.max(0, rb.stacks - 2); if (!rb.stacks) k.clear('rush'); }
   k.lockUntil = Math.max(k.lockUntil, k.now + IRONPALM.STAGGER); k.lockLen = Math.max(0.1, k.lockUntil - k.now);
   k.buff('stagger', IRONPALM.STAGGER);
   k.fx('stagger');
@@ -3351,8 +3374,8 @@ function ipPress(k, ab) {
     return;
   }
   const st = ipStep(k, x), mv = st.move;
-  // Crisp: pressed in the first moment after the last recovery ended (or buffered no more than a tenth of a second
-  // before it ended), while you're in the rhythm
+  // Crisp: pressed in the first moment after the last recovery ended (or buffered no more than CRISP_BUFFER before it
+  // ended), while you're in the rhythm
   const inq = k.input;
   // (an Opening's Thousand Palms is always Crisp)
   const crisp = st.open || (!!inq && (inq.buffered ? now - inq.at <= IRONPALM.CRISP_BUFFER : inq.idle <= IRONPALM.CRISP) && now - g.lastPress < 3);
@@ -3379,7 +3402,7 @@ function ipPress(k, ab) {
       const n = mv.flurry + (k.perk('ironpalm_w2') ? 1 : 0);
       for (let i = 0; i < n; i++) k.after(0.07 * (i + 1), () => k.damage(mv.bonus * bonusMult / mv.flurry * (i >= mv.flurry ? 0.3 : 1), { ab: mv, mult }));
     }
-    if (k.def.avalanche) k.buff('rush', k.has('slide') ? 30 : IRONPALM.RUSH_FADE, {}, IRONPALM.RUSH_MAX, 1);
+    if (k.def.avalanche) k.buff('rush', k.has('slide') ? 30 : IRONPALM.RUSH_FADE, {}, IRONPALM.RUSH_MAX, mv.seq.length >= 4 ? 2 : 1);   // (a long move: 2)
     if (mv.finish) mv.finish(k, mv, st);
     if (k.has('bellows')) { k.damage(54, { ab: k.abilities[4] }); ipBreath(k, 6); }
     if (ipUnbroken(k)) ipBreath(k, 4);
@@ -3426,10 +3449,13 @@ function ipNext(k, plan) {
   if (!live || g.clean) return IP_SLOT[plan[0]];
   return null;
 }
+// the beat: the glowing key lights only as the last press's recovery ends (from CRISP_BUFFER before it), so pressing
+// it when it lights lands Crisp
+const ipOnBeat = k => k.lockUntil - k.now <= IRONPALM.CRISP_BUFFER;
 function ipInputAb(x, id, desc) {
   const I = IP_INPUT[x];
   return { id, name: IP_NAME[x], input: x, type: 'gcd', target: 'enemy', range: MELEE, anim: IP_ANIM[x], lock: I.lock,
-    meta: `${x} · no GCD · ${I.lock}s recovery · ${I.cost} Breath`, cost: k => (ipTaps(k, x) ? 0 : I.cost), glow: k => !ipWinded(k) && ipGuide(k) === x, desc, effect(k) { ipPress(k, this); } };
+    meta: `${x} · no GCD · ${I.lock}s recovery · ${I.cost} Breath`, cost: k => (ipTaps(k, x) ? 0 : I.cost), glow: k => !ipWinded(k) && ipOnBeat(k) && ipGuide(k) === x, desc, effect(k) { ipPress(k, this); } };
 }
 // the base ability (by the id a spec or talent replaced) and its current id, for cooldown changes
 const ipAbId = (k, base) => (k.abilities.find(a => k.baseId(a) === base) || {}).id;
@@ -3460,15 +3486,15 @@ KITS.ironpalm = {
   tick: k => ipTick(k),
   dmgMod: k => (k.has('wind') ? 0.1 : 0) + (k.def.avalanche ? IRONPALM.RUSH * k.stacks('rush') : 0),
   poolRate: k => (k.has('wind') ? 2 : 1) * (k.talent('ironpalm_lungs') ? 1.2 : 1) * (k.has('bellows') ? 1.5 : 1) * (ipWinded(k) && k.now < (k.g.tapUntil || 0) && !k.has('skin') ? IRONPALM.TAP_REFILL : 1),
-  poolRest: k => k.has('skin') || ipWinded(k),   // winded: the resting pace until Breath is back to 60
+  poolRest: k => k.has('skin') || ipWinded(k),   // winded: the resting pace until Breath is back to 45
   onNotify(k, type, d) { if (type === 'read') ipRead(k, d); },
   signature: 'Strings and Reads',
-  floor: 'Press the glowing key: Q, W and E spell named moves on their own. When the ring runs dry you\'re winded: the keys stop glowing and every press is a weak tap until it\'s back to 60, so stop and breathe. Press R when it glows, just as a big hit lands, D when you\'re in trouble, and F when the party is about to be hit.',
+  floor: 'Press the glowing key as it lights: it lights on the beat, so following it keeps your presses Crisp, and Q, W and E spell named moves on their own. When the ring runs dry you\'re winded: the keys stop glowing and every press is a weak tap until it\'s back to 45, so stop and breathe. Press R when it glows, just as a big hit lands, D when you\'re in trouble, and F when the party is about to be hit.',
   ceiling: [
     'Every move is a string of Light, Heavy and Kick (L H K). Rising Gate is L L H, and two Kicks after it bring Heaven\'s Drop down on the airborne boss. Thousand Palms is L K H H. The gauge shows what you have pressed and every move still in reach.',
-    'There is no GCD. Breath is the limit: every press costs some, it creeps back while you fight and floods back once you stop for half a second. Below 18 you\'re winded until you\'re back to 60: every press is a weak tap at half strength, with no string. Stop and it floods back at the full resting pace; keep tapping and it comes back a quarter slower. Crane Step (K L), or Flowing Palms (L L L) pressed Crisp when you\'re low, gives Breath back without stopping.',
+    'There is no GCD. Breath is the limit: every press costs some, it creeps back while you fight and floods back once you stop for half a second. Below 18 you\'re winded until you\'re back to 45: every press is a weak tap at half strength, with no string. Stop and it floods back at the full resting pace; keep tapping and it comes back a quarter slower. Crane Step (K L), or Flowing Palms (L L L) pressed Crisp when you\'re low, gives Breath back without stopping.',
     'Iron Ox (H H H) throws the boss off balance: Read is ready again at once, and a blow you Read in the next 4s opens it up like a tankbuster. Ox, Read the next swing, Heavy: a free Thousand Palms.',
-    'Rhythm: a press made just as the last one\'s recovery ends is Crisp, 10% harder for 40% less Breath. Mashing still works, because early presses are buffered, but only one pressed in the last tenth of a second of the recovery is Crisp.',
+    'Rhythm: a press made just as the last one\'s recovery ends is Crisp, 10% harder for 40% less Breath. Mashing still works, because early presses are buffered, but only one pressed in the last quarter second of the recovery, or within 0.3s after it ends, is Crisp. The glowing key lights on that beat.',
     'Read (R) in the last moment before a hit lands catches it: half the damage, a counter and Breath. Read a tankbuster and your next Heavy is a free, stronger Thousand Palms.',
   ],
   abilities: [
@@ -3478,7 +3504,7 @@ KITS.ironpalm = {
     {
       id: 'read', name: 'Read', type: 'ogcd', target: 'self', cd: 6, lock: 0.25, anim: 'guard',
       desc: 'Drop into a reading stance for 1.2s: 20% less damage. A hit that lands in its first 0.4s is read: it lands at half strength, you counter for {d:63}, and you get 15 Breath. Read a tankbuster (or any blow after Iron Ox) and your next Heavy is a free, Crisp Thousand Palms, 30% stronger. It doesn\'t break your string.',
-      glow: k => { const b = bossNow(k); return !!(b && b.casting && b.onMe && b.castLeft < 0.8); },   // (a tankbuster about to land)
+      glow: k => { const b = bossNow(k); return !!(b && b.casting && b.onMe && b.castLeft < 0.55); },   // (a tankbuster about to land: lit late enough that pressing it as it lights catches the hit)
       effect(k) {
         k.mitigate('self', IRONPALM.READ.pct, IRONPALM.READ.dur, { kind: 'parry', ab: this }); k.buff('read', IRONPALM.READ.dur);
         if (k.has('pond')) { const id = this.id; k.after(0.8, () => k.refundCharge(id)); }   // Still Water's Still Pond: Read is back at once
@@ -3551,7 +3577,7 @@ const ipDragon = {
 };
 TALENT_ABILITIES.ironpalm_dragon = { cls: 'ironpalm', ab: ipDragon,
   spec: { avalanche: Object.assign({}, ipDragon, {
-    desc: 'Leap and come down on your target like a dragon: a {d:170} blow, the whole party deals 5% more damage for 12s, and you get Second Wind for 15s. Your Momentum fills and lasts 15s, unless a string drops.',
+    desc: 'Leap and come down on your target like a dragon: a {d:170} blow, the whole party deals 5% more damage for 12s, and you get Second Wind for 15s. Your Momentum fills and lasts 15s, unless a string breaks.',
     effect(k) { ipDragon.effect.call(this, k); k.buff('rush', 15, {}, IRONPALM.RUSH_MAX, IRONPALM.RUSH_MAX); },
   }) } };
 

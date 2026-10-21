@@ -358,6 +358,7 @@ const VOLKAR = {
       for (let i = 0; i < n; i++) {
         const a = a0 + i * TAU / n, R = roomAt(a) - 50;
         const dir = a + Math.PI + (i % 2 ? 0.35 : -0.35);
+        f.rollerPreview({ x: Math.cos(a) * R, y: Math.sin(a) * R, angle: dir, speed: 135, r: 40, delay: d - 1.2 + i * 0.4 + 2.2, tag: 'orb' });   // (visual only: the lane shows from the cast start)
         f.afterKeep(d - 1.2 + i * 0.4, () => f.roller({ x: Math.cos(a) * R, y: Math.sin(a) * R, angle: dir, speed: 135, delay: 2.2, dmg: dmg.orb, r: 40, kb: 120, tag: 'orb' }));
       }
     };

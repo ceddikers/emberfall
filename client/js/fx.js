@@ -144,7 +144,7 @@ const FX = {
       const cam = this.camFor(ent);
       const run = () => {
         VFX.setScale(dim); this.vscale = dim;   // (vscale: addShake scales with it)
-        try { recipe({ ent, x: ent.x, y: ent.y, tx, ty, ang: ent.angle, tent: opts.tent || null, mine: !!opts.mine, cam, later: (d, fn) => this.later(d, () => { VFX.setScale(dim); this.vscale = dim; try { fn(); } finally { VFX.setScale(1); this.vscale = 1; } }) }); }
+        try { recipe({ ent, x: ent.x, y: ent.y, tx, ty, ang: ent.angle, tent: opts.tent || null, mine: !!opts.mine, cam, step: Number.isInteger(opts.step) ? opts.step : null, later: (d, fn) => this.later(d, () => { VFX.setScale(dim); this.vscale = dim; try { fn(); } finally { VFX.setScale(1); this.vscale = 1; } }) }); }
         finally { VFX.setScale(1); this.vscale = 1; }
       };
       if (delay) this.later(delay, run); else run();

@@ -105,13 +105,13 @@ const SPECS = {
         abilities: {
           drain: {
             id: 'rampage', replaces: 'drain', name: 'Rampage', type: 'gcd', target: 'enemy', range: SPEC_MELEE, anim: 'attack',
-            desc: 'Spend 40 Rage: a wild blow for {d:350}, up to {d:250} more the more the bank holds (the damage you took since your last Rampage, 6s at most). It hits harder the lower your HP (up to 70% harder near death) and heals you for 20% of the bank.',
+            desc: 'Spend 40 Rage: a wild blow for {d:320}, up to {d:250} more the more the bank holds (the damage you took since your last Rampage, 6s at most). Within 1.2s of a hit that took a tenth of your HP your blood is warm: {d:340} more; after that the bank has gone cold and counts for 30%. It hits harder the lower your HP (up to 70% harder near death) and heals you for 20% of the bank.',
             usable: k => reaverDrainOk(k),
             glow: k => reaverDrainGlow(k) || (k.g.blood >= 40 && k.env.hpFrac() < 0.5),
             effect(k) {
-              let pot = 350 + reaverDrainCost(k, 120);
+              let pot = 320 + reaverDrainCost(k, 120);
               const taken = reaverCash(k);
-              pot += Math.min(250, taken / (60 * ENGINE.NUM_SCALE));
+              pot += Math.min(250, taken / (60 * ENGINE.NUM_SCALE)) * reaverWarm(k);
               pot *= 1 + 0.7 * Math.max(0, 1 - k.env.hpFrac());
               pot = reaverDrainPot(k, pot);
               k.damage(pot, { ab: this });
@@ -135,11 +135,11 @@ const SPECS = {
         potMult: 0.77,
         abilities: {
           drain: {
-            desc: 'Spend 40 Blood: hits for {d:300}, up to {d:400} more the more the bank holds (the damage you took since your last Drain, 6s at most), and heals you for 35% of the bank, and the whole party for 25% of that.',
+            desc: 'Spend 40 Blood: hits for {d:260}, up to {d:520} more the more the bank holds (the damage you took since your last Drain, 6s at most). Within 1.2s of a hit that took a tenth of your HP your blood is warm: {d:340} more; after that the bank has gone cold and counts for 30%. It heals you for 35% of the bank, and the whole party for 25% of that.',
             effect(k) {
-              let pot = 300 + reaverDrainCost(k, 110);
+              let pot = 260 + reaverDrainCost(k, 110);
               const taken = reaverCash(k);
-              pot += Math.min(400, taken / (38 * ENGINE.NUM_SCALE));
+              pot += Math.min(520, taken / (30 * ENGINE.NUM_SCALE)) * reaverWarm(k);
               pot = reaverDrainPot(k, pot);
               k.damage(pot, { ab: this });
               if (k.perk('bloodreaver_w2')) { k.damage(pot * 0.3, { ab: this }); k.fx('empower'); }
@@ -168,19 +168,24 @@ const SPECS = {
       gaugeTip: 'Rune Strike gives 1 (2 during Runic Overload), a Ward that absorbed at least half refunds its Rune (a sanctified one always does), and Mirror Aegis reflecting a tankbuster gives 1. Runic Ward spends 1, Glyph Burst spends all 3.',
       blurb: 'Your Wards go where they\'re needed. When they break, they break for you.',
       focus: 'Shielding allies. Your Ward goes on whoever needs it, and pays its Rune back more easily.',
-      passive: { name: 'Shared Ward', desc: 'Runic Ward goes on an ally (yourself if none is picked). It explodes from them when it ends, and refunds its Rune once it has absorbed half.' },
+      passive: { name: 'Shared Ward', desc: 'Runic Ward goes on an ally (yourself if none is picked). It explodes from them when it ends, and refunds its Rune once it has absorbed half. A Ward broken all the way shatters outward for {d:250} more.' },
       classPassive: 'Runic Wards explode when they end. The more they absorbed, the bigger the blast ({d:150} up to {d:600}), and one that absorbed at least half refunds its Rune.',
       build: base => ({
-        potMult: 0.70,
+        potMult: 0.645,
         abilities: {
           ward: {
             target: 'ally',
-            desc: 'Spend 1 Rune: shield an ally for {s:650} for 8s. It explodes when it ends, for {d:150} up to {d:600} the more it absorbed, and gives the Rune back once it has taken half.',
+            desc: 'Spend 1 Rune: shield an ally for {s:650} for 8s. It explodes when it ends, for {d:150} up to {d:600} the more it absorbed, and gives the Rune back once it has taken half. One broken all the way shatters outward for {d:250} more: raise it just before the hit it is for.',
             effect(k, t) { runeWardCost(k); runeWardUp(k, this, t); k.g.wardAmt = k.shield(t, k.perk('runeguard_a2') ? 812 : 650, k.perk('runeguard_a4') ? 12 : 8, { ab: this, tag: 'ward' }); },
           },
         },
         onNotify(k, type, d) {
-          if (type === 'shieldEnd' && d.tag === 'ward') { runeWardEnd(k, d, k.talent('runeguard_reclaim') ? 0.33 : 0.5, 0.5); return; }
+          if (type === 'shieldEnd' && d.tag === 'ward') {
+            runeWardEnd(k, d, k.talent('runeguard_reclaim') ? 0.33 : 0.5, 0.5);
+            // Shared Ward: one that broke all the way shatters outward as well
+            if ((d.frac || 0) >= 0.999) { k.damage(250 * (k.has('overload') ? 1.5 : 1), { ab: k.abById('ward') }); k.fx('shatter'); }
+            return;
+          }
           base.onNotify(k, type, d);
         },
       }),
@@ -464,9 +469,9 @@ const SPECS = {
       id: 'sharpshooter', name: 'Sharpshooter', title: 'The Still Eye', accent: '#f2d27a',
       blurb: 'Breathe out, then let fly. Every second you stand still sharpens the next shot.',
       focus: 'Precision. Standing still builds Steady Aim for more damage, and Piercing Arrow becomes Aimed Shot, a slow, huge hit. Weaker while moving.',
-      passive: { name: 'Steady Aim', desc: 'Every second you stand still adds a stack of Steady Aim (up to 5): 4% more damage each. Moving loses them all. Piercing Arrow becomes Aimed Shot.' },
+      passive: { name: 'Steady Aim', desc: 'Every second you stand still adds a stack of Steady Aim (up to 5): 4% more damage each. Moving loses them all. Piercing Arrow becomes Aimed Shot. Inside your Hunter\'s Mark, Rapid Fire costs only 20 Focus.' },
       build: () => ({
-        potMult: 0.664,
+        potMult: 0.609, markRapid: 20,
         tick(k) {
           rangerTrack(k);
           const dt = k.now - (k.g.aimT ?? k.now);
@@ -511,7 +516,7 @@ const SPECS = {
           else k.dot('acid', 14 * k.g.acid, 15, 3, { ab });
         }
         return {
-          potMult: 0.958,
+          potMult: 0.849,
           init: () => Object.assign(base.init(), { acid: 0 }),
           tick(k) { rangerTrack(k); if (k.g.acid && !k.dots.has('acid')) k.g.acid = 0; },
           abilities: {
@@ -519,7 +524,7 @@ const SPECS = {
               desc: 'Fast shot: {d:200}, +10 Focus and a stack of Acid on the target. Sometimes lights up Keen Eye.',
               effect(k) {
                 const barr = k.consume('barrage'), ff = !barr && rangerFocusFire(k);
-                const r = k.damage((barr ? 600 : 200) * (ff ? 2 : 1), rangerShot(k, this));
+                const r = k.damage((barr ? 720 : 200) * (ff ? 2 : 1), rangerShot(k, this));
                 if (!ff) k.gain('focus', rangerFocus(k, barr));
                 addAcid(k, barr ? 3 : 1, this);
                 if (k.rng() < rangerKeenChance(k)) rangerKeen(k); else rangerNoKeen(k);
@@ -540,7 +545,7 @@ const SPECS = {
               },
               fx: { type: 'line', color: '#9aff4a', range: 440 },
             },
-            barrage: { desc: 'Your next Quick Shot fires three times ({d:600}), gives triple Focus and three stacks of Acid.' },
+            barrage: { desc: 'Your next Quick Shot fires three times ({d:720}), gives triple Focus and three stacks of Acid.' },
           },
         };
       },
@@ -871,20 +876,23 @@ Object.assign(SPECS, {
     {
       id: 'comet', name: 'Comet', title: 'The Long Charge', accent: '#ffd08a',
       gauge: { max: 200 },
-      gaugeTip: 'A Passing Strike gives 10, Hook Turn 15, Slipstream 15. Walking fills 15 a second, 22 once you hold a straight line; after 1.5s standing still it drains 15 a second. Holds up to 200. Impact spends it all.',
+      gaugeTip: 'A Passing Strike gives 10, Hook Turn 15, Slipstream 15, every Carve 6. Walking fills 15 a second, 22 once you hold a straight line; after 3s standing still it drains 15 a second. Holds up to 200. Impact needs 100 and spends it all.',
       blurb: 'Build speed across the whole hall. Then hit like something falling from the sky.',
       focus: 'Big, readable burst. Drift holds twice as much and fills faster in straight lines, and Crosswind becomes Impact, a charge clean through the boss.',
-      passive: { name: 'Long Charge', desc: 'Drift holds up to 200 and fills faster while you run in a straight line. Crosswind becomes Impact: a charge clean through your target that releases everything at once.' },
+      passive: { name: 'Long Charge', desc: 'Drift holds up to 200, fills faster while you run in a straight line, every Carve winds it 6, and it holds 3s when you stop. Crosswind becomes Impact: a charge clean through your target that releases everything at once.' },
       build: () => ({
-        potMult: 0.56,
-        driftMax: 200, straight: true,
+        potMult: 0.52,
+        driftMax: 200, straight: true, driftHold: 3, carveDrift: 6,   // (a Comet holds its charge 3s standing still before it drains)
         abilities: {
           cross: {
             id: 'impact', replaces: 'cross', name: 'Impact', type: 'gcd', target: 'enemy', range: SPEC_RANGED, anim: 'big',
-            desc: 'Spend all your Drift: charge clean through your target and out the far side, releasing it all at once: {d:120}, plus {d:40} for every 10 Drift you spend. From 160 it always crits.',
-            usable: k => k.g.drift >= 40,
+            desc: 'Needs 100 Drift. Spend it all: charge clean through your target and out the far side, releasing it all at once: {d:120}, plus {d:40} for every 10 Drift you spend. The charge through its body is a Passing Strike too. From 160 it always crits (it glows then).',
+            usable: k => k.g.drift >= 100,   // (the Drift floor: a charge needs a real run-up behind it)
             glow: k => k.g.drift >= 160,
             effect(k) {
+              // (the charge runs clean through the body: a Passing Strike with the whole run-up behind it)
+              const tg = k.env.target({ target: 'enemy', range: 300 });
+              if (tg) { k.g.passAt = k.now + DRIFT.ICD; driftPass(k, tg); }
               const d = k.g.drift; k.g.drift = 0;
               k.teleport('through', { ab: this, d: 120 });
               k.damage(120 + 4 * d, { ab: this, autoCrit: d >= 160 });
@@ -954,7 +962,7 @@ Object.assign(SPECS, {
       focus: 'Protecting one ally. Co-sign a friend and part of everything that hits them goes onto your Ledger instead.',
       passive: { name: 'Co-Signer', desc: 'Lien becomes Co-Sign: for 10s, 30% of the damage an ally takes is written into your Ledger instead, and Settle pays it with the rest. Paying a co-signed line down with Collect heals the ally it was written for.' },
       build: () => ({
-        potMult: 0.95,
+        potMult: 0.9,
         abilities: {
           lien: {
             id: 'cosign', replaces: 'lien', name: 'Co-Sign', type: 'ogcd', target: 'ally', cd: 20, anim: 'cast', lock: 0.4,
@@ -973,12 +981,12 @@ Object.assign(SPECS, {
       focus: 'A big Ledger. Every bill that comes due strikes the boss for half its size, so the more you owe, the harder you hit.',
       passive: { name: 'Due With Interest', desc: 'Every entry that comes due also strikes the boss for half its size. Default becomes Foreclose: the whole Ledger turned into one blow on the boss.' },
       build: () => ({
-        potMult: 0.87,
+        potMult: 0.79,
         collector: OATH.COL,
         abilities: {
           default: {
             id: 'foreclose', replaces: 'default', name: 'Foreclose', type: 'ogcd', target: 'enemy', range: 300, cd: 120, anim: 'big',
-            desc: 'Call in every debt at once: the whole Ledger is erased and strikes the boss in one blow, as big as everything that was written, a renegotiated entry at one and a half times its size. Your credit freezes for 10s after.',
+            desc: 'Call in every debt at once: the whole Ledger is erased and strikes the boss in one blow. A Ledger holding 30% of your HP or more strikes for a quarter more than everything that was written (a renegotiated entry at one and a half times that); a smaller one for only 30% of it. Your credit freezes for 10s after.',
             usable: k => k.g.ledger.length > 0,
             glow: k => oathTotal(k) >= oathHp(k) * 0.3,
             effect(k) {
@@ -999,7 +1007,7 @@ Object.assign(SPECS, {
 SPECS.ironpalm = [
   {
     id: 'stillwater', name: 'Still Water', title: 'The Unmoving Pond', accent: '#8fc8e8',
-    gaugeTip: 'Every press costs Breath: Light 12, Heavy 18, Kick 15 (40% less when Crisp). It refills 11 a second while you fight and 36 a second once you stop for half a moment; Crane Step gives 22. Below 18 you\'re winded until it\'s back to 60: every press is a weak tap, and it refills at the resting pace (75% of it while you keep tapping). Flowing Palms with all three palms Crisp gives 12 back when it leaves you under 40. A perfect Read fills it to the top.',
+    gaugeTip: 'Every press costs Breath: Light 12, Heavy 18, Kick 15 (40% less when Crisp). It refills 11 a second while you fight and 36 a second once you stop for half a moment; Crane Step gives 22. Below 18 you\'re winded until it\'s back to 45: every press is a weak tap, and it refills at the resting pace (75% of it while you keep tapping). Flowing Palms with all three palms Crisp gives 12 back when it leaves you under 40. A perfect Read fills it to the top.',
     blurb: 'Let the blow come. Be where it isn\'t, and answer it.',
     focus: 'Reading blows. Every perfect Read fills your Breath to the top, Read has two charges, and Still Pond lets you read every blow for a while.',
     passive: { name: 'Still Water', desc: 'A perfect Read fills your Breath to the top, on any hit. Read has two charges. Iron Skin becomes Still Pond.' },
@@ -1018,12 +1026,12 @@ SPECS.ironpalm = [
   },
   {
     id: 'avalanche', name: 'Avalanche Fist', title: 'The Falling Mountain', accent: '#d08a5a',
-    gaugeTip: 'Every press costs Breath: Light 12, Heavy 18, Kick 15 (40% less when Crisp). It refills 11 a second while you fight and 36 a second once you stop for half a moment; Crane Step gives 22. Below 18 you\'re winded until it\'s back to 60: every press is a weak tap, and it refills at the resting pace (75% of it while you keep tapping). Flowing Palms with all three palms Crisp gives 12 back when it leaves you under 40. Every named move adds Momentum (+3% damage, up to 8), gone 2.5s after your last one. A broken or dropped string staggers you for 0.3s and loses it all.',
+    gaugeTip: 'Every press costs Breath: Light 12, Heavy 18, Kick 15 (40% less when Crisp). It refills 11 a second while you fight and 36 a second once you stop for half a moment; Crane Step gives 22. Below 18 you\'re winded until it\'s back to 45: every press is a weak tap, and it refills at the resting pace (75% of it while you keep tapping). Flowing Palms with all three palms Crisp gives 12 back when it leaves you under 40. Every named move adds Momentum (+2% damage, a move of four inputs or more 2 of it, up to 8), gone 4s after your last one. A broken string staggers you for 0.2s and costs 2 Momentum.',
     blurb: 'Start the slide and never let it stop.',
-    focus: 'Long strings. Every named move builds Momentum, and moves of four inputs or more hit harder, but a string you drop or break staggers you and throws it all away.',
-    passive: { name: 'Avalanche', desc: 'Every named move adds Momentum: +3% damage, up to 8, gone 2.5s after your last named move. Moves of four inputs or more hit 20% harder. A string you break or let drop staggers you for 0.3s and loses all your Momentum. Temple Bell becomes Landslide.' },
+    focus: 'Long strings. Every named move builds Momentum, and moves of four inputs or more hit harder and build twice as much, but a string you break staggers you and knocks some of it away.',
+    passive: { name: 'Avalanche', desc: 'Every named move adds Momentum: +2% damage, up to 8 (a move of four inputs or more adds 2), gone 4s after your last named move. Moves of four inputs or more hit 15% harder. A string you break staggers you for 0.2s and costs 2 Momentum. Temple Bell becomes Landslide.' },
     build: base => ({
-      potMult: base.potMult * 0.79,
+      potMult: base.potMult * 0.86,
       avalanche: true,
       abilities: {
         bell: {

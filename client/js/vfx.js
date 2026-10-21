@@ -386,9 +386,14 @@ const VFX = (() => {
     // expanding ring on the floor
     shock(x, y, o = {}) {
       const r0 = o.r0 ?? 0, r1 = o.r ?? 80, color = o.color || '#ffffff', w = o.w ?? 5;
+      // (o.clip: a ring big enough to reach the walls runs along the floor, so it stops at them instead of sliding over
+      // the brickwork into the dark outside the room; boss-vfx.js asks for it)
+      const clip = o.clip && typeof ARENA !== 'undefined' && ARENA.trace;
       return fx({ dur: o.dur ?? 0.45, layer: o.layer || 'ground', delay: o.delay, draw: (c, p, t, e) => {
         const q = easeOut(p);
+        if (clip) { c.save(); ARENA.trace(c, 2); c.clip(); }
         neonRing(c, x, y, r0 + (r1 - r0) * q, color, w * (1 - p * 0.7), e.a * (1 - p), o.flat ?? 0.78);
+        if (clip) c.restore();
       } });
     },
     // magic circle on the floor: rings, ticks, a rotating star/runes. style: star4 | star5 | hex | runes | clock | petals | gears
@@ -803,7 +808,8 @@ const VFX = (() => {
     dome(ent, o = {}) {
       const color = o.color || '#ffd86a', r = o.r ?? 46, dur = o.dur ?? 2.4;
       const pos = () => ({ x: ent.x, y: ent.y + 4 });
-      fx({ dur, layer: 'ground', draw: (c, p, t, e) => {
+      // (returns its floor and dome effects, so a long dome can be settled down: vfxLingerSettle)
+      const floorFx = fx({ dur, layer: 'ground', draw: (c, p, t, e) => {
         const k = env(p, 0.15, 0.3) * e.a, { x, y } = pos(), R = r * 1.25;
         ringStroke(c, x, y, R + 2, 'rgba(30,20,5,0.35)', 6, k, 0.5);
         glowAt(c, x, y, R * 1.3, color, 0.35 * k);
@@ -813,7 +819,7 @@ const VFX = (() => {
         for (let i = 0; i < 12; i++) { const a = i * Math.PI / 6; c.globalAlpha = k * 0.9; c.fillStyle = '#fff6d8'; c.fillRect(Math.cos(a) * R * 0.9 - 2, Math.sin(a) * R * 0.9 - 2, 4, 4); }
         c.restore(); c.globalAlpha = 1;
       } });
-      fx({ dur, layer: 'air', draw: (c, p, t, e) => {
+      const domeFx = fx({ dur, layer: 'air', draw: (c, p, t, e) => {
         const rise = easeOut(Math.min(1, p / 0.18)), k = env(p, 0.1, 0.3) * e.a, { x, y } = pos(), H = r * 1.15 * rise;
         c.save(); c.globalCompositeOperation = 'lighter';
         const g = c.createLinearGradient(x, y - H, x, y);
@@ -826,6 +832,7 @@ const VFX = (() => {
         const ga = t * 2.2; glowAt(c, x + Math.cos(ga) * r * 0.6, y - H * (0.5 + Math.sin(ga) * 0.3), 14, '#ffffff', 0.7 * k);
       }, tick: () => { if (Math.random() < 0.25) { const { x, y } = pos(), a = Math.random() * Math.PI; spawn({ x: x + Math.cos(a) * r * 0.9, y: y - Math.sin(a) * r * 0.5, z: 4, vz: rand(30, 70), life: 0.9, size: rand(6, 10), size1: 0, color, kind: 'star' }); } },
       done: () => { const { x, y } = pos(); for (let i = 0; i < 14; i++) { const a = Math.random() * Math.PI * 2; spawn({ x: x + Math.cos(a) * r * 0.8, y: y + Math.sin(a) * r * 0.4 - 20, z: rand(10, 50), vx: Math.cos(a) * 40, vy: Math.sin(a) * 20, vz: rand(-10, 20), drag: 0.04, life: rand(0.7, 1.2), size: rand(6, 11), size1: 0, color: i % 3 ? color : '#ffffff', kind: 'star' }); } } });
+      return [floorFx, domeFx];
     },
 
     // a column of holy light: shafts falling onto a spot, feathers drifting down, a golden ring that lingers
@@ -1026,7 +1033,7 @@ const VFX = (() => {
       };
       fx({ dur, layer: 'ground', draw: (c, p, t, e) => {
         c.save(); if (typeof ARENA !== 'undefined') { ARENA.trace(c, 2); c.clip(); }
-        const life = p * dur, k = e.a * Math.min(1, life / 0.08) * Math.min(1, (dur - life) / 1.6), heat = Math.max(0, 1 - life / heatT);
+        const life = p * dur, k = e.a * Math.min(1, life / 0.08) * Math.min(1, (dur - life) / 1.6) * (o.a ?? 1), heat = Math.max(0, 1 - life / heatT);   // (o.a: a boss's aftermath cap)
         c.globalAlpha = k * 0.5; c.fillStyle = o.lip || '#5a3418'; trace(c, 1.9);
         c.globalAlpha = k * 0.95; c.fillStyle = '#120804'; trace(c, 1);
         c.strokeStyle = '#1a0e08'; c.lineWidth = 2; c.lineCap = 'round'; c.globalAlpha = k * 0.85;
@@ -1056,7 +1063,7 @@ const VFX = (() => {
       const shape = (c, pad, s = 1) => { c.beginPath(); for (const b of blobs) { const r = b.r * s + pad; if (r <= 0.5) continue; c.moveTo(b.x + r, b.y); c.ellipse(b.x, b.y, r, r * 0.7, 0, 0, Math.PI * 2); } c.fill(); };
       fx({ dur, layer: 'ground', draw: (c, p, t, e) => {
         c.save(); if (typeof ARENA !== 'undefined') { ARENA.trace(c, 2); c.clip(); }
-        const life = p * dur, k = e.a * Math.min(1, life / 0.1) * Math.min(1, (dur - life) / 1.8), dry = Math.min(1, life / dur * 1.4);
+        const life = p * dur, k = e.a * Math.min(1, life / 0.1) * Math.min(1, (dur - life) / 1.8) * (o.a ?? 1), dry = Math.min(1, life / dur * 1.4);   // (o.a: a boss's aftermath cap)
         c.globalAlpha = k * 0.8; c.fillStyle = dark; shape(c, 3);
         c.globalAlpha = k * 0.9; c.fillStyle = color; shape(c, 0);
         c.globalAlpha = k * 0.35 * (1 - dry * 0.7); c.fillStyle = hi; shape(c, -w * 0.18, 0.55);
@@ -1267,7 +1274,7 @@ const VFX = (() => {
         c.globalAlpha = e.a; c.fillStyle = '#e8dce8'; c.strokeStyle = '#2a2034'; c.lineWidth = 1.5; c.beginPath(); c.arc(bx, by, 5, 0, Math.PI * 2); c.fill(); c.stroke();
         c.strokeStyle = '#c0304a'; c.lineWidth = 1; c.beginPath(); c.arc(bx, by, 3, -1, 1); c.stroke(); c.globalAlpha = 1;
       } });
-      fx({ dur: 0.05, delay: toss, layer: 'air', draw: () => {}, done: () => { B.flash(x, y - 20, r * 0.6, '#e8dcf8', 0.2); B.sparks(x, y, { color: '#e8dcf8', n: 5, speed: 300, z: 20 }); B.shock(x, y, { r: r * 1.4, color: o.ring || '#a08ac0', dur: 0.5 }); } });
+      fx({ dur: 0.05, delay: toss, layer: 'air', draw: () => {}, done: () => { if (o.flashR !== 0) B.flash(x, y - 20, o.flashR ?? r * 0.6, '#e8dcf8', 0.2); B.sparks(x, y, { color: '#e8dcf8', n: 5, speed: 300, z: 20 }); B.shock(x, y, { r: r * 1.4, color: o.ring || '#a08ac0', dur: 0.5 }); } });
       fx({ dur, delay: toss, layer: 'air', draw: (c, p, t, e) => {
         const pop = easeOut(Math.min(1, p / 0.12)), thin = p < 0.25 ? 1 : 1 - (p - 0.25) / 0.75 * 0.7, k = e.a * Math.min(1, (1 - p) / 0.3) * thin * (o.a ?? 1), sp = (0.4 + 0.6 * pop) * (1 + p * 0.3);
         const pr = b => b.r * (0.35 + 0.65 * pop) * (1 + p * 0.25), px = b => x + b.x * sp, py = b => y + b.y * sp - b.z - 16 - p * 14 + Math.sin(t * 2 + b.ph) * 2;

@@ -16,6 +16,15 @@ function vfxShake(amount, src) {
   else FX.shake = Math.max(FX.shake || 0, s);
 }
 
+// (QA polish) a lasting floor mark (VFX.sigil / ink / shock... any effect VFX.fx returned) bright for its first `hold`
+// seconds, then easing down to `settle` of its strength for the rest of its life, so a boss telegraph under it reads
+function vfxLingerSettle(e, settle = 0.32, hold = 0.9) {
+  if (!e || typeof e.draw !== 'function') return e;
+  const d = e.draw;
+  e.draw = (c, p, t, ee) => { const a0 = ee.a; ee.a = a0 * (settle + (1 - settle) * Math.max(0, 1 - t / hold)); try { d(c, p, t, ee); } finally { ee.a = a0; } };
+  return e;
+}
+
 // OLD_PAINT: pieces for the older seven classes' polish pass (and a few thin moves of the newer ones). Melee moves draw
 // their own layered smear and impact on top of VFX.slash; a buff or debuff that lasts leaves a faint marker for its real
 // duration, bright for its first moment and then low, so a boss telegraph under it still reads.
@@ -24,11 +33,12 @@ const OLD_PAINT = (() => {
   // a lasting mark's strength: in over 0.12s, `peak` for its first `hold`s easing down to `settle`, out over its last 0.6s
   const markK = (t, dur, peak = 0.9, settle = 0.3, hold = 0.5) => Math.min(1, t / 0.12) * Math.max(0, Math.min(1, (dur - t) / 0.6)) * (settle + (peak - settle) * Math.max(0, 1 - t / hold));
   // draw(c, k, t, fx) every frame for dur seconds (k already carries the remote dimming). Returns the effect: setting
-  // fx.cut = true fades it out over 0.3s (a ward broken early, a buff spent); o.tick(p, dt, fx) runs while it lasts
+  // fx.cut = true fades it out over 0.3s (a ward broken early, a buff spent); o.tick(p, dt, fx) runs while it lasts.
+  // fx.dur can be changed while it runs (a guard a talent held longer: KIT_VFX.braceHold); its fade-out follows
   function linger(dur, layer, draw, o = {}) {
     return V.fx({ dur, layer, tick: o.tick, draw: (c, p, t, e) => {
       if (e.cut && e.cutT == null) e.cutT = t;
-      const k = e.a * markK(t, dur, o.peak, o.settle, o.hold) * (e.cutT != null ? Math.max(0, 1 - (t - e.cutT) / 0.3) : 1);
+      const k = e.a * markK(t, e.dur, o.peak, o.settle, o.hold) * (e.cutT != null ? Math.max(0, 1 - (t - e.cutT) / 0.3) : 1);
       if (k > 0.01) draw(c, k, t, e);
     } });
   }
@@ -130,7 +140,9 @@ const ABILITY_VFX = (() => {
   // ---- Bastion: steel blue and dawn gold
   const BAST_STEEL = '#7fb2ff', BAST_GOLD = '#ffd65a', BAST_DAWN = '#ffe9a8', BAST_INK = '#0e1a30';
   // Blade Chain's step (0 Strike, 1 Riposte, 2 Judgment), counted per hero the way the kit counts it (back to Strike after 15s)
-  const bastionStep = e => { const s = e.bastionBlade || (e.bastionBlade = { n: -1, at: -99 }); s.n = FX.now - s.at > 15 ? 0 : (s.n + 1) % 3; s.at = FX.now; return s.n; };
+  // (c.step: the step the kit really made, sent with the cast (kits.js fxStep), so a talent that skips one (Rhythm) never
+  // puts the look out of step; the count is only the fallback for a cast that came without it)
+  const bastionStep = c => { const e = c.ent, s = e.bastionBlade || (e.bastionBlade = { n: -1, at: -99 }); s.n = c.step != null ? c.step % 3 : FX.now - s.at > 15 ? 0 : (s.n + 1) % 3; s.at = FX.now; return s.n; };
   // Brace: a tower-shield plate held in front for the whole guard (an 80 degree band of steel, a gold rim, the sun boss
   // in its middle, a glint sliding along it); KIT_VFX.perfect sets fx.pb and the plate flares
   function bastionPlate(ent, dur) {
@@ -192,7 +204,8 @@ const ABILITY_VFX = (() => {
 
   // ---- Bloodreaver: crimson and iron
   const REAV_RED = '#d4202c', REAV_INK = '#1a0406';
-  const reaverStep = e => { const s = e.reaverHack || (e.reaverHack = { n: -1, at: -99 }); s.n = FX.now - s.at > 15 ? 0 : (s.n + 1) % 2; s.at = FX.now; return s.n; };
+  // Hack & Maul's step: 0 Hack, 1 Maul, 2 Gore (a talent's third hit); c.step from the kit (fxStep), else counted
+  const reaverStep = c => { const e = c.ent, s = e.reaverHack || (e.reaverHack = { n: -1, at: -99 }); s.n = c.step != null ? c.step : FX.now - s.at > 15 ? 0 : (s.n + 1) % 2; s.at = FX.now; return s.n; };
   // Ground Slam (tank sheet): glowing lava cracks run out across the floor, then cool and darken over dur
   function reaverCracks(x, y, r, dur) {
     const rays = Array.from({ length: 10 }, (_, i) => { const a0 = i * TAU / 10 + rnd(-0.25, 0.25), L = r * rnd(0.55, 1), pts = [[0, 0]]; let px = 0, py = 0;
@@ -315,7 +328,7 @@ const ABILITY_VFX = (() => {
     bastion: {
       // Blade Chain, three different swings: Strike a quick steel cut, Riposte a flipped backhand that bites with a blue
       // starburst, Judgment a glint on the blade, a great gold overhead arc and a gold seal stamped before the boss
-      blade: c => { const st = bastionStep(c.ent), f = st === 1 ? true : st === 2 ? false : Math.random() < 0.5, judg = st === 2, d = judg ? 0.07 : 0;
+      blade: c => { const st = bastionStep(c), f = st === 1 ? true : st === 2 ? false : Math.random() < 0.5, judg = st === 2, d = judg ? 0.07 : 0;
         if (judg) { const h = ahead(c, 18); V.glint(h.x, h.y, { color: BAST_DAWN, size: 32, z: 34 }); }
         c.later(d, () => { V.slash(c.x, c.y, c.ang, { r: [56, 62, 76][st], span: [1.9, 2.2, 2.7][st], color: judg ? '#ffe08a' : '#9fc4ff', flip: f, sparks: [3, 4, 6][st] });
           OP.smear(c.x, c.y, c.ang, { r: [62, 70, 88][st], span: [1.9, 2.3, 2.9][st], w: [13, 16, 25][st], color: judg ? '#ffc840' : BAST_STEEL, core: judg ? '#fffbe0' : '#e8f2ff', ink: BAST_INK, dur: [0.24, 0.26, 0.34][st], flip: f, lines: judg ? 4 : 2 }); });
@@ -331,15 +344,16 @@ const ABILITY_VFX = (() => {
         V.missile(c.x, c.y, c.tx, c.ty, { style: 'blade', color: '#ffe08a', speed: 800, size: 1.9, onHit: (x, y) => { V.spikeburst(x, y, { r: 60, n: 14, color: '#ffc840', core: '#fffbe0', ink: '#3a2a08', dur: 0.36 });
           V.hit(x, y, '#ffe9a0', 0.9); V.shock(x, y, { r: 92, color: '#ffe08a', dur: 0.4, w: 5 }); V.burst(x, y, { color: '#ffe9a0', color2: '#ffffff', n: 12, speed: 220, flash: false });
           const m = { x: x + (c.x - x) * 0.25, y: y + (c.y - y) * 0.25 }; V.sigil(m.x, m.y, { r: 50, style: 'star4', color: BAST_GOLD, dur: 0.8, spin: 3 }); shake(2); } }); },
-      // Brace: a glint on the shield face, the tower shield set in front for the whole 3s guard (KIT_VFX.perfect flares
-      // it on a Perfect Block), sparks and a scuff of dust at the feet
+      // Brace: a glint on the shield face, the tower shield set in front for the whole guard: 3s, or what Hold Fast
+      // stretched it to (KIT_VFX.braceHold); a Perfect Block flares it and, the guard spent, lowers it (KIT_VFX.perfect).
+      // Sparks and a scuff of dust at the feet
       brace: c => { const fx = c.x + Math.cos(c.ang) * 34, fy = c.y + Math.sin(c.ang) * 34; V.glint(fx, fy, { color: '#dbe9ff', size: 26 }); V.shield(c.ent, { shape: 'front', color: BAST_STEEL, dur: 0.4, r: 40 });
         if (c.ent.bastionPlate) c.ent.bastionPlate.cut = true;
         c.ent.bastionPlate = bastionPlate(c.ent, 3);
         V.sparks(fx, fy, { color: '#cfe0ff', n: 6, angle: c.ang, spread: 0.7, speed: 220 }); V.smoke(c.x, c.y, { n: 4, color: '#c8c0b0', size: 18, a: 0.45, speed: 40 }); },
       // a shaft of light slams down (Divine Leap): a golden starburst, a seal on the floor, stones kicked up, then the aura
       oath: c => { V.lightfall(c.x, c.y, { color: '#ffe08a', r: 30, h: 240, dur: 0.8, feathers: 0 }); V.aura(c.ent, { color: '#ffd65a', dur: 15, r: 30, rate: 0.12 });
-        c.later(0.2, () => { V.ink(c.x, c.y, { r: 60, dur: 1.4 }); V.sigil(c.x, c.y, { r: 60, style: 'star4', color: '#ffd65a', dur: 1.4, spin: 1.5 }); V.spikeburst(c.x, c.y, { r: 50, n: 12, color: '#ffd65a', core: '#fffbe0', ink: '#4a3408', dur: 0.36, z: 4 }); V.debris(c.x, c.y, { n: 6, color: '#8a7a68' }); shake(3); }); },
+        c.later(0.2, () => { V.ink(c.x, c.y, { r: 60, dur: 1.4 }); V.sigil(c.x, c.y, { r: 60, style: 'star4', color: '#ffd65a', dur: 1.4, spin: 1.5 }); V.spikeburst(c.x, c.y, { r: 66, n: 14, hole: 0.5, color: '#ffd65a', core: '#fffbe0', ink: '#4a3408', fill: '#8a6a10', dur: 0.4, layer: 'ground', z: 0, flat: 0.6 }); V.debris(c.x, c.y, { n: 6, color: '#8a7a68' }); shake(3); }); },
       // Rally Banner: a glint and a shaft of light where it goes in, then the banner itself stands behind the bastion for
       // its 12s, a small seal at its foot and a faint gold ring round it (the old full-strength floor star is gone)
       banner: c => { const a = c.ang || 0, bx = c.x - Math.cos(a) * 24, by = c.y - Math.sin(a) * 14 - 4;
@@ -366,7 +380,7 @@ const ABILITY_VFX = (() => {
     bloodreaver: {
       // Hack & Maul (heavy axe): a wide crimson-iron arc, a grit-and-spark bite and a small crack in the floor; Maul, the
       // second swing, comes back the other way, wider, and shakes
-      hack: c => { const maul = reaverStep(c.ent) === 1, f = maul ? true : Math.random() < 0.5, R = maul ? 86 : 76;
+      hack: c => { const maul = reaverStep(c) >= 1, f = maul ? true : Math.random() < 0.5, R = maul ? 86 : 76;
         V.slash(c.x, c.y, c.ang, { r: R - 10, span: 2.4, color: '#ff3a3a', w: 0.55, flip: f });
         OP.smear(c.x, c.y, c.ang, { r: R, span: maul ? 2.9 : 2.6, w: maul ? 28 : 22, color: REAV_RED, core: '#f0dcd4', ink: REAV_INK, dur: maul ? 0.34 : 0.3, flip: f, lines: 3 });
         c.later(0.1, () => { const m = between(c, 0.72); V.splash(c.tx, c.ty, { n: maul ? 10 : 6 }); V.hit(c.tx, c.ty, '#ff6a5a', maul ? 0.9 : 0.7);
@@ -383,19 +397,20 @@ const ABILITY_VFX = (() => {
           V.spikeburst(c.tx, c.ty, { r: 48, n: 12, color: '#d0203a', core: '#ffd0d0', ink: '#2a0408', dur: 0.3 }); V.puddle(m.x, m.y, { r: 16, color: '#a01028', dark: '#3a0610', dur: 1.4, bubbles: false, fumes: false }); }); },
       // power gathers, then a ground slam: a starburst, the floor cracks with glowing lava, rocks fly; the flame aura stays on
       frenzy: c => { V.charge(c.x, c.y, { color: '#ff5a2a', r: 50, n: 8, dur: 0.25, follow: c.ent }); V.aura(c.ent, { color: '#ff2a1a', style: 'flame', dur: 12, r: 30, rate: 0.3 });
-        c.later(0.18, () => { const x = c.ent.x, y = c.ent.y; reaverCracks(x, y, 120, 4); V.crater(x, y, { r: 72, color: '#ff4a1a', dur: 3.2, flames: 6, a: 0.7, cracks: 10 }); V.spikeburst(x, y, { r: 70, n: 16, color: '#ff3a1a', core: '#ffd070', ink: '#3a0806', dur: 0.4, z: 6 });
-          V.flash(x, y - 16, 90, '#ff6a2a', 0.2); V.flare(x, y, { color: '#ff3a1a', n: 18, r: 26 }); V.debris(x, y, { n: 10, hot: true, color: '#5a3a2a' }); V.shock(x, y, { r: 140, color: '#ff3a2a', dur: 0.5, w: 8 });
+        c.later(0.18, () => { const x = c.ent.x, y = c.ent.y; reaverCracks(x, y, 120, 4); V.crater(x, y, { r: 72, color: '#ff4a1a', dur: 3.2, flames: 6, a: 0.7, cracks: 10 }); V.spikeburst(x, y, { r: 84, n: 16, color: '#ff3a1a', core: '#ffd070', ink: '#3a0806', dur: 0.42, layer: 'ground', z: 0, flat: 0.6 });   // (QA) under the reaver, not over it
+          V.flash(x, y - 16, 48, '#ff6a2a', 0.18); V.flare(x, y, { color: '#ff3a1a', n: 18, r: 26 }); V.debris(x, y, { n: 10, hot: true, color: '#5a3a2a' }); V.shock(x, y, { r: 140, color: '#ff3a2a', dur: 0.5, w: 8 });
           V.smoke(x, y, { n: 5, r: 40, color: '#5a3a2a', size: 30, a: 0.4, speed: 50, life: 1.4 }); shake(6); }); },
       // a roar: a ring of red spikes bursts across the floor, shockwaves roll out, a dust cloud and embers settle
       warcry: c => { V.glint(c.x, c.y, { color: '#ffb08a', size: 26, z: 40 });
         c.later(0.1, () => { V.spikeburst(c.x, c.y, { r: 120, n: 22, hole: 0.62, color: '#ff4a1a', core: '#ffb070', ink: '#3a0806', fill: '#8a1a0a', dur: 0.55, layer: 'ground', z: 0, flat: 0.6 });
           for (let i = 0; i < 2; i++) V.shock(c.x, c.y, { r: 160 + i * 50, color: '#ff8a5a', dur: 0.6, w: 6 - i * 2, delay: i * 0.12 }); shake(4); });
-        // (polish) the roar's blood shield flashes up on the reaver and, on each player's screen, on themselves (the party
-        // shield covers everyone; FX.me is the one hero every client has to hand)
-        c.later(0.3, () => { reaverBloodShield(c.ent); if (typeof FX !== 'undefined' && FX.me && FX.me !== c.ent && FX.me.x != null) reaverBloodShield(FX.me); });
+        // (polish) the roar's blood shield flashes up on the reaver; the rest of the party gets its flash from the shield
+        // itself (KIT_VFX.partyWard, on every client)
+        c.later(0.3, () => reaverBloodShield(c.ent));
         c.later(0.45, () => { V.smoke(c.x, c.y, { n: 7, r: 70, color: '#8a5a40', size: 34, a: 0.35, speed: 40, life: 1.8 }); V.motes(c.x, c.y, { color: '#ff8a3a', n: 8, r: 90, rise: 0.5, life: 1.4 }); }); },
       // a blood-red rune circle that stays under the reaver, a red dome flaring up, shadows rising
-      undying: c => { V.ink(c.x, c.y, { r: 60, dur: 8, follow: c.ent, a: 0.3 }); V.sigil(c.x, c.y, { r: 60, style: 'runes', color: '#c01a2a', dur: 8, spin: -0.8, follow: c.ent }); V.aura(c.ent, { color: '#8a0010', style: 'shadow', dur: 8, r: 30, rate: 0.3 });
+      // (QA) the red rune circle settles faint after its flare: at full strength for 8s it read as a danger zone
+      undying: c => { vfxLingerSettle(V.ink(c.x, c.y, { r: 60, dur: 8, follow: c.ent, a: 0.3 }), 0.5, 1); vfxLingerSettle(V.sigil(c.x, c.y, { r: 60, style: 'runes', color: '#c01a2a', dur: 8, spin: -0.8, follow: c.ent }), 0.28, 1.2); V.aura(c.ent, { color: '#8a0010', style: 'shadow', dur: 8, r: 30, rate: 0.3 });
         V.dome(c.ent, { color: '#ff2a3a', r: 44, dur: 1.4 }); c.later(1.2, () => V.motes(c.ent.x, c.ent.y, { color: '#ff2a3a', n: 8, r: 30 })); },
       // Berserker: a wild double swing of burning orange, the floor cracking and smoking where it lands
       rampage: c => {
@@ -412,43 +427,46 @@ const ABILITY_VFX = (() => {
       strike: c => { const h = ahead(c, 14); V.glint(h.x, h.y, { color: RUNE_PALE, size: 24, z: 18 }); V.spawn({ x: h.x, y: h.y, z: 18, life: 0.18, size: 26, size1: 8, color: RUNE_VIO });
         c.later(0.04, () => OP.thrust(c.x, c.y, c.tx, c.ty, { w: 11, color: RUNE_DEEP, core: '#f0e8ff', ink: RUNE_INK, dur: 0.22, z: 18 }));
         c.later(0.1, () => { const p = between(c, 0.72), m = between(c, 0.82); V.hit(c.tx, c.ty, RUNE_VIO, 0.85); V.spikeburst(c.tx, c.ty, { r: 36, n: 8, color: RUNE_DEEP, core: '#f0e8ff', ink: RUNE_INK, dur: 0.24 });
-          V.sigil(p.x, p.y - 24, { r: 26, style: 'hex', color: RUNE_PALE, dur: 0.36, spin: 4, flat: 1, layer: 'air' }); V.sigil(m.x, m.y, { r: 42, style: 'runes', color: '#c8a8ff', dur: 0.55, spin: 6 }); }); },
+          // (QA: a filler, so cheaper; and the standing shield indigo, not a white disc over the boss's face)
+          V.sigil(p.x, p.y - 24, { r: 24, style: 'hex', color: RUNE_VIO, dur: 0.32, spin: 4, flat: 1, layer: 'air' }); V.shock(m.x, m.y, { r: 46, color: RUNE_VIO, dur: 0.4, w: 4 }); }); },
       // a rune circle turns under the guard, the hex ward closes over and holds as rune plates turning round the holder
       // until it ends (KIT_VFX.wardBlast breaks it with a rune burst sized by what it soaked)
-      ward: c => { const w = c.tent || c.ent; V.sigil(w.x, w.y, { r: 40, style: 'runes', color: '#b18cff', dur: 0.7, spin: 4, follow: w }); V.shield(w, { shape: 'hex', color: '#a88cff', dur: 0.6, r: 40 }); V.burst(w.x, w.y - 20, { color: '#d8c4ff', n: 8, speed: 140, kind: 'star', flash: false });
+      // (QA colour pass: every Runeguard recipe on the indigo RUNE_ palette, not the Shadowblade's violet)
+      ward: c => { const w = c.tent || c.ent; V.sigil(w.x, w.y, { r: 40, style: 'runes', color: RUNE_VIO, dur: 0.7, spin: 4, follow: w }); V.shield(w, { shape: 'hex', color: '#9aa4ff', dur: 0.6, r: 40 }); V.burst(w.x, w.y - 20, { color: RUNE_PALE, n: 8, speed: 140, kind: 'star', flash: false });
         if (c.ent.rgWard) c.ent.rgWard.cut = true;
         c.ent.rgWard = runeguardWard(w, 8); },
       // a glyph spins up on the target, then rune crystals erupt in a violet starburst and leave the floor cracked
-      glyph: c => { V.ink(c.tx, c.ty, { r: 64, dur: 0.5 }); V.sigil(c.tx, c.ty, { r: 64, style: 'runes', color: '#9a6bff', dur: 0.5, spin: 8 });
-        c.later(0.4, () => { V.crystals(c.tx, c.ty, { color: '#b28cff', n: 7, r: 46, h: 58 }); V.spikeburst(c.tx, c.ty, { r: 50, n: 12, color: '#9a6bff', core: '#f0e8ff', ink: '#1e0e3a', dur: 0.32 }); V.decal(c.tx, c.ty, { style: 'crack', r: 50, dur: 1.8, a: 0.55, seed: Math.random() * 6 }); shake(3); }); },
+      glyph: c => { V.ink(c.tx, c.ty, { r: 64, dur: 0.5 }); V.sigil(c.tx, c.ty, { r: 64, style: 'runes', color: RUNE_DEEP, dur: 0.5, spin: 8 });
+        c.later(0.4, () => { V.crystals(c.tx, c.ty, { color: '#9aa4ff', n: 7, r: 46, h: 58 }); V.spikeburst(c.tx, c.ty, { r: 50, n: 12, color: RUNE_DEEP, core: '#eef1ff', ink: RUNE_INK, dur: 0.32 }); V.decal(c.tx, c.ty, { style: 'crack', r: 50, dur: 1.8, a: 0.55, seed: Math.random() * 6 }); shake(3); }); },
       // runes spiral in, a rune circle, crackling bolts, a violet burst; motes drift off afterwards
-      overload: c => { V.charge(c.x, c.y, { color: '#c8a8ff', r: 50, n: 10, dur: 0.3, follow: c.ent }); V.aura(c.ent, { color: '#a070ff', style: 'runes', dur: 15, r: 32, rate: 0.2 }); V.ink(c.x, c.y, { r: 70, dur: 1.2 }); V.sigil(c.x, c.y, { r: 70, style: 'runes', color: '#a070ff', dur: 1.2, spin: 3 });
-        for (let i = 0; i < 4; i++) c.later(i * 0.12, () => { const a = Math.random() * Math.PI * 2; V.lightning(c.ent.x, c.ent.y, c.ent.x + Math.cos(a) * 60, c.ent.y + Math.sin(a) * 40, { color: '#d0b8ff', jag: 10 }); });
-        c.later(0.3, () => V.spikeburst(c.ent.x, c.ent.y, { r: 46, n: 12, color: '#a070ff', core: '#f0e8ff', ink: '#1e0e3a', dur: 0.32, z: 20 })); c.later(1, () => V.motes(c.ent.x, c.ent.y, { color: '#c8a8ff', n: 8, r: 34 })); },
+      overload: c => { V.charge(c.x, c.y, { color: '#b8c0ff', r: 50, n: 10, dur: 0.3, follow: c.ent }); V.aura(c.ent, { color: '#7c84ff', style: 'runes', dur: 15, r: 32, rate: 0.2 }); V.ink(c.x, c.y, { r: 70, dur: 1.2 }); V.sigil(c.x, c.y, { r: 70, style: 'runes', color: '#7c84ff', dur: 1.2, spin: 3 });
+        for (let i = 0; i < 4; i++) c.later(i * 0.12, () => { const a = Math.random() * Math.PI * 2; V.lightning(c.ent.x, c.ent.y, c.ent.x + Math.cos(a) * 60, c.ent.y + Math.sin(a) * 40, { color: '#c8ceff', jag: 10 }); });
+        c.later(0.3, () => V.spikeburst(c.ent.x, c.ent.y, { r: 46, n: 12, color: '#7c84ff', core: '#eef1ff', ink: RUNE_INK, dur: 0.32, z: 20 })); c.later(1, () => V.motes(c.ent.x, c.ent.y, { color: '#b8c0ff', n: 8, r: 34 })); },
       // a great rune circle, a pillar of light, and a ring of rune stones bursting up round its edge
       // (the great circle flares for a moment, then a faint sanctuary rim of runes holds there for the buff's 10s)
-      sanctum: c => { V.glint(c.x, c.y, { color: '#e0d4ff', size: 30, z: 40 }); V.ink(c.x, c.y, { r: 150, dur: 0.7, a: 0.25 }); V.sigil(c.x, c.y, { r: 150, style: 'runes', color: '#9f7aff', dur: 0.7, spin: 0.5 }); V.pillar(c.x, c.y, { r: 50, h: 160, color: '#b8a0ff', dur: 1.2 });
-        OP.rim(c.x, c.y, 150, '#9f7aff', 10, { style: 'runes', settle: 0.22, ticks: 24, spin: 0.12 }); V.shock(c.x, c.y, { r: 170, color: RUNE_PALE, dur: 0.55, w: 5 });
-        c.later(0.15, () => { for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3 + 0.5; V.crystals(c.x + Math.cos(a) * 140, c.y + Math.sin(a) * 109, { color: '#b8a0ff', n: 3, r: 14, h: 40, dur: 1.6 }); } }); },
+      // (QA: the flare whited out the middle) a slimmer pillar, indigo
+      sanctum: c => { V.glint(c.x, c.y, { color: RUNE_PALE, size: 30, z: 40 }); V.ink(c.x, c.y, { r: 150, dur: 0.7, a: 0.25 }); V.sigil(c.x, c.y, { r: 150, style: 'runes', color: '#7c84ff', dur: 0.7, spin: 0.5 }); V.pillar(c.x, c.y, { r: 36, h: 160, color: '#7c84ff', dur: 1.1 });
+        OP.rim(c.x, c.y, 150, '#7c84ff', 10, { style: 'runes', settle: 0.22, ticks: 24, spin: 0.12 }); V.shock(c.x, c.y, { r: 170, color: RUNE_PALE, dur: 0.55, w: 5 });
+        c.later(0.15, () => { for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3 + 0.5; V.crystals(c.x + Math.cos(a) * 140, c.y + Math.sin(a) * 109, { color: '#9aa4ff', n: 3, r: 14, h: 40, dur: 1.6 }); } }); },
       // a glint on the mirror, a pane of rune-glass standing in front for the 3s hold, light sliding across it, shards
       // falling away when it goes
-      mirror: c => { const fx = c.x + Math.cos(c.ang) * 30, fy = c.y + Math.sin(c.ang) * 30; V.glint(fx, fy, { color: '#ffffff', size: 34 }); V.shield(c.ent, { shape: 'front', color: '#e0d4ff', dur: 0.5, r: 44 });
-        runeguardMirror(c.ent, 3); V.crystals(fx, fy, { color: '#e8e0ff', n: 5, r: 18, h: 40, dur: 0.6 }); V.sparks(fx, fy - 20, { color: RUNE_PALE, n: 6, speed: 200 });
-        c.later(2.9, () => { const e = c.ent, a = e.angle || 0; V.crystals(e.x + Math.cos(a) * 32, e.y + Math.sin(a) * 26, { color: '#e8e0ff', n: 4, r: 16, h: 30, dur: 0.5 }); }); },
-      // Runeblade: a rune-etched sword cut with a lavender trail (Carve, the second hit, cuts wider)
-      cut: c => { const carve = Math.random() < 0.5; V.slash(c.x, c.y, c.ang, { r: carve ? 64 : 54, span: carve ? 2.2 : 1.6, color: '#c58cff', w: 0.5, dur: 0.24, flip: carve });
-        c.later(0.07, () => { V.hit(c.tx, c.ty, '#e0c8ff', 0.7); V.sigil(c.tx, c.ty, { r: 22, style: 'runes', color: '#d8b8ff', dur: 0.35, spin: 8 }); }); },
+      mirror: c => { const fx = c.x + Math.cos(c.ang) * 30, fy = c.y + Math.sin(c.ang) * 30; V.glint(fx, fy, { color: '#ffffff', size: 34 }); V.shield(c.ent, { shape: 'front', color: RUNE_PALE, dur: 0.5, r: 44 });
+        runeguardMirror(c.ent, 3); V.crystals(fx, fy, { color: '#e4e8ff', n: 5, r: 18, h: 40, dur: 0.6 }); V.sparks(fx, fy - 20, { color: RUNE_PALE, n: 6, speed: 200 });
+        c.later(2.9, () => { const e = c.ent, a = e.angle || 0; V.crystals(e.x + Math.cos(a) * 32, e.y + Math.sin(a) * 26, { color: '#e4e8ff', n: 4, r: 16, h: 30, dur: 0.5 }); }); },
+      // Runeblade: a rune-etched sword cut with a pale indigo trail (Carve, the second hit, cuts wider)
+      cut: c => { const carve = Math.random() < 0.5; V.slash(c.x, c.y, c.ang, { r: carve ? 64 : 54, span: carve ? 2.2 : 1.6, color: '#a8b0ff', w: 0.5, dur: 0.24, flip: carve });
+        c.later(0.07, () => { V.hit(c.tx, c.ty, '#d8deff', 0.7); V.sigil(c.tx, c.ty, { r: 22, style: 'runes', color: '#b8c0ff', dur: 0.35, spin: 8 }); }); },
       // Rune Cleave: a wide sweep that leaves a burning rune hanging in the air
       cleave: c => {
-        V.slash(c.x, c.y, c.ang, { r: 76, span: 2.8, color: '#e0b8ff', w: 0.65, dur: 0.32 });
-        c.later(0.12, () => { V.sigil(c.tx, c.ty - 30, { r: 34, style: 'runes', color: '#b070ff', dur: 1.6, spin: 1.5, flat: 1, layer: 'air' }); V.burst(c.tx, c.ty - 20, { color: '#d8c4ff', n: 14, speed: 220 });
+        V.slash(c.x, c.y, c.ang, { r: 76, span: 2.8, color: '#c8ceff', w: 0.65, dur: 0.32 });
+        c.later(0.12, () => { V.sigil(c.tx, c.ty - 30, { r: 34, style: 'runes', color: '#7c84ff', dur: 1.6, spin: 1.5, flat: 1, layer: 'air' }); V.burst(c.tx, c.ty - 20, { color: '#d8deff', n: 14, speed: 220 });
           // (polish) the rune keeps burning, faint, over the target for the burn's 12s, an ember dropping off it now and then
           const rx = c.tx, ry = c.ty - 30;
           OP.linger(12, 'air', (cc, k, t) => { if (t < 1.3) return; const kk = k * Math.min(1, (t - 1.3) / 0.4), fl = 0.8 + 0.2 * Math.sin(t * 7);
-            V.glowAt(cc, rx, ry, 26, '#b070ff', 0.35 * kk * fl); V.neonRing(cc, rx, ry, 20, '#b070ff', 1.4, kk * fl, 1);
+            V.glowAt(cc, rx, ry, 26, '#7c84ff', 0.35 * kk * fl); V.neonRing(cc, rx, ry, 20, '#7c84ff', 1.4, kk * fl, 1);
             V.neonPath(cc, RUNE_PALE, 1.5, kk * fl, () => { cc.moveTo(rx - 7, ry + 8); cc.lineTo(rx, ry - 9); cc.lineTo(rx + 7, ry + 8); cc.moveTo(rx - 4, ry + 1); cc.lineTo(rx + 4, ry + 1); }); },
-            { peak: 0.6, settle: 0.6, hold: 1, tick: () => { if (Math.random() < 0.04) V.spawn({ x: rx + rnd(-10, 10), y: c.ty, z: 30, vz: -20, life: 0.7, size: 5, size1: 0, color: '#c58cff' }); } });
-          for (let i = 0; i < 8; i++) V.spawn({ x: c.tx + (Math.random() - 0.5) * 40, y: c.ty, z: 20, vz: 40 + Math.random() * 50, life: 1.2, size: 7, size1: 0, color: '#c58cff' }); vfxShake(3); });
+            { peak: 0.6, settle: 0.6, hold: 1, tick: () => { if (Math.random() < 0.04) V.spawn({ x: rx + rnd(-10, 10), y: c.ty, z: 30, vz: -20, life: 0.7, size: 5, size1: 0, color: '#a8b0ff' }); } });
+          for (let i = 0; i < 8; i++) V.spawn({ x: c.tx + (Math.random() - 0.5) * 40, y: c.ty, z: 20, vz: 40 + Math.random() * 50, life: 1.2, size: 7, size1: 0, color: '#a8b0ff' }); vfxShake(3); });
       },
     },
     ranger: {
@@ -495,7 +513,8 @@ const ABILITY_VFX = (() => {
         const e = c.ent; if (e.rangerBarrage) e.rangerBarrage.cut = true;
         e.rangerBarrage = OP.linger(15, 'air', (cc, k, t) => { const a = e.angle || 0, bx = e.x + Math.cos(a) * 16, by = e.y + Math.sin(a) * 12 - 20, pu = 0.75 + 0.25 * Math.sin(t * 5);
           V.glowAt(cc, bx, by, 16, RANG_GOLD, 0.6 * k * pu); V.glowAt(cc, bx, by, 5, '#ffffff', k);
-          for (let i = -1; i <= 1; i++) { const x = e.x + i * 9, y = e.y - 58 - Math.abs(i) * 3 + Math.sin(t * 3 + i) * 1.5; V.neonPath(cc, RANG_GOLD, 1.6, k, () => { cc.moveTo(x - 4, y + 3); cc.lineTo(x, y - 3); cc.lineTo(x + 4, y + 3); }); } },
+          // (QA: bare chevrons read as a zigzag) three little gold arrows, shaft and head, standing over the hero
+          for (let i = -1; i <= 1; i++) { const x = e.x + i * 9, y = e.y - 58 - Math.abs(i) * 3 + Math.sin(t * 3 + i) * 1.5; V.neonPath(cc, RANG_GOLD, 1.4, k, () => { cc.moveTo(x, y + 9); cc.lineTo(x, y - 3); cc.moveTo(x - 3.5, y + 1); cc.lineTo(x, y - 4); cc.lineTo(x + 3.5, y + 1); cc.moveTo(x - 2.5, y + 10); cc.lineTo(x, y + 7); cc.lineTo(x + 2.5, y + 10); }); } },
           { peak: 1, settle: 0.6, hold: 0.6 });
         e.rangerBarrage.at = FX.now; },
     },
@@ -536,7 +555,8 @@ const ABILITY_VFX = (() => {
             { peak: 0.6, settle: 0.6, hold: 1 }); }); },
       // a little bomb tossed down, a pop and a big dense cloud over the party (the kit's r140); it thins to a faint
       // haze with wisps and a violet edge that holds for the buff's 10s (low, so telegraphs read through it)
-      smoke: c => { V.smokebomb(c.x, c.y, { r: 140, color: '#8a7a9a', dur: 2.2, a: 0.5, n: 18, sx: c.x + Math.cos(c.ang) * 10, sy: c.y - 6 });
+      // (QA: the pop whited out the middle of the cloud) a small pop flash
+      smoke: c => { V.smokebomb(c.x, c.y, { r: 140, color: '#8a7a9a', dur: 2.2, a: 0.5, n: 18, sx: c.x + Math.cos(c.ang) * 10, sy: c.y - 6, flashR: 36 });
         const x = c.x, y = c.y, r = 140;
         OP.linger(10, 'ground', (cc, k) => { cc.globalAlpha = 0.12 * k; cc.fillStyle = '#2a1838'; cc.beginPath(); cc.ellipse(x, y, r, r * 0.78, 0, 0, TAU); cc.fill(); cc.globalAlpha = 1; V.neonRing(cc, x, y, r, '#8a5ac0', 1.4, k * 0.55, 0.78); },
           { peak: 0.7, settle: 0.45, hold: 2, tick: (p, dt, e) => { if (!e.cut && Math.random() < 0.3) { const a = Math.random() * TAU, d = Math.sqrt(Math.random()) * r * 0.85;
@@ -601,8 +621,10 @@ const ABILITY_VFX = (() => {
       prayer: c => { const x = c.x, y = c.y; V.ink(x, y, { r: 160, dur: 0.7, a: 0.25 }); V.sigil(x, y, { r: 160, style: 'hex', color: '#ffe680', dur: 0.7, spin: 0.4 }); V.lightfall(x, y, { color: '#fff0b0', r: 50, h: 260, dur: 1.4, feathers: 8 }); c.later(0.3, () => V.shock(x, y, { r: 170, color: '#ffe680', dur: 0.6, w: 5 }));
         OP.rim(x, y, 160, CLER_GOLD, 15, { style: 'hex', settle: 0.2, ticks: 24, spin: 0.1, tick: () => { if (Math.random() < 0.12) { const a = Math.random() * TAU, d = Math.sqrt(Math.random()) * 150; V.spawn({ x: x + Math.cos(a) * d, y: y + Math.sin(a) * d * 0.78, z: 0, vz: rnd(25, 50), life: 1.2, size: rnd(4, 7), size1: 0, color: CLER_PALE, kind: Math.random() < 0.3 ? 'star' : 'glow' }); } } }); },
       // a towering column of light and feathers, a holy seal under the ally, a white burst as they rise
-      intervene: c => { V.lightfall(c.tx, c.ty, { color: '#fff6c8', r: 44, h: 340, dur: 1.8, feathers: 10 }); V.pillar(c.tx, c.ty, { r: 40, h: 320, color: '#fff6c8', dur: 1.6 });
-        c.later(0.2, () => { V.ink(c.tx, c.ty, { r: 70, dur: 1.6 }); V.sigil(c.tx, c.ty, { r: 70, style: 'star4', color: '#ffe680', dur: 1.6, spin: 1 }); V.burst(c.tx, c.ty - 40, { color: '#ffffff', color2: '#ffe680', n: 14, speed: 200, flashR: 80 }); }); },
+      // (QA: lightfall + a white pillar stacked into a solid white column that hid the ally for 1.6s) one gold column,
+      // slimmer and shorter, a small flash
+      intervene: c => { V.lightfall(c.tx, c.ty, { color: '#ffe9a0', r: 36, h: 340, dur: 1.4, feathers: 10 }); V.pillar(c.tx, c.ty, { r: 22, h: 320, color: '#ffe680', dur: 0.9 });
+        c.later(0.2, () => { V.ink(c.tx, c.ty, { r: 70, dur: 1.6 }); V.sigil(c.tx, c.ty, { r: 70, style: 'star4', color: '#ffe680', dur: 1.6, spin: 1 }); V.burst(c.tx, c.ty - 40, { color: '#ffffff', color2: '#ffe680', n: 14, speed: 200, flashR: 40 }); }); },
       // light falls on the ally, then a golden bubble, a burst of stars and rising crosses
       bene: c => { V.lightfall(c.tx, c.ty, { color: '#ffe680', r: 30, h: 240, dur: 0.8, feathers: 4 });
         c.later(0.15, () => { if (c.tent) V.shield(c.tent, { color: '#ffe680', dur: 1.6, r: 40 }); V.burst(c.tx, c.ty - 10, { color: '#fff0a8', color2: '#ffffff', n: 12, speed: 220, kind: 'star' }); V.shock(c.tx, c.ty, { r: 70, color: '#ffe680', dur: 0.4 }); V.plus(c.tx, c.ty, { color: '#ffe680', n: 5 }); }); },
@@ -638,9 +660,10 @@ const ABILITY_VFX = (() => {
       recall: c => { const w = c.tent || { x: c.tx, y: c.ty }; V.sigil(w.x, w.y, { r: 64, style: 'clock', color: '#9ff4ff', dur: 1.4, spin: -4, follow: c.tent || undefined });
         for (let i = 0; i < 3; i++) V.shock(w.x, w.y, { r0: 110, r: 24, color: i % 2 ? '#b48cff' : '#5ff0ff', dur: 0.4, w: 4, delay: i * 0.12 });
         V.lightfall(c.tx, c.ty, { color: '#9ff4ff', r: 34, h: 260, dur: 1.4, feathers: 0 }); V.ribbons(c.tx, c.ty, { r: 50, dur: 1.6, follow: c.tent, colors: ['#5ff0ff', '#b48cff', '#ffd27a'] }); V.swirl(c.tx, c.ty, { r: 56, color: '#5ff0ff', dur: 1.6, arms: 5, dir: -1 });
-        c.later(0.45, () => { V.flash(w.x, w.y - 24, 70, '#e8ffff', 0.25); V.burst(w.x, w.y - 24, { color: '#9ff4ff', color2: '#ffffff', n: 16, speed: 240, kind: 'star', flash: false }); V.shock(w.x, w.y, { r: 100, color: '#9ff4ff', dur: 0.5, w: 5 }); V.plus(w.x, w.y, { color: '#9ff4ff', n: 5 }); }); },
+        c.later(0.45, () => { V.flash(w.x, w.y - 24, 42, '#9ff4ff', 0.22); V.burst(w.x, w.y - 24, { color: '#9ff4ff', color2: '#ffffff', n: 12, speed: 240, kind: 'star', flash: false }); V.shock(w.x, w.y, { r: 100, color: '#9ff4ff', dur: 0.5, w: 5 }); V.plus(w.x, w.y, { color: '#9ff4ff', n: 5 }); }); },
       // Echoist: the clock face rings out three times, each ring a softer echo of the last
-      chamber: c => { V.sigil(c.x, c.y, { r: 160, style: 'clock', color: '#c4a8ff', dur: 2.2, spin: 2 }); for (let i = 0; i < 3; i++) V.shock(c.x, c.y, { r: 150 + i * 30, color: '#d8c8ff', dur: 0.6, w: 6 - i * 1.5, delay: i * 0.35 }); V.burst(c.x, c.y - 20, { color: '#e8dcff', n: 12, speed: 180, kind: 'star' }); },
+      // (QA) the 160px clock is a moment, not a mark: 1.3s, so it's gone before it sits over a telegraph at full strength
+      chamber: c => { V.sigil(c.x, c.y, { r: 160, style: 'clock', color: '#c4a8ff', dur: 1.3, spin: 2 }); for (let i = 0; i < 3; i++) V.shock(c.x, c.y, { r: 150 + i * 30, color: '#b48cff', dur: 0.6, w: 5 - i * 1.3, delay: i * 0.3 }); V.burst(c.x, c.y - 20, { color: '#e8dcff', n: 12, speed: 180, kind: 'star' }); },
     },
   };
 })();
@@ -649,10 +672,27 @@ const ABILITY_VFX = (() => {
 const KIT_VFX = {
   // an item enhancement firing: a quick golden flare in the hero's colour
   empower: e => { VFX.flash(e.x, e.y - 20, 40, '#ffd27a', 0.25); VFX.motes(e.x, e.y, { color: (e.cls && e.cls.accent) || '#ffd27a', n: 6, r: 22, kind: 'star' }); VFX.shock(e.x, e.y, { r: 46, color: '#ffd27a', w: 3, dur: 0.3 }); },
+  // a shield or a damage cut the caster just put on the whole party (main.js partyWard, raid-host.js for bots; War Cry,
+  // Rally Banner, Sanctum, Prayer Circle, the party shields of Ultimates...): a brief flash in the caster's colour on every
+  // other living party member, read from the party as it stands on this client (FX.party): a bubble and sparks for a
+  // shield, a smaller, shorter bubble for a damage cut (the hex shape costs ~450 canvas calls a hero, too dear here).
+  // Always at the dimmed teammate scale; the caster's own recipe dresses the caster
+  partyWard: (e, target, d) => {
+    const list = typeof FX.party === 'function' ? FX.party() : [FX.me], mit = !!(d && d.m), col = e.cls && e.cls.id === 'bloodreaver' ? '#ff3a4a' : (e.cls && e.cls.accent) || '#e8f4ff';
+    const sc = Math.min(typeof VFX.scale === 'number' ? VFX.scale : 1, 0.6);
+    OLD_PAINT.later(0.25, () => { const p = VFX.scale; VFX.setScale(sc);
+      try { for (const w of list) { if (!w || w === e || w.x == null) continue;
+        VFX.shield(w, { color: col, dur: mit ? 0.6 : 0.8, r: mit ? 32 : 36 }); if (!mit) VFX.sparks(w.x, w.y - 10, { color: col, n: 4, speed: 150 }); } }
+      finally { VFX.setScale(typeof p === 'number' ? p : 1); } });
+  },
   // a Perfect Block: the Brace plate flares (bastionPlate), a gold flash on its face, a gold ring and a steel one
-  perfect: e => { if (e.bastionPlate && !e.bastionPlate.cut) e.bastionPlate.pb = true;
+  // (the block spends the guard (fight.js takes its Brace off), so once the flare has shown the plate comes down too)
+  perfect: e => { const pl = e.bastionPlate; if (pl && !pl.cut) { pl.pb = true; OLD_PAINT.later(0.4, () => { pl.cut = true; if (e.bastionPlate === pl) e.bastionPlate = null; }); }
     VFX.flash(e.x + Math.cos(e.angle) * 36, e.y + Math.sin(e.angle) * 30 - 16, 64, '#ffe27a', 0.22); VFX.shock(e.x, e.y, { r: 130, color: '#9fc4ff', dur: 0.5, w: 4, delay: 0.06 });
     VFX.shock(e.x, e.y, { r: 90, color: '#ffe27a', dur: 0.4, w: 7 }); VFX.spawn({ x: e.x + Math.cos(e.angle) * 30, y: e.y + Math.sin(e.angle) * 30, z: 18, life: 0.3, size: 80, size1: 30, color: '#ffe27a', kind: 'star', vr: 5 }); VFX.sparks(e.x + Math.cos(e.angle) * 30, e.y + Math.sin(e.angle) * 30, { color: '#fff2b0', n: 12, angle: e.angle, spread: 1, speed: 420 }); vfxShake(4); },
+  // Hold Fast held a Brace past its 3s (kits.js, data.d: the guard's real length): the plate just raised stays that long
+  braceHold: (e, target, d) => { const pl = e.bastionPlate, dur = d && Number.isFinite(d.d) ? Math.max(0.5, Math.min(8, d.d)) : 0;
+    if (pl && !pl.cut && dur) pl.dur = dur; },
   // Crusader: a Radiant Holy Edge leaves as a beam of light toward the boss
   radiant: (e, target) => { const t = target || { x: e.x + Math.cos(e.angle) * 200, y: e.y + Math.sin(e.angle) * 200 }; VFX.beam(e.x, e.y, t.x, t.y, { color: '#fff2b0', w: 14, dur: 0.4 }); VFX.burst(e.x, e.y, { color: '#ffe27a', color2: '#ffffff', n: 14, speed: 240, kind: 'star' }); },
   // Runeguard: a Runic Ward ends and blasts (kits.js runeWardEnd; data.f: how much of it was soaked, 0-1): the ward's
@@ -660,19 +700,20 @@ const KIT_VFX = {
   wardBlast: Object.assign((e, target, d) => {
     const f = Math.max(0, Math.min(1, (d && d.f) || 0)), wf = e.rgWard, old = wf && FX.now - wf.at > 0.25, w = old && wf.w && wf.w.x != null ? wf.w : e, R = 50 + 90 * f;
     if (old) { wf.cut = true; e.rgWard = null; }
-    VFX.flash(w.x, w.y - 20, 40 + 60 * f, '#d8c4ff', 0.22);
-    VFX.spikeburst(w.x, w.y, { r: R * 0.7, n: 10 + Math.round(8 * f), color: '#9a6bff', core: '#f0e8ff', ink: '#1e0e3a', dur: 0.36, z: 16 });
-    VFX.crystals(w.x, w.y, { color: '#b28cff', n: 4 + Math.round(6 * f), r: 30 + 30 * f, h: 34 + 30 * f, dur: 0.8 });
-    VFX.shock(w.x, w.y, { r: R + 30, color: '#b18cff', dur: 0.45, w: 4 + 3 * f });
-    VFX.sigil(w.x, w.y, { r: Math.min(90, R), style: 'runes', color: '#c8a8ff', dur: 0.6, spin: 5 });
+    // (QA: indigo, and the burst a ring of spikes on the floor round the holder rather than a solid star over them)
+    VFX.flash(w.x, w.y - 20, 34 + 40 * f, '#c8ceff', 0.22);
+    VFX.spikeburst(w.x, w.y, { r: R * 0.85, n: 10 + Math.round(8 * f), hole: 0.5, color: '#6c74f2', core: '#eef1ff', ink: '#0c1236', fill: '#2a3070', dur: 0.4, layer: 'ground', z: 0, flat: 0.6 });
+    VFX.crystals(w.x, w.y, { color: '#9aa4ff', n: 4 + Math.round(6 * f), r: 30 + 30 * f, h: 34 + 30 * f, dur: 0.8 });
+    VFX.shock(w.x, w.y, { r: R + 30, color: '#8e98ff', dur: 0.45, w: 4 + 3 * f });
+    VFX.sigil(w.x, w.y, { r: Math.min(90, R), style: 'runes', color: '#b8c0ff', dur: 0.6, spin: 5 });
     for (let i = 0; i < 6 + Math.round(6 * f); i++) { const a = Math.random() * Math.PI * 2, sp = 120 + Math.random() * 160; VFX.spawn({ x: w.x, y: w.y, z: 24, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * 0.6, vz: 60 + Math.random() * 120, g: 500, bounce: true, life: 0.5 + Math.random() * 0.4, size: 7 + Math.random() * 4, color: '#e8e0ff', kind: 'shard', add: false, vr: Math.random() * 20 - 10 }); }
-    if (target) { VFX.lightning(w.x, w.y - 20, target.x, target.y - 20, { color: '#d0b8ff', jag: 10, dur: 0.25 }); OLD_PAINT.later(0.06, () => VFX.hit(target.x, target.y, '#c8a8ff', 0.6 + 0.6 * f)); }
+    if (target) { VFX.lightning(w.x, w.y - 20, target.x, target.y - 20, { color: '#c8ceff', jag: 10, dur: 0.25 }); OLD_PAINT.later(0.06, () => VFX.hit(target.x, target.y, '#b8c0ff', 0.6 + 0.6 * f)); }
     vfxShake(2 + 3 * f);
   }, { atTarget: true }),
   'rune-echo': e => { VFX.crystals(e.x, e.y, { color: '#8e98ff', n: 8, r: 44, h: 50 }); VFX.burst(e.x, e.y, { color: '#d0d6ff', n: 14, speed: 240 }); },
   reflect: (e, target) => { if (target) VFX.beam(e.x, e.y, target.x, target.y, { color: '#e4e8ff', w: 12, dur: 0.4 }); VFX.burst(e.x, e.y, { color: '#ffffff', color2: '#dde3ff', n: 16, speed: 260, kind: 'star' }); },
   overheat: e => { VFX.flare(e.x, e.y, { n: 24, color: '#ff2a1a', r: 18 }); VFX.shock(e.x, e.y, { r: 90, color: '#ff3a1a', dur: 0.4 }); },
-  dawnstar: (e, target) => { const t = target || e; VFX.beam(t.x, t.y - 300, t.x, t.y, { color: '#fff6c8', w: 18, dur: 0.5 }); VFX.burst(t.x, t.y, { color: '#ffe680', color2: '#ffffff', n: 26, speed: 320, kind: 'star', flashR: 110 }); VFX.sigil(t.x, t.y, { r: 90, style: 'star4', color: '#ffe680', dur: 0.9, spin: 4 }); vfxShake(5); },
+  dawnstar: (e, target) => { const t = target || e; /* (QA: whited out the boss) */ VFX.beam(t.x, t.y - 300, t.x, t.y, { color: '#ffe680', w: 11, dur: 0.45 }); VFX.burst(t.x, t.y, { color: '#ffe680', color2: '#ffffff', n: 26, speed: 320, kind: 'star', flashR: 44 }); VFX.sigil(t.x, t.y, { r: 90, style: 'star4', color: '#ffe680', dur: 0.9, spin: 4 }); vfxShake(5); },
   lag: e => { VFX.smoke(e.x, e.y, { n: 6, color: '#8aa0a8', size: 22, a: 0.5 }); },
   // Aegis: a Petal shield that held comes back as a petal drifting home
   'petal-back': e => { for (let i = 0; i < 6; i++) VFX.spawn({ x: e.x, y: e.y, z: 30 + i * 4, life: 0.9, size: 12, color: i % 2 ? '#ffd0e0' : '#fff0a8', kind: 'petal', add: false, vr: 5, flutter: 6, orbit: { x: e.x, y: e.y, a: i, r: 40, w: 5, dr: -40, flat: 0.55 } }); VFX.flash(e.x, e.y - 20, 30, '#ffe9a8', 0.25); },
@@ -911,8 +952,13 @@ const DASH_VFX = (() => {
   const puff = (e, color, n = 3, big = 1) => {
     const s = still(e);
     for (let i = 0; i < n; i++) V.spawn({ x: s.x + rand(-4, 4), y: s.y + rand(-3, 3), z: 30, vx: rand(-15, 15), vy: rand(-10, 10), vz: rand(30, 60), drag: 0.04, life: rand(0.7, 1.1) * big,
-      size: rand(10, 15) * big, size1: 26 * big, color: i ? '#e8e4dc' : color, kind: 'smoke', add: false, a: i ? 0.45 : 0.7, fadeIn: 0.05 });
-    V.spawn({ x: s.x, y: s.y, z: 26, life: 0.25, size: 18 * big, size1: 4, color });
+      size: rand(10, 15) * big, size1: 26 * big, color: i > 1 ? '#e8e4dc' : color, kind: 'smoke', add: false, a: i > 1 ? 0.45 : 0.7, fadeIn: 0.05 });
+    // (QA) the reagent's colour has to read at a glance (Ember orange, Dew blue, Salt white): a coloured flash at the
+    // still, a small ring of it on the floor and two drops of it; most of the smoke is now tinted, not grey
+    V.spawn({ x: s.x, y: s.y, z: 26, life: 0.3, size: 26 * big, size1: 4, color });
+    V.shock(s.x, s.y, { r: 44 * big, color, dur: 0.35, w: 3 });   // (wider than the hero, or it hides under the sprite)
+    V.flash(s.x, s.y - 30, 26 * big, color, 0.28);
+    for (let i = 0; i < 2; i++) V.spawn({ x: s.x, y: s.y, z: 30, vx: rand(-40, 40), vy: rand(-20, 20), vz: rand(80, 130), g: 500, life: 0.45, size: 6, color, kind: 'drop', add: false, rot: Math.PI / 2 });
   };
   // ---- Alembist painted-sheet pieces (docs/art/vfx-reference/alembist.png): green cure, red bomb, blue shield.
   // Floor marks flare for a moment, then settle low (boss telegraphs must stay readable through them).
@@ -1008,7 +1054,12 @@ const DASH_VFX = (() => {
     // a gush of white steam out of the still, a little rune of glass at the feet
     distill: c => { puff(c.ent, '#dff4f4', 6, 1.4); V.sigil(c.x, c.y, { r: 34, style: 'hex', color: '#cfeff0', dur: 0.7, spin: 3 }); },
     catalyst: c => { puff(c.ent, '#ff8a3a', 4, 1.2); const s = still(c.ent); for (let i = 0; i < 3; i++) c.later(i * 0.06, () => { const a = Math.random() * Math.PI * 2; V.lightning(s.x, s.y, s.x + Math.cos(a) * 30, s.y + Math.sin(a) * 20, { color: '#ffb070', jag: 6, dur: 0.18 }); }); },
-    batch: c => { for (let i = 0; i < 4; i++) c.later(i * 0.12, () => puff(c.ent, '#ffd27a', 2, 1)); V.shock(c.x, c.y, { r: 60, color: '#ffd27a', dur: 0.4, w: 3 }); },
+    // (QA) Grand Batch read as nothing at all: now the still bubbles over in each reagent's colour in turn (a pop per
+    // vial brewed) over a small brass hex seal, and gold bubbles rise as it finishes
+    batch: c => { const cols = ['#ff7a2a', '#4fc8ff', '#efe6cf', '#ffd27a'];
+      V.sigil(c.x, c.y, { r: 46, style: 'hex', color: '#ffd27a', dur: 0.75, spin: 2.5, follow: c.ent });
+      for (let i = 0; i < 4; i++) c.later(i * 0.12, () => puff(c.ent, cols[i], 2, 1));
+      c.later(0.45, () => { const s = still(c.ent); V.shock(c.x, c.y, { r: 70, color: '#ffd27a', dur: 0.4, w: 3.5 }); V.motes(s.x, s.y, { color: '#ffd27a', n: 6, r: 18, kind: 'star' }); }); },
     blend: c => { V.swirl(c.x, c.y, { r: 36, color: '#ffe0a8', dur: 0.7, follow: c.ent, inward: true }); puff(c.ent, '#ffe0a8', 5, 1.3); },
   };
 
@@ -1411,7 +1462,7 @@ const CAST_VFX = (() => {
     // Sigilmancer: a ring of ember glyphs on the floor for the circle's whole life, embers rising off its rim
     circle: c => {
       const x = c.x, y = c.y, r = 95;
-      V.sigil(x, y, { r, style: 'runes', color: '#ffb347', dur: 20, spin: 0.25 });
+      vfxLingerSettle(V.sigil(x, y, { r, style: 'runes', color: '#ffb347', dur: 20, spin: 0.25 }), 0.3, 1.2);   // (QA) settles faint for its 20s
       V.shock(x, y, { r: r + 20, color: '#ffcf7a', dur: 0.5, w: 6 }); V.flare(x, y, { n: 14, r: 20, color: '#ff9a3a' });
       V.fx({ dur: 20, layer: 'ground', draw: (ctx, p, t, e) => {
         const k = Math.min(1, p / 0.05, (1 - p) / 0.05) * e.a;
@@ -1443,13 +1494,15 @@ const CAST_VFX = (() => {
   // a pair of feathered wings behind a hero (drawn on the floor layer, so they sit behind the sprite)
   function wings(ent, dur, color) {
     V.fx({ dur, layer: 'ground', draw: (c, p, t, e) => {
-      const k = fade(p, 0.06, 0.12) * e.a, open = Math.min(1, p * dur / 0.4), bx = ent.x, by = ent.y - 30, flap = Math.sin(t * 2.4) * 0.12;
-      V.glowAt(c, bx, by - 6, 60, color, 0.3 * k);
+      // (QA: they hid behind the sprite) spread wide from the shoulders, out past the hero's sides, so the wings read
+      const k = Math.min(1, t / 0.25, (dur - t) / 0.6) * e.a * (0.75 + 0.25 * Math.max(0, 1 - t / 1.2)), open = easeOut(Math.min(1, t / 0.4)), bx = ent.x, by = ent.y - 24 - (ent.lift || 0), flap = Math.sin(t * 2.4) * 0.1;
+      V.glowAt(c, bx, by - 8, 56, color, 0.22 * k);
       for (const sd of [-1, 1]) for (let i = 0; i < 6; i++) {
-        const a = -Math.PI / 2 + sd * (0.3 + i * 0.18 * open + flap), L = (34 - i * 2) * (0.5 + 0.5 * open);
-        c.save(); c.translate(bx + sd * 5, by); c.rotate(a);
-        c.globalAlpha = 0.4 * k; c.fillStyle = i % 2 ? '#fff6d8' : color; c.beginPath(); c.ellipse(L / 2, 0, L / 2, 4.5 + i * 0.4, 0, 0, TAU); c.fill();
-        V.neonPath(c, color, 1.3, k * 0.8, () => c.ellipse(L / 2, 0, L / 2, 4.5 + i * 0.4, 0, 0, TAU));
+        const a = -Math.PI / 2 + sd * (0.5 + i * 0.19 * open + flap), L = (54 - i * 4) * (0.45 + 0.55 * open), w = 5 + i * 0.4;
+        c.save(); c.translate(bx + sd * 8, by); c.rotate(a);
+        c.globalAlpha = 0.55 * k; c.fillStyle = i % 2 ? '#fff6d8' : color; c.beginPath(); c.ellipse(L / 2, 0, L / 2, w, 0, 0, TAU); c.fill();
+        c.globalAlpha = 0.5 * k; c.lineWidth = 1.2; c.strokeStyle = '#4a3408'; c.stroke();
+        V.neonPath(c, color, 1.3, k * 0.8, () => c.ellipse(L / 2, 0, L / 2, w, 0, 0, TAU));
         c.restore();
       }
       c.globalAlpha = 1;
@@ -1479,7 +1532,8 @@ const CAST_VFX = (() => {
     // Hallowed Ground: light falls on the spot and the floor is consecrated for 10s, embers rising off it, a pulse every 2s
     hallowed: c => { const x = c.x, y = c.y, r = 110;
       V.lightfall(x, y, { color: '#ffe08a', r: 34, h: 260, dur: 0.9, feathers: 3 });
-      V.ink(x, y, { r, dur: 10 }); V.sigil(x, y, { r, style: 'star5', color: '#f2c84b', dur: 10, spin: 0.3 });
+      // (QA) the consecrated star is bright as it lands, then holds faint for the 10s (a boss telegraph under it reads)
+      vfxLingerSettle(V.ink(x, y, { r, dur: 10 }), 0.6, 1); vfxLingerSettle(V.sigil(x, y, { r, style: 'star5', color: '#f2c84b', dur: 10, spin: 0.3 }), 0.3, 1.1);
       c.later(0.15, () => { V.spikeburst(x, y, { r: 70, n: 16, hole: 0.6, color: '#ffc840', core: '#fffbe0', ink: '#3a2a08', layer: 'ground', z: 0, flat: 0.6, dur: 0.5 }); V.debris(x, y, { n: 5, color: '#8a7a68' }); shake(3); });
       V.fx({ dur: 10, layer: 'ground', draw: () => {}, tick: (p, dt, e) => {
         if (Math.random() < 0.45) { const a = Math.random() * TAU, d = Math.sqrt(Math.random()) * r * 0.95; V.spawn({ x: x + Math.cos(a) * d, y: y + Math.sin(a) * d * 0.78, z: 0, vz: rand(40, 90), life: rand(0.7, 1.1), size: rand(6, 10), size1: 0, color: Math.random() < 0.6 ? '#ffd65a' : '#fff6d0', kind: Math.random() < 0.3 ? 'star' : 'glow' }); }
@@ -1487,9 +1541,10 @@ const CAST_VFX = (() => {
       } }); },
     // Avatar of Dawn: a shaft of dawn, then wings of light on the back for the whole burst
     avatar: c => { const dur = longFor(c.ent, 'crusader', 15, 20);
-      V.lightfall(c.x, c.y, { color: '#ffe08a', r: 36, h: 300, dur: 1.1, feathers: 8 });
+      V.lightfall(c.x, c.y, { color: '#ffe08a', r: 28, h: 300, dur: 1.1, feathers: 8 });
       c.later(0.2, () => { wings(c.ent, dur, '#ffd65a'); V.aura(c.ent, { color: '#ffd65a', dur, r: 32, rate: 0.15 });
-        V.burst(c.ent.x, c.ent.y - 30, { color: '#ffe9a0', color2: '#ffffff', n: 24, speed: 300, kind: 'star', flashR: 110 }); V.shock(c.ent.x, c.ent.y, { r: 160, color: '#ffe08a', dur: 0.6, w: 7 }); shake(5); }); },
+        // (QA) no flash of its own: the shaft of dawn is the bright beat, not a white-out over the hero
+        V.burst(c.ent.x, c.ent.y - 30, { color: '#ffe9a0', color2: '#ffffff', n: 24, speed: 300, kind: 'star', flash: false }); V.shock(c.ent.x, c.ent.y, { r: 160, color: '#ffe08a', dur: 0.6, w: 7 }); shake(5); }); },
   });
 
   Object.assign(ABILITY_VFX.bloodreaver, {
@@ -1498,7 +1553,7 @@ const CAST_VFX = (() => {
       c.later(0.3, () => { V.shield(c.ent, { shape: 'hex', color: '#b01a2a', dur: 8, r: 40 }); V.crystals(c.ent.x, c.ent.y, { color: '#8a1020', n: 6, r: 26, h: 26, dur: 0.8 }); V.spikeburst(c.ent.x, c.ent.y, { r: 44, n: 10, color: '#a01028', core: '#ffb0b0', ink: '#2a0408', dur: 0.3, z: 18 }); }); },
     // Blood Moon: a red moon hangs over the reaver for 10s; blood rises off the floor into it
     moon: c => { const ent = c.ent;
-      V.ink(c.x, c.y, { r: 70, dur: 10, follow: ent, a: 0.3 }); V.sigil(c.x, c.y, { r: 70, style: 'runes', color: '#c01a2a', dur: 10, spin: -0.6, follow: ent });
+      vfxLingerSettle(V.ink(c.x, c.y, { r: 70, dur: 10, follow: ent, a: 0.3 }), 0.5, 1); vfxLingerSettle(V.sigil(c.x, c.y, { r: 70, style: 'runes', color: '#c01a2a', dur: 10, spin: -0.6, follow: ent }), 0.28, 1.2);   // (QA) settles faint
       V.aura(ent, { color: '#8a0010', style: 'shadow', dur: 10, r: 30, rate: 0.25 });
       V.fx({ dur: 10, layer: 'air', draw: (c2, p, t, e) => {
         const k = fade(p, 0.08, 0.1) * e.a, rise = Math.min(1, p * 10 / 0.6), mx = ent.x, my = ent.y - 70 - 40 * rise, R = 22;
@@ -1513,16 +1568,17 @@ const CAST_VFX = (() => {
 
   Object.assign(ABILITY_VFX.runeguard, {
     // Whirling Runes: the held runes tear loose in a burst of violet (the blades themselves are KIT_VFX.whirl)
-    whirl: c => { V.sigil(c.x, c.y, { r: 60, style: 'runes', color: '#a070ff', dur: 0.8, spin: 6, follow: c.ent }); V.crystals(c.x, c.y, { color: '#c8a8ff', n: 6, r: 34, h: 34, dur: 0.5 });
-      V.burst(c.x, c.y - 20, { color: '#d8c4ff', color2: '#ffffff', n: 16, speed: 260, kind: 'star' }); },
+    // (QA colour pass: indigo, like the rest of the Runeguard)
+    whirl: c => { V.sigil(c.x, c.y, { r: 60, style: 'runes', color: '#7c84ff', dur: 0.8, spin: 6, follow: c.ent }); V.crystals(c.x, c.y, { color: '#b8c0ff', n: 6, r: 34, h: 34, dur: 0.5 });
+      V.burst(c.x, c.y - 20, { color: '#d8deff', color2: '#ffffff', n: 16, speed: 260, kind: 'star' }); },
     // Living Rune: a great rune rises behind the warder and stands there, pulsing, for 15s
     living: c => { const ent = c.ent;
-      V.pillar(c.x, c.y, { r: 40, h: 200, color: '#b8a0ff', dur: 1 }); V.ink(c.x, c.y, { r: 80, dur: 1.4 }); V.sigil(c.x, c.y, { r: 80, style: 'runes', color: '#9f7aff', dur: 1.4, spin: 2 });
+      V.pillar(c.x, c.y, { r: 34, h: 200, color: '#8e98ff', dur: 1 }); V.ink(c.x, c.y, { r: 80, dur: 1.4 }); V.sigil(c.x, c.y, { r: 80, style: 'runes', color: '#7c84ff', dur: 1.4, spin: 2 });
       V.fx({ dur: 15, layer: 'air', draw: (c2, p, t, e) => {
-        const k = fade(p, 0.05, 0.08) * e.a, rise = Math.min(1, p * 15 / 0.5), a = ent.angle || 0;
-        standingRune(c2, ent.x - Math.cos(a) * 22, ent.y - 40 - 30 * rise + Math.sin(t * 2) * 3, 46, '#b18cff', k, t);
-      }, tick: () => { if (Math.random() < 0.2) { const a = ent.angle || 0; V.spawn({ x: ent.x - Math.cos(a) * 22 + rand(-10, 10), y: ent.y, z: 60, vz: rand(-20, 20), life: 0.8, size: 6, size1: 0, color: '#d8c4ff', kind: 'star' }); } } });
-      c.later(0.3, () => { V.spikeburst(ent.x, ent.y, { r: 50, n: 12, color: '#a070ff', core: '#f0e8ff', ink: '#1e0e3a', dur: 0.34, z: 20 }); shake(4); }); },
+        const k = fade(p, 0.05, 0.08) * e.a * (0.7 + 0.3 * Math.max(0, 1 - t / 1.2)), rise = Math.min(1, p * 15 / 0.5), a = ent.angle || 0;
+        standingRune(c2, ent.x - Math.cos(a) * 22, ent.y - 40 - 30 * rise + Math.sin(t * 2) * 3, 46, '#9aa4ff', k, t);
+      }, tick: () => { if (Math.random() < 0.2) { const a = ent.angle || 0; V.spawn({ x: ent.x - Math.cos(a) * 22 + rand(-10, 10), y: ent.y, z: 60, vz: rand(-20, 20), life: 0.8, size: 6, size1: 0, color: '#d8deff', kind: 'star' }); } } });
+      c.later(0.3, () => { V.spikeburst(ent.x, ent.y, { r: 66, n: 12, hole: 0.5, color: '#7c84ff', core: '#eef1ff', ink: '#0c1236', fill: '#2a3070', dur: 0.4, layer: 'ground', z: 0, flat: 0.6 }); shake(4); }); },
   });
 
   Object.assign(ABILITY_VFX.ranger, {
@@ -1577,7 +1633,7 @@ const CAST_VFX = (() => {
         V.glowAt(c2, q.x, q.y, 70, '#ff6a1a', 0.55 * k); V.glowAt(c2, q.x, q.y, 30, '#ffe08a', 0.7 * k);
         bird(c2, q.x, q.y, 2.2, t * 9, fa, '#ff8a2a', '#fff2b0', k);
       }, tick: p => { const q = path(p); for (let i = 0; i < 3; i++) V.spawn({ x: q.x + rand(-14, 14), y: q.y + 40 + rand(-8, 8), z: 40, vx: rand(-30, 30), vz: rand(10, 60), life: rand(0.4, 0.8), size: rand(12, 22), size1: 2, color: Math.random() < 0.5 ? '#ff6a1a' : '#ffc040' }); } });
-      for (const d of [0.38, 1.12]) c.later(d, () => { V.spikeburst(tx, ty, { r: 60, n: 14, color: '#ff6a1a', core: '#ffe08a', ink: '#3a0806', dur: 0.36 }); V.flare(tx, ty, { n: 16, r: 20 }); shake(4); }); },
+      for (const d of [0.38, 1.12]) c.later(d, () => { V.spikeburst(tx, ty, { r: 80, n: 14, color: '#ff6a1a', core: '#ffe08a', ink: '#3a0806', dur: 0.38, layer: 'ground', z: 0, flat: 0.6 }); /* (QA) at its feet */ V.flare(tx, ty, { n: 16, r: 20 }); shake(4); }); },
   });
 
   Object.assign(ABILITY_VFX.cleric, {
@@ -1589,8 +1645,9 @@ const CAST_VFX = (() => {
         V.motes(w.x, w.y, { kind: 'petal', color: '#ffc0dc', n: 10, r: 60, rise: 0.6 }); }); },
     // Dawn Sanctum: a great circle of dawn at the cleric's feet for 12s, petals and light drifting up out of it
     dawnsanctum: c => { const x = c.x, y = c.y, r = 130;
-      V.pillar(x, y, { r: 50, h: 220, color: '#ffe680', dur: 1.2 });
-      V.ink(x, y, { r, dur: 12 }); V.sigil(x, y, { r, style: 'star4', color: '#ffd65a', dur: 12, spin: 0.25 }); V.sigil(x, y, { r: r * 0.6, style: 'petals', color: '#ffc0dc', dur: 12, spin: -0.4 });
+      // (QA: two full-strength circles for 12s hid telegraphs; the pillar whited out the cleric) both settle faint
+      V.pillar(x, y, { r: 30, h: 220, color: '#ffe680', dur: 1 });
+      vfxLingerSettle(V.ink(x, y, { r, dur: 12 }), 0.5, 1); vfxLingerSettle(V.sigil(x, y, { r, style: 'star4', color: '#ffd65a', dur: 12, spin: 0.25 }), 0.26, 1.2); vfxLingerSettle(V.sigil(x, y, { r: r * 0.6, style: 'petals', color: '#ffc0dc', dur: 12, spin: -0.4 }), 0.22, 1.2);
       V.shock(x, y, { r: r + 30, color: '#ffe680', dur: 0.6, w: 7 });
       V.fx({ dur: 12, layer: 'ground', draw: () => {}, tick: (p, dt, e) => {
         if (Math.random() < 0.4) { const a = Math.random() * TAU, d = Math.sqrt(Math.random()) * r * 0.9, pet = Math.random() < 0.35;
@@ -1639,9 +1696,12 @@ const CAST_VFX = (() => {
       V.ink(c.x, c.y, { r: 150, dur: 1.6 }); V.sigil(c.x, c.y, { r: 150, style: 'clock', color: '#ffd27a', dur: 1.6, spin: 2 });
       for (let i = 0; i < 3; i++) V.shock(c.x, c.y, { r: 200 + i * 60, color: '#9fe8ff', dur: 0.7, w: 5 - i, delay: i * 0.12 });
       V.fx({ dur, layer: 'air', draw: (c2, p, t, e) => {
-        const k = fade(p, 0.04, 0.06) * e.a, x = ent.x, y = ent.y - 120 + Math.sin(t * 1.5) * 4, R = 40 * Math.min(1, t / 0.4);
+        // (QA) bright as it's declared, then settled to half for the long burst (it hangs over whatever is north of
+        // the party, often a telegraph); its dark face kept faint
+        const settle = 1 - 0.5 * Math.min(1, Math.max(0, (t - 1) / 0.6));
+        const k = fade(p, 0.04, 0.06) * e.a * settle, x = ent.x, y = ent.y - 120 + Math.sin(t * 1.5) * 4, R = 40 * Math.min(1, t / 0.4);
         V.glowAt(c2, x, y, R * 2, '#ffd27a', 0.35 * k);
-        c2.globalAlpha = 0.45 * k; c2.fillStyle = '#1a1a34'; c2.beginPath(); c2.arc(x, y, R, 0, TAU); c2.fill(); c2.globalAlpha = 1;
+        c2.globalAlpha = 0.25 * k; c2.fillStyle = '#1a1a34'; c2.beginPath(); c2.arc(x, y, R, 0, TAU); c2.fill(); c2.globalAlpha = 1;
         V.neonRing(c2, x, y, R, '#ffd27a', 3, k); V.neonRing(c2, x, y, R * 0.84, '#9fe8ff', 1.2, k * 0.8);
         for (let i = 0; i < 12; i++) { const a = i * TAU / 12; V.neonPath(c2, '#ffe6a8', i % 3 ? 1 : 2, k, () => { c2.moveTo(x + Math.cos(a) * R * 0.7, y + Math.sin(a) * R * 0.7); c2.lineTo(x + Math.cos(a) * R * 0.8, y + Math.sin(a) * R * 0.8); }); }
         V.neonPath(c2, '#ffffff', 2, k, () => { c2.moveTo(x, y); c2.lineTo(x + Math.cos(t * 8) * R * 0.66, y + Math.sin(t * 8) * R * 0.66); });
@@ -1659,7 +1719,8 @@ const CAST_VFX = (() => {
     dawnPillar: (e, t) => { const T = at(e, t); V.lightfall(T.x, T.y, { color: '#ffe08a', r: 38, h: 320, dur: 0.8, feathers: 2 });
       FX.later(0.18, () => { V.spikeburst(T.x, T.y, { r: 56, n: 14, color: '#ffc840', core: '#fffbe0', ink: '#3a2a08', dur: 0.36 }); V.shock(T.x, T.y, { r: 90, color: '#ffe08a', dur: 0.4, w: 5 }); shake(3); }); },
     readSwing: e => { const a = e.angle || 0, fx = e.x + Math.cos(a) * 30, fy = e.y + Math.sin(a) * 30; V.glint(fx, fy, { color: '#ffffff', size: 30 }); V.shock(e.x, e.y, { r: 70, color: '#9fc4ff', dur: 0.35, w: 4 }); V.sparks(fx, fy, { color: '#dbe9ff', n: 8, angle: a, spread: 0.6, speed: 340 }); },
-    lastStand: e => { V.dome(e, { color: '#ffb84a', r: 46, dur: 1.6 }); V.spikeburst(e.x, e.y, { r: 54, n: 14, color: '#ff9a3a', core: '#fff2c0', ink: '#3a1a06', dur: 0.36, z: 18 }); shake(4); },
+    // (QA) the burst is a ring of spikes on the floor round the bastion, not a solid star over the sprite
+    lastStand: e => { V.dome(e, { color: '#ffb84a', r: 46, dur: 1.6 }); V.spikeburst(e.x, e.y, { r: 72, n: 16, hole: 0.55, color: '#ff9a3a', core: '#fff2c0', ink: '#3a1a06', fill: '#8a4a10', dur: 0.42, layer: 'ground', z: 0, flat: 0.6 }); shake(4); },
     faith: e => { V.motes(e.x, e.y, { color: '#ffe08a', n: 10, r: 30, kind: 'star' }); V.sigil(e.x, e.y, { r: 40, style: 'star4', color: '#ffd65a', dur: 0.6, spin: 4, follow: e }); },
     // Bloodreaver
     secondHelping: e => { V.swirl(e.x, e.y, { r: 46, color: '#ff2a4a', dur: 0.5, follow: e, inward: true }); V.plus(e.x, e.y, { color: '#ff8a8a', n: 4 }); },
@@ -1670,60 +1731,80 @@ const CAST_VFX = (() => {
     moonburst: (e, t) => { const T = at(e, t), ang = Math.atan2(T.y - e.y, T.x - e.x), L = Math.hypot(T.x - e.x, T.y - e.y);
       V.flash(e.x, e.y - 90, 80, '#ff2a3a', 0.3);
       for (let i = 0; i < 26; i++) { const sp = rand(500, 800), s = rand(-0.35, 0.35); V.spawn({ x: e.x, y: e.y, z: rand(10, 30), vx: Math.cos(ang + s) * sp, vy: Math.sin(ang + s) * sp, vz: rand(20, 80), g: 200, life: Math.min(1, L / sp + 0.1), size: rand(8, 14), color: '#c01a2a', kind: 'drop', add: false, rot: ang + Math.PI / 2 }); }
-      FX.later(Math.min(0.6, L / 650), () => { V.spikeburst(T.x, T.y, { r: 80, n: 16, color: '#c01a2a', core: '#ffd0d0', ink: '#2a0408', dur: 0.45 }); V.splash(T.x, T.y, { n: 18, speed: 1.4 }); V.shock(T.x, T.y, { r: 130, color: '#ff2a3a', dur: 0.5, w: 7 }); V.stream(T.x, T.y, e, { color: '#ff3a4a', n: 12 }); shake(6); }); },
+      // (QA: a solid white-cored star the size of the boss's head) the tide breaks round its feet on the floor instead
+      FX.later(Math.min(0.6, L / 650), () => { V.spikeburst(T.x, T.y, { r: 100, n: 18, color: '#c01a2a', core: '#ff8a9a', ink: '#2a0408', dur: 0.45, layer: 'ground', z: 0, flat: 0.6 }); V.hit(T.x, T.y, '#ff6a7a', 0.8); V.splash(T.x, T.y, { n: 18, speed: 1.4 }); V.shock(T.x, T.y, { r: 130, color: '#ff2a3a', dur: 0.5, w: 7 }); V.stream(T.x, T.y, e, { color: '#ff3a4a', n: 12 }); shake(6); }); },
     // Runeguard
-    runeOverflow: (e, t) => { const T = at(e, t); V.missile(e.x, e.y, T.x, T.y, { style: 'orb', color: '#c8a8ff', speed: 850, size: 0.8, onHit: (x, y) => { V.hit(x, y, '#e0d0ff', 0.6); V.sigil(x, y, { r: 26, style: 'runes', color: '#c8a8ff', dur: 0.4, spin: 6 }); } }); },
+    // (QA colour pass: the Runeguard's moments on its indigo palette, not the Shadowblade's violet)
+    runeOverflow: (e, t) => { const T = at(e, t); V.missile(e.x, e.y, T.x, T.y, { style: 'orb', color: '#b8c0ff', speed: 850, size: 0.8, onHit: (x, y) => { V.hit(x, y, '#d8deff', 0.6); V.sigil(x, y, { r: 26, style: 'runes', color: '#b8c0ff', dur: 0.4, spin: 6 }); } }); },
     runeBolt: (e, t) => { const T = at(e, t), a = e.angle || 0, sx = e.x - Math.cos(a) * 22, sy = e.y - 30;
-      V.missile(sx, sy, T.x, T.y, { style: 'helix', color: '#b18cff', speed: 1000, size: 0.8, onHit: (x, y) => V.hit(x, y, '#d8c4ff', 0.7) }); },
-    emergency: e => { V.shield(e, { shape: 'hex', color: '#c8a8ff', dur: 0.8, r: 44 }); V.shock(e.x, e.y, { r: 80, color: '#b18cff', dur: 0.4, w: 5 }); V.burst(e.x, e.y - 20, { color: '#e0d0ff', n: 10, speed: 200, kind: 'star' }); },
-    glyphEcho: (e, t) => { const T = at(e, t); V.sigil(T.x, T.y, { r: 40, style: 'runes', color: '#9a6bff', dur: 0.4, spin: 8 }); FX.later(0.3, () => V.crystals(T.x, T.y, { color: '#b28cff', n: 4, r: 28, h: 36, dur: 0.6 })); },
-    shatter: e => { for (let i = 0; i < 10; i++) { const a = Math.random() * TAU, sp = rand(120, 260); V.spawn({ x: e.x, y: e.y, z: 24, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * 0.6, vz: rand(60, 180), g: 500, bounce: true, life: rand(0.5, 0.9), size: rand(7, 11), color: '#e8e0ff', kind: 'shard', add: false, vr: rand(-12, 12) }); }
-      V.flash(e.x, e.y - 20, 50, '#e0d4ff', 0.2); V.shock(e.x, e.y, { r: 90, color: '#e0d4ff', dur: 0.4, w: 5 }); },
-    wardLeap: e => { V.sigil(e.x, e.y, { r: 46, style: 'hex', color: '#b18cff', dur: 0.6, spin: 4, follow: e }); V.shock(e.x, e.y, { r: 70, color: '#c8a8ff', dur: 0.35, w: 4 }); },
-    wardNova: (e, t) => { const T = at(e, t); for (let i = 0; i < 2; i++) V.shock(e.x, e.y, { r: 120 + i * 40, color: '#b18cff', dur: 0.5, w: 6 - i * 2, delay: i * 0.08 }); V.lightning(e.x, e.y, T.x, T.y, { color: '#d8c4ff', jag: 12, dur: 0.3 }); FX.later(0.05, () => V.hit(T.x, T.y, '#c8a8ff', 0.9)); },
-    binding: (e, t) => { const T = at(e, t); V.ink(T.x, T.y, { r: 56, dur: 1 }); V.sigil(T.x, T.y, { r: 56, style: 'runes', color: '#b18cff', dur: 1, spin: -3 }); V.lightning(e.x, e.y, T.x, T.y, { color: '#c8a8ff', jag: 8, dur: 0.25 }); },
-    mirrorShards: (e, t) => { const T = at(e, t); for (let i = 0; i < 5; i++) FX.later(i * 0.05, () => V.missile(e.x + rand(-16, 16), e.y + rand(-10, 10), T.x + rand(-14, 14), T.y + rand(-8, 8), { style: 'blade', color: '#e8e0ff', speed: 1100, size: 0.5, onHit: (x, y) => V.sparks(x, y, { color: '#ffffff', n: 3 }) })); },
+      V.missile(sx, sy, T.x, T.y, { style: 'helix', color: '#9aa4ff', speed: 1000, size: 0.8, onHit: (x, y) => V.hit(x, y, '#d8deff', 0.7) }); },
+    emergency: e => { V.shield(e, { shape: 'hex', color: '#b8c0ff', dur: 0.8, r: 44 }); V.shock(e.x, e.y, { r: 80, color: '#9aa4ff', dur: 0.4, w: 5 }); V.burst(e.x, e.y - 20, { color: '#d8deff', n: 10, speed: 200, kind: 'star' }); },
+    glyphEcho: (e, t) => { const T = at(e, t); V.sigil(T.x, T.y, { r: 40, style: 'runes', color: '#6c74f2', dur: 0.4, spin: 8 }); FX.later(0.3, () => V.crystals(T.x, T.y, { color: '#9aa4ff', n: 4, r: 28, h: 36, dur: 0.6 })); },
+    shatter: e => { for (let i = 0; i < 10; i++) { const a = Math.random() * TAU, sp = rand(120, 260); V.spawn({ x: e.x, y: e.y, z: 24, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * 0.6, vz: rand(60, 180), g: 500, bounce: true, life: rand(0.5, 0.9), size: rand(7, 11), color: '#e4e8ff', kind: 'shard', add: false, vr: rand(-12, 12) }); }
+      V.flash(e.x, e.y - 20, 50, '#d8deff', 0.2); V.shock(e.x, e.y, { r: 90, color: '#d8deff', dur: 0.4, w: 5 }); },
+    wardLeap: e => { V.sigil(e.x, e.y, { r: 46, style: 'hex', color: '#9aa4ff', dur: 0.6, spin: 4, follow: e }); V.shock(e.x, e.y, { r: 70, color: '#b8c0ff', dur: 0.35, w: 4 }); },
+    wardNova: (e, t) => { const T = at(e, t); for (let i = 0; i < 2; i++) V.shock(e.x, e.y, { r: 120 + i * 40, color: '#9aa4ff', dur: 0.5, w: 6 - i * 2, delay: i * 0.08 }); V.lightning(e.x, e.y, T.x, T.y, { color: '#d8deff', jag: 12, dur: 0.3 }); FX.later(0.05, () => V.hit(T.x, T.y, '#b8c0ff', 0.9)); },
+    binding: (e, t) => { const T = at(e, t); V.ink(T.x, T.y, { r: 56, dur: 1 }); V.sigil(T.x, T.y, { r: 56, style: 'runes', color: '#9aa4ff', dur: 1, spin: -3 }); V.lightning(e.x, e.y, T.x, T.y, { color: '#b8c0ff', jag: 8, dur: 0.25 }); },
+    mirrorShards: (e, t) => { const T = at(e, t); for (let i = 0; i < 5; i++) FX.later(i * 0.05, () => V.missile(e.x + rand(-16, 16), e.y + rand(-10, 10), T.x + rand(-14, 14), T.y + rand(-8, 8), { style: 'blade', color: '#e4e8ff', speed: 1100, size: 0.5, onHit: (x, y) => V.sparks(x, y, { color: '#ffffff', n: 3 }) })); },
     // Whirling Runes: n rune blades spinning round the warder for 12s, one flashing out at the boss every 2s
     whirl: (e, t, d) => { const n = Math.max(1, Math.min(8, (d && d.n) || 1)), T = t;
       V.fx({ dur: 12, layer: 'air', draw: (c, p, tt, fx) => {
         const k = fade(p, 0.03, 0.05) * fx.a;
         for (let i = 0; i < n; i++) { const a = tt * 3 + i * TAU / n, x = e.x + Math.cos(a) * 46, y = e.y - 18 + Math.sin(a) * 22;
           c.save(); c.translate(x, y); c.rotate(a + Math.PI / 2);
-          V.glowAt(c, 0, 0, 14, '#a070ff', 0.5 * k);
-          V.neonPath(c, '#c8a8ff', 1.8, k, () => { c.moveTo(0, -10); c.lineTo(4, 0); c.lineTo(0, 10); c.lineTo(-4, 0); c.closePath(); });
+          V.glowAt(c, 0, 0, 14, '#7c84ff', 0.5 * k);
+          V.neonPath(c, '#b8c0ff', 1.8, k, () => { c.moveTo(0, -10); c.lineTo(4, 0); c.lineTo(0, 10); c.lineTo(-4, 0); c.closePath(); });
           c.restore(); }
-      }, tick: (p, dt, fx) => { fx.s = fx.s || 0; if (T && p * 12 >= (fx.s + 1) * 2) { fx.s++; V.lightning(e.x, e.y, T.x, T.y, { color: '#d0b8ff', jag: 10, dur: 0.22 }); V.hit(T.x, T.y, '#c8a8ff', 0.6); }
-        if (Math.random() < 0.2) { const a = Math.random() * TAU; V.spawn({ x: e.x + Math.cos(a) * 46, y: e.y + Math.sin(a) * 22, z: 18, vz: 20, life: 0.5, size: 5, size1: 0, color: '#d8c4ff', kind: 'star' }); } } }); },
+      }, tick: (p, dt, fx) => { fx.s = fx.s || 0; if (T && p * 12 >= (fx.s + 1) * 2) { fx.s++; V.lightning(e.x, e.y, T.x, T.y, { color: '#c8ceff', jag: 10, dur: 0.22 }); V.hit(T.x, T.y, '#b8c0ff', 0.6); }
+        if (Math.random() < 0.2) { const a = Math.random() * TAU; V.spawn({ x: e.x + Math.cos(a) * 46, y: e.y + Math.sin(a) * 22, z: 18, vz: 20, life: 0.5, size: 5, size1: 0, color: '#d8deff', kind: 'star' }); } } }); },
     // Ranger
     explode: (e, t, d) => { const T = at(e, t), s = 1 + 0.3 * ((d && d.n) || 0);
       V.spikeburst(T.x, T.y, { r: 56 * s, n: 16, color: '#ff6a1a', core: '#ffe08a', ink: '#3a0806', dur: 0.4 }); V.flare(T.x, T.y, { n: Math.round(14 * s), r: 20 * s });
       V.shock(T.x, T.y, { r: 100 * s, color: '#ffb040', dur: 0.45, w: 6 }); V.debris(T.x, T.y, { n: 6, hot: true, color: '#5a3a2a' }); V.smoke(T.x, T.y, { n: 6, color: '#3a2a2a', size: 30 * s, a: 0.5, speed: 50, life: 1.3 }); shake(3 + 2 * s); },
     falconDive: (e, t) => { const T = at(e, t);
-      V.fx({ dur: 0.35, layer: 'air', draw: (c, p, tt, fx) => { const x = T.x - 60 * (1 - p), y = T.y - 30 - 150 * (1 - p); V.glowAt(c, x, y, 20, '#ffe27a', 0.5 * fx.a); bird(c, x, y, 1.1, 0, Math.atan2(150, 60), '#8a5a32', '#ffd27a', fx.a); },
-        done: () => { V.hit(T.x, T.y, '#ffe27a', 0.9); V.spawn({ x: T.x, y: T.y, z: 30, vx: rand(-60, 60), vz: rand(30, 80), g: 80, life: 1.1, size: 11, color: '#c8a070', kind: 'feather', add: false, vr: 2, flutter: 3 }); } }); },
-    ricochetArrow: (e, t) => { const T = at(e, t), a = Math.random() * TAU; V.missile(T.x, T.y, T.x + Math.cos(a) * 90, T.y + Math.sin(a) * 60, { style: 'arrow', color: '#bfff9a', speed: 1100, onHit: (x, y) => V.hit(x, y, '#d8ffc0', 0.4) }); },
+      V.fx({ dur: 0.35, layer: 'air', draw: (c, p, tt, fx) => { const x = T.x - 60 * (1 - p), y = T.y - 30 - 150 * (1 - p); V.glowAt(c, x, y, 24, '#ffe27a', 0.5 * fx.a); bird(c, x, y, 1.5, 0, Math.atan2(150, 60), '#8a5a32', '#ffd27a', fx.a); },
+        // (QA: it barely read) a bigger falcon, and its talons rake the boss as it strikes, feathers flying
+        done: () => { V.hit(T.x, T.y, '#ffe27a', 0.9); for (const s of [-1, 1]) OLD_PAINT.thrust(T.x - 26 + s * 8, T.y - 22, T.x + 22 + s * 8, T.y + 14, { w: 5, color: '#ffd27a', core: '#fff6d8', ink: '#3a2408', dur: 0.2, z: 22 });
+          for (let i = 0; i < 3; i++) V.spawn({ x: T.x, y: T.y, z: 30, vx: rand(-60, 60), vz: rand(30, 80), g: 80, life: 1.1, size: 11, color: '#c8a070', kind: 'feather', add: false, vr: 2, flutter: 3 }); } }); },
+    // (QA: a tiny arrow off into nowhere read as nothing) the crit glances off the boss in a spark and the arrow arcs back
+    // to the ranger's quiver (the charge it refunds), a green glint when it lands
+    ricochetArrow: (e, t) => { const T = at(e, t); V.sparks(T.x, T.y, { color: '#e8ffd0', n: 6, speed: 300 }); V.spawn({ x: T.x, y: T.y, z: 20, life: 0.2, size: 34, size1: 10, color: '#d8ffc0', kind: 'star', vr: 6 });
+      V.missile(T.x, T.y, e.x, e.y, { style: 'arrow', color: '#bfff9a', speed: 900, size: 1.2, arc: 60, onHit: () => V.glint(e.x, e.y, { color: '#d8ffb0', size: 26, z: 30 }) }); },
     stormArc: (e, t) => { const T = at(e, t); V.lightning(e.x, e.y, T.x, T.y, { color: '#c8ffb0', jag: 14, dur: 0.25 }); V.hit(T.x, T.y, '#e0ffd0', 0.6); },
-    volley: (e, t) => { const T = at(e, t); V.volley(T.x, T.y, { n: 8, r: 46, color: '#bfff9a', wind: 0.12, stay: 1.2 }); },
+    // (QA: the stuck arrows stood on the boss's sprite) the volley drops on the floor in front of it, toward the ranger
+    volley: (e, t) => { const T = at(e, t), d = Math.hypot(e.x - T.x, e.y - T.y) || 1, s = Math.min(50, d * 0.4); V.volley(T.x + (e.x - T.x) / d * s, T.y + (e.y - T.y) / d * s, { n: 8, r: 46, color: '#bfff9a', wind: 0.12, stay: 1.2 }); },
     deathmark: (e, t) => { const T = at(e, t); V.ink(T.x, T.y, { r: 60, dur: 1.2 }); V.sigil(T.x, T.y, { r: 60, style: 'star4', color: '#ff4a3a', dur: 1.2, spin: -2 }); V.spikeburst(T.x, T.y, { r: 30, n: 8, color: '#ff4a3a', core: '#ffe0d0', ink: '#3a0806', dur: 0.3, z: 40 }); },
     secondWind: e => { V.swirl(e.x, e.y, { r: 50, color: '#8fdf7a', dur: 0.6, follow: e }); V.plus(e.x, e.y, { color: '#9aff8a', n: 5 }); V.motes(e.x, e.y, { kind: 'leaf', color: '#6fbf5a', n: 6, r: 36 }); },
     // Shadowblade
     feint: e => { const a = (e.angle || 0) + Math.PI / 2; V.shadowdash(e.x - Math.cos(a) * 30, e.y - Math.sin(a) * 30, e.x, e.y, { dur: 0.3 }); },
-    toxicBurst: (e, t) => { const T = at(e, t); V.splash(T.x, T.y, { color: '#7adf3a', n: 12, speed: 1.2 }); V.puddle(T.x, T.y + 8, { r: 34, color: '#9aff4a', dark: '#1e3a0a', dur: 2.4 }); V.shock(T.x, T.y, { r: 60, color: '#9aff4a', dur: 0.35, w: 4 }); },
+    // (QA: it hid under the boss sprite) a green pop on the body, the acid pooling in front of it, toward the rogue
+    toxicBurst: (e, t) => { const T = at(e, t), d = Math.hypot(e.x - T.x, e.y - T.y) || 1, s = Math.min(36, d * 0.4); V.spawn({ x: T.x, y: T.y, z: 20, life: 0.25, size: 50, size1: 18, color: '#9aff4a', kind: 'star', vr: 5 });
+      V.splash(T.x, T.y, { color: '#7adf3a', n: 12, speed: 1.2 }); V.puddle(T.x + (e.x - T.x) / d * s, T.y + (e.y - T.y) / d * s + 6, { r: 34, color: '#9aff4a', dark: '#1e3a0a', dur: 2.4 }); V.shock(T.x, T.y, { r: 70, color: '#9aff4a', dur: 0.35, w: 4 }); },
     shadowClone: (e, t) => { const T = at(e, t); V.shadowdash(e.x, e.y, T.x, T.y, { color: '#6a3dcf', dur: 0.4 }); FX.later(0.15, () => { V.slash(T.x, T.y, Math.random() * TAU, { r: 50, span: 1.6, color: '#8a5dff', dur: 0.24 }); V.smoke(T.x, T.y, { n: 4, color: '#4a3060', size: 22, a: 0.5, speed: 40 }); }); },
     ambush: (e, t) => { const T = at(e, t); V.spawn({ x: T.x, y: T.y, z: 18, life: 0.3, size: 64, size1: 22, color: '#ff3a5a', kind: 'star', vr: 5 }); V.splash(T.x, T.y, { n: 6 }); },
     dodge: e => { V.smoke(e.x, e.y, { n: 5, color: '#4a3060', size: 22, a: 0.55, speed: 50 }); V.shock(e.x, e.y, { r: 46, color: '#c58aff', dur: 0.3, w: 3 }); },
     garrote: (e, t) => { const T = at(e, t);
       V.fx({ dur: 0.6, layer: 'air', draw: (c, p, tt, fx) => { const k = (1 - p) * fx.a, R = 34 * (1 - p * 0.5); V.neonPath(c, '#ff3a5a', 1.6, k, () => c.ellipse(T.x, T.y - 30, R, R * 0.4, 0, 0, TAU)); } });
       FX.later(0.3, () => { V.splash(T.x, T.y, { n: 8 }); V.hit(T.x, T.y, '#ff6a7a', 0.6); }); },
-    blossomEnd: (e, t) => { const T = at(e, t); V.spikeburst(T.x, T.y, { r: 80, n: 18, color: '#d0204a', core: '#ffe0ec', ink: '#2a0410', dur: 0.45 }); V.splash(T.x, T.y, { n: 16, speed: 1.4 });
+    // (QA: a solid star hid the boss) the steel flower opens on the floor round it, a small hit on the body
+    blossomEnd: (e, t) => { const T = at(e, t); V.spikeburst(T.x, T.y, { r: 105, n: 18, color: '#d0204a', core: '#ffe0ec', ink: '#2a0410', dur: 0.45, layer: 'ground', z: 0, flat: 0.6 }); V.hit(T.x, T.y, '#ff8aa8', 0.8); V.splash(T.x, T.y, { n: 16, speed: 1.4 });
       V.burst(T.x, T.y - 20, { color: '#ff7ab0', color2: '#ffffff', n: 16, speed: 260, kind: 'petal' }); V.shock(T.x, T.y, { r: 120, color: '#ff4d9a', dur: 0.5, w: 6 }); shake(6); },
     // Pyromancer
-    haze: e => { for (let i = 0; i < 6; i++) V.spawn({ x: e.x + rand(-20, 20), y: e.y + rand(-6, 6), z: rand(0, 20), vz: rand(20, 50), life: 1, size: 20, size1: 36, color: '#ffb070', kind: 'smoke', add: false, a: 0.25 }); },
-    hurry: e => { V.shock(e.x, e.y, { r: 50, color: '#ffb040', dur: 0.3, w: 3 }); V.sparks(e.x, e.y, { color: '#ffd070', n: 6, speed: 260 }); },
+    // (QA: a few faint puffs read as nothing) heat ripples rise off the mage in wavy orange lines, a warm glow, the puffs
+    haze: e => { for (let i = 0; i < 6; i++) V.spawn({ x: e.x + rand(-20, 20), y: e.y + rand(-6, 6), z: rand(0, 20), vz: rand(20, 50), life: 1, size: 20, size1: 36, color: '#ffb070', kind: 'smoke', add: false, a: 0.25 });
+      V.fx({ dur: 0.9, layer: 'air', draw: (c, p, tt, fx) => { const k = fx.a * Math.sin(p * Math.PI); V.glowAt(c, e.x, e.y - 20, 30, '#ff8a3a', 0.3 * k);
+        for (let j = -1; j <= 1; j++) { const bx = e.x + j * 12, by = e.y - 10 - p * 40 - Math.abs(j) * 6; V.neonPath(c, '#ffb060', 1.4, k * 0.8, () => { for (let s = 0; s <= 8; s++) { const q = s / 8; c.lineTo(bx + Math.sin(q * 9 + tt * 12 + j) * 3, by - q * 22); } }); } } }); },
+    hurry: e => { V.shock(e.x, e.y, { r: 56, color: '#ffb040', dur: 0.32, w: 4 }); V.sparks(e.x, e.y, { color: '#ffd070', n: 8, speed: 280 }); V.glint(e.x + Math.cos(e.angle || 0) * 14, e.y, { color: '#ffd070', size: 22, z: 30 }); },
     flashpoint: (e, t) => { const T = at(e, t); V.spikeburst(T.x, T.y, { r: 60, n: 14, color: '#ff5a1a', core: '#ffe08a', ink: '#3a0806', dur: 0.36 }); V.flare(T.x, T.y, { n: 14, r: 18 }); shake(4); },
     chainReact: (e, t) => { const T = at(e, t); for (let i = 0; i < 3; i++) { const a = Math.random() * TAU; V.lightning(T.x, T.y, T.x + Math.cos(a) * 70, T.y + Math.sin(a) * 45, { color: '#ffb070', jag: 8, dur: 0.2 }); } V.flare(T.x, T.y, { n: 8, r: 14 }); },
     twinFlame: (e, t) => { const T = at(e, t); for (const s of [-1, 1]) V.missile(e.x, e.y, T.x, T.y, { style: 'fire', color: '#ff7a1a', speed: 800, arc: 30 * s, onHit: (x, y) => V.flare(x, y, { n: 8, r: 14 }) }); },
-    bombPlant: (e, t) => { const T = at(e, t); V.sigil(T.x, T.y, { r: 44, style: 'runes', color: '#ff8a2a', dur: 0.8, spin: 4 }); V.glint(T.x, T.y, { color: '#ffb040', size: 26, z: 30 }); },
+    // (QA: the sigil hid under the boss sprite, so it read as nothing) a fire charge sticks on the boss's body, its glow
+    // blinking faster and faster for the 3s fuse (the blast is KIT_VFX.bomb), a small rune ring in front of it
+    bombPlant: (e, t) => { const T = at(e, t), d = Math.hypot(e.x - T.x, e.y - T.y) || 1, s = Math.min(40, d * 0.4);
+      V.sigil(T.x + (e.x - T.x) / d * s, T.y + (e.y - T.y) / d * s, { r: 30, style: 'runes', color: '#ff8a2a', dur: 0.8, spin: 4 }); V.glint(T.x, T.y, { color: '#ffb040', size: 30, z: 30 });
+      V.fx({ dur: 3, layer: 'air', draw: (c, p, tt, fx) => { const blink = Math.sin(tt * (5 + p * 22)) > 0 ? 1 : 0.35, x = T.x + 6, y = T.y - 30;
+        c.globalAlpha = fx.a; c.fillStyle = '#3a1a0c'; c.strokeStyle = '#1a0804'; c.lineWidth = 1.5; c.beginPath(); c.arc(x, y, 5.5, 0, TAU); c.fill(); c.stroke(); c.globalAlpha = 1;
+        V.glowAt(c, x, y, 13 + p * 8, '#ff5a1a', blink * fx.a * 0.8); V.glowAt(c, x + 3, y - 5, 4, '#fff2c0', blink * fx.a); } }); },
     bomb: (e, t) => { const T = at(e, t); V.spikeburst(T.x, T.y, { r: 70, n: 16, color: '#ff5a1a', core: '#ffe08a', ink: '#3a0806', dur: 0.4 }); V.crater(T.x, T.y, { r: 50, color: '#ff4a1a', dur: 2.2, flames: 3, a: 0.5 }); V.flare(T.x, T.y, { n: 18, r: 22 }); shake(5); },
     // Cleric
     petalBloom: e => { V.motes(e.x, e.y, { kind: 'petal', color: '#ffc0dc', n: 8, r: 34, rise: 0.6 }); V.shock(e.x, e.y, { r: 50, color: '#ffc0dc', dur: 0.35, w: 3 }); },
@@ -2399,9 +2480,12 @@ function windLaneBoost(x, y, vx, vy, now) {
       V.fx({ dur: 0.16, layer: 'ground', draw: (c, p, tt, fx) => { V.neonRing(c, t.x, t.y, R * 1.3 * (1 - p), to.color, 3, fx.a * p, 0.7); V.neonRing(c, t.x, t.y, R * 1.1 * (1 - p), other.color, 3, fx.a * p, 0.7); } });
       if (!echo) TP.steam(t.x, t.y, { n: 3, r: R * 0.8, size: 20, life: 0.8, a: 0.3 });
       FX.later(0.15, () => {
-        V.spikeburst(t.x, t.y, { r: R, n: 12 + Math.round(s), ...to, dur: 0.34 + s * 0.02 });
+        V.spikeburst(t.x, t.y, { r: R, n: 12 + Math.round(s), ...to, core: to === ICE ? '#bfe8ff' : '#ffd890', dur: 0.34 + s * 0.02 });
         V.spikeburst(t.x, t.y, { r: R * 1.35, n: 16, hole: 0.7, ...other, dur: 0.4, layer: 'ground', z: 0, flat: 0.7 });
-        V.burst(t.x, t.y, { color: to.core, color2: other.color, n: 6 + s, speed: 160 + s * 25, flashR: R * 1.1 });
+        // (QA) the flash kept small and in the element's colour: with the starburst's white core a big white flash
+        // whited out the boss on a large Shock
+        V.burst(t.x, t.y, { color: to.core, color2: other.color, n: 6 + s, speed: 160 + s * 25, flash: false });
+        V.flash(t.x, t.y - 10, R * 0.55, to.color, 0.18);
         V.shock(t.x, t.y, { r: R * 2, color: to.color, dur: 0.5, w: 4 + s * 0.5 });
         if (to === ICE) V.crystals(t.x, t.y, { color: '#bfe6ff', n: 4 + Math.round(s / 2), r: R * 0.7, h: 30 + s * 4, dur: 1 }); else V.flare(t.x, t.y, { n: 6 + s, r: 14 + s, color: '#ff6a1a' });
         // both elements break out of it whichever way it swung: shards of ice and embers, rocks for a big one
@@ -2570,13 +2654,17 @@ function windLaneBoost(x, y, vx, vy, now) {
         cc.restore(); } });
       c.later(0.45, () => { seal(x, y, 34, GOLD, 1.4); V.sigil(x, y, { r: 40, style: 'hex', color: GOLD, dur: 0.6, spin: 3 }); V.shock(x, y, { r: 90, color: GOLD, dur: 0.4, w: 5 }); V.burst(x, y - 20, { color: GOLD, color2: '#ffffff', n: 10, speed: 200, kind: 'star', flash: false }); shake(3); }); },
     // Default: the book torn open, pages flung everywhere, smoke
-    default: c => { pages(c.x, c.y, 18); V.shock(c.x, c.y, { r: 120, color: WAX, dur: 0.5, w: 6 }); V.smoke(c.x, c.y, { n: 6, color: '#6a6070', size: 26, a: 0.45, speed: 50 }); shake(4); },
+    // (QA) it read as a faint ring: now the seal on the book cracks (a burst of dark-red wax spikes and lilac light at
+    // the knight's chest), torn pages flung high, then the ring and the smoke
+    default: c => { V.spikeburst(c.x, c.y, { r: 54, n: 12, color: '#c0485a', core: '#f0d8ff', ink: INK, dur: 0.32, z: 22 }); V.flash(c.x, c.y - 22, 46, LIL, 0.2);
+      pages(c.x, c.y, 18); V.shock(c.x, c.y, { r: 120, color: '#c0485a', dur: 0.5, w: 6 }); V.smoke(c.x, c.y, { n: 6, color: '#6a6070', size: 26, a: 0.45, speed: 50 }); shake(4); },
     // Foreclose: a great seal slams down onto the boss
     foreclose: c => { V.lightfall(c.tx, c.ty, { color: WAX, r: 34, h: 220, dur: 0.5, feathers: 0 }); c.later(0.2, () => { stamp(c.tx, c.ty, WAX, true); seal(c.tx, c.ty, 60, WAX, 1.8); pages(c.tx, c.ty, 10); shake(5); }); },
     // Moratorium: an hourglass seal, the Ledger held
     // (polish) a stopped clock face under the knight and a lilac hourglass over its head, both holding the 5s the
     // Ledger stands still (faint after the first moment); the dome flares as it's declared
-    moratorium: c => { const e = c.ent; V.sigil(c.x, c.y, { r: 56, style: 'clock', color: '#e8dcc0', dur: 0.8, spin: 0, follow: e }); V.dome(e, { color: LIL, r: 46, dur: 0.9 }); V.shock(c.x, c.y, { r: 90, color: LIL, dur: 0.45, w: 5 });
+    // (QA) the clock lilac, not parchment-white: with the dome over it the knight whited out
+    moratorium: c => { const e = c.ent; V.sigil(c.x, c.y, { r: 56, style: 'clock', color: LIL, dur: 0.8, spin: 0, follow: e }); V.dome(e, { color: LIL, r: 46, dur: 0.9 }); V.shock(c.x, c.y, { r: 90, color: LIL, dur: 0.45, w: 5 });
       OLD_PAINT.rim(e.x, e.y, 50, '#e8dcc0', 5, { follow: e, ticks: 12, spin: 0, settle: 0.35 });
       OLD_PAINT.linger(5, 'air', (cc, k, t) => { const x = e.x, y = e.y - 74 + Math.sin(t * 2) * 2, s = 9, sand = Math.min(1, t / 5);
         V.glowAt(cc, x, y, 18, LIL, 0.35 * k);
@@ -2759,7 +2847,8 @@ function windLaneBoost(x, y, vx, vy, now) {
       for (let i = 0; i < 3; i++) V.shock(c.x, c.y, { r: 150 + i * 40, color: '#ffd27a', dur: 0.7, w: 6 - i * 1.5, delay: i * 0.18 });
       V.sigil(c.x, c.y, { r: 120, style: 'star5', color: '#ffd27a', dur: 1.6, spin: 0.6 }); V.aura(c.ent, { color: '#ffd27a', dur: 15, r: 28, rate: 0.12 }); shake(2); },
     // Still Pond: the floor goes still as water: a pale pool spreads, rings on it, the monk calm in the middle
-    pond: c => { V.ink(c.x, c.y, { r: 90, dur: 8, follow: c.ent, a: 0.25 }); V.sigil(c.x, c.y, { r: 90, style: 'hex', color: '#9fd8f0', dur: 8, spin: 0.2, follow: c.ent });
+    // (QA: a near-white hex circle at full strength for 8s sat over telegraphs) it settles faint after the first second
+    pond: c => { vfxLingerSettle(V.ink(c.x, c.y, { r: 90, dur: 8, follow: c.ent, a: 0.25 }), 0.5, 1); vfxLingerSettle(V.sigil(c.x, c.y, { r: 90, style: 'hex', color: '#7fc0e0', dur: 8, spin: 0.2, follow: c.ent }), 0.25, 1.2);
       for (let i = 0; i < 3; i++) V.shock(c.x, c.y, { r: 60 + i * 30, color: '#cfeeff', dur: 0.9, w: 3, delay: i * 0.25 }); },
     // Landslide: the floor heaves; boulders, a rolling dust wall over the party, the earth aura
     slide: c => { V.crater(c.x, c.y, { r: 70, color: '#c07a3a', dur: 2.4, flames: 0, a: 0.4 }); V.debris(c.x, c.y, { n: 10, color: '#7a6a58' });
@@ -2999,7 +3088,8 @@ function windLaneBoost(x, y, vx, vy, now) {
     cradle: c => { const x = c.x, y = c.y, r = 150;
       V.shock(x, y, { r: r + 20, color: '#cbb8ff', dur: 0.5, w: 5 });
       V.fx({ dur: 9, layer: 'ground', draw: (cc, p, t, e) => {
-        const k = Math.min(1, p / 0.04, (1 - p) / 0.06) * e.a, pts = [];
+        // (QA) strung bright, then settled low for the 9s: the white star crossed red telegraphs at full strength
+        const k = Math.min(1, p / 0.04, (1 - p) / 0.06) * e.a * (1 - 0.55 * Math.min(1, Math.max(0, (t - 0.7) / 0.5))), pts = [];
         for (let i = 0; i < 8; i++) { const a = i * TAU / 8 + Math.sin(t * 0.5) * 0.04; pts.push([x + Math.cos(a) * r, y + Math.sin(a) * r * 0.78]); }
         for (let i = 0; i < 8; i++) for (const j of [3, 5]) { const A = pts[i], B = pts[(i + j) % 8]; V.neonPath(cc, '#cbb8ff', 1.2, k * 0.6, () => { cc.moveTo(A[0], A[1]); cc.lineTo(B[0], B[1]); }); }
         V.neonRing(cc, x, y, r, '#e8deff', 1.4, k * 0.5);
@@ -3060,12 +3150,19 @@ function windLaneBoost(x, y, vx, vy, now) {
     redcurtain: c => { const ent = c.ent, r = 140;
       V.fx({ dur: 0.7, layer: 'air', draw: (cc, p, t, e) => { const x = ent.x, y = ent.y, k = e.a * Math.min(1, (1 - p) / 0.35), fall = easeOut(Math.min(1, p / 0.5));
         for (let i = 0; i < 9; i++) { const a = Math.PI + 0.15 + i * (Math.PI - 0.3) / 8, bx = x + Math.cos(a) * r, by = y + Math.sin(a) * r * 0.78, top = by - 120, bot = top + (by - top) * fall, w = 12;
-          cc.globalAlpha = 0.85 * k; cc.fillStyle = i % 2 ? '#a01838' : '#d03050'; cc.beginPath(); cc.moveTo(bx - w, top); cc.lineTo(bx + w, top); cc.quadraticCurveTo(bx + w * 1.2, (top + bot) / 2, bx + w * 0.8, bot); cc.lineTo(bx - w * 0.8, bot); cc.quadraticCurveTo(bx - w * 1.2, (top + bot) / 2, bx - w, top); cc.fill();
+          // (QA) velvet, not flat red slabs: shaded across its folds (dark at the edges, lit down the middle), a dark
+          // ink edge, two pleat lines, and kept a little see-through (it drops over the party for a moment)
+          const vg = cc.createLinearGradient(bx - w, 0, bx + w, 0); vg.addColorStop(0, '#4a0818'); vg.addColorStop(0.45, i % 2 ? '#b8203e' : '#d83656'); vg.addColorStop(1, '#5a0a1e');
+          cc.globalAlpha = 0.72 * k; cc.fillStyle = vg; cc.beginPath(); cc.moveTo(bx - w, top); cc.lineTo(bx + w, top); cc.quadraticCurveTo(bx + w * 1.2, (top + bot) / 2, bx + w * 0.8, bot); cc.lineTo(bx - w * 0.8, bot); cc.quadraticCurveTo(bx - w * 1.2, (top + bot) / 2, bx - w, top); cc.fill();
+          cc.strokeStyle = '#2a0410'; cc.lineWidth = 1.2; cc.stroke();
+          cc.globalAlpha = 0.5 * k; cc.strokeStyle = '#ff8aa0'; cc.lineWidth = 1; cc.beginPath(); for (const f of [-0.35, 0.3]) { cc.moveTo(bx + w * f, top + 4); cc.quadraticCurveTo(bx + w * f * 1.3, (top + bot) / 2, bx + w * f * 0.9, bot - 4); } cc.stroke();
           cc.globalAlpha = k; cc.fillStyle = '#ffd27a'; cc.fillRect(bx - w * 0.8, bot - 3, w * 1.6, 3); }
         cc.globalAlpha = 1; } });
       OLD_PAINT.linger(8, 'ground', (cc, k, t) => { const x = ent.x, y = ent.y;
-        cc.globalAlpha = 0.16 * k; cc.fillStyle = '#d03050'; cc.beginPath(); cc.ellipse(x, y, r, r * 0.78, 0, 0, TAU); cc.fill(); cc.globalAlpha = 1;
-        for (let i = 0; i < 18; i++) { const a = i * TAU / 18 + Math.sin(t + i) * 0.03; V.neonPath(cc, i % 2 ? '#d03050' : '#a01838', 5, k * 0.8, () => { cc.moveTo(x + Math.cos(a) * r * 0.86, y + Math.sin(a) * r * 0.67); cc.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r * 0.78); }); }
+        // (QA) a red-filled 140px circle for 8s read as a boss telegraph: the fill is now a bare warm tint and the
+        // pleats a darker wine, so the ring reads by its gold rim and footlights
+        cc.globalAlpha = 0.05 * k; cc.fillStyle = '#ffcf6a'; cc.beginPath(); cc.ellipse(x, y, r, r * 0.78, 0, 0, TAU); cc.fill(); cc.globalAlpha = 1;
+        for (let i = 0; i < 18; i++) { const a = i * TAU / 18 + Math.sin(t + i) * 0.03; V.neonPath(cc, i % 2 ? '#8a1830' : '#5a0a1e', 5, k * 0.6, () => { cc.moveTo(x + Math.cos(a) * r * 0.86, y + Math.sin(a) * r * 0.67); cc.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r * 0.78); }); }
         V.neonRing(cc, x, y, r, '#ffd27a', 1.4, k * 0.8);
         for (let i = 0; i < 7; i++) { const a = 0.35 + i * (Math.PI - 0.7) / 6; V.glowAt(cc, x + Math.cos(a) * r * 0.93, y + Math.sin(a) * r * 0.73, 12, '#ffcf6a', k * (0.7 + 0.15 * Math.sin(t * 6 + i))); } },
         { peak: 1, settle: 0.45, hold: 0.8 });
@@ -3094,7 +3191,8 @@ function windLaneBoost(x, y, vx, vy, now) {
     // (painted pass) the Doll comes back to life: let down again on gold strings (the Doll Summon panel)
     unlimp: e => { for (const dl of dollsOf(e)) { V.glint(dl.x, dl.y, { color: '#ffffff', size: 22, z: 30 }); threadOut(e, dl, { color: '#ffd27a', w: 1.2, grow: 0.2, dur: 0.5 }); MARI_PAINT.dollDrop(dl.x, dl.y, { dur: 0.5 }); MARI_PAINT.petals(dl.x, dl.y, { n: 5, speed: 110, life: 1.1 }); } },
     flourish: (e, t) => { for (const dl of dollsOf(e)) V.slash(dl.x, dl.y, (t ? Math.atan2(t.y - dl.y, t.x - dl.x) : 0) + 0.6, { r: 42, span: 1, color: '#ff9ab0', w: 0.35, dur: 0.18, flip: true }); },
-    standin: e => { for (const dl of dollsOf(e)) V.shield(dl, { shape: 'hex', color: '#f0a8cc', dur: 0.5, r: 30 }); },
+    // (QA) bubble, not the hex shield (~450 canvas calls a Doll for a half-second flicker), and a petal ring to sell it
+    standin: e => { for (const dl of dollsOf(e)) { V.shield(dl, { color: '#f0a8cc', dur: 0.5, r: 30 }); V.shock(dl.x, dl.y, { r: 40, color: '#ff9ab0', dur: 0.3, w: 2.5 }); } },
     // (polish) the kit's verdict on a Cross-Cut (data.n: how many strings caught the enemy): a hit gets a gold encore
     // flourish on the enemy (stars, two gold rings, rose petals, bigger for each string); a miss lets every string go
     // slack, drooping grey-rose to the floor, with a dull puff where it sags
@@ -3149,7 +3247,7 @@ function windLaneBoost(x, y, vx, vy, now) {
     if (c.cam) c.cam.dim(0.32, 1.3);
     V.charge(c.x, c.y, { color: DAWN, r: 70, n: 12, dur: 0.35, follow: c.ent });
     V.glint(c.x, c.y - 60, { color: '#ffffff', size: 40, z: 40 });
-    V.lightfall(c.x, c.y, { color: DAWN, r: 26, h: 300, dur: 0.5, feathers: 0 });
+    V.lightfall(c.x, c.y, { color: DAWN, r: 22, h: 300, dur: 0.44, feathers: 0 });
     c.later(0.38, () => {
       if (c.cam) { c.cam.stop(0.09); c.cam.punch(0.07, 0.6); c.cam.flash('#fff0c8', 0.22, 0.35); }
       shake(7);
@@ -3157,10 +3255,11 @@ function windLaneBoost(x, y, vx, vy, now) {
       for (let i = 0; i < 3; i++) V.shock(at.x, at.y, { r: 150 + i * 60, color: i ? DAWN : '#ffffff', dur: 0.6 + i * 0.1, w: 8 - i * 2, delay: i * 0.08 });
       V.debris(at.x, at.y, { n: 10, color: '#8a7a68' });
       V.decal(at.x, at.y, { style: 'crack', r: 60, dur: 8, a: 0.55, seed: Math.random() * 6 });
-      V.ink(at.x, at.y, { r: 160, dur: 8, a: 0.25 });
-      V.sigil(at.x, at.y, { r: 160, style: 'star5', color: GOLD, dur: 8, spin: 0.25 });
-      V.dome(at, { color: DAWN, r: 130, dur: 8 });
-      V.burst(at.x, at.y - 30, { color: DAWN, color2: '#ffffff', n: 24, speed: 300, kind: 'star', flashR: 120 });
+      // (QA) the star and the dome flare for the raise, then hold at a third for the 8s, so telegraphs under them read
+      vfxLingerSettle(V.ink(at.x, at.y, { r: 160, dur: 8, a: 0.25 }), 0.5, 1.2);
+      vfxLingerSettle(V.sigil(at.x, at.y, { r: 160, style: 'star5', color: GOLD, dur: 8, spin: 0.25 }), 0.28, 1.4);
+      for (const d of V.dome(at, { color: DAWN, r: 130, dur: 8 }) || []) vfxLingerSettle(d, 0.3, 1.4);
+      V.burst(at.x, at.y - 30, { color: DAWN, color2: '#ffffff', n: 24, speed: 300, kind: 'star', flash: false });
     });
   };
   KIT_VFX['bastion-slam'] = Object.assign((e, target) => {
@@ -3168,9 +3267,10 @@ function windLaneBoost(x, y, vx, vy, now) {
     if (cam) { cam.stop(0.08); cam.punch(0.05, 0.45); cam.flash('#fff2c8', 0.18, 0.3); }
     shake(6);
     V.lightfall(t.x, t.y, { color: DAWN, r: 44, h: 340, dur: 0.6, feathers: 6 });
-    V.spikeburst(t.x, t.y, { r: 90, n: 16, color: GOLD, core: '#fffbe0', ink: '#4a3408', dur: 0.4, z: 6 });
+    // (QA) the starburst sits at the boss's feet and the seal settles low, so the boss and its next telegraph still read
+    V.spikeburst(t.x, t.y, { r: 105, n: 18, color: GOLD, core: '#fffbe0', ink: '#4a3408', dur: 0.42, z: 0, layer: 'ground', flat: 0.6 });
     V.shock(t.x, t.y, { r: 170, color: DAWN, dur: 0.55, w: 8 });
-    V.sigil(t.x, t.y, { r: 90, style: 'star4', color: GOLD, dur: 2.4, spin: 1.2 });
+    vfxLingerSettle(V.sigil(t.x, t.y, { r: 90, style: 'star4', color: GOLD, dur: 2.4, spin: 1.2 }), 0.3, 0.7);
     V.decal(t.x, t.y, { style: 'crack', r: 56, dur: 3, a: 0.55, seed: Math.random() * 6 });
     V.debris(t.x, t.y, { n: 8, color: '#8a7a68' });
   }, { atTarget: true });
@@ -3185,10 +3285,11 @@ function windLaneBoost(x, y, vx, vy, now) {
     V.emberWings(c.ent, { dur: 8 });
     V.aura(c.ent, { color: '#ff8a2a', style: 'flame', dur: 8, r: 30, rate: 0.35 });
     c.later(0.4, () => V.phoenix(c.x, c.y, c.tx, c.ty, { s: 1.3, dur: 0.55, onHit: (x, y) => {
-      if (c.cam) { c.cam.stop(0.1); c.cam.punch(0.08, 0.55); c.cam.flash('#ffb060', 0.28, 0.35); }
+      // (QA: the impact whited out the whole screen) a softer camera flash, a smaller flash, the starburst on the floor
+      if (c.cam) { c.cam.stop(0.1); c.cam.punch(0.08, 0.55); c.cam.flash('#ff9a40', 0.16, 0.3); }
       shake(8);
-      V.flash(x, y - 20, 160, '#ffc060', 0.3);
-      V.spikeburst(x, y, { r: 96, n: 18, color: FIRE, core: ASH, dur: 0.45 });
+      V.flash(x, y - 20, 80, '#ff9a40', 0.24);
+      V.spikeburst(x, y, { r: 120, n: 18, color: FIRE, core: ASH, dur: 0.48, layer: 'ground', z: 0, flat: 0.6 });
       V.shock(x, y, { r: 200, color: '#ffa040', dur: 0.6, w: 9 });
       V.shock(x, y, { r: 130, color: ASH, dur: 0.45, w: 5, delay: 0.06 });
       V.flare(x, y, { n: 20, r: 30, size: 1.3, h: 1.3 });
@@ -3208,7 +3309,7 @@ function windLaneBoost(x, y, vx, vy, now) {
     } });
   };
   ABILITY_VFX.pyromancer.phoenixblast = c => V.phoenix(c.x, c.y, c.tx, c.ty, { s: 0.6, dur: 0.42, onHit: (x, y) => {
-    V.spikeburst(x, y, { r: 64, n: 14, color: FIRE, core: ASH, dur: 0.36 });
+    V.spikeburst(x, y, { r: 80, n: 14, color: FIRE, core: ASH, dur: 0.38, layer: 'ground', z: 0, flat: 0.6 });   // (QA) at its feet
     V.shock(x, y, { r: 110, color: '#ffa040', dur: 0.45, w: 6 });
     V.flare(x, y, { n: 12, r: 18, size: 1 });
     V.decal(x, y, { r: 40, embers: true, dur: 2.5 });
@@ -3332,17 +3433,18 @@ function windLaneBoost(x, y, vx, vy, now) {
     thousandcuts: c => {
       const sx = c.x, sy = c.y, tx = c.tx, ty = c.ty;
       if (c.cam) c.cam.dim(0.4, 1.3);
-      V.smokebomb(sx, sy, { r: 130, dur: 2.6, toss: 0.2, color: '#6a5a7a', ring: BL.VIO });
+      // (QA: the full-strength cloud hid the boss and the party for 2s, and its pop whited out) thinner, a small pop
+      V.smokebomb(sx, sy, { r: 130, dur: 2.2, toss: 0.2, color: '#6a5a7a', ring: BL.VIO, a: 0.6, flashR: 40 });
       V.charge(sx, sy, { color: BL.VIO, r: 56, n: 10, dur: 0.3 });
       c.later(0.35, () => {
         V.shadowdash(sx, sy, c.ent.x, c.ent.y, { color: '#8a4dff', dur: 0.4 });
         if (c.cam) { c.cam.stop(0.1); c.cam.punch(0.07, 0.5); c.cam.flash('#d8b8ff', 0.22, 0.3); }
         shake(6);
         for (let i = 0; i < 3; i++) c.later(i * 0.05, () => V.slash(tx, ty + 6, rand(0, TAU), { r: 70, span: 2.2, color: i % 2 ? BL.STEEL : BL.ROSE, w: 0.5, dur: 0.26, flip: i % 2 === 1, sparks: 4 }));
-        V.spikeburst(tx, ty, { r: 70, n: 14, color: BL.VIO, core: '#f0e8ff', ink: BL.INK, dur: 0.36, z: 18 });
+        V.spikeburst(tx, ty, { r: 100, n: 16, color: BL.VIO, core: '#f0e8ff', ink: BL.INK, dur: 0.42, layer: 'ground', z: 0, flat: 0.6 });   // (QA) round its feet, not over it
         V.shock(tx, ty, { r: 170, color: BL.VIO, dur: 0.55, w: 7 });
-        V.ink(tx, ty, { r: 100, dur: 7, a: 0.3 });
-        V.sigil(tx, ty, { r: 100, style: 'runes', color: BL.VIO, dur: 7, spin: -0.7 });
+        vfxLingerSettle(V.ink(tx, ty, { r: 100, dur: 7, a: 0.3 }), 0.5, 1);
+        vfxLingerSettle(V.sigil(tx, ty, { r: 100, style: 'runes', color: BL.VIO, dur: 7, spin: -0.7 }), 0.26, 1.2);   // (QA) settles faint for the window
         V.aura(c.ent, { color: '#8a00c0', style: 'shadow', dur: 7, r: 28, rate: 0.3 });
       });
     },
@@ -3368,7 +3470,7 @@ function windLaneBoost(x, y, vx, vy, now) {
       if (cam) { cam.punch(0.06, 0.45); cam.flash('#ffd0e8', 0.18, 0.3); }
       shake(6);
       for (const s of [-1, 1]) V.slash(t.x, t.y + 6, Math.PI / 4 * s, { r: 96, span: 1.2, color: BL.ROSE, w: 0.7, dur: 0.32, flip: s > 0, sparks: 6 });
-      V.spikeburst(t.x, t.y, { r: 92, n: 18, color: BL.ROSE, core: '#ffe0ec', ink: '#2a0410', dur: 0.42, z: 16 });
+      V.spikeburst(t.x, t.y, { r: 118, n: 18, color: BL.ROSE, core: '#ffe0ec', ink: '#2a0410', dur: 0.45, layer: 'ground', z: 0, flat: 0.6 });   // (QA) round its feet, the X cuts carry the hit
       V.shock(t.x, t.y, { r: 190, color: BL.VIO, dur: 0.55, w: 8 });
       V.splash(t.x, t.y, { n: 12, speed: 1.3 });
       V.decal(t.x, t.y, { style: 'crack', r: 60, dur: 3, a: 0.5, seed: Math.random() * 6 });
@@ -3387,16 +3489,17 @@ function windLaneBoost(x, y, vx, vy, now) {
     c.later(0.4, () => {
       if (c.cam) { c.cam.stop(0.09); c.cam.punch(0.06, 0.5); c.cam.flash('#fff6d0', 0.2, 0.3); }
       shake(6);
-      V.lightfall(c.tx, c.ty, { color: RG.STAR, r: 40, h: 380, dur: 0.5, feathers: 0 });
-      V.spikeburst(c.tx, c.ty, { r: 80, n: 16, color: RG.GOLD, core: '#ffffff', ink: '#3a2404', dur: 0.4, z: 8 });
+      // (QA: the impact whited out the boss) a slimmer shaft, the starburst on the floor round its feet, a gold flash
+      V.lightfall(c.tx, c.ty, { color: RG.STAR, r: 28, h: 380, dur: 0.5, feathers: 0 });
+      V.spikeburst(c.tx, c.ty, { r: 110, n: 18, color: RG.GOLD, core: '#fff6d0', ink: '#3a2404', dur: 0.45, layer: 'ground', z: 0, flat: 0.6 });
       V.shock(c.tx, c.ty, { r: 180, color: RG.GOLD, dur: 0.55, w: 7 });
-      V.burst(c.tx, c.ty - 20, { color: RG.STAR, color2: RG.GOLD, n: 20, speed: 280, kind: 'star', flashR: 100 });
+      V.flash(c.tx, c.ty - 20, 60, RG.GOLD, 0.2); V.burst(c.tx, c.ty - 20, { color: RG.STAR, color2: RG.GOLD, n: 20, speed: 280, kind: 'star', flash: false });
     });
   };
   KIT_VFX['ranger-stars'] = Object.assign((e, target, d) => {
     const t = target || e, x = t.x, y = t.y, f = Math.max(0, Math.min(100, (d && d.f) || 0)), r = 70 + 0.6 * f, heal = d && d.c;
-    V.ink(x, y, { r, dur: 3.6, a: 0.3 });
-    V.sigil(x, y, { r, style: 'star5', color: RG.GOLD, dur: 3.6, spin: 0.4 });
+    vfxLingerSettle(V.ink(x, y, { r, dur: 3.6, a: 0.3 }), 0.5, 0.8);
+    vfxLingerSettle(V.sigil(x, y, { r, style: 'star5', color: RG.GOLD, dur: 3.6, spin: 0.4 }), 0.35, 0.8);   // (QA) settles under the arrows
     V.fx({ dur: 3.6, layer: 'ground', draw: (cc, p, tt, fx) => { const k = Math.min(1, p / 0.05, (1 - p) / 0.15) * fx.a; for (let i = 0; i < 9; i++) { const a = i * 2.4 + tt * 0.3, q = ((i * 0.37) % 1) * 0.85; V.glowAt(cc, x + Math.cos(a) * r * q, y + Math.sin(a) * r * q * 0.62, 8, RG.STAR, k * (0.4 + 0.4 * Math.sin(tt * 5 + i))); } } });
     for (let i = 1; i <= 6; i++) dmgUltLater(e, 0.4 + 0.5 * i - 0.2, () => {
       V.volley(x, y, { n: 8 + Math.round(f / 12), r: r * 0.85, color: RG.GOLD, wind: 0.02, gap: 0.02, stay: 1.1, ring: false });
@@ -3549,13 +3652,14 @@ function windLaneBoost(x, y, vx, vy, now) {
     c.later(0.4, () => {
       camHit(c.cam, '#ff5a5a', 1);
       shake(7);
-      V.ink(e.x, e.y, { r: 120, dur: 10, follow: e, a: 0.3 });
-      V.sigil(e.x, e.y, { r: 120, style: 'runes', color: BLOOD, dur: 10, spin: -0.5, follow: e });
+      // (QA: a full-strength red circle for 10s read as a boss danger zone) the rune circle flares, then holds faint
+      vfxLingerSettle(V.ink(e.x, e.y, { r: 120, dur: 10, follow: e, a: 0.3 }), 0.5, 1.2);
+      vfxLingerSettle(V.sigil(e.x, e.y, { r: 120, style: 'runes', color: BLOOD, dur: 10, spin: -0.5, follow: e }), 0.22, 1.3);
       V.spikeburst(e.x, e.y, { r: 150, n: 24, hole: 0.62, color: '#ff3a2a', core: '#ffb0a0', ink: CLOT, fill: GORE, dur: 0.6, layer: 'ground', z: 0, flat: 0.6 });
       for (let i = 0; i < 3; i++) V.shock(e.x, e.y, { r: 170 + i * 50, color: i ? '#ff8a7a' : '#ffffff', dur: 0.6 + i * 0.1, w: 8 - i * 2, delay: i * 0.08 });
       V.splash(e.x, e.y, { n: 14, speed: 1.4 });
       V.aura(e, { color: '#8a0010', style: 'shadow', dur: 10, r: 32, rate: 0.25 });
-      V.burst(e.x, e.y - 30, { color: BLOOD, color2: '#ffd0d0', n: 20, speed: 280, flashR: 110 });
+      V.flash(e.x, e.y - 30, 60, BLOOD, 0.22); V.burst(e.x, e.y - 30, { color: BLOOD, color2: '#ffd0d0', n: 20, speed: 280, flash: false });   // (QA) no white-out
     });
   };
   // the eclipse ends: the bank comes up out of the floor under the enemy as a geyser of blood, and flows back
@@ -3564,8 +3668,8 @@ function windLaneBoost(x, y, vx, vy, now) {
     camHit(cam, '#ff5a5a', 0.8);
     shake(6);
     V.ink(t.x, t.y, { r: 90, dur: 4, a: 0.35 });
-    V.pillar(t.x, t.y, { r: 44, h: 260, color: BLOOD, dur: 0.8 });
-    V.spikeburst(t.x, t.y, { r: 100, n: 18, color: '#d0203a', core: '#ffd0d0', ink: CLOT, dur: 0.45 });
+    V.pillar(t.x, t.y, { r: 32, h: 260, color: BLOOD, dur: 0.6 });   // (QA) slimmer, so the boss isn't whited out
+    V.spikeburst(t.x, t.y, { r: 120, n: 20, color: '#d0203a', core: '#ff9aa8', ink: CLOT, dur: 0.5, layer: 'ground', z: 0, flat: 0.6 });   // (QA) on the floor round the boss, not a solid star over it
     V.shock(t.x, t.y, { r: 170, color: '#ff5a6a', dur: 0.55, w: 8 });
     V.splash(t.x, t.y, { n: 18, speed: 1.6, size: 1.3 });
     V.puddle(t.x, t.y, { r: 60, color: GORE, dark: CLOT, dur: 4, bubbles: true, fumes: false });
@@ -3582,22 +3686,23 @@ function windLaneBoost(x, y, vx, vy, now) {
     V.charge(c.x, c.y, { color: RUNE2, r: 60, n: 12, dur: 0.35, follow: c.ent });
     V.ink(c.tx, c.ty, { r: 110, dur: 0.6 });
     V.sigil(c.tx, c.ty, { r: 110, style: 'runes', color: RUNE, dur: 0.6, spin: 7 });
-    for (let i = 0; i < 4; i++) c.later(0.05 + i * 0.08, () => { const a = Math.random() * Math.PI * 2; V.lightning(c.ent.x, c.ent.y, c.ent.x + Math.cos(a) * 70, c.ent.y + Math.sin(a) * 45, { color: '#d0b8ff', jag: 12 }); });
+    for (let i = 0; i < 4; i++) c.later(0.05 + i * 0.08, () => { const a = Math.random() * Math.PI * 2; V.lightning(c.ent.x, c.ent.y, c.ent.x + Math.cos(a) * 70, c.ent.y + Math.sin(a) * 45, { color: '#c8ceff', jag: 12 }); });
     c.later(0.42, () => {
-      camHit(c.cam, '#d8c4ff', 1);
+      camHit(c.cam, '#c8ceff', 1);
       shake(8);
       for (let i = 0; i < 5; i++) { const a = i * Math.PI * 2 / 5, d = rand(20, 60); V.lightning(c.tx + Math.cos(a) * d, c.ty - 260, c.tx + Math.cos(a) * d * 0.4, c.ty + Math.sin(a) * d * 0.3, { color: i % 2 ? RUNE2 : '#ffffff', jag: 16, dur: 0.3 }); }
-      V.crystals(c.tx, c.ty, { color: '#b28cff', n: 11, r: 72, h: 96, dur: 1.4 });
-      V.spikeburst(c.tx, c.ty, { r: 110, n: 18, color: RUNE, core: RCORE, ink: RINK, dur: 0.45 });
+      // (QA: the starburst sits on the floor round the enemy, not over it; the circles flare then settle faint; all indigo)
+      V.crystals(c.tx, c.ty, { color: '#9aa4ff', n: 11, r: 72, h: 96, dur: 1.4 });
+      V.spikeburst(c.tx, c.ty, { r: 135, n: 20, color: RUNE, core: RCORE, ink: RINK, dur: 0.5, layer: 'ground', z: 0, flat: 0.6 });
       for (let i = 0; i < 2; i++) V.shock(c.tx, c.ty, { r: 180 + i * 60, color: i ? RUNE2 : '#ffffff', dur: 0.6, w: 8 - i * 3, delay: i * 0.08 });
       V.decal(c.tx, c.ty, { style: 'crack', r: 70, dur: 4, a: 0.6, seed: Math.random() * 6 });
-      V.sigil(c.tx, c.ty, { r: 80, style: 'runes', color: RUNE, dur: 4, spin: 0.4 });
-      V.debris(c.tx, c.ty, { n: 10, color: '#6a5a88' });
+      vfxLingerSettle(V.sigil(c.tx, c.ty, { r: 80, style: 'runes', color: RUNE, dur: 4, spin: 0.4 }), 0.3, 0.8);
+      V.debris(c.tx, c.ty, { n: 10, color: '#5a5e88' });
       // the Sanctum the shattered runes settle into, round the guard (the party's Wards)
-      V.ink(c.ent.x, c.ent.y, { r: 150, dur: 8, a: 0.25 });
-      V.sigil(c.ent.x, c.ent.y, { r: 150, style: 'runes', color: '#9f7aff', dur: 8, spin: 0.35 });
-      V.pillar(c.ent.x, c.ent.y, { r: 46, h: 170, color: '#b8a0ff', dur: 1 });
-      for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3 + 0.5; V.crystals(c.ent.x + Math.cos(a) * 140, c.ent.y + Math.sin(a) * 109, { color: '#b8a0ff', n: 3, r: 14, h: 44, dur: 2.4 }); }
+      vfxLingerSettle(V.ink(c.ent.x, c.ent.y, { r: 150, dur: 8, a: 0.25 }), 0.5, 1);
+      vfxLingerSettle(V.sigil(c.ent.x, c.ent.y, { r: 150, style: 'runes', color: '#7c84ff', dur: 8, spin: 0.35 }), 0.24, 1.2);
+      V.pillar(c.ent.x, c.ent.y, { r: 34, h: 170, color: '#8e98ff', dur: 1 });
+      for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3 + 0.5; V.crystals(c.ent.x + Math.cos(a) * 140, c.ent.y + Math.sin(a) * 109, { color: '#9aa4ff', n: 3, r: 14, h: 44, dur: 2.4 }); }
     });
   };
   // the stones themselves: one rune per Rune held (d.n) flies off the guard to the enemy; a Ward lending its blast (d.w)
@@ -3606,7 +3711,7 @@ function windLaneBoost(x, y, vx, vy, now) {
     const n = (d && d.n) || 0, t = target || e;
     for (let i = 0; i < n; i++) FX.later(0.05 * i, () => { const a = -Math.PI / 2 + (i - (n - 1) / 2) * 0.7, sx = e.x + Math.cos(a) * 30, sy = e.y + Math.sin(a) * 20 - 30;
       V.glint(sx, sy, { color: RCORE, size: 22, z: 30 }); V.missile(sx, sy, t.x, t.y, { style: 'helix', color: RUNE2, speed: 900, arc: 120, size: 1.3 }); });
-    if (d && d.w) { V.shield(e, { shape: 'hex', color: '#a88cff', dur: 0.5, r: 44 }); V.burst(e.x, e.y - 20, { color: '#d8c4ff', n: 12, speed: 220, kind: 'star' }); }
+    if (d && d.w) { V.shield(e, { shape: 'hex', color: '#9aa4ff', dur: 0.5, r: 44 }); V.burst(e.x, e.y - 20, { color: '#d8deff', n: 12, speed: 220, kind: 'star' }); }
   }, { atTarget: true });
 
   // (Ironpalm · Hundred Palms, Gorgemaw · Maw of Ruin, Oathbroker · Final Reckoning: their own VFX PASS blocks below)
@@ -3802,7 +3907,7 @@ function windLaneBoost(x, y, vx, vy, now) {
   // the giant palm driven through, hands bursting out of the blow, the handprint left cracked in the floor
   KIT_VFX['ip-hundred'] = Object.assign((e, target) => {
     const I = P(), k = I.col(e), h = I.hot(e), t = target || e, cam = FX.camFor(e), a = Math.atan2(t.y - e.y, t.x - e.x), S = IRONPALM_ULT_SCALE;
-    camHit(cam, '#fff0c8', 1.2);
+    camHit(cam, '#ffd27a', 0.7);   // (QA: the ultimate's landing whited out the screen) a warmer, softer camera flash
     shake(9);
     stopE(e, 0.16);
     ironpalmHandFly(e.x, e.y, t.x, t.y, 3.4 * S * 0.8, h, 0.32, 0, 30);
@@ -3812,18 +3917,19 @@ function windLaneBoost(x, y, vx, vy, now) {
     V.fx({ dur: 0.5, layer: 'air', draw: (c, p, tt, fx) => {
       const q = 1 - Math.pow(1 - Math.min(1, p / 0.3), 3), kk = fx.a * Math.min(1, p / 0.08) * Math.min(1, (1 - p) / 0.45);
       c.save(); c.globalCompositeOperation = 'lighter'; c.fillStyle = k;
-      c.globalAlpha = Math.min(1, 0.5 * kk); c.beginPath();   // tapered wedges of light
+      c.globalAlpha = Math.min(1, 0.3 * kk); c.beginPath();   // tapered wedges of light
       for (const r of rays) { const r0 = 16 * S * q, r1 = (36 + 64 * r.L) * S * q, w = 0.07, cy = t.y - 20;
         c.moveTo(t.x + Math.cos(r.a - w) * r0, cy + Math.sin(r.a - w) * r0 * 0.7); c.lineTo(t.x + Math.cos(r.a) * r1, cy + Math.sin(r.a) * r1 * 0.7); c.lineTo(t.x + Math.cos(r.a + w) * r0, cy + Math.sin(r.a + w) * r0 * 0.7); c.closePath(); }
       c.fill(); c.restore();
       ironpalmHand(c, t.x, t.y - 10 - 44 * S * q, -Math.PI / 2, 2.6 * S * (0.6 + 0.4 * q), k, kk * 0.75);
     } });
-    V.spikeburst(t.x, t.y, { r: 62 * S, n: 18, color: k, core: h, ink: '#2a1408', dur: 0.32 });
+    // (QA: a solid star plus a white flash read as a white-out over the boss) the burst goes on the floor round it
+    V.spikeburst(t.x, t.y, { r: 80 * S, n: 18, color: k, core: h, ink: '#2a1408', dur: 0.36, layer: 'ground', z: 0, flat: 0.6 });
     V.shock(t.x, t.y, { r: 120 * S, color: '#ffffff', dur: 0.4, w: 8 });
     V.shock(t.x, t.y, { r: 90 * S, color: k, dur: 0.55, w: 5, delay: 0.06 });
     for (let i = 0; i < 12; i++) { const ra = i / 12 * Math.PI * 2 + rand(-0.15, 0.15), d = rand(110, 150) * S;
       ironpalmHandFly(t.x + Math.cos(ra) * 18 * S, t.y + Math.sin(ra) * 12 * S, t.x + Math.cos(ra) * d, t.y + Math.sin(ra) * d * 0.62, rand(1.5, 1.9) * Math.sqrt(S), i % 2 ? h : k, 0.45, 0.03 + i * 0.01, 28); }
-    V.burst(t.x, t.y, { color: k, color2: '#ffffff', n: 16, speed: 280 * S, kind: 'star', flashR: 50 * S });
+    V.burst(t.x, t.y, { color: k, color2: '#ffffff', n: 16, speed: 280 * S, kind: 'star', flash: false });
     V.debris(t.x, t.y, { n: 16, color: IP_ROCK, speed: 1.4, size: 1.3 });
     V.smoke(t.x, t.y, { n: 6, r: 40 * S, color: '#a89880', size: 30 * S, a: 0.35, speed: 70 * S, life: 1.2 });
     // the aftermath: the giant print in the floor between the monk and the enemy, fingers toward the enemy; its
@@ -3886,7 +3992,8 @@ function windLaneBoost(x, y, vx, vy, now) {
           stopE(c.ent, 0.04); shake(1.5);
         });
       });
-      c.later(0.12 + n * gap, () => { V.spikeburst(c.tx, c.ty, { r: 60 * M, n: 16, color: k, core: h, ink: '#2a1408', dur: 0.34 }); V.shock(c.tx, c.ty, { r: 100 * M, color: k, dur: 0.4, w: 5 });
+      // (QA: a solid gold star covered the boss's face) the finishing burst on the floor round its feet
+      c.later(0.12 + n * gap, () => { V.spikeburst(c.tx, c.ty, { r: 80 * M, n: 16, color: k, core: h, ink: '#2a1408', dur: 0.36, layer: 'ground', z: 0, flat: 0.6 }); V.shock(c.tx, c.ty, { r: 100 * M, color: k, dur: 0.4, w: 5 });
         for (let i = 0; i < 5; i++) { const ra = c.ang + (i - 2) * 0.5; ironpalmHandFly(c.tx, c.ty, c.tx + Math.cos(ra) * 70 * M, c.ty + Math.sin(ra) * 44 * M, 0.9 * M, i % 2 ? h : k, 0.3, i * 0.015, 22); }   // the flurry bursting through
         V.debris(c.tx, c.ty, { n: 5, color: IP_ROCK, speed: 0.8 });
         V.burst(c.tx, c.ty, { color: k, color2: '#ffffff', n: 12, speed: 240 * M, kind: 'star', flashR: 50 * M }); stopE(c.ent, 0.1); shake(5); });
@@ -4400,6 +4507,17 @@ function windLaneBoost(x, y, vx, vy, now) {
       oathParchment(x, y, a * 0.3, 64, 42, 2.1, M);
       if (g) g.pages(c.x, c.y, 4);
     },
+    // (QA) Foreclose: was a borrowed holy light-shaft (it read lime-gold, a paladin's move). Now the class's own: the
+    // great stamp let down on its gold chain onto the boss, red wax spikes, coins and pages, a faint seal left
+    foreclose: c => { const g = O(), M = OATHBROKER_MOVE_SCALE, tx = c.tx, ty = c.ty;
+      oathStamp(tx, ty, 30 * M, { fall: 0.24, hold: 0.24, h: 170 * M, from: c.ent, link: 11 });
+      c.later(0.24, () => {
+        V.spikeburst(tx, ty, { r: 60 * M, n: 16, color: WAXL, core: '#fff0d0', ink: INK, dur: 0.34 });
+        V.shock(tx, ty, { r: 120 * M, color: GOLD, dur: 0.45, w: 5 });
+        oathCoins(tx, ty, 8, { size: 1.1 }); if (g) g.pages(tx, ty, 8);
+        oathWaxSeal(tx, ty, 40 * M, { dur: 2.2, a: 0.45, fill: 0.5, gold: 0.6, coins: 4, pages: 2 });
+        shake(5);
+      }); },
   });
 })();
 
@@ -4422,11 +4540,12 @@ function windLaneBoost(x, y, vx, vy, now) {
     const dur = o.dur ?? 1.1, H = o.h ?? 150;
     V.fx({ dur, layer: 'air', draw: (c, p, t, e) => {
       const rise = 1 - Math.pow(1 - Math.min(1, p / 0.38), 3), k = e.a * Math.min(1, (1 - p) / 0.4), sy = y - 40 - H * rise, R = 22 + 18 * rise;
-      V.glowAt(c, x, sy, R * 3.4, SUN, 0.45 * k);
+      // (QA: the sun washed out the whole frame at the landing) a smaller halo, softer rays
+      V.glowAt(c, x, sy, R * 2.4, SUN, 0.32 * k);
       c.save(); c.translate(x, sy); c.rotate(t * 0.7); c.globalCompositeOperation = 'lighter';
       for (let i = 0; i < 12; i++) {
         const a = i * TAU / 12, L = R * (i % 2 ? 1.8 : 2.6);
-        c.globalAlpha = 0.5 * k; c.fillStyle = DAWN; c.beginPath();
+        c.globalAlpha = 0.36 * k; c.fillStyle = DAWN; c.beginPath();
         c.moveTo(Math.cos(a - 0.1) * R, Math.sin(a - 0.1) * R); c.lineTo(Math.cos(a) * L, Math.sin(a) * L); c.lineTo(Math.cos(a + 0.1) * R, Math.sin(a + 0.1) * R); c.closePath(); c.fill();
       }
       c.restore(); c.globalAlpha = 1;
@@ -4445,13 +4564,15 @@ function windLaneBoost(x, y, vx, vy, now) {
     c.later(LAND, () => {
       impact(c.cam, '#fff2c8', 0.24);
       shake(6);
-      V.lightfall(at.x, at.y, { color: DAWN, r: 70, h: 420, dur: 1.1, feathers: 10 });
-      V.pillar(at.x, at.y, { r: 60, h: 380, color: '#fff6c8', dur: 1 });
+      // (QA: the pillar whited out the party for a second and the two circles held full strength over telegraphs for
+      // 12s) a slimmer pillar, no extra flash, and the star and petal circles settle faint after the landing
+      V.lightfall(at.x, at.y, { color: DAWN, r: 50, h: 420, dur: 1.1, feathers: 10 });
+      V.pillar(at.x, at.y, { r: 34, h: 380, color: SUN, dur: 0.8 });
       for (let i = 0; i < 3; i++) V.shock(at.x, at.y, { r: 170 + i * 50, color: i ? DAWN : '#ffffff', dur: 0.6 + i * 0.1, w: 8 - i * 2, delay: i * 0.08 });
-      V.ink(at.x, at.y, { r: 170, dur: 12, a: 0.22 });
-      V.sigil(at.x, at.y, { r: 170, style: 'star5', color: SUN, dur: 12, spin: 0.2 });
-      V.sigil(at.x, at.y, { r: 110, style: 'petals', color: DAWN, dur: 12, spin: -0.35 });
-      V.burst(at.x, at.y - 40, { color: DAWN, color2: '#ffffff', n: 26, speed: 320, kind: 'star', flashR: 140 });
+      vfxLingerSettle(V.ink(at.x, at.y, { r: 170, dur: 12, a: 0.22 }), 0.5, 1.2);
+      vfxLingerSettle(V.sigil(at.x, at.y, { r: 170, style: 'star5', color: SUN, dur: 12, spin: 0.2 }), 0.26, 1.4);
+      vfxLingerSettle(V.sigil(at.x, at.y, { r: 110, style: 'petals', color: DAWN, dur: 12, spin: -0.35 }), 0.2, 1.4);
+      V.burst(at.x, at.y - 40, { color: DAWN, color2: '#ffffff', n: 26, speed: 320, kind: 'star', flash: false });
       clericPetals(at.x, at.y, 16, 260);
     });
   };
@@ -4459,12 +4580,13 @@ function windLaneBoost(x, y, vx, vy, now) {
   // lands as a second, whiter star. The Petals growing back glint round the cleric.
   KIT_VFX['cleric-dawn'] = Object.assign((e, target, d) => {
     const t = target || e, star = d && d.s;
-    V.beam(t.x, t.y - 360, t.x, t.y, { color: '#fff6c8', w: star ? 30 : 22, dur: 0.55 });
-    V.spikeburst(t.x, t.y, { r: star ? 110 : 90, n: 18, color: SUN, core: '#fffbe0', ink: '#4a3408', dur: 0.45, z: 8 });
+    V.beam(t.x, t.y - 360, t.x, t.y, { color: SUN, w: star ? 18 : 13, dur: 0.5 });
+    // (QA) the starburst round the boss's feet, not over it; the seal settles
+    V.spikeburst(t.x, t.y, { r: star ? 130 : 110, n: 18, color: SUN, core: '#fffbe0', ink: '#4a3408', dur: 0.45, layer: 'ground', z: 0, flat: 0.6 });
     V.shock(t.x, t.y, { r: 180, color: DAWN, dur: 0.55, w: 8 });
-    V.sigil(t.x, t.y, { r: 90, style: 'star4', color: SUN, dur: 2.4, spin: 1.4 });
+    vfxLingerSettle(V.sigil(t.x, t.y, { r: 90, style: 'star4', color: SUN, dur: 2.4, spin: 1.4 }), 0.3, 0.7);
     V.decal(t.x, t.y, { style: 'crack', r: 56, dur: 3, a: 0.5, seed: Math.random() * 6 });
-    if (star) V.burst(t.x, t.y - 30, { color: '#ffffff', color2: DAWN, n: 22, speed: 300, kind: 'star', flashR: 120 });
+    if (star) V.burst(t.x, t.y - 30, { color: '#ffffff', color2: DAWN, n: 22, speed: 300, kind: 'star', flashR: 50 });
     shake(star ? 6 : 4);
     for (let i = 0; i < 3; i++) V.spawn({ x: e.x, y: e.y, z: 26, life: 1.1, size: 13, color: i % 2 ? PETAL : DAWN, kind: 'petal', add: false, vr: 4, flutter: 4, orbit: { x: e.x, y: e.y, a: i * TAU / 3, r: 34, w: 3, dr: -10, flat: 0.55, follow: e } });
   }, { atTarget: true });
@@ -4693,7 +4815,8 @@ function windLaneBoost(x, y, vx, vy, now) {
     const t = target || e, thorn = d && d.s;
     groveThorns(t.x, t.y, { n: thorn ? 10 : 7, r: 66, h: thorn ? 76 : 58, dur: 1.1 });
     groveRoots(t.x, t.y, { r: 90, n: 6, dur: 2.6, grow: 0.18, glow: 0.6, a: 0.25 });
-    if (thorn) V.spikeburst(t.x, t.y, { r: 84, n: 16, color: '#8adf4a', core: GROVE_CREAM, ink: '#0e2208', dur: 0.36, z: 6 });
+    // (QA) a ring of thorn-spikes on the floor (hole), not a solid green-white blob that buried the boss sprite
+    if (thorn) V.spikeburst(t.x, t.y, { r: 84, n: 16, hole: 0.55, color: '#8adf4a', core: '#d8f0a0', ink: '#0e2208', dur: 0.36, z: 0, layer: 'ground', flat: 0.62 });
     V.debris(t.x, t.y, { n: 6, color: '#5a4a32' });
     V.shock(t.x, t.y, { r: 140, color: GROVE_GOLD, dur: 0.5, w: 5 });
     V.motes(t.x, t.y, { kind: 'leaf', color: '#6fbf4a', n: 6, r: 50, rise: 0.6 });
@@ -5390,7 +5513,7 @@ function windLaneBoost(x, y, vx, vy, now) {
       for (let i = 0; i < 12; i++) { const a = rand(0, TAU), d = Math.sqrt(Math.random()) * 140 * AS; alemOpusDrop(at.x + Math.cos(a) * d, at.y + Math.sin(a) * d * 0.7, OPUS3[i % 3], 0.04 + i * 0.035); }
       V.shock(at.x, at.y, { r: 170 * AS, color: BRASS, dur: 0.6, w: 7 });
       c.later(0.5, () => V.burst(at.x, at.y, { color: TEAL, color2: '#ffffff', n: 10, speed: 160, z: OPUS_TIP, kind: 'star', flash: false }));
-      alemOpusSeal(at.x, at.y, 150 * AS, 10, { peak: 0.95, settle: 0.36, w: 1.4 });
+      alemOpusSeal(at.x, at.y, 150 * AS, 10, { peak: 0.95, settle: 0.22, w: 1.2 });   // (QA) settled lower: its lines crossed telegraphs for 10s
     });
   };
   // the flask hurls its orb at the boss: it bursts in red, green and blue (layered spikebursts), sparks of every vial
@@ -5458,16 +5581,17 @@ function windLaneBoost(x, y, vx, vy, now) {
       const trace = (segs, off) => () => { for (const [a, b] of segs) {
         const bx = a.x + (b.x - a.x) * grow, by = a.y + (b.y - a.y) * grow, L = Math.hypot(bx - a.x, by - a.y) || 1, nx = -(by - a.y) / L, ny = (bx - a.x) / L;
         c.moveTo(a.x + nx * off, a.y + ny * off); c.quadraticCurveTo((a.x + bx) / 2 + nx * (off + 2 * sag), (a.y + by) / 2 + ny * (off + 2 * sag), bx + nx * off, by + ny * off); } };
-      const w = (2.2 + 1.4 * tight) * WS, col = hot > 0.5 ? HOT : CRIM;
+      // (QA) the web flares rose-hot, not white: a white star the size of the room whited the whole frame out
+      const w = (2.2 + 1.4 * tight) * WS, col = hot > 0.5 ? '#ff9aac' : CRIM;
       if (t < LAND + 0.25) { c.save(); c.globalAlpha = 0.16 * k * grow * Math.min(1, (LAND + 0.25 - t) / 0.2); c.fillStyle = '#5a0a18'; c.beginPath(); A.forEach((a, i) => (i ? c.lineTo(a.x, a.y) : c.moveTo(a.x, a.y))); c.closePath(); c.fill(); c.restore(); c.globalAlpha = 1; }
       V.neonPath(c, ROSE, w * 0.35, k * 0.55, trace(spokes, 0));
-      V.neonPath(c, hot > 0.5 ? HOT : SEAM, w * 0.6 + 3 * WS * flare, k * 0.85, trace(rim, 0));
+      V.neonPath(c, SEAM, w * 0.6 + 2 * WS * flare, k * 0.85, trace(rim, 0));
       V.neonPath(c, CRIM, w * 0.4, k * 0.6, trace(rim, -4 * WS));
-      V.neonPath(c, col, w + 4 * WS * flare, k, trace(star, 0));
+      V.neonPath(c, col, w + 2 * WS * flare, k, trace(star, 0));   // (QA) flare halved: the web whited out the frame
       V.neonPath(c, CRIM, w * 0.45, k * 0.8, trace(star, 4.5 * WS));
       V.neonPath(c, SEAM, 1.1 * WS, k * (1 - hot * 0.5), trace(star, 0));
       V.neonPath(c, col, w * 0.5, k * 0.8, trace(links, 0));
-      if (flare > 0.01) for (const a of A) { V.glowAt(c, a.x, a.y, 44 * WS, HOT, flare * k); V.glowAt(c, a.x, a.y, 70 * WS, CRIM, 0.6 * flare * k); }
+      if (flare > 0.01) for (const a of A) { V.glowAt(c, a.x, a.y, 28 * WS, HOT, 0.8 * flare * k); V.glowAt(c, a.x, a.y, 50 * WS, CRIM, 0.6 * flare * k); }
     } });
   }
   // the anchors: a crimson spear tip on a thread shaft standing at each point of the web
@@ -5505,8 +5629,8 @@ function windLaneBoost(x, y, vx, vy, now) {
   function weaveTaut(pairs, o = {}) {
     const dur = o.dur ?? LAND;
     for (const [A, B] of pairs) V.fx({ dur, layer: 'air', draw: (c, p, t, e) => {
-      const k = e.a * (0.4 + 0.6 * p), w = 1.5 + 4 * p * p;
-      V.neonPath(c, p > 0.85 ? '#ffffff' : SILK, w, k, () => { c.moveTo(A.x, A.y - 16); c.lineTo(B.x, B.y - 16); });
+      const k = e.a * (0.4 + 0.6 * p), w = 1.5 + 2.5 * p * p;
+      V.neonPath(c, p > 0.85 ? HOT : SILK, w, k, () => { c.moveTo(A.x, A.y - 16); c.lineTo(B.x, B.y - 16); });
       const q = (t * 3) % 1; V.glowAt(c, A.x + (B.x - A.x) * q, A.y - 16 + (B.y - A.y) * q, 8, SEAM, k);
     } });
   }
@@ -5522,17 +5646,17 @@ function windLaneBoost(x, y, vx, vy, now) {
     weaveLoomSpears(F, LAND + 0.5);
     weaveTaut(weaveMine(c.ent), { dur: LAND });
     c.later(LAND, () => {
-      impact(c.cam, '#ffe8ec', 0.2);
+      impact(c.cam, '#ffd0d8', 0.13);   // (QA) softer flash: the web already flares
       shake(5);
       for (const [A, B] of weaveMine(c.ent)) {
-        V.fx({ dur: 0.45, layer: 'air', draw: (cc, p, t, e) => { const k = (1 - p) * e.a; V.neonPath(cc, HOT, 7 * WS * (1 - p * 0.6), k, () => { cc.moveTo(A.x, A.y - 16); cc.lineTo(B.x, B.y - 16); }); } });
+        V.fx({ dur: 0.45, layer: 'air', draw: (cc, p, t, e) => { const k = (1 - p) * e.a; V.neonPath(cc, '#ff9aac', 4 * WS * (1 - p * 0.6), k, () => { cc.moveTo(A.x, A.y - 16); cc.lineTo(B.x, B.y - 16); }); } });
         for (const w of [A, B]) V.burst(w.x, w.y - 16, { color: ROSE, color2: SEAM, n: 6, speed: 200, kind: 'star', flash: false });
       }
       F.anchors.forEach((a, i) => { V.sparks(a.x, a.y, { color: i % 2 ? SEAM : ROSE, n: 7, speed: 300, z: 30 });
         V.spikeburst(a.x, a.y - 30 * WS, { r: 30 * WS, n: 8, color: CRIM, core: HOT, ink: '#2a0410', dur: 0.3 }); });
       for (const w of F.ps) V.plus(w.x, w.y, { color: '#ffb0bc', n: 2 });
       V.shock(F.x, F.y, { r: F.R + 40 * WS, color: CRIM, dur: 0.55, w: 7 });
-      if (W) W.diamond(F.x, F.y, F.R * 0.95, 6, { peak: 0.95, settle: 0.4, w: 1.5 });
+      if (W) W.diamond(F.x, F.y, F.R * 0.95, 6, { peak: 0.95, settle: 0.26, w: 1.5 });
     });
   };
   // one strike per thread (d.n, at least one) runs from her to the boss on its own arc, then two bright lances cross
@@ -5558,11 +5682,15 @@ function windLaneBoost(x, y, vx, vy, now) {
 // spilling to the party (Bloodreaver), a reflected buster carving a Rune and a sanctified Ward (Runeguard), Crisp
 // Flowing Palms breathing and Iron Ox throwing the boss off balance (Ironpalm)
 Object.assign(KIT_VFX, {
-  turnedEdge: e => { VFX.glint(e.x, e.y - 24, { color: '#fff3c0', size: 34 }); VFX.motes(e.x, e.y, { color: '#ffe08a', n: 8, r: 26, kind: 'star' }); },
+  // (QA: it read as nothing) the blade flares gold along its edge, a ring of gold at the feet, then the motes
+  turnedEdge: e => { const a = e.angle || 0, bx = e.x + Math.cos(a) * 20, by = e.y + Math.sin(a) * 12;
+    VFX.glint(bx, by, { color: '#fff3c0', size: 40, z: 30 }); VFX.flash(bx, by - 30, 30, '#ffd65a', 0.2); VFX.shock(e.x, e.y, { r: 56, color: '#ffd65a', dur: 0.4, w: 4 });
+    VFX.sparks(bx, by, { color: '#ffe9a0', n: 6, angle: a, spread: 0.9, speed: 240 }); VFX.motes(e.x, e.y, { color: '#ffe08a', n: 8, r: 26, kind: 'star' }); },
   warcryDrain: e => { VFX.shock(e.x, e.y, { r: 150, color: '#ff6a6a', w: 4, dur: 0.5 }); VFX.plus(e.x, e.y, { color: '#ff9a9a', n: 5 }); },
-  mirrorRune: e => { VFX.sigil(e.x, e.y, { r: 34, style: 'runes', color: '#e0d4ff', dur: 0.6, spin: 6, follow: e }); VFX.motes(e.x, e.y, { color: '#c8a8ff', n: 6, r: 22 }); },
-  sanctWard: e => { VFX.sigil(e.x, e.y, { r: 44, style: 'clock', color: '#9f7aff', dur: 0.7, spin: 2, follow: e }); },
-  sanctBlast: e => { VFX.shock(e.x, e.y, { r: 160, color: '#c8b0ff', w: 5, dur: 0.6 }); VFX.plus(e.x, e.y, { color: '#d8c8ff', n: 5 }); },
-  flowBreath: e => { VFX.swirl(e.x, e.y, { r: 36, color: '#bfe8ff', dur: 0.45, follow: e, inward: true }); },
+  mirrorRune: e => { VFX.sigil(e.x, e.y, { r: 34, style: 'runes', color: '#d8deff', dur: 0.6, spin: 6, follow: e }); VFX.motes(e.x, e.y, { color: '#b8c0ff', n: 6, r: 22 }); },
+  sanctWard: e => { VFX.sigil(e.x, e.y, { r: 44, style: 'clock', color: '#7c84ff', dur: 0.7, spin: 2, follow: e }); },
+  sanctBlast: e => { VFX.shock(e.x, e.y, { r: 160, color: '#b8c0ff', w: 5, dur: 0.6 }); VFX.plus(e.x, e.y, { color: '#d8deff', n: 5 }); },
+  // (QA: the pale swirl was invisible on sand) a gold breath drawn in, a soft ring and a glint at the chest
+  flowBreath: e => { VFX.swirl(e.x, e.y, { r: 36, color: '#ffd27a', dur: 0.45, follow: e, inward: true }); VFX.shock(e.x, e.y, { r: 44, r0: 10, color: '#ffe08a', dur: 0.35, w: 3 }); VFX.glint(e.x, e.y, { color: '#fff2c0', size: 24, z: 24 }); },
   oxStagger: Object.assign((e, target) => { const t = target || e; VFX.shock(t.x, t.y, { r: 80, color: '#e0b070', w: 5, dur: 0.4 }); VFX.sparks(t.x, t.y, { color: '#ffe0a0', n: 8 }); }, { atTarget: true }),
 });

@@ -350,8 +350,8 @@
         } else {
           const e = enemyPos(); if (e) { tx = e.x; ty = e.y; } else { const m = mouseWorld(); tx = m.x; ty = m.y; }
         }
-        FX.cast(player, ab, tx, ty, { mine: true, tent: ally != null ? entById(ally) : null });
-        Net.send({ t: 'cast', i, a: ab.fxId || ab.id, x: rnd(player.x), y: rnd(player.y), tx: rnd(tx), ty: rnd(ty), ally, s: scene === 'arena' ? 1 : 0, c: +rnow.toFixed(3) });
+        FX.cast(player, ab, tx, ty, { mine: true, tent: ally != null ? entById(ally) : null, step: ev.st });
+        Net.send(Object.assign({ t: 'cast', i, a: ab.fxId || ab.id, x: rnd(player.x), y: rnd(player.y), tx: rnd(tx), ty: rnd(ty), ally, s: scene === 'arena' ? 1 : 0, c: +rnow.toFixed(3) }, Number.isInteger(ev.st) ? { st: ev.st } : null));
         break;
       }
       case 'auto': {
@@ -368,8 +368,9 @@
       case 'castStart':
         // a real cast: the hero channels it (see drawChannel in heroes.js)
         player.st.action = { type: 'cast', t0: now, dur: Math.max(0.55, ev.dur), channel: true };
-        player.castBar = { ab: ev.ab, t0: now, dur: ev.dur };
-        Net.send({ t: 'castStart', i: actor.abilities.indexOf(ev.ab), dur: +ev.dur.toFixed(2) });
+        // (h: a heal's expected size on the ally it's aimed at, to: who; the party frames preview it: frameMarks)
+        player.castBar = { ab: ev.ab, t0: now, dur: ev.dur, to: ev.h > 0 ? ev.target : null, h: ev.h > 0 ? ev.h : 0 };
+        Net.send(Object.assign({ t: 'castStart', i: actor.abilities.indexOf(ev.ab), dur: +ev.dur.toFixed(2) }, ev.h > 0 ? { h: ev.h, to: ev.target } : null));
         if (typeof CAST_VFX !== 'undefined') CAST_VFX.start(player, ev.dur, ev.ab);   // the gathering (it follows castBar to its end)
         break;
       case 'interrupted':
@@ -391,11 +392,20 @@
           if (inArena()) {
             sendCombat(ev);
             if (ev.type === 'heal' || (ev.type === 'splash' && ev.amount)) showHeal(ev.target, ev.amount, ev.crit);
+            if ((ev.type === 'shield' || ev.type === 'mit') && ev.target === 'party') partyWard(ev);
           } else townEvent(ev);
         }
     }
   }
 
+  // a shield or damage cut you put on the whole party: everyone sees it flash on every member (KIT_VFX.partyWard);
+  // one flash for a move that does both (a shield and a cut together)
+  let wardAt = -9;
+  function partyWard(ev) {
+    if (now - wardAt < 0.3) return;
+    wardAt = now;
+    kitFx('partyWard', ev.type === 'mit' ? { m: 1 } : null);
+  }
   const PRE_PULL = new Set(['hot', 'shield', 'mit', 'partyBuff', 'pool']);
   function sendCombat(ev) {
     if (!inArena()) return;
@@ -2596,7 +2606,18 @@
       kit: k || null, cls: player.cls ? player.cls.id : null,   // your own DoTs on the boss (raid-ui.js boss status)
       // whose Ultimate is full (a pip on the frame): yours from your kit, everyone else's from their 'ult-ready' moment
       ult: new Set([...raid.rosterIds].filter(id => (id === Net.id ? !!(k && k.ultFull()) : !!(entById(id) || {}).ultReady))),
+      incoming: incomingHeals(),
     };
+  }
+  // heals being cast right now, by anyone in the party (bots too), summed per ally they're aimed at: castStart's h/to
+  // (a cast that was interrupted or has run its length counts no more)
+  function incomingHeals() {
+    const out = new Map();
+    for (const r of raid.roster) {
+      const cb = (entById(r.id) || {}).castBar, s = raid.party.get(r.id);
+      if (cb && cb.h > 0 && (!s || s.alive) && cb.to != null && cb.stop == null && now - cb.t0 < cb.dur) out.set(cb.to, (out.get(cb.to) || 0) + cb.h);
+    }
+    return out;
   }
 
   // under whoever your heals will land on: corner brackets when locked, a soft ring when it's just the nearest ally.
@@ -2885,6 +2906,8 @@
   function hitStop(dur = 0.1) { hitStopUntil = Math.max(hitStopUntil, now + Math.min(0.2, dur)); }
   FX.cam = { flash: screenFlash, dim: screenDim, punch: zoomPunch, stop: hitStop };
   FX.me = player;
+  // the party as this client sees it, living heroes only (KIT_VFX.partyWard flashes a party shield on each)
+  FX.party = () => (inArena() ? allyList().filter(c => { const s = raid.party.get(c.id); return !s || s.alive; }) : allyList()).map(c => c.ent);
   function drawScreenFx(kind) {
     const f = screenFx[kind];
     if (!f) return;
@@ -3526,7 +3549,7 @@
     if (!ab) return;
     let tx = msg.tx, ty = msg.ty, tent = null;
     if (msg.ally != null) { tent = entById(msg.ally); if (tent) { tx = tent.x; ty = tent.y; } }
-    FX.cast(e, ab, tx, ty, { tent });
+    FX.cast(e, ab, tx, ty, { tent, step: msg.st });   // (st: its combo step, engine.js fxStep)
   });
   // another player's class moment (Perfect Block, Overheat, Dawnstar...)
   Net.on('kfx', msg => {
@@ -3540,7 +3563,7 @@
     if (e) e.st.action = { type: 'cast', t0: now, dur: Math.max(0.55, msg.dur || 1), channel: true };
     // the bar under them: the skill's icon and name, and the seconds left
     const ab = e && e.cls && Number.isInteger(msg.i) && msg.i >= 0 ? kitFor(e.cls.id, e.spec).abilities[msg.i] : null;
-    if (e) e.castBar = ab ? { ab, t0: now, dur: Math.max(0.3, msg.dur || 1) } : null;
+    if (e) e.castBar = ab ? { ab, t0: now, dur: Math.max(0.3, msg.dur || 1), to: msg.h > 0 && Number.isInteger(msg.to) ? msg.to : null, h: msg.h > 0 ? msg.h : 0 } : null;
     if (e && e.castBar && typeof CAST_VFX !== 'undefined') { VFX.setScale(0.6); try { CAST_VFX.start(e, e.castBar.dur, ab); } finally { VFX.setScale(1); } }
   });
   Net.on('castStop', msg => {
