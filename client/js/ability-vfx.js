@@ -294,7 +294,7 @@ const KIT_VFX = {
   const alemMarkK = (p, t, dur, peak, settle) => Math.min(1, t / 0.15) * Math.min(1, (1 - p) * dur / 0.6) * (settle + (peak - settle) * Math.max(0, 1 - t / 0.7));
   // cure: thin shafts of light rising out of the splash
   function alemRays(x, y, col, n, R) {
-    const rays = Array.from({ length: n }, () => { const a = rand(0, ALEM_TAU), d = Math.sqrt(Math.random()) * R; return { x: x + Math.cos(a) * d, y: y + Math.sin(a) * d * 0.7, h: rand(40, 80), w: rand(1.5, 3), dl: rand(0, 0.12) }; });
+    const rays = Array.from({ length: n }, () => { const a = rand(0, ALEM_TAU), d = Math.sqrt(Math.random()) * R; return { x: x + Math.cos(a) * d, y: y + Math.sin(a) * d * 0.7, h: rand(55, 105), w: rand(2, 4), dl: rand(0, 0.12) }; });
     V.fx({ dur: 0.6, layer: 'air', draw: (c, p, t, e) => {
       for (const r of rays) { const q = Math.max(0, Math.min(1, (t - r.dl) / 0.18)), k = e.a * (1 - p) * q; if (k < 0.02) continue;
         V.neonPath(c, col, r.w, k, () => { c.moveTo(r.x, r.y); c.lineTo(r.x, r.y - r.h * q); }); }
@@ -305,10 +305,10 @@ const KIT_VFX = {
     V.fx({ dur, layer: 'ground', draw: (c, p, t, e) => {
       const k = e.a * alemMarkK(p, t, dur, 0.9, 0.35), g = easeOut(Math.min(1, t / 0.2)), RR = R * (0.7 + 0.3 * g);
       if (k < 0.02) return;
-      V.neonRing(c, x, y, RR, col, 2.2, k, 0.78); V.neonRing(c, x, y, RR * 0.72, col, 1, k * 0.6, 0.78);
+      V.neonRing(c, x, y, RR, col, 3, k, 0.78); V.neonRing(c, x, y, RR * 0.72, col, 1.4, k * 0.6, 0.78);
       const pl = (px, py, s, w) => V.neonPath(c, col, w, k, () => { c.moveTo(px - s, py); c.lineTo(px + s, py); c.moveTo(px, py - s * 0.78); c.lineTo(px, py + s * 0.78); });
-      pl(x, y, RR * 0.2, 3);
-      for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2 + Math.PI / 4; pl(x + Math.cos(a) * RR * 0.86, y + Math.sin(a) * RR * 0.86 * 0.78, 5, 1.4); }
+      V.glowAt(c, x, y, RR * 0.35, col, 0.35 * k); pl(x, y, RR * 0.24, 4);
+      for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2 + Math.PI / 4; pl(x + Math.cos(a) * RR * 0.86, y + Math.sin(a) * RR * 0.86 * 0.78, 7, 1.9); }
     } });
   }
   // shield aftermath: a ring of ticks with a shield emblem in the middle (its size and life are the ward's)
@@ -316,12 +316,13 @@ const KIT_VFX = {
     V.fx({ dur, layer: 'ground', draw: (c, p, t, e) => {
       const k = e.a * alemMarkK(p, t, dur, 0.85, 0.3), g = easeOut(Math.min(1, t / 0.25)), RR = R * (0.75 + 0.25 * g);
       if (k < 0.02) return;
-      V.neonRing(c, x, y, RR, col, 2.2, k, 0.78); V.neonRing(c, x, y, RR * 0.84, col, 1, k * 0.6, 0.78);
+      V.neonRing(c, x, y, RR, col, 3, k, 0.78); V.neonRing(c, x, y, RR * 0.84, col, 1.4, k * 0.6, 0.78);
       c.save(); c.translate(x, y); c.scale(1, 0.78); c.rotate(t * 0.2);
-      for (let i = 0; i < 12; i++) { const a = i * ALEM_TAU / 12; V.neonPath(c, col, 1.2, k * 0.7, () => { c.moveTo(Math.cos(a) * RR * 0.86, Math.sin(a) * RR * 0.86); c.lineTo(Math.cos(a) * RR * 0.96, Math.sin(a) * RR * 0.96); }); }
+      for (let i = 0; i < 12; i++) { const a = i * ALEM_TAU / 12; V.neonPath(c, col, 1.6, k * 0.7, () => { c.moveTo(Math.cos(a) * RR * 0.86, Math.sin(a) * RR * 0.86); c.lineTo(Math.cos(a) * RR * 0.96, Math.sin(a) * RR * 0.96); }); }
       c.restore();
-      const s = Math.min(26, RR * 0.22);
-      V.neonPath(c, col, 2.4, k, () => { c.moveTo(x - s, y - s * 0.7); c.lineTo(x + s, y - s * 0.7); c.lineTo(x + s * 0.9, y + s * 0.05); c.quadraticCurveTo(x + s * 0.5, y + s * 0.6, x, y + s * 0.85); c.quadraticCurveTo(x - s * 0.5, y + s * 0.6, x - s * 0.9, y + s * 0.05); c.closePath(); });
+      const s = Math.min(34, RR * 0.28);
+      V.glowAt(c, x, y, s * 1.6, col, 0.35 * k);
+      V.neonPath(c, col, 3.2, k, () => { c.moveTo(x - s, y - s * 0.7); c.lineTo(x + s, y - s * 0.7); c.lineTo(x + s * 0.9, y + s * 0.05); c.quadraticCurveTo(x + s * 0.5, y + s * 0.6, x, y + s * 0.85); c.quadraticCurveTo(x - s * 0.5, y + s * 0.6, x - s * 0.9, y + s * 0.05); c.closePath(); });
     } });
   }
   // Reaction: a rune circle in the two reagents' colours, segments alternating, turning slowly
@@ -330,9 +331,9 @@ const KIT_VFX = {
       const k = e.a * alemMarkK(p, t, dur, 0.9, 0.3), g = easeOut(Math.min(1, t / 0.2)), RR = R * (0.6 + 0.4 * g);
       if (k < 0.02) return;
       c.save(); c.translate(x, y); c.scale(1, 0.78); c.rotate(t * 0.6);
-      for (let i = 0; i < 6; i++) { const a = i * ALEM_TAU / 6; V.neonPath(c, i % 2 ? colB : colA, 2.2, k, () => c.arc(0, 0, RR, a + 0.06, a + ALEM_TAU / 6 - 0.06)); }
+      for (let i = 0; i < 6; i++) { const a = i * ALEM_TAU / 6; V.neonPath(c, i % 2 ? colB : colA, 3, k, () => c.arc(0, 0, RR, a + 0.06, a + ALEM_TAU / 6 - 0.06)); }
       for (let i = 0; i < 6; i++) { const a = i * ALEM_TAU / 6 + 0.5, px = Math.cos(a) * RR * 0.68, py = Math.sin(a) * RR * 0.68, s = RR * 0.09;
-        V.neonPath(c, i % 2 ? colA : colB, 1.4, k * 0.8, () => { c.moveTo(px - s, py + s); c.lineTo(px, py - s); c.lineTo(px + s, py + s); c.moveTo(px - s * 0.5, py); c.lineTo(px + s * 0.5, py); }); }
+        V.neonPath(c, i % 2 ? colA : colB, 1.9, k * 0.8, () => { c.moveTo(px - s, py + s); c.lineTo(px, py - s); c.lineTo(px + s, py + s); c.moveTo(px - s * 0.5, py); c.lineTo(px + s * 0.5, py); }); }
       V.neonPath(c, colA, 1.6, k * 0.8, () => c.arc(0, 0, RR * 0.32, 0, ALEM_TAU));
       V.neonPath(c, colB, 1.2, k * 0.7, () => { c.ellipse(0, 0, RR * 0.32, RR * 0.14, t * 1.4, 0, ALEM_TAU); });
       c.restore();
@@ -343,25 +344,26 @@ const KIT_VFX = {
     V.fx({ dur, layer: 'ground', draw: (c, p, t, e) => {
       const k = e.a * alemMarkK(p, t, dur, 0.6, 0.22), cx = follow ? follow.x : x, cy = follow ? follow.y : y;
       if (k < 0.02) return;
-      for (let i = 0; i < 3; i++) V.neonPath(c, '#e8f4f4', 1.6, k, () => {
+      for (let i = 0; i < 3; i++) V.neonPath(c, '#e8f4f4', 2.2, k, () => {
         for (let s = 0; s <= 16; s++) { const q = s / 16, a = t * 0.9 + i * ALEM_TAU / 3 + q * 3, rr = R * (0.2 + q * 0.75); const px = cx + Math.cos(a) * rr, py = cy + Math.sin(a) * rr * 0.6; s ? c.lineTo(px, py) : c.moveTo(px, py); } });
     } });
   }
   // Kiln Bomb wind-up: the coals under the still flare orange and spit sparks
   function alemKilnGlow(e) {
     V.fx({ dur: ALEMBIC.FLIGHT + 0.1, layer: 'air', draw: (c, p, t, f) => { const s = still(e), k = f.a * Math.sin(Math.PI * p);
-      V.glowAt(c, s.x, s.y - 10, 30, ALEM_KILN, 0.8 * k); V.glowAt(c, s.x, s.y - 10, 10, '#fff0b0', k); },
+      V.glowAt(c, s.x, s.y - 10, 42, ALEM_KILN, 0.85 * k); V.glowAt(c, s.x, s.y - 10, 14, '#fff0b0', k); },
     tick: () => { if (Math.random() < 0.4) { const s = still(e); V.spawn({ x: s.x + rand(-6, 6), y: s.y, z: 14, vx: rand(-20, 20), vz: rand(60, 140), g: 120, life: rand(0.3, 0.6), size: rand(3, 5), size1: 0, color: '#ffb040' }); } } });
   }
   // Kiln Bomb: a big orange kiln blast, hot shards, and a cracked crater glowing as it cools
   function alemKilnBlast(x, y) {
-    V.flash(x, y - 14, 70, ALEM_KILN, 0.16);
-    V.spikeburst(x, y, { r: 74, n: 18, color: '#ff6a1a', core: '#fff0b0', ink: '#3a1006', dur: 0.4 });
-    V.flare(x, y, { n: 16, r: 24, color: '#ff5a1a' });
-    V.debris(x, y, { n: 8, hot: true, color: '#5a3a2a' });
-    V.shock(x, y, { r: 110, color: '#ff9a3a', dur: 0.45, w: 6 });
-    V.crater(x, y, { r: 62, color: ALEM_KILN, dur: 2.6, flames: 4, a: 0.5, cracks: 10 });
-    V.smoke(x, y, { n: 5, color: '#3a2a2a', size: 32, a: 0.5, speed: 50, life: 1.4 });
+    V.flash(x, y - 14, 90, ALEM_KILN, 0.16);
+    V.spikeburst(x, y, { r: 96, n: 20, color: '#ff6a1a', core: '#fff0b0', ink: '#3a1006', dur: 0.45 });
+    V.spikeburst(x, y, { r: 54, n: 12, color: '#ffb040', core: '#ffffff', ink: '#3a1006', dur: 0.36, z: 18 });
+    V.flare(x, y, { n: 18, r: 30, color: '#ff5a1a' });
+    V.debris(x, y, { n: 10, hot: true, color: '#5a3a2a' });
+    V.shock(x, y, { r: 140, color: '#ff9a3a', dur: 0.5, w: 7 });
+    V.crater(x, y, { r: 80, color: ALEM_KILN, dur: 3, flames: 5, a: 0.65, cracks: 12 });
+    V.smoke(x, y, { n: 6, color: '#3a2a2a', size: 40, a: 0.5, speed: 60, life: 1.5 });
     shake(5);
   }
   ABILITY_VFX.alembist = {
@@ -388,9 +390,9 @@ const KIT_VFX = {
     }, draw: (c, p, t, e) => {
       const q = pos(p), y = q.y - q.z; last = p;
       const p0 = Math.max(0, p - 0.38);
-      V.neonPath(c, cols[0], 2.4, 0.5 * e.a, () => { for (let i = 0; i <= 8; i++) { const r = pos(p0 + (p - p0) * i / 8); i ? c.lineTo(r.x, r.y - r.z) : c.moveTo(r.x, r.y - r.z); } });
-      V.glowAt(c, q.x, y, 16, cols[0], 0.55 * e.a);
-      c.save(); c.globalAlpha = e.a; c.translate(q.x, y); c.rotate(t * 16);
+      V.neonPath(c, cols[0], 3.2, 0.6 * e.a, () => { for (let i = 0; i <= 8; i++) { const r = pos(p0 + (p - p0) * i / 8); i ? c.lineTo(r.x, r.y - r.z) : c.moveTo(r.x, r.y - r.z); } });
+      V.glowAt(c, q.x, y, 22, cols[0], 0.6 * e.a);
+      c.save(); c.globalAlpha = e.a; c.translate(q.x, y); c.scale(1.3, 1.3); c.rotate(t * 16);
       c.fillStyle = cols[0]; c.strokeStyle = OUT; c.lineWidth = 1.4;
       c.beginPath(); c.ellipse(0, 2, 5, 6, 0, 0, Math.PI * 2); c.fill(); c.stroke();
       if (cols.length > 1) { c.fillStyle = cols[1]; c.beginPath(); c.ellipse(1.5, 2, 2.5, 5, 0, 0, Math.PI * 2); c.fill(); }
@@ -420,9 +422,9 @@ const KIT_VFX = {
         const R = big ? 150 : 110;
         if (r === 'DE') {   // Steam: a white cloud billows up with swirls, and turns on the floor for the cloud's life
           const dur = 9 * m, f = fol ? tent : null;
-          V.smoke(x, y, { n: 8, r: 30, color: '#eef6f6', size: 40, a: 0.5, speed: 90, life: 1.4 });
-          V.swirl(x, y, { r: 90, color: '#e8f4f4', dur: 0.9, arms: 3 });
-          alemSteamSwirl(x, y, R * 0.85, dur, f);
+          V.smoke(x, y, { n: 9, r: 38, color: '#eef6f6', size: 50, a: 0.5, speed: 100, life: 1.5 });
+          V.swirl(x, y, { r: 115, color: '#e8f4f4', dur: 1, arms: 3 });
+          alemSteamSwirl(x, y, 114, dur, f);   // the cloud's own 120 radius
           V.plus(x, y, { color: '#9affd8', n: 4 });
           steam(x, y, 120, dur, '#d8f2f2', f);
           break;
@@ -430,20 +432,20 @@ const KIT_VFX = {
         // a cure: shafts of light rise out of the splash, a ring with a healing plus settles on the floor
         V.shock(x, y, { r: R, color: col, dur: 0.5, w: 5 });
         alemRays(x, y, col, big ? 9 : 6, R * 0.7);
-        alemCureMark(x, y, R * 0.8, col, big ? 1.6 : 1.2);
+        alemCureMark(x, y, R * 0.92, col, big ? 1.8 : 1.4);
         V.plus(x, y, { color: shade(col, 0.3), n: big ? 8 : 5 }); V.motes(x, y, { color: col, n: 8, r: R * 0.6, rise: 0.8 });
         if (r === 'DDD') steam(x, y, 150, 6, '#d8f2f2', fol ? tent : null);
         break;
       }
       case 'bomb': {
         // red arc, a fiery blast with hot rubble, and a scorched crater whose cracks glow as it cools
-        const s = big ? 1.5 : 1;
+        const s = (big ? 1.5 : 1) * 1.25;
         V.flash(x, y - 12, 44 * s, '#ff5a2a', 0.14);
         V.spikeburst(x, y, { r: 50 * s, n: 16, color: '#ff4a1a', core: '#ffe08a', ink: '#3a0806', dur: 0.36 });
-        V.flare(x, y, { n: 12 * s, r: 20 * s, color: col === '#fff070' ? '#ffd23a' : '#ff5a1a' });
+        V.flare(x, y, { n: big ? 18 : 12, r: 20 * s, color: col === '#fff070' ? '#ffd23a' : '#ff5a1a' });
         V.debris(x, y, { n: big ? 7 : 5, hot: true, color: '#5a3a2a' });
         V.smoke(x, y, { n: 5, color: '#3a2a2a', size: 30 * s, a: 0.5, speed: 50, life: 1.4 });
-        V.crater(x, y, { r: big ? 54 : 36, color: '#ff4a1a', dur: big ? 3 : 1.8, flames: big ? 4 : 2, a: 0.45, cracks: big ? 8 : 6 });
+        V.crater(x, y, { r: big ? 68 : 46, color: '#ff4a1a', dur: big ? 3 : 2, flames: big ? 4 : 3, a: 0.5, cracks: big ? 10 : 8 });
         if (r === 'EQ') V.lightning(x - 30, y - 10, x + 30, y + 6, { color: '#fff4c0', jag: 10 });
         if (r === 'EES') { V.burst(x, y, { color: '#fff070', n: 14, speed: 260, kind: 'star' }); }
         shake(big ? 5 : 3);
@@ -452,7 +454,7 @@ const KIT_VFX = {
       case 'ward': {
         // a blue dome closes over the splash, then a shield seal stays (low) on the floor as long as the ward works
         const R = r === 'SSS' ? 160 : 120, dur = (r === 'SSS' ? 8 : 6) * m, blue = r === 'QQ' ? '#a8c8ff' : ALEM_BLUE;
-        V.dome({ x, y }, { color: blue, r: R * 0.5, dur: 1.1 });
+        V.dome({ x, y }, { color: blue, r: R * 0.62, dur: 1.2 });
         alemShieldSeal(x, y, R, blue, dur);
         V.burst(x, y - 20, { color: '#cfe4ff', color2: '#ffffff', n: 10, speed: 160, kind: 'star', flash: false });
         // salt glitter hanging in the circle for its whole life
@@ -504,8 +506,8 @@ const KIT_VFX = {
       const go = (x, y) => {
         glass(x, y);
         if (kiln) { alemKilnBlast(x, y); return; }
-        if (pair) { V.spikeburst(x, y, { r: 58, n: 12, color: pair[0], core: '#ffffff', ink: '#1a1020', dur: 0.32 }); V.spikeburst(x, y, { r: 40, n: 10, color: pair[1], core: '#ffffff', ink: '#1a1020', dur: 0.3, z: 18 });
-          alemReactRune(x, y, 80, pair[0], pair[1], 1.6); }
+        if (pair) { V.spikeburst(x, y, { r: 76, n: 14, color: pair[0], core: '#ffffff', ink: '#1a1020', dur: 0.36 }); V.spikeburst(x, y, { r: 52, n: 12, color: pair[1], core: '#ffffff', ink: '#1a1020', dur: 0.32, z: 18 });
+          alemReactRune(x, y, 104, pair[0], pair[1], 1.8); }
         for (const r of parts) burst(r, x, y, m, target && target !== e ? target : null, d.fol);
       };
       if (d.self) { V.spawn({ x: e.x, y: e.y, z: 20, life: 0.3, size: 50, size1: 10, color: '#ffb040' }); go(e.x, e.y); return; }
@@ -950,10 +952,14 @@ const MARI_PAINT = (() => {
     if (a <= 0.02) return;
     V.glowAt(c, x, y - 14 * s, 15 * s, C.ROSE, 0.3 * a);
     c.save(); c.translate(x, y); c.rotate(lean); c.scale(s, s); c.globalAlpha = Math.min(1, a);
-    c.strokeStyle = body; c.lineCap = 'round'; c.lineWidth = 2;
-    c.beginPath(); c.moveTo(-3, 0); c.lineTo(-1, -10); c.moveTo(3, 0); c.lineTo(1, -10); c.moveTo(0, -12); c.lineTo(0, -19);
-    c.moveTo(-8, -26); c.lineTo(0, -18); c.lineTo(8, -26); c.stroke();
+    const limbs = () => { c.beginPath(); c.moveTo(-3, 0); c.lineTo(-1, -10); c.moveTo(3, 0); c.lineTo(1, -10); c.moveTo(0, -12); c.lineTo(0, -19);
+      c.moveTo(-8, -26); c.lineTo(0, -18); c.lineTo(8, -26); c.stroke(); };
+    // (scale-up pass) a dark ink outline under the limbs, skirt and head so the doll reads on any floor
+    c.lineCap = 'round'; c.strokeStyle = C.INK; c.lineWidth = 4.2; limbs();
+    c.fillStyle = C.INK; c.beginPath(); c.ellipse(0, -11, 8.4, 4.2, 0, 0, TAU2); c.fill(); c.beginPath(); c.arc(0, -23.4, 4.8, 0, TAU2); c.fill();
+    c.strokeStyle = body; c.lineWidth = 2.2; limbs();
     c.fillStyle = C.VEL2; c.beginPath(); c.ellipse(0, -11, 7, 3, 0, 0, TAU2); c.fill();
+    c.fillStyle = C.GOLD; c.fillRect(-6, -11.6, 12, 1.2);
     c.fillStyle = body; c.beginPath(); c.arc(0, -23, 3.4, 0, TAU2); c.fill();
     c.fillStyle = C.CRIM; c.beginPath(); c.arc(0, -24.5, 3.6, Math.PI * 1.05, Math.PI * 1.95); c.fill();
     c.restore(); c.globalAlpha = 1;
@@ -976,29 +982,32 @@ const MARI_PAINT = (() => {
       V.glowAt(c, x, y - z, r * 0.45, col, 0.6 * k);
     } });
     if (o.scar) V.fx({ dur: o.scar, layer: 'ground', draw: (c, p, t, e) => {
-      const k = e.a * Math.min(1, t / 0.1, (1 - p) / 0.5) * 0.4;
-      for (const an of angs) { const dx = Math.cos(an) * r * 0.9, dy = Math.sin(an) * r * 0.9 * 0.62; V.neonPath(c, col, 1.2, k, () => { c.moveTo(x - dx, y - dy); c.lineTo(x + dx, y + dy); }); }
+      const k = e.a * Math.min(1, t / 0.1, (1 - p) / 0.5) * (o.scarA ?? 0.55);
+      for (const an of angs) { const dx = Math.cos(an) * r * 0.9, dy = Math.sin(an) * r * 0.9 * 0.62; V.neonPath(c, col, 1.7, k, () => { c.moveTo(x - dx, y - dy); c.lineTo(x + dx, y + dy); }); }
     } });
   }
   // the stage: a gold ring with a compass on its floor and footlights round its front, velvet drapes framing it at the
   // back (they swing open over the first 0.35s), the valance across the top
   function stage(x, y, o = {}) {
-    const R = o.r ?? 110, dur = o.dur ?? 1.1, F = 0.62;
+    const R = o.r ?? 110, dur = o.dur ?? 1.1, F = 0.62, sk = R / 110, adur = o.airDur ?? dur;
     V.fx({ dur, layer: 'ground', draw: (c, p, t, e) => {
       const k = Math.min(1, t / 0.15, (dur - t) / 0.3) * e.a, open = easeOut(Math.min(1, t / 0.3)), RR = R * (0.7 + 0.3 * open);
       c.globalAlpha = 0.18 * k; c.fillStyle = '#1a0408'; c.beginPath(); c.ellipse(x, y, RR, RR * F, 0, 0, TAU2); c.fill(); c.globalAlpha = 1;
-      V.neonRing(c, x, y, RR, C.GOLD, 1.8, 0.8 * k, F);
-      V.neonRing(c, x, y, RR * 0.88, C.GOLD, 0.8, 0.45 * k, F);
+      V.neonRing(c, x, y, RR, C.GOLD, 1.8 * sk, 0.85 * k, F);
+      V.neonRing(c, x, y, RR * 0.88, C.GOLD, 0.8 * sk, 0.5 * k, F);
+      V.neonRing(c, x, y, RR * 0.34, C.GOLD, 0.8 * sk, 0.4 * k, F);
       c.save(); c.translate(x, y); c.scale(1, F);
-      V.neonPath(c, C.GOLD, 0.9, 0.35 * k, () => { for (let i = 0; i < 8; i++) { const a = i * TAU2 / 8 + t * 0.3, r1 = RR * (i % 2 ? 0.45 : 0.78); c.moveTo(Math.cos(a) * RR * 0.12, Math.sin(a) * RR * 0.12); c.lineTo(Math.cos(a) * r1, Math.sin(a) * r1); } });
+      V.neonPath(c, C.GOLD, 0.9 * sk, 0.42 * k, () => { for (let i = 0; i < 8; i++) { const a = i * TAU2 / 8 + t * 0.3, r1 = RR * (i % 2 ? 0.45 : 0.8); c.moveTo(Math.cos(a) * RR * 0.12, Math.sin(a) * RR * 0.12); c.lineTo(Math.cos(a) * r1, Math.sin(a) * r1); } });
       c.restore();
-      for (let i = 0; i < 11; i++) {
-        const a = -0.15 * Math.PI + i * 1.3 * Math.PI / 10, px = x + Math.cos(a) * RR * 1.04, py = y + Math.sin(a) * RR * F * 1.04, fl = 0.7 + 0.15 * Math.sin(t * 13 + i * 1.7);
-        V.glowAt(c, px, py - 3, 13, C.AMBER, k * fl * open); V.glowAt(c, px, py - 3, 4, '#ffffff', k * open);
+      // footlights: little dark lamp housings with a warm flame in each, round the front of the ring
+      for (let i = 0; i < 13; i++) {
+        const a = -0.15 * Math.PI + i * 1.3 * Math.PI / 12, px = x + Math.cos(a) * RR * 1.04, py = y + Math.sin(a) * RR * F * 1.04, fl = 0.7 + 0.15 * Math.sin(t * 13 + i * 1.7);
+        c.globalAlpha = 0.8 * k * open; c.fillStyle = C.INK; c.fillRect(px - 4 * sk, py - 2 * sk, 8 * sk, 5 * sk); c.globalAlpha = 1;
+        V.glowAt(c, px, py - 3 * sk, 15 * sk, C.AMBER, k * fl * open); V.glowAt(c, px, py - 3 * sk, 4.5 * sk, '#ffffff', k * open);
       }
     } });
-    V.fx({ dur, layer: 'air', draw: (c, p, t, e) => {
-      const k = Math.min(1, t / 0.12, (dur - t) / 0.3) * e.a, open = 0.35 + 0.65 * easeOut(Math.min(1, t / 0.35));
+    V.fx({ dur: adur, layer: 'air', draw: (c, p, t, e) => {
+      const k = Math.min(1, t / 0.12, (adur - t) / 0.3) * e.a, open = 0.35 + 0.65 * easeOut(Math.min(1, t / 0.35));
       const H = R * 1.05, top = y - R * F - H + 20, bot = top + H, W = R + 24, io = (W - R * 0.42) * open;
       c.save();
       for (const s of [-1, 1]) {
@@ -1006,34 +1015,42 @@ const MARI_PAINT = (() => {
         g.addColorStop(0, C.VEL2); g.addColorStop(1, '#4a0614');
         c.globalAlpha = 0.85 * k; c.fillStyle = g;
         c.beginPath(); c.moveTo(xo, top); c.lineTo(xi, top); c.quadraticCurveTo(xi + s * 8, top + H * 0.55, xi - s * 4 + Math.sin(t * 3) * 2, bot); c.lineTo(xo, bot + 6); c.closePath(); c.fill();
-        c.globalAlpha = 0.45 * k; c.strokeStyle = '#ff6a7e'; c.lineWidth = 1.2;
-        for (let i = 1; i < 4; i++) { const fx = xi + (xo - xi) * i / 4; c.beginPath(); c.moveTo(fx, top + 6); c.quadraticCurveTo(fx + s * 3, top + H * 0.5, fx - s * 2, bot); c.stroke(); }
-        c.globalAlpha = 0.9 * k; c.strokeStyle = C.GOLD; c.lineWidth = 2; c.beginPath(); c.moveTo(xi - s * 4, bot); c.lineTo(xo, bot + 6); c.stroke();
+        c.globalAlpha = 0.5 * k; c.strokeStyle = '#ff6a7e'; c.lineWidth = 1.2 * sk;
+        for (let i = 1; i < 5; i++) { const fx = xi + (xo - xi) * i / 5; c.beginPath(); c.moveTo(fx, top + 6); c.quadraticCurveTo(fx + s * 3 * sk, top + H * 0.5, fx - s * 2 * sk, bot); c.stroke(); }
+        c.globalAlpha = 0.6 * k; c.strokeStyle = '#2a0410'; c.lineWidth = 1.6 * sk;
+        for (let i = 1; i < 5; i++) { const fx = xi + (xo - xi) * (i - 0.5) / 5; c.beginPath(); c.moveTo(fx, top + 6); c.quadraticCurveTo(fx + s * 3 * sk, top + H * 0.5, fx - s * 2 * sk, bot); c.stroke(); }
+        c.globalAlpha = 0.9 * k; c.strokeStyle = C.GOLD; c.lineWidth = 2 * sk; c.beginPath(); c.moveTo(xi - s * 4, bot); c.lineTo(xo, bot + 6); c.stroke();
+        V.glowAt(c, xi - s * 4, bot - H * 0.35, 6 * sk, C.GOLD, 0.8 * k);   // a gold tie-back on each drape
       }
-      const x0 = x - W - 6, x1 = x + W + 6, step = (x1 - x0) / 8;
+      const x0 = x - W - 6, x1 = x + W + 6, step = (x1 - x0) / 8, vh = 14 * sk;
       c.globalAlpha = 0.9 * k; c.fillStyle = C.VEL;
-      c.beginPath(); c.moveTo(x0, top - 14); c.lineTo(x1, top - 14); c.lineTo(x1, top + 2);
-      for (let i = 1; i <= 8; i++) { const fx = x1 - step * i; c.quadraticCurveTo(fx + step / 2, top + 14, fx, top + 2); }
+      c.beginPath(); c.moveTo(x0, top - vh); c.lineTo(x1, top - vh); c.lineTo(x1, top + 2);
+      for (let i = 1; i <= 8; i++) { const fx = x1 - step * i; c.quadraticCurveTo(fx + step / 2, top + vh, fx, top + 2); }
       c.closePath(); c.fill();
-      c.strokeStyle = C.GOLD; c.lineWidth = 1.5; c.stroke();
+      c.strokeStyle = C.GOLD; c.lineWidth = 1.5 * sk; c.stroke();
       c.restore();
     } });
   }
   // phantom dolls let down on gold strings round a ring; at `hit` they lunge across the middle in pairs (an X of cuts)
   function troupe(x, y, o = {}) {
-    const R = o.r ?? 90, n = o.n ?? 4, hit = o.hit ?? 0.45, F = 0.62, dur = hit + 0.22;
+    const R = o.r ?? 90, n = o.n ?? 4, hit = o.hit ?? 0.45, F = 0.62, dur = hit + 0.22, ds = o.ds ?? 1.15;
     const pos = Array.from({ length: n }, (_, i) => { const a = Math.PI / 4 + i * TAU2 / n; return [x + Math.cos(a) * R, y + Math.sin(a) * R * F]; });
     V.fx({ dur, layer: 'air', draw: (c, p, t, e) => {
       for (let i = 0; i < n; i++) {
         const [px, py] = pos[i], [qx, qy] = pos[(i + Math.floor(n / 2)) % n];
         if (t < hit) {
-          const q = easeOut(Math.min(1, t / (hit * 0.75))), z = 70 * (1 - q), k = e.a * Math.min(1, t / 0.12);
-          V.neonPath(c, C.GOLD, 0.8, 0.55 * k, () => { c.moveTo(px - 4, py - 240); c.lineTo(px - 6, py - z - 22); c.moveTo(px + 4, py - 240); c.lineTo(px + 6, py - z - 22); c.moveTo(px, py - 240); c.lineTo(px, py - z - 24); });
-          doll(c, px, py - z, 1.15, 0.9 * k, Math.sin(t * 9 + i) * 0.12);
+          // let down on gold strings from a little wooden control bar (the cross of a marionette) that sways above it
+          const q = easeOut(Math.min(1, t / (hit * 0.75))), z = 60 * ds * (1 - q), k = e.a * Math.min(1, t / 0.12), sw = Math.sin(t * 9 + i) * 0.12;
+          const hy = py - z - 26 * ds, by = hy - 70 * ds, bx = px + sw * 30 * ds, bw = 11 * ds;
+          V.neonPath(c, C.GOLD, 0.7 * ds, 0.7 * k, () => { c.moveTo(px, by - 160); c.lineTo(bx, by); c.moveTo(bx - bw, by); c.lineTo(px - 8 * ds, hy); c.moveTo(bx + bw, by); c.lineTo(px + 8 * ds, hy); c.moveTo(bx, by); c.lineTo(px, hy + 2 * ds); });
+          c.globalAlpha = 0.95 * k; c.strokeStyle = '#7a4a22'; c.lineWidth = 2.6 * ds; c.lineCap = 'round';
+          c.beginPath(); c.moveTo(bx - bw, by); c.lineTo(bx + bw, by); c.moveTo(bx, by - bw * 0.6); c.lineTo(bx, by + bw * 0.6); c.stroke(); c.globalAlpha = 1;
+          V.glowAt(c, bx, by, 6 * ds, C.GOLD, 0.6 * k);
+          doll(c, px, py - z, ds, 0.95 * k, sw);
         } else {
           const u = Math.min(1, (t - hit) / 0.2), m = easeOut(u), dx = px + (qx - px) * m, dy = py + (qy - py) * m, k = e.a * (1 - u);
-          V.neonPath(c, i % 2 ? C.ROSE : C.GOLD, 3, 0.7 * k, () => { c.moveTo(px, py - 14); c.lineTo(dx, dy - 14); });
-          doll(c, dx, dy, 1.15, k, (qx > px ? 1 : -1) * 0.35);
+          V.neonPath(c, i % 2 ? C.ROSE : C.GOLD, 3 * ds / 1.15, 0.75 * k, () => { c.moveTo(px, py - 14 * ds); c.lineTo(dx, dy - 14 * ds); });
+          doll(c, dx, dy, ds, k, (qx > px ? 1 : -1) * 0.35);
         }
       }
     } });
@@ -1054,17 +1071,23 @@ const MARI_PAINT = (() => {
   }
   // the rose sigil: a gold ring and a crimson one, four spokes, and a rose of three whorls in the middle
   function roseSigil(x, y, o = {}) {
-    const r = o.r ?? 90, dur = o.dur ?? 2.6, al = o.a ?? 0.5, F = 0.62, spin = rand(0, TAU2);
+    const r = o.r ?? 90, dur = o.dur ?? 2.6, al = o.a ?? 0.5, F = 0.62, spin = rand(0, TAU2), sk = Math.max(1, r / 90), posts = o.posts ?? 0;
     V.fx({ dur, layer: 'ground', follow: o.follow, draw: (c, p, t, e) => {
       const cx = e.follow ? e.follow.x : x, cy = e.follow ? e.follow.y : y, k = Math.min(1, t / 0.3, (dur - t) / 0.9) * e.a * al, R = r * (0.85 + 0.15 * easeOut(Math.min(1, t / 0.4)));
       if (k < 0.01) return;
-      V.neonRing(c, cx, cy, R, C.GOLD, 1.4, k, F);
-      V.neonRing(c, cx, cy, R * 0.8, C.CRIM, 0.9, 0.7 * k, F);
+      V.neonRing(c, cx, cy, R, C.GOLD, 1.4 * sk, k, F);
+      V.neonRing(c, cx, cy, R * 0.8, C.CRIM, 0.9 * sk, 0.7 * k, F);
+      // (scale-up pass) o.posts: little gold stanchions round the rim with velvet-gold ropes drooping between them
+      if (posts) {
+        const pp = Array.from({ length: posts }, (_, i) => { const a = spin + (i + 0.5) * TAU2 / posts; return [cx + Math.cos(a) * R * 1.12, cy + Math.sin(a) * R * 1.12 * F]; });
+        V.neonPath(c, C.GOLD, 0.9 * sk, 0.75 * k, () => { for (let i = 0; i < posts; i++) { const [ax, ay] = pp[i], [bx, by] = pp[(i + 1) % posts]; c.moveTo(ax, ay - 22 * sk); c.quadraticCurveTo((ax + bx) / 2, (ay + by) / 2 - 8 * sk, bx, by - 22 * sk); } });
+        for (const [px, py] of pp) { V.neonPath(c, C.GOLD, 1.3 * sk, k, () => { c.moveTo(px, py); c.lineTo(px, py - 26 * sk); }); V.glowAt(c, px, py - 27 * sk, 6 * sk, C.AMBER, k); }
+      }
       c.save(); c.translate(cx, cy); c.scale(1, F);
-      V.neonPath(c, C.GOLD, 0.8, 0.6 * k, () => { for (let i = 0; i < 4; i++) { const a = spin + i * TAU2 / 4 + t * 0.15; c.moveTo(Math.cos(a) * R * 0.32, Math.sin(a) * R * 0.32); c.lineTo(Math.cos(a) * R * 1.08, Math.sin(a) * R * 1.08); } });
+      V.neonPath(c, C.GOLD, 0.8 * sk, 0.6 * k, () => { for (let i = 0; i < 4; i++) { const a = spin + i * TAU2 / 4 + t * 0.15; c.moveTo(Math.cos(a) * R * 0.32, Math.sin(a) * R * 0.32); c.lineTo(Math.cos(a) * R * 1.08, Math.sin(a) * R * 1.08); } });
       const rr = R * 0.28;
       for (let j = 0; j < 3; j++) {
-        const rad = rr * (1 - j * 0.3); c.fillStyle = [C.VEL, C.VEL2, C.ROSE][j]; c.globalAlpha = Math.min(1, 1.1 * k);
+        const rad = rr * (1 - j * 0.3); c.fillStyle = [C.VEL, C.VEL2, C.ROSE][j]; c.globalAlpha = Math.min(0.62, 1.1 * k);
         for (let i = 0; i < 5; i++) { const a = spin + i * TAU2 / 5 + j * 0.63; c.beginPath(); c.ellipse(Math.cos(a) * rad * 0.42, Math.sin(a) * rad * 0.42, rad * 0.55, rad * 0.36, a, 0, TAU2); c.fill(); }
       }
       c.globalAlpha = 1; c.restore();
@@ -1076,10 +1099,12 @@ const MARI_PAINT = (() => {
     const r = o.r ?? 56, dur = o.dur ?? 0.7;
     V.fx({ dur, layer: 'air', draw: (c, p, t, e) => {
       const k = e.a * Math.min(1, t / 0.08, (1 - p) / 0.4), grow = easeOut(Math.min(1, p / 0.35));
-      for (let i = 0; i < 3; i++) {
-        const R = r * (0.6 + 0.22 * i) * (0.6 + 0.4 * grow), tilt = [-0.25, 0.15, 0][i], a0 = t * (14 - i * 3) * (i % 2 ? -1 : 1) + i * 2, zz = 12 + i * 6;
-        V.neonPath(c, [C.ROSE, C.GOLD, C.CRIM][i], 2.6 - i * 0.5, k * 0.9, () => c.ellipse(x, y - zz, R, R * 0.36, tilt, a0, a0 + 2.6));
+      const sk = Math.max(1, r / 56);
+      for (let i = 0; i < 4; i++) {
+        const R = r * (0.6 + 0.2 * i) * (0.6 + 0.4 * grow), tilt = [-0.25, 0.15, 0, -0.08][i], a0 = t * (14 - i * 3) * (i % 2 ? -1 : 1) + i * 2, zz = 12 + i * 6;
+        V.neonPath(c, [C.ROSE, C.GOLD, C.CRIM, C.PINK][i], (2.8 - i * 0.5) * sk, k * 0.9, () => c.ellipse(x, y - zz, R, R * 0.36, tilt, a0, a0 + 2.6));
       }
+      V.neonRing(c, x, y, r * 0.95 * (0.6 + 0.4 * grow), C.ROSE, 1.2 * sk, 0.5 * k, 0.62);
       V.glowAt(c, x, y - 16, r * 0.6, C.ROSE, 0.35 * k);
     } });
   }
@@ -1095,13 +1120,14 @@ const MARI_PAINT = (() => {
   }
   // Doll Summon: three gold strings let down onto a Doll and a crimson ribbon spiralling down round it as it lands
   function dollDrop(x, y, o = {}) {
-    const dur = o.dur ?? 0.55;
+    const dur = o.dur ?? 0.55, s1 = o.s ?? 1.3;   // (scale-up pass) s1: overall size, 1.3 by default
     V.fx({ dur, layer: 'air', draw: (c, p, t, e) => {
       const k = e.a * Math.min(1, (1 - p) / 0.4), drop = easeOut(Math.min(1, p / 0.5));
-      V.neonPath(c, C.GOLD, 0.9, 0.7 * k, () => { for (const dx of [-7, 0, 7]) { c.moveTo(x + dx * 1.6, y - 230); c.lineTo(x + dx, y - 26); } });
-      V.neonPath(c, C.CRIM, 2, k, () => { for (let s = 0; s <= 20; s++) { const q = s / 20, a = q * 9 + t * 10, rr = 14 + 8 * q, px = x + Math.cos(a) * rr, py = y - 6 - 84 * (1 - q) * (1.2 - drop) + Math.sin(a) * rr * 0.35; s ? c.lineTo(px, py) : c.moveTo(px, py); } });
+      V.neonPath(c, C.GOLD, 1.1, 0.75 * k, () => { for (const dx of [-7, 0, 7]) { c.moveTo(x + dx * 1.6 * s1, y - 240); c.lineTo(x + dx * s1, y - 26 * s1); } });
+      for (const [col, w, ph] of [[C.CRIM, 2.4, 0], [C.ROSE, 1.2, Math.PI]]) V.neonPath(c, col, w * s1, k, () => { for (let s = 0; s <= 20; s++) { const q = s / 20, a = q * 9 + t * 10 + ph, rr = (14 + 8 * q) * s1, px = x + Math.cos(a) * rr, py = y - 6 - 84 * s1 * (1 - q) * (1.2 - drop) + Math.sin(a) * rr * 0.35; s ? c.lineTo(px, py) : c.moveTo(px, py); } });
+      V.glowAt(c, x, y - 20 * s1, 22 * s1, C.ROSE, 0.35 * k);
     } });
-    V.fx({ dur: 0.5, delay: 0.12, layer: 'ground', draw: (c, p, t, e) => { const k = e.a * (1 - p); V.neonRing(c, x, y, 26 + 16 * easeOut(p), C.ROSE, 1.6, k, 0.62); V.neonRing(c, x, y, 18 + 10 * easeOut(p), C.GOLD, 1, 0.8 * k, 0.62); } });
+    V.fx({ dur: 0.55, delay: 0.12, layer: 'ground', draw: (c, p, t, e) => { const k = e.a * (1 - p); V.neonRing(c, x, y, (26 + 18 * easeOut(p)) * s1, C.ROSE, 1.8, k, 0.62); V.neonRing(c, x, y, (18 + 10 * easeOut(p)) * s1, C.GOLD, 1.2, 0.8 * k, 0.62); } });
   }
   return { C, petals, doll, xcut, stage, troupe, spotlight, roseSigil, spinRings, ghostTrail, dollDrop };
 })();
@@ -1150,39 +1176,41 @@ const THERM_PAINT = (() => {
       c.globalAlpha = k; c.fillStyle = '#e8f8ff'; c.strokeStyle = 'rgba(40,80,120,0.6)'; c.lineWidth = 1;
       for (const s of sp) { const r0 = r * 0.95, r1 = r * (1 + s.l); c.beginPath(); c.moveTo(Math.cos(s.a - s.w) * r0, Math.sin(s.a - s.w) * r0); c.lineTo(Math.cos(s.a) * r1, Math.sin(s.a) * r1); c.lineTo(Math.cos(s.a + s.w) * r0, Math.sin(s.a + s.w) * r0); c.closePath(); c.fill(); c.stroke(); }
       c.restore(); c.globalAlpha = 1;
-      V.neonRing(c, x, y, r, '#8fd0ff', 1.2, 0.6 * k, F);
+      V.neonRing(c, x, y, r, '#8fd0ff', 1.2 * Math.max(1, r / 80), 0.6 * k, F);
     } });
   }
   // the dial: a frost clock face, its hands racing, an orange and a blue arc whirling round its rim
   function dialSeal(x, y, o = {}) {
-    const r = o.r ?? 100, dur = o.dur ?? 0.75, follow = o.follow;
+    const r = o.r ?? 100, dur = o.dur ?? 0.75, follow = o.follow, sk = Math.max(1, r / 100);
     V.ink(x, y, { r: r * 1.05, dur, flat: F, a: 0.4, follow });
     V.fx({ dur, layer: 'ground', follow, draw: (c, p, t, e) => {
       const cx = follow ? follow.x : x, cy = follow ? follow.y : y, k = e.a * Math.min(1, t / 0.12, (1 - p) / 0.2), R = r * (0.7 + 0.3 * easeOut(Math.min(1, t / 0.3)));
-      V.neonRing(c, cx, cy, R, '#8fd0ff', 2.2, k, F); V.neonRing(c, cx, cy, R * 0.72, '#bfe6ff', 1, 0.7 * k, F);
+      V.neonRing(c, cx, cy, R, '#8fd0ff', 2.2 * sk, k, F); V.neonRing(c, cx, cy, R * 0.72, '#bfe6ff', 1 * sk, 0.7 * k, F);
       c.save(); c.translate(cx, cy); c.scale(1, F);
-      V.neonPath(c, '#cfeeff', 1.2, 0.8 * k, () => { for (let i = 0; i < 12; i++) { const a = i * TAU2 / 12, r1 = R * (i % 3 ? 0.84 : 0.76); c.moveTo(Math.cos(a) * r1, Math.sin(a) * r1); c.lineTo(Math.cos(a) * R * 0.96, Math.sin(a) * R * 0.96); } });
-      V.neonPath(c, '#ffffff', 2, k, () => { c.moveTo(0, 0); c.lineTo(Math.cos(t * 9) * R * 0.62, Math.sin(t * 9) * R * 0.62); c.moveTo(0, 0); c.lineTo(Math.cos(t * 2) * R * 0.4, Math.sin(t * 2) * R * 0.4); });
+      V.neonPath(c, '#cfeeff', 1.2 * sk, 0.8 * k, () => { for (let i = 0; i < 12; i++) { const a = i * TAU2 / 12, r1 = R * (i % 3 ? 0.84 : 0.76); c.moveTo(Math.cos(a) * r1, Math.sin(a) * r1); c.lineTo(Math.cos(a) * R * 0.96, Math.sin(a) * R * 0.96); } });
+      V.neonPath(c, '#ffffff', 2 * sk, k, () => { c.moveTo(0, 0); c.lineTo(Math.cos(t * 9) * R * 0.62, Math.sin(t * 9) * R * 0.62); c.moveTo(0, 0); c.lineTo(Math.cos(t * 2) * R * 0.4, Math.sin(t * 2) * R * 0.4); });
       const a = t * (o.spin ?? 8);
-      V.neonPath(c, FIRE, 4, k, () => c.arc(0, 0, R * 1.15, a, a + 1.4));
-      V.neonPath(c, ICE, 4, k, () => c.arc(0, 0, R * 1.15, a + Math.PI, a + Math.PI + 1.4));
+      V.neonPath(c, FIRE, 4 * sk, k, () => c.arc(0, 0, R * 1.15, a, a + 1.4));
+      V.neonPath(c, ICE, 4 * sk, k, () => c.arc(0, 0, R * 1.15, a + Math.PI, a + Math.PI + 1.4));
+      // (scale-up pass) a big seal gets a second, wider pair of arcs whirling the other way
+      if (sk > 1.2) { const b = -t * (o.spin ?? 8) * 0.7 + 1; V.neonPath(c, FIRE, 2.6 * sk, 0.8 * k, () => c.arc(0, 0, R * 1.34, b, b + 1.1)); V.neonPath(c, ICE, 2.6 * sk, 0.8 * k, () => c.arc(0, 0, R * 1.34, b + Math.PI, b + Math.PI + 1.1)); }
       c.restore();
     } });
   }
   // a crown of frost crystals rising round a ring, leaning out; they shatter into shards when it ends
   function crystalCrown(x, y, o = {}) {
-    const r = o.r ?? 80, n = Math.min(14, o.n ?? 10), dur = o.dur ?? 0.72, h = o.h ?? 70;
-    const cs = Array.from({ length: n }, (_, i) => { const a = i / n * TAU2 + rand(-0.15, 0.15); return { x: x + Math.cos(a) * r, y: y + Math.sin(a) * r * F, a, h: h * rand(0.7, 1.25), w: rand(7, 11), d: rand(0, 0.25) }; }).sort((u, v) => u.y - v.y);
-    V.fx({ dur, layer: 'air', draw: (c, p, t, e) => {
+    const r = o.r ?? 80, n = Math.min(20, o.n ?? 10), dur = o.dur ?? 0.72, h = o.h ?? 70, ws = o.ws ?? 1, lean = o.lean ?? 0.45;
+    const cs = Array.from({ length: n }, (_, i) => { const a = i / n * TAU2 + rand(-0.15, 0.15); return { x: x + Math.cos(a) * r, y: y + Math.sin(a) * r * F, a, h: h * rand(0.7, 1.25), w: rand(7, 11) * ws, d: rand(0, 0.25) }; }).sort((u, v) => u.y - v.y);
+    V.fx({ dur, delay: o.delay, layer: 'air', draw: (c, p, t, e) => {
       const k = e.a * Math.min(1, t / 0.1);
       for (const s of cs) {
         const g = easeOut(Math.max(0, Math.min(1, (t - s.d) / 0.4))); if (g <= 0) continue;
-        const hh = s.h * g, tx = s.x + Math.cos(s.a) * 0.45 * hh, ty = s.y - hh;
+        const hh = s.h * g, tx = s.x + Math.cos(s.a) * lean * hh, ty = s.y - hh;
         c.globalAlpha = k * 0.9; c.fillStyle = '#5fb4f0'; c.beginPath(); c.moveTo(s.x - s.w, s.y); c.lineTo(tx, ty); c.lineTo(s.x + s.w, s.y); c.lineTo(s.x, s.y + s.w * 0.4); c.closePath(); c.fill();
         c.fillStyle = 'rgba(240,250,255,0.75)'; c.beginPath(); c.moveTo(s.x - s.w * 0.15, s.y); c.lineTo(tx, ty); c.lineTo(s.x + s.w * 0.55, s.y); c.closePath(); c.fill();
         c.strokeStyle = 'rgba(8,32,58,0.75)'; c.lineWidth = 1.2; c.beginPath(); c.moveTo(s.x - s.w, s.y); c.lineTo(tx, ty); c.lineTo(s.x + s.w, s.y); c.stroke();
         c.globalAlpha = 1;
-        V.glowAt(c, tx, ty, 8, '#e8f8ff', 0.6 * k * g);
+        V.glowAt(c, tx, ty, 8 * ws, '#e8f8ff', 0.6 * k * g);
       }
       c.globalAlpha = 1;
     }, done: () => { for (let i = 0; i < cs.length; i += 2) shards(cs[i].x, cs[i].y, { n: 2, z: cs[i].h * 0.5, speed: 220 }); } });
@@ -1192,7 +1220,7 @@ const THERM_PAINT = (() => {
     const r = o.r ?? 70, dur = o.dur ?? 0.2, z = o.z ?? 14;
     V.fx({ dur, layer: 'air', draw: (c, p, t, e) => {
       const k = e.a * Math.min(1, t / 0.05), R = r * (1 - p * 0.55);
-      for (let i = 0; i < 4; i++) V.neonPath(c, i % 2 ? ICE : FIRE, 3, k, () => { for (let s = 0; s <= 16; s++) { const q = s / 16, a = t * 12 + i * TAU2 / 4 + q * 2.6, rr = R * (0.2 + q * 0.8), px = x + Math.cos(a) * rr, py = y - z + Math.sin(a) * rr * F; s ? c.lineTo(px, py) : c.moveTo(px, py); } });
+      for (let i = 0; i < 4; i++) V.neonPath(c, i % 2 ? ICE : FIRE, 3 * Math.sqrt(Math.max(1, r / 70)), k, () => { for (let s = 0; s <= 16; s++) { const q = s / 16, a = t * 12 + i * TAU2 / 4 + q * 2.6, rr = R * (0.2 + q * 0.8), px = x + Math.cos(a) * rr, py = y - z + Math.sin(a) * rr * F; s ? c.lineTo(px, py) : c.moveTo(px, py); } });
     } });
   }
   // two flame crescents (or frost ones) whirling round the mage's hand: the wind-up of a spell
@@ -1218,10 +1246,14 @@ const THERM_PAINT = (() => {
       const x = ent.x, y = ent.y, close = easeOut(Math.min(1, t / 0.25)), R = r * (1.25 - 0.25 * close), g = (1 - close) * 16;
       const k = e.a * Math.min(1, t / 0.08, (1 - p) / 0.45) * (1 - 0.55 * Math.min(1, Math.max(0, (t - 0.45) / 0.3)));
       c.save(); c.translate(x, y); c.scale(1, F);
-      V.neonPath(c, ICE, 3, k, () => c.arc(-g, 0, R, Math.PI / 2 + 0.12, Math.PI * 1.5 - 0.12));
-      V.neonPath(c, FIRE, 3, k, () => c.arc(g, 0, R, -Math.PI / 2 + 0.12, Math.PI / 2 - 0.12));
+      const sk = Math.max(1, r / 56);
+      V.neonPath(c, ICE, 3 * sk, k, () => c.arc(-g, 0, R, Math.PI / 2 + 0.12, Math.PI * 1.5 - 0.12));
+      V.neonPath(c, FIRE, 3 * sk, k, () => c.arc(g, 0, R, -Math.PI / 2 + 0.12, Math.PI / 2 - 0.12));
+      // (scale-up pass) a thinner inner pair of arcs, the other way round, like the sheet's double crescents
+      V.neonPath(c, ICE, 1.4 * sk, 0.7 * k, () => c.arc(-g * 1.5, 0, R * 0.8, Math.PI / 2 + 0.4, Math.PI * 1.5 - 0.4));
+      V.neonPath(c, FIRE, 1.4 * sk, 0.7 * k, () => c.arc(g * 1.5, 0, R * 0.8, -Math.PI / 2 + 0.4, Math.PI / 2 - 0.4));
       c.restore();
-      const s = 6 + 5 * close;
+      const s = (6 + 5 * close) * sk;
       crossStar(c, x, y - R * F, s, '#ffffff', k); crossStar(c, x, y + R * F, s, '#ffffff', k);
       crossStar(c, x - R - g, y, s * 0.8, '#8fd0ff', k); crossStar(c, x + R + g, y, s * 0.8, '#ffb070', k);
     } });
@@ -1319,28 +1351,39 @@ const DRIFT_PAINT = (() => {
     const r = o.r ?? 46, h = o.h ?? 90, dur = o.dur ?? 0.5, col = o.color || '#8ff0d8', x0 = ent.x, y0 = ent.y;
     V.fx({ dur, layer: 'air', draw: (c, p, t, e) => {
       const x = o.follow === false ? x0 : ent.x, y = o.follow === false ? y0 : ent.y, k = e.a * Math.min(1, t / 0.08, (1 - p) / 0.35), g = easeOut(Math.min(1, p / 0.4));
-      for (let i = 0; i < 4; i++) {
-        const q = i / 3, R = r * (0.65 + 0.5 * q) * (0.7 + 0.3 * g), a0 = t * (10 - i) + i * 1.3, zz = 6 + q * h * g;
-        const pts = Array.from({ length: 13 }, (_, j) => { const a = a0 + 2.6 * j / 12; return [x + Math.cos(a) * R, y - zz + Math.sin(a) * R * 0.32 + Math.cos(a) * 6 * (i % 2 ? 1 : -1)]; });
-        paint(c, pts, 6 - q * 2, i % 2 ? WHITE : col, k * (0.6 + 0.4 * (1 - q)), 'head');
+      const sk = Math.max(1, r / 46), nb = sk > 1.2 ? 6 : 4;
+      for (let i = 0; i < nb; i++) {
+        const q = i / (nb - 1), R = r * (0.65 + 0.5 * q) * (0.7 + 0.3 * g), a0 = t * (10 - i) + i * 1.3, zz = 6 + q * h * g;
+        const pts = Array.from({ length: 13 }, (_, j) => { const a = a0 + 2.6 * j / 12; return [x + Math.cos(a) * R, y - zz + Math.sin(a) * R * 0.32 + Math.cos(a) * 6 * sk * (i % 2 ? 1 : -1)]; });
+        paint(c, pts, (6 - q * 2) * Math.sqrt(sk), i % 2 ? WHITE : col, k * (0.6 + 0.4 * (1 - q)), 'head');
       }
     } });
     leaves(x0, y0, { n: o.leaves ?? 6, orbit: r, dr: 30, follow: o.follow === false ? null : ent });
   }
   // a twister: stacked spinning bands widening as they climb, a swirl of ribbons round its foot, rocks whirling in it
   function twister(x, y, o = {}) {
-    const r = o.r ?? 70, h = o.h ?? 170, dur = o.dur ?? 1, col = o.color || '#8ff0d8';
+    const r = o.r ?? 70, h = o.h ?? 170, dur = o.dur ?? 1, col = o.color || '#8ff0d8', sk = Math.max(1, r / 70), sw = Math.pow(sk, 0.75);
+    const nb = sk > 1.3 ? 9 : 6, nf = sk > 1.3 ? 4 : 3;
     V.fx({ dur, layer: 'air', draw: (c, p, t, e) => {
       const k = e.a * Math.min(1, t / 0.08, (1 - p) / 0.35), g = easeOut(Math.min(1, p / 0.25));
-      for (let i = 0; i < 3; i++) { const a0 = t * 7 + i * TAU2 / 3, R = r * (1.1 + 0.25 * Math.sin(t * 3 + i)) * g; paint(c, arcPts(x, y - 6, R, a0, 2.2, 14, 0.5), 7, i % 2 ? WHITE : col, k * 0.8, 'head'); }
-      for (let i = 0; i < 6; i++) {
-        const q = i / 5, R = r * (0.22 + q * 0.55) * (0.6 + 0.4 * g), a0 = t * (12 - q * 4) + i * 0.8, yy = y - q * h * g;
-        paint(c, arcPts(x + Math.sin(t * 3 + q * 3) * 6 * q, yy, R, a0, 4.4, 14, 0.28), 5 - q * 1.5, i % 2 ? WHITE : col, k * (0.5 + 0.5 * (1 - q)), 'head', i === 0);
+      // (scale-up pass) a big twister gets a faint funnel body behind its bands, so it reads as one column of wind
+      if (sk > 1.3) {
+        const H = h * g, w0 = r * 0.2, w1 = r * 0.85 * (0.6 + 0.4 * g), sway = Math.sin(t * 3 + 3) * 6;
+        const fg = c.createLinearGradient(0, y - H * 1.05, 0, y);
+        fg.addColorStop(0, rgba(col, 0)); fg.addColorStop(0.45, rgba(col, 0.2)); fg.addColorStop(1, rgba(col, 0.08));
+        c.globalCompositeOperation = 'lighter'; c.globalAlpha = Math.min(1, k); c.fillStyle = fg;
+        c.beginPath(); c.moveTo(x - w0, y - 4); c.quadraticCurveTo(x - w0 * 1.6, y - H * 0.55, x - w1 + sway, y - H); c.quadraticCurveTo(x + sway, y - H * 1.12, x + w1 + sway, y - H); c.quadraticCurveTo(x + w0 * 1.6, y - H * 0.55, x + w0, y - 4); c.closePath(); c.fill();
+        c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
       }
-      V.glowAt(c, x, y - h * 0.3, r * 0.5, WHITE, 0.25 * k);
+      for (let i = 0; i < nf; i++) { const a0 = t * 7 + i * TAU2 / nf, R = r * (1.1 + 0.25 * Math.sin(t * 3 + i)) * g; paint(c, arcPts(x, y - 6, R, a0, 2.2, 14, 0.5), 7 * sw, i % 2 ? WHITE : col, k * 0.85, 'head'); }
+      for (let i = 0; i < nb; i++) {
+        const q = i / (nb - 1), R = r * (0.22 + q * (sk > 1.3 ? 0.68 : 0.55)) * (0.6 + 0.4 * g), a0 = t * (12 - q * 4) + i * 0.8, yy = y - q * h * g;
+        paint(c, arcPts(x + Math.sin(t * 3 + q * 3) * 6 * q, yy, R, a0, 4.4, 14, 0.28), (5 - q * 1.5) * sw, i % 2 ? WHITE : col, k * (0.55 + 0.45 * (1 - q)), 'head', i < 2);
+      }
+      V.glowAt(c, x, y - h * 0.3, r * 0.5, WHITE, 0.3 * k);
     } });
-    const nr = Math.min(10, o.rocks ?? 8);
-    for (let i = 0; i < nr; i++) V.spawn({ x, y, z: rand(10, h * 0.5), life: dur * rand(0.6, 0.9), size: rand(6, 10), color: i % 2 ? '#3a4440' : '#56605a', kind: 'shard', add: false, vr: rand(-10, 10), fadePow: 3,
+    const nr = Math.min(12, o.rocks ?? 8);
+    for (let i = 0; i < nr; i++) V.spawn({ x, y, z: rand(10, h * 0.5), life: dur * rand(0.6, 0.9), size: rand(6, 10) * sw, color: i % 2 ? '#3a4440' : '#56605a', kind: 'shard', add: false, vr: rand(-10, 10), fadePow: 3,
       orbit: { x, y, a: rand(0, TAU2), r: rand(0.6, 1.1) * r, w: rand(5, 8), dr: 30, flat: F } });
     leaves(x, y, { n: o.leaves ?? 8, orbit: r * 0.9, dr: 50 });
   }
@@ -1352,7 +1395,8 @@ const DRIFT_PAINT = (() => {
       if (k < 0.01) return;
       const trace = i => () => { for (let s = 0; s <= 22; s++) { const q = s / 22, a = rot + i * TAU2 / arms + q * 4, rr = r * (0.08 + q * 0.92), px = x + Math.cos(a) * rr, py = y + Math.sin(a) * rr * F; s ? c.lineTo(px, py) : c.moveTo(px, py); } };
       c.lineCap = 'round';
-      for (let i = 0; i < arms; i++) { c.globalAlpha = 0.5 * k; c.strokeStyle = INK; c.lineWidth = 5; c.beginPath(); trace(i)(); c.stroke(); c.globalAlpha = 1; V.neonPath(c, col, 1.4, k, trace(i)); }
+      const sk = Math.max(1, r / 80);
+      for (let i = 0; i < arms; i++) { c.globalAlpha = 0.5 * k; c.strokeStyle = INK; c.lineWidth = 5 * sk; c.beginPath(); trace(i)(); c.stroke(); c.globalAlpha = 1; V.neonPath(c, col, 1.4 * sk, k, trace(i)); }
     } });
   }
   // a curved sickle of wind round (x, y) from a0 through span: thick at the leading end, a faint arc left on the floor
@@ -1368,12 +1412,14 @@ const DRIFT_PAINT = (() => {
   function stillSeal(ent, o = {}) {
     const r = o.r ?? 54, dur = o.dur ?? 2, col = o.color || '#8ff0d8';
     V.fx({ dur, layer: 'ground', draw: (c, p, t, e) => {
-      const x = ent.x, y = ent.y, k = e.a * Math.min(1, t / 0.12, (1 - p) / 0.3) * (1 - 0.5 * Math.min(1, Math.max(0, (t - 0.5) / 0.4))), g = easeOut(Math.min(1, t / 0.3)), R = r * (0.8 + 0.2 * g);
-      V.neonRing(c, x, y, R, col, 1.4, 0.8 * k, F); V.neonRing(c, x, y, R * 0.55, WHITE, 0.8, 0.5 * k, F);
+      const x = ent.x, y = ent.y, k = e.a * Math.min(1, t / 0.12, (1 - p) / 0.3) * (1 - 0.5 * Math.min(1, Math.max(0, (t - 0.5) / 0.4))), g = easeOut(Math.min(1, t / 0.3)), R = r * (0.8 + 0.2 * g), sk = Math.max(1, r / 54);
+      V.neonRing(c, x, y, R, col, 1.4 * sk, 0.8 * k, F); V.neonRing(c, x, y, R * 0.55, WHITE, 0.8 * sk, 0.5 * k, F);
+      // (scale-up pass) a slow spiral in the middle of the seal, as on the sheet's aftermath
+      V.neonPath(c, col, 1 * sk, 0.6 * k, () => { for (let s = 0; s <= 16; s++) { const q = s / 16, aa = t * 1.5 + q * 5, rr = R * 0.08 + q * R * 0.36; const px = x + Math.cos(aa) * rr, py = y + Math.sin(aa) * rr * F; s ? c.lineTo(px, py) : c.moveTo(px, py); } });
       for (let i = 0; i < 4; i++) {
         const a = Math.PI / 4 + i * Math.PI / 2, vx = x + Math.cos(a) * R, vy = y + Math.sin(a) * R * F;
-        for (let j = 0; j < 2; j++) V.neonPath(c, j ? WHITE : col, 1.4, k, () => { for (let s = 0; s <= 10; s++) { const q = s / 10, aa = -t * 9 + j * Math.PI + q * 4, rr = 3 + q * 11; const px = vx + Math.cos(aa) * rr, py = vy + Math.sin(aa) * rr * 0.6; s ? c.lineTo(px, py) : c.moveTo(px, py); } });
-        V.glowAt(c, vx, vy, 10, col, 0.5 * k);
+        for (let j = 0; j < 2; j++) V.neonPath(c, j ? WHITE : col, 1.4 * sk, k, () => { for (let s = 0; s <= 10; s++) { const q = s / 10, aa = -t * 9 + j * Math.PI + q * 4, rr = (3 + q * 11) * sk; const px = vx + Math.cos(aa) * rr, py = vy + Math.sin(aa) * rr * 0.6; s ? c.lineTo(px, py) : c.moveTo(px, py); } });
+        V.glowAt(c, vx, vy, 10 * sk, col, 0.5 * k);
       }
     } });
   }
@@ -1418,18 +1464,18 @@ function windLaneBoost(x, y, vx, vy, now) {
     rime: c => { const h = ahead(c, 16); V.glint(h.x, h.y, { color: '#cfeeff', size: 16 }); V.missile(c.x, c.y, c.tx, c.ty, { style: 'blade', color: '#8fd0ff', speed: 1000, size: 0.75, onHit: (x, y) => { V.spikeburst(x, y, { r: 24, n: 8, ...ICE, dur: 0.24 }); V.crystals(x, y, { color: '#bfe6ff', n: 3, r: 14, h: 20, dur: 0.5 }); } }); },
     // (painted pass, thermist.png) Flare: flame crescents whirl round the hand and a fire glyph opens on the boss; a bold
     // orange starburst with flame tongues leaping out of it; then cracks glowing in the floor that cool, and a little smoke
-    flare: c => { const TP = THERM_PAINT; TP.handArcs(c.ent, { r: 30, dur: 0.28 }); V.sigil(c.tx, c.ty, { r: 40, style: 'star5', color: '#ff9a3a', dur: 0.35, spin: 5 });
-      c.later(0.12, () => { V.spikeburst(c.tx, c.ty, { r: 62, n: 16, ...FIRE, dur: 0.36 }); V.flare(c.tx, c.ty, { n: 12, r: 20, color: '#ff6a1a', h: 1.2 }); V.burst(c.tx, c.ty, { color: '#ffd070', n: 8, speed: 240, flashR: 56 }); shake(2); });
-      c.later(0.4, () => { TP.lavaCracks(c.tx, c.ty, { r: 46, dur: 2.2 }); V.smoke(c.tx, c.ty, { n: 3, r: 24, color: '#5a4a48', size: 24, a: 0.35, speed: 30, life: 1.6 }); }); },
+    flare: c => { const TP = THERM_PAINT; TP.handArcs(c.ent, { r: 36, dur: 0.3 }); V.sigil(c.tx, c.ty, { r: 52, style: 'star5', color: '#ff9a3a', dur: 0.35, spin: 5 });
+      c.later(0.12, () => { V.spikeburst(c.tx, c.ty, { r: 82, n: 18, ...FIRE, dur: 0.38 }); V.spikeburst(c.tx, c.ty, { r: 44, n: 10, color: '#ffb050', core: '#fff6d0', ink: '#3a1004', dur: 0.28, z: 26 }); V.flare(c.tx, c.ty, { n: 16, r: 28, color: '#ff6a1a', h: 1.4, size: 1.2 }); V.burst(c.tx, c.ty, { color: '#ffd070', n: 10, speed: 280, flashR: 70 }); V.shock(c.tx, c.ty, { r: 96, color: '#ff9a5a', dur: 0.35, w: 4 }); shake(2); });
+      c.later(0.4, () => { TP.lavaCracks(c.tx, c.ty, { r: 62, dur: 2.4, n: 9, a: 0.7 }); V.smoke(c.tx, c.ty, { n: 4, r: 30, color: '#5a4a48', size: 28, a: 0.35, speed: 30, life: 1.7 }); }); },
     // Glacier Lance: frost crescents at the hand, then a long faceted spear of ice with a frost trail; ice bursts
     // out ahead of it where it lands, shards flung on, and a faint frost streak and mist stay along its path
-    lance: c => { const TP = THERM_PAINT, a = Math.atan2(c.ty - c.y, c.tx - c.x); TP.handArcs(c.ent, { r: 28, dur: 0.25, color: '#6fb2f0', color2: '#cfeeff' });
-      TP.iceSpear(c.x + Math.cos(a) * 16, c.y + Math.sin(a) * 16, c.tx, c.ty, { speed: 1300, len: 64, w: 8, onHit: (x, y) => { V.spikeburst(x, y, { r: 52, n: 12, ...ICE, dur: 0.34 }); V.crystals(x, y, { color: '#9fd8ff', n: 5, r: 30, h: 46, dur: 0.8 });
-        TP.shards(x, y, { n: 8, angle: a, spread: 0.7, speed: 320 }); V.shock(x, y, { r: 80, color: '#bfe6ff', dur: 0.4, w: 4 }); shake(2); FX.later(0.4, () => TP.steam(x, y, { n: 3, r: 26, size: 22, life: 1.6 })); } }); },
+    lance: c => { const TP = THERM_PAINT, a = Math.atan2(c.ty - c.y, c.tx - c.x); TP.handArcs(c.ent, { r: 34, dur: 0.27, color: '#6fb2f0', color2: '#cfeeff' });
+      TP.iceSpear(c.x + Math.cos(a) * 16, c.y + Math.sin(a) * 16, c.tx, c.ty, { speed: 1300, len: 84, w: 10, onHit: (x, y) => { V.spikeburst(x, y, { r: 68, n: 14, ...ICE, dur: 0.36 }); V.crystals(x, y, { color: '#9fd8ff', n: 6, r: 38, h: 58, dur: 0.9 });
+        TP.shards(x, y, { n: 11, angle: a, spread: 0.7, speed: 360, size: 1.15 }); V.shock(x, y, { r: 100, color: '#bfe6ff', dur: 0.42, w: 4.5 }); shake(2); FX.later(0.4, () => TP.steam(x, y, { n: 4, r: 32, size: 26, life: 1.7 })); } }); },
     // Equilibrium: a frost half and a fire half swing together into one ring at the feet, star crosses where they meet,
     // the shield closing over; the ring settles faint and steam rises off it
-    equil: c => { const TP = THERM_PAINT; TP.dualRing(c.ent, { r: 54, dur: 1.3 });
-      c.later(0.15, () => { V.shield(c.ent, { color: '#e8d8ff', dur: 1.4, r: 40 }); V.shock(c.ent.x, c.ent.y, { r: 88, color: '#f2e6c8', dur: 0.4, w: 3 }); });
+    equil: c => { const TP = THERM_PAINT; TP.dualRing(c.ent, { r: 70, dur: 1.4 });
+      c.later(0.15, () => { V.shield(c.ent, { color: '#e8d8ff', dur: 1.4, r: 40 }); V.shock(c.ent.x, c.ent.y, { r: 110, color: '#f2e6c8', dur: 0.42, w: 3.5 }); });
       c.later(0.55, () => TP.steam(c.ent.x, c.ent.y, { n: 4, r: 30, size: 22, life: 1.5, a: 0.25 })); },
     // the dial turns over: two coloured arcs wheel round the mage and swap sides, then a ring in both colours
     invert: c => { V.charge(c.x, c.y, { color: '#e8d8ff', r: 56, n: 10, dur: 0.25, follow: c.ent });
@@ -1476,22 +1522,23 @@ function windLaneBoost(x, y, vx, vy, now) {
     // (painted pass, driftblade.png) Hook Turn: a curl of wind gathers on the blade, then a great sickle of wind swings
     // round the target from where you were to its far side (thick at its leading edge), a cut as you pass, a faint arc stays
     hook: c => { const DP = DRIFT_PAINT, col = windCol(c.ent), a0 = Math.atan2(c.y - c.ty, c.x - c.tx), r = Math.max(40, Math.hypot(c.x - c.tx, c.y - c.ty));
-      DP.windStrip(DP.arcPts(c.x, c.y, 26, c.ang + 2.2, -2.6, 10, 0.7), { w: 5, color: col, dur: 0.24, z: 20 });
-      DP.hookArc(c.tx, c.ty, r, a0, Math.PI, { color: col, w: 10, dur: 0.5 });
-      c.later(0.1, () => { V.slash(c.tx, c.ty + 10, a0 + Math.PI / 2, { r: 54, span: 2, color: '#e8fff8', w: 0.4, dur: 0.24 }); V.hit(c.tx, c.ty, col, 0.8); }); },
+      DP.windStrip(DP.arcPts(c.x, c.y, 34, c.ang + 2.2, -2.6, 10, 0.7), { w: 6.5, color: col, dur: 0.26, z: 20 });
+      DP.windStrip(DP.arcPts(c.x, c.y, 26, c.ang + 1.6, -2.2, 10, 0.7), { w: 3.5, color: DP.WHITE, dur: 0.22, z: 24 });
+      DP.hookArc(c.tx, c.ty, r, a0, Math.PI, { color: col, w: 13, dur: 0.52, stay: 1.3 });
+      c.later(0.1, () => { V.slash(c.tx, c.ty + 10, a0 + Math.PI / 2, { r: 68, span: 2, color: '#e8fff8', w: 0.45, dur: 0.26 }); V.hit(c.tx, c.ty, col, 0.95); }); },
     // Crosswind: two loops of wind cross round the blade, the crescent flies, and on the target it opens into an X of
     // long wind blades through it, leaves and grit flung off; the X stays a moment, faint, on the floor
     cross: c => { const DP = DRIFT_PAINT, col = windCol(c.ent), aim = Math.atan2(c.ty - c.y, c.tx - c.x);
-      for (const s of [-1, 1]) DP.windStrip(Array.from({ length: 17 }, (_, i) => { const a = c.ang + i / 16 * 5.4; return [c.x + Math.cos(a) * 34 * Math.cos(s * 0.7) - Math.sin(a) * 14 * Math.sin(s * 0.7), c.y + Math.cos(a) * 34 * Math.sin(s * 0.7) * 0.62 + Math.sin(a) * 14 * Math.cos(s * 0.7)]; }), { w: 4, color: s > 0 ? col : '#e8fff8', dur: 0.32, z: 20 });
-      c.later(0.08, () => V.missile(c.x, c.y, c.tx, c.ty, { style: 'blade', color: col, speed: 1300, size: 1.5, onHit: (x, y) => {
-        for (const s of [-1, 1]) DP.streaks(x, y, aim + s * 0.7, { n: 2, back: 100, on: 100, w: 8, gap: 8, color: col, dur: 0.42, stay: 1.2, leaves: 2 });
-        V.spikeburst(x, y, { r: 50, n: 12, color: col, core: '#ffffff', ink: '#0a2a24', dur: 0.3 }); shake(3);
+      for (const s of [-1, 1]) DP.windStrip(Array.from({ length: 17 }, (_, i) => { const a = c.ang + i / 16 * 5.4; return [c.x + Math.cos(a) * 44 * Math.cos(s * 0.7) - Math.sin(a) * 18 * Math.sin(s * 0.7), c.y + Math.cos(a) * 44 * Math.sin(s * 0.7) * 0.62 + Math.sin(a) * 18 * Math.cos(s * 0.7)]; }), { w: 5, color: s > 0 ? col : '#e8fff8', dur: 0.34, z: 20 });
+      c.later(0.08, () => V.missile(c.x, c.y, c.tx, c.ty, { style: 'blade', color: col, speed: 1300, size: 1.6, onHit: (x, y) => {
+        for (const s of [-1, 1]) DP.streaks(x, y, aim + s * 0.7, { n: 3, back: 130, on: 130, w: 9.5, gap: 9, color: col, dur: 0.44, stay: 1.4, leaves: 2 });
+        V.spikeburst(x, y, { r: 64, n: 14, color: col, core: '#ffffff', ink: '#0a2a24', dur: 0.32 }); shake(3);
         FX.later(0.3, () => V.smoke(x, y, { n: 3, r: 30, color: '#c8d0c0', size: 22, a: 0.3, speed: 40, life: 1.3 })); } })); },
     // Stillpoint: the blade held flat across (a glint and the parry face), four little whirls round you bound by a ring seal,
     // a shaft of pale light down the middle; the seal goes faint and holds while it lasts
     still: c => { const DP = DRIFT_PAINT, col = windCol(c.ent), fx = c.x + Math.cos(c.ang) * 26, fy = c.y + Math.sin(c.ang) * 26; V.glint(fx, fy, { color: '#ffffff', size: 26 }); V.shield(c.ent, { shape: 'front', color: '#e8fff8', dur: 2, r: 38 });
-      DP.stillSeal(c.ent, { r: 54, dur: 2, color: col });
-      c.later(0.12, () => { V.pillar(c.ent.x, c.ent.y, { r: 13, h: 150, color: '#d8fff0', dur: 0.5 }); V.shock(c.ent.x, c.ent.y, { r: 76, color: col, dur: 0.35, w: 3 }); DP.leaves(c.ent.x, c.ent.y, { n: 4, orbit: 50, dr: 10, follow: c.ent }); }); },
+      DP.stillSeal(c.ent, { r: 70, dur: 2, color: col });
+      c.later(0.12, () => { V.pillar(c.ent.x, c.ent.y, { r: 16, h: 185, color: '#d8fff0', dur: 0.5 }); V.shock(c.ent.x, c.ent.y, { r: 96, color: col, dur: 0.38, w: 3.5 }); DP.leaves(c.ent.x, c.ent.y, { n: 6, orbit: 64, dr: 10, follow: c.ent }); }); },
     // a gust spirals up round the duellist, streaks shoot out, and the wind aura stays on
     gale: c => { const col = windCol(c.ent); V.charge(c.x, c.y, { color: col, r: 60, n: 10, dur: 0.25, follow: c.ent }); V.tornado(c.x, c.y, { color: '#e8fff8', h: 120, r: 36, dur: 0.9 });
       c.later(0.2, () => { V.shock(c.x, c.y, { r: 140, color: col, dur: 0.5, w: 6 }); for (let i = 0; i < 10; i++) { const a = i * Math.PI / 5; ribbon(line2(c.x + Math.cos(a) * 20, c.y + Math.sin(a) * 12, c.x + Math.cos(a) * 120, c.y + Math.sin(a) * 74, 6, 12), { color: col, w: 2, dur: 0.6 }); } });
@@ -1515,7 +1562,7 @@ function windLaneBoost(x, y, vx, vy, now) {
     shock: Object.assign((e, target, d) => {
       const t = target || { x: e.x + Math.cos(e.angle || 0) * 120, y: e.y + Math.sin(e.angle || 0) * 120 };
       const s = Math.max(3, Math.min(12, (d && d.s) || 5)), to = d && d.c < 0 ? ICE : FIRE, other = to === ICE ? FIRE : ICE, echo = d && d.echo;
-      const R = (echo ? 24 : 34) + s * (echo ? 3 : 8), TP = THERM_PAINT;
+      const R = ((echo ? 24 : 34) + s * (echo ? 3 : 8)) * (echo ? 1.1 : 1.2), TP = THERM_PAINT;   // (scale-up pass) x1.2
       // (painted pass) wind-up: fire and frost spiral in together with a breath of steam
       TP.swirl2(t.x, t.y, { r: R * 1.4, dur: 0.17 });
       V.fx({ dur: 0.16, layer: 'ground', draw: (c, p, tt, fx) => { V.neonRing(c, t.x, t.y, R * 1.3 * (1 - p), to.color, 3, fx.a * p, 0.7); V.neonRing(c, t.x, t.y, R * 1.1 * (1 - p), other.color, 3, fx.a * p, 0.7); } });
@@ -1548,7 +1595,7 @@ function windLaneBoost(x, y, vx, vy, now) {
     pass: Object.assign((e, target, d) => {
       // (painted pass) long streaks of wind through the body along the way you ran, leaves flung ahead, faint scuffs left
       const col = windCol(e), a = e.angle || 0, t = target || e, gale = d && d.g;
-      DRIFT_PAINT.streaks(t.x, t.y, a, { n: gale ? 4 : 3, back: 80, on: 100, w: gale ? 7 : 5, gap: 9, color: gale ? '#ffffff' : col, dur: 0.34, stay: 0.8, leaves: gale ? 3 : 2 });
+      DRIFT_PAINT.streaks(t.x, t.y, a, { n: gale ? 4 : 3, back: 105, on: 130, w: gale ? 8.5 : 6.5, gap: 11, color: gale ? '#ffffff' : col, dur: 0.36, stay: 0.9, leaves: gale ? 3 : 2 });
       V.hit(t.x, t.y, col, gale ? 1 : 0.6); if (gale) shake(2);
     }, { atTarget: true }),
     lane: e => { V.shock(e.x, e.y, { r: 30, color: windCol(e), dur: 0.25, w: 2 }); },
@@ -1920,21 +1967,22 @@ function windLaneBoost(x, y, vx, vy, now) {
   // the woven diamond seal: a gold diamond round a crimson one, lens-shaped petals woven through it, spikes past its
   // points (Tapestry, Snap's aftermath, Grand Loom's aftermath)
   function weaveDiamond(x, y, R, dur, o = {}) {
-    const peak = o.peak ?? 0.85, settle = o.settle ?? 0.28;
+    const peak = o.peak ?? 0.85, settle = o.settle ?? 0.28, W = o.w ?? 1;   // o.w: line weight
     V.fx({ dur, layer: 'ground', draw: (c, p, t, e) => {
       const k = e.a * Math.min(1, t / 0.12) * Math.min(1, (1 - p) * dur / 0.6) * (settle + (peak - settle) * Math.max(0, 1 - t / 0.7));
       if (k < 0.02) return;
       const RR = R * (0.7 + 0.3 * easeOut(Math.min(1, t / 0.25)));
       const dia = r => { c.moveTo(0, -r); c.lineTo(r, 0); c.lineTo(0, r); c.lineTo(-r, 0); c.closePath(); };
-      const lens = (a, L, wd, col, w) => V.neonPath(c, col, w, k, () => { const ca = Math.cos(a), sa = Math.sin(a), px = -sa * wd, py = ca * wd; c.moveTo(0, 0); c.quadraticCurveTo(ca * L / 2 + px, sa * L / 2 + py, ca * L, sa * L); c.quadraticCurveTo(ca * L / 2 - px, sa * L / 2 - py, 0, 0); });
+      const lens = (a, L, wd, col, w) => V.neonPath(c, col, w * W, k, () => { const ca = Math.cos(a), sa = Math.sin(a), px = -sa * wd, py = ca * wd; c.moveTo(0, 0); c.quadraticCurveTo(ca * L / 2 + px, sa * L / 2 + py, ca * L, sa * L); c.quadraticCurveTo(ca * L / 2 - px, sa * L / 2 - py, 0, 0); });
       c.save(); c.translate(x, y); c.scale(1, 0.78);
       c.globalAlpha = 0.14 * k; c.fillStyle = '#5a0a18'; c.beginPath(); dia(RR); c.fill(); c.globalAlpha = 1;
-      V.neonPath(c, TW_GOLD, 2, k, () => dia(RR));
-      V.neonPath(c, TW_CRIM, 1.6, k, () => dia(RR * 0.74));
+      V.neonPath(c, TW_GOLD, 2 * W, k, () => dia(RR));
+      V.neonPath(c, TW_CRIM, 1 * W, k * 0.7, () => dia(RR * 0.92));
+      V.neonPath(c, TW_CRIM, 1.6 * W, k, () => dia(RR * 0.74));
       for (let i = 0; i < 4; i++) lens(i * Math.PI / 2, RR * 0.95, RR * 0.16, TW_CRIM, 1.6);
       for (let i = 0; i < 4; i++) lens(Math.PI / 4 + i * Math.PI / 2, RR * 0.5, RR * 0.12, TW_GOLD, 1.3);
-      V.neonPath(c, TW_GOLD, 1.4, k, () => { for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2; c.moveTo(Math.cos(a) * RR, Math.sin(a) * RR); c.lineTo(Math.cos(a) * RR * 1.2, Math.sin(a) * RR * 1.2); } });
-      V.neonPath(c, TW_GOLD, 1.4, k, () => dia(RR * 0.14));
+      V.neonPath(c, TW_GOLD, 1.4 * W, k, () => { for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2; c.moveTo(Math.cos(a) * RR, Math.sin(a) * RR); c.lineTo(Math.cos(a) * RR * 1.2, Math.sin(a) * RR * 1.2); } });
+      V.neonPath(c, TW_GOLD, 1.4 * W, k, () => dia(RR * 0.14));
       c.restore();
       V.glowAt(c, x, y, RR * 0.3, TW_CRIM, 0.5 * k);
     } });
@@ -1945,25 +1993,25 @@ function windLaneBoost(x, y, vx, vy, now) {
     V.fx({ dur: 0.4, layer: 'air', draw: (c, p, t, e) => {
       const q = easeOut(Math.min(1, p / 0.35)), k = e.a * (1 - Math.max(0, (p - 0.3) / 0.7));
       for (const r of rays) { const ca = Math.cos(r.a), sa = Math.sin(r.a) * 0.8, L = R * r.l * q;
-        V.neonPath(c, r.l > 0.8 ? TW_ROSE : TW_CRIM, 1.8, k, () => { c.moveTo(x + ca * L * 0.35, y + sa * L * 0.35); c.lineTo(x + ca * L, y + sa * L); }); }
-      V.glowAt(c, x, y, R * 0.45, TW_ROSE, 0.7 * k); V.glowAt(c, x, y, R * 0.18, '#ffffff', k);
+        V.neonPath(c, r.l > 0.8 ? TW_ROSE : TW_CRIM, r.l > 0.8 ? 2.8 : 2.2, k, () => { c.moveTo(x + ca * L * 0.3, y + sa * L * 0.3); c.lineTo(x + ca * L, y + sa * L); }); }
+      V.glowAt(c, x, y, R * 0.6, TW_CRIM, 0.6 * k); V.glowAt(c, x, y, R * 0.35, TW_ROSE, 0.8 * k); V.glowAt(c, x, y, R * 0.2, '#ffffff', k);
     } });
   }
   // two bright lances crossing through a point (Grand Loom on the boss): each shoots through end to end, then fades
   function weaveCross(x, y, o = {}) {
-    const L = o.L ?? 150, a0 = rand(-0.15, 0.15), cy = y - 24;
-    V.fx({ dur: 0.45, layer: 'air', draw: (c, p, t, e) => {
-      const k = e.a * (1 - p);
+    const L = o.L ?? 150, a0 = rand(-0.15, 0.15), cy = y - 24, W = o.w ?? 1;   // o.w: the lances' thickness
+    V.fx({ dur: o.dur ?? 0.45, layer: 'air', draw: (c, p, t, e) => {
+      const k = e.a * Math.min(1, (1 - p) / 0.7);
       for (let i = 0; i < 2; i++) {
         const q = easeOut(Math.max(0, Math.min(1, (t - i * 0.05) / 0.1))); if (q <= 0) continue;
         const a = a0 + (i ? 0.7 : -0.7), ca = Math.cos(a), sa = Math.sin(a) * 0.78;
         const x0 = x - ca * L, y0 = cy - sa * L, x1 = x0 + ca * 2 * L * q, y1 = y0 + sa * 2 * L * q, mx = (x0 + x1) / 2, my = (y0 + y1) / 2;
         c.save(); c.globalCompositeOperation = 'lighter';
-        for (const [col, w, al] of [[TW_CRIM, 7, 0.7], [TW_HOT, 2.2, 1]]) { c.globalAlpha = al * k; c.fillStyle = col; c.beginPath(); c.moveTo(x0, y0); c.lineTo(mx - sa * w, my + ca * w); c.lineTo(x1, y1); c.lineTo(mx + sa * w, my - ca * w); c.closePath(); c.fill(); }
+        for (const [col, w, al] of [[TW_CRIM, 12 * W, 0.35], [TW_CRIM, 7 * W, 0.7], [TW_GOLD, 3.6 * W, 0.6], [TW_HOT, 2.2 * W, 1]]) { c.globalAlpha = al * k; c.fillStyle = col; c.beginPath(); c.moveTo(x0, y0); c.lineTo(mx - sa * w, my + ca * w); c.lineTo(x1, y1); c.lineTo(mx + sa * w, my - ca * w); c.closePath(); c.fill(); }
         c.restore();
-        V.glowAt(c, x1, y1, 16, TW_HOT, k);
+        V.glowAt(c, x1, y1, 16 * W, TW_HOT, k);
       }
-      V.glowAt(c, x, cy, 44, TW_CRIM, 0.8 * k);
+      V.glowAt(c, x, cy, 44 * W, TW_CRIM, 0.8 * k);
     } });
   }
   // Tie: a loop of thread flies from her hand to the ally, its line trailing back to her
@@ -1972,18 +2020,21 @@ function windLaneBoost(x, y, vx, vy, now) {
     V.fx({ dur, layer: 'air', draw: (c, p, t, e) => {
       const q = easeOut(Math.min(1, t / fly)), k = e.a * Math.min(1, (dur - t) / 0.3);
       const ax = a.x, ay = a.y - 18, bx = b.x, by = b.y - 18, hx = ax + (bx - ax) * q, hy = ay + (by - ay) * q - Math.sin(q * Math.PI) * 30;
-      V.neonPath(c, TW_CRIM, 1.6, k, () => { c.moveTo(ax, ay); c.quadraticCurveTo((ax + hx) / 2, Math.min(ay, hy) - 20 * (1 - q * 0.5), hx, hy); });
-      if (q < 1) V.neonPath(c, TW_ROSE, 2, k, () => c.ellipse(hx, hy, 9, 5, t * 10, 0, TAU));
-      V.glowAt(c, hx, hy, 10, TW_GOLD, 0.6 * k);
+      V.neonPath(c, TW_CRIM, 2.2, k, () => { c.moveTo(ax, ay); c.quadraticCurveTo((ax + hx) / 2, Math.min(ay, hy) - 24 * (1 - q * 0.5), hx, hy); });
+      V.neonPath(c, TW_ROSE, 1, k * 0.7, () => { c.moveTo(ax, ay - 3); c.quadraticCurveTo((ax + hx) / 2, Math.min(ay, hy) - 34 * (1 - q * 0.5), hx, hy); });
+      if (q < 1) { V.neonPath(c, TW_ROSE, 2.6, k, () => c.ellipse(hx, hy, 13, 7, t * 10, 0, TAU)); V.neonPath(c, TW_CRIM, 1.4, k, () => c.ellipse(hx, hy, 8, 12, -t * 8, 0, TAU)); }
+      V.glowAt(c, hx, hy, 16, TW_GOLD, 0.7 * k);
     } });
   }
   // a thread coiled round an ally: a helix from their feet to their shoulders that pulls tight, then fades slowly
   function weaveCoil(w, o = {}) {
     const dur = o.dur ?? 1;
     V.fx({ dur, layer: 'air', draw: (c, p, t, e) => {
-      const tight = easeOut(Math.min(1, t / 0.25)), rx = 24 - 10 * tight, k = e.a * Math.min(1, t / 0.06) * Math.min(1, (1 - p) / 0.5), x = w.x, y = w.y - (w.lift || 0);
-      V.neonPath(c, TW_CRIM, 1.6, k, () => { for (let s = 0; s <= 40; s++) { const q = s / 40, a = q * TAU * 3.5 + t * 6, px = x + Math.cos(a) * rx, py = y - 4 - q * 40 + Math.sin(a) * rx * 0.3; s ? c.lineTo(px, py) : c.moveTo(px, py); } });
-      V.glowAt(c, x + rx, y - 22, 8, TW_GOLD, 0.7 * k);
+      const tight = easeOut(Math.min(1, t / 0.25)), rx = 30 - 12 * tight, k = e.a * Math.min(1, t / 0.06) * Math.min(1, (1 - p) / 0.5), x = w.x, y = w.y - (w.lift || 0);
+      const helix = (ph, col, wd, kk) => V.neonPath(c, col, wd, kk, () => { for (let s = 0; s <= 40; s++) { const q = s / 40, a = q * TAU * 3.5 + t * 6 + ph, px = x + Math.cos(a) * rx, py = y - 4 - q * 50 + Math.sin(a) * rx * 0.3; s ? c.lineTo(px, py) : c.moveTo(px, py); } });
+      V.glowAt(c, x, y - 28, 30, TW_CRIM, 0.35 * k);
+      helix(0, TW_CRIM, 2.2, k); helix(Math.PI, TW_ROSE, 1.2, k * 0.7);
+      V.glowAt(c, x + rx, y - 28, 12, TW_GOLD, 0.8 * k);
     } });
   }
   // Needle: a sharp lance of thread shoots at the target, a crimson spiral thread trailing behind it; onHit where it bites
@@ -1991,39 +2042,39 @@ function windLaneBoost(x, y, vx, vy, now) {
     const d = Math.hypot(tx - sx, ty - sy), fly = Math.max(0.08, d / 1500), dur = fly + 0.25, ang = Math.atan2(ty - sy, tx - sx), ca = Math.cos(ang), sa = Math.sin(ang);
     V.fx({ dur, layer: 'air', draw: (c, p, t, e) => {
       const q = Math.min(1, t / fly), k = e.a * (t < fly ? 1 : Math.max(0, 1 - (t - fly) / 0.25)), hx = sx + (tx - sx) * q, hy = sy - 16 + (ty - sy) * q;
-      V.neonPath(c, TW_CRIM, 1.2, k * 0.8, () => { for (let s = 0; s <= 16; s++) { const f = s / 16, L = d * q * f, w = 5 * Math.sin(f * Math.PI) * Math.sin(f * 18 - t * 30); const px = sx + ca * L - sa * w, py = sy - 16 + sa * L + ca * w; s ? c.lineTo(px, py) : c.moveTo(px, py); } });
+      V.neonPath(c, TW_CRIM, 2.3, k * 0.9, () => { for (let s = 0; s <= 20; s++) { const f = s / 20, L = d * q * f, w = 7 * Math.sin(f * Math.PI) * Math.sin(f * 18 - t * 30); const px = sx + ca * L - sa * w, py = sy - 16 + sa * L + ca * w; s ? c.lineTo(px, py) : c.moveTo(px, py); } });
       if (t >= fly) return;
       c.save(); c.globalCompositeOperation = 'lighter';
-      for (const [col, len, w, al] of [[TW_ROSE, 34, 2.6, 0.9], ['#ffffff', 22, 1, 1]]) { c.globalAlpha = al * k; c.fillStyle = col; c.beginPath(); c.moveTo(hx + ca * 10, hy + sa * 10); c.lineTo(hx - sa * w, hy + ca * w); c.lineTo(hx - ca * len, hy - sa * len); c.lineTo(hx + sa * w, hy - ca * w); c.closePath(); c.fill(); }
+      for (const [col, len, w, al] of [[TW_CRIM, 56, 6, 0.45], [TW_ROSE, 44, 3.4, 0.9], ['#ffffff', 28, 1.3, 1]]) { c.globalAlpha = al * k; c.fillStyle = col; c.beginPath(); c.moveTo(hx + ca * 13, hy + sa * 13); c.lineTo(hx - sa * w, hy + ca * w); c.lineTo(hx - ca * len, hy - sa * len); c.lineTo(hx + sa * w, hy - ca * w); c.closePath(); c.fill(); }
       c.restore();
-      V.glowAt(c, hx, hy, 12, TW_ROSE, 0.8 * k);
+      V.glowAt(c, hx, hy, 18, TW_ROSE, 0.85 * k);
     } });
     V.fx({ dur: fly, layer: 'air', draw: () => {}, done: () => onHit(tx, ty) });
   }
   // where a Needle bites: a small crimson star, and a faint eight-point star etched on the floor for a moment
   function weaveStar(x, y) {
-    V.spikeburst(x, y, { r: 30, n: 8, color: TW_CRIM, core: TW_HOT, ink: '#2a0410', dur: 0.28 });
-    V.sparks(x, y, { color: TW_ROSE, n: 4, speed: 220 });
-    V.fx({ dur: 0.7, layer: 'ground', draw: (c, p, t, e) => { const k = e.a * 0.45 * (1 - p); V.neonPath(c, TW_CRIM, 1.2, k, () => { for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4, L = i % 2 ? 14 : 26; c.moveTo(x, y); c.lineTo(x + Math.cos(a) * L, y + Math.sin(a) * L * 0.78); } }); } });
+    V.spikeburst(x, y, { r: 40, n: 10, color: TW_CRIM, core: TW_HOT, ink: '#2a0410', dur: 0.3 });
+    V.sparks(x, y, { color: TW_ROSE, n: 5, speed: 260 });
+    V.fx({ dur: 0.9, layer: 'ground', draw: (c, p, t, e) => { const k = e.a * 0.6 * (1 - p); V.neonPath(c, TW_CRIM, 1.7, k, () => { for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4, L = i % 2 ? 18 : 36; c.moveTo(x, y); c.lineTo(x + Math.cos(a) * L, y + Math.sin(a) * L * 0.78); } }); } });
   }
   // Shuttle: two threads loop over each other in a chain of figure-eights from her to the target, the gold shuttle at
   // their head; onHit where it strikes
   function weaveShuttleLoops(sx, sy, tx, ty, onHit) {
-    const d = Math.hypot(tx - sx, ty - sy), ang = Math.atan2(ty - sy, tx - sx), ca = Math.cos(ang), sa = Math.sin(ang), fly = 0.3, dur = fly + 0.35, A = Math.min(34, 10 + d * 0.08);
+    const d = Math.hypot(tx - sx, ty - sy), ang = Math.atan2(ty - sy, tx - sx), ca = Math.cos(ang), sa = Math.sin(ang), fly = 0.3, dur = fly + 0.35, A = Math.min(44, 13 + d * 0.1);
     const pt = (f, s) => { const al = d * (f - 0.1 * Math.sin(f * TAU * 2)), lat = s * A * Math.sin(f * TAU * 1.5); return [sx + ca * al - sa * lat, sy - 16 + sa * al + ca * lat]; };
     V.fx({ dur, layer: 'air', draw: (c, p, t, e) => {
       const q = easeOut(Math.min(1, t / fly)), k = e.a * Math.min(1, (dur - t) / 0.3);
-      for (const s of [1, -1]) V.neonPath(c, s > 0 ? TW_CRIM : TW_ROSE, 1.6, k, () => { for (let i = 0; i <= 30; i++) { const [px, py] = pt(q * i / 30, s); i ? c.lineTo(px, py) : c.moveTo(px, py); } });
-      if (t < fly) { const [hx, hy] = pt(q, 0); V.glowAt(c, hx, hy, 12, TW_GOLD, k); V.glowAt(c, hx, hy, 5, '#ffffff', k); }
+      for (const s of [1, -1]) V.neonPath(c, s > 0 ? TW_CRIM : TW_ROSE, 2.8, k, () => { for (let i = 0; i <= 30; i++) { const [px, py] = pt(q * i / 30, s); i ? c.lineTo(px, py) : c.moveTo(px, py); } });
+      if (t < fly) { const [hx, hy] = pt(q, 0); V.glowAt(c, hx, hy, 26, TW_CRIM, 0.6 * k); V.glowAt(c, hx, hy, 16, TW_GOLD, k); V.glowAt(c, hx, hy, 6, '#ffffff', k); }
     } });
     V.fx({ dur: fly, layer: 'air', draw: () => {}, done: () => onHit(tx, ty) });
   }
   // crossed threads left lying on the floor a moment (Shuttle's aftermath): faint, short
   function weaveFloorThreads(x, y, n, dur) {
-    const ls = Array.from({ length: n }, () => ({ a: rand(0, Math.PI), L: rand(60, 100), o: rand(-14, 14) }));
+    const ls = Array.from({ length: n }, () => ({ a: rand(0, Math.PI), L: rand(75, 125), o: rand(-18, 18) }));
     V.fx({ dur, layer: 'ground', draw: (c, p, t, e) => {
-      const k = e.a * Math.min(1, t / 0.1) * (1 - p) * 0.5; if (k < 0.02) return;
-      for (const l of ls) { const ca = Math.cos(l.a), sa = Math.sin(l.a) * 0.78, ox = -sa * l.o, oy = ca * l.o; V.neonPath(c, TW_CRIM, 1.2, k, () => { c.moveTo(x + ox - ca * l.L, y + oy - sa * l.L); c.lineTo(x + ox + ca * l.L, y + oy + sa * l.L); }); }
+      const k = e.a * Math.min(1, t / 0.1) * (1 - p) * 0.62; if (k < 0.02) return;
+      for (const l of ls) { const ca = Math.cos(l.a), sa = Math.sin(l.a) * 0.78, ox = -sa * l.o, oy = ca * l.o; V.neonPath(c, TW_CRIM, 2.2, k, () => { c.moveTo(x + ox - ca * l.L, y + oy - sa * l.L); c.lineTo(x + ox + ca * l.L, y + oy + sa * l.L); }); }
     } });
   }
   globalThis.THREADWEAVER_VFX = { diamond: weaveDiamond, snapBurst: weaveSnapBurst, cross: weaveCross, CRIM: TW_CRIM, ROSE: TW_ROSE, GOLD: TW_GOLD, HOT: TW_HOT };
@@ -2033,7 +2084,7 @@ function windLaneBoost(x, y, vx, vy, now) {
     needle: c => { const hx = c.x + Math.cos(c.ang || 0) * 12, hy = c.y + Math.sin(c.ang || 0) * 12; weaveLance(hx, hy, c.tx, c.ty, (x, y) => weaveStar(x, y)); },
     // Tie (painted sheet): a loop of thread flies to the ally and coils round them, pulling tight, then fades
     tie: c => { const w = c.tent || c.ent; weaveLoopFly(c.ent, w);
-      c.later(0.24, () => { weaveCoil(w, { dur: 1.1 }); V.glint(w.x, w.y, { color: TW_GOLD, size: 20, z: 24 }); V.sparks(w.x, w.y, { color: TW_ROSE, n: 4, speed: 160, z: 22 }); }); },
+      c.later(0.24, () => { weaveCoil(w, { dur: 1.2 }); V.glint(w.x, w.y, { color: TW_GOLD, size: 28, z: 24 }); V.sparks(w.x, w.y, { color: TW_ROSE, n: 5, speed: 190, z: 22 }); }); },
     // a running stitch of light closes over the ally, then beads run down each of their threads
     mend: c => { const w = c.tent || c.ent;
       V.sigil(w.x, w.y, { r: 42, style: 'runes', color: '#e4d8ff', dur: 0.7, spin: 2, follow: w }); V.plus(w.x, w.y, { color: '#e4d8ff', n: 5 });
@@ -2041,17 +2092,17 @@ function windLaneBoost(x, y, vx, vy, now) {
       c.later(0.15, () => runDown(w, '#e4d8ff')); },
     // the shears close over the threads: a flash of silver, and the cut threads let go their heal (thrs plays the snaps)
     snip: c => { const w = c.tent || c.ent;
-      V.fx({ dur: 0.4, layer: 'air', draw: (cc, p, t, e) => { const k = (1 - p) * e.a, o = 0.7 * (1 - Math.min(1, p * 2.5)); for (const s of [-1, 1]) V.neonPath(cc, s > 0 ? TW_HOT : TW_ROSE, 2.4, k, () => { const a = -Math.PI / 4 + s * o; cc.moveTo(w.x - Math.cos(a) * 22, w.y - 30 - Math.sin(a) * 22); cc.lineTo(w.x + Math.cos(a) * 22, w.y - 30 + Math.sin(a) * 22); }); } });
-      V.glint(w.x, w.y, { color: '#ffffff', size: 30, z: 30 });
+      V.fx({ dur: 0.4, layer: 'air', draw: (cc, p, t, e) => { const k = (1 - p) * e.a, o = 0.7 * (1 - Math.min(1, p * 2.5)); for (const s of [-1, 1]) V.neonPath(cc, s > 0 ? TW_HOT : TW_ROSE, 3.2, k, () => { const a = -Math.PI / 4 + s * o; cc.moveTo(w.x - Math.cos(a) * 28, w.y - 30 - Math.sin(a) * 28); cc.lineTo(w.x + Math.cos(a) * 28, w.y - 30 + Math.sin(a) * 28); }); } });
+      V.glint(w.x, w.y, { color: '#ffffff', size: 38, z: 30 });
       // (painted sheet) the threads snap in a crimson starburst, then a small woven diamond under the ally
-      c.later(0.12, () => { weaveSnapBurst(w.x, w.y - 24, { r: 64, n: 14 }); V.sparks(w.x, w.y, { color: TW_ROSE, n: 6, speed: 240, z: 24 }); weaveDiamond(w.x, w.y, 56, 1.2, { peak: 0.7, settle: 0.25 }); }); },
+      c.later(0.12, () => { weaveSnapBurst(w.x, w.y - 24, { r: 84, n: 16 }); V.sparks(w.x, w.y, { color: TW_ROSE, n: 7, speed: 280, z: 24 }); weaveDiamond(w.x, w.y, 72, 1.4, { peak: 0.8, settle: 0.32, w: 1.3 }); }); },
     // Shuttle (painted sheet): two threads loop over each other in figure-eights out to the boss with the gold shuttle
     // at their head; beads run down her threads (one strike per thread); crossed threads lie a moment where it strikes
-    shuttle: c => { runDown(c.ent, TW_ROSE); weaveShuttleLoops(c.x, c.y, c.tx, c.ty, (x, y) => { V.hit(x, y, TW_ROSE, 0.7); V.glint(x, y, { color: TW_GOLD, size: 24, z: 20 }); weaveFloorThreads(x, y, 3, 1); }); },
+    shuttle: c => { runDown(c.ent, TW_ROSE); weaveShuttleLoops(c.x, c.y, c.tx, c.ty, (x, y) => { V.hit(x, y, TW_ROSE, 0.85); weaveSnapBurst(x, y - 20, { r: 50, n: 10 }); V.glint(x, y, { color: TW_GOLD, size: 30, z: 20 }); weaveFloorThreads(x, y, 4, 1.2); }); },
     // Tapestry (painted sheet): a snapping starburst of thread, then a great woven diamond seal under her, ribbons of
     // crimson and gold wheeling out to the party (stagecraft.js draws the web itself while it lasts)
-    tapestry: c => { weaveSnapBurst(c.x, c.y - 24, { r: 90, n: 16 }); weaveDiamond(c.x, c.y, 140, 2.2, { peak: 0.85, settle: 0.3 });
-      V.ribbons(c.x, c.y, { r: 90, dur: 1.2, follow: c.ent, colors: [TW_GOLD, TW_CRIM, '#ffffff'] }); V.shock(c.x, c.y, { r: 200, color: TW_GOLD, dur: 0.6, w: 5 }); shake(3); },
+    tapestry: c => { weaveSnapBurst(c.x, c.y - 24, { r: 118, n: 18 }); weaveDiamond(c.x, c.y, 175, 2.4, { peak: 0.9, settle: 0.36, w: 1.4 });
+      V.ribbons(c.x, c.y, { r: 112, dur: 1.3, follow: c.ent, colors: [TW_GOLD, TW_CRIM, '#ffffff'] }); V.shock(c.x, c.y, { r: 240, color: TW_GOLD, dur: 0.6, w: 6 }); shake(3); },
     // Embroider: a flower of stitches blooms over the ally and every thread on them lights up
     embroider: c => { const w = c.tent || c.ent; V.sigil(w.x, w.y, { r: 56, style: 'petals', color: '#f0d8ff', dur: 0.9, spin: 3, follow: w }); V.burst(w.x, w.y - 20, { color: '#f0d8ff', color2: '#ffffff', n: 12, speed: 180, kind: 'star', flash: false }); V.plus(w.x, w.y, { color: '#f0d8ff', n: 6 }); c.later(0.1, () => runDown(w, '#f0d8ff')); },
     // Cat's Cradle: a web strung at her feet for 9s, glinting where its strands cross
@@ -2073,27 +2124,27 @@ function windLaneBoost(x, y, vx, vy, now) {
     // Pull Strings (the Doll Summon panel): the string from the bar draws taut in gold, then the Doll is let down on three
     // gold strings with a crimson ribbon spiralling round it, rings where it lands and a few petals settling
     pull: c => { act(c.ent, 'pull'); const MP = MARI_PAINT; c.later(0.03, () => { for (const d of dollsOf(c.ent)) { threadOut(c.ent, d, { color: '#ffd27a', w: 1.4, grow: 0.12, dur: 0.4 }); MP.dollDrop(d.x, d.y, { dur: 0.5 });
-      V.smoke(d.x, d.y, { n: 2, color: '#f0d8e8', size: 16, a: 0.3, speed: 40 }); MP.petals(d.x, d.y, { n: 6, speed: 120, life: 1.2 }); } }); },
+      V.smoke(d.x, d.y, { n: 3, color: '#f0d8e8', size: 20, a: 0.3, speed: 50 }); MP.petals(d.x, d.y, { n: 9, speed: 150, life: 1.3 }); V.glint(d.x, d.y, { color: '#ffffff', size: 26, z: 34 }); } }); },
     // Cross-Cut: every string goes rigid and bright crimson for a moment, a blade from the bar to the Doll; where the line
     // crosses the enemy a bright crimson X flashes, rose petals burst off it and a faint X stays scored on the floor
     cross: c => { act(c.ent, 'cut'); const MP = MARI_PAINT, ds = dollsOf(c.ent), ox = c.ent.x, oy = c.ent.y;
-      V.fx({ dur: 0.42, layer: 'air', draw: (cc, p, t, e) => { const k = (1 - p) * e.a, w = 4 * (1 - p) + 1; for (const d of ds) { V.neonPath(cc, '#e0203c', w, k, () => { cc.moveTo(ox, oy - 12); cc.lineTo(d.x, d.y - 12); }); V.neonPath(cc, '#ffd27a', 1, k, () => { cc.moveTo(ox, oy - 12); cc.lineTo(d.x, d.y - 12); }); } } });
+      V.fx({ dur: 0.42, layer: 'air', draw: (cc, p, t, e) => { const k = (1 - p) * e.a, w = 5.5 * (1 - p) + 1.2; for (const d of ds) { V.neonPath(cc, '#e0203c', w, k, () => { cc.moveTo(ox, oy - 12); cc.lineTo(d.x, d.y - 12); }); V.neonPath(cc, '#ffd27a', 1.3, k, () => { cc.moveTo(ox, oy - 12); cc.lineTo(d.x, d.y - 12); }); } } });
       for (const d of ds) { V.sparks((ox + d.x) / 2, (oy + d.y) / 2, { color: '#ff9ab0', n: 5, angle: Math.atan2(d.y - oy, d.x - ox) + Math.PI / 2, spread: 0.6, speed: 240 }); }
       // the X goes on the enemy when it stands on a string's line, otherwise halfway along the longest string
       let at = null, best = null;
       for (const d of ds) { if (kitSegDist(c.tx, c.ty, ox, oy, d.x, d.y) < 70) at = { x: c.tx, y: c.ty }; const L = Math.hypot(d.x - ox, d.y - oy); if (!best || L > best.L) best = { L, x: (ox + d.x) / 2, y: (oy + d.y) / 2 }; }
       const hit = at || best || { x: c.tx, y: c.ty }, big = !!at || !ds.length;
-      c.later(0.05, () => { MP.xcut(hit.x, hit.y, { r: big ? 62 : 40, w: big ? 8 : 5, dur: 0.36, scar: big ? 1.1 : 0.6 }); MP.petals(hit.x, hit.y, { n: big ? 10 : 5, speed: 220, life: 1.3 }); if (big) V.hit(hit.x, hit.y, '#ff5a7a', 0.7); }); },
+      c.later(0.05, () => { MP.xcut(hit.x, hit.y, { r: big ? 82 : 52, w: big ? 10 : 6, dur: 0.38, scar: big ? 1.3 : 0.7 }); MP.petals(hit.x, hit.y, { n: big ? 14 : 6, speed: 260, life: 1.4 }); if (big) { V.hit(hit.x, hit.y, '#ff5a7a', 0.9); V.sparks(hit.x, hit.y - 12, { color: '#ffd27a', n: 6, speed: 360 }); } }); },
     // Pirouette: tilted rings of rose and gold light spin round the Doll, two cuts sweep it, petals fly; a small rose
     // sigil is left a moment under where it spun
-    pirouette: c => { act(c.ent, 'spin'); const MP = MARI_PAINT; for (const d of dollsOf(c.ent)) { MP.spinRings(d.x, d.y, { r: 58, dur: 0.75 });
-      for (let i = 0; i < 2; i++) c.later(i * 0.12, () => V.slash(d.x, d.y, i * Math.PI, { r: 54, span: 2.6, color: i ? '#ffd27a' : '#e0203c', w: 0.45, dur: 0.24 }));
-      c.later(0.2, () => MP.petals(d.x, d.y, { n: 8, speed: 200, life: 1.3 })); c.later(0.35, () => MP.roseSigil(d.x, d.y, { r: 46, dur: 1.2, a: 0.35 })); } },
+    pirouette: c => { act(c.ent, 'spin'); const MP = MARI_PAINT; for (const d of dollsOf(c.ent)) { MP.spinRings(d.x, d.y, { r: 76, dur: 0.8 });
+      for (let i = 0; i < 2; i++) c.later(i * 0.12, () => V.slash(d.x, d.y, i * Math.PI, { r: 70, span: 2.6, color: i ? '#ffd27a' : '#e0203c', w: 0.5, dur: 0.26 }));
+      c.later(0.2, () => MP.petals(d.x, d.y, { n: 12, speed: 230, life: 1.4 })); c.later(0.35, () => MP.roseSigil(d.x, d.y, { r: 62, dur: 1.4, a: 0.45 })); } },
     // Swap: pale afterimages strung along both ways, a pillar of rose light where each of them reappears, and a gold
     // string left between them a moment
     swap: c => { act(c.ent, 'swap'); const MP = MARI_PAINT; c.later(0.03, () => { const ex = c.ent.x, ey = c.ent.y;
-      for (const d of dollsOf(c.ent)) { MP.ghostTrail(ex, ey, d.x, d.y, { s: 1.15 }); MP.ghostTrail(d.x, d.y, ex, ey, { s: 1.6 }); V.pillar(d.x, d.y, { r: 14, h: 110, color: '#ff7a94', dur: 0.45 }); threadOut(c.ent, d, { color: '#ffd27a', w: 1.2, grow: 0.15, dur: 0.7 }); MP.petals(d.x, d.y, { n: 4, speed: 120, life: 1.1 }); }
-      V.pillar(ex, ey, { r: 16, h: 130, color: '#ff7a94', dur: 0.45, follow: c.ent }); V.shock(ex, ey, { r: 46, color: '#e0203c', dur: 0.35, w: 3 }); MP.petals(ex, ey, { n: 5, speed: 140, life: 1.1 }); }); },
+      for (const d of dollsOf(c.ent)) { MP.ghostTrail(ex, ey, d.x, d.y, { s: 1.4 }); MP.ghostTrail(d.x, d.y, ex, ey, { s: 1.9 }); V.pillar(d.x, d.y, { r: 18, h: 140, color: '#ff7a94', dur: 0.5 }); V.shock(d.x, d.y, { r: 54, color: '#ffd27a', dur: 0.35, w: 3 }); threadOut(c.ent, d, { color: '#ffd27a', w: 1.4, grow: 0.15, dur: 0.8 }); MP.petals(d.x, d.y, { n: 6, speed: 140, life: 1.2 }); }
+      V.pillar(ex, ey, { r: 20, h: 160, color: '#ff7a94', dur: 0.5, follow: c.ent }); V.shock(ex, ey, { r: 60, color: '#e0203c', dur: 0.38, w: 3.5 }); MP.petals(ex, ey, { n: 7, speed: 160, life: 1.2 }); }); },
     // Grand Finale: the footlights come up round the Doll, five crimson cuts in time, a bow and a burst of rose petals
     finale: c => { act(c.ent, 'finale'); const ds = dollsOf(c.ent), MP = MARI_PAINT;
       for (const d of ds) V.fx({ dur: 2.6, layer: 'ground', draw: (cc, p, t, e) => { const k = Math.min(1, p / 0.05, (1 - p) / 0.1) * e.a; for (let i = 0; i < 7; i++) { const a = Math.PI * 0.15 + i * Math.PI * 0.7 / 6 + Math.PI / 2; V.glowAt(cc, d.x + Math.cos(a) * 60, d.y + Math.sin(a) * 40, 14, '#ffcf6a', k * (0.5 + Math.sin(t * 9 + i) * 0.15)); } } });
@@ -2128,7 +2179,7 @@ function windLaneBoost(x, y, vx, vy, now) {
       V.sparks(mx, my + 14, { color: col, n: kind === 1 ? 10 : 5, speed: 200 });
       for (const w of [a, b]) V.plus(w.x, w.y, { color: col, n: kind === 1 ? 4 : 2 });
     },
-    tapestryEnd: e => { V.shock(e.x, e.y, { r: 220, color: TW_GOLD, dur: 0.6, w: 5 }); weaveDiamond(e.x, e.y, 110, 1, { peak: 0.6, settle: 0.3 }); V.motes(e.x, e.y, { color: TW_GOLD, n: 10, r: 120, kind: 'star' }); },
+    tapestryEnd: e => { V.shock(e.x, e.y, { r: 250, color: TW_GOLD, dur: 0.6, w: 6 }); weaveDiamond(e.x, e.y, 140, 1.2, { peak: 0.7, settle: 0.34, w: 1.3 }); V.motes(e.x, e.y, { color: TW_GOLD, n: 10, r: 120, kind: 'star' }); },
     // a String tears: a spark at the bar and the frayed end whipping loose
     strtear: (e, t, d) => { const a = e.angle || 0, x = e.x + Math.cos(a) * 24, y = e.y + Math.sin(a) * 24; V.sparks(x, y, { color: d && d.w ? '#ff8a9a' : '#f6e6f0', n: 6, speed: 220 }); V.glint(x, y, { color: '#ff9ab0', size: 18, z: 16 }); },
     limp: e => { for (const dl of dollsOf(e)) { V.smoke(dl.x, dl.y, { n: 5, color: '#8a7a78', size: 20, a: 0.45, speed: 30 }); V.debris(dl.x, dl.y, { n: 3, color: '#c89a64', speed: 0.5 }); } },
@@ -2280,29 +2331,36 @@ function windLaneBoost(x, y, vx, vy, now) {
     V.hit(x, y, '#e8fff8', o.hit ?? 0.8);
     V.sparks(x, y, { color: col, n: 6, angle: a, spread: 0.5, speed: 380 });
   };
+  // (scale-up pass) DRIFT_ULT_SCALE sizes Eye of the Gale's twister, scar and the closing tempest; DRIFT_ULT_HIT is the impact
+  const DRIFT_ULT_SCALE = 1.8, DRIFT_ULT_HIT = 0.45;
   Object.assign(ABILITY_VFX.driftblade, {
     // (painted pass, driftblade.png) WINDUP: a jade cyclone of wind ribbons winds up round the duellist and the blade,
     // leaves caught in it, and a gust runs out to the target. IMPACT (0.3s): a twister stands on the target with rocks
     // and leaves whirling in it, long slashing streaks cut through it from every side. AFTERMATH: a spiral wind scar on
     // the floor (faint), turning slowly as it fades. The eye stays as a quiet ring of gusts for the window.
     eyeofthegale: c => {
-      const DP = DRIFT_PAINT, col = driftUltCol(c.ent), sx = c.x, sy = c.y, a = Math.atan2(c.ty - sy, c.tx - sx), tx = c.tx, ty = c.ty;
-      if (c.cam) c.cam.dim(0.3, 1.2);
-      V.charge(sx, sy, { color: col, r: 74, n: 10, dur: 0.3, follow: c.ent });
-      DP.cyclone(c.ent, { r: 50, h: 100, dur: 0.55, color: col, leaves: 6 });
-      c.later(0.16, () => DP.windStrip(dmgUltLine(sx, sy, tx + Math.cos(a) * 60, ty + Math.sin(a) * 60, 14, 16), { w: 8, color: col, dur: 0.4, z: 18 }));
-      c.later(0.3, () => {
+      const DP = DRIFT_PAINT, col = driftUltCol(c.ent), sx = c.x, sy = c.y, a = Math.atan2(c.ty - sy, c.tx - sx), tx = c.tx, ty = c.ty, SC = DRIFT_ULT_SCALE, HIT = DRIFT_ULT_HIT;
+      if (c.cam) c.cam.dim(0.3, 1.3);
+      // WINDUP: a tall cyclone winds up round the duellist; on the target the wind starts to turn in on itself
+      V.charge(sx, sy, { color: col, r: 90, n: 10, dur: 0.35, follow: c.ent });
+      DP.cyclone(c.ent, { r: 50 * 1.35, h: 130, dur: HIT + 0.2, color: col, leaves: 8 });
+      V.swirl(tx, ty, { r: 75 * SC, color: col, dur: HIT, arms: 3, inward: true });
+      c.later(HIT - 0.16, () => DP.windStrip(dmgUltLine(sx, sy, tx + Math.cos(a) * 60, ty + Math.sin(a) * 60, 14, 16), { w: 10, color: col, dur: 0.4, z: 18 }));
+      // IMPACT: a great twister on the target, a bright eye at its foot, slashing streaks through it, rocks and leaves flung
+      c.later(HIT, () => {
         if (c.cam) { c.cam.stop(0.09); c.cam.punch(0.07, 0.5); c.cam.flash('#e8fff8', 0.16, 0.28); }
         shake(6);
-        DP.twister(tx, ty, { r: 78, h: 190, dur: 1.1, color: col, rocks: 8, leaves: 8 });
-        for (let i = 0; i < 4; i++) c.later(0.04 + i * 0.07, () => DP.streaks(tx, ty, a + i * 0.8 + rand(-0.2, 0.2), { n: 2, back: 120, on: 120, w: 7, gap: 12, color: i % 2 ? '#e8fff8' : col, dur: 0.36, scuff: false, leaves: 1 }));
-        V.spikeburst(tx, ty, { r: 70, n: 14, color: col, core: '#ffffff', ink: '#0a2a24', dur: 0.36 });
-        V.shock(tx, ty, { r: 180, color: col, dur: 0.55, w: 7 });
-        V.shock(tx, ty, { r: 120, color: '#ffffff', dur: 0.4, w: 3, delay: 0.06 });
-        V.debris(tx, ty, { n: 6, color: '#4a524c', speed: 1.1 });
-        V.smoke(tx, ty, { n: 4, r: 50, color: '#c8d8d0', size: 26, a: 0.3, speed: 60, life: 1.3 });
+        DP.twister(tx, ty, { r: 78 * SC, h: 190 * (1 + (SC - 1) * 0.6), dur: 1.25, color: col, rocks: 12, leaves: 10 });
+        for (let i = 0; i < 4; i++) c.later(0.04 + i * 0.07, () => DP.streaks(tx, ty, a + i * 0.8 + rand(-0.2, 0.2), { n: 2, back: 120 * SC * 0.85, on: 120 * SC * 0.85, w: 9, gap: 16, color: i % 2 ? '#e8fff8' : col, dur: 0.4, scuff: false, leaves: 1 }));
+        V.flash(tx, ty - 24, 44 * SC, '#ffffff', 0.18);
+        V.spikeburst(tx, ty, { r: 70 * SC * 0.85, n: 16, color: col, core: '#ffffff', ink: '#0a2a24', dur: 0.38 });
+        V.shock(tx, ty, { r: 180 * SC * 0.85, color: col, dur: 0.6, w: 9 });
+        V.shock(tx, ty, { r: 120 * SC * 0.85, color: '#ffffff', dur: 0.45, w: 4, delay: 0.06 });
+        V.debris(tx, ty, { n: 10, color: '#4a524c', speed: 1.1 * SC * 0.8, size: 1.3 });
+        V.smoke(tx, ty, { n: 6, r: 50 * SC, color: '#c8d8d0', size: 34, a: 0.3, speed: 80, life: 1.4 });
       });
-      c.later(0.9, () => DP.spiralScar(tx, ty, { r: 90, dur: 2.6, color: col, a: 0.38 }));
+      // AFTERMATH: a spiral wind scar on the floor (ink and jade lines, no fill), turning slowly as it fades
+      c.later(HIT + 0.6, () => DP.spiralScar(tx, ty, { r: 90 * SC, dur: 3, color: col, a: 0.56, arms: 4 }));
       // the eye: a few gusts wheeling round the duellist for the window, kept quiet (the floor stays readable)
       V.aura(c.ent, { color: col, dur: 8, r: 30, rate: 0.15 });
       V.fx({ dur: 8, layer: 'ground', follow: c.ent, draw: (cc, p, t, e) => {
@@ -2322,17 +2380,19 @@ function windLaneBoost(x, y, vx, vy, now) {
   Object.assign(KIT_VFX, {
     // a Passing Strike inside the eye: a long gale line along the way you were running (Gale Run makes it white-hot)
     'drift-gale': Object.assign((e, target, d) => { const t = target || e, col = d && d.g ? '#ffffff' : driftUltCol(e); driftUltGaleLine(t.x, t.y, e.angle || 0, col, { w: d && d.g ? 6 : 4 });
-      DRIFT_PAINT.streaks(t.x, t.y, e.angle || 0, { n: 2, back: 120, on: 150, w: 6, gap: 16, color: col, dur: 0.4, scuff: false, leaves: 2 }); if (d && d.g) shake(2); }, { atTarget: true }),
+      DRIFT_PAINT.streaks(t.x, t.y, e.angle || 0, { n: 3, back: 145, on: 180, w: 7, gap: 14, color: col, dur: 0.42, scuff: false, leaves: 2 }); if (d && d.g) shake(2); }, { atTarget: true }),
     // the tempest that ends the window: a great twister on the target, gusts flung out, sized by the Drift you kept
     'drift-tempest': Object.assign((e, target, d) => {
-      const t = target || e, col = driftUltCol(e), q = 0.6 + 0.4 * Math.min(1, ((d && d.d) || 0) / 100), cam = FX.camFor(e);
+      const t = target || e, col = driftUltCol(e), q0 = 0.6 + 0.4 * Math.min(1, ((d && d.d) || 0) / 100), q = q0 * DRIFT_ULT_SCALE * 0.9, cam = FX.camFor(e);
       // (painted pass) a great twister on the target with rocks and leaves in it, gusts flung out in ribbons, a spiral scar after
       if (cam) { cam.punch(0.05, 0.45); cam.flash('#e8fff8', 0.14, 0.28); }
       shake(5);
-      DRIFT_PAINT.twister(t.x, t.y, { r: 80 * q, h: 210 * q, dur: 1.2, color: col, rocks: 8, leaves: 8 });
-      V.shock(t.x, t.y, { r: 210 * q, color: col, dur: 0.6, w: 7 });
-      for (let i = 0; i < 6; i++) { const a = i * TAU / 6 + rand(-0.2, 0.2); DRIFT_PAINT.windStrip(dmgUltLine(t.x + Math.cos(a) * 30, t.y + Math.sin(a) * 18, t.x + Math.cos(a) * 160 * q, t.y + Math.sin(a) * 100 * q, 8, 18), { color: i % 2 ? '#ffffff' : col, w: 5, dur: 0.55, z: 16 }); }
-      dmgUltLater(e, 0.4, () => { V.smoke(t.x, t.y, { n: 5, r: 60, color: '#c8d0c0', size: 28, a: 0.3, speed: 40, life: 1.8 }); DRIFT_PAINT.spiralScar(t.x, t.y, { r: 85 * q, dur: 2.6, color: col, a: 0.36 }); });
+      DRIFT_PAINT.twister(t.x, t.y, { r: 80 * q, h: 210 * q0 * 1.35, dur: 1.3, color: col, rocks: 12, leaves: 10 });
+      V.flash(t.x, t.y - 24, 40 * q, '#ffffff', 0.16);
+      V.shock(t.x, t.y, { r: 210 * q * 0.66, color: col, dur: 0.6, w: 9 });
+      for (let i = 0; i < 6; i++) { const a = i * TAU / 6 + rand(-0.2, 0.2); DRIFT_PAINT.windStrip(dmgUltLine(t.x + Math.cos(a) * 30, t.y + Math.sin(a) * 18, t.x + Math.cos(a) * 160 * q, t.y + Math.sin(a) * 100 * q, 8, 18), { color: i % 2 ? '#ffffff' : col, w: 7, dur: 0.6, z: 16 }); }
+      V.debris(t.x, t.y, { n: 8, color: '#4a524c', speed: 1.3, size: 1.2 });
+      dmgUltLater(e, 0.4, () => { V.smoke(t.x, t.y, { n: 6, r: 60 * q, color: '#c8d0c0', size: 32, a: 0.3, speed: 50, life: 1.8 }); DRIFT_PAINT.spiralScar(t.x, t.y, { r: 85 * q, dur: 3, color: col, a: 0.54, arms: 4 }); });
     }, { atTarget: true }),
   });
 
@@ -2429,32 +2489,41 @@ function windLaneBoost(x, y, vx, vy, now) {
   // footlights round its front, red velvet drapes swinging open behind it, and four phantom dolls let down on gold
   // strings round the ring. IMPACT (0.45s): the dolls lunge across in an X of cuts with the real Dolls, two crimson Xs
   // flash, rose petals explode. AFTERMATH: a rose sigil under a lingering spotlight, petals drifting down (all faint).
+  // (scale-up pass) MARI_ULT_SCALE sizes the whole Curtain Call (stage, troupe, cuts, sigil); MARI_ULT_HIT is the impact
+  const MARI_ULT_SCALE = 1.65, MARI_ULT_HIT = 0.5;
   ABILITY_VFX.marionettist.curtaincall = c => {
-    const tx = c.tx, ty = c.ty, MP = MARI_PAINT, R = 108;
-    if (c.cam) c.cam.dim(0.45, 1.5);
+    const tx = c.tx, ty = c.ty, MP = MARI_PAINT, SC = MARI_ULT_SCALE, R = 108 * SC, HIT = MARI_ULT_HIT;
+    if (c.cam) c.cam.dim(0.45, 1.6);
     mariUltAct(c.ent, 'finale');
-    MP.stage(tx, ty, { r: R, dur: 1.05 });
-    MP.troupe(tx, ty, { r: R * 0.82, n: 4, hit: 0.45 });
-    MP.spotlight(tx, ty, { r: 56, dur: 0.6, a: 0.22 });
+    // WINDUP: the stage (ring, compass, footlights) and the drapes, which fall away just after the strike
+    MP.stage(tx, ty, { r: R, dur: HIT + 0.75, airDur: HIT + 0.38 });
+    MP.troupe(tx, ty, { r: R * 0.8, n: 4, hit: HIT, ds: 1.15 * SC * 1.05 });
+    MP.spotlight(tx, ty, { r: 56 * SC, h: 340, dur: HIT + 0.2, a: 0.3 });
+    MP.petals(tx, ty, { mode: 'fall', n: 8, r: R * 0.9, life: 1.2 });
     c.later(0.1, () => { for (const d of mariUltDolls(c.ent)) { V.smoke(d.x, d.y, { n: 2, color: '#f0d8e8', size: 18, a: 0.35, speed: 40 }); V.glint(d.x, d.y, { color: '#ffffff', size: 24, z: 30 }); } });
-    c.later(0.45, () => {
+    // IMPACT: the troupe lunges through, two great crimson Xs, a brief white-hot heart, petals everywhere
+    c.later(HIT, () => {
       if (c.cam) { c.cam.stop(0.1); c.cam.punch(0.07, 0.5); c.cam.flash('#ffd8c8', 0.18, 0.28); }
       shake(7);
-      for (const d of mariUltDolls(c.ent)) { const a = Math.atan2(ty - d.y, tx - d.x); V.slash(d.x, d.y, a, { r: 74, span: 1.8, color: MU.CRIM, w: 0.6, dur: 0.3, sparks: 5 }); }
-      MP.xcut(tx, ty, { r: R * 1.05, a: 0.62, w: 10, dur: 0.42, z: 14 });
-      c.later(0.06, () => MP.xcut(tx, ty, { r: R * 0.85, a: 0.62 + Math.PI / 4, w: 7, dur: 0.36, z: 14, color: MU.ROSE2 }));
-      V.spikeburst(tx, ty, { r: 72, n: 16, color: MU.CRIM, core: '#fff0e6', ink: '#2a0410', dur: 0.38, z: 12 });
-      V.shock(tx, ty, { r: 175, color: MU.ROSE2, dur: 0.5, w: 6 });
-      V.shock(tx, ty, { r: 130, color: MU.GOLD, dur: 0.45, w: 3, delay: 0.06 });
-      MP.petals(tx, ty, { n: 24, speed: 300, life: 1.8 });
+      for (const d of mariUltDolls(c.ent)) { const a = Math.atan2(ty - d.y, tx - d.x); V.slash(d.x, d.y, a, { r: 74 * 1.3, span: 1.8, color: MU.CRIM, w: 0.6, dur: 0.3, sparks: 5 }); }
+      MP.xcut(tx, ty, { r: R * 1.05, a: 0.62, w: 10 * SC, dur: 0.44, z: 14 });
+      c.later(0.06, () => MP.xcut(tx, ty, { r: R * 0.85, a: 0.62 + Math.PI / 4, w: 7 * SC, dur: 0.38, z: 14, color: MU.ROSE2 }));
+      V.flash(tx, ty - 20, 46 * SC, '#fff0e6', 0.18);
+      V.spikeburst(tx, ty, { r: 72 * SC, n: 18, color: MU.CRIM, core: '#fff0e6', ink: '#2a0410', dur: 0.4, z: 12 });
+      V.shock(tx, ty, { r: 175 * SC, color: MU.ROSE2, dur: 0.55, w: 7 });
+      V.shock(tx, ty, { r: 130 * SC, color: MU.GOLD, dur: 0.5, w: 4, delay: 0.06 });
+      V.burst(tx, ty, { color: MU.GOLD, color2: '#ffffff', n: 12, speed: 320, kind: 'star', flash: false });
+      MP.petals(tx, ty, { n: 24, speed: 300 * SC, life: 1.8, size: 1.3 });
+      MP.petals(tx, ty, { n: 14, speed: 170 * SC, life: 2, size: 1.1 });
     });
-    c.later(0.8, () => { MP.roseSigil(tx, ty, { r: 92, dur: 2.6, a: 0.45 }); MP.spotlight(tx, ty, { r: 64, dur: 2.4, a: 0.14 }); MP.petals(tx, ty, { mode: 'fall', n: 10, r: 90, life: 2 }); });
+    // AFTERMATH: a rose sigil with gold stanchions round it under a warm spotlight, petals drifting down (rims, not fills)
+    c.later(HIT + 0.35, () => { MP.roseSigil(tx, ty, { r: 92 * SC, dur: 3, a: 0.65, posts: 6 }); MP.spotlight(tx, ty, { r: 64 * SC, h: 340, dur: 2.8, a: 0.19 }); MP.petals(tx, ty, { mode: 'fall', n: 16, r: 90 * SC, life: 2.4 }); });
   };
   Object.assign(KIT_VFX, {
     // the Strings go rigid and bright crimson as the troupe strikes: one blade per taut String to every Doll
     'mari-curtain': (e, target, d) => {
       const s = Math.max(0, Math.min(3, (d && d.s) || 0));
-      dmgUltLater(e, 0.45, () => {
+      dmgUltLater(e, MARI_ULT_HIT, () => {
         const ds = mariUltDolls(e), ox = e.x, oy = e.y;
         V.fx({ dur: 0.5, layer: 'air', draw: (cc, p, t, fx) => { const k = (1 - p) * fx.a; for (const dl of ds) for (let i = 0; i < s; i++) { const off = (i - (s - 1) / 2) * 5; V.neonPath(cc, i === 1 ? MU.GOLD : MU.CRIM, 3 * (1 - p) + 1, k, () => { cc.moveTo(ox, oy - 12 + off); cc.lineTo(dl.x, dl.y - 12 + off); }); } } });
         for (const dl of ds) V.sparks((ox + dl.x) / 2, (oy + dl.y) / 2, { color: MU.ROSE2, n: 4 + 2 * s, angle: Math.atan2(dl.y - oy, dl.x - ox) + Math.PI / 2, spread: 0.7, speed: 260 });
@@ -2464,9 +2533,9 @@ function windLaneBoost(x, y, vx, vy, now) {
     'mari-bow': Object.assign((e, target) => {
       const t = target || e;
       V.fx({ dur: 0.45, layer: 'air', draw: (cc, p, tt, fx) => { const k = (1 - p) * fx.a; V.neonPath(cc, MU.CRIM, 4 * (1 - p) + 1, k, () => { cc.moveTo(e.x, e.y - 12); cc.lineTo(t.x, t.y - 12); }); } });
-      V.hit(t.x, t.y, MU.ROSE2, 1);
-      MARI_PAINT.xcut(t.x, t.y, { r: 58, w: 7, dur: 0.34 });
-      MARI_PAINT.petals(t.x, t.y, { n: 12, speed: 220, life: 1.5 });
+      V.hit(t.x, t.y, MU.ROSE2, 1.2);
+      MARI_PAINT.xcut(t.x, t.y, { r: 76, w: 9, dur: 0.36, scar: 1 });
+      MARI_PAINT.petals(t.x, t.y, { n: 16, speed: 260, life: 1.6, size: 1.15 });
       shake(3);
     }, { atTarget: true }),
   });
@@ -2479,33 +2548,48 @@ function windLaneBoost(x, y, vx, vy, now) {
   // frost clock-seal opens with its own arcs racing round it and a crown of ice crystals rises from its rim. IMPACT
   // (0.7s): the crown shatters in a fire-and-ice explosion: a fire starburst, a ring of ice spikes, shards, burning rocks,
   // smoke. AFTERMATH: a scorched crater with frost at its edge (faint) and steam rising off it.
+  // (scale-up pass) THERM_ULT_SCALE sizes Supernova's seal, crown, explosion and crater; THERM_ULT_HIT is the impact
+  const THERM_ULT_SCALE = 1.7, THERM_ULT_HIT = 0.7;
   ABILITY_VFX.thermist.supernova = c => {
-    if (c.cam) c.cam.dim(0.42, 1.5);
-    V.charge(c.x, c.y, { color: '#e8d8ff', r: 64, n: 12, dur: 0.35, follow: c.ent });
-    THERM_PAINT.dialSeal(c.x, c.y, { r: 46, dur: 0.75, follow: c.ent, spin: 11 });
+    if (c.cam) c.cam.dim(0.42, 1.6);
+    V.charge(c.x, c.y, { color: '#e8d8ff', r: 80, n: 12, dur: 0.4, follow: c.ent });
+    THERM_PAINT.dialSeal(c.x, c.y, { r: 60, dur: THERM_ULT_HIT + 0.05, follow: c.ent, spin: 11 });
+    THERM_PAINT.handArcs(c.ent, { r: 40, dur: THERM_ULT_HIT, color: '#ff8a3a', color2: '#6fb2f0' });
     V.aura(c.ent, { color: '#e8d8ff', dur: 6, r: 28, rate: 0.15 });
-    c.later(0.7, () => { if (c.cam) { c.cam.stop(0.1); c.cam.punch(0.08, 0.55); c.cam.flash('#ffc890', 0.2, 0.32); } shake(8); });
+    c.later(THERM_ULT_HIT, () => { if (c.cam) { c.cam.stop(0.1); c.cam.punch(0.08, 0.55); c.cam.flash('#ffc890', 0.2, 0.32); } shake(8); });
   };
   KIT_VFX['therm-nova'] = Object.assign((e, target, d) => {
-    const t = target || e, x = t.x, y = t.y, s = Math.max(0, Math.min(5, (d && d.s) || 0)), q = 0.75 + 0.05 * s, TP = THERM_PAINT;
-    TP.dialSeal(x, y, { r: 96 * q, dur: 0.75 });
-    TP.crystalCrown(x, y, { r: 82 * q, n: 10 + s, h: 66 * q, dur: 0.72 });
-    dmgUltLater(e, 0.35, () => V.shock(x, y, { r: 120 * q, color: '#bfe6ff', dur: 0.35, w: 4 }));
-    dmgUltLater(e, 0.7, () => {
-      V.flash(x, y - 20, 120 * q, '#ffc060', 0.22);
-      V.spikeburst(x, y, { r: 115 * q, n: 20, ...TH.FIRE, dur: 0.45 });
-      V.spikeburst(x, y, { r: 140 * q, n: 18, hole: 0.68, ...TH.ICE, dur: 0.45, layer: 'ground', z: 0, flat: 0.7 });
-      V.flare(x, y, { n: 14 + 2 * s, r: 26 * q, color: '#ff6a1a', size: 1.2, h: 1.3 });
-      TP.shards(x, y, { n: 14, speed: 360, size: 1.2, z: 24 });
-      V.shock(x, y, { r: 210 * q, color: '#ff9a5a', dur: 0.55, w: 8 });
-      V.shock(x, y, { r: 175 * q, color: '#7ac0f0', dur: 0.55, w: 5, delay: 0.07 });
-      V.burst(x, y, { color: '#fff0b0', color2: '#8fd0ff', n: 12, speed: 320, flash: false });
-      V.debris(x, y, { n: 8, hot: true, color: '#3a2a22', speed: 1.2 });
-      V.smoke(x, y, { n: 6, r: 50 * q, color: '#b8b4b0', size: 34, a: 0.4, speed: 90, life: 1.3 });
+    const t = target || e, x = t.x, y = t.y, s = Math.max(0, Math.min(5, (d && d.s) || 0)), SC = THERM_ULT_SCALE, HIT = THERM_ULT_HIT, TP = THERM_PAINT;
+    const q = (0.75 + 0.05 * s) * SC, qr = (0.75 + 0.05 * s) * (1 + (SC - 1) * 0.6);   // shapes grow by the full scale, the outer rings by less
+    // WINDUP: a big frost clock-seal, a spiky crown of ice round its rim and a ring of tall spears rising inside it
+    TP.dialSeal(x, y, { r: 96 * q, dur: HIT + 0.05 });
+    TP.crystalCrown(x, y, { r: 82 * q, n: 12 + 2 * s, h: 66 * q, dur: HIT + 0.02, ws: 1.5 });
+    TP.crystalCrown(x, y, { r: 44 * q, n: 7, h: 100 * q, dur: HIT - 0.26, delay: 0.28, ws: 1.8, lean: 0.25 });
+    TP.swirl2(x, y, { r: 120 * q, dur: 0.3, z: 20 });
+    dmgUltLater(e, 0.35, () => V.shock(x, y, { r: 120 * q, color: '#bfe6ff', dur: 0.35, w: 5 }));
+    dmgUltLater(e, HIT - 0.3, () => TP.swirl2(x, y, { r: 110 * q, dur: 0.3, z: 24 }));
+    // IMPACT: a fire-and-ice explosion: a white-hot heart, a fire starburst and a column of flame through a ring of ice
+    // spikes, shards and burning rocks flung out, smoke rolling
+    dmgUltLater(e, HIT, () => {
+      V.flash(x, y - 30, 70 * q, '#ffffff', 0.16);
+      V.flash(x, y - 20, 110 * q, '#ffc060', 0.24);
+      V.spikeburst(x, y, { r: 115 * q, n: 22, ...TH.FIRE, dur: 0.48 });
+      V.spikeburst(x, y, { r: 140 * q, n: 20, hole: 0.68, ...TH.ICE, dur: 0.48, layer: 'ground', z: 0, flat: 0.7 });
+      V.spikeburst(x, y, { r: 70 * q, n: 12, ...TH.ICE, dur: 0.32, z: 30 });
+      V.pillar(x, y, { r: 34 * q, h: 300, color: '#ffb060', dur: 0.45 });
+      V.flare(x, y, { n: 16 + 2 * s, r: 40 * q, color: '#ff6a1a', size: 1.5, h: 1.6 });
+      TP.shards(x, y, { n: 18, speed: 360 * SC * 0.8, size: 1.5, z: 24 });
+      TP.shards(x, y, { n: 10, speed: 200 * SC * 0.8, size: 1.1, z: 40, color: '#cfeeff' });
+      V.shock(x, y, { r: 210 * qr, color: '#ff9a5a', dur: 0.6, w: 10 });
+      V.shock(x, y, { r: 175 * qr, color: '#7ac0f0', dur: 0.6, w: 7, delay: 0.07 });
+      V.burst(x, y, { color: '#fff0b0', color2: '#8fd0ff', n: 16, speed: 320 * SC * 0.8, flash: false });
+      V.debris(x, y, { n: 12, hot: true, color: '#3a2a22', speed: 1.2 * SC * 0.8, size: 1.4 });
+      V.smoke(x, y, { n: 8, r: 50 * q, color: '#b8b4b0', size: 34 * SC * 0.8, a: 0.42, speed: 90 * SC * 0.8, life: 1.4 });
     });
-    dmgUltLater(e, 0.85, () => { V.crater(x, y, { r: 70 * q, color: '#ff5a1a', dur: 4, flames: 4, a: 0.4 }); TP.frostRim(x, y, { r: 78 * q, dur: 4, a: 0.4, n: 20 }); });
-    dmgUltLater(e, 1.1, () => TP.steam(x, y, { n: 6, r: 60 * q, size: 30, life: 2.2 }));
-    dmgUltLater(e, 2, () => TP.steam(x, y, { n: 4, r: 70 * q, size: 26, life: 2, a: 0.22 }));
+    // AFTERMATH: a scorched crater ringed with frost spikes, the heat cooling in its cracks, steam rising (kept to rims)
+    dmgUltLater(e, HIT + 0.15, () => { V.crater(x, y, { r: 70 * q, color: '#ff5a1a', dur: 4.5, flames: 6, a: 0.48, cracks: 10 }); TP.frostRim(x, y, { r: 78 * q, dur: 4.5, a: 0.6, n: 26 }); });
+    dmgUltLater(e, HIT + 0.4, () => TP.steam(x, y, { n: 7, r: 60 * q, size: 36, life: 2.4, a: 0.32 }));
+    dmgUltLater(e, HIT + 1.3, () => TP.steam(x, y, { n: 5, r: 70 * q, size: 30, life: 2.2, a: 0.24 }));
   }, { atTarget: true });
 })();
 
@@ -2610,6 +2694,8 @@ function windLaneBoost(x, y, vx, vy, now) {
   const V = VFX, rand = (a, b) => a + Math.random() * (b - a), shake = s => { FX.shake = Math.max(FX.shake, s); };
   const P = () => globalThis.IRONPALM_VFX || { col: () => '#ffb84a', hot: () => '#fff0c8', print: () => {}, impact: () => ({ x: 0, y: 0, a: 0 }), at: () => ({ x: 0, y: 0, a: 0 }) };
   const IP_INK = '#140a04', IP_ROCK = '#5a4a3a';
+  // the size knobs: Hundred Palms' footprint (tiger, burst, the print left), and the supporting moves'
+  const IRONPALM_ULT_SCALE = 1.8, IRONPALM_MOVE_SCALE = 1.3;
   const camHit = (cam, col, s = 1) => { if (cam) { cam.stop(0.08 + 0.03 * s); cam.punch(0.05 + 0.025 * s, 0.55); cam.flash(col, 0.18 + 0.06 * s, 0.35); } };
   const stopE = (e, s) => { if (e && e.st && typeof hitStop === 'function') hitStop(e.st, s, FX.now); };
   const toward = (c, f) => ({ x: c.x + (c.tx - c.x) * f, y: c.y + (c.ty - c.y) * f });
@@ -2654,56 +2740,87 @@ function windLaneBoost(x, y, vx, vy, now) {
     const inner = nc ? Array.from({ length: 4 }, () => [rand(-5, 3) * s, rand(-5, 5) * s, rand(-5, 3) * s, rand(-5, 5) * s]) : [];
     const trace = c => { for (const pts of cracks) { c.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length; i++) c.lineTo(pts[i][0], pts[i][1]); } for (const l of inner) { c.moveTo(l[0], l[1]); c.lineTo(l[2], l[3]); } };
     V.fx({ dur, delay: o.delay, layer: 'ground', draw: (c, p, t, e) => {
-      const k = e.a * Math.min(1, p / 0.04) * Math.min(1, (1 - p) / 0.35), heat = Math.max(0, 1 - t / Math.min(2.6, dur * 0.55));
+      const k = e.a * Math.min(1, p / 0.04) * Math.min(1, (1 - p) / 0.35), heat = Math.max(0, 1 - t / (o.heatT ?? Math.min(2.6, dur * 0.55)));
       c.save(); c.translate(x, y); c.scale(1, 0.62); c.rotate(a);
-      c.globalAlpha = 0.26 * k; c.fillStyle = c.strokeStyle = IP_INK; ironpalmHandShape(c, s, 0.8 * s);   // the dent
-      c.globalCompositeOperation = 'lighter'; c.globalAlpha = k * (0.07 + 0.4 * heat); c.fillStyle = c.strokeStyle = col; ironpalmHandShape(c, s);   // the heat in it
+      if (o.rim) { c.globalCompositeOperation = 'lighter'; c.globalAlpha = Math.min(1, o.rim * k); c.fillStyle = c.strokeStyle = col; ironpalmHandShape(c, s, 1.6 * s); c.globalCompositeOperation = 'source-over'; }   // a warm glow round its edge
+      c.globalAlpha = Math.min(1, (o.ink ?? 0.26) * k); c.fillStyle = c.strokeStyle = IP_INK; ironpalmHandShape(c, s, 0.8 * s);   // the dent
+      c.globalCompositeOperation = 'lighter'; c.globalAlpha = k * ((o.warm ?? 0.07) + 0.4 * heat); c.fillStyle = c.strokeStyle = col; ironpalmHandShape(c, s);   // the heat in it
       c.globalCompositeOperation = 'source-over';
       if (nc) {
-        c.lineCap = 'round'; c.lineJoin = 'round'; c.globalAlpha = 0.42 * k; c.strokeStyle = IP_INK; c.lineWidth = 2.4; c.beginPath(); trace(c); c.stroke();
-        if (heat > 0.02) { c.globalCompositeOperation = 'lighter'; c.globalAlpha = 0.5 * k * heat; c.strokeStyle = col; c.lineWidth = 1.1; c.beginPath(); trace(c); c.stroke(); }
+        c.lineCap = 'round'; c.lineJoin = 'round'; c.globalAlpha = Math.min(1, (o.crackA ?? 0.42) * k); c.strokeStyle = IP_INK; c.lineWidth = o.crackW ?? 2.4; c.beginPath(); trace(c); c.stroke();
+        const ch = Math.max(heat, o.ember ?? 0);   // (o.ember: the cracks keep a faint glow after the heat's gone)
+        if (ch > 0.02) { c.globalCompositeOperation = 'lighter'; c.globalAlpha = 0.5 * k * ch; c.strokeStyle = col; c.lineWidth = 1.1; c.beginPath(); trace(c); c.stroke(); }
       }
       c.restore();
+      if (o.ring) V.neonRing(c, x, y, o.ring, col, 1.6, k * 0.3, 0.62);   // the shock's rim cut round it
       if (heat > 0.02) V.glowAt(c, x, y, 12 * s, col, 0.3 * k * heat);
     } });
   }
   // the tiger spirit: striped bands of gold coiling up round the monk, a tiger's mask looming over its shoulder
   function ironpalmTigerMask(c, x, y, s, col, hot, k) {
     if (k <= 0.02) return;
-    V.glowAt(c, x, y, 42 * s, col, 0.35 * k);
+    V.glowAt(c, x, y, 46 * s, col, 0.4 * k);
     c.save(); c.translate(x, y); c.scale(s, s);
-    V.neonPath(c, col, 2.2, k, () => {
+    const head = () => {
       c.moveTo(-22, -6); c.quadraticCurveTo(-24, -24, -12, -26); c.lineTo(-17, -38); c.lineTo(-4, -28);   // left ear
       c.quadraticCurveTo(0, -30, 4, -28); c.lineTo(17, -38); c.lineTo(12, -26); c.quadraticCurveTo(24, -24, 22, -6);   // crown, right ear
-      c.quadraticCurveTo(26, 10, 12, 18); c.quadraticCurveTo(0, 26, -12, 18); c.quadraticCurveTo(-26, 10, -22, -6);   // cheeks and jaw
-    });
-    V.neonPath(c, hot, 1.6, k, () => {
-      c.moveTo(-14, -9); c.lineTo(-5, -5); c.moveTo(14, -9); c.lineTo(5, -5);   // the eyes, narrowed
-      c.moveTo(-4, 5); c.lineTo(0, 9); c.lineTo(4, 5);   // the nose
-      c.moveTo(-9, 13); c.quadraticCurveTo(0, 19, 9, 13);   // the snarl
+      c.lineTo(31, -1); c.lineTo(25, 4); c.lineTo(32, 10); c.lineTo(21, 13); c.lineTo(24, 20); c.lineTo(12, 21);   // the right ruff
+      c.quadraticCurveTo(0, 33, -12, 21); c.lineTo(-24, 20); c.lineTo(-21, 13); c.lineTo(-32, 10); c.lineTo(-25, 4); c.lineTo(-31, -1); c.closePath();   // jaw, the left ruff
+    };
+    // the face's light: a saffron body behind the lines, so the head reads as a solid shape and not a doodle
+    c.save(); c.globalCompositeOperation = 'lighter'; c.globalAlpha = Math.min(1, 0.3 * k); c.fillStyle = col; c.beginPath(); head(); c.fill(); c.restore();
+    c.save(); c.globalAlpha = Math.min(1, 0.55 * k); c.strokeStyle = '#2a1408'; c.lineWidth = 2.6; c.lineCap = 'round'; c.beginPath();   // the dark stripes
+    for (const d of [-1, 1]) { c.moveTo(d * 29, 0); c.lineTo(d * 17, 2); c.moveTo(d * 29, 8); c.lineTo(d * 18, 8); c.moveTo(d * 21, 16); c.lineTo(d * 14, 13); c.moveTo(d * 20, -17); c.lineTo(d * 13, -12); }
+    c.moveTo(-6, -27); c.lineTo(-3, -19); c.moveTo(6, -27); c.lineTo(3, -19);
+    c.stroke(); c.restore();
+    V.neonPath(c, col, 2.4, k, head);
+    // the open jaw and its fangs
+    c.save(); c.globalAlpha = Math.min(1, 0.85 * k); c.fillStyle = '#2a0c04'; c.beginPath(); c.moveTo(-10, 12); c.quadraticCurveTo(0, 9, 10, 12); c.quadraticCurveTo(0, 29, -10, 12); c.fill();
+    c.globalCompositeOperation = 'lighter'; c.fillStyle = hot; c.beginPath(); for (const d of [-1, 1]) { c.moveTo(d * 8, 12); c.lineTo(d * 5.5, 21); c.lineTo(d * 3.5, 11.5); c.moveTo(d * 6, 25); c.lineTo(d * 4, 19); c.lineTo(d * 2, 25.5); } c.fill(); c.restore();
+    V.neonPath(c, hot, 1.7, k, () => {
+      c.moveTo(-15, -10); c.lineTo(-5, -5); c.lineTo(-13, -4); c.moveTo(15, -10); c.lineTo(5, -5); c.lineTo(13, -4);   // the eyes, narrowed and burning
+      c.moveTo(-4, 4); c.lineTo(0, 8); c.lineTo(4, 4);   // the nose
       c.moveTo(-3, -25); c.lineTo(0, -17); c.lineTo(3, -25); c.moveTo(-11, -20); c.lineTo(-7, -13); c.moveTo(11, -20); c.lineTo(7, -13);   // brow stripes
+      c.moveTo(-11, 7); c.lineTo(-27, 4); c.moveTo(-11, 9); c.lineTo(-26, 11); c.moveTo(11, 7); c.lineTo(27, 4); c.moveTo(11, 9); c.lineTo(26, 11);   // whiskers
     });
+    V.glowAt(c, -10, -7, 7, '#ffffff', 0.7 * k); V.glowAt(c, 10, -7, 7, '#ffffff', 0.7 * k);
     c.restore();
   }
-  function ironpalmTiger(ent, dur, col, hot) {
+  // a tiger's forepaw of light at (x, y), reaching along a: the pad, the toes and three hooked claws
+  function ironpalmPaw(c, x, y, a, s, col, hot, k) {
+    if (k <= 0.02) return;
+    c.save(); c.translate(x, y); c.rotate(a); c.scale(s, s);
+    c.save(); c.globalCompositeOperation = 'lighter'; c.globalAlpha = Math.min(1, 0.32 * k); c.fillStyle = col; c.beginPath(); c.ellipse(0, 0, 9, 7.5, 0, 0, Math.PI * 2); for (const t of [-5.5, 0, 5.5]) { c.moveTo(16, t); c.arc(13, t, 3, 0, Math.PI * 2); } c.fill(); c.restore();
+    V.neonPath(c, col, 2, k, () => { c.moveTo(9, 0); c.ellipse(0, 0, 9, 7.5, 0, 0, Math.PI * 2); });
+    V.neonPath(c, hot, 1.6, k, () => { for (const t of [-5, 0, 5]) { c.moveTo(16, t); c.quadraticCurveTo(24, t * 1.3 - 1, 25, t * 1.5 + 4); } });
+    c.restore();
+  }
+  function ironpalmTiger(ent, dur, col, hot, S = 1) {
     const back = (ent.angle || 0) + Math.PI;
     V.fx({ dur, layer: 'air', draw: (c, p, t, e) => {
-      const k = e.a * Math.min(1, t / 0.15) * Math.min(1, (1 - p) / 0.25), x = ent.x, y = ent.y;
+      const k = e.a * Math.min(1, t / 0.15) * Math.min(1, (1 - p) / 0.25), x = ent.x, y = ent.y, fa = ent.angle || 0;
+      // the striped body: three bands of gold coiling up round the monk, the middle one white-hot
       for (let i = 0; i < 3; i++) {
-        const a0 = t * 7 + i * 2.1, R = 42 + i * 15 + 6 * Math.sin(t * 5 + i), z = 6 + i * 16 + t * 12, span = 2.3;
+        const a0 = t * 7 + i * 2.1, R = (42 + i * 15 + 6 * Math.sin(t * 5 + i)) * S, z = (6 + i * 16 + t * 12) * S, span = 2.5, W = 11 * S;
         c.save(); c.translate(x, y - z); c.scale(1, 0.55);
         c.globalCompositeOperation = 'lighter'; c.globalAlpha = Math.min(1, 0.55 * k); c.fillStyle = i === 1 ? hot : col;
         c.beginPath(); c.arc(0, 0, R, a0, a0 + span);
-        for (let j = 10; j >= 0; j--) { const q = j / 10, aa = a0 + span * q, rr = R - 9 * Math.sin(Math.PI * q); c.lineTo(Math.cos(aa) * rr, Math.sin(aa) * rr); }
+        for (let j = 12; j >= 0; j--) { const q = j / 12, aa = a0 + span * q, rr = R - W * Math.sin(Math.PI * Math.min(1, q * 1.25)); c.lineTo(Math.cos(aa) * rr, Math.sin(aa) * rr); }
         c.closePath(); c.fill();
         // the tiger's stripes: dark cuts across the band
-        c.globalCompositeOperation = 'source-over'; c.globalAlpha = 0.6 * k; c.strokeStyle = '#2a1408'; c.lineWidth = 2.2; c.beginPath();
-        for (let j = 1; j < 5; j++) { const sa = a0 + j * 0.46; c.moveTo(Math.cos(sa) * (R + 1), Math.sin(sa) * (R + 1)); c.lineTo(Math.cos(sa + 0.14) * (R - 8), Math.sin(sa + 0.14) * (R - 8)); }
+        c.globalCompositeOperation = 'source-over'; c.globalAlpha = 0.62 * k; c.strokeStyle = '#2a1408'; c.lineWidth = 2.4 * Math.sqrt(S); c.beginPath();
+        for (let j = 1; j < 7; j++) { const sa = a0 + j * 0.34; c.moveTo(Math.cos(sa) * (R + 1), Math.sin(sa) * (R + 1)); c.lineTo(Math.cos(sa + 0.12) * (R - W * 0.9), Math.sin(sa + 0.12) * (R - W * 0.9)); }
         c.stroke(); c.restore();
       }
-      ironpalmTigerMask(c, x + Math.cos(back) * 26, y + Math.sin(back) * 12 - 96 - t * 10, 1.25 + 0.2 * Math.min(1, t / 0.4), col, hot, k * Math.min(1, t / 0.3) * 0.85);
-    }, tick: p => { if (p < 0.8 && Math.random() < 0.25) { const a = Math.random() * Math.PI * 2, d = rand(60, 90);   // grit swept up into the coil
-      V.spawn({ x: ent.x + Math.cos(a) * d, y: ent.y + Math.sin(a) * d * 0.6, z: 4, life: 0.5, size: rand(4, 6), color: IP_ROCK, kind: 'shard', add: false, vr: 8, orbit: { x: ent.x, y: ent.y, a, r: d, w: 7, dr: -60, flat: 0.6, follow: ent } }); } } });
+      // the forepaws come down either side of the monk, claws reaching for the enemy
+      const pk = k * Math.min(1, Math.max(0, (t - 0.12) / 0.2)), reach = 1 - Math.pow(1 - Math.min(1, Math.max(0, (t - 0.12) / 0.3)), 2);
+      for (const d of [-1, 1]) { const px = x + Math.cos(fa) * (6 + 16 * reach) * S - Math.sin(fa) * d * 26 * S, py = y + (Math.sin(fa) * (6 + 16 * reach) * S + Math.cos(fa) * d * 26 * S) * 0.6 - 10 * S;
+        ironpalmPaw(c, px, py, Math.atan2(Math.sin(fa) * 0.6, Math.cos(fa)) + d * 0.25, 1.1 * S, col, hot, pk * 0.9); }
+      // the head looms over the monk's shoulder, growing as it forms
+      const form = 1 - Math.pow(1 - Math.min(1, t / 0.35), 2);
+      ironpalmTigerMask(c, x + Math.cos(back) * 20 * S, y + Math.sin(back) * 10 * S - (60 + 26 * form) * S - t * 10, (0.8 + 0.25 * form) * S, col, hot, k * Math.min(1, t / 0.25) * 0.9);
+    }, tick: p => { if (p < 0.8 && Math.random() < 0.3) { const a = Math.random() * Math.PI * 2, d = rand(60, 90) * S;   // grit swept up into the coil
+      V.spawn({ x: ent.x + Math.cos(a) * d, y: ent.y + Math.sin(a) * d * 0.6, z: 4, life: 0.5, size: rand(4, 7), color: IP_ROCK, kind: 'shard', add: false, vr: 8, orbit: { x: ent.x, y: ent.y, a, r: d, w: 7, dr: -60 * S, flat: 0.6, follow: ent } }); } } });
   }
   // a torii of light standing on (x, y), w wide, h tall: it rises out of the floor, holds a beat and fades
   function ironpalmTorii(x, y, w, h, col, hot, dur = 0.6) {
@@ -2719,11 +2836,11 @@ function windLaneBoost(x, y, vx, vy, now) {
   }
   // the gate's shadow left on the floor: two post marks, the beam between, cloud scrolls curling off the posts
   const ironpalmCurl = (c, x, y, s, dir) => { for (let j = 0; j <= 12; j++) { const a = dir * j * 0.5, r = s * (1 + j * 0.45), px = x + Math.cos(a) * r, py = y + Math.sin(a) * r * 0.6; j ? c.lineTo(px, py) : c.moveTo(px, py); } c.lineTo(x + dir * s * 12, y + s * 2); };
-  function ironpalmToriiMark(x, y, w, col, dur = 2.2) {
+  function ironpalmToriiMark(x, y, w, col, dur = 2.2, A = 0.5) {
     V.fx({ dur, layer: 'ground', draw: (c, p, t, e) => {
-      const k = e.a * Math.min(1, p / 0.08) * Math.min(1, (1 - p) / 0.5) * 0.5, L = x - w * 0.36, Rr = x + w * 0.36;
-      V.neonPath(c, col, 1.6, k, () => { c.moveTo(L, y); c.lineTo(L - 4, y - 10); c.moveTo(Rr, y); c.lineTo(Rr + 4, y - 10); c.moveTo(L - 12, y - 12); c.quadraticCurveTo(x, y - 6, Rr + 12, y - 12); });
-      V.neonPath(c, col, 1.2, k * 0.8, () => { ironpalmCurl(c, L - 10, y + 4, 3, -1); ironpalmCurl(c, Rr + 10, y + 4, 3, 1); });
+      const k = e.a * Math.min(1, p / 0.08) * Math.min(1, (1 - p) / 0.5) * A, L = x - w * 0.36, Rr = x + w * 0.36, s = w / 76;
+      V.neonPath(c, col, 1.8, k, () => { c.moveTo(L, y); c.lineTo(L - 4 * s, y - 10 * s); c.moveTo(Rr, y); c.lineTo(Rr + 4 * s, y - 10 * s); c.moveTo(L - 12 * s, y - 12 * s); c.quadraticCurveTo(x, y - 6 * s, Rr + 12 * s, y - 12 * s); c.moveTo(L - 2 * s, y - 6 * s); c.lineTo(Rr + 2 * s, y - 6 * s); });
+      V.neonPath(c, col, 1.3, k * 0.85, () => { ironpalmCurl(c, L - 10 * s, y + 4, 3 * s, -1); ironpalmCurl(c, Rr + 10 * s, y + 4, 3 * s, 1); });
     } });
   }
   // an eye glyph (an almond and its pupil)
@@ -2734,9 +2851,11 @@ function windLaneBoost(x, y, vx, vy, now) {
   // ---- Hundred Palms (the Ultimate). Wind-up and the eight named strikes here; the last palm's shockwave is ip-hundred
   ABILITY_VFX.ironpalm.hundredpalms = c => {
     const I = P(), k = I.col(c.ent), h = I.hot(c.ent), e = c.ent;
+    const S = IRONPALM_ULT_SCALE;
     if (c.cam) c.cam.dim(0.4, 1.6);
-    ironpalmTiger(e, 1.15, k, h);
-    V.charge(c.x, c.y, { color: h, r: 70, n: 8, dur: 0.35, follow: e });
+    ironpalmTiger(e, 1.15, k, h, S);
+    V.charge(c.x, c.y, { color: h, r: 70 * S, n: 10, dur: 0.4, follow: e });
+    V.swirl(e.x, e.y, { r: 60 * S, color: k, dur: 0.5, inward: true, follow: e });
     V.shield(e, { shape: 'front', color: k, dur: 5, r: 40 });   // (Tiger Wall's stance, held)
     GRAND.forEach((name, i) => c.later(0.1 * (i + 1), () => {
       const a = Math.atan2(c.ty - e.y, c.tx - e.x) + rand(-0.6, 0.6), sx = e.x + Math.cos(a) * 12, sy = e.y + Math.sin(a) * 8;
@@ -2754,32 +2873,51 @@ function windLaneBoost(x, y, vx, vy, now) {
   };
   // the giant palm driven through, hands bursting out of the blow, the handprint left cracked in the floor
   KIT_VFX['ip-hundred'] = Object.assign((e, target) => {
-    const I = P(), k = I.col(e), h = I.hot(e), t = target || e, cam = FX.camFor(e), a = Math.atan2(t.y - e.y, t.x - e.x);
+    const I = P(), k = I.col(e), h = I.hot(e), t = target || e, cam = FX.camFor(e), a = Math.atan2(t.y - e.y, t.x - e.x), S = IRONPALM_ULT_SCALE;
     camHit(cam, '#fff0c8', 1.2);
-    shake(8);
+    shake(9);
     stopE(e, 0.16);
-    ironpalmHandFly(e.x, e.y, t.x, t.y, 3.4, h, 0.32, 0, 30);
-    V.spikeburst(t.x, t.y, { r: 62, n: 14, color: k, core: h, ink: '#2a1408', dur: 0.3 });
-    for (let i = 0; i < 9; i++) { const ra = i / 9 * Math.PI * 2 + rand(-0.15, 0.15), d = rand(110, 150);
-      ironpalmHandFly(t.x + Math.cos(ra) * 18, t.y + Math.sin(ra) * 12, t.x + Math.cos(ra) * d, t.y + Math.sin(ra) * d * 0.62, rand(1.5, 1.9), i % 2 ? h : k, 0.45, 0.03 + i * 0.012, 28); }
-    V.burst(t.x, t.y, { color: k, color2: '#ffffff', n: 12, speed: 280, kind: 'star', flashR: 80 });
-    V.debris(t.x, t.y, { n: 10, color: IP_ROCK });
-    V.smoke(t.x, t.y, { n: 4, r: 40, color: '#a89880', size: 30, a: 0.35, speed: 70, life: 1.2 });
-    // the aftermath: the giant print in the floor between the monk and the enemy, fingers toward the enemy
-    const m = { x: e.x + (t.x - e.x) * 0.3, y: e.y + (t.y - e.y) * 0.3 };
-    ironpalmFloorPrint(m.x - Math.cos(a) * 16, m.y - Math.sin(a) * 10, Math.atan2(Math.sin(a) / 0.62, Math.cos(a)), 7, k, 5, { delay: 0.1 });
+    ironpalmHandFly(e.x, e.y, t.x, t.y, 3.4 * S * 0.8, h, 0.32, 0, 30);
+    V.flash(t.x, t.y - 24, 60 * S, '#fff6e0', 0.16);   // the white-hot core of the blow, brief
+    // the giant palm of light stands up out of the blow, fingers to the sky, with light raying out round it
+    const rays = Array.from({ length: 18 }, (_, i) => ({ a: i / 18 * Math.PI * 2 + rand(-0.1, 0.1), L: rand(0.6, 1) }));
+    V.fx({ dur: 0.5, layer: 'air', draw: (c, p, tt, fx) => {
+      const q = 1 - Math.pow(1 - Math.min(1, p / 0.3), 3), kk = fx.a * Math.min(1, p / 0.08) * Math.min(1, (1 - p) / 0.45);
+      c.save(); c.globalCompositeOperation = 'lighter'; c.fillStyle = k;
+      c.globalAlpha = Math.min(1, 0.5 * kk); c.beginPath();   // tapered wedges of light
+      for (const r of rays) { const r0 = 16 * S * q, r1 = (36 + 64 * r.L) * S * q, w = 0.07, cy = t.y - 20;
+        c.moveTo(t.x + Math.cos(r.a - w) * r0, cy + Math.sin(r.a - w) * r0 * 0.7); c.lineTo(t.x + Math.cos(r.a) * r1, cy + Math.sin(r.a) * r1 * 0.7); c.lineTo(t.x + Math.cos(r.a + w) * r0, cy + Math.sin(r.a + w) * r0 * 0.7); c.closePath(); }
+      c.fill(); c.restore();
+      ironpalmHand(c, t.x, t.y - 10 - 44 * S * q, -Math.PI / 2, 2.6 * S * (0.6 + 0.4 * q), k, kk * 0.75);
+    } });
+    V.spikeburst(t.x, t.y, { r: 62 * S, n: 18, color: k, core: h, ink: '#2a1408', dur: 0.32 });
+    V.shock(t.x, t.y, { r: 120 * S, color: '#ffffff', dur: 0.4, w: 8 });
+    V.shock(t.x, t.y, { r: 90 * S, color: k, dur: 0.55, w: 5, delay: 0.06 });
+    for (let i = 0; i < 12; i++) { const ra = i / 12 * Math.PI * 2 + rand(-0.15, 0.15), d = rand(110, 150) * S;
+      ironpalmHandFly(t.x + Math.cos(ra) * 18 * S, t.y + Math.sin(ra) * 12 * S, t.x + Math.cos(ra) * d, t.y + Math.sin(ra) * d * 0.62, rand(1.5, 1.9) * Math.sqrt(S), i % 2 ? h : k, 0.45, 0.03 + i * 0.01, 28); }
+    V.burst(t.x, t.y, { color: k, color2: '#ffffff', n: 16, speed: 280 * S, kind: 'star', flashR: 50 * S });
+    V.debris(t.x, t.y, { n: 16, color: IP_ROCK, speed: 1.4, size: 1.3 });
+    V.smoke(t.x, t.y, { n: 6, r: 40 * S, color: '#a89880', size: 30 * S, a: 0.35, speed: 70 * S, life: 1.2 });
+    // the aftermath: the giant print in the floor between the monk and the enemy, fingers toward the enemy; its
+    // fill stays a faint dent, the glow is round its rim and in the cracks, so telegraphs read through it
+    const m = { x: e.x + (t.x - e.x) * 0.3, y: e.y + (t.y - e.y) * 0.3 }, ps = 7 * S * 0.75;
+    ironpalmFloorPrint(m.x - Math.cos(a) * 16 * S, m.y - Math.sin(a) * 10 * S, Math.atan2(Math.sin(a) / 0.62, Math.cos(a)), ps, k, 5, { delay: 0.1, rim: 0.12, ink: 0.26, warm: 0.04, crackA: 0.55, crackW: 3, ember: 0.35, ring: 12 * ps, heatT: 1.4 });
     // the bell over the party (Temple Bell's 15% for 8s): two gold rings
     for (let i = 0; i < 2; i++) V.shock(e.x, e.y, { r: 160 + i * 50, color: '#ffd27a', dur: 0.7, w: 6 - i * 2, delay: 0.1 + i * 0.16 });
-    FX.text(t.x, t.y - 100, 'Hundred Palms', '#fff0c8', 17, 1.1);
+    FX.text(t.x, t.y - 100 * S, 'Hundred Palms', '#fff0c8', 17, 1.1);
   }, { atTarget: true });
 
   // ---- the moves on the sheet
   Object.assign(ABILITY_VFX.ironpalm, {
     // Crane Step: feather arcs sweep round the monk, afterimages trail the hop, a flicked palm, feathers drift down
     crane: c => {
-      const I = P(), k = I.col(c.ent), e = c.ent, sx = c.x, sy = c.y;
-      V.smoke(sx, sy, { n: 2, color: '#d8ccb8', size: 16, a: 0.45, speed: 40 });
-      for (let i = 0; i < 2; i++) V.slash(sx, sy, c.ang + Math.PI * (0.7 + i * 0.6), { r: 36 + i * 10, span: 2.4, color: k, w: 0.16, dur: 0.3, flip: i === 1, sparks: 0 });
+      const I = P(), k = I.col(c.ent), e = c.ent, sx = c.x, sy = c.y, M = IRONPALM_MOVE_SCALE;
+      V.smoke(sx, sy, { n: 3, color: '#d8ccb8', size: 16 * M, a: 0.45, speed: 40 * M });
+      for (let i = 0; i < 3; i++) V.slash(sx, sy, c.ang + Math.PI * (0.7 + i * 0.45), { r: (36 + i * 10) * M, span: 2.4, color: i === 1 ? '#fff0c8' : k, w: 0.16, dur: 0.3 + i * 0.04, flip: i === 1, sparks: 0 });
+      V.fx({ dur: 0.4, layer: 'ground', draw: (ctx, p, t, fx) => {   // the feather-edged sweep round the feet: a crane's wing of streaks
+        const kk = fx.a * Math.min(1, p / 0.1) * (1 - p), a0 = c.ang + Math.PI * 0.6 + p * 2.2;
+        V.neonPath(ctx, k, 1.4, kk * 0.7, () => { for (let j = 0; j < 7; j++) { const a = a0 + j * 0.28, r0 = 30 * M, r1 = (44 + j * 2.5) * M; ctx.moveTo(sx + Math.cos(a) * r0, sy + Math.sin(a) * r0 * 0.6); ctx.quadraticCurveTo(sx + Math.cos(a + 0.2) * r1, sy + Math.sin(a + 0.2) * r1 * 0.6, sx + Math.cos(a + 0.42) * r1 * 1.05, sy + Math.sin(a + 0.42) * r1 * 0.63); } });
+      } });
       V.fx({ dur: 0.45, layer: 'air', draw: (ctx, p, t, fx) => {   // afterimages: pale ghosts of the monk between where it left and where it is
         const dx = e.x - sx, dy = e.y - sy, moved = Math.hypot(dx, dy) > 10, kk = fx.a * (1 - p);
         for (let i = 0; i < 3; i++) { const f = moved ? i / 3 : 0, x = sx + dx * f - (moved ? 0 : Math.cos(c.ang) * (8 + i * 9)), y = sy + dy * f - (moved ? 0 : Math.sin(c.ang) * (5 + i * 6)), a = kk * (0.35 - i * 0.08);
@@ -2787,49 +2925,58 @@ function windLaneBoost(x, y, vx, vy, now) {
           ctx.beginPath(); ctx.ellipse(x, y - 16, 7, 12, 0, 0, Math.PI * 2); ctx.moveTo(x + 5, y - 34); ctx.arc(x, y - 34, 5, 0, Math.PI * 2); ctx.fill(); ctx.globalCompositeOperation = 'source-over'; }
       } });
       c.later(0.08, () => { const p = I.impact(c, 0.45); I.print(p.x, p.y, p.a, k, 1, 0.35); });
-      c.later(0.16, () => { for (let i = 0; i < 4; i++) V.spawn({ x: e.x + rand(-26, 26), y: e.y + rand(-14, 14), z: rand(26, 44), vx: rand(-30, 30), vy: rand(-10, 10), vz: rand(-10, 20), g: 30, drag: 0.05,
-        life: rand(1, 1.4), size: rand(16, 20), color: i % 2 ? '#ffe0a0' : k, kind: 'feather', vr: rand(-2, 2), flutter: 4 }); });
+      c.later(0.16, () => { for (let i = 0; i < 6; i++) V.spawn({ x: e.x + rand(-34, 34), y: e.y + rand(-18, 18), z: rand(26, 50), vx: rand(-36, 36), vy: rand(-12, 12), vz: rand(-10, 20), g: 30, drag: 0.05,
+        life: rand(1.1, 1.6), size: rand(18, 24), color: i % 2 ? '#ffe0a0' : k, kind: 'feather', vr: rand(-2, 2), flutter: 4 }); });
     },
     // Rising Gate: the uppercut; a torii of light rises over the boss, rock thrown up, cloud scrolls left on the floor
     gate: c => c.later(0.14, () => {
-      const I = P(), k = I.col(c.ent), h = I.hot(c.ent);
+      const I = P(), k = I.col(c.ent), h = I.hot(c.ent), M = IRONPALM_MOVE_SCALE;
       I.impact(c, 1.1);
-      ironpalmTorii(c.tx, c.ty + 6, 76, 104, k, h, 0.6);
-      V.pillar(c.tx, c.ty, { r: 22, h: 120, color: k, dur: 0.45 });
-      V.debris(c.tx, c.ty, { n: 5, color: IP_ROCK, speed: 0.6, up: 1.3 });
-      V.smoke(c.tx, c.ty, { n: 3, color: '#c8b8a0', size: 22, a: 0.4, speed: 60 });
-      const m = toward(c, 0.72); c.later(0.3, () => ironpalmToriiMark(m.x, m.y + 8, 76, k, 2.2));
+      ironpalmTorii(c.tx, c.ty + 6, 76 * M, 104 * M, k, h, 0.65);
+      V.pillar(c.tx, c.ty, { r: 22 * M, h: 120 * M, color: k, dur: 0.45 });
+      V.shock(c.tx, c.ty, { r: 70 * M, color: k, dur: 0.35, w: 4 });
+      V.sparks(c.tx, c.ty, { color: h, n: 8, speed: 300, up: 380, spread: 0.6, angle: -Math.PI / 2 });
+      V.debris(c.tx, c.ty, { n: 8, color: IP_ROCK, speed: 0.75, up: 1.4 });
+      V.smoke(c.tx, c.ty, { n: 4, color: '#c8b8a0', size: 22 * M, a: 0.4, speed: 60 * M });
+      const m = toward(c, 0.72); c.later(0.3, () => ironpalmToriiMark(m.x, m.y + 8, 76 * M, k, 2.4, 0.7));
     }),
     // Thousand Palms: hands circle the monk, then flurry out one by one onto the boss, small prints left on the floor
     palms: c => {
-      const I = P(), k = I.col(c.ent), h = I.hot(c.ent), e = c.ent, n = 6, gap = 0.07, a0 = Math.random() * Math.PI * 2;
-      const orbit = (i, t) => { const a = a0 + i * Math.PI * 2 / n + t * 9; return { x: e.x + Math.cos(a) * 34, y: e.y + Math.sin(a) * 20, a }; };
-      V.fx({ dur: 0.02 + n * gap, layer: 'air', draw: (ctx, p, t, fx) => { for (let i = 0; i < n; i++) { if (t > 0.02 + i * gap) continue; const o = orbit(i, t); ironpalmHand(ctx, o.x, o.y - 22, o.a + Math.PI / 2, 0.75, i % 2 ? h : k, fx.a * Math.min(1, t / 0.06) * 0.9); } } });
+      const I = P(), k = I.col(c.ent), h = I.hot(c.ent), e = c.ent, n = 6, gap = 0.07, a0 = Math.random() * Math.PI * 2, M = IRONPALM_MOVE_SCALE;
+      const orbit = (i, t) => { const a = a0 + i * Math.PI * 2 / n + t * 9; return { x: e.x + Math.cos(a) * 34 * M, y: e.y + Math.sin(a) * 20 * M, a }; };
+      V.fx({ dur: 0.02 + n * gap, layer: 'air', draw: (ctx, p, t, fx) => { const kk = fx.a * Math.min(1, t / 0.06);
+        V.neonRing(ctx, e.x, e.y - 22, 34 * M, k, 1.4, kk * 0.4, 0.59);   // the orbit's trail
+        for (let i = 0; i < n; i++) { if (t > 0.02 + i * gap) continue; const o = orbit(i, t); ironpalmHand(ctx, o.x, o.y - 22, o.a + Math.PI / 2, 0.75 * M, i % 2 ? h : k, kk * 0.9); } } });
       for (let i = 0; i < n; i++) c.later(0.02 + i * gap, () => {
         const o = orbit(i, 0.02 + i * gap), a = Math.atan2(c.ty - c.y, c.tx - c.x) + rand(-0.8, 0.8), x = c.tx - Math.cos(a) * rand(10, 26) + rand(-10, 10), y = c.ty - Math.sin(a) * rand(10, 26) + rand(-8, 8);
-        ironpalmHandFly(o.x, o.y + 2, x, y, 1, i % 2 ? h : k, 0.1, 0, 20);
+        ironpalmHandFly(o.x, o.y + 2, x, y, M, i % 2 ? h : k, 0.1, 0, 20);
         c.later(0.09, () => {
           I.print(x, y, a, i % 2 ? h : k, rand(0.9, 1.3), 0.35);
           V.spawn({ x, y, z: 16, life: 0.14, size: 36, size1: 8, color: h, kind: 'star', vr: 6 });
           const f = { x: c.x + (x - c.x) * 0.8, y: c.y + (y - c.y) * 0.8 };   // (short of the boss's feet, so its sprite doesn't hide the print)
-          ironpalmFloorPrint(f.x + rand(-14, 14), f.y + rand(-10, 10), a + rand(-0.5, 0.5), 1.15, k, 2.2, { cracks: 0 });
+          ironpalmFloorPrint(f.x + rand(-18, 18), f.y + rand(-12, 12), a + rand(-0.5, 0.5), 1.15 * M, k, 2.4, { cracks: 0, rim: 0.18, ink: 0.3, warm: 0.1 });
           stopE(c.ent, 0.04); shake(1.5);
         });
       });
-      c.later(0.12 + n * gap, () => { V.spikeburst(c.tx, c.ty, { r: 60, n: 14, color: k, core: h, ink: '#2a1408', dur: 0.34 }); V.shock(c.tx, c.ty, { r: 100, color: k, dur: 0.4, w: 5 });
-        V.burst(c.tx, c.ty, { color: k, color2: '#ffffff', n: 10, speed: 240, kind: 'star', flashR: 50 }); stopE(c.ent, 0.1); shake(5); });
+      c.later(0.12 + n * gap, () => { V.spikeburst(c.tx, c.ty, { r: 60 * M, n: 16, color: k, core: h, ink: '#2a1408', dur: 0.34 }); V.shock(c.tx, c.ty, { r: 100 * M, color: k, dur: 0.4, w: 5 });
+        for (let i = 0; i < 5; i++) { const ra = c.ang + (i - 2) * 0.5; ironpalmHandFly(c.tx, c.ty, c.tx + Math.cos(ra) * 70 * M, c.ty + Math.sin(ra) * 44 * M, 0.9 * M, i % 2 ? h : k, 0.3, i * 0.015, 22); }   // the flurry bursting through
+        V.debris(c.tx, c.ty, { n: 5, color: IP_ROCK, speed: 0.8 });
+        V.burst(c.tx, c.ty, { color: k, color2: '#ffffff', n: 12, speed: 240 * M, kind: 'star', flashR: 50 * M }); stopE(c.ent, 0.1); shake(5); });
     },
     // Read Stance: still rings open round the monk one inside the other, a cross of ticks and an eye at each point
     read: c => {
-      const I = P(), k = I.col(c.ent), e = c.ent;
-      V.fx({ dur: 1.1, layer: 'ground', draw: (ctx, p, t, fx) => {
+      const I = P(), k = I.col(c.ent), e = c.ent, M = IRONPALM_MOVE_SCALE;
+      V.fx({ dur: 1.2, layer: 'ground', draw: (ctx, p, t, fx) => {
         const kk = fx.a * Math.min(1, (1 - p) / 0.45), x = e.x, y = e.y, F = 0.6;
-        for (let i = 0; i < 3; i++) { const q = Math.min(1, Math.max(0, (t - i * 0.07) / 0.18)); if (q <= 0) continue; V.neonRing(ctx, x, y, (26 + i * 18) * (0.8 + 0.2 * q), k, 1.6 - i * 0.3, kk * q * (0.6 - i * 0.12), F); }
+        V.glowAt(ctx, x, y, 40 * M, k, 0.18 * kk);
+        for (let i = 0; i < 4; i++) { const q = Math.min(1, Math.max(0, (t - i * 0.06) / 0.18)); if (q <= 0) continue; V.neonRing(ctx, x, y, (22 + i * 16) * M * (0.8 + 0.2 * q), k, 1.7 - i * 0.3, kk * q * (0.62 - i * 0.11), F); }
         const q = Math.min(1, Math.max(0, (t - 0.18) / 0.15)); if (q <= 0) return;
-        V.neonPath(ctx, k, 1.3, kk * q * 0.55, () => { for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2, cx = Math.cos(a), cy = Math.sin(a) * F; ctx.moveTo(x + cx * 74, y + cy * 74); ctx.lineTo(x + cx * 92, y + cy * 92); } });
-        V.neonPath(ctx, '#fff0c8', 1.2, kk * q * 0.6, () => { for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2; ironpalmEye(ctx, x + Math.cos(a) * 66, y + Math.sin(a) * 66 * F, 0.8); } });
+        V.neonPath(ctx, k, 1.3, kk * q * 0.6, () => { for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2, cx = Math.cos(a), cy = Math.sin(a) * F; ctx.moveTo(x + cx * 76 * M, y + cy * 76 * M); ctx.lineTo(x + cx * 100 * M, y + cy * 100 * M);
+          for (let j = 0; j < 3; j++) { const r = (30 + j * 14) * M; ctx.moveTo(x + cx * r - cy / F * 3, y + cy * r + cx * 3 * F); ctx.lineTo(x + cx * r + cy / F * 3, y + cy * r - cx * 3 * F); } } });   // the cross, ticked along its arms
+        V.neonPath(ctx, '#fff0c8', 1.3, kk * q * 0.7, () => { for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2; ironpalmEye(ctx, x + Math.cos(a) * 68 * M, y + Math.sin(a) * 68 * M * F, 0.8 * M); } });
       } });
-      V.shock(c.x, c.y, { r: 50, color: '#fff0c8', dur: 0.35, w: 2 });
+      V.shock(c.x, c.y, { r: 50 * M, color: '#fff0c8', dur: 0.35, w: 2 });
+      V.shock(c.x, c.y, { r: 90 * M, color: k, dur: 0.5, w: 2, delay: 0.1 });
     },
   });
 })();
@@ -2848,6 +2995,8 @@ function windLaneBoost(x, y, vx, vy, now) {
   const mcol = m => (G() ? G().MCOL(m) : TGLOW);
   const mouthOf = e => (G() ? G().mouth(e) : { x: e.x, y: e.y, z: 30 });
   const camHit = (cam, col, s = 1) => { if (cam) { cam.stop(0.08 + 0.03 * s); cam.punch(0.05 + 0.025 * s, 0.55); cam.flash(col, 0.18 + 0.06 * s, 0.35); } };
+  // the size knobs: Maw of Ruin's footprint (the jaw, the bite, the scorch left), and the supporting moves'
+  const GORGEMAW_ULT_SCALE = 1.8, GORGEMAW_MOVE_SCALE = 1.3;
 
   // ---- primitives
   // the Maw: a band of purple flesh with dark spines on its back and glowing teeth along its inside, open by `gap`
@@ -2876,15 +3025,21 @@ function windLaneBoost(x, y, vx, vy, now) {
   // tooth marks scorched into the floor where the Maw shut: dark fang-shaped burns, their edges still glowing a moment
   function gorgemawScorch(x, y, R, dur, o = {}) {
     const n = o.teeth ?? 18, a0 = o.a0 ?? 0, span = o.span ?? Math.PI * 2, rr = Array.from({ length: n }, () => rand(0.85, 1.15));
+    // o.cracks: lava cracks running out from the ring (the Ultimate's); o.glow: the teeth's edges keep a faint glow
+    const cracks = Array.from({ length: o.cracks || 0 }, (_, i) => { const ca = a0 + span * (i + rand(0.2, 0.8)) / (o.cracks || 1); let px = Math.cos(ca) * R * 1.02, py = Math.sin(ca) * R * 1.02; const pts = [[px, py]];
+      for (let j = 0; j < 3; j++) { const aa = ca + rand(-0.4, 0.4), L = R * rand(0.08, 0.16); px += Math.cos(aa) * L; py += Math.sin(aa) * L; pts.push([px, py]); } return pts; });
     V.fx({ dur, delay: o.delay, layer: 'ground', draw: (c, p, t, e) => {
       const k = e.a * Math.min(1, p / 0.05) * Math.min(1, (1 - p) / 0.4), heat = Math.max(0, 1 - t / 1.2);
       c.save(); c.translate(x, y); c.scale(1, 0.7);
       c.globalAlpha = 0.16 * k; c.strokeStyle = GINK; c.lineWidth = R * 0.22; c.beginPath(); c.arc(0, 0, R * 0.95, a0, a0 + span); c.stroke();   // the charred band
+      if (cracks.length) { c.lineCap = 'round'; c.lineJoin = 'round'; c.beginPath(); for (const pts of cracks) { c.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length; i++) c.lineTo(pts[i][0], pts[i][1]); }
+        c.globalAlpha = 0.4 * k; c.strokeStyle = GINK; c.lineWidth = 3; c.stroke();
+        c.globalCompositeOperation = 'lighter'; c.globalAlpha = k * (0.22 + 0.5 * heat); c.strokeStyle = LAVA; c.lineWidth = 1.3; c.stroke(); c.globalCompositeOperation = 'source-over'; }
       c.beginPath();
       for (let i = 0; i < n; i++) { const a = a0 + span * (i + 0.5) / n, w = span / n * 0.32, r0 = R * 1.02, L = R * 0.26 * rr[i];
         c.moveTo(Math.cos(a - w) * r0, Math.sin(a - w) * r0); c.lineTo(Math.cos(a) * (r0 - L), Math.sin(a) * (r0 - L)); c.lineTo(Math.cos(a + w) * r0, Math.sin(a + w) * r0); c.closePath(); }
-      c.globalAlpha = 0.34 * k; c.fillStyle = GINK; c.fill();
-      c.globalCompositeOperation = 'lighter'; c.globalAlpha = k * (0.08 + 0.45 * heat); c.strokeStyle = TGLOW; c.lineWidth = 1.4; c.stroke();
+      c.globalAlpha = (o.ink ?? 0.34) * k; c.fillStyle = GINK; c.fill();
+      c.globalCompositeOperation = 'lighter'; c.globalAlpha = k * ((o.glow ?? 0.08) + 0.45 * heat); c.strokeStyle = TGLOW; c.lineWidth = o.lw ?? 1.4; c.stroke();
       c.restore();
     } });
   }
@@ -2929,8 +3084,9 @@ function windLaneBoost(x, y, vx, vy, now) {
     V.fx({ dur, layer: 'ground', draw: (c, p, t, e) => {
       const k = e.a * Math.min(1, p / 0.06) * Math.min(1, (1 - p) / 0.45);
       for (let i = 0; i < blobs.length; i++) { const b = blobs[i];
-        c.globalAlpha = 0.4 * k; c.fillStyle = SLIME_D; c.beginPath(); c.ellipse(b.x, b.y, b.r * 1.15, b.r * 0.65, 0, 0, Math.PI * 2); c.fill();
-        V.glowAt(c, b.x, b.y, b.r * 1.3, i ? SLIME : col, (i ? 0.25 : 0.4) * k * (0.8 + 0.2 * Math.sin(t * 6 + b.ph))); }
+        c.globalAlpha = 0.42 * k; c.fillStyle = SLIME_D; c.beginPath(); c.ellipse(b.x, b.y, b.r * 1.15, b.r * 0.65, 0, 0, Math.PI * 2); c.fill();
+        c.globalAlpha = 0.5 * k; c.strokeStyle = SLIME; c.lineWidth = 1.2; c.stroke();   // a bright wet rim
+        V.glowAt(c, b.x, b.y, b.r * 1.3, i ? SLIME : col, (i ? 0.32 : 0.5) * k * (0.8 + 0.2 * Math.sin(t * 6 + b.ph))); }
       c.globalAlpha = 1;
     } });
   }
@@ -2953,33 +3109,41 @@ function windLaneBoost(x, y, vx, vy, now) {
 
   // ---- Maw of Ruin (the Ultimate). The jaw, the bite and the scorch here; the Morsels themselves are maw-ruin
   ABILITY_VFX.gorgemaw.mawofruin = c => {
-    const g = G(), e = c.ent, a = Math.atan2(c.ty - c.y, c.tx - c.x), R = 80;
+    const g = G(), e = c.ent, a = Math.atan2(c.ty - c.y, c.tx - c.x), S = GORGEMAW_ULT_SCALE, R = 80 * S, LAND = 0.48;
     if (c.cam) c.cam.dim(0.42, 1.4);
     if (g) { const q = g.mouth(e); g.chomp(q.x, q.y, q.z, 1.6, TGLOW, 0.42); }
-    // wind-up: the jaw unhinges round the Gorgemaw, open on the enemy, the throat glowing
-    V.fx({ dur: 0.48, layer: 'ground', draw: (ctx, p, t, fx) => {
-      const open = Math.min(1, p / 0.55), shut = p > 0.82 ? (p - 0.82) / 0.18 : 0, k = fx.a * Math.min(1, p / 0.1) * (1 - shut * 0.6);
-      const x = e.x - Math.cos(a) * 8, y = e.y - Math.sin(a) * 5;
-      V.glowAt(ctx, x + Math.cos(a) * 40, y + Math.sin(a) * 26, 56, '#ff3a6a', 0.3 * k);
-      gorgemawMaw(ctx, x, y, 52 + 12 * open, a, (0.5 + 1.3 * open) * (1 - shut), k, { teeth: 16, thick: 0.36 });
+    // wind-up: the jaw unhinges round the Gorgemaw, open on the enemy, the throat glowing, the air torn into it
+    V.fx({ dur: LAND + 0.06, layer: 'ground', draw: (ctx, p, t, fx) => {
+      const open = 1 - Math.pow(1 - Math.min(1, p / 0.5), 2), shut = p > 0.84 ? (p - 0.84) / 0.16 : 0, k = fx.a * Math.min(1, p / 0.1) * (1 - shut * 0.6);
+      const x = e.x - Math.cos(a) * 14 * S, y = e.y - Math.sin(a) * 9 * S, Rj = (44 + 20 * open) * S;
+      V.glowAt(ctx, x + Math.cos(a) * 30 * S, y + Math.sin(a) * 20 * S, 60 * S, '#ff3a6a', 0.32 * k);
+      V.glowAt(ctx, x, y, Rj * 0.6, '#3a0420', 0.5 * k);   // the dark throat
+      // the wind: streaks curving in from in front of it, into the jaw
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round'; ctx.strokeStyle = '#f0dce8'; ctx.lineWidth = 2;
+      for (let j = 0; j < 9; j++) { const off = (j - 4) * 0.16, u0 = (t * 2.2 + j * 0.29) % 1; ctx.globalAlpha = Math.min(1, 0.4 * k * Math.sin(u0 * Math.PI)); ctx.beginPath();
+        for (let i = 0; i <= 5; i++) { const u = Math.min(1, u0 + i * 0.05), r = (140 * (1 - u) + 30) * S * 0.8, aa = a + off * Math.pow(1 - u, 0.6) * 2.4; const px = x + Math.cos(aa) * r, py = y + Math.sin(aa) * r * 0.7; i ? ctx.lineTo(px, py) : ctx.moveTo(px, py); }
+        ctx.stroke(); }
+      ctx.restore();
+      gorgemawMaw(ctx, x, y, Rj, a, (0.5 + 1.4 * open) * (1 - shut), k, { teeth: 20, thick: 0.38 });
     } });
     // everything in front of it streams in: rock and torn air
-    for (let i = 0; i < 14; i++) { const s = rand(0.3, 1), aa = a + rand(-0.7, 0.7), d = 40 + Math.hypot(c.tx - c.x, c.ty - c.y) * s + rand(0, 50), x = c.x + Math.cos(aa) * d, y = c.y + Math.sin(aa) * d * 0.8, rock = i % 3 === 0;
-      V.spawn({ x, y, z: rock ? 8 : rand(6, 30), vx: (c.x - x) * 2.4, vy: (c.y - y) * 2.4, vz: 20, life: 0.4, size: rock ? rand(6, 9) : rand(7, 11), size1: rock ? 4 : 2, color: rock ? '#3a2a30' : '#f0dce8', kind: rock ? 'shard' : undefined, add: rock ? false : undefined, stretch: rock ? 0 : 4, vr: rock ? 10 : 0 }); }
-    c.later(0.42, () => {
+    for (let i = 0; i < 18; i++) { const s = rand(0.3, 1), aa = a + rand(-0.7, 0.7), d = 40 * S + Math.hypot(c.tx - c.x, c.ty - c.y) * s + rand(0, 60 * S), x = c.x + Math.cos(aa) * d, y = c.y + Math.sin(aa) * d * 0.8, rock = i % 3 === 0;
+      V.spawn({ x, y, z: rock ? 8 : rand(6, 30), vx: (c.x - x) * 2.2, vy: (c.y - y) * 2.2, vz: 20, life: 0.42, size: rock ? rand(7, 11) : rand(8, 13), size1: rock ? 4 : 2, color: rock ? '#3a2a30' : '#f0dce8', kind: rock ? 'shard' : undefined, add: rock ? false : undefined, stretch: rock ? 0 : 5, vr: rock ? 10 : 0 }); }
+    c.later(LAND, () => {
       camHit(c.cam, '#ffc080', 1.1);
-      shake(9);
+      shake(10);
       // the ring of teeth slams shut round the enemy
       V.fx({ dur: 0.5, layer: 'ground', draw: (ctx, p, t, fx) => {
         const q = Math.min(1, p / 0.22), k = fx.a * Math.min(1, (1 - p) / 0.35);
         V.glowAt(ctx, c.tx, c.ty, R * 1.1, '#ff5a3a', 0.35 * k * (1 - p));
-        gorgemawMaw(ctx, c.tx, c.ty, R * (1.35 - 0.35 * q), a + Math.PI, 1.6 * (1 - q), k, { teeth: 22, thick: 0.3, bite: 0.8 + 0.4 * q });
+        gorgemawMaw(ctx, c.tx, c.ty, R * (1.35 - 0.35 * q), a + Math.PI, 1.6 * (1 - q), k, { teeth: 24, thick: 0.32, bite: 0.8 + 0.4 * q });
       } });
-      if (g) g.crumbs(c.tx, c.ty, 20, '#c8a070', 10);
-      V.spikeburst(c.tx, c.ty, { r: 56, n: 14, color: '#d0306a', core: '#ffe0b0', ink: GINK, dur: 0.28 });
-      for (let i = 0; i < 2; i++) V.shock(c.tx, c.ty, { r: 150 + i * 50, color: i ? TGLOW : '#ffffff', dur: 0.55, w: 7 - i * 3, delay: 0.08 + i * 0.08 });
-      V.debris(c.tx, c.ty, { n: 10, color: '#3a2a30', hot: true });
-      gorgemawScorch(c.tx, c.ty, R, 4, { teeth: 22, delay: 0.3 });
+      V.flash(c.tx, c.ty - 20, 46 * S, '#ffe0b0', 0.15);   // the bright core of the bite, brief
+      if (g) g.crumbs(c.tx, c.ty, 20 * S, '#c8a070', 14);
+      V.spikeburst(c.tx, c.ty, { r: 56 * S, n: 18, color: '#d0306a', core: '#ffe0b0', ink: GINK, dur: 0.3 });
+      for (let i = 0; i < 2; i++) V.shock(c.tx, c.ty, { r: (110 + i * 40) * S, color: i ? TGLOW : '#ffffff', dur: 0.55, w: 8 - i * 3, delay: 0.08 + i * 0.08 });
+      V.debris(c.tx, c.ty, { n: 16, color: '#3a2a30', hot: true, speed: 1.5, size: 1.4 });
+      gorgemawScorch(c.tx, c.ty, R * 0.9, 4.5, { teeth: 24, delay: 0.3, cracks: 14, ink: 0.42, glow: 0.2, lw: 2 });
       // the warmth spills over the party: a gold ring off the Gorgemaw
       V.shock(e.x, e.y, { r: 170, color: '#ffd27a', dur: 0.7, w: 5, delay: 0.1 });
       V.plus(e.x, e.y, { color: '#ffd8a0', n: 5 });
@@ -2990,43 +3154,48 @@ function windLaneBoost(x, y, vx, vy, now) {
   // fly home round the teeth (the warmth: the heal and the party's shields)
   KIT_VFX['maw-ruin'] = Object.assign((e, target, d) => {
     const letters = String((d && d.m) || '').slice(0, 6), t = target || e, mouth = () => mouthOf(e);
-    for (let i = 0; i < letters.length; i++) gorgemawSpirit(gorgemawArc(mouth, { x: t.x, y: t.y, z: 16 }, i % 2 ? 0.25 : -0.25, 30), mcol(LETTER[letters[i]] || 'ring'), 0.3, 0.06 + i * 0.05);
+    const S = GORGEMAW_ULT_SCALE, ss = Math.sqrt(S);
+    for (let i = 0; i < letters.length; i++) gorgemawSpirit(gorgemawArc(mouth, { x: t.x, y: t.y, z: 16 }, i % 2 ? 0.25 : -0.25, 30 * ss), mcol(LETTER[letters[i]] || 'ring'), 0.3, 0.06 + i * 0.05, ss);
     const home = letters || 'rr';
     for (let i = 0; i < home.length; i++) { const a = Math.random() * Math.PI * 2;
-      gorgemawSpirit(gorgemawArc({ x: t.x + Math.cos(a) * 80, y: t.y + Math.sin(a) * 56, z: 10 }, mouth, i % 2 ? 0.3 : -0.3, 50), letters ? mcol(LETTER[home[i]] || 'ring') : TGLOW, 0.6, 1 + i * 0.08); }
+      gorgemawSpirit(gorgemawArc({ x: t.x + Math.cos(a) * 72 * S, y: t.y + Math.sin(a) * 50 * S, z: 10 }, mouth, i % 2 ? 0.3 : -0.3, 50 * ss), letters ? mcol(LETTER[home[i]] || 'ring') : TGLOW, 0.7, 1 + i * 0.08, ss); }
   }, { atTarget: true });
 
   // ---- the moves on the sheet
   Object.assign(ABILITY_VFX.gorgemaw, {
     // Gnash: a crescent of jaw and teeth sweeps onto the target and bites, a scorched crescent left a moment
     gnash: c => {
-      const g = G(), a = Math.atan2(c.ty - c.y, c.tx - c.x), dist = Math.hypot(c.tx - c.x, c.ty - c.y), d = Math.min(dist, 48), x = c.x + Math.cos(a) * d, y = c.y + Math.sin(a) * d;
+      const g = G(), M = GORGEMAW_MOVE_SCALE, a = Math.atan2(c.ty - c.y, c.tx - c.x), dist = Math.hypot(c.tx - c.x, c.ty - c.y), d = Math.min(dist, 48), x = c.x + Math.cos(a) * d, y = c.y + Math.sin(a) * d;
       V.fx({ dur: 0.3, layer: 'air', draw: (ctx, p, t, fx) => {
         const q = Math.min(1, p / 0.4), k = fx.a * Math.min(1, p / 0.08) * Math.min(1, (1 - p) / 0.4);
-        gorgemawMaw(ctx, x, y, 30 * (1.25 - 0.25 * q), a + 0.5 * (1 - q), 3.2 - 0.9 * q, k, { teeth: 9, thick: 0.4, z: 14, flat: 0.75 });
+        // the swing: pale streaks trailing the jaw's sweep
+        ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round'; ctx.strokeStyle = '#f0dce8'; ctx.lineWidth = 1.8; ctx.globalAlpha = Math.min(1, 0.45 * k * (1 - q * 0.5)); ctx.beginPath();
+        for (let j = 0; j < 4; j++) { const r = (22 + j * 7) * M, a1 = a + 0.5 * (1 - q) + 1.2, a2 = a1 + 1.1; ctx.moveTo(x + Math.cos(a1) * r, y - 14 + Math.sin(a1) * r * 0.75); ctx.quadraticCurveTo(x + Math.cos((a1 + a2) / 2) * r * 1.1, y - 14 + Math.sin((a1 + a2) / 2) * r * 0.8, x + Math.cos(a2) * r, y - 14 + Math.sin(a2) * r * 0.75); }
+        ctx.stroke(); ctx.restore();
+        gorgemawMaw(ctx, x, y, 30 * M * (1.25 - 0.25 * q), a + 0.5 * (1 - q), 3.2 - 0.9 * q, k, { teeth: 11, thick: 0.4, z: 14, flat: 0.75 });
       } });
-      c.later(0.1, () => { V.hit(c.tx, c.ty, '#ffe0b0', 0.55); if (g) g.crumbs(c.tx, c.ty, 16, '#c8a070', 3);
-        gorgemawScorch(x, y, 26, 0.9, { teeth: 7, a0: Math.atan2(Math.sin(a) / 0.7, Math.cos(a)) + 1.45, span: Math.PI * 2 - 2.9 }); });
+      c.later(0.1, () => { V.hit(c.tx, c.ty, '#ffe0b0', 0.7); if (g) g.crumbs(c.tx, c.ty, 16 * M, '#c8a070', 5); V.debris(c.tx, c.ty, { n: 3, color: '#3a2a30', speed: 0.6 });
+        gorgemawScorch(x, y, 26 * M, 1.3, { teeth: 9, a0: Math.atan2(Math.sin(a) / 0.7, Math.cos(a)) + 1.45, span: Math.PI * 2 - 2.9, glow: 0.18, cracks: 4, lw: 1.8 }); });
     },
     // Open Wide: the jaw opens on the front, a funnel of wind pours into it, a dark spiral is left on the floor
-    wide: c => { const e = c.ent, dur = 1.6; if (e.st) e.st.jawUntil = FX.now + 1.5;
+    wide: c => { const e = c.ent, dur = 1.6, M = GORGEMAW_MOVE_SCALE; if (e.st) e.st.jawUntil = FX.now + 1.5;
       V.fx({ dur, layer: 'ground', draw: (ctx, p, t, fx) => {   // the funnel: streaks of air running in along a cone
         const m = mouthOf(e), a = e.angle || 0, k = fx.a * Math.min(1, t / 0.12) * Math.min(1, (1 - p) / 0.2);
-        ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round'; ctx.strokeStyle = '#f0dce8'; ctx.lineWidth = 1.8;
-        for (let j = 0; j < 7; j++) { const off = (j - 3) * 0.2, sw = j % 2 ? 1 : -1;
-          for (let s = 0; s < 2; s++) { const u0 = (t * 1.6 + j * 0.37 + s * 0.5) % 1; ctx.globalAlpha = Math.min(1, 0.45 * k * Math.sin(u0 * Math.PI)); ctx.beginPath();
-            for (let i = 0; i <= 4; i++) { const u = Math.min(1, u0 + i * 0.04), r = 150 * (1 - u) + 10, aa = a + off * Math.pow(1 - u, 0.7) + sw * 0.4 * u; const px = m.x + Math.cos(aa) * r, py = m.y + Math.sin(aa) * r * 0.7; i ? ctx.lineTo(px, py) : ctx.moveTo(px, py); }
+        ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round'; ctx.strokeStyle = '#f0dce8'; ctx.lineWidth = 2;
+        for (let j = 0; j < 9; j++) { const off = (j - 4) * 0.16, sw = j % 2 ? 1 : -1;
+          for (let s = 0; s < 2; s++) { const u0 = (t * 1.6 + j * 0.37 + s * 0.5) % 1; ctx.globalAlpha = Math.min(1, 0.5 * k * Math.sin(u0 * Math.PI)); ctx.beginPath();
+            for (let i = 0; i <= 4; i++) { const u = Math.min(1, u0 + i * 0.04), r = 150 * M * (1 - u) + 10, aa = a + off * Math.pow(1 - u, 0.7) + sw * 0.4 * u; const px = m.x + Math.cos(aa) * r, py = m.y + Math.sin(aa) * r * 0.7; i ? ctx.lineTo(px, py) : ctx.moveTo(px, py); }
             ctx.stroke(); } }
         ctx.restore();
       } });
       V.fx({ dur, layer: 'air', draw: (ctx, p, t, fx) => {   // the jaw itself, open toward the front
         const m = mouthOf(e), open = Math.min(1, t / 0.12) * (p > 0.85 ? (1 - p) / 0.15 : 1), k = fx.a * Math.min(1, t / 0.08) * (p > 0.85 ? (1 - p) / 0.15 : 1), a = e.angle || 0;
-        V.glowAt(ctx, m.x + Math.cos(a) * 10, m.y - m.z + Math.sin(a) * 6, 22, '#ff3a6a', 0.35 * k);
-        gorgemawMaw(ctx, m.x - Math.cos(a) * 4, m.y, 16 + 6 * open, a, 0.4 + 1.5 * open, k, { teeth: 10, thick: 0.42, z: m.z, flat: 0.8 });
-      }, tick: () => { if (Math.random() < 0.5) { const m = mouthOf(e), a = (e.angle || 0) + rand(-0.7, 0.7), d = rand(70, 140), x = m.x + Math.cos(a) * d, y = m.y + Math.sin(a) * d * 0.7, rock = Math.random() < 0.3;
-        V.spawn({ x, y, z: rock ? 6 : rand(10, 34), vx: (m.x - x) * 3.5, vy: (m.y - y) * 3.5, vz: rock ? 30 : 0, life: 0.28, size: rock ? 6 : 6, size1: rock ? 3 : 1, color: rock ? '#3a2a30' : '#ffe8d8', kind: rock ? 'shard' : undefined, add: rock ? false : undefined, stretch: rock ? 0 : 4, vr: rock ? 10 : 0 }); } } });
-      V.swirl(e.x, e.y, { r: 44, color: '#ffb070', dur: 0.45, inward: true, follow: e });
-      c.later(dur * 0.75, () => { const a = e.angle || 0; gorgemawSpiral(e.x + Math.cos(a) * 44, e.y + Math.sin(a) * 28, 34, 1.4, { arms: 4, color: '#a04a9a', glow: 0.35, spin: -1.5 }); });
+        V.glowAt(ctx, m.x + Math.cos(a) * 10, m.y - m.z + Math.sin(a) * 6, 22 * M, '#ff3a6a', 0.35 * k);
+        gorgemawMaw(ctx, m.x - Math.cos(a) * 4, m.y, (16 + 6 * open) * M, a, 0.4 + 1.5 * open, k, { teeth: 12, thick: 0.42, z: m.z, flat: 0.8 });
+      }, tick: () => { if (Math.random() < 0.55) { const m = mouthOf(e), a = (e.angle || 0) + rand(-0.7, 0.7), d = rand(70, 140) * M, x = m.x + Math.cos(a) * d, y = m.y + Math.sin(a) * d * 0.7, rock = Math.random() < 0.3;
+        V.spawn({ x, y, z: rock ? 6 : rand(10, 34), vx: (m.x - x) * 3.5, vy: (m.y - y) * 3.5, vz: rock ? 30 : 0, life: 0.28, size: rock ? 7 : 7, size1: rock ? 3 : 1, color: rock ? '#3a2a30' : '#ffe8d8', kind: rock ? 'shard' : undefined, add: rock ? false : undefined, stretch: rock ? 0 : 4, vr: rock ? 10 : 0 }); } } });
+      V.swirl(e.x, e.y, { r: 44 * M, color: '#ffb070', dur: 0.45, inward: true, follow: e });
+      c.later(dur * 0.75, () => { const a = e.angle || 0; gorgemawSpiral(e.x + Math.cos(a) * 44 * M, e.y + Math.sin(a) * 28 * M, 34 * M, 1.8, { arms: 4, color: '#a04a9a', glow: 0.48, spin: -1.5 }); });
     },
   });
 
@@ -3035,13 +3204,13 @@ function windLaneBoost(x, y, vx, vy, now) {
   // teeth (slime spattered where it bites), a Spike a great yellow spike
   KIT_VFX.spit = Object.assign((e, target, d) => {
     const g = G(); if (!g) return;
-    const m = (d && d.m) || 'ring', f = d && d.f, s = f ? 1.7 : 1, col = g.MCOL(m), t = target || { x: e.x + Math.cos(e.angle || 0) * 200, y: e.y + Math.sin(e.angle || 0) * 200 };
+    const m = (d && d.m) || 'ring', f = d && d.f, s = (f ? 1.7 : 1) * GORGEMAW_MOVE_SCALE, col = g.MCOL(m), t = target || { x: e.x + Math.cos(e.angle || 0) * 200, y: e.y + Math.sin(e.angle || 0) * 200 };
     const go = () => {
       const q = g.mouth(e);
       g.chomp(q.x, q.y, q.z, 0.8 * s, col, 0.2);
       for (let i = 0; i < 3; i++) V.spawn({ x: q.x + rand(-6, 6), y: q.y, z: q.z, vx: rand(-20, 20), vz: rand(-20, 30), g: 400, life: 0.45, size: rand(4, 6), color: SLIME, kind: 'drop', add: false });   // drool
       if (m === 'ring') gorgemawGlob(q, t, col, 1.2 * s, (x, y) => { for (let i = 0; i < (f ? 3 : 2); i++) V.shock(x, y, { r: (60 + i * 30) * s, color: col, dur: 0.45, w: 6, delay: i * 0.08 });
-        V.spikeburst(x, y, { r: 38 * s, n: 12, color: SLIME, core: '#f0ffb0', ink: '#14300a', dur: 0.3 }); V.splash(x, y, { n: 8, color: SLIME }); gorgemawPuddles(x, y, col, s, 2); shake(2 * s); });
+        V.spikeburst(x, y, { r: 38 * s, n: 14, color: SLIME, core: '#f0ffb0', ink: '#14300a', dur: 0.3 }); V.splash(x, y, { n: 10, color: SLIME }); V.flash(x, y - 12, 26 * s, '#f0ffb0', 0.14); gorgemawPuddles(x, y, col, s * 1.35, 2.4); shake(2 * s); });
       else if (m === 'lance') V.missile(q.x, q.y, t.x, t.y, { style: 'blade', color: col, speed: 1500, size: 1.4 * s, onHit: (x, y) => { V.spikeburst(x, y, { r: 36 * s, n: 10, color: col, core: '#ffffff', ink: '#0a2030', dur: 0.3 }); V.beam(q.x, q.y, x, y, { color: col, w: 6 * s, dur: 0.25 }); shake(2 * s); } });
       else if (m === 'fang') { V.breath(q.x, q.y, Math.atan2(t.y - q.y, t.x - q.x), { len: Math.min(220, Math.hypot(t.x - q.x, t.y - q.y) + 20) * s, span: 0.6 * s, color: col });
         FX.later(0.15, () => { g.chomp(t.x, t.y, 20, 1.2 * s, col, 0.3); V.splash(t.x, t.y, { n: 6, color: SLIME }); gorgemawPuddles((q.x + t.x) / 2, (q.y + t.y) / 2, col, 0.7 * s, 1.6); }); }
@@ -3052,11 +3221,17 @@ function windLaneBoost(x, y, vx, vy, now) {
   }, { atTarget: true });
   // Digest (d: { n eaten, m: their shapes' first letters }): the Morsels spiral into the belly, a spiral seal glows under it
   KIT_VFX.digest = (e, target, d) => {
-    const n = Math.min(6, (d && d.n) || 0), letters = String((d && d.m) || '');
-    V.swirl(e.x, e.y, { r: 46, color: '#ffc070', dur: 0.6, inward: true, follow: e });
+    const n = Math.min(6, (d && d.n) || 0), letters = String((d && d.m) || ''), M = GORGEMAW_MOVE_SCALE;
+    V.swirl(e.x, e.y, { r: 46 * M, color: '#ffc070', dur: 0.6, inward: true, follow: e });
+    V.fx({ dur: 0.6, layer: 'ground', follow: e, draw: (ctx, p, t, fx) => {   // the eddy: pale streaks spiralling in round the belly
+      const kk = fx.a * Math.min(1, p / 0.15) * Math.min(1, (1 - p) / 0.3);
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round'; ctx.strokeStyle = '#f0dce8'; ctx.lineWidth = 1.8; ctx.globalAlpha = Math.min(1, 0.35 * kk); ctx.beginPath();
+      for (let j = 0; j < 5; j++) { const b = j * Math.PI * 2 / 5 + t * 5; for (let i = 0; i <= 8; i++) { const q = i / 8, aa = b + q * 1.6, r = (90 - 50 * q) * M; const px = e.x + Math.cos(aa) * r, py = e.y + Math.sin(aa) * r * 0.6; i ? ctx.lineTo(px, py) : ctx.moveTo(px, py); } }
+      ctx.stroke(); ctx.restore();
+    } });
     for (let i = 0; i < n; i++) { const a0 = i * Math.PI * 2 / Math.max(1, n), col = mcol(LETTER[letters[i]] || 'ring');
-      gorgemawSpirit(p => { const a = a0 + p * 4.5, r = 80 * (1 - p) + 4; return { x: e.x + Math.cos(a) * r, y: e.y + Math.sin(a) * r * 0.6, z: 22 + 10 * (1 - p) }; }, col, 0.6, i * 0.06); }
-    gorgemawSpiral(e.x, e.y, 40, 1.5, { follow: e, veins: true, ink: '#3a0a34', delay: 0.45, spin: 2.5 });
+      gorgemawSpirit(p => { const a = a0 + p * 4.5, r = 80 * M * (1 - p) + 4; return { x: e.x + Math.cos(a) * r, y: e.y + Math.sin(a) * r * 0.6, z: 22 + 10 * (1 - p) }; }, col, 0.6, i * 0.06, 1.15); }
+    gorgemawSpiral(e.x, e.y, 40 * M, 1.7, { follow: e, veins: true, ink: '#3a0a34', delay: 0.45, spin: 2.5, glow: 0.62 });
     FX.later(0.5, () => { V.plus(e.x, e.y, { color: '#ffd8a0', n: 3 + n }); if (e.spec === 'gizzard' && n) V.shock(e.x, e.y, { r: 160, color: '#ffc070', dur: 0.6, w: 5 }); });
   };
 })();
@@ -3072,6 +3247,8 @@ function windLaneBoost(x, y, vx, vy, now) {
   const O = () => globalThis.OATHBROKER_VFX;
   const LIL = '#b8a8e0', GOLD = '#ffd27a', GOLD2 = '#d8a038', WAX = '#7a1a2a', WAXL = '#c0485a', WAXD = '#3e0a14', PAPER = '#efe4cc', INK = '#2a2034';
   const camHit = (cam, col, s = 1) => { if (cam) { cam.stop(0.08 + 0.03 * s); cam.punch(0.05 + 0.025 * s, 0.55); cam.flash(col, 0.18 + 0.06 * s, 0.35); } };
+  // the size knobs: Final Reckoning's footprint (the clock, the stamp, the seal left), and the supporting moves'
+  const OATHBROKER_ULT_SCALE = 1.8, OATHBROKER_MOVE_SCALE = 1.3;
 
   // ---- primitives
   // the scales (a sword for the post): traced at the origin, s per unit
@@ -3084,7 +3261,7 @@ function windLaneBoost(x, y, vx, vy, now) {
   function oathCoins(x, y, n, o = {}) {
     for (let i = 0; i < n; i++) { const a = Math.random() * Math.PI * 2, sp = rand(60, 200) * (o.speed ?? 1);
       V.spawn({ x: x + rand(-6, 6), y, z: o.z ?? 20, vx: (o.vx ?? 0) * rand(0.8, 1.2) + Math.cos(a) * sp * (o.vx != null ? 0.3 : 1), vy: (o.vy ?? 0) * rand(0.8, 1.2) + Math.sin(a) * sp * 0.6 * (o.vx != null ? 0.3 : 1), vz: rand(140, 260), g: 600, bounce: true,
-        life: rand(0.7, 1.1) * (o.life ?? 1), size: rand(7, 9), color: i % 3 ? GOLD : '#fff2c0', kind: 'petal', add: false, vr: rand(-4, 4), flutter: 11 }); }
+        life: rand(0.7, 1.1) * (o.life ?? 1), size: rand(7, 9) * (o.size ?? 1), color: i % 3 ? GOLD : '#fff2c0', kind: 'petal', add: false, vr: rand(-4, 4), flutter: 11 }); }
   }
   // a chain of gold links from (x1, y1) to (x2, y2): flat links and edge-on links in turn, a faint glow along it
   function oathChain(c, x1, y1, x2, y2, k, L = 9) {
@@ -3119,20 +3296,25 @@ function windLaneBoost(x, y, vx, vy, now) {
     const dur = o.dur ?? 3, A = o.a ?? 0.45, nb = 22, bumps = Array.from({ length: nb }, () => rand(0.94, 1.1));
     const drips = Array.from({ length: 5 }, () => ({ a: rand(0, Math.PI * 2), L: rand(0.1, 0.22) }));
     const litter = Array.from({ length: (o.coins || 0) + (o.pages || 0) }, (_, i) => { const a = rand(0, Math.PI * 2), d = R * rand(0.95, 1.5); return { x: Math.cos(a) * d, y: Math.sin(a) * d, r: rand(0, 3), coin: i < (o.coins || 0) }; });
+    // o.fill: the wax body's share of the strength (the rims, the scales and the litter keep all of it); o.gold: the
+    // gold of the rim and scales stays this strong after the heat has gone (the mark reads by its outline, not its red)
+    const ls = Math.max(1, R / 60);
     V.fx({ dur, delay: o.delay, layer: 'ground', follow: o.follow, draw: (c, p, t, e) => {
       const k = e.a * Math.min(1, p / 0.03) * Math.min(1, (1 - p) / 0.35) * A, sq = t < 0.1 ? 1.2 - t * 2 : 1, heat = Math.max(0, 1 - t / 0.9), cx = e.follow ? e.follow.x : x, cy = e.follow ? e.follow.y : y;
       c.save(); c.translate(cx, cy); c.scale(sq, sq * 0.7);
-      for (const l of litter) { c.save(); c.translate(l.x, l.y); c.rotate(l.r);
+      for (const l of litter) { c.save(); c.translate(l.x, l.y); c.rotate(l.r); c.scale(ls, ls);
         if (l.coin) { c.globalAlpha = Math.min(1, k * 1.6); c.fillStyle = GOLD2; c.beginPath(); c.ellipse(0, 0, 4.5, 3.2, 0, 0, Math.PI * 2); c.fill(); }
         else { c.globalAlpha = Math.min(1, k * 1.1); c.fillStyle = PAPER; c.fillRect(-7, -5, 14, 10); c.fillStyle = INK; c.globalAlpha *= 0.5; c.fillRect(-5, -2, 9, 1); c.fillRect(-5, 1, 7, 1); }
         c.restore(); }
-      c.globalAlpha = Math.min(1, k); c.fillStyle = WAX; c.beginPath();
+      c.globalAlpha = Math.min(1, k * (o.fill ?? 1)); c.fillStyle = WAX; c.beginPath();
       for (let i = 0; i < nb; i++) { const a = i / nb * Math.PI * 2, r = R * bumps[i]; i ? c.lineTo(Math.cos(a) * r, Math.sin(a) * r) : c.moveTo(Math.cos(a) * r, Math.sin(a) * r); }
       c.closePath(); for (const d of drips) { const dx = Math.cos(d.a) * R * (1 + d.L * 0.5), dy = Math.sin(d.a) * R * (1 + d.L * 0.5); c.moveTo(dx + R * d.L * 0.5, dy); c.arc(dx, dy, R * d.L * 0.5, 0, Math.PI * 2); } c.fill();
-      c.lineWidth = Math.max(1.5, R * 0.06); c.strokeStyle = WAXD; c.beginPath(); c.arc(0, 0, R * 0.78, 0, Math.PI * 2); c.stroke();
+      c.globalAlpha = Math.min(1, k); c.lineWidth = Math.max(1.5, R * 0.06); c.strokeStyle = WAXD; c.beginPath(); c.arc(0, 0, R * 0.78, 0, Math.PI * 2); c.stroke();
       c.lineWidth = 1.2; c.strokeStyle = WAXL; c.beginPath(); c.arc(0, 0, R * 0.66, 0, Math.PI * 2); c.stroke();
       c.lineWidth = Math.max(1.2, R * 0.04); c.strokeStyle = WAXD; c.beginPath(); oathScales(c, R / 24); c.stroke();
-      if (heat > 0.02) { c.globalCompositeOperation = 'lighter'; c.globalAlpha = Math.min(1, k * heat * 1.4); c.strokeStyle = GOLD; c.lineWidth = 1.4; c.beginPath(); c.arc(0, 0, R * 0.78, 0, Math.PI * 2); oathScales(c, R / 24); c.stroke(); }
+      const gk = Math.max(heat * 1.4, o.gold ?? 0);
+      if (gk > 0.02) { c.globalCompositeOperation = 'lighter'; c.globalAlpha = Math.min(1, k * gk); c.strokeStyle = GOLD; c.lineWidth = Math.max(1.4, R * 0.018); c.beginPath(); c.arc(0, 0, R * 0.78, 0, Math.PI * 2); oathScales(c, R / 24); c.stroke();
+        if (o.gold) { c.lineWidth = 1.2; c.beginPath(); c.arc(0, 0, R * 1.04, 0, Math.PI * 2); c.stroke(); } }
       c.restore();
     } });
   }
@@ -3143,7 +3325,7 @@ function windLaneBoost(x, y, vx, vy, now) {
     V.fx({ dur, delay: o.delay, layer: 'air', draw: (c, p, t, e) => {
       const q = Math.min(1, t / fall), after = Math.max(0, t - fall), z = H * (1 - q * q) + after * 60, k = e.a * Math.min(1, t / 0.08) * (after > 0 ? 1 - after / (dur - fall) : 1), sy = y - z;
       c.save(); c.globalAlpha = Math.min(1, 0.35 * k * q); c.fillStyle = '#000000'; c.beginPath(); c.ellipse(x, y, R * (0.5 + 0.5 * q), R * 0.35 * (0.5 + 0.5 * q), 0, 0, Math.PI * 2); c.fill(); c.restore();   // its shadow
-      if (from) oathChain(c, from.x, from.y - 24, x, sy - R * 1.9, k * Math.min(1, t / 0.15));
+      if (from) oathChain(c, from.x, from.y - 24, x, sy - R * 1.9, k * Math.min(1, t / 0.15), o.link ?? 9);
       c.save(); c.globalAlpha = Math.min(1, k);
       const hw = R * 0.3, g = c.createLinearGradient(x - hw, 0, x + hw, 0); g.addColorStop(0, WAXD); g.addColorStop(0.4, WAXL); g.addColorStop(1, WAXD);
       c.fillStyle = g; c.fillRect(x - hw, sy - R * 1.85, hw * 2, R * 1.5);   // the handle
@@ -3157,11 +3339,11 @@ function windLaneBoost(x, y, vx, vy, now) {
     } });
   }
   // a parchment of light lying on the floor, written out line by line, a little seal in its corner
-  function oathParchment(x, y, ang, w, h, dur) {
+  function oathParchment(x, y, ang, w, h, dur, s = 1) {
     V.fx({ dur, layer: 'ground', draw: (c, p, t, e) => {
       const k = e.a * Math.min(1, t / 0.15) * Math.min(1, (1 - p) / 0.4), write = Math.min(1, t / 0.55);
-      V.glowAt(c, x, y, w * 0.7, LIL, 0.25 * k);
-      c.save(); c.translate(x, y); c.scale(1, 0.7); c.rotate(ang);
+      V.glowAt(c, x, y, w * 0.7 * s, LIL, 0.25 * k);
+      c.save(); c.translate(x, y); c.scale(s, 0.7 * s); c.rotate(ang);
       c.beginPath(); c.moveTo(-w / 2, -h / 2); c.lineTo(w / 2, -h / 2); c.quadraticCurveTo(w / 2 + 6, 0, w / 2, h / 2); c.lineTo(-w / 2, h / 2); c.quadraticCurveTo(-w / 2 - 6, 0, -w / 2, -h / 2); c.closePath();
       c.globalAlpha = Math.min(1, 0.45 * k); c.fillStyle = PAPER; c.fill();
       V.neonPath(c, LIL, 1.4, k * 0.8, () => { c.moveTo(-w / 2, -h / 2); c.lineTo(w / 2, -h / 2); c.quadraticCurveTo(w / 2 + 6, 0, w / 2, h / 2); c.lineTo(-w / 2, h / 2); c.quadraticCurveTo(-w / 2 - 6, 0, -w / 2, -h / 2); });
@@ -3175,37 +3357,44 @@ function windLaneBoost(x, y, vx, vy, now) {
   }
   const oathScalesAt = (c, x, y, s) => { c.save(); c.translate(x, y); oathScales(c, s); c.restore(); };
   // the dial of a clock on the floor round `ent`: Roman ticks, its hands spinning back, pages whirled round it
-  function oathClock(ent, R, dur, nPages = 10) {
+  function oathClock(ent, R0, dur, nPages = 10) {
+    const u = Math.max(1, R0 / 72), NUM = ['XII', 'III', 'VI', 'IX'];
     V.fx({ dur, layer: 'ground', follow: ent, draw: (c, p, t, e) => {
-      const k = e.a * Math.min(1, t / 0.1) * Math.min(1, (1 - p) / 0.3), x = ent.x, y = ent.y, F = 0.62;
-      V.glowAt(c, x, y, R * 1.1, '#8a5ad8', 0.35 * k);
-      V.neonRing(c, x, y, R, '#9a6ad8', 2.6, k, F); V.neonRing(c, x, y, R * 0.8, LIL, 1.2, k * 0.6, F);
+      const k = e.a * Math.min(1, t / 0.1) * Math.min(1, (1 - p) / 0.3), x = ent.x, y = ent.y, F = 0.62, R = R0 * (0.7 + 0.3 * (1 - Math.pow(1 - Math.min(1, t / 0.22), 2)));
+      V.glowAt(c, x, y, R * 1.1, '#8a5ad8', 0.38 * k);
+      V.neonRing(c, x, y, R, '#9a6ad8', 2.6 * Math.sqrt(u), k, F); V.neonRing(c, x, y, R * 1.08, LIL, 1.2, k * 0.5, F); V.neonRing(c, x, y, R * 0.8, LIL, 1.2, k * 0.6, F);
       V.neonPath(c, LIL, 1.3, k * 0.85, () => { for (let i = 0; i < 12; i++) { const a = i * Math.PI / 6, m = i % 3 === 0 ? 3 : 1, ca = Math.cos(a), sa = Math.sin(a);
-        for (let j = 0; j < m; j++) { const off = (j - (m - 1) / 2) * 3.2, px = x + ca * R * 0.9 - sa * off, py = y + (sa * R * 0.9 + ca * off) * F; c.moveTo(px - ca * 4, py - sa * 4 * F); c.lineTo(px + ca * 4, py + sa * 4 * F); } } });
-      V.neonPath(c, '#efe4ff', 2.6, k, () => { const a1 = -t * 14, a2 = -t * 3.5; c.moveTo(x, y); c.lineTo(x + Math.cos(a1) * R * 0.7, y + Math.sin(a1) * R * 0.7 * F); c.moveTo(x, y); c.lineTo(x + Math.cos(a2) * R * 0.45, y + Math.sin(a2) * R * 0.45 * F); });
+        if (i % 3 === 0) continue;   // (the quarters carry numerals)
+        for (let j = 0; j < m; j++) { const off = (j - (m - 1) / 2) * 3.2 * u, px = x + ca * R * 0.9 - sa * off, py = y + (sa * R * 0.9 + ca * off) * F; c.moveTo(px - ca * 4 * u, py - sa * 4 * u * F); c.lineTo(px + ca * 4 * u, py + sa * 4 * u * F); } } });
+      // the Roman numerals at the quarters, laid flat on the floor
+      c.save(); c.globalCompositeOperation = 'lighter'; c.globalAlpha = Math.min(1, 0.85 * k); c.fillStyle = '#e6dcff'; c.font = 'bold ' + Math.round(10 * u) + 'px serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+      for (let i = 0; i < 4; i++) { const a = -Math.PI / 2 + i * Math.PI / 2, px = x + Math.cos(a) * R * 0.9, py = y + Math.sin(a) * R * 0.9 * F; c.save(); c.translate(px, py); c.scale(1, F); c.fillText(NUM[i], 0, 0); c.restore(); }
+      c.restore();
+      V.neonPath(c, '#efe4ff', 2.6 * Math.sqrt(u), k, () => { const a1 = -t * 14, a2 = -t * 3.5; c.moveTo(x, y); c.lineTo(x + Math.cos(a1) * R * 0.7, y + Math.sin(a1) * R * 0.7 * F); c.moveTo(x, y); c.lineTo(x + Math.cos(a2) * R * 0.45, y + Math.sin(a2) * R * 0.45 * F); });
     } });
-    for (let i = 0; i < nPages; i++) { const a = Math.random() * Math.PI * 2, r = R * rand(0.8, 1.3);
-      V.spawn({ x: ent.x, y: ent.y, z: rand(10, 50), life: dur * rand(0.8, 1.1), size: rand(13, 17), color: i % 3 ? PAPER : '#e6dcff', kind: 'petal', add: false, flutter: 6, vr: rand(-5, 5), orbit: { x: ent.x, y: ent.y, a, r, w: -rand(5, 8), dr: -r * 0.6 / dur, flat: 0.6, follow: ent } }); }
+    for (let i = 0; i < nPages; i++) { const a = Math.random() * Math.PI * 2, r = R0 * rand(0.8, 1.3);
+      V.spawn({ x: ent.x, y: ent.y, z: rand(10, 50 * u), life: dur * rand(0.8, 1.1), size: rand(13, 17) * Math.sqrt(u), color: i % 3 ? PAPER : '#e6dcff', kind: 'petal', add: false, flutter: 6, vr: rand(-5, 5), orbit: { x: ent.x, y: ent.y, a, r, w: -rand(5, 8), dr: -r * 0.6 / dur, flat: 0.6, follow: ent } }); }
   }
 
   // ---- Final Reckoning (the Ultimate). The clock, the chain, the stamp and the seal here; oath-reckoning is the
   // settled account going out to the party as shields
   ABILITY_VFX.oathbroker.reckoning = c => {
-    const e = c.ent, R = 44;
+    const e = c.ent, S = OATHBROKER_ULT_SCALE, R = 44 * S * 0.8, LAND = 0.5;
     if (c.cam) c.cam.dim(0.4, 1.4);
-    oathClock(e, 72, 0.6, 14);
-    oathStamp(c.tx, c.ty, R, { fall: 0.45, hold: 0.3, h: 210, from: e });
-    c.later(0.45, () => {
+    oathClock(e, 72 * S * 0.85, LAND + 0.15, 20);
+    oathStamp(c.tx, c.ty, R, { fall: LAND, hold: 0.32, h: 210 * S * 0.8, from: e, link: 12 });
+    c.later(LAND, () => {
       const g = O();
       camHit(c.cam, '#ffd27a', 1.1);
-      shake(8);
-      V.spikeburst(c.tx, c.ty, { r: 96, n: 16, color: WAXL, core: '#fff0d0', ink: INK, dur: 0.4 });
-      for (let i = 0; i < 2; i++) V.shock(c.tx, c.ty, { r: 160 + i * 60, color: i ? GOLD : '#ffffff', dur: 0.6, w: 7 - i * 3, delay: i * 0.08 });
-      V.flash(c.tx, c.ty - 20, 90, GOLD, 0.18);
-      oathCoins(c.tx, c.ty, 12, { speed: 1.2 });
-      if (g) g.pages(c.tx, c.ty, 12);
-      V.debris(c.tx, c.ty, { n: 6, color: '#4a4050' });
-      oathWaxSeal(c.tx, c.ty, 84, { dur: 4.5, a: 0.34, coins: 8, pages: 6 });
+      shake(9);
+      V.flash(c.tx, c.ty - 20, 60 * S, '#fff6e0', 0.16);   // the white-hot core of the stamp's blow, brief
+      V.spikeburst(c.tx, c.ty, { r: 96 * S * 0.85, n: 20, color: WAXL, core: '#fff0d0', ink: INK, dur: 0.4 });
+      for (let i = 0; i < 2; i++) V.shock(c.tx, c.ty, { r: (120 + i * 45) * S, color: i ? GOLD : '#ffffff', dur: 0.6, w: 8 - i * 3, delay: i * 0.08 });
+      oathCoins(c.tx, c.ty, 18, { speed: 1.2 * S, size: 1.3 });
+      if (g) g.pages(c.tx, c.ty, 16);
+      V.debris(c.tx, c.ty, { n: 12, color: '#4a4050', speed: 1.4, size: 1.3 });
+      // the seal left: its wax kept faint, its gold rim and scales carrying it (red marks must not read as telegraphs)
+      oathWaxSeal(c.tx, c.ty, 84 * S * 0.8, { dur: 4.5, a: 0.5, fill: 0.42, gold: 0.7, coins: 12, pages: 8 });
     });
   };
   KIT_VFX['oath-reckoning'] = (e) => {
@@ -3221,60 +3410,67 @@ function windLaneBoost(x, y, vx, vy, now) {
   // ---- the moves on the sheet
   Object.assign(ABILITY_VFX.oathbroker, {
     // Dun, Levy, Collect: the mace sweeps, coins arc back off the target to the knight; the third stamps a seal
-    collect: c => { const g = O(), third = c.ent.st && c.ent.st.combo === 2;
-      V.slash(c.x, c.y, c.ang, { r: 56, span: 1.6, color: '#e8d8b0', w: 0.45, dur: 0.24, flip: Math.random() < 0.5 });
+    collect: c => { const g = O(), third = c.ent.st && c.ent.st.combo === 2, M = OATHBROKER_MOVE_SCALE;
+      V.slash(c.x, c.y, c.ang, { r: 56 * M, span: 1.6, color: '#e8d8b0', w: 0.45, dur: 0.24, flip: Math.random() < 0.5 });
       c.later(0.09, () => {
         if (g) g.stamp(c.tx, c.ty, third ? WAXL : LIL, third);
-        V.glint(c.tx, c.ty, { color: GOLD, size: third ? 30 : 20 });
-        oathCoins(c.tx, c.ty, third ? 5 : 2, { vx: (c.x - c.tx) * 1.4, vy: (c.y - c.ty) * 1.4, life: 0.7 });
+        V.glint(c.tx, c.ty, { color: GOLD, size: (third ? 30 : 20) * M });
+        oathCoins(c.tx, c.ty, third ? 7 : 3, { vx: (c.x - c.tx) * 1.4, vy: (c.y - c.ty) * 1.4, life: 0.7, size: 1.2 });
+        // the debt drawn home: a lilac ribbon curling from the target back to the knight
+        const bend = Math.random() < 0.5 ? 1 : -1;
+        V.fx({ dur: 0.32, layer: 'air', draw: (ctx, p, t, fx) => { const q = Math.min(1, p / 0.5), k = fx.a * Math.min(1, (1 - p) / 0.4), nx = -(c.ty - c.y), ny = c.tx - c.x;
+          V.neonPath(ctx, third ? GOLD : LIL, 2, k * 0.75, () => { for (let i = 0; i <= 14; i++) { const s = i / 14 * q, x = c.tx + (c.x - c.tx) * s + nx * 0.35 * bend * Math.sin(s * Math.PI), y = c.ty - 22 + (c.y - c.ty) * s + ny * 0.35 * bend * Math.sin(s * Math.PI) * 0.6; i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); } }); } });
       }); },
     // Settle: coins whirl in a lilac eddy, the stamp comes down beside the knight, a seal with coins and pages is left
-    settle: c => { const g = O(), x = c.x + Math.cos(c.ang) * 34, y = c.y + Math.sin(c.ang) * 22;
-      V.swirl(x, y, { r: 46, color: LIL, dur: 0.32, inward: true });
-      for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3; V.spawn({ x, y, z: 26, life: 0.32, size: 8, color: GOLD, kind: 'petal', add: false, flutter: 11, orbit: { x, y, a, r: 44, w: 9, dr: -100, flat: 0.6 } }); }
-      oathStamp(x, y, 24, { fall: 0.28, hold: 0.2, h: 140 });
+    settle: c => { const g = O(), M = OATHBROKER_MOVE_SCALE, x = c.x + Math.cos(c.ang) * 34 * M, y = c.y + Math.sin(c.ang) * 22 * M;
+      V.swirl(x, y, { r: 46 * M, color: LIL, dur: 0.32, inward: true });
+      for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4; V.spawn({ x, y, z: 26, life: 0.32, size: 9, color: GOLD, kind: 'petal', add: false, flutter: 11, orbit: { x, y, a, r: 44 * M, w: 9, dr: -100 * M, flat: 0.6 } }); }
+      oathStamp(x, y, 24 * M, { fall: 0.28, hold: 0.2, h: 140 * M });
       c.later(0.28, () => {
-        V.spikeburst(x, y, { r: 44, n: 12, color: WAXL, core: '#fff0d0', ink: INK, dur: 0.3 });
-        V.shock(x, y, { r: 90, color: GOLD, dur: 0.4, w: 5 });
-        oathCoins(x, y, 8); if (g) g.pages(x, y, 5);
-        oathWaxSeal(x, y, 30, { dur: 2.4, a: 0.42, coins: 4, pages: 3 });
+        V.spikeburst(x, y, { r: 44 * M, n: 14, color: WAXL, core: '#fff0d0', ink: INK, dur: 0.3 });
+        V.shock(x, y, { r: 90 * M, color: GOLD, dur: 0.4, w: 5 });
+        oathCoins(x, y, 10, { size: 1.15 }); if (g) g.pages(x, y, 6);
+        oathWaxSeal(x, y, 30 * M, { dur: 2.6, a: 0.5, fill: 0.7, gold: 0.6, coins: 5, pages: 3 });
         shake(2);
       }); },
     // Lien: a golden chain is thrown to the boss and wraps it round a seal; a ring of runes is left under it
-    lien: c => { const g = O(), tx = c.tx, ty = c.ty;
-      if (g) g.pages(c.x, c.y, 4);
-      V.fx({ dur: 0.22, layer: 'air', draw: (ctx, p, t, fx) => { const x = c.x + (tx - c.x) * p, y = c.y - 24 + (ty - 30 - c.y + 24) * p; oathChain(ctx, c.x, c.y - 24, x, y, fx.a); V.glowAt(ctx, x, y, 16, GOLD, fx.a); } });
+    lien: c => { const g = O(), tx = c.tx, ty = c.ty, M = OATHBROKER_MOVE_SCALE;
+      if (g) g.pages(c.x, c.y, 5);
+      V.fx({ dur: 0.22, layer: 'air', draw: (ctx, p, t, fx) => { const x = c.x + (tx - c.x) * p, y = c.y - 24 + (ty - 30 - c.y + 24) * p; oathChain(ctx, c.x, c.y - 24, x, y, fx.a, 11); V.glowAt(ctx, x, y, 18 * M, GOLD, fx.a); } });
       c.later(0.2, () => {
         V.fx({ dur: 1.4, layer: 'air', draw: (ctx, p, t, fx) => {
-          const q = Math.min(1, p / 0.15), k = fx.a * Math.min(1, (1 - p) / 0.35), r = 48 - 14 * q;
-          for (let i = 0; i < 3; i++) oathChainLoop(ctx, tx, ty - 16 - i * 20, r * (1 - i * 0.08), r * 0.36, k, t * (i % 2 ? 1.5 : -1.5) + i);
-          ctx.save(); ctx.translate(tx, ty - 36); ctx.globalAlpha = Math.min(1, k * 0.9); ctx.fillStyle = WAXL; ctx.beginPath(); ctx.arc(0, 0, 10, 0, Math.PI * 2); ctx.fill();
-          ctx.strokeStyle = GOLD; ctx.lineWidth = 1.2; ctx.beginPath(); oathScales(ctx, 0.5); ctx.stroke(); ctx.restore();
+          const q = Math.min(1, p / 0.15), k = fx.a * Math.min(1, (1 - p) / 0.35), r = (48 - 14 * q) * M;
+          for (let i = 0; i < 3; i++) oathChainLoop(ctx, tx, ty - 16 - i * 20 * M, r * (1 - i * 0.08), r * 0.36, k, t * (i % 2 ? 1.5 : -1.5) + i);
+          ctx.save(); ctx.translate(tx, ty - 36 * M); ctx.globalAlpha = Math.min(1, k * 0.9); ctx.fillStyle = WAXL; ctx.beginPath(); ctx.arc(0, 0, 10 * M, 0, Math.PI * 2); ctx.fill();
+          ctx.strokeStyle = GOLD; ctx.lineWidth = 1.2; ctx.beginPath(); oathScales(ctx, 0.5 * M); ctx.stroke(); ctx.restore();
         } });
-        V.spikeburst(tx, ty - 30, { r: 34, n: 10, color: GOLD, core: '#fff6d0', ink: INK, dur: 0.26 });
-        V.fx({ dur: 1.6, layer: 'ground', draw: (ctx, p, t, fx) => {   // a faint ring of runes under it, the seal's mark
-          const k = fx.a * Math.min(1, p / 0.1) * Math.min(1, (1 - p) / 0.4) * 0.5;
-          V.neonRing(ctx, tx, ty, 50, WAXL, 1.6, k, 0.62); V.neonRing(ctx, tx, ty, 40, WAXL, 1, k * 0.7, 0.62);
-          V.neonPath(ctx, WAXL, 1, k * 0.8, () => { for (let i = 0; i < 10; i++) { const a = i * Math.PI / 5 + t * 0.6, x = tx + Math.cos(a) * 45, y = ty + Math.sin(a) * 45 * 0.62; ctx.moveTo(x - 2.5, y + 2); ctx.lineTo(x, y - 2.5); ctx.lineTo(x + 2.5, y + 2); } });
+        V.spikeburst(tx, ty - 30, { r: 34 * M, n: 12, color: GOLD, core: '#fff6d0', ink: INK, dur: 0.26 });
+        oathCoins(tx, ty, 3);
+        V.fx({ dur: 1.8, layer: 'ground', draw: (ctx, p, t, fx) => {   // a faint ring of runes under it, the seal's mark
+          const k = fx.a * Math.min(1, p / 0.1) * Math.min(1, (1 - p) / 0.4) * 0.65, R = 50 * M;
+          V.neonRing(ctx, tx, ty, R, WAXL, 1.8, k, 0.62); V.neonRing(ctx, tx, ty, R * 0.8, WAXL, 1, k * 0.7, 0.62); V.neonRing(ctx, tx, ty, R * 1.12, GOLD, 1, k * 0.5, 0.62);
+          V.neonPath(ctx, WAXL, 1.1, k * 0.85, () => { for (let i = 0; i < 12; i++) { const a = i * Math.PI / 6 + t * 0.6, x = tx + Math.cos(a) * R * 0.9, y = ty + Math.sin(a) * R * 0.9 * 0.62; ctx.moveTo(x - 3, y + 2.4); ctx.lineTo(x, y - 3); ctx.lineTo(x + 3, y + 2.4); } });
         } });
       }); },
     // Co-Sign: a ribbon of lilac ink runs to the ally, a seal under each of you, linked by a gold line a moment
-    cosign: c => { const w = c.tent || c.ent, e = c.ent;
-      V.fx({ dur: 0.3, layer: 'air', draw: (ctx, p, t, fx) => { const q = Math.min(1, p / 0.7);
-        V.neonPath(ctx, LIL, 2.4, fx.a * Math.min(1, (1 - p) / 0.3), () => { for (let i = 0; i <= 16; i++) { const s = i / 16 * q, x = e.x + (w.x - e.x) * s, y = e.y - 20 + (w.y - e.y) * s + Math.sin(s * Math.PI * 3 + t * 20) * 8 * Math.sin(s * Math.PI); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); } }); } });
+    cosign: c => { const w = c.tent || c.ent, e = c.ent, M = OATHBROKER_MOVE_SCALE, Rs = 22 * M;
+      V.fx({ dur: 0.3, layer: 'air', draw: (ctx, p, t, fx) => { const q = Math.min(1, p / 0.7), kk = fx.a * Math.min(1, (1 - p) / 0.3);
+        for (const [col, wd, ph] of [[LIL, 2.6, 0], ['#efe4ff', 1.4, 1.3]]) V.neonPath(ctx, col, wd, kk * (ph ? 0.6 : 1), () => { for (let i = 0; i <= 16; i++) { const s = i / 16 * q, x = e.x + (w.x - e.x) * s, y = e.y - 20 + (w.y - e.y) * s + Math.sin(s * Math.PI * 3 + t * 20 + ph) * 9 * M * Math.sin(s * Math.PI); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); } }); } });
       c.later(0.22, () => {
-        V.fx({ dur: 1.5, layer: 'ground', draw: (ctx, p, t, fx) => { const k = fx.a * Math.min(1, p / 0.1) * Math.min(1, (1 - p) / 0.45);
-          V.neonRing(ctx, e.x, e.y, 22, LIL, 1.8, k * 0.8, 0.62); V.neonRing(ctx, w.x, w.y, 22, WAXL, 1.8, k * 0.8, 0.62);
-          V.neonPath(ctx, GOLD, 1.4, k * 0.7, () => { const a = Math.atan2(w.y - e.y, w.x - e.x); ctx.moveTo(e.x + Math.cos(a) * 22, e.y + Math.sin(a) * 14); ctx.lineTo(w.x - Math.cos(a) * 22, w.y - Math.sin(a) * 14); oathScalesAt(ctx, w.x, w.y, 0.6); oathScalesAt(ctx, e.x, e.y, 0.6); });
+        V.fx({ dur: 1.6, layer: 'ground', draw: (ctx, p, t, fx) => { const k = fx.a * Math.min(1, p / 0.1) * Math.min(1, (1 - p) / 0.45);
+          V.neonRing(ctx, e.x, e.y, Rs, LIL, 1.8, k * 0.85, 0.62); V.neonRing(ctx, w.x, w.y, Rs, WAXL, 1.8, k * 0.85, 0.62);
+          V.neonRing(ctx, e.x, e.y, Rs * 0.75, LIL, 1, k * 0.5, 0.62); V.neonRing(ctx, w.x, w.y, Rs * 0.75, GOLD, 1, k * 0.5, 0.62);
+          V.neonPath(ctx, GOLD, 1.5, k * 0.75, () => { const a = Math.atan2(w.y - e.y, w.x - e.x); ctx.moveTo(e.x + Math.cos(a) * Rs, e.y + Math.sin(a) * Rs * 0.62); ctx.lineTo(w.x - Math.cos(a) * Rs, w.y - Math.sin(a) * Rs * 0.62); oathScalesAt(ctx, w.x, w.y, 0.6 * M); oathScalesAt(ctx, e.x, e.y, 0.6 * M); });
         } });
         V.shield(w, { color: LIL, dur: 1.2, r: 36 });
       }); },
     // Writ of Protection: a lilac scribble runs from the knight's hand to the floor, where a contract writes itself out
-    writ: c => { const g = O(), a = (c.ang || 0) - 1.1, x = c.x + Math.cos(a) * 58, y = c.y + Math.sin(a) * 40;
+    writ: c => { const g = O(), M = OATHBROKER_MOVE_SCALE, a = (c.ang || 0) - 1.1, x = c.x + Math.cos(a) * 58 * M, y = c.y + Math.sin(a) * 40 * M;
       V.shield(c.ent, { shape: 'front', color: PAPER, dur: 2, r: 44 });
       V.lightning(c.x + Math.cos(a) * 14, c.y - 20, x, y, { color: LIL, jag: 8 });
-      oathParchment(x, y, a * 0.3, 64, 42, 1.8);
-      if (g) g.pages(c.x, c.y, 3);
+      V.glint(x, y, { color: LIL, size: 26 });
+      oathParchment(x, y, a * 0.3, 64, 42, 2.1, M);
+      if (g) g.pages(c.x, c.y, 4);
     },
   });
 })();
@@ -3425,80 +3621,143 @@ function windLaneBoost(x, y, vx, vy, now) {
       c.globalAlpha = 1;
     } });
   }
-  // the World Tree itself: a trunk that shoots up in half a second with roots flaring at its foot, a crown of leaves that
-  // sways, golden fruit hanging from it on threads, light pouring down through it at first. After 1.6s it thins to a
-  // ghost of itself so the floor and every telegraph under it stay readable.
+  // GROVE_ULT_SCALE sizes the World Tree (trunk, crown, roots, wind-up and burst). The heal's 180 canopy ring is fixed.
+  const GROVE_ULT_SCALE = 1.8;
+  // the World Tree, painted once into a sprite (the same tree every cast, so a frame only blits it): roots clawing out
+  // from a thick gnarled trunk with bark ridges and a knot, branches up into a crown of many overlapping leaf clusters,
+  // each with an ink edge, a dark underside, a mid green and a lit top, a shadow under the crown and warm light on it.
+  let groveTreeArt = null;
+  function groveTreeSprite(H, R) {
+    if (groveTreeArt && groveTreeArt.H === H && groveTreeArt.R === R) return groveTreeArt;
+    const W = Math.ceil(R * 2.6 + 40), SH = Math.ceil(H + R * 0.95 + 40), fx = W / 2, fy = SH - 30, cy = fy - H, ry = R * 0.7;
+    const cv = document.createElement('canvas'); cv.width = W; cv.height = SH;
+    const c = cv.getContext('2d'); c.lineJoin = 'round'; c.lineCap = 'round';
+    const tw = R * 0.21, quad = (a, b, d, q) => (1 - q) * (1 - q) * a + 2 * (1 - q) * q * b + q * q * d;
+    // a tapering limb along a quadratic curve: ink, bark, a lit line on its upper edge
+    const limb = (x0, y0, x1, y1, x2, y2, w0, w1) => {
+      for (const [col, add, off] of [['#0e0804', 3, 0], ['#4a3220', 0, 0], ['#8a6a3e', -w0 * 0.65, -1]]) {
+        c.strokeStyle = col;
+        for (let s = 0; s < 7; s++) { const q0 = s / 7, q1 = (s + 1) / 7, lw = w0 + (w1 - w0) * q0 + add; if (lw <= 0.5) continue; c.lineWidth = lw;
+          c.beginPath(); c.moveTo(quad(x0, x1, x2, q0), quad(y0, y1, y2, q0) + off); c.lineTo(quad(x0, x1, x2, q1), quad(y0, y1, y2, q1) + off); c.stroke(); }
+      }
+    };
+    // roots clawing out across the floor, a smaller one off each
+    for (const s of [-1, -0.7, -0.35, 0.3, 0.68, 1]) {
+      const L = R * rand(0.8, 1.15), ex = fx + s * L, ey = fy + rand(-4, 14) + (1 - Math.abs(s)) * 16;
+      limb(fx + s * tw * 0.7, fy - tw, fx + s * L * 0.45, fy - 4, ex, ey, tw * 0.9, 2);
+      const q = 0.55, bx = quad(fx + s * tw * 0.7, fx + s * L * 0.45, ex, q), by = quad(fy - tw, fy - 4, ey, q);
+      limb(bx, by, bx + s * L * 0.15, by + 10, bx + s * L * rand(0.2, 0.35), by + rand(12, 22), tw * 0.35, 1);
+    }
+    // the trunk: gnarled edges narrowing up, shaded dark on its right, bark ridges and a knot
+    const top = fy - H * 0.8, edge = (side, q) => fx + side * tw * (1.25 - 0.6 * q) + Math.sin(q * 7 + side) * tw * 0.12 + (q > 0.85 ? side * (q - 0.85) * tw * 4 : 0);
+    c.beginPath(); for (let i = 0; i <= 12; i++) { const q = i / 12; c.lineTo(edge(-1, q), fy - (fy - top) * q); } for (let i = 12; i >= 0; i--) { const q = i / 12; c.lineTo(edge(1, q), fy - (fy - top) * q); } c.closePath();
+    const bark = c.createLinearGradient(fx - tw * 1.3, 0, fx + tw * 1.3, 0); bark.addColorStop(0, '#7a5a34'); bark.addColorStop(0.35, '#4a3220'); bark.addColorStop(1, '#1a1008');
+    c.fillStyle = bark; c.fill(); c.strokeStyle = '#0e0804'; c.lineWidth = 3; c.stroke();
+    c.save(); c.clip();
+    for (let j = 0; j < 7; j++) { const f = -0.85 + j * 0.28, ph = rand(0, 6);
+      c.strokeStyle = '#1a1008'; c.lineWidth = 1.8; c.beginPath(); for (let i = 0; i <= 12; i++) { const q = i / 12, ex = edge(-1, q) + (edge(1, q) - edge(-1, q)) * (f + 1) / 2; c.lineTo(ex + Math.sin(q * 9 + ph) * 3, fy - (fy - top) * q); } c.stroke();
+      c.strokeStyle = 'rgba(160,124,74,0.5)'; c.lineWidth = 1; c.stroke(); }
+    c.fillStyle = '#140c06'; c.beginPath(); c.ellipse(fx - tw * 0.2, fy - H * 0.42, tw * 0.28, tw * 0.4, 0.2, 0, TAU); c.fill(); c.strokeStyle = '#7a5a34'; c.lineWidth = 1.4; c.stroke();
+    c.restore();
+    // branches up into the crown
+    for (const [dx, dy] of [[-0.75, 0.05], [-0.4, -0.35], [0.05, -0.55], [0.45, -0.3], [0.8, 0.08]]) limb(fx + dx * tw, top + tw, fx + dx * R * 0.35, cy + R * 0.2, fx + dx * R * 0.8, cy + dy * ry, tw * 0.75, 3);
+    // the crown: loose leaves peeking out at its edge, then clusters back to front
+    const greens = ['#0f280c', '#173a12', '#21521a', '#2c6a20', '#3a8428', '#4f9e32', '#6cba40', '#94d85a'];
+    for (let i = 0; i < 46; i++) { const a = rand(0, TAU), lx = fx + Math.cos(a) * R * 1.04, ly = cy + Math.sin(a) * ry * 1.06;
+      c.save(); c.translate(lx, ly); c.rotate(a + rand(-0.6, 0.6)); c.fillStyle = '#081406'; c.beginPath(); c.ellipse(0, 0, 9, 4.5, 0, 0, TAU); c.fill(); c.fillStyle = greens[2 + (Math.random() * 4 | 0)]; c.beginPath(); c.ellipse(0, 0, 7.5, 3.2, 0, 0, TAU); c.fill(); c.restore(); }
+    const cl = [];
+    for (let i = 0; i < 48; i++) { const a = rand(0, TAU), d = Math.sqrt(Math.random()) * 0.82; cl.push({ x: fx + Math.cos(a) * d * R, y: cy + Math.sin(a) * d * ry, s: R * rand(0.2, 0.3) * (1.1 - d * 0.25) }); }
+    for (let i = 0; i < 10; i++) { const a = Math.PI * (0.1 + i * 0.09); cl.push({ x: fx + Math.cos(a) * R * 0.86, y: cy + Math.sin(a) * ry * 0.82, s: R * rand(0.18, 0.24) }); }   // (a full lower rim)
+    cl.sort((a, b) => a.y - b.y);
+    const blob = (x, y, s, grow) => { c.beginPath(); c.arc(x, y, s * 0.6 + grow, 0, TAU); for (let i = 0; i < 7; i++) { const a = i * TAU / 7 + s; c.moveTo(x + Math.cos(a) * s * 0.55 + s * 0.48 + grow, y + Math.sin(a) * s * 0.55); c.arc(x + Math.cos(a) * s * 0.55, y + Math.sin(a) * s * 0.55, s * 0.48 + grow, 0, TAU); } c.fill(); };
+    for (const b of cl) {
+      const tone = 0.55 - (b.y - cy) / ry * 0.38 - (b.x - fx) / R * 0.16 + rand(-0.12, 0.12), gi = Math.max(1, Math.min(5, Math.round(tone * 7)));
+      c.fillStyle = '#061004'; blob(b.x, b.y, b.s, 2.5);
+      c.fillStyle = greens[gi - 1]; blob(b.x, b.y, b.s, 0);
+      c.fillStyle = greens[gi]; blob(b.x - b.s * 0.1, b.y - b.s * 0.14, b.s * 0.82, 0);
+      c.fillStyle = greens[gi + 2]; blob(b.x - b.s * 0.24, b.y - b.s * 0.3, b.s * 0.42, 0);
+      c.fillStyle = 'rgba(200,250,140,0.55)';
+      for (let j = 0; j < 3; j++) { c.save(); c.translate(b.x - b.s * rand(0.1, 0.5), b.y - b.s * rand(0.25, 0.6)); c.rotate(rand(-1, 1)); c.beginPath(); c.ellipse(0, 0, b.s * 0.16, b.s * 0.07, 0, 0, TAU); c.fill(); c.restore(); }
+    }
+    // a shadow under the crown, and warm light falling on its top
+    c.globalCompositeOperation = 'source-atop';
+    const sh = c.createLinearGradient(0, cy, 0, cy + ry * 1.15); sh.addColorStop(0, 'rgba(2,10,2,0)'); sh.addColorStop(1, 'rgba(2,10,2,0.55)'); c.fillStyle = sh; c.fillRect(0, cy, W, ry * 1.15);
+    const lit = c.createRadialGradient(fx - R * 0.35, cy - ry * 0.7, 0, fx - R * 0.35, cy - ry * 0.7, R * 1.1); lit.addColorStop(0, 'rgba(255,236,150,0.32)'); lit.addColorStop(1, 'rgba(255,236,150,0)'); c.fillStyle = lit; c.fillRect(0, 0, W, fy);
+    c.globalCompositeOperation = 'source-over';
+    return (groveTreeArt = { cv, H, R, fx, fy });
+  }
+  // the World Tree standing over the druid: it shoots up out of its roots in half a second (a little overshoot) and
+  // sways, golden lanterns hanging from its crown on threads, light pouring down through it; it fades out entirely by
+  // `dur` (from `fade`) so nothing leafy hangs over the party or the boss for the heal's 12s.
   function groveWorldTree(x, y, o = {}) {
-    const dur = o.dur ?? 12, H = o.h ?? 150, R = o.r ?? 78;
-    const crown = [[0, 0, 1], [-0.62, 0.2, 0.68], [0.62, 0.16, 0.7], [-0.36, -0.44, 0.66], [0.38, -0.42, 0.62], [0, -0.7, 0.55], [-0.86, -0.12, 0.44], [0.86, -0.16, 0.44]];
-    const fruit = Array.from({ length: 9 }, (_, i) => ({ x: -0.84 + i * 0.21 + rand(-0.05, 0.05), y: rand(0.1, 0.45), len: rand(12, 30), ph: rand(0, 6) }));
-    const feet = [-1, -0.45, 0.45, 1].map(s => ({ s, l: rand(26, 40) }));
+    const dur = o.dur ?? 2.7, fade = o.fade ?? 1.9, H = o.h ?? 150, R = o.r ?? 78, art = groveTreeSprite(H, R);
+    const fruit = Array.from({ length: 11 }, (_, i) => { const u = -0.84 + i * 0.168 + rand(-0.05, 0.05); return { x: u * R, y: R * 0.7 * rand(0.35, 0.9) * (1 - Math.abs(u) * 0.35), len: rand(12, 34), ph: rand(0, 6) }; });
     V.fx({ dur, layer: 'air', draw: (c, p, t, e) => {
-      const T = p * dur, g = 1 - Math.pow(1 - Math.min(1, T / 0.5), 3);
-      const k = e.a * Math.min(1, (dur - T) / 1.2) * (T < 1.6 ? 1 : Math.max(0.3, 1 - (T - 1.6) / 1.0 * 0.7));
-      const sway = Math.sin(t * 1.3) * 4 * g, top = y - H * g, cx = x + sway;
-      // golden light pouring down through the crown, the first moment only
-      const shaft = Math.max(0, 1 - T / 1.4) * Math.min(1, T / 0.3) * e.a;
+      const T = p * dur, q = Math.min(1, T / 0.5), g = (1 - Math.pow(1 - q, 3)) * (1 + 0.08 * Math.sin(q * Math.PI)), gx = 0.55 + 0.45 * g;
+      const k = e.a * Math.min(1, T / 0.06) * Math.max(0, Math.min(1, (dur - T) / (dur - fade)));
+      if (k <= 0.01) return;
+      const sway = Math.sin(t * 1.3) * R * 0.04 * g;
+      V.glowAt(c, x, y - 10, R * 1.1, GROVE_GOLD, k * 0.3 * Math.max(0.3, 1 - T / 1.5));
+      c.save(); c.globalAlpha = k; c.translate(x, y); c.transform(gx, 0, -sway / H, g, 0, 0); c.drawImage(art.cv, -art.fx, -art.fy); c.restore();
+      // golden light pouring down through the crown, the first moments
+      const shaft = e.a * Math.min(1, T / 0.25) * Math.max(0, 1 - T / 1.7);
       if (shaft > 0.01) {
+        const top = y - (H - R * 0.25) * g;
         c.save(); c.globalCompositeOperation = 'lighter';
-        for (let i = -2; i <= 2; i++) { const sx = cx + i * R * 0.34, gr = c.createLinearGradient(0, top, 0, y); gr.addColorStop(0, rgba(GROVE_GOLD, 0)); gr.addColorStop(0.35, rgba(GROVE_GOLD, 0.26 * shaft)); gr.addColorStop(1, rgba(GROVE_GOLD, 0)); c.fillStyle = gr; c.fillRect(sx - 6, top, 12, y - top); }
+        for (let i = -2; i <= 2; i++) { const sx = x + sway + i * R * 0.3, w = R * (0.1 + 0.04 * Math.abs(i)), gr = c.createLinearGradient(0, top, 0, y + 10);
+          gr.addColorStop(0, rgba(GROVE_GOLD, 0)); gr.addColorStop(0.3, rgba(GROVE_GOLD, 0.24 * shaft)); gr.addColorStop(1, rgba(GROVE_GOLD, 0));
+          c.fillStyle = gr; c.beginPath(); c.moveTo(sx - w * 0.5, top); c.lineTo(sx + w * 0.5, top); c.lineTo(sx + w * 1.2 + i * 6, y + 10); c.lineTo(sx - w * 1.2 + i * 6, y + 10); c.closePath(); c.fill(); }
         c.restore();
       }
-      c.save(); c.globalAlpha = k; c.lineJoin = 'round'; c.lineCap = 'round';
-      // roots flaring out at the foot, then the trunk
-      for (const f of feet) { c.strokeStyle = '#140c06'; c.lineWidth = 8; c.beginPath(); c.moveTo(x + f.s * 8, y - 6); c.quadraticCurveTo(x + f.s * f.l * 0.6, y - 2, x + f.s * f.l * g, y + 6); c.stroke(); c.strokeStyle = BARK; c.lineWidth = 5; c.stroke(); }
-      c.fillStyle = BARK; c.strokeStyle = '#140c06'; c.lineWidth = 3;
-      c.beginPath(); c.moveTo(x - 22, y + 2); c.quadraticCurveTo(x - 8, y - 10, x - 7, y - H * 0.35 * g); c.quadraticCurveTo(cx - 6, top + R * 0.5 * g, cx - 4, top + R * 0.3 * g);
-      c.lineTo(cx + 4, top + R * 0.3 * g); c.quadraticCurveTo(cx + 6, top + R * 0.5 * g, x + 7, y - H * 0.35 * g); c.quadraticCurveTo(x + 8, y - 10, x + 22, y + 2); c.closePath(); c.fill(); c.stroke();
-      // the fruit's threads hang from under the crown (drawn first so the leaves cover their tops)
-      c.strokeStyle = '#c8a050'; c.lineWidth = 1;
-      for (const f of fruit) { const fx = cx + f.x * R * g, fy = top + f.y * R * g; c.beginPath(); c.moveTo(fx, fy - 6); c.lineTo(fx + Math.sin(t * 1.3 + f.ph) * 1.5, fy + f.len * g); c.stroke(); }
-      // the crown: an ink edge, the leaves, then a light pass on top
-      for (const [bx, by, br] of crown) { c.fillStyle = '#0e2208'; c.beginPath(); c.arc(cx + bx * R * g, top + by * R * g, R * br * g + 3, 0, TAU); c.fill(); }
-      for (const [bx, by, br] of crown) { c.fillStyle = MOSS; c.beginPath(); c.arc(cx + bx * R * g, top + by * R * g, R * br * g, 0, TAU); c.fill(); }
-      c.globalCompositeOperation = 'lighter';
-      for (const [bx, by, br] of crown) { c.globalAlpha = 0.24 * k; c.fillStyle = LEAF; c.beginPath(); c.arc(cx + (bx - 0.12) * R * g, top + (by - 0.14) * R * g, R * br * g * 0.62, 0, TAU); c.fill(); }
-      c.restore(); c.globalAlpha = 1;
-      for (const f of fruit) { const fx = cx + f.x * R * g + Math.sin(t * 1.3 + f.ph) * 1.5, fy = top + f.y * R * g + f.len * g, pulse = 0.65 + 0.35 * Math.sin(t * 2.4 + f.ph);
-        V.glowAt(c, fx, fy, 12, GROVE_GOLD, k * 0.6 * pulse); V.glowAt(c, fx, fy, 4, GROVE_CREAM, k * pulse); }
+      // golden lanterns on threads under the crown
+      const fk = k * Math.min(1, Math.max(0, T - 0.3) / 0.25); if (fk <= 0.01) return;
+      c.strokeStyle = '#d8b060'; c.lineWidth = 1; c.globalAlpha = fk * 0.8;
+      const ls = fruit.map(f => { const bx = x + f.x * gx + sway, by = y + (-H + f.y) * g, lx = bx + Math.sin(t * 1.6 + f.ph) * 2, ly = by + f.len * g; c.beginPath(); c.moveTo(bx, by); c.lineTo(lx, ly); c.stroke(); return [lx, ly, 0.7 + 0.3 * Math.sin(t * 2.4 + f.ph)]; });
+      c.globalAlpha = 1;
+      for (const [lx, ly, pulse] of ls) { V.glowAt(c, lx, ly + 3, 18, GROVE_GOLD, fk * 0.7 * pulse); c.globalAlpha = fk; c.fillStyle = '#ffcf4a'; c.beginPath(); c.ellipse(lx, ly + 3, 3.4, 4.4, 0, 0, TAU); c.fill(); c.globalAlpha = 1; V.glowAt(c, lx, ly + 3, 5, GROVE_CREAM, fk * pulse); }
     }, tick: p => {
-      if (p * dur > 0.5 && Math.random() < 0.16) V.spawn({ x: x + rand(-R, R), y: y + rand(-6, 6), z: H * rand(0.6, 1.1), vz: rand(-50, -25), vx: rand(-20, 20), life: rand(1.6, 2.4), size: rand(9, 12), color: Math.random() < 0.7 ? LEAF : '#ffe0a0', kind: 'leaf', add: false, vr: rand(-3, 3), flutter: 5, fadeIn: 0.1 });
+      const T = p * dur; if (T < 0.45 || T > fade + 0.3) return;
+      if (Math.random() < 0.3) V.spawn({ x: x + rand(-R, R), y: y + rand(-R * 0.3, R * 0.2), z: H * rand(0.55, 1.05), vz: rand(-55, -25), vx: rand(-25, 25), life: rand(1.4, 2.2), size: rand(9, 13), color: Math.random() < 0.7 ? (Math.random() < 0.5 ? LEAF : '#5fb03a') : '#ffe0a0', kind: 'leaf', add: false, vr: rand(-3, 3), flutter: 5, fadeIn: 0.1 });
+      if (Math.random() < 0.2) V.spawn({ x: x + rand(-R, R) * 0.8, y: y + rand(-10, 10), z: H * rand(0.4, 0.9), vz: rand(-20, 10), life: rand(0.8, 1.4), size: rand(5, 8), size1: 0, color: Math.random() < 0.6 ? GROVE_GOLD : GROVE_CREAM, kind: 'star' });
     } });
   }
-  // the grove the tree leaves: a faint canopy shade the size of its reach (r: the heal's 180) ringed with flowers, and a
-  // teal pool glowing among the roots at its foot, ripples running out across it
+  // the grove the tree leaves: the ring of its reach (r: the heal's 180) with a dashed inner leaf ring and flowers on
+  // it, and a teal pool among the roots at its foot (rim-led, its middle barely tinted), ripples running out across it.
+  // No fill over the party: everything here is a rim or a glow, so the telegraphs under it read.
   function groveCanopy(x, y, o = {}) {
-    const R = o.r ?? 180, dur = o.dur ?? 12, pool = R * 0.42, flat = 0.55;
-    const flowers = Array.from({ length: 10 }, (_, i) => ({ a: i * TAU / 10 + rand(-0.2, 0.2), d: rand(0.74, 0.94), s: rand(3, 4.5) }));
+    const R = o.r ?? 180, dur = o.dur ?? 12, pool = o.pool ?? R * 0.42, flat = 0.55;
+    const flowers = Array.from({ length: 12 }, (_, i) => ({ a: i * TAU / 12 + rand(-0.15, 0.15), d: rand(0.86, 0.98), s: rand(3, 4.5) }));
     V.fx({ dur, layer: 'ground', draw: (c, p, t, e) => {
       const T = p * dur, g = easeOut(Math.min(1, T / 0.5)), k = e.a * Math.min(1, T / 0.3, (dur - T) / 0.8);
-      c.globalAlpha = 0.12 * k; c.fillStyle = GROVE_SHADE; c.beginPath(); c.ellipse(x, y, R * g, R * g * flat, 0, 0, TAU); c.fill(); c.globalAlpha = 1;
-      V.neonRing(c, x, y, R * g, LEAF, 2, k * 0.45, flat);
+      V.neonRing(c, x, y, R * g, LEAF, 2, k * 0.5, flat);
+      c.save(); c.translate(x, y); c.scale(1, flat); c.rotate(t * 0.08); c.setLineDash([10, 14]); V.neonPath(c, '#5fb03a', 1, k * 0.35, () => c.arc(0, 0, R * g * 0.9, 0, TAU)); c.setLineDash([]); c.restore();
       c.save(); c.globalCompositeOperation = 'lighter';
-      const gr = c.createRadialGradient(x, y, 0, x, y, pool); gr.addColorStop(0, rgba(GROVE_TEAL, 0.2 * k)); gr.addColorStop(0.8, rgba(GROVE_TEAL, 0.1 * k)); gr.addColorStop(1, rgba(GROVE_TEAL, 0));
+      const gr = c.createRadialGradient(x, y, 0, x, y, pool); gr.addColorStop(0, rgba(GROVE_TEAL, 0.05 * k)); gr.addColorStop(0.75, rgba(GROVE_TEAL, 0.1 * k)); gr.addColorStop(1, rgba(GROVE_TEAL, 0.2 * k));
       c.fillStyle = gr; c.beginPath(); c.ellipse(x, y, pool * g, pool * g * flat, 0, 0, TAU); c.fill(); c.restore();
-      for (let i = 0; i < 2; i++) { const q = (t * 0.35 + i * 0.5) % 1; V.neonRing(c, x, y, pool * (0.3 + 0.7 * q), GROVE_TEAL, 1.2, k * 0.3 * (1 - q), flat); }
-      V.neonRing(c, x, y, pool * g, GROVE_TEAL, 1.6, k * 0.4, flat);
+      for (let i = 0; i < 2; i++) { const q = (t * 0.35 + i * 0.5) % 1; V.neonRing(c, x, y, pool * (0.3 + 0.7 * q), GROVE_TEAL, 1.2, k * 0.35 * (1 - q), flat); }
+      V.neonRing(c, x, y, pool * g, GROVE_TEAL, 2, k * 0.55, flat);
       for (const f of flowers) groveFlower(c, x + Math.cos(f.a) * R * f.d * g, y + Math.sin(f.a) * R * f.d * flat * g, f.s, f.a + t * 0.3, k * 0.65);
     }, tick: () => { if (Math.random() < 0.1) { const a = rand(0, TAU), d = Math.sqrt(Math.random()) * pool; V.spawn({ x: x + Math.cos(a) * d, y: y + Math.sin(a) * d * flat, z: 2, vz: rand(15, 35), life: rand(1, 1.6), size: rand(5, 8), size1: 0, color: Math.random() < 0.6 ? GROVE_TEAL : GROVE_GOLD }); } } });
   }
-  // leaves spiral in, roots tear through the floor at the druid's feet, and the World Tree shoots up out of them: a
-  // faint canopy grove with its teal pool stays under it for the 12s of healing. Its thorns on the boss: KIT_VFX['grove-tree'].
+  // leaves spiral in and roots tear through the floor at the druid's feet; the World Tree shoots up out of them, stands
+  // for about two seconds and fades away, leaving only the canopy ring, the teal pool and the roots (rims, low) for the
+  // 12s of healing, gold and teal motes rising off them. Its thorns on the boss: KIT_VFX['grove-tree'].
   ABILITY_VFX.grovekeeper.worldtree = c => {
-    const at = { x: c.x, y: c.y };
+    const at = { x: c.x, y: c.y }, S = GROVE_ULT_SCALE;
     if (c.cam) c.cam.dim(0.28, 1.3);
-    groveLeafSpiral(at.x, at.y, { r: 170, dur: LAND + 0.05, n: 18 });
-    groveRoots(at.x, at.y, { r: 190, n: 8, dur: 12 + LAND, grow: LAND + 0.25, glow: 1, a: 0.2 });
+    groveLeafSpiral(at.x, at.y, { r: 110 * S, dur: LAND + 0.05, n: 20 });
+    groveRoots(at.x, at.y, { r: 130 * S, n: 10, dur: 12 + LAND, grow: LAND + 0.25, glow: 1.4, a: 0.28 });
+    V.fx({ dur: LAND, layer: 'ground', draw: (cx, p, t, e) => { V.glowAt(cx, at.x, at.y, 30 + 60 * S * p, GROVE_GOLD, e.a * 0.5 * p); V.neonRing(cx, at.x, at.y, 90 * S * (1 - 0.7 * p), LEAF, 2, e.a * p, 0.55); } });
     c.later(LAND, () => {
       impact(c.cam, '#e8ffc0', 0.18);
-      shake(6);
-      groveWorldTree(at.x, at.y, { dur: 12 });
-      groveCanopy(at.x, at.y, { r: 180, dur: 12 });
-      V.shock(at.x, at.y, { r: 200, color: '#fff2b0', dur: 0.55, w: 6 });
-      V.shock(at.x, at.y, { r: 240, color: LEAF, dur: 0.7, w: 4, delay: 0.08 });
-      V.debris(at.x, at.y, { n: 8, color: '#5a4a32' });
-      V.burst(at.x, at.y - 90, { color: GROVE_GOLD, color2: GROVE_CREAM, n: 14, speed: 220, kind: 'star', flashR: 90 });
-      for (let i = 0; i < 10; i++) { const a = i * TAU / 10, s = rand(140, 240); V.spawn({ x: at.x, y: at.y, z: 60, vx: Math.cos(a) * s, vy: Math.sin(a) * s * 0.6, vz: rand(40, 120), g: 140, drag: 0.04, life: rand(1, 1.5), size: rand(10, 13), color: i % 3 ? LEAF : GROVE_GOLD, kind: 'leaf', add: false, vr: rand(-6, 6), flutter: 5 }); }
+      shake(7);
+      groveWorldTree(at.x, at.y, { h: 112 * S, r: 78 * S, dur: 2.3, fade: 1.55 });
+      groveCanopy(at.x, at.y, { r: 180, dur: 12, pool: 42 * S });
+      V.shock(at.x, at.y, { r: 120 * S, color: '#fff2b0', dur: 0.55, w: 7 });
+      V.shock(at.x, at.y, { r: 150 * S, color: LEAF, dur: 0.75, w: 5, delay: 0.08 });
+      V.debris(at.x, at.y, { n: 10, color: '#5a4a32' });
+      V.burst(at.x, at.y - 90 * S, { color: GROVE_GOLD, color2: GROVE_CREAM, n: 16, speed: 260, kind: 'star', flashR: 70 * S });
+      for (let i = 0; i < 14; i++) { const a = i * TAU / 14, s = rand(160, 300); V.spawn({ x: at.x, y: at.y, z: 60 * S, vx: Math.cos(a) * s, vy: Math.sin(a) * s * 0.6, vz: rand(40, 140), g: 140, drag: 0.04, life: rand(1.1, 1.6), size: rand(11, 15), color: i % 3 ? (i % 2 ? LEAF : '#5fb03a') : GROVE_GOLD, kind: 'leaf', add: false, vr: rand(-6, 6), flutter: 5 }); }
     });
   };
   // thorned roots burst out of the floor under the boss with a spray of earth; with Thornlash on it (d.s) more and taller
@@ -3521,8 +3780,9 @@ function windLaneBoost(x, y, vx, vy, now) {
       return { x: sx + (tx - sx) * q + nx * b, y: sy + (ty - sy) * q + ny * b - 24 }; };
     V.fx({ dur, layer: 'air', draw: (c, p, t, e) => {
       const k = e.a * Math.min(1, (1 - p) / 0.2 + 0.3), q0 = Math.max(0, p - 0.4);
-      V.neonPath(c, LEAF, 2.6, k * 0.7, () => { for (let s = 0; s <= 10; s++) { const P = at(q0 + (p - q0) * s / 10); s ? c.lineTo(P.x, P.y) : c.moveTo(P.x, P.y); } });
-      const h = at(p); V.glowAt(c, h.x, h.y, 22, LEAF, k * 0.8); V.glowAt(c, h.x, h.y, 7, GROVE_CREAM, k);
+      V.neonPath(c, LEAF, 3.2, k * 0.7, () => { for (let s = 0; s <= 10; s++) { const P = at(q0 + (p - q0) * s / 10); s ? c.lineTo(P.x, P.y) : c.moveTo(P.x, P.y); } });
+      V.neonPath(c, GROVE_GOLD, 1.4, k * 0.6, () => { for (let s = 0; s <= 10; s++) { const P = at(q0 + (p - q0) * s / 10), wv = Math.sin(s * 1.3 + t * 20) * 7; s ? c.lineTo(P.x, P.y + wv) : c.moveTo(P.x, P.y + wv); } });
+      const h = at(p); V.glowAt(c, h.x, h.y, 30, LEAF, k * 0.8); V.glowAt(c, h.x, h.y, 9, GROVE_CREAM, k);
     }, tick: p => { if (Math.random() < 0.6) { const h = at(p); V.spawn({ x: h.x, y: h.y + 24, z: 24, vx: rand(-30, 30), vy: rand(-20, 20), vz: rand(-10, 30), life: rand(0.4, 0.6), size: rand(9, 12), color: Math.random() < 0.3 ? GROVE_GOLD : LEAF, kind: 'leaf', add: false, vr: rand(-8, 8), flutter: 6 }); } } });
   }
   // a ring of small flowers and a vine circle opening round the ally's feet (follows them)
@@ -3548,20 +3808,22 @@ function windLaneBoost(x, y, vx, vy, now) {
   function groveCross(w, o = {}) {
     const dur = o.dur ?? 1.1;
     V.fx({ dur, layer: 'air', draw: (c, p, t, e) => {
-      const k = e.a * Math.min(1, p / 0.15, (1 - p) / 0.4), x = w.x, y = w.y - 74 - 14 * p;
-      V.glowAt(c, x, y, 18, GROVE_GOLD, 0.5 * k);
-      V.neonPath(c, GROVE_GOLD, 2.2, k, () => { c.moveTo(x, y - 9); c.lineTo(x, y + 9); c.moveTo(x - 6, y - 3); c.lineTo(x + 6, y - 3); });
-      for (const s of [-1, 1]) V.glowAt(c, x + s * 14, y + 4 - s * 6, 4, GROVE_CREAM, k * (0.6 + 0.4 * Math.sin(t * 9 + s)));
+      const k = e.a * Math.min(1, p / 0.15, (1 - p) / 0.4), x = w.x, y = w.y - 84 - 16 * p;
+      V.glowAt(c, x, y, 26, GROVE_GOLD, 0.55 * k);
+      V.neonPath(c, GROVE_GOLD, 2.8, k, () => { c.moveTo(x, y - 12); c.lineTo(x, y + 12); c.moveTo(x - 8, y - 4); c.lineTo(x + 8, y - 4); });
+      for (const s of [-1, 1]) { const sx = x + s * 19, sy = y + 5 - s * 8, tw = k * (0.6 + 0.4 * Math.sin(t * 9 + s)); V.glowAt(c, sx, sy, 6, GROVE_CREAM, tw); V.neonPath(c, GROVE_CREAM, 1.2, tw * 0.8, () => { c.moveTo(sx - 4, sy); c.lineTo(sx + 4, sy); c.moveTo(sx, sy - 4); c.lineTo(sx, sy + 4); }); }
     } });
   }
   // Rejuvenate: leaves spiral along to the ally, a flower ring bursts open round them with light rising, a cross glyph
   ABILITY_VFX.grovekeeper.rejuv = c => {
     const w = c.tent || { x: c.tx, y: c.ty }, follow = c.tent || null;
     const land = () => {
-      groveFlowerRing(w.x, w.y, { r: 34, dur: 1.6, follow });
-      groveRays(w.x, w.y, { n: 6, r: 26, h: 64 });
+      groveFlowerRing(w.x, w.y, { r: 46, dur: 1.7, n: 8, follow });
+      groveRays(w.x, w.y, { n: 9, r: 34, h: 92 });
+      V.lightfall(w.x, w.y, { color: '#b8ff9a', r: 24, h: 170, dur: 0.6, feathers: 0 });
+      V.shock(w.x, w.y, { r: 62, color: LEAF, dur: 0.4, w: 3 });
       groveCross(w);
-      for (let i = 0; i < 5; i++) V.spawn({ x: w.x, y: w.y, z: 6 + i * 4, life: 1, size: 11, color: i % 2 ? LEAF : '#c8ff8a', kind: 'leaf', add: false, vr: 5, orbit: { x: w.x, y: w.y, a: i * 1.25, r: 28, w: 4.5, dr: 6, flat: 0.55, follow: follow || undefined } });
+      for (let i = 0; i < 7; i++) V.spawn({ x: w.x, y: w.y, z: 6 + i * 4, life: 1.1, size: 12, color: i % 3 ? (i % 2 ? LEAF : '#c8ff8a') : GROVE_GOLD, kind: 'leaf', add: false, vr: 5, orbit: { x: w.x, y: w.y, a: i * 0.9, r: 36, w: 4.5, dr: 8, flat: 0.55, follow: follow || undefined } });
     };
     if (Math.hypot(w.x - c.x, w.y - c.y) < 30) land(); else { groveLeafStream(c.x, c.y, w, { dur: 0.32 }); c.later(0.32, land); }
   };
@@ -3574,8 +3836,10 @@ function windLaneBoost(x, y, vx, vy, now) {
       V.glowAt(c, x, y, r * (0.8 + open), GROVE_GOLD, 0.45 * k);
       c.save(); c.translate(x, y); c.scale(1, flat); c.globalAlpha = k; c.lineJoin = 'round';
       const layer = (n, L, W, off, fill, edge) => { for (let i = 0; i < n; i++) { c.save(); c.rotate(off + i * TAU / n); petal(c, L, W); c.fillStyle = fill; c.fill(); if (edge) { c.strokeStyle = edge; c.lineWidth = 1.4; c.stroke(); } c.restore(); } };
-      layer(8, r * (0.5 + 0.55 * open), r * 0.22, 0.2, '#2f7a22', '#0e2208');
+      layer(10, r * (0.5 + 0.6 * open), r * 0.22, 0.2, '#2f7a22', '#0e2208');
+      layer(10, r * (0.4 + 0.42 * open), r * 0.12, 0.2, '#6cba40');
       layer(8, r * (0.35 + 0.5 * open), r * 0.2, 0.2 + TAU / 16, GROVE_GOLD, '#6a4a10');
+      layer(8, r * (0.25 + 0.36 * open), r * 0.17, 0.2, '#ffe9a0', '#8a6a20');
       c.globalCompositeOperation = 'lighter'; c.globalAlpha = k * 0.6;
       layer(6, r * (0.2 + 0.28 * open), r * 0.14, 0.5, GROVE_CREAM);
       c.restore(); c.globalAlpha = 1;
@@ -3599,36 +3863,41 @@ function windLaneBoost(x, y, vx, vy, now) {
   // Bloom: a golden lotus bursts open at the druid's feet, petals thrown out, and a mandala seal stays behind
   ABILITY_VFX.grovekeeper.bloom = c => {
     const x = c.x, y = c.y;
-    groveLotus(x, y, { r: 50, dur: 1.1 });
-    V.shock(x, y, { r: 150, color: GROVE_GOLD, dur: 0.5, w: 4, delay: 0.14 });
+    groveLotus(x, y, { r: 66, dur: 1.15 });
+    V.shock(x, y, { r: 190, color: GROVE_GOLD, dur: 0.5, w: 5, delay: 0.14 });
     c.later(0.14, () => {
-      V.flash(x, y - 20, 60, GROVE_GOLD, 0.2);
-      for (let i = 0; i < 12; i++) { const a = i * TAU / 12, sp = rand(120, 220); V.spawn({ x, y, z: 18, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * 0.6, vz: rand(80, 180), g: 160, drag: 0.05, life: 1.2, size: 12, color: i % 3 ? GROVE_GOLD : GROVE_CREAM, kind: 'petal', add: false, vr: 6, flutter: 6, fadeIn: 0.02 }); }
+      V.flash(x, y - 20, 70, GROVE_GOLD, 0.2);
+      groveRays(x, y, { n: 8, r: 40, h: 110, color: GROVE_GOLD, dur: 0.6 });
+      for (let i = 0; i < 16; i++) { const a = i * TAU / 16, sp = rand(140, 260); V.spawn({ x, y, z: 18, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * 0.6, vz: rand(80, 200), g: 160, drag: 0.05, life: 1.3, size: 13, color: i % 3 ? GROVE_GOLD : (i % 2 ? GROVE_CREAM : LEAF), kind: i % 4 === 3 ? 'leaf' : 'petal', add: false, vr: 6, flutter: 6, fadeIn: 0.02 }); }
     });
-    groveMandala(x, y, { r: 92, dur: 1.6, delay: 0.7 });
+    groveMandala(x, y, { r: 122, dur: 1.7, delay: 0.7 });
   };
   // vines surging up out of the floor round a point: each a curling green tendril with a leaf or two
   function groveVines(x, y, o = {}) {
-    const n = Math.min(o.n ?? 8, 10), r = o.r ?? 120, h = o.h ?? 50, dur = o.dur ?? 1.1;
+    const n = Math.min(o.n ?? 8, 12), r = o.r ?? 120, h = o.h ?? 50, dur = o.dur ?? 1.1, s = Math.max(1, h / 50);
     const vs = Array.from({ length: n }, (_, i) => { const a = i * TAU / n + rand(-0.2, 0.2); return { x: x + Math.cos(a) * r * rand(0.75, 1), y: y + Math.sin(a) * r * 0.55 * rand(0.75, 1), h: h * rand(0.7, 1.2), curl: Math.random() < 0.5 ? -1 : 1, at: rand(0, 0.15) }; }).sort((a, b) => a.y - b.y);
     V.fx({ dur, layer: 'air', draw: (c, p, t, e) => {
       const k = e.a * Math.min(1, (1 - p) / 0.35);
       c.lineCap = 'round';
       for (const v of vs) {
         const g = easeOut(Math.min(1, Math.max(0, t - v.at) / 0.3)); if (g <= 0) continue;
-        const tip = { x: v.x + v.curl * 10 * g, y: v.y - v.h * g }, path = () => { c.beginPath(); c.moveTo(v.x, v.y); c.quadraticCurveTo(v.x - v.curl * 12, v.y - v.h * 0.5 * g, tip.x, tip.y); c.arc(tip.x - v.curl * 5, tip.y, 5 * g, v.curl > 0 ? 0 : Math.PI, v.curl > 0 ? -Math.PI * 1.2 : Math.PI * 2.2, v.curl > 0); };
-        c.globalAlpha = k; c.strokeStyle = '#0e2208'; c.lineWidth = 5; path(); c.stroke(); c.strokeStyle = '#5fbf3a'; c.lineWidth = 2.6; path(); c.stroke();
-        c.fillStyle = LEAF; c.beginPath(); c.ellipse(v.x - v.curl * 6, v.y - v.h * 0.4 * g, 5 * g, 2.5 * g, v.curl * 0.6, 0, TAU); c.fill();
+        const tip = { x: v.x + v.curl * 10 * s * g, y: v.y - v.h * g }, path = () => { c.beginPath(); c.moveTo(v.x, v.y); c.quadraticCurveTo(v.x - v.curl * 12 * s, v.y - v.h * 0.5 * g, tip.x, tip.y); c.arc(tip.x - v.curl * 5 * s, tip.y, 5 * s * g, v.curl > 0 ? 0 : Math.PI, v.curl > 0 ? -Math.PI * 1.2 : Math.PI * 2.2, v.curl > 0); };
+        c.globalAlpha = k; c.strokeStyle = '#0e2208'; c.lineWidth = 5 * s; path(); c.stroke(); c.strokeStyle = '#5fbf3a'; c.lineWidth = 2.6 * s; path(); c.stroke();
+        c.strokeStyle = '#a8f070'; c.lineWidth = 0.9 * s; c.globalAlpha = k * 0.7; path(); c.stroke(); c.globalAlpha = k;
+        c.fillStyle = LEAF; c.beginPath(); c.ellipse(v.x - v.curl * 6 * s, v.y - v.h * 0.4 * g, 5 * s * g, 2.5 * s * g, v.curl * 0.6, 0, TAU); c.fill();
+        c.fillStyle = '#4f9e32'; c.beginPath(); c.ellipse(v.x - v.curl * 2 * s, v.y - v.h * 0.7 * g, 4 * s * g, 2 * s * g, -v.curl * 0.6, 0, TAU); c.fill();
       }
       c.globalAlpha = 1;
     } });
   }
   // Wild Growth: vines surge up in a ring round the druid, a leafy circle of the party's heal grows, leaves flung outward
   ABILITY_VFX.grovekeeper.growth = c => {
-    groveVines(c.x, c.y, { r: 130, n: 8, h: 54, dur: 1.2 });
+    groveVines(c.x, c.y, { r: 160, n: 11, h: 70, dur: 1.3 });
+    groveRoots(c.x, c.y, { r: 150, n: 7, dur: 1.6, grow: 0.25, glow: 0.6, a: 0.25 });
+    groveFlowerRing(c.x, c.y, { r: 64, dur: 1.4, n: 8 });
     V.grove(c.x, c.y, { r: 170, dur: 3, color: '#7ee06a', color2: '#ffe0a0', flowers: 8, rate: 0.3 });
-    V.shock(c.x, c.y, { r: 180, color: LEAF, dur: 0.5, w: 5 });
-    for (let i = 0; i < 12; i++) V.spawn({ x: c.x, y: c.y, z: 10 + Math.random() * 20, life: 1.3, size: 13, color: i % 3 ? LEAF : GROVE_GOLD, kind: 'leaf', add: false, vr: 6, orbit: { x: c.x, y: c.y, a: i * 0.52, r: 10, w: 3, dr: 130, flat: 0.6 } });
+    V.shock(c.x, c.y, { r: 200, color: LEAF, dur: 0.55, w: 6 });
+    for (let i = 0; i < 14; i++) V.spawn({ x: c.x, y: c.y, z: 10 + Math.random() * 24, life: 1.4, size: 14, color: i % 3 ? (i % 2 ? LEAF : '#5fb03a') : GROVE_GOLD, kind: 'leaf', add: false, vr: 6, orbit: { x: c.x, y: c.y, a: i * 0.45, r: 10, w: 3, dr: 150, flat: 0.6 } });
     V.plus(c.x, c.y, { n: 5 });
   };
   // a crescent moon hanging over a point, pale teal light falling from it onto the floor
@@ -3636,9 +3905,11 @@ function windLaneBoost(x, y, vx, vy, now) {
     const dur = o.dur ?? 1.3, H = o.h ?? 150, M = o.r ?? 20;
     V.fx({ dur, layer: 'air', draw: (c, p, t, e) => {
       const k = e.a * Math.min(1, p / 0.2, (1 - p) / 0.4), my = y - H - 10 * p;
-      const gr = c.createLinearGradient(0, my, 0, y); gr.addColorStop(0, rgba(GROVE_TEAL, 0.28 * k)); gr.addColorStop(1, rgba(GROVE_TEAL, 0));
-      c.save(); c.globalCompositeOperation = 'lighter'; c.fillStyle = gr; c.fillRect(x - M * 1.2, my, M * 2.4, y - my); c.restore();
-      V.glowAt(c, x, my, M * 2.6, GROVE_TEAL, 0.5 * k);
+      const gr = c.createLinearGradient(0, my, 0, y); gr.addColorStop(0, rgba(GROVE_TEAL, 0.3 * k)); gr.addColorStop(0.7, rgba(GROVE_TEAL, 0.14 * k)); gr.addColorStop(1, rgba(GROVE_TEAL, 0));
+      c.save(); c.globalCompositeOperation = 'lighter'; c.fillStyle = gr; c.beginPath(); c.moveTo(x - M * 1.1, my); c.lineTo(x + M * 1.1, my); c.lineTo(x + M * 2.2, y); c.lineTo(x - M * 2.2, y); c.closePath(); c.fill();
+      for (const s of [-1, 1]) V.neonPath(c, '#bfffee', 1, k * 0.4, () => { c.moveTo(x + s * M * 0.6, my + M); c.lineTo(x + s * M * 1.6, y - 6); });
+      c.restore();
+      V.glowAt(c, x, my, M * 2.8, GROVE_TEAL, 0.55 * k); V.glowAt(c, x, y, M * 2.4, GROVE_TEAL, 0.35 * k);
       c.save(); c.translate(x, my); c.rotate(-0.6); c.globalAlpha = k; c.fillStyle = '#dffff6';
       c.beginPath(); c.arc(0, 0, M, 0.7, TAU - 0.7); c.arc(M * 0.45, 0, M * 0.8, TAU - 1.15, 1.15, true); c.closePath(); c.fill();
       c.restore(); c.globalAlpha = 1;
@@ -3674,8 +3945,8 @@ function windLaneBoost(x, y, vx, vy, now) {
   // for its whole 12s
   ABILITY_VFX.grovekeeper.moonwell = c => {
     const x = c.tx, y = c.ty;
-    groveVines(x, y, { r: 110, n: 8, h: 48, dur: 1.1 });
-    groveMoon(x, y, { dur: 1.3, h: 150 });
+    groveVines(x, y, { r: 120, n: 10, h: 64, dur: 1.2 });
+    groveMoon(x, y, { dur: 1.4, h: 180, r: 27 });
     c.later(0.25, () => {
       groveMoonPool(x, y, { r: 150, dur: 11.75 });
       V.shock(x, y, { r: 160, color: GROVE_TEAL, dur: 0.5, w: 5 });
@@ -3686,9 +3957,10 @@ function windLaneBoost(x, y, vx, vy, now) {
   ABILITY_VFX.grovekeeper.wrath = c => {
     V.glint(c.tx, c.ty, { color: '#e8ffb0', size: 18, z: 12 });
     c.later(0.05, () => {
-      groveThorns(c.tx, c.ty, { n: 5, r: 26, h: 40, dur: 0.6 });
-      groveRoots(c.tx, c.ty, { r: 44, n: 4, dur: 1.2, grow: 0.1, glow: 0.3, a: 0.2 });
-      V.debris(c.tx, c.ty, { n: 3, color: '#5a4a32', up: 0.7 });
+      groveThorns(c.tx, c.ty, { n: 7, r: 36, h: 54, dur: 0.65 });
+      groveRoots(c.tx, c.ty, { r: 62, n: 6, dur: 1.3, grow: 0.1, glow: 0.35, a: 0.22 });
+      V.shock(c.tx, c.ty, { r: 70, color: GROVE_GOLD, dur: 0.3, w: 3 });
+      V.debris(c.tx, c.ty, { n: 4, color: '#5a4a32', up: 0.7 });
     });
   };
 
@@ -3699,30 +3971,64 @@ function windLaneBoost(x, y, vx, vy, now) {
   // block too, below the Ultimate; the boss's Time Stop is BOSS_VFX.timeStop (boss-vfx.js).
   const CHRONO_VIO = '#b48cff', CHRONO_BLUE = '#7aa0ff', CHRONO_GOLD = '#ffd27a', CHRONO_PALE = '#e0d4ff', CHRONO_INK = '#120c28', CHRONO_HASTE = '#ffa63a', CHRONO_DARK = '#2a2050';
   const CHRONO_NUM = ['XII', 'I', 'II', 'III', 'IIII', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI'];
+  // CHRONO_ULT_SCALE sizes Time Reversal: its wind-up dial and ribbon arrows, the implosion and burst, the clock left
+  // on the floor (the boss's Time Stop face has its own TS_SCALE in boss-vfx.js)
+  const CHRONO_ULT_SCALE = 1.6;
+  // the twelve numerals painted once per colour, so a dial blits them rather than setting text every frame
+  const chronoNumArt = {};
+  function chronoNumerals(col) {
+    if (chronoNumArt[col]) return chronoNumArt[col];
+    const fs = 40;
+    return (chronoNumArt[col] = CHRONO_NUM.map(s => {
+      const cv = document.createElement('canvas'); let g = cv.getContext('2d'); g.font = `600 ${fs}px Georgia, serif`;
+      const w = Math.ceil((g.measureText(s).width || fs) + 14), h = fs + 14; cv.width = w; cv.height = h; g = cv.getContext('2d');
+      g.font = `600 ${fs}px Georgia, serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.shadowColor = col; g.shadowBlur = 8; g.fillStyle = col; g.fillText(s, w / 2, h / 2); g.shadowBlur = 0; g.globalAlpha = 0.55; g.fillStyle = '#fffbe8'; g.fillText(s, w / 2, h / 2 - 1);
+      return { cv, w, h, fs };
+    }));
+  }
   // a clock face on the floor: a gold rim, violet and blue inner rings, roman numerals, two hands turning at `spin`
-  // (negative: backwards). o.a caps its strength: a face left lying on the floor stays faint over the telegraphs.
+  // (negative: backwards). o.a caps its strength: a face left lying on the floor stays faint over the telegraphs, and
+  // its dark middle is only a tint (it is led by its rims). o.form: the rings sweep round into being (alternating ways)
+  // and the numerals stamp in one by one over that many seconds. o.rich adds an outer band, minute ticks, a counter-
+  // turning gear ring and a small inner ring.
   function chronoDial(x, y, o = {}) {
-    const r = o.r ?? 150, dur = o.dur ?? 1, spin = o.spin ?? -1, cap = o.a ?? 1, flat = o.flat ?? 0.62, fin = o.fadeIn ?? 0.12, fout = o.fadeOut ?? 0.4, follow = o.follow;
+    const r = o.r ?? 150, dur = o.dur ?? 1, spin = o.spin ?? -1, cap = o.a ?? 1, flat = o.flat ?? 0.62, fin = o.fadeIn ?? 0.12, fout = o.fadeOut ?? 0.4, follow = o.follow, form = o.form || 0, rich = o.rich;
+    const nums = o.numerals !== false ? chronoNumerals(o.numCol || CHRONO_GOLD) : null;
     return V.fx({ dur, layer: 'ground', delay: o.delay, draw: (c, p, t, e) => {
       const T = p * dur, cx = follow ? follow.x : x, cy = follow ? follow.y : y;
-      const k = e.a * cap * Math.min(1, T / fin, (dur - T) / fout), R = r * (0.8 + 0.2 * easeOut(Math.min(1, T / 0.3)));
+      const k = e.a * cap * Math.min(1, T / fin, (dur - T) / fout), R = r * (form ? 0.9 + 0.1 * easeOut(Math.min(1, T / form)) : 0.8 + 0.2 * easeOut(Math.min(1, T / 0.3)));
       if (k <= 0.01) return;
-      c.save(); c.translate(cx, cy); c.scale(1, flat); c.globalAlpha = 0.16 * k; c.fillStyle = '#1a1648'; c.beginPath(); c.arc(0, 0, R, 0, TAU); c.fill(); c.restore();
-      V.neonRing(c, cx, cy, R, CHRONO_GOLD, 2.6, k, flat);
-      V.neonRing(c, cx, cy, R * 0.9, CHRONO_VIO, 1.2, k * 0.8, flat);
-      V.neonRing(c, cx, cy, R * 0.5, CHRONO_BLUE, 1, k * 0.6, flat);
+      const sweep = i => (form ? Math.max(0, Math.min(1, (T - i * form * 0.12) / (form * 0.55))) : 1);
+      const ring = (i, rr, col, w, a) => { const f = sweep(i); if (f <= 0) return; if (f >= 1) { V.neonRing(c, cx, cy, rr, col, w, a, flat); return; }
+        const a0 = -Math.PI / 2, dir = i % 2 ? -1 : 1; V.neonPath(c, col, w, a, () => c.ellipse(cx, cy, rr, rr * flat, 0, a0, a0 + dir * TAU * f, dir < 0)); };
+      c.save(); c.translate(cx, cy); c.scale(1, flat); c.globalAlpha = 0.16 * k * sweep(0); c.fillStyle = '#1a1648'; c.beginPath(); c.arc(0, 0, R, 0, TAU); c.fill(); c.restore();
+      ring(0, R, CHRONO_GOLD, 2.6, k);
+      if (rich) ring(1, R * 1.07, CHRONO_VIO, 1, k * 0.7);
+      ring(2, R * 0.9, CHRONO_VIO, 1.2, k * 0.8);
+      if (rich) ring(3, R * 0.62, CHRONO_BLUE, 1.2, k * 0.7);
+      ring(4, R * 0.45, CHRONO_BLUE, 1, k * 0.6);
+      if (rich) ring(5, R * 0.18, CHRONO_GOLD, 1.2, k * 0.8);
       c.save(); c.translate(cx, cy); c.scale(1, flat); c.globalCompositeOperation = 'lighter'; c.lineCap = 'round';
-      c.strokeStyle = CHRONO_GOLD; c.fillStyle = CHRONO_GOLD; c.textAlign = 'center'; c.textBaseline = 'middle'; c.font = `600 ${Math.max(9, Math.round(R * 0.12))}px Georgia, serif`;
-      for (let i = 0; i < 12; i++) {
-        const a = i * TAU / 12 - Math.PI / 2;
-        c.globalAlpha = 0.8 * k; c.lineWidth = i % 3 ? 1.2 : 2.4;
-        c.beginPath(); c.moveTo(Math.cos(a) * R * 0.9, Math.sin(a) * R * 0.9); c.lineTo(Math.cos(a) * R * 0.97, Math.sin(a) * R * 0.97); c.stroke();
-        if (o.numerals !== false) { c.save(); c.translate(Math.cos(a) * R * 0.77, Math.sin(a) * R * 0.77); c.rotate(a + Math.PI / 2); c.globalAlpha = 0.85 * k; c.fillText(CHRONO_NUM[i], 0, 0); c.restore(); }
+      c.strokeStyle = CHRONO_GOLD; c.globalAlpha = 0.8 * k * sweep(1);
+      c.lineWidth = 2.4; c.beginPath(); for (let i = 0; i < 12; i += 3) { const a = i * TAU / 12 - Math.PI / 2; c.moveTo(Math.cos(a) * R * 0.88, Math.sin(a) * R * 0.88); c.lineTo(Math.cos(a) * R * 0.99, Math.sin(a) * R * 0.99); } c.stroke();
+      c.lineWidth = 1.2; c.beginPath(); for (let i = 0; i < 12; i++) { if (i % 3 === 0) continue; const a = i * TAU / 12 - Math.PI / 2; c.moveTo(Math.cos(a) * R * 0.9, Math.sin(a) * R * 0.9); c.lineTo(Math.cos(a) * R * 0.97, Math.sin(a) * R * 0.97); } c.stroke();
+      if (rich) {
+        c.globalAlpha = 0.55 * k * sweep(2); c.lineWidth = 0.8; c.beginPath(); for (let i = 0; i < 60; i++) { if (i % 5 === 0) continue; const a = i * TAU / 60; c.moveTo(Math.cos(a) * R * 0.93, Math.sin(a) * R * 0.93); c.lineTo(Math.cos(a) * R * 0.96, Math.sin(a) * R * 0.96); } c.stroke();
+        c.strokeStyle = CHRONO_BLUE; c.globalAlpha = 0.6 * k * sweep(3); c.lineWidth = 1.4; c.beginPath(); for (let i = 0; i < 24; i++) { const a = i * TAU / 24 - t * spin * 0.6; c.moveTo(Math.cos(a) * R * 0.55, Math.sin(a) * R * 0.55); c.lineTo(Math.cos(a) * R * 0.62, Math.sin(a) * R * 0.62); } c.stroke();
+      }
+      if (nums) {
+        const sz = Math.max(10, R * 0.12);
+        for (let i = 0; i < 12; i++) {
+          const a = i * TAU / 12 - Math.PI / 2, at0 = form ? form * (0.15 + 0.6 * ((12 - i) % 12) / 12) : 0, q = form ? Math.min(1, Math.max(0, (T - at0) / 0.08)) : 1; if (q <= 0) continue;
+          const n = nums[i], sc = sz / n.fs * (1 + 0.6 * (1 - q));
+          c.save(); c.translate(Math.cos(a) * R * 0.77, Math.sin(a) * R * 0.77); c.rotate(a + Math.PI / 2); c.globalAlpha = 0.9 * k * q; c.drawImage(n.cv, -n.w * sc / 2, -n.h * sc / 2, n.w * sc, n.h * sc); c.restore();
+        }
       }
       const hand = (a, len, w, col) => { c.globalAlpha = k; c.strokeStyle = col; c.lineWidth = w; c.beginPath(); c.moveTo(0, 0); c.lineTo(Math.cos(a) * len, Math.sin(a) * len); c.stroke(); };
-      hand(-Math.PI / 2 + t * spin * 6, R * 0.7, 2, '#ffffff'); hand(-Math.PI / 2 + 2 + t * spin, R * 0.45, 4, CHRONO_GOLD);
+      hand(-Math.PI / 2 + t * spin * 6, R * 0.7, rich ? 2.6 : 2, '#ffffff'); hand(-Math.PI / 2 + 2 + t * spin, R * 0.45, rich ? 5 : 4, CHRONO_GOLD);
       c.restore();
-      V.glowAt(c, cx, cy, 10, '#ffffff', k);
+      V.glowAt(c, cx, cy, rich ? 16 : 10, '#ffffff', k);
     } });
   }
   // a band along an arc, thin at its tail (a1) and full at its head (a2); with dir it ends in an arrowhead
@@ -3735,9 +4041,9 @@ function windLaneBoost(x, y, vx, vy, now) {
   }
   // ribbon arrows sweeping round a point (dir -1: backwards), gold, violet, blue; o.inward draws them in to the centre
   function chronoArrows(x, y, o = {}) {
-    const r = o.r ?? 120, dur = o.dur ?? 1, dir = o.dir ?? -1, n = Math.min(o.n ?? 4, 6), sp = o.speed ?? 6, follow = o.follow, inward = o.inward;
-    const cols = [CHRONO_GOLD, CHRONO_VIO, CHRONO_BLUE, CHRONO_PALE];
-    const arr = Array.from({ length: n }, (_, i) => ({ a: i * TAU / n + rand(-0.2, 0.2), rr: rand(0.8, 1.12), h: rand(6, 30), w: rand(8, 12), col: cols[i % cols.length], span: rand(1.4, 2) }));
+    const r = o.r ?? 120, dur = o.dur ?? 1, dir = o.dir ?? -1, n = Math.min(o.n ?? 4, 6), sp = o.speed ?? 6, follow = o.follow, inward = o.inward, ws = o.w ?? 1;
+    const cols = o.cols || [CHRONO_GOLD, CHRONO_VIO, CHRONO_BLUE, CHRONO_PALE];
+    const arr = Array.from({ length: n }, (_, i) => ({ a: i * TAU / n + rand(-0.2, 0.2), rr: rand(0.8, 1.12), h: rand(6, 30) * ws, w: rand(8, 12) * ws, col: cols[i % cols.length], span: rand(1.4, 2) }));
     V.fx({ dur, layer: 'air', draw: (c, p, t, e) => {
       const cx = follow ? follow.x : x, cy = follow ? follow.y : y, k = e.a * Math.min(1, p / 0.15, (1 - p) / 0.3);
       const shrink = inward ? 1 - 0.6 * easeOut(p) : 0.85 + 0.15 * easeOut(Math.min(1, p / 0.3));
@@ -3752,15 +4058,34 @@ function windLaneBoost(x, y, vx, vy, now) {
       c.globalAlpha = 1;
     } });
   }
-  // crystals and dark debris pulled in to a point, then flung back out with a white-gold pop
+  // big faceted crystal shards flung out from a point along the floor, turning and falling: a violet or blue body, a
+  // white lit facet and edge (o.n at most 14)
+  function chronoCrystals(x, y, o = {}) {
+    const n = Math.min(o.n ?? 10, 14), sp = o.speed ?? 320, sz = o.size ?? 16, dur = o.dur ?? 0.75, cols = o.cols || [CHRONO_VIO, CHRONO_BLUE, CHRONO_PALE, CHRONO_DARK];
+    const sh = Array.from({ length: n }, (_, i) => { const a = i * TAU / n + rand(-0.25, 0.25), s = sp * rand(0.6, 1.1); return { vx: Math.cos(a) * s, vy: Math.sin(a) * s * 0.6, vz: rand(120, 260), r0: rand(0, TAU), vr: rand(-9, 9), L: sz * rand(0.8, 1.4), W: sz * rand(0.35, 0.5), col: cols[i % cols.length] }; });
+    V.fx({ dur, layer: 'air', draw: (c, p, t, e) => {
+      const k = e.a * Math.min(1, (1 - p) / 0.35), dr = (1 - Math.exp(-2.2 * t)) / 2.2;
+      c.lineJoin = 'round';
+      for (const s of sh) {
+        const z = Math.max(0, s.vz * t - 420 * t * t), px = x + s.vx * dr, py = y + s.vy * dr - 24 - z;
+        c.save(); c.translate(px, py); c.rotate(s.r0 + s.vr * t);
+        c.globalAlpha = k * 0.85; c.fillStyle = s.col; c.beginPath(); c.moveTo(0, -s.L); c.lineTo(s.W, 0); c.lineTo(0, s.L * 0.6); c.lineTo(-s.W, 0); c.closePath(); c.fill();
+        c.globalAlpha = k * 0.6; c.fillStyle = '#ffffff'; c.beginPath(); c.moveTo(0, -s.L); c.lineTo(s.W * 0.5, -s.L * 0.1); c.lineTo(0, 0); c.closePath(); c.fill();
+        c.globalAlpha = k; c.strokeStyle = s.col === CHRONO_DARK ? CHRONO_VIO : '#f4eeff'; c.lineWidth = 1.2; c.beginPath(); c.moveTo(0, -s.L); c.lineTo(s.W, 0); c.lineTo(0, s.L * 0.6); c.lineTo(-s.W, 0); c.closePath(); c.stroke();
+        c.restore();
+      }
+      c.globalAlpha = 1;
+    } });
+  }
+  // crystals and dark debris pulled in to a point, then flung back out with a white-gold pop (o.s scales the shards)
   function chronoImplode(x, y, o = {}) {
-    const r = o.r ?? 160, n = Math.min(o.n ?? 14, 18), T = 0.28, cols = [CHRONO_VIO, CHRONO_BLUE, CHRONO_DARK, CHRONO_GOLD];
+    const r = o.r ?? 160, n = Math.min(o.n ?? 14, 20), T = o.t ?? 0.28, s0 = o.s ?? 1, cols = [CHRONO_VIO, CHRONO_BLUE, CHRONO_DARK, CHRONO_GOLD];
     for (let i = 0; i < n; i++) { const a = rand(0, TAU), d = r * rand(0.6, 1), col = cols[i % 4];
-      V.spawn({ x: x + Math.cos(a) * d, y: y + Math.sin(a) * d * 0.6, z: rand(10, 50), vx: -Math.cos(a) * d / T, vy: -Math.sin(a) * d * 0.6 / T, life: T, size: rand(9, 15), color: col, kind: 'shard', add: col === CHRONO_DARK ? false : undefined, vr: rand(-10, 10), fadeIn: 0.3 }); }
-    V.fx({ dur: T, layer: 'air', draw: (c, p, t, e) => V.glowAt(c, x, y - 30, 30 + 50 * p, CHRONO_PALE, e.a * p * 0.8), done: () => {
-      V.flash(x, y - 30, 90, '#fff2c8', 0.22);
-      for (let i = 0; i < n; i++) { const a = rand(0, TAU), s = rand(180, 380), col = cols[i % 4];
-        V.spawn({ x, y, z: 30, vx: Math.cos(a) * s, vy: Math.sin(a) * s * 0.6, vz: rand(60, 200), g: 500, drag: 0.03, life: rand(0.5, 0.8), size: rand(8, 13), color: col, kind: 'shard', add: col === CHRONO_DARK ? false : undefined, vr: rand(-12, 12) }); }
+      V.spawn({ x: x + Math.cos(a) * d, y: y + Math.sin(a) * d * 0.6, z: rand(10, 50), vx: -Math.cos(a) * d / T, vy: -Math.sin(a) * d * 0.6 / T, life: T, size: rand(9, 15) * s0, color: col, kind: 'shard', add: col === CHRONO_DARK ? false : undefined, vr: rand(-10, 10), fadeIn: 0.3 }); }
+    V.fx({ dur: T, layer: 'air', draw: (c, p, t, e) => V.glowAt(c, x, y - 30, (30 + 50 * p) * s0, CHRONO_PALE, e.a * p * 0.8), done: () => {
+      V.flash(x, y - 30, 90 * s0, '#fff2c8', 0.22);
+      for (let i = 0; i < n; i++) { const a = rand(0, TAU), s = rand(180, 380) * s0, col = cols[i % 4];
+        V.spawn({ x, y, z: 30, vx: Math.cos(a) * s, vy: Math.sin(a) * s * 0.6, vz: rand(60, 200), g: 500, drag: 0.03, life: rand(0.5, 0.8), size: rand(8, 13) * s0, color: col, kind: 'shard', add: col === CHRONO_DARK ? false : undefined, vr: rand(-12, 12) }); }
       V.debris(x, y, { n: 6, color: '#2e2a4a' });
     } });
   }
@@ -3796,53 +4121,64 @@ function windLaneBoost(x, y, vx, vy, now) {
   function chronoStance(ent, haste) {
     const col = haste ? CHRONO_HASTE : CHRONO_VIO, dur = 1.5, gx = ent.x, gy = ent.y;
     V.fx({ dur, layer: 'ground', draw: (c, p, t, e) => {
-      const k = e.a * Math.min(1, p / 0.12, (1 - p) / 0.35), x = ent.x, y = ent.y, R = 44 * (0.8 + 0.2 * easeOut(Math.min(1, p / 0.2)));
-      V.neonRing(c, x, y, R, col, 2.2, k, 0.55); V.neonRing(c, x, y, R * 0.78, col, 1, k * 0.6, 0.55);
+      const k = e.a * Math.min(1, p / 0.12, (1 - p) / 0.35), x = ent.x, y = ent.y, R = 58 * (0.8 + 0.2 * easeOut(Math.min(1, p / 0.2)));
+      V.neonRing(c, x, y, R, col, 2.4, k, 0.55); V.neonRing(c, x, y, R * 0.78, col, 1, k * 0.6, 0.55); V.neonRing(c, x, y, R * 1.12, haste ? '#ffe0a0' : CHRONO_PALE, 0.8, k * 0.45, 0.55);
       c.save(); c.translate(x, y); c.scale(1, 0.55); c.rotate((haste ? 4 : -0.5) * t); c.globalCompositeOperation = 'lighter'; c.strokeStyle = col; c.globalAlpha = k * 0.8;
-      for (let i = 0; i < 12; i++) { const a = i * TAU / 12; c.lineWidth = i % 3 ? 1 : 2.2; c.beginPath(); c.moveTo(Math.cos(a) * R * 0.8, Math.sin(a) * R * 0.8); c.lineTo(Math.cos(a) * R * 0.95, Math.sin(a) * R * 0.95); c.stroke(); }
+      for (let i = 0; i < 12; i++) { const a = i * TAU / 12; c.lineWidth = i % 3 ? 1 : 2.4; c.beginPath(); c.moveTo(Math.cos(a) * R * 0.8, Math.sin(a) * R * 0.8); c.lineTo(Math.cos(a) * R * 0.95, Math.sin(a) * R * 0.95); c.stroke(); }
+      // a short arrow riding the rim the way the stance turns time (Haste forwards, fast; Slow backwards)
+      c.fillStyle = col; c.globalAlpha = k * 0.9; chronoBand(c, R * 1.12, haste ? -1.2 : 1.2, 0, 5, haste ? 1 : -1);
       c.restore();
     } });
     V.fx({ dur: 1.1, layer: 'air', draw: (c, p, t, e) => {
-      const k = e.a * Math.min(1, p / 0.15, (1 - p) / 0.4), x = ent.x, y = ent.y - 80 - (haste ? 18 : 4) * p;
-      V.glowAt(c, x, y, 18, col, 0.5 * k);
-      c.save(); c.translate(x, y);
+      const k = e.a * Math.min(1, p / 0.15, (1 - p) / 0.4), x = ent.x, y = ent.y - 84 - (haste ? 18 : 4) * p;
+      V.glowAt(c, x, y, 24, col, 0.55 * k);
+      c.save(); c.translate(x, y); c.scale(1.35, 1.35);
       if (haste) for (const dx of [-7, 7]) V.neonPath(c, col, 2, k, () => { c.moveTo(dx - 6, 3); c.lineTo(dx, -4); c.lineTo(dx + 6, 3); });
       else V.neonPath(c, col, 1.8, k, () => chronoHourglass(c, 18));
       c.restore();
     } });
-    if (haste) for (let i = 0; i < 8; i++) V.spawn({ x: ent.x + rand(-24, 24), y: ent.y + rand(-8, 8), z: rand(4, 30), vx: rand(-40, 40), vz: rand(180, 280), life: 0.4, size: 10, color: i % 2 ? CHRONO_HASTE : '#ffe0a0', stretch: 5 });
+    if (haste) for (let i = 0; i < 10; i++) V.spawn({ x: ent.x + rand(-30, 30), y: ent.y + rand(-10, 10), z: rand(4, 34), vx: rand(-40, 40), vz: rand(200, 300), life: 0.42, size: 11, color: i % 2 ? CHRONO_HASTE : '#ffe0a0', stretch: 5 });
     else {
-      for (let i = 0; i < 6; i++) V.spawn({ x: ent.x + rand(-26, 26), y: ent.y + rand(-8, 8), z: rand(20, 60), vz: -rand(8, 16), life: 1.2, size: rand(6, 9), size1: 0, color: i % 2 ? CHRONO_VIO : CHRONO_PALE });
-      V.fx({ dur: 0.7, layer: 'air', draw: (c, p, t, e) => chronoGhost(c, gx, gy, 1.15, CHRONO_VIO, e.a * (1 - p) * 0.8) });   // (an afterimage left where it stood)
+      for (let i = 0; i < 7; i++) V.spawn({ x: ent.x + rand(-32, 32), y: ent.y + rand(-10, 10), z: rand(20, 64), vz: -rand(8, 16), life: 1.2, size: rand(6, 10), size1: 0, color: i % 2 ? CHRONO_VIO : CHRONO_PALE });
+      V.fx({ dur: 0.8, layer: 'air', draw: (c, p, t, e) => { chronoGhost(c, gx - 10, gy, 1.3, CHRONO_VIO, e.a * (1 - p) * 0.8); chronoGhost(c, gx - 22, gy, 1.3, CHRONO_BLUE, e.a * (1 - p) * 0.45); } });   // (afterimages left where it stood)
     }
   }
   // the dial spins backwards round the party with ribbon arrows; at the impact the moment freezes (the longest hit-stop
   // of the healers), crystals implode and burst with ring arrows drawn in, and a large faint clock face stays on the floor
   // for the 6s it reached back through. The boss's stutter is KIT_VFX['chrono-undo']; its Time Stop is BOSS_VFX.timeStop.
   ABILITY_VFX.chronomancer.timereversal = c => {
-    const at = { x: c.x, y: c.y };
+    const at = { x: c.x, y: c.y }, S = CHRONO_ULT_SCALE;
     if (c.cam) c.cam.dim(0.36, 1.4);
-    chronoDial(at.x, at.y, { r: 150, dur: LAND + 0.3, spin: -9, a: 0.9, fadeOut: 0.3 });
-    chronoArrows(at.x, at.y, { r: 130, n: 4, dur: LAND + 0.2, dir: -1, speed: 7, follow: c.ent });
-    V.charge(c.x, c.y, { color: CHRONO_PALE, r: 80, n: 10, dur: LAND, follow: c.ent });
+    // wind-up: the great dial forms round the caster (rings sweeping round, numerals stamping in), hands racing back;
+    // two layers of ribbon arrows counter-turn over it, light gathering in the middle
+    chronoDial(at.x, at.y, { r: 150 * S, dur: LAND + 0.25, spin: -9, a: 0.95, fadeOut: 0.25, form: LAND * 0.85, rich: true });
+    chronoArrows(at.x, at.y, { r: 135 * S, n: 4, dur: LAND + 0.15, dir: -1, speed: 6, follow: c.ent, w: 1.4 });
+    chronoArrows(at.x, at.y, { r: 85 * S, n: 3, dur: LAND + 0.1, dir: 1, speed: 8, follow: c.ent, w: 1.1, cols: [CHRONO_VIO, CHRONO_PALE, CHRONO_BLUE] });
+    V.charge(c.x, c.y, { color: CHRONO_PALE, r: 80 * S, n: 12, dur: LAND, follow: c.ent });
     c.later(LAND, () => {
       impact(c.cam, '#e0d4ff', 0.2, 0.12);
-      shake(5);
-      chronoImplode(at.x, at.y, { r: 170, n: 16 });
-      chronoArrows(at.x, at.y, { r: 120, n: 3, dur: 0.6, dir: -1, speed: 10, inward: true });
-      V.shock(at.x, at.y, { r0: 230, r: 20, color: CHRONO_PALE, dur: 0.4, w: 7 });
-      V.shock(at.x, at.y, { r: 210, color: CHRONO_VIO, dur: 0.6, w: 5, delay: 0.3 });
-      V.burst(at.x, at.y - 30, { color: '#fff2c8', color2: CHRONO_VIO, n: 14, speed: 260, kind: 'star', flashR: 90 });
-      chronoDial(at.x, at.y, { r: 170, dur: 6, spin: -0.5, a: 0.3, fadeIn: 0.4, fadeOut: 1 });
-      V.decal(at.x, at.y, { style: 'crack', r: 70, dur: 3, a: 0.3, seed: Math.random() * 6 });
+      shake(6);
+      // impact: everything pulled in, then a white-gold pop, crystal shards and ring arrows thrown back out
+      chronoImplode(at.x, at.y, { r: 170 * S, n: 20, s: 1.25 });
+      chronoArrows(at.x, at.y, { r: 120 * S, n: 4, dur: 0.6, dir: -1, speed: 10, inward: true, w: 1.3 });
+      V.shock(at.x, at.y, { r0: 150 * S, r: 20, color: CHRONO_PALE, dur: 0.3, w: 8 });
+      V.fx({ dur: 0.3, layer: 'air', done: () => {
+        chronoCrystals(at.x, at.y, { n: 12, speed: 330 * S, size: 20, dur: 0.85 });
+        V.shock(at.x, at.y, { r: 140 * S, color: '#fff2c8', dur: 0.45, w: 6 });
+        V.shock(at.x, at.y, { r: 175 * S, color: CHRONO_VIO, dur: 0.65, w: 5, delay: 0.06 });
+        V.burst(at.x, at.y - 30, { color: '#fff2c8', color2: CHRONO_VIO, n: 16, speed: 320, kind: 'star', flashR: 110 });
+      }, draw() {} });
+      // aftermath: the clock lies on the floor, rim-led, its hands creeping back, for the 6s it reached through
+      chronoDial(at.x, at.y, { r: 170 * S, dur: 6, spin: -0.5, a: 0.4, fadeIn: 0.4, fadeOut: 1, rich: true });
+      V.decal(at.x, at.y, { style: 'crack', r: 70 * S, dur: 3, a: 0.3, seed: Math.random() * 6 });
       c.ent._chronoHaste = true; chronoHasteAura(c.ent);   // (it slips the chronomancer into Haste)
     });
   };
   // the boss stutters: a small dial spinning back on it, ring arrows drawn in, glitching streaks, a violet starburst
   KIT_VFX['chrono-undo'] = Object.assign((e, target) => {
     const t = target || e;
-    chronoDial(t.x, t.y, { r: 90, dur: 1.3, spin: -8, a: 0.75, numerals: false });
-    chronoArrows(t.x, t.y, { r: 80, n: 3, dur: 0.8, dir: -1, speed: 9, inward: true });
+    chronoDial(t.x, t.y, { r: 115, dur: 1.3, spin: -8, a: 0.75, numerals: false, rich: true });
+    chronoArrows(t.x, t.y, { r: 100, n: 3, dur: 0.8, dir: -1, speed: 9, inward: true, w: 1.2 });
     for (let i = 0; i < 4; i++) { const a = rand(0, TAU), L = rand(50, 90); V.lightning(t.x + Math.cos(a) * L, t.y + Math.sin(a) * L * 0.6, t.x, t.y, { color: i % 2 ? CHRONO_GOLD : CHRONO_VIO, jag: 12, dur: 0.3 }); }
     V.spikeburst(t.x, t.y, { r: 80, n: 14, color: CHRONO_VIO, core: '#ffffff', ink: CHRONO_INK, dur: 0.4, z: 10 });
     V.shock(t.x, t.y, { r: 130, color: CHRONO_PALE, dur: 0.5, w: 6 });
@@ -3858,22 +4194,23 @@ function windLaneBoost(x, y, vx, vy, now) {
     const n = Math.min(o.n ?? 4, 6), dur = o.dur ?? 1.1, tx = w.x, ty = w.y;
     V.fx({ dur, layer: 'ground', draw: (c, p, t, e) => {
       const k = e.a * Math.min(1, p / 0.1, (1 - p) / 0.4);
-      V.neonPath(c, CHRONO_BLUE, 1.2, k * 0.6, () => { c.moveTo(sx, sy); c.lineTo(tx, ty); });
-      for (let i = 1; i <= n; i++) { const q = i / (n + 1); V.neonRing(c, sx + (tx - sx) * q, sy + (ty - sy) * q, 6, CHRONO_PALE, 1, k * 0.7, 0.6); }
+      V.neonPath(c, CHRONO_BLUE, 1.6, k * 0.65, () => { c.moveTo(sx, sy); c.lineTo(tx, ty); });
+      for (let i = 1; i <= n; i++) { const q = i / (n + 1), px = sx + (tx - sx) * q, py = sy + (ty - sy) * q; V.neonRing(c, px, py, 8, CHRONO_PALE, 1.2, k * 0.75, 0.6); V.glowAt(c, px, py, 4, '#ffffff', k * 0.8); }
     } });
     V.fx({ dur, layer: 'air', draw: (c, p, t, e) => {
       for (let i = 0; i < n; i++) {
         const T = p * dur - i * 0.07; if (T <= 0) continue;
         const q = 1 - (i + 1) / (n + 1), a = e.a * Math.min(1, T / 0.12) * Math.min(1, (1 - p) / 0.45) * (1 - i * 0.15);
-        chronoGhost(c, sx + (tx - sx) * q, sy + (ty - sy) * q, 1.15, i % 2 ? CHRONO_VIO : CHRONO_BLUE, a);
+        chronoGhost(c, sx + (tx - sx) * q, sy + (ty - sy) * q, 1.35, i % 2 ? CHRONO_VIO : CHRONO_BLUE, a);
       }
     } });
   }
   ABILITY_VFX.chronomancer.rewind = c => {
     const w = c.tent || { x: c.tx, y: c.ty }, follow = c.tent || null;
     if (Math.hypot(w.x - c.x, w.y - c.y) > 40) chronoTrail(c.x, c.y, w, { n: 4, dur: 1.1 });
-    chronoDial(w.x, w.y, { r: 46, dur: 1, spin: -6, a: 0.85, numerals: false, follow });
-    c.later(0.45, () => { V.burst(w.x, w.y - 16, { color: CHRONO_PALE, color2: CHRONO_GOLD, n: 10, speed: 170, flashR: 50 }); V.shock(w.x, w.y, { r: 60, color: CHRONO_VIO, dur: 0.35, w: 4 }); });
+    chronoDial(w.x, w.y, { r: 62, dur: 1.05, spin: -6, a: 0.85, numerals: false, follow, rich: true });
+    chronoArrows(w.x, w.y, { r: 52, n: 2, dur: 0.6, dir: -1, speed: 9, follow: follow || undefined, w: 0.8 });
+    c.later(0.45, () => { V.burst(w.x, w.y - 16, { color: CHRONO_PALE, color2: CHRONO_GOLD, n: 12, speed: 190, flashR: 60 }); V.shock(w.x, w.y, { r: 80, color: CHRONO_VIO, dur: 0.38, w: 4 }); V.fx({ dur: 0.35, layer: 'air', draw: (c, p, t, e) => chronoGhost(c, w.x, w.y, 1.35 + 0.4 * p, '#ffffff', e.a * (1 - p)) }); });
   };
   // thin rays of light flung out from a point, violet, gold and white
   function chronoRays(x, y, o = {}) {
@@ -3902,17 +4239,18 @@ function windLaneBoost(x, y, vx, vy, now) {
   KIT_VFX.paradox = Object.assign((e, target, d) => {
     const t = target || e, big = Math.min(1.5, 0.7 + ((d && d.n) || 0) / 120);
     e._chronoHaste = false; e._chronoSlowAt = FX.now;
-    const corners = [[-1, 0], [0, -1], [1, 0], [0, 1]].map(([dx, dy], i) => ({ x: t.x + dx * 120 * big, y: t.y + dy * 70 * big, col: i % 2 ? CHRONO_BLUE : CHRONO_VIO }));
-    V.shock(e.x, e.y, { r: 70, color: CHRONO_PALE, w: 3, dur: 0.35 });
+    const corners = [[-1, 0], [0, -1], [1, 0], [0, 1]].map(([dx, dy], i) => ({ x: t.x + dx * 150 * big, y: t.y + dy * 88 * big, col: i % 2 ? CHRONO_BLUE : CHRONO_VIO }));
+    V.shock(e.x, e.y, { r: 85, color: CHRONO_PALE, w: 3, dur: 0.35 });
     V.fx({ dur: 0.3, layer: 'air', draw: (c, p, tt, ef) => {
       const q = easeOut(p) * 0.85, k = ef.a * Math.min(1, p / 0.2), at = g => ({ x: g.x + (t.x - g.x) * q, y: g.y + (t.y - g.y) * q });
-      V.neonPath(c, CHRONO_PALE, 1, k * 0.5, () => { corners.forEach((g, i) => { const P = at(g); i ? c.lineTo(P.x, P.y) : c.moveTo(P.x, P.y); }); c.closePath(); });
-      for (const g of corners) { const P = at(g); chronoGhost(c, P.x, P.y, 1.1, g.col, k * (1 - p * 0.4)); }
+      c.setLineDash([8, 6]); V.neonPath(c, CHRONO_PALE, 1.4, k * 0.6, () => { corners.forEach((g, i) => { const P = at(g); i ? c.lineTo(P.x, P.y) : c.moveTo(P.x, P.y); }); c.closePath(); }); c.setLineDash([]);
+      for (const g of corners) { const P = at(g); V.glowAt(c, P.x, P.y - 20, 22, g.col, k * 0.5); chronoGhost(c, P.x, P.y, 1.35, g.col, k * (1 - p * 0.4)); }
     }, done: () => {
-      V.spikeburst(t.x, t.y, { r: 70 * big, n: 16, color: CHRONO_VIO, core: '#ffffff', ink: CHRONO_INK, dur: 0.38, z: 14 });
-      chronoRays(t.x, t.y - 14, { n: 12, r: 110 * big, dur: 0.35 });
-      V.burst(t.x, t.y - 14, { color: CHRONO_PALE, color2: CHRONO_GOLD, n: 12, speed: 280, kind: 'star', flash: false });
-      chronoOrbits(t.x, t.y, { r: 100 * big, dur: 1.6, a: 0.5 });
+      V.spikeburst(t.x, t.y, { r: 90 * big, n: 18, color: CHRONO_VIO, core: '#ffffff', ink: CHRONO_INK, dur: 0.4, z: 14 });
+      chronoRays(t.x, t.y - 14, { n: 14, r: 145 * big, dur: 0.38 });
+      V.burst(t.x, t.y - 14, { color: CHRONO_PALE, color2: CHRONO_GOLD, n: 14, speed: 300, kind: 'star', flash: false });
+      chronoCrystals(t.x, t.y, { n: 6, speed: 240, size: 12, dur: 0.6 });
+      chronoOrbits(t.x, t.y, { r: 130 * big, dur: 1.7, a: 0.5 });
       V.debris(t.x, t.y, { n: 4, color: '#2e2a4a' });
       shake(3);
     } });
@@ -3928,12 +4266,15 @@ function windLaneBoost(x, y, vx, vy, now) {
     const id = (ent._chronoShell = (ent._chronoShell || 0) + 1);
     V.fx({ dur, layer: 'air', draw: (c, p, t, e) => {
       if (ent._chronoShell !== id) { e.dur = 0; return; }
-      const k = e.a * Math.min(1, t / 0.25) * (t < 0.6 ? 1 : 0.6) * Math.min(1, (dur - t) / 0.3), x = ent.x, y = ent.y - 28, R = 52 * (0.7 + 0.3 * easeOut(Math.min(1, t / 0.3)));
+      const k = e.a * Math.min(1, t / 0.25) * (t < 0.6 ? 1 : 0.6) * Math.min(1, (dur - t) / 0.3), x = ent.x, y = ent.y - 30, R = 68 * (0.7 + 0.3 * easeOut(Math.min(1, t / 0.3)));
       c.save(); c.globalCompositeOperation = 'lighter';
       const g = c.createRadialGradient(x, y, R * 0.5, x, y, R); g.addColorStop(0, rgba(CHRONO_VIO, 0)); g.addColorStop(1, rgba(CHRONO_VIO, 0.22 * k));
       c.fillStyle = g; c.beginPath(); c.arc(x, y, R, 0, TAU); c.fill(); c.restore();
       V.neonRing(c, x, y, R, CHRONO_VIO, 1.6, k * 0.8, 1);
       V.neonRing(c, x, y, R, CHRONO_PALE, 1, k * 0.45, 0.25);
+      const mer = Math.cos(t * 1.1);   // (a meridian turning round the bubble, so it reads as a sphere)
+      c.save(); c.translate(x, y); V.neonPath(c, CHRONO_PALE, 1, k * 0.4, () => c.ellipse(0, 0, Math.max(1, R * Math.abs(mer)), R, 0, 0, TAU)); c.restore();
+      V.neonRing(c, ent.x, ent.y, R * 0.9, CHRONO_VIO, 1.2, k * 0.5, 0.5);
       for (let j = 0; j < 2; j++) {
         const rot = j ? 0.5 : -0.5, col = j ? CHRONO_GOLD : CHRONO_BLUE;
         c.save(); c.translate(x, y); c.rotate(rot); V.neonPath(c, col, 1.4, k * 0.8, () => c.ellipse(0, 0, R * 1.18, R * 0.32, 0, 0, TAU)); c.restore();
@@ -3967,9 +4308,10 @@ function windLaneBoost(x, y, vx, vy, now) {
     e._chronoShell = (e._chronoShell || 0) + 1;   // (ends the bubble)
     V.flash(e.x, e.y - 28, 60, CHRONO_PALE, 0.2);
     V.burst(e.x, e.y - 28, { color: CHRONO_PALE, color2: CHRONO_GOLD, n: 14, speed: 260, kind: 'star', flash: false });
-    V.shock(e.x, e.y, { r: 170, color: CHRONO_PALE, w: 6, dur: 0.6 });
-    chronoSeal(e.x, e.y, { r: 90, dur: 1.8 });
-    V.motes(e.x, e.y, { color: '#fff2c8', n: 10, r: 60 });
+    V.shock(e.x, e.y, { r: 190, color: CHRONO_PALE, w: 6, dur: 0.6 });
+    chronoCrystals(e.x, e.y, { n: 8, speed: 260, size: 12, dur: 0.6, cols: [CHRONO_VIO, CHRONO_PALE, CHRONO_GOLD] });
+    chronoSeal(e.x, e.y, { r: 118, dur: 1.9 });
+    V.motes(e.x, e.y, { color: '#fff2c8', n: 10, r: 70 });
   };
 
   // ---------------------------------------------------------------- Alembist · Magnum Opus (brass and glass, every reagent)
@@ -3977,7 +4319,11 @@ function windLaneBoost(x, y, vx, vy, now) {
   // in a turning hex circle, ribbons of green, red and blue round it (wind-up); beams and vials of every colour rain
   // down onto the party while the flask hurls its orb at the boss (impact); a wide multicolour hex seal stays on the
   // floor, low, for the shield's 10s (aftermath).
-  const AMBER = '#ffd27a', BRASS = '#d9a54a', TEAL = '#4fe0cc', OPUS3 = ['#5ff08a', '#ff4a32', '#4fa8ff'], OPUS_H = 150;
+  // ALEM_ULT_SCALE: the whole Ultimate's size (flask, circle, beams, seal, orb burst). 1 = the first painted pass.
+  const ALEM_ULT_SCALE = 1.4;
+  const AMBER = '#ffd27a', BRASS = '#d9a54a', TEAL = '#4fe0cc', OPUS3 = ['#5ff08a', '#ff4a32', '#4fa8ff'];
+  // OPUS_H: the flask's height over the party's feet; OPUS_FS: the flask drawing's scale; OPUS_TIP: its spout's tip
+  const OPUS_FS = 1.6 * ALEM_ULT_SCALE, OPUS_H = 120 + 45 * ALEM_ULT_SCALE, OPUS_TIP = OPUS_H - 30 * OPUS_FS;
   // the party as live entities (Stagecraft's view of the raid; capped), else just the alembist
   function alemOpusParty(ent) {
     const sc = typeof Stagecraft !== 'undefined' && Stagecraft.S ? Stagecraft.S.env : null, out = [];
@@ -3992,91 +4338,131 @@ function windLaneBoost(x, y, vx, vy, now) {
     const dx = x - ent.x, dy = y - ent.y, d = Math.hypot(dx, dy), m = d > 200 ? 200 / d : 1;
     return { x: ent.x + dx * m, y: ent.y + dy * m };
   }
-  // the great flask at (at.x, at.y - OPUS_H): a teal glass bulb with every colour swirling inside, a brass waist band,
-  // collar, cap and spout (the beams leave from its tip, 39 px under the bulb), two brass armillary rings turning
-  // round it and ribbons of green, red and blue circling
+  // the great flask at (at.x, at.y - OPUS_H), drawn OPUS_FS times its sketch size: a teal glass bulb with green, red and
+  // blue liquid swirling inside, a dark rim and brass cage, collar, cap and a long brass spout (the beams leave from its
+  // tip, OPUS_TIP over the floor), glints running over the glass, two brass armillary rings turning round it (their back
+  // halves behind the glass) and ribbons of green, red and blue circling. After o.hold s it fades back to half so the
+  // boss and the party read through it
   function alemOpusFlask(at, o = {}) {
-    const dur = o.dur ?? 1;
+    const dur = o.dur ?? 1, hold = o.hold ?? dur, F = OPUS_FS, RX = 44 * F * 0.62, RY = 13 * F * 0.62;
+    const ring = (x, y, i, t, k, back) => {
+      c0.save(); c0.translate(x, y); c0.rotate(i ? 0.5 + t * 0.8 : -0.4 - t * 0.6); c0.globalAlpha = k * (back ? 0.55 : 1);
+      const a0 = back ? Math.PI : 0;
+      c0.strokeStyle = '#4a3010'; c0.lineWidth = 5.5; c0.beginPath(); c0.ellipse(0, 0, RX, RY, 0, a0, a0 + Math.PI); c0.stroke();
+      c0.strokeStyle = BRASS; c0.lineWidth = 3.6; c0.stroke(); c0.strokeStyle = '#fff0c0'; c0.lineWidth = 1.1; c0.stroke();
+      if (!back) for (let j = 0; j < 4; j++) { const a = 0.4 + j * 0.75; c0.fillStyle = '#ffe9a8'; c0.beginPath(); c0.arc(Math.cos(a) * RX, Math.sin(a) * RY, 2.4, 0, TAU); c0.fill(); }
+      c0.restore(); c0.globalAlpha = 1;
+    };
+    let c0 = null;
     V.fx({ dur, layer: 'air', draw: (c, p, t, e) => {
-      const k = e.a * Math.min(1, t / 0.15) * Math.min(1, (1 - p) * dur / 0.2), rise = easeOut(Math.min(1, t / 0.35));
-      const x = at.x, y = at.y - OPUS_H * (0.75 + 0.25 * rise) + Math.sin(t * 3) * 3;
-      V.glowAt(c, x, y, 80, TEAL, 0.35 * k); V.glowAt(c, x, y, 36, '#ffffff', 0.25 * k);
-      c.save(); c.translate(x, y); c.scale(1.5, 1.5); c.globalAlpha = k;
-      c.fillStyle = '#7a5420'; c.strokeStyle = OUT; c.lineWidth = 1.2;
-      c.beginPath(); c.moveTo(-6, 12); c.lineTo(6, 12); c.lineTo(0, 26); c.closePath(); c.fill(); c.stroke();
-      const g = c.createRadialGradient(-5, -4, 2, 0, 0, 17);
-      g.addColorStop(0, '#d8fff6'); g.addColorStop(0.45, '#3fbfb0'); g.addColorStop(1, '#0d3a3a');
+      c0 = c;
+      const k = e.a * Math.min(1, t / 0.15) * Math.min(1, (1 - p) * dur / 0.3) * (t > hold ? Math.max(0.5, 1 - (t - hold) / 0.4) : 1), rise = easeOut(Math.min(1, t / 0.35));
+      const x = at.x, y = at.y - OPUS_H * (0.8 + 0.2 * rise) + Math.sin(t * 3) * 3;
+      V.glowAt(c, x, y, 70 * F, TEAL, 0.45 * k); V.glowAt(c, x, y, 26 * F, '#ffffff', 0.3 * k);
+      for (let i = 0; i < 2; i++) ring(x, y, i, t, k, true);
+      c.save(); c.translate(x, y); c.scale(F, F); c.globalAlpha = k;
+      // the spout: a long brass cone, its tip glowing
+      c.fillStyle = '#8a5e22'; c.strokeStyle = '#2a1a08'; c.lineWidth = 1.2;
+      c.beginPath(); c.moveTo(-7, 12); c.lineTo(7, 12); c.lineTo(0, 30); c.closePath(); c.fill(); c.stroke();
+      c.fillStyle = BRASS; c.fillRect(-8, 11, 16, 3);
+      const g = c.createRadialGradient(-5, -5, 2, 0, 0, 17);
+      g.addColorStop(0, '#e8fffa'); g.addColorStop(0.4, '#4fd4c2'); g.addColorStop(1, '#0a3236');
       c.fillStyle = g; c.beginPath(); c.arc(0, 0, 16, 0, TAU); c.fill();
-      c.save(); c.beginPath(); c.arc(0, 0, 14, 0, TAU); c.clip(); c.globalCompositeOperation = 'lighter';
-      OPUS3.forEach((col, i) => { c.globalAlpha = 0.6 * k; c.fillStyle = col; c.beginPath(); c.ellipse(Math.cos(t * 5 + i * 2.1) * 5, 3 + Math.sin(t * 4 + i) * 5, 9, 3.5, t * 3 + i, 0, TAU); c.fill(); });
+      // the liquid: three colours swirling in the lower half, a bright surface line
+      c.save(); c.beginPath(); c.arc(0, 0, 14.5, 0, TAU); c.clip(); c.globalCompositeOperation = 'lighter';
+      OPUS3.forEach((col, i) => { c.globalAlpha = 0.85 * k; c.fillStyle = col; c.beginPath(); c.ellipse(Math.cos(t * 5 + i * 2.1) * 6, 5 + Math.sin(t * 4 + i) * 4, 10, 4.5, t * 3 + i, 0, TAU); c.fill(); });
+      c.globalAlpha = 0.7 * k; c.strokeStyle = '#ffffff'; c.lineWidth = 0.9; c.beginPath();
+      for (let j = 0; j <= 12; j++) { const px = -15 + j * 2.5, py = -1 + Math.sin(j * 0.9 + t * 7) * 1.2; j ? c.lineTo(px, py) : c.moveTo(px, py); } c.stroke();
       c.restore(); c.globalAlpha = k;
-      c.strokeStyle = '#3a2a10'; c.lineWidth = 1.5; c.beginPath(); c.arc(0, 0, 16, 0, TAU); c.stroke();
-      c.strokeStyle = BRASS; c.lineWidth = 2.2; c.beginPath(); c.ellipse(0, 2, 16, 4, 0, 0, Math.PI); c.stroke();
-      c.fillStyle = 'rgba(200,240,240,0.75)'; c.fillRect(-4, -26, 8, 12);
-      c.fillStyle = BRASS; c.fillRect(-6, -16, 12, 3); c.fillRect(-5, -29, 10, 4); c.beginPath(); c.arc(0, -31, 2.5, 0, TAU); c.fill();
-      c.globalCompositeOperation = 'lighter'; c.fillStyle = 'rgba(255,255,255,0.55)'; c.beginPath(); c.ellipse(-6, -5, 3, 6, -0.5, 0, TAU); c.fill();
+      c.strokeStyle = '#1a2a24'; c.lineWidth = 2.2; c.beginPath(); c.arc(0, 0, 16, 0, TAU); c.stroke();
+      // the brass cage: an equator band and two meridians
+      c.strokeStyle = BRASS; c.lineWidth = 2; c.beginPath(); c.ellipse(0, 2, 16, 4.5, 0, 0, Math.PI); c.stroke();
+      c.lineWidth = 1.2; c.beginPath(); c.ellipse(0, 0, 6, 16, 0, -Math.PI / 2, Math.PI / 2); c.stroke(); c.beginPath(); c.ellipse(0, 0, 6, 16, 0, Math.PI / 2, Math.PI * 1.5); c.stroke();
+      c.fillStyle = 'rgba(200,240,240,0.8)'; c.fillRect(-4, -27, 8, 13); c.strokeStyle = '#1a2a24'; c.lineWidth = 1; c.strokeRect(-4, -27, 8, 13);
+      c.fillStyle = BRASS; c.fillRect(-7, -17, 14, 3.5); c.fillRect(-5.5, -30, 11, 4.5); c.beginPath(); c.arc(0, -32, 2.8, 0, TAU); c.fill();
+      c.globalCompositeOperation = 'lighter'; c.fillStyle = 'rgba(255,255,255,0.6)'; c.beginPath(); c.ellipse(-7, -6, 3, 6.5, -0.5, 0, TAU); c.fill();
       c.restore(); c.globalAlpha = 1;
-      for (let i = 0; i < 2; i++) {
-        c.save(); c.translate(x, y); c.rotate(i ? 0.5 + t * 0.8 : -0.4 - t * 0.6); c.globalAlpha = k; c.strokeStyle = BRASS; c.lineWidth = 2.4;
-        c.beginPath(); c.ellipse(0, 0, 40, 12, 0, 0, TAU); c.stroke(); c.strokeStyle = '#fff0c0'; c.lineWidth = 0.8; c.stroke(); c.restore();
-      }
-      c.globalAlpha = 1;
-      OPUS3.forEach((col, i) => { const a0 = t * 4.5 + i * 2.09; V.neonPath(c, col, 3, 0.85 * k, () => { for (let j = 0; j <= 12; j++) { const a = a0 - 1.9 + 1.9 * j / 12, px = x + Math.cos(a) * 54, py = y + 14 - j * 1.2 + Math.sin(a) * 18; j ? c.lineTo(px, py) : c.moveTo(px, py); } }); });
-    }, tick: () => { if (Math.random() < 0.3) V.spawn({ x: at.x + rand(-30, 30), y: at.y, z: OPUS_H + rand(-20, 20), vz: rand(-20, 20), life: 0.6, size: rand(5, 8), size1: 0, color: OPUS3[Math.floor(Math.random() * 3)], kind: 'star' }); } });
+      for (let i = 0; i < 2; i++) ring(x, y, i, t, k, false);
+      // glints sliding over the glass and the spout's tip burning
+      for (let i = 0; i < 2; i++) { const a = t * 2.2 + i * 2.8, gx = x + Math.cos(a) * 11 * F, gy = y + Math.sin(a) * 9 * F, s = (7 + 3 * Math.sin(t * 9 + i)) * F * 0.5;
+        V.neonPath(c, '#ffffff', 1.4, k * 0.9, () => { c.moveTo(gx - s, gy); c.lineTo(gx + s, gy); c.moveTo(gx, gy - s); c.lineTo(gx, gy + s); }); }
+      V.glowAt(c, x, y + 30 * F, 9 * F, TEAL, k); V.glowAt(c, x, y + 30 * F, 4 * F, '#ffffff', k);
+      OPUS3.forEach((col, i) => { const a0 = t * 4.5 + i * 2.09; V.neonPath(c, col, 5, 0.9 * k, () => { for (let j = 0; j <= 14; j++) { const a = a0 - 2.1 + 2.1 * j / 14, px = x + Math.cos(a) * 34 * F, py = y + 8 * F - j * 1.6 + Math.sin(a) * 11 * F; j ? c.lineTo(px, py) : c.moveTo(px, py); } }); });
+    }, tick: () => { if (Math.random() < 0.35) V.spawn({ x: at.x + rand(-1, 1) * 22 * F, y: at.y, z: OPUS_H + rand(-14, 14) * F, vz: rand(-20, 20), life: 0.6, size: rand(6, 10), size1: 0, color: OPUS3[Math.floor(Math.random() * 3)], kind: 'star' }); } });
   }
   // the hex seal: brass rings, a hexagram of a green and a red triangle, a blue inner hexagon, little reagent circles at
   // its points. o.mono: all brass (the wind-up circle). It flares, then settles to o.settle (floor-low)
+  // (o.w: a line-weight multiplier)
   function alemOpusSeal(x, y, R, dur, o = {}) {
-    const peak = o.peak ?? 0.8, settle = o.settle ?? 0.26;
+    const peak = o.peak ?? 0.8, settle = o.settle ?? 0.26, W = o.w ?? 1;
     V.fx({ dur, layer: 'ground', draw: (c, p, t, e) => {
       const k = e.a * Math.min(1, t / 0.15) * Math.min(1, (1 - p) * dur / 0.8) * (settle + (peak - settle) * Math.max(0, 1 - t / 0.8));
       if (k < 0.02) return;
       const RR = R * (0.7 + 0.3 * easeOut(Math.min(1, t / 0.3))), cs = o.mono ? [BRASS, BRASS, BRASS] : OPUS3;
-      V.neonRing(c, x, y, RR, BRASS, 2.6, k, 0.78); V.neonRing(c, x, y, RR * 0.9, AMBER, 1.2, k * 0.7, 0.78);
+      V.neonRing(c, x, y, RR, BRASS, 2.6 * W, k, 0.78); V.neonRing(c, x, y, RR * 0.9, AMBER, 1.2 * W, k * 0.7, 0.78);
       c.save(); c.translate(x, y); c.scale(1, 0.78); c.rotate(t * (o.spin ?? 0.15));
-      const poly = (n, off, r, col, w) => V.neonPath(c, col, w, k, () => { for (let i = 0; i < n; i++) { const a = off + i * TAU / n; i ? c.lineTo(Math.cos(a) * r, Math.sin(a) * r) : c.moveTo(Math.cos(a) * r, Math.sin(a) * r); } c.closePath(); });
+      const poly = (n, off, r, col, w) => V.neonPath(c, col, w * W, k, () => { for (let i = 0; i < n; i++) { const a = off + i * TAU / n; i ? c.lineTo(Math.cos(a) * r, Math.sin(a) * r) : c.moveTo(Math.cos(a) * r, Math.sin(a) * r); } c.closePath(); });
       poly(3, -Math.PI / 2, RR * 0.78, cs[0], 2); poly(3, Math.PI / 2, RR * 0.78, cs[1], 2); poly(6, 0, RR * 0.45, cs[2], 1.6);
-      for (let i = 0; i < 6; i++) { const a = -Math.PI / 2 + i * TAU / 6; V.neonPath(c, cs[i % 3], 1.4, k, () => c.arc(Math.cos(a) * RR * 0.78, Math.sin(a) * RR * 0.78, RR * 0.09, 0, TAU)); }
-      V.neonPath(c, AMBER, 1.2, k * 0.8, () => c.arc(0, 0, RR * 0.16, 0, TAU));
+      for (let i = 0; i < 6; i++) { const a = -Math.PI / 2 + i * TAU / 6; V.neonPath(c, cs[i % 3], 1.4 * W, k, () => c.arc(Math.cos(a) * RR * 0.78, Math.sin(a) * RR * 0.78, RR * 0.09, 0, TAU)); }
+      V.neonPath(c, AMBER, 1.2 * W, k * 0.8, () => c.arc(0, 0, RR * 0.16, 0, TAU));
+      // tick marks round the rim (the sheet's dial), and a small hex at the heart
+      V.neonPath(c, BRASS, 0.9 * W, k * 0.6, () => { for (let i = 0; i < 24; i++) { const a = i * TAU / 24, r0 = RR * (i % 2 ? 0.93 : 0.9); c.moveTo(Math.cos(a) * r0, Math.sin(a) * r0); c.lineTo(Math.cos(a) * RR * 0.98, Math.sin(a) * RR * 0.98); } });
+      poly(6, Math.PI / 6, RR * 0.2, AMBER, 1);
       c.restore();
     } });
   }
   // a beam of one reagent from the flask's spout down onto an ally
-  function alemOpusBeam(from, w, col, delay) {
-    V.fx({ dur: 0.55, delay, layer: 'air', draw: (c, p, t, e) => {
-      const k = e.a * (1 - p) * Math.min(1, t / 0.05), tx = w.x, ty = w.y - 10, q = Math.min(1, t / 0.08);
-      V.neonPath(c, col, 6 * (1 - p * 0.6), k, () => { c.moveTo(from.x, from.y); c.lineTo(from.x + (tx - from.x) * q, from.y + (ty - from.y) * q); });
-      V.glowAt(c, tx, ty, 26, col, 0.7 * k);
+  // a beam of one reagent from the flask's spout down onto an ally: a thick tapered shaft of the colour with a white
+  // core, a pool of its light round their feet
+  function alemOpusBeam(tip, w, col, delay) {
+    const AS = ALEM_ULT_SCALE, d0 = Math.hypot(w.x - tip.x, w.y - tip.y) || 1, from = { x: tip.x + (w.x - tip.x) / d0 * 10 * AS, y: tip.y + (w.y - tip.y) / d0 * 10 * AS };   // fanned out off the spout
+    V.fx({ dur: 0.7, delay, layer: 'air', draw: (c, p, t, e) => {
+      const k = e.a * Math.min(1, (1 - p) / 0.6) * Math.min(1, t / 0.05), tx = w.x, ty = w.y - 6, q = Math.min(1, t / 0.08);
+      const ex = from.x + (tx - from.x) * q, ey = from.y + (ty - from.y) * q, L = Math.hypot(ex - from.x, ey - from.y) || 1, nx = -(ey - from.y) / L, ny = (ex - from.x) / L;
+      const W0 = 3 * AS * (1 - p * 0.5), W1 = 12 * AS * (1 - p * 0.5);
+      // the colour body is painted over (not added) so green, red and blue crossing stay their own colours, not white
+      c.save();
+      for (const [cc, f, al, add] of [[col, 1.8, 0.3, 1], [col, 1, 0.85, 0], ['#ffffff', 0.2, 0.75, 1]]) { c.globalCompositeOperation = add ? 'lighter' : 'source-over'; c.globalAlpha = al * k; c.fillStyle = cc; c.beginPath();
+        c.moveTo(from.x + nx * W0 * f, from.y + ny * W0 * f); c.lineTo(ex + nx * W1 * f, ey + ny * W1 * f); c.lineTo(ex - nx * W1 * f, ey - ny * W1 * f); c.lineTo(from.x - nx * W0 * f, from.y - ny * W0 * f); c.closePath(); c.fill(); }
+      c.restore(); c.globalAlpha = 1;
+      if (q >= 1) { V.glowAt(c, tx, ty, 34 * AS, col, 0.8 * k); V.glowAt(c, tx, ty, 12 * AS, '#ffffff', 0.7 * k); }
     } });
   }
   // a vial of one colour streaking down out of the flask's light and popping on the floor
   function alemOpusDrop(x, y, col, delay) {
-    V.fx({ dur: 0.3, delay, layer: 'air', draw: (c, p, t, e) => { const z = 220 * (1 - p * p); V.neonPath(c, col, 2.5, e.a, () => { c.moveTo(x, y - z - 26); c.lineTo(x, y - z); }); V.glowAt(c, x, y - z, 8, '#ffffff', e.a); },
-      done: () => { V.spawn({ x, y, z: 4, life: 0.3, size: 26, size1: 6, color: col }); V.sparks(x, y, { color: col, n: 3, speed: 140, z: 2 }); } });
+    const AS = ALEM_ULT_SCALE;
+    V.fx({ dur: 0.3, delay, layer: 'air', draw: (c, p, t, e) => { const z = 240 * AS * (1 - p * p); V.neonPath(c, col, 3 * AS, e.a, () => { c.moveTo(x, y - z - 40 * AS); c.lineTo(x, y - z); });
+      c.save(); c.globalAlpha = e.a; c.fillStyle = col; c.strokeStyle = '#1a1a1a'; c.lineWidth = 1; c.beginPath(); c.ellipse(x, y - z, 3.5 * AS, 4.5 * AS, 0, 0, TAU); c.fill(); c.stroke(); c.restore(); c.globalAlpha = 1;
+      V.glowAt(c, x, y - z, 10 * AS, '#ffffff', e.a); },
+      done: () => { V.spawn({ x, y, z: 4, life: 0.35, size: 30 * AS, size1: 6, color: col }); V.sparks(x, y, { color: col, n: 3, speed: 160, z: 2 }); } });
   }
   // wind-up: the flask hovers in over the party in a brass hex circle; impact: beams of green, red and blue onto every
   // ally and vials raining across the circle; aftermath: the multicolour seal. Its orb on the boss is KIT_VFX['alem-opus'].
   ABILITY_VFX.alembist.magnumopus = c => {
     const at = alemOpusCentre(c.ent);
     if (c.cam) c.cam.dim(0.3, 1.3);
-    alemOpusFlask(at, { dur: LAND + 0.55 });
-    alemOpusSeal(at.x, at.y, 120, LAND + 0.2, { mono: true, peak: 0.7, settle: 0.7, spin: 1.2 });
-    OPUS3.forEach(col => V.charge(at.x, at.y, { color: col, r: 80, n: 4, dur: LAND, z: OPUS_H }));
+    const AS = ALEM_ULT_SCALE;
+    alemOpusFlask(at, { dur: LAND + 1.1, hold: LAND + 0.45 });
+    alemOpusSeal(at.x, at.y, 120 * AS, LAND + 0.2, { mono: true, peak: 0.95, settle: 0.95, spin: 1.2, w: 1.3 });
+    OPUS3.forEach(col => V.charge(at.x, at.y, { color: col, r: 80 * AS, n: 4, dur: LAND, z: OPUS_H }));
+    V.ribbons(at.x, at.y, { r: 70 * AS, dur: LAND + 0.3, colors: OPUS3 });
     V.swirl(c.x, c.y, { r: 46, color: AMBER, dur: LAND, follow: c.ent, inward: true, arms: 3 });
     c.later(LAND, () => {
       impact(c.cam, '#eafff4', 0.2);
       shake(5);
-      const tip = { x: at.x, y: at.y - OPUS_H + 39 };
-      V.flash(tip.x, tip.y - 30, 90, TEAL, 0.2);
+      const tip = { x: at.x, y: at.y - OPUS_TIP };
+      V.flash(tip.x, tip.y - 20 * AS, 70 * AS, TEAL, 0.2);
+      // every ally gets a thick beam of one colour and a thinner one of the next (green, red, blue round the party)
       alemOpusParty(c.ent).forEach((w, i) => {
         const col = OPUS3[i % 3];
         alemOpusBeam(tip, w, col, i * 0.05);
-        c.later(i * 0.05 + 0.08, () => { V.plus(w.x, w.y, { color: col, n: 3 }); V.shock(w.x, w.y, { r: 40, color: col, dur: 0.35, w: 3 }); });
+        alemOpusBeam({ x: tip.x + (i % 2 ? 8 : -8) * AS, y: tip.y }, { x: w.x + (i % 2 ? -10 : 10), y: w.y + 4 }, OPUS3[(i + 1) % 3], i * 0.05 + 0.1);
+        c.later(i * 0.05 + 0.08, () => { V.plus(w.x, w.y, { color: col, n: 3 }); V.shock(w.x, w.y, { r: 46 * AS, color: col, dur: 0.4, w: 4 }); });
       });
-      for (let i = 0; i < 8; i++) { const a = rand(0, TAU), d = Math.sqrt(Math.random()) * 140; alemOpusDrop(at.x + Math.cos(a) * d, at.y + Math.sin(a) * d * 0.7, OPUS3[i % 3], 0.04 + i * 0.04); }
-      V.shock(at.x, at.y, { r: 170, color: BRASS, dur: 0.6, w: 6 });
-      c.later(0.5, () => V.burst(at.x, at.y, { color: TEAL, color2: '#ffffff', n: 10, speed: 160, z: OPUS_H - 10, kind: 'star', flash: false }));
-      alemOpusSeal(at.x, at.y, 150, 10, { peak: 0.8, settle: 0.26 });
+      for (let i = 0; i < 12; i++) { const a = rand(0, TAU), d = Math.sqrt(Math.random()) * 140 * AS; alemOpusDrop(at.x + Math.cos(a) * d, at.y + Math.sin(a) * d * 0.7, OPUS3[i % 3], 0.04 + i * 0.035); }
+      V.shock(at.x, at.y, { r: 170 * AS, color: BRASS, dur: 0.6, w: 7 });
+      c.later(0.5, () => V.burst(at.x, at.y, { color: TEAL, color2: '#ffffff', n: 10, speed: 160, z: OPUS_TIP, kind: 'star', flash: false }));
+      alemOpusSeal(at.x, at.y, 150 * AS, 10, { peak: 0.95, settle: 0.36, w: 1.4 });
     });
   };
   // the flask hurls its orb at the boss: it bursts in red, green and blue (layered spikebursts), sparks of every vial
@@ -4084,14 +4470,16 @@ function windLaneBoost(x, y, vx, vy, now) {
   KIT_VFX['alem-opus'] = Object.assign((e, target, d) => {
     const t = target || e, ps = d && Array.isArray(d.p) ? d.p.slice(0, 5) : [], at = alemOpusCentre(e);
     const cols = ps.length ? ps.map(r => (typeof alemInfo !== 'undefined' ? alemInfo(r).color : AMBER)) : OPUS3;
-    V.missile(at.x, at.y - OPUS_H + 20, t.x, t.y, { style: 'orb', color: TEAL, speed: 1500, size: 1.6, arc: 30, onHit: (x, y) => {
-      V.flash(x, y - 20, 90, '#ffffff', 0.16);
-      V.spikeburst(x, y, { r: 92, n: 18, color: OPUS3[1], core: '#fff6d8', ink: '#3a0a08', dur: 0.45 });
-      V.spikeburst(x, y, { r: 62, n: 14, color: OPUS3[0], core: '#ffffff', ink: '#0a2a10', dur: 0.4, z: 20 });
-      V.spikeburst(x, y, { r: 38, n: 12, color: OPUS3[2], core: '#ffffff', ink: '#0a1a3a', dur: 0.36, z: 26 });
-      cols.forEach(col => V.burst(x, y, { color: col, n: 5, speed: 300, flash: false }));
-      OPUS3.forEach((col, i) => V.shock(x, y, { r: 120 + i * 30, color: col, dur: 0.5, w: 6 - i, delay: i * 0.06 }));
-      V.crater(x, y, { r: 50, color: '#ff8a3a', dur: 2.5, flames: 2, a: 0.35 });
+    const AS = ALEM_ULT_SCALE;
+    V.missile(at.x, at.y - OPUS_TIP, t.x, t.y, { style: 'orb', color: TEAL, speed: 1500, size: 1.6 * AS, arc: 30, onHit: (x, y) => {
+      V.flash(x, y - 20, 90 * AS, '#ffffff', 0.16);
+      V.spikeburst(x, y, { r: 92 * AS, n: 18, color: OPUS3[1], core: '#fff6d8', ink: '#3a0a08', dur: 0.5 });
+      V.spikeburst(x, y, { r: 62 * AS, n: 14, color: OPUS3[0], core: '#ffffff', ink: '#0a2a10', dur: 0.45, z: 20 });
+      V.spikeburst(x, y, { r: 38 * AS, n: 12, color: OPUS3[2], core: '#ffffff', ink: '#0a1a3a', dur: 0.4, z: 26 });
+      V.fx({ dur: 0.45, layer: 'air', draw: (c, p, tt, ee) => { const k = ee.a * (1 - p); OPUS3.forEach((col, i) => V.glowAt(c, x + Math.cos(i * 2.1 + p * 3) * 18 * AS, y - 30 + Math.sin(i * 2.1 + p * 3) * 10 * AS, 46 * AS, col, 0.7 * k)); } });
+      cols.forEach(col => V.burst(x, y, { color: col, n: 5, speed: 340, flash: false }));
+      OPUS3.forEach((col, i) => V.shock(x, y, { r: (120 + i * 30) * AS, color: col, dur: 0.55, w: 7 - i, delay: i * 0.06 }));
+      V.crater(x, y, { r: 50 * AS, color: '#ff8a3a', dur: 2.5, flames: 2, a: 0.35 });
       V.smoke(x, y, { n: 5, r: 40, color: '#5a4a3a', size: 30, a: 0.4, speed: 50, life: 1.4 });
       shake(5);
     } });
@@ -4103,6 +4491,8 @@ function windLaneBoost(x, y, vx, vy, now) {
   // bright lances cross through the boss (impact, KIT_VFX['weave-loom']); a woven diamond sigil of crimson and gold
   // stays on the floor, low, for the Tapestry's 6s (aftermath; THREADWEAVER_VFX, from the class block).
   const CRIM = '#e8203a', ROSE = '#ff5a6a', SEAM = '#ffcf7a', HOT = '#fff0ea', SILK = '#ffe0e4';
+  // WEAVE_ULT_SCALE: the whole Ultimate's size (web, anchors, lances, seal). 1 = the first painted pass.
+  const WEAVE_ULT_SCALE = 1.3;
   // the party as live entities (Stagecraft's view of the raid; capped), else just the weaver
   function weaveParty(ent) {
     const sc = typeof Stagecraft !== 'undefined' && Stagecraft.S ? Stagecraft.S.env : null, out = [];
@@ -4116,35 +4506,59 @@ function windLaneBoost(x, y, vx, vy, now) {
     x /= ps.length; y /= ps.length;
     const dx = x - ent.x, dy = y - ent.y, dd = Math.hypot(dx, dy), m = dd > 200 ? 200 / dd : 1;
     x = ent.x + dx * m; y = ent.y + dy * m;
-    let R = 120; for (const w of ps) R = Math.max(R, Math.hypot(w.x - x, (w.y - y) / 0.78) + 40);
-    R = Math.min(R, 200);
+    const WS = WEAVE_ULT_SCALE;
+    let R = 120 * WS; for (const w of ps) R = Math.max(R, Math.hypot(w.x - x, (w.y - y) / 0.78) + 50 * WS);
+    R = Math.min(R, 200 * WS);
     const anchors = Array.from({ length: 5 }, (_, i) => { const a = -Math.PI / 2 + i * TAU / 5; return { x: x + Math.cos(a) * R, y: y + Math.sin(a) * R * 0.78 }; });
     return { x, y, R, ps, anchors };
   }
   // the web on the floor: a pentagram between the anchors, a gold pentagon round them and a thread from every ally to
   // the two anchors nearest them; drawn out through the wind-up, growing tauter, flaring white at the impact
+  // (painted sheet: bold doubled crimson threads with a gold core, slack at first and pulled taut through the wind-up,
+  // spokes from the middle, a dark red ground under the star for the wind-up only; at the impact every line flares
+  // white-hot and wide for a moment, glowing at the anchors, then cools)
   function weaveLoomWeb(F, dur) {
-    const A = F.anchors;
+    const A = F.anchors, WS = WEAVE_ULT_SCALE, C = { x: F.x, y: F.y };
+    const star = A.map((a, i) => [a, A[(i + 2) % 5]]), rim = A.map((a, i) => [a, A[(i + 1) % 5]]), spokes = A.map(a => [C, a]);
+    const links = [];
+    for (const u of F.ps) { const near = A.map(a => [Math.hypot(a.x - u.x, a.y - u.y), a]).sort((m, n) => m[0] - n[0]); links.push([u, near[0][1]], [u, near[1][1]]); }
     V.fx({ dur, layer: 'ground', draw: (c, p, t, e) => {
-      const grow = easeOut(Math.min(1, t / (LAND * 0.7))), hot = Math.max(0, Math.min(1, (t - LAND + 0.08) / 0.08));
-      const k = e.a * Math.min(1, t / 0.08) * Math.min(1, (dur - t) / 0.25), w = 1.4 + 1.6 * Math.min(1, t / LAND) + 3 * hot, col = hot > 0.5 ? HOT : CRIM;
-      const seg = (a, b, ww, cc, kk) => V.neonPath(c, cc, ww, kk, () => { c.moveTo(a.x, a.y); c.lineTo(a.x + (b.x - a.x) * grow, a.y + (b.y - a.y) * grow); });
-      for (let i = 0; i < 5; i++) seg(A[i], A[(i + 2) % 5], w, col, k);
-      for (let i = 0; i < 5; i++) seg(A[i], A[(i + 1) % 5], w * 0.6, hot > 0.5 ? HOT : SEAM, k * 0.7);
-      for (const u of F.ps) { const near = A.map(a => [Math.hypot(a.x - u.x, a.y - u.y), a]).sort((m, n) => m[0] - n[0]); for (let j = 0; j < 2; j++) seg(u, near[j][1], w * 0.5, col, k * 0.8); }
+      const grow = easeOut(Math.min(1, t / (LAND * 0.6))), tight = easeOut(Math.max(0, Math.min(1, (t - 0.1) / (LAND - 0.12))));
+      const hot = Math.max(0, Math.min(1, (t - LAND + 0.06) / 0.08)), flare = hot * (1 - Math.max(0, Math.min(1, (t - LAND) / 0.35)));
+      const k = e.a * Math.min(1, t / 0.08) * Math.min(1, (dur - t) / 0.3);
+      const sag = 18 * WS * (1 - tight) + Math.sin(t * 50) * 1.2 * tight * (1 - hot);   // slack, then trembling taut
+      const trace = (segs, off) => () => { for (const [a, b] of segs) {
+        const bx = a.x + (b.x - a.x) * grow, by = a.y + (b.y - a.y) * grow, L = Math.hypot(bx - a.x, by - a.y) || 1, nx = -(by - a.y) / L, ny = (bx - a.x) / L;
+        c.moveTo(a.x + nx * off, a.y + ny * off); c.quadraticCurveTo((a.x + bx) / 2 + nx * (off + 2 * sag), (a.y + by) / 2 + ny * (off + 2 * sag), bx + nx * off, by + ny * off); } };
+      const w = (2.2 + 1.4 * tight) * WS, col = hot > 0.5 ? HOT : CRIM;
+      if (t < LAND + 0.25) { c.save(); c.globalAlpha = 0.16 * k * grow * Math.min(1, (LAND + 0.25 - t) / 0.2); c.fillStyle = '#5a0a18'; c.beginPath(); A.forEach((a, i) => (i ? c.lineTo(a.x, a.y) : c.moveTo(a.x, a.y))); c.closePath(); c.fill(); c.restore(); c.globalAlpha = 1; }
+      V.neonPath(c, ROSE, w * 0.35, k * 0.55, trace(spokes, 0));
+      V.neonPath(c, hot > 0.5 ? HOT : SEAM, w * 0.6 + 3 * WS * flare, k * 0.85, trace(rim, 0));
+      V.neonPath(c, CRIM, w * 0.4, k * 0.6, trace(rim, -4 * WS));
+      V.neonPath(c, col, w + 4 * WS * flare, k, trace(star, 0));
+      V.neonPath(c, CRIM, w * 0.45, k * 0.8, trace(star, 4.5 * WS));
+      V.neonPath(c, SEAM, 1.1 * WS, k * (1 - hot * 0.5), trace(star, 0));
+      V.neonPath(c, col, w * 0.5, k * 0.8, trace(links, 0));
+      if (flare > 0.01) for (const a of A) { V.glowAt(c, a.x, a.y, 44 * WS, HOT, flare * k); V.glowAt(c, a.x, a.y, 70 * WS, CRIM, 0.6 * flare * k); }
     } });
   }
   // the anchors: a crimson spear tip on a thread shaft standing at each point of the web
   function weaveLoomSpears(F, dur) {
+    const WS = WEAVE_ULT_SCALE;
     V.fx({ dur, layer: 'air', draw: (c, p, t, e) => {
-      const k = e.a * Math.min(1, (dur - t) / 0.25), h = 34 * easeOut(Math.min(1, t / 0.15)), hot = t > LAND - 0.05;
-      for (const a of F.anchors) {
-        V.neonRing(c, a.x, a.y, 9, CRIM, 1.2, k * 0.7, 0.5);
-        V.neonPath(c, CRIM, 2, k, () => { c.moveTo(a.x, a.y); c.lineTo(a.x, a.y - h); });
-        c.save(); c.globalAlpha = k; c.fillStyle = hot ? HOT : ROSE; c.strokeStyle = '#3a0610'; c.lineWidth = 1.2;
-        c.beginPath(); c.moveTo(a.x, a.y - h - 16); c.lineTo(a.x + 5, a.y - h - 3); c.lineTo(a.x, a.y - h + 2); c.lineTo(a.x - 5, a.y - h - 3); c.closePath(); c.fill(); c.stroke(); c.restore();
-        V.glowAt(c, a.x, a.y - h - 6, 14, CRIM, 0.7 * k);
-      }
+      // each spear stabs down out of the air into its anchor point (staggered), then stands glowing
+      const k = e.a * Math.min(1, (dur - t) / 0.25), hot = t > LAND - 0.05, H = 46 * WS, TL = 24 * WS, TW = 7 * WS;
+      F.anchors.forEach((a, i) => {
+        const q = easeOut(Math.max(0, Math.min(1, (t - i * 0.03) / 0.14))); if (q <= 0) return;
+        const drop = (1 - q) * 60 * WS, top = a.y - H - drop, base = a.y - drop * 0.3;
+        V.neonRing(c, a.x, a.y, 15 * WS * q, CRIM, 1.6, k * 0.8, 0.5); V.neonRing(c, a.x, a.y, 9 * WS * q, SEAM, 1, k * 0.6, 0.5);
+        V.glowAt(c, a.x, top - TL * 0.4, 28 * WS, CRIM, 0.8 * k); V.glowAt(c, a.x, a.y, 20 * WS, ROSE, 0.5 * k * q);
+        V.neonPath(c, CRIM, 2.4 * WS, k, () => { c.moveTo(a.x, base); c.lineTo(a.x, top); });
+        c.save(); c.globalAlpha = k; c.fillStyle = hot ? HOT : ROSE; c.strokeStyle = '#3a0610'; c.lineWidth = 1.4;
+        c.beginPath(); c.moveTo(a.x, top - TL); c.lineTo(a.x + TW, top - TL * 0.2); c.lineTo(a.x + TW * 0.35, top - TL * 0.1); c.lineTo(a.x, top + 4); c.lineTo(a.x - TW * 0.35, top - TL * 0.1); c.lineTo(a.x - TW, top - TL * 0.2); c.closePath(); c.fill(); c.stroke();
+        c.strokeStyle = SEAM; c.lineWidth = 1.2; c.beginPath(); c.moveTo(a.x, top - TL + 3); c.lineTo(a.x, top); c.stroke(); c.restore();
+        V.glowAt(c, a.x, top - TL * 0.5, 12 * WS, hot ? '#ffffff' : HOT, 0.8 * k);
+      });
     } });
   }
   const weaveMe = ent => (ent && ent.kind === 'player' ? (typeof Net !== 'undefined' ? Net.id : 0) : ent && ent.id);
@@ -4174,21 +4588,23 @@ function windLaneBoost(x, y, vx, vy, now) {
   ABILITY_VFX.threadweaver.grandloom = c => {
     const F = weaveLoomFrame(c.ent), W = globalThis.THREADWEAVER_VFX;
     if (c.cam) c.cam.dim(0.3, 1.3);
-    V.charge(c.x, c.y, { color: ROSE, r: 60, n: 10, dur: LAND, follow: c.ent });
-    weaveLoomWeb(F, LAND + 0.3);
-    weaveLoomSpears(F, LAND + 0.35);
+    const WS = WEAVE_ULT_SCALE;
+    V.charge(c.x, c.y, { color: ROSE, r: 60 * WS, n: 10, dur: LAND, follow: c.ent });
+    weaveLoomWeb(F, LAND + 0.55);
+    weaveLoomSpears(F, LAND + 0.5);
     weaveTaut(weaveMine(c.ent), { dur: LAND });
     c.later(LAND, () => {
       impact(c.cam, '#ffe8ec', 0.2);
       shake(5);
       for (const [A, B] of weaveMine(c.ent)) {
-        V.fx({ dur: 0.45, layer: 'air', draw: (cc, p, t, e) => { const k = (1 - p) * e.a; V.neonPath(cc, HOT, 6 * (1 - p * 0.6), k, () => { cc.moveTo(A.x, A.y - 16); cc.lineTo(B.x, B.y - 16); }); } });
-        for (const w of [A, B]) V.burst(w.x, w.y - 16, { color: ROSE, color2: SEAM, n: 6, speed: 180, kind: 'star', flash: false });
+        V.fx({ dur: 0.45, layer: 'air', draw: (cc, p, t, e) => { const k = (1 - p) * e.a; V.neonPath(cc, HOT, 7 * WS * (1 - p * 0.6), k, () => { cc.moveTo(A.x, A.y - 16); cc.lineTo(B.x, B.y - 16); }); } });
+        for (const w of [A, B]) V.burst(w.x, w.y - 16, { color: ROSE, color2: SEAM, n: 6, speed: 200, kind: 'star', flash: false });
       }
-      F.anchors.forEach((a, i) => V.sparks(a.x, a.y, { color: i % 2 ? SEAM : ROSE, n: 4, speed: 200, z: 30 }));
+      F.anchors.forEach((a, i) => { V.sparks(a.x, a.y, { color: i % 2 ? SEAM : ROSE, n: 7, speed: 300, z: 30 });
+        V.spikeburst(a.x, a.y - 30 * WS, { r: 30 * WS, n: 8, color: CRIM, core: HOT, ink: '#2a0410', dur: 0.3 }); });
       for (const w of F.ps) V.plus(w.x, w.y, { color: '#ffb0bc', n: 2 });
-      V.shock(F.x, F.y, { r: F.R + 30, color: CRIM, dur: 0.5, w: 5 });
-      if (W) W.diamond(F.x, F.y, F.R * 0.95, 6, { peak: 0.85, settle: 0.28 });
+      V.shock(F.x, F.y, { r: F.R + 40 * WS, color: CRIM, dur: 0.55, w: 7 });
+      if (W) W.diamond(F.x, F.y, F.R * 0.95, 6, { peak: 0.95, settle: 0.4, w: 1.5 });
     });
   };
   // one strike per thread (d.n, at least one) runs from her to the boss on its own arc, then two bright lances cross
@@ -4197,9 +4613,10 @@ function windLaneBoost(x, y, vx, vy, now) {
     const t = target || e, n = Math.max(1, Math.min(5, Number(d && d.n) || 1)), W = globalThis.THREADWEAVER_VFX;
     for (let i = 0; i < n; i++) weaveLater(e, i * 0.05, () => V.missile(e.x, e.y, t.x, t.y, { style: 'blade', color: i % 2 ? SEAM : ROSE, speed: 1300, size: 0.9, arc: 20 + i * 28, onHit: (x, y) => V.hit(x, y, ROSE, 0.6) }));
     weaveLater(e, 0.3, () => {
-      if (W) W.cross(t.x, t.y, { L: 120 + n * 16 });
-      V.spikeburst(t.x, t.y, { r: 60 + n * 6, n: 12, color: CRIM, core: HOT, ink: '#2a0410', dur: 0.36, z: 16 });
-      V.shock(t.x, t.y, { r: 140, color: SEAM, dur: 0.45, w: 5 });
+      const WS = WEAVE_ULT_SCALE;
+      if (W) W.cross(t.x, t.y, { L: (150 + n * 20) * WS, w: 1.4 * WS, dur: 0.6 });
+      V.spikeburst(t.x, t.y, { r: (60 + n * 6) * WS, n: 14, color: CRIM, core: HOT, ink: '#2a0410', dur: 0.4, z: 16 });
+      V.shock(t.x, t.y, { r: 140 * WS, color: SEAM, dur: 0.5, w: 6 });
       shake(4);
     });
   }, { atTarget: true });

@@ -1411,10 +1411,28 @@ const BOSS_VFX = (() => {
   // again it all shatters into ice shards and numerals flung off the face. The face lies over the floor's telegraphs, so
   // it stays pale and thin. (The boss's own pose freezes and frosts in main.js; the boss bar shows the stop and the held
   // feed in raid-ui.js.)
+  // TS_SCALE sizes the Time Stop face, its rim spikes and its shatter (the timing is the fight's, not this)
+  const TS_SCALE = 1.45;
+  // the face's ticks, numerals and frost tracery, painted once per Time Stop (a frame blits it, flattened)
+  function timeStopFace(R, NUM) {
+    const D = Math.ceil(R * 2 + 24), m = D / 2, cv = document.createElement('canvas'); cv.width = D; cv.height = D;
+    const c = cv.getContext('2d'); c.translate(m, m); c.lineCap = 'round'; c.shadowColor = '#9fd4ff'; c.shadowBlur = 8;
+    c.strokeStyle = c.fillStyle = 'rgba(214,240,255,0.85)';
+    for (let i = 0; i < 60; i++) { const a = i * TAU / 60, big = i % 5 === 0; c.lineWidth = big ? (i % 15 === 0 ? 4 : 2) : 1; c.beginPath(); c.moveTo(Math.cos(a) * R * (big ? 0.88 : 0.93), Math.sin(a) * R * (big ? 0.88 : 0.93)); c.lineTo(Math.cos(a) * R * 0.97, Math.sin(a) * R * 0.97); c.stroke(); }
+    c.font = `600 ${Math.round(R * 0.14)}px Georgia, serif`; c.textAlign = 'center'; c.textBaseline = 'middle';
+    for (let i = 0; i < 12; i++) { const a = i * TAU / 12 - Math.PI / 2; c.save(); c.translate(Math.cos(a) * R * 0.76, Math.sin(a) * R * 0.76); c.rotate(a + Math.PI / 2); c.fillText(NUM[i], 0, 0); c.restore(); }
+    // a six-armed frost star in the middle, faint
+    c.shadowBlur = 4; c.strokeStyle = 'rgba(190,230,255,0.45)'; c.lineWidth = 1.4;
+    for (let i = 0; i < 6; i++) { const a = i * TAU / 6, L = R * 0.4; c.beginPath(); c.moveTo(0, 0); c.lineTo(Math.cos(a) * L, Math.sin(a) * L);
+      for (const q of [0.45, 0.75]) { const px = Math.cos(a) * L * q, py = Math.sin(a) * L * q, bl = L * 0.18 * (1.2 - q); for (const s of [-1, 1]) { c.moveTo(px, py); c.lineTo(px + Math.cos(a + s * 0.8) * bl, py + Math.sin(a + s * 0.8) * bl); } } c.stroke(); }
+    return { cv, m };
+  }
   function timeStop(b, dur) {
-    const ICE = '#cfeeff', DEEP = '#6fa8e8', R = 128, FL = 0.55, NUM = ['XII', 'I', 'II', 'III', 'IIII', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI'];
-    const spikes = Array.from({ length: 12 }, (_, i) => ({ a: i * TAU / 12 + TAU / 24 + rand(-0.1, 0.1), h: rand(16, 34), w: rand(4, 7), lean: rand(-0.25, 0.25), at: rand(0.05, 0.3) })).sort((p, q) => Math.sin(p.a) - Math.sin(q.a));
-    const shell = Array.from({ length: 6 }, (_, i) => ({ dx: (i - 2.5) * 13 + rand(-4, 4), h: rand(40, 86), w: rand(8, 13), lean: (i - 2.5) * 0.08 + rand(-0.1, 0.1), at: 0.08 + i * 0.03 }));
+    const ICE = '#cfeeff', DEEP = '#6fa8e8', S = TS_SCALE, R = 128 * S, FL = 0.55, NUM = ['XII', 'I', 'II', 'III', 'IIII', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI'];
+    const face = timeStopFace(R, NUM);
+    const spikes = Array.from({ length: 16 }, (_, i) => ({ a: i * TAU / 16 + TAU / 32 + rand(-0.08, 0.08), h: rand(18, 40) * S, w: rand(4, 8) * S, lean: rand(-0.25, 0.25), at: rand(0.05, 0.3) })).sort((p, q) => Math.sin(p.a) - Math.sin(q.a));
+    const shell = Array.from({ length: 7 }, (_, i) => ({ dx: (i - 3) * 13 + rand(-4, 4), h: rand(44, 96), w: rand(8, 14), lean: (i - 3) * 0.08 + rand(-0.1, 0.1), at: 0.08 + i * 0.03 }));
+    const cracks = Array.from({ length: 9 }, (_, i) => { const a0 = i * TAU / 9 + rand(-0.2, 0.2), pts = [[0, 0]]; let a = a0, d = 0; for (let s = 0; s < 4; s++) { a += rand(-0.3, 0.3); d += R * rand(0.2, 0.28); pts.push([Math.cos(a) * d, Math.sin(a) * d]); } return pts; });
     // a standing ice spike: a pale translucent body, a white lit edge, a blue rim
     const ice = (c, x, y, h, w, lean, a, fill) => {
       const tx = x + lean * h;
@@ -1422,48 +1440,57 @@ const BOSS_VFX = (() => {
       c.globalAlpha = a * 0.7; c.strokeStyle = DEEP; c.lineWidth = 1; c.stroke();
       c.globalAlpha = a * 0.9; c.strokeStyle = '#ffffff'; c.beginPath(); c.moveTo(x - w * 0.2, y); c.lineTo(tx, y - h); c.stroke();
     };
-    VFX.shock(b.x, b.y, { r: 190, color: ICE, w: 6, dur: 0.45, flat: FL });
-    // the face on the floor
+    VFX.shock(b.x, b.y, { r: R * 1.5, color: ICE, w: 7, dur: 0.45, flat: FL });
+    VFX.shock(b.x, b.y, { r0: R * 1.3, r: R, color: '#ffffff', w: 3, dur: 0.3, flat: FL });
+    // the face on the floor (rim-led: its middle is only a faint cold tint); cracks race across it just before it breaks
     VFX.fx({ dur, layer: 'ground', draw: (c, p, t, e) => {
       const life = p * dur, k = e.a * Math.min(1, life / 0.12) * Math.min(1, (dur - life) / 0.2), r = R * (0.85 + 0.15 * easeOut(Math.min(1, life / 0.25)));
       c.save(); c.translate(b.x, b.y); c.scale(1, FL); c.globalCompositeOperation = 'lighter';
       const gr = c.createRadialGradient(0, 0, r * 0.2, 0, 0, r); gr.addColorStop(0, `rgba(120,170,255,${(0.04 * k).toFixed(3)})`); gr.addColorStop(1, `rgba(150,200,255,${(0.16 * k).toFixed(3)})`);
       c.fillStyle = gr; c.beginPath(); c.arc(0, 0, r, 0, TAU); c.fill();
-      c.restore();
-      VFX.neonRing(c, b.x, b.y, r, ICE, 2.5, k * 0.85, FL); VFX.neonRing(c, b.x, b.y, r * 0.88, ICE, 1.2, k * 0.55, FL); VFX.neonRing(c, b.x, b.y, r * 0.5, DEEP, 1, k * 0.4, FL);
-      c.save(); c.translate(b.x, b.y); c.scale(1, FL); c.lineCap = 'round';
-      c.strokeStyle = c.fillStyle = `rgba(214,240,255,${(0.8 * k).toFixed(3)})`;
-      c.font = `600 ${Math.round(r * 0.13)}px Georgia, serif`; c.textAlign = 'center'; c.textBaseline = 'middle';
-      for (let i = 0; i < 12; i++) {
-        const a = i * TAU / 12 - Math.PI / 2;
-        c.lineWidth = i % 3 ? 1.5 : 3; c.beginPath(); c.moveTo(Math.cos(a) * r * 0.9, Math.sin(a) * r * 0.9); c.lineTo(Math.cos(a) * r * 0.97, Math.sin(a) * r * 0.97); c.stroke();
-        c.save(); c.translate(Math.cos(a) * r * 0.77, Math.sin(a) * r * 0.77); c.rotate(a + Math.PI / 2); c.fillText(NUM[i], 0, 0); c.restore();
-      }
+      c.globalAlpha = Math.min(1, k * 0.9); c.drawImage(face.cv, -face.m * r / R, -face.m * r / R, face.cv.width * r / R, face.cv.height * r / R);
+      c.restore(); c.globalAlpha = 1;
+      VFX.neonRing(c, b.x, b.y, r, ICE, 3, k * 0.9, FL); VFX.neonRing(c, b.x, b.y, r * 1.05, DEEP, 1.2, k * 0.5, FL); VFX.neonRing(c, b.x, b.y, r * 0.86, ICE, 1.2, k * 0.55, FL); VFX.neonRing(c, b.x, b.y, r * 0.5, DEEP, 1.2, k * 0.45, FL);
+      c.save(); c.translate(b.x, b.y); c.scale(1, FL); c.lineCap = 'round'; c.globalCompositeOperation = 'lighter';
+      c.strokeStyle = `rgba(224,244,255,${(0.85 * k).toFixed(3)})`;
       // two hands that kick back once and then stand still
       const back = Math.min(1, life / 0.3), hand = (a, len, w) => { c.lineWidth = w; c.beginPath(); c.moveTo(0, 0); c.lineTo(Math.cos(a) * len, Math.sin(a) * len); c.stroke(); };
-      hand(-Math.PI / 2 - 0.9 * easeOut(back), r * 0.66, 2.5); hand(-Math.PI / 2 + 2.1 - 0.15 * easeOut(back), r * 0.42, 4);
+      hand(-Math.PI / 2 - 0.9 * easeOut(back), r * 0.66, 3); hand(-Math.PI / 2 + 2.1 - 0.15 * easeOut(back), r * 0.42, 5);
+      const cr = Math.max(0, 1 - (dur - life) / 0.35);
+      if (cr > 0) { c.strokeStyle = `rgba(255,255,255,${(0.9 * k).toFixed(3)})`; c.lineWidth = 1.6; c.beginPath();
+        for (const pts of cracks) { const m = Math.max(1, Math.ceil((pts.length - 1) * cr)); c.moveTo(0, 0); for (let i = 1; i <= m; i++) c.lineTo(pts[i][0] * r / R, pts[i][1] * r / R); } c.stroke(); }
       c.restore();
     } });
     // the ice: spikes round the rim, a shell on the body, a cold glow
     VFX.fx({ dur, layer: 'air', draw: (c, p, t, e) => {
       const life = p * dur, k = e.a * Math.min(1, life / 0.12) * Math.min(1, (dur - life) / 0.15);
-      VFX.glowAt(c, b.x, b.y - 34, 90, ICE, k * 0.3);
+      VFX.glowAt(c, b.x, b.y - 34, 110, ICE, k * 0.32);
       c.save(); c.lineJoin = 'round';
       for (const s of spikes) { if (life < s.at) continue; const g = easeOut(Math.min(1, (life - s.at) / 0.2)); ice(c, b.x + Math.cos(s.a) * R * 0.98, b.y + Math.sin(s.a) * R * 0.98 * FL, s.h * g, s.w, s.lean, k, 0.45); }
       for (const s of shell) { if (life < s.at) continue; const g = easeOut(Math.min(1, (life - s.at) / 0.25)); ice(c, b.x + s.dx, b.y + 6, s.h * g, s.w, s.lean, k, 0.28); }
       c.restore();
     }, done: () => {
-      // time starts again: the ice shatters, numerals thrown off the face
-      VFX.flash(b.x, b.y - 40, 80, ICE, 0.2);
-      VFX.shock(b.x, b.y, { r: 160, color: ICE, w: 4, dur: 0.4, flat: FL });
-      for (let i = 0; i < 18; i++) { const a = rand(0, TAU), s = rand(160, 340); VFX.spawn({ x: b.x + Math.cos(a) * rand(0, 40), y: b.y, z: rand(10, 80), vx: Math.cos(a) * s, vy: Math.sin(a) * s * 0.6, vz: rand(40, 200), g: 520, drag: 0.03, life: rand(0.5, 0.85), size: rand(8, 14), color: i % 3 ? ICE : '#ffffff', kind: 'shard', vr: rand(-12, 12) }); }
-      const flying = [0, 2, 3, 6, 9, 10].map(i => { const a = i * TAU / 12 - Math.PI / 2; return { s: NUM[i], x: b.x + Math.cos(a) * R * 0.77, y: b.y + Math.sin(a) * R * 0.77 * FL, vx: Math.cos(a) * rand(80, 150), vy: Math.sin(a) * rand(50, 90) - 60, vr: rand(-6, 6) }; });
-      VFX.fx({ dur: 0.7, layer: 'air', draw: (c, p, t, e) => {
-        c.font = '600 16px Georgia, serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = ICE;
-        for (const f of flying) { c.save(); c.translate(f.x + f.vx * t, f.y + f.vy * t + 160 * t * t); c.rotate(f.vr * t); c.globalAlpha = e.a * (1 - p); c.fillText(f.s, 0, 0); c.restore(); }
+      // time starts again: the face breaks into plates thrown off the floor, the ice shatters, every numeral flung off
+      VFX.flash(b.x, b.y - 40, 110, ICE, 0.22);
+      VFX.shock(b.x, b.y, { r: R * 1.35, color: ICE, w: 6, dur: 0.45, flat: FL });
+      VFX.shock(b.x, b.y, { r: R * 1.7, color: '#ffffff', w: 3, dur: 0.6, flat: FL, delay: 0.06 });
+      for (let i = 0; i < 24; i++) { const a = rand(0, TAU), s = rand(180, 400); VFX.spawn({ x: b.x + Math.cos(a) * rand(0, 50), y: b.y, z: rand(10, 90), vx: Math.cos(a) * s, vy: Math.sin(a) * s * 0.6, vz: rand(60, 240), g: 520, drag: 0.03, life: rand(0.55, 0.9), size: rand(9, 16), color: i % 3 ? ICE : '#ffffff', kind: 'shard', vr: rand(-12, 12) }); }
+      const plates = Array.from({ length: 10 }, (_, i) => { const a0 = i * TAU / 10 + rand(-0.1, 0.1), a1 = a0 + TAU / 10 * rand(0.75, 0.95), r0 = R * rand(0.45, 0.65), am = (a0 + a1) / 2, s = rand(120, 220);
+        return { pts: [[a0, r0], [a1, r0 * rand(0.9, 1.1)], [a1, R], [am, R * 1.02], [a0, R]], vx: Math.cos(am) * s, vy: Math.sin(am) * s * FL, vz: rand(140, 240), vr: rand(-3, 3), am, rm: (r0 + R) / 2 }; });
+      const flying = NUM.map((s, i) => { const a = i * TAU / 12 - Math.PI / 2; return { s, x: b.x + Math.cos(a) * R * 0.76, y: b.y + Math.sin(a) * R * 0.76 * FL, vx: Math.cos(a) * rand(100, 190), vy: Math.sin(a) * rand(60, 110) - 90, vr: rand(-6, 6) }; });
+      VFX.fx({ dur: 0.85, layer: 'air', draw: (c, p, t, e) => {
+        const k = e.a * (1 - p * p);
+        c.lineJoin = 'round';
+        for (const pl of plates) {
+          const ox = pl.vx * t, oy = pl.vy * t - Math.max(0, pl.vz * t - 500 * t * t), cx = b.x + Math.cos(pl.am) * pl.rm, cy = b.y + Math.sin(pl.am) * pl.rm * FL, rot = pl.vr * t;
+          c.beginPath(); pl.pts.forEach(([a, rr], j) => { let px = b.x + Math.cos(a) * rr - cx, py = (b.y + Math.sin(a) * rr * FL) - cy; const qx = px * Math.cos(rot) - py * Math.sin(rot), qy = px * Math.sin(rot) + py * Math.cos(rot); j ? c.lineTo(cx + ox + qx, cy + oy + qy) : c.moveTo(cx + ox + qx, cy + oy + qy); }); c.closePath();
+          c.globalAlpha = k * 0.3; c.fillStyle = '#dff4ff'; c.fill(); c.globalAlpha = k * 0.9; c.strokeStyle = '#ffffff'; c.lineWidth = 1.4; c.stroke();
+        }
+        c.font = `600 ${Math.round(R * 0.14)}px Georgia, serif`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = ICE;
+        for (const f of flying) { c.save(); c.translate(f.x + f.vx * t, f.y + f.vy * t + 200 * t * t); c.rotate(f.vr * t); c.globalAlpha = k; c.fillText(f.s, 0, 0); c.restore(); }
         c.globalAlpha = 1;
       } });
-      shake(3);
+      shake(4);
     } });
   }
 
