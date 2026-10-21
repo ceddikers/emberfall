@@ -374,10 +374,15 @@ function drawTownDynamic(ctx, t) {
 function drawSmoke(ctx, t) {
   for (const b of [TOWN.tavern, TOWN.smithy, ...TOWN.houses]) {
     if (!b.smoke) continue;
-    const dark = b === TOWN.smithy;
-    for (let i = 0; i < 6; i++) {
-      const q = (t * 0.22 + i / 6) % 1;
-      circle(ctx, b.smoke.x + q * 34 + Math.sin(t + i) * 4, b.smoke.y - q * 90, 7 + q * 16, rgba(dark ? '#8a8a8a' : '#e0e0e0', 0.45 * (1 - q)));
+    // soft layered smoke: each puff a soft-edged body (cached glow sprites, no gradients per frame) with a lighter lit
+    // side, swelling and thinning as the wind leans it over; the smithy's is darker and thicker
+    const dark = b === TOWN.smithy, body = dark ? '#5e5a58' : '#b8b4ae', lit = dark ? '#8e8884' : '#eceae4';
+    const seed = (b.smoke.x * 0.013) % 1;
+    for (let i = 0; i < 9; i++) {
+      const q = (t * 0.19 + i / 9 + seed) % 1, r = 8 + q * 22, a = Math.sin(Math.min(1, q * 4) * Math.PI / 2) * (1 - q) * (dark ? 0.5 : 0.42);
+      const x = b.smoke.x + q * q * 46 + Math.sin(t * 0.9 + i * 1.7) * 3 * (0.4 + q), y = b.smoke.y - q * 96;
+      glow(ctx, x, y, r * 1.35, body, a);
+      glow(ctx, x - r * 0.25, y - r * 0.3, r * 0.85, lit, a * 0.75);
     }
   }
 }
@@ -394,6 +399,14 @@ function drawPlaque(g, pd, text) {
 }
 
 // a hero's pad on the tavern deck (packed rows get smaller pads)
+// (a small round rug: a warm glow under it, a deep red field with a woven inner ring, a gold rim with a lit top edge)
 function drawDeckPad(g, x, y, packed) {
-  ellipse(g, x, y + 4, packed ? 24 : 28, packed ? 17 : 20, 0, 'rgba(120,30,30,0.55)', 'rgba(230,190,110,0.6)', 2);
+  const rx = packed ? 24 : 28, ry = packed ? 17 : 20, cy = y + 4;
+  g.save(); g.translate(x, cy); g.scale(1, ry / rx); glow(g, 0, 0, rx * 1.45, '#ffb860', 0.16); g.restore();
+  ellipse(g, x, cy, rx, ry, 0, 'rgba(112,28,28,0.62)', 'rgba(40,14,10,0.55)', 3);
+  ellipse(g, x, cy, rx * 0.72, ry * 0.72, 0, 'rgba(150,44,36,0.4)', 'rgba(230,190,110,0.32)', 1);
+  g.save(); g.setLineDash([2, 3]); ellipse(g, x, cy, rx * 0.86, ry * 0.86, 0, null, 'rgba(240,200,130,0.3)', 1); g.restore();
+  ellipse(g, x, cy, rx, ry, 0, null, 'rgba(230,190,110,0.62)', 1.6);
+  g.strokeStyle = 'rgba(255,236,190,0.5)'; g.lineWidth = 1.2; g.lineCap = 'round';
+  g.beginPath(); g.ellipse(x, cy, rx - 0.5, ry - 0.5, 0, Math.PI * 1.15, Math.PI * 1.85); g.stroke();
 }

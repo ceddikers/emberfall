@@ -86,6 +86,86 @@ const BOSS_ART = {
     } else if (props.held === 'lid') {
       ellipse(ctx, 4, -31, 13, 9, 0.35, skin, OUT, 2.5);
       circle(ctx, 16, -35, 8, skin, OUT, 2.5);
+    // ---- [boss presentation] cast poses: what he holds in his off hand says which move is coming (boss-vfx.js CAST_POSE)
+    } else if (props.raise) {
+      // Grease Fire / Last Orders / Last Call: a skillet of grease thrust up and forward, catching light
+      ctx.save(); ctx.translate(4, -31); ctx.rotate(-0.35);
+      ellipse(ctx, 0, 0, 13, 9, 0, skin, OUT, 2.5);
+      line(ctx, 8, 0, 30, 0, OUT, 7); line(ctx, 8, 0, 30, 0, '#3a3a42', 4);
+      circle(ctx, 44, 0, 15, '#2a2a30', OUT, 3); circle(ctx, 44, 0, 10.5, '#6a4212');
+      const fl = 0.75 + Math.sin(st.t * 13) * 0.2;
+      glow(ctx, 44, 0, 34, '#ff8a2a', 0.55 * fl);
+      for (let i = 0; i < 5; i++) {
+        const a = i * TAU / 5 + st.t * 3, h = 9 + 5 * Math.sin(st.t * 15 + i * 2.1), fx = 44 + Math.cos(a) * 5, fy = Math.sin(a) * 5;
+        poly(ctx, [fx - 3.5, fy, fx + Math.cos(a) * h, fy + Math.sin(a) * h, fx + 3.5, fy], i % 2 ? '#ffb030' : '#ff6a14');
+      }
+      circle(ctx, 44, 0, 4, '#fff0b0');
+      circle(ctx, 12, 0, 8, skin, OUT, 2.5);
+      ctx.restore();
+    } else if (props.bell) {
+      // Order Up! / Dinner Rush / Service!: a brass service bell held out, his thumb on the plunger; it rings on the beat
+      ellipse(ctx, 4, -31, 13, 9, 0.35, skin, OUT, 2.5);
+      const ding = Math.max(0, 1 - ((st.t * 1.6) % 1) * 4);
+      ctx.save(); ctx.translate(26, -44 + ding * 1.5);
+      ellipse(ctx, 0, 3, 15, 6, 0, '#5a3a1a', OUT, 2);
+      ctx.beginPath(); ctx.arc(0, 2, 12, Math.PI, 0); ctx.closePath(); ctx.fillStyle = '#e0b048'; ctx.fill(); ctx.strokeStyle = OUT; ctx.lineWidth = 2.5; ctx.stroke();
+      ellipse(ctx, -4, -4, 4, 2.5, -0.4, 'rgba(255,248,210,0.8)');
+      rrect(ctx, -1.5, -15, 3, 6, 1, '#c89a3a', OUT, 1.5);
+      if (ding > 0) glow(ctx, 0, -2, 26, '#ffe08a', 0.6 * ding);
+      ctx.restore();
+      circle(ctx, 16, -35, 8, skin, OUT, 2.5);
+    } else if (props.cloche) {
+      // Family Meal / Mise en Place: a covered platter held high on his palm, steam leaking from under the dome
+      ellipse(ctx, 4, -31, 13, 9, 0.35, skin, OUT, 2.5);
+      ctx.save(); ctx.translate(24, -46);
+      ellipse(ctx, 0, 4, 22, 9, 0, '#c8ced4', OUT, 2.5);
+      ctx.beginPath(); ctx.ellipse(0, 3, 17, 15, 0, Math.PI, 0); ctx.closePath(); ctx.fillStyle = '#dfe4e8'; ctx.fill(); ctx.strokeStyle = OUT; ctx.lineWidth = 2.5; ctx.stroke();
+      ellipse(ctx, -6, -5, 5, 3, -0.5, 'rgba(255,255,255,0.8)');
+      circle(ctx, 0, -12, 3.2, '#c8ced4', OUT, 1.5);
+      for (let i = 0; i < 3; i++) { const q = (st.t * 0.9 + i / 3) % 1; circle(ctx, -14 + i * 14, 2 - q * 20, 3 + q * 4, `rgba(245,245,245,${0.45 * (1 - q)})`); }
+      ctx.restore();
+      circle(ctx, 16, -35, 8, skin, OUT, 2.5);
+    } else if (props.whisk) {
+      // Whisk: a big balloon whisk, beating so fast its wires blur
+      ctx.save(); ctx.translate(4, -31); ctx.rotate(-0.5);
+      ellipse(ctx, 0, 0, 13, 9, 0, skin, OUT, 2.5);
+      line(ctx, 8, 0, 28, 0, OUT, 6); line(ctx, 8, 0, 28, 0, '#b88a4a', 3.5);
+      ctx.translate(40, 0); ctx.rotate(st.t * 22);
+      ellipse(ctx, 0, 0, 14, 14, 0, 'rgba(240,236,220,0.22)');
+      for (let i = 0; i < 4; i++) ellipse(ctx, 0, 0, 13, 4.5, i * Math.PI / 4, null, '#dfe4ea', 1.6);
+      ctx.restore();
+      circle(ctx, 16, -35, 8, skin, OUT, 2.5);
+    } else if (props.hunk) {
+      // Meat Toss: a slab of raw meat on the bone, swung back to throw
+      ellipse(ctx, 4, -31, 13, 9, 0.35, skin, OUT, 2.5);
+      ctx.save(); ctx.translate(14, -50); ctx.rotate(-0.5 + Math.sin(st.t * 7) * 0.12);
+      ellipse(ctx, 0, 0, 16, 11, 0, '#b83a2a', OUT, 2.5); ellipse(ctx, -3, -3, 9, 5, 0, '#e07060'); ellipse(ctx, 5, 2, 5, 3, 0.4, '#f0e0d0');
+      line(ctx, 14, 0, 22, 0, '#efe6cf', 4); circle(ctx, 23, -2, 3, '#efe6cf', OUT, 1); circle(ctx, 23, 2, 3, '#efe6cf', OUT, 1);
+      ctx.restore();
+      circle(ctx, 16, -35, 8, skin, OUT, 2.5);
+    } else if (props.spice) {
+      // Spice Rack: a jar of chilli shaken over the room, red flakes jumping out of it
+      ellipse(ctx, 4, -31, 13, 9, 0.35, skin, OUT, 2.5);
+      const sh = Math.sin(st.t * 18) * 3;
+      ctx.save(); ctx.translate(26 + sh, -46); ctx.rotate(0.6);
+      rrect(ctx, -7, -11, 14, 20, 3, '#d8c8a8', OUT, 2); rrect(ctx, -7, 0, 14, 9, 2, '#c8401a'); rrect(ctx, -8, -14, 16, 5, 2, '#7a4a22', OUT, 1.5);
+      ctx.restore();
+      for (let i = 0; i < 4; i++) { const q = (st.t * 2.2 + i / 4) % 1; circle(ctx, 36 + q * 18 + i * 2, -50 + (i - 1.5) * 6 + q * 8, 1.8 * (1 - q) + 0.6, `rgba(220,60,20,${1 - q})`); }
+      circle(ctx, 16, -35, 8, skin, OUT, 2.5);
+    } else if (props.bucket) {
+      // Clogged Drains: a slop bucket of grease tipped forward, a thick brown pour off its lip
+      ellipse(ctx, 4, -31, 13, 9, 0.35, skin, OUT, 2.5);
+      ctx.save(); ctx.translate(26, -44); ctx.rotate(0.8 + Math.sin(st.t * 3) * 0.08);
+      rrect(ctx, -10, -11, 20, 22, [2, 2, 6, 6], '#6a6e74', OUT, 2.5); ellipse(ctx, 0, -11, 10, 3.5, 0, '#3a2410', OUT, 1.5);
+      line(ctx, -10, -6, 10, -6, '#4a4e54', 1.5);
+      ctx.restore();
+      for (let i = 0; i < 3; i++) { const q = (st.t * 1.8 + i / 3) % 1; circle(ctx, 40 + q * 12, -38 + q * 4, 4.5 * (1 - q * 0.5), `rgba(110,64,20,${0.9 * (1 - q)})`); }
+      circle(ctx, 16, -35, 8, skin, OUT, 2.5);
+    } else if (props.heave || props.carry) {
+      // Flare-Up (and the walk down with it): both hands under the stockpot (the pot itself is drawn over his head below)
+      ellipse(ctx, 4, -31, 13, 9, 0.35, skin, OUT, 2.5);
+      circle(ctx, 16, -30, 8, skin, OUT, 2.5);
+    // ---- [/boss presentation]
     } else if (props.meat) {
       // Rolling Meatballs: a huge meatball hefted in his off hand, ready to throw
       ellipse(ctx, 4, -31, 13, 9, 0.35, skin, OUT, 2.5);
@@ -117,19 +197,37 @@ const BOSS_ART = {
     circle(ctx, 10, -8, 2.5, '#b33a2a'); circle(ctx, 4, 9, 1.8, '#b33a2a'); circle(ctx, 13, 6, 1.4, '#8a5a2a');
     // right arm with the giant cleaver
     // (Cleaver Toss, Hard: the cleaver drawn back over his shoulder, glinting)
-    const rg = props.mince ? (props.mince.side === 'right' ? 0.75 + Math.sin(st.t * 10) * 0.2 : props.mince.second === 'right' ? 0.25 : 0) : props.toss ? 0.6 + Math.sin(st.t * 12) * 0.2 : 0;
-    ctx.save(); ctx.translate(2, 27); ctx.rotate(props.mince ? 0.9 : props.toss ? 2.2 : 0.15 + s * 1.2);
+    // ([boss presentation] Tenderize: the cleaver hauled up behind his shoulder, its edge brightening as the blow nears)
+    const rg = props.mince ? (props.mince.side === 'right' ? 0.75 + Math.sin(st.t * 10) * 0.2 : props.mince.second === 'right' ? 0.25 : 0) : props.toss ? 0.6 + Math.sin(st.t * 12) * 0.2 : props.windup ? 0.45 + Math.sin(st.t * 9) * 0.2 : 0;
+    ctx.save(); ctx.translate(2, 27); ctx.rotate(props.mince ? 0.9 : props.toss ? 2.2 : props.windup && !(s > 0.05) ? 2.6 + Math.sin(st.t * 4) * 0.06 : 0.15 + s * 1.2);
     ellipse(ctx, 9, 0, 14, 9, 0, skin, OUT, 2.5);
     cleaver(rg);
     circle(ctx, 20, 0, 8.5, skin, OUT, 2.5);
     ctx.restore();
-    // head, tusks, chef hat
+    // head, tusks, chef hat ([boss presentation] Butcher's Charge: head down, tusks first, the hat pushed forward)
+    const hd = props.headdown ? 7 + Math.sin(st.t * 16) * 1.2 : 0;
+    ctx.save(); ctx.translate(hd, 0);
     circle(ctx, 23, 0, 13, skin, OUT, 2.5);
-    for (const sy of [-1, 1]) poly(ctx, [32, 5 * sy, 41, 8 * sy, 34, 1.5 * sy], '#f3ecd8', OUT, 1.5);
-    circle(ctx, 31, -4.5, 1.8, OUT); circle(ctx, 31, 4.5, 1.8, OUT);
+    for (const sy of [-1, 1]) poly(ctx, [32, 5 * sy, 41 + hd * 0.6, 8 * sy, 34, 1.5 * sy], '#f3ecd8', OUT, 1.5);
+    circle(ctx, 31, -4.5, 1.8, props.headdown ? '#c8301a' : OUT); circle(ctx, 31, 4.5, 1.8, props.headdown ? '#c8301a' : OUT);
+    if (hd) { ctx.translate(hd * 0.5, 0); ctx.scale(0.86, 0.86); }
     for (const [hx, hy] of [[14, -7], [14, 7], [20, 0], [8, 0]]) circle(ctx, hx, hy, 7.5, '#ffffff', OUT, 2);
     circle(ctx, 14, 0, 7, '#ffffff');
     rrect(ctx, 21, -9, 4, 18, 1.5, '#e6e2d8', OUT, 1.5);
+    ctx.restore();
+    if (props.heave || props.carry) {
+      // [boss presentation] the stockpot hoisted over his head (Flare-Up), or carried down to the middle; it sways
+      const sw = Math.sin(st.t * (props.carry ? 9 : 4)) * 2, R = 30;
+      ctx.save(); ctx.translate(6 + sw, -4);
+      ellipse(ctx, 4, 6, R + 4, R * 0.8, 0, 'rgba(0,0,0,0.18)');
+      for (const sy of [-1, 1]) rrect(ctx, -6, sy * (R + 2) - 3, 12, 6, 3, '#4a4e54', OUT, 2);
+      circle(ctx, 0, 0, R, '#9aa2ab', OUT, 3);
+      circle(ctx, 0, 0, R - 6, '#5a3a20', OUT, 1.5);
+      circle(ctx, 0, 0, R - 9, '#c8601a');
+      for (let i = 0; i < 4; i++) { const q = (st.t * 1.3 + i / 4) % 1, a = i * 1.7; circle(ctx, Math.cos(a) * 9, Math.sin(a) * 9, 2 + q * 3, `rgba(255,${180 + q * 60 | 0},90,${0.9 * (1 - q)})`); }
+      ellipse(ctx, -10, -12, 7, 4, -0.6, 'rgba(255,255,255,0.35)');
+      ctx.restore();
+    }
     if (props.held === 'lid') {
       // a pot lid hoisted overhead, ready to come down
       const lift = 1 + Math.sin(st.t * 5) * 0.04;
@@ -162,14 +260,15 @@ const BOSS_ART = {
         ctx.strokeStyle = 'rgba(240,240,255,0.55)'; ctx.lineWidth = 1.4; ctx.stroke();
       }
     }
-    // eight legs
+    // eight legs ([boss presentation] props.fold 0..1: dead, they curl in under her one pair after another)
+    const fold = props.fold || 0;
     for (const sy of [-1, 1]) for (let i = 0; i < 4; i++) {
-      const bx = 12 - i * 5, by = 8 * sy;
-      const sw = Math.sin(st.t * speed + i * 1.4 + (sy > 0 ? Math.PI : 0)) * (st.moving ? 0.22 : 0.06);
+      const bx = 12 - i * 5, by = 8 * sy, fi = clamp(fold * 1.6 - i * 0.2, 0, 1);
+      const sw = Math.sin(st.t * speed + i * 1.4 + (sy > 0 ? Math.PI : 0)) * (st.moving ? 0.22 : 0.06) * (1 - fold) + (fold > 0 && fi < 1 ? Math.sin(st.t * 30 + i) * 0.08 * fi : 0);
       const a = sy * (0.55 + i * 0.62 + sw - (i < 2 ? rear * 0.4 : 0));
-      const kx = bx + Math.cos(a) * 30, ky = by + Math.sin(a) * 30;
-      const a2 = a + sy * (i < 2 ? -0.5 : 0.5);
-      const fx = kx + Math.cos(a2) * 26, fy = ky + Math.sin(a2) * 26;
+      const L1 = 30 * (1 - 0.45 * fi), kx = bx + Math.cos(a) * L1, ky = by + Math.sin(a) * L1;
+      const a2 = a + sy * (i < 2 ? -0.5 : 0.5) + sy * 2.2 * fi;
+      const fx = kx + Math.cos(a2) * 26 * (1 - 0.3 * fi), fy = ky + Math.sin(a2) * 26 * (1 - 0.3 * fi);
       limb(ctx, [bx, by, kx, ky, fx, fy], body, 4);
       circle(ctx, kx, ky, 3, dark, OUT, 1.2);
     }
@@ -200,8 +299,8 @@ const BOSS_ART = {
       for (let i = 0; i < 3; i++) { const q = (st.t * 1.4 + i / 3) % 1; circle(ctx, hx + 14 + q * 10, (i - 1) * 5, 2.6 * (1 - q) + 0.6, `rgba(170,255,110,${0.9 * (1 - q)})`); }
     }
     if (husk) return;
-    glow(ctx, hx + 5, 0, 10, '#ff3a3a', 0.35);
-    for (const [ex, ey, r] of [[5, -3, 1.8], [5, 3, 1.8], [3, -5.5, 1.3], [3, 5.5, 1.3], [6.5, -1, 1.1], [6.5, 1, 1.1]]) circle(ctx, hx + ex, ey, r, '#ff3a3a');
+    glow(ctx, hx + 5, 0, 10, '#ff3a3a', 0.35 * (1 - fold));
+    for (const [ex, ey, r] of [[5, -3, 1.8], [5, 3, 1.8], [3, -5.5, 1.3], [3, 5.5, 1.3], [6.5, -1, 1.1], [6.5, 1, 1.1]]) circle(ctx, hx + ex, ey, r, fold > 0.6 ? '#5a2a2a' : '#ff3a3a');
     for (let k = 0; k < 5; k++) {
       const a = Math.PI * 0.6 + k * Math.PI * 0.2;
       poly(ctx, [hx + Math.cos(a - 0.15) * 7, Math.sin(a - 0.15) * 7, hx + Math.cos(a) * 13, Math.sin(a) * 13,
@@ -230,7 +329,7 @@ const BOSS_ART = {
     }
     // orbiting rocks tethered by lightning (they whirl while the storm walls turn)
     for (let i = 0; i < 4; i++) {
-      const a = st.t * (props.spin ? 3.2 : 0.8) + i * TAU / 4, rx = Math.cos(a) * 64, ry = Math.sin(a) * 64;
+      const a = st.t * (props.spin ? 3.2 : 0.8) + i * TAU / 4, rr = 64 * (1 + (props.disperse || 0) * 1.6), rx = Math.cos(a) * rr, ry = Math.sin(a) * rr;   // ([boss presentation] disperse: flung off as he goes)
       if (Math.floor(st.t * 8 + i * 3) % 4 !== 0) jagged(ctx, rx * 0.45, ry * 0.45, rx, ry, Math.floor(st.t * 14) + i * 31, bolt, 1.2);
       poly(ctx, [rx - 7, ry - 4, rx - 2, ry - 8, rx + 6, ry - 5, rx + 7, ry + 3, rx + 1, ry + 7, rx - 6, ry + 5], stone, OUT, 2);
     }
@@ -278,6 +377,7 @@ const BOSS_ART = {
     const props = st.props || {};
     let s = swing(actP(st, 'attack'));
     if (props.rise || props.raise) s = -0.9;   // Rise, My Guard / a big swing coming: the greatsword held high
+    if (props.windup && !(s > 0.05)) s = -1.35 + Math.sin(st.t * 5) * 0.04;   // [boss presentation] Grave Cleave: hauled right back
     if (st.raid) ctx.scale(1.2, 1.2);
     glow(ctx, 0, 0, 75, ghost, 0.14);
     // Barrow Knell: rings of a tolling bell roll off him
@@ -311,12 +411,37 @@ const BOSS_ART = {
       ctx.save(); ctx.translate(16, -24); ctx.rotate(st.t * 2);
       for (let k = 0; k < 3; k++) { const a = k * TAU / 3; line(ctx, Math.cos(a) * 9, Math.sin(a) * 9, Math.cos(a + 2.1) * 9, Math.sin(a + 2.1) * 9, '#e8d0ff', 1.5); }
       ctx.restore();
+    // ---- [boss presentation] cast poses in his off hand (boss-vfx.js CAST_POSE)
+    } else if (props.marks) {
+      // Grave Marks: the hand thrust out, a ring of grave-sigils turning in its flame
+      glow(ctx, 24, -30, 30, ghost, 0.7 + Math.sin(st.t * 9) * 0.15);
+      ctx.save(); ctx.translate(24, -30); ctx.rotate(-st.t * 2.5);
+      for (let k = 0; k < 4; k++) { const a = k * TAU / 4; ctx.save(); ctx.rotate(a); line(ctx, 11, -3, 11, 3, '#c8ffd8', 1.6); line(ctx, 8.5, 0, 13.5, 0, '#c8ffd8', 1.6); ctx.restore(); }
+      ellipse(ctx, 0, 0, 15, 15, 0, null, rgba('#c8ffd8', 0.6), 1.2);
+      ctx.restore();
+    } else if (props.gavel) {
+      // Writ / Judgement: his sceptre raised over the court, its head burning gold
+      ctx.save(); ctx.translate(16, -24); ctx.rotate(-0.9);
+      line(ctx, 0, 0, 40, 0, OUT, 5.5); line(ctx, 0, 0, 40, 0, gold, 3);
+      glow(ctx, 44, 0, 26, '#ffe6a0', 0.6 + Math.sin(st.t * 8) * 0.2);
+      circle(ctx, 44, 0, 6.5, '#ffe08a', OUT, 2);
+      for (let k = 0; k < 4; k++) { const a = k * TAU / 4 + st.t; poly(ctx, [44 + Math.cos(a - 0.3) * 6, Math.sin(a - 0.3) * 6, 44 + Math.cos(a) * 12, Math.sin(a) * 12, 44 + Math.cos(a + 0.3) * 6, Math.sin(a + 0.3) * 6], '#ffe08a', OUT, 1); }
+      ctx.restore();
+    } else if (props.scroll) {
+      // The Charge Sheet: a long roll of charges unfurled from his hand, read out line by line
+      ctx.save(); ctx.translate(20, -30); ctx.rotate(-0.3);
+      rrect(ctx, 0, -9, 34, 18, 1.5, '#d8ccb0', OUT, 1.8);
+      for (let i = 0; i < 4; i++) line(ctx, 5, -5 + i * 3.4, 29 - (i % 2) * 6, -5 + i * 3.4, i === Math.floor(st.t * 1.5) % 4 ? '#3aff7a' : '#6a5a40', 1.2);
+      rrect(ctx, -3, -11, 5, 22, 2.5, '#a8987a', OUT, 1.5); rrect(ctx, 32, -11, 5, 22, 2.5, '#a8987a', OUT, 1.5);
+      ctx.restore();
+    // ---- [/boss presentation]
     } else glow(ctx, 16, -24, 14, ghost, 0.6);
     circle(ctx, 16, -24, 5, '#4a4e5c', OUT, 2);
     // greatsword
     ctx.save(); ctx.translate(10, 24); ctx.rotate(0.3 + s * 1.2);
     poly(ctx, [4, -3.5, 52, -3.5, 60, 0, 52, 3.5, 4, 3.5], '#2b2f3a', OUT, 2);
     line(ctx, 8, 0, 50, 0, rgba(ghost, 0.9), 1.5);
+    if (props.windup) { const g = 0.55 + Math.sin(st.t * 10) * 0.2; glow(ctx, 34, 0, 34, '#b46aff', g * 0.6); line(ctx, 8, 0, 54, 0, rgba('#f0e0ff', g), 2.2); }
     rrect(ctx, 0, -8, 4, 16, 1.5, gold, OUT, 1.5);
     rrect(ctx, -9, -2, 9, 4, 1.5, '#2a1d14', OUT, 1.2);
     circle(ctx, 0, 0, 5.5, '#4a4e5c', OUT, 2);
@@ -325,7 +450,7 @@ const BOSS_ART = {
     circle(ctx, 4, 0, 11, '#2a2c34', OUT, 2.5);
     const aud = props.audience ? 0.75 + Math.sin(st.t * 9) * 0.2 : 0;
     if (aud) glow(ctx, 4, 0, 44, '#ffe6a0', 0.6 * aud);
-    for (let k = 0; k < 9; k++) {
+    if (!props.crownless) for (let k = 0; k < 9; k++) {   // ([boss presentation] crownless: it fell when he did)
       const a = k * TAU / 9 + 0.35, tip = 16 + aud * 7;
       poly(ctx, [4 + Math.cos(a - 0.22) * 9, Math.sin(a - 0.22) * 9, 4 + Math.cos(a) * tip, Math.sin(a) * tip,
         4 + Math.cos(a + 0.22) * 9, Math.sin(a + 0.22) * 9], aud ? '#ffe08a' : gold, OUT, 1.2);
@@ -337,7 +462,7 @@ const BOSS_ART = {
       glow(ctx, 12, 0, 34, '#e8fff0', 0.55 * k);
       for (let i = 0; i < 7; i++) { const a = (i - 3) * 0.2; line(ctx, 14, 0, 14 + Math.cos(a) * 46, Math.sin(a) * 46, rgba('#e8fff0', 0.35 * k), 2); }
       circle(ctx, 10.5, -3.5, 2.6, '#ffffff'); circle(ctx, 10.5, 3.5, 2.6, '#ffffff');
-    } else {
+    } else if (!props.crownless) {
       glow(ctx, 11, 0, 10, ghost, 0.6);
       circle(ctx, 10.5, -3.5, 1.8, ghost); circle(ctx, 10.5, 3.5, 1.8, ghost);
     }

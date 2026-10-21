@@ -156,14 +156,15 @@ const RaidUI = (() => {
         <kbd class="pf-key" style="color:${FIGHT.SLOTS[i % 4]};border-color:${FIGHT.SLOTS[i % 4]}">${i + 1}</kbd>
         <div class="pf-main">
           <div class="pf-name"><i class="pf-role">${ROLE_GLYPH[r.role] || ''}</i><span>${esc(r.name)}</span><b class="pf-aggro" data-tip="The boss is attacking them">${GLYPH.aggro}</b><i class="pf-ult" data-tip="Their Ultimate is ready"></i><small>${esc(CLASSES.find(c => c.id === r.cls)?.name || '')}${r.bot ? ' · bot' : ''}</small></div>
-          <div class="pf-hp"><div class="trail"></div><div class="hp"></div><div class="sh"></div><span></span></div>
+          <div class="pf-hp"><div class="trail"></div><div class="hp"></div><div class="sh"></div><div class="hl"></div><span></span></div>
           <div class="pf-cast"><i></i></div>
           <div class="pf-st"></div>
         </div>
       </div>`).join('');
     frames = {};
     for (const row of $('party-frames').children) frames[row.dataset.id] = { row, hp: row.querySelector('.hp'), sh: row.querySelector('.sh'), trail: row.querySelector('.trail'),
-      txt: row.querySelector('.pf-hp span'), cast: row.querySelector('.pf-cast i'), st: row.querySelector('.pf-st'), key: '', trailV: 1, txtKey: '' };
+      hl: row.querySelector('.hl'), bar: row.querySelector('.pf-hp'), txt: row.querySelector('.pf-hp span'), cast: row.querySelector('.pf-cast i'), st: row.querySelector('.pf-st'), key: '', trailV: 1, txtKey: '',
+      hpV: null, alive: null, healAt: -9 };
   }
 
   // a lighter chunk that lingers where health just was, then drains away: shows who just got hit and how hard
@@ -178,6 +179,10 @@ const RaidUI = (() => {
   const els = {}, q = sel => els[sel] || (els[sel] = root.querySelector(sel));
   const setText = (el, v) => { if (el._t !== v) { el._t = v; el.textContent = v; } };
   const setW = (el, v) => { if (el._w !== v) { el._w = v; el.style.width = v; } };
+  // a bar's fill slid along instead of resized (no layout per frame; its gradient and leading edge keep their shape).
+  // The fill spans the whole track (style.css) and its track clips it.
+  const setX = (el, f) => { const v = ((Math.max(0, Math.min(1, f)) - 1) * 100).toFixed(2); if (el._x !== v) { el._x = v; el.style.transform = `translateX(${v}%)`; } };
+  const setS = (el, f) => { const v = Math.max(0, Math.min(1, f)).toFixed(3); if (el._s !== v) { el._s = v; el.style.transform = `scaleX(${v})`; } };
   function update(raid, now, myId, marks = {}) {
     const dt = Math.min(0.1, Math.max(0, now - lastT)); lastT = now;
     lastState = raid.state;
@@ -194,8 +199,8 @@ const RaidUI = (() => {
     setText(q('.bb-time'), raid.state === 'live' || raid.state === 'clear' || raid.state === 'wipe' ? mmss(raid.fightTime || 0) : raid.state === 'prepull' ? 'Waiting for the pull' : '');
     const frac = b.mx ? b.hp / b.mx : 1;
     bossTrail = frac > bossTrail ? frac : Math.max(frac, bossTrail - dt * 0.08 - (bossTrail - frac) * dt * 1.5);
-    setW(q('.bb-hp .fill'), (frac * 100).toFixed(2) + '%');
-    setW(q('.bb-hp .trail'), (bossTrail * 100).toFixed(2) + '%');
+    setX(q('.bb-hp .fill'), frac);
+    setX(q('.bb-hp .trail'), bossTrail);
     q('.bb-hp .vuln').classList.toggle('on', !!b.v);
     // a damage check running: where her health has to be when the cast ends
     const goal = raid.cast && raid.cast.goal != null && now < raid.cast.start + raid.cast.dur ? raid.cast.goal : null, gEl = q('.bb-hp .goal');
@@ -208,7 +213,7 @@ const RaidUI = (() => {
     upcoming(raid, now);
     bossStatus(raid, now, myId, marks);
     threatMeter(raid, myId);
-    limitGauge(raid, myId);
+    limitGauge(raid, myId, dt);
 
     // countdown before the pull
     const cd = $('countdown');
@@ -237,9 +242,18 @@ const RaidUI = (() => {
       const f = frames[id];
       if (!f) continue;
       const hpF = p.maxHp ? Math.max(0, Math.min(1, p.hp / p.maxHp)) : 0, shF = p.maxHp ? Math.min(1, p.shield / p.maxHp) : 0;
-      f.trailV = p.alive ? trailStep(f.trailV, hpF, p.hitAt, now, dt) : 0;
-      setW(f.hp, (hpF * 100).toFixed(1) + '%');
-      setW(f.trail, (f.trailV * 100).toFixed(1) + '%');
+      // (dead: what was left drains away quickly instead of vanishing)
+      f.trailV = p.alive ? trailStep(f.trailV, hpF, p.hitAt, now, dt) : Math.max(0, f.trailV - dt * 2.2);
+      // healed: a soft green sweep along the bar (a HoT's ticks share one every 0.4s at most)
+      if (p.alive && f.alive && f.hpV != null && p.maxHp > 1 && hpF > f.hpV + 0.004 && now - f.healAt > 0.4 && f.hl.animate) {
+        f.healAt = now;
+        f.hl.animate([{ transform: 'translateX(-100%)', opacity: 0.85 }, { transform: 'translateX(100%)', opacity: 0 }], { duration: 480, easing: 'ease-out' });
+      }
+      // down: the bar dips once as the frame greys out (style.css .pf transition)
+      if (f.alive === true && !p.alive && f.bar.animate) f.bar.animate([{ transform: 'translateY(0)' }, { transform: 'translateY(3px)', offset: 0.3 }, { transform: 'translateY(0)' }], { duration: 420, easing: 'ease-out' });
+      f.hpV = hpF; f.alive = p.alive;
+      setX(f.hp, hpF);
+      setX(f.trail, f.trailV);
       setW(f.sh, (shF * 100).toFixed(1) + '%');
       const shL = Math.min(100 - shF * 100, hpF * 100).toFixed(1) + '%';
       if (f.sh._l !== shL) { f.sh._l = shL; f.sh.style.left = shL; }
@@ -259,7 +273,7 @@ const RaidUI = (() => {
       f.row.classList.toggle('hit', p.alive && now - (p.hitAt || -9) < 0.2);
       f.row.classList.toggle('cleanse', !!marks.cleanse && p.alive && !!(p.dd || p.vuln || (p.debuffs || []).some(([k]) => k === 'slowed' || k === 'rooted')));
       const casting = marks.casting && marks.casting.id === id;
-      setW(f.cast, casting ? (marks.casting.frac * 100).toFixed(1) + '%' : '0%');
+      setS(f.cast, casting ? marks.casting.frac : 0);
       f.row.classList.toggle('casting', !!casting);
       const chips = [];
       for (const [hid, secs, from] of p.hots || []) {
@@ -324,8 +338,17 @@ const RaidUI = (() => {
     el.classList.remove('hidden', 'out');
     void el.offsetWidth;   // restart the fade-in
     el.classList.add('in');
-    introTimer = setTimeout(() => { el.classList.add('out'); introTimer = setTimeout(() => el.classList.add('hidden'), 900); }, line ? 4200 : 2600);
+    // [boss presentation] the name lands on his entrance's beat (BOSS_VFX.intro: the pot slammed down, her landing, the
+    // storm crashing in, his eyes lighting): a hit-stop-like punch, then his title slides in under it. Cosmetic only.
+    const beat = INTRO_BEAT[def.id] ?? 0.4, nameEl = el.querySelector('b'), titleEl = el.querySelector('i');
+    if (nameEl.animate) {
+      nameEl.animate([{ opacity: 0, transform: 'scale(1.35)', letterSpacing: '.3em' }, { opacity: 1, transform: 'scale(0.96)', letterSpacing: '.1em', offset: 0.55 }, { opacity: 1, transform: 'scale(1.02)', offset: 0.62 }, { opacity: 1, transform: 'scale(1)', letterSpacing: '.12em' }],
+        { duration: 420, delay: beat * 1000, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'backwards' });
+      titleEl.animate([{ opacity: 0, transform: 'translateY(8px)' }, { opacity: 1, transform: 'none' }], { duration: 380, delay: beat * 1000 + 180, easing: 'ease-out', fill: 'backwards' });
+    }
+    introTimer = setTimeout(() => { el.classList.add('out'); introTimer = setTimeout(() => el.classList.add('hidden'), 900); }, (line ? 4200 : 2600) + beat * 1000);
   }
+  const INTRO_BEAT = { grubnak: 0.7, skitterra: 0.9, volkar: 0.3, hollowking: 1.6 };   // [boss presentation] (boss-vfx.js intro)
 
   // the waymark bar: lit for each marker on the floor, and for the one being placed (marks null: hidden, e.g. a trial)
   let wmKey = '';
@@ -340,24 +363,37 @@ const RaidUI = (() => {
 
   // ---------------------------------------------------------------- Limit Break
   // the party's gauge under the frames: three bars, each lit as it fills (the effect is your role's: see limitTip)
-  let lbKey = '', lbRole = 'dps', lbBars = 0;
-  function limitGauge(raid, myId) {
+  // (the fill eases toward the gauge's value over ~0.15s; a bar that fills lights once, and the key breathes while ready)
+  let lbKey = '', lbRole = 'dps', lbBars = 0, lbShown = 0, lbSegs = null, lbLevel = -1;
+  function limitGauge(raid, myId, dt = 0) {
     const el = $('lb-gauge'), show = !raid.def.trial && (raid.state === 'live' || raid.state === 'prepull');
     const me = roster.find(r => r.id === myId); if (me) lbRole = me.role;
-    const v = Math.max(0, Math.min(300, raid.lb || 0)), key = show ? String(Math.round(v)) : '-';
+    const v = Math.max(0, Math.min(300, raid.lb || 0));
     const kk = typeof Keybinds !== 'undefined' ? Keybinds.label(Keybinds.keyFor('limit')) : 'G';
+    // the ease: close to an exponential approach, snapped once within a hair (a spend drops at the same pace)
+    lbShown = !show ? v : Math.abs(v - lbShown) < 0.3 ? v : lbShown + (v - lbShown) * (1 - Math.exp(-dt / 0.05));
+    const key = show ? lbShown.toFixed(1) : '-';
     if (key + kk === lbKey) return;
     lbKey = key + kk;
     el.classList.toggle('hidden', !show);
-    const kb = el.querySelector('.lb-key'); if (kb) kb.textContent = kk;
-    if (!show) return;
+    const kb = el.querySelector('.lb-key'); if (kb && kb.textContent !== kk) kb.textContent = kk;
+    if (!show) { lbLevel = -1; return; }
     lbBars = Math.floor(v / 100);
     el.classList.toggle('ready', lbBars >= 1);
-    [...el.querySelectorAll('.lb-bars i')].forEach((seg, i) => {
-      const f = Math.max(0, Math.min(1, (v - i * 100) / 100));
+    if (!lbSegs || !lbSegs[0].isConnected) lbSegs = [...el.querySelectorAll('.lb-bars i')];
+    lbSegs.forEach((seg, i) => {
+      const f = Math.max(0, Math.min(1, (lbShown - i * 100) / 100));
       seg.classList.toggle('full', f >= 1);
-      seg.firstChild.style.width = (f * 100).toFixed(1) + '%';
+      const s = f.toFixed(3);
+      if (seg._s !== s) { seg._s = s; seg.firstChild.style.transform = `scaleX(${s})`; }
     });
+    // a level reached (not on the first look at it): that bar lights once and the gauge's frame pulses
+    const lv = Math.floor(lbShown / 100 + 1e-6);
+    if (lbLevel >= 0 && lv > lbLevel && lbSegs[lv - 1] && lbSegs[lv - 1].animate) {
+      lbSegs[lv - 1].animate([{ filter: 'brightness(2.1)', boxShadow: '0 0 0 1px #ffe9b0, 0 0 10px #ffd27a' }, { filter: 'brightness(1)', boxShadow: '0 0 0 0 #ffe9b000, 0 0 0 #ffd27a00' }], { duration: 700, easing: 'ease-out' });
+      el.animate([{ boxShadow: '0 0 0 1px #f2d38aa0, 0 0 14px #ffd27a60' }, { boxShadow: '0 0 0 1px #f2d38a00, 0 0 0 #ffd27a00' }], { duration: 900, easing: 'ease-out' });
+    }
+    lbLevel = lv;
   }
   function limitTip() {
     const L = FIGHT.LB, pct = a => a.slice(1).map(x => Math.round(x * 1000) / 10).join(' / ') + '%';
@@ -454,7 +490,7 @@ const RaidUI = (() => {
       el.querySelector('.bc-icon').style.backgroundImage = typeof BossIcons !== 'undefined' ? BossIcons.css(raid.def.id, name) : '';
       setText(el.querySelector('.bc-name'), name);
     }
-    setW(el.querySelector('.bc-bar .fill'), (frac * 100).toFixed(1) + '%');
+    setX(el.querySelector('.bc-bar .fill'), frac);
     setText(el.querySelector('.bc-left'), mode === 'cast' ? left.toFixed(1) : mode === 'next' ? Math.ceil(left) + 's' : '');
     // a Time Stop: the frame turns pale and says so, its count held (a cast already running keeps going: its hit is out)
     const stop = paused(raid, now);

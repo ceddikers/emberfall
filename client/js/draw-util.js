@@ -89,8 +89,11 @@ function glowSprite(color) {
   _glowCache.set(color, c);
   return c;
 }
-function glow(ctx, x, y, r, color, a) {
+// hot (optional, 0..1): a white-hot core on top, the same look as VFX.glowAt's lights (ability and boss effects),
+// so a light drawn here and one drawn there read as one style
+function glow(ctx, x, y, r, color, a, hot) {
   if (a <= 0 || r <= 0) return;
+  if (hot > 0) { glow(ctx, x, y, r, color, a); glow(ctx, x, y, r * 0.32, '#ffffff', a * (hot > 1 ? 1 : hot)); return; }
   const s = glowSprite(color);
   if (!s) {
     const g = ctx.createRadialGradient(x, y, 0, x, y, r);

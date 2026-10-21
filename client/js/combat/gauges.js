@@ -25,7 +25,7 @@ const GAUGES = {
     c.restore();
     shape(); c.lineWidth = 3; c.strokeStyle = k.g.resolve >= 50 ? '#ffe28a' : '#7a8aa8'; c.stroke();
     line(c, cx, top + 4, cx, top + sh - 6, 'rgba(255,255,255,0.12)', 2);
-    if (k.g.counter) { glow(c, cx, top + 28, 22, '#bfe0ff', 0.6 + Math.sin(t * 10) * 0.2); label(c, 'âš”', cx, top + 34, '#ffffff', 18, 'system-ui'); }
+    if (k.g.counter) { glow(c, cx, top + 28, 22, '#bfe0ff', 0.6 + Math.sin(t * 10) * 0.2); crossedSwords(c, cx, top + 28, 9); }
     label(c, String(Math.floor(k.g.resolve)), cx, top + sh + 16, '#f2e6c8', 14, 'system-ui', 800);
   },
 
@@ -738,7 +738,45 @@ GAUGES.breath = function (c, k, w, h, t) {
   });
 };
 
+// two crossed swords (the Bastion's counter mark), drawn: no font has to carry the glyph
+function crossedSwords(c, x, y, r) {
+  c.save(); c.translate(x, y); c.lineCap = 'round'; c.lineJoin = 'round';
+  for (const s of [-1, 1]) {
+    c.save(); c.rotate(s * Math.PI / 4);
+    // blade, guard, grip: dark outline first, then the steel
+    for (const [col, k] of [['#141a26', 1.9], ['#ffffff', 1]]) {
+      c.strokeStyle = col;
+      c.lineWidth = 2.6 * k; c.beginPath(); c.moveTo(0, -r); c.lineTo(0, r * 0.45); c.stroke();
+      c.lineWidth = 1.8 * k; c.beginPath(); c.moveTo(-r * 0.38, r * 0.45); c.lineTo(r * 0.38, r * 0.45); c.stroke();
+      c.lineWidth = 2 * k; c.beginPath(); c.moveTo(0, r * 0.5); c.lineTo(0, r * 0.95); c.stroke();
+    }
+    c.restore();
+  }
+  c.restore();
+}
+
+// Every gauge's main value eases to a change (~120 ms) instead of snapping, and a real gain or spend gives one soft
+// flash (gold for a gain, pale for a spend). Small, steady drips (Heat cooling, Flux draining) don't flash.
+// Counted gauges (Runes, Combo, Petals: max under 20) keep whole pips and only flash, so a pip never lights early.
+const GAUGE_EASE = { kit: null, v: 0, at: 0, flash: -9, dir: 0 };
 function drawGauge(c, kit, w, h, t) {
   const g = kit.def.gauge;
-  if (g && GAUGES[g.kind]) GAUGES[g.kind](c, kit, w, h, t);
+  if (!g || !GAUGES[g.kind]) return;
+  const E = GAUGE_EASE, key = g.key, real = kit.g && kit.g[key];
+  if (typeof real !== 'number') { GAUGES[g.kind](c, kit, w, h, t); return; }
+  const max = g.max || 100, smooth = max >= 20;
+  const dt = Math.max(0, Math.min(0.1, t - E.at)); E.at = t;
+  if (E.kit !== kit) { E.kit = kit; E.v = real; E.flash = -9; }
+  const step = real - E.v;
+  if (Math.abs(step) >= (smooth ? max * 0.04 : 0.5)) { E.flash = t; E.dir = Math.sign(step); }
+  E.v = !smooth || Math.abs(step) < max * 0.004 ? real : E.v + step * (1 - Math.exp(-dt / 0.04));
+  // (the drawer reads the eased value for this one draw; the kit's own number is put straight back)
+  kit.g[key] = E.v;
+  try { GAUGES[g.kind](c, kit, w, h, t); } finally { kit.g[key] = real; }
+  const q = (t - E.flash) / 0.32;
+  if (q >= 0 && q < 1) {
+    c.save(); c.globalCompositeOperation = 'lighter';
+    glow(c, w / 2, h * 0.42, Math.min(w, h) * (0.42 + q * 0.12), E.dir > 0 ? '#ffd88a' : '#dfe8ff', 0.32 * (1 - q) * (1 - q));
+    c.restore();
+  }
 }

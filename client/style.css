@@ -52,11 +52,14 @@ ul.abilities .ab-icon.ogcd { border-radius: 50%; }
 .slot:not([class*="charges"]) .charges:empty { display: none; }
 .slot .name { position: absolute; top: 100%; left: 50%; transform: translateX(-50%); margin-top: 3px; max-width: 62px; overflow: hidden; text-overflow: ellipsis; font-size: 10px; color: #d8cdb8; white-space: nowrap; text-shadow: 0 1px 2px #000; pointer-events: none; }
 .slot.dim { filter: grayscale(.75) brightness(.6); }
-.slot.glow { border-color: #ffe9a0; box-shadow: 0 0 0 2px #ffd65a, 0 0 18px 4px #ffd65acc; animation: glowpulse .9s ease-in-out infinite alternate; }
+.slot.glow { border-color: #ffe9a0; }
 .slot.queued { border-color: #9fe0ff; box-shadow: 0 0 0 2px #6fc8ff; }
 .slot.casting { transform: translateY(-3px); border-color: #fff; }
 .slot:active { transform: scale(.94); }
-@keyframes glowpulse { from { box-shadow: 0 0 0 2px #ffd65a, 0 0 10px 2px #ffd65a99; } to { box-shadow: 0 0 0 2px #fff2b0, 0 0 22px 6px #ffd65aee; } }
+/* the proc glow: a fixed shadow on its own layer whose opacity breathes (no box-shadow repaint every frame) */
+.slot .gl { position: absolute; inset: -2px; border-radius: inherit; pointer-events: none; z-index: 0; opacity: 0; box-shadow: 0 0 0 2px #ffe08a, 0 0 18px 5px #ffd65ad0; transition: opacity .15s; will-change: opacity; }
+.slot.glow .gl { opacity: 1; animation: glowpulse .9s ease-in-out infinite alternate; }
+@keyframes glowpulse { from { opacity: .5; } to { opacity: 1; } }
 .slot .tip { display: none; position: absolute; bottom: 74px; left: 50%; transform: translateX(-50%); width: 240px; background: var(--panel); border: 1px solid var(--gold-dim); border-radius: 8px; padding: 8px 10px; font-size: 12px; z-index: 6; line-height: 1.4; text-align: left; cursor: default; }
 .slot:hover .tip { display: block; }
 .tip b { display: block; color: var(--gold); font-family: var(--fantasy); margin-bottom: 2px; }
@@ -1489,3 +1492,44 @@ ul.mech .mech-dot { flex: none; width: 6px; height: 6px; margin-top: 6px; transf
 .kb-check { white-space: nowrap; flex: none; }
 /* (numbers sit in the sentence, whatever the panel does with its own bold headings) */
 b.num, #tip b.num, .pt-panel b.num, .tu-body b.num, #sel-detail b.num { display: inline; margin: 0; font-family: inherit; font-size: inherit; letter-spacing: 0; text-transform: none; }
+
+/* ================================================================ HUD motion
+   Bars move by transform (no layout per frame), slots answer presses, buffs and gauges ease. Everything here is small
+   and local: no full-screen flashes, and reduced motion turns the movement off. */
+/* the hotbar: a press flash (hud.js pressed), the ready ring (readyFlash), the sweep's leading edge */
+.slot .fl { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 2; opacity: 0;
+  background: radial-gradient(circle at 50% 45%, #fff6dc99, #fff6dc22 60%, transparent 75%); box-shadow: 0 0 0 2px #fff2c8b0, 0 0 10px 2px #ffe2a060; }
+.slot .sweep.sw { background: conic-gradient(rgba(0,0,0,.72) calc(var(--cd, 0) * 360deg), rgba(255,236,190,.55) 0 calc(var(--cd, 0) * 360deg + 2.5deg), transparent 0); }
+/* the Ultimate's last tenth before full: the ring brightens and breathes */
+.slot.ult.near .ring { --ring: #f0d898; animation: ultnear 1.2s ease-in-out infinite alternate; }
+@keyframes ultnear { from { opacity: .7; } to { opacity: 1; } }
+/* your cast bar: the fill scales (hud.js); a finished cast flashes and fades, a broken one goes red and drops */
+#cast-bar .fill { width: 100%; transform-origin: 0 50%; transform: scaleX(0); will-change: transform; }
+#cast-bar.done { animation: cb-done .45s ease-out forwards; }
+#cast-bar.done .fill { background: linear-gradient(90deg, #c9a45c, #fff1c8); }
+@keyframes cb-done { 0% { opacity: 1; box-shadow: 0 0 0 1px #000, 0 0 10px #ffe2a080; } 35% { opacity: 1; } 100% { opacity: 0; box-shadow: 0 0 0 1px #000, 0 0 0 #ffe2a000; } }
+#cast-bar.broke { border-color: #c8463a; animation: cb-broke .45s ease-in forwards; }
+#cast-bar.broke .fill { background: linear-gradient(90deg, #6a1e16, #d8483a); }
+@keyframes cb-broke { 0% { opacity: 1; transform: translateY(0); } 30% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(8px); } }
+/* buffs: a new one pops in, a refreshed one pulses (hud.js), the last 3s blink softly */
+.buff s:empty { display: none; }
+.buff.gain .bf-icon { animation: bf-gain .26s ease-out; }
+@keyframes bf-gain { from { transform: scale(.55); opacity: 0; } 60% { transform: scale(1.12); opacity: 1; } to { transform: scale(1); } }
+.buff.exp .bf-icon { animation: bf-exp .5s ease-in-out infinite alternate; }
+@keyframes bf-exp { from { opacity: 1; } to { opacity: .45; } }
+/* boss, party and Limit Break bars slide (raid-ui.js setX / setS) */
+.bb-hp .fill, .bb-hp .trail, .pf-hp .hp, .pf-hp .trail, #boss-cast .bc-bar .fill { width: 100%; transform: translateX(-100%); will-change: transform; }
+.bb-hp .fill, .pf-hp .hp { transition: transform .12s; }
+.pf-cast i { width: 100%; transform-origin: 0 50%; transform: scaleX(0); }
+#lb-gauge .lb-bars b { width: 100%; transform-origin: 0 50%; transform: scaleX(0); }
+/* party frames: a heal's green sweep, and a softer greying when someone goes down */
+.pf-hp .hl { position: absolute; inset: 0; pointer-events: none; opacity: 0; transform: translateX(-100%); background: linear-gradient(90deg, transparent, #c8ffd2a0 50%, transparent); }
+.pf { transition: border-color .12s, box-shadow .12s, opacity .45s, filter .45s; }
+/* Limit Break ready: the key breathes (an opacity layer, not a repaint) */
+#lb-gauge kbd { position: relative; }
+#lb-gauge.ready kbd::after { content: ''; position: absolute; inset: -1px; border-radius: inherit; pointer-events: none; box-shadow: 0 0 6px 1px #f2d38a90; animation: lbready 1.4s ease-in-out infinite alternate; }
+@keyframes lbready { from { opacity: .2; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .slot.glow .gl, .slot.ult.near .ring, .buff.gain .bf-icon, .buff.exp .bf-icon, #lb-gauge.ready kbd::after { animation: none; }
+  #cast-bar.done, #cast-bar.broke { animation-duration: .01s; }
+}

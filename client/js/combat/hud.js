@@ -219,6 +219,8 @@ const BUFF_GLYPH = {
   fx: bfSvg('<path d="M6 1.2 10 4.6 6 10.8 2 4.6Z M2 4.6h8" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>'),
 };
 const tipAttr = s => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+// the system's reduced-motion setting (the slot's denied shake stays still under it; style.css stops the loops)
+const HUD_CALM = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : null;
 
 const Hud = {
   el: null, slots: [], actor: null, gaugeCanvas: null, castFill: null, castName: null, buffRow: null, extra: () => [],
@@ -270,11 +272,14 @@ const Hud = {
         <div class="icon"${art(ab, i) ? ` style="background-image:${art(ab, i)}"` : ''}>${art(ab, i) ? '' : ab.name.replace(/^The /, '')[0]}</div>
         <kbd>${SLOT_KEYS[i]}</kbd>
         <div class="sweep"></div>
+        <span class="gl" aria-hidden="true"></span><span class="fl" aria-hidden="true"></span>
         <div class="cdtext"></div>
         <div class="charges"></div>${ab.ult ? '<div class="ring"></div>' : ''}${i < 6 ? '<i class="tb"></i>' : ''}
         <div class="name">${ab.name}</div>
       </div>`).join('');
-    this.slots = [...row.children].map(el => ({ el, sweep: el.querySelector('.sweep'), cd: el.querySelector('.cdtext'), ch: el.querySelector('.charges'), name: el.querySelector('.name'), icon: el.querySelector('.icon'), ring: el.querySelector('.ring'), tb: el.querySelector('.tb') }));
+    this.slots = [...row.children].map(el => ({ el, sweep: el.querySelector('.sweep'), cd: el.querySelector('.cdtext'), ch: el.querySelector('.charges'), name: el.querySelector('.name'), icon: el.querySelector('.icon'), ring: el.querySelector('.ring'), tb: el.querySelector('.tb'), fl: el.querySelector('.fl'),
+      onCd: false, blocked: false, ch0: null, pressAt: -9 }));
+    this._sets = -9;   // (the gear perks and talents marks are re-read now)
     if (ult) row.insertBefore(this.slots[7].el, this.slots[6].el);
     this._abs = actor.kit.abilities; this._ultFull = null; this._ultBg = null;
     // in-game tooltips (shows the current label, e.g. Riposte / Dawnstar; a window's empowered move; a taunt carrier)
@@ -301,6 +306,7 @@ const Hud = {
       return `<div class="tip-ab">${icon}<div><b>${name}</b><em>${meta.join(' · ')}</em></div></div>${ab.desc || ''}${enh}${tal}${i < 6 ? tauntNote(cls.id, ab) : ''}`;
     }));
     this.slots.forEach((s, i) => s.el.addEventListener('mousedown', e => { e.stopPropagation(); onPress(i); }));
+    this.slots.forEach(s => { s.el.setAttribute('role', 'button'); s.el.setAttribute('aria-label', s.name.textContent); });
     Tip.set(this.el.querySelector('.gauge-wrap'), () => {
       const k = this.actor && this.actor.kit, g = k && k.def.gauge, sp = this.actor && specOf(cls.id, this.actor.spec);
       const info = sp && sp.gaugeTip ? Object.assign({}, GAUGE_TIPS[cls.id], { desc: sp.gaugeTip }) : GAUGE_TIPS[cls.id];
@@ -315,12 +321,37 @@ const Hud = {
 
   hide() { this.el.classList.add('hidden'); this.actor = null; },
 
+  // a slot pressed (key or click, main.js pressSlot): a quick light on it, or a small shake when it's still cooling
+  // (Web Animations: nothing to reset, and a held key re-flashes at most every 0.15s)
+  pressed(i) {
+    const s = this.slots[i], now = performance.now() / 1000;
+    if (!s || !s.el.animate || now - s.pressAt < 0.15) return;
+    s.pressAt = now;
+    if (s.blocked) {
+      if (HUD_CALM && HUD_CALM.matches) return;   // (reduced motion: no shake)
+      s.el.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(-3px)' }, { transform: 'translateX(3px)' }, { transform: 'translateX(-2px)' }, { transform: 'translateX(0)' }], { duration: 220, easing: 'ease-out' });
+      return;
+    }
+    s.el.animate([{ transform: 'scale(0.93)' }, { transform: 'scale(1)' }], { duration: 140, easing: 'ease-out' });
+    s.fl.animate([{ opacity: 0.7, transform: 'scale(0.9)' }, { opacity: 0, transform: 'scale(1.06)' }], { duration: 240, easing: 'ease-out' });
+  },
+  // a move off cooldown (or a charge back): one soft ring that swells out from the slot
+  readyFlash(s) {
+    if (!s.fl || !s.fl.animate) return;
+    s.fl.animate([{ opacity: 0, transform: 'scale(0.96)' }, { opacity: 0.85, transform: 'scale(1)', offset: 0.25 }, { opacity: 0, transform: 'scale(1.2)' }], { duration: 420, easing: 'ease-out' });
+  },
+
   update(now, t) {
     const a = this.actor;
     if (!a) return;
     const k = a.kit;
-    const enhanced = new Set([...(k.gear().perks || [])].map(p => ITEM_PERKS[p] && ITEM_PERKS[p].ab));
-    const talented = new Set(k.env.talents && typeof TALENT_BY_ID !== 'undefined' ? [...(k.env.talents() || [])].map(id => TALENT_BY_ID[id] && TALENT_BY_ID[id].t.ab) : []);
+    // which moves gear perks and talents touch (they change out of combat: re-read twice a second, not every frame)
+    if (Math.abs(now - this._sets) > 0.5) {
+      this._sets = now;
+      this._enh = new Set([...(k.gear().perks || [])].map(p => ITEM_PERKS[p] && ITEM_PERKS[p].ab));
+      this._tal = new Set(k.env.talents && typeof TALENT_BY_ID !== 'undefined' ? [...(k.env.talents() || [])].map(id => TALENT_BY_ID[id] && TALENT_BY_ID[id].t.ab) : []);
+    }
+    const enhanced = this._enh, talented = this._tal;
     // an Ultimate's window opened or closed: the bar's icons follow its moves
     if (k.abilities !== this._abs) {
       this._abs = k.abilities;
@@ -333,8 +364,9 @@ const Hud = {
     }
     // the taunt carrier (a tank): a mark when the taunt is ready, its seconds while it cools
     const carry = a.taunt && k.def.tauntOn ? k.abilities.findIndex(ab => k.baseId(ab) === k.def.tauntOn) : -1;
-    a.abilities.forEach((ab, i) => {
-      const s = this.slots[i];
+    for (let i = 0; i < a.abilities.length; i++) {
+      const ab = a.abilities[i], s = this.slots[i];
+      if (!s) continue;
       if (s.tb) {
         const on = i === carry, left = on ? a.tauntLeft(now) : 0;
         s.el.classList.toggle('carrier', on);
@@ -345,32 +377,48 @@ const Hud = {
       const usable = k.usable(ab);
       let frac = 0, txt = '';
       const cdLeft = k.cdRemaining(ab);
+      let onCd = false;
       if (ab.charges) {
         const ch = k.charges(ab);
         hudText(s.ch, ch);
         frac = ch === 0 ? k.cdFraction(ab) : 0;
         if (ch === 0) txt = cdLeft < 1 ? cdLeft.toFixed(1) : Math.ceil(cdLeft);
         s.el.classList.toggle('partial', ch > 0 && ch < ab.charges);
+        // a charge back: the ready ring (same move only: an Ultimate's window swapping moves in isn't a charge)
+        if (s.ch0 != null && ch > s.ch0 && s.ab0 === ab) this.readyFlash(s);
+        s.ch0 = ch; onCd = ch === 0;
       } else if (k.recast(ab) && cdLeft > 0) {
         frac = k.cdFraction(ab);
         txt = cdLeft < 1 ? cdLeft.toFixed(1) : Math.ceil(cdLeft);
-      }
+        onCd = true;
+      } else s.ch0 = null;
+      // off its own cooldown (not the GCD): one soft ring
+      if (s.onCd && !onCd && s.ab0 === ab) this.readyFlash(s);
+      s.onCd = onCd; s.ab0 = ab;
       if (ab.type === 'gcd' && k.gcdRemaining() > 0 && cdLeft <= 0) frac = Math.max(frac, k.gcdRemaining() / k.gcdLen);
       // no GCD (a paced kit): its moves show the recovery of the last press instead
       if (ab.type === 'gcd' && k.gcdFree() && cdLeft <= 0 && k.lockUntil > now) frac = Math.max(frac, (k.lockUntil - now) / Math.max(0.1, k.lockLen));
       hudCd(s.sweep, frac.toFixed(3));
       hudText(s.cd, txt);
+      // the sweep's bright leading edge, only while it turns
+      s.sweep.classList.toggle('sw', frac > 0.002);
+      s.blocked = onCd || !usable;
       s.el.classList.toggle('glow', usable && cdLeft <= 0 && k.glows(ab));
       s.el.classList.toggle('dim', !usable);
-      s.el.classList.toggle('queued', !!((k.queued && k.queued.ab === ab) || (k.queuedO && k.queuedO.ab === ab)) || k.inbuf.some(q => q.ab === ab));
+      let queued = !!((k.queued && k.queued.ab === ab) || (k.queuedO && k.queuedO.ab === ab));
+      if (!queued) for (let j = 0; j < k.inbuf.length; j++) if (k.inbuf[j].ab === ab) { queued = true; break; }
+      s.el.classList.toggle('queued', queued);
       s.el.classList.toggle('casting', !!(k.cast && k.cast.ab === ab));
       const lbl = k.label(ab);
-      if (s.name.textContent !== lbl) s.name.textContent = lbl;
-    });
+      if (s.name.textContent !== lbl) { s.name.textContent = lbl; s.el.setAttribute('aria-label', lbl); }
+    }
     // dash
     const ds = this.slots[6];
     a.dashReady(now);
     hudText(ds.ch, a.dash.charges);
+    if (ds.ch0 != null && a.dash.charges > ds.ch0) this.readyFlash(ds);
+    ds.ch0 = a.dash.charges; ds.blocked = a.dash.charges === 0;
+    ds.sweep.classList.toggle('sw', a.dash.charges === 0);
     hudCd(ds.sweep, a.dash.charges === 0 ? a.dashFraction(now).toFixed(3) : 0);
     hudText(ds.cd, a.dash.charges === 0 ? Math.ceil(a.dash.next - now) : '');
     // the Ultimate (T): the ring fills with its charge; while its window is open the ring drains with the seconds left
@@ -382,6 +430,9 @@ const Hud = {
       hudText(us.cd, win ? Math.ceil(k.ultLeft()) : '');
       us.el.classList.toggle('full', full);
       us.el.classList.toggle('active', !!win);
+      // the last tenth before it's full: the ring brightens (anticipation, not yet the cue)
+      us.el.classList.toggle('near', !win && !full && v >= 0.9);
+      us.blocked = !win && !full;
       // one cue when it fills (the soft glow then stays: .full)
       if (full && this._ultFull === false) { us.el.classList.remove('cue'); void us.el.offsetWidth; us.el.classList.add('cue'); }
       this._ultFull = full;
@@ -389,51 +440,105 @@ const Hud = {
       if (bg !== this._ultBg) { this._ultBg = bg; us.icon.style.backgroundImage = bg; }
     }
     // cast bar
+    // (the fill is scaled, never resized: no layout per frame. A cast that runs to its end flashes and fades; one
+    // cut short goes red and drops away)
+    const cb = this.castBar;
     if (k.cast) {
-      this.castBar.classList.remove('hidden');
-      this.castFill.style.width = (Math.min(1, (now - k.cast.start) / (k.cast.end - k.cast.start)) * 100).toFixed(1) + '%';
+      if (this._castOut) { this._castOut = 0; cb.classList.remove('done', 'broke'); }
+      cb.classList.remove('hidden');
+      const f = Math.min(1, (now - k.cast.start) / (k.cast.end - k.cast.start));
+      const v = f.toFixed(3);
+      if (this._castV !== v) { this._castV = v; this.castFill.style.transform = `scaleX(${v})`; }
+      this._castEnd = k.cast.end;
       if (this._castAb !== k.cast.ab) {
         this._castAb = k.cast.ab;
         this.castName.innerHTML = `<i class="cb-icon" style="background-image:url(${abilityIcon(a.cls.id, abilityIconId(k.cast.ab))})"></i>${k.cast.ab.name}`;
       }
-    } else { this.castBar.classList.add('hidden'); this._castAb = null; }
+    } else if (this._castAb) {
+      const broke = now < (this._castEnd || 0) - 0.1;
+      this._castAb = null; this._castOut = now || 1e-6;
+      if (!broke) { this._castV = '1.000'; this.castFill.style.transform = 'scaleX(1)'; }
+      cb.classList.add(broke ? 'broke' : 'done');
+    } else if (this._castOut && (now - this._castOut > 0.45 || now < this._castOut)) {
+      this._castOut = 0; cb.classList.remove('done', 'broke'); cb.classList.add('hidden');
+    } else if (!this._castOut) cb.classList.add('hidden');
     // gauge
     const c = this.gaugeCanvas.getContext('2d');
     const gw = this.gw || 130, dpr = this.gaugeCanvas.width / gw;
     c.setTransform(dpr, 0, 0, dpr, 0, 0);
     c.clearRect(0, 0, gw, 116);
     drawGauge(c, k, gw, 116, t);
-    // buffs (rebuilt only when the set changes)
-    const list = [];
-    const hidden = new Set(Object.entries(BUFF_HIDES).filter(([own]) => k.has(own)).map(([, base]) => base));
-    const nm = base => { const ab = k.abilities.find(x => (x.replaces || x.id) === base); return ab ? ab.name : base; };
+    this.buffs(k, now, a);
+  },
+
+  // The buff row. Rebuilt only when which buffs are up changes (ids and kinds); the seconds and stacks are written in
+  // place, a new buff pops in, a refreshed one pulses, and the last 3s blink softly. Tooltips are live (read on hover).
+  // (items are pooled objects: nothing is allocated per frame beyond what extra() and itemBuffs() hand over)
+  buffs(k, now, a) {
+    const pool = this._bPool || (this._bPool = []);
+    let n = 0;
     for (const [id, b] of k.buffs) {
-      if (!(b.end > now && BUFF_NAMES[id] && !hidden.has(id))) continue;
-      const left = BUFF_UNTIMED.has(id) ? undefined : b.end - now;
-      list.push({ id, name: BUFF_NAMES[id], left, stacks: b.stacks, bad: BAD_BUFFS.has(id), html: BUFF_TIPS[id] && `<b>${BUFF_NAMES[id]}</b>${left != null ? `<em>${Math.ceil(left)}s</em>` : ''}${BUFF_TIPS[id](nm)}` });
+      if (!(b.end > now && BUFF_NAMES[id]) || (BUFF_HIDDEN_BY[id] && k.has(BUFF_HIDDEN_BY[id]))) continue;
+      this._bput(pool, n++, id, BUFF_NAMES[id], BUFF_UNTIMED.has(id) ? undefined : b.end - now, b.stacks, BAD_BUFFS.has(id), false, '', '', '', true);
     }
-    for (const x of this.extra()) list.push(x);
-    for (const x of k.itemBuffs()) list.push(x);   // buffs from item effects
-    const key = list.map(b => b.id + ':' + (b.left != null ? Math.ceil(b.left) : '') + ':' + b.stacks + ':' + (b.label || '')).join('|');
-    if (key !== this._buffKey) {
-      this._buffKey = key;
+    for (const x of this.extra()) this._bput(pool, n++, x.id, x.name, x.left, x.stacks, !!x.bad, !!x.bond, x.label || '', x.img || '', x.tip || '', false);
+    for (const x of k.itemBuffs()) this._bput(pool, n++, x.id, x.name, x.left, x.stacks, !!x.bad, !!x.bond, x.label || '', x.img || '', x.tip || '', false);   // buffs from item effects
+    const R = this._bR || [];
+    let rebuild = n !== R.length || this._bCls !== a.cls.id;
+    for (let i = 0; i < n && !rebuild; i++) { const r = R[i], b = pool[i]; if (r.id !== b.id || r.bad !== b.bad || r.bond !== b.bond || r.img !== b.img) rebuild = true; }
+    if (rebuild) {
+      const had = new Set(R.map(r => r.id)), first = !this._bR;
+      this._bCls = a.cls.id;
       const icon = b => {
         if (b.img) return `<u class="bf-icon" style="background-image:url(${b.img})"></u>`;   // (another class's art: an ally's buff on you)
         if (BUFF_ICON[b.id]) return `<u class="bf-icon" style="background-image:url(${abilityIcon(a.cls.id, BUFF_ICON[b.id])})"></u>`;
         const g = BUFF_GLYPH[b.id] || BUFF_GLYPH[b.bond ? 'bond' : String(b.id).startsWith('fx-') ? 'fx' : ''];
         return `<u class="bf-icon g">${g || `<em>${(b.name || '?')[0]}</em>`}</u>`;
       };
-      // under each icon: the seconds left, or a short label (2/4, +50%) for the ones with no timer
-      const under = b => (b.left != null ? Math.ceil(b.left) : b.label || '');
-      this.buffRow.innerHTML = list.map(b => `<span class="buff${b.bad ? ' bad' : ''}${b.bond ? ' bond' : ''}">${icon(b)}${b.stacks > 1 ? `<s>${b.stacks}</s>` : ''}<i>${under(b)}</i></span>`).join('');
-      // the name lives in the tooltip
-      [...this.buffRow.children].forEach((ch, i) => {
-        const b = list[i], head = `<b>${b.name}${b.stacks > 1 ? ` ×${b.stacks}` : ''}</b>${b.left != null ? `<em>${Math.ceil(b.left)}s</em>` : b.label ? `<em>${b.label}</em>` : ''}`;
-        Tip.set(ch, b.html || head + (b.tip ? tipAttr(b.tip) : ''));
+      const live = pool.slice(0, n);
+      this.buffRow.innerHTML = live.map(b => `<span class="buff${b.bad ? ' bad' : ''}${b.bond ? ' bond' : ''}${!first && !had.has(b.id) ? ' gain' : ''}">${icon(b)}<s></s><i></i></span>`).join('');
+      // the name lives in the tooltip (bound once per chip, read live on hover)
+      this._bR = live.map((b, i) => {
+        const el = this.buffRow.children[i], id = b.id;
+        Tip.set(el, () => this._buffTip(id));
+        return { id, bad: b.bad, bond: b.bond, img: b.img, el, t: el.querySelector('i'), s: el.querySelector('s'), u: el.querySelector('u'), left: b.left, stacks: b.stacks, exp: false };
       });
     }
+    // the seconds and stacks, in place; a refresh (more time or another stack) pulses the icon once
+    for (let i = 0; i < n; i++) {
+      const b = pool[i], r = this._bR[i];
+      // under each icon: the seconds left, or a short label (2/4, +50%) for the ones with no timer
+      hudText(r.t, b.left != null ? Math.ceil(b.left) : b.label);
+      hudText(r.s, b.stacks > 1 ? b.stacks : '');
+      if (!rebuild && r.u.animate && ((b.left != null && r.left != null && b.left > r.left + 0.6) || b.stacks > r.stacks)) {
+        r.u.animate([{ transform: 'scale(1.18)' }, { transform: 'scale(1)' }], { duration: 220, easing: 'ease-out' });
+      }
+      r.left = b.left; r.stacks = b.stacks;
+      const exp = b.left != null && b.left <= 3;
+      if (exp !== r.exp) { r.exp = exp; r.el.classList.toggle('exp', exp); }
+    }
+  },
+  _bput(pool, i, id, name, left, stacks, bad, bond, label, img, tip, own) {
+    const b = pool[i] || (pool[i] = {});
+    b.id = id; b.name = name; b.left = left; b.stacks = stacks || 1; b.bad = bad; b.bond = bond; b.label = label; b.img = img; b.tip = tip; b.own = own;
+  },
+  // a buff's tooltip, from what's up right now (an ability's name as this hero has it: a spec may rename it)
+  _buffTip(id) {
+    const pool = this._bPool || [], R = this._bR || [], k = this.actor && this.actor.kit;
+    let b = null;
+    for (let i = 0; i < R.length; i++) if (pool[i] && pool[i].id === id) { b = pool[i]; break; }
+    if (!b) return '';
+    if (b.own && BUFF_TIPS[id] && k) {
+      const nm = base => { const ab = k.abilities.find(x => (x.replaces || x.id) === base); return ab ? ab.name : base; };
+      return `<b>${BUFF_NAMES[id]}</b>${b.left != null ? `<em>${Math.ceil(b.left)}s</em>` : ''}${BUFF_TIPS[id](nm)}`;
+    }
+    const head = `<b>${b.name}${b.stacks > 1 ? ` ×${b.stacks}` : ''}</b>${b.left != null ? `<em>${Math.ceil(b.left)}s</em>` : b.label ? `<em>${b.label}</em>` : ''}`;
+    return head + (b.tip ? tipAttr(b.tip) : '');
   },
 };
+// the borrowed buff each talent move hides while its own is up (BUFF_HIDES, the other way round)
+const BUFF_HIDDEN_BY = {};
+for (const [own, base] of Object.entries(BUFF_HIDES)) BUFF_HIDDEN_BY[base] = own;
 
 // ---------------------------------------------------------------- drawn ability icons (classes without painted icons yet)
 // A dark tile in the class accent with a simple glyph per move. Cached as data URLs; null for classes that have art.

@@ -1,10 +1,36 @@
 // Visual effects shared by the town and the arena: ability visuals, floating numbers, rings, trails.
 // Purely cosmetic. Game logic never reads anything in here.
 
+// How each kind of floating text moves (FX.text). from/peak: the pop's start and overshoot scale; pop/hold: seconds of
+// the pop and of the full-strength hold before the fade; rise: world px it drifts up over its life (negative sinks);
+// dx/driftX: its side of the body and its sideways drift; floor: its smallest size in screen px; lanes: where the
+// second, third... text spawned on the same spot sits (fanned left, right and up), busy for laneHold of a life.
+const fxSmooth = u => (u <= 0 ? 0 : u >= 1 ? 1 : u * u * (3 - 2 * u));
+const TEXT_LANES = {
+  out: [[0, 0], [-34, -17], [34, -17], [-17, -34], [17, -34], [-50, 2], [50, 2], [0, -50]],
+  // (on a hero: below the name tag, fanned outward and down, never up into it)
+  in: [[0, 0], [-6, 15], [0, 30], [-12, 45], [-4, 60]],
+  heal: [[0, 0], [6, 15], [0, 30], [12, 45], [4, 60]],
+  call: [[0, 0], [0, -22], [0, -44], [0, -66]],
+};
+const TEXT_KINDS = {
+  '': { group: 'misc', from: 0.7, peak: 1.18, pop: 0.16, hold: 0.25, rise: 30, floor: 11 },
+  auto: { group: 'out', lanes: TEXT_LANES.out, laneHold: 0.4, from: 0.8, peak: 1.1, pop: 0.1, hold: 0.1, rise: 22, floor: 10, alpha: 0.85, durK: 0.8, weight: 700 },
+  dot: { group: 'out', lanes: TEXT_LANES.out, laneHold: 0.4, from: 0.85, peak: 1.08, pop: 0.1, hold: 0.12, rise: 16, floor: 10, alpha: 0.8, durK: 0.85, weight: 700 },
+  hit: { group: 'out', lanes: TEXT_LANES.out, laneHold: 0.45, from: 0.6, peak: 1.3, pop: 0.16, hold: 0.28, rise: 32, floor: 12 },
+  crit: { group: 'out', lanes: TEXT_LANES.out, laneHold: 0.45, from: 0.5, peak: 1.45, pop: 0.2, hold: 0.38, rise: 28, floor: 12.5, durK: 1.15, weight: 900 },
+  ult: { group: 'out', lanes: TEXT_LANES.out, laneHold: 0.5, from: 0.4, peak: 1.6, pop: 0.24, hold: 0.5, rise: 24, floor: 13, durK: 1.3, weight: 900 },
+  heal: { group: 'heal', lanes: TEXT_LANES.heal, laneHold: 0.45, dx: 16, align: 'left', from: 0.6, peak: 1.25, pop: 0.16, hold: 0.3, rise: 6, driftX: 12, floor: 12 },
+  taken: { group: 'in', lanes: TEXT_LANES.in, laneHold: 0.45, dx: -16, align: 'right', from: 0.6, peak: 1.3, pop: 0.15, hold: 0.3, rise: -10, driftX: -10, floor: 12 },
+  absorb: { group: 'in', lanes: TEXT_LANES.in, laneHold: 0.45, dx: -16, align: 'right', from: 0.8, peak: 1.12, pop: 0.12, hold: 0.3, rise: -8, driftX: -8, floor: 11, alpha: 0.9, weight: 700 },
+  call: { group: 'call', lanes: TEXT_LANES.call, laneHold: 0.6, stamp: true, peak: 1.7, pop: 0.14, hold: 0.45, rise: 10, floor: 12 },
+  quiet: { group: 'call', lanes: TEXT_LANES.call, laneHold: 0.6, from: 1, peak: 1, pop: 0.01, hold: 0.35, rise: 0, shake: true, floor: 11, weight: 700 },
+};
+
 const FX = {
   list: [], pending: [], now: 0, heroScale: 1.5, shake: 0,
   muted: false,   // a hidden tab spawns nothing (it would all play at once on the way back)
-  GROUND: new Set(['zone', 'click', 'ring', 'puff', 'cone', 'aura', 'ghost', 'flash']),
+  GROUND: new Set(['zone', 'click', 'ring', 'puff', 'cone', 'aura', 'ghost', 'flash', 'land', 'step']),
 
   add(f) { f.t0 = this.now; if (!this.muted) this.list.push(f); return f; },
   // the screen moments an Ultimate may use (main.js sets cam: { flash(color, a, dur), dim(a, dur), punch(amount, dur),
@@ -21,10 +47,82 @@ const FX = {
     }
     for (let i = this.list.length - 1; i >= 0; i--) if (now - this.list[i].t0 > this.list[i].dur) this.list.splice(i, 1);
     this.shake *= Math.pow(0.002, dt);
+    // a dash that stopped this frame: the arrival (a ring of dust; the hero's settle is heroes.js heroPose)
+    for (const e of this._dashers) if (now - e._dash.last > 0.05) { this._dashers.delete(e); if (e.cls) this.add({ type: 'land', x: e.x, y: e.y, color: '#d8ccb4', dur: 0.45 }); }
+  },
+  _dashers: new Set(),
+  // The one way in for screen shake (px). source says whose it is: true / 'mine', an entity, or a recipe's context
+  // ({ ent, mine }). Your own (or the boss's: no source) shake in full; a teammate's or a bot's only a little, and an
+  // effect playing dimmed (VFX scale, someone else's cast) is scaled with it.
+  vscale: 1,
+  addShake(amount, source) {
+    if (!(amount > 0) || this.muted) return;
+    let k = this.vscale;
+    if (source !== undefined && source !== null && source !== true && source !== 'mine') {
+      const mine = source === false ? false : typeof source === 'object' && 'mine' in source ? !!source.mine : (source.ent || source) === this.me;
+      if (!mine) k *= 0.2;
+    }
+    this.shake = Math.max(this.shake, Math.min(14, amount * k));
   },
 
-  text(x, y, text, color = '#ffffff', size = 16, dur = 0.9) {
-    this.add({ type: 'text', x: x + (Math.random() - 0.5) * 24, y, text, color, size, dur });
+  // A floating number or word. kind (opts.kind) sets how it moves:
+  //  auto / dot: small, quick, muted · hit: an ability's hit · crit · ult: an Ultimate's own hit (the biggest pop)
+  //  heal: to the right of the body · taken / absorb: damage on you (and what a shield ate), to the left of the body
+  //  call: a stamped word ('Perfect!', 'Interrupted') · quiet: a grey refusal ('Not ready'), a small shake in place
+  // Every kind pops in (a short overshoot), holds at full strength, then fades. Numbers spawned close together on the
+  // same spot fan out into lanes instead of piling up. (No kind: a plain pop, for the effects' own captions.)
+  text(x, y, text, color = '#ffffff', size = 16, dur = 0.9, opts) {
+    const kind = (opts && opts.kind) || '';
+    const K = TEXT_KINDS[kind] || TEXT_KINDS[''];
+    if (kind === 'quiet') {
+      // a refusal already showing just shakes again (no pile of "Not ready")
+      for (const f of this.list) if (f.type === 'text' && f.kind === 'quiet' && f.text === text && Math.abs(f.ox - x) < 60 && Math.abs(f.oy - y) < 60) { f.t0 = this.now; return f; }
+    }
+    // the lowest free lane among live texts of this group that started near here (deterministic: no random jitter)
+    let lane = 0;
+    if (K.lanes) {
+      const busy = new Set();
+      for (const f of this.list) {
+        if (f.type !== 'text' || f.group !== K.group || Math.abs(f.ox - x) > 60 || Math.abs(f.oy - y) > 60) continue;
+        if (this.now - f.t0 < f.dur * K.laneHold) busy.add(f.lane);
+      }
+      while (busy.has(lane) && lane < K.lanes.length - 1) lane++;
+      if (busy.has(lane)) lane = busy.size % K.lanes.length;
+    }
+    return this.add({ type: 'text', kind, group: K.group, lane, ox: x, oy: y, x, y, text, color, size, dur: dur * (K.durK || 1) });
+  },
+
+  // (drawn into a world zoomed by the arena camera: numbers never shrink below a readable size on screen)
+  drawText(ctx, f) {
+    const K = TEXT_KINDS[f.kind] || TEXT_KINDS[''], t = this.now - f.t0, p = Math.min(1, t / f.dur);
+    if (t < 0) return;
+    const z = this._z || 1, m = Math.max(1, 12 / (15 * z));   // (everything grows together, so the sizes keep their order)
+    const size = Math.max(f.size * m, K.floor / z);
+    const L = K.lanes ? K.lanes[f.lane % K.lanes.length] : null;
+    let x = f.x + (K.dx || 0) * m + (L ? L[0] * m : 0), y = f.y + (K.dy || 0) * m + (L ? L[1] * m : 0);
+    // pop: from a little small, past full size, back to 1; a stamp lands from big instead
+    const u = Math.min(1, t / K.pop);
+    let s;
+    if (K.stamp) s = 1 + (K.peak - 1) * (1 - easeOut(u)) ** 2;
+    else s = u < 0.4 ? K.from + (K.peak - K.from) * easeOut(u / 0.4) : K.peak + (1 - K.peak) * fxSmooth((u - 0.4) / 0.6);
+    // alpha: full through the pop and the hold, then eases out (a stamp fades in over its landing)
+    const hold = Math.min(f.dur * 0.7, K.pop + K.hold);
+    const fade = t <= hold ? 1 : 1 - fxSmooth((t - hold) / Math.max(0.01, f.dur - hold));
+    const a = (K.stamp ? Math.min(1, u * 2.5) : 1) * fade * (K.alpha || 1);
+    if (a <= 0.01) return;
+    // the drift: up for most, a slow sink for a hit you took; a quiet refusal stays put and shakes once
+    const q = easeOut(p);
+    x += (K.driftX || 0) * m * q;
+    y -= (K.rise || 0) * m * q;
+    if (K.shake && t < 0.24) x += Math.sin(t * 70) * 3 * (1 - t / 0.24);
+    ctx.save(); ctx.globalAlpha = a;
+    ctx.translate(x, y); if (s !== 1) ctx.scale(s, s);
+    ctx.font = `${K.weight || 800} ${size.toFixed(1)}px system-ui, sans-serif`;
+    ctx.textAlign = K.align || 'center'; ctx.textBaseline = 'alphabetic'; ctx.lineJoin = 'round';
+    ctx.lineWidth = Math.max(2.2, size * 0.2); ctx.strokeStyle = 'rgba(10,8,14,0.9)';
+    ctx.strokeText(f.text, 0, 0);
+    ctx.fillStyle = f.color; ctx.fillText(f.text, 0, 0);
+    ctx.restore();
   },
 
   // Play an ability's visual. ent: { x, y, angle, st, cls, lift }. (tx, ty): where it lands.
@@ -45,9 +143,9 @@ const FX = {
       // cam: the screen moments (flash, dim, camera push, hit-stop) for your own Ultimates only; null for anyone else's
       const cam = this.camFor(ent);
       const run = () => {
-        VFX.setScale(dim);
-        try { recipe({ ent, x: ent.x, y: ent.y, tx, ty, ang: ent.angle, tent: opts.tent || null, mine: !!opts.mine, cam, later: (d, fn) => this.later(d, () => { VFX.setScale(dim); try { fn(); } finally { VFX.setScale(1); } }) }); }
-        finally { VFX.setScale(1); }
+        VFX.setScale(dim); this.vscale = dim;   // (vscale: addShake scales with it)
+        try { recipe({ ent, x: ent.x, y: ent.y, tx, ty, ang: ent.angle, tent: opts.tent || null, mine: !!opts.mine, cam, later: (d, fn) => this.later(d, () => { VFX.setScale(dim); this.vscale = dim; try { fn(); } finally { VFX.setScale(1); this.vscale = 1; } }) }); }
+        finally { VFX.setScale(1); this.vscale = 1; }
       };
       if (delay) this.later(delay, run); else run();
       return;
@@ -93,15 +191,25 @@ const FX = {
   // Dash visuals: a quick trail of afterimages.
   dashTrail(ent, color) {
     if (!ent.cls) return;
-    // (called every frame while dashing: at most ~45 afterimages a second, so a 144 Hz screen doesn't draw three times
-    // as many full hero ghosts as a 60 Hz one)
-    if (this.now - (ent._trailAt ?? -1) < 1 / 45) return;
-    ent._trailAt = this.now;
-    this.add({ type: 'ghost', cls: ent.cls, x: ent.x, y: ent.y, angle: ent.angle, dur: 0.25 });
-    if (Math.random() < 0.5) this.add({ type: 'puff', x: ent.x + (Math.random() - 0.5) * 12, y: ent.y + (Math.random() - 0.5) * 12, r: 9, color: color || '#ffffff', dur: 0.5 });
+    const now = this.now;
+    if (ent.st) ent.st.dashT = now;   // the hero leans into it, and settles when it stops (heroes.js heroPose)
+    // one picture of the hero per dash (taken at the first afterimage's draw): every afterimage is that one image,
+    // tinted, instead of the whole hero redrawn at low alpha (which showed its insides and cost a hero per ghost)
+    if (!ent._dash || now - ent._dash.last > 0.12) ent._dash = { last: now, snap: { cls: ent.cls, spec: ent.spec || null, angle: ent.angle, color: color || ent.cls.accent || '#ffffff', cv: null, owner: ent } };
+    ent._dash.last = now;
+    this._dashers.add(ent);
+    // (called every frame while dashing: at most ~45 afterimages a second, so a 144 Hz screen doesn't make more)
+    if (now - (ent._trailAt ?? -1) < 1 / 45) return;
+    ent._trailAt = now;
+    this.add({ type: 'ghost', snap: ent._dash.snap, x: ent.x, y: ent.y - (ent.lift || 0), dur: 0.25 });
+    // (shared-fx polish) the class's own dash trail (DASH_VFX in ability-vfx.js); the plain dust puff is the fallback
+    if (typeof DASH_VFX !== 'undefined' && DASH_VFX.trail(ent, color)) return;
+    if (Math.random() < 0.5) this.add({ type: 'puff', x: ent.x + (Math.random() - 0.5) * 12, y: ent.y + (Math.random() - 0.5) * 12, r: 9, color: '#d8ccb8', dur: 0.5 });
   },
 
   draw(ctx, ground) {
+    // the camera's zoom in screen pixels (the canvas is scaled by its pixel ratio, capped at 2 as in main.js)
+    if (!ground) { const a = ctx.getTransform ? ctx.getTransform().a : 1; this._z = clamp(a / Math.min((typeof window !== 'undefined' && window.devicePixelRatio) || 1, 2), 0.3, 3); }
     for (const f of this.list) if (this.GROUND.has(f.type) === ground) this.drawOne(ctx, f);
   },
 
@@ -223,12 +331,18 @@ const FX = {
       case 'ring': {
         const implode = f.style === 'implode' || f.style === 'rewind';
         const q = implode ? 1 - easeOut(p) : easeOut(p);
-        const r = f.r * (0.25 + 0.75 * q);
-        glow(ctx, f.x, f.y, r * 1.2, f.color, 0.25 * a);
-        circle(ctx, f.x, f.y, r, null, rgba(f.color, a), 4 * a + 1);
+        // (shared-fx polish) the same look as the ability rings: a soft ink band under it so it reads on any floor,
+        // then a neon rim (coloured glow, white-hot core) lying flat on the floor, and a light with a hot centre
+        const r = f.r * (0.25 + 0.75 * q), fl = 0.78;
+        ctx.save();
+        ctx.globalAlpha = 0.3 * a; ctx.strokeStyle = '#140c18'; ctx.lineWidth = 3 + 5 * a;
+        ctx.beginPath(); ctx.ellipse(f.x, f.y, r + 1.5, (r + 1.5) * fl, 0, 0, TAU); ctx.stroke();
+        ctx.restore();
+        glow(ctx, f.x, f.y, r * 1.2, f.color, 0.22 * a, implode ? 0.6 * a : 0);
+        VFX.neonRing(ctx, f.x, f.y, r, f.color, 1.2 + 2.6 * a, a, fl);
         if (f.style === 'rewind') for (let k = 0; k < 3; k++) {
           const ang = -now * 6 + k * TAU / 3;
-          circle(ctx, f.x + Math.cos(ang) * r, f.y + Math.sin(ang) * r, 3, rgba('#ffffff', a));
+          VFX.glowAt(ctx, f.x + Math.cos(ang) * r, f.y + Math.sin(ang) * r * fl, 7, f.color, a);
         }
         if (f.style === 'mark') {
           ctx.save(); ctx.translate(f.x, f.y); ctx.rotate(now * 3);
@@ -245,11 +359,44 @@ const FX = {
         ctx.restore();
         break;
       }
-      case 'puff': circle(ctx, f.x, f.y - p * 10, f.r * (0.6 + p * 0.8), rgba(f.color, 0.5 * a)); break;
-      case 'ghost':
-        ctx.save(); ctx.globalAlpha = 0.35 * a;
-        drawHero(ctx, f.cls, f.x, f.y, f.angle, { t: now, moving: false, action: null }, this.heroScale, { ring: false, noShadow: true });
+      case 'puff': {
+        // (shared-fx polish) a little cartoon smoke puff (the VFX smoke sprite, lit from the top left), rising and fading
+        const R = f.r * (0.7 + p * 0.9) * 1.7;
+        ctx.save(); ctx.globalAlpha = 0.55 * a * a;
+        ctx.drawImage(VFX.sprite('smoke', f.color || '#e8e0d0'), f.x - R, f.y - p * 14 - R * 1.1, R * 2, R * 2);
         ctx.restore();
+        break;
+      }
+      case 'ghost': {
+        // a dash afterimage: the dash's one picture of the hero, washed in its colour and laid on additively
+        const sn = f.snap;
+        if (!sn) break;
+        ctx.save(); ctx.translate(f.x, f.y); ctx.scale(this.ghostScale || this.heroScale, this.ghostScale || this.heroScale);
+        if (!sn.cv && typeof heroSnapshot === 'function') {
+          const o = sn.owner, cv = heroSnapshot(ctx, sn.cls, sn.angle, { t: now, moving: true, action: null, dashT: now }, { spec: sn.spec }, o._ghostCv || (o._ghostCv = typeof document !== 'undefined' ? document.createElement('canvas') : null));
+          if (cv) {
+            const c = cv.getContext('2d');
+            c.globalCompositeOperation = 'source-atop'; c.globalAlpha = 0.6; c.fillStyle = sn.color; c.fillRect(0, 0, cv.width, cv.height);
+            c.globalCompositeOperation = 'source-over'; c.globalAlpha = 1;
+          }
+          sn.cv = cv || null; sn.tried = true;
+        }
+        if (sn.cv) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.42 * a * a; blitHero(ctx, sn.cv); }
+        ctx.restore();
+        break;
+      }
+      case 'land': {
+        // a dash's arrival: a low ring of dust kicked out round the feet and a few puffs
+        const q = easeOut(p), rx = 10 + 22 * q;
+        ellipse(ctx, f.x, f.y + 4, rx, rx * 0.5, 0, null, rgba(f.color, 0.45 * a), 2.2 * a + 0.4);
+        for (let k = 0; k < 4; k++) {
+          const ang = k * TAU / 4 + 0.6, d = 8 + 18 * q;
+          circle(ctx, f.x + Math.cos(ang) * d, f.y + 4 + Math.sin(ang) * d * 0.5 - q * 5, 4 + 3 * q, rgba(f.color, 0.28 * a));
+        }
+        break;
+      }
+      case 'step':   // a footstep's puff of dust in town: small and faint
+        ellipse(ctx, f.x, f.y - p * 3, 3 + 5 * easeOut(p), 1.8 + 2.6 * easeOut(p), 0, rgba(f.color, 0.3 * a * a));
         break;
       case 'cone': {
         const r = f.r * easeOut(Math.min(1, p * 3));
@@ -295,9 +442,9 @@ const FX = {
           ellipse(ctx, 0, 0, 6, 3, 0, '#8fff7a', OUT, 1);
           ctx.restore();
         } else {
-          line(ctx, x - ux * 22, y - uy * 22, x, y, rgba(f.color, 0.5), 5);
-          glow(ctx, x, y, 16, f.color, 0.7);
-          circle(ctx, x, y, 5, '#ffffff');
+          // (shared-fx polish) the same comet tail and hot-cored light as the ability missiles
+          VFX.streakTo(ctx, x - ux * 26, y - uy * 26, x, y, 4, f.color, 0.85);
+          glow(ctx, x, y, 16, f.color, 0.7, 0.9);
         }
         break;
       }
@@ -311,18 +458,16 @@ const FX = {
       }
       case 'shield': {
         const e = f.follow, k = Math.min(1, (p * f.dur) / 0.1) * (p > 0.85 ? (1 - p) / 0.15 : 1);
-        const y = e.y - 4 - (e.lift || 0);
-        ctx.beginPath(); ctx.arc(e.x, y, 36, e.angle - 0.8, e.angle + 0.8);
-        ctx.lineCap = 'round'; ctx.lineWidth = 9; ctx.strokeStyle = rgba(f.color, 0.3 * k); ctx.stroke();
-        ctx.lineWidth = 3.5; ctx.strokeStyle = rgba('#ffffff', 0.85 * k); ctx.stroke();
-        glow(ctx, e.x + Math.cos(e.angle) * 36, y + Math.sin(e.angle) * 36, 26, f.color, 0.5 * k);
+        // (shared-fx polish) a front ward like VFX.shield's: a tinted band, a neon rim and a hot light on its face
+        const y = e.y - 4 - (e.lift || 0), a0 = e.angle - 0.8, a1 = e.angle + 0.8;
+        ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.3 * k; ctx.fillStyle = f.color;
+        ctx.beginPath(); ctx.arc(e.x, y, 38, a0, a1); ctx.arc(e.x, y, 29, a1, a0, true); ctx.closePath(); ctx.fill();
+        ctx.restore();
+        VFX.neonPath(ctx, f.color, 3, k, () => ctx.arc(e.x, y, 36, a0, a1));
+        VFX.glowAt(ctx, e.x + Math.cos(e.angle) * 36, y + Math.sin(e.angle) * 36, 24, f.color, 0.7 * k);
         break;
       }
-      case 'text':
-        ctx.save(); ctx.globalAlpha = a;
-        label(ctx, f.text, f.x, f.y - easeOut(p) * 36, f.color, f.size, 'system-ui, sans-serif', 800);
-        ctx.restore();
-        break;
+      case 'text': this.drawText(ctx, f); break;
     }
   },
 };

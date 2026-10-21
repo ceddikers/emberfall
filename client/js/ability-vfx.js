@@ -2,57 +2,397 @@
 // recipe(c) gets c = { ent, x, y (caster), tx, ty (where it lands), tent (the ally it lands on, if any), ang (facing), later(delay, fn) }.
 // Spammed GCD fillers stay small and quick; cooldowns and big hits get the show.
 
+// ======================================================================= SHARED SHAKE (shared-fx polish)
+// Every class block's local `shake` routes here. It respects whose effect it is: a recipe runs under VFX.setScale
+// (yours 1, your autos 0.85, a teammate's or a bot's 0.6 / 0.5), so a dimmed effect never moves YOUR camera, and your
+// own scale through. src 'boss' (boss-vfx.js) always shakes. Uses FX.addShake(amount, source) when the render
+// pipeline provides it, else the old FX.shake max.
+function vfxShake(amount, src) {
+  if (!(amount > 0) || typeof FX === 'undefined') return;
+  const sc = typeof VFX !== 'undefined' && typeof VFX.scale === 'number' ? VFX.scale : 1;
+  if (src !== 'boss' && sc < 0.7) return;
+  const s = src === 'boss' ? amount : amount * Math.min(1, sc);
+  if (typeof FX.addShake === 'function') FX.addShake(s, src || 'mine');
+  else FX.shake = Math.max(FX.shake || 0, s);
+}
+
+// OLD_PAINT: pieces for the older seven classes' polish pass (and a few thin moves of the newer ones). Melee moves draw
+// their own layered smear and impact on top of VFX.slash; a buff or debuff that lasts leaves a faint marker for its real
+// duration, bright for its first moment and then low, so a boss telegraph under it still reads.
+const OLD_PAINT = (() => {
+  const V = VFX, TAU = Math.PI * 2;
+  // a lasting mark's strength: in over 0.12s, `peak` for its first `hold`s easing down to `settle`, out over its last 0.6s
+  const markK = (t, dur, peak = 0.9, settle = 0.3, hold = 0.5) => Math.min(1, t / 0.12) * Math.max(0, Math.min(1, (dur - t) / 0.6)) * (settle + (peak - settle) * Math.max(0, 1 - t / hold));
+  // draw(c, k, t, fx) every frame for dur seconds (k already carries the remote dimming). Returns the effect: setting
+  // fx.cut = true fades it out over 0.3s (a ward broken early, a buff spent); o.tick(p, dt, fx) runs while it lasts
+  function linger(dur, layer, draw, o = {}) {
+    return V.fx({ dur, layer, tick: o.tick, draw: (c, p, t, e) => {
+      if (e.cut && e.cutT == null) e.cutT = t;
+      const k = e.a * markK(t, dur, o.peak, o.settle, o.hold) * (e.cutT != null ? Math.max(0, 1 - (t - e.cutT) / 0.3) : 1);
+      if (k > 0.01) draw(c, k, t, e);
+    } });
+  }
+  // a heavy weapon smear round (x, y) facing ang: an ink band, the coloured body thickening toward its leading edge, a
+  // white-hot rim and speed lines trailing it. o: r, span, w (px), color, core, ink, dur, flip, z, flat, lines
+  function smear(x, y, ang, o = {}) {
+    const r = o.r ?? 70, span = o.span ?? 2.2, W = o.w ?? 18, dur = o.dur ?? 0.3, fl = o.flip ? -1 : 1, z = o.z ?? 12, flat = o.flat ?? 0.82;
+    const col = o.color || '#ffffff', core = o.core || '#ffffff', ink = o.ink || '#140a14', nl = o.lines ?? 3;
+    const shape = (c, a0, a1, R, Wd) => { c.beginPath();
+      for (let i = 0; i <= 16; i++) { const a = a0 + (a1 - a0) * i / 16; c.lineTo(Math.cos(a) * R, Math.sin(a) * R); }
+      for (let i = 16; i >= 0; i--) { const q = i / 16, a = a0 + (a1 - a0) * q, th = Wd * Math.pow(q, 0.7) * Math.min(1, (1 - q) * 6 + 0.35); c.lineTo(Math.cos(a) * (R - th), Math.sin(a) * (R - th)); }
+      c.closePath(); c.fill(); };
+    V.fx({ dur, layer: 'air', draw: (c, p, t, e) => {
+      const sw = easeOut(Math.min(1, p / 0.38)), k = e.a * (1 - Math.max(0, (p - 0.4) / 0.6));
+      const lead = -span / 2 + span * sw, back = -span / 2 + span * Math.max(0, (p - 0.2) / 0.8) * 0.9;
+      if (lead - back < 0.03 || k < 0.02) return;
+      c.save(); c.translate(x, y - z); c.scale(1, flat); c.rotate(ang); c.scale(1, fl);
+      c.globalAlpha = 0.4 * k; c.fillStyle = ink; shape(c, back, lead, r * 1.05, W * 1.3);
+      c.globalCompositeOperation = 'lighter';
+      c.globalAlpha = 0.8 * k; c.fillStyle = col; shape(c, back, lead, r, W);
+      c.globalAlpha = 0.95 * k; c.fillStyle = core; shape(c, back + (lead - back) * 0.3, lead, r * 0.99, W * 0.3);
+      c.lineCap = 'round'; c.strokeStyle = col; c.lineWidth = 1.6;
+      for (let i = 0; i < nl; i++) { const rr = r * (0.6 + i * 0.1), a1 = lead - 0.15 - i * 0.12, a0 = Math.max(back - 0.3, a1 - span * 0.5); if (a1 <= a0) continue; c.globalAlpha = 0.45 * k; c.beginPath(); c.arc(0, 0, rr, a0, a1); c.stroke(); }
+      c.restore();
+      if (sw < 1) { const a = ang + fl * lead; V.glowAt(c, x + Math.cos(a) * r, y - z + Math.sin(a) * r * flat, 12 + W * 0.6, '#ffffff', 0.8 * k); }
+    } });
+  }
+  // a straight stab of light from (x1, y1) to (x2, y2): a lens that shoots out and thins, ink under, a hot core, two
+  // speed lines; o.head puts an arrowhead on its tip (the rogue sheet's Backstab streak)
+  function thrust(x1, y1, x2, y2, o = {}) {
+    const W = o.w ?? 10, dur = o.dur ?? 0.24, col = o.color || '#ffffff', core = o.core || '#ffffff', ink = o.ink || '#140a14', z = o.z ?? 14;
+    const L = Math.hypot(x2 - x1, y2 - y1), a = Math.atan2(y2 - y1, x2 - x1);
+    const lens = (c, l0, l1, w) => { c.beginPath(); c.moveTo(l0, 0); c.quadraticCurveTo((l0 + l1) / 2, -w, l1, 0); c.quadraticCurveTo((l0 + l1) / 2, w, l0, 0); c.fill(); };
+    V.fx({ dur, layer: 'air', draw: (c, p, t, e) => {
+      const go = easeOut(Math.min(1, p / 0.3)), k = e.a * (1 - Math.max(0, (p - 0.35) / 0.65)), l1 = L * go, l0 = L * Math.max(0, (p - 0.15) / 0.85) * 0.9, w = W * (1 - p * 0.5);
+      if (l1 - l0 < 2 || k < 0.02) return;
+      c.save(); c.translate(x1, y1 - z); c.rotate(a);
+      c.globalAlpha = 0.4 * k; c.fillStyle = ink; lens(c, l0 - 4, l1 + 4, w * 1.4);
+      c.globalCompositeOperation = 'lighter';
+      c.globalAlpha = 0.85 * k; c.fillStyle = col; lens(c, l0, l1, w);
+      c.globalAlpha = k; c.fillStyle = core; lens(c, l0 + (l1 - l0) * 0.35, l1, w * 0.32);
+      if (o.head) { const hs = W * 1.6; c.globalAlpha = 0.95 * k; c.fillStyle = col; c.beginPath(); c.moveTo(l1 + hs * 1.3, 0); c.lineTo(l1 - hs * 0.4, -hs); c.lineTo(l1, 0); c.lineTo(l1 - hs * 0.4, hs); c.closePath(); c.fill();
+        c.fillStyle = core; c.beginPath(); c.moveTo(l1 + hs * 1.1, 0); c.lineTo(l1 - hs * 0.1, -hs * 0.35); c.lineTo(l1 - hs * 0.1, hs * 0.35); c.closePath(); c.fill(); }
+      c.strokeStyle = col; c.lineWidth = 1.5; c.lineCap = 'round';
+      for (const s of [-1, 1]) { const b = l1 - L * 0.2; if (b <= l0) continue; c.globalAlpha = 0.5 * k; c.beginPath(); c.moveTo(Math.max(0, l0 - 20), s * w * 0.95); c.lineTo(b, s * w * 0.95); c.stroke(); }
+      c.restore();
+    } });
+  }
+  // a faint rim on the floor that holds for dur: a ring, a finer inner ring, slow-turning ticks; o.style 'hex' adds two
+  // triangles, 'runes' six rune marks; o.follow keeps it under an entity
+  function rim(x, y, r, col, dur, o = {}) {
+    return linger(dur, 'ground', (c, k, t) => {
+      const cx = o.follow ? o.follow.x : x, cy = o.follow ? o.follow.y : y, R = r * (0.75 + 0.25 * easeOut(Math.min(1, t / 0.3))), n = o.ticks ?? 16;
+      V.neonRing(c, cx, cy, R, col, 2.4, k, 0.78); V.neonRing(c, cx, cy, R * 0.9, col, 1, k * 0.6, 0.78);
+      c.save(); c.translate(cx, cy); c.scale(1, 0.78); c.rotate(t * (o.spin ?? 0.15));
+      V.neonPath(c, col, 1.4, k * 0.8, () => { for (let i = 0; i < n; i++) { const a = i * TAU / n, r2 = R * (i % 2 ? 0.96 : 1.04); c.moveTo(Math.cos(a) * R * 0.9, Math.sin(a) * R * 0.9); c.lineTo(Math.cos(a) * r2, Math.sin(a) * r2); } });
+      if (o.style === 'hex') for (const off of [-Math.PI / 2, Math.PI / 2]) V.neonPath(c, col, 1.2, k * 0.55, () => { for (let i = 0; i <= 3; i++) { const a = off + i * TAU / 3; c.lineTo(Math.cos(a) * R * 0.86, Math.sin(a) * R * 0.86); } });
+      if (o.style === 'runes') for (let i = 0; i < 6; i++) { const a = i * TAU / 6, px = Math.cos(a) * R * 0.78, py = Math.sin(a) * R * 0.78, s = R * 0.05;
+        V.neonPath(c, col, 1.3, k * 0.7, () => { c.moveTo(px - s, py + s); c.lineTo(px, py - s); c.lineTo(px + s, py + s); c.moveTo(px - s * 0.5, py); c.lineTo(px + s * 0.5, py); }); }
+      c.restore();
+    }, { peak: o.peak ?? 0.9, settle: o.settle ?? 0.28, hold: o.hold ?? 0.6, tick: o.tick });
+  }
+  // the tanks' taunt (the tank sheet's Iron Chain): heavy iron links thrown out in 0.18s with a head (o.head 'spear' or
+  // 'hook') glowing in o.glow, sagging as it flies, holding, then reeled back in
+  function chain(sx, sy, tx, ty, o = {}) {
+    const L = Math.hypot(tx - sx, ty - sy), ang = Math.atan2(ty - sy, tx - sx), n = Math.max(5, Math.floor(L / 15)), metal = o.metal || '#9aa0aa', glow = o.glow || '#ffffff';
+    V.fx({ dur: 0.8, layer: 'air', draw: (c, p, t, fx) => {
+      const reach = p < 0.22 ? easeOut(p / 0.22) : p < 0.55 ? 1 : 1 - easeOut((p - 0.55) / 0.45), k = (p < 0.8 ? 1 : (1 - p) / 0.2) * fx.a, sag = Math.sin(Math.min(1, p / 0.22) * Math.PI) * 12, hx = L * reach;
+      if (k < 0.02 || hx < 4) return;
+      c.save(); c.translate(sx, sy); c.rotate(ang); c.lineCap = 'round';
+      c.globalCompositeOperation = 'lighter'; c.globalAlpha = 0.3 * k; c.strokeStyle = glow; c.lineWidth = 12; c.beginPath(); c.moveTo(0, 0); c.lineTo(hx, 0); c.stroke(); c.globalCompositeOperation = 'source-over';
+      const link = (i, x, y) => { c.beginPath(); if (i % 2) { c.moveTo(x - 7, y); c.lineTo(x + 7, y); } else c.ellipse(x, y, 9, 5, 0, 0, TAU); c.stroke(); };
+      for (let i = 0; i < n; i++) { const x = (i + 0.5) * L / n; if (x > hx - 8) break; const y = -Math.sin(x / hx * Math.PI) * sag;
+        c.globalAlpha = k; c.lineWidth = 5; c.strokeStyle = '#141018'; link(i, x, y); c.lineWidth = 2.8; c.strokeStyle = metal; link(i, x, y);
+        c.lineWidth = 1; c.strokeStyle = 'rgba(255,255,255,0.75)'; c.beginPath(); c.moveTo(x - 4, y - (i % 2 ? 1 : 3.5)); c.lineTo(x + 3, y - (i % 2 ? 1 : 3.5)); c.stroke(); }
+      c.beginPath();
+      if (o.head === 'hook') { c.moveTo(hx - 6, -3); c.lineTo(hx + 8, -3); c.quadraticCurveTo(hx + 22, -2, hx + 18, 12); c.lineTo(hx + 12, 6); c.quadraticCurveTo(hx + 13, 2, hx + 6, 3); c.lineTo(hx - 6, 3); }
+      else { c.moveTo(hx + 26, 0); c.lineTo(hx - 2, -10); c.lineTo(hx + 5, 0); c.lineTo(hx - 2, 10); }
+      c.closePath(); c.globalAlpha = k; c.fillStyle = metal; c.fill(); c.lineWidth = 2; c.strokeStyle = '#141018'; c.stroke();
+      V.neonPath(c, glow, 1.4, k, () => { if (o.head === 'hook') { c.moveTo(hx + 8, -3); c.quadraticCurveTo(hx + 22, -2, hx + 18, 12); } else { c.moveTo(hx + 26, 0); c.lineTo(hx - 2, -10); } });
+      c.restore();
+      V.glowAt(c, sx + Math.cos(ang) * hx, sy + Math.sin(ang) * hx, 22, glow, 0.6 * k);
+    } });
+  }
+  // FX.later that keeps the dimming it was called under (a teammate's 0.6), so a KIT_VFX moment's later beats stay dim
+  function later(d, fn) { const s = typeof V.scale === 'number' ? V.scale : 1; FX.later(d, () => { const p = V.scale; V.setScale(s); try { fn(); } finally { V.setScale(typeof p === 'number' ? p : 1); } }); }
+  return { markK, linger, smear, thrust, rim, chain, later };
+})();
+
 const ABILITY_VFX = (() => {
   const V = VFX;
   // a point d px from the caster toward where the ability lands (a hand, a bow, a blade)
   const ahead = (c, d) => { const a = Math.atan2(c.ty - c.y, c.tx - c.x); return { x: c.x + Math.cos(a) * d, y: c.y + Math.sin(a) * d }; };
   // a point part way from the caster (0) to the target (1): floor marks at a boss's feet go here so its sprite doesn't hide them
   const between = (c, f) => ({ x: c.x + (c.tx - c.x) * f, y: c.y + (c.ty - c.y) * f });
-  const shake = s => { FX.shake = Math.max(FX.shake, s); };
+  const shake = s => vfxShake(s);
+  const TAU = Math.PI * 2, rnd = (a, b) => a + Math.random() * (b - a), OP = OLD_PAINT;
+
+  // ---- Bastion: steel blue and dawn gold
+  const BAST_STEEL = '#7fb2ff', BAST_GOLD = '#ffd65a', BAST_DAWN = '#ffe9a8', BAST_INK = '#0e1a30';
+  // Blade Chain's step (0 Strike, 1 Riposte, 2 Judgment), counted per hero the way the kit counts it (back to Strike after 15s)
+  const bastionStep = e => { const s = e.bastionBlade || (e.bastionBlade = { n: -1, at: -99 }); s.n = FX.now - s.at > 15 ? 0 : (s.n + 1) % 3; s.at = FX.now; return s.n; };
+  // Brace: a tower-shield plate held in front for the whole guard (an 80 degree band of steel, a gold rim, the sun boss
+  // in its middle, a glint sliding along it); KIT_VFX.perfect sets fx.pb and the plate flares
+  function bastionPlate(ent, dur) {
+    return OP.linger(dur, 'air', (c, k, t, e) => {
+      if (e.pb) { e.pbT = t; e.pb = false; }
+      const pb = e.pbT != null ? Math.max(0, 1 - (t - e.pbT) / 0.45) : 0, kk = Math.min(1, k + pb), a = ent.angle || 0, cx = ent.x, cy = ent.y - 14 - (ent.lift || 0);
+      const R = 40 * (0.8 + 0.2 * easeOut(Math.min(1, t / 0.12))), half = 0.7, P = (an, r) => [cx + Math.cos(an) * r, cy + Math.sin(an) * r * 0.8];
+      const arc = (r, a0, a1) => { for (let i = 0; i <= 10; i++) { const [x, y] = P(a0 + (a1 - a0) * i / 10, r); i ? c.lineTo(x, y) : c.moveTo(x, y); } };
+      c.beginPath(); arc(R + 8, a - half, a + half); arc(R - 7, a + half, a - half); c.closePath();
+      c.globalAlpha = 0.72 * kk; c.fillStyle = '#3a5288'; c.fill(); c.globalAlpha = kk; c.lineWidth = 2.4; c.strokeStyle = BAST_INK; c.stroke(); c.globalAlpha = 1;
+      V.neonPath(c, BAST_GOLD, 2.4, kk, () => arc(R + 8, a - half, a + half));
+      V.neonPath(c, BAST_STEEL, 1.4, kk * 0.8, () => arc(R - 6, a - half, a + half));
+      const [mx, my] = P(a, R + 0.5);
+      V.glowAt(c, mx, my, 14 + 34 * pb, BAST_GOLD, 0.55 * kk + 0.6 * pb);
+      V.neonPath(c, BAST_DAWN, 1.6, kk, () => { for (let i = 0; i < 4; i++) { const q = i * Math.PI / 2; c.moveTo(mx, my); c.lineTo(mx + Math.cos(q) * 8, my + Math.sin(q) * 8); } });
+      for (const s of [-0.5, 0.5]) { const [rx, ry] = P(a + s, R + 0.5); V.glowAt(c, rx, ry, 5, '#ffffff', 0.7 * kk); }
+      const [gx, gy] = P(a - half + ((t * 0.7) % 1) * half * 2, R + 6); V.glowAt(c, gx, gy, 9, '#ffffff', 0.55 * kk);
+    }, { peak: 1, settle: 0.6, hold: 0.35 });
+  }
+  // Rally Banner: a war banner on a pole planted where the bastion stood, standing for its 12s (blue cloth, gold trim and
+  // star, the cloth waving); it rises out of the floor in 0.25s
+  function bastionBanner(bx, by, dur) {
+    OP.linger(dur, 'air', (c, k, t) => {
+      const H = 76 * easeOut(Math.min(1, t / 0.25)), top = by - H, wave = q => Math.sin(t * 3 - q * 3) * 3.5 * q;
+      c.globalAlpha = 0.35 * k; c.fillStyle = '#000'; c.beginPath(); c.ellipse(bx, by, 10, 4, 0, 0, TAU); c.fill();
+      c.lineCap = 'round'; c.globalAlpha = k;
+      const pole = (w, col) => { c.lineWidth = w; c.strokeStyle = col; c.beginPath(); c.moveTo(bx, by); c.lineTo(bx, top - 4); c.moveTo(bx - 17, top + 3); c.lineTo(bx + 17, top + 3); c.stroke(); };
+      pole(5, BAST_INK); pole(2.6, '#a07a40');
+      const L = bx - 15, Rr = bx + 15, T = top + 4, B = top + 46;
+      c.beginPath(); c.moveTo(L, T);
+      for (let i = 1; i <= 6; i++) { const q = i / 6; c.lineTo(L + wave(q), T + (B - T) * q); }
+      c.lineTo(bx + wave(0.8), B - 9); c.lineTo(Rr + wave(1), B);
+      for (let i = 5; i >= 0; i--) { const q = i / 6; c.lineTo(Rr + wave(q), T + (B - T) * q); }
+      c.closePath(); c.fillStyle = '#2c4f9a'; c.fill(); c.lineWidth = 1.8; c.strokeStyle = BAST_INK; c.stroke();
+      c.globalAlpha = 0.9 * k; c.lineWidth = 1.2; c.strokeStyle = BAST_GOLD; c.beginPath(); c.moveTo(L + 3 + wave(0.9), B - 6); c.lineTo(bx + wave(0.75), B - 14); c.lineTo(Rr - 3 + wave(0.9), B - 6); c.stroke();
+      const sx = bx + wave(0.45), sy = T + 18;
+      c.fillStyle = BAST_GOLD; c.beginPath(); for (let i = 0; i < 8; i++) { const q = i * Math.PI / 4 - Math.PI / 2, r = i % 2 ? 2.6 : 7.5; c.lineTo(sx + Math.cos(q) * r, sy + Math.sin(q) * r); } c.closePath(); c.fill();
+      c.globalAlpha = 1;
+      V.glowAt(c, bx, top - 6, 14, BAST_GOLD, 0.7 * k); V.glowAt(c, bx, top - 6, 4, '#ffffff', k); V.glowAt(c, sx, sy, 12, BAST_GOLD, 0.35 * k);
+    }, { peak: 1, settle: 0.85, hold: 0.4, tick: () => { if (Math.random() < 0.05) V.spawn({ x: bx + rnd(-14, 14), y: by, z: rnd(30, 60), vz: rnd(10, 30), life: 1, size: rnd(4, 7), size1: 0, color: BAST_GOLD, kind: 'star' }); } });
+  }
+  // Bulwark / Zealous Guard: a faint dome of hex plates over the hero for the guard's 10s (outline-led, so the floor reads)
+  function bastionDome(ent, dur, col) {
+    OP.linger(dur, 'air', (c, k, t) => {
+      const x = ent.x, y = ent.y + 4, r = 48, H = 56 * easeOut(Math.min(1, t / 0.2));
+      c.save(); c.globalCompositeOperation = 'lighter';
+      const g = c.createLinearGradient(x, y - H, x, y); g.addColorStop(0, `rgba(255,255,255,${0.12 * k})`); g.addColorStop(1, `rgba(140,180,255,${0.1 * k})`);
+      c.fillStyle = g; c.beginPath(); c.ellipse(x, y, r, H, 0, Math.PI, 0); c.fill(); c.restore();
+      V.neonPath(c, col, 1.8, k, () => c.ellipse(x, y, r, H, 0, Math.PI, 0));
+      V.neonPath(c, col, 1.1, k * 0.7, () => c.ellipse(x, y, r, r * 0.45, 0, 0, TAU));
+      for (let row = 0; row < 2; row++) for (let i = -2; i <= 2; i++) {
+        const hx = x + i * 15 + (row ? 7.5 : 0), hy = y - H * (0.38 + row * 0.3); if (Math.abs(hx - x) > r * (0.75 - row * 0.25)) continue;
+        const sh = 0.35 + 0.65 * Math.max(0, Math.sin(t * 3 + i * 1.3 + row * 2));
+        V.neonPath(c, col, 1, k * 0.55 * sh, () => { for (let j = 0; j <= 6; j++) { const q = j * Math.PI / 3; c.lineTo(hx + Math.cos(q) * 6.5, hy + Math.sin(q) * 5.5); } });
+      }
+      V.glowAt(c, x + Math.cos(t * 1.7) * r * 0.55, y - H * 0.62, 10, '#ffffff', 0.5 * k);
+    }, { peak: 0.95, settle: 0.4, hold: 0.7 });
+  }
+
+  // ---- Bloodreaver: crimson and iron
+  const REAV_RED = '#d4202c', REAV_INK = '#1a0406';
+  const reaverStep = e => { const s = e.reaverHack || (e.reaverHack = { n: -1, at: -99 }); s.n = FX.now - s.at > 15 ? 0 : (s.n + 1) % 2; s.at = FX.now; return s.n; };
+  // Ground Slam (tank sheet): glowing lava cracks run out across the floor, then cool and darken over dur
+  function reaverCracks(x, y, r, dur) {
+    const rays = Array.from({ length: 10 }, (_, i) => { const a0 = i * TAU / 10 + rnd(-0.25, 0.25), L = r * rnd(0.55, 1), pts = [[0, 0]]; let px = 0, py = 0;
+      for (let s = 1; s <= 4; s++) { const a = a0 + rnd(-0.45, 0.45); px += Math.cos(a) * L / 4; py += Math.sin(a) * L / 4; pts.push([px, py]); } return pts; });
+    OP.linger(dur, 'ground', (c, k, t) => {
+      const grow = easeOut(Math.min(1, t / 0.18)), heat = Math.max(0.2, 1 - t / dur);
+      c.save(); c.translate(x, y); c.scale(1, 0.7); c.lineCap = 'round'; c.lineJoin = 'round';
+      for (const pts of rays) { const m = Math.max(2, Math.round(pts.length * grow)), tr = () => pts.slice(0, m).forEach(([a, b], i) => (i ? c.lineTo(a, b) : c.moveTo(a, b)));
+        c.globalAlpha = 0.65 * k; c.strokeStyle = '#140604'; c.lineWidth = 8; c.beginPath(); tr(); c.stroke();
+        V.neonPath(c, heat > 0.5 ? '#ff6a1a' : '#c0401a', 1 + 2.6 * heat, k * Math.min(1, heat * 1.3), tr); }
+      c.restore();
+      V.glowAt(c, x, y, r * 0.7, '#ff4a1a', 0.4 * k * heat);
+    }, { peak: 1, settle: 0.7, hold: 1.2 });
+  }
+  // War Cry's blood shield on a hero it covers: a red bubble flashing up, sparks of blood
+  const reaverBloodShield = w => { V.shield(w, { color: '#ff3a4a', dur: 0.9, r: 38 }); V.flash(w.x, w.y - 20, 44, '#ff4a4a', 0.25); V.sparks(w.x, w.y - 10, { color: '#ff8a7a', n: 6, speed: 170 }); };
+
+  // ---- Runeguard: violet runes
+  // (shared-fx colour pass: a cooler indigo-blue-violet, so the Runeguard never reads as the Shadowblade's magenta-violet)
+  const RUNE_VIO = '#8e98ff', RUNE_DEEP = '#6c74f2', RUNE_PALE = '#dde3ff', RUNE_INK = '#0c1236';
+  // Runic Ward: rune plates turning round the holder for the ward's life; KIT_VFX.wardBlast cuts it when it ends early
+  function runeguardWard(w, dur) {
+    const f = OP.linger(dur, 'air', (c, k, t) => {
+      const x = w.x, y = w.y - 14 - (w.lift || 0), r = 40 * (0.85 + 0.15 * easeOut(Math.min(1, t / 0.2)));
+      c.save(); c.globalCompositeOperation = 'lighter'; const g = c.createRadialGradient(x, y, r * 0.3, x, y, r); g.addColorStop(0, 'rgba(177,140,255,0)'); g.addColorStop(1, `rgba(177,140,255,${0.22 * k})`);
+      c.fillStyle = g; c.beginPath(); c.arc(x, y, r, 0, TAU); c.fill(); c.restore();
+      V.neonPath(c, RUNE_VIO, 1.8, k, () => { for (let i = 0; i <= 6; i++) { const q = i * Math.PI / 3 + t * 0.5; c.lineTo(x + Math.cos(q) * r, y + Math.sin(q) * r); } });
+      for (let i = 0; i < 3; i++) { const q = t * 1.6 + i * TAU / 3, px = x + Math.cos(q) * r * 0.95, py = y + Math.sin(q) * r * 0.45, s = 4.5;
+        V.neonPath(c, RUNE_PALE, 1.4, k, () => { c.moveTo(px - s, py + s); c.lineTo(px, py - s); c.lineTo(px + s, py + s); c.moveTo(px - s * 0.5, py); c.lineTo(px + s * 0.5, py); }); }
+    }, { peak: 1, settle: 0.55, hold: 0.4 });
+    f.w = w; f.at = FX.now; return f;
+  }
+  // Mirror Aegis: a pane of rune-glass standing in front of the guard, light sliding across it
+  function runeguardMirror(ent, dur) {
+    OP.linger(dur, 'air', (c, k, t) => {
+      // (the pane faces the camera, narrowed as it turns side-on, so it never collapses to a line)
+      const a = ent.angle || 0, cx = ent.x + Math.cos(a) * 32, cy = ent.y + Math.sin(a) * 32 * 0.8 - 24, nx = 0.45 + 0.55 * Math.abs(Math.sin(a)), ny = Math.cos(a) * Math.sign(Math.sin(a) || 1) * 0.25, W = 26 * easeOut(Math.min(1, t / 0.15)), H = 28;
+      const pts = [[cx, cy - H], [cx + nx * W, cy + ny * W - H * 0.45], [cx + nx * W, cy + ny * W + H * 0.45], [cx, cy + H], [cx - nx * W, cy - ny * W + H * 0.45], [cx - nx * W, cy - ny * W - H * 0.45]];
+      const tr = () => { pts.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.closePath(); };
+      c.save(); c.globalCompositeOperation = 'lighter'; c.globalAlpha = 0.2 * k; c.fillStyle = RUNE_PALE; c.beginPath(); tr(); c.fill(); c.restore();
+      V.neonPath(c, RUNE_PALE, 2, k, tr);
+      V.neonPath(c, RUNE_VIO, 1.1, k * 0.7, () => { c.moveTo(cx, cy - H * 0.6); c.lineTo(cx, cy + H * 0.6); c.moveTo(cx - nx * W * 0.5, cy - ny * W * 0.5); c.lineTo(cx + nx * W * 0.5, cy + ny * W * 0.5); });
+      const s = (t * 0.9) % 1, sx = cx + nx * W * (s * 2 - 1), sy = cy + ny * W * (s * 2 - 1);
+      V.neonPath(c, '#ffffff', 1.4, k * 0.6 * Math.sin(s * Math.PI), () => { c.moveTo(sx, sy - H * 0.55); c.lineTo(sx, sy + H * 0.55); });
+    }, { peak: 1, settle: 0.6, hold: 0.4 });
+  }
+
+  // ---- Ranger: leaf green and hunter's gold
+  const RANG_GREEN = '#bfff9a', RANG_GOLD = '#ffe27a', RANG_AMBER = '#ff9d3d';
+  // an arrow's release: rings of air bursting off the bow across the shot (archer sheet: Quick Shot)
+  function rangerRelease(x, y, ang, col, s = 1) {
+    V.fx({ dur: 0.3, layer: 'air', draw: (c, p, t, e) => { const k = (1 - p) * e.a, R = (8 + 20 * easeOut(p)) * s;
+      c.save(); c.translate(x, y - 18); c.rotate(ang);
+      V.neonPath(c, col, 2 * s, k, () => c.ellipse(10 + p * 30 * s, 0, R * 0.32, R, 0, 0, TAU));
+      V.neonPath(c, '#ffffff', 1.2, k * 0.7, () => c.ellipse(4 + p * 14 * s, 0, R * 0.22, R * 0.65, 0, 0, TAU));
+      c.restore(); } });
+  }
+  // speed lines riding behind a shot from (sx, sy) to (tx, ty) for its flight
+  function rangerStreaks(sx, sy, tx, ty, dur, col, n = 4) {
+    const ang = Math.atan2(ty - sy, tx - sx), L = Math.hypot(tx - sx, ty - sy);
+    V.fx({ dur: dur + 0.12, layer: 'air', draw: (c, p, t, e) => {
+      const q = Math.min(1, t / dur), k = e.a * (t > dur ? 1 - (t - dur) / 0.12 : 1), hx = L * q - 10;
+      c.save(); c.translate(sx, sy - 18); c.rotate(ang);
+      for (let i = 0; i < n; i++) { const off = (i - (n - 1) / 2) * 4.5, len = 46 + (i % 2) * 26, h = hx - (i % 2) * 8; if (h <= 2) continue;
+        V.neonPath(c, i % 2 ? '#ffffff' : col, 1.2, k * 0.7, () => { c.moveTo(Math.max(0, h - len), off); c.lineTo(h, off); }); }
+      c.restore();
+    } });
+  }
+  // where an arrow bites: a dust puff, stone chips skittering
+  function rangerDust(x, y, s = 1) {
+    V.smoke(x, y, { n: Math.round(5 * s), r: 8, color: '#c8b898', size: 20 * s, a: 0.55, speed: 60 * s, life: 0.8 });
+    for (let i = 0; i < Math.round(5 * s); i++) { const a = Math.random() * TAU, sp = rnd(80, 200); V.spawn({ x, y, z: 10, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * 0.6, vz: rnd(60, 160), g: 600, bounce: true, life: rnd(0.4, 0.7), size: rnd(4, 6), color: '#d8d0c0', kind: 'shard', add: false, vr: rnd(-12, 12) }); }
+  }
+
+  // ---- Shadowblade: violet shadow and pale steel
+  const SHAD_VIO = '#9a4dff', SHAD_STEEL = '#e8e0ff', SHAD_INK = '#14081e';
+  // the rogue sheet's Swift Strike: two daggers' cuts crossing in an X at (x, y), violet and steel
+  function shadowX(x, y, ang, s = 1) {
+    for (const [i, side] of [[0, 1], [1, -1]]) { const a = ang + side * 0.8, L = 46 * s;
+      OP.later(i * 0.05, () => OP.thrust(x - Math.cos(a) * L, y - Math.sin(a) * L * 0.7, x + Math.cos(a) * L, y + Math.sin(a) * L * 0.7, { w: 8 * s, color: i ? '#d8d0ff' : SHAD_VIO, core: '#ffffff', ink: SHAD_INK, dur: 0.26, z: 22 })); }
+  }
+
+  // ---- Pyromancer: orange flame
+  // the fire sheet's Fireball impact: a pillow of fat flame puffs round a white-hot heart, swelling and burning out
+  function pyroPillow(x, y, r) {
+    const puffs = Array.from({ length: 9 }, (_, i) => ({ a: i * TAU / 9 + rnd(-0.2, 0.2), d: rnd(0.7, 1), s: rnd(0.8, 1.2) }));
+    V.fx({ dur: 0.55, layer: 'air', draw: (c, p, t, e) => {
+      const g = easeOut(Math.min(1, p / 0.25)), k = e.a * Math.pow(1 - p, 1.4);
+      for (const f of puffs) { const px = x + Math.cos(f.a) * r * f.d * g, py = y - 16 + Math.sin(f.a) * r * f.d * g * 0.6;
+        V.glowAt(c, px, py, 20 * f.s * (0.6 + 0.6 * g), '#ff6a1a', 0.9 * k); V.glowAt(c, px, py, 9 * f.s, '#ffd070', k); }
+      V.glowAt(c, x, y - 16, r * 0.9, '#fff0b0', k);
+    } });
+  }
+  // Combustion: a ring of flame round the mage for the burst (fire sheet: the burning ring), tongues licking up
+  function pyroFireRing(ent, dur) {
+    return OP.linger(dur, 'ground', (c, k, t) => {
+      const x = ent.x, y = ent.y + 2, R = 44;
+      V.glowAt(c, x, y, R * 1.25, '#ff5a1a', 0.3 * k); V.neonRing(c, x, y, R, '#ff6a1a', 2.4, k, 0.55);
+      c.save(); c.globalCompositeOperation = 'lighter';
+      for (let i = 0; i < 14; i++) { const a = i * TAU / 14 + t * 0.5, px = x + Math.cos(a) * R, py = y + Math.sin(a) * R * 0.55, h = (11 + 5 * Math.sin(t * 9 + i * 1.7)) * (0.7 + 0.3 * Math.sin(a + Math.PI)), w = 4.5, sw = Math.sin(t * 6 + i) * 2;
+        c.globalAlpha = 0.7 * k; c.fillStyle = i % 2 ? '#ff7a1a' : '#ffb040'; c.beginPath(); c.moveTo(px - w, py); c.quadraticCurveTo(px - w, py - h * 0.6, px + sw, py - h); c.quadraticCurveTo(px + w, py - h * 0.6, px + w, py); c.closePath(); c.fill(); }
+      c.restore();
+    }, { peak: 1, settle: 0.5, hold: 0.8, tick: (p, dt, e) => { if (!e.cut && Math.random() < 0.35) { const a = Math.random() * TAU; V.spawn({ x: ent.x + Math.cos(a) * 44, y: ent.y + 2 + Math.sin(a) * 24, z: 2, vz: rnd(50, 110), life: rnd(0.3, 0.5), size: rnd(6, 10), size1: 1, color: Math.random() < 0.5 ? '#ff6a1a' : '#ffb040' }); } } });
+  }
+
+  // ---- Cleric: dawn gold and petal pink
+  // (shared-fx colour pass: the Cleric's light is a paler white-gold, the Bastion keeps the warm gold)
+  const CLER_GOLD = '#fff0b0', CLER_PINK = '#ffd0e0', CLER_PALE = '#fff8dc';
+  // a Dawn Petal's mend over time on the ally for its 15s: a faint gold ring under them, a petal or a mote drifting off
+  // now and then, a small plus at each 3s tick
+  function clericHot(w, dur) {
+    OP.linger(dur, 'ground', (c, k, t) => { V.neonRing(c, w.x, w.y + 2, 24 + 2 * Math.sin(t * 3), CLER_GOLD, 1.6, k, 0.55); V.glowAt(c, w.x, w.y, 26, CLER_GOLD, 0.2 * k); },
+      { peak: 0.9, settle: 0.35, hold: 0.8, tick: (p, dt, e) => {
+        if (Math.random() < 0.05) { const pet = Math.random() < 0.4; V.spawn({ x: w.x + rnd(-14, 14), y: w.y + rnd(-4, 4), z: rnd(4, 20), vz: rnd(20, 40), vx: rnd(-8, 8), life: 1.2, size: pet ? 9 : 6, size1: pet ? 9 : 0, color: pet ? CLER_PINK : CLER_PALE, kind: pet ? 'petal' : 'glow', add: pet ? false : undefined, flutter: pet ? 4 : 0 }); }
+        e.n = e.n || 0; if (p * dur >= (e.n + 1) * 3) { e.n++; V.plus(w.x, w.y, { color: CLER_GOLD, n: 2 }); }
+      } });
+  }
 
   return {
     bastion: {
-      blade: c => { V.slash(c.x, c.y, c.ang, { r: 58, span: 2.1, color: '#9fc4ff', flip: Math.random() < 0.5, sparks: 4 }); c.later(0.08, () => V.hit(c.tx, c.ty, '#cfe0ff', 0.65)); },
-      // a glint on the sword, a radiant blade thrown, a golden starburst and a small seal where it lands
-      edge: c => { const h = ahead(c, 16); V.glint(h.x, h.y, { color: '#ffe08a', size: 26 }); V.missile(c.x, c.y, c.tx, c.ty, { style: 'blade', color: '#ffe08a', speed: 900, onHit: (x, y) => { V.spikeburst(x, y, { r: 44, n: 12, color: '#ffc840', core: '#fffbe0', ink: '#3a2a08', dur: 0.32 });
-        V.burst(x, y, { color: '#ffe9a0', color2: '#ffffff', n: 8, speed: 180, flash: false }); V.sigil(x, y, { r: 44, style: 'star4', color: '#ffd65a', dur: 0.6, spin: 3 }); } }); },
-      // a glint on the shield face, the shield up, a few sparks and a scuff of dust at the feet
-      brace: c => { const fx = c.x + Math.cos(c.ang) * 34, fy = c.y + Math.sin(c.ang) * 34; V.glint(fx, fy, { color: '#dbe9ff', size: 24 }); V.shield(c.ent, { shape: 'front', color: '#7fb2ff', dur: 1.2, r: 40 });
-        V.sparks(fx, fy, { color: '#cfe0ff', n: 4, angle: c.ang, spread: 0.7, speed: 200 }); V.smoke(c.x, c.y, { n: 3, color: '#c8c0b0', size: 16, a: 0.45, speed: 35 }); },
+      // Blade Chain, three different swings: Strike a quick steel cut, Riposte a flipped backhand that bites with a blue
+      // starburst, Judgment a glint on the blade, a great gold overhead arc and a gold seal stamped before the boss
+      blade: c => { const st = bastionStep(c.ent), f = st === 1 ? true : st === 2 ? false : Math.random() < 0.5, judg = st === 2, d = judg ? 0.07 : 0;
+        if (judg) { const h = ahead(c, 18); V.glint(h.x, h.y, { color: BAST_DAWN, size: 32, z: 34 }); }
+        c.later(d, () => { V.slash(c.x, c.y, c.ang, { r: [56, 62, 76][st], span: [1.9, 2.2, 2.7][st], color: judg ? '#ffe08a' : '#9fc4ff', flip: f, sparks: [3, 4, 6][st] });
+          OP.smear(c.x, c.y, c.ang, { r: [62, 70, 88][st], span: [1.9, 2.3, 2.9][st], w: [13, 16, 25][st], color: judg ? '#ffc840' : BAST_STEEL, core: judg ? '#fffbe0' : '#e8f2ff', ink: BAST_INK, dur: [0.24, 0.26, 0.34][st], flip: f, lines: judg ? 4 : 2 }); });
+        c.later(d + 0.08, () => {
+          if (st === 0) { V.hit(c.tx, c.ty, '#cfe0ff', 0.7); V.sparks(c.tx, c.ty, { color: '#e8f2ff', n: 6, angle: c.ang, spread: 0.8, speed: 320 }); return; }
+          if (st === 1) { V.hit(c.tx, c.ty, '#cfe0ff', 0.85); V.spikeburst(c.tx, c.ty, { r: 36, n: 10, color: BAST_STEEL, core: '#ffffff', ink: BAST_INK, dur: 0.26 }); V.sparks(c.tx, c.ty, { color: BAST_DAWN, n: 7, angle: c.ang, spread: 0.7, speed: 360 }); return; }
+          const m = between(c, 0.78);
+          V.flash(c.tx, c.ty - 16, 70, BAST_GOLD, 0.22); V.spikeburst(c.tx, c.ty, { r: 58, n: 14, color: '#ffc840', core: '#fffbe0', ink: '#3a2a08', dur: 0.36 });
+          V.sigil(m.x, m.y, { r: 46, style: 'star4', color: BAST_GOLD, dur: 0.9, spin: 2.5 }); V.shock(c.tx, c.ty, { r: 96, color: '#ffe08a', dur: 0.42, w: 6 });
+          V.burst(c.tx, c.ty, { color: BAST_DAWN, color2: '#ffffff', n: 10, speed: 220, kind: 'star', flash: false }); shake(3); }); },
+      // a glint on the sword, a big radiant blade thrown end over end with a gold wake, a golden starburst and a seal where it lands
+      edge: c => { const h = ahead(c, 16); V.glint(h.x, h.y, { color: '#ffe08a', size: 34, z: 26 }); V.flash(h.x, h.y - 20, 36, BAST_GOLD, 0.18);
+        V.missile(c.x, c.y, c.tx, c.ty, { style: 'blade', color: '#ffe08a', speed: 800, size: 1.9, onHit: (x, y) => { V.spikeburst(x, y, { r: 60, n: 14, color: '#ffc840', core: '#fffbe0', ink: '#3a2a08', dur: 0.36 });
+          V.hit(x, y, '#ffe9a0', 0.9); V.shock(x, y, { r: 92, color: '#ffe08a', dur: 0.4, w: 5 }); V.burst(x, y, { color: '#ffe9a0', color2: '#ffffff', n: 12, speed: 220, flash: false });
+          const m = { x: x + (c.x - x) * 0.25, y: y + (c.y - y) * 0.25 }; V.sigil(m.x, m.y, { r: 50, style: 'star4', color: BAST_GOLD, dur: 0.8, spin: 3 }); shake(2); } }); },
+      // Brace: a glint on the shield face, the tower shield set in front for the whole 3s guard (KIT_VFX.perfect flares
+      // it on a Perfect Block), sparks and a scuff of dust at the feet
+      brace: c => { const fx = c.x + Math.cos(c.ang) * 34, fy = c.y + Math.sin(c.ang) * 34; V.glint(fx, fy, { color: '#dbe9ff', size: 26 }); V.shield(c.ent, { shape: 'front', color: BAST_STEEL, dur: 0.4, r: 40 });
+        if (c.ent.bastionPlate) c.ent.bastionPlate.cut = true;
+        c.ent.bastionPlate = bastionPlate(c.ent, 3);
+        V.sparks(fx, fy, { color: '#cfe0ff', n: 6, angle: c.ang, spread: 0.7, speed: 220 }); V.smoke(c.x, c.y, { n: 4, color: '#c8c0b0', size: 18, a: 0.45, speed: 40 }); },
       // a shaft of light slams down (Divine Leap): a golden starburst, a seal on the floor, stones kicked up, then the aura
       oath: c => { V.lightfall(c.x, c.y, { color: '#ffe08a', r: 30, h: 240, dur: 0.8, feathers: 0 }); V.aura(c.ent, { color: '#ffd65a', dur: 15, r: 30, rate: 0.12 });
         c.later(0.2, () => { V.ink(c.x, c.y, { r: 60, dur: 1.4 }); V.sigil(c.x, c.y, { r: 60, style: 'star4', color: '#ffd65a', dur: 1.4, spin: 1.5 }); V.spikeburst(c.x, c.y, { r: 50, n: 12, color: '#ffd65a', core: '#fffbe0', ink: '#4a3408', dur: 0.36, z: 4 }); V.debris(c.x, c.y, { n: 6, color: '#8a7a68' }); shake(3); }); },
-      // a glint where the banner goes in, light falling onto it, and a great gold circle on the floor
-      banner: c => { V.glint(c.x, c.y, { color: '#ffe08a', size: 30, z: 60 }); V.ink(c.x, c.y, { r: 150, dur: 3 }); V.sigil(c.x, c.y, { r: 150, style: 'star5', color: '#f2c84b', dur: 3, spin: 0.4 });
-        c.later(0.1, () => { V.lightfall(c.x, c.y, { color: '#ffe08a', r: 26, h: 260, dur: 1.2, feathers: 4 }); V.shock(c.x, c.y, { r: 160, color: '#ffe08a', dur: 0.6, w: 6 }); V.debris(c.x, c.y, { n: 5, color: '#8a7a68', speed: 0.7 }); }); },
-      // a glint, then a blue dome over a rune circle, sparkles scattering when it lifts
-      bulwark: c => { V.glint(c.x, c.y, { color: '#cfe0ff', size: 30, z: 40 }); V.ink(c.x, c.y, { r: 62, dur: 3, flat: 0.5, follow: c.ent }); V.dome(c.ent, { color: '#8fc0ff', r: 48, dur: 3 });
-        V.shock(c.x, c.y, { r: 110, color: '#9fc4ff', dur: 0.5, w: 7 }); V.burst(c.x, c.y - 20, { color: '#cfe0ff', n: 12, speed: 220, kind: 'star' }); },
+      // Rally Banner: a glint and a shaft of light where it goes in, then the banner itself stands behind the bastion for
+      // its 12s, a small seal at its foot and a faint gold ring round it (the old full-strength floor star is gone)
+      banner: c => { const a = c.ang || 0, bx = c.x - Math.cos(a) * 24, by = c.y - Math.sin(a) * 14 - 4;
+        V.glint(bx, by, { color: '#ffe08a', size: 30, z: 80 }); V.lightfall(bx, by, { color: '#ffe08a', r: 22, h: 260, dur: 0.8, feathers: 3 });
+        c.later(0.12, () => { bastionBanner(bx, by, 12); OP.rim(bx, by, 150, BAST_GOLD, 12, { settle: 0.16, ticks: 20, spin: 0.08 });
+          V.sigil(bx, by, { r: 56, style: 'star5', color: '#f2c84b', dur: 1.1, spin: 1 }); V.shock(bx, by, { r: 160, color: '#ffe08a', dur: 0.6, w: 6 });
+          V.debris(bx, by, { n: 6, color: '#8a7a68', speed: 0.7 }); V.smoke(bx, by, { n: 4, color: '#c8c0b0', size: 22, a: 0.45, speed: 45 }); shake(3); }); },
+      // Bulwark: a glint, a blue dome flaring up, then a faint dome of hex plates that holds over the bastion for the 10s
+      bulwark: c => { V.glint(c.x, c.y, { color: '#cfe0ff', size: 30, z: 40 }); V.ink(c.x, c.y, { r: 62, dur: 1.2, flat: 0.5, follow: c.ent }); V.dome(c.ent, { color: '#8fc0ff', r: 48, dur: 1.1 });
+        bastionDome(c.ent, 10, '#8fc0ff');
+        V.shock(c.x, c.y, { r: 110, color: '#9fc4ff', dur: 0.5, w: 7 }); V.burst(c.x, c.y - 20, { color: '#cfe0ff', n: 12, speed: 220, kind: 'star' }); shake(2); },
       // Sentinel: the tower shield slams forward, a blue shockwave off its face, dust kicked up
       bash: c => {
         const fx = c.x + Math.cos(c.ang) * 34, fy = c.y + Math.sin(c.ang) * 34;
         V.shield(c.ent, { shape: 'front', color: '#bcd8ff', dur: 0.5, r: 42 });
         c.later(0.06, () => { V.spawn({ x: fx, y: fy, z: 18, life: 0.25, size: 70, size1: 26, color: '#dbe9ff', kind: 'star', vr: 4 }); V.shock(fx, fy, { r: 80, color: '#7fb2ff', dur: 0.35, w: 6 });
-          V.sparks(fx, fy, { color: '#ffffff', n: 8, angle: c.ang, spread: 0.8, speed: 360 }); V.smoke(fx, fy, { n: 4, color: '#c8c0b0', size: 20, a: 0.5, speed: 50 }); FX.shake = Math.max(FX.shake, 3); });
+          V.sparks(fx, fy, { color: '#ffffff', n: 8, angle: c.ang, spread: 0.8, speed: 360 }); V.smoke(fx, fy, { n: 4, color: '#c8c0b0', size: 20, a: 0.5, speed: 50 }); vfxShake(3); });
       },
       // Crusader: a consecrated dome of dawn light over a rune circle
-      zeal: c => { V.dome(c.ent, { color: '#ffd65a', r: 46, dur: 2.6 }); V.sigil(c.x, c.y, { r: 70, style: 'star4', color: '#ffe27a', dur: 1, spin: 2 }); V.burst(c.x, c.y - 30, { color: '#fff2b0', color2: '#ffffff', n: 14, speed: 200, kind: 'star' }); },
+      // (the dome of dawn flares, then a faint gold dome of plates holds for the guard's 10s)
+      zeal: c => { V.glint(c.x, c.y - 30, { color: BAST_DAWN, size: 30, z: 40 }); V.dome(c.ent, { color: '#ffd65a', r: 46, dur: 1.2 }); bastionDome(c.ent, 10, '#ffd65a');
+        V.sigil(c.x, c.y, { r: 70, style: 'star4', color: '#ffe27a', dur: 1, spin: 2 }); V.shock(c.x, c.y, { r: 110, color: BAST_DAWN, dur: 0.5, w: 6 }); V.burst(c.x, c.y - 30, { color: '#fff2b0', color2: '#ffffff', n: 14, speed: 200, kind: 'star' }); shake(2); },
     },
     bloodreaver: {
-      hack: c => { V.slash(c.x, c.y, c.ang, { r: 66, span: 2.4, color: '#ff3a3a', w: 0.55, flip: Math.random() < 0.5 }); c.later(0.08, () => { V.splash(c.tx, c.ty, { n: 6 }); V.hit(c.tx, c.ty, '#ff5a5a', 0.6); }); },
+      // Hack & Maul (heavy axe): a wide crimson-iron arc, a grit-and-spark bite and a small crack in the floor; Maul, the
+      // second swing, comes back the other way, wider, and shakes
+      hack: c => { const maul = reaverStep(c.ent) === 1, f = maul ? true : Math.random() < 0.5, R = maul ? 86 : 76;
+        V.slash(c.x, c.y, c.ang, { r: R - 10, span: 2.4, color: '#ff3a3a', w: 0.55, flip: f });
+        OP.smear(c.x, c.y, c.ang, { r: R, span: maul ? 2.9 : 2.6, w: maul ? 28 : 22, color: REAV_RED, core: '#f0dcd4', ink: REAV_INK, dur: maul ? 0.34 : 0.3, flip: f, lines: 3 });
+        c.later(0.1, () => { const m = between(c, 0.72); V.splash(c.tx, c.ty, { n: maul ? 10 : 6 }); V.hit(c.tx, c.ty, '#ff6a5a', maul ? 0.9 : 0.7);
+          V.spikeburst(c.tx, c.ty, { r: maul ? 46 : 36, n: 10, color: '#c0202a', core: '#ffe0c0', ink: REAV_INK, dur: 0.28 });
+          V.sparks(c.tx, c.ty, { color: '#ffb070', n: maul ? 10 : 6, angle: c.ang, spread: 0.9, speed: 340 }); V.sparks(c.tx, c.ty, { color: '#e8e0dc', n: 4, speed: 260 });
+          V.debris(m.x, m.y, { n: maul ? 5 : 3, color: '#6a5048', speed: 0.6, up: 0.6 }); V.decal(m.x, m.y, { style: 'crack', r: maul ? 34 : 24, dur: 1.4, a: 0.5, seed: Math.random() * 6 }); if (maul) shake(3); }); },
       // a heavy cut, blood streaming back into the reaver, and a splatter left on the floor
       drain: c => { V.slash(c.x, c.y, c.ang, { r: 74, span: 2.6, color: '#ff1a3a', w: 0.6, dur: 0.38 }); c.later(0.1, () => { const m = between(c, 0.6); V.splash(c.tx, c.ty, { n: 10, speed: 1.3 }); V.hit(c.tx, c.ty, '#ff2a4a', 1); V.stream(c.tx, c.ty, c.ent, { color: '#ff2a4a', n: 10 });
         V.puddle(m.x, m.y, { r: 22, color: '#a01028', dark: '#3a0610', dur: 1.8, bubbles: false, fumes: false }); }); c.later(0.5, () => V.swirl(c.ent.x, c.ent.y, { r: 44, color: '#ff2a4a', dur: 0.6, follow: c.ent, inward: true })); },
-      letting: c => { V.slash(c.x, c.y, c.ang + 0.4, { r: 50, span: 1.3, color: '#ff6a6a', dur: 0.22 }); c.later(0.07, () => V.slash(c.x, c.y, c.ang - 0.4, { r: 50, span: 1.3, color: '#ff6a6a', dur: 0.22, flip: true }));
-        c.later(0.12, () => { V.splash(c.tx, c.ty, { n: 5 }); V.spikeburst(c.tx, c.ty, { r: 32, n: 10, color: '#d0203a', core: '#ffd0d0', ink: '#2a0408', dur: 0.26 }); }); },
+      // Bloodletting: two quick crossing cuts, a crimson starburst, a spray of blood and a few drops left on the floor
+      letting: c => { for (const [i, s] of [[0, 1], [1, -1]]) c.later(i * 0.07, () => { V.slash(c.x, c.y, c.ang + 0.4 * s, { r: 56, span: 1.4, color: '#ff6a6a', dur: 0.22, flip: s < 0 });
+          OP.smear(c.x, c.y, c.ang + 0.35 * s, { r: 66, span: 1.7, w: 15, color: '#e02a3a', core: '#ffe0e0', ink: REAV_INK, dur: 0.24, flip: s < 0, lines: 2 }); });
+        c.later(0.14, () => { const m = between(c, 0.7); V.splash(c.tx, c.ty, { n: 12, speed: 1.2 }); V.hit(c.tx, c.ty, '#ff5a5a', 0.75);
+          V.spikeburst(c.tx, c.ty, { r: 48, n: 12, color: '#d0203a', core: '#ffd0d0', ink: '#2a0408', dur: 0.3 }); V.puddle(m.x, m.y, { r: 16, color: '#a01028', dark: '#3a0610', dur: 1.4, bubbles: false, fumes: false }); }); },
       // power gathers, then a ground slam: a starburst, the floor cracks with glowing lava, rocks fly; the flame aura stays on
       frenzy: c => { V.charge(c.x, c.y, { color: '#ff5a2a', r: 50, n: 8, dur: 0.25, follow: c.ent }); V.aura(c.ent, { color: '#ff2a1a', style: 'flame', dur: 12, r: 30, rate: 0.3 });
-        c.later(0.18, () => { V.crater(c.ent.x, c.ent.y, { r: 64, color: '#ff4a1a', dur: 2.6, flames: 4, a: 0.55 }); V.spikeburst(c.ent.x, c.ent.y, { r: 60, n: 14, color: '#ff3a1a', core: '#ffd070', ink: '#3a0806', dur: 0.36, z: 6 });
-          V.flare(c.ent.x, c.ent.y, { color: '#ff3a1a', n: 12, r: 22 }); V.debris(c.ent.x, c.ent.y, { n: 8, hot: true, color: '#5a3a2a' }); V.shock(c.ent.x, c.ent.y, { r: 120, color: '#ff3a2a', dur: 0.45, w: 8 }); shake(5); }); },
+        c.later(0.18, () => { const x = c.ent.x, y = c.ent.y; reaverCracks(x, y, 120, 4); V.crater(x, y, { r: 72, color: '#ff4a1a', dur: 3.2, flames: 6, a: 0.7, cracks: 10 }); V.spikeburst(x, y, { r: 70, n: 16, color: '#ff3a1a', core: '#ffd070', ink: '#3a0806', dur: 0.4, z: 6 });
+          V.flash(x, y - 16, 90, '#ff6a2a', 0.2); V.flare(x, y, { color: '#ff3a1a', n: 18, r: 26 }); V.debris(x, y, { n: 10, hot: true, color: '#5a3a2a' }); V.shock(x, y, { r: 140, color: '#ff3a2a', dur: 0.5, w: 8 });
+          V.smoke(x, y, { n: 5, r: 40, color: '#5a3a2a', size: 30, a: 0.4, speed: 50, life: 1.4 }); shake(6); }); },
       // a roar: a ring of red spikes bursts across the floor, shockwaves roll out, a dust cloud and embers settle
       warcry: c => { V.glint(c.x, c.y, { color: '#ffb08a', size: 26, z: 40 });
         c.later(0.1, () => { V.spikeburst(c.x, c.y, { r: 120, n: 22, hole: 0.62, color: '#ff4a1a', core: '#ffb070', ink: '#3a0806', fill: '#8a1a0a', dur: 0.55, layer: 'ground', z: 0, flat: 0.6 });
           for (let i = 0; i < 2; i++) V.shock(c.x, c.y, { r: 160 + i * 50, color: '#ff8a5a', dur: 0.6, w: 6 - i * 2, delay: i * 0.12 }); shake(4); });
+        // (polish) the roar's blood shield flashes up on the reaver and, on each player's screen, on themselves (the party
+        // shield covers everyone; FX.me is the one hero every client has to hand)
+        c.later(0.3, () => { reaverBloodShield(c.ent); if (typeof FX !== 'undefined' && FX.me && FX.me !== c.ent && FX.me.x != null) reaverBloodShield(FX.me); });
         c.later(0.45, () => { V.smoke(c.x, c.y, { n: 7, r: 70, color: '#8a5a40', size: 34, a: 0.35, speed: 40, life: 1.8 }); V.motes(c.x, c.y, { color: '#ff8a3a', n: 8, r: 90, rise: 0.5, life: 1.4 }); }); },
       // a blood-red rune circle that stays under the reaver, a red dome flaring up, shadows rising
       undying: c => { V.ink(c.x, c.y, { r: 60, dur: 8, follow: c.ent, a: 0.3 }); V.sigil(c.x, c.y, { r: 60, style: 'runes', color: '#c01a2a', dur: 8, spin: -0.8, follow: c.ent }); V.aura(c.ent, { color: '#8a0010', style: 'shadow', dur: 8, r: 30, rate: 0.3 });
@@ -61,15 +401,23 @@ const ABILITY_VFX = (() => {
       rampage: c => {
         V.slash(c.x, c.y, c.ang + 0.3, { r: 80, span: 2.8, color: '#ff7a2a', w: 0.7, dur: 0.34 });
         c.later(0.1, () => V.slash(c.x, c.y, c.ang - 0.3, { r: 84, span: 2.8, color: '#ffb050', w: 0.6, dur: 0.34, flip: true }));
-        c.later(0.16, () => { V.flare(c.tx, c.ty, { n: 16, r: 18, color: '#ff5a1a' }); V.hit(c.tx, c.ty, '#ffb060', 1.2); V.decal(c.tx, c.ty, { style: 'crack', r: 50, dur: 2.5, a: 0.6, seed: Math.random() * 6 }); V.decal(c.tx, c.ty, { r: 36, embers: true, dur: 2 }); FX.shake = Math.max(FX.shake, 4); });
+        c.later(0.16, () => { V.flare(c.tx, c.ty, { n: 16, r: 18, color: '#ff5a1a' }); V.hit(c.tx, c.ty, '#ffb060', 1.2); V.decal(c.tx, c.ty, { style: 'crack', r: 50, dur: 2.5, a: 0.6, seed: Math.random() * 6 }); V.decal(c.tx, c.ty, { r: 36, embers: true, dur: 2 }); vfxShake(4); });
       },
       // Hemomancer: a spear of liquid blood, droplets trailing, a splash where it strikes
       lance: c => V.missile(c.x, c.y, c.tx, c.ty, { style: 'blade', color: '#ff2d4b', speed: 1000, onHit: (x, y) => { V.splash(x, y, { n: 12, speed: 1.2 }); V.hit(x, y, '#ff5a6a', 0.9); V.spawn({ x, y, z: 16, life: 0.3, size: 54, size1: 18, color: '#c0204a', kind: 'star', vr: 6 }); } }),
     },
     runeguard: {
-      strike: c => c.later(0.06, () => { V.hit(c.tx, c.ty, '#b18cff', 0.75); V.sigil(c.tx, c.ty, { r: 26, style: 'runes', color: '#c8a8ff', dur: 0.4, spin: 6 }); }),
-      // a rune circle turns under the guard, the hex ward closes over, rune sparks scatter
-      ward: c => { const w = c.tent || c.ent; V.sigil(w.x, w.y, { r: 40, style: 'runes', color: '#b18cff', dur: 0.7, spin: 4, follow: w }); V.shield(w, { shape: 'hex', color: '#a88cff', dur: 8, r: 40 }); V.burst(w.x, w.y - 20, { color: '#d8c4ff', n: 8, speed: 140, kind: 'star', flash: false }); },
+      // Rune Strike: the gauntlet glows, the fist drives a violet lance of force in, a standing rune-shield flashes where
+      // it lands and a rune circle turns before the boss
+      strike: c => { const h = ahead(c, 14); V.glint(h.x, h.y, { color: RUNE_PALE, size: 24, z: 18 }); V.spawn({ x: h.x, y: h.y, z: 18, life: 0.18, size: 26, size1: 8, color: RUNE_VIO });
+        c.later(0.04, () => OP.thrust(c.x, c.y, c.tx, c.ty, { w: 11, color: RUNE_DEEP, core: '#f0e8ff', ink: RUNE_INK, dur: 0.22, z: 18 }));
+        c.later(0.1, () => { const p = between(c, 0.72), m = between(c, 0.82); V.hit(c.tx, c.ty, RUNE_VIO, 0.85); V.spikeburst(c.tx, c.ty, { r: 36, n: 8, color: RUNE_DEEP, core: '#f0e8ff', ink: RUNE_INK, dur: 0.24 });
+          V.sigil(p.x, p.y - 24, { r: 26, style: 'hex', color: RUNE_PALE, dur: 0.36, spin: 4, flat: 1, layer: 'air' }); V.sigil(m.x, m.y, { r: 42, style: 'runes', color: '#c8a8ff', dur: 0.55, spin: 6 }); }); },
+      // a rune circle turns under the guard, the hex ward closes over and holds as rune plates turning round the holder
+      // until it ends (KIT_VFX.wardBlast breaks it with a rune burst sized by what it soaked)
+      ward: c => { const w = c.tent || c.ent; V.sigil(w.x, w.y, { r: 40, style: 'runes', color: '#b18cff', dur: 0.7, spin: 4, follow: w }); V.shield(w, { shape: 'hex', color: '#a88cff', dur: 0.6, r: 40 }); V.burst(w.x, w.y - 20, { color: '#d8c4ff', n: 8, speed: 140, kind: 'star', flash: false });
+        if (c.ent.rgWard) c.ent.rgWard.cut = true;
+        c.ent.rgWard = runeguardWard(w, 8); },
       // a glyph spins up on the target, then rune crystals erupt in a violet starburst and leave the floor cracked
       glyph: c => { V.ink(c.tx, c.ty, { r: 64, dur: 0.5 }); V.sigil(c.tx, c.ty, { r: 64, style: 'runes', color: '#9a6bff', dur: 0.5, spin: 8 });
         c.later(0.4, () => { V.crystals(c.tx, c.ty, { color: '#b28cff', n: 7, r: 46, h: 58 }); V.spikeburst(c.tx, c.ty, { r: 50, n: 12, color: '#9a6bff', core: '#f0e8ff', ink: '#1e0e3a', dur: 0.32 }); V.decal(c.tx, c.ty, { style: 'crack', r: 50, dur: 1.8, a: 0.55, seed: Math.random() * 6 }); shake(3); }); },
@@ -78,10 +426,15 @@ const ABILITY_VFX = (() => {
         for (let i = 0; i < 4; i++) c.later(i * 0.12, () => { const a = Math.random() * Math.PI * 2; V.lightning(c.ent.x, c.ent.y, c.ent.x + Math.cos(a) * 60, c.ent.y + Math.sin(a) * 40, { color: '#d0b8ff', jag: 10 }); });
         c.later(0.3, () => V.spikeburst(c.ent.x, c.ent.y, { r: 46, n: 12, color: '#a070ff', core: '#f0e8ff', ink: '#1e0e3a', dur: 0.32, z: 20 })); c.later(1, () => V.motes(c.ent.x, c.ent.y, { color: '#c8a8ff', n: 8, r: 34 })); },
       // a great rune circle, a pillar of light, and a ring of rune stones bursting up round its edge
-      sanctum: c => { V.glint(c.x, c.y, { color: '#e0d4ff', size: 30, z: 40 }); V.ink(c.x, c.y, { r: 150, dur: 3 }); V.sigil(c.x, c.y, { r: 150, style: 'runes', color: '#9f7aff', dur: 3, spin: 0.5 }); V.pillar(c.x, c.y, { r: 50, h: 160, color: '#b8a0ff', dur: 1.2 });
-        c.later(0.15, () => { for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3 + 0.5; V.crystals(c.x + Math.cos(a) * 140, c.y + Math.sin(a) * 109, { color: '#b8a0ff', n: 3, r: 14, h: 40, dur: 2.2 }); } }); },
-      // a glint on the mirror, a crystal plane in front, shards falling away
-      mirror: c => { const fx = c.x + Math.cos(c.ang) * 30, fy = c.y + Math.sin(c.ang) * 30; V.glint(fx, fy, { color: '#ffffff', size: 30 }); V.shield(c.ent, { shape: 'front', color: '#e0d4ff', dur: 3, r: 44 }); V.crystals(fx, fy, { color: '#e8e0ff', n: 5, r: 18, h: 40, dur: 0.6 }); },
+      // (the great circle flares for a moment, then a faint sanctuary rim of runes holds there for the buff's 10s)
+      sanctum: c => { V.glint(c.x, c.y, { color: '#e0d4ff', size: 30, z: 40 }); V.ink(c.x, c.y, { r: 150, dur: 0.7, a: 0.25 }); V.sigil(c.x, c.y, { r: 150, style: 'runes', color: '#9f7aff', dur: 0.7, spin: 0.5 }); V.pillar(c.x, c.y, { r: 50, h: 160, color: '#b8a0ff', dur: 1.2 });
+        OP.rim(c.x, c.y, 150, '#9f7aff', 10, { style: 'runes', settle: 0.22, ticks: 24, spin: 0.12 }); V.shock(c.x, c.y, { r: 170, color: RUNE_PALE, dur: 0.55, w: 5 });
+        c.later(0.15, () => { for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3 + 0.5; V.crystals(c.x + Math.cos(a) * 140, c.y + Math.sin(a) * 109, { color: '#b8a0ff', n: 3, r: 14, h: 40, dur: 1.6 }); } }); },
+      // a glint on the mirror, a pane of rune-glass standing in front for the 3s hold, light sliding across it, shards
+      // falling away when it goes
+      mirror: c => { const fx = c.x + Math.cos(c.ang) * 30, fy = c.y + Math.sin(c.ang) * 30; V.glint(fx, fy, { color: '#ffffff', size: 34 }); V.shield(c.ent, { shape: 'front', color: '#e0d4ff', dur: 0.5, r: 44 });
+        runeguardMirror(c.ent, 3); V.crystals(fx, fy, { color: '#e8e0ff', n: 5, r: 18, h: 40, dur: 0.6 }); V.sparks(fx, fy - 20, { color: RUNE_PALE, n: 6, speed: 200 });
+        c.later(2.9, () => { const e = c.ent, a = e.angle || 0; V.crystals(e.x + Math.cos(a) * 32, e.y + Math.sin(a) * 26, { color: '#e8e0ff', n: 4, r: 16, h: 30, dur: 0.5 }); }); },
       // Runeblade: a rune-etched sword cut with a lavender trail (Carve, the second hit, cuts wider)
       cut: c => { const carve = Math.random() < 0.5; V.slash(c.x, c.y, c.ang, { r: carve ? 64 : 54, span: carve ? 2.2 : 1.6, color: '#c58cff', w: 0.5, dur: 0.24, flip: carve });
         c.later(0.07, () => { V.hit(c.tx, c.ty, '#e0c8ff', 0.7); V.sigil(c.tx, c.ty, { r: 22, style: 'runes', color: '#d8b8ff', dur: 0.35, spin: 8 }); }); },
@@ -89,49 +442,114 @@ const ABILITY_VFX = (() => {
       cleave: c => {
         V.slash(c.x, c.y, c.ang, { r: 76, span: 2.8, color: '#e0b8ff', w: 0.65, dur: 0.32 });
         c.later(0.12, () => { V.sigil(c.tx, c.ty - 30, { r: 34, style: 'runes', color: '#b070ff', dur: 1.6, spin: 1.5, flat: 1, layer: 'air' }); V.burst(c.tx, c.ty - 20, { color: '#d8c4ff', n: 14, speed: 220 });
-          for (let i = 0; i < 8; i++) V.spawn({ x: c.tx + (Math.random() - 0.5) * 40, y: c.ty, z: 20, vz: 40 + Math.random() * 50, life: 1.2, size: 7, size1: 0, color: '#c58cff' }); FX.shake = Math.max(FX.shake, 3); });
+          // (polish) the rune keeps burning, faint, over the target for the burn's 12s, an ember dropping off it now and then
+          const rx = c.tx, ry = c.ty - 30;
+          OP.linger(12, 'air', (cc, k, t) => { if (t < 1.3) return; const kk = k * Math.min(1, (t - 1.3) / 0.4), fl = 0.8 + 0.2 * Math.sin(t * 7);
+            V.glowAt(cc, rx, ry, 26, '#b070ff', 0.35 * kk * fl); V.neonRing(cc, rx, ry, 20, '#b070ff', 1.4, kk * fl, 1);
+            V.neonPath(cc, RUNE_PALE, 1.5, kk * fl, () => { cc.moveTo(rx - 7, ry + 8); cc.lineTo(rx, ry - 9); cc.lineTo(rx + 7, ry + 8); cc.moveTo(rx - 4, ry + 1); cc.lineTo(rx + 4, ry + 1); }); },
+            { peak: 0.6, settle: 0.6, hold: 1, tick: () => { if (Math.random() < 0.04) V.spawn({ x: rx + rnd(-10, 10), y: c.ty, z: 30, vz: -20, life: 0.7, size: 5, size1: 0, color: '#c58cff' }); } });
+          for (let i = 0; i < 8; i++) V.spawn({ x: c.tx + (Math.random() - 0.5) * 40, y: c.ty, z: 20, vz: 40 + Math.random() * 50, life: 1.2, size: 7, size1: 0, color: '#c58cff' }); vfxShake(3); });
       },
     },
     ranger: {
       // a glint on the bow, the arrow, a puff of dust where it bites
-      quick: c => { const b = ahead(c, 16); V.glint(b.x, b.y, { color: '#e8ffb0', size: 16 }); V.missile(c.x, c.y, c.tx, c.ty, { style: 'arrow', color: '#bfff9a', speed: 1300, onHit: (x, y) => { V.hit(x, y, '#d8ffc0', 0.4); V.smoke(x, y, { n: 2, color: '#c8b898', size: 14, a: 0.5, speed: 40, life: 0.6 }); } }); },
-      // a golden glint on the drawn bow, the arrow wrapped in spirals, a little whirlwind where it lands
-      pierce: c => { const b = ahead(c, 18); V.glint(b.x, b.y, { color: '#ffe27a', size: 30 }); V.missile(c.x, c.y, c.tx, c.ty, { style: 'helix', color: '#7dffb0', speed: 1500, size: 1.2, onHit: (x, y) => { V.hit(x, y, '#b0ffd0', 0.9); V.tornado(x, y, { color: '#e8f4ff', h: 70, r: 22, dur: 0.6 }); V.smoke(x, y, { n: 3, color: '#d8d0c0', size: 18, a: 0.45, speed: 50 }); } }); },
-      // a target ring, a volley dropping in, and the arrows left standing in the ground
-      rapid: c => V.volley(c.tx, c.ty, { n: 10, r: 52, color: '#bfff9a', wind: 0.18, stay: 1.8 }),
+      // (archer sheet, Quick Shot) a glint on the bow, rings of air bursting off it, a big arrow with speed lines, and a
+      // puff of dust and chips where it bites. Under Barrage (its marker on the hero) three arrows go, fanned
+      quick: c => { const b = ahead(c, 16), ang = Math.atan2(c.ty - c.y, c.tx - c.x), nx = -Math.sin(ang), ny = Math.cos(ang); V.glint(b.x, b.y, { color: '#e8ffb0', size: 24 }); rangerRelease(b.x, b.y, ang, RANG_GREEN);
+        const fire = (dl, off) => c.later(dl, () => { const tx = c.tx + nx * off, ty = c.ty + ny * off * 0.7, dur = Math.hypot(tx - c.x, ty - c.y) / 1300;
+          rangerStreaks(c.x, c.y, tx, ty, dur, RANG_GREEN, 3);
+          V.missile(c.x, c.y, tx, ty, { style: 'arrow', color: RANG_GREEN, speed: 1300, size: 1.6, onHit: (x, y) => { V.hit(x, y, '#d8ffc0', 0.6); rangerDust(x, y); } }); });
+        const bar = c.ent.rangerBarrage;
+        if (bar && !bar.cut && FX.now - bar.at > 0.3) { bar.cut = true; c.ent.rangerBarrage = null; [-12, 0, 12].forEach((o, i) => fire(i * 0.07, o)); c.later(0.07, () => rangerRelease(b.x, b.y, ang, RANG_GOLD, 1.3)); }
+        else fire(0, 0); },
+      // a golden glint on the drawn bow, the arrow wrapped in big spirals that carries on through the boss, a whirlwind
+      // where it passes, and dust where it finally drops
+      pierce: c => { const b = ahead(c, 18), ang = Math.atan2(c.ty - c.y, c.tx - c.x), d = Math.hypot(c.tx - c.x, c.ty - c.y), ex = c.tx + Math.cos(ang) * 170, ey = c.ty + Math.sin(ang) * 170;
+        V.glint(b.x, b.y, { color: '#ffe27a', size: 34 }); rangerRelease(b.x, b.y, ang, RANG_GOLD, 1.3);
+        rangerStreaks(c.x, c.y, ex, ey, (d + 170) / 1500, '#7dffb0', 4);
+        V.missile(c.x, c.y, ex, ey, { style: 'helix', color: '#7dffb0', speed: 1500, size: 1.8, onHit: (x, y) => { V.smoke(x, y, { n: 3, color: '#d8d0c0', size: 16, a: 0.4, speed: 40 }); V.hit(x, y, '#b0ffd0', 0.35); } });
+        c.later(d / 1500, () => { V.hit(c.tx, c.ty, '#b0ffd0', 1); V.tornado(c.tx, c.ty, { color: '#e8f4ff', h: 92, r: 28, dur: 0.7 }); V.spikeburst(c.tx, c.ty, { r: 40, n: 10, color: '#7dffb0', core: '#ffffff', ink: '#0a2a14', dur: 0.28, z: 20 });
+          V.sparks(c.tx, c.ty, { color: '#e8ffd0', n: 8, angle: ang, spread: 0.5, speed: 420 }); rangerDust(c.tx, c.ty, 0.8); }); },
+      // a green target ring winds up in front of the boss (not under its sprite), the volley drops in, arrows left standing
+      rapid: c => { const m = between(c, 0.72); V.glint(m.x, m.y, { color: RANG_GREEN, size: 24, z: 6 }); V.volley(m.x, m.y, { n: 12, r: 60, color: RANG_GREEN, wind: 0.32, stay: 1.8 }); },
       // a hunter's reticle on the boss with golden starbursts popping round it
       mark: c => { V.ink(c.tx, c.ty, { r: 70, dur: 1.4 }); V.sigil(c.tx, c.ty, { r: 70, style: 'star4', color: '#ff9d3d', dur: 1.4, spin: 2 });
         for (let i = 0; i < 4; i++) c.later(0.2 + i * 0.08, () => { const a = i * Math.PI / 2 + 0.6; V.spikeburst(c.tx + Math.cos(a) * 34, c.ty + Math.sin(a) * 20, { r: 22, n: 8, color: '#ffb040', core: '#fffbe0', ink: '#4a2a08', dur: 0.3, z: 30 }); });
-        c.later(0.3, () => V.burst(c.tx, c.ty - 40, { color: '#ffb060', n: 8, speed: 120, flash: false })); },
-      // a leafy dome over the ranger, leaves whirling out, and leaves drifting down after
-      cloak: c => { V.dome(c.ent, { color: '#8fdf7a', r: 50, dur: 1.8 }); for (let i = 0; i < 12; i++) V.spawn({ x: c.x, y: c.y, z: 10 + Math.random() * 20, life: 1.2, size: 12, color: '#5fbf4a', kind: 'leaf', add: false, vr: 6, orbit: { x: c.x, y: c.y, a: i * 0.52, r: 20, w: 5, dr: 90, flat: 0.6 } });
-        V.shock(c.x, c.y, { r: 120, color: '#8fdf7a', dur: 0.6 }); c.later(1.6, () => V.motes(c.ent.x, c.ent.y, { kind: 'leaf', color: '#6fbf5a', n: 8, r: 50, rise: 0.4 })); },
-      // a glint, power spiralling into the bow over a small circle, then the aura
-      barrage: c => { V.glint(c.x, c.y, { color: '#ffe27a', size: 30, z: 30 }); V.charge(c.ent.x, c.ent.y, { color: '#d8ff9a', r: 50, follow: c.ent }); V.sigil(c.x, c.y, { r: 40, style: 'star4', color: '#c8ff7a', dur: 0.8, spin: 4, follow: c.ent }); V.aura(c.ent, { color: '#c8ff7a', dur: 2, r: 28, rate: 0.4 }); },
+        c.later(0.3, () => V.burst(c.tx, c.ty - 40, { color: '#ffb060', n: 8, speed: 120, flash: false }));
+        // (polish) the reticle stays on the boss for the debuff's 15s, turning slowly, its four ticks closing in
+        const rx = c.tx, ry = c.ty - 40;
+        OP.linger(15, 'air', (cc, k, t) => { const R = 30 + 14 * Math.max(0, 1 - t / 0.35);
+          V.neonRing(cc, rx, ry, R, RANG_AMBER, 1.6, k, 1); V.neonRing(cc, rx, ry, R * 0.55, RANG_AMBER, 1, k * 0.5, 1);
+          cc.save(); cc.translate(rx, ry); cc.rotate(t * 0.6); for (let i = 0; i < 4; i++) { cc.rotate(Math.PI / 2); V.neonPath(cc, '#ffb040', 2, k, () => { cc.moveTo(R + 9, 0); cc.lineTo(R - 7, 0); }); } cc.restore();
+          V.glowAt(cc, rx, ry, 5, '#fff2c0', k); }, { peak: 1, settle: 0.42, hold: 0.8 }); },
+      // a leafy dome over the ranger, leaves whirling out; then a faint green shimmer stays on the ranger for the 10s, a
+      // leaf slipping off now and then
+      cloak: c => { V.dome(c.ent, { color: '#8fdf7a', r: 50, dur: 1.4 }); for (let i = 0; i < 12; i++) V.spawn({ x: c.x, y: c.y, z: 10 + Math.random() * 20, life: 1.2, size: 12, color: '#5fbf4a', kind: 'leaf', add: false, vr: 6, orbit: { x: c.x, y: c.y, a: i * 0.52, r: 20, w: 5, dr: 90, flat: 0.6 } });
+        V.shock(c.x, c.y, { r: 150, color: '#8fdf7a', dur: 0.6, w: 5 }); const e = c.ent;
+        OP.linger(10, 'ground', (cc, k, t) => { V.neonRing(cc, e.x, e.y + 2, 30 + Math.sin(t * 2.4) * 2, '#8fdf7a', 1.6, k, 0.55); V.glowAt(cc, e.x, e.y - 10, 34, '#8fdf7a', 0.22 * k);
+          for (let i = 0; i < 3; i++) { const a = t * 1.3 + i * TAU / 3; V.glowAt(cc, e.x + Math.cos(a) * 30, e.y + 2 + Math.sin(a) * 16, 5, '#d8ffb0', 0.8 * k); } },
+          { peak: 0.9, settle: 0.4, hold: 1.4, tick: () => { if (Math.random() < 0.04) V.spawn({ x: e.x + rnd(-18, 18), y: e.y, z: rnd(30, 50), vz: rnd(-25, -10), vx: rnd(-15, 15), life: 1.3, size: 10, color: '#6fbf5a', kind: 'leaf', add: false, vr: rnd(-3, 3), flutter: 5 }); } }); },
+      // a glint, power spiralling into the bow over a small circle; then the bow keeps a gold glow and three gold arrow
+      // ticks over the hero until the next Quick Shot spends it (up to the buff's 15s; quick cuts this marker)
+      barrage: c => { V.glint(c.x, c.y, { color: '#ffe27a', size: 30, z: 30 }); V.charge(c.ent.x, c.ent.y, { color: '#d8ff9a', r: 50, follow: c.ent }); V.sigil(c.x, c.y, { r: 40, style: 'star4', color: '#c8ff7a', dur: 0.8, spin: 4, follow: c.ent }); V.aura(c.ent, { color: '#c8ff7a', dur: 1.2, r: 28, rate: 0.4 });
+        const e = c.ent; if (e.rangerBarrage) e.rangerBarrage.cut = true;
+        e.rangerBarrage = OP.linger(15, 'air', (cc, k, t) => { const a = e.angle || 0, bx = e.x + Math.cos(a) * 16, by = e.y + Math.sin(a) * 12 - 20, pu = 0.75 + 0.25 * Math.sin(t * 5);
+          V.glowAt(cc, bx, by, 16, RANG_GOLD, 0.6 * k * pu); V.glowAt(cc, bx, by, 5, '#ffffff', k);
+          for (let i = -1; i <= 1; i++) { const x = e.x + i * 9, y = e.y - 58 - Math.abs(i) * 3 + Math.sin(t * 3 + i) * 1.5; V.neonPath(cc, RANG_GOLD, 1.6, k, () => { cc.moveTo(x - 4, y + 3); cc.lineTo(x, y - 3); cc.lineTo(x + 4, y + 3); }); } },
+          { peak: 1, settle: 0.6, hold: 0.6 });
+        e.rangerBarrage.at = FX.now; },
     },
     shadowblade: {
       // two daggers cross in an X (violet and steel), a few red sparks and drops
-      strike: c => { const f = Math.random() < 0.5; V.slash(c.x, c.y, c.ang + 0.25, { r: 44, span: 1.3, color: '#c58aff', dur: 0.2, flip: f, sparks: 3 }); c.later(0.04, () => V.slash(c.x, c.y, c.ang - 0.25, { r: 44, span: 1.3, color: '#e8e0ff', dur: 0.2, w: 0.35, flip: !f, sparks: 2 }));
-        c.later(0.08, () => { V.hit(c.tx, c.ty, '#e0c0ff', 0.4); V.splash(c.tx, c.ty, { n: 2, size: 0.6 }); }); },
+      // (rogue sheet, Swift Strike) a violet smear off the blades, then two big steel cuts crossing in an X before the
+      // target, a white glint where they cross, red sparks and a few drops
+      strike: c => { const f = Math.random() < 0.5, ang = Math.atan2(c.ty - c.y, c.tx - c.x), p = between(c, 0.75);
+        V.slash(c.x, c.y, c.ang + 0.25, { r: 48, span: 1.3, color: '#c58aff', dur: 0.2, flip: f, sparks: 3 }); c.later(0.04, () => V.slash(c.x, c.y, c.ang - 0.25, { r: 48, span: 1.3, color: '#e8e0ff', dur: 0.2, w: 0.35, flip: !f, sparks: 2 }));
+        OP.smear(c.x, c.y, c.ang, { r: 58, span: 1.8, w: 12, color: SHAD_VIO, core: SHAD_STEEL, ink: SHAD_INK, dur: 0.24, flip: f, lines: 2 });
+        shadowX(p.x, p.y, ang, 1.35);
+        c.later(0.1, () => { V.glint(p.x, p.y, { color: '#ffffff', size: 30, z: 22 }); V.hit(c.tx, c.ty, '#e0c0ff', 0.55); V.splash(c.tx, c.ty, { n: 4, size: 0.7 }); V.sparks(p.x, p.y, { color: '#ff7a6a', n: 6, speed: 300, z: 22 }); }); },
       // a double cut, then a crimson starburst, a spray of blood and a splatter left on the floor
       evis: c => { V.slash(c.x, c.y, c.ang + 0.5, { r: 58, span: 1.7, color: '#ff4d9a', dur: 0.28 }); c.later(0.08, () => V.slash(c.x, c.y, c.ang - 0.5, { r: 58, span: 1.7, color: '#ff4d9a', dur: 0.28, flip: true }));
         c.later(0.16, () => { const m = between(c, 0.6); V.spikeburst(c.tx, c.ty, { r: 54, n: 12, color: '#d0204a', core: '#ffe0ec', ink: '#2a0410', dur: 0.36 }); V.splash(c.tx, c.ty, { n: 10, speed: 1.2 }); V.hit(c.tx, c.ty, '#ff9ad0', 0.8);
           V.puddle(m.x, m.y, { r: 20, color: '#a01028', dark: '#3a0610', dur: 1.6, bubbles: false, fumes: false }); }); },
       // a dark smear slipping round the target, purple smoke hanging where you land
       step: c => { const d = Math.hypot(c.x - c.tx, c.y - c.ty) || 1; V.shadowdash(c.tx - (c.x - c.tx) / d * 60, c.ty - (c.y - c.ty) / d * 60, c.x, c.y); V.swirl(c.x, c.y, { r: 36, color: '#b070ff', dur: 0.4, inward: true });
-        c.later(0.2, () => V.smoke(c.x, c.y, { n: 5, color: '#5a3a7a', size: 24, a: 0.65, speed: 45, life: 1.3 })); },
+        // (polish) smoke left hanging where the rogue vanished and where it lands, thinning over ~2s
+        const d0 = { x: c.tx - (c.x - c.tx) / d * 60, y: c.ty - (c.y - c.ty) / d * 60 };
+        V.smoke(d0.x, d0.y, { n: 6, r: 12, color: '#4a3a5a', size: 26, a: 0.55, speed: 30, life: 2.2 });
+        c.later(0.2, () => { V.smoke(c.x, c.y, { n: 7, r: 14, color: '#5a3a7a', size: 26, a: 0.6, speed: 35, life: 2.2 }); V.shock(c.x, c.y, { r: 50, color: '#b070ff', dur: 0.35, w: 3 }); }); },
       // two dagger glints, a whirl of blades round the rogue, scratch marks left glinting, then the shadow aura
       dance: c => { V.glint(c.x - 14, c.y, { color: '#e8e0ff', size: 20, z: 34 }); V.glint(c.x + 14, c.y, { color: '#e8e0ff', size: 20, z: 34 }); c.later(0.08, () => V.vortex(c.x, c.y, { r: 72, color: '#9a4dff', dur: 0.9, follow: c.ent }));
         V.aura(c.ent, { color: '#b04dff', style: 'shadow', dur: 10, r: 30, rate: 0.25 }); },
       // a dripping green cut, and a poison puddle bubbling at the target's feet
-      venom: c => { V.slash(c.x, c.y, c.ang, { r: 48, span: 1.6, color: '#8aff4a', dur: 0.24 }); c.later(0.08, () => { const m = between(c, 0.6); V.splash(c.tx, c.ty, { color: '#7adf3a', n: 6 }); V.puddle(m.x, m.y, { r: 26, color: '#7adf3a', dark: '#1e3a0a', dur: 2.6 }); }); },
-      // a little bomb tossed down, a pop, and a big cartoon cloud that hangs over the party, then drifts apart
-      smoke: c => V.smokebomb(c.x, c.y, { r: 62, color: '#8a7a9a', dur: 1.8, a: 0.6,   // kept small and see-through: it sits over the floor, where telegraphs are
-        sx: c.x + Math.cos(c.ang) * 10, sy: c.y - 6 }),
+      // (rogue sheet, Poison Blades) the blade glints green and drips, a green cut with a spray of venom, a bubbling
+      // puddle; then a faint green stain stays there for the poison's 24s, a bubble rising now and then
+      venom: c => { const h = ahead(c, 16); V.glint(h.x, h.y, { color: '#b8ff8a', size: 24, z: 22 });
+        for (let i = 0; i < 4; i++) V.spawn({ x: h.x + rnd(-6, 6), y: h.y, z: 22, vz: -20, g: 500, life: 0.4, size: 7, color: '#8aff4a', kind: 'drop', add: false, rot: Math.PI / 2 });
+        c.later(0.07, () => { V.slash(c.x, c.y, c.ang, { r: 52, span: 1.6, color: '#8aff4a', dur: 0.24 }); OP.smear(c.x, c.y, c.ang, { r: 64, span: 1.9, w: 15, color: '#5adf2a', core: '#e8ffd0', ink: '#0a1a04', dur: 0.26, lines: 2 }); });
+        c.later(0.15, () => { const m = between(c, 0.6); V.splash(c.tx, c.ty, { color: '#7adf3a', n: 10 }); V.hit(c.tx, c.ty, '#b8ff8a', 0.6); V.puddle(m.x, m.y, { r: 28, color: '#7adf3a', dark: '#1e3a0a', dur: 2.6 });
+          const bub = Array.from({ length: 3 }, (_, i) => ({ x: rnd(-14, 14), y: rnd(-5, 5), ph: i / 3 }));
+          OP.linger(24, 'ground', (cc, k, t) => { if (t < 2) return; const kk = k * Math.min(1, (t - 2) / 0.6);
+            cc.globalAlpha = 0.3 * kk; cc.fillStyle = '#2a5a10'; cc.beginPath(); cc.ellipse(m.x, m.y, 26, 12, 0, 0, TAU); cc.ellipse(m.x + 12, m.y + 4, 12, 6, 0, 0, TAU); cc.fill(); cc.globalAlpha = 1;
+            V.neonRing(cc, m.x, m.y, 24, '#7adf3a', 1.1, kk * 0.6, 0.48);
+            for (const b of bub) { const q = (t * 0.6 + b.ph) % 1; V.glowAt(cc, m.x + b.x, m.y + b.y - q * 6, 2 + q * 4, '#b8ff8a', kk * Math.sin(q * Math.PI)); } },
+            { peak: 0.6, settle: 0.6, hold: 1 }); }); },
+      // a little bomb tossed down, a pop and a big dense cloud over the party (the kit's r140); it thins to a faint
+      // haze with wisps and a violet edge that holds for the buff's 10s (low, so telegraphs read through it)
+      smoke: c => { V.smokebomb(c.x, c.y, { r: 140, color: '#8a7a9a', dur: 2.2, a: 0.5, n: 18, sx: c.x + Math.cos(c.ang) * 10, sy: c.y - 6 });
+        const x = c.x, y = c.y, r = 140;
+        OP.linger(10, 'ground', (cc, k) => { cc.globalAlpha = 0.12 * k; cc.fillStyle = '#2a1838'; cc.beginPath(); cc.ellipse(x, y, r, r * 0.78, 0, 0, TAU); cc.fill(); cc.globalAlpha = 1; V.neonRing(cc, x, y, r, '#8a5ac0', 1.4, k * 0.55, 0.78); },
+          { peak: 0.7, settle: 0.45, hold: 2, tick: (p, dt, e) => { if (!e.cut && Math.random() < 0.3) { const a = Math.random() * TAU, d = Math.sqrt(Math.random()) * r * 0.85;
+            V.spawn({ x: x + Math.cos(a) * d, y: y + Math.sin(a) * d * 0.78, z: rnd(0, 12), vz: rnd(5, 15), vx: rnd(-8, 8), drag: 0.05, life: rnd(1.6, 2.4), size: rnd(26, 40), size1: 54, color: '#6a5a7a', kind: 'smoke', add: false, a: 0.14, fadeIn: 0.3, fadePow: 2 }); } } }); },
     },
     pyromancer: {
       // a flame flickers in the hand, the fireball streaks over, and pops in a small spiky burst
-      fireball: c => { const h = ahead(c, 16); V.glint(h.x, h.y, { color: '#ffb040', size: 18, z: 24 }); V.missile(c.x, c.y, c.tx, c.ty, { style: 'fire', color: '#ff8c2a', speed: 700, arc: 16, onHit: (x, y) => { V.spikeburst(x, y, { r: 30, n: 10, color: '#ff8a2a', dur: 0.26 }); V.shock(x, y, { r: 46, color: '#ffa040', dur: 0.3, w: 3 }); V.flare(x, y, { n: 6, r: 10, size: 0.8 }); V.smoke(x, y, { n: 2, color: '#4a3a3a', size: 18, a: 0.4, speed: 30 }); } }); },
+      // (fire sheet, Fireball) a flame in the hand, a fat fireball streaking over, a pillow of flame puffs round a
+      // white-hot heart and spikes where it bursts, smoke, and a small scorch left glowing before the target
+      fireball: c => { const h = ahead(c, 16); V.glint(h.x, h.y, { color: '#ffb040', size: 24, z: 24 }); V.spawn({ x: h.x, y: h.y, z: 22, life: 0.22, size: 22, size1: 6, color: '#ff8a2a' });
+        V.missile(c.x, c.y, c.tx, c.ty, { style: 'fire', color: '#ff8c2a', speed: 700, arc: 16, size: 1.4, onHit: (x, y) => { V.flash(x, y - 16, 64, '#ffb050', 0.2); pyroPillow(x, y, 32);
+          V.spikeburst(x, y, { r: 58, n: 14, color: '#ff8a2a', core: '#fff0b0', dur: 0.32 }); V.shock(x, y, { r: 84, color: '#ffa040', dur: 0.36, w: 5 }); V.flare(x, y, { n: 10, r: 16, size: 1 });
+          V.smoke(x, y, { n: 4, r: 16, color: '#4a3a3a', size: 24, a: 0.45, speed: 40, life: 1.2 }); V.decal(x + (c.x - x) * 0.18, y + (c.y - y) * 0.18, { r: 28, embers: true, dur: 2.2 }); shake(1.5); } }); },
       // heat gathers at the hand, a burning rock arcs over, a big starburst, flying rocks and a smoking scorch
       pyro: c => { const h = ahead(c, 16); V.glint(h.x, h.y, { color: '#ffd070', size: 30, z: 26 }); V.charge(c.x, c.y, { color: '#ff8a3a', r: 40, n: 8, dur: 0.25 });
         V.missile(c.x, c.y, c.tx, c.ty, { style: 'meteor', color: '#ff5a1a', speed: 560, arc: 50, onHit: (x, y) => { V.spikeburst(x, y, { r: 70, n: 16, color: '#ff6a1a', dur: 0.42 }); V.flare(x, y, { n: 16, r: 22, size: 1.2, h: 1.2 }); V.shock(x, y, { r: 110, color: '#ff8a3a', dur: 0.5, w: 7 });
@@ -140,16 +558,27 @@ const ABILITY_VFX = (() => {
       fireblast: c => { const h = ahead(c, 18); V.glint(h.x, h.y, { color: '#ffb040', size: 24 }); c.later(0.06, () => { V.spikeburst(c.tx, c.ty, { r: 58, n: 14, color: '#ff8a1a', dur: 0.34 }); V.flash(c.tx, c.ty - 14, 60, '#ffb050', 0.2); V.sparks(c.tx, c.ty, { color: '#ffd070', n: 8, speed: 380 }); });
         c.later(0.22, () => V.smoke(c.tx, c.ty, { n: 6, r: 26, color: '#5a5050', size: 28, a: 0.5, speed: 55, life: 1.5 })); },
       // heat spirals in, then a fire spiral wraps the mage and flies apart into embers; the flame aura stays on
-      combust: c => { V.charge(c.x, c.y, { color: '#ffb040', r: 50, n: 10, dur: 0.3, follow: c.ent }); V.sigil(c.x, c.y, { r: 66, style: 'star5', color: '#ff7a1a', dur: 1.2, spin: 2.5 }); V.blaze(c.ent, { r: 50, dur: 1.6 }); V.aura(c.ent, { color: '#ff6a1a', style: 'flame', dur: 10, r: 30, rate: 0.3 }); },
+      combust: c => { V.charge(c.x, c.y, { color: '#ffb040', r: 50, n: 10, dur: 0.3, follow: c.ent }); V.sigil(c.x, c.y, { r: 66, style: 'star5', color: '#ff7a1a', dur: 1.2, spin: 2.5 }); V.blaze(c.ent, { r: 50, dur: 1.6 }); V.aura(c.ent, { color: '#ff6a1a', style: 'flame', dur: 10, r: 30, rate: 0.3 });
+        // (polish, fire sheet) a ring of flame stands round the mage for the burst's 10s
+        c.later(0.25, () => { pyroFireRing(c.ent, 9.75); V.shock(c.ent.x, c.ent.y, { r: 90, color: '#ffb040', dur: 0.45, w: 5 }); }); },
       // a meteor called down on a rune circle: a cracked, burning crater is left behind
-      vent: c => V.meteor(c.tx, c.ty, { r: 64, wind: 0.32, fall: 0.28, onHit: () => shake(7) }),
+      vent: c => V.meteor(c.tx, c.ty, { r: 80, wind: 0.32, fall: 0.28, onHit: () => shake(7) }),   // (r: the kit's 80)
       // a cone of fire breathed at the boss, then embers, scorch and a smoky haze over the party
       smolder: c => { const L = Math.min(240, Math.max(120, Math.hypot(c.tx - c.x, c.ty - c.y))); V.breath(c.x, c.y, Math.atan2(c.ty - c.y, c.tx - c.x), { len: L, span: 0.75 }); V.shock(c.x, c.y, { r: 130, color: '#ff8a5a', dur: 0.6 });
-        c.later(0.7, () => V.smoke(c.x, c.y, { n: 6, r: 60, color: '#5a3a4a', size: 34, speed: 40, a: 0.35, life: 1.8 })); },
+        c.later(0.7, () => V.smoke(c.x, c.y, { n: 6, r: 60, color: '#5a3a4a', size: 34, speed: 40, a: 0.35, life: 1.8 }));
+        // (polish) the boss smoulders for the debuff's 10s: embers circling its middle, a dark wisp rising off it
+        const bx = c.tx, by = c.ty;
+        if (Math.hypot(bx - c.x, by - c.y) > 10) c.later(0.35, () => OP.linger(9.6, 'air', (cc, k, t) => { const cy = by - 34;
+          V.neonPath(cc, '#ff8a3a', 1.2, k * 0.55, () => cc.ellipse(bx, cy, 32, 10, 0, 0, TAU));
+          for (let i = 0; i < 6; i++) { const a = t * 1.2 + i * TAU / 6; V.glowAt(cc, bx + Math.cos(a) * 32, cy + Math.sin(a) * 10, 7, '#ff6a1a', k * (0.6 + 0.4 * Math.sin(t * 7 + i))); } },
+          { peak: 1, settle: 0.5, hold: 0.8, tick: () => { if (Math.random() < 0.06) V.spawn({ x: bx + rnd(-14, 14), y: by, z: 50, vz: rnd(20, 40), life: 1.4, size: 14, size1: 28, color: '#4a3a3a', kind: 'smoke', add: false, a: 0.3, fadeIn: 0.2 }); } })); },
     },
     cleric: {
-      smite: c => {
-        V.beam(c.tx, c.ty - 260, c.tx, c.ty, { color: '#fff0a8', w: 9, dur: 0.35 }); c.later(0.05, () => { V.burst(c.tx, c.ty, { color: '#fff4c0', n: 8, speed: 160 }); V.shock(c.tx, c.ty, { r: 40, color: '#ffe680', dur: 0.3, w: 3 }); });
+      // Smite: a gold glint gathers high over the boss, a shaft of light drops, a gold starburst and ring where it lands
+      smite: c => { V.glint(c.tx, c.ty - 90, { color: CLER_GOLD, size: 34, z: 0 }); V.spawn({ x: c.tx, y: c.ty - 90, z: 0, life: 0.14, size: 30, size1: 8, color: CLER_PALE });
+        c.later(0.08, () => { V.beam(c.tx, c.ty - 280, c.tx, c.ty, { color: '#fff0a8', w: 14, dur: 0.38 }); });
+        c.later(0.13, () => { V.flash(c.tx, c.ty - 20, 70, CLER_GOLD, 0.2); V.spikeburst(c.tx, c.ty, { r: 48, n: 12, color: '#ffd65a', core: '#fffbe0', ink: '#3a2a08', dur: 0.32, z: 18 });
+          V.burst(c.tx, c.ty, { color: '#fff4c0', color2: '#ffffff', n: 12, speed: 220, kind: 'star', flash: false }); V.shock(c.tx, c.ty, { r: 72, color: CLER_GOLD, dur: 0.38, w: 5 }); V.sparks(c.tx, c.ty, { color: CLER_PALE, n: 6, speed: 300 }); shake(1.5); });
         // Inquisitor: the strike leaves a burning brand on the boss
         if (c.ent.spec === 'inquisitor') c.later(0.1, () => { V.sigil(c.tx, c.ty, { r: 36, style: 'star4', color: '#ff9a3c', dur: 1.2, spin: 2 }); V.flare(c.tx, c.ty, { n: 6, r: 10, color: '#ff8a2a', size: 0.7 }); });
       },
@@ -158,15 +587,19 @@ const ABILITY_VFX = (() => {
       // Inquisitor: a lance of holy fire that scorches a brand into the boss
       condemn: c => V.missile(c.x, c.y, c.tx, c.ty, { style: 'fire', color: '#ffb04a', speed: 1100, size: 1.2, onHit: (x, y) => {
         V.flare(x, y, { n: 18, r: 16, color: '#ff9a3c' }); V.sigil(x, y, { r: 54, style: 'star4', color: '#ff9a3c', dur: 1.6, spin: 1.5 }); V.shock(x, y, { r: 90, color: '#ffc070', dur: 0.4, w: 5 });
-        V.burst(x, y, { color: '#ffe0a0', color2: '#ffffff', n: 14, speed: 260, flashR: 60 }); V.decal(x, y, { r: 40, embers: true, dur: 3 }); FX.shake = Math.max(FX.shake, 4); } }),
+        V.burst(x, y, { color: '#ffe0a0', color2: '#ffffff', n: 14, speed: 260, flashR: 60 }); V.decal(x, y, { r: 40, embers: true, dur: 3 }); vfxShake(4); } }),
       // holy light falls on the ally in shafts, a few feathers drift down, a golden ring lingers
-      mend: c => { V.lightfall(c.tx, c.ty, { color: '#ffe680', r: 26, h: 200, dur: 0.9, feathers: 3 }); V.plus(c.tx, c.ty, { color: '#ffe680', n: 3 }); },
-      // a glint, petals whirling round the ally, then a few drifting down after
-      petal: c => { V.glint(c.tx, c.ty, { color: '#ffe9a8', size: 22, z: 34 }); for (let i = 0; i < 10; i++) V.spawn({ x: c.tx, y: c.ty, z: 8 + i * 3, life: 1, size: 12, color: i % 2 ? '#ffd0e0' : '#fff0a8', kind: 'petal', add: false, vr: 5, flutter: 6, orbit: { x: c.tx, y: c.ty, a: i * 0.63, r: 30, w: 4, dr: -20, flat: 0.55 } }); V.plus(c.tx, c.ty, { color: '#ffe680', n: 3 });
+      mend: c => { V.lightfall(c.tx, c.ty, { color: '#ffe680', r: 44, h: 240, dur: 1, feathers: 5 }); V.plus(c.tx, c.ty, { color: '#ffe680', n: 5 });
+        c.later(0.12, () => { V.flash(c.tx, c.ty - 24, 50, CLER_GOLD, 0.25); V.shock(c.tx, c.ty, { r: 64, color: CLER_GOLD, dur: 0.45, w: 4 }); }); },
+      // a glint, a flash and a ring on the ally, petals whirling round them and drifting down after; then the 15s mend
+      // over time shows as a faint gold ring under them, motes and petals slipping off, a small plus at each tick
+      petal: c => { const w = c.tent || { x: c.tx, y: c.ty }; V.glint(c.tx, c.ty, { color: '#ffe9a8', size: 28, z: 34 }); V.flash(c.tx, c.ty - 20, 48, '#ffe9a8', 0.25); V.shock(c.tx, c.ty, { r: 58, color: CLER_GOLD, dur: 0.45, w: 4 }); clericHot(w, 15); for (let i = 0; i < 10; i++) V.spawn({ x: c.tx, y: c.ty, z: 8 + i * 3, life: 1, size: 12, color: i % 2 ? '#ffd0e0' : '#fff0a8', kind: 'petal', add: false, vr: 5, flutter: 6, orbit: { x: c.tx, y: c.ty, a: i * 0.63, r: 30, w: 4, dr: -20, flat: 0.55 } }); V.plus(c.tx, c.ty, { color: '#ffe680', n: 3 });
         c.later(0.9, () => { for (let i = 0; i < 4; i++) V.spawn({ x: c.tx + (Math.random() - 0.5) * 50, y: c.ty + (Math.random() - 0.5) * 16, z: 40 + Math.random() * 20, vz: -25, vx: (Math.random() - 0.5) * 30, life: 1.4, size: 10, color: i % 2 ? '#ffd0e0' : '#fff0a8', kind: 'petal', add: false, vr: 2, flutter: 4 }); });
         if (c.ent.spec === 'aegis' && c.tent) c.later(0.3, () => V.shield(c.tent, { color: '#ffe9a8', dur: 1.4, r: 38 })); },
       // a great holy circle on the floor, light and feathers falling into its middle
-      prayer: c => { V.ink(c.x, c.y, { r: 160, dur: 3 }); V.sigil(c.x, c.y, { r: 160, style: 'hex', color: '#ffe680', dur: 3, spin: 0.4 }); V.lightfall(c.x, c.y, { color: '#fff0b0', r: 50, h: 260, dur: 1.4, feathers: 8 }); c.later(0.3, () => V.shock(c.x, c.y, { r: 170, color: '#ffe680', dur: 0.6, w: 5 })); },
+      // (the circle flares for a moment, then a faint holy rim holds there for the 15s of healing, motes rising off it)
+      prayer: c => { const x = c.x, y = c.y; V.ink(x, y, { r: 160, dur: 0.7, a: 0.25 }); V.sigil(x, y, { r: 160, style: 'hex', color: '#ffe680', dur: 0.7, spin: 0.4 }); V.lightfall(x, y, { color: '#fff0b0', r: 50, h: 260, dur: 1.4, feathers: 8 }); c.later(0.3, () => V.shock(x, y, { r: 170, color: '#ffe680', dur: 0.6, w: 5 }));
+        OP.rim(x, y, 160, CLER_GOLD, 15, { style: 'hex', settle: 0.2, ticks: 24, spin: 0.1, tick: () => { if (Math.random() < 0.12) { const a = Math.random() * TAU, d = Math.sqrt(Math.random()) * 150; V.spawn({ x: x + Math.cos(a) * d, y: y + Math.sin(a) * d * 0.78, z: 0, vz: rnd(25, 50), life: 1.2, size: rnd(4, 7), size1: 0, color: CLER_PALE, kind: Math.random() < 0.3 ? 'star' : 'glow' }); } } }); },
       // a towering column of light and feathers, a holy seal under the ally, a white burst as they rise
       intervene: c => { V.lightfall(c.tx, c.ty, { color: '#fff6c8', r: 44, h: 340, dur: 1.8, feathers: 10 }); V.pillar(c.tx, c.ty, { r: 40, h: 320, color: '#fff6c8', dur: 1.6 });
         c.later(0.2, () => { V.ink(c.tx, c.ty, { r: 70, dur: 1.6 }); V.sigil(c.tx, c.ty, { r: 70, style: 'star4', color: '#ffe680', dur: 1.6, spin: 1 }); V.burst(c.tx, c.ty - 40, { color: '#ffffff', color2: '#ffe680', n: 14, speed: 200, flashR: 80 }); }); },
@@ -179,7 +612,14 @@ const ABILITY_VFX = (() => {
       // the helpers they share with World Tree)
       // brambles burst out of the floor, sap splashes, leaves flutter, the ground is left cracked
       thorn: c => { V.glint(c.tx, c.ty, { color: '#c8ff8a', size: 20, z: 10 }); c.later(0.06, () => { const m = between(c, 0.7); V.crystals(c.tx, c.ty, { color: '#5a8a2a', n: 6, r: 36, h: 40, dur: 1 }); V.splash(c.tx, c.ty, { color: '#4a7a2a', n: 4, size: 0.8 });
-        V.motes(c.tx, c.ty, { kind: 'leaf', color: '#6fbf4a', n: 4, r: 30, rise: 0.5 }); V.decal(m.x, m.y, { style: 'crack', r: 34, dur: 1.6, a: 0.45, seed: Math.random() * 6 }); }); },
+        V.motes(c.tx, c.ty, { kind: 'leaf', color: '#6fbf4a', n: 4, r: 30, rise: 0.5 }); V.decal(m.x, m.y, { style: 'crack', r: 34, dur: 1.6, a: 0.45, seed: Math.random() * 6 });
+        // (polish) a bramble starburst of dark green thorns and a sap-green ring; then a faint ring of thorny vine stays
+        // round the target's feet for the 30s the thorns bite, a leaf dropping now and then
+        V.spikeburst(c.tx, c.ty, { r: 46, n: 12, color: '#4f9f3f', core: '#d8ff9a', ink: '#0e2008', dur: 0.32, z: 10 }); V.shock(c.tx, c.ty, { r: 64, color: '#8fdf5a', dur: 0.4, w: 4 });
+        const tx = c.tx, ty = c.ty, R = 44, spikes = Array.from({ length: 12 }, (_, i) => ({ a: i * TAU / 12 + rnd(-0.15, 0.15), l: rnd(6, 10) }));
+        OP.linger(30, 'ground', (cc, k, t) => { V.neonRing(cc, tx, ty, R, '#4f9f3f', 1.8, k, 0.6);
+          V.neonPath(cc, '#8fdf5a', 1.3, k * 0.8, () => { for (const s of spikes) { const x = tx + Math.cos(s.a) * R, y = ty + Math.sin(s.a) * R * 0.6; cc.moveTo(x, y); cc.lineTo(x + Math.cos(s.a + 0.6) * s.l, y + Math.sin(s.a + 0.6) * s.l * 0.6 - 3); } }); },
+          { peak: 0.9, settle: 0.32, hold: 1, tick: () => { if (Math.random() < 0.02) V.spawn({ x: tx + rnd(-30, 30), y: ty, z: rnd(30, 50), vz: -15, vx: rnd(-10, 10), life: 1.2, size: 9, color: '#6fbf4a', kind: 'leaf', add: false, vr: rnd(-3, 3), flutter: 5 }); } }); }); },
       // a shaft of green light, a flower circle under the ally, a swirl, and leaves drifting off as they rise
       rebirth: c => { V.lightfall(c.tx, c.ty, { color: '#a8ff9a', r: 40, h: 280, dur: 1.6, feathers: 0 }); V.grove(c.tx, c.ty, { r: 60, dur: 2.2, color: '#8fff7a', color2: '#ffd0e8', flowers: 5, rate: 0.4, tint: '#1a3a10' }); V.swirl(c.tx, c.ty, { r: 50, color: '#8fff7a', dur: 1.4 });
         c.later(1.4, () => V.motes(c.tx, c.ty, { kind: 'leaf', color: '#8fff7a', n: 10, r: 40 })); },
@@ -193,7 +633,12 @@ const ABILITY_VFX = (() => {
       accel: c => { V.ink(c.x, c.y, { r: 160, dur: 2.2 }); V.sigil(c.x, c.y, { r: 160, style: 'clock', color: '#3fd0d0', dur: 2.2, spin: 3 }); V.ribbons(c.x, c.y, { r: 100, dur: 1.6, n: 4, colors: ['#5ff0d0', '#b48cff', '#ffd27a', '#5ff0ff'] });
         for (let i = 0; i < 12; i++) V.spawn({ x: c.x + (Math.random() - 0.5) * 220, y: c.y + (Math.random() - 0.5) * 140, z: 0, vz: 260 + Math.random() * 120, life: 0.6, size: 9, color: '#9ff4ff', stretch: 5 }); },
       // a shaft of time-light on the ally, ribbons winding round them, a swirl at their feet
-      recall: c => { V.lightfall(c.tx, c.ty, { color: '#9ff4ff', r: 34, h: 260, dur: 1.4, feathers: 0 }); V.ribbons(c.tx, c.ty, { r: 50, dur: 1.6, follow: c.tent, colors: ['#5ff0ff', '#b48cff', '#ffd27a'] }); V.swirl(c.tx, c.ty, { r: 56, color: '#5ff0ff', dur: 1.6, arms: 5 }); },
+      // (polish) a clock face turns backward under the ally and rings close in on them (time running back), then a
+      // white flash, a burst of stars and the shaft of time-light as they're whole again
+      recall: c => { const w = c.tent || { x: c.tx, y: c.ty }; V.sigil(w.x, w.y, { r: 64, style: 'clock', color: '#9ff4ff', dur: 1.4, spin: -4, follow: c.tent || undefined });
+        for (let i = 0; i < 3; i++) V.shock(w.x, w.y, { r0: 110, r: 24, color: i % 2 ? '#b48cff' : '#5ff0ff', dur: 0.4, w: 4, delay: i * 0.12 });
+        V.lightfall(c.tx, c.ty, { color: '#9ff4ff', r: 34, h: 260, dur: 1.4, feathers: 0 }); V.ribbons(c.tx, c.ty, { r: 50, dur: 1.6, follow: c.tent, colors: ['#5ff0ff', '#b48cff', '#ffd27a'] }); V.swirl(c.tx, c.ty, { r: 56, color: '#5ff0ff', dur: 1.6, arms: 5, dir: -1 });
+        c.later(0.45, () => { V.flash(w.x, w.y - 24, 70, '#e8ffff', 0.25); V.burst(w.x, w.y - 24, { color: '#9ff4ff', color2: '#ffffff', n: 16, speed: 240, kind: 'star', flash: false }); V.shock(w.x, w.y, { r: 100, color: '#9ff4ff', dur: 0.5, w: 5 }); V.plus(w.x, w.y, { color: '#9ff4ff', n: 5 }); }); },
       // Echoist: the clock face rings out three times, each ring a softer echo of the last
       chamber: c => { V.sigil(c.x, c.y, { r: 160, style: 'clock', color: '#c4a8ff', dur: 2.2, spin: 2 }); for (let i = 0; i < 3; i++) V.shock(c.x, c.y, { r: 150 + i * 30, color: '#d8c8ff', dur: 0.6, w: 6 - i * 1.5, delay: i * 0.35 }); V.burst(c.x, c.y - 20, { color: '#e8dcff', n: 12, speed: 180, kind: 'star' }); },
     },
@@ -204,13 +649,30 @@ const ABILITY_VFX = (() => {
 const KIT_VFX = {
   // an item enhancement firing: a quick golden flare in the hero's colour
   empower: e => { VFX.flash(e.x, e.y - 20, 40, '#ffd27a', 0.25); VFX.motes(e.x, e.y, { color: (e.cls && e.cls.accent) || '#ffd27a', n: 6, r: 22, kind: 'star' }); VFX.shock(e.x, e.y, { r: 46, color: '#ffd27a', w: 3, dur: 0.3 }); },
-  perfect: e => { VFX.shock(e.x, e.y, { r: 90, color: '#ffe27a', dur: 0.4, w: 7 }); VFX.spawn({ x: e.x + Math.cos(e.angle) * 30, y: e.y + Math.sin(e.angle) * 30, z: 18, life: 0.3, size: 80, size1: 30, color: '#ffe27a', kind: 'star', vr: 5 }); VFX.sparks(e.x + Math.cos(e.angle) * 30, e.y + Math.sin(e.angle) * 30, { color: '#fff2b0', n: 12, angle: e.angle, spread: 1, speed: 420 }); FX.shake = Math.max(FX.shake, 4); },
+  // a Perfect Block: the Brace plate flares (bastionPlate), a gold flash on its face, a gold ring and a steel one
+  perfect: e => { if (e.bastionPlate && !e.bastionPlate.cut) e.bastionPlate.pb = true;
+    VFX.flash(e.x + Math.cos(e.angle) * 36, e.y + Math.sin(e.angle) * 30 - 16, 64, '#ffe27a', 0.22); VFX.shock(e.x, e.y, { r: 130, color: '#9fc4ff', dur: 0.5, w: 4, delay: 0.06 });
+    VFX.shock(e.x, e.y, { r: 90, color: '#ffe27a', dur: 0.4, w: 7 }); VFX.spawn({ x: e.x + Math.cos(e.angle) * 30, y: e.y + Math.sin(e.angle) * 30, z: 18, life: 0.3, size: 80, size1: 30, color: '#ffe27a', kind: 'star', vr: 5 }); VFX.sparks(e.x + Math.cos(e.angle) * 30, e.y + Math.sin(e.angle) * 30, { color: '#fff2b0', n: 12, angle: e.angle, spread: 1, speed: 420 }); vfxShake(4); },
   // Crusader: a Radiant Holy Edge leaves as a beam of light toward the boss
   radiant: (e, target) => { const t = target || { x: e.x + Math.cos(e.angle) * 200, y: e.y + Math.sin(e.angle) * 200 }; VFX.beam(e.x, e.y, t.x, t.y, { color: '#fff2b0', w: 14, dur: 0.4 }); VFX.burst(e.x, e.y, { color: '#ffe27a', color2: '#ffffff', n: 14, speed: 240, kind: 'star' }); },
-  'rune-echo': e => { VFX.crystals(e.x, e.y, { color: '#b28cff', n: 8, r: 44, h: 50 }); VFX.burst(e.x, e.y, { color: '#d8c4ff', n: 14, speed: 240 }); },
-  reflect: (e, target) => { if (target) VFX.beam(e.x, e.y, target.x, target.y, { color: '#e8e0ff', w: 12, dur: 0.4 }); VFX.burst(e.x, e.y, { color: '#ffffff', color2: '#e0d4ff', n: 16, speed: 260, kind: 'star' }); },
+  // Runeguard: a Runic Ward ends and blasts (kits.js runeWardEnd; data.f: how much of it was soaked, 0-1): the ward's
+  // plates break off the holder in a burst of runes, crystals and a ring sized by f, and a violet bolt runs to the enemy
+  wardBlast: Object.assign((e, target, d) => {
+    const f = Math.max(0, Math.min(1, (d && d.f) || 0)), wf = e.rgWard, old = wf && FX.now - wf.at > 0.25, w = old && wf.w && wf.w.x != null ? wf.w : e, R = 50 + 90 * f;
+    if (old) { wf.cut = true; e.rgWard = null; }
+    VFX.flash(w.x, w.y - 20, 40 + 60 * f, '#d8c4ff', 0.22);
+    VFX.spikeburst(w.x, w.y, { r: R * 0.7, n: 10 + Math.round(8 * f), color: '#9a6bff', core: '#f0e8ff', ink: '#1e0e3a', dur: 0.36, z: 16 });
+    VFX.crystals(w.x, w.y, { color: '#b28cff', n: 4 + Math.round(6 * f), r: 30 + 30 * f, h: 34 + 30 * f, dur: 0.8 });
+    VFX.shock(w.x, w.y, { r: R + 30, color: '#b18cff', dur: 0.45, w: 4 + 3 * f });
+    VFX.sigil(w.x, w.y, { r: Math.min(90, R), style: 'runes', color: '#c8a8ff', dur: 0.6, spin: 5 });
+    for (let i = 0; i < 6 + Math.round(6 * f); i++) { const a = Math.random() * Math.PI * 2, sp = 120 + Math.random() * 160; VFX.spawn({ x: w.x, y: w.y, z: 24, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * 0.6, vz: 60 + Math.random() * 120, g: 500, bounce: true, life: 0.5 + Math.random() * 0.4, size: 7 + Math.random() * 4, color: '#e8e0ff', kind: 'shard', add: false, vr: Math.random() * 20 - 10 }); }
+    if (target) { VFX.lightning(w.x, w.y - 20, target.x, target.y - 20, { color: '#d0b8ff', jag: 10, dur: 0.25 }); OLD_PAINT.later(0.06, () => VFX.hit(target.x, target.y, '#c8a8ff', 0.6 + 0.6 * f)); }
+    vfxShake(2 + 3 * f);
+  }, { atTarget: true }),
+  'rune-echo': e => { VFX.crystals(e.x, e.y, { color: '#8e98ff', n: 8, r: 44, h: 50 }); VFX.burst(e.x, e.y, { color: '#d0d6ff', n: 14, speed: 240 }); },
+  reflect: (e, target) => { if (target) VFX.beam(e.x, e.y, target.x, target.y, { color: '#e4e8ff', w: 12, dur: 0.4 }); VFX.burst(e.x, e.y, { color: '#ffffff', color2: '#dde3ff', n: 16, speed: 260, kind: 'star' }); },
   overheat: e => { VFX.flare(e.x, e.y, { n: 24, color: '#ff2a1a', r: 18 }); VFX.shock(e.x, e.y, { r: 90, color: '#ff3a1a', dur: 0.4 }); },
-  dawnstar: (e, target) => { const t = target || e; VFX.beam(t.x, t.y - 300, t.x, t.y, { color: '#fff6c8', w: 18, dur: 0.5 }); VFX.burst(t.x, t.y, { color: '#ffe680', color2: '#ffffff', n: 26, speed: 320, kind: 'star', flashR: 110 }); VFX.sigil(t.x, t.y, { r: 90, style: 'star4', color: '#ffe680', dur: 0.9, spin: 4 }); FX.shake = Math.max(FX.shake, 5); },
+  dawnstar: (e, target) => { const t = target || e; VFX.beam(t.x, t.y - 300, t.x, t.y, { color: '#fff6c8', w: 18, dur: 0.5 }); VFX.burst(t.x, t.y, { color: '#ffe680', color2: '#ffffff', n: 26, speed: 320, kind: 'star', flashR: 110 }); VFX.sigil(t.x, t.y, { r: 90, style: 'star4', color: '#ffe680', dur: 0.9, spin: 4 }); vfxShake(5); },
   lag: e => { VFX.smoke(e.x, e.y, { n: 6, color: '#8aa0a8', size: 22, a: 0.5 }); },
   // Aegis: a Petal shield that held comes back as a petal drifting home
   'petal-back': e => { for (let i = 0; i < 6; i++) VFX.spawn({ x: e.x, y: e.y, z: 30 + i * 4, life: 0.9, size: 12, color: i % 2 ? '#ffd0e0' : '#fff0a8', kind: 'petal', add: false, vr: 5, flutter: 6, orbit: { x: e.x, y: e.y, a: i, r: 40, w: 5, dr: -40, flat: 0.55 } }); VFX.flash(e.x, e.y - 20, 30, '#ffe9a8', 0.25); },
@@ -218,7 +680,8 @@ const KIT_VFX = {
   echo: (e, target) => { if (target) VFX.missile(e.x, e.y, target.x, target.y, { style: 'orb', color: '#c4a8ff', speed: 800, size: 0.75, onHit: (x, y) => VFX.hit(x, y, '#e0d4ff', 0.6) }); },
   // Inquisitor: an ally's hit bursts a charge of the brand on the boss
   brandHit: (e, target) => { if (target) { VFX.flare(target.x, target.y, { n: 5, r: 12, color: '#ff9a3c', size: 0.6, h: 0.7 }); VFX.hit(target.x, target.y, '#ffc070', 0.5); } },
-  dash: (e, color) => { VFX.smoke(e.x, e.y, { n: 4, color: '#d8ccb8', size: 18, a: 0.6, speed: 40 }); VFX.shock(e.x, e.y, { r: 36, color: color || '#ffffff', dur: 0.3, w: 3 }); },
+  // the dash: each class has its own (DASH_VFX, below: a start burst, a trail, an arrival)
+  dash: (e, color) => { if (typeof DASH_VFX !== 'undefined' && DASH_VFX.start(e, color)) return; VFX.smoke(e.x, e.y, { n: 4, color: '#d8ccb8', size: 18, a: 0.6, speed: 40 }); VFX.shock(e.x, e.y, { r: 36, color: color || '#ffffff', dur: 0.3, w: 3 }); },
   // the tanks' taunts, one per class (TAUNT in kits.js), built from each class's own look:
   //   Bastion's Challenge: steel on the shield, gold rings of sound and a line of gold light that lands as a star
   //   Bloodreaver's Reaver's Hook: a red chain thrown out to the target, a hook-bite of blood, then it snaps back
@@ -230,32 +693,23 @@ const KIT_VFX = {
     if (id === 'bloodreaver') {
       VFX.shock(e.x, e.y, { r: 60, color: '#ff5a5a', w: 4, dur: 0.3 });
       if (!target || L < 10) return;
-      const n = Math.max(4, Math.floor(L / 18));
-      // out in 0.2s, holds, then reels back in toward the hero
-      VFX.fx({ dur: 0.75, layer: 'air', draw: (c, p, t, fx) => {
-        const reach = p < 0.22 ? p / 0.22 : p < 0.5 ? 1 : 1 - (p - 0.5) / 0.5, k = (p < 0.7 ? 1 : (1 - p) / 0.3) * fx.a;
-        c.save(); c.translate(sx, sy); c.rotate(ang);
-        VFX.neonPath(c, '#ff3a3a', 2.2, k, () => {
-          for (let i = 0; i < n * reach; i++) {
-            const x = (i + 0.5) * L / n;
-            if (i % 2) { c.moveTo(x - 6, 0); c.lineTo(x + 6, 0); } else { c.moveTo(x + 8, 0); c.ellipse(x, 0, 8, 4, 0, 0, Math.PI * 2); }
-          }
-          const hx = L * reach;   // the hook at the chain's head
-          c.moveTo(hx - 4, -9); c.quadraticCurveTo(hx + 10, -6, hx + 6, 4); c.lineTo(hx - 2, 2);
-        });
-        c.restore();
-      } });
-      FX.later(0.17, () => { VFX.hit(tx, ty, '#ff4a4a', 0.8); VFX.sparks(tx, ty, { color: '#c0101a', n: 9, angle: ang + Math.PI, spread: 0.8, speed: 260 }); });
+      // (polish) the tank sheet's iron chain: dark red-iron links and a hook, out in 0.18s, a bite of blood, reeled back
+      OLD_PAINT.chain(sx, sy, tx, ty, { head: 'hook', metal: '#8a6a68', glow: '#ff3a3a' });
+      OLD_PAINT.later(0.17, () => { VFX.hit(tx, ty, '#ff4a4a', 1.1); VFX.spikeburst(tx, ty + 26, { r: 44, n: 10, color: '#d0203a', core: '#ffd0d0', ink: '#2a0408', dur: 0.3, z: 26 });
+        VFX.splash(tx, ty + 26, { n: 10, speed: 1.1 }); VFX.sparks(tx, ty, { color: '#c0101a', n: 9, angle: ang + Math.PI, spread: 0.8, speed: 260 });
+        VFX.smoke(tx, ty + 26, { n: 4, color: '#a08a78', size: 22, a: 0.45, speed: 50 }); vfxShake(2); });
+      OLD_PAINT.later(0.5, () => VFX.smoke(e.x + Math.cos(ang) * 30, e.y + Math.sin(ang) * 20, { n: 3, color: '#a08a78', size: 18, a: 0.4, speed: 40 }));
       return;
     }
     if (id === 'runeguard') {
-      VFX.crystals(e.x, e.y, { color: '#b18cff', n: 5, r: 30, h: 30 });
+      // (shared-fx colour pass: Runeguard indigo)
+      VFX.crystals(e.x, e.y, { color: '#8e98ff', n: 5, r: 30, h: 30 });
       if (!target) return;
-      VFX.lightning(sx, sy + 16, tx, ty + 16, { color: '#c8a8ff', jag: 8, dur: 0.3 });
+      VFX.lightning(sx, sy + 16, tx, ty + 16, { color: '#aab4ff', jag: 8, dur: 0.3 });
       FX.later(0.1, () => {
-        VFX.sigil(target.x, target.y, { r: 64, style: 'runes', color: '#b18cff', dur: 1.3, spin: 2 });
-        VFX.sigil(target.x, target.y - 70, { r: 22, style: 'runes', color: '#e0d0ff', dur: 1, spin: -3, flat: 1, layer: 'air' });
-        VFX.shock(target.x, target.y, { r: 70, color: '#b18cff', w: 3, dur: 0.35 });
+        VFX.sigil(target.x, target.y, { r: 64, style: 'runes', color: '#8e98ff', dur: 1.3, spin: 2 });
+        VFX.sigil(target.x, target.y - 70, { r: 22, style: 'runes', color: '#dde3ff', dur: 1, spin: -3, flat: 1, layer: 'air' });
+        VFX.shock(target.x, target.y, { r: 70, color: '#8e98ff', w: 3, dur: 0.35 });
       });
       return;
     }
@@ -264,13 +718,186 @@ const KIT_VFX = {
     VFX.shock(e.x, e.y, { r: 112, color: col, w: 2.5, dur: 0.45, delay: 0.08 });
     VFX.sparks(e.x + Math.cos(e.angle || 0) * 24, e.y + Math.sin(e.angle || 0) * 24, { color: '#fff2b0', n: 8, speed: 300 });
     if (!target || L < 10) return;
-    VFX.beam(sx, sy + 14, tx, ty + 14, { color: '#ffe9a0', w: 5, dur: 0.35 });
-    FX.later(0.12, () => {
-      VFX.spawn({ x: tx, y: ty, z: 10, life: 0.35, size: 56, size1: 18, color: '#ffe27a', kind: 'star', vr: 4 });
-      VFX.shock(tx, target.y, { r: 50, color: '#ffe27a', w: 3, dur: 0.3 });
+    // (polish) the tank sheet's iron chain: steel links with a gold spearhead, out in 0.18s, a gold star where it bites
+    OLD_PAINT.chain(sx, sy, tx, ty, { head: 'spear', metal: '#a8b0c0', glow: '#ffe27a' });
+    OLD_PAINT.later(0.17, () => {
+      VFX.spawn({ x: tx, y: ty, z: 10, life: 0.35, size: 70, size1: 22, color: '#ffe27a', kind: 'star', vr: 4 });
+      VFX.hit(tx, ty, '#ffe9a0', 0.9); VFX.spikeburst(tx, target.y, { r: 42, n: 10, color: '#ffc840', core: '#fffbe0', ink: '#3a2a08', dur: 0.3, z: 26 });
+      VFX.shock(tx, target.y, { r: 70, color: '#ffe27a', w: 4, dur: 0.35 }); VFX.smoke(tx, target.y, { n: 4, color: '#c8c0b0', size: 22, a: 0.45, speed: 50 }); vfxShake(2);
     });
+    OLD_PAINT.later(0.5, () => VFX.smoke(e.x + Math.cos(ang) * 30, e.y + Math.sin(ang) * 20, { n: 3, color: '#c8c0b0', size: 18, a: 0.4, speed: 40 }));
   },
 };
+
+// ======================================================================= DASH_VFX (shared-fx polish)
+// Every class dashes in its own way: a start burst where it pushes off, a trail while it moves (FX.dashTrail calls
+// trail() up to 45 times a second for the 0.18s dash) and an arrival where it lands. One ribbon effect follows the hero
+// for the whole dash, so the trail costs one effect and a few particles. Someone else's dash plays at 0.6.
+//   heavy  (tanks): a dust burst and a shoulder-charge shock, scuffed floor behind, dust and a thud on landing
+//   shadow (rogues): a smoke pop, a violet smear with streaks, a smoke puff where they land
+//   rune   (casters): a little rune flash under the feet, a ribbon of light in the class colour, motes of the class
+//   wind   (Driftblade): a wind ribbon, leaves and white gust lines, a small whirl on arrival
+//   gust   (Ironpalm): a gust and glowing footprints on the floor
+//   nimble (Ranger): a dust kick, leaves, a light green streak
+const DASH_VFX = (() => {
+  const V = VFX, rand = (a, b) => a + Math.random() * (b - a), DUST = '#d8ccb8';
+  // kind, c (the main colour), c2 (a second colour), part (trail particle kind), sigil (rune style)
+  const T = {
+    bastion:      { kind: 'heavy', c: '#9fc4ff', c2: '#ffe08a' },
+    bloodreaver:  { kind: 'heavy', c: '#ff3a4a', c2: '#a01028' },
+    runeguard:    { kind: 'heavy', c: '#8a90ff', c2: '#d0d6ff', sigil: 'runes' },
+    gorgemaw:     { kind: 'heavy', c: '#ffb070', c2: '#8ee03a' },
+    oathbroker:   { kind: 'heavy', c: '#c04a5a', c2: '#b8a8e0' },
+    ironpalm:     { kind: 'gust', c: '#ffd27a', c2: '#ffffff' },
+    ranger:       { kind: 'nimble', c: '#bfff9a', c2: '#6fbf5a', part: 'leaf' },
+    shadowblade:  { kind: 'shadow', c: '#b070ff', c2: '#e0c8ff', smoke: '#3a2450' },
+    marionettist: { kind: 'shadow', c: '#ff5a8a', c2: '#ffd0e0', smoke: '#4a1a34' },
+    driftblade:   { kind: 'wind', c: '#8ff0d0', c2: '#e8fff8', part: 'leaf' },
+    pyromancer:   { kind: 'rune', c: '#ff8a2a', c2: '#ffd070', part: 'glow', sigil: 'runes' },
+    cleric:       { kind: 'rune', c: '#fff0b8', c2: '#ffffff', part: 'feather', sigil: 'star4' },
+    grovekeeper:  { kind: 'rune', c: '#8fff7a', c2: '#ffd0e8', part: 'leaf', sigil: 'petals' },
+    chronomancer: { kind: 'rune', c: '#b48cff', c2: '#7aa0ff', part: 'star', sigil: 'clock' },
+    thermist:     { kind: 'rune', c: '#ff8a3a', c2: '#6fb2f0', part: 'glow', sigil: 'hex' },
+    alembist:     { kind: 'rune', c: '#5ff08a', c2: '#ffd27a', part: 'glow', sigil: 'hex' },
+    threadweaver: { kind: 'rune', c: '#ff4a5a', c2: '#ffcf7a', part: 'star', sigil: 'star5' },
+  };
+  const def = { kind: 'rune', c: '#ffffff', c2: '#ffffff', part: 'star', sigil: 'star4' };
+  const styleOf = e => { const id = e && e.cls && e.cls.id; return T[id] || Object.assign({}, def, { c: (e && e.cls && e.cls.accent) || '#ffffff' }); };
+  // run fn later at the intensity the dash started with
+  const later = (d, fn) => { const sc = V.scale; FX.later(d, () => { V.setScale(sc); try { fn(); } finally { V.setScale(1); } }); };
+
+  // the ribbon: the path the hero took, tapered (thin at the tail, full at the hero) and shrinking away behind them.
+  // st: 'glow' (light, additive), 'smear' (ink + colour + a bright core), 'scuff' (faint marks on the floor)
+  function ribbon(e, s, st, w) {
+    const pts = [], LIFE = st === 'scuff' ? 0.9 : 0.3;
+    let last = null;
+    V.fx({ dur: 0.24 + LIFE, layer: st === 'scuff' ? 'ground' : 'air', tick: (q, dt, fx) => {
+      const tt = q * fx.dur;
+      if (tt < 0.24 && (!last || Math.hypot(e.x - last.x, e.y - last.y) > 3)) { last = { x: e.x, y: e.y, t: tt }; pts.push(last); }
+    }, draw: (c, p, t, fx) => {
+      if (pts.length < 2) return;
+      const shape = (W, lift) => {
+        const L = [], R = [];
+        for (let i = 0; i < pts.length; i++) {
+          const a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)], nx = -(b.y - a.y), ny = b.x - a.x, n = Math.hypot(nx, ny) || 1;
+          const age = Math.max(0, t - pts[i].t), k = Math.max(0, 1 - age / LIFE) * (0.25 + 0.75 * i / (pts.length - 1)), ww = W * k;
+          L.push([pts[i].x + nx / n * ww, pts[i].y - lift + ny / n * ww * 0.7]); R.push([pts[i].x - nx / n * ww, pts[i].y - lift - ny / n * ww * 0.7]);
+        }
+        c.beginPath(); L.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); for (let i = R.length - 1; i >= 0; i--) c.lineTo(R[i][0], R[i][1]); c.closePath(); c.fill();
+      };
+      const k = fx.a;
+      if (st === 'scuff') {
+        // two faint scrape marks where the feet dragged (lingering floor marks stay faint)
+        c.globalAlpha = 0.22 * k * Math.min(1, (1 - p) / 0.4); c.fillStyle = '#1a120c';
+        c.save(); c.translate(0, -4); shape(2.2, 0); c.restore(); c.save(); c.translate(0, 5); shape(2.2, 0); c.restore();
+        c.globalAlpha = 1; return;
+      }
+      if (st === 'smear') { c.globalAlpha = 0.55 * k; c.fillStyle = '#140a1e'; shape(w * 1.35, 16); }
+      c.globalCompositeOperation = 'lighter';
+      c.globalAlpha = (st === 'smear' ? 0.75 : 0.5) * k; c.fillStyle = s.c; shape(w, 16);
+      c.globalAlpha = 0.8 * k; c.fillStyle = s.c2 || '#ffffff'; shape(w * 0.3, 16);
+      c.globalCompositeOperation = 'source-over'; c.globalAlpha = 1;
+    } });
+  }
+  // the dash's direction, a frame in (the hero has started to move by then)
+  const dirOf = (e, sx, sy) => (Math.hypot(e.x - sx, e.y - sy) > 2 ? Math.atan2(e.y - sy, e.x - sx) : e.angle || 0);
+
+  const START = {
+    heavy(e, s, sx, sy) {
+      V.smoke(sx, sy, { n: 5, r: 8, color: DUST, size: 20, a: 0.55, speed: 70, life: 0.8 });
+      V.debris(sx, sy, { n: 3, color: '#7a6a58', speed: 0.6, up: 0.5, dur: 1 });
+      ribbon(e, s, 'scuff');
+      // the shoulder charge: a bright shock arc on the leading side and a flat ring kicked off the floor
+      later(0.03, () => { const a = dirOf(e, sx, sy);
+        V.fx({ dur: 0.22, layer: 'air', draw: (c, p, t, fx) => { const k = fx.a * (1 - p), R = 22 + 12 * p;
+          V.neonPath(c, s.c, 3.5 * (1 - p * 0.5), k, () => c.arc(e.x, e.y - 18, R, a - 0.85, a + 0.85));
+          V.glowAt(c, e.x + Math.cos(a) * R, e.y - 18 + Math.sin(a) * R, 18, s.c, 0.8 * k); } });
+        V.shock(sx, sy, { r: 46, color: s.c, dur: 0.3, w: 4 });
+        V.sparks(e.x + Math.cos(a) * 20, e.y + Math.sin(a) * 20, { color: s.c2, n: 4, angle: a, spread: 0.6, speed: 260 });
+        if (s.sigil) V.sigil(sx, sy, { r: 26, style: s.sigil, color: s.c, dur: 0.45, spin: 4 }); });
+    },
+    shadow(e, s, sx, sy) {
+      V.smoke(sx, sy, { n: 5, r: 10, color: s.smoke, size: 24, a: 0.6, speed: 50, life: 1 });
+      V.flash(sx, sy - 16, 34, s.c, 0.18);
+      ribbon(e, s, 'smear', 9);
+    },
+    rune(e, s, sx, sy) {
+      V.sigil(sx, sy, { r: 26, style: s.sigil || 'star4', color: s.c, dur: 0.42, spin: 5 });
+      V.flash(sx, sy - 14, 30, s.c, 0.18);
+      V.motes(sx, sy, { color: s.c, n: 5, r: 16, size: 7, life: 0.6 });
+      ribbon(e, s, 'glow', 6);
+    },
+    wind(e, s, sx, sy) {
+      V.swirl(sx, sy, { r: 26, color: s.c, dur: 0.35, arms: 3, layer: 'ground' });
+      V.smoke(sx, sy, { n: 3, color: '#e8f4f0', size: 16, a: 0.4, speed: 60, life: 0.6 });
+      ribbon(e, s, 'glow', 8);
+    },
+    gust(e, s, sx, sy) {
+      V.shock(sx, sy, { r: 40, color: s.c, dur: 0.28, w: 3 });
+      V.smoke(sx, sy, { n: 4, color: DUST, size: 18, a: 0.5, speed: 60, life: 0.7 });
+      ribbon(e, s, 'glow', 4);
+    },
+    nimble(e, s, sx, sy) {
+      V.smoke(sx, sy, { n: 4, color: DUST, size: 16, a: 0.5, speed: 55, life: 0.7 });
+      V.motes(sx, sy, { kind: 'leaf', color: s.c2, n: 3, r: 14, size: 9, life: 0.8 });
+      ribbon(e, s, 'glow', 4);
+    },
+  };
+  const TRAIL = {
+    heavy(e, s) { if (Math.random() < 0.6) V.spawn({ x: e.x + rand(-6, 6), y: e.y + rand(-3, 3), z: 2, vx: rand(-20, 20), vz: rand(10, 30), drag: 0.05, life: rand(0.4, 0.6), size: rand(12, 16), size1: 26, color: DUST, kind: 'smoke', add: false, a: 0.45 }); },
+    shadow(e, s, a) {
+      V.spawn({ x: e.x + rand(-5, 5), y: e.y, z: rand(6, 24), vx: -Math.cos(a) * rand(300, 420), vy: -Math.sin(a) * rand(300, 420) * 0.7, drag: 0.2, life: rand(0.18, 0.28), size: rand(8, 12), size1: 2, color: Math.random() < 0.6 ? s.c : s.c2, stretch: 5 });
+      if (Math.random() < 0.5) V.spawn({ x: e.x, y: e.y, z: 8, vz: rand(10, 30), life: 0.6, size: 16, size1: 28, color: s.smoke, kind: 'smoke', add: false, a: 0.4 });
+    },
+    rune(e, s) { V.spawn({ x: e.x + rand(-8, 8), y: e.y + rand(-4, 4), z: rand(6, 26), vz: rand(20, 50), vx: rand(-15, 15), life: rand(0.4, 0.7), size: s.part === 'feather' ? 11 : s.part === 'leaf' ? 9 : rand(5, 8), size1: s.part === 'feather' || s.part === 'leaf' ? undefined : 0,
+      color: Math.random() < 0.6 ? s.c : s.c2, kind: s.part || 'glow', add: s.part === 'leaf' || s.part === 'feather' ? false : undefined, vr: rand(-4, 4), flutter: s.part === 'leaf' || s.part === 'feather' ? 5 : 0 }); },
+    wind(e, s, a) {
+      V.spawn({ x: e.x + rand(-10, 10), y: e.y + rand(-6, 6), z: rand(8, 30), vx: -Math.cos(a) * 320, vy: -Math.sin(a) * 220, drag: 0.15, life: 0.22, size: 10, size1: 3, color: s.c2, kind: 'soft', stretch: 6, a: 0.8 });
+      if (Math.random() < 0.4) V.spawn({ x: e.x, y: e.y, z: rand(6, 20), vx: rand(-40, 40), vy: rand(-30, 30), vz: rand(10, 40), g: 60, life: 0.8, size: 9, color: Math.random() < 0.5 ? s.c : '#5fc890', kind: 'leaf', add: false, vr: rand(-8, 8), flutter: 6 });
+    },
+    gust(e, s, a) {
+      // a footprint on alternate sides, glowing faintly gold and fading
+      e._dashStep = (e._dashStep || 0) + 1;
+      if (e._dashStep % 2 === 0) { const side = (e._dashStep / 2) % 2 ? 1 : -1, px = e.x - Math.sin(a) * 5 * side, py = e.y + Math.cos(a) * 3.5 * side;
+        V.fx({ dur: 0.9, layer: 'ground', draw: (c, p, t, fx) => { const k = fx.a * Math.min(1, (1 - p) / 0.5);
+          c.save(); c.translate(px, py); c.rotate(a); c.globalAlpha = 0.3 * k; c.fillStyle = '#1a120c';
+          c.beginPath(); c.ellipse(0, 0, 5, 2.6, 0, 0, Math.PI * 2); c.fill(); c.restore();
+          V.glowAt(c, px, py, 7, s.c, 0.45 * k * (1 - p)); } }); }
+      V.spawn({ x: e.x + rand(-8, 8), y: e.y + rand(-5, 5), z: rand(10, 28), vx: -Math.cos(a) * 280, vy: -Math.sin(a) * 200, drag: 0.15, life: 0.2, size: 9, size1: 3, color: '#ffffff', kind: 'soft', stretch: 6, a: 0.6 });
+    },
+    nimble(e, s) { if (Math.random() < 0.5) V.spawn({ x: e.x, y: e.y, z: rand(4, 16), vx: rand(-30, 30), vy: rand(-20, 20), vz: rand(10, 40), g: 60, life: 0.7, size: 8, color: Math.random() < 0.5 ? s.c2 : '#8fe060', kind: 'leaf', add: false, vr: rand(-8, 8), flutter: 6 });
+      if (Math.random() < 0.4) V.spawn({ x: e.x, y: e.y, z: 2, vz: 15, life: 0.45, size: 12, size1: 22, color: DUST, kind: 'smoke', add: false, a: 0.4 }); },
+  };
+  const ARRIVE = {
+    heavy(e, s) { V.smoke(e.x, e.y, { n: 5, r: 14, color: DUST, size: 20, a: 0.5, speed: 80, life: 0.8 }); V.shock(e.x, e.y, { r: 50, color: s.c, dur: 0.32, w: 4 }); V.debris(e.x, e.y, { n: 3, color: '#7a6a58', speed: 0.6, up: 0.5, dur: 1 }); vfxShake(1.5); },
+    shadow(e, s) { V.smoke(e.x, e.y, { n: 3, color: s.smoke, size: 22, a: 0.5, speed: 40, life: 0.9 }); V.shock(e.x, e.y, { r: 34, color: s.c, dur: 0.25, w: 3 }); V.glint(e.x, e.y, { color: s.c2, size: 20, z: 22 }); },
+    rune(e, s) { V.shock(e.x, e.y, { r: 36, color: s.c, dur: 0.3, w: 3 }); V.motes(e.x, e.y, { color: s.c, n: 4, r: 16, size: 7, life: 0.7, kind: s.part === 'leaf' || s.part === 'feather' ? s.part : undefined }); },
+    wind(e, s) { V.tornado(e.x, e.y, { color: s.c2, h: 46, r: 18, dur: 0.4 }); V.shock(e.x, e.y, { r: 40, color: s.c, dur: 0.28, w: 3 }); },
+    gust(e, s) { V.shock(e.x, e.y, { r: 44, color: s.c, dur: 0.3, w: 4 }); V.smoke(e.x, e.y, { n: 3, color: DUST, size: 16, a: 0.45, speed: 50, life: 0.6 }); },
+    nimble(e, s) { V.smoke(e.x, e.y, { n: 3, color: DUST, size: 16, a: 0.45, speed: 50, life: 0.6 }); V.shock(e.x, e.y, { r: 32, color: s.c, dur: 0.25, w: 2.5 }); },
+  };
+  return {
+    // at the push-off (runs under the caller's scale: 1 for you, 0.6 for anyone else). true: handled
+    start(e, color) {
+      if (!e) return false;
+      const s = styleOf(e), sx = e.x, sy = e.y;
+      e._dashStyle = s; e._dashStep = 0; e._dashA = null; e._dashP = null;
+      START[s.kind](e, s, sx, sy);
+      later(0.19, () => { if (ARRIVE[s.kind]) ARRIVE[s.kind](e, s); });
+      return true;
+    },
+    // while moving (FX.dashTrail; not dimmed by the caller, so it picks the intensity itself). true: handled
+    trail(e, color) {
+      const s = e._dashStyle || styleOf(e), fn = TRAIL[s.kind];
+      if (!fn) return false;
+      const a = e._dashA != null && e._dashP ? Math.atan2(e.y - e._dashP.y, e.x - e._dashP.x) : e.angle || 0;
+      e._dashP = { x: e.x, y: e.y }; e._dashA = a;
+      const prev = V.scale; V.setScale(!FX.me || e === FX.me ? 1 : 0.6);
+      try { fn(e, s, a); } finally { V.setScale(prev); }
+      return true;
+    },
+  };
+})();
 
 // ======================================================================= Alembist (classes-b)
 // Glassware and liquids after the painted sheets: a small wind-up (a puff at the still, a flick of the wrist), a bold
@@ -278,7 +905,7 @@ const KIT_VFX = {
 // salt glitter, a ward circle that lingers as long as it works). Each reagent puffs its colour out of the copper still.
 (() => {
   const V = VFX, rand = (a, b) => a + Math.random() * (b - a);
-  const shake = s => { FX.shake = Math.max(FX.shake, s); };
+  const shake = s => vfxShake(s);
   // the still on the hero's back (local -x), where brewing shows
   const still = e => ({ x: e.x - Math.cos(e.angle || 0) * 16, y: e.y - Math.sin(e.angle || 0) * 16 });
   const puff = (e, color, n = 3, big = 1) => {
@@ -370,7 +997,13 @@ const KIT_VFX = {
     ember: c => puff(c.ent, ALEMBIC.reagents.E.color),
     dew: c => puff(c.ent, ALEMBIC.reagents.D.color),
     salt: c => puff(c.ent, ALEMBIC.reagents.S.color),
-    quicksilver: c => puff(c.ent, ALEMBIC.reagents.Q.color),
+    // (polish) a puff of its colour, then beads of mercury spin out of the still in a quick silver ring, run back
+    // together into one bright drop and wink out
+    quicksilver: c => { const qc = ALEMBIC.reagents.Q.color, e = c.ent; puff(e, qc, 3, 1.1);
+      V.fx({ dur: 0.6, layer: 'air', draw: (cc, p, t, f) => { const s = still(e), k = f.a * Math.min(1, (1 - p) / 0.25), R = 22 * Math.sin(Math.min(1, p / 0.8) * Math.PI);
+        for (let i = 0; i < 6; i++) { const a = t * 9 + i * Math.PI / 3, x = s.x + Math.cos(a) * R, y = s.y - 30 + Math.sin(a) * R * 0.45; V.glowAt(cc, x, y, 7, qc, 0.8 * k); V.glowAt(cc, x, y, 2.5, '#ffffff', k); }
+        V.neonPath(cc, '#e8eef4', 1, k * 0.5, () => cc.ellipse(s.x, s.y - 30, Math.max(1, R), Math.max(1, R * 0.45), 0, 0, Math.PI * 2)); } });
+      c.later(0.5, () => { const s = still(e); V.glint(s.x, s.y, { color: '#ffffff', size: 22, z: 30 }); V.spawn({ x: s.x, y: s.y, z: 30, life: 0.25, size: 16, size1: 4, color: qc }); }); },
     throw: () => {},   // the vial itself is KIT_VFX.vial (it knows what it carries)
     // a gush of white steam out of the still, a little rune of glass at the feet
     distill: c => { puff(c.ent, '#dff4f4', 6, 1.4); V.sigil(c.x, c.y, { r: 34, style: 'hex', color: '#cfeff0', dur: 0.7, spin: 3 }); },
@@ -555,10 +1188,196 @@ const AUTO_VFX = (() => {
     slash: c => { V.slash(c.ent.x, c.ent.y, c.ang, { r: 52, span: 1.4, color: '#dfe8ff', dur: 0.22, w: 0.32, flip: c.alt, sparks: 3 }); c.later(0.08, () => { const p = reach(c, 70); V.hit(p.x, p.y, '#e8f0ff', 0.45); }); },
     chop: c => { V.slash(c.ent.x, c.ent.y, c.ang, { r: 60, span: 1.7, color: '#ff8a7a', dur: 0.26, w: 0.42, flip: c.alt, sparks: 4 }); c.later(0.1, () => { const p = reach(c, 76); V.hit(p.x, p.y, '#ffb0a0', 0.55); V.splash(p.x, p.y, { n: 3, size: 0.6 }); }); },
     stab: c => { const p = reach(c, 62); V.slash(c.ent.x, c.ent.y, c.ang + (c.alt ? 0.35 : -0.35), { r: 40, span: 0.8, color: '#e0b0ff', dur: 0.18, w: 0.3, flip: c.alt, sparks: 2 }); c.later(0.06, () => V.sparks(p.x, p.y, { color: '#f0d8ff', n: 4, angle: c.ang, spread: 0.6, speed: 260 })); },
-    rune: c => V.missile(c.ent.x, c.ent.y, c.tx, c.ty, { style: 'orb', color: '#b18cff', speed: 900, size: 0.55, onHit: (x, y) => V.hit(x, y, '#c9b0ff', 0.45) }),
+    rune: c => V.missile(c.ent.x, c.ent.y, c.tx, c.ty, { style: 'orb', color: '#8a90ff', speed: 900, size: 0.55, onHit: (x, y) => V.hit(x, y, '#b4bcff', 0.45) }),
     shot: c => V.missile(c.ent.x, c.ent.y, c.tx, c.ty, { style: 'arrow', color: '#e8e0c0', speed: 1500, size: 0.8, onHit: (x, y) => V.hit(x, y, '#fff2c0', 0.4) }),
-    spark: c => V.missile(c.ent.x, c.ent.y, c.tx, c.ty, { style: 'orb', color: c.color, speed: 950, size: 0.5, onHit: (x, y) => V.hit(x, y, c.color, 0.35) }),
+    // ---- (shared-fx polish) the casters' autos each look like their class (dispatched by class, so the kits keep
+    // the 'spark' kind and its cast pose); anyone else's spark is the plain orb
+    spark: c => { const f = SPARK[c.ent && c.ent.cls && c.ent.cls.id]; if (f) return f(c);
+      V.missile(c.ent.x, c.ent.y, c.tx, c.ty, { style: 'orb', color: c.color, speed: 950, size: 0.5, onHit: (x, y) => V.hit(x, y, c.color, 0.35) }); },
+    // Runeguard: a gauntleted rune-shield bash (a melee tank: no missile). A shove of indigo light off the shield face,
+    // a little rune flashing where it lands, a few sparks
+    runebash: c => {
+      const p = reach(c, 58), a = c.ang;
+      V.fx({ dur: 0.16, layer: 'air', draw: (cx, q, t, e) => { const k = e.a * (1 - q), R = 16 + 10 * easeOut(q), hx = c.ent.x + Math.cos(a) * (20 + 18 * q), hy = c.ent.y - 16 + Math.sin(a) * (20 + 18 * q);
+        V.neonPath(cx, RG_AUTO, 3 * (1 - q * 0.5), k, () => cx.arc(hx - Math.cos(a) * R, hy - Math.sin(a) * R, R, a - 0.8, a + 0.8)); } });
+      c.later(0.07, () => { V.spikeburst(p.x, p.y, { r: 20, n: 8, color: RG_AUTO, core: '#eef0ff', ink: '#0e1238', dur: 0.2 }); V.sparks(p.x, p.y, { color: '#d0d6ff', n: 3, angle: a, spread: 0.7, speed: 240 });
+        V.glint(p.x, p.y, { color: '#b4bcff', size: 22, z: 18, life: 0.22 }); });
+    },
   };
+})();
+
+// ---- (shared-fx polish) the casters' own auto bolts: small, quick and cheap (one effect, at most one trail particle a
+// tick). Pyromancer a flame bolt shedding embers; Cleric a gold light mote with a tiny halo; Grovekeeper a seed wrapped
+// in leaves; Chronomancer a violet clock-shard; Alembist a little glass vial lobbed over, bursting into coloured fizz.
+const RG_AUTO = '#8a90ff';
+const SPARK = (() => {
+  const V = VFX, rand = (a, b) => a + Math.random() * (b - a);
+  // one small projectile: o = { speed, arc, z, head(c, x, y, ang, t, k, p), trail(x, y, z, ang, p), tail: [col, w], hit(x, y, ang) }
+  function bolt(c, o) {
+    const sx = c.ent.x, sy = c.ent.y, tx = c.tx, ty = c.ty, d = Math.hypot(tx - sx, ty - sy), dur = Math.max(0.08, d / (o.speed || 950)), ang = Math.atan2(ty - sy, tx - sx), arc = o.arc || 0, z0 = o.z ?? 20;
+    const pos = p => ({ x: sx + (tx - sx) * p, y: sy + (ty - sy) * p, z: z0 * (1 - p * 0.4) + Math.sin(p * Math.PI) * arc });
+    V.fx({ dur, layer: 'air', tick: o.trail ? (p) => { const q = pos(p); o.trail(q.x, q.y, q.z, ang, p); } : undefined,
+      draw: (cx, p, t, e) => { const q = pos(p), y = q.y - q.z;
+        if (o.tail) { const b = pos(Math.max(0, p - 0.14)); V.streakTo(cx, b.x, b.y - b.z, q.x, y, o.tail[1], o.tail[0], 0.85 * e.a); }
+        o.head(cx, q.x, y, arc ? Math.atan2((pos(Math.min(1, p + 0.02)).y - pos(Math.min(1, p + 0.02)).z) - y, pos(Math.min(1, p + 0.02)).x - q.x) : ang, t, e.a, p); },
+      done: () => { if (o.hit) o.hit(tx, ty, ang); } });
+  }
+  return {
+    pyromancer: c => bolt(c, { speed: 900, tail: ['#ff6a1a', 4],
+      head: (x, px, py, a, t, k) => { V.glowAt(x, px, py, 16, '#ff7a1a', 0.85 * k);
+        const fl = 1 + Math.sin(t * 40) * 0.15; x.save(); x.translate(px, py); x.rotate(a); x.globalCompositeOperation = 'lighter';
+        for (const [col, L, W, al] of [['#ff5a1a', 15, 5, 0.8], ['#ffb040', 11, 3.6, 0.9], ['#fff2c0', 6, 2.2, 1]]) { x.globalAlpha = al * k; x.fillStyle = col; x.beginPath();
+          x.moveTo(W, 0); x.quadraticCurveTo(W * 0.9, W, -L * 0.45 * fl, W * 0.35); x.lineTo(-L * fl, 0); x.lineTo(-L * 0.45 * fl, -W * 0.35); x.quadraticCurveTo(W * 0.9, -W, W, 0); x.fill(); }
+        x.restore(); },
+      trail: (x, y, z, a) => { if (Math.random() < 0.5) V.spawn({ x, y, z, vx: -Math.cos(a) * rand(40, 110) + rand(-30, 30), vy: -Math.sin(a) * rand(40, 110) + rand(-30, 30), vz: rand(10, 60), drag: 0.06, g: 140, life: rand(0.25, 0.45), size: rand(2.5, 4), size1: 0, color: Math.random() < 0.5 ? '#ffd070' : '#ff8a2a', stretch: 2 }); },
+      hit: (x, y, a) => { V.hit(x, y, '#ffb060', 0.35); V.sparks(x, y, { color: '#ffc060', n: 3, angle: a + Math.PI, spread: 1, speed: 200 }); } }),
+    cleric: c => bolt(c, { speed: 820, tail: ['#ffe9a0', 3],
+      head: (x, px, py, a, t, k) => { V.glowAt(x, px, py, 15, '#fff0b8', 0.8 * k); V.glowAt(x, px, py, 5, '#ffffff', k);
+        V.neonRing(x, px, py, 8 + Math.sin(t * 18) * 0.8, '#ffe9a0', 1.1, 0.8 * k, 0.45); },
+      trail: (x, y, z) => { if (Math.random() < 0.3) V.spawn({ x: x + rand(-3, 3), y, z: z + rand(-3, 3), vz: rand(-10, 15), life: rand(0.25, 0.4), size: rand(5, 8), size1: 0, color: '#fff6d8', kind: 'star', vr: 4 }); },
+      hit: (x, y) => { V.spawn({ x, y, z: 16, life: 0.22, size: 30, size1: 10, color: '#fff0b8', kind: 'star', vr: 4 }); V.shock(x, y, { r: 24, color: '#fff0b8', dur: 0.25, w: 2 }); V.motes(x, y, { color: '#fff6d8', n: 2, r: 10, size: 6, life: 0.6 }); } }),
+    grovekeeper: c => bolt(c, { speed: 780, arc: 10, tail: ['#8fff7a', 2.5],
+      head: (x, px, py, a, t, k) => { V.glowAt(x, px, py, 13, '#8fff7a', 0.5 * k);
+        x.save(); x.translate(px, py); x.rotate(t * 14); x.globalAlpha = k;
+        x.fillStyle = '#6a4a22'; x.strokeStyle = '#1e140a'; x.lineWidth = 1; x.beginPath(); x.ellipse(0, 0, 3.4, 2.4, 0, 0, Math.PI * 2); x.fill(); x.stroke();
+        const lf = V.sprite('leaf', '#7ee06a'); x.drawImage(lf, -1, -9, 12, 9); x.rotate(Math.PI); x.drawImage(lf, -1, -9, 12, 9);
+        x.restore(); },
+      trail: (x, y, z) => { if (Math.random() < 0.2) V.spawn({ x, y, z, vx: rand(-30, 30), vy: rand(-20, 20), vz: rand(0, 30), g: 60, life: 0.6, size: 7, color: Math.random() < 0.5 ? '#8fff7a' : '#5fbf4a', kind: 'leaf', add: false, vr: rand(-8, 8), flutter: 6 }); },
+      hit: (x, y) => { V.hit(x, y, '#b8ff9a', 0.3); V.motes(x, y, { kind: 'leaf', color: '#7ee06a', n: 3, r: 12, size: 8, life: 0.7 }); } }),
+    chronomancer: c => bolt(c, { speed: 1000, tail: ['#b48cff', 3],
+      head: (x, px, py, a, t, k) => { V.glowAt(x, px, py, 15, '#b48cff', 0.75 * k);
+        x.save(); x.translate(px, py); x.rotate(t * 10); x.globalAlpha = k; x.drawImage(V.sprite('shard', '#c8a8ff'), -8, -8, 16, 16); x.restore();
+        V.glowAt(x, px, py, 4, '#ffffff', k); },
+      trail: (x, y, z) => { if (Math.random() < 0.35) V.spawn({ x, y, z, life: 0.3, size: rand(4, 7), size1: 0, color: Math.random() < 0.5 ? '#b48cff' : '#7aa0ff' }); },
+      // a tiny clock face ticks once where it lands
+      hit: (x, y) => { V.hit(x, y, '#d8c4ff', 0.3);
+        V.fx({ dur: 0.3, layer: 'air', draw: (cx, p, t, e) => { const k = e.a * (1 - p), R = 11 + 4 * p, cy = y - 18;
+          V.neonRing(cx, x, cy, R, '#b48cff', 1.4, k, 1); V.neonPath(cx, '#e0d4ff', 1.4, k, () => { cx.moveTo(x, cy); cx.lineTo(x, cy - R * 0.75); cx.moveTo(x, cy); const ha = -Math.PI / 2 + p * Math.PI * 1.2; cx.lineTo(x + Math.cos(ha) * R * 0.5, cy + Math.sin(ha) * R * 0.5); }); } }); } }),
+    alembist: c => { const liq = ['#5ff08a', '#ff6a4a', '#4fa8ff'][(Math.random() * 3) | 0];
+      bolt(c, { speed: 620, arc: 34, z: 22,
+        head: (x, px, py, a, t, k) => { x.save(); x.translate(px, py); x.rotate(t * 13); x.scale(1.5, 1.5); x.globalAlpha = k;
+          x.fillStyle = 'rgba(210,235,255,0.45)'; x.strokeStyle = '#1a1622'; x.lineWidth = 1.2; x.beginPath(); x.ellipse(0, 1.5, 4, 4.5, 0, 0, Math.PI * 2); x.fill(); x.stroke();
+          x.fillStyle = liq; x.beginPath(); x.ellipse(0, 2.6, 3.2, 3, 0, 0, Math.PI); x.fill();
+          x.fillStyle = '#c8b8a0'; x.fillRect(-1.6, -5.5, 3.2, 3); x.strokeRect(-1.6, -5.5, 3.2, 3);
+          x.fillStyle = '#7a5a3a'; x.fillRect(-1.3, -7.5, 2.6, 2.2);
+          x.fillStyle = 'rgba(255,255,255,0.8)'; x.fillRect(-2.6, -0.5, 1, 2.4);
+          x.restore(); V.glowAt(x, px, py, 10, liq, 0.35 * k); },
+        trail: (x, y, z) => { if (Math.random() < 0.3) V.spawn({ x: x + rand(-2, 2), y, z, vz: rand(10, 30), life: 0.35, size: rand(3, 5), size1: 0, color: liq }); },
+        hit: (x, y) => { V.spawn({ x, y, z: 12, life: 0.18, size: 26, size1: 8, color: liq, kind: 'star', vr: 5 });
+          for (let i = 0; i < 3; i++) V.spawn({ x, y, z: 12, vx: rand(-110, 110), vy: rand(-60, 60), vz: rand(60, 150), g: 500, life: 0.4, size: 6, color: '#dff0ff', kind: 'shard', add: false, vr: rand(-12, 12) });
+          V.splash(x, y, { color: liq, n: 4, size: 0.55, speed: 0.6, z: 12 });
+          for (let i = 0; i < 4; i++) V.spawn({ x: x + rand(-10, 10), y: y + rand(-5, 5), z: rand(4, 14), vz: rand(20, 50), life: rand(0.4, 0.7), size: rand(3, 5), size1: 0, color: i % 2 ? liq : '#ffffff' }); } }); },
+  };
+})();
+
+// ======================================================================= CAST_VFX (shared-fx polish)
+// The gathering while a long cast (over 1s) charges: fire gathering in the Pyromancer's hand, light motes drawn into the
+// Cleric's staff, an arrow-draw glow on the Ranger's bow, leaves spiralling to the Grovekeeper, a clock ring forming
+// under the Chronomancer, fizz rising off the Alembist's flask, a rune ring forming for anyone else. It grows with the
+// cast's progress. main.js starts it at castStart (CAST_VFX.start); after that it watches the hero's castBar itself:
+// the cast running out (or the bar going) is the release (a small flash into the hand; the ability's recipe takes
+// over), and castBar.stop (an interrupt or a stop) or a new cast is the cancel (it fizzles out in 0.15s).
+// handle.cancel() / handle.release() end it by hand. Someone else's plays at 0.6 (the caller's scale).
+const CAST_VFX = (() => {
+  const V = VFX, rand = (a, b) => a + Math.random() * (b - a), TAU = Math.PI * 2, MIN = 1.0;
+  // where the light gathers: the casting hand (or a staff's tip, a bow's string), as ground x/y and a height z
+  const handOf = (e, z, fwd = 14) => ({ x: e.x + Math.cos(e.angle || 0) * fwd, y: e.y + Math.sin(e.angle || 0) * fwd * 0.6, z: z + (e.lift || 0) });
+  // one mote pulled in on a spiral to a moving point (h: { x, y } updated each tick)
+  const inward = (h, z, r, col, o = {}) => { const a = Math.random() * TAU, life = o.life ?? 0.45;
+    V.spawn({ x: h.x, y: h.y, z, life, size: o.size ?? rand(4, 7), size1: o.size1 ?? 2, color: col, kind: o.kind, add: o.add, vr: o.vr, flutter: o.flutter,
+      orbit: { follow: h, x: h.x, y: h.y, a, r, w: (Math.random() < 0.5 ? 1 : -1) * rand(5, 8), dr: -r / life * 0.95, flat: o.flat ?? 0.6 } }); };
+  const R = {
+    pyromancer: { col: '#ff7a1a', z: 30,
+      tick(s, q) { if (Math.random() < 0.25 + 0.5 * q) inward(s.h, s.h.z, 36 - 10 * q, Math.random() < 0.5 ? '#ffb040' : '#ff6a1a', { life: 0.4 }); },
+      draw(c, s, q, k, t) { const { x, y } = s.p, sz = 5 + 9 * q, fl = 1 + Math.sin(t * 30) * 0.12;
+        V.glowAt(c, x, y, 14 + 22 * q, '#ff7a1a', 0.7 * k);
+        c.save(); c.translate(x, y); c.globalCompositeOperation = 'lighter';
+        for (const [col, h, w, al] of [['#ff5a1a', 2.2, 1, 0.75], ['#ffb040', 1.6, 0.72, 0.85], ['#fff2c0', 0.9, 0.42, 1]]) { c.globalAlpha = al * k; c.fillStyle = col; c.beginPath();
+          c.moveTo(-sz * w, 0); c.quadraticCurveTo(-sz * w, -sz * h * 0.6 * fl, Math.sin(t * 9) * sz * 0.2, -sz * h * fl); c.quadraticCurveTo(sz * w, -sz * h * 0.6 * fl, sz * w, 0); c.arc(0, 0, sz * w, 0, Math.PI); c.fill(); }
+        c.restore(); } },
+    cleric: { col: '#fff0b8', z: 54, fwd: 12,
+      tick(s, q) { if (Math.random() < 0.3 + 0.4 * q) inward(s.h, s.h.z + rand(-6, 10), 48 - 14 * q, Math.random() < 0.6 ? '#fff0b8' : '#ffffff', { kind: Math.random() < 0.4 ? 'star' : undefined, life: 0.5, vr: 4 }); },
+      draw(c, s, q, k, t) { const { x, y } = s.p;
+        V.glowAt(c, x, y, 12 + 20 * q, '#fff0b8', 0.75 * k); V.glowAt(c, x, y, 4 + 5 * q, '#ffffff', k);
+        V.neonRing(c, x, y, 8 + 6 * q, '#ffe9a0', 1.2, k * q, 0.4);
+        c.save(); c.translate(x, y); c.rotate(t * 1.5); c.globalCompositeOperation = 'lighter'; c.globalAlpha = 0.6 * k * q; c.fillStyle = '#fff6d8';
+        for (let i = 0; i < 4; i++) { c.rotate(Math.PI / 2); c.beginPath(); c.moveTo(0, -2); c.lineTo(14 + 8 * q, 0); c.lineTo(0, 2); c.fill(); }
+        c.restore(); } },
+    ranger: { col: '#fff2c0', z: 28, fwd: 16,
+      tick(s, q) { if (Math.random() < 0.15 + 0.35 * q) inward(s.tip, s.h.z, 22, '#fff2c0', { life: 0.3, size: 4 }); },
+      draw(c, s, q, k, t) { const a = s.e.angle || 0, ca = Math.cos(a), sa = Math.sin(a) * 0.6, { x, y } = s.p, L = 10 + 16 * q;
+        // the drawn arrow: a line of light from the string to the head, brightening as the string comes back
+        V.neonPath(c, '#ffe9a0', 1.6 + 1.4 * q, k * (0.4 + 0.6 * q), () => { c.moveTo(x - ca * 10, y - sa * 10); c.lineTo(x + ca * L, y + sa * L); });
+        V.glowAt(c, x + ca * L, y + sa * L, 8 + 14 * q, '#fff2c0', 0.9 * k); V.glowAt(c, x + ca * L, y + sa * L, 3 + 3 * q, '#ffffff', k);
+        if (q > 0.85) V.glowAt(c, x + ca * L, y + sa * L, 26, '#ffffff', k * (0.4 + 0.4 * Math.sin(t * 30))); } },
+    grovekeeper: { col: '#8fff7a', z: 30,
+      tick(s, q) { if (Math.random() < 0.2 + 0.35 * q) inward(s.h, s.h.z - rand(0, 18), 40 - 10 * q, Math.random() < 0.5 ? '#8fff7a' : '#5fbf4a', { kind: 'leaf', add: false, size: 8, size1: 4, life: 0.6, vr: 6, flutter: 5 });
+        if (Math.random() < 0.15) inward(s.h, s.h.z, 30, '#ffd0e8', { kind: 'petal', add: false, size: 6, size1: 3, life: 0.5, flutter: 5 }); },
+      draw(c, s, q, k, t) { const { x, y } = s.p, e = s.e;
+        V.glowAt(c, x, y, 12 + 16 * q, '#8fff7a', 0.6 * k); V.glowAt(c, x, y, 3 + 3 * q, '#ffffff', 0.9 * k);
+        V.neonRing(c, e.x, e.y + 2, 18 + 12 * q, '#7ee06a', 1.6, k * 0.8 * q, 0.5); } },
+    chronomancer: { col: '#b48cff', z: 32,
+      tick(s, q) { if (Math.random() < 0.2 + 0.3 * q) inward(s.h, s.h.z, 30, Math.random() < 0.5 ? '#b48cff' : '#7aa0ff', { life: 0.4 }); },
+      draw(c, s, q, k, t) { const { x, y } = s.p, e = s.e, R0 = 30, fl = 0.5, n = Math.floor(12 * Math.min(1, q * 1.1));
+        V.glowAt(c, x, y, 10 + 14 * q, '#b48cff', 0.65 * k);
+        // the clock face under the feet: its rim, an hour tick appearing for each twelfth of the cast, a hand sweeping
+        V.neonRing(c, e.x, e.y + 2, R0, '#b48cff', 1.6, k * Math.min(1, q * 3), fl);
+        V.neonPath(c, '#e0d4ff', 1.3, k, () => { for (let i = 0; i < n; i++) { const a = -Math.PI / 2 + i * TAU / 12; c.moveTo(e.x + Math.cos(a) * R0 * 0.78, e.y + 2 + Math.sin(a) * R0 * 0.78 * fl); c.lineTo(e.x + Math.cos(a) * R0 * 0.94, e.y + 2 + Math.sin(a) * R0 * 0.94 * fl); }
+          const ha = -Math.PI / 2 + q * TAU; c.moveTo(e.x, e.y + 2); c.lineTo(e.x + Math.cos(ha) * R0 * 0.7, e.y + 2 + Math.sin(ha) * R0 * 0.7 * fl); }); } },
+    alembist: { col: '#5ff08a', z: 28,
+      tick(s, q) { if (Math.random() < 0.3 + 0.4 * q) V.spawn({ x: s.h.x + rand(-4, 4), y: s.h.y, z: s.h.z, vz: rand(25, 60), vx: rand(-8, 8), life: rand(0.35, 0.6), size: rand(3, 5.5), size1: 0, color: s.liq(), kind: Math.random() < 0.3 ? 'star' : undefined }); },
+      draw(c, s, q, k, t) { const { x, y } = s.p, col = s.liq();
+        V.glowAt(c, x, y, 10 + 14 * q, col, 0.6 * k); V.glowAt(c, x, y, 3 + 3 * q, '#ffffff', 0.9 * k);
+        V.neonPath(c, col, 1.2, k * q, () => c.ellipse(x, y, 8 + 4 * q, 3 + 1.5 * q, 0, t * 8, t * 8 + 4.2)); },
+      init(s) { const cols = ['#5ff08a', '#ff6a4a', '#4fa8ff']; s.liq = () => cols[Math.floor(s.t * 2.5) % 3]; } },
+    thermist: { col: '#ff8a3a', z: 30,
+      tick(s, q) { if (Math.random() < 0.25 + 0.45 * q) inward(s.h, s.h.z, 34 - 8 * q, Math.random() < 0.5 ? '#ff8a3a' : '#8fd0ff', { life: 0.42 }); },
+      draw(c, s, q, k, t) { const { x, y } = s.p; V.glowAt(c, x - 4, y, 10 + 12 * q, '#ff8a3a', 0.55 * k); V.glowAt(c, x + 4, y, 10 + 12 * q, '#6fb2f0', 0.55 * k); V.glowAt(c, x, y, 3 + 3 * q, '#ffffff', 0.9 * k); } },
+  };
+  // anyone else: a rune ring forming at the feet, closing as the cast fills, and a light gathering in the hand
+  const DEF = { z: 30,
+    tick(s, q) { if (Math.random() < 0.15 + 0.3 * q) inward(s.h, s.h.z, 30, s.col, { life: 0.4 }); },
+    draw(c, s, q, k, t) { const { x, y } = s.p, e = s.e, R0 = 28, a0 = -Math.PI / 2;
+      V.glowAt(c, x, y, 10 + 12 * q, s.col, 0.6 * k);
+      V.neonPath(c, s.col, 1.8, k, () => c.ellipse(e.x, e.y + 2, R0, R0 * 0.5, 0, a0, a0 + TAU * Math.max(0.02, q))); } };
+
+  function start(e, dur, ab) {
+    if (!e || !(dur > MIN)) return null;
+    if (e._castFx) e._castFx.cancel(true);
+    const id = e.cls && e.cls.id, r = R[id] || DEF;
+    const bar = e.castBar || null;
+    const s = { e, dur, ab, bar, t: 0, end: null, released: false, col: r.col || (e.cls && e.cls.accent) || '#ffffff', h: handOf(e, r.z, r.fwd), tip: { x: e.x, y: e.y }, p: { x: e.x, y: e.y } };
+    if (r.init) r.init(s);
+    const place = () => { const h = handOf(e, r.z, r.fwd); s.h.x = h.x; s.h.y = h.y; s.h.z = h.z; s.p.x = h.x; s.p.y = h.y - h.z;
+      s.tip.x = h.x + Math.cos(e.angle || 0) * 22; s.tip.y = h.y + Math.sin(e.angle || 0) * 13; };
+    const handle = {
+      // fade it out quickly, with a little fizzle (quiet: no fizzle, for a cast replaced by another)
+      cancel(quiet) { if (s.end) return; s.end = s.t; if (!quiet && s.t > 0.15) { place(); for (let i = 0; i < 2; i++) V.spawn({ x: s.h.x + rand(-4, 4), y: s.h.y, z: s.h.z, vx: rand(-15, 15), vz: rand(15, 35), drag: 0.05, life: 0.5, size: 10, size1: 20, color: '#8a8090', kind: 'smoke', add: false, a: 0.35 }); } if (e._castFx === handle) e._castFx = null; },
+      // the cast went off: a quick flash into the hand; the ability's own recipe takes it from here
+      release() { if (s.end) return; s.end = s.t; s.released = true; place();
+        V.flash(s.p.x, s.p.y, 26, s.col, 0.16);
+        for (let i = 0; i < 4; i++) { const a = Math.random() * TAU; V.spawn({ x: s.h.x, y: s.h.y, z: s.h.z, vx: Math.cos(a) * 90, vy: Math.sin(a) * 50, vz: rand(-20, 40), drag: 0.08, life: 0.3, size: 5, size1: 0, color: s.col }); }
+        if (e._castFx === handle) e._castFx = null; },
+    };
+    e._castFx = handle;
+    V.fx({ dur: dur + 0.6, layer: 'air', tick: (p, dt, fx) => {
+      s.t = p * fx.dur;
+      if (!s.end) {
+        // the hero's cast bar says how it went: cut short (stop) or replaced is a cancel; run out or gone is the release
+        const cb = e.castBar;
+        if (bar && (cb !== bar || cb.stop != null)) { if (cb === bar || !cb) { if (cb && cb.stop != null) handle.cancel(); else handle.release(); } else handle.cancel(true); }
+        else if (s.t >= dur) handle.release();
+      }
+      if (s.end) { if (s.t - s.end > 0.16) fx.dur = 0; return; }
+      place(); r.tick(s, Math.min(1, s.t / dur));
+    }, draw: (c, p, t, fx) => {
+      if (!s.end) place();
+      const q = Math.min(1, t / dur), fade = s.end != null ? Math.max(0, 1 - (t - s.end) / 0.15) : 1, k = fx.a * Math.min(1, t / 0.15) * fade;
+      if (k > 0.01) r.draw(c, s, s.released ? 1 : q, k, t);
+    } });
+    return handle;
+  }
+  return { start, stop(e, released) { if (e && e._castFx) e._castFx[released ? 'release' : 'cancel'](); }, recipes: R };
 })();
 
 // DPS specialization moves (kept in their own block; the class recipes above stay as they were).
@@ -567,7 +1386,7 @@ const AUTO_VFX = (() => {
   Object.assign(ABILITY_VFX.ranger, {
     // Sharpshooter: a glint on the string, then a golden spiralling shot and a puff of dust where it lands
     aimed: c => { V.spawn({ x: c.x + Math.cos(c.ang) * 18, y: c.y + Math.sin(c.ang) * 18, z: 20, life: 0.25, size: 34, size1: 8, color: '#fff2c0', kind: 'star', vr: 6 });
-      V.missile(c.x, c.y, c.tx, c.ty, { style: 'helix', color: '#f2d27a', speed: 1700, size: 1.3, onHit: (x, y) => { V.hit(x, y, '#fff2c0', 1.2); V.shock(x, y, { r: 70, color: '#ffe9a0', dur: 0.35, w: 5 }); V.smoke(x, y, { n: 4, color: '#d8ccb0', size: 22, a: 0.5, speed: 50 }); FX.shake = Math.max(FX.shake, 3); } }); },
+      V.missile(c.x, c.y, c.tx, c.ty, { style: 'helix', color: '#f2d27a', speed: 1700, size: 1.3, onHit: (x, y) => { V.hit(x, y, '#fff2c0', 1.2); V.shock(x, y, { r: 70, color: '#ffe9a0', dur: 0.35, w: 5 }); V.smoke(x, y, { n: 4, color: '#d8ccb0', size: 22, a: 0.5, speed: 50 }); vfxShake(3); } }); },
     // Venomstrike: a dripping green arrow that splashes acid, which bubbles for a moment
     caustic: c => V.missile(c.x, c.y, c.tx, c.ty, { style: 'arrow', color: '#9aff4a', speed: 1400, size: 1.2, onHit: (x, y) => {
       V.splash(x, y, { color: '#7adf3a', n: 12, speed: 1.2 }); V.puddle(x, y, { r: 40, color: '#9aff4a', dark: '#1e3a0a', dur: 3 }); V.hit(x, y, '#c8ff8a', 1); V.shock(x, y, { r: 60, color: '#9aff4a', dur: 0.35, w: 4 });
@@ -578,12 +1397,17 @@ const AUTO_VFX = (() => {
     fury: c => { for (let i = 0; i < 3; i++) c.later(i * 0.06, () => V.slash(c.x, c.y, c.ang + i * 2.1, { r: 64, span: 2.4, color: i % 2 ? '#c58aff' : '#e8ecff', w: 0.5, dur: 0.26, flip: i % 2 === 1, sparks: 4 }));
       V.swirl(c.x, c.y, { r: 66, color: '#d8c0ff', dur: 0.5, arms: 4, layer: 'air' }); },
     // Nightstalker: a deep crimson thrust from behind, a red flash and a spray at the wound
+    // (polish, rogue sheet's Backstab) a red arrowhead streak drives through the target with two thinner streaks beside it
     backstab: c => { V.slash(c.x, c.y, c.ang, { r: 56, span: 0.9, color: '#ff3a5a', w: 0.7, dur: 0.22 });
-      c.later(0.07, () => { V.spawn({ x: c.tx, y: c.ty, z: 18, life: 0.3, size: 70, size1: 24, color: '#ff3a5a', kind: 'star', vr: 5 }); V.splash(c.tx, c.ty, { n: 10, speed: 1.2 }); V.hit(c.tx, c.ty, '#ff8a9a', 1.2); FX.shake = Math.max(FX.shake, 3); }); },
+      const a = Math.atan2(c.ty - c.y, c.tx - c.x), nx = -Math.sin(a), ny = Math.cos(a), sx = c.x - Math.cos(a) * 16, sy = c.y - Math.sin(a) * 16, ex = c.tx + Math.cos(a) * 34, ey = c.ty + Math.sin(a) * 34;
+      OLD_PAINT.thrust(sx, sy, ex, ey, { w: 14, color: '#d01a3a', core: '#ffe0e8', ink: '#2a0410', head: true, dur: 0.28, z: 20 });
+      for (const s of [-1, 1]) c.later(0.03, () => OLD_PAINT.thrust(sx + nx * s * 14, sy + ny * s * 10, ex - Math.cos(a) * 26 + nx * s * 14, ey - Math.sin(a) * 26 + ny * s * 10, { w: 5, color: '#ff3a5a', core: '#ffd0d8', ink: '#2a0410', dur: 0.22, z: 20 }));
+      c.later(0.07, () => { V.spawn({ x: c.tx, y: c.ty, z: 18, life: 0.3, size: 70, size1: 24, color: '#ff3a5a', kind: 'star', vr: 5 }); V.splash(c.tx, c.ty, { n: 12, speed: 1.3 }); V.hit(c.tx, c.ty, '#ff8a9a', 1.2);
+        V.spikeburst(c.tx, c.ty, { r: 48, n: 12, color: '#c01a3a', core: '#ffe0ec', ink: '#2a0410', dur: 0.32, z: 18 }); vfxShake(3); }); },
   });
   Object.assign(ABILITY_VFX.pyromancer, {
     // Cataclysm: a big rune circle marks the spot, a meteor falls onto it 1.5s later (when the damage lands) and leaves a crater that burns for the 9s burn
-    meteor: c => V.meteor(c.tx, c.ty, { r: 88, color: '#ff4a2a', wind: 1.15, fall: 0.35, from: 220, onHit: (x, y) => { V.crater(x, y, { r: 62, dur: 9, color: '#ff5a1a' }); FX.shake = Math.max(FX.shake, 9); } }),
+    meteor: c => V.meteor(c.tx, c.ty, { r: 88, color: '#ff4a2a', wind: 1.15, fall: 0.35, from: 220, onHit: (x, y) => { V.crater(x, y, { r: 62, dur: 9, color: '#ff5a1a' }); vfxShake(9); } }),
     // Sigilmancer: a ring of ember glyphs on the floor for the circle's whole life, embers rising off its rim
     circle: c => {
       const x = c.x, y = c.y, r = 95;
@@ -609,7 +1433,7 @@ const AUTO_VFX = (() => {
   'garrote', 'ambush', 'blossomEnd', 'twinFlame', 'chainReact', 'bomb', 'bombPlant', 'flashpoint', 'petalfall', 'sunfall', 'natureWrath', 'treantSlam',
   'clockStrike', 'futureMark', 'futureBurst'];
   const V = VFX, rand = (a, b) => a + Math.random() * (b - a), TAU = Math.PI * 2;
-  const shake = s => { FX.shake = Math.max(FX.shake, s); };
+  const shake = s => vfxShake(s);
   const fade = (p, i = 0.1, o = 0.2) => Math.min(1, p / i, (1 - p) / o);
   // a moment aimed at the enemy, with a spot ahead of the hero when there's no enemy to hand
   const at = (e, t) => t || { x: e.x + Math.cos(e.angle || 0) * 160, y: e.y + Math.sin(e.angle || 0) * 160 };
@@ -1446,7 +2270,7 @@ function windLaneBoost(x, y, vx, vy, now) {
 (() => {
   const V = VFX;
   const FIRE = { color: '#ff7a2a', core: '#fff0b0', ink: '#3a1004' }, ICE = { color: '#5fb4f0', core: '#f0faff', ink: '#08203a' };
-  const shake = s => { FX.shake = Math.max(FX.shake, s); };
+  const shake = s => vfxShake(s);
   const ahead = (c, d) => { const a = Math.atan2(c.ty - c.y, c.tx - c.x); return { x: c.x + Math.cos(a) * d, y: c.y + Math.sin(a) * d }; };
   const windCol = ent => (ent && ent.spec === 'comet' ? '#ffd08a' : ent && ent.spec === 'orbit' ? '#a8f0c8' : '#8ff0d8');
   // a ribbon of wind drawn along a path (pts in world space), flowing toward its end and fading out over dur
@@ -1499,9 +2323,15 @@ function windLaneBoost(x, y, vx, vy, now) {
 
   ABILITY_VFX.driftblade = {
     // a crescent sabre cut in jade, a sharp white edge, a few sparks
-    carve: c => { const col = windCol(c.ent), f = Math.random() < 0.5; V.slash(c.x, c.y, c.ang, { r: 60, span: 2.2, color: col, w: 0.4, dur: 0.24, flip: f, sparks: 3 }); c.later(0.08, () => V.hit(c.tx, c.ty, '#e8fff8', 0.5)); },
+    // (polish) Carve: a glint on the sabre, a crescent of jade wind with a white edge, leaves torn off its tip, a cut star
+    carve: c => { const col = windCol(c.ent), f = Math.random() < 0.5, h = ahead(c, 16); V.glint(h.x, h.y, { color: '#ffffff', size: 22, z: 24 });
+      V.slash(c.x, c.y, c.ang, { r: 60, span: 2.2, color: col, w: 0.4, dur: 0.24, flip: f, sparks: 3 });
+      OLD_PAINT.smear(c.x, c.y, c.ang, { r: 70, span: 2.3, w: 16, color: col, core: '#ffffff', ink: DRIFT_PAINT.INK, dur: 0.26, flip: f, lines: 3 });
+      c.later(0.08, () => { V.hit(c.tx, c.ty, '#e8fff8', 0.6); V.spikeburst(c.tx, c.ty, { r: 32, n: 8, color: col, core: '#ffffff', ink: DRIFT_PAINT.INK, dur: 0.24, z: 18 }); DRIFT_PAINT.leaves(c.tx, c.ty, { n: 3, angle: c.ang + (f ? -1 : 1) * Math.PI / 2, speed: 160 }); }); },
     // a burst of wind at the start, a ribbon along the dash, and the lane left glowing on the floor for 6s
-    slip: c => { const col = windCol(c.ent), sx = c.x, sy = c.y; V.smoke(sx, sy, { n: 3, color: '#d8e8e0', size: 16, a: 0.5, speed: 50 }); V.shock(sx, sy, { r: 34, color: col, dur: 0.25, w: 3 });
+    // (polish) the push-off: a kick of wind streaks and leaves thrown back the way you left, a scuff of dust, a ring
+    slip: c => { const col = windCol(c.ent), sx = c.x, sy = c.y; V.smoke(sx, sy, { n: 4, color: '#d8e8e0', size: 18, a: 0.5, speed: 60 }); V.shock(sx, sy, { r: 44, color: col, dur: 0.3, w: 3.5 });
+      DRIFT_PAINT.streaks(sx, sy, c.ang, { n: 3, back: 70, on: 20, w: 6, gap: 10, color: col, dur: 0.3, stay: 0.4, leaves: 2 }); DRIFT_PAINT.leaves(sx, sy, { n: 4, angle: c.ang + Math.PI, speed: 140 });
       c.later(0.22, () => {
         const ex = c.ent.x, ey = c.ent.y;
         if (Math.hypot(ex - sx, ey - sy) < 20) return;
@@ -1548,8 +2378,9 @@ function windLaneBoost(x, y, vx, vy, now) {
       V.beam(c.x, c.y, ex, ey, { color: '#ffd08a', w: 12, dur: 0.4 }); c.later(0.06, () => { V.spikeburst(c.tx, c.ty, { r: 64, n: 14, color: '#ffb84a', core: '#fff6d0', ink: '#3a2404', dur: 0.36 }); V.sparks(c.tx, c.ty, { color: '#ffe0a0', n: 14, angle: a, spread: 0.6, speed: 520 }); shake(4); });
       c.later(0.3, () => ribbon(line2(c.x, c.y, ex, ey, 10, 0), { color: '#ffd08a', w: 2, dur: 1, wob: 5 })); },
     // Gyre (talent): a full loop of ribbon round the target, a cut at each quarter
+    // (polish) the loop itself and a gust off the blade; the cuts are KIT_VFX.gyre (the kit sends how many: 1-4)
     gyre: c => { const col = windCol(c.ent), r = 70; ribbon(loop(c.tx, c.ty, r, 0, Math.PI * 2, 28), { color: col, w: 3, dur: 0.8 });
-      for (let i = 0; i < 4; i++) c.later(0.08 + i * 0.09, () => V.slash(c.tx, c.ty + 10, i * Math.PI / 2, { r: 50, span: 1.4, color: '#e8fff8', w: 0.35, dur: 0.2 })); },
+      DRIFT_PAINT.windStrip(DRIFT_PAINT.arcPts(c.x, c.y, 30, c.ang + 2, -2.4, 10, 0.7), { w: 5, color: col, dur: 0.24, z: 20 }); DRIFT_PAINT.leaves(c.tx, c.ty, { n: 4, orbit: r, dr: 20 }); },
     // Tailspin (talent): three blade arcs whirling in place, a wind ring, then the spring away leaves a ribbon
     tailspin: c => { const col = windCol(c.ent); for (let i = 0; i < 3; i++) c.later(i * 0.2, () => V.slash(c.ent.x, c.ent.y, c.ang + i * 2.1, { r: 60, span: 2.6, color: i % 2 ? '#e8fff8' : col, w: 0.45, dur: 0.24 }));
       V.swirl(c.x, c.y, { r: 56, color: col, dur: 0.8, arms: 3, follow: c.ent }); },
@@ -1599,6 +2430,14 @@ function windLaneBoost(x, y, vx, vy, now) {
       V.hit(t.x, t.y, col, gale ? 1 : 0.6); if (gale) shake(2);
     }, { atTarget: true }),
     lane: e => { V.shock(e.x, e.y, { r: 30, color: windCol(e), dur: 0.25, w: 2 }); },
+    // Gyre (kits.js k.fx('gyre', { n })): one cut round the target for every 25 Drift, 0.12s apart as the kit deals
+    // them, each from a quarter further round the loop; the more cuts, the bigger the last one and the burst after it
+    gyre: Object.assign((e, target, d) => { const t = target || e, n = Math.max(1, Math.min(4, (d && d.n) | 0 || 1)), col = windCol(e), a0 = Math.atan2(e.y - t.y, e.x - t.x);
+      for (let i = 0; i < n; i++) OLD_PAINT.later(0.12 * i, () => { const a = a0 + (i + 1) * Math.PI / 2, last = i === n - 1;
+        V.slash(t.x - Math.cos(a) * 26, t.y - Math.sin(a) * 18 + 10, a + Math.PI / 2, { r: last ? 62 : 50, span: 1.5, color: i % 2 ? '#e8fff8' : col, w: 0.4, dur: 0.22, sparks: 3 });
+        OLD_PAINT.smear(t.x - Math.cos(a) * 26, t.y - Math.sin(a) * 18 + 10, a + Math.PI / 2, { r: last ? 70 : 56, span: 1.6, w: last ? 14 : 10, color: col, core: '#ffffff', ink: DRIFT_PAINT.INK, dur: 0.22, lines: 2 });
+        V.hit(t.x, t.y, col, 0.45 + 0.15 * i);
+        if (last) { V.spikeburst(t.x, t.y, { r: 30 + 12 * n, n: 8 + 2 * n, color: col, core: '#ffffff', ink: DRIFT_PAINT.INK, dur: 0.3, z: 18 }); DRIFT_PAINT.leaves(t.x, t.y, { n: 2 + n, speed: 180 }); if (n >= 3) shake(2 + n * 0.5); } }); }, { atTarget: true }),
     orbitcut: Object.assign((e, target) => { const t = target || e; V.slash(t.x, t.y + 10, Math.random() * 6.28, { r: 46, span: 1.6, color: '#a8f0c8', w: 0.35, dur: 0.2 }); }, { atTarget: true }),
     crescent: Object.assign((e, target) => { const t = target || e; V.slash(e.x, e.y, Math.atan2(t.y - e.y, t.x - e.x), { r: 80, span: 2.8, color: windCol(e), w: 0.55, dur: 0.3, sparks: 5 }); }, { atTarget: true }),
     afterimage: Object.assign((e, target) => { const t = target || e; V.slash(t.x, t.y + 10, (e.angle || 0) + Math.PI, { r: 54, span: 1.8, color: '#d8e8e0', w: 0.4, dur: 0.3 }); V.smoke(t.x, t.y, { n: 2, color: '#c8d8d0', size: 18, a: 0.35, speed: 20 }); }, { atTarget: true }),
@@ -1609,7 +2448,10 @@ function windLaneBoost(x, y, vx, vy, now) {
   // autos: the Thermist's alternate fire and frost sparks; the Driftblade's quick sabre flick
   Object.assign(AUTO_VFX, {
     thermo: c => { const ice = c.alt; V.missile(c.ent.x, c.ent.y, c.tx, c.ty, { style: 'orb', color: ice ? '#8fd0ff' : '#ff9a4a', speed: 950, size: 0.5, onHit: (x, y) => V.hit(x, y, ice ? '#cfeeff' : '#ffc080', 0.35) }); },
-    sabre: c => { V.slash(c.ent.x, c.ent.y, c.ang, { r: 50, span: 1.5, color: windCol(c.ent), dur: 0.2, w: 0.3, flip: c.alt, sparks: 2 }); },
+    // (shared-fx polish: an impact where the flick connects, a small glint and a breath of wind)
+    sabre: c => { const col = windCol(c.ent); V.slash(c.ent.x, c.ent.y, c.ang, { r: 50, span: 1.5, color: col, dur: 0.2, w: 0.3, flip: c.alt, sparks: 2 });
+      c.later(0.07, () => { const d = Math.min(62, Math.hypot(c.tx - c.ent.x, c.ty - c.ent.y)), x = c.ent.x + Math.cos(c.ang) * d, y = c.ent.y + Math.sin(c.ang) * d;
+        V.hit(x, y, '#e8fff8', 0.38); V.spawn({ x, y, z: 16, vx: Math.cos(c.ang) * 220, vy: Math.sin(c.ang) * 150, drag: 0.12, life: 0.2, size: 9, size1: 2, color: col, kind: 'soft', stretch: 6, a: 0.8 }); }); },
   });
 })();
 // ======================================================================= Gorgemaw, Oathbroker (tanks-2)
@@ -1620,7 +2462,7 @@ function windLaneBoost(x, y, vx, vy, now) {
 // Oathbroker: grey vellum and lilac seal-wax. Its hits are stamps; a bill coming due is a red seal pressed at its feet,
 // Settle a gold one, Default the book torn and the pages flung out.
 (() => {
-  const V = VFX, rand = (a, b) => a + Math.random() * (b - a), shake = s => { FX.shake = Math.max(FX.shake, s); };
+  const V = VFX, rand = (a, b) => a + Math.random() * (b - a), shake = s => vfxShake(s);
   const MCOL = m => (MAW.COLOR[m] || '#ff9a3a');
   const mouth = e => ({ x: e.x + Math.cos(e.angle || 0) * 12, y: e.y + Math.sin(e.angle || 0) * 6, z: 30 });
   const ahead = (c, d) => { const a = Math.atan2(c.ty - c.y, c.tx - c.x); return { x: c.x + Math.cos(a) * d, y: c.y + Math.sin(a) * d }; };
@@ -1667,10 +2509,28 @@ function windLaneBoost(x, y, vx, vy, now) {
   ABILITY_VFX.gorgemaw = {
     // (Gnash, Open Wide, and KIT_VFX.spit / digest: VFX PASS · GORGEMAW, after the Ultimates)
     spit: () => {},          // the morsel flying is KIT_VFX.spit (it knows the shape)
-    regurgitate: c => { V.shock(c.x, c.y, { r: 70, color: '#ffb070', dur: 0.35, w: 5 }); shake(2); },
+    // (polish) the gut heaves (a swell of orange at the belly), the jaw gapes and a spew of bile, crumbs and steam goes
+    // up at the boss in a cone, a ring off the feet; each Morsel itself is KIT_VFX.spit
+    regurgitate: c => { const e = c.ent, a = Math.atan2(c.ty - c.y, c.tx - c.x); if (e.st) e.st.jawUntil = FX.now + 0.9;
+      V.fx({ dur: 0.3, layer: 'air', draw: (cc, p, t, fx) => { V.glowAt(cc, e.x, e.y - 14, 16 + 16 * p, '#ffb070', Math.sin(p * Math.PI) * 0.85 * fx.a); } });
+      c.later(0.18, () => { const q = mouth(e), L = Math.min(150, Math.max(90, Math.hypot(c.tx - c.x, c.ty - c.y) * 0.8));
+        V.fx({ dur: 0.38, layer: 'air', draw: (cc, p, t, fx) => { const k = fx.a * (1 - p), len = L * easeOut(Math.min(1, p / 0.35)), y0 = q.y - q.z;
+          cc.save(); cc.translate(q.x, y0); cc.rotate(a); cc.globalCompositeOperation = 'lighter';
+          const g = cc.createLinearGradient(0, 0, len, 0); g.addColorStop(0, `rgba(255,230,170,${0.95 * k})`); g.addColorStop(0.6, `rgba(255,150,70,${0.7 * k})`); g.addColorStop(1, 'rgba(216,224,96,0)');
+          cc.fillStyle = g; cc.beginPath(); cc.moveTo(0, -5); cc.quadraticCurveTo(len * 0.6, -len * 0.32, len, -len * 0.22); cc.quadraticCurveTo(len * 1.05, 0, len, len * 0.22); cc.quadraticCurveTo(len * 0.6, len * 0.32, 0, 5); cc.closePath(); cc.fill();
+          cc.restore(); } });
+        for (let i = 0; i < 18; i++) { const s = rand(-0.32, 0.32), sp = rand(300, 520); V.spawn({ x: q.x, y: q.y, z: q.z, vx: Math.cos(a + s) * sp, vy: Math.sin(a + s) * sp * 0.7, vz: rand(40, 140), g: 600, drag: 0.03, life: rand(0.35, 0.6), size: rand(6, 11), color: i % 3 ? '#ffb070' : '#d8e060', kind: 'drop', add: false, rot: a }); }
+        crumbs(q.x, q.y, q.z, '#ffb070', 8); V.smoke(q.x + Math.cos(a) * 40, q.y + Math.sin(a) * 30, { n: 4, color: '#c8b080', size: 22, a: 0.4, speed: 60, life: 1 });
+        V.shock(c.x, c.y, { r: 80, color: '#ffb070', dur: 0.35, w: 5 }); shake(3); }); },
     digest: () => {},        // KIT_VFX.digest (it knows what was eaten)
     // bronze plates over the gut: a hex shield, sparks, a heavy stamp of dust
-    iron: c => { V.shield(c.ent, { shape: 'hex', color: '#d89a5a', dur: 1.6, r: 42 }); V.sparks(c.x, c.y - 10, { color: '#ffd090', n: 10, speed: 260 }); V.smoke(c.x, c.y, { n: 4, color: '#a08a70', size: 22, a: 0.5, speed: 50 }); shake(2); },
+    // (polish) and for the Clench's 8s a faint ring of bronze plates stays round the gut, riveted, a glint running round
+    iron: c => { const e = c.ent; V.shield(e, { shape: 'hex', color: '#d89a5a', dur: 1, r: 42 }); V.sparks(c.x, c.y - 10, { color: '#ffd090', n: 10, speed: 260 }); V.smoke(c.x, c.y, { n: 4, color: '#a08a70', size: 22, a: 0.5, speed: 50 }); shake(2);
+      V.shock(c.x, c.y, { r: 80, color: '#d89a5a', dur: 0.4, w: 5 });
+      OLD_PAINT.linger(8, 'air', (cc, k, t) => { const x = e.x, y = e.y - 16, R = 30;
+        for (let i = 0; i < 8; i++) { const a0 = i * Math.PI / 4 + 0.08, a1 = a0 + Math.PI / 4 - 0.16, front = Math.sin((a0 + a1) / 2) > -0.2;
+          V.neonPath(cc, front ? '#d89a5a' : '#8a5a30', 2.6, k * (front ? 1 : 0.5), () => cc.ellipse(x, y, R, R * 0.42, 0, a0, a1)); }
+        const g = t * 1.8; V.glowAt(cc, x + Math.cos(g) * R, y + Math.sin(g) * R * 0.42, 7, '#ffe0b0', 0.8 * k); }, { peak: 1, settle: 0.5, hold: 0.6 }); },
     // Stone Belly: grey stone crusts over it, chips falling
     stonebelly: c => { V.crystals(c.x, c.y, { color: '#b8b0a4', n: 8, r: 34, h: 40, dur: 1.2 }); V.shield(c.ent, { shape: 'hex', color: '#c8c0b0', dur: 2, r: 44 }); V.debris(c.x, c.y, { n: 6, color: '#8a8278' }); shake(3); },
     // Bottomless: the room is pulled toward the jaw: a great inward vortex, the floor's dust streaming in
@@ -1699,13 +2559,30 @@ function windLaneBoost(x, y, vx, vy, now) {
     // (Collect, Settle, Lien, Co-Sign, Writ: VFX PASS · OATHBROKER, after the Ultimates)
     // Renegotiate: pages riffle forward round the knight, a lilac clock face turns back
     reneg: c => { V.sigil(c.x, c.y, { r: 46, style: 'clock', color: LIL, dur: 0.9, spin: -4, follow: c.ent }); pages(c.x, c.y, 6); },
-    audit: c => { seal(c.x, c.y, 28, GOLD, 1); V.sigil(c.x, c.y, { r: 36, style: 'hex', color: GOLD, dur: 0.6, spin: 3 }); },
+    // Audit (polish): the books riffle open (pages flung up), a gold hand sweeps a full turn over the ledger ring
+    // marking the old entries, then the gold seal stamps down: paid
+    audit: c => { const x = c.x, y = c.y, R = 62; pages(x, y, 8, '#f0e8d8'); V.glint(x, y - 30, { color: GOLD, size: 28, z: 10 });
+      V.fx({ dur: 0.6, layer: 'ground', draw: (cc, p, t, e) => { const k = e.a * Math.min(1, p / 0.1, (1 - p) / 0.25), sw = easeOut(Math.min(1, p / 0.7)) * Math.PI * 2;
+        V.neonRing(cc, x, y, R, GOLD, 2, k, 0.7);
+        cc.save(); cc.translate(x, y); cc.scale(1, 0.7);
+        V.neonPath(cc, GOLD, 2.4, k, () => { cc.moveTo(0, 0); cc.lineTo(Math.cos(sw - Math.PI / 2) * R, Math.sin(sw - Math.PI / 2) * R); });
+        for (let i = 0; i < 10; i++) { const a = i * Math.PI / 5 - Math.PI / 2; if (a + Math.PI / 2 > sw) break; V.neonPath(cc, LIL, 1.6, k, () => { const px = Math.cos(a) * R * 0.8, py = Math.sin(a) * R * 0.8; cc.moveTo(px - 4, py); cc.lineTo(px - 1, py + 4); cc.lineTo(px + 5, py - 5); }); }
+        cc.restore(); } });
+      c.later(0.45, () => { seal(x, y, 34, GOLD, 1.4); V.sigil(x, y, { r: 40, style: 'hex', color: GOLD, dur: 0.6, spin: 3 }); V.shock(x, y, { r: 90, color: GOLD, dur: 0.4, w: 5 }); V.burst(x, y - 20, { color: GOLD, color2: '#ffffff', n: 10, speed: 200, kind: 'star', flash: false }); shake(3); }); },
     // Default: the book torn open, pages flung everywhere, smoke
     default: c => { pages(c.x, c.y, 18); V.shock(c.x, c.y, { r: 120, color: WAX, dur: 0.5, w: 6 }); V.smoke(c.x, c.y, { n: 6, color: '#6a6070', size: 26, a: 0.45, speed: 50 }); shake(4); },
     // Foreclose: a great seal slams down onto the boss
     foreclose: c => { V.lightfall(c.tx, c.ty, { color: WAX, r: 34, h: 220, dur: 0.5, feathers: 0 }); c.later(0.2, () => { stamp(c.tx, c.ty, WAX, true); seal(c.tx, c.ty, 60, WAX, 1.8); pages(c.tx, c.ty, 10); shake(5); }); },
     // Moratorium: an hourglass seal, the Ledger held
-    moratorium: c => { V.sigil(c.x, c.y, { r: 56, style: 'clock', color: '#e8dcc0', dur: 5, spin: 0, follow: c.ent }); V.dome(c.ent, { color: LIL, r: 46, dur: 1 }); },
+    // (polish) a stopped clock face under the knight and a lilac hourglass over its head, both holding the 5s the
+    // Ledger stands still (faint after the first moment); the dome flares as it's declared
+    moratorium: c => { const e = c.ent; V.sigil(c.x, c.y, { r: 56, style: 'clock', color: '#e8dcc0', dur: 0.8, spin: 0, follow: e }); V.dome(e, { color: LIL, r: 46, dur: 0.9 }); V.shock(c.x, c.y, { r: 90, color: LIL, dur: 0.45, w: 5 });
+      OLD_PAINT.rim(e.x, e.y, 50, '#e8dcc0', 5, { follow: e, ticks: 12, spin: 0, settle: 0.35 });
+      OLD_PAINT.linger(5, 'air', (cc, k, t) => { const x = e.x, y = e.y - 74 + Math.sin(t * 2) * 2, s = 9, sand = Math.min(1, t / 5);
+        V.glowAt(cc, x, y, 18, LIL, 0.35 * k);
+        V.neonPath(cc, LIL, 1.6, k, () => { cc.moveTo(x - s, y - s * 1.3); cc.lineTo(x + s, y - s * 1.3); cc.lineTo(x - s, y + s * 1.3); cc.lineTo(x + s, y + s * 1.3); cc.closePath(); });
+        cc.globalAlpha = 0.8 * k; cc.fillStyle = '#e8dcc0'; cc.beginPath(); cc.moveTo(x - s * 0.6 * (1 - sand), y - s * 1.1 * (1 - sand) - 1); cc.lineTo(x + s * 0.6 * (1 - sand), y - s * 1.1 * (1 - sand) - 1); cc.lineTo(x, y); cc.closePath(); cc.fill();
+        cc.beginPath(); cc.moveTo(x - s * 0.7 * sand, y + s * 1.2); cc.lineTo(x + s * 0.7 * sand, y + s * 1.2); cc.lineTo(x, y + s * 1.2 * (1 - sand * 0.6)); cc.closePath(); cc.fill(); cc.globalAlpha = 1; }, { peak: 1, settle: 0.6, hold: 0.6 }); },
   };
 
   // (KIT_VFX.spit and KIT_VFX.digest: VFX PASS · GORGEMAW, after the Ultimates)
@@ -1731,7 +2608,12 @@ function windLaneBoost(x, y, vx, vy, now) {
 
   Object.assign(AUTO_VFX, {
     // a gauntleted cuff with the jaw-plate snapping
-    maw: c => { V.slash(c.ent.x, c.ent.y, c.ang, { r: 54, span: 1.5, color: '#e8c8a0', dur: 0.22, w: 0.4, flip: c.alt, sparks: 2 }); },
+    // (shared-fx polish: the jaw-plate's bite lands: two fang arcs snapping shut on the target, a hit and a fleck of drool)
+    maw: c => { V.slash(c.ent.x, c.ent.y, c.ang, { r: 54, span: 1.5, color: '#e8c8a0', dur: 0.22, w: 0.4, flip: c.alt, sparks: 2 });
+      c.later(0.09, () => { const d = Math.min(64, Math.hypot(c.tx - c.ent.x, c.ty - c.ent.y)), x = c.ent.x + Math.cos(c.ang) * d, y = c.ent.y + Math.sin(c.ang) * d;
+        V.fx({ dur: 0.18, layer: 'air', draw: (cx, p, t, e) => { const k = e.a * (1 - Math.max(0, (p - 0.5) / 0.5)), g = 9 * (1 - easeOut(Math.min(1, p / 0.45))) + 2, cy = y - 18;
+          V.neonPath(cx, '#ffd8b0', 2.2, k, () => { cx.moveTo(x - 10, cy - g); cx.quadraticCurveTo(x, cy - g - 6, x + 10, cy - g); cx.moveTo(x - 10, cy + g); cx.quadraticCurveTo(x, cy + g + 6, x + 10, cy + g); }); } });
+        V.hit(x, y, '#ffd0a0', 0.42); V.splash(x, y, { color: '#c8e070', n: 2, size: 0.5, speed: 0.5 }); }); },
     // a tap of the stamp-mace: a small lilac seal
     stamp: c => { V.slash(c.ent.x, c.ent.y, c.ang, { r: 50, span: 1.2, color: '#d8d0e8', dur: 0.22, w: 0.35, flip: c.alt }); c.later(0.08, () => { const d = Math.min(64, Math.hypot(c.tx - c.ent.x, c.ty - c.ent.y)); seal(c.ent.x + Math.cos(c.ang) * d, c.ent.y + Math.sin(c.ang) * d, 10, LIL, 0.5); }); },
   });
@@ -1804,7 +2686,7 @@ function windLaneBoost(x, y, vx, vy, now) {
 // storm of palm prints for Thousand Palms. Saffron by default; Still Water is pale water-blue, Avalanche Fist is earth.
 (() => {
   const V = VFX, rand = (a, b) => a + Math.random() * (b - a);
-  const shake = s => { FX.shake = Math.max(FX.shake, s); };
+  const shake = s => vfxShake(s);
   const col = e => (e && e.spec === 'stillwater' ? '#9fd8f0' : e && e.spec === 'avalanche' ? '#e09a5a' : '#ffb84a');
   const hot = e => (e && e.spec === 'stillwater' ? '#e8fbff' : '#fff0c8');
   // where a blow lands: toward the target, no further than an arm (or a leg) reaches past the boss's edge
@@ -1884,7 +2766,15 @@ function windLaneBoost(x, y, vx, vy, now) {
       V.shock(c.x, c.y, { r: 170, color: '#e09a5a', dur: 0.6, w: 7 }); V.smoke(c.x, c.y, { n: 8, r: 80, color: '#a89070', size: 34, a: 0.4, speed: 60, life: 1.6 });
       V.aura(c.ent, { color: '#e09a5a', dur: 15, r: 30, rate: 0.2 }); shake(6); },
     // Bellows Stance (talent): a great breath in, heat rising off the monk, an orange aura
-    bellows: c => { V.swirl(c.x, c.y, { r: 50, color: '#ffb070', dur: 0.6, inward: true, follow: c.ent }); V.aura(c.ent, { color: '#ff9a4a', style: 'flame', dur: 10, r: 28, rate: 0.2 }); V.shock(c.x, c.y, { r: 80, color: '#ffb070', dur: 0.4, w: 4, delay: 0.5 }); },
+    // (polish) the forge breath: air pulled in round the monk (an inward swirl, motes streaming to the chest), the
+    // chest flares like a stoked coal, a hot gust out of it and a ring; then for the 10s a coal glow at the chest pulses
+    // with each slow breath (bright on the inhale) over a faint heat ring, embers lifting off
+    bellows: c => { const e = c.ent; V.swirl(c.x, c.y, { r: 56, color: '#ffb070', dur: 0.6, inward: true, follow: e }); V.aura(e, { color: '#ff9a4a', style: 'flame', dur: 10, r: 28, rate: 0.2 });
+      for (let i = 0; i < 10; i++) { const a = Math.random() * Math.PI * 2, d = rand(60, 90); V.spawn({ x: c.x + Math.cos(a) * d, y: c.y + Math.sin(a) * d * 0.6, z: 20, vx: -Math.cos(a) * d * 1.8, vy: -Math.sin(a) * d * 1.1, life: 0.45, size: rand(5, 8), size1: 1, color: '#ffd8a0', stretch: 2 }); }
+      c.later(0.45, () => { V.flash(e.x, e.y - 22, 50, '#ff9a4a', 0.25); V.shock(e.x, e.y, { r: 90, color: '#ffb070', dur: 0.45, w: 5 }); V.smoke(e.x + Math.cos(e.angle || 0) * 20, e.y - 6, { n: 5, r: 10, color: '#e8d8c8', size: 22, a: 0.4, speed: 80, life: 0.9 }); V.flare(e.x, e.y, { n: 8, r: 14, color: '#ff8a3a', size: 0.8 }); shake(2); });
+      OLD_PAINT.linger(10, 'ground', (cc, k, t) => { const br = 0.5 + 0.5 * Math.sin(t * 2.2); V.neonRing(cc, e.x, e.y + 2, 30 + br * 4, '#ff9a4a', 1.4, k * (0.5 + 0.5 * br), 0.55); },
+        { peak: 0.9, settle: 0.5, hold: 0.8, tick: () => { if (Math.random() < 0.08) V.spawn({ x: e.x + rand(-12, 12), y: e.y, z: 24, vz: rand(40, 80), life: 0.7, size: rand(4, 6), size1: 0, color: Math.random() < 0.5 ? '#ff8a3a' : '#ffd070' }); } });
+      OLD_PAINT.linger(10, 'air', (cc, k, t) => { const br = 0.5 + 0.5 * Math.sin(t * 2.2); V.glowAt(cc, e.x, e.y - 22 - (e.lift || 0), 14 + 8 * br, '#ff7a2a', (0.35 + 0.4 * br) * k); V.glowAt(cc, e.x, e.y - 22 - (e.lift || 0), 5, '#ffe0a0', k * br); }, { peak: 1, settle: 0.6, hold: 0.8 }); },
     // Dragon Ascends (talent): a leap, a coiling streak of gold up and over, and a great blow on the target
     dragon: c => { V.smoke(c.x, c.y, { n: 4, color: '#d8ccb8', size: 20, a: 0.5, speed: 50 }); V.tornado(c.x, c.y, { color: '#ffd27a', h: 120, r: 18, dur: 0.5 });
       c.later(0.3, () => { V.lightfall(c.tx, c.ty, { color: '#ffd27a', r: 30, h: 260, dur: 0.6, feathers: 0 }); V.spikeburst(c.tx, c.ty, { r: 70, n: 16, color: '#ffb84a', core: '#fff6d0', ink: '#3a2408', dur: 0.4 });
@@ -1901,7 +2791,7 @@ function windLaneBoost(x, y, vx, vy, now) {
       V.shock(e.x, e.y, { r: b ? 110 : 70, color: b ? '#ffd27a' : '#e8f4ff', dur: 0.4, w: b ? 7 : 4 });
       V.sparks(x, y, { color: '#fff2c8', n: b ? 14 : 8, angle: e.angle || 0, spread: 1, speed: 360 });
       if (e.st) hitStop(e.st, b ? 0.18 : 0.08, FX.now);
-      if (b) { V.sigil(e.x, e.y, { r: 70, style: 'star4', color: '#ffd27a', dur: 0.8, spin: 3 }); FX.shake = Math.max(FX.shake, 4); }
+      if (b) { V.sigil(e.x, e.y, { r: 70, style: 'star4', color: '#ffd27a', dur: 0.8, spin: 3 }); vfxShake(4); }
     },
     // Avalanche Fist: a dropped string staggers you: grit and a dull ring
     stagger: e => { V.smoke(e.x, e.y, { n: 4, color: '#8a7a68', size: 18, a: 0.5, speed: 30 }); V.shock(e.x, e.y, { r: 40, color: '#8a6a50', dur: 0.3, w: 3 }); },
@@ -1937,7 +2827,7 @@ function windLaneBoost(x, y, vx, vy, now) {
 // for Cross-Cut. Big moves keep the three beats: a glyph, a bold shape, a slow aftermath.
 (() => {
   const V = VFX, TAU = Math.PI * 2, rand = (a, b) => a + Math.random() * (b - a);
-  const shake = s => { FX.shake = Math.max(FX.shake, s); };
+  const shake = s => vfxShake(s);
   const idOf = ent => (ent && ent.kind === 'player' ? (typeof Net !== 'undefined' ? Net.id : 0) : ent && ent.id);
   const dollsOf = ent => (typeof Stagecraft !== 'undefined' ? Stagecraft.dollsOf(idOf(ent), typeof Net !== 'undefined' ? Net.id : 0) : []);
   const act = (ent, kind) => { if (typeof Stagecraft !== 'undefined') Stagecraft.act(idOf(ent), kind, FX.now || 0); };
@@ -2120,7 +3010,12 @@ function windLaneBoost(x, y, vx, vy, now) {
   ABILITY_VFX.marionettist = {
     // (painted pass, marionettist.png: crimson velvet, rose petals, gold strings and footlights)
     // the Doll stabs: a quick crimson cut from where it stands
-    jab: c => { act(c.ent, 'jab'); for (const d of dollsOf(c.ent)) { const a = Math.atan2(c.ty - d.y, c.tx - d.x); V.slash(d.x, d.y, a, { r: 46, span: 0.9, color: '#ff5a7a', w: 0.4, dur: 0.2, sparks: 2 }); c.later(0.08, () => V.hit(d.x + Math.cos(a) * 40, d.y + Math.sin(a) * 40, '#ffb0c4', 0.5)); } },
+    // (polish) the Doll lunges: a crimson stab of light with an arrowhead from the Doll into the enemy, a small crimson
+    // X where it lands, a few petals
+    jab: c => { act(c.ent, 'jab'); for (const d of dollsOf(c.ent)) { const a = Math.atan2(c.ty - d.y, c.tx - d.x), L = Math.min(110, Math.max(40, Math.hypot(c.tx - d.x, c.ty - d.y))), px = d.x + Math.cos(a) * L, py = d.y + Math.sin(a) * L;
+      V.slash(d.x, d.y, a, { r: 46, span: 0.9, color: '#ff5a7a', w: 0.4, dur: 0.2, sparks: 2 });
+      OLD_PAINT.thrust(d.x, d.y, px, py, { w: 7, color: '#e0203c', core: '#ffe6ec', ink: '#2a0410', head: true, dur: 0.22, z: 16 });
+      c.later(0.08, () => { V.hit(px, py, '#ffb0c4', 0.6); MARI_PAINT.xcut(px, py, { r: 26, w: 4, dur: 0.24 }); MARI_PAINT.petals(px, py, { n: 3, speed: 140, life: 1 }); }); } },
     // Pull Strings (the Doll Summon panel): the string from the bar draws taut in gold, then the Doll is let down on three
     // gold strings with a crimson ribbon spiralling round it, rings where it lands and a few petals settling
     pull: c => { act(c.ent, 'pull'); const MP = MARI_PAINT; c.later(0.03, () => { for (const d of dollsOf(c.ent)) { threadOut(c.ent, d, { color: '#ffd27a', w: 1.4, grow: 0.12, dur: 0.4 }); MP.dollDrop(d.x, d.y, { dur: 0.5 });
@@ -2153,15 +3048,28 @@ function windLaneBoost(x, y, vx, vy, now) {
     // Tangle: the Doll lunges and its strings wind round the enemy in rose and gold loops that tighten
     tangle: c => { act(c.ent, 'jab'); const tx = c.tx, ty = c.ty;
       V.fx({ dur: 0.9, layer: 'air', draw: (cc, p, t, e) => { const k = Math.min(1, (1 - p) / 0.3) * e.a; for (let i = 0; i < 4; i++) { const R = 44 * (1 - p * 0.45); V.neonPath(cc, i % 2 ? '#ffd27a' : '#ff5a7a', 1.4, k, () => cc.ellipse(tx, ty - 30, R, R * 0.35, i * Math.PI / 4 + t * 2, 0, TAU)); } } });
-      c.later(0.3, () => V.hit(tx, ty, '#ff9ab0', 0.7)); },
+      c.later(0.3, () => { V.hit(tx, ty, '#ff9ab0', 0.8); V.spikeburst(tx, ty, { r: 36, n: 10, color: '#e0203c', core: '#ffe6ec', ink: '#2a0410', dur: 0.28, z: 24 }); MARI_PAINT.petals(tx, ty, { n: 5, speed: 160, life: 1.2 }); });
+      // (polish) the strings stay wound round it, faint, for the bleed's 10s, a drop of crimson falling now and then
+      OLD_PAINT.linger(10, 'air', (cc, k, t) => { if (t < 0.85) return; const kk = k * Math.min(1, (t - 0.85) / 0.3);
+        for (let i = 0; i < 2; i++) V.neonPath(cc, i ? '#ffd27a' : '#ff5a7a', 1.1, kk, () => cc.ellipse(tx, ty - 30 + i * 8, 26, 9, i * 0.5 + Math.sin(t * 1.5) * 0.08, 0, TAU)); },
+        { peak: 0.7, settle: 0.5, hold: 1.5, tick: () => { if (Math.random() < 0.05) V.spawn({ x: tx + (Math.random() - 0.5) * 30, y: ty, z: 26, vz: -10, g: 500, life: 0.5, size: 6, color: '#c01a2a', kind: 'drop', add: false, rot: Math.PI / 2 }); } }); },
     // Red Curtain: velvet drops in a ring round the puppeteer, gold fringe glinting, for 8s
-    redcurtain: c => { const ent = c.ent;
-      V.fx({ dur: 8, layer: 'ground', draw: (cc, p, t, e) => {
-        const k = Math.min(1, p / 0.04, (1 - p) / 0.06) * e.a, x = ent.x, y = ent.y, r = 140;
-        cc.globalAlpha = 0.18 * k; cc.fillStyle = '#d03050'; cc.beginPath(); cc.ellipse(x, y, r, r * 0.78, 0, 0, TAU); cc.fill(); cc.globalAlpha = 1;
-        for (let i = 0; i < 14; i++) { const a = i * TAU / 14 + Math.sin(t + i) * 0.03; V.neonPath(cc, i % 2 ? '#d03050' : '#a01838', 5, k * 0.8, () => { cc.moveTo(x + Math.cos(a) * r * 0.86, y + Math.sin(a) * r * 0.67); cc.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r * 0.78); }); }
-        V.neonRing(cc, x, y, r, '#ffd27a', 1.4, k * 0.7);
-      } });
+    // (polish) velvet drapes drop from above round the back of the ring and pool on the floor, then the curtain's ring
+    // holds for the 8s: pleats round its edge, a gold fringe, footlights glowing along its front (bright as it drops,
+    // then low, so telegraphs read through it)
+    redcurtain: c => { const ent = c.ent, r = 140;
+      V.fx({ dur: 0.7, layer: 'air', draw: (cc, p, t, e) => { const x = ent.x, y = ent.y, k = e.a * Math.min(1, (1 - p) / 0.35), fall = easeOut(Math.min(1, p / 0.5));
+        for (let i = 0; i < 9; i++) { const a = Math.PI + 0.15 + i * (Math.PI - 0.3) / 8, bx = x + Math.cos(a) * r, by = y + Math.sin(a) * r * 0.78, top = by - 120, bot = top + (by - top) * fall, w = 12;
+          cc.globalAlpha = 0.85 * k; cc.fillStyle = i % 2 ? '#a01838' : '#d03050'; cc.beginPath(); cc.moveTo(bx - w, top); cc.lineTo(bx + w, top); cc.quadraticCurveTo(bx + w * 1.2, (top + bot) / 2, bx + w * 0.8, bot); cc.lineTo(bx - w * 0.8, bot); cc.quadraticCurveTo(bx - w * 1.2, (top + bot) / 2, bx - w, top); cc.fill();
+          cc.globalAlpha = k; cc.fillStyle = '#ffd27a'; cc.fillRect(bx - w * 0.8, bot - 3, w * 1.6, 3); }
+        cc.globalAlpha = 1; } });
+      OLD_PAINT.linger(8, 'ground', (cc, k, t) => { const x = ent.x, y = ent.y;
+        cc.globalAlpha = 0.16 * k; cc.fillStyle = '#d03050'; cc.beginPath(); cc.ellipse(x, y, r, r * 0.78, 0, 0, TAU); cc.fill(); cc.globalAlpha = 1;
+        for (let i = 0; i < 18; i++) { const a = i * TAU / 18 + Math.sin(t + i) * 0.03; V.neonPath(cc, i % 2 ? '#d03050' : '#a01838', 5, k * 0.8, () => { cc.moveTo(x + Math.cos(a) * r * 0.86, y + Math.sin(a) * r * 0.67); cc.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r * 0.78); }); }
+        V.neonRing(cc, x, y, r, '#ffd27a', 1.4, k * 0.8);
+        for (let i = 0; i < 7; i++) { const a = 0.35 + i * (Math.PI - 0.7) / 6; V.glowAt(cc, x + Math.cos(a) * r * 0.93, y + Math.sin(a) * r * 0.73, 12, '#ffcf6a', k * (0.7 + 0.15 * Math.sin(t * 6 + i))); } },
+        { peak: 1, settle: 0.45, hold: 0.8 });
+      c.later(0.35, () => { MARI_PAINT.petals(ent.x, ent.y, { n: 14, r, mode: 'fall', life: 1.6 }); V.smoke(ent.x, ent.y - 10, { n: 5, r: 90, color: '#c07080', size: 26, a: 0.25, speed: 30 }); });
       V.shock(ent.x, ent.y, { r: 160, color: '#d03050', dur: 0.5, w: 6 }); },
   };
 
@@ -2187,6 +3095,24 @@ function windLaneBoost(x, y, vx, vy, now) {
     unlimp: e => { for (const dl of dollsOf(e)) { V.glint(dl.x, dl.y, { color: '#ffffff', size: 22, z: 30 }); threadOut(e, dl, { color: '#ffd27a', w: 1.2, grow: 0.2, dur: 0.5 }); MARI_PAINT.dollDrop(dl.x, dl.y, { dur: 0.5 }); MARI_PAINT.petals(dl.x, dl.y, { n: 5, speed: 110, life: 1.1 }); } },
     flourish: (e, t) => { for (const dl of dollsOf(e)) V.slash(dl.x, dl.y, (t ? Math.atan2(t.y - dl.y, t.x - dl.x) : 0) + 0.6, { r: 42, span: 1, color: '#ff9ab0', w: 0.35, dur: 0.18, flip: true }); },
     standin: e => { for (const dl of dollsOf(e)) V.shield(dl, { shape: 'hex', color: '#f0a8cc', dur: 0.5, r: 30 }); },
+    // (polish) the kit's verdict on a Cross-Cut (data.n: how many strings caught the enemy): a hit gets a gold encore
+    // flourish on the enemy (stars, two gold rings, rose petals, bigger for each string); a miss lets every string go
+    // slack, drooping grey-rose to the floor, with a dull puff where it sags
+    cut: Object.assign((e, t, d) => { const n = (d && d.n) | 0;
+      if (n > 0 && t) { OLD_PAINT.later(0.12, () => { for (let i = 0; i < Math.min(3, n); i++) V.shock(t.x, t.y, { r: 70 + i * 30, color: '#ffd27a', dur: 0.45, w: 4 - i, delay: i * 0.07 });
+        V.burst(t.x, t.y - 30, { color: '#ffd27a', color2: '#ffffff', n: 6 + 4 * n, speed: 220, kind: 'star', flashR: 50 }); MARI_PAINT.petals(t.x, t.y, { n: 6 + 3 * n, speed: 220, life: 1.4 }); }); return; }
+      for (const dl of dollsOf(e)) { const ox = e.x, oy = e.y - 12, dx = dl.x, dy = dl.y - 12, mx = (ox + dx) / 2, my = (oy + dy) / 2;
+        V.fx({ dur: 0.7, layer: 'air', draw: (cc, p, tt, fx) => { const k = fx.a * (1 - p), sag = 10 + 34 * easeOut(Math.min(1, p / 0.5));
+          V.neonPath(cc, '#c8a0a8', 1.2, k * 0.8, () => { cc.moveTo(ox, oy); cc.quadraticCurveTo(mx, my + sag * 2, dx, dy); }); } });
+        OLD_PAINT.later(0.25, () => { V.smoke(mx, my + 30, { n: 3, color: '#8a7a78', size: 18, a: 0.35, speed: 25 }); MARI_PAINT.petals(mx, my + 20, { n: 3, mode: 'fall', r: 20, life: 1, a: 0.6 }); }); } }, { atTarget: true }),
+    // a pull goes taut: a gold snap at the Doll pulled (data.i)
+    pull: (e, t, d) => { const dl = dollsOf(e)[(d && d.i) | 0]; if (!dl) return; OLD_PAINT.later(0.05, () => { V.shock(dl.x, dl.y, { r: 46, color: '#ffd27a', dur: 0.3, w: 3 }); V.sparks(dl.x, dl.y - 16, { color: '#ffe6a8', n: 5, speed: 180 }); }); },
+    // a swap lands: a flutter of silk at both ends of the trade
+    swap: (e, t, d) => { const dl = dollsOf(e)[(d && d.i) | 0]; for (const w of dl ? [e, dl] : [e]) { V.glint(w.x, w.y, { color: '#ffffff', size: 24, z: 30 }); MARI_PAINT.petals(w.x, w.y, { n: 4, speed: 120, life: 1 }); } },
+    // Grand Finale spends the Encore (data.e): that many gold stars burst up off the puppeteer and stream to the Doll
+    finale: (e, t, d) => { const n = Math.max(1, Math.min(10, (d && d.e) | 0 || 5)), ds = dollsOf(e);
+      for (let i = 0; i < n; i++) { const to = ds.length ? ds[i % ds.length] : (t || e); OLD_PAINT.later(i * 0.05, () => V.missile(e.x, e.y - 20, to.x, to.y - 20, { style: 'orb', color: '#ffd27a', speed: 520, size: 0.5, arc: 50 + (i % 3) * 20, onHit: (x, y) => V.glint(x, y, { color: '#ffe6a8', size: 18, z: 20 }) })); }
+      V.burst(e.x, e.y - 30, { color: '#ffd27a', color2: '#ffffff', n: 8 + n, speed: 200, kind: 'star', flash: false }); },
     mend: e => { for (const dl of dollsOf(e)) V.glint(dl.x, dl.y, { color: '#ffffff', size: 18, z: 26 }); },
   });
   KIT_VFX.flourish.atTarget = true;
@@ -2194,7 +3120,9 @@ function windLaneBoost(x, y, vx, vy, now) {
   // autos: a needle-glint flicked at the enemy; the Doll's idle slap
   Object.assign(AUTO_VFX, {
     needle: c => V.missile(c.ent.x, c.ent.y, c.tx, c.ty, { style: 'blade', color: '#d8c8ff', speed: 1300, size: 0.4, onHit: (x, y) => V.hit(x, y, '#e8ddff', 0.3) }),
-    doll: c => { for (const d of dollsOf(c.ent)) { const a = Math.atan2(c.ty - d.y, c.tx - d.x); V.slash(d.x, d.y, a, { r: 40, span: 1.1, color: '#ff7a94', dur: 0.18, w: 0.28, flip: c.alt }); } },
+    // (shared-fx polish: each slap lands with a small pink hit where the Doll's reach meets the target)
+    doll: c => { for (const d of dollsOf(c.ent)) { const a = Math.atan2(c.ty - d.y, c.tx - d.x); V.slash(d.x, d.y, a, { r: 40, span: 1.1, color: '#ff7a94', dur: 0.18, w: 0.28, flip: c.alt, sparks: 0 });
+      c.later(0.06, () => { const r = Math.min(46, Math.hypot(c.tx - d.x, c.ty - d.y)); V.hit(d.x + Math.cos(a) * r, d.y + Math.sin(a) * r, '#ffb0c4', 0.28); }); } },
   });
 })();
 
@@ -2208,7 +3136,7 @@ function windLaneBoost(x, y, vx, vy, now) {
 // The parts that land later are KIT_VFX moments (k.fx(name), atTarget when they land on the enemy); they find the
 // camera with FX.camFor(ent) the same way.
 (() => {
-  const V = VFX, shake = s => { FX.shake = Math.max(FX.shake, s); };
+  const V = VFX, shake = s => vfxShake(s);
   const rand = (a, b) => a + Math.random() * (b - a);
   const ahead = (c, d) => { const a = Math.atan2(c.ty - c.y, c.tx - c.x); return { x: c.x + Math.cos(a) * d, y: c.y + Math.sin(a) * d }; };
   const GOLD = '#ffd65a', DAWN = '#ffe9a8', FIRE = '#ff6a1a', EMBER = '#ffb040', ASH = '#ffe0a0';
@@ -2309,7 +3237,7 @@ function windLaneBoost(x, y, vx, vy, now) {
 // blue. The moments that land later (KIT_VFX) replay their delayed parts at the caster's intensity (dmgUltLater).
 (() => {
   const V = VFX, TAU = Math.PI * 2, rand = (a, b) => a + Math.random() * (b - a);
-  const shake = s => { FX.shake = Math.max(FX.shake, s); };
+  const shake = s => vfxShake(s);
   // a delayed part of a KIT_VFX moment, at the caster's intensity (your own: full; anyone else's: 0.6)
   const dmgUltLater = (e, d, fn) => { const s = FX.camFor(e) ? 1 : 0.6; FX.later(d, () => { V.setScale(s); try { fn(); } finally { V.setScale(1); } }); };
   const dmgUltLine = (ax, ay, bx, by, n = 10, bow = 0) => Array.from({ length: n + 1 }, (_, i) => { const q = i / n, nx = -(by - ay), ny = bx - ax, L = Math.hypot(nx, ny) || 1, b = Math.sin(q * Math.PI) * bow; return [ax + (bx - ax) * q + nx / L * b, ay + (by - ay) * q + ny / L * b]; });
@@ -2599,13 +3527,13 @@ function windLaneBoost(x, y, vx, vy, now) {
 // Each keeps its class's own palette and shapes: blood and a red moon, violet rune stones, saffron palm prints, the
 // Maw's morsel colours, ink, wax and gold seals.
 (() => {
-  const V = VFX, shake = s => { FX.shake = Math.max(FX.shake, s); };
+  const V = VFX, shake = s => vfxShake(s);
   const rand = (a, b) => a + Math.random() * (b - a);
   const camHit = (cam, col, s = 1) => { if (cam) { cam.stop(0.08 + 0.03 * s); cam.punch(0.05 + 0.025 * s, 0.55); cam.flash(col, 0.18 + 0.06 * s, 0.35); } };
 
   // ---- Bloodreaver · Crimson Eclipse: blood spirals in, a red moon closes over the sun above the reaver (it hangs
   // there the eclipse's 10s), the roar throws a ring of red spikes over the party; the bank erupts later on the enemy.
-  const BLOOD = '#ff2a3a', GORE = '#a01028', CLOT = '#3a0610';
+  const BLOOD = '#e81c40', GORE = '#8a0c2a', CLOT = '#3a0610';   // (shared-fx colour pass: a deeper, bluer crimson than the Pyromancer's orange)
   const reaverMoon = (ent, dur) => V.fx({ dur, layer: 'air', draw: (c, p, t, e) => {
     const k = Math.min(1, t / 0.4) * Math.min(1, (1 - p) / 0.06) * e.a * (t < 1.2 ? 1 : 0.55), x = ent.x, y = ent.y - 112 - (ent.lift || 0), pulse = 1 + 0.06 * Math.sin(t * 3);
     V.glowAt(c, x, y, 54 * pulse, BLOOD, 0.55 * k);
@@ -2648,7 +3576,7 @@ function windLaneBoost(x, y, vx, vy, now) {
   // ---- Runeguard · Runic Cataclysm: the held rune stones tear free off the guard and climb, a great rune circle
   // spins up under the enemy, and the runes come down on it as a violet starfall of crystal; a Sanctum of shattered
   // runes settles round the guard for the party's Wards' 8s.
-  const RUNE = '#9a6bff', RUNE2 = '#c8a8ff', RCORE = '#f0e8ff', RINK = '#1e0e3a';
+  const RUNE = '#6c74f2', RUNE2 = '#aab4ff', RCORE = '#eef1ff', RINK = '#0c1236';   // (shared-fx colour pass: Runeguard indigo)
   ABILITY_VFX.runeguard.runecataclysm = c => {
     if (c.cam) c.cam.dim(0.4, 1.4);
     V.charge(c.x, c.y, { color: RUNE2, r: 60, n: 12, dur: 0.35, follow: c.ent });
@@ -2691,7 +3619,7 @@ function windLaneBoost(x, y, vx, vy, now) {
 // scrolls on the floor after. Thousand Palms: hands orbit the monk, then flurry out, leaving small prints. Read Stance:
 // concentric rings and eye glyphs. Floor marks stay faint and short so boss telegraphs read through them.
 (() => {
-  const V = VFX, rand = (a, b) => a + Math.random() * (b - a), shake = s => { FX.shake = Math.max(FX.shake, s); };
+  const V = VFX, rand = (a, b) => a + Math.random() * (b - a), shake = s => vfxShake(s);
   const P = () => globalThis.IRONPALM_VFX || { col: () => '#ffb84a', hot: () => '#fff0c8', print: () => {}, impact: () => ({ x: 0, y: 0, a: 0 }), at: () => ({ x: 0, y: 0, a: 0 }) };
   const IP_INK = '#140a04', IP_ROCK = '#5a4a3a';
   // the size knobs: Hundred Palms' footprint (tiger, burst, the print left), and the supporting moves'
@@ -2988,7 +3916,7 @@ function windLaneBoost(x, y, vx, vy, now) {
 // crescent bite. Spit: a green slime glob with the Morsel glowing in it, splashing into puddles. Digest: the Morsels
 // spiral in and a spiral seal glows under the belly. Open Wide: a wind funnel into the jaw, a dark spiral on the floor.
 (() => {
-  const V = VFX, rand = (a, b) => a + Math.random() * (b - a), shake = s => { FX.shake = Math.max(FX.shake, s); };
+  const V = VFX, rand = (a, b) => a + Math.random() * (b - a), shake = s => vfxShake(s);
   const G = () => globalThis.GORGEMAW_VFX;
   const FLESH = '#5a1648', RIM = '#e0508a', TOOTH = '#ffd8b0', TGLOW = '#ff8a3a', LAVA = '#ff6a2a', GINK = '#1e0618', SLIME = '#8ee03a', SLIME_D = '#3e7a18';
   const LETTER = { r: 'ring', l: 'lance', f: 'fang', s: 'spike' };
@@ -3243,7 +4171,7 @@ function windLaneBoost(x, y, vx, vy, now) {
 // wrap the target round a seal. Settle: a stamp comes down, coins fly. Writ: a glowing contract is written out on the
 // floor. Co-Sign: two seals linked by a line. The wax on the floor is kept dark and faint (red telegraphs must read).
 (() => {
-  const V = VFX, rand = (a, b) => a + Math.random() * (b - a), shake = s => { FX.shake = Math.max(FX.shake, s); };
+  const V = VFX, rand = (a, b) => a + Math.random() * (b - a), shake = s => vfxShake(s);
   const O = () => globalThis.OATHBROKER_VFX;
   const LIL = '#b8a8e0', GOLD = '#ffd27a', GOLD2 = '#d8a038', WAX = '#7a1a2a', WAXL = '#c0485a', WAXD = '#3e0a14', PAPER = '#efe4cc', INK = '#2a2034';
   const camHit = (cam, col, s = 1) => { if (cam) { cam.stop(0.08 + 0.03 * s); cam.punch(0.05 + 0.025 * s, 0.55); cam.flash(col, 0.18 + 0.06 * s, 0.35); } };
@@ -3482,13 +4410,13 @@ function windLaneBoost(x, y, vx, vy, now) {
 // moment (atTarget) for the blow on the boss, sent by the kit as it lands (k.fx). Everyone else's plays at 0.6.
 // The primitives here are local to this block and prefixed with their class.
 (() => {
-  const V = VFX, TAU = Math.PI * 2, shake = s => { FX.shake = Math.max(FX.shake, s); };
+  const V = VFX, TAU = Math.PI * 2, shake = s => vfxShake(s);
   const rand = (a, b) => a + Math.random() * (b - a);
   const LAND = 0.4;
   const impact = (cam, col, a = 0.2, stop = 0.08) => { if (cam) { cam.stop(stop); cam.punch(0.06, 0.5); cam.flash(col, a, 0.32); } };
 
   // ---------------------------------------------------------------- Cleric · Dawn Breaks (gold and white, the sun)
-  const SUN = '#ffd65a', DAWN = '#ffe9a8', PETAL = '#ffd0e0';
+  const SUN = '#ffe9a0', DAWN = '#fff4d0', PETAL = '#ffd0e0';   // (shared-fx colour pass: Cleric white-gold)
   // a sun climbing over the cleric: a white core, slow-turning rays, a wide halo
   function clericSunrise(x, y, o = {}) {
     const dur = o.dur ?? 1.1, H = o.h ?? 150;

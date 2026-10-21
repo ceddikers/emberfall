@@ -121,12 +121,82 @@ const BossTells = (() => {
     circle(ctx, 20, -8, 3, '#5d636c');
     ctx.restore();
   }
+  // Larder Toss: where a cask comes to rest, the same steps as the host (grubnak.js larderToss): off the wall, out of
+  // the stove fire once the Flare-Up has lit it for good, and shoved off any prop it would land on
+  function caskRest(s, env) {
+    const at = ARENA.clamp({ x: s.x, y: s.y }, 120);
+    const st = env.room && env.room.ev && env.room.ev.stove;
+    if (st && st.end - st.start > 1000) at.y = Math.max(at.y, -60);   // (the Flare-Up's fire never goes out: 'hot')
+    const props = env.props || [];
+    for (let i = 0; i < 3; i++) for (const o of props) {
+      const dd = Math.hypot(o.x - at.x, o.y - at.y), min = (o.r || 40) + 30 + 26;
+      if (dd >= min) continue;
+      if (dd < 1) at.x += min; else { const q = (min - dd) / dd; at.x += (at.x - o.x) * q; at.y += (at.y - o.y) * q; }
+      ARENA.clamp(at, 120);
+    }
+    return at;
+  }
   // how far a line from (x, y) along angle runs before it meets the wall
   function toWall(x, y, ang, max) {
     const c = Math.cos(ang), s = Math.sin(ang);
     let d = 0;
     while (d < max && ARENA.sd(x + c * d, y + s * d) < -24) d += 16;
     return d;
+  }
+
+  // Flare-Up: the burners catch along the stove line and a wall of heat rolls down the kitchen from the top wall: the
+  // air shimmers in wavy bands, embers ride it, and the floor behind its front flushes orange (the whole room: a raidwide)
+  function heatWave(ctx, tg, p, k, t) {
+    const hw = ARENA.hw + 40, top = -ARENA.hh - 40, H = ARENA.hh * 2 + 80, front = top + H * easeOut(Math.min(1, p * 1.15));
+    ctx.save();
+    const g = ctx.createLinearGradient(0, top, 0, front + 60);
+    g.addColorStop(0, rgba('#ff6a1a', (0.22 + 0.16 * p) * k)); g.addColorStop(0.85, rgba('#ff8a2a', (0.1 + 0.1 * p) * k)); g.addColorStop(1, 'rgba(255,138,42,0)');
+    ctx.fillStyle = g; ctx.fillRect(-hw, top, hw * 2, front - top + 60);
+    // the haze: wavy shimmer lines drifting up through the heat
+    ctx.lineWidth = 2;
+    for (let i = 0; i < 9; i++) {
+      const y0 = top + ((i / 9 + t * 0.12) % 1) * (front - top);
+      ctx.beginPath();
+      for (let x = -hw; x <= hw; x += 24) { const y = y0 + Math.sin(x * 0.03 + t * 3 + i) * 6; x === -hw ? ctx.moveTo(x, y) : ctx.lineTo(x, y); }
+      ctx.strokeStyle = rgba('#ffe0b0', 0.12 * k); ctx.stroke();
+    }
+    // the front: a bright rolling edge
+    ctx.beginPath();
+    for (let x = -hw; x <= hw; x += 16) { const y = front + Math.sin(x * 0.02 + t * 4) * 10 + Math.sin(x * 0.05 - t * 2) * 5; x === -hw ? ctx.moveTo(x, y) : ctx.lineTo(x, y); }
+    ctx.strokeStyle = rgba('#ffd08a', (0.35 + 0.4 * p) * k); ctx.lineWidth = 4; ctx.stroke();
+    ctx.restore();
+    // embers riding the wave up and along
+    for (let i = 0; i < 40; i++) {
+      const x = -ARENA.hw + hash(i, tg.id) * ARENA.hw * 2, q = (t * (0.5 + hash(i, 3)) + hash(i, 5)) % 1, y = front - q * Math.max(60, front - top);
+      if (y < top) continue;
+      circle(ctx, x + Math.sin(t * 2 + i) * 8, y, 1.6 + hash(i, 7) * 1.8, rgba(i % 3 ? '#ffb040' : '#fff0b0', 0.8 * (1 - q) * k));
+    }
+  }
+  // Last Orders: the bell on the pass rings for last orders: a brass service bell over him, its ring rolling out across
+  // the kitchen in gold waves that come faster and harder as it nears (a raidwide: the whole room)
+  function orderBell(ctx, tg, p, k, t, env) {
+    const b = env.boss, R = AR() * 1.1, rate = 0.5 + 1.6 * easeIn(p);
+    ctx.save(); ctx.fillStyle = rgba('#2a1406', (0.08 + 0.2 * easeIn(p)) * k); ctx.fillRect(-R, -R, R * 2, R * 2); ctx.restore();
+    for (let i = 0; i < 4; i++) {
+      const q = (t * rate + i / 4) % 1, r = 60 + q * R;
+      ellipse(ctx, b.x, b.y, r, r * 0.9, 0, null, rgba('#ffd27a', (0.18 + 0.4 * p) * (1 - q) * k), 3 + 5 * p * (1 - q));
+      ellipse(ctx, b.x, b.y, r - 6, (r - 6) * 0.9, 0, null, rgba('#fff4d0', 0.2 * (1 - q) * k), 1.2);
+    }
+  }
+  // ... and the bell itself, up beside him: a brass dome on a base, the striker bouncing faster and faster
+  function orderBellAir(ctx, tg, p, k, t, env) {
+    const b = env.boss, rate = 0.5 + 1.6 * easeIn(p);
+    const x = b.x - 120, y = b.y - 150, hit = Math.abs(Math.sin(t * Math.PI * rate)), j = hit > 0.9 ? 2 : 0;
+    ctx.save(); ctx.globalAlpha = k * (0.6 + 0.4 * p); ctx.translate(x + Math.sin(t * 70) * j * p, y);
+    glow(ctx, 0, -6, 60, '#ffd27a', 0.25 + 0.35 * p * hit);
+    rrect(ctx, -30, 6, 60, 9, 3, '#6a4a22', OUT, 2.5);
+    ctx.beginPath(); ctx.ellipse(0, 6, 24, 24, 0, Math.PI, TAU); ctx.closePath();
+    const gg = ctx.createLinearGradient(-24, -18, 24, 6); gg.addColorStop(0, '#fff0b0'); gg.addColorStop(0.5, '#d8a84a'); gg.addColorStop(1, '#8a6224');
+    ctx.fillStyle = gg; ctx.fill(); ctx.strokeStyle = OUT; ctx.lineWidth = 2.5; ctx.stroke();
+    ellipse(ctx, -9, -8, 4, 7, -0.5, 'rgba(255,255,255,0.6)');
+    rrect(ctx, -3, -30 + 6 * hit, 6, 12, 2, '#3a3a42', OUT, 1.5);
+    circle(ctx, 0, -32 + 6 * hit, 5, '#5a5a62', OUT, 1.5);
+    ctx.restore();
   }
 
   const G = {
@@ -185,7 +255,8 @@ const BossTells = (() => {
         ctx.restore();
       },
     },
-    // Lid Slam: the lid's shadow is the only floor it spares; outside it, the tiles shiver and the floor reads red
+    // Lid Slam: outside the hole the tiles shiver and the floor reads red; the hole itself is left unpainted (no
+    // shadow, no glints: the floor it spares is just the floor)
     lid: {
       color: '#cfe0ff',
       ground(ctx, tg, s, p, k, t) {
@@ -194,9 +265,10 @@ const BossTells = (() => {
           const q = (t * (0.5 + p) + i / 5) % 1, rr = r2 + 10 + q * (AR() * 1.1 - r2);
           circle(ctx, s.x, s.y, rr, null, rgba(COL.dangerHi, 0.28 * (1 - q) * k), 2 + 2 * p);
         }
-        shadow(ctx, s.x, s.y, r2 * (0.75 + 0.25 * easeIn(p)), (0.3 + 0.25 * p) * k);
-        circle(ctx, s.x, s.y, r2, null, rgba(COL.danger, (0.45 + 0.45 * p) * k), 3);   // the red edge of the hit
-        for (let i = 0; i < 3; i++) { const a = t * 0.8 + i * 2.1; glow(ctx, s.x + Math.cos(a) * r2, s.y + Math.sin(a) * r2, 14, '#ffffff', 0.6 * k); }
+        // the red edge of the hit, stroked on the outside of the hole so not a pixel of it lands inside
+        circle(ctx, s.x, s.y, r2 + 1.5, null, rgba(COL.danger, (0.45 + 0.45 * p) * k), 3);
+        // glints running round the lip, on the hit side
+        for (let i = 0; i < 3; i++) { const a = t * 0.8 + i * 2.1; glow(ctx, s.x + Math.cos(a) * (r2 + 16), s.y + Math.sin(a) * (r2 + 16), 14, '#ffffff', 0.6 * k); }
       },
     },
     // Meat Toss: a slab of meat hangs over each target; its shadow grows until it drops
@@ -383,9 +455,12 @@ const BossTells = (() => {
       },
     },
     // Grease Fire (raidwide): grease spills out across the floor, and the last moment it catches
+    // (the Flare-Up's heat and Last Orders share the tag; shape.look says which: grubnak.js)
     grease: {
       raidwide: true,
       ground(ctx, tg, s, p, k, t, env) {
+        if (s.look === 'heat') return heatWave(ctx, tg, p, k, t);
+        if (s.look === 'orders') return orderBell(ctx, tg, p, k, t, env);
         const b = env.boss, rr = 60 + (AR() - 40) * easeOut(p);
         ctx.save();
         ctx.beginPath();
@@ -397,6 +472,7 @@ const BossTells = (() => {
         ctx.restore();
         if (p > 0.75) for (let i = 0; i < 14; i++) { const a = hash(i, tg.id) * TAU, d = Math.sqrt(hash(i + 5, tg.id)) * rr * 0.95; flame(ctx, b.x + Math.cos(a) * d, b.y + Math.sin(a) * d, 4 + (p - 0.75) * 30, t + i); }
       },
+      air(ctx, tg, s, p, k, t, env) { if (s.look === 'orders') orderBellAir(ctx, tg, p, k, t, env); },
     },
     // Belly Flop (Hard): his shadow swells under him as he gathers himself, and the tiles at its rim start to rattle
     flop: {
@@ -451,24 +527,23 @@ const BossTells = (() => {
         flyingCleaver(ctx, s.x + Math.cos(s.angle) * (L - 30) + wob, s.y + Math.sin(s.angle) * (L - 30) - 30, s.angle + Math.PI + t * 4 * p, k);
       },
     },
-    // Butcher's Charge: skid marks score the tiles from his feet to whatever he'll hit first (a wall or a cask), and
-    // dust kicks up at that end once he's set
+    // Butcher's Charge: skid marks score the tiles the whole length of the hit (it runs wall to wall: the rush carries
+    // through a cask, so the tiles past it are scored too), and dust kicks up at whatever he'll hit first once he's set
     charge: {
       color: '#ffcf9a',
       ground(ctx, tg, s, p, k, t, env) {
         const ca = Math.cos(s.angle), sa = Math.sin(s.angle), hw = s.w / 2;
-        let L = toWall(s.x, s.y, s.angle, s.len) + 30;
-        const hit = PROPS.ray(s.x, s.y, s.x + ca * L, s.y + sa * L, env.props, FIGHT.BOSS_R * 0.7);
-        if (hit) L *= hit.t;
+        // (the hit is the full rect, wall to wall: the art covers all of it, and only the dust marks where he stops)
+        const L = toWall(s.x, s.y, s.angle, s.len) + 30;
+        const hit = PROPS.ray(s.x, s.y, s.x + ca * L, s.y + sa * L, env.props, FIGHT.BOSS_R * 0.7), stop = hit ? L * hit.t : L;
         const locked = p > 1 - (tg.lockAt || 1) / tg.dur;
-        const shape = Object.assign({}, s, { len: L + FIGHT.BOSS_R });
-        ctx.save(); SHAPES.trace(ctx, shape); ctx.fillStyle = rgba('#3a1a08', (0.12 + 0.2 * p) * k); ctx.fill(); ctx.restore();
+        ctx.save(); SHAPES.trace(ctx, s); ctx.fillStyle = rgba('#3a1a08', (0.12 + 0.2 * p) * k); ctx.fill(); ctx.restore();
         for (const side of [-0.55, -0.2, 0.2, 0.55]) {
           const ox = -sa * hw * side, oy = ca * hw * side, q = Math.min(1, p * 1.4);
           line(ctx, s.x + ox + ca * 60, s.y + oy + sa * 60, s.x + ox + ca * (60 + (L - 40) * q), s.y + oy + sa * (60 + (L - 40) * q), rgba('#1a0a04', (0.35 + 0.3 * p) * k), 4);
         }
         // the wall (or cask) he'll hit: it trembles, then dust shakes off it
-        const ex = s.x + ca * (L + FIGHT.BOSS_R * 0.7), ey = s.y + sa * (L + FIGHT.BOSS_R * 0.7);
+        const ex = s.x + ca * (stop + FIGHT.BOSS_R * 0.7), ey = s.y + sa * (stop + FIGHT.BOSS_R * 0.7);
         if (locked) for (let i = 0; i < 6; i++) { const a = s.angle + Math.PI + (hash(i, tg.id) - 0.5) * 2, q = (t * 1.5 + hash(i, 3)) % 1; circle(ctx, ex + Math.cos(a) * q * 50, ey + Math.sin(a) * q * 50, 6 + q * 12, rgba('#e8dcc8', 0.35 * (1 - q) * k)); }
         for (let i = 0; i < 6; i++) {
           const q = (t * (1 + p * 2) + i / 6) % 1, d = 70 + q * (L - 70);
@@ -488,13 +563,12 @@ const BossTells = (() => {
       air(ctx, tg, s, p, k, t, env) {
         if (p < 0.55) return;   // still on the shelf
         const q = (p - 0.55) / 0.45, sx = s.x < 0 ? -ARENA.hw - 30 : ARENA.hw + 30, sy = clamp(s.y, -ARENA.hh + 60, ARENA.hh - 60);
-        const to = ARENA.clamp({ x: s.x, y: s.y }, 120);   // where it'll come to rest (off the wall, as the host puts it)
+        const to = caskRest(s, env);   // where it'll come to rest, worked out exactly as the host does
         const x = sx + (to.x - sx) * q, y = sy + (to.y - sy) * q - Math.sin(q * Math.PI) * 160;
         ctx.save(); ctx.globalAlpha = k; ctx.translate(x, y); ctx.rotate(q * 9);
         rrect(ctx, -22, -16, 44, 32, 9, '#9a6a36', OUT, 2.5);
         line(ctx, -12, -16, -12, 16, '#3a3a42', 3); line(ctx, 12, -16, 12, 16, '#3a3a42', 3);
         ctx.restore();
-        void env;
       },
     },
     // Gut Blast: a gust of foul breath rolls out of him across the whole kitchen. The shadow behind every cask is cut out
@@ -530,8 +604,8 @@ const BossTells = (() => {
         ctx.save(); ctx.translate(hx, hy); ctx.beginPath(); ctx.arc(0, 8, 9, -Math.PI * 0.9, Math.PI * 0.6); ctx.strokeStyle = rgba('#d8dee4', k); ctx.lineWidth = 3.5; ctx.stroke(); ctx.restore();
       },
     },
-    // Flambé (Hard): brandy glistens in stripes across the tiles, and blue flame starts to lick along it just before
-    // it goes up
+    // Flambé: brandy glistens in stripes across the tiles, and white-gold flame starts to lick along it just before it
+    // goes up (not blue: blue on the floor means "share it")
     flambe: {
       color: '#ffc070',
       ground(ctx, tg, s, p, k, t) {
@@ -546,7 +620,7 @@ const BossTells = (() => {
         if (p > 0.6) for (let i = 0; i < 18; i++) {
           const d = hash(i, tg.id + 1) * s.len, off = (hash(i, tg.id + 2) - 0.5) * s.w * 0.85, f = (p - 0.6) / 0.4;
           const fl = 0.6 + 0.4 * Math.sin(t * 16 + i * 3);
-          glow(ctx, s.x + ca * d - sa * off, s.y + sa * d + ca * off, 10 + f * 22 * fl, '#5aa8ff', 0.55 * f * k);
+          glow(ctx, s.x + ca * d - sa * off, s.y + sa * d + ca * off, 10 + f * 22 * fl, '#ffe6a0', 0.55 * f * k);
         }
         ctx.restore();
       },
@@ -814,6 +888,42 @@ const BossTells = (() => {
         }
       },
     },
+    // Venom Drip: venom gathers on a thread over each hero and drips; the red circle (the outline) is where it will
+    // splash, so keep it off the others. A venom-green drop glyph sits in it, swelling, with drips already spotting the
+    // floor, and a white ring counts down to the splash.
+    spread: {
+      color: '#ff3b2f',
+      ground(ctx, tg, s, p, k, t) {
+        // spatters already landing in the circle
+        for (let i = 0; i < 12; i++) {
+          if (hash(tg.id, i + 20) > p * 1.15) continue;
+          const a = hash(i, tg.id + 4) * TAU, d = Math.sqrt(hash(i + 9, tg.id)) * s.r * 0.85, x = s.x + Math.cos(a) * d, y = s.y + Math.sin(a) * d;
+          ellipse(ctx, x, y, 3 + hash(i, 6) * 3, 2 + hash(i, 7) * 2, a, rgba('#8adf2a', 0.7 * k), rgba('#14300a', 0.6 * k), 1);
+        }
+        // the drop glyph: a fat venom drop, its highlight, swelling as it nears
+        const sw = 0.8 + 0.35 * easeIn(p) + Math.sin(t * (4 + 10 * p) + tg.id) * 0.04 * p, gx = s.x, gy = s.y + 4;
+        glow(ctx, gx, gy - 8, 34 * sw, '#8aff4a', (0.18 + 0.3 * p) * k);
+        ctx.save(); ctx.globalAlpha = k * (0.55 + 0.45 * p); ctx.translate(gx, gy); ctx.scale(sw, sw);
+        ctx.beginPath(); ctx.moveTo(0, -26); ctx.bezierCurveTo(10, -10, 16, -2, 16, 6); ctx.arc(0, 6, 16, 0, Math.PI); ctx.bezierCurveTo(-16, -2, -10, -10, 0, -26); ctx.closePath();
+        ctx.fillStyle = '#7ad22a'; ctx.fill(); ctx.strokeStyle = '#14300a'; ctx.lineWidth = 2.5; ctx.stroke();
+        ellipse(ctx, -5, 2, 4, 7, 0.4, 'rgba(240,255,210,0.85)');
+        ctx.restore();
+        ctx.beginPath(); ctx.arc(s.x, s.y, s.r + 7, -Math.PI / 2, -Math.PI / 2 + TAU * (1 - p));
+        ctx.strokeStyle = rgba('#ffffff', 0.8 * k); ctx.lineWidth = 2.5; ctx.stroke();
+      },
+      // a thread of venom let down from the dark over them, a bead swelling at its end and falling as it lands
+      air(ctx, tg, s, p, k, t) {
+        const top = s.y - 520, end = s.y - 150 + 40 * easeIn(p), sw = Math.sin(t * 2 + tg.id) * 5 * (1 - p);
+        ctx.save(); ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(s.x, top); ctx.quadraticCurveTo(s.x + sw, (top + end) / 2, s.x, end);
+        ctx.strokeStyle = rgba('#b8ff6a', 0.35 * k); ctx.lineWidth = 3; ctx.stroke();
+        ctx.restore();
+        const br = 4 + 6 * p;
+        glow(ctx, s.x, end + br, br * 3, '#8aff4a', 0.4 * k);
+        circle(ctx, s.x, end + br, br, rgba('#8adf2a', k), rgba('#14300a', 0.8 * k), 1.5);
+        if (p > 0.6) { const q = (t * 1.8 + tg.id * 0.3) % 1; circle(ctx, s.x, end + br + q * (s.y - end - br), 2.5, rgba('#b8ff6a', 0.8 * (1 - q) * k)); }
+      },
+    },
     // (the pockets she leaves clear, 'snaregap', are sim data only: nothing is drawn there, the red snares round them
     // show the way)
     // Egg-Laden: a pale clutch hangs on the carrier's back, swelling; the circle under them is where its pool will lie,
@@ -866,6 +976,8 @@ const BossTells = (() => {
     if (Math.floor(t * 9 + seed) % 7 === 0) glow(ctx, x, y, s * 0.5, '#9ccfff', a * 0.6);
   }
 
+  // Still Air's stone: its charge comes in its colour (volkar.js: gold '#ffd84a' is +, blue is −)
+  const stillSign = tg => (String(tg.color || '').toLowerCase() === '#ffd84a' ? 1 : -1);
   const V = {
     // Thunderclap (raidwide): storm clouds roll in over the summit and it goes dark, flickering, before the clap
     clap: {
@@ -976,16 +1088,18 @@ const BossTells = (() => {
         stormCloud(ctx, s.x, s.y - 190, 60 + p * 30, (0.3 + 0.5 * p) * k, t, tg.id);
       },
     },
-    // Gale Slam: the wind pours in toward him (he's drawing breath). Where the still air lies behind the rods is not
-    // painted: that's for the players to work out.
+    // Gale Slam: the blast of air he's about to let go: streams rushing out from him to the walls, each with its head
+    // pointing the way it will throw you (out). Where the still air lies behind the rods is not painted: that's for
+    // the players to work out.
     gale: {
       outline: false,
       ground(ctx, tg, s, p, k, t, env) {
         const R = AR(), b = env.boss;
-        // air pouring in to him in curling streams, each with its head pointing the way it's going
+        // a pressure ring swelling round him, and air streaming outward in curling gusts
+        for (let i = 0; i < 2; i++) { const q = (t * 0.9 + i / 2) % 1; circle(ctx, b.x, b.y, 110 + q * (R - 110), null, rgba('#e8f4ff', (0.12 + 0.2 * p) * (1 - q) * k), 2 + 3 * p); }
         ctx.save(); ctx.lineCap = 'round';
         for (let i = 0; i < 32; i++) {
-          const q = (t * (0.7 + 0.6 * p) + hash(i, 7)) % 1, a = i * TAU / 32 + q * 0.9, r1 = R - (R - 120) * q, r0 = r1 + 90, a0 = a - 0.25;
+          const q = (t * (0.7 + 0.6 * p) + hash(i, 7)) % 1, a = i * TAU / 32 + q * 0.9, r0 = 120 + (R - 210) * q, r1 = r0 + 90, a0 = a - 0.25;
           const x0 = b.x + Math.cos(a0) * r0, y0 = b.y + Math.sin(a0) * r0, x1 = b.x + Math.cos(a) * r1, y1 = b.y + Math.sin(a) * r1;
           const cx = b.x + Math.cos(a0 + 0.06) * (r0 + r1) / 2, cy = b.y + Math.sin(a0 + 0.06) * (r0 + r1) / 2, al = (0.2 + 0.45 * p) * k * Math.sin(q * Math.PI);
           ctx.beginPath(); ctx.moveTo(x0, y0); ctx.quadraticCurveTo(cx, cy, x1, y1);
@@ -1034,6 +1148,57 @@ const BossTells = (() => {
           jagged(ctx, s.x + ca * d, s.y + sa * d - 40, s.x + ca * d + (hash(tg.id, 4) - 0.5) * 30, s.y + sa * d + 10, Math.floor(t * 14) + tg.id, '#dffbff', 1.6);
         }
         ctx.restore();
+      },
+    },
+    // Still Air (the Eye): a lit stone wants one hero of its own charge. Its ring is a soak (the blue rim, the outline);
+    // round it, carved stone sigils of its sign (+ gold, − blue) turn slowly, and the charge reaches out: a calm arc to
+    // anyone of the right charge standing in it, a red crackle at anyone of the wrong one (they'll be struck)
+    still: {
+      ground(ctx, tg, s, p, k, t, env) {
+        const sign = stillSign(tg), col = sign > 0 ? '#ffd84a' : '#6ab8ff';
+        glow(ctx, s.x, s.y, s.r * 1.25, col, (0.12 + 0.12 * p) * k);
+        circle(ctx, s.x, s.y, s.r * 0.8, null, rgba(col, (0.35 + 0.3 * p) * k), 2);
+        // the sigils: little slate tiles with the sign cut into them, turning round the ring
+        const n = 6, spin = t * 0.25 * sign;
+        for (let i = 0; i < n; i++) {
+          const a = spin + i * TAU / n, x = s.x + Math.cos(a) * (s.r + 22), y = s.y + Math.sin(a) * (s.r + 22);
+          ctx.save(); ctx.globalAlpha = k * (0.7 + 0.3 * p); ctx.translate(x, y);
+          rrect(ctx, -9, -9, 18, 18, 4, '#3a4250', OUT, 2);
+          line(ctx, -5, 0, 5, 0, col, 3);
+          if (sign > 0) line(ctx, 0, -5, 0, 5, col, 3);
+          ctx.restore();
+        }
+        // one pip: it wants one
+        circle(ctx, s.x, s.y - s.r - 44, 5, rgba(COL.shareHi, k), OUT, 1.5);
+        // the countdown
+        ctx.beginPath(); ctx.arc(s.x, s.y, s.r + 6, -Math.PI / 2, -Math.PI / 2 + TAU * (1 - p));
+        ctx.strokeStyle = rgba('#ffffff', 0.75 * k); ctx.lineWidth = 2; ctx.stroke();
+        // the charge reaching for whoever stands in it
+        const pol = env.pol, top = [s.x, s.y - 80];
+        for (const u of env.units || []) {
+          if (Math.hypot(u.x - s.x, u.y - s.y) > s.r) continue;
+          const us = pol && pol.get(u.id);
+          if (!us) continue;
+          ctx.save();
+          if (us === sign) {
+            ctx.globalAlpha = (0.45 + 0.4 * p) * k; ctx.lineCap = 'round';
+            ctx.beginPath(); ctx.moveTo(...top); ctx.quadraticCurveTo((top[0] + u.x) / 2, Math.min(top[1], u.y - 20) - 30, u.x, u.y - 18);
+            ctx.strokeStyle = col; ctx.lineWidth = 3 + Math.sin(t * 4) * 1; ctx.stroke();
+            ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1; ctx.stroke();
+          } else if (Math.floor(t * 14 + u.id) % 2) {
+            ctx.globalAlpha = (0.5 + 0.5 * p) * k;
+            jagged(ctx, top[0], top[1], u.x, u.y - 16, Math.floor(t * 14) * 3 + u.id, '#ff8a7a', 1.4 + p);
+          }
+          ctx.restore();
+        }
+      },
+      // a column of its charge's light standing up off the stone as the Eye nears its close
+      air(ctx, tg, s, p, k, t) {
+        const col = stillSign(tg) > 0 ? '#ffd84a' : '#6ab8ff', h = 120 + 140 * p, w = 16 + 10 * p;
+        const g = ctx.createLinearGradient(0, s.y - 100 - h, 0, s.y - 100);
+        g.addColorStop(0, rgba(col, 0)); g.addColorStop(1, rgba(col, (0.12 + 0.3 * p) * k));
+        ctx.fillStyle = g; ctx.fillRect(s.x - w / 2, s.y - 100 - h, w, h);
+        if (p > 0.8 && Math.floor(t * 12 + tg.id) % 3 === 0) { ctx.save(); ctx.globalAlpha = k; jagged(ctx, s.x, s.y - 110, s.x + (hash(Math.floor(t * 12), tg.id) - 0.5) * 30, s.y - 100 - h, Math.floor(t * 12) + tg.id, col, 1.4); ctx.restore(); }
       },
     },
     // (the still air past a rod while its front passes, 'stilllane', is sim data only: the red cells show the gap)
@@ -1602,6 +1767,155 @@ const BossTells = (() => {
     },
   };
 
+  // ------------------------------------------------------------------ aftermath
+  // The faint marks a landed mechanic leaves on the floor: a soup splash, scorched rings, spilt spice, a dented ring.
+  // One standard for every lingering decal (boss-vfx.js decals should use it too): a duration tier, one cap on how
+  // strong it gets, the same quick fade in and slow fade out, and always drawn under every telegraph (ArenaView.drawZones
+  // calls drawAftermath before the puddles and telegraphs), so a decal never hides a warning.
+  const AFTER = {
+    tier: { brief: 2.5, short: 4.5, long: 8 },   // seconds a decal lasts
+    maxA: 0.6,                                    // the most opaque any decal gets (each part scales it by 1 or less)
+    fadeIn: 0.15, fadeOut: 1.5,                   // seconds
+  };
+  // how strong a decal is (0..1 of its own colours; AFTER.maxA is applied here) at `age` seconds into `dur`
+  const afterK = (age, dur) => (age < 0 || age >= dur ? 0 : Math.min(1, age / AFTER.fadeIn) * Math.min(1, (dur - age) / AFTER.fadeOut) * AFTER.maxA);
+  const marks = [];
+  const mark = (dur, s, draw, seed = 0) => { if (marks.length < 40) marks.push({ at: aftNow, dur, s: Object.assign({}, s), draw, seed }); };
+  let aftNow = 0;
+  // a ragged blob, the same every frame for a seed
+  function blob(ctx, x, y, r, seed, n = 14, flat = 0.85) {
+    ctx.beginPath();
+    for (let i = 0; i <= n; i++) { const a = i * TAU / n, w = r * (0.78 + 0.32 * hash(i % n, seed)); i ? ctx.lineTo(x + Math.cos(a) * w, y + Math.sin(a) * w * flat) : ctx.moveTo(x + Math.cos(a) * w, y + Math.sin(a) * w * flat); }
+    ctx.closePath();
+  }
+  // by boss, by tag: what each landed mechanic leaves (tg, env) => mark(...)
+  const AFTERMATH = {
+    grubnak: {
+      // Ladle Spin: soup slopped in a ring where the ladle swept, a few splashes thrown past it
+      ladle(tg) {
+        mark(AFTER.tier.short, tg.live, (ctx, s, k, age, seed) => {
+          for (let i = 0; i < 16; i++) {
+            const a = i * TAU / 16 + hash(i, seed) * 0.3, d = s.r * (0.72 + 0.32 * hash(i + 4, seed)), r = 14 + 16 * hash(i + 8, seed);
+            blob(ctx, s.x + Math.cos(a) * d, s.y + Math.sin(a) * d, r, seed + i, 10);
+            ctx.fillStyle = rgba('#b8742a', k * 0.7); ctx.fill();
+          }
+          for (let i = 0; i < 22; i++) { const a = hash(i, seed + 2) * TAU, d = s.r * (0.9 + 0.35 * hash(i, seed + 3)); circle(ctx, s.x + Math.cos(a) * d, s.y + Math.sin(a) * d, 2 + 3 * hash(i, seed + 5), rgba('#d89a4a', k)); }
+        }, tg.id);
+      },
+      // Simmer: the coils it heated leave their rings scorched into the tiles, an ember or two still glowing
+      simmer(tg) {
+        mark(AFTER.tier.short, tg.live, (ctx, s, k, age, seed) => {
+          const r2 = s.r2 || 0;
+          for (let rr = r2 + 12; rr < s.r - 6; rr += 18) for (let seg = 0; seg < 4; seg++) {
+            const a0 = seg * TAU / 4 + rr * 0.01 + 0.12;
+            ctx.beginPath(); ctx.arc(s.x, s.y, rr, a0, a0 + TAU / 4 - 0.24); ctx.strokeStyle = rgba('#140804', k); ctx.lineWidth = 6; ctx.stroke();
+          }
+          const glowK = Math.max(0, 1 - age / 1.5);
+          if (glowK > 0) for (let i = 0; i < 8; i++) { const a = hash(i, seed) * TAU, d = r2 + 12 + hash(i, seed + 1) * Math.max(10, s.r - r2 - 24); circle(ctx, s.x + Math.cos(a) * d, s.y + Math.sin(a) * d, 2.5, rgba('#ff7a2a', k * glowK)); }
+        }, tg.id);
+      },
+      // Spice Rack: the jar lies smashed where it fell, its spice scattered round it
+      spice(tg) {
+        const kind = tg.id % 3, j = JARS[kind];
+        mark(AFTER.tier.short, tg.live, (ctx, s, k, age, seed) => {
+          for (let i = 0; i < 46; i++) { const a = hash(i, seed + 1) * TAU, d = Math.sqrt(hash(i + 3, seed)) * s.r * 0.95; circle(ctx, s.x + Math.cos(a) * d, s.y + Math.sin(a) * d, 2.5 + hash(i, 9) * 3, rgba(j.dust, k)); }
+          blob(ctx, s.x, s.y, s.r * 0.32, seed); ctx.fillStyle = rgba(j.dust, k * 0.6); ctx.fill();
+          // the broken jar, on its side, and a shard of it
+          ctx.save(); ctx.globalAlpha = k; ctx.translate(s.x + 6, s.y - 4); ctx.rotate(1.2 + hash(seed, 2));
+          rrect(ctx, -11, -14, 22, 26, 5, j.body, OUT, 2); rrect(ctx, -12, -20, 24, 8, 3, j.lid, OUT, 1.5);
+          poly(ctx, [-11, 12, -2, 6, 4, 14, 11, 8, 11, 12, -11, 12], '#1a1210');
+          ctx.restore();
+          ctx.save(); ctx.globalAlpha = k; poly(ctx, [s.x - 26, s.y + 14, s.x - 16, s.y + 8, s.x - 18, s.y + 20], j.body, OUT, 1.2); ctx.restore();
+        }, tg.id);
+      },
+      // Whisk: its wires score fine grooves along each arm
+      whisk(tg) {
+        mark(AFTER.tier.brief, tg.live, (ctx, s, k, age, seed) => {
+          const L = Math.min(s.len, AR() + 40);
+          for (let arm = 0; arm < 4; arm++) {
+            const a = s.angle + arm * Math.PI / 2, ca = Math.cos(a), sa = Math.sin(a);
+            for (const f of [-0.3, 0, 0.3]) { const ox = -sa * s.w * f, oy = ca * s.w * f; line(ctx, s.x + ox + ca * 50, s.y + oy + sa * 50, s.x + ox + ca * L, s.y + oy + sa * L, rgba('#1a0e06', k * 0.9), 2); line(ctx, s.x + ox + ca * 50, s.y + oy + sa * 50 + 1.5, s.x + ox + ca * L, s.y + oy + sa * L + 1.5, rgba('#fff2cf', k * 0.5), 1); }
+          }
+        }, tg.id);
+      },
+      // Lid Slam: the lid came down round the hole and left the floor dented: a sunken ring, cracked tiles along it
+      lid(tg) {
+        mark(AFTER.tier.short, tg.live, (ctx, s, k, age, seed) => {
+          const r = s.r2 + 34;
+          ctx.beginPath(); ctx.arc(s.x, s.y, r, 0, TAU); ctx.strokeStyle = rgba('#140a06', k * 0.6); ctx.lineWidth = 26; ctx.stroke();
+          ctx.beginPath(); ctx.arc(s.x, s.y, r - 12, 0, TAU); ctx.strokeStyle = rgba('#e8eef4', k * 0.5); ctx.lineWidth = 1.5; ctx.stroke();
+          ctx.lineCap = 'round';
+          for (let i = 0; i < 18; i++) {
+            const a = i * TAU / 18 + hash(i, seed) * 0.2, d0 = r - 10, d1 = r + 22 + 30 * hash(i + 2, seed);
+            ctx.beginPath(); ctx.moveTo(s.x + Math.cos(a) * d0, s.y + Math.sin(a) * d0);
+            ctx.lineTo(s.x + Math.cos(a + 0.05) * (d0 + d1) / 2, s.y + Math.sin(a + 0.05) * (d0 + d1) / 2); ctx.lineTo(s.x + Math.cos(a - 0.03) * d1, s.y + Math.sin(a - 0.03) * d1);
+            ctx.strokeStyle = rgba('#0c0604', k); ctx.lineWidth = 2; ctx.stroke();
+          }
+        }, tg.id);
+      },
+      // Gorge: he sucks the whole kitchen in and blasts it back out: a scorched spiral wound round where he stood
+      gorge(tg, env) {
+        const at = env.boss ? { x: env.boss.x, y: env.boss.y } : tg.live;
+        mark(AFTER.tier.long, { kind: 'circle', x: at.x, y: at.y, r: 0 }, (ctx, s, k, age, seed) => {
+          ctx.lineCap = 'round';
+          for (let arm = 0; arm < 3; arm++) {
+            ctx.beginPath();
+            for (let i = 0; i <= 40; i++) { const q = i / 40, a = arm * TAU / 3 + q * TAU * 1.1 + seed, d = 40 + q * 320; i ? ctx.lineTo(s.x + Math.cos(a) * d, s.y + Math.sin(a) * d * 0.9) : ctx.moveTo(s.x + Math.cos(a) * d, s.y + Math.sin(a) * d * 0.9); }
+            ctx.strokeStyle = rgba('#120804', k * 0.5); ctx.lineWidth = 22; ctx.stroke();
+            ctx.strokeStyle = rgba('#5a2a10', k * 0.45); ctx.lineWidth = 6; ctx.stroke();
+          }
+          const g = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, 90); g.addColorStop(0, rgba('#0c0604', k * 0.6)); g.addColorStop(1, 'rgba(12,6,4,0)');
+          ctx.fillStyle = g; ctx.beginPath(); ctx.arc(s.x, s.y, 90, 0, TAU); ctx.fill();
+        }, tg.id * 0.7);
+      },
+    },
+    volkar: {
+      // Still Air: the stone lets its charge go: a ring of its colour cracks out across the stone's reach and fades,
+      // leaving its sign scorched into the rock
+      still(tg) {
+        const sign = stillSign(tg), col = sign > 0 ? '#ffd84a' : '#6ab8ff';
+        mark(AFTER.tier.brief, tg.live, (ctx, s, k, age, seed) => {
+          const flash = Math.max(0, 1 - age / 0.5);
+          if (flash > 0) {
+            circle(ctx, s.x, s.y, s.r * (0.6 + 0.6 * (1 - flash)), null, rgba(col, 0.9 * flash), 4 + 6 * flash);
+            glow(ctx, s.x, s.y, s.r * 1.2, col, 0.45 * flash);
+            for (let i = 0; i < 8; i++) { const a = i * TAU / 8 + seed, d = s.r * (1.1 - 0.5 * flash); jagged(ctx, s.x + Math.cos(a) * 30, s.y + Math.sin(a) * 30, s.x + Math.cos(a) * d, s.y + Math.sin(a) * d, i + Math.floor(age * 20), col, 1.6 * flash + 0.4); }
+          }
+          ctx.save(); ctx.translate(s.x, s.y + s.r * 0.55); ctx.strokeStyle = rgba('#0a0e18', k); ctx.lineWidth = 7; ctx.lineCap = 'round';
+          ctx.beginPath(); ctx.moveTo(-14, 0); ctx.lineTo(14, 0); if (sign > 0) { ctx.moveTo(0, -14); ctx.lineTo(0, 14); } ctx.stroke();
+          ctx.strokeStyle = rgba(col, k); ctx.lineWidth = 2; ctx.stroke();
+          ctx.restore();
+        }, tg.id);
+      },
+    },
+  };
+  // note the mechanics that just landed (once each; a telegraph cleared early, on a wipe or a phase change, leaves
+  // nothing), from drawTelegraphs
+  function track(tgs, t, env) {
+    aftNow = t;
+    if (marks.length && t < marks[marks.length - 1].at - 1) marks.length = 0;   // the clock went back: a new pull
+    const set = AFTERMATH[env.bossId];
+    for (const tg of tgs.values()) {
+      if (tg.gone == null || tg._aft) continue;
+      tg._aft = true;
+      if (!set || !set[tg.tag] || Math.abs(tg.gone - (tg.start + tg.dur)) > 0.5) continue;
+      try { set[tg.tag](tg, env); } catch (e) { /* a broken decal never stops the fight drawing */ }
+    }
+  }
+  // the decals, under everything the fight draws on the floor (ArenaView.drawZones)
+  function drawAftermath(ctx, t) {
+    if (!marks.length) return;
+    ctx.save(); ARENA.trace(ctx, 2); ctx.clip();
+    for (let i = marks.length - 1; i >= 0; i--) {
+      const m = marks[i], age = t - m.at;
+      if (age >= m.dur || age < -1) { marks.splice(i, 1); continue; }
+      const k = afterK(age, m.dur);
+      if (k <= 0) continue;
+      ctx.save(); m.draw(ctx, m.s, k, age, m.seed); ctx.restore();
+    }
+    ctx.restore();
+  }
+
   function get(tg, env) {
     if (tg.type === 'buster') return buster;
     if (env.bossId === 'skitterra') return S[tg.tag] || null;
@@ -1703,6 +2017,18 @@ const BossTells = (() => {
     circle(ctx, x, cy, r * 0.42, '#ffffff');
     ctx.restore();
   }
+  // the lane a roller will run down, exactly as wide as what it hits (r + 16 either side of its line): a faint red wash
+  // and dashed red edges out to the far wall
+  const ROLL_PAD = 16;   // fight.js updateRollers: hit within r + 16
+  function rollLane(ctx, m, ca, sa, t, a) {
+    const hw = m.r + ROLL_PAD, L = AR() * 2;
+    ctx.save(); ARENA.trace(ctx); ctx.clip();
+    const shape = { kind: 'rect', x: m.x - ca * hw, y: m.y - sa * hw, angle: m.a, len: L + hw, w: hw * 2 };
+    SHAPES.trace(ctx, shape); ctx.fillStyle = rgba(COL.danger, 0.06 * a); ctx.fill();
+    ctx.setLineDash([14, 12]); ctx.lineDashOffset = -t * 40;
+    for (const side of [-1, 1]) line(ctx, m.x - sa * hw * side, m.y + ca * hw * side, m.x - sa * hw * side + ca * L, m.y + ca * hw * side + sa * L, rgba(COL.danger, a), 2);
+    ctx.restore();
+  }
   // r: { x, y, a, sp, r, delay, start, tag } (client clock)
   function drawRollers(ctx, rollers, t, env) {
     for (const [id, m] of rollers) {
@@ -1716,12 +2042,7 @@ const BossTells = (() => {
         const form = clamp((t - m.start) / 0.6, 0, 1);
         if (t < rollAt) {
           const q = (t - m.start) / Math.max(0.1, m.delay);
-          {
-            ctx.save(); ARENA.trace(ctx); ctx.clip();
-            ctx.setLineDash([10, 12]); ctx.lineDashOffset = -t * 30;
-            for (const side of [-1, 1]) line(ctx, m.x - sa * m.r * side, m.y + ca * m.r * side, m.x - sa * m.r * side + ca * AR() * 2, m.y + ca * m.r * side + sa * AR() * 2, rgba(COL.danger, 0.45), 2);
-            ctx.restore();
-          }
+          rollLane(ctx, m, ca, sa, t, 0.45 + 0.35 * clamp(q, 0, 1));
           for (let i = 0; i < 3; i++) {
             const dd = m.r + 24 + i * 26 + ((t * 40) % 26);
             ctx.save(); ctx.translate(m.x + ca * dd, m.y + sa * dd); ctx.rotate(m.a);
@@ -1743,13 +2064,8 @@ const BossTells = (() => {
         }
         const q = (t - m.start - 0.5) / Math.max(0.1, m.delay - 0.5);
         // which way it'll roll: a grease streak in front and a faint lane across the room
-        {
-          ctx.save(); ARENA.trace(ctx); ctx.clip();
-          ctx.setLineDash([14, 12]); ctx.lineDashOffset = -t * 40;
-          line(ctx, m.x - sa * m.r, m.y + ca * m.r, m.x - sa * m.r + ca * AR() * 2, m.y + ca * m.r + sa * AR() * 2, rgba(COL.danger, 0.45), 2);
-          line(ctx, m.x + sa * m.r, m.y - ca * m.r, m.x + sa * m.r + ca * AR() * 2, m.y - ca * m.r + sa * AR() * 2, rgba(COL.danger, 0.45), 2);
-          ctx.restore();
-        }
+        // (the lane is as wide as the hit: anyone within r + 16 of its middle is run over, fight.js updateRollers)
+        rollLane(ctx, m, ca, sa, t, 0.45 + 0.35 * q);
         for (let i = 0; i < 3; i++) {
           const d = m.r + 26 + i * 28 + ((t * 60) % 28);
           ctx.save(); ctx.translate(m.x + ca * d, m.y + sa * d); ctx.rotate(m.a);
@@ -1864,5 +2180,5 @@ const BossTells = (() => {
     ctx.restore();
   }
 
-  return { COL, get, ground, air, fade, rims, roleColor, drawRollers, drawReels, drawSweeps, rodPost: (ctx, x, y, t, a) => rodPole(ctx, x, y, t, a, 0.15) };
+  return { COL, AFTER, afterK, get, ground, air, fade, rims, roleColor, track, drawAftermath, drawRollers, drawReels, drawSweeps, rodPost: (ctx, x, y, t, a) => rodPole(ctx, x, y, t, a, 0.15) };
 })();

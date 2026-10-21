@@ -69,8 +69,75 @@ const VFX = (() => {
         x.beginPath(); x.moveTo(-s * 0.36, 0); x.lineTo(s * 0.36, 0); x.stroke();
       }); break;
       case 'shard': c = makeCanvas(32, (x, s) => {
-        x.translate(s / 2, s / 2); x.fillStyle = col(1); x.strokeStyle = 'rgba(255,255,255,0.8)'; x.lineWidth = 1;
-        x.beginPath(); x.moveTo(0, -s * 0.45); x.lineTo(s * 0.16, 0); x.lineTo(0, s * 0.45); x.lineTo(-s * 0.16, 0); x.closePath(); x.fill(); x.stroke();
+        // (shared-fx polish) an ink edge under the crystal so shards read on light floors, then the lit facet
+        x.translate(s / 2, s / 2);
+        const sh = () => { x.beginPath(); x.moveTo(0, -s * 0.45); x.lineTo(s * 0.16, 0); x.lineTo(0, s * 0.45); x.lineTo(-s * 0.16, 0); x.closePath(); };
+        sh(); x.strokeStyle = 'rgba(20,12,30,0.85)'; x.lineWidth = 3; x.lineJoin = 'round'; x.stroke();
+        x.fillStyle = col(1); x.fill(); x.strokeStyle = 'rgba(255,255,255,0.8)'; x.lineWidth = 1; x.stroke();
+        x.fillStyle = 'rgba(255,255,255,0.45)'; x.beginPath(); x.moveTo(0, -s * 0.42); x.lineTo(s * 0.13, 0); x.lineTo(0, 0); x.closePath(); x.fill();
+      }); break;
+      // ---- (shared-fx polish) pre-rendered gradients, so effects don't build gradients every frame
+      case 'smoke1': case 'smoke2': c = makeCanvas(64, (x, s) => {
+        // two more cartoon-puff silhouettes (picked at random per smoke particle)
+        const B2 = kind === 'smoke1'
+          ? [[0.5, 0.58, 0.28], [0.3, 0.56, 0.18], [0.7, 0.54, 0.22], [0.5, 0.36, 0.22], [0.34, 0.4, 0.14]]
+          : [[0.48, 0.55, 0.3], [0.7, 0.6, 0.17], [0.28, 0.46, 0.19], [0.58, 0.33, 0.19], [0.72, 0.4, 0.14], [0.4, 0.3, 0.13]];
+        x.fillStyle = col(1);
+        for (const [px, py, pr] of B2) { x.beginPath(); x.arc(px * s, py * s, pr * s, 0, Math.PI * 2); x.fill(); }
+        x.globalCompositeOperation = 'source-atop';
+        const gr = x.createLinearGradient(0, 0, s, s);
+        gr.addColorStop(0, 'rgba(255,255,255,0.45)'); gr.addColorStop(1, 'rgba(0,0,0,0.25)');
+        x.fillStyle = gr; x.fillRect(0, 0, s, s);
+      }); break;
+      case 'shaft': c = makeCanvas(64, (x, s) => {
+        // a vertical light shaft: clear at the top, the colour lower down, white-hot at the foot (drawn stretched)
+        const gr = x.createLinearGradient(0, 0, 0, s);
+        gr.addColorStop(0, col(0)); gr.addColorStop(0.7, col(0.6)); gr.addColorStop(1, 'rgba(255,255,255,1)');
+        x.fillStyle = gr; x.fillRect(0, 0, s, s);
+      }); break;
+      case 'column': c = makeCanvas(64, (x, s) => {
+        // a pillar's body: clear at the top to the colour at the foot, its edges soft
+        const gr = x.createLinearGradient(0, 0, 0, s);
+        gr.addColorStop(0, col(0)); gr.addColorStop(0.7, col(0.5)); gr.addColorStop(1, col(1));
+        x.fillStyle = gr; x.fillRect(0, 0, s, s);
+        x.globalCompositeOperation = 'destination-in';
+        const e = x.createLinearGradient(0, 0, s, 0);
+        e.addColorStop(0, 'rgba(0,0,0,0.35)'); e.addColorStop(0.2, 'rgba(0,0,0,1)'); e.addColorStop(0.8, 'rgba(0,0,0,1)'); e.addColorStop(1, 'rgba(0,0,0,0.35)');
+        x.fillStyle = e; x.fillRect(0, 0, s, s);
+      }); break;
+      case 'streak': c = makeCanvas(64, (x, s) => {
+        // a comet tail along +x: clear at the back, full at the head, soft top and bottom edges
+        const gr = x.createLinearGradient(0, 0, s, 0);
+        gr.addColorStop(0, col(0)); gr.addColorStop(0.75, col(0.75)); gr.addColorStop(1, col(1));
+        x.fillStyle = gr; x.fillRect(0, 0, s, s);
+        x.globalCompositeOperation = 'destination-in';
+        const e = x.createLinearGradient(0, 0, 0, s);
+        e.addColorStop(0, 'rgba(0,0,0,0)'); e.addColorStop(0.3, 'rgba(0,0,0,0.9)'); e.addColorStop(0.5, 'rgba(0,0,0,1)'); e.addColorStop(0.7, 'rgba(0,0,0,0.9)'); e.addColorStop(1, 'rgba(0,0,0,0)');
+        x.fillStyle = e; x.fillRect(0, 0, s, s);
+      }); break;
+      case 'bubble': c = makeCanvas(96, (x, s) => {
+        // a shield bubble's body: faint white near the lit top left, the colour thickening to the rim
+        const gr = x.createRadialGradient(s * 0.35, s * 0.35, s * 0.05, s / 2, s / 2, s / 2);
+        gr.addColorStop(0, 'rgba(255,255,255,0.27)'); gr.addColorStop(0.75, col(0.27)); gr.addColorStop(1, col(1));
+        x.fillStyle = gr; x.beginPath(); x.arc(s / 2, s / 2, s / 2, 0, Math.PI * 2); x.fill();
+      }); break;
+      case 'pool': c = makeCanvas(96, (x, s) => {
+        // a glowing floor pool: faint middle, brighter toward the rim
+        const gr = x.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
+        gr.addColorStop(0, col(0.17)); gr.addColorStop(0.75, col(0.47)); gr.addColorStop(1, col(1));
+        x.fillStyle = gr; x.beginPath(); x.arc(s / 2, s / 2, s / 2, 0, Math.PI * 2); x.fill();
+      }); break;
+      case 'pit': c = makeCanvas(96, (x, s) => {
+        // a crater's scorched pit with a darker lip (colour ignored)
+        const gr = x.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
+        gr.addColorStop(0, 'rgba(30,16,8,1)'); gr.addColorStop(0.6, 'rgba(45,26,14,0.62)'); gr.addColorStop(0.82, 'rgba(22,12,6,0.88)'); gr.addColorStop(1, 'rgba(22,12,6,0)');
+        x.fillStyle = gr; x.fillRect(0, 0, s, s);
+      }); break;
+      case 'char': c = makeCanvas(64, (x, s) => {
+        // a soft charred blot (decals, scorch marks; colour ignored)
+        const gr = x.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
+        gr.addColorStop(0, 'rgba(16,9,5,1)'); gr.addColorStop(0.65, 'rgba(28,16,9,0.64)'); gr.addColorStop(1, 'rgba(28,16,9,0)');
+        x.fillStyle = gr; x.fillRect(0, 0, s, s);
       }); break;
       case 'plus': c = makeCanvas(32, (x, s) => {
         const gr = x.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
@@ -102,17 +169,32 @@ const VFX = (() => {
   // ---------------------------------------------------------------- particles
   // p: { x, y, z, vx, vy, vz, g, drag, life, size, size1, color, kind, add, rot, vr, stretch, a, spin, ground, fadeIn }
   // (full: the new one takes the slot of the oldest still around, instead of shifting the whole list)
-  let oldest = 0;
+  // (oldest: the slot last overwritten at the cap; the next overwrite takes the one after it. update() rotates the
+  // list back to oldest-first each frame, so overwrites never land on fresh particles)
+  let oldest = -1;
+  const ring = [];
   function spawn(p) {
     p.t0 = now; p.z = p.z || 0; p.vx = p.vx || 0; p.vy = p.vy || 0; p.vz = p.vz || 0;
     p.rot = p.rot ?? Math.random() * Math.PI * 2;
     p.a = (p.a ?? 1) * scale;
     if (muted) return p;
+    // the sprite is looked up once here, not every frame (smoke picks one of three puff shapes)
+    const kind = p.kind || 'glow';
+    p.img = sprite(kind === 'smoke' ? SMOKES[(Math.random() * 3) | 0] : kind, p.color || '#ffffff');
     if (parts.length >= MAX_PARTS) { oldest = (oldest + 1) % parts.length; parts[oldest] = p; }
     else parts.push(p);
     return p;
   }
   const rand = (a, b) => a + Math.random() * (b - a);
+  const SMOKES = ['smoke', 'smoke1', 'smoke2'];
+  // (shared-fx polish) colour strings with a fixed alpha, built once (neon rings and paths ask for these every frame)
+  const _tint = new Map();
+  function tint(color, a) {
+    const key = color + a;
+    let s = _tint.get(key);
+    if (s === undefined) { s = rgba(color, a); if (_tint.size > 512) _tint.clear(); _tint.set(key, s); }
+    return s;
+  }
 
   // ---------------------------------------------------------------- effects
   // e: { layer: 'ground'|'air', dur, draw(ctx, p, t, e), add }
@@ -123,9 +205,13 @@ const VFX = (() => {
   function update(t, dt) {
     now = t;
     // dead particles are dropped by compacting the list in one pass (keeps the draw order, no per-removal splice)
+    // (at the cap, new particles overwrote slots from `oldest` on: the list is a ring then. The compaction reads it
+    // from the slot after the last overwrite, so it comes out oldest-first again, and the next overwrite starts at 0)
+    const n = parts.length, s0 = oldest >= 0 && oldest < n - 1 ? oldest + 1 : 0, src = s0 ? ring : parts;
+    if (s0) { ring.length = n; for (let i = 0; i < n; i++) ring[i] = parts[(s0 + i) % n]; }
     let w = 0;
-    for (let i = 0; i < parts.length; i++) {
-      const p = parts[i];
+    for (let i = 0; i < n; i++) {
+      const p = src[i];
       const age = now - p.t0;
       if (age > p.life) continue;
       parts[w++] = p;
@@ -142,8 +228,8 @@ const VFX = (() => {
         p.x = c.x + Math.cos(p.orbit.a) * p.orbit.r; p.y = c.y + Math.sin(p.orbit.a) * p.orbit.r * (p.orbit.flat ?? 0.55);
       }
     }
-    parts.length = w;
-    if (oldest >= w) oldest = 0;
+    parts.length = w; ring.length = 0;
+    oldest = -1;
     for (let i = effects.length - 1; i >= 0; i--) {
       const e = effects[i];
       if (now - e.t0 > e.dur) { effects.splice(i, 1); if (e.done) withScale(e.sc, e.done); continue; }
@@ -162,7 +248,7 @@ const VFX = (() => {
     let a = p.a * (q < (p.fadeIn || 0.08) ? q / (p.fadeIn || 0.08) : 1) * (1 - Math.pow(q, p.fadePow || 1.6));
     if (a <= 0.01) return;
     const size = p.size + ((p.size1 ?? p.size) - p.size) * q;
-    const img = sprite(p.kind || 'glow', p.color);
+    const img = p.img || sprite(p.kind || 'glow', p.color);
     ctx.globalAlpha = Math.min(1, a);
     const op = p.add === false ? 'source-over' : 'lighter';
     if (op !== curOp) { ctx.globalCompositeOperation = op; curOp = op; }
@@ -214,6 +300,16 @@ const VFX = (() => {
     ctx.drawImage(sprite('glow', color), x - r, y - r, r * 2, r * 2);
     ctx.globalCompositeOperation = prev; ctx.globalAlpha = 1;
   }
+  // (shared-fx polish) a soft comet tail from (x0, y0) to the head (x1, y1), w the half-thickness: one cached
+  // sprite laid along the line, instead of a gradient built per frame
+  function streakTo(ctx, x0, y0, x1, y1, w, color, a) {
+    const L = Math.hypot(x1 - x0, y1 - y0);
+    if (a <= 0.01 || L < 0.5) return;
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = Math.min(1, a);
+    ctx.translate(x0, y0); ctx.rotate(Math.atan2(y1 - y0, x1 - x0));
+    ctx.drawImage(sprite('streak', color), 0, -w, L + w * 0.5, w * 2);
+    ctx.restore();
+  }
   function ringStroke(ctx, x, y, r, color, w, a, flat = 1) {
     if (a <= 0.01 || r <= 0) return;
     ctx.globalAlpha = Math.min(1, a);
@@ -225,7 +321,7 @@ const VFX = (() => {
   function neonRing(ctx, x, y, r, color, w, a, flat = 1) {
     const prev = ctx.globalCompositeOperation;
     ctx.globalCompositeOperation = 'lighter';
-    ringStroke(ctx, x, y, r, rgba(color, 0.35), w * 3, a, flat);
+    ringStroke(ctx, x, y, r, tint(color, 0.35), w * 3, a, flat);
     ringStroke(ctx, x, y, r, color, w, a, flat);
     ringStroke(ctx, x, y, r, 'rgba(255,255,255,0.9)', Math.max(1, w * 0.35), a, flat);
     ctx.globalCompositeOperation = prev;
@@ -233,7 +329,7 @@ const VFX = (() => {
   function neonPath(ctx, color, w, a, trace) {
     const prev = ctx.globalCompositeOperation;
     ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-    for (const [c, lw] of [[rgba(color, 0.3), w * 3], [color, w], ['rgba(255,255,255,0.9)', Math.max(1, w * 0.35)]]) {
+    for (const [c, lw] of [[tint(color, 0.3), w * 3], [color, w], ['rgba(255,255,255,0.9)', Math.max(1, w * 0.35)]]) {
       ctx.globalAlpha = Math.min(1, a); ctx.strokeStyle = c; ctx.lineWidth = lw; ctx.beginPath(); trace(); ctx.stroke();
     }
     ctx.globalAlpha = 1; ctx.globalCompositeOperation = prev;
@@ -365,12 +461,8 @@ const VFX = (() => {
       }, draw: (c, p, t, e) => {
         const cx = e.follow ? e.follow.x : x, cy = e.follow ? e.follow.y : y;
         const k = env(p, 0.12, 0.4) * e.a, w = r * (0.7 + 0.3 * Math.sin(t * 12) * 0.1);
-        const g = c.createLinearGradient(0, cy - h, 0, cy);
-        g.addColorStop(0, rgba(color, 0)); g.addColorStop(0.7, rgba(color, 0.35 * k)); g.addColorStop(1, rgba(color, 0.7 * k));
-        c.fillStyle = g; c.fillRect(cx - w, cy - h, w * 2, h);
-        const g2 = c.createLinearGradient(0, cy - h * 0.9, 0, cy);
-        g2.addColorStop(0, 'rgba(255,255,255,0)'); g2.addColorStop(1, `rgba(255,255,255,${0.7 * k})`);
-        c.fillStyle = g2; c.fillRect(cx - w * 0.25, cy - h * 0.9, w * 0.5, h * 0.9);
+        c.globalAlpha = Math.min(1, 0.7 * k); c.drawImage(sprite('column', color), cx - w, cy - h, w * 2, h);
+        c.drawImage(sprite('column', '#ffffff'), cx - w * 0.25, cy - h * 0.9, w * 0.5, h * 0.9); c.globalAlpha = 1;
         neonRing(c, cx, cy, r, color, 3, k, 0.45);
         glowAt(c, cx, cy, r * 1.6, color, 0.5 * k);
       } });
@@ -391,26 +483,50 @@ const VFX = (() => {
       } });
     },
     // crescent slash with a glowing edge and sparks from the tip
+    // (shared-fx polish) a crescent that is thickest just behind its head and pointed at both ends: a soft ink
+    // shadow (fading out faster than the light, so it never lingers as a grey arc), a coloured smear over the whole
+    // swept arc, the lit body, a wide white-hot core, a bright tip riding the edge, and sparks thrown off the end.
+    // o: { r, span, color, dur, w (thickness, a fraction of r), flip, sparks (0: none), size (scales r and the
+    //      sparks), thick (scales w), core (core colour), ink (shadow strength, 0..1), tip (false: no tip glint) }
     slash(x, y, angle, o = {}) {
-      const r = o.r ?? 60, span = o.span ?? 1.8, color = o.color || '#ffffff', dur = o.dur ?? 0.3, w = o.w ?? 0.45, flip = o.flip ? -1 : 1;
+      const size = o.size ?? 1, r = (o.r ?? 60) * size, span = o.span ?? 1.8, color = o.color || '#ffffff', dur = o.dur ?? 0.3;
+      const th = o.thick ?? 1, W = r * Math.min(0.42 * th, (o.w ?? 0.45) * 0.8 * th), flip = o.flip ? -1 : 1, core = o.core || '#ffffff', ink = o.ink ?? 1;
+      const cy = y - 10, N = 14;
+      // one crescent from angle aA (q = 0) to aB (q = 1), outer radius R, thickness W * prof(q)
+      const cres = (c, R, aA, aB, Wd, lo) => {
+        c.beginPath();
+        for (let i = 0; i <= N; i++) { const a = aA + (aB - aA) * i / N; c.lineTo(x + Math.cos(a) * R, cy + Math.sin(a) * R); }
+        for (let i = N; i >= 0; i--) { const q = i / N, a = aA + (aB - aA) * q, th = Wd * (lo + (1 - lo) * Math.sin(Math.PI * Math.pow(q, 1.9))), rr = Math.max(0, R - th);
+          c.lineTo(x + Math.cos(a) * rr, cy + Math.sin(a) * rr); }
+        c.closePath(); c.fill();
+      };
       fx({ dur, layer: 'air', draw: (c, p, t, e) => {
-        const sweep = easeOut(Math.min(1, p / 0.45));
+        const sweep = easeOut(Math.min(1, p / 0.4));
         const a0 = angle - flip * span / 2, a1 = a0 + flip * span * sweep;
-        const tail = Math.max(0, sweep - 0.55) / 0.45;
-        const aT = a0 + flip * span * tail;
-        const k = e.a * (1 - Math.max(0, (p - 0.45) / 0.55));
-        const arcBand = (rr, ww) => { c.beginPath(); c.arc(x, y - 10, rr, flip > 0 ? aT : a1, flip > 0 ? a1 : aT, false); c.arc(x, y - 10, rr * (1 - ww), flip > 0 ? a1 : aT, flip > 0 ? aT : a1, true); c.closePath(); c.fill(); };
-        c.save();
-        // an ink band under the light, so the cut reads on a bright floor too, and a fading smear trailing it
-        c.globalAlpha = 0.32 * k; c.fillStyle = '#140a14'; arcBand(r * 1.03, w * 1.15);
+        const tq = Math.min(1, Math.max(0, (p - 0.22) / 0.6)), tail = tq * Math.sqrt(tq);
+        const aT = a0 + (a1 - a0) * tail;
+        const fade = 1 - Math.max(0, (p - 0.45) / 0.55), k = e.a * Math.pow(fade, 1.3);
+        if (k <= 0.01) return;
+        // the ink fades out with the cube of the light, so the dark never outlives the cut
+        c.globalAlpha = Math.min(1, 0.2 * ink * e.a * fade * fade * fade); c.fillStyle = '#140a18'; cres(c, r * 1.04, aT, a1, W * 1.2, 0.05);
         c.globalCompositeOperation = 'lighter';
-        if (tail < 1) { c.globalAlpha = 0.18 * k; c.fillStyle = color; c.beginPath(); c.arc(x, y - 10, r * 0.96, flip > 0 ? a0 : aT, flip > 0 ? aT : a0, false); c.arc(x, y - 10, r * (1 - w * 0.7), flip > 0 ? aT : a0, flip > 0 ? a0 : aT, true); c.closePath(); c.fill(); }
-        for (const [col, rr, ww, al] of [[color, r, w, 0.55], ['#ffffff', r * 0.98, w * 0.35, 0.9]]) { c.globalAlpha = al * k; c.fillStyle = col; arcBand(rr, ww); }
-        c.restore();
-        // a glint riding the blade's tip while it sweeps
-        if (sweep < 1) glowAt(c, x + Math.cos(a1) * r, y - 10 + Math.sin(a1) * r, 14 + r * 0.12, '#ffffff', 0.8 * k);
+        // the smear: the whole arc the blade has crossed, faint at the start and stronger toward the blade; it goes
+        // first, so no ghost arc is left after the light
+        const sk = k * fade * (1 - tail);
+        if (sk > 0.01) for (let s = 0; s < 4; s++) { const q0 = s / 4, q1 = (s + 1) / 4, sa = a0 + (a1 - a0) * q0, sb = a0 + (a1 - a0) * q1;
+          c.globalAlpha = Math.min(1, sk * (0.06 + 0.2 * q1)); c.fillStyle = color; cres(c, r * 0.99, sa, sb, W * (0.35 + 0.5 * q1), 0.9); }
+        c.globalAlpha = Math.min(1, 0.78 * k); c.fillStyle = color; cres(c, r, aT, a1, W, 0.05);
+        c.globalAlpha = Math.min(1, 0.85 * k); c.fillStyle = core; cres(c, r * 0.985, aT + (a1 - aT) * 0.2, a1, W * 0.42, 0.05);
+        c.globalCompositeOperation = 'source-over'; c.globalAlpha = 1;
+        // the bright tip riding the edge while it sweeps, flaring as it finishes
+        if (o.tip !== false && p < 0.6) { const tk = k * (sweep < 1 ? 0.9 : 0.9 * (1 - (p - 0.42) / 0.18)), hx = x + Math.cos(a1) * r * 0.97, hy = cy + Math.sin(a1) * r * 0.97;
+          glowAt(c, hx, hy, 12 + r * 0.16, color, tk); glowAt(c, hx, hy, 5 + r * 0.06, '#ffffff', tk); }
       } });
-      fx({ dur: dur * 0.35, layer: 'air', draw: () => {}, done: () => B.sparks(x + Math.cos(angle) * r, y + Math.sin(angle) * r, { color, n: o.sparks ?? 6, angle, spread: 0.9, speed: 300 }) });
+      if ((o.sparks ?? 6) > 0) fx({ dur: dur * 0.38, layer: 'air', draw: () => {}, done: () => {
+        const ea = angle + flip * span / 2, ex = x + Math.cos(ea) * r, ey = y + Math.sin(ea) * r, tan = ea + flip * Math.PI / 2;
+        B.sparks(ex, ey, { color, n: o.sparks ?? 6, angle: tan, spread: 0.7, speed: 300 * Math.sqrt(size) });
+        spawn({ x: ex, y: ey, z: 10, life: 0.16, size: 22 * size, size1: 6, color, kind: 'star', vr: 6 });
+      } });
     },
     // projectile that flies from a to b, leaving a trail, then calls onHit. style: orb | comet | arrow | fire | leaf | helix | blade | meteor
     missile(sx, sy, tx, ty, o = {}) {
@@ -430,12 +546,8 @@ const VFX = (() => {
       }, draw: (c, p, t, e) => {
         const q = pos(p), y = q.y - q.z;
         const back = pos(Math.max(0, p - 0.12));
-        c.save(); c.globalCompositeOperation = 'lighter';
-        // streak from slightly behind to the head
-        const grd = c.createLinearGradient(back.x, back.y - back.z, q.x, y);
-        grd.addColorStop(0, rgba(color, 0)); grd.addColorStop(1, rgba(color, 0.9 * e.a));
-        c.strokeStyle = grd; c.lineCap = 'round'; c.lineWidth = 8 * size; c.beginPath(); c.moveTo(back.x, back.y - back.z); c.lineTo(q.x, y); c.stroke();
-        c.restore();
+        // streak from slightly behind to the head (a cached tail sprite, laid along the flight)
+        streakTo(c, back.x, back.y - back.z, q.x, y, 5 * size, color, 0.9 * e.a);
         switch (style) {
           case 'arrow': {
             c.save(); c.translate(q.x, y); c.rotate(ang);
@@ -584,9 +696,7 @@ const VFX = (() => {
         } else {
           const rr = r * (1 + Math.sin(t * 5) * 0.02);
           c.save(); c.globalCompositeOperation = 'lighter';
-          const g = c.createRadialGradient(ent.x - rr * 0.3, y - rr * 0.3, rr * 0.1, ent.x, y, rr);
-          g.addColorStop(0, rgba('#ffffff', 0.12 * k)); g.addColorStop(0.75, rgba(color, 0.12 * k)); g.addColorStop(1, rgba(color, 0.45 * k));
-          c.fillStyle = g; c.beginPath(); c.arc(ent.x, y, rr, 0, Math.PI * 2); c.fill();
+          c.globalAlpha = Math.min(1, 0.45 * k); c.drawImage(sprite('bubble', color), ent.x - rr, y - rr, rr * 2, rr * 2);
           c.restore();
           neonRing(c, ent.x, y, rr, color, 2, k);
           if (shape === 'hex') {
@@ -657,12 +767,11 @@ const VFX = (() => {
       fx({ dur: o.dur ?? 3, layer: 'ground', draw: (c, p, t, e) => {
         const k = Math.min(1, (1 - p) / 0.5) * e.a * (o.a ?? 0.5);
         if (o.style === 'crack') {
-          c.strokeStyle = `rgba(20,12,8,${k})`; c.lineWidth = 2.5; c.lineCap = 'round';
+          c.globalAlpha = Math.min(1, k); c.strokeStyle = '#140c08'; c.lineWidth = 2.5; c.lineCap = 'round';
           for (let i = 0; i < 7; i++) { const a = i * 0.9 + (o.seed || 0); let px = x, py = y; c.beginPath(); c.moveTo(px, py); for (let s = 0; s < 3; s++) { px += Math.cos(a + Math.sin(s * 3 + i) * 0.5) * (o.r ?? 40) / 3; py += Math.sin(a + Math.sin(s * 3 + i) * 0.5) * (o.r ?? 40) / 3 * 0.7; c.lineTo(px, py); } c.stroke(); }
         } else {
-          const g = c.createRadialGradient(x, y, 0, x, y, o.r ?? 40);
-          g.addColorStop(0, `rgba(20,10,5,${k})`); g.addColorStop(1, 'rgba(20,10,5,0)');
-          c.fillStyle = g; c.beginPath(); c.ellipse(x, y, o.r ?? 40, (o.r ?? 40) * 0.7, 0, 0, Math.PI * 2); c.fill();
+          const R = o.r ?? 40;
+          c.globalAlpha = Math.min(1, k); c.drawImage(sprite('char', ''), x - R, y - R * 0.7, R * 2, R * 1.4); c.globalAlpha = 1;
           if (o.embers) for (let i = 0; i < 5; i++) glowAt(c, x + Math.cos(i * 1.3) * (o.r ?? 40) * 0.5, y + Math.sin(i * 1.3) * (o.r ?? 40) * 0.35, 6, '#ff7a1a', k * (0.5 + 0.5 * Math.sin(t * 6 + i)));
         }
       } });
@@ -724,14 +833,14 @@ const VFX = (() => {
       const color = o.color || '#ffe680', r = o.r ?? 34, h = o.h ?? 260, dur = o.dur ?? 1.2;
       const shafts = Array.from({ length: 7 }, () => ({ dx: rand(-1, 1) * r * 0.8, w: rand(3, 9), ph: rand(0, 6), len: rand(0.6, 1) }));
       B.charge(x, y, { color, r: r * 1.6, n: 8, dur: 0.25, z: 10 });
+      const shaft = sprite('shaft', color);
       fx({ dur, layer: 'air', add: true, draw: (c, p, t, e) => {
         const k = env(p, 0.1, 0.45) * e.a;
         glowAt(c, x, y - 20, r * 2.2, color, 0.55 * k);
         for (const s of shafts) {
           const top = y - h * s.len, a = k * (0.5 + 0.5 * Math.sin(t * 9 + s.ph));
-          const g = c.createLinearGradient(0, top, 0, y);
-          g.addColorStop(0, rgba(color, 0)); g.addColorStop(0.7, rgba(color, 0.55 * a)); g.addColorStop(1, rgba('#ffffff', 0.9 * a));
-          c.fillStyle = g; c.fillRect(x + s.dx - s.w / 2, top, s.w, y - top);
+          if (a <= 0.01) continue;
+          c.globalAlpha = Math.min(1, 0.9 * a); c.drawImage(shaft, x + s.dx - s.w / 2, top, s.w, y - top);
         }
       } });
       for (let i = 0; i < (o.feathers ?? 6); i++) spawn({ x: x + rand(-r, r), y: y + rand(-6, 6), z: rand(90, 180), vz: rand(-70, -40), vx: rand(-20, 20), life: rand(1.2, 1.7), size: rand(12, 16), color: '#fff8e6', kind: 'feather', add: false, vr: rand(-2, 2), flutter: 3, fadeIn: 0.1 });
@@ -753,9 +862,7 @@ const VFX = (() => {
         if (o.tint) { c.globalAlpha = 0.28 * k; c.fillStyle = o.tint; c.beginPath(); c.ellipse(cx, cy, R, R * 0.55, 0, 0, Math.PI * 2); c.fill(); c.globalAlpha = 1; }
         ringStroke(c, cx, cy, R + 2, 'rgba(10,16,30,0.4)', 7, k, 0.55);
         c.save(); c.globalCompositeOperation = 'lighter';
-        const g = c.createRadialGradient(cx, cy, 0, cx, cy, R);
-        g.addColorStop(0, rgba(color, 0.05 * k)); g.addColorStop(0.75, rgba(color, 0.14 * k)); g.addColorStop(1, rgba(color, 0.3 * k));
-        c.fillStyle = g; c.beginPath(); c.ellipse(cx, cy, R, R * 0.55, 0, 0, Math.PI * 2); c.fill();
+        if (R > 0.5) { c.globalAlpha = Math.min(1, 0.3 * k); c.drawImage(sprite('pool', color), cx - R, cy - R * 0.55, R * 2, R * 1.1); }
         c.restore();
         neonRing(c, cx, cy, R, color, 3, k, 0.55); neonRing(c, cx, cy, R * 0.9, color, 1.2, k * 0.7, 0.55);
         // vine scrollwork turning slowly: S-curls around the ring
@@ -871,11 +978,7 @@ const VFX = (() => {
       fx({ dur, layer: 'ground', draw: (c, p, t, e) => {
         const k = e.a * Math.min(1, (1 - p) / 0.4), heat = Math.max(0, 1 - p * 1.5);
         // the pit: a dark scorch with a darker lip (source-over, so it reads on light floors)
-        c.save(); c.translate(x, y); c.scale(1, 0.6);
-        const g = c.createRadialGradient(0, 0, 0, 0, 0, r);
-        g.addColorStop(0, 'rgba(30,16,8,0.8)'); g.addColorStop(0.6, 'rgba(45,26,14,0.5)'); g.addColorStop(0.82, 'rgba(22,12,6,0.7)'); g.addColorStop(1, 'rgba(22,12,6,0)');
-        c.globalAlpha = k * (o.a ?? 0.8); c.fillStyle = g; c.beginPath(); c.arc(0, 0, r, 0, Math.PI * 2); c.fill();
-        c.restore();
+        c.globalAlpha = Math.min(1, k * (o.a ?? 0.8) * 0.8); c.drawImage(sprite('pit', ''), x - r, y - r * 0.6, r * 2, r * 1.2);
         // cracks: ink first, then the heat glowing inside them while it lasts
         c.lineCap = 'round'; c.lineJoin = 'round';
         c.globalAlpha = k * 0.85; c.strokeStyle = '#1a0e08'; c.lineWidth = 3.5; c.beginPath(); trace(c); c.stroke();
@@ -980,11 +1083,10 @@ const VFX = (() => {
       fx({ dur, layer: 'ground', draw: (c, p, t, e) => {
         c.save(); if (typeof ARENA !== 'undefined') { ARENA.trace(c, 2); c.clip(); }
         const life = p * dur, k = e.a * Math.min(1, life / 0.15) * Math.min(1, (dur - life) / 2) * (o.a ?? 1);
-        for (const b of blobs) {
-          const g = c.createRadialGradient(b.x, b.y, 0, b.x, b.y, b.r);
-          g.addColorStop(0, `rgba(16,9,5,${0.78 * k})`); g.addColorStop(0.65, `rgba(28,16,9,${0.5 * k})`); g.addColorStop(1, 'rgba(28,16,9,0)');
-          c.fillStyle = g; c.beginPath(); c.ellipse(b.x, b.y, b.r, b.r * 0.72, 0, 0, Math.PI * 2); c.fill();
-        }
+        const ch = sprite('char', '');
+        c.globalAlpha = Math.min(1, 0.78 * k);
+        for (const b of blobs) c.drawImage(ch, b.x - b.r, b.y - b.r * 0.72, b.r * 2, b.r * 1.44);
+        c.globalAlpha = 1;
         for (const em of embers) { const ek = Math.max(0, 1 - p / em.life); if (ek > 0.02) glowAt(c, em.x, em.y, 8, o.ember || '#ff7a1a', k * ek * (0.5 + 0.5 * Math.sin(t * 6 + em.ph))); }
         c.restore();
       }, tick: (p) => {
@@ -1050,10 +1152,10 @@ const VFX = (() => {
       }, draw: (c, p, t, e) => {
         const q = at(p * p), b = at(Math.max(0, p * p - 0.25)), hx = q.x, hy = q.y - q.z, bx = b.x, by = b.y - b.z, s = r / 60;
         // the flame tail: a fat streak, orange fading to gold at the head
-        c.save(); c.globalCompositeOperation = 'lighter'; c.lineCap = 'round';
-        const g = c.createLinearGradient(bx, by, hx, hy); g.addColorStop(0, rgba(color, 0)); g.addColorStop(0.6, rgba(color, 0.7 * e.a)); g.addColorStop(1, rgba('#ffe08a', 0.95 * e.a));
-        c.strokeStyle = g; c.lineWidth = 22 * s; c.beginPath(); c.moveTo(bx, by); c.lineTo(hx, hy); c.stroke();
-        c.lineWidth = 8 * s; c.strokeStyle = rgba('#ffffff', 0.6 * e.a); c.beginPath(); c.moveTo((bx + hx * 2) / 3, (by + hy * 2) / 3); c.lineTo(hx, hy); c.stroke();
+        streakTo(c, bx, by, hx, hy, 13 * s, color, 0.85 * e.a);
+        streakTo(c, (bx + hx) / 2, (by + hy) / 2, hx, hy, 7 * s, '#ffe08a', 0.95 * e.a);
+        c.save(); c.globalCompositeOperation = 'lighter'; c.lineCap = 'round'; c.globalAlpha = Math.min(1, 0.6 * e.a);
+        c.lineWidth = 8 * s; c.strokeStyle = '#ffffff'; c.beginPath(); c.moveTo((bx + hx * 2) / 3, (by + hy * 2) / 3); c.lineTo(hx, hy); c.stroke();
         c.restore();
         glowAt(c, hx, hy, 34 * s, '#ff7a1a', 0.9 * e.a);
         // the rock: dark and ink-edged, with glowing cracks
@@ -1221,6 +1323,7 @@ const VFX = (() => {
       const along = (q, s) => ({ x: mx + Math.cos(ang) * q - Math.sin(ang) * s, y: my + Math.sin(ang) * q + Math.cos(ang) * s });
       B.glint(mx, my, { color: '#ffb040', size: 22, z: 16 });
       const lobes = Array.from({ length: 10 }, (_, i) => ({ q: 0.3 + i * 0.075, s: rand(-0.8, 0.8), ph: rand(0, 6), r: rand(0.55, 0.9) }));
+      let grad = null;
       fx({ dur, delay: wind, layer: 'air', draw: (c, p, t, e) => {
         const L = len * easeOut(Math.min(1, p / 0.25)), k = e.a * Math.min(1, (1 - p) / 0.4);
         c.save(); c.translate(mx, my - 16); c.rotate(ang);
@@ -1230,9 +1333,9 @@ const VFX = (() => {
           c.fill();
         };
         c.globalAlpha = k * 0.7; c.fillStyle = '#4a0e04'; shape(3);
-        const g = c.createLinearGradient(0, 0, Math.max(1, L), 0);
-        g.addColorStop(0, '#fff6c8'); g.addColorStop(0.25, '#ffc040'); g.addColorStop(0.6, '#ff7a1a'); g.addColorStop(1, '#c8301a');
-        c.globalAlpha = k * 0.95; c.fillStyle = g; shape(0);
+        // (the gradient is built once, for the full length: while the cone is still growing it shows its hotter part)
+        if (!grad) { grad = c.createLinearGradient(0, 0, Math.max(1, len), 0); grad.addColorStop(0, '#fff6c8'); grad.addColorStop(0.25, '#ffc040'); grad.addColorStop(0.6, '#ff7a1a'); grad.addColorStop(1, '#c8301a'); }
+        c.globalAlpha = k * 0.95; c.fillStyle = grad; shape(0);
         // a white-hot tongue down the middle
         c.globalCompositeOperation = 'lighter'; c.globalAlpha = k * 0.7; c.fillStyle = '#ffe9a0';
         c.beginPath(); c.moveTo(0, 0); c.quadraticCurveTo(L * 0.35, -L * W * 0.25, L * 0.6, 0); c.quadraticCurveTo(L * 0.35, L * W * 0.25, 0, 0); c.fill();
@@ -1391,8 +1494,8 @@ const VFX = (() => {
   };
 
   function setScale(s) { scale = s; }
-  function clear() { parts.length = 0; effects.length = 0; }
+  function clear() { parts.length = 0; effects.length = 0; oldest = -1; }
   function mute(on) { muted = !!on; }
 
-  return Object.assign({ update, draw, spawn, fx, sprite, setScale, clear, mute, glowAt, neonRing, neonPath, get count() { return parts.length; } }, B);
+  return Object.assign({ update, draw, spawn, fx, sprite, setScale, clear, mute, glowAt, neonRing, neonPath, get count() { return parts.length; }, get scale() { return scale; }, streakTo, tint }, B);
 })();

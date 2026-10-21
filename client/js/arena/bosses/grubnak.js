@@ -319,6 +319,7 @@ const GRUBNAK = {
     const drains = () => {
       const d = f.ct(4);
       f.cast('Clogged Drains', d, 'drains');
+      f.emit({ t: 'roomev', k: 'drains', dur: d });   // (visual only: the grates bubble and steam until they spill)
       f.afterKeep(d, () => {
         for (const [x, y] of DRAINS) {
           const n = f.floor.filter(fl => fl.kind === 'grease' && Math.hypot(fl.x - x, fl.y - y) < 160).length;
@@ -456,7 +457,7 @@ const GRUBNAK = {
       f.cast('Flare-Up', d, 'boil');
       f.zone({ shape: stoveZone(), dur: 9999, delay: d, effect: 'burn', dmg: dmg.stove, tag: 'stovefire' });
       // the blast of heat as it catches reaches the whole kitchen
-      f.mech({ type: 'raidwide', shape: { kind: 'circle', x: 0, y: 0, r: 0 }, delay: d, dmg: dmg.heat, hidden: true, tag: 'grease' });
+      f.mech({ type: 'raidwide', shape: { kind: 'circle', x: 0, y: 0, r: 0, look: 'heat' }, delay: d, dmg: dmg.heat, hidden: true, tag: 'grease' });   // (look: how the tell draws it; visual only)
       f.afterKeep(d, () => {
         hot = true;
         f.emit({ t: 'roomev', k: 'stove', x: 0, dur: 9999 });
@@ -475,7 +476,7 @@ const GRUBNAK = {
     };
     const lastOrders = () => {
       f.cast('Last Orders', f.ct(5), 'raise');
-      f.mech({ type: 'raidwide', shape: { kind: 'circle', x: 0, y: 0, r: 0 }, delay: f.ct(5), dmg: dmg.orders, hidden: true, tag: 'grease' });
+      f.mech({ type: 'raidwide', shape: { kind: 'circle', x: 0, y: 0, r: 0, look: 'orders' }, delay: f.ct(5), dmg: dmg.orders, hidden: true, tag: 'grease' });   // (look: visual only)
     };
     // Gorge: he eats, hitting everyone and getting stronger each time
     const gorge = () => {

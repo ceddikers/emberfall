@@ -7,9 +7,12 @@ const ANIM_DUR = { attack: 0.45, bash: 0.4, brace: 1.2, cast: 0.55, big: 0.9, da
 const IP_STRIKES = ['palm', 'fist', 'kick', 'uppercut', 'axe', 'flurry'];
 
 function feet(ctx, st, color) {
-  const w = st.moving ? Math.sin(st.t * 12) * 5 : 0;
-  ellipse(ctx, 1 + w, -6.5, 5, 3.4, 0, color, OUT, 1.5);
-  ellipse(ctx, 1 - w, 6.5, 5, 3.4, 0, color, OUT, 1.5);
+  // the stride runs with the hero's real speed and eases in and out (heroMotion); old callers without one still step
+  const amp = st.walkK != null ? st.walkK : st.moving ? 1 : 0;
+  const w = amp > 0.01 ? Math.sin(st.stride != null ? st.stride : st.t * 12) * 5 * amp : 0;
+  const sit = st.sitK || 0;   // sitting (the emote): legs stretched out in front
+  ellipse(ctx, 1 + w + sit * 8, -6.5 - sit * 0.6, 5, 3.4, 0, color, OUT, 1.5);
+  ellipse(ctx, 1 - w + sit * 9, 6.5 + sit * 0.6, 5, 3.4, 0, color, OUT, 1.5);
 }
 function torso(ctx, color, rx = 9, ry = 14) {
   ellipse(ctx, -1, 0, rx, ry, 0, color, OUT, 2);
@@ -688,30 +691,276 @@ SPEC_ART.volatile = function (ctx, st) {
 
 // the spec of the hero being drawn right now, for the few class looks a spec changes underneath (the Berserker's helm)
 let HERO_SPEC = null;
-// cls may be null (wisp). opts: { ring, noShadow, lift, spec }
+// ---- Body language (all cosmetic, all read off the anim state, so you, friends and bots move alike) ----
+//  st.spd / st.stride / st.walkK: how fast the hero really moves on screen, a stride phase that runs with it, and how
+//    much of the walk shows (heroMotion keeps them; legs, bob and lean follow)
+//  st.hurt = { t0, k, ax, ay }: a hit landed (k 0..1 strength, (ax, ay) away from what hit them): a flash and a recoil
+//  st.dashT: the last moment of a dash (fx.js dashTrail): lean into it, then a settle on arrival
+//  st.react = { kind: 'cheer' | 'slump', t0 }: the end of a fight
+// A hero can also be drawn into a picture of its own (heroSprite): the hit flash, the downed body and the dash
+// afterimages are one image each, never a stack of see-through shapes.
+const HERO_BOX = 150;   // local units round a hero that its picture holds (room for a raised weapon or a staff)
+let _heroScratch = null;
+const heroCanvas = () => (typeof document === 'undefined' ? null : document.createElement('canvas'));
+function heroMotion(st, x, y) {
+  const t = st.t;
+  if (st._mt === t) return;
+  if (st.stride == null) { st.stride = 0; st.walkK = st.moving ? 1 : 0; st.spd = 0; }
+  const dt = st._mt == null ? 0 : t - st._mt;
+  if (dt > 0 && dt < 0.25 && st._mx != null) {
+    const v = Math.min(900, Math.hypot(x - st._mx, y - st._my) / dt);
+    st.spd += (v - st.spd) * Math.min(1, dt * 14);
+    // stride speed follows the real speed (a slowed walk takes slower steps); standing still in a preview still steps
+    const rate = st.moving ? (st.spd > 25 ? clamp(st.spd / 230, 0.6, 1.5) : 1) : 0;
+    st.stride += dt * 12 * rate;
+    st.walkK += ((st.moving ? 1 : 0) - st.walkK) * Math.min(1, dt * 12);
+  }
+  st._mt = t; st._mx = x; st._my = y;
+}
+const NO_POSE = { fwd: 0, tw: 0, sx: 1, sy: 1, wave: 0 };
+// what the body is doing on top of its class animation: offsets in local units (oy up the screen, fwd along the facing)
+function heroPose(st, emote) {
+  const t = st.t, P = { oy: 0, hop: 0, fwd: 0, tw: 0, sx: 1, sy: 1, hx: 0, hy: 0, flash: 0, wave: 0, shadow: 0 };
+  const wk = st.walkK || 0;
+  if (wk > 0.01) {
+    // a bob on every step, a slight lean into the walk (more the faster it goes) and a sway of the shoulders
+    const ph = st.stride || 0, rate = clamp((st.spd || 230) / 230, 0.6, 1.5);
+    P.oy -= Math.abs(Math.sin(ph)) * 1.4 * wk;
+    P.fwd += 1.3 * wk * Math.min(1.2, rate);
+    P.tw += Math.sin(ph) * 0.05 * wk;
+  }
+  if (st.dashT != null) {
+    const a = t - st.dashT;
+    if (a >= 0 && a < 0.4) {
+      // leaning hard into the dash and stretched along it; on arrival it lets go and settles back with a little give
+      const q = Math.max(0, (a - 0.05) / 0.32), rel = a < 0.05 ? 1 : Math.max(0, 1 - q / 0.25), s = q > 0 ? Math.sin(Math.min(1, q) * Math.PI) * (1 - Math.min(1, q)) : 0;
+      P.fwd += 4 * rel - 2.2 * s; P.sx *= 1 + 0.1 * rel - 0.06 * s; P.sy *= 1 - 0.1 * rel + 0.05 * s;
+    }
+  }
+  const h = st.hurt;
+  if (h) {
+    const a = t - h.t0;
+    if (a >= 0.32 || a < -0.05) st.hurt = null;
+    else if (a >= 0) {
+      // knocked back 2-3 px from the blow and eased home; a white flash for the first beat
+      const r = a < 0.04 ? a / 0.04 : 1 - easeOut((a - 0.04) / 0.28);
+      P.hx = h.ax * h.k * 3 * r; P.hy = h.ay * h.k * 3 * r;
+      P.flash = a < 0.13 ? (0.3 + 0.4 * h.k) * (1 - a / 0.13) : 0;
+      P.sy *= 1 - 0.05 * h.k * r;
+    }
+  }
+  const rc = st.react;
+  if (rc) {
+    const a = t - rc.t0;
+    if (rc.kind === 'cheer') {
+      if (a > 1.5) st.react = null;
+      else if (a > 0) {
+        // two hops, the second smaller, with a squash as they land
+        const hop = a < 0.45 ? Math.sin(a / 0.45 * Math.PI) * 9 : a < 0.8 ? Math.sin((a - 0.45) / 0.35 * Math.PI) * 4.5 : 0;
+        P.hop += hop;
+        const land = a > 0.42 && a < 0.55 ? Math.sin((a - 0.42) / 0.13 * Math.PI) : a > 0.78 && a < 0.92 ? Math.sin((a - 0.78) / 0.14 * Math.PI) * 0.6 : 0;
+        P.sx *= 1 + 0.06 * land; P.sy *= 1 - 0.08 * land;
+      }
+    } else if (rc.kind === 'slump') {
+      if (a > 2.6) st.react = null;
+      else if (a > 0) {
+        // head down and sinking to a knee, then slowly back up
+        const k = a < 0.5 ? easeOut(a / 0.5) : a > 2.0 ? 1 - easeOut((a - 2.0) / 0.6) : 1;
+        P.oy += 3 * k; P.fwd += 2.6 * k; P.sx *= 1 - 0.05 * k; P.sy *= 1 - 0.09 * k; P.tw -= 0.08 * k;
+      }
+    }
+  }
+  st.sitK = 0;
+  if (emote && emote.k > 0.001) {
+    const k = emote.k, et = emote.t;
+    switch (emote.kind) {
+      case 'sit': st.sitK = k; P.oy += 3 * k; P.fwd -= 2.5 * k; P.sy *= 1 - 0.04 * k; P.shadow += 3 * k; break;
+      case 'wave': P.wave = k; P.tw += Math.sin(et * 8) * 0.04 * k; break;
+      case 'cheer': P.hop += Math.abs(Math.sin(et * 6.5)) * 7 * k; break;
+      case 'dance': P.tw += Math.sin(et * 9) * 0.32 * k; P.hop += Math.abs(Math.sin(et * 9)) * 3 * k; P.fwd += Math.sin(et * 4.5) * 1.5 * k; break;
+      case 'bow': {
+        const b = (et < 0.35 ? easeOut(et / 0.35) : et < 1.4 ? 1 : Math.max(0, 1 - easeOut((et - 1.4) / 0.45))) * k;
+        P.fwd += 3.5 * b; P.sx *= 1 - 0.06 * b; P.sy *= 1 - 0.03 * b; P.oy += 1.5 * b;
+        break;
+      }
+      case 'laugh': P.oy += Math.sin(et * 22) * k; P.tw += Math.sin(et * 11) * 0.05 * k; break;
+      case 'point': P.fwd += 2 * k; break;
+    }
+  }
+  return P;
+}
+// a raised hand waving beside the head (the wave emote), in the hero's local space
+function waveHand(ctx, t, k) {
+  const hx = 4 + Math.sin(t * 12) * 3.5, hy = -15 - k * 2;
+  ctx.save(); ctx.globalAlpha *= Math.min(1, k * 1.5);
+  limb(ctx, [0, -9, hx, hy], '#d9b490', 2.4);
+  circle(ctx, hx, hy, 3.2, '#ecc8a2', OUT, 1.3);
+  ctx.strokeStyle = 'rgba(255,248,230,0.6)'; ctx.lineWidth = 1; ctx.lineCap = 'round';
+  for (const s of [-1, 1]) { ctx.beginPath(); ctx.arc(hx, hy, 6.5, -Math.PI / 2 + s * 0.6 - 0.35, -Math.PI / 2 + s * 0.6 + 0.35); ctx.stroke(); }
+  ctx.restore();
+}
+// the hero itself, in its local space (no shadow, ring or ground marks): what heroSprite takes a picture of
+function heroBody(ctx, cls, angle, st, opts, P) {
+  HERO_SPEC = opts.spec || null;
+  const big = pulse(actP(st, 'big'));
+  if (cls && big > 0) glow(ctx, 0, 0, 36, cls.accent, big * 0.6);
+  ctx.rotate(angle);
+  const body = attackBody(st);
+  ctx.translate(body.lunge + P.fwd, 0); ctx.rotate(body.twist + P.tw);
+  const br = (1 + Math.sin((st.t + (st.phase || 0)) * 2.5) * 0.02) * (1 + big * 0.06);
+  ctx.scale(br * P.sx, br * P.sy);
+  (cls ? HERO_ART[cls.id] : HERO_ART.wisp)(ctx, st);
+  if (cls && opts.spec && SPEC_ART[opts.spec]) SPEC_ART[opts.spec](ctx, st);
+  if (cls) drawChannelFocus(ctx, cls, st, cls ? channelP(st) : -1);
+  if (P.wave > 0) waveHand(ctx, st.t, P.wave);
+}
+// The hero drawn into a canvas of its own at the resolution it's about to be shown at (read off ctx's transform,
+// which must already hold the hero's scale). into: a canvas to keep (else a shared scratch one, good until the next call).
+function heroSprite(ctx, cls, angle, st, opts, P, into) {
+  const cv = into || _heroScratch || (_heroScratch = heroCanvas());
+  if (!cv) return null;
+  const m = ctx.getTransform ? ctx.getTransform() : { a: 1, b: 0 }, px = clamp(Math.hypot(m.a, m.b) || 1, 0.5, 5);
+  const S = Math.ceil(HERO_BOX * px);
+  if (cv.width !== S || cv.height !== S) { cv.width = S; cv.height = S; }
+  const c = cv.getContext('2d');
+  c.setTransform(1, 0, 0, 1, 0, 0); c.globalAlpha = 1; c.globalCompositeOperation = 'source-over'; c.clearRect(0, 0, S, S);
+  c.setTransform(S / HERO_BOX, 0, 0, S / HERO_BOX, S / 2, S / 2);
+  heroBody(c, cls, angle, st, opts || {}, P || NO_POSE);
+  c.setTransform(1, 0, 0, 1, 0, 0);
+  return cv;
+}
+const blitHero = (ctx, cv) => ctx.drawImage(cv, -HERO_BOX / 2, -HERO_BOX / 2, HERO_BOX, HERO_BOX);
+// one still picture of a hero in a fresh anim state (the dash afterimages): ctx must hold the scale it's shown at
+function heroSnapshot(ctx, cls, angle, st, opts, into) {
+  return heroSprite(ctx, cls, angle, st, opts, heroPose(st, null), into || heroCanvas());
+}
+
+// cls may be null (wisp). opts: { ring, noShadow, lift, spec, emote: { kind, t, k } (pastimes.js emoteLook) }
 function drawHero(ctx, cls, x, y, angle, st, scale = 1, opts = {}) {
   HERO_SPEC = opts.spec || null;
+  heroMotion(st, x, y);
+  const P = heroPose(st, opts.emote);
   ctx.save();
   ctx.translate(x, y);
   ctx.scale(scale, scale);
-  const lift = opts.lift || 0;
-  if (!opts.noShadow) ellipse(ctx, 2, 5, 16 - lift * 0.15, 12 - lift * 0.12, 0, 'rgba(0,0,0,0.28)');
+  const lift = (opts.lift || 0) + P.hop;
+  if (!opts.noShadow) ellipse(ctx, 2, 5, 16 - lift * 0.15 + P.shadow, 12 - lift * 0.12 + P.shadow * 0.5, 0, 'rgba(0,0,0,0.28)');
   if (cls && opts.ring !== false) ellipse(ctx, 0, 2, 19, 15, 0, null, rgba(ROLES[cls.role].color, 0.85), 2);
   const chP = cls ? channelP(st) : -1;
   if (chP >= 0) drawChannelGround(ctx, cls, st, chP);
   if (opts.spec && SPEC_GROUND[opts.spec]) SPEC_GROUND[opts.spec](ctx, st);
   if (cls && HERO_TRAIL[cls.id]) HERO_TRAIL[cls.id](ctx, x, y, st, scale, opts.spec);   // world-space trails (the Driftblade's wind)
-  ctx.translate(0, -lift);
-  const big = pulse(actP(st, 'big'));
-  if (cls && big > 0) glow(ctx, 0, 0, 36, cls.accent, big * 0.6);
-  ctx.rotate(angle);
-  const body = attackBody(st);
-  ctx.translate(body.lunge, 0); ctx.rotate(body.twist);
-  const br = (1 + Math.sin((st.t + (st.phase || 0)) * 2.5) * 0.02) * (1 + big * 0.06);
-  ctx.scale(br, br);
-  (cls ? HERO_ART[cls.id] : HERO_ART.wisp)(ctx, st);
-  if (cls && opts.spec && SPEC_ART[opts.spec]) SPEC_ART[opts.spec](ctx, st);
-  if (cls) drawChannelFocus(ctx, cls, st, chP);
+  ctx.translate(P.hx / scale, P.hy / scale - lift + P.oy);
+  const cv = P.flash > 0.02 && cls ? heroSprite(ctx, cls, angle, st, opts, P) : null;
+  if (cv) {
+    // the hit flash: the hero's own picture washed white (a whole-hero overlay would whiten the floor round it)
+    const c = cv.getContext('2d');
+    c.globalCompositeOperation = 'source-atop'; c.globalAlpha = P.flash; c.fillStyle = '#ffffff'; c.fillRect(0, 0, cv.width, cv.height);
+    c.globalCompositeOperation = 'source-over'; c.globalAlpha = 1;
+    blitHero(ctx, cv);
+  } else heroBody(ctx, cls, angle, st, opts, P);
+  ctx.restore();
+  HERO_SPEC = null;
+}
+
+// A downed hero's picture: taken once as they fall, washed grey and cold. null where there's no canvas.
+function heroDownSprite(ctx, cls, angle, opts) {
+  const base = heroSprite(ctx, cls, angle, { t: 0, moving: false, action: null, phase: 0 }, opts, NO_POSE);
+  const cv = base && heroCanvas();
+  if (!cv) return null;
+  cv.width = base.width; cv.height = base.height;
+  const c = cv.getContext('2d');
+  c.drawImage(base, 0, 0);
+  c.globalCompositeOperation = 'saturation'; c.fillStyle = 'rgba(128,128,128,0.85)'; c.fillRect(0, 0, cv.width, cv.height);
+  c.globalCompositeOperation = 'destination-in'; c.drawImage(base, 0, 0);   // (back to the hero's own outline)
+  c.globalCompositeOperation = 'source-atop'; c.fillStyle = 'rgba(52,76,124,0.28)'; c.fillRect(0, 0, cv.width, cv.height);
+  c.globalCompositeOperation = 'source-over';
+  return cv;
+}
+// A hero going down (k 0 -> 1) or getting up (1 -> 0): img (their picture, at the scale ctx will hold) tipped over
+// onto the floor, falling backward from where they faced, with a soft shadow; the role ring goes to a muted dashed one.
+function drawHeroDown(ctx, cls, x, y, angle, scale, k, img) {
+  ctx.save();
+  ctx.translate(x, y); ctx.scale(scale, scale);
+  const fa = angle + Math.PI, fx = Math.cos(fa), fy = Math.sin(fa);
+  ellipse(ctx, 2 + fx * 7 * k, 5 + fy * 5 * k, 16 + 7 * k, 12 - 2 * k, fa * k, 'rgba(0,0,0,' + (0.28 + 0.06 * k).toFixed(3) + ')');
+  if (cls) {
+    if (k < 0.99) ellipse(ctx, 0, 2, 19, 15, 0, null, rgba(ROLES[cls.role].color, 0.85 * (1 - k)), 2);
+    ctx.setLineDash([4, 5]);
+    ellipse(ctx, 0, 2, 19, 15, 0, null, rgba('#9c98a8', 0.5 * k), 1.5);
+    ctx.setLineDash([]);
+  }
+  if (img) {
+    ctx.translate(fx * 7 * k, fy * 6 * k + 2 * k);
+    ctx.rotate(1.4 * k);                              // tipped over (about 80 degrees)...
+    ctx.scale(1 + 0.04 * k, 1 - 0.1 * k);             // ...and slumped flat
+    ctx.globalAlpha *= 1 - 0.12 * k;
+    blitHero(ctx, img);
+  }
+  ctx.restore();
+}
+
+// The status layer over a hero (local, cheap, persistent while it lasts): a shell for a shield or a defensive, a mote
+// per chosen-ally buff, Slowed (cold haze, chevrons sinking), Damage Down (a grey-red arrow), Vulnerability (a pulsing
+// cracked red rim), and drips for a bleed (red) or venom (green). s: the party state; buffs: [ALLY_BUFFS id].
+const STATUS_BUFF_COLOR = { quickened: '#5ff0ff', blessed: '#ffe680', wildheart: '#8fff7a', galvanized: '#ffb35a' };
+function drawHeroStatus(ctx, x, y, scale, cls, s, buffs, t) {
+  const deb = s.debuffs || [], has = k => deb.some(d => d[0] === k);
+  const slowed = has('slowed'), bleed = has('bleed'), venom = has('laden');
+  if (!(s.shield > 0.5 || s.mit > 0 || s.dd || s.vuln || buffs.length || slowed || bleed || venom)) return;
+  ctx.save();
+  ctx.translate(x, y); ctx.scale(scale, scale);
+  if (slowed) {
+    glow(ctx, 0, -2, 26, '#5a8fd8', 0.2);
+    for (let i = 0; i < 2; i++) {
+      const q = (t * 0.9 + i * 0.5) % 1, sx = i ? 17 : -17, cy = -10 + q * 9;
+      ctx.globalAlpha = Math.sin(q * Math.PI) * 0.85;
+      ctx.strokeStyle = '#a8d8ff'; ctx.lineWidth = 1.6; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      ctx.beginPath(); ctx.moveTo(sx - 3, cy - 2); ctx.lineTo(sx, cy + 1); ctx.lineTo(sx + 3, cy - 2); ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  }
+  if (s.shield > 0.5 || s.mit > 0) {
+    // the shell: a faint dome round the body with a highlight turning on it (pale for a shield, the class colour for a defensive)
+    const col = s.shield > 0.5 ? '#dcecff' : (cls && cls.accent) || '#dcecff', a0 = t * 1.7;
+    ellipse(ctx, 0, -1, 21, 22, 0, rgba(col, 0.06), rgba(col, 0.3), 1.3);
+    ctx.strokeStyle = rgba(col, 0.75); ctx.lineWidth = 1.8; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.ellipse(0, -1, 21, 22, 0, a0, a0 + 0.9); ctx.stroke();
+  }
+  if (s.vuln) {
+    const pz = 0.5 + 0.5 * Math.sin(t * 6), col = rgba('#ff3a2a', 0.3 + 0.35 * pz);
+    ellipse(ctx, 0, 1, 19.5, 17, 0, null, col, 1.5);
+    ctx.strokeStyle = col; ctx.lineWidth = 1.2; ctx.lineJoin = 'miter';
+    for (const a of [-0.7, 1.9, 3.6]) {
+      const c = Math.cos(a), sn = Math.sin(a), nx = -sn, ny = c;
+      ctx.beginPath(); ctx.moveTo(c * 19.5, 1 + sn * 17);
+      ctx.lineTo(c * 22.5 + nx * 1.6, 1 + sn * 19.5 + ny * 1.6); ctx.lineTo(c * 24.5 - nx * 1.2, 1 + sn * 21.5 - ny * 1.2); ctx.stroke();
+    }
+  }
+  if (s.dd) {
+    const q = (t * 0.8) % 1, ay = -21 + q * 5;
+    glow(ctx, -17, ay, 9, '#a85a5a', 0.3 * Math.sin(q * Math.PI));
+    ctx.globalAlpha = 0.35 + 0.55 * Math.sin(q * Math.PI);
+    poly(ctx, [-19, ay - 4, -15, ay - 4, -15, ay, -12.5, ay, -17, ay + 4.5, -21.5, ay, -19, ay], '#c47070', 'rgba(20,10,12,0.9)', 1.1);
+    ctx.globalAlpha = 1;
+  }
+  for (let i = 0; i < buffs.length; i++) {
+    // a mote per buff circling the waist; dimmer while it passes behind
+    const a = t * 2.1 + i * TAU / buffs.length, mx = Math.cos(a) * 21, my = -4 + Math.sin(a) * 11, back = Math.sin(a) < 0;
+    const col = STATUS_BUFF_COLOR[buffs[i]] || '#fff2c8';
+    glow(ctx, mx, my, 7, col, back ? 0.3 : 0.75);
+    circle(ctx, mx, my, 1.7, rgba(col, back ? 0.45 : 1));
+  }
+  for (const [on, col] of [[bleed, '#d0242a'], [venom, '#6ad04a']]) {
+    if (!on) continue;
+    for (let i = 0; i < 3; i++) {
+      const q = (t * 1.1 + i * 0.37) % 1, dx = [-8, 7, -1][i], dy = -8 + q * q * 20, r = 1.8 - q * 0.6;
+      ctx.globalAlpha = Math.sin(q * Math.PI) * 0.9;
+      poly(ctx, [dx, dy - r * 2.2, dx + r, dy, dx - r, dy], col);
+      circle(ctx, dx, dy, r, col);
+    }
+    ctx.globalAlpha = 1;
+  }
   ctx.restore();
 }
 

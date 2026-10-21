@@ -370,16 +370,17 @@
         player.st.action = { type: 'cast', t0: now, dur: Math.max(0.55, ev.dur), channel: true };
         player.castBar = { ab: ev.ab, t0: now, dur: ev.dur };
         Net.send({ t: 'castStart', i: actor.abilities.indexOf(ev.ab), dur: +ev.dur.toFixed(2) });
+        if (typeof CAST_VFX !== 'undefined') CAST_VFX.start(player, ev.dur, ev.ab);   // the gathering (it follows castBar to its end)
         break;
       case 'interrupted':
-        player.st.action = null; player.castBar = null;
+        player.st.action = null; if (player.castBar && player.castBar.stop == null) player.castBar.stop = now;   // (its bar shows the interrupt: drawCastBar)
         Net.send({ t: 'castStop' });
-        FX.text(player.x, player.y - 56, 'Interrupted', '#ff9a8a', 13);
+        FX.text(player.x, player.y - 60, 'Interrupted', '#ff9a8a', 14, 1, { kind: 'call' });
         break;
       case 'fail':
         if (now - failAt < 0.6 || ev.reason === 'cooldown') break;
         failAt = now;
-        FX.text(player.x, player.y - 56, ev.reason === 'target' ? (ev.ab.target === 'enemy' ? (inArena() && (raid.boss.u || (raid.state !== 'live' && raid.state !== 'prepull')) ? 'No target' : 'Out of range') : 'No target') : ev.reason === 'winded' ? 'Winded' : 'Not ready', '#c8c0d8', 12, 0.7);
+        FX.text(player.x, player.y - 56, ev.reason === 'target' ? (ev.ab.target === 'enemy' ? (inArena() && (raid.boss.u || (raid.state !== 'live' && raid.state !== 'prepull')) ? 'No target' : 'Out of range') : 'No target') : ev.reason === 'winded' ? 'Winded' : 'Not ready', '#c8c0d8', 12, 0.7, { kind: 'quiet' });
         break;
       case 'fxLocal': playKitFx(player, ev.name, true, ev.data); break;   // a class moment only you see (an Ironpalm's Crisp press)
       case 'teleport': if (ev.where && ev.where !== 'behind') kitMove(ev); else teleportBehind(); break;
@@ -435,7 +436,8 @@
     const ids = target === 'party' ? allyList().map(c => c.id) : [target === 'self' || target === 'lowest' || target == null ? Net.id : target];
     for (const id of ids) {
       const e = entById(id);
-      if (e && amount >= 1) FX.text(e.x, e.y - 50, '+' + rnd(amount), crit ? '#b6ff9a' : '#7dff8a', crit ? 17 : 14);
+      // (beside the body, right of it: clear of the name tag and the bar over their head)
+      if (e && amount >= 1) FX.text(e.x, e.y - (e.lift || 0) - 18, '+' + rnd(amount), crit ? '#b6ff9a' : '#7dff8a', crit ? 17 : 14, 1, { kind: 'heal' });
     }
   }
 
@@ -458,18 +460,22 @@
     const big = Math.round((ev.auto ? (ev.crit ? 15 : 12) : ev.crit ? 21 : ev.dot ? 12 : 15) * sc * (ultHit ? 1.55 : 1));
     const col = ultHit ? '#ffe9a8' : ev.auto ? (ev.crit ? '#f2d488' : '#cfc6b4') : ev.crit ? '#ffd84a' : ev.dot ? '#d8d0c0' : '#ffffff';
     const txt = rnd(ev.amount) + (ev.crit ? '!' : '') + (ev.positional ? ' ◆' : '');
+    // how it moves (fx.js TEXT_KINDS): autos and DoTs small and quick, a crit pops harder, an Ultimate's hit hardest
+    const tk = { kind: ultHit ? 'ult' : ev.auto || ev.dot ? (ev.dot ? 'dot' : 'auto') : ev.crit ? 'crit' : 'hit' };
     if (inArena()) {
       // damage goes to whatever you last aimed at (DoTs keep ticking on your current target)
       const tgt = ev.tgt != null ? ev.tgt : lastEnemy && lastEnemy.id != null && lastEnemy.id !== 'dummy' ? lastEnemy.id : 'boss';
       sendCombat(Object.assign({}, ev, { tgt }));
+      // [boss presentation] the boss flinches at your blow (DoT ticks don't; a crit or an Ultimate harder; throttled)
+      if (tgt === 'boss' && !ev.dot && ev.amount > 0 && raid.state === 'live') BOSS_VFX.bossHit(raid.bossDraw, ultHit ? 1 : ev.crit ? 0.75 : ev.auto ? 0.3 : 0.45);
       const at = enemyNow(tgt) || { x: raid.boss.x, y: raid.boss.y };
-      FX.text(at.x + (Math.random() - 0.5) * 40, at.y - (tgt === 'boss' ? 70 : 34), txt, col, tgt === 'boss' ? big : big - 2);
+      FX.text(at.x, at.y - (tgt === 'boss' ? 70 : 34), txt, col, tgt === 'boss' ? big : big - 2, 0.9, tk);
       return;
     }
     const d = lastEnemy && lastEnemy.dummy;
     if (!d) return;
     d.st.hit = now;
-    FX.text(d.x, d.y - 40, txt, col, big);
+    FX.text(d.x, d.y - 40, txt, col, big, 0.9, tk);
     if (!town.meter || now - town.meter.last > 6) town.meter = { start: now, dmg: 0, last: now, gcd0: actor.kit.stats.gcdTime };
     town.meter.dmg += ev.amount; town.meter.last = now;
   }
@@ -516,14 +522,18 @@
       if (m.kind !== 'living') amt *= 1 - (m.pct || 0);
     }
     if (typeof CLASS_TOWN !== 'undefined') amt = CLASS_TOWN.hit(town, amt, now, actor, player);   // an open jaw, a Ledger
+    let absorbed = 0;
     if (town.shield) {
       const used = Math.min(town.shield.amount, amt);
-      town.shield.amount -= used; amt -= used;
+      town.shield.amount -= used; amt -= used; absorbed = used;
       if (town.shield.amount <= 0.5) endTownShield();
     }
     amt = rnd(amt);
     town.taken.push({ t: now, a: amt });
-    if (amt > 0) FX.text(player.x, player.y - 46, '-' + amt, '#ff7a6a', 14);
+    if (amt > 0) { const dd = Math.hypot(player.x - d.x, player.y - d.y) || 1; player.st.hurt = { t0: now, k: d.heavy ? 1.15 : 0.6, ax: (player.x - d.x) / dd, ay: (player.y - d.y) / dd }; }   // (the flinch: heroes.js heroPose)
+    // (left of the body, clear of the name tag; what a shield ate in muted blue beside it)
+    if (amt > 0) FX.text(player.x, player.y - (player.lift || 0) - 18, '-' + amt, '#ff7a6a', 14, 1, { kind: 'taken' });
+    if (rnd(absorbed) >= 1) FX.text(player.x, player.y - (player.lift || 0) - 18, rnd(absorbed) + ' absorbed', '#9cc4ec', 12, 1, { kind: 'absorb' });
     if (perfect) actor.notify('perfect', { b: d.heavy ? 1 : 0 });
     if (reflect) actor.notify('reflect', { b: d.heavy ? 1 : 0 });
     if (read) actor.notify('read', { b: d.heavy ? 1 : 0 });   // (the sparring dummy's every fourth swing counts as a tankbuster)
@@ -617,21 +627,80 @@
     return `<em class="tf-tot" style="--rc:${ROLES[r.role].color}">→ ${t.tg === Net.id ? 'You' : escapeHtml(r.name)}</em>`;
   }
   // the boss's chest where he fell: it drops in with a bounce, glows while there's anything in it
+  let chestFx = null;   // the chest's own animation: { born, t0, last, openK, landed }
   function drawChest() {
     const c = Loot.chestAt();
-    if (!c) return;
-    const age = (performance.now() - c.born) / 1000, drop = Math.max(0, 1 - age / 0.5), y = c.y - drop * drop * 120;
-    const glow = c.n > 0 ? 0.35 + Math.sin(now * 3) * 0.12 : 0.08;
+    if (!c) { chestFx = null; return; }
+    // (timed on the game clock from the moment this chest first shows; c.born only tells one chest from the next)
+    if (!chestFx || chestFx.born !== c.born) chestFx = { born: c.born, t0: now, last: now, openK: 0, landed: false };
+    const cf = chestFx, age = now - cf.t0, cdt = clamp(now - cf.last, 0, 0.1);
+    cf.last = now;
+    // it falls (0.42s), lands with a puff of dust and a squash, and bounces once
+    const fallQ = Math.min(1, age / 0.42), air = (1 - fallQ * fallQ) * 120 + (age > 0.42 && age < 0.64 ? Math.sin((age - 0.42) / 0.22 * Math.PI) * 7 : 0);
+    const sq = age > 0.42 && age < 0.54 ? Math.sin((age - 0.42) / 0.12 * Math.PI) * 0.12 : age > 0.64 && age < 0.72 ? Math.sin((age - 0.64) / 0.08 * Math.PI) * 0.05 : 0;
+    if (!cf.landed && age >= 0.42) {
+      cf.landed = true;
+      FX.add({ type: 'land', x: c.x, y: c.y + 12, color: '#d8ccb4', dur: 0.6 });
+      for (let i = 0; i < 6; i++) { const a = i * TAU / 6 + 0.3; FX.add({ type: 'puff', x: c.x + Math.cos(a) * 26, y: c.y + 14 + Math.sin(a) * 8, r: 7, color: '#cfc2a6', dur: 0.55 }); }
+    }
+    // the lid swings open while the spoils are up, or once it's empty
+    const want = Loot.isOpen() || c.n === 0 ? 1 : 0;
+    cf.openK += (want - cf.openK) * Math.min(1, cdt * 7);
+    const k = cf.openK, ink = OUT, wood = '#6e3f1d', woodD = '#4a2810', iron = '#8c8a86';
     ctx.save();
-    VFX.glowAt(ctx, c.x, c.y, 70, '#ffd65a', glow);
-    ctx.translate(c.x, y);
-    ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.beginPath(); ctx.ellipse(0, 16, 30, 9, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#5a3418'; ctx.fillRect(-26, -6, 52, 22);                       // the box
-    ctx.fillStyle = '#7a4a22'; ctx.beginPath(); ctx.moveTo(-26, -6); ctx.quadraticCurveTo(0, -30, 26, -6); ctx.closePath(); ctx.fill();   // the lid
-    ctx.strokeStyle = '#c89a3a'; ctx.lineWidth = 3;                                  // bands
-    ctx.beginPath(); ctx.moveTo(-14, -16); ctx.lineTo(-14, 16); ctx.moveTo(14, -16); ctx.lineTo(14, 16); ctx.stroke();
-    ctx.strokeStyle = '#2a1608'; ctx.lineWidth = 2; ctx.strokeRect(-26, -6, 52, 22);
-    ctx.fillStyle = '#ffd65a'; ctx.fillRect(-4, -4, 8, 8);                           // the lock
+    VFX.glowAt(ctx, c.x, c.y, 70 + 24 * k, '#ffd65a', (c.n > 0 ? 0.32 + Math.sin(now * 3) * 0.1 : 0.08) * Math.min(1, age / 0.5));
+    const sh = 1 - Math.min(0.6, air / 200);
+    ellipse(ctx, c.x, c.y + 16, 30 * sh, 9 * sh, 0, 'rgba(0,0,0,' + (0.38 * sh).toFixed(3) + ')');
+    ctx.translate(c.x, c.y + 16 - air); ctx.scale(1 + sq * 0.6, 1 - sq); ctx.translate(0, -16);
+    const domeAt = x => { const t = (x + 26) / 52; return -6 - 48 * t * (1 - t); };
+    const lid = (open) => {
+      ctx.save();
+      if (open) { ctx.translate(0, -6 - 11 * k); ctx.scale(1 - 0.05 * k, 1 - 0.5 * k); ctx.translate(0, 6); }
+      ctx.beginPath(); ctx.moveTo(-26, -6); ctx.quadraticCurveTo(0, -30, 26, -6); ctx.closePath();
+      ctx.fillStyle = open && k > 0.5 ? '#4e2c14' : '#7a4a22'; ctx.fill();
+      ctx.save(); ctx.clip();
+      ctx.strokeStyle = 'rgba(40,18,6,0.45)'; ctx.lineWidth = 0.8;   // grain
+      for (const gy of [-10, -15]) { ctx.beginPath(); ctx.moveTo(-24, gy + 2); ctx.quadraticCurveTo(-6, gy - 2, 8, gy + 1); ctx.quadraticCurveTo(16, gy + 3, 24, gy); ctx.stroke(); }
+      ctx.fillStyle = iron; ctx.fillRect(-17.5, -32, 5, 30); ctx.fillRect(12.5, -32, 5, 30);   // the bands over the lid
+      ctx.fillStyle = 'rgba(255,255,255,0.22)'; ctx.fillRect(-17, -32, 1.2, 30); ctx.fillRect(13, -32, 1.2, 30);
+      ctx.restore();
+      ctx.lineWidth = 2.2; ctx.strokeStyle = ink; ctx.lineJoin = 'round'; ctx.stroke();
+      for (const bx of [-15, 15]) circle(ctx, bx, domeAt(bx) + 3, 1, '#d8d4c8');
+      ctx.restore();
+    };
+    if (k > 0.02) lid(true);   // (swung back, it's behind the box)
+    // the box: planks with grain, iron bands with rivets, an ink outline
+    rrect(ctx, -26, -6, 52, 22, 2.5, wood);
+    ctx.strokeStyle = woodD; ctx.lineWidth = 1.2;
+    for (const py of [1.5, 9]) { ctx.beginPath(); ctx.moveTo(-25, py); ctx.lineTo(25, py); ctx.stroke(); }
+    ctx.strokeStyle = 'rgba(36,16,6,0.45)'; ctx.lineWidth = 0.8;
+    for (const [gx, gy] of [[-22, -2.5], [-4, 5], [4, 12.5], [-20, 12]]) { ctx.beginPath(); ctx.moveTo(gx, gy); ctx.quadraticCurveTo(gx + 7, gy - 1.6, gx + 14, gy + 0.5); ctx.stroke(); }
+    ctx.fillStyle = 'rgba(255,220,160,0.16)'; ctx.fillRect(-25, -5, 50, 1.5);
+    for (const bx of [-15, 15]) {
+      rrect(ctx, bx - 2.5, -6, 5, 22, 0.8, iron, ink, 1);
+      line(ctx, bx - 1.3, -5, bx - 1.3, 15, 'rgba(255,255,255,0.25)', 0.8);
+      circle(ctx, bx, -2, 1, '#d8d4c8'); circle(ctx, bx, 12, 1, '#d8d4c8');
+    }
+    rrect(ctx, -26, -6, 52, 22, 2.5, null, ink, 2.2);
+    if (k > 0.02) {
+      // open: the dark inside, the gold catching the light, light spilling up and motes drifting out
+      ellipse(ctx, 0, -6, 24, 5.5 * k, 0, '#24120a', ink, 1.5);
+      if (c.n > 0) {
+        ellipse(ctx, 0, -5.5, 18, 3.4 * k, 0, '#e8b84a');
+        ctx.save(); ctx.globalCompositeOperation = 'lighter';
+        glow(ctx, 0, -8, 34, '#ffd65a', 0.55 * k);
+        ctx.save(); ctx.translate(0, -8); ctx.scale(0.55, 1.9); glow(ctx, 0, -12, 26, '#ffe9a0', 0.35 * k * (0.85 + 0.15 * Math.sin(now * 4))); ctx.restore();
+        for (let i = 0; i < 6; i++) {
+          const q = (now * 0.55 + i / 6) % 1, mx = Math.sin(i * 2.3) * 13 + Math.sin(now * 2 + i) * 3, my = -8 - q * 48;
+          glow(ctx, mx, my, 5, '#ffd65a', 0.8 * k * Math.sin(q * Math.PI));
+          circle(ctx, mx, my, 1.1, rgba('#fff6d8', k * Math.sin(q * Math.PI)));
+        }
+        ctx.restore();
+      }
+    } else lid(false);
+    // the lock plate (on the box front; open, it hangs from the box)
+    rrect(ctx, -4.5, -8 + k * 3, 9, 9, 1.5, '#e8c15a', ink, 1.2);
+    circle(ctx, 0, -4.4 + k * 3, 1.3, '#3a2408'); line(ctx, 0, -4 + k * 3, 0, -1.6 + k * 3, '#3a2408', 1.1);
     ctx.restore();
     if (Math.hypot(mouseWorld().x - c.x, mouseWorld().y - c.y) < 40) label(ctx, c.n ? `Chest · ${c.n}` : 'Chest (empty)', c.x, c.y - 42, '#ffe9a8', 12);
   }
@@ -728,7 +797,7 @@
     const x = player.x, y = player.y;
     if (name === 'ult-ready') ultReadyCue();
     const label = { perfect: ['Perfect!', '#ffe27a'], reflect: ['Reflect!', '#e0d4ff'], overheat: ['Overheat', '#ff6a3a'], lag: ['Time Lag', '#9ab8c0'], frostbite: ['Frostbite', '#9ad8ff'], riposte: ['Riposte!', '#e8fff8'], read: ['Read!', '#ffd9a0'] }[name];
-    if (label) FX.text(x, y - 62, label[0], label[1], 17, 1.1);
+    if (label) FX.text(x, y - 62, label[0], label[1], 17, 1.1, { kind: 'call' });
     playKitFx(player, name, true, data);
     Net.send(Object.assign({ t: 'kfx', k: name, s: scene === 'arena' ? 1 : 0 }, data ? { d: data } : null));
   }
@@ -751,6 +820,7 @@
     if (!started || panelOpen()) return;
     if (!actor) { toast('Pick a hero first.'); return; }
     if (amDead() || (inArena() && raid.state !== 'live' && raid.state !== 'countdown' && raid.state !== 'prepull')) return;
+    Hud.pressed(i);   // (the slot lights, or shakes if it's still cooling: hud.js)
     if (i === 6) { doDash(); return; }
     // T (slot 7): the Ultimate (engine.js; kits without one have nothing there yet)
     actor.press(i);
@@ -956,7 +1026,7 @@
   const LB_NAME = { tank: 'Stand Fast', healer: 'Rekindle', dps: 'Emberfall' };
   function useLimit() {
     if (!raid || raid.state !== 'live' || amDead() || raid.def.trial) return;
-    if ((raid.lb || 0) < FIGHT.LB.BAR) { FX.text(player.x, player.y - 56, 'Not ready', '#c8c0d8', 12, 0.7); return; }
+    if ((raid.lb || 0) < FIGHT.LB.BAR) { FX.text(player.x, player.y - 56, 'Not ready', '#c8c0d8', 12, 0.7, { kind: 'quiet' }); return; }
     sendCombat({ type: 'lb' });
   }
   Net.on('lb', msg => {
@@ -1309,7 +1379,7 @@
       if (!raid.def.trial) Pastimes.event('pull', { boss: raid.def.id, practice: !!raid.practice });
       return;
     }
-    raid.state = msg.s; raid.result = msg; raid.resultAt = now + 2.2;
+    raid.state = msg.s; raid.result = msg; raid.resultAt = now + (msg.s === 'clear' ? 3.4 : 2.8);   // [boss presentation] (after his fall / the wipe's beat)
     if (player.cls && !raid.def.trial && !raid.practice && msg.s === 'clear') Journal.won(player.cls.id, raid.def.id);
     if (!raid.def.trial && msg.s === 'clear') Pastimes.event('clear', { boss: raid.def.id, mode: raid.mode, secs: Number(msg.time) || 0, practice: !!raid.practice,
       deaths: Object.values(msg.stats || {}).reduce((n, x) => n + (x.deaths | 0), 0), avoidable: Object.values(msg.stats || {}).reduce((n, x) => n + (x.avoidable | 0), 0) });
@@ -1324,7 +1394,19 @@
     if (msg.s === 'clear') raid.night = false;   // the Long Night lifts when he falls
     for (const z of raid.zones.values()) z.end = Math.min(z.end, now + 1);
     if (actor && actor.kit.cast) actor.kit.cast = null;
-    FX.shake = 8;
+    // the end of the fight: the boss falling is a heavy thump, a wipe only a low shudder. Heroes still standing cheer
+    // (a hop and the weapon thrown up, one after another) or sink to a knee (heroes.js heroPose)
+    FX.shake = msg.s === 'clear' ? 7 : msg.s === 'wipe' ? 2.5 : 4;
+    if (msg.s === 'clear' || msg.s === 'wipe') {
+      let i = 0;
+      for (const id of raid.rosterIds) {
+        const e = entById(id), s = raid.party.get(id);
+        if (!e || !e.st || (s && !s.alive)) continue;
+        const t0 = now + (msg.s === 'clear' ? 0.25 : 0.1) + i++ * 0.14;
+        e.st.react = { kind: msg.s === 'clear' ? 'cheer' : 'slump', t0 };
+        if (msg.s === 'clear') e.st.action = { type: 'big', t0: t0 + 0.05, dur: ANIM_DUR.big };
+      }
+    }
     if (msg.s === 'clear' && player.cls && raid.def.trial) {
       Save.recordTrial(player.cls.id, raid.def.trial);
       trialPrevSpec = raid.def.trial;   // you leave the memory wearing the spec you just earned
@@ -1340,12 +1422,14 @@
         if (raid.def.id === 'hollowking') later(3.5, () => toast('Every hero feels it: something new has woken in them. Look again at your hero.'));
       }
     }
-    if (msg.s === 'clear') BOSS_VFX.victory([...raid.rosterIds].map(entById).filter(Boolean));
-    else BOSS_VFX.wipe();
+    // [boss presentation] his fall first, then the confetti (victory waits for it); a wipe gets its own scene
+    if (msg.s === 'clear') { if (!raid.def.trial) BOSS_VFX.bossDeath(raid.def.id, raid.bossDraw); BOSS_VFX.victory([...raid.rosterIds].map(entById).filter(Boolean), raid.def.trial ? 0 : 2.2); }
+    else BOSS_VFX.wipe(raid.bossDraw, raid.def.id);
   });
   Net.on('fb', msg => {
     if (!raid) return;
     Object.assign(raid.boss, { x: msg.x, y: msg.y, f: msg.f, hp: msg.hp, mx: msg.mx, u: msg.u, v: msg.v, tg: msg.tg });
+    BOSS_VFX.bossHp(raid.bossDraw, msg.hp, msg.mx);   // [boss presentation] a flinch for everyone's bigger blows
     raid.bossTrack.push(raid.fightClock.map(msg.c, rnow), msg.x, msg.y, msg.f);
     raid.lastFb = performance.now();   // for the debug overlay
     raid.fightTime = msg.ft;
@@ -1397,7 +1481,7 @@
     raid.cast = { name: msg.name, dur: msg.dur, start: now, goal: Number.isFinite(msg.goal) ? msg.goal : null };
     if (raid.state === 'live' && player.cls && !raid.def.trial && !raid.practice) Journal.castStart(player.cls.id, raid.def.id, String(msg.name), msg.dur, now);
     if (raid.state === 'live' && raid.tl.casts.length < 400) raid.tl.casts.push([raid.fightTime || 0, String(msg.name).slice(0, 40), raid.cast.goal != null ? 1 : 0]);
-    BOSS_VFX.castStart(raid.def.id, msg.anim, msg.dur, raid.bossDraw);
+    const castPose = BOSS_VFX.castStart(raid.def.id, msg.anim, msg.dur, raid.bossDraw, msg.name);   // [boss presentation] the move's pose
     const end = now + msg.dur, st = raid.bossDraw.st;
     const prop = (k, v, until) => { raid.props[k] = v; raid.propsUntil[k] = until; };
     switch (msg.anim) {
@@ -1446,6 +1530,7 @@
       case 'march': prop('rise', true, end + 0.3); break;
       case 'bind': prop('graves', true, end + 0.3); break;
     }
+    for (const [k, after] of castPose || []) prop(k, true, end + after);   // [boss presentation] (boss-vfx.js CAST_POSE)
     if (msg.anim !== 'mince' && msg.anim !== 'boil') st.action = { type: 'attack', t0: end - 0.45, dur: 1.2 };
   });
   Net.on('banim', msg => {
@@ -1458,7 +1543,12 @@
     }
     else if (msg.name === 'ladle') { raid.props.held = 'ladle'; raid.propsUntil.held = now + msg.dur + 0.3; later(msg.dur - 0.5, () => { if (raid) { raid.props.spin = true; raid.propsUntil.spin = now + 0.9; } }); }
     else if (msg.name === 'lid') { raid.props.held = 'lid'; raid.propsUntil.held = now + msg.dur + 0.2; }
-    else if (msg.name === 'leap') later(msg.dur || 0.6, () => raid && BOSS_VFX.leap(raid.boss.x, raid.boss.y));
+    else if (msg.name === 'leap') {
+      // [boss presentation] Grubnak's walk down after the Flare-Up: he carries the stockpot until he sets it down (grubnak.js
+      // adds the pot 0.9 s in)
+      if (raid.def.id === 'grubnak' && !raid.room.props.some(p => p.kind === 'pot')) { raid.props.carry = true; raid.propsUntil.carry = now + 0.9; }
+      later(msg.dur || 0.6, () => raid && BOSS_VFX.leap(raid.boss.x, raid.boss.y));
+    }
     else if (msg.name === 'gorge' || msg.name === 'roar') { st.action = { type: 'attack', t0: now, dur: 1.4 }; BOSS_VFX.roar(raid.boss.x, raid.boss.y, raid.def.id); }
     else if (msg.name === 'wrap') { raid.props.silk = true; raid.propsUntil.silk = now + msg.dur + 0.3; }
     else if (msg.name === 'field') { raid.props.charge = true; raid.propsUntil.charge = now + msg.dur + 0.3; }
@@ -1654,12 +1744,19 @@
     player.kb = { sx: player.x, sy: player.y, tx: dest.x, ty: dest.y, t0: now };
     player.dashMove = null; player.target = null;
   });
+  // a heal someone else landed on you (fight.js applyHeal): its number, a paler green than your own heals'
+  Net.on('pheal', msg => {
+    if (!raid || msg.id !== Net.id || !(msg.a >= 1) || !player) return;
+    FX.text(player.x, player.y - (player.lift || 0) - 18, '+' + rnd(msg.a), '#a6e8b0', 13, 1, { kind: 'heal' });
+  });
   Net.on('pdmg', msg => {
     if (!raid) return;
     // party frames react to the hit right away instead of waiting for the next party update
     const ps = raid.party.get(msg.id);
     if (ps && msg.hp != null) { ps.hp = msg.hp; if (msg.a > 0) ps.hitAt = now; }
+    heroFlinch(msg, ps);
     // a blow that left them at 0: the death log on the results screen
+    if (msg.k === 'enrage') BOSS_VFX.enrageLand(raid.def.id, raid.bossDraw);   // [boss presentation] the enrage lands (once)
     if (msg.hp === 0 && msg.a > 0 && raid.state === 'live' && raid.deaths.length < 60) {
       const c = raid.cast && now <= raid.cast.start + raid.cast.dur + 0.3 ? raid.cast.name : null;
       raid.deaths.push({ id: msg.id, t: raid.fightTime || 0, n: typeof msg.n === 'string' ? msg.n.slice(0, 40) : null, k: String(msg.k || ''), cast: c });
@@ -1672,7 +1769,10 @@
       (raid.hits || (raid.hits = [])).push({ t: now, a: msg.a, n: typeof msg.n === 'string' ? msg.n.slice(0, 40) : null, k: String(msg.k || ''), cast: c, hp: msg.hp, dd: !!msg.dd });
       if (raid.hits.length > 12) raid.hits.shift();
     }
-    if (msg.a > 0) FX.text(player.x, player.y - 46, '-' + rnd(msg.a), msg.dd ? '#ff4a3a' : '#ff8a7a', msg.a > 400 ? 18 : 14);
+    // (left of the body, clear of the name tag; what your shield ate beside it in muted blue: msg.sh, fight.js)
+    const hy = player.y - (player.lift || 0) - 18;
+    if (msg.a > 0) FX.text(player.x, hy, '-' + rnd(msg.a), msg.dd ? '#ff4a3a' : '#ff8a7a', msg.a > 400 ? 18 : 14, 1, { kind: 'taken' });
+    if (msg.sh >= 1) FX.text(player.x, hy, rnd(msg.sh) + ' absorbed', '#9cc4ec', 12, 1, { kind: 'absorb' });
     if (msg.dd) FX.shake = Math.max(FX.shake, 4);
     // the screen's edge flushes red, harder the bigger the bite out of your health
     if (msg.a > 0 && ps && ps.maxHp > 1) {
@@ -1684,6 +1784,7 @@
     if (!raid) return;
     const e = entById(msg.id);
     if (msg.k === 'death' && e) BOSS_VFX.playerDeath(e);
+    if (msg.k === 'behind') BOSS_VFX.behind(raid.bossDraw, msg.n);   // [boss presentation] the soft enrage's pass: he gets heavier
     if (msg.k === 'death') raid.doom.delete(msg.id);
     if (msg.k === 'raised' && e) BOSS_VFX.playerRaised(e);
     // a Time Stop on the boss (Time Reversal, fight.js pauseBoss): it freezes mid-pose, frosted, under a stopped clock
@@ -2272,6 +2373,7 @@
     if (raid.introAt && now >= raid.introAt) {
       raid.introAt = 0;
       if (!raid.def.trial) {
+        BOSS_VFX.intro(raid.def.id, raid.bossDraw);   // [boss presentation] his entrance, in time with the title card
         let met = {};
         try { met = JSON.parse(localStorage.getItem('emberfall.met') || '{}') || {}; } catch (e) { /* first time for everything */ }
         RaidUI.intro(raid.def, raid.mode, !met[raid.def.id]);
@@ -2367,6 +2469,17 @@
     c.beginPath(); c.moveTo(x - 31, y - 10); c.quadraticCurveTo(x, y - 2, x + 31, y - 10); c.stroke();
     c.restore();
   }
+  // a hero taking a real hit flinches (heroes.js heroPose: a white flash and a 2-3px recoil away from the blow), you,
+  // friends and bots alike. Damage-over-time ticks and chip damage don't; a tankbuster rocks them hardest.
+  function heroFlinch(msg, ps) {
+    const e = msg.a > 0 && raid ? entById(msg.id) : null;
+    if (!e || !e.st || !ps || !(ps.maxHp > 1)) return;
+    const frac = msg.a / ps.maxHp, buster = msg.k === 'buster';
+    if (!buster && (frac < 0.03 || msg.k === 'bleed' || msg.k === 'static' || msg.k === 'tithe')) return;
+    const k = buster ? 1.15 : clamp(0.35 + frac * 3, 0.35, 0.9);
+    const b = raid.bossDraw, dx = e.x - b.x, dy = e.y - b.y, d = Math.hypot(dx, dy);
+    e.st.hurt = { t0: now, k, ax: d > 1 ? dx / d : -Math.cos(e.angle), ay: d > 1 ? dy / d : -Math.sin(e.angle) };
+  }
   function drawEntity(e) {
     switch (e.kind) {
       case 'hero': drawHero(ctx, e.cls, e.x, e.y, e.angle, e.st, HERO_SCALE); break;
@@ -2375,41 +2488,94 @@
       case 'boss': if (bossOpen(e.boss)) drawBoss(ctx, e.boss, e.x, e.y, e.angle, e.st, BOSS_SCALE); else drawShroud(ctx, e.x, e.y); break;
       case 'dummy': drawDummy(ctx, e.x, e.y, e.st, HERO_SCALE); break;
       case 'player': case 'remote': {
-        const dead = inArena() && raid.party.get(e.id === undefined ? Net.id : e.id) && !raid.party.get(e.id === undefined ? Net.id : e.id).alive;
-        if (dead) { ctx.save(); ctx.globalAlpha = 0.4; }
-        const em = !dead && Pastimes.emoteLook(e, now);
-        if (em) { ctx.save(); ctx.translate(e.x + em.dx, e.y + em.dy); ctx.rotate(em.rot); ctx.scale(1, em.squash); ctx.translate(-e.x, -e.y); }
-        drawHero(ctx, e.cls, e.x, e.y, e.angle, dead ? { t: 0, moving: false, action: null } : e.st, heroScale(), { lift: e.lift, spec: e.spec });
-        if (em) ctx.restore();
-        if (dead) ctx.restore();
+        const ps = inArena() ? raid.party.get(e.id === undefined ? Net.id : e.id) : null, dead = !!ps && !ps.alive;
+        // going down and getting up (heroes.js drawHeroDown): one grey picture taken as they fall, tipped over in 0.4s;
+        // on a revive their live self rises back up. (A new raid starts clean, with no fall or rise to play.)
+        const dn = e._dn || (e._dn = { dead: false, t: -9, cv: null, raid: null, angle: 0 });
+        if (dn.raid !== raid) { dn.raid = raid; dn.dead = dead; dn.t = -9; dn.cv = null; dn.angle = e.angle; }
+        else if (dn.dead !== dead) { dn.dead = dead; dn.t = now; dn.cv = null; dn.angle = e.angle; }
+        const dAge = now - dn.t;
+        if (dead || dAge < 0.45) {
+          const q = Math.min(1, dAge / (dead ? 0.4 : 0.45)), sm = q * q * (3 - 2 * q), k = dead ? sm : 1 - sm, hs = heroScale();
+          ctx.save(); ctx.translate(e.x, e.y); ctx.scale(hs, hs);
+          if (dead && !dn.cv) dn.cv = heroDownSprite(ctx, e.cls, dn.angle, { spec: e.spec });
+          const img = dead ? dn.cv : heroSprite(ctx, e.cls, dn.angle, e.st, { spec: e.spec }, null);
+          ctx.restore();
+          if (img) { drawHeroDown(ctx, e.cls, e.x, e.y, dn.angle, hs, k, img); break; }
+          if (dead) { ctx.save(); ctx.globalAlpha = 0.4; drawHero(ctx, e.cls, e.x, e.y, e.angle, { t: 0, moving: false, action: null }, hs, { lift: e.lift, spec: e.spec }); ctx.restore(); break; }
+        }
+        const em = Pastimes.emoteLook(e, now);
+        drawHero(ctx, e.cls, e.x, e.y, e.angle, e.st, heroScale(), { lift: e.lift, spec: e.spec, emote: em || null });
+        // what's on them, on the body (heroes.js drawHeroStatus): shields and defensives, chosen-ally buffs, Slowed,
+        // Damage Down, Vulnerability, a bleed or venom
+        if (ps) {
+          const id = e.id === undefined ? Net.id : e.id, buffs = [];
+          for (const b of raid.abuffs) if (b.to === id && b.end > now && !buffs.includes(b.id)) buffs.push(b.id);
+          drawHeroStatus(ctx, e.x, e.y - (e.lift || 0), heroScale(), e.cls, ps, buffs, now);
+        }
+        // town footsteps: a faint puff of dust under each foot as it lands
+        if (scene === 'town' && e.st.stride != null) {
+          const n = Math.floor(e.st.stride / Math.PI + 0.5);
+          if (e._step !== n) {
+            if (e._step != null && e.st.moving && e.st.walkK > 0.5 && !e.dashMove) {
+              const side = n % 2 ? 1 : -1, a = e.angle + Math.PI / 2;
+              FX.add({ type: 'step', x: e.x + Math.cos(a) * side * 7 + Math.cos(e.angle) * 3, y: e.y + 7 + Math.sin(a) * side * 4, color: '#dccca4', dur: 0.55 });
+            }
+            e._step = n;
+          }
+        }
         break;
       }
     }
   }
 
   function playerTag(e, isMe, hp) {
-    const y = e.y - (e.lift || 0) - (e.cls ? 36 : 26) * heroScale() / HERO_SCALE;
+    // a downed hero's tag sinks with them (lying on the floor) and goes a muted grey
+    const dn = inArena() && e._dn, dk = !dn ? 0 : dn.dead ? Math.min(1, (now - dn.t) / 0.4) : Math.max(0, 1 - (now - dn.t) / 0.45);
+    const y = e.y - (e.lift || 0) - (e.cls ? 36 : 26) * heroScale() / HERO_SCALE + 14 * dk;
     const color = e.cls ? ROLES[e.cls.role].color : '#dffaff';
-    label(ctx, e.name + (isMe ? ' (you)' : ''), e.x, y, isMe ? '#fff3d8' : color, 12);
+    if (dk > 0.5) { ctx.save(); ctx.globalAlpha = 0.8; label(ctx, e.name + (isMe ? ' (you)' : ''), e.x, y, '#9c98a8', 11); ctx.restore(); }
+    else label(ctx, e.name + (isMe ? ' (you)' : ''), e.x, y, isMe ? '#fff3d8' : color, 12);
     if (e.title && !inArena()) label(ctx, e.title, e.x, y - 13, '#d8b46a', 10);
-    if (e.emote && now - e.emote.t0 < 2.2) label(ctx, Pastimes.EMOTES[e.emote.kind], e.x, y - (e.title && !inArena() ? 26 : 14), '#e6dcc8', 10.5);
+    const wa = e.emote ? Pastimes.emoteWordA(e, now) : 0;   // (the emote's word eases in, rising, and fades out)
+    if (wa > 0.01) { ctx.save(); ctx.globalAlpha = wa; label(ctx, Pastimes.EMOTES[e.emote.kind], e.x, y - (e.title && !inArena() ? 26 : 14) + (1 - wa) * 4, '#e6dcc8', 10.5); ctx.restore(); }
     if (hp && !isMe) {
       // over-head bar: health, then any shield in pale white after it
       const w = 44, f = hp.maxHp ? clamp(hp.hp / hp.maxHp, 0, 1) : 0, sf = hp.maxHp ? clamp((hp.shield || 0) / hp.maxHp, 0, 1 - f) : 0;
       const x0 = Math.round(e.x - w / 2), y0 = Math.round(y + 4);
       rrect(ctx, x0 - 1, y0 - 1, w + 2, 7, 2, 'rgba(10,8,6,0.85)');
+      // the damage trail: a pale chunk holds where health just was, then drains (as on the party frames, raid-ui.js)
+      const tdt = clamp(now - (e._hpTt ?? now), 0, 0.1); e._hpTt = now;
+      if (e._hpF != null && f < e._hpF - 0.001) e._hpHit = now;
+      e._hpF = f;
+      e._hpT = f >= (e._hpT ?? 0) ? f : now - (e._hpHit ?? -9) > 0.45 ? Math.max(f, e._hpT - tdt * 0.7) : e._hpT;
+      if (e._hpT > f + 0.002) rrect(ctx, x0 + w * f, y0, w * (e._hpT - f), 5, 1.5, 'rgba(255,226,196,0.7)');
       if (f > 0) rrect(ctx, x0, y0, w * f, 5, 1.5, f < 0.35 ? '#e8503f' : f < 0.7 ? '#c9c45a' : '#5fcf78');
       if (sf > 0) rrect(ctx, x0 + w * f, y0, w * sf, 5, 1.5, 'rgba(236,244,255,0.85)');
     } else if (e.cls && !inArena()) label(ctx, e.cls.name, e.x, y + 12, color, 10);
     drawCastBar(e);
     if (e.chat && now < e.chatUntil) {
-      ctx.font = '600 13px system-ui, sans-serif';
-      const tw = Math.min(260, ctx.measureText(e.chat).width) + 18, bx = e.x - tw / 2, by = y - 38;
-      rrect(ctx, bx, by, tw, 26, 8, 'rgba(255,250,240,0.95)', OUT, 1.5);
-      poly(ctx, [e.x - 6, by + 26, e.x + 6, by + 26, e.x, by + 33], 'rgba(255,250,240,0.95)');
-      ctx.fillStyle = '#1a1622'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText(e.chat, e.x, by + 13, 250);
-      ctx.textBaseline = 'alphabetic';
+      // the same bubble the townsfolk speak in (town-life.js bubble): wrapped at 240px, the wrap kept until the line changes
+      ctx.save();
+      ctx.font = '13px Georgia, serif';
+      let cw = e._chatWrap;
+      if (!cw || cw.text !== e.chat) {
+        const lines = [];
+        let cur = '';
+        for (const wd of String(e.chat).split(' ')) { const t = cur ? cur + ' ' + wd : wd; if (ctx.measureText(t).width > 240 && cur) { lines.push(cur); cur = wd; } else cur = t; }
+        if (cur) lines.push(cur);
+        cw = e._chatWrap = { text: e.chat, until: 0, t0: now, lines, w: Math.min(260, Math.max(...lines.map(l => ctx.measureText(l).width))) + 20 };
+      }
+      if (cw.until !== e.chatUntil) { cw.until = e.chatUntil; cw.t0 = now; }   // (said again: pops in again)
+      const age = now - cw.t0, ka = clamp(Math.min(age / 0.15, (e.chatUntil - now) / 0.3), 0, 1);   // (pops in, fades out)
+      const bh = cw.lines.length * 17 + 12, by = y - 20 - (e.title && !inArena() ? 13 : 0) - (wa > 0.01 ? 13 : 0) + (1 - ka) * 3;
+      ctx.globalAlpha = ka;
+      ctx.fillStyle = 'rgba(16,13,10,0.92)'; ctx.strokeStyle = '#c89a5a'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.roundRect(e.x - cw.w / 2, by - bh, cw.w, bh, 4); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(e.x - 6, by); ctx.lineTo(e.x, by + 7); ctx.lineTo(e.x + 6, by); ctx.fill();
+      ctx.fillStyle = '#f2e6c8'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+      cw.lines.forEach((l, i) => ctx.fillText(l, e.x, by - bh + 6 + i * 17, 250));
+      ctx.restore();
     }
   }
 
@@ -2474,15 +2640,23 @@
     }
   }
 
+  // Screen shake: a smooth, damped wobble (sines on the game clock, so it reads the same at 60 or 144 Hz) instead of a
+  // fresh random jump every frame. FX.shake is its strength (FX.addShake sets it; FX.update lets it die away).
+  function shakeOffset() {
+    const sh = FX.shake;
+    if (!(sh > 0.3)) return [0, 0];
+    const t = now, a = sh * 0.5;
+    return [a * (Math.sin(t * 47.3 + 1.1) * 0.62 + Math.sin(t * 83.9 + 2.7) * 0.38), a * (Math.sin(t * 53.1 + 0.4) * 0.62 + Math.sin(t * 71.7 + 4.2) * 0.38)];
+  }
   function render() {
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
     if (scene === 'arena' && raid) renderArena(); else renderTown();
   }
 
+  let lineupLabelAt = null;   // (the last frame the deck heroes' names were eased)
   function renderTown() {
     ctx.fillStyle = '#2d4a22'; ctx.fillRect(0, 0, W, H);
-    const sh = FX.shake;
-    const sx = sh > 0.3 ? (Math.random() - 0.5) * sh : 0, sy = sh > 0.3 ? (Math.random() - 0.5) * sh : 0;
+    const [sx, sy] = shakeOffset();
     // (snapped to device pixels, not whole CSS pixels: on a 2x screen a half-pixel step is visible as jitter)
     const cx = Math.round((cam.x + sx) * DPR) / DPR, cy = Math.round((cam.y + sy) * DPR) / DPR;
     ctx.translate(-cx, -cy);
@@ -2522,11 +2696,19 @@
     Stagecraft.drawOver(ctx, now, scEnv);
 
     drawScreenFx('dim');
-    FX.draw(ctx, false);
     VFX.draw(ctx, 'air');
     drawSmoke(ctx, now);
 
-    for (const h of lineup) if (Math.hypot(player.x - h.x, player.y - h.y) < 260 || hov?.label === h.cls.name) label(ctx, h.cls.name, h.x, h.y - (h.labelUp ? 47 : 34), ROLES[h.cls.role].color, 11);
+    // the deck heroes' names fade in (rising a little) as you come near, and out as you leave
+    const ldt = clamp(now - (lineupLabelAt ?? now), 0, 0.1); lineupLabelAt = now;
+    for (const h of lineup) {
+      const want = Math.hypot(player.x - h.x, player.y - h.y) < 260 || hov?.label === h.cls.name ? 1 : 0;
+      h.labelK = (h.labelK || 0) + (want - (h.labelK || 0)) * Math.min(1, ldt * 9);
+      if (h.labelK < 0.02) continue;
+      ctx.save(); ctx.globalAlpha = h.labelK;
+      label(ctx, h.cls.name, h.x, h.y - (h.labelUp ? 47 : 34) + (1 - h.labelK) * 4, ROLES[h.cls.role].color, 11);
+      ctx.restore();
+    }
     const bob = Math.sin(now * 4) * 3;
     label(ctx, '!', keeper.x, keeper.y - 40 + bob, '#ffd65a', 26, 'Cinzel, Georgia, serif', 800);
     label(ctx, 'Barkeep', keeper.x, keeper.y - 28 + 6, '#f0d48a', 11);
@@ -2538,39 +2720,23 @@
     TownLife.drawLabels(ctx, label, f => Math.hypot(player.x - f.x, player.y - f.y) < 220);
     for (const r of townRemotes) playerTag(r, false);
     playerTag(player, true);
+    FX.draw(ctx, false);   // (the numbers over the tags and the air effects, as in the arena)
     if (hov && !hov.label.match(/Barkeep|Trainer/) &&!lineup.some(h => h.cls.name === hov.label)) {
       label(ctx, hov.label, mouseWorld().x, mouseWorld().y - 18, '#ffe9a8', 13);
     }
     drawScreenFx('flash');
   }
 
-  // The boss drawn into a canvas of his own, then darkened (the Long Night: the same as brightness(1 - dark), only on
-  // his own pixels) and/or filtered as one small image onto the scene.
-  let bossCv = null;
-  const BOSS_BOX = 600;   // world px round him: room for his widest swing
-  function bossLayer(def, bd, alpha, dark, filter) {
-    const m = ctx.getTransform(), px = Math.hypot(m.a, m.b) || 1, S = Math.ceil(BOSS_BOX * px);
-    if (!bossCv) bossCv = document.createElement('canvas');
-    if (bossCv.width !== S) bossCv.width = bossCv.height = S;
-    const c = bossCv.getContext('2d');
-    c.setTransform(1, 0, 0, 1, 0, 0); c.globalCompositeOperation = 'source-over'; c.globalAlpha = 1; c.clearRect(0, 0, S, S);
-    c.setTransform(px, 0, 0, px, S / 2 - bd.x * px, S / 2 - bd.y * px);
-    drawBoss(c, def, bd.x, bd.y, bd.f, bd.st, RAID_BOSS_SCALE);
-    if (dark > 0) {
-      c.setTransform(1, 0, 0, 1, 0, 0); c.globalCompositeOperation = 'source-atop'; c.globalAlpha = 1;
-      c.fillStyle = `rgba(0,0,0,${dark.toFixed(3)})`; c.fillRect(0, 0, S, S);
-    }
-    ctx.save(); ctx.globalAlpha = alpha; if (filter) ctx.filter = filter;
-    ctx.drawImage(bossCv, bd.x - BOSS_BOX / 2, bd.y - BOSS_BOX / 2, BOSS_BOX, BOSS_BOX);
-    ctx.restore();
-  }
+  // [boss presentation] the boss's own layer (the Long Night's dark, a Time Stop's frost, a trial's memory, his flinch,
+  // the enrage rim, untargetable as a ghost) is BOSS_VFX.drawBody now: tints laid on with source-atop and an outline
+  // from his silhouette, instead of a CSS filter with a drop-shadow on a canvas up to ~1320 px a side every frame.
 
   function renderArena() {
     ctx.fillStyle = { volkar: '#080b11', hollowking: '#0a0c0e' }[raid.def.id] || '#120d0a'; ctx.fillRect(0, 0, W, H);
-    const sh = FX.shake;
-    const sx = sh > 0.3 ? (Math.random() - 0.5) * sh : 0, sy = sh > 0.3 ? (Math.random() - 0.5) * sh : 0;
+    const [sx, sy] = shakeOffset(), px = DPR * zoom;
     ctx.scale(zoom, zoom);
-    ctx.translate(-cam.x + sx, -cam.y + sy);
+    // (snapped to device pixels, like the town's camera, so a resting or shaking view never shimmers half a pixel)
+    ctx.translate(Math.round((-cam.x + sx) * px) / px, Math.round((-cam.y + sy) * px) / px);
     ArenaView.drawFloor(ctx, raid.def.id, Math.min(1.5, DPR * zoom));
     ArenaView.drawAmbient(ctx, now);
     ArenaView.drawEdge(ctx, now, raid.edgeWarn);
@@ -2595,12 +2761,16 @@
     const covers = [...raid.posts.values()].filter(p => now < p.end).map(p => ({ x: p.x, y: p.y }));
     for (const tg of raid.tgs.values()) if (tg.tag === 'rod' && tg.gone == null) covers.push({ x: tg.live.x, y: tg.live.y });
     const tellEnv = { tgs: raid.tgs, boss: bd, bossId: raid.def.id, entById, hard: raid.mode === 'hard', pol: raid.pol, units, covers, props: raid.room.props, room: raid.room };
+    // the floor effects (scorch, frost, lingering pools, dash afterimages) go under the telegraphs' fills, so a lingering
+    // effect never sits over a mechanic; the telegraph rims are drawn over both again below (BossTells.rims)
+    FX.draw(ctx, true);
+    VFX.draw(ctx, 'ground');
     ArenaView.drawTelegraphs(ctx, raid.tgs, now, tellEnv);
     BossTells.drawRollers(ctx, raid.rollers, now, tellEnv);
     BossTells.drawSweeps(ctx, raid.sweeps, now, tellEnv);
     // the tells' props (cleaver, cloches, jars, whisk) go under every unit too, so nobody is hidden behind a mechanic
     BossTells.air(ctx, raid.tgs, now, tellEnv);
-    const ringA = clamp((bd.fade - 0.55) / 0.45, 0, 1);   // the hitbox ring fades with the boss when it goes untargetable
+    const ringA = clamp((bd.fade - 0.55) / 0.45, 0, 1) * BOSS_VFX.presence(bd);   // the hitbox ring fades with the boss when it goes untargetable ([boss presentation] or falls, or hasn't come in yet)
     if (ringA > 0.02) { ctx.save(); ctx.globalAlpha = ringA; ArenaView.drawBossRing(ctx, { x: bd.x, y: bd.y, f: bd.f }); ctx.restore(); }
     // your current add target gets a red ring
     const lt = lockedTarget();
@@ -2610,8 +2780,6 @@
     for (const a of raid.adds.values()) { const o = a.link && raid.adds.get(a.link); if (o && a.id < o.id && raid.mode === 'hard') ArenaView.addBeam(ctx, a, o, now); }
     drawFocusMark();
     drawChest();
-    FX.draw(ctx, true);
-    VFX.draw(ctx, 'ground');
     BossTells.rims(ctx, raid.tgs, now, tellEnv);   // telegraph rims stay readable over the floor effects
     drawAllyTarget();
     if (raid.pol.size) ArenaView.polarityAuras(ctx, units, raid.pol, now);
@@ -2633,12 +2801,13 @@
     const bossDef = BOSSES.find(x => x.id === raid.def.id);
     for (const e of all) {
       if (e === bossEnt) {
-        // in the Long Night he's a shape in the dark; in a trial only a memory: pale, cold and not quite there. Both go
-        // through a small layer of his own (bossLayer): a filter on the main canvas costs a whole-screen pass every frame
-        if (raid.def.trial) bossLayer(bossDef, bd, bd.fade * (0.72 + 0.06 * Math.sin(now * 2.3)), 0, 'grayscale(0.7) brightness(1.9) sepia(0.35) hue-rotate(175deg) drop-shadow(0 0 9px #8fa8ff)');
-        else if (raid.nightK > 0.05) bossLayer(bossDef, bd, bd.fade, 0.55 * raid.nightK, null);
-        else if (raid.bossPause && now < raid.bossPause.end) bossLayer(bossDef, bd, bd.fade, 0, 'saturate(0.35) brightness(1.25) sepia(0.25) hue-rotate(165deg) drop-shadow(0 0 6px #bfe8ff)');   // frosted in a Time Stop
-        else { ctx.save(); ctx.globalAlpha = bd.fade; drawBoss(ctx, bossDef, bd.x, bd.y, bd.f, bd.st, RAID_BOSS_SCALE); ctx.restore(); }
+        // [boss presentation] BOSS_VFX.drawBody: in the Long Night he's a shape in the dark; in a trial only a memory (pale,
+        // cold, not quite there); in a Time Stop frosted; untargetable a ghost with an outline; his flinches, enrage,
+        // entrance and fall. (Plain frames still draw him straight onto the scene.)
+        const ghost = clamp((1 - bd.fade) / 0.45, 0, 1);
+        BOSS_VFX.drawBody(ctx, bossDef, bd, { scale: RAID_BOSS_SCALE, ghost, dark: raid.nightK > 0.05 ? 0.55 * raid.nightK : 0,
+          alpha: raid.def.trial ? 0.72 + 0.06 * Math.sin(now * 2.3) : Math.max(bd.fade, 0.8),
+          tint: raid.def.trial ? 'memory' : raid.bossPause && now < raid.bossPause.end ? 'frost' : null, pending: !!raid.introAt && !raid.def.trial });
       } else if (e.kind === 'knight') {
         const k = e.k, a = Math.min(1, (now - k.born) / 0.6) * (k.gone ? Math.max(0, 1 - (now - k.gone) / 0.8) : 1);
         drawEchoKnight(ctx, k.x, k.y, k.f, k.st, a * (1 - 0.3 * raid.nightK));
@@ -2680,7 +2849,6 @@
     }
     Stagecraft.drawOver(ctx, now, scEnv);
     drawScreenFx('dim');
-    FX.draw(ctx, false);
     VFX.draw(ctx, 'air');
     // add health bars
     for (const a of raid.adds.values()) {
@@ -2692,6 +2860,9 @@
     for (const tg of raid.tgs.values()) if (tg.type === 'buster' && tg.target != null && tg.gone == null) { const e = entById(tg.target); if (e) ArenaView.busterIcon(ctx, e.x, e.y, now); }
     for (const e of [...arenaRemotes, ...raid.bots.values()]) playerTag(e, false, raid.party.get(e.id));
     playerTag(player, true);
+    // the floating numbers (and the old-style ability shapes) over everything in the world: the air effects' additive
+    // glow doesn't wash them out and no name tag or health bar covers them
+    FX.draw(ctx, false);
     Pings.draw(ctx, now);
     hurtVignette();
     drawScreenFx('flash');
@@ -3369,11 +3540,12 @@
     // the bar under them: the skill's icon and name, and the seconds left
     const ab = e && e.cls && Number.isInteger(msg.i) && msg.i >= 0 ? kitFor(e.cls.id, e.spec).abilities[msg.i] : null;
     if (e) e.castBar = ab ? { ab, t0: now, dur: Math.max(0.3, msg.dur || 1) } : null;
+    if (e && e.castBar && typeof CAST_VFX !== 'undefined') { VFX.setScale(0.6); try { CAST_VFX.start(e, e.castBar.dur, ab); } finally { VFX.setScale(1); } }
   });
   Net.on('castStop', msg => {
     const e = msg.id >= 1000 ? (raid && raid.bots.get(msg.id)) : remotes.get(msg.id);
     if (e && e.st.action && e.st.action.channel) e.st.action = null;
-    if (e) e.castBar = null;
+    if (e && e.castBar && e.castBar.stop == null) e.castBar.stop = now;   // (its bar shows the interrupt, then goes: drawCastBar)
   });
   // a cast under a hero's feet: icon, name, a bar filling, "1.9 / 5.9"
   const castIcons = new Map();
@@ -3386,19 +3558,34 @@
     const c = e.castBar;
     if (!c || !e.cls) return;
     const el = now - c.t0;
-    if (el > c.dur + 0.15) { e.castBar = null; return; }
-    const w = 74, x0 = Math.round(e.x - w / 2 + 9), y0 = Math.round(e.y + 22), f = clamp(el / c.dur, 0, 1);
+    // its ending: a cast that ran out flashes full and fades; one cut short (c.stop: castStop) goes red and drops away
+    const stopEl = c.stop != null ? c.stop - c.t0 : null, broke = stopEl != null;
+    if (broke ? el > stopEl + 0.4 : el > c.dur + 0.3) { e.castBar = null; return; }
+    const q = broke ? (el - stopEl) / 0.4 : el >= c.dur ? (el - c.dur) / 0.3 : 0;
+    const w = 74, x0 = Math.round(e.x - w / 2 + 9), y0 = Math.round(e.y + 22 + (broke ? q * q * 9 : 0));
+    const f = clamp((broke ? stopEl : el) / c.dur, 0, 1);
     const im = castIcon(e.cls, c.ab);
+    ctx.save();
+    if (q > 0) ctx.globalAlpha = broke ? 1 - q * q : 1 - q * q * (3 - 2 * q);
     rrect(ctx, x0 - 20, y0 - 3, w + 22, 14, 2, 'rgba(10,8,6,0.82)');
     if (im.complete && im.naturalWidth) ctx.drawImage(im, x0 - 19, y0 - 2, 12, 12);
     rrect(ctx, x0, y0, w, 8, 1.5, 'rgba(255,255,255,0.08)');
-    rrect(ctx, x0, y0, w * f, 8, 1.5, e.cls.accent || '#e8c15a');
-    ctx.save();
-    ctx.font = '600 9.5px system-ui, sans-serif'; ctx.textBaseline = 'middle';
-    ctx.fillStyle = '#fff'; ctx.textAlign = 'right';
-    ctx.fillText(`${Math.min(el, c.dur).toFixed(1)} / ${c.dur.toFixed(1)}`, x0 + w - 2, y0 + 4.5);
-    ctx.textAlign = 'left'; ctx.fillStyle = '#f2e6c8';
-    ctx.fillText(c.ab.name, x0 - 19, y0 - 9);
+    rrect(ctx, x0, y0, w * f, 8, 1.5, broke ? '#c8463a' : e.cls.accent || '#e8c15a');
+    if (!broke && el >= c.dur) rrect(ctx, x0, y0, w, 8, 1.5, `rgba(255,248,226,${(0.6 * (1 - q)).toFixed(3)})`);   // (the completion flash)
+    ctx.font = '600 9.5px system-ui, sans-serif'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
+    ctx.lineWidth = 2.5; ctx.strokeStyle = 'rgba(10,8,6,0.9)';
+    const outlined = (s, x, y, col) => { ctx.strokeText(s, x, y); ctx.fillStyle = col; ctx.fillText(s, x, y); };
+    ctx.textAlign = 'right';
+    outlined(broke ? 'Interrupted' : `${Math.min(el, c.dur).toFixed(1)} / ${c.dur.toFixed(1)}`, x0 + w - 2, y0 + 4.5, broke ? '#ffd0c8' : '#fff');
+    // the name, cut to the plate's width (measured once per cast)
+    if (c.nm == null) {
+      const max = w + 20;
+      let s = c.ab.name;
+      if (ctx.measureText(s).width > max) { while (s.length > 1 && ctx.measureText(s + '…').width > max) s = s.slice(0, -1); s = s.trimEnd() + '…'; }
+      c.nm = s;
+    }
+    ctx.textAlign = 'left';
+    outlined(c.nm, x0 - 19, y0 - 9, '#f2e6c8');
     ctx.restore();
   }
   // someone else's auto-attack (a friend's or a bot's)

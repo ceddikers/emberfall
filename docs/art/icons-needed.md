@@ -617,3 +617,75 @@
   *(the Hollow King, accessory)* A tarnished gold crown with tall, thin spikes, one spike broken off, a grave-green gem at the front and a few strands of old cobweb between the points.
 - **Mantle of the Dead Court** — `items/m_deadcourt.png`
   *(the Hollow King, armour)* A deep plum-black royal mantle with a high stiff collar, a tarnished gold chain of office across the chest, a small grave-green brooch, and a frayed, grave-dusted hem.
+
+## Ultimate icons (17)
+
+Each class's Ultimate (the T key). Until these arrive the hotbar borrows one of the class's other icons. Same style as the ability icons, but each is the biggest moment in the class's kit: one bold subject filling more of the frame, in the class's own colours, with a single gold rim-light to set it apart from the everyday buttons.
+
+### Bastion
+- **Last Bastion** — `icons/bastion/lastbastion.png`
+  a broadsword driven point-down into the floor, a dome of pale dawn light rising over it, the dome's rim edged in gold.
+
+### Bloodreaver
+- **Crimson Eclipse** — `icons/bloodreaver/crimsoneclipse.png`
+  a black disc sliding across a red moon, a thin blood-red corona burning round its edge, three drops falling below it.
+
+### Runeguard
+- **Runic Cataclysm** — `icons/runeguard/runecataclysm.png`
+  a ring of five rune stones torn free and falling inward onto one point, cracks of blue light running between them.
+
+### Ironpalm
+- **Hundred Palms** — `icons/ironpalm/hundredpalms.png`
+  a fan of open palm prints radiating from one centre like the petals of a flower, a gold ring behind them.
+
+### Gorgemaw
+- **Maw of Ruin** — `icons/gorgemaw/mawofruin.png`
+  a huge open jaw seen from the front, rows of fangs, the dark of its throat swirling, small orange, blue, red and yellow morsels falling in.
+
+### Oathbroker
+- **Final Reckoning** — `icons/oathbroker/reckoning.png`
+  a heavy ledger slammed shut, a broken wax seal on its cover, gold coins and torn contract pages bursting out from its edges.
+
+### Ranger
+- **Starfall Volley** — `icons/ranger/starfall.png`
+  a longbow drawn upward, a cascade of falling stars streaking down past it, each star with a short arrow-straight tail.
+
+### Shadowblade
+- **Thousand Cuts** — `icons/shadowblade/thousandcuts.png`
+  a burst of dark smoke with many thin crossing knife slashes through it, a single dagger tip stepping out of the smoke.
+
+### Pyromancer
+- **Phoenix Dive** — `icons/pyromancer/phoenixdive.png`
+  a phoenix of flat cartoon flame diving straight down, wings swept back, a long curled tail of fire behind it.
+
+### Marionettist
+- **Curtain Call** — `icons/marionettist/curtaincall.png`
+  a red stage curtain parted, three small wooden dolls leaping out mid-bow in a line, gold strings running up from them out of frame.
+
+### Thermist
+- **Supernova** — `icons/thermist/supernova.png`
+  a split sphere, one half white-hot flame and the other half cracked blue ice, the two halves blasting apart from a bright seam.
+
+### Driftblade
+- **Eye of the Gale** — `icons/driftblade/eyeofthegale.png`
+  a jade spiral of wind seen from above with a calm round eye at its centre, a single sabre streaking through the eye.
+
+### Cleric
+- **Dawn Breaks** — `icons/cleric/dawnbreaks.png`
+  a sun rising over a horizon line, a broad pillar of warm light standing up from it, three small petals drifting in the light.
+
+### Grovekeeper
+- **World Tree** — `icons/grovekeeper/worldtree.png`
+  a great tree bursting up out of the ground, its canopy a wide round crown of leaves, roots spreading at its base.
+
+### Chronomancer
+- **Time Reversal** — `icons/chronomancer/timereversal.png`
+  a clock face with its hands spinning backward, a curved arrow running counter-clockwise round the rim, sand grains rising instead of falling.
+
+### Alembist
+- **Magnum Opus** — `icons/alembist/magnumopus.png`
+  one ornate round flask held high, swirling with every colour of the class's vials in bands, a burst of liquid arcing out of its open neck.
+
+### Threadweaver
+- **Grand Loom** — `icons/threadweaver/grandloom.png`
+  many taut gold threads converging on one bright knot at the centre, a shuttle flying through them, the threads flaring where they cross.

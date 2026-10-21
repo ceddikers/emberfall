@@ -186,3 +186,28 @@ Each boss's own background and palette from above.
 4. **Dinner Rush** (`grubnak/dinner-rush`): a cleaver stuck upright in a board in the middle, four white plates set down round it at different distances, each with a gold rim: the nearest plate's rim complete, the next two-thirds round, the farthest two only a third. Steam off the nearest. (The shape to read: plates laid out round him, filling in order.)
 5. **Grounding Rods** (`volkar/grounding-rods`): an iron lightning rod hanging point-down, crown of spikes at the top, sparks crawling down its length and a small burst of blue-white at the point where it's about to bite into the rock.
 6. **Supercell** (`volkar/supercell`): three dark bands of driving rain marching across the square with lightning in them, and one iron rod standing in their path with a clean strip of calm, plain blue air running out behind it. (Walls of storm, and the lane a rod leaves.)
+
+---
+
+## Still unpainted (15 icons, two sheets)
+
+These 15 still show the drawn placeholder in the cast frame (October 2026). Some were briefed above; this list replaces those briefs, so paint from here. Use each boss's own background and palette from its section above, and the shared style. Sheet 1 is the first nine, read left to right, top to bottom; sheet 2 the last six (the rest of the grid left empty).
+
+**Sheet 1**
+1. **Mince** (`grubnak/mince`): a thick wooden chopping board seen from the side, a heap of minced red meat on it, and one cleaver coming down into the heap at an angle with an orange glint on its edge, two short speed lines behind it. (Chop Chop's half-room cut: one blade, one board.)
+2. **Double Chop** (`grubnak/double-chop`): a long board split down the middle by a pale crack, its left half lit cooking-fire orange and the right half dark, and two cleavers coming down crossed in an X, one over each half. (The shape to read: both halves at once.)
+3. **Butcher's Charge** (`grubnak/butchers-charge`): a straight dusty track running across the square, a pair of short curved bull horns lowered at its near end, skid marks and puffs of dust behind them, and an oak cask at the far end splitting apart with staves flying. (A line: the charge runs wall to wall.)
+4. **Dinner Rush** (`grubnak/dinner-rush`): a cleaver stuck upright in a board in the middle, four white plates set down round it at different distances, each with a blue rim: the nearest plate's rim complete, the next two-thirds round, the farthest two only a third. Steam off the nearest. (Plates laid out round him, filling in order.)
+5. **Last Call** (`grubnak/last-call`): a brass service bell on a wooden base in front of a cream clock face whose hands both point straight up to the hour, a small curled flame catching at the bell's side.
+6. **Chrysalis** (`skitterra/chrysalis`): a tall silk cocoon hanging on one thread at the centre of a web, wound tight in bands, a pink seam of her glow showing through it, two strands pulling taut from its sides. (Her damage check: it should look about to close.)
+7. **Snare Weave** (`skitterra/snare-weave`): a web seen from above made of many small overlapping silk rings packed edge to edge, three round holes left clear in it (the holes plain dark blue), a small pale egg clutch hanging from one strand at the side. (A field of rings with gaps.)
+8. **Gathering Storm** (`volkar/gathering-storm`): a low, heavy storm cloud with three short bolts already crackling out of its underside at once, small cyan sparks where each meets the ground.
+9. **Thunderhead** (`volkar/thunderhead`): one huge anvil-shaped storm cloud, flat-topped and dark, a single thick white bolt splitting it down the middle to a bright splash on the ground.
+
+**Sheet 2**
+10. **Grounding Rods** (`volkar/grounding-rods`): an iron lightning rod hanging point-down, a crown of three spikes at its top, sparks crawling down its length and a small blue-white burst on the rock where its point is about to bite.
+11. **Supercell** (`volkar/supercell`): three dark vertical bands of driving rain marching across the square with lightning in them, one iron rod standing in their path with a clean strip of calm, plain dark-blue air running out behind it. (Walls of storm, and the lane a rod leaves.)
+12. **Burial Rites** (`hollowking/burial-rites`): four small open graves in a cross around a tarnished gold crown, each grave's rim a different flat colour (green, violet, pink, white), a grey headstone at the head of each.
+13. **Writ of Execution** (`hollowking/writ-of-execution`): an unrolled parchment writ with a heavy red wax seal, three iron chains running from it out to the edges of the square, and a fourth chain hanging broken. (Lines going out from one point, one of them harmless.)
+14. **Royal Tithe** (`hollowking/royal-tithe`): a tarnished gold offering bowl on a short foot, a floating gold crown above it, and a stream of green life-light pouring up out of the bowl into the crown, a few pale motes in it.
+15. **Dirge** (`hollowking/dirge`): an old iron funeral bell hanging still from a short beam, wide slow rings of sound spreading out beneath it in grave-light green, fading as they widen.

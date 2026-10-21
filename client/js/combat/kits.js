@@ -187,7 +187,7 @@ const KITS = {
 
   runeguard: {
     potMult: 0.65, // balance knob (tools/simulate.js)
-    auto: { kind: 'rune', potency: 40, range: MELEE },  // passive auto-attack (see ENGINE.AUTO_EVERY)
+    auto: { kind: 'runebash', potency: 40, range: MELEE },  // passive auto-attack (see ENGINE.AUTO_EVERY); a rune-shield bash (AUTO_VFX.runebash)
     gauge: { kind: 'runes', key: 'runes', max: 3, label: 'Runes' },
     init: () => ({ runes: 0 }),
     dmgMod: k => (k.has('overload') ? 0.1 : 0),
@@ -1012,6 +1012,7 @@ function runeWardEnd(k, d, refundAt, novaAt) {
   const shattered = k.g.shatter; k.g.shatter = false;
   if (shattered) { frac = 1; k.fx('shatter'); }
   k.damage((150 + 450 * frac) * (k.has('overload') ? 1.5 : 1), { ab: k.abById('ward') });
+  k.fx('wardBlast', { f: Math.round(frac * 100) / 100 });   // (the look only: ability-vfx.js KIT_VFX.wardBlast)
   if (!shattered && frac >= refundAt) { k.gain('runes', 1, 3); k.stats.wardBreaks = (k.stats.wardBreaks || 0) + 1; k.fx('rune-echo'); k.ultGain(3); }   // (Runic Cataclysm)
   // a Ward broken all the way during Runic Overload gives one more Rune
   if (!shattered && frac >= 0.999 && k.has('overload')) { k.gain('runes', 1, 3); k.stats.overBreaks = (k.stats.overBreaks || 0) + 1; }

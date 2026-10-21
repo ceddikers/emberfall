@@ -342,23 +342,42 @@ const Pastimes = (() => {
   function emote(e, kind, now) {
     if (!EMOTES[kind]) return false;
     e.emote = { kind, t0: now };
+    e.emoteOut = null;
+    // a cheer throws the weapon up (the class's own big gesture); a point reaches out (its cast gesture)
+    if (e.st && typeof ANIM_DUR !== 'undefined' && (kind === 'cheer' || kind === 'point')) {
+      const type = kind === 'cheer' ? 'big' : 'cast';
+      e.st.action = { type, t0: now + 0.05, dur: ANIM_DUR[type] };
+    }
     return true;
   }
-  // a little motion for each: drawn as an offset/rotation the main draw applies, and a word over the head
+  // The pose for each (heroes.js heroPose reads { kind, t, k }: sit, wave, cheer, dance, bow, laugh, point), eased in
+  // over a quarter second and back out at the end (or when you walk off a sit), so it never snaps.
+  const EMOTE_LEN = 3.2;
   function emoteLook(e, now) {
     const m = e.emote;
-    if (!m) return null;
+    if (m) {
+      const t = now - m.t0;
+      const over = m.kind === 'sit' ? (e.st.moving || t > 120) : t > EMOTE_LEN;
+      if (over) { e.emoteOut = { kind: m.kind, t, at: now, k: emoteK(m.kind, t) }; e.emote = null; }
+      else return { kind: m.kind, t, k: emoteK(m.kind, t) };
+    }
+    const o = e.emoteOut;
+    if (!o) return null;
+    const q = (now - o.at) / 0.25;
+    if (q >= 1) { e.emoteOut = null; return null; }
+    return { kind: o.kind, t: o.t + (now - o.at), k: o.k * (1 - q) * (1 - q) };
+  }
+  function emoteK(kind, t) {
+    const inK = Math.min(1, t / 0.25), k = 1 - (1 - inK) * (1 - inK);
+    if (kind === 'sit') return k;
+    return k * Math.min(1, Math.max(0, (EMOTE_LEN - t) / 0.35));
+  }
+  // how much of the word over the head shows (eases in and out over its 2.2s), for main.js playerTag
+  function emoteWordA(e, now) {
+    const m = e.emote;
+    if (!m) return 0;
     const t = now - m.t0;
-    if (m.kind !== 'sit' && t > 3.2) { e.emote = null; return null; }
-    if (m.kind === 'sit' && (e.st.moving || t > 120)) { e.emote = null; return null; }
-    const look = { dx: 0, dy: 0, rot: 0, squash: 1, word: t < 2.2 ? EMOTES[m.kind] : '' };
-    if (m.kind === 'dance') { look.rot = Math.sin(t * 9) * 0.5; look.dy = -Math.abs(Math.sin(t * 9)) * 4; }
-    if (m.kind === 'cheer') look.dy = -Math.abs(Math.sin(t * 7)) * 8;
-    if (m.kind === 'bow') look.squash = 0.82 + Math.abs(Math.cos(Math.min(t, 1.2) * 2.6)) * 0.18;
-    if (m.kind === 'sit') { look.squash = 0.78; look.dy = 4; }
-    if (m.kind === 'laugh') look.dy = Math.sin(t * 22) * 1.2;
-    if (m.kind === 'wave' || m.kind === 'point') look.rot = Math.sin(t * 8) * 0.08;
-    return look;
+    return t < 0 || t > 2.2 ? 0 : Math.min(1, t / 0.18, (2.2 - t) / 0.4);
   }
 
   // ---------------------------------------------------------------- the Logbook (L)
@@ -451,5 +470,5 @@ const Pastimes = (() => {
     for (const k of [-0.62, -0.2, 0.2, 0.62]) COLLIDERS.circles.push({ x: POND.x + k * POND.rx, y: POND.y, r: POND.ry * (1 - Math.abs(k) * 0.35) });
     checkFeats(true);
   }
-  return { init, event, update, drawGround, drawOver, interactables, pondClick, emote, emoteLook, EMOTES, title, setTitle, openBook, closeAll, anyOpen, openFishShop, storyOpen, grantFeat, fishing: () => !!rod, rod: () => rod, notice };
+  return { init, event, update, drawGround, drawOver, interactables, pondClick, emote, emoteLook, emoteWordA, EMOTES, title, setTitle, openBook, closeAll, anyOpen, openFishShop, storyOpen, grantFeat, fishing: () => !!rod, rod: () => rod, notice };
 })();

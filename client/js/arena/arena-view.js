@@ -933,10 +933,13 @@ const ArenaView = {
       if (k <= 0) continue;
       const r = p.r * (0.7 + 0.3 * life);
       if (p.tag === 'venom') { this.venomPool(ctx, p, r, k, t); continue; }
-      glow(ctx, p.x, p.y, r * 1.25, '#ff6a2a', 0.18 * k);
+      // hot grease: a glossy brown pool, bubbling; it only burns (flames, an orange glow) once fire has reached it
+      const lit = this.puddleLit(p, t);
+      if (lit) glow(ctx, p.x, p.y, r * 1.25, '#ff6a2a', 0.18 * k);
       ctx.save(); ctx.globalAlpha = k;
       const g = ctx.createRadialGradient(p.x - r * 0.3, p.y - r * 0.3, r * 0.1, p.x, p.y, r);
-      g.addColorStop(0, '#d89a3a'); g.addColorStop(0.6, '#8a4e14'); g.addColorStop(1, '#4a2408');
+      if (lit) { g.addColorStop(0, '#d89a3a'); g.addColorStop(0.6, '#8a4e14'); g.addColorStop(1, '#4a2408'); }
+      else { g.addColorStop(0, '#8a6630'); g.addColorStop(0.55, '#5a3a14'); g.addColorStop(1, '#2e1c08'); }
       ctx.fillStyle = g;
       ctx.beginPath();
       for (let i = 0; i <= 18; i++) {
@@ -950,9 +953,22 @@ const ArenaView = {
         const q = (t * 0.7 + i / 4 + p.id * 0.13) % 1, a = i * 1.9 + p.id;
         circle(ctx, p.x + Math.cos(a) * r * 0.5, p.y + Math.sin(a) * r * 0.5, 2 + q * 5, null, `rgba(255,220,150,${0.6 * (1 - q)})`, 1.5);
       }
-      for (let i = 0; i < 3; i++) flame(ctx, p.x + Math.cos(i * 2.1 + p.id) * r * 0.35, p.y + Math.sin(i * 2.1 + p.id) * r * 0.35, 5, t + i);
+      if (lit) for (let i = 0; i < 3; i++) flame(ctx, p.x + Math.cos(i * 2.1 + p.id) * r * 0.35, p.y + Math.sin(i * 2.1 + p.id) * r * 0.35, 5, t + i);
+      else {
+        // the gloss: the light caught in long streaks across it, sliding slowly
+        for (let i = 0; i < 3; i++) { const q = (t * 0.08 + i / 3 + p.id * 0.1) % 1; ellipse(ctx, p.x - r * 0.45 + q * r * 0.6, p.y - r * 0.35 + i * r * 0.28, r * (0.22 - i * 0.04), r * 0.05, -0.3, `rgba(255,236,190,${0.3 * Math.sin(q * Math.PI)})`); }
+      }
       ctx.restore();
     }
+  },
+  // is a grease puddle burning? fire reaches it from burning grease on the floor it touches, or from the stove line
+  // (the top third of the kitchen) while that's alight
+  puddleLit(p, t) {
+    const room = this.liveRoom;
+    if (!room) return false;
+    for (const fl of room.floor || []) if (fl.kind === 'grease' && (room.lit.get(fl.id) || 0) > t && Math.hypot(fl.x - p.x, fl.y - p.y) < fl.r + p.r * 0.8) return true;
+    const st = room.ev && room.ev.stove;
+    return !!(st && t < st.end && t > st.start + (st.end - st.start > 1000 ? 0 : 1.2) && p.y - p.r < -ARENA.hh + ARENA.hh * 2 / 3);
   },
 
   // green, bubbling and sticky
@@ -994,6 +1010,7 @@ const ArenaView = {
 
   // lasting zones: the sticky outer web in Skitterra's phase 2
   drawZones(ctx, zones, t) {
+    BossTells.drawAftermath(ctx, t);   // the faint marks landed mechanics leave: under every zone, puddle and telegraph
     const R = ARENA.R;
     for (const z of zones.values()) {
       // fades in as the web spreads, and out over its last second
@@ -1116,13 +1133,15 @@ const ArenaView = {
     ctx.restore();
   },
 
-  // a tether between two players: a silk thread. Long ones (green on Hard) want stretching, short ones (red, thick) want
-  // keeping close. The thread goes taut and bright once the distance is right.
+  // a tether between two players: a silk thread. Long ones (green on Hard) want stretching, short ones (pale gold silk,
+  // thick) want keeping close (not red: red on the floor means damage). The thread goes taut and bright once the
+  // distance is right. When it resolves it snaps (tetherWatch).
   tether(ctx, a, b, th, t, hard) {
     const d = Math.hypot(b.x - a.x, b.y - a.y);
     const ok = th.kind === 'long' ? d >= th.len : d <= th.len;
+    this.tetherSeen(th, a, b, t, ok);
     if (th.tag === 'bind') return this.graveChain(ctx, a, b, th, t, d, ok);
-    const color = !hard ? '#f0eaff' : th.kind === 'long' ? '#6dff7a' : '#ff4a4a';
+    const color = !hard ? '#f0eaff' : th.kind === 'long' ? '#6dff7a' : '#ffe6a8';
     const w = th.kind === 'short' ? 6 : 3;
     const left = Math.max(0, th.end - t), p = 1 - left / Math.max(0.1, th.end - th.start);
     // slack threads sag and wobble; satisfied ones run straight
@@ -1140,6 +1159,40 @@ const ArenaView = {
     glow(ctx, bx, by, 12, color, 0.8);
     for (const e of [a, b]) circle(ctx, e.x, e.y - 20, 5, rgba(color, 0.9), OUT, 1.5);
     ctx.restore();
+  },
+
+  // The snap: a tether stops being drawn when the host resolves it (main.js drops it on 'tethx'), so each one drawn is
+  // remembered here; one that vanishes at about its end time snaps: the two halves whip back to their heroes from a
+  // spark where it broke. (A tether cleared early, on a wipe, just goes.)
+  tetherSeen(th, a, b, t, ok) {
+    const m = this._teth || (this._teth = new Map());
+    m.set(th, { ax: a.x, ay: a.y - 20, bx: b.x, by: b.y - 20, end: th.end, last: t, frame: this._tframe || 0, ok, kind: th.kind, tag: th.tag });
+  },
+  tetherWatch(t, hard) {
+    const m = this._teth;
+    this._tframe = (this._tframe || 0) + 1;
+    if (!m || !m.size) return;
+    for (const [th, e] of m) {
+      if (e.frame >= this._tframe - 1) continue;   // still being drawn
+      m.delete(th);
+      if (Math.abs(e.last - e.end) > 0.6 || typeof VFX === 'undefined' || !VFX.fx) continue;
+      const col = e.tag === 'bind' ? '#9affc0' : !hard ? '#f0eaff' : e.kind === 'long' ? '#6dff7a' : '#ffe6a8';
+      const mx = (e.ax + e.bx) / 2, my = (e.ay + e.by) / 2;
+      VFX.fx({ dur: 0.45, layer: 'air', draw: (c, p) => {
+        const q = easeOut(p), k = 1 - p;
+        c.save(); c.lineCap = 'round';
+        for (const [ex, ey] of [[e.ax, e.ay], [e.bx, e.by]]) {
+          // a half whipping back: from the break toward its hero, kinked and shortening
+          const sx = mx + (ex - mx) * q, sy = my + (ey - my) * q, nx = -(ey - my), ny = ex - mx, nd = Math.hypot(nx, ny) || 1, kink = Math.sin(p * 18) * 14 * k;
+          c.beginPath(); c.moveTo(sx, sy); c.quadraticCurveTo((sx + ex) / 2 + nx / nd * kink, (sy + ey) / 2 + ny / nd * kink, ex, ey);
+          c.strokeStyle = rgba(col, 0.9 * k); c.lineWidth = 2.5; c.stroke();
+        }
+        circle(c, mx, my, 6 + 26 * q, null, rgba('#ffffff', 0.8 * k), 2.5);
+        glow(c, mx, my, 26, col, 0.7 * k);
+        for (let i = 0; i < 6; i++) { const a = i * TAU / 6 + 0.4, d = 10 + 40 * q; line(c, mx + Math.cos(a) * d, my + Math.sin(a) * d, mx + Math.cos(a) * (d + 8), my + Math.sin(a) * (d + 8), rgba(col, k), 2); }
+        c.restore();
+      } });
+    }
   },
 
   // Gravebind (the Hollow King, Hard): an iron grave-chain between two heroes, drawn tight and burning green when it's
@@ -1212,6 +1265,8 @@ const ArenaView = {
   // tg: { shape, start, dur, type, hidden, follow, target, aim, lockAt, need, tag }
   // live(): the current shape (follow/aim applied by the caller)
   drawTelegraphs(ctx, tgs, t, env) {
+    this.tetherWatch(t, env && env.hard);
+    if (env) BossTells.track(tgs, t, env);   // what just landed leaves its mark (drawn under everything, drawZones)
     ctx.save();
     ARENA.trace(ctx, 4); ctx.clip();
     this.drawTelegraphsInner(ctx, tgs, t, env);
@@ -1357,8 +1412,9 @@ const ArenaView = {
   // ------------------------------------------------------------------ the room's props and floor state
   // The host owns them (fight.js): a 'props' message carries every prop, the floor changes and the burning grease.
   // Floor changes are drawn once into their own cached layer; props are drawn with the units, sorted by depth.
-  newRoom() { return { props: [], floor: [], fv: -1, lit: new Map(), layer: null, layerFor: '', born: new Map(), ev: {} }; },
+  newRoom() { return (this.liveRoom = { props: [], floor: [], fv: -1, lit: new Map(), layer: null, layerFor: '', born: new Map(), ev: {} }); },
   roomProps(room, msg, now) {
+    this.liveRoom = room;   // (the puddles read which grease is burning from it)
     const seen = new Set();
     room.props = (msg.p || []).map(a => {
       const pr = PROPS.unpack(a);
@@ -1378,7 +1434,7 @@ const ArenaView = {
       if (typeof BOSS_VFX !== 'undefined' && room.floorSynced) {
         const was = new Set(room.floor.map(fl => fl.id)), now2 = new Set(msg.f.map(fl => fl.id));
         for (const fl of room.floor) if (fl.kind === 'thread' && !now2.has(fl.id)) BOSS_VFX.threadSnap(fl);
-        for (const fl of msg.f) if (!was.has(fl.id)) { if (fl.kind === 'thread') BOSS_VFX.threadShoot(fl); else if (fl.kind === 'pit') BOSS_VFX.floorFalls(fl); }
+        for (const fl of msg.f) if (!was.has(fl.id)) { if (fl.kind === 'thread') BOSS_VFX.threadShoot(fl); else if (fl.kind === 'pit') BOSS_VFX.floorFalls(fl); else if (fl.kind === 'grease' && !fl.stain) this.greaseSpill(fl); }
       }
       room.floorSynced = true;
       room.fv = msg.fv; room.floor = msg.f; room.layerFor = '';
@@ -1600,6 +1656,63 @@ const ArenaView = {
     if (amb && t < amb.end + 0.3) this.ambushShadow(ctx, amb, t);
     const cr = room.ev.crumble;
     if (cr && t < cr.end + 0.1) this.crumbleWarn(ctx, cr, t);
+    const dr = room.ev.drains;
+    if (dr && t < dr.end + 0.4) this.drainsBackUp(ctx, dr, t);
+    const ti = room.ev.tithe;
+    if (ti && t < ti.start + 2.2) this.titheWave(ctx, ti, t, v && v.boss);
+  },
+  // the kitchen's drain grates (the floor's: a big one in the middle, two smaller), where Clogged Drains spills
+  drainGrates() { return [[0, 0, 34], [-ARENA.hw * 0.55, ARENA.hh * 0.35, 20], [ARENA.hw * 0.55, ARENA.hh * 0.35, 20]]; },
+  // Clogged Drains (Grubnak, Hard): the grates back up while he casts: brown grease wells up through the bars,
+  // bubbling harder, and steam puffs off them, until they spill (the spill itself: greaseSpill, as the grease lands)
+  drainsBackUp(ctx, dr, t) {
+    const p = clamp((t - dr.start) / Math.max(0.1, dr.end - dr.start), 0, 1), k = Math.min(1, (t - dr.start) / 0.4) * clamp((dr.end + 0.4 - t) / 0.4, 0, 1);
+    for (const [gx, gy, gr] of this.drainGrates()) {
+      const R = gr * (1.05 + 0.9 * easeOut(p));
+      glow(ctx, gx, gy, R * 1.8, '#c88a3a', (0.12 + 0.25 * p) * k);
+      // grease welling up over the bars
+      ctx.save(); ctx.globalAlpha = k * (0.4 + 0.6 * p);
+      ctx.beginPath();
+      for (let i = 0; i <= 16; i++) { const a = i * TAU / 16, w = R * (0.85 + 0.15 * Math.sin(a * 3 + t * 2 + gx)); i ? ctx.lineTo(gx + Math.cos(a) * w, gy + Math.sin(a) * w * 0.8) : ctx.moveTo(gx + Math.cos(a) * w, gy + Math.sin(a) * w * 0.8); }
+      ctx.closePath(); ctx.fillStyle = 'rgba(70,48,18,0.85)'; ctx.fill(); ctx.strokeStyle = 'rgba(200,160,90,0.6)'; ctx.lineWidth = 2; ctx.stroke();
+      // bubbles swelling and popping, faster as it nears
+      for (let i = 0; i < 6; i++) {
+        const q = (t * (0.8 + 2.2 * p) + i / 6 + gx * 0.01) % 1, a = i * 2.4 + gx, d = R * 0.5 * hash01(i + gr);
+        if (q < 0.8) circle(ctx, gx + Math.cos(a) * d, gy + Math.sin(a) * d * 0.8, 2 + q * 5, 'rgba(150,110,50,0.9)', 'rgba(30,20,8,0.9)', 1);
+        else circle(ctx, gx + Math.cos(a) * d, gy + Math.sin(a) * d * 0.8, 6 + (q - 0.8) * 40, null, `rgba(230,200,140,${(1 - q) * 4})`, 1.2);
+      }
+      ctx.restore();
+      // steam puffing up off it
+      for (let i = 0; i < 4; i++) { const q = (t * 0.7 + i / 4 + gy * 0.01) % 1; glow(ctx, gx + Math.sin(t * 2 + i * 2) * 10, gy - 10 - q * 90, 14 + q * 22, '#ece4d8', 0.28 * Math.sin(q * Math.PI) * k * (0.4 + 0.6 * p)); }
+    }
+  },
+  // the drains' grease landing on the floor: a gout of it slops out and spreads to its edge (once, as it appears)
+  greaseSpill(fl) {
+    if (typeof VFX === 'undefined' || !VFX.fx) return;
+    VFX.fx({ dur: 0.7, layer: 'ground', draw: (c, p) => {
+      const q = easeOut(p), k = 1 - p * p;
+      for (let i = 0; i < 10; i++) {
+        const a = i * TAU / 10 + fl.id, d = fl.r * (0.3 + 0.9 * q), x = fl.x + Math.cos(a) * d, y = fl.y + Math.sin(a) * d * 0.86;
+        ellipse(c, x, y, 7 * (1 - q * 0.5), 4 * (1 - q * 0.5), a, `rgba(90,62,24,${0.9 * k})`);
+      }
+      ellipse(c, fl.x, fl.y, fl.r * (0.4 + 0.65 * q), fl.r * (0.4 + 0.65 * q) * 0.86, 0, null, `rgba(220,180,110,${0.6 * k})`, 3);
+    } });
+    if (VFX.splash) VFX.splash(fl.x, fl.y, { color: '#6a4a1c', n: 10, speed: 1.1 });
+  },
+  // Royal Tithe (the Hollow King): as it lands, a cold violet-grey wave rolls out from him through the hall, and the
+  // life is drawn up out of every hero toward him in pale wisps (their health has just fallen to a third)
+  titheWave(ctx, ti, t, boss) {
+    const age = t - ti.start, p = clamp(age / 1.4, 0, 1), k = clamp(1 - (age - 1.4) / 0.8, 0, 1);
+    const b = boss || { x: 0, y: -ARENA.hh * 0.6 }, R = ARENA.R * 1.2, r = 40 + easeOut(p) * R;
+    ctx.save(); ARENA.trace(ctx, 2); ctx.clip();
+    ctx.fillStyle = rgba('#141022', 0.22 * k * Math.sin(Math.min(1, age / 0.5) * Math.PI / 2)); ctx.fillRect(-R, -R, R * 2, R * 2);
+    const g = ctx.createRadialGradient(b.x, b.y, Math.max(0, r - 120), b.x, b.y, r);
+    g.addColorStop(0, 'rgba(150,130,190,0)'); g.addColorStop(0.8, rgba('#a898c8', 0.28 * k)); g.addColorStop(1, rgba('#e8e0ff', 0.5 * k));
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(b.x, b.y, r, 0, TAU); ctx.fill();
+    ellipse(ctx, b.x, b.y, r, r * 0.92, 0, null, rgba('#e8e0ff', 0.55 * k), 3);
+    // frost-grey motes left in its wake
+    for (let i = 0; i < 30; i++) { const a = hash01(i * 3 + 1) * TAU, d = hash01(i * 5 + 2) * r; if (d > r - 10) continue; circle(ctx, b.x + Math.cos(a) * d, b.y + Math.sin(a) * d - (age * 20) % 30, 1.6, rgba('#d8d0f0', 0.45 * k)); }
+    ctx.restore();
   },
   // Crumbling Summit (Volkar, Hard): the wedge about to go shudders and darkens, and a crack runs along where it'll break
   crumbleWarn(ctx, cr, t) {
@@ -1670,6 +1783,26 @@ const ArenaView = {
       const e = env.entById(id); if (!e) continue;
       const k = clamp((t - dn.start) / 1.5, 0, 1) * (0.45 + 0.25 * Math.sin(t * 6));
       ctx.save(); ctx.globalAlpha = k; this.doomMark(ctx, e.x, e.y - (e.lift || 0) - 92, 1, t); ctx.restore();
+    }
+    // Royal Tithe: as the wave reaches each hero, their life is drawn up out of them in violet-grey wisps, off toward him
+    const ti = room.ev.tithe;
+    if (ti && t < ti.start + 2.2 && env.boss) {
+      const b = env.boss, age = t - ti.start, R = ARENA.R * 1.2;
+      for (const u of env.units || []) {
+        const reach = (Math.hypot(u.x - b.x, u.y - b.y) - 40) / R, a0 = clamp((age - reach * 1.4 * 0.6) / 1.2, 0, 1);
+        if (a0 <= 0 || a0 >= 1) continue;
+        const k = Math.sin(a0 * Math.PI);
+        glow(ctx, u.x, u.y - 30, 36, '#a898c8', 0.45 * k);
+        ellipse(ctx, u.x, u.y + 2, 22 + 10 * a0, 9 + 4 * a0, 0, null, rgba('#d8d0f0', 0.6 * k), 2);
+        for (let i = 0; i < 5; i++) {
+          // each wisp leaves them upward and bends off toward him
+          const q = clamp(a0 * 1.4 - i * 0.08, 0, 1), sx = u.x + (i - 2) * 6, sy = u.y - 20, ex = sx + (b.x - sx) * 0.25 * q, ey = sy - 70 * q + (b.y - 150 - sy) * 0.1 * q;
+          if (q <= 0) continue;
+          ctx.beginPath(); ctx.moveTo(sx, sy); ctx.quadraticCurveTo(sx + Math.sin(t * 5 + i) * 10, (sy + ey) / 2, ex, ey);
+          ctx.strokeStyle = rgba(i % 2 ? '#c8bce8' : '#8a7aa8', 0.7 * k * (1 - q * 0.5)); ctx.lineWidth = 3 - q * 1.5; ctx.lineCap = 'round'; ctx.stroke();
+          circle(ctx, ex, ey, 2.5, rgba('#ece6ff', 0.8 * k));
+        }
+      }
     }
     const rs = room.ev.rodmark;
     if (rs && t < rs.end) for (const id of rs.ids || []) {
@@ -1845,12 +1978,12 @@ const ArenaView = {
     }
   },
   // Squall Line (Volkar): the quiet circle drifts round him. Outside it the storm is live (dark, crackling, washed red:
-  // it's the damage) and its edge is red; the circle itself is left unpainted. A dashed red line shows where that edge
-  // will be in a moment. During the cast it pulses where it will start.
+  // it's the damage) and its edge is red; the circle itself is left unpainted. Red chevrons on the storm side of its
+  // trailing edge show which way the storm is pushing. During the cast it pulses where it will start.
   squallDraw(ctx, q, t) {
     const begin = q.start + q.at, p = clamp((t - begin) / Math.max(0.1, q.sdur), 0, 1);
     const at = u => { const a = q.a0 + q.dir * TAU * clamp(u, 0, 1); return { x: Math.cos(a) * q.D, y: Math.sin(a) * q.D }; };
-    const c = at(p), g = at((t + 1.5 - begin) / q.sdur), warm = t < begin;
+    const c = at(p), warm = t < begin;
     const k = clamp((t - q.start) / 0.4, 0, 1) * clamp((q.end - t) / 0.5, 0, 1);
     if (k <= 0) return;
     ctx.save(); ctx.globalAlpha = k;
@@ -1886,15 +2019,57 @@ const ArenaView = {
         jagged(ctx, c.x + Math.cos(a0) * q.R, c.y + Math.sin(a0) * q.R, c.x + Math.cos(a1) * q.R, c.y + Math.sin(a1) * q.R, Math.floor(t * 12) * 7 + i, '#7fe8ff', 1.4);
       }
     }
-    if (p < 1) { ctx.setLineDash([12, 10]); ctx.lineDashOffset = -t * 30; ctx.beginPath(); ctx.arc(g.x, g.y, q.R, 0, TAU); ctx.strokeStyle = rgba(BossTells.COL.dangerHi, 0.55); ctx.lineWidth = 2; ctx.stroke(); ctx.setLineDash([]); }
+    // which way the storm is coming: its front is the trailing side of the circle, where the edge closes in. Chevrons
+    // march along the storm side of that stretch, pointing the way the circle travels (never a ghost of where the quiet
+    // circle will be: that would paint the safe spot)
+    if (p < 1) {
+      const ca = q.a0 + q.dir * TAU * p, tx = -Math.sin(ca) * q.dir, ty = Math.cos(ca) * q.dir, back = Math.atan2(-ty, -tx), run = (t * 0.8) % 1;
+      ctx.save(); ctx.beginPath(); ctx.rect(-3000, -3000, 6000, 6000); ctx.arc(c.x, c.y, q.R + 4, 0, TAU, true); ctx.clip('evenodd');
+      ctx.beginPath(); ctx.arc(c.x, c.y, q.R + 10, back - 1.1, back + 1.1);
+      ctx.strokeStyle = rgba(BossTells.COL.dangerHi, warm ? 0.35 + 0.2 * Math.sin(t * 6) : 0.65); ctx.lineWidth = 8; ctx.stroke();
+      for (let i = -3; i <= 3; i++) for (let row = 0; row < 3; row++) {
+        const a = back + i * 0.3, d = q.R + 40 + (row - run) * 52, x = c.x + Math.cos(a) * d, y = c.y + Math.sin(a) * d;   // (marching in on the circle)
+        const al = (warm ? 0.55 : 0.85) * (1 - Math.abs(i) / 4.5) * (row === 0 ? 1 - run : row === 2 ? Math.min(1, run * 3) : 1);
+        ctx.save(); ctx.translate(x, y); ctx.rotate(Math.atan2(ty, tx));
+        poly(ctx, [-14, -20, 14, 0, -14, 20, -5, 0], rgba(BossTells.COL.dangerHi, al), rgba('#1a0a08', 0.7 * al), 2);
+        ctx.restore();
+      }
+      ctx.restore();
+    }
     ctx.restore();
   },
-  // the Eye of the Storm: the clouds part over the summit and a pale, still light falls on it
+  // the Eye of the Storm: the clouds part over the summit. A wall of storm cloud turns slowly round the peak, out past
+  // the cliff edge (its inner face lit), and a pale, still light falls evenly over the whole summit. Nothing on the
+  // rock itself is marked: the whole summit is calm alike (the Eye is a lull, not a place to stand).
   eyeCalm(ctx, e, t) {
-    const k = clamp((t - e.start) / 2, 0, 1) * clamp((e.end - t) / 2, 0, 1);
+    const open = clamp((t - e.start) / 3, 0, 1), close = clamp((e.end - t) / 3, 0, 1), k = Math.min(open, close);
     if (k <= 0) return;
+    const R0 = (ARENA.full || ARENA.r) + 30, part = easeOut(k);   // the wall draws back as the clouds part
+    // the even light over the summit
     ctx.save(); ARENA.trace(ctx, 2); ctx.clip();
-    glow(ctx, 0, 0, ARENA.r * 1.1, '#dff0ff', 0.16 * k);
+    ctx.fillStyle = rgba('#dff0ff', 0.09 * k); ctx.fillRect(-R0, -R0, R0 * 2, R0 * 2);
+    ctx.restore();
+    // the cloud wall: three bands of cloud turning at their own speeds, beyond the rim
+    ctx.save();
+    ctx.beginPath(); ctx.rect(-4000, -4000, 8000, 8000); ctx.arc(0, 0, R0 - 10, 0, TAU, true); ctx.clip('evenodd');
+    for (let band = 0; band < 3; band++) {
+      const n = 22 + band * 6, spin = t * (0.05 - band * 0.012), rr = R0 + 40 + band * 70 + (1 - part) * -60;
+      for (let i = 0; i < n; i++) {
+        const a = spin + i * TAU / n + hash01(i * 7 + band) * 0.2, d = rr + (hash01(i * 3 + band * 11) - 0.5) * 50;
+        const x = Math.cos(a) * d, y = Math.sin(a) * d, s = 70 + hash01(i + band * 31) * 50;
+        glow(ctx, x, y, s, band === 2 ? '#1a2232' : '#2a3448', 0.7 * k);
+        // its inner face, lit by the light falling into the eye
+        glow(ctx, x - Math.cos(a) * s * 0.45, y - Math.sin(a) * s * 0.45, s * 0.45, '#b8cce4', 0.16 * k * (band === 0 ? 1 : 0.5));
+      }
+    }
+    // the swirl: long curved streaks of cloud spiralling round the rim
+    ctx.lineCap = 'round';
+    for (let i = 0; i < 12; i++) {
+      const a0 = t * 0.06 + i * TAU / 12, d0 = R0 + 30 + (i % 3) * 40;
+      ctx.beginPath();
+      for (let s = 0; s <= 10; s++) { const a = a0 + s * 0.06, d = d0 + s * 6; s ? ctx.lineTo(Math.cos(a) * d, Math.sin(a) * d) : ctx.moveTo(Math.cos(a) * d, Math.sin(a) * d); }
+      ctx.strokeStyle = rgba('#c8d8ec', 0.26 * k); ctx.lineWidth = 6; ctx.stroke();
+    }
     ctx.restore();
   },
   // the Hollow King's banners, standards planted either side of the dais below the throne, four of them (the Charge Sheet uses the

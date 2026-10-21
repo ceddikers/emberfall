@@ -63,6 +63,43 @@ const BossIcons = (() => {
   };
   const coffin = (c, x, y, s, col) => fill(c, col, [[x - 6 * s, y - 20 * s], [x + 6 * s, y - 20 * s], [x + 11 * s, y - 8 * s], [x + 7 * s, y + 20 * s], [x - 7 * s, y + 20 * s], [x - 11 * s, y - 8 * s]]);
   const motion = (c, col, lines) => { for (const l of lines) stroke(c, col, 2.5, l); };
+  // the illustrated style (the newer glyphs, standing in for the painted icons): a flat fill, a dark ink outline, one
+  // hard shadow tone and a small hard highlight, lit from the upper left
+  const inked = (c, col, pts, w = 2.2) => { path(c, pts); c.fillStyle = col; c.fill(); c.strokeStyle = INK; c.lineWidth = w; c.lineJoin = 'round'; c.stroke(); };
+  const inkDisc = (c, x, y, r, col, w = 2) => { c.beginPath(); c.arc(x, y, r, 0, TAU); c.fillStyle = col; c.fill(); c.strokeStyle = INK; c.lineWidth = w; c.stroke(); };
+  const inkEll = (c, x, y, rx, ry, col, w = 2, rot = 0) => { c.beginPath(); c.ellipse(x, y, rx, ry, rot, 0, TAU); c.fillStyle = col; c.fill(); c.strokeStyle = INK; c.lineWidth = w; c.stroke(); };
+  const hi = (c, x, y, rx, ry, rot = -0.5) => { c.beginPath(); c.ellipse(x, y, rx, ry, rot, 0, TAU); c.fillStyle = 'rgba(255,255,255,0.75)'; c.fill(); };
+  const shadowUnder = (c, x, y, rx) => { c.beginPath(); c.ellipse(x, y, rx, rx * 0.28, 0, 0, TAU); c.fillStyle = 'rgba(0,0,0,0.35)'; c.fill(); };
+  // a meat cleaver, inked: blade (with its hard shadow and edge glint), hanging hole, wooden handle
+  const inkCleaver = (c, x, y, a, s, edge) => {
+    c.save(); c.translate(x, y); c.rotate(a); c.scale(s, s);
+    inked(c, '#8a5a2e', [[10, -3], [26, -3], [27, 3], [10, 3]], 2);
+    inked(c, '#dfe4ea', [[-16, -11], [11, -11], [11, 9], [-12, 9], [-16, 5]], 2.2);
+    fill(c, '#9aa4b0', [[-16, 2], [11, 2], [11, 9], [-12, 9], [-16, 5]]);
+    stroke(c, edge || '#ffffff', 1.6, [[-14, 8], [10, 8]]);
+    disc(c, -9, -5, 2.4, INK);
+    c.restore();
+  };
+  const inkCloud = (c, x, y, s, col, dark) => {
+    const lobes = [[-12, 3, 9], [0, -5, 12], [12, 2, 9], [-5, 7, 9], [6, 7, 9]];
+    for (const [dx, dy, r] of lobes) inkDisc(c, x + dx * s, y + dy * s, r * s, col, 2.4);
+    for (const [dx, dy, r] of lobes) disc(c, x + dx * s, y + dy * s, r * s - 1.2, col);
+    for (const [dx, dy, r] of lobes.slice(3)) disc(c, x + dx * s, y + dy * s + 2 * s, r * s - 2.5, dark);
+    hi(c, x - 4 * s, y - 9 * s, 4 * s, 2 * s);
+  };
+  const inkBolt = (c, col, x, y, s = 1) => { const pts = [[x + 3 * s, y - 18 * s], [x - 8 * s, y + 2 * s], [x, y + 2 * s], [x - 4 * s, y + 18 * s], [x + 9 * s, y - 3 * s], [x + 1 * s, y - 3 * s]]; inked(c, col, pts, 1.8); };
+  const inkBell = (c, x, y, s, col, dark) => {
+    const pts = [[x - 5 * s, y - 14 * s], [x - 11 * s, y - 10 * s], [x - 13 * s, y + 6 * s], [x - 17 * s, y + 10 * s], [x + 17 * s, y + 10 * s], [x + 13 * s, y + 6 * s], [x + 11 * s, y - 10 * s], [x + 5 * s, y - 14 * s]];
+    inked(c, col, pts, 2.2);
+    fill(c, dark, [[x + 4 * s, y - 12 * s], [x + 10 * s, y - 9 * s], [x + 12 * s, y + 6 * s], [x + 16 * s, y + 9 * s], [x + 6 * s, y + 9 * s]]);
+    hi(c, x - 6 * s, y - 6 * s, 2 * s, 5 * s, 0.2);
+    inkDisc(c, x, y + 14 * s, 3.5 * s, dark, 1.6);
+  };
+  const inkCrown = (c, x, y, s, col = '#e8c15a') => {
+    inked(c, col, [[x - 16 * s, y + 8 * s], [x - 18 * s, y - 8 * s], [x - 8 * s, y], [x, y - 12 * s], [x + 8 * s, y], [x + 18 * s, y - 8 * s], [x + 16 * s, y + 8 * s]], 2);
+    fill(c, '#a8823a', [[x - 16 * s, y + 3 * s], [x + 16 * s, y + 3 * s], [x + 16 * s, y + 8 * s], [x - 16 * s, y + 8 * s]]);
+    disc(c, x, y + 1 * s, 2.4 * s, '#6dff9a');
+  };
   // the party slots' own colours (FIGHT.SLOTS in fight.js; a copy so the icons draw before a fight is loaded)
   const FIGHT_SLOTS = typeof FIGHT !== 'undefined' && FIGHT.SLOTS ? FIGHT.SLOTS : ['#5fe36a', '#b26cff', '#ff6fd2', '#f2eee4'];
 
@@ -91,21 +128,55 @@ const BossIcons = (() => {
     'Service!': (c, A) => { c.beginPath(); c.arc(32, 40, 16, Math.PI, 0); c.closePath(); c.fillStyle = L; c.fill(); fill(c, L, [[10, 40], [54, 40], [54, 45], [10, 45]]); disc(c, 32, 22, 3.5, L); fill(c, A, [[29, 6], [35, 6], [33, 16], [31, 16]]); disc(c, 32, 19, 1.5, A); },
     // four plates set down round a cleaver, the nearest with a full blue rim (a soak), the others filling less (the order)
     'Dinner Rush': (c, A) => {
-      cleaver(c, 32, 30, -0.5, 0.75, L);
-      for (const [x, y, f] of [[18, 46, 1], [46, 46, 0.66], [12, 18, 0.33], [52, 16, 0.33]]) {
-        disc(c, x, y, 7, L); ring(c, x, y, 7, INK, 1.2);
-        c.beginPath(); c.arc(x, y, 9, -Math.PI / 2, -Math.PI / 2 + TAU * f); c.strokeStyle = '#3d8bff'; c.lineWidth = 2.5; c.stroke();
+      inkCleaver(c, 32, 28, -1.2, 0.8, A);
+      for (const [x, y, f] of [[18, 48, 1], [47, 47, 0.66], [12, 16, 0.33], [53, 15, 0.33]]) {
+        shadowUnder(c, x + 1, y + 6, 8); inkEll(c, x, y, 8, 6.5, '#f6f3ea', 1.8); c.beginPath(); c.ellipse(x, y, 5, 4, 0, 0, TAU); c.strokeStyle = '#d8d2c2'; c.lineWidth = 1.2; c.stroke();
+        c.beginPath(); c.ellipse(x, y, 10.5, 9, 0, -Math.PI / 2, -Math.PI / 2 + TAU * f); c.strokeStyle = '#3d8bff'; c.lineWidth = 2.6; c.lineCap = 'round'; c.stroke();
       }
+      for (let i = 0; i < 2; i++) stroke(c, 'rgba(246,242,238,0.8)', 1.8, [[15 + i * 6, 38], [13 + i * 6, 33], [16 + i * 6, 29]]);
     },
     'Flare-Up': (c, A) => { flame(c, 32, 36, 24, A, '#ffe08a'); stroke(c, L, 2.5, [[12, 54], [52, 54]]); },
     'Ladle Spin': (c, A) => { c.beginPath(); c.arc(32, 32, 22, 0.2, 5.2); c.strokeStyle = A; c.lineWidth = 3; c.stroke(); stroke(c, L, 4, [[18, 18], [36, 36]]); c.beginPath(); c.arc(40, 40, 8, 0, Math.PI); c.fillStyle = L; c.fill(); },
     'Lid Slam': (c, A) => { c.beginPath(); c.ellipse(32, 30, 22, 8, 0, Math.PI, 0); c.closePath(); c.fillStyle = '#c8ced4'; c.fill(); disc(c, 32, 20, 4, '#c8ced4'); motion(c, A, [[[10, 48], [54, 48]], [[16, 56], [48, 56]]]); },
     'Stockpot': (c, A) => { fill(c, L, [[10, 22], [54, 22], [50, 56], [14, 56]]); fill(c, '#8a5a2e', [[6, 20], [58, 20], [58, 25], [6, 25]]); for (const x of [22, 34, 44]) ring(c, x, 14, 3.5, A, 2); },
     'Gorge': (c, A) => { c.beginPath(); c.arc(32, 34, 20, 0.35, TAU - 0.35); c.lineTo(32, 34); c.closePath(); c.fillStyle = L; c.fill(); for (let i = 0; i < 3; i++) { c.beginPath(); c.arc(32, 34, 8 + i * 6, i, i + 2); c.strokeStyle = A; c.lineWidth = 2; c.stroke(); } },
-    'Mince': (c, A) => { fill(c, '#8a5a2e', [[8, 42], [56, 42], [56, 54], [8, 54]]); fill(c, A, [[8, 42], [32, 42], [32, 54], [8, 54]]); cleaver(c, 26, 24, -0.35, 1.1, L); stroke(c, '#ffe08a', 2, [[14, 10], [18, 14]]); },
-    'Double Chop': (c, A) => { fill(c, A, [[8, 42], [31, 42], [31, 54], [8, 54]]); fill(c, shade(A, -0.35), [[33, 42], [56, 42], [56, 54], [33, 54]]); cleaver(c, 20, 24, -0.25, 0.85, L); cleaver(c, 44, 22, 0.25, 0.85, L); },
-    "Butcher's Charge": (c, A) => { for (const sd of [-1, 1]) fill(c, L, [[32 + sd * 8, 22], [32 + sd * 22, 10], [32 + sd * 14, 26]]); disc(c, 32, 30, 11, '#9a5a2e'); disc(c, 27, 28, 2, INK); disc(c, 37, 28, 2, INK); fill(c, A, [[26, 44], [38, 44], [38, 50], [44, 50], [32, 60], [20, 50], [26, 50]]); },
-    'Last Call': (c, A) => { ring(c, 32, 32, 20, L, 3.5); stroke(c, L, 3, [[32, 32], [32, 17]]); stroke(c, L, 3, [[32, 32], [40, 36]]); flame(c, 50, 50, 12, A, '#ffe08a'); },
+    // a chopping board, a heap of minced meat on it, the cleaver coming down into the heap
+    'Mince': (c, A) => {
+      shadowUnder(c, 32, 54, 24);
+      inked(c, '#a8743a', [[8, 42], [56, 42], [58, 52], [6, 52]]); stroke(c, '#7a4e22', 1.2, [[12, 47], [52, 47]]);
+      for (const [x, y, r] of [[22, 40, 6], [30, 37, 7], [38, 40, 6], [27, 42, 5], [35, 42, 5]]) inkDisc(c, x, y, r, '#c0503a', 1.5);
+      for (const [x, y] of [[24, 37], [33, 34], [39, 38]]) disc(c, x, y, 1.6, '#f0d8c0');
+      inkCleaver(c, 34, 20, -0.55, 1.15, A);
+      motion(c, A, [[[50, 12], [54, 6]], [[54, 20], [60, 17]]]);
+    },
+    // both halves of the board hit at once: two cleavers coming down crossed, the left half lit in his colour
+    'Double Chop': (c, A) => {
+      inked(c, A, [[6, 44], [31, 44], [31, 56], [6, 56]]); inked(c, shade(A, -0.45), [[33, 44], [58, 44], [58, 56], [33, 56]]);
+      stroke(c, '#fff2c0', 2, [[32, 40], [32, 60]]);
+      inkCleaver(c, 21, 24, -0.75, 0.95, A); inkCleaver(c, 43, 24, 0.75 + Math.PI, 0.95, A);
+      motion(c, '#fff2c0', [[[8, 8], [14, 14]], [[56, 8], [50, 14]]]);
+    },
+    // a line straight across the board: horns lowered at the near end, skid marks and dust behind, a cask splitting
+    // at the far end
+    "Butcher's Charge": (c, A) => {
+      inked(c, 'rgba(255,154,58,0.35)', [[6, 30], [54, 30], [54, 42], [6, 42]], 1.5);
+      motion(c, '#3a1e0e', [[[8, 34], [30, 34]], [[8, 39], [26, 39]]]);
+      inked(c, '#9a6a36', [[46, 24], [58, 24], [58, 48], [46, 48]]); stroke(c, '#3a3a42', 2.5, [[46, 30], [58, 30]]); stroke(c, '#3a3a42', 2.5, [[46, 42], [58, 42]]);
+      stroke(c, INK, 2, [[52, 22], [50, 34], [54, 40], [51, 50]]);
+      for (const sd of [-1, 1]) inked(c, L, [[30, 36 + sd * 5], [42, 36 + sd * 14], [36, 36 + sd * 4]], 1.8);
+      inkDisc(c, 28, 36, 9, '#9a5a2e'); hi(c, 25, 32, 3, 1.6);
+      for (const [x, y] of [[10, 24], [16, 20], [12, 50]]) disc(c, x, y, 3, 'rgba(232,220,200,0.7)');
+    },
+    // the last orders: a brass service bell, a clock face behind it at the stroke of the hour, a flame catching
+    'Last Call': (c, A) => {
+      inkDisc(c, 34, 26, 20, '#efe6cf', 2.4); ring(c, 34, 26, 16, 'rgba(26,22,34,0.25)', 1.2);
+      for (let i = 0; i < 12; i++) { const a = i * TAU / 12; disc(c, 34 + Math.cos(a) * 16, 26 + Math.sin(a) * 16, i % 3 ? 0.9 : 1.8, INK); }
+      stroke(c, INK, 3, [[34, 26], [34, 12]]); stroke(c, INK, 2.2, [[34, 26], [35, 15]]);
+      shadowUnder(c, 22, 57, 14);
+      c.beginPath(); c.arc(22, 52, 12, Math.PI, 0); c.closePath(); c.fillStyle = '#d8a84a'; c.fill(); c.strokeStyle = INK; c.lineWidth = 2; c.stroke();
+      inked(c, '#6a4a22', [[8, 52], [36, 52], [36, 56], [8, 56]], 1.8); inkDisc(c, 22, 38, 2.6, '#5a5a62', 1.4); hi(c, 17, 46, 2.2, 3.5);
+      flame(c, 52, 52, 13, A, '#ffe08a');
+    },
     // Skitterra
     'Venom Mist': (c, A) => { cloud(c, 32, 30, 1.2, A); for (const x of [22, 34, 44]) drop(c, x, 50, 0.6, L); },
     'Venom Spit': (c, A) => { drop(c, 42, 24, 1.3, A); for (const [x, y, r] of [[30, 34, 3.5], [22, 42, 3], [15, 49, 2.5]]) disc(c, x, y, r, A); ring(c, 44, 46, 8, L, 2); },
@@ -125,9 +196,12 @@ const BossIcons = (() => {
     'Strand': (c, A) => { stroke(c, L, 2.5, [[8, 34], [56, 30]]); },
     // a field of overlapping snares with three holes left clear, and a clutch hanging at the side
     'Snare Weave': (c, A) => {
-      for (const [x, y] of [[14, 14], [32, 12], [50, 14], [12, 32], [52, 32], [22, 50], [42, 52], [32, 36]]) ring(c, x, y, 10, L, 1.8);
-      for (const [x, y] of [[24, 26], [40, 26], [32, 50]]) disc(c, x, y, 6, INK);
-      stroke(c, L, 1.2, [[56, 4], [56, 18]]); egg(c, 56, 22, 0.55, '#efeedc');
+      for (const [x, y] of [[14, 14], [32, 11], [50, 14], [11, 32], [53, 32], [21, 51], [43, 52], [32, 34]]) {
+        ring(c, x, y, 10, INK, 4); ring(c, x, y, 10, L, 2);
+        for (let i = 0; i < 4; i++) { const a = i * Math.PI / 4 + x; stroke(c, 'rgba(242,230,200,0.45)', 1, [[x - Math.cos(a) * 9, y - Math.sin(a) * 9], [x + Math.cos(a) * 9, y + Math.sin(a) * 9]]); }
+      }
+      for (const [x, y] of [[23, 23], [41, 23], [32, 50]]) { disc(c, x, y, 6.5, '#1a2440'); ring(c, x, y, 6.5, INK, 1.5); }
+      stroke(c, L, 1.2, [[57, 2], [57, 16]]); egg(c, 57, 21, 0.6, '#efeedc'); hi(c, 55, 18, 1.5, 2.5);
     },
     'Ceiling Ambush': (c, A) => { stroke(c, L, 1.5, [[32, 0], [32, 20]]); spider(c, 32, 30, 0.9, L); c.beginPath(); c.ellipse(32, 54, 16, 4, 0, 0, TAU); c.fillStyle = A; c.fill(); },
     'Into the Dark': (c, A) => { disc(c, 32, 32, 22, '#05040a'); spider(c, 32, 28, 0.7, '#3a3448'); disc(c, 27, 24, 2, A); disc(c, 37, 24, 2, A); },
@@ -135,7 +209,19 @@ const BossIcons = (() => {
     'Molt': (c, A) => { spider(c, 32, 32, 1.1, 'rgba(242,230,200,0.35)'); stroke(c, L, 2, [[22, 20], [28, 30], [24, 40], [30, 50]]); },
     'Tightening Web': (c, A) => { web(c, 32, 32, 24, L, 1.8); ring(c, 32, 32, 24, A, 3); },
     'The Web Gives Way': (c, A) => { ring(c, 32, 32, 24, '#ff4ab0', 4); web(c, 32, 32, 14, L, 1.6); stroke(c, '#ff4ab0', 2, [[48, 16], [54, 10]]); stroke(c, '#ff4ab0', 2, [[12, 48], [8, 56]]); },
-    'Chrysalis': (c, A) => { c.beginPath(); c.ellipse(32, 32, 14, 22, 0, 0, TAU); c.fillStyle = L; c.fill(); for (let i = 0; i < 6; i++) stroke(c, INK, 1.6, [[19, 14 + i * 7], [32, 18 + i * 7], [45, 13 + i * 7]]); stroke(c, A, 2, [[32, 2], [32, 10]]); for (const x of [20, 44]) stroke(c, '#ff4ab0', 2.5, [[x, 30], [x + (x < 32 ? -8 : 8), 26]]); },
+    // a silk cocoon hanging in the web, wound tight in bands, her glow showing through a seam, strands pulling round it
+    'Chrysalis': (c, A) => {
+      web(c, 32, 30, 28, 'rgba(242,230,200,0.22)', 1);
+      stroke(c, L, 1.6, [[32, 0], [32, 9]]);
+      inkEll(c, 32, 34, 14, 22, '#efeedc', 2.4);
+      c.save(); c.beginPath(); c.ellipse(32, 34, 13, 21, 0, 0, TAU); c.clip();
+      fill(c, '#c8c2b0', [[38, 10], [48, 20], [48, 58], [36, 58]]);
+      for (let i = 0; i < 6; i++) stroke(c, 'rgba(26,22,34,0.55)', 1.4, [[17, 17 + i * 7], [32, 21 + i * 7], [47, 16 + i * 7]]);
+      stroke(c, '#ff7ac0', 2.2, [[30, 24], [33, 32], [30, 40], [33, 46]]);
+      c.restore();
+      hi(c, 25, 24, 2.5, 6, 0.1);
+      for (const sd of [-1, 1]) stroke(c, A, 1.6, [[32 + sd * 13, 30], [32 + sd * 26, 22]]);
+    },
     'Devour': (c, A) => { c.beginPath(); c.arc(32, 30, 22, 0, Math.PI); c.closePath(); c.fillStyle = '#2a1424'; c.fill(); for (const sd of [-1, 1]) fill(c, '#ff7ac0', [[32 + sd * 14, 26], [32 + sd * 6, 26], [32 + sd * 9, 50]]); for (const x of [20, 44]) drop(c, x, 54, 0.5, A); },
     // Volkar
     'Thunderclap': (c, A) => { cloud(c, 32, 22, 1.1, '#5a6a84'); bolt(c, A, 32, 42, 0.9); },
@@ -147,16 +233,24 @@ const BossIcons = (() => {
     'Lightning Rods': (c, A) => { stroke(c, L, 4, [[32, 56], [32, 16]]); fill(c, L, [[26, 18], [32, 6], [38, 18]]); bolt(c, A, 46, 22, 0.5); ring(c, 32, 56, 10, A, 2); },
     // a rod held point-down over a hand, sparks on its tip
     'Grounding Rods': (c, A) => {
-      stroke(c, L, 4, [[32, 8], [32, 44]]); fill(c, L, [[26, 42], [32, 56], [38, 42]]);
-      fill(c, '#8a939e', [[22, 10], [42, 10], [42, 15], [22, 15]]);
-      bolt(c, A, 46, 30, 0.45); bolt(c, A, 18, 34, 0.35);
+      for (const dx of [-6, 0, 6]) inked(c, '#8a939e', [[32 + dx - 2.5, 12], [32 + dx, 3 - (dx ? 0 : 3)], [32 + dx + 2.5, 12]], 1.4);
+      inked(c, '#6a7480', [[22, 11], [42, 11], [42, 16], [22, 16]], 1.8);
+      inked(c, '#5a626e', [[29, 16], [35, 16], [35, 44], [29, 44]], 2);
+      stroke(c, 'rgba(220,230,240,0.55)', 1.4, [[30.5, 18], [30.5, 42]]);
+      inked(c, '#8a939e', [[27, 43], [37, 43], [32, 56]], 2);
+      c.beginPath(); c.ellipse(32, 58, 12, 3.5, 0, 0, TAU); c.fillStyle = 'rgba(127,232,255,0.5)'; c.fill();
+      inkBolt(c, A, 46, 28, 0.42); inkBolt(c, A, 18, 34, 0.34);
+      for (const [x, y] of [[40, 50], [24, 52], [44, 56]]) stroke(c, '#dffbff', 1.6, [[x, y], [x + 3, y - 4]]);
     },
     // a squall front marching across in three bands, broken by a rod with a clear lane behind it
     'Supercell': (c, A) => {
-      for (const x of [14, 26, 38]) fill(c, '#3a4a64', [[x - 5, 8], [x + 5, 8], [x + 5, 56], [x - 5, 56]]);
-      fill(c, INK, [[18, 28], [56, 28], [56, 36], [18, 36]]);
-      stroke(c, L, 3.5, [[16, 18], [16, 34]]); fill(c, L, [[12, 32], [16, 40], [20, 32]]);
-      bolt(c, A, 50, 16, 0.4);
+      for (const x of [12, 25, 38]) {
+        inked(c, '#3a4a64', [[x - 5, 6], [x + 5, 6], [x + 5, 58], [x - 5, 58]], 1.8);
+        for (let y = 10; y < 56; y += 9) stroke(c, 'rgba(188,214,238,0.6)', 1, [[x - 2, y], [x - 4, y + 5]]);
+      }
+      inked(c, '#1a2440', [[20, 28], [58, 28], [58, 36], [20, 36]], 1.4);
+      inked(c, '#5a626e', [[14, 14], [18, 14], [18, 34], [14, 34]], 1.6); inked(c, '#8a939e', [[12, 33], [20, 33], [16, 41]], 1.6);
+      inkBolt(c, A, 50, 16, 0.42); inkBolt(c, '#ffffff', 30, 48, 0.3);
     },
     'Still Air': (c, A) => { fill(c, '#ffd84a', [[10, 18], [26, 18], [24, 52], [12, 52]]); fill(c, '#6ab8ff', [[38, 18], [54, 18], [52, 52], [40, 52]]); stroke(c, INK, 3, [[18, 28], [18, 40]]); stroke(c, INK, 3, [[12, 34], [24, 34]]); stroke(c, INK, 3, [[40, 34], [52, 34]]); },
     'Rod Strike': (c, A) => { fill(c, '#8a9ab0', [[22, 22], [42, 22], [40, 56], [24, 56]]); bolt(c, A, 32, 14, 0.7); },
@@ -171,8 +265,18 @@ const BossIcons = (() => {
     'Skyfall': (c, A) => { fill(c, 'rgba(223,244,255,0.85)', [[24, 0], [40, 0], [44, 48], [20, 48]]); c.beginPath(); c.ellipse(32, 50, 20, 6, 0, 0, TAU); c.strokeStyle = A; c.lineWidth = 3; c.stroke(); },
     'Heavens Fall': (c, A) => { fill(c, 'rgba(223,244,255,0.85)', [[22, 0], [42, 0], [42, 40], [22, 40]]); for (const x of [18, 28, 36, 46]) disc(c, x, 50, 4, L); ring(c, 32, 50, 16, '#3d8bff', 2.5); },
     'Skybreak': (c, A) => { cloud(c, 32, 20, 1.1, '#3a4660'); stroke(c, '#ffffff', 3, [[14, 18], [26, 24], [34, 16], [48, 22]]); bolt(c, A, 26, 44, 0.7); bolt(c, A, 44, 46, 0.55); },
-    'Gathering Storm': (c, A) => { cloud(c, 32, 20, 1, '#4a5874'); for (const [x, y] of [[18, 44], [32, 50], [46, 44]]) bolt(c, A, x, y, 0.42); ring(c, 32, 46, 22, 'rgba(127,232,255,0.4)', 2); },
-    'Thunderhead': (c, A) => { cloud(c, 32, 18, 1.3, '#2e3850'); bolt(c, '#ffffff', 32, 44, 1); bolt(c, A, 32, 44, 0.75); },
+    // a low storm cloud, three bolts already crackling out of its underside, sparks at their feet
+    'Gathering Storm': (c, A) => {
+      for (const [x, y] of [[18, 46], [32, 50], [46, 46]]) { inkBolt(c, A, x, y - 4, 0.48); for (const d of [-5, 5]) stroke(c, '#dffbff', 1.4, [[x + d * 0.6, y + 12], [x + d, y + 8]]); }
+      inkCloud(c, 32, 20, 1.15, '#5a6a84', '#3a4660');
+    },
+    // one great anvil cloud, a single thick white bolt splitting it to the ground
+    'Thunderhead': (c, A) => {
+      inked(c, '#3a4660', [[6, 14], [58, 14], [52, 22], [12, 22]], 2.2); fill(c, '#2a3448', [[8, 18], [56, 18], [52, 22], [12, 22]]);
+      inkCloud(c, 32, 26, 1.1, '#4a5874', '#2e3850');
+      inkBolt(c, '#ffffff', 32, 46, 0.95); stroke(c, A, 1.6, [[34, 30], [26, 46], [33, 46], [29, 62]]);
+      c.beginPath(); c.ellipse(32, 61, 12, 3, 0, 0, TAU); c.fillStyle = 'rgba(223,251,255,0.55)'; c.fill();
+    },
     // the Hollow King
     'Sceptre Sweep': (c, A) => { c.beginPath(); c.moveTo(14, 50); c.arc(14, 50, 40, -1.4, -0.1); c.closePath(); c.fillStyle = 'rgba(232,193,90,0.55)'; c.fill(); stroke(c, '#e8c15a', 4, [[14, 50], [40, 18]]); disc(c, 40, 18, 5, '#e8c15a'); },
     'Barrow Stomp': (c, A) => { ring(c, 32, 40, 18, '#4fe0d0', 3); for (let i = 0; i < 6; i++) { const a = i * TAU / 6; stroke(c, '#4fe0d0', 2, [[32, 40], [32 + Math.cos(a) * 16, 40 + Math.sin(a) * 12]]); } fill(c, L, [[24, 6], [40, 6], [40, 24], [46, 28], [24, 28]]); },
@@ -186,14 +290,23 @@ const BossIcons = (() => {
     'Grave Marks': (c, A) => { ring(c, 32, 32, 18, A, 3); for (let i = 0; i < 4; i++) { const a = i * TAU / 4 + 0.78; stroke(c, L, 3, [[32 + Math.cos(a) * 6, 32 + Math.sin(a) * 6], [32 + Math.cos(a) * 14, 32 + Math.sin(a) * 14]]); } },
     // four graves round a crown, each rim in a party colour
     'Burial Rites': (c, A) => {
-      crown(c, 32, 33, 0.55, '#e8c15a');
-      for (const [x, y, col] of [[32, 10, FIGHT_SLOTS[0]], [32, 54, FIGHT_SLOTS[1]], [10, 32, FIGHT_SLOTS[2]], [54, 32, FIGHT_SLOTS[3]]]) { fill(c, '#060807', [[x - 6, y - 4], [x + 6, y - 4], [x + 6, y + 5], [x - 6, y + 5]]); stroke(c, col, 2.2, [[x - 6, y - 4], [x + 6, y - 4], [x + 6, y + 5], [x - 6, y + 5]], true); }
+      inkCrown(c, 32, 34, 0.6);
+      for (const [x, y, col] of [[32, 12, FIGHT_SLOTS[0]], [32, 54, FIGHT_SLOTS[1]], [10, 33, FIGHT_SLOTS[2]], [54, 33, FIGHT_SLOTS[3]]]) {
+        for (const sd of [-1, 1]) disc(c, x + sd * 8, y + 3, 3, '#3a3026');
+        inked(c, '#060807', [[x - 6, y - 2], [x + 6, y - 2], [x + 6, y + 7], [x - 6, y + 7]], 1.4);
+        stroke(c, col, 2.2, [[x - 6, y - 2], [x + 6, y - 2], [x + 6, y + 7], [x - 6, y + 7]], true);
+        inked(c, '#6a7276', [[x - 4, y - 2], [x - 4, y - 8], [x, y - 10], [x + 4, y - 8], [x + 4, y - 2]], 1.4);
+      }
     },
     // a sealed writ, three chains out from it and a fourth hanging broken
     'Writ of Execution': (c, A) => {
-      for (const a of [-2.4, -0.7, 0.9]) stroke(c, '#8a939e', 2.5, [[32, 32], [32 + Math.cos(a) * 28, 32 + Math.sin(a) * 28]]);
-      stroke(c, '#8a939e', 2.5, [[32, 32], [32 + Math.cos(2.4) * 12, 32 + Math.sin(2.4) * 12]]); stroke(c, '#8a939e', 2.5, [[32 + Math.cos(2.4) * 18, 32 + Math.sin(2.4) * 18], [32 + Math.cos(2.4) * 28, 32 + Math.sin(2.4) * 28]]);
-      fill(c, L, [[22, 22], [42, 22], [42, 42], [22, 42]]); disc(c, 32, 36, 5, '#b8322a');
+      const chain = (a, d0, d1) => { for (let d = d0; d < d1; d += 5) { const x = 32 + Math.cos(a) * d, y = 32 + Math.sin(a) * d; c.beginPath(); c.ellipse(x, y, 3, (d / 5) % 2 < 1 ? 1.6 : 2.6, a, 0, TAU); c.strokeStyle = '#8a939e'; c.lineWidth = 1.6; c.stroke(); } };
+      for (const a of [-2.4, -0.7, 0.9]) chain(a, 10, 30);
+      chain(2.4, 10, 17); chain(2.6, 22, 29);
+      inked(c, '#efe2c4', [[20, 20], [44, 20], [44, 42], [20, 42]], 2); fill(c, '#d8c8a4', [[36, 20], [44, 20], [44, 42], [36, 42]]);
+      inked(c, '#c8b48a', [[18, 18], [46, 18], [46, 22], [18, 22]], 1.6); inked(c, '#c8b48a', [[18, 40], [46, 40], [46, 44], [18, 44]], 1.6);
+      for (const y of [26, 30]) stroke(c, 'rgba(26,22,34,0.6)', 1.4, [[23, y], [37, y]]);
+      inkDisc(c, 32, 36, 5, '#b8322a', 1.6); hi(c, 30, 34, 1.4, 1);
     },
     'Gravebind': (c, A) => { for (const x of [22, 42]) { c.beginPath(); c.ellipse(x, 32, 10, 7, 0, 0, TAU); c.strokeStyle = L; c.lineWidth = 4; c.stroke(); } stroke(c, '#ff5a4a', 2, [[30, 32], [34, 32]]); },
     'Funeral March': (c, A) => { for (const x of [16, 30, 44]) { stroke(c, L, 2.5, [[x, 54], [x + 10, 12]]); fill(c, L, [[x + 8, 14], [x + 13, 6], [x + 13, 16]]); } motion(c, A, [[[6, 58], [56, 58]]]); },
@@ -207,8 +320,22 @@ const BossIcons = (() => {
     'The Charge Sheet': (c, A) => { fill(c, L, [[16, 8], [48, 8], [48, 56], [16, 56]]); for (const y of [18, 30, 42]) { disc(c, 22, y, 2.5, A); stroke(c, INK, 2, [[28, y], [42, y]]); } },
     'Judgement': (c, A) => { stroke(c, L, 3, [[32, 10], [32, 52]]); stroke(c, L, 3, [[14, 18], [50, 18]]); for (const x of [14, 50]) { c.beginPath(); c.arc(x, 30, 8, 0, Math.PI); c.fillStyle = A; c.fill(); } stroke(c, L, 3, [[22, 54], [42, 54]]); },
     'The Long Night': (c, A) => { disc(c, 32, 32, 26, '#05060c'); fill(c, '#c89a4a', [[26, 24], [38, 24], [40, 44], [24, 44]]); disc(c, 32, 34, 5, '#ffe2a0'); stroke(c, '#c89a4a', 2, [[32, 24], [32, 16]]); },
-    'Royal Tithe': (c, A) => { crown(c, 32, 16, 0.8, '#e8c15a'); c.beginPath(); c.moveTo(18, 30); c.lineTo(46, 30); c.lineTo(40, 50); c.lineTo(24, 50); c.closePath(); c.fillStyle = '#5a6266'; c.fill(); for (const [x, y] of [[26, 54], [38, 56]]) drop(c, x, y, 0.5, '#d6304a'); disc(c, 32, 38, 4, A); },
-    'Dirge': (c, A) => { bell(c, 32, 26, 0.9, '#7a8488'); for (const r of [20, 27]) { c.beginPath(); c.arc(32, 30, r, 0.15 * Math.PI, 0.85 * Math.PI); c.strokeStyle = A; c.lineWidth = 2.5; c.stroke(); } },
+    // a tarnished offering bowl under a floating crown, life-light pouring up out of the bowl into it
+    'Royal Tithe': (c, A) => {
+      const g = c.createLinearGradient(0, 22, 0, 44); g.addColorStop(0, rgba(A, 0.15)); g.addColorStop(1, rgba(A, 0.7));
+      c.fillStyle = g; c.beginPath(); c.moveTo(24, 42); c.quadraticCurveTo(28, 30, 26, 22); c.lineTo(38, 22); c.quadraticCurveTo(36, 30, 40, 42); c.closePath(); c.fill();
+      for (const [x, y] of [[28, 30], [35, 26], [32, 36]]) disc(c, x, y, 1.6, '#eafff0');
+      inkCrown(c, 32, 14, 0.8);
+      shadowUnder(c, 32, 57, 16);
+      inked(c, '#b89a4a', [[14, 42], [50, 42], [44, 52], [20, 52]], 2.2); fill(c, '#8a6a2a', [[38, 42], [50, 42], [44, 52], [36, 52]]);
+      inkEll(c, 32, 42, 18, 3.5, '#5a4a20', 1.8); inked(c, '#8a6a2a', [[26, 52], [38, 52], [40, 56], [24, 56]], 1.6);
+    },
+    // an old iron funeral bell, still, wide slow rings of sound spreading out under it
+    'Dirge': (c, A) => {
+      stroke(c, '#4a3b22', 3, [[32, 2], [32, 10]]);
+      inkBell(c, 32, 24, 1, '#7a8488', '#4a5256');
+      for (const [r, a] of [[20, 0.9], [27, 0.6], [34, 0.35]]) { c.beginPath(); c.ellipse(32, 44, r, r * 0.32, 0, 0.1 * Math.PI, 0.9 * Math.PI); c.strokeStyle = rgba(A, a); c.lineWidth = 2.5; c.stroke(); }
+    },
     'Moonset': (c, A) => { disc(c, 32, 34, 18, '#cfe2ff'); disc(c, 40, 28, 15, '#0e1218'); fill(c, '#0e1218', [[0, 44], [64, 44], [64, 64], [0, 64]]); stroke(c, A, 3, [[6, 44], [58, 44]]); },
     'Doom Pass': (c, A) => { skull(c, 22, 32, 0.6, '#efe2ff'); stroke(c, L, 2.5, [[34, 32], [52, 32]]); fill(c, L, [[50, 26], [58, 32], [50, 38]]); },
   };

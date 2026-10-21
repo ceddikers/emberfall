@@ -5,7 +5,8 @@
 const BOSS_VFX = (() => {
   const rand = (a, b) => a + Math.random() * (b - a);
   const AR = () => ARENA.R;   // far enough to reach every wall of the room
-  const shake = n => { FX.shake = Math.max(FX.shake, n); };
+  // (shared-fx polish) routed through the one shake function (ability-vfx.js vfxShake): a boss always shakes everyone
+  const shake = n => { if (typeof vfxShake === 'function') vfxShake(n, 'boss'); else FX.shake = Math.max(FX.shake, n); };
   const after = (sec, fn) => VFX.fx({ dur: sec, layer: 'ground', draw() {}, done: fn });
   const clipArena = c => { ARENA.trace(c, 4); c.clip(); };
 
@@ -35,8 +36,7 @@ const BOSS_VFX = (() => {
       const k = (1 - p) * (1 - p) * e.a;
       c.save(); clipArena(c);
       SHAPES.trace(c, s);
-      c.globalCompositeOperation = 'screen';
-      c.globalAlpha = a * k; c.fillStyle = color; c.fill();
+      if (!o.rimOnly) { c.globalCompositeOperation = 'screen'; c.globalAlpha = a * k; c.fillStyle = color; c.fill(); }   // ([boss presentation] rimOnly: no screen-blended fill)
       c.globalCompositeOperation = 'lighter';
       c.globalAlpha = Math.min(1, 0.8 * k); c.strokeStyle = color; c.lineWidth = 10 * (1 - p) + 2; c.stroke();
       c.globalAlpha = Math.min(1, 1.2 * k); c.strokeStyle = '#ffffff'; c.lineWidth = 2.5; c.stroke();
@@ -89,6 +89,18 @@ const BOSS_VFX = (() => {
     return { x: x + Math.cos(a) * d, y: y + Math.sin(a) * d, d };
   };
   // a bold painted burst: ink edge, saturated body, white-hot heart (Grubnak's colours unless told otherwise)
+  // [boss presentation] floor marks left by impacts keep to the telegraph agent's aftermath tiers (BossTells.AFTER:
+  // brief 2.5 s / short 4.5 s / long 8 s, at most 0.6 opaque), so nothing lingers long enough to read as a hazard
+  const AFTER_T = () => (typeof BossTells !== 'undefined' && BossTells.AFTER) || { tier: { brief: 2.5, short: 4.5, long: 8 }, maxA: 0.6 };
+  const tierDur = d => { const T = AFTER_T().tier; return d == null ? T.short : d <= 3 ? T.brief : d <= 6 ? T.short : T.long; };
+  const aftO = o => Object.assign({}, o, { dur: tierDur(o.dur), a: Math.min(o.a ?? AFTER_T().maxA, AFTER_T().maxA) });
+  const AFT = {
+    scorch: (x1, y1, x2, y2, o = {}) => VFX.scorch(x1, y1, x2, y2, aftO(o)),
+    gouge: (x1, y1, x2, y2, o = {}) => VFX.gouge(x1, y1, x2, y2, aftO(o)),
+    crater: (x, y, o = {}) => VFX.crater(x, y, aftO(o)),
+    decal: (x, y, o = {}) => VFX.decal(x, y, aftO(o)),
+    smear: (x1, y1, x2, y2, o = {}) => VFX.smear(x1, y1, x2, y2, aftO(o)),
+  };
   const bang = (x, y, r, o = {}) => VFX.spikeburst(x, y, Object.assign({ r, n: 12, color: '#ff9a2a', core: '#fff2c0', ink: '#3a1408', dur: 0.42 }, o));
   // a flame tongue standing on (x, y), for effects drawn here
   const flameTongue = (c, x, y, h, w, sway, color) => {
@@ -142,6 +154,7 @@ const BOSS_VFX = (() => {
   const clipOut = (c, shadows) => { for (const sh of shadows) { c.beginPath(); c.rect(-4000, -4000, 8000, 8000); sh.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.closePath(); c.clip('evenodd'); } };
 
   // ---------------------------------------------------------------- telegraph impacts by tag
+  let flambeAt = -9, flambeN = 0, squallAt = -9;   // [boss presentation] perf: impacts landing in a burst
   const IMPACT = {
     // Grubnak
     // Chop Chop: the ghost cleaver comes down beside him and the cut runs along his line, wall to wall: a burst of
@@ -156,7 +169,7 @@ const BOSS_VFX = (() => {
       sweep(s, '#ffe0b8', 0.4);
       for (const q of scatter(s, 9)) after(rand(0.05, 0.3), () => VFX.smoke(q.x, q.y, { n: 2, color: '#e8dccb', size: 30, a: 0.45, speed: 60 }));
       after(0.06, () => {
-        VFX.gouge(a.x, a.y, b.x, b.y, { w: 26, dur: 11 });
+        AFT.gouge(a.x, a.y, b.x, b.y, { w: 26, dur: 11 });
         for (const [end, dir] of [[a, la], [b, la + Math.PI]]) for (let d = 0; d < end.d; d += 120) {
           const x = s.x + Math.cos(dir) * d, y = s.y + Math.sin(dir) * d;
           after(d / 2600, () => {
@@ -184,12 +197,23 @@ const BOSS_VFX = (() => {
       for (const q of ringPts(s.x, s.y, s.r2, 14)) VFX.sparks(q.x, q.y, { color: '#ffffff', n: 2, angle: q.a, spread: 0.3, speed: 520 });
       shake(8);
     },
-    spread(tg) {
+    spread(tg, ctx) {
       const s = tg.live;
-      shapeFlash(s, '#c070ff', { a: 0.4, dur: 0.4 });
-      VFX.burst(s.x, s.y, { color: '#e0b0ff', color2: '#ffffff', n: 16, speed: 260 });
-      VFX.splash(s.x, s.y, { color: '#8a4a2a', n: 8 });
-      VFX.shock(s.x, s.y, { r: s.r, color: '#d79bff', flat: 1 });
+      if (ctx && ctx.boss === 'skitterra') return IMPACT.venomdrip(tg);   // Skitterra's Venom Drip shares the tag
+      // [boss presentation] Meat Toss: a slab of meat slapping down in meat-red and grease-brown (was an off-palette purple)
+      shapeFlash(s, '#d8402a', { a: 0.34, dur: 0.4 });
+      bang(s.x, s.y, s.r * 0.7, { n: 11, color: '#c0401a', core: '#ffd8a0', ink: '#2a0c04', dur: 0.36 });
+      VFX.splash(s.x, s.y, { color: '#8a4a1a', n: 10 });
+      VFX.splash(s.x, s.y, { color: '#a8281a', n: 6 });
+      VFX.shock(s.x, s.y, { r: s.r, color: '#e07a4a', flat: 1 });
+    },
+    // Venom Drip (Skitterra): the drop splashes venom-green across the circle
+    venomdrip(tg) {
+      const s = tg.live;
+      shapeFlash(s, '#8adf2a', { a: 0.3, dur: 0.4 });
+      VFX.splash(s.x, s.y, { color: '#7ad22a', n: 12, speed: 1.3 });
+      VFX.burst(s.x, s.y, { color: '#b8ff6a', color2: '#eaffb8', n: 12, speed: 220 });
+      VFX.shock(s.x, s.y, { r: s.r, color: '#b8ff5a', flat: 1 });
     },
     stack(tg) {
       const s = tg.live;
@@ -232,10 +256,12 @@ const BOSS_VFX = (() => {
       VFX.flare(s.x, s.y, { color: '#ff7a2a', n: 26, r: 60, h: 1.6, size: 1.4 });
       VFX.splash(s.x, s.y, { color: '#b8561c', n: 34, speed: 2.2, size: 1.4 });
       steam(s.x, s.y, 16, 480);
+      // [boss presentation] where the broth slopped, only cool steam wisps curl up and thin away (the old hot puddles
+      // looked like hazards and did nothing)
       for (let i = 0; i < 8; i++) {
         const a = rand(0, TAU), d = rand(90, 340), x = s.x + Math.cos(a) * d, y = s.y + Math.sin(a) * d * 0.75;
         if (ARENA.sd(x, y) > -40) continue;
-        after(rand(0.15, 0.45), () => VFX.puddle(x, y, { r: rand(20, 36), color: '#d8702a', dark: '#5a1e08', dur: 5 }));
+        after(rand(0.15, 0.45), () => { for (let j = 0; j < 3; j++) VFX.spawn({ x: x + rand(-14, 14), y: y + rand(-8, 8), z: 2, vx: rand(-8, 8), vz: rand(18, 34), drag: 0.02, life: rand(1.1, 1.6), size: rand(12, 18), size1: 40, color: '#eef2f4', kind: 'smoke', add: false, a: 0.32, fadeIn: 0.3 }); });
       }
       VFX.shock(s.x, s.y, { r: AR(), color: '#ffb070', w: 8, dur: 0.7, flat: 1 });
       roomTint('#ff6a2a', 0.18);
@@ -288,8 +314,9 @@ const BOSS_VFX = (() => {
       const s = tg.live, src = tg.cover || [s.x, s.y], props = ((ctx && ctx.props) || []).filter(pr => pr.cover);
       const lit = scatter({ kind: 'circle', x: 0, y: 0, r: AR() }, 100).filter(q => !PROPS.shadowing(src[0], src[1], q.x, q.y, props));
       roomTint('#7ad83a', 0.16, 0.6);
-      lit.forEach((q, i) => after(rand(0, 0.3), () => acidDrop(q.x, q.y, i % 3 === 0)));
-      acidPits(lit.slice(0, 45), 6);
+      // ([boss presentation] perf: at most 48 drops, staggered over half a second, and 28 pits, instead of ~100 bursts at once)
+      lit.slice(0, 48).forEach((q, i) => after(0.45 * (i / 48) + rand(0, 0.06), () => acidDrop(q.x, q.y, i % 4 === 0)));
+      acidPits(lit.slice(0, 28), 6);
       shake(7);
     },
     strand(tg) {
@@ -307,7 +334,7 @@ const BOSS_VFX = (() => {
       VFX.debris(s.x, s.y, { color: '#4a4156', n: 16, speed: 1.5 });
       VFX.smoke(s.x, s.y, { color: '#8a8098', n: 12, size: 42, a: 0.6, speed: 160 });
       webDecal(s.x, s.y, s.r * 1.05, 8);
-      VFX.decal(s.x, s.y, { style: 'crack', r: s.r * 0.8, dur: 6, a: 0.6, seed: Math.random() * 6 });
+      AFT.decal(s.x, s.y, { style: 'crack', r: s.r * 0.8, dur: 6, a: 0.6, seed: Math.random() * 6 });
       shake(12);
     },
     // Butcher's Charge: a trail of dust and broken grout along his path (the impact at the end comes as a 'slam')
@@ -352,16 +379,30 @@ const BOSS_VFX = (() => {
       } });
       // the scorch, laid as the wave passes
       const blots = scatter({ kind: 'circle', x: 0, y: 0, r: AR() }, 26).map(q => ({ x: q.x, y: q.y, r: rand(60, 130) }));
+      // ([boss presentation] perf: the scorch is painted once into a half-resolution sprite, the arena and the props'
+      // shadows already cut out of it, then each frame only blits it faded: it used to build 26 gradients and clip
+      // every shadow every frame for 8 s)
+      let sprite = null;
+      const bake = () => {
+        const R = AR() + 10, D = Math.ceil(R * 2 * 0.5), cv = document.createElement('canvas'); cv.width = cv.height = D;
+        const g = cv.getContext('2d'); g.setTransform(0.5, 0, 0, 0.5, D / 2, D / 2);
+        g.save(); clipArena(g);
+        g.globalAlpha = 0.28; g.fillStyle = '#1c100a'; g.fillRect(-R, -R, R * 2, R * 2);
+        g.globalAlpha = 1;
+        for (const b of blots) {
+          const gg = g.createRadialGradient(b.x, b.y, 0, b.x, b.y, b.r);
+          gg.addColorStop(0, 'rgba(14,8,4,0.55)'); gg.addColorStop(1, 'rgba(14,8,4,0)');
+          g.fillStyle = gg; g.beginPath(); g.ellipse(b.x, b.y, b.r, b.r * 0.7, 0, 0, TAU); g.fill();
+        }
+        g.restore();
+        g.globalCompositeOperation = 'destination-out'; g.fillStyle = '#000';
+        for (const sh of shadows) { g.beginPath(); sh.forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y))); g.closePath(); g.fill(); }
+        return { cv, R };
+      };
       after(0.3, () => VFX.fx({ dur: 8, layer: 'ground', draw: (c, p, t, e) => {
         const life = p * 8, k = e.a * Math.min(1, life / 0.3) * Math.min(1, (8 - life) / 2);
-        c.save(); clipArena(c); clipOut(c, shadows);
-        c.globalAlpha = k * 0.28; c.fillStyle = '#1c100a'; c.fillRect(-AR() - 10, -AR() - 10, AR() * 2 + 20, AR() * 2 + 20);
-        for (const b of blots) {
-          const gg = c.createRadialGradient(b.x, b.y, 0, b.x, b.y, b.r);
-          gg.addColorStop(0, `rgba(14,8,4,${0.55 * k})`); gg.addColorStop(1, 'rgba(14,8,4,0)');
-          c.globalAlpha = 1; c.fillStyle = gg; c.beginPath(); c.ellipse(b.x, b.y, b.r, b.r * 0.7, 0, 0, TAU); c.fill();
-        }
-        c.restore(); c.globalAlpha = 1;
+        if (!sprite) sprite = bake();
+        c.globalAlpha = Math.min(1, k); c.drawImage(sprite.cv, -sprite.R, -sprite.R, sprite.R * 2, sprite.R * 2); c.globalAlpha = 1;
       }, tick: (p) => { if (Math.random() < 0.3 * (1 - p)) { const b = blots[Math.floor(Math.random() * blots.length)]; VFX.spawn({ x: b.x, y: b.y, z: 4, vx: rand(-6, 6), vz: rand(14, 30), drag: 0.02, life: rand(1.4, 2.2), size: rand(10, 16), size1: 34, color: '#5a4c48', kind: 'smoke', add: false, a: 0.25, fadeIn: 0.25 }); } } }));
       steam(s.x, s.y, 10, 380, '#4a3a34');
       roomTint('#ff7a2a', 0.16, 0.6);
@@ -392,6 +433,11 @@ const BOSS_VFX = (() => {
     },
     // Grease Fire (and the Flare-Up's heat, Last Orders): every grease puddle on the floor whooshes up; the kitchen flushes
     grease(tg, ctx) {
+      // [boss presentation] the same tag, three moves (shape.look, visual only): the Flare-Up's heat and Last Orders
+      // get their own landings
+      const look = tg.live && tg.live.look;
+      if (look === 'heat') return flareHeat();
+      if (look === 'orders') return lastOrdersHit(ctx && ctx.bossDraw);
       roomTint('#ff7a1a', 0.26);
       const pools = ((ctx && ctx.room && ctx.room.floor) || []).filter(fl => fl.kind === 'grease');
       const spots = pools.length ? pools.map(fl => ({ x: fl.x, y: fl.y, r: fl.r })) : scatter({ kind: 'circle', x: 0, y: 0, r: AR() - 60 }, 7).map(q => ({ x: q.x, y: q.y, r: 50 }));
@@ -406,7 +452,7 @@ const BOSS_VFX = (() => {
       const b = ctx && ctx.bossDraw || tg.live;
       bang(b.x, b.y - 20, 130, { n: 16, dur: 0.5 });
       VFX.shock(b.x, b.y, { r: AR(), color: '#ffb070', w: 10, dur: 0.6, flat: 1 });
-      VFX.scorch(b.x, b.y, b.x, b.y, { w: 300, dur: 8, smokeRate: 0.3 });
+      // (the scorched spiral is BossTells.drawAftermath's now)
       roomTint('#ff6a2a', 0.2, 0.6);
       shake(10);
     },
@@ -420,7 +466,7 @@ const BOSS_VFX = (() => {
       for (const q of ringPts(s.x, s.y, s.r * 0.95, 12)) VFX.smoke(q.x, q.y, { n: 1, color: '#e0d4c0', size: 34, a: 0.55, speed: 140 });
       VFX.debris(s.x, s.y, { color: '#e2d6c0', n: 12, speed: 1.4, up: 1.3, size: 1.7 });
       VFX.debris(s.x, s.y, { color: '#3a3a42', n: 3, speed: 1.2, up: 1.5, size: 2.2 });
-      VFX.crater(s.x, s.y + 10, { r: s.r * 0.75, dur: 9, cracks: 12, flames: 6 });
+      AFT.crater(s.x, s.y + 10, { r: s.r * 0.75, dur: 9, cracks: 12, flames: 6 });
       shake(13);
     },
     cleaver(tg) {
@@ -435,14 +481,17 @@ const BOSS_VFX = (() => {
       VFX.sparks(s.x, s.y, { color: '#ffe6d0', n: 10, speed: 260 });
       shake(5);
     },
-    // Flambé: the brandy goes up along the whole stripe in a wall of flame (a lick of blue in it), and burns it black
+    // Flambé: the brandy goes up along the whole stripe in a wall of flame (a white-gold lick in it), and burns it black
     flambe(tg) {
       const s = tg.live, ca = Math.cos(s.angle), sa = Math.sin(s.angle), L = Math.min(s.len, AR() * 2);
       const x1 = s.x + ca * 24, y1 = s.y + sa * 24, x2 = s.x + ca * (L - 24), y2 = s.y + sa * (L - 24);
+      // [boss presentation] the hot heart of it white-gold (was blue); when several stripes go up together (Hard), each
+      // wall is sparser and only the first two get the inner lick, so a volley isn't a dozen walls of glows at once
+      const tn = clk(), burst = tn - flambeAt < 0.15 ? ++flambeN : (flambeN = 0); flambeAt = tn;
       shapeFlash(s, '#ff9a3a', { a: 0.24, dur: 0.5 });
-      VFX.flameWall(x1, y1, x2, y2, { w: s.w * 0.7, h: 86, dur: 1.5, travel: 0.35, step: 54 });
-      VFX.flameWall(x1, y1, x2, y2, { w: s.w * 0.2, h: 24, dur: 0.7, travel: 0.3, step: 170, color: '#3a7aff', mid: '#9ad0ff', ink: '#0a1a4a', size: 0.45 });
-      after(0.3, () => VFX.scorch(s.x, s.y, s.x + ca * L, s.y + sa * L, { w: s.w * 0.55, dur: 9 }));
+      VFX.flameWall(x1, y1, x2, y2, { w: s.w * 0.7, h: 86, dur: 1.5, travel: 0.35, step: burst ? 84 : 54 });
+      if (burst < 2) VFX.flameWall(x1, y1, x2, y2, { w: s.w * 0.2, h: 24, dur: 0.7, travel: 0.3, step: 220, color: '#ffd870', mid: '#fff6d8', ink: '#5a2a08', size: 0.45 });
+      after(0.3, () => AFT.scorch(s.x, s.y, s.x + ca * L, s.y + sa * L, { w: s.w * 0.55, dur: 9 }));
       shake(4);
     },
     // Skitterra
@@ -460,7 +509,7 @@ const BOSS_VFX = (() => {
       streak(s.x, s.y, s.angle, '#ffb0dc', { w: 8, dur: 0.24 });
       const end = reach(s.x, s.y, s.angle).d - 30, d1 = Math.min(600, end), d0 = Math.max(110, Math.min(320, d1 - 120));
       if (d1 > d0 + 40) {
-        VFX.gouge(s.x + ca * d0, s.y + sa * d0, s.x + ca * d1, s.y + sa * d1, { w: 30, dur: 8, heat: '#ff3aa8', lip: '#3a1030', ember: '#ff9ad8', heatT: 6.5 });
+        AFT.gouge(s.x + ca * d0, s.y + sa * d0, s.x + ca * d1, s.y + sa * d1, { w: 30, dur: 8, heat: '#ff3aa8', lip: '#3a1030', ember: '#ff9ad8', heatT: 6.5 });
         const tip = Math.min(500, d1 - 30), tx = s.x + ca * tip, ty = s.y + sa * tip;
         bang(tx, ty, 82, { n: 11, color: '#ff5ab4', core: '#ffe4f4', ink: '#2a0a20' });
         VFX.sparks(tx, ty, { color: '#ffd0ec', n: 8, angle: s.angle, spread: 0.9, speed: 320 });
@@ -508,16 +557,20 @@ const BOSS_VFX = (() => {
       const s = tg.live;
       bang(s.x, s.y, 40, { n: 8, color: '#5ab8ff', core: '#ffffff', ink: '#0a1a3a', layer: 'ground' });
       VFX.debris(s.x, s.y, { color: '#5a6270', n: 5, speed: 0.8 });
-      VFX.decal(s.x, s.y, { style: 'crack', r: 45, dur: 8, a: 0.6, seed: Math.random() * 6 });
+      AFT.decal(s.x, s.y, { style: 'crack', r: 45, dur: 8, a: 0.6, seed: Math.random() * 6 });
       shake(4);
     },
     squallcell(tg) {
       const s = tg.live, ca = Math.cos(s.angle), sa = Math.sin(s.angle), d = s.len * (0.3 + Math.random() * 0.4);
-      shapeFlash(s, '#cfe6ff', { a: 0.18, dur: 0.3 });
+      // ([boss presentation] perf: a front breaks a strip of cells at once; only one screen-blended flash per beat, the rest rims)
+      const tn = clk(), lone = tn - squallAt > 0.12; if (lone) squallAt = tn;
+      shapeFlash(s, '#cfe6ff', { a: 0.18, dur: 0.3, rimOnly: !lone });
       VFX.lightning(s.x + ca * d + rand(-20, 20), s.y + sa * d - 380, s.x + ca * d, s.y + sa * d, { color: '#dffbff', jag: 22, dur: 0.3 });
       shake(2);
     },
     stilllane() {},
+    // [boss presentation] Still Air: a stone's charge going quiet into whoever stood with it (its own colour), not a generic flash
+    still(tg) { const s = tg.live, col = tg.color || '#9ff4ff'; VFX.shock(s.x, s.y, { r: s.r * 0.6, color: col, w: 3, dur: 0.35, flat: 1 }); VFX.sparks(s.x, s.y - 30, { color: col, n: 6, speed: 160 }); },
     // Skitterra, Hard: a sac bursting, the charge, a glob of silk landing
     eggsac(tg) {
       const s = tg.live;
@@ -568,7 +621,7 @@ const BOSS_VFX = (() => {
       if (b) {
         bang(b.x, b.y, 420, { hole: 0.74, n: 30, color: '#5ab8ff', core: '#ffffff', ink: '#0a1a3a', dur: 0.55, layer: 'ground' });
         for (let i = 0; i < 10; i++) { const a = i * TAU / 10 + rand(-0.15, 0.15), L = rand(260, 400); VFX.lightning(b.x, b.y - 20, b.x + Math.cos(a) * L, b.y + Math.sin(a) * L * 0.9, { color: i % 2 ? '#ffffff' : '#9fe0ff', jag: 22, dur: 0.4 }); }
-        VFX.crater(b.x, b.y, { r: 230, color: '#4fc8ff', core: '#dff6ff', cracks: 14, flames: 0, dur: 7, a: 0.7 });
+        AFT.crater(b.x, b.y, { r: 230, color: '#4fc8ff', core: '#dff6ff', cracks: 14, flames: 0, dur: 7, a: 0.7 });
       }
       roomTint('#bfe0ff', 0.32, 0.6);
       for (const q of scatter({ kind: 'circle', x: 0, y: 0, r: AR() - 40 }, 6)) after(rand(0, 0.25), () => {
@@ -599,12 +652,12 @@ const BOSS_VFX = (() => {
       VFX.lightning(s.x + rand(-20, 20), s.y - 380, mx, my, { color: '#fff2b0', jag: 26, dur: 0.45 });
       for (const u of us.length ? us : [s]) {
         VFX.lightning(mx, my, u.x, u.y - 10, { color: '#ffffff', jag: 16, dur: 0.42 });
-        VFX.scorch(u.x, u.y, u.x, u.y, { w: 60, dur: 6, ember: '#ffe27a', smokeRate: 0.1 });
+        AFT.scorch(u.x, u.y, u.x, u.y, { w: 60, dur: 6, ember: '#ffe27a', smokeRate: 0.1 });
       }
       if (us.length > 1) crackle(us.map(u => [u.x, u.y]), '#ffe27a', 3);
       VFX.pillar(s.x, s.y, { r: s.r * 0.5, h: 260, color: '#fff0a0', dur: 0.6 });
       VFX.shock(s.x, s.y, { r: s.r * 1.3, color: '#ffe27a', w: 6, flat: 1 });
-      VFX.decal(s.x, s.y, { style: 'crack', r: 50, dur: 2.2, a: 0.5, seed: Math.random() * 6 });
+      AFT.decal(s.x, s.y, { style: 'crack', r: 50, dur: 2.2, a: 0.5, seed: Math.random() * 6 });
       shake(6);
     },
     static(tg) {
@@ -620,7 +673,7 @@ const BOSS_VFX = (() => {
       VFX.sparks(s.x, s.y - 80, { color: '#dffbff', n: 14, speed: 300 });
       bang(s.x, s.y, 70, { n: 12, color: '#5ab8ff', core: '#ffffff', ink: '#0a1a3a', layer: 'ground' });
       VFX.debris(s.x, s.y, { color: '#5a6270', n: 6, speed: 0.9 });
-      VFX.decal(s.x, s.y, { style: 'crack', r: 70, dur: 6, a: 0.6, seed: Math.random() * 6 });
+      AFT.decal(s.x, s.y, { style: 'crack', r: 70, dur: 6, a: 0.6, seed: Math.random() * 6 });
       roomTint('#bfe8ff', 0.12, 0.3);
       shake(7);
     },
@@ -631,7 +684,7 @@ const BOSS_VFX = (() => {
       for (let i = 0; i < 5; i++) VFX.lightning(s.x + rand(-60, 60), s.y - 480, s.x + rand(-s.r * 0.6, s.r * 0.6), s.y + rand(-20, 20), { color: i % 2 ? '#ffffff' : '#9fe0ff', jag: 28, dur: 0.5 });
       bang(s.x, s.y, s.r * 1.6, { hole: 0.6, n: 22, color: '#9fe0ff', core: '#ffffff', ink: '#0a1a3a', dur: 0.5, layer: 'ground' });
       for (let i = 0; i < 10; i++) { const a = i * TAU / 10, r = s.r * 1.2; VFX.debris(s.x + Math.cos(a) * r, s.y + Math.sin(a) * r * 0.8, { color: '#5a6270', n: 3, speed: 1.2 }); }
-      VFX.crater(s.x, s.y, { r: s.r * 1.5, color: '#4fc8ff', core: '#dff6ff', cracks: 12, flames: 0, dur: 7, a: 0.6 });
+      AFT.crater(s.x, s.y, { r: s.r * 1.5, color: '#4fc8ff', core: '#dff6ff', cracks: 12, flames: 0, dur: 7, a: 0.6 });
       roomTint('#dff4ff', 0.25, 0.5);
       shake(11);
     },
@@ -652,7 +705,7 @@ const BOSS_VFX = (() => {
       for (let i = 0; i < 4; i++) VFX.lightning(s.x + rand(-50, 50), s.y - 460, s.x + rand(-20, 20), s.y, { color: i % 2 ? '#ffffff' : '#bfe8ff', jag: 30, dur: 0.5 });
       VFX.pillar(s.x, s.y, { r: 90, h: 420, color: '#dff4ff', dur: 0.8 });
       for (let i = 0; i < 3; i++) VFX.shock(s.x, s.y, { r: 640, color: '#cfeaff', w: 12 - i * 3, dur: 0.7, flat: 1, delay: i * 0.12 });
-      VFX.decal(s.x, s.y, { style: 'crack', r: 110, dur: 3, a: 0.6, seed: Math.random() * 6 });
+      AFT.decal(s.x, s.y, { style: 'crack', r: 110, dur: 3, a: 0.6, seed: Math.random() * 6 });
       roomTint('#dff4ff', 0.3, 0.6);
       shake(12);
     },
@@ -663,7 +716,7 @@ const BOSS_VFX = (() => {
       VFX.smoke(x, y, { color: '#c8c0b0', n: 10, size: 40, a: 0.6, speed: 120 });
       VFX.debris(x, y - 10, { color: '#6a6460', n: 10, speed: 1.1 });
       VFX.shock(x, y, { r: 120, color: '#e0d6c4', w: 6, dur: 0.45, flat: 1 });
-      VFX.decal(x, y, { style: 'crack', r: 60, dur: 3, a: 0.5, seed: Math.random() * 6 });
+      AFT.decal(x, y, { style: 'crack', r: 60, dur: 3, a: 0.5, seed: Math.random() * 6 });
       for (let i = 0; i < 6; i++) { const q = i / 6; VFX.smoke(s.x + Math.cos(s.angle) * d * q, s.y + Math.sin(s.angle) * d * q, { color: '#b8ae9c', n: 2, size: 30, a: 0.4, speed: 50 }); }
       shake(6);
     },
@@ -702,7 +755,7 @@ const BOSS_VFX = (() => {
     graveBurst(s, color);
     for (const r of [180, 300]) VFX.slash(s.x, s.y, s.angle, { r, span: Math.min(s.arc, 2.4), color: core, dur: 0.4, w: 0.55, sparks: 6 });
     if (a < 1) return;
-    for (let i = 0; i <= 8; i++) { const ang = s.angle - s.arc / 2 + s.arc * i / 8, d = 240 + Math.sin(i) * 20, x = s.x + Math.cos(ang) * d, y = s.y + Math.sin(ang) * d; if (ARENA.sd(x, y) < -20) VFX.scorch(x, y, x, y, { w: 46, dur: 6, ember: color, smokeRate: 0.06 }); }
+    for (let i = 0; i <= 8; i++) { const ang = s.angle - s.arc / 2 + s.arc * i / 8, d = 240 + Math.sin(i) * 20, x = s.x + Math.cos(ang) * d, y = s.y + Math.sin(ang) * d; if (ARENA.sd(x, y) < -20) AFT.scorch(x, y, x, y, { w: 46, dur: 6, ember: color, smokeRate: 0.06 }); }
   }
   // the Barrow Stomp: a shockwave out through the flagstones and a crater left cracked and glowing
   function swingStomp(s, color, core, a = 1) {
@@ -711,7 +764,7 @@ const BOSS_VFX = (() => {
     bang(s.x, s.y, s.r * 0.55, { n: 14, color, core, ink: '#0a1a18', layer: 'ground' });
     VFX.debris(s.x, s.y, { color: '#4a5054', n: 10, speed: 1.2 });
     if (a < 1) return;
-    VFX.crater(s.x, s.y, { r: s.r * 0.6, color, core, cracks: 12, flames: 0, dur: 6, a: 0.7 });
+    AFT.crater(s.x, s.y, { r: s.r * 0.6, color, core, cracks: 12, flames: 0, dur: 6, a: 0.7 });
   }
   // the Crown of Graves: hands of light bursting up out of the floor all round him, and the safe ring flashing
   function swingRing(s, color, core, a = 1) {
@@ -771,9 +824,9 @@ const BOSS_VFX = (() => {
       bang(x, y, 100, { n: 12, color: '#5a7a9a', core: '#dff6ff', ink: '#0a1222' });
       VFX.crystals(x, y, { r: 56, n: 9, h: 66, color: '#6a86a8', dur: 1.1 });
       VFX.shock(x, y, { r: 90, color: '#9ff4ff', w: 6, flat: 1 });
-      VFX.gouge(s.x + ca * 70, s.y + sa * 70, s.x + ca * r, s.y + sa * r, { w: 34, dur: 8, heat: '#3ab8ff', lip: '#1a2230', ember: '#bff6ff', heatT: 5 });
+      AFT.gouge(s.x + ca * 70, s.y + sa * 70, s.x + ca * r, s.y + sa * r, { w: 34, dur: 8, heat: '#3ab8ff', lip: '#1a2230', ember: '#bff6ff', heatT: 5 });
       VFX.debris(x, y, { color: '#5a6270', n: 10, speed: 1.2 });
-      VFX.decal(x, y, { style: 'crack', r: 70, dur: 6, a: 0.6, seed: Math.random() * 6 });
+      AFT.decal(x, y, { style: 'crack', r: 70, dur: 6, a: 0.6, seed: Math.random() * 6 });
     } else if (ctx.boss === 'hollowking') {
       // Grave Cleave: the greatsword comes down in grave-light and violet, splits the floor along the cone (the rift
       // glows a while) and the wound keeps bleeding
@@ -781,7 +834,7 @@ const BOSS_VFX = (() => {
       VFX.slash(x, y, s.angle + Math.PI / 2, { r: 90, span: 2.4, color: '#c8ffd8', dur: 0.4, w: 0.55, sparks: 8 });
       VFX.hit(x, y, '#ff4a3a', 2.3);
       bang(x, y, 90, { n: 13, color: '#7affa8', core: '#eafff0', ink: '#1a0a2a' });
-      VFX.gouge(s.x + ca * 60, s.y + sa * 60, s.x + ca * r, s.y + sa * r, { w: 28, dur: 8, heat: '#a050ff', lip: '#14101c', ember: '#9affc0', heatT: 5 });
+      AFT.gouge(s.x + ca * 60, s.y + sa * 60, s.x + ca * r, s.y + sa * r, { w: 28, dur: 8, heat: '#a050ff', lip: '#14101c', ember: '#9affc0', heatT: 5 });
       VFX.debris(x, y, { color: '#4a5054', n: 8, speed: 1.1 });
       VFX.splash(x, y, { color: '#a01a1a', n: 10 });
     } else if (ctx.boss === 'skitterra') {
@@ -799,7 +852,7 @@ const BOSS_VFX = (() => {
       after(0.06, () => {
         bang(x, y, 95, { n: 14 });
         VFX.hit(x, y, '#ff5a3a', 2.2);
-        VFX.gouge(s.x + ca * 60, s.y + sa * 60, s.x + ca * r, s.y + sa * r, { w: 20, dur: 9 });
+        AFT.gouge(s.x + ca * 60, s.y + sa * 60, s.x + ca * r, s.y + sa * r, { w: 20, dur: 9 });
         for (let d = 90; d < r; d += 80) bang(s.x + ca * d, s.y + sa * d, 40, { n: 9, dur: 0.32 });
         VFX.sparks(x, y, { color: '#fff0c8', n: 12, speed: 340 });
         VFX.debris(x, y, { color: '#e2d6c0', n: 7, speed: 1.1, size: 1.3 });
@@ -811,7 +864,7 @@ const BOSS_VFX = (() => {
 
   // ---------------------------------------------------------------- casts, autos, adds, moments
   const CAST_COLOR = {
-    grubnak: { def: '#ffb050', boil: '#ff6a2a', bell: '#9ffff4', whisk: '#fff0c8', raise: '#ff7a1a', flop: '#f0e0c8', throw: '#ffe6d0', flambe: '#6ab0ff',
+    grubnak: { def: '#ffb050', boil: '#ff6a2a', bell: '#9ffff4', whisk: '#fff0c8', raise: '#ff7a1a', flop: '#f0e0c8', throw: '#ffe6d0', flambe: '#ffd870',
       charge: '#ff8a4a', larder: '#ffd8a0', gut: '#c8d87a', hook: '#e8eef4', drains: '#b89a5a' },
     skitterra: { def: '#d08aff', mist: '#9adf3a', spit: '#9adf3a', wrap: '#f4f0ff', silk: '#f4f0ff', web: '#f4f0ff', lunge: '#ff7ac0', eggs: '#e8ff9a', fang: '#ff7ac0', volley: '#f4f0ff',
       deluge: '#9adf3a', strand: '#f4f0ff', ambush: '#b090ff', cocoon: '#f4f0ff' },
@@ -881,17 +934,24 @@ const BOSS_VFX = (() => {
     VFX.shock(b.x, b.y, { r: 200, color: '#f4f0ff', w: 5, dur: 0.5, flat: 1 });
     shake(6);
   }
-  function castStart(bossKind, anim, dur, bossDraw) {
+  // [boss presentation] each move gathers in its own way, in the right place on him (CAST_FX), and his body takes a
+  // pose for it (CAST_POSE: returned as [[prop, held for s after the cast]] for main.js to hold on raid.props). Under it
+  // all, the old ring, quieter, so "he's casting" reads the same for every move. The cast's timing is untouched.
+  function castStart(bossKind, anim, dur, bossDraw, name) {
     if (bossKind === 'grubnak' && anim === 'gorge') gorgeVortex(bossDraw, dur);
     if (bossKind === 'skitterra' && anim === 'chrysalis') chrysalis(bossDraw, dur);
-    const pal = CAST_COLOR[bossKind] || {}, color = pal[anim] || pal.def || '#ffffff';
-    VFX.fx({ dur, layer: 'ground', tick: (p) => {
-      if (Math.random() < 0.25 + p * 0.6) VFX.charge(bossDraw.x, bossDraw.y - 30, { color, n: 1, r: 120 - p * 40, dur: 0.5, z: 30 });
+    const key = castKey(bossKind, anim, name), sh = SH(bossDraw);
+    if (anim === 'enrage') enrageStart(bossKind, bossDraw, dur);
+    else { const fx = CAST_FX[bossKind] && CAST_FX[bossKind][(CAST_USE[bossKind] && CAST_USE[bossKind][key]) || key]; if (fx) fx(sh, bossDraw, dur); }
+    const pal = CAST_COLOR[bossKind] || {}, color = anim === 'enrage' ? (ENR[bossKind] || '#ff3a2a') : pal[anim] || pal.def || '#ffffff';
+    own(sh, VFX.fx({ dur, layer: 'ground', tick: (p) => {
+      if (Math.random() < 0.12 + p * 0.3) VFX.charge(bossDraw.x, bossDraw.y - 30, { color, n: 1, r: 120 - p * 40, dur: 0.5, z: 30 });
     }, draw: (c, p, t, e) => {
-      const k = e.a * Math.min(1, p / 0.15);
+      const k = e.a * Math.min(1, p / 0.15) * 0.7;
       VFX.neonRing(c, bossDraw.x, bossDraw.y, 150 - 70 * easeOut(p), color, 2 + p * 3, k * (0.25 + 0.6 * p), 0.6);
-      VFX.glowAt(c, bossDraw.x, bossDraw.y - 30, 60 + 60 * p, color, k * (0.15 + 0.35 * p) * (0.85 + 0.15 * Math.sin(t * (6 + p * 18))));
-    } });
+      VFX.glowAt(c, bossDraw.x, bossDraw.y - 30, 60 + 60 * p, color, k * (0.12 + 0.3 * p) * (0.85 + 0.15 * Math.sin(t * (6 + p * 12))));
+    } }));
+    return (CAST_POSE[bossKind] && CAST_POSE[bossKind][key]) || null;
   }
   function auto(boss, target) {
     if (!target) return;
@@ -902,7 +962,7 @@ const BOSS_VFX = (() => {
   function leap(x, y) {
     VFX.shock(x, y, { r: 180, color: '#f0e0c8', w: 8, dur: 0.6, flat: 1 });
     for (const q of ringPts(x, y, 60, 10)) VFX.smoke(q.x, q.y, { n: 1, color: '#e0d4c0', size: 34, a: 0.6, speed: 120 });
-    VFX.decal(x, y, { style: 'crack', r: 80, dur: 3, a: 0.55, seed: Math.random() * 6 });
+    AFT.decal(x, y, { style: 'crack', r: 80, dur: 3, a: 0.55, seed: Math.random() * 6 });
     shake(8);
   }
   function roar(x, y, bossKind) {
@@ -940,7 +1000,7 @@ const BOSS_VFX = (() => {
     for (let i = 0; i < 10; i++) VFX.spawn({ x, y, z: 30, vx: rand(-160, 160), vy: rand(-120, 120), vz: rand(60, 200), g: 500, life: 0.7, size: 11, color: '#e8dcc8', kind: 'shard', add: false, vr: rand(-10, 10) });
   }
   function tetherSnap(e, ok) {
-    if (ok) { VFX.burst(e.x, e.y, { color: '#f4f0ff', n: 10, speed: 160, size: 10 }); return; }
+    if (ok) { VFX.burst(e.x, e.y, { color: '#f4f0ff', n: 4, speed: 120, size: 7 }); return; }   // ([boss presentation] the snap itself is arena-view.js's now)
     VFX.hit(e.x, e.y, '#ff5a4a', 1.4);
     VFX.shock(e.x, e.y, { r: 80, color: '#ff5a4a', flat: 1 });
   }
@@ -962,7 +1022,7 @@ const BOSS_VFX = (() => {
     bang(x, y, 46, { color: '#c0401a', core: '#ffd8a0', ink: '#2a0c04', n: 10, dur: 0.32 });
     VFX.smoke(x, y, { color: '#d8c4a4', n: 5, size: 26, a: 0.55, speed: 60 });
     VFX.splash(x, y, { color: '#b02a14', n: 8 });
-    VFX.smear(x, y, x, y, { w: 46, splat: true, dur: 6, color: '#8a321a', hi: '#d0704a' });
+    AFT.smear(x, y, x, y, { w: 46, splat: true, dur: 6, color: '#8a321a', hi: '#d0704a' });
     shake(3);
   }
   // ...and when it reaches the far wall: it bursts against the bricks, and its gravy trail runs all the way back
@@ -971,7 +1031,7 @@ const BOSS_VFX = (() => {
     VFX.splash(x, y, { color: '#a8281a', n: 22, speed: 1.6, size: 1.3 });
     VFX.debris(x, y, { color: '#6a3a1a', n: 8, speed: 1.2 });
     VFX.smoke(x, y, { color: '#d8c4a4', n: 6, size: 30, a: 0.5, speed: 80 });
-    VFX.smear(sx, sy, x - Math.cos(a) * 20, y - Math.sin(a) * 20, { w: 36, splat: true, dur: 10, color: '#8a321a', hi: '#d0704a' });
+    AFT.smear(sx, sy, x - Math.cos(a) * 20, y - Math.sin(a) * 20, { w: 36, splat: true, dur: 10, color: '#8a321a', hi: '#d0704a' });
     shake(5);
   }
   function meatballHit(e) {
@@ -1020,16 +1080,19 @@ const BOSS_VFX = (() => {
   }
   // the floor the acid fell on, pitted and smoking for a while: little dark pocks rimmed in green, bubbling
   function acidPits(pts, dur) {
+    dur = tierDur(dur);   // [boss presentation] (aftermath tiers)
     const pits = pts.map(q => ({ x: q.x + rand(-20, 20), y: q.y + rand(-14, 14), r: rand(7, 15), ph: rand(0, 6), n: 1 + Math.floor(rand(0, 3)) }));
     VFX.fx({ dur, layer: 'ground', draw: (c, p, t, e) => {
       const life = p * dur, k = e.a * Math.min(1, life / 0.3) * Math.min(1, (dur - life) / 1.5);
+      // ([boss presentation] perf: every pit in three batched paths, the rims bubbling in two alternating sets)
       c.save(); clipArena(c);
-      for (const q of pits) for (let j = 0; j < q.n; j++) {
-        const x = q.x + j * q.r * 1.3, y = q.y + (j % 2) * q.r * 0.5, r = q.r * (1 - j * 0.25);
-        c.globalAlpha = k * 0.85; c.fillStyle = '#10200a'; c.beginPath(); c.ellipse(x, y, r, r * 0.65, 0, 0, TAU); c.fill();
-        c.globalAlpha = k * (0.55 + 0.25 * Math.sin(t * 3 + q.ph + j)); c.strokeStyle = '#9adf3a'; c.lineWidth = 2; c.stroke();
-        c.globalAlpha = k * 0.6; c.fillStyle = '#5aae22'; c.beginPath(); c.ellipse(x, y + r * 0.1, r * 0.55, r * 0.3, 0, 0, TAU); c.fill();
-      }
+      const each = (fn) => { for (const q of pits) for (let j = 0; j < q.n; j++) fn(q.x + j * q.r * 1.3, q.y + (j % 2) * q.r * 0.5, q.r * (1 - j * 0.25), q, j); };
+      c.beginPath(); each((x, y, r) => { c.moveTo(x + r, y); c.ellipse(x, y, r, r * 0.65, 0, 0, TAU); });
+      c.globalAlpha = k * 0.85; c.fillStyle = '#10200a'; c.fill();
+      c.strokeStyle = '#9adf3a'; c.lineWidth = 2;
+      for (const half of [0, 1]) { c.beginPath(); each((x, y, r, q, j) => { if ((j + (q.ph > 3 ? 1 : 0)) % 2 === half) { c.moveTo(x + r, y); c.ellipse(x, y, r, r * 0.65, 0, 0, TAU); } }); c.globalAlpha = k * (0.55 + 0.25 * Math.sin(t * 3 + half * 2.5)); c.stroke(); }
+      c.beginPath(); each((x, y, r) => { c.moveTo(x + r * 0.55, y + r * 0.1); c.ellipse(x, y + r * 0.1, r * 0.55, r * 0.3, 0, 0, TAU); });
+      c.globalAlpha = k * 0.6; c.fillStyle = '#5aae22'; c.fill();
       c.restore(); c.globalAlpha = 1;
     }, tick: (p) => {
       if (Math.random() < 0.35 * (1 - p)) { const q = pits[Math.floor(Math.random() * pits.length)]; if (q) VFX.spawn({ x: q.x, y: q.y, z: 4, vx: rand(-6, 6), vz: rand(18, 36), drag: 0.02, life: rand(1.2, 1.8), size: rand(8, 12), size1: 26, color: '#8ac85a', kind: 'smoke', add: false, a: 0.3, fadeIn: 0.2 }); }
@@ -1149,6 +1212,7 @@ const BOSS_VFX = (() => {
   }
   // a web stuck to the floor where the wrap landed: crooked spokes and sagging rings, fading out
   function webDecal(x, y, r, dur) {
+    dur = tierDur(dur);   // [boss presentation] (aftermath tiers)
     const n = 11, spokes = Array.from({ length: n }, (_, i) => ({ a: i * TAU / n + rand(-0.15, 0.15), l: r * rand(0.75, 1.1) }));
     const P = (s, f) => [x + Math.cos(s.a) * s.l * f, y + Math.sin(s.a) * s.l * f * 0.75];
     VFX.fx({ dur, layer: 'ground', draw: (c, p, t, e) => {
@@ -1228,7 +1292,7 @@ const BOSS_VFX = (() => {
         if (i) for (let n = 0; n < 2; n++) VFX.lightning(ents[i - 1].x, ents[i - 1].y - 16, e.x, e.y - 16, { color: n ? '#ffffff' : '#9ff4ff', jag: 16, dur: 0.4 });
         VFX.hit(e.x, e.y, '#bff6ff', 1.3);
         VFX.shock(e.x, e.y, { r: 60, color: '#9ff4ff', w: 4, dur: 0.35, flat: 1 });
-        VFX.scorch(e.x, e.y, e.x, e.y, { w: 50, dur: 5, ember: '#7fe8ff', smokeRate: 0.08 });
+        AFT.scorch(e.x, e.y, e.x, e.y, { w: 50, dur: 5, ember: '#7fe8ff', smokeRate: 0.08 });
       });
     });
     shake(ents.length > 1 ? 7 : 4);
@@ -1300,7 +1364,7 @@ const BOSS_VFX = (() => {
       VFX.debris(msg.x, msg.y - 10, { color: '#7a6a5a', n: boss ? 14 : 6, speed: boss ? 1.4 : 1 });
       VFX.shock(msg.x, msg.y, { r: boss ? 220 : 90, color: '#f0e0c8', w: boss ? 10 : 5, dur: 0.45, flat: 1 });
       VFX.sparks(msg.x, msg.y - 14, { color: '#fff0d0', n: boss ? 14 : 6, angle: back, spread: 1.4, speed: 300 });
-      if (boss) VFX.decal(msg.x, msg.y, { style: 'crack', r: 90, dur: 4, a: 0.6, seed: Math.random() * 6 });
+      if (boss) AFT.decal(msg.x, msg.y, { style: 'crack', r: 90, dur: 4, a: 0.6, seed: Math.random() * 6 });
       const e = msg.pid != null && entById ? entById(msg.pid) : null;
       if (e) { VFX.hit(e.x, e.y, '#ffe0c0', 1.5); VFX.aura(e, { style: 'ring', color: '#f0e8d8', r: 26, dur: 0.6, rate: 0.6 }); }
       shake(boss ? 12 : 5);
@@ -1322,7 +1386,7 @@ const BOSS_VFX = (() => {
       VFX.shock(x, y, { r: msg.kind === 'stone' ? 110 : 80, color: '#9ff4ff', w: 6, dur: 0.4, flat: 1 });
       VFX.sparks(x, y - top, { color: '#dffbff', n: 12, speed: 300 });
       if (e) VFX.hit(e.x, e.y, '#bff6ff', 2);
-      if (msg.kind !== 'stone' && msg.kind !== 'post') { VFX.scorch(x, y, x, y, { w: 70, dur: 6, ember: '#7fe8ff', smokeRate: 0.12 }); VFX.decal(x, y, { style: 'crack', r: 50, dur: 6, a: 0.6, seed: Math.random() * 6 }); }
+      if (msg.kind !== 'stone' && msg.kind !== 'post') { AFT.scorch(x, y, x, y, { w: 70, dur: 6, ember: '#7fe8ff', smokeRate: 0.12 }); AFT.decal(x, y, { style: 'crack', r: 50, dur: 6, a: 0.6, seed: Math.random() * 6 }); }
       roomTint('#bfe8ff', 0.1, 0.25);
       shake(msg.kind === 'stone' ? 5 : 8);
     } else if (msg.k === 'discharge') {
@@ -1336,7 +1400,7 @@ const BOSS_VFX = (() => {
     } else if (msg.k === 'arc') {
       // Grounded (Hard): the discharge leaps on to the nearest player
       const e = msg.pid != null && entById ? entById(msg.pid) : null;
-      if (e) { for (let n = 0; n < 2; n++) VFX.lightning(msg.x, msg.y - 60, e.x, e.y - 16, { color: n ? '#ffffff' : '#ff9a7a', jag: 18, dur: 0.45 }); VFX.hit(e.x, e.y, '#ffb09a', 1.8); VFX.scorch(e.x, e.y, e.x, e.y, { w: 56, dur: 5, ember: '#ffb09a', smokeRate: 0.1 }); }
+      if (e) { for (let n = 0; n < 2; n++) VFX.lightning(msg.x, msg.y - 60, e.x, e.y - 16, { color: n ? '#ffffff' : '#ff9a7a', jag: 18, dur: 0.45 }); VFX.hit(e.x, e.y, '#ffb09a', 1.8); AFT.scorch(e.x, e.y, e.x, e.y, { w: 56, dur: 5, ember: '#ffb09a', smokeRate: 0.1 }); }
       shake(5);
     } else if (msg.k === 'fall' && bossKind === 'skitterra') {
       // into the pit (the Collapse): dust where they went over, and a thread let down from the dark to haul them back
@@ -1384,13 +1448,40 @@ const BOSS_VFX = (() => {
   }
 
   // a grease puddle that has burnt off leaves a charred blot, still smoking
-  function scorchPool(x, y, r) { VFX.scorch(x, y, x, y, { w: r * 2, dur: 8 }); }
+  function scorchPool(x, y, r) { AFT.scorch(x, y, x, y, { w: r * 2, dur: 8 }); }
 
-  function victory(ents) {
-    for (const e of ents) { VFX.confetti(e.x, e.y, { n: 50 }); VFX.burst(e.x, e.y, { color: '#ffe27a', color2: '#ffffff', n: 16, speed: 260 }); }
-    roomTint('#fff2b0', 0.2, 1);
+  // [boss presentation] the confetti waits for his fall (bossDeath, about 2.2 s); the wipe has its own scene (wipeShow)
+  function victory(ents, delay = 2.2) {
+    after(delay, () => {
+      for (const e of ents) { VFX.confetti(e.x, e.y, { n: 50 }); VFX.burst(e.x, e.y, { color: '#ffe27a', color2: '#ffffff', n: 16, speed: 260 }); }
+      roomTint('#fff2b0', 0.2, 1);
+    });
   }
-  function wipe() { roomTint('#200810', 0.4, 1.4); }
+  function wipe(bd, kind) { roomTint('#200810', 0.4, 1.4); wipeShow(bd, kind); }
+
+  // [boss presentation] the Flare-Up catching: a wall of heat rolls down off the stove line across the kitchen
+  function flareHeat() {
+    const top = -ARENA.hh - 20, H = ARENA.hh * 2 + 40, W = ARENA.hw + 20;
+    VFX.fx({ dur: 0.8, layer: 'ground', draw: (c, p, t, e) => {
+      const y = top + H * easeOut(p), k = e.a * (1 - Math.max(0, p - 0.6) / 0.4);
+      c.save(); clipArena(c);
+      const g = c.createLinearGradient(0, y - 180, 0, y + 20);
+      g.addColorStop(0, 'rgba(255,110,30,0)'); g.addColorStop(0.7, `rgba(255,140,50,${0.4 * k})`); g.addColorStop(1, `rgba(255,230,160,${0.6 * k})`);
+      c.globalCompositeOperation = 'screen'; c.fillStyle = g; c.fillRect(-W, y - 180, W * 2, 200);
+      c.restore();
+    } });
+    for (let i = 0; i < 10; i++) { const x = -ARENA.hw + (i + 0.5) / 10 * ARENA.hw * 2; VFX.sparks(x, top + 40, { color: '#ffd080', n: 5, angle: Math.PI / 2, spread: 0.9, speed: 380 }); }
+    roomTint('#ff6a1a', 0.2, 0.7);
+    shake(8);
+  }
+  // [boss presentation] Last Orders: he bellows the kitchen closed: gold rings out of him and a gust of steam off every wall
+  function lastOrdersHit(b) {
+    const x = b ? b.x : 0, y = b ? b.y : 0;
+    for (let i = 0; i < 3; i++) VFX.shock(x, y, { r: AR() * 1.2, color: i % 2 ? '#ffe08a' : '#ff9a3a', w: 9 - i * 2, dur: 0.8, flat: 1, delay: i * 0.12 });
+    for (let i = 0; i < 16; i++) { const a = i * TAU / 16, d = (ARENA.edge ? ARENA.edge(a) : AR()) - 30; after(0.25 + rand(0, 0.2), () => VFX.smoke(Math.cos(a) * d, Math.sin(a) * d, { color: '#f6f2ee', n: 2, size: 40, a: 0.45, speed: 90 })); }
+    roomTint('#ffb050', 0.2, 0.6);
+    shake(8);
+  }
 
   // a stack or soak that wasn't answered (the host flags it): it must never look like a success. The shape burns red,
   // the room flushes red, and the screen jolts. A missed Barrow Bell tolls purple through the whole barrow.
@@ -1426,6 +1517,17 @@ const BOSS_VFX = (() => {
     for (let i = 0; i < 6; i++) { const a = i * TAU / 6, L = R * 0.4; c.beginPath(); c.moveTo(0, 0); c.lineTo(Math.cos(a) * L, Math.sin(a) * L);
       for (const q of [0.45, 0.75]) { const px = Math.cos(a) * L * q, py = Math.sin(a) * L * q, bl = L * 0.18 * (1.2 - q); for (const s of [-1, 1]) { c.moveTo(px, py); c.lineTo(px + Math.cos(a + s * 0.8) * bl, py + Math.sin(a + s * 0.8) * bl); } } c.stroke(); }
     return { cv, m };
+  }
+  const numCache = new Map();
+  function numeral(s, px, color) {
+    const key = s + px + color;
+    let cv = numCache.get(key);
+    if (!cv) {
+      cv = document.createElement('canvas'); cv.width = Math.ceil(px * 2.6); cv.height = Math.ceil(px * 1.6);
+      const g = cv.getContext('2d'); g.font = `600 ${px}px Georgia, serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = color; g.fillText(s, cv.width / 2, cv.height / 2);
+      numCache.set(key, cv);
+    }
+    return cv;
   }
   function timeStop(b, dur) {
     const ICE = '#cfeeff', DEEP = '#6fa8e8', S = TS_SCALE, R = 128 * S, FL = 0.55, NUM = ['XII', 'I', 'II', 'III', 'IIII', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI'];
@@ -1486,13 +1588,609 @@ const BOSS_VFX = (() => {
           c.beginPath(); pl.pts.forEach(([a, rr], j) => { let px = b.x + Math.cos(a) * rr - cx, py = (b.y + Math.sin(a) * rr * FL) - cy; const qx = px * Math.cos(rot) - py * Math.sin(rot), qy = px * Math.sin(rot) + py * Math.cos(rot); j ? c.lineTo(cx + ox + qx, cy + oy + qy) : c.moveTo(cx + ox + qx, cy + oy + qy); }); c.closePath();
           c.globalAlpha = k * 0.3; c.fillStyle = '#dff4ff'; c.fill(); c.globalAlpha = k * 0.9; c.strokeStyle = '#ffffff'; c.lineWidth = 1.4; c.stroke();
         }
-        c.font = `600 ${Math.round(R * 0.14)}px Georgia, serif`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = ICE;
-        for (const f of flying) { c.save(); c.translate(f.x + f.vx * t, f.y + f.vy * t + 200 * t * t); c.rotate(f.vr * t); c.globalAlpha = k; c.fillText(f.s, 0, 0); c.restore(); }
+        // ([boss presentation] perf: each numeral is a sprite painted once, not 12 fillText calls a frame)
+        for (const f of flying) { const g = numeral(f.s, Math.round(R * 0.14), ICE); c.save(); c.translate(f.x + f.vx * t, f.y + f.vy * t + 200 * t * t); c.rotate(f.vr * t); c.globalAlpha = k; c.drawImage(g, -g.width / 2, -g.height / 2); c.restore(); }
         c.globalAlpha = 1;
       } });
       shake(4);
     } });
   }
 
-  return { timeStop, failed,propFx, stoveBurst, gazed, doomed, cure, knightMemory, knightRise, nightFall, polarityFlip, edgeClose, pulse, orbForm, orbHit, chain, meatballLand, meatballWall, meatballHit, scorchPool, silkSnap, silkFree, reelBite, snuff, hatch, threadShoot, threadSnap, floorFalls, impact, castStart, cocoonEnd, auto, leap, roar, addSpawn, addDeath, addEnrage, fury, spit, husk, tetherSnap, playerDeath, playerRaised, partyBuff, victory, wipe };
+  // ================================================================ [boss presentation]
+  // The boss's body and his big moments: what each cast shows on him, a flinch when he's hit, the enrage, the
+  // entrance, the fall and the wipe. All cosmetic, all driven by messages every client gets from the host (bcast,
+  // banim, pdmg 'enrage', fev 'behind', fight clear / wipe, the room's own intro beat), so everyone sees the same
+  // thing. The state lives on the client's bossDraw (bd.show), which is new for every pull. Nothing here moves a
+  // timing, a shape or a number; props stay on his body, and screen effects stay at the edges or are a soft wash.
+  let clockFn = () => performance.now() / 1000;
+  const clk = () => clockFn();
+  const SH = bd => bd.show || (bd.show = { hitAt: -9, hitK: 0, enrAt: -9, enrDur: 8, behind: 0, death: null, intro: null, wipeAt: -9, hp: null, fx: [], alpha: 1, landed: false });
+  const BODY_S = { grubnak: 1.3, skitterra: 1.3, volkar: 1.3 * 1.35, hollowking: 1.3 * 1.2 };
+  // a point on his body (the art's own frame, facing +x) in the world
+  const onBody = (b, kind, x, y) => { const S = BODY_S[kind] || 1.3, c = Math.cos(b.f || 0), s = Math.sin(b.f || 0); return { x: b.x + (x * c - y * s) * S, y: b.y + (x * s + y * c) * S }; };
+  // effects owned by his state: his death (or a wipe) cuts them off
+  const own = (sh, e) => { sh.fx.push(e); if (sh.fx.length > 60) sh.fx.shift(); return e; };
+  const cut = sh => { for (const e of sh.fx) { e.gone = true; e.dur = 0; e.done = null; e.tick = null; } sh.fx.length = 0; };
+  const soon = (sh, sec, fn) => own(sh, VFX.fx({ dur: sec, layer: 'ground', draw() {}, done: fn }));
+  const easeIn = q => q * q;
+
+  // screen-space helpers (inside an effect's draw): an edge vignette (cached gradient), and a whole-screen wash
+  const vigG = new Map();
+  function vignette(c, col, a, inner = 0.42) {
+    if (!(a > 0.004)) return;
+    const w = c.canvas.width, h = c.canvas.height, key = w + 'x' + h + col + inner;
+    let g = vigG.get(key);
+    if (!g) {
+      if (vigG.size > 24) vigG.clear();
+      g = c.createRadialGradient(w / 2, h / 2, Math.min(w, h) * inner, w / 2, h / 2, Math.hypot(w, h) * 0.56);
+      g.addColorStop(0, rgba(col, 0)); g.addColorStop(0.55, rgba(col, 0.45)); g.addColorStop(1, rgba(col, 1)); vigG.set(key, g);
+    }
+    c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.globalCompositeOperation = 'source-over'; c.globalAlpha = Math.min(1, a); c.fillStyle = g; c.fillRect(0, 0, w, h); c.restore();
+  }
+  function wash(c, col, a, op = 'source-over') {
+    if (!(a > 0.004)) return;
+    c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.globalCompositeOperation = op; c.globalAlpha = Math.min(1, a); c.fillStyle = col; c.fillRect(0, 0, c.canvas.width, c.canvas.height); c.restore();
+  }
+  // one soft flash over the screen (a single fade, never repeated: no strobing)
+  const softFlash = (sh, col, a, dur = 0.5) => own(sh, VFX.fx({ dur, layer: 'air', draw: (c, p, t, e) => wash(c, col, a * e.a * (1 - p) * (1 - p), 'screen') }));
+
+  // ---- hits: a brief white flinch (stronger for a crit or an Ultimate), throttled so DoT ticks or a flurry don't strobe
+  function bossHit(bd, k) {
+    if (!bd) return;
+    const sh = SH(bd), t = clk(), left = sh.hitK * Math.max(0, 1 - (t - sh.hitAt) / 0.18);
+    if (sh.death || (t - sh.hitAt < 0.14 && k <= left + 0.1)) return;
+    sh.hitAt = t; sh.hitK = Math.min(1, Math.max(k, left));
+  }
+  // everyone else's blows: a faint flinch when his health drops by a real bite between two updates
+  function bossHp(bd, hp, mx) {
+    if (!bd || !(mx > 0)) return;
+    const sh = SH(bd), prev = sh.hp; sh.hp = hp;
+    if (prev != null && hp < prev && (prev - hp) / mx >= 0.0008 && clk() - sh.hitAt > 0.3) bossHit(bd, 0.28);
+  }
+
+  // ---- casts: a pose on his body for each move, and a gathering effect in the right place
+  // pose: [prop, held for s after the cast ends]; keyed by boss, then by the cast's anim (castKey remaps a few shared ones)
+  const CAST_POSE = {
+    grubnak: { raise: [['raise', 0.3]], cleaver: [['windup', 0.1]], hunk: [['hunk', 0.2]], spice: [['spice', 0.2]], serve: [['cloche', 0.3]], bell: [['bell', 0.3]],
+      whisk: [['whisk', 0.3]], charge: [['headdown', 0.6]], drains: [['bucket', 0.3]], heave: [['heave', 0.05]], enrage: [['raise', 0.5], ['steam', 0.5]] },
+    skitterra: { enrage: [['rear', 0.5], ['venom', 0.5], ['brood', 0.5]] },
+    volkar: { enrage: [['sky', 0.5], ['charge', 0.5]] },
+    hollowking: { cleave: [['windup', 0.1]], marks: [['marks', 0.3]], judgement: [['gavel', 0.3]], charges: [['scroll', 0.4]], enrage: [['rise', 0.5], ['gaze', 0.5]] },
+  };
+  const castKey = (kind, anim, name) => {
+    if (kind === 'grubnak' && anim === 'boil' && name === 'Flare-Up') return 'heave';
+    if (kind === 'grubnak' && anim === 'toss') return name === 'Spice Rack' ? 'spice' : 'hunk';
+    return anim;
+  };
+  // motes drawn in to a point on him (pt(): where it is now), faster as the cast nears its end, and a glow there
+  function drawIn(sh, dur, pt, o) {
+    own(sh, VFX.fx({ dur, layer: 'air', tick: (p) => {
+      if (Math.random() > (o.rate ?? 0.35) * (0.45 + p)) return;
+      const q = pt(), a = rand(0, TAU), r = (o.r ?? 70) * rand(0.7, 1.1), life = rand(0.35, 0.55);
+      VFX.spawn({ x: q.x + Math.cos(a) * r, y: q.y + Math.sin(a) * r * 0.7, z: o.z ?? 0, vx: -Math.cos(a) * r / life, vy: -Math.sin(a) * r * 0.7 / life, life, size: rand(5, 9) * (o.size ?? 1), size1: 2, color: Math.random() < 0.7 ? o.color : (o.color2 || '#ffffff') });
+    }, draw: (c, p, t, e) => {
+      if (o.glow === false) return;
+      const q = pt(); VFX.glowAt(c, q.x, q.y - (o.z ?? 0), (o.gr ?? 26) * (0.7 + 0.6 * p), o.color, e.a * (0.22 + 0.4 * p) * (0.85 + 0.15 * Math.sin(t * 12)));
+    } }));
+  }
+  // something spawned from a point on him at a steady rate for the length of the cast
+  const emit = (sh, dur, rate, fn) => own(sh, VFX.fx({ dur, layer: 'air', draw() {}, tick: (p, dt, e) => { if (Math.random() < rate) fn(p, e); } }));
+  // a beat: fn every `every` s through the cast
+  const beat = (sh, dur, every, fn) => { let n = 0; own(sh, VFX.fx({ dur, layer: 'air', draw() {}, tick: (p) => { const k = Math.floor(p * dur / every); if (k > n) { n = k; fn(p); } } })); };
+  const P = (b, kind, x, y) => () => onBody(b, kind, x, y);
+  const CAST_FX = {
+    grubnak: {
+      // the skillet catching: heat gathering in the pan, embers lifting off the floor round his feet
+      raise(sh, b, dur) {
+        drawIn(sh, dur, P(b, 'grubnak', 45, -46), { color: '#ff8a2a', color2: '#ffe0a0', r: 60, gr: 34 });
+        emit(sh, dur, 0.4, () => { const a = rand(0, TAU), d = rand(30, 90); VFX.spawn({ x: b.x + Math.cos(a) * d, y: b.y + Math.sin(a) * d * 0.7, z: 0, vz: rand(50, 110), vx: rand(-10, 10), life: rand(0.6, 1), size: rand(3, 6), size1: 0, color: Math.random() < 0.5 ? '#ffb040' : '#ff6a1a' }); });
+      },
+      // the cleaver hauled back: glints running up its edge, the last one the brightest
+      cleaver(sh, b, dur) {
+        const pt = P(b, 'grubnak', -39, 44);
+        drawIn(sh, dur, pt, { color: '#fff2c8', r: 46, gr: 22, rate: 0.25, size: 0.8 });
+        beat(sh, dur, 0.55, (p) => { const q = pt(); VFX.glint(q.x, q.y, { z: 0, size: 18 + 22 * p, color: '#fff6d8' }); });
+      },
+      // Meat Toss: the slab dripping; Spice Rack: chilli shaken out in red puffs
+      hunk(sh, b, dur) { const pt = P(b, 'grubnak', 16, -52); emit(sh, dur, 0.18, () => { const q = pt(); VFX.spawn({ x: q.x + rand(-6, 6), y: q.y, z: 10, vz: 0, g: 320, life: 0.35, size: rand(5, 8), color: '#8a2a14', kind: 'drop', add: false, rot: Math.PI / 2 }); }); drawIn(sh, dur, pt, { color: '#c8401a', color2: '#ffb070', r: 50, rate: 0.2, gr: 20 }); },
+      spice(sh, b, dur) { const pt = P(b, 'grubnak', 30, -48); emit(sh, dur, 0.3, () => { const q = pt(), a = rand(0, TAU); VFX.spawn({ x: q.x, y: q.y, z: 4, vx: Math.cos(a) * rand(40, 90), vy: Math.sin(a) * rand(30, 70), vz: rand(20, 60), drag: 0.05, life: rand(0.5, 0.8), size: rand(10, 16), size1: 26, color: '#c84a2a', kind: 'smoke', add: false, a: 0.45 }); }); },
+      // the platter's steam curling up
+      serve(sh, b, dur) { const pt = P(b, 'grubnak', 24, -46); emit(sh, dur, 0.22, () => { const q = pt(); VFX.spawn({ x: q.x + rand(-12, 12), y: q.y, z: 10, vz: rand(30, 60), vx: rand(-8, 8), drag: 0.02, life: rand(0.8, 1.2), size: rand(8, 12), size1: 26, color: '#f6f2ee', kind: 'smoke', add: false, a: 0.45, fadeIn: 0.2 }); }); drawIn(sh, dur, pt, { color: '#ffcf7a', r: 50, rate: 0.15, gr: 24 }); },
+      // the bell rung on a beat: a small gold "ding" off it each time
+      bell(sh, b, dur) { const pt = P(b, 'grubnak', 26, -44); beat(sh, dur, 0.62, () => { const q = pt(); VFX.shock(q.x, q.y, { r: 60, color: '#ffe08a', w: 3, dur: 0.35, flat: 0.7 }); VFX.glint(q.x, q.y - 6, { z: 0, size: 16, color: '#fff2c0' }); }); },
+      // cream flung off the whisk in a spinning ring
+      whisk(sh, b, dur) { const pt = P(b, 'grubnak', 39, -50); emit(sh, dur, 0.5, (p) => { const q = pt(), a = rand(0, TAU), sp = rand(90, 160); VFX.spawn({ x: q.x, y: q.y, z: 4, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * 0.7, vz: rand(10, 40), g: 200, drag: 0.04, life: 0.45, size: rand(3, 5), size1: 1, color: '#fff6dc' }); }); },
+      // head down, pawing: dust kicked up behind his heels, a stamp on each beat
+      charge(sh, b, dur) {
+        emit(sh, dur, 0.3, () => { const q = onBody(b, 'grubnak', -26, rand(-20, 20)), back = (b.f || 0) + Math.PI + rand(-0.5, 0.5); VFX.spawn({ x: q.x, y: q.y, z: 2, vx: Math.cos(back) * rand(60, 120), vy: Math.sin(back) * rand(40, 90), vz: rand(10, 40), drag: 0.06, life: rand(0.5, 0.8), size: rand(12, 18), size1: 34, color: '#d8c4a4', kind: 'smoke', add: false, a: 0.5 }); });
+        beat(sh, dur, 0.5, () => { const q = onBody(b, 'grubnak', -6, Math.random() < 0.5 ? -18 : 18); VFX.shock(q.x, q.y, { r: 40, color: '#e8d8c0', w: 3, dur: 0.3, flat: 0.6 }); VFX.debris(q.x, q.y, { color: '#c9b48e', n: 2, speed: 0.5, size: 0.7 }); });
+      },
+      // the stockpot overhead, slopping and steaming; at the end it's thrown up onto the stove line
+      heave(sh, b, dur) {
+        const pt = P(b, 'grubnak', 6, -4);
+        emit(sh, dur, 0.3, () => { const q = pt(); VFX.spawn({ x: q.x + rand(-20, 20), y: q.y - 20, z: 30, vz: rand(30, 60), drag: 0.02, life: rand(0.8, 1.2), size: rand(10, 14), size1: 30, color: '#f6f2ee', kind: 'smoke', add: false, a: 0.5, fadeIn: 0.2 }); });
+        emit(sh, dur, 0.12, () => { const q = pt(), a = rand(0, TAU); VFX.spawn({ x: q.x + Math.cos(a) * 30, y: q.y + Math.sin(a) * 24, z: 30, vx: Math.cos(a) * 40, vy: Math.sin(a) * 30, vz: 40, g: 400, life: 0.45, size: rand(5, 8), color: '#d8702a', kind: 'drop', add: false }); });
+        soon(sh, dur, () => potThrow(pt(), { x: b.x * 0.6, y: -ARENA.hh - 6 }));
+      },
+      // the grease bucket pouring
+      drains(sh, b, dur) { const pt = P(b, 'grubnak', 46, -38); emit(sh, dur, 0.25, () => { const q = pt(); VFX.spawn({ x: q.x + rand(-4, 4), y: q.y, z: 14, g: 360, life: 0.3, size: rand(6, 9), color: '#6a4014', kind: 'drop', add: false, rot: Math.PI / 2 }); }); },
+      // the broth coming up to the boil in him: his belly glowing, bubbles popping round him
+      boil(sh, b, dur) {
+        drawIn(sh, dur, () => b, { color: '#ff7a2a', color2: '#ffd070', r: 90, rate: 0.2, gr: 60 });
+        emit(sh, dur, 0.3, () => { const a = rand(0, TAU), d = rand(20, 70); VFX.spawn({ x: b.x + Math.cos(a) * d, y: b.y + Math.sin(a) * d * 0.7, z: 10, vz: rand(20, 50), life: 0.4, size: rand(5, 9), size1: 12, color: '#ffb060', kind: 'soft' }); });
+      },
+      // Gut Blast: drawing a great breath, the air (and the smoke) pulled into his belly
+      gut(sh, b, dur) { drawIn(sh, dur, () => b, { color: '#ffb070', color2: '#c8d87a', r: 140, rate: 0.6, gr: 50 }); },
+    },
+    skitterra: {
+      venom(sh, b, dur) {
+        const pt = P(b, 'skitterra', 38, 0);
+        drawIn(sh, dur, pt, { color: '#8aff4a', color2: '#e8ffb0', r: 64, gr: 24 });
+        emit(sh, dur, 0.2, () => { const q = pt(); VFX.spawn({ x: q.x + rand(-6, 6), y: q.y + rand(-4, 4), z: 6, g: 260, life: 0.35, size: rand(5, 8), color: '#8adf2a', kind: 'drop', add: false, rot: Math.PI / 2 }); });
+      },
+      // silk: strands drawn in from all round, winding into her spinnerets
+      silk(sh, b, dur) {
+        const pt = P(b, 'skitterra', -54, 0), st = Array.from({ length: 7 }, (_, i) => ({ a: i * TAU / 7 + rand(-0.3, 0.3), ph: rand(0, 1), bend: rand(-0.8, 0.8) }));
+        own(sh, VFX.fx({ dur, layer: 'air', draw: (c, p, t, e) => {
+          const q = pt(), k = e.a * Math.min(1, p / 0.1) * Math.min(1, (1 - p) / 0.1);
+          c.save(); c.lineCap = 'round';
+          for (const s of st) {
+            const u = (t * 0.9 + s.ph) % 1, r0 = 170 * (1 - u) + 10, r1 = r0 + 60, a0 = s.a + s.bend * u;
+            c.beginPath(); c.moveTo(q.x + Math.cos(a0) * r1, q.y + Math.sin(a0) * r1 * 0.7);
+            c.quadraticCurveTo(q.x + Math.cos(a0 + 0.4) * (r0 + 20), q.y + Math.sin(a0 + 0.4) * (r0 + 20) * 0.7, q.x + Math.cos(a0) * r0 * 0.3, q.y + Math.sin(a0) * r0 * 0.21);
+            c.globalAlpha = k * 0.75 * Math.sin(u * Math.PI); c.strokeStyle = '#f4f0ff'; c.lineWidth = 1.6; c.stroke();
+          }
+          c.restore();
+          VFX.glowAt(c, q.x, q.y, 20 + 14 * p, '#f4f0ff', k * (0.3 + 0.3 * p));
+        } }));
+      },
+      // a lunge or a molt: the claws on her front legs catching the light in turn
+      claws(sh, b, dur) { let side = 1; beat(sh, dur, 0.4, (p) => { side = -side; const q = onBody(b, 'skitterra', 40, 42 * side); VFX.glint(q.x, q.y, { z: 0, size: 16 + 14 * p, color: '#ffd0ec' }); }); },
+      // the brood: the sacs in her glowing, green motes rising off her abdomen
+      brood(sh, b, dur) { const pt = P(b, 'skitterra', -28, 0); drawIn(sh, dur, pt, { color: '#c8ff6a', r: 40, rate: 0.15, gr: 40 }); emit(sh, dur, 0.25, () => { const q = pt(); VFX.spawn({ x: q.x + rand(-20, 20), y: q.y + rand(-14, 14), z: 6, vz: rand(30, 60), life: rand(0.6, 0.9), size: rand(3, 5), size1: 0, color: '#e8ff9a' }); }); },
+      // up into the dark: grit and silk dust sifting down round her
+      ambush(sh, b, dur) { emit(sh, dur, 0.35, () => { const a = rand(0, TAU), d = rand(20, 120); VFX.spawn({ x: b.x + Math.cos(a) * d, y: b.y + Math.sin(a) * d * 0.7, z: rand(160, 260), g: 380, life: 0.8, size: rand(3, 5), color: '#8a8098', kind: 'shard', add: false, vr: rand(-6, 6) }); }); },
+    },
+    volkar: {
+      // the storm gathering over him: dark cloud wheeling overhead, short bolts dropping from it onto him
+      sky(sh, b, dur) {
+        const blobs = Array.from({ length: 8 }, (_, i) => ({ a: i * TAU / 8, r: rand(40, 70), s: rand(34, 50) }));
+        own(sh, VFX.fx({ dur, layer: 'air', draw: (c, p, t, e) => {
+          const k = e.a * Math.min(1, p / 0.15) * Math.min(1, (1 - p) / 0.1), cx = b.x, cy = b.y - 170;
+          c.save();
+          for (const o of blobs) { const a = o.a + t * 1.2; c.globalAlpha = k * 0.42; c.fillStyle = '#1a2230'; c.beginPath(); c.ellipse(cx + Math.cos(a) * o.r, cy + Math.sin(a) * o.r * 0.45, o.s, o.s * 0.6, 0, 0, TAU); c.fill(); }
+          c.restore();
+          VFX.glowAt(c, cx, cy, 70, '#7fe8ff', k * (0.15 + 0.3 * p));
+        } }));
+        beat(sh, dur, 0.5, () => VFX.lightning(b.x + rand(-40, 40), b.y - 170, b.x + rand(-20, 20), b.y - 40, { color: '#bff6ff', jag: 12, dur: 0.18 }));
+      },
+      // lightning gathering in the striking fist
+      fist(sh, b, dur) { const pt = P(b, 'volkar', 18, 36); drawIn(sh, dur, pt, { color: '#9ff4ff', r: 70, gr: 30 }); beat(sh, dur, 0.3, () => { const q = pt(), a = rand(0, TAU); VFX.lightning(q.x + Math.cos(a) * 70, q.y + Math.sin(a) * 50, q.x, q.y, { color: '#dffbff', jag: 10, dur: 0.14 }); }); },
+      // Polarity Surge: gold into one hand, blue into the other
+      surge(sh, b, dur) { drawIn(sh, dur, P(b, 'volkar', 18, -36), { color: '#ffc24a', r: 60, gr: 26 }); drawIn(sh, dur, P(b, 'volkar', 18, 36), { color: '#4ad8ff', r: 60, gr: 26 }); },
+      // charged: arcs crawling over his stone, blue motes pulled into him
+      crackle(sh, b, dur) { drawIn(sh, dur, () => b, { color: '#7fe8ff', r: 110, rate: 0.3, gr: 50 }); beat(sh, dur, 0.28, () => { const a = rand(0, TAU), a2 = a + rand(0.6, 1.4); VFX.lightning(b.x + Math.cos(a) * 60, b.y + Math.sin(a) * 45, b.x + Math.cos(a2) * 70, b.y + Math.sin(a2) * 50, { color: '#bff6ff', jag: 10, dur: 0.16 }); }); },
+      // Gale Slam: streaks of air pulled in toward him
+      gale(sh, b, dur) {
+        own(sh, VFX.fx({ dur, layer: 'air', draw: (c, p, t, e) => {
+          const k = e.a * Math.min(1, p / 0.15);
+          c.save(); c.lineCap = 'round'; c.strokeStyle = '#e8f4ff'; c.lineWidth = 2;
+          for (let i = 0; i < 12; i++) { const a = i * TAU / 12 + 0.3 * Math.sin(i), u = (t * 1.3 + i * 0.37) % 1, d = 220 - 160 * u; c.globalAlpha = k * 0.6 * Math.sin(u * Math.PI); c.beginPath(); c.moveTo(b.x + Math.cos(a) * d, b.y + Math.sin(a) * d * 0.7); c.lineTo(b.x + Math.cos(a) * (d - 40), b.y + Math.sin(a) * (d - 40) * 0.7); c.stroke(); }
+          c.restore();
+        } }));
+      },
+    },
+    hollowking: {
+      // Grave Cleave: violet light running up the raised blade
+      cleave(sh, b, dur) { const pt = P(b, 'hollowking', 18, -9); drawIn(sh, dur, pt, { color: '#b46aff', color2: '#f0e0ff', r: 60, gr: 30 }); beat(sh, dur, 0.6, (p) => { const q = pt(); VFX.glint(q.x, q.y, { z: 0, size: 16 + 18 * p, color: '#f0e0ff' }); }); },
+      // Grave Marks: sigils turning on the floor round him, grave-light rising
+      marks(sh, b, dur) {
+        own(sh, VFX.fx({ dur, layer: 'ground', draw: (c, p, t, e) => {
+          const k = e.a * Math.min(1, p / 0.15) * Math.min(1, (1 - p) / 0.1);
+          VFX.neonRing(c, b.x, b.y, 96, '#6dff9a', 2, k * 0.6, 0.55);
+          for (let i = 0; i < 6; i++) { const a = t * 0.8 + i * TAU / 6; VFX.glowAt(c, b.x + Math.cos(a) * 96, b.y + Math.sin(a) * 96 * 0.55, 10, '#c8ffd8', k * 0.7); }
+        } }));
+        drawIn(sh, dur, P(b, 'hollowking', 24, -30), { color: '#6dff9a', r: 70, gr: 22 });
+      },
+      // the Writ / Judgement: the sceptre's head drawing gold out of the air
+      judgement(sh, b, dur) { drawIn(sh, dur, P(b, 'hollowking', 43, -58), { color: '#ffe08a', color2: '#ffffff', r: 80, gr: 34 }); },
+      charges(sh, b, dur) { drawIn(sh, dur, P(b, 'hollowking', 37, -35), { color: '#7affa8', r: 40, rate: 0.15, gr: 22 }); },
+      doom(sh, b, dur) { drawIn(sh, dur, P(b, 'hollowking', 16, -24), { color: '#b46aff', color2: '#e8d0ff', r: 70, gr: 30 }); },
+      // his gaze: a cold glint in his eyes
+      gaze(sh, b, dur) { const pt = P(b, 'hollowking', 11, 0); beat(sh, dur, 0.7, (p) => { const q = pt(); VFX.glint(q.x, q.y, { z: 0, size: 14 + 16 * p, color: '#e8fff0' }); }); },
+      // the dead answering: grave-light rising out of the floor round him
+      rise(sh, b, dur) { emit(sh, dur, 0.35, () => { const a = rand(0, TAU), d = rand(60, 160); VFX.spawn({ x: b.x + Math.cos(a) * d, y: b.y + Math.sin(a) * d * 0.6, z: 0, vz: rand(90, 150), life: rand(0.5, 0.8), size: rand(4, 7), size1: 0, color: Math.random() < 0.7 ? '#6dff9a' : '#c8ffd8' }); }); },
+      // a swing building: grave-light pooling at his feet
+      pool(sh, b, dur) { drawIn(sh, dur, () => b, { color: '#3aff7a', r: 120, rate: 0.25, gr: 60 }); },
+      lights(sh, b, dur) { emit(sh, dur, 0.3, () => { const a = rand(0, TAU), d = rand(80, 160), life = 0.6; VFX.spawn({ x: b.x + Math.cos(a) * d, y: b.y + Math.sin(a) * d * 0.7, z: 20, vx: -Math.cos(a) * d / life, vy: -Math.sin(a) * d * 0.7 / life, life, size: rand(14, 20), size1: 6, color: '#141a18', kind: 'smoke', add: false, a: 0.5 }); }); },
+      audience(sh, b, dur) { drawIn(sh, dur, P(b, 'hollowking', 4, 0), { color: '#ffe6a0', r: 70, gr: 36 }); },
+    },
+  };
+  // which gathering effect each anim gets (anims sharing one look share an entry)
+  const CAST_USE = {
+    skitterra: { mist: 'venom', spit: 'venom', deluge: 'venom', fang: 'venom', wrap: 'silk', silk: 'silk', web: 'silk', strand: 'silk', cocoon: 'silk', volley: 'silk', reel: 'silk',
+      lunge: 'claws', molt: 'claws', brood: 'brood', eggs: 'brood', ambush: 'ambush' },
+    volkar: { clap: 'sky', storm: 'sky', skyfall: 'sky', fist: 'fist', avalanche: 'fist', surge: 'surge', rods: 'crackle', crash: 'crackle', field: 'crackle', chain: 'crackle', orbs: 'crackle', gale: 'gale' },
+    hollowking: { cleave: 'cleave', marks: 'marks', judgement: 'judgement', charges: 'charges', doom: 'doom', gaze: 'gaze', lightsout: 'lights', rise: 'rise', night: 'rise', march: 'rise',
+      sweep: 'pool', stomp: 'pool', ring: 'pool', bind: 'pool', lids: 'rise', decree: 'rise', knell: 'pool', bells: 'pool', audience: 'audience' },
+  };
+  // the Flare-Up's end: the pot flung up onto the stove line in an arc, landing with a clang and a gout of steam
+  function potThrow(from, to) {
+    VFX.fx({ dur: 0.45, layer: 'air', draw: (c, p, t, e) => {
+      const x = from.x + (to.x - from.x) * p, y = from.y + (to.y - from.y) * p - Math.sin(p * Math.PI) * 140 - 30 * (1 - p);
+      c.save(); c.translate(x, y); c.rotate(p * 3);
+      circle(c, 0, 0, 26, '#9aa2ab', '#1a1622', 3); circle(c, 0, 0, 19, '#c8601a');
+      c.restore();
+    }, done: () => {
+      VFX.shock(to.x, to.y + 30, { r: 150, color: '#f0f4f8', w: 6, dur: 0.4, flat: 0.6 });
+      VFX.sparks(to.x, to.y + 10, { color: '#ffe0a0', n: 12, speed: 320 });
+      steam(to.x, to.y + 30, 10, 220);
+      shake(7);
+    } });
+  }
+
+  // ---- the enrage: the cast builds to the lethal moment (pdmg 'enrage': fight.js's sentence, untouched)
+  const ENR = { grubnak: '#ff2a10', skitterra: '#b02aff', volkar: '#7a8aff', hollowking: '#9ac8ff' };
+  function enrageStart(kind, b, dur) {
+    const sh = SH(b); if (sh.death) return;
+    sh.enrAt = clk(); sh.enrDur = dur; sh.landed = false;
+    const col = ENR[kind] || '#ff2a10';
+    // the screen's edge breathing in the boss's colour: a slow pulse (under once a second) that climbs to the end
+    own(sh, VFX.fx({ dur: dur + 3, layer: 'air', draw: (c, p, t, e) => { const q = Math.min(1, t / dur); vignette(c, col, e.a * (0.14 + 0.36 * q) * (0.78 + 0.22 * Math.sin(t * TAU * 0.8))); } }));
+    (ENRAGE_SEQ[kind] || (() => {}))(sh, b, dur);
+    roar(b.x, b.y, kind);
+    shake(5);
+  }
+  const ENRAGE_SEQ = {
+    // Last Call: he kicks the table over, and the whole kitchen goes red, embers lifting off the floor
+    grubnak(sh, b, dur) {
+      own(sh, VFX.fx({ dur: dur + 3, layer: 'ground', draw: (c, p, t, e) => wash(c, '#ff4a2a', e.a * 0.42 * Math.min(1, t / dur), 'multiply') }));
+      emit(sh, dur + 2, 0.6, (p) => { const q = scatter({ kind: 'circle', x: 0, y: 0, r: AR() - 40 }, 1)[0]; if (q) VFX.spawn({ x: q.x, y: q.y, z: 0, vz: rand(40, 100), vx: rand(-12, 12), life: rand(0.8, 1.4), size: rand(3, 6), size1: 0, color: Math.random() < 0.5 ? '#ffb040' : '#ff5a1a' }); });
+      soon(sh, 0.6, () => tableFlip(sh, b, dur + 2));
+    },
+    // Devour: the brood comes pouring out of the walls and rings her while she rears
+    skitterra(sh, b, dur) {
+      own(sh, VFX.fx({ dur: dur + 3, layer: 'ground', draw: (c, p, t, e) => wash(c, '#9a7ab8', e.a * 0.5 * Math.min(1, t / dur), 'multiply') }));
+      const brood = Array.from({ length: 28 }, (_, i) => { const a = i * TAU / 28 + rand(-0.1, 0.1), wall = ARENA.edge ? ARENA.edge(a) : AR(), ra = rand(150, 230); return { a, wall, ra, at: rand(0.3, dur * 0.7), sp: rand(1.1, 1.8), st: { t: 0, props: {}, moving: true } }; });
+      own(sh, VFX.fx({ dur: dur + 2.5, layer: 'ground', draw: (c, p, t, e) => {
+        for (const s of brood) {
+          if (t < s.at) continue;
+          const q = Math.min(1, (t - s.at) / s.sp), d = s.wall + (s.ra - s.wall) * easeOut(q), jit = q >= 1 ? Math.sin(t * 9 + s.a * 7) * 6 : 0;
+          s.st.t = t + s.a; s.st.moving = q < 1 || Math.sin(t * 3 + s.a) > 0.6;
+          c.save(); c.globalAlpha = e.a * Math.min(1, (t - s.at) / 0.3);
+          drawAdd(c, 'spiderling', b.x + Math.cos(s.a) * (d + jit), b.y + Math.sin(s.a) * (d + jit) * 0.75, s.a + Math.PI, s.st, t > dur * 0.85, 1.1);
+          c.restore();
+        }
+      } }));
+    },
+    // Skybreak: a crack opens across the sky, rain drives down, bolts fall out of the split
+    volkar(sh, b, dur) {
+      const pts = Array.from({ length: 14 }, (_, i) => [i / 13, 0.16 + rand(-0.035, 0.035)]);
+      own(sh, VFX.fx({ dur: dur + 3, layer: 'ground', draw: (c, p, t, e) => wash(c, '#6a7aa8', e.a * 0.45 * Math.min(1, t / dur), 'multiply') }));
+      own(sh, VFX.fx({ dur: dur + 3, layer: 'air', draw: (c, p, t, e) => {
+        const q = Math.min(1, t / dur), W = c.canvas.width, H = c.canvas.height, w = (3 + 34 * easeIn(q)) * H / 900, k = e.a * Math.min(1, t / 0.4);
+        c.save(); c.setTransform(1, 0, 0, 1, 0, 0);
+        // rain: long thin streaks, in screen space, thickening with the storm
+        c.strokeStyle = '#c8dcff'; c.lineWidth = Math.max(1, H / 700); c.globalAlpha = k * (0.12 + 0.25 * q); c.beginPath();
+        for (let i = 0; i < 70; i++) { const x = ((i * 0.618 + t * 0.07) % 1) * W * 1.1 - W * 0.05, y = (((i * 0.377) + t * (1.1 + (i % 3) * 0.2)) % 1) * H * 1.1 - H * 0.05; c.moveTo(x, y); c.lineTo(x - H * 0.012, y + H * 0.05); }
+        c.stroke();
+        // the split: a jagged seam of white-blue light across the top of the sky, opening
+        const path = (s) => { c.beginPath(); pts.forEach(([u, v], i) => { const y = v * H - s * w * (0.4 + 0.6 * Math.sin(u * Math.PI)); i ? c.lineTo(u * W, y) : c.moveTo(u * W, y); }); for (let i = pts.length - 1; i >= 0; i--) { const [u, v] = pts[i]; c.lineTo(u * W, v * H + s * w * (0.4 + 0.6 * Math.sin(u * Math.PI))); } c.closePath(); };
+        c.globalCompositeOperation = 'lighter';
+        c.globalAlpha = k * 0.35; c.fillStyle = '#5a7aff'; path(2.6); c.fill();
+        c.globalAlpha = k * 0.8; c.fillStyle = '#bfe8ff'; path(1); c.fill();
+        c.globalAlpha = k; c.fillStyle = '#ffffff'; path(0.35); c.fill();
+        c.restore();
+      } }));
+      beat(sh, dur, 0.85, () => { const a = rand(0, TAU), d = rand(120, AR() * 0.8); VFX.lightning(b.x + rand(-200, 200), b.y - 700, b.x + Math.cos(a) * d, b.y + Math.sin(a) * d * 0.7, { color: '#dff4ff', jag: 26, dur: 0.35 }); });
+    },
+    // Moonset: the moon climbs over the barrow and the hall freezes, frost closing in from the edges
+    hollowking(sh, b, dur) {
+      own(sh, VFX.fx({ dur: dur + 3, layer: 'ground', draw: (c, p, t, e) => wash(c, '#8ab4e8', e.a * 0.5 * Math.min(1, t / dur), 'multiply') }));
+      own(sh, VFX.fx({ dur: dur + 3, layer: 'air', draw: (c, p, t, e) => {
+        const q = Math.min(1, t / dur), W = c.canvas.width, H = c.canvas.height, R = Math.min(W, H) * 0.075, x = W * 0.5, y = H * (0.3 - 0.2 * easeOut(q)), k = e.a * Math.min(1, t / 0.6);
+        vignette(c, '#dff0ff', k * 0.4 * q, 0.48);
+        c.save(); c.setTransform(1, 0, 0, 1, 0, 0);
+        c.globalCompositeOperation = 'lighter'; c.globalAlpha = k * 0.35; c.drawImage(VFX.sprite('glow', '#9ac8ff'), x - R * 4, y - R * 4, R * 8, R * 8);
+        c.globalCompositeOperation = 'source-over'; c.globalAlpha = k * 0.82; c.fillStyle = '#eef6ff'; c.beginPath(); c.arc(x, y, R, 0, TAU); c.fill();
+        c.fillStyle = 'rgba(150,175,210,0.45)'; for (const [dx, dy, r] of [[-0.3, -0.2, 0.22], [0.25, 0.1, 0.16], [-0.05, 0.35, 0.12], [0.35, -0.35, 0.1]]) { c.beginPath(); c.arc(x + dx * R, y + dy * R, r * R, 0, TAU); c.fill(); }
+        c.restore();
+      } }));
+      emit(sh, dur + 2, 0.5, () => { const q = scatter({ kind: 'circle', x: 0, y: 0, r: AR() - 40 }, 1)[0]; if (q) VFX.spawn({ x: q.x, y: q.y, z: rand(60, 140), vz: -rand(10, 30), vx: rand(-15, 15), life: rand(1.2, 2), size: rand(3, 5), size1: 1, color: '#e8f4ff' }); });
+    },
+  };
+  // Last Call's table: set in front of him, kicked up end over end, landing upside down with a crash of plates
+  function tableFlip(sh, b, dur) {
+    const f = b.f || 0, ca = Math.cos(f), sa = Math.sin(f), x0 = b.x + ca * 120, y0 = b.y + sa * 120, L = 150, Wd = 70;
+    let crashed = false;
+    own(sh, VFX.fx({ dur, layer: 'air', draw: (c, p, t, e) => {
+      const q = Math.min(1, t / 0.5), phi = Math.PI * easeOut(q), fwd = 70 * q, z = Math.sin(phi) * 50, k = e.a * Math.min(1, (dur - t) / 0.6);
+      if (q >= 1 && !crashed) { crashed = true; const cx = x0 + ca * 70, cy = y0 + sa * 70; bang(cx, cy, 90, { n: 12, color: '#c8803a', core: '#ffe0b0', ink: '#3a1a08' }); VFX.debris(cx, cy, { color: '#7a4a22', n: 12, speed: 1.3 }); for (let i = 0; i < 10; i++) VFX.spawn({ x: cx, y: cy, z: 20, vx: rand(-220, 220), vy: rand(-160, 160), vz: rand(100, 260), g: 600, life: 0.7, size: 10, color: '#f0ece4', kind: 'shard', add: false, vr: rand(-10, 10) }); shake(10); }
+      c.save(); c.translate(x0 + ca * fwd, y0 + sa * fwd - z); c.rotate(f); c.scale(Math.cos(phi), 1); c.globalAlpha = k;
+      const under = Math.cos(phi) < 0;
+      rrect(c, -Wd / 2, -L / 2, Wd, L, 6, under ? '#5a3418' : '#9a6a3a', '#1a1622', 3);
+      if (!under) { c.strokeStyle = 'rgba(60,30,10,0.5)'; c.lineWidth = 1.5; c.beginPath(); for (const u of [-0.25, 0, 0.25]) { c.moveTo(u * Wd, -L / 2 + 6); c.lineTo(u * Wd, L / 2 - 6); } c.stroke(); circle(c, 0, -20, 12, '#f0ece4', '#1a1622', 2); circle(c, 4, 26, 10, '#f0ece4', '#1a1622', 2); }
+      else for (const [lx, ly] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { rrect(c, lx * (Wd / 2 - 10) - 5, ly * (L / 2 - 12) - 5, 10, 10, 2, '#3a2010', '#1a1622', 2); }
+      c.restore(); c.globalAlpha = 1;
+    } }));
+  }
+  // the lethal moment (once): each boss's own end of the world, then the wipe follows
+  function enrageLand(kind, b) {
+    const sh = SH(b); if (sh.landed || sh.death) return; sh.landed = true;
+    shake(14);
+    if (kind === 'grubnak') {
+      softFlash(sh, '#ff6a2a', 0.35, 0.7);
+      bang(b.x, b.y - 20, 260, { n: 20, dur: 0.6 });
+      for (const q of scatter({ kind: 'circle', x: 0, y: 0, r: AR() - 50 }, 12)) after(rand(0, 0.35), () => VFX.flare(q.x, q.y, { color: '#ff5a1a', n: 16, r: 30, h: 1.8, size: 1.3 }));
+    } else if (kind === 'skitterra') {
+      softFlash(sh, '#c070ff', 0.3, 0.7);
+      VFX.shock(b.x, b.y, { r: AR() * 1.2, color: '#c070ff', w: 12, dur: 0.6, flat: 1 });
+      bang(b.x, b.y, 200, { n: 18, color: '#b04aff', core: '#ffe0ff', ink: '#1a0a2a', dur: 0.55 });
+    } else if (kind === 'volkar') {
+      softFlash(sh, '#dff4ff', 0.4, 0.8);
+      VFX.pillar(b.x, b.y, { r: 160, h: 900, color: '#dff4ff', dur: 1.1 });
+      for (const q of scatter({ kind: 'circle', x: 0, y: 0, r: AR() - 40 }, 7)) after(rand(0, 0.3), () => VFX.lightning(q.x + rand(-40, 40), q.y - 600, q.x, q.y, { color: '#ffffff', jag: 26, dur: 0.4 }));
+    } else {
+      softFlash(sh, '#cfe8ff', 0.4, 0.9);
+      VFX.shock(b.x, b.y, { r: AR() * 1.3, color: '#dff0ff', w: 14, dur: 0.8, flat: 1 });
+      for (let i = 0; i < 24; i++) { const a = rand(0, TAU), s = rand(200, 420); VFX.spawn({ x: b.x, y: b.y, z: rand(10, 60), vx: Math.cos(a) * s, vy: Math.sin(a) * s * 0.6, vz: rand(60, 200), g: 500, drag: 0.03, life: 0.8, size: rand(9, 15), color: '#dff4ff', kind: 'shard', vr: rand(-12, 12) }); }
+    }
+  }
+  // the soft enrage (fev 'behind': another pass of a course's last set): he gets heavier and his rim burns red
+  function behind(b, n) {
+    const sh = SH(b); if (sh.death) return;
+    sh.behind = Math.min(0.75, 0.3 + 0.12 * (n || 1));
+    VFX.shock(b.x, b.y, { r: 220, color: '#ff4a2a', w: 6, dur: 0.6, flat: 1 });
+    shake(4);
+  }
+
+  // ---- the entrance (at the room's title card): short, cosmetic, nothing blocked
+  const INTRO_DUR = { grubnak: 1.5, skitterra: 1.6, volkar: 1.2, hollowking: 2.2 };
+  function intro(kind, b) {
+    const sh = SH(b); sh.intro = { at: clk(), kind };
+    if (kind === 'grubnak') {
+      // he slams a stockpot down in front of him: a clang, a ring, a gout of steam
+      soon(sh, 0.7, () => {
+        const q = onBody(b, 'grubnak', 70, 0);
+        VFX.fx({ dur: 1.4, layer: 'air', draw: (c, p, t, e) => { const z = Math.max(0, 1 - t / 0.08) * 50, k = e.a * Math.min(1, (1.4 - t) / 0.5); c.save(); c.globalAlpha = k; c.translate(q.x, q.y - z); ellipse(c, 0, 18, 34, 12, 0, 'rgba(0,0,0,0.3)'); rrect(c, -30, -26, 60, 44, [4, 4, 14, 14], '#9aa2ab', '#1a1622', 3); ellipse(c, 0, -26, 30, 9, 0, '#c8601a', '#1a1622', 2.5); for (const s of [-1, 1]) rrect(c, s * 30 - 5, -18, 10, 6, 3, '#4a4e54', '#1a1622', 2); c.restore(); c.globalAlpha = 1; } });
+        VFX.shock(q.x, q.y, { r: 130, color: '#f4f6f8', w: 6, dur: 0.4, flat: 0.6 });
+        VFX.shock(q.x, q.y, { r: 200, color: '#ffd08a', w: 3, dur: 0.6, flat: 0.6, delay: 0.08 });
+        VFX.sparks(q.x, q.y - 10, { color: '#ffe0a0', n: 10, speed: 280 });
+        steam(q.x, q.y - 20, 10, 160);
+        shake(8);
+      });
+    } else if (kind === 'skitterra') {
+      // she comes down out of the dark on a thread and lands in a burst of dust and silk
+      VFX.fx({ dur: 1.9, layer: 'air', draw: (c, p, t, e) => {
+        const oy = introDrop(t), k = e.a * Math.min(1, (1.9 - t) / 0.5);
+        c.save(); c.globalAlpha = k; c.lineCap = 'round'; c.strokeStyle = 'rgba(250,248,255,0.85)'; c.lineWidth = 2; c.beginPath(); c.moveTo(b.x - 40, b.y - 1200); c.lineTo(b.x - 40 * (1 - Math.min(1, t)), b.y + oy - 30); c.stroke(); c.restore(); c.globalAlpha = 1;
+      } });
+      soon(sh, 0.9, () => {
+        VFX.shock(b.x, b.y, { r: 220, color: '#e8dcff', w: 8, dur: 0.5, flat: 1 });
+        VFX.smoke(b.x, b.y, { color: '#8a8098', n: 10, size: 40, a: 0.55, speed: 150 });
+        VFX.debris(b.x, b.y, { color: '#4a4156', n: 10, speed: 1.2 });
+        webDecal(b.x, b.y, 150, 5);
+        shake(9);
+      });
+    } else if (kind === 'volkar') {
+      // the storm crashes in: bolts drive down on the spot and he's standing in them, one soft flash and thunder
+      soon(sh, 0.3, () => {
+        for (let i = 0; i < 3; i++) VFX.lightning(b.x + rand(-60, 60), b.y - 700, b.x + rand(-20, 20), b.y - 10, { color: i ? '#bff6ff' : '#ffffff', jag: 28, dur: 0.45 });
+        VFX.pillar(b.x, b.y, { r: 90, h: 600, color: '#dff4ff', dur: 0.7 });
+        VFX.shock(b.x, b.y, { r: 320, color: '#9ff4ff', w: 10, dur: 0.55, flat: 1 });
+        for (const q of ringPts(b.x, b.y, 110, 12)) VFX.spawn({ x: q.x, y: q.y, z: 10, vx: Math.cos(q.a) * 120, vy: Math.sin(q.a) * 90, vz: 20, drag: 0.04, life: rand(1, 1.5), size: rand(30, 44), size1: 80, color: '#2a3240', kind: 'smoke', add: false, a: 0.55 });
+        AFT.decal(b.x, b.y, { style: 'crack', r: 110, dur: 4, a: 0.6, seed: Math.random() * 6 });
+        softFlash(sh, '#dff4ff', 0.18, 0.45);
+        shake(10);
+      });
+    } else if (kind === 'hollowking') {
+      // the great door behind him swings open on grave-light, fog rolls out over the floor, he walks out of it
+      const dy = -ARENA.hh;
+      VFX.fx({ dur: 2.3, layer: 'ground', draw: (c, p, t, e) => {
+        const open = easeOut(Math.min(1, t / 0.9)), k = e.a * Math.min(1, t / 0.2) * Math.min(1, (2.3 - t) / 0.6), w = 90, h = 150;
+        c.save(); c.globalAlpha = k;
+        c.fillStyle = '#05080a'; c.fillRect(b.x - w, dy - h, w * 2, h);
+        VFX.glowAt(c, b.x, dy - 20, 130 * open, '#6dff9a', k * 0.6 * open);
+        c.fillStyle = '#2a2e34'; c.strokeStyle = '#1a1622'; c.lineWidth = 3;
+        for (const s of [-1, 1]) { const lw = w * (1 - open * 0.85); c.fillRect(s < 0 ? b.x - w : b.x + w - lw, dy - h, lw, h); c.strokeRect(s < 0 ? b.x - w : b.x + w - lw, dy - h, lw, h); }
+        c.restore(); c.globalAlpha = 1;
+      } });
+      emit(sh, 1.5, 0.7, () => { const a = Math.PI / 2 + rand(-1.3, 1.3), sp = rand(80, 200); VFX.spawn({ x: b.x + rand(-80, 80), y: Math.max(dy + 10, b.y - 60) + rand(0, 40), z: 4, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * 0.8, drag: 0.02, life: rand(1.4, 2.2), size: rand(40, 60), size1: 110, color: '#9ab0a8', kind: 'smoke', add: false, a: 0.22, fadeIn: 0.25 }); });
+      soon(sh, 1.6, () => { const q = onBody(b, 'hollowking', 11, 0); VFX.flash(q.x, q.y - 6, 60, '#c8ffd8', 0.3); VFX.shock(b.x, b.y, { r: 160, color: '#6dff9a', w: 4, dur: 0.5, flat: 0.6 }); shake(5); });
+    }
+  }
+  const introDrop = t => t < 0.9 ? -620 * (1 - easeIn(t / 0.9)) : t < 1.25 ? -16 * Math.sin((t - 0.9) / 0.35 * Math.PI) : 0;
+
+  // ---- his fall (fight clear), 2-3 s; the confetti comes after it (victory)
+  const DEATH_DUR = { grubnak: 2.2, skitterra: 2.2, volkar: 2.3, hollowking: 2.4 };
+  function bossDeath(kind, b) {
+    const sh = SH(b); if (sh.death) return;
+    cut(sh); sh.enrAt = -9; sh.behind = 0; sh.death = { at: clk(), kind };
+    if (kind === 'grubnak') {
+      // he staggers, then goes down flat on his face; a pot lid clangs away across the tiles, steam everywhere
+      emit(sh, 0.8, 0.25, () => VFX.smoke(b.x + rand(-30, 30), b.y - 30, { color: '#f6f2ee', n: 1, size: 24, a: 0.4, speed: 30 }));
+      soon(sh, 0.8, () => {
+        VFX.shock(b.x, b.y, { r: 240, color: '#f0e0c8', w: 8, dur: 0.6, flat: 1 });
+        VFX.debris(b.x, b.y, { color: '#e2d6c0', n: 12, speed: 1.3 });
+        steam(b.x, b.y, 14, 260);
+        const dir = Math.random() < 0.5 ? -1 : 1;
+        VFX.fx({ dur: 1.3, layer: 'air', draw: (c, p, t, e) => {
+          const x = b.x + dir * (40 + 220 * easeOut(p)), z = Math.abs(Math.sin(p * Math.PI * 2.5)) * 70 * (1 - p), k = e.a * Math.min(1, (1 - p) / 0.3);
+          c.save(); c.globalAlpha = k; c.translate(x, b.y + 30 - z); c.rotate(dir * p * 9); ellipse(c, 0, 0, 24, 24 * Math.abs(Math.cos(p * 14)) + 3, 0, '#aab2bb', '#1a1622', 2.5); c.restore(); c.globalAlpha = 1;
+        } });
+        for (const at of [0, 0.45, 0.8]) after(at, () => VFX.shock(b.x + dir * (40 + 220 * easeOut(at / 1.3)), b.y + 30, { r: 50, color: '#ffffff', w: 3, dur: 0.3, flat: 0.6 }));
+        shake(12);
+      });
+    } else if (kind === 'skitterra') {
+      // she rears once, curls up, her legs folding in under her pair by pair, and the silk in her bursts
+      soon(sh, 1.1, () => {
+        VFX.burst(b.x, b.y - 20, { color: '#f4f0ff', n: 26, speed: 300, size: 12 });
+        for (let i = 0; i < 16; i++) VFX.spawn({ x: b.x + rand(-40, 40), y: b.y + rand(-30, 30), z: 20, vx: rand(-260, 260), vy: rand(-160, 160), vz: rand(60, 220), g: 320, life: 0.9, size: 14, color: '#ffffff', stretch: 4, vr: rand(-8, 8) });
+        webDecal(b.x, b.y, 170, 12);
+        VFX.shock(b.x, b.y, { r: 200, color: '#f4f0ff', w: 5, dur: 0.5, flat: 1 });
+        shake(7);
+      });
+    } else if (kind === 'volkar') {
+      // the storm in him lets go: a column of lightning goes up out of him, he comes apart, rain falls where he stood
+      emit(sh, 0.7, 0.4, () => { const a = rand(0, TAU); VFX.lightning(b.x, b.y - 30, b.x + Math.cos(a) * 80, b.y - 30 + Math.sin(a) * 60, { color: '#bff6ff', jag: 10, dur: 0.14 }); });
+      soon(sh, 0.7, () => {
+        VFX.pillar(b.x, b.y, { r: 70, h: 800, color: '#dff4ff', dur: 1.3 });
+        for (let i = 0; i < 4; i++) VFX.lightning(b.x + rand(-20, 20), b.y - 40, b.x + rand(-80, 80), b.y - 760, { color: i % 2 ? '#ffffff' : '#9fe0ff', jag: 30, dur: 0.6 });
+        softFlash(sh, '#dff4ff', 0.2, 0.6);
+        for (let i = 0; i < 14; i++) { const a = rand(0, TAU), s = rand(80, 200); VFX.spawn({ x: b.x, y: b.y, z: rand(10, 60), vx: Math.cos(a) * s, vy: Math.sin(a) * s * 0.7, vz: rand(60, 160), g: 400, life: 0.9, size: rand(10, 16), color: '#5b6a80', kind: 'shard', add: false, vr: rand(-8, 8) }); }
+        shake(9);
+      });
+      own(sh, VFX.fx({ dur: 3.2, delay: 0.8, layer: 'air', draw: (c, p, t, e) => {
+        const k = e.a * Math.min(1, t / 0.4) * Math.min(1, (1 - p) / 0.4);
+        c.save(); c.strokeStyle = '#c8dcff'; c.lineWidth = 1.6; c.lineCap = 'round'; c.globalAlpha = k * 0.55; c.beginPath();
+        for (let i = 0; i < 46; i++) { const x = b.x + (((i * 0.618) % 1) - 0.5) * 520, y0 = b.y + (((i * 0.377) % 1) - 0.5) * 260, fall = ((t * 1.8 + i * 0.13) % 1); c.moveTo(x + 10 * fall, y0 - 260 * (1 - fall)); c.lineTo(x + 10 * fall - 4, y0 - 260 * (1 - fall) + 26); }
+        c.stroke(); c.restore();
+      } }));
+    } else {
+      // he goes to a knee; the crown drops and rolls; the armour crumbles to dust; the bells toll away to nothing
+      soon(sh, 0.5, () => crownDrop(onBody(b, 'hollowking', 4, 0), b));
+      emit(sh, 2.2, 0.5, (p) => { if (p < 0.25) return; const a = rand(0, TAU), d = rand(0, 40); VFX.spawn({ x: b.x + Math.cos(a) * d, y: b.y + Math.sin(a) * d * 0.7, z: rand(0, 50), vx: rand(-20, 20), vz: rand(-10, 20), drag: 0.03, life: rand(1, 1.6), size: rand(16, 26), size1: 50, color: '#8a9490', kind: 'smoke', add: false, a: 0.45 }); if (Math.random() < 0.3) VFX.debris(b.x + rand(-20, 20), b.y, { color: '#3a3d48', n: 2, speed: 0.6 }); });
+      for (const [at, a] of [[0.6, 1], [1.3, 0.6], [2, 0.3]]) after(at, () => VFX.shock(b.x, b.y, { r: AR() * 0.9, color: a > 0.5 ? '#c8ffdc' : '#6a8a78', w: 6 * a, dur: 1, flat: 1 }));
+    }
+  }
+  // the Hollow King's crown: falls off as he goes down, bounces, rolls a little and lies there, still faintly lit
+  function crownDrop(from, b) {
+    const dir = Math.random() < 0.5 ? -1 : 1, x1 = from.x + dir * 90, y1 = b.y + 40;
+    VFX.fx({ dur: 14, layer: 'air', draw: (c, p, t, e) => {
+      const q = Math.min(1, t / 0.9), x = from.x + (x1 - from.x) * easeOut(q), z = (1 - q) * 60 * Math.abs(Math.cos(q * Math.PI * 1.5)), y = from.y + (y1 - from.y) * q - z, k = e.a * Math.min(1, (14 - t) / 2);
+      c.save(); c.globalAlpha = k; c.translate(x, y); c.scale(1.8, 1.8); c.rotate(dir * Math.min(1, t / 0.9) * 2.6);
+      ellipse(c, 0, 4, 18, 7, 0, 'rgba(0,0,0,0.3)');
+      for (let i = 0; i < 7; i++) { const a = i * TAU / 7; poly(c, [Math.cos(a - 0.25) * 10, Math.sin(a - 0.25) * 10, Math.cos(a) * 19, Math.sin(a) * 19, Math.cos(a + 0.25) * 10, Math.sin(a + 0.25) * 10], '#b89a4a', '#1a1622', 1.5); }
+      circle(c, 0, 0, 11, null, '#1a1622', 3); circle(c, 0, 0, 11, null, '#d8b85a', 2);
+      c.restore(); c.globalAlpha = 1;
+      if (t > 0.9) VFX.glowAt(c, x, y, 26, '#6dff9a', k * 0.25 * (1 - Math.min(1, (t - 0.9) / 6)));
+    }, tick: (p, dt, e) => { if (!e.landed && p * 14 > 0.9) { e.landed = true; VFX.shock(x1, y1, { r: 40, color: '#ffe2a0', w: 3, dur: 0.3, flat: 0.6 }); } } });
+  }
+
+  // ---- the wipe: a heavy vignette, his laugh, and the room draining of colour
+  function wipeShow(b, kind) {
+    const sh = b && SH(b);
+    if (sh && !sh.death) { cut(sh); sh.wipeAt = clk(); if (b.st) b.st.action = { type: 'attack', t0: b.st.t, dur: 1.4 }; roar(b.x, b.y, kind); }
+    VFX.fx({ dur: 9, layer: 'air', draw: (c, p, t, e) => {
+      const k = e.a * Math.min(1, (9 - t) / 0.5);
+      wash(c, '#808080', k * 0.8 * Math.min(1, t / 2.6), 'saturation');
+      wash(c, '#000000', k * 0.22 * Math.min(1, t / 2), 'source-over');
+      vignette(c, '#0a0204', k * 0.85 * Math.min(1, t / 1.2), 0.3);
+    } });
+  }
+
+  // ---- drawing him: poses from the moments above, the flinch, the enrage rim, untargetable as a ghost, the
+  // Time Stop frost / a trial's memory / the Long Night's dark (these last three replace the old CSS filter layer)
+  let layerCv = null, silCv = null;
+  const BOX = 640;   // world px round him: room for his widest swing and his props
+  function bodyPose(kind, sh, t, o) {
+    const q = { alpha: 1, ox: 0, oy: 0, sx: 1, sy: 1, rot: 0, grow: 1, extra: null, ghost: o.ghost || 0, dark: o.dark || 0, rim: null, rimA: 0 };
+    const X = (k, v) => { (q.extra || (q.extra = {}))[k] = v; };
+    // hit flinch: a squash toward the camera and a white flash
+    const hq = t - sh.hitAt, hk = hq < 0.18 && !sh.death ? sh.hitK * (1 - hq / 0.18) : 0;
+    q.flash = hk; q.sx *= 1 + 0.05 * hk; q.sy *= 1 - 0.05 * hk; q.oy += 2.5 * hk;
+    // the enrage: he swells and shakes harder to the end, his rim pulsing red / violet
+    if (sh.enrAt > 0 && !sh.death) {
+      const ep = Math.min(1, (t - sh.enrAt) / sh.enrDur), a = 0.6 + 3 * ep;
+      q.grow *= 1 + 0.13 * easeOut(ep); q.ox += Math.sin(t * 41) * a + Math.sin(t * 67) * a * 0.5; q.oy += Math.sin(t * 53) * a * 0.6;
+      q.rim = Math.sin(t * 3) > 0 ? '#ff3a2a' : '#b04aff'; q.rimA = 0.5 + 0.4 * ep * (0.6 + 0.4 * Math.sin(t * 5));
+    } else if (sh.behind > 0 && !sh.death) {
+      q.grow *= 1 + 0.025 * sh.behind + 0.012 * Math.sin(t * 2.6); q.rim = '#ff3a2a'; q.rimA = sh.behind * (0.45 + 0.25 * Math.sin(t * 2.6));
+    }
+    // the wipe: he laughs, shoulders heaving
+    const wq = t - sh.wipeAt;
+    if (wq >= 0 && wq < 2.6 && !sh.death) q.grow *= 1 + 0.035 * Math.abs(Math.sin(wq * 11)) * (1 - wq / 2.6);
+    // the entrance
+    if (o.pending && !sh.intro) { if (kind !== 'grubnak') q.alpha = 0; else X('heave', true); }
+    if (sh.intro && !sh.intro.done) {
+      const s = t - sh.intro.at;
+      if (s > (INTRO_DUR[kind] || 2)) sh.intro.done = true;
+      else if (kind === 'grubnak') { if (s < 0.7) { X('heave', true); q.oy -= Math.sin(s / 0.7 * Math.PI) * 5; } else if (s < 0.9) { const u = (s - 0.7) / 0.2; q.sy *= 0.9 + 0.1 * u; q.sx *= 1.08 - 0.08 * u; } }
+      else if (kind === 'skitterra') { q.oy += introDrop(s); if (s < 1.2) X('rear', true); }
+      else if (kind === 'volkar') { if (s < 0.3) q.alpha = 0; else { const u = Math.min(1, (s - 0.3) / 0.45); q.alpha = u; q.grow *= 1.25 - 0.25 * easeOut(u); if (s < 1.1) X('charge', true); } }
+      else if (kind === 'hollowking') { if (s < 0.3) q.alpha = 0; else { const u = Math.min(1, (s - 0.3) / 1.3); q.alpha = easeOut(u); q.ghost = Math.max(q.ghost, 1 - u); if (s > 1.6 && s < 2.1) X('gaze', true); } }
+    }
+    // the fall
+    if (sh.death) {
+      const s = t - sh.death.at;
+      if (kind === 'grubnak') {
+        if (s < 0.8) { q.rot = Math.sin(s * 9) * 0.12 * (s / 0.8); q.ox += Math.sin(s * 23) * 2; X('steam', true); }
+        else { X('flat', true); const u = Math.min(1, (s - 0.8) / 0.25); q.sy *= 0.82 + 0.18 * easeOut(u); q.dark = Math.max(q.dark, 0.15 * Math.min(1, (s - 0.8) / 1.5)); }
+      } else if (kind === 'skitterra') {
+        if (s < 0.5) X('rear', true);
+        X('fold', clamp((s - 0.3) / 1.3, 0, 1)); q.grow *= 1 - 0.08 * clamp((s - 0.3) / 1.3, 0, 1); q.dark = Math.max(q.dark, 0.3 * clamp((s - 0.6) / 1.6, 0, 1));
+      } else if (kind === 'volkar') {
+        if (s < 0.7) { q.ox += Math.sin(s * 47) * 3; X('charge', true); }
+        else { const u = Math.min(1, (s - 0.7) / 1.5); X('disperse', u); q.alpha = 1 - easeOut(u); q.grow *= 1 + 0.15 * u; q.oy -= 40 * u; q.ghost = Math.max(q.ghost, u); }
+      } else {
+        const kneel = Math.min(1, s / 0.5); q.grow *= 1 - 0.07 * kneel; q.ox += s < 0.6 ? Math.sin(s * 37) * 1.5 : 0;
+        if (s > 0.5) X('crownless', true);
+        if (s > 0.6) { const u = Math.min(1, (s - 0.6) / 1.6); q.alpha = 1 - u; q.dark = Math.max(q.dark, 0.5 * u); }
+      }
+    }
+    return q;
+  }
+  function drawBody(ctx, def, bd, o = {}) {
+    const sh = SH(bd), t = clk(), kind = def.id, S = o.scale || 1.3;
+    const q = bodyPose(kind, sh, t, o);
+    const alpha = (o.alpha ?? 1) * q.alpha;
+    sh.alpha = q.alpha;
+    if (alpha <= 0.01) return;
+    const st = q.extra ? Object.assign({}, bd.st, { props: Object.assign({}, bd.st.props, q.extra) }) : bd.st;
+    const tint = o.tint || null, ghost = q.ghost, flash = q.flash, dark = q.dark;
+    let rim = q.rim, rimA = q.rimA;
+    if (!rim && tint) { rim = tint === 'frost' ? '#bfe8ff' : '#8fa8ff'; rimA = 0.55; }
+    if (!rim && ghost > 0.02) { rim = (PAL_GHOST[kind] || '#e8f0ff'); rimA = 0.6 * ghost; }
+    const x = bd.x + q.ox, y = bd.y + q.oy, gx = q.sx * q.grow, gy = q.sy * q.grow;
+    // the cheap path: nothing to tint, he's drawn straight onto the scene
+    if (flash < 0.02 && rimA < 0.02 && !tint && dark < 0.01 && ghost < 0.02) {
+      ctx.save(); ctx.globalAlpha *= alpha; ctx.translate(x, y); if (q.rot) ctx.rotate(q.rot); if (gx !== 1 || gy !== 1) ctx.scale(gx, gy);
+      drawBoss(ctx, def, 0, 0, bd.f, st, S); ctx.restore(); return;
+    }
+    // otherwise into a small layer of his own, tinted there (source-atop keeps his own shape), then onto the scene
+    const m = ctx.getTransform(), px = Math.min(Math.hypot(m.a, m.b) || 1, 1.5), N = Math.ceil(BOX * px);
+    if (!layerCv) { layerCv = document.createElement('canvas'); silCv = document.createElement('canvas'); }
+    if (layerCv.width !== N) { layerCv.width = layerCv.height = N; silCv.width = silCv.height = N; }
+    const c = layerCv.getContext('2d');
+    c.setTransform(1, 0, 0, 1, 0, 0); c.globalCompositeOperation = 'source-over'; c.globalAlpha = 1; c.clearRect(0, 0, N, N);
+    c.setTransform(px, 0, 0, px, N / 2, N / 2); if (q.rot) c.rotate(q.rot); c.scale(gx, gy);
+    drawBoss(c, def, 0, 0, bd.f, st, S);
+    c.setTransform(1, 0, 0, 1, 0, 0); c.globalCompositeOperation = 'source-atop';
+    const fill = (col, a) => { if (a > 0.004) { c.globalAlpha = Math.min(1, a); c.fillStyle = col; c.fillRect(0, 0, N, N); } };
+    if (tint === 'frost') { fill('#d8ecff', 0.45); fill('#6fa8e8', 0.12); }
+    else if (tint === 'memory') { fill('#c8d4ff', 0.55); fill('#8fa8ff', 0.15); }
+    fill('#000000', dark);
+    if (ghost > 0.02) {
+      // untargetable: washed pale, and a slow band of light sliding down him (a shimmer, not a blink)
+      fill(PAL_GHOST[kind] || '#e8f0ff', 0.3 * ghost);
+      const by = ((t * 0.45) % 1) * N * 1.4 - N * 0.2, g = c.createLinearGradient(0, by - N * 0.1, 0, by + N * 0.1);
+      g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(0.5, 'rgba(255,255,255,1)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+      c.globalAlpha = 0.35 * ghost; c.fillStyle = g; c.fillRect(0, by - N * 0.1, N, N * 0.2);
+    }
+    fill('#ffffff', 0.55 * flash);
+    c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
+    const X0 = x - BOX / 2, Y0 = y - BOX / 2;
+    ctx.save();
+    if (rim && rimA > 0.02) {
+      // his outline: his silhouette in one colour, laid a few px out round him under the body
+      const s = silCv.getContext('2d');
+      s.setTransform(1, 0, 0, 1, 0, 0); s.globalCompositeOperation = 'source-over'; s.globalAlpha = 1; s.clearRect(0, 0, N, N);
+      s.drawImage(layerCv, 0, 0); s.globalCompositeOperation = 'source-in'; s.fillStyle = rim; s.fillRect(0, 0, N, N);
+      const r = 3;
+      ctx.globalAlpha = alpha * Math.min(1, rimA) * 0.6;
+      for (const [dx, dy] of [[-r, 0], [r, 0], [0, -r], [0, r], [-r * 0.7, -r * 0.7], [r * 0.7, r * 0.7], [r * 0.7, -r * 0.7], [-r * 0.7, r * 0.7]]) ctx.drawImage(silCv, X0 + dx, Y0 + dy, BOX, BOX);
+    }
+    ctx.globalAlpha = alpha * (ghost > 0.02 ? 1 - 0.35 * ghost : 1);
+    ctx.drawImage(layerCv, X0, Y0, BOX, BOX);
+    ctx.restore();
+  }
+  const PAL_GHOST = { grubnak: '#ffe8c8', skitterra: '#e8dcff', volkar: '#cfeeff', hollowking: '#c8ffd8' };
+  // how much of him is there (the hitbox ring fades with him: he's gone, falling or not yet come in)
+  const presence = bd => (bd && bd.show ? bd.show.alpha : 1) * (bd && bd.show && bd.show.death ? Math.max(0, 1 - (clk() - bd.show.death.at) / 0.5) : 1);
+  function setClock(fn) { clockFn = fn; }
+  // ================================================================ [/boss presentation]
+
+  return { timeStop, failed,propFx, stoveBurst, gazed, doomed, cure, knightMemory, knightRise, nightFall, polarityFlip, edgeClose, pulse, orbForm, orbHit, chain, meatballLand, meatballWall, meatballHit, scorchPool, silkSnap, silkFree, reelBite, snuff, hatch, threadShoot, threadSnap, floorFalls, impact, castStart, cocoonEnd, auto, leap, roar, addSpawn, addDeath, addEnrage, fury, spit, husk, tetherSnap, playerDeath, playerRaised, partyBuff, victory, wipe,
+    // [boss presentation]
+    drawBody, presence, bossHit, bossHp, enrageLand, behind, intro, bossDeath, setClock };
 })();

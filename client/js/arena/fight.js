@@ -607,6 +607,8 @@ class FightSim {
       s.hp += real;
       const st = this.stats[fromId];
       if (st) { st.healing += real; st.overheal += amt - real; }
+      // a heal from someone else on a player: their client shows the number over themselves (bots have no screen)
+      if (fromId !== p.id && p.id < 1000 && amt >= 1) this.emit({ t: 'pheal', id: p.id, a: amt });
       const fs = this.ps.get(fromId); if (fs && fs.alive) fs.threat += real * FIGHT.HEAL_THREAT;
     }
   }
@@ -676,9 +678,10 @@ class FightSim {
     if (this.classHit) amt = this.classHit(p, s, amt, opts);   // a Gorgemaw's open jaw, an Oathbroker's Ledger (end of this file)
     const st = this.stats[p.id];
     st.mitigated += Math.round(before - amt);
+    let absorbed = 0;   // (sent with the hit: the number a shield ate, shown to the one it covered)
     if (s.shield > 0 && amt > 0) {
       const used = Math.min(s.shield, amt);
-      s.shield -= used; amt -= used;
+      s.shield -= used; amt -= used; absorbed = Math.round(used);
       const shSt = this.stats[s.shieldFrom]; if (shSt) shSt.healing += Math.round(used);
       if (s.shield <= 0.5) this.endShield(p.id, s);
     }
@@ -694,6 +697,7 @@ class FightSim {
     if (s.hp <= 0 && s.mits.some(m => m.kind === 'living') && opts.kind !== 'enrage' && opts.kind !== 'fall') s.hp = 1;
     const pd = { t: 'pdmg', id: p.id, a: amt, k: opts.kind || 'hit', hp: Math.max(0, s.hp), dd: opts.avoidable ? 1 : 0 };
     if (opts.n) pd.n = opts.n;   // the move it came from (the death recap)
+    if (absorbed > 0) pd.sh = absorbed;
     this.emit(pd);
     if (s.hp <= 0) {
       s.hp = 0; s.alive = false; s.shield = 0; s.mits = []; s.hots = []; s.threat = 0; s.diedAt = this.t; this.dropThreat(p.id);
