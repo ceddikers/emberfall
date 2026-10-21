@@ -172,6 +172,14 @@ ul.abilities em.meta { display: block; font-style: normal; font-size: 11px; colo
 .bb-hp .vuln.on { opacity: 1; }
 .bb-hp span { position: absolute; right: 8px; top: 0; font-size: 12px; font-weight: 800; line-height: 18px; text-shadow: 0 1px 2px #000; }
 #boss-bar.untargetable .bb-hp .fill { filter: grayscale(.8) brightness(.7); }
+/* a Time Stop on the boss (Time Reversal): the bar and the cast frame go pale and cold, the frame says so */
+#boss-bar.stopped .bb-hp .fill { filter: saturate(.25) brightness(1.15) hue-rotate(170deg); }
+#boss-bar.stopped .bb-next i { color: #cfeeff; }
+.bst.pause { border-color: #6fa6c8; color: #dff4ff; }
+#boss-cast.stopped { border-color: #8cc4e6; box-shadow: 0 0 10px #8cc4e655; }
+#boss-cast.stopped small { display: block; color: #cfeeff; }
+#boss-cast.stopped .bc-bar .fill { filter: saturate(.2) brightness(1.2) hue-rotate(170deg); }
+#boss-cast.stopped .bc-left { color: #cfeeff; }
 .bb-cast { position: relative; height: 20px; margin: 6px auto 0; width: 70%; background: #0d0b12e8; border: 1px solid #ff9a5a; border-radius: 10px; overflow: hidden; }
 .bb-cast .fill { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, #a83a1a, #ff8a3a); }
 .bb-cast span { position: relative; display: block; text-align: center; font-family: var(--fantasy); font-weight: 700; font-size: 13px; line-height: 20px; text-shadow: 0 1px 3px #000; }
@@ -673,8 +681,32 @@ kbd { border-radius: 3px; background: #1d1813; border-color: #4a3d2c; color: var
 .bb-next i { font-style: normal; font-variant-numeric: tabular-nums; letter-spacing: .02em; color: #cfc5b2; }
 #target-frame { top: max(96px, calc(var(--bb-bottom, 0px) + 8px)); }
 
-/* a tank's taunt on the bar (T) and on the hero page */
-.slot.taunt { border-color: #7a6238; }
+/* the Ultimate on T: a thin charge ring round its slot, one soft glow when it's full, its window's seconds while open */
+.slot.ult { width: 54px; height: 54px; border-color: #7a6238; }
+.slot.ult .ring { position: absolute; inset: -5px; border-radius: 50%; pointer-events: none; z-index: 2;
+  background: conic-gradient(var(--ring, #c9a45c) calc(var(--ult, 0) * 360deg), #ffffff12 0);
+  -webkit-mask: radial-gradient(closest-side, transparent calc(100% - 3px), #000 calc(100% - 2.5px)); mask: radial-gradient(closest-side, transparent calc(100% - 3px), #000 calc(100% - 2.5px)); }
+.slot.ult:not(.full):not(.active) .icon { filter: saturate(.45) brightness(.62); }
+.slot.ult.full { border-color: #f0d898; box-shadow: 0 0 14px 3px color-mix(in srgb, var(--fx) 50%, transparent); }
+.slot.ult.full .ring { --ring: #ffe9a8; }
+.slot.ult.active { border-color: #ffc070; }
+.slot.ult.active .ring { --ring: color-mix(in srgb, var(--fx) 70%, #fff2d0); }
+.slot.ult.cue { animation: ultcue 1.1s ease-out 1; }
+@keyframes ultcue { 0% { box-shadow: 0 0 0 0 #fff0c0d0, 0 0 14px 3px #ffd07a80; } 100% { box-shadow: 0 0 0 14px #fff0c000, 0 0 14px 3px #ffd07a80; } }
+/* a move the Ultimate's window has empowered: a warm inner rim on its icon */
+.slot.empowered { border-color: #ffb050; }
+.slot.empowered .icon { box-shadow: inset 0 0 12px 3px #ffa040d0, inset 0 0 0 2px #ffd890a0; filter: saturate(1.25) brightness(1.08); }
+/* the button that carries a tank's taunt: a small mark above it, its seconds while the taunt cools */
+.slot .tb { display: none; position: absolute; top: -9px; left: 50%; transform: translateX(-50%); z-index: 4; min-width: 12px; height: 12px; padding: 0 3px;
+  border-radius: 6px; background: #1a120a; border: 1px solid #c9a45c; color: #f0d898; font-size: 8.5px; font-weight: 700; line-height: 10px; text-align: center; font-style: normal; }
+.slot.carrier .tb { display: block; }
+.slot.carrier .tb.ready { min-width: 8px; width: 8px; height: 8px; padding: 0; top: -6px; background: #ffd65a; border-color: #2a1a06; box-shadow: 0 0 5px #ffd65a; }
+.it-taunt, .it-ult { margin-top: 6px; padding: 6px 8px; border-left: 2px solid #c08a4a; background: #c08a4a14; font-size: 12px; color: #ece4d4; }
+.it-taunt u, .it-ult u { text-decoration: none; color: #f0c890; font-weight: 700; }
+.key-cell.ult .ab-icon, .kchip.ult i, #tip .ab-icon.ult { border-radius: 50%; box-shadow: 0 0 0 2px #c9a45c80, 0 0 10px #e8b46a50; }
+/* party frames: a tiny pip when that player's Ultimate is full */
+.pf-ult { display: none; flex: none; width: 6px; height: 6px; transform: rotate(45deg); background: #ffe2a0; box-shadow: 0 0 5px #ffd070; }
+.pf.ult .pf-ult { display: block; }
 @media (min-width: 761px) { #sel-keys:has(> :nth-child(8)) { grid-template-columns: repeat(8, 1fr); } }
 
 /* the player's own cast bar */

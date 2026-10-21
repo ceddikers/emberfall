@@ -31,6 +31,9 @@
   let rnow = realNow();
   let townLayer = null, layerScale = 1, minimapBase = null;
   let scene = 'town', zoom = 1;
+  // an Ultimate's screen moments (screenFlash, zoomPunch, hitStop... next to hurtVignette) and a fall noticed once
+  const screenFx = { flash: null, dim: null };
+  let punch = null, vfxClock = 0, hitStopUntil = -9, wasDown = false;
   const cam = { x: 0, y: 0 };
 
   initTown();
@@ -95,8 +98,8 @@
   function runTimers() {
     for (let i = timers.length - 1; i >= 0; i--) if (now >= timers[i].t) { const tm = timers[i]; timers.splice(i, 1); tm.fn(); }
   }
-  // a scene change drops whatever the last scene still had queued (a queued taunt, a prop due to change)
-  function clearTimers() { timers.length = 0; tauntQueued = false; }
+  // a scene change drops whatever the last scene still had queued (a prop due to change)
+  function clearTimers() { timers.length = 0; }
 
   // Back from a hidden tab: nothing spawned while hidden (FX/VFX muted), what was already playing is dropped, and
   // everything moving stands at its newest known position instead of fast-forwarding through what was missed.
@@ -116,7 +119,7 @@
   // ---------------------------------------------------------------- local combat (your class kit)
   let actor = null;
   let lockedAlly = null, hoverFrame = null, lastEnemy = null, lockedEnemy = null;
-  const town = { buffs: [], vuln: 0, vulnEnd: 0, mits: [], shield: null, taken: [], meter: null, meterDone: null };
+  const town = { buffs: [], abuffs: [], vuln: 0, vulnEnd: 0, mits: [], shield: null, taken: [], meter: null, meterDone: null };
 
   const inArena = () => scene === 'arena' && !!raid;
   const myState = () => (raid ? raid.party.get(Net.id) : null);
@@ -197,6 +200,11 @@
     known: () => new Set(Save.found(player.cls ? player.cls.id : '')),   // hidden recipes found (Volatile Reactions)
     discover: (a, id) => { if (player.cls) Save.discover(player.cls.id, id); },
     isDead: id => { if (!inArena()) return false; const s = raid.party.get(id); return !!s && !s.alive; },
+    // an ally's health 0..1 (an Alembist's Smart Throw): the party's in the arena, your own in town
+    allyHp: id => {
+      if (!inArena()) { if (id !== Net.id) return 1; const s = myState(); return s && s.maxHp ? Math.max(0, s.hp / s.maxHp) : 1; }
+      const s = raid.party.get(id); return s && s.maxHp ? (s.alive === false ? 0 : Math.max(0, s.hp / s.maxHp)) : null;
+    },
     defaultLink: () => (inArena() && raid.boss.tg != null ? raid.boss.tg : Net.id),
     partyMods: () => {
       const m = { dmg: 0, crit: 0, haste: 0 };
@@ -205,7 +213,12 @@
       return m;
     },
     targetMods: () => ({ vuln: inArena() ? (raid.boss.v || 0) : (town.vulnEnd > now ? town.vuln : 0) }),
-    selfMods: () => { const s = myState(); return { dmgDown: inArena() && s && s.dd ? FIGHT.DMG_DOWN : 0 }; },
+    selfMods: () => {
+      const s = myState(), m = { dmgDown: inArena() && s && s.dd ? FIGHT.DMG_DOWN : 0, dmg: 0, haste: 0 };
+      // a healer's buff on you (engine.js ALLY_BUFFS: the host's 'abuff'; in town, your own on yourself)
+      for (const b of (inArena() ? raid.abuffs : town.abuffs)) if (b.to === Net.id && b.end > now) m[b.kind] = Math.max(m[b.kind] || 0, b.value);
+      return m;
+    },
     recentDamage: (a, secs) => (inArena() ? raid.taken : town.taken).filter(d => d.t > now - secs).reduce((x, d) => x + d.a, 0),
     hpFrac: () => { const s = myState(); return s && s.maxHp ? Math.max(0, s.hp / s.maxHp) : 1; },
     // the boss as talents see it (kits.js bossNow): its cast bar, the next move in the bnext feed, who it's on
@@ -213,7 +226,11 @@
       if (!inArena() || !raid || raid.state !== 'live') return null;
       const c = raid.cast && now <= raid.cast.start + raid.cast.dur ? raid.cast : null, s = myState();
       const n = raid.bnext && raid.bnext.l.length ? Math.max(0, raid.bnext.l[0][1] - (now - raid.bnext.at)) : null;
-      return { casting: !!c, castLeft: c ? c.start + c.dur - now : 0, next: n, onMe: raid.boss.tg === Net.id, vuln: raid.boss.v || 0, selfVuln: !!(s && s.vuln) };
+      // wide: a raidwide is on its way (its cast is up, its telegraph is down, or it's next in the feed within 5s): an Alembist's Salt glows
+      const RW = typeof RAID_CASTS !== 'undefined' ? RAID_CASTS : null;
+      const wide = (c && RW && RW.test(c.name)) || [...raid.tgs.values()].some(tg => tg.type === 'raidwide' && tg.gone == null && now < tg.start + tg.dur) ||
+        !!(RW && raid.bnext && raid.bnext.l.some(e => { const left = e[1] - (now - raid.bnext.at); return RW.test(e[0]) && left > -0.5 && left < 5; }));
+      return { casting: !!c, castLeft: c ? c.start + c.dur - now : 0, next: n, onMe: raid.boss.tg === Net.id, vuln: raid.boss.v || 0, selfVuln: !!(s && s.vuln), wide: !!wide };
     },
     maxHp: () => { const s = myState(); return s ? s.maxHp : playerBaseHp(player.cls ? player.cls.role : 'dps') + (Inventory.mods(player.cls && player.cls.id).hp || 0); },
     onEvent: (a, ev) => onKitEvent(ev),
@@ -228,6 +245,22 @@
     },
     threads: () => (inArena() ? Stagecraft.threadsOf(Net.id, entById) : null),
     dolls: (a, list) => Stagecraft.setMine(list, player.cls && player.cls.id, actor && actor.kit),
+    // a telegraph about to land on a spot (a circle, cone, spread or cleave due within `within` s): Pirouette glows for its Doll
+    danger: (a, x, y, within) => inArena() && [...raid.tgs.values()].some(tg => tg.gone == null && !tg.hidden && ['aoe', 'spread', 'buster'].includes(tg.type) &&
+      tg.start + tg.dur - now <= within && SHAPES.contains(tg.live || tg.shape, x, y, 12)),
+    // a tank pressed its taunt carrier (kits.js TAUNT_CARRY; CombatActor checked the taunt is ready): taunt the move's
+    // enemy (or the one you face) unless it is already on you. The host applies it and shows everyone ('fev' taunt).
+    taunt: (a, tg0) => {
+      if (!inArena() || raid.state !== 'live' || amDead()) return false;
+      const tg = tg0 && typeof tg0 === 'object' && tg0.id != null ? tg0 : world.findEnemy(a, { range: TAUNT.range });
+      if (!tg || (tg.id === 'boss' && raid.boss.tg === Net.id)) return false;
+      a.useTaunt(now);
+      playTaunt(player, enemyNow(tg.id) || tg, true);
+      sendCombat({ type: 'taunt', tgt: tg.id });
+      return true;
+    },
+    // the Ultimate's passive trickle runs while a raid is live (in town: while you're hitting a dummy)
+    inCombat: () => (inArena() ? raid.state === 'live' : null),
   };
 
   // --- ally targeting: party frame under the mouse > clicked ally > ally nearest the cursor > yourself
@@ -288,7 +321,7 @@
   function healerish() { return actor && actor.abilities.some(a => a.target === 'ally'); }
 
   // --- kit events
-  const SIM_EVENTS = new Set(['damage', 'heal', 'hot', 'shield', 'mit', 'raise', 'rewind', 'selfDamage', 'targetDebuff', 'partyBuff', 'snap', 'pool', 'brand', 'taunt', 'splash',
+  const SIM_EVENTS = new Set(['damage', 'heal', 'hot', 'shield', 'mit', 'raise', 'rewind', 'selfDamage', 'targetDebuff', 'partyBuff', 'allyBuff', 'snap', 'pool', 'brand', 'taunt', 'splash',
     'maw', 'ledger',   // (the Gorgemaw's jaw and the Oathbroker's Ledger: fight.js classEvent)
     'tie', 'snip', 'tighten', 'tapestry', 'tug',   // (the Threadweaver's threads: fight.js weaveEvent)
     'lb']);   // (a Limit Break: fight.js limitBreak)
@@ -318,7 +351,7 @@
           const e = enemyPos(); if (e) { tx = e.x; ty = e.y; } else { const m = mouseWorld(); tx = m.x; ty = m.y; }
         }
         FX.cast(player, ab, tx, ty, { mine: true, tent: ally != null ? entById(ally) : null });
-        Net.send({ t: 'cast', i, a: ab.id, x: rnd(player.x), y: rnd(player.y), tx: rnd(tx), ty: rnd(ty), ally, s: scene === 'arena' ? 1 : 0, c: +rnow.toFixed(3) });
+        Net.send({ t: 'cast', i, a: ab.fxId || ab.id, x: rnd(player.x), y: rnd(player.y), tx: rnd(tx), ty: rnd(ty), ally, s: scene === 'arena' ? 1 : 0, c: +rnow.toFixed(3) });
         break;
       }
       case 'auto': {
@@ -406,10 +439,24 @@
     }
   }
 
+  // a hit's size next to what this hero usually deals (a running average of its ability hits): a bigger-than-usual one
+  // is drawn a little larger, a small one a little smaller, so a finisher or a burst reads without any flash
+  const dmgAvg = { v: 0, n: 0 };
+  function hitScale(ev) {
+    if (ev.auto || ev.dot || !(ev.amount > 0)) return 1;
+    const avg = dmgAvg.v;
+    dmgAvg.v = dmgAvg.n ? avg * 0.85 + ev.amount * 0.15 : ev.amount; dmgAvg.n++;
+    if (dmgAvg.n < 4 || !(avg > 0)) return 1;
+    return Math.max(0.85, Math.min(1.7, 1 + 0.4 * Math.log2(ev.amount / avg)));
+  }
+
   function onMyDamage(ev) {
     // auto-attacks and DoTs get small, muted numbers so the abilities stay the headline
-    const big = ev.auto ? (ev.crit ? 15 : 12) : ev.crit ? 21 : ev.dot ? 12 : 15;
-    const col = ev.auto ? (ev.crit ? '#f2d488' : '#cfc6b4') : ev.crit ? '#ffd84a' : ev.dot ? '#d8d0c0' : '#ffffff';
+    const sc = hitScale(ev);
+    // (an Ultimate's own hit is the one big number of its moment)
+    const ultHit = !!(ev.ab && ev.ab.ult);
+    const big = Math.round((ev.auto ? (ev.crit ? 15 : 12) : ev.crit ? 21 : ev.dot ? 12 : 15) * sc * (ultHit ? 1.55 : 1));
+    const col = ultHit ? '#ffe9a8' : ev.auto ? (ev.crit ? '#f2d488' : '#cfc6b4') : ev.crit ? '#ffd84a' : ev.dot ? '#d8d0c0' : '#ffffff';
     const txt = rnd(ev.amount) + (ev.crit ? '!' : '') + (ev.positional ? ' ◆' : '');
     if (inArena()) {
       // damage goes to whatever you last aimed at (DoTs keep ticking on your current target)
@@ -432,6 +479,9 @@
     switch (ev.type) {
       case 'heal': showHeal(ev.target, ev.amount, ev.crit); break;
       case 'partyBuff': town.buffs.push({ kind: ev.kind, value: ev.value, end: now + ev.dur }); break;
+      case 'allyBuff':   // (no host in town: only one on yourself takes)
+        if (ev.target === 'self' || ev.target === Net.id) { town.abuffs = town.abuffs.filter(b => b.end > now && b.id !== ev.id); town.abuffs.push({ to: Net.id, id: ev.id, kind: ev.kind, value: ev.value, end: now + ev.dur, from: Net.id }); }
+        break;
       case 'targetDebuff': if (ev.kind === 'vuln') { town.vuln = ev.value; town.vulnEnd = now + ev.dur; } break;
       case 'mit': if (ev.target === 'self' || ev.target === Net.id || ev.target === 'party') town.mits.push({ kind: ev.kind, pct: ev.pct, start: now, end: now + ev.dur }); break;
       case 'shield':
@@ -474,8 +524,8 @@
     amt = rnd(amt);
     town.taken.push({ t: now, a: amt });
     if (amt > 0) FX.text(player.x, player.y - 46, '-' + amt, '#ff7a6a', 14);
-    if (perfect) actor.notify('perfect');
-    if (reflect) actor.notify('reflect');
+    if (perfect) actor.notify('perfect', { b: d.heavy ? 1 : 0 });
+    if (reflect) actor.notify('reflect', { b: d.heavy ? 1 : 0 });
     if (read) actor.notify('read', { b: d.heavy ? 1 : 0 });   // (the sparring dummy's every fourth swing counts as a tankbuster)
   }
 
@@ -676,13 +726,14 @@
   // class moments (Perfect Block, Overheat...): the big effect plays for everyone, the text only for you
   function kitFx(name, data) {
     const x = player.x, y = player.y;
+    if (name === 'ult-ready') ultReadyCue();
     const label = { perfect: ['Perfect!', '#ffe27a'], reflect: ['Reflect!', '#e0d4ff'], overheat: ['Overheat', '#ff6a3a'], lag: ['Time Lag', '#9ab8c0'], frostbite: ['Frostbite', '#9ad8ff'], riposte: ['Riposte!', '#e8fff8'], read: ['Read!', '#ffd9a0'] }[name];
     if (label) FX.text(x, y - 62, label[0], label[1], 17, 1.1);
     playKitFx(player, name, true, data);
     Net.send(Object.assign({ t: 'kfx', k: name, s: scene === 'arena' ? 1 : 0 }, data ? { d: data } : null));
   }
   function playKitFx(ent, name, mine, data) {
-    const f = KIT_VFX[name];
+    const f = Object.prototype.hasOwnProperty.call(KIT_VFX, name) ? KIT_VFX[name] : null;   // (names come over the wire: never a prototype key)
     if (!f) return;
     let target = name === 'reflect' || name === 'dawnstar' || name === 'radiant' || name === 'echo' || f.atTarget ? (ent === player ? enemyPos() : (inArena() ? { x: raid.boss.x, y: raid.boss.y } : null)) : null;
     // a moment aimed somewhere (an Alembist's vial): data.to names an ally, data.en an enemy ('boss', an add, a dummy)
@@ -701,32 +752,10 @@
     if (!actor) { toast('Pick a hero first.'); return; }
     if (amDead() || (inArena() && raid.state !== 'live' && raid.state !== 'countdown' && raid.state !== 'prepull')) return;
     if (i === 6) { doDash(); return; }
-    if (i === 7) { doTaunt(); return; }
+    // T (slot 7): the Ultimate (engine.js; kits without one have nothing there yet)
     actor.press(i);
   }
 
-  // A tank's taunt (T): an oGCD outside the kit. It waits out a short animation lock (like a queued press), never
-  // fires mid-cast, and goes to the enemy you're aiming at (locked, else nearest in reach). The host applies it.
-  let tauntQueued = false;
-  function doTaunt() {
-    if (!actor.taunt || !player.cls) return;
-    const k = actor.kit, lock = k.lockUntil - now;
-    if (k.cast || !actor.tauntReady(now)) { kitFail(k.cast ? 'Not ready' : null); return; }
-    if (lock > 0) { if (lock <= ENGINE.QUEUE_WINDOW && !tauntQueued) { tauntQueued = true; later(lock, () => { tauntQueued = false; if (actor && !amDead()) doTaunt(); }); } return; }
-    const tg = world.findEnemy(actor, { range: TAUNT.range });
-    if (!tg) { kitFail(inArena() && (raid.boss.u || (raid.state !== 'live' && raid.state !== 'prepull')) ? 'No target' : 'Out of range'); return; }
-    actor.useTaunt(now);
-    k.lockUntil = now + TAUNT.lock;
-    const at = tg.dummy ? tg.dummy : (inArena() ? enemyNow(tg.id) : null) || tg;
-    playTaunt(player, at, true);
-    if (inArena()) sendCombat({ type: 'taunt', tgt: tg.id });   // the host shows it to everyone else ('fev' taunt)
-    else Net.send({ t: 'kfx', k: 'taunt', s: 0 });
-  }
-  function kitFail(text) {
-    if (!text || now - failAt < 0.6) return;
-    failAt = now;
-    FX.text(player.x, player.y - 56, text, '#c8c0d8', 12, 0.7);
-  }
   // the taunt's look: the hero rears up, a shout ring, and a chain of the class's colour to whatever was taunted
   function playTaunt(ent, at, mine) {
     if (!ent) return;
@@ -1100,6 +1129,12 @@
       if (!['dmg', 'crit', 'haste'].includes(ev.kind)) return;
       ev.value = Math.max(0, Math.min(0.2, ev.value || 0)); ev.dur = Math.max(0, Math.min(30, ev.dur || 0));
     }
+    // a buff on one chosen ally: only a known one (engine.js ALLY_BUFFS), at its own strength, on a player id
+    if (ev.type === 'allyBuff') {
+      const b = typeof ev.id === 'string' && Object.prototype.hasOwnProperty.call(ALLY_BUFFS, ev.id) ? ALLY_BUFFS[ev.id] : null;
+      if (!b || !Number.isFinite(ev.target)) return;
+      ev.kind = b.kind; ev.value = b.value; ev.dur = b.dur;
+    }
     raidHost.onPlayerEvent(pid, ev);
   });
   // a Marionettist's Dolls, from its own client (classes-c): [[x, y, state], ...], at most two
@@ -1152,7 +1187,7 @@
       fightClock: new SendClock(), botClock: new SendClock(),   // the host's fight and bot clocks (see interp.js)
       nextAutoAt: 0, cast: null, props: {}, propsUntil: {},
       hits: [],
-      tgs: new Map(), puddles: new Map(), party: new Map(), bots: new Map(), pbuffs: [], taken: [], result: null, resultAt: 0,
+      tgs: new Map(), puddles: new Map(), party: new Map(), bots: new Map(), pbuffs: [], abuffs: [], taken: [], result: null, resultAt: 0,
       adds: new Map(), tethers: new Map(), zones: new Map(), lunges: [], husks: [], eggs: null,
       rollers: new Map(), reels: new Map(),
       bond: partyBonus(msg.bond),   // the gear party bonus the host counted for this fight
@@ -1177,6 +1212,7 @@
     lockedAlly = null; lastEnemy = null;
     Stagecraft.reset();   // threads and Dolls (classes-c)
     makeActor();
+    for (const rm of remotes.values()) rm.ultReady = false;   // (everyone starts the raid with an empty Ultimate)
     RaidUI.resetRoster();
     RaidUI.setRoster(msg.roster);
     applyFrameDock();
@@ -1232,9 +1268,9 @@
     updateHelp();
     updateHeroName();
   }
-  // the key line at the bottom (tanks also get their taunt key)
+  // the key line at the bottom (a hero with an Ultimate also gets its key)
   function updateHelp() {
-    const tauntKey = player.cls && player.cls.role === 'tank' ? ` · <kbd>${KEYS[7]}</kbd> taunt` : '';
+    const tauntKey = actor && actor.kit.ult ? ` · <kbd>${KEYS[7]}</kbd> ultimate` : '';
     const hurtKey = healerish() ? ' · <kbd>&#96;</kbd> most hurt' : '';
     $('help').innerHTML = scene === 'arena'
       ? `<kbd>Right-click</kbd> move · <kbd>Left-click</kbd> ally or frame to target · <kbd>1</kbd>-<kbd>4</kbd> target party${hurtKey} · <kbd>Shift</kbd>+skill on yourself · <kbd>${KEYS[6]}</kbd> dash${tauntKey}`
@@ -1610,7 +1646,7 @@
   Net.on('night', msg => { if (!raid) return; raid.night = !!msg.on; if (raid.night) BOSS_VFX.nightFall(); });
 
   Net.on('kb', msg => {
-    if (!raid || msg.id !== Net.id) return;
+    if (!raid || msg.id !== Net.id || (actor && actor.kit.ultSteady())) return;   // (an Ultimate's lock: engine.js ultSteady)
     const a = Math.atan2(player.y - msg.y, player.x - msg.x);
     const dest = { x: player.x + Math.cos(a) * msg.d, y: player.y + Math.sin(a) * msg.d };
     clampArena(dest);
@@ -1650,14 +1686,16 @@
     if (msg.k === 'death' && e) BOSS_VFX.playerDeath(e);
     if (msg.k === 'death') raid.doom.delete(msg.id);
     if (msg.k === 'raised' && e) BOSS_VFX.playerRaised(e);
+    // a Time Stop on the boss (Time Reversal, fight.js pauseBoss): it freezes mid-pose, frosted, under a stopped clock
+    if (msg.k === 'pause' && msg.dur > 0) { const d = Math.min(2.5, +msg.dur); raid.bossPause = { at: now, end: now + d }; BOSS_VFX.timeStop(raid.bossDraw, d); }
     if (msg.k === 'brandHit') { VFX.setScale(msg.id === Net.id ? 1 : 0.6); try { KIT_VFX.brandHit(e, { x: raid.boss.x, y: raid.boss.y }); } finally { VFX.setScale(1); } }
     if (msg.k === 'taunt' && e && msg.id !== Net.id) playTaunt(e, enemyNow(msg.tg), false);   // (your own played when you pressed it)
     // the advanced tanks' moments (something eaten, a bill stamped): CLASS_FEV in ability-vfx.js
     if (typeof CLASS_FEV !== 'undefined' && CLASS_FEV[msg.k] && e) { VFX.setScale(msg.id === Net.id ? 1 : 0.6); try { CLASS_FEV[msg.k](msg, e, { mine: msg.id === Net.id, tgs: raid.tgs, now, boss: raid.bossDraw }); } finally { VFX.setScale(1); } }
     if (msg.id !== Net.id || !actor) return;
     if (msg.k === 'eat' || msg.k === 'ledger') actor.notify(msg.k, msg);
-    if (msg.k === 'perfect') actor.notify('perfect');
-    if (msg.k === 'reflect') actor.notify('reflect');
+    if (msg.k === 'perfect') actor.notify('perfect', msg);   // (msg.b: it was a tankbuster)
+    if (msg.k === 'reflect') actor.notify('reflect', msg);
     if (msg.k === 'read') actor.notify('read', msg);   // an Ironpalm's Read caught a hit (msg.b: it was a tankbuster)
     if (msg.k === 'shieldEnd') actor.notify('shieldEnd', msg);
     if (msg.k === 'carry' || msg.k === 'snapped' || msg.k === 'dollhit' || msg.k === 'tiefail') actor.notify(msg.k, msg);   // threads and Dolls (classes-c)
@@ -1667,6 +1705,14 @@
   Net.on('thr', msg => { if (raid) Stagecraft.onThreads(msg, now); });
   Net.on('thrs', msg => { if (raid) Stagecraft.onSnaps(msg, now, entById); });
   Net.on('dolls', msg => { if (raid) Stagecraft.onDolls(msg, now, Net.id); });
+  // a healer's buff on one chosen ally (raid-host.js allyBuffs): every client keeps them all, for the party frames
+  Net.on('abuff', msg => {
+    if (!raid || !ALLY_BUFFS[msg.id]) return;
+    raid.abuffs = raid.abuffs.filter(b => !(b.to === msg.to && b.id === msg.id) && b.end > now);
+    raid.abuffs.push({ to: msg.to, id: msg.id, kind: msg.kind, value: msg.value, end: now + msg.dur, from: msg.from });
+    const e = entById(msg.to);
+    if (e) { VFX.shock(e.x, e.y, { r: 46, color: '#ffe2a0', w: 3, dur: 0.45 }); VFX.motes(e.x, e.y, { color: '#ffe9a0', n: 8, r: 24 }); }
+  });
   Net.on('pbuff', msg => {
     if (!raid) return;
     raid.pbuffs.push({ kind: msg.kind, value: msg.value, end: now + msg.dur });
@@ -1771,7 +1817,7 @@
   // Options (K): keys and the HUD (keybinds.js)
   function openOptions() {
     Keybinds.openPanel({
-      namer: i => (i < 6 && actor && actor.abilities[i] ? actor.abilities[i].name : null),
+      namer: i => (i < 6 && actor && actor.abilities[i] ? actor.abilities[i].name : i === 7 && actor && actor.kit.ult ? actor.kit.ult.name : null),
       onChange: () => { document.querySelectorAll('#ability-row .slot').forEach(el => { const k = el.querySelector('kbd'); if (k) k.textContent = SLOT_KEYS[Number(el.dataset.i)]; }); updateHelp(); },
       prefs: player.cls ? {
         get: () => ({ frames: frameDock(), role: ROLES[player.cls.role].name.toLowerCase(), mouseover: mouseoverOn() }),
@@ -1957,10 +2003,18 @@
 
   function update(dt) {
     FX.update(now, dt);
-    VFX.update(now, dt);
+    // the effects' own clock: it crawls through a hit-stop (an Ultimate's impact) while game time runs on
+    const vdt = now < hitStopUntil ? dt * 0.08 : dt;
+    vfxClock += vdt;
+    VFX.update(vfxClock, vdt);
     runTimers();
     updatePlayer(dt);
-    if (actor) actor.update();
+    if (actor) {
+      const down = amDead();
+      if (down && !wasDown) actor.onDeath();   // (a fall keeps half the Ultimate's charge: engine.js ultDeath)
+      wasDown = down;
+      actor.update();
+    }
     sendPos();
     // your Dolls to the host, 10 times a second (classes-c; the host's own go straight in)
     if (inArena() && raid.state === 'live' && Stagecraft.dueMine(now)) {
@@ -2145,7 +2199,7 @@
     let df = bp.a - bd.f; while (df > Math.PI) df -= TAU; while (df < -Math.PI) df += TAU;
     bd.f += df * Math.min(1, dt * 9);
     bd.fade += ((b.u ? 0.55 : 1) - bd.fade) * Math.min(1, dt * 5);   // fades out and back in when untargetable
-    bd.st.t = now; bd.st.raid = true;
+    bd.st.t = raid.bossPause && now < raid.bossPause.end ? raid.bossPause.at : now; bd.st.raid = true;   // (a Time Stop holds its pose)
     bd.st.moving = Math.hypot(bd.x - bd.lastX, bd.y - bd.lastY) > 20 * dt;
     bd.lastX = bd.x; bd.lastY = bd.y;
     // wind-up before each auto-attack (it only lands on the tank, in melee range)
@@ -2199,6 +2253,7 @@
     for (const h of raid.husks) { h.st.t = now; h.st.props.rear = raid.lunges.some(l => l.who === 'husk'); }
     if (raid.eggs && now > raid.eggs.end + 0.3) raid.eggs = null;
     raid.pbuffs = raid.pbuffs.filter(x => x.end > now);
+    if (raid.abuffs.length) raid.abuffs = raid.abuffs.filter(x => x.end > now);
     raid.taken = raid.taken.filter(x => x.t > now - 10);
     if (raid.cast && now > raid.cast.start + raid.cast.dur + 0.3) raid.cast = null;
     if (raid.result && raid.resultAt && now >= raid.resultAt) {
@@ -2229,7 +2284,20 @@
   }
 
   let camFocus = null;   // an arrival in town borrows the camera while they walk in (TownLife)
+  // the camera push (zoomPunch) is laid over the normal camera each frame and taken off before the next one
+  let punchCam = null;
   function updateCamera(dt, snap) {
+    if (punchCam) { cam.x = punchCam.x; cam.y = punchCam.y; punchCam = null; }
+    baseCamera(dt, snap);
+    const p = punchNow();
+    if (p > 0.0005 && scene === 'arena') {
+      punchCam = { x: cam.x, y: cam.y };
+      const z1 = zoom * (1 + p), sx = player.x - cam.x, sy = player.y - (player.lift || 0) - cam.y;
+      cam.x = player.x - sx * zoom / z1; cam.y = player.y - (player.lift || 0) - sy * zoom / z1;
+      zoom = z1;
+    }
+  }
+  function baseCamera(dt, snap) {
     if (snap) dt = 10;  // jump straight there (scene changes)
     if (camFocus && (scene !== 'town' || now > camFocus.until || mouse.rightDown || player.target || player.dashMove)) camFocus = null;
     if (camFocus) {
@@ -2359,6 +2427,8 @@
       // you carry a cleanse (the Alembist's vials, the Cleric's Purify): frames with something to wash off are marked
       cleanse: !!(k && ((player.cls && player.cls.id === 'alembist') || (k.talent && k.talent('cleric_purify')))),
       kit: k || null, cls: player.cls ? player.cls.id : null,   // your own DoTs on the boss (raid-ui.js boss status)
+      // whose Ultimate is full (a pip on the frame): yours from your kit, everyone else's from their 'ult-ready' moment
+      ult: new Set([...raid.rosterIds].filter(id => (id === Net.id ? !!(k && k.ultFull()) : !!(entById(id) || {}).ultReady))),
     };
   }
 
@@ -2451,6 +2521,7 @@
     for (const e of ents) { if (e.kind === 'stagecraft') e.draw(ctx); else drawEntity(e); }
     Stagecraft.drawOver(ctx, now, scEnv);
 
+    drawScreenFx('dim');
     FX.draw(ctx, false);
     VFX.draw(ctx, 'air');
     drawSmoke(ctx, now);
@@ -2470,6 +2541,7 @@
     if (hov && !hov.label.match(/Barkeep|Trainer/) &&!lineup.some(h => h.cls.name === hov.label)) {
       label(ctx, hov.label, mouseWorld().x, mouseWorld().y - 18, '#ffe9a8', 13);
     }
+    drawScreenFx('flash');
   }
 
   // The boss drawn into a canvas of his own, then darkened (the Long Night: the same as brightness(1 - dark), only on
@@ -2565,6 +2637,7 @@
         // through a small layer of his own (bossLayer): a filter on the main canvas costs a whole-screen pass every frame
         if (raid.def.trial) bossLayer(bossDef, bd, bd.fade * (0.72 + 0.06 * Math.sin(now * 2.3)), 0, 'grayscale(0.7) brightness(1.9) sepia(0.35) hue-rotate(175deg) drop-shadow(0 0 9px #8fa8ff)');
         else if (raid.nightK > 0.05) bossLayer(bossDef, bd, bd.fade, 0.55 * raid.nightK, null);
+        else if (raid.bossPause && now < raid.bossPause.end) bossLayer(bossDef, bd, bd.fade, 0, 'saturate(0.35) brightness(1.25) sepia(0.25) hue-rotate(165deg) drop-shadow(0 0 6px #bfe8ff)');   // frosted in a Time Stop
         else { ctx.save(); ctx.globalAlpha = bd.fade; drawBoss(ctx, bossDef, bd.x, bd.y, bd.f, bd.st, RAID_BOSS_SCALE); ctx.restore(); }
       } else if (e.kind === 'knight') {
         const k = e.k, a = Math.min(1, (now - k.born) / 0.6) * (k.gone ? Math.max(0, 1 - (now - k.gone) / 0.8) : 1);
@@ -2606,6 +2679,7 @@
       if (a && b && now <= th.end) ArenaView.tether(ctx, a, b, th, now, raid.mode === 'hard');
     }
     Stagecraft.drawOver(ctx, now, scEnv);
+    drawScreenFx('dim');
     FX.draw(ctx, false);
     VFX.draw(ctx, 'air');
     // add health bars
@@ -2620,6 +2694,42 @@
     playerTag(player, true);
     Pings.draw(ctx, now);
     hurtVignette();
+    drawScreenFx('flash');
+  }
+  // ---- an Ultimate's screen moments (your own only: FX.camFor in fx.js). All cosmetic: `now` never slows.
+  //  screenFlash(color, alpha, dur): a bright wash over everything, fading fast
+  //  screenDim(alpha, dur): the world darkens under the effects for a beat (drawn before the air layer, so they pop)
+  //  zoomPunch(amount, dur): the camera pushes in toward you (zoom x (1 + amount)) and eases back
+  //  hitStop(dur): the effects' clock (VFX) nearly stops for dur s (at most 0.2) at the moment of impact
+  function screenFlash(color = '#ffffff', alpha = 0.35, dur = 0.3) { screenFx.flash = { color, alpha, dur, t0: now }; }
+  function screenDim(alpha = 0.35, dur = 0.8) { screenFx.dim = { color: '#05030a', alpha: Math.min(0.26, alpha * 0.6), dur: Math.min(0.8, dur * 0.55), t0: now }; }   // (a beat of contrast, not a blackout)
+  function zoomPunch(amount = 0.06, dur = 0.5) { punch = { a: Math.min(0.15, amount), dur, t0: now }; }
+  function punchNow() {
+    if (!punch) return 0;
+    const q = (now - punch.t0) / punch.dur;
+    if (q >= 1) { punch = null; return 0; }
+    return punch.a * (q < 0.18 ? easeOut(q / 0.18) : 1 - easeOut((q - 0.18) / 0.82));
+  }
+  function hitStop(dur = 0.1) { hitStopUntil = Math.max(hitStopUntil, now + Math.min(0.2, dur)); }
+  FX.cam = { flash: screenFlash, dim: screenDim, punch: zoomPunch, stop: hitStop };
+  FX.me = player;
+  function drawScreenFx(kind) {
+    const f = screenFx[kind];
+    if (!f) return;
+    const age = now - f.t0, q = age / f.dur;
+    if (q >= 1) { screenFx[kind] = null; return; }
+    const a = f.alpha * (kind === 'dim' ? Math.min(1, age / 0.1) * Math.min(1, (1 - q) / 0.45) : (1 - q) * (1 - q));
+    ctx.save();
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.globalCompositeOperation = kind === 'flash' ? 'lighter' : 'source-over';
+    ctx.globalAlpha = Math.min(1, a); ctx.fillStyle = f.color; ctx.fillRect(0, 0, W, H);
+    ctx.restore();
+  }
+  // your Ultimate is full: a soft ring and a rising shimmer round you, once (the T slot glows: hud.js)
+  function ultReadyCue() {
+    const c = (player.cls && player.cls.accent) || '#ffd65a';
+    VFX.shock(player.x, player.y, { r: 70, color: c, dur: 0.6, w: 3 });
+    VFX.motes(player.x, player.y, { color: '#fff2c8', n: 8, r: 26, rise: 0.8, life: 1.1 });
   }
   // a red flush round the screen's edge for a moment when you're hit (stronger for a bigger hit)
   let hurtGrad = null, hurtFor = '';
@@ -2677,6 +2787,11 @@
     const list = inArena() ? raid.pbuffs : town.buffs;
     const seen = new Set();
     for (const b of list) if (b.end > now && !seen.has(b.kind)) { seen.add(b.kind); out.push({ id: 'p-' + b.kind, name: PBUFF_NAMES[b.kind] || b.kind, left: b.end - now, stacks: 1 }); }
+    // a healer's buff on you (engine.js ALLY_BUFFS), wearing the icon of the move that gave it
+    for (const b of (inArena() ? raid.abuffs : town.abuffs)) {
+      const d = ALLY_BUFFS[b.id];
+      if (d && b.to === Net.id && b.end > now) out.push({ id: 'a-' + b.id, name: d.name, left: b.end - now, stacks: 1, img: abilityIcon(d.cls, d.icon), tip: d.text });
+    }
     const s = myState();
     if (inArena() && s) {
       if (s.dd) out.push({ id: 'dd', name: 'Damage Down', left: s.dd, stacks: 1, bad: true, tip: 'Dealing 10% less damage.' });
@@ -2815,12 +2930,12 @@
       altar.appendChild(band);
     }
   })();
-  // an ability's icon as a CSS background (the taunt layers its own painting over the icon it borrows)
-  const abBg = (cls, a) => (a.taunt ? tauntIconBg(cls.id) : `url(${abilityIcon(cls.id, abilityIconId(a))})`);
-  // the shared in-game tooltip for an ability
+  // an ability's icon as a CSS background (an Ultimate layers its own painting over the icon it borrows)
+  const abBg = (cls, a) => (a.ult ? ultIconBg(cls.id) : `url(${abilityIcon(cls.id, abilityIconId(a))})`);
+  // the shared in-game tooltip for an ability (a tank's taunt carrier says so: kits.js tauntNote)
   function abilityTip(cls, a) {
-    const icon = a.id ? `<i class="ab-icon ${a.type}" style="background-image:${abBg(cls, a)}"></i>` : '<i class="ab-icon dash">»</i>';
-    return `<div class="tip-ab">${icon}<div><b>${a.name}</b><em>${abilityMeta(a)}</em></div></div>${a.desc}`;
+    const icon = a.id ? `<i class="ab-icon ${a.type}${a.ult ? ' ult' : ''}" style="background-image:${abBg(cls, a)}"></i>` : '<i class="ab-icon dash">»</i>';
+    return `<div class="tip-ab">${icon}<div><b>${a.name}</b><em>${a.ult ? ultMeta(a) : abilityMeta(a)}</em></div></div>${a.desc}${a.id ? tauntNote(cls.id, a) : ''}`;
   }
   // --- specializations on the hero page: the base class and its two specs as tabs. A spec shows what it
   // specializes in, its passive, and every move it adds or changes (with the move it replaced).
@@ -2891,8 +3006,9 @@
   }
   const slotIndex = k => (k === 'space' ? 6 : SLOT_OF[k]);
   function keyChip(cls, k) {
-    const i = slotIndex(k), a = i === 6 ? DASH_AB : kitFor(cls.id, selSpec).abilities[i];
-    return `<span class="kchip ${a.type}" data-i="${i}">${a.id ? `<i style="background-image:url(${abilityIcon(cls.id, abilityIconId(a))})"></i>` : '<i class="dash">»</i>'}<kbd>${KEYS[i]}</kbd></span>`;
+    const kt = kitFor(cls.id, selSpec), i = slotIndex(k), a = i === 6 ? DASH_AB : i === 7 ? kt.ultimate : kt.abilities[i];
+    if (!a) return '';
+    return `<span class="kchip ${a.type}${a.ult ? ' ult' : ''}" data-i="${i}">${a.id ? `<i style="background-image:${abBg(cls, a)}"></i>` : '<i class="dash">»</i>'}<kbd>${KEYS[i]}</kbd></span>`;
   }
   function openSelect(cls) {
     if (scene !== 'town') return;
@@ -2917,8 +3033,7 @@
     selGrid.classList.add('hidden'); selDetail.classList.remove('hidden');
     loadSpecPortraits(cls.id);
     const kit = KITS[cls.id], guide = HERO_GUIDE[cls.id];
-    const tauntAb = tauntAbility(cls.id);   // tanks: the taunt on T after the dash
-    const abs = [...kit.abilities, DASH_AB, ...(tauntAb ? [tauntAb] : [])];
+    const abs = [...kit.abilities, DASH_AB];
     const takenBy = [...remotes.values()].filter(r => r.cls === cls).map(r => escapeHtml(r.name));
     selDetail.style.setProperty('--a', cls.accent);
     selDetail.style.setProperty('--c', ROLES[cls.role].color);
@@ -2932,10 +3047,10 @@
     const keys = $('sel-keys');
     selSpec = player.cls === cls ? (player.spec || null) : Save.spec(cls.id);
     const renderKit = () => {
-      const kitAbs = [...kitFor(cls.id, selSpec).abilities, DASH_AB, ...(tauntAb ? [tauntAb] : [])];
+      const sk0 = kitFor(cls.id, selSpec), kitAbs = [...sk0.abilities, DASH_AB, ...(sk0.ultimate ? [sk0.ultimate] : [])];
       abs.splice(0, abs.length, ...kitAbs);
-      // the seven keys (eight for a tank), with what this specialization changed marked
-      keys.innerHTML = abs.map((a, i) => `<button class="key-cell ${a.type}${i < 6 && a !== kit.abilities[i] ? ' changed' : ''}" data-i="${i}">
+      // the seven keys (eight with an Ultimate on T), with what this specialization changed marked
+      keys.innerHTML = abs.map((a, i) => `<button class="key-cell ${a.type}${a.ult ? ' ult' : ''}${i < 6 && a !== kit.abilities[i] ? ' changed' : ''}" data-i="${i}">
         <i class="ab-icon ${a.type}${a.id ? '' : ' dash'}" ${a.id ? `style="background-image:${abBg(cls, a)}"` : ''}>${a.id ? '' : '»'}</i>
         <kbd>${KEYS[i]}</kbd><span>${a.name}</span></button>`).join('');
       keys.querySelectorAll('.key-cell').forEach(b => {
@@ -3244,6 +3359,7 @@
   // another player's class moment (Perfect Block, Overheat, Dawnstar...)
   Net.on('kfx', msg => {
     const e = msg.id >= 1000 ? (raid && raid.bots.get(msg.id)) : remotes.get(msg.id);
+    if (e && (msg.k === 'ult-ready' || msg.k === 'ult-spent')) e.ultReady = msg.k === 'ult-ready';   // (the pip on their party frame)
     if (!e || (msg.s ? 1 : 0) !== (scene === 'arena' ? 1 : 0)) return;
     playKitFx(e, msg.k, false, msg.d && typeof msg.d === 'object' ? msg.d : null);
   });

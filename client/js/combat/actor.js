@@ -13,7 +13,7 @@ class CombatActor {
     this.cls = cls; this.ent = ent; this.world = world;
     this.spec = ent.spec || null;
     this.dash = { charges: DASH.charges, next: 0 };
-    this.taunt = cls.role === 'tank' && typeof TAUNT !== 'undefined' ? { next: 0 } : null;   // tanks' taunt on T (kits.js)
+    this.taunt = cls.role === 'tank' && typeof TAUNT !== 'undefined' ? { next: 0 } : null;   // tanks' taunt, on a carrier button (kits.js TAUNT_CARRY)
     const actor = this;
     // the kit with this hero's spec, and any moves its talents grant (TALENT_ABILITIES in kits.js)
     this.kit = new Kit(kitFor(cls.id, this.spec, world.talents ? world.talents(this) : null), {
@@ -38,6 +38,7 @@ class CombatActor {
       pos: () => ({ x: actor.ent.x, y: actor.ent.y }),            // where you stand (Sigilmancer's circle)
       boss: () => (world.boss ? world.boss(actor) : null),         // what the boss is doing, for talents that react to it (kits.js bossNow)
       isDead: id => world.isDead(id),
+      allyHp: id => (world.allyHp ? world.allyHp(id) : null),     // an ally's health, 0..1, or null if unknown (Alembist's Smart Throw)
       defaultLink: () => world.defaultLink(actor),
       refundDash: () => actor.refundDash(world.now()),            // a kit giving back a dash charge (Driftblade's Hook Turn)
       emit: ev => world.onEvent(actor, ev),
@@ -52,6 +53,11 @@ class CombatActor {
       collide: (o, r) => { if (world.collide) world.collide(actor, o, r); },
       threads: () => (world.threads ? world.threads(actor) : null),
       dolls: list => { if (world.dolls) world.dolls(actor, list); },
+      danger: (x, y, within) => (world.danger ? world.danger(actor, x, y, within) : false),   // a telegraph landing on a spot within `within` s (Pirouette's glow)
+      // a tank pressed its taunt carrier (kits.js TAUNT_CARRY): the world taunts if the taunt is ready and the enemy
+      // (the move's target, or the one you face) is on someone else
+      taunt: tg => (actor.taunt && actor.tauntReady(world.now()) && world.taunt ? world.taunt(actor, tg) : false),
+      inCombat: () => (world.inCombat ? world.inCombat(actor) : null),   // (the Ultimate's trickle: engine.js ultTick)
     });
   }
   refundDash(now) {
@@ -65,6 +71,8 @@ class CombatActor {
   press(i) { return this.kit.press(i); }
   update() { this.kit.update(); }
   notify(type, data) { this.kit.notify(type, data); }
+  // the hero went down: the Ultimate keeps part of its charge and an open window ends (engine.js ultDeath)
+  onDeath() { this.kit.ultDeath(); }
 
   dashReady(now) {
     while (this.dash.charges < DASH.charges && this.dash.next && now >= this.dash.next) {

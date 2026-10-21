@@ -14,6 +14,7 @@ class RaidHost {
     this.def = opts.def; this.mode = opts.mode; this.humans = opts.humans; this.emitOut = opts.emit;
     this.t = 0;
     this.partyBuffs = [];  // { kind, value, end }
+    this.allyBuffs = [];   // a healer's buff on one chosen ally (engine.js ALLY_BUFFS): { to, id, kind, value, end, from }
     this.bond = opts.bond || { hp: 0, dmg: 0, crit: 0, haste: 0 };
     const rngSeed = opts.seed || 1;
     let s = rngSeed >>> 0;
@@ -66,6 +67,7 @@ class RaidHost {
       this.emit({ t: 'mtr', ft: +this.sim.t.toFixed(1), d: Object.entries(this.sim.stats).map(([id, st]) => [Number(id), Math.round(st.damage), Math.round(st.healing)]) });
     }
     this.partyBuffs = this.partyBuffs.filter(b => b.end > this.sim.t);
+    if (this.allyBuffs.length) this.allyBuffs = this.allyBuffs.filter(b => b.end > this.sim.t);
     if (this.sim.state === 'live') this.tickBots(dt);
     if (this.t - this.lastBotBroadcast >= 0.1 && this.bots.length) {
       this.lastBotBroadcast = Math.max(this.lastBotBroadcast + 0.1, this.t - 0.05);   // steady 10/s (see fight.js)
@@ -98,6 +100,11 @@ class RaidHost {
       debuffs: id => { const s = sim.ps.get(id); const out = {}; if (s) for (const k in s.debuffs) if (s.debuffs[k] > sim.t) out[k] = Math.max(0.01, s.debuffs[k] - sim.t); return out; },   // seconds left
       // classes-c: the Threadweavers' threads and Tapestry, and every Marionettist's Dolls
       threads: sim.threads || [], tapestry: sim.tapestry && sim.tapestry.end > sim.t ? sim.tapestry : null, dolls: sim.liveDolls(),
+      // a healer bot's chosen-ally buff (bots.js BotAI.allyBuff): the party's burst is on (a damage buff or a vulnerability
+      // on the boss), how much each player has dealt, and the buffs already on them
+      burst: this.partyBuffs.some(x => x.kind === 'dmg' && x.end > sim.t) || b.vulnEnd > sim.t,
+      dealt: id => (sim.stats[id] ? sim.stats[id].damage : 0) || 0,
+      allyMods: id => this.allyMods(id),
     };
   }
 
@@ -125,10 +132,12 @@ class RaidHost {
 
   tickBots(dt) {
     this.botLimit();
-    const view = this.view();
+    const view = this.view(), sim = this.sim;
+    const ultCtx = { mods: this.partyMods(), dpsCheck: sim.dpsCheckEnd > sim.t, healCheck: sim.healCheckEnd > sim.t, bossFrac: sim.boss.maxHp ? sim.boss.hp / sim.boss.maxHp : 1 };
     for (const bot of this.bots) {
       const s = this.sim.ps.get(bot.id);
-      if (!s || !s.alive) { bot.moving = false; continue; }
+      if (!s || !s.alive) { if (!bot.down) { bot.down = true; bot.actor.onDeath(); } bot.moving = false; continue; }   // (a fall keeps half the Ultimate)
+      bot.down = false;
       if (this.sim.t >= bot.nextThink) {
         bot.wantEnemy = BotAI.pickEnemy(bot, view);
         bot.plan = BotAI.move(bot, view);
@@ -166,6 +175,8 @@ class RaidHost {
       if (view.mechs.some(m => m.type === 'gaze' && m.resolveAt - this.sim.t < 1.1) && !view.mechs.some(m => m.type === 'audience' && m.resolveAt - this.sim.t < 1.1)) bot.a += Math.PI;
       bot.actor.update();
       if (bot.actor.taunt) this.botTaunt(bot, view);
+      // the Ultimate (T): BotAI.ult says when (the party's burst, a check, a buster, a raidwide)
+      if (bot.actor.kit.ult && BotAI.ult(bot, bot.actor.kit, view, ultCtx)) bot.actor.press(7);
       if (this.sim.t >= bot.nextAct) {
         const i = BotAI.act(bot, bot.actor.kit, view);
         if (i !== null && i !== undefined) {
@@ -179,13 +190,20 @@ class RaidHost {
     }
   }
 
-  // a bot tank taunts back what it lost, after a human-ish moment to notice (BotAI.tauntTarget picks what)
+  // a bot tank taunts back what it lost, after a human-ish moment to notice (BotAI.tauntTarget picks what): it presses
+  // the button that carries its taunt (kits.js TAUNT_CARRY), and botWorld.taunt taunts what it wanted. A bot only ever
+  // taunts from here: its other presses of that button don't (bot.tauntWant is unset).
   botTaunt(bot, view) {
     const t = this.sim.t, want = bot.actor.tauntReady(t) ? BotAI.tauntTarget(bot, view) : null;
     if (!want) { bot.tauntSeen = null; return; }
     if (!bot.tauntSeen || bot.tauntSeen.tg !== want) { bot.tauntSeen = { tg: want, at: t + 0.7 }; return; }
     if (t < bot.tauntSeen.at) return;
     bot.tauntSeen = null;
+    const k = bot.actor.kit, i = k.def.tauntOn ? k.abilities.findIndex(a => k.baseId(a) === k.def.tauntOn) : -1;
+    bot.tauntWant = { tg: want, until: t + 1 };
+    if (i >= 0 && bot.actor.press(i)) return;   // fired (or queued behind the GCD or a lock, and fires within a second)
+    // the carrier can't go right now (no charges, out of reach): the bot taunts anyway, so it still holds the boss
+    bot.tauntWant = null;
     if (this.sim.taunt(bot.id, want)) bot.actor.useTaunt(t);
   }
   // ---------------------------------------------------------------- routing
@@ -194,8 +212,8 @@ class RaidHost {
     if (msg.t === 'fev') {
       const bot = this.bots.find(b => b.id === msg.id);
       if (bot) {
-        if (msg.k === 'perfect') bot.actor.notify('perfect');
-        if (msg.k === 'reflect') bot.actor.notify('reflect');
+        if (msg.k === 'perfect') bot.actor.notify('perfect', msg);   // (msg.b: it was a tankbuster)
+        if (msg.k === 'reflect') bot.actor.notify('reflect', msg);
         if (msg.k === 'read') bot.actor.notify('read', msg);
         if (msg.k === 'shieldEnd') bot.actor.notify('shieldEnd', msg);
         if (msg.k === 'eat' || msg.k === 'ledger') bot.actor.notify(msg.k, msg);   // (the advanced tanks: fight.js classEvent)
@@ -211,7 +229,7 @@ class RaidHost {
     if (msg.t === 'reelx') { const bot = this.bots.find(b => b.id === msg.pid); if (bot) bot.reel = null; }
     if (msg.t === 'kb') {
       const bot = this.bots.find(b => b.id === msg.id);
-      if (bot) {
+      if (bot && !bot.actor.kit.ultSteady()) {   // (an Ultimate's animation lock can't be knocked out of)
         const a = Math.atan2(bot.y - msg.y, bot.x - msg.x);
         const to = ARENA.clamp({ x: bot.x + Math.cos(a) * msg.d, y: bot.y + Math.sin(a) * msg.d }, 12);  // the arena has a wall, same as for players
         PROPS.clipMove(bot, to, this.sim.props, 14);   // ... and a throw stops at a solid prop
@@ -228,7 +246,22 @@ class RaidHost {
       this.emit({ t: 'pbuff', kind: ev.kind, value: ev.value, dur: ev.dur, from: pid });
       return;
     }
+    if (ev.type === 'allyBuff') {
+      // one chosen ally (a fallen one takes nothing); the same buff again replaces the old one
+      const to = ev.target === 'self' ? pid : ev.target, s = this.sim.ps.get(to);
+      if (!s || !s.alive || s.left) return;
+      this.allyBuffs = this.allyBuffs.filter(x => !(x.to === to && x.id === ev.id));
+      this.allyBuffs.push({ to, id: ev.id, kind: ev.kind, value: ev.value, end: this.sim.t + ev.dur, from: pid });
+      this.emit({ t: 'abuff', to, id: ev.id, kind: ev.kind, value: ev.value, dur: ev.dur, from: pid });
+      return;
+    }
     this.sim.onEvent(pid, ev);
+  }
+  // what the healers' chosen-ally buffs on this player add up to: { dmg, haste } (the strongest of each kind)
+  allyMods(id) {
+    const m = { dmg: 0, haste: 0 };
+    for (const b of this.allyBuffs) if (b.to === id && b.end > this.sim.t) m[b.kind] = Math.max(m[b.kind] || 0, b.value);
+    return m;
   }
 
   partyMods() {
@@ -268,10 +301,11 @@ class RaidHost {
         return t;
       },
       isDead: id => { const s = host.sim.ps.get(id); return !!s && !s.alive; },
+      allyHp: id => { const s = host.sim.ps.get(id); return s && s.maxHp ? (s.alive ? Math.max(0, s.hp / s.maxHp) : 0) : null; },
       defaultLink: () => { const t = host.sim.tank(); return t ? t.id : bot.id; },
       partyMods: () => host.partyMods(),
       targetMods: () => ({ vuln: host.sim.boss.vulnEnd > host.sim.t ? host.sim.boss.vuln : 0 }),
-      selfMods: () => { const s = host.sim.ps.get(bot.id); return { dmgDown: s && s.dmgDownEnd > host.sim.t ? FIGHT.DMG_DOWN : 0 }; },
+      selfMods: () => { const s = host.sim.ps.get(bot.id), a = host.allyMods(bot.id); return { dmgDown: s && s.dmgDownEnd > host.sim.t ? FIGHT.DMG_DOWN : 0, dmg: a.dmg, haste: a.haste }; },
       recentDamage: (actor, secs) => bot.taken.filter(d => d.t > host.sim.t - secs).reduce((a, d) => a + d.a, 0),
       maxHp: () => { const s = host.sim.ps.get(bot.id); return s ? s.maxHp : playerBaseHp(bot.role); },
       hpFrac: () => { const s = host.sim.ps.get(bot.id); return s && s.maxHp ? Math.max(0, s.hp / s.maxHp) : 1; },
@@ -280,6 +314,14 @@ class RaidHost {
       aim: () => bot.aim || bot.plan || null,
       collide: (actor, o, r) => { ARENA.clamp(o, 16); if (host.sim.props.length) PROPS.collide(o, host.sim.props, r); },
       dolls: (actor, list) => host.sim.setDoll(bot.id, list),
+      // the taunt carrier went off (engine.js resolve): taunt only what botTaunt asked for
+      taunt: actor => {
+        const w = bot.tauntWant; bot.tauntWant = null;
+        if (!w || host.sim.t > w.until || !host.sim.taunt(bot.id, w.tg)) return false;
+        actor.useTaunt(host.sim.t);
+        return true;
+      },
+      inCombat: () => host.sim.state === 'live',
       threads: () => ({ me: bot.id, l: (host.sim.threads || []).filter(th => th.from === bot.id).map(th => {
         const a = host.sim.players().find(p => p.id === th.a), b = host.sim.players().find(p => p.id === th.b);
         return [th.a, th.b, a && b ? Math.hypot(a.x - b.x, a.y - b.y) : 0];
@@ -290,7 +332,7 @@ class RaidHost {
             const en = ev.ab.target === 'enemy' && ev.target && typeof ev.target === 'object' ? ev.target : null;
             if (en) bot.lastEnemy = en.id;
             // (a: the move's id, so a talent's move or a paced kit's named string shows as itself; slot: its button)
-            host.emit({ t: 'cast', id: bot.id, i: actor.abilities.includes(ev.ab) ? actor.abilities.indexOf(ev.ab) : (ev.ab.slot ?? -1), a: ev.ab.id, x: Math.round(bot.x), y: Math.round(bot.y),
+            host.emit({ t: 'cast', id: bot.id, i: actor.abilities.includes(ev.ab) ? actor.abilities.indexOf(ev.ab) : (ev.ab.slot ?? -1), a: ev.ab.fxId || ev.ab.id, x: Math.round(bot.x), y: Math.round(bot.y),
               tx: Math.round(en ? en.x : host.sim.boss.x), ty: Math.round(en ? en.y : host.sim.boss.y), ally: typeof ev.target === 'number' ? ev.target : null });
             break;
           }
@@ -324,7 +366,7 @@ class RaidHost {
             break;
           }
           case 'heal': case 'hot': case 'shield': case 'mit': case 'raise': case 'rewind':
-          case 'selfDamage': case 'targetDebuff': case 'partyBuff': case 'pool': case 'brand': case 'splash': case 'maw': case 'ledger':
+          case 'selfDamage': case 'targetDebuff': case 'partyBuff': case 'allyBuff': case 'pool': case 'brand': case 'splash': case 'maw': case 'ledger':
           case 'tie': case 'snip': case 'tighten': case 'tapestry': case 'tug':   // classes-c
             host.onPlayerEvent(bot.id, ev);
             break;

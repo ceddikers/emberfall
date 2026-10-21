@@ -143,7 +143,7 @@ const TALENTS = {
       { id: 'ranger_rhythm', name: 'Fletcher\'s Rhythm', ab: 'quick', text: 'Every fourth Quick Shot looses a second arrow for half damage.' },
       { id: 'ranger_ricochet', name: 'Ricochet', ab: 'pierce', text: 'A Piercing Arrow that crits ricochets back into your quiver: it gives its charge back.',
         spec: { sharpshooter: 'An Aimed Shot that crits ricochets back into your quiver: it gives its charge back.', venomstrike: 'A Caustic Arrow that crits ricochets back into your quiver: it gives its charge back.' } },
-      { id: 'ranger_steady', name: 'Steady Breath', ab: 'quick', text: 'A Quick Shot loosed after standing still for 2s lights Keen Eye far more often (60%).' },
+      { id: 'ranger_steady', name: 'Steady Breath', ab: 'quick', text: 'A Quick Shot loosed after standing still for 2s lights Keen Eye far more often (55%).' },
     ],
     [
       { id: 'ranger_disengage', name: 'Disengage', ab: 'cloak', text: 'Hunter\'s Cloak now also leaps you backwards, clear of whatever is at your feet.' },
@@ -178,8 +178,8 @@ const TALENTS = {
         spec: { nightstalker: 'A Strike from the front is no longer wasted: it sets up a feint, and your next Backstab lands as a hit from behind wherever you stand.' } },
       { id: 'shadowblade_opportunist', name: 'Opportunist', ab: 'evis', text: 'An Eviscerate while the boss is casting is always a critical hit.',
         spec: { nightstalker: 'A Backstab while the boss is casting is always a critical hit.' } },
-      { id: 'shadowblade_ambush', name: 'Ambush', ab: 'step', text: 'Shadowstep now strikes as you arrive: a stab from behind for {d:40} and a combo point.',
-        spec: { bladedancer: 'Blade Fury\'s spin now gives 2 combo points instead of 1.' } },
+      { id: 'shadowblade_ambush', name: 'Ambush', ab: 'step', text: 'Shadowstep now strikes as you arrive: a stab from behind for {d:20} and a combo point.',
+        spec: { bladedancer: 'Blade Fury\'s spin now gives a second combo point, but never one past 5 (your Tempo is safe).' } },
     ],
     [
       { id: 'shadowblade_dodge', name: 'Shadow Dodge', ab: 'step', text: 'A Shadowstep while the boss is casting also slips the blow: you take 50% less damage for 2s.',
@@ -198,7 +198,7 @@ const TALENTS = {
         spec: { nightstalker: 'A combo point that would spill past 5 now sharpens your next Backstab instead: 12% harder for each (up to 3).' } },
     ],
     [
-      { id: 'shadowblade_clone', name: 'Shadow Clone', ab: 'dance', text: 'Shadow Dance now calls a shadow that repeats your Eviscerates at 30%.', spec: { nightstalker: 'Shadow Dance now calls a shadow that repeats your Backstabs at 30%.' } },
+      { id: 'shadowblade_clone', name: 'Shadow Clone', ab: 'dance', text: 'Shadow Dance now calls a shadow that repeats your Eviscerates at 25%.', spec: { nightstalker: 'Shadow Dance now calls a shadow that repeats your Backstabs at 25%.' } },
       { id: 'shadowblade_sprint', name: 'Shadow Sprint', ab: 'step', cd: { step: -3 }, specMods: { bladedancer: { cd: { step: -1 } } }, text: 'Shadowstep recharges 3s faster.', spec: { bladedancer: 'Blade Fury recharges 1s faster.' } },
       { id: 'shadowblade_endless', name: 'Endless Dance', ab: 'dance', text: 'Each 5-point finisher during Shadow Dance makes it last 1s longer (up to 4s).' },
     ],
@@ -259,7 +259,7 @@ const TALENTS = {
       { id: 'cleric_bloom', name: 'Bloom of Dawn', ab: 'intervene', grants: true,
         text: 'Intervention becomes Bloom of Dawn (30s, instant): spend all your Petals on one ally. A fallen ally rises at once; a living one is healed for {h:500} per Petal. Every Petal counts toward Dawnstar.' },
       { id: 'cleric_favour', name: 'Sun\'s Favour', ab: 'smite', text: 'Dawnstar gives back a Petal.' },
-      { id: 'cleric_overgrowth', name: 'Overflowing Petals', ab: 'petal', text: 'A Petal that would grow past 3 now blooms by itself onto the most hurt ally, and counts toward Dawnstar.' },
+      { id: 'cleric_firstlight', name: 'First Light', ab: 'mend', text: 'While Dawnstar is ready, Mend now casts instantly.', spec: { aegis: 'While Dawnstar is ready, Divine Barrier now casts instantly.' } },
     ],
     [
       { id: 'cleric_twinbless', name: 'Twin Blessing', ab: 'bene', text: 'Benediction can now be pressed again within 5s: the same blessing, at half strength, on the most hurt other ally.',
@@ -303,7 +303,7 @@ const TALENTS = {
     [
       { id: 'grovekeeper_treant', name: 'Treant', ab: 'thorn', grants: true,
         text: 'Thornlash becomes Treant (45s): call up a treant beside the boss for 15s. It slams the boss for {d:170} every 3s, and every slam heals your most hurt ally for {h:150}.' },
-      { id: 'grovekeeper_naturewrath', name: 'Nature\'s Wrath', ab: 'bloom', text: 'Bloom now also tears roots up under the boss that lash it for {d:120}.' },
+      { id: 'grovekeeper_naturewrath', name: 'Nature\'s Wrath', ab: 'bloom', text: 'Bloom now also tears roots up under the boss that lash it for {d:90}.' },
       { id: 'grovekeeper_pulse', name: 'Verdant Pulse', ab: 'growth', text: 'Wild Growth now pulses every 3s while it lasts, and each pulse grows 8 Bloom.',
         spec: { moonwell: 'Moonwell now pulses every 3s while it lasts, and each pulse grows 8 Bloom.' } },
     ],
@@ -311,7 +311,7 @@ const TALENTS = {
 
   chronomancer: [
     [
-      { id: 'chronomancer_phase', name: 'Phase Strike', ab: 'shift', text: 'Shift now leaves an afterimage that fires a free Temporal Bolt (once every 10s). It heals like any Bolt.' },
+      { id: 'chronomancer_phase', name: 'Phase Strike', ab: 'shift', text: 'Shifting into Haste now leaves an afterimage that fires a free Temporal Bolt at 75% strength (once every 10s). It heals like any Bolt.' },
       { id: 'chronomancer_double', name: 'Double Time', ab: 'shift', text: 'Shifting into Haste now makes your next two Bolts instant instead of one.' },
       { id: 'chronomancer_skip', name: 'Skipped Beat', ab: 'bolt', text: 'Every fifth Temporal Bolt is instant.' },
     ],
@@ -328,7 +328,7 @@ const TALENTS = {
     ],
     [
       { id: 'chronomancer_hourglass', name: 'Hourglass Ward', ab: 'rewind', text: 'Rewind now also slows time around its target: they take 15% less damage for 6s.' },
-      { id: 'chronomancer_stopwatch', name: 'Stopwatch', ab: 'shift', text: 'Shift now also stops your Flux for 4s: it neither drains nor fills.' },
+      { id: 'chronomancer_stopwatch', name: 'Stopwatch', ab: 'shift', text: 'Shifting into Haste now also stops your Flux for 4s: your first 4s of Haste cost nothing.' },
       { id: 'chronomancer_second', name: 'Second Hand', ab: 'bolt', text: 'In Haste, Temporal Bolt now strikes again 2s later at 8% strength, healing as a Bolt does.',
         spec: { echoist: 'Your echoes are 60% strength instead of half.', accelerant: 'In Haste, Temporal Bolt now strikes again 2s later at 6% strength, healing as a Bolt does.' } },
     ],
@@ -350,7 +350,7 @@ Object.assign(TALENTS, {
   thermist: [
     [
       { id: 'thermist_embers', name: 'Banked Embers', ab: 'cinder', text: 'A Cinder Bolt cast at +3 or hotter now leaves an ember in the target (up to 3). Your next Thermal Shock sets every ember off, {d:95} each.' },
-      { id: 'thermist_flicker', name: 'Flicker', ab: 'rime', text: 'Rime Shard is now instant while the dial is cold, and Cinder Bolt while it is hot.' },
+      { id: 'thermist_flicker', name: 'Flicker', ab: 'rime', text: 'A Cinder Bolt or Rime Shard now makes your next Flare or Glacier Lance instant (within 6s).' },
       { id: 'thermist_afterglow', name: 'Afterglow', ab: 'flare', text: 'A Flare or Glacier Lance cast at its own edge now leaves the target burning or freezing for {d:42} every 3s for 9s.', spec: { zenith: 'A Flare or Glacier Lance cast at its own edge now leaves the target burning or freezing for {d:30} every 3s for 9s.' } },
     ],
     [
@@ -389,7 +389,7 @@ Object.assign(TALENTS, {
     [
       { id: 'driftblade_gyre', name: 'Gyre', ab: 'hook', grants: true, text: 'New move on E, in place of Hook Turn. Gyre: loop once round your target, one {d:105} cut for every 25 Drift you have (up to 4). It spends nothing and adds 10 Drift. Two charges.' },
       { id: 'driftblade_second', name: 'Second Wind', ab: 'cross', text: 'A Crosswind that spends 80 Drift or more now gives 10 back.', spec: { comet: 'An Impact that spends 160 Drift or more now gives 20 back.' } },
-      { id: 'driftblade_hover', name: 'Hover', ab: 'still', text: 'Your Drift no longer drains in the first 1.5s you stand still.' },
+      { id: 'driftblade_hover', name: 'Hover', ab: 'carve', text: 'A Carve you make while standing still now gives 10 Drift.' },
     ],
     [
       { id: 'driftblade_galeforce', name: 'Galeforce', ab: 'gale', text: 'When Gale Run ends, it now looses a free blade of wind at the target: {d:100}, plus {d:50} for every 10 Drift you hold (it spends nothing).' },
@@ -451,7 +451,7 @@ Object.assign(TALENTS, {
   gorgemaw: [
     [
       { id: 'gorgemaw_marinade', name: 'Marinade', ab: 'gnash', text: 'Gulp, the third bite of Gnash, now marinates the boss: your next Spit within 10s hits 25% harder.' },
-      { id: 'gorgemaw_aftertaste', name: 'Aftertaste', ab: 'spit', text: 'A Spit now leaves the taste behind: the boss burns for {d:40} every 3s for 9s ({d:70} after a Spike).' },
+      { id: 'gorgemaw_aftertaste', name: 'Aftertaste', ab: 'spit', text: 'A Spit now leaves the taste behind: the boss burns for {d:35} every 3s for 9s ({d:65} after a Spike).' },
       { id: 'gorgemaw_crunch', name: 'Crunch', ab: 'gnash', text: 'Gulp, the third bite of Gnash, now bites twice: the second bite hits for {d:70}.' },
     ],
     [
@@ -516,7 +516,7 @@ Object.assign(TALENTS, {
     ],
     [
       { id: 'threadweaver_thimble', name: 'Thimble', ab: 'snip', text: 'Every thread Snap cuts now also shields both its ends for {s:150} for 6s.' },
-      { id: 'threadweaver_reelin', name: 'Reel In', ab: 'tighten', text: 'Tighten now pulls both ends together to meet in the middle, and both take 10% less damage for 4s.', spec: { shears: 'Lash now pulls both ends together to meet in the middle, and both take 10% less damage for 4s.' } },
+      { id: 'threadweaver_reelin', name: 'Reel In', ab: 'tie', text: 'A Tie that pulls an ally along a thread now pulls both ends together to meet in the middle, and both take 10% less damage for 4s.' },
       { id: 'threadweaver_knotwork', name: 'Knotwork', ab: 'tie', text: 'A thread that snaps on its own now gives back a charge of Tie.' },
     ],
     [
@@ -530,7 +530,7 @@ Object.assign(TALENTS, {
       { id: 'threadweaver_longthread', name: 'Long Thread', ab: 'tapestry', cd: { tapestry: -30 }, text: 'Tapestry recharges 30s faster.' },
     ],
     [
-      { id: 'threadweaver_cradle', name: 'Cat\'s Cradle', ab: 'tighten', grants: true, text: 'New move on D, in place of Tighten. Cat\'s Cradle: a cradle of threads at your feet for 9s. Allies inside take 15% less damage and heal {h:70} every 1.5s.', spec: { shears: 'New move on D, in place of Lash. Cat\'s Cradle: a cradle of threads at your feet for 9s. Allies inside take 15% less damage and heal {h:70} every 1.5s.' } },
+      { id: 'threadweaver_cradle', name: 'Cat\'s Cradle', ab: 'shuttle', grants: true, text: 'New move on D, in place of Shuttle. Cat\'s Cradle (30s): a cradle of threads at your feet for 9s. Allies inside take 15% less damage and heal {h:70} every 1.5s, and its shuttle strikes the boss for {d:240} per thread you hold.', spec: { shears: 'New move on D, in place of Shuttle. Cat\'s Cradle (30s): a cradle of threads at your feet for 9s. Allies inside take 15% less damage and heal {h:70} every 1.5s, and its shuttle strikes the boss for {d:240} per thread you hold or Snap cut in the last 8s (up to 5).' } },
       { id: 'threadweaver_heartstring', name: 'Heartstring', ab: 'snip', text: 'Every thread Snap cuts now also whips the boss for {d:50}.' },
       { id: 'threadweaver_skein', name: 'Double Knot', ab: 'tie', text: 'A thread you tie can\'t snap for its first 6s, however far apart its ends are pulled.' },
     ],
@@ -548,14 +548,14 @@ Object.assign(TALENTS, {
       { id: 'marionettist_standin', name: 'Stand-In', ab: 'swap', text: 'For 3s after a Swap, a blow that lands on the Doll no longer tears a String.' },
     ],
     [
-      { id: 'marionettist_tangle', name: 'Tangle', ab: 'pirouette', grants: true, text: 'New move on R, in place of Pirouette. Tangle: the Doll winds its strings round the enemy, a {d:160} cut now and a bleed of {d:55} every 2s for 10s.', spec: { understudy: 'New move on R, in place of Pirouette. Tangle: each Doll winds its strings round the enemy, a {d:92.8} cut now and a bleed of {d:31.9} every 2s for 10s.' } },
+      { id: 'marionettist_tangle', name: 'Tangle', ab: 'pirouette', grants: true, text: 'New move on R, in place of Pirouette. Tangle: the Doll winds its strings round the enemy, a {d:160} cut now and a bleed of {d:38} every 2s for 10s.', spec: { understudy: 'New move on R, in place of Pirouette. Tangle: each Doll winds its strings round the enemy, a {d:92.8} cut now and a bleed of {d:22} every 2s for 10s.' } },
       { id: 'marionettist_encore', name: 'Encore! Encore!', ab: 'finale', text: 'Grand Finale now leaves you 2 Encore when it ends.' },
       { id: 'marionettist_secondact', name: 'Second Act', ab: 'pirouette', text: 'Pirouette now also mends a torn String.' },
     ],
     [
       { id: 'marionettist_curtain', name: 'Curtain Call', ab: 'finale', text: 'The last hit of Grand Finale is now always a critical hit.' },
       { id: 'marionettist_cue', name: 'On Cue', ab: 'swap', text: 'Swap now also takes 3s off Cross-Cut\'s cooldown.' },
-      { id: 'marionettist_quickchange', name: 'Quick Change', ab: 'swap', cd: { swap: -6 }, text: 'Swap recharges 6s faster.' },
+      { id: 'marionettist_quickchange', name: 'Quick Change', ab: 'swap', cd: { swap: -4 }, text: 'Swap recharges 4s faster.' },
     ],
     [
       { id: 'marionettist_curtainrise', name: 'Red Curtain', ab: 'swap', grants: true, text: 'New move on D, in place of Swap. Red Curtain: a red curtain round you for 8s; allies inside take 15% less damage, and the Dolls bow and come back to you.' },
@@ -572,7 +572,7 @@ Object.assign(TALENTS, {
 TALENTS.ironpalm = [
   [
     { id: 'ironpalm_swallow', name: 'Swallow\'s Return', ab: 'kick', text: 'Crane Step now flows on: Crane Step then Heavy (K L H) is a Rising Gate too, so it can carry on into Heaven\'s Drop.' },
-    { id: 'ironpalm_echo', name: 'Echoing Palm', ab: 'fist', text: 'Thousand Palms now echoes: three more strikes of {d:18.9} land a moment after the flurry.' },
+    { id: 'ironpalm_echo', name: 'Echoing Palm', ab: 'fist', text: 'Thousand Palms now echoes: three more strikes of {d:13.2} land a moment after the flurry.' },
     { id: 'ironpalm_clean', name: 'Clean Hands', ab: 'palm', text: 'A Crisp press now costs no Breath at all.' },
   ],
   [

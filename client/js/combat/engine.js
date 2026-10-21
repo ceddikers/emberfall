@@ -19,6 +19,15 @@
 // def.moveFor(k, ab) may turn a press into the move it completes (a named string): that move is what fires, is shown
 // and is sent to everyone ('used' carries it; it names its button in `slot`). k.input says how the press came in.
 // Kits without `pacing` behave exactly as before.
+//
+// The Ultimate (T, slot 7): def.ultimate, an ability-like object kept OUT of def.abilities (bots, the simulator and
+// the six-slot checks never see it). Its charge lives in k.g.ult (0..100, no decay) and fills through the class's own
+// loop (ultGain, or the gain/spend maps that Kit.gain/Kit.spend funnel) plus a small trickle while fighting (ultTick).
+// Pressing it at 100 spends it all. mode 'instant': its effect is the whole moment. mode 'window': for window.dur
+// seconds the bar's moves named in window.over swap to empowered versions (ultOver: same id, so cooldowns, talents,
+// bots and kit code keep working; fxId names their look and what other clients are told), then window.onEnd runs.
+// While its animation lock lasts the caster takes ult.dr less damage and can't be knocked back (ultSteady).
+// Part of the charge (charge.keep, default half) survives a death (ultDeath). Shape: docs/DESIGN.md "Ultimates".
 
 const ENGINE = {
   GCD: 2.5,
@@ -39,6 +48,16 @@ const ENGINE = {
   // enemy skill in the last AUTO_ENGAGE seconds. Each kit sets its own { kind, potency, range } in `auto`.
   AUTO_EVERY: 2.6,
   AUTO_ENGAGE: 8,
+};
+
+// Buffs a healer puts on ONE chosen ally (Kit.allyBuff): what each one does and how long, and its look (cls/icon: the
+// ability art its chip on the party frame and the buff bar wears). Shown by name on every client, so the host only
+// relays ids it knows (main.js 'cev'). value: a fraction (0.1 = 10%).
+const ALLY_BUFFS = {
+  quickened: { name: 'Quickened', kind: 'haste', value: 0.12, dur: 15, cls: 'chronomancer', icon: 'accel', text: 'Acting 12% faster.' },
+  blessed: { name: 'Blessed', kind: 'dmg', value: 0.1, dur: 10, cls: 'cleric', icon: 'bene', text: 'Dealing 10% more damage.' },
+  wildheart: { name: 'Wildheart', kind: 'dmg', value: 0.1, dur: 12, cls: 'grovekeeper', icon: 'rebirth', text: 'Dealing 10% more damage.' },
+  galvanized: { name: 'Galvanized', kind: 'dmg', value: 0.1, dur: 10, cls: 'alembist', icon: 'throw', text: 'Dealing 10% more damage.' },
 };
 
 class Kit {
@@ -76,6 +95,12 @@ class Kit {
     this.lastSpend = -99;
     const pool = this.pace && this.pace.pool;
     if (pool && this.g[pool.key] == null) this.g[pool.key] = this.poolMax();
+    // the Ultimate (see the top of this file)
+    this.ult = def.ultimate || null;
+    this.baseAbilities = this.abilities;   // the bar without a window's empowered moves
+    this.ultWin = null;                    // an open window: { start, end, dur, ab }
+    this.ultSteadyUntil = 0;
+    if (this.ult) { if (this.g.ult == null) this.g.ult = 0; this.cd[this.ult.id] = 0; }
   }
   // ---------------------------------------------------------------- pacing
   gcdFree() { return !!this.pace && this.pace.gcd === false; }
@@ -100,12 +125,83 @@ class Kit {
   // ---------------------------------------------------------------- resources
   // Add to a gauge value, counting anything above max as overcap (shown in the fight report).
   gain(key, n, max = 100) {
-    const v = (this.g[key] || 0) + n;
+    const was = this.g[key] || 0, v = was + n;
     if (v > max) this.stats.overcap[key] = (this.stats.overcap[key] || 0) + (v - max);
     this.g[key] = Math.min(max, v);
     if (n > 0) this.fxGain(n);
+    const per = this.ult && this.ult.charge && this.ult.charge.gain && this.ult.charge.gain[key];
+    if (per && this.g[key] > was) this.ultGain((this.g[key] - was) * per);   // (the Ultimate fills from this gauge)
   }
-  spend(key, n) { if ((this.g[key] || 0) < n) return false; this.g[key] -= n; return true; }
+  spend(key, n) {
+    if ((this.g[key] || 0) < n) return false;
+    this.g[key] -= n;
+    const per = this.ult && this.ult.charge && this.ult.charge.spend && this.ult.charge.spend[key];
+    if (per && n > 0) this.ultGain(n * per);
+    return true;
+  }
+
+  // ---------------------------------------------------------------- the Ultimate (see the top of this file)
+  ultCharge() { return this.ult ? Math.min(100, this.g.ult || 0) : 0; }
+  ultFull() { return !!this.ult && !this.ultWin && (this.g.ult || 0) >= 100; }
+  ultLeft() { return this.ultWin ? Math.max(0, this.ultWin.end - this.now) : 0; }
+  ultSteady() { return this.now < this.ultSteadyUntil; }   // (no knockback: main.js 'kb', raid-host.js)
+  // add charge (none while a window is open; a single cue, the 'ult-ready' moment, when it fills)
+  ultGain(n) {
+    if (!this.ult || this.ultWin || !(n > 0)) return;
+    const was = this.g.ult || 0;
+    if (was >= 100) return;
+    this.g.ult = Math.min(100, was + n);
+    if (this.g.ult >= 100) this.fx('ult-ready');
+  }
+  // every update: close a window that has run out, and the trickle while fighting
+  ultTick(now) {
+    if (this.ultWin && now >= this.ultWin.end) this.ultClose();
+    const dt = now - (this._ultT ?? now);
+    this._ultT = now;
+    const c = this.ult.charge;
+    if (!(dt > 0 && dt < 1) || this.ultWin || !c || !c.rate) return;
+    const ic = this.env.inCombat ? this.env.inCombat() : null;
+    if (ic != null ? ic : now - this.engagedAt <= ENGINE.AUTO_ENGAGE) this.ultGain(c.rate * dt);
+  }
+  // pressed at full (resolve): spend it all, steady the caster through the animation lock, open a window
+  ultFire(ab) {
+    this.g.ult = 0;
+    this.fx('ult-spent');
+    const lock = ab.lock ?? ENGINE.ANIM_LOCK;
+    this.ultSteadyUntil = this.now + lock + 0.2;
+    if (ab.dr) this.mitigate('self', ab.dr, lock + 0.2, { ab, kind: 'ult' });
+    this.stats.ults = (this.stats.ults || 0) + 1;
+    if (ab.mode === 'window' && ab.window) {
+      const w = ab.window;
+      this.ultWin = { start: this.now, end: this.now + w.dur, dur: w.dur, ab };
+      this.swapBar(this.baseAbilities.map(a => { const o = w.over && w.over[this.baseId(a)]; return o ? ultOver(a, o, ab) : a; }));
+    }
+  }
+  ultClose() {
+    const w = this.ultWin;
+    if (!w) return;
+    this.ultWin = null;
+    this.swapBar(this.baseAbilities);
+    if (w.ab.window.onEnd) w.ab.window.onEnd(this);
+  }
+  // a death keeps charge.keep (default half) of the charge and ends a window
+  ultDeath() {
+    if (!this.ult) return;
+    this.ultClose();
+    const full = (this.g.ult || 0) >= 100;
+    this.g.ult = Math.floor((this.g.ult || 0) * ((this.ult.charge && this.ult.charge.keep) ?? 0.5));
+    if (full) this.fx('ult-spent');
+  }
+  // put a different set of moves on the bar (the same slots): presses waiting in the queue follow their slot
+  swapBar(list) {
+    const old = this.abilities;
+    if (old === list) return;
+    this.abilities = list;
+    const map = ab => { const i = old.indexOf(ab); return i >= 0 && list[i] ? list[i] : ab; };
+    if (this.queued) this.queued.ab = map(this.queued.ab);
+    if (this.queuedO) this.queuedO.ab = map(this.queuedO.ab);
+    for (const q of this.inbuf) q.ab = map(q.ab);
+  }
   wasted(what, n = 1) { this.stats.wasted[what] = (this.stats.wasted[what] || 0) + n; }
 
   // ---------------------------------------------------------------- buffs
@@ -194,6 +290,8 @@ class Kit {
     let h = this.def.haste ? this.def.haste(this) : 1;
     const party = this.env.partyMods ? this.env.partyMods() : null;
     if (party && party.haste) h *= 1 - party.haste;
+    const mine = this.env.selfMods ? this.env.selfMods() : null;   // (a buff an ally put on you: allyBuff below)
+    if (mine && mine.haste) h *= 1 - mine.haste;
     const gear = this.gear();
     if (gear.haste) h *= 1 - gear.haste;
     const fh = this.fxMod('haste');
@@ -285,7 +383,7 @@ class Kit {
     return t > 0 ? t * this.hasteMult() : 0;
   }
   gcdRemaining() { return Math.max(0, this.gcdReady - this.now); }
-  usable(ab) { return (!ab.usable || ab.usable(this)) && this.affords(ab); }
+  usable(ab) { return (!ab.ult || this.ultFull()) && (!ab.usable || ab.usable(this)) && this.affords(ab); }
   needsTarget(ab) { return ab.target && ab.target !== 'self' && ab.target !== 'none'; }
   available(ab) {
     if (!this.usable(ab)) return false;
@@ -307,7 +405,7 @@ class Kit {
 
   // ---------------------------------------------------------------- input
   press(index) {
-    const ab = this.abilities[index];
+    const ab = index === 7 ? this.ult : this.abilities[index];   // (7: T, the Ultimate)
     if (!ab) return false;
     if (!this.usable(ab)) { this.env.emit({ type: 'fail', reason: this.affords(ab) ? 'unusable' : 'winded', ab }); return false; }
     const wait = this.readyIn(ab);
@@ -366,6 +464,9 @@ class Kit {
   resolve(ab, target) {
     this.stats.casts[ab.id] = (this.stats.casts[ab.id] || 0) + 1;
     this.env.emit({ type: 'used', ab, target });
+    // a tank's taunt rides on this button (kits.js TAUNT_CARRY): the world taunts only if it's ready and wanted
+    if (this.def.tauntOn && this.env.taunt && this.baseId(ab) === this.def.tauntOn) this.env.taunt(target);
+    if (ab.ult) this.ultFire(ab);
     ab.effect(this, target);
     if (this.def.afterUse) this.def.afterUse(this, ab);
     const asGcd = ab.type === 'gcd' && !(this.pace && this.pace.itemGcd && !this.pace.itemGcd(this, ab));
@@ -418,6 +519,7 @@ class Kit {
       if (due.length) { this.pending = this.pending.filter(p => now < p.at); for (const p of due) p.fn(); }
     }
     this.autoAttack(now);
+    if (this.ult) this.ultTick(now);
     if (this.def.tick) this.def.tick(this);
     for (const [id, b] of this.buffs) if (b.end <= now) { this.buffs.delete(id); if (this.def.onExpire) this.def.onExpire(this, id, b); }
   }
@@ -457,9 +559,9 @@ class Kit {
     const crit = this.rng() < critChance;
     const variance = 0.95 + this.rng() * 0.1;
     const amount = Math.round(pot * ENGINE.POT_SCALE * (this.def.potMult || 1) * (1 + kitDmg) * (1 + (gear.power || 0)) * (1 + (party.dmg || 0)) * (1 + (tgt.vuln || 0)) *
-      (1 - (self.dmgDown || 0)) * (opts.mult || 1) * (crit ? ENGINE.CRIT_MULT : 1) * variance * (1 + this.fxMod('dmg')));
+      (1 - (self.dmgDown || 0)) * (1 + (self.dmg || 0)) * (opts.mult || 1) * (crit ? ENGINE.CRIT_MULT : 1) * variance * (1 + this.fxMod('dmg')));
     this.stats.damage += amount;
-    if (party.dmg || tgt.vuln) this.stats.burstDamage += amount;
+    if (party.dmg || tgt.vuln || self.dmg) this.stats.burstDamage += amount;
     this.stats.last = this.now;
     // (opts.tgt: an enemy id when a hit lands on something other than what you last aimed at: a Passing Strike)
     this.env.emit({ type: 'damage', amount, crit, potency: pot, positional: posHit, ab: opts.ab, dot: !!opts.dot, auto: !!opts.auto, threat: opts.threat || 1, tgt: opts.tgt });
@@ -515,6 +617,13 @@ class Kit {
   // Damage reduction on a player (or 'party'). kind: undefined | 'brace' | 'reflect' | 'living' | 'invuln'
   mitigate(target, pct, dur, opts = {}) { this.env.emit({ type: 'mit', target, pct, dur, ab: opts.ab, kind: opts.kind }); }
   partyBuff(kind, value, dur, opts = {}) { this.env.emit({ type: 'partyBuff', kind, value, dur, ab: opts.ab }); }
+  // A buff on ONE chosen ally (ALLY_BUFFS names it): kind 'dmg' (damage dealt) or 'haste'. The host keeps it per player
+  // (raid-host.js allyBuffs), tells everyone ('abuff'), and the ally's own kit reads it through env.selfMods().
+  allyBuff(target, id, opts = {}) {
+    const b = ALLY_BUFFS[id];
+    if (!b || target == null) return;
+    this.env.emit({ type: 'allyBuff', target, id, kind: b.kind, value: b.value, dur: b.dur, ab: opts.ab });
+  }
   debuffTarget(kind, value, dur, opts = {}) { this.env.emit({ type: 'targetDebuff', kind, value, dur, ab: opts.ab }); }
   selfDamage(pctMaxHp, opts = {}) { this.env.emit({ type: 'selfDamage', pct: pctMaxHp, ab: opts.ab }); }
   raise(target, opts = {}) { this.env.emit({ type: 'raise', target, ab: opts.ab }); }
@@ -525,4 +634,28 @@ class Kit {
   fx(name, data) { this.env.emit({ type: 'fx', name, data }); }
 }
 
-if (typeof module !== 'undefined') module.exports = { ENGINE, Kit };
+// A window's empowered move: the bar's move with the override's fields on top (getters kept). It keeps the move's id,
+// so its cooldown, talents, item enhancements, bot logic and kit code (k.abById, opts.ab.id checks) all still apply;
+// o.fxId names its visual (ABILITY_VFX) and what other clients are told it was. ultOf: the Ultimate it belongs to.
+function ultOver(ab, o, ult) {
+  const copy = (...src) => src.reduce((to, s) => Object.defineProperties(to, Object.getOwnPropertyDescriptors(s)), {});
+  return Object.assign(copy(ab, o), { id: ab.id, ultOf: ult ? ult.id : true });
+}
+// def.ultimate, or one of its window's empowered moves, by the id other clients were sent (fxId) or its own id
+function ultAbilityById(def, id) {
+  const u = def && def.ultimate;
+  if (!u || id == null) return null;
+  if (u.id === id) return u;
+  const over = u.window && u.window.over;
+  if (!over) return null;
+  for (const [base, o] of Object.entries(over)) {
+    if (o.fxId !== id) continue;
+    const ab = def.abilities.find(a => (a.replaces || a.id) === base);
+    return ab ? ultOver(ab, o, u) : null;
+  }
+  return null;
+}
+// for kit code: add Ultimate charge (k.ultGain does the work; nothing for a kit without an Ultimate)
+function ultGain(k, n) { k.ultGain(n); }
+
+if (typeof module !== 'undefined') module.exports = { ENGINE, ALLY_BUFFS, Kit, ultOver, ultAbilityById, ultGain };

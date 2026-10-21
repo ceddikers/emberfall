@@ -7,7 +7,7 @@ const ROLES = {
   healer: { name: 'Healer', color: '#4fd27a' },
 };
 
-const KEYS = ['Q', 'W', 'E', 'R', 'D', 'F', 'Space', 'T'];   // T: a tank's taunt
+const KEYS = ['Q', 'W', 'E', 'R', 'D', 'F', 'Space', 'T'];   // T: the Ultimate
 
 const CLASSES = [
   // ---------------------------------------------------------------- Tanks
@@ -19,7 +19,7 @@ const CLASSES = [
   {
     id: 'bloodreaver', name: 'Bloodreaver', title: 'Berserker', role: 'tank', difficulty: 2, accent: '#c0353d',
     tagline: 'Every wound is fuel.',
-    gameplan: 'Crimson Drain heals you for the damage you took in the last few seconds and hits harder the more it was. Fire it right after a big hit and you heal through anything; fire it on cooldown and it does little. Frenzy gives free, stronger Drains: save them for the tankbuster.',
+    gameplan: 'Every hit you take goes into the bank, and Crimson Drain cashes it: it heals you for the damage you took since your last Drain and hits harder the more it was. Fire it right after a big hit and you heal through anything; fire it on cooldown and it does little. Frenzy gives free, stronger Drains: spread them, and save one for the tankbuster.',
   },
   {
     id: 'runeguard', name: 'Runeguard', title: 'Warder', role: 'tank', difficulty: 3, accent: '#8a5cf6',
@@ -84,7 +84,7 @@ CLASSES.push({
   id: 'alembist', name: 'Alembist', title: 'Alchemist', role: 'healer', difficulty: 3, accent: '#d08a3a',
   art: { portraits: true },
   tagline: 'Brewed before it\'s needed.',
-  gameplan: 'Three reagents, two presses each: Dew and Dew brews a healing Draught, Ember and Ember a Fire Bomb, Salt a ward. Vials wait in your bandolier and grow stronger, so you brew in the quiet for what\'s coming, then throw the oldest at whoever needs it. A splash catches everyone near where it lands.',
+  gameplan: 'Three reagents, two presses each: Dew and Dew brews a healing Draught, Ember and Ember a Fire Bomb, Salt a ward. Vials wait in your bandolier and grow stronger, so you brew in the quiet for what\'s coming. Throw at an ally below 70% health and your strongest heal goes; at anyone else, your oldest bomb flies at the enemy. Three vials that are not bombs light the Kiln, and your next throw also sends a free Kiln Bomb. A splash catches everyone near where it lands.',
 });
 
 // ---------------------------------------------------------------- advanced tanks (tanks-2)

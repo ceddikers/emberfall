@@ -35,7 +35,7 @@ function runSim(classId, skill, seed, specId, talents) {
   const def = kitFor(classId, specId, talents);   // (talents that grant a new move put it in its slot)
   const rng = mulberry(seed);
   const human = mulberry(seed * 7 + 3); // separate stream for "human" randomness
-  const state = { t: 0, moving: false, tookDamage: [], shield: null, mits: [], reflect: null, healDebt: 0, healing: 0, gcdHeals: 0, allyWards: [], petalShields: [] };
+  const state = { t: 0, moving: false, tookDamage: [], shield: null, mits: [], reflect: null, healDebt: 0, healing: 0, eff: 0, gcdHeals: 0, allyWards: [], petalShields: [] };
   const role = ['bastion', 'bloodreaver', 'runeguard', 'ironpalm'].includes(classId) || def.role === 'tank' ? 'tank'
     : ['cleric', 'grovekeeper', 'chronomancer', 'alembist', 'threadweaver'].includes(classId) ? 'healer' : 'dps';
   const maxHp = role === 'tank' ? 32000 : 21000;
@@ -56,13 +56,19 @@ function runSim(classId, skill, seed, specId, talents) {
     // a rough HP for the Berserker: lower right after big hits
     hpFrac: () => Math.max(0.15, 1 - Math.min(0.85, env.recentDamage(8) / maxHp * 1.3)),
     isDead: () => false,
+    // the heal target's health (an Alembist's Smart Throw): a pro says whom it aims at (state.aimHp); otherwise the
+    // ally you'd throw at is hurt while the party carries real damage
+    allyHp: () => (state.aimHp != null ? state.aimHp : state.healDebt > 3500 ? 0.6 : 0.95),
+    // a telegraph about to land on a spot: the blow the Marionettist mover has coming for the Doll (Pirouette glows)
+    danger: (x, y, within) => state.dollHitAt != null && state.dollHitAt - state.t <= within,
     defaultLink: () => 'tank',
     talents: () => talents || null,
     // the boss as talents see it (kits.js bossNow): busters and raidwides are 2.5s casts; the tank is its target
     boss: () => {
       const nextOf = (first, every) => (state.t < first ? first : first + Math.ceil((state.t - first) / every) * every);
       const left = Math.min(nextOf(20, BUSTER_EVERY), nextOf(12, RAIDWIDE_EVERY)) - state.t;
-      return { casting: left > 0 && left < 2.5, castLeft: Math.max(0, left), next: Math.max(0, left), onMe: role === 'tank', vuln: 0, selfVuln: role === 'tank' && state.t - lastBusterAt < 8 };
+      const toRw = nextOf(12, RAIDWIDE_EVERY) - state.t;   // (wide: a raidwide within 5s, for the Alembist's Salt glow)
+      return { casting: left > 0 && left < 2.5, castLeft: Math.max(0, left), next: Math.max(0, left), onMe: role === 'tank', vuln: 0, selfVuln: role === 'tank' && state.t - lastBusterAt < 8, wide: toRw > 0 && toRw < 5 };
     },
     // where you stand: away from your spot while a mechanic moves you (and now and then for a newbie), so a Sigilmancer leaves its circle
     // (a class that plays on the move, the Driftblade, gets a path from its mover: circles for Orbit, long lines for Comet)
@@ -71,28 +77,28 @@ function runSim(classId, skill, seed, specId, talents) {
       if (ev.type === 'heal' || ev.type === 'hot') {
         const amt = ev.type === 'hot' ? ev.amount * ev.ticks : ev.amount;
         state.healing += ev.target === 'party' ? amt * 4 : amt;
-        state.healDebt = Math.max(0, state.healDebt - (ev.target === 'party' ? amt * 4 : amt));
+        state.eff += Math.min(state.healDebt, (ev.target === 'party' ? amt * 4 : amt)); state.healDebt = Math.max(0, state.healDebt - (ev.target === 'party' ? amt * 4 : amt));
       }
       // Moonwell: assume three of the four stand in the pool for its whole life
-      if (ev.type === 'pool') { state.healing += ev.amount * ev.ticks * 3; state.healDebt = Math.max(0, state.healDebt - ev.amount * ev.ticks * 3); }
+      if (ev.type === 'pool') { state.healing += ev.amount * ev.ticks * 3; state.eff += Math.min(state.healDebt, ev.amount * ev.ticks * 3); state.healDebt = Math.max(0, state.healDebt - ev.amount * ev.ticks * 3); }
       // a thrown vial (Alembist): a splash usually catches two or three of the four (the whole party if it says so),
       // a cloud about the same for its whole life; shields count at 80% like an Aegis's
       if (ev.type === 'splash') {
         const hits = ev.target === 'party' ? 4 : ev.target === 'lowest' ? 1.2 : (ev.r || 0) >= 110 ? 2.4 : 1.6;
         const amt = (ev.amount || 0) * hits + (ev.sh || 0) * hits * 0.8 + ((ev.pa || 0) + (ev.ps || 0) * 0.6) * (ev.ticks || 0) * 2.4;
-        state.healing += amt; state.healDebt = Math.max(0, state.healDebt - amt);
+        state.healing += amt; state.eff += Math.min(state.healDebt, amt); state.healDebt = Math.max(0, state.healDebt - amt);
       }
       // Judgment (Inquisitor): the party's hits burst every charge soon after
       if (ev.type === 'brand') k.stats.damage += ev.amount * ev.ticks;
       // a shield on an ally (Aegis): counts as healing; a Petal shield on the tank soaks most of it and comes back now and then
       if (ev.type === 'shield' && role === 'healer') {
-        state.healing += ev.amount * 0.8; state.healDebt = Math.max(0, state.healDebt - ev.amount * 0.8);
+        state.healing += ev.amount * 0.8; state.eff += Math.min(state.healDebt, ev.amount * 0.8); state.healDebt = Math.max(0, state.healDebt - ev.amount * 0.8);
         if (ev.tag === 'petal') state.petalShields.push({ at: state.t + 3 });
       }
       if (ev.type === 'shield' && ev.target === 'self') state.shield = { amt: ev.amount, max: ev.amount, end: state.t + ev.dur, tag: ev.tag };
       // a Ward on an ally (Spellwarden): assume it soaks a bit over half before it ends (an ally isn't tanking)
       if (ev.type === 'shield' && ev.tag === 'ward' && ev.target !== 'self') state.allyWards.push({ end: state.t + ev.dur });
-      if (ev.type === 'shield' && ev.target === 'party') state.healDebt = Math.max(0, state.healDebt - ev.amount * 4);
+      if (ev.type === 'shield' && ev.target === 'party') { state.eff += Math.min(state.healDebt, ev.amount * 4); state.healDebt = Math.max(0, state.healDebt - ev.amount * 4); }
       if (TANK_SIM.emit(state, k, ev)) return;   // the advanced tanks' jaw and Ledger (below)
       if (ev.type === 'mit' && ev.target === 'self') {
         if (ev.kind === 'reflect') state.reflect = state.t + ev.dur;
@@ -118,8 +124,8 @@ function runSim(classId, skill, seed, specId, talents) {
       else if (m.kind === 'reflect') { mult *= 0.2; }
       else if (m.kind !== 'living' && m.kind !== 'invuln') mult *= 1 - m.pct;
     }
-    if (state.reflect && state.t <= state.reflect) { state.reflect = null; state.mits = state.mits.filter(m => m.kind !== 'reflect'); k.notify('reflect'); }
-    if (perfect) { state.mits = state.mits.filter(m => !(m.kind === 'brace' && state.t - m.start <= 0.8)); k.notify('perfect'); }
+    if (state.reflect && state.t <= state.reflect) { state.reflect = null; state.mits = state.mits.filter(m => m.kind !== 'reflect'); k.notify('reflect', { b: kind === 'buster' ? 1 : 0 }); }
+    if (perfect) { state.mits = state.mits.filter(m => !(m.kind === 'brace' && state.t - m.start <= 0.8)); k.notify('perfect', { b: kind === 'buster' ? 1 : 0 }); }
     if (read) { state.mits = state.mits.filter(m => m !== read); k.notify('read', { b: kind === 'buster' ? 1 : 0 }); }
     let amt = raw * mult;
     amt = TANK_SIM.hit(state, k, amt, kind);
@@ -185,7 +191,7 @@ function runSim(classId, skill, seed, specId, talents) {
     }
   }
   const dur = FIGHT_LEN;
-  return { dps: k.stats.damage / dur, stats: k.stats, hps: state.healing / dur, gcdHeals: state.gcdHeals, k };
+  return { dps: k.stats.damage / dur, stats: k.stats, hps: state.healing / dur, ehps: state.eff / dur, gcdHeals: state.gcdHeals, k };
 }
 
 // ---------------------------------------------------------------- policies
@@ -208,8 +214,8 @@ function genericNewbie(k, ctx) {
   for (const ab of k.abilities) {
     if (ab.type !== 'ogcd') continue;
     if (!k.usable(ab) || k.readyIn(ab) > 0.0001) { n.ogcdSeen[ab.id] = null; continue; }
-    if (ab.target === 'ally' && ctx.role === 'healer' && ctx.state.healDebt < 3000) continue;
-    if (ab.id === 'stasis' || ab.id === 'mirror' || ab.id === 'undying' || ab.id === 'shift') continue;
+    if (ab.target === 'ally' && ctx.role === 'healer' && ctx.state.healDebt < 3000 && !k.glows(ab)) continue;
+    if ((ab.id === 'stasis' || ab.id === 'mirror' || ab.id === 'undying' || ab.id === 'shift') && !k.glows(ab)) continue;
     if (n.ogcdSeen[ab.id] == null) n.ogcdSeen[ab.id] = ctx.t + 0.5 + ctx.human() * 2.5;
     if (ctx.t >= n.ogcdSeen[ab.id] && !k.cast) { n.ogcdSeen[ab.id] = null; return I(k, ab.id); }
   }
@@ -228,14 +234,25 @@ function genericNewbie(k, ctx) {
   return 0;
 }
 function genericPro(k, ctx) { return genericNewbie(k, ctx); }
+// a glowing oGCD a newbie answers (60% of the time, 0.1-0.6s late): Bastion's Brace as a tankbuster comes in
+function newbieGlowOgcd(k, ctx, id) {
+  const n = ctx.state.newbie || (ctx.state.newbie = { gcdSeenAt: null, delay: 0, ogcdSeen: {} });
+  const ab = abOf(k, id);
+  const up = ab && (ab.charges ? k.charges(ab) > 0 : k.cdRemaining(ab) <= 0.0001);   // (off cooldown; a move in progress is waited out below)
+  if (!ab || !k.glows(ab) || !up || !k.usable(ab)) { n.glowAt = null; return null; }
+  if (n.glowAt == null) { n.glowAt = ctx.t + 0.1 + ctx.human() * 0.5; n.glowGo = ctx.human() < 0.6; }
+  if (n.glowGo && ctx.t >= n.glowAt) { n.glowGo = false; return I(k, id); }   // (pressed mid-move it's buffered, as any press)
+  return null;
+}
 const NEWBIE = {
+  bastion(k, ctx) { const g = newbieGlowOgcd(k, ctx, 'brace'); return g != null ? (g < 0 ? null : g) : genericNewbie(k, ctx); },
   // Alembist: the hints only. Distill and Grand Batch when noticed; throws when the party looks hurt or R glows;
   // otherwise the glowing reagent (noticed 60% of the time), else Q, now and then a random one. Never picks a slot.
   alembist(k, ctx) {
     const n = ctx.state.newbie || (ctx.state.newbie = { gcdSeenAt: null, delay: 0, ogcdSeen: {} });
     for (const id of ['distill', 'batch']) {
       const ab = abOf(k, id);
-      if (!k.usable(ab) || k.readyIn(ab) > 0.0001) { n.ogcdSeen[id] = null; continue; }
+      if (!k.usable(ab) || k.readyIn(ab) > 0.0001 || (ab.glow && !k.glows(ab))) { n.ogcdSeen[id] = null; continue; }   // (Catalyst: only while it glows)
       if (n.ogcdSeen[id] == null) n.ogcdSeen[id] = ctx.t + 0.5 + ctx.human() * 2.5;
       if (ctx.t >= n.ogcdSeen[id]) { n.ogcdSeen[id] = null; return I(k, id); }
     }
@@ -270,6 +287,8 @@ const PRO = {
     if (abOf(k, 'banner').id === 'hallowed' && ready(k, 'banner') && weaveOk(k) && k.g.resolve >= 90 && !k.has('oath') && k.cdRemaining(abOf(k, 'oath')) > 12) return I(k, 'banner');
     if (k.gcdRemaining() > 0.0001) return null;
     const pooling = ctx.burstSoon(ctx.t) || (k.cdRemaining(abOf(k, 'oath')) < 8 && !k.has('oath'));
+    // a free Holy Edge (a tankbuster turned aside): in the Oath if it's coming before the free one runs out
+    if (k.has('turned') && (k.has('oath') || k.remaining('turned') < 3 || k.cdRemaining(abOf(k, 'oath')) > k.remaining('turned'))) return I(k, 'edge');
     if (k.g.resolve >= 50 && (k.has('oath') || k.g.resolve >= 75 && !pooling || (k.g.resolve >= 90 && k.g.step === 2))) return I(k, 'edge');
     return I(k, 'blade');
   },
@@ -281,11 +300,26 @@ const PRO = {
     if (abOf(k, 'undying').id === 'moon' && ready(k, 'undying') && toBust < 1.5 && weaveOk(k)) return I(k, 'undying');
     const let_ = abOf(k, 'letting');
     if (weaveOk(k) && k.charges(let_) > 0 && k.g.blood <= 80 && (k.charges(let_) === 2 || ctx.inBurst(ctx.t) || k.cdRemaining(let_) < 1)) return I(k, 'letting');
+    // Undying on a tankbuster (the hit turns to Blood, Drains are free), War Cry just before one (its free Drain cashes it)
+    if (abOf(k, 'undying').id === 'undying' && ready(k, 'undying') && toBust < 1.5 && weaveOk(k)) return I(k, 'undying');
+    if (abOf(k, 'warcry').id === 'warcry' && ready(k, 'warcry') && toBust < 3 && weaveOk(k)) return I(k, 'warcry');
     if (k.gcdRemaining() > 0.0001) return null;
-    if (k.stacks('gorge') > 0) return I(k, 'drain');
-    const recent = k.env.recentDamage(6);
+    // the bank: what a Drain cashes (the damage since the last one). Free Drains are spread so each has a bank behind
+    // it (one Hack between), and one is held for a tankbuster that lands while they last
+    const bank = reaverBank(k), mx = k.env.maxHp(), G = ENGINE.GCD;
+    const gorge = k.stacks('gorge');
+    if (gorge > 0) {
+      const left = k.remaining('gorge'), must = left <= gorge * G + 0.4;
+      const busterIn = toBust < left - 0.4 && toBust > 0;
+      if (must || (bank >= mx * 0.03 && !(busterIn && gorge === 1 && toBust > 0.2))) return I(k, 'drain');
+      return I(k, 'hack');
+    }
+    for (const id of ['deathless', 'roar']) if (k.has(id) && (bank >= mx * 0.15 || k.remaining(id) < G + 0.3)) return I(k, 'drain');
     const pooling = ctx.burstSoon(ctx.t) || k.cdRemaining(abOf(k, 'frenzy')) < 6;
-    if (k.g.blood >= 40 && (recent > 12000 || (k.g.blood >= 85 && !pooling) || (k.g.blood >= 95))) return I(k, 'drain');
+    // (Undying turns the buster into Blood and makes Drains free: empty the gauge before it, or that Blood spills)
+    const undyingNext = abOf(k, 'undying').id === 'undying' && k.cdRemaining(abOf(k, 'undying')) < toBust && toBust < 7;
+    const holdForBuster = toBust < 5 && k.g.blood < 80 && !undyingNext;
+    if (k.g.blood >= 40 && (bank > mx * 0.28 || undyingNext || (k.g.blood >= 75 && !pooling && !holdForBuster) || (k.g.blood >= 90))) return I(k, 'drain');
     return I(k, 'hack');
   },
   runeguard(k, ctx) {
@@ -294,6 +328,8 @@ const PRO = {
     if (toBuster < 0.6 && toBuster > 0.1 && ready(k, 'mirror')) return I(k, 'mirror');
     // Whirling Runes (a talent in Sanctum's place): three Runes into blades instead of a Glyph Burst
     if (abOf(k, 'sanctum').id === 'whirl' && ready(k, 'sanctum') && k.g.runes >= 3 && weaveOk(k) && Math.min(toBuster, toRw) > 6) return I(k, 'sanctum');
+    // Sanctum just before the Ward for a raidwide (a Ward a raidwide won't break all the way): sanctified, it keeps its Rune
+    if (abOf(k, 'sanctum').id === 'sanctum' && ready(k, 'sanctum') && weaveOk(k) && toRw < 3.4 && toRw > 0.6 && k.g.runes >= 1 && !ctx.state.shield) return I(k, 'sanctum');
     if (k.gcdRemaining() > 0.0001) return null;
     const wardFor = (toBuster < 3 && toBuster > 0.3) || (toRw < 3 && toRw > 0.3);
     if (wardFor && k.g.runes >= 1 && !ctx.state.shield) return I(k, 'ward');
@@ -305,48 +341,81 @@ const PRO = {
     }
     return I(k, 'strike');
   },
+  // Ranger: pool Focus to 100 and bank two Keen Eyes before Hunter's Mark (Rapid Fire is half price in it, and a banked
+  // Keen cashed there readies Barrage again); Cloak for its Focus inside the Mark; Sharpshooter hard-casts Aimed Shot at
+  // 5 Steady Aim; Venomstrike bursts a full jar
   ranger(k, ctx) {
+    const inMark = k.has('markself'), markCd = k.cdRemaining(abOf(k, 'mark'));
+    const pooling = !inMark && (markCd < 9 || ctx.burstSoon(ctx.t));
     if (ready(k, 'mark') && ctx.inBurst(ctx.t) && weaveOk(k)) return I(k, 'mark');
-    if (ready(k, 'barrage') && weaveOk(k) && (k.has('markself') || k.cdRemaining(abOf(k, 'mark')) > 25)) return I(k, 'barrage');
-    if (weaveOk(k) && ready(k, 'rapid') && (k.g.focus >= 90 || (k.has('markself') && k.g.focus >= 50))) return I(k, 'rapid');
-    if (k.gcdRemaining() > 0.0001) return null;
-    const p = abOf(k, 'pierce');
+    if (ready(k, 'barrage') && weaveOk(k) && (inMark || markCd > 25)) return I(k, 'barrage');
+    if (ready(k, 'cloak') && weaveOk(k) && inMark && k.g.focus <= 60) return I(k, 'cloak');
+    if (weaveOk(k) && ready(k, 'rapid') && (inMark || (pooling ? k.g.focus >= 100 && markCd > 3 : k.g.focus >= 90))) return I(k, 'rapid');
+    if (k.gcdRemaining() > 0.0001 || k.cast) return null;
+    const p = abOf(k, 'pierce'), spec = k.def.spec, keen = k.stacks('keen');
     if (k.has('barrage')) return I(k, 'quick');
-    if (k.has('keen') && k.charges(p) >= 0 && ready(k, 'pierce')) return I(k, 'pierce');
-    if (k.charges(p) === 2 || (k.charges(p) === 1 && k.cdRemaining(p) === 0 && k.cd[p.id].next - k.now < 2.5)) return I(k, 'pierce');
-    if (k.has('markself') && k.charges(p) > 0) return I(k, 'pierce');
+    if (spec === 'venomstrike') {
+      if (k.charges(p) > 0 && (k.g.acid >= 8 || (k.charges(p) === 2 && k.g.acid >= 3 && k.cd[p.id].next === 0) || (keen >= 2 && !pooling && k.g.acid >= 5) || (pooling && k.g.focus >= 95 && k.g.acid >= 5))) return I(k, 'pierce');
+      return I(k, 'quick');
+    }
+    if (keen && ready(k, 'pierce') && (inMark ? keen >= 2 || k.remaining('markself') < 2.5 : keen >= 2 && (!pooling || markCd > 3) || (!pooling && markCd > 20))) return I(k, 'pierce');
+    if (pooling && k.g.focus >= 95 && k.charges(p) > 0 && !keen && (spec !== 'sharpshooter' || castOk(k, ctx, 2))) return I(k, 'pierce');   // (no Focus past 100)
+    if (spec === 'sharpshooter' && !keen && k.charges(p) > 0 && k.stacks('aim') >= 5 && castOk(k, ctx, 2)) return I(k, 'pierce');
+    if (!keen && (k.charges(p) === 2 || (k.charges(p) === 1 && k.cdRemaining(p) === 0 && k.cd[p.id].next - k.now < 2.5))) return spec === 'sharpshooter' && !castOk(k, ctx, 2) ? I(k, 'quick') : I(k, 'pierce');
+    if (inMark && k.charges(p) > 0 && (spec !== 'sharpshooter' || castOk(k, ctx, 2))) return I(k, 'pierce');
     return I(k, 'quick');
   },
+  // Shadowblade: enter Shadow Dance at 5 points (the first finisher keeps them), Smoke Bomb inside the Dance (it runs
+  // 3s longer); a Bladedancer lands every finisher at exactly 5 (Blade Fury tops 4 up to 5) for Tempo and its Flourish
   shadowblade(k, ctx) {
-    if (ready(k, 'dance') && ctx.inBurst(ctx.t) && weaveOk(k) && k.g.combo <= 2) return I(k, 'dance');
+    const danceCd = k.cdRemaining(abOf(k, 'dance')), dancer = k.def.spec === 'bladedancer';
+    if (ready(k, 'dance') && ctx.inBurst(ctx.t) && weaveOk(k) && (k.g.combo >= 5 || ctx.t % BURST_EVERY > 4)) return I(k, 'dance');
     // Death Blossom (a talent in Smoke Bomb's place): from empty, in the burst
     if (abOf(k, 'smoke').id === 'blossom' && ready(k, 'smoke') && weaveOk(k) && k.g.combo <= 1 && (ctx.inBurst(ctx.t) || k.cdRemaining(abOf(k, 'dance')) > 20)) return I(k, 'smoke');
+    if (abOf(k, 'smoke').id === 'smoke' && ready(k, 'smoke') && weaveOk(k) && k.has('dance')) return I(k, 'smoke');
     const step = abOf(k, 'step');
-    if (weaveOk(k) && k.charges(step) > 0 && (k.charges(step) === 2 || ctx.isMoveWindow(ctx.t))) return I(k, 'step');
+    if (dancer) {
+      if (weaveOk(k) && k.charges(step) > 0 && (k.stacks('tempo') >= 3 || (k.g.combo === 4 && !k.g.spilled))) return I(k, 'step');
+    } else if (weaveOk(k) && k.charges(step) > 0 && (k.charges(step) === 2 || ctx.isMoveWindow(ctx.t))) return I(k, 'step');
     if (k.gcdRemaining() > 0.0001) return null;
+    // pool to 5 for the Dance
     const rupture = abOf(k, 'venom').id === 'rupture';
+    const pool = !k.has('dance') && (ready(k, 'dance') || danceCd < 2.5 || (ctx.burstSoon(ctx.t) && danceCd < 6));
+    if (pool && k.g.combo >= 5) return rupture ? null : I(k, 'venom');
     if (rupture ? k.g.combo >= 4 && k.dotRemaining('rupture') < 3 : k.dotRemaining('poison') < 7) return I(k, 'venom');
-    const behind = true;
-    if (k.g.combo >= 5 || (k.g.combo >= 4 && behind)) { ctx.setPos(abOf(k, 'evis').id === 'backstab' ? 'rear' : 'flank'); return I(k, 'evis'); }   // Nightstalker's Backstab wants the back
+    if (dancer && k.g.combo === 4 && !k.g.spilled && k.charges(step) > 0) return I(k, 'step');
+    if (k.g.combo >= 5 || (k.g.combo >= 4 && !pool)) { ctx.setPos(abOf(k, 'evis').id === 'backstab' ? 'rear' : 'flank'); return I(k, 'evis'); }   // Nightstalker's Backstab wants the back
     ctx.setPos('rear');
     return I(k, 'strike');
   },
   pyromancer(k, ctx) {
     const fb = abOf(k, 'fireblast');
+    // (never a Fire Blast that, with the cast under way, would burn you)
+    const pend = k.cast ? (k.cast.ab.id === 'fireball' ? 12 : 20) : 0, fbSafe = k.g.heat + 6 + pend < 100;
     // Fire Blast converts Heating Up into Hot Streak (also mid-cast)
-    if (k.has('heating') && k.charges(fb) > 0 && k.readyIn(fb) <= 0.0001) return I(k, 'fireblast');
-    if (k.has('combust') && k.charges(fb) > 0 && k.readyIn(fb) <= 0.0001 && !k.has('hotstreak')) return I(k, 'fireblast');
-    if (k.charges(fb) === 2 && k.readyIn(fb) <= 0.0001 && !k.cast && weaveOk(k) && !k.has('hotstreak')) return I(k, 'fireblast');
-    if (ready(k, 'combust') && ctx.inBurst(ctx.t) && weaveOk(k)) return I(k, 'combust');
+    if (k.has('heating') && fbSafe && k.charges(fb) > 0 && k.readyIn(fb) <= 0.0001) return I(k, 'fireblast');
+    if (k.has('combust') && fbSafe && k.charges(fb) > 0 && k.readyIn(fb) <= 0.0001 && !k.has('hotstreak')) return I(k, 'fireblast');
+    if (k.charges(fb) === 2 && fbSafe && k.readyIn(fb) <= 0.0001 && !k.cast && weaveOk(k) && !k.has('hotstreak')) return I(k, 'fireblast');
+    if (ready(k, 'combust') && ctx.inBurst(ctx.t) && !k.cast && (weaveOk(k) || (k.gcdRemaining() <= 0.0001 && abOf(k, 'combust').id === 'combust'))) return I(k, 'combust');
     // Firestep (a talent in Smolder's place): just before a mechanic moves you, for an instant Fireball on the way
     if (abOf(k, 'smolder').id === 'firestep' && ready(k, 'smolder') && weaveOk(k) && k.g.heat <= 80 && (ctx.moveSoon(ctx.t, 1.5) || ctx.state.moving)) return I(k, 'smolder');
+    // White-Hot: top Heat up past 90 with a Fire Blast for the Vent, and Smolder (its Heat into the party's shields)
+    // rather than burn
+    const ventIn = k.readyIn(abOf(k, 'vent'));
+    if (k.g.heat >= 84 && k.g.heat < 90 && ventIn < 0.5 && k.charges(fb) > 0 && k.readyIn(fb) <= 0.0001 && !k.has('heating') && !k.has('hotstreak') && weaveOk(k)) return I(k, 'fireblast');
+    // Smolder: Heat can't boil over for 10s, so ride it at 99 through Combustion (or when Vent is far off)
+    if (abOf(k, 'smolder').id === 'smolder' && ready(k, 'smolder') && weaveOk(k) && k.g.heat >= 70 && (k.has('combust') || (k.g.heat >= 87 && ventIn > 4))) return I(k, 'smolder');
     if (k.gcdRemaining() > 0.0001 || k.cast) return null;
     const moving = ctx.state.moving || ctx.isMoveWindow(ctx.t + 1.4);
-    if (k.has('hotstreak') && (moving || !k.has('combust') || true)) return I(k, 'pyro');
-    if (k.g.heat >= 84 && ready(k, 'vent')) return I(k, 'vent');
+    if (k.has('hotstreak') && k.g.heat >= 90 && ready(k, 'vent')) return I(k, 'vent');
+    if (k.has('hotstreak')) return I(k, 'pyro');
+    // Cataclysm: Vent while a Meteor falls (it lands at once, the Heat in its crater)
+    if (k.g.meteors && k.g.meteors.length && ready(k, 'vent') && k.g.heat >= 70) return I(k, 'vent');
+    if (k.g.heat >= 90 && ready(k, 'vent')) return I(k, 'vent');
+    if (k.g.heat >= 84 && ready(k, 'vent') && (k.charges(fb) === 0 || moving)) return I(k, 'vent');
     if (moving && (k.has('firestep') || k.has('haze')) && k.g.heat <= 88) return I(k, 'fireball');   // an instant Fireball (talents)
     if (moving) { if (ready(k, 'vent') && k.g.heat >= 30) return I(k, 'vent'); return null; }
-    if (k.g.heat > 88) return ready(k, 'vent') ? I(k, 'vent') : null; // don't overheat
+    if (k.g.heat >= 87.5 && !(k.has('smoulder') && k.remaining('smoulder') > 2)) return ready(k, 'vent') ? I(k, 'vent') : null; // don't overheat
     return castOk(k, ctx, 1.8) ? I(k, 'fireball') : null;
   },
   cleric(k, ctx) {
@@ -356,7 +425,8 @@ const PRO = {
     if (k.gcdRemaining() > 0.0001 || k.cast) return null;
     // Bloom of Dawn (a talent in Intervention's place): a pile of Petals into one big heal
     if (abOf(k, 'intervene').id === 'dawnbloom' && ready(k, 'intervene') && k.g.petals >= 2 && debt > 8000) { ctx.state.gcdHeals++; return I(k, 'intervene'); }
-    if (k.g.bloom >= 3 && (ctx.inBurst(ctx.t) || ctx.state.moving)) return I(k, 'smite');
+    // (Dawnstar waits for the burst, unless the next Petal or Mend would spill past it)
+    if (k.g.bloom >= 3 && (ctx.inBurst(ctx.t) || ctx.state.moving || (!ctx.burstSoon(ctx.t) && ((k.g.petals >= 1 && debt > 2500) || debt > 14000)))) return I(k, 'smite');
     if (k.g.petals >= 1 && (debt > 2500 || k.g.petals >= 3 || ctx.state.moving)) return I(k, 'petal');
     if (debt > 14000) { ctx.state.gcdHeals++; return castOk(k, ctx, 1.8) ? I(k, 'mend') : null; }
     if (ctx.state.moving) return null;
@@ -386,10 +456,12 @@ const PRO = {
     const toRw = ctx.nextRaidwide - ctx.t;
     // Time Bubble (a talent in Stasis's place) on the tank before a buster
     if (abOf(k, 'stasis').id === 'bubble' && ready(k, 'stasis') && k.g.flux >= 50 && ctx.nextBuster - ctx.t < 2 && weaveOk(k)) return I(k, 'stasis');
-    if (ready(k, 'shift') && weaveOk(k)) {
+    // Stasis: start holding the Bolts' heals just before a raidwide, release them once it has landed
+    if (abOf(k, 'stasis').id === 'stasis' && ready(k, 'stasis') && weaveOk(k) && (k.g.stash ? toRw > 26 && toRw < 29 : toRw < 4)) return I(k, 'stasis');
+    if (ready(k, 'shift') && (weaveOk(k) || (k.g.stance === 'haste' && k.g.flux < 6))) {
       if (k.g.stance === 'slow' && k.g.flux >= 95) return I(k, 'shift');
       if (k.g.stance === 'slow' && k.g.flux >= 50 && (ctx.inBurst(ctx.t) || toRw < 2)) return I(k, 'shift');
-      if (k.g.stance === 'haste' && k.g.flux < 8) return I(k, 'shift');
+      if (k.g.stance === 'haste' && k.g.flux < 12) return I(k, 'shift');   // (Paradox: before the Flux runs dry)
     }
     if (k.gcdRemaining() > 0.0001 || k.cast) return null;
     if (debt > 16000 && ready(k, 'recall') && castOk(k, ctx, 2.5)) { ctx.state.gcdHeals++; return I(k, 'recall'); }
@@ -399,6 +471,7 @@ const PRO = {
   alembist(k, ctx) {
     const debt = ctx.state.healDebt, A = k.def.alem, vials = k.g.vials, vol = !!A.fuse;
     const room = vials.length < A.slots, cat = abOf(k, 'distill').id === 'catalyst';
+    ctx.state.aimHp = null;
     const weave = k.gcdRemaining() > 0.2 && !k.cast;   // the short reagent GCD leaves a quarter second to weave
     if (cat) { if (ready(k, 'distill') && !k.g.half.length && room && weave) return I(k, 'distill'); }
     else if (ready(k, 'distill') && room && !k.g.half.length && weave) return I(k, 'distill');
@@ -406,18 +479,16 @@ const PRO = {
     if (batch.id === 'blend') { if (ready(k, 'batch') && vials.length >= A.slots && weave) return I(k, 'batch'); }
     else if (ready(k, 'batch') && k.g.last && vials.length <= 1 && weave && ((alemInfo(k.g.last).kind === 'bomb' && ctx.inBurst(ctx.t)) || (alemInfo(k.g.last).kind === 'heal' && debt > 10000))) return I(k, 'batch');
     if (k.gcdRemaining() > 0.0001 || k.cast) return null;
-    if (A.pick && vials.length) {
-      const h = vials.findIndex(alemIsHeal);
-      let best = 0; vials.forEach((v, i) => { if (alemStrength(k, v) > alemStrength(k, vials[best]) && !alemIsHeal(v)) best = i; });
-      k.g.sel = debt > 5000 && h >= 0 ? h : best;
-    }
-    const i = alemPick(k), v = vials[i];
-    if (v) {
-      const heal = alemIsHeal(v), ripe = alemStrength(k, v) >= 1 + ALEMBIC.GROW - 0.001;
-      if (heal && debt > 5000) return I(k, 'throw');
-      if (v.fuse && v.fuse - k.now < 1.3) return I(k, 'throw');
-      if (!heal && ripe) return I(k, 'throw');
-      if (!room) return I(k, 'throw');
+    // which vial goes: the Apothecary marks it (Shift+R); everyone else steers Smart Throw by whom they aim at (a hurt
+    // ally takes the strongest heal, a healthy one the oldest bomb)
+    const want = j => { if (A.pick) { k.g.sel = j; k.g.picked = true; } else ctx.state.aimHp = alemIsBomb(vials[j]) ? 1 : 0.5; return I(k, 'throw'); };
+    if (vials.length) {
+      const ripe = v => alemStrength(k, v) >= 1 + ALEMBIC.GROW - 0.001;
+      let h = -1; vials.forEach((v, j) => { if (alemIsHeal(v) && (h < 0 || alemStrength(k, v) > alemStrength(k, vials[h]) + 0.001)) h = j; });
+      if (h >= 0 && debt > 5000) return want(h);
+      const fuse = vials.findIndex(v => v.fuse && v.fuse - k.now < 1.3); if (fuse >= 0) return want(fuse);
+      const rb = vials.findIndex(v => !alemIsHeal(v) && ripe(v)); if (rb >= 0) return want(rb);
+      if (!room) return want(0);
     }
     if (!room) return null;
     const need = k.has('catalyst') ? 3 : 2;
@@ -573,14 +644,22 @@ Object.assign(PRO, {
     const wide = abOf(k, 'wide'), max = mawMax(k), b = k.g.belly;
     if (ready(k, 'bottomless') && toR < 0.5 && toR > 0.05) return I(k, 'bottomless');
     if (k.charges(wide) > 0 && k.readyIn(wide) <= 0.0001 && !(ctx.t < (s.mawUntil || 0)) && ((toB < 0.5 && toB > 0.05) || (toE < 0.5 && toE > 0.05))) return I(k, 'wide');
-    if (toB < 1.2 && ready(k, 'iron') && abOf(k, 'iron').id === 'iron' && k.charges(wide) === 0) return I(k, 'iron');
+    // Iron Gut just before a tankbuster (Digest inside it counts twice), then Digest what's in the Belly as the buster
+    // comes, so the Spike Open Wide eats next is spat back with the acid
+    const gut = abOf(k, 'iron').id === 'iron', spikeNext = toB < 2.4 && toB > 0.4 && k.charges(wide) > 0;
+    if (gut && ready(k, 'iron') && weaveOk(k) && spikeNext && b.length) return I(k, 'iron');
+    if (toB < 1.2 && ready(k, 'iron') && gut && k.charges(wide) === 0) return I(k, 'iron');
     if (abOf(k, 'iron').id === 'stonebelly' && ready(k, 'iron') && toB < 1.2) return I(k, 'iron');
+    if (weaveOk(k) && ready(k, 'digest') && b.length && spikeNext && !(k.def.spec === 'gizzard' && b.length < 2 && !k.has('irongut'))) return I(k, 'digest');
     if (weaveOk(k) && ready(k, 'digest') && (k.def.spec === 'gizzard' ? b.length >= 2 && (toR < 4 || toB < 4 || b.length >= max) : b.length >= max && k.gcdRemaining() > 0.7)) return I(k, 'digest');
     if (k.gcdRemaining() > 0.0001) return null;
     const spit = abOf(k, 'spit');
+    // (a Morsel or two kept for the Digest before a tankbuster, when it'll be ready)
+    const keep = toB < 7 && toB > 0.4 && b.length <= 2 && b.length < max && k.cdRemaining(abOf(k, 'digest')) < toB - 0.5 && !k.has('acid');
     if (spit.id === 'regurgitate') { if (b.length >= Math.min(3, max) && k.usable(spit)) return I(k, 'spit'); }
-    else if (k.usable(spit) && k.def.spec !== 'gizzard' && (k.def.fuse ? (b.length >= 2 && b[0].m === b[1].m) || b.length >= max || (b.length && ctx.inBurst(ctx.t)) : b.length >= 1)) return I(k, 'spit');
-    else if (k.usable(spit) && k.def.spec === 'gizzard' && b.length >= max) return I(k, 'spit');
+    else if (k.usable(spit) && k.has('acid') && b.length && b[0].m === 'spike') return I(k, 'spit');
+    else if (k.usable(spit) && k.def.spec !== 'gizzard' && !keep && (k.def.fuse ? (b.length >= 2 && b[0].m === b[1].m) || b.length >= max || (b.length && ctx.inBurst(ctx.t)) : b.length >= 1)) return I(k, 'spit');
+    else if (k.usable(spit) && k.def.spec === 'gizzard' && (b.length >= max || (k.has('acid') && b.length))) return I(k, 'spit');
     return I(k, 'gnash');
   },
   // Oathbroker: Lien in the burst window (Co-Sign kept up), Writ on busters, Renegotiate a big bill that's about to
@@ -591,10 +670,18 @@ Object.assign(PRO, {
     if (lien.id === 'cosign') { if (ready(k, 'lien') && weaveOk(k)) return I(k, 'lien'); }
     else if (ready(k, 'lien') && weaveOk(k) && (ctx.inBurst(ctx.t) || oathDueSoon(k, 9) > hp * 0.15)) return I(k, 'lien');
     if (toB < 1 && ready(k, 'writ')) return I(k, 'writ');
-    const def = abOf(k, 'default');
-    if (ready(k, 'default') && weaveOk(k) && tot > hp * (def.id === 'foreclose' ? 0.32 : 0.45)) return I(k, 'default');
+    const def = abOf(k, 'default'), reneg = abOf(k, 'reneg').id === 'reneg';
+    const plain = k.g.ledger.filter(e => !e.rn).reduce((s, e) => s + e.a, 0);
+    // Renegotiate as a setup: a big Ledger about to be torn up is renegotiated first (Default strikes for those lines
+    // in full, Foreclose at 1.5x), and lines about to fall due just before Lien are pushed into it
+    const defSoon = k.cdRemaining(def) < 2 && tot > hp * (def.id === 'foreclose' ? 0.28 : 0.38);
+    if (reneg && ready(k, 'reneg') && weaveOk(k) && defSoon && plain > tot * 0.5) return I(k, 'reneg');
+    if (reneg && ready(k, 'reneg') && weaveOk(k) && lien.id === 'lien' && !oathLien(k) && k.cdRemaining(lien) < 3 && oathDueSoon(k, 2.5) > hp * 0.05) return I(k, 'reneg');
+    if (ready(k, 'default') && weaveOk(k) && tot > hp * (def.id === 'foreclose' ? 0.32 : 0.4) && (!reneg || plain < tot * 0.5 || k.cdRemaining(abOf(k, 'reneg')) > 3)) return I(k, 'default');
     if (ready(k, 'reneg') && weaveOk(k) && oathDueSoon(k, 1.2) > hp * 0.12) return I(k, 'reneg');
-    if (ready(k, 'settle') && weaveOk(k) && def.id !== 'foreclose' && (abOf(k, 'settle').id === 'audit' ? oathAuditable(k).reduce((s, e) => s + e.a, 0) > hp * 0.12 : tot > hp * 0.22)) return I(k, 'settle');
+    // (the Ledger is left to grow for a Default that's nearly back)
+    const hoard = def.id === 'default' && k.cdRemaining(def) < 10 && tot < hp * 0.5;
+    if (ready(k, 'settle') && weaveOk(k) && def.id !== 'foreclose' && !hoard && (abOf(k, 'settle').id === 'audit' ? oathAuditable(k).reduce((s, e) => s + e.a, 0) > hp * 0.12 : tot > hp * 0.22)) return I(k, 'settle');
     if (k.gcdRemaining() > 0.0001) return null;
     return I(k, 'collect');
   },
@@ -614,6 +701,8 @@ const IP_COST = { L: IP_INPUT.L.cost, H: IP_INPUT.H.cost, K: IP_INPUT.K.cost };
 Object.assign(NEWBIE, {
   ironpalm(k, ctx) {
     const n = ctx.state.newbie || (ctx.state.newbie = { ogcdSeen: {}, next: 0 });
+    const gr = newbieGlowOgcd(k, ctx, 'read');   // (Read glows as a tankbuster comes in)
+    if (gr != null) return gr < 0 ? null : gr;
     for (const ab of k.abilities) {
       if (ab.type !== 'ogcd') continue;
       if (!k.usable(ab) || k.readyIn(ab) > 0.0001) { n.ogcdSeen[ab.id] = null; continue; }
@@ -635,7 +724,7 @@ Object.assign(PRO, {
     const readUp = k.readyIn(read) <= 0.0001 || (read.charges && k.charges(read) > 0 && k.lockUntil - k.now < 0.05);
     const spare = !!read.charges && k.charges(read) === 2;
     // the next hit worth reading, and when it lands (an auto only when Read will be back for the next buster)
-    const hitIn = toBuster < 0.6 ? toBuster : toAuto < toBuster && (spare || toBuster > 6.6 || k.has('pond')) ? toAuto : toBuster;
+    const hitIn = toBuster < 0.6 ? toBuster : toAuto < toBuster && (spare || toBuster > 6.6 || k.has('pond') || k.has('offbal')) ? toAuto : toBuster;
     if (readUp && hitIn < 0.32 && hitIn > 0.02 && k.lockUntil <= k.now) return I(k, 'read');
     if (toBuster < 2.5 && ready(k, 'skin') && k.lockUntil <= k.now) return I(k, 'skin');
     const bell = abOf(k, 'bell');
@@ -654,9 +743,13 @@ Object.assign(PRO, {
           const main = swallow ? 'KLHKK' : 'LLHKK';
           if (toBuster < 7 && toBuster > 1.6 && !k.has('wall')) P.plan = 'HKK';
           else if (k.dotRemaining('bruise') < 2.5) P.plan = 'HHK';
+          // Iron Ox while Read is cooling: it brings Read back and the auto read after it opens a free Thousand Palms
+          else if (k.readyIn(read) > 2 && toBuster > 9 && !k.has('offbal') && !k.has('opening')) P.plan = 'HHH';
           else P.plan = main;
           if (g.breath < cost(P.plan) + 2) {
-            if (g.breath >= cost('KL') && !swallow) P.plan = 'KL';
+            // short of Breath: Flowing Palms in rhythm breathes without stopping (Crisp, finished under 40: Breath back)
+            if (g.breath >= cost('LLL') + 1 && !k.talent('ironpalm_clean')) P.plan = 'LLL';
+            else if (g.breath >= cost('KL') && !swallow) P.plan = 'KL';
             else { P.resting = true; P.plan = null; }
           }
         }
@@ -681,7 +774,11 @@ Object.assign(PRO, {
     const debt = ctx.state.healDebt, n = k.g.n, toRw = ctx.nextRaidwide - ctx.t, shears = k.def.store > 1;
     if (weaveOk(k) && ready(k, 'tie') && n < weaveMax(k)) return I(k, 'tie');
     if (weaveOk(k) && ready(k, 'tapestry') && toRw < 2) return I(k, 'tapestry');
-    if (abOf(k, 'tighten').id === 'cradle' && weaveOk(k) && ready(k, 'tighten') && toRw < 2.5) return I(k, 'tighten');
+    const cradle = abOf(k, 'shuttle').id === 'cradle';
+    if (cradle && weaveOk(k) && ready(k, 'shuttle') && toRw < 2.5) return I(k, 'shuttle');
+    // Shuttle with the web full (a strike per thread)
+    // (a Shears' Shuttle also runs what Snap just cut: she cuts, re-ties, then throws it)
+    if (!cradle && weaveOk(k) && ready(k, 'shuttle') && weaveShuttleN(k) >= 3) return I(k, 'shuttle');
     if (weaveOk(k) && ready(k, 'snip') && n > 0 && (shears ? n >= 2 || debt > 4000 : debt > 7000)) return I(k, 'snip');
     if (k.gcdRemaining() > 0.0001 || k.cast) return null;
     const mend = abOf(k, 'mend');
@@ -697,10 +794,15 @@ Object.assign(PRO, {
     if (cross.type === 'ogcd' && weaveOk(k) && ready(k, 'cross') && mariLineOn(k)) return I(k, 'cross');
     if (weaveOk(k) && ready(k, 'pull') && k.charges(abOf(k, 'pull')) === 2) return I(k, 'pull');
     if (abOf(k, 'swap').id === 'swap' && k.talent('marionettist_cue') && weaveOk(k) && ready(k, 'swap') && k.cdRemaining(cross) > 3) return I(k, 'swap');
+    // Stage Cross: Swap a moment before Cross-Cut comes up, so the cut lands harder (the Doll is back on its mark by then)
+    else if (abOf(k, 'swap').id === 'swap' && weaveOk(k) && ready(k, 'swap') && !k.has('oncue') && k.readyIn(cross) < 4 && k.readyIn(cross) > 1.5) return I(k, 'swap');
     if (k.gcdRemaining() > 0.0001 || k.cast) return null;
-    if (ready(k, 'finale') && (k.g.encore >= 5 || (ctx.inBurst(ctx.t) && k.g.encore >= 3))) return I(k, 'finale');
+    const hitIn = ctx.state.dollHitAt != null ? ctx.state.dollHitAt - ctx.t : 99;
+    // Pirouette through a blow you see coming (+1 Encore); otherwise keep it for the next one when it's close
+    if (ready(k, 'pirouette') && abOf(k, 'pirouette').id === 'pirouette' && hitIn < 1.4) return I(k, 'pirouette');
+    if (ready(k, 'finale') && k.g.encore >= 5) return I(k, 'finale');
     if (cross.type === 'gcd' && ready(k, 'cross') && mariLineOn(k)) return I(k, 'cross');
-    if (ready(k, 'pirouette')) return I(k, 'pirouette');
+    if (ready(k, 'pirouette') && (abOf(k, 'pirouette').id !== 'pirouette' || hitIn > 12)) return I(k, 'pirouette');
     return ready(k, 'jab') ? I(k, 'jab') : null;
   },
 });
@@ -724,9 +826,9 @@ const RUNS = only ? 8 : 5;
 const rows = [];
 for (const [cls, spec] of picked) {
   const avg = skill => {
-    let dps = 0, hps = 0, gcdH = 0, last;
-    for (let s = 1; s <= RUNS; s++) { const r = runSim(cls, skill, s * 101, spec); dps += r.dps; hps += r.hps; gcdH += r.gcdHeals; last = r; }
-    return { dps: dps / RUNS, hps: hps / RUNS, gcdHeals: gcdH / RUNS, last };
+    let dps = 0, hps = 0, ehps = 0, gcdH = 0, last;
+    for (let s = 1; s <= RUNS; s++) { const r = runSim(cls, skill, s * 101, spec); dps += r.dps; hps += r.hps; ehps += r.ehps; gcdH += r.gcdHeals; last = r; }
+    return { dps: dps / RUNS, hps: hps / RUNS, ehps: ehps / RUNS, gcdHeals: gcdH / RUNS, last };
   };
   const nb = avg('newbie'), pro = avg('pro');
   rows.push({ c: spec ? `${cls}:${spec}` : cls, nb, pro });
@@ -734,7 +836,7 @@ for (const [cls, spec] of picked) {
 console.log('\nclass                    newbie DPS   pro DPS   newbie/pro   (pro HPS / newbie HPS for healers)');
 for (const { c, nb, pro } of rows) {
   const ratio = (nb.dps / pro.dps * 100).toFixed(0) + '%';
-  const heal = pro.hps > 0 ? `   HPS ${pro.hps.toFixed(0)} / ${nb.hps.toFixed(0)}, GCD heals ${pro.gcdHeals.toFixed(0)} / ${nb.gcdHeals.toFixed(0)}` : '';
+  const heal = pro.hps > 0 ? `   HPS ${pro.ehps.toFixed(0)} / ${nb.ehps.toFixed(0)} effective (${pro.hps.toFixed(0)} / ${nb.hps.toFixed(0)} raw), GCD heals ${pro.gcdHeals.toFixed(0)} / ${nb.gcdHeals.toFixed(0)}` : '';
   console.log(`${c.padEnd(14)} ${nb.dps.toFixed(0).padStart(9)} ${pro.dps.toFixed(0).padStart(9)} ${ratio.padStart(11)}${heal}`);
 }
 if (only) {

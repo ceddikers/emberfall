@@ -1405,5 +1405,36 @@ const BOSS_VFX = (() => {
     shake(8);
   }
 
-  return { failed, propFx, stoveBurst, gazed, doomed, cure, knightMemory, knightRise, nightFall, polarityFlip, edgeClose, pulse, orbForm, orbHit, chain, meatballLand, meatballWall, meatballHit, scorchPool, silkSnap, silkFree, reelBite, snuff, hatch, threadShoot, threadSnap, floorFalls, impact, castStart, cocoonEnd, auto, leap, roar, addSpawn, addDeath, addEnrage, fury, spit, husk, tetherSnap, playerDeath, playerRaised, partyBuff, victory, wipe };
+  // Time Stop (a Chronomancer's Time Reversal, fight.js pauseBoss): a pale clock face stands still on the floor round
+  // the boss, its hands stopped after one jolt back; frost creeps up its body and shatters as time starts again.
+  // (The boss's own pose freezes and frosts in main.js; the boss bar shows the stop and the held feed in raid-ui.js.)
+  function timeStop(b, dur) {
+    const ICE = '#cfeeff', R = 118, shards = Array.from({ length: 9 }, (_, i) => ({ a: i * TAU / 9 + rand(-0.2, 0.2), h: rand(10, 70), s: rand(5, 10), at: rand(0, 0.35) }));
+    VFX.shock(b.x, b.y, { r: 190, color: ICE, w: 6, dur: 0.45, flat: 1 });
+    VFX.fx({ dur, layer: 'air', draw: (c, p, t, e) => {
+      const life = p * dur, k = e.a * Math.min(1, life / 0.12) * Math.min(1, (dur - life) / 0.2);
+      // the face: a double ring, twelve hour marks, and two hands that kick back once and then stand still
+      VFX.neonRing(c, b.x, b.y, R, ICE, 2.5, k * 0.85, 0.55); VFX.neonRing(c, b.x, b.y, R * 0.86, ICE, 1.2, k * 0.6, 0.55);
+      c.save(); c.translate(b.x, b.y); c.scale(1, 0.55); c.lineCap = 'round';
+      c.strokeStyle = `rgba(214,240,255,${(0.8 * k).toFixed(3)})`;
+      for (let i = 0; i < 12; i++) { const a = i * TAU / 12, r0 = i % 3 ? R * 0.9 : R * 0.8; c.lineWidth = i % 3 ? 1.5 : 3; c.beginPath(); c.moveTo(Math.cos(a) * r0, Math.sin(a) * r0); c.lineTo(Math.cos(a) * R * 0.97, Math.sin(a) * R * 0.97); c.stroke(); }
+      const back = Math.min(1, life / 0.3), hand = (a, len, w) => { c.lineWidth = w; c.beginPath(); c.moveTo(0, 0); c.lineTo(Math.cos(a) * len, Math.sin(a) * len); c.stroke(); };
+      hand(-Math.PI / 2 - 0.9 * easeOut(back), R * 0.78, 2.5); hand(-Math.PI / 2 + 2.1 - 0.15 * easeOut(back), R * 0.5, 4);
+      c.restore();
+      // frost on the body: shards climbing it, a cold glow
+      VFX.glowAt(c, b.x, b.y - 34, 90, ICE, k * 0.32);
+      c.save(); c.globalAlpha = k * 0.9; c.fillStyle = '#eaf8ff'; c.strokeStyle = '#6fb6e0'; c.lineWidth = 1;
+      for (const s of shards) {
+        if (life < s.at) continue;
+        const x = b.x + Math.cos(s.a) * 52, y = b.y - s.h + Math.sin(s.a) * 22, g = Math.min(1, (life - s.at) / 0.25) * s.s;
+        c.beginPath(); c.moveTo(x, y - g * 1.6); c.lineTo(x + g * 0.6, y); c.lineTo(x, y + g); c.lineTo(x - g * 0.6, y); c.closePath(); c.fill(); c.stroke();
+      }
+      c.restore();
+    }, done: () => {
+      VFX.burst(b.x, b.y - 34, { color: ICE, n: 18, speed: 260, size: 9 });
+      VFX.shock(b.x, b.y, { r: 150, color: ICE, w: 4, dur: 0.4, flat: 1 });
+    } });
+  }
+
+  return { timeStop, failed,propFx, stoveBurst, gazed, doomed, cure, knightMemory, knightRise, nightFall, polarityFlip, edgeClose, pulse, orbForm, orbHit, chain, meatballLand, meatballWall, meatballHit, scorchPool, silkSnap, silkFree, reelBite, snuff, hatch, threadShoot, threadSnap, floorFalls, impact, castStart, cocoonEnd, auto, leap, roar, addSpawn, addDeath, addEnrage, fury, spit, husk, tetherSnap, playerDeath, playerRaised, partyBuff, victory, wipe };
 })();

@@ -23,7 +23,8 @@ const RaidUI = (() => {
     bleed: svg('<path d="M6 1.5C4.5 4 3 5.6 3 7.4a3 3 0 0 0 6 0C9 5.6 7.5 4 6 1.5Z" fill="none" stroke="currentColor" stroke-width="1.3"/>'),
     static: svg('<path d="M7 1 3 6.5h3L5 11l4-5.5H6Z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M1.5 3.5h1.5M9 8.5h1.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/>'),
     aggro: svg('<path d="M1 6c1.6-2.6 3.2-3.6 5-3.6S9.4 3.4 11 6c-1.6 2.6-3.2 3.6-5 3.6S2.6 8.6 1 6Z" fill="none" stroke="currentColor" stroke-width="1.2"/><circle cx="6" cy="6" r="1.7" fill="currentColor"/>'),
-    // on the boss: hitting harder, and the enrage
+    // on the boss: a Time Stop (an hourglass), hitting harder, and the enrage
+    hourglass: svg('<path d="M2.5 1.2h7M2.5 10.8h7M3.3 1.2c0 2.6 2.7 3.4 2.7 4.8S3.3 8.2 3.3 10.8M8.7 1.2c0 2.6-2.7 3.4-2.7 4.8s2.7 2.2 2.7 4.8" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>'),
     fury: svg('<path d="M6 1.2 7.4 4.6 11 6 7.4 7.4 6 10.8 4.6 7.4 1 6 4.6 4.6Z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M6 4.4v3.2" stroke="currentColor" stroke-width="1.2"/>'),
     enrage: svg('<path d="M6 1c.4 2-1.8 3-1.8 5a1.8 1.8 0 0 0 3.6 0c0-.8-.4-1.4-.4-1.4S9.5 5.5 9.5 7.8A3.5 3.5 0 0 1 2.5 7.8C2.5 4.4 6 3.6 6 1Z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>'),
   };
@@ -154,7 +155,7 @@ const RaidUI = (() => {
       <div class="pf" data-id="${r.id}" style="--rc:${ROLES[r.role].color}">
         <kbd class="pf-key" style="color:${FIGHT.SLOTS[i % 4]};border-color:${FIGHT.SLOTS[i % 4]}">${i + 1}</kbd>
         <div class="pf-main">
-          <div class="pf-name"><i class="pf-role">${ROLE_GLYPH[r.role] || ''}</i><span>${esc(r.name)}</span><b class="pf-aggro" data-tip="The boss is attacking them">${GLYPH.aggro}</b><small>${esc(CLASSES.find(c => c.id === r.cls)?.name || '')}${r.bot ? ' · bot' : ''}</small></div>
+          <div class="pf-name"><i class="pf-role">${ROLE_GLYPH[r.role] || ''}</i><span>${esc(r.name)}</span><b class="pf-aggro" data-tip="The boss is attacking them">${GLYPH.aggro}</b><i class="pf-ult" data-tip="Their Ultimate is ready"></i><small>${esc(CLASSES.find(c => c.id === r.cls)?.name || '')}${r.bot ? ' · bot' : ''}</small></div>
           <div class="pf-hp"><div class="trail"></div><div class="hp"></div><div class="sh"></div><span></span></div>
           <div class="pf-cast"><i></i></div>
           <div class="pf-st"></div>
@@ -202,6 +203,7 @@ const RaidUI = (() => {
     if (goal != null) { const v = (goal * 100).toFixed(2) + '%'; if (gEl._l !== v) { gEl._l = v; gEl.style.left = v; } }
     setText(q('.bb-hp span'), `${(frac * 100).toFixed(1)}%`);
     q('#boss-bar').classList.toggle('untargetable', !!b.u);
+    q('#boss-bar').classList.toggle('stopped', paused(raid, now));   // a Time Stop (fight.js pauseBoss)
     castFrame(raid, now);
     upcoming(raid, now);
     bossStatus(raid, now, myId, marks);
@@ -251,6 +253,7 @@ const RaidUI = (() => {
       f.row.classList.toggle('target', id === marks.locked);
       f.row.classList.toggle('healnext', id === marks.heal && id !== marks.locked);
       f.row.classList.toggle('aggro', id === marks.aggro && p.alive);
+      f.row.classList.toggle('ult', !!(marks.ult && marks.ult.has(id)) && p.alive);   // (their Ultimate is full)
       f.row.classList.toggle('mid', p.alive && hpF < 0.6 && hpF >= 0.35);
       f.row.classList.toggle('low', p.alive && hpF < 0.35);
       f.row.classList.toggle('hit', p.alive && now - (p.hitAt || -9) < 0.2);
@@ -262,6 +265,11 @@ const RaidUI = (() => {
       for (const [hid, secs, from] of p.hots || []) {
         const h = HOT_ICON[hid];
         if (h) chips.push(`<b class="chip hot${from === myId ? '' : ' theirs'}" data-tip="${h[2]}: healing over time"><u style="background-image:url(${abilityIcon(h[0], h[1])})"></u>${secs}</b>`);
+      }
+      // a healer's buff on this one ally (engine.js ALLY_BUFFS: Blessed, Quickened...), wearing the move's icon
+      for (const b of raid.abuffs || []) {
+        const d = b.to === id && b.end > now && typeof ALLY_BUFFS !== 'undefined' ? ALLY_BUFFS[b.id] : null;
+        if (d) chips.push(`<b class="chip hot${b.from === myId ? '' : ' theirs'}" data-tip="${d.name}: ${d.text}"><u style="background-image:url(${abilityIcon(d.cls, d.icon)})"></u>${Math.ceil(b.end - now)}</b>`);
       }
       if (p.mit) chips.push(`<b class="chip mit" data-tip="Taking ${p.mit}% less damage">${GLYPH.shield}${p.mit}%</b>`);
       if (p.dd) chips.push(`<b class="chip bad" data-tip="Damage Down: dealing 10% less damage">${GLYPH.down}${p.dd}</b>`);
@@ -414,13 +422,22 @@ const RaidUI = (() => {
   // it flashes as the cast goes off. Between casts it shows the next move coming, dimmed, counting down. Drag it
   // anywhere (it remembers); double-click puts it back.
   let castKey = '';
+  // seconds left on a feed entry: one the host marked held ([name, secs, 1]: a Time Stop on the boss, fight.js
+  // pauseBoss) only counts down once the stop is over
+  const paused = (raid, now) => !!(raid.bossPause && now < raid.bossPause.end);
+  function feedLeft(raid, e, at, now) {
+    const p = raid.bossPause;
+    let gone = now - at;
+    if (e[2] && p) gone -= Math.max(0, Math.min(now, p.end) - Math.max(at, p.at));
+    return e[1] - gone;
+  }
   function castFrame(raid, now) {
     const el = $('boss-cast'), c = raid.cast, n = raid.bnext;
     let mode = '', name = '', frac = 0, left = 0;
     if (c && now < c.start + c.dur + 0.25) { mode = now >= c.start + c.dur ? 'done' : 'cast'; name = c.name; frac = Math.min(1, (now - c.start) / c.dur); left = Math.max(0, c.start + c.dur - now); }
     else if (raid.state === 'live' && n && n.l.length && now - n.at <= 3) {
-      const [nm, sec] = n.l[0]; left = Math.max(0, sec - (now - n.at));
-      if (left <= 15) { mode = 'next'; name = nm; }
+      const nm = n.l[0][0]; left = Math.max(0, feedLeft(raid, n.l[0], n.at, now));
+      if (left <= 15 || paused(raid, now)) { mode = 'next'; name = nm; }
     }
     el.classList.toggle('hidden', !mode);
     if (!mode) { castKey = ''; return; }
@@ -439,6 +456,10 @@ const RaidUI = (() => {
     }
     setW(el.querySelector('.bc-bar .fill'), (frac * 100).toFixed(1) + '%');
     setText(el.querySelector('.bc-left'), mode === 'cast' ? left.toFixed(1) : mode === 'next' ? Math.ceil(left) + 's' : '');
+    // a Time Stop: the frame turns pale and says so, its count held (a cast already running keeps going: its hit is out)
+    const stop = paused(raid, now);
+    el.classList.toggle('stopped', stop);
+    setText(el.querySelector('small'), stop ? 'Time Stop' : 'Next');
   }
   function castFrameDrag() {
     const el = $('boss-cast'), KEY = 'emberfall.castFrame';
@@ -464,7 +485,7 @@ const RaidUI = (() => {
   function upcoming(raid, now) {
     const el = root.querySelector('.bb-next'), n = raid.bnext;
     const fresh = n && raid.state === 'live' && now - n.at <= 3;
-    const rows = fresh ? n.l.map(([name, s]) => [name, s - (now - n.at)]).filter(([, s]) => s > -0.5).slice(0, 3) : [];
+    const rows = fresh ? n.l.map(e => [e[0], feedLeft(raid, e, n.at, now)]).filter(([, s]) => s > -0.5).slice(0, 3) : [];
     const key = rows.map(([name, s]) => name + ':' + Math.max(0, Math.ceil(s))).join('|');
     if (key === nextKey) return;
     nextKey = key;
@@ -481,6 +502,7 @@ const RaidUI = (() => {
     if (raid.state === 'live') {
       for (const [kind, secs, val, who] of raid.bossStatus || []) {
         if (kind === 'vuln') items.push({ k: kind, c: 'debuff', bg: iconBg('ranger', 'mark'), n: secs, tip: `<b>Hunter's Mark</b><em>${secs}s</em>Takes ${val}% more damage from everyone.` });
+        else if (kind === 'pause') items.push({ k: kind, c: 'debuff pause', glyph: GLYPH.hourglass, n: secs, tip: `<b>Time Stop</b><em>${secs}s</em>Frozen: its next move waits. What is already on the floor lands on time.` });
         else if (kind === 'stun') items.push({ k: kind, c: 'debuff', glyph: GLYPH.vuln, n: secs, tip: `<b>Staggered</b><em>${secs}s</em>${raid.def.id === 'skitterra' ? 'Torn out of her chrysalis' : 'Stuck in the wall'}: takes ${val}% more damage.` });
         else if (kind === 'dmg') items.push({ k: kind, c: 'buff', glyph: GLYPH.fury, n: `+${val}%`, tip: `<b>Fury</b><em>+${val}% damage</em>Every blow from the boss lands harder.` });
         else if (kind === 'brand') {

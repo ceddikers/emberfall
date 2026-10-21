@@ -50,6 +50,10 @@ function segDist(px, py, ax, ay, bx, by) {
   return Math.hypot(px - ax - dx * t, py - ay - dy * t);
 }
 
+// A Time Stop on the boss (a Chronomancer's Time Reversal, FightSim.pauseBoss): at most MAX s long, and not again
+// until GUARD s after the last one ended
+const BOSS_PAUSE = { MAX: 2.5, GUARD: 20 };
+
 class FightSim {
   // getPlayers: () => [{ id, name, role, cls, x, y, a }]. emit(msg) broadcasts to everyone (incl. host).
   // opts: { hpPct } extra max HP for everyone (the gear party bonus, items.js)
@@ -112,7 +116,8 @@ class FightSim {
 
   // ---------------------------------------------------------------- scheduling
   // name: the step's player-facing name (its cast name), for the upcoming-moves feed (bnext); unnamed steps don't show
-  at(t, fn, name) { this.events.push({ t, fn, phase: this.layPhase ?? this.phase, name }); this.events.sort((a, b) => a.t - b.t); }
+  // (step: laid by course(), the script's own timeline, which a Time Stop slides later: pauseBoss)
+  at(t, fn, name) { this.events.push({ t, fn, phase: this.layPhase ?? this.phase, name, step: !!this.layStep }); this.events.sort((a, b) => a.t - b.t); }
   after(dt, fn, name) { this.at(this.t + dt, fn, name); }
   // scheduled event that survives phase changes (enrage timer, follow-ups of a running mechanic)
   atKeep(t, fn, name) { this.events.push({ t, fn, phase: this.phase, keep: true, name }); this.events.sort((a, b) => a.t - b.t); }
@@ -151,6 +156,7 @@ class FightSim {
     if (ph > this.phase) this.atKeep(from - 0.001, () => this.startCourse(cur));
     else this.startCourse(cur, true);
     let t = from;
+    this.layStep = true;
     for (const set of o.sets) {
       if (!set || !set.length) continue;
       cur.seams.push(t + set[0][0]);
@@ -160,18 +166,20 @@ class FightSim {
     const closing = o.closing && o.closing.length ? o.closing : null;
     if (closing) {
       // each pass lays out the next one 20 s before it ends, so the feed sees across the join
+      // (sh0: a Time Stop in between slides the next pass by as much as it slid this one: pauseBoss)
       const pass = (start, k) => {
-        this.layPhase = ph;
+        this.layPhase = ph; this.layStep = true;
+        const sh0 = this.pauseShift || 0;
         cur.seams.push(start + closing[0][0]);
         const ramp = o.ramp ?? 0.1;
         if (ramp) this.at(start + closing[0][0] - 0.01, () => { this.boss.dmgUp += ramp; this.emit({ t: 'fev', k: 'behind', n: k }); });
         const len = this.seq(closing, start) - (start - this.t);
-        this.at(Math.max(start, start + len - 20), () => pass(start + len, k + 1));
-        this.layPhase = null;
+        this.at(Math.max(start, start + len - 20), () => pass(start + len + (this.pauseShift || 0) - sh0, k + 1));
+        this.layPhase = null; this.layStep = false;
       };
       pass(t, 1);
     }
-    this.layPhase = null;
+    this.layPhase = null; this.layStep = false;
     // no gate to wait for: it ends with its last step, so what follows is laid out now (the feed reads across the join)
     if (!closing && o.until == null && o.next) { cur.done = true; o.next(t); }
     return cur;
@@ -188,7 +196,8 @@ class FightSim {
     if (cur.done || this.phase !== cur.ph || !cur.o.next) return;
     cur.done = true;
     const seam = cur.seams.find(s => s > this.t + 0.05);
-    const at = seam != null && seam - this.t <= (cur.o.seam ?? 8) ? seam - 0.02 : this.t;
+    // (not before a Time Stop on the boss ends: pauseBoss)
+    const at = Math.max(seam != null && seam - this.t <= (cur.o.seam ?? 8) ? seam - 0.02 : this.t, this.boss.pauseUntil || 0);
     // what this course still had after the seam is dropped now, so the feed already shows what comes next
     this.events = this.events.filter(e => e.keep || e.phase !== cur.ph || e.t <= at);
     cur.o.next(at);
@@ -209,7 +218,9 @@ class FightSim {
     const up = this.upcoming(3), key = up.map(e => e.name + '@' + e.t.toFixed(2)).join('|');
     if (!force && key === this.nextKey && (!up.length || this.t - this.lastNext < 1)) return;
     this.nextKey = key; this.lastNext = this.t;
-    this.emit({ t: 'bnext', l: up.map(e => [e.name, Math.max(0, Math.round((e.t - this.t) * 10) / 10)]) });
+    // while a Time Stop holds the boss, its own steps don't count down: [name, secs, 1] (held till the stop ends)
+    const pu = this.boss.pauseUntil > this.t ? this.boss.pauseUntil : 0;
+    this.emit({ t: 'bnext', l: up.map(e => pu && e.step ? [e.name, Math.max(0, Math.round((e.t - pu) * 10) / 10), 1] : [e.name, Math.max(0, Math.round((e.t - this.t) * 10) / 10)]) });
   }
   onHp(frac, fn) { this.hpTriggers.push({ frac, fn }); this.hpTriggers.sort((a, b) => b.frac - a.frac); }
   // start a new phase: drops everything still scheduled for the old one (a course already laid out after it stays)
@@ -353,7 +364,9 @@ class FightSim {
     if (b.anim && this.t >= b.anim.end) b.anim = null;
     const tank = this.tank();
     b.target = tank ? tank.id : null;
-    const stunned = b.stunUntil > this.t;   // stuck in a wall after a charge: no walking, turning or autos
+    // stuck in a wall after a charge, or held by a Time Stop (pauseBoss): no walking, turning or autos (a scripted
+    // move already under way, moveTo, still finishes)
+    const stunned = b.stunUntil > this.t || b.pauseUntil > this.t;
     if (b.moveTo) {
       const dx = b.moveTo.x - b.x, dy = b.moveTo.y - b.y, d = Math.hypot(dx, dy);
       const step = (b.moveTo.speed || 400) * dt;
@@ -478,6 +491,17 @@ class FightSim {
         break;
       }
       case 'rewind': {
+        // target 'party' (a Chronomancer's Time Reversal): every living ally back to their best HP of the last secs, at
+        // most pct of their max HP each; nobody is revived
+        if (ev.target === 'party') {
+          const secs = Math.min(6, ev.secs || 4), cap = Math.max(0, Math.min(0.5, Number(ev.pct) || 0.4));
+          for (const p of this.alive()) {
+            const ps = p.s, best = ps.hist.filter(h => h[0] >= this.t - secs).reduce((m, h) => Math.max(m, h[1]), ps.hp);
+            if (best > ps.hp) this.applyHeal(pid, p.id, Math.min(best - ps.hp, ps.maxHp * cap));
+          }
+          if (ev.dur > 0) this.pauseBoss(ev.dur, pid);   // dur: and the boss's own clock stops (Time Stop)
+          break;
+        }
         const tid = this.resolveTarget(pid, ev.target), ts = this.ps.get(tid);
         if (!ts || ts.left) break;
         const secs = Math.min(6, ev.secs || 4);
@@ -637,11 +661,11 @@ class FightSim {
     if (invuln) mult = 0;
     if (perfect) {
       s.mits = s.mits.filter(m => m !== perfect);
-      this.emit({ t: 'fev', k: 'perfect', id: p.id });
+      this.emit({ t: 'fev', k: 'perfect', id: p.id, b: opts.kind === 'buster' ? 1 : 0 });   // (b: a tankbuster, for Bastion's turned blow)
     }
     if (reflect) {
       s.mits = s.mits.filter(m => m !== reflect);
-      this.emit({ t: 'fev', k: 'reflect', id: p.id });
+      this.emit({ t: 'fev', k: 'reflect', id: p.id, b: opts.kind === 'buster' ? 1 : 0 });
     }
     if (read) {
       s.mits = s.mits.filter(m => m !== read);
@@ -729,6 +753,45 @@ class FightSim {
   anim(name, dur = 1, extra = {}) { this.boss.anim = { name, start: this.t, end: this.t + dur }; this.emit(Object.assign({ t: 'banim', name, dur }, extra)); }
   ticker(fn) { this.tickers.push(fn); }
   moveBoss(x, y, speed = 500) { const p = ARENA.clamp({ x, y }, 110); this.boss.moveTo = { x: p.x, y: p.y, speed }; }
+
+  // Time Stop (a Chronomancer's Time Reversal): the boss's own clock stands still for dur s. The steps its script still
+  // has to come (course steps: its next moves, and the passes of the soft enrage after them) slide dur s later, with
+  // the course's seams and end and the upcoming-moves feed; it stands frozen (no walking, turning or autos, its swing
+  // timer held). Whatever is already under way keeps true time: telegraphs, puddles, towers, tethers, rollers, adds,
+  // the cast running now (its hit is already on the floor) and the follow-ups of a move already begun (after /
+  // afterKeep inside a move), the hard enrage, damage and heal checks. False if it doesn't take (pauseBlock says why).
+  pauseBoss(dur, pid) {
+    dur = Math.max(0, Math.min(BOSS_PAUSE.MAX, Number(dur) || 0));
+    if (!dur || this.pauseBlock(dur)) return false;
+    const b = this.boss, t = this.t, cur = this.curCourse;
+    for (const e of this.events) if (e.step && e.t > t) e.t += dur;
+    this.events.sort((a, c) => a.t - c.t);
+    cur.seams = cur.seams.map(s => (s > t ? s + dur : s)); cur.end += dur;
+    this.pauseShift = (this.pauseShift || 0) + dur;
+    b.pauseUntil = t + dur; this.pauseReady = t + dur + BOSS_PAUSE.GUARD;
+    b.autoAt = Math.max(b.autoAt, t) + dur;
+    if (this.onPause) this.onPause(dur);   // a script with clocks of its own on show (Skitterra's brood clock)
+    this.emit({ t: 'fev', k: 'pause', id: pid ?? null, dur });
+    this.broadcastNext(true);
+    return true;
+  }
+  // why a Time Stop wouldn't take now (null: it would). It is extra time to answer the boss, never a way round a check:
+  // not in a phase change or an interlude (a course without an HP gate, or one whose gate has gone), not once the soft
+  // enrage has begun (past the course's sets), not in the enrage or about to, not in a damage or heal check, not while
+  // the boss is out of reach, not within GUARD s of the last one, and not when the script says so (f.noPause: the
+  // Hollow King's Royal Doom).
+  pauseBlock(dur = BOSS_PAUSE.MAX) {
+    const b = this.boss, t = this.t, cur = this.curCourse, enr = this.def.enrage && this.def.enrage[this.mode];
+    if (this.state !== 'live') return 'not live';
+    if (b.pauseUntil > t || t < (this.pauseReady || 0)) return 'guard';
+    if (!cur || cur.o.until == null || cur.done || this.phase !== cur.ph) return 'phase';
+    if (t + dur >= cur.end) return 'soft enrage';
+    if (enr && t + dur + 0.5 >= enr) return 'enrage';
+    if ((b.cast && t < b.cast.end && b.cast.anim === 'enrage') || this.dpsCheckEnd > t || this.healCheckEnd > t) return 'check';
+    if (b.untargetable) return 'untargetable';
+    if (this.noPause && this.noPause()) return 'script';
+    return null;
+  }
 
   // Generic telegraph. opts: { shape, delay, dmg, type, follow, need, tag, onResolve, avoidable, failDmg }
   // type: 'aoe' | 'raidwide' | 'stack' | 'spread' | 'tower' | 'buster' | 'knockback' | 'proximity'
@@ -1231,6 +1294,7 @@ class FightSim {
     if (b.brand && b.brand.end > t && b.brand.charges > 0) out.push(['brand', Math.ceil(b.brand.end - t), b.brand.charges, b.brand.from]);
     if (b.fix && b.fix.until > t) out.push(['fix', Math.ceil(b.fix.until - t), 0, b.fix.id]);
     if (b.exposedUntil > t) out.push(['stun', Math.ceil(b.exposedUntil - t), Math.round((b.exposed || 0) * 100)]);
+    if (b.pauseUntil > t) out.push(['pause', Math.ceil(b.pauseUntil - t), 0]);   // a Time Stop (pauseBoss)
     return out.length ? out : undefined;
   }
   // [id, kind, x, y, hp, maxHp, enraged, link, facing]
@@ -1358,6 +1422,7 @@ Object.assign(FightSim.prototype, {
     const p = this.alive().find(q => q.id === pid);
     if (r.self > 0 && p) { this.damagePlayer(p, r.self, { kind: 'settle', raw: true, nomit: true }); this.emit({ t: 'fev', k: 'bill', id: pid, a: Math.round(r.self), s: 1 }); }
     if (r.boss > 0) this.ledgerStrike(pid, r.boss);
+    if (r.co) for (const [id, a] of Object.entries(r.co)) if (a > 0) this.applyHeal(pid, Number(id), a);   // (a co-signed line paid down heals its ally)
     if (ev.op === 'default' || ev.op === 'foreclose') this.emit({ t: 'fev', k: 'default', id: pid, b: Math.round(r.boss) });
     this.sendLedger(pid, true);
   },
@@ -1583,7 +1648,7 @@ Object.assign(FightSim.prototype, {
     if (!this.dolls || !this.dolls.size) return;
     const props = cov ? this.props.filter(pr => pr.cover) : null;
     for (const [pid, d, i] of this.liveDolls()) {
-      if (d.st === 1 || d.st === 2) continue;
+      if (d.st === 2) continue;   // (a spinning Doll, st 1, is still told: its kit counts the dodge, Pirouette's Encore, and tears nothing)
       const shadowed = cov && PROPS.shadowing(m.src.x, m.src.y, d.x, d.y, props);
       let hit = false;
       if (m.type === 'aoe' || m.type === 'spread' || m.type === 'buster') hit = SHAPES.contains(m.shape, d.x, d.y, DOLL_HOST.PAD) && !shadowed;

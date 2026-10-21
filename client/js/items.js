@@ -152,7 +152,7 @@ Object.assign(ITEM_PERKS, {
   oathbroker_w1: { ab: 'collect', text: 'Your combo pays down 50% more of the Ledger.' },
   oathbroker_a2: { ab: 'reneg', text: 'Renegotiate also shields you.' },
   oathbroker_w2: { ab: 'settle', text: 'Settle also heals you for 5% of your HP.' },
-  oathbroker_w3: { ab: 'lien', text: 'Lien lasts 13s instead of 10s (a Guarantor\'s bond 24s instead of 20s).' },
+  oathbroker_w3: { ab: 'lien', text: 'Lien lasts 13s instead of 10s (a Guarantor\'s bond 13s instead of 10s).' },
   oathbroker_a4: { ab: 'default', text: 'After Default the Ledger is closed for 7s instead of 10s.' },
 });
 // ---------------------------------------------------------------- Ironpalm (tank): iron knuckle wraps for a weapon, gis for armour

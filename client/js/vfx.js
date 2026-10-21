@@ -1317,6 +1317,77 @@ const VFX = (() => {
       } });
       B.smoke(sx, sy, { n: 4, color: o.smoke || '#4a3060', size: 24, a: 0.6, speed: 40, life: 1.3 });
     },
+
+    // ---- Ultimates (kits.js ULTIMATES): the big shapes their recipes in ability-vfx.js are built from
+
+    // a phoenix of flame: it climbs off the caster in an arc and dives onto (tx, ty), wings beating, a tail of fire
+    // streaming behind it and feathers shed along the way. o: { s (size), dur (the flight), color, core, onHit(x, y) }
+    phoenix(sx, sy, tx, ty, o = {}) {
+      const s = o.s ?? 1, dur = o.dur ?? 0.7, color = o.color || '#ff7a1a', core = o.core || '#ffe9a0', ink = o.ink || '#3a0e04';
+      const p0 = { x: sx, y: sy - 30 }, p2 = { x: tx, y: ty - 12 };
+      const p1 = { x: sx + (tx - sx) * 0.25, y: Math.min(sy, ty) - 230 * s };
+      const at = q => ({ x: (1 - q) * (1 - q) * p0.x + 2 * (1 - q) * q * p1.x + q * q * p2.x, y: (1 - q) * (1 - q) * p0.y + 2 * (1 - q) * q * p1.y + q * q * p2.y });
+      const ease = p => p * p * (1.6 - 0.6 * p);   // slow climb, fast dive
+      const trail = [];
+      fx({ dur, layer: 'air', draw: (c, p, t, e) => {
+        const q = ease(p), h = at(q), b = at(Math.max(0, q - 0.04)), ang = Math.atan2(h.y - b.y, h.x - b.x), k = e.a;
+        trail.push({ x: h.x, y: h.y }); if (trail.length > 14) trail.shift();
+        // the tail: a fat streak of fire down the path behind it
+        c.save(); c.globalCompositeOperation = 'lighter'; c.lineCap = 'round'; c.lineJoin = 'round';
+        for (const [w, col, a] of [[22 * s, color, 0.45], [10 * s, core, 0.7]]) {
+          c.globalAlpha = a * k; c.strokeStyle = col; c.lineWidth = w; c.beginPath();
+          trail.forEach((pt, i) => (i ? c.lineTo(pt.x, pt.y) : c.moveTo(pt.x, pt.y))); c.stroke();
+        }
+        c.restore();
+        glowAt(c, h.x, h.y, 60 * s, color, 0.8 * k);
+        // the bird: a teardrop body, a forked tail, and two broad wings that beat (a curved leading edge, a scalloped
+        // trailing edge of feathers), ink-edged with a hot core
+        const flap = 0.85 + 0.25 * Math.sin(t * 20);
+        c.save(); c.translate(h.x, h.y); c.rotate(ang); c.globalAlpha = k;
+        const wing = side => {
+          const W = side * 62 * s * flap;
+          c.beginPath(); c.moveTo(6 * s, side * 3 * s);
+          c.quadraticCurveTo(16 * s, W * 0.55, -10 * s, W);   // leading edge, swept back to the tip
+          for (let i = 1; i <= 4; i++) { const f = i / 4; c.quadraticCurveTo(-22 * s - 4 * s * (1 - f), W * (1 - f * 0.8) + side * 2 * s, -14 * s - 8 * s * f, W * (1 - f) * 0.9 + side * 4 * s); }   // feathers
+          c.closePath();
+        };
+        const tail = side => { c.beginPath(); c.moveTo(-18 * s, 0); c.quadraticCurveTo(-40 * s, side * 6 * s, -64 * s, side * 16 * s * flap); c.quadraticCurveTo(-42 * s, side * 2 * s, -18 * s, side * 1 * s); c.closePath(); };
+        for (const side of [-1, 1]) for (const shape of [wing, tail]) { shape(side); c.globalAlpha = 0.6 * k; c.lineWidth = 5 * s; c.strokeStyle = ink; c.stroke(); c.globalAlpha = k; c.fillStyle = color; c.fill(); }
+        c.globalCompositeOperation = 'lighter';
+        for (const side of [-1, 1]) { c.save(); c.scale(0.7, 0.6); wing(side); c.fillStyle = core; c.globalAlpha = 0.75 * k; c.fill(); c.restore(); }
+        c.globalCompositeOperation = 'source-over'; c.globalAlpha = k;
+        c.fillStyle = ink; c.beginPath(); c.ellipse(-4 * s, 0, 22 * s, 8.5 * s, 0, 0, Math.PI * 2); c.fill();
+        c.fillStyle = color; c.beginPath(); c.ellipse(-4 * s, 0, 20 * s, 7 * s, 0, 0, Math.PI * 2); c.fill();
+        c.globalCompositeOperation = 'lighter'; c.fillStyle = core; c.beginPath(); c.ellipse(6 * s, 0, 11 * s, 4 * s, 0, 0, Math.PI * 2); c.fill();
+        c.restore(); c.globalAlpha = 1;
+        glowAt(c, h.x, h.y, 18 * s, '#ffffff', 0.7 * k);
+      }, tick: p => {
+        const h = at(ease(p));
+        spawn({ x: h.x + rand(-8, 8) * s, y: h.y + 10, z: 10 + rand(-6, 6), vx: rand(-30, 30), vz: rand(-20, 40), life: rand(0.3, 0.6), size: rand(10, 18) * s, size1: 0, color: Math.random() < 0.5 ? color : core });
+        if (Math.random() < 0.25) spawn({ x: h.x, y: h.y + 20, z: 20, vx: rand(-40, 40), vz: rand(-30, -10), life: rand(0.8, 1.2), size: rand(10, 14) * s, color: core, kind: 'feather', vr: rand(-3, 3), flutter: 4 });
+      }, done: () => { if (o.onHit) o.onHit(tx, ty); } });
+    },
+
+    // two flame wings on an entity's back for a while (a Phoenix Dive's window): they beat slowly, flicker and shed
+    // embers. Drawn over the hero, starting off the shoulders so the hero stays readable.
+    emberWings(ent, o = {}) {
+      const dur = o.dur ?? 8, color = o.color || '#ff8a2a', core = o.core || '#ffe0a0', ink = o.ink || '#4a1406', s = o.s ?? 1.25;
+      fx({ dur, layer: 'air', draw: (c, p, t, e) => {
+        const k = env(p, 0.05, 0.12) * e.a, x = ent.x, y = ent.y - 40 - (ent.lift || 0), beat = 0.85 + 0.15 * Math.sin(t * 6);
+        const shape = (side, sc) => {
+          c.beginPath(); c.moveTo(side * 12 * s, 0);
+          c.quadraticCurveTo(side * 30 * s * sc, -34 * s * beat * sc, side * (12 + 46 * sc) * s, -20 * s * beat * sc);
+          c.quadraticCurveTo(side * (12 + 30 * sc) * s, -6 * s * sc, side * (12 + 38 * sc) * s, 12 * s * sc);
+          c.quadraticCurveTo(side * (12 + 16 * sc) * s, 6 * s * sc, side * 12 * s, 6 * s); c.closePath();
+        };
+        c.save(); c.translate(x, y);
+        for (const side of [-1, 1]) { shape(side, 1); c.globalAlpha = 0.45 * k; c.lineWidth = 4 * s; c.strokeStyle = ink; c.stroke(); c.globalAlpha = 0.75 * k; c.fillStyle = color; c.fill(); }
+        c.globalCompositeOperation = 'lighter';
+        for (const side of [-1, 1]) { shape(side, 0.62); c.globalAlpha = 0.8 * k * (0.85 + 0.15 * Math.sin(t * 17 + side)); c.fillStyle = core; c.fill(); }
+        c.restore(); c.globalAlpha = 1;
+        glowAt(c, x, y, 44 * s, color, 0.3 * k);
+      }, tick: () => { if (Math.random() < 0.35) { const side = Math.random() < 0.5 ? -1 : 1; spawn({ x: ent.x + side * rand(10, 44) * s, y: ent.y, z: 34 + (ent.lift || 0) + rand(-10, 16), vx: side * rand(10, 30), vz: rand(20, 60), life: rand(0.4, 0.8), size: rand(6, 10) * s, size1: 0, color: Math.random() < 0.5 ? color : core }); } } });
+    },
   };
 
   function setScale(s) { scale = s; }

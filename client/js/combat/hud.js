@@ -1,6 +1,6 @@
 // Combat HUD for the local player: ability bar (Q W E R D F + Space), class gauge, cast bar, buffs.
 
-const SLOT_KEYS = ['Q', 'W', 'E', 'R', 'D', 'F', 'SPC', 'T'];   // 7: a tank's taunt
+const SLOT_KEYS = ['Q', 'W', 'E', 'R', 'D', 'F', 'SPC', 'T'];   // 7: the Ultimate (engine.js, kits.js ULTIMATES)
 // (the bar is updated every frame: text and the cooldown sweep are only written to the page when they change)
 const hudText = (el, v) => { v = String(v); if (el._t !== v) { el._t = v; el.textContent = v; } };
 const hudCd = (el, v) => { v = String(v); if (el._cd !== v) { el._cd = v; el.style.setProperty('--cd', v); } };
@@ -19,8 +19,9 @@ const BUFF_NAMES = {
   combust: 'Combustion', heating: 'Heating Up', hotstreak: 'Hot Streak', burnt: 'Burnt Out', growth: 'Wild Growth',
   awaken: 'Awakened', surge: 'Surge', lag: 'Time Lag', radiant: 'Radiant', verdict: 'Swift Verdict', chamber: 'Echo Chamber', moonlit: 'Moonlit', aim: 'Steady Aim', incircle: 'Ember Circle',
   // the advanced classes
-  brink: 'On the Brink', overheat: 'Overheat', frostbite: 'Frostbite', attuned: 'Attuned', momentum: 'Momentum', redline: 'Redline', rebound: 'Rebound',
+  brink: 'On the Brink', overheat: 'Overheat', frostbite: 'Frostbite', attuned: 'Attuned', momentum: 'Momentum', redline: 'Redline', rebound: 'Rebound', flicker: 'Flicker',
   still: 'Stillpoint', gale: 'Gale Run', orbit: 'Orbit', tailwind: 'Tailwind',
+  looseend: 'Loose End',
 };
 const BAD_BUFFS = new Set(['burnt', 'lag', 'overheat', 'frostbite']);
 // which ability's icon a buff wears
@@ -28,23 +29,26 @@ const BUFF_ICON = {
   oath: 'oath', frenzy: 'frenzy', gorge: 'drain', undying: 'undying', overload: 'overload', markself: 'mark', keen: 'pierce',
   barrage: 'barrage', truenorth: 'step', dance: 'dance', combust: 'combust', heating: 'fireblast', hotstreak: 'pyro', burnt: 'vent',
   growth: 'growth', awaken: 'bloom', surge: 'shift', lag: 'shift', radiant: 'edge', verdict: 'smite', chamber: 'accel', moonlit: 'growth', aim: 'pierce', incircle: 'combust',
-  brink: 'flare', overheat: 'cinder', frostbite: 'rime', attuned: 'invert', momentum: 'equil', redline: 'flare', rebound: 'lance',
+  brink: 'flare', overheat: 'cinder', frostbite: 'rime', attuned: 'invert', momentum: 'equil', redline: 'flare', rebound: 'lance', flicker: 'rime',
   still: 'still', gale: 'gale', orbit: 'slip', tailwind: 'hook',
+  looseend: 'needle',
 };
 
 // hover text for each class gauge: what fills it, what spends it, and (state) a live readout under the name
 const GAUGE_TIPS = {
-  bastion: { desc: 'Judgment (the third Blade Chain hit) gives 25, or 50 during Oath of Valor. A Perfect Block gives 20. Holy Edge spends 50.' },
-  bloodreaver: { desc: 'Hack gives 10, Maul 15 and Bloodletting 20. Crimson Drain spends 40; Frenzy makes your next three Drains free.' },
-  runeguard: { desc: 'Rune Strike gives 1 (2 during Runic Overload), and a Ward broken all the way refunds its Rune. Runic Ward spends 1, Glyph Burst spends all 3.' },
-  ranger: { desc: 'Quick Shot gives 10, or 30 with Barrage. Rapid Fire spends 50. Anything past 100 is lost.' },
-  shadowblade: { desc: 'Strike gives 1 point, or 2 from behind. Eviscerate spends every point and hits for {d:115} more for each, with a {d:160} bonus at 5. A sixth point is lost.' },
+  bastion: { desc: 'Judgment (the third Blade Chain hit) gives 25, or 50 during Oath of Valor. A Perfect Block gives 20 (30 under Rally Banner). Holy Edge spends 50, or nothing after a Perfect Block on a tankbuster. Rally Banner takes up to 50.',
+    state: k => (k.has('turned') ? 'next Holy Edge free' : k.has('banner') ? 'Banner: Perfect Blocks +10' : `${Math.floor(k.g.resolve)} Resolve`) },
+  bloodreaver: { desc: 'Hack gives 10, Maul 15 and Bloodletting 20; under Undying every hit you take gives 1 for each 1% of your HP. Crimson Drain spends 40; Frenzy makes your next three Drains free, War Cry the next one, Undying every one while it lasts. The number under the heart is the bank: the damage you took since your last Drain (6s at most), what the next one cashes.',
+    state: k => `bank ${Math.round(k.g.bank || 0)}` + (k.env.maxHp && k.g.bank >= k.env.maxHp() * REAVER.GLOW ? ' · Drain it' : '') },
+  runeguard: { desc: 'Rune Strike gives 1 (2 during Runic Overload), a Ward broken all the way refunds its Rune (a sanctified one always does), and Mirror Aegis reflecting a tankbuster gives 1. Runic Ward spends 1, Glyph Burst spends all 3.' },
+  ranger: { desc: 'Quick Shot gives 10, or 30 with Barrage, and Hunter\'s Cloak 40. Rapid Fire spends 50, or 25 while Hunter\'s Mark is up. Anything past 100 is lost. The eye is Keen Eye; ×2 means a second one is banked.' },
+  shadowblade: { desc: 'Strike gives 1 point, or 2 from behind. Eviscerate spends every point and hits for {d:115} more for each, with a {d:160} bonus at 5. A sixth point is lost. Shadow Dance entered at 5 points lets the first Eviscerate in it keep them.' },
   pyromancer: {
-    desc: 'Fireball gives 12, Pyroblast 20 (10 with Hot Streak) and Fire Blast 6. Every point of Heat adds 0.3% damage. At 100 you overheat: you lose 15% of your HP, Heat resets and you deal 20% less damage for 5s. Heat cools slowly while you aren\'t casting. Vent spends it all.',
+    desc: 'Fireball gives 12, Pyroblast 20 (10 with Hot Streak) and Fire Blast 6. Every point of Heat adds 0.3% damage. At 100 you overheat: you lose 15% of your HP, Heat resets and you deal 20% less damage for 5s. Heat cools slowly while you aren\'t casting. Vent spends it all (at 90 or more it also lights Hot Streak). While Smolder is up it can\'t boil over: it stops at 99.',
     state: k => `+${Math.round(k.g.heat * 0.3)}% damage`,
   },
   cleric: {
-    desc: 'You get a Petal every 15s, up to 3. Dawn Petal spends one. Every third Petal spent turns your next Smite into Dawnstar.',
+    desc: 'You get a Petal every 15s, up to 3; one that grows past 3 blooms by itself onto the most hurt ally. Dawn Petal spends one. Every third Petal spent turns your next Smite into Dawnstar, and a Mend counts as half a Petal.',
     state: k => (k.g.bloom >= 3 ? 'Dawnstar ready' : `Dawnstar ${k.g.bloom} / 3`) + (k.g.petals < 3 && k.g.petalAt != null ? ` · next Petal ${Math.max(0, Math.ceil(k.g.petalAt - k.now))}s` : ''),
   },
   grovekeeper: { desc: 'Each Rejuvenate tick gives 5. Bloom spends 50.' },
@@ -57,7 +61,7 @@ const GAUGE_TIPS = {
     state: k => (k.g.peak >= 3 && k.g.side ? `Shock armed (${k.g.peak})` : 'Shock not armed') + (k.def.redline ? ` · Strain ${Math.floor(k.g.strain || 0)}` : ''),
   },
   driftblade: {
-    desc: 'Moving fills it by 20 a second; standing still drains it by 30. Most of your cuts hit harder the fuller it is. Crosswind spends it all.',
+    desc: 'A Passing Strike gives 10, Hook Turn 15, Slipstream 15, and walking 15 a second. After 1.5s standing still it drains 15 a second. Most of your cuts hit harder the fuller it is. Crosswind spends it all.',
     state: k => `+${Math.round(Math.min(1, (k.g.drift || 0) / 100) * 100)}% to Drift moves`,
   },
 };
@@ -73,10 +77,10 @@ const BUFF_HIDES = { avatar: 'oath', bloodmoon: 'undying', living: 'overload', w
 Object.assign(BUFF_NAMES, { distill: 'Distill', catalyst: 'Catalyst' });
 Object.assign(BUFF_ICON, { distill: 'distill', catalyst: 'distill' });
 GAUGE_TIPS.alembist = {
-  desc: 'Two reagents brew a vial into your bandolier (three after Catalyst). Throw takes the oldest. Vials grow 30% stronger over their first 10s and spoil after 40s.',
+  desc: 'Two reagents brew a vial into your bandolier (three after Catalyst). Smart Throw: an ally below 70% health gets your strongest heal, anyone else your oldest bomb. Vials grow 30% stronger over their first 10s and spoil after 40s. The three coals under the still are the Kiln: every vial you throw that is not a bomb lights one, and with all three lit your next Throw also launches a free Kiln Bomb for {d:900}.',
   state: k => {
     const i = alemPick(k), v = i >= 0 ? k.g.vials[i] : null, raise = Math.ceil(k.g.raiseAt - k.now);
-    const parts = [v ? `next: ${alemInfo(v.r).name} ${Math.round((alemStrength(k, v) - 1) * 100)}%` : 'empty'];
+    const parts = [v ? `next: ${v.parts ? 'Grand Blend' : alemInfo(v.r).name} ${Math.round((alemStrength(k, v) - 1) * 100)}%` : 'empty', `Kiln ${k.g.kiln || 0} / ${ALEMBIC.KILN}`];
     if (raise > 0) parts.push(`raise in ${raise}s`);
     return parts.join(' · ');
   },
@@ -89,15 +93,15 @@ Object.assign(BUFF_NAMES, { read: 'Read', wall: 'Tiger Wall', opening: 'Opening'
 BAD_BUFFS.add('stagger');
 Object.assign(BUFF_ICON, { read: 'read', wall: 'kick', opening: 'fist', wind: 'bell', skin: 'skin', rush: 'fist', stagger: 'kick', guard: 'palm', pond: 'pond', slide: 'slide', bellows: 'bellows' });
 GAUGE_TIPS.ironpalm = {
-  desc: 'Every press costs Breath: Light 12, Heavy 18, Kick 15 (40% less when Crisp). It refills slowly while you fight and fast once you stop for half a moment. Crane Step gives some back, and a Read gives 15.',
-  state: k => (k.has('opening') ? 'Opening: Heavy is Thousand Palms' : k.has('wind') ? 'Second Wind' : (k.g.breath || 0) < IP_INPUT.L.cost ? 'Winded' : 'Steady'),
+  desc: `Every press costs Breath: Light ${IP_INPUT.L.cost}, Heavy ${IP_INPUT.H.cost}, Kick ${IP_INPUT.K.cost} (${Math.round(IRONPALM.CRISP_SAVE * 100)}% less when Crisp). It refills ${IRONPALM.pool.regen} a second while you fight and ${IRONPALM.pool.rest} a second once you stop for half a moment. Below ${IRONPALM.WINDED} you're winded until it's back to ${IRONPALM.RECOVER}: every press is a weak tap, and it refills at the resting pace (${Math.round(IRONPALM.TAP_REFILL * 100)}% of it while you keep tapping). Crane Step gives some back, Flowing Palms with all three palms Crisp gives ${IRONPALM.FLOW_BREATH} back when it leaves you under ${IRONPALM.FLOW_LOW}, and a Read gives 15.`,
+  state: k => (k.has('opening') ? 'Opening: Heavy is Thousand Palms' : k.has('offbal') ? 'Off balance: Read the next blow' : k.g.winded ? 'Winded: breathe' : k.has('wind') ? 'Second Wind' : 'Steady'),
   extra: k => `<div class="ip-moves">${ipMoves(k).map(e => `<div><b>${[...e.seq].join(' ')}</b> ${e.mv.name}<i> · ${e.mv.desc}</i></div>`).join('')}</div>`,
 };
 
 // talents whose proc shows in the tracker (named after the talent)
 Object.assign(BUFF_NAMES, { answer: 'Answering Rune', beat: 'Skipped Beat', feint: 'Feint', haze: 'Heat Haze', pinned: 'Pinning Shot', quickmend: 'Quick Mend',
-  secondwind: 'Second Wind', sharpen: 'Sharpened Shadows', steady: 'Steady Hands', unbreak: 'Unbreakable' });
-Object.assign(BUFF_ICON, { answer: 'strike', beat: 'bolt', feint: 'strike', haze: 'fireball', pinned: 'quick', quickmend: 'mend', secondwind: 'cloak', sharpen: 'evis', steady: 'brace', unbreak: 'bulwark' });
+  secondwind: 'Second Wind', sharpen: 'Sharpened Shadows', steady: 'Steady Hands', unbreak: 'Unbreakable', tempo: 'Tempo', oncue: 'Stage Cross', smoulder: 'Smoulder' });
+Object.assign(BUFF_ICON, { tempo: 'fury', oncue: 'swap', smoulder: 'smolder', answer: 'strike', beat: 'bolt', feint: 'strike', haze: 'fireball', pinned: 'quick', quickmend: 'mend', secondwind: 'cloak', sharpen: 'evis', steady: 'brace', unbreak: 'bulwark' });
 
 // what each buff does while it's up, for its hover text. n(id) is the move's name as this hero has it (a spec may rename it).
 const BUFF_TIPS = {
@@ -113,8 +117,11 @@ const BUFF_TIPS = {
   overload: n => `You deal 10% more damage. ${n('strike')} gives 2 Runes, and ${n('glyph')} and Ward blasts hit harder.`,
   living: n => `You deal 10% more damage, ${n('strike')} gives 2 Runes, and ${n('glyph')} and Ward blasts hit harder. Every Rune you spend fires a bolt at the boss.`,
   answer: n => `Your next ${n('strike')} gives an extra Rune.`,
-  markself: n => `Keen Eye lights up more often, and your critical chance is 10% higher.`,
-  keen: n => `Your next ${n('pierce')} hits harder and gives its charge back.`,
+  markself: n => `Keen Eye lights up more often, your critical chance is 10% higher, and ${n('rapid')} costs 25 Focus. A Keen Eye cashed while a second is banked readies ${n('barrage')} again.`,
+  keen: n => `Your next ${n('pierce')} hits harder and gives its charge back. Banks up to two.`,
+  smoulder: () => 'Your Heat can\'t boil over: it stops at 99.',
+  oncue: n => `Your next ${n('cross')} cuts twice as hard and gives 1 more Encore.`,
+  tempo: n => `At three Tempo your next ${n('step')} is a Flourish. A spilled combo point loses them all.`,
   barrage: n => `Your next ${n('quick')} hits three times as hard and gives triple Focus.`,
   falconHunt: () => 'Your falcon is hunting: every Keen Eye you light sends it diving at the boss.',
   pinned: n => `Your next ${n('quick')} is a critical hit.`,
@@ -143,8 +150,9 @@ const BUFF_TIPS = {
   chamber: () => 'Your echoes are full strength.',
   warp: () => 'A great clock hangs over the party: everyone acts faster, and every 3s it strikes the boss and heals the party.',
   distill: () => 'Your next two reagents recover almost at once.',
-  catalyst: () => 'Your next brew takes three reagents. Three that make a Reaction brew it; three that don\'t fizzle back to the first two.',
-  brink: () => 'Your next spell must be the other element, or you overload. Wait too long and you overload anyway.',
+  catalyst: () => 'Your next brew takes three reagents. Three that make a Reaction brew it; three that don\'t brew the pair you put in twice, fully heated.',
+  brink: () => 'If your next spell is the same element, you overload. The other element, or letting this run out, is safe.',
+  flicker: n => `Your next ${n('flare')} or ${n('lance')} is instant.`,
   overheat: n => `You can't cast ${n('cinder')} or ${n('flare')}.`,
   frostbite: () => 'Your casts are 30% slower.',
   attuned: () => 'Every step from 0 makes both fire and frost spells stronger.',
@@ -169,6 +177,36 @@ const BUFF_TIPS = {
 };
 // buffs refreshed every moment while a condition holds (the timer means nothing there)
 const BUFF_UNTIMED = new Set(['incircle', 'redline']);
+// the damage classes' Ultimates (kits.js "ULTIMATES · DAMAGE CLASSES"): what they leave on you
+Object.assign(BUFF_NAMES, { starfall: 'Starfall', curtaincall: 'Curtain Call' });
+Object.assign(BUFF_ICON, { starfall: 'barrage', curtaincall: 'swap' });
+Object.assign(BUFF_TIPS, {
+  starfall: n => `Every ${n('quick')} lights Keen Eye while the stars fall.`,
+  curtaincall: n => `Your next ${n('swap')} is the bow: the Strings snap taut across the target as you trade places.`,
+});
+// the tanks' Ultimates (kits.js "TANK ULTIMATES"): Crimson Eclipse's bank
+// the Chronomancer's Stasis, holding the Bolts' heals (kits.js chronoStasis)
+Object.assign(BUFF_NAMES, { stasis: 'Stasis' });
+Object.assign(BUFF_ICON, { stasis: 'stasis' });
+Object.assign(BUFF_TIPS, { stasis: n => `Your ${n('bolt')}s' heals are held, 25% stronger. Press ${n('stasis')} again (or wait) to release them all to the party.` });
+Object.assign(BUFF_NAMES, { eclipse: 'Crimson Eclipse' });
+Object.assign(BUFF_ICON, { eclipse: 'undying' });
+Object.assign(BUFF_TIPS, {
+  eclipse: n => `Every hit you take is banked. When the eclipse ends it erupts on your target and heals you for 30% of it, the party for 10%. Your ${n('drain')}s cost no Blood while Gorged.`,
+});
+// the tanks' kit links (round 2): the buffs one button leaves for another
+Object.assign(BUFF_NAMES, { turned: 'Turned Aside', banner: 'Rally Banner', roar: 'War Cry', sanctified: 'Sanctified', offbal: 'Off Balance', acid: 'Acid', irongut: 'Iron Gut' });
+Object.assign(BUFF_ICON, { turned: 'edge', banner: 'banner', roar: 'warcry', sanctified: 'sanctum', offbal: 'fist', acid: 'digest', irongut: 'iron' });
+Object.assign(BUFF_TIPS, {
+  acid: n => `Your next ${n('spit')} carries the acid of your last ${n('digest')}: it hits harder.`,
+  irongut: n => `${n('digest')} works in any moment, and every Morsel it digests counts twice.`,
+  offbal: n => `Iron Ox has the boss off balance: the next blow you ${n('read')} opens it up like a tankbuster (your next Heavy is a free Thousand Palms).`,
+  sanctified: n => `The next ${n('ward')} you raise keeps its Rune however little it soaks, and its blast heals the whole party for a third of what it absorbed.`,
+  roar: n => `Your next ${n('drain')} costs no Blood, and the party heals for a quarter of what it heals you.`,
+  undying: n => (n('undying') === 'Undying' ? `You can't drop below 1 HP, and every heal and shield you give is doubled. ${n('drain')} costs no Blood, and every hit you take fills Blood.` : 'You can\'t drop below 1 HP, and every heal and shield you give is doubled.'),
+  turned: n => `You turned a tankbuster aside: your next ${n('edge')} costs no Resolve.`,
+  banner: () => 'The banner stands: every Perfect Block gives 10 more Resolve.',
+});
 // status icons for entries with no ability art: drawn line glyphs (12x12, in the icon's text colour)
 const bfSvg = d => `<svg viewBox="0 0 12 12" aria-hidden="true">${d}</svg>`;
 const BUFF_GLYPH = {
@@ -221,28 +259,35 @@ const Hud = {
       this.el.querySelector('.gauge-wrap').style.width = gw + 'px';
     }
     const items = [...actor.abilities, { id: 'dash', name: 'Dash', type: 'ogcd', desc: 'A quick dash toward where you\'re heading (or the cursor). Two charges, 12s each.', fx: { color: cls.accent } }];
-    // a tank's taunt (slot 7, key T), drawn just before the dash
-    const taunt = actor.taunt ? tauntAbility(cls.id) : null;
-    if (taunt) items.push(taunt);
+    // the Ultimate (slot 7, key T), drawn just before the dash; a hero without one yet has no T slot
+    const ult = actor.kit.ult;
+    if (ult) items.push(ult);
     // painted icons live in icons/<class>/<ability id>.png; the dash (and anything without art) shows its letter
-    const art = (ab, i) => (i < 6 ? `url(${abilityIcon(cls.id, abilityIconId(ab))})` : ab.taunt ? tauntIconBg(cls.id) : '');
+    // (i < 6 reads the bar as it is now: an Ultimate's window swaps empowered moves in)
+    const art = (ab, i) => (i < 6 ? `url(${abilityIcon(cls.id, abilityIconId(ab))})` : ab.ult ? ultIconBg(cls.id) : '');
     row.innerHTML = items.map((ab, i) => `
-      <div class="slot ${ab.type}${art(ab, i) ? ' has-art' : ''}${ab.taunt ? ' taunt' : ''}" data-i="${i}" style="--a:${cls.accent};--fx:${(ab.fx && ab.fx.color) || cls.accent}">
+      <div class="slot ${ab.type}${art(ab, i) ? ' has-art' : ''}${ab.ult ? ' ult' : ''}" data-i="${i}" style="--a:${cls.accent};--fx:${(ab.fx && ab.fx.color) || cls.accent}">
         <div class="icon"${art(ab, i) ? ` style="background-image:${art(ab, i)}"` : ''}>${art(ab, i) ? '' : ab.name.replace(/^The /, '')[0]}</div>
         <kbd>${SLOT_KEYS[i]}</kbd>
         <div class="sweep"></div>
         <div class="cdtext"></div>
-        <div class="charges"></div>
+        <div class="charges"></div>${ab.ult ? '<div class="ring"></div>' : ''}${i < 6 ? '<i class="tb"></i>' : ''}
         <div class="name">${ab.name}</div>
       </div>`).join('');
-    this.slots = [...row.children].map(el => ({ el, sweep: el.querySelector('.sweep'), cd: el.querySelector('.cdtext'), ch: el.querySelector('.charges'), name: el.querySelector('.name'), icon: el.querySelector('.icon') }));
-    if (taunt) row.insertBefore(this.slots[7].el, this.slots[6].el);
-    // in-game tooltips (shows the current label, e.g. Riposte / Dawnstar)
+    this.slots = [...row.children].map(el => ({ el, sweep: el.querySelector('.sweep'), cd: el.querySelector('.cdtext'), ch: el.querySelector('.charges'), name: el.querySelector('.name'), icon: el.querySelector('.icon'), ring: el.querySelector('.ring'), tb: el.querySelector('.tb') }));
+    if (ult) row.insertBefore(this.slots[7].el, this.slots[6].el);
+    this._abs = actor.kit.abilities; this._ultFull = null; this._ultBg = null;
+    // in-game tooltips (shows the current label, e.g. Riposte / Dawnstar; a window's empowered move; a taunt carrier)
     this.slots.forEach((s, i) => Tip.set(s.el, () => {
-      const ab = items[i], k = this.actor && this.actor.kit;
+      const k = this.actor && this.actor.kit, ab = i < 6 && k ? k.abilities[i] : items[i];
       const name = k && i < 6 ? k.label(ab) : ab.name;
-      const icon = art(ab, i) ? `<i class="ab-icon ${ab.type}" style="background-image:${art(ab, i)}"></i>` : '<i class="ab-icon dash">»</i>';
+      const icon = art(ab, i) ? `<i class="ab-icon ${ab.type}${ab.ult ? ' ult' : ''}" style="background-image:${art(ab, i)}"></i>` : '<i class="ab-icon dash">»</i>';
+      if (ab.ult) {
+        const meta = [ultMeta(ab), k.ultWin ? `${Math.ceil(k.ultLeft())}s left` : `${Math.floor(k.ultCharge())}%`];
+        return `<div class="tip-ab">${icon}<div><b>${name}</b><em>${meta.join(' · ')}</em></div></div>${ab.desc || ''}`;
+      }
       const meta = [ab.meta || (ab.type === 'gcd' ? 'GCD' : 'oGCD')];   // (a paced kit's moves say what limits them instead)
+      if (ab.ultOf) meta.unshift('Ultimate');
       if (typeof ab.cast === 'number' && ab.cast) meta.push(`${ab.cast}s cast`);
       if (ab.charges) meta.push(`${ab.charges} charges · ${ab.cd}s`); else if (typeof ab.cd === 'number' && ab.cd) meta.push(`${ab.cd}s cooldown`);
       const perks = k ? [...(k.gear().perks || [])].filter(p => ITEM_PERKS[p] && ITEM_PERKS[p].ab === (ab.replaces || ab.id)) : [];
@@ -253,7 +298,7 @@ const Hud = {
       if (granted) meta.push('Talent');
       const held = k && k.env.talents && typeof TALENT_BY_ID !== 'undefined' ? [...(k.env.talents() || [])].map(id => TALENT_BY_ID[id]).filter(d => d && d.t.ab === (ab.replaces || ab.id) && !(d.t.grants && granted)) : [];
       const tal = held.map(d => `<div class="it-talent"><span><u>Talent · ${d.t.name}:</u> ${talentText(d.t, this.actor.spec)}</span></div>`).join('');
-      return `<div class="tip-ab">${icon}<div><b>${name}</b><em>${meta.join(' · ')}</em></div></div>${ab.desc || ''}${enh}${tal}`;
+      return `<div class="tip-ab">${icon}<div><b>${name}</b><em>${meta.join(' · ')}</em></div></div>${ab.desc || ''}${enh}${tal}${i < 6 ? tauntNote(cls.id, ab) : ''}`;
     }));
     this.slots.forEach((s, i) => s.el.addEventListener('mousedown', e => { e.stopPropagation(); onPress(i); }));
     Tip.set(this.el.querySelector('.gauge-wrap'), () => {
@@ -276,8 +321,25 @@ const Hud = {
     const k = a.kit;
     const enhanced = new Set([...(k.gear().perks || [])].map(p => ITEM_PERKS[p] && ITEM_PERKS[p].ab));
     const talented = new Set(k.env.talents && typeof TALENT_BY_ID !== 'undefined' ? [...(k.env.talents() || [])].map(id => TALENT_BY_ID[id] && TALENT_BY_ID[id].t.ab) : []);
+    // an Ultimate's window opened or closed: the bar's icons follow its moves
+    if (k.abilities !== this._abs) {
+      this._abs = k.abilities;
+      k.abilities.forEach((ab, i) => {
+        const s = this.slots[i];
+        if (!s) return;
+        s.icon.style.backgroundImage = `url(${abilityIcon(a.cls.id, abilityIconId(ab))})`;
+        s.el.classList.toggle('empowered', !!ab.ultOf);
+      });
+    }
+    // the taunt carrier (a tank): a mark when the taunt is ready, its seconds while it cools
+    const carry = a.taunt && k.def.tauntOn ? k.abilities.findIndex(ab => k.baseId(ab) === k.def.tauntOn) : -1;
     a.abilities.forEach((ab, i) => {
       const s = this.slots[i];
+      if (s.tb) {
+        const on = i === carry, left = on ? a.tauntLeft(now) : 0;
+        s.el.classList.toggle('carrier', on);
+        if (on) { s.tb.classList.toggle('ready', left <= 0); hudText(s.tb, left > 0 ? Math.ceil(left) : ''); }
+      }
       s.el.classList.toggle('enhanced', enhanced.has(ab.replaces || ab.id));
       s.el.classList.toggle('talented', talented.has(ab.replaces || ab.id));
       const usable = k.usable(ab);
@@ -311,12 +373,20 @@ const Hud = {
     hudText(ds.ch, a.dash.charges);
     hudCd(ds.sweep, a.dash.charges === 0 ? a.dashFraction(now).toFixed(3) : 0);
     hudText(ds.cd, a.dash.charges === 0 ? Math.ceil(a.dash.next - now) : '');
-    // taunt (tanks)
-    const ts = a.taunt && this.slots[7];
-    if (ts) {
-      const left = a.tauntLeft(now);
-      hudCd(ts.sweep, (left / TAUNT.cd).toFixed(3));
-      hudText(ts.cd, left > 0 ? (left < 1 ? left.toFixed(1) : Math.ceil(left)) : '');
+    // the Ultimate (T): the ring fills with its charge; while its window is open the ring drains with the seconds left
+    const us = k.ult && this.slots[7];
+    if (us) {
+      const win = k.ultWin, full = k.ultFull();
+      const v = win ? k.ultLeft() / win.dur : k.ultCharge() / 100;
+      if (us.ring._v !== v.toFixed(3)) { us.ring._v = v.toFixed(3); us.ring.style.setProperty('--ult', us.ring._v); }
+      hudText(us.cd, win ? Math.ceil(k.ultLeft()) : '');
+      us.el.classList.toggle('full', full);
+      us.el.classList.toggle('active', !!win);
+      // one cue when it fills (the soft glow then stays: .full)
+      if (full && this._ultFull === false) { us.el.classList.remove('cue'); void us.el.offsetWidth; us.el.classList.add('cue'); }
+      this._ultFull = full;
+      const bg = ultIconBg(a.cls.id);   // (its own painting, once that's in)
+      if (bg !== this._ultBg) { this._ultBg = bg; us.icon.style.backgroundImage = bg; }
     }
     // cast bar
     if (k.cast) {
@@ -348,6 +418,7 @@ const Hud = {
     if (key !== this._buffKey) {
       this._buffKey = key;
       const icon = b => {
+        if (b.img) return `<u class="bf-icon" style="background-image:url(${b.img})"></u>`;   // (another class's art: an ally's buff on you)
         if (BUFF_ICON[b.id]) return `<u class="bf-icon" style="background-image:url(${abilityIcon(a.cls.id, BUFF_ICON[b.id])})"></u>`;
         const g = BUFF_GLYPH[b.id] || BUFF_GLYPH[b.bond ? 'bond' : String(b.id).startsWith('fx-') ? 'fx' : ''];
         return `<u class="bf-icon g">${g || `<em>${(b.name || '?')[0]}</em>`}</u>`;
@@ -416,9 +487,9 @@ Object.assign(ICON_GLYPHS, {
     tie: c => { c.strokeStyle = '#cbb8ff'; c.lineWidth = 3; c.lineCap = 'round'; c.beginPath(); c.moveTo(10, 44); c.bezierCurveTo(24, 20, 40, 44, 54, 20); c.stroke(); c.fillStyle = '#f2e6ff'; for (const [x, y] of [[10, 44], [54, 20]]) { c.beginPath(); c.arc(x, y, 5, 0, TAU); c.fill(); } c.strokeStyle = '#ffffff'; c.lineWidth = 2; c.beginPath(); c.arc(32, 32, 5, 0, TAU); c.stroke(); },
     mend: c => { c.strokeStyle = '#e4d8ff'; c.lineWidth = 3; c.setLineDash([5, 4]); c.beginPath(); c.moveTo(14, 50); c.lineTo(50, 14); c.stroke(); c.setLineDash([]); c.fillStyle = '#b89cff'; c.fillRect(28, 16, 8, 32); c.fillRect(16, 28, 32, 8); },
     snip: c => { c.strokeStyle = '#e8eef4'; c.lineWidth = 4; c.lineCap = 'round'; c.beginPath(); c.moveTo(14, 14); c.lineTo(46, 46); c.moveTo(14, 50); c.lineTo(46, 18); c.stroke(); c.strokeStyle = '#ff9ab8'; c.lineWidth = 2.5; for (const y of [14, 50]) { c.beginPath(); c.arc(12, y, 6, 0, TAU); c.stroke(); } c.strokeStyle = '#cbb8ff'; c.lineWidth = 1.5; c.beginPath(); c.moveTo(42, 32); c.lineTo(58, 28); c.moveTo(42, 34); c.lineTo(58, 40); c.stroke(); },
-    tighten: c => { c.strokeStyle = '#cbb8ff'; c.lineWidth = 3; c.beginPath(); c.moveTo(12, 32); c.lineTo(52, 32); c.stroke(); c.fillStyle = '#f2e6ff'; for (const [x, d] of [[22, 1], [42, -1]]) { c.beginPath(); c.moveTo(x, 32); c.lineTo(x - 8 * d, 24); c.lineTo(x - 8 * d, 40); c.fill(); } },
+    // a weaver's shuttle: a pointed wooden boat with its bobbin, thread trailing off behind it
+    shuttle: c => { c.fillStyle = '#c8a24a'; c.strokeStyle = '#6a4a20'; c.lineWidth = 1.6; c.beginPath(); c.moveTo(8, 40); c.quadraticCurveTo(32, 18, 56, 24); c.quadraticCurveTo(34, 46, 8, 40); c.fill(); c.stroke(); c.fillStyle = '#f2e6ff'; c.beginPath(); c.ellipse(32, 33, 7, 3.5, -0.3, 0, TAU); c.fill(); c.strokeStyle = '#cbb8ff'; c.lineWidth = 1.6; c.beginPath(); c.moveTo(26, 35); c.bezierCurveTo(18, 50, 34, 54, 22, 60); c.stroke(); },
     tapestry: c => { c.strokeStyle = '#ffd89a'; c.lineWidth = 1.6; const p = []; for (let i = 0; i < 5; i++) { const a = -Math.PI / 2 + i * TAU / 5; p.push([32 + Math.cos(a) * 20, 32 + Math.sin(a) * 20]); } for (let i = 0; i < 5; i++) for (let j = i + 1; j < 5; j++) { c.beginPath(); c.moveTo(p[i][0], p[i][1]); c.lineTo(p[j][0], p[j][1]); c.stroke(); } c.fillStyle = '#f2e6ff'; for (const [x, y] of p) { c.beginPath(); c.arc(x, y, 3.5, 0, TAU); c.fill(); } },
-    lash: c => { c.strokeStyle = '#ff9ab8'; c.lineWidth = 3; c.lineCap = 'round'; c.beginPath(); c.moveTo(10, 50); c.bezierCurveTo(20, 10, 40, 60, 54, 16); c.stroke(); c.strokeStyle = '#f2e6ff'; c.lineWidth = 2; c.beginPath(); c.arc(48, 22, 9, 0, TAU); c.stroke(); },
     embroider: c => { c.strokeStyle = '#f0d8ff'; c.lineWidth = 2; for (let i = 0; i < 6; i++) { const a = i * TAU / 6; c.beginPath(); c.moveTo(32, 32); c.quadraticCurveTo(32 + Math.cos(a + 0.6) * 16, 32 + Math.sin(a + 0.6) * 16, 32 + Math.cos(a) * 22, 32 + Math.sin(a) * 22); c.stroke(); } c.fillStyle = '#b89cff'; c.beginPath(); c.arc(32, 32, 6, 0, TAU); c.fill(); },
     cradle: c => { c.strokeStyle = '#cbb8ff'; c.lineWidth = 2; for (const [a, b] of [[[12, 20], [52, 44]], [[12, 44], [52, 20]], [[20, 12], [44, 52]], [[44, 12], [20, 52]]]) { c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke(); } c.beginPath(); c.arc(32, 32, 22, 0, TAU); c.stroke(); },
   },
@@ -438,7 +509,7 @@ GAUGE_TIPS.threadweaver = {
   state: k => { const n = weaveCount(k); return `${n} thread${n === 1 ? '' : 's'}` + (k.g.spool >= WEAVE.MEND_COST ? ' · Mend Seam instant' : ''); },
 };
 GAUGE_TIPS.marionettist = {
-  desc: 'Strings (top): three tie you to the Doll. One tears if it strays past their reach or a blow lands on it, and grows back after 15s; with none left the Doll lies limp for 4s. Encore (the footlights) builds from the Doll\'s hits; Grand Finale spends it.',
+  desc: 'Strings (top): three tie you to the Doll. One tears if it strays past their reach or a blow lands on it, and grows back after 15s; with none left the Doll lies limp for 4s. Encore (the footlights) builds from the Doll\'s hits, and 1 more for a blow it spins through under Pirouette; Grand Finale spends all 5.',
   state: k => (mariLimp(k) ? 'Limp' : `${k.g.strings} String${k.g.strings === 1 ? '' : 's'}`) + ` · Encore ${k.g.encore || 0} / 5`,
 };
 function drawnIcon(classId, abilityId, force = false) {
@@ -468,11 +539,11 @@ Object.assign(BUFF_TIPS, {
   stone: () => 'You take less damage, and everything you eat becomes a Spike.',
 });
 GAUGE_TIPS.gorgemaw = {
-  desc: 'An edible hit that lands in your open jaw deals a quarter of its damage and goes in as a Morsel of its shape: circles are Rings, lines Lances, cones Fangs, a tankbuster a Spike. Spit fires the oldest back at the boss; Digest heals you on all of them. A full Belly wastes what you eat next.',
-  state: k => (k.g.belly.length ? 'next Spit: ' + MAW.NAMES[k.g.belly[0].m] + (k.def.fuse && k.g.belly.length > 1 && k.g.belly[0].m === k.g.belly[1].m ? ' (' + MAW.FUSION[k.g.belly[0].m] + ')' : '') : 'empty'),
+  desc: 'An edible hit that lands in your open jaw deals a quarter of its damage and goes in as a Morsel of its shape: circles are Rings, lines Lances, cones Fangs, a tankbuster a Spike. Gulp swallows a Ring into an empty Belly (once every 20s). Spit fires the oldest back at the boss; Digest takes all of them, and its acid makes the next Spit 50% harder for each (up to twice as hard). A full Belly wastes what you eat next.',
+  state: k => (k.g.belly.length ? 'next Spit: ' + MAW.NAMES[k.g.belly[0].m] + (k.def.fuse && k.g.belly.length > 1 && k.g.belly[0].m === k.g.belly[1].m ? ' (' + MAW.FUSION[k.g.belly[0].m] + ')' : '') + (k.has('acid') ? ` +${Math.round(k.buffs.get('acid').data.x * 100)}% acid` : '') : 'empty'),
 };
 GAUGE_TIPS.oathbroker = {
-  desc: '60% of every hit you take is written here instead, and billed to you when it comes due. Your combo pays the oldest lines down. Lines in the last 2s are red.',
+  desc: '60% of every hit you take is written here instead, and billed to you when it comes due. Your combo pays the oldest lines down (under Lien each payment also strikes the boss). Lines in the last 2s are red; renegotiated lines carry a », and come due cheaper under Lien and Writ and count in full for Default.',
   state: k => `${Math.round(k.g.total || 0)} owed · ${Math.round(oathDueSoon(k, 3))} due in 3s`,
 };
 (() => {

@@ -14,7 +14,7 @@ const TUTORIAL = {
           ] },
         { h: 'Skills', keys: ['Q', 'W', 'E', 'R', 'D', 'F', 'T', 'Shift'],
           body: [
-            'Q W E R D F are your six skills. T is the taunt, on tanks only.',
+            'Q W E R D F are your six skills. T is your Ultimate, where your hero has one: the ring round it fills as you play your class, and at full it glows. A damage hero\'s opens a few seconds of empowered skills; a tank\'s or a healer\'s is one big moment for the whole party. A fall keeps half the charge.',
             'Shift + a healing or support skill casts it on yourself.',
           ] },
         { h: 'Dash', keys: ['Space'],
@@ -120,10 +120,11 @@ const TUTORIAL = {
           'Under the party frames: everyone as a share of the top threat. Your row is lit; a non-tank at 90% of the tank turns amber.',
           'An eye on a party frame marks who the boss is attacking.',
         ] },
-        { h: 'Taunt', keys: ['T'],
+        { h: 'Taunt',
           body: [
-            'Tanks only. Your threat jumps to 10% above the highest, and the boss stays on you for 3 seconds whatever anyone does (an add: 6 seconds). 20 second cooldown.',
-            'An icon under the boss bar shows the fixation and its seconds. You cannot taunt a boss that is out of reach.',
+            'Tanks only, and it rides on one of your own skills: the Bastion\'s Brace, the Bloodreaver\'s Bloodletting, the Runeguard\'s Rune Strike, the Ironpalm\'s Read, the Gorgemaw\'s Open Wide and the Oathbroker\'s Renegotiate.',
+            'Use that skill while the enemy you face is attacking someone else and it taunts as well: your threat jumps to 10% above the highest, and the boss stays on you for 3 seconds whatever anyone does (an add: 6 seconds). 20 second cooldown. If the boss is already on you, it is just the skill.',
+            'A small mark above the skill shows the taunt is ready, and its seconds while it cools. An icon under the boss bar shows the fixation. You cannot taunt a boss that is out of reach.',
           ] },
         { h: 'Deaths and adds', body: [
           'Dying wipes your threat. A raised player comes back with none.',

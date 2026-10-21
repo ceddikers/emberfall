@@ -7,6 +7,10 @@ const FX = {
   GROUND: new Set(['zone', 'click', 'ring', 'puff', 'cone', 'aura', 'ghost', 'flash']),
 
   add(f) { f.t0 = this.now; if (!this.muted) this.list.push(f); return f; },
+  // the screen moments an Ultimate may use (main.js sets cam: { flash(color, a, dur), dim(a, dur), punch(amount, dur),
+  // stop(dur) } and me: your hero). Only your own hero gets them: everyone else's Ultimate plays dimmed, camera still.
+  cam: null, me: null,
+  camFor(ent) { return ent && ent === this.me ? this.cam : null; },
   later(delay, fn) { if (!this.muted) this.pending.push({ t: this.now + delay, fn }); },
   clear() { this.list.length = 0; this.pending.length = 0; },
 
@@ -32,13 +36,17 @@ const FX = {
     const ang = Math.atan2(ty - ent.y, tx - ent.x);
     if (!f.onTarget && ab.target !== 'ally' && (tx !== ent.x || ty !== ent.y)) { ent.faceTo = ang; ent.faceLock = now + 0.5; }   // turned toward over a few frames (see turnFacing in main.js)
     if (ab.anim && ab.anim !== 'dash' && ent.st) ent.st.action = { type: ab.anim, t0: now, dur: ANIM_DUR[ab.anim] };
-    const recipe = ent.cls && typeof ABILITY_VFX !== 'undefined' && ABILITY_VFX[ent.cls.id] && ABILITY_VFX[ent.cls.id][ab.id];
+    // (a window's empowered move looks like itself: fxId, engine.js ultOver)
+    const recipe = ent.cls && typeof ABILITY_VFX !== 'undefined' && ABILITY_VFX[ent.cls.id] && ABILITY_VFX[ent.cls.id][ab.fxId || ab.id];
     if (recipe) {
-      const delay = { attack: 0.1, bash: 0.06, cast: 0.16, big: 0.2 }[ab.anim] || 0;
+      // an Ultimate's wind-up is its own (the recipe times it), so it isn't delayed by its animation
+      const delay = ab.ult ? 0 : { attack: 0.1, bash: 0.06, cast: 0.16, big: 0.2 }[ab.anim] || 0;
       const dim = opts.mine ? 1 : 0.6;
+      // cam: the screen moments (flash, dim, camera push, hit-stop) for your own Ultimates only; null for anyone else's
+      const cam = this.camFor(ent);
       const run = () => {
         VFX.setScale(dim);
-        try { recipe({ ent, x: ent.x, y: ent.y, tx, ty, ang: ent.angle, tent: opts.tent || null, later: (d, fn) => this.later(d, () => { VFX.setScale(dim); try { fn(); } finally { VFX.setScale(1); } }) }); }
+        try { recipe({ ent, x: ent.x, y: ent.y, tx, ty, ang: ent.angle, tent: opts.tent || null, mine: !!opts.mine, cam, later: (d, fn) => this.later(d, () => { VFX.setScale(dim); try { fn(); } finally { VFX.setScale(1); } }) }); }
         finally { VFX.setScale(1); }
       };
       if (delay) this.later(delay, run); else run();

@@ -56,6 +56,13 @@ const GAUGES = {
     const gorge = k.stacks('gorge');
     for (let i = 0; i < gorge; i++) { const x = cx - 18 + i * 18, y = cy + 48; poly(c, [x, y - 8, x + 5, y + 2, x, y + 6, x - 5, y + 2], '#ff3a4a', OUT, 1.2); }
     label(c, String(Math.floor(k.g.blood)), cx, cy + 6, '#ffe0e0', 15, 'system-ui', 800);
+    // the bank: what the next Drain cashes (the damage taken since the last one); bright once it's worth a Drain
+    const bank = Math.round(k.g.bank || 0);
+    if (bank > 0) {
+      const big = typeof REAVER !== 'undefined' && k.env.maxHp && bank >= k.env.maxHp() * REAVER.GLOW;
+      if (big) glow(c, cx + 40, cy + 30, 14, '#ff3a4a', 0.5 + Math.sin(t * 8) * 0.15);
+      label(c, String(bank), cx + 40, cy + 34, big ? '#ffd0d0' : '#c08088', 11, 'system-ui', 700);
+    }
   },
 
   // Runeguard: three rune stones orbiting a ward ring; lit stones are Runes ready to use.
@@ -94,6 +101,7 @@ const GAUGES = {
       glow(c, ex, ey, 20, '#ffd27a', 0.6 + Math.sin(t * 8) * 0.2);
       ellipse(c, ex, ey, 12, 7, 0, '#fff3c8', OUT, 1.5);
       circle(c, ex, ey, 4, '#a8641a');
+      if (k.stacks('keen') >= 2) label(c, '×2', ex, ey + 16, '#ffd27a', 11, 'system-ui', 800);   // (a second Keen Eye banked)
     }
     if (k.has('barrage')) label(c, '×3', w - 26, 62, '#ffe27a', 14, 'system-ui', 800);
     label(c, String(Math.floor(k.g.focus)), cx, top + 80, '#f2e6c8', 13, 'system-ui', 800);
@@ -116,6 +124,15 @@ const GAUGES = {
       const f = Math.min(1, k.dotRemaining('poison') / 24);
       poly(c, [cx, cy - 22, cx + 9, cy - 4, cx, cy + 4, cx - 9, cy - 4], f < 0.3 ? '#4a7a3a' : '#8aff6a', OUT, 1.5);
       label(c, Math.ceil(k.dotRemaining('poison')) + 's', cx, cy + 22, '#bfffaa', 12, 'system-ui', 700);
+    }
+    // Bladedancer's Tempo: three small pips down at the left; all three lit, Blade Fury is a Flourish
+    if (k.def.spec === 'bladedancer') {
+      const n = k.stacks('tempo');
+      for (let i = 0; i < 3; i++) {
+        const x = cx - 54 + i * 11, y = cy + 20, on = i < n;
+        poly(c, [x, y - 5, x + 4, y, x, y + 5, x - 4, y], on ? (n >= 3 ? '#fff0ff' : '#d6b3ff') : '#1e1a28', on ? '#ffffff' : '#4a4060', 1);
+      }
+      if (n >= 3) glow(c, cx - 43, cy + 20, 16, '#e0c8ff', 0.4 + Math.sin(t * 6) * 0.15);
     }
     if (k.has('dance')) label(c, 'âœ¦', cx, cy - 34, '#e0a8ff', 18, 'system-ui');
   },
@@ -146,7 +163,9 @@ const GAUGES = {
       if (on) glow(c, x, y, 14, '#ffb03a', 0.7);
       poly(c, [x, y - 9, x + 4, y - 2, x + 9, y, x + 4, y + 2, x, y + 9, x - 4, y + 2, x - 9, y, x - 4, y - 2], on ? '#ffe27a' : '#3a2a20', OUT, 1);
     }
-    label(c, String(Math.floor(k.g.heat)), cx - 34, 56, '#ffd8b0', 14, 'system-ui', 800);
+    // White-Hot (Vent at 90+ lights Hot Streak): a pale tick at 90, and the number burns white past it
+    line(c, cx + 12, 10 + (bottom - 10) * 0.1, cx + 18, 10 + (bottom - 10) * 0.1, '#fff4dc', 1.5);
+    label(c, String(Math.floor(k.g.heat)), cx - 34, 56, k.g.heat >= 90 ? '#ffffff' : '#ffd8b0', 14, 'system-ui', 800);
   },
 
   // Cleric: a sun disc ringed by three petals (available Petals) and three inner rays (bloom toward Dawnstar).
@@ -169,7 +188,10 @@ const GAUGES = {
     circle(c, cx, cy, 16, ready ? '#fff6c8' : '#c9a040', OUT, 2);
     for (let i = 0; i < 3; i++) {
       const a = -Math.PI / 2 + i * TAU / 3 + Math.PI / 3;
-      line(c, cx + Math.cos(a) * 18, cy + Math.sin(a) * 18, cx + Math.cos(a) * 25, cy + Math.sin(a) * 25, i < k.g.bloom ? '#fff6c8' : '#4a4030', 3);
+      // (a Mend fills half a ray)
+      const fill = Math.max(0, Math.min(1, k.g.bloom - i));
+      line(c, cx + Math.cos(a) * 18, cy + Math.sin(a) * 18, cx + Math.cos(a) * 25, cy + Math.sin(a) * 25, '#4a4030', 3);
+      if (fill > 0) line(c, cx + Math.cos(a) * 18, cy + Math.sin(a) * 18, cx + Math.cos(a) * (18 + 7 * fill), cy + Math.sin(a) * (18 + 7 * fill), '#fff6c8', 3);
     }
   },
 
@@ -378,7 +400,8 @@ Object.assign(GAUGES, {
       rrect(c, x - 7, y, 14, 4, 1, '#3a2c22', OUT, 1);
     }
     // Cutting Line: a red edge on the strings; Understudy: two little Doll heads on the bar
-    if (k.def.bladed) for (let i = 0; i < Math.min(3, s); i++) glow(c, cx - 26 + i * 26, 50, 5, '#ff6a8a', 0.4);
+    // (Taut String: the red edge brightens and spreads as the line holds across the enemy)
+    if (k.def.bladed) { const tt = Math.min(1, (g.taut || 0) / MARI.TAUT_MAX); for (let i = 0; i < Math.min(3, s); i++) glow(c, cx - 26 + i * 26, 50, 5 + tt * 7, '#ff6a8a', 0.4 + tt * 0.4); }
     if (k.def.dolls === 2) for (const x of [-12, 12]) { circle(c, cx + x, 38, 4, '#f8efe8', OUT, 1); circle(c, cx + x - 1.5, 38, 2.6, '#1a1418'); }
   },
 });
@@ -448,6 +471,13 @@ GAUGES.bandolier = (c, k, w, h, t) => {
   // a fallen ally can't be raised again yet: a small dimmed feather that fills back
   const rl = g.raiseAt - k.now;
   if (rl > 0) { circle(c, 8, 8, 6, 'rgba(20,16,12,0.8)', 'rgba(120,200,180,0.5)', 1.2); c.beginPath(); c.moveTo(8, 8); c.arc(8, 8, 6, -Math.PI / 2, -Math.PI / 2 + TAU * (1 - rl / ALEMBIC.RAISE_CD)); c.closePath(); c.fillStyle = 'rgba(120,230,200,0.55)'; c.fill(); }
+  // the Kiln under the still: a coal lights for every cure vial thrown; all three lit, they flare (the next Throw adds a Fire Bomb)
+  const kiln = g.kiln || 0, hot = kiln >= ALEMBIC.KILN;
+  for (let i = 0; i < ALEMBIC.KILN; i++) {
+    const x = sx + (i - 1) * 13, y = 109, lit = i < kiln;
+    if (lit) glow(c, x, y, hot ? 11 + Math.sin(t * 6 + i) * 2 : 8, hot ? '#ff7a2a' : '#ff9a4a', hot ? 0.7 : 0.4);
+    ellipse(c, x, y, 5, 3.4, 0, lit ? (hot ? '#ffb040' : '#e0622a') : 'rgba(40,30,24,0.9)', OUT, 1.2);
+  }
   // the bandolier: a leather strap with a loop per slot
   const n = A.slots, x0 = 74, x1 = w - 4, sp = (x1 - x0) / n, vw = n > 3 ? 15 : 20, vh = n > 3 ? 38 : 46, foot = 96;
   ctx2Strap(c, x0 - 4, x1 + 2, foot - 10);
@@ -592,6 +622,7 @@ Object.assign(GAUGES, {
       const bw = Math.min(1, e.a / (maxHp * 0.12)) * 46;
       c.fillStyle = e.co ? 'rgba(120,100,180,0.55)' : late ? 'rgba(190,40,56,0.6)' : 'rgba(60,44,70,0.35)'; c.fillRect(x0 + 2, y + 2, Math.max(2, bw), rowH - 4);
       label(c, String(Math.round(e.a)), x0 + 66, y + rowH / 2 + 0.5, late ? '#a01828' : '#2a2034', 10, 'system-ui', 700);
+      if (e.rn) label(c, '»', x0 + 88, y + rowH / 2 + 0.5, '#6a50b0', 10, 'system-ui', 800);   // (renegotiated: a setup for Lien, Writ, Default)
       label(c, (g.holdUntil || 0) > now ? '—' : left.toFixed(left < 10 ? 1 : 0), x1 - 14, y + rowH / 2 + 0.5, late ? '#a01828' : '#5a4a6a', 10, 'system-ui', 700);
     });
     if (L.length > rows) label(c, '+' + (L.length - rows), x1 - 14, top + rows * rowH + 4, '#5a4a6a', 9, 'system-ui', 700);
@@ -630,8 +661,8 @@ function ipGlyph(c, x, y, key, s, o = {}) {
 GAUGES.breath = function (c, k, w, h, t) {
   const g = k.g, now = k.now, max = k.poolMax(), v = Math.max(0, Math.min(1, (g.breath || 0) / max));
   const cx = 50, cy = 52, R = 36;
-  const resting = now - k.lastSpend >= IRONPALM.pool.delay || k.has('skin');
-  const winded = (g.breath || 0) < IP_INPUT.L.cost;
+  const winded = !!g.winded;   // (below 18 until it's back to 60: resting pace, the keys don't glow, presses are taps)
+  const resting = now - k.lastSpend >= IRONPALM.pool.delay || k.has('skin') || winded;
   const shake = k.has('stagger') ? Math.sin(t * 60) * 2 : 0;
   c.save(); c.translate(shake, 0);
   const swell = resting && v < 1 ? 1 + Math.sin(t * 5) * 0.02 : 1;   // it swells a little as you breathe in
@@ -648,6 +679,13 @@ GAUGES.breath = function (c, k, w, h, t) {
   for (let i = 0; i < 3; i++) line(c, cx - 11, cy - 1 + i * 4, cx + 11, cy - 1 + i * 4, 'rgba(90,60,40,0.45)', 1);
   for (let i = 0; i < 4; i++) circle(c, cx - 7.5 + i * 5, cy - 7, 2.8, k.has('opening') ? '#ffd890' : '#8a96a4', OUT, 1.1);
   label(c, String(Math.floor(g.breath || 0)), cx, cy + 25, winded ? '#ff9a8a' : '#f2e6c8', 11, 'system-ui', 800);
+  if (winded) {   // the cue: breathe in, to the notch at 60
+    const ra = -Math.PI / 2 + TAU * IRONPALM.RECOVER / max;
+    line(c, cx + Math.cos(ra) * (R - 7), cy + Math.sin(ra) * (R - 7), cx + Math.cos(ra) * (R + 7), cy + Math.sin(ra) * (R + 7), '#ffffff', 2);
+    c.save(); c.globalAlpha = 0.65 + Math.sin(t * 5) * 0.35;
+    label(c, 'BREATHE', cx, cy - R - 9, '#ffe2c8', 10, 'Cinzel, Georgia, serif', 800);
+    c.restore();
+  }
   // Avalanche Fist: Momentum as beads under the ring; Read's stance as a bright arc over it
   if (k.def.avalanche) { const n = k.stacks('rush'); for (let i = 0; i < IRONPALM.RUSH_MAX; i++) { const a = Math.PI * (0.18 + i * 0.66 / (IRONPALM.RUSH_MAX - 1)); circle(c, cx + Math.cos(a) * (R + 9), cy + Math.sin(a) * (R + 9), 2.4, i < n ? '#ffb070' : '#2a2026', OUT, 0.8); } }
   if (k.has('read')) { c.beginPath(); c.arc(cx, cy, R + 7, -Math.PI * 0.85, -Math.PI * 0.15); c.lineWidth = 2; c.strokeStyle = '#ffe2a8'; c.stroke(); }

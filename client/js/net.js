@@ -114,7 +114,7 @@ const Net = (() => {
         if (CLASS_IDS.has(msg.id)) { p.cls = msg.id; p.spec = /^[a-z]{1,16}$/.test(msg.spec) ? msg.spec : null; broadcast({ t: 'cls', id: p.id, cls: p.cls, spec: p.spec }, p.id); }
         break;
       case 'cast':
-        if (!p.cls || !Number.isInteger(msg.i) || msg.i < 0 || msg.i > 6) return;
+        if (!p.cls || !Number.isInteger(msg.i) || msg.i < 0 || msg.i > 7) return;   // (6: the dash, 7: the Ultimate)
         p.x = num(msg.x, -3000, 3000, p.x); p.y = num(msg.y, -3000, 3000, p.y);
         // a: the move's id, so a move a talent swapped onto a button is found by others (specs.js abilityById)
         broadcast({ t: 'cast', id: p.id, i: msg.i, a: /^[a-z]{1,16}$/.test(msg.a) ? msg.a : undefined, x: p.x, y: p.y, tx: num(msg.tx, -3000, 3000, p.x), ty: num(msg.ty, -3000, 3000, p.y),
@@ -132,7 +132,7 @@ const Net = (() => {
         broadcast({ t: 'auto', id: p.id, k: msg.k, tx: num(msg.tx, -3000, 3000, p.x), ty: num(msg.ty, -3000, 3000, p.y), a: msg.a ? 1 : 0, s: msg.s ? 1 : 0 }, p.id);
         break;
       case 'kfx':
-        if (!p.cls || !/^[a-z-]{1,16}$/.test(msg.k)) return;
+        if (!p.cls || !/^[A-Za-z-]{1,20}$/.test(msg.k)) return;
         broadcast({ t: 'kfx', id: p.id, k: msg.k, s: msg.s ? 1 : 0, d: fxData(msg.d) }, p.id);
         break;
       case 'chat': {

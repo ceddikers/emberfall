@@ -54,14 +54,14 @@ Four ideas from the research shaped every kit.
 - **Auto-attacks** play a lighter version that alternates forehand and backhand, with small effects and small, muted damage numbers.
 - **Channeling** a real cast: a rune circle under the caster fills with the cast's progress, and motes in the class's style (embers, light motes, leaves, clock ticks) spiral into the staff, orb or hands, which swell until the release. Interrupting a cast stops it for everyone. While casting, the hero keeps turned toward the target (the enemy, or the ally being healed), following it if it moves.
 
-**Controls:** right-click to move. Left-click interacts in town, or picks an ally to heal in the arena. **Q W E R D F** are the six skills, **Space** is a shared dash (2 charges, 12 s each), **T** is a tank's taunt, **1–4** target party members, and **`** locks the most hurt ally (again to cycle). **I** opens the inventory and **N** your talents.
+**Controls:** right-click to move. Left-click interacts in town, or picks an ally to heal in the arena. **Q W E R D F** are the six skills, **Space** is a shared dash (2 charges, 12 s each), **T** is the hero's Ultimate (see "Ultimates" below), **1–4** target party members, and **`** locks the most hurt ally (again to cycle). **I** opens the inventory and **N** your talents.
 
 **Threat and taunt** (host-side, `client/js/arena/fight.js`):
 - Threat is damage dealt × 2.75 for tanks (× 1 for everyone else), plus 20% of healing done. It fades by 5% a second, so what counts is roughly the last 20 seconds. A tank who keeps hitting holds the boss through normal play; a tank who stops for a few seconds (or a newbie tank against a bursting DPS) loses it.
 - The boss attacks, faces and aims its tankbusters at whoever has the most threat. Adds keep their own threat (from damage dealt to that add, with the same tank multiplier) and go for the nearest player until someone hits them.
 - Death wipes your threat; a raise starts you again from zero.
-- **Taunt (T, tanks only, every spec):** an oGCD, 20 s cooldown, 500 range, aimed at your target (the locked enemy, or the nearest). Your threat becomes 10% above the highest, and the boss stays on you for 3 s even if someone out-threats you in that time; an add stays on you for 6 s. Each tank's taunt is its own move with a small gauge tie-in (in the class tables below). The host checks the cooldown, and clamps any threat multiplier a client sends to 0–3.
-- Bot tanks taunt back, after a moment's reaction, when the boss or an add is on someone who isn't a tank. They save it for the boss while a DPS is close to pulling.
+- **Taunt (tanks only, every spec), carried by one of the tank's own buttons** (`TAUNT_CARRY` in kits.js: Bastion Brace, Bloodreaver Bloodletting, Runeguard Rune Strike, Ironpalm Read, Gorgemaw Open Wide, Oathbroker Renegotiate; a spec's or talent's replacement of that button carries it too). It is smart: pressing the carrier taunts only when the taunt is off its 20 s cooldown and the enemy you face is on someone else (`Kit.resolve` calls `env.taunt`; the worlds in main.js and raid-host.js decide). A small mark over the carrier shows it ready, and its seconds while it cools. 500 range, aimed at the carrier's target, or the enemy you face. Your threat becomes 10% above the highest, and the boss stays on you for 3 s even if someone out-threats you in that time; an add stays on you for 6 s. Each tank's taunt is its own move with a small gauge tie-in (in the class tables below). The host checks the cooldown, and clamps any threat multiplier a client sends to 0–3.
+- Bot tanks taunt back, after a moment's reaction, when the boss or an add is on someone who isn't a tank: they press the carrier (`RaidHost.botTaunt`), and only that press taunts; if the carrier can't go (no charges, out of reach) they taunt directly so they still hold the boss. They save it for the boss while a DPS is close to pulling.
 - Tuning test (bot raids, the bot tank stops attacking and never taunts while idle): inside the party's 60 s burst windows it loses the boss after 3–6 s; outside them after 7–11 s. In normal play the top DPS sits at about 70–75% of the tank's threat and the bot tank taunts 1–3 times a fight; with taunts switched off a DPS held the boss for 8–33 s of a fight. With the old setting (× 5, no fade) the top DPS sat near 40% and an idle tank never lost it.
 
 **Ally targeting** (for healers), in order of priority:
@@ -76,6 +76,50 @@ A green dashed ring always shows who your heal will land on. Healers get the par
 
 **Authority:** each player runs their own kit locally and reports damage and heals to the host. The host's fight sim owns boss HP, player HP, threat, mechanics, deaths, and the HP history Rewind needs.
 
+### Ultimates (T, slot 7; added 2026-10-21)
+
+Every class gets one button on **T** that always feels great to press: a big payoff built up through that class's **own** loop (no shared meter). **Damage** classes press it to open a 6-10 s **window** in which bar buttons swap to empowered versions (FF14 job-gauge payoff: Bahamut, Ogi); **tanks and healers** get an **instant** Ultimate, one big timed party moment. Built so far: **Bastion · Last Bastion** (instant) and **Pyromancer · Phoenix Dive** (window), the reference implementations; the other 15 classes have nothing on T yet (no T slot).
+
+Rules: charge 0-100 in `k.g.ult`, capped, never decays; a pro fills it in about 90 s, a newcomer in about 120 s (measured in tools/simulate.js: Bastion 84 / 125 s, Pyromancer about 93 / 130 s); the kit loop supplies most of it, a passive trickle (`charge.rate`, about 35% of the pace, only while fighting) the rest; a fall keeps half (`charge.keep`); no charge while a window is open. The press spends all of it. It has a short animation lock (`lock`) during which the caster takes `dr` less damage and can't be knocked back (`Kit.ultSteady`; main.js ignores `kb` for you, raid-host.js for bots). Every hit stays far under the host's 15000 clamp (fight.js). Exact numbers live only in the tooltip ({d:N} {h:N} {s:N} tokens, numbers.js).
+
+**Data** (kits.js `ULTIMATES[classId]`, next to `TAUNT`; attached as `KITS[cls].ultimate` at the end of kits.js, so every spec and talent kit carries it; never in `abilities[]`, which stays six):
+
+```js
+ultimate: {
+  id, name,            // id: lowercase letters, at most 16 (it goes over the network as `a`)
+  slot: 7, type: 'ogcd', ult: true,
+  mode: 'instant' | 'window',
+  target: 'self' | 'enemy', range, anim: 'big', icon,   // icon: the ability icon it borrows until icons/<class>/<id>.png is painted
+  lock, dr,            // animation lock (s) and the damage reduction during it
+  charge: { rate, keep, gain: { gaugeKey: perPoint }, spend: { gaugeKey: perPoint } },
+                       // rate: %/s while fighting; gain/spend: Kit.gain()/Kit.spend() on that gauge feed it automatically
+  desc,                // the tooltip, with tokens
+  effect(k, target),   // the moment itself (instant), or the opening hit (window)
+  window: {            // mode 'window' only
+    dur,               // seconds
+    over: { <base ability id>: { fxId, name, desc, ...any ability fields to override (cast, recastGcd, glow, effect) } },
+    onEnd(k),          // runs when the window closes (not on a death)
+  },
+  burst,               // optional: a buff id; a bot opens its window while that buff is up
+}
+```
+
+Worked example, instant (Bastion · Last Bastion): `{ id: 'lastbastion', mode: 'instant', target: 'self', icon: 'bulwark', lock: 1.0, dr: 0.3, charge: { rate: 0.4, keep: 0.5 }, effect(k) { k.mitigate('party', 0.25, 8, { ab: this }); k.after(8, () => { k.damage(1600, { ab, threat: 2 }); k.heal('party', 200, { ab }); k.fx('bastion-slam'); }); } }`. Charge: `k.ultGain(4.5)` on every Perfect Block (bastion `onNotify`), and `bastionUltHits(k)` once a second: up to 3 for the hits taken in that second (12 per 100% of max HP).
+
+Worked example, window (Pyromancer · Phoenix Dive): `{ id: 'phoenixdive', mode: 'window', target: 'enemy', range: RANGED, icon: 'combust', lock: 0.8, dr: 0.3, burst: 'combust', effect(k) { k.damage(900, { ab: this }); /* an active Combustion burns 4 s longer */ }, window: { dur: 8, over: { fireball: { fxId: 'phoenixflame', name: 'Phoenix Flame', cast: 0, recastGcd: 1.8, effect(k) { k.damage(420, { ab: this }); k.gain('heat', 6, 100); } }, pyro: { fxId: 'phoenixblast', name: 'Phoenix Blast', cast: 0, recastGcd: 1.8, effect(k) { const hs = k.consume('hotstreak'); k.damage(hs ? 820 : 640, { ab: this }); k.gain('heat', 8, 100); } } }, onEnd(k) { k.damage(500, { ab: k.ult }); k.fx('phoenix-rebirth'); } } }`. Charge: `k.ultGain(4)` per Hot Streak (pyromancer `onDamage`), `k.ultGain(heat / 13)` when Vent spends Heat.
+
+**Engine** (engine.js, `Kit`): `k.ult` (the def), `k.ultCharge()`, `k.ultFull()`, `k.ultWin` ({ start, end, dur, ab } while a window is open), `k.ultLeft()`, `k.ultSteady()`, `k.ultGain(n)` (also the global helper `ultGain(k, n)`), `k.ultDeath()` (CombatActor.onDeath). `press(7)` resolves to the Ultimate; `usable()` needs it full. On resolve `ultFire` spends it, emits the `ult-spent` moment (and `ult-ready` when it fills: both go out as `kfx`, which is how party frames show the ready pip), steadies the caster, and for a window swaps `k.abilities` to empowered copies (`ultOver(ab, over[id], ult)`: the base move with the override on top, **same id**, so cooldowns, charges, talents, item perks, bot logic and `opts.ab.id` checks keep working; `ultOf` marks it, `fxId` names its look). `k.baseAbilities` is always the plain bar; queued presses follow their slot. Other clients find an Ultimate or an empowered move by id or fxId through `abilityById` (specs.js) -> `ultAbilityById(def, id)`. The cast is always instant (castStart is limited to slots 0-5); a window's empowered moves use the normal slots and cast path.
+
+**Look** (ability-vfx.js, bottom block): `ABILITY_VFX[class][ult.id]` and `[fxId]` for each empowered move; moments that land later are `KIT_VFX[name]` (name `[a-z-]{1,16}`, `atTarget` when they land on the enemy). FX.cast passes `c.cam` only for your own hero (`FX.camFor`): `c.cam.dim(a, dur)` (the world darkens under the effects), `c.cam.stop(dur)` (a cosmetic hit-stop: only the VFX clock slows, never `now`), `c.cam.punch(amount, dur)` (a small push in toward the caster) and `c.cam.flash(color, a, dur)`; main.js `screenFlash / screenDim / zoomPunch / hitStop` implement them. Everyone else's Ultimate plays at 0.6 with no camera. Recipe shape: a 0.3-0.5 s wind-up, one impact (stop + punch + flash there), a mark on the floor that lingers as long as the moment; your own Ultimate's hit is the one big number (main.js onMyDamage). VFX blocks added for these: `VFX.phoenix`, `VFX.emberWings`.
+
+**HUD** (hud.js): the T slot shows only for a hero with an Ultimate: a thin charge ring (`.slot.ult .ring`, `--ult` 0..1), the icon desaturated while charging, one soft glow and a single cue animation when it fills, the seconds left (and a draining ring) while a window is open; empowered moves get a warm rim (`.slot.empowered`). Party frames show a tiny pip (`.pf.ult`) for anyone whose Ultimate is full. The hero page lists it as the eighth key; the help line and Options name it.
+
+**Bots** (bots.js `BotAI.ult(bot, k, view, ctx)`, called each tick from RaidHost.tickBots right after the taunt): damage classes open the window when the party has a damage buff up, in a damage check, under 15% boss HP, inside their own burst (`ult.burst`) or after holding it 20 s; tanks just before a tankbuster aimed at them (under 3 s) or in a heal check; healers when 3+ allies are under 60% or a raidwide is next in the feed (under 6 s); tanks and healers never hold one more than 35 s. tools/simulate.js stays single-player and never presses T, so the pro DPS baselines don't include Ultimates.
+
+**The healers' Ultimates** (kits.js "HEALER ULTIMATES", after the Threadweaver's kit; looks in ability-vfx.js "ULTIMATES · healers"): all instant, each landing 0.4 s after the press (`HEAL_ULT_LAND`, on its recipe's impact) as a party heal plus a blow on the boss that ties the kit's separate buttons together. **Cleric · Dawn Breaks**: heals the party {h:600} + {h:150} per Petal held and a {h:80} regen for 12 s, smites for {d:1200} (+{d:1425} when a ready Dawnstar goes up with it), then all three Petals grow back; charged by Petals spent (5.5 on someone below 90%, 2 above; an Aegis 40% of that), Mends (1), Dawnstars (8, 16 in the party's burst) and Smites (0.5) through `clericUltGain`. **Grovekeeper · World Tree**: party {h:450}, a 180 px canopy that heals {h:110} every 1.5 s for 12 s (a vial-style floor pool: a `splash` with ticks, so it never replaces a Moonwell), {h:300} more on every Rejuvenated ally, roots for {d:900} or {d:1400} with Thornlash on (which starts over), +50 Bloom; charged by Rejuvenate ticks (the Bloom gain map), Bloom spent (the spend map), Thornlash ticks and Wraths while it's on (onDamage). **Chronomancer · Time Reversal**: a `rewind` with target `'party'` (fight.js: every living ally back to their best HP of the last 6 s, at most `pct` 40% of max HP each, nobody revived), at least {h:300} each, {d:900} on the boss and a 2.5 s **Time Stop** (the event's `dur`; fight.js `pauseBoss`: the course's own steps (`at` events laid by `course()`, flagged `step`) slide 2.5 s later with the course's seams and end and the feed, which holds its count (`bnext` entries `[name, secs, 1]`); the boss freezes (no walking, turning or autos, its swing timer held; frosted, its pose stopped, a stopped clock on the floor, an hourglass under its bar). True time for everything already under way: telegraphs, puddles, towers, tethers, rollers, adds, the running cast (its hit is already out), follow-ups inside a move (`after`/`afterKeep`), the hard enrage and damage/heal checks. Refused (`pauseBlock`) in a phase change or interlude (a course without an HP gate, or whose gate has fired), once the soft-enrage passes are due, near or in the enrage, in a damage or heal check, while untargetable, within 20 s of the last stop's end (`BOSS_PAUSE`), and when the script says so (`f.noPause`: the Hollow King's Royal Doom and the Long Night); Skitterra's brood clock follows its steps (`f.onPause`)), then Recall ready, Stasis 30 s closer, full Flux and Haste with two instant Bolts; charged by the Flux Haste burns (chronoFlux), Bolts cast in Haste and Rewinds. **Alembist · Magnum Opus**: party {h:500} + {h:80} per held vial (times its ripeness), a {s:250} party shield, {d:1000} + {d:200} per held vial; the vials are not used up but all ripen, and the Kiln lights; charged per vial thrown (`alemUltThrow`: ripe more, a cure more on someone hurt and less on someone healthy) and Kiln Bombs. **Threadweaver · Grand Loom**: party {h:350} + {h:120} per thread held, {d:500} + {d:300} per thread, then a 6 s Tapestry (never cutting an open one short: `g.tapUntil`) and +35 Spool; charged by the Spool gain map (damage the threads carry), Shuttle strikes and Needle tugs. Fill times (simulate, pro / newbie): Cleric 94 / 108 s, Grovekeeper 88 / 105, Chronomancer 88 / 107, Alembist 102 / 111, Threadweaver 86 / 116 (specs within about 10 s, except the Aegis 82 / 131). Bots: an Ultimate marked `after: true` (Dawn Breaks, Time Reversal: they heal what already happened) waits for 3 allies under 60% (or 2 with one under 35%) instead of firing ahead of a raidwide.
+
+**Adding the next class:** write `ULTIMATES[cls]` (pick 2-3 places in the kit's loop for `k.ultGain`, measure the fill with simulate's runSim, aim for about 90 / 120 s), its recipes in the Ultimates block of ability-vfx.js, and (for a procedurally drawn class, `art.icons === false`) an icon drawer for its id in hud.js ICON_GLYPHS. Nothing else needs touching.
+
 ## 3. The twelve classes
 
 Each class has 6 skills plus the shared dash. **GCD** skills share the global cooldown; **oGCD** skills have their own cooldowns and can be woven between GCDs. Potency × 10 ≈ damage.
@@ -87,12 +131,12 @@ Each class has 6 skills plus the shared dash. **GCD** skills share the global co
 | Key | Skill | Type | What it does |
 |---|---|---|---|
 | Q | Blade Chain | GCD | Strike → Riposte → Judgment on one button (220/300/400). Judgment gives +25 Resolve (+50 during Oath). After a Perfect Block it glows: the next hit counters for +150. |
-| W | Holy Edge | GCD | Spend 50 Resolve: 560 (720 during Oath), range 260, small self-heal. |
-| E | Brace | oGCD | 2 charges, 7 s each: 25% less damage for 3 s. Brace within 0.8 s before a hit lands for a **Perfect Block**: 60% less damage, +20 Resolve, and the counter. |
+| W | Holy Edge | GCD | Spend 50 Resolve: 560 (720 during Oath), range 260, small self-heal. Free after a Perfect Block on a tankbuster ("Turned Aside", 10 s). |
+| E | Brace | oGCD | 2 charges, 7 s each: 25% less damage for 3 s. Brace within 0.8 s before a hit lands for a **Perfect Block**: 60% less damage, +20 Resolve, and the counter. A Perfect Block on a tankbuster also gives the charge straight back and makes the next Holy Edge free. Glows in the last 0.8 s of a cast aimed at you. |
 | R | Oath of Valor | oGCD | 60 s burst: +10% damage for 15 s. |
-| D | Rally Banner | oGCD | The party takes 15% less damage for 12 s (90 s cooldown). |
+| D | Rally Banner | oGCD | Takes up to 50 Resolve: the party takes 15% less damage for 12 s, +1% per 5 Resolve put in (25% at 50); every Perfect Block under it gives +10 Resolve (90 s cooldown). |
 | F | Bulwark | oGCD | 40% less damage for 10 s, and Brace's charges refill (120 s cooldown). |
-| T | Challenge | oGCD | Taunt (20 s cooldown). Steel on the shield: +10 Resolve, and the next Blade Chain counters for +150, as after a Perfect Block. |
+| (Brace) | Challenge | taunt | Carried by Brace (20 s cooldown). Steel on the shield: +10 Resolve, and the next Blade Chain counters for +150, as after a Perfect Block. |
 
 *Floor:* combo, Holy Edge when it glows, Brace when you see the swing. *Ceiling:* time Brace to the boss's wind-up (the boss visibly raises its weapon before every auto-attack), pool Resolve for Oath, plan Banner and Bulwark onto known hits.
 
@@ -101,12 +145,12 @@ Each class has 6 skills plus the shared dash. **GCD** skills share the global co
 | Key | Skill | Type | What it does |
 |---|---|---|---|
 | Q | Hack / Maul | GCD | Two-hit combo, 240 / 340, builds Blood. |
-| W | Crimson Drain | GCD | Spend 40 Blood: 330 + up to 450 potency based on damage taken in the last 6 s. Heals for 35% of that damage (minimum 8% max HP). Free and +120 during Frenzy. |
+| W | Crimson Drain | GCD | Spend 40 Blood: 300 + up to 700 potency (1 per 25 damage) from **the bank**: the damage taken since the last Drain, 6 s at most (shown under the heart). Heals for 35% of the bank (minimum 8% max HP). Free and +120 during Frenzy. Glows on Frenzy's/War Cry's/Undying's free Drains, at 90+ Blood, or once the bank holds 20% of max HP (no more "damage in the last 6 s" glow: back-to-back Drains no longer double-dip a buster). |
 | E | Bloodletting | oGCD | 2 charges, 15 s each: 220 and +20 Blood. |
 | R | Frenzy | oGCD | 60 s burst: +15% damage, and the next 3 Drains are free and stronger. |
-| D | War Cry | oGCD | Party shield of about 14% HP (90 s cooldown). |
-| F | Undying | oGCD | Can't drop below 1 HP for 8 s; self-heals doubled (150 s cooldown). |
-| T | Reaver's Hook | oGCD | Taunt (20 s cooldown). A hooked chain thrown into the target: +20 Blood. |
+| D | War Cry | oGCD | Party shield of about 14% HP (90 s cooldown). The next Drain within 15 s is free and heals the party for a quarter of what it heals you. |
+| F | Undying | oGCD | Can't drop below 1 HP for 8 s; self-heals doubled (150 s cooldown). While it lasts Drains are free and every hit taken gives 1 Blood per 1% max HP (so empty the gauge first). Glows as a cast aimed at you lands. |
+| (Bloodletting) | Reaver's Hook | taunt | Carried by Bloodletting (20 s cooldown). A hooked chain thrown into the target: +20 Blood. |
 
 *Ceiling:* Drain right after a tankbuster heals and hits for far more than Drain on cooldown. Save Frenzy's free Drains for the buster.
 
@@ -118,9 +162,9 @@ Each class has 6 skills plus the shared dash. **GCD** skills share the global co
 | W | Runic Ward | GCD | Spend 1 Rune: a shield of about 20% HP for 8 s. When it ends, it explodes for 150–600 potency (more if it absorbed more; ×1.5 during Overload). Fully broken, it refunds the Rune. |
 | E | Glyph Burst | GCD | Spend 3 Runes: 830 (1080 during Overload). |
 | R | Runic Overload | oGCD | 60 s burst. |
-| D | Sanctum | oGCD | The party takes 15% less damage for 10 s. |
-| F | Mirror Aegis | oGCD | For 3 s, the next hit is reduced by 80% and reflected for 1500 potency. |
-| T | Binding Rune | oGCD | Taunt (20 s cooldown). A rune of challenge stamped on the target: +1 Rune. |
+| D | Sanctum | oGCD | The party takes 15% less damage for 10 s. The next Ward raised within 10 s is **sanctified**: it refunds its Rune however little it soaks, and its blast heals the party for a third of what it absorbed (spend it on the raidwide Ward that won't break). |
+| F | Mirror Aegis | oGCD | For 3 s, the next hit is reduced by 80% and reflected for 1500 potency. A reflected tankbuster carves a Rune (a mirrored buster barely touches the Ward, so the mirror pays the Rune the Ward break would have). |
+| (Rune Strike) | Binding Rune | taunt | Carried by Rune Strike (20 s cooldown). A rune of challenge stamped on the target: +1 Rune. |
 
 *Ceiling:* learn the timeline so a Ward goes up right before each heavy hit and gets fully broken (it pays for itself). Line Mirror Aegis up with the boss's biggest swing.
 
@@ -132,12 +176,12 @@ Each class has 6 skills plus the shared dash. **GCD** skills share the global co
 |---|---|---|---|
 | Q | Quick Shot | GCD | 230, +10 Focus, 35% chance of Keen Eye (55% while Marked). During Barrage it fires three times (690) with triple Focus. |
 | W | Piercing Arrow | GCD | 2 charges, 12 s each: 340. With Keen Eye, 500 and the charge comes back. |
-| E | Rapid Fire | oGCD | Spend 50 Focus: 420. |
+| E | Rapid Fire | oGCD | Spend 50 Focus (25 during Hunter's Mark): 420. |
 | R | Hunter's Mark | oGCD | 60 s party burst: the boss takes 8% more damage from everyone for 15 s; +10% crit for you. |
-| D | Hunter's Cloak | oGCD | The party takes 10% less damage. |
+| D | Hunter's Cloak | oGCD | The party takes 10% less damage; +40 Focus. |
 | F | Barrage | oGCD | The next Quick Shot fires three times. |
 
-The lowest floor (everything is instant, so you never stop to cast) and a modest ceiling: newbies reach 85% of pro damage. Mastery is spending Keen Eye before the next Quick Shot overwrites it, and never sitting on full Focus.
+The lowest floor (everything is instant, so you never stop to cast) and a modest ceiling: newbies reach about 80% of pro damage. Keen Eye banks up to two procs. Mastery (Round 2) is pooling: walk into Hunter's Mark with 100 Focus and two Keen Eyes banked, then spend it all at half price (a Keen Eye cashed there while a second is still banked readies Barrage again); Hunter's Cloak's 40 Focus feeds the Mark or Starfall Volley.
 
 **Shadowblade, Assassin** (◆◆◆). Signature: **positionals**. Gauge: a moon with 5 phases (combo points).
 
@@ -146,9 +190,9 @@ The lowest floor (everything is instant, so you never stop to cast) and a modest
 | Q | Strike | GCD | 220, +1 combo point. From behind: +60 and +2 points. |
 | W | Eviscerate | GCD | Spend all points: 120 + 115 per point (+160 at 5). From the flank +80; ×1.15 while poisoned; ×1.25 during Shadow Dance. |
 | E | Shadowstep | oGCD | 2 charges, 15 s each: teleport behind the boss; every hit counts as a positional for 5 s. |
-| R | Shadow Dance | oGCD | 60 s burst, 10 s: faster attacks, every positional lands. |
+| R | Shadow Dance | oGCD | 60 s burst, 10 s: faster attacks, every positional lands. Entered at 5 combo points, the first finisher in it keeps them. |
 | D | Venom Blade | GCD | 140 + poison (70 every 3 s for 24 s). Glows in the last 7 s. |
-| F | Smoke Bomb | oGCD | The party takes 10% less damage. |
+| F | Smoke Bomb | oGCD | The party takes 10% less damage; every hit of yours is a positional for 10 s, and a running Shadow Dance lasts 3 s longer. |
 
 The highest ceiling: newbies reach 70% of pro damage. The boss's hitbox ring shows its front (red), sides (white) and back (purple).
 
@@ -160,13 +204,13 @@ The highest ceiling: newbies reach 70% of pro damage. The boss's hitbox ring sho
 | W | Pyroblast | GCD | 3 s cast, 540. Instant and 620 with Hot Streak. |
 | E | Fire Blast | oGCD | 2 charges, 10 s each. Always crits, and works *during* a cast. |
 | R | Combustion | oGCD | 60 s burst: every Fireball, Pyroblast and Fire Blast crits for 10 s. |
-| D | Vent | GCD | 150 + 6 per Heat; resets Heat. |
-| F | Smolder | oGCD | The party takes 10% less damage. |
+| D | Vent | GCD | 150 + 6 per Heat; resets Heat. White-Hot: at 90+ Heat it also lights Hot Streak. |
+| F | Smolder | oGCD | The party takes 10% less damage; for 10 s your Heat can't boil over (it holds at 99). |
 
 - **Heat:** each point raises your damage by 0.3%. At 100 you overheat: you lose 15% HP and deal −20% damage for 5 s.
 - **Procs:** a crit gives Heating Up; a second crit turns it into Hot Streak; a non-crit clears Heating Up.
 
-*Ceiling:* experts manufacture the second crit with Fire Blast mid-cast, ride high Heat, Vent just before 100, and cast only when they know they won't have to move.
+*Ceiling:* experts manufacture the second crit with Fire Blast mid-cast, ride high Heat, Vent at 90+ for White-Hot (a Fire Blast tops 84 up), keep Combustion burning with Hot Streak Pyroblasts (+1 s each, up to 4 s), and cast only when they know they won't have to move. A Cataclysm Vents while its Meteor falls: it lands at once with the Heat in its crater.
 
 ### Healers
 
@@ -203,14 +247,22 @@ The highest ceiling: newbies reach 70% of pro damage. The boss's hitbox ring sho
 | Q | Temporal Bolt | GCD | 1.5 s cast, 280. Slow stance: heals your linked ally (the tank) for 85% of the damage. Haste stance: heals the whole party for 30%. |
 | W | Rewind | oGCD | 2 charges, 30 s each: set an ally's HP back to its highest point in the last 4 s. Revives them if they died in that window. They become your link. |
 | E | Shift | oGCD | Toggle stance. Haste needs 20+ Flux; your first Bolt in Haste is instant. |
-| R | Accelerando | oGCD | 60 s party burst: everyone is 10% faster for 15 s; +40 Flux. |
-| D | Stasis | oGCD | The whole party is immune for 2 s (120 s cooldown). |
+| R | Accelerando | oGCD | 60 s party burst: everyone is 10% faster for 15 s; +40 Flux. Aimed at an ally: they are Quickened (12% faster still, 15 s). |
+| D | Stasis | oGCD | (Round 2) 60 s: for 8 s the Bolts' heals are held (25% stronger); press again or let it end to release them to the whole party. Cooldown runs from the release. |
 | F | Recall | GCD | 2.5 s cast, 30 s cooldown: raise, or 1200 heal. |
 
 - **Flux:** Slow stance fills it (+3/s). Haste stance gives 20% faster casts and +10% damage, but drains it (−5/s).
 - Hitting 0 Flux in Haste knocks you into Slow with 3 s of slower casts.
 
 *Ceiling:* plan Haste for raidwides and burst windows, fire Rewind right after a tankbuster, and land Stasis on the boss's biggest attack.
+
+**Healer kit synergy, Round 2 (2026-10-21).** Every healer button now plays off the others, and four healers can pick ONE ally to make stronger.
+- *Chronomancer:* **Paradox** (Shift from Haste back to Slow): an instant hit of potency 14 per Flux spent in that Haste window (`CHRONO_PARADOX`, about 5 damage per Flux), healing the party for half; stumbling out (0 Flux) gives none. Shift glows both ways (into Haste at 95+ Flux, back below 15). **Rewind** in Haste costs 25 Flux instead of a charge (that Flux feeds Paradox). **Stasis** reworked: 8 s of held Bolt heals (+25%), released to the party on the second press or at the end; never wasted; 60 s cooldown from the release. Bolt now carries a smaller share of the damage, so potMult fell (0.84 to 0.67; Echoist 0.53 to 0.47; Accelerant 0.80 to 0.70) and Bolt's heal shares rose to match (Slow 150% / Haste 60%; Echoist 135/56; Accelerant 114/71). Phase Strike and Stopwatch now act only on the shift into Haste (Phase's Bolt at 75%).
+- *Grovekeeper:* every Thornlash tick grows 2 Bloom (`GROVE_THORN_BLOOM`; pandemic already carried up to 9 s). **Rebirth** is instant on the living: a heal of potency 1100 and Wildheart; it glows when its target is down.
+- *Alembist:* **Distill** is a decision: on an empty still the next two reagents are instant (as before); with one reagent in, it doubles it into a fully ripe vial at once. Quickpowder Galvanizes the ally it lands on, and Smart Throw gives a healthy target the Quickpowder before a bomb.
+- *Cleric / Threadweaver:* Intervention and Recall glow when their target is down; Benediction Blesses. The Threadweaver had no dead buttons left (Grand Loom ties Tapestry in).
+
+**Chosen-ally buffs** (`ALLY_BUFFS` in engine.js): Quickened (Accelerando / Echo Chamber / Time Warp: 12% haste, 15 s), Blessed (Benediction: +10% damage, 10 s), Wildheart (Rebirth on the living: +10% damage, 12 s), Galvanized (Quickpowder's target: +10% damage, 10 s). Data flow: the kit calls `k.allyBuff(target, id)`, which emits `{ type: 'allyBuff', target, id, kind, value, dur }`; a human's goes to the host as a `cev` (main.js accepts only a known id on a numeric target and resets its kind, value and duration from the table), a bot's goes straight in (raid-host.js botWorld). `RaidHost.onPlayerEvent` keeps it in `allyBuffs` per player id (the same buff again replaces the old one; nobody fallen) and broadcasts `{ t: 'abuff', to, id, kind, value, dur, from }`. Every client keeps `raid.abuffs`: your own kit reads the ones on you through `env.selfMods()` (`dmg` multiplies damage in `Kit.damage`, `haste` shortens casts and the GCD in `Kit.hasteMult`), bots through `RaidHost.allyMods(id)`; the party frames show a chip with the move's icon, your buff bar shows it too. Bots spend them on the damage dealer who has dealt the most (`BotAI.topDps`) while the party's burst is on (`view.burst`: a damage buff or a vulnerability on the boss), Accelerando on cooldown; a shielding move keeps a charge or waits for an upcoming tankbuster. The simulator has no allies, so it gives these no damage.
 
 ### Advanced DPS (added 2026-10-19)
 
@@ -319,19 +371,19 @@ The first class built on a different **pacing**: there is **no GCD**. Light, Hea
 | R | Read | oGCD | 6 s: a 1.2 s reading stance (20% less damage). A hit landing in its first 0.4 s is **read**: half damage, a counter (63, double threat) and 15 Breath. A read **tankbuster** gives an **Opening**: the next Heavy within 4 s is a free Thousand Palms, 30% stronger. Doesn't break the string. |
 | D | Iron Skin | oGCD | 120 s: 40% less damage for 10 s, and Breath refills at its resting pace the whole time. |
 | F | Temple Bell | oGCD | 60 s: the party takes 10% less damage for 8 s; you get **Second Wind** for 15 s (Breath refills twice as fast, +10% damage). |
-| T | Beckoning Palm | taunt | The shared taunt; calling it out steadies your breathing (+30 Breath). |
+| (Read) | Beckoning Palm | taunt | The shared taunt, carried by Read; calling it out steadies your breathing (+30 Breath). |
 
 **The move list** (a string fires its move on its last press: that press's hit plus a bonus):
 
 | Move | String | Bonus | Effect |
 |---|---|---|---|
 | Crane Step | K L | 24 | Gives back 22 Breath without stopping. |
-| Flowing Palms | L L L | 50 | Cheap and simple. |
+| Flowing Palms | L L L | 50 | Cheap and simple. All three palms Crisp and left under 40 Breath: 12 Breath back (breathing without stopping). |
 | Rising Gate | L L H | 60 | A launcher, triple threat. The next input gets 1.3 s instead of 0.8 s. |
 | Heaven's Drop | L L H K K | 140 | Rising Gate carried on: an axe kick onto the airborne boss. |
 | Tiger Wall | H K K | 18 | 25% less damage for 5 s (strung before a buster). |
 | Stone Breaker | H H K | 55 | Bruise: a 20-potency tick every 3 s for 15 s. |
-| Iron Ox | H H H | 90 | Double threat. |
+| Iron Ox | H H H | 90 | Double threat. Off balance: Read is ready again at once, and a blow Read within 4 s opens like a tankbuster (the next Heavy is a free, Crisp Thousand Palms). Ox > Read the next auto > Heavy. |
 | Thousand Palms | L K H H | 170 | The finisher: five extra strikes in a flurry. |
 
 - **Strings.** A press that continues a known string adds to it; one that fits no string **breaks** it and starts a new one. Waiting longer than the **window** (0.8 s after the last recovery ends, 1.3 s after Rising Gate) **drops** it. After a finished move any key just starts the next string (no break). Strings branch: H H, then H is Iron Ox and K is Stone Breaker; L L H is a move on its own and also the start of Heaven's Drop.
@@ -362,19 +414,19 @@ Other engine pieces: named moves live on the kit (`kit.moves`) and `abilityById`
 <!-- tanks-2: Gorgemaw and Oathbroker (advanced tanks, 2026-10) -->
 ### Advanced tanks (added 2026-10-20)
 
-Two tanks whose survival is a plan rather than a cooldown rotation. Both carry tank threat (the shared tank multiplier) and the usual taunt on T, tied to their gauge.
+Two tanks whose survival is a plan rather than a cooldown rotation. Both carry tank threat (the shared tank multiplier) and the usual taunt (on a carrier button), tied to their gauge.
 
 **Gorgemaw, the Glutton Knight** (◆◆◇, complexity 3). Signature: **eating mechanics**. Gauge: the Belly, a row of hollows holding Morsels in their shape's colour, with a jaw over it that gapes while Open Wide is up. Melee; autos are a gauntlet cuff (40).
 
 | Key | Skill | Type | What it does |
 |---|---|---|---|
-| Q | Gnash > Rend > Gulp | GCD | 220 / 300 / 390. Gulp heals 2% of your HP. |
+| Q | Gnash > Rend > Gulp | GCD | 220 / 300 / 390. Gulp heals 2% of your HP, and into an empty Belly it swallows a Ring Morsel (once every 20 s). |
 | W | Open Wide | oGCD | 2 charges, 14 s: the jaw is open for 1.5 s. An edible hit that lands on you deals 25% and becomes a Morsel. |
 | E | Spit | GCD | Range 300: the oldest Morsel back at the boss. Ring 420, Lance 460, Fang 490, Spike 800. The button names what it will spit. |
-| R | Digest | oGCD | 25 s: eat every Morsel. Each heals 6% of your HP and gives 5% less damage taken for 8 s (at most 30%). |
-| D | Iron Gut | oGCD | 90 s: 40% less damage for 8 s. |
+| R | Digest | oGCD | 25 s: eat every Morsel. Each heals 6% of your HP and gives 5% less damage taken for 8 s (at most 30%), and its **acid** makes the next Spit within 15 s 50% harder per Morsel (at most +100%). Digest as the buster comes, eat it, spit the Spike back doubled: Digest and Spit feed each other instead of being either/or. |
+| D | Iron Gut | oGCD | 90 s: 40% less damage for 8 s. While it lasts Digest works in any moment and every Morsel counts twice (heal, armour, acid). |
 | F | Bottomless | oGCD | 120 s: for 4 s you eat everything, raidwides too. The whole party takes half from a raidwide, and each one is a Morsel for you. |
-| T | Bellow | taunt | Takes the boss and opens the jaw for 1 s. |
+| (Open Wide) | Bellow | taunt | Carried by Open Wide. Takes the boss and opens the jaw for 1 s. |
 
 - **What's edible** (host rule, `MAW_HOST.typeOf` in `fight.js`): any boss telegraph by its shape (circle or donut: Ring; line or cross: Lance; cone: Fang), every tankbuster (Spike), spread and proximity marks (Ring), raidwides (Ring, Bottomless only). A boss file can override with `eat: '<shape>'` or `eat: false` on a mechanic, or pass `eat` on its own `damagePlayer` calls. **Not edible:** room blasts you hide from behind a prop (`cover`: Gut Blast, the Hollow King's knell-behind-a-tomb moves), stacks and towers (the party's soak would be pointless), floor puddles, adds' hits, enrage. Volkar's Rod Strike in the open and Chain Lightning are edible as Lances (a chain swallowed ends in the mouth).
 - **Across the four bosses** the rule above decides it, so every tankbuster (Tenderize, Silk Wrap, Titan Fist, Grave Cleave) is a Spike, every plain telegraph you stand in is food by its shape (the Hollow King's sweeps are Fangs, his stomp and Crown of Graves Rings), and a teammate's circle (Larder Toss casks, Grave Marks) can be eaten whole. Room moves are not: cover blasts (Gut Blast), Lights Out, stacks and towers (Barrow Bells), custom mechanics (gaze, polarity, gale, hooks). Volkar's Rod Strike in the open and Chain Lightning are opted in.
@@ -389,12 +441,12 @@ Two tanks whose survival is a plan rather than a cooldown rotation. Both carry t
 | Key | Skill | Type | What it does |
 |---|---|---|---|
 | Q | Dun > Levy > Collect | GCD | 230 / 300 / 400. Every strike pays the oldest entry down by 2% of your HP. |
-| W | Renegotiate | oGCD | 20 s: every entry comes due 4 s later. |
+| W | Renegotiate | oGCD | 20 s: every entry comes due 4 s later and is marked **renegotiated** (» on the page): under Lien the boss pays two thirds of it, under Writ you pay half of it, Default strikes for it in full, Foreclose at 1.5×. |
 | E | Settle | oGCD | 25 s: pay the whole Ledger now at half its size. |
-| R | Lien | oGCD | 60 s: for 10 s the boss pays a third of every bill that comes due. |
-| D | Writ of Protection | oGCD | 90 s: 30% less damage for 8 s, and what's written in that time is halved. |
-| F | Default | oGCD | 120 s: tear the Ledger up. It is closed for 10 s after (hits land on you in full). |
-| T | Summons | taunt | Takes the boss; its next blow on you goes 100% into the Ledger, due 3 s later than usual. |
+| R | Lien | oGCD | 60 s: for 10 s the boss pays a third of every bill that comes due (two thirds of a renegotiated one), and every Collect strike that pays the Ledger down also strikes the boss for what it paid (it was ~0% of damage when Collect simply emptied the Ledger). |
+| D | Writ of Protection | oGCD | 90 s: 30% less damage for 8 s, and what's written in that time is halved; a renegotiated line coming due in it is billed at half. |
+| F | Default | oGCD | 120 s: tear the Ledger up and strike the boss for half of it (renegotiated lines in full): a Ledger-fed finisher. It is closed for 10 s after (hits land on you in full). |
+| (Renegotiate) | Summons | taunt | Carried by Renegotiate. Takes the boss; its next blow on you goes 100% into the Ledger, due 3 s later than usual. |
 
 - **The Ledger** takes 60% of every hit after mitigation and bills it 8 s later as raw damage (no mitigation twice). It is **host-owned** (`s.led` in `fight.js`, rules in `OATH` in `kits.js`, shared with `tools/simulate.js`). The kit sends `ledger` events (`op`: `pay`, `reneg`, `settle`, `lien`, `writ`, `default`, `foreclose`, `summons`, `hold`, `cosign`, and `terms` every 3 s for talents and spec); every value is clamped on the host. The host sends `fev 'ledger'` with the packed page (`[[amount, seconds left, co-signer]]` plus timers) whenever it changes (at most 10 a second, and once a second while it holds anything), and `fev 'bill'` when a bill lands, so the owner's column stays exact and everyone else sees the stamp. A late joiner gets the next page within a second. A very long Ledger folds its two oldest lines together (24 at most).
 
@@ -403,7 +455,7 @@ Two tanks whose survival is a plan rather than a cooldown rotation. Both carry t
 **Specializations.**
 - **Glutton** (Gorgemaw): the Belly holds 5. A Spit whose next Morsel is the same shape fires both as a **Fusion** at 2.4× (two Rings a Quake, two Lances a Skewer, two Fangs a Maul, two Spikes an Impale).
 - **Gizzard** (Gorgemaw): Digest feeds the party by shape: Ring a shield on everyone (150 each), Lance a big shield on the most hurt (360 each), Fang the party takes 15% less per Fang for 6 s (at most 30%), Spike the most hurt ally is immune for 2 s. You heal 3% per Morsel.
-- **Guarantor** (Oathbroker): Lien becomes **Co-Sign** (20 s cooldown): for 20 s, 30% of what an ally takes goes into your Ledger instead (marked lines on the page). Picks your locked ally, or the most hurt other ally.
+- **Guarantor** (Oathbroker): Lien becomes **Co-Sign** (20 s cooldown): for 10 s (was 20 s, which made it a press-on-cooldown button), 30% of what an ally takes goes into your Ledger instead (marked lines on the page), and every Collect strike that pays a co-signed line down heals that ally for what it paid (`OATH.op 'pay'` returns `r.co`, the host heals). Half the time covered: sign before the blow you want to share; it glows while the boss casts. Picks your locked ally, or the most hurt other ally.
 - **Collector** (Oathbroker): every bill also strikes the boss for half its size, and Default becomes **Foreclose**: the whole Ledger in one blow on the boss, then closed for 10 s.
 
 **Talents** (15 each; one plain number each: Wide Jaw, Grace Period). New moves: Regurgitate (III, Spit) and Stone Belly (V, Iron Gut); Audit (III, Settle) and Moratorium (V, Renegotiate). The rest change behaviour (`client/js/combat/talents.js`, tanks-2 block).
@@ -461,9 +513,9 @@ Single talents stay under +7% pro DPS; full builds +7 to +17%.
 | Q | Jab | GCD | The Doll stabs: 250, +1 Encore. |
 | W | Pull Strings | oGCD | 2 charges, 10 s. Fling the Doll to where you aim (within reach). It cuts what it passes through and stays there until you pull it again or pick another target. |
 | E | Cross-Cut | GCD | 8 s. The strings become blades along the line from you to the Doll: 560 and +2 Encore if the enemy is on the line, nothing otherwise. |
-| R | Pirouette | GCD | 12 s. The Doll spins: 300 around it, and nothing can touch it for 1.5 s. +1 Encore. |
-| D | Swap | oGCD | 20 s. You and the Doll trade places. |
-| F | Grand Finale | GCD | 30 s, needs 3 Encore: spends it all on five hits of 60 + 44 per Encore. The Doll can't move while it plays. |
+| R | Pirouette | GCD | 12 s. The Doll spins: 300 around it, and nothing can touch it for 1.5 s. +1 Encore, +1 more for a blow it spins through. Glows when a telegraph is about to land on the Doll. |
+| D | Swap | oGCD | 20 s. You and the Doll trade places. Stage Cross: the next Cross-Cut within 6 s cuts twice as hard and gives 1 more Encore. |
+| F | Grand Finale | GCD | 10 s, needs 5 Encore: spends it on five hits of 160. The Doll can't move while it plays. |
 
 - **The Doll** works only the enemy you have picked (click or Tab): it stations itself on that enemy's far side. With none picked it stays where it is. Pull Strings parks it until you pull again or pick another target; Swap leaves it for 1.5 s. Bots keep the old 3 s hold.
 - **Strings:** three. One tears if the Doll is dragged past 300 px from you (it gets yanked back) or a boss mechanic lands on it. At 0 the Doll goes limp for 4 s and then all three come back; a torn string regrows after 15 s.
@@ -473,7 +525,7 @@ Single talents stay under +7% pro DPS; full builds +7 to +17%.
 **Specs.**
 - **Loomwright** (The Living Web): 5 threads, and heals run two links deep (60% to the far end, then 30% on through that ally's threads).
 - **Shears** (The Cut Thread): threads store 60% more, Snap recharges in 8 s and refunds 10 Spool per thread, and Tighten becomes **Lash** (the pull plus a 260 shield for 2 s).
-- **Cutting Line** (The Bladed String): strings reach 400 px and cut any enemy they cross once a second (48), and Cross-Cut is an oGCD with 2 charges on 9 s.
+- **Cutting Line** (The Bladed String): strings reach 400 px and cut any enemy they cross once a second (48, and Taut String: +12 for every second the line holds across, up to +72; it slackens when the line leaves or a String tears), and Cross-Cut is an oGCD with 2 charges on 9 s.
 - **Understudy** (Two Dolls on One Bar): two Dolls at 58% each. The triangle between you and both Dolls is **the Stage**: an enemy inside takes 10% more damage from the whole party.
 
 **Talents.** Threadweaver: Backstitch, Cross Stitch, Taut, Thimble, Reel In, Knotwork, Embroider (replaces Mend Seam), Full Bobbin, Tension, Grand Tapestry, Selvedge, Long Thread, Cat's Cradle (replaces Tighten), Heartstring, Double Knot. Marionettist: Flourish, Lunge, Counterweight, Body Double, Mended Strings, Stand-In, Tangle (replaces Pirouette), Encore! Encore!, Second Act, Curtain Call, On Cue, Quick Change, Red Curtain (replaces Swap), Twin Strings, Final Bow.
@@ -948,7 +1000,7 @@ The user picked: **story vignettes**, **one per spec**, **built so the spec's tr
 |---|---|---|
 | **Ranger · Sharpshooter** (The Still Eye) | Precision | Each second standing still adds Steady Aim (up to 5, +4% damage each); moving loses it. Piercing Arrow becomes **Aimed Shot**: a 2 s cast, a heavy hit (instant with Keen Eye). |
 | **Ranger · Venomstrike** (The Green Death) | Damage that ramps | Quick Shot stacks Acid on the target (up to 8, a growing burn). Piercing Arrow becomes **Caustic Arrow**, which bursts every stack. |
-| **Shadowblade · Bladedancer** (The Whirling Edge) | Steady damage from anywhere | Positionals always land. Shadowstep becomes **Blade Fury**, a spinning flurry (+1 combo point, two charges). |
+| **Shadowblade · Bladedancer** (The Whirling Edge) | Steady damage from anywhere | Positionals always land. Shadowstep becomes **Blade Fury**, a spinning flurry (+1 combo point, two charges). **Tempo**: an Eviscerate at exactly 5 with no point spilled since the last adds a Tempo (up to 3); at 3 the next Blade Fury is a Flourish (650). A spilled point loses them. |
 | **Shadowblade · Nightstalker** (The Knife Behind) | Burst from behind | Eviscerate becomes **Backstab**: much stronger from behind, 25% weaker from the front. Shadow Dance lasts 14 s. |
 | **Pyromancer · Cataclysm** (The Falling Star) | Huge single hits | Pyroblast becomes **Meteor**: lands 1.5 s after the cast, hits harder, leaves a burning crater. Hot Streak still makes it instant. |
 | **Pyromancer · Sigilmancer** (The Burning Circle) | Positioning | Combustion becomes **Ember Circle**: a 20 s circle at your feet (45 s cooldown). Inside it you cast 20% faster and deal 15% more damage; outside, nothing. Bots stay in theirs. |
@@ -1071,7 +1123,7 @@ The base Cleric gains least in damage because its talents mostly change healing 
 |---|---|---|
 | I | **Fletcher's Rhythm** | Every fourth Quick Shot looses a second arrow for half damage. |
 | I | **Ricochet** | A Piercing Arrow that crits ricochets back into your quiver: it gives its charge back. *Sharpshooter:* An Aimed Shot that crits ricochets back into your quiver: it gives its charge back. *Venomstrike:* A Caustic Arrow that crits ricochets back into your quiver: it gives its charge back. |
-| I | **Steady Breath** | A Quick Shot loosed after standing still for 2s lights Keen Eye far more often (60%). |
+| I | **Steady Breath** | A Quick Shot loosed after standing still for 2s lights Keen Eye far more often (55%). |
 | II | **Disengage** | Hunter's Cloak now also leaps you backwards, clear of whatever is at your feet. |
 | II | **Second Wind** | When you drop below 40% HP, your next Quick Shot also heals you for 15% of your HP (once every 45s). |
 | II | **Light Feet** | Each Piercing Arrow takes 3s off Hunter's Cloak's cooldown. *Sharpshooter:* Each Aimed Shot takes 3s off Hunter's Cloak's cooldown. *Venomstrike:* Each Caustic Arrow takes 3s off Hunter's Cloak's cooldown. |
@@ -1091,14 +1143,14 @@ The base Cleric gains least in damage because its talents mostly change healing 
 |---|---|---|
 | I | **Feint** | A Strike from the front is no longer wasted: it sets up a feint, and your next Eviscerate lands as a hit from the side wherever you stand. *Nightstalker:* A Strike from the front is no longer wasted: it sets up a feint, and your next Backstab lands as a hit from behind wherever you stand. |
 | I | **Opportunist** | An Eviscerate while the boss is casting is always a critical hit. *Nightstalker:* A Backstab while the boss is casting is always a critical hit. |
-| I | **Ambush** | Shadowstep now strikes as you arrive: a stab from behind for a combo point. *Bladedancer:* Blade Fury's spin now gives 2 combo points instead of 1. |
+| I | **Ambush** | Shadowstep now strikes as you arrive: a stab from behind for a combo point. *Bladedancer:* Blade Fury's spin now gives a second combo point, but never one past 5. |
 | II | **Shadow Dodge** | A Shadowstep while the boss is casting also slips the blow: you take 50% less damage for 2s. *Bladedancer:* A Blade Fury while the boss is casting also slips the blow: you take 50% less damage for 2s. |
 | II | **Recuperate** | While you are below 60% HP, Eviscerate heals you for 3% of your HP per combo point. *Nightstalker:* While you are below 60% HP, Backstab heals you for 3% of your HP per combo point. |
 | II | **Smoke Trail** | Shadowstep leaves a cloud of smoke where you vanished: allies inside take 10% less damage for 6s. *Bladedancer:* Blade Fury kicks up a cloud of smoke around you: allies inside take 10% less damage for 6s. |
 | III | **Rupture** | **New move.** Venom Blade becomes Rupture: a finisher that spends all your combo points to open the boss up for 4s per point. While it bleeds, Eviscerate hits 15% harder, as with your poison. *Nightstalker:* Venom Blade becomes Rupture: a finisher that spends all your combo points to open the boss up for 4s per point. While it bleeds, Backstab hits 15% harder, as with your poison. |
 | III | **Relentless** | A 5-point Eviscerate has an even chance to give back 1 combo point. *Nightstalker:* A 5-point Backstab has an even chance to give back 1 combo point. |
 | III | **Sharpened Shadows** | A combo point that would spill past 5 now sharpens your next Eviscerate instead: 12% harder for each (up to 3). *Nightstalker:* A combo point that would spill past 5 now sharpens your next Backstab instead: 12% harder for each (up to 3). |
-| IV | **Shadow Clone** | Shadow Dance now calls a shadow that repeats your Eviscerates at 30%. *Nightstalker:* Shadow Dance now calls a shadow that repeats your Backstabs at 30%. |
+| IV | **Shadow Clone** | Shadow Dance now calls a shadow that repeats your Eviscerates at 25%. *Nightstalker:* Shadow Dance now calls a shadow that repeats your Backstabs at 25%. |
 | IV | **Shadow Sprint** | (The one number talent.) Shadowstep recharges 3s faster. *Bladedancer:* Blade Fury recharges 1s faster. |
 | IV | **Endless Dance** | Each 5-point finisher during Shadow Dance makes it last 1s longer (up to 4s). |
 | V | **Death Blossom** | **New move.** Smoke Bomb becomes Death Blossom (120s): you vanish into a storm of knives around the boss, six cuts over 1.5s that each give a combo point. The last is a free Eviscerate with everything you hold. *Nightstalker:* Smoke Bomb becomes Death Blossom (120s): you vanish into a storm of knives around the boss, six cuts over 1.5s that each give a combo point. The last is a free Backstab with everything you hold. |
@@ -1518,7 +1570,7 @@ After an intended balance change, record the new numbers with `node tools/check.
   - every tank and tank spec gets its taunt and its gauge tie-in.
 
 **Not yet tested:**
-- In the browser: the taunt on T (bar slot, tooltip, cooldown sweep, the three looks), the threat meter, the boss status icons and their tooltips, the upcoming-moves row (with `?bnext-demo` until the bosses send `bnext`), and the target frame moving down under a taller boss plate.
+- In the browser: the taunt (now on carrier buttons; the T slot is the Ultimate), the threat meter, the boss status icons and their tooltips, the upcoming-moves row (with `?bnext-demo` until the bosses send `bnext`), and the target frame moving down under a taller boss plate.
 - A human tank taunting over real latency (the host applies it about one round trip after the press; your own look plays at once).
 - The Hollow King played by a person, on Normal or Hard (tested headless with bots, and in the browser solo with bots: hall, Gaze cones, lanterns, knights and replays, bells, the Long Night, the Doom sigil, loot).
 - The Hollow King over real latency. The host judges the Gaze from the facing it last heard (positions arrive about 12 times a second), so turning away at the very last moment can count a little late on a slow connection. Lantern pickups and cures are judged on the host from positions too.

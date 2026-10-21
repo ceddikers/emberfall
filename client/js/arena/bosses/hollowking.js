@@ -66,6 +66,8 @@ const HOLLOWKING = {
 
     // shared with the bots and the host's view (raid-host.js)
     f.lanterns = []; f.doomed = new Map(); f.knights = []; f.echoPlan = []; f.night = false; f.doomNext = null;
+    // no Time Stop (fight.js pauseBoss) on Royal Doom: while it's cast, while anyone carries it, and all the Long Night
+    f.noPause = () => f.night || f.doomed.size > 0 || !!(f.doomNext && f.doomNext.length) || !!(B.cast && B.cast.name === 'Royal Doom' && f.t < B.cast.end);
     const memory = [null, null];   // the swing each knight remembers
     let memNext = 0;
 

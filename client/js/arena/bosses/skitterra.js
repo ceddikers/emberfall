@@ -381,6 +381,12 @@ const SKITTERRA = {
       return spots;
     };
     let swarmAt = null;
+    // a Time Stop (fight.js pauseBoss) slides her Brood and Swarm steps later: the clock on the clutches goes with them
+    f.onPause = dur => {
+      const step = n => f.events.find(e => e.step && e.name === n), br = step('Brood'), sw = step('The Swarm');
+      if (sw) swarmAt = sw.t + f.ct(3); else if (swarmAt != null && swarmAt > f.t) swarmAt += dur;
+      if (liveClutches().length) broodClock(br ? br.t - f.t + f.ct(3) : 0, swarmAt != null ? swarmAt - f.t : 0);
+    };
     // Brood (Act I): the two ripest clutches hatch, one spiderling each: a pair across the web
     const brood = () => {
       const d = f.ct(3);
