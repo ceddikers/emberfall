@@ -189,7 +189,7 @@ Each boss's own background and palette from above.
 
 ---
 
-## Still unpainted (15 icons, two sheets)
+## Painted 2026-10-22 (these 15 now have painted icons in client/icons/boss/; the briefs below are kept for reference)
 
 These 15 still show the drawn placeholder in the cast frame (October 2026). Some were briefed above; this list replaces those briefs, so paint from here. Use each boss's own background and palette from its section above, and the shared style. Sheet 1 is the first nine, read left to right, top to bottom; sheet 2 the last six (the rest of the grid left empty).
 
