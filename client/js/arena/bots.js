@@ -840,7 +840,7 @@ const BotAI = {
       if (k.gcdRemaining() < 0.65 && !k.cast) continue;
       if (a.target === 'ally' || (hotAndHurt && a.id === 'fireblast')) continue;
       // a step that puts you behind the boss (Shadowstep) isn't taken with floor about to land: it could land you in it
-      if (a.id === 'step' && view.mechs.some(m => m.type === 'aoe' && m.resolveAt - view.t < 2.5)) continue;
+      if (a.id === 'step' && view.mechs.some(m => ['aoe', 'safe', 'tower', 'proximity', 'gale', 'drop', 'gaze', 'stack', 'spread'].includes(m.type) && m.resolveAt - view.t < 2.5)) continue;
       const defensive = /mitigate|party takes|less damage|immune|shield/i.test(a.desc) && !/Burst/.test(a.desc);
       // Stasis is for the enrage; a tank's Undying and Mirror Aegis wait for the busters aimed at it (the tank branch above)
       if (a.id === 'stasis' || a.id === 'undying' || a.id === 'mirror') { if (a.id === 'stasis' && castingBig && view.bossCast.left < 1.2 && /Last Call|Devour|Skybreak|Moonset/.test(view.bossCast.name)) return i; continue; }
