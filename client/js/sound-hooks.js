@@ -129,6 +129,22 @@ const SoundHooks = (() => {
       }
     } catch (e) { /* never into the game loop */ }
   }
+  // counted stacks filling (a class's whole-number gauge, Pyromancer's two sparks): a rising tick on each gain, a fuller one when full
+  let stackKit = null, stackWas = {};
+  function stacks(kit) {
+    if (!has() || !kit) return;
+    try {
+      if (kit !== stackKit) { stackKit = kit; stackWas = null; }
+      const g = kit.def && kit.def.gauge, cur = {};
+      if (g && g.key === 'heat') cur.sparks = kit.has('hotstreak') ? 2 : kit.has('heating') ? 1 : 0;
+      else if (g && g.max < 20 && typeof kit.g[g.key] === 'number') cur.pips = Math.floor(kit.g[g.key]);
+      if (stackWas) {
+        if (cur.sparks > (stackWas.sparks || 0)) play(cur.sparks >= 2 ? 'stack-2' : 'stack-1', { vol: 0.9 });
+        else if (cur.pips > (stackWas.pips || 0)) play('pip-up', { vol: 0.7, rate: Math.min(1.6, 0.9 + 0.1 * cur.pips) });
+      }
+      stackWas = cur;
+    } catch (e) { /* never into the game loop */ }
+  }
   function stopBeds() { for (const h of [amb, hum, heart]) if (h) h.stop(0.3); amb = hum = heart = null; castEnd(0.1); }
 
   // ---------------------------------------------------------------- the interface
@@ -174,7 +190,7 @@ const SoundHooks = (() => {
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wireUI); else wireUI();
   }
 
-  return { play, vo, ability, auto, castStart, castEnd, telegraph, bossCast, impact, music, phase, bossTrack, tick, stopBeds, ground, TG };
+  return { play, vo, ability, auto, castStart, castEnd, stacks, telegraph, bossCast, impact, music, phase, bossTrack, tick, stopBeds, ground, TG };
 })();
 
 if (typeof module !== 'undefined') module.exports = { SoundHooks };

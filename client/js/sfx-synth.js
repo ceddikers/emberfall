@@ -667,19 +667,20 @@
     'emote-wave': 2, 'fish-bite': 3, 'fish-cast': 1.5, 'fish-catch': -3,
     'fish-lost': -0.5, 'fish-reel': -0.5, 'heal-land': -2.5, 'hit-heavy': 5,
     'hit-light': 9, 'lb-fire': -1.5, 'lb-ready': -5, 'loot-take': -2,
-    'low-hp': -4.5, 'npc-talk': -6, 'ping': 2.5, 'portal-enter': -3,
-    'portal-hum': -22.5, 'pull-count': 0.5, 'pull-count-last': -3.5, 'pull-go': -2,
-    'revive': -2, 'shield-break': 5, 'shield-up': -4, 'step-grass': 8,
-    'step-stone': 8.5, 'step-wood': 1.5, 'story-page': 3.5, 'tg-aoe': 1.5,
-    'tg-buster': 1, 'tg-charge': 0.5, 'tg-gaze': 0.5, 'tg-knockback': 2.5,
-    'tg-raidwide': -0.5, 'tg-spread': 5.5, 'tg-stack': 1.5, 'title-sting': -3,
-    'ui-bounty': 0.5, 'ui-buy': -6, 'ui-click': 2, 'ui-close': -0.5,
-    'ui-equip': -2.5, 'ui-error': -3, 'ui-feat': -7, 'ui-gold': -4,
-    'ui-hover': 13, 'ui-secret': -6, 'ult-alembist': 0.5, 'ult-bastion': 1.5,
-    'ult-bloodreaver': 1, 'ult-driftblade': 6.5, 'ult-fire': -1.5, 'ult-gorgemaw': 1,
-    'ult-grovekeeper': 2.5, 'ult-marionettist': 0.5, 'ult-oathbroker': -1, 'ult-pyromancer': -1,
-    'ult-ranger': 3, 'ult-ready': -4, 'ult-runeguard': -1, 'ult-shadowblade': 4,
-    'ult-thermist': -1, 'ult-threadweaver': -1, 'waymark': 11.5, 'wipe': -2,
+    'low-hp': -4.5, 'npc-talk': -6, 'ping': 2.5, 'pip-up': 11,
+    'portal-enter': -3, 'portal-hum': -22.5, 'pull-count': 0.5, 'pull-count-last': -3.5,
+    'pull-go': -2, 'revive': -2, 'shield-break': 5, 'shield-up': -4,
+    'stack-1': 7.5, 'stack-2': -2.5, 'step-grass': 8, 'step-stone': 8.5,
+    'step-wood': 1.5, 'story-page': 3.5, 'tg-aoe': 1.5, 'tg-buster': 1,
+    'tg-charge': 0.5, 'tg-gaze': 0.5, 'tg-knockback': 2.5, 'tg-raidwide': -0.5,
+    'tg-spread': 5.5, 'tg-stack': 1.5, 'title-sting': -3, 'ui-bounty': 0.5,
+    'ui-buy': -6, 'ui-click': 2, 'ui-close': -0.5, 'ui-equip': -2.5,
+    'ui-error': -3, 'ui-feat': -7, 'ui-gold': -4, 'ui-hover': 13,
+    'ui-secret': -6, 'ult-alembist': 0.5, 'ult-bastion': 1.5, 'ult-bloodreaver': 1,
+    'ult-driftblade': 6.5, 'ult-fire': -1.5, 'ult-gorgemaw': 1, 'ult-grovekeeper': 2.5,
+    'ult-marionettist': 0.5, 'ult-oathbroker': -1, 'ult-pyromancer': -1, 'ult-ranger': 3,
+    'ult-ready': -4, 'ult-runeguard': -1, 'ult-shadowblade': 4, 'ult-thermist': -1,
+    'ult-threadweaver': -1, 'waymark': 11.5, 'wipe': -2,
   };
   // @@TRIM-END
 
@@ -921,6 +922,24 @@
     [72, 76, 79, 84, 88, 91].forEach((n, i) => S.glass({ at: i * 0.07, f: mf(n), dur: 1, peak: 0.11 }));
     S.noise({ hp: 4000, dur: 1, pts: [[0.6, 1], [1.0, 0]], peak: 0.1 });
     S.pad({ notes: [mf(60), mf(67)], type: 'tri', a: 0.5, dur: 1.3, peak: 0.1 });
+  });
+  // a class's counted stacks filling: Pyromancer's two sparks (Heating Up, Hot Streak) and any whole-number pips
+  def('stack-1', 'hud', S => {
+    S.space('room', 0.2);
+    S.glass({ f: mf(91), dur: 0.35, peak: 0.12 });
+    S.noise({ hp: 5000, dur: 0.12, pts: [[0.01, 1], [0.12, 0]], peak: 0.07 });
+    S.tone({ at: 0.01, f: mf(79), dur: 0.1, peak: 0.07 });
+  });
+  def('stack-2', 'hud', S => {
+    S.space('room', 0.3);
+    S.whoosh({ f: 700, f1: 3600, dur: 0.22, peak: 0.16 });
+    S.glass({ at: 0.1, f: mf(84), dur: 0.5, peak: 0.1 }); S.glass({ at: 0.15, f: mf(91), dur: 0.6, peak: 0.1 }); S.glass({ at: 0.2, f: mf(96), dur: 0.8, peak: 0.09 });
+    S.thud({ at: 0.1, f: 160, f1: 70, dur: 0.25, peak: 0.2 });
+    S.noise({ at: 0.1, hp: 3000, dur: 0.35, pts: [[0.02, 1], [0.35, 0]], peak: 0.1 });
+  });
+  def('pip-up', 'hud', S => {
+    S.glass({ f: mf(86), dur: 0.3, peak: 0.1 });
+    S.wood({ f: 1800, dur: 0.03, peak: 0.12 });
   });
   def('lb-fire', 'imp', S => {
     S.space('hall', 0.5);
