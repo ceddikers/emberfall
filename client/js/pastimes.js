@@ -33,6 +33,7 @@ const Pastimes = (() => {
 
   // ---------------------------------------------------------------- a small card that rises for a moment (a feat, a find)
   function notice(kind, title, sub) {
+    if (typeof Sound !== 'undefined') Sound.play({ Feat: 'ui-feat', Caught: 'fish-catch', 'Bounty done': 'ui-bounty' }[kind] || 'ui-feat', { bus: kind === 'Caught' ? 'sfx' : 'ui', key: 'pt-notice', minGap: 0.3 });
     let el = document.getElementById('pt-notice');
     if (!el) { el = document.createElement('div'); el.id = 'pt-notice'; document.body.appendChild(el); }
     const card = document.createElement('div');
@@ -160,6 +161,7 @@ const Pastimes = (() => {
     if (r.gift && deps.giveGift(r.gift)) got = (typeof TOWN_GIFTS !== 'undefined' && TOWN_GIFTS[r.gift] ? TOWN_GIFTS[r.gift].name : 'a gift');
     if (r.title) grantFeat(r.title);
     card(x.name, x.lines || [], got);
+    if (typeof Sound !== 'undefined') Sound.play('ui-secret', { bus: 'ui' });
     event('secret', { id: x.id });
   }
   // the find, told in the same box the townsfolk use
@@ -225,6 +227,7 @@ const Pastimes = (() => {
       const b = list.find(x => x.id === btn.dataset.claim);
       if (!b || s.bounty.done[b.id] || (s.bounty.prog[b.id] || 0) < (b.goal.n || 1)) return;
       s.bounty.done[b.id] = 1; commit();
+      sfx('ui-bounty', { bus: 'ui' });
       deps.addGold(b.reward.gold); bump('bounties'); checkFeats();
       openBoard();
     }));
@@ -245,6 +248,8 @@ const Pastimes = (() => {
   const POND = { x: 590, y: 1370, rx: 120, ry: 62 };
   const inPond = (x, y) => ((x - POND.x) / POND.rx) ** 2 + ((y - POND.y) / POND.ry) ** 2 < 1;
   let rod = null;   // { x, y, state: 'wait' | 'bite' | 'reel', at, fish, need }
+  // sound (audio.js), when there is any
+  function sfx(n, o) { if (typeof Sound !== 'undefined') Sound.play(n, o); }
   function pondClick(m, now) {
     const p = deps.player;
     if (rod && rod.state === 'bite') { hook(now); return true; }
@@ -252,6 +257,7 @@ const Pastimes = (() => {
     if (!inPond(m.x, m.y)) { if (rod) rod = null; return false; }
     if (Math.hypot(p.x - m.x, p.y - m.y) > 260) { deps.toast('Get closer to the water to cast.'); return true; }
     if (!FISH_().length) return true;
+    sfx('fish-cast', { vol: 0.7 });
     rod = { x: m.x, y: m.y, state: 'wait', at: now + 2.5 + Math.random() * 6 };
     p.angle = Math.atan2(m.y - p.y, m.x - p.x);
     return true;
@@ -266,14 +272,14 @@ const Pastimes = (() => {
   function hook(now) {
     const f = pickFish();
     if (!f) { rod = null; return; }
-    if ((f.rarity | 0) >= 2) { rod = Object.assign(rod, { state: 'reel', fish: f, at: now + 4, need: f.rarity === 3 ? 3 : 2, got: 0, ring: now }); return; }
+    if ((f.rarity | 0) >= 2) { rod = Object.assign(rod, { state: 'reel', fish: f, at: now + 4, need: f.rarity === 3 ? 3 : 2, got: 0, ring: now }); sfx('fish-reel', { vol: 0.7 }); return; }
     land(f);
   }
   // a rare fish fights: three quick, timed clicks while the ring is small
   function reelClick(now) {
     const ph = ((now - rod.ring) % 1.1) / 1.1, good = ph > 0.72 && ph < 0.95;
-    if (good) { rod.got++; rod.ring = now; if (rod.got >= rod.need) land(rod.fish); }
-    else { deps.toast('It slipped the hook.'); rod = null; }
+    if (good) { rod.got++; rod.ring = now; sfx('fish-reel', { vol: 0.7 }); if (rod.got >= rod.need) land(rod.fish); }
+    else { deps.toast('It slipped the hook.'); sfx('fish-lost', { vol: 0.7 }); rod = null; }
   }
   function land(f) {
     const s = st();
@@ -286,9 +292,9 @@ const Pastimes = (() => {
     if (!rod) return;
     const p = deps.player;
     if (p.target || p.dashMove || Math.hypot(p.x - rod.x, p.y - rod.y) > 300) { rod = null; return; }   // (walking off reels in)
-    if (rod.state === 'wait' && now >= rod.at) { rod.state = 'bite'; rod.at = now + 0.9; }
-    else if (rod.state === 'bite' && now >= rod.at) { deps.toast('Too slow: it got away.'); rod = null; }
-    else if (rod.state === 'reel' && now >= rod.at) { deps.toast('It slipped the hook.'); rod = null; }
+    if (rod.state === 'wait' && now >= rod.at) { rod.state = 'bite'; rod.at = now + 0.9; sfx('fish-bite', { vol: 0.85 }); }
+    else if (rod.state === 'bite' && now >= rod.at) { deps.toast('Too slow: it got away.'); sfx('fish-lost', { vol: 0.7 }); rod = null; }
+    else if (rod.state === 'reel' && now >= rod.at) { deps.toast('It slipped the hook.'); sfx('fish-lost', { vol: 0.7 }); rod = null; }
   }
   function drawPond(ctx, now) {
     ctx.save();
@@ -342,6 +348,7 @@ const Pastimes = (() => {
   function emote(e, kind, now) {
     if (!EMOTES[kind]) return false;
     e.emote = { kind, t0: now };
+    if (kind === 'cheer' || kind === 'laugh' || kind === 'wave') sfx('emote-' + kind, { vol: 0.6, at: e, remote: e !== deps.player });
     e.emoteOut = null;
     // a cheer throws the weapon up (the class's own big gesture); a point reaches out (its cast gesture)
     if (e.st && typeof ANIM_DUR !== 'undefined' && (kind === 'cheer' || kind === 'point')) {
@@ -438,7 +445,7 @@ const Pastimes = (() => {
       const p = pages[i];
       el.innerHTML = `<div class="sy-page"><small>Emberfall</small><h2>${esc(p.h)}</h2>${p.body.map(b => `<p>${esc(b)}</p>`).join('')}
         <div class="sy-foot"><button type="button" class="linkish sy-skip">Skip</button><span>${pages.map((_, k) => `<i class="${k === i ? 'on' : ''}"></i>`).join('')}</span><button type="button" class="cta sy-next">${i < pages.length - 1 ? 'Next' : 'Into town'}</button></div></div>`;
-      el.querySelector('.sy-next').addEventListener('click', () => { i++; if (i >= pages.length) end(); else show(); });
+      el.querySelector('.sy-next').addEventListener('click', () => { i++; if (i >= pages.length) end(); else { sfx('story-page', { bus: 'ui' }); show(); } });
       el.querySelector('.sy-skip').addEventListener('click', end);
     };
     const end = () => { st().story[which] = 1; commit(); el.classList.add('out'); setTimeout(() => el.remove(), 500); if (done) done(); };

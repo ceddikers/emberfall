@@ -23,6 +23,7 @@
   const TOWN_PACE = 1.35;
   const $ = id => document.getElementById(id);
   const rnd = Math.round;
+  const SH = typeof SoundHooks !== 'undefined' ? SoundHooks : null;   // sound (sound-hooks.js): every call below is guarded by it
   let now = 0, last = performance.now(), started = false;
   // Network smoothing runs on its own clock (interp.js): real time, so a stalled frame or a throttled tab doesn't
   // squeeze arrival stamps together the way the capped game clock `now` would. step() (testing) pushes it along too.
@@ -351,6 +352,7 @@
           const e = enemyPos(); if (e) { tx = e.x; ty = e.y; } else { const m = mouseWorld(); tx = m.x; ty = m.y; }
         }
         FX.cast(player, ab, tx, ty, { mine: true, tent: ally != null ? entById(ally) : null, step: ev.st });
+        if (SH) { SH.castEnd(); SH.ability(player.cls.id, ab, true, null, Net.id); if (ab.ult) SH.vo('hero-ult', { classId: player.cls.id, ability: ab.id }); }
         Net.send(Object.assign({ t: 'cast', i, a: ab.fxId || ab.id, x: rnd(player.x), y: rnd(player.y), tx: rnd(tx), ty: rnd(ty), ally, s: scene === 'arena' ? 1 : 0, c: +rnow.toFixed(3) }, Number.isInteger(ev.st) ? { st: ev.st } : null));
         break;
       }
@@ -361,6 +363,7 @@
           lastEnemy = t;
           autoAlt = !autoAlt;
           playAuto(player, t.x, t.y, ev.kind, true, autoAlt);
+          if (SH) SH.auto(player.cls.id, ev.kind, true, null, Net.id);
           Net.send({ t: 'auto', k: ev.kind, tx: rnd(t.x), ty: rnd(t.y), a: autoAlt ? 1 : 0, s: scene === 'arena' ? 1 : 0 });
         }
         break;
@@ -372,15 +375,18 @@
         player.castBar = { ab: ev.ab, t0: now, dur: ev.dur, to: ev.h > 0 ? ev.target : null, h: ev.h > 0 ? ev.h : 0 };
         Net.send(Object.assign({ t: 'castStart', i: actor.abilities.indexOf(ev.ab), dur: +ev.dur.toFixed(2) }, ev.h > 0 ? { h: ev.h, to: ev.target } : null));
         if (typeof CAST_VFX !== 'undefined') CAST_VFX.start(player, ev.dur, ev.ab);   // the gathering (it follows castBar to its end)
+        if (SH) SH.castStart();
         break;
       case 'interrupted':
         player.st.action = null; if (player.castBar && player.castBar.stop == null) player.castBar.stop = now;   // (its bar shows the interrupt: drawCastBar)
         Net.send({ t: 'castStop' });
+        if (SH) SH.castEnd();
         FX.text(player.x, player.y - 60, 'Interrupted', '#ff9a8a', 14, 1, { kind: 'call' });
         break;
       case 'fail':
         if (now - failAt < 0.6 || ev.reason === 'cooldown') break;
         failAt = now;
+        if (SH) SH.play('ui-error', { bus: 'ui', key: 'ui-error', minGap: 0.5 });
         FX.text(player.x, player.y - 56, ev.reason === 'target' ? (ev.ab.target === 'enemy' ? (inArena() && (raid.boss.u || (raid.state !== 'live' && raid.state !== 'prepull')) ? 'No target' : 'Out of range') : 'No target') : ev.reason === 'winded' ? 'Winded' : 'Not ready', '#c8c0d8', 12, 0.7, { kind: 'quiet' });
         break;
       case 'fxLocal': playKitFx(player, ev.name, true, ev.data); break;   // a class moment only you see (an Ironpalm's Crisp press)
@@ -448,6 +454,7 @@
       const e = entById(id);
       // (beside the body, right of it: clear of the name tag and the bar over their head)
       if (e && amount >= 1) FX.text(e.x, e.y - (e.lift || 0) - 18, '+' + rnd(amount), crit ? '#b6ff9a' : '#7dff8a', crit ? 17 : 14, 1, { kind: 'heal' });
+      if (SH && id === Net.id && amount >= 1) SH.play('heal-land', { vol: 0.55, key: 'heal-land', minGap: 0.3 });
     }
   }
 
@@ -472,6 +479,8 @@
     const txt = rnd(ev.amount) + (ev.crit ? '!' : '') + (ev.positional ? ' ◆' : '');
     // how it moves (fx.js TEXT_KINDS): autos and DoTs small and quick, a crit pops harder, an Ultimate's hit hardest
     const tk = { kind: ultHit ? 'ult' : ev.auto || ev.dot ? (ev.dot ? 'dot' : 'auto') : ev.crit ? 'crit' : 'hit' };
+    if (SH && ev.crit && !ev.dot && ev.amount > 0) SH.play('crit', { vol: ev.auto ? 0.35 : 0.6, key: 'crit', minGap: 0.08 });
+    if (SH && !inArena() && lastEnemy && lastEnemy.dummy && !ev.dot) SH.play('dummy-hit', { vol: 0.45, at: lastEnemy.dummy, key: 'dummy-hit', minGap: 0.1 });
     if (inArena()) {
       // damage goes to whatever you last aimed at (DoTs keep ticking on your current target)
       const tgt = ev.tgt != null ? ev.tgt : lastEnemy && lastEnemy.id != null && lastEnemy.id !== 'dummy' ? lastEnemy.id : 'boss';
@@ -854,6 +863,7 @@
     const dest = { x: player.x + Math.cos(a) * DASH_DIST, y: player.y + Math.sin(a) * DASH_DIST };
     if (inArena()) clampArena(dest); else { dest.x = clamp(dest.x, 40, WORLD.w - 40); dest.y = clamp(dest.y, 40, WORLD.h - 40); }
     KIT_VFX.dash(player, player.cls.accent);
+    if (SH) SH.play('dash', { vol: 0.6 });
     // dashing snaps a Silk Reel (tell the host; show it right away)
     const rl = player.reel;
     if (inArena() && rl && now >= rl.pullAt - 0.2) {
@@ -1022,9 +1032,10 @@
     Loot.onChest(m);
     const c = raid && Loot.chestAt();
     if (c) { VFX.burst(c.x, c.y, { color: '#ffd65a', color2: '#ffffff', n: 46, speed: 340 }); FX.add({ type: 'ring', x: c.x, y: c.y, r: 90, color: '#ffd65a', dur: 0.6 }); FX.shake = Math.max(FX.shake || 0, 6); }
+    if (SH && c) SH.play('chest-drop', { vol: 0.85, at: c });
   });
   Net.on('cst', m => Loot.onState(m));
-  Net.on('cgot', m => Loot.onGot(m));
+  Net.on('cgot', m => { Loot.onGot(m); if (SH) SH.play('loot-take', { bus: 'ui', key: 'loot-take', minGap: 0.1 }); });
   Net.on('cputok', m => Loot.onPutOk(m));
   Net.on('csalv', m => Loot.onSalvage(m));
   Net.onHost('ctake', (pid, m) => Loot.hostTake(pid, m));
@@ -1043,6 +1054,7 @@
     if (!raid) return;
     const who = entById(msg.id), units = raidUnits(), b = raid.bossDraw, lv = Math.max(1, Math.min(3, msg.lv | 0));
     if (who) FX.text(who.x, who.y - 64, LB_NAME[msg.role] || 'Limit Break', '#f2d38a', 14 + lv * 2, 1.6);
+    if (SH) SH.play('lb-fire', { vol: 1, variant: lv - 1 });
     if (msg.role === 'tank') for (const u of units) { VFX.shock(u.x, u.y, { r: 46 + lv * 12, color: '#f2d38a', w: 3 + lv, dur: 0.7, flat: 1 }); VFX.shock(u.x, u.y, { r: 30, color: '#ffffff', w: 2, dur: 0.4, flat: 1 }); }
     else if (msg.role === 'healer') for (const u of units) { VFX.burst(u.x, u.y - 24, { color: '#c8f5d0', n: 6 + lv * 3, speed: 120, size: 8 }); VFX.shock(u.x, u.y, { r: 40 + lv * 10, color: '#9fe8b0', w: 3, dur: 0.6, flat: 1 }); }
     else if (b) { VFX.hit(b.x, b.y - 30, '#fff0c8', 1.4 + lv * 0.6); VFX.shock(b.x, b.y, { r: 140 + lv * 60, color: '#f2b060', w: 4 + lv * 2, dur: 0.7, flat: 1 }); FX.shake = Math.max(FX.shake, 4 + lv * 3); }
@@ -1145,6 +1157,7 @@
     const m = {};
     for (const k of WAYMARKS) if (Array.isArray(msg.m[k]) && msg.m[k].every(Number.isFinite)) m[k] = msg.m[k];
     raid.marks = m;
+    if (SH) SH.play('waymark', { bus: 'ui', key: 'waymark', minGap: 0.1 });
   });
   // pings: { x, y, c } from a player in the raid; the host checks it (and keeps anyone from flooding the floor)
   const lastPing = new Map();
@@ -1168,6 +1181,7 @@
     if (!raid || !Number.isFinite(msg.x) || !Number.isFinite(msg.y)) return;
     const r = raid.roster.find(x => x.id === msg.id);
     Pings.add({ x: msg.x, y: msg.y, c: msg.c, name: r ? r.name : '', color: r && ROLES[r.role] ? ROLES[r.role].color : null }, now);
+    if (SH) SH.play('ping', { bus: 'ui', vol: 0.8, key: 'ping', minGap: 0.15 });
   });
   function sendPing(x, y, c) { const msg = { x: Math.round(x), y: Math.round(y), c: c || null }; if (Net.isHost) hostPing(Net.id, msg); else Net.send(Object.assign({ t: 'pg' }, msg)); }
   let pingFrom = null;   // where an Alt-drag began (the wheel is open)
@@ -1249,6 +1263,7 @@
     resetRaidInput();
     FX.clear(); VFX.clear(); clearTimers();
     ARENA.use(def.id);
+    if (SH) { SH.castEnd(); SH.play('portal-enter', { vol: 0.8 }); SH.music('mus-pull', { fade: 2 }); later(0.6, () => { SH.play(def.id + '-intro', { vol: 0.9 }); SH.vo('boss-intro', { bossId: def.id }); }); }
     sceneFade();
     const sp = def.spawn || { x: 0, y: -40 };
     raid = {
@@ -1387,9 +1402,11 @@
       Journal.fightStart();
       if (player.cls && !raid.def.trial && !raid.practice) Journal.met(player.cls.id, raid.def.id);
       if (!raid.def.trial) Pastimes.event('pull', { boss: raid.def.id, practice: !!raid.practice });
+      if (SH) { SH.play('pull-go', { vol: 1 }); SH.music(SH.bossTrack(raid.def.id, raid.mode), { fade: 0.8 }); SH.phase(raid.def.id, raid.ph || 1); SH.vo('pull', { bossId: raid.def.id }); }
       return;
     }
     raid.state = msg.s; raid.result = msg; raid.resultAt = now + (msg.s === 'clear' ? 3.4 : 2.8);   // [boss presentation] (after his fall / the wipe's beat)
+    if (SH && (msg.s === 'clear' || msg.s === 'wipe')) { SH.castEnd(); SH.play(msg.s, { vol: 1 }); SH.music(msg.s === 'clear' ? 'mus-victory' : 'mus-wipe', { fade: 1, loop: false }); SH.vo(msg.s === 'clear' ? 'boss-death' : 'boss-wipe', { bossId: raid.def.id }); if (msg.s === 'clear') SH.vo('clear', { bossId: raid.def.id, classId: player.cls ? player.cls.id : null }); }
     if (player.cls && !raid.def.trial && !raid.practice && msg.s === 'clear') Journal.won(player.cls.id, raid.def.id);
     if (!raid.def.trial && msg.s === 'clear') Pastimes.event('clear', { boss: raid.def.id, mode: raid.mode, secs: Number(msg.time) || 0, practice: !!raid.practice,
       deaths: Object.values(msg.stats || {}).reduce((n, x) => n + (x.deaths | 0), 0), avoidable: Object.values(msg.stats || {}).reduce((n, x) => n + (x.avoidable | 0), 0) });
@@ -1447,6 +1464,8 @@
     if (raid.state === 'live' && msg.mx > 0 && (!raid.tl.hp.length || msg.ft - raid.tl.hp[raid.tl.hp.length - 1][0] >= 1) && raid.tl.hp.length < 1200) raid.tl.hp.push([msg.ft, msg.hp / msg.mx]);
     if (msg.na != null) raid.nextAutoAt = now + msg.na;
     raid.bossStatus = Array.isArray(msg.bs) ? msg.bs : [];   // what's on the boss (fight.js bossStatus)
+    if (SH && raid.state === 'live' && msg.mx > 0 && Math.floor(msg.hp / msg.mx * 20) !== raid.hpBucket) { raid.hpBucket = Math.floor(msg.hp / msg.mx * 20); SH.vo('boss-hp', { bossId: raid.def.id, hp: msg.hp, maxHp: msg.mx }); }   // (every 5%)
+    if (msg.ph != null && msg.ph !== raid.ph) { const first = raid.ph == null; raid.ph = msg.ph; if (SH && raid.state === 'live') { SH.phase(raid.def.id, msg.ph); if (!first) SH.vo('boss-phase', { bossId: raid.def.id, n: msg.ph }); } }
   });
   // the boss's next moves, from the host about once a second: [[name, seconds until], ...] (drawn under the cast bar)
   Net.on('bnext', msg => {
@@ -1460,6 +1479,7 @@
     for (const [id, hp, maxHp, shield, alive, dd, vuln, mit, weak, debuffs, threat, hots] of msg.ps) {
       listed.add(id);
       const s = raid.party.get(id);
+      if (SH && s && id === Net.id && s.alive && alive) { if (shield > 0 && !(s.shield > 0)) SH.play('shield-up', { vol: 0.6, key: 'shield-up', minGap: 0.5 }); if (Array.isArray(debuffs) && debuffs.length > (Array.isArray(s.debuffs) ? s.debuffs.length : 0)) SH.play('debuff-on', { vol: 0.75, key: 'debuff-on', minGap: 0.4 }); }
       if (s) Object.assign(s, { hp, maxHp, shield, alive: !!alive, dd, vuln, mit, weak, debuffs, threat: threat || 0, hots: hots || [], left: false });
     }
     // the host stops listing anyone who left the raid; don't leave their last numbers frozen on the frames
@@ -1468,6 +1488,7 @@
   Net.on('tg', msg => {
     if (!raid) return;
     raid.tgs.set(msg.id, Object.assign({}, msg, { start: now, live: Object.assign({}, msg.shape) }));
+    if (SH) SH.telegraph(msg.type);
   });
   Net.on('tgx', msg => {
     if (!raid) return;
@@ -1476,6 +1497,7 @@
     tg.gone = now;
     BOSS_VFX.impact(tg, msg, { entById, boss: raid.def.id, pol: raid.pol, units: raidUnits(), props: raid.room.props, room: raid.room, bossDraw: raid.bossDraw });
     if (msg.fail) BOSS_VFX.failed(tg);
+    if (SH && tg.type !== 'safe') SH.impact(tg.type, !!(msg.hits && msg.hits.includes(Net.id)));
     if (msg.hits && msg.hits.includes(Net.id) && tg.type === 'aoe') FX.shake = Math.max(FX.shake, 5);
   });
   Net.on('tgclear', () => { if (raid) { fadeTelegraphs(); raid.lunges = []; raid.eggs = null; } });
@@ -1490,6 +1512,7 @@
     if (!raid) return;
     raid.cast = { name: msg.name, dur: msg.dur, start: now, goal: Number.isFinite(msg.goal) ? msg.goal : null };
     if (raid.state === 'live' && player.cls && !raid.def.trial && !raid.practice) Journal.castStart(player.cls.id, raid.def.id, String(msg.name), msg.dur, now);
+    if (SH) { SH.bossCast(raid.def.id, String(msg.name), msg.anim); SH.vo(msg.anim === 'enrage' ? 'boss-enrage' : 'boss-cast', { bossId: raid.def.id, move: String(msg.name), dur: msg.dur, hp: raid.boss.hp, maxHp: raid.boss.mx }); }
     if (raid.state === 'live' && raid.tl.casts.length < 400) raid.tl.casts.push([raid.fightTime || 0, String(msg.name).slice(0, 40), raid.cast.goal != null ? 1 : 0]);
     const castPose = BOSS_VFX.castStart(raid.def.id, msg.anim, msg.dur, raid.bossDraw, msg.name);   // [boss presentation] the move's pose
     const end = now + msg.dur, st = raid.bossDraw.st;
@@ -1725,7 +1748,7 @@
     if (!raid) return;
     for (const id of msg.ids || []) { raid.doom.set(id, { start: now, end: now + (msg.dur || 14) }); const e = entById(id); if (e) BOSS_VFX.doomed(e); }
   });
-  Net.on('cure', msg => { if (!raid) return; raid.doom.delete(msg.id); const e = entById(msg.id); if (e) BOSS_VFX.cure(e); });
+  Net.on('cure', msg => { if (!raid) return; raid.doom.delete(msg.id); const e = entById(msg.id); if (e) BOSS_VFX.cure(e); if (SH && e) SH.play('cleanse', { vol: 0.7, remote: msg.id !== Net.id, at: e }); });
   Net.on('gazed', msg => { const e = raid && entById(msg.id); if (e) BOSS_VFX.gazed(e, raid.bossDraw); });
   // the Echo Knights: where they stand; one remembering a swing; one raising its blade to replay it
   Net.on('knights', msg => {
@@ -1759,6 +1782,7 @@
   Net.on('pheal', msg => {
     if (!raid || msg.id !== Net.id || !(msg.a >= 1) || !player) return;
     FX.text(player.x, player.y - (player.lift || 0) - 18, '+' + rnd(msg.a), '#a6e8b0', 13, 1, { kind: 'heal' });
+    if (SH) SH.play('heal-land', { vol: 0.55, key: 'heal-land', minGap: 0.3 });
   });
   Net.on('pdmg', msg => {
     if (!raid) return;
@@ -1784,6 +1808,8 @@
     const hy = player.y - (player.lift || 0) - 18;
     if (msg.a > 0) FX.text(player.x, hy, '-' + rnd(msg.a), msg.dd ? '#ff4a3a' : '#ff8a7a', msg.a > 400 ? 18 : 14, 1, { kind: 'taken' });
     if (msg.sh >= 1) FX.text(player.x, hy, rnd(msg.sh) + ' absorbed', '#9cc4ec', 12, 1, { kind: 'absorb' });
+    if (SH && msg.a > 0) SH.play(ps && ps.maxHp > 1 && msg.a > ps.maxHp / 3 ? 'hit-heavy' : 'hit-light', { vol: 0.85, key: 'hit', minGap: 0.08 });
+    if (SH && msg.sh >= 1 && msg.a > 0) SH.play('shield-break', { vol: 0.7, key: 'shield-break', minGap: 0.4 });   // (it ate what it could and broke)
     if (msg.dd) FX.shake = Math.max(FX.shake, 4);
     // the screen's edge flushes red, harder the bigger the bite out of your health
     if (msg.a > 0 && ps && ps.maxHp > 1) {
@@ -1798,6 +1824,7 @@
     if (msg.k === 'behind') BOSS_VFX.behind(raid.bossDraw, msg.n);   // [boss presentation] the soft enrage's pass: he gets heavier
     if (msg.k === 'death') raid.doom.delete(msg.id);
     if (msg.k === 'raised' && e) BOSS_VFX.playerRaised(e);
+    if (SH && e && (msg.k === 'death' || msg.k === 'raised')) { const mine = msg.id === Net.id; SH.play(msg.k === 'death' ? 'death' : 'revive', { vol: 0.9, remote: !mine, at: mine ? null : e }); SH.vo(msg.k === 'death' ? 'hero-down' : 'hero-revive', { id: msg.id, classId: e.cls ? e.cls.id : null, mine, local: mine }); }
     // a Time Stop on the boss (Time Reversal, fight.js pauseBoss): it freezes mid-pose, frosted, under a stopped clock
     if (msg.k === 'pause' && msg.dur > 0) { const d = Math.min(2.5, +msg.dur); raid.bossPause = { at: now, end: now + d }; BOSS_VFX.timeStop(raid.bossDraw, d); }
     if (msg.k === 'brandHit') { VFX.setScale(msg.id === Net.id ? 1 : 0.6); try { KIT_VFX.brandHit(e, { x: raid.boss.x, y: raid.boss.y }); } finally { VFX.setScale(1); } }
@@ -1824,12 +1851,14 @@
     raid.abuffs.push({ to: msg.to, id: msg.id, kind: msg.kind, value: msg.value, end: now + msg.dur, from: msg.from });
     const e = entById(msg.to);
     if (e) { VFX.shock(e.x, e.y, { r: 46, color: '#ffe2a0', w: 3, dur: 0.45 }); VFX.motes(e.x, e.y, { color: '#ffe9a0', n: 8, r: 24 }); }
+    if (SH && msg.to === Net.id) SH.play('buff-on', { vol: 0.6, key: 'buff-on', minGap: 0.3 });
   });
   Net.on('pbuff', msg => {
     if (!raid) return;
     raid.pbuffs.push({ kind: msg.kind, value: msg.value, end: now + msg.dur });
     const e = entById(msg.from);
     if (e) BOSS_VFX.partyBuff(e);
+    if (SH) SH.play('buff-on', { vol: 0.7, key: 'buff-on', minGap: 0.3 });
   });
   Net.on('bots', msg => {
     if (!raid) return;
@@ -1889,13 +1918,14 @@
       placeMark(null);   // (right-click just puts it away)
       return;
     }
-    if (e.button === 2) { mouse.rightDown = true; player.interact = null; moveTo(mouseWorld(), true); return; }
+    if (e.button === 2) { mouse.rightDown = true; player.interact = null; moveTo(mouseWorld(), true); if (SH && player.cls && !amDead()) SH.vo('hero-move', { classId: player.cls.id, scene }); return; }
     if (e.button !== 0) return;
     if (scene === 'town' && Pastimes.pondClick(mouseWorld(), now)) return;   // (fishing: cast, strike, reel)
     const ch = inArena() && Loot.chestAt();
-    if (ch && Math.hypot(mouseWorld().x - ch.x, mouseWorld().y - ch.y) < 40) { Loot.open(); return; }
+    if (ch && Math.hypot(mouseWorld().x - ch.x, mouseWorld().y - ch.y) < 40) { Loot.open(); if (SH) SH.play('chest-open', { vol: 0.8 }); return; }
     const it = hoverTarget();
     if (it) { player.interact = it; player.target = { x: it.x, y: it.y }; return; }
+    if (SH && player.cls && Math.hypot(mouseWorld().x - player.x, mouseWorld().y - (player.y - 18)) < 26) SH.vo('hero-select', { classId: player.cls.id, scene });
     const ally = healerish() ? allyUnderMouse() : null;
     if (ally != null) { lockedAlly = ally; return; }
     // clicking an enemy picks it as your target
@@ -1945,7 +1975,7 @@
     player,
     addItem: key => { const inst = Inventory.add(key, player.cls && player.cls.id); VFX.burst(player.x, player.y, { color: Inventory.rarityColor(inst), color2: '#ffffff', n: 20, speed: 220 }); },
     gold: () => Save.gold(),
-    spendGold: n => { Save.addGold(-n); Inventory.refreshGold(); },
+    spendGold: n => { Save.addGold(-n); Inventory.refreshGold(); if (SH) SH.play('ui-buy', { bus: 'ui' }); },
     toast: msg => toast(msg),
     orderFeast: id => {
       if (!Net.isHost && !Net.online) { toast('Not connected: nobody to cook for.'); return false; }
@@ -2924,6 +2954,7 @@
   function ultReadyCue() {
     const c = (player.cls && player.cls.accent) || '#ffd65a';
     VFX.shock(player.x, player.y, { r: 70, color: c, dur: 0.6, w: 3 });
+    if (SH) SH.play('ult-ready', { vol: 0.75, key: 'ult-ready', minGap: 2 });
     VFX.motes(player.x, player.y, { color: '#fff2c8', n: 8, r: 26, rise: 0.8, life: 1.1 });
   }
   // a red flush round the screen's edge for a moment when you're hit (stronger for a bigger hit)
@@ -3003,6 +3034,7 @@
   function toast(msg) {
     const el = $('toast');
     el.textContent = msg; el.classList.add('show');
+    if (SH && /\b(not enough|can't|cannot|only the host|not connected|get closer|short)\b/i.test(msg)) SH.play('ui-error', { bus: 'ui', key: 'ui-error', minGap: 0.5 });
     clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove('show'), 2800);
   }
   function setObjective(html) { $('objective').innerHTML = html; }
@@ -3543,13 +3575,14 @@
     if (eScene !== (scene === 'arena' ? 1 : 0)) return;
     // where they cast from goes into their track like any position update (snapping here would fight the smoothing)
     if (!e.bot) { e.tx = msg.x; e.ty = msg.y; if (e.track) e.track.push(e.clock ? e.clock.map(msg.c, rnow) : rnow, msg.x, msg.y, e.track.latest().a); }
-    if (msg.i === 6) { e.dashUntil = now + 0.2; VFX.setScale(0.6); KIT_VFX.dash(e, e.cls.accent); VFX.setScale(1); return; }
+    if (msg.i === 6) { e.dashUntil = now + 0.2; VFX.setScale(0.6); KIT_VFX.dash(e, e.cls.accent); VFX.setScale(1); if (SH) SH.play('dash', { vol: 0.6, remote: true, at: e }); return; }
     // a move a talent granted (msg.a names it) looks like itself, not the move it replaced
     const ab = (msg.a && abilityById(e.cls.id, e.spec, msg.a)) || kitFor(e.cls.id, e.spec).abilities[msg.i];
     if (!ab) return;
     let tx = msg.tx, ty = msg.ty, tent = null;
     if (msg.ally != null) { tent = entById(msg.ally); if (tent) { tx = tent.x; ty = tent.y; } }
     FX.cast(e, ab, tx, ty, { tent, step: msg.st });   // (st: its combo step, engine.js fxStep)
+    if (SH) SH.ability(e.cls.id, ab, false, e, msg.id);
   });
   // another player's class moment (Perfect Block, Overheat, Dawnstar...)
   Net.on('kfx', msg => {
@@ -3617,6 +3650,7 @@
     const e = msg.id >= 1000 ? (raid && raid.bots.get(msg.id)) : remotes.get(msg.id);
     if (!e || !e.cls || (msg.s ? 1 : 0) !== (scene === 'arena' ? 1 : 0)) return;
     playAuto(e, msg.tx, msg.ty, msg.k, false, !!msg.a);
+    if (SH) SH.auto(e.cls.id, msg.k, false, e, msg.id);
   });
   Net.on('chat', msg => {
     const r = remotes.get(msg.id);
@@ -3764,6 +3798,24 @@
   };
   let paused = false;
 
+  // sound once a frame (sound-hooks.js): the listener, the scene's beds and music, the pull countdown's drum, an
+  // Ultimate window opening and closing, and the cast hum ending with its bar
+  let sndCount = -1, sndUltWin = false;
+  function soundTick() {
+    if (!SH) return;
+    try {
+      const ms = inArena() ? myState() : null;
+      SH.tick(!started ? 'title' : scene, player.x, player.y, !!player.st.moving, ms && ms.maxHp > 0 ? ms.hp / ms.maxHp : 1, !!(ms && ms.alive));
+      const left = !inArena() ? -1 : raid.state === 'countdown' ? raid.countdownEnd - now : raid.state === 'prepull' && raid.pullAt ? raid.pullAt - now : -1;
+      const n = left > 0 ? Math.ceil(left) : -1;
+      if (n !== sndCount) { if (n > 0) SH.play('pull-count', { vol: n === 1 ? 1 : 0.8 }); if (n > 0 && sndCount <= 0) SH.vo('countdown', { bossId: raid.def.id, seconds: left }); sndCount = n; }
+      const w = !!(actor && actor.kit.ultWin);
+      if (w !== sndUltWin) { sndUltWin = w; SH.play(w ? 'ult-window' : 'ult-window-end', { vol: 0.7 }); }
+      const cb = player.castBar;
+      if (!cb || cb.stop != null || now > cb.t0 + cb.dur + 0.15) SH.castEnd();
+    } catch (e) { /* sound never stops a frame */ }
+  }
+
   // ---------------------------------------------------------------- boot
   function frame(ts) {
     const raw = (ts - last) / 1000;
@@ -3778,6 +3830,7 @@
     updateTargetFrame();
     Hud.update(now, now);
     drawMinimap();
+    soundTick();
     requestAnimationFrame(frame);
   }
 

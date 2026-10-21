@@ -97,7 +97,9 @@ const Inventory = (() => {
     const e = data.equip[clsId] = data.equip[clsId] || {};
     // the same ring can't be in both accessory slots
     for (const s of ['acc1', 'acc2']) if (s !== slot && e[s] === inst.uid) e[s] = null;
-    e[slot] = inst.uid; changed(); return true;
+    e[slot] = inst.uid; changed();
+    if (typeof Sound !== 'undefined') Sound.play('ui-equip', { bus: 'ui', key: 'ui-equip', minGap: 0.15 });
+    return true;
   }
   function unequip(clsId, slot) { const e = data.equip[clsId]; if (e) { e[slot] = null; changed(); } }
   // sell an item for gold (RARITY[r].sell); anyone wearing it takes it off first
@@ -106,6 +108,7 @@ const Inventory = (() => {
     data.items = data.items.filter(i => i !== inst);
     for (const e of Object.values(data.equip)) for (const s in e) if (e[s] === inst.uid) e[s] = null;
     Save.addGold(sellPrice(inst));
+    if (typeof Sound !== 'undefined') Sound.play('ui-gold', { bus: 'ui', key: 'ui-gold', minGap: 0.1 });
     changed(); showGold();
   }
   const wornBy = inst => Object.entries(data.equip).filter(([, e]) => Object.values(e).includes(inst.uid)).map(([c]) => c);
@@ -120,7 +123,7 @@ const Inventory = (() => {
     goldHud.innerHTML = `${coin}${g}`;
     if (isOpen()) { const b = el.querySelector('.inv-gold'); if (b) b.innerHTML = `${coin}${g}`; }
   }
-  function addGold(n) { if (n > 0) { Save.addGold(n); showGold(); } }
+  function addGold(n) { if (n > 0) { Save.addGold(n); showGold(); if (typeof Sound !== 'undefined') Sound.play('ui-gold', { bus: 'ui', key: 'ui-gold', minGap: 0.1 }); } }
   // (extra: something besides gear adding to the totals, like a feast; main sets it)
   let extra = () => null;
   function totals(clsId) {

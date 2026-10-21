@@ -95,6 +95,7 @@ const Title = (() => {
     if (opened) return;
     opened = true;
     el.classList.add('opened');
+    if (typeof Sound !== 'undefined') { Sound._unlock(); Sound.play('title-sting', { bus: 'ui', vol: 0.9 }); }
     const join = document.getElementById('join');
     if (join) join.classList.add('over-title');
     setTimeout(() => { const n = document.getElementById('name-input'); if (n && !n.value) n.focus(); }, 500);

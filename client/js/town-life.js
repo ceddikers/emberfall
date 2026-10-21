@@ -50,6 +50,7 @@ const TownLife = (() => {
     f.x = from.x; f.y = from.y; f.walk = { to: f.home };
     scene = { f, i: -1, lineAt: 0, lines: (f.d.entrance && f.d.entrance.lines) || [] };
     deps.focusCamera(f, 999);
+    if (typeof Sound !== 'undefined') Sound.play('arrival', { vol: 0.8 });
   }
   function bannerEl() {
     let el = document.getElementById('town-banner');
@@ -298,6 +299,7 @@ const TownLife = (() => {
     el.innerHTML = `<header><b>${esc(d.name)}</b><small>${esc(d.title || '')}</small><button type="button" class="dl-x" aria-label="Close">×</button></header>
       <p class="dl-line">${esc(talk.lines[talk.i] || '')}</p>${choices || `<button type="button" class="dl-next">${last ? (talk.node && talk.node.action === 'feast' ? 'See the board' : talk.node && talk.node.action === 'fish-shop' ? 'Show the catch' : 'Goodbye') : 'Next'}</button>`}`;
     el.classList.remove('hidden');
+    if (typeof Sound !== 'undefined' && talk.lines[talk.i]) Sound.play('npc-talk', { vol: 0.6, key: 'npc-talk', minGap: 0.15 });
   }
   const isTalking = () => !!talk;
   // walk away and the conversation ends

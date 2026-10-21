@@ -159,6 +159,11 @@ const Keybinds = (() => {
         <h4>Party and healing</h4>
         <div class="kb-foot kb-pref"><label for="kb-frames">Party frames</label><select id="kb-frames"><option value="left">In the corner</option><option value="strip">Above your skills</option></select><span class="kb-note kb-frames-note"></span></div>
         <div class="kb-foot kb-pref"><label class="kb-check"><input type="checkbox" id="kb-mouseover"> Mouseover casting</label><span class="kb-note">Point at a party frame or an ally and press a heal: it goes to them. Off: heals go to the ally you selected, or to you.</span></div>
+        <h4>Audio</h4>
+        ${[['master', 'Master'], ['sfx', 'Effects'], ['ui', 'Interface'], ['voice', 'Voices'], ['music', 'Music'], ['amb', 'Ambience']].map(([k, n]) => `<div class="kb-foot kb-scale kb-vol"><label for="kb-vol-${k}">${n}</label><input id="kb-vol-${k}" type="range" min="0" max="100" step="5" data-vol="${k}"><b></b></div>`).join('')}
+        <div class="kb-foot"><label class="kb-check"><input type="checkbox" id="kb-mute"> Mute all sound</label></div>
+        <div class="kb-foot"><label class="kb-check"><input type="checkbox" id="kb-captions"> Subtitles for voice lines</label></div>
+        <div class="kb-foot"><label class="kb-check"><input type="checkbox" id="kb-speech"> Use device speech when no voice file exists</label><span class="kb-note">Your browser's own voice: it sounds robotic.</span></div>
         <h4>Your data</h4>
         <div class="kb-foot"><button type="button" class="btn2 kb-wipe">Delete all data</button><span class="kb-note">Heroes, gear, gold, journals, progress and settings in this browser. It can't be undone.</span></div>`;
       document.body.appendChild(panel);
@@ -188,6 +193,12 @@ const Keybinds = (() => {
       sc.addEventListener('input', () => { setScale(Number(sc.value) / 100); panel.querySelector('.kb-scale-v').textContent = sc.value + '%'; });
       panel.querySelector('#kb-frames').addEventListener('change', e => { if (prefs) prefs.set('frames', e.target.value); });
       panel.querySelector('#kb-mouseover').addEventListener('change', e => { if (prefs) prefs.set('mouseover', e.target.checked); });
+      // sound (audio.js): every change applies at once and is saved with the game
+      panel.querySelectorAll('[data-vol]').forEach(el => el.addEventListener('input', () => {
+        if (typeof Sound !== 'undefined') Sound.set(el.dataset.vol, Number(el.value) / 100);
+        el.nextElementSibling.textContent = el.value + '%';
+      }));
+      for (const [id, k] of [['kb-mute', 'mute'], ['kb-captions', 'captions'], ['kb-speech', 'speech']]) panel.querySelector('#' + id).addEventListener('change', e => { if (typeof Sound !== 'undefined') Sound.set(k, e.target.checked); });
     }
     // the settings as they stand now (the frames are kept per role: a healer's and a tank's can differ)
     const pv = prefs ? prefs.get() : null;
@@ -196,6 +207,12 @@ const Keybinds = (() => {
       panel.querySelector('#kb-frames').value = pv.frames;
       panel.querySelector('.kb-frames-note').textContent = pv.role ? `For your ${pv.role} heroes.` : '';
       panel.querySelector('#kb-mouseover').checked = !!pv.mouseover;
+    }
+    if (typeof Sound !== 'undefined') {
+      panel.querySelectorAll('[data-vol]').forEach(el => { el.value = Math.round((Sound.get(el.dataset.vol) ?? 0) * 100); el.nextElementSibling.textContent = el.value + '%'; });
+      panel.querySelector('#kb-mute').checked = !!Sound.get('mute');
+      panel.querySelector('#kb-captions').checked = !!Sound.get('captions');
+      panel.querySelector('#kb-speech').checked = !!Sound.get('speech');
     }
     capturing = null;
     render();

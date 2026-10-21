@@ -83,7 +83,7 @@ const TalentPanel = (() => {
     if (ub) ub.addEventListener('click', () => {
       const r = Number(ub.dataset.r);
       if (deps.locked() || Save.talents(cls.id).rows !== r) return;
-      if (Save.unlockTalentRow(cls.id, TALENT_COSTS[r])) { deps.onGold(); deps.onChange(); render(); }
+      if (Save.unlockTalentRow(cls.id, TALENT_COSTS[r])) { deps.onGold(); deps.onChange(); render(); if (typeof Sound !== 'undefined') Sound.play('ui-buy', { bus: 'ui' }); }
     });
     $q('.tal-reset').addEventListener('click', () => {
       if (deps.locked()) return;

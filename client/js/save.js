@@ -121,6 +121,13 @@ const Save = (() => {
     commit: write,
     setting: (k, fallback) => (k in data.settings ? data.settings[k] : fallback),
     setSetting(k, v) { data.settings[k] = v; write(); },
+    // sound (audio.js): settings.audio, added without a version bump; anything missing reads as its default
+    AUDIO_DEFAULTS: { master: 0.7, sfx: 0.8, ui: 0.6, voice: 0.9, music: 0.5, amb: 0.5, mute: false, captions: true, speech: false },
+    audio() {
+      const a = data.settings.audio && typeof data.settings.audio === 'object' ? data.settings.audio : {}, o = {};
+      for (const [k, d] of Object.entries(this.AUDIO_DEFAULTS)) o[k] = typeof a[k] === typeof d && (typeof d !== 'number' || Number.isFinite(a[k])) ? a[k] : d;
+      return o;
+    },
     // the account-wide wallet (boss clears, salvage and selling add to it; talent rows spend it)
     gold: () => data.gold,
     addGold(n) { n = Math.floor(Number(n) || 0); data.gold = Math.max(0, data.gold + n); write(); return data.gold; },
