@@ -1405,34 +1405,65 @@ const BOSS_VFX = (() => {
     shake(8);
   }
 
-  // Time Stop (a Chronomancer's Time Reversal, fight.js pauseBoss): a pale clock face stands still on the floor round
-  // the boss, its hands stopped after one jolt back; frost creeps up its body and shatters as time starts again.
-  // (The boss's own pose freezes and frosts in main.js; the boss bar shows the stop and the held feed in raid-ui.js.)
+  // Time Stop (a Chronomancer's Time Reversal, fight.js pauseBoss), after the painted sheet (docs/art/vfx-reference/
+  // chronomancer.png): a great ice clock face lies still on the floor round the boss (roman numerals, its hands stopped
+  // after one jolt back), ice spikes stand up round its rim and a shell of ice grows on the boss's body; as time starts
+  // again it all shatters into ice shards and numerals flung off the face. The face lies over the floor's telegraphs, so
+  // it stays pale and thin. (The boss's own pose freezes and frosts in main.js; the boss bar shows the stop and the held
+  // feed in raid-ui.js.)
   function timeStop(b, dur) {
-    const ICE = '#cfeeff', R = 118, shards = Array.from({ length: 9 }, (_, i) => ({ a: i * TAU / 9 + rand(-0.2, 0.2), h: rand(10, 70), s: rand(5, 10), at: rand(0, 0.35) }));
-    VFX.shock(b.x, b.y, { r: 190, color: ICE, w: 6, dur: 0.45, flat: 1 });
-    VFX.fx({ dur, layer: 'air', draw: (c, p, t, e) => {
-      const life = p * dur, k = e.a * Math.min(1, life / 0.12) * Math.min(1, (dur - life) / 0.2);
-      // the face: a double ring, twelve hour marks, and two hands that kick back once and then stand still
-      VFX.neonRing(c, b.x, b.y, R, ICE, 2.5, k * 0.85, 0.55); VFX.neonRing(c, b.x, b.y, R * 0.86, ICE, 1.2, k * 0.6, 0.55);
-      c.save(); c.translate(b.x, b.y); c.scale(1, 0.55); c.lineCap = 'round';
-      c.strokeStyle = `rgba(214,240,255,${(0.8 * k).toFixed(3)})`;
-      for (let i = 0; i < 12; i++) { const a = i * TAU / 12, r0 = i % 3 ? R * 0.9 : R * 0.8; c.lineWidth = i % 3 ? 1.5 : 3; c.beginPath(); c.moveTo(Math.cos(a) * r0, Math.sin(a) * r0); c.lineTo(Math.cos(a) * R * 0.97, Math.sin(a) * R * 0.97); c.stroke(); }
-      const back = Math.min(1, life / 0.3), hand = (a, len, w) => { c.lineWidth = w; c.beginPath(); c.moveTo(0, 0); c.lineTo(Math.cos(a) * len, Math.sin(a) * len); c.stroke(); };
-      hand(-Math.PI / 2 - 0.9 * easeOut(back), R * 0.78, 2.5); hand(-Math.PI / 2 + 2.1 - 0.15 * easeOut(back), R * 0.5, 4);
+    const ICE = '#cfeeff', DEEP = '#6fa8e8', R = 128, FL = 0.55, NUM = ['XII', 'I', 'II', 'III', 'IIII', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI'];
+    const spikes = Array.from({ length: 12 }, (_, i) => ({ a: i * TAU / 12 + TAU / 24 + rand(-0.1, 0.1), h: rand(16, 34), w: rand(4, 7), lean: rand(-0.25, 0.25), at: rand(0.05, 0.3) })).sort((p, q) => Math.sin(p.a) - Math.sin(q.a));
+    const shell = Array.from({ length: 6 }, (_, i) => ({ dx: (i - 2.5) * 13 + rand(-4, 4), h: rand(40, 86), w: rand(8, 13), lean: (i - 2.5) * 0.08 + rand(-0.1, 0.1), at: 0.08 + i * 0.03 }));
+    // a standing ice spike: a pale translucent body, a white lit edge, a blue rim
+    const ice = (c, x, y, h, w, lean, a, fill) => {
+      const tx = x + lean * h;
+      c.globalAlpha = a * fill; c.fillStyle = '#dff4ff'; c.beginPath(); c.moveTo(x - w, y); c.lineTo(tx, y - h); c.lineTo(x + w, y); c.closePath(); c.fill();
+      c.globalAlpha = a * 0.7; c.strokeStyle = DEEP; c.lineWidth = 1; c.stroke();
+      c.globalAlpha = a * 0.9; c.strokeStyle = '#ffffff'; c.beginPath(); c.moveTo(x - w * 0.2, y); c.lineTo(tx, y - h); c.stroke();
+    };
+    VFX.shock(b.x, b.y, { r: 190, color: ICE, w: 6, dur: 0.45, flat: FL });
+    // the face on the floor
+    VFX.fx({ dur, layer: 'ground', draw: (c, p, t, e) => {
+      const life = p * dur, k = e.a * Math.min(1, life / 0.12) * Math.min(1, (dur - life) / 0.2), r = R * (0.85 + 0.15 * easeOut(Math.min(1, life / 0.25)));
+      c.save(); c.translate(b.x, b.y); c.scale(1, FL); c.globalCompositeOperation = 'lighter';
+      const gr = c.createRadialGradient(0, 0, r * 0.2, 0, 0, r); gr.addColorStop(0, `rgba(120,170,255,${(0.04 * k).toFixed(3)})`); gr.addColorStop(1, `rgba(150,200,255,${(0.16 * k).toFixed(3)})`);
+      c.fillStyle = gr; c.beginPath(); c.arc(0, 0, r, 0, TAU); c.fill();
       c.restore();
-      // frost on the body: shards climbing it, a cold glow
-      VFX.glowAt(c, b.x, b.y - 34, 90, ICE, k * 0.32);
-      c.save(); c.globalAlpha = k * 0.9; c.fillStyle = '#eaf8ff'; c.strokeStyle = '#6fb6e0'; c.lineWidth = 1;
-      for (const s of shards) {
-        if (life < s.at) continue;
-        const x = b.x + Math.cos(s.a) * 52, y = b.y - s.h + Math.sin(s.a) * 22, g = Math.min(1, (life - s.at) / 0.25) * s.s;
-        c.beginPath(); c.moveTo(x, y - g * 1.6); c.lineTo(x + g * 0.6, y); c.lineTo(x, y + g); c.lineTo(x - g * 0.6, y); c.closePath(); c.fill(); c.stroke();
+      VFX.neonRing(c, b.x, b.y, r, ICE, 2.5, k * 0.85, FL); VFX.neonRing(c, b.x, b.y, r * 0.88, ICE, 1.2, k * 0.55, FL); VFX.neonRing(c, b.x, b.y, r * 0.5, DEEP, 1, k * 0.4, FL);
+      c.save(); c.translate(b.x, b.y); c.scale(1, FL); c.lineCap = 'round';
+      c.strokeStyle = c.fillStyle = `rgba(214,240,255,${(0.8 * k).toFixed(3)})`;
+      c.font = `600 ${Math.round(r * 0.13)}px Georgia, serif`; c.textAlign = 'center'; c.textBaseline = 'middle';
+      for (let i = 0; i < 12; i++) {
+        const a = i * TAU / 12 - Math.PI / 2;
+        c.lineWidth = i % 3 ? 1.5 : 3; c.beginPath(); c.moveTo(Math.cos(a) * r * 0.9, Math.sin(a) * r * 0.9); c.lineTo(Math.cos(a) * r * 0.97, Math.sin(a) * r * 0.97); c.stroke();
+        c.save(); c.translate(Math.cos(a) * r * 0.77, Math.sin(a) * r * 0.77); c.rotate(a + Math.PI / 2); c.fillText(NUM[i], 0, 0); c.restore();
       }
+      // two hands that kick back once and then stand still
+      const back = Math.min(1, life / 0.3), hand = (a, len, w) => { c.lineWidth = w; c.beginPath(); c.moveTo(0, 0); c.lineTo(Math.cos(a) * len, Math.sin(a) * len); c.stroke(); };
+      hand(-Math.PI / 2 - 0.9 * easeOut(back), r * 0.66, 2.5); hand(-Math.PI / 2 + 2.1 - 0.15 * easeOut(back), r * 0.42, 4);
+      c.restore();
+    } });
+    // the ice: spikes round the rim, a shell on the body, a cold glow
+    VFX.fx({ dur, layer: 'air', draw: (c, p, t, e) => {
+      const life = p * dur, k = e.a * Math.min(1, life / 0.12) * Math.min(1, (dur - life) / 0.15);
+      VFX.glowAt(c, b.x, b.y - 34, 90, ICE, k * 0.3);
+      c.save(); c.lineJoin = 'round';
+      for (const s of spikes) { if (life < s.at) continue; const g = easeOut(Math.min(1, (life - s.at) / 0.2)); ice(c, b.x + Math.cos(s.a) * R * 0.98, b.y + Math.sin(s.a) * R * 0.98 * FL, s.h * g, s.w, s.lean, k, 0.45); }
+      for (const s of shell) { if (life < s.at) continue; const g = easeOut(Math.min(1, (life - s.at) / 0.25)); ice(c, b.x + s.dx, b.y + 6, s.h * g, s.w, s.lean, k, 0.28); }
       c.restore();
     }, done: () => {
-      VFX.burst(b.x, b.y - 34, { color: ICE, n: 18, speed: 260, size: 9 });
-      VFX.shock(b.x, b.y, { r: 150, color: ICE, w: 4, dur: 0.4, flat: 1 });
+      // time starts again: the ice shatters, numerals thrown off the face
+      VFX.flash(b.x, b.y - 40, 80, ICE, 0.2);
+      VFX.shock(b.x, b.y, { r: 160, color: ICE, w: 4, dur: 0.4, flat: FL });
+      for (let i = 0; i < 18; i++) { const a = rand(0, TAU), s = rand(160, 340); VFX.spawn({ x: b.x + Math.cos(a) * rand(0, 40), y: b.y, z: rand(10, 80), vx: Math.cos(a) * s, vy: Math.sin(a) * s * 0.6, vz: rand(40, 200), g: 520, drag: 0.03, life: rand(0.5, 0.85), size: rand(8, 14), color: i % 3 ? ICE : '#ffffff', kind: 'shard', vr: rand(-12, 12) }); }
+      const flying = [0, 2, 3, 6, 9, 10].map(i => { const a = i * TAU / 12 - Math.PI / 2; return { s: NUM[i], x: b.x + Math.cos(a) * R * 0.77, y: b.y + Math.sin(a) * R * 0.77 * FL, vx: Math.cos(a) * rand(80, 150), vy: Math.sin(a) * rand(50, 90) - 60, vr: rand(-6, 6) }; });
+      VFX.fx({ dur: 0.7, layer: 'air', draw: (c, p, t, e) => {
+        c.font = '600 16px Georgia, serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = ICE;
+        for (const f of flying) { c.save(); c.translate(f.x + f.vx * t, f.y + f.vy * t + 160 * t * t); c.rotate(f.vr * t); c.globalAlpha = e.a * (1 - p); c.fillText(f.s, 0, 0); c.restore(); }
+        c.globalAlpha = 1;
+      } });
+      shake(3);
     } });
   }
 
