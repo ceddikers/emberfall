@@ -169,6 +169,64 @@ const BOSS_VFX = (() => {
   // ---------------------------------------------------------------- telegraph impacts by tag
   let flambeAt = -9, flambeN = 0, squallAt = -9;   // [boss presentation] perf: impacts landing in a burst
   const IMPACT = {
+    // Hrimgar
+    tislam(tg) { const s = tg.live; shockAt(s.x, s.y, { r: s.r * 1.3, color: '#bff0ff', w: 8, dur: 0.55, flat: 1 }); shapeFlash(s, '#9fe8ff', { a: 0.34, dur: 0.5 }); VFX.sparks(s.x, s.y, { color: '#eaf6ff', n: 12, speed: 320 }); AFT.decal(s.x, s.y, { style: 'crack', r: s.r * 0.7, dur: 6, a: 0.6, seed: s.x * 0.01 + s.y * 0.013 }); shake(13); },
+    tifault(tg) { const s = tg.live; shapeFlash(s, '#9fe8ff', { a: 0.34, dur: 0.6 }); sweep(s, '#eaf6ff', 0.5); for (const q of scatter(s, 12)) after(rand(0, 0.3), () => VFX.sparks(q.x, q.y, { color: '#eaf6ff', n: 3, speed: 260 })); shake(12); },
+    tisink(tg) { const s = tg.live, x = s.x + s.len / 2, y = s.y; shockAt(x, y, { r: 150, color: '#7fc8ff', w: 7, dur: 0.6, flat: 1 }); VFX.splash(x, y, { color: '#4a8ac8', n: 14 }); VFX.sparks(x, y, { color: '#eaf6ff', n: 10, speed: 260 }); shake(7); },
+    tiburst(tg) { const s = tg.live, x = s.x + s.len / 2, y = s.y; shockAt(x, y, { r: 150, color: '#bff0ff', w: 7, dur: 0.5, flat: 1 }); VFX.sparks(x, y, { color: '#eaf6ff', n: 16, speed: 320 }); shake(7); },
+    ticicle(tg) { const s = tg.live; shockAt(s.x, s.y, { r: s.r * 1.2, color: '#dff4ff', w: 5, dur: 0.4, flat: 1 }); VFX.sparks(s.x, s.y, { color: '#eaf6ff', n: 8, speed: 260 }); shake(3); },
+    tisweep(tg) { const s = tg.live; shapeFlash(s, '#cfeaff', { a: 0.32, dur: 0.6 }); sweep(s, '#ffffff', 0.55); for (const q of scatter(s, 12)) VFX.smoke(q.x, q.y, { n: 1, color: '#dff0ff', size: 36, a: 0.5, speed: 120 }); shake(11); },
+    tibreath(tg) { const s = tg.live; shapeFlash(s, '#dff4ff', { a: 0.34, dur: 0.6 }); sweep(s, '#ffffff', 0.5); for (const q of scatter(s, 14)) after(rand(0, 0.3), () => VFX.sparks(q.x, q.y, { color: '#eaf6ff', n: 3, speed: 220 })); shake(5); },
+    tistomp(tg) { const s = tg.live; shockAt(s.x, s.y, { r: s.r * 1.4, color: '#bff0ff', w: 10, dur: 0.6, flat: 1 }); VFX.sparks(s.x, s.y, { color: '#eaf6ff', n: 14, speed: 340 }); shake(14); },
+    tiring(tg) { const s = tg.live; shockAt(s.x, s.y, { r: s.r, color: '#dff4ff', w: 7, dur: 0.5, flat: 1 }); shake(6); },
+    tislide(tg) { const s = tg.live; shapeFlash(s, '#dff0ff', { a: 0.36, dur: 0.7 }); for (const q of scatter(s, 10)) after(rand(0, 0.25), () => { VFX.smoke(q.x, q.y, { n: 1, color: '#e8f2fa', size: 40, a: 0.6, speed: 100 }); VFX.debris(q.x, q.y, { color: '#8a9ab0', n: 4, speed: 1 }); }); shake(10); },
+    tigrip(tg) { const s = tg.live; shockAt(s.x, s.y, { r: s.r * 1.2, color: '#9fb6c9', w: 7, dur: 0.4, flat: 1 }); shake(6); },
+    tigripstack(tg, msg) { const s = tg.live; shockAt(s.x, s.y, { r: s.r * 1.2, color: '#bfe0ff', w: 6, dur: 0.5, flat: 1 }); shake(4); },
+    tifrost(tg, msg) { const s = tg.live; if (msg && msg.cure) { VFX.smoke(s.x, s.y, { n: 4, color: '#ffe8c8', size: 30, a: 0.5, speed: 60 }); VFX.sparks(s.x, s.y, { color: '#ffd890', n: 10, speed: 180 }); return; } shockAt(s.x, s.y, { r: s.r * 1.2, color: '#bfe0ff', w: 6, dur: 0.5, flat: 1 }); shake(4); },
+    tigrasp(tg) { const s = tg.live; shockAt(s.x, s.y, { r: s.r * 1.5, color: '#eaf6ff', w: 6, dur: 0.5, flat: 1 }); VFX.sparks(s.x, s.y, { color: '#eaf6ff', n: 12, speed: 220 }); },
+    tihowl() { roomTint('#9fd8ff', 0.2, 0.8); shake(9); },
+    tiwhite() { roomTint('#f0faff', 0.45, 1.0); shake(8); },
+    tinight() { roomTint('#304a80', 0.25, 1.0); shake(8); },
+    // Vhalgrath
+    // the dive lands: a slam that rolls out from the pit, the floor cracking and throwing up embers and rock
+    dragonfall(tg) {
+      const s = tg.live;
+      shockAt(s.x, s.y, { r: s.r * 1.3, color: '#ffb04a', w: 9, dur: 0.6, flat: 1 });
+      shockAt(s.x, s.y, { r: s.r * 0.8, color: '#fff0c0', w: 5, dur: 0.4, flat: 1, delay: 0.05 });
+      shapeFlash(s, '#ff7a22', { a: 0.34, dur: 0.6 });
+      for (const q of scatter(s, 12)) after(rand(0, 0.25), () => { VFX.sparks(q.x, q.y, { color: '#ffd27a', n: 4, speed: 300 }); VFX.smoke(q.x, q.y, { n: 1, color: '#3a2a26', size: 32, a: 0.5, speed: 80 }); });
+      AFT.decal(s.x, s.y, { style: 'crack', r: s.r * 0.7, dur: 6, a: 0.6, seed: s.x * 0.01 + s.y * 0.013 });
+      shake(14);
+    },
+    // the breath goes: fire down the whole cone
+    breath(tg) {
+      const s = tg.live;
+      shapeFlash(s, '#ff8a2a', { a: 0.36, dur: 0.6 });
+      sweep(s, '#ffe0a0', 0.5);
+      for (const q of scatter(s, 14)) after(rand(0, 0.3), () => VFX.sparks(q.x, q.y, { color: '#ffd27a', n: 3, speed: 240 }));
+      shake(7);
+    },
+    // the tail comes round behind him
+    taillash(tg) { const s = tg.live; shapeFlash(s, '#e8c8a0', { a: 0.3, dur: 0.45 }); sweep(s, '#ffffff', 0.35); for (const q of scatter(s, 8)) VFX.smoke(q.x, q.y, { n: 1, color: '#6a4a3a', size: 30, a: 0.5, speed: 120 }); shake(9); },
+    // the Roar: the whole crater flares and rocks
+    roar() { roomTint('#ff8a3a', 0.22, 0.8); shake(10); },
+    heartburn(tg) { roomTint('#ff5a1a', 0.3, 1.0); shake(16); },
+    scorch(tg) { const s = tg.live; shockAt(s.x, s.y, { r: s.r * 1.2, color: '#ffb04a', w: 6, dur: 0.45, flat: 1 }); shapeFlash(s, '#ff7a22', { a: 0.4, dur: 0.5 }); VFX.sparks(s.x, s.y, { color: '#ffd27a', n: 8, speed: 280 }); shake(6); },
+    // the Hydra (hydra.js)
+    acid(tg) { const s = tg.live; shapeFlash(s, '#b8f04a', { a: 0.36, dur: 0.6 }); sweep(s, '#e8ffb0', 0.45); for (const q of scatter(s, 12)) after(rand(0, 0.3), () => VFX.splash(q.x, q.y, { color: '#9ccc2e', n: 5, speed: 0.8 })); shake(6); },
+    tide(tg) { const s = tg.live; shapeFlash(s, '#7ffff0', { a: 0.34, dur: 0.55 }); sweep(s, '#d8fffa', 0.4); for (const q of scatter(s, 10)) after(rand(0, 0.25), () => VFX.splash(q.x, q.y, { color: '#4fd8cc', n: 5, speed: 1 })); shake(7); },
+    bloom(tg) { const s = tg.live; shockAt(s.x, s.y, { r: s.r * 1.3, color: '#e0a0ff', w: 7, dur: 0.5, flat: 1 }); shapeFlash(s, '#b060f0', { a: 0.36, dur: 0.6 }); VFX.splash(s.x, s.y, { color: '#a050e0', n: 14, speed: 1.3 }); VFX.smoke(s.x, s.y, { n: 4, color: '#5a2a80', size: 34, a: 0.5, speed: 70 }); shake(6); },
+    gout(tg) { const s = tg.live; shockAt(s.x, s.y, { r: s.r * 1.2, color: '#ffb060', w: 6, dur: 0.45, flat: 1 }); shapeFlash(s, '#ff8a2a', { a: 0.4, dur: 0.5 }); VFX.sparks(s.x, s.y, { color: '#ffd27a', n: 10, speed: 280 }); shake(5); },
+    rime(tg) { const s = tg.live; shapeFlash(s, '#bfe8ff', { a: 0.34, dur: 0.6 }); shockAt(s.x, s.y, { r: s.r, color: '#e8f8ff', w: 8, dur: 0.6, flat: 1 }); for (const q of scatter(s, 12)) after(rand(0, 0.3), () => VFX.sparks(q.x, q.y, { color: '#e8f8ff', n: 3, speed: 200 })); shake(7); },
+    storm(tg) { const s = tg.live; shapeFlash(s, '#fff6a0', { a: 0.3, dur: 0.4 }); sweep(s, '#ffffff', 0.3); for (const q of scatter(s, 6)) after(rand(0, 0.2), () => VFX.lightning(q.x + rand(-14, 14), q.y - 280, q.x, q.y, { color: '#fff6a0', jag: 22, dur: 0.35 })); shake(8); },
+    gaze(tg) { roomTint('#e8e8f8', 0.22, 0.7); const s = tg.live; if (s) VFX.sparks(s.x, s.y, { color: '#ffffff', n: 8, speed: 260 }); shake(9); },
+    mirespit(tg) { const s = tg.live; shockAt(s.x, s.y, { r: s.r * 1.2, color: '#d8b868', w: 6, dur: 0.45, flat: 1 }); VFX.splash(s.x, s.y, { color: '#7a5a2a', n: 12, speed: 1.1 }); shake(4); },
+    sear(tg) { const s = tg.live; VFX.pillar(s.x, s.y, { r: 40, h: 150, color: '#ffb060', dur: 0.6 }); shockAt(s.x, s.y, { r: s.r * 1.4, color: '#ffd27a', w: 6, dur: 0.5, flat: 1 }); VFX.sparks(s.x, s.y, { color: '#ffd27a', n: 10, speed: 260 }); },
+    rise(tg) { const s = tg.live; shockAt(s.x, s.y, { r: s.r * 1.3, color: '#a8f0e8', w: 8, dur: 0.55, flat: 1 }); VFX.splash(s.x, s.y, { color: '#4fd8cc', n: 16, speed: 1.4 }); shake(6); },
+    cry() { roomTint('#e8d890', 0.16, 0.7); shake(7); },
+    surge() { roomTint('#4fd8cc', 0.22, 0.9); shake(9); },
+    heartbeat() { roomTint('#ffd870', 0.3, 1.0); shake(12); },
+    hgaze(tg) { roomTint('#e8e8f8', 0.28, 0.9); const s = tg.live; shockAt(s.x, s.y, { r: s.r, color: '#ffffff', w: 8, dur: 0.6, flat: 1 }); shake(12); },
     // Grubnak
     // Chop Chop: the ghost cleaver comes down beside him and the cut runs along his line, wall to wall: a burst of
     // sparks racing out both ways, tiles jumping, and a gouge left glowing in the floor
@@ -824,8 +882,10 @@ const BOSS_VFX = (() => {
   }
 
   function impact(tg, msg, ctx) {
+    // Azerath: every tag of his lands in archmage-art.js
+    if (ctx && ctx.boss === 'archmage' && typeof AZ_ART !== 'undefined') { AZ_ART.impact(tg, ctx, { shapeFlash, shockAt, scatter, after, shake, roomTint, sweep }); return; }
     // (an untagged raidwide washes the room in the boss's own colour, softly, instead of a grey-white veil)
-    if (tg.type === 'raidwide') { (IMPACT[tg.tag] || (() => { roomTint({ grubnak: '#ff8a3a', skitterra: '#b070ff', volkar: '#7fc8ff', hollowking: '#6dff9a' }[ctx && ctx.boss] || '#ffffff', 0.15); shake(6); }))(tg, ctx); return; }
+    if (tg.type === 'raidwide') { (IMPACT[tg.tag] || (() => { roomTint({ grubnak: '#ff8a3a', skitterra: '#b070ff', volkar: '#7fc8ff', hollowking: '#6dff9a', wyrm: '#ff8a3a', titan: '#9fd8ff' }[ctx && ctx.boss] || '#ffffff', 0.15); shake(6); }))(tg, ctx); return; }
     if (tg.type === 'proximity') { (IMPACT[tg.tag] || IMPACT.boil)(tg); shake(10); return; }
     if (tg.type === 'knockback') { const s = tg.live; shockAt(s.x, s.y, { r: 380, color: '#bfe6ff', w: 8, dur: 0.6, flat: 1 }); VFX.tornado(s.x, s.y, { r: 50, h: 160, dur: 0.7 }); return; }
     if (tg.type === 'buster') { buster(tg, ctx); return; }
@@ -898,6 +958,10 @@ const BOSS_VFX = (() => {
     volkar: { def: '#7fe8ff', surge: '#ffe08a', crash: '#ffe27a', field: '#d79bff', gale: '#e8f4ff', walls: '#e8f4ff', fist: '#9ff4ff', skyfall: '#dff4ff', avalanche: '#d8c8a8' },
     hollowking: { def: '#6dff9a', gaze: '#f0fff4', doom: '#b46aff', bells: '#ffd88a', cleave: '#ff8a7a', night: '#8aa0ff', audience: '#ffe6a0',
       lightsout: '#f0fff4', lids: '#c8ffd8', decree: '#7affa8' },
+    titan: { def: '#9fe8ff', howl: '#cfeaff', fist: '#bfe0ff', slam: '#9fe8ff', sweep: '#dff4ff', breath: '#eaf6ff', avalanche: '#e8f2fa', cast: '#bff0ff' },
+    wyrm: { def: '#ff8a2a', breath: '#ffd27a', roar: '#ff5a1a', dive: '#ffb04a', fly: '#ffd2a0', heart: '#ffe08a', roost: '#ff7a3a' },
+    archmage: { def: '#7fe8e0', fire: '#ff6a2a', pyre: '#ff6a2a', frost: '#7fd8ff', lances: '#7fd8ff', bolt: '#ffe45a', chain: '#ffe45a', void: '#a05aff', rifts: '#a05aff', rune: '#ffe08a', swap: '#ffe08a', mark: '#ffe08a', conv: '#ffffff', bind: '#3fe0d0', counter: '#c8a0ff', lance: '#9af0ff' },
+    hydra: { def: '#7fe0a8', head: '#c8ffd8', cry: '#ffe9a8', maul: '#ffb070', dive: '#7ffff0', heart: '#ffe08a', gaze: '#e8e8f8' },
   };
   // the wind-up while the boss casts: motes spiral in, a ring tightens, everything brightens near the end
   // Gorge: the whole kitchen is sucked into him: arms of fire and food spiralling in, tightening as he swallows
@@ -1370,7 +1434,56 @@ const BOSS_VFX = (() => {
     lid: { color: '#565d61', dust: '#a8b0ac', size: 1.2 }, stone: { color: '#5a6270', dust: '#b8c4d4', size: 1.3 },
     boulder: { color: '#6a6460', dust: '#c8c0b0', size: 1.4 }, brazier: { color: '#2f3337', dust: '#7a8a80', size: 0.9 },
   };
+  // The Hydra's head moments (hydra.js: propfx k 'hcast' a head winding up, 'stump' a head cut, 'sear' the stump burned,
+  // 'regrow' it left to sprout, 'rise' the Mother's heads coming up, 'echo' a cut head's memory striking in the Heart)
+  const HY_COL = { acid: '#b8f04a', tide: '#7ffff0', venom: '#e0a0ff', flame: '#ffb060', frost: '#e8f8ff', storm: '#fff6a0', gaze: '#ffffff', mire: '#d8b868' };
+  function hydraFx(msg) {
+    const col = HY_COL[msg.el] || '#ffffff';
+    if (msg.k === 'hcast') {
+      const dur = msg.dur || 3, big = msg.s ? 1 : 0.65;
+      VFX.fx({ dur, layer: 'air', draw: (c, p, t, e) => {
+        const k = e.a * Math.min(1, p / 0.12) * Math.min(1, (1 - p) / 0.06) * big;
+        c.save(); c.globalAlpha = k;
+        VFX.glowAt(c, msg.x, msg.y - 20, 12 + p * 30, col, 0.25 + 0.5 * p);
+        for (let i = 0; i < 6; i++) { const a = i * TAU / 6 + t * 3, d = (1 - p) * 46 + 8; VFX.glowAt(c, msg.x + Math.cos(a) * d, msg.y - 20 + Math.sin(a) * d * 0.7, 6, col, 0.5 * p); }
+        c.restore(); c.globalAlpha = 1;
+      } });
+    } else if (msg.k === 'stump') {
+      shockAt(msg.x, msg.y, { r: 90, color: col, w: 6, dur: 0.5, flat: 1 });
+      VFX.splash(msg.x, msg.y - 20, { color: '#8a2a1a', n: 14, speed: 1.4 });
+      VFX.smoke(msg.x, msg.y - 10, { n: 4, color: '#2a3a2a', size: 30, a: 0.5, speed: 60 });
+      AFT.decal(msg.x, msg.y, { style: 'crack', r: 40, dur: 10, a: 0.5, seed: msg.x * 0.01 });
+      shake(7);
+    } else if (msg.k === 'sear') {
+      VFX.pillar(msg.x, msg.y, { r: 36, h: 150, color: '#ffb060', dur: 0.8 });
+      VFX.pillar(msg.px, msg.py, { r: 30, h: 120, color: '#ffd27a', dur: 0.7 });
+      shockAt(msg.x, msg.y, { r: 110, color: '#ffd27a', w: 7, dur: 0.5, flat: 1 });
+      VFX.sparks(msg.x, msg.y - 20, { color: '#ffd27a', n: 14, speed: 300 });
+      VFX.smoke(msg.x, msg.y - 20, { n: 5, color: '#4a3a30', size: 34, a: 0.55, speed: 80 });
+      shake(5);
+    } else if (msg.k === 'regrow') {
+      shockAt(msg.x, msg.y, { r: 120, color: col, w: 7, dur: 0.6, flat: 1 });
+      VFX.splash(msg.x, msg.y - 20, { color: '#4f9a4a', n: 18, speed: 1.5 });
+      roomTint('#4f9a4a', 0.1, 0.5);
+      shake(7);
+    } else if (msg.k === 'rise') {
+      shockAt(0, 0, { r: 160, color: '#a8f0e8', w: 10, dur: 0.7, flat: 1 });
+      shockAt(0, 0, { r: 300, color: '#7ffff0', w: 6, dur: 0.9, flat: 1, delay: 0.1 });
+      VFX.splash(0, 0, { color: '#4fd8cc', n: 24, speed: 1.6 });
+      shake(8);
+    } else if (msg.k === 'echo') {
+      VFX.fx({ dur: 1.4, layer: 'air', draw: (c, p, t, e) => {
+        const k = e.a * (1 - p);
+        c.save(); c.globalAlpha = k;
+        VFX.glowAt(c, msg.x, msg.y - 22, 46 * (0.6 + 0.6 * p), col, 0.7);
+        c.restore(); c.globalAlpha = 1;
+      } });
+      shockAt(msg.x, msg.y, { r: 130, color: col, w: 6, dur: 0.6, flat: 1 });
+    } else return false;
+    return true;
+  }
   function propFx(msg, room, entById, bossKind) {
+    if (hydraFx(msg)) return;
     const st = PROP_STUFF[msg.kind] || { color: '#6a6a72', dust: '#b0b0b8', size: 1 };
     if (msg.k === 'chip') {
       VFX.debris(msg.x, msg.y - 20, { color: st.color, n: 5, speed: 0.8, size: st.size * 0.8 });
@@ -1683,6 +1796,8 @@ const BOSS_VFX = (() => {
     skitterra: { enrage: [['rear', 0.5], ['venom', 0.5], ['brood', 0.5]] },
     volkar: { enrage: [['sky', 0.5], ['charge', 0.5]] },
     hollowking: { cleave: [['windup', 0.1]], marks: [['marks', 0.3]], judgement: [['gavel', 0.3]], charges: [['scroll', 0.4]], enrage: [['rise', 0.5], ['gaze', 0.5]] },
+    archmage: { fire: [['fire', 0.5]], pyre: [['fire', 0.5]], frost: [['frost', 0.5]], lances: [['frost', 0.5]], bolt: [['bolt', 0.5]], chain: [['bolt', 0.5]], void: [['void', 0.5]], rifts: [['void', 0.5]],
+      rune: [['rune', 0.6]], swap: [['rune', 0.6]], mark: [['rune', 0.6]], bind: [['bind', 0.8]], conv: [['conv', 0.8]], counter: [['counter', 0.6]], burst: [['burst', 0.4]], lance: [['lance', 0.4]], enrage: [['conv', 0.5], ['burst', 0.5]] },
   };
   const castKey = (kind, anim, name) => {
     if (kind === 'grubnak' && anim === 'boil' && name === 'Flare-Up') return 'heave';
@@ -1857,7 +1972,9 @@ const BOSS_VFX = (() => {
   }
 
   // ---- the enrage: the cast builds to the lethal moment (pdmg 'enrage': fight.js's sentence, untouched)
-  const ENR = { grubnak: '#ff2a10', skitterra: '#b02aff', volkar: '#7a8aff', hollowking: '#9ac8ff' };
+  const ENR = { grubnak: '#ff2a10', skitterra: '#b02aff', volkar: '#7a8aff', hollowking: '#9ac8ff', wyrm: '#ff5a1a', titan: '#9fe8ff' };
+  ENR.archmage = '#3fe0d0';
+  ENR.hydra = '#3affb0';
   function enrageStart(kind, b, dur) {
     const sh = SH(b); if (sh.death) return;
     sh.enrAt = clk(); sh.enrDur = dur; sh.landed = false;
@@ -1974,7 +2091,9 @@ const BOSS_VFX = (() => {
   }
 
   // ---- the entrance (at the room's title card): short, cosmetic, nothing blocked
-  const INTRO_DUR = { grubnak: 1.5, skitterra: 1.6, volkar: 1.2, hollowking: 2.2 };
+  const INTRO_DUR = { grubnak: 1.5, skitterra: 1.6, volkar: 1.2, hollowking: 2.2, wyrm: 2.0, titan: 2.2 };
+  INTRO_DUR.archmage = 2.2;
+  INTRO_DUR.hydra = 2.0;
   function intro(kind, b) {
     const sh = SH(b); sh.intro = { at: clk(), kind };
     if (kind === 'grubnak') {
@@ -2012,6 +2131,10 @@ const BOSS_VFX = (() => {
         softFlash(sh, '#dff4ff', 0.18, 0.45);
         shake(10);
       });
+    } else if (kind === 'archmage') {
+      // the seven circles flare one after another under him, and he rises out of the water in their light
+      for (let i = 0; i < 4; i++) soon(sh, 0.15 + i * 0.28, () => shockAt(b.x, b.y, { r: 130 + i * 90, color: ['#ff6a2a', '#7fd8ff', '#ffe45a', '#a05aff'][i], w: 6, dur: 0.6, flat: 1 }));
+      soon(sh, 1.0, () => { VFX.pillar(b.x, b.y, { r: 60, h: 360, color: '#7fe8e0', dur: 0.8 }); VFX.smoke(b.x, b.y, { color: '#2a5a60', n: 8, size: 36, a: 0.5, speed: 120 }); shake(6); });
     } else if (kind === 'hollowking') {
       // the great door behind him swings open on grave-light, fog rolls out over the floor, he walks out of it
       const dy = -ARENA.hh;
@@ -2031,7 +2154,9 @@ const BOSS_VFX = (() => {
   const introDrop = t => t < 0.9 ? -620 * (1 - easeIn(t / 0.9)) : t < 1.25 ? -16 * Math.sin((t - 0.9) / 0.35 * Math.PI) : 0;
 
   // ---- his fall (fight clear), 2-3 s; the confetti comes after it (victory)
-  const DEATH_DUR = { grubnak: 2.2, skitterra: 2.2, volkar: 2.3, hollowking: 2.4 };
+  const DEATH_DUR = { grubnak: 2.2, skitterra: 2.2, volkar: 2.3, hollowking: 2.4, wyrm: 2.6, titan: 2.8 };
+  DEATH_DUR.archmage = 2.8;
+  DEATH_DUR.hydra = 2.8;
   function bossDeath(kind, b) {
     const sh = SH(b); if (sh.death) return;
     cut(sh); sh.enrAt = -9; sh.behind = 0; sh.death = { at: clk(), kind };
@@ -2140,6 +2265,10 @@ const BOSS_VFX = (() => {
       else if (kind === 'skitterra') { q.oy += introDrop(s); if (s < 1.2) X('rear', true); }
       else if (kind === 'volkar') { if (s < 0.3) q.alpha = 0; else { const u = Math.min(1, (s - 0.3) / 0.45); q.alpha = u; q.grow *= 1.25 - 0.25 * easeOut(u); if (s < 1.1) X('charge', true); } }
       else if (kind === 'hollowking') { if (s < 0.3) q.alpha = 0; else { const u = Math.min(1, (s - 0.3) / 1.3); q.alpha = easeOut(u); q.ghost = Math.max(q.ghost, 1 - u); if (s > 1.6 && s < 2.1) X('gaze', true); } }
+      else if (kind === 'titan') { if (s < 0.3) q.alpha = 0; else { const u = Math.min(1, (s - 0.3) / 0.9); q.alpha = easeOut(u); q.grow *= 1.12 - 0.12 * easeOut(u); if (s < 1.6) X('howl', true); } }
+      else if (kind === 'wyrm') { if (s < 0.3) q.alpha = 0; else { const u = Math.min(1, (s - 0.3) / 0.6); q.alpha = easeOut(u); q.grow *= 1.2 - 0.2 * easeOut(Math.min(1, (s - 0.3) / 1.2)); if (s < 1.5) X('roar', true); } }
+      else if (kind === 'archmage') { if (s < 0.4) q.alpha = 0; else { const u = Math.min(1, (s - 0.4) / 1.0); q.alpha = easeOut(u); q.oy += (1 - easeOut(u)) * 50; q.grow *= 1.1 - 0.1 * easeOut(u); X('conv', s < 1.6); } }
+      else if (kind === 'hydra') { if (s < 0.3) q.alpha = 0; else { const u = Math.min(1, (s - 0.3) / 0.9); q.alpha = easeOut(u); q.oy += (1 - easeOut(u)) * 40; if (s < 1.5) X('cry', true); } }
     }
     // the fall
     if (sh.death) {
@@ -2153,6 +2282,23 @@ const BOSS_VFX = (() => {
       } else if (kind === 'volkar') {
         if (s < 0.7) { q.ox += Math.sin(s * 47) * 3; X('charge', true); }
         else { const u = Math.min(1, (s - 0.7) / 1.5); X('disperse', u); q.alpha = 1 - easeOut(u); q.grow *= 1 + 0.15 * u; q.oy -= 40 * u; q.ghost = Math.max(q.ghost, u); }
+      } else if (kind === 'titan') {
+        const u = Math.min(1, s / 2.4);
+        if (s < 1.0) { X('howl', true); q.ox += Math.sin(s * 29) * 2; } else q.alpha = 1 - easeOut(Math.min(1, (s - 1.0) / 1.6));
+        q.grow *= 1 - 0.05 * u; q.dark = Math.max(q.dark, 0.45 * u);
+      } else if (kind === 'wyrm') {
+        const u = Math.min(1, s / 2.2);
+        if (s < 0.9) { X('roar', true); q.ox += Math.sin(s * 31) * 2.5; } else q.alpha = 1 - easeOut(Math.min(1, (s - 0.9) / 1.5));
+        q.grow *= 1 - 0.06 * u; q.dark = Math.max(q.dark, 0.55 * u);
+      } else if (kind === 'archmage') {
+        // the rings go dark one by one and he comes apart into bubbles, sinking
+        const u = Math.min(1, s / 2.4);
+        if (s < 1.0) { X('conv', true); q.ox += Math.sin(s * 33) * 2; } else q.alpha = 1 - easeOut(Math.min(1, (s - 1.0) / 1.6));
+        q.oy += 26 * easeOut(u); q.grow *= 1 - 0.08 * u; q.dark = Math.max(q.dark, 0.4 * u);
+      } else if (kind === 'hydra') {
+        // she sinks back into the pool, the brass collar last, and the water goes still
+        const u = Math.min(1, s / 2.4);
+        X('dive', true); q.oy += 36 * easeOut(u); q.alpha = 1 - easeOut(Math.min(1, (s - 0.5) / 1.9)); q.grow *= 1 - 0.1 * u; q.dark = Math.max(q.dark, 0.35 * u);
       } else {
         const kneel = Math.min(1, s / 0.5); q.grow *= 1 - 0.07 * kneel; q.ox += s < 0.6 ? Math.sin(s * 37) * 1.5 : 0;
         if (s > 0.5) X('crownless', true);
@@ -2215,7 +2361,9 @@ const BOSS_VFX = (() => {
     ctx.drawImage(layerCv, X0, Y0, BOX, BOX);
     ctx.restore();
   }
-  const PAL_GHOST = { grubnak: '#ffe8c8', skitterra: '#e8dcff', volkar: '#cfeeff', hollowking: '#c8ffd8' };
+  const PAL_GHOST = { grubnak: '#ffe8c8', skitterra: '#e8dcff', volkar: '#cfeeff', hollowking: '#c8ffd8', wyrm: '#ffd8b0', titan: '#e8f6ff' };
+  PAL_GHOST.archmage = '#bff8f0';
+  PAL_GHOST.hydra = '#c8ffd8';
   // how much of him is there (the hitbox ring fades with him: he's gone, falling or not yet come in)
   const presence = bd => (bd && bd.show ? bd.show.alpha : 1) * (bd && bd.show && bd.show.death ? Math.max(0, 1 - (clk() - bd.show.death.at) / 0.5) : 1);
   function setClock(fn) { clockFn = fn; }

@@ -95,6 +95,10 @@ const ARENA_DEFS = {
   skitterra: { kind: 'poly', n: 8, r: 560 },
   volkar: { kind: 'circle', r: 540 },   // a storm-swept peak; in phase 2 its electrified edge closes in (resize)
   hollowking: { kind: 'rect', hw: 600, hh: 440, corner: 40 },   // a long burial hall, the throne against the top wall
+  wyrm: { kind: 'circle', r: 560 },   // a volcanic crater; three scorched spots where he lands, the rim turns molten mid-fight
+  archmage: { kind: 'circle', r: 540 },   // a drowned tower: seven circles of spellwork on the floor, four elemental sigils (archmage.js)
+  hydra: { kind: 'circle', r: 540 },   // a flooded temple: nine columns in a ring, the Mother in the pool at its heart (hydra.js)
+  titan: { kind: 'rect', hw: 500, hh: 400, corner: 40 },   // a glacier plateau: a 5 x 4 mosaic of ice sheets 200 across (titan.js), four braziers where four sheets meet
 };
 const ARENA = {
   kind: 'circle', r: 520, hw: 520, hh: 520, corner: 0, n: 0,

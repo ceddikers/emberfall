@@ -599,6 +599,70 @@ TALENTS.ironpalm = [
   ],
 ];
 
+// ======================================================================= GLOOMSWORN (tank, class 18)
+// New behaviour, one plain number (Quick Rites). Rows III and V grant a move (TALENT_ABILITIES in kits.js).
+Object.assign(TALENTS, {
+  gloomsworn: [
+    [
+      { id: 'gloomsworn_bleed', name: 'Black Blood', ab: 'rend', text: 'Gloaming, the third strike, now leaves the boss bleeding black: {d:35} every 3s for 9s.' },
+      { id: 'gloomsworn_interest', name: 'Dread Interest', ab: 'strike', text: 'Gloom Strike, when you still hold 40 Gloom or more after it, now cuts a second time for 40%.' },
+      { id: 'gloomsworn_omen', name: 'Ill Omen', ab: 'rend', text: 'Whenever the boss begins a cast, your next Rend strike builds 12 extra Gloom.' },
+    ],
+    [
+      { id: 'gloomsworn_wakened', name: 'Waking Dead', ab: 'mantle', text: 'When a Hollow ends with you standing, Black Mantle and Last Rite are ready again at once.' },
+      { id: 'gloomsworn_veil', name: 'Veiled Step', ab: 'shade', text: 'Shade Step now also veils you: 15% less damage taken for 4s.' },
+      { id: 'gloomsworn_bearer', name: 'Pallbearers', ab: 'pall', text: 'Black Pall now also lays a barrier of {s:100} on every ally for 8s.' },
+    ],
+    [
+      { id: 'gloomsworn_vigil', name: 'Vigil Ward', ab: 'pall', grants: true, text: 'New move on R, in place of Black Pall. Vigil Ward (45s, 30 Gloom): stand watch over whoever is hurt most. They take 50% less damage for 5s and are wrapped in a barrier of {s:200}; you take 15% less damage for 5s.' },
+      { id: 'gloomsworn_spill', name: 'Spill', ab: 'strike', text: 'Gloom that would run past 100 now hardens into a barrier on you for 8s: {s:10} for every point that spilled.' },
+      { id: 'gloomsworn_feast', name: 'Feast on the Hollow', ab: 'rend', text: 'While you are Hollow, every strike you land heals you for 3% of your HP. The healing counts against your debt.' },
+    ],
+    [
+      { id: 'gloomsworn_thorns', name: 'Thorned Mantle', ab: 'mantle', text: 'While Black Mantle lasts, every hit that gets through it strikes the boss back for a quarter of the damage (up to {d:500}).' },
+      { id: 'gloomsworn_requiem', name: 'Requiem', ab: 'rite', text: 'Last Rite now shares half its barrier with every ally.' },
+      { id: 'gloomsworn_quick', name: 'Quick Rites', ab: 'strike', cd: { strike: -2 }, text: 'Gloom Strike recharges 2s faster.' },
+    ],
+    [
+      { id: 'gloomsworn_pyre', name: 'Black Pyre', ab: 'rite', grants: true, text: 'New move on F, in place of Last Rite. Black Pyre (90s): spend all your Gloom (at least 30), and the vessel breaks over your target in black fire for {d:600} plus {d:10} for every point, and a barrier of {s:150} plus {s:2} for every point wraps you for 8s.' },
+      { id: 'gloomsworn_weeping', name: 'Weeping Wake', ab: 'strike', text: 'When a Hollow ends with you standing, the whole party is shielded for half your debt (at most a quarter of your HP).' },
+      { id: 'gloomsworn_dusk', name: 'Last Light', ab: 'rite', text: 'Eclipse of the Vigil now keeps half your Gloom instead of emptying the vessel.' },
+    ],
+  ],
+});
+
+// ======================================================================= THRESHER (damage, class 19)
+// New behaviour, one plain number (Quick Hands). Rows III and V grant a move (TALENT_ABILITIES in kits.js).
+Object.assign(TALENTS, {
+  thresher: [
+    [
+      { id: 'thresher_drag', name: 'Dragging Edge', ab: 'slash', text: 'A Backswing now drags the harvest along: it ages every affliction on the boss by 1s.' },
+      { id: 'thresher_weight', name: 'Dread Weight', ab: 'hook', text: 'Hook now plants a Bind as well as its Thread.' },
+      { id: 'thresher_gleaning', name: 'Gleaning', ab: 'reap', text: 'A Reap that cashes in two or more gold afflictions makes your next Slash or Cleave cut again for 35% a moment later.' },
+    ],
+    [
+      { id: 'thresher_vanish', name: 'Vanishing Cut', ab: 'blink', text: 'Gloam Blink now takes you out of the world for 1.5s: nothing can touch you.' },
+      { id: 'thresher_tithe', name: 'Tithe', ab: 'reap', text: 'Drain, its ticks and its payout in a Reap, now mend the most hurt ally instead of you.' },
+      { id: 'thresher_hush', name: 'Hush', ab: 'gather', text: 'Gather also wraps you in a barrier of {s:100} for 6s.' },
+    ],
+    [
+      { id: 'thresher_sowing', name: 'Sowing', ab: 'gather', grants: true, text: 'New move on R, in place of Gather. Sowing (25s): all four afflictions land on the boss at once, young (any that is already ripening is left to ripen), and a cut for {d:100}.' },
+      { id: 'thresher_compost', name: 'Compost', ab: 'reap', text: 'Rot you reap is not wasted: every rotten affliction a Reap cashes in leaves the boss bleeding for {d:30} every 2s for 8s.' },
+      { id: 'thresher_second', name: 'Second Growth', ab: 'reap', text: 'A gold affliction a Reap cashes in is not spent: it stays on the boss, a moment from ripe again.' },
+    ],
+    [
+      { id: 'thresher_sacrifice', name: 'Sacrifice', ab: 'wisp', text: 'Press F again while the Wisp is out to burst it: a blow for {d:320}, every young affliction ripens to gold at once, and you deal 10% more damage for 8s. Its cooldown counts from the day it was summoned.' },
+      { id: 'thresher_joined', name: 'Joined Swing', ab: 'reap', text: 'With the Wisp out, Reap makes it strike too: a second cut for {d:140}.' },
+      { id: 'thresher_quick', name: 'Quick Hands', ab: 'gather', cd: { gather: -4 }, text: 'Gather recharges 4s faster.' },
+    ],
+    [
+      { id: 'thresher_cull', name: 'Cull', ab: 'wisp', grants: true, text: 'New move on F, in place of Spirit Wisp. Cull (40s): take what is owed now. Every affliction on the boss pays out as if it were gold, whatever its age, and none is spent.' },
+      { id: 'thresher_opengate', name: 'Open Gate', ab: 'reap', text: 'The fifth strike of Reaper\'s Gate no longer spends the afflictions: they stay on the boss, all four at full ripeness.' },
+      { id: 'thresher_omen', name: 'Omen of Harvest', ab: 'gather', text: 'Whenever the boss begins a cast, every affliction that is still young ripens to gold at once.' },
+    ],
+  ],
+});
+
 // id -> { cls, row, col, t }
 const TALENT_BY_ID = {};
 for (const [cls, rows] of Object.entries(TALENTS)) rows.forEach((row, r) => row.forEach((t, c) => { TALENT_BY_ID[t.id] = { cls, row: r, col: c, t }; }));

@@ -780,3 +780,154 @@ function drawGauge(c, kit, w, h, t) {
     c.restore();
   }
 }
+
+// ======================================================================= Gloomsworn (tank, class 18)
+// Gloom: a dark glass vessel, cracked, that fills from the bottom with shadow lit by a cold teal-white where it is full of
+// cracks; the surface line glows, and brimming (100) a crown of shards stands up on it and pulses: Hollow is ready.
+// While Hollow (and the grace after) the vessel empties out to pure light, a ring of one segment per second runs down
+// round it (teal for the Hollow, amber for the grace) and two bars race underneath: the debt (red) against what has been
+// healed back (green), with the verdict beneath. The painted gauge replaces this later.
+Object.assign(GAUGES, {
+  gloom(c, k, w, h, t) {
+    const g = k.g, v = Math.max(0, Math.min(1, (g.gloom || 0) / 100)), cx = w / 2, cy = 44, R = 29, now = k.now;
+    const hol = k.has('hollow'), grace = !hol && (g.graceUntil || 0) > now, hl = (hol || grace) && g.hl ? g.hl : null, full = (g.gloom || 0) >= 99.5;
+    const GH = '#bff8ee', pulse = 0.5 + 0.5 * Math.sin(t * 6);
+    // the light behind the vessel
+    if (hol) glow(c, cx, cy, R + 22, GH, 0.34 + 0.1 * pulse);
+    else if (grace) glow(c, cx, cy, R + 20, '#ffb06a', 0.26 + 0.12 * Math.sin(t * 9));
+    else if (full) glow(c, cx, cy, R + 18, GH, 0.2 + 0.12 * pulse);
+    else if (v > 0.4) glow(c, cx, cy, R + 10, '#6a3aba', 0.16 * v);
+    // the crown of shards on a full vessel
+    if (full || hol) for (let i = 0; i < 7; i++) {
+      const a = -Math.PI / 2 + (i - 3) * 0.33, tip = R + 9 + (i % 2) * 4 + (hol ? Math.sin(t * 3 + i) * 1.5 : 0), w2 = 0.1;
+      poly(c, [cx + Math.cos(a - w2) * (R - 1), cy + Math.sin(a - w2) * (R - 1), cx + Math.cos(a) * tip, cy + Math.sin(a) * tip, cx + Math.cos(a + w2) * (R - 1), cy + Math.sin(a + w2) * (R - 1)], '#120a1e', OUT, 1.2);
+      c.save(); c.globalAlpha = 0.5 + 0.5 * pulse; line(c, cx + Math.cos(a) * (R + 1), cy + Math.sin(a) * (R + 1), cx + Math.cos(a) * (tip - 2), cy + Math.sin(a) * (tip - 2), GH, 1); c.restore();
+    }
+    circle(c, cx, cy, R, '#0e0816', OUT, 2.4);
+    c.save(); c.beginPath(); c.arc(cx, cy, R - 2, 0, TAU); c.clip();
+    // the fill: a Hollow vessel is all light, an ordinary one is shadow brightening to a pale surface
+    const top = hol ? cy - R : cy + R - 2 * (R - 2) * v;
+    const gr = c.createLinearGradient(0, top, 0, cy + R);
+    if (hol) { gr.addColorStop(0, '#f4fffb'); gr.addColorStop(1, '#5fd8c8'); }
+    else if (grace) { gr.addColorStop(0, '#ffe0b8'); gr.addColorStop(1, '#8a4a3a'); }
+    else { gr.addColorStop(0, v > 0.85 ? '#a98ae8' : '#7a5ac8'); gr.addColorStop(0.35, '#4a2a8a'); gr.addColorStop(1, '#1e0f3a'); }
+    c.fillStyle = gr; c.beginPath(); c.moveTo(0, top);
+    for (let x = 0; x <= w; x += 4) c.lineTo(x, top + (hol ? 0 : Math.sin(x * 0.22 + t * 3) * 1.6));
+    c.lineTo(w, h); c.lineTo(0, h); c.closePath(); c.fill();
+    // the cracks in the glass: pale where the shadow behind them is, hidden above the surface
+    c.strokeStyle = hol ? 'rgba(20,10,40,0.55)' : GH; c.lineWidth = 1.1; c.lineCap = 'round'; c.lineJoin = 'round';
+    for (const [x0, y0, x1, y1, x2, y2] of [[-4, -22, 3, -8, -2, 4], [3, -8, 14, -14, 20, -6], [-2, 4, -14, 12, -20, 8], [-2, 4, 8, 16, 6, 26], [-14, 12, -12, 22, -4, 27]]) {
+      const yy = cy + y0; if (!hol && yy < top - 1) continue;
+      c.globalAlpha = hol ? 0.7 : 0.3 + 0.5 * v; c.beginPath(); c.moveTo(cx + x0, cy + y0); c.lineTo(cx + x1, cy + y1); c.lineTo(cx + x2, cy + y2); c.stroke();
+    }
+    c.globalAlpha = 1;
+    // the surface line
+    if (!hol && v > 0.02 && v < 0.99) { c.strokeStyle = GH; c.globalAlpha = 0.85; c.lineWidth = 1.3; c.beginPath(); for (let x = cx - R; x <= cx + R; x += 4) { const yy = top + Math.sin(x * 0.22 + t * 3) * 1.6; x === cx - R ? c.moveTo(x, yy) : c.lineTo(x, yy); } c.stroke(); c.globalAlpha = 1; }
+    c.restore();
+    c.beginPath(); c.arc(cx, cy, R, 0, TAU); c.lineWidth = 2.5; c.strokeStyle = hol ? '#ffffff' : grace ? '#ffb06a' : full ? '#e8fffa' : (g.gloom || 0) >= 40 ? '#a98ae8' : '#5a4a78'; c.stroke();
+    // the marks where Gloom Strike (40) and Black Pall (30) become possible
+    if (!hol) for (const m of [30, 40]) { const y = cy + R - 2 * (R - 2) * (m / 100), dx = Math.sqrt(Math.max(0, (R - 2) * (R - 2) - (y - cy) * (y - cy))); line(c, cx - dx, y, cx - dx + 5, y, 'rgba(240,230,255,0.6)', 1.2); }
+    label(c, hol ? 'HOLLOW' : String(Math.floor(g.gloom || 0)), cx, cy + 1, hol ? '#0e0816' : '#f6f2ff', hol ? 9 : 15, 'system-ui', 800);
+    // Hollow's ring: a segment for every second, running out clockwise from the top; the grace is the amber tail
+    if (hol || grace) {
+      const D = k.def.hollowLong ? GLOOM.HOLLOW_LONG : GLOOM.HOLLOW, Gr = GLOOM.GRACE, n = D + Gr, left = Math.max(0, (g.graceUntil || 0) - now), gone = n - left;
+      for (let i = 0; i < n; i++) {
+        const a0 = -Math.PI / 2 + i * TAU / n + 0.05, a1 = -Math.PI / 2 + (i + 1) * TAU / n - 0.05, amber = i >= D;
+        const part = Math.max(0, Math.min(1, i + 1 - gone));   // 1 = whole second left, 0 = spent
+        c.beginPath(); c.arc(cx, cy, R + 7, a0, a1); c.lineWidth = 4.5; c.lineCap = 'butt'; c.strokeStyle = 'rgba(14,8,22,0.8)'; c.stroke();
+        if (part > 0.01) { c.beginPath(); c.arc(cx, cy, R + 7, a0, a0 + (a1 - a0) * part); c.lineWidth = 3.4; c.strokeStyle = amber ? (grace ? `rgba(255,${150 + 60 * Math.sin(t * 9)},106,1)` : '#ffb06a') : GH; c.stroke(); }
+      }
+    }
+    // debt against healing
+    if (hl) {
+      const debt = Math.max(1, hl.debt), maxHp = (k.env.maxHp && k.env.maxHp()) || 1, scale = Math.max(debt, hl.healed, maxHp * 0.25), bw = 118, bx = cx - bw / 2, by = cy + R + 13, covered = hl.healed >= debt;
+      rrect(c, bx, by, bw, 7, 3, '#241830', OUT, 1);
+      rrect(c, bx, by, Math.max(2, bw * Math.min(1, debt / scale)), 7, 3, '#c0405a');
+      rrect(c, bx, by + 9, bw, 7, 3, '#241830', OUT, 1);
+      rrect(c, bx, by + 9, Math.max(2, bw * Math.min(1, hl.healed / scale)), 7, 3, covered ? '#5fe08a' : '#7fc89a');
+      const mx = bx + bw * Math.min(1, debt / scale); line(c, mx, by + 8, mx, by + 17, '#ffffff', 1.2);   // the debt, marked on the healed bar: reach it
+      label(c, `debt ${Math.round(hl.debt)}`, cx, by + 6, '#fff', 8, 'system-ui', 700);
+      label(c, `healed ${Math.round(hl.healed)}`, cx, by + 15, '#fff', 8, 'system-ui', 700);
+      label(c, covered ? 'covered' : `short ${Math.round(debt - hl.healed)}`, cx, by + 26, covered ? '#8ff0b0' : '#ff9ab0', 9, 'system-ui', 700);
+    }
+  },
+});
+
+// ======================================================================= Thresher (damage, class 19)
+// Harvest: four ripening meters, one per affliction on the boss (Mark, Drain, Bind, Thread). Each is a tall bar that fills as
+// its affliction ages through three stretches: green (young), a GOLD stretch bracketed on both sides and ruled with fine
+// lines (ripe: this is the moment to Reap), then brown and cracked (rotten). The affliction's glyph sits under its bar and
+// takes the stage's colour; a bar in its gold glows and pulses, a rotten one droops. A fine line under them runs down with
+// the Wisp's seconds (a small blue flame at its end), and in the Gate five pips count the strikes (the fifth gold). An empty
+// bar is a dark slot. The painted gauge replaces this later.
+Object.assign(GAUGES, {
+  harvest(c, k, w, h, t) {
+    const g = k.g, now = k.now, ids = THRESH.IDS, Y = thY(k), R = thR(k), END = R + THRESH.LIFE;
+    const bw = 26, gap = 8, tot = ids.length * bw + (ids.length - 1) * gap, x0 = w / 2 - tot / 2, top = 6, bh = 52;
+    const hidden = id => !!(k.def.noAff && k.def.noAff.indexOf(id) >= 0);
+    const AFC = { mark: '#ff6a6a', drain: '#7ff08a', bind: '#b88cff', thread: '#dff2f0' };
+    const yY = top + bh - bh * (Y / END), yR = top + bh - bh * (R / END);   // where gold begins and ends
+    // the affliction's glyph, small, under its bar
+    const mini = (id, x, y, s, col, dim) => {
+      c.save(); c.translate(x, y); c.lineCap = 'round'; c.lineJoin = 'round'; c.globalAlpha = dim ? 0.45 : 1;
+      const path = () => {
+        c.beginPath();
+        if (id === 'mark') { c.moveTo(0, -s); c.lineTo(s * 0.68, 0); c.lineTo(0, s); c.lineTo(-s * 0.68, 0); c.closePath(); c.moveTo(0, -s * 0.55); c.lineTo(0, s * 0.55); }
+        else if (id === 'drain') { c.moveTo(0, -s * 1.05); c.bezierCurveTo(s * 0.9, -s * 0.1, s * 0.8, s * 0.8, 0, s * 0.8); c.bezierCurveTo(-s * 0.8, s * 0.8, -s * 0.9, -s * 0.1, 0, -s * 1.05); }
+        else if (id === 'bind') { for (let i = 0; i < 3; i++) { const a = i * TAU / 3 - Math.PI / 2; c.save(); c.rotate(a); c.moveTo(s * 1.04, 0); c.ellipse(s * 0.42, 0, s * 0.62, s * 0.34, 0, 0, TAU); c.restore(); } }
+        else { for (let i = 0; i < 3; i++) { const lx = (i - 1) * s * 0.62, ly = (i - 1) * s * 0.62, rx = s * (i % 2 ? 0.42 : 0.3), ry = s * (i % 2 ? 0.3 : 0.42); c.moveTo(lx + rx, ly); c.ellipse(lx, ly, rx, ry, 0.6, 0, TAU); } }
+      };
+      c.strokeStyle = '#08140c'; c.lineWidth = 3.6; path(); c.stroke(); c.strokeStyle = col; c.lineWidth = 1.6; path(); c.stroke();
+      c.restore();
+    };
+    ids.forEach((id, i) => {
+      const x = x0 + i * (bw + gap), cx = x + bw / 2, at = g.aff[id], age = at == null ? -1 : now - at, st = thStage(k, id);
+      const col = st === 2 ? '#ffd65a' : st === 3 ? '#8a5e34' : st === 1 ? AFC[id] : '#5a6a58';
+      if (hidden(id)) { rrect(c, x, top, bw, bh, 6, '#14131a', OUT, 2); label(c, '-', cx, top + bh / 2, '#4a4650', 12, 'system-ui', 700); return; }
+      if (st === 2) glow(c, cx, top + bh / 2, bh * 0.75, '#ffd65a', 0.28 + 0.12 * Math.sin(t * 7 + i));
+      rrect(c, x, top, bw, bh, 6, '#0d1a12', OUT, 2.4);
+      c.save(); c.beginPath(); c.roundRect(x + 1.5, top + 1.5, bw - 3, bh - 3, 5); c.clip();
+      // the three stretches: young green at the foot, the gold band ruled with fine lines, the rotten brown above it
+      c.fillStyle = 'rgba(95,190,80,0.16)'; c.fillRect(x, yY, bw, top + bh - yY);
+      c.fillStyle = 'rgba(255,214,90,0.22)'; c.fillRect(x, yR, bw, yY - yR);
+      c.strokeStyle = 'rgba(255,226,130,0.38)'; c.lineWidth = 1;
+      for (let yy = yR + 3; yy < yY; yy += 4) { c.beginPath(); c.moveTo(x, yy); c.lineTo(x + bw, yy); c.stroke(); }
+      c.fillStyle = 'rgba(120,80,48,0.22)'; c.fillRect(x, top, bw, yR - top);
+      if (age >= 0) {
+        const fh = Math.min(bh, bh * (age / END)), fy = top + bh - fh;
+        const gr = c.createLinearGradient(0, top + bh, 0, fy), q = Math.max(0.01, age);
+        gr.addColorStop(0, '#4fae48'); gr.addColorStop(Math.min(1, Y / q), '#8fe06a');
+        gr.addColorStop(Math.min(1, Y / q + 0.001), '#f2c84a'); gr.addColorStop(Math.min(1, R / q), '#ffe27a');
+        gr.addColorStop(Math.min(1, R / q + 0.001), '#8a5a3a'); gr.addColorStop(1, '#5a3a24');
+        c.fillStyle = gr; c.fillRect(x, fy, bw, fh);
+        c.fillStyle = 'rgba(255,255,255,0.55)'; c.fillRect(x, fy, bw, 2);
+        if (st === 3) { c.strokeStyle = 'rgba(20,10,4,0.7)'; c.lineWidth = 1; for (let n = 0; n < 4; n++) { const cyy = top + 6 + n * 9; c.beginPath(); c.moveTo(x + 3, cyy); c.lineTo(x + 9 + (n % 2) * 6, cyy + 4); c.lineTo(x + 7, cyy + 8); c.stroke(); } }
+      }
+      c.restore();
+      // the gold stretch bracketed at both sides: the Reap window, readable with the bar empty
+      const bk = st === 2 ? '#fff0a0' : '#e0b84a';
+      for (const sx of [x - 2.5, x + bw + 2.5]) { const dx = sx < x ? 3 : -3; c.strokeStyle = bk; c.lineWidth = 1.8; c.lineCap = 'round'; c.beginPath(); c.moveTo(sx + dx, yR); c.lineTo(sx, yR); c.lineTo(sx, yY); c.lineTo(sx + dx, yY); c.stroke(); }
+      if (st === 2) { c.save(); c.globalAlpha = 0.55 + Math.sin(t * 7 + i) * 0.3; rrect(c, x - 1, top - 1, bw + 2, bh + 2, 7, null, '#ffe27a', 2); c.restore(); }
+      if (st === 3) rrect(c, x - 1, top - 1, bw + 2, bh + 2, 7, null, 'rgba(138,90,58,0.85)', 1.6);
+      if (age >= 0) { const my = top + bh - bh * Math.min(1, age / END); line(c, x - 3, my, x + bw + 3, my, '#ffffff', 1.4); }
+      mini(id, cx, top + bh + 13 + (st === 3 ? 2 : 0), 6, col, st === 0);
+    });
+    // the Wisp's seconds, a fine line with a little blue flame at its end
+    const wl = k.has('wisp') ? k.remaining('wisp') : 0, wy = top + bh + 28;
+    rrect(c, x0, wy, tot, 4, 2, '#12201a', OUT, 1);
+    if (wl > 0) {
+      const fw = (tot - 2) * Math.min(1, wl / THRESH.WISP_DUR);
+      rrect(c, x0 + 1, wy + 0.5, Math.max(2, fw), 3, 1.5, '#9ad4ff');
+      glow(c, x0 + 1 + fw, wy + 2, 7, '#7ec4ff', 0.8); circle(c, x0 + 1 + fw, wy + 2, 1.8, '#ffffff');
+    }
+    // inside the Gate: five pips, the fifth gold
+    if (k.has('gate')) {
+      const n = g.gate | 0;
+      for (let i = 0; i < 5; i++) {
+        const px = w / 2 + (i - 2) * 18, py = wy + 17, last = i === 4, lit = i < n;
+        if (lit) glow(c, px, py, last ? 12 : 9, last ? '#ffd65a' : '#9be06a', 0.5);
+        circle(c, px, py, last ? 6.5 : 5, lit ? (last ? '#ffe27a' : '#9be06a') : '#12201a', last ? '#ffe27a' : '#6a7a60', 1.6);
+      }
+    }
+  },
+});

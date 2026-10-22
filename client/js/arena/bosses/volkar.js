@@ -30,6 +30,7 @@ const VOLKAR = {
   vuln: 0.5,
   spawn: { x: 0, y: 0 }, anchor: true,
   arena: { theme: 'peak' },
+  gates: [0.55, 0.15],   // where the movements change (ticks on the boss bar; fight.js course)
 
   // four standing stones on the summit, at the cardinal points (clear of where the party stands round him)
   room(f) {

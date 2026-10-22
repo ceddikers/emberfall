@@ -4,6 +4,7 @@
 const Tutorial = (() => {
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
   const T = typeof TUTORIAL !== 'undefined' ? TUTORIAL : { lessons: [], bosses: {} };
+  const BRIEFINGS = false;   // the per-boss briefings are hidden (the data stays in tutorial-data.js; the journals carry the knowledge)
   let panel = null, at = { kind: 'lesson', id: (T.lessons[0] || {}).id }, opts = { bosses: () => [] };
 
   // a key written in the data is the default; the page shows whatever the player has bound to that action now
@@ -13,7 +14,7 @@ const Tutorial = (() => {
     return a ? Keybinds.label(Keybinds.keyFor(a.id)) : k;
   }
   function navHtml() {
-    const bosses = opts.bosses().filter(b => T.bosses[b.id]);
+    const bosses = BRIEFINGS ? opts.bosses().filter(b => T.bosses[b.id]) : [];
     return `<h6>Lessons</h6>${T.lessons.map((l, i) => `<button type="button" class="tu-nav${at.kind === 'lesson' && at.id === l.id ? ' on' : ''}" data-l="${l.id}"><i>${i + 1}</i>${esc(l.title)}</button>`).join('')}
       ${bosses.length ? `<h6>Bosses</h6>${bosses.map(b => `<button type="button" class="tu-nav${at.kind === 'boss' && at.id === b.id ? ' on' : ''}" data-b="${b.id}">${esc(b.name)}</button>`).join('')}` : ''}`;
   }
@@ -40,7 +41,7 @@ const Tutorial = (() => {
   }
   function open(o = {}) {
     opts = Object.assign(opts, o);
-    if (o.boss && T.bosses[o.boss]) at = { kind: 'boss', id: o.boss };
+    if (BRIEFINGS && o.boss && T.bosses[o.boss]) at = { kind: 'boss', id: o.boss };
     if (!panel) {
       panel = document.createElement('div');
       panel.id = 'tutorial'; panel.className = 'hidden';

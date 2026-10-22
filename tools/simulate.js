@@ -133,6 +133,7 @@ function runSim(classId, skill, seed, specId, talents) {
       const used = Math.min(state.shield.amt, amt); state.shield.amt -= used; amt -= used;
       if (state.shield.amt <= 0) { k.notify('shieldEnd', { tag: state.shield.tag, frac: 1 }); state.shield = null; }
     }
+    if (amt > 0) k.notify('taken', { a: amt });   // (a Gloomsworn's vessel fills for every hit it takes)
     state.tookDamage.push({ t: state.t, a: amt });
   }
 
@@ -217,7 +218,7 @@ function genericNewbie(k, ctx) {
     if (ab.type !== 'ogcd') continue;
     if (!k.usable(ab) || k.readyIn(ab) > 0.0001) { n.ogcdSeen[ab.id] = null; continue; }
     if (ab.target === 'ally' && ctx.role === 'healer' && ctx.state.healDebt < 3000 && !k.glows(ab)) continue;
-    if ((ab.id === 'stasis' || ab.id === 'mirror' || ab.id === 'undying' || ab.id === 'shift') && !k.glows(ab)) continue;
+    if ((ab.id === 'stasis' || ab.id === 'mirror' || ab.id === 'undying' || ab.id === 'shift' || k.baseId(ab) === 'rite') && !k.glows(ab)) continue;
     if (n.ogcdSeen[ab.id] == null) n.ogcdSeen[ab.id] = ctx.t + 0.5 + ctx.human() * 2.5;
     if (ctx.t >= n.ogcdSeen[ab.id] && !k.cast) { n.ogcdSeen[ab.id] = null; return I(k, ab.id); }
   }
@@ -840,6 +841,51 @@ Object.assign(PRO, {
     if (cross.type === 'gcd' && ready(k, 'cross') && mariLineOn(k)) return I(k, 'cross');
     if (ready(k, 'pirouette') && (abOf(k, 'pirouette').id !== 'pirouette' || hitIn > 12)) return I(k, 'pirouette');
     return ready(k, 'jab') ? I(k, 'jab') : null;
+  },
+});
+
+// ---------------------------------------------------------------- Gloomsworn (tank, class 18)
+// The pro: Black Mantle just before a buster, Black Pall before a raidwide it can afford, Shade Step on cooldown and Gloom
+// Strike into its echoes. (A real pro also holds the vessel full before a tankbuster, because a full vessel is what turns a
+// killing blow into a Hollow; the simulator only measures damage, so this one spends.) Last Rite when the tank is low. The
+// Hollow itself is the host's: tools/hollow-test.js.)
+Object.assign(PRO, {
+  gloomsworn(k, ctx) {
+    const toB = ctx.nextBuster - ctx.t, toR = ctx.nextRaidwide - ctx.t, g = k.g.gloom || 0;
+    if (toB < 1.2 && toB > 0 && ready(k, 'mantle') && weaveOk(k)) return I(k, 'mantle');
+    if (toR < 1.5 && toR > 0 && g >= 30 && ready(k, 'pall') && weaveOk(k) && (g >= 70 || toB > 12)) return I(k, 'pall');
+    if (ready(k, 'rite') && weaveOk(k) && k.env.hpFrac() < 0.3 && g >= 20) return I(k, 'rite');
+    // Shade Step when the vessel holds Gloom for two Strikes, so both echo
+    if (ready(k, 'shade') && weaveOk(k) && !k.has('shade') && g >= 50 && k.charges(abOf(k, 'strike')) >= 1) return I(k, 'shade');
+    if (k.gcdRemaining() > 0.0001) return null;
+    // (the vessel held full before a buster, for a Hollow, is real play but not damage: the simulator only measures damage, so a pro here spends)
+    if (ready(k, 'strike') && g >= 40 && (g >= 65 || k.has('shade') || ctx.inBurst(ctx.t) || k.has('hollow'))) return I(k, 'strike');
+    return I(k, 'rend');
+  },
+});
+
+// ---------------------------------------------------------------- Thresher (damage, class 19)
+// The pro: lays all four afflictions (Hook for the Thread, Blink for the Bind, Q for the Mark and Drain), Gathers the young ones
+// to gold, and Reaps when the gold is in, or just before it rots. The newbie is the generic one: it notices the glowing Reap
+// 60% of the time and otherwise cuts.
+Object.assign(PRO, {
+  thresher(k, ctx) {
+    const on = thCount(k), gold = thCount(k, 2), young = thCount(k, 1), rot = thCount(k, 3);
+    const R = thR(k), soon = THRESH.IDS.some(id => thStage(k, id) === 2 && k.now - k.g.aff[id] > R - 1.5);
+    const reapReady = ready(k, 'reap');
+    if (weaveOk(k)) {
+      const wisp = abOf(k, 'wisp');
+      if (wisp.id === 'cull') { if (ready(k, 'wisp') && on >= 3) return I(k, 'wisp'); }
+      else if (ready(k, 'wisp') && (!k.has('wisp') || (k.talent('thresher_sacrifice') && k.remaining('wisp') < 6 && on >= 3))) return I(k, 'wisp');
+      const hook = abOf(k, 'hook'), blink = abOf(k, 'blink');
+      if (k.charges(hook) > 0 && thStage(k, 'thread') === 0) return I(k, 'hook');
+      if (k.charges(blink) > 0 && thStage(k, 'bind') === 0 && !(k.def.noAff && k.def.noAff.indexOf('bind') >= 0)) return I(k, 'blink');
+      if (abOf(k, 'gather').id === 'sowing') { if (ready(k, 'gather') && on <= 1) return I(k, 'gather'); }
+      else if (ready(k, 'gather') && on >= 2 && (rot >= 1 || (reapReady && young >= 2 && gold === 0))) return I(k, 'gather');
+    }
+    if (k.gcdRemaining() > 0.0001) return null;
+    if (reapReady && on > 0 && (gold >= Math.max(2, on - 1) || (soon && gold >= 1) || rot >= 2)) return I(k, 'reap');
+    return I(k, 'slash');
   },
 });
 

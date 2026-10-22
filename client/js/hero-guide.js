@@ -201,3 +201,27 @@ HERO_GUIDE.marionettist = {
     { keys: ['t', 'd'], text: 'Curtain Call with all three Strings taut, then Swap within 10s for the bow.' },
   ],
 };
+// Gloomsworn (tank, class 18)
+HERO_GUIDE.gloomsworn = {
+  passive: { name: 'Hollow', icon: 'rite', desc: 'The Gloom meter fills as you fight: 8 for every hit you land, 6 for every hit you take. Keep it FULL when something big is coming. If a blow would kill you while it is full, you do not die: you go Hollow for 8s. You cannot drop below 1 HP and you hit 30% harder, but every point of damage you take is written down as a debt, and your healer must heal at least that much by the time the 4s after Hollow ends, or you fall. So when Hollow starts: call for heals, press Black Mantle, stay out of the next hit. Spending Gloom (Gloom Strike, Black Pall, Last Rite) empties the very thing that saves you. Once a minute.' },
+  combos: [
+    { keys: ['q', 'q', 'q'], text: 'Rend, Sunder, Gloaming: every hit fills the vessel, and the combo carries your taunt (+20 Gloom).' },
+    { keys: ['e', 'w', 'w'], text: 'Shade Step, then two Gloom Strikes inside 4s: both echo for a second blow. Step only when you hold the Gloom for both.' },
+    { keys: ['d', 'q', 'q'], text: 'Black Mantle as the tankbuster lands on you (40% less, +15 Gloom), then keep striking. Hollow already started? Press it at once: it cuts every blow while you are down to 1 HP, so your healer has less debt to pay back.' },
+    { keys: ['r'], text: 'Black Pall on the raidwide that matters: 25% less for the whole party for 6s, for 30 Gloom. Do not cast it with a full vessel unless the raid needs it more than your Hollow.' },
+    { keys: ['f'], text: 'Last Rite when you are low: all your Gloom becomes a barrier and a heal. It leaves the vessel empty, so there is no Hollow behind it.' },
+    { keys: ['w', 't'], text: 'Eclipse of the Vigil with the vessel full: a huge blow, a barrier on the whole party and 10% less damage for 6s. It empties the vessel.' },
+  ],
+};
+// Thresher (damage, class 19)
+HERO_GUIDE.thresher = {
+  passive: { name: 'Ripeness', icon: 'reap', desc: 'Four afflictions ripen on the boss, each in its own bar: Mark (a bleed), Drain (mends you), Bind (pulses) and Thread (waits to be snapped). Each is young (green) for 3s, then gold for 5s, then rotten. Reap spends them all: gold pays in full, young only 40%, rotten 65%. A hit lays only an affliction that is not up or has rotted, so you never reset a ripening one: the gold comes on its own, and the only way to waste it is to wait too long.' },
+  combos: [
+    { keys: ['q', 'q'], text: 'Slash lays a Mark, Cleave a Drain. Keep pressing Q: a hit pressed within 1.2s of your last recovery adds a Backswing, a free second cut.' },
+    { keys: ['w', 'd'], text: 'Hook plants the Thread and Gloam Blink binds. Both keep your Backswing going, so use them between your Slashes. When all four bars are up, stop: nothing more can be laid until one ripens or rots.' },
+    { keys: ['q', 'q', 'e'], text: 'Wait for gold, then Reap. E glows when any bar is in its gold stretch (the marked part): press it when most of them are. Too early pays 40%, too late 65%.' },
+    { keys: ['r', 'e'], text: 'Gather puts every bar on the edge of gold at once. Press it, then Reap: you can cash a full harvest early, or hold the gold for the moment the party bursts.' },
+    { keys: ['f'], text: 'Spirit Wisp as soon as it is ready: it strikes every 2.5s for 15s and binds the boss if nothing else has. With the Sacrifice talent, press it again to pop it for a big hit and a damage bonus.' },
+    { keys: ['t', 'q', 'q', 'q', 'q', 'q'], text: 'Reaper\'s Gate when T is full: nothing can touch you for 8s. Press Q once a second: each strike lays the next affliction, and the fifth, The Fifth, releases all four at full ripeness. Do not stop at four.' },
+  ],
+};

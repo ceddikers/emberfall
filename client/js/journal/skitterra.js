@@ -3,6 +3,8 @@
   // the first time this hero meets her (after the first pull)
   meet: {
     bastion: "Queen Skitterra. A great spider in a cave of pillars and silk, and the floor itself works for her. Bad footing everywhere. I kept her face on me and the line behind. Will hold.",
+    gloomsworn: "The Queen. A cave of pillars and silk, and a floor that works for her. I kept her face on me and the line behind. I have stood in worse dark, but never on such sticky ground.",
+    thresher: "Mother Skitterra keeps her cave like a neglected barn: silk in every rafter, eggs ripening in the walls, the floor gone soft and sticky. I liked her at once. Everything here comes due in its season, and I mean to learn the season.",
     bloodreaver: "The old mother! Legs everywhere, fangs like roasting spits, and a whole nursery in the walls. She bit me before I'd finished grinning. A fine first scar. I want another.",
     runeguard: "The Broodmother keeps a cave of omens: lit legs, ripening eggs, threads drawn pillar to pillar. Every blow she deals is written somewhere first; I simply had not yet learned the hand.",
     gorgemaw: "My hostess keeps a larder in silk: eggs, venom, guests wrapped for later. Everything bound and saved. I intend to eat through her pantry before she gets round to me.",
@@ -23,6 +25,8 @@
   // the first time this hero beats her
   win: {
     bastion: "The Queen fell at the hub with the floor gone round us. Bad footing to the last, and we stood on her own silk to finish it. Line intact. Held.",
+    gloomsworn: "The Queen fell at the hub with the floor gone round us, and we finished her standing on her own silk. The line is whole. The watch is relieved.",
+    thresher: "Mother Skitterra came in at the hub, on the last of the good ground. Plenty of time, in the end. I said a few words over her, as I do for anything I've brought in, and swept the eggshell into a tidy row.",
     bloodreaver: "The old mother's down! Every bite she gave me, I gave back with interest. My arms are more scab than skin. The finest scars I own. I'll miss her.",
     runeguard: "The Broodmother is dead, and every omen she wrote, we read in time at last. Her final fall I saw a full breath ahead. As foreseen; eventually.",
     gorgemaw: "My hostess, served at last. Tough in the legs, bitter in the venom, generous in the portions. I have had shorter meals and few finer. Still hungry.",
@@ -43,6 +47,8 @@
   moves: {
     'Venom Mist': { hard: false, learned: {
       bastion: "She breathed a green mist over the whole cave. Nothing to block. I drew the line in close to the healer before it rolled out, braced, and let it pass. Held.",
+      gloomsworn: "She breathed a green mist over the whole cave. Nothing stops it. I drew the line in close to our healer before it rolled out and let it pass over us.",
+      thresher: "Her green breath comes in over the whole cave like fog off the low field, and no row escapes it. We came in close by the menders, everyone whole beforehand, and let it settle on all of us at once.",
       bloodreaver: "The whole cave choked on her breath! Barely a scratch on me, shameful, but the others feel it, so we come in close by the menders, all of us whole beforehand, and drink it down together.",
       runeguard: "The omen: her body swells and she exhales. The answer: everyone whole beforehand and gathered within reach of mending, for the mist spares no corner. Not foreseen; now it is.",
       gorgemaw: "A broth served to the whole table at once. Thin, bitter, faintly green. There is no refusing it, so we gathered by the healers, full beforehand, and swallowed it together. Underseasoned.",
@@ -62,6 +68,8 @@
     } },
     'Silk Wrap': { hard: false, learned: {
       bastion: "She swung the wrap at me with her forelegs, and the sweep in front of her reaches wide. Shield up in the last instant, line kept clear of her front. It pinned my feet after. Bad footing. Held.",
+      gloomsworn: "She swung her forelegs at me, and the sweep in front of her reaches wide. I took it with the dark drawn tight and kept the line clear of her front. It pinned my feet after. I do not mind being held still.",
+      thresher: "The wrap comes due on our knight alone, a wide sweep off her front legs, then his feet stuck fast like a post in clay. I worked her flank, well off her face, where nothing was ripe for me.",
       bloodreaver: "The old mother wrapped me in silk and bit straight through it. A good one! Then my feet stuck, so I made her come to me. The others kept to her sides, out of the sweep.",
       runeguard: "The omen: her forelegs draw back toward whoever holds her. The answer: a ward the breath before, and everyone else away from her front, for the sweep is broad. It binds the feet after; choose your ground first.",
       gorgemaw: "My hostess served the wrap straight to me, as a proper hostess should: silk outside, a bite within. I opened wide just before, then stood stuck to my chair, chewing. Overcooked.",
@@ -81,6 +89,8 @@
     } },
     'Eightfold Lunge': { hard: false, learned: {
       bastion: "Her legs lit up in order, and she struck each way and its opposite at once, turning as she went. I stepped onto the ground the last strike had just left and followed it round. Held.",
+      gloomsworn: "Her legs lit in order and she struck each way and its opposite at once, turning as she went. I stepped onto the ground the last strike had just left and followed it round.",
+      thresher: "Her legs light up in order, like a row coming ripe end to end, and each strike goes both ways at once while she turns. I stepped onto the ground just struck and followed the turn round her. Stubble never burns twice.",
       bloodreaver: "She stabbed both ways at once, turned, and stabbed again! Took one the first night. A good one. Now I watch the lit legs and step in behind each strike as it passes.",
       runeguard: "The omen: her legs light in sequence, and the sequence is the order of the strikes. The answer: each strike takes a direction and its opposite; step into the ground just struck and trail the turning. As foreseen.",
       gorgemaw: "My hostess serves this course in pairs, from opposite ends of the table, turning like a lazy carousel. The trick is to sit where the last plate was just cleared. Sent nothing back.",
@@ -100,6 +110,8 @@
     } },
     'Silk Lines': { hard: false, learned: {
       bastion: "She strung lines between pairs of us. A long line wanted its ends far apart; on the hard nights a short one wanted its pair side by side. Each pair kept its ground until the silk let go. Held.",
+      gloomsworn: "She strung silk between pairs of us. A long line wanted its ends far apart; on the harder nights a short one wanted its pair side by side. Each pair kept its ground until the silk let go.",
+      thresher: "She strung silk between me and the archer, a long line, so we walked to opposite ends of the field till it was taut as fence wire and waited out its season. A short one wants the pair shoulder to shoulder instead.",
       bloodreaver: "Silk between a pair of the others! The long one they pulled taut, far apart as the cave allows. The short ones stayed close as lovers. No scars for anyone. Disappointing, honestly.",
       runeguard: "The omen: a thread drawn between a pair of the party. The answer: a long thread is stretched until it sings, a short one kept close until it fades. Its colour tells which; the Broodmother is nothing if not consistent.",
       gorgemaw: "Silk strung between diners, like noodles. The long ones you stretch until they're thin as thread; the short ones you eat side by side. Al dente, when handled properly.",
@@ -119,6 +131,8 @@
     } },
     'Spin': { hard: false, learned: {
       bastion: "She strung threads pillar to pillar round the middle. Crossing one stings and pins the feet, so we walked round them and broke the knots by the pillars to cut them for good. Better footing. Held.",
+      gloomsworn: "She strung threads from pillar to pillar round the middle. Crossing one stings and pins the feet, so we walked round and broke the knots at the pillars to cut them for good.",
+      thresher: "She strung threads pillar to pillar round the middle, like bean poles nobody asked for. Walk through one and it stings and holds you. I broke the knots by the pillars instead; every thread cut now is one less that comes due in the dark.",
       bloodreaver: "Silk across the cave, pillar to pillar. Walked through one: a sting, then stuck. Barely a scratch, shameful. The knots by the pillars break, and a broken knot drops its thread. So I broke them.",
       runeguard: "The omen: silk drawn pillar to pillar, a square about the hub. The answer: never cross a thread; break its knot beside the pillar and it is cut for good. Each one left whole she will use later, in the dark.",
       gorgemaw: "Silk strung across the dining room, pillar to pillar. Walk through it and it stings. Each strand is tied off by a knot at its pillar; I bit through the knots and the strands fell. Chewy. No flavour at all.",
@@ -138,6 +152,8 @@
     } },
     'Venom Spit': { hard: false, learned: {
       bastion: "She spat a narrow line at those of us farthest from her. They stepped aside as it came, and kept to the edge, so the venom pooled by the wall, away from our ground. Held.",
+      gloomsworn: "She spat a narrow line at those of us farthest from her. They stepped aside as it came and kept to the edge, so the venom pooled by the wall, away from our ground.",
+      thresher: "She spits a thin green line at whoever stands farthest out. Not me; I'm close in at her side. The far hands stepped aside late and left the puddle by the wall, out on the headland where nobody ploughs.",
       bloodreaver: "She spits at whoever keeps their distance. Never me; I'm in her face, where the biting is. The far ones sidestep at the very last and leave her venom out by the wall.",
       runeguard: "The omen: she turns her head toward whoever stands farthest. The answer: those at the edge step aside as it comes, and stay at the edge, so the pool it leaves lies out of everyone's way.",
       gorgemaw: "My hostess spits at guests who sit far from the table. Rude, but fair. The far ones stepped aside at the last moment, and her spittle pooled by the wall. A sour sauce, wasted on the floor.",
@@ -157,6 +173,8 @@
     } },
     'Egg Sacs': { hard: true, learned: {
       bastion: "On the hard nights she drops egg sacs round the web, each wanting one of us on it. One soldier to each sac, feet planted; the goo holds you a moment after. Leave one and it bursts on everyone. Held.",
+      gloomsworn: "On the harder nights she drops egg sacs round the web, each wanting one of us standing on it. One soldier to each sac, feet planted; the goo holds you a moment after. Leave one empty and it bursts on everyone.",
+      thresher: "On the hard nights she drops egg sacs round the web like windfalls, and each wants one of us treading it flat. I took my own and stood stuck a moment in the goo. Leave one lying and it bursts over the whole yard.",
       bloodreaver: "Egg sacs! One of us on each, stomp it flat. It splashes and grips your feet, a sticky little sting. Leave one alone and it bursts over everyone, and that's not even a good scar.",
       runeguard: "The omen: sacs settle on the web, each within its own ring. The answer: one of us to each, standing inside; the stomp holds the feet a moment. An unattended sac bursts upon us all and fouls its ground.",
       gorgemaw: "Caviar! Egg sacs scattered on the web, one portion each. We each stepped onto our own; mine was chewy and clung to my boots. Leave one uneaten and it splatters the whole table.",
@@ -176,6 +194,8 @@
     } },
     'Strand Reel': { hard: false, learned: {
       bastion: "She shot a strand to a far pillar and hauled herself down it. Anyone on that line is hit and stuck. We stepped off it, and I followed her to the pillar to keep her face on me. Held.",
+      gloomsworn: "She shot a strand to a far pillar and hauled herself down it. Anyone on that line is struck and stuck, so we stepped off, and I followed her to the pillar to keep her face on me.",
+      thresher: "She throws a strand to a far pillar and draws herself down it like a plough line pulled straight. I stepped off the furrow before she came through, then walked over to her pillar, where she sits a while, and carried on with my row.",
       bloodreaver: "She threw a strand at a pillar and flew down it! I was in the way once. A good one. Now I step off the line and run after her, so she's never lonely at her pillar.",
       runeguard: "The omen: a strand flung from her to a distant pillar. The answer: leave the line between them before she reels herself along it, then follow, for she hangs at that pillar a while.",
       gorgemaw: "My hostess throws a strand to a far pillar and slurps herself along it like a noodle, flattening anyone in the way. Step aside, then follow her to her new seat.",
@@ -195,6 +215,8 @@
     } },
     'Fang Rush': { hard: true, learned: {
       bastion: "On the hard nights she charges whoever stands farthest. Her line follows them until just before. They stepped aside late, or put a pillar in her way. Then nobody walks the silk she drags. Held.",
+      gloomsworn: "On the harder nights she charges whoever stands farthest, her line following them until just before. They stepped aside late, or put a pillar in her way. Then nobody walks the silk she drags.",
+      thresher: "On the hard nights she runs at whoever stands farthest, her line following them like a dog after a hare until just before. Step aside then and not a moment sooner, or put a pillar in her way. Then keep off the sticky track she leaves.",
       bloodreaver: "She runs down the farthest one herself! Not me, sadly. They wait until the last moment and step out of her line, or hide behind a pillar and let the stone take the fangs.",
       runeguard: "The omen: she fixes on whoever stands farthest, and her line follows them until a breath before. The answer: step aside late, or set a pillar in her way; then avoid the sticky trail she leaves.",
       gorgemaw: "My hostess rushes the guest seated farthest away. They step aside late, or sit behind a pillar, and she gets a mouthful of stone. Her trail stays sticky, like spilt syrup.",
@@ -214,6 +236,8 @@
     } },
     'Brood': { hard: false, learned: {
       bastion: "The ripest eggs hatched, a spiderling on each side of the web. They must die together, or the survivor goes wild. We brought both low evenly and finished them in the same breath. Held.",
+      gloomsworn: "The ripest eggs hatched, a spiderling on each side of the web. They must die together, or the survivor goes wild. We brought both low evenly and finished them in the same breath.",
+      thresher: "The ripest clutches hatch a pair, one each side of the web, and they won't be parted. Cut one early and the other runs wild. We brought both down even and took them in together. Better still, break the eggs before they ripen.",
       bloodreaver: "A pair of little ones hatched across the web! Kill one and the other goes mad. So we bled them both down evenly and finished them together. Cute. Bite hard.",
       runeguard: "The omen: the ripest clutches swell. The answer: they hatch as a pair, and the pair must fall together, for one left alone turns savage. Better still, break the clutches before they ripen. As foreseen.",
       gorgemaw: "My hostess serves her children in pairs, one at each end of the table. Eat one and the other takes offence. So we ate them together. Soft-shelled. Delicate.",
@@ -233,6 +257,8 @@
     } },
     'Silk Reel': { hard: false, learned: {
       bastion: "She hooked whoever stood farthest from her and reeled them in. A quick bound away the moment it pulls snaps the thread; reaching her means a bite. I keep her ready, but nobody should arrive. Held.",
+      gloomsworn: "She hooked whoever stood farthest from her and reeled them in. A quick bound away the moment it pulls snaps the thread; reaching her means a bite. I stay ready for whoever comes, but nobody should arrive.",
+      thresher: "She casts a thread at whoever stands farthest and draws them in like a bucket up a well. The far hands leaned against it, then jumped away sharp as it pulled, and it snapped. Come all the way in and she bites.",
       bloodreaver: "She reels in whoever's farthest, for a bite! Lucky them. They don't want it, though, so they pull away and then leap hard, and the thread snaps.",
       runeguard: "The omen: a thread fastens on whoever is farthest. The answer: one sharp leap away as the pull begins snaps it; struggling against it slows it. Arriving at her means a venomous bite.",
       gorgemaw: "My hostess fishes for the guest farthest from the table and reels them in. They leap away to snap the line. Arrive, and she takes a bite. Rude, eating one's guests.",
@@ -252,6 +278,8 @@
     } },
     'Acid Deluge': { hard: false, learned: {
       bastion: "She went to the middle, reared up and sprayed the whole cave. Only a pillar's shadow is safe, so the line got behind one together. Each pillar that shelters someone takes a crack. Held.",
+      gloomsworn: "She went to the middle, reared and sprayed the whole cave. Only a pillar's shadow is safe, so the line got behind one together. A pillar that shelters someone takes a crack.",
+      thresher: "She went to the middle and reared, and acid came in over the whole cave like a hard spring rain. Only the shadow behind a pillar stayed dry. We crowded behind one together; each pillar that shelters someone cracks, and stone doesn't grow back.",
       bloodreaver: "Acid everywhere! I wanted to taste it. The others dragged me behind a pillar, out of her line from the middle. Every pillar that hides someone cracks, so we shared one.",
       runeguard: "The omen: she scuttles to the hub and rears. The answer: a pillar between yourself and her before the acid falls. Every pillar used is chipped, and enough uses bring it down; share them sparingly.",
       gorgemaw: "My hostess douses the whole dining room in vinegar from the middle. A pillar between you and her keeps you dry. Each pillar used takes a splash, so we crowded behind one. Far too acidic.",
@@ -271,6 +299,8 @@
     } },
     'Into the Dark': { hard: false, learned: {
       bastion: "She climbed into the dark, out of reach, and the lights failed. No face to hold. So I put my weight on the knots of her threads and the eggs until she came down. Held.",
+      gloomsworn: "She climbed into the dark, out of reach, and the lights failed. With no face to hold, I put my blade to the knots of her threads and the eggs until she came down. The dark does not frighten me.",
+      thresher: "She went up into the dark, out of reach, and the lights went low. A slack season, not one to waste. I broke the knots on her threads in the order she'd use them, then the eggs, before any of it came due.",
       bloodreaver: "She climbed into the dark! Gone! Rude. Nobody to bleed on, so I broke the knots on her threads and smashed eggs until she came back down.",
       runeguard: "The omen: she climbs, and the lights fail. The answer: break the knots on her threads, in the order she will run them, and the eggs, before she drops from the dark.",
       gorgemaw: "My hostess left the table and climbed into the dark. While she was gone we broke the knots on her threads and ate her eggs. Rude, leaving guests unattended.",
@@ -290,6 +320,8 @@
     } },
     'From the Dark': { hard: false, learned: {
       bastion: "Her shadow ran overhead along a thread, and she dropped at its far end. We left that ground. A thread already cut, she cannot use, so she hunts: the one who stands farthest from her gets the drop, and it follows them until the last moment. Held.",
+      gloomsworn: "Her shadow ran overhead along a thread, and she dropped at its far end. We left that ground. A thread already cut she cannot use, so she hunts: the one standing farthest gets the drop, and it follows them until the last moment.",
+      thresher: "Her shadow runs along an uncut thread and she drops at its far end, so I stepped out of that patch. Where we'd cut the thread, she goes for whoever stands farthest instead, the circle following them till the last moment. Hard nights, twice.",
       bloodreaver: "She ran along a thread overhead and dropped at its far end! I stepped out of the landing, then hit her. Cut a thread and she hunts the farthest of us instead, and the circle tracks you. On the hard nights she drops twice.",
       runeguard: "The omen: her shadow runs along an uncut thread. The answer: leave the circle at its far end. A thread already cut, she hunts the one farthest from her, her circle following until a breath before it lands; on harder nights, twice in turn.",
       gorgemaw: "My hostess scurries along a thread overhead and drops onto its far end like a dish from a height. We left that seat. A thread cut beforehand, she can't use, so she goes after whichever guest sits farthest away, and the plate follows them.",
@@ -309,6 +341,8 @@
     } },
     'Cocoon Drop': { hard: false, learned: {
       bastion: "A cocoon fell on one of the young ones, never me, and the dead weight of it wanted us all. Everyone in, all but one at least; on the hard nights, every last one of us. The line closed on whoever it was. Held.",
+      gloomsworn: "A cocoon fell on one of the young ones, never me, and its weight wanted us all under it. Everyone in, all but one at least; on the harder nights, every last one. The line closed on whoever it was.",
+      thresher: "A cocoon came down on one of the young ones, never our knight, and the rest of us went in to share the weight, all but one at most. On the hard nights, every hand, the way you carry a coffin. I'm used to that.",
       bloodreaver: "A cocoon dropped on one of the others and the rest of us had to pile in! Together or not at all. Normal nights she'll forgive one straggler. Hard nights, no one. Closer, then. Closer!",
       runeguard: "The omen: a cocoon gathers over one of the party, never the knight. The answer: all gather on them, all but one on the ordinary nights, every one of us on the harder nights. As foreseen.",
       gorgemaw: "A cocoon, swung down onto one guest, and the rest of us were expected at that table. All but one on a gentle night; every seat taken on a hard one. A thin portion if you're alone.",
@@ -328,6 +362,8 @@
     } },
     'Venom Drip': { hard: false, learned: {
       bastion: "Venom gathered over each of our heads and followed us. Every one of us needed our own patch of floor. The line opened out, kept its distance until it fell, and closed again after. Held.",
+      gloomsworn: "Venom gathered over each of our heads and followed us. Each needed their own patch of floor. The line opened out, kept its distance until it fell, and closed again after.",
+      thresher: "Venom ripened over each of our heads and followed us about. Each of us took our own patch of ground, rows apart, so none fell on two, and we came back in after it dropped.",
       bloodreaver: "Venom over every head! It burns you and anyone close by. I took mine alone, well away from the others, a clean little scald. Then straight back in.",
       runeguard: "The omen: venom gathers over every head at once, and it follows. The answer: each to their own patch of floor, well apart, until it falls; then the party closes again.",
       gorgemaw: "A drip of venom over every guest's head. One portion each, to be taken alone; share a plate and you get both helpings. We each retired to our own corner. A sour little amuse-bouche.",
@@ -347,6 +383,8 @@
     } },
     'Tightening Web': { hard: false, learned: {
       bastion: "She came back down into the middle, and the blow of her landing reached every one of us. After that the outer web went sticky for good. The line fights inside it now. Held.",
+      gloomsworn: "She came down into the middle and the blow of her landing reached every one of us. After that the outer web went sticky for good. The line fights inside it now.",
+      thresher: "She came down into the middle and the landing reached every one of us; whole beforehand, it passed. After that the outer web stayed sticky for good, like clay after a wet winter, so I worked the inner ground.",
       bloodreaver: "She dropped back into the middle and shook the whole cave! Felt it in my teeth. Lovely. Then the outer web went sticky, so I keep the old mother well away from the rim.",
       runeguard: "The omen: her shadow runs back to the hub. The answer: be whole when she lands, for the blow reaches everyone; then keep inward, for the outer web stays sticky to the end.",
       gorgemaw: "My hostess returns to the table with a thump that rattles every plate in the cave. Then she glazes the edges of the room in syrup. We dine in the middle from now on.",
@@ -366,6 +404,8 @@
     } },
     'Spinneret Volley': { hard: true, learned: {
       bastion: "On the hard nights she rained silk on everyone but me, a glob at a time, each following its target until just before it fell. They kept moving, apart from each other. I kept her still. Held.",
+      gloomsworn: "On the harder nights she rained silk on everyone but me, a glob at a time, each following its target until just before it fell. They kept moving, apart from each other. I kept her still.",
+      thresher: "On the hard nights she rains silk on all of us but the knight, a glob at a time, each following us until just before it fell. I kept walking, steady and apart from the others, like walking a long furrow, and it all landed behind me.",
       bloodreaver: "Silk globs falling on everyone but me! Insulting. The others keep walking, apart, and each glob chases its owner, settles a moment before it drops, and lands on empty floor.",
       runeguard: "The omen: silk gathers over all but whoever holds her. The answer: keep walking, apart, for each glob follows its mark until a breath before it falls, and they come in a long train.",
       gorgemaw: "My hostess sprinkles silk on every guest but me, glob after glob, like a cook seasoning plates. They walk on and leave each glob on an empty seat. I was not served. Offended.",
@@ -385,6 +425,8 @@
     } },
     'Molt': { hard: true, learned: {
       bastion: "On the hard nights she shed her skin, and the husk struck her last pattern of legs over again while she began a new one elsewhere. I kept the last pattern in mind and watched both. Held.",
+      gloomsworn: "On the harder nights she shed her skin, and the husk struck her last pattern of legs again while she began a new one elsewhere. I kept the last pattern in mind and watched both. I know what it is to leave a shell behind.",
+      thresher: "On the hard nights she sheds her skin, and the husk strikes again the pattern she last made while she starts a fresh one. Last year's crop coming up through this year's. I kept the old pattern in my head and watched both.",
       bloodreaver: "She left her old skin behind and it fought on without her! The husk repeats her last strikes while she starts fresh ones. Twice the old mother! A good night.",
       runeguard: "The omen: she sheds her skin and leaves the husk standing. The answer: the husk repeats her previous strikes from where it stands while she begins anew; remember the last order, read the new.",
       gorgemaw: "My hostess left her shell on the table and it served the last course again, from where it lay, while she began a new one. Reheated leftovers. I watched both plates.",
@@ -404,6 +446,8 @@
     } },
     'Ceiling Ambush': { hard: true, learned: {
       bastion: "On the hard nights she climbed into the ceiling, and her shadow crossed to where one of us had stood. Her landing was marked on the floor. We left it; anyone inside is thrown into the walls. Held.",
+      gloomsworn: "On the harder nights she climbed into the ceiling, and her shadow crossed to where one of us had stood. Her landing was marked on the floor. We left it; anyone inside is thrown into the walls.",
+      thresher: "On the hard nights she climbs into the roof, and her shadow crosses to where one of us stood. The landing shows on the floor. I stepped clear before it came due; whoever stays in it gets thrown to the walls.",
       bloodreaver: "Up into the ceiling she went, and her shadow ran to where one of us stood. I stayed in the circle once. Thrown into the wall! A good one. Now I step out.",
       runeguard: "The omen: she climbs into the ceiling, and her shadow crosses toward where one of us stood. The answer: leave the circle marked where she will land, before she drops and throws us to the walls.",
       gorgemaw: "My hostess climbed into the rafters and dropped onto a guest's empty chair. Her landing is marked; we left it. Those who lingered were thrown into the walls like spoiled crockery.",
@@ -423,6 +467,8 @@
     } },
     'The Swarm': { hard: false, learned: {
       bastion: "Every clutch still standing hatched at once. They come in pairs and must die together. I gathered them on me, and we brought each pair down side by side. The eggs we broke earlier sent nothing. Held.",
+      gloomsworn: "Every clutch still standing hatched at once. They come in pairs and must die together. I gathered them on me and we brought each pair down side by side. The eggs we broke earlier sent nothing.",
+      thresher: "Every clutch still standing hatched at once, the whole crop come up together. We took each pair down side by side. The eggs we broke earlier sent nothing, which is the thing about weeding early.",
       bloodreaver: "Every egg left in the web hatched at once! Spiderlings everywhere, all teeth! Pairs again; kill one and its twin goes mad. We took them pair by pair. Fine scars all round.",
       runeguard: "The omen: every clutch left standing ripens together. The answer: they hatch in pairs, and each pair must fall together. Fewer clutches spared before means fewer spiderlings now. As foreseen.",
       gorgemaw: "My hostess serves the whole nursery at once: every clutch left on the shelf hatches. Pairs again, to be eaten together. A buffet. The eggs we cracked earlier made it a smaller one, which the others insist is the point.",
@@ -442,6 +488,8 @@
     } },
     'Chrysalis': { hard: false, learned: {
       bastion: "She wrapped herself in silk at the hub, and it closes slowly. No blow to brace for, so I struck it with the rest of the line, everything we had, before it shut. It tore. She came out staggered and open. Held.",
+      gloomsworn: "She wrapped herself in silk at the hub, and it closes slowly. Nothing to brace for, so I struck it with the whole line, everything we had, before it shut. It tore. She came out staggered and open.",
+      thresher: "She wrapped herself in silk at the hub, closing slowly like a bud. Not yet ripe, and that is the only time to cut it: everything we had into it before it shut. It tore, and she came out staggered and open.",
       bloodreaver: "She hid in a cocoon! Coward. I tore at it with every wound I'd saved up, all of us did, before it closed. She tumbled out dazed and soft. Then the real bleeding started.",
       runeguard: "The omen: she binds herself in silk at the hub. The answer: the whole party's force upon it before it closes; torn open, she staggers and lies exposed. Let it close, and she devours us all.",
       gorgemaw: "My hostess wrapped herself up like a parcel left for later. We tore into the wrapping with everything before it sealed, and she fell out stunned and tender. Best course of the night.",
@@ -461,6 +509,8 @@
     } },
     'The Web Gives Way': { hard: false, learned: {
       bastion: "The floor gave way ring by ring from the walls inward, each ring shuddering first. Worst footing I've known. We moved inside, onto the hub, the spokes, or silk we never cut. Held.",
+      gloomsworn: "The floor gave way ring by ring from the walls inward, each ring shuddering first. We moved inside, onto the hub, the spokes, or silk we never cut. I have fallen once. I knew the sound.",
+      thresher: "The floor went from the walls in, ring by ring, each ring shuddering first like a bank before it slips. I moved in on the shudder, onto the hub, the spokes, and the silk we'd left standing. Soft ground everywhere else, and then none.",
       bloodreaver: "The floor fell away! I was on a falling ring once: dropped, hurt, held, hauled back up the silk. A good one. Now I watch for the shudder and move in onto the spokes first.",
       runeguard: "The omen: a ring of floor shudders before it falls. The answer: step inward before it drops, onto the hub, a spoke, or a thread left uncut. Every thread we cut earlier is one less path now.",
       gorgemaw: "My hostess pulled the tablecloth from under us, ring by ring, from the walls inward. Only the centre of the table, the spokes and the silk we didn't eat stayed put. We kept our seats there.",
@@ -480,6 +530,8 @@
     } },
     'Snare Weave': { hard: true, learned: {
       bastion: "She went to her hub and wove snares over every inch, twice. Three clear pockets each time: I held the one beside her, then stepped round to the next. The two with eggs dropped them where they had stood. Held.",
+      gloomsworn: "She went to her hub and wove snares over every inch, twice. Three clear pockets each time: I held the one beside her, then stepped round to the next. The two with eggs dropped them where they had stood.",
+      thresher: "She laid snares over every inch of the field, twice, leaving three bare patches, then three more a turn round her. I went patch to patch with the others. The two carrying eggs set them down in the patch just left, never the one ahead.",
       bloodreaver: "Snares everywhere, twice over! Only three holes were clear, so I kept my friend company in the one by her and stepped round with her. The egg-carriers dropped their mess in the hole they'd left. No scar at all. Shameful.",
       runeguard: "The omen: she takes the hub and the web fills with snares, the second layer showing early, its pockets a turn round. The answer: pocket, then the next one round; the egg-bearers drop theirs in the pocket just left, clear of the pillars. As foreseen.",
       gorgemaw: "My host laid the table edge to edge with snares, two courses, leaving three clean plates bare. We moved plate to plate round her. The two given eggs set them down on the plate just finished. Well cleared, at least.",

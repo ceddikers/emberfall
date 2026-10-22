@@ -80,7 +80,10 @@ class RaidHost {
     const sim = this.sim;
     const players = this.allPlayers().map(p => {
       const s = sim.ps.get(p.id) || {};
-      return { id: p.id, x: p.x, y: p.y, role: p.role, alive: !!s.alive, hp: s.hp || 0, maxHp: s.maxHp || 1, left: s.left, threat: s.threat || 0 };
+      // a Gloomsworn's Hollow, for the healer bots (BotAI.hollowNeed): the debt, what has been healed back, and the seconds left
+      const hl = s.hollow, t = sim.t;
+      return { id: p.id, x: p.x, y: p.y, role: p.role, alive: !!s.alive, hp: s.hp || 0, maxHp: s.maxHp || 1, left: s.left, threat: s.threat || 0,
+        hollow: !!hl, debt: hl ? hl.debt : 0, healed: hl ? hl.heal : 0, hollowLeft: hl ? Math.max(0, hl.until - t) : 0, graceLeft: hl ? Math.max(0, hl.graceUntil - t) : 0 };
     });
     const b = sim.boss;
     return {
@@ -95,6 +98,8 @@ class RaidHost {
       pendingCut: sim.pendingCut || null,   // (Hard) the wedge of the summit about to break away
       // the Hollow King: lanterns, who is doomed (and when it kills), and the knights' replays still to come
       lanterns: sim.lanterns || [], doomed: sim.doomed || null, echoPlan: sim.echoPlan || [], night: !!sim.night, pools: sim.healPools,
+      // Azerath: the Rune Pair (who carries the runes, and whether the coming spell wants them together or apart) and the Binding
+      runes: sim.runePair || null, binding: sim.binding || null,
       // the room: solid props (cover, walls to bait a charge into), burning grease, and boss-specific room state
       props: sim.props, floor: sim.floor, burning: fl => sim.burning(fl), room: sim.room || null,
       // the boss's next named moves, as the upcoming-moves feed shows them to players: [[name, seconds until], ...]
@@ -225,11 +230,11 @@ class RaidHost {
         if (msg.k === 'reflect') bot.actor.notify('reflect', msg);
         if (msg.k === 'read') bot.actor.notify('read', msg);
         if (msg.k === 'shieldEnd') bot.actor.notify('shieldEnd', msg);
-        if (msg.k === 'eat' || msg.k === 'ledger') bot.actor.notify(msg.k, msg);   // (the advanced tanks: fight.js classEvent)
+        if (msg.k === 'eat' || msg.k === 'ledger' || msg.k === 'hollow') bot.actor.notify(msg.k, msg);   // (the advanced tanks: fight.js classEvent)
         if (msg.k === 'carry' || msg.k === 'snapped' || msg.k === 'dollhit' || msg.k === 'tiefail') bot.actor.notify(msg.k, msg);   // classes-c
       }
     }
-    if (msg.t === 'pdmg') { const bot = this.bots.find(b => b.id === msg.id); if (bot) { bot.taken.push({ t: this.sim.t, a: msg.a }); while (bot.taken.length && bot.taken[0].t < this.sim.t - 30) bot.taken.shift(); } }
+    if (msg.t === 'pdmg') { const bot = this.bots.find(b => b.id === msg.id); if (bot) { bot.taken.push({ t: this.sim.t, a: msg.a }); while (bot.taken.length && bot.taken[0].t < this.sim.t - 30) bot.taken.shift(); if (msg.a > 0) bot.actor.notify('taken', msg); } }   // (a Gloomsworn bot's vessel fills for every hit it takes)
     if (msg.t === 'reel') {
       const bot = this.bots.find(b => b.id === msg.pid);
       // a bot notices the hook after a human-ish reaction time (the hook shows for its whole windup: a player dashes as the pull starts)
@@ -393,7 +398,7 @@ class RaidHost {
             break;
           }
           case 'heal': case 'hot': case 'shield': case 'mit': case 'raise': case 'rewind':
-          case 'selfDamage': case 'targetDebuff': case 'partyBuff': case 'allyBuff': case 'pool': case 'brand': case 'splash': case 'maw': case 'ledger':
+          case 'selfDamage': case 'targetDebuff': case 'partyBuff': case 'allyBuff': case 'pool': case 'brand': case 'splash': case 'maw': case 'ledger': case 'gloom':
           case 'tie': case 'snip': case 'tighten': case 'tapestry': case 'tug':   // classes-c
             host.onPlayerEvent(bot.id, ev);
             // a shield or damage cut on the whole party: its flash on every member (KIT_VFX.partyWard; once for a move that does both)

@@ -1125,3 +1125,74 @@ Object.assign(SPECS, {
     },
   ],
 });
+
+// ===================================================================================================================
+// GLOOMSWORN (tank, class 18): the Sentinel's and the Reaver of Dusk's specs (the kit is the last block of kits.js)
+// ===================================================================================================================
+SPECS.gloomsworn = [
+  {
+    id: 'duskward', name: 'Sentinel', title: 'The Long Vigil', accent: '#9ab8ff',
+    gaugeTip: 'Every hit you land fills 8 Gloom and every hit you take 6. Gloom Strike spends 40, Black Pall 30, Last Rite all of it. Out of combat the vessel drains, but only 1 a second. Full Gloom when a blow would kill you makes you Hollow.',
+    blurb: 'A wall that lasts. The dark keeps its watch over the others too.',
+    focus: 'Protecting the party. Your barriers last longer and chain on to the ally who needs one, Black Pall holds longer, and the vessel drains slower.',
+    passive: { name: 'Long Vigil', desc: 'Gloom Strike\'s barrier lasts 10s instead of 6s and a second barrier ({s:110}) falls on the most hurt ally. Black Pall lasts 8s. Gloom drains 1 a second out of combat instead of 2.5.' },
+    build: base => ({
+      potMult: base.potMult * 0.995,   // balance knob (tools/simulate.js)
+      sentinel: true, slowDecay: true,
+      abilities: {
+        strike: { desc: 'Spend 40 Gloom: a heavy blow for {d:540} that wraps you in a barrier of {s:150} for 10s, and the ally who is hurt most in one of {s:110}. Two charges. Needs 40 Gloom.' },
+        pall: { desc: 'Spend 30 Gloom: a pall falls over the whole party, 25% less damage taken for 8s.' },
+      },
+    }),
+  },
+  {
+    id: 'duskreaver', name: 'Reaver of Dusk', title: 'The Hollow Blade', accent: '#c85a8a',
+    gaugeTip: 'Every hit you land fills 8 Gloom and every hit you take 6. Gloom Strike spends 40, Black Pall 30, Last Rite all of it. Full Gloom when a blow would kill you makes you Hollow, for 10s instead of 8s, and Gloom Strike echoes while you are.',
+    blurb: 'The dark is a weapon. Let it hollow you out, and cut.',
+    focus: 'Damage. You hit harder, Hollow lasts 10s, and while Hollow every Gloom Strike hits twice.',
+    passive: { name: 'Hollow Blade', desc: 'You deal 6% more damage. Hollow lasts 10s instead of 8s, and while you are Hollow Gloom Strike echoes, hitting again for 60%.' },
+    build: base => ({
+      potMult: base.potMult * 0.94,
+      hollowLong: true, hollowEcho: true,
+      dmgMod: k => base.dmgMod(k) + 0.06,
+    }),
+  },
+];
+
+// ===================================================================================================================
+// THRESHER (damage, class 19): the Sower's and the Grim's specs (the kit is in kits.js, after the Gloomsworn)
+// ===================================================================================================================
+SPECS.thresher = [
+  {
+    id: 'sower', name: 'Sower', title: 'The Quick Hand', accent: '#9be06a',
+    gaugeTip: 'Four afflictions on the boss, each a bar that ripens: green (young, 2s), gold (ripe, until 6.5s), then rotten. Slash and Cleave lay all four between them, and Hook and the Wisp too. Reap pays gold in full, young 40%, rotten 65%.',
+    blurb: 'Plant everything, and quickly. The harvest never waits.',
+    focus: 'Pace. You act 10% faster, the afflictions ripen sooner and lay themselves, and a Reap is rarely short of anything.',
+    passive: { name: 'Quick Hands', desc: 'You act 10% faster. Slash lays a Drain as well as its Mark, Cleave lays a Bind, and Hook binds too. Afflictions are young for 2s and gold from then until 6.5s, then they rot: the window is shorter, and it comes sooner.' },
+    build: base => ({
+      potMult: base.potMult * 0.875,   // balance knob (tools/simulate.js)
+      sower: true, young: 2, rot: 6.5,
+      haste: () => 0.9,
+      abilities: {
+        slash: { desc: 'Two-hit combo on one button: Slash ({d:200}) > Cleave ({d:270}), a wide arc. Slash lays a Mark and a Drain on the boss and Cleave a Bind. Press the next hit within 1.2s of your recovery and a Backswing follows for {d:90}.' },
+        hook: { desc: 'Throw the chain: if you are not at the boss, pull yourself in, and cut for {d:150}. It plants a Thread and a Bind on the boss and ages the others by 1.5s. Two charges.' },
+      },
+    }),
+  },
+  {
+    id: 'grim', name: 'Grim', title: 'The Patient Reaper', accent: '#c8a84a',
+    gaugeTip: 'Three afflictions on the boss (no Bind), each a bar that ripens slowly: green (young, 4s), gold (ripe, until 11s), then rotten. Reap pays gold in full, young 40%, and rotten 95%, and every payout is half again as big.',
+    blurb: 'Fewer afflictions, ripened slowly, and one great harvest.',
+    focus: 'Patience. A long gold window, a rotten payout that is hardly less, and a Reap 50% bigger on a longer cooldown.',
+    passive: { name: 'Patient Reaper', desc: 'Afflictions are young for 4s and gold until 11s, and Bind is never laid. Reap pays half again as much, a rotten affliction pays 95% instead of 65%, and its cooldown is 9s instead of 6s.' },
+    build: base => ({
+      potMult: base.potMult * 0.985,
+      young: 4, rot: 11, noAff: ['bind'], reapMult: 1.5, rotPay: 0.95, reapCd: 9,
+      abilities: {
+        reap: { desc: 'Spend every affliction on the boss. A cut for {d:180}, then each pays out: Mark {d:165}, Drain {d:150} (and mends you for 3% of your health) and Thread {d:255}. Gold pays in full, young 40%, rotten 95%. Glows when something is gold. Needs an affliction up.' },
+        blink: { glow: () => false, desc: 'Cut through the dark to the boss for {d:140}. The cut keeps your Backswing going, and you take 50% less damage for 1s. Two charges.' },
+        wisp: { desc: 'A wisp rises beside you for 15s and harries the boss, striking for {d:60} every 2.5s.' },
+      },
+    }),
+  },
+];

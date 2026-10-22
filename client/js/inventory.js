@@ -362,7 +362,23 @@ const Inventory = (() => {
         for (let i = 0; i < 4; i++) shape(() => c.arc(-10.5 + i * 7, -12, 2.6, 0, Math.PI * 2), i % 2 ? gold : metal, 1.2);
         stroke(() => { c.moveTo(-12, -2); c.lineTo(12, -2); }, '#5a3420', 1.5);
         break;
-      case 'stampmace':   // Oathbroker: a mace whose head is a square seal, a dab of red wax on its face
+      case 'duskblade':   // Gloomsworn: a black greatsword with a violet edge, a guard like folded wings and a vessel-stone in the pommel
+        c.rotate(-Math.PI / 4);
+        shape(() => { c.moveTo(-5, -4); c.lineTo(-5, -26); c.lineTo(0, -32); c.lineTo(5, -26); c.lineTo(5, -4); }, '#262030');
+        stroke(() => { c.moveTo(-5, -6); c.lineTo(-5, -26); c.lineTo(0, -32); }, '#9a7ad8', 1.4);
+        stroke(() => { c.moveTo(0, -6); c.lineTo(0, -24); }, '#6a4aa0', 1.2);
+        shape(() => { c.moveTo(-13, -3); c.lineTo(-8, -8); c.lineTo(-3, -5); c.lineTo(3, -5); c.lineTo(8, -8); c.lineTo(13, -3); c.lineTo(8, -1); c.lineTo(-8, -1); c.closePath(); }, '#4a3a68', 2);
+        shape(() => c.rect(-2.5, -1, 5, 16), '#1a1420', 2);
+        shape(() => c.arc(0, 17, 3.8, 0, Math.PI * 2), '#b08aff', 2);
+        break;
+      case 'scythe':   // Thresher: a long ash snath with a curved green-black blade and a bone-white edge
+        c.rotate(0.35);
+        stroke(() => { c.moveTo(-1, 30); c.lineTo(1, -22); }, wood, 3);
+        shape(() => { c.moveTo(1, -22); c.quadraticCurveTo(22, -34, 30, -12); c.quadraticCurveTo(18, -24, 1, -17); c.closePath(); }, '#2a3a2e');
+        stroke(() => { c.moveTo(3, -22); c.quadraticCurveTo(20, -30, 29, -13); }, '#c8f0a8', 1.2);
+        shape(() => c.rect(-3.5, -10, 7, 3), gold, 1.5);
+        break;
+      case 'stampmace':   // Oathbroker:a mace whose head is a square seal, a dab of red wax on its face
         c.rotate(-Math.PI / 4);
         shape(() => c.rect(-2.5, -6, 5, 32), '#5a4a3a', 2);
         shape(() => c.rect(-10, -26, 20, 20), metal, 2);

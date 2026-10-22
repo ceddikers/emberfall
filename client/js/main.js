@@ -76,10 +76,14 @@
   // (localStorage 'emberfall.unlockAll' = '1' opens everything, for testing.)
   const unlockAll = (() => { try { return localStorage.getItem('emberfall.unlockAll') === '1'; } catch (e) { return false; } })();
   function bossOpen(boss) { const i = BOSSES.indexOf(boss); return unlockAll || i <= 0 || Save.bossBeaten(BOSSES[i - 1].id); }
-  // Hard: locked until all four bosses have fallen on Normal, then it opens a boss at a time, starting with Grubnak
-  const hardUnlocked = () => unlockAll || BOSSES.filter(b => b.playable).every(b => Save.normalBeaten(b.id));
-  function hardOpen(boss) { const i = BOSSES.indexOf(boss); return unlockAll || (hardUnlocked() && (i <= 0 || Save.hardBeaten(BOSSES[i - 1].id))); }
-  const hardWhy = boss => { const i = BOSSES.indexOf(boss); return !hardUnlocked() ? 'Clear all four bosses on Normal first.' : `Beat ${BOSSES[i - 1].name} on Hard first.`; };
+  // Hard, set by set (data.js BOSSES[].set): locked until every playable boss of the set has fallen on Normal, then it opens a boss at a
+  // time, starting with the set's first (Grubnak; Vhalgrath for set 2)
+  const bossSet = boss => boss.set || 1;
+  const hardUnlocked = (set = 1) => unlockAll || BOSSES.filter(b => b.playable && bossSet(b) === set).every(b => Save.normalBeaten(b.id));
+  const firstOfSet = boss => { const i = BOSSES.indexOf(boss); return i <= 0 || bossSet(BOSSES[i - 1]) !== bossSet(boss); };
+  function hardOpen(boss) { const i = BOSSES.indexOf(boss); return unlockAll || (hardUnlocked(bossSet(boss)) && (firstOfSet(boss) || Save.hardBeaten(BOSSES[i - 1].id))); }
+  const hardWhy = boss => { const i = BOSSES.indexOf(boss); return !hardUnlocked(bossSet(boss)) ? (bossSet(boss) === 1 ? 'Clear all four bosses on Normal first.' : 'Clear every boss of the wild realm on Normal first.') : `Beat ${BOSSES[i - 1].name} on Hard first.`; };
+  const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX'];
   const lastOpenBoss = () => [...BOSSES].reverse().find(b => b.playable && bossOpen(b)) || BOSSES[0];
   // the specializations stay a secret until the Hollow King has fallen once on this account
   const specsRevealed = () => unlockAll || Save.bossBeaten('hollowking');
@@ -327,7 +331,7 @@
 
   // --- kit events
   const SIM_EVENTS = new Set(['damage', 'heal', 'hot', 'shield', 'mit', 'raise', 'rewind', 'selfDamage', 'targetDebuff', 'partyBuff', 'allyBuff', 'snap', 'pool', 'brand', 'taunt', 'splash',
-    'maw', 'ledger',   // (the Gorgemaw's jaw and the Oathbroker's Ledger: fight.js classEvent)
+    'maw', 'ledger', 'gloom',   // (the Gorgemaw's jaw, the Oathbroker's Ledger and the Gloomsworn's vessel: fight.js classEvent)
     'tie', 'snip', 'tighten', 'tapestry', 'tug',   // (the Threadweaver's threads: fight.js weaveEvent)
     'lb',   // (a Limit Break: fight.js limitBreak)
     'ult']);   // (an Ultimate pressed, for the contribution score: kitFx)
@@ -561,6 +565,7 @@
     if (perfect) actor.notify('perfect', { b: d.heavy ? 1 : 0 });
     if (reflect) actor.notify('reflect', { b: d.heavy ? 1 : 0 });
     if (read) actor.notify('read', { b: d.heavy ? 1 : 0 });   // (the sparring dummy's every fourth swing counts as a tankbuster)
+    if (amt > 0) actor.notify('taken', { a: amt });
   }
 
   const ADD_R = 30;
@@ -889,8 +894,10 @@
   // host only
   let raidHost = null, hostRoster = [], stopHostTick = null, lastRaidOpts = { mode: 'normal', fill: true, boss: 'grubnak' };
 
-  const RAID_DEFS = { grubnak: GRUBNAK, skitterra: SKITTERRA, volkar: VOLKAR, hollowking: HOLLOWKING };
+  const RAID_DEFS = { grubnak: GRUBNAK, skitterra: SKITTERRA, volkar: VOLKAR, hollowking: HOLLOWKING, wyrm: WYRM, titan: TITAN };
   // a raid id is a boss id, or 'trial:<spec>' for a specialization trial (trials.js)
+  RAID_DEFS.hydra = HYDRA;   // (set 2, Boss VIII: hydra.js)
+  RAID_DEFS.archmage = AZERATH;   // (set 2, Boss VII: archmage.js)
   const raidDef = id => RAID_DEFS[id] || (typeof id === 'string' && id.startsWith('trial:') ? trialDef(id.slice(6)) : null);
   let hostTrial = null;   // host: the spec whose trial is running, if it's a trial
   let trialPrevSpec;      // the spec you wore before stepping into a trial (undefined when not in one)
@@ -1073,7 +1080,11 @@
     skitterra: ['The Web', 'The Dark Between', 'The Brood', 'The Collapse'],
     volkar: ['The Front', 'The Eye', 'Back of the Storm', 'Heavens Fall'],
     hollowking: ['The Summons', 'Testimony', 'Court of Bones', 'The Verdict', 'Judgement', 'The Long Night'],
+    wyrm: ['Ground', 'First Flight', 'The Roost', 'Final Flight', 'Last Ember'],
+    titan: ['The Thaw', 'The Freeze', 'The Crack', 'The Avalanche', 'Last Winter'],
   };
+  PRACTICE_PHASES.hydra = ['Three Heads', 'Six Heads', 'The Submerge', 'Nine Heads', 'Last Heads'];
+  PRACTICE_PHASES.archmage = ['Fire', 'Frost', 'The Binding', 'Void', 'Convergence'];
   let practicePanel = null, practicePick = { boss: 'grubnak', mode: 'normal' };
   function openPractice() {
     if (!practicePanel) {
@@ -1472,6 +1483,8 @@
     if (raid.state === 'live' && msg.mx > 0 && (!raid.tl.hp.length || msg.ft - raid.tl.hp[raid.tl.hp.length - 1][0] >= 1) && raid.tl.hp.length < 1200) raid.tl.hp.push([msg.ft, msg.hp / msg.mx]);
     if (msg.na != null) raid.nextAutoAt = now + msg.na;
     raid.bossStatus = Array.isArray(msg.bs) ? msg.bs : [];   // what's on the boss (fight.js bossStatus)
+    if (Array.isArray(msg.g)) raid.gates = msg.g;   // the HP gates (ticks on the boss bar) and the wall's label while the boss is sealed (fight.js raiseWall)
+    raid.wallLabel = msg.wl || null;
     if (SH && raid.state === 'live' && msg.mx > 0 && Math.floor(msg.hp / msg.mx * 20) !== raid.hpBucket) { raid.hpBucket = Math.floor(msg.hp / msg.mx * 20); SH.vo('boss-hp', { bossId: raid.def.id, hp: msg.hp, maxHp: msg.mx }); }   // (every 5%)
     if (msg.ph != null && msg.ph !== raid.ph) { const first = raid.ph == null; raid.ph = msg.ph; if (SH && raid.state === 'live') { SH.phase(raid.def.id, msg.ph); if (!first) SH.vo('boss-phase', { bossId: raid.def.id, n: msg.ph }); } }
   });
@@ -1485,9 +1498,12 @@
     if (Number.isFinite(msg.lb)) raid.lb = msg.lb;
     raid.rc = msg.rc > 0 ? msg.rc : 0;   // seconds of 'recovering' left (fight.js FIGHT.REC)
     const listed = new Set();
-    for (const [id, hp, maxHp, shield, alive, dd, vuln, mit, weak, debuffs, threat, hots] of msg.ps) {
+    for (const [id, hp, maxHp, shield, alive, dd, vuln, mit, weak, debuffs, threat, hots, hol] of msg.ps) {
       listed.add(id);
       const s = raid.party.get(id);
+      // a Gloomsworn's Hollow: [on, debt, healed, seconds left, grace left] (party frames: raid-ui.js; its own gauge: the kit)
+      if (s) s.hollow = Array.isArray(hol) && hol[0] ? { debt: hol[1], healed: hol[2], left: hol[3], grace: hol[4], at: now } : null;
+      if (id === Net.id && actor && actor.cls.id === 'gloomsworn') actor.notify('hollowtick', Array.isArray(hol) && hol[0] ? { on: 1, debt: hol[1], healed: hol[2], left: hol[3], grace: hol[4] } : { on: 0 });
       if (SH && s && id === Net.id && s.alive && alive) { if (shield > 0 && !(s.shield > 0)) SH.play('shield-up', { vol: 0.6, key: 'shield-up', minGap: 0.5 }); if (Array.isArray(debuffs) && debuffs.length > (Array.isArray(s.debuffs) ? s.debuffs.length : 0)) SH.play('debuff-on', { vol: 0.75, key: 'debuff-on', minGap: 0.4 }); }
       if (s) Object.assign(s, { hp, maxHp, shield, alive: !!alive, dd, vuln, mit, weak, debuffs, threat: threat || 0, hots: hots || [], left: false });
     }
@@ -1509,6 +1525,8 @@
     if (SH && tg.type !== 'safe') SH.impact(tg.type, !!(msg.hits && msg.hits.includes(Net.id)));
     if (msg.hits && msg.hits.includes(Net.id) && tg.type === 'aoe') FX.shake = Math.max(FX.shake, 5);
   });
+  // Azerath: a shape that joins two heroes (a stack halfway between the Rune bearers, the bolt from one to the other) moves with them until it locks
+  Net.on('azlink', msg => { const tg = raid && raid.tgs.get(msg.id); if (tg) tg.link = msg; });
   Net.on('tgclear', () => { if (raid) { fadeTelegraphs(); raid.lunges = []; raid.eggs = null; } });
   const TG_FADE = 0.25;
   function fadeTelegraphs() { for (const tg of raid.tgs.values()) if (tg.gone == null) tg.gone = now; }
@@ -1571,6 +1589,22 @@
       case 'audience': prop('audience', true, end + 0.3); break;
       case 'march': prop('rise', true, end + 0.3); break;
       case 'bind': prop('graves', true, end + 0.3); break;
+      // Vhalgrath
+      case 'claws': prop('claw', true, end + 0.2); break;
+      case 'tail': prop('tail', true, end + 0.3); break;
+      case 'breath': prop('breath', true, end + 0.3); break;
+      case 'fly': prop('fly', true, end + 0.4); break;
+      case 'dive': prop('dive', true, end + 0.2); break;
+      case 'roost': prop('perch', true, end + 12.4); break;
+      case 'heart': prop('heart', true, end + 0.5); break;
+      // the Hydra
+      case 'cry': prop('cry', true, end + 0.4); break;
+      case 'maul': prop('maul', true, end + 0.3); break;
+      case 'head': prop('head', true, end + 0.3); break;
+      case 'burst': case 'feast': case 'rain': case 'flare': case 'crater': prop('roar', true, end + 0.2); break;
+      // Hrimgar
+      case 'slam': prop('raise', true, end + 0.4); break;
+      case 'howl': prop('howl', true, end + 0.3); break;
     }
     for (const [k, after] of castPose || []) prop(k, true, end + after);   // [boss presentation] (boss-vfx.js CAST_POSE)
     if (msg.anim !== 'mince' && msg.anim !== 'boil') st.action = { type: 'attack', t0: end - 0.45, dur: 1.2 };
@@ -1807,6 +1841,7 @@
     }
     if (msg.id !== Net.id) return;
     raid.taken.push({ t: now, a: msg.a });
+    if (actor && msg.a > 0) actor.notify('taken', msg);   // (a Gloomsworn's vessel fills for every hit it takes)
     // the death recap: your last few hits, named by the move they came from (or what kind of hit it was)
     if (msg.a > 0) {
       const c = raid.cast && now <= raid.cast.start + raid.cast.dur + 0.3 ? raid.cast.name : null;
@@ -1841,7 +1876,7 @@
     // the advanced tanks' moments (something eaten, a bill stamped): CLASS_FEV in ability-vfx.js
     if (typeof CLASS_FEV !== 'undefined' && CLASS_FEV[msg.k] && e) { VFX.setScale(msg.id === Net.id ? 1 : 0.6); try { CLASS_FEV[msg.k](msg, e, { mine: msg.id === Net.id, tgs: raid.tgs, now, boss: raid.bossDraw }); } finally { VFX.setScale(1); } }
     if (msg.id !== Net.id || !actor) return;
-    if (msg.k === 'eat' || msg.k === 'ledger') actor.notify(msg.k, msg);
+    if (msg.k === 'eat' || msg.k === 'ledger' || msg.k === 'hollow') actor.notify(msg.k, msg);
     if (msg.k === 'perfect') actor.notify('perfect', msg);   // (msg.b: it was a tankbuster)
     if (msg.k === 'reflect') actor.notify('reflect', msg);
     if (msg.k === 'read') actor.notify('read', msg);   // an Ironpalm's Read caught a hit (msg.b: it was a tankbuster)
@@ -2367,12 +2402,15 @@
     }
     for (const key of Object.keys(raid.propsUntil)) if (now > raid.propsUntil[key]) { delete raid.props[key]; delete raid.propsUntil[key]; }
     bd.st.props = raid.props;
+    if (raid.def.id === 'hydra') { raid.props.dive = !!b.u; raid.props.heart = !!raid.wallLabel; }   // (the Mother sinks while she is out of reach; the Heart shows in her chest while she is sealed)
+    if (raid.def.id === 'wyrm') { raid.props.air = !!b.u && !raid.props.perch; if (raid.wallLabel) raid.props.heart = true; }   // (Vhalgrath: lifted while he is out of reach; the Ember Heart shows in his chest while he is sealed)
     // telegraphs that follow players or track the tank
     for (const [id, tg] of raid.tgs) {
       const end = tg.start + tg.dur;
       // a resolved telegraph stays put and fades out (ArenaView / BossTells read tg.gone)
       if (tg.gone != null) { if (now > tg.gone + TG_FADE) raid.tgs.delete(id); continue; }
       if (tg.follow != null && now < end - (tg.lockAt || 0)) { const e = entById(tg.follow); if (e) { tg.live.x = e.x; tg.live.y = e.y; } }
+      if (tg.link && now < end - tg.link.lock) { const la = entById(tg.link.a), lb = entById(tg.link.b); if (la && lb) AZ.linkShape(tg.link.k, la, lb, tg.live); }
       if (tg.aim != null && now < end - (tg.lockAt || 0.6)) {
         const e = entById(tg.aim);
         tg.live.x = bd.x; tg.live.y = bd.y;
@@ -2498,7 +2536,7 @@
   }
 
   function bossImpact(b) {
-    const style = { grubnak: ['#d8b07a', 70], skitterra: ['#9dff6a', 60], volkar: ['#7fe8ff', 85], hollowking: ['#6dff9a', 75] }[b.boss.id];
+    const style = { grubnak: ['#d8b07a', 70], skitterra: ['#9dff6a', 60], volkar: ['#7fe8ff', 85], hollowking: ['#6dff9a', 75], wyrm: ['#ff8a3a', 85], titan: ['#bfe8ff', 95] }[b.boss.id] || (b.boss.id === 'hydra' ? ['#7fe0a8', 80] : ['#ffffff', 70]);
     const x = b.x + Math.cos(b.angle) * 50, y = b.y + Math.sin(b.angle) * 50;
     FX.add({ type: 'ring', x, y, r: style[1], color: style[0], dur: 0.6 });
     if (scene === 'town' && Math.hypot(player.x - b.x, player.y - b.y) < 350) FX.shake = Math.max(FX.shake, 4);
@@ -2803,7 +2841,7 @@
   // from his silhouette, instead of a CSS filter with a drop-shadow on a canvas up to ~1320 px a side every frame.
 
   function renderArena() {
-    ctx.fillStyle = { volkar: '#080b11', hollowking: '#0a0c0e' }[raid.def.id] || '#120d0a'; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = { volkar: '#080b11', hollowking: '#0a0c0e', wyrm: '#0b0706', titan: '#070d14' }[raid.def.id] || (raid.def.id === 'hydra' ? '#04100c' : raid.def.id === 'archmage' ? '#04141a' : '#120d0a'); ctx.fillRect(0, 0, W, H);
     const [sx, sy] = shakeOffset(), px = DPR * zoom;
     ctx.scale(zoom, zoom);
     // (snapped to device pixels, like the town's camera, so a resting or shaking view never shimmers half a pixel)
@@ -2879,6 +2917,7 @@
         BOSS_VFX.drawBody(ctx, bossDef, bd, { scale: RAID_BOSS_SCALE, ghost, dark: raid.nightK > 0.05 ? 0.55 * raid.nightK : 0,
           alpha: raid.def.trial ? 0.72 + 0.06 * Math.sin(now * 2.3) : Math.max(bd.fade, 0.8),
           tint: raid.def.trial ? 'memory' : raid.bossPause && now < raid.bossPause.end ? 'frost' : null, pending: !!raid.introAt && !raid.def.trial });
+        if (raid.wallLabel) ArenaView.wallShield(ctx, bd.x, bd.y, now, RAID_BOSS_SCALE);
       } else if (e.kind === 'knight') {
         const k = e.k, a = Math.min(1, (now - k.born) / 0.6) * (k.gone ? Math.max(0, 1 - (now - k.gone) / 0.8) : 1);
         drawEchoKnight(ctx, k.x, k.y, k.f, k.st, a * (1 - 0.3 * raid.nightK));
@@ -3407,6 +3446,8 @@
     VFX.burst(e.x, e.y, { color: cls.accent, color2: '#ffffff', n: 18, speed: 220 });
   }
   function chooseHero(cls, specId) {
+    if (typeof cls === 'string') cls = CLASSES.find(c => c.id === cls);   // (window.__game.chooseHero('thresher') from a console: an id without its class left drawHero reading ROLES[undefined])
+    if (!cls) return;
     setTimeout(refreshLineup, 0);   // (the hero you just picked steps off the deck; the one you left steps back on)
     player.cls = cls;
     // the spec picked on the hero page, or the one this hero last played
@@ -3445,7 +3486,7 @@
       const t = bossThumbs[i], open = bossOpen(boss);
       t.b.classList.toggle('sealed', !open);
       t.b.querySelector('b').textContent = open ? boss.name : 'Sealed';
-      t.b.querySelector('small').textContent = open ? `Boss ${['I', 'II', 'III', 'IV'][i]} · ${boss.title}` : `Boss ${['I', 'II', 'III', 'IV'][i]} · beat ${bossOpen(BOSSES[i - 1]) ? BOSSES[i - 1].name : `Boss ${['I', 'II', 'III', 'IV'][i - 1]}`} to open`;
+      t.b.querySelector('small').textContent = open ? `Boss ${ROMAN[i]} · ${boss.title}` : `Boss ${ROMAN[i]} · beat ${bossOpen(BOSSES[i - 1]) ? BOSSES[i - 1].name : `Boss ${ROMAN[i - 1]}`} to open`;
     });
   }
   let raidMode = 'normal', raidFill = true;
@@ -3465,7 +3506,7 @@
         <canvas></canvas>
         <div class="detail-info">
           <h3>${boss.name}</h3>
-          <div class="sub"><span class="role-tag" style="--c:#ff7a6a">Boss ${['I', 'II', 'III', 'IV'][i]}</span>${boss.title}</div>
+          <div class="sub"><span class="role-tag" style="--c:#ff7a6a">Boss ${ROMAN[i]}</span>${boss.title}</div>
           <p class="tagline">${boss.blurb}</p>${typeof STORY !== 'undefined' && STORY.bossLore && STORY.bossLore[boss.id] ? `<p class="lore">${escapeHtml(STORY.bossLore[boss.id])}</p>` : ''}
         </div>
       </div>
@@ -3534,9 +3575,17 @@
     const st = preview.st;
     st.t = now;
     {
-      if (now > preview.nextDemo) { st.action = { type: 'attack', t0: now, dur: BOSS_ATTACK_DUR }; preview.nextDemo = now + 2.8; }
+      if (now > preview.nextDemo) {
+        st.action = { type: 'attack', t0: now, dur: BOSS_ATTACK_DUR }; preview.nextDemo = now + 2.8;
+        if (preview.boss.id === 'wyrm') { const ks = ['roar', 'breath', 'claw', 'tail', 'fly']; preview.wp = ks[preview.wn = ((preview.wn ?? -1) + 1) % ks.length]; preview.wpUntil = now + 2.2; }
+        if (preview.boss.id === 'hydra') { const ks = ['cry', 'maul', 'head', 'heart']; preview.wp = ks[preview.wn = ((preview.wn ?? -1) + 1) % ks.length]; preview.wpUntil = now + 2.2; }
+        if (preview.boss.id === 'titan') { const ks = ['howl', 'fist', 'raise', 'breath']; preview.wp = ks[preview.wn = ((preview.wn ?? -1) + 1) % ks.length]; preview.wpUntil = now + 2.2; }
+      }
+      if (preview.boss.id === 'wyrm') st.props = preview.wp && now < preview.wpUntil ? { [preview.wp]: true } : {};   // (Vhalgrath's pose changes as the preview cycles)
+      if (preview.boss.id === 'hydra') st.props = preview.wp && now < preview.wpUntil ? { [preview.wp]: true } : {};   // (the Mother's pose changes as the preview cycles)
+      if (preview.boss.id === 'titan') st.props = preview.wp && now < preview.wpUntil ? { [preview.wp]: true } : {};   // (Hrimgar's pose changes as the preview cycles)
       const c = prep(preview.cv);
-      drawBoss(c, preview.boss, 130, 128, 0.5 + Math.sin(now * 0.5) * 0.3, st, 1.45);
+      preview.boss.id === 'wyrm' ? drawBoss(c, preview.boss, 168, 134, 0.3, st, 1.15) : drawBoss(c, preview.boss, 130, 128, 0.5 + Math.sin(now * 0.5) * 0.3, st, 1.45);
     }
   }
 

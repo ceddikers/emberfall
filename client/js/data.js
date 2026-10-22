@@ -128,10 +128,28 @@ CLASSES.push(
   },
 );
 
+// ---------------------------------------------------------------- Gloomsworn (tank, class 18; docs/plans/2026-10-new-classes-2.md)
+// No painted icons or portraits yet: the game draws its own icons until they are in.
+CLASSES.push({
+  id: 'gloomsworn', name: 'Gloomsworn', title: 'Undying Vigil', role: 'tank', difficulty: 3, complexity: 3, accent: '#7a5aa8',
+  art: { icons: false, portraits: false },
+  tagline: 'The dark keeps the watch. It does not let go.',
+  gameplan: 'Strikes and wounds fill your Gloom, and heavy blows, a pall over the whole party and your last rite spend it. Keep it full when the killing blow comes and you do not fall: you go Hollow, held at one health, hitting harder, every wound written down as a debt. Your healer must pay the debt back before the grace runs out, or the dark takes it from you. Once a minute, at most.',
+});
+
+// ---------------------------------------------------------------- Thresher (damage, class 19; docs/plans/2026-10-new-classes-2.md)
+// No painted icons or portraits yet: the game draws its own icons until they are in.
+CLASSES.push({
+  id: 'thresher', name: 'Thresher', title: 'Afflict, Ripen, Reap', role: 'dps', difficulty: 3, complexity: 4, accent: '#9be06a',
+  art: { icons: false, portraits: false },
+  tagline: 'Everything is ripe in its time. You only have to be there.',
+  gameplan: 'Your scythe lays four afflictions on the boss: a Mark that bleeds, a Drain that mends you, a Bind that pulses and a Thread that waits to be snapped. Each ripens, from green to gold and then to rot. Reap spends them all, and pays the most when they are gold, so cut, weave, and let the harvest come due. Once in a while step through the Gate, where nothing can touch you, and the fifth strike calls in all four at once.',
+});
+
 // Boss panel text: flavor only. Nothing here tells you how to deal with an attack.
 const BOSSES = [
   {
-    id: 'grubnak', name: 'Grubnak', title: 'The Ogre Chef', color: '#7fa650', playable: true,
+    id: 'grubnak', name: 'Grubnak', title: 'The Ogre Chef', color: '#7fa650', playable: true, set: 1,
     blurb: 'Grubnak has been cooking adventurers for years and is not happy about the reviews. His scullery runs hot, his cleavers run sharp, and nobody has ever sent a dish back.',
     mechanics: [
       { name: 'Tenderize', desc: 'A {b:29900/28350} cleaver blow for whoever holds his attention.' },
@@ -144,7 +162,7 @@ const BOSSES = [
     ],
   },
   {
-    id: 'skitterra', name: 'Queen Skitterra', title: 'Spider Broodmother', color: '#7b4a9a', playable: true,
+    id: 'skitterra', name: 'Queen Skitterra', title: 'Spider Broodmother', color: '#7b4a9a', playable: true, set: 1,
     blurb: 'Deep in the webbed caves, the Broodmother never fights alone, and she never forgets who hurt her children.',
     mechanics: [
       { name: 'Silk Lines', desc: 'Threads strung between her chosen prey: {b:20800/17300} each if they are wrong at the end.' },
@@ -157,7 +175,7 @@ const BOSSES = [
     ],
   },
   {
-    id: 'volkar', name: 'Volkar', title: 'The Storm Titan', color: '#5b8ab0', playable: true,
+    id: 'volkar', name: 'Volkar', title: 'The Storm Titan', color: '#5b8ab0', playable: true, set: 1,
     blurb: 'A living mountain crackling with the fury of the sky. He never moves from the summit. He has never needed to.',
     mechanics: [
       { name: 'Polarity', desc: 'Positive and negative charges, and what happens when they meet. Opposites attract.' },
@@ -170,7 +188,7 @@ const BOSSES = [
     ],
   },
   {
-    id: 'hollowking', name: 'The Hollow King', title: 'Lord of the Barrow', color: '#4a9a6a', playable: true,
+    id: 'hollowking', name: 'The Hollow King', title: 'Lord of the Barrow', color: '#4a9a6a', playable: true, set: 1,
     blurb: 'A king who refused to stay dead, holding court in his own tomb. His guard still stands watch, his bells still toll, and the moon over the Barrow is sinking.',
     mechanics: [
       { name: 'Royal Gaze', desc: 'It is not wise to look a king in the eye: {b:9000/11250}, and {b:16000/20000} the second time.' },
@@ -180,6 +198,51 @@ const BOSSES = [
       { name: 'Barrow Bells', desc: 'Every bell must be rung. Unrung bells toll for everyone.' },
       { name: 'The Long Night', desc: 'At the end, the lanterns go out, and the moon is setting.' },
       { name: 'Hard: Royal Audience, Funeral March, Gravebind', desc: 'The king will be faced, his dead march from wall to wall, and the grave takes the living two at a time.' },
+    ],
+  },
+  // ---- set 2: the wild realm beyond the road (docs/plans/2026-10-set-2-bosses.md). `set` groups the bosses whose Hard opens together (main.js hardUnlocked).
+  {
+    id: 'wyrm', name: 'Vhalgrath', title: 'Tyrant of the Cinder Peaks', color: '#e8662a', playable: true, set: 2,
+    blurb: 'An old dragon holds the highest crater of the Cinder Peaks and has let nothing fly over it since. The rock there is warm. It is not from the sun.',
+    mechanics: [
+      { name: 'Breath', desc: 'A cone of fire that leaves the ground molten.' },
+      { name: 'Flight', desc: 'It takes to the air, and it will come down somewhere.' },
+      { name: 'The Roost', desc: 'It perches high above the crater and shakes its burning scales loose.' },
+      { name: 'The Ember Heart', desc: 'At the end, the crater floor burns and shrinks.' },
+      { name: 'Hard: Wingbeat, Cinder Rain, Heart Flare', desc: 'Its wings push the air along its flight, embers fall like rain, and the heart flares at the weakest.' },
+    ],
+  },
+  {
+    id: 'titan', name: 'Hrimgar', title: 'Warden of the White Reach', color: '#8ad0ee', playable: true, set: 2,
+    blurb: 'A giant keeps the glacier plateau under the aurora, and the ice there is not as thick as it looks. Where he strikes, the floor does not hold.',
+    mechanics: [
+      { name: 'Ice Sheets', desc: 'The plateau is a mosaic of ice. Where he strikes, a sheet cracks and sinks.' },
+      { name: 'Frost', desc: 'Frozen sheets hold, but they are slick, and a hero can be chilled to the bone.' },
+      { name: 'The Long Night', desc: 'The aurora dims, and the giant swings in great slow arcs.' },
+      { name: 'The Avalanche', desc: 'At the end, the plateau tips and the snow runs down in lanes.' },
+      { name: "Hard: Glacial Stomp, Breath of Winter, Titan's Grip", desc: 'The ground rings with shards, his breath freezes the floor before it shatters, and his fist closes on a hero.' },
+    ],
+  },
+  {
+    id: 'archmage', name: 'Azerath', title: 'Master of the Seven Circles', color: '#3fb8b0', playable: true, set: 2,
+    blurb: 'A mage\'s tower sank into the water with its master still at his work. Its floors are circles of spellwork, one for each of the elements, and they are all still lit.',
+    mechanics: [
+      { name: 'The Runes', desc: 'Two heroes carry runes of different elements, and the runes react when they stand close.' },
+      { name: 'The Four Elements', desc: 'Fire, frost, lightning and the void, each in its turn, and each changes what the floor does.' },
+      { name: 'The Binding', desc: 'He calls up elementals and the circles wake. Each belongs in the circle of its own element.' },
+      { name: 'Convergence', desc: 'At the end, every circle is lit at once, and where two meet, they react.' },
+      { name: 'Hard: Counterspell, Rune Swap, Arcane Mark', desc: 'His last spell comes again from the far side of the room, the runes change hands, and a hero\'s own elemental rises where they stood.' },
+    ],
+  },
+  {
+    id: 'hydra', name: 'The Hydra', title: 'Mother of Nine Heads', color: '#4f9a6a', playable: true, set: 2,
+    blurb: 'A temple sank into its own pool long ago, and something grew in the water. It has a great many heads, and they do not agree with each other. Cut one, and you will have to choose how.',
+    mechanics: [
+      { name: 'The Heads', desc: 'Each head has its own element and aims at someone at random. Her heads take their turns round the pool.' },
+      { name: 'Searing', desc: 'A head that falls leaves a bleeding stump. Left alone, it grows back as two.' },
+      { name: 'The Submerge', desc: 'She dives and the temple floods. Heads rise at the columns, one by one.' },
+      { name: "The Mother's Heart", desc: 'At the end, every head she has had strikes again, in the order you cut them.' },
+      { name: "Hard: Regrowth, Tidal Dance, Hydra's Gaze", desc: 'A missed stump grows an extra head, two heads send their tides across each other, and the whole temple is watched.' },
     ],
   },
 ];

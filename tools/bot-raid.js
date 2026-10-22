@@ -14,7 +14,13 @@ const { GRUBNAK } = load('arena/bosses/grubnak.js');
 const { SKITTERRA } = load('arena/bosses/skitterra.js');
 const { VOLKAR } = load('arena/bosses/volkar.js');
 const { HOLLOWKING } = load('arena/bosses/hollowking.js');
-const DEFS = { grubnak: GRUBNAK, skitterra: SKITTERRA, volkar: VOLKAR, hollowking: HOLLOWKING };
+const { WYRM } = load('arena/bosses/wyrm.js');
+const { TITAN } = load('arena/bosses/titan.js');
+const DEFS = { grubnak: GRUBNAK, skitterra: SKITTERRA, volkar: VOLKAR, hollowking: HOLLOWKING, wyrm: WYRM, titan: TITAN };
+const { HYDRA } = load('arena/bosses/hydra.js');
+DEFS.hydra = HYDRA;
+const { AZERATH } = load('arena/bosses/archmage.js');
+DEFS.archmage = AZERATH;
 const { TRIALS, trialDef } = load('arena/trials.js');
 
 const ITEMSMOD = load('items.js');
@@ -85,6 +91,7 @@ if (GEARSET) {
 log(`${def.name}, ${mode}, ${comp.join('/')}`);
 
 let clears = 0, totDeaths = 0, totClearT = 0;
+const hollowTot = { started: 0, saved: 0, failed: 0 };   // a Gloomsworn's Hollow (fight.js HOLLOW_HOST), over every run
 for (let r = 0; r < runs; r++) {
   const casts = [];
   const host = new RaidHost({ def, mode, humans: () => [], bots: comp, seed: seed0 + r * 77, bond: GEARSET ? GEARSET.bond : undefined, emit: msg => {
@@ -97,7 +104,12 @@ for (let r = 0; r < runs; r++) {
   const origEmit = host.emitOut;
   const recent = {};
   const kinds = {};
+  const hollow = { started: 0, saved: 0, failed: 0 };
   host.emitOut = msg => {
+    if (msg.t === 'fev' && msg.k === 'hollow') {
+      if (msg.on) hollow.started++; else if (msg.ok) hollow.saved++; else hollow.failed++;
+      if (process.env.WHY) console.log(`   ${host.sim.t.toFixed(1)}s Hollow ${msg.on ? 'begins' : msg.ok ? `ends: SAVED (debt ${msg.debt}, healed ${msg.heal})` : `ends: FELL (debt ${msg.debt}, healed ${msg.heal})`}`);
+    }
     if (msg.t === 'pdmg') {
       (recent[msg.id] = recent[msg.id] || []).push(`${msg.k}:${Math.round(msg.a)}@${host.sim.t.toFixed(1)}(${msg.hp})`);
       if (msg.dd) kinds[msg.k] = (kinds[msg.k] || 0) + 1;
@@ -118,13 +130,16 @@ for (let r = 0; r < runs; r++) {
   const dur = host.sim.t;
   totDeaths += deaths.length; if (host.sim.state === 'clear') totClearT += dur;
   log(`run ${r + 1}: ${host.sim.state} at ${dur.toFixed(0)}s, boss ${(host.sim.boss.hp / host.sim.boss.maxHp * 100).toFixed(1)}%, phase ${host.sim.phase}, deaths: ${deaths.join(', ') || 'none'}`);
-  log('   ' + Object.values(st).map(s => `${s.name}/${s.cls}: ${(s.damage / dur).toFixed(0)} dps, ${(s.healing / dur).toFixed(0)} hps, avoidable ${s.avoidable}, deaths ${s.deaths}`).join('\n   '));
+  log('   ' + Object.values(st).map(s => `${s.name}/${s.cls}: ${(s.damage / dur).toFixed(0)} dps, ${(s.healing / dur).toFixed(0)} hps, avoidable ${s.avoidable}, deaths ${s.deaths}${s.ults ? `, ults ${s.ults}` : ""}`).join('\n   '));
   // contribution points (scoring.js): the MVP on a clear, and with SCORE=1 each player's points, raw tracking and the awards
   const sc = Scoring.score(st, { time: dur }), mv = host.sim.state === 'clear' ? Scoring.mvp(st, sc) : null;
   if (process.env.SCORE) log('   ' + Object.entries(st).map(([id, s]) => `${s.name}/${s.role} ${sc[id].total} pts ${JSON.stringify(Object.fromEntries(Object.entries(sc[id].pts).map(([k, v]) => [k, Math.round(v)])))} pen ${sc[id].pen.avoid}/${sc[id].pen.deaths} | ` +
     Scoring.KEYS.filter(k => !['avoidable', 'deaths'].includes(k)).map(k => `${k} ${s[k]}`).join(' ')).join('\n   '));
   if (mv != null) log(`   MVP: ${st[mv].name} (${st[mv].cls}) ${sc[mv].total} pts` + (process.env.SCORE ? '; awards ' + Scoring.awards(st, sc, { clear: true, time: dur }).map(a => `${a.name}: ${st[a.who].name}`).join(', ') : ''));
+  if (hollow.started) log(`   Hollow: ${hollow.started} started, ${hollow.saved} saved, ${hollow.failed} fell`);
+  for (const k of Object.keys(hollow)) hollowTot[k] += hollow[k];
   if (Object.keys(kinds).length) log('   failed: ' + Object.entries(kinds).map(([k, n]) => `${k} ${n}`).join(', '));
 }
 log(`cleared ${clears} of ${runs}`);
-if (SUMMARY) console.log(JSON.stringify({ boss: def.id, mode, gear: gearLevel || 'base', runs, clears, deathsPerRun: +(totDeaths / runs).toFixed(2), meanClearT: clears ? Math.round(totClearT / clears) : null }));
+if (hollowTot.started) log(`Hollow over ${runs} runs: ${hollowTot.started} started, ${hollowTot.saved} saved, ${hollowTot.failed} fell`);
+if (SUMMARY) console.log(JSON.stringify({ boss: def.id, mode, gear: gearLevel || 'base', runs, clears, deathsPerRun: +(totDeaths / runs).toFixed(2), meanClearT: clears ? Math.round(totClearT / clears) : null, hollow: hollowTot.started ? hollowTot : undefined }));

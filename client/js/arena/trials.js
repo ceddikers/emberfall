@@ -453,6 +453,57 @@ Object.assign(TRIALS, {
   },
 });
 
+// ======================================================================= Gloomsworn (tank, class 18)
+Object.assign(TRIALS, {
+  duskward: {
+    cls: 'gloomsworn', spec: 'duskward', name: 'The Night Watch',
+    lore: ['The night the Barrow was sealed, one knight took the watch for the whole court.', 'Whatever fell on the others fell on her barrier first.'],
+    outro: 'Dawn comes to the Barrow. The Sentinel keeps her watch.',
+    allies: ['cleric:base', 'ranger:base'], guard: 'allies', seconds: 58, enrage: 150, regen: 0.004,
+    script(f, k, me) {
+      // blows at the others as often as at the knight: her barriers have to be where the next one lands
+      const other = () => f.alive().find(p => p.id !== me.id && p.role === 'dps') || f.alive().find(p => p.id !== me.id);
+      const at = (dmg, name) => () => { const t = other(); if (t) k.blow(dmg, 4, name, t.id); };
+      k.loop([[4, () => k.blow(6500, 3.5, 'Grave Strike', me.id)], [5, () => k.knell(3000)], [5, at(5000, 'Lunge at the Watch')], [5, () => k.swing('stomp', 4500, 3.5)], [5, () => k.knell(3000)]]);
+    },
+  },
+  duskreaver: {
+    cls: 'gloomsworn', spec: 'duskreaver', name: 'The Hollow Knight',
+    lore: ['A knight was cut down in the Barrow and did not stop.', 'He kept swinging, and the dark kept count.'],
+    outro: 'The count is settled. The Reaver walks on.',
+    allies: ['cleric:base'], seconds: 52, enrage: 70, regen: 0,
+    script(f, k, me) {
+      // heavy blows one after another on the knight, with a knell between: the killing blow lands, and a Hollow is how it is answered
+      k.loop([[3, () => k.blow(9500, 3.5, 'Grave Cleave', me.id)], [3, () => k.blow(9500, 3.2, 'Grave Cleave', me.id)], [6, () => k.knell(2800)], [5, () => k.swing('stomp', 5000, 3.5)]]);
+    },
+  },
+});
+
+// ======================================================================= Thresher (damage, class 19)
+Object.assign(TRIALS, {
+  sower: {
+    cls: 'thresher', spec: 'sower', name: 'The Quick Harvest',
+    lore: ['The Barrow\'s gardens ran wild the night the King fell.', 'Whoever sowed fast enough reaped before the frost.'],
+    outro: 'The field is bare. The Sower walks on.',
+    allies: ['bastion:base', 'cleric:base'], seconds: 55, enrage: 66, regen: 0,
+    script(f, k) {
+      // short gaps between blows: the afflictions have to be laid quickly and reaped on the run
+      k.loop([[3, () => k.swing('stomp', 5500, 3)], [4, () => k.knell(2500)], [4, () => k.blow(8500, 3.5)], [4, () => k.swing('sweep', 5500, 3.5, Math.PI / 2)]]);
+    },
+  },
+  grim: {
+    cls: 'thresher', spec: 'grim', name: 'The Long Wait',
+    lore: ['The old reaper never hurried a harvest.', 'It came ripe on the day it came ripe, and he was there.'],
+    outro: 'The last sheaf is cut. The Grim waits for the next season.',
+    allies: ['bastion:base', 'cleric:base'], seconds: 56, enrage: 70, regen: 0,
+    script(f, k) {
+      // long quiet stretches and then a heavy blow: time to let everything ripen, and a reason to hold the Reap for the right moment
+      f.boss.anchor = true;
+      k.loop([[6, () => k.blow(9500, 4)], [7, () => k.knell(2800)], [6, () => k.swing('stomp', 6500, 4)], [6, () => k.knell(2800)]]);
+    },
+  },
+});
+
 // the boss definition FightSim runs for a trial
 function trialDef(specId) {
   const T = TRIALS[specId];

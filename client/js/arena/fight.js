@@ -82,6 +82,9 @@ class FightSim {
     // Host-owned; the whole list goes out in a 'props' message when anything changes, and every 3 s anyway.
     this.props = []; this.floor = []; this.floorVer = 0; this.propsDirty = false; this.lastPropsSend = -99; this.fires = new Map();
     this.phase = 1; this.hpTriggers = [];
+    // HP gates (shown as ticks on the boss bar), and the wall a course can raise at its gate (see course()): wallHp is the floor the boss's health cannot go below
+    this.gates = (def.gates || []).map(g => (typeof g === 'number' ? { f: g, push: 0, wall: 0 } : { f: g.f, push: g.push ? 1 : 0, wall: g.wall ? 1 : 0 }));
+    this.wall = null; this.wallHp = null;
     // Vulnerability per avoidable hit: a boss can make it bite harder (def.vuln)
     this.vulnStep = def.vuln || FIGHT.VULN;
     this.ps = new Map();
@@ -149,8 +152,23 @@ class FightSim {
   //   o.next(from): lays out what follows (another course), starting at `from`
   //   o.onStart(): runs as the course begins (clearing the floor, moving the boss...)
   // A course without `until` or `closing` ends with its last step and goes straight on to next().
+  //
+  // Set 2 systems (a boss opts in; the set 1 fights use only the ticks):
+  //   GATES  every o.until is a tick on the boss bar. A boss def may list them up front (def.gates: [0.75, 0.5, ...], numbers or
+  //     {f, push, wall}) so the whole fight's acts show from the pull; a gate a course lays out that is not listed is added then.
+  //   PUSH   o.push: true (or def.push) on a course with an `until`: reaching the gate cuts the act's remaining steps (and its
+  //     closing passes) at once and the next act begins now, instead of at the next set seam. Telegraphs already on the floor
+  //     still resolve. A step's follow-ups scheduled with f.after (not afterKeep) die with the act, so a move that must finish
+  //     after the cut lays its follow-ups with afterKeep. A party that is behind still gets the closing passes, up to the gate.
+  //   WALL   o.wall: { label, run(f), until: 'resolved' | fn(f) -> bool, timeout } on a course with an `until`. From the act's start the boss
+  //     cannot be taken below that gate (damage is clamped there). When the gate is reached it is sealed: invulnerable, a shield
+  //     drawn round it and a pip with the label on its bar. The act's remaining steps are cut and wall.run(f) lays out the
+  //     mechanic that breaks the seal; that mechanic calls f.wallDown() when it resolves ('resolved'), or the seal opens when
+  //     fn(f) returns true (polled every tick). timeout (default 45 s) opens it anyway so a script bug can't hold a fight. Then
+  //     the act ends as usual (next / push / seam). A course with a wall needs a next() unless the fight is meant to end there.
   course(o, from = this.t) {
     const ph = this.courseN = (this.courseN || 0) + 1;
+    if (o.until != null) this.addGate(o.until, o);
     // practice from a later phase: this course is passed over at once. Its onStart still runs (the room is set as it
     // would be by then), and the boss will start at the health the asked-for course begins at.
     if (this.skipTo && ph < this.skipTo && o.next) {
@@ -199,14 +217,50 @@ class FightSim {
     this.curCourse = cur;
     if (cur.o.onStart) cur.o.onStart();
     if (cur.o.until != null) this.onHp(cur.o.until, () => this.gate(cur));
+    if (cur.o.wall && cur.o.until != null) this.wallHp = Math.max(1, Math.floor(this.boss.maxHp * cur.o.until));   // (from here on the boss can't go below its gate)
+  }
+  addGate(frac, o) {
+    const push = (o.push ?? this.def.push) ? 1 : 0, g = this.gates.find(x => Math.abs(x.f - frac) < 0.0005);
+    if (g) { if (push) g.push = 1; if (o.wall) g.wall = 1; return; }
+    this.gates.push({ f: frac, push, wall: o.wall ? 1 : 0 }); this.gates.sort((a, b) => b.f - a.f);
+  }
+  // the gates for the clients' boss bar [[fraction, wall], ...]: only when they change (and every 3 s for anyone who missed it)
+  gateMsg() {
+    const key = this.gates.map(g => g.f + ':' + g.wall).join('|');
+    if (key === this.gateKey && this.t - (this.gateSentAt ?? -99) < 3) return undefined;
+    this.gateKey = key; this.gateSentAt = this.t;
+    return this.gates.map(g => [g.f, g.wall]);
+  }
+  // a wall goes up at its gate (see the header note above course())
+  raiseWall(cur, w) {
+    this.wall = { cur, label: w.label || 'Sealed', until: w.until || 'resolved', since: this.t, timeout: w.timeout ?? 45, resolved: false };
+    this.events = this.events.filter(e => e.keep || e.phase !== cur.ph || e.t <= this.t);   // the act's remaining steps are cut
+    this.emit({ t: 'fev', k: 'wall', on: 1, label: this.wall.label });
+    if (w.run) w.run(this);
+  }
+  wallDown() {
+    const w = this.wall;
+    if (!w) return;
+    this.wall = null; this.wallHp = null;
+    this.emit({ t: 'fev', k: 'wall', on: 0, label: w.label });
+    this.gate(w.cur);
+  }
+  wallTick() {
+    const w = this.wall;
+    if (!w) return;
+    if (w.resolved || (typeof w.until === 'function' && w.until(this)) || this.t - w.since > w.timeout) this.wallDown();
   }
   // the boss HP gate is reached: finish the set that's running (up to o.seam s), then go on
   gate(cur) {
-    if (cur.done || this.phase !== cur.ph || !cur.o.next) return;
+    if (cur.done || this.phase !== cur.ph) return;
+    if (cur.o.wall && !cur.walled) { cur.walled = true; this.raiseWall(cur, cur.o.wall); return; }
+    if (!cur.o.next) return;
     cur.done = true;
     const seam = cur.seams.find(s => s > this.t + 0.05);
+    // push: the act is cut at once, not at the next seam
+    const push = !!(cur.o.push ?? this.def.push);
     // (not before a Time Stop on the boss ends: pauseBoss)
-    const at = Math.max(seam != null && seam - this.t <= (cur.o.seam ?? 8) ? seam - 0.02 : this.t, this.boss.pauseUntil || 0);
+    const at = Math.max(!push && seam != null && seam - this.t <= (cur.o.seam ?? 8) ? seam - 0.02 : this.t, this.boss.pauseUntil || 0);
     // what this course still had after the seam is dropped now, so the feed already shows what comes next
     this.events = this.events.filter(e => e.keep || e.phase !== cur.ph || e.t <= at);
     cur.o.next(at);
@@ -316,6 +370,7 @@ class FightSim {
       if (e.phase === this.phase || e.keep) e.fn();
     }
     while (this.hpTriggers.length && this.boss.hp / this.boss.maxHp <= this.hpTriggers[0].frac) this.hpTriggers.shift().fn();
+    if (this.wall) this.wallTick();
     this.fadeThreat(dt);
     this.updateBoss(dt);
     this.updateMechs();
@@ -463,6 +518,7 @@ class FightSim {
         if (this.boss.untargetable) return;
         if (this.boss.exposedUntil > this.t) amt = Math.round(amt * (1 + (this.boss.exposed || 0)));   // staggered: takes more
         if (this.stageUntil > this.t) amt = Math.round(amt * (1 + DOLL_HOST.STAGE));   // standing on an Understudy's Stage (classes-c)
+        if (this.wallHp != null) amt = Math.min(amt, Math.max(0, this.boss.hp - this.wallHp));   // sealed at a gate (a wall)
         this.boss.hp = Math.max(0, this.boss.hp - amt);
         this.burstBrand(pid);
         st.damage += amt;
@@ -491,6 +547,7 @@ class FightSim {
         for (const tid of targetsOf(ev.target)) {
           const ts = this.ps.get(tid); if (!ts || !ts.alive) continue;
           this.ward(pid, tid, ts, true);
+          if (ts.hollow) { this.hollowShield(pid, ts, ev.amount); continue; }   // (a Hollow knight: a shield pays the debt at half)
           if (ts.shield > 0) this.endShield(tid, ts);
           ts.shield = Math.min(ev.amount | 0, ts.maxHp); ts.shieldMax = ts.shield; ts.shieldEnd = this.t + Math.min(30, ev.dur || 15);
           ts.shieldFrom = pid; ts.shieldTag = ev.tag || null;
@@ -557,7 +614,7 @@ class FightSim {
       }
       case 'snap': this.snapReel(pid); break;   // a dash snapped the silk reeling this player in
       case 'taunt': this.taunt(pid, typeof ev.tgt === 'string' ? ev.tgt : 'boss'); break;
-      case 'maw': case 'ledger': if (this.classEvent) this.classEvent(pid, ev); break;   // Gorgemaw, Oathbroker (end of this file)
+      case 'maw': case 'ledger': case 'gloom': if (this.classEvent) this.classEvent(pid, ev); break;   // Gorgemaw, Oathbroker, Gloomsworn (end of this file)
       case 'tie': case 'snip': case 'tighten': case 'tapestry': case 'tug': this.weaveEvent(pid, ev); break;   // Threadweaver (classes-c)
     }
   }
@@ -587,6 +644,7 @@ class FightSim {
     }
   }
   giveShield(from, tid, ts, amount, dur) {
+    if (ts.hollow) { this.hollowShield(from, ts, amount); return; }
     if (ts.shield > 0) this.endShield(tid, ts);
     ts.shield = Math.min(amount | 0, ts.maxHp); ts.shieldMax = ts.shield; ts.shieldEnd = this.t + Math.min(30, dur || 15);
     ts.shieldFrom = from; ts.shieldTag = null;
@@ -604,7 +662,7 @@ class FightSim {
     const b = this.boss, br = b.brand;
     if (!br || br.from === pid || br.end <= this.t || br.charges <= 0) return;
     br.charges--;
-    b.hp = Math.max(0, b.hp - br.amount);
+    b.hp = Math.max(this.wallHp ?? 0, b.hp - br.amount);
     const st = this.stats[br.from]; if (st) st.damage += br.amount;
     this.emit({ t: 'fev', k: 'brandHit', id: br.from, left: br.charges });
     if (br.charges <= 0) b.brand = null;
@@ -612,7 +670,7 @@ class FightSim {
 
   revive(tid, ts, frac, by, rewound) {
     const rs = this.stats[by]; if (rs && by !== tid) rs.raises++;
-    ts.alive = true; ts.hp = Math.round(ts.maxHp * Math.max(0.1, Math.min(1, frac)));
+    ts.alive = true; ts.hollow = null; ts.hp = Math.round(ts.maxHp * Math.max(0.1, Math.min(1, frac)));
     ts.weakEnd = rewound ? 0 : this.t + 20; ts.threat = ts.role === 'tank' ? 1 : 0; ts.hist = []; this.dropThreat(tid);
     ts.mits.push({ pct: 1, start: this.t, end: this.t + FIGHT.REVIVE_SAFE, kind: 'invuln', from: by });   // a moment to find their feet
     this.emit({ t: 'fev', k: 'raised', id: tid, by });
@@ -623,9 +681,9 @@ class FightSim {
     for (const p of targets) {
       const s = p.s;
       const amt = Math.max(0, Math.min(8000, amount | 0));
-      const real = Math.min(amt, s.maxHp - s.hp);
+      const real = s.hollow ? amt : Math.min(amt, s.maxHp - s.hp);   // (Hollow: the whole heal pays the debt)
       if (real >= s.maxHp * 0.05) this.ward(fromId, p.id, s, false);
-      s.hp += real;
+      if (s.hollow) s.hollow.heal += real; else s.hp += real;
       const st = this.stats[fromId];
       if (st) { st.healing += real; st.overheal += amt - real; }
       // a heal from someone else on a player: their client shows the number over themselves (bots have no screen)
@@ -718,8 +776,9 @@ class FightSim {
       if (s.shield <= 0.5) this.endShield(p.id, s);
     }
     amt = Math.round(amt);
-    s.hp -= amt;
-    st.taken += amt;
+    // a Gloomsworn's Hollow (end of this file): a killing blow at full Gloom starts it, and while it runs every point is debt, not health
+    if (amt > 0 && this.hollowHit && this.hollowHit(p, s, amt, opts)) st.taken += amt;
+    else { s.hp -= amt; st.taken += amt; }
     if (opts.avoidable) {
       st.avoidable++; this.avoidCount++;
       s.dmgDownEnd = this.t + FIGHT.DMG_DOWN_DUR;
@@ -730,6 +789,7 @@ class FightSim {
     const pd = { t: 'pdmg', id: p.id, a: amt, k: opts.kind || 'hit', hp: Math.max(0, s.hp), dd: opts.avoidable ? 1 : 0 };
     if (opts.n) pd.n = opts.n;   // the move it came from (the death recap)
     if (absorbed > 0) pd.sh = absorbed;
+    if (s.hollow && amt > 0) pd.hl = 1;   // (taken as Hollow debt: hp stays at 1)
     this.emit(pd);
     if (s.hp <= 0) {
       s.hp = 0; s.alive = false; s.shield = 0; s.mits = []; s.hots = []; s.threat = 0; s.diedAt = this.t; this.dropThreat(p.id);
@@ -1328,7 +1388,8 @@ class FightSim {
       u: b.untargetable ? 1 : 0, v: b.vulnEnd > this.t ? b.vuln : 0, ft: Math.round(this.t * 10) / 10, ph: this.phase,
       na: +(b.autoAt - this.t).toFixed(2),  // time to the next auto-attack, so clients can show the wind-up
       c: +this.t.toFixed(3),                // the fight clock, so clients can space the boss's moves evenly (interp.js)
-      bs: this.bossStatus() });             // what's on the boss, for the icons under the boss bar (raid-ui.js)
+      bs: this.bossStatus(),                // what's on the boss, for the icons under the boss bar (raid-ui.js)
+      g: this.gateMsg(), wl: this.wall ? this.wall.label : undefined });   // the HP gates for the bar's ticks, and the wall's label while it holds
     if (this.adds.size || this.addsDirty) this.broadcastAdds();
   }
   // host-side states on the boss, compact: [kind, seconds left (0 = no timer), value, who]
@@ -1342,6 +1403,7 @@ class FightSim {
     if (b.fix && b.fix.until > t) out.push(['fix', Math.ceil(b.fix.until - t), 0, b.fix.id]);
     if (b.exposedUntil > t) out.push(['stun', Math.ceil(b.exposedUntil - t), Math.round((b.exposed || 0) * 100)]);
     if (b.pauseUntil > t) out.push(['pause', Math.ceil(b.pauseUntil - t), 0]);   // a Time Stop (pauseBoss)
+    if (this.wall) out.push(['wall', 0, 0, this.wall.label]);   // sealed at a gate (a wall)
     return out.length ? out : undefined;
   }
   // [id, kind, x, y, hp, maxHp, enraged, link, facing]
@@ -1360,7 +1422,8 @@ class FightSim {
       const hots = s.hots.map(h => [h.id, Math.max(1, Math.ceil((h.ticks - 1) * h.interval + h.next - this.t)), h.from]);
       list.push([id, Math.round(s.hp), s.maxHp, Math.round(s.shield), s.alive ? 1 : 0,
         s.dmgDownEnd > this.t ? Math.ceil(s.dmgDownEnd - this.t) : 0, s.vulnEnd > this.t ? Math.round(s.vuln * 100) : 0,
-        Math.round((1 - mit) * 100), s.weakEnd > this.t ? 1 : 0, debuffs, Math.round(s.threat), hots]);
+        Math.round((1 - mit) * 100), s.weakEnd > this.t ? 1 : 0, debuffs, Math.round(s.threat), hots,
+        s.hollow ? [1, Math.round(s.hollow.debt), Math.round(s.hollow.heal), +Math.max(0, s.hollow.until - this.t).toFixed(1), +Math.max(0, s.hollow.graceUntil - this.t).toFixed(1)] : 0]);   // (a Gloomsworn's Hollow: on, debt, healed, seconds left, grace left)
     }
     this.emit({ t: 'fps', ps: list, lb: Math.round(this.lb), rc: this.recoverEnd > this.t ? Math.ceil(this.recoverEnd - this.t) : 0 });
   }
@@ -1440,7 +1503,7 @@ Object.assign(FightSim.prototype, {
     return amt;
   },
   classDeath(p, s) {
-    s.maw = null;
+    s.maw = null; s.hollow = null; s.glm = null;   // (a Hollow ends with the knight)
     if (s.led) { s.led.e = []; s.led.cosign = null; s.led.ver++; }
   },
   classEvent(pid, ev) {
@@ -1450,6 +1513,12 @@ Object.assign(FightSim.prototype, {
       if (me.cls !== 'gorgemaw') return;
       const dur = Math.max(0, Math.min(MAW_HOST.WIN, Number(ev.dur) || 0));
       s.maw = { until: this.t + dur, all: !!ev.all && dur > 1 };
+      return;
+    }
+    if (ev.type === 'gloom') {   // the Gloomsworn's vessel, as its kit sees it (HOLLOW_HOST judges a killing blow by it)
+      if (me.cls !== 'gloomsworn') return;
+      const H = HOLLOW_HOST, num = (v, a, b, d) => (Number.isFinite(+v) ? Math.max(a, Math.min(b, +v)) : d);
+      s.glm = { v: num(ev.value, 0, 100, 0), at: this.t, dur: num(ev.dur, H.DUR_MIN, H.DUR_MAX, H.DUR), grace: num(ev.secs, H.GRACE_MIN, H.GRACE_MAX, H.GRACE), cd: num(ev.st, H.CD_MIN, H.CD, H.CD) };
       return;
     }
     if (me.cls !== 'oathbroker') return;
@@ -1478,7 +1547,7 @@ Object.assign(FightSim.prototype, {
     const s = this.ps.get(pid), b = this.boss;
     if (!s || b.untargetable || this.state !== 'live' || !(amt > 0)) return;
     amt = Math.round(Math.min(amt, 15000));
-    b.hp = Math.max(0, b.hp - amt);
+    b.hp = Math.max(this.wallHp ?? 0, b.hp - amt);
     this.stats[pid].damage += amt;
     s.threat += amt * this.threatMult(s, null);
     if (b.hp <= 0) this.end('clear');
@@ -1494,6 +1563,7 @@ Object.assign(FightSim.prototype, {
     this.emit(Object.assign({ t: 'fev', k: 'ledger', id: pid }, OATH.pack(L, this.t), bill ? { bill: Math.round(bill) } : null));
   },
   updateClass(dt) {
+    this.hollowTick();
     for (const [pid, s] of this.ps) {
       const L = s.led;
       if (!L || s.left) continue;
@@ -1512,6 +1582,65 @@ Object.assign(FightSim.prototype, {
       if (L.cosign && L.cosign.until <= this.t) { L.cosign = null; L.ver++; }
       this.sendLedger(pid, false, billed || null);
     }
+  },
+});
+
+// ===================================================================================================================
+// GLOOMSWORN (tank, class 18): Hollow, host side. The knight's kit tells the host its Gloom (a 'gloom' event: value, and
+// the Hollow it would have: dur, grace). When a blow would take a Gloomsworn from alive to dead while that Gloom is full,
+// and it is not already Hollow and the minute has passed, it does not: HP is held at 1 and s.hollow = { until, graceUntil,
+// debt, heal } starts. Every point of damage it would take (after shields, mitigation and the rest) is added to the debt,
+// the whole of every heal and half of every shield pay it (applyHeal, giveShield, the 'shield' event), through the window
+// and the grace after it. At graceUntil: healed >= debt and it stands up at WAKE of its HP, otherwise it dies the usual way.
+// The sentences (Royal Doom running out, the enrage, a fall) never reach this: they kill outright, which also ends a Hollow
+// (classDeath). A revive clears it too. HP never drops below 0: the debt is its own number.
+// ===================================================================================================================
+const HOLLOW_HOST = { DEBT: 1.8, DUR: 8, DUR_MIN: 6, DUR_MAX: 12, GRACE: 4, GRACE_MIN: 2, GRACE_MAX: 8, CD: 60, CD_MIN: 30, WAKE: 0.25, SHIELD: 0.5, STALE: 4, NOT: new Set(['doom', 'enrage', 'fall']) };
+Object.assign(FightSim.prototype, {
+  // one hit of amt on p (after mitigation). True if Hollow took it (the debt grew, or Hollow began and the hit was forgiven)
+  hollowHit(p, s, amt, opts) {
+    const H = HOLLOW_HOST;
+    if (s.hollow) { s.hollow.debt += amt * HOLLOW_HOST.DEBT; return true; }   // (DEBT: every point written down counts this many times; mitigation and barriers already cut amt)
+    if (!s.glm || s.hp - amt > 0 || H.NOT.has(opts.kind)) return false;
+    if (s.glm.v < 99.5 || this.t - s.glm.at > H.STALE || this.t < (s.hollowCd || 0)) return false;
+    s.hollow = { until: this.t + s.glm.dur, graceUntil: this.t + s.glm.dur + s.glm.grace, debt: 0, heal: 0 };
+    s.hollowCd = this.t + s.glm.cd;
+    s.hp = 1; s.glm.v = 0;
+    this.emit({ t: 'fev', k: 'hollow', id: p.id, on: 1, d: +s.glm.dur.toFixed(1), g: +s.glm.grace.toFixed(1) });
+    return true;
+  },
+  // a shield given to a Hollow knight pays its debt at half (it never stands: all damage is debt already)
+  hollowShield(from, ts, amount) {
+    const amt = Math.max(0, Math.min(8000, (Number(amount) || 0) | 0)) * HOLLOW_HOST.SHIELD;
+    ts.hollow.heal += amt;
+    const st = this.stats[from]; if (st) st.healing += Math.round(amt);
+  },
+  // every tick: a Hollow whose grace has run out is settled
+  hollowTick() {
+    for (const [pid, s] of this.ps) {
+      if (!s.hollow || s.left) continue;
+      if (!s.alive) { s.hollow = null; continue; }
+      if (this.t < s.hollow.graceUntil) continue;
+      const H = s.hollow, ok = H.heal >= H.debt;
+      s.hollow = null;
+      if (ok) {
+        s.hp = Math.max(1, Math.round(s.maxHp * HOLLOW_HOST.WAKE));
+        this.emit({ t: 'fev', k: 'hollow', id: pid, on: 0, ok: 1, debt: Math.round(H.debt), heal: Math.round(H.heal) });
+      } else {
+        this.emit({ t: 'fev', k: 'hollow', id: pid, on: 0, ok: 0, debt: Math.round(H.debt), heal: Math.round(H.heal) });
+        this.hollowKill(pid, s, Math.round(H.debt - H.heal));
+      }
+    }
+  },
+  // the debt was not paid: the knight falls the way a hit would have felled it
+  hollowKill(pid, s, short) {
+    const p = this.players().find(q => q.id === pid), st = this.stats[pid];
+    this.emit({ t: 'pdmg', id: pid, a: Math.max(1, short), k: 'hollow', hp: 0, dd: 0, n: 'Hollow debt' });
+    s.hp = 0; s.alive = false; s.shield = 0; s.mits = []; s.hots = []; s.threat = 0; s.diedAt = this.t; this.dropThreat(pid);
+    if (this.classDeath) this.classDeath(p || { id: pid }, s);
+    if (st) st.deaths++;
+    this.emit({ t: 'fev', k: 'death', id: pid });
+    if (this.hard && this.t >= this.recoverEnd + FIGHT.REC.COOL && this.state === 'live') { this.recoverEnd = this.t + FIGHT.REC.DUR; this.emit({ t: 'fev', k: 'recover', dur: FIGHT.REC.DUR }); }
   },
 });
 
@@ -1748,4 +1877,4 @@ Object.assign(FightSim.prototype, {
   },
 });
 
-if (typeof module !== 'undefined') module.exports = { FIGHT, FightSim, segDist, playerBaseHp, MAW_HOST, WEAVE_HOST, DOLL_HOST };
+if (typeof module !== 'undefined') module.exports = { FIGHT, FightSim, segDist, playerBaseHp, MAW_HOST, WEAVE_HOST, DOLL_HOST, HOLLOW_HOST };

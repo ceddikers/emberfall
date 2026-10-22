@@ -47,6 +47,34 @@ const SoundHooks = (() => {
     // (autos land every ~2 s and share the ability loudness target, so they sit about 3 dB under the ability level)
     safe(() => { const k = mine ? 1 : remoteSlot(true); if (k) for (const n of abilityNames(classId, 'auto', kind)) play(n, { vol: (mine ? 0.22 : 0.2) * k, remote: !mine, at: mine ? null : at, key: 'auto:' + who, minGap: 0.2 }); });
   }
+  // a Gloomsworn's Hollow (the host's 'hollow' moment, ability-vfx.js CLASS_FEV.hollow): the knight goes hollow, is sealed
+  // (ok) or breaks. Full for your own hero, soft and placed for anyone else's
+  function hollow(msg, mine, at) {
+    if (!has() || !msg) return;
+    safe(() => {
+      const n = msg.on ? 'gloom-hollow-on' : msg.ok ? 'gloom-hollow-off' : 'gloom-hollow-break';
+      play(n, mine ? { vol: 0.9, key: 'gloom-hollow', minGap: 0.3 } : { vol: 0.4, remote: true, at, key: 'gloom-hollow:' + (msg.id || ''), minGap: 0.5 });
+    });
+  }
+  // a Thresher's moments (ability-vfx.js KIT_VFX handlers call this): an affliction turning gold (a soft chime, your own hero only), a
+  // payout's ping, thud or pop (the pings climb for each one in a Reap), a Gate strike (a note that rises with each of the five) and its bloom
+  let popAt = -9, popN = 0;
+  function thresher(ev, d, mine, at, who) {
+    if (!has()) return;
+    safe(() => {
+      const rem = (key, vol) => ({ vol: vol * 0.45, remote: true, at, key: key + ':' + (who || ''), minGap: 0.1 });
+      if (ev === 'ripe') { if (mine) play('gold-ripe', { vol: 0.4, key: 'gold-ripe', minGap: 0.2 }); return; }
+      if (ev === 'pop') {
+        const now = (typeof performance !== 'undefined' ? performance.now() : Date.now()) / 1000;
+        popN = now - popAt < 0.9 ? popN + 1 : 0; popAt = now;
+        const s = (d && d.s) || 2, o = mine ? { key: 'th-pop', minGap: 0.05, rate: 1 + Math.min(popN, 4) * 0.09 } : rem('th-pop', 0.6);
+        if (s === 2) play('gold-pop', Object.assign({ vol: 0.7 }, o)); else if (s === 3) play('thresher-rot', Object.assign({ vol: 0.7 }, o)); else play('thresher-pop', Object.assign({ vol: 0.6 }, o));
+        return;
+      }
+      if (ev === 'gate-strike') { const n = (d && d.n) | 0; play('thresher-gate-tone', mine ? { vol: 0.7, rate: 1 + n * 0.13, key: 'th-gate', minGap: 0.1 } : Object.assign(rem('th-gate', 0.7), { rate: 1 + n * 0.13 })); return; }
+      if (ev === 'gate-release') play('thresher-gate-bloom', mine ? { vol: 0.9, key: 'th-gate', minGap: 0.1 } : rem('th-gate', 0.9));
+    });
+  }
   // your own cast bar's quiet hum
   let castHum = null;
   // (a cast gets a soft, higher 'gathering' blip of its own sound at the press, a very quiet hum under the bar, and the full
@@ -203,7 +231,7 @@ const SoundHooks = (() => {
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wireUI); else wireUI();
   }
 
-  return { play, vo, ability, auto, castStart, castEnd, stacks, telegraph, bossCast, impact, music, phase, bossTrack, tick, stopBeds, ground, TG };
+  return { play, vo, ability, auto, hollow, thresher, castStart, castEnd, stacks, telegraph, bossCast, impact, music, phase, bossTrack, tick, stopBeds, ground, TG };
 })();
 
 if (typeof module !== 'undefined') module.exports = { SoundHooks };

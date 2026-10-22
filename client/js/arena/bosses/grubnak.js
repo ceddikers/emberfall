@@ -35,6 +35,7 @@ const GRUBNAK = {
   enrageName: 'Last Call',
   vuln: 0.5,   // every avoidable hit leaves you taking half again as much for a while
   arena: { theme: 'kitchen' },
+  gates: [0.8, 0.5, 0.18],   // where the courses change (ticks on the boss bar; fight.js course)
 
   script(f) {
     const H = f.hard;

@@ -682,3 +682,268 @@ GAUGE_TIPS.oathbroker = {
     taunt: c => { sealG(c, 32, 30, 16, '#c04a5a'); ink(c, 2.5, '#b8a8e0'); c.beginPath(); c.moveTo(10, 54); c.lineTo(54, 54); c.stroke(); },
   };
 })();
+
+// ======================================================================= Gloomsworn (tank, class 18)
+// Placeholder drawn icons (art.icons === false in data.js) and the gauge's tooltip; the painted set replaces them later.
+Object.assign(BUFF_NAMES, { hollow: 'Hollow', shade: 'Shade', mantle: 'Black Mantle', omen: 'Ill Omen' });
+Object.assign(BUFF_ICON, { hollow: 'rite', shade: 'shade', mantle: 'mantle', omen: 'rend' });
+Object.assign(BUFF_TIPS, {
+  hollow: n => `You cannot fall below 1 HP and you deal 30% more damage. Everything you take is written down as a debt: your healer must heal at least that much before the grace after it ends, or you fall. ${n('strike')} on a Reaver of Dusk echoes.`,
+  shade: n => `Your next ${n('strike')}s echo, hitting again for 85%.`,
+  mantle: () => 'You take 40% less damage.',
+  omen: n => `Your next ${n('rend')} strike builds 12 extra Gloom.`,
+});
+GAUGE_TIPS.gloomsworn = {
+  desc: 'Every hit of yours fills 8 Gloom, every hit you take 6. Gloom Strike spends 40, Black Pall 30, Last Rite all of it. Out of combat it drains slowly. When Gloom is full and a blow would kill you, you go Hollow instead: held at 1 HP for 8s, 30% more damage, every wound written down as a debt that your healer must heal back in the 4s after, or you fall. Once a minute.',
+  state: k => {
+    const h = k.g.hl, hw = k.has('hollow') || (k.g.graceUntil || 0) > k.now;
+    if (hw && h) return `Hollow: debt ${Math.round(h.debt)} · healed ${Math.round(h.healed)}`;
+    return `${Math.floor(k.g.gloom || 0)} Gloom` + ((k.g.gloom || 0) >= 100 ? ' · full: Hollow is ready' : '');
+  },
+};
+(() => {
+  // ink-black and bruised violet for the dark, a cold teal-white for the light that leaks from it
+  const K = '#120a1e', D = '#2a1450', B = '#6a3aba', L = '#a98ae8', G = '#bff8ee', W = '#f4fffb';
+  const ink = (c, w = 3, col = G) => { c.strokeStyle = col; c.lineWidth = w; c.lineCap = 'round'; c.lineJoin = 'round'; };
+  const glowDot = (c, x, y, r, col = G) => { const g = c.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, col); g.addColorStop(1, 'rgba(191,248,238,0)'); c.fillStyle = g; c.beginPath(); c.arc(x, y, r, 0, TAU); c.fill(); };
+  // the duskblade from (x0, y0) to its tip (x1, y1): an ink body, a violet edge and a pale light in the fuller; a jagged guard
+  const sword = (c, x0, y0, x1, y1, w = 5, ghost = false) => {
+    const a = Math.atan2(y1 - y0, x1 - x0), L2 = Math.hypot(x1 - x0, y1 - y0);
+    c.save(); c.translate(x0, y0); c.rotate(a);
+    if (ghost) { c.globalAlpha = 0.5; c.fillStyle = 'rgba(95,216,200,0.35)'; c.strokeStyle = G; c.lineWidth = 1.6; }
+    else { c.fillStyle = '#1a1230'; c.strokeStyle = L; c.lineWidth = 1.6; }
+    c.beginPath(); c.moveTo(L2 * 0.18, -w); c.lineTo(L2 * 0.9, -w * 0.9); c.lineTo(L2, 0); c.lineTo(L2 * 0.9, w * 0.9); c.lineTo(L2 * 0.18, w); c.closePath(); c.fill(); c.stroke();
+    if (!ghost) {
+      ink(c, 1.6, G); c.beginPath(); c.moveTo(L2 * 0.24, 0); c.lineTo(L2 * 0.88, 0); c.stroke();
+      c.fillStyle = D; c.strokeStyle = K; c.lineWidth = 1; c.beginPath(); c.moveTo(L2 * 0.12, -w * 1.9); c.lineTo(L2 * 0.2, -w * 0.9); c.lineTo(L2 * 0.2, w * 0.9); c.lineTo(L2 * 0.12, w * 1.9); c.lineTo(L2 * 0.06, 0); c.closePath(); c.fill(); c.stroke();
+      c.fillStyle = K; c.fillRect(-1, -w * 0.4, L2 * 0.14, w * 0.8);
+    }
+    c.restore();
+  };
+  // a cracked vessel: a dark sphere with pale light leaking from its cracks
+  const vessel = (c, x, y, r, lit = 1) => {
+    glowDot(c, x, y, r * 1.5, `rgba(95,216,200,${0.35 * lit})`);
+    const g = c.createRadialGradient(x - r * 0.3, y - r * 0.35, 1, x, y, r); g.addColorStop(0, '#3a2468'); g.addColorStop(1, K);
+    c.fillStyle = g; c.beginPath(); c.arc(x, y, r, 0, TAU); c.fill(); ink(c, 1.4, L); c.stroke();
+    ink(c, 1.8, G); c.globalAlpha = lit; c.beginPath(); c.moveTo(x - r * 0.1, y - r); c.lineTo(x + r * 0.15, y - r * 0.45); c.lineTo(x - r * 0.2, y - r * 0.05); c.lineTo(x + r * 0.2, y + r * 0.4); c.lineTo(x, y + r);
+    c.moveTo(x + r * 0.15, y - r * 0.45); c.lineTo(x + r * 0.7, y - r * 0.6); c.moveTo(x - r * 0.2, y - r * 0.05); c.lineTo(x - r * 0.75, y + r * 0.1); c.stroke(); c.globalAlpha = 1;
+  };
+  const figure = (c, x, y, s, fill, a = 1) => {   // a hooded, cloaked figure seen from the front
+    c.save(); c.globalAlpha = a; c.fillStyle = fill; c.translate(x, y); c.scale(s, s);
+    c.beginPath(); c.moveTo(0, -22); c.quadraticCurveTo(10, -22, 10, -10); c.lineTo(15, 14); c.lineTo(10, 11); c.lineTo(6, 16); c.lineTo(2, 12); c.lineTo(-2, 16); c.lineTo(-6, 11); c.lineTo(-10, 14); c.lineTo(-15, 14); c.lineTo(-10, -10); c.quadraticCurveTo(-10, -22, 0, -22); c.closePath(); c.fill(); c.restore();
+  };
+  ICON_GLYPHS.gloomsworn = {
+    // three swings, each bigger, a dark trail behind the blade
+    rend: c => {
+      for (const [r, a, w, col] of [[12, 0.5, 3, B], [18, 0.75, 4.5, L], [24, 1, 6, G]]) { c.globalAlpha = a; ink(c, w, col); c.beginPath(); c.arc(14, 54, r + 14, -1.35, -0.2); c.stroke(); }
+      c.globalAlpha = 1; sword(c, 12, 56, 54, 14, 5);
+    },
+    // the blade driven down, a pale blade still hanging behind it, the floor cracked open
+    strike: c => {
+      sword(c, 40, 6, 24, 44, 4.5, true);
+      sword(c, 32, 4, 32, 46, 5);
+      ink(c, 2.2, G); c.beginPath(); c.moveTo(32, 50); c.lineTo(14, 56); c.moveTo(32, 50); c.lineTo(52, 56); c.moveTo(32, 50); c.lineTo(28, 60); c.moveTo(32, 50); c.lineTo(42, 60); c.stroke();
+      glowDot(c, 32, 50, 9);
+    },
+    // a dark knight stepping through: a pale ghost left behind, streaks
+    shade: c => {
+      ink(c, 2, L); for (const [y, l] of [[22, 12], [34, 18], [46, 10]]) { c.globalAlpha = 0.6; c.beginPath(); c.moveTo(6, y); c.lineTo(6 + l, y); c.stroke(); } c.globalAlpha = 1;
+      figure(c, 22, 36, 1, 'rgba(95,216,200,0.35)', 0.8);
+      figure(c, 42, 36, 1.05, '#1a1230'); ink(c, 1.5, L); c.beginPath(); c.moveTo(42, 14); c.quadraticCurveTo(53, 14, 53, 26); c.stroke(); glowDot(c, 40, 24, 3, W); glowDot(c, 45, 24, 3, W);
+    },
+    // a bell of shadow standing over a ground ring
+    pall: c => {
+      c.fillStyle = D; c.beginPath(); c.moveTo(6, 52); c.quadraticCurveTo(10, 14, 32, 12); c.quadraticCurveTo(54, 14, 58, 52); c.closePath(); c.fill(); ink(c, 2.4, L); c.stroke();
+      ink(c, 1.4, B); for (const x of [18, 32, 46]) { c.beginPath(); c.moveTo(32, 12); c.quadraticCurveTo(x, 30, x + (x - 32) * 0.5, 50); c.stroke(); }
+      ink(c, 2, G); c.beginPath(); c.ellipse(32, 52, 26, 6, 0, 0, TAU); c.stroke();
+      glowDot(c, 32, 12, 7); c.fillStyle = W; c.beginPath(); c.arc(32, 12, 2.5, 0, TAU); c.fill();
+    },
+    // a cloak streaming back from the shoulders
+    mantle: c => {
+      c.fillStyle = '#1e1236'; c.beginPath(); c.moveTo(32, 6); c.quadraticCurveTo(46, 8, 50, 22); c.quadraticCurveTo(58, 40, 52, 58); c.lineTo(46, 50); c.lineTo(40, 58); c.lineTo(34, 50); c.lineTo(28, 58); c.lineTo(22, 50); c.lineTo(16, 58); c.quadraticCurveTo(6, 40, 14, 22); c.quadraticCurveTo(18, 8, 32, 6); c.closePath(); c.fill(); ink(c, 2.2, L); c.stroke();
+      ink(c, 1.4, B); c.beginPath(); c.moveTo(32, 12); c.quadraticCurveTo(26, 34, 30, 52); c.moveTo(32, 12); c.quadraticCurveTo(40, 34, 38, 52); c.stroke();
+      glowDot(c, 32, 14, 6); c.fillStyle = W; c.beginPath(); c.arc(32, 14, 2.2, 0, TAU); c.fill();
+    },
+    // the vessel with the dark collapsing in upon it
+    rite: c => {
+      ink(c, 2.4, L); c.setLineDash([5, 4]); c.beginPath(); c.arc(32, 32, 27, 0, TAU); c.stroke(); c.setLineDash([]);
+      ink(c, 2.4, G); for (let i = 0; i < 4; i++) { const a = i * TAU / 4 + 0.7; c.beginPath(); c.moveTo(Math.cos(a) * 28 + 32, Math.sin(a) * 28 + 32); c.lineTo(Math.cos(a) * 19 + 32, Math.sin(a) * 19 + 32); c.stroke(); }
+      vessel(c, 32, 32, 14);
+    },
+    // a lantern of pale watch inside a black arch
+    vigil: c => {
+      ink(c, 3, L); c.beginPath(); c.moveTo(8, 56); c.lineTo(8, 28); c.quadraticCurveTo(8, 6, 32, 6); c.quadraticCurveTo(56, 6, 56, 28); c.lineTo(56, 56); c.stroke();
+      c.fillStyle = K; c.fillRect(24, 22, 16, 26); ink(c, 2, B); c.strokeRect(24, 22, 16, 26); c.beginPath(); c.moveTo(28, 22); c.lineTo(32, 14); c.lineTo(36, 22); c.stroke();
+      glowDot(c, 32, 36, 14); c.fillStyle = W; c.beginPath(); c.moveTo(32, 28); c.quadraticCurveTo(38, 38, 32, 44); c.quadraticCurveTo(26, 38, 32, 28); c.fill();
+    },
+    // the vessel broken over the target in black fire
+    pyre: c => {
+      c.fillStyle = D; c.beginPath(); c.moveTo(32, 4); c.quadraticCurveTo(54, 24, 46, 44); c.quadraticCurveTo(52, 36, 42, 30); c.quadraticCurveTo(46, 50, 32, 58); c.quadraticCurveTo(18, 50, 22, 30); c.quadraticCurveTo(12, 36, 18, 44); c.quadraticCurveTo(10, 24, 32, 4); c.closePath(); c.fill(); ink(c, 2.2, L); c.stroke();
+      c.fillStyle = '#4a2a8a'; c.beginPath(); c.moveTo(32, 20); c.quadraticCurveTo(42, 34, 32, 50); c.quadraticCurveTo(22, 34, 32, 20); c.fill();
+      glowDot(c, 32, 42, 9); c.fillStyle = W; c.beginPath(); c.arc(32, 42, 3, 0, TAU); c.fill();
+    },
+    // the Dread Mark: an eye cracked open on a dark disc
+    taunt: c => {
+      c.fillStyle = K; c.beginPath(); c.arc(32, 32, 24, 0, TAU); c.fill(); ink(c, 2.4, L); c.stroke();
+      ink(c, 2.4, G); c.beginPath(); c.moveTo(12, 32); c.quadraticCurveTo(32, 12, 52, 32); c.quadraticCurveTo(32, 52, 12, 32); c.stroke();
+      glowDot(c, 32, 32, 10); c.fillStyle = W; c.beginPath(); c.arc(32, 32, 4, 0, TAU); c.fill();
+      ink(c, 1.6, G); c.beginPath(); c.moveTo(32, 8); c.lineTo(36, 18); c.moveTo(32, 56); c.lineTo(28, 46); c.stroke();
+    },
+    // the black sun and its corona, the pale light cracking through it
+    eclipsevigil: c => {
+      glowDot(c, 32, 32, 30, 'rgba(95,216,200,0.5)');
+      ink(c, 1.8, G); for (let i = 0; i < 16; i++) { const a = i * TAU / 16, r0 = 17, r1 = i % 2 ? 24 : 30; c.beginPath(); c.moveTo(32 + Math.cos(a) * r0, 32 + Math.sin(a) * r0); c.lineTo(32 + Math.cos(a) * r1, 32 + Math.sin(a) * r1); c.stroke(); }
+      c.fillStyle = K; c.beginPath(); c.arc(32, 32, 16, 0, TAU); c.fill(); ink(c, 2.6, W); c.stroke();
+      ink(c, 1.4, G); c.beginPath(); c.moveTo(30, 17); c.lineTo(34, 27); c.lineTo(28, 35); c.lineTo(35, 47); c.stroke();
+    },
+  };
+})();
+
+// ======================================================================= Thresher (damage, class 19)
+// Drawn icons (art.icons === false in data.js) and the gauge's tooltip; the painted set replaces them later.
+Object.assign(BUFF_NAMES, { wisp: 'Spirit Wisp', wispgift: 'Wisp\'s Gift', gate: 'Reaper\'s Gate', gleaning: 'Gleaning' });
+Object.assign(BUFF_ICON, { wisp: 'wisp', wispgift: 'wisp', gate: 'gate', gleaning: 'slash' });
+Object.assign(BUFF_TIPS, {
+  wisp: () => 'A wisp harries the boss, striking every 2.5s and binding it if nothing else has.',
+  wispgift: () => 'The wisp is spent: you deal 10% more damage.',
+  gate: () => 'You are out of the world: nothing can touch you. Every Slash is a Gate Strike that lays the next affliction; the fifth releases all four at full ripeness.',
+  gleaning: () => 'Your next Slash or Cleave cuts a second time for 35%.',
+});
+GAUGE_TIPS.thresher = {
+  desc: 'Four afflictions ripen on the boss: Mark (a bleed, Slash), Drain (mends you, Cleave), Bind (pulses, Gloam Blink and the Wisp) and Thread (Hook). Each bar fills as its affliction ages: green while young, gold while ripe (the marked stretch), then rotten. Reap spends them all: gold pays in full, young 40%, rotten 65%. A hit only lays an affliction that is not up or has rotted; Gather puts them all back on the edge of gold. The line under the bars is the Wisp\'s time.',
+  state: k => {
+    const n = THRESH.IDS.filter(id => thStage(k, id)).length, gold = thCount(k, 2), rot = thCount(k, 3);
+    if (k.has('gate')) return `Reaper's Gate: strike ${Math.min(5, (k.g.gate | 0) + 1)} of 5`;
+    return n ? `${n} up · ${gold} gold${rot ? ' · ' + rot + ' rotten' : ''}` : 'no afflictions up';
+  },
+};
+(() => {
+  // ink-green for the dark, moss and a soul-green light, gold for the ripe, a violet vein, bone for the edge
+  const K = '#08140c', D = '#16382a', M = '#4f9a52', S = '#b8f5a8', W = '#f2ffe8', V = '#a77ae8', G = '#ffd65a', G2 = '#fff1a8', A = '#8a6a44', R = '#8a5e34';
+  const ink = (c, w = 3, col = S) => { c.strokeStyle = col; c.lineWidth = w; c.lineCap = 'round'; c.lineJoin = 'round'; };
+  const glowDot = (c, x, y, r, col = S, a = 1) => { const g = c.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, col); g.addColorStop(1, 'rgba(184,245,168,0)'); c.save(); c.globalAlpha = a; c.fillStyle = g; c.beginPath(); c.arc(x, y, r, 0, TAU); c.fill(); c.restore(); };
+  const dot = (c, x, y, r, col) => { c.fillStyle = col; c.beginPath(); c.arc(x, y, r, 0, TAU); c.fill(); };
+  // the scythe: a snath from (x0, y0) toward (x1, y1) and a long curved blade swept from its head, `flip` turning the blade the other way
+  const scythe = (c, x0, y0, x1, y1, o = {}) => {
+    const a = Math.atan2(y1 - y0, x1 - x0), L = Math.hypot(x1 - x0, y1 - y0), fl = o.flip ? -1 : 1, edge = o.edge || S, body = o.body || '#d2e4c4';
+    c.save(); c.translate(x0, y0); c.rotate(a);
+    ink(c, 3.6, K); c.beginPath(); c.moveTo(-3, 0); c.lineTo(L, 0); c.stroke();
+    ink(c, 2.2, A); c.beginPath(); c.moveTo(-2, 0); c.lineTo(L, 0); c.stroke();
+    c.fillStyle = body; c.strokeStyle = K; c.lineWidth = 1.6; c.beginPath();
+    c.moveTo(L - 3, fl * 2); c.quadraticCurveTo(L + 10, fl * -7, L + 26, fl * -22 * 0.8); c.quadraticCurveTo(L + 30, fl * -16, L + 22, fl * -12); c.quadraticCurveTo(L + 8, fl * -2, L - 1, fl * 6); c.closePath(); c.fill(); c.stroke();
+    ink(c, 1.5, edge); c.beginPath(); c.moveTo(L - 1, fl * 5); c.quadraticCurveTo(L + 9, fl * -1, L + 21, fl * -12); c.stroke();
+    glowDot(c, L + 16, fl * -10, 9, edge, 0.5);
+    c.restore();
+  };
+  // a swoosh: the wide crescent a swing leaves, pointed at both ends, from angle a0 to a1 on a circle (cx, cy, r)
+  const swoosh = (c, cx, cy, r, a0, a1, w, col, a = 1) => {
+    c.save(); c.globalAlpha = a; c.fillStyle = col; c.beginPath();
+    for (let i = 0; i <= 14; i++) { const q = i / 14, an = a0 + (a1 - a0) * q; c.lineTo(cx + Math.cos(an) * r, cy + Math.sin(an) * r); }
+    for (let i = 14; i >= 0; i--) { const q = i / 14, an = a0 + (a1 - a0) * q, th = w * Math.pow(Math.sin(Math.PI * q), 0.8); c.lineTo(cx + Math.cos(an) * (r - th), cy + Math.sin(an) * (r - th)); }
+    c.closePath(); c.fill(); c.restore();
+  };
+  // the four afflictions, small: a red rune, green drips, a violet knot, a pale chain
+  const glyphIcon = (c, id, x, y, s, col) => {
+    c.save(); c.translate(x, y); c.lineCap = 'round'; c.lineJoin = 'round';
+    const path = () => {
+      c.beginPath();
+      if (id === 'mark') { c.moveTo(0, -s); c.lineTo(s * 0.68, 0); c.lineTo(0, s); c.lineTo(-s * 0.68, 0); c.closePath(); c.moveTo(0, -s * 0.55); c.lineTo(0, s * 0.55); c.moveTo(-s * 0.3, -s * 0.05); c.lineTo(s * 0.3, -s * 0.05); }
+      else if (id === 'drain') { c.moveTo(0, -s * 1.05); c.bezierCurveTo(s * 0.9, -s * 0.1, s * 0.8, s * 0.8, 0, s * 0.8); c.bezierCurveTo(-s * 0.8, s * 0.8, -s * 0.9, -s * 0.1, 0, -s * 1.05); }
+      else if (id === 'bind') { for (let i = 0; i < 3; i++) { const an = i * TAU / 3 - Math.PI / 2; c.save(); c.rotate(an); c.moveTo(s * 1.04, 0); c.ellipse(s * 0.42, 0, s * 0.62, s * 0.34, 0, 0, TAU); c.restore(); } }
+      else { for (let i = 0; i < 3; i++) { const lx = (i - 1) * s * 0.62, ly = (i - 1) * s * 0.62, rx = s * (i % 2 ? 0.42 : 0.3), ry = s * (i % 2 ? 0.3 : 0.42); c.moveTo(lx + rx, ly); c.ellipse(lx, ly, rx, ry, 0.6, 0, TAU); } }
+    };
+    c.strokeStyle = K; c.lineWidth = 5; path(); c.stroke();
+    c.fillStyle = col; c.globalAlpha = 0.3; path(); c.fill(); c.globalAlpha = 1; c.strokeStyle = col; c.lineWidth = 2.4; path(); c.stroke();
+    c.restore();
+  };
+  // a little flame spirit: a round head and a curling tail, two eyes
+  const spirit = (c, x, y, s, col = '#7ec4ff', rot = 0) => {
+    c.save(); c.translate(x, y); c.rotate(rot); c.scale(s, s);
+    glowDot(c, 0, 0, 22, col, 0.55);
+    c.fillStyle = col; c.strokeStyle = K; c.lineWidth = 1.6 / s;
+    c.beginPath(); c.moveTo(-22, 8); c.quadraticCurveTo(-12, 2, -8, -7); c.quadraticCurveTo(-1, -15, 7, -9); c.quadraticCurveTo(13, -1, 6, 7); c.quadraticCurveTo(-2, 12, -22, 8); c.closePath(); c.fill(); c.stroke();
+    c.fillStyle = '#e8f6ff'; c.beginPath(); c.moveTo(-10, 5); c.quadraticCurveTo(-5, 0, -3, -5); c.quadraticCurveTo(2, -8, 5, -3); c.quadraticCurveTo(6, 3, 1, 6); c.quadraticCurveTo(-4, 7, -10, 5); c.closePath(); c.fill();
+    c.fillStyle = '#0d2238'; c.beginPath(); c.arc(2, -3.4, 1.3, 0, TAU); c.arc(5.6, -1.6, 1.3, 0, TAU); c.fill();
+    c.restore();
+  };
+  const ICONS = {
+    // an outward swing and the thinner return behind it, the scythe at the head of both
+    slash: c => {
+      swoosh(c, 30, 52, 40, -2.5, -0.15, 15, 'rgba(79,154,82,0.7)'); swoosh(c, 30, 52, 40, -1.6, -0.15, 5, S);
+      swoosh(c, 32, 56, 26, -0.4, -2.4, 7, 'rgba(167,122,232,0.7)');
+      scythe(c, 10, 56, 32, 28, { flip: false });
+      glowDot(c, 54, 18, 8, W, 0.8);
+    },
+    // a chain of links flying out to a hooked blade, drag lines behind it
+    hook: c => {
+      ink(c, 2, 'rgba(184,245,168,0.5)'); for (const [y, l] of [[44, 10], [52, 16], [58, 8]]) { c.beginPath(); c.moveTo(6, y); c.lineTo(6 + l, y); c.stroke(); }
+      const pts = [[14, 50], [21, 43], [28, 38], [35, 33], [42, 26], [48, 20]];
+      pts.forEach(([x, y], i) => { c.save(); c.translate(x, y); c.rotate(-0.7 + (i % 2) * Math.PI / 2); ink(c, 4.2, K); c.beginPath(); c.ellipse(0, 0, 5.4, 3, 0, 0, TAU); c.stroke(); ink(c, 2, i % 2 ? S : '#dff2f0'); c.beginPath(); c.ellipse(0, 0, 5.4, 3, 0, 0, TAU); c.stroke(); c.restore(); });
+      c.fillStyle = '#d2e4c4'; c.strokeStyle = K; c.lineWidth = 1.8; c.beginPath(); c.moveTo(46, 24); c.quadraticCurveTo(60, 22, 58, 4); c.quadraticCurveTo(52, 12, 42, 14); c.closePath(); c.fill(); c.stroke();
+      ink(c, 1.6, S); c.beginPath(); c.moveTo(47, 22); c.quadraticCurveTo(58, 20, 57, 7); c.stroke(); glowDot(c, 54, 14, 9, S, 0.6);
+    },
+    // a great sweep through ripe grain, the cut ears flying gold
+    reap: c => {
+      for (const [x, h] of [[12, 22], [22, 28], [32, 24], [42, 30], [52, 20]]) { ink(c, 2, '#6a8a3a'); c.beginPath(); c.moveTo(x, 62); c.lineTo(x + 1, 62 - h); c.stroke(); for (let i = 0; i < 3; i++) { c.fillStyle = G; c.beginPath(); c.ellipse(x + (i % 2 ? 3 : -2), 62 - h + i * 5, 2.2, 4, i % 2 ? 0.5 : -0.5, 0, TAU); c.fill(); } }
+      swoosh(c, 30, 46, 38, -2.9, -0.2, 18, 'rgba(255,214,90,0.75)'); swoosh(c, 30, 46, 38, -2.0, -0.2, 6, G2);
+      scythe(c, 8, 38, 26, 16, { edge: G2, body: '#e8dcb0' });
+      for (const [x, y] of [[44, 14], [52, 24], [48, 34]]) { c.fillStyle = G; c.beginPath(); c.ellipse(x, y, 2.2, 4, 0.6, 0, TAU); c.fill(); }
+      glowDot(c, 50, 12, 10, G2, 0.7);
+    },
+    // four threads of four colours drawn tight to one knot
+    gather: c => {
+      const pts = [[14, 14, 'mark', '#ff6a6a'], [50, 14, 'drain', '#7ff08a'], [14, 50, 'bind', '#b88cff'], [50, 50, 'thread', '#dff2f0']];
+      for (const [x, y, , col] of pts) { ink(c, 2, col); c.beginPath(); c.moveTo(x, y); c.quadraticCurveTo((x + 32) / 2 + (y < 32 ? 6 : -6), (y + 32) / 2 + (x < 32 ? -6 : 6), 32, 32); c.stroke(); }
+      for (const [x, y, id, col] of pts) glyphIcon(c, id, x, y, 7, col);
+      glowDot(c, 32, 32, 14, G2, 0.8); ink(c, 2.4, G); c.beginPath(); c.arc(32, 32, 7, 0, TAU); c.stroke(); dot(c, 32, 32, 3, W);
+    },
+    // a flickering cut: a pale scythe left standing and the cuts that crossed the foe
+    blink: c => {
+      ink(c, 2, 'rgba(184,245,168,0.5)'); for (const [y, l] of [[18, 12], [28, 20], [38, 10]]) { c.beginPath(); c.moveTo(4, y); c.lineTo(4 + l, y); c.stroke(); }
+      c.globalAlpha = 0.45; scythe(c, 10, 52, 28, 30, { edge: V, body: 'rgba(167,122,232,0.5)' }); c.globalAlpha = 1;
+      scythe(c, 20, 56, 38, 34, {});
+      for (const [x0, y0, x1, y1, col] of [[34, 10, 58, 36, W], [30, 30, 56, 14, V]]) { ink(c, 5, K); c.beginPath(); c.moveTo(x0, y0); c.lineTo(x1, y1); c.stroke(); ink(c, 2.4, col); c.beginPath(); c.moveTo(x0, y0); c.lineTo(x1, y1); c.stroke(); }
+      glowDot(c, 46, 24, 9, W, 0.8);
+    },
+    // the spirit and its tail, sparks about it
+    wisp: c => {
+      spirit(c, 34, 34, 1.2);
+      for (const [x, y, r] of [[12, 16, 2.4], [52, 12, 2], [54, 50, 2.2], [10, 48, 1.8]]) { glowDot(c, x, y, r * 3, '#9ad0ff', 0.7); dot(c, x, y, r, W); }
+    },
+    // seed raining on a furrow, shoots opening
+    sowing: c => {
+      ink(c, 3, A); c.beginPath(); c.moveTo(4, 56); c.quadraticCurveTo(32, 50, 60, 56); c.stroke();
+      for (const [x, h] of [[14, 22], [32, 30], [50, 24]]) {
+        ink(c, 2.6, '#3f8a3f'); c.beginPath(); c.moveTo(x, 54); c.quadraticCurveTo(x + 2, 54 - h / 2, x, 54 - h); c.stroke();
+        c.fillStyle = '#7fd06a'; c.strokeStyle = K; c.lineWidth = 1.2;
+        for (const s of [-1, 1]) { c.beginPath(); c.ellipse(x + s * 6, 54 - h + 2, 7, 3.2, s * -0.6, 0, TAU); c.fill(); c.stroke(); }
+        glowDot(c, x, 54 - h - 2, 6, S, 0.6);
+      }
+      for (const [x, y] of [[8, 8], [22, 14], [38, 6], [54, 12], [28, 24]]) { c.fillStyle = '#e8f6b0'; c.strokeStyle = K; c.lineWidth = 1; c.beginPath(); c.ellipse(x, y, 2.4, 3.6, 0.5, 0, TAU); c.fill(); c.stroke(); }
+    },
+    // the great cut: a falling blade, a line struck across, four glyphs thrown out gold
+    cull: c => {
+      ink(c, 4, K); c.beginPath(); c.moveTo(6, 40); c.lineTo(58, 40); c.stroke(); ink(c, 2.2, G2); c.beginPath(); c.moveTo(6, 40); c.lineTo(58, 40); c.stroke();
+      glowDot(c, 32, 40, 16, G, 0.6);
+      scythe(c, 32, 2, 32, 28, { edge: G2, body: '#e8dcb0', flip: true });
+      for (const [x, y, id] of [[12, 54, 'mark'], [26, 56, 'drain'], [40, 56, 'bind'], [54, 54, 'thread']]) glyphIcon(c, id, x, y, 5.2, G);
+    },
+    // a tall arch of pale light, the dark beyond it, five pips round the curve, the last gold
+    gate: c => {
+      ink(c, 6, K); c.beginPath(); c.moveTo(12, 60); c.lineTo(12, 28); c.quadraticCurveTo(12, 4, 32, 4); c.quadraticCurveTo(52, 4, 52, 28); c.lineTo(52, 60); c.stroke();
+      const g = c.createLinearGradient(0, 4, 0, 60); g.addColorStop(0, 'rgba(8,20,12,0.9)'); g.addColorStop(1, 'rgba(79,154,82,0.55)');
+      c.fillStyle = g; c.beginPath(); c.moveTo(12, 60); c.lineTo(12, 28); c.quadraticCurveTo(12, 4, 32, 4); c.quadraticCurveTo(52, 4, 52, 28); c.lineTo(52, 60); c.closePath(); c.fill();
+      ink(c, 2.6, S); c.beginPath(); c.moveTo(12, 60); c.lineTo(12, 28); c.quadraticCurveTo(12, 4, 32, 4); c.quadraticCurveTo(52, 4, 52, 28); c.lineTo(52, 60); c.stroke();
+      c.save(); c.globalAlpha = 0.4; ink(c, 5, W); for (let i = 0; i < 3; i++) { c.beginPath(); c.moveTo(20 + i * 12, 58); c.quadraticCurveTo(14 + i * 14, 40, 22 + i * 10, 22); c.stroke(); } c.restore();
+      for (let i = 0; i < 5; i++) { const an = Math.PI + (i + 0.5) * Math.PI / 5, x = 32 + Math.cos(an) * 28, y = 30 + Math.sin(an) * 26; glowDot(c, x, y, i === 4 ? 9 : 6, i === 4 ? G : S, 0.9); dot(c, x, y, i === 4 ? 3 : 2.2, i === 4 ? G2 : W); }
+      scythe(c, 26, 56, 36, 34, { edge: S });
+    },
+    // the afflictions on their own (their painted status icons, later)
+    mark: c => { glowDot(c, 32, 32, 26, '#ff6a6a', 0.35); glyphIcon(c, 'mark', 32, 32, 20, '#ff6a6a'); },
+    drain: c => { glowDot(c, 32, 32, 26, '#7ff08a', 0.35); glyphIcon(c, 'drain', 32, 30, 20, '#7ff08a'); dot(c, 22, 56, 2.4, '#7ff08a'); dot(c, 42, 52, 2, '#7ff08a'); },
+    bind: c => { glowDot(c, 32, 32, 26, '#b88cff', 0.35); glyphIcon(c, 'bind', 30, 32, 20, '#b88cff'); },
+    thread: c => { glowDot(c, 32, 32, 26, '#dff2f0', 0.35); glyphIcon(c, 'thread', 32, 32, 18, '#dff2f0'); },
+  };
+  ICONS.reapersgate = ICONS.gate;
+  ICON_GLYPHS.thresher = ICONS;
+})();

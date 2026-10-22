@@ -21,6 +21,8 @@ const RaidUI = (() => {
     doom: svg('<path d="M6 1.5c-2.3 0-4 1.6-4 3.8 0 1.3.6 2.2 1.5 2.8V10h5V8.1c.9-.6 1.5-1.5 1.5-2.8 0-2.2-1.7-3.8-4-3.8Z" fill="none" stroke="currentColor" stroke-width="1.2"/><circle cx="4.4" cy="5.5" r="1" fill="currentColor"/><circle cx="7.6" cy="5.5" r="1" fill="currentColor"/>'),
     dread: svg('<path d="M1 6c1.6-2.6 3.2-3.6 5-3.6S9.4 3.4 11 6c-1.6 2.6-3.2 3.6-5 3.6S2.6 8.6 1 6Z" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M3 9 9 3" stroke="currentColor" stroke-width="1.2"/>'),
     bleed: svg('<path d="M6 1.5C4.5 4 3 5.6 3 7.4a3 3 0 0 0 6 0C9 5.6 7.5 4 6 1.5Z" fill="none" stroke="currentColor" stroke-width="1.3"/>'),
+    frostbite: svg('<path d="M6 1v10M1.6 3.5l8.8 5M10.4 3.5l-8.8 5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><circle cx="6" cy="6" r="1.4" fill="currentColor"/>'),
+    gripped: svg('<path d="M2 5.5V3m2.5 2.5V2m2.5 3.5V2m2.5 3.5V3M2 5.5c0 3 1.6 5 4 5s3.5-2 3.5-5" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>'),
     static: svg('<path d="M7 1 3 6.5h3L5 11l4-5.5H6Z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M1.5 3.5h1.5M9 8.5h1.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/>'),
     aggro: svg('<path d="M1 6c1.6-2.6 3.2-3.6 5-3.6S9.4 3.4 11 6c-1.6 2.6-3.2 3.6-5 3.6S2.6 8.6 1 6Z" fill="none" stroke="currentColor" stroke-width="1.2"/><circle cx="6" cy="6" r="1.7" fill="currentColor"/>'),
     // on the boss: a Time Stop (an hourglass), hitting harder, and the enrage
@@ -41,7 +43,8 @@ const RaidUI = (() => {
     slowed: 'Slowed: stuck in silk or venom', rooted: 'Rooted: you can\'t move',
     conductive: 'Conductive: the next strike you catch hurts far more', doom: 'Royal Doom: when this runs out, so do you',
     dread: 'Dread: you met his eyes. Meeting them again hurts far more', bleed: 'Bleeding: losing health over time',
-    static: 'Static: the storm is building on you, a jolt every 1.5s' };
+    static: 'Static: the storm is building on you, a jolt every 1.5s',
+    frostbite: 'Frostbitten: slowed by the cold, and when it runs out you are frozen solid', gripped: 'Gripped: held fast in a fist of ice' };
   // heals over time wear their ability's icon: [class, ability, name]
   const HOT_ICON = { petal: ['cleric', 'petal', 'Dawn Petal'], prayer: ['cleric', 'prayer', 'Prayer Circle'], rejuv: ['grovekeeper', 'rejuv', 'Rejuvenate'], growth: ['grovekeeper', 'growth', 'Wild Growth'] };
 
@@ -56,7 +59,7 @@ const RaidUI = (() => {
     root.innerHTML = `
       <div id="boss-bar">
         <div class="bb-top"><b class="bb-name"></b><span class="bb-mode"></span><em class="bb-tot"></em><span class="bb-time"></span></div>
-        <div class="bb-hp"><div class="trail"></div><div class="fill"></div><div class="ticks"></div><div class="vuln"></div><div class="goal hidden"></div><span></span></div>
+        <div class="bb-hp"><div class="trail"></div><div class="fill"></div><div class="ticks"></div><div class="gates"></div><div class="vuln"></div><div class="goal hidden"></div><span></span></div>
         <div class="bb-status"></div>
         <div class="bb-next hidden"></div>
       </div>
@@ -208,6 +211,8 @@ const RaidUI = (() => {
     if (goal != null) { const v = (goal * 100).toFixed(2) + '%'; if (gEl._l !== v) { gEl._l = v; gEl.style.left = v; } }
     setText(q('.bb-hp span'), `${(frac * 100).toFixed(1)}%`);
     q('#boss-bar').classList.toggle('untargetable', !!b.u);
+    q('#boss-bar').classList.toggle('walled', !!raid.wallLabel);   // sealed at a gate (fight.js raiseWall)
+    gateTicks(raid);
     q('#boss-bar').classList.toggle('stopped', paused(raid, now));   // a Time Stop (fight.js pauseBoss)
     castFrame(raid, now);
     upcoming(raid, now);
@@ -291,6 +296,12 @@ const RaidUI = (() => {
         const d = b.to === id && b.end > now && typeof ALLY_BUFFS !== 'undefined' ? ALLY_BUFFS[b.id] : null;
         if (d) chips.push(`<b class="chip hot${b.from === myId ? '' : ' theirs'}" data-tip="${d.name}: ${d.text}"><u style="background-image:url(${abilityIcon(d.cls, d.icon)})"></u>${Math.ceil(b.end - now)}</b>`);
       }
+      // a Gloomsworn's Hollow: held at 1 HP while the damage it takes is written down as a debt; the bar is what has been healed back against it
+      f.row.classList.toggle('hollow', !!p.hollow && p.alive);
+      if (p.hollow && p.alive) {
+        const hl = p.hollow, paid = hl.debt > 0 ? Math.min(1, hl.healed / hl.debt) : 1, secs = Math.ceil(Math.max(0, hl.left > 0 ? hl.left : hl.grace));
+        chips.push(`<b class="chip hollow" data-tip="Hollow: held at 1 HP, dealing 30% more damage. Everything it takes is a debt of ${Math.round(hl.debt)}; ${Math.round(hl.healed)} healed back so far. Heal at least the debt before the ${hl.left > 0 ? 'Hollow and its grace end' : 'grace ends'} or it falls.">Hollow ${Math.round(hl.debt)}<i><s style="width:${Math.round(paid * 100)}%"></s></i>${Math.round(hl.healed)} · ${secs}s</b>`);
+      }
       if (p.mit) chips.push(`<b class="chip mit" data-tip="Taking ${p.mit}% less damage">${GLYPH.shield}${p.mit}%</b>`);
       if (p.dd) chips.push(`<b class="chip bad" data-tip="Damage Down: dealing 10% less damage">${GLYPH.down}${p.dd}</b>`);
       if (p.vuln) chips.push(`<b class="chip bad" data-tip="Vulnerability: taking ${p.vuln}% more damage">${GLYPH.vuln}${p.vuln}%</b>`);
@@ -330,7 +341,9 @@ const RaidUI = (() => {
     skitterra: 'Hush now. The web hears every step you take.',
     volkar: 'You climbed all this way to stand in my storm?',
     hollowking: 'The court is in session. Kneel, or be judged standing.',
+    titan: 'The ice remembers every step. Mind where you put yours.',
   };
+  INTRO_LINES.archmage = 'Seven circles, and a place for each of you in them. Mind where you stand.';
   let introTimer = null;
   function intro(def, mode, firstMeet) {
     const el = $('boss-intro');
@@ -610,6 +623,15 @@ const RaidUI = (() => {
     el.innerHTML = rows.map(([name, s]) => `<span>${icon(name)}<b>${esc(name)}</b><i>${Math.max(0, Math.ceil(s))}</i></span>`).join('');
   }
 
+  // the HP gates (where the acts change) as ticks on the boss's health; a gate with a wall on it is marked, and lit while it holds
+  let gateKey = '';
+  function gateTicks(raid) {
+    const g = Array.isArray(raid.gates) ? raid.gates : [], key = g.map(x => x[0] + ':' + x[1]).join('|') + (raid.wallLabel ? '!' : '');
+    if (key === gateKey) return;
+    gateKey = key;
+    root.querySelector('.bb-hp .gates').innerHTML = g.map(([f, wall]) => `<i class="${wall ? 'wall' : ''}${wall && raid.wallLabel ? ' up' : ''}" style="left:${(f * 100).toFixed(2)}%"></i>`).join('');
+  }
+
   // icons under the boss's health: Hunter's Mark, a damage-up, a taunt's fixation, the Inquisitor's brand and the last
   // minute before the enrage (all from the host), then your own damage over time (from your kit)
   const iconBg = (cls, id) => `url(${abilityIcon(cls, id)})`;
@@ -619,6 +641,7 @@ const RaidUI = (() => {
       for (const [kind, secs, val, who] of raid.bossStatus || []) {
         if (kind === 'vuln') items.push({ k: kind, c: 'debuff', bg: iconBg('ranger', 'mark'), n: secs, tip: `<b>Hunter's Mark</b><em>${secs}s</em>Takes ${val}% more damage from everyone.` });
         else if (kind === 'pause') items.push({ k: kind, c: 'debuff pause', glyph: GLYPH.hourglass, n: secs, tip: `<b>Time Stop</b><em>${secs}s</em>Frozen: its next move waits. What is already on the floor lands on time.` });
+        else if (kind === 'wall') items.push({ k: kind, c: 'debuff wall', glyph: GLYPH.shield, n: '', tip: `<b>${esc(who || 'Sealed')}</b><em>Invulnerable</em>Nothing hurts it until the seal breaks.` });
         else if (kind === 'stun') items.push({ k: kind, c: 'debuff', glyph: GLYPH.vuln, n: secs, tip: `<b>Staggered</b><em>${secs}s</em>${raid.def.id === 'skitterra' ? 'Torn out of her chrysalis' : 'Stuck in the wall'}: takes ${val}% more damage.` });
         else if (kind === 'dmg') items.push({ k: kind, c: 'buff', glyph: GLYPH.fury, n: `+${val}%`, tip: `<b>Fury</b><em>+${val}% damage</em>Every blow from the boss lands harder.` });
         else if (kind === 'brand') {

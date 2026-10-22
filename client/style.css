@@ -558,6 +558,14 @@ kbd { border-radius: 3px; background: #1d1813; border-color: #4a3d2c; color: var
 .bb-hp .ticks { position: absolute; inset: 0; pointer-events: none;
   background: linear-gradient(90deg, transparent calc(25% - 1px), #000000a0 0 25%, transparent 0 calc(50% - 1px), #000000a0 0 50%, transparent 0 calc(75% - 1px), #000000a0 0 75%, transparent 0); }
 .bb-hp .vuln { background: repeating-linear-gradient(-45deg, #ffb34722 0 4px, transparent 4px 10px); }
+/* HP gates: where the acts change; a walled gate has a notch, and the bar rings gold while the seal holds */
+.bb-hp .gates { position: absolute; inset: 0; pointer-events: none; }
+.bb-hp .gates i { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: #f2dcb4cc; box-shadow: 0 0 0 1px #000a; }
+.bb-hp .gates i.wall { background: #ffd27a; width: 3px; margin-left: -1.5px; }
+.bb-hp .gates i.wall.up { background: #fff3c4; box-shadow: 0 0 6px 1px #ffd27a; }
+#boss-bar.walled .bb-hp { box-shadow: 0 0 0 1px #d8b45a, 0 0 8px #ffd27a88; }
+#boss-bar.walled .bb-hp .fill { filter: saturate(.5) brightness(1.1); }
+.bst.wall { border-color: #d8b45a; color: #ffe6a0; }
 .bb-hp span { right: 7px; font-size: 11px; line-height: 14px; letter-spacing: .03em; font-variant-numeric: tabular-nums; }
 .bb-cast { width: 66%; height: 18px; margin-top: 8px; background: #0a0807f2; border: 1px solid #6e4426; border-radius: 2px; box-shadow: 0 0 0 1px #000; }
 .bb-cast .fill { background: linear-gradient(90deg, #5a2410, #b85a26 75%, #f0a066); }
@@ -1624,3 +1632,9 @@ body:has(#raid-ui.pf-strip:not(.hidden)) #captions { bottom: calc(var(--hud-top,
 .pt-fight .pf-aw { margin: 6px 0 0; font-size: 11px; color: var(--muted); }
 .pt-fight .pf-aw span { margin-right: 14px; white-space: nowrap; }
 .pt-fight .pf-aw span b { margin-left: 5px; font-weight: 600; color: #d8cdb8; }
+
+/* a Gloomsworn's Hollow (class 18): its chip on the party frame, debt against what has been healed back */
+.chip.hollow { background: #1a1226; border-color: #9a7ad8; color: #efe6ff; gap: 3px; }
+.chip.hollow i { display: inline-block; width: 26px; height: 5px; background: #4a1a2e; border: 1px solid #000; }
+.chip.hollow i s { display: block; height: 100%; background: #5fe08a; }
+.pf.hollow { box-shadow: inset 0 0 0 1px #9a7ad8aa; }

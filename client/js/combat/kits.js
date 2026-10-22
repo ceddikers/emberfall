@@ -4449,6 +4449,571 @@ ULTIMATES.thermist = {
   },
 };
 
+// ======================================================================= GLOOMSWORN (tank, class 18): the Undying Vigil
+// Gloom (0-100) fills as you strike (8 for every hit of your own abilities) and as you are struck (6 for every hit you
+// take, heard from the host as a 'taken' notice). It is spent on Gloom Strike (40), Black Pall (30) and Last Rite (all),
+// and fades slowly once nothing has landed either way for a while. The signature is the host's (fight.js HOLLOW_HOST):
+// a blow that would kill you while your Gloom is FULL does not. You go Hollow for 8s (10 for the Reaver of Dusk): HP held
+// at 1, every point of damage added to a debt instead, and 30% more damage dealt. Healing received through the Hollow and
+// a short grace after it must cover the debt (shields count half) or you fall when the grace ends; if it does, you stand
+// up at a quarter of your health. Doom, the enrage and a fall still kill. The kit keeps the host's copy of the Gloom up to
+// date ('gloom' events), hears 'hollow' (it began or ended) and the debt/healed numbers of the party update ('hollowtick').
+const GLOOM = {
+  MAX: 100, HIT: 8, TAKEN: 6, TAKEN_GAP: 0.35,   // gains: a hit of yours, a hit you take (at most one every TAKEN_GAP s)
+  REST: 6, DECAY: 2.5, DECAY_SLOW: 1,            // out of combat (nothing landed or taken for REST s): lost per second (a Sentinel: slower)
+  STRIKE: 40, PALL: 30, MANTLE: 15, RITE_MIN: 20, // Gloom Strike and Black Pall spend; Black Mantle gives; Last Rite needs at least RITE_MIN and spends all
+  ECHO: 0.85, ECHO_DUR: 4,                        // Shade Step: the next two Gloom Strikes echo at 85%, for 4s
+  HOLLOW: 8, HOLLOW_LONG: 10, GRACE: 4, CD: 60, DMG: 0.3, WAKE: 0.25,   // (HOLLOW_HOST in fight.js clamps what the kit asks for)
+  ULT_SPEND: 0.13, ULT_SAVE: 25, ULT_HIT: 800, ULT_HIT_G: 8, ULT_SH: 200, ULT_SH_G: 3, ULT_MIT: 0.1,
+};
+const gloomDur = k => (k.def.hollowLong ? GLOOM.HOLLOW_LONG : GLOOM.HOLLOW);
+const gloomGraceLen = k => GLOOM.GRACE;
+const gloomHollow = k => k.has('hollow');
+// +gain, with Spill: what would run past the vessel hardens into a barrier on you
+function gloomGain(k, n) {
+  if (!(n > 0)) return;
+  if (k.talent('gloomsworn_spill')) { const over = (k.g.gloom || 0) + n - GLOOM.MAX; if (over > 0.5) k.shield('self', over * 10, 8, { ab: k.abilities[1] }); }
+  k.gain('gloom', n, GLOOM.MAX);
+  k.g.actAt = k.now;
+}
+// Shade Step's echo: a Gloom Strike with the shade behind it hits again (85%) and spends one of the two echoes
+function gloomEcho(k, ab, pot) {
+  if (!k.consume('shade')) return false;
+  k.after(0.3, () => k.damage(pot * GLOOM.ECHO, { ab, extra: true }));
+  k.fx('shade-echo');
+  return true;
+}
+// the host's copy: the Gloom (and what Hollow would be, with this hero's talents), a few times a second while it moves
+function gloomSend(k) {
+  const g = k.g, v = Math.round(g.gloom || 0), sent = g.sentV ?? -1;
+  if (v === sent && (v === 0 || k.now - g.sentAt < 1)) return;
+  if (v !== sent && k.now - g.sentAt < 0.2 && (v >= GLOOM.MAX) === (sent >= GLOOM.MAX)) return;
+  g.sentV = v; g.sentAt = k.now;
+  k.env.emit({ type: 'gloom', value: v, dur: gloomDur(k), secs: gloomGraceLen(k), st: GLOOM.CD });
+}
+// the host says the Hollow began (d.d: its seconds, d.g: the grace after) or ended (d.ok: the knight stood up)
+function gloomHollowNote(k, d) {
+  if (d.on) {
+    k.g.gloom = 0; k.g.sentV = -1;
+    k.buff('hollow', d.d);
+    k.g.hollowUntil = k.now + d.d; k.g.graceUntil = k.now + d.d + d.g;
+    k.g.hl = { debt: 0, healed: 0, at: k.now };
+    k.stats.hollows = (k.stats.hollows || 0) + 1;
+    k.fx('hollow-on', { d: d.d, g: d.g });
+    return;
+  }
+  k.clear('hollow'); k.g.hollowUntil = 0; k.g.graceUntil = 0; k.g.hl = null;
+  if (d.ok) {
+    k.stats.hollowSaves = (k.stats.hollowSaves || 0) + 1;
+    k.ultGain(GLOOM.ULT_SAVE);   // (Eclipse of the Vigil)
+    if (k.talent('gloomsworn_wakened')) { for (const id of ['mantle', 'rite']) { const a = k.abilities.find(x => k.baseId(x) === id); if (a) k.refill(a.id); } }
+    if (k.talent('gloomsworn_weeping') && d.debt > 0) k.shield('party', Math.min(k.env.maxHp() * 0.25, d.debt * 0.5) / ENGINE.POT_SCALE, 8, { ab: k.abilities[3] });
+    k.fx('hollow-end', { ok: 1 });
+  } else k.fx('hollow-end', { ok: 0 });
+}
+const gloomStrikeReady = k => (k.g.gloom || 0) >= GLOOM.STRIKE;
+// the ability whose base id this is (a spec's or a talent's replacement answers to it)
+const gloomAb = (k, id) => k.abilities.find(a => k.baseId(a) === id);
+
+KITS.gloomsworn = {
+  potMult: 0.6,   // balance knob (tools/simulate.js)
+  role: 'tank',
+  auto: { kind: 'slash', potency: 40, range: MELEE },
+  gauge: { kind: 'gloom', key: 'gloom', max: 100, label: 'Gloom', w: 150 },
+  init: () => ({ gloom: 0, step: 0, comboUntil: 0, actAt: -99, takenAt: -9, sentV: -1, sentAt: -9, hollowUntil: 0, graceUntil: 0, hl: null }),
+  dmgMod: k => (gloomHollow(k) ? GLOOM.DMG : 0),
+  onDamage(k, amount, crit, opts) {
+    // a hit of your own ability fills the vessel (not autos, damage over time, echoes or an item's strike)
+    if (!opts.ab || opts.auto || opts.dot || opts.extra || opts.item) return;
+    gloomGain(k, k.perk('gloomsworn_w1') ? 10 : GLOOM.HIT);
+    if (k.has('omen') && k.baseId(opts.ab) === 'rend') { k.clear('omen'); gloomGain(k, 12); }
+    if (gloomHollow(k) && k.talent('gloomsworn_feast')) k.healRaw('self', k.env.maxHp() * 0.03, { ab: opts.ab });   // (self healing counts against the debt)
+  },
+  onNotify(k, type, d) {
+    if (type === 'taken') {
+      if (!(d.a > 0)) return;
+      if (k.now - k.g.takenAt >= GLOOM.TAKEN_GAP) { k.g.takenAt = k.now; gloomGain(k, GLOOM.TAKEN); }
+      // Thorned Mantle: the Mantle strikes back for a quarter of what gets through it
+      if (k.has('mantle') && k.talent('gloomsworn_thorns')) k.damage(Math.min(500, d.a / ENGINE.POT_SCALE * 0.25), { ab: gloomAb(k, 'mantle'), extra: true });
+    }
+    if (type === 'hollow') gloomHollowNote(k, d);
+    if (type === 'hollowtick') k.g.hl = d.on ? { debt: d.debt, healed: d.healed, at: k.now } : null;
+  },
+  tick(k) {
+    const g = k.g, now = k.now;
+    gloomSend(k);
+    tankUltHits(k, 6);   // (Eclipse of the Vigil: the hits you take also fill it, as the other tanks')
+    onBossCast(k, () => { if (k.talent('gloomsworn_omen')) k.buff('omen', 8); });
+    // out of combat the vessel drains, slowly
+    if (g.gloom > 0 && now - g.actAt > GLOOM.REST) {
+      const dt = now - (g.decayT ?? now);
+      if (dt > 0 && dt < 1) g.gloom = Math.max(0, g.gloom - (k.def.slowDecay ? GLOOM.DECAY_SLOW : GLOOM.DECAY) * dt);
+    }
+    g.decayT = now;
+    if (g.hollowUntil && now > g.graceUntil + 1) { g.hollowUntil = 0; g.graceUntil = 0; g.hl = null; }   // (a missed notice never leaves it stuck)
+  },
+  signature: 'Hollow',
+  floor: 'Press Q to strike, W when it glows to spend Gloom on a heavy blow and a barrier, F if you are about to die. Keep your health up and your healer on you.',
+  ceiling: [
+    'Gloom fills 8 for every hit you land and 6 for every hit you take. Every spend (Gloom Strike 40, Black Pall 30, Last Rite all of it) is Gloom you will not have when the killing blow lands.',
+    'Hollow: a blow that would kill you while your Gloom is full does not. For 8s you cannot fall below 1 HP, you deal 30% more damage, and all the damage you take is written down as a debt. Your healer must heal at least that much by the end of the 4s after, or you fall. Mitigation and barriers still cut the debt as they cut a hit.',
+    'Hold the vessel full before the hits that could kill you (the tankbuster, the raidwide on a sagging tank). Hollow comes back once a minute.',
+    'Shade Step closes the gap and gives your next two Gloom Strikes an echo for 4s: step when you hold the Gloom for both.',
+    'Black Pall is the party\'s cooldown and costs Gloom you may want to keep: spend it on the raidwide that matters.',
+  ],
+  abilities: [
+    {
+      id: 'rend', name: 'Rend', type: 'gcd', target: 'enemy', range: MELEE, anim: 'attack',
+      desc: 'Three-hit combo on one button: Rend ({d:220}) > Sunder ({d:300}) > Gloaming ({d:390}). Every hit you land fills 8 Gloom. It carries your taunt.',
+      label: k => ['Rend', 'Sunder', 'Gloaming'][k.now < k.g.comboUntil ? k.g.step : 0],
+      fxStep: k => (k.now < k.g.comboUntil ? k.g.step : 0),
+      effect(k) {
+        const step = k.now < k.g.comboUntil ? k.g.step : 0, pot = [200, 270, 350][step];
+        k.damage(pot, { ab: this });
+        if (step === 2 && k.talent('gloomsworn_bleed')) k.dot('gloomblood', 35, 9, 3, { ab: this });
+        k.g.step = (step + 1) % 3; k.g.comboUntil = k.now + 15;
+      },
+      fx: { type: 'slash', color: '#7a5aa8', r: 54, span: 1.7 },
+    },
+    {
+      id: 'strike', name: 'Gloom Strike', type: 'gcd', target: 'enemy', range: MELEE, charges: 2, cd: 7, anim: 'bash',
+      desc: 'Spend 40 Gloom: a heavy blow for {d:540} that wraps you in a barrier of {s:150} for 6s. Two charges. Needs 40 Gloom.',
+      usable: k => gloomStrikeReady(k),
+      glow: k => (k.g.gloom || 0) >= 90,
+      effect(k) {
+        const pot = 760, sen = !!k.def.sentinel;
+        k.spend('gloom', GLOOM.STRIKE);
+        k.damage(pot, { ab: this });
+        gloomEcho(k, this, pot);
+        // a Reaver of Dusk's Strike echoes again while Hollow
+        if (k.def.hollowEcho && gloomHollow(k)) { k.after(0.55, () => k.damage(pot * GLOOM.ECHO, { ab: this, extra: true })); k.fx('shade-echo'); }
+        if (k.talent('gloomsworn_interest') && (k.g.gloom || 0) >= 40) k.after(0.4, () => k.damage(pot * 0.4, { ab: this, extra: true }));
+        const dur = sen ? 10 : 6;
+        if (sen) k.shield('lowest', 110, dur, { ab: this });   // (a Sentinel's barrier chains on to the most hurt ally; if that is you, yours below replaces it)
+        k.shield('self', k.perk('gloomsworn_a2') ? 225 : 150, dur, { ab: this });
+      },
+      fx: { type: 'slash', color: '#5a3a8a', r: 60, span: 1.3 },
+    },
+    {
+      id: 'shade', name: 'Shade Step', type: 'ogcd', target: 'enemy', range: 320, cd: 15, lock: 0.4, anim: 'attack',
+      desc: 'Step through the dark to your target and cut it for {d:150}. For 4s your next two Gloom Strikes echo, hitting again for 85%.',
+      effect(k) {
+        if (!k.env.target({ target: 'enemy', range: MELEE })) k.teleport('dash', { ab: this, d: 150 });
+        k.damage(150, { ab: this });
+        const n = k.perk('gloomsworn_w2') ? 3 : 2;
+        k.buff('shade', GLOOM.ECHO_DUR, {}, n, n);
+        if (k.talent('gloomsworn_veil')) k.mitigate('self', 0.15, 4, { ab: this });
+      },
+      fx: { type: 'slash', color: '#8a6ac8', r: 40, span: 1.1 },
+    },
+    {
+      id: 'pall', name: 'Black Pall', type: 'ogcd', target: 'self', cd: 60, lock: 0.5, anim: 'big',
+      desc: 'Spend 30 Gloom: a pall falls over the whole party, 25% less damage taken for 6s (8s as a Sentinel).',
+      usable: k => (k.g.gloom || 0) >= GLOOM.PALL,
+      glow: k => { const b = bossNow(k); return !!(b && b.wide) && (k.g.gloom || 0) >= GLOOM.PALL; },
+      effect(k) {
+        k.spend('gloom', GLOOM.PALL);
+        k.mitigate('party', 0.25, (k.def.sentinel ? 8 : 6) + (k.perk('gloomsworn_w3') ? 2 : 0), { ab: this });
+        if (k.talent('gloomsworn_bearer')) k.shield('party', 100, 8, { ab: this });
+        k.fx('black-pall');
+      },
+      fx: { type: 'ring', color: '#6a4aa0', r: 160 },
+    },
+    {
+      id: 'mantle', name: 'Black Mantle', type: 'ogcd', target: 'self', cd: 60, lock: 0.5, anim: 'big',
+      desc: 'Pull the dark about you: 40% less damage taken for 8s, and 15 Gloom.',
+      glow: k => { const b = bossNow(k); return !!(b && b.casting && b.onMe && b.castLeft < 1.5); },
+      effect(k) {
+        k.mitigate('self', k.perk('gloomsworn_a4') ? 0.5 : 0.4, 8, { ab: this });
+        k.buff('mantle', 8);
+        gloomGain(k, GLOOM.MANTLE);
+      },
+      fx: { type: 'aura', color: '#4a2a7a', r: 36, dur: 2.5 },
+    },
+    {
+      id: 'rite', name: 'Last Rite', type: 'ogcd', target: 'self', cd: 120, lock: 0.5, anim: 'big',
+      desc: 'Spend all your Gloom (at least 20): a barrier of {s:220} plus {s:7} for every point, for 8s, and you heal 5% of your HP plus 0.07% for every point.',
+      usable: k => (k.g.gloom || 0) >= GLOOM.RITE_MIN,
+      glow: k => hpOf(k) < 0.4,
+      effect(k) {
+        const g = Math.floor(k.g.gloom || 0);
+        k.spend('gloom', g);
+        const pot = 220 + 7 * g;
+        k.shield('self', pot, 8, { ab: this });
+        if (k.talent('gloomsworn_requiem')) k.shield('party', pot * 0.5, 8, { ab: this });
+        k.healRaw('self', k.env.maxHp() * (0.05 + 0.0007 * g), { ab: this });
+        k.fx('last-rite', { g });
+      },
+      fx: { type: 'aura', color: '#9a7ad8', r: 38, dur: 2.5 },
+    },
+  ],
+};
+
+// the taunt (carried by Rend, TAUNT_CARRY): a mark the dark drinks from
+Object.assign(TAUNT, {
+  gloomsworn: {
+    name: 'Dread Mark', icon: 'rend',
+    desc: 'The mark feeds the vessel: +20 Gloom.',
+    use(k) { gloomGain(k, 20); },
+  },
+});
+TAUNT_CARRY.gloomsworn = 'rend';
+
+// talents that grant a new move (TALENT_ABILITIES, the shared system above)
+TALENT_ABILITIES.gloomsworn_vigil = { cls: 'gloomsworn', ab: {
+  id: 'vigil', replaces: 'pall', icon: 'pall', name: 'Vigil Ward', type: 'ogcd', target: 'self', cd: 45, lock: 0.5, anim: 'big',
+  desc: 'Spend 30 Gloom: stand watch over whoever is hurt most (you, if that is you). They take 50% less damage for 5s and are wrapped in a barrier of {s:200} for 6s. You take 15% less damage for 5s.',
+  usable: k => (k.g.gloom || 0) >= GLOOM.PALL,
+  glow: k => { const b = bossNow(k); return !!(b && b.casting && !b.onMe) && (k.g.gloom || 0) >= GLOOM.PALL; },
+  effect(k) {
+    k.spend('gloom', GLOOM.PALL);
+    k.mitigate('lowest', 0.5, 5, { ab: this });
+    k.shield('lowest', 200, 6, { ab: this });
+    k.mitigate('self', 0.15, 5, { ab: this });
+    k.fx('black-pall');
+  },
+  fx: { type: 'ring', color: '#8a6ac8', r: 70 },
+} };
+TALENT_ABILITIES.gloomsworn_pyre = { cls: 'gloomsworn', ab: {
+  id: 'pyre', replaces: 'rite', icon: 'rite', name: 'Black Pyre', type: 'ogcd', target: 'enemy', range: 300, cd: 90, lock: 0.5, anim: 'big',
+  desc: 'Spend all your Gloom (at least 30): the vessel breaks over your target in black fire, {d:600} plus {d:10} for every point, and a barrier of {s:150} plus {s:2} for every point wraps you for 8s.',
+  usable: k => (k.g.gloom || 0) >= 30,
+  glow: k => (k.g.gloom || 0) >= 90,
+  effect(k) {
+    const g = Math.floor(k.g.gloom || 0);
+    k.spend('gloom', g);
+    k.damage(600 + 10 * g, { ab: this, threat: 1.5 });
+    k.shield('self', 150 + 2 * g, 8, { ab: this });
+    k.fx('last-rite', { g });
+  },
+  fx: { type: 'slash', color: '#9a5ad8', r: 70, span: 2 },
+} };
+
+// Eclipse of the Vigil (T): the vessel pours out. Gloom (spends: 0.13% each, and 25% for a Hollow you stand up from) and
+// the hits you take fill it. Instant: a blow on the target worth 800 plus 8 for every Gloom, a barrier on the whole party
+// of 200 plus 3 for every Gloom, and the party takes 10% less damage for 6s. It empties the vessel (Last Light keeps half).
+ULTIMATES.gloomsworn = {
+  id: 'eclipsevigil', name: 'Eclipse of the Vigil', slot: 7, type: 'ogcd', ult: true, mode: 'instant', target: 'self', anim: 'big', icon: 'eclipsevigil',
+  lock: 1.0, dr: 0.3,
+  charge: { rate: 0.4, keep: 0.5, spend: { gloom: GLOOM.ULT_SPEND } },
+  botOk: k => (k.g.gloom || 0) >= 40,
+  desc: `The vigil breaks. Every point of Gloom you hold is poured out: a blow on your target for {d:${GLOOM.ULT_HIT}} plus {d:${GLOOM.ULT_HIT_G}} for every Gloom (full: {d:${GLOOM.ULT_HIT + 100 * GLOOM.ULT_HIT_G}}), ` +
+    `a barrier of {s:${GLOOM.ULT_SH}} plus {s:${GLOOM.ULT_SH_G}} for every Gloom on the whole party for 8s, and the party takes ${GLOOM.ULT_MIT * 100}% less damage for 6s. ` +
+    'It empties the vessel. You take 30% less damage and can\'t be knocked back while you pour it out.' +
+    `<div class="it-ult"><span><u>Charge:</u> ${GLOOM.ULT_SPEND * 100}% for every Gloom you spend, ${GLOOM.ULT_SAVE}% for a Hollow you stand up from, more for every hit you take, and a little on its own while you fight. It never drains; a fall keeps half.</span></div>`,
+  effect(k) {
+    const ab = this, g = Math.floor(k.g.gloom || 0);
+    k.g.gloom = k.talent('gloomsworn_dusk') ? Math.floor(g / 2) : 0;   // (set, not spent: spending feeds the charge just spent)
+    k.damage(GLOOM.ULT_HIT + GLOOM.ULT_HIT_G * g, { ab, threat: 2 });
+    k.shield('party', GLOOM.ULT_SH + GLOOM.ULT_SH_G * g, 8, { ab });
+    k.mitigate('party', GLOOM.ULT_MIT, 6, { ab });
+    k.fx('gloom-eclipse', { g });
+  },
+};
+
+if (typeof module !== 'undefined') Object.assign(module.exports, { GLOOM, gloomGain, gloomEcho, gloomSend, gloomHollowNote, gloomStrikeReady, gloomDur, gloomGraceLen });
+
+// ======================================================================= THRESHER (damage, class 19): afflict, ripen, reap
+// Four AFFLICTIONS (k.g.aff: id -> the second it was laid) build on the boss: Mark (Slash; a damage over time that keeps
+// ticking after its bonus is paid), Drain (Cleave; heals you a little while it lasts), Bind (Gloam Blink and the Wisp; a pulse
+// of damage every few seconds) and Thread (Hook; planted, snapped for burst). They RIPEN with age: young (green) for the first
+// few seconds, gold while ripe, then rotten. A hit lays an affliction that is not up, or one that has rotted; a ripe one is left to
+// ripen. Reap spends them all: gold pays in full, young a little, rotten a smaller, messy payout. Gather puts every affliction
+// back on the young/ripe edge (so it is gold at once, and its rot is reset). Spirit Wisp is a timed, cosmetic companion
+// (like the Ranger's falcon: a damage over time and a buff, nothing synced). Reaper's Gate (T) is a window: you vanish, every
+// Slash is a Gate Strike that lays one affliction in turn, and the fifth releases all four at full ripeness.
+const THRESH = {
+  IDS: ['mark', 'drain', 'bind', 'thread'],
+  NAMES: { mark: 'Mark', drain: 'Drain', bind: 'Bind', thread: 'Thread' },
+  YOUNG: 3, ROT: 8, LIFE: 6,            // young under YOUNG s, gold until ROT s, rotten after; gone LIFE s later
+  SWING: 1.2,                           // Backswing: the next hit pressed this soon after the last recovery
+  SLASH: 200, CLEAVE: 270, BACK: 90,
+  HOOK: 150, HOOK_AGE: 1.5, BLINK: 140, BLINK_MIT: 0.5,
+  MARK_DOT: 28, MARK_DUR: 12, BIND: 60, BIND_EVERY: 4, DRAIN_EVERY: 3, DRAIN_HEAL: 0.012, DRAIN_POP: 0.03,
+  BASE: 120, PAY: { mark: 110, drain: 100, bind: 110, thread: 170 },   // Reap: a base hit and what each affliction pays at gold
+  P_YOUNG: 0.4, P_ROT: 0.65, REAP_CD: 6,
+  GATHER_CD: 20,
+  WISP_DUR: 15, WISP_HIT: 60, WISP_EVERY: 2.5, WISP_CD: 45, SAC: 320, SAC_BUFF: 0.1, SAC_DUR: 8,
+  U_REAP: 1.6, U_GOLD: 1.2, U_OTHER: 0.4,                              // Ultimate charge: a Reap, and each affliction it cashes
+  GATE: { DUR: 8, GCD: 1.0, STRIKE: 190, END: 260, MULT: 1.3 },
+};
+const thY = k => k.def.young || THRESH.YOUNG, thR = k => k.def.rot || THRESH.ROT;
+// 0: not up, 1: young, 2: gold (ripe), 3: rotten
+function thStage(k, id) {
+  const at = k.g.aff[id];
+  if (at == null) return 0;
+  const a = k.now - at;
+  return a < thY(k) ? 1 : a < thR(k) ? 2 : 3;
+}
+const thCount = (k, stage) => THRESH.IDS.filter(id => (stage ? thStage(k, id) === stage : thStage(k, id) > 0)).length;
+const thAb = (k, id) => k.abilities.find(a => k.baseId(a) === id) || k.baseAbilities.find(a => k.baseId(a) === id);
+// lay an affliction: one that is not up, or has rotted, starts again young; a ripening one is left to ripen
+function thApply(k, id) {
+  if (k.def.noAff && k.def.noAff.indexOf(id) >= 0) return;
+  const st = thStage(k, id);
+  if (st !== 0 && st !== 3) return;
+  k.g.aff[id] = k.now;
+  if (id === 'bind') k.g.bindAt = k.now + THRESH.BIND_EVERY;
+  if (id === 'drain') k.g.drainAt = k.now + THRESH.DRAIN_EVERY;
+  if (id === 'mark') k.dot('mark', THRESH.MARK_DOT, THRESH.MARK_DUR, 3, { ab: thAb(k, 'slash') });
+  k.fx('afflict', { id });
+}
+// every affliction that is up ripens by `secs` (it counts as that much older)
+function thAge(k, secs) { for (const id of THRESH.IDS) if (k.g.aff[id] != null) k.g.aff[id] -= secs; }
+// ... or to the young/ripe edge at the least
+function thRipen(k) { for (const id of THRESH.IDS) if (k.g.aff[id] != null && k.now - k.g.aff[id] < thY(k)) k.g.aff[id] = k.now - thY(k); }
+const thGold = k => thCount(k, 2) > 0;
+// what a Reap (or the Gate's fifth strike, or Cull) pays: a base hit, then each affliction in turn. stage: id -> 1|2|3
+function thPayout(k, ab, stage, o) {
+  let n = 0, gold = 0, rot = 0;
+  k.damage(o.base * o.mult, { ab });
+  for (const id of THRESH.IDS) {
+    const s = stage[id];
+    if (!s) continue;
+    n++; if (s === 2) gold++; if (s === 3) rot++;
+    const f = s === 1 ? THRESH.P_YOUNG : s === 2 ? 1 : o.rotPay;
+    k.after(o.gap * n, () => {
+      k.damage(THRESH.PAY[id] * f * o.mult, { ab, extra: true });
+      if (id === 'drain' && s !== 3) k.healRaw(k.talent('thresher_tithe') ? 'lowest' : 'self', k.env.maxHp() * THRESH.DRAIN_POP * (s === 2 ? 1 : 0.5), { ab });
+      k.fx('afflict-pop', { id, s });
+    });
+  }
+  return { n, gold, rot };
+}
+const thStages = k => { const st = {}; for (const id of THRESH.IDS) st[id] = thStage(k, id); return st; };
+function thCharge(k, r) { k.ultGain(THRESH.U_REAP + THRESH.U_GOLD * r.gold + THRESH.U_OTHER * (r.n - r.gold)); }
+// Reap, and what the talents add to it
+function thReap(k, ab) {
+  const st = thStages(k), m = k.def.reapMult || 1;
+  const r = thPayout(k, ab, st, { base: THRESH.BASE, mult: m, rotPay: k.def.rotPay || (k.perk('thresher_a2') ? 0.8 : THRESH.P_ROT), gap: 0.14 });
+  for (const id of THRESH.IDS) if (st[id]) k.g.aff[id] = k.talent('thresher_second') && st[id] === 2 ? k.now - thY(k) * 0.6 : null;   // (Second Growth: a gold one stays, just young)
+  if (k.talent('thresher_compost') && r.rot > 0) k.dot('compost', 30 * r.rot, 8, 2, { ab });
+  if (k.talent('thresher_joined') && k.has('wisp')) { k.after(0.3, () => k.damage(140, { ab, extra: true })); k.fx('wisp-strike'); }
+  if (k.talent('thresher_gleaning') && r.gold >= 2) k.buff('gleaning', 10);
+  thCharge(k, r);
+  k.g.swingBy = k.now + k.gcdLen + THRESH.SWING;
+  k.fx('reap', { gold: r.gold, n: r.n, rot: r.rot });
+  return r;
+}
+// Slash and Cleave (the Gate's strikes are theirs, below)
+function thSlash(k, ab) {
+  const g = k.g, step = k.now < g.comboUntil ? g.step : 0, back = k.now <= g.swingBy, pot = step ? THRESH.CLEAVE : THRESH.SLASH;
+  k.damage(pot, { ab });
+  if (step === 0) { thApply(k, 'mark'); if (k.def.sower) thApply(k, 'drain'); }
+  else { thApply(k, 'drain'); if (k.def.sower) thApply(k, 'bind'); }
+  g.step = (step + 1) % 2; g.comboUntil = k.now + 15;
+  if (k.consume('gleaning')) { k.after(0.2, () => k.damage(pot * 0.35, { ab, extra: true })); k.fx('backswing'); }
+  if (back) {
+    k.after(0.28, () => k.damage(THRESH.BACK * (k.perk('thresher_w1') ? 1.5 : 1), { ab, extra: true }));
+    if (k.talent('thresher_drag')) thAge(k, 1);
+    k.fx('backswing');
+  }
+  g.swingBy = k.now + k.gcdLen + THRESH.SWING;
+}
+function thSacrifice(k, ab) {
+  k.dots.delete('wisp'); k.clear('wisp'); k.g.wispOn = false;
+  k.damage(THRESH.SAC, { ab });
+  thRipen(k);
+  k.buff('wispgift', THRESH.SAC_DUR);
+  k.cd[ab.id] = Math.max(k.now, (k.g.wispAt || 0) + THRESH.WISP_CD);
+  k.fx('wisp-sacrifice');
+}
+
+KITS.thresher = {
+  potMult: 1.05,   // balance knob (tools/simulate.js)
+  auto: { kind: 'slash', potency: 40, range: MELEE },
+  gauge: { kind: 'harvest', key: 'aff', max: 100, label: 'Harvest', w: 150 },
+  init: () => ({ aff: {}, step: 0, comboUntil: 0, swingBy: 0, bindAt: 0, drainAt: 0, gate: 0, wispAt: -99, wispOn: false, castSeen: false }),
+  dmgMod: k => (k.has('wispgift') ? THRESH.SAC_BUFF : 0),
+  onDamage(k, amount, crit, opts) {
+    if (opts.dot && opts.ab && k.baseId(opts.ab) === 'wisp') { k.fx('wisp-strike'); if (thStage(k, 'bind') === 0) thApply(k, 'bind'); }
+  },
+  tick(k) {
+    const g = k.g, now = k.now, life = thR(k) + THRESH.LIFE, far = { target: 'enemy', range: 2000 };
+    for (const id of THRESH.IDS) if (g.aff[id] != null && now - g.aff[id] >= life) g.aff[id] = null;   // (it has fallen away)
+    // Bind pulses while it is up and not rotten; Drain mends you the same way
+    if (g.aff.bind != null && now >= g.bindAt) {
+      g.bindAt = now + THRESH.BIND_EVERY;
+      if (thStage(k, 'bind') < 3 && k.env.target(far)) { k.damage(THRESH.BIND, { ab: thAb(k, 'blink'), extra: true }); k.fx('bind-pulse'); }
+    }
+    if (g.aff.drain != null && now >= g.drainAt) {
+      g.drainAt = now + THRESH.DRAIN_EVERY;
+      const s = thStage(k, 'drain');
+      if (s < 3 && k.env.target(far)) { k.healRaw(k.talent('thresher_tithe') ? 'lowest' : 'self', k.env.maxHp() * THRESH.DRAIN_HEAL * (s === 2 ? 1.5 : 1), { ab: thAb(k, 'slash') }); k.fx('drain-tick'); }
+    }
+    onBossCast(k, () => { if (k.talent('thresher_omen')) { thRipen(k); k.fx('omen'); } });
+    // the Wisp ran out on its own: with Sacrifice held the cooldown only starts now (counted from the summon)
+    if (g.wispOn && !k.has('wisp')) { g.wispOn = false; const w = thAb(k, 'wisp'); if (w) k.cd[w.id] = Math.max(k.cd[w.id] || 0, g.wispAt + THRESH.WISP_CD); }
+  },
+  signature: 'Ripeness',
+  floor: 'Press Q to cut, and E when it glows: that is the harvest. Keep Q going, and weave the others when they are ready.',
+  ceiling: [
+    'Slash lays a Mark and Cleave a Drain; Hook plants a Thread and Gloam Blink binds. An affliction is young for 3s (green), gold for the next 5s, then rotten. Reap pays gold in full, young 40%, rotten 65%: watch the gauge, and Reap when most of it is gold.',
+    'A hit only lays an affliction that is not up or has rotted: it does not reset one that is ripening. So the gold comes of its own accord, and rot comes of waiting.',
+    'Gather puts every affliction back on the edge of ripe, gold at once and its rot reset. Use it to Reap early, or to hold the gold for the party\'s burst.',
+    'Backswing: press the next Q within 1.2s of your recovery and the scythe comes back round for a second hit. Every Reap you make keeps it going.',
+    'Reaper\'s Gate: every hit lays the next affliction in turn, and the fifth strike releases all four at full ripeness. Open it with your afflictions up, and the party\'s burst.',
+  ],
+  abilities: [
+    {
+      id: 'slash', name: 'Slash', type: 'gcd', target: 'enemy', range: MELEE, anim: 'attack',
+      desc: 'Two-hit combo on one button: Slash ({d:200}) > Cleave ({d:270}), a wide arc. Slash lays a Mark on the boss and Cleave a Drain. Press the next hit within 1.2s of your recovery and a Backswing follows for {d:90}.',
+      label: k => ['Slash', 'Cleave'][k.now < k.g.comboUntil ? k.g.step : 0],
+      fxStep: k => (k.now < k.g.comboUntil ? k.g.step : 0),
+      effect(k) { thSlash(k, this); },
+      fx: { type: 'slash', color: '#9be06a', r: 64, span: 2.3 },
+    },
+    {
+      id: 'hook', name: 'Hook', type: 'ogcd', target: 'enemy', range: 320, charges: 2, cd: 12, lock: 0.4, anim: 'attack',
+      desc: 'Throw the chain: if you are not at the boss, pull yourself in, and cut for {d:150}. It plants a Thread on the boss and ages Mark, Drain and Bind by 1.5s. Two charges.',
+      glow: k => thStage(k, 'thread') === 0,
+      effect(k) {
+        if (!k.env.target({ target: 'enemy', range: MELEE })) k.teleport('dash', { ab: this, d: 150 });
+        thAge(k, k.perk('thresher_w2') ? 2.5 : THRESH.HOOK_AGE);
+        k.damage(THRESH.HOOK, { ab: this });
+        thApply(k, 'thread');
+        if (k.talent('thresher_weight') || k.def.sower) thApply(k, 'bind');
+        k.g.swingBy = Math.max(k.g.swingBy, k.now + 3);
+      },
+      fx: { type: 'slash', color: '#7fc86a', r: 44, span: 1.1 },
+    },
+    {
+      id: 'reap', name: 'Reap', type: 'gcd', target: 'enemy', range: MELEE, cd: k => k.def.reapCd || THRESH.REAP_CD, anim: 'bash',
+      desc: 'Spend every affliction on the boss. A cut for {d:120}, then each pays out: Mark {d:110}, Drain {d:100} (and mends you for 3% of your health), Bind {d:110} and Thread {d:170}. Gold pays in full, young 40%, rotten 65%. Glows when something is gold. Needs an affliction up.',
+      usable: k => thCount(k) > 0,
+      glow: k => thGold(k),
+      effect(k) { thReap(k, this); },
+      fx: { type: 'slash', color: '#e8c84a', r: 76, span: 3.0 },
+    },
+    {
+      id: 'gather', name: 'Gather', type: 'ogcd', target: 'self', cd: THRESH.GATHER_CD, lock: 0.8, anim: 'cast',
+      desc: 'Pull every affliction on the boss back to the edge of ripe: gold at once, with the rot reset. It does not lay any that are not up.',
+      usable: k => thCount(k) > 0,
+      glow: k => thCount(k, 3) > 0 || (thCount(k, 1) >= 2 && thCount(k, 2) === 0),
+      effect(k) {
+        for (const id of THRESH.IDS) if (k.g.aff[id] != null) k.g.aff[id] = k.now - thY(k);
+        if (k.talent('thresher_hush')) k.shield('self', 100, 6, { ab: this });
+        k.fx('gather');
+      },
+      fx: { type: 'aura', color: '#d8c84a', r: 40, dur: 1.5 },
+    },
+    {
+      id: 'blink', name: 'Gloam Blink', type: 'ogcd', target: 'enemy', range: 320, charges: 2, cd: 15, lock: 0.4, anim: 'attack',
+      desc: 'Cut through the dark to the boss for {d:140} and bind it: a Bind pulses for {d:60} every 4s while it lasts. The cut keeps your Backswing going, and you take 50% less damage for 1s. Two charges.',
+      glow: k => thStage(k, 'bind') === 0,
+      effect(k) {
+        if (!k.env.target({ target: 'enemy', range: MELEE })) k.teleport('dash', { ab: this, d: 150 });
+        k.damage(THRESH.BLINK, { ab: this });
+        thApply(k, 'bind');
+        k.mitigate('self', k.perk('thresher_a4') ? 0.7 : THRESH.BLINK_MIT, 1, { ab: this });
+        if (k.talent('thresher_vanish')) k.mitigate('self', 1, 1.5, { ab: this, kind: 'invuln' });
+        k.g.swingBy = Math.max(k.g.swingBy, k.now + 3.5);
+      },
+      fx: { type: 'slash', color: '#5a8a6a', r: 40, span: 1.1 },
+    },
+    {
+      id: 'wisp', name: 'Spirit Wisp', type: 'ogcd', target: 'self', cd: THRESH.WISP_CD, lock: 0.5, anim: 'cast',
+      label: k => (k.has('wisp') && k.talent('thresher_sacrifice') ? 'Sacrifice' : 'Spirit Wisp'),
+      usable: k => !k.has('wisp') || k.talent('thresher_sacrifice'),
+      desc: 'A wisp rises beside you for 15s and harries the boss, striking for {d:60} every 2.5s and binding it if nothing else has.',
+      glow: k => k.has('wisp') && k.talent('thresher_sacrifice') && thCount(k, 1) + thCount(k, 2) >= 3,
+      effect(k) {
+        if (k.has('wisp')) { thSacrifice(k, this); return; }
+        const wd = k.perk('thresher_w3') ? 20 : THRESH.WISP_DUR;
+        k.buff('wisp', wd); k.g.wispAt = k.now; k.g.wispOn = true;
+        k.dot('wisp', THRESH.WISP_HIT, wd, THRESH.WISP_EVERY, { ab: this });
+        if (k.talent('thresher_sacrifice')) k.cd[this.id] = k.now + 1;
+        k.fx('wisp-summon');
+      },
+      fx: { type: 'aura', color: '#a8f0d0', r: 34, dur: 2 },
+    },
+  ],
+};
+
+// talents that grant a new move (TALENT_ABILITIES, the shared system above)
+TALENT_ABILITIES.thresher_sowing = { cls: 'thresher', ab: {
+  id: 'sowing', replaces: 'gather', icon: 'sowing', name: 'Sowing', type: 'ogcd', target: 'enemy', range: 420, cd: 25, lock: 0.6, anim: 'cast',
+  desc: 'Sow ruin: all four afflictions land on the boss at once, young (any that is ripening is left to ripen), and a cut for {d:100}.',
+  glow: k => thCount(k) <= 1,
+  effect(k) {
+    k.damage(100, { ab: this });
+    for (const id of THRESH.IDS) thApply(k, id);
+    k.fx('sowing');
+  },
+  fx: { type: 'zone', color: '#7fc86a', r: 90, range: 0, dur: 1.5 },
+} };
+TALENT_ABILITIES.thresher_cull = { cls: 'thresher', ab: {
+  id: 'cull', replaces: 'wisp', icon: 'cull', name: 'Cull', type: 'ogcd', target: 'enemy', range: MELEE, cd: 40, lock: 0.6, anim: 'big',
+  desc: 'Take what is owed now: every affliction on the boss pays out as if it were gold, whatever its age, and none is spent. A cut for {d:120} first, then Mark {d:110}, Drain {d:100}, Bind {d:110} and Thread {d:170}.',
+  usable: k => thCount(k) > 0,
+  glow: k => thCount(k) >= 3,
+  effect(k) {
+    const st = {}; for (const id of THRESH.IDS) st[id] = thStage(k, id) ? 2 : 0;
+    const r = thPayout(k, this, st, { base: THRESH.BASE, mult: k.def.reapMult || 1, rotPay: 1, gap: 0.14 });
+    thCharge(k, r);
+    k.fx('cull', { n: r.n });
+  },
+  fx: { type: 'slash', color: '#c8e84a', r: 70, span: 2.6 },
+} };
+
+// Reaper's Gate (T). Fills from Reaps (more for every gold affliction they cash). A window of 8s: you vanish (nothing can touch
+// you), and every Slash is a Gate Strike on a 1s global cooldown that lays the next affliction in turn (Mark, Drain, Bind, Thread);
+// the fifth strike releases all four at full ripeness, a heavy burst, and the cycle starts again.
+const GATE = THRESH.GATE, GATE_ORDER = ['mark', 'drain', 'bind', 'thread'];
+ULTIMATES.thresher = {
+  id: 'reapersgate', name: 'Reaper\'s Gate', slot: 7, type: 'ogcd', ult: true, mode: 'window', target: 'enemy', range: 380, anim: 'big', icon: 'gate',
+  lock: 0.6, dr: 0.3,
+  charge: { rate: 0.4, keep: 0.5 },
+  botOk: k => !!k.env.target({ target: 'enemy', range: 220 }) && thCount(k) >= 1,
+  desc: `Step through the Gate and out of the world for ${GATE.DUR}s: nothing can touch you, and you strike from behind your target. Slash becomes <b>Gate Strike</b> on a ${GATE.GCD}s global cooldown: each one cuts for {d:${GATE.STRIKE}} and lays the next affliction in turn (Mark, Drain, Bind, Thread). ` +
+    `The fifth strike releases all four at full ripeness: {d:${GATE.END}} and every affliction paying at gold, ${Math.round((GATE.MULT - 1) * 100)}% more. Your afflictions are spent (Open Gate keeps them). ` +
+    'You take 30% less damage and can\'t be knocked back while you step through.' +
+    `<div class="it-ult"><span><u>Charge:</u> ${THRESH.U_REAP}% for every Reap, ${THRESH.U_GOLD} more for every gold affliction it cashes (${THRESH.U_OTHER} for the others), and a little on its own while you fight. It never drains; a fall keeps half.</span></div>`,
+  effect(k) {
+    k.mitigate('self', 1, GATE.DUR, { ab: this, kind: 'invuln' });
+    k.teleport('behind', { ab: this });
+    k.buff('gate', GATE.DUR);
+    k.g.gate = 0;
+    k.fx('gate-open');
+  },
+  window: {
+    dur: GATE.DUR,
+    over: {
+      slash: {
+        fxId: 'gatestrike', name: 'Gate Strike', recastGcd: GATE.GCD, anim: 'attack',
+        label: k => (k.g.gate >= 4 ? 'The Fifth' : 'Gate Strike'),
+        desc: `Reaper's Gate: a strike for {d:${GATE.STRIKE}} that lays the next affliction in turn (Mark, Drain, Bind, Thread). The fifth releases all four at full ripeness.`,
+        glow: k => k.g.gate >= 4,
+        effect(k) {
+          const n = k.g.gate | 0;
+          if (n < 4) {
+            k.damage(GATE.STRIKE, { ab: this });
+            const id = GATE_ORDER[n];
+            if (k.g.aff[id] == null || thStage(k, id) === 3) {
+              k.g.aff[id] = k.now;
+              if (id === 'bind') k.g.bindAt = k.now + THRESH.BIND_EVERY;
+              if (id === 'drain') k.g.drainAt = k.now + THRESH.DRAIN_EVERY;
+              if (id === 'mark') k.dot('mark', THRESH.MARK_DOT, THRESH.MARK_DUR, 3, { ab: this });
+              k.fx('afflict', { id });
+            }
+            k.g.gate = n + 1;
+            k.fx('gate-strike', { n });
+            return;
+          }
+          const st = {}; for (const id of THRESH.IDS) st[id] = 2;
+          const r = thPayout(k, this, st, { base: GATE.END, mult: GATE.MULT, rotPay: 1, gap: 0.12 });
+          if (!k.talent('thresher_opengate')) for (const id of THRESH.IDS) k.g.aff[id] = null;
+          k.g.gate = 0;
+          k.fx('gate-release', { n: r.n });
+        },
+      },
+    },
+    onEnd(k) { k.clear('gate'); k.g.gate = 0; k.fx('gate-close'); },
+  },
+};
+
+if (typeof module !== 'undefined') Object.assign(module.exports, { THRESH, thStage, thCount, thApply, thPayout, thReap, thSlash, thAge, thRipen, thY, thR });
+
 // every tank's taunt carrier (TAUNT_CARRY, next to TAUNT): a spec's kit copies it from the base kit (specs.js specKit)
 for (const [cls, id] of Object.entries(TAUNT_CARRY)) if (KITS[cls]) KITS[cls].tauntOn = id;
 // ... and its Ultimate (ULTIMATES, next to TAUNT), copied the same way

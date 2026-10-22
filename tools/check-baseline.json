@@ -70,5 +70,13 @@
   "marionettist": {
     "newbie": 1870,
     "pro": 2295
+  },
+  "gloomsworn": {
+    "newbie": 1051,
+    "pro": 1519
+  },
+  "thresher": {
+    "newbie": 1863,
+    "pro": 2348
   }
 }

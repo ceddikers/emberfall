@@ -13,7 +13,7 @@ const ArenaView = {
     // a round room is drawn at its full size (Volkar's closes in later; the dead ground is drawn over it)
     const ex = ARENA.kind === 'poly' ? ARENA.R : ARENA.kind === 'circle' ? ARENA.full : ARENA.hw;
     const ey = ARENA.kind === 'poly' ? ARENA.R : ARENA.kind === 'circle' ? ARENA.full : ARENA.hh;
-    const M = bossId === 'volkar' ? 260 : bossId === 'hollowking' ? 160 : 120, bx = Math.ceil(ex + M), by = Math.ceil(ey + M);
+    const M = bossId === 'volkar' ? 260 : bossId === 'hollowking' ? 160 : bossId === 'wyrm' ? 200 : 120, bx = Math.ceil(ex + M), by = Math.ceil(ey + M);
     const cv = document.createElement('canvas');
     cv.width = Math.ceil(bx * 2 * scale); cv.height = Math.ceil(by * 2 * scale);
     const c = cv.getContext('2d');
@@ -22,6 +22,10 @@ const ArenaView = {
     if (bossId === 'skitterra') this.buildWebCave(c, bx, by);
     else if (bossId === 'volkar') this.buildPeak(c, bx, by);
     else if (bossId === 'hollowking') this.buildBarrow(c, bx, by);
+    else if (bossId === 'hydra') this.buildTemple(c, bx, by);
+    else if (bossId === 'wyrm') this.buildCrater(c, bx, by);
+    else if (bossId === 'titan') this.buildGlacier(c, bx, by);
+    else if (bossId === 'archmage') this.buildTower(c, bx, by);   // (archmage-art.js)
     else this.buildKitchen(c, bx, by);
     this.floor = cv; this.floorFor = bossId + '@' + scale; this.floorBox = { bx, by };
   },
@@ -137,6 +141,259 @@ const ArenaView = {
       spores: Array.from({ length: 30 }, () => ({ x: (r() * 2 - 1) * inner, y: (r() * 2 - 1) * inner, ph: r() * 9, sp: 8 + r() * 10 })),
       fog: Array.from({ length: 10 }, () => ({ a: r() * TAU, sp: (r() < 0.5 ? -1 : 1) * (0.015 + r() * 0.02), s: 70 + r() * 60 })),
     };
+  },
+
+  // Vhalgrath: the crater of a volcano. A round floor of black basalt, veined with the glow of the lava under it, ringed by
+  // bone-white ribs of older kills; three pits scorched deep into the stone (where he lands); cooling lava beyond the rim.
+  buildCrater(c, bx, by) {
+    const r = rng(77), R = ARENA.full;
+    // a ragged pit
+    const pit = (x, y, rad, seed, fill) => {
+      c.beginPath();
+      for (let i = 0; i <= 16; i++) { const a = i * TAU / 16, w = rad * (0.82 + 0.22 * hash01((i % 16) + seed)); i ? c.lineTo(x + Math.cos(a) * w, y + Math.sin(a) * w * 0.92) : c.moveTo(x + Math.cos(a) * w, y + Math.sin(a) * w * 0.92); }
+      c.closePath(); c.fillStyle = fill; c.fill();
+    };
+    c.fillStyle = '#0b0706'; c.fillRect(-bx, -by, bx * 2, by * 2);
+    // the slope beyond the rim: dark rock, lava creeping in the low places
+    for (let i = 0; i < 90; i++) {
+      const a = r() * TAU, d = R + 30 + r() * Math.max(bx, by), x = Math.cos(a) * d, y = Math.sin(a) * d * 0.95;
+      if (Math.abs(x) > bx - 6 || Math.abs(y) > by - 6) continue;
+      glow(c, x, y, 40 + r() * 90, r() < 0.45 ? '#7a2a0a' : '#1c1210', 0.35 + r() * 0.35);
+    }
+    for (let i = 0; i < 26; i++) {
+      let a = r() * TAU, d = R + 20 + r() * 40, x = Math.cos(a) * d, y = Math.sin(a) * d;
+      c.beginPath(); c.moveTo(x, y);
+      for (let k = 0; k < 7; k++) { a += (r() - 0.5) * 0.35; d += 18 + r() * 26; x = Math.cos(a) * d; y = Math.sin(a) * d; c.lineTo(x, y); }
+      c.strokeStyle = 'rgba(255,100,30,0.3)'; c.lineWidth = 5; c.stroke(); c.strokeStyle = 'rgba(255,190,90,0.5)'; c.lineWidth = 1.6; c.stroke();
+    }
+    for (let i = 0; i < 40; i++) {   // broken rim rock
+      const a = r() * TAU, d = R + 6 + r() * 70, x = Math.cos(a) * d, y = Math.sin(a) * d, s = 18 + r() * 34, pts = [];
+      for (let k = 0; k < 6; k++) { const q = k * TAU / 6 + r() * 0.6; pts.push(x + Math.cos(q) * s * (0.7 + r() * 0.5), y + Math.sin(q) * s * (0.6 + r() * 0.4)); }
+      poly(c, pts, `rgb(${30 + r() * 18 | 0},${24 + r() * 12 | 0},${22 + r() * 10 | 0})`, 'rgba(0,0,0,0.5)', 2);
+    }
+    // bone-white ribs of older kills, curving up out of the rim
+    for (let i = 0; i < 7; i++) {
+      const a = i * TAU / 7 + 0.3 + r() * 0.3, R0 = R + 8, x0 = Math.cos(a) * R0, y0 = Math.sin(a) * R0, nx = Math.cos(a), ny = Math.sin(a);
+      for (let k = 0; k < 4; k++) {
+        const off = (k - 1.5) * 22, bx0 = x0 - ny * off, by0 = y0 + nx * off, len = 60 + r() * 50 - Math.abs(k - 1.5) * 12, side = k < 2 ? 1 : -1;
+        c.beginPath(); c.moveTo(bx0, by0); c.quadraticCurveTo(bx0 + nx * len * 0.9 - ny * 10, by0 + ny * len * 0.9 + nx * 10, bx0 + nx * len * 0.25 - ny * 30 * side, by0 + ny * len * 0.25 + nx * 30 * side);
+        c.lineCap = 'round'; c.strokeStyle = '#0c0807'; c.lineWidth = 11; c.stroke(); c.strokeStyle = '#d9d0bb'; c.lineWidth = 7; c.stroke(); c.strokeStyle = 'rgba(255,255,255,0.35)'; c.lineWidth = 2; c.stroke();
+      }
+    }
+    // the floor
+    c.save();
+    c.beginPath(); c.arc(0, 0, R, 0, TAU); c.clip();
+    const g = c.createRadialGradient(-R * 0.1, -R * 0.15, 40, 0, 0, R);
+    g.addColorStop(0, '#3b302b'); g.addColorStop(0.65, '#2a211e'); g.addColorStop(1, '#1b1311');
+    c.fillStyle = g; c.fillRect(-R, -R, R * 2, R * 2);
+    for (let i = 0; i < 120; i++) {   // basalt plates
+      const a = r() * TAU, d = Math.sqrt(r()) * R, cx = Math.cos(a) * d, cy = Math.sin(a) * d, s = 24 + r() * 46, rot = r() * TAU, pts = [];
+      for (let k = 0; k < 5; k++) { const q = rot + k * TAU / 5 + (r() - 0.5) * 0.5, rr = s * (0.6 + r() * 0.5); pts.push(cx + Math.cos(q) * rr, cy + Math.sin(q) * rr * 0.85); }
+      const v = 36 + r() * 22;
+      poly(c, pts, `rgba(${v + 8 | 0},${v | 0},${v - 2 | 0},${0.28 + r() * 0.25})`, 'rgba(10,6,5,0.45)', 1.5);
+    }
+    for (let i = 0; i < 2400; i++) { const x = (r() * 2 - 1) * R, y = (r() * 2 - 1) * R; circle(c, x, y, 0.5 + r() * 1.2, r() < 0.6 ? `rgba(8,5,4,${0.25 + r() * 0.3})` : `rgba(255,150,70,${0.05 + r() * 0.1})`); }
+    // the glow of the lava under the stone: cracks, each with a hot core
+    for (let i = 0; i < 34; i++) {
+      let x = (r() * 2 - 1) * R * 0.9, y = (r() * 2 - 1) * R * 0.9, a = r() * TAU;
+      c.beginPath(); c.moveTo(x, y);
+      for (let k = 0; k < 6 + r() * 7; k++) {
+        a += (r() - 0.5) * 1.1; x += Math.cos(a) * (12 + r() * 20); y += Math.sin(a) * (12 + r() * 20); c.lineTo(x, y);
+        if (r() < 0.22) { c.moveTo(x, y); c.lineTo(x + Math.cos(a + 1.2) * 18, y + Math.sin(a + 1.2) * 18); c.moveTo(x, y); }
+      }
+      c.lineCap = 'round'; c.lineJoin = 'round';
+      c.strokeStyle = 'rgba(255,80,20,0.22)'; c.lineWidth = 6; c.stroke(); c.strokeStyle = 'rgba(255,150,60,0.55)'; c.lineWidth = 2; c.stroke(); c.strokeStyle = 'rgba(255,230,160,0.4)'; c.lineWidth = 0.8; c.stroke();
+    }
+    // three pits scorched deep into the stone: where he comes down
+    for (const [sx, sy] of [[0, 260], [-225, -130], [225, -130]]) {
+      glow(c, sx, sy, 150, '#6a1c06', 0.45);
+      pit(sx, sy, 96, 7, '#100806'); pit(sx, sy, 74, 19, '#1c0e08');
+      for (let k = 0; k < 9; k++) { const a = k * TAU / 9 + r() * 0.4, d0 = 62 + r() * 10, d1 = 105 + r() * 50; line(c, sx + Math.cos(a) * d0, sy + Math.sin(a) * d0, sx + Math.cos(a) * d1, sy + Math.sin(a) * d1, 'rgba(255,120,40,0.5)', 2); }
+      for (let k = 0; k < 14; k++) { const a = r() * TAU, d = r() * 60; circle(c, sx + Math.cos(a) * d, sy + Math.sin(a) * d, 1.2 + r() * 2, `rgba(255,${120 + r() * 100 | 0},50,${0.4 + r() * 0.4})`); }
+    }
+    // old claw gouges across the middle
+    for (let i = 0; i < 5; i++) { const x = -90 + i * 40 + r() * 10; c.beginPath(); c.moveTo(x, -70); c.quadraticCurveTo(x + 18, 0, x + 6, 80 + r() * 20); c.strokeStyle = 'rgba(6,4,3,0.7)'; c.lineWidth = 5; c.stroke(); c.strokeStyle = 'rgba(255,140,60,0.18)'; c.lineWidth = 1.2; c.stroke(); }
+    c.restore();
+    // the rim catches the glow from below
+    c.beginPath(); c.arc(0, 0, R - 5, 0, TAU); c.strokeStyle = 'rgba(255,110,40,0.2)'; c.lineWidth = 12; c.stroke();
+    c.beginPath(); c.arc(0, 0, R, 0, TAU); c.strokeStyle = 'rgba(0,0,0,0.7)'; c.lineWidth = 3; c.stroke();
+  },
+
+  // Hrimgar: a glacier plateau under the aurora. Twenty sheets of pale ice in a five-by-four mosaic (the host's floor entries
+  // redraw a sheet when it freezes, cracks or sinks: iceSheet), a rim of piled ice, standing stones and drifts beyond it, the
+  // aurora washing green and violet over everything.
+  buildGlacier(c, bx, by) {
+    const r = rng(91), hw = ARENA.hw, hh = ARENA.hh, W = 200;
+    // the night beyond the plateau: deep blue, snow drifts, ridges of far ice
+    const sky = c.createLinearGradient(0, -by, 0, by);
+    sky.addColorStop(0, '#0a1a2c'); sky.addColorStop(0.5, '#08111e'); sky.addColorStop(1, '#050a14');
+    c.fillStyle = sky; c.fillRect(-bx, -by, bx * 2, by * 2);
+    for (let i = 0; i < 70; i++) {
+      const x = (r() * 2 - 1) * bx, y = (r() * 2 - 1) * by;
+      if (Math.abs(x) < hw + 6 && Math.abs(y) < hh + 6) continue;
+      glow(c, x, y, 30 + r() * 80, r() < 0.5 ? '#2a4a6a' : '#1a3048', 0.3 + r() * 0.3);
+    }
+    // aurora over the margin: soft curtains of green and violet
+    for (let k = 0; k < 3; k++) {
+      c.save(); c.globalCompositeOperation = 'lighter';
+      for (let i = 0; i < 26; i++) {
+        const x = -bx + (i / 25) * bx * 2, y = -by * 0.55 + Math.sin(i * 0.55 + k * 1.7) * by * 0.2 + k * by * 0.38;
+        glow(c, x, y, 70 + r() * 40, k === 1 ? '#7a5aff' : '#3affb0', 0.05 + r() * 0.04);
+      }
+      c.restore();
+    }
+    // standing stones round the rim, leaning, rimed
+    for (let i = 0; i < 16; i++) {
+      const side = i % 4, u = ((i / 4) | 0) / 3.2 + r() * 0.05;
+      let x, y;
+      if (side === 0) { x = -hw + u * hw * 2; y = -hh - 28 - r() * 20; } else if (side === 1) { x = hw + 26 + r() * 20; y = -hh + u * hh * 2; }
+      else if (side === 2) { x = hw - u * hw * 2; y = hh + 26 + r() * 20; } else { x = -hw - 26 - r() * 20; y = hh - u * hh * 2; }
+      const s = 14 + r() * 12, lean = (r() - 0.5) * 0.5;
+      ellipse(c, x + 4, y + 8, s * 1.2, s * 0.5, 0, 'rgba(0,0,0,0.4)');
+      poly(c, [x - s * 0.7, y + 4, x - s * 0.5 + lean * s, y - s * 2.2, x + s * 0.1 + lean * s * 1.4, y - s * 2.8, x + s * 0.6 + lean * s, y - s * 2, x + s * 0.8, y + 4], '#3a4a5c', 'rgba(4,8,14,0.8)', 2);
+      poly(c, [x - s * 0.5 + lean * s, y - s * 2.2, x + s * 0.1 + lean * s * 1.4, y - s * 2.8, x + s * 0.2 + lean * s, y - s * 1.7], 'rgba(220,240,255,0.5)');
+    }
+    // the plateau
+    c.save();
+    ARENA.trace(c, 0); c.clip();
+    c.fillStyle = '#9ec4dc'; c.fillRect(-hw, -hh, hw * 2, hh * 2);
+    for (let i = 0; i < 20; i++) {
+      const col = i % 5, row = (i / 5) | 0, x0 = -hw + col * W, y0 = -hh + row * W, rr = rng(i * 17 + 5);
+      // the sheet: pale blue ice, each a little different; light from the upper left
+      const tint = [['#b6d6ea', '#9ec2da'], ['#a9cde4', '#8fb6d2'], ['#bcdcee', '#a2c8de'], ['#a2c6de', '#88b0cc']][(i * 7 + row * 3) % 4];
+      const g = c.createLinearGradient(x0, y0, x0 + W, y0 + W);
+      g.addColorStop(0, tint[0]); g.addColorStop(1, tint[1]);
+      c.fillStyle = g; c.fillRect(x0, y0, W, W);
+      c.save(); c.beginPath(); c.rect(x0, y0, W, W); c.clip();
+      // bubbles and sediment frozen into it, faint
+      for (let k = 0; k < 26; k++) circle(c, x0 + rr() * W, y0 + rr() * W, 0.8 + rr() * 2.6, rr() < 0.5 ? 'rgba(255,255,255,0.22)' : 'rgba(40,80,120,0.16)');
+      // wind-scoured scratches
+      for (let k = 0; k < 9; k++) { const sx = x0 + rr() * W, sy = y0 + rr() * W, a = -0.4 + rr() * 0.3, l = 20 + rr() * 50; line(c, sx, sy, sx + Math.cos(a) * l, sy + Math.sin(a) * l, 'rgba(255,255,255,0.25)', 1); }
+      // deep hairline fractures, white-edged
+      for (let k = 0; k < 3; k++) {
+        let px = x0 + rr() * W, py = y0 + rr() * W, a = rr() * TAU;
+        c.beginPath(); c.moveTo(px, py);
+        for (let s = 0; s < 4; s++) { a += (rr() - 0.5) * 1.1; px += Math.cos(a) * (14 + rr() * 22); py += Math.sin(a) * (14 + rr() * 22); c.lineTo(px, py); }
+        c.strokeStyle = 'rgba(30,70,110,0.28)'; c.lineWidth = 1.6; c.stroke(); c.strokeStyle = 'rgba(255,255,255,0.18)'; c.lineWidth = 0.7; c.stroke();
+      }
+      // a soft lit corner
+      glow(c, x0 + 40, y0 + 36, 70, '#ffffff', 0.1);
+      c.restore();
+      // the seam between sheets: a dark line, a white glint along its upper side
+      c.strokeStyle = 'rgba(12,30,52,0.55)'; c.lineWidth = 3; c.strokeRect(x0 + 1.5, y0 + 1.5, W - 3, W - 3);
+      c.strokeStyle = 'rgba(240,250,255,0.45)'; c.lineWidth = 1.2; c.beginPath(); c.moveTo(x0 + 4, y0 + W - 4); c.lineTo(x0 + 4, y0 + 4); c.lineTo(x0 + W - 4, y0 + 4); c.stroke();
+    }
+    // night: the whole plateau a shade darker, so a frozen (bright) sheet stands out
+    c.fillStyle = 'rgba(8,22,46,0.34)'; c.fillRect(-hw, -hh, hw * 2, hh * 2);
+    // aurora laid over the whole floor: green from one side, violet from the other
+    c.save(); c.globalCompositeOperation = 'lighter';
+    const au = c.createLinearGradient(-hw, -hh, hw, hh);
+    au.addColorStop(0, 'rgba(60,255,170,0.12)'); au.addColorStop(0.5, 'rgba(60,140,255,0.04)'); au.addColorStop(1, 'rgba(150,90,255,0.14)');
+    c.fillStyle = au; c.fillRect(-hw, -hh, hw * 2, hh * 2);
+    c.restore();
+    const v = c.createRadialGradient(0, 0, hh * 0.5, 0, 0, hw * 1.15);
+    v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(4,10,22,0.4)');
+    c.fillStyle = v; c.fillRect(-hw, -hh, hw * 2, hh * 2);
+    c.restore();
+    // the rim: a lip of piled ice with a dark foot
+    ARENA.trace(c, 8); c.lineJoin = 'round'; c.strokeStyle = '#5c86a6'; c.lineWidth = 16; c.stroke();
+    ARENA.trace(c, 13); c.strokeStyle = 'rgba(230,248,255,0.5)'; c.lineWidth = 3; c.stroke();
+    ARENA.trace(c, 0); c.strokeStyle = 'rgba(4,10,20,0.85)'; c.lineWidth = 3; c.stroke();
+    for (let i = 0; i < 120; i++) {
+      const side = (r() * 4) | 0, u = r();
+      const x = side < 2 ? -hw + u * hw * 2 : (side === 2 ? -hw - 8 : hw + 8), y = side < 2 ? (side ? hh : -hh) + (side ? 8 : -8) : -hh + u * hh * 2, s = 4 + r() * 8;
+      poly(c, [x - s, y + s * 0.3, x - s * 0.2, y - s * 0.8, x + s * 0.7, y - s * 0.3, x + s * 0.6, y + s * 0.5], r() < 0.5 ? '#8fb8d4' : '#7ca6c4', 'rgba(8,20,36,0.7)', 1.2);
+    }
+    this.amb = {
+      kind: 'glacier', bx, by,
+      flakes: Array.from({ length: 70 }, () => ({ x: (r() * 2 - 1) * (hw + 80), y: (r() * 2 - 1) * (hh + 80), sp: 14 + r() * 26, dr: 6 + r() * 14, ph: r() * 9, s: 0.8 + r() * 1.6 })),
+      ribbons: Array.from({ length: 5 }, (_, i) => ({ y: -hh - 70 + i * 40, ph: r() * 9, col: i % 2 ? '#8a6aff' : '#3affb0', w: 220 + r() * 160 })),
+    };
+  },
+  // a sheet of the glacier changing: frozen (glassy), cracked (marked), or sunk (black water). Drawn into the room's floor layer.
+  iceSheet(c, fl, r) {
+    const st = fl.st | 0;
+    if (!st) return;
+    const x0 = fl.x - 100, y0 = fl.y - 100, W = 200;
+    c.save(); ARENA.trace(c, 0); c.clip();
+    c.beginPath(); c.rect(x0, y0, W, W); c.clip();
+    if (st === 1) {
+      // thick, polished ice: pale and bright, long reflections, a white rime at the edges
+      const g = c.createLinearGradient(x0, y0, x0 + W, y0 + W);
+      g.addColorStop(0, '#e6f8ff'); g.addColorStop(0.5, '#c4e8f8'); g.addColorStop(1, '#d6f0fc');
+      c.fillStyle = g; c.fillRect(x0, y0, W, W);
+      for (let k = 0; k < 5; k++) { const sx = x0 - 20 + k * 50 + r() * 14; poly(c, [sx, y0, sx + 18, y0, sx + 18 - W * 0.6, y0 + W, sx - W * 0.6, y0 + W], `rgba(255,255,255,${0.12 + r() * 0.2})`); }
+      for (let k = 0; k < 14; k++) { const sx = x0 + r() * W, sy = y0 + r() * W; circle(c, sx, sy, 0.8 + r() * 1.6, 'rgba(255,255,255,0.7)'); }
+      glow(c, x0 + 60, y0 + 50, 80, '#ffffff', 0.35);
+      c.strokeStyle = 'rgba(255,255,255,0.85)'; c.lineWidth = 6; c.strokeRect(x0 + 3, y0 + 3, W - 6, W - 6);
+      c.strokeStyle = 'rgba(60,140,200,0.6)'; c.lineWidth = 1.5; c.strokeRect(x0 + 8, y0 + 8, W - 16, W - 16);
+      for (const [cx, cy, sx, sy] of [[x0, y0, 1, 1], [x0 + W, y0, -1, 1], [x0, y0 + W, 1, -1], [x0 + W, y0 + W, -1, -1]]) {
+        for (let k = 0; k < 5; k++) { const a = (k / 4) * Math.PI / 2; line(c, cx + sx * 6, cy + sy * 6, cx + sx * (6 + Math.cos(a) * 38), cy + sy * (6 + Math.sin(a) * 38), 'rgba(255,255,255,0.7)', 1.4); }
+      }
+    } else if (st === 2) {
+      // marked to go: dark cracks running through it, white at their lips
+      c.fillStyle = 'rgba(10,30,60,0.22)'; c.fillRect(x0, y0, W, W);
+      for (let k = 0; k < 7; k++) {
+        let px = fl.x + (r() - 0.5) * 40, py = fl.y + (r() - 0.5) * 40, a = k * TAU / 7 + r() * 0.5;
+        c.beginPath(); c.moveTo(px, py);
+        for (let s = 0; s < 5; s++) { a += (r() - 0.5) * 0.9; px += Math.cos(a) * (24 + r() * 26); py += Math.sin(a) * (24 + r() * 26); c.lineTo(px, py); }
+        c.lineCap = 'round'; c.lineJoin = 'round';
+        c.strokeStyle = 'rgba(2,10,24,0.9)'; c.lineWidth = 5; c.stroke(); c.strokeStyle = 'rgba(235,248,255,0.8)'; c.lineWidth = 1.4; c.stroke();
+      }
+    } else {
+      // sunk: black water, a few floes, a ragged white lip where the sheet used to be
+      const g = c.createRadialGradient(fl.x, fl.y, 10, fl.x, fl.y, 150);
+      g.addColorStop(0, '#0f2c44'); g.addColorStop(1, '#040c18');
+      c.fillStyle = g; c.fillRect(x0, y0, W, W);
+      for (let k = 0; k < 4; k++) ellipse(c, fl.x + (r() - 0.5) * 80, fl.y + (r() - 0.5) * 80, 24 + k * 18, 8 + k * 5, 0, null, 'rgba(120,190,240,0.18)', 1.2);
+      for (let k = 0; k < 6; k++) { const sx = x0 + 20 + r() * (W - 40), sy = y0 + 20 + r() * (W - 40), s = 6 + r() * 12; poly(c, [sx - s, sy + s * 0.3, sx - s * 0.2, sy - s * 0.7, sx + s * 0.8, sy - s * 0.3, sx + s * 0.6, sy + s * 0.6], '#cfeaff', 'rgba(8,20,40,0.8)', 1.2); }
+      c.beginPath();
+      const jag = (ax, ay, bx2, by2) => { const n = 9; for (let i = 0; i <= n; i++) { const u = i / n, off = i % 2 ? 7 : -3; const dx = bx2 - ax, dy = by2 - ay, L = Math.hypot(dx, dy); c.lineTo(ax + dx * u - dy / L * off, ay + dy * u + dx / L * off); } };
+      c.moveTo(x0, y0); jag(x0, y0, x0 + W, y0); jag(x0 + W, y0, x0 + W, y0 + W); jag(x0 + W, y0 + W, x0, y0 + W); jag(x0, y0 + W, x0, y0);
+      c.strokeStyle = '#eaf6ff'; c.lineWidth = 7; c.lineJoin = 'round'; c.stroke(); c.strokeStyle = 'rgba(8,20,40,0.8)'; c.lineWidth = 2; c.stroke();
+    }
+    c.restore();
+  },
+  // snow drifting across, the aurora breathing over the margin, water shimmering where a sheet has sunk; in the Long Night the
+  // light drains from the plateau and huge shapes loom at its rim
+  glacierLife(ctx, a, t) {
+    const hw = ARENA.hw, hh = ARENA.hh, room = this.liveRoom;
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    for (const b of a.ribbons) {
+      const sway = Math.sin(t * 0.25 + b.ph) * 120;
+      for (let i = 0; i < 6; i++) glow(ctx, sway + (i - 2.5) * b.w * 0.35, b.y + Math.sin(t * 0.6 + b.ph + i) * 12, b.w * 0.3, b.col, 0.045 + 0.02 * Math.sin(t * 0.8 + b.ph + i));
+    }
+    ctx.restore();
+    if (room && room.floor) for (const fl of room.floor) {
+      if (fl.kind !== 'sheet') continue;
+      if (fl.st === 3) {
+        for (let k = 0; k < 3; k++) { const q = (t * 0.5 + k / 3 + fl.i * 0.17) % 1; ellipse(ctx, fl.x + Math.sin(fl.i * 3 + k * 2) * 60, fl.y + Math.cos(fl.i * 5 + k) * 50, 8 + q * 36, 3 + q * 12, 0, null, `rgba(160,210,255,${0.35 * (1 - q)})`, 1.2); }
+      } else if (fl.st === 1) {
+        const q = (t * 0.35 + fl.i * 0.31) % 1;
+        poly(ctx, [fl.x - 100 + q * 260 - 60, fl.y - 100, fl.x - 100 + q * 260 - 40, fl.y - 100, fl.x - 100 + q * 260 - 100, fl.y + 100, fl.x - 100 + q * 260 - 120, fl.y + 100], `rgba(255,255,255,${0.22 * Math.sin(q * Math.PI)})`);
+      }
+    }
+    // the Long Night
+    const ev = room && room.ev && room.ev.night;
+    if (ev) {
+      const k = Math.max(0, Math.min(1, (t - ev.start) / 1.6, (ev.end - t) / 1.6));
+      if (k > 0) {
+        ctx.save(); ctx.fillStyle = `rgba(2,6,16,${0.55 * k})`; ctx.fillRect(-hw - 200, -hh - 200, hw * 2 + 400, hh * 2 + 400);
+        for (let i = 0; i < 5; i++) {
+          const an = i * TAU / 5 + 0.4, d = 1, x = Math.cos(an) * (hw + 120) * d, y = Math.sin(an) * (hh + 120) * d, s = 150 + (i % 3) * 40, lean = Math.sin(t * 0.3 + i) * 12;
+          ctx.globalAlpha = 0.85 * k;
+          poly(ctx, [x - s * 0.5 + lean, y + s * 0.5, x - s * 0.35, y - s * 0.4, x - s * 0.1 + lean, y - s * 1.2, x + s * 0.15 + lean, y - s * 1.3, x + s * 0.4, y - s * 0.3, x + s * 0.55 + lean, y + s * 0.5], '#050a12');
+          glow(ctx, x + lean, y - s * 0.9, 18, '#9ff4ff', 0.5 * k);
+        }
+        ctx.restore();
+      }
+    }
+    // snow
+    for (const f of a.flakes) {
+      const x = ((f.x + t * f.sp * 0.6 + Math.sin(t * 0.7 + f.ph) * f.dr + hw + 80) % (hw * 2 + 160) + (hw * 2 + 160)) % (hw * 2 + 160) - hw - 80;
+      const y = ((f.y + t * f.sp + hh + 80) % (hh * 2 + 160) + (hh * 2 + 160)) % (hh * 2 + 160) - hh - 80;
+      circle(ctx, x, y, f.s, 'rgba(235,245,255,0.55)');
+    }
   },
 
   // Volkar: the summit of a mountain above the storm. A round shelf of slate and granite, scarred by lightning, with
@@ -548,6 +805,9 @@ const ArenaView = {
     else if (a.kind === 'cave') this.caveLife(ctx, a, t);
     else if (a.kind === 'peak') this.peakLife(ctx, a, t);
     else if (a.kind === 'barrow') this.barrowLife(ctx, a, t);
+    else if (a.kind === 'glacier') this.glacierLife(ctx, a, t);
+    else if (a.kind === 'tower') this.towerLife(ctx, a, t);   // (archmage-art.js)
+    else if (a.kind === 'temple') this.templeLife(ctx, a, t);
   },
 
   // candles gutter, the braziers burn grave-green, dust hangs in the air and mist creeps in along the walls.
@@ -910,6 +1170,22 @@ const ArenaView = {
 
   // ------------------------------------------------------------------ boss hitbox ring
   // Front, flanks and rear are marked so positionals can be read at a glance.
+  // A wall (fight.js raiseWall): the boss is sealed at a gate, so a shell of light stands round it with a ring of facets turning slowly.
+  wallShield(ctx, x, y, t, scale = 1.3) {
+    const R = 74 * scale, pulse = 0.85 + 0.15 * Math.sin(t * 3);
+    ctx.save(); ctx.translate(x, y - 6);
+    const g = ctx.createRadialGradient(0, 0, R * 0.55, 0, 0, R * 1.05);
+    g.addColorStop(0, 'rgba(255,214,120,0)'); g.addColorStop(0.8, `rgba(255,214,120,${0.16 * pulse})`); g.addColorStop(1, `rgba(255,240,190,${0.4 * pulse})`);
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, R * 1.05, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = `rgba(255,236,170,${0.85 * pulse})`; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI * 2); ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,214,120,0.5)'; ctx.lineWidth = 1.5;
+    for (let i = 0; i < 6; i++) {
+      const a = t * 0.4 + i * Math.PI / 3;
+      ctx.beginPath(); ctx.moveTo(Math.cos(a) * R * 0.82, Math.sin(a) * R * 0.82); ctx.lineTo(Math.cos(a + 0.5) * R, Math.sin(a + 0.5) * R); ctx.lineTo(Math.cos(a + 1.0) * R * 0.82, Math.sin(a + 1.0) * R * 0.82); ctx.stroke();
+    }
+    ctx.restore();
+  },
+
   drawBossRing(ctx, boss) {
     const r = FIGHT.BOSS_R + 8, f = boss.f;
     circle(ctx, boss.x, boss.y, r, null, 'rgba(255,255,255,0.25)', 1.5);
@@ -933,6 +1209,8 @@ const ArenaView = {
       if (k <= 0) continue;
       const r = p.r * (0.7 + 0.3 * life);
       if (p.tag === 'venom') { this.venomPool(ctx, p, r, k, t); continue; }
+      if (p.tag === 'bloom' || p.tag === 'mire') { this.hydraPool(ctx, p, r, k, t); continue; }
+      if (p.tag === 'ember') { this.emberPool(ctx, p, r, k, t); continue; }
       // hot grease: a glossy brown pool, bubbling; it only burns (flames, an orange glow) once fire has reached it
       const lit = this.puddleLit(p, t);
       if (lit) glow(ctx, p.x, p.y, r * 1.25, '#ff6a2a', 0.18 * k);
@@ -1021,6 +1299,7 @@ const ArenaView = {
       if (z.tag === 'stovefire') { this.stoveFire(ctx, z, t); continue; }
       if (z.tag === 'acid') { this.acidFloor(ctx, z, k, t); continue; }
       if (z.tag === 'writburn') { this.writBurn(ctx, z, t); continue; }
+      if (z.tag === 'lava') { this.moltenFloor(ctx, z, k, t); continue; }
       ctx.save();
       ARENA.trace(ctx, 2); ctx.clip();   // the web stops at the walls, whatever shape they are
       SHAPES.trace(ctx, s);
@@ -1036,6 +1315,41 @@ const ArenaView = {
       for (let i = 0; i < 10; i++) { const a = i * 0.63 + t * 0.05, d = s.r2 + 30 + (i * 37) % Math.max(1, ARENA.inner - s.r2 - 40); circle(ctx, Math.cos(a) * d, Math.sin(a) * d, 2, `rgba(255,255,255,${0.4 + Math.sin(t * 3 + i) * 0.3})`); }
       ctx.restore();
     }
+  },
+
+  // Vhalgrath's molten floor (a breath's cone, the boiling rim): glowing stone, a cracked crust drifting over it, a red rim
+  moltenFloor(ctx, z, k, t) {
+    const s = z.shape, R = ARENA.R;
+    ctx.save();
+    ARENA.trace(ctx, 2); ctx.clip();
+    SHAPES.trace(ctx, s); ctx.save(); ctx.clip();
+    const g = ctx.createRadialGradient(0, 0, 40, 0, 0, R * 1.3);
+    g.addColorStop(0, rgba('#ff9a3a', 0.5 * k)); g.addColorStop(1, rgba('#d43a0a', 0.42 * k));
+    ctx.fillStyle = g; ctx.fillRect(-R * 2, -R * 2, R * 4, R * 4);
+    // the crust: dark plates drifting on it, with the glow showing between
+    for (let i = 0; i < 46; i++) {
+      const x = (hash01(i * 3 + z.id) * 2 - 1) * R + Math.sin(t * 0.3 + i) * 10, y = (hash01(i * 7 + z.id) * 2 - 1) * R + Math.cos(t * 0.27 + i) * 10, w = 22 + hash01(i + 40) * 36;
+      ellipse(ctx, x, y, w, w * 0.6, i, rgba('#2a0e06', 0.55 * k));
+    }
+    for (let i = 0; i < 26; i++) { const x = (hash01(i * 5 + 3 + z.id) * 2 - 1) * R, y = (hash01(i * 11 + z.id) * 2 - 1) * R, q = (t * 0.6 + hash01(i)) % 1; circle(ctx, x, y - q * 18, 2 + q * 3, rgba('#ffd890', 0.7 * (1 - q) * k)); }
+    ctx.restore();
+    SHAPES.trace(ctx, s);
+    ctx.strokeStyle = rgba(BossTells.COL.danger, 0.85 * k); ctx.lineWidth = 2.5; ctx.stroke();   // a lasting hazard: red rim
+    ctx.restore();
+  },
+  // a pool of lava left where a Magma Burst or a Cinder Rain ember fell
+  emberPool(ctx, p, r, k, t) {
+    ctx.save(); ctx.globalAlpha = k;
+    glow(ctx, p.x, p.y, r * 1.4, '#ff6a1a', 0.3);
+    const g = ctx.createRadialGradient(p.x, p.y, r * 0.1, p.x, p.y, r);
+    g.addColorStop(0, '#ffd27a'); g.addColorStop(0.45, '#ff7a22'); g.addColorStop(1, '#8a2208');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    for (let i = 0; i <= 18; i++) { const a = i * TAU / 18, w = 1 + Math.sin(a * 3 + p.id) * 0.08 + Math.sin(a * 5 + t * 1.6) * 0.04, x = p.x + Math.cos(a) * r * w, y = p.y + Math.sin(a) * r * w; i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = rgba(BossTells.COL.danger, 0.85); ctx.lineWidth = 2.5; ctx.stroke();
+    for (let i = 0; i < 4; i++) { const q = (t * 0.7 + i / 4 + p.id * 0.13) % 1, a = i * 1.9 + p.id; circle(ctx, p.x + Math.cos(a) * r * 0.5, p.y + Math.sin(a) * r * 0.5, 2 + q * 5, null, `rgba(255,235,170,${0.6 * (1 - q)})`, 1.5); }
+    ctx.restore();
   },
 
   // the silk Skitterra drags behind her on a Fang Rush (Hard): a sticky strip of tangled threads along her path
@@ -1141,6 +1455,7 @@ const ArenaView = {
     const ok = th.kind === 'long' ? d >= th.len : d <= th.len;
     this.tetherSeen(th, a, b, t, ok);
     if (th.tag === 'bind') return this.graveChain(ctx, a, b, th, t, d, ok);
+    if (String(th.tag).startsWith('rune:')) return this.runeLink(ctx, a, b, th, t);   // Azerath's Rune Pair (archmage-art.js)
     const color = !hard ? '#f0eaff' : th.kind === 'long' ? '#6dff7a' : '#ffe6a8';
     const w = th.kind === 'short' ? 6 : 3;
     const left = Math.max(0, th.end - t), p = 1 - left / Math.max(0.1, th.end - th.start);
@@ -1485,6 +1800,7 @@ const ArenaView = {
     else if (fl.kind === 'scorch') { glow(c, fl.x, fl.y, fl.r, '#140a04', 0.6); }
     else if (fl.kind === 'thread') this.webThread(c, fl);
     else if (fl.kind === 'pit') this.webPit(c, fl);
+    else if (fl.kind === 'sheet') this.iceSheet(c, fl, r);
   },
   // Skitterra's Spin: a thick strand of silk strung pillar to pillar, low across the floor (crossing it stings)
   webThread(c, fl) {
@@ -1661,6 +1977,7 @@ const ArenaView = {
     if (dr && t < dr.end + 0.4) this.drainsBackUp(ctx, dr, t);
     const ti = room.ev.tithe;
     if (ti && t < ti.start + 2.2) this.titheWave(ctx, ti, t, v && v.boss);
+    if (room.ev.flood || room.ev.hheart) this.hydraRoom(ctx, room, t, v);
   },
   // the kitchen's drain grates (the floor's: a big one in the middle, two smaller), where Clogged Drains spills
   drainGrates() { return [[0, 0, 34], [-ARENA.hw * 0.55, ARENA.hh * 0.35, 20], [ARENA.hw * 0.55, ARENA.hh * 0.35, 20]]; },
@@ -1825,6 +2142,7 @@ const ArenaView = {
     switch (pr.kind) {
       case 'cask': this.cask(ctx, pr, last, t); break;
       case 'pillar': this.rockPillar(ctx, pr, last, worn, t); break;
+      case 'column': this.templeColumn(ctx, pr, t); break;
       case 'brazier': this.brazier(ctx, pr, t, room); break;
       case 'lid': this.coffinLid(ctx, pr, last); break;
       case 'masonry': this.masonry(ctx, pr); break;
@@ -1890,8 +2208,10 @@ const ArenaView = {
   },
   // the Hollow King's braziers: an iron bowl on three legs. Lit, grave-green fire; snuffed, cold embers and smoke
   brazier(ctx, pr, t, room) {
-    const { x, y, r } = pr, lit = pr.state === 1;
-    if (lit) glow(ctx, x, y - 10, 90, '#3aff7a', 0.28);
+    // (state 3: a warm hearth, orange flame: Hrimgar's braziers, which cure the cold)
+    const { x, y, r } = pr, warm = pr.state === 3, lit = pr.state === 1 || warm;
+    if (lit) glow(ctx, x, y - 10, warm ? 125 : 90, warm ? '#ff9a3a' : '#3aff7a', warm ? 0.34 : 0.28);
+    if (warm) ellipse(ctx, x, y, 125, 125, 0, null, 'rgba(255,170,90,0.2)', 1.5);
     ellipse(ctx, x + 5, y + 8, r * 1.1, r * 0.5, 0, 'rgba(0,0,0,0.5)');
     for (const dx of [-0.6, 0, 0.6]) line(ctx, x + dx * r * 0.6, y - 10, x + dx * r, y + 8, '#1c1f22', 4);
     poly(ctx, [x - r, y - 22, x + r, y - 22, x + r * 0.62, y - 6, x - r * 0.62, y - 6], '#2f3337', OUT, 2.5);
@@ -1901,10 +2221,10 @@ const ArenaView = {
       for (let i = 0; i < 6; i++) {
         const q = (t * 1.4 + i / 6 + pr.id * 0.1) % 1;
         ctx.save(); ctx.globalAlpha *= (1 - q);
-        ellipse(ctx, x + Math.sin(t * 3 + i * 2) * 7, y - 26 - q * 40, 8 * (1 - q * 0.6), 13 * (1 - q * 0.5), 0, i % 2 ? '#7affa8' : '#3adf7a');
+        ellipse(ctx, x + Math.sin(t * 3 + i * 2) * 7, y - 26 - q * 40, 8 * (1 - q * 0.6), 13 * (1 - q * 0.5), 0, warm ? (i % 2 ? '#ffd27a' : '#ff7a22') : (i % 2 ? '#7affa8' : '#3adf7a'));
         ctx.restore();
       }
-      ellipse(ctx, x, y - 24, r * 0.6, 4, 0, '#d8ffe0');
+      ellipse(ctx, x, y - 24, r * 0.6, 4, 0, warm ? '#fff0c8' : '#d8ffe0');
     } else {
       for (let i = 0; i < 5; i++) circle(ctx, x + (i - 2) * 6, y - 23, 2.2, i % 2 ? '#5a2a1a' : '#8a3a1a');
       for (let i = 0; i < 3; i++) { const q = (t * 0.5 + i / 3 + pr.id * 0.2) % 1; circle(ctx, x + Math.sin(t + i) * 6, y - 30 - q * 46, 5 + q * 10, `rgba(150,160,155,${0.25 * (1 - q)})`); }

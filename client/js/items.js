@@ -186,6 +186,30 @@ Object.assign(ITEM_PERKS, {
   marionettist_a4: { ab: 'pirouette', text: 'Nothing can touch the Doll for 3s after Pirouette instead of 1.5s.' },
 });
 
+// ---------------------------------------------------------------- Gloomsworn (tank, class 18)
+// Weapon shape: 'duskblade' (a black greatsword with a violet edge). Placeholder item art until the painted set is in.
+CLASS_MAIN.gloomsworn = 'phys';
+CLASS_GEAR.gloomsworn = { wtype: 'duskblade', w: ["Recruit's Greatsword", 'Carving-Hall Greatsword', 'Silkcleaver Greatsword', 'Stormbled Greatsword', 'Greatsword of the Unsetting Vigil'], a: ['Scullery-Night Plate', 'Webwatch Plate', 'Stormvigil Plate', 'Plate of the Hollow Watch'] };
+Object.assign(ITEM_PERKS, {
+  gloomsworn_w1: { ab: 'rend', text: 'Every hit you land fills 10 Gloom instead of 8.' },
+  gloomsworn_a2: { ab: 'strike', text: 'The barrier of Gloom Strike is 50% stronger.' },
+  gloomsworn_w2: { ab: 'shade', text: 'Shade Step gives three echoes instead of two.' },
+  gloomsworn_w3: { ab: 'pall', text: 'Black Pall lasts 8s instead of 6s.' },
+  gloomsworn_a4: { ab: 'mantle', text: 'Black Mantle takes 50% off instead of 40%.' },
+});
+
+// ---------------------------------------------------------------- Thresher (damage, class 19)
+// Weapon shape: 'scythe' (a long snath, a green-black blade). Placeholder item art until the painted set is in.
+CLASS_MAIN.thresher = 'phys';
+CLASS_GEAR.thresher = { wtype: 'scythe', w: ["Recruit's Sickle", 'Carving-Hall Scythe', 'Silkcleaver Scythe', 'Stormbled Scythe', 'Scythe of the Last Harvest'], a: ['Scullery-Night Leathers', 'Webwatch Leathers', 'Stormvigil Leathers', 'Leathers of the Hollow Harvest'] };
+Object.assign(ITEM_PERKS, {
+  thresher_w1: { ab: 'slash', text: 'A Backswing cuts for 50% more.' },
+  thresher_a2: { ab: 'reap', text: 'A rotten affliction pays 80% instead of 65%.' },
+  thresher_w2: { ab: 'hook', text: 'Hook ages the afflictions by 2.5s instead of 1.5s.' },
+  thresher_w3: { ab: 'wisp', text: 'Spirit Wisp lasts 20s instead of 15s.' },
+  thresher_a4: { ab: 'blink', text: 'Gloam Blink takes 70% off for 1s instead of 50%.' },
+});
+
 // ---------------------------------------------------------------- item effects
 // Effects are data. The combat engine runs them in your own kit (Kit.itemHook / Kit.fxMod in engine.js), like the
 // enhancements; the host only ever sees the ordinary combat events they cause. An effect is either

@@ -2,7 +2,7 @@
 
 Every spoken line in the game, for recording with an AI voice tool. **Generated** from `client/js/voice-lines.js` by `node tools/audio/voice-manifest.js --doc`: change a line there, then regenerate this page, so the game and the script never drift apart.
 
-**563 files** (442 hero, 121 boss), about **18.9 minutes** of audio in all. The recommended minimum set is **80 files**, about 3.2 minutes.
+**615 files** (494 hero, 121 boss), about **20.8 minutes** of audio in all. The recommended minimum set is **80 files**, about 3.2 minutes.
 
 ## How to record and deliver
 
@@ -53,12 +53,14 @@ The move and select lines of four favourites (Bastion, Ranger, Pyromancer, Cleri
 | Oathbroker | 26 | 46 s |
 | Ironpalm | 26 | 50 s |
 | Threadweaver | 26 | 47 s |
+| Gloomsworn | 26 | 62 s |
 | Marionettist | 26 | 49 s |
+| Thresher | 26 | 51 s |
 | Grubnak | 38 | 82 s |
 | Queen Skitterra | 30 | 73 s |
 | Volkar | 24 | 52 s |
 | The Hollow King | 29 | 89 s |
-| **All** | **563** | **18.9 min** |
+| **All** | **615** | **20.8 min** |
 
 ## Bosses
 
@@ -841,6 +843,44 @@ The move and select lines of four favourites (Bastion, Ranger, Pyromancer, Cleri
 | `hero-threadweaver-victory-1.ogg` | Neatly finished. | *Victory (after a boss falls)* · satisfied, a little tired |
 | `hero-threadweaver-victory-2.ogg` | Snip. Done. | satisfied, a little tired |
 
+### Gloomsworn
+
+**Voice:** weary, steady, protective. A knight who has died once already and stayed at his post. A low, even voice with something empty behind it.
+
+- **Age:** forties
+- **Accent:** low, level, tired
+- **Pacing:** slow, deliberate, hollow-voiced
+- **Device-speech fallback:** pitch 0.7, rate 0.9
+
+| File | Line | Delivery |
+|---|---|---|
+| `hero-gloomsworn-move-1.ogg` | I walk the line. | *Move (told to go somewhere)* · brisk acknowledgement |
+| `hero-gloomsworn-move-2.ogg` | The watch moves. | brisk acknowledgement |
+| `hero-gloomsworn-move-3.ogg` | Behind me. Quickly. | brisk acknowledgement |
+| `hero-gloomsworn-move-4.ogg` | I have been here before. | brisk acknowledgement |
+| `hero-gloomsworn-move-5.ogg` | Still standing. Going. | brisk acknowledgement |
+| `hero-gloomsworn-move-6.ogg` | Bring it to me. | brisk acknowledgement |
+| `hero-gloomsworn-move-7.ogg` | I will not be long. | brisk acknowledgement |
+| `hero-gloomsworn-move-8.ogg` | The debt can wait. | brisk acknowledgement |
+| `hero-gloomsworn-select-1.ogg` | The watch is kept. | *Select (clicked on)* · attentive, in character |
+| `hero-gloomsworn-select-2.ogg` | Gloomsworn. I hold. | attentive, in character |
+| `hero-gloomsworn-select-3.ogg` | Who needs guarding? | attentive, in character |
+| `hero-gloomsworn-select-4.ogg` | I died once. It did not take. | attentive, in character |
+| `hero-gloomsworn-down-1.ogg` | The debt... is paid... | *Down (falls in battle)* · pained, fading out |
+| `hero-gloomsworn-down-2.ogg` | Relieve... the watch... | pained, fading out |
+| `hero-gloomsworn-down-3.ogg` | Again... so soon... | pained, fading out |
+| `hero-gloomsworn-revive-1.ogg` | Not yet. Not yet. | *Revived* · a breath in, relieved |
+| `hero-gloomsworn-revive-2.ogg` | The dark gave me back. | a breath in, relieved |
+| `hero-gloomsworn-revive-3.ogg` | I am still owed a post. | a breath in, relieved |
+| `hero-gloomsworn-low-1.ogg` | Hollow! Heal me, now! | *Low health* · urgent, strained |
+| `hero-gloomsworn-low-2.ogg` | The debt is rising! | urgent, strained |
+| `hero-gloomsworn-low-3.ogg` | Heal me! I am running out of self! | urgent, strained |
+| `hero-gloomsworn-ult-1.ogg` | Eclipse of the Vigil. | *Ultimate (shouted as it fires)* · shouted, full voice |
+| `hero-gloomsworn-ult-2.ogg` | Let the dark pour out. | shouted, full voice |
+| `hero-gloomsworn-ult-3.ogg` | Stand in my shadow! | shouted, full voice |
+| `hero-gloomsworn-victory-1.ogg` | The watch is relieved. | *Victory (after a boss falls)* · satisfied, a little tired |
+| `hero-gloomsworn-victory-2.ogg` | Dawn. I remember dawn. | satisfied, a little tired |
+
 ### Marionettist
 
 **Voice:** theatrical, eerie, playful. A puppeteer who speaks for two: themself and the Doll. Androgynous, unsettlingly sweet, like a stage host in an empty theatre.
@@ -878,5 +918,43 @@ The move and select lines of four favourites (Bastion, Ranger, Pyromancer, Cleri
 | `hero-marionettist-ult-3.ogg` | The final act! | shouted, full voice |
 | `hero-marionettist-victory-1.ogg` | Bravo. Bravo. | *Victory (after a boss falls)* · slow clap in the voice |
 | `hero-marionettist-victory-2.ogg` | And... scene. | satisfied, a little tired |
+
+### Thresher
+
+**Voice:** cheerful, patient, faintly unnerving. A farmer who is also the one who digs the graves, and sees no difference between the two jobs. Warm, chatty, a low fond laugh now and then; she is never cruel and never in a hurry, which is the worst of it.
+
+- **Age:** thirties
+- **Accent:** soft, rural, unhurried
+- **Pacing:** easy, patient, a pause before the word that matters
+- **Device-speech fallback:** pitch 1, rate 0.95
+
+| File | Line | Delivery |
+|---|---|---|
+| `hero-thresher-move-1.ogg` | Mind the furrows. | *Move (told to go somewhere)* · brisk acknowledgement |
+| `hero-thresher-move-2.ogg` | Walking, walking. | brisk acknowledgement |
+| `hero-thresher-move-3.ogg` | Lovely day for it. | brisk acknowledgement |
+| `hero-thresher-move-4.ogg` | Plenty of time. | brisk acknowledgement |
+| `hero-thresher-move-5.ogg` | Another row. | brisk acknowledgement |
+| `hero-thresher-move-6.ogg` | Soft ground, this. | brisk acknowledgement |
+| `hero-thresher-move-7.ogg` | Just tilling. | brisk acknowledgement |
+| `hero-thresher-move-8.ogg` | Round the headland. | brisk acknowledgement |
+| `hero-thresher-select-1.ogg` | Morning! Thresher. | *Select (clicked on)* · attentive, in character |
+| `hero-thresher-select-2.ogg` | Something here is ripening. | attentive, in character |
+| `hero-thresher-select-3.ogg` | I do like a fresh field. | attentive, in character |
+| `hero-thresher-select-4.ogg` | Spade is in the cart. | attentive, in character |
+| `hero-thresher-down-1.ogg` | Oh... planted me... | *Down (falls in battle)* · pained, fading out |
+| `hero-thresher-down-2.ogg` | Cut... down... early... | pained, fading out |
+| `hero-thresher-down-3.ogg` | Lovely... soil... | pained, fading out |
+| `hero-thresher-revive-1.ogg` | Up again, like wheat. | *Revived* · a breath in, relieved |
+| `hero-thresher-revive-2.ogg` | Not in the ground yet. | a breath in, relieved |
+| `hero-thresher-revive-3.ogg` | Ha! Wrong season. | a breath in, relieved |
+| `hero-thresher-low-1.ogg` | I am going soft! | *Low health* · urgent, strained |
+| `hero-thresher-low-2.ogg` | Mend me, I am wilting! | urgent, strained |
+| `hero-thresher-low-3.ogg` | Frost! It is frost! | urgent, strained |
+| `hero-thresher-ult-1.ogg` | Open the gate. | *Ultimate (shouted as it fires)* · shouted, full voice |
+| `hero-thresher-ult-2.ogg` | All at once, then! | shouted, full voice |
+| `hero-thresher-ult-3.ogg` | Harvest time! | shouted, full voice |
+| `hero-thresher-victory-1.ogg` | Look at that yield. | *Victory (after a boss falls)* · satisfied, a little tired |
+| `hero-thresher-victory-2.ogg` | Everything ripens. Everything. | satisfied, a little tired |
 
 ★ = in the recommended minimum set.

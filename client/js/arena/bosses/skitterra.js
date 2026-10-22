@@ -32,6 +32,7 @@ const SKITTERRA = {
   enrageName: 'Devour',
   vuln: 0.5,
   arena: { theme: 'webcave' },
+  gates: [0.7, 0.28],   // where the acts change (ticks on the boss bar; fight.js course)
   // the eight pillars the web hangs from, one toward each corner of the cave
   room(f) {
     for (let i = 0; i < 8; i++) {

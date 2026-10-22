@@ -604,6 +604,11 @@ Shared rules for every fight:
   - **Hard enrage:** one named cast, set so a party playing cleanly has about a minute of slack.
   - **Party size:** the timeline is the same for 1 to 4 players; plates, stacks and spreads count the living. Boss HP scaling is unchanged for now (42/62/82/100%).
   - `npm run check` lints every rebuilt boss ("Grubnak's timeline"): no `f.loop`, no hidden telegraph, every step named, nothing avoidable shown for under 1.2 s, no more than 16 s between named steps, a raidwide every 150 s and a tankbuster every 180 s at most, the feed always three deep, and the script 8 to 10 minutes long when each course ends as its sets do.
+  - **Set 2 systems** (October 2026, `docs/plans/2026-10-set-2-bosses.md`; the set 1 fights use only the ticks; set 2 opts in per boss). The full contract is in the header comment above `course()` in `fight.js`.
+    - **Visible HP gates.** Every `until` is a tick on the boss bar. A boss lists them up front (`def.gates: [0.75, 0.5, ...]`, numbers or `{ f, push, wall }`) so the acts show from the pull; any gate a course lays out that isn't listed is added then. The host sends them (`fb.g`) when they change and every 3 s.
+    - **Push.** `push: true` on a course (or `def.push`): the moment the boss reaches the gate, the act's remaining steps and closing passes are cut and the next act begins at once, instead of waiting for the next set seam. Telegraphs already on the floor still resolve; follow-ups laid with `f.after` die with the act, so a move that must finish lays them with `afterKeep`. A party that is behind still gets the closing passes, up to the gate.
+    - **Wall.** `wall: { label, run(f), until: 'resolved' | fn, timeout }` on a course with an `until`. From the act's start the boss cannot be taken below the gate (every damage path is clamped there). At the gate it is sealed: a shield of light drawn round it, a gold notch on the bar's gate tick that lights, and a pip with the label under the bar. The act's remaining steps are cut and `run(f)` lays out the mechanic that breaks the seal, which calls `f.wallDown()` (or `fn(f)` returns true; `timeout`, 45 s by default, opens it anyway). Then the act ends as usual. Practice skips a wall like any passed-over course.
+    - The lint (`check.js`) counts named steps laid with `afterKeep` too, so a wall's own mechanic must keep the upcoming-moves feed at three names until it falls (the last two named in the same tick).
 - **Every boss has its own room shape** (`ARENA_DEFS` in `client/js/arena/shapes.js`). The shape fits the theme and the mechanics: Grubnak's kitchen is a long rectangle (1040 × 720, rounded corners; shrunk from 1240 × 840 in October 2026 because the room felt too big, with spawns, plates, Flambé stripes, Boil Over falloff, Belly Flop throw and cask landings retuned to match), Skitterra's web is an octagon hung between eight rock pillars, Volkar's summit is a circle whose electrified edge closes in during phase 2 (on Hard it breaks away a wedge at a time instead), and any boss without its own shape gets a circle. The walls are walls: you're never knocked off an edge, except where Volkar's summit has broken away on Hard (a fall). Wall clamps, bot planning, the camera, mechanics that start at the wall (Rolling Meatballs, Venom Mist) and telegraph clipping all read the shape, so a new boss only needs a new entry.
 - **The room has things in it** (October 2026, `docs/plans/2026-10-arena-mechanics.md`). Every boss's room holds **props** the host owns (`PROPS` in `shapes.js`, `addProp` / `hitProp` / `breakProp` in `fight.js`): casks, rock pillars, braziers, coffin lids and fallen masonry, standing stones, boulders.
   - **Solid:** nobody walks through one (players, bots, adds and the boss collide and steer round them), and a throw stops at one.
@@ -913,6 +918,93 @@ Merges: "Last Ember" (one light left in the dark) is the Long Night's lantern ra
 - **Hard, Bastion / Cleric / Ranger / Pyromancer:** the bots reach phase 3 in most runs; 2 of 8 killed him during the Moonset cast, the rest wiped at 1–34%.
 - Every Doom in every run was cured.
 - **With the braziers and lids** (October 2026, six seeds each): Normal 6 of 6 for all three line-ups (5:52–6:26); Hard (base specs) 0 of 6, reaching 5–40% (three reached the Moonset).
+### Boss V: Vhalgrath, the Ember Wyrm, Tyrant of the Cinder Peaks (set 2, built 2026-10-22, playable on Normal and Hard)
+
+*The first boss of set 2 (`docs/plans/2026-10-set-2-bosses.md`). Script: `client/js/arena/bosses/wyrm.js`; room: a 560-radius crater (`ARENA_DEFS.wyrm`, `ArenaView.buildCrater`); journal: `client/js/journal/wyrm.js`.*
+
+**Shape: the hunter in the air. Question: where is it going to land?** Four acts on HP gates, all pushed (`push: true`), one wall at the end.
+
+- **Ground.** He walks after his tank. Rending Claws (tankbuster, a cone), Tail Lash (the cone *behind* him), Ember Breath (a cone at a random hero that follows them until a second before it goes; the floor in it, from 190 out, is molten for 20 s), Magma Burst (a circle on every hero but the tank, each leaving a pool), Cinder Feast (a stack on a random hero), Tyrant's Roar (raidwide). Hard shuffles the middle sets of each ground act per pull.
+- **Flight.** Take Flight (a gust; he is out of reach until he lands). Dragonfall draws a line of embers from the rim to one of the **three crater spots** (scorched pits at south, north-west and north-east, drawn into the floor) and a ring on the pit he has picked; he flies the line and lands in the ring. The pit and the side he comes from are random each time, shown 4.6 s ahead (3.9 s Hard). The line and the ring are one hit (a shared `group`). Twin Pass: two lines at once, the first only a pass-over, the second landing; the second shows 3.5 s ahead of its landing.
+- **The Roost** (the seam, opening the third act). He perches on the rim for 12 s and shakes burning scales onto random tiles (a volley every 2 s: three tiles, one under a random hero) while two ember whelps harry the party; any whelp left alive when he comes down detonates (a circle shown 2.2 s). Then **the Crater Boils**: the ring of floor from 465 out (430 Hard) is molten for the rest of the fight.
+- **The Ember Heart (the wall).** At 10% he is sealed (`wall`: label "Ember Heart"). Heart Burn, twice (Hard three times): scorch marks bloom at the three crater spots one after another, 2 s apart; the last one marks the island. The floor-wide fire (a donut: everything but a hole 235 across, smaller on later waves, 195 on Hard's third) is shown 3.6 s before it lands, so the island is the unpainted hole, and a hero can work it out from the first two marks. Between the waves: a Roar as the last fire lands, then a buster in the same tick as the seal opens. Hard adds a Heart Flare in the middle.
+- **Last Ember.** The Heart closes; the last 10% is Roar, Twin Breath, claws, Magma Burst, tail, then closing passes (+8% a pass) until he falls or **Ashfall** lands (10:20 Normal, 10:30 Hard).
+- **Hard** (casts 15% faster, 25% more damage, and three new moves): **Wingbeat** (every dive: the wings shove everyone within 235 of the flight line away from it, a wall slam if they hit the rim; named on the cast frame as it goes), **Cinder Rain** (ten embers across the crater, each a circle and a small pool), **Heart Flare** (a stack on a random hero, then a spread on everyone as it lands).
+- **Pools and molten floor give a second's grace** before they first burn, so a hero standing where one appears can step out of it.
+
+| | Normal | Hard |
+|---|---|---|
+| HP | 3.45M | 4.1M |
+| Gates | 75% / 50% / 24%, the wall at 10% | the same |
+| Script (scripted length) | 9:12 | 9:57 |
+| Acts (nominal ends) | 1:57 / 3:54 / 6:00 / 8:00, the Heart to 8:25 | 2:07 / 4:13 / 6:38 / 8:38, the Heart to 9:12 |
+| Enrage | Ashfall, lands 10:20 | lands 10:30 |
+
+**Bot results** (Bastion / Cleric / Ranger / Pyromancer, `tools/bot-raid.js`; 30–60 seeded runs each): Normal at fresh gear 60 of 60 (kill 8:13 on average), mid 28 of 30, full 20 of 20; the `check.js` line-ups at base gear 19 of 30 and 13 of 30. Hard at mid gear 32 of 60 (53%, kill 9:41 on average), fresh 13 of 30, full 28 of 30 (kill 6:57), base 0 of 20. A kill comes earlier than the script when the party is ahead of the gates (pushes cut the rest of an act).
+### Boss VI: Hrimgar, the Frost Titan, Warden of the White Reach (set 2, built 2026-10-23, playable on Normal and Hard)
+
+*The second boss of set 2 (`docs/plans/2026-10-set-2-bosses.md`). Script: `client/js/arena/bosses/titan.js`; room: a 1000 x 800 glacier plateau (`ARENA_DEFS.titan`, `ArenaView.buildGlacier`); journal: `client/js/journal/titan.js`. Opens after Vhalgrath falls.*
+
+**Shape: the slow giant, and the ground itself. Question: what will the floor do?** Four acts on HP gates (74 / 48 / 22%, all pushed), one wall at 10%.
+
+- **The sheets.** The floor is twenty ice sheets, five by four, 200 across (floor entries `kind: 'sheet'`, `st` 0 plain / 1 frozen / 2 cracked / 3 water; the script changes them and bumps `floorVer`). Where Hrimgar strikes (Rime Slam: the sheet under the circle; Fault Line: up to three sheets along the line) a sheet is marked: it is painted red as a normal telegraph for the whole warning, with cracks drawn in, and sinks when it lands. A sunk sheet is black water: a burn zone (bots read it as danger) plus a brief slow, until the Whiteout or 32 s on. A **frozen** sheet cannot crack (his blows glance off it) but is **slick**: entering it from other ground shoves you 105 along your heading (a `kb` from the host's ticker; bots take it through the same message). Winter's Grasp freezes the sheet under two random heroes (three on Hard) and thaws the old frost, so frost is always on a few sheets.
+- **Braziers.** Four stand where four sheets meet (prop kind `brazier`, state 3, orange). **Frostbite:** a random non-tank is chilled (debuff `frostbite`, slowed) and a blue stack follows them; standing within 125 of a brazier for a moment cures them and takes the stack with it; otherwise the stack lands, and if they are still chilled at the end they are frozen solid (damage, rooted).
+- **Acts.** The Thaw (Howl, Glacial Fist, Rime Slam, Fault Line, Icefall, Titan's Sweep) / the Freeze (Winter's Grasp, Frostbite, Whiteout, Twin Slam) / the Crack, opened by **the Long Night** (the seam: the aurora dims, four huge slow arcs and the frost called twice, so the marked heroes choose where the ice will be) / the Avalanche (Winter's Grasp, then **Avalanche**: five lanes, one per column of sheets; every sheet in a lane that is not frozen is painted red, frozen ones are left clear, the lanes land one after another).
+- **The wall: The Plateau Tips.** At 10% he is sealed; the Grasp and the Avalanche run twice (Hard: three times), then a Howl and a Fist as the seal falls. Last stretch until he falls or **Endless Winter** lands (10:08 Normal, 9:58 Hard).
+- **Hard** (casts 15% faster, 25% more damage, three new moves): **Glacial Stomp** (a stomp and two rings of shards: step into the quiet at his feet once the stomp has landed), **Breath of Winter** (a cone that freezes the sheets it crosses, then breaks them), **Titan's Grip** (a ring on a hero; whoever it catches is held, a stack frees them or they are crushed). Hard also shuffles the middle sets of each act per pull.
+- **Pacing.** His ordinary swings stop while he winds up a heavy move. Autos 1650 / 1800.
+
+| | Normal | Hard |
+|---|---|---|
+| HP | 3.5M | 4.4M |
+| Gates | 74 / 48 / 22%, the wall at 10% | the same |
+| Script (scripted length) | 8:25 | 8:25 |
+| Enrage | Endless Winter, lands 10:08 | lands 9:58 |
+
+### Boss VII: Azerath, the Sunken Archmage, Master of the Seven Circles (set 2, built 2026-10-23, playable on Normal and Hard)
+
+*Script: `client/js/arena/bosses/archmage.js` (with the shared helper `AZ`); art: `client/js/archmage-art.js` (body, the four elementals, every tell and impact, the tower floor and its life, the rune link); room: a 540-radius round floor (`ARENA_DEFS.archmage`, `ArenaView.buildTower`); journal: `client/js/journal/archmage.js`.*
+
+**Shape: the rotating lab. Question: which element is it, and who holds the rune?** Five acts on HP gates (78% / 55% / 32% / 14%), all pushed, no wall. He floats in the middle of the room (`anchor`) and never walks. The floor is seven circles: the middle one (a seven-pointed star), the two rings round it (the Pyre Rings' borders at 170 and 350) and four sigils at 270 from the middle (Fire north, Frost east, Lightning south, the Void west).
+
+- **The Rune Pair (the set piece).** Rune Mark puts runes of two different elements on two random non-tank heroes (a rune glyph over each head, a link between them). The spell named next in the feed is of one of the two elements and decides **together or apart**. *Cinder Rune* (fire): a spread circle on each bearer; keep apart, or when they are within 250 at the lock a reaction circle (their two elements' colours, 165 across) is laid at their midpoint 1.35 s ahead. *Rime Rune* (frost): one blue stack halfway between the bearers (a `azlink` shape that follows both until 1.2 s before). *Storm Rune* (lightning): a bolt (a rect) from one bearer to the other, cut short at both ends, so bearers standing together make it harmless. *Rift Rune* (void): a donut (hole 90, outer 255) round each bearer plus a small unavoidable hit on them; the same reaction as fire. A pair that stood as asked counts a soak (points) for both. `f.runePair` is read by the bots (`view.runes`).
+- **Act I Fire:** Arcane Burst, Arcane Lance (buster), Pyre Rings (two of the three floor rings burn 2.8 s apart; the third is never painted), Cinder Rune. **Act II Frost:** Ice Lances (lines out of him through two heroes, three on Hard, following them until 1.2 s before), Rime Rune, Cinder Rune returning. **The Binding (the seam, opens Act III):** the sigils wake; three elementals (random elements) are called one at a time 8 s apart, each walks after the shield (the tank) and must be led into its own sigil and stand in it 2.3 s; one left alone for 17 s blasts the room (a raidwide, tag `azSurge`). He stays targetable, pulses of circles fall all the while. **Act III Lightning:** Leaping Bolt (a circle on a hero, then the hero nearest them, four jumps, five on Hard), Storm Rune. **Act IV Void:** Void Rifts (circles where heroes stand, again where they went 2.5 s later), Rift Rune, the older moves mixed. **Act V Convergence:** all four sigils at once (a circle of 225 each in its own element, a shared `group`) and in each of the four lenses where two meet a reaction rect (74 wide); the clear floor is the diagonals by the wall (from about 310 out) and a small spot in the middle. Closing passes (+8% a pass) until he falls or **The Tide Rises** lands (10:08 Normal, 10:13 Hard).
+- **Hard** (casts 15% faster, 25% more damage, three new moves, and each act's middle sets shuffled per pull): **Counterspell** (the last spell's areas, fire circles, donuts, lines, bolts and stacks, come again through the middle to the far side, shown at once, 4.4 s), **Rune Swap** (after the Mark the runes jump to two other heroes), **Arcane Mark** (a stack left where one hero stood, for everyone, all must be in it).
+- **Bots:** `view.runes` and `view.binding` (raid-host.js); `BotAI.danger` makes the two bearers close up (the higher id walks) or keep 380 apart by the rule; the tank bot's `home` is the sigil of the elemental due to blow first. A Time Stop is refused (`f.noPause`) while a pair is held or an elemental is unbound.
+
+| | Normal | Hard |
+|---|---|---|
+| HP | 3.9M | 5.2M |
+| Gates | 78% / 55% / 32% / 14% | the same |
+| Script (scripted length) | 8:59 | 9:29 |
+| Enrage | The Tide Rises, lands 10:08 | lands 10:13 |
+
+**Bot results** (Bastion / Cleric / Ranger / Pyromancer, `tools/bot-raid.js`, 30 to 60 seeded runs): Normal fresh gear 30 of 30 (kill 7:47), mid 30 of 30, the `check.js` base-gear line-ups 30 of 30 (Cleric Aegis) and 17 of 30 (Runeguard / Grovekeeper). Hard mid gear 32 of 60 (53%, kill about 9:55). The bots read the Rune Pair and the Binding: over 10 runs nearly no avoidable rune hits and every elemental bound.
+
+### Boss VIII: The Hydra of the Drowned Temple, Mother of Nine Heads (set 2, built 2026-10-23, playable on Normal and Hard)
+
+*The last boss of set 2 until the Void Gate exists (`docs/plans/2026-10-set-2-bosses.md`), so the hardest of the four. Script: `client/js/arena/bosses/hydra.js`; room: a 540-radius flooded temple (`ARENA_DEFS.hydra`, `ArenaView.buildTemple` in `client/js/hydra-view.js`); art: `client/js/hydra-art.js`; journal: `client/js/journal/hydra.js`.*
+
+**Shape: many threats, one body. Question: which head is which, and what do they want?** Three acts on HP gates (75 / 45%, all pushed), a seam (the Submerge), one wall at 10%.
+
+- **The Mother** sits in the pool at the middle (`anchor`) and never walks: Mother's Cry (raidwide) and Rending Maul (a tankbuster cone) every ~13 s, and the tank holds her.
+- **The heads are killable adds** (`spawnAdd`, `inert: true`: they never walk or bite; kinds `hy-<element>`, `-s` lesser, `-e` Elder, `-w` breaking the flood). They stand on a ring 210 from the middle, one to a slot (nine slots, the first due north); nine columns (prop kind `column`, solid, cover) stand behind them at 400. **Turn order:** one head after another (the one that has waited longest first, clockwise from the north), the gap `max(3.4, 17.5 / heads)` s (Hard 14.5 / 3.0), capped at 11 s; every head aims at a random hero (never the same one twice running). The turns are named events (`owner: 'rot'`) so the upcoming-moves feed shows them and a dead head's turns vanish. Eight elements: **Acid Spray** (cone at a hero's position when it began, acid left in its middle for 8 s), **Tidal Line** (a lane through a hero), **Venom Bloom** (a stack on a hero, a slowing bog after; the number needed drops by one for each searing ring open), **Flame Gout** (a following circle on two heroes, embers after), **Rime Crown** (a donut round the head: close in or far out), **Stormcall** (three lanes fanned, the middle through a hero), **Stonegaze** (everything the head can see; the columns are cover: `cover: true`), **Mire Spit** (circles on three heroes, slowing bog after). Lesser heads do the same at 55% damage and smaller; an Elder at 125%.
+- **Searing.** A great head that falls (`onDeath`) leaves a stump: the cast bar reads "Searing" and a blue tower (need 1, radius 62) opens at the foot of its column (470 out) 1 s later for 10 s (Hard 8.5 s). Soaked: the stump is seared, the head gone for good. Missed: everyone takes a sting and two lesser heads sprout in its place (Hard: three, with a "Regrowth" cast). The column's brazier burns while the ring is open.
+- **Order.** `f.cutOrder` records the great heads cut. The **first** one cut in the fight grows back as an **Elder** at the start of Act III (acid if nothing was cut). The **Mother's Heart** replays the order.
+- **Acts.** Three Heads (Acid, Tide, Venom at slots 0/3/6) to 75% / Six Heads (Flame, Frost, Storm at 1/4/7) to 45%, **the Submerge** (the seam: she dives, the temple floods and slows everyone for the dive, four lesser heads break the surface at random columns one after another, each with a ring first; each strikes once after 2 s and sinks after 8 s if not cut; the old heads are under the water; then she surfaces with a Cry) / Nine Heads (Gaze, Mire and the Elder at 2/5/8) to 10%.
+- **The wall: the Mother's Heart.** At 10% she is sealed (`wall`: label "Mother's Heart"). The cut heads strike again from their stumps in the order they fell (up to five, 2.7 s apart, random targets), then every great head still alive at once, and in the same breath the Heart beats and the seal opens. Then Last Heads: Cry and Maul until she falls or **The Drowning** lands (10:20 Normal, 10:30 Hard).
+- **Hard** (casts 15% faster, 25% more damage, the heads' round faster, each pull draws which head stands where, and three new moves): **Regrowth** (a missed ring grows three heads), **Tidal Dance** (two heads send lanes across each other three times, each pair crossing a step round from the last; the wedges between are the safe ground), **Hydra's Gaze** (a red circle over the whole inside of the temple, radius 372: only the ground by the wall is safe).
+- **The head-picking order for bots** (`prio` set by a ticker in the script, bots.js `pickEnemy` unchanged): the heads breaking the flood, then lesser heads, then great ones the gentlest first (acid, gaze, storm, venom, frost, flame, tide, mire). The searing towers are served by the existing tower logic (`towerFor`).
+
+| | Normal | Hard |
+|---|---|---|
+| HP | 3.0M | 4.1M |
+| Gates | 75 / 45%, the wall at 10% | the same |
+| Script (scripted length) | 9:49 | 9:49 |
+| Enrage | The Drowning, lands 10:20 | lands 10:30 |
+
+**Bot results** (`tools/bot-raid.js`, 12 to 20 seeded runs each): Normal at base gear Bastion / Cleric / Ranger / Pyromancer 10 of 12 (kill ~8:45), Runeguard / Grovekeeper / Shadowblade / Pyromancer 8 of 12; fresh gear 20 of 20 (kill 7:20). Hard at mid gear: Bastion / Cleric / Ranger / Pyromancer 13 of 20 (kill 9:30), Runeguard / Grovekeeper / Shadowblade / Pyromancer 0 of 20. `check.js`: base-gear line-ups clear 3 of 3 and 2 of 3.
+
 ### Specializations (all 24 built)
 
 Each class picks one of two specializations, or keeps the base kit. Rules:
@@ -1362,7 +1454,7 @@ Single talents stay at or under +5.8% pro DPS (Falling Mountain +5.8%, Deflect +
 | Telegraph shapes (hit tests and drawing), and each boss's room shape (`ARENA`) | `client/js/arena/shapes.js` |
 | Smooth motion for networked units (entity interpolation) | `client/js/interp.js` |
 | Host fight sim (HP, threat, mechanics, deaths, Rewind history, tethers, adds, slow zones) | `client/js/arena/fight.js` |
-| Boss scripts | `client/js/arena/bosses/grubnak.js`, `skitterra.js`, `volkar.js`, `hollowking.js` |
+| Boss scripts | `client/js/arena/bosses/grubnak.js`, `skitterra.js`, `volkar.js`, `hollowking.js`, `wyrm.js`, `titan.js` (set 2) |
 | Bots | `client/js/arena/bots.js`, `client/js/arena/raid-host.js` |
 | Arena drawing (textured kitchen and web-cave floors, ambient life, telegraphs, puddles, hitbox ring, tethers, sticky web, lit legs) | `client/js/arena/arena-view.js` |
 | Per-boss mechanic tells (cleaver, cloches, plates, spice jars, stove coils, meatballs, silk reel, leg strikes, venom beads, fog) | `client/js/arena/boss-tells.js` |

@@ -21,7 +21,10 @@ const TOWN = {
   trainer: { x: 1664, y: 1112 },   // the Talent Trainer, just inside the Training Yard gate
   yard: { x: 1600, y: 1060, w: 520, h: 300 },
   dummies: [{ x: 1730, y: 1210 }, { x: 1870, y: 1170 }, { x: 2010, y: 1230 }],
-  pedestals: [{ x: 780, y: 560 }, { x: 1020, y: 560 }, { x: 1380, y: 560 }, { x: 1620, y: 560 }],
+  // set 1 stands on the terrace; set 2 (the wild realm) on a second terrace either side of the portal. Placeholders: the order is BOSSES' order
+  pedestals: [{ x: 780, y: 560 }, { x: 1020, y: 560 }, { x: 1380, y: 560 }, { x: 1620, y: 560 },
+    { x: 790, y: 330 }, { x: 960, y: 330 }, { x: 1440, y: 330 }, { x: 1610, y: 330 }],
+  terrace2: [{ x: 700, y: 240, w: 320, h: 200 }, { x: 1380, y: 240, w: 320, h: 200 }],
   lamps: [],
   trees: [],
   spawn: { x: 1200, y: 1180 },
@@ -43,7 +46,7 @@ function initTown() {
     t.push([30 + r() * 30, y + r() * 20, 1 + r() * 0.3]);
     t.push([WORLD.w - 40 - r() * 30, y + r() * 20, 1 + r() * 0.3]);
   }
-  for (const [x, y] of [[780, 300], [650, 230], [1640, 300], [1790, 220], [2270, 1030], [2260, 1400], [140, 720],
+  for (const [x, y] of [[650, 230], [1790, 220], [2270, 1030], [2260, 1400], [140, 720],
     [140, 1060], [560, 1500], [1720, 1560], [1960, 1520], [480, 300], [900, 1190], [1450, 1260], [1900, 380]]) {
     t.push([x, y, 1.1 + r() * 0.3]);
   }
@@ -219,6 +222,13 @@ function buildTownLayer(scale) {
   g.fillStyle = '#8e8778'; g.fillRect(T.x, T.y, T.w, T.h);
   flagstones(g, T.x, T.y, T.w, T.h, r, '#8f8879', 30);
   g.restore();
+  for (const T2 of TOWN.terrace2) {
+    rrect(g, T2.x - 6, T2.y - 6, T2.w + 12, T2.h + 12, 12, '#5f5a50');
+    g.save(); g.beginPath(); g.roundRect(T2.x, T2.y, T2.w, T2.h, 10); g.clip();
+    g.fillStyle = '#8e8778'; g.fillRect(T2.x, T2.y, T2.w, T2.h);
+    flagstones(g, T2.x, T2.y, T2.w, T2.h, r, '#8f8879', 30);
+    g.restore();
+  }
   const PO = TOWN.portal;
   circle(g, PO.x, PO.y, 172, '#4f4a5c');
   g.save(); g.beginPath(); g.arc(PO.x, PO.y, 164, 0, TAU); g.clip();

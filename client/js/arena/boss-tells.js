@@ -1768,6 +1768,345 @@ const BossTells = (() => {
     },
   };
 
+  // ------------------------------------------------------------------ Vhalgrath
+  // The rule here as everywhere: the red outline and the sweeping wash mark the exact area; the embers, cracks and fire
+  // inside are the extra clue, never the only one.
+  // a scorch mark blooming on the stone: a dark heart, a ring of heat, cracks running out of it, embers lifting
+  function scorchBloom(ctx, s, p, k, t, seed) {
+    ctx.save(); SHAPES.trace(ctx, s); ctx.clip();
+    glow(ctx, s.x, s.y, s.r, '#ff6a1a', (0.12 + 0.34 * p) * k);
+    circle(ctx, s.x, s.y, s.r * (0.25 + 0.55 * p), rgba('#0c0504', (0.25 + 0.4 * p) * k));
+    ctx.lineCap = 'round';
+    for (let i = 0; i < 12; i++) {
+      const a = i * TAU / 12 + hash(i, seed) * 0.4, d0 = s.r * 0.2, d1 = s.r * (0.4 + 0.6 * p * (0.6 + 0.4 * hash(i, seed + 1)));
+      ctx.beginPath(); ctx.moveTo(s.x + Math.cos(a) * d0, s.y + Math.sin(a) * d0);
+      ctx.lineTo(s.x + Math.cos(a + 0.12) * (d0 + d1) / 2, s.y + Math.sin(a + 0.12) * (d0 + d1) / 2); ctx.lineTo(s.x + Math.cos(a - 0.05) * d1, s.y + Math.sin(a - 0.05) * d1);
+      ctx.strokeStyle = rgba('#ff9a3a', (0.35 + 0.5 * p) * k); ctx.lineWidth = 2.5; ctx.stroke();
+    }
+    for (let i = 0; i < 14; i++) { const q = (t * 0.8 + hash(i, seed + 2)) % 1, a = hash(i, seed + 3) * TAU, d = hash(i, seed + 4) * s.r * 0.8; circle(ctx, s.x + Math.cos(a) * d, s.y + Math.sin(a) * d - q * 40, 2 + 2 * (1 - q), rgba('#ffd890', 0.8 * (1 - q) * k * (0.3 + p))); }
+    ctx.restore();
+  }
+  // a column of coals and sparks racing along a line toward its end: the trail the dive will follow
+  function emberTrail(ctx, s, p, k, t, seed) {
+    const ca = Math.cos(s.angle), sa = Math.sin(s.angle), L = s.len;
+    ctx.save(); SHAPES.trace(ctx, s); ctx.clip();
+    ctx.fillStyle = rgba('#2a0c04', (0.12 + 0.2 * p) * k); ctx.fillRect(-AR() * 2, -AR() * 2, AR() * 4, AR() * 4);
+    for (let i = 0; i < 44; i++) {
+      const u = (hash(i, seed) + t * (0.25 + 0.4 * p)) % 1, d = u * L, off = (hash(i, seed + 1) - 0.5) * s.w * 0.85;
+      const x = s.x + ca * d - sa * off, y = s.y + sa * d + ca * off;
+      glow(ctx, x, y, 10 + 12 * p, i % 3 ? '#ff7a22' : '#ffd27a', (0.22 + 0.5 * p) * k * (0.5 + 0.5 * Math.sin(t * 6 + i)));
+    }
+    // the line itself, glowing hotter toward where he comes down
+    const g = ctx.createLinearGradient(s.x, s.y, s.x + ca * L, s.y + sa * L);
+    g.addColorStop(0, rgba('#ff8a2a', 0.1 * k)); g.addColorStop(1, rgba('#ffd27a', (0.25 + 0.4 * p) * k));
+    ctx.strokeStyle = g; ctx.lineWidth = 6; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(s.x + ca * L, s.y + sa * L); ctx.stroke();
+    ctx.restore();
+  }
+  const W = {
+    // Tyrant's Roar: the crater darkens and glows at the edges, and the roar rolls out of him in rings
+    roar: {
+      raidwide: true,
+      ground(ctx, tg, s, p, k, t, env) {
+        const R = AR(), b = env.boss;
+        ctx.save(); ctx.fillStyle = `rgba(40,8,0,${(0.08 + 0.26 * easeIn(p)) * k})`; ctx.fillRect(-R - 80, -R - 80, R * 2 + 160, R * 2 + 160); ctx.restore();
+        for (let i = 0; i < 3; i++) { const q = (t * 0.7 + i / 3) % 1; ellipse(ctx, b.x, b.y, 70 + q * R, (70 + q * R) * 0.9, 0, null, rgba('#ff9a4a', 0.25 * (1 - q) * k * (0.4 + 0.6 * p)), 3); }
+      },
+    },
+    // Take Flight / the Roost: a gust through the crater, grit and ash blown across
+    gust: {
+      raidwide: true,
+      ground(ctx, tg, s, p, k, t, env) {
+        const R = AR(), b = env.boss;
+        ctx.save(); ctx.fillStyle = `rgba(20,10,6,${(0.05 + 0.15 * p) * k})`; ctx.fillRect(-R - 80, -R - 80, R * 2 + 160, R * 2 + 160);
+        for (let i = 0; i < 26; i++) {
+          const a = hash(i, 5) * TAU, u = (t * 0.9 + hash(i, 6)) % 1, d0 = R * (1.05 - u * 0.95), x = b.x + Math.cos(a) * d0, y = b.y + Math.sin(a) * d0;
+          line(ctx, x, y, x + Math.cos(a) * 30, y + Math.sin(a) * 30, rgba('#d8c8b0', 0.4 * k * Math.sin(u * Math.PI)), 2);
+        }
+        ctx.restore();
+      },
+    },
+    // Dragonfall: the embers draw the line he will fly along (faint at first, then hot), and a scorch blooms at the end
+    divepath: { ground(ctx, tg, s, p, k, t) { emberTrail(ctx, s, p, k, t, tg.id); } },
+    divepath2: { ground(ctx, tg, s, p, k, t) { emberTrail(ctx, s, p, k, t, tg.id + 7); } },
+    dragonfall: {
+      ground(ctx, tg, s, p, k, t) { scorchBloom(ctx, s, p, k, t, tg.id); },
+      // his shadow comes over the pit, growing
+      air(ctx, tg, s, p, k, t) {
+        const q = easeIn(p);
+        ellipse(ctx, s.x, s.y, s.r * (0.2 + 0.75 * q), s.r * (0.2 + 0.75 * q) * 0.55, 0, rgba('#000000', 0.12 + 0.4 * q), null);
+      },
+    },
+    scorch: { ground(ctx, tg, s, p, k, t) { scorchBloom(ctx, s, p, k, t, tg.id); } },
+    // Ember Breath: fire building inside the cone, tongues of it leaning down its length
+    breath: {
+      ground(ctx, tg, s, p, k, t) {
+        ctx.save(); SHAPES.trace(ctx, s); ctx.clip();
+        const fr = ctx.createRadialGradient(s.x, s.y, 20, s.x, s.y, s.r);
+        fr.addColorStop(0, rgba('#ffd27a', (0.2 + 0.4 * p) * k)); fr.addColorStop(1, rgba('#ff5a1a', (0.04 + 0.2 * p) * k));
+        ctx.fillStyle = fr; ctx.fillRect(s.x - s.r, s.y - s.r, s.r * 2, s.r * 2);
+        for (let i = 0; i < 18; i++) {
+          const a = s.angle + (hash(i, tg.id) - 0.5) * s.arc * 0.9, d = 70 + hash(i, tg.id + 1) * (s.r - 90), x = s.x + Math.cos(a) * d, y = s.y + Math.sin(a) * d;
+          glow(ctx, x, y, 22 + 10 * Math.sin(t * 7 + i), i % 2 ? '#ff8a2a' : '#ffd27a', (0.18 + 0.4 * p) * k);
+        }
+        ctx.restore();
+      },
+    },
+    // Tail Lash: the shadow of the swing, bone spikes along it
+    taillash: {
+      ground(ctx, tg, s, p, k, t) {
+        ctx.save(); SHAPES.trace(ctx, s); ctx.clip();
+        ctx.fillStyle = rgba('#140806', (0.2 + 0.3 * p) * k); ctx.fillRect(s.x - s.r, s.y - s.r, s.r * 2, s.r * 2);
+        for (let i = 0; i < 9; i++) { const a = s.angle - s.arc / 2 + ((i + 0.5) / 9) * s.arc, d = s.r * (0.35 + 0.6 * p); poly(ctx, [s.x + Math.cos(a - 0.04) * d, s.y + Math.sin(a - 0.04) * d, s.x + Math.cos(a) * (d + 26), s.y + Math.sin(a) * (d + 26), s.x + Math.cos(a + 0.04) * d, s.y + Math.sin(a + 0.04) * d], rgba('#e6dcc4', (0.35 + 0.4 * p) * k)); }
+        ctx.restore();
+      },
+    },
+    // burning scales and cinders: a glow on the stone, the ember itself falling from above
+    scales: {
+      ground(ctx, tg, s, p, k, t) { glow(ctx, s.x, s.y, s.r * 1.1, '#ff6a1a', (0.18 + 0.4 * p) * k); circle(ctx, s.x, s.y, s.r * (0.2 + 0.5 * p), rgba('#1a0a06', 0.35 * k)); },
+      air(ctx, tg, s, p, k, t) { const h = (1 - easeIn(p)) * 260; glow(ctx, s.x, s.y - h, 20, '#ffb04a', 0.8 * k); poly(ctx, [s.x - 9, s.y - h, s.x, s.y - h - 12, s.x + 9, s.y - h, s.x, s.y - h + 10], '#b4421a', OUT, 1.5); },
+    },
+    cinder: {
+      ground(ctx, tg, s, p, k, t) { glow(ctx, s.x, s.y, s.r * 1.1, '#ff6a1a', (0.16 + 0.4 * p) * k); },
+      air(ctx, tg, s, p, k, t) { const h = (1 - easeIn(p)) * 300; glow(ctx, s.x, s.y - h, 14, '#ffd27a', 0.9 * k); circle(ctx, s.x, s.y - h, 4, rgba('#fff4c8', k)); },
+    },
+    // the wings' push: chevrons running outward from the line
+    wingbeat: {
+      ground(ctx, tg, s, p, k, t) {
+        ctx.save(); SHAPES.trace(ctx, s); ctx.clip();
+        const ca = Math.cos(s.angle), sa = Math.sin(s.angle);
+        for (let i = 0; i < 22; i++) {
+          const d = hash(i, tg.id) * s.len, u = (t * 0.9 + hash(i, tg.id + 1)) % 1;
+          for (const sd of [-1, 1]) {
+            const off = sd * (20 + u * s.w * 0.5), x = s.x + ca * d - sa * off, y = s.y + sa * d + ca * off;
+            line(ctx, x, y, x - sa * sd * 16, y + ca * sd * 16, rgba('#ffe8c8', 0.45 * (1 - u) * k * (0.3 + p)), 2.5);
+          }
+        }
+        ctx.restore();
+      },
+    },
+    // the rim boiling up
+    boil: {
+      ground(ctx, tg, s, p, k, t) {
+        ctx.save(); SHAPES.trace(ctx, s); ctx.clip();
+        ctx.fillStyle = rgba('#ff5a1a', (0.1 + 0.3 * p) * k); ctx.fillRect(-AR() * 2, -AR() * 2, AR() * 4, AR() * 4);
+        for (let i = 0; i < 40; i++) { const a = hash(i, 11) * TAU, d = s.r2 + hash(i, 12) * (AR() - s.r2), q = (t * 0.5 + hash(i, 13)) % 1; circle(ctx, Math.cos(a) * d, Math.sin(a) * d - q * 14, 3 + q * 5, null, rgba('#ffd890', 0.7 * (1 - q) * k * (0.3 + p)), 1.8); }
+        ctx.restore();
+      },
+    },
+    // the floor-wide fire of the Heart Burn: red from wall to wall except the island, flames licking up
+    heartburn: {
+      ground(ctx, tg, s, p, k, t) {
+        ctx.save(); ARENA.trace(ctx, 4); ctx.clip(); SHAPES.trace(ctx, s); ctx.clip();
+        ctx.fillStyle = rgba('#ff3a0a', (0.1 + 0.3 * p) * k); ctx.fillRect(-AR() * 2, -AR() * 2, AR() * 4, AR() * 4);
+        for (let i = 0; i < 54; i++) {
+          const a = hash(i, 21) * TAU, d = Math.sqrt(hash(i, 22)) * AR(), q = (t * 0.7 + hash(i, 23)) % 1;
+          glow(ctx, Math.cos(a) * d, Math.sin(a) * d - q * 30, 24 + 14 * p, i % 2 ? '#ff7a22' : '#ffd27a', (0.12 + 0.35 * p) * k * (1 - q));
+        }
+        ctx.restore();
+      },
+    },
+    whelpboom: { ground(ctx, tg, s, p, k, t) { glow(ctx, s.x, s.y, s.r * 1.2, '#ff6a1a', (0.14 + 0.45 * p) * k * (0.7 + 0.3 * Math.sin(t * 12))); } },
+  };
+
+  // ------------------------------------------------------------------ Hrimgar
+  // The rule here as everywhere: the red (or blue) outline and the sweeping wash mark the exact area; the frost, cracks and
+  // snow inside are the extra clue, never the only one. Sheets (rect cells) are drawn as ice: cracking, breaking, sinking.
+  // frost crystals growing outward from a point: six arms, each with side branches
+  function frostStar(ctx, x, y, r, p, k, seed, col = '#eaf6ff') {
+    ctx.save(); ctx.lineCap = 'round';
+    for (let i = 0; i < 6; i++) {
+      const a = i * TAU / 6 + hash(i, seed) * 0.12, L = r * (0.35 + 0.65 * p);
+      line(ctx, x, y, x + Math.cos(a) * L, y + Math.sin(a) * L, rgba(col, (0.35 + 0.5 * p) * k), 2.2);
+      for (const f of [0.45, 0.72]) {
+        const bx = x + Math.cos(a) * L * f, by = y + Math.sin(a) * L * f;
+        for (const sd of [-1, 1]) line(ctx, bx, by, bx + Math.cos(a + sd * 0.9) * L * 0.22, by + Math.sin(a + sd * 0.9) * L * 0.22, rgba(col, (0.3 + 0.4 * p) * k), 1.5);
+      }
+    }
+    ctx.restore();
+  }
+  // dark cracks spreading over a rect cell
+  function cellCracks(ctx, s, p, k, seed, glowCol) {
+    const cx = s.x + s.len / 2, cy = s.y;
+    ctx.save(); SHAPES.trace(ctx, s); ctx.clip();
+    ctx.fillStyle = rgba(glowCol || '#0a2a4a', (0.1 + 0.3 * p) * k); ctx.fillRect(s.x - 4, s.y - s.w / 2 - 4, s.len + 8, s.w + 8);
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    for (let i = 0; i < 9; i++) {
+      const a = i * TAU / 9 + hash(i, seed) * 0.5, L = s.len * (0.25 + 0.55 * p) * (0.7 + 0.5 * hash(i, seed + 1));
+      let px = cx, py = cy;
+      ctx.beginPath(); ctx.moveTo(px, py);
+      for (let j = 1; j <= 4; j++) { const q = j / 4, aa = a + (hash(i * 7 + j, seed + 2) - 0.5) * 0.8; px = cx + Math.cos(aa) * L * q; py = cy + Math.sin(aa) * L * q; ctx.lineTo(px, py); }
+      ctx.strokeStyle = rgba('#020a18', (0.55 + 0.4 * p) * k); ctx.lineWidth = 4.5; ctx.stroke();
+      ctx.strokeStyle = rgba('#eaf6ff', (0.45 + 0.4 * p) * k); ctx.lineWidth = 1.3; ctx.stroke();
+    }
+    ctx.restore();
+  }
+  const HR = {
+    // Winter's Howl / the Long Night: the room dims and goes cold, frost rolling out of him in rings
+    tihowl: {
+      raidwide: true,
+      ground(ctx, tg, s, p, k, t, env) {
+        const R = AR() * 1.4, b = env.boss;
+        ctx.save(); ctx.fillStyle = `rgba(8,24,48,${(0.06 + 0.24 * easeIn(p)) * k})`; ctx.fillRect(-R, -R, R * 2, R * 2); ctx.restore();
+        for (let i = 0; i < 3; i++) { const q = (t * 0.7 + i / 3) % 1; ellipse(ctx, b.x, b.y, 70 + q * R, (70 + q * R) * 0.9, 0, null, rgba('#cfeaff', 0.3 * (1 - q) * k * (0.4 + 0.6 * p)), 3); }
+        for (let i = 0; i < 24; i++) { const a = hash(i, 3) * TAU, u = (t * 0.6 + hash(i, 4)) % 1, d = 60 + u * R * 0.9; circle(ctx, b.x + Math.cos(a) * d, b.y + Math.sin(a) * d, 1.8, rgba('#ffffff', 0.6 * (1 - u) * k)); }
+      },
+    },
+    tinight: {
+      raidwide: true,
+      ground(ctx, tg, s, p, k, t, env) {
+        const R = AR() * 1.4;
+        ctx.save(); ctx.fillStyle = `rgba(2,6,18,${(0.08 + 0.3 * easeIn(p)) * k})`; ctx.fillRect(-R, -R, R * 2, R * 2); ctx.restore();
+        for (let i = 0; i < 5; i++) glow(ctx, -R * 0.6 + i * R * 0.3, -AR() * 0.8 + Math.sin(t * 0.8 + i) * 20, 130, i % 2 ? '#8a6aff' : '#3affb0', 0.12 * p * k);
+      },
+    },
+    // Whiteout: a white blindness coming up from the edges, snow streaming across
+    tiwhite: {
+      raidwide: true,
+      ground(ctx, tg, s, p, k, t) {
+        const R = AR() * 1.4;
+        ctx.save(); ctx.fillStyle = `rgba(225,242,255,${(0.04 + 0.3 * easeIn(p)) * k})`; ctx.fillRect(-R, -R, R * 2, R * 2);
+        for (let i = 0; i < 40; i++) {
+          const u = (t * 0.9 + hash(i, 5)) % 1, y = (hash(i, 6) * 2 - 1) * R, x = -R + u * R * 2;
+          line(ctx, x, y, x - 34, y + 8, rgba('#ffffff', 0.5 * k * (0.3 + p)), 2);
+        }
+        ctx.restore();
+      },
+    },
+    // Rime Slam: a fist's shadow over the ring, frost and cracks spreading from its centre
+    tislam: {
+      ground(ctx, tg, s, p, k, t) {
+        ctx.save(); SHAPES.trace(ctx, s); ctx.clip();
+        glow(ctx, s.x, s.y, s.r, '#9fe8ff', (0.1 + 0.3 * p) * k);
+        ctx.restore();
+        frostStar(ctx, s.x, s.y, s.r * 0.95, p, k, tg.id);
+        circle(ctx, s.x, s.y, s.r * (0.1 + 0.2 * p), rgba('#0a1a30', 0.35 * k));
+      },
+      air(ctx, tg, s, p, k) {
+        const q = easeIn(p);
+        ellipse(ctx, s.x, s.y, s.r * (0.25 + 0.7 * q), s.r * (0.25 + 0.7 * q) * 0.6, 0, rgba('#000000', 0.12 + 0.35 * q), null);
+      },
+    },
+    // a sheet marked to sink: cracks spreading over it, white at their lips, a cold glow coming up through them
+    tisink: { ground(ctx, tg, s, p, k, t, env) { cellCracks(ctx, s, p, k, tg.id); } },
+    // the sheet breaks (Breath of Winter): white frost over it, then the same cracks, a brighter light under
+    tiburst: {
+      ground(ctx, tg, s, p, k, t) {
+        ctx.save(); SHAPES.trace(ctx, s); ctx.clip(); ctx.fillStyle = rgba('#eaf6ff', (0.25 + 0.2 * p) * k); ctx.fillRect(s.x - 4, s.y - s.w / 2 - 4, s.len + 8, s.w + 8); ctx.restore();
+        cellCracks(ctx, s, p, k, tg.id, '#3a9ad8');
+      },
+    },
+    // Fault Line: a fissure opening along the line, shards leaning up out of it
+    tifault: {
+      ground(ctx, tg, s, p, k, t) {
+        const ca = Math.cos(s.angle), sa = Math.sin(s.angle);
+        ctx.save(); SHAPES.trace(ctx, s); ctx.clip();
+        ctx.fillStyle = rgba('#0a2a4a', (0.1 + 0.22 * p) * k); ctx.fillRect(s.x - s.len, s.y - s.len, s.len * 2 + 2000, s.len * 2 + 2000);
+        ctx.restore();
+        ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+        const L = s.len * (0.2 + 0.8 * easeOut(p));
+        ctx.beginPath(); ctx.moveTo(s.x, s.y);
+        for (let i = 1; i <= 16; i++) { const u = i / 16, off = (hash(i, tg.id) - 0.5) * 34 * (i % 2 ? 1 : -1); ctx.lineTo(s.x + ca * L * u - sa * off, s.y + sa * L * u + ca * off); }
+        ctx.strokeStyle = rgba('#020a18', 0.85 * k); ctx.lineWidth = 9; ctx.stroke(); ctx.strokeStyle = rgba('#eaf6ff', (0.5 + 0.4 * p) * k); ctx.lineWidth = 2; ctx.stroke();
+        for (let i = 0; i < 14; i++) {
+          const u = (0.08 + 0.9 * hash(i, tg.id + 3)) * (0.2 + 0.8 * easeOut(p)), x = s.x + ca * s.len * u, y = s.y + sa * s.len * u, off = (hash(i, tg.id + 4) - 0.5) * s.w * 0.6;
+          poly(ctx, [x - sa * off - 5, y + ca * off, x - sa * off, y + ca * off - 16 - 12 * p, x - sa * off + 5, y + ca * off], rgba('#d8f0ff', 0.6 * k), OUT, 1);
+        }
+        ctx.restore();
+      },
+    },
+    // Icefall: a glint on the ice, the shard itself falling out of the dark
+    ticicle: {
+      ground(ctx, tg, s, p, k, t) { glow(ctx, s.x, s.y, s.r * 1.1, '#9fe8ff', (0.15 + 0.4 * p) * k); frostStar(ctx, s.x, s.y, s.r * 0.8, p, k, tg.id); },
+      air(ctx, tg, s, p, k) { const h = (1 - easeIn(p)) * 340; poly(ctx, [s.x - 6, s.y - h - 26, s.x + 6, s.y - h - 26, s.x, s.y - h + 6], '#dff4ff', OUT, 1.5); glow(ctx, s.x, s.y - h, 16, '#ffffff', 0.7 * k); },
+    },
+    // Titan's Sweep: the shadow of a great arm, frost blown along the arc
+    tisweep: {
+      ground(ctx, tg, s, p, k, t) {
+        ctx.save(); SHAPES.trace(ctx, s); ctx.clip();
+        const g = ctx.createRadialGradient(s.x, s.y, 40, s.x, s.y, s.r);
+        g.addColorStop(0, rgba('#0a1a30', (0.28 + 0.2 * p) * k)); g.addColorStop(1, rgba('#9fe8ff', (0.05 + 0.18 * p) * k));
+        ctx.fillStyle = g; ctx.fillRect(s.x - s.r, s.y - s.r, s.r * 2, s.r * 2);
+        for (let i = 0; i < 26; i++) {
+          const a = s.angle + (hash(i, tg.id) - 0.5) * s.arc * 0.92, d = 80 + hash(i, tg.id + 1) * (s.r - 100), u = (t * 0.8 + hash(i, tg.id + 2)) % 1, x = s.x + Math.cos(a) * d, y = s.y + Math.sin(a) * d;
+          line(ctx, x, y, x + Math.cos(a + 1.57) * 22 * u, y + Math.sin(a + 1.57) * 22 * u, rgba('#ffffff', 0.5 * (1 - u) * k * (0.4 + p)), 2);
+        }
+        ctx.restore();
+      },
+    },
+    // Winter's Grasp (a marker, not damage): frost spreading from the feet of the chosen
+    tigrasp: {
+      ground(ctx, tg, s, p, k, t) {
+        glow(ctx, s.x, s.y, s.r * 1.2, '#bff0ff', (0.12 + 0.32 * p) * k);
+        circle(ctx, s.x, s.y, s.r * (0.3 + 0.6 * p), rgba('#eaf6ff', (0.1 + 0.25 * p) * k));
+        frostStar(ctx, s.x, s.y, s.r * 1.05, p, k, tg.id);
+      },
+    },
+    // Frostbite's shared hit (blue): a snowflake in the ring, cold mist
+    tifrost: {
+      ground(ctx, tg, s, p, k, t) {
+        glow(ctx, s.x, s.y, s.r * 1.1, '#9fd0ff', (0.12 + 0.3 * p) * k);
+        frostStar(ctx, s.x, s.y, s.r * 0.9, 0.5 + 0.5 * p, k, tg.id, '#dff0ff');
+        for (let i = 0; i < 10; i++) { const a = hash(i, tg.id) * TAU + t * 0.4, d = hash(i, tg.id + 1) * s.r * 0.9; glow(ctx, s.x + Math.cos(a) * d, s.y + Math.sin(a) * d - ((t * 20) % 14), 14, '#e8f6ff', 0.14 * k); }
+      },
+    },
+    // the Avalanche: snow and rock streaming down the lane toward the south
+    tislide: {
+      ground(ctx, tg, s, p, k, t) {
+        ctx.save(); SHAPES.trace(ctx, s); ctx.clip();
+        ctx.fillStyle = rgba('#dff0ff', (0.08 + 0.16 * p) * k); ctx.fillRect(s.x - s.w, s.y - 10, s.w * 2, s.len + 20);
+        for (let i = 0; i < 36; i++) {
+          const x = s.x + (hash(i, tg.id) - 0.5) * s.w * 0.9, u = (t * (0.5 + 0.5 * p) + hash(i, tg.id + 1)) % 1, y = s.y + u * s.len;
+          if (i % 3 === 0) poly(ctx, [x - 7, y, x - 2, y - 7, x + 6, y - 4, x + 7, y + 4, x, y + 7], rgba('#7a8ea4', 0.55 * k * (0.3 + p)), OUT, 1.2);
+          else line(ctx, x, y - 16, x, y, rgba('#ffffff', 0.5 * k * (0.3 + p)), 2.5);
+        }
+        const g = ctx.createLinearGradient(s.x, s.y, s.x, s.y + s.len);
+        g.addColorStop(0, rgba('#ffffff', (0.05 + 0.1 * p) * k)); g.addColorStop(1, rgba('#9fb6cc', (0.1 + 0.2 * p) * k));
+        ctx.fillStyle = g; ctx.fillRect(s.x - s.w, s.y, s.w * 2, s.len);
+        ctx.restore();
+      },
+    },
+    // Glacial Stomp: the shock of his foot, then rings of shards leaning out of the ice
+    tistomp: {
+      ground(ctx, tg, s, p, k, t) {
+        glow(ctx, s.x, s.y, s.r, '#9fe8ff', (0.1 + 0.3 * p) * k);
+        for (let i = 0; i < 10; i++) { const a = i * TAU / 10 + 0.1; line(ctx, s.x + Math.cos(a) * s.r * 0.2, s.y + Math.sin(a) * s.r * 0.2, s.x + Math.cos(a) * s.r * (0.3 + 0.6 * p), s.y + Math.sin(a) * s.r * (0.3 + 0.6 * p), rgba('#020a18', 0.7 * k), 4); }
+      },
+    },
+    tiring: {
+      ground(ctx, tg, s, p, k, t) {
+        ctx.save(); SHAPES.trace(ctx, s); ctx.clip();
+        ctx.fillStyle = rgba('#9fe8ff', (0.06 + 0.14 * p) * k); ctx.fillRect(s.x - s.r, s.y - s.r, s.r * 2, s.r * 2);
+        ctx.restore();
+        const n = 26;
+        for (let i = 0; i < n; i++) { const a = i * TAU / n + hash(i, tg.id) * 0.1, d = (s.r2 + s.r) / 2 + (hash(i, tg.id + 1) - 0.5) * (s.r - s.r2) * 0.5; poly(ctx, [s.x + Math.cos(a - 0.03) * d, s.y + Math.sin(a - 0.03) * d, s.x + Math.cos(a) * (d + 22 + 12 * p), s.y + Math.sin(a) * (d + 22 + 12 * p), s.x + Math.cos(a + 0.03) * d, s.y + Math.sin(a + 0.03) * d], rgba('#dff4ff', (0.35 + 0.4 * p) * k), OUT, 1); }
+      },
+    },
+    // Breath of Winter: a cloud of frost swirling down the cone
+    tibreath: {
+      ground(ctx, tg, s, p, k, t) {
+        ctx.save(); SHAPES.trace(ctx, s); ctx.clip();
+        const g = ctx.createRadialGradient(s.x, s.y, 20, s.x, s.y, s.r);
+        g.addColorStop(0, rgba('#ffffff', (0.2 + 0.35 * p) * k)); g.addColorStop(1, rgba('#7fc8ff', (0.04 + 0.16 * p) * k));
+        ctx.fillStyle = g; ctx.fillRect(s.x - s.r, s.y - s.r, s.r * 2, s.r * 2);
+        for (let i = 0; i < 20; i++) {
+          const a = s.angle + (hash(i, tg.id) - 0.5) * s.arc * 0.9, u = (t * 0.5 + hash(i, tg.id + 1)) % 1, d = 70 + u * (s.r - 90);
+          glow(ctx, s.x + Math.cos(a) * d, s.y + Math.sin(a) * d, 20 + 14 * u, '#eaf6ff', (0.15 + 0.3 * p) * k * (1 - u * 0.5));
+        }
+        ctx.restore();
+      },
+    },
+    // Titan's Grip: the shadow of a hand over the ring, its fingers closing
+    tigrip: {
+      ground(ctx, tg, s, p, k, t) {
+        glow(ctx, s.x, s.y, s.r * 1.1, '#0a1a30', (0.2 + 0.3 * p) * k);
+        for (let i = 0; i < 5; i++) { const a = -Math.PI / 2 + (i - 2) * 0.6, d = s.r * (1.1 - 0.55 * easeIn(p)); poly(ctx, [s.x + Math.cos(a - 0.12) * d, s.y + Math.sin(a - 0.12) * d, s.x + Math.cos(a) * (d + 38), s.y + Math.sin(a) * (d + 38), s.x + Math.cos(a + 0.12) * d, s.y + Math.sin(a + 0.12) * d], rgba('#0a1a30', 0.55 * k), null); }
+      },
+    },
+    tigripstack: {
+      ground(ctx, tg, s, p, k, t) { glow(ctx, s.x, s.y, s.r * 1.1, '#9fd0ff', (0.12 + 0.3 * p) * k); frostStar(ctx, s.x, s.y, s.r * 0.9, 0.4 + 0.6 * p, k, tg.id, '#dff0ff'); },
+    },
+  };
+
   // ------------------------------------------------------------------ aftermath
   // The faint marks a landed mechanic leaves on the floor: a soup splash, scorched rings, spilt spice, a dented ring.
   // One standard for every lingering decal (boss-vfx.js decals should use it too): a duration tier, one cap on how
@@ -1924,6 +2263,10 @@ const BossTells = (() => {
     if (env.bossId === 'skitterra') return S[tg.tag] || null;
     if (env.bossId === 'volkar') return V[tg.tag] || null;
     if (env.bossId === 'hollowking') return K[tg.tag] || null;
+    if (env.bossId === 'hydra') return (typeof HY_TELLS !== 'undefined' && HY_TELLS[tg.tag]) || null;
+    if (env.bossId === 'wyrm') return W[tg.tag] || null;
+    if (env.bossId === 'titan') return HR[tg.tag] || null;
+    if (env.bossId === 'archmage') return (typeof AZ_ART !== 'undefined' && AZ_ART.tell(tg.tag)) || null;
     return G[tg.tag] || null;
   }
   // under everyone (called inside the arena clip)

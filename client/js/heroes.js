@@ -1527,3 +1527,131 @@ Object.assign(SPEC_ART, {
     for (let i = 0; i < 3; i++) { const q = (st.t * 1.3 + i / 3) % 1; circle(ctx, 6 - q * 6, (i - 1) * 9, 1 - q * 0.6, '#8a6a50'); }
   },
 });
+// Gloomsworn (tank, class 18): a hooded dark knight in bruised-violet plate. The helm is cracked and lit from within (a
+// cold teal-white), a crown of cracked shadow stands round the back of it, the cloak is ragged and trails behind, and a
+// black greatsword with a pale light in its fuller rides at the right hip. The Reaver of Dusk burns brighter in the cracks.
+HERO_ART.gloomsworn = function (ctx, st) {
+  const plate = '#5a3f7e', plateD = '#3a2a58', ink = '#14101e', cloak = '#1d1430', ghost = '#bff8ee', vio = '#9a6ae0';
+  const reaver = HERO_SPEC === 'duskreaver';
+  const s = swing(actP(st, 'attack')), bash = pulse(actP(st, 'bash')), big = pulse(actP(st, 'big')), pa = actP(st, 'attack');
+  const wave = Math.sin(st.t * 3.2) * 1.8 + (st.moving ? Math.sin(st.t * 10) * 2.4 : 0);
+  const fl = (0.72 + 0.28 * Math.sin(st.t * 5.3 + 1)) * (reaver ? 1.25 : 1);
+  // the ragged cloak, trailing behind: a long torn hem that stirs, lit faintly along its tatters
+  const hem = [[-12, -13], [-17, -10], [-21 + wave * 0.4, -12], [-24 + wave, -6], [-30 + wave * 1.2, -3], [-25 + wave, 0], [-31 + wave * 1.3, 3], [-24 + wave, 6], [-27 + wave, 11], [-19 + wave * 0.4, 10], [-14, 13]];
+  poly(ctx, [-3, -11].concat(...hem, [-3, 11]), cloak, OUT, 2);
+  line(ctx, -8, -4, -21 + wave * 0.6, -3, '#2c1f48', 1.2); line(ctx, -8, 4, -21 + wave * 0.6, 3, '#2c1f48', 1.2);
+  for (const [hx, hy] of [hem[4], hem[6], hem[3]]) glow(ctx, hx, hy, 5, ghost, 0.2 * fl);
+  feet(ctx, st, '#241a38');
+  torso(ctx, plate, 9.5, 14.5);
+  // heavy spiked pauldrons, a pale rim along each
+  for (const sy of [-1, 1]) {
+    ellipse(ctx, 0.5, 12.5 * sy, 6.6, 5.4, 0, plateD, OUT, 1.6);
+    poly(ctx, [-2, 16 * sy, 2, 17.5 * sy, 4.5, 15 * sy, 2, 13.5 * sy], ink, OUT, 1);
+    ellipse(ctx, 0.5, 12.5 * sy, 4.8, 3.6, 0, null, 'rgba(191,248,238,0.35)', 0.9);
+  }
+  // the chest cracked open: light from within
+  glow(ctx, 0, 0, 9, ghost, 0.22 * fl);
+  ctx.save(); ctx.strokeStyle = ghost; ctx.globalAlpha = Math.min(1, 0.75 * fl); ctx.lineWidth = 1.2; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.beginPath(); ctx.moveTo(-3, -7); ctx.lineTo(0.5, -3); ctx.lineTo(-1.5, 0.5); ctx.lineTo(2.5, 4); ctx.lineTo(0.5, 8); ctx.moveTo(0.5, -3); ctx.lineTo(4, -4.5); ctx.stroke();
+  ctx.restore();
+  // the free hand holds a small pale flame: the vigil
+  hand(ctx, 6, -11, plateD);
+  glow(ctx, 9, -11.5, 7, ghost, 0.4 * fl); circle(ctx, 9, -11.5, 1.7, '#f4fffb');
+  // the greatsword (a violet arc while it cuts; raised for a big move, thrust for a bash)
+  const dir = swingDir(st), rot = 0.3 + dir * s * 1.2 - big * 1.4;
+  // (no smear drawn here: the swing's dark trail is ABILITY_VFX.gloomsworn, which everyone sees)
+  ctx.save(); ctx.translate(7 + 5 * bash, 11 - 3 * bash); ctx.rotate(rot - bash * 0.3);
+  poly(ctx, [2, -2.6, 30, -3.4, 38, 0, 30, 3.4, 2, 2.6], '#171126', OUT, 1.6);
+  line(ctx, 4, -2.2, 29, -3, vio, 1);
+  ctx.save(); ctx.globalAlpha = Math.min(1, 0.85 * fl); line(ctx, 5, 0, 31, 0, ghost, 1.3); ctx.restore();
+  glow(ctx, 20, 0, 13, ghost, 0.13 * fl);
+  poly(ctx, [-0.5, -7.5, 3, -4.5, 3, 4.5, -0.5, 7.5, -2.2, 0], plateD, OUT, 1.3);
+  rrect(ctx, -9, -1.6, 8, 3.2, 1, ink, OUT, 1); circle(ctx, -10.5, 0, 2.1, plateD, OUT, 1);
+  hand(ctx, 0, 0, plateD); hand(ctx, -6, 0, plateD);
+  ctx.restore();
+  // the hood and the cracked helm; a crown of shadow shards stands round the back of it
+  poly(ctx, [-5, -6.5, -15, 0, -5, 6.5], cloak, OUT, 1.8);
+  ellipse(ctx, -3, 0, 8.6, 8.2, 0, cloak, OUT, 2);
+  const n = reaver ? 9 : 7;
+  for (let i = 0; i < n; i++) {
+    const a = 1.75 + i * (2.64 / (n - 1)), tip = 12.5 + (i % 2) * 2.6 + Math.sin(st.t * 2.6 + i * 1.7) * 0.7, w = 0.2;
+    poly(ctx, [1 + Math.cos(a - w) * 6.4, Math.sin(a - w) * 6.4, 1 + Math.cos(a) * tip, Math.sin(a) * tip, 1 + Math.cos(a + w) * 6.4, Math.sin(a + w) * 6.4], ink, OUT, 1.1);
+    circle(ctx, 1 + Math.cos(a) * (tip - 1.2), Math.sin(a) * (tip - 1.2), 0.9, ghost);
+  }
+  circle(ctx, 1, 0, 7.2, plateD, OUT, 2);
+  circle(ctx, 2.6, -2.6, 2.4, shade(plateD, 0.22));
+  ctx.save(); ctx.strokeStyle = ghost; ctx.globalAlpha = Math.min(1, 0.85 * fl); ctx.lineWidth = 1.1; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.beginPath(); ctx.moveTo(7, 0.6); ctx.lineTo(3.5, -0.8); ctx.lineTo(1, 1.2); ctx.lineTo(-2.5, -0.6); ctx.lineTo(-5, 1.2); ctx.moveTo(1, 1.2); ctx.lineTo(-0.5, 4.4); ctx.stroke();
+  ctx.restore();
+  ellipse(ctx, 5.8, 0, 1.7, 3.8, 0, '#0a0612');
+  glow(ctx, 6.4, 0, 6.5, ghost, 0.5 * fl);
+  circle(ctx, 6.3, -1.8, 0.9, '#f4fffb'); circle(ctx, 6.3, 1.8, 0.9, '#f4fffb');
+};
+
+// Thresher (damage, class 19): a lean harvester in a tattered bone-white coat with moss-green mantle and a deep hood, a
+// lantern lit inside it and another hung at the hip. The scythe is long: an ash snath, a curved blade with a soul-lit edge
+// (pale green; a violet vein runs in it). In the Reaper's Gate (st.thMist, set by ability-vfx.js) the body goes to mist.
+HERO_ART.thresher = function (ctx, st) {
+  const bone = '#e4e0c6', boneD = '#b4b092', moss = '#5a8c42', mossD = '#2f5a2c', ink = '#0e160e', ash = '#7a5d3c', ashD = '#4a3624', soul = '#b8f5a8', lamp = '#ffd98a', vio = '#a77ae8';
+  const sower = HERO_SPEC === 'sower', grim = HERO_SPEC === 'grim';
+  const mist = st.thMist && typeof FX !== 'undefined' && FX.now < st.thMist;
+  const s = swing(actP(st, 'attack')), bash = pulse(actP(st, 'bash')), big = pulse(actP(st, 'big')), cast = pulse(actP(st, 'cast')), pa = actP(st, 'attack');
+  const wave = Math.sin(st.t * 3.4) * 1.8 + (st.moving ? Math.sin(st.t * 10) * 2.2 : 0);
+  const fl = 0.75 + 0.25 * Math.sin(st.t * 6.1 + 1);
+  ctx.save();
+  if (mist) ctx.globalAlpha = 0.34 + 0.1 * Math.sin(st.t * 7);
+  // the torn coat tails behind, a moss thread through the hem
+  const hem = [[-9, -12], [-14, -10], [-18 + wave * 0.4, -12], [-22 + wave, -6], [-18 + wave, -2], [-25 + wave * 1.2, 2], [-19 + wave, 6], [-23 + wave, 10], [-15 + wave * 0.4, 10], [-10, 12]];
+  poly(ctx, [-3, -9].concat(...hem, [-3, 9]), bone, OUT, 2);
+  line(ctx, -8, -4, -20 + wave * 0.7, -3, boneD, 1.1); line(ctx, -8, 4, -20 + wave * 0.7, 3, boneD, 1.1);
+  for (const [hx, hy] of [hem[3], hem[5], hem[7]]) circle(ctx, hx + 0.5, hy, 1.2, moss);
+  feet(ctx, st, '#3a2c20');
+  torso(ctx, bone, 8.2, 13.2);
+  line(ctx, -2, -10, 3, 9, boneD, 1.2);                                  // the coat's seam
+  // the moss mantle over the shoulders, ragged at the edge, a sprig tucked in each
+  for (const sy of [-1, 1]) {
+    poly(ctx, [-3, 8.5 * sy, 1, 15.5 * sy, 5, 14.5 * sy, 7, 10.5 * sy, 4, 8 * sy], moss, OUT, 1.6);
+    line(ctx, 0, 11 * sy, 5, 11.5 * sy, mossD, 1);
+  }
+  if (sower) for (const sy of [-1, 1]) { circle(ctx, 5.5, 13.2 * sy, 1.7, '#e8f6b0', OUT, 0.8); circle(ctx, 5.5, 13.2 * sy, 0.6, '#f0b848'); }
+  // belt, seed pouches and the hip lantern (free of the scythe: it hangs on the left, away from the swing)
+  line(ctx, -5, -9, -5, 9, ashD, 2.2);
+  rrect(ctx, -7.5, 5.5, 4.5, 4.2, 1.2, ash, OUT, 1); rrect(ctx, -7.5, -1, 4.5, 4, 1.2, ash, OUT, 1);
+  line(ctx, -1, -9.5, 1.5, -13, ashD, 1);
+  glow(ctx, 2.2, -14, 8, lamp, 0.4 * fl); rrect(ctx, 0.6, -15.6, 3.4, 3.8, 1, '#3a2e22', OUT, 0.9); circle(ctx, 2.3, -13.8, 1.1, '#fff4c8');
+  // the scythe: held two-handed on the right; the whole arm swings it round
+  const dir = swingDir(st), rot = 0.55 + dir * s * 1.35 - big * 1.5 - cast * 0.5 + bash * 0.25;
+  ctx.save(); ctx.translate(5, 10); ctx.rotate(rot);
+  // the snath, a curve of ash with a knob at the heel
+  poly(ctx, [-13, -1.4, 20, -1.8, 39, -1.5, 39, 1.5, 20, 1.8, -13, 1.4], ash, OUT, 1.4);
+  line(ctx, -11, -0.2, 38, -0.3, '#9a7a52', 0.9);
+  circle(ctx, -14, 0, 2.2, ashD, OUT, 1);
+  rrect(ctx, 25, -2.3, 2.4, 4.6, 0.8, boneD, OUT, 0.8);                    // the grip
+  // the blade: a long curved crescent swept forward from the head of the snath, soul-lit along its edge
+  const blade = grim ? '#d8d0b0' : '#cfe2c0';
+  poly(ctx, [37, 1.6, 46, -4, 57, -10.5, 69, -12, 77, -7.5, 69, -8.8, 58, -5.6, 48, 0.4, 40, 4.4], blade, OUT, 1.5);
+  ctx.save(); ctx.globalAlpha = (mist ? 0.5 : 1) * Math.min(1, 0.95 * fl); ctx.strokeStyle = grim ? '#ffe08a' : soul; ctx.lineWidth = 1.5; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.beginPath(); ctx.moveTo(40, 3.4); ctx.quadraticCurveTo(54, -1.4, 68, -9.2); ctx.lineTo(76, -7.5); ctx.stroke();
+  ctx.globalAlpha = 0.7 * fl; ctx.strokeStyle = vio; ctx.lineWidth = 0.9; ctx.beginPath(); ctx.moveTo(41, 0.4); ctx.quadraticCurveTo(54, -4.4, 67, -10.2); ctx.stroke();
+  ctx.restore();
+  glow(ctx, 58, -6, 14, grim ? '#ffd65a' : soul, 0.2 * fl); circle(ctx, 76, -7.4, 1.2, '#ffffff');
+  ctx.restore();
+  smear(ctx, 5, 10, 38, 0.55 + dir * 1.35, rot, grim ? '#ffe08a' : soul, strikeAmt(pa) * 0.8, 8);
+  hand(ctx, 5, 10, bone); hand(ctx, 5 + 23 * Math.cos(rot), 10 + 23 * Math.sin(rot), bone);
+  // the deep hood: moss-green, peaked at the back, with the lantern-lit hollow where the face is
+  poly(ctx, [-3, -6.5, -14, 0, -3, 6.5], mossD, OUT, 1.8);
+  ellipse(ctx, -2, 0, 8.6, 8.2, 0, moss, OUT, 2);
+  ellipse(ctx, -3.5, -2.2, 3.4, 2.4, 0, shade(moss, 0.2));
+  ellipse(ctx, 3.4, 0, 5, 5.4, 0, '#0b120b');                                // the hollow
+  glow(ctx, 4.4, 0, 9, lamp, 0.55 * fl); glow(ctx, 5, 0, 4, '#fff2c0', 0.5 * fl);
+  circle(ctx, 4.6, -1.9, 0.9, '#fffbe8'); circle(ctx, 4.6, 1.9, 0.9, '#fffbe8');
+  ellipse(ctx, 0.8, 0, 8.6, 8.2, 0, null, shade(mossD, 0.05), 1.6);          // the hood's lip
+  ctx.restore();
+  if (mist) for (let i = 0; i < 4; i++) { const q = (st.t * 0.9 + i / 4) % 1; ctx.save(); ctx.globalAlpha = (1 - q) * 0.4; circle(ctx, -4 - q * 10, (i - 1.5) * 5 + Math.sin(st.t * 3 + i) * 2, 3 + q * 4, '#dff5d0'); ctx.restore(); }
+};
+Object.assign(SPEC_ART, {
+  // Sower: a loose scatter of pale seed drifting off the hands, a green glint at the belt
+  sower(ctx, st) { for (let i = 0; i < 3; i++) { const q = (st.t * 0.8 + i / 3) % 1; ctx.save(); ctx.globalAlpha = (1 - q) * 0.7; circle(ctx, 8 + q * 8, 7 + (i - 1) * 4 + Math.sin(q * 6 + i) * 2, 1 - q * 0.4, '#d8f2a0'); ctx.restore(); } },
+  // Grim: an hourglass of gold sand at the hip and a slow gold motes rising from the blade's heel
+  grim(ctx, st) { glow(ctx, -3, 12, 7, '#ffd65a', 0.16 + Math.sin(st.t * 2) * 0.04); rrect(ctx, -4.4, 10.4, 2.8, 4.6, 0.8, '#ffe9a0', OUT, 0.9); line(ctx, -4.4, 12.7, -1.6, 12.7, '#8a6a20', 0.8); },
+});

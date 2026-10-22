@@ -50,7 +50,7 @@ const Pastimes = (() => {
     const c = h && h.clears && h.clears[boss];
     return c && (mode ? (c[mode] | 0) > 0 : (c.normal | 0) + (c.hard | 0) > 0);
   });
-  const BOSS_IDS = () => (typeof BOSSES !== 'undefined' ? BOSSES.map(b => b.id) : []);
+  const BOSS_IDS = set => (typeof BOSSES !== 'undefined' ? BOSSES.filter(b => !set || (b.set || 1) === set).map(b => b.id) : []);   // (set: only that set's bosses; the "all four" feats are set 1)
   function journalPages() {
     let n = 0;
     for (const h of Object.values(Save.get('heroes') || {})) for (const b of Object.values((h && h.journal && h.journal.moves) || {})) for (const m of Object.values(b || {})) if (m && m.pass > 0) n++;
@@ -64,7 +64,7 @@ const Pastimes = (() => {
     const s = st();
     switch (c && c.type) {
       case 'clear': return c.boss ? anyClear(c.boss, c.mode) : BOSS_IDS().some(b => anyClear(b, c.mode));
-      case 'clearAll': return BOSS_IDS().every(b => anyClear(b, c.mode));
+      case 'clearAll': return BOSS_IDS(1).every(b => anyClear(b, c.mode));
       case 'clearNoDeaths': return c.boss ? !!(s.flawless[c.boss] && (c.mode ? s.flawless[c.boss][c.mode] : Object.values(s.flawless[c.boss]).some(Boolean))) : Object.values(s.flawless).some(f => c.mode ? f[c.mode] : Object.values(f).some(Boolean));
       case 'clearUnder': return (s.best[c.boss] || Infinity) <= c.secs;
       case 'pulls': return stat('pulls') >= c.n;

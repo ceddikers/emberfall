@@ -1,4 +1,4 @@
-# Music prompts: menu, town, four bosses, and the short stings
+# Music prompts: menu, town, the bosses, and the short stings
 
 Instrumental only. The game is dusky low fantasy: warm and a little rustic in town, heavier and darker inside the bosses' halls. Nothing cartoonish, nothing comedic in the melody itself. Each piece is written to loop under a fight or a screen, so the arrangement matters more than a big ending.
 
@@ -139,6 +139,78 @@ Full prompt: the same theme and key as the main loop but faster, about 128 BPM, 
 
 **Harder variant `mus-hollowking-b` (the war march, after Royal Doom) (Style):** `dark fantasy war march, wordless choir, pounding timpani and snare, brass fanfare, bells, relentless, majestic, instrumental, no lyrics`
 Full prompt: the same theme and key as the main loop but turned into a war march at about 108 BPM: snare and timpani marching, a defiant brass fanfare carrying the melody, the choir now loud and fierce (wordless), bells in the rhythm, relentless and grand. No lyrics. Ends on the single tolling bell.
+
+---
+
+## 6b. Hrimgar, the Frost Titan (set 2, `mus-titan`, harder variant `mus-titan-b`)
+
+**What it is:** a glacier plateau under the aurora; a slow giant, the ice itself the enemy. Deep choir drone, glacial bells, giant footfalls, built in layers of ice-crack percussion. Mood: pale blue, white, aurora green and violet.
+
+**Main loop (Style):** `dark fantasy glacial boss theme, deep male choir drone, glacial bells and glass harmonics, slow giant footfall drums, low cello, ice cracking percussion, cold, vast, instrumental, no lyrics`
+
+**Structure block:**
+```
+[Instrumental]
+[Intro: a deep choir drone and a single glacial bell, wind, 4 bars]
+[Verse: slow giant footfalls on huge frame drums, a low cello figure, the choir holding long open fifths, 16 bars]
+[Chorus: the choir rises over bells and glass harmonics, an ice-crack percussion layer (cracking ice, struck frozen metal) enters on every other beat, 16 bars]
+[Bridge: only the drone, bells and a distant wordless female voice like the aurora, 8 bars]
+[Return: the footfalls again, one more layer of ice-crack percussion, ends on the bell and the drone, 16 bars]
+```
+
+**Full prompt:** Vast, cold dark-fantasy boss music for a frost giant on a glacier under the northern lights, around 60 BPM in D minor. A deep wordless male choir drone on open fifths, giant slow footfalls on frame drums, a low solo cello, glacial bells and glass-harmonica shimmer, and a percussion layer of cracking ice and struck frozen metal that grows a layer at a time as the piece goes on. A sparse middle with a distant wordless female voice over the drone. Heavy, patient, awe rather than fury. No lyrics, no electronic sounds. Starts and ends on a single bell over the drone so it loops.
+
+**Harder variant `mus-titan-b` (the Long Night onward) (Style):** `dark fantasy glacial war theme, deep choir, pounding frame drums, ice cracking percussion, rising brass, avalanche rumble, relentless, instrumental, no lyrics`
+Full prompt: the same theme and key at about 96 BPM: the footfalls become a march, brass carries the melody over a loud fierce wordless choir, ice-crack percussion on every beat, a low avalanche rumble underneath that swells at the end of each phrase. Ends on the single bell.
+
+---
+
+## 6c. The Hydra of the Drowned Temple (set 2, `mus-hydra`, harder variant `mus-hydra-b`)
+
+**What it is:** a flooded temple, black water, brass and moss, a pool with a gold sheen and a many-headed thing in it. Drums and a low choir, with a head-count layer: each head that rises adds an instrument, so the music thickens as the fight grows from three heads to nine. Dark, wet, ritual; menacing rather than epic.
+
+**Main loop (Style):** `dark ritual fantasy, deep frame drums, low wordless choir, bowed bass, water drips and bubbles, brass drones, slow, layered, ominous, instrumental, no lyrics`
+
+**Structure block:**
+```
+[Instrumental]
+[Intro: water drips over a low brass drone, one frame drum every two bars, 8 bars]
+[Three heads: slow frame-drum pulse, bowed bass, low wordless choir holding a fifth, 16 bars]
+[Six heads: add a hand drum counter-rhythm, bowed cellos on a rising figure, 16 bars]
+[Submerge: everything drops to a bubbling drone and a heartbeat, 8 bars]
+[Nine heads: all layers at once, brass stabs, choir opens to a full chord, bells, 16 bars]
+[Return: back to the intro drone and a single drum, 8 bars]
+```
+
+**Full prompt:** Slow, dark, ritual instrumental for a boss fight against a many-headed hydra in a flooded temple, around 84 BPM in D minor. Deep frame drums, bowed double bass and cellos, a low wordless choir (oohs only), brass drones, water drips and bubbling as texture, bronze bells. Build it in layers: begin with drums and drone, then add a new instrument every sixteen bars so the music gains one voice per head, down to a sudden stripped bubbling heartbeat in the middle and a full thick return. Menacing, wet, never cheerful, leaving room in the mix for sound effects. No lyrics, no electric guitars, no electronic elements. Starts and ends on the water drip over the low drone so it loops.
+
+**Harder variant `mus-hydra-b` (the last acts, the Mother's Heart) (Style):** `intense dark ritual orchestral finale, pounding frame drums, choir chords, brass stabs, heartbeat bass, relentless strings, instrumental, no lyrics`
+Full prompt: the same theme and key but faster, about 112 BPM, with a pounding drum pattern, a thick wordless choir on rising chords, brass stabs on every strike, a heartbeat in the low bass, and tolling bells. Climactic, urgent, never silent. No lyrics. Ends on the same water drip and drum hit.
+
+---
+
+## 6d. Azerath, the Sunken Archmage (set 2, `mus-archmage`, harder variant `mus-archmage-b`)
+
+**What it is:** a drowned mage's tower, deep teal stone under standing water, seven circles of old spellwork glowing in four elements. Arcane strings and a wordless choir, with one motif that modulates by element: it is heard in four keys through the fight (fire, frost, lightning, void), and an electric undertone runs under the whole piece. Mood: deep teal, with orange, pale blue, yellow and violet each in its turn. Learned, ceremonial, a little sad; menacing rather than epic.
+
+**Main loop (Style):** `dark fantasy arcane boss theme, legato string ensemble, wordless chamber choir, harp and celesta arpeggios, low pipe organ drone, glass harmonica, subtle electric hum, modal, instrumental, no lyrics`
+
+**Structure block:**
+```
+[Instrumental]
+[Intro: water drips over a low organ drone and a glass harmonica, the four-note motif once in the celesta, 8 bars]
+[Fire: the motif in the cellos in D minor, harp arpeggios, a low war drum on the beat, 16 bars]
+[Frost: the same motif a tone up in high strings and glass harmonica, sparse, bells, 16 bars]
+[Lightning: the motif in staccato violins, a crackling electric texture under it, the choir on short stabs, 16 bars]
+[Binding: only the choir and the organ, the motif passing from instrument to instrument, 8 bars]
+[Void: the motif low in a bass clarinet and contrabass, the choir sliding downward, 16 bars]
+[Return: the intro drone, the motif once, ends on the glass harmonica, 8 bars]
+```
+
+**Full prompt:** Learned, ceremonial dark-fantasy boss music for a drowned archmage's tower, around 76 BPM in D minor. A single short four-note motif is carried by different instruments and moves to a new key for each element: low cellos for fire, high strings and glass harmonica for frost, staccato violins over a faint crackling electric hum for lightning, bass clarinet and contrabass for the void. A wordless chamber choir, harp and celesta arpeggios, a low pipe organ drone, water drips as texture. A short stripped passage of choir and organ in the middle where the motif is handed from voice to voice. Eerie and dignified, a little sad, never cheerful, leaving room in the mix for sound effects. No lyrics, no guitars, no synth leads. Starts and ends on the water drip over the organ drone so it loops.
+
+**Harder variant `mus-archmage-b` (the last acts, the Convergence) (Style):** `intense dark arcane orchestral finale, driving strings ostinato, full choir chords, brass stabs, pipe organ, electric crackle, relentless, instrumental, no lyrics`
+Full prompt: the same motif and key at about 108 BPM: a driving string ostinato, a full wordless choir on rising chords, brass stabs on every strike, the organ opened wide, and all four element colours of the motif played at once in different registers, with an electric crackle through the top. Climactic, urgent, never silent. No lyrics. Ends on the same water drip and organ chord.
 
 ---
 

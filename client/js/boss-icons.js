@@ -4,7 +4,8 @@
 // file instead, icons/boss/<boss>/<slug>.png, with the drawn one underneath until it loads (or if one is missing).
 
 const BossIcons = (() => {
-  const ACCENT = { grubnak: '#ff9a3a', skitterra: '#b8ef5a', volkar: '#7fe8ff', hollowking: '#6dff9a' };
+  const ACCENT = { archmage: '#3fb8b0', grubnak: '#ff9a3a', skitterra: '#b8ef5a', volkar: '#7fe8ff', hollowking: '#6dff9a', wyrm: '#ff8a2a', titan: '#8ad0ee' };
+  ACCENT.hydra = '#7fe0a8';
   const L = '#f2e6c8', INK = '#14111a';
   const cache = new Map();
   const PAINTED = new Set(['grubnak', 'skitterra', 'volkar', 'hollowking']);
@@ -338,7 +339,426 @@ const BossIcons = (() => {
     },
     'Moonset': (c, A) => { disc(c, 32, 34, 18, '#cfe2ff'); disc(c, 40, 28, 15, '#0e1218'); fill(c, '#0e1218', [[0, 44], [64, 44], [64, 64], [0, 64]]); stroke(c, A, 3, [[6, 44], [58, 44]]); },
     'Doom Pass': (c, A) => { skull(c, 22, 32, 0.6, '#efe2ff'); stroke(c, L, 2.5, [[34, 32], [52, 32]]); fill(c, L, [[50, 26], [58, 32], [50, 38]]); },
+    // Vhalgrath (drawn badges; painted icons come later)
+    // a dragon's head thrown back, jaws wide, rings of sound rolling out
+    "Tyrant's Roar": (c, A) => {
+      for (const r of [14, 21, 28]) { c.beginPath(); c.arc(40, 24, r, -0.5, 0.9); c.strokeStyle = rgba(A, 0.75 - r / 50); c.lineWidth = 2.5; c.stroke(); }
+      inked(c, '#4a2a22', [[8, 40], [20, 26], [34, 20], [40, 24], [30, 30], [22, 36]], 2);
+      inked(c, '#6b3a2c', [[8, 42], [22, 40], [34, 38], [26, 46], [14, 48]], 2);
+      for (const x of [20, 25, 30]) fill(c, L, [[x, 28 + (x - 20) * -0.5], [x + 2, 33], [x - 2, 33]]);
+      disc(c, 30, 24, 2.2, A); inked(c, L, [[10, 26], [4, 14], [16, 22]], 1.6);
+    },
+    // three claw marks raked down across a dark ground, the middle one deepest
+    'Rending Claws': (c, A) => {
+      for (const [x, d] of [[18, 0], [32, 4], [46, 0]]) { inked(c, '#efe2c4', [[x - 3, 8 + d], [x + 3, 8 + d], [x + 8, 56], [x - 4, 52]], 2); stroke(c, A, 2, [[x, 14 + d], [x + 2, 48]]); }
+      motion(c, A, [[[6, 12], [12, 20]], [[54, 12], [50, 20]]]);
+    },
+    // a cone of flame, a dragon's snout at its tip, embers drifting off
+    'Ember Breath': (c, A) => {
+      fill(c, rgba(A, 0.5), [[8, 32], [58, 12], [58, 52]]); fill(c, rgba('#ffd27a', 0.8), [[10, 32], [46, 22], [46, 42]]); fill(c, '#fff4c8', [[10, 32], [30, 28], [30, 36]]);
+      inked(c, '#4a2a22', [[2, 26], [14, 26], [16, 32], [14, 38], [2, 38]], 2); disc(c, 9, 30, 1.8, A);
+      for (const [x, y] of [[50, 18], [54, 34], [44, 48], [56, 44]]) disc(c, x, y, 2, '#ffe0a0');
+    },
+    // a spined tail swinging round in a wide arc behind
+    'Tail Lash': (c, A) => {
+      c.beginPath(); c.arc(32, 36, 22, 3.6, 6.1); c.strokeStyle = A; c.lineWidth = 12; c.lineCap = 'round'; c.stroke();
+      c.beginPath(); c.arc(32, 36, 22, 3.6, 6.1); c.strokeStyle = '#4a2a22'; c.lineWidth = 8; c.stroke();
+      for (let i = 0; i < 6; i++) { const a = 3.8 + i * 0.4; fill(c, '#efe2c4', [[32 + Math.cos(a) * 27, 36 + Math.sin(a) * 27], [32 + Math.cos(a) * 33, 36 + Math.sin(a) * 33], [32 + Math.cos(a + 0.12) * 27, 36 + Math.sin(a + 0.12) * 27]]); }
+      inked(c, '#efe2c4', [[53, 28], [60, 36], [53, 38]], 1.8);
+    },
+    // three bursts of lava, each a ring with a bright core
+    'Magma Burst': (c, A) => {
+      for (const [x, y] of [[18, 22], [44, 18], [32, 44]]) { ring(c, x, y, 11, A, 2.6); disc(c, x, y, 7, '#ffb04a'); disc(c, x, y, 3.5, '#fff4c8'); for (let i = 0; i < 6; i++) { const a = i * 1.05; stroke(c, A, 1.6, [[x + Math.cos(a) * 11, y + Math.sin(a) * 11], [x + Math.cos(a) * 16, y + Math.sin(a) * 16]]); } }
+    },
+    // a ring of embers round a bowl of coals, the whole table gathered at it
+    'Cinder Feast': (c, A) => {
+      shadowUnder(c, 32, 50, 22);
+      inked(c, '#3a2a22', [[14, 34], [50, 34], [44, 50], [20, 50]], 2.2); inkEll(c, 32, 34, 18, 5, '#2a1812', 1.8);
+      flame(c, 32, 30, 15, A, '#ffe08a'); flame(c, 24, 32, 9, '#ff6a1a', '#ffd27a'); flame(c, 40, 32, 9, '#ff6a1a', '#ffd27a');
+      ring(c, 32, 40, 26, '#3d8bff', 2);
+    },
+    // wings spread above a ground line, a gust under them
+    'Take Flight': (c, A) => {
+      for (const sd of [-1, 1]) inked(c, '#7a2f1a', [[32, 22], [32 + sd * 28, 8], [32 + sd * 26, 22], [32 + sd * 20, 24], [32 + sd * 14, 32], [32 + sd * 6, 28]], 2);
+      inked(c, '#4a2a22', [[26, 20], [38, 20], [36, 36], [28, 36]], 2); disc(c, 32, 17, 3.5, '#6b3a2c');
+      motion(c, L, [[[16, 46], [26, 52]], [[48, 46], [38, 52]], [[28, 56], [36, 56]]]);
+    },
+    // a line of embers down from the top edge to a ring on a scorched pit
+    'Dragonfall': (c, A) => {
+      stroke(c, rgba(A, 0.55), 10, [[16, 2], [32, 36]]); stroke(c, '#ffd27a', 2.5, [[16, 2], [32, 36]]);
+      for (const [x, y] of [[20, 10], [25, 20], [29, 28]]) disc(c, x, y, 2.4, '#fff4c8');
+      c.beginPath(); c.ellipse(34, 46, 22, 9, 0, 0, TAU); c.fillStyle = '#100806'; c.fill(); c.strokeStyle = A; c.lineWidth = 3; c.stroke();
+      c.beginPath(); c.ellipse(34, 46, 12, 4.5, 0, 0, TAU); c.fillStyle = '#ff8a2a'; c.fill();
+    },
+    // two lines crossing, the second ending in a ring
+    'Twin Pass': (c, A) => {
+      stroke(c, rgba(A, 0.45), 8, [[4, 10], [60, 30]]); stroke(c, '#ffd27a', 2, [[4, 10], [60, 30]]);
+      stroke(c, rgba(A, 0.7), 8, [[58, 6], [24, 46]]); stroke(c, '#fff4c8', 2, [[58, 6], [24, 46]]);
+      ring(c, 22, 48, 9, A, 3); disc(c, 22, 48, 4, '#ffb04a');
+    },
+    // a high rim, a dragon's wing over it, burning scales falling
+    'The Roost': (c, A) => {
+      inked(c, '#3a2a26', [[0, 20], [64, 20], [64, 28], [0, 28]], 2);
+      inked(c, '#7a2f1a', [[6, 22], [22, 4], [44, 10], [58, 22], [44, 18], [30, 20], [18, 18]], 2);
+      for (const [x, y, r] of [[18, 40, 5], [34, 48, 6], [48, 38, 5]]) { flame(c, x, y, r + 5, A, '#ffe08a'); }
+    },
+    // the rim of a crater glowing, lava creeping in
+    'Crater Boils': (c, A) => {
+      disc(c, 32, 34, 26, '#ff7a22'); disc(c, 32, 34, 18, '#1c1210'); ring(c, 32, 34, 26, '#ffd27a', 2);
+      for (const [x, y] of [[14, 22], [50, 24], [44, 50], [18, 48]]) { disc(c, x, y, 3.2, '#ffd27a'); }
+      for (const [x, y] of [[26, 30], [38, 38], [30, 42]]) disc(c, x, y, 1.8, A);
+    },
+    // two cones of fire, the second behind the first
+    'Twin Breath': (c, A) => {
+      fill(c, rgba(A, 0.45), [[6, 18], [58, 4], [58, 34]]); fill(c, rgba('#ffd27a', 0.8), [[8, 18], [44, 14], [44, 24]]);
+      fill(c, rgba(A, 0.7), [[6, 46], [58, 34], [58, 62]]); fill(c, rgba('#fff4c8', 0.85), [[8, 46], [44, 42], [44, 52]]);
+      inked(c, '#4a2a22', [[0, 12], [10, 12], [12, 18], [10, 24], [0, 24]], 1.8); inked(c, '#4a2a22', [[0, 40], [10, 40], [12, 46], [10, 52], [0, 52]], 1.8);
+    },
+    // a glowing heart in the middle of three scorch marks
+    'Heart Burn': (c, A) => {
+      for (const [x, y] of [[32, 54], [12, 20], [52, 20]]) { disc(c, x, y, 8, '#100806'); ring(c, x, y, 8, A, 2); }
+      c.beginPath(); c.moveTo(32, 46); c.bezierCurveTo(10, 32, 16, 14, 32, 24); c.bezierCurveTo(48, 14, 54, 32, 32, 46); c.fillStyle = '#ff5a1a'; c.fill(); c.strokeStyle = INK; c.lineWidth = 2; c.stroke();
+      glow(c, 32, 32, 14, '#ffd27a', 0.7); hi(c, 25, 28, 3, 4.5, 0.3);
+    },
+    // two gusts pushing away from a line
+    'Wingbeat': (c, A) => {
+      stroke(c, A, 3, [[32, 4], [32, 60]]);
+      for (const sd of [-1, 1]) for (const y of [16, 32, 48]) { stroke(c, L, 2.5, [[32 + sd * 6, y], [32 + sd * 24, y]]); fill(c, L, [[32 + sd * 24, y - 5], [32 + sd * 31, y], [32 + sd * 24, y + 5]]); }
+    },
+    // embers falling, each landing in a small ring
+    'Cinder Rain': (c, A) => {
+      for (const [x, y] of [[14, 30], [32, 22], [50, 34], [22, 52], [42, 56]]) { stroke(c, rgba(A, 0.7), 2.5, [[x + 3, y - 18], [x, y]]); disc(c, x, y, 3.4, '#ffd27a'); ring(c, x, y + 4, 7, A, 1.8); }
+    },
+    // a ring, shared, and small marks outside it
+    'Heart Flare': (c, A) => {
+      c.beginPath(); c.moveTo(32, 36); c.bezierCurveTo(18, 28, 22, 16, 32, 22); c.bezierCurveTo(42, 16, 46, 28, 32, 36); c.fillStyle = '#ff5a1a'; c.fill(); c.strokeStyle = INK; c.lineWidth = 1.6; c.stroke();
+      ring(c, 32, 28, 12, '#3d8bff', 2.5);
+      for (const [x, y] of [[10, 12], [54, 12], [10, 52], [54, 52]]) { ring(c, x, y, 6, A, 2); disc(c, x, y, 2.2, '#ffd27a'); }
+    },
+    'Ashfall': (c, A) => {
+      cloud(c, 32, 20, 1.2, '#3a3238');
+      for (const [x, y] of [[16, 40], [28, 48], [40, 42], [50, 52], [22, 56]]) disc(c, x, y, 2.4, '#d8d0c4');
+      for (const [x, y] of [[34, 38], [46, 46], [14, 50]]) disc(c, x, y, 2, A);
+    },
   };
+  // Hrimgar (drawn badges; painted icons come later: docs/art/icon-prompts.md)
+  Object.assign(G, {
+    // a giant's bearded head thrown back, rings of cold rolling out
+    "Winter's Howl": (c, A) => {
+      for (const r of [14, 21, 28]) { c.beginPath(); c.arc(38, 24, r, -0.6, 0.9); c.strokeStyle = rgba(A, 0.8 - r / 45); c.lineWidth = 2.5; c.stroke(); }
+      inked(c, '#8a9db3', [[6, 44], [10, 28], [24, 20], [34, 22], [30, 32], [24, 44]], 2);
+      for (const x of [12, 17, 22, 27]) fill(c, '#eaf6ff', [[x, 40], [x + 3, 40], [x + 1.5, 52]]);
+      inked(c, '#cfeaff', [[10, 24], [4, 12], [16, 20]], 1.6); disc(c, 26, 28, 2, A);
+    },
+    // a great pale fist coming down on a cone of dark ground
+    'Glacial Fist': (c, A) => {
+      fill(c, rgba(A, 0.35), [[32, 26], [8, 62], [56, 62]]);
+      inked(c, '#9fb6c9', [[20, 4], [44, 4], [48, 24], [40, 34], [24, 34], [16, 24]], 2.2);
+      for (const x of [22, 29, 36]) stroke(c, '#55657a', 1.8, [[x, 24], [x + 2, 33]]);
+      fill(c, '#cfeaff', [[16, 24], [12, 34], [22, 30]]); hi(c, 28, 12, 5, 3, 0.1);
+    },
+    // a ring on the ice, a crack starting in the middle
+    'Rime Slam': (c, A) => {
+      ring(c, 32, 34, 22, A, 3); disc(c, 32, 34, 18, rgba('#cfeaff', 0.25));
+      stroke(c, INK, 4, [[32, 34], [26, 24], [30, 16]]); stroke(c, INK, 4, [[32, 34], [42, 40], [46, 50]]); stroke(c, INK, 4, [[32, 34], [20, 42], [16, 50]]);
+      stroke(c, '#eaf6ff', 1.6, [[32, 34], [26, 24], [30, 16]]); stroke(c, '#eaf6ff', 1.6, [[32, 34], [42, 40], [46, 50]]); stroke(c, '#eaf6ff', 1.6, [[32, 34], [20, 42], [16, 50]]);
+    },
+    // two rings, one behind the other, a crack under each
+    'Twin Slam': (c, A) => {
+      for (const [x, y] of [[20, 22], [42, 42]]) { ring(c, x, y, 14, A, 2.8); disc(c, x, y, 11, rgba('#cfeaff', 0.25)); stroke(c, INK, 3, [[x, y], [x - 5, y - 8]]); stroke(c, INK, 3, [[x, y], [x + 6, y + 7]]); stroke(c, '#eaf6ff', 1.4, [[x, y], [x - 5, y - 8]]); stroke(c, '#eaf6ff', 1.4, [[x, y], [x + 6, y + 7]]); }
+    },
+    // a long jagged crack running across the ice, sheets splitting either side
+    'Fault Line': (c, A) => {
+      fill(c, rgba(A, 0.3), [[2, 22], [62, 6], [62, 30], [2, 46]]);
+      stroke(c, INK, 6, [[2, 36], [16, 28], [24, 36], [38, 24], [48, 30], [62, 18]]); stroke(c, '#eaf6ff', 2, [[2, 36], [16, 28], [24, 36], [38, 24], [48, 30], [62, 18]]);
+      stroke(c, INK, 3, [[24, 36], [20, 50]]); stroke(c, '#eaf6ff', 1.2, [[24, 36], [20, 50]]); stroke(c, INK, 3, [[38, 24], [42, 10]]); stroke(c, '#eaf6ff', 1.2, [[38, 24], [42, 10]]);
+    },
+    // icicles falling out of the aurora, each into a small ring
+    'Icefall': (c, A) => {
+      for (const [x, y] of [[14, 40], [32, 30], [50, 44]]) { fill(c, '#eaf6ff', [[x - 4, y - 24], [x + 4, y - 24], [x, y - 4]]); stroke(c, INK, 1.5, [[x - 4, y - 24], [x, y - 4], [x + 4, y - 24]]); ring(c, x, y + 6, 9, A, 2); }
+    },
+    // a vast arc swung in front of a giant's shoulder
+    "Titan's Sweep": (c, A) => {
+      fill(c, rgba(A, 0.35), [[10, 56], [4, 24], [20, 6], [44, 6], [60, 24], [54, 56]]);
+      c.beginPath(); c.arc(32, 58, 44, 3.6, 5.8); c.strokeStyle = '#eaf6ff'; c.lineWidth = 3; c.stroke();
+      inkEll(c, 32, 54, 12, 8, '#9fb6c9', 2); inkEll(c, 32, 52, 7, 5, '#cfeaff', 1.4);
+    },
+    // frost spreading from a footprint, a hand of ice rising
+    "Winter's Grasp": (c, A) => {
+      inkEll(c, 32, 46, 16, 9, '#cfeaff', 2); ring(c, 32, 46, 24, A, 2);
+      for (const [x, y] of [[16, 32], [24, 24], [32, 20], [40, 24], [48, 32]]) fill(c, '#eaf6ff', [[x - 3, y + 10], [x, y - 8], [x + 3, y + 10]]);
+      for (const [x, y] of [[16, 32], [24, 24], [32, 20], [40, 24], [48, 32]]) stroke(c, INK, 1.4, [[x - 3, y + 10], [x, y - 8], [x + 3, y + 10]]);
+    },
+    // a snowflake over a small thermometer
+    'Frostbite': (c, A) => {
+      for (let i = 0; i < 3; i++) { const a = i * Math.PI / 3; stroke(c, '#eaf6ff', 3, [[32 + Math.cos(a) * 20, 28 + Math.sin(a) * 20], [32 - Math.cos(a) * 20, 28 - Math.sin(a) * 20]]); }
+      for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3; stroke(c, A, 2, [[32 + Math.cos(a) * 12, 28 + Math.sin(a) * 12], [32 + Math.cos(a + 0.5) * 18, 28 + Math.sin(a + 0.5) * 18]]); }
+      disc(c, 32, 28, 4, '#ffffff'); ring(c, 32, 54, 6, A, 2); disc(c, 32, 54, 3, '#ff9a6a');
+    },
+    // a blind white blast, the aurora behind
+    'Whiteout': (c, A) => {
+      glow(c, 32, 32, 34, '#ffffff', 0.9);
+      for (let i = 0; i < 10; i++) { const a = i * TAU / 10; stroke(c, rgba('#eaf6ff', 0.8), 2, [[32 + Math.cos(a) * 12, 32 + Math.sin(a) * 12], [32 + Math.cos(a) * 30, 32 + Math.sin(a) * 30]]); }
+      for (const [x, y] of [[10, 12], [52, 10], [54, 50], [12, 52]]) disc(c, x, y, 2.4, A);
+    },
+    // a dim aurora ribbon over huge slow shapes
+    'The Long Night': (c, A) => {
+      disc(c, 46, 14, 8, '#cfe2ff'); disc(c, 50, 12, 7, '#0e1218');
+      fill(c, '#1a2a44', [[0, 22], [20, 14], [40, 24], [64, 16], [64, 36], [0, 36]]); stroke(c, A, 2.5, [[0, 28], [20, 20], [40, 30], [64, 22]]);
+      inked(c, '#2a3548', [[8, 56], [14, 38], [26, 36], [30, 56]], 1.8); inked(c, '#2a3548', [[34, 56], [40, 40], [54, 38], [58, 56]], 1.8);
+    },
+    // five lanes of snow and rock running down, one lane left clear
+    'Avalanche': (c, A) => {
+      for (let i = 0; i < 5; i++) { if (i === 2) continue; const x = 6 + i * 13; fill(c, rgba(A, 0.5), [[x, 4], [x + 11, 4], [x + 11, 60], [x, 60]]); for (const y of [14, 28, 42, 54]) disc(c, x + 5.5, y, 3, '#eaf6ff'); }
+      fill(c, rgba('#cfeaff', 0.35), [[32, 4], [43, 4], [43, 60], [32, 60]]); stroke(c, '#eaf6ff', 1.6, [[32, 4], [32, 60]]); stroke(c, '#eaf6ff', 1.6, [[43, 4], [43, 60]]);
+    },
+    // a giant's foot, shards running out in two rings
+    'Glacial Stomp': (c, A) => {
+      ring(c, 32, 34, 28, rgba(A, 0.6), 3); ring(c, 32, 34, 20, A, 3);
+      inkEll(c, 32, 34, 11, 14, '#9fb6c9', 2.2); for (const x of [26, 30, 34, 38]) disc(c, x, 22, 2.2, '#eaf6ff');
+      for (let i = 0; i < 8; i++) { const a = i * TAU / 8 + 0.2; fill(c, '#eaf6ff', [[32 + Math.cos(a) * 20, 34 + Math.sin(a) * 20], [32 + Math.cos(a) * 29, 34 + Math.sin(a) * 29], [32 + Math.cos(a + 0.2) * 20, 34 + Math.sin(a + 0.2) * 20]]); }
+    },
+    // a cone of frost, three sheets inside it turning white
+    'Breath of Winter': (c, A) => {
+      fill(c, rgba(A, 0.4), [[4, 32], [60, 8], [60, 56]]); fill(c, rgba('#eaf6ff', 0.7), [[6, 32], [36, 24], [36, 40]]);
+      for (const [x, y] of [[42, 18], [48, 34], [44, 48]]) { inked(c, '#cfeaff', [[x - 6, y - 6], [x + 6, y - 6], [x + 6, y + 6], [x - 6, y + 6]], 1.6); stroke(c, INK, 1.2, [[x - 2, y - 6], [x + 1, y + 6]]); }
+      inked(c, '#9fb6c9', [[0, 26], [12, 26], [14, 32], [12, 38], [0, 38]], 1.8);
+    },
+    // a huge hand closing on a small figure
+    "Titan's Grip": (c, A) => {
+      disc(c, 32, 40, 6, '#f2e6c8'); fill(c, '#f2e6c8', [[27, 44], [37, 44], [36, 58], [28, 58]]);
+      for (const x of [14, 24, 34, 44]) inked(c, '#9fb6c9', [[x, 4], [x + 8, 4], [x + 9, 30], [x + 4, 36], [x - 1, 30]], 1.8);
+      inked(c, '#7fa0bb', [[10, 2], [54, 2], [52, 14], [12, 14]], 1.8); ring(c, 32, 50, 12, '#3d8bff', 2);
+    },
+    // the whole plateau snowed over, the sun a pale ring
+    'Endless Winter': (c, A) => {
+      ring(c, 32, 26, 14, '#eaf6ff', 2.5); disc(c, 32, 26, 7, rgba('#cfeaff', 0.5));
+      fill(c, '#2a3a54', [[0, 44], [18, 34], [36, 44], [50, 32], [64, 42], [64, 64], [0, 64]]); fill(c, '#eaf6ff', [[18, 34], [24, 40], [12, 40]]); fill(c, '#eaf6ff', [[50, 32], [57, 40], [43, 40]]);
+      for (const [x, y] of [[8, 12], [54, 10], [20, 54], [44, 56], [30, 48]]) { disc(c, x, y, 2.2, '#ffffff'); }
+    },
+    // a sheet of ice tipping on its edge, snow sliding off
+    'The Plateau Tips': (c, A) => {
+      inked(c, '#cfeaff', [[6, 44], [50, 14], [58, 24], [14, 54]], 2.2); stroke(c, rgba(INK, 0.5), 1.4, [[20, 40], [38, 22]]); stroke(c, rgba(INK, 0.5), 1.4, [[32, 46], [48, 28]]);
+      for (const [x, y] of [[48, 40], [54, 48], [44, 52], [56, 34]]) disc(c, x, y, 3, A);
+      motion(c, L, [[[40, 42], [46, 56]], [[28, 50], [34, 60]]]);
+    },
+  });
+  // The Hydra (drawn badges; painted icons come later: docs/art/icon-prompts.md)
+  Object.assign(G, {
+    // a great scaled face thrown back, mouth wide, rings of sound rolling out under a brass collar
+    "Mother's Cry": (c, A) => {
+      for (const r of [14, 21, 28]) { c.beginPath(); c.arc(40, 26, r, -0.5, 0.9); c.strokeStyle = rgba('#ffe9a8', 0.8 - r / 45); c.lineWidth = 2.5; c.stroke(); }
+      inked(c, '#2f5a3a', [[6, 46], [10, 28], [24, 20], [38, 24], [30, 32], [20, 40]], 2);
+      inked(c, '#16301f', [[8, 48], [22, 42], [34, 40], [26, 50], [14, 52]], 2);
+      for (const x of [18, 23, 28]) fill(c, L, [[x, 28 + (x - 18) * -0.4], [x + 2, 33], [x - 2, 33]]);
+      disc(c, 26, 24, 2.2, '#ffd870'); stroke(c, '#b8903a', 3, [[6, 54], [30, 56]]);
+    },
+    // a broad jaw closing on a cone of dark water, teeth top and bottom
+    'Rending Maul': (c, A) => {
+      fill(c, rgba('#ff4a5a', 0.3), [[32, 30], [8, 4], [56, 4]]);
+      inked(c, '#2f5a3a', [[6, 30], [20, 22], [44, 22], [58, 30], [44, 34], [20, 34]], 2.2);
+      inked(c, '#16301f', [[6, 38], [20, 46], [44, 46], [58, 38], [44, 34], [20, 34]], 2.2);
+      for (const x of [14, 22, 30, 38, 46]) { fill(c, L, [[x, 34], [x + 2.5, 34], [x + 1, 26]]); fill(c, L, [[x + 2, 34], [x + 4.5, 34], [x + 3, 42]]); }
+      motion(c, A, [[[6, 12], [14, 18]], [[58, 12], [50, 18]]]);
+    },
+    // a cone of green spray from a snout, drops and bubbles in it, something eaten through
+    'Acid Spray': (c) => {
+      fill(c, rgba('#9ccc2e', 0.5), [[8, 32], [58, 10], [58, 54]]); fill(c, rgba('#d8ff70', 0.75), [[10, 32], [46, 22], [46, 42]]);
+      inked(c, '#3d5a12', [[2, 26], [14, 26], [16, 32], [14, 38], [2, 38]], 2); disc(c, 8, 30, 1.8, '#d8ff70');
+      for (const [x, y, r] of [[44, 16, 3], [52, 32, 2.6], [46, 48, 3], [34, 38, 2]]) { ring(c, x, y, r, '#e8ffb0', 1.8); }
+    },
+    // a long lane of water with waves in it, a snout at one end
+    'Tidal Line': (c) => {
+      fill(c, rgba('#2fbfb0', 0.35), [[4, 24], [60, 20], [60, 44], [4, 40]]);
+      for (const y of [28, 33, 38]) stroke(c, '#d8fffa', 2.2, [[8, y], [16, y - 3], [24, y + 3], [32, y - 3], [40, y + 3], [48, y - 3], [56, y]]);
+      inked(c, '#0f4a46', [[0, 22], [10, 22], [12, 32], [10, 42], [0, 42]], 2);
+    },
+    // a violet flower of poison, a ring round it shared
+    'Venom Bloom': (c) => {
+      ring(c, 32, 32, 24, '#3d8bff', 2.5);
+      for (let i = 0; i < 6; i++) { const a = i * TAU / 6; inkEll(c, 32 + Math.cos(a) * 11, 32 + Math.sin(a) * 11, 8, 5, '#a050e0', 1.8, a); }
+      inkDisc(c, 32, 32, 6, '#e0a0ff', 1.8); hi(c, 30, 30, 2, 1.5);
+      for (const [x, y] of [[10, 12], [54, 52], [12, 54]]) drop(c, x, y, 0.8, '#e0a0ff');
+    },
+    // two rings of fire on two small figures
+    'Flame Gout': (c) => {
+      for (const [x, y] of [[20, 24], [44, 40]]) { ring(c, x, y, 13, '#ff8a2a', 3); disc(c, x, y, 9, rgba('#ffb060', 0.45)); flame(c, x, y + 4, 12, '#ff8a2a', '#ffe08a'); }
+    },
+    // a ring of ice round a head, a safe hollow in the middle, crystals set in it
+    'Rime Crown': (c) => {
+      ring(c, 32, 32, 25, '#a8d8f0', 7); ring(c, 32, 32, 25, '#f0fbff', 2);
+      for (let i = 0; i < 8; i++) { const a = i * TAU / 8 + 0.2; fill(c, '#eaf6ff', [[32 + Math.cos(a - 0.1) * 21, 32 + Math.sin(a - 0.1) * 21], [32 + Math.cos(a) * 33, 32 + Math.sin(a) * 33], [32 + Math.cos(a + 0.1) * 21, 32 + Math.sin(a + 0.1) * 21]]); }
+      inkEll(c, 32, 33, 8, 6, '#2f5a3a', 1.8); disc(c, 35, 31, 1.6, '#e8f8ff');
+    },
+    // three bolts fanned out from one point
+    'Stormcall': (c) => {
+      for (const [a, col] of [[-0.55, '#fff6a0'], [0, '#ffffff'], [0.55, '#fff6a0']]) {
+        const ca = Math.cos(a - 0.2 + 0.2), sa = Math.sin(a);
+        stroke(c, rgba('#e8d040', 0.55), 9, [[8, 32], [8 + ca * 50, 32 + sa * 50]]);
+        stroke(c, col, 2.4, [[8, 32], [8 + ca * 14, 32 + sa * 14 - 5], [8 + ca * 26, 32 + sa * 26 + 5], [8 + ca * 38, 32 + sa * 38 - 4], [8 + ca * 50, 32 + sa * 50]]);
+      }
+      inkDisc(c, 8, 32, 5, '#e8d040', 1.8);
+    },
+    // one great pale eye, a column's shadow cut out of the light
+    'Stonegaze': (c, A) => {
+      fill(c, rgba('#d8d4e4', 0.22), [[32, 20], [0, 62], [64, 62]]);
+      fill(c, '#0a1410', [[24, 62], [28, 40], [36, 40], [40, 62]]);
+      eye(c, 32, 18, 0.95, '#f4f2ee', '#c8c4d4'); disc(c, 32, 18, 3.2, INK); hi(c, 30, 15, 2, 1.4);
+      for (const a of [-0.6, 0.6]) stroke(c, rgba('#ffffff', 0.6), 2, [[32, 28], [32 + Math.sin(a) * 28, 28 + Math.cos(a) * 28]]);
+    },
+    // three blobs of bog, a slow arrow in each
+    'Mire Spit': (c) => {
+      for (const [x, y] of [[16, 22], [44, 18], [30, 46]]) { inkEll(c, x, y, 11, 8, '#9a7a44', 2); inkEll(c, x - 2, y - 1, 6, 4, '#5a4222', 1.4); stroke(c, L, 1.8, [[x - 3, y - 2], [x - 3, y + 3]]); fill(c, L, [[x - 6, y + 2], [x, y + 2], [x - 3, y + 6]]); }
+    },
+    // a bleeding stump, a brazier flame searing it
+    'Searing': (c, A) => {
+      inked(c, '#2f5a3a', [[22, 56], [24, 34], [40, 34], [42, 56]], 2); inkEll(c, 32, 34, 9, 4, '#16301f', 1.8); disc(c, 32, 34, 2.4, '#ff4a5a');
+      flame(c, 32, 26, 20, '#ff8a2a', '#ffe08a'); flame(c, 22, 30, 11, '#ff6a1a', '#ffd27a'); flame(c, 42, 30, 11, '#ff6a1a', '#ffd27a');
+      ring(c, 32, 56, 12, '#3d8bff', 2);
+    },
+    // a column and a rising line of water, the Mother's eyes just above it
+    'Submerge': (c, A) => {
+      fill(c, rgba('#2fbfb0', 0.55), [[0, 30], [64, 30], [64, 64], [0, 64]]);
+      for (const y of [34, 42, 50]) stroke(c, '#d8fffa', 2, [[4, y], [14, y - 3], [24, y + 3], [34, y - 3], [44, y + 3], [54, y - 3], [60, y]]);
+      for (const x of [20, 44]) { inkEll(c, x, 24, 6, 3.6, '#e8c050', 1.6); disc(c, x, 24, 1.4, INK); }
+      for (const [x, y, r] of [[30, 14, 2.5], [36, 8, 2], [26, 6, 1.6]]) ring(c, x, y, r, '#d8fffa', 1.4);
+      motion(c, A, [[[8, 18], [8, 8]], [[56, 18], [56, 8]]]);
+    },
+    // a beating heart in gold, brass studs, strikes from nine points
+    "Mother's Heart": (c) => {
+      c.beginPath(); c.moveTo(32, 50); c.bezierCurveTo(6, 32, 14, 12, 32, 22); c.bezierCurveTo(50, 12, 58, 32, 32, 50); c.fillStyle = '#e8b030'; c.fill(); c.strokeStyle = INK; c.lineWidth = 2; c.stroke();
+      glow(c, 32, 32, 18, '#fff0b0', 0.8); hi(c, 24, 26, 3, 5, 0.3);
+      for (let i = 0; i < 9; i++) { const a = -Math.PI / 2 + i * TAU / 9; disc(c, 32 + Math.cos(a) * 28, 32 + Math.sin(a) * 28, 2.6, '#b8903a'); }
+    },
+    // water over everything, a hand reaching up out of it
+    'The Drowning': (c, A) => {
+      fill(c, rgba('#2fbfb0', 0.65), [[0, 18], [64, 18], [64, 64], [0, 64]]);
+      for (const y of [24, 34, 44, 54]) stroke(c, '#d8fffa', 2, [[2, y], [12, y - 3], [22, y + 3], [32, y - 3], [42, y + 3], [52, y - 3], [62, y]]);
+      inked(c, '#cfe0d6', [[28, 40], [28, 22], [31, 8], [34, 22], [36, 6], [39, 22], [42, 10], [44, 24], [46, 40]], 1.8);
+      for (const [x, y, r] of [[14, 12, 3], [52, 10, 2.4], [18, 4, 1.8]]) ring(c, x, y, r, A, 1.6);
+    },
+    // a stump with two small heads sprouting from it
+    'Regrowth': (c) => {
+      inked(c, '#2f5a3a', [[22, 58], [26, 38], [38, 38], [42, 58]], 2); inkEll(c, 32, 38, 8, 3.6, '#16301f', 1.6);
+      for (const sd of [-1, 1]) {
+        stroke(c, '#16301f', 8, [[32, 38], [32 + sd * 8, 26], [32 + sd * 14, 14]]); stroke(c, '#4f8a55', 5, [[32, 38], [32 + sd * 8, 26], [32 + sd * 14, 14]]);
+        inkEll(c, 32 + sd * 15, 11, 7, 4.6, '#4f8a55', 1.8, sd * 0.5); disc(c, 32 + sd * 17, 9, 1.4, '#ffd870');
+      }
+    },
+    // two lines crossing, the water between them
+    'Tidal Dance': (c) => {
+      stroke(c, rgba('#2fbfb0', 0.5), 9, [[4, 8], [60, 50]]); stroke(c, '#d8fffa', 2, [[4, 8], [60, 50]]);
+      stroke(c, rgba('#2fbfb0', 0.7), 9, [[60, 10], [4, 54]]); stroke(c, '#d8fffa', 2, [[60, 10], [4, 54]]);
+      for (const [x, y] of [[8, 30], [56, 30]]) inkEll(c, x, y, 4.5, 3, '#0f4a46', 1.4);
+      for (const y of [18, 46]) disc(c, 32, y, 2.4, '#ffffff');
+    },
+    // the whole inside of the room under one eye, the wall left clear
+    "Hydra's Gaze": (c) => {
+      ring(c, 32, 32, 29, '#d8d4e4', 2.5); disc(c, 32, 32, 22, rgba('#d8d4e4', 0.3));
+      eye(c, 32, 32, 0.8, '#f4f2ee', '#c8c4d4'); disc(c, 32, 32, 3.4, INK); hi(c, 30, 29, 2, 1.4);
+      for (let i = 0; i < 8; i++) { const a = i * TAU / 8; stroke(c, rgba('#ffffff', 0.55), 1.8, [[32 + Math.cos(a) * 18, 32 + Math.sin(a) * 18], [32 + Math.cos(a) * 24, 32 + Math.sin(a) * 24]]); }
+    },
+  });
+  // Azerath, the Sunken Archmage
+  Object.assign(G, {
+    // Azerath (drawn badges; painted icons come later). Fire orange, frost blue, lightning yellow, the void violet.
+    // seven sparks ringed round a star, the ring spreading outward
+    'Arcane Burst': (c, A) => {
+      for (const [r, a] of [[28, 0.35], [21, 0.6]]) ring(c, 32, 32, r, rgba(A, a), 2.5);
+      for (let i = 0; i < 7; i++) { const an = -Math.PI / 2 + i * TAU / 7; disc(c, 32 + Math.cos(an) * 21, 32 + Math.sin(an) * 21, 3, i % 2 ? '#bff8f0' : '#ffe08a'); }
+      inked(c, '#e8fffa', [[32, 18], [36, 28], [46, 32], [36, 36], [32, 46], [28, 36], [18, 32], [28, 28]], 1.8);
+    },
+    // a long lance of pale light, a cone of shadow behind its point
+    'Arcane Lance': (c, A) => {
+      fill(c, rgba(A, 0.3), [[4, 54], [60, 10], [50, 40]]);
+      inked(c, '#e8fffa', [[6, 56], [48, 14], [54, 8], [52, 20], [12, 60]], 2); stroke(c, A, 2.4, [[10, 56], [50, 14]]);
+      disc(c, 53, 9, 3.4, '#ffffff'); motion(c, A, [[[40, 44], [30, 52]], [[50, 36], [42, 46]]]);
+    },
+    // a ring with a rune in it, two small marks orbiting
+    'Rune Mark': (c, A) => {
+      ring(c, 32, 32, 22, A, 3); ring(c, 32, 32, 17, rgba(A, 0.5), 1.5);
+      stroke(c, L, 3, [[32, 18], [32, 46]]); stroke(c, L, 3, [[24, 26], [32, 32], [40, 26]]); stroke(c, L, 3, [[26, 40], [38, 40]]);
+      disc(c, 10, 14, 4, '#ff6a2a'); disc(c, 54, 50, 4, '#7fd8ff');
+    },
+    // two rings of flame, set well apart, and a spark where they would meet
+    'Cinder Rune': (c, A) => {
+      for (const [x, y] of [[16, 32], [48, 32]]) { ring(c, x, y, 12, '#ff6a2a', 3); flame(c, x, y, 9, '#ff8a2a', '#ffe08a'); }
+      stroke(c, rgba('#ff6a2a', 0.5), 2, [[29, 32], [35, 32]]); fill(c, '#ffe08a', [[32, 22], [34, 30], [42, 32], [34, 34], [32, 42], [30, 34], [22, 32], [30, 30]]);
+    },
+    // a blue circle between two small flakes
+    'Rime Rune': (c, A) => {
+      ring(c, 32, 32, 21, '#3d8bff', 3); ring(c, 32, 32, 14, rgba('#3d8bff', 0.4), 1.5);
+      for (const [x, y] of [[10, 52], [54, 12]]) { for (let i = 0; i < 3; i++) { const a = i * Math.PI / 3; stroke(c, '#d8f4ff', 2, [[x + Math.cos(a) * 8, y + Math.sin(a) * 8], [x - Math.cos(a) * 8, y - Math.sin(a) * 8]]); } }
+      for (let i = 0; i < 3; i++) { const a = i * Math.PI / 3; stroke(c, '#d8f4ff', 2.6, [[32 + Math.cos(a) * 12, 32 + Math.sin(a) * 12], [32 - Math.cos(a) * 12, 32 - Math.sin(a) * 12]]); }
+    },
+    // a bolt running from one rune to the other
+    'Storm Rune': (c, A) => {
+      for (const [x, y] of [[10, 52], [54, 12]]) { disc(c, x, y, 8, '#10222a'); ring(c, x, y, 8, '#ffe45a', 2.5); disc(c, x, y, 3, '#fff6b0'); }
+      stroke(c, rgba('#ffe45a', 0.4), 9, [[14, 48], [26, 38], [34, 40], [48, 18]]); stroke(c, '#fff6b0', 3, [[14, 48], [26, 38], [34, 40], [48, 18]]);
+    },
+    // two rings of void with a quiet middle, each held away from the other
+    'Rift Rune': (c, A) => {
+      for (const [x, y] of [[17, 32], [47, 32]]) { disc(c, x, y, 13, '#10041e'); ring(c, x, y, 13, '#a05aff', 3); disc(c, x, y, 5, '#000000'); ring(c, x, y, 5, '#c8a0ff', 1.5); }
+      motion(c, L, [[[30, 32], [26, 32]], [[34, 32], [38, 32]]]);
+    },
+    // three rings on the floor, two burning, one dark
+    'Pyre Rings': (c, A) => {
+      disc(c, 32, 34, 28, rgba('#ff6a2a', 0.55)); disc(c, 32, 34, 20, '#0e1c22'); disc(c, 32, 34, 12, rgba('#ff6a2a', 0.85)); disc(c, 32, 34, 5, '#ffe08a');
+      ring(c, 32, 34, 28, '#ffb04a', 2); ring(c, 32, 34, 20, rgba(L, 0.35), 1.5);
+    },
+    // three shards of ice flying out from a point
+    'Ice Lances': (c, A) => {
+      for (const an of [-0.6, 0, 0.6]) { const x = 14, y = 32, ex = x + Math.cos(an) * 46, ey = y + Math.sin(an) * 46; inked(c, '#d8f4ff', [[x - Math.sin(an) * 4, y + Math.cos(an) * 4], [ex, ey], [x + Math.sin(an) * 4, y - Math.cos(an) * 4]], 1.8); stroke(c, '#7fd8ff', 1.6, [[x, y], [ex - Math.cos(an) * 6, ey - Math.sin(an) * 6]]); }
+      disc(c, 12, 32, 5, '#7fd8ff');
+    },
+    // a bolt jumping from one point to the next
+    'Leaping Bolt': (c, A) => {
+      const P = [[10, 48], [28, 22], [44, 40], [56, 12]];
+      stroke(c, rgba('#ffe45a', 0.4), 8, P); stroke(c, '#fff6b0', 2.6, P);
+      for (const [x, y] of P) { disc(c, x, y, 5.5, '#ffe45a'); ring(c, x, y, 5.5, INK, 1.5); }
+    },
+    // rifts opening in the floor, once, and again further on
+    'Void Rifts': (c, A) => {
+      for (const [x, y, rx] of [[20, 24, 14], [42, 44, 16]]) { inkEll(c, x, y, rx, rx * 0.45, '#10041e', 2); c.beginPath(); c.ellipse(x, y, rx, rx * 0.45, 0, 0, TAU); c.strokeStyle = '#a05aff'; c.lineWidth = 2.2; c.stroke(); disc(c, x, y, 3.5, '#000000'); }
+      motion(c, '#c8a0ff', [[[30, 34], [34, 38]]]);
+    },
+    // a sigil with a small thing being led into it
+    'The Binding': (c, A) => {
+      ring(c, 38, 38, 20, A, 3); ring(c, 38, 38, 14, rgba(A, 0.45), 1.5);
+      for (let i = 0; i < 8; i++) { const an = i * TAU / 8; stroke(c, A, 2, [[38 + Math.cos(an) * 20, 38 + Math.sin(an) * 20], [38 + Math.cos(an) * 25, 38 + Math.sin(an) * 25]]); }
+      inkDisc(c, 14, 14, 7, '#ff6a2a', 1.8); stroke(c, L, 2, [[19, 19], [29, 29]]); fill(c, L, [[27, 24], [33, 33], [24, 31]]);
+    },
+    // four rings of four elements, overlapping, and a white lens where two meet
+    'Convergence': (c, A) => {
+      for (const [x, y, col] of [[32, 18, '#ff6a2a'], [46, 32, '#7fd8ff'], [32, 46, '#ffe45a'], [18, 32, '#a05aff']]) { disc(c, x, y, 15, rgba(col, 0.35)); ring(c, x, y, 15, col, 2.5); }
+      for (const [x, y] of [[39, 25], [39, 39], [25, 39], [25, 25]]) disc(c, x, y, 3.2, '#ffffff');
+    },
+    // a circle thrown across a dotted line to the far side
+    'Counterspell': (c, A) => {
+      ring(c, 18, 20, 11, '#a05aff', 3); disc(c, 18, 20, 4, rgba('#a05aff', 0.6));
+      for (let i = 0; i < 7; i++) disc(c, 8 + i * 8, 32, 1.6, rgba(L, 0.7));
+      ring(c, 46, 44, 11, '#c8a0ff', 3);
+      stroke(c, rgba(L, 0.6), 2, [[22, 28], [42, 38]]); fill(c, rgba(L, 0.8), [[40, 34], [46, 40], [38, 41]]);
+    },
+    // two runes trading places
+    'Rune Swap': (c, A) => {
+      for (const [x, y, col] of [[14, 32, '#ff6a2a'], [50, 32, '#7fd8ff']]) { disc(c, x, y, 9, '#10222a'); ring(c, x, y, 9, col, 2.6); disc(c, x, y, 3.6, col); }
+      stroke(c, L, 2.6, [[24, 22], [32, 16], [40, 22]]); fill(c, L, [[38, 16], [46, 22], [37, 26]]);
+      stroke(c, L, 2.6, [[40, 42], [32, 48], [24, 42]]); fill(c, L, [[26, 38], [18, 42], [27, 48]]);
+    },
+    // a blue ring and a small elemental rising in the middle of it
+    'Arcane Mark': (c, A) => {
+      ring(c, 32, 36, 24, '#3d8bff', 3); ring(c, 32, 36, 18, rgba('#3d8bff', 0.4), 1.5);
+      glow(c, 32, 30, 16, '#ffe08a', 0.7); flame(c, 32, 32, 13, '#ff8a2a', '#ffe08a');
+      stroke(c, L, 2.2, [[32, 8], [32, 14]]); stroke(c, L, 2.2, [[26, 11], [38, 11]]);
+    },
+    // water climbing a tower
+    'The Tide Rises': (c, A) => {
+      inked(c, '#3a5a60', [[24, 8], [40, 8], [42, 52], [22, 52]], 2); for (const y of [16, 26, 36]) stroke(c, '#0e1c22', 2, [[26, y], [38, y]]);
+      for (const [y, a] of [[44, 0.9], [38, 0.6]]) { c.beginPath(); c.moveTo(0, 64); c.lineTo(0, y); for (let x = 0; x <= 64; x += 8) c.quadraticCurveTo(x + 4, y - 8, x + 8, y); c.lineTo(64, 64); c.closePath(); c.fillStyle = rgba(A, a * 0.8); c.fill(); c.strokeStyle = rgba('#bff8f0', 0.8); c.lineWidth = 2; c.stroke(); }
+    },
+  });
+  G['Call of the Circle'] = G['The Binding'];
   // moves that share a badge with their nearest sibling until they get their own
   G['Cocoon Drop'] = G['Egg Sacs']; G['Sceptre Throw'] = G['Sceptre Sweep']; G['Grave Summons'] = G['Court of Bones'];
   function draw(bossId, name) {

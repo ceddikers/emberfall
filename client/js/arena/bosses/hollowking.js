@@ -42,6 +42,7 @@ const HOLLOWKING = {
   vuln: 0.5,
   spawn: { x: 0, y: -80 },
   arena: { theme: 'barrow' },
+  gates: [0.8, 0.62, 0.46, 0.25],   // where the sessions change (ticks on the boss bar; fight.js course)
   // six grave-light braziers down the hall, three a side
   room(f) {
     for (const x of [-400, 400]) for (const y of [-190, 0, 190]) f.addProp({ kind: 'brazier', x, y, r: 24, solid: true, cover: false, state: 1 });

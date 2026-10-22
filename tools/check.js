@@ -55,14 +55,42 @@ const RAIDS = [   // [boss name, boss id, tank, healer, two DPS]
   ['Grubnak', 'grubnak', 'bastion:base', 'cleric:base', 'marionettist:base', 'ranger:base'],
   ['Skitterra', 'skitterra', 'runeguard:base', 'grovekeeper:base', 'marionettist:cuttingline', 'shadowblade:base'],
   ['the Hollow King', 'hollowking', 'bastion:base', 'cleric:aegis', 'marionettist:understudy', 'ranger:base'],
+  // set 2: Vhalgrath, the Ember Wyrm
+  ['Vhalgrath', 'wyrm', 'bastion:base', 'cleric:aegis', 'ranger:sharpshooter', 'pyromancer:cataclysm'],
+  ['Vhalgrath', 'wyrm', 'runeguard:runeblade', 'grovekeeper:moonwell', 'shadowblade:bladedancer', 'pyromancer:sigilmancer'],
+  // set 2: Hrimgar, the Frost Titan
+  ['Hrimgar', 'titan', 'bastion:base', 'cleric:aegis', 'ranger:sharpshooter', 'pyromancer:cataclysm'],
+  ['Hrimgar', 'titan', 'runeguard:runeblade', 'grovekeeper:moonwell', 'shadowblade:bladedancer', 'pyromancer:sigilmancer'],
   ['Volkar', 'volkar', 'bastion:base', 'threadweaver:base', 'marionettist:base', 'pyromancer:base'],
+  // Gloomsworn (class 18): the base kit and each spec tanking a boss (a Hollow's saves: tools/hollow-test.js)
+  ['Grubnak', 'grubnak', 'gloomsworn:base', 'cleric:base', 'ranger:base', 'pyromancer:base'],
+  ['Skitterra', 'skitterra', 'gloomsworn:duskward', 'grovekeeper:base', 'ranger:base', 'shadowblade:base'],
+  ['Volkar', 'volkar', 'gloomsworn:duskreaver', 'cleric:base', 'ranger:base', 'pyromancer:base'],
+  ['the Hollow King', 'hollowking', 'gloomsworn:base', 'alembist:base', 'ranger:base', 'pyromancer:base'],
+  // Thresher (class 19): the base kit and each spec as the damage dealer
+  ['Grubnak', 'grubnak', 'bastion:base', 'cleric:base', 'thresher:base', 'pyromancer:base'],
+  ['Skitterra', 'skitterra', 'bastion:base', 'grovekeeper:base', 'thresher:sower', 'ranger:base'],
+  ['Volkar', 'volkar', 'bastion:base', 'cleric:base', 'thresher:grim', 'pyromancer:base'],
+  ['the Hollow King', 'hollowking', 'bastion:base', 'cleric:base', 'thresher:base', 'ranger:base'],
 ];
+// set 2: Azerath, the Sunken Archmage (Boss VII)
+RAIDS.push(
+  ['Azerath', 'archmage', 'bastion:base', 'cleric:aegis', 'ranger:sharpshooter', 'pyromancer:cataclysm'],
+  ['Azerath', 'archmage', 'runeguard:runeblade', 'grovekeeper:moonwell', 'shadowblade:bladedancer', 'pyromancer:sigilmancer'],
+);
+// set 2: the Hydra of the Drowned Temple (Boss VIII)
+RAIDS.push(
+  ['the Hydra', 'hydra', 'bastion:base', 'cleric:aegis', 'ranger:sharpshooter', 'pyromancer:cataclysm'],
+  ['the Hydra', 'hydra', 'runeguard:runeblade', 'grovekeeper:moonwell', 'shadowblade:bladedancer', 'pyromancer:sigilmancer'],
+);
 // Hard smoke runs: one per boss, with the plain line-up. Bots aren't expected to clear Hard; the script just has to run
 // clean and the longest of 3 fights has to last a while (HARD_MIN seconds) before they wipe
 const HARD_COMP = 'bastion:base,cleric:base,ranger:base,pyromancer:base';
 const HARD_MIN = 90;
-const HARD_BOSSES = [['Grubnak', 'grubnak'], ['Skitterra', 'skitterra'], ['Volkar', 'volkar'], ['the Hollow King', 'hollowking']];
+const HARD_BOSSES = [['Grubnak', 'grubnak'], ['Skitterra', 'skitterra'], ['Volkar', 'volkar'], ['the Hollow King', 'hollowking'], ['Vhalgrath', 'wyrm'], ['Hrimgar', 'titan']];
 
+HARD_BOSSES.push(['the Hydra', 'hydra']);
+HARD_BOSSES.push(['Azerath', 'archmage']);
 const results = [];
 const pass = (name, detail = '') => results.push({ ok: true, name, detail });
 const fail = (name, detail = '') => results.push({ ok: false, name, detail });
@@ -496,7 +524,9 @@ function run(args) {
 //   shows for less than WARN_MIN s; the gap between named steps stays under GAP_MAX s; a raidwide at least every
 //   RAID_MAX s and a tankbuster every BUSTER_MAX s; the upcoming-moves feed always shows three steps; and the script
 //   from the pull to the end of its last set lasts LEN_MIN..LEN_MAX s.
-const CHOREO = [['Grubnak', 'grubnak', 'GRUBNAK'], ['Skitterra', 'skitterra', 'SKITTERRA'], ['Volkar', 'volkar', 'VOLKAR'], ['The Hollow King', 'hollowking', 'HOLLOWKING']];
+const CHOREO = [['Grubnak', 'grubnak', 'GRUBNAK'], ['Skitterra', 'skitterra', 'SKITTERRA'], ['Volkar', 'volkar', 'VOLKAR'], ['The Hollow King', 'hollowking', 'HOLLOWKING'], ['Vhalgrath', 'wyrm', 'WYRM'], ['Hrimgar', 'titan', 'TITAN']];
+CHOREO.push(['The Hydra', 'hydra', 'HYDRA']);
+CHOREO.push(['Azerath', 'archmage', 'AZERATH']);
 const TL = { WARN_MIN: 1.2, GAP_MAX: 16, RAID_MAX: 150, BUSTER_MAX: 180, LEN_MIN: 480, LEN_MAX: 600 };
 function timelines() {
   const load = p => require(path.join(ROOT, 'client/js', p));
@@ -530,6 +560,8 @@ function timelines() {
       const fire = [];   // named steps as they happen
       const step = sim.at.bind(sim);
       sim.at = (t, fn, name) => step(t, name ? () => { fire.push([sim.t, name]); fn(); } : fn, name);
+      const keep = sim.atKeep.bind(sim);   // (named steps laid with afterKeep, like a wall's mechanic, count too)
+      sim.atKeep = (t, fn, name) => keep(t, name ? () => { fire.push([sim.t, name]); fn(); } : fn, name);
       let end = null;
       for (let i = 0; i < 20 * 1200 && sim.state !== 'clear'; i++) {
         sim.tick(0.05);
@@ -554,6 +586,16 @@ function timelines() {
     if (probs.length) fail(`${boss}'s timeline`, [...new Set(probs)].slice(0, 14).join('\n'));
     else pass(`${boss}'s timeline`, `no loops, nothing hidden, all named, cadence and feed OK; scripted ${notes.join(', ')}`);
   }
+}
+
+// ---------------------------------------------------------------- 3b. the Gloomsworn's Hollow (tools/hollow-test.js)
+// A killing blow at full Gloom starts it, damage becomes debt, healing pays it (shields at half), an unpaid debt kills when the
+// grace ends, doom / the enrage / a fall bypass it, a revive clears it; then healer bots have to save a Hollow tank.
+function hollowCheck() {
+  const r = spawnSync(process.execPath, [path.join(__dirname, 'hollow-test.js')], { cwd: ROOT, encoding: 'utf8' });
+  const out = (r.stdout || '') + (r.stderr || '');
+  if (r.status === 0 && /Hollow OK/.test(out)) pass('Hollow: debt, healing, death, bypasses', out.trim().split('\n').pop());
+  else fail('Hollow: debt, healing, death, bypasses', out.slice(-900));
 }
 
 async function heavy() {
@@ -642,6 +684,7 @@ async function heavy() {
   try { scoring(); } catch (e) { fail('Contribution points score sensibly', e.stack); }
   try { data(); } catch (e) { fail('Data checks ran', e.stack); }
   try { timelines(); } catch (e) { fail('Timelines checked', e.stack); }
+  try { hollowCheck(); } catch (e) { fail('Hollow checked', e.stack); }
   await heavy();
   console.log('');
   for (const r of results) {

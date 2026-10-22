@@ -8,10 +8,10 @@ function segsCross(ax, ay, bx, by, cx, cy, dx, dy) {
 }
 
 // the bosses' tankbusters by cast name, and the tank cooldowns that answer them
-const BUSTER_CASTS = /^(Tenderize|Silk Wrap|Titan Fist|Grave Cleave)$/;
-const TANK_CDS = ['bulwark', 'zeal', 'undying', 'banner', 'sanctum', 'warcry'];
+const BUSTER_CASTS = /^(Tenderize|Silk Wrap|Titan Fist|Grave Cleave|Arcane Lance)$/;
+const TANK_CDS = ['bulwark', 'zeal', 'undying', 'banner', 'sanctum', 'warcry', 'mantle'];
 // ... and the casts that hurt the whole party, which healers top people up for
-const RAID_CASTS = /^(Grease Fire|Simmer|Venom Mist|Tightening Web|Thunderclap|Thunder Crash|Static Field|Polarity Surge|Skyfall|Barrow Knell|Grave Marks|Gathering Storm|Thunderhead|Royal Tithe|Dirge|Gut Blast|Flare-Up|Last Orders|Gorge|Boil Over|Heavens Fall)$/;
+const RAID_CASTS = /^(Grease Fire|Simmer|Venom Mist|Tightening Web|Thunderclap|Thunder Crash|Static Field|Polarity Surge|Skyfall|Barrow Knell|Grave Marks|Gathering Storm|Thunderhead|Royal Tithe|Dirge|Gut Blast|Flare-Up|Last Orders|Gorge|Boil Over|Heavens Fall|Arcane Burst|Convergence|The Tide Rises)$/;
 
 const BotAI = {
   isMelee(cls) { return KITS[cls.id].abilities[0].range === 'melee'; },
@@ -294,8 +294,19 @@ const BotAI = {
 
   home(bot, view) {
     const b = view.boss, idx = bot.slot || 0;
+    // The Binding (Azerath): the shield leads each elemental into the sigil of its own element, the one due to blow up first
+    if (bot.role === 'tank' && view.binding) {
+      const it = view.binding.items.filter(i => !i.done).sort((p, q) => p.t0 - q.t0)[0], c = it && view.binding.circles.find(q => q.el === it.el);
+      if (c) return { x: c.x, y: c.y };
+    }
     const own = typeof BOT_CLASS !== 'undefined' && BOT_CLASS[bot.cls.id] && BOT_CLASS[bot.cls.id].home;   // a class with its own footwork
     if (own) { const h = own(bot, view); if (h) return h; }
+    // Frostbite (Hrimgar): a chilled bot walks to the nearest brazier and stands in its warmth
+    if (view.bossId === 'titan' && view.debuffs(bot.id).frostbite) {
+      let nb = null;
+      for (const p of view.props || []) if (p.kind === 'brazier' && (!nb || Math.hypot(p.x - bot.x, p.y - bot.y) < Math.hypot(nb.x - bot.x, nb.y - bot.y))) nb = p;
+      if (nb) { const d = Math.hypot(bot.x - nb.x, bot.y - nb.y) || 1; return { x: nb.x + (bot.x - nb.x) / d * 55, y: nb.y + (bot.y - nb.y) / d * 55 }; }
+    }
     // on an add: melee hug it, ranged stand off to one side of it (out of any beam to its sibling)
     const homeId = bot.wantEnemy === 'hold' ? bot.addHome : bot.wantEnemy;
     const add = homeId && (view.adds || []).find(a => a.id === homeId);
@@ -318,6 +329,17 @@ const BotAI = {
     if (wall > 0) pen += 8000 + wall * 100;
     const me = bot.id;
     const alive = view.players.filter(p => p.alive);
+    // The Rune Pair (Azerath): the two bearers stand together or well apart, whichever the coming spell wants (view.runes). When they
+    // must meet, the higher id walks to the other, so a bot comes to a human bearer and not the other way round
+    const rp = view.runes;
+    if (rp && rp.on && (rp.a === me || rp.b === me)) {
+      const other = alive.find(o => o.id === (rp.a === me ? rp.b : rp.a));
+      if (other) {
+        const d = Math.hypot(other.x - px, other.y - py);
+        if (rp.rule === 'pair') { if (me > other.id) pen += Math.max(0, d - 70) * 25; }
+        else pen += Math.max(0, 380 - d) * 18;
+      }
+    }
     // Waves (Simmer etc.): the area the next hit covers is safe right after it lands. Waiting just outside it,
     // ready to step in, beats standing somewhere that gets hit later and having to cross waves to escape.
     let first = null;
@@ -729,7 +751,7 @@ const BotAI = {
     // plates that leave you Stuffed (Order Up! on Hard) coming up soon that aren't ours: don't walk across one as it lands
     const myT = view.mechs.some(m => m.type === 'tower' && m.stuff) ? this.towerFor(bot.id, view) : null;
     const plates = view.mechs.filter(m => m.type === 'tower' && m.stuff && m.id !== myT && m.resolveAt - view.t < 3);
-    const burns = (view.zones || []).filter(z => z.effect === 'burn' && z.tag === 'writburn' && view.t > z.startAt - 1);
+    const burns = (view.zones || []).filter(z => z.effect === 'burn' && (z.tag === 'writburn' || z.tag === 'drown') && view.t > z.startAt - 1);
     const pathCost = c => {
       let pen = 0;
       const dist = Math.hypot(c.x - bot.x, c.y - bot.y);
@@ -942,6 +964,8 @@ const BotAI = {
       if (tid === 'oathbroker') return mx > 0 && (k.g.total || 0) >= mx * 0.15;
       if (tid === 'gorgemaw') return belly.some(m => m.m === 'spike') || belly.length >= (k.def.bellyMax || 3);
       if (tid === 'runeguard') return (buster && (k.g.runes || 0) >= 1) || ((k.g.runes || 0) >= 3 && !!k.g.selfWard);
+      // the Gloomsworn pours out the vessel: worth pressing with real Gloom in it (and best just before a buster), never while Hollow
+      if (tid === 'gloomsworn') return !k.has('hollow') && ((k.g.gloom || 0) >= 70 || (buster && (k.g.gloom || 0) >= 40));
       return buster;
     }
     const al = view.players.filter(p => p.alive && !p.left), low = al.filter(p => p.hp / p.maxHp < 0.6).length;
@@ -977,6 +1001,9 @@ const BotAI = {
         if (rw >= 0 && readyIdx(rw)) { bot.healTarget = dead[0].id; return rw; }
       }
       let low = hurt[0];
+      // a Gloomsworn gone Hollow (held at 1 HP, its damage written down as a debt): heal it until the debt is covered
+      const hollowN = BotAI.hollowNeed(view);
+      if (hollowN) low = { p: hollowN.p, f: Math.min(low ? low.f : 1, 0.04) };
       // a tankbuster is coming (being cast, or next in the feed): get the tank topped first
       const busterSoon = view.mechs.some(m => m.type === 'buster' && m.resolveAt - view.t < 4) || (nextBuster && nextBuster[1] < 4);
       const tankH = hurt.find(h => h.p.role === 'tank');
@@ -1306,7 +1333,8 @@ BotAI.alembist = function (bot, k, view) {
   const crowdSpot = () => alive.map(q => ({ q, n: near(q, 115).length })).sort((a, b) => b.n - a.n)[0];
   const kindOf = v => (v.parts ? 'blend' : alemInfo(v.r).kind);
   const enemyNear = !!k.env.target({ target: 'enemy', range: RANGED });
-  const needHeal = hurt.length >= 2 || (hurt[0] && frac(hurt[0]) < 0.62);
+  const hollowN = BotAI.hollowNeed(view);   // (a Hollow Gloomsworn: heals on it pay its debt)
+  const needHeal = !!hollowN || hurt.length >= 2 || (hurt[0] && frac(hurt[0]) < 0.62);
 
   // oGCDs: Catalyst whenever a brew is about to start; Distill when healing is urgent; Grand Batch / Blend in a crunch
   const di = idx('distill'), bi = idx('batch');
@@ -1334,7 +1362,9 @@ BotAI.alembist = function (bot, k, view) {
     const v = vials[i], kind = kindOf(v), ripe = alemStrength(k, v) >= 1 + ALEMBIC.GROW - 0.001;
     const fuseLow = v.fuse && v.fuse - k.now < 1.4, spoiling = !v.fuse && !v.keep && alemSpoilTime(k) - (k.now - v.born) < 3;
     let score = 0, who = bot.id;
-    if (kind === 'heal' || kind === 'blend') { const s = healSpot(); if (s && (needHeal || s.v > 0.5)) { score = 5 + s.v * 4; who = s.q.id; } }
+    if ((kind === 'heal' || kind === 'blend') && hollowN) { score = 10; who = hollowN.p.id; }
+    else if (kind === 'heal' || kind === 'blend') { const s = healSpot(); if (s && (needHeal || s.v > 0.5)) { score = 5 + s.v * 4; who = s.q.id; } }
+    else if (kind === 'salve' && hollowN) { score = 6; who = hollowN.p.id; }
     else if (kind === 'salve') { if (busterSoon && tank) { score = 7; who = tank.id; } else if (hurt.length >= 2) { const s = healSpot(); score = 4; who = s.q.id; } }
     else if (kind === 'ward') { if (raidwideSoon || (busterSoon && tank)) { const s = raidwideSoon ? crowdSpot() : { q: tank }; score = 6; who = s.q.id; } }
     else if (kind === 'quick') { score = hurt.length ? 1 : view.burst ? 4 : 3; const top = BotAI.topDps(bot, view, ALLY_BUFFS.galvanized); who = top != null ? top : crowdSpot().q.id; }   // (Galvanized: the top damage dealer)
@@ -1544,6 +1574,8 @@ BotAI.threadweaver = function (bot, k, view) {
   // heal: whoever is low (the tank first before a buster), aimed through the web
   let want = low && frac(low) < (raidSoon ? 0.85 : 0.72) ? low : null;
   if (busterSoon && tank && frac(tank) < 0.92) want = tank;
+  const hollowN = BotAI.hollowNeed(view);   // (a Hollow Gloomsworn: heals on it pay its debt)
+  if (hollowN) want = alive.find(p => p.id === hollowN.p.id) || want;
   if (want && ready(mend)) {
     const a = k.abilities[mend], instant = !k.castTime(a);
     if (instant || !moving) {
@@ -1616,6 +1648,78 @@ BOT_CLASS.marionettist = {
     if (ok(pir)) return pir;
     if (ok(jab)) return jab;
     return null;
+  },
+};
+
+// ======================================================================= Gloomsworn (tank, class 18)
+// A Gloomsworn gone Hollow is held at 1 HP while the damage it takes is written down as a debt (fight.js HOLLOW_HOST); it
+// lives only if what is healed back (shields at half) covers the debt by the end of the grace. The healers see it in the
+// view (view.players[].hollow, debt, healed, hollowLeft, graceLeft): this names the one that still needs healing, and by
+// how much (a margin on top: more damage is still coming), or null.
+BotAI.hollowNeed = function (view) {
+  let best = null;
+  for (const p of view.players) {
+    if (!p.alive || p.left || !p.hollow) continue;
+    const short = p.debt - p.healed + p.maxHp * 0.08;
+    if (short > 0 && (!best || short > best.short)) best = { p, short, debt: p.debt, healed: p.healed, left: p.hollowLeft, grace: p.graceLeft };
+  }
+  return best;
+};
+
+// Gloomsworn: Black Mantle for a buster aimed at it, Black Pall for a raidwide that hurts, Last Rite when it is low, Shade Step on
+// cooldown (it opens the echo for the next two strikes), Gloom Strike when the vessel is high, except in the few seconds before a
+// tankbuster: there the vessel is held full, because a full vessel is what turns the killing blow into a Hollow.
+BOT_CLASS.gloomsworn = {
+  act(bot, k, view) {
+    const idx = id => k.abilities.findIndex(a => a.id === id || a.replaces === id);
+    const ok = i => { const a = k.abilities[i]; return i >= 0 && !!a && k.usable(a) && k.readyIn(a) <= 0.0001 && k.available(a); };
+    const me = view.players.find(p => p.id === bot.id), hp = me ? me.hp / me.maxHp : 1, gloom = k.g.gloom || 0;
+    const weave = k.gcdRemaining() > 0.5 && !k.cast && k.lockUntil <= k.now;
+    const myBuster = view.mechs.find(m => m.type === 'buster' && (m.target ?? m.follow) === bot.id && m.resolveAt - view.t < 3);
+    const nb = (view.next || []).find(([n]) => BUSTER_CASTS.test(n));
+    const busterSoon = !!myBuster || !!(nb && nb[1] < 9) || !!(view.bossCast && BUSTER_CASTS.test(view.bossCast.name));
+    const hollow = k.has('hollow') || (k.g.graceUntil || 0) > k.now;
+    const mantle = idx('mantle'), pall = idx('pall'), rite = idx('rite'), shade = idx('shade'), strike = idx('strike');
+    if (weave || (myBuster && k.gcdRemaining() > 0.1)) {
+      if (ok(mantle) && (myBuster || (hp < 0.5 && !hollow))) return mantle;
+      if (ok(rite) && hp < 0.35 && !hollow && gloom >= 20 && !myBuster) return rite;
+      if (ok(pall) && gloom >= 30 && !hollow && (BotAI.incoming(view, 4.5) >= 0.3 || (view.bossCast && RAID_CASTS.test(view.bossCast.name) && view.bossCast.left < 3 && BotAI.incoming(view, 4.5) >= 0.12))) return pall;
+      if (ok(shade) && !k.has('shade') && gloom >= 50 && !hollow) return shade;   // (the echoes are for Gloom Strikes: step when the vessel can pay for two)
+    }
+    if (k.gcdRemaining() > 0 || k.cast || k.lockUntil > k.now) return null;
+    const hold = busterSoon && gloom >= 70 && !hollow;
+    if (ok(strike) && gloom >= 40 && !hold && (gloom >= 85 || hollow || k.has('shade'))) return strike;
+    return ok(0) ? 0 : null;
+  },
+};
+
+// ======================================================================= Thresher (damage, class 19)
+// Thresher: keep all four afflictions up (Hook for the Thread, Gloam Blink for the Bind, Slash and Cleave for the Mark and Drain),
+// Gather the young ones to gold or put a rotting set back, and Reap once the gold is in (or just before it rots). The Wisp on cooldown.
+// Inside Reaper's Gate it only strikes: each Slash is a Gate Strike. (A Reap held back for a boss that is nearly dead is not read:
+// the view carries no boss health here.) The Ultimate itself is pressed through BotAI.ult, its botOk wanting an affliction up.
+BOT_CLASS.thresher = {
+  act(bot, k, view) {
+    const idx = id => k.abilities.findIndex(a => a.id === id || a.replaces === id);
+    const ok = i => { const a = k.abilities[i]; return i >= 0 && !!a && k.usable(a) && k.readyIn(a) <= 0.0001 && k.available(a); };
+    const weave = k.gcdRemaining() > 0.55 && !k.cast && k.lockUntil <= k.now;
+    const on = thCount(k), gold = thCount(k, 2), young = thCount(k, 1), rot = thCount(k, 3), R = thR(k);
+    const soon = THRESH.IDS.some(id => thStage(k, id) === 2 && k.now - k.g.aff[id] > R - 1.5);
+    const slash = idx('slash'), hook = idx('hook'), reap = idx('reap'), gather = idx('gather'), blink = idx('blink'), wisp = idx('wisp');
+    // a dash cut can land in something on the floor: not with a telegraph about to resolve
+    const floor = view.mechs.some(m => ['aoe', 'safe', 'tower', 'proximity', 'gale', 'drop', 'gaze', 'stack', 'spread'].includes(m.type) && m.resolveAt - view.t < 2.5);
+    if (weave && !k.ultWin) {
+      if (ok(wisp) && (k.abilities[wisp].id === 'cull' ? on >= 3 : !k.has('wisp'))) return wisp;
+      if (!floor && ok(hook) && thStage(k, 'thread') === 0) return hook;
+      if (!floor && ok(blink) && thStage(k, 'bind') === 0 && !(k.def.noAff && k.def.noAff.indexOf('bind') >= 0)) return blink;
+      if (ok(gather)) {
+        if (k.abilities[gather].id === 'sowing') { if (on <= 1) return gather; }
+        else if (on >= 2 && (rot >= 1 || (ok(reap) && young >= 2 && gold === 0))) return gather;
+      }
+    }
+    if (k.gcdRemaining() > 0 || k.cast || k.lockUntil > k.now) return null;
+    if (!k.ultWin && ok(reap) && on > 0 && (gold >= Math.max(2, on - 1) || (soon && gold >= 1) || rot >= 2)) return reap;
+    return ok(slash) ? slash : null;
   },
 };
 

@@ -56,6 +56,8 @@
     thermist: ['ab-fire', 'ab-frost'], driftblade: ['ab-slash', 'ab-wind'], alembist: ['ab-alchemy', 'ab-alchemy'],
     gorgemaw: ['ab-maw', 'ab-maw'], oathbroker: ['ab-ledger', 'ab-ledger'], ironpalm: ['ab-punch', 'ab-punch'],
     threadweaver: ['ab-thread', 'ab-thread'], marionettist: ['ab-stab', 'ab-thread'],
+    gloomsworn: ['ab-slash', 'ab-shield'],
+    thresher: ['ab-slash', 'ab-nature'],
   };
   // every ability id per class: base kit, spec replacements (specs.js), talent moves, Ultimate, taunt, auto-attack
   const CLASS = {
@@ -144,6 +146,18 @@
       tangle: L('ab-thread', 'ab-dot'), redcurtain: L('ab-thread', 'ab-buff'), string: 'ab-thread',
       curtaincall: ULT('marionettist'), auto: 'ab-thread',
     },
+    // Gloomsworn: heavy, low and metallic with a hollow breath under it; every move has its own voice (sfx-synth.js ABIL.gloomsworn)
+    gloomsworn: {
+      rend: 'ab-slash', strike: 'ab-heavy', shade: L('dash', 'ab-wind'), pall: L('ab-shield', 'ab-buff'), mantle: L('ab-shield', 'ab-buff'),
+      rite: L('ab-shield', 'ab-heal'), vigil: L('ab-shield', 'ab-holy'), pyre: L('ab-heavy', 'ab-fire'),
+      eclipsevigil: ULT('gloomsworn'), taunt: 'ab-taunt', auto: 'ab-slash',
+    },
+    // Thresher: airy scythe sweeps with the dry rustle of afflictions and a ripe chime; every move has its own voice (sfx-synth.js ABIL.thresher)
+    thresher: {
+      slash: L('ab-slash', 'ab-nature'), hook: L('ab-thread', 'ab-shot'), reap: L('ab-heavy', 'ab-slash'), gather: L('ab-nature', 'ab-buff'),
+      blink: L('ab-stab', 'dash'), wisp: L('ab-nature', 'ab-heal'), sowing: L('ab-nature', 'ab-dot'), cull: L('ab-heavy', 'ab-dot'),
+      gatestrike: L('ab-slash', 'ab-wind'), reapersgate: ULT('thresher'), auto: 'ab-melee-generic',
+    },
   };
   // Every ability has its own voice, ab-<class>-<id> (sfx-synth.js ABIL: the families above layered at their own
   // pitch, timing and variant, plus accents), so the table above now documents each one's character; the taunt and
@@ -192,14 +206,20 @@
     skitterra: 'venom-mist silk-wrap eightfold-lunge silk-lines spin venom-spit strand-reel silk-reel brood acid-deluge into-the-dark from-the-dark venom-drip tightening-web the-swarm spiderlings chrysalis the-web-gives-way egg-sacs fang-rush spinneret-volley molt ceiling-ambush snare-weave',
     volkar: 'pulse thunderclap titan-fist polarity-surge polarity-plus polarity-minus thunder-crash static-field rod-strike gale-slam storm-walls lightning-rods grounding-rods avalanche squall-line eye-of-the-storm still-air distant-thunder eye-closes gathering-storm thunderhead heavens-fall chain-lightning ball-lightning skyfall supercell',
     hollowking: 'barrow-knell royal-gaze grave-cleave royal-doom lantern echo-knights barrow-bells coffin-lids the-long-night judgement sceptre-sweep barrow-stomp crown-of-graves the-charge-sheet royal-decree lights-out court-of-bones grave-marks the-king-rises royal-tithe dirge royal-audience funeral-march gravebind burial-rites writ-of-execution',
+    wyrm: 'tyrants-roar rending-claws ember-breath tail-lash magma-burst cinder-feast take-flight dragonfall twin-pass the-roost crater-boils twin-breath heart-burn wingbeat cinder-rain heart-flare ashfall',
+    hydra: 'mothers-cry rending-maul acid-spray tidal-line venom-bloom flame-gout rime-crown stormcall stonegaze mire-spit searing submerge mothers-heart the-drowning regrowth tidal-dance hydras-gaze',
+    titan: 'winters-howl glacial-fist rime-slam twin-slam fault-line icefall titans-sweep winters-grasp frostbite whiteout the-long-night avalanche glacial-stomp breath-of-winter titans-grip endless-winter',
+    archmage: 'arcane-burst arcane-lance rune-mark cinder-rune rime-rune storm-rune rift-rune pyre-rings ice-lances leaping-bolt void-rifts the-binding call-of-the-circle convergence counterspell rune-swap arcane-mark the-tide-rises',
   };
   const ALIAS = {
     grubnak: { 'butcher-s-charge': 'butchers-charge', 'order-up-plus': 'order-up', 'flame': 'flambe', 'meatballs': 'rolling-meatballs' },
     skitterra: { lunge: 'eightfold-lunge', 'web-gives-way': 'the-web-gives-way', swarm: 'the-swarm', 'egg-sac': 'egg-sacs', eggs: 'egg-sacs', 'silk-reel-in': 'silk-reel', webs: 'silk-lines' },
     volkar: { polarity: 'polarity-surge', surge: 'polarity-surge', 'polarity-positive': 'polarity-plus', 'polarity-negative': 'polarity-minus', plus: 'polarity-plus', minus: 'polarity-minus', 'heavens-fall-plus': 'heavens-fall', 'the-pulse': 'pulse', eye: 'eye-of-the-storm', rods: 'lightning-rods' },
     hollowking: { 'long-night': 'the-long-night', 'charge-sheet': 'the-charge-sheet', 'king-rises': 'the-king-rises', knell: 'barrow-knell', bells: 'barrow-bells', 'royal-lantern': 'lantern', judgment: 'judgement', doom: 'royal-doom', gaze: 'royal-gaze' },
+    wyrm: { roar: 'tyrants-roar', claws: 'rending-claws', breath: 'ember-breath', tail: 'tail-lash', magma: 'magma-burst', feast: 'cinder-feast', flight: 'take-flight', dive: 'dragonfall', roost: 'the-roost', boils: 'crater-boils', 'heart-burn-wave': 'heart-burn', rain: 'cinder-rain', flare: 'heart-flare' },
+    titan: { howl: 'winters-howl', fist: 'glacial-fist', slam: 'rime-slam', fault: 'fault-line', sweep: 'titans-sweep', grasp: 'winters-grasp', stomp: 'glacial-stomp', breath: 'breath-of-winter', grip: 'titans-grip', 'long-night': 'the-long-night' },
   };
-  const BOSS_ALIAS = { 'hollow-king': 'hollowking', 'the-hollow-king': 'hollowking', 'queen-skitterra': 'skitterra' };
+  const BOSS_ALIAS = { 'hollow-king': 'hollowking', 'the-hollow-king': 'hollowking', 'queen-skitterra': 'skitterra', vhalgrath: 'wyrm', azerath: 'archmage', 'the-sunken-archmage': 'archmage', 'the-ember-wyrm': 'wyrm', hrimgar: 'titan', 'the-frost-titan': 'titan' };
   const TABLE = {};
   for (const b in MOVES) { TABLE[b] = {}; for (const s of MOVES[b].split(' ')) TABLE[b][s] = 'bm-' + b + '-' + s; for (const a in ALIAS[b]) TABLE[b][a] = TABLE[b][ALIAS[b][a]]; }
   // (anim: the boss animation the hook may pass along; unused for now, kept for move-less casts later)

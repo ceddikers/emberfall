@@ -467,6 +467,160 @@ const BOSS_ART = {
       circle(ctx, 10.5, -3.5, 1.8, ghost); circle(ctx, 10.5, 3.5, 1.8, ghost);
     }
   },
+  // Vhalgrath, the Ember Wyrm: black basalt scale, a belly that glows from within, a spined back, a long tail. Facing +x.
+  // props (set from his casts, main.js): claw, tail, breath, roar, fly/dive (wings), perch, heart (the Ember Heart open); props.air: in the
+  // air, so he is lifted off his own shadow.
+  wyrm(ctx, st, angle = 0) {
+    const hide = '#3a2420', plate = '#56302a', dark = '#1e1311', ember = '#ff8a2a', hot = '#ffd27a', bone = '#e6dcc4';
+    const props = st.props || {}, t = st.t || 0;
+    const air = !!props.air, perch = !!props.perch;
+    const flap = air || perch ? Math.sin(t * (props.dive ? 1.5 : 4.2)) : 0;
+    const open = props.breath ? 0.55 : props.roar ? 0.7 : 0.08 + Math.max(0, Math.sin(t * 1.3)) * 0.04;
+    const pa = actP(st, 'attack');
+    const s = swing(pa);
+    if (air) {
+      // lifted: a long shadow stays on the ground (drawn without his turn), he is drawn higher and larger
+      ctx.save(); ctx.rotate(-angle);
+      ellipse(ctx, 10, 12, 96 + flap * 6, 40, 0, 'rgba(0,0,0,0.3)');
+      ctx.translate(0, -52); ctx.rotate(angle);
+      ctx.scale(1.15, 1.15);
+    }
+    if (perch) { ctx.rotate(-angle); ctx.translate(0, -18); ctx.rotate(angle); }
+    glow(ctx, 0, 0, 100, ember, props.heart ? 0.32 : props.breath ? 0.26 : 0.14);
+    // ---- the tail: tapering, swaying, a blade at the end; it lashes round when Tail Lash is called
+    const sway = Math.sin(t * 2.1) * 10 + (props.tail ? Math.sin(t * 9) * 16 : 0), n = 12, up = [], dn = [];
+    for (let i = 0; i <= n; i++) {
+      const q = i / n, x = -26 - q * 118, y = Math.sin(q * 2.6 + t * 2.1) * (6 + q * 14) + (props.tail ? (q * q) * (Math.sin(t * 9) * 22 + 30) : sway * q * 0.5), w = 14 * (1 - q) + 2.5;
+      up.push(x, y - w); dn.unshift(x, y + w);
+      if (i % 2 === 1 && i < n - 1) poly(ctx, [x + 4, y - w, x - 6, y - w - 9 - (1 - q) * 5, x - 12, y - w], plate, OUT, 1.2);
+    }
+    poly(ctx, [...up, ...dn], hide, OUT, 2.5);
+    const tx = -26 - 118, ty = Math.sin(2.6 + t * 2.1) * 20 + (props.tail ? Math.sin(t * 9) * 22 + 30 : sway * 0.5);
+    poly(ctx, [tx + 2, ty - 9, tx - 22, ty, tx + 2, ty + 9, tx - 4, ty], bone, OUT, 2);
+    // ---- hind legs
+    const w = st.moving ? Math.sin(t * 6) * 5 : 0;
+    for (const sy of [-1, 1]) {
+      ellipse(ctx, -20 + w * sy, 24 * sy, 15, 9, 0.3 * sy, hide, OUT, 2.5);
+      for (let k = -1; k <= 1; k++) poly(ctx, [-8 + w * sy, 26 * sy + k * 4, -2 + w * sy, 27 * sy + k * 5, -9 + w * sy, 30 * sy + k * 4], bone, OUT, 1);
+    }
+    // ---- wings: folded along the flanks on the ground, spread (and beating) in the air and on the perch, swept back in a dive
+    const spread = air || perch || props.fly ? 1 : 0;
+    for (const sy of [-1, 1]) {
+      if (!spread) {
+        poly(ctx, [4, 16 * sy, -30, 20 * sy, -52, 44 * sy, -30, 34 * sy, -12, 38 * sy], plate, OUT, 2);
+        line(ctx, 4, 17 * sy, -50, 43 * sy, OUT, 2.2);
+      } else {
+        // a bat's wing: an arm out to the wrist, four fingers fanned back from it, the membrane scalloped between their tips
+        const dive = props.dive ? 1 : 0, lift = flap * 0.1, sw = dive ? 0.55 : 1;   // (swept back and narrow in a dive)
+        const P = (x, y) => [x, y * sy];
+        const wr = P(-4 - flap * 6, (64 + 12 * lift * 10) * sw + 8), f1 = P(-34 - (dive ? 40 : 0) - flap * 10, (134 + 10 * flap) * sw), f2 = P(-72 - (dive ? 50 : 0), (118 + 6 * flap) * sw), f3 = P(-98 - (dive ? 40 : 0), (84 + 4 * flap) * sw), f4 = P(-96 - (dive ? 30 : 0), 44 * sw + 10);
+        const root = P(-38, 22), s0 = P(8, 14);
+        const bay = (a, b) => [(a[0] + b[0]) / 2 + 10, (a[1] + b[1]) / 2 - 12 * sy];   // the membrane sags in toward the arm between two fingertips
+        poly(ctx, [...s0, ...wr, ...f1, ...bay(f1, f2), ...f2, ...bay(f2, f3), ...f3, ...bay(f3, f4), ...f4, ...root], rgba('#7a2f1a', 0.94), OUT, 2.5);
+        for (const f of [f1, f2, f3, f4]) line(ctx, wr[0], wr[1], f[0], f[1], '#2a1612', 2.6);
+        line(ctx, s0[0], s0[1], wr[0], wr[1], '#2a1612', 4.2); line(ctx, s0[0], s0[1], wr[0], wr[1], bone, 1.3);
+        for (const f of [f1, f2, f3]) glow(ctx, (f[0] + wr[0]) / 2, (f[1] + wr[1]) / 2, 22, ember, 0.15 + (props.heart ? 0.12 : 0));
+        poly(ctx, [wr[0] + 2, wr[1] - 3 * sy, wr[0] + 12, wr[1] + 6 * sy, wr[0] - 3, wr[1] + 4 * sy], bone, OUT, 1.2);   // the thumb claw
+      }
+    }
+    // ---- the body: dark scale, a plated back, the glow of the fire inside showing in the seams
+    ellipse(ctx, 0, 0, 42, 28, 0, hide, OUT, 3);
+    for (let i = 0; i < 6; i++) { const x = 22 - i * 9; poly(ctx, [x + 5, -2, x, -12 - (i === 2 || i === 3 ? 4 : 0), x - 6, -2], plate, OUT, 1.2); poly(ctx, [x + 5, 2, x, 12 + (i === 2 || i === 3 ? 4 : 0), x - 6, 2], plate, OUT, 1.2); }
+    ellipse(ctx, -2, 0, 30, 17, 0, null, rgba(ember, 0.35 + (props.heart ? 0.3 : 0)), 1.6);
+    const pulse = 0.6 + Math.sin(t * 3.2) * 0.2;
+    glow(ctx, 6, 0, props.heart ? 40 : 22, props.heart ? hot : ember, (props.heart ? 0.8 : 0.32) * pulse);
+    if (props.heart) { ellipse(ctx, 8, 0, 11, 9, 0, rgba(hot, 0.9), OUT, 1.5); glow(ctx, 8, 0, 18, '#ffffff', 0.55 * pulse); }
+    // ---- front claws (Rending Claws: one rears back and rakes)
+    const rake = props.claw ? -0.7 + s * 1.4 : 0;
+    for (const sy of [-1, 1]) {
+      const fx = 28 + (sy < 0 ? rake * 12 : 0), fy = 28 * sy;
+      ellipse(ctx, fx, fy, 14, 8, 0.2 * sy, hide, OUT, 2.5);
+      for (let k = -1; k <= 1; k++) poly(ctx, [fx + 9, fy + k * 4, fx + 20, fy + k * 5 + sy * 1.5, fx + 9, fy + k * 4 + 3], bone, OUT, 1);
+    }
+    // ---- neck and head: the jaw drops for a roar or a breath
+    poly(ctx, [30, -13, 52, -9, 60, -8, 60, 8, 52, 9, 30, 13], hide, OUT, 2.5);
+    for (let i = 0; i < 3; i++) poly(ctx, [36 + i * 8, -10, 40 + i * 8, -17, 44 + i * 8, -10], plate, OUT, 1);
+    ctx.save(); ctx.translate(58, 0);
+    ctx.save(); ctx.rotate(open * 0.7);
+    poly(ctx, [0, 1, 26, 3, 38, 6, 38, 9, 22, 11, 0, 11], plate, OUT, 2.2);   // lower jaw
+    for (let k = 0; k < 4; k++) poly(ctx, [10 + k * 7, 5, 12 + k * 7, 0, 14 + k * 7, 5], bone, OUT, 0.8);
+    ctx.restore();
+    if (props.breath) { glow(ctx, 36, 0, 36, hot, 0.8 + Math.sin(t * 20) * 0.1); glow(ctx, 50, 0, 50, ember, 0.5); }
+    ctx.save(); ctx.rotate(-open * 0.35);
+    poly(ctx, [0, -11, 20, -11, 40, -4, 44, 0, 40, 3, 22, 3, 0, 8], hide, OUT, 2.5);   // skull and upper jaw
+    for (let k = 0; k < 4; k++) poly(ctx, [12 + k * 7, 3, 14 + k * 7, 8, 16 + k * 7, 3], bone, OUT, 0.8);
+    circle(ctx, 34, -3, 1.6, dark); circle(ctx, 35, 2.6, 1.2, dark);   // nostrils
+    ctx.restore();
+    // horns sweep back from the brow
+    for (const sy of [-1, 1]) {
+      poly(ctx, [10, 8 * sy, -2, 20 * sy, -22, 24 * sy, -4, 14 * sy], bone, OUT, 2);
+      poly(ctx, [16, 9 * sy, 8, 14 * sy, 2, 12 * sy], plate, OUT, 1.2);
+      glow(ctx, 22, 6 * sy, 9, props.roar || props.breath ? hot : ember, 0.9);
+      circle(ctx, 22, 6 * sy, 2.8, props.roar || props.breath ? '#fff4c8' : hot);
+    }
+    ctx.restore();
+  },
+
+  // Hrimgar, the Frost Titan: a frost giant in a mantle of rime, a beard of icicles, a crown of ice horns. Facing +x, drawn big.
+  // props (set from his casts, main.js): raise (an arm up for a slam, a sweep, a fist), fist, howl (head back), breath (frost from the mouth).
+  titan(ctx, st) {
+    const fur = '#8a9db3', furHi = '#b6c8dc', furLo = '#55657a', ice = '#cfeaff', iceLo = '#7fb4de', skin = '#9fb6c9', eye = '#9ff4ff';
+    const props = st.props || {}, t = st.t || 0;
+    const pa = actP(st, 'attack');
+    let s = swing(pa);
+    const up = props.raise || props.fist ? 1 : 0;
+    if (up && !(s > 0.05)) s = -0.9 + Math.sin(t * 5) * 0.03;
+    if (st.raid) ctx.scale(1.5, 1.5);   // in his own arena he is a giant (his hitbox is the same as anyone's; the art is not)
+    glow(ctx, 0, 0, 110, '#9fe8ff', props.howl || props.breath ? 0.3 : 0.12);
+    // frost breath: a cone of white from the mouth
+    if (props.breath) for (let i = 0; i < 14; i++) {
+      const q = (t * 1.6 + i / 14) % 1, a = (i % 5 - 2) * 0.12, d = 30 + q * 90;
+      glow(ctx, 36 + Math.cos(a) * d, Math.sin(a) * d, 12 + q * 16, '#e8f8ff', 0.5 * (1 - q));
+    }
+    // howl: rings of cold rolling out of him
+    if (props.howl) for (let i = 0; i < 2; i++) { const q = (t * 0.9 + i / 2) % 1; ellipse(ctx, 0, 0, 40 + q * 90, 40 + q * 90, 0, null, rgba('#dff6ff', 0.4 * (1 - q)), 2.5); }
+    // feet
+    const w = st.moving ? Math.sin(t * 5) * 5 : 0;
+    ellipse(ctx, -8 + w, -20, 14, 9, 0, furLo, OUT, 2.5);
+    ellipse(ctx, -8 - w, 20, 14, 9, 0, furLo, OUT, 2.5);
+    // the mantle: a great cloak of grey fur, matted with rime, falling off his back
+    poly(ctx, [-12, -34, -40, -26, -52, -6, -46, 10, -52, 24, -34, 34, -10, 32], fur, OUT, 3);
+    for (let i = 0; i < 7; i++) { const y = -28 + i * 9; poly(ctx, [-16, y, -36 - (i % 2) * 6, y + 3, -22, y + 8], furHi, null); }
+    // icicle spikes along the back
+    for (let i = 0; i < 5; i++) { const y = -24 + i * 12; poly(ctx, [-36, y - 3, -52 - (i % 2) * 8, y + 1, -36, y + 4], ice, OUT, 1.2); }
+    // body and shoulders
+    ellipse(ctx, 0, 0, 26, 38, 0, fur, OUT, 3);
+    ellipse(ctx, -4, -12, 12, 14, 0, furHi);
+    ellipse(ctx, 4, 6, 8, 10, 0, rgba(furLo, 0.5));
+    for (const sy of [-1, 1]) {
+      // pauldron of ice plates
+      poly(ctx, [0, 30 * sy, 14, 38 * sy, 26, 30 * sy, 20, 22 * sy, 6, 22 * sy], ice, OUT, 2.2);
+      poly(ctx, [8, 30 * sy, 14, 44 * sy, 20, 30 * sy], iceLo, OUT, 1.4);
+      line(ctx, 6, 28 * sy, 20, 28 * sy, 'rgba(255,255,255,0.7)', 1.2);
+    }
+    // arms and fists: the right one lifts and slams
+    for (const sy of [-1, 1]) {
+      const lift = sy > 0 ? s : 0.1 * s;
+      const hx = 30 + lift * 16 + (props.howl ? -8 : 0), hy = 34 * sy - lift * 4 * sy, ew = 14 + lift * 4;
+      line(ctx, 8, 30 * sy, hx, hy, OUT, 18); line(ctx, 8, 30 * sy, hx, hy, skin, 13);
+      if (up && sy > 0) glow(ctx, hx + 6, hy, 34, '#bff0ff', 0.4 + Math.sin(t * 8) * 0.1);
+      circle(ctx, hx + 4, hy, ew, skin, OUT, 3);
+      for (let k = -1; k <= 1; k++) poly(ctx, [hx + 12, hy + k * 5 - 2, hx + 20, hy + k * 5, hx + 12, hy + k * 5 + 3], ice, OUT, 1);
+      circle(ctx, hx + 2, hy - 2, ew * 0.55, rgba(furHi, 0.5));
+    }
+    // head: a broad brow, a beard of icicles, a crown of ice horns
+    for (let k = 0; k < 7; k++) { const a = -1.1 + k * 0.37; poly(ctx, [18 + Math.cos(a - 0.14) * 11, Math.sin(a - 0.14) * 11, 20 + Math.cos(a) * (props.howl ? 30 : 24), Math.sin(a) * (props.howl ? 30 : 24), 18 + Math.cos(a + 0.14) * 11, Math.sin(a + 0.14) * 11], ice, OUT, 1.3); }
+    circle(ctx, 18, 0, 13, skin, OUT, 2.8);
+    ellipse(ctx, 22, 0, 8, 11, 0, rgba(furHi, 0.5));
+    for (let k = -2; k <= 2; k++) poly(ctx, [24, k * 4.4 - 2, 32 + (2 - Math.abs(k)) * 3, k * 4.8, 24, k * 4.4 + 2], '#eaf6ff', OUT, 1);
+    for (const sy of [-1, 1]) { poly(ctx, [14, 8 * sy, 6, 20 * sy, -6, 22 * sy, 6, 12 * sy], ice, OUT, 1.8); }
+    if (props.howl || props.breath) ellipse(ctx, 29, 0, 4.5, 6 + (props.howl ? 3 : 0), 0, '#1a2a3a', OUT, 1.4);
+    glow(ctx, 25, 0, 14, eye, 0.5);
+    circle(ctx, 26, -4.4, 2.4, eye); circle(ctx, 26, 4.4, 2.4, eye);
+    // sparks of frost drifting off him
+    for (let i = 0; i < 6; i++) { const q = (t * 0.5 + i / 6) % 1, a = i * 1.7 + t * 0.2; circle(ctx, Math.cos(a) * (30 + q * 24), Math.sin(a) * (34 + q * 20) - q * 8, 1.5, rgba('#ffffff', 0.7 * (1 - q))); }
+  },
+
 };
 
 // Adds (killable minions). Same conventions as the bosses: facing +x.
@@ -542,6 +696,18 @@ const ADD_ART = {
     circle(ctx, 5, 0, 6.5, bone, OUT, 1.8);
     circle(ctx, 7, -2.2, 1.6, enraged ? '#ff4a2a' : '#6dff9a'); circle(ctx, 7, 2.2, 1.6, enraged ? '#ff4a2a' : '#6dff9a');
   },
+  // an ember whelp (the Roost): a small basalt-black dragon, wings half open, a glow in its throat
+  whelp(ctx, st, enraged) {
+    const t = st.t || 0, hide = '#3a2420', ember = '#ff8a2a';
+    const flap = Math.sin(t * 9) * 0.25;
+    for (const sy of [-1, 1]) poly(ctx, [0, 3 * sy, -8, (14 + flap * 12) * sy, -20, (18 + flap * 10) * sy, -14, 6 * sy], rgba('#7a2f1a', 0.95), OUT, 1.5);
+    poly(ctx, [-8, -2.6, -28, 0, -8, 2.6], hide, OUT, 1.3);
+    ellipse(ctx, 0, 0, 13, 9, 0, hide, OUT, 2);
+    glow(ctx, 2, 0, 10, ember, 0.5);
+    poly(ctx, [10, -5, 22, -2.5, 25, 0, 22, 3, 10, 5], hide, OUT, 1.8);
+    for (const sy of [-1, 1]) { poly(ctx, [11, 4 * sy, 6, 9 * sy, 2, 7 * sy], '#e6dcc4', OUT, 1); circle(ctx, 17, 2.4 * sy, 1.5, enraged ? '#ff4a2a' : '#ffd27a'); }
+  },
+
 };
 function drawAdd(ctx, kind, x, y, angle, st, enraged, scale = 1) {
   ctx.save();
@@ -599,6 +765,6 @@ function drawBoss(ctx, boss, x, y, angle, st, scale = 1) {
   ctx.scale(scale, scale);
   ellipse(ctx, 4, 10, 50, 40, 0, 'rgba(0,0,0,0.3)');
   ctx.rotate(angle);
-  BOSS_ART[boss.id](ctx, st);
+  BOSS_ART[boss.id](ctx, st, angle);
   ctx.restore();
 }

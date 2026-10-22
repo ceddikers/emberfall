@@ -607,7 +607,9 @@
     'ab-driftblade-carve': 3.5, 'ab-driftblade-cross': 1.5, 'ab-driftblade-eyestep': 0.5, 'ab-driftblade-gale': 1.5,
     'ab-driftblade-galeline': 1, 'ab-driftblade-gyre': 1, 'ab-driftblade-hook': 3, 'ab-driftblade-impact': -2.5,
     'ab-driftblade-pass': 5.5, 'ab-driftblade-slip': 5, 'ab-driftblade-still': -0.5, 'ab-driftblade-tailspin': 0.5,
-    'ab-fire': -1.5, 'ab-gorgemaw-auto': 4.5, 'ab-gorgemaw-bottomless': -0.5, 'ab-gorgemaw-gnash': 4,
+    'ab-fire': -1.5, 'ab-gloomsworn-auto': 2, 'ab-gloomsworn-mantle': 1.5, 'ab-gloomsworn-pall': 0.5,
+    'ab-gloomsworn-pyre': -1, 'ab-gloomsworn-rend': 0.5, 'ab-gloomsworn-rite': -0.5, 'ab-gloomsworn-shade': 4,
+    'ab-gloomsworn-strike': -2, 'ab-gorgemaw-auto': 4.5, 'ab-gorgemaw-bottomless': -0.5, 'ab-gorgemaw-gnash': 4,
     'ab-gorgemaw-iron': 1.5, 'ab-gorgemaw-regurgitate': -1.5, 'ab-gorgemaw-spit': 3.5, 'ab-gorgemaw-stonebelly': -0.5,
     'ab-gorgemaw-wide': -0.5, 'ab-grovekeeper-auto': 8.5, 'ab-grovekeeper-bloom': -1.5, 'ab-grovekeeper-growth': -1,
     'ab-grovekeeper-lifebind': -2, 'ab-grovekeeper-moonwell': -2, 'ab-grovekeeper-rebirth': -1.5, 'ab-grovekeeper-rejuv': -1.5,
@@ -640,40 +642,55 @@
     'ab-thermist-thermocline': -1.5, 'ab-thermist-zero': -2, 'ab-thread': 4, 'ab-threadweaver-auto': 9,
     'ab-threadweaver-cradle': -0.5, 'ab-threadweaver-embroider': 0.5, 'ab-threadweaver-mend': -1, 'ab-threadweaver-needle': 3.5,
     'ab-threadweaver-shuttle': 0.5, 'ab-threadweaver-snip': 5.5, 'ab-threadweaver-tapestry': 1, 'ab-threadweaver-tie': 1,
-    'ab-time': -0.5, 'ab-wind': 5.5, 'amb-fountain': -11, 'amb-pond': -16.5,
-    'amb-tavern': -13, 'amb-town': -18.5, 'arrival': -8, 'bm-grubnak-belly-flop': -1,
-    'bm-grubnak-butchers-charge': -0.5, 'bm-grubnak-chop-chop': 1, 'bm-grubnak-cleaver-toss': 1.5, 'bm-grubnak-clogged-drains': 3.5,
-    'bm-grubnak-dinner-rush': 3.5, 'bm-grubnak-double-chop': 1, 'bm-grubnak-family-meal': 0.5, 'bm-grubnak-flambe': -0.5,
-    'bm-grubnak-flare-up': -1.5, 'bm-grubnak-gorge': 2, 'bm-grubnak-grease-fire': 0.5, 'bm-grubnak-intro': -1,
-    'bm-grubnak-ladle-spin': 4, 'bm-grubnak-larder-toss': 2.5, 'bm-grubnak-lid-slam': -1.5, 'bm-grubnak-meat-toss': 1.5,
-    'bm-grubnak-mince': 1.5, 'bm-grubnak-mise-en-place': 4, 'bm-grubnak-order-up': -3, 'bm-grubnak-rolling-meatballs': 2.5,
-    'bm-grubnak-service': -1, 'bm-grubnak-simmer': 2, 'bm-grubnak-spice-rack': 0.5, 'bm-grubnak-stockpot': 1.5,
-    'bm-grubnak-tenderize': 1, 'bm-grubnak-whisk': 7, 'bm-hollowking-barrow-bells': -1.5, 'bm-hollowking-barrow-knell': 1.5,
-    'bm-hollowking-coffin-lids': 2, 'bm-hollowking-court-of-bones': 1.5, 'bm-hollowking-crown-of-graves': 3.5, 'bm-hollowking-dirge': 0.5,
-    'bm-hollowking-echo-knights': 4.5, 'bm-hollowking-funeral-march': 0.5, 'bm-hollowking-grave-cleave': 0.5, 'bm-hollowking-grave-marks': 4,
-    'bm-hollowking-gravebind': 2.5, 'bm-hollowking-intro': 1.5, 'bm-hollowking-judgement': 0.5, 'bm-hollowking-lantern': 8.5,
-    'bm-hollowking-lights-out': 2, 'bm-hollowking-royal-audience': -1.5, 'bm-hollowking-royal-decree': -1, 'bm-hollowking-royal-doom': 1,
-    'bm-hollowking-royal-gaze': -1.5, 'bm-hollowking-sceptre-sweep': 3.5, 'bm-hollowking-the-charge-sheet': 1.5, 'bm-hollowking-the-king-rises': -1,
-    'bm-hollowking-the-long-night': 1.5, 'bm-hollowking-writ-of-execution': 1.5, 'bm-skitterra-acid-deluge': 0.5, 'bm-skitterra-brood': 4.5,
-    'bm-skitterra-ceiling-ambush': 1, 'bm-skitterra-chrysalis': 4, 'bm-skitterra-egg-sacs': 1.5, 'bm-skitterra-eightfold-lunge': 6.5,
-    'bm-skitterra-fang-rush': 2, 'bm-skitterra-from-the-dark': 2, 'bm-skitterra-into-the-dark': 2, 'bm-skitterra-intro': -1,
-    'bm-skitterra-molt': 8, 'bm-skitterra-silk-lines': 3.5, 'bm-skitterra-silk-reel': 3.5, 'bm-skitterra-silk-wrap': 2.5,
-    'bm-skitterra-snare-weave': 2, 'bm-skitterra-spiderlings': 11, 'bm-skitterra-spin': 8, 'bm-skitterra-spinneret-volley': 16,
-    'bm-skitterra-strand-reel': 5.5, 'bm-skitterra-the-swarm': 11.5, 'bm-skitterra-the-web-gives-way': 0.5, 'bm-skitterra-tightening-web': 2,
-    'bm-skitterra-venom-drip': 4, 'bm-skitterra-venom-mist': -1.5, 'bm-skitterra-venom-spit': 4, 'bm-volkar-avalanche': 0.5,
-    'bm-volkar-ball-lightning': 1.5, 'bm-volkar-chain-lightning': 3, 'bm-volkar-distant-thunder': 4, 'bm-volkar-eye-closes': 2,
-    'bm-volkar-eye-of-the-storm': 4.5, 'bm-volkar-gale-slam': 4, 'bm-volkar-gathering-storm': 0.5, 'bm-volkar-grounding-rods': 3,
-    'bm-volkar-heavens-fall': -1, 'bm-volkar-intro': -1.5, 'bm-volkar-lightning-rods': 9, 'bm-volkar-polarity-minus': 3,
-    'bm-volkar-polarity-plus': 3, 'bm-volkar-polarity-surge': 1.5, 'bm-volkar-pulse': 4.5, 'bm-volkar-rod-strike': 1.5,
-    'bm-volkar-skyfall': -0.5, 'bm-volkar-squall-line': 3, 'bm-volkar-static-field': 5, 'bm-volkar-still-air': 3,
-    'bm-volkar-storm-walls': 2, 'bm-volkar-supercell': 2, 'bm-volkar-thunder-crash': 1, 'bm-volkar-thunderclap': 1.5,
-    'bm-volkar-thunderhead': 2.5, 'bm-volkar-titan-fist': -1.5, 'boss-death': -2.5, 'boss-enrage': -2.5,
-    'boss-impact-heavy': 0.5, 'boss-impact-light': 7, 'boss-intro': -1.5, 'buff-on': -0.5,
-    'chest-drop': 3.5, 'chest-open': -5, 'cleanse': -5, 'clear': -4.5,
-    'crit': 4, 'dash': 6.5, 'debuff-on': -1, 'dummy-hit': 3,
-    'emote-cheer': -6.5, 'emote-laugh': -2, 'emote-wave': 2, 'feast-chew': 6.5,
-    'feast-clink': -5.5, 'feast-serve': -3.5, 'feast-sting': -2.5, 'fish-bite': 3,
-    'fish-cast': 1.5, 'fish-catch': -3, 'fish-lost': -0.5, 'fish-reel': -0.5,
+    'ab-thresher-auto': 2, 'ab-thresher-blink': 2.5, 'ab-thresher-cull': -1.5, 'ab-thresher-gatestrike': 1.5,
+    'ab-thresher-gather': 6, 'ab-thresher-hook': 3.5, 'ab-thresher-reap': -1.5, 'ab-thresher-slash': 1,
+    'ab-thresher-sowing': 2.5, 'ab-thresher-wisp': 6, 'ab-time': -0.5, 'ab-wind': 5.5,
+    'amb-fountain': -11, 'amb-pond': -16.5, 'amb-tavern': -13, 'amb-town': -18.5,
+    'arrival': -8, 'bm-archmage-arcane-burst': -0.5, 'bm-archmage-arcane-mark': 2, 'bm-archmage-call-of-the-circle': 2.5,
+    'bm-archmage-cinder-rune': 1, 'bm-archmage-convergence': 1.5, 'bm-archmage-counterspell': 2.5, 'bm-archmage-ice-lances': 3,
+    'bm-archmage-leaping-bolt': 1, 'bm-archmage-pyre-rings': 1, 'bm-archmage-rift-rune': -1.5, 'bm-archmage-rime-rune': 0.5,
+    'bm-archmage-rune-mark': 2, 'bm-archmage-rune-swap': 2, 'bm-archmage-storm-rune': 2, 'bm-archmage-the-binding': 1.5,
+    'bm-archmage-the-tide-rises': 1, 'bm-archmage-void-rifts': -1, 'bm-grubnak-belly-flop': -1, 'bm-grubnak-butchers-charge': -0.5,
+    'bm-grubnak-chop-chop': 1, 'bm-grubnak-cleaver-toss': 1.5, 'bm-grubnak-clogged-drains': 3.5, 'bm-grubnak-dinner-rush': 3.5,
+    'bm-grubnak-double-chop': 1, 'bm-grubnak-family-meal': 0.5, 'bm-grubnak-flambe': -0.5, 'bm-grubnak-flare-up': -1.5,
+    'bm-grubnak-gorge': 2, 'bm-grubnak-grease-fire': 0.5, 'bm-grubnak-intro': -1, 'bm-grubnak-ladle-spin': 4,
+    'bm-grubnak-larder-toss': 2.5, 'bm-grubnak-lid-slam': -1.5, 'bm-grubnak-meat-toss': 1.5, 'bm-grubnak-mince': 1.5,
+    'bm-grubnak-mise-en-place': 4, 'bm-grubnak-order-up': -3, 'bm-grubnak-rolling-meatballs': 2.5, 'bm-grubnak-service': -1,
+    'bm-grubnak-simmer': 2, 'bm-grubnak-spice-rack': 0.5, 'bm-grubnak-stockpot': 1.5, 'bm-grubnak-tenderize': 1,
+    'bm-grubnak-whisk': 7, 'bm-hollowking-barrow-bells': -1.5, 'bm-hollowking-barrow-knell': 1.5, 'bm-hollowking-coffin-lids': 2,
+    'bm-hollowking-court-of-bones': 1.5, 'bm-hollowking-crown-of-graves': 3.5, 'bm-hollowking-dirge': 0.5, 'bm-hollowking-echo-knights': 4.5,
+    'bm-hollowking-funeral-march': 0.5, 'bm-hollowking-grave-cleave': 0.5, 'bm-hollowking-grave-marks': 4, 'bm-hollowking-gravebind': 2.5,
+    'bm-hollowking-intro': 1.5, 'bm-hollowking-judgement': 0.5, 'bm-hollowking-lantern': 8.5, 'bm-hollowking-lights-out': 2,
+    'bm-hollowking-royal-audience': -1.5, 'bm-hollowking-royal-decree': -1, 'bm-hollowking-royal-doom': 1, 'bm-hollowking-royal-gaze': -1.5,
+    'bm-hollowking-sceptre-sweep': 3.5, 'bm-hollowking-the-charge-sheet': 1.5, 'bm-hollowking-the-king-rises': -1, 'bm-hollowking-the-long-night': 1.5,
+    'bm-hollowking-writ-of-execution': 1.5, 'bm-hydra-acid-spray': 3, 'bm-hydra-flame-gout': 3, 'bm-hydra-intro': -3,
+    'bm-hydra-mire-spit': 2, 'bm-hydra-mothers-cry': -1.5, 'bm-hydra-mothers-heart': 0.5, 'bm-hydra-regrowth': 0.5,
+    'bm-hydra-rending-maul': 1.5, 'bm-hydra-rime-crown': 1, 'bm-hydra-searing': 2.5, 'bm-hydra-stonegaze': 0.5,
+    'bm-hydra-stormcall': 3, 'bm-hydra-the-drowning': -2.5, 'bm-hydra-tidal-dance': 3.5, 'bm-hydra-tidal-line': 2,
+    'bm-hydra-venom-bloom': 3, 'bm-skitterra-acid-deluge': 0.5, 'bm-skitterra-brood': 4.5, 'bm-skitterra-ceiling-ambush': 1,
+    'bm-skitterra-chrysalis': 4, 'bm-skitterra-egg-sacs': 1.5, 'bm-skitterra-eightfold-lunge': 6.5, 'bm-skitterra-fang-rush': 2,
+    'bm-skitterra-from-the-dark': 2, 'bm-skitterra-into-the-dark': 2, 'bm-skitterra-intro': -1, 'bm-skitterra-molt': 8,
+    'bm-skitterra-silk-lines': 3.5, 'bm-skitterra-silk-reel': 3.5, 'bm-skitterra-silk-wrap': 2.5, 'bm-skitterra-snare-weave': 2,
+    'bm-skitterra-spiderlings': 11, 'bm-skitterra-spin': 8, 'bm-skitterra-spinneret-volley': 16, 'bm-skitterra-strand-reel': 5.5,
+    'bm-skitterra-the-swarm': 11.5, 'bm-skitterra-the-web-gives-way': 0.5, 'bm-skitterra-tightening-web': 2, 'bm-skitterra-venom-drip': 4,
+    'bm-skitterra-venom-mist': -1.5, 'bm-skitterra-venom-spit': 4, 'bm-titan-avalanche': 0.5, 'bm-titan-breath-of-winter': 1.5,
+    'bm-titan-endless-winter': -1.5, 'bm-titan-frostbite': 2.5, 'bm-titan-glacial-stomp': -0.5, 'bm-titan-icefall': 2.5,
+    'bm-titan-intro': -3, 'bm-titan-rime-slam': 0.5, 'bm-titan-titans-grip': 2.5, 'bm-titan-titans-sweep': 2,
+    'bm-titan-twin-slam': 2, 'bm-titan-whiteout': 1.5, 'bm-titan-winters-grasp': 2.5, 'bm-titan-winters-howl': -1,
+    'bm-volkar-avalanche': 0.5, 'bm-volkar-ball-lightning': 1.5, 'bm-volkar-chain-lightning': 3, 'bm-volkar-distant-thunder': 4,
+    'bm-volkar-eye-closes': 2, 'bm-volkar-eye-of-the-storm': 4.5, 'bm-volkar-gale-slam': 4, 'bm-volkar-gathering-storm': 0.5,
+    'bm-volkar-grounding-rods': 3, 'bm-volkar-heavens-fall': -1, 'bm-volkar-intro': -1.5, 'bm-volkar-lightning-rods': 9,
+    'bm-volkar-polarity-minus': 3, 'bm-volkar-polarity-plus': 3, 'bm-volkar-polarity-surge': 1.5, 'bm-volkar-pulse': 4.5,
+    'bm-volkar-rod-strike': 1.5, 'bm-volkar-skyfall': -0.5, 'bm-volkar-squall-line': 3, 'bm-volkar-static-field': 5,
+    'bm-volkar-still-air': 3, 'bm-volkar-storm-walls': 2, 'bm-volkar-supercell': 2, 'bm-volkar-thunder-crash': 1,
+    'bm-volkar-thunderclap': 1.5, 'bm-volkar-thunderhead': 2.5, 'bm-volkar-titan-fist': -1.5, 'boss-death': -2.5,
+    'boss-enrage': -2.5, 'boss-impact-heavy': 0.5, 'boss-impact-light': 7, 'boss-intro': -1.5,
+    'buff-on': -0.5, 'chest-drop': 3.5, 'chest-open': -5, 'cleanse': -5,
+    'clear': -4.5, 'crit': 4, 'dash': 6.5, 'debuff-on': -1,
+    'dummy-hit': 3, 'emote-cheer': -6.5, 'emote-laugh': -2, 'emote-wave': 2,
+    'feast-chew': 6.5, 'feast-clink': -5.5, 'feast-serve': -3.5, 'feast-sting': -2.5,
+    'fish-bite': 3, 'fish-cast': 1.5, 'fish-catch': -3, 'fish-lost': -0.5,
+    'fish-reel': -0.5, 'gloom-hollow-off': -2, 'gloom-hollow-on': 2, 'gold-pop': 5,
     'heal-land': -2.5, 'hit-heavy': 5, 'hit-light': 9, 'lb-fire': -1.5,
     'lb-ready': -5, 'loot-take': -2, 'low-hp': -4.5, 'npc-talk': -6,
     'ping': 2.5, 'pip-up': 12, 'portal-enter': -3, 'portal-hum': -22.5,
@@ -682,14 +699,15 @@
     'step-grass': 8, 'step-stone': 8.5, 'step-wood': 1.5, 'story-page': 3.5,
     'tg-aoe': 1.5, 'tg-buster': 1, 'tg-charge': 0.5, 'tg-gaze': 0.5,
     'tg-knockback': 2.5, 'tg-raidwide': -0.5, 'tg-spread': 5.5, 'tg-stack': 1.5,
+    'thresher-gate-bloom': -2.5, 'thresher-gate-tone': 8.5, 'thresher-pop': 16, 'thresher-rot': 2.5,
     'title-sting': -3, 'ui-bounty': 0.5, 'ui-buy': -6, 'ui-click': 2,
     'ui-close': -0.5, 'ui-equip': -2.5, 'ui-error': -3, 'ui-feat': -7,
     'ui-gold': -4, 'ui-hover': 13, 'ui-secret': -6, 'ult-alembist': 0.5,
     'ult-bastion': 1.5, 'ult-bloodreaver': 1, 'ult-driftblade': 6.5, 'ult-fire': -1.5,
-    'ult-gorgemaw': 1, 'ult-grovekeeper': 2.5, 'ult-marionettist': 0.5, 'ult-oathbroker': -1,
-    'ult-pyromancer': -1, 'ult-ranger': 3, 'ult-ready': -4, 'ult-runeguard': -1,
-    'ult-shadowblade': 4, 'ult-thermist': -1, 'ult-threadweaver': -1, 'waymark': 11.5,
-    'wipe': -2,
+    'ult-gloomsworn': -1, 'ult-gorgemaw': 1, 'ult-grovekeeper': 2.5, 'ult-marionettist': 0.5,
+    'ult-oathbroker': -1, 'ult-pyromancer': -1, 'ult-ranger': 3, 'ult-ready': -4,
+    'ult-runeguard': -1, 'ult-shadowblade': 4, 'ult-thermist': -1, 'ult-threadweaver': -1,
+    'waymark': 11.5, 'wipe': -2,
   };
   // @@TRIM-END
 
@@ -1342,6 +1360,19 @@
     tear: S => S.noise({ bp: 2600, bp1: 700, q: 3, grain: 0.8, grainRate: 0.6, dur: 0.3, pts: [[0.02, 1], [0.3, 0]], peak: 0.25 }),
     string: S => S.pluck({ f: 440, type: 'tri', dur: 0.45, peak: 0.16 }),
     breath: S => S.noise({ color: 'pink', bp: 800, bp1: 1400, q: 1.2, dur: 0.45, pts: [[0.35, 1], [0.45, 0]], peak: 0.25 }),
+    // Gloomsworn: the duskblade through dark air, a hollow breath (a vowel with no voice in it), an iron toll, a crack of the shell
+    gsweep: S => { S.whoosh({ color: 'brown', f: 220, f1: 800, q: 0.9, dur: 0.3, peakAt: 0.5, peak: 0.45 }); S.metal({ at: 0.04, set: 'plate', f: 190, dur: 0.5, peak: 0.1, click: 0.3 }); },
+    gbreath: S => { S.noise({ color: 'pink', bp: 520, bp1: 360, q: 3.2, dur: 0.55, pts: [[0.16, 1], [0.55, 0]], peak: 0.17 }); S.voice({ f: 92, vowel: 'o', vowel1: 'u', breath: 1.4, dur: 0.5, peak: 0.06 }); },
+    gtoll: S => { S.bell({ set: 'church', f: mf(35), dur: 1.7, peak: 0.2, beat: 0.9 }); S.thud({ f: 60, f1: 38, dur: 0.3, peak: 0.25, click: 0 }); },
+    gcrack: S => { S.crack({ f: 1100, dur: 0.22, peak: 0.22 }); S.glass({ at: 0.02, f: mf(88), dur: 0.5, peak: 0.05 }); },
+    // Thresher: a scythe through open air (a long breathy sweep with a thin bright edge), the dry rustle of something ripening, a ripe chime,
+    // a rotten thud, the wisp's whisper, a run of chain links
+    tsweep: S => { S.whoosh({ color: 'pink', f: 450, f1: 2600, q: 0.7, dur: 0.38, peakAt: 0.5, peak: 0.42 }); S.noise({ at: 0.06, hp: 5200, dur: 0.22, pts: [[0.1, 1], [0.22, 0]], peak: 0.08 }); },
+    trustle: S => { for (let i = 0; i < 4; i++) S.noise({ at: i * 0.045 + S.rr(0, 0.02), color: 'pink', bp: S.rr(2800, 4600), q: 1.6, grain: 0.9, dur: 0.07, pts: [[0.01, 1], [0.07, 0]], peak: 0.1 }); },
+    tchime: S => { S.partials({ set: 'hand', f: mf(88), dur: 1.1, peak: 0.13 }); S.glass({ at: 0.03, f: mf(95), dur: 0.8, peak: 0.05 }); },
+    trot: S => { S.thud({ f: 58, f1: 30, dur: 0.55, drive: 1.6, peak: 0.5 }); S.noise({ color: 'brown', lp: 380, dur: 0.4, pts: [[0.02, 1], [0.4, 0]], peak: 0.2 }); S.splat({ at: 0.04, peak: 0.18, dur: 0.2 }); },
+    twisp: S => { S.noise({ color: 'pink', bp: 1900, bp1: 3200, q: 3.4, dur: 0.5, pts: [[0.25, 1], [0.5, 0]], peak: 0.1 }); S.voice({ f: 640, vowel: 'u', vowel1: 'i', breath: 1.6, dur: 0.45, peak: 0.05 }); S.glass({ at: 0.12, f: mf(96), dur: 0.5, peak: 0.04 }); },
+    tchain: S => { for (let i = 0; i < 5; i++) S.metal({ at: i * 0.028, set: 'bar', f: S.rr(1900, 2800), dur: 0.12, peak: 0.08, click: 0.2 }); S.scrape({ f: 5200, q: 3, rate: 90, dur: 0.16, pts: [[0.01, 1], [0.16, 0]], peak: 0.07 }); },
   };
   function layer(S, l) {
     const [name, p, at, g, v] = Array.isArray(l) ? l : [l];
@@ -1581,6 +1612,31 @@
       string: [['thread', 1.35, 0, 1, 0], ['zing', 1.2]],
       auto: [['thread', 1.2, 0, 0.6, 2], ['thunk', 1.6, 0, 0.5]],
     },
+    // Gloomsworn: low, heavy and metallic, with a hollow breath under it (gbreath); no two moves alike
+    gloomsworn: {
+      rend: [['slash', 0.7, 0, 0.9], ['gsweep', 1], ['gbreath', 1.1, 0.05, 0.5]],
+      strike: [['heavy', 0.7, 0, 1, 1], ['clang', 0.55, 0.05, 0.9], ['boom', 0.8, 0.12, 0.7], ['gbreath', 0.8, 0.1, 0.5]],
+      shade: [['dash', 0.8, 0, 1, 1], ['gbreath', 1.4, 0, 0.9], ['wind', 0.6, 0.03, 0.6], ['stab', 0.8, 0.14, 0.6, 0]],
+      pall: [['gtoll', 1, 0, 1], ['drone', 0.7, 0, 0.7], ['shield', 0.6, 0.1, 0.7, 2]],
+      mantle: [['shield', 0.5, 0, 0.8, 1], ['gbreath', 0.7, 0, 1], ['creak', 0.6, 0.05, 0.7], ['hum', 0.5, 0.1, 0.6]],
+      rite: [['gtoll', 0.75, 0.05, 0.8], ['shield', 0.8, 0.15, 0.8, 0], ['heal', 0.6, 0.2, 0.5], ['gbreath', 0.6, 0, 0.8]],
+      vigil: [['gtoll', 1.4, 0, 0.8], ['hum', 0.8, 0, 0.7], ['shield', 0.9, 0.1, 0.8, 1], ['gbreath', 1, 0.1, 0.5]],
+      pyre: [['gbreath', 0.6, 0, 1], ['fire', 0.5, 0.05, 0.8, 0], ['boom', 0.7, 0.18, 0.9], ['gcrack', 1, 0.2]],
+      auto: [['slash', 0.65, 0, 0.7, 1], ['gsweep', 1.2, 0, 0.5]],
+    },
+    // Thresher: airy, long scythe sweeps (tsweep) with the dry rustle of afflictions under them and a ripe chime where something is cashed
+    thresher: {
+      slash: [['slash', 0.85, 0, 0.7, 1], ['tsweep', 1, 0, 1], ['trustle', 1.1, 0.08, 0.35]],
+      hook: [['tchain', 1, 0, 1], ['whoosh-down', 1.3, 0.06, 0.55], ['stab', 0.9, 0.16, 0.7, 0]],
+      reap: [['tsweep', 0.55, 0, 1], ['heavy', 0.75, 0.1, 0.9, 2], ['tchime', 0.8, 0.2, 0.5], ['trustle', 0.8, 0.12, 0.4]],
+      gather: [['trustle', 0.9, 0, 0.8], ['swirl', 1.2, 0, 0.6], ['tchime', 1.15, 0.22, 0.45]],
+      blink: [['dash', 1.1, 0, 1, 1], ['tsweep', 1.4, 0.03, 0.6], ['stab', 1.2, 0.1, 0.7, 2], ['wind', 0.8, 0, 0.4]],
+      wisp: [['twisp', 1, 0, 1], ['sparkle', 1.2, 0.1, 0.5], ['hum', 1.8, 0, 0.3]],
+      sowing: [['leaves', 1, 0, 0.8], ['trustle', 1.3, 0.05, 0.6], ['nature', 0.9, 0.1, 0.55, 1], ['tchime', 0.7, 0.25, 0.4]],
+      cull: [['tsweep', 0.5, 0, 1], ['heavy', 0.6, 0.12, 1, 1], ['trot', 0.9, 0.14, 0.7], ['tchime', 0.6, 0.2, 0.5]],
+      gatestrike: [['tsweep', 1.1, 0, 0.8], ['slash', 1, 0, 0.6, 2], ['twisp', 1.3, 0.03, 0.4], ['tchime', 1.25, 0.08, 0.35]],
+      auto: [['slash', 0.8, 0, 0.6, 0], ['tsweep', 1.25, 0, 0.5]],
+    },
   };
   for (const cls in ABIL) for (const id in ABIL[cls]) { const spec = ABIL[cls][id]; def('ab-' + cls + '-' + id, 'ab', S => { for (const l of spec) layer(S, l); }); }
 
@@ -1684,6 +1740,85 @@
     for (let i = 0; i < 4; i++) S.wood({ at: i * 0.08, f: S.rr(600, 900), dur: 0.05, peak: 0.25 });
     [69, 72, 76, 81].forEach((n, i) => S.pluck({ at: 0.35 + i * 0.06, f: mf(n), dur: 0.5, peak: 0.12, rev: 0.3 }));
     S.whoosh({ at: 0.35, color: 'brown', f: 200, f1: 900, dur: 0.7, peak: 0.3, q: 0.6 });
+  });
+  // Gloomsworn: the sky going dark (a hollow breath drawn in, a low drone swelling), the black sun's toll, the shells bursting on the party
+  def('ult-gloomsworn', 'ult', S => {
+    S.space('hall', 0.5);
+    S.noise({ color: 'pink', bp: 360, bp1: 700, q: 2.6, dur: 0.55, pts: [[0.5, 1], [0.55, 0]], peak: 0.2 });
+    S.choir({ notes: [mf(33), mf(40)], vowel: 'o', vowel1: 'u', a: 0.45, dur: 1.3, peak: 0.13 });
+    S.bell({ at: 0.5, set: 'church', f: mf(31), dur: 2.2, peak: 0.26, beat: 0.7 });
+    S.thud({ at: 0.5, f: 70, f1: 28, dur: 0.7, peak: 0.55, drive: 2 });
+    S.whoosh({ at: 0.5, color: 'brown', f: 300, f1: 2000, dur: 0.5, peakAt: 0.3, peak: 0.3 });
+    [79, 84, 88, 91, 96].forEach((n, i) => S.glass({ at: 0.6 + i * 0.05, f: mf(n), dur: 0.9, peak: 0.07, pan: (i - 2) * 0.3 }));
+  });
+  // Thresher: the Gate. A breath drawn in as the world falls away, the gateway opening on a low hum, five strikes climbing, a bloom
+  def('ult-thresher', 'ult', S => {
+    S.space('hall', 0.45);
+    S.whoosh({ color: 'pink', f: 3200, f1: 240, q: 1.1, dur: 0.55, peakAt: 0.9, peak: 0.34 });
+    S.choir({ notes: [mf(45), mf(52)], vowel: 'u', vowel1: 'o', a: 0.5, dur: 1.4, peak: 0.1 });
+    S.tone({ f: mf(33), fm: [1.5, 2, 0.5], dur: 1.2, a: 0.5, swell: true, lp: 800, peak: 0.12 });
+    [0, 1, 2, 3, 4].forEach(i => { const at = 0.62 + i * 0.1; S.whoosh({ at, f: 1800 + i * 350, f1: 5200 + i * 300, q: 2, dur: 0.1, peak: 0.2, pan: i % 2 ? 0.35 : -0.35 }); S.glass({ at: at + 0.02, f: mf(79 + i * 2), dur: 0.5, peak: 0.05 }); });
+    S.bell({ at: 1.12, set: 'hand', f: mf(88), dur: 1.4, peak: 0.16 });
+    S.thud({ at: 1.12, f: 80, f1: 38, dur: 0.5, peak: 0.4 });
+    [84, 88, 91, 96].forEach((n, i) => S.glass({ at: 1.16 + i * 0.05, f: mf(n), dur: 0.9, peak: 0.06, pan: (i - 1.5) * 0.3 }));
+  });
+  // an affliction turning gold (yours only, soft), and a gold payout's ping (rises for each one in a Reap)
+  def('gold-ripe', 'hud', S => {
+    S.partials({ set: 'hand', f: mf(91), dur: 0.9, peak: 0.14 });
+    S.glass({ at: 0.07, f: mf(98), dur: 0.7, peak: 0.06 });
+    S.noise({ at: 0.02, hp: 7000, dur: 0.3, pts: [[0.1, 1], [0.3, 0]], peak: 0.03 });
+  });
+  def('gold-pop', 'hud', S => {
+    S.partials({ set: 'hand', f: mf(84), dur: 0.55, peak: 0.15 });
+    S.coins({ n: 1, f: 3600, spread: 0.02, peak: 0.1 });
+    S.glass({ at: 0.02, f: mf(96), dur: 0.4, peak: 0.05 });
+  });
+  // a rotten payout (a dull, wet thud), a young one (a small papery pop), a Gate strike (a bright climbing note: rate rises with each), the fifth's bloom
+  def('thresher-rot', 'ab', S => {
+    S.thud({ f: 62, f1: 34, dur: 0.45, drive: 1.5, peak: 0.5 });
+    S.noise({ color: 'brown', lp: 420, dur: 0.35, pts: [[0.02, 1], [0.35, 0]], peak: 0.18 });
+    S.splat({ at: 0.03, peak: 0.16, dur: 0.18 });
+  });
+  def('thresher-pop', 'ab', S => {
+    S.noise({ color: 'pink', bp: 3200, q: 1.4, grain: 0.8, dur: 0.12, pts: [[0.01, 1], [0.12, 0]], peak: 0.14 });
+    S.tone({ f: 520, f1: 760, dur: 0.1, a: 0.01, peak: 0.08 });
+  });
+  def('thresher-gate-tone', 'ab', S => {
+    S.whoosh({ f: 1600, f1: 4800, q: 2, dur: 0.12, peak: 0.2 });
+    S.glass({ at: 0.02, f: mf(79), dur: 0.6, peak: 0.07 });
+    S.partials({ at: 0.02, set: 'hand', f: mf(72), dur: 0.5, peak: 0.07 });
+  });
+  def('thresher-gate-bloom', 'ab', S => {
+    S.space('hall', 0.4);
+    S.thud({ f: 76, f1: 36, dur: 0.6, drive: 1.8, peak: 0.5 });
+    S.bell({ set: 'hand', f: mf(84), dur: 1.5, peak: 0.16 });
+    S.choir({ at: 0.03, notes: [mf(60), mf(67), mf(72)], vowel: 'a', a: 0.12, dur: 1.2, peak: 0.1 });
+    [84, 88, 91, 96, 100].forEach((n, i) => S.glass({ at: 0.06 + i * 0.045, f: mf(n), dur: 0.9, peak: 0.06, pan: (i - 2) * 0.3 }));
+  });
+  // Hollow: the knight goes hollow (a crack through a low struck shell and a breath let go), is sealed (a white resolve), or breaks
+  def('gloom-hollow-on', 'sting', S => {
+    S.space('hall', 0.45);
+    S.thud({ f: 70, f1: 32, dur: 0.5, peak: 0.55, drive: 2 });
+    S.crack({ at: 0.02, f: 900, dur: 0.3, peak: 0.3 });
+    S.metal({ at: 0.03, set: 'plate', f: 150, dur: 1.2, peak: 0.16, strike: 0.4 });
+    S.noise({ at: 0.1, color: 'pink', bp: 700, bp1: 300, q: 3, dur: 0.9, pts: [[0.1, 1], [0.9, 0]], peak: 0.22 });
+    S.choir({ at: 0.15, notes: [mf(38), mf(45)], vowel: 'u', vowel1: 'o', a: 0.2, dur: 1.2, peak: 0.1 });
+  });
+  def('gloom-hollow-off', 'sting', S => {
+    S.space('hall', 0.5);
+    S.noise({ color: 'pink', bp: 400, bp1: 2400, q: 1.6, dur: 0.5, pts: [[0.4, 1], [0.5, 0]], peak: 0.18 });
+    S.bell({ at: 0.2, set: 'hand', f: mf(72), dur: 1.6, peak: 0.22 });
+    S.choir({ at: 0.1, notes: [mf(52), mf(59), mf(64)], vowel: 'a', a: 0.3, dur: 1.4, peak: 0.12 });
+    S.thud({ at: 0.2, f: 90, f1: 50, dur: 0.3, peak: 0.3, click: 0.1 });
+    [84, 88, 91].forEach((n, i) => S.glass({ at: 0.35 + i * 0.07, f: mf(n), dur: 0.9, peak: 0.07 }));
+  });
+  def('gloom-hollow-break', 'sting', S => {
+    S.space('hall', 0.45);
+    S.thud({ f: 80, f1: 30, dur: 0.6, peak: 0.55, drive: 2 });
+    for (let i = 0; i < 7; i++) S.glass({ at: S.rr(0, 0.25), f: S.rr(1800, 5200), dur: 0.45, peak: 0.08, pan: S.rr(-0.5, 0.5) });
+    S.noise({ at: 0.02, hp: 2500, dur: 0.06, a: 0.0005, peak: 0.28 });
+    S.metal({ at: 0.04, set: 'plate', f: 120, dur: 1.0, peak: 0.14, strike: 0.4 });
+    S.pad({ at: 0.1, notes: [mf(45), mf(48)], type: 'tri', bend: -6, dur: 1.6, a: 0.05, lpEnv: [900, 700, 200, 0.3], peak: 0.12 });
   });
 
   // ============================================================================================== 5. boss moves
@@ -2345,6 +2480,328 @@
     S.bell({ at: 0.8, f: mf(38), dur: 3, peak: 0.35 });
   });
 
+  // ---------------------------------------------------------------------------------------------- Vhalgrath (the Ember Wyrm)
+  def('bm-wyrm-intro', 'sting', S => {
+    S.space('cave', 0.6);
+    S.voice({ f: 52, f1: 40, dur: 2.2, vowel: 'a', vowel1: 'o', breath: 6, peak: 0.4, lp: 3500, pts: [[0.3, 1], [2.2, 0]] });
+    S.rumble({ dur: 3, f: 70, peak: 0.45, a: 0.1 });
+    S.crackle({ at: 0.5, dens: 1.2, f: 3000, dur: 2, pts: [[0.3, 1], [2, 0]], peak: 0.12 });
+  });
+  def('bm-wyrm-tyrants-roar', 'bm', S => {
+    S.space('cave', 0.5);
+    S.voice({ f: 58, f1: 44, dur: 1.8, vowel: 'a', vowel1: 'o', breath: 6, peak: 0.38, lp: 4000, pts: [[0.25, 1], [1.8, 0]] });
+    S.rumble({ dur: 2.4, f: 80, peak: 0.4, a: 0.05 });
+    S.noise({ at: 0.3, bp: 900, q: 2, dur: 1.4, pts: [[0.2, 1], [1.4, 0]], peak: 0.12 });
+  });
+  def('bm-wyrm-rending-claws', 'bm', S => {
+    S.whoosh({ f: 200, f1: 1100, dur: 0.4, peakAt: 0.9, peak: 0.35 });
+    S.metal({ at: 0.38, set: 'bar', f: 900, dur: 0.9, peak: 0.16, strike: 0.6 });
+    S.thud({ at: 0.4, f: 80, f1: 34, dur: 0.6, drive: 2.5, peak: 0.65 });
+    S.noise({ at: 0.4, bp: 3200, bp1: 700, q: 3, dur: 0.3, grain: 0.8, pts: [[0.03, 1], [0.3, 0]], peak: 0.3 });
+  });
+  def('bm-wyrm-ember-breath', 'bm', S => {
+    S.noise({ bp: 500, bp1: 2200, q: 1.2, dur: 1.6, a: 0.25, pts: [[0.3, 0.7], [0.9, 1], [1.6, 0]], peak: 0.3 });
+    S.crackle({ dens: 2.4, f: 4200, dur: 1.6, pts: [[0.3, 1], [1.6, 0]], peak: 0.2 });
+    S.rumble({ dur: 1.8, f: 90, peak: 0.25, a: 0.2 });
+  });
+  def('bm-wyrm-tail-lash', 'bm', S => {
+    S.whoosh({ f: 120, f1: 700, dur: 0.6, peakAt: 0.85, peak: 0.4 });
+    S.thud({ at: 0.55, f: 70, f1: 30, dur: 0.6, drive: 2.5, peak: 0.6 });
+    S.crack({ at: 0.55, peak: 0.25, dur: 0.15 });
+  });
+  def('bm-wyrm-magma-burst', 'bm', S => {
+    [0, 0.18, 0.36].forEach((at, i) => { S.thud({ at, f: 90 - i * 10, f1: 40, dur: 0.4, drive: 2, peak: 0.45 }); S.splat({ at, peak: 0.22, dur: 0.25 }); });
+    S.crackle({ at: 0.1, dens: 2, f: 3600, dur: 0.9, pts: [[0.05, 1], [0.9, 0]], peak: 0.2 });
+  });
+  def('bm-wyrm-cinder-feast', 'bm', S => {
+    S.rumble({ dur: 1.8, f: 110, peak: 0.3, a: 0.3 });
+    S.crackle({ dens: 1.6, f: 3000, dur: 1.8, pts: [[0.4, 1], [1.8, 0]], peak: 0.2 });
+    S.tone({ f: 82, f1: 123, dur: 1.6, a: 0.8, peak: 0.1 });
+  });
+  def('bm-wyrm-take-flight', 'bm', S => {
+    [0, 0.4, 0.8].forEach((at, i) => S.whoosh({ at, f: 100, f1: 500 + i * 100, dur: 0.45, peakAt: 0.5, peak: 0.28 - i * 0.04 }));
+    S.rumble({ dur: 1.4, f: 90, peak: 0.25, a: 0.1 });
+  });
+  def('bm-wyrm-dragonfall', 'bm', S => {
+    S.space('cave', 0.4);
+    S.whoosh({ f: 700, f1: 90, dur: 1.4, peakAt: 0.8, peak: 0.35 });
+    S.thud({ at: 1.4, f: 60, f1: 24, dur: 1.0, drive: 3, peak: 0.85 });
+    S.rumble({ at: 1.4, dur: 1.6, f: 100, peak: 0.35, a: 0.02 });
+    S.crackle({ at: 1.4, lp: 2800, dur: 0.8, pts: [[0.02, 1], [0.8, 0]], peak: 0.25 });
+  });
+  def('bm-wyrm-twin-pass', 'bm', S => {
+    S.whoosh({ f: 500, f1: 120, dur: 0.9, peakAt: 0.5, peak: 0.32 });
+    S.whoosh({ at: 0.9, f: 700, f1: 90, dur: 1.2, peakAt: 0.8, peak: 0.34 });
+    S.thud({ at: 2.1, f: 60, f1: 24, dur: 0.9, drive: 3, peak: 0.7 });
+  });
+  def('bm-wyrm-the-roost', 'bm', S => {
+    S.space('cave', 0.45);
+    [0, 0.5, 1.0, 1.5].forEach(at => S.whoosh({ at, f: 90, f1: 380, dur: 0.5, peakAt: 0.5, peak: 0.22 }));
+    S.voice({ at: 1.2, f: 62, dur: 1.2, vowel: 'o', breath: 5, peak: 0.25, lp: 3000, pts: [[0.3, 1], [1.2, 0]] });
+    S.rumble({ dur: 2.2, f: 80, peak: 0.3, a: 0.2 });
+  });
+  def('bm-wyrm-crater-boils', 'bm', S => {
+    S.rumble({ dur: 3, f: 60, peak: 0.45, a: 0.3 });
+    S.crackle({ dens: 2.2, f: 3400, dur: 2.8, pts: [[0.5, 1], [2.8, 0]], peak: 0.22 });
+    S.noise({ bp: 400, q: 1.5, dur: 2.5, a: 0.5, pts: [[1.2, 1], [2.5, 0]], peak: 0.15 });
+  });
+  def('bm-wyrm-twin-breath', 'bm', S => {
+    [0, 1.1].forEach(at => {
+      S.noise({ at, bp: 500, bp1: 2200, q: 1.2, dur: 1.3, a: 0.2, pts: [[0.25, 0.7], [0.7, 1], [1.3, 0]], peak: 0.28 });
+      S.crackle({ at, dens: 2.2, f: 4000, dur: 1.3, pts: [[0.25, 1], [1.3, 0]], peak: 0.18 });
+    });
+    S.rumble({ dur: 2.4, f: 90, peak: 0.25, a: 0.2 });
+  });
+  def('bm-wyrm-heart-burn', 'bm', S => {
+    S.space('cave', 0.5);
+    S.bell({ f: mf(31), dur: 4, peak: 0.45, lp: 2500 });
+    [0.8, 1.6, 2.4].forEach(at => { S.thud({ at, f: 80, f1: 36, dur: 0.4, peak: 0.4 }); S.crackle({ at, dens: 2, f: 3000, dur: 0.5, pts: [[0.02, 1], [0.5, 0]], peak: 0.18 }); });
+    S.rumble({ at: 2.6, dur: 2.2, f: 70, peak: 0.45, a: 0.4 });
+  });
+  def('bm-wyrm-wingbeat', 'bm', S => {
+    S.whoosh({ f: 80, f1: 600, dur: 0.7, peakAt: 0.6, peak: 0.4 });
+    S.thud({ at: 0.55, f: 60, f1: 30, dur: 0.5, drive: 2, peak: 0.5 });
+  });
+  def('bm-wyrm-cinder-rain', 'bm', S => {
+    for (let i = 0; i < 10; i++) { S.tone({ at: i * 0.2, f: 1600 + S.rr(0, 900), f1: 500, dur: 0.25, peak: 0.05 }); S.thud({ at: i * 0.2 + 0.25, f: 120, f1: 60, dur: 0.15, peak: 0.12 }); }
+    S.crackle({ dens: 1.5, f: 3500, dur: 2.4, pts: [[0.3, 1], [2.4, 0]], peak: 0.15 });
+  });
+  def('bm-wyrm-heart-flare', 'bm', S => {
+    S.bell({ f: mf(36), dur: 3, peak: 0.35 });
+    S.thud({ at: 0.6, f: 70, f1: 30, dur: 0.7, drive: 2.5, peak: 0.6 });
+    S.crackle({ at: 0.6, dens: 2.4, f: 3600, dur: 1.0, pts: [[0.03, 1], [1.0, 0]], peak: 0.22 });
+  });
+  def('bm-wyrm-ashfall', 'bm', S => {
+    S.space('cave', 0.6);
+    S.voice({ f: 50, f1: 36, dur: 3, vowel: 'a', vowel1: 'o', breath: 6, peak: 0.4, lp: 3000, pts: [[0.4, 1], [3, 0]] });
+    S.rumble({ dur: 4, f: 60, peak: 0.5, a: 0.5 });
+    S.noise({ bp: 700, q: 1.2, dur: 3.5, a: 1, pts: [[2.5, 1], [3.5, 0]], peak: 0.2 });
+  });
+
+  // ---------------------------------------------------------------------------------------------- Hrimgar (the Frost Titan)
+  def('bm-titan-intro', 'sting', S => {
+    S.space('hall', 0.6);
+    S.voice({ f: 46, f1: 38, dur: 2.6, vowel: 'o', vowel1: 'a', breath: 5, peak: 0.4, lp: 2600, pts: [[0.4, 1], [2.6, 0]] });
+    S.rumble({ dur: 3.2, f: 55, peak: 0.45, a: 0.2 });
+    S.bell({ at: 0.6, f: mf(52), dur: 3.4, peak: 0.16, lp: 5000 });
+  });
+  def('bm-titan-winters-howl', 'bm', S => {
+    S.space('hall', 0.55);
+    S.noise({ bp: 600, bp1: 1800, q: 1.4, dur: 2.2, a: 0.5, pts: [[0.6, 0.8], [1.2, 1], [2.2, 0]], peak: 0.3 });
+    S.voice({ f: 52, f1: 44, dur: 1.9, vowel: 'o', breath: 6, peak: 0.28, lp: 3200, pts: [[0.3, 1], [1.9, 0]] });
+    S.rumble({ dur: 2.4, f: 60, peak: 0.35, a: 0.1 });
+  });
+  def('bm-titan-glacial-fist', 'bm', S => {
+    S.whoosh({ f: 140, f1: 800, dur: 0.6, peakAt: 0.85, peak: 0.35 });
+    S.thud({ at: 0.58, f: 56, f1: 26, dur: 0.9, drive: 3, peak: 0.75 });
+    S.crack({ at: 0.58, peak: 0.3, dur: 0.2 });
+    S.metal({ at: 0.6, set: 'bar', f: 1300, dur: 1.4, peak: 0.12, strike: 0.5 });
+  });
+  def('bm-titan-rime-slam', 'bm', S => {
+    S.whoosh({ f: 120, f1: 500, dur: 0.5, peakAt: 0.9, peak: 0.3 });
+    S.thud({ at: 0.5, f: 60, f1: 28, dur: 0.8, drive: 3, peak: 0.7 });
+    S.crackle({ at: 0.5, dens: 3, f: 5200, dur: 0.9, pts: [[0.02, 1], [0.9, 0]], peak: 0.22 });
+    S.tone({ at: 0.5, f: 2300, f1: 900, dur: 0.5, peak: 0.06 });
+  });
+  def('bm-titan-twin-slam', 'bm', S => {
+    [0, 1.1].forEach(at => {
+      S.whoosh({ at, f: 120, f1: 500, dur: 0.45, peakAt: 0.9, peak: 0.26 });
+      S.thud({ at: at + 0.45, f: 60, f1: 28, dur: 0.7, drive: 3, peak: 0.6 });
+      S.crackle({ at: at + 0.45, dens: 3, f: 5000, dur: 0.7, pts: [[0.02, 1], [0.7, 0]], peak: 0.18 });
+    });
+  });
+  def('bm-titan-fault-line', 'bm', S => {
+    S.thud({ at: 0.3, f: 54, f1: 24, dur: 1.0, drive: 3, peak: 0.7 });
+    S.crackle({ at: 0.35, dens: 4, f: 4200, dur: 1.8, pts: [[0.05, 1], [0.6, 0.8], [1.8, 0]], peak: 0.28 });
+    S.noise({ at: 0.4, bp: 2600, bp1: 700, q: 2.5, dur: 1.4, grain: 0.7, pts: [[0.05, 1], [1.4, 0]], peak: 0.2 });
+    S.rumble({ at: 0.3, dur: 2.0, f: 50, peak: 0.35, a: 0.05 });
+  });
+  def('bm-titan-icefall', 'bm', S => {
+    for (let i = 0; i < 8; i++) { S.tone({ at: i * 0.25, f: 2600 + S.rr(0, 1400), f1: 700, dur: 0.3, peak: 0.09 }); S.thud({ at: i * 0.25 + 0.3, f: 160, f1: 70, dur: 0.2, peak: 0.16 }); S.crackle({ at: i * 0.25 + 0.3, dens: 3, f: 6000, dur: 0.25, pts: [[0.02, 1], [0.25, 0]], peak: 0.16 }); }
+    S.bell({ f: mf(70), dur: 2.4, peak: 0.1, lp: 6000 });
+  });
+  def('bm-titan-titans-sweep', 'bm', S => {
+    S.whoosh({ f: 90, f1: 520, dur: 1.4, peakAt: 0.7, peak: 0.45 });
+    S.rumble({ dur: 1.8, f: 56, peak: 0.35, a: 0.2 });
+    S.thud({ at: 1.3, f: 50, f1: 24, dur: 0.8, drive: 2.5, peak: 0.55 });
+  });
+  def('bm-titan-winters-grasp', 'bm', S => {
+    S.space('hall', 0.4);
+    S.crackle({ dens: 2.8, f: 5600, dur: 2.0, pts: [[0.4, 0.6], [1.6, 1], [2, 0]], peak: 0.2 });
+    S.bell({ f: mf(64), dur: 3.0, peak: 0.18, lp: 5500 });
+    S.bell({ at: 0.15, f: mf(71), dur: 2.6, peak: 0.1, lp: 6500 });
+    S.noise({ bp: 4200, q: 3, dur: 2, a: 0.9, pts: [[1.4, 1], [2, 0]], peak: 0.08 });
+  });
+  def('bm-titan-frostbite', 'bm', S => {
+    S.tone({ f: 1760, f1: 1180, dur: 1.4, a: 0.1, peak: 0.07 });
+    S.crackle({ dens: 3.2, f: 6200, dur: 1.4, pts: [[0.05, 1], [1.4, 0]], peak: 0.16 });
+    S.bell({ at: 0.1, f: mf(76), dur: 2.4, peak: 0.12, lp: 7000 });
+    S.noise({ bp: 3000, q: 2, dur: 1.2, a: 0.3, pts: [[0.5, 1], [1.2, 0]], peak: 0.07 });
+  });
+  def('bm-titan-whiteout', 'bm', S => {
+    S.space('hall', 0.6);
+    S.noise({ bp: 900, bp1: 3200, q: 0.9, dur: 3.4, a: 1.0, pts: [[1.8, 1], [3.4, 0]], peak: 0.36 });
+    S.rumble({ dur: 3.4, f: 50, peak: 0.3, a: 0.8 });
+    S.bell({ at: 2.0, f: mf(60), dur: 3, peak: 0.14, lp: 5000 });
+  });
+  def('bm-titan-the-long-night', 'bm', S => {
+    S.space('hall', 0.7);
+    S.bell({ f: mf(33), dur: 5, peak: 0.4, lp: 2400 });
+    S.voice({ at: 0.5, f: 44, f1: 41, dur: 3.2, vowel: 'o', breath: 4, peak: 0.3, lp: 2400, pts: [[0.8, 1], [3.2, 0]] });
+    S.rumble({ dur: 4.4, f: 48, peak: 0.4, a: 0.6 });
+    S.crackle({ at: 1.5, dens: 1.2, f: 5200, dur: 2.5, pts: [[0.3, 1], [2.5, 0]], peak: 0.07 });
+  });
+  def('bm-titan-avalanche', 'bm', S => {
+    S.space('hall', 0.5);
+    S.rumble({ dur: 4.2, f: 46, peak: 0.55, a: 1.2 });
+    S.noise({ bp: 300, bp1: 1400, q: 0.8, dur: 4, a: 1.4, grain: 0.6, pts: [[2.2, 1], [4, 0]], peak: 0.35 });
+    [0.8, 1.6, 2.4, 3.2].forEach((at, i) => S.thud({ at, f: 52, f1: 28, dur: 0.7, drive: 2.5, peak: 0.3 + i * 0.07 }));
+  });
+  def('bm-titan-glacial-stomp', 'bm', S => {
+    S.thud({ at: 0.3, f: 50, f1: 22, dur: 1.1, drive: 3.4, peak: 0.85 });
+    S.rumble({ at: 0.3, dur: 2.0, f: 52, peak: 0.4, a: 0.02 });
+    [1.4, 2.8].forEach(at => { S.crackle({ at, dens: 4, f: 5000, dur: 0.8, pts: [[0.02, 1], [0.8, 0]], peak: 0.2 }); S.tone({ at, f: 2400, f1: 900, dur: 0.4, peak: 0.05 }); });
+  });
+  def('bm-titan-breath-of-winter', 'bm', S => {
+    S.noise({ bp: 1400, bp1: 4200, q: 1.0, dur: 2.0, a: 0.3, pts: [[0.4, 0.7], [1.0, 1], [2.0, 0]], peak: 0.32 });
+    S.crackle({ at: 0.4, dens: 3, f: 6200, dur: 1.8, pts: [[0.3, 1], [1.8, 0]], peak: 0.16 });
+    S.bell({ at: 1.1, f: mf(73), dur: 2.6, peak: 0.1, lp: 6500 });
+  });
+  def('bm-titan-titans-grip', 'bm', S => {
+    S.whoosh({ f: 200, f1: 70, dur: 0.7, peakAt: 0.7, peak: 0.3 });
+    S.thud({ at: 0.65, f: 58, f1: 30, dur: 0.6, drive: 2.5, peak: 0.55 });
+    S.metal({ at: 0.65, set: 'bar', f: 520, dur: 1.2, peak: 0.12, strike: 0.7 });
+    S.crackle({ at: 0.7, dens: 2, f: 3800, dur: 0.9, pts: [[0.02, 1], [0.9, 0]], peak: 0.12 });
+  });
+  def('bm-titan-endless-winter', 'bm', S => {
+    S.space('hall', 0.7);
+    S.voice({ f: 42, f1: 34, dur: 3.4, vowel: 'o', vowel1: 'a', breath: 5, peak: 0.4, lp: 2400, pts: [[0.5, 1], [3.4, 0]] });
+    S.rumble({ dur: 4.4, f: 46, peak: 0.5, a: 0.5 });
+    S.noise({ bp: 800, bp1: 3000, q: 1.0, dur: 3.8, a: 1.2, pts: [[2.6, 1], [3.8, 0]], peak: 0.26 });
+    S.bell({ at: 0.2, f: mf(31), dur: 4.4, peak: 0.25, lp: 2200 });
+  });
+
+  // ---------------------------------------------------------------------------------------------- Azerath (the Sunken Archmage)
+  def('bm-archmage-intro', 'sting', S => {
+    S.space('hall', 0.65);
+    S.pad({ notes: [mf(45), mf(52), mf(57)], dur: 3.2, det: 9, type: 'saw', lpEnv: [300, 1400, 500, 1.2], vib: [4.5, 0.003], peak: 0.2 });
+    [0, 0.5, 1.0, 1.5].forEach((at, i) => S.bell({ at: at + 0.3, f: mf(64 + i * 3), dur: 2.4, peak: 0.12, lp: 5000 }));
+    S.rumble({ dur: 3.4, f: 50, peak: 0.35, a: 0.4 });
+  });
+  def('bm-archmage-arcane-burst', 'bm', S => {
+    S.space('hall', 0.5);
+    S.bell({ f: mf(57), dur: 2.4, peak: 0.28, lp: 4500 });
+    S.thud({ at: 0.35, f: 70, f1: 30, dur: 0.8, drive: 2.5, peak: 0.6 });
+    S.noise({ at: 0.35, bp: 1800, bp1: 500, q: 1.4, dur: 1.2, a: 0.1, pts: [[0.05, 1], [1.2, 0]], peak: 0.2 });
+    [0.35, 0.55, 0.75].forEach((at, i) => S.bell({ at, f: mf(69 + i * 4), dur: 1.4, peak: 0.1, lp: 6000 }));
+  });
+  def('bm-archmage-arcane-lance', 'bm', S => {
+    S.whoosh({ f: 300, f1: 2400, dur: 0.45, peakAt: 0.9, peak: 0.34 });
+    S.tone({ at: 0.4, f: 1800, f1: 600, dur: 0.5, peak: 0.1 });
+    S.thud({ at: 0.42, f: 90, f1: 38, dur: 0.6, drive: 2.5, peak: 0.6 });
+    S.metal({ at: 0.42, set: 'bar', f: 1500, dur: 1.2, peak: 0.14, strike: 0.6 });
+  });
+  def('bm-archmage-rune-mark', 'bm', S => {
+    S.space('hall', 0.4);
+    [0, 0.22].forEach((at, i) => { S.bell({ at, f: mf(72 + i * 7), dur: 1.4, peak: 0.2, lp: 6000 }); S.tone({ at, f: mf(84 + i * 7), dur: 0.5, peak: 0.05 }); });
+    S.noise({ at: 0.05, bp: 3600, q: 3, dur: 0.6, a: 0.05, pts: [[0.1, 1], [0.6, 0]], peak: 0.07, grain: 0.5 });
+  });
+  def('bm-archmage-cinder-rune', 'bm', S => {
+    S.bell({ f: mf(64), dur: 1.2, peak: 0.14, lp: 5000 });
+    S.noise({ bp: 500, bp1: 2400, q: 1.2, dur: 1.5, a: 0.3, pts: [[0.3, 0.7], [0.8, 1], [1.5, 0]], peak: 0.4 });
+    S.crackle({ dens: 2.2, f: 4000, dur: 1.6, pts: [[0.3, 1], [1.6, 0]], peak: 0.26 });
+    S.rumble({ dur: 1.6, f: 85, peak: 0.4, a: 0.2 });
+    S.thud({ at: 0.9, f: 80, f1: 36, dur: 0.5, drive: 2, peak: 0.4 });
+  });
+  def('bm-archmage-rime-rune', 'bm', S => {
+    S.space('hall', 0.5);
+    [0, 0.12, 0.26, 0.4].forEach((at, i) => S.bell({ at, f: mf(81 + i * 2), dur: 1.8, peak: 0.1, lp: 8000 }));
+    S.noise({ bp: 4200, q: 2, dur: 1.6, a: 0.6, pts: [[0.8, 0.8], [1.6, 0]], peak: 0.09 });
+    S.pad({ notes: [mf(69), mf(76)], dur: 1.8, det: 6, type: 'sine', peak: 0.09 });
+  });
+  def('bm-archmage-storm-rune', 'bm', S => {
+    S.zap({ f: 140, f1: 90, dur: 0.9, jit: 3, bf: 2600, peak: 0.2 });
+    S.crack({ at: 0.55, peak: 0.45 }); S.crack({ at: 0.65, peak: 0.3, f: 2200 });
+    S.thud({ at: 0.55, f: 80, f1: 34, dur: 0.6, drive: 2, peak: 0.45 });
+    S.crackle({ at: 0.55, dens: 3, f: 5200, dur: 1.0, pts: [[0.02, 1], [1.0, 0]], peak: 0.2 });
+  });
+  def('bm-archmage-rift-rune', 'bm', S => {
+    S.space('hall', 0.55);
+    S.tone({ f: mf(40), f1: mf(34), dur: 1.8, a: 0.4, peak: 0.2 });
+    S.noise({ bp: 300, bp1: 120, q: 2, dur: 1.8, a: 0.6, pts: [[0.8, 0.8], [1.8, 0]], peak: 0.22 });
+    S.whoosh({ at: 0.2, f: 1200, f1: 100, dur: 1.2, peakAt: 0.7, peak: 0.2 });
+    S.thud({ at: 1.3, f: 50, f1: 24, dur: 0.7, drive: 2, peak: 0.4 });
+  });
+  def('bm-archmage-pyre-rings', 'bm', S => {
+    [0, 0.9].forEach(at => {
+      S.noise({ at, bp: 400, bp1: 1800, q: 1.2, dur: 1.0, a: 0.15, pts: [[0.25, 1], [1.0, 0]], peak: 0.22 });
+      S.thud({ at: at + 0.15, f: 80, f1: 36, dur: 0.6, drive: 2, peak: 0.45 });
+      S.crackle({ at, dens: 2, f: 3600, dur: 1.0, pts: [[0.1, 1], [1.0, 0]], peak: 0.16 });
+    });
+    S.rumble({ dur: 2.2, f: 70, peak: 0.25, a: 0.2 });
+  });
+  def('bm-archmage-ice-lances', 'bm', S => {
+    [0, 0.14, 0.28].forEach((at, i) => { S.whoosh({ at, f: 600, f1: 3200, dur: 0.3, peakAt: 0.8, peak: 0.2 }); S.bell({ at: at + 0.25, f: mf(88 + i * 2), dur: 1.2, peak: 0.09, lp: 9000 }); });
+    S.crackle({ at: 0.3, dens: 3, f: 6000, dur: 0.8, pts: [[0.02, 1], [0.8, 0]], peak: 0.15 });
+  });
+  def('bm-archmage-leaping-bolt', 'bm', S => {
+    [0, 0.2, 0.4, 0.6].forEach((at, i) => { S.crack({ at, peak: 0.55 - i * 0.05, f: 1400 + i * 300 }); S.zap({ at, f: 160 + i * 40, dur: 0.18, jit: 3, peak: 0.2 }); S.thud({ at, f: 100 - i * 8, f1: 40, dur: 0.3, drive: 2, peak: 0.45 }); });
+    S.crackle({ dens: 3, f: 5000, dur: 1.0, pts: [[0.05, 1], [1.0, 0]], peak: 0.2 });
+    S.rumble({ dur: 1.2, f: 90, peak: 0.3, a: 0.1 });
+  });
+  def('bm-archmage-void-rifts', 'bm', S => {
+    S.space('hall', 0.5);
+    S.whoosh({ f: 900, f1: 80, dur: 1.0, peakAt: 0.6, peak: 0.3 });
+    S.tone({ at: 0.2, f: mf(36), f1: mf(31), dur: 1.4, a: 0.3, peak: 0.2 });
+    S.thud({ at: 0.9, f: 56, f1: 22, dur: 0.9, drive: 2.5, peak: 0.55 });
+    S.noise({ at: 0.9, bp: 250, q: 1.5, dur: 1.2, a: 0.05, pts: [[0.1, 1], [1.2, 0]], peak: 0.2 });
+  });
+  def('bm-archmage-the-binding', 'bm', S => {
+    S.space('hall', 0.6);
+    S.pad({ notes: [mf(45), mf(52), mf(59)], dur: 3, det: 8, type: 'saw', lpEnv: [300, 1200, 500, 1.4], peak: 0.17 });
+    [0, 0.7, 1.4, 2.1].forEach((at, i) => S.bell({ at: at + 0.2, f: mf(60 + i * 5), dur: 2.2, peak: 0.14, lp: 5000 }));
+  });
+  def('bm-archmage-call-of-the-circle', 'bm', S => {
+    S.space('hall', 0.5);
+    S.bell({ f: mf(55), dur: 2.0, peak: 0.22, lp: 4000 });
+    S.whoosh({ at: 0.1, f: 100, f1: 700, dur: 0.9, peakAt: 0.7, peak: 0.25 });
+    S.noise({ at: 0.5, bp: 800, q: 1.2, dur: 0.9, a: 0.1, pts: [[0.1, 1], [0.9, 0]], peak: 0.14 });
+    S.voice({ at: 0.3, f: 120, f1: 160, dur: 0.9, vowel: 'o', breath: 4, peak: 0.12, lp: 2500, pts: [[0.2, 1], [0.9, 0]] });
+  });
+  def('bm-archmage-convergence', 'bm', S => {
+    S.space('hall', 0.65);
+    S.pad({ notes: [mf(45), mf(52), mf(57), mf(64)], dur: 4.4, det: 10, type: 'saw', lpEnv: [250, 2200, 600, 3.2], peak: 0.18 });
+    [0, 1.1, 2.2, 3.3].forEach((at, i) => { S.bell({ at, f: mf(57 + i * 3), dur: 2.4, peak: 0.16, lp: 6000 }); S.thud({ at: at + 0.05, f: 70 - i * 6, f1: 30, dur: 0.5, drive: 2, peak: 0.3 }); });
+    S.rumble({ at: 3.4, dur: 2.0, f: 60, peak: 0.45, a: 0.3 });
+  });
+  def('bm-archmage-counterspell', 'bm', S => {
+    S.space('hall', 0.5);
+    S.bell({ f: mf(69), dur: 1.4, peak: 0.2, lp: 5000 });
+    S.whoosh({ at: 0.3, f: 1600, f1: 120, dur: 0.9, peakAt: 0.4, peak: 0.28 });
+    S.bell({ at: 1.2, f: mf(60), dur: 1.8, peak: 0.16, lp: 3500 });
+    S.thud({ at: 1.2, f: 60, f1: 28, dur: 0.6, drive: 2, peak: 0.4 });
+  });
+  def('bm-archmage-rune-swap', 'bm', S => {
+    S.space('hall', 0.4);
+    S.bell({ f: mf(72), dur: 1.0, peak: 0.18, lp: 6000 });
+    S.whoosh({ at: 0.2, f: 400, f1: 2000, dur: 0.5, peakAt: 0.5, peak: 0.3 });
+    S.bell({ at: 0.55, f: mf(79), dur: 1.2, peak: 0.2, lp: 6000 });
+    S.thud({ at: 0.5, f: 90, f1: 40, dur: 0.4, drive: 2, peak: 0.35 });
+  });
+  def('bm-archmage-arcane-mark', 'bm', S => {
+    S.space('hall', 0.45);
+    S.bell({ f: mf(60), dur: 2.2, peak: 0.22, lp: 4200 });
+    S.noise({ bp: 900, bp1: 2400, q: 1.4, dur: 1.4, a: 0.6, pts: [[0.7, 0.8], [1.4, 0]], peak: 0.14 });
+    S.thud({ at: 1.2, f: 74, f1: 32, dur: 0.6, drive: 2, peak: 0.4 });
+  });
+  def('bm-archmage-the-tide-rises', 'bm', S => {
+    S.space('hall', 0.7);
+    S.noise({ color: 'brown', bp: 200, bp1: 900, q: 0.9, dur: 4.5, a: 1.5, pts: [[3, 1], [4.5, 0]], peak: 0.35 });
+    S.rumble({ dur: 5, f: 48, peak: 0.5, a: 0.8 });
+    S.pad({ notes: [mf(40), mf(47), mf(52)], dur: 4.4, det: 12, type: 'saw', lpEnv: [200, 1600, 400, 3], peak: 0.2 });
+    [3.0, 3.4, 3.8].forEach(at => S.bell({ at, f: mf(48), dur: 3, peak: 0.2, lp: 2500 }));
+  });
+
   // ============================================================================================== 6. loops
   // Beds built from long looped material at unrelated lengths, moved by slow LFOs so they never feel like a loop.
   loop('amb-town', 'amb', L => {
@@ -2406,6 +2863,119 @@
     L.c(L.src(heartBuf(L.ctx), 1), L.f('lowpass', 260), L.g(1.0), L.out);
     const drone = L.g(0.05); L.c(L.osc('sine', 46), drone); L.lfo(drone.gain, 0.13, 0.02); L.c(drone, L.out);
   }, 0.25);
+
+  // ---------------------------------------------------------------------------------------------- The Hydra of the Drowned Temple
+  def('bm-hydra-intro', 'sting', S => {
+    S.space('hall', 0.6);
+    S.noise({ color: 'brown', lp: 900, dur: 2.6, a: 0.3, pts: [[0.6, 0.6], [1.4, 1], [2.6, 0]], peak: 0.3 });
+    S.bubbles({ at: 0.2, n: 8, f: 160, f1: 520, spread: 1.6, size: 0.05, peak: 0.12 });
+    S.voice({ at: 0.9, f: 70, f1: 54, dur: 1.8, vowel: 'o', vowel1: 'a', breath: 6, peak: 0.3, lp: 3000, pts: [[0.3, 1], [1.8, 0]] });
+    S.choir({ at: 1.0, notes: [mf(38), mf(45), mf(50)], vowel: 'u', dur: 2.2, a: 0.8, peak: 0.08 });
+  });
+  def('bm-hydra-mothers-cry', 'bm', S => {
+    S.space('hall', 0.5);
+    S.voice({ f: 150, f1: 120, dur: 1.9, vowel: 'a', vowel1: 'o', breath: 4, peak: 0.3, lp: 5000, pts: [[0.25, 1], [1.9, 0]] });
+    S.bell({ at: 0.1, f: mf(55), dur: 2.6, peak: 0.2, lp: 4000 });
+    S.rumble({ dur: 2.2, f: 70, peak: 0.3, a: 0.1 });
+    S.bubbles({ at: 0.5, n: 6, f: 300, f1: 900, spread: 1.2, size: 0.04, peak: 0.07 });
+  });
+  def('bm-hydra-rending-maul', 'bm', S => {
+    S.whoosh({ f: 160, f1: 900, dur: 0.45, peakAt: 0.9, peak: 0.35 });
+    S.splat({ at: 0.4, peak: 0.4, dur: 0.3 });
+    S.thud({ at: 0.4, f: 74, f1: 30, dur: 0.6, drive: 2.5, peak: 0.65 });
+    S.noise({ at: 0.4, bp: 2600, bp1: 600, q: 3, dur: 0.3, grain: 0.8, pts: [[0.03, 1], [0.3, 0]], peak: 0.28 });
+  });
+  def('bm-hydra-acid-spray', 'bm', S => {
+    S.noise({ bp: 2400, bp1: 5200, q: 1.5, dur: 1.5, a: 0.2, pts: [[0.3, 0.8], [0.8, 1], [1.5, 0]], peak: 0.22 });
+    S.sizzle({ at: 0.3, dur: 1.2, pts: [[0.1, 1], [1.2, 0]], peak: 0.2 });
+    S.bubbles({ at: 0.4, n: 8, f: 500, f1: 1800, spread: 0.9, size: 0.03, peak: 0.08 });
+  });
+  def('bm-hydra-tidal-line', 'bm', S => {
+    S.noise({ color: 'pink', bp: 300, bp1: 1800, q: 1.2, dur: 1.4, a: 0.25, pts: [[0.4, 0.7], [0.9, 1], [1.4, 0]], peak: 0.32 });
+    S.whoosh({ at: 0.3, f: 120, f1: 800, dur: 0.9, peakAt: 0.7, peak: 0.28 });
+    S.bubbles({ at: 0.6, n: 7, f: 300, f1: 1200, spread: 0.7, size: 0.04, peak: 0.1 });
+    S.thud({ at: 1.0, f: 70, f1: 34, dur: 0.5, peak: 0.4 });
+  });
+  def('bm-hydra-venom-bloom', 'bm', S => {
+    S.space('hall', 0.35);
+    S.pad({ notes: [mf(45), mf(46)], type: 'tri', dur: 1.8, a: 0.4, peak: 0.1, lp: 900 });
+    S.bubbles({ n: 10, f: 200, f1: 900, spread: 1.4, size: 0.05, peak: 0.12 });
+    S.splat({ at: 1.5, peak: 0.35, dur: 0.3 });
+    S.thud({ at: 1.5, f: 80, f1: 38, dur: 0.5, peak: 0.45 });
+  });
+  def('bm-hydra-flame-gout', 'bm', S => {
+    S.noise({ bp: 500, bp1: 2400, q: 1.2, dur: 1.2, a: 0.2, pts: [[0.25, 0.7], [0.7, 1], [1.2, 0]], peak: 0.28 });
+    S.crackle({ dens: 2.2, f: 4000, dur: 1.3, pts: [[0.25, 1], [1.3, 0]], peak: 0.2 });
+    S.thud({ at: 0.9, f: 90, f1: 40, dur: 0.4, drive: 2, peak: 0.45 });
+  });
+  def('bm-hydra-rime-crown', 'bm', S => {
+    S.space('hall', 0.4);
+    [0, 0.12, 0.24, 0.38].forEach((at, i) => S.glass({ at, f: 1500 + i * 420, dur: 1.0, peak: 0.12 - i * 0.015 }));
+    S.noise({ bp: 4200, q: 2, dur: 1.3, a: 0.3, pts: [[0.5, 0.7], [0.9, 1], [1.3, 0]], peak: 0.12 });
+    S.thud({ at: 0.95, f: 70, f1: 36, dur: 0.5, peak: 0.35 });
+  });
+  def('bm-hydra-stormcall', 'bm', S => {
+    S.rumble({ dur: 1.6, f: 60, peak: 0.35, a: 0.2 });
+    [0.3, 0.55, 0.8].forEach((at, i) => { S.zap({ at, f: 90, dur: 0.22, peak: 0.2, pan: [-0.5, 0, 0.5][i] }); S.crack({ at: at + 0.04, peak: 0.2, dur: 0.12 }); });
+    S.noise({ at: 0.9, bp: 800, q: 1, dur: 1.0, pts: [[0.05, 1], [1.0, 0]], peak: 0.15 });
+  });
+  def('bm-hydra-stonegaze', 'bm', S => {
+    S.space('cave', 0.45);
+    S.tone({ f: 110, f1: 330, dur: 2.0, a: 1.0, peak: 0.1, lp: 1800 });
+    S.scrape({ at: 0.4, f: 1400, q: 3, rate: 18, dur: 1.4, pts: [[0.1, 1], [1.4, 0]], peak: 0.1 });
+    S.rumble({ dur: 2.2, f: 52, peak: 0.3, a: 0.5 });
+    S.glass({ at: 1.8, f: 880, dur: 1.2, peak: 0.07 });
+  });
+  def('bm-hydra-mire-spit', 'bm', S => {
+    [0, 0.2, 0.4].forEach((at, i) => { S.splat({ at, peak: 0.3, dur: 0.3 }); S.thud({ at, f: 100 - i * 12, f1: 46, dur: 0.3, peak: 0.3 }); });
+    S.bubbles({ at: 0.2, n: 10, f: 120, f1: 500, spread: 1.0, size: 0.06, peak: 0.1 });
+    S.noise({ color: 'brown', lp: 700, dur: 0.9, pts: [[0.05, 1], [0.9, 0]], peak: 0.18 });
+  });
+  def('bm-hydra-searing', 'bm', S => {
+    S.sizzle({ dur: 1.4, pts: [[0.2, 1], [0.7, 0.8], [1.4, 0]], peak: 0.28 });
+    S.whoosh({ f: 200, f1: 1400, dur: 0.6, peakAt: 0.6, peak: 0.24 });
+    S.crackle({ dens: 2, f: 3600, dur: 1.2, pts: [[0.1, 1], [1.2, 0]], peak: 0.16 });
+    S.thud({ at: 0.15, f: 80, f1: 40, dur: 0.3, peak: 0.3 });
+  });
+  def('bm-hydra-submerge', 'bm', S => {
+    S.space('hall', 0.55);
+    S.noise({ color: 'brown', lp: 1400, lp1: 200, dur: 3.2, a: 0.4, pts: [[0.6, 0.8], [1.6, 1], [3.2, 0]], peak: 0.4 });
+    S.bubbles({ at: 0.3, n: 14, f: 600, f1: 140, spread: 2.4, size: 0.06, peak: 0.12 });
+    S.rumble({ dur: 3.4, f: 46, peak: 0.45, a: 0.4 });
+    S.choir({ at: 0.4, notes: [mf(33), mf(40)], vowel: 'u', dur: 2.8, a: 0.9, peak: 0.1 });
+  });
+  def('bm-hydra-mothers-heart', 'bm', S => {
+    S.space('hall', 0.5);
+    [0, 0.9, 1.8, 2.7].forEach((at, i) => { S.thud({ at, f: 56, f1: 26, dur: 0.7, drive: 2, peak: 0.55 }); S.thud({ at: at + 0.22, f: 48, f1: 24, dur: 0.5, peak: 0.38 }); S.bell({ at, f: mf(31 + i * 2), dur: 2.4, peak: 0.18, lp: 3000 }); });
+    S.choir({ at: 0.3, notes: [mf(38), mf(45), mf(52)], vowel: 'a', dur: 3.4, a: 1.0, peak: 0.1 });
+    S.rumble({ dur: 3.6, f: 60, peak: 0.35, a: 0.4 });
+  });
+  def('bm-hydra-the-drowning', 'bm', S => {
+    S.space('hall', 0.6);
+    S.noise({ color: 'brown', lp: 1800, dur: 4.2, a: 1.2, pts: [[2.4, 0.7], [3.6, 1], [4.2, 0]], peak: 0.45 });
+    S.rumble({ dur: 4.4, f: 44, peak: 0.55, a: 0.5 });
+    S.voice({ at: 0.4, f: 62, f1: 46, dur: 3.4, vowel: 'a', vowel1: 'o', breath: 6, peak: 0.34, lp: 3000, pts: [[0.4, 1], [3.4, 0]] });
+    S.bubbles({ at: 1.0, n: 20, f: 500, f1: 120, spread: 3, size: 0.07, peak: 0.1 });
+    [2.6, 3.2, 3.8].forEach(at => S.drum({ at, f: 62, dur: 0.8, peak: 0.45 }));
+  });
+  def('bm-hydra-regrowth', 'bm', S => {
+    S.creak({ dur: 0.9, f: 20, f1: 11, res: [480, 1000, 1800], q: 12, peak: 0.2 });
+    S.bubbles({ at: 0.1, n: 9, f: 150, f1: 700, spread: 0.9, size: 0.05, peak: 0.12 });
+    S.splat({ at: 0.8, peak: 0.35, dur: 0.3 });
+    S.voice({ at: 0.7, f: 130, f1: 190, dur: 0.9, vowel: 'o', breath: 4, peak: 0.16, lp: 4000, pts: [[0.2, 1], [0.9, 0]] });
+  });
+  def('bm-hydra-tidal-dance', 'bm', S => {
+    [0, 0.9, 1.8].forEach((at, i) => { S.whoosh({ at, f: 130, f1: 900 + i * 150, dur: 0.7, peakAt: 0.6, peak: 0.26 }); S.noise({ at, color: 'pink', bp: 400, bp1: 1600, q: 1.2, dur: 0.8, pts: [[0.1, 1], [0.8, 0]], peak: 0.2 }); });
+    S.drum({ at: 0.6, f: 90, dur: 0.4, peak: 0.35 }); S.drum({ at: 1.5, f: 90, dur: 0.4, peak: 0.35 });
+    S.bubbles({ at: 0.4, n: 9, f: 300, f1: 1100, spread: 2, size: 0.04, peak: 0.08 });
+  });
+  def('bm-hydra-hydras-gaze', 'bm', S => {
+    S.space('cave', 0.55);
+    S.tone({ f: 82, f1: 164, dur: 2.6, a: 1.2, peak: 0.1, lp: 2000 });
+    S.voice({ at: 0.3, f: 110, f1: 96, dur: 2.0, vowel: 'i', breath: 7, peak: 0.12, lp: 5000, pts: [[0.4, 1], [2.0, 0]] });
+    S.glass({ at: 2.2, f: 1760, dur: 1.4, peak: 0.1 });
+    S.rumble({ dur: 2.8, f: 50, peak: 0.35, a: 0.6 });
+  });
 
   // ---------------------------------------------------------------------------------------------- install
   const API = { mf, st, CAT, TRIM, ABIL, ACC, strict: false, names: () => DEFS.map(d => d[0]), loops: () => LOOPS.map(d => d[0]), installed: false };
