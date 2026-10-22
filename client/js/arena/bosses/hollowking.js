@@ -21,7 +21,7 @@
 //     stay), and the Dirge tolls everyone 8 s later; he holds his blows on the tank meanwhile.
 // A slow party runs each part's last set again, +10% each pass (f.course in fight.js). Every telegraph shows on the
 // floor on every difficulty.
-// Hard: casts 15% faster, 25% more damage; Judgement shown for 1.2 s; the Charge Sheet has four sigils (one is Royal
+// Hard: casts 15% faster, 25% more damage; Judgement shown for 1.5 s; the Charge Sheet has four sigils (one is Royal
 // Audience: face him); Grave Cleave on the tank as Gravebind lands on the healer and a DPS; Doom on two in the Verdict;
 // two lanterns and two dooms at once in the Long Night; Falling Masonry with each Knell; and his three moves:
 //   Royal Audience: his crown blazes. Anyone with their back to the king when it lands is caught, as by the Gaze.
@@ -31,7 +31,7 @@
 
 const HOLLOWKING = {
   id: 'hollowking', name: 'The Hollow King', title: 'Lord of the Barrow',
-  hp: { normal: 3300000, hard: 3650000 },
+  hp: { normal: 3560000, hard: 3650000 },
   autoDmg: { normal: 1650, hard: 1650 },
   enrage: { normal: 622, hard: 632 },   // the cast starts here and lands 8 s later (10:30 / 10:40)
   enrageName: 'Moonset',
@@ -58,7 +58,7 @@ const HOLLOWKING = {
     const LANT_PICK = 40;     // walk this close to a lantern on the floor to pick it up
     const LANT_CURE = 85;     // a lantern's light cures Doom this far out
     const ECHO_WARN = H ? 1.8 : 2.6;
-    const JUDGE_WARN = H ? 1.2 : 1.6;
+    const JUDGE_WARN = H ? 1.5 : 1.6;
     // the Charge Sheet: the swings Judgement brings back, in order
     const CHARGES = H ? ['stomp', 'audience', 'sweep', 'ring'] : ['stomp', 'sweep', 'ring'];
     // where the Echo Knights stand: by the side walls, facing the middle (they move after the Court of Bones)

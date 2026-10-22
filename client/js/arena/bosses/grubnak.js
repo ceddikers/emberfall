@@ -29,7 +29,7 @@
 
 const GRUBNAK = {
   id: 'grubnak', name: 'Grubnak', title: 'The Ogre Chef',
-  hp: { normal: 3100000, hard: 3300000 },
+  hp: { normal: 3350000, hard: 3300000 },
   autoDmg: { normal: 1600, hard: 1600 },
   enrage: { normal: 592, hard: 607 },   // the cast starts here and lands 8 s later (10:00 / 10:15)
   enrageName: 'Last Call',

@@ -306,6 +306,9 @@ const BotAI = {
     }
     if (bot.role === 'tank') return { x: b.x, y: b.y - 125 };
     if (this.isMelee(bot.cls)) return { x: b.x + (idx % 2 ? 40 : -40), y: b.y + 115 };
+    // (Skitterra aims her Venom Spit and Fang Rush at whoever stands farthest from her: the healer stands nearer than the
+    // damage dealers, so the party's one healer isn't the one they are aimed at)
+    if (bot.role === 'healer' && view.bossId === 'skitterra') return { x: b.x + (idx % 2 ? 150 : -150), y: b.y + 175 };
     return { x: b.x + (idx % 2 ? 170 : -170), y: b.y + 250 };
   },
 
@@ -406,6 +409,8 @@ const BotAI = {
           // ... so carry it where it lands on nobody else (a cask out where it can stand as cover, not in his lap)
           if (m.follow === me && dt > (m.lockAt || 0) + 0.1) {
             for (const o of alive) if (o.id !== me && Math.hypot(o.x - px, o.y - py) < s.r + 45) pen += 1500 * Math.max(urgency, 0.4);
+            // (a circle that locks where you stand when it does: be on the move by then, so you are leaving it at full speed, not starting to)
+            if (m.tag === 'glob') pen += Math.max(0, 150 - Math.hypot(px - bot.x, py - bot.y)) * 6 * Math.min(1, (dt - (m.lockAt || 0)) + 0.5);
             if (m.tag === 'cask') { const db = Math.hypot(px - view.boss.x, py - view.boss.y); if (db < 240) pen += (240 - db) * 15; }
             break;
           }
@@ -468,12 +473,21 @@ const BotAI = {
             : m.tag === 'still' ? this.stillFor(me, view) === m.id : this.towerFor(me, view) === m.id;
           const inside = Math.hypot(s.x - px, s.y - py) < s.r - 18;
           // head for your own tower early: it may be across the room
-          if (mine && !inside) pen += (Math.hypot(s.x - px, s.y - py)) * 12 * Math.max(urgency, 0.3) + (dt < Math.hypot(s.x - bot.x, s.y - bot.y) / 230 + 3 ? 4500 : 1200);   // (a sting on the way beats a failed tower: set off in time)
+          if (mine && !inside) pen += (Math.hypot(s.x - px, s.y - py)) * 12 * Math.max(urgency, 0.3) + (dt < Math.hypot(s.x - bot.x, s.y - bot.y) / 230 + 3 ? (view.room && view.room.threads ? 16000 : 4500) : 1200);   // (a failed tower hits the whole party: a sting or three from Skitterra's threads on the way beats it)
           // (a plate coming up in a moment is yours to serve: a later blow round it can wait until it has)
           if (mine && !inside && m.tag === 'plate' && dt < 2.5 && m.stuff) pen += dt < 1.2 ? 9000 : 4000;
           // (a plate that leaves you Stuffed is worse than useless if it isn't yours: you can't take your own after it)
           // (the host counts anyone touching it, so keep well clear)
           if (!mine && (m.stuff ? Math.hypot(s.x - px, s.y - py) < s.r + 30 : inside)) pen += (m.stuff ? 6000 : 2500) * urgency;
+          // (my tower with a ball's lane over it just after it lands: stand on the side of it that is the shortest way off the lane)
+          if (mine && inside) for (const rl of [...(view.rollers || []), ...(view.rollPre || [])]) {
+            if (view.t > rl.end) continue;
+            const cs = Math.cos(rl.angle), sn = Math.sin(rl.angle), perp = Math.abs(-(px - rl.x) * sn + (py - rl.y) * cs);
+            const dxc = s.x - rl.x, dyc = s.y - rl.y, pc = Math.abs(-dxc * sn + dyc * cs);
+            if (pc > rl.r + 60) continue;
+            const along = dxc * cs + dyc * sn, arrive = rl.rollAt + Math.max(0, along) / rl.speed;
+            if (arrive > m.resolveAt - 0.5 && arrive < m.resolveAt + 2.5) pen += Math.max(0, 85 - perp) * 25;
+          }
           break;
         }
         case 'proximity':
@@ -627,9 +641,20 @@ const BotAI = {
     const lsrc = [];
     for (const e of view.lungePlan || []) if (e.at > view.t && !lsrc.some(q => Math.hypot(q.x - e.shape.x, q.y - e.shape.y) < 20)) lsrc.push(e.shape);
     for (const q of lsrc) for (const r of [110, 170, 240]) for (let i = 0; i < 16; i++) { const a = i * Math.PI / 8 + Math.PI / 16; cands.push(ARENA.clamp({ x: q.x + Math.cos(a) * r, y: q.y + Math.sin(a) * r }, 50)); }
+    const lungeGo = lsrc.length ? this.lungeSpot(bot, view) : null;
+    if (lungeGo) cands.push(lungeGo);
     // tower centers and the stack target are good candidates too
     for (const m of view.mechs) {
-      if (m.type === 'tower') cands.push({ x: m.shape.x, y: m.shape.y });
+      if (m.type === 'tower') {
+        cands.push({ x: m.shape.x, y: m.shape.y });
+        // a ball's lane over the tower: the spot on its rim farthest from the lane's middle (the shortest way out of it afterwards)
+        for (const rl of [...(view.rollers || []), ...(view.rollPre || [])]) {
+          if (view.t > rl.end) continue;
+          const cs = Math.cos(rl.angle), sn = Math.sin(rl.angle);
+          if (Math.abs(-(m.shape.x - rl.x) * sn + (m.shape.y - rl.y) * cs) > rl.r + 60) continue;
+          for (const sg of [-1, 1]) cands.push({ x: m.shape.x - sn * sg * (m.shape.r - 24), y: m.shape.y + cs * sg * (m.shape.r - 24) });
+        }
+      }
       if (m.type === 'stack') { const o = view.players.find(p => p.id === m.follow); if (o) cands.push({ x: o.x, y: o.y }); }
       if (m.shape.kind === 'donut') cands.push({ x: m.shape.x + (bot.x - m.shape.x) * 0.3, y: m.shape.y + (bot.y - m.shape.y) * 0.3 });
       if (m.safe) for (const q of m.safe) cands.push({ x: q.x, y: q.y });
@@ -744,6 +769,12 @@ const BotAI = {
       if (s < bs) { bs = s; best = c; bd = d; }
     };
     for (const c of cands) score(c);
+    // a Lunge being walked through (BotAI.lungeSpot): the spot that is clear of every strike goes unless something else
+    // there is bad as well (the lunge's own cones are left out of that look)
+    if (lungeGo && bd > 0) {
+      const bare = Object.assign({}, view, { lungePlan: [] });
+      if (this.danger(bot, lungeGo.x, lungeGo.y, bare) < 2500 && pathCost(lungeGo) < 5500) return lungeGo;
+    }
     // nowhere close is safe (a knight's replayed sweep from the far wall covers everything near): look farther out
     if (bd > 4000) for (const r of [460, 600]) for (let i = 0; i < 12; i++) {
       const a = i * Math.PI / 6 + 0.26;
@@ -767,6 +798,11 @@ const BotAI = {
     if (!b.untargetable && view.bossTarget != null && view.bossTarget !== bot.id && notTank(view.bossTarget) && reach(b.x, b.y, FIGHT.BOSS_R)) return 'boss';
     const me = byId(bot.id);
     if (!me) return null;
+    // the boss's next move is about to start: a tankbuster can hide in any step (Titan Fist inside a Chain Lightning) and is
+    // aimed at whoever the boss is on when its cast STARTS, so with a damage dealer close behind take the lead now, rather
+    // than taunt back after the blow is aimed
+    const nb = (view.next || [])[0];
+    if (nb && nb[1] < 2.2 && !b.untargetable && !view.bossCast && reach(b.x, b.y, FIGHT.BOSS_R) && al.some(p => p.role !== 'tank' && p.threat > me.threat * 0.85)) { bot.tauntPre = true; return 'boss'; }
     // still on us but a damage dealer is right behind (the threat list shows it): taunt before it turns, not after
     if (!b.untargetable && view.bossTarget === bot.id && reach(b.x, b.y, FIGHT.BOSS_R) && al.some(p => p.role !== 'tank' && p.threat > me.threat * 0.93)) return 'boss';
     if (al.some(p => p.role !== 'tank' && p.threat > me.threat * 0.85)) return null;
@@ -783,7 +819,71 @@ const BotAI = {
     const T = Math.max(...tanks.map(p => p.threat));
     // (easing off only while every tank's taunt is spent: with one ready, the tank takes it back itself)
     const spent = !view.tauntAt || tanks.every(p => view.t - view.tauntAt(p.id) < 19);
+    // the boss's next move starts in a moment (a tankbuster may be in it, aimed at whoever he is on): with the taunt spent,
+    // nobody in reach of the lead adds to it
+    const nb = (view.next || [])[0];
+    if (nb && nb[1] < 2.5 && spent && me.threat > T * 0.88) return 'stop';
     return me.threat > T * 0.97 && spent ? 'stop' : me.threat > T * 0.8 ? 'ult' : null;
+  },
+  // Skitterra's Eightfold Lunge, planned through: her lit legs give every strike (a cone and its opposite, turning 45
+  // degrees a step) and the moment it lands, so work out a path round her that is clear of each strike as it lands and
+  // reachable from the last: the spot to stand at now (or null when no way through is found, or no lunge is coming).
+  // Rings of spots round the strikes' source, each step's clear ones, the walk between two steps no longer than a bot's
+  // legs allow; of the clear first spots the ones that stay clear a step longer, then the nearest, win.
+  lungeSpot(bot, view) {
+    const plan = (view.lungePlan || []).filter(e => e.at > view.t - 0.05 && e.at < view.t + 9);
+    if (!plan.length) return null;
+    const src = plan[0].shape, times = [...new Set(plan.map(e => Math.round(e.at * 20) / 20))].sort((a, b) => a - b);
+    if (times.length > 12) times.length = 12;
+    const spots = [];
+    for (const r of [75, 120, 170, 230, 300]) for (let i = 0; i < 36; i++) {
+      const a = i * Math.PI / 18 + (r % 3) * 0.04, p = { x: src.x + Math.cos(a) * r, y: src.y + Math.sin(a) * r };
+      if (ARENA.sd(p.x, p.y) < -60 && !(view.props || []).some(pr => pr.solid && PROPS.sd(pr, p.x, p.y) < 20)) spots.push(p);
+    }
+    if (!spots.length) return null;
+    const SPEED = 215, ok = spots.map(() => times.map(() => true));
+    times.forEach((tk, k) => {
+      const cones = plan.filter(e => Math.abs(e.at - tk) < 0.06);
+      spots.forEach((p, j) => { if (cones.some(e => SHAPES.contains(e.shape, p.x, p.y, 20))) ok[j][k] = false; });
+    });
+    // from the last step back: a spot is good at step k if it is clear then and some good spot at k+1 is a walk away
+    const good = spots.map(() => times.map(() => false));
+    for (let k = times.length - 1; k >= 0; k--) for (let j = 0; j < spots.length; j++) {
+      if (!ok[j][k]) continue;
+      if (k === times.length - 1) { good[j][k] = true; continue; }
+      const reach = Math.max(0, times[k + 1] - times[k] - 0.3) * SPEED;
+      for (let j2 = 0; j2 < spots.length; j2++) if (good[j2][k + 1] && Math.hypot(spots[j2].x - spots[j].x, spots[j2].y - spots[j].y) <= reach) { good[j][k] = true; break; }
+    }
+    // the first step still ahead is the one to be clear at; the bot gets there in the time it has left
+    let best = null, bs = Infinity;
+    const lead = Math.max(0, times[0] - view.t - 0.25) * SPEED;
+    for (let j = 0; j < spots.length; j++) {
+      if (!good[j][0]) continue;
+      const d = Math.hypot(spots[j].x - bot.x, spots[j].y - bot.y);
+      if (d > lead + 20) continue;
+      const stays = times.length > 1 && ok[j][1] ? 0 : 60;
+      const s = d + stays;
+      if (s < bs) { bs = s; best = spots[j]; }
+    }
+    return best;
+  },
+  // what the party is about to take, per player on average, from the telegraphs landing in the next  seconds
+  // (raidwides, stacks, spreads and the like, before mitigation) as a share of a damage dealer's health
+  incoming(view, secs) {
+    const al = view.players.filter(p => p.alive && !p.left);
+    if (!al.length || !view.dmgScale) return 0;
+    let sum = 0;
+    for (const m of view.mechs) {
+      const dt = m.resolveAt - view.t;
+      if (dt > secs || dt < -0.1 || !m.dmg) continue;
+      const raw = m.dmg * view.dmgScale;
+      if (m.type === 'raidwide') sum += raw;
+      else if (m.type === 'stack') sum += raw * 0.9;
+      else if (m.type === 'spread') sum += raw / Math.max(1, al.length - 1);
+      else if (m.type === 'proximity') sum += raw * 0.4;
+    }
+    const mx = al.filter(p => p.role !== 'tank').reduce((a, p) => a + p.maxHp, 0) / Math.max(1, al.filter(p => p.role !== 'tank').length);
+    return sum / (mx || 1050);
   },
   // something on the floor (or being cast) that will hurt most of the party within `s` seconds: a raidwide, a blast you
   // hide from, a stack, spreads, plates, the sky falling. Healers top everyone up ahead of it.
@@ -913,7 +1013,10 @@ const BotAI = {
       if (bot.cls.id === 'grovekeeper' && readyIdx(idx('bloom')) && hurt.some(h => h.f < 0.8 && k.g.rejuvs.some(r => r.t === h.p.id))) return idx('bloom');
       // party-wide damage due soon: heal people up further ahead of it
       const top = raidSoon || BotAI.partyHitSoon(view, 5) ? 0.17 : 0;
-      if (low && low.f < 0.8 + top) {
+      // (a healer spends its Smite and Dawnstar on the boss while nobody is truly hurt: on the two bursty fights that pays more than
+      // topping people up from 80%; Grubnak's grease and fire chip at everyone all the time, so there they are kept topped up)
+      const lazy = view.bossId === 'skitterra' || view.bossId === 'volkar' ? 0.1 : 0;
+      if (low && low.f < 0.8 - lazy + top) {
         bot.healTarget = low.p.id;
         const avgLow = hurt.filter(h => h.f < 0.8).length >= 3;
         for (let i = 0; i < k.abilities.length; i++) {
@@ -935,8 +1038,8 @@ const BotAI = {
           // (in real danger the quickest heal first; otherwise the big cast heal standing, the instant one on the move)
           if (low.f < 0.4 + top / 2 && instant.length) return instant[0];
           // (an instant heal first, a Petal say, which also builds toward damage; the cast heal is the fallback)
-          if (low.f < 0.65 + top && heals.length) return instant.length && (moving || low.f > 0.55) ? instant[0] : (moving ? null : heals[0]);
-          if (low.f < 0.78 + top && instant.length) return instant[0];
+          if (low.f < 0.65 - lazy * 0.7 + top && heals.length) return instant.length && (moving || low.f > 0.55) ? instant[0] : (moving ? null : heals[0]);
+          if (low.f < 0.78 - lazy + top && instant.length) return instant[0];
         }
       }
     }
@@ -971,6 +1074,7 @@ const BotAI = {
     for (let i = 0; i < k.abilities.length; i++) {
       const a = ab(i);
       if (a.type !== 'ogcd' || !readyIdx(i)) continue;
+      let markMit = false;
       if (k.gcdRemaining() < 0.65 && !k.cast) continue;
       if (a.target === 'ally' || (hotAndHurt && a.id === 'fireblast')) continue;
       // a step that puts you behind the boss (Shadowstep) isn't taken with floor about to land: it could land you in it
@@ -984,7 +1088,15 @@ const BotAI = {
       if (a.id === 'undying' || a.id === 'mirror') continue;
       // Brace is worth most as a Perfect Block: only right before a hit lands, and never spent while a buster is on the way
       if (a.id === 'brace') { if (!myBuster && castingBig && view.bossCast.left < 0.6) return i; continue; }
-      if (defensive && !(castingBig && view.bossCast.left < 3)) continue;
+      // a cooldown that eases the whole party's damage (Prayer, Cloak of Shadows, Smolder, the banner): put up for the hits
+      // the telegraphs show coming (BotAI.incoming), one more for each that is already running, not for every cast
+      const partyMit = defensive && /party takes|whole party/i.test(a.desc) && !/Burst/.test(a.desc);
+      if (partyMit && view.mitLog) {
+        const running = view.mitLog.filter(t => t <= view.t && view.t - t < 9).length;
+        const inc = BotAI.incoming(view, 4.5);
+        if (!(inc >= 0.3 + running * 0.3 || (castingBig && view.bossCast.left < 3 && running === 0 && inc >= 0.15))) continue;
+        markMit = true;
+      } else if (defensive && !(castingBig && view.bossCast.left < 3)) continue;
       // a tank keeps what it answers busters with when the feed shows the next buster close
       if (bot.role === 'tank' && TANK_CDS.includes(a.id) && nextBuster && nextBuster[1] < 15) continue;
       if (a.id === 'shift') {
@@ -995,6 +1107,7 @@ const BotAI = {
         if (k.g.stance === 'haste' && (k.g.flux < 14 || (!groupHurt && k.g.flux < 45 && hurt[0] && hurt[0].f < 0.6))) return i;
         continue;
       }
+      if (markMit) view.mitLog.push(view.t);
       return i;
     }
     if (k.gcdRemaining() > 0 || k.cast || k.lockUntil > k.now) return null;

@@ -3809,7 +3809,7 @@
       SH.tick(!started ? 'title' : scene, player.x, player.y, !!player.st.moving, ms && ms.maxHp > 0 ? ms.hp / ms.maxHp : 1, !!(ms && ms.alive));
       const left = !inArena() ? -1 : raid.state === 'countdown' ? raid.countdownEnd - now : raid.state === 'prepull' && raid.pullAt ? raid.pullAt - now : -1;
       const n = left > 0 ? Math.ceil(left) : -1;
-      if (n !== sndCount) { if (n > 0) SH.play('pull-count', { vol: n === 1 ? 1 : 0.8 }); if (n > 0 && sndCount <= 0) SH.vo('countdown', { bossId: raid.def.id, seconds: left }); sndCount = n; }
+      if (n !== sndCount) { if (n > 0) SH.play(n === 1 ? 'pull-count-last' : 'pull-count', { vol: n === 1 ? 1 : 0.8 }); if (n > 0 && sndCount <= 0) SH.vo('countdown', { bossId: raid.def.id, seconds: left }); sndCount = n; }
       const w = !!(actor && actor.kit.ultWin);
       if (w !== sndUltWin) { sndUltWin = w; SH.play(w ? 'ult-window' : 'ult-window-end', { vol: 0.7 }); }
       const cb = player.castBar;

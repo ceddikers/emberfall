@@ -881,7 +881,7 @@ Object.assign(SPECS, {
       focus: 'Big, readable burst. Drift holds twice as much and fills faster in straight lines, and Crosswind becomes Impact, a charge clean through the boss.',
       passive: { name: 'Long Charge', desc: 'Drift holds up to 200, fills faster while you run in a straight line, every Carve winds it 6, and it holds 3s when you stop. Crosswind becomes Impact: a charge clean through your target that releases everything at once.' },
       build: () => ({
-        potMult: 0.52,
+        potMult: 0.533,
         driftMax: 200, straight: true, driftHold: 3, carveDrift: 6,   // (a Comet holds its charge 3s standing still before it drains)
         abilities: {
           cross: {
@@ -1031,7 +1031,7 @@ SPECS.ironpalm = [
     focus: 'Long strings. Every named move builds Momentum, and moves of four inputs or more hit harder and build twice as much, but a string you break staggers you and knocks some of it away.',
     passive: { name: 'Avalanche', desc: 'Every named move adds Momentum: +2% damage, up to 8 (a move of four inputs or more adds 2), gone 4s after your last named move. Moves of four inputs or more hit 15% harder. A string you break staggers you for 0.2s and costs 2 Momentum. Temple Bell becomes Landslide.' },
     build: base => ({
-      potMult: base.potMult * 0.86,
+      potMult: base.potMult * 0.89,
       avalanche: true,
       abilities: {
         bell: {

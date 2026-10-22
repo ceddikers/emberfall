@@ -14,6 +14,7 @@ class RaidHost {
     this.def = opts.def; this.mode = opts.mode; this.humans = opts.humans; this.emitOut = opts.emit;
     this.t = 0;
     this.partyBuffs = [];  // { kind, value, end }
+    this.mitLog = [];      // when a bot last put up a party-wide damage cooldown (bots.js: they stagger them)
     this.allyBuffs = [];   // a healer's buff on one chosen ally (engine.js ALLY_BUFFS): { to, id, kind, value, end, from }
     this.bond = opts.bond || { hp: 0, dmg: 0, crit: 0, haste: 0 };
     const rngSeed = opts.seed || 1;
@@ -86,6 +87,7 @@ class RaidHost {
       t: sim.t, boss: { x: b.x, y: b.y, facing: b.facing, untargetable: b.untargetable }, bossTarget: b.target,
       bossCast: b.cast ? { name: b.cast.name, left: b.cast.end - sim.t } : null,
       mechs: [...sim.mechs.values()], puddles: sim.puddles, players,
+      bossId: sim.def.id, dmgScale: sim.scale.dmg * (sim.hard ? 1.25 : 1), mitLog: this.mitLog,   // (what a telegraph's raw dmg comes to on a player, before mitigation)
       adds: [...sim.adds.values()], tethers: [...sim.tethers.values()], zones: sim.zones,
       rollers: [...sim.rollers.values()], rollPre: (this.rollPre || []).filter(r => r.end > sim.t), lungePlan: (this.lungePlan || []).filter(e => e.at > sim.t - 0.2), tauntAt: id => (this.tauntAt || {})[id] ?? -99, reels: [...sim.reels.values()], sweeps: [...sim.sweeps.values()],
       // Volkar: everyone's charge, the rods' posts, and where the closing wall is about to jump
@@ -197,9 +199,12 @@ class RaidHost {
   // the button that carries its taunt (kits.js TAUNT_CARRY), and botWorld.taunt taunts what it wanted. A bot only ever
   // taunts from here: its other presses of that button don't (bot.tauntWant is unset).
   botTaunt(bot, view) {
-    const t = this.sim.t, want = bot.actor.tauntReady(t) ? BotAI.tauntTarget(bot, view) : null;
+    const t = this.sim.t;
+    bot.tauntPre = false;
+    const want = bot.actor.tauntReady(t) ? BotAI.tauntTarget(bot, view) : null;
     if (!want) { bot.tauntSeen = null; return; }
-    if (!bot.tauntSeen || bot.tauntSeen.tg !== want) { bot.tauntSeen = { tg: want, at: t + 0.7 }; return; }
+    // (a taunt ahead of a tankbuster's cast is the plan, not a reaction: no moment to notice)
+    if (!bot.tauntSeen || bot.tauntSeen.tg !== want) { bot.tauntSeen = { tg: want, at: t + (bot.tauntPre ? 0.05 : 0.7) }; return; }
     if (t < bot.tauntSeen.at) return;
     bot.tauntSeen = null;
     const k = bot.actor.kit, i = k.def.tauntOn ? k.abilities.findIndex(a => k.baseId(a) === k.def.tauntOn) : -1;
@@ -226,8 +231,8 @@ class RaidHost {
     if (msg.t === 'pdmg') { const bot = this.bots.find(b => b.id === msg.id); if (bot) { bot.taken.push({ t: this.sim.t, a: msg.a }); while (bot.taken.length && bot.taken[0].t < this.sim.t - 30) bot.taken.shift(); } }
     if (msg.t === 'reel') {
       const bot = this.bots.find(b => b.id === msg.pid);
-      // a bot notices the hook after a human-ish reaction time (slower on purpose: sometimes it gets bitten)
-      if (bot) bot.reel = { pullAt: this.sim.t + msg.windup, speed: msg.sp, snapAt: this.sim.t + msg.windup + 0.35 + this.rng() * 0.9 };
+      // a bot notices the hook after a human-ish reaction time (the hook shows for its whole windup: a player dashes as the pull starts)
+      if (bot) bot.reel = { pullAt: this.sim.t + msg.windup, speed: msg.sp, snapAt: this.sim.t + msg.windup + 0.12 + this.rng() * 0.35 };
     }
     if (msg.t === 'reelx') { const bot = this.bots.find(b => b.id === msg.pid); if (bot) bot.reel = null; }
     // what the floor shows players ahead of time, for the bots: a meatball's lane from the start of the cast, and the

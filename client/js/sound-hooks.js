@@ -22,17 +22,30 @@ const SoundHooks = (() => {
     if (r === undefined) return kind ? [KIND[kind] || 'ab-' + kind] : [];
     return Array.isArray(r) ? r : r ? [r] : [];
   }
+  // voice-limiting for other heroes' sounds: in a busy 4-player raid at most a few of their ability sounds start inside
+  // a short window (your own, telegraph and boss cues are never limited and outrank them in the engine's voice cap).
+  // Autos give way first (at 2 within the window), abilities next (at 3); a crowded moment also thins what plays.
+  const remoteAt = [];
+  function remoteSlot(isAuto) {
+    const t = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    while (remoteAt.length && t - remoteAt[0] > 300) remoteAt.shift();
+    if (remoteAt.length >= (isAuto ? 2 : 3)) return 0;
+    remoteAt.push(t);
+    return remoteAt.length > 1 ? 0.75 : 1;
+  }
   // a move pressed: yours (mine) at full presence, anyone else's quieter and placed where they stand
   function ability(classId, ab, mine, at, who) {
     if (!has() || !ab) return;
     safe(() => {
-      for (const n of abilityNames(classId, ab.id, ab.anim)) play(n, mine ? { vol: 1 } : { vol: 0.45, remote: true, at, key: 'ab:' + who + ':' + n, minGap: 0.06 });
+      const k = mine ? 1 : remoteSlot(false);
+      if (k) for (const n of abilityNames(classId, ab.id, ab.anim)) play(n, mine ? { vol: 1 } : { vol: 0.45 * k, remote: true, at, key: 'ab:' + who + ':' + n, minGap: 0.06 });
       if (ab.ult) play('ult-fire', mine ? { vol: 0.95 } : { vol: 0.9, remote: true, at });
     });
   }
   function auto(classId, kind, mine, at, who) {
     if (!has()) return;
-    safe(() => { for (const n of abilityNames(classId, 'auto', kind)) play(n, { vol: mine ? 0.32 : 0.3, remote: !mine, at: mine ? null : at, key: 'auto:' + who, minGap: 0.2 }); });
+    // (autos land every ~2 s and share the ability loudness target, so they sit about 3 dB under the ability level)
+    safe(() => { const k = mine ? 1 : remoteSlot(true); if (k) for (const n of abilityNames(classId, 'auto', kind)) play(n, { vol: (mine ? 0.22 : 0.2) * k, remote: !mine, at: mine ? null : at, key: 'auto:' + who, minGap: 0.2 }); });
   }
   // your own cast bar's quiet hum
   let castHum = null;
