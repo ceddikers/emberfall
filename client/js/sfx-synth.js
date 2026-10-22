@@ -671,7 +671,8 @@
     'boss-impact-heavy': 0.5, 'boss-impact-light': 7, 'boss-intro': -1.5, 'buff-on': -0.5,
     'chest-drop': 3.5, 'chest-open': -5, 'cleanse': -5, 'clear': -4.5,
     'crit': 4, 'dash': 6.5, 'debuff-on': -1, 'dummy-hit': 3,
-    'emote-cheer': -6.5, 'emote-laugh': -2, 'emote-wave': 2, 'fish-bite': 3,
+    'emote-cheer': -6.5, 'emote-laugh': -2, 'emote-wave': 2, 'feast-chew': 6.5,
+    'feast-clink': -5.5, 'feast-serve': -3.5, 'feast-sting': -2.5, 'fish-bite': 3,
     'fish-cast': 1.5, 'fish-catch': -3, 'fish-lost': -0.5, 'fish-reel': -0.5,
     'heal-land': -2.5, 'hit-heavy': 5, 'hit-light': 9, 'lb-fire': -1.5,
     'lb-ready': -5, 'loot-take': -2, 'low-hp': -4.5, 'npc-talk': -6,
@@ -792,6 +793,33 @@
     S.noise({ color: 'pink', lp: 2000, dur: 0.12, a: 0.002, peak: 0.18 });
     [0.15, 0.3, 0.45].forEach((at, i) => S.bubbles({ at, n: 1, f: 900, f1: 1100, size: 0.03, peak: 0.1 / (i + 1) }));
     S.pluck({ at: 0.05, f: 180, dur: 0.25, peak: 0.1, bright: 4 });
+  });
+  // the chef's table (town-life.js): the dish set down, forks and cups, quiet chewing, and the happy sting once the plate is clean
+  def('feast-serve', 'town', S => {
+    S.space('room', 0.2);
+    S.wood({ f: 420, dur: 0.1, peak: 0.34, lp: 2400 });
+    S.metal({ at: 0.05, set: 'bar', f: 2300, dur: 0.18, peak: 0.1, click: 0.2 });
+    S.noise({ at: 0.12, color: 'pink', bp: 2600, q: 0.8, dur: 0.35, pts: [[0.1, 0.5], [0.2, 1], [0.35, 0]], peak: 0.07 });
+    [72, 76, 79].forEach((n, i) => S.pluck({ at: 0.3 + i * 0.09, f: mf(n), dur: 0.5, peak: 0.1, bright: 5, rev: 0.3 }));
+  });
+  def('feast-clink', 'town', S => {
+    S.space('room', 0.18);
+    for (let i = 0; i < 4; i++) S.glass({ at: i * 0.07 + S.rr(0, 0.03), f: S.rr(1700, 2600), dur: 0.5, peak: 0.16 - i * 0.02 });
+    S.wood({ at: 0.32, f: 360, dur: 0.07, peak: 0.16, lp: 2000 });
+  });
+  def('feast-chew', 'town', S => {
+    for (let i = 0; i < 3; i++) {
+      const at = i * 0.17 + S.rr(0, 0.03);
+      S.noise({ at, color: 'pink', bp: 900 + S.rr(0, 500), q: 1.2, dur: 0.09, pts: [[0.01, 1], [0.09, 0]], peak: 0.2, grain: 0.7 });
+      S.wood({ at: at + 0.01, f: S.rr(200, 280), dur: 0.05, peak: 0.07, lp: 1400 });
+    }
+    S.metal({ at: 0.58, set: 'bar', f: 3000, dur: 0.06, peak: 0.05, click: 0.1 });
+  });
+  def('feast-sting', 'sting', S => {
+    S.space('room', 0.3);
+    [67, 71, 74, 79].forEach((n, i) => S.pluck({ at: i * 0.1, f: mf(n), dur: i === 3 ? 1.1 : 0.45, peak: 0.2, bright: 6, rev: 0.4 }));
+    S.glass({ at: 0.32, f: mf(91), dur: 0.9, peak: 0.07 });
+    S.thud({ at: 0, f: 110, f1: 60, dur: 0.18, pd: 0.4, peak: 0.12 });
   });
   def('fish-reel', 'town', S => {
     let t = 0;

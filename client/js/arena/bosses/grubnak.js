@@ -29,8 +29,8 @@
 
 const GRUBNAK = {
   id: 'grubnak', name: 'Grubnak', title: 'The Ogre Chef',
-  hp: { normal: 3350000, hard: 3300000 },
-  autoDmg: { normal: 1600, hard: 1600 },
+  hp: { normal: 3415000, hard: 4225000 },
+  autoDmg: { normal: 1750, hard: 1750 },
   enrage: { normal: 592, hard: 607 },   // the cast starts here and lands 8 s later (10:00 / 10:15)
   enrageName: 'Last Call',
   vuln: 0.5,   // every avoidable hit leaves you taking half again as much for a while
@@ -40,10 +40,10 @@ const GRUBNAK = {
     const H = f.hard;
     const B = f.boss;
     const dmg = {
-      grease: 8500, buster: 26000, mince: 13000, ladle: 13000, spread: H ? 6500 : 7500, stack: H ? 20000 : 22000,
-      puddle: 2600, tower: 5000, towerFail: 14000, stuffed: 14000, simmer: 13000, whisk: 13000, spice: 13000, boil: H ? 46000 : 40000,
-      gorge: 6500, heat: 6500, orders: 11000, meatball: 13000, flop: 13000, cleaver: 13000, flambe: 14000,
-      charge: 14000, cask: 9000, gut: H ? 16000 : 15000, stove: 4500, burn: 4000, slam: 5000, hook: 7000,
+      grease: H ? 9250 : 9800, buster: H ? 28350 : 29900, mince: H ? 14150 : 14950, ladle: H ? 14150 : 14950, spread: H ? 7100 : 8650, stack: H ? 21800 : 25300,
+      puddle: H ? 2850 : 3000, tower: H ? 5450 : 5750, towerFail: H ? 15250 : 16100, stuffed: H ? 15250 : 16100, simmer: H ? 14150 : 14950, whisk: H ? 14150 : 14950, spice: H ? 14150 : 14950, boil: H ? 50150 : 46000,
+      gorge: H ? 7100 : 7450, heat: H ? 7100 : 7450, orders: H ? 12000 : 12650, meatball: H ? 14150 : 14950, flop: H ? 14150 : 14950, cleaver: H ? 14150 : 14950, flambe: H ? 15250 : 16100,
+      charge: H ? 15250 : 16100, cask: H ? 9800 : 10350, gut: H ? 17450 : 17250, stove: H ? 4900 : 5200, burn: H ? 4350 : 4600, slam: H ? 5450 : 5750, hook: H ? 7650 : 8050,
     };
     const HW = ARENA.hw, HH = ARENA.hh;
     const LL = { ladle: 'Ladle Spin', lid: 'Lid Slam' };
@@ -104,15 +104,24 @@ const GRUBNAK = {
       hold(d + 2.4);
       f.afterKeep(d - 0.01, () => { B.lockFacing = false; f.anim(second, 2.4); });
     };
-    // where a Meat Toss puddle was stays greasy: harmless, until fire reaches it and burns it off
+    // where a Meat Toss puddle was stays greasy, harmless until fire reaches it and burns it off. The stain does not last
+    // for ever: it dulls and shrinks over its last 14 s (fade 1, then 2) and is gone STAIN_LIFE s after the puddle dried.
+    const STAIN_LIFE = H ? 70 : 45;
     const stain = (x, y) => {
       const stains = f.floor.filter(fl => fl.stain);
       if (stains.length >= 8) f.removeFloor(stains[0]);
-      f.addFloor({ kind: 'grease', stain: 1, x: Math.round(x), y: Math.round(y), r: 62, dmg: dmg.burn });
+      f.addFloor({ kind: 'grease', stain: 1, x: Math.round(x), y: Math.round(y), r: 62, dmg: dmg.burn, fade: 0, born: f.t });
     };
-    // a stain that has burnt is gone (the drains' grease, on Hard, stays and burns again)
     f.ticker(() => {
-      for (const fl of f.floor) if (fl.stain) { if (f.burning(fl)) fl.burnt = 1; else if (fl.burnt) { f.removeFloor(fl); break; } }
+      for (const fl of f.floor) {
+        if (!fl.stain) continue;
+        if (f.burning(fl)) fl.burnt = 1;
+        else if (fl.burnt) { f.removeFloor(fl); break; }   // (a stain that has burnt is gone)
+        const left = STAIN_LIFE - (f.t - fl.born);
+        if (left <= 0 && !f.burning(fl)) { f.removeFloor(fl); break; }
+        const stage = left <= 6 ? 2 : left <= 14 ? 1 : 0;
+        if (stage !== fl.fade) { fl.fade = stage; fl.r = stage === 2 ? 40 : 52; f.floorVer++; }
+      }
     });
     // Meat Toss: spread circles on players; where they land, a grease puddle stays for a while, then a stain.
     const meatToss = (targets) => {
@@ -162,6 +171,7 @@ const GRUBNAK = {
     const plate = (x, y, delay) => f.mech({ type: 'tower', shape: { kind: 'circle', x, y, r: 72 }, delay, dmg: dmg.tower, failDmg: dmg.towerFail, need: 1, tag: 'plate',
       stuff: H ? STUFF : 0,
       onResolve: inside => {
+        if (!inside.length) return;   // (nobody served it: failDmg already landed on everyone)
         if (!H) return;
         for (const p of inside) {
           if (f.hasDebuff(p.id, 'stuffed')) f.damagePlayer(p, dmg.stuffed, { kind: 'stuffed' });

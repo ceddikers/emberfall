@@ -3,6 +3,8 @@
 //   node tools/bot-raid.js [normal|hard] [runs] [classes comma-separated] [boss id]
 //   e.g. node tools/bot-raid.js normal 5 skitterra   (arguments can come in any order; the boss defaults to grubnak)
 //   seed=N uses another set of seeds; WHY=1 prints the last hits before each death, NEXT=1 the upcoming-moves feed
+//   gear=fresh|mid|full (or GEAR=...) gives every bot representative player gear (see buildGear below); FEAST=pie|stew|broth|tarts
+//   picks the meal for 'full' (default pie, none at the other levels). SUMMARY=1 prints one machine-readable line only.
 const path = require('path');
 const load = (p) => require(path.join(__dirname, '../client/js', p));
 Object.assign(global, load('arena/shapes.js'), load('data.js'), load('combat/engine.js'), load('combat/kits.js'), load('combat/specs.js'),
@@ -15,10 +17,14 @@ const { HOLLOWKING } = load('arena/bosses/hollowking.js');
 const DEFS = { grubnak: GRUBNAK, skitterra: SKITTERRA, volkar: VOLKAR, hollowking: HOLLOWKING };
 const { TRIALS, trialDef } = load('arena/trials.js');
 
+const ITEMSMOD = load('items.js');
+const FEASTS_ = { stew: { stat: 'hp', pct: 3 }, pie: { stat: 'power', pct: 3 }, broth: { stat: 'heal', pct: 3 }, tarts: { stat: 'speed', pct: 2 } };   // town-npcs.js FEASTS
+let gearLevel = process.env.GEAR || '';
 let mode = 'normal', runs = 3, comp = 'bastion,cleric,ranger,pyromancer'.split(','), def = GRUBNAK, seed0 = 1000;
 for (const a of process.argv.slice(2)) {
   if (a === 'normal' || a === 'hard') mode = a;
   else if (/^seed=\d+$/.test(a)) seed0 = Number(a.slice(5));   // a different set of seeds (default 1000)
+  else if (/^gear=\w+$/.test(a)) gearLevel = a.slice(5);
   else if (/^\d+$/.test(a)) runs = Number(a);
   else if (DEFS[a]) def = DEFS[a];
   // trial:<spec> runs that spec's trial, with a bot taking it (or 'trial:<spec>:base' to try it with the base kit)
@@ -26,16 +32,67 @@ for (const a of process.argv.slice(2)) {
   else if (a.includes(',')) comp = a.split(',');
   else { console.error(`unknown argument: ${a} (bosses: ${Object.keys(DEFS).join(', ')})`); process.exit(1); }
 }
-console.log(`${def.name}, ${mode}, ${comp.join('/')}`);
+// ---------------------------------------------------------------- gear for the bots
+// A player's gear reaches a fight three ways; this reproduces all three from real items (items.js):
+//  1. hostGear (main.js sendGear -> sanitizeGear caps) -> p.gear per player: fight.js:112-115 uses hp (flat, max 150) and def/1000 (max 0.1)
+//  2. gearMods(cls, totals, loadout) -> the kit's env.gearMods (engine.js gear(): power = main stat/1000, crit, haste, item fx and perks)
+//  3. partyBonus(counts of players wearing each boss's tier) -> RaidHost opts.bond (hp% in fight.js hpPct; dmg/crit/haste in raid-host.js partyMods)
+// The feast is added to the totals AFTER gearTotals' caps (inventory.js totals), as here; the host's sanitizeGear caps HP again.
+// Levels (bots are slots 0-3; every item is in a real loot table, nothing exceeds a cap):
+//   fresh: Uncommon weapon + armour and one Rare ring, one boss's gear per player, a different boss each: no bond
+//   mid:   four pieces each (Uncommon weapon and armour, two Rare/Legendary accessories); slots 0 and 1 wear Grubnak gear: one 2-piece bond
+//   full:  best Hard drops: Legendary class weapon (Grubnak), Mythic armour (Hollow King), Mythic accessories (Skitterra, Volkar):
+//          every player wears all four bosses = 4-piece bonuses for every tier, plus a feast
+const GEN = {   // [phys weapon, mag weapon, armour, Rare ring, second accessory]
+  1: ['g_cleaver', 'g_ladle', 'g_apron', 'g_pepper', 'g_timer'], 2: ['g_fang', 'g_wand', 'g_hauberk', 'g_band', 'g_silk'],
+  3: ['g_maul', 'g_rod', 'g_slate', 'g_polar', 'g_iron'], 4: ['g_crown', 'g_sceptre', 'g_shroud', 'g_signet', 'g_lantern'],
+};
+function buildGear(level, entries) {
+  if (!level || level === 'base') return null;
+  const sets = entries.map((e, i) => {
+    const cls = e.split(':')[0], main = ITEMSMOD.CLASS_MAIN[cls] || 'phys';
+    const w = t => GEN[t][main === 'mag' ? 1 : 0];
+    let keys;
+    if (level === 'fresh') { const t = (i % 4) + 1; keys = [w(t), GEN[t][2], GEN[t][3]]; }
+    else if (level === 'mid') {
+      const tiers = [[1, 1, 1, 1], [1, 1, 1, 1], [2, 2, 3, 3], [4, 4, 4, 4]][i % 4];
+      keys = [w(tiers[0]), GEN[tiers[1]][2], GEN[tiers[2]][3], GEN[tiers[3]][4]];
+    } else if (level === 'full') keys = [`${cls}_w1`, 'm_deadcourt', 'm_broodeye', 'm_torc'];
+    else { console.error('gear levels: base, fresh, mid, full'); process.exit(1); }
+    const insts = keys.map(key => { if (!ITEMSMOD.ITEMS[key]) throw new Error('no item ' + key); return { key }; });
+    const t = ITEMSMOD.gearTotals(cls, insts);
+    if (level === 'full') {   // the feast (town-life.js feastTotals), added after the caps
+      const { stat, pct } = FEASTS_[process.env.FEAST || 'pie'];
+      const role = CLASSES.find(c => c.id === cls).role;
+      const x = stat === 'hp' ? { hp: Math.round(1100 * pct / 100) } : stat === 'speed' ? { haste: pct }
+        : stat === 'heal' ? (role === 'healer' ? { main: pct * 10 } : { hp: Math.round(1100 * pct / 200) }) : { main: pct * 10 };
+      for (const [k, v] of Object.entries(x)) { const kk = k === 'main' ? main : k; t[kk] = (t[kk] || 0) + v; }
+    }
+    return { cls, insts, totals: t, mods: ITEMSMOD.gearMods(cls, t, insts), host: ITEMSMOD.sanitizeGear(t), src: ITEMSMOD.gearSources(insts) };
+  });
+  const counts = {};
+  for (const g of sets) for (const t of g.src) counts[t] = (counts[t] || 0) + 1;
+  return { sets, bond: ITEMSMOD.partyBonus(counts) };
+}
+const GEARSET = buildGear(gearLevel, comp);
+const SUMMARY = !!process.env.SUMMARY;
+const log = (...a) => { if (!SUMMARY) console.log(...a); };
+if (GEARSET) {
+  const orig = RaidHost.prototype.allPlayers;
+  RaidHost.prototype.allPlayers = function () { return orig.call(this).map(p => (p.bot ? Object.assign(p, { gear: GEARSET.sets[p.id - 1000].host }) : p)); };
+  log(`gear ${gearLevel}: bond ${JSON.stringify(GEARSET.bond.active.map(a => a.name + ' x' + a.n))}; ` + GEARSET.sets.map(g => `${g.cls} hp${g.host.hp} def${g.host.def} main+${(g.mods.power * 1000).toFixed(0)} crit${g.mods.crit} haste${g.mods.haste}`).join(' | '));
+}
+log(`${def.name}, ${mode}, ${comp.join('/')}`);
 
-let clears = 0;
+let clears = 0, totDeaths = 0, totClearT = 0;
 for (let r = 0; r < runs; r++) {
   const casts = [];
-  const host = new RaidHost({ def, mode, humans: () => [], bots: comp, seed: seed0 + r * 77, emit: msg => {
+  const host = new RaidHost({ def, mode, humans: () => [], bots: comp, seed: seed0 + r * 77, bond: GEARSET ? GEARSET.bond : undefined, emit: msg => {
     if (msg.t === 'bcast') casts.push(msg.name);
     // NEXT=1: print the upcoming-moves feed whenever it changes
     if (msg.t === 'bnext' && process.env.NEXT) console.log(`   ${host.sim.t.toFixed(1)} next: ${msg.l.map(([n, s]) => `${n} ${s}s`).join(', ')}`);
   } });
+  if (GEARSET) host.bots.forEach((b, i) => { b.actor.kit.env.gearMods = () => GEARSET.sets[i].mods; });
   let deaths = [];
   const origEmit = host.emitOut;
   const recent = {};
@@ -59,8 +116,10 @@ for (let r = 0; r < runs; r++) {
   if (host.sim.state === 'clear') clears++;
   const st = host.sim.stats;
   const dur = host.sim.t;
-  console.log(`run ${r + 1}: ${host.sim.state} at ${dur.toFixed(0)}s, boss ${(host.sim.boss.hp / host.sim.boss.maxHp * 100).toFixed(1)}%, phase ${host.sim.phase}, deaths: ${deaths.join(', ') || 'none'}`);
-  console.log('   ' + Object.values(st).map(s => `${s.name}/${s.cls}: ${(s.damage / dur).toFixed(0)} dps, ${(s.healing / dur).toFixed(0)} hps, avoidable ${s.avoidable}, deaths ${s.deaths}`).join('\n   '));
-  if (Object.keys(kinds).length) console.log('   failed: ' + Object.entries(kinds).map(([k, n]) => `${k} ${n}`).join(', '));
+  totDeaths += deaths.length; if (host.sim.state === 'clear') totClearT += dur;
+  log(`run ${r + 1}: ${host.sim.state} at ${dur.toFixed(0)}s, boss ${(host.sim.boss.hp / host.sim.boss.maxHp * 100).toFixed(1)}%, phase ${host.sim.phase}, deaths: ${deaths.join(', ') || 'none'}`);
+  log('   ' + Object.values(st).map(s => `${s.name}/${s.cls}: ${(s.damage / dur).toFixed(0)} dps, ${(s.healing / dur).toFixed(0)} hps, avoidable ${s.avoidable}, deaths ${s.deaths}`).join('\n   '));
+  if (Object.keys(kinds).length) log('   failed: ' + Object.entries(kinds).map(([k, n]) => `${k} ${n}`).join(', '));
 }
-console.log(`cleared ${clears} of ${runs}`);
+log(`cleared ${clears} of ${runs}`);
+if (SUMMARY) console.log(JSON.stringify({ boss: def.id, mode, gear: gearLevel || 'base', runs, clears, deathsPerRun: +(totDeaths / runs).toFixed(2), meanClearT: clears ? Math.round(totClearT / clears) : null }));

@@ -149,6 +149,7 @@ class Kit {
   // add charge (none while a window is open; a single cue, the 'ult-ready' moment, when it fills)
   ultGain(n) {
     if (!this.ult || this.ultWin || !(n > 0)) return;
+    n *= (this.ult.charge && this.ult.charge.scale) || 1;   // (charge.scale: one dial for a class whose sources fill it too fast)
     const was = this.g.ult || 0;
     if (was >= 100) return;
     this.g.ult = Math.min(100, was + n);

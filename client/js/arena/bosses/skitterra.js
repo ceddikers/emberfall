@@ -7,9 +7,12 @@
 //     Lunge (the safe side rotates), Silk Lines (stretch), Spin (four threads pillar to pillar: crossing one stings and
 //     roots), Venom Spit, Strand Reel, Brood (the two ripest of the six clutches in the web hatch: kill them together),
 //     Silk Reel, Acid Deluge (hide behind a pillar).
-//   The Dark Between (70%): she climbs into the dark for 40 s. The cave falls to pools of light; her shadow runs along
+//   The Dark Between (70%): she climbs into the dark for about 38 s. The cave falls to pools of light; her shadow runs along
 //     each uncut thread in turn and she drops where it ends. Breaking a thread's knot before she gets there spares you
-//     that drop, and the eggs can be broken meanwhile too. She comes back down and the outer web turns sticky.
+//     that drop, but a cut thread is one she hunts instead: her shadow goes to whoever stands farthest and drops there
+//     (lighter; the circle follows its mark until 1.6 s out). A cocoon falls on a random one of them (the party stacks in)
+//     and venom drips over every head, so something always lands within 4 s of the last cast whatever was cut.
+//     The eggs can be broken meanwhile too. She comes back down and the outer web turns sticky.
 //   Act II, The Brood (68% → 28%): pairs, then the Swarm: every clutch still standing hatches at once.
 //   Act III, The Collapse (28% → 0%): the cave floor falls away ring by ring from the walls. The hub, the eight spokes
 //     and the threads nobody cut stay; anyone on falling floor drops (heavy damage, held, then hauled back up the silk).
@@ -23,8 +26,8 @@
 
 const SKITTERRA = {
   id: 'skitterra', name: 'Queen Skitterra', title: 'Spider Broodmother',
-  hp: { normal: 3240000, hard: 3200000 },
-  autoDmg: { normal: 1550, hard: 1550 },
+  hp: { normal: 3305000, hard: 4065000 },
+  autoDmg: { normal: 1800, hard: 1650 },
   enrage: { normal: 602, hard: 612 },   // the cast starts here and lands 8 s later (10:10 / 10:20)
   enrageName: 'Devour',
   vuln: 0.5,
@@ -42,12 +45,12 @@ const SKITTERRA = {
     const B = f.boss;
     const TAU = Math.PI * 2;
     const dmg = {
-      mist: 8500, wrap: 26000, lunge: H ? 11000 : 13000, tether: 16000, spit: H ? 10500 : 12000, pool: 2200,
-      bite: H ? 2000 : 1600, fury: 5500, beam: 6000, reel: H ? 15000 : 17000,
-      sac: 5000, sacFail: 10000, fang: 15000, glob: 11000, snare: 10000,
-      deluge: H ? 16000 : 15000, strand: 11000, ambush: 16000, slam: 5000,
+      mist: H ? 9200 : 11050, wrap: H ? 28100 : 33800, lunge: H ? 11900 : 16900, tether: H ? 17300 : 20800, spit: H ? 11350 : 15600, pool: H ? 2400 : 2850,
+      bite: H ? 2150 : 2100, fury: H ? 5950 : 7150, beam: H ? 6500 : 7800, reel: H ? 16200 : 22100,
+      sac: H ? 5400 : 6500, sacFail: H ? 10800 : 13000, fang: H ? 16200 : 19500, glob: H ? 11900 : 14300, snare: H ? 10800 : 13000,
+      deluge: H ? 17300 : 19500, strand: H ? 11900 : 14300, ambush: H ? 17300 : 20800, slam: H ? 5400 : 6500,
       clutchHp: 24000, knotHp: 24000, broodHp: H ? 30000 : 26000, swarmHp: H ? 16000 : 18000,
-      sting: 3000, drop: 13000, drip: 7000, fall: 14000,
+      sting: H ? 3250 : 3900, drop: H ? 14050 : 16900, drip: H ? 7550 : 9100, fall: H ? 15100 : 18200, cocoon: H ? 18350 : 14300,
     };
     const LONG = 420, SHORT = 150;
     const S = (...steps) => steps.filter(Boolean);
@@ -94,8 +97,15 @@ const SKITTERRA = {
         onResolve: () => { if (f.alive().some(p => p.id === tank.id)) f.debuff(tank.id, 'rooted', H ? 3 : 2.6); } });
     };
     // Phase 2: the wrap lands just before a Lunge starts; wherever the tank is rooted has to survive the first strikes.
+    // Hard: the wrap lands well before the first strike, and the Lunge starts square across from wherever the tank
+    // stands (the first two strikes pass either side of the root), so the buster and the Lunge are no longer one wall.
     const wrapLunge = () => {
-      const d = f.ct(6.5);
+      const d = f.ct(6.5), tank = f.tank();
+      if (H && tank) {
+        lunge({ delay: d, a0: Math.atan2(tank.y - B.y, tank.x - B.x) + Math.PI / 2 });
+        silkWrap(d - 1.8, true);
+        return;
+      }
       lunge({ delay: d });
       silkWrap(d - 0.3, true);
     };
@@ -468,22 +478,55 @@ const SKITTERRA = {
         f.emit({ t: 'roomev', k: 'lightsout', r: 120, extra: f.props.filter(p => p.kind === 'pillar').map(p => ({ x: p.x, y: p.y })), dur: 37 });
       });
     };
-    // she runs the length of a thread overhead and drops at its far end (Hard: then back to the near end); a thread
-    // already cut, she can't use
+    // The Dark Between is all reaction. She runs a thread overhead and drops at its far end (Hard: then back to the near
+    // end), so which drops come, and where, is the party's doing: a thread already cut she cannot use, and hunts instead:
+    // her shadow goes to whoever stands farthest from her and drops there (lighter than the thread's drop, and the circle
+    // follows its mark until 1.6 s out). In between she lets a cocoon fall on a random one of them (a shared hit: everyone
+    // in), and the dark drips on whoever is where.
+    const DROP = 4.5, LOCK = 1.6;
+    const hunt = () => {
+      f.cast('From the Dark', DROP, 'ambush');
+      // Hard: she drops, then hunts the next farthest from where she landed, 2.3 s behind (as a thread's near end would)
+      for (let i = 0; i < (H ? 2 : 1); i++) {
+        const land = DROP + i * 2.3;
+        f.afterKeep(i * 2.3, () => {
+          const al = f.alive();
+          if (!al.length) return;
+          const far = [...al].sort((a, b) => Math.hypot(b.x - from.x, b.y - from.y) - Math.hypot(a.x - from.x, a.y - from.y))[0];
+          const m = f.mech({ type: 'aoe', shape: { kind: 'circle', x: far.x, y: far.y, r: H ? 170 : 150 }, delay: land - i * 2.3, dmg: dmg.drop * (H ? 1 : 0.7),
+            follow: far.id, lockAt: Math.min(LOCK, land - i * 2.3 - 1.5), tag: 'ambush' });
+          const lock = Math.min(LOCK, land - i * 2.3 - 1.5);
+          f.afterKeep(land - i * 2.3 - lock, () => {
+            const at = ARENA.clamp({ x: m.shape.x, y: m.shape.y }, 90);
+            f.emit({ t: 'roomev', k: 'ambush', pts: [[Math.round(from.x), Math.round(from.y)], [Math.round(at.x), Math.round(at.y)]], dur: lock, ease: 1.2 });
+            from = at;
+          });
+        });
+      }
+    };
     const dropFrom = k => {
       room.runAt = k + 1;
       const th = room.threads.find(t => t.order === k);
-      if (!th || th.cut) return;
-      f.cast('From the Dark', 6, 'ambush');
+      if (!th || th.cut) return hunt();
+      f.cast('From the Dark', DROP, 'ambush');
       const ends = H ? [[th.x2, th.y2], [th.x1, th.y1]] : [[th.x2, th.y2]];
       ends.forEach(([ex, ey], i) => {
-        const at = ARENA.clamp({ x: ex * 0.86, y: ey * 0.86 }, 90), land = 6 + i * 2.5;
-        f.afterKeep(i * 2.5, () => {
-          f.emit({ t: 'roomev', k: 'ambush', pts: [[Math.round(from.x), Math.round(from.y)], [Math.round(at.x), Math.round(at.y)]], dur: land - i * 2.5, ease: 1.2 });
+        const at = ARENA.clamp({ x: ex * 0.86, y: ey * 0.86 }, 90), land = DROP + i * 2.3;
+        f.afterKeep(i * 2.3, () => {
+          f.emit({ t: 'roomev', k: 'ambush', pts: [[Math.round(from.x), Math.round(from.y)], [Math.round(at.x), Math.round(at.y)]], dur: land - i * 2.3, ease: 1.2 });
           from = at;
         });
         f.aoe({ kind: 'circle', x: at.x, y: at.y, r: 190 }, land, dmg.drop, { tag: 'ambush' });
       });
+    };
+    // Cocoon Drop: a cocoon falls on one of them (never the tank); whoever it is, the rest of the party has to be in it
+    const cocoonDrop = () => {
+      const al = f.alive();
+      if (al.length < 2) return;
+      const p = f.pick(f.nonTanks().length ? f.nonTanks() : al), d = f.ct(5);
+      f.cast('Cocoon Drop', f.ct(3), 'brood');
+      f.mech({ type: 'stack', shape: { kind: 'circle', x: p.x, y: p.y, r: 115 }, delay: d, dmg: dmg.cocoon * Math.min(al.length, 4) / 4, follow: p.id,
+        need: H ? al.length : Math.max(1, al.length - 1), tag: 'stack' });
     };
     const venomDrip = noCast => {
       const d = f.ct(4);
@@ -565,7 +608,7 @@ const SKITTERRA = {
         S([14, () => lunge(), 'Eightfold Lunge']),
         S([15, () => silkLines(), 'Silk Lines']),
         S([15, spin, 'Spin']),
-        S([15, venomSpit, 'Venom Spit'], H && [8, eggSacs, 'Egg Sacs']),
+        S([15, venomSpit, 'Venom Spit'], H && [10, eggSacs, 'Egg Sacs']),
         S([15, strandReel, 'Strand Reel'], H && [9, fangRush, 'Fang Rush']),
         S([H ? 10 : 15, venomMist, 'Venom Mist']),
         S([15, wrapLunge, 'Eightfold Lunge']),
@@ -576,15 +619,18 @@ const SKITTERRA = {
       next: dark,
     }, at);
 
+    // (cast-free gaps stay under 4 s whatever the party cuts; the Hard drop's second landing is 2.3 s behind its first)
     const dark = at => f.course({
       onStart: () => { f.clearTethers(); f.clearReels(); },
       sets: [
         S([2, intoDark, 'Into the Dark']),
-        S([4, () => dropFrom(0), 'From the Dark']),
-        S([7, () => dropFrom(1), 'From the Dark']),
-        S([7, () => dropFrom(2), 'From the Dark'], [3, venomDrip, 'Venom Drip']),
-        S([4, () => dropFrom(3), 'From the Dark']),
-        S([8, comeBack, 'Tightening Web']),
+        S([3, () => dropFrom(0), 'From the Dark']),
+        S([6.5, cocoonDrop, 'Cocoon Drop']),
+        S([3.5, () => dropFrom(1), 'From the Dark']),
+        S([6.5, venomDrip, 'Venom Drip']),
+        S([4.5, () => dropFrom(2), 'From the Dark']),
+        S([5.5, () => dropFrom(3), 'From the Dark']),
+        S([H ? 8 : 6, comeBack, 'Tightening Web']),
         S([6]),
       ],
       next: actTwo,

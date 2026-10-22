@@ -33,8 +33,11 @@ const FIGHT = {
   // Limit Break: a shared party gauge of three bars (BAR each). A mechanic that resolves with no avoidable hits and
   // nothing failed adds CLEAN; a damage check met, or a heal check with nobody lost, adds CHECK. Raw damage adds nothing.
   //   TANK: party damage taken down by this much for TANK_DUR s   HEAL: party healed by this share of max health
-  //   (three bars also raise the fallen at RAISE)   DPS: a blow worth this share of the boss's max health
+  //   (three bars, from any role, also raise the fallen at RAISE)   DPS: a blow worth this share of the boss's max health
   LB: { BAR: 100, CLEAN: 4, CHECK: 70, TANK: [0, 0.2, 0.35, 0.5], TANK_DUR: 8, HEAL: [0, 0.3, 0.6, 1], RAISE: 0.5, DPS: [0, 0.008, 0.018, 0.03] },
+  // Recovering (Hard): after a death the boss's hits land lighter for DUR s (CUT less) so the party can raise, shown on the HUD; it can
+  // start again only COOL s after it ends. A raised player is untouchable for REVIVE_SAFE s.
+  REC: { DUR: 12, CUT: 0.3, COOL: 12 }, REVIVE_SAFE: 2.5,
   TANK_HP: 32000, HP: 21000,   // before NUM_SCALE
   // Each party slot's own colour (Hard's own-colour circles: Burial Rites), in the order the party frames list
   // everyone (tank, healer, then the rest by id: FightSim.slotOf). None of them is red or blue, which say
@@ -67,6 +70,7 @@ class FightSim {
     this.t = 0; this.state = opts.waitPull ? 'prepull' : 'countdown'; this.countdown = 8;
     // practice: start at this course (phase) number; the ones before it are passed over at the pull (course())
     this.skipTo = opts.practiceFrom > 1 ? Math.floor(opts.practiceFrom) : 0;
+    this.recoverEnd = -99;
     this.lb = 0; this.lbUsedAt = -99; this.avoidCount = 0;   // the Limit Break gauge (FIGHT.LB), and avoidable hits so far
     this.events = []; this.mechs = new Map(); this.nextMechId = 1; this.puddles = [];
     this.tethers = new Map(); this.adds = new Map(); this.zones = []; this.addsDirty = false;
@@ -595,6 +599,7 @@ class FightSim {
   revive(tid, ts, frac, by, rewound) {
     ts.alive = true; ts.hp = Math.round(ts.maxHp * Math.max(0.1, Math.min(1, frac)));
     ts.weakEnd = rewound ? 0 : this.t + 20; ts.threat = ts.role === 'tank' ? 1 : 0; ts.hist = []; this.dropThreat(tid);
+    ts.mits.push({ pct: 1, start: this.t, end: this.t + FIGHT.REVIVE_SAFE, kind: 'invuln', from: by });   // a moment to find their feet
     this.emit({ t: 'fev', k: 'raised', id: tid, by });
   }
 
@@ -648,6 +653,7 @@ class FightSim {
     }
     // (opts.scaled: already in small numbers, e.g. a share passed along a thread, but still mitigated as usual)
     let amt = opts.raw || opts.scaled ? raw : raw * this.scale.dmg * (this.hard ? 1.25 : 1) * (1 + this.boss.dmgUp);
+    if (this.recoverEnd > this.t && !opts.raw) amt *= 1 - FIGHT.REC.CUT;   // recovering after a death (Hard)
     if (!opts.shared) amt = this.threadSplit(p, s, amt, opts);   // threads split the hit evenly along them (classes-c)
     if (s.vulnEnd > this.t && !opts.raw) amt *= 1 + s.vuln;
     if (s.def && !opts.raw) amt *= 1 - s.def;
@@ -704,6 +710,7 @@ class FightSim {
       if (this.classDeath) this.classDeath(p, s);
       st.deaths++;
       this.emit({ t: 'fev', k: 'death', id: p.id });
+      if (this.hard && this.t >= this.recoverEnd + FIGHT.REC.COOL && this.state === 'live') { this.recoverEnd = this.t + FIGHT.REC.DUR; this.emit({ t: 'fev', k: 'recover', dur: FIGHT.REC.DUR }); }
     }
     return amt;
   }
@@ -744,10 +751,11 @@ class FightSim {
     const L = FIGHT.LB;
     this.lb -= lv * L.BAR; this.lbUsedAt = this.t;
     this.emit({ t: 'lb', id: pid, lv, role: s.role });
+    // any living role's Limit Break at three bars raises the fallen (a healer is often the one who is down)
+    if (lv >= 3) for (const [tid, ts] of this.ps) if (!ts.alive && !ts.left) this.revive(tid, ts, L.RAISE, pid);
     if (s.role === 'tank') {
       for (const p of this.alive()) { const ts = this.ps.get(p.id); ts.mits.push({ pct: L.TANK[lv], start: this.t, end: this.t + L.TANK_DUR, kind: 'lb', from: pid }); }
     } else if (s.role === 'healer') {
-      if (lv >= 3) for (const [tid, ts] of this.ps) if (!ts.alive && !ts.left) this.revive(tid, ts, L.RAISE, pid);
       for (const p of this.alive()) { const ts = this.ps.get(p.id); this.applyHeal(pid, p.id, ts.maxHp * L.HEAL[lv], true); }
     } else if (!this.boss.untargetable) {
       this.onEvent(pid, { type: 'damage', amount: Math.round(this.boss.maxHp * L.DPS[lv]), tgt: 'boss' });
@@ -1325,7 +1333,7 @@ class FightSim {
         s.dmgDownEnd > this.t ? Math.ceil(s.dmgDownEnd - this.t) : 0, s.vulnEnd > this.t ? Math.round(s.vuln * 100) : 0,
         Math.round((1 - mit) * 100), s.weakEnd > this.t ? 1 : 0, debuffs, Math.round(s.threat), hots]);
     }
-    this.emit({ t: 'fps', ps: list, lb: Math.round(this.lb) });
+    this.emit({ t: 'fps', ps: list, lb: Math.round(this.lb), rc: this.recoverEnd > this.t ? Math.ceil(this.recoverEnd - this.t) : 0 });
   }
 }
 

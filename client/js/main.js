@@ -1475,6 +1475,7 @@
   Net.on('fps', msg => {
     if (!raid) return;
     if (Number.isFinite(msg.lb)) raid.lb = msg.lb;
+    raid.rc = msg.rc > 0 ? msg.rc : 0;   // seconds of 'recovering' left (fight.js FIGHT.REC)
     const listed = new Set();
     for (const [id, hp, maxHp, shield, alive, dd, vuln, mit, weak, debuffs, threat, hots] of msg.ps) {
       listed.add(id);
@@ -1986,6 +1987,13 @@
     collide: e => resolveCollisions(e, 12),
     fishShop: () => Pastimes.openFishShop(),
     focusCamera: f => { camFocus = f ? { f, until: now + 5 } : null; },   // (a few seconds at most; moving takes it back)
+    // the eating scene (town-life.js): its own camera hold, who sits down, whether you've moved, and what time it is
+    holdCamera: (pt, secs, zm) => { camFocus = pt ? { f: pt, until: now + (secs || 8), hold: true, zoom: zm || 0 } : null; },
+    diners: () => [...(player.cls ? [{ ent: player, name: player.name || 'You', cls: player.cls, spec: player.spec || null, me: true }] : []),
+      ...[...remotes.values()].filter(r => r.scene === 0 && r.cls).map(r => ({ ent: r, name: r.name || 'Hero', cls: r.cls, spec: r.spec || null }))],
+    moving: () => (player.dashMove ? 'dash' : player.target || null),
+    inTown: () => scene === 'town' && started,
+    now: () => now,
     onFeast: () => { Inventory.refresh(); sendGear(); },
   });
   Inventory.setExtra(clsId => TownLife.feastTotals(clsId));
@@ -2442,10 +2450,13 @@
   }
   function baseCamera(dt, snap) {
     if (snap) dt = 10;  // jump straight there (scene changes)
-    if (camFocus && (scene !== 'town' || now > camFocus.until || mouse.rightDown || player.target || player.dashMove)) camFocus = null;
+    if (camFocus && (scene !== 'town' || now > camFocus.until || (!camFocus.hold && (mouse.rightDown || player.target || player.dashMove)))) camFocus = null;
     if (camFocus) {
       const k = Math.min(1, dt * 2.5);
-      cam.x += (camFocus.f.x - cam.x) * k; cam.y += (camFocus.f.y - cam.y) * k;
+      if (camFocus.zoom) zoom += (camFocus.zoom - zoom) * Math.min(1, dt * 3);   // (a scene can lean in a little)
+      // (cam is the screen's top-left corner: centre the thing being watched, and stay inside the town)
+      const tx = clamp(camFocus.f.x - W / zoom / 2, 0, Math.max(0, WORLD.w - W / zoom)), ty = clamp(camFocus.f.y - H / zoom / 2, 0, Math.max(0, WORLD.h - H / zoom));
+      cam.x += (tx - cam.x) * k; cam.y += (ty - cam.y) * k;
       return;
     }
     if (scene === 'arena') {
@@ -2469,14 +2480,14 @@
       cam.y += (ty - cam.y) * ka;
       return;
     }
-    zoom = 1;
-    const tx = clamp(player.x - W / 2, 0, Math.max(0, WORLD.w - W));
-    const ty = clamp(player.y - H / 2, 0, Math.max(0, WORLD.h - H));
+    zoom = Math.abs(zoom - 1) < 0.003 || snap ? 1 : zoom + (1 - zoom) * (1 - Math.exp(-5 * dt));   // (easing back out of a scene's zoom)
+    const tx = clamp(player.x - W / zoom / 2, 0, Math.max(0, WORLD.w - W / zoom));
+    const ty = clamp(player.y - H / zoom / 2, 0, Math.max(0, WORLD.h - H / zoom));
     const kt = 1 - Math.exp(-8 * dt);
     cam.x += (tx - cam.x) * kt;
     cam.y += (ty - cam.y) * kt;
-    if (W > WORLD.w) cam.x = (WORLD.w - W) / 2;
-    if (H > WORLD.h) cam.y = (WORLD.h - H) / 2;
+    if (W / zoom > WORLD.w) cam.x = (WORLD.w - W / zoom) / 2;
+    if (H / zoom > WORLD.h) cam.y = (WORLD.h - H / zoom) / 2;
   }
 
   function bossImpact(b) {
@@ -2711,10 +2722,11 @@
     const [sx, sy] = shakeOffset();
     // (snapped to device pixels, not whole CSS pixels: on a 2x screen a half-pixel step is visible as jitter)
     const cx = Math.round((cam.x + sx) * DPR) / DPR, cy = Math.round((cam.y + sy) * DPR) / DPR;
+    if (zoom !== 1) ctx.scale(zoom, zoom);   // (only while a town scene leans in: the feast)
     ctx.translate(-cx, -cy);
 
     const vx = clamp(cx, 0, WORLD.w), vy = clamp(cy, 0, WORLD.h);
-    const vw = Math.min(W, WORLD.w - vx), vh = Math.min(H, WORLD.h - vy);
+    const vw = Math.min(W / zoom, WORLD.w - vx), vh = Math.min(H / zoom, WORLD.h - vy);
     if (vw > 0 && vh > 0) ctx.drawImage(townLayer, vx * layerScale, vy * layerScale, vw * layerScale, vh * layerScale, vx, vy, vw, vh);
     drawTownDynamic(ctx, now);
 
@@ -2742,7 +2754,7 @@
     TownLife.drawGround(ctx, now, TOWN.pedestals, BOSSES.map(b => b.id));
     TOWN.pedestals.forEach((pd, i) => { if (BOSSES[i]) drawPlaque(ctx, pd, bossOpen(BOSSES[i]) ? BOSSES[i].name : 'Sealed'); });
     for (const h of lineup) drawDeckPad(ctx, h.home ? h.home.x : h.x, h.home ? h.home.y : h.y, lineup.filter(o => o.cls.role === h.cls.role).length > 3);
-    const ents = [...lineup, keeper, trainer, ...statues, ...dummies, player, ...townRemotes, ...Stagecraft.entities(now, scEnv), ...TownLife.entities(HERO_SCALE)];
+    const ents = [...lineup, keeper, trainer, ...statues, ...dummies, player, ...townRemotes, ...Stagecraft.entities(now, scEnv), ...TownLife.entities(HERO_SCALE)].filter(e => !TownLife.hides(e));
     ents.sort((a, b) => a.y - b.y);
     for (const e of ents) { if (e.kind === 'stagecraft') e.draw(ctx); else drawEntity(e); }
     Stagecraft.drawOver(ctx, now, scEnv);
@@ -2770,8 +2782,8 @@
     for (const d of dummies) if (d.spar && Math.hypot(player.x - d.x, player.y - d.y) < 260) label(ctx, 'Sparring Dummy', d.x, d.y - 46, '#ffb0a0', 11);
     Pastimes.drawOver(ctx, now);
     TownLife.drawLabels(ctx, label, f => Math.hypot(player.x - f.x, player.y - f.y) < 220);
-    for (const r of townRemotes) playerTag(r, false);
-    playerTag(player, true);
+    for (const r of townRemotes) if (!TownLife.hides(r)) playerTag(r, false);
+    if (!TownLife.hides(player)) playerTag(player, true);
     FX.draw(ctx, false);   // (the numbers over the tags and the air effects, as in the arena)
     if (hov && !hov.label.match(/Barkeep|Trainer/) &&!lineup.some(h => h.cls.name === hov.label)) {
       label(ctx, hov.label, mouseWorld().x, mouseWorld().y - 18, '#ffe9a8', 13);

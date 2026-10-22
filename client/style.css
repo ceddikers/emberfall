@@ -1559,3 +1559,8 @@ body:has(#raid-ui.pf-strip:not(.hidden)) #captions { bottom: calc(var(--hud-top,
 #captions .cap.boss span { font-style: italic; }
 @media (prefers-reduced-motion: reduce) { #captions .cap { transition-duration: .01s; transform: none; } }
 /* ================================================================ /CAPTIONS */
+#lb-gauge.raise { border-color: #8a6a34; }
+#lb-gauge.raise small { color: #f2d38a; }
+#rc-cue { display: flex; justify-content: space-between; margin-top: 4px; padding: 3px 8px; font-size: 9.5px; letter-spacing: .16em; text-transform: uppercase; color: #9fe8b0; background: linear-gradient(90deg, #15120fea, #100e0cd8); border: 1px solid #9fe8b055; border-radius: 3px; cursor: default; }
+#rc-cue.hidden { display: none; }
+#rc-cue b { font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: .04em; }

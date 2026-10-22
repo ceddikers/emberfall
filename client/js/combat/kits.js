@@ -3818,7 +3818,7 @@ Object.assign(ULTIMATES, {
   grovekeeper: {
     id: 'worldtree', name: 'World Tree', slot: 7, type: 'ogcd', ult: true, mode: 'instant', target: 'self', anim: 'big', icon: 'treant',
     lock: 0.9, dr: 0.3,
-    charge: { rate: 0.4, keep: 0.5, gain: { bloom: 0.2 }, spend: { bloom: 0.12 } },
+    charge: { scale: 0.58, rate: 0.4, keep: 0.5, gain: { bloom: 0.2 }, spend: { bloom: 0.12 } },
     desc: 'A great tree bursts from the ground at your feet. The whole party heals {h:450}, and for 12s everyone under its canopy (180 px around where it stands) heals {h:110} every 1.5s. ' +
       'Every ally wearing your Rejuvenate blooms at once for {h:300} more. Its roots tear into your target for {d:900}, or {d:1400} if your Thornlash is on it, and the Thornlash starts over at 30s. You gain 50 Bloom. ' +
       'You take 30% less damage and can\'t be knocked back while it grows.' +
@@ -3866,7 +3866,7 @@ Object.assign(ULTIMATES, {
   alembist: {
     id: 'magnumopus', name: 'Magnum Opus', slot: 7, type: 'ogcd', ult: true, mode: 'instant', target: 'self', anim: 'big', icon: 'blend',
     lock: 0.9, dr: 0.3,
-    charge: { rate: 0.4, keep: 0.5 },
+    charge: { scale: 0.74, rate: 0.4, keep: 0.5 },
     desc: 'Pour a drop of every vial you hold into one mythic flask and hurl it high over the party: everyone heals {h:500} and gains a {s:250} shield for 10s, and it bursts on your target for {d:1000}. ' +
       'Every vial you hold adds {h:80} to the heal and {d:200} to the blast, a ripe one 30% more. Your vials aren\'t used up: they all ripen at once, and all three Kiln coals light. ' +
       'You take 30% less damage and can\'t be knocked back while you throw it.' +
@@ -3889,7 +3889,7 @@ Object.assign(ULTIMATES, {
   threadweaver: {
     id: 'grandloom', name: 'Grand Loom', slot: 7, type: 'ogcd', ult: true, mode: 'instant', target: 'self', anim: 'big', icon: 'tapestry',
     lock: 0.9, dr: 0.3,
-    charge: { rate: 0.4, keep: 0.5, gain: { spool: 0.25 } },
+    charge: { scale: 0.78, rate: 0.4, keep: 0.5, gain: { spool: 0.25 } },
     desc: 'Pull every thread you hold taut until they all flare at once. The whole party heals {h:350}, plus {h:120} for every thread you hold (three: {h:710}), and the light runs down them into your target: {d:500}, plus {d:300} for every thread (three: {d:1400}). ' +
       'Then the web re-forms around everyone as a Tapestry for 6s (any damage to one of you is split evenly among all), and you gain 35 Spool. You take 30% less damage and can\'t be knocked back while you pull.' +
       healUltCharge('1% for every 4 Spool you gain (the damage your threads carry), 1% for every Shuttle strike, 0.2% for every thread a Needle tugs down,'),
@@ -4370,7 +4370,7 @@ const RANGER_STAR = { id: 'starvolley', name: 'Starfall' };
 ULTIMATES.ranger = {
   id: 'starfall', name: 'Starfall Volley', slot: 7, type: 'ogcd', ult: true, mode: 'instant', target: 'enemy', range: RANGED, anim: 'big', icon: 'barrage',
   lock: 0.6, dr: 0.3,
-  charge: { rate: 0.4, keep: 0.5, spend: { focus: RANGER_ULT.GAIN_FOCUS } },
+  charge: { scale: 0.95, rate: 0.4, keep: 0.5, spend: { focus: RANGER_ULT.GAIN_FOCUS } },
   botOk: k => (k.g.focus || 0) >= 50,
   desc: `Loose all your Focus into the sky. A first star strikes your target for {d:${RANGER_ULT.HIT}} plus {d:${RANGER_ULT.HIT_F * 10}} for every 10 Focus, then the sky falls on it: ` +
     `${RANGER_ULT.N} volleys over 3s, each {d:${RANGER_ULT.VOL}} plus {d:${Math.round(RANGER_ULT.VOL_F * 10)}} for every 10 Focus (at 100 Focus: {d:${Math.round(RANGER_ULT.HIT + 100 * RANGER_ULT.HIT_F)}} and {d:${Math.round(RANGER_ULT.VOL + 100 * RANGER_ULT.VOL_F)}} each). ` +
@@ -4433,7 +4433,7 @@ const THERM_NOVA = { id: 'novafrost', name: 'Supernova: Frost' };
 ULTIMATES.thermist = {
   id: 'supernova', name: 'Supernova', slot: 7, type: 'ogcd', ult: true, mode: 'instant', target: 'enemy', range: RANGED, anim: 'big', icon: 'invert',
   lock: 0.8, dr: 0.3,
-  charge: { rate: 0.4, keep: 0.5 },
+  charge: { scale: 0.88, rate: 0.4, keep: 0.5 },
   botOk: k => (k.g.peak || 0) >= 4,
   desc: `The dial slams to both of its ends at once. Frost shatters on your target for {d:${THERM_ULT.FROST}} plus {d:${THERM_ULT.FROST_S}} for every step of your stored swing, ` +
     `then fire detonates through it for {d:${THERM_ULT.FIRE}} plus {d:${THERM_ULT.FIRE_S}} per step (5 steps: {d:${THERM_ULT.FROST + 5 * THERM_ULT.FROST_S}} and {d:${THERM_ULT.FIRE + 5 * THERM_ULT.FIRE_S}}). ` +

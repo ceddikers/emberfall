@@ -1471,6 +1471,7 @@ const ArenaView = {
     if (fl.kind === 'grease') {
       // dark, glossy grease backed up out of the drains
       c.save();
+      if (fl.fade) c.globalAlpha = fl.fade === 2 ? 0.35 : 0.65;   // a stain dulling before it goes
       c.beginPath();
       for (let i = 0; i <= 22; i++) { const a = i * TAU / 22, w = fl.r * (0.85 + 0.15 * Math.sin(a * 3 + fl.id) + 0.05 * Math.sin(a * 7)); i ? c.lineTo(fl.x + Math.cos(a) * w, fl.y + Math.sin(a) * w * 0.86) : c.moveTo(fl.x + Math.cos(a) * w, fl.y + Math.sin(a) * w * 0.86); }
       c.closePath();

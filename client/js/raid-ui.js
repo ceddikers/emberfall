@@ -214,6 +214,7 @@ const RaidUI = (() => {
     bossStatus(raid, now, myId, marks);
     threatMeter(raid, myId);
     limitGauge(raid, myId, dt);
+    recoverCue(raid);
 
     // countdown before the pull
     const cd = $('countdown');
@@ -374,12 +375,16 @@ const RaidUI = (() => {
     const el = $('lb-gauge'), show = !raid.def.trial && (raid.state === 'live' || raid.state === 'prepull');
     const me = roster.find(r => r.id === myId); if (me) lbRole = me.role;
     const v = Math.max(0, Math.min(300, raid.lb || 0));
+    // three bars with someone down: the gauge calls for the raise (any role's Limit Break raises the fallen)
+    const raise = show && v >= 300 && [...raid.party.values()].some(q => !q.alive && !q.left) && !(me && !raid.party.get(myId)?.alive);
     const kk = typeof Keybinds !== 'undefined' ? Keybinds.label(Keybinds.keyFor('limit')) : 'G';
     // the ease: close to an exponential approach, snapped once within a hair (a spend drops at the same pace)
     lbShown = !show ? v : Math.abs(v - lbShown) < 0.3 ? v : lbShown + (v - lbShown) * (1 - Math.exp(-dt / 0.05));
     const key = show ? lbShown.toFixed(1) : '-';
-    if (key + kk === lbKey) return;
-    lbKey = key + kk;
+    if (key + kk + raise === lbKey) return;
+    lbKey = key + kk + raise;
+    el.classList.toggle('raise', raise);
+    const sm = el.querySelector('small'); if (sm) sm.textContent = raise ? 'Raise' : 'Limit';
     el.classList.toggle('hidden', !show);
     const kb = el.querySelector('.lb-key'); if (kb && kb.textContent !== kk) kb.textContent = kk;
     if (!show) { lbLevel = -1; return; }
@@ -400,12 +405,25 @@ const RaidUI = (() => {
     }
     lbLevel = lv;
   }
+  // After a death on Hard the boss hits lighter for a few seconds (fight.js FIGHT.REC): say so, beside the gauge
+  let rcShown = -1;
+  function recoverCue(raid) {
+    const gauge = $('lb-gauge'); if (!gauge) return;
+    let el = $('rc-cue');
+    if (!el) { el = document.createElement('div'); el.id = 'rc-cue'; el.className = 'hidden'; gauge.insertAdjacentElement('afterend', el); Tip.set(el, () => `<b>Recovering</b>A fall steadies the party: the boss's hits land ${Math.round(FIGHT.REC.CUT * 100)}% lighter for a few seconds. Raise your fallen now.`); }
+    const rc = raid.state === 'live' && !raid.def.trial ? (raid.rc || 0) : 0;
+    if (rc === rcShown) return;
+    rcShown = rc;
+    el.classList.toggle('hidden', rc <= 0);
+    if (rc > 0) el.innerHTML = `Recovering<b>${rc}s</b>`;
+  }
   function limitTip() {
     const L = FIGHT.LB, pct = a => a.slice(1).map(x => Math.round(x * 1000) / 10).join(' / ') + '%';
     const what = lbRole === 'tank' ? `<b>Stand Fast</b>The party takes ${pct(L.TANK)} less damage for ${L.TANK_DUR}s.`
-      : lbRole === 'healer' ? `<b>Rekindle</b>Heals the party for ${pct(L.HEAL)} of their health. Three bars also raise the fallen.`
+      : lbRole === 'healer' ? `<b>Rekindle</b>Heals the party for ${pct(L.HEAL)} of their health.`
       : `<b>Emberfall</b>One blow worth ${pct(L.DPS)} of the boss's health.`;
-    return `<b>Limit Break</b><em>${lbBars} of 3 bars · ${typeof Keybinds !== 'undefined' ? Keybinds.label(Keybinds.keyFor('limit')) : 'G'}</em>Every whole bar is spent at once, by whoever presses first. Filled by mechanics met cleanly and checks passed.<br><br>${what}`;
+    const raise = '<br><br><b>Raise</b>With all three bars, a Limit Break from any role also raises every fallen ally.';
+    return `<b>Limit Break</b><em>${lbBars} of 3 bars · ${typeof Keybinds !== 'undefined' ? Keybinds.label(Keybinds.keyFor('limit')) : 'G'}</em>Every whole bar is spent at once, by whoever presses first. Filled by mechanics met cleanly and checks passed.<br><br>${what}${raise}`;
   }
 
   // ---------------------------------------------------------------- the live meter (M)

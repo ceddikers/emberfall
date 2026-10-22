@@ -23,8 +23,8 @@
 
 const VOLKAR = {
   id: 'volkar', name: 'Volkar', title: 'The Storm Titan',
-  hp: { normal: 3620000, hard: 3800000 },
-  autoDmg: { normal: 1300, hard: 1400 },
+  hp: { normal: 3620000, hard: 4445000 },
+  autoDmg: { normal: 1450, hard: 1550 },
   enrage: { normal: 592, hard: 607 },   // the cast starts here and lands 8 s later (10:00 / 10:15)
   enrageName: 'Skybreak',
   vuln: 0.5,
@@ -44,12 +44,12 @@ const VOLKAR = {
     const B = f.boss;
     const TAU = Math.PI * 2;
     const dmg = {
-      clap: 6500, fist: H ? 22000 : 20000, surgeAlone: 8500, surgeSame: 15000, surgePair: 2000,
-      storm: 1600, thunderhead: 5000,
-      crash: 13000, field: 5500, rod: 5000, rodAgain: 12000, rodFail: 12000, slam: 9000, wall: H ? 9500 : 11000, edge: 12000, pulse: H ? 300 : 260,
-      chain: 7000, orb: 12000, skyfall: 36000,
-      strike: H ? 9000 : 8000, strikeOpen: H ? 18000 : 15000, discharge: 12000, grounded: 9000, boulder: H ? 12000 : 11000, fall: 15000,
-      squall: 6000, still: 9000, stillWrong: 12000, heavens: 28000, front: 7500,
+      clap: H ? 7800 : 7450, fist: H ? 26400 : 23000, surgeAlone: H ? 10200 : 9800, surgeSame: H ? 18000 : 17250, surgePair: H ? 2400 : 2300,
+      storm: H ? 1900 : 1850, thunderhead: H ? 6000 : 5750,
+      crash: H ? 15600 : 14950, field: H ? 6600 : 6300, rod: H ? 6000 : 5750, rodAgain: H ? 14400 : 13800, rodFail: H ? 14400 : 13800, slam: H ? 10800 : 10350, wall: H ? 11400 : 12650, edge: H ? 14400 : 13800, pulse: H ? 360 : 300,
+      chain: H ? 8400 : 8050, orb: H ? 14400 : 13800, skyfall: H ? 43200 : 41400,
+      strike: H ? 10800 : 9200, strikeOpen: H ? 21600 : 17250, discharge: H ? 14400 : 13800, grounded: H ? 10800 : 10350, boulder: H ? 14400 : 12650, fall: H ? 18000 : 17250,
+      squall: H ? 7200 : 6900, still: H ? 10800 : 10350, stillWrong: H ? 14400 : 13800, heavens: H ? 33600 : 32200, front: H ? 9000 : 8650,
     };
     const S = (...steps) => steps.filter(Boolean);
     const room = f.room = { squall: null, eye: false };
