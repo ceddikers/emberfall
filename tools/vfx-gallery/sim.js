@@ -14,7 +14,7 @@ function loadGame(root) {
   Object.assign(global, load('arena/shapes.js'), load('data.js'), load('combat/engine.js'), load('combat/kits.js'), load('combat/specs.js'),
     load('combat/actor.js'), load('arena/fight.js'), load('arena/bots.js'));
   try { Object.assign(global, load('combat/talents.js')); } catch (e) { /* talents are optional for the sim */ }
-  Object.assign(global, load('arena/raid-host.js'));
+  Object.assign(global, load('arena/scoring.js'), load('arena/raid-host.js'));
   const defs = {};
   const fs = require('fs');
   for (const f of fs.readdirSync(path.join(root, 'client/js/arena/bosses'))) {

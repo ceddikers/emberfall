@@ -7,12 +7,14 @@ const Keybinds = (() => {
   const ACTIONS = [
     { id: 's0', def: 'q' }, { id: 's1', def: 'w' }, { id: 's2', def: 'e' }, { id: 's3', def: 'r' },
     { id: 's4', def: 'd' }, { id: 's5', def: 'f' }, { id: 's6', def: ' ', name: 'Dash' }, { id: 's7', def: 't', name: 'Ultimate' },
-    { id: 'focus', def: 'v', name: 'Set focus' }, { id: 'limit', def: 'g', name: 'Limit Break' }, { id: 'meter', def: 'm', name: 'Damage meter' },
+    { id: 'focus', def: 'v', name: 'Set focus' }, { id: 'limit', def: 'g', name: 'Limit Break' }, { id: 'meter', def: 'm', name: 'Damage meter' }, { id: 'metermode', def: 'b', name: 'Meter: next view' },
     { id: 'bags', def: 'i', name: 'Inventory' }, { id: 'talents', def: 'n', name: 'Talents' },
     { id: 'journal', def: 'j', name: 'Journal' }, { id: 'logbook', def: 'l', name: 'Logbook' }, { id: 'options', def: 'k', name: 'Options' },
+    { id: 'cycle', def: 'tab', name: 'Next enemy (Shift: back)' }, { id: 'hurt', def: '`', name: 'Select most hurt ally' }, { id: 'chat', def: 'enter', name: 'Chat' },
+    { id: 'ally1', def: '1', name: 'Select party member 1' }, { id: 'ally2', def: '2', name: 'Select party member 2' }, { id: 'ally3', def: '3', name: 'Select party member 3' }, { id: 'ally4', def: '4', name: 'Select party member 4' },
   ];
   // keys the game keeps for itself (chat, targeting, menus)
-  const RESERVED = new Set(['enter', 'escape', 'tab', '`', '1', '2', '3', '4', 'shift', 'alt', 'control', 'meta', 'mouse0', 'mouse1', 'mouse2', 'f3', 'f5', 'f11', 'f12']);
+  const RESERVED = new Set(['escape', 'shift', 'alt', 'control', 'meta', 'mouse0', 'mouse1', 'mouse2', 'f3', 'f5', 'f11', 'f12']);
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
   let binds = {};
@@ -56,7 +58,7 @@ const Keybinds = (() => {
   // game's own positioning stay as they are underneath).
   const PIECES = [
     { sel: '#combat-hud', name: 'Hotbar' }, { sel: '#pf-wrap', name: 'Party frames' }, { sel: '#boss-bar', name: 'Boss bar' },
-    { sel: '#raid-left', name: 'Threat & progress' }, { sel: '#live-meter', name: 'Damage meter' }, { sel: '#waymarks', name: 'Markers' },
+    { sel: '#raid-left', name: 'Threat & progress' }, { sel: '#live-meter', name: 'Damage meter' }, { id: 'metermode', def: 'b', name: 'Meter: next view' }, { sel: '#waymarks', name: 'Markers' },
     { sel: '#lb-gauge', name: 'Limit Break' }, { sel: '#minimap', name: 'Minimap' }, { sel: '#target-frame', name: 'Target' }, { sel: '#focus-frame', name: 'Focus' },
   ];
   let layout = {};

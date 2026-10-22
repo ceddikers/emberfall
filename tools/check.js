@@ -78,6 +78,40 @@ function syntax() {
   else pass('Scripts parse', `${files.length} files`);
 }
 
+// ---------------------------------------------------------------- 1b. contribution points (arena/scoring.js)
+function scoring() {
+  const { Scoring: S } = require(path.join(ROOT, 'client/js', 'arena/scoring.js'));
+  const base = { damage: 0, healing: 0, taken: 0, overheal: 0, mitigated: 0, deaths: 0, avoidable: 0, aggro: 0, up: 0, soaked: 0, raises: 0, saves: 0, perfects: 0, busters: 0, ults: 0, burst: 0, wards: 0, closer: 0 };
+  const mk = (role, o) => Object.assign({ name: role, cls: 'x', role }, base, o);
+  const stats = {
+    1: mk('tank', { damage: 3000, taken: 4000, mitigated: 3000, aggro: 280, up: 250, soaked: 3, perfects: 6, busters: 3, ults: 1, burst: 1 }),
+    2: mk('healer', { damage: 2500, healing: 6000, overheal: 1500, taken: 1500, saves: 3, wards: 8, soaked: 3, raises: 1 }),
+    3: mk('dps', { damage: 6000, taken: 1500, up: 280, soaked: 3, ults: 1, burst: 8, closer: 900 }),
+    4: mk('dps', { damage: 4500, taken: 1500, up: 200, soaked: 2, ults: 1, burst: 1, avoidable: 3, deaths: 1 }),
+  };
+  const probs = [];
+  const a = S.score(stats, { time: 300 }), b = S.score(JSON.parse(JSON.stringify(stats)), { time: 300 });
+  if (JSON.stringify(a) !== JSON.stringify(b)) probs.push('not deterministic');
+  for (const [id, s] of Object.entries(a)) if (!(s.total >= 0 && s.total <= 100)) probs.push(`player ${id} scored ${s.total}`);
+  for (const [role, w] of Object.entries(S.WEIGHTS)) if (Object.values(w).reduce((n, v) => n + v, 0) !== 100) probs.push(`${role} weights don't add to 100`);
+  const top = Object.keys(a).sort((x, y) => a[y].total - a[x].total)[0];
+  if (S.mvp(stats, a) !== Number(top)) probs.push(`MVP was ${S.mvp(stats, a)}, wanted the top score (${top})`);
+  if (a[3].total <= a[4].total) probs.push('the clean DPS did not beat the one who died');
+  if (a[4].total >= a[3].total) probs.push('avoidable hits and a death did not lower a score');
+  // a tie goes to fewer deaths, then more raises
+  const tie = { 1: mk('dps', { damage: 100, deaths: 1 }), 2: mk('dps', { damage: 100, deaths: 0 }) }, ts = { 1: { total: 50 }, 2: { total: 50 } };
+  if (S.mvp(tie, ts) !== 2) probs.push('tie did not go to the fewer deaths');
+  const aw = S.awards(stats, a, { clear: true, time: 300 }), names = aw.map(x => x.k);
+  if (!names.includes('ironwall') || aw.find(x => x.k === 'ironwall').who !== 1) probs.push('Iron Wall missing');
+  if (!names.includes('lifeline') || !names.includes('secondwind')) probs.push('Lifeline / Second Wind missing');
+  if (S.awards(stats, a, { clear: false, time: 300 }).some(x => x.k === 'closer' || x.k === 'spotless')) probs.push('a wipe showed Closer or Spotless');
+  const row = S.pack(3, stats[3]), back = S.unpack(row, { role: 'dps' });
+  if (back.damage !== 6000 || back.burst !== 8 || back.closer !== 900) probs.push('pack/unpack does not round-trip');
+  const rec = S.record(stats, a, { boss: 'grubnak', mode: 'normal', clear: true, time: 300, at: 1, awards: aw });
+  if (JSON.stringify(rec).length > 1500) probs.push(`Logbook record is ${JSON.stringify(rec).length} bytes`);
+  if (probs.length) fail('Contribution points score sensibly', probs.join('\n')); else pass('Contribution points score sensibly', `MVP, ${aw.length} awards, record ${JSON.stringify(rec).length} bytes`);
+}
+
 // ---------------------------------------------------------------- 2. data and shared math
 function data() {
   const load = p => require(path.join(ROOT, 'client/js', p));
@@ -605,6 +639,7 @@ async function heavy() {
 (async () => {
   const t0 = Date.now();
   syntax();
+  try { scoring(); } catch (e) { fail('Contribution points score sensibly', e.stack); }
   try { data(); } catch (e) { fail('Data checks ran', e.stack); }
   try { timelines(); } catch (e) { fail('Timelines checked', e.stack); }
   await heavy();

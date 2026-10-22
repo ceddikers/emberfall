@@ -62,10 +62,10 @@ class RaidHost {
     // a pull countdown someone started (pullIn): the boss engages when it runs out, if nobody hit it first
     if (this.pullAt != null) { this.pullAt -= dt; if (this.pullAt <= 0) { this.pullAt = null; this.sim.pull(); } }
     this.sim.tick(dt);
-    // the live meter: everyone's damage and healing so far, once a second
-    if (this.sim.state === 'live' && this.t - (this.lastMeter || -9) >= 1) {
+    // the live meter: everyone's damage, healing (overheal not counted) and damage taken so far, twice a second
+    if (this.sim.state === 'live' && this.t - (this.lastMeter || -9) >= 0.5) {
       this.lastMeter = this.t;
-      this.emit({ t: 'mtr', ft: +this.sim.t.toFixed(1), d: Object.entries(this.sim.stats).map(([id, st]) => [Number(id), Math.round(st.damage), Math.round(st.healing)]) });
+      this.emit({ t: 'mtr', ft: +this.sim.t.toFixed(1), d: Object.entries(this.sim.stats).map(([id, st]) => Scoring.pack(Number(id), st)) });
     }
     this.partyBuffs = this.partyBuffs.filter(b => b.end > this.sim.t);
     if (this.allyBuffs.length) this.allyBuffs = this.allyBuffs.filter(b => b.end > this.sim.t);
@@ -363,7 +363,7 @@ class RaidHost {
             break;
           }
           case 'damage':
-            host.onPlayerEvent(bot.id, Object.assign({}, ev, { tgt: ev.tgt != null ? ev.tgt : bot.lastEnemy || 'boss' }));
+            host.onPlayerEvent(bot.id, Object.assign({}, ev, { tgt: ev.tgt != null ? ev.tgt : bot.lastEnemy || 'boss' }, ev.ab && (ev.ab.ult || ev.ab.ultOf) ? { ub: 1 } : null));
             break;
           case 'castStart':
             host.emit(Object.assign({ t: 'castStart', id: bot.id, i: actor.abilities.indexOf(ev.ab), dur: ev.dur }, ev.h > 0 && typeof ev.target === 'number' ? { h: ev.h, to: ev.target } : null));
@@ -377,6 +377,7 @@ class RaidHost {
           }
           case 'fx':  // class moments (perfect block, overheat...) so every client can show them
             host.emit(Object.assign({ t: 'kfx', id: bot.id, k: ev.name, s: 1 }, ev.data ? { d: ev.data } : null));
+            if (ev.name === 'ult-spent') host.onPlayerEvent(bot.id, { type: 'ult' });
             break;
           case 'teleport': {
             const b = host.sim.boss, a = b.facing + Math.PI;

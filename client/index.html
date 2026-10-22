@@ -23,6 +23,7 @@
 <div id="chat-log"></div>
 <input id="chat-input" class="hidden" maxlength="120" placeholder="Say something… (Enter to send)" autocomplete="off">
 <button type="button" id="menu-chip" data-tip="Settings: keys, HUD layout, interface size, your data"><kbd>Esc</kbd> Menu</button>
+<button type="button" id="meter-btn" aria-label="Damage meter" data-tip="Damage meter"><svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path fill="currentColor" d="M2 13V9h2.6v4zM6.7 13V3h2.6v10zM11.4 13V6h2.6v7z"/></svg></button>
 <div id="help"><kbd>Right-click</kbd> move · <kbd>Left-click</kbd> interact · <kbd>Q</kbd><kbd>W</kbd><kbd>E</kbd><kbd>R</kbd><kbd>D</kbd><kbd>F</kbd> skills · <kbd>Space</kbd> dash · <kbd>Enter</kbd> chat</div>
 <div id="toast"></div>
 <div id="target-frame" class="hidden"></div>
@@ -100,6 +101,7 @@
 <script src="js/combat/gauges.js"></script>
 <script src="js/combat/hud.js"></script>
 <script src="js/arena/shapes.js"></script>
+<script src="js/arena/scoring.js"></script>
 <script src="js/arena/fight.js"></script>
 <script src="js/arena/bots.js"></script>
 <script src="js/arena/raid-host.js"></script>

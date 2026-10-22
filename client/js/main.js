@@ -325,11 +325,12 @@
   const SIM_EVENTS = new Set(['damage', 'heal', 'hot', 'shield', 'mit', 'raise', 'rewind', 'selfDamage', 'targetDebuff', 'partyBuff', 'allyBuff', 'snap', 'pool', 'brand', 'taunt', 'splash',
     'maw', 'ledger',   // (the Gorgemaw's jaw and the Oathbroker's Ledger: fight.js classEvent)
     'tie', 'snip', 'tighten', 'tapestry', 'tug',   // (the Threadweaver's threads: fight.js weaveEvent)
-    'lb']);   // (a Limit Break: fight.js limitBreak)
+    'lb',   // (a Limit Break: fight.js limitBreak)
+    'ult']);   // (an Ultimate pressed, for the contribution score: kitFx)
   const EV_FIELDS = ['type', 'amount', 'crit', 'target', 'ticks', 'interval', 'id', 'dur', 'tag', 'pct', 'kind', 'value', 'secs', 'threat', 'tgt', 'r', 'not',
     'up', 'sh', 'cl', 'pa', 'ps', 'pr', 'fol',   // (a thrown vial's splash: fight.js splash())
     'all', 'op', 'older', 'mark', 'freeze', 'drop', 'merge', 'hit', 'push', 'due', 'col', 'small', 'tithe', 'mult',   // (jaw and Ledger orders)
-    'pair', 'mx', 'st', 'dp', 'hm', 'seam', 'both', 'mit', 'keep'];   // (threads)
+    'pair', 'mx', 'st', 'dp', 'hm', 'seam', 'both', 'mit', 'keep', 'ub'];   // (threads; ub: a hit of an Ultimate or its window)
   function packEv(ev) {
     const o = {};
     for (const k of EV_FIELDS) if (ev[k] !== undefined) o[k] = ev[k];
@@ -391,7 +392,7 @@
         break;
       case 'fxLocal': playKitFx(player, ev.name, true, ev.data); break;   // a class moment only you see (an Ironpalm's Crisp press)
       case 'teleport': if (ev.where && ev.where !== 'behind') kitMove(ev); else teleportBehind(); break;
-      case 'fx': kitFx(ev.name, ev.data); break;
+      case 'fx': kitFx(ev.name, ev.data); if (ev.name === 'ult-spent' && inArena()) sendCombat({ type: 'ult' }); break;
       case 'damage': onMyDamage(ev); break;
       default:
         if (SIM_EVENTS.has(ev.type)) {
@@ -484,7 +485,7 @@
     if (inArena()) {
       // damage goes to whatever you last aimed at (DoTs keep ticking on your current target)
       const tgt = ev.tgt != null ? ev.tgt : lastEnemy && lastEnemy.id != null && lastEnemy.id !== 'dummy' ? lastEnemy.id : 'boss';
-      sendCombat(Object.assign({}, ev, { tgt }));
+      sendCombat(Object.assign({}, ev, { tgt }, ev.ab && (ev.ab.ult || ev.ab.ultOf) ? { ub: 1 } : null));
       // [boss presentation] the boss flinches at your blow (DoT ticks don't; a crit or an Ultimate harder; throttled)
       if (tgt === 'boss' && !ev.dot && ev.amount > 0 && raid.state === 'live') BOSS_VFX.bossHit(raid.bossDraw, ultHit ? 1 : ev.crit ? 0.75 : ev.auto ? 0.3 : 0.45);
       const at = enemyNow(tgt) || { x: raid.boss.x, y: raid.boss.y };
@@ -1405,6 +1406,8 @@
       if (SH) { SH.play('pull-go', { vol: 1 }); SH.music(SH.bossTrack(raid.def.id, raid.mode), { fade: 0.8 }); SH.phase(raid.def.id, raid.ph || 1); SH.vo('pull', { bossId: raid.def.id }); }
       return;
     }
+    if (msg.stats) raid.meter = { ft: msg.time, d: Object.entries(msg.stats).map(([id, st]) => Scoring.pack(Number(id), st)) };   // (the meter ends on the final tally)
+    if ((msg.s === 'clear' || msg.s === 'wipe') && msg.stats && !raid.def.trial && !raid.practice && !raid.fightLogged) { raid.fightLogged = true; Pastimes.logFight(msg, raid.def.id); }   // (the Logbook's Fights tab)
     raid.state = msg.s; raid.result = msg; raid.resultAt = now + (msg.s === 'clear' ? 3.4 : 2.8);   // [boss presentation] (after his fall / the wipe's beat)
     if (SH && (msg.s === 'clear' || msg.s === 'wipe')) { SH.castEnd(); SH.play(msg.s, { vol: 1 }); SH.music(msg.s === 'clear' ? 'mus-victory' : 'mus-wipe', { fade: 1, loop: false }); SH.vo(msg.s === 'clear' ? 'boss-death' : 'boss-wipe', { bossId: raid.def.id }); if (msg.s === 'clear') SH.vo('clear', { bossId: raid.def.id, classId: player.cls ? player.cls.id : null }); }
     if (player.cls && !raid.def.trial && !raid.practice && msg.s === 'clear') Journal.won(player.cls.id, raid.def.id);
@@ -2068,6 +2071,7 @@
   // a bound action that isn't a panel (keyboard or a mouse's side button)
   function runAction(a, e) {
     if (a === 'meter') { if (inArena()) RaidUI.toggleMeter(); return; }
+    if (a === 'metermode') { if (inArena() && !e.repeat) RaidUI.cycleMeter(); return; }
     if (a === 'focus') { if (!e.repeat) setFocus(); return; }
     if (a === 'limit') { if (inArena() && !e.repeat) useLimit(); return; }
     if (a === 'options') { if (Keybinds.panelOpen()) Keybinds.closePanel(); else openOptions(); return; }
@@ -2099,8 +2103,6 @@
     if (e.key === 'Tab') {
       e.preventDefault();
       if (document.activeElement && document.activeElement !== document.body && document.activeElement !== chatInput) document.activeElement.blur();
-      if (!panelOpen() && document.activeElement !== chatInput) cycleTarget(e.shiftKey ? -1 : 1);
-      return;
     }
     if (document.activeElement === chatInput) {
       if (e.key === 'Enter') { sendChat(chatInput.value); chatInput.value = ''; chatInput.blur(); chatInput.classList.add('hidden'); }
@@ -2123,11 +2125,11 @@
       return;
     }
     if (panelOpen()) return;
-    if (e.key === 'Enter') { chatInput.classList.remove('hidden'); chatInput.focus(); e.preventDefault(); return; }
-    if (e.code === 'Backquote') { e.preventDefault(); lockMostHurt(); return; }
-    if (/^[1-4]$/.test(e.key)) {
-      const list = partyOrder();
-      const pick = list[Number(e.key) - 1];
+    if (act === 'chat') { chatInput.classList.remove('hidden'); chatInput.focus(); e.preventDefault(); return; }
+    if (act === 'hurt') { e.preventDefault(); lockMostHurt(); return; }
+    if (act === 'cycle') { e.preventDefault(); cycleTarget(e.shiftKey ? -1 : 1); return; }
+    if (act && /^ally[1-4]$/.test(act)) {
+      const pick = partyOrder()[Number(act.slice(4)) - 1];
       if (pick != null) lockedAlly = pick;
       return;
     }

@@ -94,7 +94,7 @@ class FightSim {
       hp, maxHp: hp, x: sp.x, y: sp.y, facing: Math.PI / 2, target: null, cast: null, anim: null, untargetable: false,
       vuln: 0, vulnEnd: 0, autoAt: 4, moveTo: null, speed: 140, dmgUp: 0, anchor: !!def.anchor,
     };
-    this.stats = {};
+    this.stats = {}; this.lastHit = {}; this.saveAt = {};   // (lastHit: when each player last hurt the boss or an add; saveAt: when an ally was last pulled back from the brink)
     for (const p of getPlayers()) this.addPlayer(p);
     this.lastBroadcast = -1; this.lastPartyBroadcast = -1;
     // what stands in the room from the start (Skitterra's pillars, the Hollow King's braziers, Volkar's stones)
@@ -114,7 +114,12 @@ class FightSim {
     const maxHp = Math.round((playerBaseHp(p.role) + Math.max(0, Math.min(150, gear.hp || 0))) * (1 + (this.hpPct || 0)));
     this.ps.set(p.id, { id: p.id, role: p.role, hp: maxHp, maxHp, alive: true, def: Math.max(0, Math.min(0.1, (gear.def || 0) / 1000)), shield: 0, shieldEnd: 0, shieldMax: 0, shieldFrom: null, shieldTag: null,
       mits: [], threat: p.role === 'tank' ? 1 : 0, vuln: 0, vulnEnd: 0, dmgDownEnd: 0, weakEnd: 0, hots: [], debuffs: {}, hist: [], diedAt: -99 });
-    this.stats[p.id] = { damage: 0, healing: 0, overheal: 0, taken: 0, mitigated: 0, deaths: 0, avoidable: 0, name: p.name, role: p.role, cls: p.cls, bot: !!p.bot };
+    this.stats[p.id] = { damage: 0, healing: 0, overheal: 0, taken: 0, mitigated: 0, deaths: 0, avoidable: 0,
+      // contribution tracking (scoring.js): seconds as the boss's target, seconds of damage landed on it, towers/stacks soaked, raises given,
+      // allies lifted from low health, perfect blocks/reads, tankbusters taken, Ultimates and burst-window hits, wards put up on allies,
+      // damage dealt while the boss was in its last 20%
+      aggro: 0, up: 0, soaked: 0, raises: 0, saves: 0, perfects: 0, busters: 0, ults: 0, burst: 0, wards: 0, closer: 0,
+      name: p.name, role: p.role, cls: p.cls, bot: !!p.bot };
   }
   removePlayer(id) { const s = this.ps.get(id); if (s) { s.alive = false; s.left = true; } }
 
@@ -325,6 +330,7 @@ class FightSim {
     for (const fn of this.tickers) fn(dt);
     if (this.updateClass) this.updateClass(dt);   // Ledgers coming due (end of this file)
     this.weaveTick(dt); this.dollTick(dt);   // classes-c: threads and Dolls (block at the end of this file)
+    for (const id in this.lastHit) if (this.t - this.lastHit[id] <= 2.5) this.stats[id].up += dt;   // (seconds with a blow on the boss or an add in the last 2.5 s)
     this.updatePlayers(dt);
     if (this.state !== 'live') return;
     if (this.alive().length === 0) return this.end('wipe');
@@ -359,6 +365,7 @@ class FightSim {
     this.events = []; this.broadcastNext(true);
     this.broadcastAdds();
     this.broadcastParty();
+    for (const st of Object.values(this.stats)) { st.aggro = Math.round(st.aggro * 10) / 10; st.up = Math.round(st.up * 10) / 10; }
     this.emit({ t: 'fight', s: result, time: Math.round(this.t * 10) / 10, stats: this.stats, hp: this.boss.hp, maxHp: this.boss.maxHp, mode: this.mode, ph: this.phase || 1 });
   }
 
@@ -368,6 +375,7 @@ class FightSim {
     if (b.anim && this.t >= b.anim.end) b.anim = null;
     const tank = this.tank();
     b.target = tank ? tank.id : null;
+    if (b.target != null && this.stats[b.target]) this.stats[b.target].aggro += dt;   // (aggro seconds: scoring.js)
     // stuck in a wall after a charge, or held by a Time Stop (pauseBoss): no walking, turning or autos (a scripted
     // move already under way, moveTo, still finishes)
     const stunned = b.stunUntil > this.t || b.pauseUntil > this.t;
@@ -449,7 +457,7 @@ class FightSim {
         // ev.tgt names the enemy it was aimed at: 'boss' (or nothing) or an add's id
         if (ev.tgt != null && ev.tgt !== 'boss') {
           const a = this.adds.get(ev.tgt);
-          if (a) this.damageAdd(pid, a, amt, this.threatMult(s, ev));
+          if (a) { this.damageAdd(pid, a, amt, this.threatMult(s, ev)); this.lastHit[pid] = this.t; if (ev.ub) st.burst++; }
           break;
         }
         if (this.boss.untargetable) return;
@@ -458,10 +466,14 @@ class FightSim {
         this.boss.hp = Math.max(0, this.boss.hp - amt);
         this.burstBrand(pid);
         st.damage += amt;
+        this.lastHit[pid] = this.t;
+        if (ev.ub) st.burst++;   // (a hit of an Ultimate or its window)
+        if (this.boss.hp <= this.boss.maxHp * 0.2) st.closer += amt;
         s.threat += amt * this.threatMult(s, ev);
         if (this.boss.hp <= 0) this.end('clear');
         break;
       }
+      case 'ult': st.ults++; break;   // (an Ultimate pressed: main.js kitFx, raid-host bots)
       case 'heal': {
         const tid = ev.target === 'party' ? null : this.resolveTarget(pid, ev.target, ev.not);
         this.applyHeal(pid, tid, ev.amount, ev.target === 'party');
@@ -478,6 +490,7 @@ class FightSim {
       case 'shield':
         for (const tid of targetsOf(ev.target)) {
           const ts = this.ps.get(tid); if (!ts || !ts.alive) continue;
+          this.ward(pid, tid, ts, true);
           if (ts.shield > 0) this.endShield(tid, ts);
           ts.shield = Math.min(ev.amount | 0, ts.maxHp); ts.shieldMax = ts.shield; ts.shieldEnd = this.t + Math.min(30, ev.dur || 15);
           ts.shieldFrom = pid; ts.shieldTag = ev.tag || null;
@@ -486,6 +499,7 @@ class FightSim {
       case 'mit':
         for (const tid of targetsOf(ev.target)) {
           const ts = this.ps.get(tid); if (!ts || !ts.alive) continue;
+          this.ward(pid, tid, ts, true);
           ts.mits.push({ pct: Math.max(0, Math.min(1, ev.pct)), start: this.t, end: this.t + Math.min(30, ev.dur || 5), kind: ev.kind, from: pid });
         }
         break;
@@ -597,6 +611,7 @@ class FightSim {
   }
 
   revive(tid, ts, frac, by, rewound) {
+    const rs = this.stats[by]; if (rs && by !== tid) rs.raises++;
     ts.alive = true; ts.hp = Math.round(ts.maxHp * Math.max(0.1, Math.min(1, frac)));
     ts.weakEnd = rewound ? 0 : this.t + 20; ts.threat = ts.role === 'tank' ? 1 : 0; ts.hist = []; this.dropThreat(tid);
     ts.mits.push({ pct: 1, start: this.t, end: this.t + FIGHT.REVIVE_SAFE, kind: 'invuln', from: by });   // a moment to find their feet
@@ -609,6 +624,7 @@ class FightSim {
       const s = p.s;
       const amt = Math.max(0, Math.min(8000, amount | 0));
       const real = Math.min(amt, s.maxHp - s.hp);
+      if (real >= s.maxHp * 0.05) this.ward(fromId, p.id, s, false);
       s.hp += real;
       const st = this.stats[fromId];
       if (st) { st.healing += real; st.overheal += amt - real; }
@@ -616,6 +632,15 @@ class FightSim {
       if (fromId !== p.id && p.id < 1000 && amt >= 1) this.emit({ t: 'pheal', id: p.id, a: amt });
       const fs = this.ps.get(fromId); if (fs && fs.alive) fs.threat += real * FIGHT.HEAL_THREAT;
     }
+  }
+
+  // Contribution tracking: an ally below a quarter of their health lifted by a heal, shield or cut from someone else is a
+  // save (one per ally per 10 s); a shield or cut put on an ally counts as a ward (scoring.js)
+  ward(by, tid, ts, put) {
+    const st = this.stats[by];
+    if (!st || by === tid) return;
+    if (put) st.wards++;
+    if (ts.hp < ts.maxHp * 0.25 && this.t - (this.saveAt[tid] ?? -99) >= 10) { this.saveAt[tid] = this.t; st.saves++; }
   }
 
   endShield(tid, s) {
@@ -667,6 +692,7 @@ class FightSim {
       mult *= 1 - m.pct;
     }
     if (invuln) mult = 0;
+    if (perfect || read || reflect) this.stats[p.id].perfects++;   // (a Brace, Read or Reflect that caught the hit)
     if (perfect) {
       s.mits = s.mits.filter(m => m !== perfect);
       this.emit({ t: 'fev', k: 'perfect', id: p.id, b: opts.kind === 'buster' ? 1 : 0 });   // (b: a tankbuster, for Bastion's turned blow)
@@ -891,6 +917,7 @@ class FightSim {
         const owner = this.alive().find(p => p.id === m.target);
         for (const p of inside) if (p.id !== m.target) hit(p, m.otherDmg ?? m.dmg * 0.6, m.tag || 'own', true);
         if (owner && !inside.some(p => p.id === owner.id)) { fail = 1; hit(owner, m.dmg, m.tag || 'own', true); }
+        else if (owner) this.stats[owner.id].soaked++;
         break;
       }
       // 'safe' (a harmless area, not drawn: sim data for bots) and 'drop' (a marker on a player; its onResolve does the work) hit nobody
@@ -903,6 +930,7 @@ class FightSim {
         const need = Math.min(m.need || 1, this.alive().length);
         if (!inside.length) { fail = 1; for (const p of this.alive()) hit(p, m.dmg * 0.6, 'stack-miss', true); break; }
         if (inside.length < need) fail = 1;
+        else for (const p of inside) this.stats[p.id].soaked++;
         const each = m.dmg / inside.length * (inside.length < need ? 1.5 : 1);
         for (const p of inside) hit(p, each, 'stack', false);
         break;
@@ -914,6 +942,7 @@ class FightSim {
         const need = Math.min(m.need || 1, Math.max(1, this.alive().length));
         for (const p of inside) hit(p, m.dmg, 'tower', false);
         if (inside.length < need) { fail = 1; for (const p of this.alive()) hit(p, m.failDmg || m.dmg * 2, 'tower-fail', false); }
+        else for (const p of inside) this.stats[p.id].soaked++;
         break;
       }
       case 'buster': {
@@ -922,7 +951,7 @@ class FightSim {
           if (tgt && p.id === tgt.id) continue;
           hit(p, m.dmg * 0.7, 'cleave', true);
         }
-        if (tgt) hit(tgt, m.dmg, 'buster', false);
+        if (tgt) { hit(tgt, m.dmg, 'buster', false); if (tgt.s.alive) this.stats[tgt.id].busters++; }
         break;
       }
       case 'proximity':

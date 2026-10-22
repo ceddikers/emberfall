@@ -9,7 +9,7 @@ const path = require('path');
 const load = (p) => require(path.join(__dirname, '../client/js', p));
 Object.assign(global, load('arena/shapes.js'), load('data.js'), load('combat/engine.js'), load('combat/kits.js'), load('combat/specs.js'),
   load('combat/actor.js'), load('arena/fight.js'), load('arena/bots.js'));
-Object.assign(global, load('arena/raid-host.js'));
+Object.assign(global, load('arena/scoring.js'), load('arena/raid-host.js'));
 const { GRUBNAK } = load('arena/bosses/grubnak.js');
 const { SKITTERRA } = load('arena/bosses/skitterra.js');
 const { VOLKAR } = load('arena/bosses/volkar.js');
@@ -119,6 +119,11 @@ for (let r = 0; r < runs; r++) {
   totDeaths += deaths.length; if (host.sim.state === 'clear') totClearT += dur;
   log(`run ${r + 1}: ${host.sim.state} at ${dur.toFixed(0)}s, boss ${(host.sim.boss.hp / host.sim.boss.maxHp * 100).toFixed(1)}%, phase ${host.sim.phase}, deaths: ${deaths.join(', ') || 'none'}`);
   log('   ' + Object.values(st).map(s => `${s.name}/${s.cls}: ${(s.damage / dur).toFixed(0)} dps, ${(s.healing / dur).toFixed(0)} hps, avoidable ${s.avoidable}, deaths ${s.deaths}`).join('\n   '));
+  // contribution points (scoring.js): the MVP on a clear, and with SCORE=1 each player's points, raw tracking and the awards
+  const sc = Scoring.score(st, { time: dur }), mv = host.sim.state === 'clear' ? Scoring.mvp(st, sc) : null;
+  if (process.env.SCORE) log('   ' + Object.entries(st).map(([id, s]) => `${s.name}/${s.role} ${sc[id].total} pts ${JSON.stringify(Object.fromEntries(Object.entries(sc[id].pts).map(([k, v]) => [k, Math.round(v)])))} pen ${sc[id].pen.avoid}/${sc[id].pen.deaths} | ` +
+    Scoring.KEYS.filter(k => !['avoidable', 'deaths'].includes(k)).map(k => `${k} ${s[k]}`).join(' ')).join('\n   '));
+  if (mv != null) log(`   MVP: ${st[mv].name} (${st[mv].cls}) ${sc[mv].total} pts` + (process.env.SCORE ? '; awards ' + Scoring.awards(st, sc, { clear: true, time: dur }).map(a => `${a.name}: ${st[a.who].name}`).join(', ') : ''));
   if (Object.keys(kinds).length) log('   failed: ' + Object.entries(kinds).map(([k, n]) => `${k} ${n}`).join(', '));
 }
 log(`cleared ${clears} of ${runs}`);

@@ -4,7 +4,8 @@
 //   The bounty board (BOUNTIES in bounty-data.js): three notices a week, gold for each one done.
 //   Fishing (FISH in fish-data.js): cast into the pond, wait for the bite, click. The angler buys your catch.
 //   Emotes: /sit /wave /dance /cheer /bow /point /laugh in chat.
-//   The Logbook (L): feats (and your title), secrets found, the Armory (every item you've held), your catch.
+//   The Logbook (L): feats (and your title), secrets found, the Armory (every item you've held), your catch, and your last fights
+//   (the contribution points of everyone in them: scoring.js).
 //   The story (STORY in story-data.js): a prologue on your first visit, why things are as they are.
 // Progress lives in the save under 'pastimes'.
 
@@ -408,7 +409,7 @@ const Pastimes = (() => {
     const el = document.getElementById('pt-book');
     if (!el || el.classList.contains('hidden')) return;
     const s = st();
-    const tabs = [['feats', 'Feats'], ['secrets', 'Secrets'], ['armory', 'Armory'], ['catch', 'Catch']];
+    const tabs = [['feats', 'Feats'], ['secrets', 'Secrets'], ['armory', 'Armory'], ['catch', 'Catch'], ['fights', 'Fights']];
     let body = '';
     if (bookTab === 'feats') {
       const fs = FEATS_(), got = fs.filter(f => s.feats[f.id]).length, titles = fs.filter(f => f.title && s.feats[f.id]);
@@ -423,15 +424,49 @@ const Pastimes = (() => {
       const keys = Object.keys(ITEMS).filter(k => !ITEMS[k].gift && ITEMS[k].tier > 0), seen = new Set([...Object.keys(s.seenItems), ...deps.items().map(i => i.key)]);
       const have = keys.filter(k => seen.has(k)).length;
       body = `<p class="pt-note">${have} of ${keys.length} pieces held at least once.</p><div class="pt-armory">${keys.map(k => { const it = ITEMS[k], on = seen.has(k); return `<i class="${on ? 'on' : ''}" style="--rc:${RARITY[it.rarity].color}${on ? `;background-image:url(${deps.iconURL(k)})` : ''}" data-tip="${on ? esc(it.name) : '???'}"></i>`; }).join('')}</div>`;
+    } else if (bookTab === 'fights') {
+      body = fightsHtml();
     } else {
       const fish = FISH_();
       body = `<p class="pt-note">Caught ${stat('fish')} in all. Sell your catch to the angler by the pond.</p><div class="pt-feats">${fish.map(f => { const n = s.stats['fish:' + f.id] || 0; return n ? `<div class="pt-feat got r${f.rarity | 0}"><b>${esc(f.name)}</b><span>${esc(f.desc)}</span><em>Caught ${n}</em></div>` : `<div class="pt-feat"><b>???</b><span>${['Common', 'Uncommon', 'Rare', 'Legendary'][f.rarity | 0]}</span></div>`; }).join('')}</div>`;
     }
     el.querySelector('.pt-body').innerHTML = `<nav class="pt-tabs">${tabs.map(([k, n]) => `<button type="button" data-tab="${k}" class="${bookTab === k ? 'on' : ''}">${n}</button>`).join('')}</nav>${body}`;
     el.querySelectorAll('[data-tab]').forEach(b => b.addEventListener('click', () => { bookTab = b.dataset.tab; renderBook(); }));
+    el.querySelectorAll('.pt-fight').forEach(d => d.addEventListener('toggle', () => { if (d.open) openFight = d.dataset.at; else if (openFight === d.dataset.at) openFight = null; }));
     const pick = el.querySelector('.pt-title-pick');
     if (pick) pick.addEventListener('change', () => setTitle(pick.value));
   }
+
+  // ---------------------------------------------------------------- fights in the Logbook
+  // The last few fights, newest first, each with every player's contribution points by category (Scoring.record: compact, whole
+  // numbers). A fight is kept for real pulls only (not trials or practice). The end screen shows only the MVP and awards.
+  const FIGHTS_KEPT = 10;
+  let openFight = null;
+  function logFight(msg, boss) {
+    if (typeof Scoring === 'undefined' || !msg || !msg.stats) return;
+    const clear = msg.s === 'clear', time = Number(msg.time) || 0, sc = Scoring.score(msg.stats, { time });
+    const rec = Scoring.record(msg.stats, sc, { boss, mode: msg.mode, clear, time, at: Date.now(), awards: Scoring.awards(msg.stats, sc, { clear, time }) });
+    const s = st();
+    s.fights = [rec, ...(Array.isArray(s.fights) ? s.fights : [])].slice(0, FIGHTS_KEPT);
+    commit();
+    renderBook();
+  }
+  function fightsHtml() {
+    const list = Array.isArray(st().fights) ? st().fights : [];
+    if (!list.length) return '<p class="pt-note">Your last fights will be written here, with what everyone contributed: points for damage, healing, holding the boss, soaking mechanics, raising the fallen, and more.</p>';
+    const bossName = id => { const b = typeof BOSSES !== 'undefined' ? BOSSES.find(x => x.id === id) : null; return b ? b.name : 'A fight'; };
+    const crown = '<i class="crown"><svg viewBox="0 0 16 12" aria-hidden="true"><path d="M1.5 10.5 0.8 3.2 4.6 6.4 8 1.5 11.4 6.4 15.2 3.2 14.5 10.5Z" fill="currentColor"/></svg></i>';
+    const mmss = t => `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
+    const label = Scoring.LABEL;
+    return `<p class="pt-note">Contribution points by role, out of 100. Your last ${FIGHTS_KEPT} fights.</p><div class="pt-fights">${list.map(f => {
+      const when = new Date(f.at || 0), mv = f.mvp >= 0 && f.p[f.mvp] ? f.p[f.mvp][0] : '';
+      return `<details class="pt-fight" data-at="${f.at}"${openFight === String(f.at) ? ' open' : ''}><summary><b>${esc(bossName(f.b))}</b><span>${f.m === 'hard' ? 'Hard' : 'Normal'} · ${f.c ? 'Cleared' : 'Wiped'} · ${mmss(f.t)}</span><em>${f.at ? when.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : ''}</em></summary><div class="pf-body">${f.p.map(([name, cls, role, total, pts, av, de], i) => `
+        <div class="pf-p"><i style="background:${(typeof ROLES !== 'undefined' && ROLES[role] ? ROLES[role].color : '#999')}"></i><b>${esc(name)}${i === f.mvp ? crown : ''}<em>${esc((typeof CLASSES !== 'undefined' && CLASSES.find(c => c.id === cls) || {}).name || '')}</em></b><strong>${total}</strong>
+          <p>${Object.entries(pts).map(([k, v]) => `<u>${label[k] || k}<b>${v}</b></u>`).join('')}${av ? `<u class="neg">Avoidable hits<b>-${Math.min(18, av * Scoring.PENALTY.avoid.each)}</b></u>` : ''}${de ? `<u class="neg">Deaths<b>-${Math.min(21, de * Scoring.PENALTY.deaths.each)}</b></u>` : ''}</p></div>`).join('')}
+        ${f.aw && f.aw.length ? `<p class="pf-aw">${f.aw.map(([k, i]) => `<span>${esc(AWARD_NAMES[k] || k)}<b>${esc(f.p[i] ? f.p[i][0] : '')}</b></span>`).join('')}</p>` : ''}</div></details>`;
+    }).join('')}</div>`;
+  }
+  const AWARD_NAMES = { heavy: 'Heavy Hitter', closer: 'Closer', ironwall: 'Iron Wall', lifeline: 'Lifeline', secondwind: 'Second Wind', surefooted: 'Sure Footed', spotless: 'Spotless' };
 
   // ---------------------------------------------------------------- the story
   function storyPages(which, done) {
@@ -477,5 +512,5 @@ const Pastimes = (() => {
     for (const k of [-0.62, -0.2, 0.2, 0.62]) COLLIDERS.circles.push({ x: POND.x + k * POND.rx, y: POND.y, r: POND.ry * (1 - Math.abs(k) * 0.35) });
     checkFeats(true);
   }
-  return { init, event, update, drawGround, drawOver, interactables, pondClick, emote, emoteLook, emoteWordA, EMOTES, title, setTitle, openBook, closeAll, anyOpen, openFishShop, storyOpen, grantFeat, fishing: () => !!rod, rod: () => rod, notice };
+  return { init, event, update, drawGround, drawOver, interactables, pondClick, emote, emoteLook, emoteWordA, EMOTES, title, setTitle, openBook, logFight, closeAll, anyOpen, openFishShop, storyOpen, grantFeat, fishing: () => !!rod, rod: () => rod, notice };
 })();

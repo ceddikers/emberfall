@@ -427,26 +427,83 @@ const RaidUI = (() => {
   }
 
   // ---------------------------------------------------------------- the live meter (M)
-  // Everyone's damage (or healing) per second so far, from the host once a second. Click the header to switch.
-  let meterOn = false, meterHeal = false, meterKey = '';
-  try { meterOn = localStorage.getItem('emberfall.meter') === '1'; } catch (e) { /* off */ }
-  function toggleMeter() { meterOn = !meterOn; meterKey = ''; try { localStorage.setItem('emberfall.meter', meterOn ? '1' : '0'); } catch (e) { /* not remembered */ } }
+  // Everyone's running tally from the host twice a second (raid.meter: Scoring.pack rows, [id, damage, healing, taken, ...], at fight time ft).
+  // Rates are the total over the fight so far. Damage, Healing, Output (both, stacked: a healer's smite and heals
+  // add up), Damage taken, and Score (contribution points so far, scoring.js: partial until the fight ends); click a tab or
+  // press the view key. On and view are saved with the settings.
+  const METER_MODES = [['dmg', 'Damage'], ['heal', 'Heal'], ['out', 'Output'], ['taken', 'Taken'], ['score', 'Score']];
+  let meterOn = true, meterMode = 'dmg', meterKey = '', meterLoaded = false;
+  function meterLoad() {
+    if (meterLoaded || typeof Save === 'undefined') return;
+    meterLoaded = true;
+    const v = Save.setting('meter', null);
+    if (v && typeof v === 'object') { meterOn = v.on !== false; if (METER_MODES.some(m => m[0] === v.mode)) meterMode = v.mode; }
+  }
+  function meterSave() { meterKey = ''; if (typeof Save !== 'undefined') Save.setSetting('meter', { on: meterOn, mode: meterMode }); syncMeterBtn(); }
+  function toggleMeter() { meterLoad(); meterOn = !meterOn; meterSave(); }
+  function setMeterMode(m) { meterLoad(); meterMode = m; meterOn = true; meterSave(); }
+  function cycleMeter() { meterLoad(); if (!meterOn) { meterOn = true; meterSave(); return; } setMeterMode(METER_MODES[(METER_MODES.findIndex(m => m[0] === meterMode) + 1) % METER_MODES.length][0]); }
+  function syncMeterBtn() { const b = $('meter-btn'); if (b) { b.classList.toggle('on', meterOn); b.dataset.tip = `Damage meter: ${meterOn ? 'shown' : 'hidden'} (${typeof Keybinds !== 'undefined' ? Keybinds.label(Keybinds.keyFor('meter')) : 'M'}). ${typeof Keybinds !== 'undefined' ? Keybinds.label(Keybinds.keyFor('metermode')) : 'B'} switches the view.`; } }
+  function meterBtn() {
+    const b = $('meter-btn');
+    if (!b || b._wired) return;
+    b._wired = true; meterLoad(); syncMeterBtn();
+    b.addEventListener('mousedown', e => e.stopPropagation());
+    b.addEventListener('click', toggleMeter);
+  }
+  const rate = n => (n >= 10000 ? (n / 1000).toFixed(1) + 'k' : fmt(n));
   function liveMeter(raid, myId) {
+    meterLoad(); meterBtn();
     let el = $('live-meter');
     if (!el) {
       el = document.createElement('div'); el.id = 'live-meter'; el.className = 'hidden'; root.appendChild(el);
-      el.addEventListener('mousedown', e => { e.stopPropagation(); if (e.target.closest('h6')) { meterHeal = !meterHeal; meterKey = ''; } });
+      el.addEventListener('mousedown', e => {
+        e.stopPropagation();
+        const t = e.target.closest('[data-m]');
+        if (t) setMeterMode(t.dataset.m);
+      });
     }
     const m = raid.meter, show = meterOn && !!m && (raid.state === 'live' || raid.state === 'clear' || raid.state === 'wipe');
     el.classList.toggle('hidden', !show);
     if (!show) return;
-    const ft = Math.max(1, m.ft), rows = m.d.map(([id, d, h]) => ({ id, v: (meterHeal ? h : d) / ft, r: roster.find(x => x.id === id) })).filter(x => x.r && (x.v > 0 || !meterHeal)).sort((a, b) => b.v - a.v);
-    const top = rows.length ? Math.max(1, rows[0].v) : 1;
-    const key = (meterHeal ? 'h' : 'd') + rows.map(x => x.id + ':' + Math.round(x.v)).join('|');
+    const ft = Math.max(1, m.ft || 0), b = raid.boss, enr = raid.def.enrage && raid.def.enrage[raid.mode];
+    // Score: the same function that picks the MVP, on the stats so far
+    const scoreOn = meterMode === 'score';
+    let sc = null;
+    if (scoreOn) {
+      const stats = {};
+      for (const row of m.d) { const r = roster.find(x => x.id === row[0]); if (r) stats[row[0]] = Scoring.unpack(row, { role: r.role }); }
+      sc = Scoring.score(stats, { time: ft });
+    }
+    const rows = m.d.map(([id, d, h, tk]) => ({ id, d: d / ft, h: h / ft, tk: tk || 0, r: roster.find(x => x.id === id) })).filter(x => x.r)
+      .map(x => ({ ...x, v: scoreOn ? (sc[x.id] ? sc[x.id].total : 0) : meterMode === 'dmg' ? x.d : meterMode === 'heal' ? x.h : meterMode === 'out' ? x.d + x.h : x.tk }))
+      .sort((a, c) => c.v - a.v || a.id - c.id);
+    const top = Math.max(1, rows.length ? rows[0].v : 1), sumD = rows.reduce((n, x) => n + x.d, 0), sumV = rows.reduce((n, x) => n + x.v, 0);
+    // what the party still has to do: the boss's health left over the time before the enrage
+    const left = b && b.mx > 0 ? Math.max(0, b.hp) : 0, tl = enr ? Math.max(0, enr - ft) : 0, live = raid.state === 'live' && left > 0;
+    const need = live && enr ? left / Math.max(1, tl) : 0;
+    const key = [meterMode, Math.round(ft), rows.map(x => `${x.id}:${Math.round(x.d)}:${Math.round(x.h)}:${x.tk}:${scoreOn ? x.v : ''}`).join('|'), live ? Math.round(left / 10) : 'e', myId].join(';');
     if (key === meterKey) return;
     meterKey = key;
-    el.innerHTML = `<h6>${meterHeal ? 'Healing' : 'Damage'}<span>per second</span></h6>` + rows.map(x => `
-      <div class="lm-row${x.id === myId ? ' me' : ''}" style="--rc:${ROLES[x.r.role].color}"><i style="width:${(x.v / top * 100).toFixed(1)}%"></i><span>${esc(x.r.name)}</span><b>${fmt(x.v)}</b></div>`).join('');
+    const unit = meterMode === 'taken' || scoreOn ? '' : '/s';
+    const tabs = METER_MODES.map(([k, n]) => `<button type="button" class="lm-tab${k === meterMode ? ' on' : ''}" data-m="${k}">${n}</button>`).join('');
+    const body = rows.map((x, i) => {
+      const w = x.v / top * 100, dw = meterMode === 'out' && x.v > 0 ? w * x.d / x.v : 0;
+      const bar = meterMode === 'out' ? `<i class="d" style="width:${dw.toFixed(1)}%"></i><i class="h" style="left:${dw.toFixed(1)}%;width:${(w - dw).toFixed(1)}%"></i>`
+        : `<i class="${meterMode === 'heal' ? 'h' : meterMode === 'taken' ? 't' : 'd'}" style="width:${w.toFixed(1)}%"></i>`;
+      const s0 = scoreOn && sc[x.id];
+      const tip = `<b>${esc(x.r.name)}</b><em>${esc(CLASSES.find(c => c.id === x.r.cls)?.name || '')}${x.r.bot ? ' · bot' : ''}</em>` + (s0
+        ? Object.entries(s0.pts).map(([k, v]) => `${Scoring.LABEL[k]} ${Math.round(v)}`).join('<br>') + (s0.pen.avoid ? `<br>Avoidable hits -${s0.pen.avoid}` : '') + (s0.pen.deaths ? `<br>Deaths -${s0.pen.deaths}` : '') + '<br><em>Live: settles when the fight ends</em>'
+        : `Damage ${fmt(x.d)}/s<br>Healing ${fmt(x.h)}/s<br>Taken ${fmt(x.tk)}`);
+      return `<div class="lm-row${x.id === myId ? ' me' : ''}" style="--rc:${ROLES[x.r.role].color}" data-tip="${esc(tip)}"><small>${i + 1}</small><i class="pf-role">${ROLE_GLYPH[x.r.role] || ''}</i><span>${esc(x.r.name)}</span><b>${scoreOn ? Math.round(x.v) : rate(x.v)}<u>${unit}</u></b><div class="lm-bar">${bar}</div></div>`;
+    }).join('');
+    // the pace: ahead of or behind the damage the boss's remaining health asks for before the enrage
+    let pace = '';
+    if (live) {
+      const proj = sumD > 0 ? left / sumD : Infinity, ok = enr ? sumD >= need : true;
+      pace = `<div class="lm-need ${ok ? 'ahead' : 'behind'}"><span>Boss ${fmt(left)}</span>${enr ? `<b>Need ${rate(need)}/s <em>${ok ? '▲' : '▼'}</em></b>` : `<b>${proj < 5999 ? mmss(proj) + ' to kill' : ''}</b>`}</div>${enr ? `<div class="lm-need"><span>Enrage in ${mmss(tl)}</span>${proj < 5999 ? `<b>Kill in ${mmss(proj)}</b>` : ''}</div>` : ''}`;
+    }
+    el.innerHTML = `<h6>${tabs}</h6>${body}<div class="lm-sum"><span>${mmss(ft)}</span><b>${scoreOn ? 'Contribution so far' : `Party ${rate(sumV)}${unit}`}</b></div>${pace}`;
   }
 
   // ---------------------------------------------------------------- the death recap
@@ -640,6 +697,7 @@ const RaidUI = (() => {
         <td>${fmt(s.taken)}</td><td>${s.avoidable}</td><td>${s.deaths}</td>
       </tr>`).join('');
     const report = mine ? personalReport(mine, msg.stats[myId], dur) : '';
+    const honors = honorsBlock(msg, clear, dur, myId);
     // who fell, when, and to what
     const deathName = d => d.k === 'enrage' ? (raid.def.enrageName || 'Enrage') : d.n || HIT_KIND[d.k] || d.cast || (d.k ? d.k[0].toUpperCase() + d.k.slice(1) : 'A hit');
     const deaths = (raid.deaths || []).map(d => ({ d, s: msg.stats[d.id] })).filter(x => x.s);
@@ -651,6 +709,7 @@ const RaidUI = (() => {
       <div class="res-card">
         <h2 class="${clear ? 'win' : 'lose'}">${clear ? 'Cleared' : 'Wiped'}</h2>
         <p class="res-sub">${esc(raid.def.name)} · ${msg.mode === 'hard' ? 'Hard' : 'Normal'} · ${mmss(dur)}${clear ? '' : ` · boss at ${(msg.hp / msg.maxHp * 100).toFixed(1)}%`}</p>
+        ${honors}
         <table class="res-table">
           <thead><tr><th>Player</th><th>Class</th><th>DPS</th><th>HPS</th><th>Taken</th><th data-tip="Hits from attacks that could have been avoided">Avoidable</th><th>Deaths</th></tr></thead>
           <tbody>${table}</tbody>
@@ -666,6 +725,19 @@ const RaidUI = (() => {
     el.classList.remove('hidden');
     el.querySelectorAll('button[data-a]').forEach(b => b.addEventListener('click', () => actions[b.dataset.a] && actions[b.dataset.a]()));
     el.querySelectorAll('.res-tl [data-t]').forEach(m => Tip.set(m, m.dataset.t));
+  }
+  // The MVP (a clear only) and the category awards, from the contribution points (scoring.js). Only what went well: a wipe
+  // shows the awards that were earned, or a quiet line. The full breakdown lives in the Logbook.
+  const CROWN = '<svg viewBox="0 0 16 12" aria-hidden="true"><path d="M1.5 10.5 0.8 3.2 4.6 6.4 8 1.5 11.4 6.4 15.2 3.2 14.5 10.5Z" fill="currentColor"/></svg>';
+  function honorsBlock(msg, clear, dur, myId) {
+    if (typeof Scoring === 'undefined' || !msg.stats) return '';
+    const sc = Scoring.score(msg.stats, { time: dur }), mv = clear ? Scoring.mvp(msg.stats, sc) : null;
+    const aw = Scoring.awards(msg.stats, sc, { clear, time: dur });
+    const who = id => msg.stats[id];
+    const mvp = mv != null ? `<p class="res-mvp${mv === myId ? ' me' : ''}" style="--rc:${ROLES[who(mv).role].color}"><i class="crown">${CROWN}</i><small>MVP</small><b>${esc(who(mv).name)}</b><em>${esc(CLASSES.find(c => c.id === who(mv).cls)?.name || '')} · ${sc[mv].total} contribution</em></p>` : '';
+    const row = aw.length ? `<div class="res-awards">${aw.map(a => `<span class="${a.who === myId ? 'me' : ''}" data-tip="${esc(`<b>${a.name}</b>${a.tip}`)}"><small>${a.name}</small><b>${esc(who(a.who).name)}</b></span>`).join('')}</div>`
+      : !clear ? '<p class="res-effort">Best effort</p>' : '';
+    return mvp || row ? `<div class="res-honors">${mvp}${row}</div>` : '';
   }
   // the pull at a glance: the boss's health over time, every cast he made (coloured by kind), and every death
   function castKind(raid, name, goal) {
@@ -735,5 +807,5 @@ const RaidUI = (() => {
       `<div class="rr ${cls}"><b>${n}</b><span>${esc(v)}</span><small>${esc(tip)}</small></div>`).join('')}</div>`;
   }
 
-  return { waymarks, prog, intro, toggleMeter, init, show, setRoster, update, meter, showResults, hideResults, dock, resetRoster: () => { rosterKey = ''; } };
+  return { waymarks, prog, intro, toggleMeter, cycleMeter, init, show, setRoster, update, meter, showResults, hideResults, dock, resetRoster: () => { rosterKey = ''; } };
 })();
