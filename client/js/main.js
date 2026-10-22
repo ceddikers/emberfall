@@ -76,6 +76,10 @@
   // (localStorage 'emberfall.unlockAll' = '1' opens everything, for testing.)
   const unlockAll = (() => { try { return localStorage.getItem('emberfall.unlockAll') === '1'; } catch (e) { return false; } })();
   function bossOpen(boss) { const i = BOSSES.indexOf(boss); return unlockAll || i <= 0 || Save.bossBeaten(BOSSES[i - 1].id); }
+  // Hard: locked until all four bosses have fallen on Normal, then it opens a boss at a time, starting with Grubnak
+  const hardUnlocked = () => unlockAll || BOSSES.filter(b => b.playable).every(b => Save.normalBeaten(b.id));
+  function hardOpen(boss) { const i = BOSSES.indexOf(boss); return unlockAll || (hardUnlocked() && (i <= 0 || Save.hardBeaten(BOSSES[i - 1].id))); }
+  const hardWhy = boss => { const i = BOSSES.indexOf(boss); return !hardUnlocked() ? 'Clear all four bosses on Normal first.' : `Beat ${BOSSES[i - 1].name} on Hard first.`; };
   const lastOpenBoss = () => [...BOSSES].reverse().find(b => b.playable && bossOpen(b)) || BOSSES[0];
   // the specializations stay a secret until the Hollow King has fallen once on this account
   const specsRevealed = () => unlockAll || Save.bossBeaten('hollowking');
@@ -940,6 +944,7 @@
   function startRaid(mode, fill, bossId = lastRaidOpts.boss, practiceFrom = 0) {
     Loot.hostClose();   // a chest from the last pull is settled first
     if (!Net.isHost || !player.cls) return;
+    if (mode === 'hard' && !hardOpen(BOSSES.find(b => b.id === bossId) || BOSSES[0])) mode = 'normal';   // (Hard stays locked)
     stopRaidHost();
     hostTrial = null;
     const def = RAID_DEFS[bossId] || GRUBNAK;
@@ -1101,7 +1106,7 @@
     practicePanel.innerHTML = `<header><h3>Practice Hall</h3><button type="button" class="close" aria-label="Close">×</button></header>
       <p class="pr-note">Any fight, from any phase. No loot, no clears; the progression record doesn't see it.${Net.isHost ? '' : ' Only the host can start one.'}</p>
       <h4>Fight</h4><div class="pr-row">${ids.map(id => `<button type="button" class="btn2${pk.boss === id ? ' on' : ''}" data-boss="${id}">${escapeHtml(RAID_DEFS[id] ? RAID_DEFS[id].name : id)}</button>`).join('')}</div>
-      <h4>Difficulty</h4><div class="pr-row">${['normal', 'hard'].map(m => `<button type="button" class="btn2${pk.mode === m ? ' on' : ''}" data-mode="${m}">${m === 'hard' ? 'Hard' : 'Normal'}</button>`).join('')}</div>
+      <h4>Difficulty</h4><div class="pr-row">${['normal', 'hard'].map(m => `<button type="button" class="btn2${pk.mode === m ? ' on' : ''}"${m === 'hard' && !hardOpen(BOSSES.find(b => b.id === pk.boss)) ? ' disabled data-tip="Hard is still locked"' : ''} data-mode="${m}">${m === 'hard' ? 'Hard' : 'Normal'}</button>`).join('')}</div>
       <h4>Start from</h4><div class="pr-phases">${PRACTICE_PHASES[pk.boss].map((n, i) => `<button type="button" class="pr-ph" data-ph="${i + 1}"${Net.isHost ? '' : ' aria-disabled="true"'}><i>${['I', 'II', 'III', 'IV', 'V', 'VI'][i]}</i><b>${escapeHtml(n)}</b></button>`).join('')}</div>`;
   }
   function closePractice() { if (practicePanel) practicePanel.classList.add('hidden'); }
@@ -3464,11 +3469,7 @@
           <p class="tagline">${boss.blurb}</p>${typeof STORY !== 'undefined' && STORY.bossLore && STORY.bossLore[boss.id] ? `<p class="lore">${escapeHtml(STORY.bossLore[boss.id])}</p>` : ''}
         </div>
       </div>
-      <ul class="abilities mech">${boss.mechanics.map(m => `<li><i class="mech-dot"></i><div><b>${m.name}</b><span>${Num.fill(m.desc)}</span></div></li>`).join('')}</ul>
-      ${boss.playable && typeof TUTORIAL !== 'undefined' && TUTORIAL.bosses[boss.id] ? `<button type="button" class="linkish brief-btn">Read the briefing: every move, and what to do</button>` : ''}
       <div class="raid-setup"></div>`;
-    const bb = det.querySelector('.brief-btn');
-    if (bb) bb.addEventListener('click', () => openTutorial(boss.id));
     const cv = det.querySelector('canvas');
     setupCanvas(cv, 260, 260);
     preview = { kind: 'boss', boss, cv, st: newSt(), nextDemo: now + 0.8 };
@@ -3478,19 +3479,21 @@
     const humans = raidHumans();
     const bots = raidFill ? pickBots(humans) : [];
     const canStart = Net.isHost && !!player.cls;
+    const bossDef = BOSSES.find(b => b.id === el.dataset.boss) || BOSSES[0], hardOk = hardOpen(bossDef);
+    if (!hardOk && raidMode === 'hard') raidMode = 'normal';
     const why = !Net.isHost ? 'Only the host can start the raid.' : !player.cls ? 'Pick a hero first.' : '';
     const extra = [...remotes.values()].filter(r => r.cls).length + (player.cls ? 1 : 0) > 4 ? '<p class="raid-note">Only the first four heroes go in.</p>' : '';
     el.innerHTML = `
       <div class="mode-pick">
         <button data-mode="normal" class="${raidMode === 'normal' ? 'on' : ''}"><b>Normal</b><small>Every attack is telegraphed on the floor.</small></button>
-        <button data-mode="hard" class="${raidMode === 'hard' ? 'on' : ''}"><b>Hard</b><small>Faster and deadlier, with attacks Normal never uses.</small></button>
+        <button data-mode="hard" class="${raidMode === 'hard' ? 'on' : ''}"${hardOk ? '' : ' disabled'}><b>Hard</b><small>${hardOk ? 'Faster and deadlier, with attacks Normal never uses.' : hardWhy(bossDef)}</small></button>
       </div>
       <label class="fill"><input type="checkbox" ${raidFill ? 'checked' : ''} ${Net.isHost ? '' : 'disabled'}> Fill empty slots with bots</label>
       <div class="raid-roster">${humans.map(h => `<span style="--c:${ROLES[h.role].color}">${escapeHtml(h.name)}<small>${CLASSES.find(c => c.id === h.cls).name}</small></span>`).join('')}${
         bots.map(id => { const c = CLASSES.find(x => x.id === id); return `<span class="bot" style="--c:${ROLES[c.role].color}">Bot<small>${c.name}</small></span>`; }).join('')}</div>
       ${extra}
       <button class="cta" ${canStart ? '' : 'disabled'}>${canStart ? `Start raid · ${raidMode === 'hard' ? 'Hard' : 'Normal'}` : why}</button>`;
-    el.querySelectorAll('.mode-pick button').forEach(b => b.addEventListener('click', () => { raidMode = b.dataset.mode; renderRaidSetup(el); }));
+    el.querySelectorAll('.mode-pick button:not([disabled])').forEach(b => b.addEventListener('click', () => { raidMode = b.dataset.mode; renderRaidSetup(el); }));
     el.querySelector('.fill input').addEventListener('change', e => { raidFill = e.target.checked; renderRaidSetup(el); });
     el.querySelector('.cta').addEventListener('click', () => startRaid(raidMode, raidFill, el.dataset.boss));
   }

@@ -339,6 +339,8 @@ const BossIcons = (() => {
     'Moonset': (c, A) => { disc(c, 32, 34, 18, '#cfe2ff'); disc(c, 40, 28, 15, '#0e1218'); fill(c, '#0e1218', [[0, 44], [64, 44], [64, 64], [0, 64]]); stroke(c, A, 3, [[6, 44], [58, 44]]); },
     'Doom Pass': (c, A) => { skull(c, 22, 32, 0.6, '#efe2ff'); stroke(c, L, 2.5, [[34, 32], [52, 32]]); fill(c, L, [[50, 26], [58, 32], [50, 38]]); },
   };
+  // moves that share a badge with their nearest sibling until they get their own
+  G['Cocoon Drop'] = G['Egg Sacs']; G['Sceptre Throw'] = G['Sceptre Sweep']; G['Grave Summons'] = G['Court of Bones'];
   function draw(bossId, name) {
     const cv = document.createElement('canvas'); cv.width = cv.height = 64;
     const c = cv.getContext('2d'), A = ACCENT[bossId] || '#e8c15a';

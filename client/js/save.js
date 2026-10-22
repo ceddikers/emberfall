@@ -168,6 +168,10 @@ const Save = (() => {
     // has any hero on this account cleared this boss (either difficulty)? The next boss opens on it, and the Hollow
     // King's first fall reveals the specializations.
     bossBeaten: bossId => Object.values(data.heroes).some(h => h && h.clears && h.clears[bossId] && (h.clears[bossId].normal | 0) + (h.clears[bossId].hard | 0) > 0),
+    // Hard opens once every boss has fallen on Normal (any hero on this account), then one boss at a time from Grubnak:
+    // each Hard fight opens on the Hard clear of the one before it.
+    normalBeaten: bossId => Object.values(data.heroes).some(h => h && h.clears && h.clears[bossId] && (h.clears[bossId].normal | 0) > 0),
+    hardBeaten: bossId => Object.values(data.heroes).some(h => h && h.clears && h.clears[bossId] && (h.clears[bossId].hard | 0) > 0),
     clears: (classId, bossId) => ((data.heroes[classId] || { clears: {} }).clears[bossId] || { normal: 0, hard: 0 }),
     // specializations: a hero's trials open once it has cleared the Hollow King (any difficulty), and passing a
     // spec's trial unlocks that spec for the hero (trials.js)
