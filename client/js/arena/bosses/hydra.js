@@ -30,7 +30,7 @@
 const HYDRA = {
   id: 'hydra', name: 'The Hydra', title: 'Mother of Nine Heads',
   hp: { normal: 3000000, hard: 4100000 },
-  autoDmg: { normal: 1500, hard: 1900 },
+  autoDmg: { normal: 1500, hard: 1650 },
   enrage: { normal: 612, hard: 622 },   // the cast starts here and lands 8 s later (10:20 / 10:30)
   enrageName: 'The Drowning',
   vuln: 0.5,
@@ -53,7 +53,7 @@ const HYDRA = {
     const B = f.boss;
     const TAU = Math.PI * 2;
     const dmg = {
-      cry: H ? 8200 : 7600, maul: H ? 26500 : 18000, gazeAll: H ? 20150 : 0, dance: H ? 12050 : 0, heart: H ? 12500 : 11500,
+      cry: H ? 7700 : 7600, maul: H ? 22000 : 18000, gazeAll: H ? 20150 : 0, dance: H ? 12050 : 0, heart: H ? 12500 : 11500,
       acid: H ? 12650 : 11500, pool: H ? 2100 : 2200, tide: H ? 14350 : 13000, bloom: H ? 24150 : 20000, bloomPool: H ? 1700 : 1700,
       flame: H ? 10100 : 9200, ember: H ? 2000 : 2000, frost: H ? 12050 : 11000, storm: H ? 10350 : 9500, gaze: H ? 16700 : 15000,
       mire: H ? 6450 : 5800, mirePool: H ? 1700 : 1700, sear: 1400, rise: H ? 7000 : 7500,

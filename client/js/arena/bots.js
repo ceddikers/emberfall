@@ -1718,7 +1718,9 @@ BOT_CLASS.thresher = {
       }
     }
     if (k.gcdRemaining() > 0 || k.cast || k.lockUntil > k.now) return null;
-    if (!k.ultWin && ok(reap) && on > 0 && (gold >= Math.max(2, on - 1) || (soon && gold >= 1) || rot >= 2)) return reap;
+    // an add in the scythe's arc as well as the main target: the Reap's wide cut pays twice, so it goes a little sooner
+    const crowd = k.env.enemiesNear ? k.env.enemiesNear(THRESH.ARC_R).length >= 2 : false;
+    if (!k.ultWin && ok(reap) && on > 0 && (gold >= Math.max(2, on - 1) || (soon && gold >= 1) || rot >= 2 || (crowd && gold >= Math.max(1, on - 2)))) return reap;
     return ok(slash) ? slash : null;
   },
 };

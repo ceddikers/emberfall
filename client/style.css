@@ -1370,7 +1370,7 @@ select option { background: #14100c; color: #ece4d4; }
 /* one close button for the small panels, one for the big pages */
 #callouts .close, #practice .close, #options .close, #journal .close, #tutorial .close, #dialogue .dl-x, #loot .loot-x { width: 24px; height: 24px; padding: 0; display: grid; place-items: center; font-size: 16px; line-height: 1; color: var(--muted); background: none; border: 1px solid transparent; border-radius: 2px; cursor: pointer; }
 #callouts .close:hover, #practice .close:hover, #options .close:hover, #journal .close:hover, #tutorial .close:hover, #dialogue .dl-x:hover, #loot .loot-x:hover { color: var(--gold-hi); border-color: var(--line); }
-.panel > .close { right: 14px; top: 14px; width: 32px; height: 32px; font-size: 20px; line-height: 1; border: 1px solid var(--line); background: var(--panel-2); border-radius: 3px; color: var(--muted); }
+.panel > .close { z-index: 5; right: 14px; top: 14px; width: 32px; height: 32px; font-size: 20px; line-height: 1; border: 1px solid var(--line); background: var(--panel-2); border-radius: 3px; color: var(--muted); }
 .panel > .close:hover { color: var(--gold-hi); border-color: var(--gold-dim); }
 .panel h2 { font-size: 20px; letter-spacing: .16em; text-transform: uppercase; }
 /* toasts sit above panels, and above the healers' party strip */

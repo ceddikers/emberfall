@@ -199,6 +199,10 @@
       for (const d of dummies) { const dist = Math.hypot(d.x - player.x, d.y - player.y) - 20; if (dist <= range && dist < bd) { bd = dist; best = d; } }
       return best ? { id: 'dummy', x: best.x, y: best.y, dummy: best } : null;
     },
+    enemiesNear: (a, range) => {
+      if (inArena()) return raid.state === 'live' ? arenaEnemies().filter(c => Math.hypot(c.x - player.x, c.y - player.y) - c.r <= range) : [];
+      return dummies.filter(d => Math.hypot(d.x - player.x, d.y - player.y) - 20 <= range).map(d => ({ id: 'dummy', x: d.x, y: d.y, r: 20 }));
+    },
     positional: () => {
       if (inArena()) return positionalOf(player, { x: raid.boss.x, y: raid.boss.y, facing: raid.boss.f });
       return lastEnemy ? positionalOf(player, { x: lastEnemy.x, y: lastEnemy.y, facing: Math.PI / 2 }) : 'front';

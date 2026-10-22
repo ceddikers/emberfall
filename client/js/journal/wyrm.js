@@ -3,7 +3,7 @@
   // the first time this hero meets him (after the first pull)
   meet: {
     bastion: "The dragon walks after whoever holds him, then leaves the ground altogether and comes back down where he likes. A line cannot hold what is not there. Learned to watch the sky. Gave ground.",
-    gloomsworn: "The Wyrm walks after whoever holds him, then leaves the ground altogether and comes back down where he likes. A line cannot hold what is not there. I learned to watch the sky.",
+    gloomsworn: "The Wyrm walks after whoever holds him, then leaves the ground altogether and comes down where he likes. A watch cannot hold what is not there. I learned to look up.",
     thresher: "Vhalgrath is weather with wings: drought on the ground, then hail out of a clear sky wherever he likes. I learned to watch where the embers drew his road down before he came. Nothing ripens on a hill that hot. Not yet.",
     bloodreaver: "Finally, one with real fire in him! Claws like plough blades, a breath that cooks the floor, and then he flew off before I'd finished enjoying it. Cheeky. I want him back on the ground.",
     runeguard: "The Wyrm keeps two courts, one on the ground and one in the air, and the omens differ between them. The air gives warning; the ground gives none that I have read yet. Not foreseen; now it will be.",
@@ -25,7 +25,7 @@
   // the first time this hero beats him
   win: {
     bastion: "The Wyrm is down. The line held the ground through the flights and the burning rim, and the crater is quiet. A long way past the Barrow, and still standing. Held.",
-    gloomsworn: "The Wyrm is down. The line held the ground through the flights and the burning rim, and the crater is quiet. A long way past the Barrow, and still standing. The watch is relieved.",
+    gloomsworn: "The Wyrm is down. We kept the ground through every flight and the burning rim, and the crater is quiet. A long road from the Barrow, and the watch is still standing. Relieved at last.",
     thresher: "Vhalgrath has come in at last, and the crater can lie fallow a while. I said a few kind words over him; he was old weather, and old weather earns them. Something new in me, not yet ripe.",
     bloodreaver: "The big one is down, and every scar he gave me is still warm. The best fire I have ever taken, and I took all of it. I will remember his heart opening for the rest of my life.",
     runeguard: "The Wyrm is judged, and the air with him. I read the sky at last: every line drawn before it was walked, every fire shown before it fell. As foreseen, finally.",
@@ -47,7 +47,7 @@
   moves: {
     "Tyrant's Roar": { hard: false, learned: {
       bastion: "He roared and it reached every one of us. Nothing to block, nowhere to stand that was not in it. I kept the line close to our healer, footing set, and took it standing. Held.",
-      gloomsworn: "He roared and it reached every one of us. Nothing to stop it, nowhere to stand that was not in it. I kept the line close to our healer, footing set, and we took it standing.",
+      gloomsworn: "He roared and it reached all of us, and there was nowhere to stand that was not in it. I kept us bunched near our healer, feet set, and we took it standing.",
       thresher: "His roar comes due on all of us at once, like hail on an open field, and there's no hedge to stand behind. I made sure I was whole before his throat swelled, and kept to my work through it.",
       bloodreaver: "The roar went through my ribs and every one of my friends' too. Barely a scratch for me, shameful, but they felt it, so I stayed near the one who mends and let them be topped up after.",
       runeguard: "The omen: his throat swells and the air shakes. The answer: it reaches the whole crater and no ward turns it, so each of us must be whole before it sounds. As foreseen.",
@@ -68,7 +68,7 @@
     } },
     'Rending Claws': { hard: false, learned: {
       bastion: "The claws came down on me alone, a wide rake in front of him. I waited for the shoulder to drop, shield up in the last instant, and kept the others out of the arc. Held.",
-      gloomsworn: "The claws came down on me alone, a wide rake in front of him. I waited for the shoulder to drop, drew the dark about me, and kept the others out of the arc.",
+      gloomsworn: "The claws came for me alone, a wide rake in front of him. I waited on the drop of his shoulder, wrapped the dark about me, and kept the others out of the arc.",
       thresher: "The claws come in on our knight, a wide rake across the front of him, like a harrow dragged the wrong way. I stayed at his flank, well out of the arc, and kept working his side. Not my row, that one.",
       bloodreaver: "The claws! A deep one across the front of him, and the wound stays good and open. Barely a scratch, shameful. I braced, took it, and answered it while it was fresh.",
       runeguard: "The omen: he rears and the near claw lifts. The answer: a ward a breath before, the others well outside the arc in front of him. As foreseen.",
@@ -89,7 +89,7 @@
     } },
     'Ember Breath': { hard: false, learned: {
       bastion: "He breathed at one of us, not me, and the fan of fire followed them. I kept the line clear of the long flames and out of the glowing ground it left behind. Held.",
-      gloomsworn: "He breathed at one of us, not me, and the fan of fire followed them. I kept the line clear of the long flames and out of the glowing ground it left behind.",
+      gloomsworn: "He breathed on one of the others, not me, and the fan of fire followed them. We stayed out of the long flames and off the embers it left glowing.",
       thresher: "The breath picks one of us and follows them like a sheepdog till the last. Whoever it is waits, then steps aside late, not back. The ground it scorches stays bad a good while; I kept off it like a burnt field.",
       bloodreaver: "A cone of fire! And it follows whoever he picks until the last moment. I like that. Step aside late and sideways, and keep off the molten ground after. A fine scar, not mine.",
       runeguard: "The omen: his head goes back and the fire gathers; it tracks its quarry until the last. The answer: leave the fan sideways, late, and stay off the molten ground it leaves. As foreseen.",
@@ -110,7 +110,7 @@
     } },
     'Tail Lash': { hard: false, learned: {
       bastion: "He swept the tail round behind him, not in front. I held my footing at his front and the line stood to his sides. Whoever stood at his back learned it. Held.",
-      gloomsworn: "He swept the tail round behind him, not in front. I held my footing at his front and the line stood to his sides. Whoever stood at his back learned it.",
+      gloomsworn: "He swung the tail round behind him, never in front. I stood at his front, the others at his sides. Whoever stood at his back found out.",
       thresher: "The tail comes round behind him like a flail on the threshing floor. I work from his side, never his back, and it passes me by. Whoever stood behind him learned it in one season.",
       bloodreaver: "The tail! Behind him, a wide sweep, and I was in front for once. A good one, but not mine. The ones behind him were not so pleased. Stay at his sides.",
       runeguard: "The omen: his shoulders turn and the tail rises. The answer: the sweep is behind him, so the line stands at his sides or his front, and no one behind. As foreseen.",
@@ -131,7 +131,7 @@
     } },
     'Magma Burst': { hard: false, learned: {
       bastion: "The marks came up over the others, not me. I held his front while each took their own patch of floor, and they stepped off their own pools when it struck. Held.",
-      gloomsworn: "The marks came up over the others, not me. I held his front while each took their own patch of floor, and they stepped off their own pools when it struck.",
+      gloomsworn: "Marks floated up over the others, not me. I kept his front while each of them took a patch of floor alone, and they walked off their own pools when it burst.",
       thresher: "A ring came up over each of us but our knight, and every one wanted its own plot. I walked out to mine, apart from the others, let it come in, then stepped off the pool it left. Soft ground, that.",
       bloodreaver: "Little circles of fire over my friends, and each leaves a puddle of molten rock. I stayed with the big one and let them handle theirs. Step out of your puddle, fast.",
       runeguard: "The omen: marks over each of us, save the one in front. The answer: each takes a patch of their own, apart, then leaves the pool they leave behind. As foreseen.",
@@ -152,7 +152,7 @@
     } },
     'Cinder Feast': { hard: false, learned: {
       bastion: "He marked one of us for a hit that had to be shared. I closed the line on them and took my share, standing in the ring, and we split it. Held.",
-      gloomsworn: "He marked one of us for a hit that had to be shared. I closed the line on them and took my share, standing in the ring, and we split it. Shared, a debt is light.",
+      gloomsworn: "He marked one of us for a blow to be shared. I drew the rest in, stood in the ring for my part, and we divided it. Divided, a debt is light.",
       thresher: "A blue ring over one of us, and it's a load to share, like a cart nobody pulls alone. All of us in under it together, and it came in light. Leave a hand out and the rest carry more.",
       bloodreaver: "A blow too big for one! We all piled in on the marked one and split it between us. A fine scar each. Stand close, stand in the ring, and bleed together.",
       runeguard: "The omen: a ring over one of us, blue at the edge. The answer: it is a share, so everyone stands in it together, and it is divided among us. As foreseen.",
@@ -173,7 +173,7 @@
     } },
     'Dragonfall': { hard: false, learned: {
       bastion: "He rose, and embers drew a line across the floor, out of the sky to a scorched pit. The line and the circle at its end were what hurt. Held the ground, stayed clear of both. Held.",
-      gloomsworn: "He rose, and embers drew a line across the floor, out of the sky to a scorched pit. The line and the circle at its end were what hurt. I stayed clear of both.",
+      gloomsworn: "He rose, and embers drew a line across the floor from the sky to a scorched pit. The line and the circle at its end are the harm. I kept out of both.",
       thresher: "He went up, and the embers drew his road across the floor to one of the pits; the ring on the pit tells which. I stepped off the road and away from the ring, and let him come down on empty ground. Plenty of time, if you watch the embers.",
       bloodreaver: "He dives! A line of embers from the edge, and a great red circle where he lands. I wanted to meet him there. I stayed off the line and out of the circle, for once, and bled elsewhere.",
       runeguard: "The omen: embers draw a line from the edge of the crater to one of three scorched pits, and a ring blooms on the pit he has chosen. The answer: off the line and out of the ring. As foreseen.",
@@ -194,7 +194,7 @@
     } },
     'Twin Pass': { hard: false, learned: {
       bastion: "Two lines of embers at once. He flew the first without landing, then came round on the second and came down. Clear of the first was not enough. Held the ground, and moved twice.",
-      gloomsworn: "Two lines of embers at once. He flew the first without landing, then came round on the second and came down. Clear of the first was not enough. I moved twice.",
+      gloomsworn: "Two lines of embers together. He flew the first without landing and came round on the second to land. Leaving the first was not enough. I moved twice.",
       thresher: "Two roads drawn in embers. He only flies over the first and comes down on the second, so I stepped off one and then off the other, and didn't sit down in between. A second frost after the first thaw.",
       bloodreaver: "Two lines! The first he only passes over; the second ends in a ring and a landing. I moved clear of the first, then clear of the second. A cheat, I call that, and I loved it.",
       runeguard: "The omen: two lines drawn, the later one fainter. The answer: the first is only a pass, the second ends in a landing, and both must be left. Not foreseen; now it is.",
@@ -215,7 +215,7 @@
     } },
     'The Roost': { hard: false, learned: {
       bastion: "He perched on the rim and shook his burning scales loose onto the floor, three at a time. Two whelps came down with them. The line kept moving off the scales and put the whelps down. Held.",
-      gloomsworn: "He perched on the rim and shook his burning scales loose onto the floor, three at a time. Two whelps came down with them. The line kept moving off the scales and put the whelps down.",
+      gloomsworn: "He perched on the rim and shook burning scales onto the floor, three at a time, and two whelps came down with them. We kept moving off the scales and put the whelps down.",
       thresher: "He sat up on the rim and shook his burning scales loose, always one patch under somebody, so I kept walking. Two little whelps came down with them, and I put them in the ground before he dropped. Not ripe, but due.",
       bloodreaver: "The big one sat on the rim and rained burning scales on us, and two little ones came to bite. Good fun. Keep moving, kill the little ones before he drops, or they go off.",
       runeguard: "The omen: he perches high and the scales fall, three at a time, always one under one of us. The answer: keep moving, put the whelps down before he comes to the ground, or they burst. As foreseen.",
@@ -236,7 +236,7 @@
     } },
     'Crater Boils': { hard: false, learned: {
       bastion: "The ring of floor by the rim began to glow, and it stayed that way. From then on, we fought on the inner ground only. I kept the line in from the edge for the rest of the night. Held.",
-      gloomsworn: "The ring of floor by the rim began to glow, and it stayed that way. From then on we fought on the inner ground only. I kept the line in from the edge for the rest of the night.",
+      gloomsworn: "The ring of floor beside the rim began to glow and did not stop. After that we fought on the inner ground and no further. I kept us off the edge for the rest of the night.",
       thresher: "The rim went from ember to flame and never cooled, so the field is smaller for the rest of the night. I kept to the inner ground, away from the edge, like ploughing short of a ditch.",
       bloodreaver: "The rim boiled, and it stays boiled. A smaller room to hit him in. I like it close. Keep in from the edge, the glow bites for good.",
       runeguard: "The omen: the rim brightens and the stone along it weeps. The answer: it does not cool, so the room is smaller for the rest of the fight. Keep from the edge. As foreseen.",
@@ -257,7 +257,7 @@
     } },
     'Twin Breath': { hard: false, learned: {
       bastion: "Two fans of fire at two of us, the second a heartbeat after the first. The line watched the first go, and did not step into the second. Held.",
-      gloomsworn: "Two fans of fire at two of us, the second a heartbeat after the first. The line watched the first go, and did not step into the second.",
+      gloomsworn: "Two fans of fire at two of us, one a heartbeat behind the other. We watched the first pass and did not walk into the second.",
       thresher: "Two breaths at two of us, the second a beat behind the first. I stepped out of the first and looked before I stepped again, because the second was waiting right where I meant to go. Two weathers in one afternoon.",
       bloodreaver: "Two cones, two targets, one behind the other! The trick is not to leap out of the first right into the second. I stayed with the big one and let them dance.",
       runeguard: "The omen: two heads of the same breath, the second a beat behind. The answer: leave the first, and look before you step, for the second may be waiting. As foreseen.",
@@ -278,7 +278,7 @@
     } },
     'Heart Burn': { hard: false, learned: {
       bastion: "The Heart opened and he could not be hurt. Scorch marks bloomed at the three pits one after another, and the last one marked where the fire would not reach. The line stood round it, off the mark. Held.",
-      gloomsworn: "The Heart opened and he could not be hurt. Scorch marks bloomed at the three pits one after another, and the last one marked where the fire would not reach. The line stood round it, off the mark.",
+      gloomsworn: "The Heart opened and he could not be hurt. Scorch marks bloomed at the three pits in turn, and the last showed where the fire would not reach. We stood round it, clear of the mark.",
       thresher: "His heart opened and nothing of ours would bite. Scorches came up at the pits one after another, and the last one is the only ground the great fire spares. I stood close round it, off the scorch, and waited for it to come in.",
       bloodreaver: "His heart opened in his chest, and I could not touch him. Three marks, one after another, and the last is where the fire does not go. I stood by it, and not on it, and bled for nothing at all.",
       runeguard: "The omen: three marks bloom in turn, and the third is where the great fire will not fall. The answer: when the first two are known, the third is known; stand around it, but not on it. As foreseen.",
@@ -299,7 +299,7 @@
     } },
     'Wingbeat': { hard: true, learned: {
       bastion: "His wings beat as he flew, and everything near the line was shoved away from it. I stood far enough from the line that it only nudged me, and held my footing. Held.",
-      gloomsworn: "His wings beat as he flew, and everything near the line was shoved away from it. I stood far enough from the line that it only nudged me, and held my footing.",
+      gloomsworn: "His wings beat as he flew, and everything near his line was shoved away from it. I stood far enough off that it only nudged me, and kept my feet.",
       thresher: "His wings stirred a gale down the dive road, and anyone near it was tossed like chaff off the threshing floor. I stood well back from the road, not just off it, and kept clear of the walls besides.",
       bloodreaver: "A shove from his wings, and everyone near the line goes flying! I like a good shove. Stay well back from the line, or be carried away from it, or into the wall.",
       runeguard: "The omen: the wings lift as he enters the line. The answer: those near it are thrown outward, so stand well back from it, or be ready for the wall. Not foreseen; now it is.",
@@ -320,7 +320,7 @@
     } },
     'Cinder Rain': { hard: true, learned: {
       bastion: "Embers fell across the crater, each in a little circle that burned afterwards. I held my ground and watched for the circles, and moved only when one landed near me. Held.",
-      gloomsworn: "Embers fell across the crater, each in a little circle that burned afterwards. I held my ground and watched for the circles, and moved only when one landed near me.",
+      gloomsworn: "Embers fell over the crater, each in a small circle that burned after. I held my ground, watched for the circles, and moved only when one landed close.",
       thresher: "Embers came down all over the crater, little circles one after another, and each left a burning pool. I kept moving, watched where the next was coming up, and stepped round them. A bad season for standing still.",
       bloodreaver: "Sparks! All over the floor, and each leaves a pool. A scar for every one, if you like, and I do not, today. Keep moving, and watch the little circles.",
       runeguard: "The omen: small circles bloom one after another across the whole crater. The answer: each leaves a pool, so watch where the next one appears, and do not stand still. As foreseen.",
@@ -341,7 +341,7 @@
     } },
     'Heart Flare': { hard: true, learned: {
       bastion: "The Heart flared. One of us was marked for a hit we had to share, and I closed the line on them; and the moment it landed we scattered, each to our own patch. Held.",
-      gloomsworn: "The Heart flared. One of us was marked for a hit we had to share, and I closed the line on them; the moment it landed we scattered, each to our own patch.",
+      gloomsworn: "The Heart flared and marked one of us for a shared blow. I drew the others in on them, and the instant it landed we scattered, each to a patch of our own.",
       thresher: "First a ring over one of us to share, so we all stood in close like sheaves in a stook. The moment it came in, a ring over each head, so out to our own ground. Together, then apart, one season after the other.",
       bloodreaver: "A flare! First everyone piles onto the one who is marked, then we all fly apart before the second blow. A fine scar, and a good dance.",
       runeguard: "The omen: a ring over one of us, to be shared; and the instant it lands, marks over all. The answer: together first, then apart. Not foreseen; now it is.",

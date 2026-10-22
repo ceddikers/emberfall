@@ -2200,6 +2200,25 @@ const BOSS_VFX = (() => {
         for (let i = 0; i < 46; i++) { const x = b.x + (((i * 0.618) % 1) - 0.5) * 520, y0 = b.y + (((i * 0.377) % 1) - 0.5) * 260, fall = ((t * 1.8 + i * 0.13) % 1); c.moveTo(x + 10 * fall, y0 - 260 * (1 - fall)); c.lineTo(x + 10 * fall - 4, y0 - 260 * (1 - fall) + 26); }
         c.stroke(); c.restore();
       } }));
+    } else if (kind === 'wyrm') {
+      // the Ember Wyrm: the fire inside gutters, it rears once, collapses with a ring of embers, and ash drifts down where it lay
+      emit(sh, 1.6, 0.12, () => VFX.spawn({ x: b.x + rand(-70, 70), y: b.y + rand(-40, 40), z: rand(10, 40), vx: rand(-20, 20), vy: rand(-20, 20), vz: rand(90, 220), g: -40, life: 1.1, size: 7, color: '#ffb04a' }));
+      soon(sh, 0.8, () => { shockAt(b.x, b.y, { r: 300, color: '#ff8a2a', w: 9, dur: 0.7, flat: 1 }); VFX.burst(b.x, b.y - 20, { color: '#ffd27a', n: 30, speed: 320, size: 11 }); shake(11); });
+      soon(sh, 1.7, () => { shockAt(b.x, b.y, { r: 180, color: '#6a3a22', w: 6, dur: 0.9, flat: 1 }); VFX.smoke(b.x, b.y - 10, { color: '#4a3a34', n: 14, size: 34, a: 0.5, speed: 40 }); });
+    } else if (kind === 'titan') {
+      // Hrimgar: the frost cracks through him, he goes down on one knee and shatters into ice that blows away as mist
+      soon(sh, 0.5, () => { shockAt(b.x, b.y, { r: 260, color: '#dff4ff', w: 8, dur: 0.6, flat: 1 }); shake(10); });
+      soon(sh, 1.2, () => { VFX.debris(b.x, b.y, { color: '#cfeeff', n: 22, speed: 1.5 }); VFX.burst(b.x, b.y - 30, { color: '#eaf8ff', n: 28, speed: 280, size: 12 }); shockAt(b.x, b.y, { r: 340, color: '#9fe8ff', w: 7, dur: 0.9, flat: 1 }); shake(13); });
+      emit(sh, 2.4, 0.18, () => VFX.smoke(b.x + rand(-60, 60), b.y - 20, { color: '#e8f6ff', n: 1, size: 26, a: 0.35, speed: 26 }));
+    } else if (kind === 'archmage') {
+      // Azerath: the seven circles flare, his robes unravel into runes that scatter as motes, and the tower goes quiet
+      soon(sh, 0.5, () => { shockAt(b.x, b.y, { r: 220, color: '#c8a8ff', w: 6, dur: 0.6, flat: 1 }); softFlash(sh, '#e8d8ff', 0.15, 0.5); });
+      soon(sh, 1.3, () => { VFX.pillar(b.x, b.y, { r: 60, h: 700, color: '#d8c0ff', dur: 1.1 }); VFX.burst(b.x, b.y - 30, { color: '#f0e4ff', n: 34, speed: 260, size: 9 }); shockAt(b.x, b.y, { r: 380, color: '#8a6aff', w: 6, dur: 1, flat: 1 }); shake(8); });
+      emit(sh, 2.4, 0.1, () => { const a = rand(0, TAU), d = rand(20, 120); VFX.spawn({ x: b.x + Math.cos(a) * d, y: b.y + Math.sin(a) * d * 0.7, z: rand(10, 60), vx: rand(-14, 14), vy: rand(-14, 14), vz: rand(40, 120), g: -20, life: 1.2, size: 6, color: '#d8c0ff' }); });
+    } else if (kind === 'hydra') {
+      // the Hydra: the heads sink one after another into the black water, the Mother slips under, rings spread and bubbles rise
+      for (const [at, r] of [[0.4, 160], [0.9, 220], [1.5, 300]]) soon(sh, at, () => { shockAt(b.x, b.y, { r, color: '#9ad8c0', w: 7, dur: 0.9, flat: 1 }); VFX.burst(b.x, b.y - 10, { color: '#cfe8e0', n: 14, speed: 220, size: 10 }); shake(7); });
+      emit(sh, 2.6, 0.14, () => VFX.spawn({ x: b.x + rand(-90, 90), y: b.y + rand(-50, 50), z: 0, vx: 0, vy: 0, vz: rand(40, 100), g: -30, life: 1, size: 6, color: '#bfe8dc' }));
     } else {
       // he goes to a knee; the crown drops and rolls; the armour crumbles to dust; the bells toll away to nothing
       soon(sh, 0.5, () => crownDrop(onBody(b, 'hollowking', 4, 0), b));

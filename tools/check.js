@@ -598,6 +598,22 @@ function hollowCheck() {
   else fail('Hollow: debt, healing, death, bypasses', out.slice(-900));
 }
 
+// ---------------------------------------------------------------- 3c. the Thresher's wide arc (tools/thresher-arc-test.js)
+function thresherArcCheck() {
+  const r = spawnSync(process.execPath, [path.join(__dirname, 'thresher-arc-test.js')], { cwd: ROOT, encoding: 'utf8' });
+  const out = (r.stdout || '') + (r.stderr || '');
+  if (r.status === 0 && /Thresher arc OK/.test(out)) pass('Thresher: Reap arcs onto adds in front, not behind', out.trim().split(/\r?\n/).pop());
+  else fail('Thresher: Reap arcs onto adds in front, not behind', out.slice(-900));
+}
+
+// ---------------------------------------------------------------- 3d. the boss journals (tools/journal-lint.js)
+function journalCheck() {
+  const r = spawnSync(process.execPath, [path.join(__dirname, 'journal-lint.js')], { cwd: ROOT, encoding: 'utf8' });
+  const out = (r.stdout || '') + (r.stderr || '');
+  if (r.status === 0 && /journal-lint: clean/.test(out)) pass('Journals: no digits, within the word cap, every move is a real cast', out.trim().split(/\r?\n/).pop());
+  else fail('Journals: no digits, within the word cap, every move is a real cast', out.slice(-900));
+}
+
 async function heavy() {
   const trialIds = Object.values(SPECS).flat().map(s => s.id);
   const [sim, tal, ...raids] = await Promise.all([
@@ -685,6 +701,8 @@ async function heavy() {
   try { data(); } catch (e) { fail('Data checks ran', e.stack); }
   try { timelines(); } catch (e) { fail('Timelines checked', e.stack); }
   try { hollowCheck(); } catch (e) { fail('Hollow checked', e.stack); }
+  try { journalCheck(); } catch (e) { fail('Journals checked', e.stack); }
+  try { thresherArcCheck(); } catch (e) { fail('Thresher arc checked', e.stack); }
   await heavy();
   console.log('');
   for (const r of results) {

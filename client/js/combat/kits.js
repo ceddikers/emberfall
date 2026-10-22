@@ -4736,6 +4736,7 @@ const THRESH = {
   WISP_DUR: 15, WISP_HIT: 60, WISP_EVERY: 2.5, WISP_CD: 45, SAC: 320, SAC_BUFF: 0.1, SAC_DUR: 8,
   U_REAP: 1.6, U_GOLD: 1.2, U_OTHER: 0.4,                              // Ultimate charge: a Reap, and each affliction it cashes
   GATE: { DUR: 8, GCD: 1.0, STRIKE: 190, END: 260, MULT: 1.3 },
+  ARC: 2.1, ARC_R: 95, ARC_SHARE: 0.6,   // the scythe's wide arc (about 120 degrees, a little past melee): other enemies in it take 60% of the cut
 };
 const thY = k => k.def.young || THRESH.YOUNG, thR = k => k.def.rot || THRESH.ROT;
 // 0: not up, 1: young, 2: gold (ripe), 3: rotten
@@ -4780,11 +4781,32 @@ function thPayout(k, ab, stage, o) {
   }
   return { n, gold, rot };
 }
+// the wide arc: every OTHER enemy (the boss or an add) in the arc in front of you takes `share` of the cut, through the
+// ordinary damage path (so threat, add HP and kill credit work). Needs a host with env.enemiesNear; without one (the dummy) nothing.
+function thArc(k, ab, pot, o = {}) {
+  if (!k.env.enemiesNear || !k.env.pos) return 0;
+  const me = k.env.pos(), e = k.env.target({ target: 'enemy', range: MELEE });
+  if (!me || !e || typeof e !== 'object') return 0;
+  const dir = Math.atan2(e.y - me.y, e.x - me.x), same = c => (c.id === 'dummy' || e.id === 'dummy' ? c.x === e.x && c.y === e.y : c.id === e.id);
+  let n = 0;
+  for (const c of k.env.enemiesNear(THRESH.ARC_R) || []) {
+    if (same(c)) continue;
+    const dx = c.x - me.x, dy = c.y - me.y, d = Math.hypot(dx, dy), r = c.r || 0;
+    if (d - r > THRESH.ARC_R) continue;
+    let da = Math.abs(Math.atan2(dy, dx) - dir); if (da > Math.PI) da = 2 * Math.PI - da;
+    if (d > 0.001 && da - Math.asin(Math.min(1, r / d)) > THRESH.ARC / 2) continue;
+    k.damage(pot * (o.share || THRESH.ARC_SHARE), { ab, extra: true, tgt: c.id !== 'dummy' ? c.id : undefined });
+    k.fx('reap-add', { id: c.id, x: Math.round(c.x), y: Math.round(c.y) });
+    n++;
+  }
+  return n;
+}
 const thStages = k => { const st = {}; for (const id of THRESH.IDS) st[id] = thStage(k, id); return st; };
 function thCharge(k, r) { k.ultGain(THRESH.U_REAP + THRESH.U_GOLD * r.gold + THRESH.U_OTHER * (r.n - r.gold)); }
 // Reap, and what the talents add to it
 function thReap(k, ab) {
   const st = thStages(k), m = k.def.reapMult || 1;
+  thArc(k, ab, THRESH.BASE * m);
   const r = thPayout(k, ab, st, { base: THRESH.BASE, mult: m, rotPay: k.def.rotPay || (k.perk('thresher_a2') ? 0.8 : THRESH.P_ROT), gap: 0.14 });
   for (const id of THRESH.IDS) if (st[id]) k.g.aff[id] = k.talent('thresher_second') && st[id] === 2 ? k.now - thY(k) * 0.6 : null;   // (Second Growth: a gold one stays, just young)
   if (k.talent('thresher_compost') && r.rot > 0) k.dot('compost', 30 * r.rot, 8, 2, { ab });
@@ -4799,6 +4821,7 @@ function thReap(k, ab) {
 function thSlash(k, ab) {
   const g = k.g, step = k.now < g.comboUntil ? g.step : 0, back = k.now <= g.swingBy, pot = step ? THRESH.CLEAVE : THRESH.SLASH;
   k.damage(pot, { ab });
+  if (step) thArc(k, ab, pot);   // (Cleave is the wide arc)
   if (step === 0) { thApply(k, 'mark'); if (k.def.sower) thApply(k, 'drain'); }
   else { thApply(k, 'drain'); if (k.def.sower) thApply(k, 'bind'); }
   g.step = (step + 1) % 2; g.comboUntil = k.now + 15;
@@ -5012,7 +5035,7 @@ ULTIMATES.thresher = {
   },
 };
 
-if (typeof module !== 'undefined') Object.assign(module.exports, { THRESH, thStage, thCount, thApply, thPayout, thReap, thSlash, thAge, thRipen, thY, thR });
+if (typeof module !== 'undefined') Object.assign(module.exports, { thArc, THRESH, thStage, thCount, thApply, thPayout, thReap, thSlash, thAge, thRipen, thY, thR });
 
 // every tank's taunt carrier (TAUNT_CARRY, next to TAUNT): a spec's kit copies it from the base kit (specs.js specKit)
 for (const [cls, id] of Object.entries(TAUNT_CARRY)) if (KITS[cls]) KITS[cls].tauntOn = id;

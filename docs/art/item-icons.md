@@ -261,3 +261,46 @@ GO-15. **Pantry-Ledger Surcoat** (`oathbroker_a1`): a grey surcoat with a pantry
 GO-16. **Silk-Bound Surcoat** (`oathbroker_a2`): a dark grey surcoat stitched with pale silk web lines, a chitin clasp, a rolled writ tied at the belt.
 GO-17. **Thunder-Notary Surcoat** (`oathbroker_a3`): a slate-blue surcoat with a high collar, a blue lightning seal on the chest, rain-darkened shoulders.
 GO-18. **Surcoat of the Unpaid Court** (`oathbroker_a4`): a plum-black surcoat edged in tarnished gold, a broken red wax seal on the chest, a short chain of ledger pages at the hip.
+
+## Set 2 sheet (Vhalgrath, Hrimgar, Azerath, the Hydra; 2026-10)
+**Tier style:** Vhalgrath is the cinder wyrm (charcoal scale, ember orange cracks, bone horn). Hrimgar is the frost titan (pale blue rime, cold dark iron, white fur). Azerath is the archmage (deep teal robe, gold circle sigils, floating pale runes). The Hydra is the drowned deep (mossy green-black scale, sea-glass blue, nine small eyes). General items only: any class can wear them. Same layout rules as above; numbered S2-1 to S2-32; files go in `client/items/<key>.png` (key in brackets). Until painted they fall back to the drawn icons of the closest existing shape.
+
+### Vhalgrath
+S2-1. **Cinderforged Waraxe** (`g_cinderaxe`): a heavy single-bladed axe of black iron, orange cracks glowing along the edge, a horn-bone spike on the back, a charred leather grip.
+S2-2. **Cindersmoke Scepter** (`g_cinderrod`): a short charcoal rod topped with a clawed cage holding a flat orange ember stone, a wisp of grey smoke curling from it.
+S2-3. **Ashscale Hauberk** (`g_ashscale`): a grey-black scale shirt, each scale edged orange as if cooling, a red-brown leather collar.
+S2-4. **Wyrmbrand Ring** (`g_brand`): a thick black iron ring with a flat orange stone cut like a branding mark, scorched at the edges.
+S2-5. **Emberscale Charm** (`g_emberscale`): a single curved dragon scale in charcoal black with an orange rim, hung from a short chain of blackened links.
+S2-6. **Kindling Pendant** (`g_kindle`): a gold pendant holding a small cage of twigs around a bright orange flat flame shape.
+S2-7. **Heart of the Cinder Tyrant** (`m_wyrmheart`): an open iron torc set with a fist-sized dark red heart-shaped stone, orange cracks of light across it, bone beads at the ends.
+S2-8. **Mantle of Cinder Hide** (`m_wyrmhide`): broad shoulder plates of overlapping charcoal wyrm scale, a short cape of ash-grey hide, orange glowing seams, a horn clasp at the throat.
+
+### Hrimgar
+S2-9. **Rimeforged Maul** (`g_frostmaul`): a squat hammer head of dark iron frosted white, a thick haft wrapped in pale fur, icicles hanging under the head.
+S2-10. **Icicle Wand** (`g_frostwand`): a slender wand that is one long clear icicle, a fur-wrapped handle, a pale blue flat highlight along its length.
+S2-11. **Glacial Plate** (`g_glacial`): a bulky breastplate of pale blue ice-rimed iron plates with white fur at the collar and a frozen rivet at each corner.
+S2-12. **Rimefrost Ring** (`g_rimering`): a dark iron ring crusted with white rime, set with a cut pale blue stone.
+S2-13. **Cold Iron Charm** (`g_coldiron`): a small plain black iron shield-charm, frost on its face, tied on a strip of white fur.
+S2-14. **Eye of the Glacier** (`g_glaciereye`): a silver pendant holding a round clear blue ice lens like an eye, with a dark pupil-shaped flaw inside.
+S2-15. **Heart of the White Reach** (`m_titanheart`): a squat iron cauldron-heart of dark metal on a loop of fur cord, glowing pale blue inside, frost spilling over the rim.
+S2-16. **Pelt of the Warden** (`m_titanfur`): a thick white fur mantle with a dark iron clasp shaped like a fist, blue rime on the tips and a strip of stitched hide at the hem.
+
+### Azerath
+S2-17. **Circlet Blade** (`g_circleblade`): a slim teal-steel blade with a ring-shaped guard, a small gold circle sigil etched at the base of the blade.
+S2-18. **Sevenfold Focus** (`g_circlefocus`): a teal crystal held in seven thin gold rings tilted at different angles, a pale rune floating at its heart.
+S2-19. **Robes of the Circles** (`g_circlerobe`): a deep teal robe with concentric gold circles stitched across the chest and a cream sash.
+S2-20. **Sigil Ring** (`g_sigil`): a gold ring with a flat teal disc engraved with a small seven-pointed star in a circle.
+S2-21. **Wardstone Charm** (`g_wardstone`): a smooth grey standing stone no bigger than a thumb, a pale teal rune carved in it, hung on a gold wire loop.
+S2-22. **Arcanum Pendant** (`g_arcanum`): a gold pendant shaped like a clock face with seven runes in place of numbers, a single teal hand.
+S2-23. **The Seventh Circle** (`m_seventh`): a gold pendant of six thin concentric rings around a bright flat teal eye, one ring a little apart from the others, as if just opened.
+S2-24. **Archmage's Vestment** (`m_archrobe`): a long midnight-teal mantle with a tall collar, gold seven-circle embroidery down the front, pale floating runes along the hem, a gold clasp shaped like a closed book.
+
+### The Hydra
+S2-25. **Hydrafang Glaive** (`g_hydrafang`): a polearm blade cut from one huge curved fang, mossy green with a dark tip, a wet-looking dark haft wrapped in kelp cord.
+S2-26. **Mirewood Staff** (`g_hydrastaff`): a twisted dark swamp-wood staff forking into two small heads at the top, each holding a sea-glass blue bead.
+S2-27. **Drowned Scale Hauberk** (`g_hydrahide`): a green-black scale shirt with a few barnacles on the shoulders, a dripping hem and a torn net at the waist.
+S2-28. **Tidewrack Ring** (`g_tidering`): a green-bronze ring set with a rounded piece of sea-glass blue, a strand of dried kelp wound round it.
+S2-29. **Gillcharm** (`g_gillcharm`): a small fan-shaped charm of three pale green gill ribs on a leather cord, a single drop of water on its edge.
+S2-30. **Ninth Head Pendant** (`g_ninthhead`): a gold pendant shaped like a small serpent head with open jaws and a venom-green gem eye, on a chain.
+S2-31. **Eye of the Drowned Mother** (`m_hydraeye`): a large round pale green slit-pupil eye in a bronze setting, eight small eyes ringing it, on a chain of kelp links.
+S2-32. **Mantle of Nine Heads** (`m_hydramantle`): a green-black scale mantle with nine small serpent-head shoulder crests in a fan, sea-glass blue eyes, and a torn trailing cape of wet scales.

@@ -25,7 +25,7 @@
   // the first time this hero beats him
   win: {
     bastion: "The sky came down and the line held it up together, every time, until he fell. Footing was bad to the last. Held.",
-    gloomsworn: "The sky came down and the line held it up together every time, until he fell. Footing bad to the last. The watch is relieved.",
+    gloomsworn: "The sky came down and we held it up between us every time, until he fell. The ground was bad to the last. The watch is relieved.",
     thresher: "The weather broke at last and lay down on his own field, quiet as a cut row. We came down the mountain together, every hand of us. I said a few kind words over him. He was a good season, all told.",
     bloodreaver: "The big one went down at last, still crackling. I carried every bolt he gave me and kept every scar. My friend, you were magnificent.",
     runeguard: "The Titan's last omen was his own fall, and I had foreseen it for some while. The storm read to its final line. As foreseen, at last.",
@@ -47,7 +47,7 @@
   moves: {
     'Thunderclap': { hard: false, learned: {
       bastion: "The clouds rolled over the summit and the light went. Then the clap reached every one of us. Nothing to block, so I braced and let the line be mended after. Held.",
-      gloomsworn: "The clouds rolled over the summit and the light went. Then the clap reached every one of us. Nothing to stand behind, so I braced and let the line be mended after.",
+      gloomsworn: "The clouds rolled in over the summit and the light went. Then the clap reached every one of us. There was nothing to stand behind, so I braced and let the healers mend us after.",
       thresher: "The clouds came over the summit and the light went, the way it does before a downpour. Then the clap came in on every one of us, no hedge to get under. I kept working and let the menders bring us round. Plenty of time.",
       bloodreaver: "The sky went dark, then cracked open across all of us. A decent sting! I took it and drank it back on the next few blows.",
       runeguard: "The omen: the summit darkens under rolling cloud. The answer: wounds closed beforehand, for the clap reaches all of us and cannot be stepped out of. As foreseen.",
@@ -68,7 +68,7 @@
     } },
     'Titan Fist': { hard: false, learned: {
       bastion: "Lightning gathered along his arm, pointed at me. I waited for the fist to drop, guard up in the last instant, and kept the line out of the path behind me. Held.",
-      gloomsworn: "Lightning gathered along his arm, pointed at me. I waited for the fist to drop, drew the dark in tight at the last instant, and kept the line out of the path behind me.",
+      gloomsworn: "Lightning gathered along his arm and pointed at me. I waited for the fist to fall, drew the dark in tight about me at the last instant, and kept the others out of the path behind.",
       thresher: "Lightning ran up his arm toward our knight, and I knew the fist was ripe. It falls down a long furrow, straight through the knight and out behind, so I worked from his flank, well off that row, and let it come in empty.",
       bloodreaver: "Lightning crawled down his arm and the fist came for me alone. A good one! I took it full, struck back while it still burned, and kept the others out from behind me, where it carries on.",
       runeguard: "The omen: lightning gathers along the line between the Titan and me. The answer: a ward laid just before, and nobody else in that line, for the blow runs on past me. On the harder climb it leaves me charged; I decline the next rod.",
@@ -89,7 +89,7 @@
     } },
     'Polarity Surge': { hard: false, learned: {
       bastion: "Each of us carries gold or blue. When the surge came I stood beside a blue one, close enough to touch, with no other gold near. Alone, it hits hard; beside my own colour, harder. Held.",
-      gloomsworn: "Each of us carries gold or blue. When the surge came I stood beside one of the other colour, close enough to touch, with none of my own colour near. Alone it hits hard; beside my own colour, harder.",
+      gloomsworn: "Every one of us carries gold or blue. At the surge I went and stood next to someone of the opposite colour, close enough to touch, with none of my own colour near. Alone it hurts; beside your own it hurts more.",
       thresher: "Gold and blue, like wheat and cornflower. When the surge came due I stood close beside one of the other colour, near enough to share a hoe, and kept my own colour well off. Plant like beside like and the whole row scorches.",
       bloodreaver: "Gold beside gold makes a terrible arc; alone, a nasty bite. Gold beside blue, barely a tickle. Shameful! But I found my blue partner and stood close anyway.",
       runeguard: "The omen: arcs crackle between like charges before the surge, and a calm thread joins unlike ones. The answer: each stands beside an opposite charge, with no like charge in reach. As foreseen.",
@@ -110,7 +110,7 @@
     } },
     'Thunder Crash': { hard: false, learned: {
       bastion: "A cloud gathered over each gold one of us. My blue partner and I stood together under mine and shared the blow; the other pair kept their distance. Then everyone broke apart for the static after. Held.",
-      gloomsworn: "A cloud gathered over each gold one of us. My partner and I stood together under mine and shared the blow; the other pair kept their distance. Then everyone broke apart for the static after.",
+      gloomsworn: "A cloud gathered over each gold one of us. My partner and I stood together beneath mine and shared the blow, and the other pair kept their distance. Then all of us scattered for the static that followed.",
       thresher: "A cloud ripened over each gold one of us. Each pair stood under their own cloud and took the rain together, the pairs a good row apart. Then the static came in behind it, so we broke off, every hand to their own ground.",
       bloodreaver: "A cloud over my partner's head. I stood right under it with her and took my half, a good meaty half, and then we scattered before the static came.",
       runeguard: "The omen: a storm cloud over every gold. The answer: each gold's blue partner stands beneath it with them to share the blow, the pairs well apart; then, at once, everyone scatters. As foreseen.",
@@ -131,7 +131,7 @@
     } },
     'Static Field': { hard: false, learned: {
       bastion: "Static settled on each of us at once. Every one of us needed our own patch of ground, away from the rest. I took mine and held it.",
-      gloomsworn: "Static settled on each of us at once. Every one of us needed our own patch of ground, away from the rest. I took mine and kept it.",
+      gloomsworn: "Static settled on every one of us at once, and each needed a patch of ground clear of the rest. I took mine and kept it. A patch of ground is all a watch asks.",
       thresher: "Static settled on every head at once, like frost on a fence row. Each of us wanted our own patch of soft ground, well apart, nobody leaning on a neighbour. I walked out to my corner of the field and let it go over.",
       bloodreaver: "A ring of static over every head. Mine alone, nobody else's in it. Barely a scratch, shameful.",
       runeguard: "The omen: a ring of static gathers over every head. The answer: each to their own ground, no ring touching another. As foreseen.",
@@ -152,7 +152,7 @@
     } },
     'Rod Strike': { hard: false, learned: {
       bastion: "A ring burned down over my head. I put my back to the nearest standing stone and the bolt struck the rock, not me. The next pair took the other stones; a struck stone needs time. Held.",
-      gloomsworn: "A ring burned down over my head. I put my back to the nearest standing stone and the bolt struck the rock, not me. The next pair took the other stones; a struck stone needs time to wake.",
+      gloomsworn: "A burning ring settled over my head. I backed against the nearest standing stone and the bolt broke on the rock. The next pair took the other stones. A struck stone needs time to wake.",
       thresher: "A ring came down over my head and I knew the bolt was nearly ripe. I put my back to the nearest standing stone and the lightning went into the rock. The next pair took the other stones; a struck stone wants resting, like a field left fallow.",
       bloodreaver: "Marked! I ran to a standing stone and the bolt hit the rock instead of me. A pity. The next pair went to different stones; strike one twice in a hurry and it bursts on everyone near.",
       runeguard: "The omen: a burning ring over a head. The answer: that person stands against a standing stone, and the bolt goes into the rock; the second pair choose untouched stones, for a freshly struck one discharges. As foreseen.",
@@ -173,7 +173,7 @@
     } },
     'Gale Slam': { hard: false, learned: {
       bastion: "He drew breath and the wind threw us all outward. Where a rod stood, I stepped into the still air behind it, away from him. With no rods, I stood close in so the throw stopped short of rock. Held.",
-      gloomsworn: "He drew breath and the wind threw us all outward. Where a rod stood, I stepped into the still air behind it, away from him. With no rods, I stood close in so the throw stopped short of rock.",
+      gloomsworn: "He drew in a breath and the wind hurled us outward. If a rod stood near I slipped into the calm behind it, away from him. If none did, I pressed in close so the throw ended short of the rock.",
       thresher: "He drew a breath and the wind threw us all outward, like chaff off the threshing floor. Where a rod stood, I tucked in behind it, on the far side from him. With no rods up, I stood close at his knees, so the throw ran out before the rocks.",
       bloodreaver: "The big one breathed and threw us at the walls. Slammed into stone? Not even an honest wound. So: behind a standing rod, out of the wind, or close in, where the throw lands on open ground.",
       runeguard: "The omen: the Titan draws breath. The answer: the still air behind a standing rod, on its far side from him; or, with no rods, near enough to him that the throw ends short of wall and stone. As foreseen.",
@@ -194,7 +194,7 @@
     } },
     'Storm Walls': { hard: false, learned: {
       bastion: "Walls of wind turned slowly round him like spokes. I kept my place between them and walked with them, step for step. Where a boulder lay, I stood behind it. Held.",
-      gloomsworn: "Walls of wind turned slowly round him like spokes. I kept my place between them and walked with them, step for step. Where a boulder lay, I stood behind it.",
+      gloomsworn: "Walls of wind swung slowly round him like the spokes of a wheel. I stayed in the gap and walked round with them, step by step. If a boulder lay close, I put it between me and the wall.",
       thresher: "Walls of wind went round him slowly, like a mill wheel turning in its season. I found a gap between the spokes and walked along with it, unhurried, step for step. Behind a boulder there was shelter, once.",
       bloodreaver: "Walls of wind wheeling round the big one. Stood in the gap and walked with it, hitting him the whole way round. A wall would sting, but walking is free.",
       runeguard: "The omen: lines of wind drawn outward from the Titan. The answer: stand in the gap between them and walk with the turning, never against it; a boulder's lee holds, once. As foreseen.",
@@ -215,7 +215,7 @@
     } },
     'Chain Lightning': { hard: true, learned: {
       bastion: "A bolt gathered over our healer while his fist came at me. She walked away from the line, and the rest of us stood well apart, so it had nobody to leap to. Held.",
-      gloomsworn: "A bolt gathered over our healer while his fist came at me. She walked away from the line, and the rest of us stood well apart, so the bolt had nobody to leap to.",
+      gloomsworn: "A bolt gathered over our healer while his fist came for me. She walked clear of the rest, and the others spread out, so the bolt found nobody to jump to. I took the fist alone.",
       thresher: "A bolt ripened over our healer while his fist came down on the knight. She walked off on her own, and the rest of us stood well apart, like stooks in a field, so the lightning had nobody to jump to.",
       bloodreaver: "Lightning over our healer's head, itching to jump. She walked off alone and I kept my distance from her and everyone. Hard not to share, but every leap hurts someone new.",
       runeguard: "The omen: a cell gathers over one of us, ringed by how far it can leap. The answer: that one walks clear of everyone, and the rest stand apart from each other besides. As foreseen.",
@@ -236,7 +236,7 @@
     } },
     'Lightning Rods': { hard: false, learned: {
       bastion: "Iron rods driven into the rock, each wanting one of us when the bolt fell. I took one; I did not take the next while still crackling from the first. The rods stood after, good cover. Held.",
-      gloomsworn: "Iron rods were driven into the rock, each wanting one of us when the bolt fell. I took one; I did not take the next while still crackling from the first. The rods stood after, good cover.",
+      gloomsworn: "Iron rods were hammered into the rock, each wanting one of us when the bolt came. I took a single rod and never a second while the first still crackled in me. The rods stayed after, and made fair cover.",
       thresher: "Iron rods went in like fence posts, each wanting one of us when the bolt came due. I took one, then stood clear of the next while I still crackled; ground wants resting between crops. The posts stayed standing after, good shelter.",
       bloodreaver: "A rod for each of us to catch. I took one and the bolt went straight through me. Lovely. The next rod I left alone; twice running would floor even me. Probably.",
       runeguard: "The omen: iron rods driven into the rock. The answer: one of us in each before the bolt falls; anyone still charged from a rod stands aside for the next. An empty rod strikes us all. As foreseen.",
@@ -257,7 +257,7 @@
     } },
     'Avalanche': { hard: false, learned: {
       bastion: "He stamped and boulders rolled across the summit in lanes. I stepped out of the lanes before they came and let them settle. Then I stood behind one when the walls came round. Held.",
-      gloomsworn: "He stamped and boulders rolled across the summit in lanes. I stepped out of the lanes before they came and let them settle. Then I stood behind one when the walls came round.",
+      gloomsworn: "He stamped and boulders rolled in lanes across the summit. I left the lanes before they came and let them settle, and when the walls came round I stood behind one of the stones.",
       thresher: "He stamped and the boulders came down in rows, like a cart tipping its load. I stood in the furrow between the rows and let them roll past. Once they settled, I kept one at my back for when the wind walls came round.",
       bloodreaver: "He stomped and rocks came rolling down marked lanes. Flattened by a rock? No honour in that. Stepped out of the lane, then hid behind the boulder when the walls came.",
       runeguard: "The omen: the stamp, and lanes marked across the summit. The answer: stand between the lanes as the boulders roll; then behind the boulders, for the walls of wind that follow. As foreseen.",
@@ -278,7 +278,7 @@
     } },
     'Squall Line': { hard: false, learned: {
       bastion: "The storm's edge closed on one side and opened on the other, and the safe ground walked slowly round him. The line walked with it, step for step, never outside. Held.",
-      gloomsworn: "The storm's edge closed on one side and opened on the other, and the safe ground walked slowly round him. The line walked with it, step for step, never outside.",
+      gloomsworn: "The storm's edge shut on one side and opened on the other, so the safe ground walked slowly round him. We walked with it, step for step, and none of us strayed outside.",
       thresher: "The storm's edge closed on one side and opened on the other, and the dry ground moved slowly round him like shade round a barn. We walked with it, all the hands together, never stepping out into the rain.",
       bloodreaver: "The safe ground crawled round the big one and outside it the storm bit every heartbeat. Tempting, but no. Walked round with it and kept hitting him.",
       runeguard: "The omen: the safe ground slides off its centre, with a ghost of where it goes next. The answer: walk with it round the Titan, inside its edge, and keep striking; he is always within it. As foreseen.",
@@ -299,7 +299,7 @@
     } },
     'Ball Lightning': { hard: true, learned: {
       bastion: "Orbs of lightning formed at the cliff edge and drifted slowly across the summit. I watched where each was heading and stepped off its path. Held.",
-      gloomsworn: "Orbs of lightning formed at the cliff's edge and drifted slowly across the summit. I watched where each was heading and stepped off its path.",
+      gloomsworn: "Orbs of lightning formed along the cliff edge and drifted over the summit. I watched where each was bound and stepped off its road. Slow things can still be killing things.",
       thresher: "Orbs of lightning came off the cliff's edge and drifted across the summit, slow as thistledown, each down its own straight row. I watched which way each was heading, stepped off its line, and went back to work. Plenty of time.",
       bloodreaver: "Balls of lightning wandering across the summit. Touch one and it bursts and flings you. I stepped aside. Not every scar is worth having.",
       runeguard: "The omen: orbs born of falling bolts at the cliff edge, each marked with its heading. The answer: read every path and stand clear of all of them as they drift through. As foreseen.",
@@ -320,7 +320,7 @@
     } },
     'Eye of the Storm': { hard: false, learned: {
       bastion: "The wind dropped and the sky cleared. Nothing struck. I kept on him, kept the line together, and watched for what came next. On the harder climb our colours turn here; I checked mine. Held.",
-      gloomsworn: "The wind dropped and the sky cleared. Nothing struck. I kept on him, kept the line together, and watched for what came next. On the harder climb our colours turn here, so I checked mine.",
+      gloomsworn: "The wind dropped. The sky cleared. Nothing struck. I stayed on him, kept the others with me, and waited for whatever came next. Harder climbs turn our colours here; I checked mine.",
       thresher: "The wind dropped and the sky cleared, like the still hour before hail. Nothing fell. I kept working and looked about for what was ripening. On the harder climb our colours turn over here, so I checked mine before anything came due.",
       bloodreaver: "The storm stopped! No more biting from the sky. Too quiet. I kept hitting him, and on the hard climb I checked my colour twice; it flips when the calm comes.",
       runeguard: "The omen: the clouds part and the storm's steady grind ceases. The answer: rest, mend, strike; and on the harder ascent, read one's charge anew, for it reverses. As foreseen.",
@@ -341,7 +341,7 @@
     } },
     'Still Air': { hard: false, learned: {
       bastion: "The standing stones lit, gold and blue. I went to a stone of my own colour, alone at it, and held that ground until the eye closed. Every stone had one of us. Held.",
-      gloomsworn: "The standing stones lit, gold and blue. I went to a stone of my own colour, alone at it, and held that ground until the eye closed. Every stone had one of us.",
+      gloomsworn: "The standing stones lit up, gold and blue. I walked to one of my own colour, stood there alone, and held the post until the eye closed. Each stone had one of us at it.",
       thresher: "The standing stones lit up gold and blue, like a field in flower. I walked to a stone of my own colour, alone at it, and stood there till the calm went over. Every stone had someone; none left fallow.",
       bloodreaver: "Stones lit up gold and blue. Found one of my own colour and stood at it alone. Wrong colour, it strikes you. Empty stone, it strikes everyone.",
       runeguard: "The omen: the stones kindle, gold and blue, opposite stones alike. The answer: each to a stone of their own charge, one apiece, there before the Eye closes; none left empty. As foreseen.",
@@ -362,7 +362,7 @@
     } },
     'Distant Thunder': { hard: false, learned: {
       bastion: "Thunder rolled, far off. Nothing reached us. I kept my ground at my stone and did not flinch. Held.",
-      gloomsworn: "Thunder rolled, far off. Nothing reached us. I kept my ground at my stone and did not flinch. Stillness is a thing the dead do well.",
+      gloomsworn: "Thunder rolled, far off, and nothing reached us. I kept my ground at my stone and did not flinch. Stillness is a thing the dead do well.",
       thresher: "Thunder rolled away over the far hills, somebody else's weather. Nothing came in on us. I stayed at my stone and did not go wandering off to look. Not yet.",
       bloodreaver: "Thunder, way off over the peaks. Not a scratch! Shameful. I kept swinging.",
       runeguard: "The omen: thunder, far off. The answer: none needed; it is only the storm gathering beyond the eye. A sign without a blow. Not foreseen; now it is.",
@@ -383,7 +383,7 @@
     } },
     'Eye Closes': { hard: false, learned: {
       bastion: "The calm ended. I was at my stone, my own colour, when it did, and the storm came back down on the line. Held.",
-      gloomsworn: "The calm ended. I was at my stone, my own colour, when it did, and the storm came back down on the line. The watch held.",
+      gloomsworn: "The calm ended. I stood at my stone, my own colour, as it ended, and the storm came down on us again. The watch held.",
       thresher: "The calm went over, the way a fine afternoon does. I was already at my stone, my own colour, when it closed, and the storm came back down on us as if it had never left.",
       bloodreaver: "The quiet broke. I was at a stone of my own colour when it did, as I should be. Then the sky came back, biting. Good.",
       runeguard: "The omen: the calm draws shut. The answer: be at one's stone, of one's own charge, before it closes; then brace for the storm resumed. As foreseen.",
@@ -404,7 +404,7 @@
     } },
     'Gathering Storm': { hard: false, learned: {
       bastion: "Static settled on all of us and bit, over and over. I kept close to the healers, guard ready, and let them mend the line as it went. Held, by a thread.",
-      gloomsworn: "Static settled on all of us and bit, over and over. I kept close to the healers and let them mend the line as it went. Held up by a thread, which is how I know the sensation.",
+      gloomsworn: "Static settled on all of us and bit, over and over. I stayed close to the healers and let them mend us as it went. Held up by a thread, which is how I know the sensation.",
       thresher: "Static settled on all of us and stung, over and over, like nettles in a hedge. I kept close by the menders so they could tend the whole row at once, and kept working while it lasted. Soft ground, but we stood on it.",
       bloodreaver: "The storm gathered in all of us at once, biting again and again, more than any of us could carry alone! I kept hitting to drink it back, and the healers did the rest.",
       runeguard: "The omen: static clings to every one of us. The answer: gather near the healers, keep every ward in hand, and expect the Thunderhead behind it. As foreseen.",
@@ -425,7 +425,7 @@
     } },
     'Thunderhead': { hard: false, learned: {
       bastion: "The gathered static broke as one great blast on all of us. I'd kept my guard for that moment, and the healers had the line whole first. Held.",
-      gloomsworn: "The gathered static broke as one great blast on all of us. I had saved the dark about me for that moment, and the healers had the line whole first.",
+      gloomsworn: "The gathered static broke in one great blast on all of us. I had saved the dark about me for that moment, and the healers had us whole before it.",
       thresher: "All that static came due at once and broke on every one of us. I knew it was ripe, so I had my guard up and came in mended beforehand. Nothing to step out of; only to be ready.",
       bloodreaver: "The Thunderhead broke on all of us. A fine scar! I took it with everything I had left and drank back what I could.",
       runeguard: "The omen: the static's ticking ceases. The answer: every ward raised, the wounded mended first, and then the Thunderhead breaks over us. As foreseen.",
@@ -446,7 +446,7 @@
     } },
     'Skyfall': { hard: true, learned: {
       bastion: "He called the sky down on the spot where one of us stood. The nearer you are, the worse it falls. I gave ground away from it, as far as the edge allowed. Held.",
-      gloomsworn: "He called the sky down on the spot where one of us stood. The nearer you are, the worse it falls, so I gave ground, as far as the edge allowed.",
+      gloomsworn: "He dropped the sky on the spot where one of us stood, and the nearer you are, the harder it comes down. I gave ground, as far as the edge let me.",
       thresher: "The weather picked the spot where one of us had stood and brought the sky down on it. The nearer you stand, the harder it falls, so I walked off to the far edge of the field and let it land on empty soil.",
       bloodreaver: "The big one called the sky down where one of us stood. Got as far from that spot as I could. Even I don't want that one.",
       runeguard: "The omen: the clouds open over the spot where one of us stood as he called it. The answer: everyone as far from that spot as the summit permits. As foreseen.",
@@ -467,7 +467,7 @@
     } },
     'Heavens Fall': { hard: false, learned: {
       bastion: "The sky came down on a marked spot beside him. All of us stood in it together, gold and blue both, and held it up as a line. Each fall heavier than the last. Held.",
-      gloomsworn: "The sky came down on a marked spot beside him. All of us stood in it together, gold and blue both, and held it up as a line. Each fall was heavier than the last.",
+      gloomsworn: "The sky came down on a marked patch beside him, and all of us, gold and blue, stood in it together and held it up between us. Every fall was heavier than the one before.",
       thresher: "The sky came down on a spot drawn beside him. All of us stood in it together, gold and blue both, leaned in like sheaves in a stook, and held it up between us. Each fall came in heavier than the last.",
       bloodreaver: "The sky came down and all of us stood under it together, gold and blue mixed. Every fall a little heavier. Better and better!",
       runeguard: "The omen: a column of sky marked on the floor beside the Titan. The answer: the whole party within it, both charges present, sharing the blow. As foreseen.",
@@ -488,7 +488,7 @@
     } },
     'Grounding Rods': { hard: true, learned: {
       bastion: "On the harder climb an iron rod hung over each gold one of us and was driven in wherever they stood. Ours went a stride either side of Volkar, one east, one west, level with him. I watched them plant and went to my partner's. Held.",
-      gloomsworn: "On the harder climb an iron rod hung over each gold one of us and was driven in wherever they stood. Ours went a stride either side of Volkar, one east, one west, level with him. I watched them plant and went to my partner's.",
+      gloomsworn: "On the harder climb an iron rod hung over every gold one of us, and was driven in where they stood. Ours went either side of Volkar, level with him, one east and one west. I watched them sink and went to my partner's.",
       thresher: "On the harder climb, a rod hung over each gold one of us and went in wherever they stood. We set ours like fence posts, a stride off either side of the weather, east and west, level with him, and the blues came to them.",
       bloodreaver: "Iron rods over the two golds, hammered in where they stood. A stride off the big one, one east, one west, square across from each other through him. I found my partner's rod and stayed by it. No scar. Pity.",
       runeguard: "The omen: an iron rod over each gold charge. The answer: plant them a stride to either side of the Titan, east and west, in the very row he stands in; the blue partners mark where they fall and join them. As foreseen.",
@@ -508,8 +508,8 @@
       threadweaver: "Rods hung over my two golds, so I placed them like pins: a stride off either side of the old windbag, east and west, level with him. Each blue stitched to their partner's rod. Pulled it tight.",
     } },
     'Supercell': { hard: true, learned: {
-      bastion: "Three squall fronts, always the same order: from the west, then the north, then the east. Each stops at a rod and leaves still air past it. My partner and I went round our rod, east side, south side, west side, never leaving Volkar. Then the cell broke over all of us; we came in mended. Held.",
-      gloomsworn: "Three squall fronts, always in order: west, north, east. Each stops at a rod and leaves still air past it. My partner and I went round our rod, east side, south side, west side, never leaving Volkar. Then the cell broke over all of us, and we came in mended.",
+      bastion: "Three squall fronts, always the same order: west, then north, then east. Each stops at a rod and leaves still air past it. My partner and I went round our rod, never leaving Volkar. Then the cell broke over all of us; we came in mended. Held.",
+      gloomsworn: "Three squall fronts, always in the same order: west, north, east. Each ended at a rod and left still air beyond it. My partner and I walked round our rod, never leaving Volkar. Then the cell burst on all of us, and we came in mended.",
       thresher: "Squall fronts crossed in their season: west, then north, then east. Each stops at a rod and leaves still air behind it. My partner and I went round our post, east side, south side, west side, never leaving the weather, then came in mended for the cloudburst.",
       bloodreaver: "Walls of lightning rolling over the summit: west, then north, then east. A rod stops them, and past it the ground stays dry and still. Round our rod we went, east, south, west, still hitting the big one. Then the whole cell burst over everyone. A fine scar, at last!",
       runeguard: "The omen: three fronts, ever in one order, west, north, east, a lane of still air past each rod. The answer: circle one's rod with one's partner, east side, then south, then west; and be whole as the last passes, for the cell then breaks over us all. As foreseen.",

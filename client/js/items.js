@@ -37,7 +37,8 @@ const STAT_INFO = {
 
 // Where an item comes from (an item's `tier`). Every boss drops gear of the same strength: there is no ladder where one
 // fight's loot replaces the last. Bosses differ in themes, effects and party bonuses, not in how good their gear is.
-const TIERS = { 0: { name: 'Recruit' }, 1: { name: 'Grubnak' }, 2: { name: 'Skitterra' }, 3: { name: 'Volkar' }, 4: { name: 'Hollow King' } };
+const TIERS = { 0: { name: 'Recruit' }, 1: { name: 'Grubnak' }, 2: { name: 'Skitterra' }, 3: { name: 'Volkar' }, 4: { name: 'Hollow King' },
+  5: { name: 'Vhalgrath' }, 6: { name: 'Hrimgar' }, 7: { name: 'Azerath' }, 8: { name: 'The Hydra' } };
 
 const CLASS_GEAR = {
   bastion: { wtype: 'sword', w: ["Recruit's Arming Sword", 'Cleaverguard Sword', 'Silkrend Oathblade', 'Stormward Oathblade', 'Barrowking Oathblade'], a: ['Iron Skillet Plate', 'Broodwarden Plate', 'Thunderforged Plate', 'Gravewarden Plate'] },
@@ -317,6 +318,67 @@ const ITEMS = {};
     { key: 'm_deadcourt', name: 'Mantle of the Dead Court', slot: 'armor', atype: 'deadcourt', tier: 4, rarity: M, base: { hp: 75, def: 50 },
       fx: [{ while: 'always', recast: 0.1 }, { on: 'ogcd', buff: { dmg: 0.02 }, dur: 10, stacks: 3, name: 'Dead Court' }],
       fxText: 'Your oGCD cooldowns are 10% shorter, and each oGCD you use gives +2% damage for 10 s, stacking 3 times.' },
+
+    // ---- set 2. Every set-2 boss drops general gear only (class pieces come with the painted sets), same budgets as set 1.
+    // Vhalgrath, the cinder wyrm: burning, brands and big openers. Icons reuse the closest drawn shapes until the painted set is in.
+    { key: 'g_cinderaxe', name: 'Cinderforged Waraxe', slot: 'weapon', main: 'phys', wtype: 'axe', tier: 5, rarity: U, base: { main: 88, crit: 1 } },
+    { key: 'g_cinderrod', name: 'Cindersmoke Scepter', slot: 'weapon', main: 'mag', wtype: 'scepter', tier: 5, rarity: U, base: { main: 88, haste: 1 } },
+    { key: 'g_ashscale', name: 'Ashscale Hauberk', slot: 'armor', tier: 5, rarity: U, atype: 'scale', base: { hp: 70, def: 45, crit: 1 } },
+    { key: 'g_brand', name: 'Wyrmbrand Ring', slot: 'accessory', atype: 'ring', tier: 5, rarity: R, base: { crit: 3, main: 12 },
+      fx: [{ on: 'crit', icd: 6, strike: 60 }], fxText: 'Your critical hits brand the target: about 30 extra damage, once every 6 s.' },
+    { key: 'g_emberscale', name: 'Emberscale Charm', slot: 'accessory', atype: 'charm', tier: 5, rarity: R, base: { hp: 45, def: 30 },
+      fx: [{ on: 'ogcd', icd: 15, ward: 120, dur: 6 }], fxText: 'An oGCD hardens a scale ward of about 60 over you for 6 s (once every 15 s).' },
+    { key: 'g_kindle', name: 'Kindling Pendant', slot: 'accessory', atype: 'amulet', tier: 5, rarity: L, base: { crit: 3, main: 12 },
+      fx: [{ on: 'gcd', chance: 0.12, buff: { dmg: 0.05 }, dur: 8, name: 'Kindled' }], fxText: 'Your GCDs have a 12% chance to kindle +5% damage for 8 s.' },
+    { key: 'm_wyrmheart', name: 'Heart of the Cinder Tyrant', slot: 'accessory', atype: 'torc', tier: 5, rarity: M, base: { main: 12, crit: 3 },
+      fx: [{ on: 'crit', buff: { dmg: 0.02 }, dur: 8, stacks: 5, name: 'Wyrmfire' }], fxText: 'Wyrmfire: each critical hit gives +2% damage for 8 s, stacking up to 5 times.' },
+    { key: 'm_wyrmhide', name: 'Mantle of Cinder Hide', slot: 'armor', atype: 'thunderhead', tier: 5, rarity: M, base: { hp: 75, def: 50 },
+      fx: [{ while: 'hpAbove', frac: 0.6, dmg: 0.05 }, { on: 'dash', icd: 10, ward: 140, dur: 6 }], fxText: 'While above 60% HP, +5% damage. After you dash, a cinder ward of about 70 holds for 6 s (once every 10 s).' },
+
+    // Hrimgar, the frost titan: slows, cold iron and standing your ground.
+    { key: 'g_frostmaul', name: 'Rimeforged Maul', slot: 'weapon', main: 'phys', wtype: 'maul', tier: 6, rarity: U, base: { main: 86, haste: 2 } },
+    { key: 'g_frostwand', name: 'Icicle Wand', slot: 'weapon', main: 'mag', wtype: 'wand', tier: 6, rarity: U, base: { main: 86, haste: 2 } },
+    { key: 'g_glacial', name: 'Glacial Plate', slot: 'armor', tier: 6, rarity: U, atype: 'chitin', base: { hp: 100, def: 40 } },
+    { key: 'g_rimering', name: 'Rimefrost Ring', slot: 'accessory', atype: 'ring', tier: 6, rarity: R, base: { haste: 3, main: 12 },
+      fx: [{ on: 'gcd', chance: 0.15, buff: { haste: 0.05 }, dur: 6, name: 'Rimed' }], fxText: 'Your GCDs have a 15% chance to give +5% haste for 6 s.' },
+    { key: 'g_coldiron', name: 'Cold Iron Charm', slot: 'accessory', atype: 'charm', tier: 6, rarity: R, base: { hp: 50, def: 30 },
+      fx: [{ while: 'hpBelow', frac: 0.6, heal: 0.08 }], fxText: 'While below 60% HP, your healing and shields are 8% stronger.' },
+    { key: 'g_glaciereye', name: 'Eye of the Glacier', slot: 'accessory', atype: 'amulet', tier: 6, rarity: L, base: { haste: 3, main: 12 },
+      fx: [{ on: 'heal', icd: 10, ward: 140, dur: 8 }], fxText: 'Healing or shielding anyone freezes a ward of about 70 over you for 8 s (once every 10 s).' },
+    { key: 'm_titanheart', name: 'Heart of the White Reach', slot: 'accessory', atype: 'pot', tier: 6, rarity: M, base: { main: 12, haste: 3 },
+      fx: [{ on: 'ogcd', icd: 20, buff: { haste: 0.1, dmg: 0.04 }, dur: 8, name: 'Frostbound' }], fxText: 'Frostbound: an oGCD gives +10% haste and +4% damage for 8 s (once every 20 s).' },
+    { key: 'm_titanfur', name: 'Pelt of the Warden', slot: 'armor', atype: 'whites', tier: 6, rarity: M, base: { hp: 75, def: 50 },
+      fx: [{ while: 'always', recast: 0.06 }, { while: 'hpAbove', frac: 0.7, heal: 0.06 }], fxText: 'Your oGCD cooldowns are 6% shorter, and above 70% HP your healing and shields are 6% stronger.' },
+
+    // Azerath, the archmage: the seven circles. Cooldowns, wards and arcane bursts.
+    { key: 'g_circleblade', name: 'Circlet Blade', slot: 'weapon', main: 'phys', wtype: 'sword', tier: 7, rarity: U, base: { main: 82, crit: 2, haste: 2 } },
+    { key: 'g_circlefocus', name: 'Sevenfold Focus', slot: 'weapon', main: 'mag', wtype: 'focus', tier: 7, rarity: U, base: { main: 82, crit: 2, haste: 2 } },
+    { key: 'g_circlerobe', name: 'Robes of the Circles', slot: 'armor', tier: 7, rarity: U, atype: 'venomweave', base: { hp: 65, def: 50, haste: 1 } },
+    { key: 'g_sigil', name: 'Sigil Ring', slot: 'accessory', atype: 'ring', tier: 7, rarity: R, base: { crit: 2, haste: 2, main: 8 },
+      fx: [{ on: 'ogcd', icd: 5, strike: 50 }], fxText: 'Each oGCD you use (at most once every 5 s) flings a sigil for about 25 extra damage.' },
+    { key: 'g_wardstone', name: 'Wardstone Charm', slot: 'accessory', atype: 'charm', tier: 7, rarity: R, base: { hp: 40, def: 35 },
+      fx: [{ on: 'heal', icd: 12, ward: 110, dur: 8 }], fxText: 'Healing or shielding anyone raises a ward of about 55 over you for 8 s (once every 12 s).' },
+    { key: 'g_arcanum', name: 'Arcanum Pendant', slot: 'accessory', atype: 'amulet', tier: 7, rarity: L, base: { haste: 3, main: 12 },
+      fx: [{ while: 'always', recast: 0.07 }], fxText: 'Your oGCD cooldowns are 7% shorter.' },
+    { key: 'm_seventh', name: 'The Seventh Circle', slot: 'accessory', atype: 'broodeye', tier: 7, rarity: M, base: { main: 12, haste: 3 },
+      fx: [{ on: 'ogcd', buff: { crit: 0.02 }, dur: 10, stacks: 6, name: 'Circle' }], fxText: 'Each oGCD you use opens a Circle: +2% critical chance for 10 s, stacking up to 6 times.' },
+    { key: 'm_archrobe', name: "Archmage's Vestment", slot: 'armor', atype: 'deadcourt', tier: 7, rarity: M, base: { hp: 75, def: 50 },
+      fx: [{ on: 'ogcd', icd: 3, strike: 70, cdr: 0.5 }], fxText: 'Each oGCD you use (at most once every 3 s) bursts for about 35 extra damage and takes 0.5 s off your other oGCD cooldowns.' },
+
+    // The Hydra: nine heads, the drowned deep. Regrowth, venom and sustain.
+    { key: 'g_hydrafang', name: 'Hydrafang Glaive', slot: 'weapon', main: 'phys', wtype: 'fang', tier: 8, rarity: U, base: { main: 84, crit: 2, haste: 1 } },
+    { key: 'g_hydrastaff', name: 'Mirewood Staff', slot: 'weapon', main: 'mag', wtype: 'branch', tier: 8, rarity: U, base: { main: 84, crit: 2, haste: 1 } },
+    { key: 'g_hydrahide', name: 'Drowned Scale Hauberk', slot: 'armor', tier: 8, rarity: U, atype: 'scale', base: { hp: 85, def: 45 } },
+    { key: 'g_tidering', name: 'Tidewrack Ring', slot: 'accessory', atype: 'ring', tier: 8, rarity: R, base: { crit: 3, main: 12 },
+      fx: [{ on: 'crit', icd: 8, mend: 0.03 }], fxText: 'Your critical hits wash 3% of your HP back to you (once every 8 s).' },
+    { key: 'g_gillcharm', name: 'Gillcharm', slot: 'accessory', atype: 'charm', tier: 8, rarity: R, base: { hp: 55, def: 25 },
+      fx: [{ on: 'dash', icd: 10, mend: 0.04 }], fxText: 'After you dash, recover 4% of your HP (once every 10 s).' },
+    { key: 'g_ninthhead', name: 'Ninth Head Pendant', slot: 'accessory', atype: 'amulet', tier: 8, rarity: L, base: { crit: 3, main: 12 },
+      fx: [{ on: 'crit', icd: 3, strike: 70 }], fxText: 'Your critical hits spit venom: about 35 extra damage, once every 3 s.' },
+    { key: 'm_hydraeye', name: 'Eye of the Drowned Mother', slot: 'accessory', atype: 'broodeye', tier: 8, rarity: M, base: { main: 12, crit: 3 },
+      fx: [{ on: 'crit', buff: { dmg: 0.015 }, dur: 10, stacks: 6, name: 'Many Heads' }], fxText: 'Each critical hit grows another head: +1.5% damage for 10 s, stacking up to 6 times.' },
+    { key: 'm_hydramantle', name: 'Mantle of Nine Heads', slot: 'armor', atype: 'chitin', tier: 8, rarity: M, base: { hp: 75, def: 50 },
+      fx: [{ on: 'gcd', chance: 0.25, strike: 70 }, { on: 'heal', icd: 10, mend: 0.03 }], fxText: 'Each GCD has a 25% chance to bite for about 35 extra damage, and healing or shielding anyone mends 3% of your HP (once every 10 s).' },
   ];
   for (const it of gen) ITEMS[it.key] = it;
   // every effect gets an id (its proc cooldowns and buffs are tracked by it)
@@ -388,6 +450,14 @@ const PARTY_BONUS = {
     tiers: { 2: { haste: 0.02 }, 3: { hp: 0.03, haste: 0.02 }, 4: { hp: 0.04, haste: 0.03 } } },
   4: { name: 'Court of the Barrow', boss: 'The Hollow King', flavor: 'Kneel to no king. Stand together in the dark.',
     tiers: { 2: { dmg: 0.02 }, 3: { dmg: 0.02, crit: 0.02 }, 4: { dmg: 0.03, crit: 0.03 } } },
+  5: { name: 'Cinder Pact', boss: 'Vhalgrath', flavor: 'Burn bright together, and nothing in the peaks stands before you.',
+    tiers: { 2: { dmg: 0.02 }, 3: { dmg: 0.02, haste: 0.02 }, 4: { dmg: 0.04, haste: 0.03 } } },
+  6: { name: 'Frostbound', boss: 'Hrimgar', flavor: 'The White Reach yields to those who hold the line.',
+    tiers: { 2: { hp: 0.03 }, 3: { hp: 0.04, haste: 0.02 }, 4: { hp: 0.06, dmg: 0.02 } } },
+  7: { name: 'Circle of Seven', boss: 'Azerath', flavor: 'Seven circles, drawn together, close around the foe.',
+    tiers: { 2: { crit: 0.02 }, 3: { crit: 0.02, dmg: 0.02 }, 4: { crit: 0.03, haste: 0.02, dmg: 0.02 } } },
+  8: { name: 'Nine Heads', boss: 'The Hydra', flavor: 'Cut one down and the rest grow wiser.',
+    tiers: { 2: { hp: 0.03 }, 3: { hp: 0.03, crit: 0.02 }, 4: { hp: 0.04, crit: 0.03, haste: 0.02 } } },
 };
 const BONUS_STAT = { hp: 'max HP', dmg: 'damage', crit: 'critical chance', haste: 'haste' };
 const bonusText = m => Object.entries(m).map(([k, v]) => `+${Math.round(v * 100)}% ${BONUS_STAT[k]}`).join(', ');
@@ -415,7 +485,7 @@ function partyBonus(counts) {
 // A clear drops a chest: 4 items on Normal, 5 on Hard. Each item rolls its rarity first, then picks an item of that
 // rarity from the boss's table. Class items only roll for classes a human in the run plays (bots don't count).
 // Then everyone rolls Need / Greed / Pass on each (main.js + loot.js).
-const BOSS_TIER = { grubnak: 1, skitterra: 2, volkar: 3, hollowking: 4 };
+const BOSS_TIER = { grubnak: 1, skitterra: 2, volkar: 3, hollowking: 4, wyrm: 5, titan: 6, archmage: 7, hydra: 8 };
 const CHEST_SIZE = { normal: 4, hard: 5 };
 const CHEST_ODDS = {   // percent by rarity: [Uncommon, Rare, Legendary, Mythic]
   normal: [55, 30, 12, 3],
@@ -428,7 +498,7 @@ for (const [boss, tier] of Object.entries(BOSS_TIER)) {
   for (const it of Object.values(ITEMS)) if (it.tier === tier && t[it.rarity]) t[it.rarity].push(it.key);
 }
 // gold for clearing a boss (Hard doubles it; wipes and trials give nothing)
-const CLEAR_GOLD = { grubnak: 40, skitterra: 45, volkar: 50, hollowking: 60 };
+const CLEAR_GOLD = { grubnak: 40, skitterra: 45, volkar: 50, hollowking: 60, wyrm: 65, titan: 70, archmage: 75, hydra: 85 };
 const clearGold = (bossId, mode) => (CLEAR_GOLD[bossId] || 0) * (mode === 'hard' ? 2 : 1);
 
 // classes: the classes the humans in the run play. -> [item keys]

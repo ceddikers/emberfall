@@ -322,6 +322,13 @@ class RaidHost {
         for (const a of host.sim.adds.values()) if (inRange(a.x, a.y, a.r)) return { id: a.id, x: a.x, y: a.y };
         return null;
       },
+      // every enemy within `range` of the bot's reach (the boss and adds), for a wide arc (kits.js thArc)
+      enemiesNear: (actor, range) => {
+        const b = host.sim.boss, out = [];
+        if (!b.untargetable) out.push({ id: 'boss', x: b.x, y: b.y, r: FIGHT.BOSS_R });
+        for (const a of host.sim.adds.values()) out.push({ id: a.id, x: a.x, y: a.y, r: a.r });
+        return out.filter(c => Math.hypot(c.x - bot.x, c.y - bot.y) - c.r <= range);
+      },
       positional: () => positionalOf(bot, host.sim.boss),
       allyTarget: (actor, ab) => {
         const t = bot.healTarget;

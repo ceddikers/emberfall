@@ -50,6 +50,7 @@ class CombatActor {
       aim: () => (world.aim ? world.aim(actor) : null),
       human: () => !!world.picked,
       picked: () => (world.picked ? world.picked(actor) : world.findEnemy(actor, { target: 'enemy', range: 2000 })),   // bots have no clicked target: the nearest enemy
+      enemiesNear: range => (world.enemiesNear ? world.enemiesNear(actor, range) : null),   // every enemy (boss, adds) within `range` of the edge: [{ id, x, y, r }] (a Thresher's wide arc)
       collide: (o, r) => { if (world.collide) world.collide(actor, o, r); },
       threads: () => (world.threads ? world.threads(actor) : null),
       dolls: list => { if (world.dolls) world.dolls(actor, list); },
