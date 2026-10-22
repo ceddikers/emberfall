@@ -68,7 +68,7 @@
     } },
     "Arcane Lance": { hard: false, learned: {
       bastion: "The Lance came for me alone, a wide sweep in front of him. I waited for his staff to level, shield up in the last instant, and kept the line out of the arc. Held.",
-      gloomsworn: "The Lance came for me, a wide pale sweep across his front. I drew the dark about me as his staff levelled, and kept the others at his shoulders, out of the arc.",
+      gloomsworn: "The Lance came for me, a pale sweep across his front. I drew the dark about me as his staff levelled, and had the others stand at his shoulders, away from it.",
       thresher: "The Lance is a scythe stroke across the front of him, laid on our knight. I worked from his side, well out of the arc. Not my row, that one.",
       bloodreaver: "The Lance! A wide sweep straight into whoever holds him, and today that was me. A good one. Braced, took it, answered it. The rest kept out of his front.",
       runeguard: "The omen: the staff levels at whoever holds him. The answer: a ward laid a breath before, and the rest of the party well outside the sweep in front of him. As foreseen.",
@@ -89,7 +89,7 @@
     } },
     "Rune Mark": { hard: false, learned: {
       bastion: "Two of us wore runes over our heads, a bright thread between them. The name of the next spell told them whether to close ranks or keep apart. I read his list and called it. Held.",
-      gloomsworn: "Two runes rose over two of us, joined by a thread of light. The spell that came next decided it: close together or far apart. I learned to read his list before I watched the runes.",
+      gloomsworn: "Runes burned over two heads, bound by a bright cord. The next spell's name said close or part. After that I read his list, not the runes.",
       thresher: "Two of us came up wearing runes, tied by a thread like oxen in one yoke. The spell named next on his list tells whether they plough one furrow or two. Read the list, then walk.",
       bloodreaver: "A rune over my head and a thread to a friend! I pulled the wrong way on it the first time. The spell named next says close up or keep apart, so now I read before I pull.",
       runeguard: "The omen: two runes, two elements, a thread between two of us. The answer is already written in his list of coming spells; the next name says close or apart. As foreseen.",
@@ -110,7 +110,7 @@
     } },
     "Cinder Rune": { hard: false, learned: {
       bastion: "Fire runes. Each bearer carried a ring of fire, and the line kept out of both. The bearers went to opposite ends; when they stood close, a second flame showed between them and they broke apart. Held.",
-      gloomsworn: "The Cinder Rune puts a ring of fire round each bearer. The rest of us kept outside both, and the bearers walked well apart; when they lingered close, a second burst lit between them and they parted fast.",
+      gloomsworn: "The Cinder Rune puts a ring of fire round each bearer. The rest of us stayed outside both, and the bearers walked well apart; left close, a second burst lit between them.",
       thresher: "Fire wants the pair apart, like two hayricks you would never build side by side. Each bearer carries a ring of flame, so we kept out of both. Too close, and a fresh blaze sprang up between them.",
       bloodreaver: "Fire on the thread! Each bearer burns in a ring of it, and the rest keep out. The bearers go well apart; stand close and a second burst shows up between you. A good scar, but a needless one.",
       runeguard: "The omen: Cinder on the list, fire runes over two of us. The answer: the bearers part well apart and everyone else keeps out of their rings; close bearers earn a second flame between them, shown a moment before. As foreseen.",
@@ -173,7 +173,7 @@
     } },
     "Rift Rune": { hard: false, learned: {
       bastion: "Void runes. A violet ring round each bearer, quiet in the middle. The line kept out of both rings, and the bearers walked to opposite sides; close together, the void opened between them. Held.",
-      gloomsworn: "The Rift Rune draws a violet ring round each bearer with a still centre. I know that dark. The rest kept out of both rings, and the pair parted far; too close, and the void bloomed between them.",
+      gloomsworn: "The Rift Rune draws a violet ring round each bearer with a still centre. I know that dark. We stayed clear of both rings and the pair parted far; too near, and the void bloomed between them.",
       thresher: "The void wants the pair apart, like two fields that must never share a ditch. A violet ring round each bearer, quiet in the middle; we kept out of the rings, and the pair walked to opposite ends.",
       bloodreaver: "Void runes! A violet ring round each bearer, still in the middle where they stand. Keep out of their rings. Bearers well apart, or the void opens between them, and that one stings.",
       runeguard: "The omen: Rift on the list, violet runes over two of us. The answer: the bearers part well apart and the rest keep out of each violet ring; close bearers open a bloom of the void between them. As foreseen.",
@@ -194,8 +194,8 @@
     } },
     "Pyre Rings": { hard: false, learned: {
       bastion: "The floor split into three rings: the middle, the one round it, the outer. Two burned in turn; the third had no red on it and never caught. I took the line onto that one, or onto the one already burned out. Held.",
-      gloomsworn: "Three rings on the floor, and two of them burn one after the other. The third never shows red and never burns. I took the line there, or stepped into the first ring once it had burned out.",
-      thresher: "He burns the floor in rings like a farmer burning stubble, two of the three in turn. The one with no red on it never catches. I walked to that, or back onto ground that had already burned.",
+      gloomsworn: "Three rings on the floor, and two of them burn, one after the other. The third never shows red and never burns. I led us there, or stepped into the first ring once it had burned out.",
+      thresher: "He burns the floor ring by ring like a farmer burning stubble, two of the three in turn. The ring with no red on it never catches, and that is where I stood, or on the one already burnt.",
       bloodreaver: "Three rings of floor and two of them go up, one then the other. I would rather stand in it, but the one with no red stays clean. Got there, or into the burned one after.",
       runeguard: "The omen: red creeps across two of the three rings. The answer: the ring without red never burns; stand there, or step into the first ring once it has spent itself. As foreseen.",
       gorgemaw: "Three rings on the griddle, and the cook fires two of them in turn. The one with no red is the cool plate. I sat there, or on the first once it had gone cold. Seared.",
@@ -236,7 +236,7 @@
     } },
     "Leaping Bolt": { hard: false, learned: {
       bastion: "A ring of lightning on one of us, then on whoever stood nearest, and on again, a heartbeat apart. The line kept well apart so it had no one close to jump to, and each walked out of their ring. Held.",
-      gloomsworn: "The Leaping Bolt lands on one of us and jumps to the nearest, again and again. I kept the line far apart so it found nobody close, and walked out of my ring before it fell.",
+      gloomsworn: "The bolt lands on one of us and jumps to the nearest, again and again. I kept everyone far apart so it found nobody close, and walked out of my ring before it fell.",
       thresher: "The bolt jumps from one of us to the nearest like fire along a dry hedgerow. We kept wide gaps between us, like separate stooks, and each walked out of our own ring before it came down.",
       bloodreaver: "Lightning that jumps friend to friend! Each ring follows its owner till just before it lands. Keep well apart so it has nobody near to leap to, and walk out of your ring. I took one anyway. Good one.",
       runeguard: "The omen: a ring of lightning on one of us; a heartbeat later, on whoever stands nearest. The answer: keep far apart so the chain finds no one, and step out of each ring as it settles. As foreseen.",
@@ -278,7 +278,7 @@
     } },
     "The Binding": { hard: false, learned: {
       bastion: "The four sigils woke and elementals rose from the middle, each one following me, slow. I walked each into the sigil of its own colour and held it there. The line kept striking him and kept off the falling light. Held.",
-      gloomsworn: "The four sigils wake and his elementals rise from the middle, slow, after the shield. Each goes into the sigil of its colour and stays a moment; leave one loose and the whole room pays. The rest kept striking him, off the falling light.",
+      gloomsworn: "Four sigils woke and his elementals crept from the middle after the shield. Each went to the sigil that matched its colour, and I stood guard there so none strayed. The others struck at him, clear of the falling light.",
       thresher: "The four sigils wake like four fields at sowing, and his elementals come after our shield to be penned, each in the sigil of its own colour. I kept reaping at Azerath and stepped round the light falling on the floor.",
       bloodreaver: "Elementals! They walk after whoever holds the old man, led into the sigil of their own colour and held; one left loose blasts the room. Meanwhile I kept hitting him, and kept off the falling light.",
       runeguard: "The omen: four sigils glow and elementals rise from the middle. The answer: our shield leads each to the sigil of its colour and holds it there; the rest strike the Archmage and step from the pulses of light. As foreseen.",
@@ -321,7 +321,7 @@
     "Convergence": { hard: false, learned: {
       bastion: "Every sigil lit at once, each in its own colour, and where two met it hurt worse. The clear floor was out by the wall between the sigils. I took the line there, clear of the overlaps. Held.",
       gloomsworn: "All four sigils burn together, and where they overlap it is worse. The quiet ground lies out by the wall between the sigils, with a small patch in the very middle. I went to the wall.",
-      thresher: "Every circle burns at once, each its own weather, and where two meet, a worse storm. The safe ground is the headland by the wall between the sigils. I went there, clear of the overlaps.",
+      thresher: "Every circle burning at once, each with its own weather, and worse where two overlap. The clear ground is the headland by the wall, between the sigils. I stood there.",
       bloodreaver: "Every circle lit up at once, and the overlaps are where the best scars are. I went out to the wall between the sigils anyway, clear of where they meet. The spot in the middle serves too.",
       runeguard: "The omen: every sigil lights in its own colour, and the lens where two overlap blazes worse. The answer: the clear ground lies by the wall between the sigils, and a small spot in the very middle. As foreseen.",
       gorgemaw: "Every burner lit at once, and where two meet, the flavours fight. I took my plate to the edge of the table, by the wall between the sigils, clear of the clashes. Too much at once.",
@@ -341,8 +341,8 @@
     } },
     "Counterspell": { hard: true, learned: {
       bastion: "He cast it again, thrown through the middle of the room to the far side, the copy drawn on the floor at once. Ground that was clear could now be hit. I looked across the room, and moved. Held.",
-      gloomsworn: "Counterspell: the last spell comes again a little later, thrown through the middle to the far side. The copy is drawn at once. What was safe may not be now. I looked across the room before I settled.",
-      thresher: "He sows the same field twice: the last spell comes back, thrown through the middle to the far side. The copy shows on the floor straight away. I looked across the room and moved off it.",
+      gloomsworn: "The last spell came a second time, thrown through the centre to the far side, with its copy drawn at once. Safe places had stopped being safe. I looked across before I took my place.",
+      thresher: "Same spell, thrown again straight through the middle, and its copy was marked on the floor in the same breath. Where it was safe a moment ago it was not any more. I glanced across the room and shifted.",
       bloodreaver: "He threw the last spell again, mirrored across the room! The copy shows at once. Ground that was clear is not. Look across and move. I did not, once. Good one.",
       runeguard: "The omen: a copy drawn at once, mirrored through the middle of the room. The answer: the last spell lands again on the far side, so we look across and leave where it will fall. Not foreseen; now it is.",
       gorgemaw: "My host served the last course again, flipped through the middle of the table to the far side. The copy shows on the cloth at once. I moved my plate. Reheated.",

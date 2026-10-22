@@ -1,6 +1,6 @@
 # Boss journal: the voice bible
 
-Every hero keeps a journal. When a player sees a boss move and lives through it, that hero writes one entry about it, that night, by the fire, in their own voice. There are 17 journals and four bosses, written by four writers at once, so this page is the shared reference. Read the rules first, then the hero you're writing.
+Every hero keeps a journal. When a player sees a boss move and lives through it, that hero writes one entry about it, that night, by the fire, in their own voice. There are 19 journals and eight bosses, written by several writers at once, so this page is the shared reference. Read the rules first, then the hero you're writing.
 
 Sources for every voice: the class tagline and gameplan (`client/js/data.js`), the spec blurbs (`client/js/combat/specs.js`), the passives (`client/js/hero-guide.js`) and the trial lore (`client/js/arena/trials.js`). A voice grows out of the class's own puzzle: what the hero *does* in a fight decides what they *notice* in one.
 
@@ -432,6 +432,52 @@ Each sheet: who they are, how they sound, what they notice, their tics, and two 
 
 ---
 
+### gloomsworn — Gloomsworn, Undying Vigil (tank)
+
+**Who:** A knight who has already died once and stayed at his post. Death is a debt he is paying slowly; the dark keeps the watch with him and does not let go.
+
+**Voice:** Low, level, tired, with something empty behind it. Flat past-tense sentences, no flourish, dry rather than funny. Vocabulary of the watch and the dark: post, relieved, the dark, hollow, owed, grave, dusk, small hours, the dead. He takes a blow the way a man takes weather he has survived before. Never a drill-yard word: footing, line and "Held" belong to the Bastion.
+
+**Notices:** What will hurt, and whether it can hurt him any more than it already has. Who is behind him. Who is going to pay for his wounds (the healer, at the end). Places where one stands alone, and long, quiet stretches. Uses "the watch" for the party only a few times per boss.
+
+**Tics:**
+- Dry asides about being dead: "I know the sensation.", "I was dead for those.", "Even I hide from some things."
+- Takes the blow *whole*, drawing the dark in at the last moment, rather than bracing a shield.
+- Sign-offs are rare and varied ("The watch is relieved.", "The dark remembers."); most entries simply stop.
+- Never "Held.", never a footing complaint.
+
+**Samples:**
+> The claws were meant for me. I watched his near shoulder and let the rake land where I stood. A wound is only a wound; mine are written down already. The rest kept wide of the arc.
+
+> Static took hold of every one of us, and each needed room apart. I found my own bare place and stayed on it. A man who has been buried does not mind a small space.
+
+**Don't:** make him gloomy for its own sake, or pile on death jokes. One dry aside per entry, at most. Do not let him say "debt" in every line (the Oathbroker owns it).
+
+---
+
+### thresher — Thresher, Scythe-Farmer (dps)
+
+**Who:** A farmer who is also the one who digs the graves, and sees no difference between the two jobs. Everything ripens in its time; she only has to be there.
+
+**Voice:** Warm, chatty, unhurried, with a pause before the word that matters. Rural plain-speech; a low fond laugh. Cheerful about terrible things and never in a hurry, which is the unnerving part. Vocabulary of the field and the plot: furrow, row, headland, stubble, sheaf, stook, chaff, plough, spade, soil, ripe, rot, weeds, fallow. (Weather, seasons and planting belong to the Grovekeeper; keep those to a passing word.)
+
+**Notices:** Timing in the sense of when a thing is ready: the telegraph of a blow as a crop coming ripe, ground that has been worked, ground that is spent. The kind of soil one stands on. What will need burying afterwards.
+
+**Tics:**
+- A farm comparison now and then (not every line): "like chaff off a threshing floor".
+- Graveyard cheer: "Room for one more.", "Not the plot I would have chosen to lie in."
+- Easy sign-offs: "Plenty of time.", "Not yet.", "Wrong season for that one.", a pleased "Ha."
+- Talks to the boss kindly, as to something about to be put in the ground.
+
+**Samples:**
+> Up he went, and the embers drew his road to one of the pits, the ring showing which. I stepped off the road and well clear of the pit, and let him dig it himself. Saves me the trouble.
+
+> Cut a head and the stump bleeds, and a blue ring opens at the column behind. Someone has to stand in it till it shuts, or two sprout like weeds. The first cut grows back late, so take the mildest first.
+
+**Don't:** use a "like ... in a field" simile in every entry (it had become a formula), or make her sinister on purpose. She is never cruel.
+
+---
+
 ## Quick reference: who notices what
 
 | Hero | Sees a fight as | Signature verdict |
@@ -453,9 +499,13 @@ Each sheet: who they are, how they sound, what they notice, their tics, and two 
 | ironpalm | breath and conversation | "Breathe." |
 | threadweaver | seams, slack and who's tied to whom | "Mind the slack." |
 | marionettist | staging, cues and the company | (stage directions) |
+| gloomsworn | a post kept, and a wound already written down | a dry aside about being dead |
+| thresher | what is ripe, what needs burying, and ground already worked | "Plenty of time." |
 
 **Pairs most likely to blur, and how to keep them apart:**
 - Bastion / Ironpalm / Runeguard (all "brace before the blow"): Bastion holds his ground, Ironpalm answers a word, Runeguard foresaw it.
 - Cleric / Grovekeeper / Alembist (all "heal before"): Cleric prays for people, Grovekeeper reads weather and plants, Alembist labels an ailment and brews its cure.
 - Ranger / Driftblade (both move a lot): Ranger stands off and picks an angle in few words; Driftblade runs through in one long breath.
+- Gloomsworn / Bastion (both tanks who take the blow): Bastion braces a shield at the last instant and ends "Held."; Gloomsworn lets the wound in, draws the dark about him, and makes a dry remark about having died. Different verbs, different endings, and never the same nouns for the ground ("footing", "line" are Bastion's).
+- Thresher / Grovekeeper (both farm talk): Grovekeeper reads weather and plants before; Thresher works rows and spades, waits for a thing to ripen, and jokes pleasantly about graves.
 - Shadowblade / Marionettist (both theatrical): Shadowblade is noir and alone; Marionettist is the stage and the whole company.
