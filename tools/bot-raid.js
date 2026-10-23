@@ -3,8 +3,8 @@
 //   node tools/bot-raid.js [normal|hard] [runs] [classes comma-separated] [boss id]
 //   e.g. node tools/bot-raid.js normal 5 skitterra   (arguments can come in any order; the boss defaults to grubnak)
 //   seed=N uses another set of seeds; WHY=1 prints the last hits before each death, NEXT=1 the upcoming-moves feed
-//   gear=fresh|mid|full (or GEAR=...) gives every bot representative player gear (see buildGear below); FEAST=pie|stew|broth|tarts
-//   picks the meal for 'full' (default pie, none at the other levels). SUMMARY=1 prints one machine-readable line only.
+//   gear=fresh|mid|full|post1|post2 (or GEAR=...) gives every bot representative player gear (see buildGear below); FEAST=pie|stew|broth|tarts
+//   picks the meal for 'full', 'post1' and 'post2' (default pie, none at the other levels). SUMMARY=1 prints one machine-readable line only.
 const path = require('path');
 const load = (p) => require(path.join(__dirname, '../client/js', p));
 Object.assign(global, load('arena/shapes.js'), load('data.js'), load('combat/engine.js'), load('combat/kits.js'), load('combat/specs.js'),
@@ -49,10 +49,37 @@ for (const a of process.argv.slice(2)) {
 //   mid:   four pieces each (Uncommon weapon and armour, two Rare/Legendary accessories); slots 0 and 1 wear Grubnak gear: one 2-piece bond
 //   full:  best Hard drops: Legendary class weapon (Grubnak), Mythic armour (Hollow King), Mythic accessories (Skitterra, Volkar):
 //          every player wears all four bosses = 4-piece bonuses for every tier, plus a feast
+//   post1: the party that has cleared all four set-1 bosses on Normal AND Hard (eight chests: 16 + 20 items, shared by four, rolled at
+//          loot.js/items.js CHEST_ODDS normal 55/30/12/3 and hard 30/40/22/8 for Uncommon/Rare/Legendary/Mythic: about 15 Uncommon,
+//          13 Rare, 6 Legendary and 2 Mythic in the party's hands). The MEDIAN outcome, worn: every player has one piece from each of
+//          the four set-1 bosses (so the 4-piece bonus for every tier), 16 worn pieces = 2 Mythic, 6 Legendary, 6 Rare, 2 Uncommon,
+//          plus the Pepper Pie. This is the target for SET 2 NORMAL. (Weaker than 'full', which is every piece Legendary/Mythic.)
+//   post2: post1 + a set-2 Normal clear on all four set-2 bosses (4 x 4 = 16 chest items at Normal odds, no Mythic drops in set 2 at
+//          Normal worth wearing: Uncommon/Rare/Legendary only, general items only). The party swaps eight of its post1 pieces
+//          for set-2 pieces (1 Legendary, 4 Rare, 3 Uncommon): 2-piece set-2 bonuses for all four set-2 tiers (5-8); the set-1 bonuses
+//          fall to Brood Bond x3, Stormbound x2, Court of the Barrow x2 and no Kitchen Crew (every swap costs a set-1 piece). Same feast.
+//          This is the target for SET 2 HARD.
 const GEN = {   // [phys weapon, mag weapon, armour, Rare ring, second accessory]
   1: ['g_cleaver', 'g_ladle', 'g_apron', 'g_pepper', 'g_timer'], 2: ['g_fang', 'g_wand', 'g_hauberk', 'g_band', 'g_silk'],
   3: ['g_maul', 'g_rod', 'g_slate', 'g_polar', 'g_iron'], 4: ['g_crown', 'g_sceptre', 'g_shroud', 'g_signet', 'g_lantern'],
 };
+// post1 / post2 per bot slot (index = line-up position, so tank/healer/dps/dps): [weapon, armour, accessory, accessory] with {c} = class id.
+// Every row has one piece of each set-1 tier (1-4). Rarity: w1/w2/w3 and a2/a4 class pieces Legendary, w4 Rare (Court's Favour), g_* as listed.
+const POST1 = [
+  ['{c}_w1', '{c}_a2', 'g_polar', 'g_lantern'],        // L(t1) L(t2) R(t3) R(t4)
+  ['{c}_w3', '{c}_a4', 'g_pepper', 'g_venom'],         // L(t3) L(t4) R(t1) L(t2)
+  ['{c}_w2', 'g_slate', 'm_crown', 'g_pepper'],        // L(t2) U(t3) M(t4) R(t1)
+  ['{c}_w4', 'g_apron', 'm_broodeye', 'g_iron'],       // R(t4) U(t1) M(t2) R(t3)
+];
+// post2 swaps on top of POST1 (old key -> set-2 key; WEAPON6 = the Rimeforged Maul / Icicle Wand by main stat). Eight swaps, always the
+// weakest Rare/Uncommon (or an equal Legendary) piece, never a class Legendary or a Mythic: set-2 bonuses 2/2/2/2 pieces (tiers 5-8),
+// set-1 bonuses left at tier 2 x3, tier 3 x2, tier 4 x2 (tier 1 loses all but one wearer).
+const POST2 = [
+  { g_polar: 'g_brand', g_lantern: 'g_gillcharm' },                // R5 R8
+  { g_pepper: 'g_sigil', g_venom: 'g_kindle' },                    // R7 L5
+  { g_slate: 'g_glacial', g_pepper: 'g_tidering' },                // U6 R8
+  { g_apron: 'g_circlerobe', '{c}_w4': 'WEAPON6' },                // U7 U6
+];
 function buildGear(level, entries) {
   if (!level || level === 'base') return null;
   const sets = entries.map((e, i) => {
@@ -64,10 +91,13 @@ function buildGear(level, entries) {
       const tiers = [[1, 1, 1, 1], [1, 1, 1, 1], [2, 2, 3, 3], [4, 4, 4, 4]][i % 4];
       keys = [w(tiers[0]), GEN[tiers[1]][2], GEN[tiers[2]][3], GEN[tiers[3]][4]];
     } else if (level === 'full') keys = [`${cls}_w1`, 'm_deadcourt', 'm_broodeye', 'm_torc'];
-    else { console.error('gear levels: base, fresh, mid, full'); process.exit(1); }
+    else if (level === 'post1' || level === 'post2') {
+      keys = POST1[i % 4].map(k => k.replace('{c}', cls));
+      if (level === 'post2') keys = keys.map((k, j) => { const sw = POST2[i % 4][POST1[i % 4][j]]; return sw === 'WEAPON6' ? (main === 'mag' ? 'g_frostwand' : 'g_frostmaul') : sw || k; });
+    } else { console.error('gear levels: base, fresh, mid, full, post1, post2'); process.exit(1); }
     const insts = keys.map(key => { if (!ITEMSMOD.ITEMS[key]) throw new Error('no item ' + key); return { key }; });
     const t = ITEMSMOD.gearTotals(cls, insts);
-    if (level === 'full') {   // the feast (town-life.js feastTotals), added after the caps
+    if (level === 'full' || level === 'post1' || level === 'post2') {   // the feast (town-life.js feastTotals), added after the caps
       const { stat, pct } = FEASTS_[process.env.FEAST || 'pie'];
       const role = CLASSES.find(c => c.id === cls).role;
       const x = stat === 'hp' ? { hp: Math.round(1100 * pct / 100) } : stat === 'speed' ? { haste: pct }

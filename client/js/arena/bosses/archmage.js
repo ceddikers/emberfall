@@ -53,8 +53,8 @@ const AZ = {
 
 const AZERATH = {
   id: 'archmage', name: 'Azerath', title: 'Master of the Seven Circles',
-  hp: { normal: 3900000, hard: 5200000 },
-  autoDmg: { normal: 1700, hard: 1800 },
+  hp: { normal: 5200000, hard: 5300000 },
+  autoDmg: { normal: 2000, hard: 1850 },
   enrage: { normal: 600, hard: 605 },   // the cast starts here and lands 8 s later
   enrageName: 'The Tide Rises',
   vuln: 0.5,
@@ -69,9 +69,9 @@ const AZERATH = {
     const TAU = Math.PI * 2;
     const { ELS, RULE, SPELL, TAG, SIG, NAME } = AZ;
     const dmg = {
-      burst: H ? 10000 : 10600, lance: H ? 22500 : 16500, pyre: H ? 14500 : 14000, fire: H ? 13000 : 12500, react: H ? 14500 : 13500, frost: H ? 27000 : 26000,
-      beam: H ? 14500 : 13500, void: H ? 12500 : 12000, voidSelf: H ? 6500 : 6000, ice: H ? 14500 : 14000, bolt: H ? 11500 : 11000, rift: H ? 12500 : 12000,
-      conv: H ? 16500 : 15500, lens: H ? 11000 : 10000, counter: H ? 12000 : 12000, mark: H ? 27000 : 26000, pulse: H ? 9500 : 9000, surge: H ? 13500 : 12500,
+      burst: H ? 16000 : 19100, lance: H ? 22500 : 17500, pyre: H ? 25200 : 21000, fire: H ? 20800 : 22500, react: H ? 24300 : 20250, frost: H ? 43200 : 46800,
+      beam: H ? 24300 : 20250, void: H ? 21600 : 18000, voidSelf: H ? 10400 : 10800, ice: H ? 25200 : 21000, bolt: H ? 19800 : 16500, rift: H ? 21600 : 18000,
+      conv: H ? 27900 : 23250, lens: H ? 18000 : 15000, counter: H ? 21600 : 18000, mark: H ? 43200 : 46800, pulse: H ? 16200 : 13500, surge: H ? 21600 : 22500,
       elBite: H ? 1500 : 1200,
     };
     const S = (...steps) => steps.filter(Boolean);

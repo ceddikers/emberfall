@@ -24,8 +24,8 @@
 
 const TITAN = {
   id: 'titan', name: 'Hrimgar', title: 'Warden of the White Reach',
-  hp: { normal: 3500000, hard: 4400000 },
-  autoDmg: { normal: 1650, hard: 1800 },
+  hp: { normal: 4550000, hard: 4400000 },
+  autoDmg: { normal: 1800, hard: 1980 },
   enrage: { normal: 600, hard: 590 },   // the cast starts here and lands 8 s later (10:08 / 9:58)
   enrageName: 'Endless Winter',
   vuln: 0.5,
@@ -49,10 +49,10 @@ const TITAN = {
     const TAU = Math.PI * 2;
     B.speed = 112;
     const dmg = {
-      howl: H ? 10000 : 10400, fist: H ? 24500 : 23000, slam: H ? 16500 : 16000, sink: H ? 8500 : 8000, fault: H ? 14500 : 14500, icicle: H ? 8200 : 8000,
-      sweep: H ? 12500 : 12000, cold: H ? 26500 : 25000, frozen: H ? 13500 : 12000, water: H ? 2900 : 2900, slide: H ? 19500 : 18500, whiteout: H ? 11500 : 11000,
-      arc: H ? 14500 : 14000, stomp: H ? 14500 : 13500, ring: H ? 12000 : 11000, breath: H ? 4800 : 4500, burst: H ? 14000 : 13000,
-      gripAim: H ? 5000 : 5000, gripStack: H ? 26000 : 24000, crush: H ? 24000 : 22000,
+      howl: H ? 13000 : 13000, fist: H ? 31850 : 28750, slam: H ? 21450 : 20000, sink: H ? 11050 : 10000, fault: H ? 18850 : 18150, icicle: H ? 10650 : 10000,
+      sweep: H ? 16250 : 15000, cold: H ? 34450 : 31250, frozen: H ? 17550 : 15000, water: H ? 3750 : 3650, slide: H ? 25350 : 23150, whiteout: H ? 14950 : 13750,
+      arc: H ? 18850 : 17500, stomp: H ? 18850 : 16900, ring: H ? 15600 : 13750, breath: H ? 6250 : 5650, burst: H ? 18200 : 16250,
+      gripAim: H ? 6500 : 6250, gripStack: H ? 33800 : 30000, crush: H ? 31200 : 27500,
     };
     const S = (...steps) => steps.filter(Boolean);
     // --- the floor ------------------------------------------------------------------------------

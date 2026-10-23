@@ -25,8 +25,8 @@
 
 const WYRM = {
   id: 'wyrm', name: 'Vhalgrath', title: 'Tyrant of the Cinder Peaks',
-  hp: { normal: 3450000, hard: 4100000 },
-  autoDmg: { normal: 1700, hard: 1800 },
+  hp: { normal: 4250000, hard: 4500000 },
+  autoDmg: { normal: 2300, hard: 2100 },
   enrage: { normal: 612, hard: 622 },   // the cast starts here and lands 8 s later (10:20 / 10:30)
   enrageName: 'Ashfall',
   vuln: 0.5,
@@ -40,10 +40,10 @@ const WYRM = {
     const B = f.boss;
     const TAU = Math.PI * 2;
     const dmg = {
-      roar: H ? 10000 : 10600, buster: H ? 24500 : 23000, tail: H ? 14000 : 14500, breath: H ? 15500 : 15600, molten: H ? 2900 : 2900, puddle: H ? 2300 : 2300,
-      magma: H ? 9400 : 9800, feast: H ? 26500 : 28000, gust: H ? 3500 : 3500, pass: H ? 12000 : 12800, land: H ? 17000 : 17200, wing: H ? 3800 : 3600, slam: H ? 5500 : 5000,
-      scale: H ? 10500 : 11000, boom: H ? 12500 : 12000, boil: H ? 9000 : 9500, scorch: H ? 13000 : 13500, burn: H ? 20500 : 18500, heart: H ? 7500 : 7000,
-      rain: H ? 7500 : 7000, flareStack: H ? 21000 : 20000, flareSpread: H ? 9400 : 8800, whelpHp: 30000, whelpBite: H ? 1900 : 1500, last: H ? 11000 : 9500,
+      roar: H ? 11700 : 15900, buster: H ? 28700 : 34500, tail: H ? 16400 : 21800, breath: H ? 18100 : 23400, molten: H ? 2900 : 2900, puddle: H ? 2300 : 2300,
+      magma: H ? 11000 : 14700, feast: H ? 31000 : 42000, gust: H ? 3500 : 3500, pass: H ? 14000 : 19200, land: H ? 19900 : 25800, wing: H ? 4400 : 5400, slam: H ? 6400 : 7500,
+      scale: H ? 12300 : 16500, boom: H ? 14600 : 18000, boil: H ? 10500 : 14300, scorch: H ? 15200 : 20300, burn: H ? 24000 : 27800, heart: H ? 8800 : 10500,
+      rain: H ? 8800 : 10500, flareStack: H ? 24600 : 30000, flareSpread: H ? 11000 : 13200, whelpHp: 30000, whelpBite: H ? 2200 : 2300, last: H ? 12900 : 14300,
     };
     const S = (...steps) => steps.filter(Boolean);
     const R = 560;                       // the crater floor's radius (shapes.js)

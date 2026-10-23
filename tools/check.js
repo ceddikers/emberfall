@@ -16,7 +16,7 @@ const BUILD_MAX = 18;    // ... and the strongest pick of every row together at 
 // Normal is meant to take a real group several wipes, so a bot party only has to clear one run in RAID_RUNS
 const RAID_RUNS = 3;
 // bot raids: every boss, and every spec somewhere, with a fixed line-up so the result doesn't depend on a random spec
-const RAIDS = [   // [boss name, boss id, tank, healer, two DPS]
+const RAIDS = [   // [boss name, boss id, tank, healer, two DPS, optional 'gear=...' (bot-raid.js buildGear levels; set 2 Normal runs as a party with all of set 1 cleared: gear=post1)]
   ['Grubnak', 'grubnak', 'bastion:base', 'cleric:aegis', 'ranger:sharpshooter', 'pyromancer:cataclysm'],
   ['Skitterra', 'skitterra', 'runeguard:runeblade', 'grovekeeper:moonwell', 'shadowblade:bladedancer', 'pyromancer:sigilmancer'],
   ['Volkar', 'volkar', 'bloodreaver:berserker', 'chronomancer:accelerant', 'ranger:venomstrike', 'pyromancer:base'],
@@ -56,11 +56,11 @@ const RAIDS = [   // [boss name, boss id, tank, healer, two DPS]
   ['Skitterra', 'skitterra', 'runeguard:base', 'grovekeeper:base', 'marionettist:cuttingline', 'shadowblade:base'],
   ['the Hollow King', 'hollowking', 'bastion:base', 'cleric:aegis', 'marionettist:understudy', 'ranger:base'],
   // set 2: Vhalgrath, the Ember Wyrm
-  ['Vhalgrath', 'wyrm', 'bastion:base', 'cleric:aegis', 'ranger:sharpshooter', 'pyromancer:cataclysm'],
-  ['Vhalgrath', 'wyrm', 'runeguard:runeblade', 'grovekeeper:moonwell', 'shadowblade:bladedancer', 'pyromancer:sigilmancer'],
+  ['Vhalgrath', 'wyrm', 'bastion:base', 'cleric:aegis', 'ranger:sharpshooter', 'pyromancer:cataclysm', 'gear=post1'],
+  ['Vhalgrath', 'wyrm', 'runeguard:runeblade', 'grovekeeper:moonwell', 'shadowblade:bladedancer', 'pyromancer:sigilmancer', 'gear=post1'],
   // set 2: Hrimgar, the Frost Titan
-  ['Hrimgar', 'titan', 'bastion:base', 'cleric:aegis', 'ranger:sharpshooter', 'pyromancer:cataclysm'],
-  ['Hrimgar', 'titan', 'runeguard:runeblade', 'grovekeeper:moonwell', 'shadowblade:bladedancer', 'pyromancer:sigilmancer'],
+  ['Hrimgar', 'titan', 'bastion:base', 'cleric:aegis', 'ranger:sharpshooter', 'pyromancer:cataclysm', 'gear=post1'],
+  ['Hrimgar', 'titan', 'runeguard:runeblade', 'grovekeeper:moonwell', 'shadowblade:bladedancer', 'pyromancer:sigilmancer', 'gear=post1'],
   ['Volkar', 'volkar', 'bastion:base', 'threadweaver:base', 'marionettist:base', 'pyromancer:base'],
   // Gloomsworn (class 18): the base kit and each spec tanking a boss (a Hollow's saves: tools/hollow-test.js)
   ['Grubnak', 'grubnak', 'gloomsworn:base', 'cleric:base', 'ranger:base', 'pyromancer:base'],
@@ -75,22 +75,22 @@ const RAIDS = [   // [boss name, boss id, tank, healer, two DPS]
 ];
 // set 2: Azerath, the Sunken Archmage (Boss VII)
 RAIDS.push(
-  ['Azerath', 'archmage', 'bastion:base', 'cleric:aegis', 'ranger:sharpshooter', 'pyromancer:cataclysm'],
-  ['Azerath', 'archmage', 'runeguard:runeblade', 'grovekeeper:moonwell', 'shadowblade:bladedancer', 'pyromancer:sigilmancer'],
+  ['Azerath', 'archmage', 'bastion:base', 'cleric:aegis', 'ranger:sharpshooter', 'pyromancer:cataclysm', 'gear=post1'],
+  ['Azerath', 'archmage', 'runeguard:runeblade', 'grovekeeper:moonwell', 'shadowblade:bladedancer', 'pyromancer:sigilmancer', 'gear=post1'],
 );
 // set 2: the Hydra of the Drowned Temple (Boss VIII)
 RAIDS.push(
-  ['the Hydra', 'hydra', 'bastion:base', 'cleric:aegis', 'ranger:sharpshooter', 'pyromancer:cataclysm'],
-  ['the Hydra', 'hydra', 'runeguard:runeblade', 'grovekeeper:moonwell', 'shadowblade:bladedancer', 'pyromancer:sigilmancer'],
+  ['the Hydra', 'hydra', 'bastion:base', 'cleric:aegis', 'ranger:sharpshooter', 'pyromancer:cataclysm', 'gear=post1'],
+  ['the Hydra', 'hydra', 'runeguard:runeblade', 'grovekeeper:moonwell', 'shadowblade:bladedancer', 'pyromancer:sigilmancer', 'gear=post1'],
 );
 // Hard smoke runs: one per boss, with the plain line-up. Bots aren't expected to clear Hard; the script just has to run
 // clean and the longest of 3 fights has to last a while (HARD_MIN seconds) before they wipe
 const HARD_COMP = 'bastion:base,cleric:base,ranger:base,pyromancer:base';
 const HARD_MIN = 90;
-const HARD_BOSSES = [['Grubnak', 'grubnak'], ['Skitterra', 'skitterra'], ['Volkar', 'volkar'], ['the Hollow King', 'hollowking'], ['Vhalgrath', 'wyrm'], ['Hrimgar', 'titan']];
+const HARD_BOSSES = [['Grubnak', 'grubnak'], ['Skitterra', 'skitterra'], ['Volkar', 'volkar'], ['the Hollow King', 'hollowking'], ['Vhalgrath', 'wyrm', 'gear=post2'], ['Hrimgar', 'titan', 'gear=post2']];   // [name, id, optional gear: set 2 Hard is for a party that has also cleared set 2 on Normal]
 
-HARD_BOSSES.push(['the Hydra', 'hydra']);
-HARD_BOSSES.push(['Azerath', 'archmage']);
+HARD_BOSSES.push(['the Hydra', 'hydra', 'gear=post2']);
+HARD_BOSSES.push(['Azerath', 'archmage', 'gear=post2']);
 const results = [];
 const pass = (name, detail = '') => results.push({ ok: true, name, detail });
 const fail = (name, detail = '') => results.push({ ok: false, name, detail });
@@ -619,9 +619,9 @@ async function heavy() {
   const [sim, tal, ...raids] = await Promise.all([
     run([path.join(__dirname, 'simulate.js')]),
     run([path.join(__dirname, 'talents.js')]),
-    ...RAIDS.map(([, boss, ...comp]) => run([path.join(__dirname, 'bot-raid.js'), 'normal', String(RAID_RUNS), boss, comp.join(',')])),
+    ...RAIDS.map(([, boss, ...rest]) => run([path.join(__dirname, 'bot-raid.js'), 'normal', String(RAID_RUNS), boss, rest.filter(a => !/^gear=/.test(a)).join(','), ...rest.filter(a => /^gear=/.test(a))])),
     ...trialIds.map(id => run([path.join(__dirname, 'bot-raid.js'), 'normal', '2', 'trial:' + id])),
-    ...HARD_BOSSES.map(([, boss]) => run([path.join(__dirname, 'bot-raid.js'), 'hard', '3', boss, HARD_COMP])),
+    ...HARD_BOSSES.map(([, boss, gear]) => run([path.join(__dirname, 'bot-raid.js'), 'hard', '3', boss, HARD_COMP, ...(gear ? [gear] : [])])),
   ]);
   const hards = raids.splice(RAIDS.length + trialIds.length);
   const trials = raids.splice(RAIDS.length);
@@ -673,8 +673,9 @@ async function heavy() {
   }
 
   // bot raids: a bot party clears each boss on Normal at least once in RAID_RUNS
-  RAIDS.forEach(([boss, , ...comp], i) => {
-    const r = raids[i], m = r.out.match(/cleared (\d+) of (\d+)/), name = `Bots clear ${boss} (Normal, ${comp.join(' ')})`;
+  RAIDS.forEach(([boss, , ...rest], i) => {
+    const comp = rest.filter(a => !/^gear=/.test(a)), gear = rest.find(a => /^gear=/.test(a));
+    const r = raids[i], m = r.out.match(/cleared (\d+) of (\d+)/), name = `Bots clear ${boss} (Normal, ${comp.join(' ')}${gear ? ', ' + gear : ''})`;
     if (r.code === 0 && m && +m[1] >= 1) pass(name, `${m[1]} of ${m[2]}`);
     else fail(name, m ? `${m[1]} of ${m[2]}\n` + r.out.split('\n').filter(l => /^run /.test(l)).join('\n') : r.out.slice(-800));
   });
@@ -682,7 +683,7 @@ async function heavy() {
   // Hard smoke: each boss's Hard script runs without errors and the bots last at least HARD_MIN seconds
   HARD_BOSSES.forEach(([boss], i) => {
     // the longest of the runs (a bot party wipes early now and then; one early wipe isn't a broken script)
-    const r = hards[i], name = `${boss} Hard runs clean`;
+    const r = hards[i], name = `${boss} Hard runs clean${HARD_BOSSES[i][2] ? ' (' + HARD_BOSSES[i][2] + ')' : ''}`;
     const m = [...r.out.matchAll(/^run \d+: (\w+) at (\d+)s/gm)].sort((a, b) => b[2] - a[2])[0];
     if (r.code === 0 && m && +m[2] >= HARD_MIN) pass(name, `${m[1]} at ${m[2]}s`);
     else fail(name, m ? `${m[1]} at ${m[2]}s (want ${HARD_MIN}s or more)` : r.out.slice(-800));
