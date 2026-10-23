@@ -208,6 +208,15 @@ Object.assign(BUFF_TIPS, {
   turned: n => `You turned a tankbuster aside: your next ${n('edge')} costs no Resolve.`,
   banner: () => 'The banner stands: every Perfect Block gives 10 more Resolve.',
 });
+// the spec rows (VI, VII) of the Driftblade and the Ironpalm: the windows a talent leaves open
+Object.assign(BUFF_NAMES, { ricochet: 'Ricochet', zenith: 'Zenith', roost: 'Roost', flood: 'Flood Tide' });
+Object.assign(BUFF_ICON, { ricochet: 'hook', zenith: 'cross', roost: 'gale', flood: 'palm' });
+Object.assign(BUFF_TIPS, {
+  ricochet: n => `Impact lit the way back: your next ${n('hook')} also flings you back through the boss, a Passing Strike, and gives 20 more Drift.`,
+  zenith: n => `Your charge hangs at its peak: Drift cannot drain, and ${n('cross')} needs only 60.`,
+  roost: () => 'Settled on the wind: your Orbit stays full whether you circle or not, Carve cuts on its own every second, and your Drift holds.',
+  flood: () => 'The tide is in: your next named moves each wash out a second blow.',
+});
 // status icons for entries with no ability art: drawn line glyphs (12x12, in the icon's text colour)
 const bfSvg = d => `<svg viewBox="0 0 12 12" aria-hidden="true">${d}</svg>`;
 const BUFF_GLYPH = {

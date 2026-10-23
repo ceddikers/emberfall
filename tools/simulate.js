@@ -99,6 +99,8 @@ function runSim(classId, skill, seed, specId, talents) {
       // a Ward on an ally (Spellwarden): assume it soaks a bit over half before it ends (an ally isn't tanking)
       if (ev.type === 'shield' && ev.tag === 'ward' && ev.target !== 'self') state.allyWards.push({ start: state.t, end: state.t + ev.dur });
       if (ev.type === 'shield' && ev.target === 'party') { state.eff += Math.min(state.healDebt, ev.amount * 4); state.healDebt = Math.max(0, state.healDebt - ev.amount * 4); }
+      // a tank's own cut (a Berserker's Bloodbath) is damage taken: it feeds the bank and lowers HP
+      if (ev.type === 'selfDamage' && role === 'tank') { state.tookDamage.push({ t: state.t, a: maxHp * (ev.pct || 0) }); return; }
       if (TANK_SIM.emit(state, k, ev)) return;   // the advanced tanks' jaw and Ledger (below)
       if (ev.type === 'mit' && ev.target === 'self') {
         if (ev.kind === 'reflect') state.reflect = state.t + ev.dur;
@@ -339,7 +341,7 @@ const PRO = {
       if (must || (bank >= mx * 0.03 && !(busterIn && gorge === 1 && toBust > 0.2))) return I(k, 'drain');
       return I(k, 'hack');
     }
-    for (const id of ['deathless', 'roar']) if (k.has(id) && (bank >= mx * 0.15 || k.remaining(id) < G + 0.3)) return I(k, 'drain');
+    for (const id of ['deathless', 'throes', 'roar']) if (k.has(id) && (bank >= mx * 0.15 || k.remaining(id) < G + 0.3)) return I(k, 'drain');
     const pooling = ctx.burstSoon(ctx.t) || k.cdRemaining(abOf(k, 'frenzy')) < 6;
     // (Undying turns the buster into Blood and makes Drains free: empty the gauge before it, or that Blood spills)
     const undyingNext = abOf(k, 'undying').id === 'undying' && k.cdRemaining(abOf(k, 'undying')) < toBust && toBust < 7;
@@ -357,8 +359,9 @@ const PRO = {
     if (abOf(k, 'sanctum').id === 'sanctum' && ready(k, 'sanctum') && weaveOk(k) && toRw < 3.4 && toRw > 0.6 && k.g.runes >= 1 && !ctx.state.shield) return I(k, 'sanctum');
     if (k.gcdRemaining() > 0.0001) return null;
     const wardFor = (toBuster < 3 && toBuster > 0.3) || (toRw < 3 && toRw > 0.3);
-    if (wardFor && k.g.runes >= 1 && !ctx.state.shield) return I(k, 'ward');
-    if (k.g.runes >= 3 && !(ctx.burstSoon(ctx.t) && k.g.runes < 3)) {
+    if (wardFor && (k.g.runes >= 1 || k.has('foreseen')) && !ctx.state.shield) return I(k, 'ward');   // (Foreseen Ward: a cast seen coming makes the next one free)
+    const glyphAt = k.has('counter') ? 1 : 3;   // (Counterstroke: a single Rune after a reflect)
+    if (k.g.runes >= glyphAt && !(ctx.burstSoon(ctx.t) && k.g.runes < glyphAt)) {
       // keep a rune for the next planned ward if it's close
       const nextNeed = Math.min(toBuster, toRw);
       if (nextNeed < 6 && nextNeed > 3) return I(k, 'strike');
@@ -450,6 +453,8 @@ const PRO = {
     if (debt > 5000 && ready(k, 'prayer') && weaveOk(k)) return I(k, 'prayer');
     if (abOf(k, 'bene').target === 'enemy' ? ready(k, 'bene') && weaveOk(k) : debt > 6000 && ready(k, 'bene') && weaveOk(k)) return I(k, 'bene');   // Inquisitor's Condemn is an attack
     if (k.gcdRemaining() > 0.0001 || k.cast) return null;
+    // an instant Smite (Open Verdict) is pressed while moving too
+    if (k.has('opened') && k.g.bloom < 3) return I(k, 'smite');
     // Bloom of Dawn (a talent in Intervention's place): a pile of Petals into one big heal
     if (abOf(k, 'intervene').id === 'dawnbloom' && ready(k, 'intervene') && k.g.petals >= 2 && debt > 8000) { ctx.state.gcdHeals++; return I(k, 'intervene'); }
     // (Dawnstar waits for the burst, unless the next Petal or Mend would spill past it)
@@ -589,7 +594,11 @@ Object.assign(PRO, {
   thermist(k, ctx) {
     const t = k.g.temp;
     // Inversion at the edge: a swing of 10, half again as strong (in a burst window when one is close)
-    if (ready(k, 'invert') && weaveOk(k) && Math.abs(t) >= 5 && (ctx.inBurst(ctx.t) || (ctx.t % BURST_EVERY) < 40)) return I(k, 'invert');
+    // Controlled Meltdown (a talent in Inversion's place): let go with the Strain well up
+    if (abOf(k, 'invert').id === 'meltdown') { if (ready(k, 'invert') && weaveOk(k) && (k.g.strain || 0) >= 60) return I(k, 'invert'); }
+    else if (ready(k, 'invert') && weaveOk(k) && Math.abs(t) >= 5 && (ctx.inBurst(ctx.t) || (ctx.t % BURST_EVERY) < 40)) return I(k, 'invert');
+    // Dead Centre (a Pendulum talent): Equilibrium keeps the Momentum alive when it is about to lapse
+    if (k.talent('thermist_deadcentre') && ready(k, 'equil') && weaveOk(k) && k.stacks('momentum') >= 2 && k.remaining('momentum') < 2.5) return I(k, 'equil');
     // Zenith: vent Strain before it melts you down, without leaving the edge
     if (k.def.redline && ready(k, 'equil') && weaveOk(k) && k.g.strain >= 50 && Math.abs(t) >= 5) return I(k, 'equil');
     if (k.gcdRemaining() > 0.0001 || k.cast) return null;
@@ -610,7 +619,9 @@ Object.assign(PRO, {
   },
   driftblade(k, ctx) {
     const slip = abOf(k, 'slip'), full = driftMax(k);
-    if (ready(k, 'gale') && weaveOk(k) && (ctx.inBurst(ctx.t) || (ctx.t % BURST_EVERY) < 30)) return I(k, 'gale');
+    // (Starfall, the Comet's spec-row move in Gale Run's place, goes off on a big charge; Roost and Gale Run in the burst)
+    if (abOf(k, 'gale').id === 'starfall') { if (ready(k, 'gale') && weaveOk(k) && k.g.drift >= 150) return I(k, 'gale'); }
+    else if (ready(k, 'gale') && weaveOk(k) && (ctx.inBurst(ctx.t) || (ctx.t % BURST_EVERY) < 30)) return I(k, 'gale');
     if (ready(k, 'hook') && weaveOk(k) && (k.g.drift >= 70 || (abOf(k, 'hook').id === 'gyre' && (k.g.drift >= 75 || k.charges(abOf(k, 'hook')) === 2)))) return I(k, 'hook');
     if (weaveOk(k) && k.charges(slip) > 0 && (k.charges(slip) === 2 || k.g.drift < full * 0.6)) return I(k, 'slip');
     if (abOf(k, 'still').id === 'tailspin' && ready(k, 'still') && weaveOk(k)) return I(k, 'still');
@@ -658,7 +669,9 @@ const TANK_SIM = {
     if (L) {
       const bills = OATH.bills(L, state.t, DT);
       for (const b of bills) { state.tookDamage.push({ t: state.t, a: b.self }); k.stats.damage += b.boss; }
-      if (bills.length || state.t - (state.ledAt || 0) > 1) { state.ledAt = state.t; k.notify('ledger', OATH.pack(L, state.t)); }
+      // (a bill billed to you rides on the notice, as the host sends it: Compound Interest reads it)
+      const billed = bills.reduce((s, b) => s + b.self, 0);
+      if (bills.length || state.t - (state.ledAt || 0) > 1) { state.ledAt = state.t; k.notify('ledger', billed > 0 ? Object.assign(OATH.pack(L, state.t), { bill: Math.round(billed) }) : OATH.pack(L, state.t)); }
     }
   },
 };
@@ -698,7 +711,9 @@ Object.assign(PRO, {
     else if (ready(k, 'lien') && weaveOk(k) && (oathDueSoon(k, 9.5) > hp * 0.15 || (ctx.inBurst(ctx.t) && !(toB > 0 && toB < 9) && ctx.t % BURST_EVERY > 0) || (ctx.inBurst(ctx.t) && ctx.t % BURST_EVERY > BURST_LEN - 3))) return I(k, 'lien');
     const def = abOf(k, 'default'), reneg = abOf(k, 'reneg').id === 'reneg';
     // (Writ is kept off a tankbuster you mean to Default or Foreclose on: the full bill is the blow)
-    if (toB < 1 && ready(k, 'writ') && !(k.cdRemaining(def) < 4)) return I(k, 'writ');
+    // (Warrant, a Collector's spec-row move in Writ's place, goes off in the burst instead)
+    if (abOf(k, 'writ').id === 'warrant') { if (ready(k, 'writ') && weaveOk(k) && ctx.inBurst(ctx.t)) return I(k, 'writ'); }
+    else if (toB < 1 && ready(k, 'writ') && !(k.cdRemaining(def) < 4)) return I(k, 'writ');
     const plain = k.g.ledger.filter(e => !e.rn).reduce((s, e) => s + e.a, 0);
     // Renegotiate as a setup: a big Ledger about to be torn up is renegotiated first (Default strikes for those lines
     // in full, Foreclose at 1.5x), and lines about to fall due just before Lien are pushed into it
@@ -837,7 +852,7 @@ Object.assign(PRO, {
   // Doll jabs on its own)
   marionettist(k, ctx) {
     const cross = abOf(k, 'cross');
-    if (cross.type === 'ogcd' && weaveOk(k) && ready(k, 'cross') && mariLineOn(k)) return I(k, 'cross');
+    if (cross.type === 'ogcd' && weaveOk(k) && ready(k, 'cross') && k.glows(cross)) return I(k, 'cross');
     if (weaveOk(k) && ready(k, 'pull') && (k.charges(abOf(k, 'pull')) === 2 || k.g.strings < 3 || mariLimp(k))) return I(k, 'pull');
     if (abOf(k, 'swap').id === 'swap' && k.talent('marionettist_cue') && weaveOk(k) && ready(k, 'swap') && k.cdRemaining(cross) > 3) return I(k, 'swap');
     // Stage Cross: Swap a moment before Cross-Cut comes up, so the cut lands harder (the Doll is back on its mark by then)
@@ -847,7 +862,7 @@ Object.assign(PRO, {
     // Pirouette through a blow you see coming (+1 Encore); otherwise keep it for the next one when it's close
     if (ready(k, 'pirouette') && abOf(k, 'pirouette').id === 'pirouette' && hitIn < 1.4) return I(k, 'pirouette');
     if (ready(k, 'finale') && k.g.encore >= 5) return I(k, 'finale');
-    if (cross.type === 'gcd' && ready(k, 'cross') && mariLineOn(k)) return I(k, 'cross');
+    if (cross.type === 'gcd' && ready(k, 'cross') && k.glows(cross)) return I(k, 'cross');   // (Crossfire glows for the Dolls' own line)
     if (ready(k, 'pirouette') && (abOf(k, 'pirouette').id !== 'pirouette' || hitIn > 12)) return I(k, 'pirouette');
     return ready(k, 'cue') ? I(k, 'cue') : null;
   },
@@ -861,7 +876,9 @@ Object.assign(PRO, {
 Object.assign(PRO, {
   gloomsworn(k, ctx) {
     const toB = ctx.nextBuster - ctx.t, toR = ctx.nextRaidwide - ctx.t, g = k.g.gloom || 0;
-    if (toB < 1.2 && toB > 0 && ready(k, 'mantle') && weaveOk(k)) return I(k, 'mantle');
+    // (Dark Pact, the Reaver's spec row VII, takes Black Mantle's place: the vessel filled for two echoing Strikes, whenever it is ready and the vessel is low)
+    if (abOf(k, 'mantle').id === 'pact') { if (ready(k, 'mantle') && weaveOk(k) && g < 40) return I(k, 'mantle'); }
+    else if (toB < 1.2 && toB > 0 && ready(k, 'mantle') && weaveOk(k)) return I(k, 'mantle');
     // (a Reaver of Dusk's Dusk Reave stands where Black Pall was: a cut on cooldown, free in a Hollow, kept clear of a tankbuster's Gloom)
     if (abOf(k, 'pall').id === 'reave') { if (ready(k, 'pall') && weaveOk(k) && (k.has('hollow') || (g >= 50 && toB > 8))) return I(k, 'pall'); }
     else if (toR < 1.5 && toR > 0 && g >= 30 && ready(k, 'pall') && weaveOk(k) && (g >= 70 || toB > 12)) return I(k, 'pall');
@@ -889,6 +906,9 @@ Object.assign(PRO, {
       if (wisp.id === 'cull') { if (ready(k, 'wisp') && on >= 3) return I(k, 'wisp'); }
       else if (ready(k, 'wisp') && (!k.has('wisp') || (k.talent('thresher_sacrifice') && k.remaining('wisp') < 6 && on >= 3))) return I(k, 'wisp');
       const hook = abOf(k, 'hook'), blink = abOf(k, 'blink');
+      // (the spec rows' Blink replacements: Hourglass holds the gold for the Reap, Nightfall hurries the faint ones)
+      if (blink.id === 'hourglass') { if (ready(k, 'blink') && gold >= 2 && !reapReady) return I(k, 'blink'); }
+      else if (blink.id === 'nightfall') { if (ready(k, 'blink') && young >= 2 && gold === 0) return I(k, 'blink'); }
       if (k.charges(hook) > 0 && thStage(k, 'thread') === 0) return I(k, 'hook');
       if (k.charges(blink) > 0 && thStage(k, 'bind') === 0 && !(k.def.noAff && k.def.noAff.indexOf('bind') >= 0)) return I(k, 'blink');
       if (k.def.blinkAge && k.charges(blink) > 0 && young >= 2 && gold === 0) return I(k, 'blink');   // (a Grim's Blink ripens the afflictions)

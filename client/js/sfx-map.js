@@ -69,11 +69,13 @@
     bloodreaver: {
       hack: 'ab-slash', drain: L('ab-heavy', 'ab-dot'), letting: L('ab-slash', 'ab-dot'), frenzy: 'ab-buff', warcry: L('ab-taunt', 'ab-buff'), undying: L('ab-buff', 'ab-dot'),
       rampage: 'ab-heavy', lance: L('ab-shot', 'ab-dot'), scab: 'ab-shield', moon: L('ab-buff', 'ab-dot'),
+      bloodbath: L('ab-slash', 'ab-heavy', 'ab-dot'), pact: L('ab-buff', 'ab-heal', 'ab-dot'),
       crimsoneclipse: ULT('bloodreaver'), taunt: 'ab-taunt', auto: 'ab-slash',
     },
     runeguard: {
       strike: L('ab-rune', 'ab-punch'), ward: L('ab-rune', 'ab-shield'), glyph: L('ab-rune', 'ab-heavy'), overload: L('ab-rune', 'ab-buff'), sanctum: L('ab-rune', 'ab-shield'), mirror: L('ab-shield', 'ab-rune'),
       cut: L('ab-rune', 'ab-slash'), cleave: L('ab-rune', 'ab-heavy'), whirl: 'ab-rune', living: L('ab-rune', 'ab-heavy'),
+      wardglyph: L('ab-rune', 'ab-heal', 'ab-shield'),
       runecataclysm: ULT('runeguard'), taunt: 'ab-taunt', auto: 'ab-rune',
     },
     ranger: {
@@ -123,6 +125,7 @@
     gorgemaw: {
       gnash: 'ab-maw', wide: L('ab-maw', 'ab-taunt'), spit: L('ab-maw', 'ab-shot'), digest: L('ab-maw', 'ab-heal'), iron: L('ab-shield', 'ab-maw'), bottomless: L('ab-maw', 'ab-buff'),
       regurgitate: L('ab-maw', 'ab-heavy'), stonebelly: L('ab-shield', 'ab-heavy'),
+      feedingfrenzy: L('ab-maw', 'ab-buff', 'ab-heavy'), banquet: L('ab-maw', 'ab-heal', 'ab-shield'),
       mawofruin: ULT('gorgemaw'), taunt: 'ab-taunt', auto: 'ab-maw',
     },
     oathbroker: {
@@ -138,12 +141,12 @@
     },
     threadweaver: {
       needle: L('ab-thread', 'ab-stab'), tie: 'ab-thread', mend: L('ab-thread', 'ab-heal'), snip: 'ab-thread', shuttle: L('ab-thread', 'ab-shot'), tapestry: L('ab-thread', 'ab-shield'),
-      embroider: L('ab-thread', 'ab-heal'), cradle: L('ab-thread', 'ab-shield'),
+      embroider: L('ab-thread', 'ab-heal'), cradle: L('ab-thread', 'ab-shield'), thrum: L('ab-thread', 'ab-heal'), severance: L('ab-thread', 'ab-shield'),
       grandloom: ULT('threadweaver'), auto: 'ab-thread',
     },
     marionettist: {
       jab: 'ab-stab', cue: L('ab-thread', 'ab-stab'), pull: 'ab-thread', cross: L('ab-thread', 'ab-stab'), pirouette: L('ab-slash', 'ab-thread'), swap: L('ab-thread', 'dash'), finale: L('ab-thread', 'ab-heavy'),
-      tangle: L('ab-thread', 'ab-dot'), redcurtain: L('ab-thread', 'ab-buff'), string: 'ab-thread',
+      tangle: L('ab-thread', 'ab-dot'), redcurtain: L('ab-thread', 'ab-buff'), string: 'ab-thread', strum: L('ab-thread', 'ab-stab'), crossfire: L('ab-thread', 'ab-heavy'),
       curtaincall: ULT('marionettist'), auto: 'ab-thread',
     },
     // Gloomsworn: heavy, low and metallic with a hollow breath under it; every move has its own voice (sfx-synth.js ABIL.gloomsworn)
@@ -155,7 +158,7 @@
     // Reaper (class id thresher): long steel scythe sweeps with the hollow wind of afflictions and a toll where one comes due; every move has its own voice (sfx-synth.js ABIL.thresher)
     thresher: {
       slash: L('ab-slash', 'ab-wind'), hook: L('ab-thread', 'ab-shot'), reap: L('ab-heavy', 'ab-slash'), gather: L('ab-wind', 'ab-buff'),
-      blink: L('ab-stab', 'dash'), wisp: L('ab-wind', 'ab-heal'), sowing: L('ab-wind', 'ab-dot'), cull: L('ab-heavy', 'ab-dot'),
+      blink: L('ab-stab', 'dash'), wisp: L('ab-wind', 'ab-heal'), sowing: L('ab-wind', 'ab-dot'), cull: L('ab-heavy', 'ab-dot'), hourglass: L('ab-stab', 'ab-time'), nightfall: L('ab-stab', 'ab-wind'),
       gatestrike: L('ab-slash', 'ab-wind'), reapersgate: ULT('thresher'), auto: 'ab-melee-generic',
     },
   };

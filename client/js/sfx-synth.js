@@ -1411,6 +1411,8 @@
       lance: [['shot', 0.8, 0, 1, 0], ['wet', 1.3, 0.15], ['whoosh-down', 1.4, 0.05, 0.6]],
       scab: [['shield', 0.7], ['crackle', 0.6], ['wet', 0.8, 0, 0.5]],
       moon: [['buff', 0.7, 0, 1, 1], ['drone', 0.8], ['choir', 0.7, 0.1, 0.6]],
+      bloodbath: [['slash', 0.9, 0, 1, 1], ['wet', 1.2, 0.05], ['tear', 0.8, 0.12, 0.7]],
+      pact: [['buff', 0.7, 0, 1, 1], ['pulse', 1.1, 0.1], ['heal', 0.8, 0.2, 0.6, 1]],
       auto: [['slash', 0.8, 0, 0.8, 0]],
     },
     runeguard: {
@@ -1424,6 +1426,7 @@
       cleave: [['rune', 0.75, 0, 0.8, 0], ['heavy', 0.9, 0, 1, 2], ['ring', 0.7, 0.25]],
       whirl: [['rune', 1.25, 0, 1, 1], ['swirl', 1], ['sparkle', 1.1, 0.2]],
       living: [['rune', 0.7, 0, 1, 2], ['heavy', 0.7, 0, 1, 1], ['boom', 0.7, 0.3]],
+      wardglyph: [['rune', 1, 0, 1, 2], ['shield', 0.9, 0.05], ['chime', 1.1, 0.15]],
       auto: [['rune', 1.4, 0, 0.6, 1], ['punch', 1.2, 0, 0.6, 1]],
     },
     ranger: {
@@ -1556,6 +1559,8 @@
       bottomless: [['maw', 0.6, 0, 1, 1], ['gulp', 0.6, 0.2], ['drone', 0.5]],
       regurgitate: [['maw', 0.9, 0, 1, 2], ['wet', 0.7, 0.1], ['heavy', 0.9, 0.15, 0.7, 1]],
       stonebelly: [['shield', 0.75], ['boom', 0.7], ['gulp', 1.1, 0.1]],
+      feedingfrenzy: [['maw', 0.9, 0, 0.8, 1], ['gulp', 0.9, 0.12], ['growl', 0.8, 0.2], ['buff', 0.6, 0.1]],
+      banquet: [['maw', 0.7, 0, 1, 2], ['gulp', 0.8, 0.2], ['heal', 0.9, 0.35, 0.6, 1], ['shield', 0.6, 0.3]],
       auto: [['maw', 1.25, 0, 0.7, 0]],
     },
     oathbroker: {

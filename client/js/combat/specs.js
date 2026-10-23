@@ -153,7 +153,7 @@ const SPECS = {
               if (k.perk('bloodreaver_w2')) { k.damage(pot * 0.3, { ab: this }); k.fx('empower'); }
               const heal = Math.max(k.env.maxHp() * 0.08, taken * 0.35);
               const healed = k.healRaw('self', heal, { ab: this });
-              k.healRaw('party', heal * (k.talent('bloodreaver_tide') ? 0.4 : 0.25), { ab: this });
+              k.healRaw('party', heal * (k.has('pact') ? 0.75 : k.talent('bloodreaver_tide') ? 0.4 : 0.25), { ab: this });   // (Crimson Pact, spec row VII)
               reaverAfterDrain(k, this, healed, 0);
             },
           },
@@ -211,14 +211,16 @@ const SPECS = {
           strike: {
             id: 'cut', replaces: 'strike', name: 'Rune Blade', type: 'gcd', target: 'enemy', range: SPEC_MELEE, anim: 'attack',
             desc: 'Two-hit combo on one button: Cut ({d:240}) > Carve ({d:315}). Each hit gives 1 Rune (2 during Runic Overload).',
-            label: k => (k.now < k.g.comboUntil && k.g.step === 1 ? 'Carve' : 'Cut'),
+            label: k => (k.now < k.g.comboUntil && k.g.step === 2 && k.talent('runeguard_storm') && k.has('overload') ? 'Burst' : k.now < k.g.comboUntil && k.g.step === 1 ? 'Carve' : 'Cut'),
             effect(k) {
-              const second = k.now < k.g.comboUntil && k.g.step === 1;
-              k.damage(second ? 315 : 240, { ab: this });
+              const live = k.now < k.g.comboUntil, storm = k.talent('runeguard_storm') && k.has('overload');   // (Rune Storm, spec row VII: a third hit in Runic Overload)
+              const second = live && k.g.step === 1, third = live && k.g.step === 2 && storm;
+              k.damage(third ? 420 : second ? 315 : 240, { ab: this });
+              if (second && k.talent('runeguard_fan') && k.dots.has('brand')) { k.damage(k.has('overload') ? 110 : 85, { ab: this }); k.fx('empower'); }   // (Fanned Brand, spec row VI)
               const extra = k.perk('runeguard_w1') && k.rng() < 0.25 ? 1 : 0;
               runeGain(k, this, (k.has('overload') ? 2 : 1) + extra);
               if (extra) k.fx('empower');
-              k.g.step = second ? 0 : 1; k.g.comboUntil = k.now + 15;
+              k.g.step = second && storm ? 2 : second || third ? 0 : 1; k.g.comboUntil = k.now + 15;
             },
             fx: { type: 'slash', color: '#c58cff', r: 54, span: 1.6 },
           },
@@ -229,15 +231,16 @@ const SPECS = {
           glyph: {
             id: 'cleave', replaces: 'glyph', name: 'Rune Cleave', type: 'gcd', target: 'enemy', range: SPEC_MELEE, anim: 'attack',
             desc: 'Spend 3 Runes: a cleaving cut for {d:660} that leaves a burning rune on the target, {d:85} every 3s for 12s.',
-            usable: k => k.g.runes >= 3,
-            glow: k => k.g.runes >= 3,
+            usable: k => k.g.runes >= (k.has('counter') ? 1 : 3),   // (Counterstroke, spec row VII: two Runes less after a reflect)
+            glow: k => k.g.runes >= (k.has('counter') ? 1 : 3),
             effect(k) {
-              k.spend('runes', 3);
+              const cost = k.has('counter') ? 1 : 3;
+              k.consume('counter'); k.spend('runes', cost);
               const pot = k.has('overload') ? 860 : 660;
               k.damage(pot, { ab: this });
               k.dot('brand', k.has('overload') ? 110 : 85, 12, 3, { ab: this });
               if (k.perk('runeguard_w2')) k.gain('runes', 1, 3);
-              runeGlyph(k, this, pot);
+              runeGlyph(k, this, pot, cost);
             },
             fx: { type: 'slash', color: '#e0b8ff', r: 64, span: 2.2 },
           },
@@ -264,7 +267,7 @@ const SPECS = {
             id: 'barrier', replaces: 'mend', name: 'Divine Barrier', type: 'gcd', target: 'ally', anim: 'cast',
             cast: k => (k.has('quickmend') || clericFirstLight(k) ? 0 : 1.5),   // (Quick Mend and First Light, talents)
             desc: '1.5s cast: a golden dome on one ally that absorbs {s:650} for 12s, and heals them for {h:250}.',
-            effect(k, t) { k.consume('quickmend'); k.heal(t, 250, { ab: this }); k.shield(t, 650, 12, { ab: this, tag: 'barrier' }); },
+            effect(k, t) { k.consume('quickmend'); k.heal(t, 250, { ab: this }); k.shield(t, 650 * clericForesight(k), 12, { ab: this, tag: 'barrier' }); },   // (Foresight, spec row VI)
             fx: { type: 'ring', color: '#ffe9a8', r: 46, onTarget: true },
           },
           petal: {
@@ -272,7 +275,7 @@ const SPECS = {
             effect(k, t) {
               k.spend('petals', 1);
               k.heal(t, 330, { ab: this });
-              k.shield(t, k.perk('cleric_w1') ? 330 : 260, 10, { ab: this, tag: 'petal' });
+              k.shield(t, (k.perk('cleric_w1') ? 330 : 260) * clericForesight(k), 10, { ab: this, tag: 'petal' });
               clericBloom(k, 1);
               clericPetal(k, this, t, 330);
             },
@@ -283,6 +286,8 @@ const SPECS = {
           if (type === 'shieldEnd' && d.tag === 'petal' && d.frac >= 0.75 && k.now >= k.g.refundAt) {
             k.g.refundAt = k.now + 10;
             k.gain('petals', 1, 3); k.fx('petal-back');
+            // Reflected Gold (spec row VII): the light the shield caught is thrown at the boss
+            if (k.talent('cleric_reflected')) { k.damage(70, { ab: k.abilities.find(a => k.baseId(a) === 'petal') }); k.fx('petalfall'); }
           }
         },
       }),
@@ -301,16 +306,19 @@ const SPECS = {
           if (k.g.petalAt === null) k.g.petalAt = k.now + every;
           if (k.now >= k.g.petalAt) { clericGrow(k); k.g.petalAt += every; }
           clericTick(k);
+          onBossCast(k, () => { if (k.talent('cleric_openverdict')) { k.buff('opened', 8); k.fx('twinBless'); } });   // (Open Verdict, spec row VI)
         },
         abilities: {
           smite: {
-            cast: k => (k.g.bloom >= 3 || k.has('verdict') || clericInSanctum(k) ? 0 : 1.5),
+            cast: k => (k.g.bloom >= 3 || k.has('verdict') || k.has('opened') || clericInSanctum(k) ? 0 : 1.5),
             desc: '1.5s cast attack for {d:280} that brands the boss: your allies\' next 2 hits burst for {d:70} each. After three Dawn Petals it becomes Dawnstar: instant, {d:950}, and a brand of 4.',
             effect(k) {
               k.consume('verdict');
+              const open = !!k.consume('opened');   // (Open Verdict, spec row VI: brands 4 instead of 2)
+              const pm = k.env.partyMods ? k.env.partyMods() : null, hour = k.talent('cleric_judgehour') && pm && pm.dmg > 0;   // (Judge's Hour, spec row VII)
               let r;
-              if (k.g.bloom >= 3) { k.g.bloom = 0; r = k.damage(950 * clericHeld(k), { ab: this }); k.fx('dawnstar'); specBrand(k, 4, this); if (k.perk('cleric_w2')) k.heal('party', 180, { ab: this }); clericDawnstar(k, this); }
-              else { r = k.damage(280, { ab: this }); specBrand(k, 2, this); }
+              if (k.g.bloom >= 3) { k.g.bloom = 0; r = k.damage(950 * clericHeld(k), { ab: this }); k.fx('dawnstar'); specBrand(k, hour ? 8 : 4, this); if (k.perk('cleric_w2')) k.heal('party', 180, { ab: this }); clericDawnstar(k, this); }
+              else { r = k.damage(280, { ab: this }); specBrand(k, open ? 4 : 2, this); }
               clericSmite(k, this, r);
             },
           },
@@ -348,15 +356,18 @@ const SPECS = {
               k.hot(t, 120, 5, 3, { ab: this, id: 'rejuv' });
               const { amount } = k.healAmount(110, { ab: this });
               k.env.emit({ type: 'hot', target: 'lowest', not: t, amount, ticks: 5, interval: 3, ab: this, id: 'rejuv2' });
-              k.g.rejuvs = k.g.rejuvs.filter(r => r.t !== t);
+              k.g.rejuvs = k.g.rejuvs.filter(r => r.t !== t && r.t !== 'lowest');
               k.g.rejuvs.push({ t, ticks: 5, next: k.now + 3 });
+              if (k.talent('grovekeeper_drinking')) k.g.rejuvs.push({ t: 'lowest', ticks: 5, next: k.now + 3, bloom: 3 });   // (Deep Drinking, spec row VI: the second root feeds Bloom too)
             },
             fx: { type: 'ring', color: '#6fffb0', r: 40, onTarget: true },
           },
           bloom: {
             desc: 'Spend 50 Bloom: instantly heal everyone with your Lifebind and the most hurt ally for {h:520} (the whole party for {h:450} during Wild Growth). Your next Wrath is instant.',
             effect(k) {
+              const full = k.g.bloom >= 90;
               k.spend('bloom', 50);
+              if (full && k.talent('grovekeeper_brimming')) { k.heal('party', 220, { ab: this }); k.fx('empower'); }   // (Overflowing Bloom, spec row VI)
               if (k.has('growth')) k.heal('party', 450, { ab: this });
               for (const r of k.g.rejuvs) k.heal(r.t, 520, { ab: this });
               k.heal(k.g.rejuvs.length ? 'lowest' : 'self', 520, { ab: this });
@@ -376,6 +387,7 @@ const SPECS = {
         potMult: 0.92,
         healMod: k => (k.has('moonlit') ? 0.25 : 0),
         abilities: {
+          wrath: { cast: k => (k.has('awaken') || groveMoonfire(k) || (k.talent('grovekeeper_moonwrath') && k.has('moonlit')) ? 0 : 1.5) },   // (Moonlit Wrath, spec row VII)
           bloom: {
             desc: 'Spend 50 Bloom: instantly heal everyone with your Rejuvenate for {h:400} (and the whole party for {h:350} while Moonwell lasts). Your next Wrath is instant.',
             effect(k) {
@@ -391,9 +403,20 @@ const SPECS = {
             id: 'moonwell', replaces: 'growth', name: 'Moonwell', type: 'ogcd', target: 'ally', cd: 45, anim: 'big',
             desc: 'A pool of moonlight at an ally\'s feet for 12s: everyone standing in it heals {h:80} every 1.5s, and your heals are 25% stronger while it lasts.',
             effect(k, t) {
-              k.buff('moonlit', 12);
               const { amount } = k.healAmount(80, { ab: this });
+              // Tidal Shift (spec row VI): the press made within 8s of the first lifts the pool and sets it down again with what is left of its time
+              if (k.talent('grovekeeper_tide') && k.now < (k.g.tideUntil || 0)) {
+                k.g.tideUntil = 0; k.cd[this.id] = k.g.tideEnd || 0;
+                k.env.emit({ type: 'pool', target: t, r: 150, amount, ticks: Math.max(1, Math.round(k.remaining('moonlit') / 1.5)), interval: 1.5, ab: this });
+                return;
+              }
+              if (k.talent('grovekeeper_tide')) { k.g.tideUntil = k.now + 8; k.g.tideEnd = k.cd[this.id]; k.cd[this.id] = k.now; }
+              k.buff('moonlit', 12);
               k.env.emit({ type: 'pool', target: t, r: 150, amount, ticks: 8, interval: 1.5, ab: this });
+              // Argent Veil (spec row VI): set down as the boss begins a cast, it also shields everyone inside
+              if (k.talent('grovekeeper_veil') && bossCasting(k)) k.env.emit({ type: 'splash', target: t, r: 150, sh: Math.round(200 * ENGINE.POT_SCALE * (1 + (k.def.healMod ? k.def.healMod(k, { ab: this }) : 0)) * (1 + (k.gear().power || 0))), dur: 8, ab: this });
+              // Afterglow (spec row VII): when it ends, it rises again at your own feet
+              if (k.talent('grovekeeper_afterglow')) k.after(12, () => { const a = k.healAmount(60, { ab: this }).amount; k.env.emit({ type: 'pool', target: 'self', r: 150, amount: a, ticks: 4, interval: 1.5, ab: this }); k.fx('pulse'); });
               if (k.perk('grovekeeper_w3')) k.gain('bloom', 25);
               groveGrowth(k, this);
             },
@@ -420,12 +443,21 @@ const SPECS = {
           init: () => Object.assign(base.init(), { echoes: [] }),
           tick(k) {
             base.tick(k);
-            while (k.g.echoes.length && k.now >= k.g.echoes[0].at) { const e = k.g.echoes.shift(); e.fn(); }
+            // Held Echo (spec row VII): echoes wait out a boss's cast (3s at most) and land with it; Ringing: in Haste each gives 3 Flux back
+            while (k.g.echoes.length && k.now >= k.g.echoes[0].at && !(k.talent('chronomancer_held') && bossCasting(k) && k.now < k.g.echoes[0].at + 3)) {
+              const e = k.g.echoes.shift(); e.fn();
+              if (k.g.stance === 'haste' && k.talent('chronomancer_ringing')) k.gain('flux', 3);
+            }
           },
           abilities: {
             bolt: {
               desc: '1.5s cast attack for {d:280} that repeats 3s later at half strength. Slow: heals your linked ally for 135% of its damage. Haste: heals everyone for 56%.',
-              effect(k) { bolt(k, this, chronoInstant(k)); echo(k, () => { bolt(k, this, share(k)); k.fx('echo'); }); chronoBoltAfter(k, this, 0.56, 1.35, true); },
+              effect(k) {
+                const ab = this;
+                // (Resonance, spec row VI: an echo that crits echoes once more)
+                const ring = again => echo(k, () => { const r = bolt(k, ab, share(k)); k.fx('echo'); if (again && r && r.crit && k.talent('chronomancer_resonance')) ring(false); });
+                bolt(k, this, chronoInstant(k)); ring(true); chronoBoltAfter(k, this, 0.56, 1.35, true);
+              },
             },
             recall: {
               desc: '2.5s cast: bring a fallen ally back, or heal a living one for {h:1400}. A heal repeats 3s later at half strength.',
@@ -467,6 +499,8 @@ const SPECS = {
             effect(k) {
               base.abilities.find(a => a.id === 'shift').effect.call(this, k);   // (the base Shift: stance, Paradox, talents)
               if (k.g.stance === 'haste' && k.now >= (k.g.overAt || 0)) { k.g.overAt = k.now + 12; k.partyBuff('haste', 0.06, 10, { ab: this }); }
+              // Pace Setter (spec row VI): the shift into Haste also Quickens your link
+              if (k.g.stance === 'haste' && k.talent('chronomancer_pace') && k.now >= (k.g.paceAt || 0)) { k.g.paceAt = k.now + 20; chronoQuicken(k, this, k.g.link ?? k.env.defaultLink()); }
             },
           },
           accel: {
@@ -492,10 +526,21 @@ const SPECS = {
           rangerTrack(k);
           const dt = k.now - (k.g.aimT ?? k.now);
           k.g.aimT = k.now;
-          if (k.env.moving()) { if (k.has('aim')) k.clear('aim'); k.g.still = 0; return; }
+          // Read the Wind (spec row VI): a boss cast gives a steadying breath, if you are standing still
+          if (k.talent('ranger_wind')) onBossCast(k, () => { if (!k.env.moving()) { k.buff('aim', 30, {}, 5, 2); k.fx('empower'); } });
+          if (k.env.moving()) {
+            if (k.has('aim')) {
+              // Parting Shot (spec row VI): the stacks you carry are loosed as you break from your stance
+              if (k.talent('ranger_parting') && k.stacks('aim') >= 3) { k.damage(70 * k.stacks('aim'), { ab: k.abById('aimed') }); k.fx('volley'); }
+              k.clear('aim');
+            }
+            k.g.still = 0; return;
+          }
           if (dt <= 0 || dt > 1) return;
           k.g.still = (k.g.still || 0) + dt;
           if (k.g.still >= 1) { k.g.still -= 1; k.buff('aim', 30, {}, 5, 1); }
+          // Overwatch (spec row VII): at full Steady Aim the bow looses a shot of its own
+          if (k.talent('ranger_overwatch') && k.stacks('aim') >= 5 && k.now >= (k.g.watchAt || 0)) { k.g.watchAt = k.now + 4; k.damage(60, { ab: k.abById('aimed') }); k.fx('volley'); }
         },
         dmgMod: k => k.stacks('aim') * 0.04,
         abilities: {
@@ -512,6 +557,7 @@ const SPECS = {
                 if (k.perk('ranger_w2')) { k.damage(250, { ab: this }); k.fx('empower'); }
               } else { pot = k.stacks('aim') >= 5 ? 850 : 620; r = k.damage(pot, { ab: this }); if (pot === 850) k.fx('empower'); }   // (a full breath: the still shot)
               rangerPierce(k, keen, r, pot);
+              if (pot === 850 && k.talent('ranger_deadeye')) { rangerKeen(k); k.fx('empower'); }   // (Dead Eye, spec row VII: the still shot lights Keen Eye)
             },
             fx: { type: 'line', color: '#ffe9a0', range: 440 },
           },
@@ -535,7 +581,17 @@ const SPECS = {
         return {
           potMult: 0.849,
           init: () => Object.assign(base.init(), { acid: 0 }),
-          tick(k) { rangerTrack(k); if (k.g.acid && !k.dots.has('acid')) k.g.acid = 0; },
+          tick(k) {
+            rangerTrack(k);
+            if (k.g.acid && !k.dots.has('acid')) k.g.acid = 0;
+            // Boiling Over (spec row VI): a boss cast makes the Acid boil: two ticks at once and two more stacks
+            if (k.talent('ranger_boil')) onBossCast(k, () => {
+              const d = k.dots.get('acid');
+              if (!d || d.end <= k.now) return;
+              for (let i = 0; i < 2; i++) k.damage(d.potency, { dot: true, ab: d.ab });
+              addAcid(k, 2, d.ab); k.fx('empower');
+            });
+          },
           abilities: {
             quick: {
               desc: 'Fast shot: {d:200}, +10 Focus and a stack of Acid on the target. Sometimes lights up Keen Eye.',
@@ -543,7 +599,7 @@ const SPECS = {
                 const barr = k.consume('barrage'), ff = !barr && rangerFocusFire(k);
                 const r = k.damage((barr ? 720 : 200) * (ff ? 2 : 1), rangerShot(k, this));
                 if (!ff) k.gain('focus', rangerFocus(k, barr));
-                addAcid(k, barr ? 3 : 1, this);
+                addAcid(k, (barr ? 3 : 1) + (k.talent('ranger_poisonmark') && k.has('markself') ? 1 : 0), this);   // (Poisoned Mark, spec row VII)
                 if (k.rng() < rangerKeenChance(k)) rangerKeen(k); else rangerNoKeen(k);
                 rangerRhythm(k, this, barr, 200);
                 rangerQuickAfter(k, this, r);
@@ -559,6 +615,8 @@ const SPECS = {
                 const pot = 200 + 60 * n + 100 * Math.max(0, n - 5) + (keen ? 160 : 0), r = k.damage(pot, { ab: this });
                 if (keen) { k.refundCharge('caustic'); if (k.perk('ranger_w2')) { k.damage(250, { ab: this }); k.fx('empower'); } }
                 rangerPierce(k, keen, r, pot);
+                if (k.talent('ranger_seep') && n > 0) addAcid(k, 1, this);   // (Seep, spec row VI: a stack stays burning)
+                if (k.talent('ranger_virulence') && n >= 6) { k.debuffTarget('vuln', 0.06, 5, { ab: this }); k.fx('empower'); }   // (Virulence, spec row VII)
               },
               fx: { type: 'line', color: '#9aff4a', range: 440 },
             },
@@ -586,7 +644,7 @@ const SPECS = {
             glow: k => k.stacks('tempo') >= 3 || (k.g.combo === 4 && !k.g.spilled),
             effect(k) {
               const fl = k.stacks('tempo') >= 3;
-              if (fl) { k.clear('tempo'); k.fx('empower'); }
+              if (fl) { k.clear('tempo'); k.fx('empower'); if (k.talent('shadowblade_encore')) k.buff('tempo', 60, {}, 3, 1); }   // (Encore, spec row VI: one Tempo stays)
               k.damage(fl ? 650 : 260, { ab: this }); bladeCombo(k, k.perk('shadowblade_a2') ? 2 : 1); bladeStep(k, this);
               if (k.perk('shadowblade_a4')) k.reduceCooldown('fury', 2);   // (the enhancement of Shadowstep's True North, which a Bladedancer never needs: it recharges sooner)
             },
@@ -628,16 +686,19 @@ const SPECS = {
               const cp = k.g.combo; k.g.combo = 0;
               const feint = k.talent('shadowblade_feint') && k.has('feint');
               const front = k.env.positional() === 'front' && !k.has('truenorth') && !k.has('dance') && !feint;
+              const stalked = k.has('stalk');
               const mult = bladeMult(k) * (k.has('dance') ? 1.25 : 1) * (front ? 0.75 : 1) * (k.consume('stalk') ? 1.06 : 1);
               const pot = 110 + 115 * cp + (cp >= 5 ? 160 : 0), bonus = 60 + 30 * cp;
               const o = bladeOpts(k, this, 'rear', bonus, mult);
+              if (stalked && k.talent('shadowblade_deaddrop')) o.crit = (o.crit || 0) + 0.3;   // (Dead Drop, spec row VI)
               const r = k.damage(pot + (o.feint ? bonus : 0), o), hit = o.feint || r.posHit;
+              if (r.posHit && k.talent('shadowblade_cloak')) { k.mitigate('self', 0.25, 3, { ab: this }); k.fx('dodge'); }   // (Cloak of Night, spec row VI)
               if (cp >= 5 && k.perk('shadowblade_w2')) { k.damage((pot + (hit ? bonus : 0)) * 0.3, { ab: this, mult }); k.fx('empower'); }
               bladeFinisher(k, this, cp, (pot + (hit ? bonus : 0)) * mult);
             },
             fx: { type: 'slash', color: '#ff3a5a', r: 52, span: 1.4 },
           },
-          dance: { desc: 'Burst: 14s of faster attacks, every positional lands, and Backstab hits 25% harder. Enter it at 5 combo points and the first Backstab in it keeps them.', effect(k) { bladePoise(k); k.buff('dance', 14); k.g.endless = 0; if (k.perk('shadowblade_w3')) k.gain('combo', 2, 5); } },
+          dance: { desc: 'Burst: 14s of faster attacks, every positional lands, and Backstab hits 25% harder. Enter it at 5 combo points and the first Backstab in it keeps them.', effect(k) { bladePoise(k); k.buff('dance', 14); k.g.endless = 0; if (k.perk('shadowblade_w3')) k.gain('combo', 2, 5); if (k.talent('shadowblade_veil')) k.mitigate('party', 0.1, 4, { ab: this }); } },   // (Veil of Night, spec row VII)
         },
         };
       },
@@ -679,7 +740,13 @@ const SPECS = {
                 k.g.meteors.push(m);
                 m.fn = () => {
                   k.damage(pot, { ab });
+                  if (k.talent('pyromancer_ash') && bossCasting(k)) { k.mitigate('party', 0.1, 4, { ab }); k.fx('haze'); }   // (Smothering Ash, spec row VI)
                   if (hs && k.talent('pyromancer_chain') && !k.has('hotstreak') && k.now >= (k.g.chainAt || 0)) { k.g.chainAt = k.now + 15; k.buff('heating', 15); k.fx('chainReact'); }
+                  // Fault Line (spec row VII): landing on a crater that still burns sets the ground off, half of what it has left at once
+                  if (k.talent('pyromancer_fault')) {
+                    const old = k.dots.get('crater'), left = old && old.end > k.now ? old.potency * Math.max(0, Math.floor((old.end - old.next) / old.interval) + 1) : 0;
+                    if (left) { k.damage(left * 0.35, { ab, extra: true }); k.fx('twinFlame'); }
+                  }
                   k.dot('crater', 50 + m.heat, 9, 3, { ab });
                   if (hs && k.perk('pyromancer_w2')) { k.dot('pyroburn', 70, 9, 3, { ab }); k.fx('empower'); }
                 };
@@ -704,7 +771,19 @@ const SPECS = {
           dmgMod: (k, o) => base.dmgMod(k, o) + (inCircle(k) ? 0.15 : 0),
           haste: k => (inCircle(k) ? 0.8 : 1),
           // a short buff that stays lit while you stand inside, so the HUD shows it
-          tick(k) { base.tick(k); if (inCircle(k)) k.buff('incircle', 0.3); },
+          tick(k) {
+            base.tick(k);
+            const inn = inCircle(k), c = k.g.circle, live = !!c && k.now < c.end;
+            if (inn) k.buff('incircle', 0.3);
+            // Rekindle (spec row VI): stepping back into the circle after leaving it flares it, and readies an instant Fireball
+            if (inn && k.g.wasOut && k.talent('pyromancer_rekindle') && k.now >= (k.g.rekAt || 0)) {
+              k.g.rekAt = k.now + 6; k.damage(140, { ab: k.abById('circle'), extra: true }); k.buff('haze', 8); k.fx('flashpoint');
+            }
+            // Beacon (spec row VII): the boss begins a cast while you stand in the circle, and the circle flares
+            const cast = bossCasting(k);
+            if (inn && cast && !k.g.beaconSeen && k.talent('pyromancer_beacon')) { k.damage(110, { ab: k.abById('circle'), extra: true }); k.mitigate('party', 0.1, 4, { ab: k.abById('circle') }); k.fx('flashpoint'); }
+            k.g.beaconSeen = cast; k.g.wasOut = live && !inn;
+          },
           abilities: {
             combust: {
               id: 'circle', replaces: 'combust', name: 'Ember Circle', type: 'ogcd', target: 'self', cd: 45, anim: 'big',
@@ -761,6 +840,7 @@ SPECS.alembist = [
           effect(k) {
             k.buff('catalyst', 20);
             if (k.perk('alembist_a4')) k.g.ripeNext = true;
+            if (k.talent('alembist_damp')) { for (const v of k.g.vials) if (v.fuse) v.fuse += 4; }   // (Damp Cloth, spec row VI)
             if (k.talent('alembist_flash') && k.g.last && k.now >= (k.g.flashAt || 0)) { k.g.flashAt = k.now + 20; alemAdd(k, k.g.last, { copy: true }); }
             if (k.talent('alembist_fume') && k.now >= (k.g.fumeAt || 0)) { k.g.fumeAt = k.now + 30; k.mitigate('party', 0.1, 8, { ab: this }); }
           },
@@ -891,6 +971,7 @@ Object.assign(SPECS, {
               const vented = Math.min(60, k.g.strain || 0);
               k.g.strain = Math.max(0, (k.g.strain || 0) - 60);
               k.shield('self', 160 * (k.perk('thermist_a2') ? 1.5 : 1), 6, { ab: this });
+              if (k.talent('thermist_pressure') && vented > 0) { k.damage(2.5 * vented, { ab: this, extra: true }); k.fx('empower'); }   // (Pressure Release, spec row VI)
               thermUtility(k, this, vented >= 40);
               if (k.talent('thermist_pulse') && thermAt(k, THERMIST.EDGE)) thermShock(k, 3, 1, Math.sign(k.g.temp));
             },
@@ -935,13 +1016,14 @@ Object.assign(SPECS, {
           cross: {
             id: 'impact', replaces: 'cross', name: 'Impact', type: 'gcd', target: 'enemy', range: SPEC_RANGED, anim: 'big',
             desc: 'Needs 100 Drift. Spend it all: charge clean through your target and out the far side, releasing it all at once: {d:120}, plus {d:40} for every 10 Drift you spend. The charge through its body is a Passing Strike too. From 160 it always crits (it glows then).',
-            usable: k => k.g.drift >= 100,   // (the Drift floor: a charge needs a real run-up behind it)
+            usable: k => k.g.drift >= (k.has('zenith') ? 60 : 100),   // (the Drift floor: a charge needs a real run-up behind it; Zenith, a spec talent, lowers it)
             glow: k => k.g.drift >= 160,
             effect(k) {
               // (the charge runs clean through the body: a Passing Strike with the whole run-up behind it)
               const tg = k.env.target({ target: 'enemy', range: 300 });
               if (tg) { k.g.passAt = k.now + DRIFT.ICD; driftPass(k, tg); }
-              const d = k.g.drift; k.g.drift = 0;
+              const d = k.g.drift; k.g.drift = k.talent('driftblade_afterburn') ? Math.min(12, d * 0.06) : 0;   // (Afterburn, spec row VI: a little of the charge stays lit)
+              if (k.talent('driftblade_ricochet')) k.buff('ricochet', 4);   // (Ricochet, spec row VI: the next Hook Turn flings you back through)
               k.teleport('through', { ab: this, d: 120 });
               k.damage(120 + 4 * d, { ab: this, autoCrit: d >= 160 });
               if (d >= 180 && k.perk('driftblade_w2')) { k.damage((120 + 4 * d) * 0.3, { ab: this }); k.fx('empower'); }
@@ -991,11 +1073,8 @@ Object.assign(SPECS, {
               const eaten = mawDigestTake(k, this);
               if (!eaten.length) return;
               k.healRaw('self', k.env.maxHp() * 0.03 * eaten.length * mawGut(k), { ab: this });
-              const n = m => eaten.filter(e => e.m === m).length * mawGut(k);   // (Iron Gut: each counts twice)
-              if (n('ring')) k.shield('party', 150 * n('ring'), 10, { ab: this });
-              if (n('lance')) k.shield('lowest', 360 * n('lance'), 10, { ab: this });
-              if (n('fang')) k.mitigate('party', Math.min(0.3, 0.15 * n('fang')), 6, { ab: this });
-              if (n('spike')) k.mitigate('lowest', 1, 2, { kind: 'invuln', ab: this });
+              mawProtect(k, this, eaten.map(e => e.m), mawGut(k));   // (Iron Gut: each counts twice)
+              if (k.talent('gorgemaw_grinder')) k.buff('grinding', 4);   // (Grinder, spec row VI)
             },
           },
         },
@@ -1039,8 +1118,9 @@ Object.assign(SPECS, {
             usable: k => k.g.ledger.length > 0,
             glow: k => oathTotal(k) >= oathHp(k) * 0.3,
             effect(k) {
-              oathSend(k, { op: 'foreclose', mult: 1, freeze: k.perk('oathbroker_a4') ? 7 : OATH.FREEZE });
-              k.g.ledger = []; k.g.total = 0;
+              const keep = k.talent('oathbroker_rollover');   // (Rollover, spec row VII: a smaller blow, and the Ledger stays)
+              oathSend(k, { op: 'foreclose', mult: keep ? 0.9 : 1, freeze: k.perk('oathbroker_a4') ? 7 : OATH.FREEZE, keep: keep ? 1 : 0 });
+              if (!keep) { k.g.ledger = []; k.g.total = 0; }
               oathDefaultAfter(k, this);
             },
             fx: { color: '#ffd27a' },
@@ -1237,7 +1317,7 @@ SPECS.thresher = [
     build: base => ({
       potMult: base.potMult * 0.875,   // balance knob (tools/simulate.js)
       sower: true, young: 2, rot: 6.5,
-      haste: () => 0.9,
+      haste: k => 0.9 * (k.has('fleet') ? 0.88 : 1),   // (Fleet Hour, spec row VI: a Reap quickens you a little more)
       abilities: {
         slash: { desc: 'Two-hit combo on one button: Slash ({d:200}) > Cleave ({d:270}), a wide arc. Slash lays a Mark and a Drain on the boss and Cleave a Bind. Press the next hit within 1.2s of your recovery and a Backswing follows for {d:90}.' },
         hook: { desc: 'Throw the chain: if you are not at the boss, pull yourself in, and cut for {d:150}. It lays a Thread and a Bind on the boss and ages the others by 1.5s. Two charges.' },
