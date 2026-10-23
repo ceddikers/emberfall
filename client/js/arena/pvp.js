@@ -25,6 +25,23 @@ const PVP = {
 };
 if (typeof ARENA_DEFS !== 'undefined') ARENA_DEFS[PVP.RING] = { kind: 'circle', r: PVP.RING_R };
 
+// Capture the flag (phase C): a long field with each side's flag on a stand at its own end (Gold Gate west, Ash Gate
+// east). Touch the enemy flag at its stand to take it; bring it to your own stand while your own flag is home to score.
+// A carrier moves at SLOW speed, and a leap, blink or teleport from an ability drops the flag where they took off (the
+// plain dodge roll keeps it). A carrier who falls drops it where they fell. A dropped flag goes home at once when its
+// own side touches it, or by itself after RETURN seconds; the other side can pick it up again. The fallen come back at
+// their own end after RESPAWN seconds (STEP more for each death, at most MAX); no raising. First to CAPS wins. When the
+// clock runs out the side ahead wins; level: OT seconds of overtime in which the next capture wins, then a draw.
+const CTF = {
+  FIELD: 'pvp_field', HW: 780, HH: 400, CORNER: 170,
+  STAND_X: 640, SPAWN_X: 560, TOUCH: 44,
+  CAPS: 3, ROUND: 300, OT: 60,
+  RESPAWN: 5, STEP: 1, MAX: 9, GUARD: 0.6,   // GUARD: a fresh spawn can't touch a flag for this long (its client is still moving it)
+  RETURN: 10, SLOW: 0.8,
+};
+if (typeof ARENA_DEFS !== 'undefined') ARENA_DEFS[CTF.FIELD] = { kind: 'rect', hw: CTF.HW, hh: CTF.HH, corner: CTF.CORNER };
+PVP.spawnX = mode => (mode === 'ctf' ? CTF.SPAWN_X : PVP.SPAWN_R);   // (how far from the centre each side starts)
+
 const PVP_DEF = { id: PVP.RING, name: 'The Arena', hp: { normal: 1, hard: 1 }, autoDmg: { normal: 0, hard: 0 }, script() {} };
 
 class PvpSim extends FightSim {
@@ -138,6 +155,96 @@ class PvpSim extends FightSim {
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
+// Capture the flag: a team bout (2 v 2) with flags, captures and respawns instead of a knockout. Messages (host to all):
+//   ctf      { caps: [gold, ash], f: [[state 0 home|1 carried|2 dropped, x, y, carrier id|null, return secs], x2] }
+//            on every change and once a second
+//   ctfEv    { k: 'take'|'drop'|'return'|'cap', tm: the flag's side, id: who (null: it went home by itself) }
+//   ctfDown  { id, secs }   a player fell; back in secs
+//   ctfSpawn { id, x, y, a } a player is back at their end (a human's client moves itself there)
+//   pvpSudden { dur, ot: 1 } overtime; pvpEnd reason 'caps' (or 'time' for a draw after overtime)
+class CtfSim extends PvpSim {
+  constructor(getPlayers, emit, opts = {}) {
+    super(getPlayers, emit, Object.assign({}, opts, { mode: 'team' }));
+    this.pvpMode = 'ctf'; this.roundLen = CTF.ROUND;
+    ARENA.use(CTF.FIELD);   // (FightSim put up its own room, the ring)
+    this.caps = [0, 0]; this.ot = false;
+    this.flags = [0, 1].map(tm => ({ tm, st: 'home', x: this.stand(tm).x, y: 0, by: null, ret: 0 }));
+    this.respawnAt = {}; this.deathN = {}; this.guard = {}; this.ctfDirty = true; this.lastCtf = -9;
+  }
+  stand(tm) { return { x: (tm ? 1 : -1) * CTF.STAND_X, y: 0 }; }
+  spawnOf(id) {
+    const tm = this.teamOf(id), mine = Object.keys(this.teams).filter(k => this.teams[k] === tm), k = Math.max(0, mine.indexOf(String(id)));
+    return { x: (tm ? 1 : -1) * CTF.SPAWN_X, y: (k - (mine.length - 1) / 2) * 90, a: tm ? Math.PI : 0 };
+  }
+  carrying(id) { return this.flags.find(f => f.st === 'carried' && f.by === id) || null; }
+  end() {}   // (no knockout here: the fallen come back)
+
+  ctfEv(k, tm, id) { this.ctfDirty = true; this.emit({ t: 'ctfEv', k, tm, id: id ?? null }); }
+  dropFlag(f, x, y) { const by = f.by; f.st = 'dropped'; f.by = null; f.x = x; f.y = y; ARENA.clamp(f, 30); f.ret = this.t + CTF.RETURN; this.ctfEv('drop', f.tm, by); }
+  homeFlag(f, id, k) { const s = this.stand(f.tm); f.st = 'home'; f.by = null; f.x = s.x; f.y = s.y; this.ctfEv(k, f.tm, id); }
+  takeFlag(f, p) { f.st = 'carried'; f.by = p.id; f.x = p.x; f.y = p.y; this.ctfEv('take', f.tm, p.id); }
+  // a carrier who leaps, blinks or teleports lets go of the flag where they took off (main.js and pvp-bots.js call this)
+  ctfDrop(id) { const f = this.carrying(id); if (f && this.state === 'live') this.dropFlag(f, f.x, f.y); }
+  sendCtf() {
+    this.ctfDirty = false; this.lastCtf = this.t;
+    this.emit({ t: 'ctf', caps: this.caps.slice(), f: this.flags.map(f => [f.st === 'home' ? 0 : f.st === 'carried' ? 1 : 2, Math.round(f.x), Math.round(f.y), f.by, f.st === 'dropped' ? Math.max(0, +(f.ret - this.t).toFixed(1)) : 0]) });
+  }
+
+  tick(dt) {
+    FightSim.prototype.tick.call(this, dt);   // (not PvpSim's: no knockout, no sudden death)
+    if (this.state !== 'live') return;
+    const t = this.t;
+    // the fallen: their flag drops, and they come back at their own end after a while
+    for (const [id, s] of this.ps) {
+      if (s.left) continue;
+      if (!s.alive && this.respawnAt[id] == null) {
+        const n = this.deathN[id] = (this.deathN[id] || 0) + 1, secs = Math.min(CTF.MAX, CTF.RESPAWN + CTF.STEP * (n - 1));
+        this.respawnAt[id] = t + secs;
+        const f = this.carrying(id); if (f) this.dropFlag(f, f.x, f.y);
+        this.emit({ t: 'ctfDown', id, secs });
+      } else if (!s.alive && t >= this.respawnAt[id]) {
+        delete this.respawnAt[id];
+        this.revive(id, s, 1, id);
+        s.weakEnd = 0; s.dmgDownEnd = 0; for (const k in s.debuffs) s.debuffs[k] = 0;
+        const sp = this.spawnOf(id); this.guard[id] = t + CTF.GUARD;
+        this.emit({ t: 'ctfSpawn', id, x: Math.round(sp.x), y: Math.round(sp.y), a: +sp.a.toFixed(2) });
+      } else if (s.alive && this.respawnAt[id] != null) delete this.respawnAt[id];
+    }
+    // the flags
+    const up = this.alive().filter(p => !(this.guard[p.id] > t)), near = (p, x, y) => Math.hypot(p.x - x, p.y - y) <= CTF.TOUCH;
+    for (const f of this.flags) {
+      if (f.st === 'carried') {
+        const c = this.alive().find(p => p.id === f.by);
+        if (!c) { this.dropFlag(f, f.x, f.y); continue; }
+        f.x = c.x; f.y = c.y;
+        const tm = 1 - f.tm, home = this.stand(tm);
+        if (this.flags[tm].st === 'home' && near(c, home.x, home.y)) {
+          this.caps[tm]++; this.stats[c.id].caps = (this.stats[c.id].caps || 0) + 1;
+          this.homeFlag(f, c.id, 'cap');
+          if (this.caps[tm] >= CTF.CAPS || this.ot) { this.sendCtf(); return this.finish(tm, 'caps'); }
+        }
+      } else if (f.st === 'dropped') {
+        if (t >= f.ret) { this.homeFlag(f, null, 'return'); continue; }
+        const p = up.find(q => near(q, f.x, f.y) && !this.carrying(q.id));
+        if (!p) continue;
+        if (this.teamOf(p.id) === f.tm) this.homeFlag(f, p.id, 'return'); else this.takeFlag(f, p);
+      } else {
+        const s = this.stand(f.tm), p = up.find(q => this.teamOf(q.id) !== f.tm && near(q, s.x, s.y) && !this.carrying(q.id));
+        if (p) this.takeFlag(f, p);
+      }
+    }
+    // the clock: ahead at the end wins; level, overtime (the next capture wins), then a draw
+    if (!this.ot && t >= this.roundLen) {
+      if (this.caps[0] !== this.caps[1]) { this.sendCtf(); return this.finish(this.caps[0] > this.caps[1] ? 0 : 1, 'caps'); }
+      this.ot = true; this.emit({ t: 'pvpSudden', dur: CTF.OT, ot: 1 });
+    }
+    if (this.ot && t >= this.roundLen + CTF.OT) { this.sendCtf(); return this.finish(null, 'time'); }
+    if (t - this.lastClock >= 1) { this.lastClock = t; this.emit({ t: 'pvpClock', left: Math.max(0, Math.ceil(this.roundLen + (this.ot ? CTF.OT : 0) - t)), sd: this.ot ? 1 : 0 }); }
+    if (this.ctfDirty || t - this.lastCtf >= 1) this.sendCtf();
+  }
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
 // The host side of a match: PvpSim + bots. opts: {
 //   mode: 'duel'|'team',
 //   humans: () => [{ id, name, cls, spec, role, x, y, a, gear }]   (as RaidHost; positions owned by their clients)
@@ -147,14 +254,14 @@ class PvpSim extends FightSim {
 const PVP_BOT_NAMES = ['Brom', 'Ilsa', 'Tamsin', 'Oswin'];
 class PvpHost {
   constructor(opts) {
-    this.mode = opts.mode === 'team' ? 'team' : 'duel';
+    this.mode = opts.mode === 'team' || opts.mode === 'ctf' ? opts.mode : 'duel';
     this.humans = opts.humans || (() => []);
     this.emitOut = opts.emit || (() => {});
     this.t = 0; this.lastBotBroadcast = -1;
     this.partyBuffs = [[], []];   // per team: { kind, value, end }
     let s = (opts.seed || 1) >>> 0;
     this.rng = () => { s = (s + 0x6D2B79F5) >>> 0; let t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
-    ARENA.use(PVP.RING);
+    ARENA.use(this.mode === 'ctf' ? CTF.FIELD : PVP.RING);
     const teams = Object.assign({}, opts.teams || {});
     this.bots = (opts.bots || []).map((b, i) => { const bot = this.makeBot(b, i); teams[bot.id] = b.team ? 1 : 0; return bot; });
     // spawns: team 0 on the left, team 1 on the right; a pair stands a little apart
@@ -162,11 +269,11 @@ class PvpHost {
     const ids = [...this.humans().map(p => p.id), ...this.bots.map(b => b.id)];
     for (const tm of [0, 1]) {
       const mine = ids.filter(id => teams[id] === tm);
-      mine.forEach((id, k) => { this.spawns[id] = { x: (tm ? 1 : -1) * PVP.SPAWN_R, y: (k - (mine.length - 1) / 2) * 90, a: tm ? Math.PI : 0 }; });
+      mine.forEach((id, k) => { this.spawns[id] = { x: (tm ? 1 : -1) * PVP.spawnX(this.mode), y: (k - (mine.length - 1) / 2) * 90, a: tm ? Math.PI : 0 }; });
     }
     for (const b of this.bots) Object.assign(b, this.spawns[b.id] || {});
-    this.sim = new PvpSim(() => this.allPlayers(), msg => this.onSimMsg(msg), { mode: this.mode, teams, seed: opts.seed });
-    this.emit({ t: 'pvpStart', mode: this.mode, ring: PVP.RING_R, arena: PVP.RING, teams, cd: this.sim.countdown, round: this.sim.roundLen, sudden: PVP.SUDDEN,
+    this.sim = new (this.mode === 'ctf' ? CtfSim : PvpSim)(() => this.allPlayers(), msg => this.onSimMsg(msg), { mode: this.mode, teams, seed: opts.seed });
+    this.emit({ t: 'pvpStart', mode: this.mode, ring: PVP.RING_R, arena: this.mode === 'ctf' ? CTF.FIELD : PVP.RING, teams, cd: this.sim.countdown, round: this.sim.roundLen, sudden: PVP.SUDDEN,
       spawns: Object.entries(this.spawns).map(([id, p]) => [Number(id), Math.round(p.x), Math.round(p.y), +p.a.toFixed(2)]),
       bots: this.bots.map(b => ({ id: b.id, name: b.name, cls: b.cls.id, spec: b.spec, role: b.role })) });
   }
@@ -199,6 +306,7 @@ class PvpHost {
     }
   }
   onSimMsg(msg) {
+    if (msg.t === 'ctfSpawn') { const bot = this.bots.find(b => b.id === msg.id); if (bot) Object.assign(bot, { x: msg.x, y: msg.y, a: msg.a, down: false, plan: null, nextThink: 0, moving: false }); }
     if (msg.t === 'fev') { const bot = this.bots.find(b => b.id === msg.id); if (bot && ['perfect', 'reflect', 'read', 'shieldEnd', 'eat', 'ledger', 'hollow'].includes(msg.k)) bot.actor.notify(msg.k, msg); }
     if (msg.t === 'pdmg') { const bot = this.bots.find(b => b.id === msg.id); if (bot) { bot.taken.push({ t: this.sim.t, a: msg.a }); while (bot.taken.length && bot.taken[0].t < this.sim.t - 30) bot.taken.shift(); if (msg.a > 0) bot.actor.notify('taken', msg); } }
     this.emit(msg);
@@ -222,4 +330,4 @@ class PvpHost {
   }
 }
 
-if (typeof module !== 'undefined') module.exports = { PVP, PvpSim, PvpHost, PVP_DEF };
+if (typeof module !== 'undefined') module.exports = { PVP, CTF, PvpSim, CtfSim, PvpHost, PVP_DEF };

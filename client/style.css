@@ -1728,6 +1728,12 @@ body.in-pvp #boss-bar, body.in-pvp #boss-cast, body.in-pvp #lb-gauge, body.in-pv
 #pvp-hud .pv-hp .bar { height: 6px; background: #000a; border-radius: 1px; overflow: hidden; }
 #pvp-hud .pv-hp .fill { height: 100%; background: var(--sc); transform-origin: left; transition: transform .15s linear; }
 #pvp-hud .pv-hp.down span { color: #6a5e50; text-decoration: line-through; }
+#pvp-hud .pv-score { display: grid; justify-items: center; gap: 1px; margin-top: 2px; }
+#pvp-hud .pv-caps { display: flex; align-items: baseline; gap: 8px; font-family: var(--fantasy); font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; }
+#pvp-hud .pv-caps b { color: var(--sc); } #pvp-hud .pv-caps i { color: var(--muted); font-style: normal; }
+#pvp-hud .pv-score small { font-size: 10px; color: #cfc4ae; white-space: nowrap; } #pvp-hud .pv-score small::before { content: ''; display: inline-block; width: 6px; height: 6px; margin-right: 5px; border-radius: 1px; background: var(--sc); }
+#pvp-hud .pv-score em { font-style: normal; color: #ffd9a0; }
+#pvp-hud .pv-back { margin-top: 3px; font-family: var(--fantasy); font-size: 13px; letter-spacing: .08em; color: #ff9a7a; }
 #pvp-result { position: fixed; left: 50%; top: 46%; transform: translate(-50%, -50%); z-index: 21; width: 380px; max-width: calc(100vw - 32px); padding: 16px 18px; text-align: center; background: #0d0b0af4; border: 1px solid #3a2a1c; border-radius: 3px; box-shadow: 0 0 0 1px #000, 0 14px 34px #000c; }
 #pvp-result.hidden { display: none; }
 #pvp-result > small { font-size: 10px; letter-spacing: .24em; text-transform: uppercase; color: var(--muted); }

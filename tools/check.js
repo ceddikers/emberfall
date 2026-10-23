@@ -665,15 +665,17 @@ function thresherArcCheck() {
 }
 
 // ---------------------------------------------------------------- 3e. the PvP Arena (tools/pvp-sim.js)
-// A few bot duels and a 2v2: every match ends (a knockout or the clock) without errors, never in a blink, never past the clock.
+// A few bot duels, a 2v2 and a capture the flag: every match ends (a knockout, captures or the clock) without errors, never
+// in a blink, never past the clock.
 function pvpCheck() {
-  const runs = [['duel', '3', 'ranger', 'bastion'], ['duel', '2', 'cleric', 'shadowblade'], ['team', '2', 'bastion', 'pyromancer', 'gorgemaw', 'cleric']];
+  const runs = [['duel', '3', 'ranger', 'bastion'], ['duel', '2', 'cleric', 'shadowblade'], ['team', '2', 'bastion', 'pyromancer', 'gorgemaw', 'cleric'], ['ctf', '2', 'bastion', 'ranger', 'gorgemaw', 'cleric']];
   const bad = [], lens = [];
   for (const a of runs) {
     const r = spawnSync(process.execPath, [path.join(__dirname, 'pvp-sim.js'), ...a], { cwd: ROOT, encoding: 'utf8' });
     const out = (r.stdout || '') + (r.stderr || ''), ms = [...out.matchAll(/^run \d+: (\w+) .*? at ([\d.]+)s/gm)];
     if (r.status !== 0 || ms.length !== +a[1]) { bad.push(`${a.join(' ')}:\n${out.slice(-600)}`); continue; }
-    for (const m of ms) { lens.push(+m[2]); if (!/^(ko|time)$/.test(m[1]) || +m[2] < 10 || +m[2] > 200) bad.push(`${a.join(' ')}: ${m[0]}`); }
+    const ctf = a[0] === 'ctf';
+    for (const m of ms) { lens.push(+m[2]); if (!(ctf ? /^(caps|time)$/ : /^(ko|time)$/).test(m[1]) || +m[2] < 10 || +m[2] > (ctf ? 370 : 200)) bad.push(`${a.join(' ')}: ${m[0]}`); }
   }
   if (bad.length) fail('PvP Arena: matches finish cleanly', bad.join('\n'));
   else pass('PvP Arena: matches finish cleanly', `${lens.length} matches, ${Math.min(...lens)}-${Math.max(...lens)}s`);

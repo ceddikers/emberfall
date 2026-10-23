@@ -83,6 +83,76 @@ const PvpView = {
     ctx.restore();
   },
 
+  // capture the flag's field: a long sand floor in a rounded kerb, each end tinted in its side's colour with a stone
+  // stand for its flag (the flags themselves: drawFlags, over the fighters)
+  drawField(ctx, now) {
+    const HW = CTF.HW, HH = CTF.HH, C = CTF.CORNER;
+    ctx.save();
+    const grd = ctx.createRadialGradient(0, 0, HH * 0.4, 0, 0, HW + 200);
+    grd.addColorStop(0, '#3a2c1c'); grd.addColorStop(0.7, '#21180f'); grd.addColorStop(1, '#0e0a07');
+    ctx.fillStyle = grd; ctx.fillRect(-HW - 260, -HH - 260, (HW + 260) * 2, (HH + 260) * 2);
+    for (let k = 3; k >= 1; k--) { const o = 18 + k * 30; rrect(ctx, -HW - o, -HH - o, (HW + o) * 2, (HH + o) * 2, C + o, null, 'rgba(160,140,110,' + (0.05 + k * 0.03) + ')', 18); }
+    rrect(ctx, -HW - 10, -HH - 10, (HW + 10) * 2, (HH + 10) * 2, C + 10, '#6d6150', OUT, 3);
+    const sand = ctx.createLinearGradient(0, -HH, 0, HH);
+    sand.addColorStop(0, '#d9c18e'); sand.addColorStop(1, '#a88d62');
+    rrect(ctx, -HW, -HH, HW * 2, HH * 2, C, sand);
+    if (!this.fspecks) { const r = rng(13); this.fspecks = []; for (let i = 0; i < 420; i++) { this.fspecks.push([(r() * 2 - 1) * (HW - 10), (r() * 2 - 1) * (HH - 10), 1 + r() * 1.8, r() < 0.5]); } }
+    ctx.save(); ctx.beginPath(); ctx.roundRect ? ctx.roundRect(-HW, -HH, HW * 2, HH * 2, C) : ctx.rect(-HW, -HH, HW * 2, HH * 2); ctx.clip();
+    for (const [x, y, s, dk] of this.fspecks) circle(ctx, x, y, s, dk ? 'rgba(120,92,58,0.35)' : 'rgba(250,236,204,0.35)');
+    // each side's end, faintly in its colour
+    for (const [sx, col] of [[-1, '#e8c15a'], [1, '#9fb4c8']]) {
+      const g2 = ctx.createLinearGradient(sx * HW, 0, sx * (HW - 360), 0);
+      g2.addColorStop(0, rgba(col, 0.2)); g2.addColorStop(1, rgba(col, 0));
+      ctx.fillStyle = g2; ctx.fillRect(sx < 0 ? -HW : HW - 360, -HH, 360, HH * 2);
+    }
+    ctx.restore();
+    line(ctx, 0, -HH + 30, 0, HH - 30, 'rgba(110,82,48,0.35)', 3);
+    circle(ctx, 0, 0, 90, null, 'rgba(110,82,48,0.35)', 3);
+    // the stands: a round stone dais ringed in the side's colour
+    for (const [sx, col] of [[-1, '#e8c15a'], [1, '#9fb4c8']]) {
+      const x = sx * CTF.STAND_X;
+      ellipse(ctx, x, 6, CTF.TOUCH + 8, (CTF.TOUCH + 8) * 0.72, 0, 'rgba(0,0,0,0.25)');
+      ellipse(ctx, x, 0, CTF.TOUCH + 6, (CTF.TOUCH + 6) * 0.72, 0, '#9a8c74', OUT, 2.5);
+      ellipse(ctx, x, -2, CTF.TOUCH - 6, (CTF.TOUCH - 6) * 0.72, 0, '#b8aa8e', rgba(col, 0.6 + 0.15 * Math.sin(now * 2 + sx)), 2.5);
+      ctx.save(); ctx.translate(sx * (HW + 8), 0);
+      rrect(ctx, -14, -46, 28, 92, 4, '#2a2018', OUT, 2);
+      rrect(ctx, -9, -40, 18, 80, 3, rgba(col, 0.75));
+      ctx.restore();
+    }
+    ctx.restore();
+  },
+
+  // one flag: a pole and a waving pennant in the side's colour (tilt: lying on the ground)
+  flag(ctx, x, y, col, now, tilt) {
+    ctx.save(); ctx.translate(x, y); if (tilt) ctx.rotate(tilt);
+    line(ctx, 0, 0, 0, -58, '#3a2a18', 3.5);
+    const w = Math.sin(now * 5 + x * 0.01) * 4;
+    poly(ctx, [1, -56, 30, -50 + w, 26, -44 + w * 0.6, 32, -36 + w, 1, -32], col, OUT, 1.5);
+    circle(ctx, 0, -59, 3.5, '#f0d48a', OUT, 1);
+    ctx.restore();
+  },
+  // the flags: on their stands, lying where they fell (a ring running down to their return), or over a carrier's head
+  // with a trail of the side's colour behind them
+  drawFlags(ctx, C, now, entById) {
+    if (!this.trails) this.trails = [[], []];
+    C.f.forEach((f, tm) => {
+      const [st, x, y, by, ret] = f, col = tm === 0 ? '#e8c15a' : '#9fb4c8', tr = this.trails[tm];
+      const e = st === 1 ? entById(by) : null;
+      if (e) { if (!tr.length || Math.hypot(tr[tr.length - 1].x - e.x, tr[tr.length - 1].y - e.y) > 10) tr.push({ x: e.x, y: e.y, t: now }); }
+      while (tr.length && (tr.length > 40 || now - tr[0].t > 1.6 || !e)) tr.shift();
+      for (const p of tr) circle(ctx, p.x, p.y + 4, 9 * (1 - (now - p.t) / 1.6), rgba(col, 0.35 * (1 - (now - p.t) / 1.6)));
+      if (st === 1 && e) {
+        glow(ctx, e.x, e.y, 46, col, 0.35 + 0.1 * Math.sin(now * 6));
+        this.flag(ctx, e.x + 12, e.y - 56 - (e.lift || 0), col, now);
+      } else if (st === 2) {
+        const left = Math.max(0, ret - (now - C.at)), k = Math.min(1, left / CTF.RETURN);
+        ellipse(ctx, x, y + 4, CTF.TOUCH, CTF.TOUCH * 0.72, 0, rgba(col, 0.12), rgba(col, 0.5), 1.5);
+        ctx.save(); ctx.strokeStyle = rgba(col, 0.9); ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(x, y + 4, CTF.TOUCH, CTF.TOUCH * 0.72, 0, -Math.PI / 2, -Math.PI / 2 + k * TAU); ctx.stroke(); ctx.restore();
+        this.flag(ctx, x - 20, y + 2, col, now, -1.1);
+      } else this.flag(ctx, x, y - 4, col, now);
+    });
+  },
+
   // a ring in the side's colour under every fighter (foes in red over it, so the enemy reads at a glance)
   drawSides(ctx, units, teams, myTeam, now) {
     for (const u of units) {
@@ -99,6 +169,7 @@ const PvpUI = (() => {
   const MODES = [
     { id: 'duel', name: 'Duel', tag: '1 v 1', size: 1, note: 'One against one. The first to fall loses.' },
     { id: 'team', name: 'Team', tag: '2 v 2', size: 2, note: 'Two against two. The last side standing wins.' },
+    { id: 'ctf', name: 'Capture the Flag', tag: '2 v 2', size: 2, note: 'Two against two on a longer field. Take their flag from its stand and bring it to yours while your own is home. First to three captures wins. The fallen come back at their own end.' },
   ];
   const SIDES = ['Gold Gate', 'Ash Gate'], SIDE_COL = ['#e8c15a', '#9fb4c8'];
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -232,7 +303,7 @@ const PvpUI = (() => {
     const c = el.querySelector('.pv-clock'), txt = mmss(Math.ceil(left));
     if (c.textContent !== txt) c.textContent = txt;
     c.classList.toggle('sd', !!P.sd);
-    const sd = el.querySelector('.pv-sd'), sdt = P.sd ? 'Sudden death' : P.mode === 'team' ? 'Team bout' : 'Duel';
+    const sd = el.querySelector('.pv-sd'), sdt = P.sd ? (P.ctf ? 'Overtime' : 'Sudden death') : P.mode === 'ctf' ? 'Capture the flag' : P.mode === 'team' ? 'Team bout' : 'Duel';
     if (sd.textContent !== sdt) sd.textContent = sdt;
     sd.classList.toggle('on', !!P.sd);
     for (const tm of [0, 1]) {
@@ -248,6 +319,21 @@ const PvpUI = (() => {
         row.classList.toggle('down', !!(s && s.alive === false));
       }
     }
+    if (P.ctf) ctfHud(el, P, now, names);
+  }
+  // capture the flag: the score, each flag's state, and how long until you are back
+  function ctfHud(el, P, now, names) {
+    const C = P.ctf, me = deps.myId();
+    const st = (f, tm) => {
+      if (f[0] === 1) return `<em>${f[3] === me ? 'you carry it' : 'carried by ' + esc(names(f[3]))}</em>`;
+      if (f[0] === 2) return `down · ${Math.ceil(Math.max(0, f[4] - (now - C.at)))}`;
+      return 'home';
+    };
+    const back = C.down[me] > now ? `<span class="pv-back">Back in ${Math.ceil(C.down[me] - now)}</span>` : '';
+    const html = `<div class="pv-caps"><b style="--sc:${SIDE_COL[0]}">${C.caps[0]}</b><i>·</i><b style="--sc:${SIDE_COL[1]}">${C.caps[1]}</b></div>` +
+      C.f.map((f, tm) => `<small style="--sc:${SIDE_COL[tm]}">${tm === P.myTeam ? 'Your' : 'Their'} flag: ${st(f, tm)}</small>`).join('') + back;
+    const box = el.querySelector('.pv-score');
+    if (box.innerHTML !== html) box.innerHTML = html;
   }
 
   // ---------------------------------------------------------------- the result card
@@ -261,15 +347,17 @@ const PvpUI = (() => {
     card._town = actions.town;
     const won = msg.winner != null && msg.winner === P.myTeam, draw = msg.winner == null;
     const head = draw ? 'Draw' : won ? 'Victory' : 'Defeat';
-    const how = draw ? (msg.reason === 'time' ? 'Too close to call when the clock ran out' : 'Both sides fell together') : `${SIDES[msg.winner]} wins ${msg.reason === 'time' ? 'on the clock' : 'by knockout'}`;
+    const caps = P.ctf ? ` ${P.ctf.caps[0]} to ${P.ctf.caps[1]}` : '';
+    const how = draw ? (P.ctf ? `Level on captures after overtime,${caps}` : msg.reason === 'time' ? 'Too close to call when the clock ran out' : 'Both sides fell together')
+      : `${SIDES[msg.winner]} wins ${msg.reason === 'caps' ? 'by captures,' + caps : msg.reason === 'time' ? 'on the clock' : 'by knockout'}`;
     const stats = msg.stats || {}, ids = Object.keys(P.teams).map(Number).sort((a, b) => P.teams[a] - P.teams[b]);
     card.className = draw ? 'draw' : won ? 'won' : 'lost';
-    card.innerHTML = `<small>The Arena · ${P.mode === 'team' ? 'Team bout' : 'Duel'}</small><h2>${head}</h2><p>${esc(how)} · ${mmss(Math.round(msg.time || 0))}</p>
+    card.innerHTML = `<small>The Arena · ${P.mode === 'ctf' ? 'Capture the flag' : P.mode === 'team' ? 'Team bout' : 'Duel'}</small><h2>${head}</h2><p>${esc(how)} · ${mmss(Math.round(msg.time || 0))}</p>
       <table><thead><tr><th></th><th>Damage</th><th>Healing</th><th>Taken</th></tr></thead><tbody>${ids.map(id => { const st = stats[id] || {}; return `<tr style="--sc:${SIDE_COL[P.teams[id]]}"><td><i></i>${esc(names(id))}</td><td>${Math.round(st.damage || 0)}</td><td>${Math.round(st.healing || 0)}</td><td>${Math.round(st.taken || 0)}</td></tr>`; }).join('')}</tbody></table>
       <button type="button" class="cta">Back to town</button>`;
   }
 
-  function leave() { if (hud) hud.classList.add('hidden'); if (card) card.className = 'hidden'; }
+  function leave() { if (hud) { hud.classList.add('hidden'); hud.querySelector('.pv-score').innerHTML = ''; } if (card) card.className = 'hidden'; }
 
   return { MODES, SIDES, SIDE_COL, init, open, close, isOpen, onLobby, hostMove, publish, frame, result, leave };
 })();

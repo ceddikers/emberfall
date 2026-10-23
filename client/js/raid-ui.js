@@ -79,10 +79,10 @@ const RaidUI = (() => {
       const btn = $('raid-leave');
       if (lastState === 'live' && performance.now() - leaveArmed > 3000) {
         leaveArmed = performance.now(); btn.textContent = 'Leave? Click again'; btn.classList.add('armed');
-        setTimeout(() => { if (performance.now() - leaveArmed >= 2900) { btn.textContent = 'Leave raid'; btn.classList.remove('armed'); } }, 3000);
+        setTimeout(() => { if (performance.now() - leaveArmed >= 2900) { btn.textContent = leaveLabel(); btn.classList.remove('armed'); } }, 3000);
         return;
       }
-      leaveArmed = 0; btn.textContent = 'Leave raid'; btn.classList.remove('armed');
+      leaveArmed = 0; btn.textContent = leaveLabel(); btn.classList.remove('armed');
       handlers.onLeave();
     });
     // waymarks: click one, then the floor; right-click one to pick it up; the cross picks them all up
@@ -146,7 +146,8 @@ const RaidUI = (() => {
     }).observe(hud);
   }
 
-  function show(v) { if (v) trackHud(); root.classList.toggle('hidden', !v); document.body.classList.toggle('in-raid', !!v); if (!v) { $('countdown').classList.add('hidden'); $('down-veil').classList.add('hidden'); $('trial-lore').classList.add('hidden'); } }
+  const leaveLabel = () => (document.body.classList.contains('in-pvp') ? 'Leave bout' : 'Leave raid');   // (a PvP bout: pvp-ui.js)
+  function show(v) { if (v) { trackHud(); const b = $('raid-leave'); if (b && !b.classList.contains('armed')) b.textContent = leaveLabel(); } root.classList.toggle('hidden', !v); document.body.classList.toggle('in-raid', !!v); if (!v) { $('countdown').classList.add('hidden'); $('down-veil').classList.add('hidden'); $('trial-lore').classList.add('hidden'); } }
 
   function setRoster(list0) {
     const key = list0.map(r => r.id).join(',');

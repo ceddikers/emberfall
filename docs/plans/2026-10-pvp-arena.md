@@ -150,10 +150,33 @@ host = new PvpHost({
   - `finish(team, 'caps')` when a cap limit or the clock is reached.
 - **Bot objectives** go in `PvpBots.move`: carrier, escort, defend.
 
+## Phase C: capture the flag (built)
+
+- **Mode** `ctf`, 2 v 2, on `pvp_field` (a rounded rect 1560 by 800). `CtfSim` (pvp.js) extends `PvpSim`; numbers in `CTF`.
+- **Flags:** each side's flag sits on a stand at its own end. Touch the enemy flag to take it. Bring it to your own stand
+  while your own flag is home to score.
+- **Carrier:** moves at 80% speed, with the flag over their head and a trail. A leap, blink or teleport from an ability
+  drops the flag where they took off; the plain dodge roll keeps it.
+- **Dropped flag:** when the carrier falls, the flag drops where they fell. Its own side touching it sends it home; it
+  also goes home by itself after 10 s. The other side can pick it up again.
+- **Death:** back at your own end after 5 s, plus 1 s for each earlier death (at most 9 s). No raising. The usual PvP
+  damage and heal scaling applies.
+- **Win:** first to 3 captures. When the 5 min clock runs out, the side ahead wins. Level: 60 s of overtime in which the
+  next capture wins, then a draw. The result reason is `'caps'` (a draw after overtime is `'time'`).
+- **Messages:** `ctf`, `ctfEv`, `ctfDown`, `ctfSpawn` (described above `CtfSim`); client to host: `ctfDrop`.
+- **Bots** (`PvpBots.ctfMove`):
+  - the first living non-healer bot runs for the flag, or escorts a teammate carrying it;
+  - everyone else guards the stand;
+  - when their own flag is taken, all of them hunt the thief;
+  - a healer stays with the runner;
+  - anyone near a dropped flag goes for it.
+- **Bot numbers** (`node tools/pvp-sim.js ctf 30`, two seed sets): the sides split about even (30 to 27, 3 draws), the
+  median match is 75 to 80 s, and most matches end on three captures.
+
 ## Tuning snapshot (2026-10-24, `node tools/pvp-sim.js duel 2`, 342 bot duels)
 
 - Median 68 s. The middle 80 % land between 35 and 127 s.
-- Class win rates run from 31 to 75 %, except Threadweaver at 0 %: its bot plays a support web and has nobody to web in a duel.
+- Class win rates run from 31 to 75 %, except Threadweaver at 0 %: its bot played a support web and had nobody to web in a duel. Phase C gave it a PvP rotation (`PvpBots.weaver`: stand and cast Needle, Mend when low); it now wins about 45 % of a sample of duels.
 - Healer and healer duels run into sudden death (about 110 s).
 - Team fights take 75 to 150 s.
 

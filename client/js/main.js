@@ -413,7 +413,7 @@
         FX.text(player.x, player.y - 56, ev.reason === 'target' ? (ev.ab.target === 'enemy' ? (inArena() && (raid.boss.u || (raid.state !== 'live' && raid.state !== 'prepull')) ? 'No target' : 'Out of range') : 'No target') : ev.reason === 'winded' ? 'Winded' : 'Not ready', '#c8c0d8', 12, 0.7, { kind: 'quiet' });
         break;
       case 'fxLocal': playKitFx(player, ev.name, true, ev.data); break;   // a class moment only you see (an Ironpalm's Crisp press)
-      case 'teleport': if (ev.where && ev.where !== 'behind') kitMove(ev); else teleportBehind(); break;
+      case 'teleport': if (pvpCarrying()) ctfLetGo(); if (ev.where && ev.where !== 'behind') kitMove(ev); else teleportBehind(); break;   // (capture the flag: a blink lets go of the flag)
       case 'fx': kitFx(ev.name, ev.data); if (ev.name === 'ult-spent' && inArena()) sendCombat({ type: 'ult' }); break;
       case 'damage': onMyDamage(ev); break;
       default:
@@ -1295,7 +1295,7 @@
   }
 
   function enterArena(msg) {
-    const def = msg.pvp ? PVP_CLIENT_DEF : raidDef(msg.boss);
+    const def = msg.pvp ? (msg.pvp.mode === 'ctf' ? PVP_FIELD_DEF : PVP_CLIENT_DEF) : raidDef(msg.boss);
     if (!def || !msg.roster.some(r => r.id === Net.id)) {
       if (scene === 'town' && def && !def.trial) toast(`Your party went into the raid: ${def.name}.`);
       return;
@@ -1336,6 +1336,8 @@
       const T = msg.pvp.teams, myTeam = T[Net.id];
       raid.pvp = { mode: msg.pvp.mode, teams: T, myTeam, foes: msg.roster.filter(r => T[r.id] !== myTeam).map(r => r.id), round: msg.pvp.round, sudden: msg.pvp.sudden, state: 'countdown', left: null, leftAt: now, sd: 0, names: new Map(msg.roster.map(r => [r.id, r.name])) };
       raid.boss.u = 1; raid.boss.x = raid.boss.y = 99999;
+      // capture the flag: both flags home, the score, when each fallen player is back (raid.pvp.ctf, from 'ctf' / 'ctfDown')
+      if (msg.pvp.mode === 'ctf') raid.pvp.ctf = { caps: [0, 0], f: [[0, -CTF.STAND_X, 0, null, 0], [0, CTF.STAND_X, 0, null, 0]], at: now, down: {} };
       document.body.classList.add('in-pvp');
     }
     player.reel = null;
@@ -1439,6 +1441,10 @@
   // A bout runs in the arena scene with raid.pvp set: no boss, the other side are the enemies, the host never sends the
   // raid's 'fight' messages, so no raid end, loot, journal or record ever fires. 'raidend' brings everyone back.
   const PVP_CLIENT_DEF = { id: 'pvp_ring', name: 'The Arena', spawn: { x: 0, y: 0 } };
+  const PVP_FIELD_DEF = { id: 'pvp_field', name: 'The Arena', spawn: { x: 0, y: 0 } };   // (capture the flag's longer field)
+  // capture the flag: am I carrying a flag; and letting go of it (a blink while carrying drops it, see CTF in pvp.js)
+  function pvpCarrying() { const C = raid && raid.pvp && raid.pvp.ctf; return !!C && raid.pvp.state === 'live' && C.f.some(f => f[0] === 1 && f[3] === Net.id); }
+  function ctfLetGo() { if (Net.isHost) { if (pvpHost && pvpHost.sim.ctfDrop) pvpHost.sim.ctfDrop(Net.id); } else Net.send({ t: 'ctfDrop' }); }
   let pvpHost = null, stopPvpTick = null;
   function pvpName(id) {
     if (id === Net.id) return player.name;
@@ -1458,7 +1464,7 @@
     const humans = raidHumans().filter(h => cfg.teams[h.id] != null);
     // where everyone starts, laid out as PvpHost does (the host's own entry needs it before the first position update)
     const ids = [...humans.map(h => h.id), ...cfg.bots.map((b, i) => 1000 + i)], teamOf = id => (id >= 1000 ? (cfg.bots[id - 1000].team ? 1 : 0) : cfg.teams[id]), spawns = {};
-    for (const tm of [0, 1]) { const mine = ids.filter(id => teamOf(id) === tm); mine.forEach((id, k) => { spawns[id] = [(tm ? 1 : -1) * PVP.SPAWN_R, (k - (mine.length - 1) / 2) * 90]; }); }
+    for (const tm of [0, 1]) { const mine = ids.filter(id => teamOf(id) === tm); mine.forEach((id, k) => { spawns[id] = [(tm ? 1 : -1) * PVP.spawnX(cfg.mode), (k - (mine.length - 1) / 2) * 90]; }); }
     hostRoster = humans.map(h => Object.assign({}, h, { spawn: spawns[h.id] }));
     pvpHost = new PvpHost({ mode: cfg.mode, humans: hostHumans, teams: cfg.teams, bots: cfg.bots, emit: m => Net.broadcastAll(m), seed: (Math.random() * 1e9) | 0 });
     let lastT = performance.now(), endedAt = null;
@@ -1497,8 +1503,31 @@
   Net.on('pvpSudden', msg => {
     if (!raid || !raid.pvp) return;
     Object.assign(raid.pvp, { sd: 1, left: Number(msg.dur) || 30, leftAt: now });
-    FX.text(player.x, player.y - 90, 'Sudden death', '#ff9a7a', 20, 1.6, { kind: 'call' });
+    FX.text(player.x, player.y - 90, msg.ot ? 'Overtime' : 'Sudden death', '#ff9a7a', 20, 1.6, { kind: 'call' });
   });
+  // capture the flag (arena/pvp.js CtfSim): the flags and score, what happened to a flag, the fallen and their return
+  Net.on('ctf', msg => {
+    const C = raid && raid.pvp && raid.pvp.ctf; if (!C || !Array.isArray(msg.f) || msg.f.length !== 2) return;
+    C.caps = [Number(msg.caps[0]) || 0, Number(msg.caps[1]) || 0]; C.f = msg.f; C.at = now;
+  });
+  Net.on('ctfEv', msg => {
+    const P = raid && raid.pvp; if (!P || !P.ctf) return;
+    const ours = msg.tm === P.myTeam, who = msg.id != null ? pvpName(msg.id) : null, e = msg.id != null ? entById(msg.id) : null, at = e || player;
+    const say = { take: ours ? `${who} has your flag` : `${who} takes the flag`, drop: ours ? 'Your flag is down' : 'The flag is down',
+      return: ours ? 'Your flag is home' : 'Their flag goes home', cap: ours ? `${who} scores` : `${who} scores!` }[msg.k];
+    if (say) FX.text(at.x, at.y - 80, say, ours ? '#ff9a7a' : '#ffe08a', msg.k === 'cap' ? 20 : 15, 1.5, { kind: 'call' });
+    const snd = { take: ours ? 'debuff-on' : 'loot-take', drop: 'chest-drop', return: 'cleanse', cap: ours ? 'debuff-on' : 'ult-ready' }[msg.k];
+    if (SH && snd) SH.play(snd, { bus: 'ui', vol: 0.8 });
+  });
+  Net.on('ctfDown', msg => { const C = raid && raid.pvp && raid.pvp.ctf; if (C && Number.isFinite(msg.secs)) C.down[msg.id] = now + msg.secs; });
+  Net.on('ctfSpawn', msg => {
+    const C = raid && raid.pvp && raid.pvp.ctf; if (!C || !Number.isFinite(msg.x) || !Number.isFinite(msg.y)) return;
+    delete C.down[msg.id];
+    const b = raid.bots.get(msg.id);
+    if (b) { b.x = b.tx = msg.x; b.y = b.ty = msg.y; b.track = null; }   // (no slide across the field)
+    if (msg.id === Net.id) { player.x = msg.x; player.y = msg.y; player.angle = Number(msg.a) || 0; player.dashMove = null; player.kb = null; player.target = null; updateCamera(0, true); }
+  });
+  Net.onHost('ctfDrop', pid => { if (pvpHost && pvpHost.sim.ctfDrop && hostRoster.some(h => h.id === pid)) pvpHost.sim.ctfDrop(pid); });
   // a blow as it landed: your own over your target (what you take shows through 'pdmg' like in a raid)
   Net.on('phit', msg => {
     if (!raid || !raid.pvp || msg.from !== Net.id) return;
@@ -2384,7 +2413,7 @@
       else {
         const reeled = inArena() && player.reel && now >= player.reel.pullAt;
         const slow = (actP(player.st, 'brace') >= 0 ? 0.4 : 1) * (myDebuff('slowed') ? FIGHT.SLOWED : 1) * (reeled ? 0.4 : 1) * windLaneBoost(player.x, player.y, dx, dy, FX.now);   // a Driftblade's Slipstream lane
-        const step = Math.min(d, MOVE_SPEED * slow * (scene === 'town' ? TOWN_PACE : 1) * dt);   // (town is walked a little quicker)
+        const step = Math.min(d, MOVE_SPEED * slow * (scene === 'town' ? TOWN_PACE : 1) * (pvpCarrying() ? CTF.SLOW : 1) * dt);   // (town is walked a little quicker)
         const ox = player.x, oy = player.y;
         player.x += dx / d * step; player.y += dy / d * step;
         if (scene === 'town') {
@@ -2992,7 +3021,7 @@
     ctx.scale(zoom, zoom);
     // (snapped to device pixels, like the town's camera, so a resting or shaking view never shimmers half a pixel)
     ctx.translate(Math.round((-cam.x + sx) * px) / px, Math.round((-cam.y + sy) * px) / px);
-    if (raid.pvp) PvpView.drawRing(ctx, now);
+    if (raid.pvp) { if (raid.pvp.ctf) PvpView.drawField(ctx, now); else PvpView.drawRing(ctx, now); }
     else {
       ArenaView.drawFloor(ctx, raid.def.id, Math.min(1.5, DPR * zoom));
       ArenaView.drawAmbient(ctx, now);
@@ -3087,6 +3116,7 @@
     }
     // the Hollow King: lanterns held up by whoever carries them, and the Doom sigil over each doomed head
     for (const l of raid.lanterns) { const c = l.carrier != null ? entById(l.carrier) : null; if (c) ArenaView.lantern(ctx, c.x + 14, c.y - (c.lift || 0), now, true, l.last); }
+    if (raid.pvp && raid.pvp.ctf) PvpView.drawFlags(ctx, raid.pvp.ctf, now, entById);   // capture the flag: on the stands, on the ground, over a carrier
     // Stuffed (Grubnak, Hard): a gold, bloated glow round whoever can't take another plate
     for (const [id, st] of raid.party) if (st.alive && st.debuffs && st.debuffs.some(d => d[0] === 'stuffed')) { const e = entById(id); if (e) ArenaView.stuffedMark(ctx, e.x, e.y - (e.lift || 0), now); }
     // Skitterra's silk: whoever is rooted is wound in a cocoon, which shreds when it lets go

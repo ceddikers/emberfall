@@ -20,6 +20,10 @@ const PvpBots = {
   pickFoe(host, bot) {
     const sim = host.sim, foes = sim.foes(bot.id);
     if (!foes.length) return null;
+    if (sim.flags) {   // (capture the flag: whoever carries our flag comes first, when near)
+      const c = sim.flags[sim.teamOf(bot.id)].st === 'carried' ? foes.find(p => p.id === sim.flags[sim.teamOf(bot.id)].by) : null;
+      if (c && Math.hypot(c.x - bot.x, c.y - bot.y) < 650) return c;
+    }
     const score = p => Math.hypot(p.x - bot.x, p.y - bot.y) * (0.6 + 0.4 * p.s.hp / p.s.maxHp) * (p.s.role === 'healer' ? 0.8 : 1);
     let best = foes[0];
     for (const p of foes) if (score(p) < score(best)) best = p;
@@ -49,6 +53,7 @@ const PvpBots = {
   // range near a hurt ally
   move(host, bot, foe, dt) {
     const sim = host.sim;
+    if (sim.flags) { const p = this.ctfMove(host, bot, foe); if (p !== undefined) return p; }
     if (!foe) return null;
     const dx = bot.x - foe.x, dy = bot.y - foe.y, d = Math.hypot(dx, dy) || 1;
     if (this.isMelee(bot)) {
@@ -69,6 +74,52 @@ const PvpBots = {
     return to;
   },
 
+  // capture the flag: where the objective wants a bot (undefined: fight as in a team bout). Each side's first living
+  // non-healer bot runs for the enemy flag (or escorts a teammate carrying it); the others guard the stand, chase a
+  // thief, and a healer stays with whoever runs. Anyone near a dropped flag goes for it first.
+  ctfMove(host, bot, foe) {
+    const sim = host.sim, tm = sim.teamOf(bot.id), mine = sim.flags[tm], theirs = sim.flags[1 - tm], home = sim.stand(tm);
+    const d = p => Math.hypot(p.x - bot.x, p.y - bot.y);
+    if (theirs.st === 'carried' && theirs.by === bot.id) return { x: home.x, y: home.y };   // carrying: home
+    if (mine.st === 'dropped' && d(mine) < 480) return { x: mine.x, y: mine.y };
+    if (theirs.st === 'dropped' && d(theirs) < 480) return { x: theirs.x, y: theirs.y };
+    const team = host.bots.filter(b => b.team === tm && sim.ps.get(b.id) && sim.ps.get(b.id).alive);
+    const runner = team.find(b => b.role !== 'healer') || team[0];
+    const carrier = theirs.st === 'carried' ? sim.alive().find(p => p.id === theirs.by) : null;
+    const escort = c => { const a = Math.atan2(bot.y - c.y, bot.x - c.x); return { x: c.x + Math.cos(a) * 110, y: c.y + Math.sin(a) * 110 }; };
+    // our flag taken: everyone but our own carrier (and a healer minding them) hunts the thief
+    const thief = mine.st === 'carried' ? sim.alive().find(p => p.id === mine.by) : null;
+    if (thief && !(bot.role === 'healer' && carrier && Math.hypot(carrier.x - home.x, carrier.y - home.y) > 200)) return d(thief) > 260 ? { x: thief.x, y: thief.y } : undefined;
+    if (bot.role === 'healer' && runner !== bot) {
+      const mate = carrier || sim.alive().find(p => p.id !== bot.id && sim.teamOf(p.id) === tm);
+      if (!mate) return undefined;
+      if (foe && d(foe) < 300) return undefined;   // (in a fight: heal and fight as usual)
+      return d(mate) > 160 ? escort(mate) : { x: bot.x, y: bot.y };
+    }
+    if (bot === runner) {
+      if (carrier) return foe && d(foe) < 220 ? undefined : escort(carrier);
+      return { x: theirs.x, y: theirs.y };
+    }
+    // a guard: after a thief, else near our stand, fighting whoever comes close to it
+    if (mine.st === 'carried') return undefined;   // (pickFoe has put the thief first)
+    if (foe && Math.hypot(foe.x - home.x, foe.y - home.y) < 420) return undefined;
+    const post = { x: home.x * 0.82, y: (bot.slot % 2 ? 1 : -1) * 60 };
+    return Math.hypot(post.x - bot.x, post.y - bot.y) > 40 ? post : { x: bot.x, y: bot.y };
+  },
+
+  // a Threadweaver in a bout has no web to keep (no tank, rarely a teammate in reach): she stands and throws Needles,
+  // and mends herself when low; the raid rotation handles the rest (her Ultimate and so on)
+  weaver(bot, k, view) {
+    const i = id => k.abilities.findIndex(a => a.id === id || a.replaces === id);
+    const ready = j => { const a = k.abilities[j]; return j >= 0 && k.usable(a) && k.readyIn(a) <= 0.0001 && k.available(a); };
+    if (k.cast || k.lockUntil > k.now || k.gcdRemaining() > 0) return null;
+    const me = view.players.find(p => p.id === bot.id), mend = i('mend'), needle = i('needle');
+    const still = j => { bot.stillUntil = view.t + (k.castTime(k.abilities[j]) || 0) + 0.1; return j; };
+    if (me && me.hp / me.maxHp < 0.45 && ready(mend)) { bot.healTarget = bot.id; return still(mend); }
+    if (ready(needle) && !view.boss.untargetable) return still(needle);
+    return BotAI.act(bot, k, view);
+  },
+
   tick(host, dt) {
     const sim = host.sim;
     for (const bot of host.bots) {
@@ -82,7 +133,8 @@ const PvpBots = {
       const casting = !!bot.actor.kit.cast;
       if (bot.plan && !rooted && !casting && !(bot.stillUntil > sim.t)) {
         const ddx = bot.plan.x - bot.x, ddy = bot.plan.y - bot.y, d = Math.hypot(ddx, ddy);
-        if (d > 6) { const step = Math.min(d, PVP_BOT.SPEED * (slowed ? FIGHT.SLOWED : 1) * dt); bot.x += ddx / d * step; bot.y += ddy / d * step; bot.moving = true; }
+        const carry = sim.carrying && sim.carrying(bot.id) ? CTF.SLOW : 1;
+        if (d > 6) { const step = Math.min(d, PVP_BOT.SPEED * (slowed ? FIGHT.SLOWED : 1) * carry * dt); bot.x += ddx / d * step; bot.y += ddy / d * step; bot.moving = true; }
         else bot.moving = false;
       } else bot.moving = false;
       ARENA.clamp(bot, 12);
@@ -93,7 +145,7 @@ const PvpBots = {
       if (k.ult && foe && BotAI.ult(bot, k, view, { mods: host.teamMods(bot.id), dpsCheck: false, healCheck: false, bossFrac: foe.s.hp / foe.s.maxHp })) bot.actor.press(7);
       if (sim.t >= bot.nextAct) {
         let i = null;
-        try { i = BotAI.act(bot, k, view); } catch (e) { if (!bot.actErr) { bot.actErr = 1; if (typeof console !== 'undefined') console.warn('pvp bot act', bot.cls.id, e && e.message); } }
+        try { i = bot.cls.id === 'threadweaver' ? this.weaver(bot, k, view) : BotAI.act(bot, k, view); } catch (e) { if (!bot.actErr) { bot.actErr = 1; if (typeof console !== 'undefined') console.warn('pvp bot act', bot.cls.id, e && e.message); } }
         if (i !== null && i !== undefined && bot.actor.press(i)) bot.nextAct = sim.t + 0.15;
       }
     }
@@ -173,6 +225,7 @@ const PvpBots = {
             if (ev.where === 'point') to = { x: Number(ev.x) || 0, y: Number(ev.y) || 0 };
             else if (ev.where === 'behind' || !ev.where) to = f ? { x: f.x - Math.cos(f.a || 0) * 45, y: f.y - Math.sin(f.a || 0) * 45 } : { x: bot.x, y: bot.y };
             else to = kitMoveDest(ev.where, bot, f ? { x: f.x, y: f.y } : null, PvpBots.isMelee(bot) && f ? { x: f.x, y: f.y } : bot.plan, ev.d);
+            if (host.sim.ctfDrop) host.sim.ctfDrop(bot.id);   // (capture the flag: a blink lets go of the flag)
             ARENA.clamp(to, 40); bot.x = to.x; bot.y = to.y;
             break;
           }
