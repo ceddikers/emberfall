@@ -70,9 +70,9 @@ const VoiceLines = (() => {
     marionettist: { name: 'Marionettist', color: '#c84a8c', hint: { pitch: 1.2, rate: 0.9 },
       dir: { age: 'ageless, young', accent: 'stagey, sing-song', pacing: 'theatrical, drawn out, sudden quiet',
         adj: 'theatrical, eerie, playful', ref: 'A puppeteer who speaks for two: themself and the Doll. Androgynous, unsettlingly sweet, like a stage host in an empty theatre.' } },
-    thresher: { name: 'Thresher', color: '#9be06a', hint: { pitch: 1.0, rate: 0.95 },
-      dir: { age: 'thirties', accent: 'soft, rural, unhurried', pacing: 'easy, patient, a pause before the word that matters',
-        adj: 'cheerful, patient, faintly unnerving', ref: 'A farmer who is also the one who digs the graves, and sees no difference between the two jobs. Warm, chatty, a low fond laugh now and then; she is never cruel and never in a hurry, which is the worst of it.' } },
+    thresher: { name: 'Reaper', color: '#8fd8e8', hint: { pitch: 1.0, rate: 0.95 },
+      dir: { age: 'thirties', accent: 'cool, precise, faintly continental', pacing: 'unhurried, measured, a pause before the word that matters',
+        adj: 'composed, elegant, quietly amused', ref: 'A slim, hooded reaper with a pale mask and a graceful scythe, who keeps appointments rather than hunting. Cool and courteous, a dry wit, never cruel and never in a hurry.' } },
     // --- bosses
     grubnak: { name: 'Grubnak', boss: true, color: '#7fa650', hint: { pitch: 0.4, rate: 0.95 },
       dir: { age: 'big, middle-aged ogre', accent: 'broad, rich, a showman chef', pacing: 'loud, rolling, savouring words',
@@ -236,15 +236,16 @@ const VoiceLines = (() => {
       low: ['Hollow! Heal me, now!', 'The debt is rising!', 'Heal me! I am running out of self!'],
       ult: ['Eclipse of the Vigil.', 'Let the dark pour out.', 'Stand in my shadow!'],
       victory: ['The watch is relieved.', 'Dawn. I remember dawn.'] },
-    // Thresher: a farmer who is also the gravedigger and sees no difference between the two; cheerful, patient, everything ripens in its time
+    // Reaper (id thresher): a hooded, elegant reaper who keeps appointments; cool, composed, darkly amused, never in a hurry
     thresher: { chance: 0.13,
-      move: ['Mind the furrows.', 'Walking, walking.', 'Lovely day for it.', 'Plenty of time.', 'Another row.', 'Soft ground, this.', 'Just tilling.', 'Round the headland.'],
-      select: ['Morning! Thresher.', 'Something here is ripening.', 'I do like a fresh field.', 'Spade is in the cart.'],
-      down: ['Oh... planted me...', 'Cut... down... early...', 'Lovely... soil...'],
-      revive: ['Up again, like wheat.', 'Not in the ground yet.', 'Ha! Wrong season.'],
-      low: ['I am going soft!', 'Mend me, I am wilting!', 'Frost! It is frost!'],
-      ult: ['Open the gate.', 'All at once, then!', 'Harvest time!'],
-      victory: ['Look at that yield.', 'Everything ripens. Everything.'] },
+      move: ['Mind the mist.', 'Gliding.', 'Lightly now.', 'In time.', 'The next step.', 'Quietly.', 'Just passing.', 'Round the edge.'],
+      select: ['Reaper. Yes?', 'Someone is due.', 'I keep a long list.', 'The scythe is ready.'],
+      down: ['An early... appointment...', 'The list... was wrong...', 'Cold... and quiet...'],
+      revive: ['Not yet, it seems.', 'Postponed.', 'My name was not called.'],
+      low: ['I am fading!', 'Mend me, I am thinning!', 'The mist takes me!'],
+      ult: ['Open the gate.', 'All at once, then!', 'The toll is called!'],
+      victory: ['Every name, in its hour.', 'Another appointment kept.'] },
+
   };
 
   // ------------------------------------------------------------------ boss dialogue

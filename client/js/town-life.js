@@ -47,7 +47,8 @@ const TownLife = (() => {
     const f = folk.find(x => x.d.arrives === boss);
     if (!f) return;
     const from = (f.d.entrance && f.d.entrance.from) || { x: f.home.x, y: f.home.y + 300 };
-    f.x = from.x; f.y = from.y; f.walk = { to: f.home };
+    const legs = ((f.d.entrance && f.d.entrance.via) || []).concat([f.home]);
+    f.x = from.x; f.y = from.y; f.walk = { to: legs[0], next: legs.slice(1), best: Infinity, at: 0, ghost: false };
     scene = { f, i: -1, lineAt: 0, lines: (f.d.entrance && f.d.entrance.lines) || [] };
     deps.focusCamera(f, 999);
     if (typeof Sound !== 'undefined') Sound.play('arrival', { vol: 0.8 });
@@ -92,8 +93,14 @@ const TownLife = (() => {
       let moving = false;
       if (f.walk) {
         const dx = f.walk.to.x - f.x, dy = f.walk.to.y - f.y, d = Math.hypot(dx, dy);
-        if (d < 4) { f.walk = null; if (scene && scene.f === f) deps.focusCamera(null); }
-        else { const st = Math.min(d, 95 * dt); f.x += dx / d * st; f.y += dy / d * st; f.angle = Math.atan2(dy, dx); moving = true; deps.collide(f); }
+        if (d < 4 && f.walk.next && f.walk.next.length) { f.walk.to = f.walk.next.shift(); f.walk.best = Infinity; }
+        else if (d < 4) { f.walk = null; if (scene && scene.f === f) deps.focusCamera(null); }
+        else {
+          const st = Math.min(d, 95 * dt); f.x += dx / d * st; f.y += dy / d * st; f.angle = Math.atan2(dy, dx); moving = true;
+          // no closer for a second (something solid in the line): walk through it, so an arrival never hangs with the camera on them
+          if (d < f.walk.best - 1) { f.walk.best = d; f.walk.at = now; } else if (now - f.walk.at > 1) f.walk.ghost = true;
+          if (!f.walk.ghost) deps.collide(f);
+        }
       } else if (f.d.wander > 0 && !talking(f)) {
         if (f.goal) {
           const dx = f.goal.x - f.x, dy = f.goal.y - f.y, d = Math.hypot(dx, dy);

@@ -56,9 +56,10 @@ for (const a of process.argv.slice(2)) {
 //          plus the Pepper Pie. This is the target for SET 2 NORMAL. (Weaker than 'full', which is every piece Legendary/Mythic.)
 //   post2: post1 + a set-2 Normal clear on all four set-2 bosses (4 x 4 = 16 chest items at Normal odds, no Mythic drops in set 2 at
 //          Normal worth wearing: Uncommon/Rare/Legendary only, general items only). The party swaps eight of its post1 pieces
-//          for set-2 pieces (1 Legendary, 4 Rare, 3 Uncommon): 2-piece set-2 bonuses for all four set-2 tiers (5-8); the set-1 bonuses
-//          fall to Brood Bond x3, Stormbound x2, Court of the Barrow x2 and no Kitchen Crew (every swap costs a set-1 piece). Same feast.
-//          This is the target for SET 2 HARD.
+//          for set-2 pieces of the same rarity (1 Legendary, 5 Rare, 2 Uncommon), each a real upgrade (items.js SET2_STEP): 2-piece
+//          set-2 bonuses for all four set-2 tiers (5-8); the set-1 bonuses fall to Brood Bond x3, Court of the Barrow x3, one
+//          Stormbound and one Kitchen Crew wearer (every swap costs a set-1 piece). Same feast. This is the target for SET 2 HARD;
+//          'post1' on Hard is the party that skips the new loot (tuned to be harder than this).
 const GEN = {   // [phys weapon, mag weapon, armour, Rare ring, second accessory]
   1: ['g_cleaver', 'g_ladle', 'g_apron', 'g_pepper', 'g_timer'], 2: ['g_fang', 'g_wand', 'g_hauberk', 'g_band', 'g_silk'],
   3: ['g_maul', 'g_rod', 'g_slate', 'g_polar', 'g_iron'], 4: ['g_crown', 'g_sceptre', 'g_shroud', 'g_signet', 'g_lantern'],
@@ -71,14 +72,14 @@ const POST1 = [
   ['{c}_w2', 'g_slate', 'm_crown', 'g_pepper'],        // L(t2) U(t3) M(t4) R(t1)
   ['{c}_w4', 'g_apron', 'm_broodeye', 'g_iron'],       // R(t4) U(t1) M(t2) R(t3)
 ];
-// post2 swaps on top of POST1 (old key -> set-2 key; WEAPON6 = the Rimeforged Maul / Icicle Wand by main stat). Eight swaps, always the
-// weakest Rare/Uncommon (or an equal Legendary) piece, never a class Legendary or a Mythic: set-2 bonuses 2/2/2/2 pieces (tiers 5-8),
-// set-1 bonuses left at tier 2 x3, tier 3 x2, tier 4 x2 (tier 1 loses all but one wearer).
+// post2 swaps on top of POST1 (old key -> set-2 key; WEAPON6 = the Rimeforged Maul / Icicle Wand by main stat, unused while
+// set 2 has no weapon that beats a class weapon). Eight swaps, each the same rarity as the piece it replaces, never a class piece
+// or a Mythic: set-2 bonuses 2/2/2/2 pieces (tiers 5-8), set-1 bonuses left at tier 2 x3, tier 4 x3, tiers 1 and 3 one wearer each.
 const POST2 = [
   { g_polar: 'g_brand', g_lantern: 'g_gillcharm' },                // R5 R8
   { g_pepper: 'g_sigil', g_venom: 'g_kindle' },                    // R7 L5
   { g_slate: 'g_glacial', g_pepper: 'g_tidering' },                // U6 R8
-  { g_apron: 'g_circlerobe', '{c}_w4': 'WEAPON6' },                // U7 U6
+  { g_apron: 'g_circlerobe', g_iron: 'g_coldiron' },               // U7 R6
 ];
 function buildGear(level, entries) {
   if (!level || level === 'base') return null;
@@ -131,6 +132,7 @@ for (let r = 0; r < runs; r++) {
   } });
   if (GEARSET) host.bots.forEach((b, i) => { b.actor.kit.env.gearMods = () => GEARSET.sets[i].mods; });
   let deaths = [];
+  const raises = [];
   const origEmit = host.emitOut;
   const recent = {};
   const kinds = {};
@@ -145,6 +147,7 @@ for (let r = 0; r < runs; r++) {
       if (msg.dd) kinds[msg.k] = (kinds[msg.k] || 0) + 1;
     }
     if (msg.t === 'addev' && msg.k === 'enrage') kinds['add-enrage'] = (kinds['add-enrage'] || 0) + 1;
+    if (msg.t === 'fev' && msg.k === 'raised') raises.push(`${host.sim.t.toFixed(0)}s ${host.bots.find(b => b.id === msg.id)?.name}`);
     if (msg.t === 'fev' && msg.k === 'death') {
       const last = (recent[msg.id] || []).slice(-3).join(' ');
       deaths.push(`${host.sim.t.toFixed(0)}s ${host.bots.find(b => b.id === msg.id)?.name}` + (process.env.WHY ? ` [${last}]` : ''));
@@ -159,7 +162,7 @@ for (let r = 0; r < runs; r++) {
   const st = host.sim.stats;
   const dur = host.sim.t;
   totDeaths += deaths.length; if (host.sim.state === 'clear') totClearT += dur;
-  log(`run ${r + 1}: ${host.sim.state} at ${dur.toFixed(0)}s, boss ${(host.sim.boss.hp / host.sim.boss.maxHp * 100).toFixed(1)}%, phase ${host.sim.phase}, deaths: ${deaths.join(', ') || 'none'}`);
+  log(`run ${r + 1}: ${host.sim.state} at ${dur.toFixed(0)}s, boss ${(host.sim.boss.hp / host.sim.boss.maxHp * 100).toFixed(1)}%, phase ${host.sim.phase}, deaths: ${deaths.join(', ') || 'none'}${raises.length ? `, raised: ${raises.join(', ')}` : ''}`);
   log('   ' + Object.values(st).map(s => `${s.name}/${s.cls}: ${(s.damage / dur).toFixed(0)} dps, ${(s.healing / dur).toFixed(0)} hps, avoidable ${s.avoidable}, deaths ${s.deaths}${s.ults ? `, ults ${s.ults}` : ""}`).join('\n   '));
   // contribution points (scoring.js): the MVP on a clear, and with SCORE=1 each player's points, raw tracking and the awards
   const sc = Scoring.score(st, { time: dur }), mv = host.sim.state === 'clear' ? Scoring.mvp(st, sc) : null;

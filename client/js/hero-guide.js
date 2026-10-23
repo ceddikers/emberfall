@@ -54,6 +54,7 @@ const HERO_GUIDE = {
       { keys: ['q', 'q', 'q', 'r', 'w', 'w'], text: 'Hold 5 points, then Shadow Dance: the first Eviscerate in it keeps them, so the next one is ready at once.' },
       { keys: ['r', 'f', 'q', 'w'], text: 'Smoke Bomb inside Shadow Dance: the party is covered and the Dance runs 3s longer.' },
       { keys: ['q', 'q', 'e', 'w'], text: 'Bladedancer: Strike, Strike, Blade Fury lands Eviscerate on exactly 5 for a Tempo; three make the next Blade Fury a Flourish.' },
+      { keys: ['q', 'q', 'e', 'w'], text: 'Nightstalker: Strike, Strike, then Shadowstep in behind it and Backstab quickly: the Stalk makes that Backstab hit 6% harder.' },
       { keys: ['r', 't', 'q', 'w', 'w', 'w'], text: 'Thousand Cuts inside Shadow Dance: Shadow Cut to 5 points, then Eviscerate every global without spending them, and it all comes due at the end.' },
     ],
   },
@@ -139,10 +140,10 @@ HERO_GUIDE.ironpalm = {
 
 // Alembist (classes-b)
 HERO_GUIDE.alembist = {
-  passive: { name: 'Ripening', icon: 'throw', desc: 'Two reagents brew a vial into your bandolier. Vials grow 30% stronger over their first 10s and spoil after 40s. Smart Throw picks the vial by who you aim at: an ally below 70% health gets your strongest heal, anyone else your oldest bomb. Every vial you throw that is not a bomb lights a coal in the Kiln, and with three lit your next Throw also launches a free Kiln Bomb for {d:900}.' },
+  passive: { name: 'Ripening', icon: 'throw', desc: 'Two reagents brew a vial into your bandolier. Vials grow 30% stronger over their first 10s and spoil after 40s. Throw takes the vial on the left; press a vial\'s number first to mark another for it. Every vial you throw that is not a bomb lights a coal in the Kiln, and with three lit your next Throw also launches a free Kiln Bomb for {d:900}.' },
   combos: [
     { keys: ['w', 'w', 'r'], text: 'Dew and Dew: a Mending Draught. Throw it into the middle of the hurt.' },
-    { keys: ['q', 'q', 'w', 'w', 'r'], text: 'A bomb and a Draught in the bandolier: R on a hurt ally throws the Draught, R on a healthy one the bomb.' },
+    { keys: ['q', 'q', 'w', 'w', 'r'], text: 'A bomb and a Draught in the bandolier: R throws the bomb on the left at the enemy. Press 2 first and R throws the Draught instead.' },
     { keys: ['e', 'w', 'r'], text: 'Salt glows while a raidwide is on its way: Salt and Dew make a Salve, thrown on the party before it lands.' },
     { keys: ['d', 'w', 'w', 'r'], text: 'Distill makes the next brew instant: an emergency Draught.' },
     { keys: ['f'], text: 'Grand Batch fills the bandolier with copies of your last vial.' },
@@ -178,7 +179,7 @@ Object.assign(HERO_GUIDE, {
 });
 // Threadweaver and Marionettist (classes-c)
 HERO_GUIDE.threadweaver = {
-  passive: { name: 'Threads', icon: 'tie', desc: 'Allies you Tie share what lands on them: a hit on one end is split evenly along the thread, and a heal on one end runs 60% of the way down. A thread snaps past 260 px.' },
+  passive: { name: 'Threads', icon: 'tie', desc: 'Allies you Tie share what lands on them: a hit on one end is split evenly along the thread, and a heal on one end runs 60% of the way down. A thread snaps past 550 px.' },
   combos: [
     { keys: ['w', 'e'], text: 'Tie the tank, then Mend Seam: the heal runs down the thread to you.' },
     { keys: ['w', 'w'], text: 'Tie twice on two allies to tie them to each other. Pair the one about to be hit with someone healthy.' },
@@ -191,9 +192,10 @@ HERO_GUIDE.threadweaver = {
   ],
 };
 HERO_GUIDE.marionettist = {
-  passive: { name: 'Strings', icon: 'pull', desc: 'The Doll does the fighting. Three Strings hold it: one tears if it is pulled past 300 px from you or a blow lands on it, and with none left it goes limp for 4s.' },
+  passive: { name: 'Strings', icon: 'pull', desc: 'The Doll does the fighting, and jabs on its own while you fight and it has the enemy in reach. Three Strings hold it: one tears if it is pulled past 300 px from you or a blow lands on it, and with none left it goes limp for 4s. Pull Strings ties all three back.' },
   combos: [
-    { keys: ['q', 'q', 'e'], text: 'Jab, then Cross-Cut with the boss between you and the Doll.' },
+    { keys: ['q', 'e'], text: 'Cue, then Cross-Cut with the boss between you and the Doll: the quick Jabs keep coming while you cut.' },
+    { keys: ['w'], text: 'A String torn, or the Doll limp: Pull Strings ties all three back and gets it up at once. Keep a charge for after a blow.' },
     { keys: ['w', 'e'], text: 'Pull the Doll to the far side of the boss to line up the cut.' },
     { keys: ['r'], text: 'Pirouette when a telegraph is about to land on the Doll (it glows): it spins through the blow and earns 1 more Encore.' },
     { keys: ['d', 'e'], text: 'Swap a few seconds before Cross-Cut comes up: once the Doll is back on its mark, the cut lands twice as hard.' },
@@ -215,13 +217,13 @@ HERO_GUIDE.gloomsworn = {
 };
 // Thresher (damage, class 19)
 HERO_GUIDE.thresher = {
-  passive: { name: 'Ripeness', icon: 'reap', desc: 'Four afflictions ripen on the boss, each in its own bar: Mark (a bleed), Drain (mends you), Bind (pulses) and Thread (waits to be snapped). Each is young (green) for 3s, then gold for 5s, then rotten. Reap spends them all: gold pays in full, young only 40%, rotten 65%. A hit lays only an affliction that is not up or has rotted, so you never reset a ripening one: the gold comes on its own, and the only way to waste it is to wait too long.' },
+  passive: { name: 'The Toll', icon: 'reap', desc: 'Four afflictions darken on the boss, each in its own bar: Mark (a bleed), Drain (mends you), Bind (pulses) and Thread (waits to be snapped). Each is faint (pale) for 3s, then gold for 5s, then lapsed. Reap spends them all: gold pays in full, faint only 40%, lapsed 65%. A hit lays only an affliction that is not up or has lapsed, so you never reset a darkening one: the gold comes on its own, and the only way to waste it is to wait too long.' },
   combos: [
     { keys: ['q', 'q'], text: 'Slash lays a Mark, Cleave a Drain. Keep pressing Q: a hit pressed within 1.2s of your last recovery adds a Backswing, a free second cut.' },
-    { keys: ['w', 'd'], text: 'Hook plants the Thread and Gloam Blink binds. Both keep your Backswing going, so use them between your Slashes. When all four bars are up, stop: nothing more can be laid until one ripens or rots.' },
+    { keys: ['w', 'd'], text: 'Hook lays the Thread and Gloam Blink binds. Both keep your Backswing going, so use them between your Slashes. When all four bars are up, stop: nothing more can be laid until one darkens or rots.' },
     { keys: ['q', 'q', 'e'], text: 'Wait for gold, then Reap. E glows when any bar is in its gold stretch (the marked part): press it when most of them are. Too early pays 40%, too late 65%.' },
-    { keys: ['r', 'e'], text: 'Gather puts every bar on the edge of gold at once. Press it, then Reap: you can cash a full harvest early, or hold the gold for the moment the party bursts.' },
+    { keys: ['r', 'e'], text: 'Beckon puts every bar on the edge of gold at once. Press it, then Reap: you can cash the full toll early, or hold the gold for the moment the party bursts.' },
     { keys: ['f'], text: 'Spirit Wisp as soon as it is ready: it strikes every 2.5s for 15s and binds the boss if nothing else has. With the Sacrifice talent, press it again to pop it for a big hit and a damage bonus.' },
-    { keys: ['t', 'q', 'q', 'q', 'q', 'q'], text: 'Reaper\'s Gate when T is full: nothing can touch you for 8s. Press Q once a second: each strike lays the next affliction, and the fifth, The Fifth, releases all four at full ripeness. Do not stop at four.' },
+    { keys: ['t', 'q', 'q', 'q', 'q', 'q'], text: 'Reaper\'s Gate when T is full: nothing can touch you for 8s. Press Q once a second: each strike lays the next affliction, and the fifth, The Fifth, releases all four fully due. Do not stop at four.' },
   ],
 };

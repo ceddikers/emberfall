@@ -158,6 +158,7 @@ function raid(seed, healer) {
   kit.g.gloom = 100; kit.g.sentAt = -9; kit.g.sentV = -1; s.hp = Math.round(s.maxHp * 0.12);
   host.tick(0.05);   // (the kit tells the host its vessel is full, as it does a few times a second)
   check(s.glm && s.glm.v === 100, 'the bot kit should have reported a full vessel to the host');
+  s.hp = Math.round(s.maxHp * 0.12);   // (again: a Chronomancer's rewind can have put the health back in that tick)
   sim.damagePlayer(sim.players().find(p => p.id === tank.id), s.maxHp, { kind: 'buster', raw: true });
   const began = !!s.hollow;
   while (sim.t < 20 + 20 && sim.state === 'live') host.tick(0.05);

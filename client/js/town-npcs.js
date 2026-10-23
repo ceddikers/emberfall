@@ -394,7 +394,8 @@ const TOWN_NPCS = [
     at: { x: 800, y: 1060 },
     wander: 0,
     arrives: 'grubnak',
-    entrance: { from: { x: 1200, y: 1680 }, lines: [
+    // (via: round the houses south of the plaza and the west end of his own long table, which is solid once he's here)
+    entrance: { from: { x: 1200, y: 1680 }, via: [{ x: 1075, y: 1295 }, { x: 1050, y: 1270 }, { x: 880, y: 1236 }, { x: 815, y: 1180 }], lines: [
       "Out of the way, out of the way, hot pot coming through!",
       "Eleven years I peeled potatoes for that ogre. Eleven years! And now? Now I cook. For you.",
       "Come and eat together before you go in. Nobody fights well on an empty stomach. I would know.",
@@ -475,7 +476,7 @@ const TOWN_NPCS = [
     at: { x: 1520, y: 800 },
     wander: 0,
     arrives: 'volkar',
-    entrance: { from: { x: 1200, y: 1680 }, lines: [
+    entrance: { from: { x: 1200, y: 1680 }, via: [{ x: 1420, y: 920 }], lines: [
       "Ah. The storm is broken, so I can read the sky again. Thirty years of nothing but lightning in my cards.",
       "Madame Ozza. Fortunes told, futures mended, no refunds.",
       "Come to me before the Barrow, any of you. I always see something.",

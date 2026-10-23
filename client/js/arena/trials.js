@@ -479,12 +479,12 @@ Object.assign(TRIALS, {
   },
 });
 
-// ======================================================================= Thresher (damage, class 19)
+// ======================================================================= Reaper (id thresher; damage, class 19)
 Object.assign(TRIALS, {
   sower: {
-    cls: 'thresher', spec: 'sower', name: 'The Quick Harvest',
-    lore: ['The Barrow\'s gardens ran wild the night the King fell.', 'Whoever sowed fast enough reaped before the frost.'],
-    outro: 'The field is bare. The Sower walks on.',
+    cls: 'thresher', spec: 'sower', name: 'The Swift Reckoning',
+    lore: ['The Barrow\'s dead woke restless the night the King fell.', 'Whoever marked them fast enough walked out before dawn.'],
+    outro: 'The names are struck. The Wraith walks on.',
     allies: ['bastion:base', 'cleric:base'], seconds: 55, enrage: 66, regen: 0,
     script(f, k) {
       // short gaps between blows: the afflictions have to be laid quickly and reaped on the run
@@ -493,11 +493,11 @@ Object.assign(TRIALS, {
   },
   grim: {
     cls: 'thresher', spec: 'grim', name: 'The Long Wait',
-    lore: ['The old reaper never hurried a harvest.', 'It came ripe on the day it came ripe, and he was there.'],
-    outro: 'The last sheaf is cut. The Grim waits for the next season.',
+    lore: ['The old reaper never hurried a soul.', 'Each came due at its hour, and he was there.'],
+    outro: 'The last name is struck. The Grim waits for the next.',
     allies: ['bastion:base', 'cleric:base'], seconds: 56, enrage: 70, regen: 0,
     script(f, k) {
-      // long quiet stretches and then a heavy blow: time to let everything ripen, and a reason to hold the Reap for the right moment
+      // long quiet stretches and then a heavy blow: time to let everything come due, and a reason to hold the Reap for the right moment
       f.boss.anchor = true;
       k.loop([[6, () => k.blow(9500, 4)], [7, () => k.knell(2800)], [6, () => k.swing('stomp', 6500, 4)], [6, () => k.knell(2800)]]);
     },

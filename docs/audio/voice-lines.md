@@ -55,7 +55,7 @@ The move and select lines of four favourites (Bastion, Ranger, Pyromancer, Cleri
 | Threadweaver | 26 | 47 s |
 | Gloomsworn | 26 | 62 s |
 | Marionettist | 26 | 49 s |
-| Thresher | 26 | 51 s |
+| Reaper | 26 | 51 s |
 | Grubnak | 38 | 82 s |
 | Queen Skitterra | 30 | 73 s |
 | Volkar | 24 | 52 s |
@@ -919,42 +919,42 @@ The move and select lines of four favourites (Bastion, Ranger, Pyromancer, Cleri
 | `hero-marionettist-victory-1.ogg` | Bravo. Bravo. | *Victory (after a boss falls)* · slow clap in the voice |
 | `hero-marionettist-victory-2.ogg` | And... scene. | satisfied, a little tired |
 
-### Thresher
+### Reaper
 
-**Voice:** cheerful, patient, faintly unnerving. A farmer who is also the one who digs the graves, and sees no difference between the two jobs. Warm, chatty, a low fond laugh now and then; she is never cruel and never in a hurry, which is the worst of it.
+**Voice:** composed, elegant, quietly amused. A slim, hooded reaper with a pale mask and a graceful scythe, who keeps appointments rather than hunting. Cool and courteous, a dry wit, never cruel and never in a hurry.
 
 - **Age:** thirties
-- **Accent:** soft, rural, unhurried
-- **Pacing:** easy, patient, a pause before the word that matters
+- **Accent:** cool, precise, faintly continental
+- **Pacing:** unhurried, measured, a pause before the word that matters
 - **Device-speech fallback:** pitch 1, rate 0.95
 
 | File | Line | Delivery |
 |---|---|---|
-| `hero-thresher-move-1.ogg` | Mind the furrows. | *Move (told to go somewhere)* · brisk acknowledgement |
-| `hero-thresher-move-2.ogg` | Walking, walking. | brisk acknowledgement |
-| `hero-thresher-move-3.ogg` | Lovely day for it. | brisk acknowledgement |
-| `hero-thresher-move-4.ogg` | Plenty of time. | brisk acknowledgement |
-| `hero-thresher-move-5.ogg` | Another row. | brisk acknowledgement |
-| `hero-thresher-move-6.ogg` | Soft ground, this. | brisk acknowledgement |
-| `hero-thresher-move-7.ogg` | Just tilling. | brisk acknowledgement |
-| `hero-thresher-move-8.ogg` | Round the headland. | brisk acknowledgement |
-| `hero-thresher-select-1.ogg` | Morning! Thresher. | *Select (clicked on)* · attentive, in character |
-| `hero-thresher-select-2.ogg` | Something here is ripening. | attentive, in character |
-| `hero-thresher-select-3.ogg` | I do like a fresh field. | attentive, in character |
-| `hero-thresher-select-4.ogg` | Spade is in the cart. | attentive, in character |
-| `hero-thresher-down-1.ogg` | Oh... planted me... | *Down (falls in battle)* · pained, fading out |
-| `hero-thresher-down-2.ogg` | Cut... down... early... | pained, fading out |
-| `hero-thresher-down-3.ogg` | Lovely... soil... | pained, fading out |
-| `hero-thresher-revive-1.ogg` | Up again, like wheat. | *Revived* · a breath in, relieved |
-| `hero-thresher-revive-2.ogg` | Not in the ground yet. | a breath in, relieved |
-| `hero-thresher-revive-3.ogg` | Ha! Wrong season. | a breath in, relieved |
-| `hero-thresher-low-1.ogg` | I am going soft! | *Low health* · urgent, strained |
-| `hero-thresher-low-2.ogg` | Mend me, I am wilting! | urgent, strained |
-| `hero-thresher-low-3.ogg` | Frost! It is frost! | urgent, strained |
+| `hero-thresher-move-1.ogg` | Mind the mist. | *Move (told to go somewhere)* · brisk acknowledgement |
+| `hero-thresher-move-2.ogg` | Gliding. | brisk acknowledgement |
+| `hero-thresher-move-3.ogg` | Lightly now. | brisk acknowledgement |
+| `hero-thresher-move-4.ogg` | In time. | brisk acknowledgement |
+| `hero-thresher-move-5.ogg` | The next step. | brisk acknowledgement |
+| `hero-thresher-move-6.ogg` | Quietly. | brisk acknowledgement |
+| `hero-thresher-move-7.ogg` | Just passing. | brisk acknowledgement |
+| `hero-thresher-move-8.ogg` | Round the edge. | brisk acknowledgement |
+| `hero-thresher-select-1.ogg` | Reaper. Yes? | *Select (clicked on)* · attentive, in character |
+| `hero-thresher-select-2.ogg` | Someone is due. | attentive, in character |
+| `hero-thresher-select-3.ogg` | I keep a long list. | attentive, in character |
+| `hero-thresher-select-4.ogg` | The scythe is ready. | attentive, in character |
+| `hero-thresher-down-1.ogg` | An early... appointment... | *Down (falls in battle)* · pained, fading out |
+| `hero-thresher-down-2.ogg` | The list... was wrong... | pained, fading out |
+| `hero-thresher-down-3.ogg` | Cold... and quiet... | pained, fading out |
+| `hero-thresher-revive-1.ogg` | Not yet, it seems. | *Revived* · a breath in, relieved |
+| `hero-thresher-revive-2.ogg` | Postponed. | a breath in, relieved |
+| `hero-thresher-revive-3.ogg` | My name was not called. | a breath in, relieved |
+| `hero-thresher-low-1.ogg` | I am fading! | *Low health* · urgent, strained |
+| `hero-thresher-low-2.ogg` | Mend me, I am thinning! | urgent, strained |
+| `hero-thresher-low-3.ogg` | The mist takes me! | urgent, strained |
 | `hero-thresher-ult-1.ogg` | Open the gate. | *Ultimate (shouted as it fires)* · shouted, full voice |
 | `hero-thresher-ult-2.ogg` | All at once, then! | shouted, full voice |
-| `hero-thresher-ult-3.ogg` | Harvest time! | shouted, full voice |
-| `hero-thresher-victory-1.ogg` | Look at that yield. | *Victory (after a boss falls)* · satisfied, a little tired |
-| `hero-thresher-victory-2.ogg` | Everything ripens. Everything. | satisfied, a little tired |
+| `hero-thresher-ult-3.ogg` | The toll is called! | shouted, full voice |
+| `hero-thresher-victory-1.ogg` | Every name, in its hour. | *Victory (after a boss falls)* · satisfied, a little tired |
+| `hero-thresher-victory-2.ogg` | Another appointment kept. | satisfied, a little tired |
 
 ★ = in the recommended minimum set.

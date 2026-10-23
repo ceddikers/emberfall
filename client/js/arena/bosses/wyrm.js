@@ -25,7 +25,7 @@
 
 const WYRM = {
   id: 'wyrm', name: 'Vhalgrath', title: 'Tyrant of the Cinder Peaks',
-  hp: { normal: 4250000, hard: 4500000 },
+  hp: { normal: 4800000, hard: 5550000 },
   autoDmg: { normal: 2300, hard: 2100 },
   enrage: { normal: 612, hard: 622 },   // the cast starts here and lands 8 s later (10:20 / 10:30)
   enrageName: 'Ashfall',

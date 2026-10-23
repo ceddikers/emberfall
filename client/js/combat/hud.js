@@ -77,7 +77,7 @@ const BUFF_HIDES = { avatar: 'oath', bloodmoon: 'undying', living: 'overload', w
 Object.assign(BUFF_NAMES, { distill: 'Distill', catalyst: 'Catalyst' });
 Object.assign(BUFF_ICON, { distill: 'distill', catalyst: 'distill' });
 GAUGE_TIPS.alembist = {
-  desc: 'Two reagents brew a vial into your bandolier (three after Catalyst). Smart Throw: an ally below 70% health gets your strongest heal, anyone else your oldest bomb. Vials grow 30% stronger over their first 10s and spoil after 40s. The three coals under the still are the Kiln: every vial you throw that is not a bomb lights one, and with all three lit your next Throw also launches a free Kiln Bomb for {d:900}.',
+  desc: 'Two reagents brew a vial into your bandolier (three after Catalyst). Throw takes the vial on the left, or the one you marked with its number key; the mark holds until you throw. Vials grow 30% stronger over their first 10s and spoil after 40s. The three coals under the still are the Kiln: every vial you throw that is not a bomb lights one, and with all three lit your next Throw also launches a free Kiln Bomb for {d:900}.',
   state: k => {
     const i = alemPick(k), v = i >= 0 ? k.g.vials[i] : null, raise = Math.ceil(k.g.raiseAt - k.now);
     const parts = [v ? `next: ${v.parts ? 'Grand Blend' : alemInfo(v.r).name} ${Math.round((alemStrength(k, v) - 1) * 100)}%` : 'empty', `Kiln ${k.g.kiln || 0} / ${ALEMBIC.KILN}`];
@@ -100,8 +100,8 @@ GAUGE_TIPS.ironpalm = {
 
 // talents whose proc shows in the tracker (named after the talent)
 Object.assign(BUFF_NAMES, { answer: 'Answering Rune', beat: 'Skipped Beat', feint: 'Feint', haze: 'Heat Haze', pinned: 'Pinning Shot', quickmend: 'Quick Mend',
-  secondwind: 'Second Wind', sharpen: 'Sharpened Shadows', steady: 'Steady Hands', unbreak: 'Unbreakable', tempo: 'Tempo', oncue: 'Stage Cross', smoulder: 'Smoulder' });
-Object.assign(BUFF_ICON, { tempo: 'fury', oncue: 'swap', smoulder: 'smolder', answer: 'strike', beat: 'bolt', feint: 'strike', haze: 'fireball', pinned: 'quick', quickmend: 'mend', secondwind: 'cloak', sharpen: 'evis', steady: 'brace', unbreak: 'bulwark' });
+  secondwind: 'Second Wind', sharpen: 'Sharpened Shadows', steady: 'Steady Hands', unbreak: 'Unbreakable', tempo: 'Tempo', oncue: 'Stage Cross', smoulder: 'Smoulder', stalk: 'Stalking' });
+Object.assign(BUFF_ICON, { tempo: 'fury', oncue: 'swap', smoulder: 'smolder', stalk: 'step', answer: 'strike', beat: 'bolt', feint: 'strike', haze: 'fireball', pinned: 'quick', quickmend: 'mend', secondwind: 'cloak', sharpen: 'evis', steady: 'brace', unbreak: 'bulwark' });
 
 // what each buff does while it's up, for its hover text. n(id) is the move's name as this hero has it (a spec may rename it).
 const BUFF_TIPS = {
@@ -122,6 +122,7 @@ const BUFF_TIPS = {
   smoulder: () => 'Your Heat can\'t boil over: it stops at 99.',
   oncue: n => `Your next ${n('cross')} cuts twice as hard and gives 1 more Encore.`,
   tempo: n => `At three Tempo your next ${n('step')} is a Flourish. A spilled combo point loses them all.`,
+  stalk: n => `Your next ${n('evis')} hits 6% harder.`,
   barrage: n => `Your next ${n('quick')} hits three times as hard and gives triple Focus.`,
   falconHunt: () => 'Your falcon is hunting: every Keen Eye you light sends it diving at the boss.',
   pinned: n => `Your next ${n('quick')} is a critical hit.`,
@@ -600,6 +601,8 @@ Object.assign(ICON_GLYPHS, {
   },
   marionettist: {
     jab: c => { c.fillStyle = '#e8eef4'; c.beginPath(); c.moveTo(10, 54); c.lineTo(54, 10); c.lineTo(16, 58); c.fill(); c.fillStyle = '#c89a64'; c.beginPath(); c.arc(14, 54, 6, 0, TAU); c.fill(); },
+    // Cue (until its painted icon exists): a finger snap, one gold string down to the Doll's stiletto lunging
+    cue: c => { c.strokeStyle = '#ffd27a'; c.lineWidth = 1.5; c.beginPath(); c.moveTo(20, 6); c.lineTo(30, 34); c.stroke(); c.fillStyle = '#e8eef4'; c.beginPath(); c.moveTo(24, 58); c.lineTo(56, 26); c.lineTo(30, 60); c.fill(); c.fillStyle = '#c89a64'; c.beginPath(); c.arc(27, 57, 5, 0, TAU); c.fill(); c.strokeStyle = '#fff4dc'; c.lineWidth = 2.5; c.lineCap = 'round'; for (let i = 0; i < 6; i++) { const a = -Math.PI / 2 + (i - 2.5) * 0.5 + (i > 2 ? Math.PI : 0); c.beginPath(); c.moveTo(20 + Math.cos(a) * 6, 14 + Math.sin(a) * 6); c.lineTo(20 + Math.cos(a) * 12, 14 + Math.sin(a) * 12); c.stroke(); } },
     pull: c => { c.strokeStyle = '#f6e6f0'; c.lineWidth = 1.5; for (const x of [18, 32, 46]) { c.beginPath(); c.moveTo(x, 8); c.lineTo(32 + (x - 32) * 0.3, 40); c.stroke(); } c.fillStyle = '#9a6a3c'; c.fillRect(12, 6, 40, 5); c.fillStyle = '#f8efe8'; c.beginPath(); c.arc(32, 46, 9, 0, TAU); c.fill(); c.strokeStyle = '#d0507e'; c.lineWidth = 3; c.beginPath(); c.moveTo(14, 58); c.lineTo(24, 50); c.stroke(); },
     cross: c => { c.strokeStyle = '#ffd8ec'; c.lineWidth = 3; c.beginPath(); c.moveTo(8, 50); c.lineTo(56, 14); c.stroke(); c.fillStyle = '#c86a5a'; c.beginPath(); c.arc(32, 32, 8, 0, TAU); c.fill(); c.strokeStyle = '#ffffff'; c.lineWidth = 1.5; c.beginPath(); c.moveTo(10, 46); c.lineTo(54, 12); c.stroke(); },
     pirouette: c => { c.strokeStyle = '#f0c8dc'; c.lineWidth = 4; c.lineCap = 'round'; c.beginPath(); c.arc(32, 32, 20, -0.3, Math.PI * 1.5); c.stroke(); c.fillStyle = '#f8efe8'; c.beginPath(); c.arc(32, 32, 8, 0, TAU); c.fill(); c.fillStyle = '#d0507e'; c.beginPath(); c.moveTo(50, 20); c.lineTo(56, 32); c.lineTo(44, 30); c.fill(); },
@@ -614,8 +617,8 @@ GAUGE_TIPS.threadweaver = {
   state: k => { const n = weaveCount(k); return `${n} thread${n === 1 ? '' : 's'}` + (k.g.spool >= WEAVE.MEND_COST ? ' · Mend Seam instant' : ''); },
 };
 GAUGE_TIPS.marionettist = {
-  desc: 'Strings (top): three tie you to the Doll. One tears if it strays past their reach or a blow lands on it, and grows back after 15s; with none left the Doll lies limp for 4s. Encore (the footlights) builds from the Doll\'s hits, and 1 more for a blow it spins through under Pirouette; Grand Finale spends all 5.',
-  state: k => (mariLimp(k) ? 'Limp' : `${k.g.strings} String${k.g.strings === 1 ? '' : 's'}`) + ` · Encore ${k.g.encore || 0} / 5`,
+  desc: 'Strings (top): three tie you to the Doll. One tears if it strays past their reach or a blow lands on it, and grows back after 15s; with none left the Doll lies limp for 4s. Pull Strings ties all three back and gets a limp Doll up at once. Encore (the footlights) builds from Cue and the Doll\'s other moves (not its own Jabs), and 1 more for a blow it spins through under Pirouette; Grand Finale spends all 5.',
+  state: k => (mariLimp(k) ? 'Limp' : `${k.g.strings} String${k.g.strings === 1 ? '' : 's'}`) + ` · Encore ${k.g.encore || 0} / 5` + (k.g.quick ? ` · ${k.g.quick} quick Jab${k.g.quick === 1 ? '' : 's'}` : ''),
 };
 function drawnIcon(classId, abilityId, force = false) {
   if (typeof document === 'undefined' || typeof CLASSES === 'undefined') return null;
@@ -688,7 +691,7 @@ GAUGE_TIPS.oathbroker = {
 Object.assign(BUFF_NAMES, { hollow: 'Hollow', shade: 'Shade', mantle: 'Black Mantle', omen: 'Ill Omen' });
 Object.assign(BUFF_ICON, { hollow: 'rite', shade: 'shade', mantle: 'mantle', omen: 'rend' });
 Object.assign(BUFF_TIPS, {
-  hollow: n => `You cannot fall below 1 HP and you deal 30% more damage. Everything you take is written down as a debt: your healer must heal at least that much before the grace after it ends, or you fall. ${n('strike')} on a Reaver of Dusk echoes.`,
+  hollow: n => `You cannot fall below 1 HP and you deal 30% more damage. Everything you take is written down as a debt: your healer must heal at least that much before the grace after it ends, or you fall. A Sentinel covers the party (15% less damage) while it lasts; a Reaver of Dusk's ${n('strike')} echoes and Dusk Reave costs nothing.`,
   shade: n => `Your next ${n('strike')}s echo, hitting again for 85%.`,
   mantle: () => 'You take 40% less damage.',
   omen: n => `Your next ${n('rend')} strike builds 12 extra Gloom.`,
@@ -799,33 +802,33 @@ GAUGE_TIPS.gloomsworn = {
   };
 })();
 
-// ======================================================================= Thresher (damage, class 19)
+// ======================================================================= Reaper (id thresher; damage, class 19)
 // Drawn icons (art.icons === false in data.js) and the gauge's tooltip; the painted set replaces them later.
-Object.assign(BUFF_NAMES, { wisp: 'Spirit Wisp', wispgift: 'Wisp\'s Gift', gate: 'Reaper\'s Gate', gleaning: 'Gleaning' });
+Object.assign(BUFF_NAMES, { wisp: 'Spirit Wisp', wispgift: 'Wisp\'s Gift', gate: 'Reaper\'s Gate', gleaning: 'Phantom Cut' });
 Object.assign(BUFF_ICON, { wisp: 'wisp', wispgift: 'wisp', gate: 'gate', gleaning: 'slash' });
 Object.assign(BUFF_TIPS, {
   wisp: () => 'A wisp harries the boss, striking every 2.5s and binding it if nothing else has.',
   wispgift: () => 'The wisp is spent: you deal 10% more damage.',
-  gate: () => 'You are out of the world: nothing can touch you. Every Slash is a Gate Strike that lays the next affliction; the fifth releases all four at full ripeness.',
+  gate: () => 'You are out of the world: nothing can touch you. Every Slash is a Gate Strike that lays the next affliction; the fifth releases all four fully due.',
   gleaning: () => 'Your next Slash or Cleave cuts a second time for 35%.',
 });
 GAUGE_TIPS.thresher = {
-  desc: 'Four afflictions ripen on the boss: Mark (a bleed, Slash), Drain (mends you, Cleave), Bind (pulses, Gloam Blink and the Wisp) and Thread (Hook). Each bar fills as its affliction ages: green while young, gold while ripe (the marked stretch), then rotten. Reap spends them all: gold pays in full, young 40%, rotten 65%. A hit only lays an affliction that is not up or has rotted; Gather puts them all back on the edge of gold. The line under the bars is the Wisp\'s time.',
+  desc: 'Four afflictions darken on the boss: Mark (a bleed, Slash), Drain (mends you, Cleave), Bind (pulses, Gloam Blink and the Wisp) and Thread (Hook). Each bar fills as its affliction ages: pale while faint, gold while due (the marked stretch), then lapsed. Reap spends them all: gold pays in full, faint 40%, lapsed 65%. A hit only lays an affliction that is not up or has lapsed; Beckon puts them all back on the edge of gold. The line under the bars is the Wisp\'s time.',
   state: k => {
     const n = THRESH.IDS.filter(id => thStage(k, id)).length, gold = thCount(k, 2), rot = thCount(k, 3);
     if (k.has('gate')) return `Reaper's Gate: strike ${Math.min(5, (k.g.gate | 0) + 1)} of 5`;
-    return n ? `${n} up · ${gold} gold${rot ? ' · ' + rot + ' rotten' : ''}` : 'no afflictions up';
+    return n ? `${n} up · ${gold} gold${rot ? ' · ' + rot + ' lapsed' : ''}` : 'no afflictions up';
   },
 };
 (() => {
-  // ink-green for the dark, moss and a soul-green light, gold for the ripe, a violet vein, bone for the edge
-  const K = '#08140c', D = '#16382a', M = '#4f9a52', S = '#b8f5a8', W = '#f2ffe8', V = '#a77ae8', G = '#ffd65a', G2 = '#fff1a8', A = '#8a6a44', R = '#8a5e34';
+  // void black for the dark, deep violet and a pale soul-fire teal light, gold for what is due, a violet vein, pale silver for the edge
+  const K = '#0c0a14', D = '#2a1840', M = '#5a3a8a', S = '#8fd8e8', W = '#e0f6ff', V = '#a77ae8', G = '#ffd65a', G2 = '#fff1a8', A = '#4a2a6a', R = '#8a82a0';
   const ink = (c, w = 3, col = S) => { c.strokeStyle = col; c.lineWidth = w; c.lineCap = 'round'; c.lineJoin = 'round'; };
-  const glowDot = (c, x, y, r, col = S, a = 1) => { const g = c.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, col); g.addColorStop(1, 'rgba(184,245,168,0)'); c.save(); c.globalAlpha = a; c.fillStyle = g; c.beginPath(); c.arc(x, y, r, 0, TAU); c.fill(); c.restore(); };
+  const glowDot = (c, x, y, r, col = S, a = 1) => { const g = c.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, col); g.addColorStop(1, 'rgba(143,216,232,0)'); c.save(); c.globalAlpha = a; c.fillStyle = g; c.beginPath(); c.arc(x, y, r, 0, TAU); c.fill(); c.restore(); };
   const dot = (c, x, y, r, col) => { c.fillStyle = col; c.beginPath(); c.arc(x, y, r, 0, TAU); c.fill(); };
   // the scythe: a snath from (x0, y0) toward (x1, y1) and a long curved blade swept from its head, `flip` turning the blade the other way
   const scythe = (c, x0, y0, x1, y1, o = {}) => {
-    const a = Math.atan2(y1 - y0, x1 - x0), L = Math.hypot(x1 - x0, y1 - y0), fl = o.flip ? -1 : 1, edge = o.edge || S, body = o.body || '#d2e4c4';
+    const a = Math.atan2(y1 - y0, x1 - x0), L = Math.hypot(x1 - x0, y1 - y0), fl = o.flip ? -1 : 1, edge = o.edge || S, body = o.body || '#e4eaf2';
     c.save(); c.translate(x0, y0); c.rotate(a);
     ink(c, 3.6, K); c.beginPath(); c.moveTo(-3, 0); c.lineTo(L, 0); c.stroke();
     ink(c, 2.2, A); c.beginPath(); c.moveTo(-2, 0); c.lineTo(L, 0); c.stroke();
@@ -842,7 +845,7 @@ GAUGE_TIPS.thresher = {
     for (let i = 14; i >= 0; i--) { const q = i / 14, an = a0 + (a1 - a0) * q, th = w * Math.pow(Math.sin(Math.PI * q), 0.8); c.lineTo(cx + Math.cos(an) * (r - th), cy + Math.sin(an) * (r - th)); }
     c.closePath(); c.fill(); c.restore();
   };
-  // the four afflictions, small: a red rune, green drips, a violet knot, a pale chain
+  // the four afflictions, small: a red rune, a rose drop, a violet knot, a pale chain
   const glyphIcon = (c, id, x, y, s, col) => {
     c.save(); c.translate(x, y); c.lineCap = 'round'; c.lineJoin = 'round';
     const path = () => {
@@ -869,37 +872,37 @@ GAUGE_TIPS.thresher = {
   const ICONS = {
     // an outward swing and the thinner return behind it, the scythe at the head of both
     slash: c => {
-      swoosh(c, 30, 52, 40, -2.5, -0.15, 15, 'rgba(79,154,82,0.7)'); swoosh(c, 30, 52, 40, -1.6, -0.15, 5, S);
+      swoosh(c, 30, 52, 40, -2.5, -0.15, 15, 'rgba(90,58,138,0.75)'); swoosh(c, 30, 52, 40, -1.6, -0.15, 5, S);
       swoosh(c, 32, 56, 26, -0.4, -2.4, 7, 'rgba(167,122,232,0.7)');
       scythe(c, 10, 56, 32, 28, { flip: false });
       glowDot(c, 54, 18, 8, W, 0.8);
     },
     // a chain of links flying out to a hooked blade, drag lines behind it
     hook: c => {
-      ink(c, 2, 'rgba(184,245,168,0.5)'); for (const [y, l] of [[44, 10], [52, 16], [58, 8]]) { c.beginPath(); c.moveTo(6, y); c.lineTo(6 + l, y); c.stroke(); }
+      ink(c, 2, 'rgba(143,216,232,0.5)'); for (const [y, l] of [[44, 10], [52, 16], [58, 8]]) { c.beginPath(); c.moveTo(6, y); c.lineTo(6 + l, y); c.stroke(); }
       const pts = [[14, 50], [21, 43], [28, 38], [35, 33], [42, 26], [48, 20]];
       pts.forEach(([x, y], i) => { c.save(); c.translate(x, y); c.rotate(-0.7 + (i % 2) * Math.PI / 2); ink(c, 4.2, K); c.beginPath(); c.ellipse(0, 0, 5.4, 3, 0, 0, TAU); c.stroke(); ink(c, 2, i % 2 ? S : '#dff2f0'); c.beginPath(); c.ellipse(0, 0, 5.4, 3, 0, 0, TAU); c.stroke(); c.restore(); });
-      c.fillStyle = '#d2e4c4'; c.strokeStyle = K; c.lineWidth = 1.8; c.beginPath(); c.moveTo(46, 24); c.quadraticCurveTo(60, 22, 58, 4); c.quadraticCurveTo(52, 12, 42, 14); c.closePath(); c.fill(); c.stroke();
+      c.fillStyle = '#e4eaf2'; c.strokeStyle = K; c.lineWidth = 1.8; c.beginPath(); c.moveTo(46, 24); c.quadraticCurveTo(60, 22, 58, 4); c.quadraticCurveTo(52, 12, 42, 14); c.closePath(); c.fill(); c.stroke();
       ink(c, 1.6, S); c.beginPath(); c.moveTo(47, 22); c.quadraticCurveTo(58, 20, 57, 7); c.stroke(); glowDot(c, 54, 14, 9, S, 0.6);
     },
-    // a great sweep through ripe grain, the cut ears flying gold
+    // a great sweep through rising soul-wisps, the cut souls flying gold
     reap: c => {
-      for (const [x, h] of [[12, 22], [22, 28], [32, 24], [42, 30], [52, 20]]) { ink(c, 2, '#6a8a3a'); c.beginPath(); c.moveTo(x, 62); c.lineTo(x + 1, 62 - h); c.stroke(); for (let i = 0; i < 3; i++) { c.fillStyle = G; c.beginPath(); c.ellipse(x + (i % 2 ? 3 : -2), 62 - h + i * 5, 2.2, 4, i % 2 ? 0.5 : -0.5, 0, TAU); c.fill(); } }
+      for (const [x, h] of [[12, 22], [22, 28], [32, 24], [42, 30], [52, 20]]) { ink(c, 2, 'rgba(143,216,232,0.8)'); c.beginPath(); c.moveTo(x, 62); c.bezierCurveTo(x - 5, 62 - h * 0.4, x + 5, 62 - h * 0.7, x, 62 - h); c.stroke(); glowDot(c, x, 62 - h, 5, S, 0.7); dot(c, x, 62 - h, 1.6, W); }
       swoosh(c, 30, 46, 38, -2.9, -0.2, 18, 'rgba(255,214,90,0.75)'); swoosh(c, 30, 46, 38, -2.0, -0.2, 6, G2);
       scythe(c, 8, 38, 26, 16, { edge: G2, body: '#e8dcb0' });
-      for (const [x, y] of [[44, 14], [52, 24], [48, 34]]) { c.fillStyle = G; c.beginPath(); c.ellipse(x, y, 2.2, 4, 0.6, 0, TAU); c.fill(); }
+      for (const [x, y] of [[44, 14], [52, 24], [48, 34]]) { glowDot(c, x, y, 6, G, 0.7); dot(c, x, y, 2, G2); }
       glowDot(c, 50, 12, 10, G2, 0.7);
     },
     // four threads of four colours drawn tight to one knot
     gather: c => {
-      const pts = [[14, 14, 'mark', '#ff6a6a'], [50, 14, 'drain', '#7ff08a'], [14, 50, 'bind', '#b88cff'], [50, 50, 'thread', '#dff2f0']];
+      const pts = [[14, 14, 'mark', '#ff6a6a'], [50, 14, 'drain', '#ff8fd0'], [14, 50, 'bind', '#b88cff'], [50, 50, 'thread', '#dff2f0']];
       for (const [x, y, , col] of pts) { ink(c, 2, col); c.beginPath(); c.moveTo(x, y); c.quadraticCurveTo((x + 32) / 2 + (y < 32 ? 6 : -6), (y + 32) / 2 + (x < 32 ? -6 : 6), 32, 32); c.stroke(); }
       for (const [x, y, id, col] of pts) glyphIcon(c, id, x, y, 7, col);
       glowDot(c, 32, 32, 14, G2, 0.8); ink(c, 2.4, G); c.beginPath(); c.arc(32, 32, 7, 0, TAU); c.stroke(); dot(c, 32, 32, 3, W);
     },
     // a flickering cut: a pale scythe left standing and the cuts that crossed the foe
     blink: c => {
-      ink(c, 2, 'rgba(184,245,168,0.5)'); for (const [y, l] of [[18, 12], [28, 20], [38, 10]]) { c.beginPath(); c.moveTo(4, y); c.lineTo(4 + l, y); c.stroke(); }
+      ink(c, 2, 'rgba(143,216,232,0.5)'); for (const [y, l] of [[18, 12], [28, 20], [38, 10]]) { c.beginPath(); c.moveTo(4, y); c.lineTo(4 + l, y); c.stroke(); }
       c.globalAlpha = 0.45; scythe(c, 10, 52, 28, 30, { edge: V, body: 'rgba(167,122,232,0.5)' }); c.globalAlpha = 1;
       scythe(c, 20, 56, 38, 34, {});
       for (const [x0, y0, x1, y1, col] of [[34, 10, 58, 36, W], [30, 30, 56, 14, V]]) { ink(c, 5, K); c.beginPath(); c.moveTo(x0, y0); c.lineTo(x1, y1); c.stroke(); ink(c, 2.4, col); c.beginPath(); c.moveTo(x0, y0); c.lineTo(x1, y1); c.stroke(); }
@@ -910,16 +913,13 @@ GAUGE_TIPS.thresher = {
       spirit(c, 34, 34, 1.2);
       for (const [x, y, r] of [[12, 16, 2.4], [52, 12, 2], [54, 50, 2.2], [10, 48, 1.8]]) { glowDot(c, x, y, r * 3, '#9ad0ff', 0.7); dot(c, x, y, r, W); }
     },
-    // seed raining on a furrow, shoots opening
+    // Shroud (icon key stays sowing): a shroud of dark mist falling over the foe, four sigils laid out beneath its hem
     sowing: c => {
-      ink(c, 3, A); c.beginPath(); c.moveTo(4, 56); c.quadraticCurveTo(32, 50, 60, 56); c.stroke();
-      for (const [x, h] of [[14, 22], [32, 30], [50, 24]]) {
-        ink(c, 2.6, '#3f8a3f'); c.beginPath(); c.moveTo(x, 54); c.quadraticCurveTo(x + 2, 54 - h / 2, x, 54 - h); c.stroke();
-        c.fillStyle = '#7fd06a'; c.strokeStyle = K; c.lineWidth = 1.2;
-        for (const s of [-1, 1]) { c.beginPath(); c.ellipse(x + s * 6, 54 - h + 2, 7, 3.2, s * -0.6, 0, TAU); c.fill(); c.stroke(); }
-        glowDot(c, x, 54 - h - 2, 6, S, 0.6);
-      }
-      for (const [x, y] of [[8, 8], [22, 14], [38, 6], [54, 12], [28, 24]]) { c.fillStyle = '#e8f6b0'; c.strokeStyle = K; c.lineWidth = 1; c.beginPath(); c.ellipse(x, y, 2.4, 3.6, 0.5, 0, TAU); c.fill(); c.stroke(); }
+      const hem = x => 36 + Math.sin(x * 0.45) * 3.5, g = c.createLinearGradient(0, 4, 0, 40); g.addColorStop(0, 'rgba(12,10,20,0.35)'); g.addColorStop(1, 'rgba(42,24,64,0.95)');
+      c.fillStyle = g; c.strokeStyle = K; c.lineWidth = 1.6; c.beginPath(); c.moveTo(22, 4); c.lineTo(42, 4); c.lineTo(58, hem(58)); for (let x = 58; x >= 6; x -= 4) c.lineTo(x, hem(x) + (x % 8 ? 3 : 0)); c.closePath(); c.fill(); c.stroke();
+      ink(c, 1.6, S); c.beginPath(); for (let x = 6; x <= 58; x += 4) { const y = hem(x) + (x % 8 ? 3 : 0); if (x === 6) c.moveTo(x, y); else c.lineTo(x, y); } c.stroke();
+      ink(c, 1.4, 'rgba(143,216,232,0.4)'); for (const x of [20, 32, 44]) { c.beginPath(); c.moveTo(x, 8); c.quadraticCurveTo(x + 3, 22, x - 1, 34); c.stroke(); }
+      for (const [x, id] of [[12, 'mark'], [26, 'drain'], [40, 'bind'], [54, 'thread']]) { glowDot(c, x, 52, 9, S, 0.3); glyphIcon(c, id, x, 52, 5, S); }
     },
     // the great cut: a falling blade, a line struck across, four glyphs thrown out gold
     cull: c => {
@@ -931,7 +931,7 @@ GAUGE_TIPS.thresher = {
     // a tall arch of pale light, the dark beyond it, five pips round the curve, the last gold
     gate: c => {
       ink(c, 6, K); c.beginPath(); c.moveTo(12, 60); c.lineTo(12, 28); c.quadraticCurveTo(12, 4, 32, 4); c.quadraticCurveTo(52, 4, 52, 28); c.lineTo(52, 60); c.stroke();
-      const g = c.createLinearGradient(0, 4, 0, 60); g.addColorStop(0, 'rgba(8,20,12,0.9)'); g.addColorStop(1, 'rgba(79,154,82,0.55)');
+      const g = c.createLinearGradient(0, 4, 0, 60); g.addColorStop(0, 'rgba(12,10,20,0.9)'); g.addColorStop(1, 'rgba(90,58,138,0.55)');
       c.fillStyle = g; c.beginPath(); c.moveTo(12, 60); c.lineTo(12, 28); c.quadraticCurveTo(12, 4, 32, 4); c.quadraticCurveTo(52, 4, 52, 28); c.lineTo(52, 60); c.closePath(); c.fill();
       ink(c, 2.6, S); c.beginPath(); c.moveTo(12, 60); c.lineTo(12, 28); c.quadraticCurveTo(12, 4, 32, 4); c.quadraticCurveTo(52, 4, 52, 28); c.lineTo(52, 60); c.stroke();
       c.save(); c.globalAlpha = 0.4; ink(c, 5, W); for (let i = 0; i < 3; i++) { c.beginPath(); c.moveTo(20 + i * 12, 58); c.quadraticCurveTo(14 + i * 14, 40, 22 + i * 10, 22); c.stroke(); } c.restore();
@@ -940,7 +940,7 @@ GAUGE_TIPS.thresher = {
     },
     // the afflictions on their own (their painted status icons, later)
     mark: c => { glowDot(c, 32, 32, 26, '#ff6a6a', 0.35); glyphIcon(c, 'mark', 32, 32, 20, '#ff6a6a'); },
-    drain: c => { glowDot(c, 32, 32, 26, '#7ff08a', 0.35); glyphIcon(c, 'drain', 32, 30, 20, '#7ff08a'); dot(c, 22, 56, 2.4, '#7ff08a'); dot(c, 42, 52, 2, '#7ff08a'); },
+    drain: c => { glowDot(c, 32, 32, 26, '#ff8fd0', 0.35); glyphIcon(c, 'drain', 32, 30, 20, '#ff8fd0'); dot(c, 22, 56, 2.4, '#ff8fd0'); dot(c, 42, 52, 2, '#ff8fd0'); },
     bind: c => { glowDot(c, 32, 32, 26, '#b88cff', 0.35); glyphIcon(c, 'bind', 30, 32, 20, '#b88cff'); },
     thread: c => { glowDot(c, 32, 32, 26, '#dff2f0', 0.35); glyphIcon(c, 'thread', 32, 32, 18, '#dff2f0'); },
   };

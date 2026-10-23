@@ -4,7 +4,7 @@
   meet: {
     bastion: "She never moves, Sergeant. Sits in the pool, and the heads come at us round the ring of columns, one after another, each to its own turn. I took the hardest head first because that is the drill. It came back bigger at the end. Gentlest first. I am rewriting the drill.",
     gloomsworn: "The Mother keeps her watch from the pool, and each head keeps its own from a column, one awake while the others sleep. I cut the cruellest first. It came back worse, at the end, when I was tired. The gentle one goes first. I would have liked someone to tell me that years ago.",
-    thresher: "Oh, she's grand. A flooded field with nine weeds coming up out of it, and every one of them in a different mood. I pulled the rankest first, and it came back fatter for the last stretch. Mildest first. And burn every stump. Plenty of time to learn that, I thought. Ha. Not quite.",
+    thresher: "She is magnificent. A flooded temple with nine heads rising out of it, every one in a different mood. I took the most savage first, and it returned the stronger for the last stretch. Mildest first. And burn every stump. In time I learned that. Not quite in time.",
     bloodreaver: "Nine heads, nine different ways to hurt me, and I got every one of them! I went for the meanest neck first because it had bitten best, and it came back bigger at the end. Lesson: the gentlest dies first. The old girl and I are not finished.",
     runeguard: "A mother with nine heads is, in the literal sense, nine sequences at once, and I could not read them. Each rose in turn; each had its sign. What I missed was the margin: the first head cut returns greater. Cut the gentlest first. Entered in the margin, in ink I will not rub out.",
     gorgemaw: "Nine mouths, and every one of them tried to feed me something different. Acid, ice, flame, stone. I have never been so respectfully served. I took the biggest bite first, and it came back bigger at the end. Gentlest first, then. Still hungry, but humbled.",
@@ -26,7 +26,7 @@
   win: {
     bastion: "The Mother is down and the pool is still. We held every ring and every column and the line came out whole. I do not say this lightly, Sergeant: that was the best post I have ever stood. Hold the report. I want to sit with them a moment.",
     gloomsworn: "The Mother has closed her eyes, every one of them. The pool lies black and still between the columns, and I sat the last of her watch for her. For once I was not the one who looked most tired. The watch is relieved.",
-    thresher: "The Hydra's gone under her own water and the temple can lie fallow. Every stump burned clean, like stubble after harvest, so nothing grows back. Nine heads in the ground. I do like a thorough job. Something in me is finally ripe.",
+    thresher: "The Hydra has gone under her own water and the temple may rest. Every stump burned clean, so nothing grows back. Nine heads in the dark. I do like a thorough reckoning. Something in me is finally due.",
     bloodreaver: "The old girl sank and stayed sunk. Every head marked me, acid, fire, ice and all, and I wore each scar home. Finest collection I own. Thank you, my friend. I am going to miss her, and I am going to find another.",
     runeguard: "The Mother is still, and the account is closed. I read nine sequences and wrote them all down, and not one escaped the margin. As foreseen. I allow myself, tonight, to be a little pleased. Let my successor read it with envy.",
     gorgemaw: "Nine heads and every one of them eaten, or as good as. The pool is still. It was the finest banquet of my life, and the only one that ever fought the whole way down. I am satisfied. Nearly. A little. Ask me tomorrow.",
@@ -48,7 +48,7 @@
     "Mother's Cry": { hard: false, learned: {
       bastion: "She cried and it reached every one of us, columns and water alike. Nothing to block. We came to it already mended, feet set, and took it standing. It came again when she surfaced, and we were ready. Held.",
       gloomsworn: "The Mother cried out, and it reached all of us through stone and water. I made certain the watch was whole before it came. It comes again when she rises. A cry like that has nothing in it but loss. I knew the sound.",
-      thresher: "She cries out over the whole temple, and there's no hedge to hide behind. Come to it full of mending, like a barn at harvest. It comes round again when she surfaces. Ha, a mother knows when to call.",
+      thresher: "She cries out over the whole temple, and there is nowhere to hide. Come to it full of mending, a cup filled to the brim. It comes round again when she surfaces. A mother knows when to call.",
       bloodreaver: "The Mother howled and it hit every one of us, columns and water alike, and I wanted to answer her! No dodging a cry. We came to it mended. She cries again when she surfaces. Fair. I'd cry too.",
       runeguard: "Her cry reaches all of us, and no column turns it, and no ward. I had the whole company mended before she drew breath; it comes again when she surfaces, and I was ready. There are omens that merely say: be ready.",
       gorgemaw: "A great cry, served to every guest and every column in the room, and no one can eat it for another. We came to the table already mended. It is served again when she surfaces. A mother's cooking: loud, and for everyone.",
@@ -69,7 +69,7 @@
     'Rending Maul': { hard: false, learned: {
       bastion: "The great jaws came down on me, a wide sweep in front of her. I watched the neck draw back, shield up in the last instant, and the line stood clear of the sweep. A bite like that is just a very large drill.",
       gloomsworn: "The jaws came for whoever holds her front, and that was me. I drew the dark about me and took it whole. The sweep is wide but short. The others stood clear. Even a mother's bite is a wound, and mine are written down.",
-      thresher: "Down comes the neck on our knight, a wide sweep in front of her, like a scythe with teeth. Keep to her flank and out of the arc. Stray in front and you'll be cut clean as cornstalks.",
+      thresher: "Down comes the neck on our knight, a wide sweep in front of her, a scythe with teeth. Keep to her flank and out of the arc. Stray in front and you will be cut down clean.",
       bloodreaver: "The jaws! Right on me, a great wide sweep, and every tooth in my head rang! A beauty. I braced, took it, and hit her back while it was still fresh. The others kept out of the arc, bless them.",
       runeguard: "The neck draws back and the sweep before her is drawn on the floor; the blow falls on whoever holds her front. I set the ward a breath before, and all others stood to her flanks. Clear in the margin, clear in practice.",
       gorgemaw: "The jaws are the main course, served to me alone, a wide sweep across the front of the table. I opened wide just before it and kept my friends off my plate. Unseasoned, but she means well.",
@@ -90,7 +90,7 @@
     'Acid Spray': { hard: false, learned: {
       bastion: "Acid in a cone, aimed at one of the line and fixed on where they stood when the head began. It does not turn. Sideways the moment it points, and off the burning middle after.",
       gloomsworn: "Acid in a cone at one of us, aimed where he stood when the head began. It does not follow. He stepped sideways the instant it pointed, and we kept off the burning middle. A slow death by acid is the one I didn't get.",
-      thresher: "Acid spits out in a cone at one of us, aimed where you stood at the start. It doesn't follow. Sidestep early, and stay off the middle afterward: it stays sour a while, like spoiled soil.",
+      thresher: "Acid spits out in a cone at one of us, aimed where you stood at the start. It does not follow. Sidestep early, and stay off the middle afterward: it stays sour a while, like spilled ink.",
       bloodreaver: "A head spat acid at me! A cone of it, aimed where I stood when it started, and it doesn't turn. I stepped out sideways early, laughing, and kept off the middle where it fizzed. Next time I'll take a lick.",
       runeguard: "A cone of acid aimed at one of us, fixed on where they stood at the start of the spitting; it does not turn. Step sideways the moment the head points. The residue in the middle persists; keep off it. A precise creature, in that respect.",
       gorgemaw: "A head spat a hot sour cone at one guest, aimed where he sat when it began. It does not follow the plate. I stepped sideways at once, and kept off the sauce it left in the middle. Too much vinegar.",
@@ -111,7 +111,7 @@
     'Tidal Line': { hard: false, learned: {
       bastion: "A lane of water drove straight through one of us. Narrow, and long. Whoever stood in it stepped aside, either way. A line is only dangerous to a man who stays in it.",
       gloomsworn: "Water drove straight across the temple through one of us, narrow and long. He stepped off to either side. It is a plain thing, a line. I have been drawn through worse.",
-      thresher: "A lane of water runs straight across the temple through one of us, like a furrow ploughed in a line. Step off it to either side. It's a thin one. Ha, you can't miss the straightness of it.",
+      thresher: "A lane of water runs straight across the temple through one of us, a line drawn with a ruler. Step off it to either side. It is a thin one. You cannot miss the straightness of it.",
       bloodreaver: "A head drove a long thin lane of water straight through one of us! He stepped off to the side and I wished it had been me. It'd have knocked me flat. A fine little scar. Very straight.",
       runeguard: "A lane of water, straight across the temple through one of us, long and narrow. Step off it to either side. The drawing is clear. The geometry of a line is its own warning.",
       gorgemaw: "A long thin jet of broth, drawn straight across the temple through one guest. Step off it, left or right. It is narrow; it cannot wet more than one at a time. A little thin, honestly.",
@@ -132,7 +132,7 @@
     'Venom Bloom': { hard: false, learned: {
       bastion: "Poison marked one of the line, more than one man could carry. We closed in on him, all but whoever stood in a ring, and split it. Then out of the bog it left. Shoulder to shoulder; I would call it drill.",
       gloomsworn: "A head marked one of us with poison, too much for one to take. We closed in on him and split it, all but whoever minded a stump's ring. Then out of the bog it left. A dose shared is a dose survived.",
-      thresher: "A head marks one of us with poison, more than any one can carry, like a bucket of lime on a single row. So we crowd in close and split it, all but whoever keeps a stump's ring. Then out of the bog it leaves.",
+      thresher: "A head marks one of us with poison, more than any one can carry alone. So we crowd in close and split it, all but whoever keeps a stump's ring. Then out of the bog it leaves.",
       bloodreaver: "Poison on one of us, enough to kill him! We crowded in on him and shared it, all but whoever kept a stump's ring. I was greedy and took the biggest share. Out of the bog afterward. Tasty. Sour. Fine.",
       runeguard: "Poison upon one of us, a dose too great for any single body. All stand close and divide it, save whoever keeps a stump's ring; then leave the bog it makes. The clause is of the most ancient kind: shared, or fatal.",
       gorgemaw: "A great plate of poison on one guest, too much for him alone. We crowded in close and shared it, all but whoever kept a stump's ring. Then out of the bog it left. Bitter, but I took seconds.",
@@ -153,7 +153,7 @@
     'Flame Gout': { hard: false, learned: {
       bastion: "Fire on a pair of the line, a ring following each. Apart, as far as the temple allowed, so neither caught the other's. The rest of us kept off the embers after. Plain work.",
       gloomsworn: "Fire chose two of us and a ring chased each. We parted as far as the temple allowed, and the rest of us stayed off the embers. I have stood in worse ash.",
-      thresher: "Fire on two of us, a ring following each, like two stubble fields set alight. Send them far apart so neither catches the other's, and keep off the embers after. Never burn two fields side by side.",
+      thresher: "Fire on two of us, a ring following each, two torches in the dark. Send them far apart so neither catches the other's, and keep off the embers after. Never burn two close together.",
       bloodreaver: "Fire on a pair of us, a ring following each! I got one, and loved it. We went far apart so neither caught the other's. The rest kept clear of the embers. A fine burn. Another, please.",
       runeguard: "Fire upon a pair of us, a ring following each; the rings must not meet, so the pair go far apart. All others keep off the embers afterward. It is, one might say, the simplest of her sentences: separate, and do not touch the ash.",
       gorgemaw: "A flambe for a pair of guests, a ring following each of them round the table. They sat at opposite ends so neither caught the other's, and the rest kept off the embers. Slightly overdone, as always.",
@@ -174,7 +174,7 @@
     'Rime Crown': { hard: false, learned: {
       bastion: "Report: the ice ring is safe only at its two ends. Close beneath the jaw, or out past the rim. I put the line at the near end and kept every boot off the middle ground. Held.",
       gloomsworn: "A cold wreath grew about the head, hollow at the throat. I took the near end of it, in the hollow, and the others took the far side, clear of the rim. The ring's middle is where the cold feeds.",
-      thresher: "Ice goes out round a head in a wide ring, and the hollow at its throat is quiet. Go in under the chin or stand well out past the rim; the band between's where it bites. Like frost in the furrow, never the middle.",
+      thresher: "Ice goes out round a head in a wide ring, and the hollow at its throat is quiet. Go in under the chin or stand well out past the rim; the band between is where it bites. Winter bites the margin, never the middle.",
       bloodreaver: "A wreath of ice round that head, and the only warm spot was right under its chin! I stood in its shadow, nose to throat, grinning. The thick of the ring is where it bites. I tried it once. Ow! Lovely.",
       runeguard: "A ring of ice about a head, with a quiet hollow at its throat. One stands close in, under the jaw, or well beyond the rim. The band between is the portion that strikes. An exact drawing, and exact in effect.",
       gorgemaw: "A head threw a ring of crushed ice round itself like a collar round a dish, quiet at the centre. I stood right under the jaw, or well out past the rim. Never in the cold band between. Needs salt.",
@@ -195,7 +195,7 @@
     'Stormcall': { hard: false, learned: {
       bastion: "Lightning fanned from one head in three lanes, the middle through a man of ours. The gaps between were good ground, and so was the far side. Held.",
       gloomsworn: "A head fanned three lanes of lightning, the middle through one of us. The gaps between were safe, and so was the far side. Lightning has an order. It is the only thing in that temple that does.",
-      thresher: "A head fans three lanes of lightning out from itself, the middle one through one of us, like furrows spread by a plough in a fan. The gaps between are good ground. So is well to the side. Don't stand in a furrow.",
+      thresher: "A head fans three lanes of lightning out from itself, the middle one through one of us, like the ribs of a fan. The gaps between are safe. So is well to the side. Do not stand in a lane.",
       bloodreaver: "Lightning in three lanes, the middle one coming for me! I stood in a gap, close enough to taste the air, and the others kept wide. A near miss. Best smell there is.",
       runeguard: "Three lanes of lightning fanned from a head, the middle through one of us. The gaps between the lanes are safe, as is the ground well to the side. It is the most easily read of her sequences: three lines, two spaces.",
       gorgemaw: "Skewers of lightning fanned out from a head, three of them, the middle through one guest. The gaps between are good seats, and so is well to the side. A tangy dish. Hard on the cutlery.",
@@ -216,7 +216,7 @@
     'Stonegaze': { hard: false, learned: {
       bastion: "One head stared at everything it could see. The columns were cover: I put the line behind one, stone between us and the head. The ground behind its own column is nearest.",
       gloomsworn: "One head turned its eye on everything it could see. The columns were our cover. Behind its own column was nearest. A man who has been looked at by the dead knows the value of a wall.",
-      thresher: "One of them stares over the whole temple like a hard sun at noon. A column's shade will do; put the stone between you and the head. The ground behind its own column's nearest. Anybody caught in the open goes stiff as a post.",
+      thresher: "One of them stares over the whole temple like a hard sun at noon. A column's shade will do; put the stone between you and the head. The ground behind its own column is nearest. Anybody caught in the open goes stiff as a statue.",
       bloodreaver: "A head stared at everything it could see! I stood behind a column with stone between us, and felt the glare on the other side. Behind its own column is nearest. I wanted to look back. I did not.",
       runeguard: "A head stares at all that it can see. The columns are the temple's cover: stand with stone between oneself and that head. The column behind the head itself is nearest. I recorded the column numbers; the architecture is an unexpected ally.",
       gorgemaw: "A head stared across the table at everything it could see. The columns were our napkins, so to speak: stone between us and the head. Behind its own column is the closest, and I kept eating.",
@@ -237,7 +237,7 @@
     'Mire Spit': { hard: false, learned: {
       bastion: "Bog came down on several of the line, a ring on each. We stepped out of our own rings and kept apart, then off the mire it left. There is nothing to plant a boot on in that stuff.",
       gloomsworn: "Bog fell on several of us, a ring on each. We left our rings and kept apart, then off the mire it made. Mud and I are old acquaintances. I never trusted it.",
-      thresher: "Bog falls on three of us, a ring on each. Out of your own, apart from the others, and stay off the mire it leaves; it slows you like wet clay. Ha, I know bog. I won't be sowing in that.",
+      thresher: "Bog falls on three of us, a ring on each. Out of your own, apart from the others, and stay off the mire it leaves; it slows you like wet clay. I know bog. I will not be lingering in that.",
       bloodreaver: "Bog fell on me and two others, a ring on each! I stepped out of mine and kept clear of the others, then off the mire. It slows you like a wound in the leg. I like a slow wound. This was too slow.",
       runeguard: "Bog fell upon several of us, a ring on each. Each stepped out of their own, and kept apart from the others, and then left the mire that remained, which slows. A simple clause, with a heavy footnote.",
       gorgemaw: "Bog fell upon several guests, a ring on each. Each stepped out of their own, apart from the others, and then off the sticky mess it left. Too thick for soup, too thin for stew.",
@@ -258,7 +258,7 @@
     'Searing': { hard: false, learned: {
       bastion: "A cut head left a bleeding stump and a blue ring at the foot of its column. I stood in the ring until it closed and it sealed. Miss it and a pair grow back. Gentlest first, always.",
       gloomsworn: "Cut a head and the stump bleeds, and a blue ring opens at its column. Someone must stand in it until it closes. I stood several. Nobody thanked the ring. The gentlest head first; the first cut returns large.",
-      thresher: "Cut a head and the stump bleeds, and a blue ring opens at the column behind. Someone has to stand in it till it shuts, or two sprout like weeds. The first cut grows back late, so take the mildest first.",
+      thresher: "Cut a head and the stump bleeds, and a blue ring opens at the column behind. Someone has to stand in it till it shuts, or two return in its place. The first cut grows back late, so take the mildest first.",
       bloodreaver: "I took a head off and the stump bled, and a blue ring opened at its column! I stood in it till it sealed. Miss it and two sprout. The first cut returns biggest, so start with the gentlest. Meanest last. Torture.",
       runeguard: "A head cut; the stump bleeds; a blue ring opens at the foot of its column. Someone must stand within until it closes, else a pair of lesser heads sprout. And the first great head cut returns greater at the end: therefore the mildest first.",
       gorgemaw: "I carved a head and the stump wept, and a blue ring opened at the foot of its column. Someone had to stand in it until it sealed. Miss it and two more heads grow. The gentlest head goes first. Light dish first, heavy course last.",
@@ -279,7 +279,7 @@
     'Submerge': { hard: false, learned: {
       bastion: "She dived and the water rose. Slow wading, bad footing. Heads came up at the columns one after another, a ring showing each. The line stayed out of the rings and cut each head before it struck. Gave ground, held.",
       gloomsworn: "She dived, and the temple flooded. We waded slow, black water to the knee. Heads rose at the columns one after another, a ring showing each. I kept out of the ring and cut it before it struck. Wading is wading.",
-      thresher: "She dives and the temple floods, and we wade through it slow as wet cattle. Heads break the surface at the columns one after another, each with a ring first. Out of the ring, and cut it down before it strikes. Ha, like weeding a paddy.",
+      thresher: "She dives and the temple floods, and we wade through it slow as in a dream. Heads break the surface at the columns one after another, each with a ring first. Out of the ring, and cut it down before it strikes. Patient work, like the tide.",
       bloodreaver: "She dived, the temple flooded, and we waded like wet bears! Heads burst up at the columns one after another, a ring showing where each would break. I stayed out of the ring and cut it down before it struck. A fun wade.",
       runeguard: "She dives; the temple floods; we wade, slowed. Heads break the surface at the columns, one after another, a ring showing where each will rise. Keep out of the ring, and cut the head before it strikes. Five risings, five rings, five readings.",
       gorgemaw: "She dived, and the temple filled like a stewpot, and we waded through it like dumplings. Heads rose at the columns one after another, a ring showing each. I stayed out of the ring and carved each before it struck. A very wet course.",
@@ -300,7 +300,7 @@
     "Mother's Heart": { hard: false, learned: {
       bastion: "She sealed herself at the end. Each head we had cut struck again from its stump, in the order we cut them, then the living all at once. I had the order by heart, and marched the line clear of each in turn.",
       gloomsworn: "She sealed herself at the end. The heads we had cut struck again from their stumps, in the order we cut them, and then the living ones, all together. I had kept the order. The dead remember who went first.",
-      thresher: "She seals up at the end, and every head we cut strikes again from its stump, in the order we cut them, then all the living ones together. Remember what you reaped, and when. Ha, every stump takes its turn.",
+      thresher: "She seals up at the end, and every head we cut strikes again from its stump, in the order we cut them, then all the living ones together. Remember what you reaped, and when. Each stump answers in its turn.",
       bloodreaver: "She sealed herself and every head I'd cut came back, striking from its stump in the order we cut them! Then all the living ones together! I kept the order in my head and stepped clear. Terrifying, glorious.",
       runeguard: "At the last she sealed herself. Every head we cut struck again from its stump, in the order we cut them; then every living head together; then her heart. I had kept the order in the margin from the first cut. This is why one keeps margins.",
       gorgemaw: "At the end she sealed herself, and every head I had carved returned to the table, one after another, in the order they were served, and then all the living ones at once. I kept the menu in my head and stepped clear of each course.",
@@ -321,7 +321,7 @@
     'Regrowth': { hard: true, learned: {
       bastion: "On the harder ground, a missed ring grew back more heads than before. Nobody leaves a ring early now. I stood each one to the end.",
       gloomsworn: "On the harder nights, a missed searing brings up yet another head. No ring goes unwatched now. I stood them all. The dead keep a good watch on empty places.",
-      thresher: "On the hard night a missed searing sprouts yet more, like weeds left to seed. Never leave a stump unburned. Ha, I have a hoe for that.",
+      thresher: "On the hard night a missed searing multiplies the heads, like a debt left to compound. Never leave a stump unburned. I do not leave debts.",
       bloodreaver: "On the hard night a missed ring grew even more heads than before. Far too many for my liking, and I like a lot. Never miss a searing. I'd happily take the bites, but not all nine.",
       runeguard: "On the harder road, a ring left empty is punished with a third head, not merely a pair. The margin now carries a bold line: no ring is left unwatched. Not foreseen; now it is.",
       gorgemaw: "On the harder menu a missed searing serves yet another head on top. Far too many courses even for me. Every stump seared, every time.",
@@ -342,7 +342,7 @@
     'Tidal Dance': { hard: true, learned: {
       bastion: "Two heads crossed their water lanes over and over, each pass a step further round. The wedges between were never painted. The line shifted to the next one on every crossing. Drill, once you see the count.",
       gloomsworn: "Two heads kept crossing their lanes, each a notch further round. The unpainted wedges between were the only clean ground. I moved the watch from wedge to wedge. The tide is patient. So am I.",
-      thresher: "Two heads cross their lanes again and again, turning a notch each pass, like a plough working round a field. The unpainted wedges are the headland. Step into the next one each time. Ha, no hurry.",
+      thresher: "Two heads cross their lanes again and again, turning a notch each pass, a slow waltz round the room. The unpainted wedges are the safe ground. Step into the next one each time. No hurry.",
       bloodreaver: "Two heads sweeping lanes across each other, a notch more each time! The gaps between were never marked, so the gaps were home, and I danced from gap to gap like a bull on a pond.",
       runeguard: "Two heads cross their lines of water thrice, each pass a step along. The wedges between the lines are never painted, and therefore are safe. The dance has an order, and I stepped in it. I'm entering the choreography here.",
       gorgemaw: "Two heads crossed their lanes of water again and again, each pass a notch further round, like stirring two soups. The wedges between are never painted. I stepped from wedge to wedge, one dish at a time.",

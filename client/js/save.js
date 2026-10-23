@@ -40,6 +40,8 @@ const Save = (() => {
   const v3Id = (cls, r, c) => { const t = V3_TALENT_IDS[cls], row = t && t.split(' / ')[r], id = row && row.split(' ')[c]; return id ? `${cls}_${id}` : null; };
   // the talent tree (combat/talents.js loads after this file; only read when someone asks)
   const tree = cls => (typeof TALENTS !== 'undefined' ? TALENTS[cls] : null);
+  // a spec's rows VI-VII (SPEC_TALENTS), or null
+  const specTree = (cls, spec) => (typeof specTalentRows === 'function' ? specTalentRows(cls, spec) : null);
   const HEROIC_REFUND = 10;
   const fresh = () => ({ v: VERSION, name: '', gold: 0, inv: { next: 1, items: [], equip: {}, lost: [] }, heroes: {}, settings: {} });
 
@@ -191,19 +193,24 @@ const Save = (() => {
       h.spec = specId || null;
       write();
     },
-    // talents (combat/talents.js): { rows: unlocked rows 0-5, picks: [column or null per row] }. Rows are bought with
+    // talents (combat/talents.js): { rows: unlocked rows 0-7, picks: [column or null per row I-V] }. Rows VI-VII are the
+    // spec rows (bought once per hero, after V; only with a spec): their picks live per spec in talents.specIds =
+    // { specId: [id VI, id VII] } (added without a version bump: missing means none), and talents() reads the active
+    // spec's as { spec, specPicks: [column or null, column or null] }. Rows are bought with
     // gold in order; picks are free to change (the game only lets you change them in town).
     // A pick names its talent (ids): if that talent moved within its row the pick follows it, if it left the row the
     // pick reads as none. (A pick with no id, from before v4, keeps its column.)
     talents(classId) {
       const t = (data.heroes[classId] || {}).talents || freshTalents();
-      const rows = Math.max(1, Math.min(5, t.rows | 0)), T = tree(classId);   // (row I is free: always open)
+      const rows = Math.max(1, Math.min(7, t.rows | 0)), T = tree(classId);   // (row I is free: always open)
       const picks = [0, 1, 2, 3, 4].map(r => {
         const id = Array.isArray(t.ids) ? t.ids[r] : null;
         if (typeof id === 'string' && T && T[r]) { const c = T[r].findIndex(x => x.id === id); return c >= 0 ? c : null; }
         return Number.isInteger(t.picks && t.picks[r]) && t.picks[r] >= 0 && t.picks[r] < 3 ? t.picks[r] : null;
       });
-      return { rows, picks };
+      const spec = this.spec(classId), ST = specTree(classId, spec), sids = (t.specIds && spec && t.specIds[spec]) || [];
+      const specPicks = [0, 1].map(i => { const id = sids[i]; if (typeof id !== 'string' || !ST || !ST[i]) return null; const c = ST[i].findIndex(x => x.id === id); return c >= 0 ? c : null; });
+      return { rows, picks, spec, specPicks };
     },
     heroTalents(classId) {
       const h = data.heroes[classId] = data.heroes[classId] || { clears: {} };
@@ -214,14 +221,24 @@ const Save = (() => {
     // unlock the next row for `cost` gold; false if the wallet is short or every row is open
     unlockTalentRow(classId, cost) {
       const t = this.heroTalents(classId);
-      if ((t.rows | 0) >= 5 || data.gold < cost) return false;
+      if ((t.rows | 0) >= 7 || data.gold < cost) return false;
+      if ((t.rows | 0) >= 5 && !specTree(classId, this.spec(classId))) return false;   // (the spec rows: only once a spec is chosen)
       data.gold -= cost; t.rows = (t.rows | 0) + 1;
       write();
       return true;
     },
     pickTalent(classId, row, col) {
       const t = this.heroTalents(classId);
-      if (row < 0 || row >= (t.rows | 0) || col < 0 || col > 2) return false;
+      if (row >= 5 && row < (t.rows | 0)) {   // a spec row: the active spec's own pick
+        const spec = this.spec(classId), ST = specTree(classId, spec), r = row - 5;
+        if (!ST || !ST[r] || !ST[r][col] || col < 0) return false;
+        if (!t.specIds || typeof t.specIds !== 'object') t.specIds = {};
+        const cur = Array.isArray(t.specIds[spec]) ? t.specIds[spec] : (t.specIds[spec] = [null, null]);
+        cur[r] = ST[r][col].id;
+        write();
+        return true;
+      }
+      if (row < 0 || row >= Math.min(5, t.rows | 0) || col < 0 || col > 2) return false;
       if (!Array.isArray(t.picks)) t.picks = freshTalents().picks;
       if (!Array.isArray(t.ids)) t.ids = freshTalents().ids;
       const T = tree(classId);
@@ -230,7 +247,7 @@ const Save = (() => {
       write();
       return true;
     },
-    resetTalents(classId) { const t = this.heroTalents(classId); t.picks = freshTalents().picks; t.ids = freshTalents().ids; write(); },
+    resetTalents(classId) { const t = this.heroTalents(classId); t.picks = freshTalents().picks; t.ids = freshTalents().ids; const sp = this.spec(classId); if (sp && t.specIds) delete t.specIds[sp]; write(); },
     // hidden recipes a hero has found (the Alembist's Volatile Reactions): heroes[classId].found = [ids], added
     // without a version bump (optional; missing means none found)
     found: classId => { const f = (data.heroes[classId] || {}).found; return Array.isArray(f) ? f.filter(x => typeof x === 'string') : []; },

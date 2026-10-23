@@ -104,6 +104,15 @@ const GAUGES = {
       if (k.stacks('keen') >= 2) label(c, '×2', ex, ey + 16, '#ffd27a', 11, 'system-ui', 800);   // (a second Keen Eye banked)
     }
     if (k.has('barrage')) label(c, '×3', w - 26, 62, '#ffe27a', 14, 'system-ui', 800);
+    // Sharpshooter's Steady Aim (five pips) and Venomstrike's Acid (eight drops) down the left of the quiver
+    if (k.def.spec === 'sharpshooter') {
+      const n = k.stacks('aim');
+      for (let i = 0; i < 5; i++) { const y = 84 - i * 12; if (i < n) glow(c, 14, y, 8, '#ffe27a', n >= 5 ? 0.6 : 0.3); circle(c, 14, y, 3.4, i < n ? '#ffe27a' : '#2a2418', i < n ? '#fff6c8' : '#6a5a38', 1); }
+    } else if (k.def.spec === 'venomstrike') {
+      const n = k.g.acid || 0;
+      for (let i = 0; i < 8; i++) { const y = 90 - i * 9.5, on = i < n; circle(c, 14, y, 3, on ? '#9aff4a' : '#1e2a18', on ? '#e4ffc8' : '#4a6a38', 1); }
+      if (n >= 8) glow(c, 14, 54, 22, '#9aff4a', 0.4 + Math.sin(t * 8) * 0.15);
+    }
     label(c, String(Math.floor(k.g.focus)), cx, top + 80, '#f2e6c8', 13, 'system-ui', 800);
   },
 
@@ -134,7 +143,7 @@ const GAUGES = {
       }
       if (n >= 3) glow(c, cx - 43, cy + 20, 16, '#e0c8ff', 0.4 + Math.sin(t * 6) * 0.15);
     }
-    if (k.has('dance')) label(c, 'âœ¦', cx, cy - 34, '#e0a8ff', 18, 'system-ui');
+    if (k.has('dance')) label(c, '✦', cx, cy - 34, '#e0a8ff', 18, 'system-ui');
   },
 
   // Pyromancer: a glass crucible that fills with Heat; the top band is the danger zone; sparks = procs.
@@ -156,7 +165,7 @@ const GAUGES = {
     c.restore();
     shape(); c.lineWidth = 2.5; c.strokeStyle = k.g.heat >= 85 ? (Math.sin(t * 14) > 0 ? '#ff4030' : '#ffd060') : '#b07050'; c.stroke();
     line(c, cx - 16, 10 + (bottom - 10) * 0.15, cx + 16, 10 + (bottom - 10) * 0.15, '#ff5040', 1.5);
-    if (k.has('burnt')) label(c, 'âœ–', cx, bottom - 18, '#202020', 20, 'system-ui', 800);
+    if (k.has('burnt')) label(c, '✖', cx, bottom - 18, '#202020', 20, 'system-ui', 800);
     const sparks = k.has('hotstreak') ? 2 : k.has('heating') ? 1 : 0;
     for (let i = 0; i < 2; i++) {
       const x = cx + 32, y = 30 + i * 26, on = i < sparks;
@@ -216,7 +225,7 @@ const GAUGES = {
       circle(c, tx, ty, 4, '#ffe27a', OUT, 1);
       if (k.g.bloom >= 90) glow(c, tx, ty, 18, '#ffb0d0', 0.5 + Math.sin(t * 6) * 0.2);
     } else circle(c, tx, ty, 4, '#8fdc6a', OUT, 1);
-    if (k.dotRemaining('thorn') > 0) label(c, 'â¦ ' + Math.ceil(k.dotRemaining('thorn')), w - 22, 20, k.dotRemaining('thorn') < 9 ? '#ffb070' : '#a8e08a', 11, 'system-ui', 700);
+    if (k.dotRemaining('thorn') > 0) label(c, '❦ ' + Math.ceil(k.dotRemaining('thorn')), w - 22, 20, k.dotRemaining('thorn') < 9 ? '#ffb070' : '#a8e08a', 11, 'system-ui', 700);
     label(c, String(Math.floor(k.g.bloom)), 18, 20, '#d8f5c8', 13, 'system-ui', 800);
   },
 
@@ -443,8 +452,9 @@ function alemVial(c, x, y, w, h, o) {
 }
 
 // The Alembist's gauge: the copper still (the half-brew in its reagent sockets) and the bandolier of vials, oldest on
-// the left (the next one thrown is raised over a gold mark). The liquid rises as a vial ripens and it glints when ripe;
-// a spoiling vial goes murky; a Volatile vial burns down a fuse on its cork.
+// the left, each loop numbered for its key (the next one thrown is raised over a chevron; a vial marked with its number
+// gets a fine gold frame and a gold numeral). The liquid rises as a vial ripens and it glints when ripe; a spoiling vial
+// goes murky; a Volatile vial burns down a fuse on its cork.
 GAUGES.bandolier = (c, k, w, h, t) => {
   const A = k.def.alem, g = k.g, sx = 36, sy = 82;
   // the still: a copper pot, its swan neck reaching for the bandolier, steam while Distill is up
@@ -481,7 +491,15 @@ GAUGES.bandolier = (c, k, w, h, t) => {
   // the bandolier: a leather strap with a loop per slot
   const n = A.slots, x0 = 74, x1 = w - 4, sp = (x1 - x0) / n, vw = n > 3 ? 15 : 20, vh = n > 3 ? 38 : 46, foot = 96;
   ctx2Strap(c, x0 - 4, x1 + 2, foot - 10);
-  const pick = alemPick(k), ripeT = alemRipeTime(k), spoilT = alemSpoilTime(k);
+  const pick = alemPick(k), marked = pick >= 0 && g.mark != null && g.vials[pick].id === g.mark, spoilT = alemSpoilTime(k);
+  // the place numbers under the loops (the keys that mark them): gold under the vial that goes next
+  c.save(); c.font = '600 9px system-ui, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+  for (let i = 0; i < n; i++) {
+    const x = x0 + sp * (i + 0.5);
+    c.fillStyle = i === pick ? (marked ? '#ffd27a' : 'rgba(255,214,140,0.8)') : g.vials[i] ? 'rgba(232,210,170,0.55)' : 'rgba(232,210,170,0.25)';
+    c.fillText(String(i + 1), x, foot + 13);
+  }
+  c.restore();
   for (let i = 0; i < n; i++) {
     const x = x0 + sp * (i + 0.5), v = g.vials[i];
     if (!v) { alemVial(c, x, foot, vw, vh, { dim: true }); continue; }
@@ -506,7 +524,16 @@ GAUGES.bandolier = (c, k, w, h, t) => {
       glow(c, ex, ey, 7, '#ffb040', 0.9); circle(c, ex, ey, 1.6, '#fff4c0');
     }
     c.restore();
-    if (i === pick) poly(c, [x - 5, foot + 6, x + 5, foot + 6, x, foot + 1], '#ffd27a', OUT, 1);
+    if (i === pick) {
+      // the chevron under the vial R takes; a marked vial also stands in a fine gold frame (corner brackets, no glow)
+      poly(c, [x - 5, foot + 6, x + 5, foot + 6, x, foot + 1], marked ? '#ffd27a' : 'rgba(255,210,122,0.55)', OUT, 1);
+      if (marked) {
+        const fx = x - sp / 2 + 2, fy = foot - vh - 9, fw = sp - 4, fh = vh + 13, e = 5;
+        c.save(); c.strokeStyle = '#ffd27a'; c.lineWidth = 1.3; c.lineCap = 'round'; c.beginPath();
+        for (const [cx, cy, dx, dy] of [[fx, fy, 1, 1], [fx + fw, fy, -1, 1], [fx, fy + fh, 1, -1], [fx + fw, fy + fh, -1, -1]]) { c.moveTo(cx + dx * e, cy); c.lineTo(cx, cy); c.lineTo(cx, cy + dy * e); }
+        c.stroke(); c.restore();
+      }
+    }
   }
 };
 // a leather strap across the vial loops
@@ -853,11 +880,11 @@ Object.assign(GAUGES, {
   },
 });
 
-// ======================================================================= Thresher (damage, class 19)
-// Harvest: four ripening meters, one per affliction on the boss (Mark, Drain, Bind, Thread). Each is a tall bar that fills as
-// its affliction ages through three stretches: green (young), a GOLD stretch bracketed on both sides and ruled with fine
-// lines (ripe: this is the moment to Reap), then brown and cracked (rotten). The affliction's glyph sits under its bar and
-// takes the stage's colour; a bar in its gold glows and pulses, a rotten one droops. A fine line under them runs down with
+// ======================================================================= Reaper (id thresher; damage, class 19)
+// Toll (the gauge kind stays `harvest`): four meters, one per affliction on the boss (Mark, Drain, Bind, Thread). Each is a tall
+// bar that fills as its affliction ages through three stretches: pale teal (faint), a GOLD stretch bracketed on both sides and
+// ruled with fine lines (due: this is the moment to Reap), then grey-violet and cracked (lapsed). The affliction's sigil sits
+// under its bar and takes the stage's colour; a bar in its gold glows and pulses, a lapsed one droops. A fine line under them runs down with
 // the Wisp's seconds (a small blue flame at its end), and in the Gate five pips count the strikes (the fifth gold). An empty
 // bar is a dark slot. The painted gauge replaces this later.
 Object.assign(GAUGES, {
@@ -865,7 +892,7 @@ Object.assign(GAUGES, {
     const g = k.g, now = k.now, ids = THRESH.IDS, Y = thY(k), R = thR(k), END = R + THRESH.LIFE;
     const bw = 26, gap = 8, tot = ids.length * bw + (ids.length - 1) * gap, x0 = w / 2 - tot / 2, top = 6, bh = 52;
     const hidden = id => !!(k.def.noAff && k.def.noAff.indexOf(id) >= 0);
-    const AFC = { mark: '#ff6a6a', drain: '#7ff08a', bind: '#b88cff', thread: '#dff2f0' };
+    const FAINT = '#8fd8e8';   // a faint (young) affliction's colour, whichever it is: the shape tells them apart
     const yY = top + bh - bh * (Y / END), yR = top + bh - bh * (R / END);   // where gold begins and ends
     // the affliction's glyph, small, under its bar
     const mini = (id, x, y, s, col, dim) => {
@@ -877,44 +904,44 @@ Object.assign(GAUGES, {
         else if (id === 'bind') { for (let i = 0; i < 3; i++) { const a = i * TAU / 3 - Math.PI / 2; c.save(); c.rotate(a); c.moveTo(s * 1.04, 0); c.ellipse(s * 0.42, 0, s * 0.62, s * 0.34, 0, 0, TAU); c.restore(); } }
         else { for (let i = 0; i < 3; i++) { const lx = (i - 1) * s * 0.62, ly = (i - 1) * s * 0.62, rx = s * (i % 2 ? 0.42 : 0.3), ry = s * (i % 2 ? 0.3 : 0.42); c.moveTo(lx + rx, ly); c.ellipse(lx, ly, rx, ry, 0.6, 0, TAU); } }
       };
-      c.strokeStyle = '#08140c'; c.lineWidth = 3.6; path(); c.stroke(); c.strokeStyle = col; c.lineWidth = 1.6; path(); c.stroke();
+      c.strokeStyle = '#0c0a14'; c.lineWidth = 3.6; path(); c.stroke(); c.strokeStyle = col; c.lineWidth = 1.6; path(); c.stroke();
       c.restore();
     };
     ids.forEach((id, i) => {
       const x = x0 + i * (bw + gap), cx = x + bw / 2, at = g.aff[id], age = at == null ? -1 : now - at, st = thStage(k, id);
-      const col = st === 2 ? '#ffd65a' : st === 3 ? '#8a5e34' : st === 1 ? AFC[id] : '#5a6a58';
+      const col = st === 2 ? '#ffd65a' : st === 3 ? '#8a82a0' : st === 1 ? FAINT : '#5a5870';
       if (hidden(id)) { rrect(c, x, top, bw, bh, 6, '#14131a', OUT, 2); label(c, '-', cx, top + bh / 2, '#4a4650', 12, 'system-ui', 700); return; }
       if (st === 2) glow(c, cx, top + bh / 2, bh * 0.75, '#ffd65a', 0.28 + 0.12 * Math.sin(t * 7 + i));
-      rrect(c, x, top, bw, bh, 6, '#0d1a12', OUT, 2.4);
+      rrect(c, x, top, bw, bh, 6, '#100c1a', OUT, 2.4);
       c.save(); c.beginPath(); c.roundRect(x + 1.5, top + 1.5, bw - 3, bh - 3, 5); c.clip();
-      // the three stretches: young green at the foot, the gold band ruled with fine lines, the rotten brown above it
-      c.fillStyle = 'rgba(95,190,80,0.16)'; c.fillRect(x, yY, bw, top + bh - yY);
+      // the three stretches: faint teal at the foot, the gold (due) band ruled with fine lines, the lapsed grey-violet above it
+      c.fillStyle = 'rgba(143,216,232,0.16)'; c.fillRect(x, yY, bw, top + bh - yY);
       c.fillStyle = 'rgba(255,214,90,0.22)'; c.fillRect(x, yR, bw, yY - yR);
       c.strokeStyle = 'rgba(255,226,130,0.38)'; c.lineWidth = 1;
       for (let yy = yR + 3; yy < yY; yy += 4) { c.beginPath(); c.moveTo(x, yy); c.lineTo(x + bw, yy); c.stroke(); }
-      c.fillStyle = 'rgba(120,80,48,0.22)'; c.fillRect(x, top, bw, yR - top);
+      c.fillStyle = 'rgba(120,108,150,0.22)'; c.fillRect(x, top, bw, yR - top);
       if (age >= 0) {
         const fh = Math.min(bh, bh * (age / END)), fy = top + bh - fh;
         const gr = c.createLinearGradient(0, top + bh, 0, fy), q = Math.max(0.01, age);
-        gr.addColorStop(0, '#4fae48'); gr.addColorStop(Math.min(1, Y / q), '#8fe06a');
+        gr.addColorStop(0, '#4a9db4'); gr.addColorStop(Math.min(1, Y / q), '#a8eaf6');
         gr.addColorStop(Math.min(1, Y / q + 0.001), '#f2c84a'); gr.addColorStop(Math.min(1, R / q), '#ffe27a');
-        gr.addColorStop(Math.min(1, R / q + 0.001), '#8a5a3a'); gr.addColorStop(1, '#5a3a24');
+        gr.addColorStop(Math.min(1, R / q + 0.001), '#7a7096'); gr.addColorStop(1, '#4a4262');
         c.fillStyle = gr; c.fillRect(x, fy, bw, fh);
         c.fillStyle = 'rgba(255,255,255,0.55)'; c.fillRect(x, fy, bw, 2);
-        if (st === 3) { c.strokeStyle = 'rgba(20,10,4,0.7)'; c.lineWidth = 1; for (let n = 0; n < 4; n++) { const cyy = top + 6 + n * 9; c.beginPath(); c.moveTo(x + 3, cyy); c.lineTo(x + 9 + (n % 2) * 6, cyy + 4); c.lineTo(x + 7, cyy + 8); c.stroke(); } }
+        if (st === 3) { c.strokeStyle = 'rgba(10,8,18,0.85)'; c.lineWidth = 1; for (let n = 0; n < 4; n++) { const cyy = top + 6 + n * 9; c.beginPath(); c.moveTo(x + 3, cyy); c.lineTo(x + 9 + (n % 2) * 6, cyy + 4); c.lineTo(x + 7, cyy + 8); c.stroke(); } }
       }
       c.restore();
       // the gold stretch bracketed at both sides: the Reap window, readable with the bar empty
       const bk = st === 2 ? '#fff0a0' : '#e0b84a';
       for (const sx of [x - 2.5, x + bw + 2.5]) { const dx = sx < x ? 3 : -3; c.strokeStyle = bk; c.lineWidth = 1.8; c.lineCap = 'round'; c.beginPath(); c.moveTo(sx + dx, yR); c.lineTo(sx, yR); c.lineTo(sx, yY); c.lineTo(sx + dx, yY); c.stroke(); }
       if (st === 2) { c.save(); c.globalAlpha = 0.55 + Math.sin(t * 7 + i) * 0.3; rrect(c, x - 1, top - 1, bw + 2, bh + 2, 7, null, '#ffe27a', 2); c.restore(); }
-      if (st === 3) rrect(c, x - 1, top - 1, bw + 2, bh + 2, 7, null, 'rgba(138,90,58,0.85)', 1.6);
+      if (st === 3) rrect(c, x - 1, top - 1, bw + 2, bh + 2, 7, null, 'rgba(160,150,190,0.85)', 1.6);
       if (age >= 0) { const my = top + bh - bh * Math.min(1, age / END); line(c, x - 3, my, x + bw + 3, my, '#ffffff', 1.4); }
       mini(id, cx, top + bh + 13 + (st === 3 ? 2 : 0), 6, col, st === 0);
     });
-    // the Wisp's seconds, a fine line with a little blue flame at its end
+    // the Wisp's seconds, a fine line with a little pale flame at its end
     const wl = k.has('wisp') ? k.remaining('wisp') : 0, wy = top + bh + 28;
-    rrect(c, x0, wy, tot, 4, 2, '#12201a', OUT, 1);
+    rrect(c, x0, wy, tot, 4, 2, '#120e1c', OUT, 1);
     if (wl > 0) {
       const fw = (tot - 2) * Math.min(1, wl / THRESH.WISP_DUR);
       rrect(c, x0 + 1, wy + 0.5, Math.max(2, fw), 3, 1.5, '#9ad4ff');
@@ -925,8 +952,8 @@ Object.assign(GAUGES, {
       const n = g.gate | 0;
       for (let i = 0; i < 5; i++) {
         const px = w / 2 + (i - 2) * 18, py = wy + 17, last = i === 4, lit = i < n;
-        if (lit) glow(c, px, py, last ? 12 : 9, last ? '#ffd65a' : '#9be06a', 0.5);
-        circle(c, px, py, last ? 6.5 : 5, lit ? (last ? '#ffe27a' : '#9be06a') : '#12201a', last ? '#ffe27a' : '#6a7a60', 1.6);
+        if (lit) glow(c, px, py, last ? 12 : 9, last ? '#ffd65a' : '#8fd8e8', 0.5);
+        circle(c, px, py, last ? 6.5 : 5, lit ? (last ? '#ffe27a' : '#8fd8e8') : '#120e1c', last ? '#ffe27a' : '#6a7a90', 1.6);
       }
     }
   },

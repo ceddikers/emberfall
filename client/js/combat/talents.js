@@ -18,8 +18,12 @@
 // The kits check k.talent(id) (engine.js); cd / cast changes are applied by the engine from this data.
 // Client-side only: nothing here touches HP or Defense, so the host never needs to know.
 // Saves keep the id of each pick (save.js): a pick whose id leaves its row is cleared, the row stays bought.
+// Rows VI and VII are the spec rows (SPEC_TALENTS, after TALENTS): bought once per hero with gold, after row V, and
+// shown only once the hero has a spec. Each spec keeps its own picks in them; only the active spec's picks are held.
 
-const TALENT_COSTS = [0, 100, 180, 280, 400];   // (the first row is free: every hero has it open from the start)
+// rows I-V, then the spec rows VI and VII (SPEC_TALENTS below). The first row is free: every hero has it open from the start.
+const TALENT_COSTS = [0, 100, 180, 280, 400, 540, 700];
+const BASE_ROWS = 5;   // rows I-V: TALENTS. Rows VI-VII (indexes 5, 6): SPEC_TALENTS, for the hero's active spec
 
 const TALENTS = {
   // ======================================================================= TANKS
@@ -119,8 +123,8 @@ const TALENTS = {
       { id: 'runeguard_whirl', name: 'Whirling Runes', ab: 'sanctum', grants: true,
         text: 'Sanctum becomes Whirling Runes (30s): every Rune you hold tears loose and spins around you as a blade for 12s, striking the boss every 2s for {d:35} per Rune.' },
       { id: 'runeguard_reclaim', name: 'Reclaim', ab: 'ward', text: 'A Ward that absorbed at least half gives its Rune back.', spec: { spellwarden: 'A Ward gives its Rune back once it has absorbed a third.' } },
-      { id: 'runeguard_glyphguard', name: 'Glyphguard', ab: 'glyph', text: 'Glyph Burst now also raises a small Ward ({s:325}) on you if you have none (once every 20s). It explodes like a Ward, for {d:60} up to {d:240}.',
-        spec: { runeblade: 'Rune Cleave now also raises a small Ward ({s:325}) on you if you have none (once every 20s). It explodes like a Ward, for {d:60} up to {d:240}.' } },
+      { id: 'runeguard_glyphguard', name: 'Glyphguard', ab: 'glyph', text: 'Glyph Burst now also raises a small Ward ({s:325}) on you if you have none (once every 15s). It explodes like a Ward, for {d:60} up to {d:240}.',
+        spec: { runeblade: 'Rune Cleave now also raises a small Ward ({s:325}) on you if you have none (once every 15s). It explodes like a Ward, for {d:60} up to {d:240}.' } },
     ],
     [
       { id: 'runeguard_shards', name: 'Mirror Shards', ab: 'mirror', text: 'A reflected hit now shatters the mirror into shards that strike the boss three more times for {d:150} each.' },
@@ -132,8 +136,8 @@ const TALENTS = {
         text: 'Runic Overload becomes Living Rune (60s): a great rune rises behind you for 15s. Everything Runic Overload does, and every Rune you spend makes it fire a bolt at the boss for {d:90}.' },
       { id: 'runeguard_nova', name: 'Ward Nova', ab: 'ward', text: 'A Runic Ward broken all the way now erupts in a nova: it strikes the boss for {d:120} and heals the whole party for a fifth of the Ward.',
         spec: { spellwarden: 'A Runic Ward that absorbed at least half now erupts in a nova when it ends: it strikes the boss for {d:120} and heals the whole party for a fifth of the Ward.' } },
-      { id: 'runeguard_binding', name: 'Sigil of Binding', ab: 'glyph', text: 'Glyph Burst now carves a binding sigil under the boss for 8s (once every 20s): your next Rune Strike while it burns gives an extra Rune.',
-        spec: { runeblade: 'Rune Cleave now carves a binding sigil under the boss for 8s (once every 20s): your next Rune Blade hit while it burns gives an extra Rune.' } },
+      { id: 'runeguard_binding', name: 'Sigil of Binding', ab: 'glyph', text: 'Glyph Burst now carves a binding sigil under the boss for 8s (once every 15s): your next Rune Strike while it burns gives an extra Rune.',
+        spec: { runeblade: 'Rune Cleave now carves a binding sigil under the boss for 8s (once every 15s): your next Rune Blade hit while it burns gives an extra Rune.' } },
     ],
   ],
 
@@ -175,7 +179,8 @@ const TALENTS = {
   shadowblade: [
     [
       { id: 'shadowblade_feint', name: 'Feint', ab: 'strike', text: 'A Strike from the front is no longer wasted: it sets up a feint, and your next Eviscerate lands as a hit from the side wherever you stand.',
-        spec: { nightstalker: 'A Strike from the front is no longer wasted: it sets up a feint, and your next Backstab lands as a hit from behind wherever you stand.' } },
+        spec: { nightstalker: 'A Strike from the front is no longer wasted: it sets up a feint, and your next Backstab lands as a hit from behind wherever you stand.',
+          bladedancer: 'A Strike never spills a combo point: at 4 points it gives only the 1 that fits, and your Tempo is safe.' } },
       { id: 'shadowblade_opportunist', name: 'Opportunist', ab: 'evis', text: 'An Eviscerate while the boss is casting is always a critical hit.',
         spec: { nightstalker: 'A Backstab while the boss is casting is always a critical hit.' } },
       { id: 'shadowblade_ambush', name: 'Ambush', ab: 'step', text: 'Shadowstep now strikes as you arrive: a stab from behind for {d:20} and a combo point.',
@@ -198,7 +203,7 @@ const TALENTS = {
         spec: { nightstalker: 'A combo point that would spill past 5 now sharpens your next Backstab instead: 12% harder for each (up to 3).' } },
     ],
     [
-      { id: 'shadowblade_clone', name: 'Shadow Clone', ab: 'dance', text: 'Shadow Dance now calls a shadow that repeats your Eviscerates at 25%.', spec: { nightstalker: 'Shadow Dance now calls a shadow that repeats your Backstabs at 25%.' } },
+      { id: 'shadowblade_clone', name: 'Shadow Clone', ab: 'dance', text: 'Shadow Dance now calls a shadow that repeats your Eviscerates at 20%.', spec: { nightstalker: 'Shadow Dance now calls a shadow that repeats your Backstabs at 20%.' } },
       { id: 'shadowblade_sprint', name: 'Shadow Sprint', ab: 'step', cd: { step: -3 }, specMods: { bladedancer: { cd: { step: -1 } } }, text: 'Shadowstep recharges 3s faster.', spec: { bladedancer: 'Blade Fury recharges 1s faster.' } },
       { id: 'shadowblade_endless', name: 'Endless Dance', ab: 'dance', text: 'Each 5-point finisher during Shadow Dance makes it last 1s longer (up to 4s).' },
     ],
@@ -215,7 +220,7 @@ const TALENTS = {
   pyromancer: [
     [
       { id: 'pyromancer_firestarter', name: 'Firestarter', ab: 'fireball', text: 'A Fireball crit sets the target burning for {d:40} every 3s for 6s.' },
-      { id: 'pyromancer_chain', name: 'Chain Reaction', ab: 'pyro', text: 'A Hot Streak Pyroblast now leaves you Heating Up (once every 10s).', spec: { cataclysm: 'A Hot Streak Meteor now leaves you Heating Up when it lands (once every 10s).' } },
+      { id: 'pyromancer_chain', name: 'Chain Reaction', ab: 'pyro', text: 'A Hot Streak Pyroblast now leaves you Heating Up (once every 15s).', spec: { cataclysm: 'A Hot Streak Meteor now leaves you Heating Up when it lands (once every 15s).' } },
       { id: 'pyromancer_hurry', name: 'Overcharged Blast', ab: 'fireblast', text: 'A Fire Blast fired mid-cast now hurries that cast along: it finishes half a second sooner.' },
     ],
     [
@@ -231,14 +236,14 @@ const TALENTS = {
     ],
     [
       { id: 'pyromancer_afterburn', name: 'Afterburn', ab: 'combust', text: 'When Combustion ends, you get Hot Streak.', spec: { sigilmancer: 'When Ember Circle fades, you get Hot Streak.' } },
-      { id: 'pyromancer_wildfire', name: 'Wildfire', ab: 'combust', text: 'Every crit during Combustion now leaves a flame on the boss that burns for {d:25} every 2s for 6s (up to 5 at once).',
-        spec: { sigilmancer: 'Every crit while you stand in Ember Circle now leaves a flame on the boss that burns for {d:25} every 2s for 6s (up to 5 at once).' } },
-      { id: 'pyromancer_longburn', name: 'Long Burn', ab: 'combust', text: 'Combustion lasts 3s longer.', spec: { sigilmancer: 'Ember Circle lasts 5s longer.' } },
+      { id: 'pyromancer_wildfire', name: 'Wildfire', ab: 'combust', text: 'Every crit during Combustion now leaves a flame on the boss that burns for {d:25} every 2s for 6s (up to 3 at once).',
+        spec: { sigilmancer: 'Every crit while you stand in Ember Circle now leaves a flame on the boss that burns for {d:25} every 2s for 6s (up to 3 at once).' } },
+      { id: 'pyromancer_longburn', name: 'Long Burn', ab: 'combust', text: 'Combustion lasts 2.5s longer.', spec: { sigilmancer: 'Ember Circle lasts 5s longer.' } },
     ],
     [
       { id: 'pyromancer_phoenix', name: 'Phoenix Flight', ab: 'vent', grants: true,
         text: 'Vent becomes Phoenix Flight (12s): release all your Heat as a phoenix that sweeps through the boss and wheels back for a second pass, each pass {d:70} plus {d:26} for every 10 Heat. At 60 Heat or more it leaves you Hot Streak.' },
-      { id: 'pyromancer_twin', name: 'Twin Flame', ab: 'pyro', text: 'A Hot Streak Pyroblast now splits: a second, smaller Pyroblast hits for 10%.', spec: { cataclysm: 'A Hot Streak Meteor now brings a second, smaller meteor down a moment later, for 10%.' } },
+      { id: 'pyromancer_twin', name: 'Twin Flame', ab: 'pyro', text: 'A Hot Streak Pyroblast now splits: a second, smaller Pyroblast hits for 5%.', spec: { cataclysm: 'A Hot Streak Meteor now brings a second, smaller meteor down a moment later, for 5%.' } },
       { id: 'pyromancer_bomb', name: 'Living Bomb', ab: 'fireball', text: 'Every fourth Fireball now plants an ember in the boss that bursts 3s later for {d:90}.' },
     ],
   ],
@@ -252,7 +257,7 @@ const TALENTS = {
     ],
     [
       { id: 'cleric_quickmend', name: 'Quick Mend', ab: 'mend', text: 'After you spend a Petal, your next Mend is instant.', spec: { aegis: 'After you spend a Petal, your next Divine Barrier is instant.' } },
-      { id: 'cleric_purify', name: 'Purify', ab: 'petal', text: 'Dawn Petal now washes Vulnerability and Damage Down off its target (once every 20s).' },
+      { id: 'cleric_purify', name: 'Purify', ab: 'petal', text: 'Dawn Petal now washes Vulnerability and Damage Down off its target (once every 15s).' },
       { id: 'cleric_wings', name: 'Wings of Dawn', ab: 'petal', text: 'Dawn Petal cast on an ally now carries you toward them on wings of light (up to 160).' },
     ],
     [
@@ -387,7 +392,8 @@ Object.assign(TALENTS, {
       { id: 'driftblade_sidestep', name: 'Sidestep', ab: 'hook', text: 'Hook Turn now also makes you take 30% less damage for 2s.' },
     ],
     [
-      { id: 'driftblade_gyre', name: 'Gyre', ab: 'hook', grants: true, text: 'New move on E, in place of Hook Turn. Gyre: loop once round your target, one {d:105} cut for every 25 Drift you have (up to 4). It spends nothing and adds 10 Drift. Two charges.' },
+      { id: 'driftblade_gyre', name: 'Gyre', ab: 'hook', grants: true, text: 'New move on E, in place of Hook Turn. Gyre: loop once round your target, one {d:105} cut for every 25 Drift you have (up to 4). It spends nothing and adds 10 Drift. Two charges.',
+        spec: { orbit: 'New move on E, in place of Hook Turn. Gyre: loop once round your target, one {d:105} cut for every 25 Drift you have (up to 4). It spends nothing, adds 10 Drift, and a full loop is a full Orbit: all five stacks. Two charges.' } },
       { id: 'driftblade_second', name: 'Second Wind', ab: 'cross', text: 'A Crosswind that spends 80 Drift or more now gives 10 back.', spec: { comet: 'An Impact that spends 160 Drift or more now gives 20 back.' } },
       { id: 'driftblade_hover', name: 'Hover', ab: 'carve', text: 'A Carve you make while standing still now gives 10 Drift.' },
     ],
@@ -429,7 +435,7 @@ TALENTS.alembist = [
   ],
   [
     { id: 'alembist_flash', name: 'Flash Distill', ab: 'distill', text: 'Distill now also drops a copy of your last vial into the bandolier.',
-      spec: { volatile: 'Catalyst now also drops a copy of your last vial into the bandolier (once every 20s).' } },
+      spec: { volatile: 'Catalyst now also drops a copy of your last vial into the bandolier (once every 15s).' } },
     { id: 'alembist_reserve', name: 'Grand Reserve', ab: 'batch', text: 'Grand Batch\'s copies start fully ripe and never spoil. A Grand Blend keeps every effect at full strength.',
       spec: { volatile: 'Grand Batch\'s copies start fully heated with 10s fuses. A Grand Blend keeps every effect at full strength.' } },
     { id: 'alembist_fume', name: 'Fume Hood', ab: 'distill', text: 'Distill now also clears the air: the whole party takes 10% less damage for 8s.',
@@ -538,29 +544,29 @@ Object.assign(TALENTS, {
 
   marionettist: [
     [
-      { id: 'marionettist_flourish', name: 'Flourish', ab: 'jab', text: 'Every third Jab now flourishes into a second, lighter stab for {d:100}.', spec: { understudy: 'Every third Jab now flourishes into a second, lighter stab: {d:58} from each Doll.' } },
+      { id: 'marionettist_flourish', name: 'Flourish', ab: 'cue', text: 'The last of the quick Jabs a Cue gives now flourishes into a second, lighter stab for {d:100}. Let all three land before you Cue again.', spec: { understudy: 'The last of the quick Jabs a Cue gives now flourishes into a second, lighter stab: {d:58} from each Doll. Let all three land before you Cue again.' } },
       { id: 'marionettist_lunge', name: 'Lunge', ab: 'pull', text: 'Pull Strings now cuts 40% harder when the Doll passes through an enemy.' },
       { id: 'marionettist_counterweight', name: 'Counterweight', ab: 'cross', text: 'A Cross-Cut that cuts nothing now gives back half its cooldown.' },
     ],
     [
       { id: 'marionettist_bodydouble', name: 'Body Double', ab: 'swap', text: 'Swap now also wraps you in a {s:150} shield for 5s.' },
-      { id: 'marionettist_mended', name: 'Mended Strings', ab: 'pull', text: 'A torn String now grows back in 7.5s instead of 15s.' },
+      { id: 'marionettist_mended', name: 'Safe Landing', ab: 'pull', text: 'Pull Strings now also leaves the Doll untouchable for 1.5s where it lands.' },
       { id: 'marionettist_standin', name: 'Stand-In', ab: 'swap', text: 'For 3s after a Swap, a blow that lands on the Doll no longer tears a String.' },
     ],
     [
       { id: 'marionettist_tangle', name: 'Tangle', ab: 'pirouette', grants: true, text: 'New move on R, in place of Pirouette. Tangle: the Doll winds its strings round the enemy, a {d:160} cut now and a bleed of {d:38} every 2s for 10s.', spec: { understudy: 'New move on R, in place of Pirouette. Tangle: each Doll winds its strings round the enemy, a {d:92.8} cut now and a bleed of {d:22} every 2s for 10s.' } },
       { id: 'marionettist_encore', name: 'Encore! Encore!', ab: 'finale', text: 'Grand Finale now leaves you 2 Encore when it ends.' },
-      { id: 'marionettist_secondact', name: 'Second Act', ab: 'pirouette', text: 'Pirouette now also mends a torn String.' },
+      { id: 'marionettist_secondact', name: 'Second Act', ab: 'pirouette', text: 'Pirouette now also gives back a charge of Pull Strings.' },
     ],
     [
-      { id: 'marionettist_curtain', name: 'Curtain Call', ab: 'finale', text: 'The last hit of Grand Finale is now always a critical hit.' },
+      { id: 'marionettist_curtain', name: 'Standing Ovation', ab: 'finale', text: 'The last hit of Grand Finale now sends the Doll out quick: its next three Jabs come twice as fast, as after a Cue.' },
       { id: 'marionettist_cue', name: 'On Cue', ab: 'swap', text: 'Swap now also takes 3s off Cross-Cut\'s cooldown.' },
       { id: 'marionettist_quickchange', name: 'Quick Change', ab: 'swap', cd: { swap: -4 }, text: 'Swap recharges 4s faster.' },
     ],
     [
       { id: 'marionettist_curtainrise', name: 'Red Curtain', ab: 'swap', grants: true, text: 'New move on D, in place of Swap. Red Curtain: a red curtain round you for 8s; allies inside take 15% less damage, and the Dolls bow and come back to you.' },
       { id: 'marionettist_twin', name: 'Twin Strings', ab: 'cross', text: 'Cross-Cut\'s line now lingers for 2s and cuts whatever still crosses it for {d:45} every second.', spec: { understudy: 'Cross-Cut\'s lines now linger for 2s and cut whatever still crosses them for {d:26.1} every second.' } },
-      { id: 'marionettist_bow', name: 'Final Bow', ab: 'finale', text: 'A Grand Finale at 5 Encore now mends every String, and nothing can touch the Doll while it plays.' },
+      { id: 'marionettist_bow', name: 'Final Bow', ab: 'finale', text: 'Nothing can touch the Doll while Grand Finale plays, and a blow it dances through during the show builds 1 Encore, as under Pirouette.' },
     ],
   ],
 });
@@ -611,10 +617,10 @@ Object.assign(TALENTS, {
     [
       { id: 'gloomsworn_wakened', name: 'Waking Dead', ab: 'mantle', text: 'When a Hollow ends with you standing, Black Mantle and Last Rite are ready again at once.' },
       { id: 'gloomsworn_veil', name: 'Veiled Step', ab: 'shade', text: 'Shade Step now also veils you: 15% less damage taken for 4s.' },
-      { id: 'gloomsworn_bearer', name: 'Pallbearers', ab: 'pall', text: 'Black Pall now also lays a barrier of {s:100} on every ally for 8s.' },
+      { id: 'gloomsworn_bearer', name: 'Pallbearers', ab: 'pall', text: 'Black Pall now also lays a barrier of {s:100} on every ally for 8s.', spec: { duskreaver: 'Dusk Reave now also lays a barrier of {s:100} on every ally for 8s.' } },
     ],
     [
-      { id: 'gloomsworn_vigil', name: 'Vigil Ward', ab: 'pall', grants: true, text: 'New move on R, in place of Black Pall. Vigil Ward (45s, 30 Gloom): stand watch over whoever is hurt most. They take 50% less damage for 5s and are wrapped in a barrier of {s:200}; you take 15% less damage for 5s.' },
+      { id: 'gloomsworn_vigil', name: 'Vigil Ward', ab: 'pall', grants: true, text: 'New move on R, in place of Black Pall. Vigil Ward (45s, 30 Gloom): stand watch over whoever is hurt most. They take 50% less damage for 5s and are wrapped in a barrier of {s:200}; you take 15% less damage for 5s.', spec: { duskreaver: 'New move on R, in place of Dusk Reave. Vigil Ward (45s, 30 Gloom): stand watch over whoever is hurt most. They take 50% less damage for 5s and are wrapped in a barrier of {s:200}; you take 15% less damage for 5s.' } },
       { id: 'gloomsworn_spill', name: 'Spill', ab: 'strike', text: 'Gloom that would run past 100 now hardens into a barrier on you for 8s: {s:10} for every point that spilled.' },
       { id: 'gloomsworn_feast', name: 'Feast on the Hollow', ab: 'rend', text: 'While you are Hollow, every strike you land heals you for 3% of your HP. The healing counts against your debt.' },
     ],
@@ -632,42 +638,96 @@ Object.assign(TALENTS, {
 });
 
 // ======================================================================= THRESHER (damage, class 19)
-// New behaviour, one plain number (Quick Hands). Rows III and V grant a move (TALENT_ABILITIES in kits.js).
+// New behaviour, one plain number (Ferryman's Haste). Rows III and V grant a move (TALENT_ABILITIES in kits.js).
 Object.assign(TALENTS, {
   thresher: [
     [
-      { id: 'thresher_drag', name: 'Dragging Edge', ab: 'slash', text: 'A Backswing now drags the harvest along: it ages every affliction on the boss by 1s.' },
-      { id: 'thresher_weight', name: 'Dread Weight', ab: 'hook', text: 'Hook now plants a Bind as well as its Thread.' },
-      { id: 'thresher_gleaning', name: 'Gleaning', ab: 'reap', text: 'A Reap that cashes in two or more gold afflictions makes your next Slash or Cleave cut again for 35% a moment later.' },
+      { id: 'thresher_drag', name: 'Dragging Edge', ab: 'slash', text: 'A Backswing now drags the toll along: it ages every affliction on the boss by 1s.' },
+      { id: 'thresher_weight', name: 'Dread Weight', ab: 'hook', text: 'Hook now lays a Bind as well as its Thread.', spec: { sower: 'Hook now lays a Mark as well as its Thread and Bind.', grim: 'Hook now lays a Mark as well as its Thread.' } },
+      { id: 'thresher_gleaning', name: 'Phantom Cut', ab: 'reap', text: 'A Reap that cashes in two or more gold afflictions makes your next Slash or Cleave cut again for 35% a moment later.' },
     ],
     [
       { id: 'thresher_vanish', name: 'Vanishing Cut', ab: 'blink', text: 'Gloam Blink now takes you out of the world for 1.5s: nothing can touch you.' },
       { id: 'thresher_tithe', name: 'Tithe', ab: 'reap', text: 'Drain, its ticks and its payout in a Reap, now mend the most hurt ally instead of you.' },
-      { id: 'thresher_hush', name: 'Hush', ab: 'gather', text: 'Gather also wraps you in a barrier of {s:100} for 6s.' },
+      { id: 'thresher_hush', name: 'Hush', ab: 'gather', text: 'Beckon also wraps you in a barrier of {s:100} for 6s.' },
     ],
     [
-      { id: 'thresher_sowing', name: 'Sowing', ab: 'gather', grants: true, text: 'New move on R, in place of Gather. Sowing (25s): all four afflictions land on the boss at once, young (any that is already ripening is left to ripen), and a cut for {d:100}.' },
-      { id: 'thresher_compost', name: 'Compost', ab: 'reap', text: 'Rot you reap is not wasted: every rotten affliction a Reap cashes in leaves the boss bleeding for {d:30} every 2s for 8s.' },
-      { id: 'thresher_second', name: 'Second Growth', ab: 'reap', text: 'A gold affliction a Reap cashes in is not spent: it stays on the boss, a moment from ripe again.' },
+      { id: 'thresher_sowing', name: 'Shroud', ab: 'gather', grants: true, text: 'New move on R, in place of Beckon. Shroud (25s): all four afflictions land on the boss at once, faint (any that is already darkening is left to darken), and a cut for {d:100}.' },
+      { id: 'thresher_compost', name: 'Grave Interest', ab: 'reap', text: 'A lapse you reap is not wasted: every lapsed affliction a Reap cashes in leaves the boss bleeding for {d:30} every 2s for 8s.' },
+      { id: 'thresher_second', name: 'Unpaid Debt', ab: 'reap', text: 'A gold affliction a Reap cashes in is not spent: it stays on the boss, a moment from due again.' },
     ],
     [
-      { id: 'thresher_sacrifice', name: 'Sacrifice', ab: 'wisp', text: 'Press F again while the Wisp is out to burst it: a blow for {d:320}, every young affliction ripens to gold at once, and you deal 10% more damage for 8s. Its cooldown counts from the day it was summoned.' },
+      { id: 'thresher_sacrifice', name: 'Sacrifice', ab: 'wisp', text: 'Press F again while the Wisp is out to burst it: a blow for {d:320}, every faint affliction comes due at once, and you deal 10% more damage for 8s. Its cooldown counts from the moment it was summoned.' },
       { id: 'thresher_joined', name: 'Joined Swing', ab: 'reap', text: 'With the Wisp out, Reap makes it strike too: a second cut for {d:140}.' },
-      { id: 'thresher_quick', name: 'Quick Hands', ab: 'gather', cd: { gather: -4 }, text: 'Gather recharges 4s faster.' },
+      { id: 'thresher_quick', name: 'Ferryman\'s Haste', ab: 'gather', cd: { gather: -4 }, text: 'Beckon recharges 4s faster.' },
     ],
     [
       { id: 'thresher_cull', name: 'Cull', ab: 'wisp', grants: true, text: 'New move on F, in place of Spirit Wisp. Cull (40s): take what is owed now. Every affliction on the boss pays out as if it were gold, whatever its age, and none is spent.' },
-      { id: 'thresher_opengate', name: 'Open Gate', ab: 'reap', text: 'The fifth strike of Reaper\'s Gate no longer spends the afflictions: they stay on the boss, all four at full ripeness.' },
-      { id: 'thresher_omen', name: 'Omen of Harvest', ab: 'gather', text: 'Whenever the boss begins a cast, every affliction that is still young ripens to gold at once.' },
+      { id: 'thresher_opengate', name: 'Open Gate', ab: 'reap', text: 'The fifth strike of Reaper\'s Gate no longer spends the afflictions: they stay on the boss, all four fully due.' },
+      { id: 'thresher_omen', name: 'Omen of the Toll', ab: 'gather', text: 'Whenever the boss begins a cast, every affliction that is still faint comes due at once.' },
     ],
   ],
 });
 
-// id -> { cls, row, col, t }
+// ======================================================================= SPEC ROWS (VI and VII)
+// SPEC_TALENTS[classId][specId] = [rowVI, rowVII], each row two talents. The rows are bought once per hero (after row V,
+// TALENT_COSTS[5] and [6]) and open for both specs; each spec keeps its own pick in each (save.js specIds), and only the
+// active spec's picks are held (talentSet). Swapping spec is free and swaps which picks count.
+//
+// AUTHORING GUIDE (how to add a class's spec rows; Bastion below is the worked example)
+//  1. Data: add SPEC_TALENTS.<class> = { <specA>: [[a, b], [c, d]], <specB>: [[e, f], [g, h]] }. A talent is the same
+//     shape as rows I-V ({ id, name, ab, text, cd?, cast?, grants? }); no `spec:` text is needed (it only ever shows in
+//     its own spec), so write the text with that spec's move names (Shield Bash, not Holy Edge). Ids start with
+//     <class>_ and are unique across the whole tree. `ab` is the BASE ability id the talent hangs on (its tooltip shows
+//     there), even when the spec replaces that move.
+//  2. Philosophy (same as rows I-V): new moves or changed behaviour, never % bumps. Each talent leans into what that
+//     spec is about (its passive / focus line in specs.js); the two in a row play differently. Row VI is the spec's
+//     rhythm or guard, row VII its capstone. A grant (grants: true) is welcome in either row; the class's one plain
+//     number talent (rows I-VII together) stays at most one.
+//  3. Code: the kits read k.talent('<id>') like any talent (kits.js helpers or the spec's build in specs.js). It only
+//     answers true in its own spec, so no spec checks are needed. A grant registers its move in kits.js
+//     (talentMoves('<class>', { <id>: { id, replaces: '<ab>', icon, name, type, desc, effect, fx } })); kitFor puts it
+//     in the slot. Don't grant into a slot a row III/V grant of the same class already takes.
+//  4. Sims: if a talent adds a move or a press the pro policy must make, teach tools/simulate.js (the class policy).
+//  5. Test: node tools/talents.js <class> (each talent <= +7% pro DPS; BUILD <= +18% for rows I-V, BUILDALL <= +24%
+//     for I-VII), then node tools/check.js ("Talents line up with the kits" checks shape, ids, grants, text).
+const SPEC_TALENTS = {
+  bastion: {
+    // Sentinel, The Wall: the party behind the shield
+    sentinel: [
+      [
+        { id: 'bastion_phalanx', name: 'Phalanx', ab: 'brace', text: 'Each Perfect Block locks one more shield into the line (up to 3, for 12s). Shield Bash sends them all out: every ally gets a {s:60} shield for each, for 6s.' },
+        { id: 'bastion_interpose', name: 'Interpose', ab: 'edge', text: 'While you are above 60% HP, Shield Bash no longer guards you: for 4s the whole party takes 15% less damage instead.' },
+      ],
+      [
+        { id: 'bastion_aegis', name: 'Aegis', ab: 'bulwark', grants: true,
+          text: 'Bulwark becomes Aegis (120s): plant your shield as a dome for 8s. You take 25% less damage and the party 15% less, Brace\'s charges refill, and every Perfect Block under it heals the party for {h:60}.' },
+        { id: 'bastion_rebuke', name: 'Rebuke', ab: 'edge', text: 'Bulwark now readies a Rebuke: your next Shield Bash within 10s costs no Resolve and strikes half again as hard.' },
+      ],
+    ],
+    // Crusader, The Dawn Blade: Radiance and holy fire
+    crusader: [
+      [
+        { id: 'bastion_dawnburn', name: 'Dawnburn', ab: 'edge', text: 'A Radiant Holy Edge leaves the light burning in the boss: {d:40} every 2s for 8s.' },
+        { id: 'bastion_kindling', name: 'Kindling', ab: 'brace', text: 'Radiance now banks: Perfect Blocks stack it (up to 3). A Radiant Holy Edge spends every stack, 30% stronger for each, instead of 50% for one.' },
+      ],
+      [
+        { id: 'bastion_verdict', name: 'Final Verdict', ab: 'blade', text: 'Judgment during Oath of Valor now kindles Radiance itself: your next Holy Edge is Radiant.' },
+        { id: 'bastion_pyre', name: 'Pyre', ab: 'bulwark', text: 'Zealous Guard now ends in a blast of light: the boss takes {d:90} for every Perfect Block you made while it stood.' },
+      ],
+    ],
+  },
+};
+
+// id -> { cls, row, col, t, spec? } (spec rows: row 5 or 6, and the spec they belong to)
 const TALENT_BY_ID = {};
 for (const [cls, rows] of Object.entries(TALENTS)) rows.forEach((row, r) => row.forEach((t, c) => { TALENT_BY_ID[t.id] = { cls, row: r, col: c, t }; }));
+for (const [cls, specs] of Object.entries(SPEC_TALENTS)) for (const [spec, rows] of Object.entries(specs))
+  rows.forEach((row, r) => row.forEach((t, c) => { TALENT_BY_ID[t.id] = { cls, row: BASE_ROWS + r, col: c, t, spec }; }));
+// a spec's two rows (or null: no spec, or that class has none yet)
+const specTalentRows = (cls, spec) => (spec && SPEC_TALENTS[cls] && SPEC_TALENTS[cls][spec]) || null;
 
-// the talent ids a hero holds, from its saved state { rows, picks } (picks beyond the unlocked rows don't count)
+// the talent ids a hero holds, from its saved state { rows, picks, spec?, specPicks? } (picks beyond the unlocked rows don't count)
 function talentSet(cls, state) {
   const out = new Set(), rows = TALENTS[cls];
   if (!rows || !state) return out;
@@ -675,9 +735,15 @@ function talentSet(cls, state) {
     const c = state.picks && state.picks[r];
     if (c != null && rows[r][c]) out.add(rows[r][c].id);
   }
+  // the spec rows: state.spec (the active spec) and state.specPicks (its column in VI and VII), from Save.talents
+  const sr = specTalentRows(cls, state.spec);
+  if (sr) sr.forEach((row, i) => {
+    const c = state.specPicks && state.specPicks[i];
+    if ((state.rows | 0) > BASE_ROWS + i && c != null && row[c]) out.add(row[c].id);
+  });
   return out;
 }
 // a talent's text for a spec (or the hero's own text)
 const talentText = (t, specId) => (specId && t.spec && t.spec[specId]) || t.text;
 
-if (typeof module !== 'undefined') module.exports = { TALENTS, TALENT_COSTS, TALENT_BY_ID, talentSet, talentText };
+if (typeof module !== 'undefined') module.exports = { TALENTS, TALENT_COSTS, TALENT_BY_ID, SPEC_TALENTS, BASE_ROWS, specTalentRows, talentSet, talentText };

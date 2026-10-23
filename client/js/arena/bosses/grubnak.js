@@ -65,9 +65,10 @@ const GRUBNAK = {
       const d = f.ct(4.5);
       f.cast('Tenderize', d, 'cleaver');
       const vuln = H && f.hasDebuff(tank.id, 'tenderized');
-      // the cleave sits on the boss and turns to follow the tank until just before it lands
-      f.mech({ type: 'buster', shape: { kind: 'cone', x: B.x, y: B.y, r: 320, arc: 1.5, angle: B.facing }, delay: d,
-        dmg: dmg.buster * (vuln ? 1.6 : 1), target: tank.id, aimFromBoss: tank.id, tag: 'buster',
+      // the cleaver comes down on the tank: a circle that follows them until just before it lands (anyone else in it
+      // takes a share of the blow)
+      f.mech({ type: 'buster', shape: { kind: 'circle', x: tank.x, y: tank.y, r: 95 }, delay: d,
+        dmg: dmg.buster * (vuln ? 1.6 : 1), target: tank.id, follow: tank.id, lockAt: 0.5, tag: 'buster',
         onResolve: () => { if (H) f.debuff(tank.id, 'tenderized', 30); } });
     };
     const halfRoom = side => {

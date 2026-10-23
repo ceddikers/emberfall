@@ -38,7 +38,7 @@ class CombatActor {
       pos: () => ({ x: actor.ent.x, y: actor.ent.y }),            // where you stand (Sigilmancer's circle)
       boss: () => (world.boss ? world.boss(actor) : null),         // what the boss is doing, for talents that react to it (kits.js bossNow)
       isDead: id => world.isDead(id),
-      allyHp: id => (world.allyHp ? world.allyHp(id) : null),     // an ally's health, 0..1, or null if unknown (Alembist's Smart Throw)
+      allyHp: id => (world.allyHp ? world.allyHp(id) : null),     // an ally's health, 0..1, or null if unknown (the Alembist's Throw glow and Magnum Opus charge)
       defaultLink: () => world.defaultLink(actor),
       refundDash: () => actor.refundDash(world.now()),            // a kit giving back a dash charge (Driftblade's Hook Turn)
       emit: ev => world.onEvent(actor, ev),

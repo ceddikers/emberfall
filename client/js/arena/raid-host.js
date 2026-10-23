@@ -130,9 +130,11 @@ class RaidHost {
       healer: (lv === 3 && dead >= 2) || (lv >= 2 && low >= 3),
     };
     const raise = lv === 3 && dead >= 1 && t - sim.lbUsedAt >= 3;   // anyone alive can spend a full gauge to raise
+    // a human is down: the gauge is saved for raising them (a tank or damage-dealer bot has no other way to), nothing else
+    const humanDown = ps.some(q => !q.alive && q.id < 1000);
     for (const bot of this.bots) {
       const s = sim.ps.get(bot.id);
-      if (!s || !s.alive || !(raise || want[bot.role])) continue;
+      if (!s || !s.alive || !(raise || (want[bot.role] && !humanDown))) continue;
       sim.onEvent(bot.id, { type: 'lb' });
       return;
     }
@@ -168,7 +170,8 @@ class RaidHost {
           this.sim.snapReel(bot.id);
         } else { const step = Math.min(d, rl.speed * dt); bot.x += dx / d * step; bot.y += dy / d * step; }
       }
-      if (bot.plan && rooted) bot.moving = false;
+      // (rooted, or standing still for a raise while the spot stays clear: BotAI.act sets stillUntil)
+      if (bot.plan && (rooted || (bot.stillUntil > this.sim.t && BotAI.stillOk(bot, view)))) bot.moving = false;
       else if (bot.plan) {
         // walk round any solid prop in the way
         const goal = this.sim.props.length ? PROPS.steer(bot, bot.plan, this.sim.props, 14) : bot.plan;

@@ -56,8 +56,8 @@ function runSim(classId, skill, seed, specId, talents) {
     // a rough HP for the Berserker: lower right after big hits
     hpFrac: () => Math.max(0.15, 1 - Math.min(0.85, env.recentDamage(8) / maxHp * 1.3)),
     isDead: () => false,
-    // the heal target's health (an Alembist's Smart Throw): a pro says whom it aims at (state.aimHp); otherwise the
-    // ally you'd throw at is hurt while the party carries real damage
+    // the heal target's health (an Alembist's Throw glow and Magnum Opus charge): a pro says whom it aims at
+    // (state.aimHp); otherwise the ally you'd throw at is hurt while the party carries real damage
     allyHp: () => (state.aimHp != null ? state.aimHp : state.healDebt > 3500 ? 0.6 : 0.95),
     // a telegraph about to land on a spot: the blow the Marionettist mover has coming for the Doll (Pirouette glows)
     danger: (x, y, within) => state.dollHitAt != null && state.dollHitAt - state.t <= within,
@@ -266,7 +266,8 @@ const NEWBIE = {
     return genericNewbie(k, ctx);
   },
   // Alembist: the hints only. Distill and Grand Batch when noticed; throws when the party looks hurt or R glows;
-  // otherwise the glowing reagent (noticed 60% of the time), else Q, now and then a random one. Never picks a slot.
+  // otherwise the glowing reagent (noticed 60% of the time), else Q, now and then a random one. Never marks a vial: its
+  // Throw takes the oldest (the leftmost).
   alembist(k, ctx) {
     const n = ctx.state.newbie || (ctx.state.newbie = { gcdSeenAt: null, delay: 0, ogcdSeen: {} });
     for (const id of ['distill', 'batch']) {
@@ -505,9 +506,8 @@ const PRO = {
     if (batch.id === 'blend') { if (ready(k, 'batch') && vials.length >= A.slots && weave) return I(k, 'batch'); }
     else if (ready(k, 'batch') && k.g.last && vials.length <= 1 && weave && ((alemInfo(k.g.last).kind === 'bomb' && ctx.inBurst(ctx.t)) || (alemInfo(k.g.last).kind === 'heal' && debt > 10000))) return I(k, 'batch');
     if (k.gcdRemaining() > 0.0001 || k.cast) return null;
-    // which vial goes: the Apothecary marks it (Shift+R); everyone else steers Smart Throw by whom they aim at (a hurt
-    // ally takes the strongest heal, a healthy one the oldest bomb)
-    const want = j => { if (A.pick) { k.g.sel = j; k.g.picked = true; } else ctx.state.aimHp = alemIsBomb(vials[j]) ? 1 : 0.5; return I(k, 'throw'); };
+    // which vial goes: a pro marks it with its number key (kits.js alemMark), and aims a cure at someone hurt
+    const want = j => { alemMark(k, j); ctx.state.aimHp = alemIsBomb(vials[j]) ? 1 : 0.5; return I(k, 'throw'); };
     if (vials.length) {
       const ripe = v => alemStrength(k, v) >= 1 + ALEMBIC.GROW - 0.001;
       let h = -1; vials.forEach((v, j) => { if (alemIsHeal(v) && (h < 0 || alemStrength(k, v) > alemStrength(k, vials[h]) + 0.001)) h = j; });
@@ -804,6 +804,14 @@ Object.assign(PRO, {
 });
 
 // ---------------------------------------------------------------- classes-c (Threadweaver, Marionettist)
+// Marionettist newbie: the generic one (Cue whenever nothing glows, so often mid quick Jabs), but it flings the Doll
+// only once both Pull Strings charges sit full: it doesn't think of W as the way to tie torn Strings back
+NEWBIE.marionettist = (k, ctx) => {
+  const n = ctx.state.newbie || (ctx.state.newbie = { gcdSeenAt: null, delay: 0, ogcdSeen: {} });
+  if (k.charges(abOf(k, 'pull')) < 2) n.ogcdSeen.pull = Infinity;
+  else if (n.ogcdSeen.pull === Infinity) n.ogcdSeen.pull = null;
+  return genericNewbie(k, ctx);
+};
 Object.assign(PRO, {
   // Threadweaver: keep the web full, Tapestry and the Cradle before raidwides, Snap when the threads have carried a lot
   // (Shears: on cooldown), Mend Seam on Spool, and Needle the rest of the time
@@ -825,11 +833,12 @@ Object.assign(PRO, {
     return castOk(k, ctx, k.castTime(abOf(k, 'needle'))) ? I(k, 'needle') : null;
   },
   // Marionettist: Finale at full Encore (or 3+ in a burst), Cross-Cut whenever the line is on, Pirouette / Tangle on
-  // cooldown, Pull Strings at two charges, Jab the rest
+  // cooldown, Pull Strings at two charges or the moment a String tears (it ties them all back), Cue in the gaps (the
+  // Doll jabs on its own)
   marionettist(k, ctx) {
     const cross = abOf(k, 'cross');
     if (cross.type === 'ogcd' && weaveOk(k) && ready(k, 'cross') && mariLineOn(k)) return I(k, 'cross');
-    if (weaveOk(k) && ready(k, 'pull') && k.charges(abOf(k, 'pull')) === 2) return I(k, 'pull');
+    if (weaveOk(k) && ready(k, 'pull') && (k.charges(abOf(k, 'pull')) === 2 || k.g.strings < 3 || mariLimp(k))) return I(k, 'pull');
     if (abOf(k, 'swap').id === 'swap' && k.talent('marionettist_cue') && weaveOk(k) && ready(k, 'swap') && k.cdRemaining(cross) > 3) return I(k, 'swap');
     // Stage Cross: Swap a moment before Cross-Cut comes up, so the cut lands harder (the Doll is back on its mark by then)
     else if (abOf(k, 'swap').id === 'swap' && weaveOk(k) && ready(k, 'swap') && !k.has('oncue') && k.readyIn(cross) < 4 && k.readyIn(cross) > 1.5) return I(k, 'swap');
@@ -840,7 +849,7 @@ Object.assign(PRO, {
     if (ready(k, 'finale') && k.g.encore >= 5) return I(k, 'finale');
     if (cross.type === 'gcd' && ready(k, 'cross') && mariLineOn(k)) return I(k, 'cross');
     if (ready(k, 'pirouette') && (abOf(k, 'pirouette').id !== 'pirouette' || hitIn > 12)) return I(k, 'pirouette');
-    return ready(k, 'jab') ? I(k, 'jab') : null;
+    return ready(k, 'cue') ? I(k, 'cue') : null;
   },
 });
 
@@ -853,7 +862,9 @@ Object.assign(PRO, {
   gloomsworn(k, ctx) {
     const toB = ctx.nextBuster - ctx.t, toR = ctx.nextRaidwide - ctx.t, g = k.g.gloom || 0;
     if (toB < 1.2 && toB > 0 && ready(k, 'mantle') && weaveOk(k)) return I(k, 'mantle');
-    if (toR < 1.5 && toR > 0 && g >= 30 && ready(k, 'pall') && weaveOk(k) && (g >= 70 || toB > 12)) return I(k, 'pall');
+    // (a Reaver of Dusk's Dusk Reave stands where Black Pall was: a cut on cooldown, free in a Hollow, kept clear of a tankbuster's Gloom)
+    if (abOf(k, 'pall').id === 'reave') { if (ready(k, 'pall') && weaveOk(k) && (k.has('hollow') || (g >= 50 && toB > 8))) return I(k, 'pall'); }
+    else if (toR < 1.5 && toR > 0 && g >= 30 && ready(k, 'pall') && weaveOk(k) && (g >= 70 || toB > 12)) return I(k, 'pall');
     if (ready(k, 'rite') && weaveOk(k) && k.env.hpFrac() < 0.3 && g >= 20) return I(k, 'rite');
     // Shade Step when the vessel holds Gloom for two Strikes, so both echo
     if (ready(k, 'shade') && weaveOk(k) && !k.has('shade') && g >= 50 && k.charges(abOf(k, 'strike')) >= 1) return I(k, 'shade');
@@ -880,6 +891,7 @@ Object.assign(PRO, {
       const hook = abOf(k, 'hook'), blink = abOf(k, 'blink');
       if (k.charges(hook) > 0 && thStage(k, 'thread') === 0) return I(k, 'hook');
       if (k.charges(blink) > 0 && thStage(k, 'bind') === 0 && !(k.def.noAff && k.def.noAff.indexOf('bind') >= 0)) return I(k, 'blink');
+      if (k.def.blinkAge && k.charges(blink) > 0 && young >= 2 && gold === 0) return I(k, 'blink');   // (a Grim's Blink ripens the afflictions)
       if (abOf(k, 'gather').id === 'sowing') { if (ready(k, 'gather') && on <= 1) return I(k, 'gather'); }
       else if (ready(k, 'gather') && on >= 2 && (rot >= 1 || (reapReady && young >= 2 && gold === 0))) return I(k, 'gather');
     }

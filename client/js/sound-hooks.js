@@ -56,8 +56,8 @@ const SoundHooks = (() => {
       play(n, mine ? { vol: 0.9, key: 'gloom-hollow', minGap: 0.3 } : { vol: 0.4, remote: true, at, key: 'gloom-hollow:' + (msg.id || ''), minGap: 0.5 });
     });
   }
-  // a Thresher's moments (ability-vfx.js KIT_VFX handlers call this): an affliction turning gold (a soft chime, your own hero only), a
-  // payout's ping, thud or pop (the pings climb for each one in a Reap), a Gate strike (a note that rises with each of the five) and its bloom
+  // a Reaper's moments (class id thresher; ability-vfx.js KIT_VFX handlers call this): an affliction coming due (a soft far toll, your own hero only), a
+  // payout's ping, cracked thud or faint puff (the pings climb for each one in a Reap), a Gate strike (a note that rises with each of the five) and its bloom
   let popAt = -9, popN = 0;
   function thresher(ev, d, mine, at, who) {
     if (!has()) return;
@@ -119,9 +119,10 @@ const SoundHooks = (() => {
 
   // ---------------------------------------------------------------- music
   const music = (id, o) => { if (has()) safe(() => Sound.music.set(id, o)); };
-  const LAYER_AT = { grubnak: 3, skitterra: 3, volkar: 3, hollowking: 5 };   // the phase (course) the harder variant starts
+  // the phase (course) where Normal crossfades into the boss's Hard track, late in the fight
+  const LAYER_AT = { grubnak: 3, skitterra: 3, volkar: 3, hollowking: 5, wyrm: 4, titan: 3, archmage: 4, hydra: 4 };
   function phase(bossId, n) {
-    // (the Hard track plays the whole fight: it is not layered over)
+    // (on Hard that track plays the whole fight: it is not layered over)
     if (has() && LAYER_AT[bossId] && n >= LAYER_AT[bossId] && !/-hard$/.test(String(Sound.music.current() || ''))) safe(() => Sound.music.layer('mus-' + bossId));
   }
   // the fight's track: 'mus-<boss>-hard' on Hard if that track exists, else 'mus-<boss>'

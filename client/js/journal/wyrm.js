@@ -4,7 +4,7 @@
   meet: {
     bastion: "Past the road the world is bigger than any wall I have held. The dragon follows whoever holds him, then leaves the ground altogether and comes down where he pleases. A line cannot hold what is not there. I learned to watch the sky. Gave ground.",
     gloomsworn: "Out past the road there are skies without ceilings. The Wyrm follows whoever stands before him, then leaves the earth and comes down wherever he pleases. I cannot guard what is not there. I looked up. I have lain under worse skies, and I was dead for those.",
-    thresher: "Beyond the road everything is bigger, the dragon included. Vhalgrath is weather with wings: drought on the ground, then hail out of a clear sky wherever he likes. I watched where the embers drew his road down. Nothing ripens on a hill that hot. Not yet.",
+    thresher: "Beyond the road everything is larger, the dragon included. Vhalgrath is weather with wings: drought on the ground, then hail from a clear sky wherever he pleases. I watched where the embers drew his road down. Nothing lingers on a hill that hot. Not yet.",
     bloodreaver: "Past the road, and finally a real fire in him! Claws like plough blades, a breath that cooks the floor, and then he flew off before I'd finished enjoying it. Cheeky. I want him back on the ground. I have never been so sure I'm in the right place.",
     runeguard: "Beyond the road the old texts run out, and the Wyrm writes his own. Two courts: the air gives plenty of warning; the ground gives none that I have yet read. I began a new volume and left the ground chapter blank. Not foreseen; now it will be.",
     gorgemaw: "Beyond the road: a roast of the first rank, a great black beast with fire in the belly, served from the sky. I am told it is too hot to eat. I shall be the judge of that. I came away hungry, and singed, and happier than I have been in weeks.",
@@ -26,7 +26,7 @@
   win: {
     bastion: "The Wyrm is down. The line held through the flights and the burning rim, and the crater is quiet. A long way past the Barrow, and still standing. I counted heads on a warm rock and said nothing for a while. Held.",
     gloomsworn: "He is down. The crater is quiet, and I am still here, which still surprises me. A long post, and a long way from the road. Somebody else may keep the watch a while. The watch is relieved.",
-    thresher: "Vhalgrath has come in at last, and the crater can lie fallow a while. I said a few kind words over him; he was old weather, and old weather earns them. Something new in me, not yet ripe. Plenty of time.",
+    thresher: "Vhalgrath has come in at last, and the crater may go quiet. I said a few courteous words over him; he was old weather, and old weather has earned them. Something new stirs in me, not yet due. In time.",
     bloodreaver: "The big lizard is down, and every scar he gave me is still warm. The best fire I ever took, and I took all of it. I'll remember his heart opening for the rest of my life. Thank you, my friend. What's next?",
     runeguard: "The Wyrm is judged, and the air with him. I read the sky at last: every line drawn before it was walked, every fire shown before it fell. The blank chapter is filled. As foreseen, finally.",
     gorgemaw: "The roast is carved. Smoke, ash and a touch of old bone. I ate until I could not feel my teeth, and it was worth every burn. Slightly overdone. Magnificent. Beyond the road, they know how to cook.",
@@ -48,7 +48,7 @@
     "Tyrant's Roar": { hard: false, learned: {
       bastion: "He roared, and it reached every one of us. Nowhere to stand that was not in it. I kept the line close to our healer, boots set, and took it standing. A shield means nothing against a sound. I held it up out of respect for the shield.",
       gloomsworn: "His roar went through every one of us, and no shield was any use against sound. I stood close to the one who mends and let the dark take its share of me. It was a long note. I have heard lower, from the grave.",
-      thresher: "His roar comes down on all of us at once, and there's no hedge to stand behind. I topped myself up before his throat swelled and kept my hands busy through it. Lovely lungs, though. Nobody grows a voice like that on grass.",
+      thresher: "His roar falls on all of us at once, and there is nowhere to hide. I had myself topped up before his throat swelled and kept my hands busy through it. Exquisite lungs, though. Few voices carry like that.",
       bloodreaver: "The roar went through my ribs and every one of my friends' too! Nothing in it for me, shameful, but they felt it, so I stayed by the healer and let them be topped up after. Ha. He's got lungs.",
       runeguard: "His throat swells and the air shakes. The roar reaches the whole crater and no ward turns it, so each of us must be whole before it sounds. I annotated it in a steady hand. The page shook anyway.",
       gorgemaw: "The roar is a course served to the whole table at once, and I cannot eat it for anyone. So we sat close, came to it well fed, and swallowed it together. Smoky, with a long finish, like an old cheese.",
@@ -69,7 +69,7 @@
     'Rending Claws': { hard: false, learned: {
       bastion: "The claws came down on me alone, a wide rake in front of him. I waited for the shoulder to drop, shield up in the last instant, and kept the others out of the arc. Claws like that make the Barrow King seem a gentleman.",
       gloomsworn: "The claws were meant for me. I watched his near shoulder and let the rake land where I stood. A wound is only a wound; mine are written down already. The rest kept wide of the arc.",
-      thresher: "The claws come in on our knight, a wide rake across the front of him, like a harrow dragged the wrong way. I stayed at his flank, well out of the arc, and kept working his side. Not my row, that one.",
+      thresher: "The claws come down on our knight, a wide rake across the front of him, a curtain drawn the wrong way. I kept to his flank, well out of the arc, and went on working his side. Not my appointment, that one.",
       bloodreaver: "The claws! A deep one across the front of him, and the wound stays good and open. I braced, took it, and answered it while it was fresh. Again, my friend, please.",
       runeguard: "He rears and the near claw lifts. A ward a breath before; the others well outside the arc in front of him. I had written the lift of the claw in the margin before it came. I count that as the first achievement of the new volume.",
       gorgemaw: "The claws are served to me alone, a heavy rake with a sauce that runs. I opened wide just before it, kept my friends off my plate, and chewed. Rare, and good. Next time, a little less char.",
@@ -90,7 +90,7 @@
     'Ember Breath': { hard: false, learned: {
       bastion: "He breathed at one of us, not me, and the fan of fire followed them. I kept the line clear of the long flames and off the glowing ground it left behind. Fire does not respect a post. I do.",
       gloomsworn: "The breath chose someone else, and followed them. I kept clear of its length and off the scorched floor after, which lingers. I know something of lingering.",
-      thresher: "The breath picks one of us and follows them like a sheepdog till the last. Whoever it is waits, then steps aside late, not back. The ground it scorches stays bad a good while; I kept off it like a burnt field.",
+      thresher: "The breath chooses one of us and follows them to the last. Whoever it is waits, then steps aside late, not back. The ground it scorches stays foul a good while; I kept off it as I would a pyre still smoking.",
       bloodreaver: "A cone of fire! And it follows whoever he picks until the last moment. I like that. Step aside late and sideways, and keep off the molten ground after. A fine scar, not mine.",
       runeguard: "His head goes back and the fire gathers; it tracks its quarry until the last. Leave the fan sideways, late, and stay off the molten ground it leaves. I noted that the breath obeys the rule of a good argument: it follows until the last possible moment.",
       gorgemaw: "The breath is a flambé, served at one guest and following them round the table. Step out of the line at the last, and do not stand on the plate afterwards. Overcooked, but fashionably so.",
@@ -111,7 +111,7 @@
     'Tail Lash': { hard: false, learned: {
       bastion: "He swept the tail round behind him, not in front. I held my place at his front and the line stood to his sides. Whoever stood at his back learned it quickly. A tail is a rear guard of its own.",
       gloomsworn: "The tail swung behind him. I stood before his face, the rest at his flanks. Whoever stood at his back learned it the way I learned dying: once.",
-      thresher: "The tail comes round behind him like a flail on the threshing floor. I work from his side, never his back, and it passes me by. Whoever stood behind him learned it in one season.",
+      thresher: "The tail sweeps round behind him in a long, slow arc. I work from his side, never his back, and it passes me by. Whoever stood behind him learned the lesson once.",
       bloodreaver: "The tail! Behind him, a wide sweep, and I was in front for once. A good one, but not mine. The ones behind him were not so pleased. Stay at his sides.",
       runeguard: "His shoulders turn and the tail rises. The sweep is behind him, so the line stands at his sides or his front, and no one behind. Rear guard is a poor posting. I have never advised anyone to take it.",
       gorgemaw: "The tail is a side dish, served at the back of the table. Whoever sat at the back got the lot. I sat at the head, as a gourmand should. Underseasoned.",
@@ -132,7 +132,7 @@
     'Magma Burst': { hard: false, learned: {
       bastion: "The marks came up over the others, not me. I held his front while each took their own patch of floor and stepped off their own pool when it struck. A quiet job, for once: keeping him pointed away.",
       gloomsworn: "Marks rose over every head but mine. Each of them took a place apart and left the pool when it burst, and no one needed me for it. A rare quiet job.",
-      thresher: "A ring came up over each of us but our knight, and every one wanted its own plot. I walked out to mine, apart from the others, let it come in, then stepped off the pool it left. Soft ground, that.",
+      thresher: "A ring rose over each of us but our knight, and every one wanted its own ground. I walked out to mine, apart from the others, let it fall, then stepped off the pool it left. Poor footing, that.",
       bloodreaver: "Little circles of fire over my friends, and each leaves a puddle of molten rock. I stayed with the big lizard and let them handle theirs. Step out of your puddle, fast. I kept grinning and let them hop.",
       runeguard: "Marks over each of us, save the one in front. Each takes a patch of their own, apart, then leaves the pool behind. A beautifully orderly torment. I numbered the pools, briefly, before they cooled.",
       gorgemaw: "The marks were little canapés over my friends' heads, each landing in a puddle of sauce. I did not eat one. Each took their own plate and left it afterwards. Hot, hot, hot.",
@@ -153,7 +153,7 @@
     'Cinder Feast': { hard: false, learned: {
       bastion: "He marked one of us for a hit that had to be shared. I closed the line on them and took my share, standing in the ring, and we split it. Duty is lighter in numbers. I would not say so to a recruit.",
       gloomsworn: "One of us wore a ring to be shared. I walked in beside them, the rest followed, and the weight was cut into pieces small enough to carry. Nothing is heavy that many hands bear.",
-      thresher: "A blue ring over one of us, and it's a load to share, like a cart nobody pulls alone. All of us in under it together, and it came in light. Leave a hand out and the rest carry more.",
+      thresher: "A blue ring over one of us, a weight no one should carry alone. All of us in beneath it together, and it fell light. Leave a hand out and the rest carry more.",
       bloodreaver: "A blow too big for one! We all piled in on the marked one and split it between us. A fine scar each. Stand close, stand in the ring, and bleed together.",
       runeguard: "A ring over one of us, blue at the edge. It is a share, so everyone stands in it together, and it is divided among us. A reading of kindness, from a dragon. I shall not expect another.",
       gorgemaw: "A dish for the whole table, to be shared, the ring marked on the floor. We all sat down in it together and took a portion each. Large, and filling.",
@@ -174,7 +174,7 @@
     'Dragonfall': { hard: false, learned: {
       bastion: "He rose, and embers drew a line across the floor from the sky to a scorched pit. The line and the circle at its end were what hurt. I held the ground, clear of both. I refuse to be impressed by a falling dragon. I am a little impressed.",
       gloomsworn: "He rose out of sight, and the embers drew his road to a pit. The road hurts, and so does the ring at its end. I stood clear of both and watched him arrive on nothing.",
-      thresher: "Up he went, and the embers drew his road to one of the pits, the ring showing which. I stepped off the road and well clear of the pit, and let him dig it himself. Saves me the trouble.",
+      thresher: "Up he went, and the embers drew his road to one of the pits, the ring showing which. I stepped off the road and well clear of the pit, and let him dig it himself. It saves me the trouble.",
       bloodreaver: "He dives! A line of embers from the edge, and a great red circle where he lands. I wanted to meet him there. I stayed off the line and out of the circle, for once, and bled elsewhere.",
       runeguard: "Embers draw a line from the edge of the crater to one of three scorched pits, and a ring blooms on the pit he has chosen. Off the line and out of the ring. The line is the sentence; the ring, its punctuation.",
       gorgemaw: "The beast arrived by air, as a roast should: a trail of embers, a plate set at one of three pits. I stepped aside for the dish and kept off the plate. Served hot.",
@@ -195,7 +195,7 @@
     'Twin Pass': { hard: false, learned: {
       bastion: "Two lines of embers at once. He flew the first without landing, then came round on the second and came down. Clear of the first was not enough. I moved twice with no rest between. A dragon gives a man no time to form up.",
       gloomsworn: "Two roads of ember. The first he only flew over; the second he landed on. I left one, then the other, and did not rest between. Rest comes later. I have been promised it.",
-      thresher: "Two roads of embers. He only flies over the first and comes down on the second, so I stepped off one, then off the other, and didn't sit down between. Not the plot I'd have chosen to lie in.",
+      thresher: "Two roads of embers. He only flies over the first and comes down on the second, so I stepped off one, then off the other, and did not linger between. Not the resting place I would have chosen.",
       bloodreaver: "Two lines! The first he only passes over; the second ends in a ring and a landing. I moved clear of the first, then clear of the second. A cheat, I call that, and I loved it.",
       runeguard: "Two lines drawn, the later one fainter. The first is only a pass, the second ends in a landing, and both must be left. The second line is what a careless reader would miss.",
       gorgemaw: "Two courses from the air: the first only flies over the table, the second lands on it. I stepped clear of both, in order. The second was the better.",
@@ -216,7 +216,7 @@
     'The Roost': { hard: false, learned: {
       bastion: "He perched on the rim and shook his burning scales onto the floor, three at a time, and two whelps came down with them. The line kept moving off the scales and put the whelps down. Standing still would have been the first mistake.",
       gloomsworn: "He perched high and shed fiery scales in threes, two whelps dropping with them. We never stopped moving off the scales, and the whelps were dead before he came down. Idle hands are for graves.",
-      thresher: "He sat up on the rim and shook his burning scales loose, always one patch under somebody, so I kept walking. Two little whelps came down with them, and I put them in the ground before he dropped. Not ripe, but due.",
+      thresher: "He sat up on the rim and shook his burning scales loose, always one patch beneath somebody, so I kept walking. Two small whelps came down with them, and I sent them to the far shore before he dropped. Early, but due.",
       bloodreaver: "The big lizard sat on the rim and rained burning scales on us, and two little ones came to bite. Good fun. Keep moving, kill the little ones before he drops, or they go off.",
       runeguard: "He perches high and the scales fall, three at a time, always one under one of us. Keep moving, and put the whelps down before he comes to the ground, or they burst. A short text, with a very short deadline.",
       gorgemaw: "The beast sat on the rim and shook his burning crumbs onto the floor, and sent two small portions to nibble at us. Better to eat the portions than let them cool and burst. Crunchy.",
@@ -237,7 +237,7 @@
     'Crater Boils': { hard: false, learned: {
       bastion: "The ring of floor by the rim began to glow, and it stayed that way. From then on we fought on the inner ground only. I kept the line in from the edge for the rest of the night. A smaller yard to drill in, but a yard.",
       gloomsworn: "The edge of the floor began to glow and never stopped. We were given less room after that, so I kept us to the middle for the rest of the night. I have fought in smaller places. I have lain in smaller places.",
-      thresher: "The rim went from ember to flame and never cooled, so the field is smaller for the rest of the night. I kept to the inner ground, away from the edge, like ploughing short of a ditch.",
+      thresher: "The rim went from ember to flame and never cooled, so the arena is smaller for the rest of the night. I kept to the inner ground, away from the edge, as one declines the last step of a dark stair.",
       bloodreaver: "The rim boiled, and it stays boiled. A smaller room to hit him in. I like it close. Keep in from the edge, the glow bites for good.",
       runeguard: "The rim brightens and the stone along it weeps. It does not cool, so the room is smaller for the rest of the fight. Keep from the edge. I drew a new boundary on the map and pressed the pen hard.",
       gorgemaw: "The rim was set to boil, and it does not stop. The table shrank for the rest of the meal, and the edges are too hot to touch. I sat nearer the middle. Reduced, and rich.",
@@ -258,7 +258,7 @@
     'Twin Breath': { hard: false, learned: {
       bastion: "Two fans of fire at two of us, the second a heartbeat after the first. The line watched the first go and did not step into the second. Eyes up before feet. My sergeant's rule, borrowed.",
       gloomsworn: "Two breaths, two of us, the second a moment behind. We left the first and looked before stepping, because the second was waiting there. Dying twice in a row is not on my list.",
-      thresher: "Two breaths at two of us, the second a beat behind the first. I stepped out of the first and looked before I stepped again, because the second was waiting right where I meant to go. Two weathers in one afternoon.",
+      thresher: "Two breaths at two of us, the second a beat behind the first. I stepped out of the first and looked before I stepped again, because the second was waiting right where I meant to go. Two verdicts in one hour.",
       bloodreaver: "Two cones, two targets, one behind the other! The trick is not to leap out of the first right into the second. I stayed with the big lizard and let them dance.",
       runeguard: "Two heads of the same breath, the second a beat behind. Leave the first, and look before you step, for the second may be waiting. A sentence with a subordinate clause, and the clause is the dangerous part.",
       gorgemaw: "Two flambés, one after the other, at two different guests. Step out of yours and look before stepping into the next. I did not eat either one. Over-cooked.",
@@ -279,7 +279,7 @@
     'Heart Burn': { hard: false, learned: {
       bastion: "The Heart opened and he could not be hurt. Scorch marks bloomed at the three pits one after another, and the last one marked where the fire would not reach. The line stood round it, off the mark. Held.",
       gloomsworn: "The Heart opened and nothing could touch him. Three scorches came up in turn; the last is where the great fire does not fall. We gathered round it, never on it. The first two taught me which.",
-      thresher: "His heart opened and nothing of ours would bite. Scorches came up at the pits one after another, and the last one is the only ground the great fire spares. I stood close round it, off the scorch, and waited for it to come in.",
+      thresher: "His heart opened and nothing of ours would bite. Scorches came up at the pits one after another, and the last one is the only ground the great fire spares. I stood close round it, off the scorch, and waited for it to fall.",
       bloodreaver: "His heart opened in his chest, and I could not touch him. Three marks, one after another, and the last is where the fire does not go. I stood by it, and not on it, and bled for nothing at all.",
       runeguard: "Three marks bloom in turn, and the third is where the great fire will not fall. Once the first two are known, the third is known; stand around it, but not on it. A proof by induction, written in embers.",
       gorgemaw: "The beast opened his heart, and we were not to touch. Three little dishes were set out in turn, and the last was the only seat the fire did not reach. We sat round it. Not on it. Rich.",
@@ -300,7 +300,7 @@
     'Wingbeat': { hard: true, learned: {
       bastion: "His wings beat as he flew, and everything near the line was shoved away from it. I stood far enough from the line that it only nudged me, and held my footing. A man can be moved. The trick is to be asked politely.",
       gloomsworn: "The wingbeat threw everything near his flight line outward. I stood well back from it and felt only a nudge. Nearer, you meet the wall; I keep a good distance from both.",
-      thresher: "His wings stirred a gale down the dive road, and anyone near it was tossed like chaff off the threshing floor. I stood well back from the road, not just off it, and kept clear of the walls besides.",
+      thresher: "His wings stirred a gale down the dive road, and anyone near it was flung like ash from a pyre. I stood well back from the road, not just off it, and kept clear of the walls besides.",
       bloodreaver: "A shove from his wings, and everyone near the line goes flying! I like a good shove. Stay well back from the line, or be carried away from it, or into the wall.",
       runeguard: "The wings lift as he enters the line. Those near it are thrown outward, so stand well back from it, or be ready for the wall. A footnote for the wall, in red.",
       gorgemaw: "The wings carried a gust that threw the diners from the table's middle. I took my plate to the far end, well away from the line, and stayed seated. Blown, not eaten.",
@@ -321,7 +321,7 @@
     'Cinder Rain': { hard: true, learned: {
       bastion: "Embers fell across the crater, each in a little circle that burned afterwards. I held my ground, watched for the circles, and moved only when one landed near me. A man under rain does not need to run.",
       gloomsworn: "Embers fell everywhere in small circles, each leaving a burning patch. I walked clear of whichever came near me and no further. There was no hurry in it.",
-      thresher: "Embers dropped in little circles all over the crater, each leaving a burning pool. I kept moving, watched where the next would come up, and went round. Plenty of fresh holes out there to fall into; I took none.",
+      thresher: "Embers dropped in small circles all over the crater, each leaving a burning pool. I kept moving, watched where the next would rise, and went round. Plenty of fresh pits out there to fall into; I took none.",
       bloodreaver: "Sparks! All over the floor, and each leaves a pool. A scar for every one, if you like, and I do not, today. Keep moving, and watch the little circles.",
       runeguard: "Small circles bloom one after another across the whole crater. Each leaves a pool, so watch where the next one appears, and do not stand still. I read the pattern on the third; the first two were tuition.",
       gorgemaw: "A shower of sparks from the great oven. Little circles of heat, each leaving a puddle of sauce. I ate none, and moved along the table. Over-seasoned.",
@@ -342,7 +342,7 @@
     'Heart Flare': { hard: true, learned: {
       bastion: "The Heart flared. One of us was marked for a hit we had to share, so I closed the line on them; and the moment it landed we scattered, each to our own patch. Two orders in one breath. The line took both.",
       gloomsworn: "A ring over one of us to be shared, so we closed in on it. The instant it landed there were rings over everyone, and we went apart, each to a space of our own. First gather, then leave.",
-      thresher: "First a ring over one of us to share, so we all stood in close like sheaves in a stook. The moment it came in, a ring over each head, so out to our own ground. Together, then apart, one season after the other.",
+      thresher: "First a ring over one of us to share, so we all stood in close, one cloak among many. The moment it fell, a ring over each head, so out to our own ground. Together, then apart, one step after the other.",
       bloodreaver: "A flare! First everyone piles onto the one who is marked, then we all fly apart before the second blow. A fine scar, and a good dance.",
       runeguard: "A ring over one of us, to be shared; and the instant it lands, marks over all. Together first, then apart. The order is the whole text, and I underlined it twice.",
       gorgemaw: "A course for the table, then dessert for each. First all sit down together at the marked seat and share it, then each rises and takes a plate of their own. Rich.",

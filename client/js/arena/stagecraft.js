@@ -67,7 +67,7 @@ const Stagecraft = (() => {
   // a Doll move for drawing (ability-vfx.js calls it when anyone's Doll acts): kind 'jab' | 'spin' | 'cut' | 'finale' | 'pull' | 'swap' | 'hit'
   function act(ownerId, kind, now, i) { S.acts.set(ownerId + ':' + (i == null ? '*' : i), { kind, t0: now }); }
   function actOf(ownerId, i, now) {
-    const a = S.acts.get(ownerId + ':' + i) || S.acts.get(ownerId + ':*');
+    const a1 = S.acts.get(ownerId + ':' + i), a2 = S.acts.get(ownerId + ':*'), a = !a1 ? a2 : !a2 ? a1 : a1.t0 >= a2.t0 ? a1 : a2;   // (the newer act wins)
     return a && now - a.t0 < 2.6 ? a : null;
   }
   // where someone's Dolls are right now (for effects): [{ x, y }]

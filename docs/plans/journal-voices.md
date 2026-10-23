@@ -455,28 +455,29 @@ Each sheet: who they are, how they sound, what they notice, their tics, and two 
 
 ---
 
-### thresher — Thresher, Scythe-Farmer (dps)
+### thresher — Reaper, Wraith of the Toll (dps)
 
-**Who:** A farmer who is also the one who digs the graves, and sees no difference between the two jobs. Everything ripens in its time; she only has to be there.
+**Who:** A slim, hooded figure in a long violet-black cloak, a pale mask, and a graceful crescent scythe that moves like a dance. Everyone keeps an appointment; she only has to be there on time.
 
-**Voice:** Warm, chatty, unhurried, with a pause before the word that matters. Rural plain-speech; a low fond laugh. Cheerful about terrible things and never in a hurry, which is the unnerving part. Vocabulary of the field and the plot: furrow, row, headland, stubble, sheaf, stook, chaff, plough, spade, soil, ripe, rot, weeds, fallow. (Weather, seasons and planting belong to the Grovekeeper; keep those to a passing word.)
+**Voice:** Cool, composed, darkly elegant. Quiet amusement, never cruel, never hurried. Short, precise sentences and a dry wit. Vocabulary of appointments and hours: the toll, a debt come due, a name on the list, the far shore, the mist, the dark, the dance. Addresses the boss with courtesy, as someone whose time is coming. (Debts and fine print belong to the Oathbroker; keep "debt" to a passing word.)
 
-**Notices:** Timing in the sense of when a thing is ready: the telegraph of a blow as a crop coming ripe, ground that has been worked, ground that is spent. The kind of soil one stands on. What will need burying afterwards.
+**Notices:** Timing in the sense of when a thing comes due: the telegraph of a blow as an hour approaching, a mark that has darkened, a mark that has lapsed. Who is about to be called. Where the mist gathers and where it thins.
 
 **Tics:**
-- A farm comparison now and then (not every line): "like chaff off a threshing floor".
-- Graveyard cheer: "Room for one more.", "Not the plot I would have chosen to lie in."
-- Easy sign-offs: "Plenty of time.", "Not yet.", "Wrong season for that one.", a pleased "Ha."
-- Talks to the boss kindly, as to something about to be put in the ground.
+- An appointment or the dance now and then (not every line): "the hour is not yet his".
+- Courteous farewells to the boss, as to someone expected: "He has an appointment.", "His name is on the list."
+- Sparing sign-offs: "Not yet.", "In time.", a faint "Hm." Most entries simply stop.
+- Never cheerful, never folksy, no "lovely".
 
 **Samples:**
-> Up he went, and the embers drew his road to one of the pits, the ring showing which. I stepped off the road and well clear of the pit, and let him dig it himself. Saves me the trouble.
+> Up he went, and the embers drew his road to one of the pits, the ring showing which. I stepped off the road and well clear of the pit, and let him go down it alone. His appointment, not mine.
 
-> Cut a head and the stump bleeds, and a blue ring opens at the column behind. Someone has to stand in it till it shuts, or two sprout like weeds. The first cut grows back late, so take the mildest first.
+> Cut a head and the stump bleeds, and a blue ring opens at the column behind. Someone must stand in it until it closes, or two return in its place. The first cut grows back late, so take the mildest first. Not yet.
 
-**Don't:** use a "like ... in a field" simile in every entry (it had become a formula), or make her sinister on purpose. She is never cruel.
+**Don't:** make her sinister on purpose, or turn every entry into an appointment joke. She is never cruel, never hurried, and never speaks of farm or field.
 
 ---
+
 
 ## Quick reference: who notices what
 
@@ -500,12 +501,13 @@ Each sheet: who they are, how they sound, what they notice, their tics, and two 
 | threadweaver | seams, slack and who's tied to whom | "Mind the slack." |
 | marionettist | staging, cues and the company | (stage directions) |
 | gloomsworn | a post kept, and a wound already written down | a dry aside about being dead |
-| thresher | what is ripe, what needs burying, and ground already worked | "Plenty of time." |
+| thresher | what is coming due, what has lapsed, and the hour of the appointment | "Not yet." |
 
 **Pairs most likely to blur, and how to keep them apart:**
 - Bastion / Ironpalm / Runeguard (all "brace before the blow"): Bastion holds his ground, Ironpalm answers a word, Runeguard foresaw it.
 - Cleric / Grovekeeper / Alembist (all "heal before"): Cleric prays for people, Grovekeeper reads weather and plants, Alembist labels an ailment and brews its cure.
 - Ranger / Driftblade (both move a lot): Ranger stands off and picks an angle in few words; Driftblade runs through in one long breath.
 - Gloomsworn / Bastion (both tanks who take the blow): Bastion braces a shield at the last instant and ends "Held."; Gloomsworn lets the wound in, draws the dark about him, and makes a dry remark about having died. Different verbs, different endings, and never the same nouns for the ground ("footing", "line" are Bastion's).
-- Thresher / Grovekeeper (both farm talk): Grovekeeper reads weather and plants before; Thresher works rows and spades, waits for a thing to ripen, and jokes pleasantly about graves.
+- Reaper / Oathbroker (both speak of what is owed): Oathbroker reads terms and fine print and ends "So noted."; Reaper keeps appointments and the hour, and ends "Not yet."
+- Reaper / Gloomsworn (both at ease with death): Gloomsworn takes the blow and makes a dry remark about having died; Reaper is the one who calls the hour, courteous and unhurried.
 - Shadowblade / Marionettist (both theatrical): Shadowblade is noir and alone; Marionettist is the stage and the whole company.

@@ -28,6 +28,8 @@ const TOWN = {
   lamps: [],
   trees: [],
   spawn: { x: 1200, y: 1180 },
+  // the Arena (PvP, pvp-ui.js draws it): a stone pit south of the Training Yard, its gate on the north rim
+  arena: { x: 1990, y: 1405, w: 230, h: 160, door: { x: 2105, y: 1398 } },
 };
 
 const COLLIDERS = { rects: [], circles: [] };
@@ -56,6 +58,7 @@ function initTown() {
   TOWN.lamps.push({ x: 700, y: 790 }, { x: 700, y: 1110 }, { x: 690, y: 650 }, { x: 1710, y: 650 });
 
   for (const b of [TOWN.tavern, TOWN.smithy, ...TOWN.houses]) COLLIDERS.rects.push({ x: b.x, y: b.y, w: b.w, h: b.h });
+  if (TOWN.arena) COLLIDERS.rects.push({ x: TOWN.arena.x, y: TOWN.arena.y + 14, w: TOWN.arena.w, h: TOWN.arena.h - 14 });
   for (const [x, y, s] of t) COLLIDERS.circles.push({ x, y: y + 4, r: 18 * s });
   for (const p of TOWN.pedestals) COLLIDERS.circles.push({ x: p.x, y: p.y, r: 58 });
   for (const l of TOWN.lamps) COLLIDERS.circles.push({ x: l.x, y: l.y, r: 8 });
@@ -317,6 +320,7 @@ function buildTownLayer(scale) {
 
   // buildings, then trees on top
   for (const b of [TOWN.tavern, TOWN.smithy, ...TOWN.houses]) drawBuilding(g, b);
+  if (TOWN.arena && typeof PvpView !== 'undefined') PvpView.drawBuilding(g, TOWN.arena);
   const tr = rng(99);
   for (const [x, y, s] of [...TOWN.trees].sort((a, b) => a[1] - b[1])) drawTree(g, x, y, s, tr);
 

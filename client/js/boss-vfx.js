@@ -113,6 +113,32 @@ const BOSS_VFX = (() => {
   // Grubnak's ghost cleaver coming down flat on the floor exactly where the hit lands: the same blade the Chop Chop
   // warning hangs in the air (edge along (ex, ey) from the point o, body off to the side (nx, ny)), slammed down,
   // biting in with a white-hot edge, held a moment, then gone. u runs along the edge (-L..L), v into the blade (0..W).
+  // Tenderize: the same ghost cleaver dropped upright out of the air onto one spot, edge first, the blade biting into the
+  // tiles and standing there a moment (its shadow closes in under it as it falls)
+  function droppedCleaver(x, y, o = {}) {
+    const W = o.w ?? 46, H = o.h ?? 64, FALL = 0.12;
+    VFX.fx({ dur: o.dur ?? 0.9, layer: 'air', draw: (c, p, t, e) => {
+      const f = Math.min(1, t / FALL), z = (1 - f * f) * (o.from ?? 340), bite = f >= 1 ? 7 : 0, k = e.a * Math.min(1, (1 - p) / 0.35);
+      c.save();
+      c.globalAlpha = k * 0.3 * (0.4 + 0.6 * f); c.fillStyle = '#140a04';
+      c.beginPath(); c.ellipse(x, y + 4, W * (0.5 + 0.5 * f), 9 * (0.5 + 0.5 * f), 0, 0, TAU); c.fill();
+      c.translate(x, y - z + bite); c.globalAlpha = k * 0.95;
+      // the handle, up out of the spine
+      c.fillStyle = '#5a3a22'; c.strokeStyle = '#1a1410'; c.lineWidth = 3;
+      c.beginPath(); c.rect(W * 0.32, -H - 46, 13, 50); c.fill(); c.stroke();
+      // the blade: edge down, steel shading from the edge to the spine
+      const g = c.createLinearGradient(0, 0, 0, -H);
+      g.addColorStop(0, '#ffffff'); g.addColorStop(0.12, '#e6eaee'); g.addColorStop(0.6, '#b4bcc6'); g.addColorStop(1, '#8a939e');
+      c.beginPath(); c.moveTo(-W, -bite); c.lineTo(W, -bite); c.lineTo(W, -H); c.lineTo(-W * 0.72, -H); c.lineTo(-W, -H * 0.74); c.closePath();
+      c.fillStyle = g; c.fill(); c.lineWidth = 4; c.stroke();
+      c.strokeStyle = 'rgba(255,255,255,0.5)'; c.lineWidth = 5; c.lineCap = 'round';
+      c.beginPath(); c.moveTo(-W * 0.5, -H * 0.3); c.lineTo(W * 0.2, -H * 0.75); c.stroke();
+      // falling: a few speed lines above it; landed: the edge white-hot where it bit in
+      if (f < 1) { c.strokeStyle = 'rgba(255,240,210,0.6)'; c.lineWidth = 3; for (const dx of [-W * 0.6, 0, W * 0.6]) { c.beginPath(); c.moveTo(dx, -H - 20); c.lineTo(dx, -H - 90); c.stroke(); } }
+      else { c.strokeStyle = '#fff4d8'; c.lineWidth = 3; c.globalAlpha = k * Math.max(0, 1 - (t - FALL) / 0.4); c.beginPath(); c.moveTo(-W, -bite); c.lineTo(W, -bite); c.stroke(); }
+      c.restore();
+    } });
+  }
   function flatCleaver(ox, oy, ex, ey, nx, ny, L, W, o = {}) {
     const off = o.off ?? 16, P = (u, v, z = 0) => [ox + ex * u + nx * v, oy + ey * u + ny * v - z];
     // (flat on the floor: it lies under everyone standing on it, inside the room, so it never hides a player or the boss
@@ -931,16 +957,12 @@ const BOSS_VFX = (() => {
       VFX.burst(x, y - 20, { color: '#f4f0ff', n: 14, speed: 220, size: 9 });
       webDecal(x, y, 120, 7);
     } else {
-      // Tenderize: the ghost cleaver comes down flat along the cone, out from him through the tank, and cuts the floor
-      // the length of it
-      const ca = Math.cos(s.angle), sa = Math.sin(s.angle), r = s.r || 320, mid = (60 + r) / 2;
-      // (the handle at his end, under him: the blade reaches out from his hand to the cone's edge, never past it)
-      flatCleaver(s.x + ca * mid, s.y + sa * mid, -ca, -sa, sa, -ca, (r - 60) / 2, 90, { off: -45, from: 60 });
-      after(0.06, () => {
+      // Tenderize: the ghost cleaver drops edge-first out of the air onto the tank, bites into the floor, and is gone
+      droppedCleaver(x, y);
+      after(0.1, () => {
         bang(x, y, 95, { n: 14 });
         VFX.hit(x, y, '#ff5a3a', 2.2);
-        AFT.gouge(s.x + ca * 60, s.y + sa * 60, s.x + ca * r, s.y + sa * r, { w: 20, dur: 9 });
-        for (let d = 90; d < r; d += 80) bang(s.x + ca * d, s.y + sa * d, 40, { n: 9, dur: 0.32 });
+        AFT.gouge(x - 46, y + 4, x + 46, y + 4, { w: 18, dur: 9 });
         VFX.sparks(x, y, { color: '#fff0c8', n: 12, speed: 340 });
         VFX.debris(x, y, { color: '#e2d6c0', n: 7, speed: 1.1, size: 1.3 });
         shake(9);

@@ -11,7 +11,8 @@
 //   Rare       stats + a small effect               Legendary  a strong effect (class enhancements live here)
 //   Mythic     a build-defining effect (two per boss)
 
-const GEAR_CAPS = { hp: 150, phys: 150, mag: 150, def: 100, haste: 10, crit: 10 };
+// (raised for set 2's step: set-1 gear alone tops out under the old 150/150/100/10/10; fight.js clamps HP and DEF to match)
+const GEAR_CAPS = { hp: 180, phys: 160, mag: 160, def: 110, haste: 12, crit: 12 };
 const CLASS_MAIN = {
   bastion: 'phys', bloodreaver: 'phys', ranger: 'phys', shadowblade: 'phys',
   runeguard: 'mag', pyromancer: 'mag', cleric: 'mag', grovekeeper: 'mag', chronomancer: 'mag',
@@ -35,8 +36,10 @@ const STAT_INFO = {
   crit: { name: 'Critical', fmt: v => `+${v}%` },
 };
 
-// Where an item comes from (an item's `tier`). Every boss drops gear of the same strength: there is no ladder where one
-// fight's loot replaces the last. Bosses differ in themes, effects and party bonuses, not in how good their gear is.
+// Where an item comes from (an item's `tier`). Within a set every boss drops gear of the same strength: bosses differ in
+// themes, effects and party bonuses, not in how good their gear is. Set 2 (tiers 5-8) is one step up: its pieces carry
+// SET2_STEP times the budget of a set-1 piece of the same rarity, so the new realm's loot is worth wearing.
+const SET2_STEP = 1.15, SET2_ILVL = 8;
 const TIERS = { 0: { name: 'Recruit' }, 1: { name: 'Grubnak' }, 2: { name: 'Skitterra' }, 3: { name: 'Volkar' }, 4: { name: 'Hollow King' },
   5: { name: 'Vhalgrath' }, 6: { name: 'Hrimgar' }, 7: { name: 'Azerath' }, 8: { name: 'The Hydra' } };
 
@@ -68,17 +71,17 @@ const ITEM_PERKS = {
   runeguard_w1: { ab: 'strike', text: 'Rune Strike has a 25% chance to give an extra Rune.' },
   runeguard_a2: { ab: 'ward', text: 'Runic Ward is 25% stronger (and so is its blast).' },
   runeguard_w2: { ab: 'glyph', text: 'Glyph Burst refunds 1 Rune.' },
-  ranger_w1: { ab: 'quick', text: 'Quick Shot lights up Keen Eye 10% more often.' },
+  ranger_w1: { ab: 'quick', text: 'Quick Shot has a 10% higher chance to light up Keen Eye.' },
   ranger_a2: { ab: 'rapid', text: 'Rapid Fire refunds 10 Focus.' },
-  ranger_w2: { ab: 'pierce', text: 'A Keen Eye Piercing Arrow fires a second arrow for 50% damage.' },
+  ranger_w2: { ab: 'pierce', text: 'A Keen Eye Piercing Arrow fires a second arrow, for about 125 damage.' },
   shadowblade_w1: { ab: 'venom', text: 'Venom Blade\'s poison hits 25% harder.' },
   shadowblade_a2: { ab: 'step', text: 'Shadowstep gives 1 combo point.' },
   shadowblade_w2: { ab: 'evis', text: 'A 5-point Eviscerate strikes a second time for 30% damage.' },
   pyromancer_w1: { ab: 'fireball', text: 'Fireball has +10% critical chance.' },
   pyromancer_a2: { ab: 'vent', text: 'Overheating only burns you for half as much.' },
   pyromancer_w2: { ab: 'pyro', text: 'A Hot Streak Pyroblast sets the target burning for 9s.' },
-  cleric_w1: { ab: 'petal', text: 'Dawn Petal\'s regen is 50% stronger.' },
-  cleric_a2: { ab: 'bene', text: 'Benediction\'s shield is 60% stronger.' },
+  cleric_w1: { ab: 'petal', text: 'Dawn Petal\'s regen is 50% stronger (an Aegis\'s Petal shield about 25%).' },
+  cleric_a2: { ab: 'bene', text: 'Benediction\'s shield is 60% stronger (Condemn brands the boss for 6 hits instead of 4).' },
   cleric_w2: { ab: 'smite', text: 'Dawnstar also heals the whole party.' },
   grovekeeper_w1: { ab: 'thorn', text: 'Thornlash hits 25% harder.' },
   grovekeeper_a2: { ab: 'rejuv', text: 'Rejuvenate ticks grow 7 Bloom instead of 5.' },
@@ -97,12 +100,12 @@ const ITEM_PERKS = {
   grovekeeper_w3: { ab: 'growth', text: 'Wild Growth gives 25 Bloom.' },
   chronomancer_w3: { ab: 'accel', text: 'Accelerando also heals the whole party.' },
   // the Hollow King (tier 4): the barrow's armour, each with something of the old court in it
-  bastion_a4: { ab: 'bulwark', text: 'Bulwark cuts damage by 50% instead of 40%.' },
+  bastion_a4: { ab: 'bulwark', text: 'Bulwark cuts damage by 50% instead of 40% (Zealous Guard 40% instead of 30%).' },
   bloodreaver_a4: { ab: 'letting', text: 'Bloodletting also heals you for 5% of your HP.' },
   runeguard_a4: { ab: 'ward', text: 'Runic Ward lasts 12s instead of 8s.' },
   ranger_a4: { ab: 'rapid', text: 'Rapid Fire hits 15% harder.' },
-  shadowblade_a4: { ab: 'step', text: 'Shadowstep\'s True North lasts 8s instead of 5s.' },
-  pyromancer_a4: { ab: 'combust', text: 'Combustion lasts 13s instead of 10s.' },
+  shadowblade_a4: { ab: 'step', text: 'Shadowstep\'s True North lasts 8s instead of 5s (Blade Fury: each use takes 2s off its recharge).' },
+  pyromancer_a4: { ab: 'combust', text: 'Combustion lasts 13s instead of 10s (Ember Circle 26s instead of 20s).' },
   cleric_a4: { ab: 'prayer', text: 'Prayer Circle\'s regen is 50% stronger.' },
   grovekeeper_a4: { ab: 'thorn', text: 'Thornlash also grows 5 Bloom.' },
   chronomancer_a4: { ab: 'rewind', text: 'Rewind reaches back 6 seconds instead of 4.' },
@@ -110,7 +113,7 @@ const ITEM_PERKS = {
 // Alembist (classes-b): one per drop, like every class (Grubnak w1, Skitterra a2 + w2, Volkar w3, the Hollow King a4)
 Object.assign(ITEM_PERKS, {
   alembist_w1: { ab: 'dew', text: 'A Mending Draught splashes 20% wider.' },
-  alembist_a2: { ab: 'salt', text: 'A Salt Ward lasts 2s longer.' },
+  alembist_a2: { ab: 'salt', text: 'A Salt Ward lasts 2s longer (a Silver Mirror 1.5s longer).' },
   alembist_w2: { ab: 'ember', text: 'A Fire Bomb also leaves the enemy burning for 6s.' },
   alembist_w3: { ab: 'batch', text: 'Grand Batch also brings Distill back.' },
   alembist_a4: { ab: 'distill', text: 'Distill also makes the next vial you brew start fully ripe.' },
@@ -125,14 +128,14 @@ Object.assign(CLASS_GEAR, {
   driftblade: { wtype: 'sabre', w: ["Recruit's Sabre", 'Filleting Sabre', 'Silkwind Sabre', 'Galecutter Sabre', 'Sabre of the Last Wind'], a: ['Kitchen-Runner Leathers', 'Webdancer Leathers', 'Squall-Rider Leathers', 'Barrowwind Leathers'] },
 });
 Object.assign(ITEM_PERKS, {
-  thermist_w1: { ab: 'cinder', text: 'Cinder Bolt hits 20% harder at +3 or hotter.' },
+  thermist_w1: { ab: 'cinder', text: 'Cinder Bolt (or Thermocline) hits 20% harder at +3 or hotter.' },
   thermist_a2: { ab: 'equil', text: 'Equilibrium\'s shield is 50% stronger.' },
   thermist_w2: { ab: 'invert', text: 'Inversion\'s Thermal Shock is 30% stronger.' },
   thermist_w3: { ab: 'lance', text: 'Glacier Lance hits 15% harder at -3 or colder.' },
   thermist_a4: { ab: 'invert', text: 'Inversion\'s Attunement lasts 14s instead of 10s.' },
   driftblade_w1: { ab: 'carve', text: 'Carve\'s follow-through cut hits for 50% instead of 30%.' },
   driftblade_a2: { ab: 'still', text: 'Stillpoint also gives 20 Drift.' },
-  driftblade_w2: { ab: 'cross', text: 'A Crosswind at 90 Drift or more strikes a second time for 30%.' },
+  driftblade_w2: { ab: 'cross', text: 'A Crosswind at 90 Drift or more strikes a second time for 30% (a Comet\'s Impact at 180 or more).' },
   driftblade_w3: { ab: 'gale', text: 'Gale Run lasts 15s instead of 12s.' },
   driftblade_a4: { ab: 'slip', text: 'Slipstream gives 25 Drift instead of 15.' },
 });
@@ -147,24 +150,24 @@ Object.assign(CLASS_GEAR, {
 Object.assign(ITEM_PERKS, {
   gorgemaw_w1: { ab: 'gnash', text: 'Gulp heals 3.5% of your HP instead of 2%.' },
   gorgemaw_a2: { ab: 'wide', text: 'Open Wide stays open 0.4s longer.' },
-  gorgemaw_w2: { ab: 'spit', text: 'A critical Spit hits again for about 60.' },
+  gorgemaw_w2: { ab: 'spit', text: 'A critical Spit hits again for about 60 (Regurgitate: every Morsel that crits).' },
   gorgemaw_w3: { ab: 'bottomless', text: 'Bottomless also shields the party.' },
-  gorgemaw_a4: { ab: 'iron', text: 'Iron Gut takes 50% off instead of 40%.' },
+  gorgemaw_a4: { ab: 'iron', text: 'Iron Gut takes 50% off instead of 40% (Stone Belly 40% instead of 30%).' },
   oathbroker_w1: { ab: 'collect', text: 'Your combo pays down 50% more of the Ledger.' },
-  oathbroker_a2: { ab: 'reneg', text: 'Renegotiate also shields you.' },
-  oathbroker_w2: { ab: 'settle', text: 'Settle also heals you for 5% of your HP.' },
+  oathbroker_a2: { ab: 'reneg', text: 'Renegotiate (or Moratorium) also shields you.' },
+  oathbroker_w2: { ab: 'settle', text: 'Settle (or Audit) also heals you for 5% of your HP.' },
   oathbroker_w3: { ab: 'lien', text: 'Lien lasts 13s instead of 10s (a Guarantor\'s bond 13s instead of 10s).' },
-  oathbroker_a4: { ab: 'default', text: 'After Default the Ledger is closed for 7s instead of 10s.' },
+  oathbroker_a4: { ab: 'default', text: 'After Default (or Foreclose) the Ledger is closed for 7s instead of 10s.' },
 });
 // ---------------------------------------------------------------- Ironpalm (tank): iron knuckle wraps for a weapon, gis for armour
 CLASS_MAIN.ironpalm = 'phys';
 CLASS_GEAR.ironpalm = { wtype: 'wraps', w: ["Recruit's Knuckle Wraps", 'Butcher-Twine Wraps', 'Silk-Bound Iron Wraps', 'Thunder-Iron Wraps', 'Wraps of the Barrow Monk'], a: ['Scullery Gi', 'Webweave Gi', 'Stormcloud Gi', 'Gravestill Gi'] };
 Object.assign(ITEM_PERKS, {
   ironpalm_w1: { ab: 'palm', text: 'Crane Step gives 30 Breath instead of 22.' },
-  ironpalm_a2: { ab: 'read', text: 'A perfect Read also shields you for about 8% of your HP.' },
+  ironpalm_a2: { ab: 'read', text: 'A perfect Read also shields you for about 5% of your HP (at most once every 10s).' },
   ironpalm_w2: { ab: 'fist', text: 'Thousand Palms strikes a sixth time, for 30% of a strike.' },
-  ironpalm_w3: { ab: 'bell', text: 'Temple Bell\'s Second Wind lasts 20s instead of 15s.' },
-  ironpalm_a4: { ab: 'skin', text: 'Iron Skin cuts damage by 50% instead of 40%.' },
+  ironpalm_w3: { ab: 'bell', text: 'Temple Bell\'s Second Wind lasts 20s instead of 15s (Landslide\'s surge too).' },
+  ironpalm_a4: { ab: 'skin', text: 'Iron Skin cuts damage by 50% instead of 40% (Still Pond 35% instead of 25%, Bellows Stance 40% instead of 30%).' },
 });
 
 // ---------------------------------------------------------------- Threadweaver and Marionettist (classes-c)
@@ -177,14 +180,14 @@ Object.assign(CLASS_GEAR, {
 Object.assign(ITEM_PERKS, {
   threadweaver_w1: { ab: 'needle', text: 'Needle\'s tug heals 30% more.' },
   threadweaver_a2: { ab: 'tie', text: 'Tie also shields the ally you tie.' },
-  threadweaver_w2: { ab: 'mend', text: 'A Mend Seam that spends Spool heals 20% more.' },
+  threadweaver_w2: { ab: 'mend', text: 'A Mend Seam that spends Spool (and Embroider) heals 20% more.' },
   threadweaver_w3: { ab: 'snip', text: 'Snap releases 25% more of what each thread carried.' },
   threadweaver_a4: { ab: 'tapestry', text: 'Tapestry lasts 10s instead of 8s.' },
-  marionettist_w1: { ab: 'jab', text: 'Jab hits 15% harder.' },
-  marionettist_a2: { ab: 'swap', text: 'Swap also mends a torn String.' },
+  marionettist_w1: { ab: 'cue', text: 'Cue reaches: with the Doll out of reach, it lunges back onto its mark across your target and stabs.' },
+  marionettist_a2: { ab: 'swap', text: 'Swap (or Red Curtain) also sends the Doll out quick: its next three Jabs come twice as fast, as after a Cue.' },
   marionettist_w2: { ab: 'cross', text: 'A Cross-Cut that crosses the enemy builds 3 Encore instead of 2.' },
-  marionettist_w3: { ab: 'finale', text: 'Grand Finale\'s routine has six hits instead of five.' },
-  marionettist_a4: { ab: 'pirouette', text: 'Nothing can touch the Doll for 3s after Pirouette instead of 1.5s.' },
+  marionettist_w3: { ab: 'finale', text: 'Grand Finale also gives back a charge of Pull Strings.' },
+  marionettist_a4: { ab: 'pirouette', text: 'Nothing can touch the Doll for 3s after Pirouette instead of 1.5s (and for 3s after Tangle).' },
 });
 
 // ---------------------------------------------------------------- Gloomsworn (tank, class 18)
@@ -195,19 +198,19 @@ Object.assign(ITEM_PERKS, {
   gloomsworn_w1: { ab: 'rend', text: 'Every hit you land fills 10 Gloom instead of 8.' },
   gloomsworn_a2: { ab: 'strike', text: 'The barrier of Gloom Strike is 50% stronger.' },
   gloomsworn_w2: { ab: 'shade', text: 'Shade Step gives three echoes instead of two.' },
-  gloomsworn_w3: { ab: 'pall', text: 'Black Pall lasts 8s instead of 6s.' },
+  gloomsworn_w3: { ab: 'pall', text: 'Black Pall lasts 2s longer (and so does Vigil Ward\'s watch, and the guard of a Reaver of Dusk\'s Dusk Reave).' },
   gloomsworn_a4: { ab: 'mantle', text: 'Black Mantle takes 50% off instead of 40%.' },
 });
 
 // ---------------------------------------------------------------- Thresher (damage, class 19)
-// Weapon shape: 'scythe' (a long snath, a green-black blade). Placeholder item art until the painted set is in.
+// Weapon shape: 'scythe' (a long black snath, a pale crescent blade). Placeholder item art until the painted set is in.
 CLASS_MAIN.thresher = 'phys';
-CLASS_GEAR.thresher = { wtype: 'scythe', w: ["Recruit's Sickle", 'Carving-Hall Scythe', 'Silkcleaver Scythe', 'Stormbled Scythe', 'Scythe of the Last Harvest'], a: ['Scullery-Night Leathers', 'Webwatch Leathers', 'Stormvigil Leathers', 'Leathers of the Hollow Harvest'] };
+CLASS_GEAR.thresher = { wtype: 'scythe', w: ["Recruit's Sickle", 'Carving-Hall Scythe', 'Silkcleaver Scythe', 'Stormbled Scythe', 'Scythe of the Last Toll'], a: ['Scullery-Night Leathers', 'Webwatch Leathers', 'Stormvigil Leathers', 'Shroud of the Last Toll'] };
 Object.assign(ITEM_PERKS, {
   thresher_w1: { ab: 'slash', text: 'A Backswing cuts for 50% more.' },
-  thresher_a2: { ab: 'reap', text: 'A rotten affliction pays 80% instead of 65%.' },
+  thresher_a2: { ab: 'reap', text: 'A rotten affliction pays 80% instead of 65% (a Grim\'s pays in full).' },
   thresher_w2: { ab: 'hook', text: 'Hook ages the afflictions by 2.5s instead of 1.5s.' },
-  thresher_w3: { ab: 'wisp', text: 'Spirit Wisp lasts 20s instead of 15s.' },
+  thresher_w3: { ab: 'wisp', text: 'Spirit Wisp lasts 20s instead of 15s (Cull recharges 5s sooner).' },
   thresher_a4: { ab: 'blink', text: 'Gloam Blink takes 70% off for 1s instead of 50%.' },
 });
 
@@ -388,7 +391,7 @@ const ITEMS = {};
 // the actual numbers on an item instance { key }, for a given class (class/general 'main' becomes phys or mag)
 function itemStats(inst, clsId) {
   const it = ITEMS[inst.key]; if (!it) return {};
-  const k = RARITY[it.rarity].power;
+  const k = RARITY[it.rarity].power * (it.tier >= 5 ? SET2_STEP : 1);
   const out = {};
   for (const [s, v] of Object.entries(it.base)) {
     const stat = s === 'main' ? (it.main || CLASS_MAIN[clsId] || 'phys') : s;
@@ -398,7 +401,7 @@ function itemStats(inst, clsId) {
   return out;
 }
 const itemRarity = inst => (ITEMS[inst.key] ? ITEMS[inst.key].rarity : 0);
-const itemLevel = inst => RARITY[itemRarity(inst)].ilvl;
+const itemLevel = inst => RARITY[itemRarity(inst)].ilvl + (ITEMS[inst.key] && ITEMS[inst.key].tier >= 5 ? SET2_ILVL : 0);
 const sellPrice = inst => RARITY[itemRarity(inst)].sell;
 
 // can this class put this item in this slot?  slot: weapon | armor | acc1 | acc2
@@ -450,14 +453,16 @@ const PARTY_BONUS = {
     tiers: { 2: { haste: 0.02 }, 3: { hp: 0.03, haste: 0.02 }, 4: { hp: 0.04, haste: 0.03 } } },
   4: { name: 'Court of the Barrow', boss: 'The Hollow King', flavor: 'Kneel to no king. Stand together in the dark.',
     tiers: { 2: { dmg: 0.02 }, 3: { dmg: 0.02, crit: 0.02 }, 4: { dmg: 0.03, crit: 0.03 } } },
+  // set 2 (one step up, like its gear): each bonus comes in a step early, so two wearers get what set 1 asks three for, and
+  // trading a set-1 piece for the new realm's loot pays even though it costs a set-1 bonus
   5: { name: 'Cinder Pact', boss: 'Vhalgrath', flavor: 'Burn bright together, and nothing in the peaks stands before you.',
-    tiers: { 2: { dmg: 0.02 }, 3: { dmg: 0.02, haste: 0.02 }, 4: { dmg: 0.04, haste: 0.03 } } },
+    tiers: { 2: { dmg: 0.02, haste: 0.02 }, 3: { dmg: 0.04, haste: 0.03 }, 4: { dmg: 0.05, haste: 0.03 } } },
   6: { name: 'Frostbound', boss: 'Hrimgar', flavor: 'The White Reach yields to those who hold the line.',
-    tiers: { 2: { hp: 0.03 }, 3: { hp: 0.04, haste: 0.02 }, 4: { hp: 0.06, dmg: 0.02 } } },
+    tiers: { 2: { hp: 0.04, haste: 0.02 }, 3: { hp: 0.06, dmg: 0.02 }, 4: { hp: 0.07, dmg: 0.03 } } },
   7: { name: 'Circle of Seven', boss: 'Azerath', flavor: 'Seven circles, drawn together, close around the foe.',
-    tiers: { 2: { crit: 0.02 }, 3: { crit: 0.02, dmg: 0.02 }, 4: { crit: 0.03, haste: 0.02, dmg: 0.02 } } },
+    tiers: { 2: { crit: 0.02, dmg: 0.02 }, 3: { crit: 0.03, haste: 0.02, dmg: 0.02 }, 4: { crit: 0.04, haste: 0.02, dmg: 0.03 } } },
   8: { name: 'Nine Heads', boss: 'The Hydra', flavor: 'Cut one down and the rest grow wiser.',
-    tiers: { 2: { hp: 0.03 }, 3: { hp: 0.03, crit: 0.02 }, 4: { hp: 0.04, crit: 0.03, haste: 0.02 } } },
+    tiers: { 2: { hp: 0.03, crit: 0.02 }, 3: { hp: 0.04, crit: 0.03, haste: 0.02 }, 4: { hp: 0.05, crit: 0.03, haste: 0.03 } } },
 };
 const BONUS_STAT = { hp: 'max HP', dmg: 'damage', crit: 'critical chance', haste: 'haste' };
 const bonusText = m => Object.entries(m).map(([k, v]) => `+${Math.round(v * 100)}% ${BONUS_STAT[k]}`).join(', ');
@@ -517,6 +522,15 @@ function rollChest(bossId, mode, classes, rng) {
   }
   return out;
 }
+// The Raid Board's Loot tab: how often each item is in one chest, from the real roll above (n chests on a fixed seed,
+// so the same party always reads the same odds). -> { key: 0..1 }; items that can't roll for these classes are absent.
+function chestChances(bossId, mode, classes, n = 20000) {
+  let seed = 7; const rng = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  const hits = {};
+  for (let i = 0; i < n; i++) for (const k of new Set(rollChest(bossId, mode, classes, rng))) hits[k] = (hits[k] || 0) + 1;
+  for (const k in hits) hits[k] /= n;
+  return hits;
+}
 // Need / Greed / Pass: picks are [[playerId, choice]] with choice 0 pass, 1 greed, 2 need. Everyone who didn't pass
 // rolls 1-100; the best Need wins, otherwise the best Greed (ties roll again). -> { w: id, c, r } or null (all passed)
 const LOOT_PASS = 0, LOOT_GREED = 1, LOOT_NEED = 2;
@@ -537,4 +551,4 @@ const canNeed = (key, clsId) => !!ITEMS[key] && slotsFor({ key }).some(s => canE
 
 if (typeof module !== 'undefined') module.exports = { ITEMS, GEAR_CAPS, CLASS_MAIN, RARITY, itemStats, itemRarity, canEquip, gearTotals, gearMods, sanitizeGear,
   PARTY_BONUS, gearSources, sanitizeSources, partyBonus, ITEM_PERKS, TIERS, FX_TRIGGERS, FX_CONDITIONS, FX_ACTIONS, FX_MODS, FX_KEYS,
-  BOSS_TIER, LOOT_TABLES, CHEST_ODDS, CHEST_SIZE, rollChest, lootWinner, canNeed, clearGold, sellPrice, LOOT_PASS, LOOT_GREED, LOOT_NEED };
+  BOSS_TIER, LOOT_TABLES, CHEST_ODDS, CHEST_SIZE, rollChest, chestChances, lootWinner, canNeed, clearGold, sellPrice, LOOT_PASS, LOOT_GREED, LOOT_NEED };

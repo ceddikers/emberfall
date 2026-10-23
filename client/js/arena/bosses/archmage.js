@@ -53,7 +53,7 @@ const AZ = {
 
 const AZERATH = {
   id: 'archmage', name: 'Azerath', title: 'Master of the Seven Circles',
-  hp: { normal: 5200000, hard: 5300000 },
+  hp: { normal: 5500000, hard: 6160000 },
   autoDmg: { normal: 2000, hard: 1850 },
   enrage: { normal: 600, hard: 605 },   // the cast starts here and lands 8 s later
   enrageName: 'The Tide Rises',

@@ -12,7 +12,8 @@ const UPDATE = process.argv.includes('--update-baseline');
 const DPS_TOLERANCE = 0.08;   // a class's pro DPS may drift this far from the baseline before it counts as a change
 const SPEC_TOLERANCE = 0.05;  // a specialization's pro DPS may differ this much from its own base class
 const TALENT_MAX = 7;    // one talent may add at most this much pro DPS (%) to its class or spec (tools/talents.js)
-const BUILD_MAX = 18;    // ... and the strongest pick of every row together at most this much
+const BUILD_MAX = 18;    // ... and the strongest pick of every row together at most this much (rows I-V)
+const BUILD_ALL_MAX = 24;   // ... and with the spec rows VI-VII too (talents.js SPEC_TALENTS): the strongest pick of all seven rows
 // Normal is meant to take a real group several wipes, so a bot party only has to clear one run in RAID_RUNS
 const RAID_RUNS = 3;
 // bot raids: every boss, and every spec somewhere, with a fixed line-up so the result doesn't depend on a random spec
@@ -413,6 +414,28 @@ function saveUpgrade() {
   S2.resetTalents('ranger');
   if (S2.talents('ranger').picks.some(x => x != null) || S2.talents('ranger').rows !== 2) probs.push('reset should clear picks and keep rows');
   if (S2.talents('cleric').rows !== 1 || talentSet('cleric', S2.talents('cleric')).size) probs.push('a fresh hero should have row I open and hold no talents');
+  // the spec rows VI-VII (SPEC_TALENTS.bastion): bought once per hero after row V and only with a spec; each spec keeps
+  // its own picks there, and only the active spec's are held; reset clears only the active spec's
+  {
+    const B = SPEC_TALENTS.bastion;
+    S2.heroTalents('bastion').rows = 5; S2.addGold(2000 - S2.gold());
+    if (S2.unlockTalentRow('bastion', TALENT_COSTS[5])) probs.push('spec row VI bought without a spec');
+    S2.recordTrial('bastion', 'sentinel'); S2.recordTrial('bastion', 'crusader'); S2.setSpec('bastion', 'sentinel');
+    if (S2.pickTalent('bastion', 5, 0)) probs.push('picked in spec row VI before buying it');
+    if (!S2.unlockTalentRow('bastion', TALENT_COSTS[5]) || !S2.unlockTalentRow('bastion', TALENT_COSTS[6]) || S2.unlockTalentRow('bastion', 0) || S2.gold() !== 2000 - 540 - 700) probs.push(`spec rows: rows ${S2.talents('bastion').rows}, gold ${S2.gold()}`);
+    if (!S2.pickTalent('bastion', 5, 1) || !S2.pickTalent('bastion', 6, 0) || S2.pickTalent('bastion', 5, 2)) probs.push('spec row picks: wrong columns allowed');
+    S2.setSpec('bastion', 'crusader');
+    if (S2.talents('bastion').specPicks.some(x => x != null)) probs.push('crusader should start with no spec-row picks');
+    S2.pickTalent('bastion', 6, 1);
+    const cr = talentSet('bastion', S2.talents('bastion'));
+    if (!cr.has(B.crusader[1][1].id) || [...B.sentinel.flat()].some(t => cr.has(t.id))) probs.push(`crusader holds ${[...cr]}`);
+    S2.setSpec('bastion', 'sentinel');
+    const se = talentSet('bastion', S2.talents('bastion'));
+    if (!se.has(B.sentinel[0][1].id) || !se.has(B.sentinel[1][0].id) || se.has(B.crusader[1][1].id)) probs.push(`sentinel holds ${[...se]}`);
+    S2.resetTalents('bastion');
+    S2.setSpec('bastion', 'crusader');
+    if (S2.talents('bastion').specPicks[1] !== 1 || S2.talents('bastion').rows !== 7) probs.push('reset should clear only the active spec\'s spec-row picks');
+  }
   delete global.localStorage;
 
   // v3 -> v4: picks made in the first talent tree follow their talent by id; one that left its row clears, rows stay bought
@@ -440,14 +463,14 @@ function saveUpgrade() {
   S3.heroTalents('ranger').ids[1] = 'ranger_gone_talent';
   if (S3.talents('ranger').picks[1] !== null || S3.talents('ranger').rows !== 5) probs.push('a pick of a removed talent should read as none');
   delete global.localStorage;
-  if (probs.length) fail('Save keeps talents', probs.join('\n')); else pass('Save keeps talents', 'v2 adds talents; v3 picks follow their talent ids, removed ones clear and rows stay bought; picks free');
+  if (probs.length) fail('Save keeps talents', probs.join('\n')); else pass('Save keeps talents', 'v2 adds talents; v3 picks follow their talent ids, removed ones clear and rows stay bought; picks free; spec rows VI-VII per spec');
 }
 
 // ---------------------------------------------------------------- 2c. talents: shape, links to the kits, code and data agree
 function talents() {
   const probs = [], ids = new Set(), src = ['combat/kits.js', 'combat/specs.js', 'combat/engine.js'].map(f => fs.readFileSync(path.join(ROOT, 'client/js', f), 'utf8')).join('\n');
   const used = new Set([...src.matchAll(/talent\('(\w+)'\)/g)].map(m => m[1]));
-  if (JSON.stringify(TALENT_COSTS) !== '[0,100,180,280,400]') probs.push(`row costs ${TALENT_COSTS}`);
+  if (JSON.stringify(TALENT_COSTS) !== '[0,100,180,280,400,540,700]') probs.push(`row costs ${TALENT_COSTS}`);
   for (const c of CLASSES) {
     const rows = TALENTS[c.id];
     if (!rows || rows.length !== 5) { probs.push(`${c.id}: ${rows ? rows.length : 0} rows (want 5)`); continue; }
@@ -494,17 +517,52 @@ function talents() {
 
       }
     });
+    // the spec rows VI-VII (SPEC_TALENTS): per spec, two rows of two; same fields, ids and links as rows I-V; a grant's
+    // move is checked in its own spec (the only one that can hold it)
+    const specRows = SPEC_TALENTS[c.id] || {};
+    for (const [s, srows] of Object.entries(specRows)) {
+      if (!specIds.includes(s)) { probs.push(`${c.id}: spec rows for unknown spec ${s}`); continue; }
+      if (!Array.isArray(srows) || srows.length !== 2) { probs.push(`${c.id}:${s}: ${srows ? srows.length : 0} spec rows (want 2)`); continue; }
+      srows.forEach((row, r) => {
+        if (row.length !== 2) probs.push(`${c.id}:${s} row ${r + 6}: ${row.length} talents (want 2)`);
+        for (const t of row) {
+          const where = `${c.id}:${s} ${t.id}`;
+          if (ids.has(t.id)) probs.push(`${where}: duplicate id`); ids.add(t.id);
+          if (!t.id.startsWith(c.id + '_')) probs.push(`${where}: id should start with ${c.id}_`);
+          if (!t.name || !t.text) probs.push(`${where}: needs a name and text`);
+          if (!KITS[c.id].abilities.some(a => a.id === t.ab)) probs.push(`${where}: unknown ability ${t.ab}`);
+          for (const k of Object.keys(t)) if (!['id', 'name', 'ab', 'text', 'cd', 'cast', 'grants'].includes(k)) probs.push(`${where}: unknown field "${k}"`);
+          const mv = talentMoveFor(c.id, s, t.id);
+          if (t.grants && !mv) probs.push(`${where}: says grants but no move is registered for it`);
+          if (!t.grants && mv) probs.push(`${where}: has a new move but no grants: true`);
+          if (t.grants && mv) {
+            if (mv.replaces !== t.ab) probs.push(`${where}: its move replaces ${mv.replaces}, not ${t.ab}`);
+            for (const fl of ['id', 'name', 'desc', 'type', 'icon']) if (!mv[fl]) probs.push(`${where}: its move has no ${fl}`);
+            if (typeof mv.effect !== 'function') probs.push(`${where}: its move has no effect`);
+            const held = kitFor(c.id, s, new Set([t.id])).abilities.filter(x => x.id === mv.id);
+            if (held.length !== 1 || held[0].fromTalent !== t.id) probs.push(`${where}: holding it should put ${mv.id} on exactly one button`);
+            const found = abilityById(c.id, s, mv.id);
+            if (!found || found.name !== mv.name) probs.push(`${where}: other players cannot find ${mv.id} by its id`);
+            for (const r2 of [2, 4]) for (const o of rows[r2]) { const om = o.grants && talentMoveFor(c.id, s, o.id); if (om && om.replaces === mv.replaces) probs.push(`${where}: grants into the same slot as ${o.id}`); }
+            used.add(t.id);
+          }
+          if (!used.has(t.id) && t.cd == null && t.cast == null) probs.push(`${where}: does nothing (no k.talent('${t.id}') in the kits, no cd/cast, no new move)`);
+          if (!TALENT_BY_ID[t.id] || TALENT_BY_ID[t.id].spec !== s) probs.push(`${where}: TALENT_BY_ID does not know its spec`);
+        }
+      });
+    }
     // the talent rule (2026-10, talents.js): at most one plain number, and a new move in row III and in row V
     {
       const plain = rows.flat().filter(t => t.cd || t.cast).length;
       if (plain > 1) probs.push(`${c.id}: ${plain} plain-number talents (at most 1)`);
+      for (const [s, srows] of Object.entries(specRows)) { const n = plain + (srows || []).flat().filter(t => t.cd || t.cast).length; if (n > 1) probs.push(`${c.id}:${s}: ${n} plain-number talents with the spec rows (at most 1)`); }
       for (const r of [2, 4]) if (!rows[r].some(t => t.grants)) probs.push(`${c.id} row ${r + 1}: no talent grants a new move`);
     }
   }
   for (const id of used) if (!TALENT_BY_ID[id]) probs.push(`k.talent('${id}') in the kits has no talent in talents.js`);
   // without talents a kit plays exactly as before: the class balance check below compares base kits with the baseline
   if (probs.length) fail('Talents line up with the kits', probs.join('\n'));
-  else pass('Talents line up with the kits', `${ids.size} talents, ${used.size} read by the kits`);
+  else pass('Talents line up with the kits', `${ids.size} talents (${Object.values(SPEC_TALENTS).reduce((a, x) => a + Object.values(x).flat(2).length, 0)} in spec rows), ${used.size} read by the kits`);
 }
 
 // ---------------------------------------------------------------- 3 + 4. balance sim and bot raids (run side by side)
@@ -606,6 +664,21 @@ function thresherArcCheck() {
   else fail('Thresher: Reap arcs onto adds in front, not behind', out.slice(-900));
 }
 
+// ---------------------------------------------------------------- 3e. the PvP Arena (tools/pvp-sim.js)
+// A few bot duels and a 2v2: every match ends (a knockout or the clock) without errors, never in a blink, never past the clock.
+function pvpCheck() {
+  const runs = [['duel', '3', 'ranger', 'bastion'], ['duel', '2', 'cleric', 'shadowblade'], ['team', '2', 'bastion', 'pyromancer', 'gorgemaw', 'cleric']];
+  const bad = [], lens = [];
+  for (const a of runs) {
+    const r = spawnSync(process.execPath, [path.join(__dirname, 'pvp-sim.js'), ...a], { cwd: ROOT, encoding: 'utf8' });
+    const out = (r.stdout || '') + (r.stderr || ''), ms = [...out.matchAll(/^run \d+: (\w+) .*? at ([\d.]+)s/gm)];
+    if (r.status !== 0 || ms.length !== +a[1]) { bad.push(`${a.join(' ')}:\n${out.slice(-600)}`); continue; }
+    for (const m of ms) { lens.push(+m[2]); if (!/^(ko|time)$/.test(m[1]) || +m[2] < 10 || +m[2] > 200) bad.push(`${a.join(' ')}: ${m[0]}`); }
+  }
+  if (bad.length) fail('PvP Arena: matches finish cleanly', bad.join('\n'));
+  else pass('PvP Arena: matches finish cleanly', `${lens.length} matches, ${Math.min(...lens)}-${Math.max(...lens)}s`);
+}
+
 // ---------------------------------------------------------------- 3d. the boss journals (tools/journal-lint.js)
 function journalCheck() {
   const r = spawnSync(process.execPath, [path.join(__dirname, 'journal-lint.js')], { cwd: ROOT, encoding: 'utf8' });
@@ -661,15 +734,17 @@ async function heavy() {
   // talents: one talent adds a few percent, a full build stays a modest step over the base kit
   const talRows = tal.out.split('\n').map(l => l.match(/^TALENT (\S+) (\w+) (-?[\d.]+)/)).filter(Boolean);
   const buildRows = tal.out.split('\n').map(l => l.match(/^BUILD (\S+) (\d+) (\d+) (-?[\d.]+)/)).filter(Boolean);
+  const allRows = tal.out.split('\n').map(l => l.match(/^BUILDALL (\S+) (\d+) (\d+) (-?[\d.]+)/)).filter(Boolean);   // (with the spec rows VI-VII)
   if (tal.code !== 0 || !talRows.length || !buildRows.length) fail('Talents balanced', 'tools/talents.js failed:\n' + tal.out.slice(-800));
   else {
     const off = [
       ...talRows.filter(m => +m[3] > TALENT_MAX).map(m => `${m[1]} ${m[2]}: +${m[3]}% DPS on its own (max ${TALENT_MAX}%)`),
       ...buildRows.filter(m => +m[4] > BUILD_MAX).map(m => `${m[1]}: full build ${m[2]} -> ${m[3]} pro DPS (+${m[4]}%, max ${BUILD_MAX}%)`),
+      ...allRows.filter(m => +m[4] > BUILD_ALL_MAX).map(m => `${m[1]}: full build with spec rows ${m[2]} -> ${m[3]} pro DPS (+${m[4]}%, max ${BUILD_ALL_MAX}%)`),
     ];
     const top = Math.max(...buildRows.map(m => +m[4]));
     if (off.length) fail('Talents balanced', off.join('\n'));
-    else pass('Talents balanced', `${talRows.length} talent runs, every one at most +${TALENT_MAX}%; best full build +${top.toFixed(1)}%`);
+    else pass('Talents balanced', `${talRows.length} talent runs, every one at most +${TALENT_MAX}%; best full build +${top.toFixed(1)}%${allRows.length ? `, with spec rows +${Math.max(...allRows.map(m => +m[4])).toFixed(1)}% (max ${BUILD_ALL_MAX}%)` : ''}`);
   }
 
   // bot raids: a bot party clears each boss on Normal at least once in RAID_RUNS
@@ -704,6 +779,7 @@ async function heavy() {
   try { hollowCheck(); } catch (e) { fail('Hollow checked', e.stack); }
   try { journalCheck(); } catch (e) { fail('Journals checked', e.stack); }
   try { thresherArcCheck(); } catch (e) { fail('Thresher arc checked', e.stack); }
+  try { pvpCheck(); } catch (e) { fail('PvP checked', e.stack); }
   await heavy();
   console.log('');
   for (const r of results) {

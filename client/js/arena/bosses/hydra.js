@@ -29,7 +29,7 @@
 
 const HYDRA = {
   id: 'hydra', name: 'The Hydra', title: 'Mother of Nine Heads',
-  hp: { normal: 4600000, hard: 4400000 },
+  hp: { normal: 4950000, hard: 5850000 },
   autoDmg: { normal: 1500, hard: 1650 },
   enrage: { normal: 612, hard: 622 },   // the cast starts here and lands 8 s later (10:20 / 10:30)
   enrageName: 'The Drowning',
@@ -59,6 +59,9 @@ const HYDRA = {
       mire: H ? 7300 : 7400, mirePool: H ? 1700 : 1700, sear: 1400, rise: H ? 7000 : 7500,
       headHp: 34000, elderHp: 52000, lesserHp: 14000, surfHp: 16000,
     };
+    // (Normal is tuned for a party in set-1 gear after set 2's step (items.js SET2_STEP): every hit, not the heads' HP, a notch up)
+    const NORMAL_HIT = 1.03;
+    if (!H) for (const k in dmg) if (!/Hp$/.test(k)) dmg[k] = Math.round(dmg[k] * NORMAL_HIT);
     const S = (...steps) => steps.filter(Boolean);
     const HEAD_R = 210;                 // the heads stand this far from the middle, one to a slot (nine slots, the first due north)
     const COL_R = 400, SEAR_R = 470;    // the columns, and the ring at the foot of each where a stump is seared

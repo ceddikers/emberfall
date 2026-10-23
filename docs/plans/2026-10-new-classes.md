@@ -162,7 +162,7 @@ A goggled alchemist with a bandolier of vials and a smoking copper still on her 
 **Floor:** brew Dew + Dew whenever you're idle and throw it at whoever is low. **Ceiling:** brewing in downtime for the mechanic two moves ahead, timing vials to peak potency, and splash placement that catches everyone.
 
 **Specs**
-- **Apothecary**, *The Prepared Hand*: 5 slots, vials ripen twice as fast, and Throw can pick any slot (Shift+R cycles). A planner's healer.
+- **Apothecary**, *The Prepared Hand*: 5 slots, vials ripen twice as fast, and Throw can take any slot (the number keys mark it; Shift+R in the first draft). A planner's healer.
 - **Volatile**, *The Unstable Mix*: three-reagent brews unlock **Reactions**, stronger, stranger effects that you discover by experimenting; they aren't listed anywhere until you've made one. But every vial has a 6s fuse and goes off wherever it is. Hidden recipes fit the "abilities you didn't know you had" idea from Talents.
 
 ---

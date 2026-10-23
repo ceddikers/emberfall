@@ -371,12 +371,13 @@ const Inventory = (() => {
         shape(() => c.rect(-2.5, -1, 5, 16), '#1a1420', 2);
         shape(() => c.arc(0, 17, 3.8, 0, Math.PI * 2), '#b08aff', 2);
         break;
-      case 'scythe':   // Thresher: a long ash snath with a curved green-black blade and a bone-white edge
+      case 'scythe':   // Reaper: a long black snath ringed with violet, a slender pale crescent blade with a teal edge
         c.rotate(0.35);
-        stroke(() => { c.moveTo(-1, 30); c.lineTo(1, -22); }, wood, 3);
-        shape(() => { c.moveTo(1, -22); c.quadraticCurveTo(22, -34, 30, -12); c.quadraticCurveTo(18, -24, 1, -17); c.closePath(); }, '#2a3a2e');
-        stroke(() => { c.moveTo(3, -22); c.quadraticCurveTo(20, -30, 29, -13); }, '#c8f0a8', 1.2);
-        shape(() => c.rect(-3.5, -10, 7, 3), gold, 1.5);
+        stroke(() => { c.moveTo(-1, 30); c.lineTo(1, -22); }, '#0c0a14', 3);
+        stroke(() => { c.moveTo(-1, 30); c.lineTo(1, -22); }, '#4a2a6a', 1);
+        shape(() => { c.moveTo(1, -22); c.quadraticCurveTo(24, -36, 33, -10); c.quadraticCurveTo(20, -25, 1, -17); c.closePath(); }, '#e4eaf2');
+        stroke(() => { c.moveTo(3, -18); c.quadraticCurveTo(20, -26, 32, -11); }, '#8fd8e8', 1.4);
+        shape(() => c.rect(-3.5, -10, 7, 3), '#7a5aa8', 1.5);
         break;
       case 'stampmace':   // Oathbroker:a mace whose head is a square seal, a dab of red wax on its face
         c.rotate(-Math.PI / 4);

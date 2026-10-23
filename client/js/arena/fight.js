@@ -114,8 +114,8 @@ class FightSim {
     if (this.ps.has(p.id)) return;
     // gear (humans only, already capped by the host): flat HP and a little damage reduction
     const gear = p.gear || {};
-    const maxHp = Math.round((playerBaseHp(p.role) + Math.max(0, Math.min(150, gear.hp || 0))) * (1 + (this.hpPct || 0)));
-    this.ps.set(p.id, { id: p.id, role: p.role, hp: maxHp, maxHp, alive: true, def: Math.max(0, Math.min(0.1, (gear.def || 0) / 1000)), shield: 0, shieldEnd: 0, shieldMax: 0, shieldFrom: null, shieldTag: null,
+    const maxHp = Math.round((playerBaseHp(p.role) + Math.max(0, Math.min(180, gear.hp || 0))) * (1 + (this.hpPct || 0)));   // (items.js GEAR_CAPS)
+    this.ps.set(p.id, { id: p.id, role: p.role, hp: maxHp, maxHp, alive: true, def: Math.max(0, Math.min(0.11, (gear.def || 0) / 1000)), shield: 0, shieldEnd: 0, shieldMax: 0, shieldFrom: null, shieldTag: null,
       mits: [], threat: p.role === 'tank' ? 1 : 0, vuln: 0, vulnEnd: 0, dmgDownEnd: 0, weakEnd: 0, hots: [], debuffs: {}, hist: [], diedAt: -99 });
     this.stats[p.id] = { damage: 0, healing: 0, overheal: 0, taken: 0, mitigated: 0, deaths: 0, avoidable: 0,
       // contribution tracking (scoring.js): seconds as the boss's target, seconds of damage landed on it, towers/stacks soaked, raises given,
@@ -548,6 +548,7 @@ class FightSim {
           const ts = this.ps.get(tid); if (!ts || !ts.alive) continue;
           this.ward(pid, tid, ts, true);
           if (ts.hollow) { this.hollowShield(pid, ts, ev.amount); continue; }   // (a Hollow knight: a shield pays the debt at half)
+          if (ev.tag === 'item' && ts.shield >= (ev.amount | 0)) continue;   // (an item's small ward never replaces a stronger shield: a Runic Ward, a barrier)
           if (ts.shield > 0) this.endShield(tid, ts);
           ts.shield = Math.min(ev.amount | 0, ts.maxHp); ts.shieldMax = ts.shield; ts.shieldEnd = this.t + Math.min(30, ev.dur || 15);
           ts.shieldFrom = pid; ts.shieldTag = ev.tag || null;
@@ -1655,7 +1656,7 @@ Object.assign(FightSim.prototype, {
 //     jaw, the Oathbroker's Ledger, shields), marked shared so it never splits again. Enrage, falls, self-inflicted
 //     damage, Ledger bills and a hit an open jaw is about to eat are never split.
 //   - A heal on one end runs 60% down each thread (Mend Seam's `seam`: 100%; Embroider's seam 2 goes a link further).
-//   - Ends more than 260 px apart snap the thread: a small heal to both, and the weaver hears ('snapped').
+//   - Ends more than 550 px apart snap the thread: a small heal to both, and the weaver hears ('snapped').
 //   - The weaver hears what their threads carried ('carry', twice a second), which fills Spool.
 //   - Everyone gets the list ('thr', on change and every second) and draws the threads, and every snap ('thrs').
 // Dolls: each Marionettist reports where its Dolls are (setDoll: a human's client 10 times a second, a bot's kit every
@@ -1664,7 +1665,7 @@ Object.assign(FightSim.prototype, {
 // Two Dolls and their owner make the Stage: with the boss's centre inside that triangle, it takes 10% more damage.
 // Bosses and bots never target a Doll; it's never in alive() or players().
 // ===================================================================================================================
-const WEAVE_HOST = { SNAP: 260, MAX: 5, SHARE: 0.6, DEEP: 0.3, CARRY_SECS: 5, NO_SPLIT: new Set(['enrage', 'fall', 'self', 'thread', 'ledger', 'settle']) };
+const WEAVE_HOST = { SNAP: 550, MAX: 5, SHARE: 0.6, DEEP: 0.3, CARRY_SECS: 5, NO_SPLIT: new Set(['enrage', 'fall', 'self', 'thread', 'ledger', 'settle']) };
 const DOLL_HOST = { STAGE: 0.10, STALE: 1.5, PAD: 12 };
 Object.assign(FightSim.prototype, {
   // ---------------------------------------------------------------- threads

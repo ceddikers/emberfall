@@ -7,7 +7,7 @@
 //     Lunge (the safe side rotates), Silk Lines (stretch), Spin (four threads pillar to pillar: crossing one stings and
 //     roots), Venom Spit, Strand Reel, Brood (the two ripest of the six clutches in the web hatch: kill them together),
 //     Silk Reel, Acid Deluge (hide behind a pillar).
-//   The Dark Between (70%): she climbs into the dark for about 38 s. The cave falls to pools of light; her shadow runs along
+//   The Dark Between (70%): she climbs into the dark for about 30 s. The cave falls to pools of light; her shadow runs along
 //     each uncut thread in turn and she drops where it ends. Breaking a thread's knot before she gets there spares you
 //     that drop, but a cut thread is one she hunts instead: her shadow goes to whoever stands farthest and drops there
 //     (lighter; the circle follows its mark until 1.6 s out). A cocoon falls on a random one of them (the party stacks in)
@@ -469,14 +469,14 @@ const SKITTERRA = {
       for (const c of liveClutches()) c.prio = !hostile && (room.dark || liveClutches().length > 2) ? 2 : 0;
     });
 
-    // --- The Dark Between: she's gone into the dark for 40 s --------------------------------------
+    // --- The Dark Between: she's gone into the dark for about 30 s --------------------------------------
     let from = { x: 0, y: 0 };
     const intoDark = () => {
       f.cast('Into the Dark', 2, 'ambush');
       f.afterKeep(2, () => {
         B.untargetable = true; B.lockFacing = true;
         room.dark = true; room.runAt = 0; from = { x: B.x, y: B.y };
-        f.emit({ t: 'roomev', k: 'lightsout', r: 120, extra: f.props.filter(p => p.kind === 'pillar').map(p => ({ x: p.x, y: p.y })), dur: 37 });
+        f.emit({ t: 'roomev', k: 'lightsout', r: 120, extra: f.props.filter(p => p.kind === 'pillar').map(p => ({ x: p.x, y: p.y })), dur: H ? 31.5 : 30 });
       });
     };
     // The Dark Between is all reaction. She runs a thread overhead and drops at its far end (Hard: then back to the near
@@ -626,12 +626,11 @@ const SKITTERRA = {
       sets: [
         S([2, intoDark, 'Into the Dark']),
         S([3, () => dropFrom(0), 'From the Dark']),
-        S([6.5, cocoonDrop, 'Cocoon Drop']),
+        S([6, cocoonDrop, 'Cocoon Drop']),
         S([3.5, () => dropFrom(1), 'From the Dark']),
-        S([6.5, venomDrip, 'Venom Drip']),
+        S([5.5, venomDrip, 'Venom Drip']),
         S([4.5, () => dropFrom(2), 'From the Dark']),
-        S([5.5, () => dropFrom(3), 'From the Dark']),
-        S([H ? 8 : 6, comeBack, 'Tightening Web']),
+        S([H ? 7 : 5.5, comeBack, 'Tightening Web']),   // (three drops: the dark ran long with four)
         S([6]),
       ],
       next: actTwo,

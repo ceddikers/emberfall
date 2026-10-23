@@ -29,11 +29,14 @@ const SPECS = {
             usable: k => bastionCanEdge(k),
             glow: k => k.g.resolve >= 90 || (k.has('oath') && k.g.resolve >= 50) || k.has('turned'),
             effect(k) {
-              bastionSpend(k);
-              const pot = k.has('oath') ? 680 : 530;
+              const rebuke = k.talent('bastion_rebuke') && k.consume('rebuke');   // (Rebuke, spec row VII: free and half again as hard)
+              if (!rebuke) bastionSpend(k);
+              const pot = (k.has('oath') ? 680 : 530) * (rebuke ? 1.5 : 1);
               k.damage(pot, { ab: this });
+              if (rebuke) k.fx('empower');
               if (k.perk('bastion_w2')) { k.damage(pot * 0.4, { ab: this }); k.fx('empower'); }
-              k.mitigate('self', 0.3, 4, { ab: this });
+              if (k.talent('bastion_interpose') && hpOf(k) > 0.6) k.mitigate('party', 0.15, 4, { ab: this });   // (Interpose, spec row VI)
+              else k.mitigate('self', 0.3, 4, { ab: this });
               bastionEdge(k, this, pot);
             },
             fx: { type: 'slash', color: '#dfe9ff', r: 46, span: 1.0 },
@@ -64,7 +67,12 @@ const SPECS = {
             effect(k) {
               bastionSpend(k);
               let pot = k.has('oath') ? 720 : 560;
-              if (k.consume('radiant')) { pot *= 1.5; k.fx('radiant'); }
+              const rad = k.stacks('radiant');
+              if (rad) {
+                k.clear('radiant'); k.fx('radiant');
+                pot *= k.talent('bastion_kindling') ? 1 + 0.3 * rad : 1.5;   // (Kindling, spec row VI: a bank of up to 3)
+                if (k.talent('bastion_dawnburn')) k.dot('dawnburn', 40, 8, 2, { ab: this });   // (Dawnburn, spec row VI)
+              }
               k.damage(pot, { ab: this });
               if (k.perk('bastion_w2')) { k.damage(pot * 0.4, { ab: this }); k.fx('empower'); }
               bastionEdge(k, this, pot);
@@ -76,7 +84,7 @@ const SPECS = {
             desc: 'Big cooldown: 30% less damage for 10s, Brace\'s charges refill, and your next Holy Edge is Radiant.',
             effect(k) {
               k.mitigate('self', k.perk('bastion_a4') ? 0.4 : 0.3, 10, { ab: this });
-              k.refill('brace'); k.buff('radiant', 15);
+              k.refill('brace'); bastionRadiate(k, 15);
               if (k.perk('bastion_w3')) k.shield('party', 160, 8, { ab: this });
               bastionGuard(k, this);
             },
@@ -85,7 +93,7 @@ const SPECS = {
         },
         onNotify(k, type, d) {
           base.onNotify(k, type, d);
-          if (type === 'perfect') k.buff('radiant', 10);
+          if (type === 'perfect') bastionRadiate(k, 10);
         },
       }),
     },
@@ -100,7 +108,7 @@ const SPECS = {
       passive: { name: 'Rage', desc: 'Your gauge is Rage. Rampage hits harder the lower your HP, but heals less. Frenzy also makes you 10% faster.' },
       gauge: { label: 'Rage', color: '#ff7a2a' },
       build: () => ({
-        potMult: 0.655,
+        potMult: 0.668,
         haste: k => (k.has('frenzy') ? 0.9 : 1),
         abilities: {
           drain: {
@@ -132,7 +140,7 @@ const SPECS = {
       focus: 'Helping the healer. Your self-healing also heals the whole party, and you can fight from range.',
       passive: { name: 'Shared Vein', desc: 'Crimson Drain\'s healing also flows to the whole party, at a quarter of the strength. Bloodletting becomes a blood lance you throw from range.' },
       build: () => ({
-        potMult: 0.77,
+        potMult: 0.741,
         abilities: {
           drain: {
             desc: 'Spend 40 Blood: hits for {d:260}, up to {d:520} more the more the bank holds (the damage you took since your last Drain, 6s at most). Within 1.2s of a hit that took a tenth of your HP your blood is warm: {d:340} more; after that the bank has gone cold and counts for 30%. It heals you for 35% of the bank, and the whole party for 25% of that.',
@@ -171,7 +179,7 @@ const SPECS = {
       passive: { name: 'Shared Ward', desc: 'Runic Ward goes on an ally (yourself if none is picked). It explodes from them when it ends, and refunds its Rune once it has absorbed half. A Ward broken all the way shatters outward for {d:250} more.' },
       classPassive: 'Runic Wards explode when they end. The more they absorbed, the bigger the blast ({d:150} up to {d:600}), and one that absorbed at least half refunds its Rune.',
       build: base => ({
-        potMult: 0.645,
+        potMult: 0.63,
         abilities: {
           ward: {
             target: 'ally',
@@ -197,7 +205,7 @@ const SPECS = {
       focus: 'Melee damage. A sword combo, a cleave that leaves a burning rune, and two reflects; smaller Wards.',
       passive: { name: 'Rune-Carved', desc: 'Rune Strike becomes a two-hit combo, Glyph Burst a cleave that leaves a burning rune, and Mirror Aegis has two charges. Wards are a little smaller ({s:600} instead of {s:650}).' },
       build: () => ({
-        potMult: 0.575,
+        potMult: 0.585,
         init: () => ({ runes: 0, step: 0, comboUntil: 0 }),
         abilities: {
           strike: {
@@ -249,7 +257,7 @@ const SPECS = {
       focus: 'Shields. Your Petals and Divine Barrier stop damage before it lands, so you plan ahead instead of healing after.',
       passive: { name: 'Hardened Light', desc: 'Dawn Petal leaves a shield instead of a regen, and a Petal shield that soaks most of its strength gives the Petal back. Benediction has two charges. Mend becomes Divine Barrier.' },
       build: base => ({
-        potMult: 0.9,
+        potMult: 0.89,
         init: () => Object.assign(base.init(), { refundAt: 0 }),
         abilities: {
           mend: {
@@ -328,7 +336,7 @@ const SPECS = {
       focus: 'Healing over time. Lifebind covers two allies at once and Bloom bursts harder, so planning ahead keeps everyone topped up.',
       passive: { name: 'Deep Roots', desc: 'Rejuvenate becomes Lifebind: it also takes root on the most hurt other ally. Bloom heals 30% more.' },
       build: () => ({
-        potMult: 0.87,
+        potMult: 0.89,
         abilities: {
           rejuv: {
             id: 'lifebind', replaces: 'rejuv', name: 'Lifebind', type: 'gcd', target: 'ally', anim: 'cast',
@@ -439,11 +447,11 @@ const SPECS = {
     },
     {
       id: 'accelerant', name: 'Accelerant', title: 'The Quickened Hour', accent: '#ffd36a',
-      gaugeTip: 'Slow fills Flux; Haste drains it 40% slower than usual. Accelerando gives 40.',
+      gaugeTip: 'Slow fills Flux; Haste drains it 40% slower than usual. Accelerando gives 40. Shifting into Haste hastens the party (Overclock).',
       blurb: 'Live in fast time. The whole party moves to your beat.',
-      focus: 'Party support. Haste lasts longer and heals the party more, and Accelerando is stronger, but Slow heals your link less.',
-      passive: { name: 'Overclock', desc: 'Haste drains Flux 40% slower and its Bolts heal the party for 71% (not 60%). Accelerando gives 15% for 20s. In Slow, Bolt heals your link for 114%.' },
-      build: () => ({
+      focus: 'Party support. Every shift into Haste speeds the whole party up, Haste lasts longer and heals the party more, and Accelerando is stronger, but Slow heals your link less.',
+      passive: { name: 'Overclock', desc: 'Haste drains Flux 40% slower and its Bolts heal the party for 71% (not 60%). Accelerando gives 15% for 20s. In Slow, Bolt heals your link for 114%. Shifting into Haste also hastens the party 6% for 10s (once every 12s): shift in as the burst begins.' },
+      build: base => ({
         potMult: 0.70,
         tick(k) { chronoFlux(k, k.perk('chronomancer_a2') ? 1.8 : 2.4); },
         abilities: {
@@ -452,6 +460,13 @@ const SPECS = {
             effect(k) {
               chronoBolt(k, this, chronoInstant(k), 0.71, 1.14);
               chronoBoltAfter(k, this, 0.71, 1.14);
+            },
+          },
+          shift: {
+            desc: base.abilities.find(a => a.id === 'shift').desc + ' Overclock: shifting into Haste also hastens the party 6% for 10s (once every 12s).',
+            effect(k) {
+              base.abilities.find(a => a.id === 'shift').effect.call(this, k);   // (the base Shift: stance, Paradox, talents)
+              if (k.g.stance === 'haste' && k.now >= (k.g.overAt || 0)) { k.g.overAt = k.now + 12; k.partyBuff('haste', 0.06, 10, { ab: this }); }
             },
           },
           accel: {
@@ -468,6 +483,7 @@ const SPECS = {
     {
       id: 'sharpshooter', name: 'Sharpshooter', title: 'The Still Eye', accent: '#f2d27a',
       blurb: 'Breathe out, then let fly. Every second you stand still sharpens the next shot.',
+      gaugeTip: 'Quick Shot gives 10, or 30 with Barrage, and Hunter\'s Cloak 40. Rapid Fire spends 50, or 20 while Hunter\'s Mark is up. Anything past 100 is lost. The eye is Keen Eye; ×2 means a second one is banked. The pips under the quiver are Steady Aim: one for each second you stand still, 4% more damage each, all lost when you move.',
       focus: 'Precision. Standing still builds Steady Aim for more damage, and Piercing Arrow becomes Aimed Shot, a slow, huge hit. Weaker while moving.',
       passive: { name: 'Steady Aim', desc: 'Every second you stand still adds a stack of Steady Aim (up to 5): 4% more damage each. Moving loses them all. Piercing Arrow becomes Aimed Shot. Inside your Hunter\'s Mark, Rapid Fire costs only 20 Focus.' },
       build: () => ({
@@ -505,6 +521,7 @@ const SPECS = {
     {
       id: 'venomstrike', name: 'Venomstrike', title: 'The Green Death', accent: '#9aff4a',
       blurb: 'Every arrow leaves a little acid behind. Then one arrow lets it all out.',
+      gaugeTip: 'Quick Shot gives 10, or 30 with Barrage, and Hunter\'s Cloak 40. Rapid Fire spends 50, or 25 while Hunter\'s Mark is up. Anything past 100 is lost. The eye is Keen Eye; ×2 means a second one is banked. The drops under the quiver are Acid on the boss: Quick Shot adds one, Barrage three, and Caustic Arrow bursts them all.',
       focus: 'Damage that ramps. Quick Shot stacks an acid burn on the boss and Caustic Arrow bursts every stack at once.',
       passive: { name: 'Acid', desc: 'Quick Shot adds a stack of Acid to the target (up to 8): a burn that grows with each stack, {d:14} per stack every 3s. Piercing Arrow becomes Caustic Arrow, which bursts every stack.' },
       build: base => {
@@ -557,10 +574,10 @@ const SPECS = {
       id: 'bladedancer', name: 'Bladedancer', title: 'The Whirling Edge', accent: '#e0c8ff',
       blurb: 'Steel in every direction. It doesn\'t matter where the boss is looking.',
       focus: 'Steady damage from anywhere. No positionals to chase, and Blade Fury spins through everything around you, but a lower peak.',
-      passive: { name: 'Whirling Edge', desc: 'Your positionals always land, wherever you stand. Shadowstep becomes Blade Fury, a spinning flurry. Tempo: an Eviscerate at exactly 5 points, with no point spilled since your last one, adds a Tempo (up to 3); at 3 your next Blade Fury is a Flourish. A spilled point loses them all.' },
+      passive: { name: 'Whirling Edge', desc: 'Your positionals always land, wherever you stand. Shadowstep becomes Blade Fury, a spinning flurry. Tempo: an Eviscerate at exactly 5 points, with no point spilled since your last one, adds a Tempo (up to 3); at 3 your next Blade Fury is a Flourish. A spilled point loses them all. Smoke Bomb readies both Blade Furies.' },
       gaugeTip: 'Strike gives 2 points (your positionals always land), Blade Fury 1. Eviscerate spends every point and hits for {d:115} more for each, with a {d:160} bonus at 5. A sixth point is lost, and so is your Tempo. The pips under the moons are Tempo.',
       build: () => ({
-        potMult: 0.836,
+        potMult: 0.81,
         positionalAlways: () => true,
         abilities: {
           step: {
@@ -571,8 +588,18 @@ const SPECS = {
               const fl = k.stacks('tempo') >= 3;
               if (fl) { k.clear('tempo'); k.fx('empower'); }
               k.damage(fl ? 650 : 260, { ab: this }); bladeCombo(k, k.perk('shadowblade_a2') ? 2 : 1); bladeStep(k, this);
+              if (k.perk('shadowblade_a4')) k.reduceCooldown('fury', 2);   // (the enhancement of Shadowstep's True North, which a Bladedancer never needs: it recharges sooner)
             },
             fx: { type: 'slash', color: '#e0c8ff', r: 60, span: 6.28 },
+          },
+          // (no positional to buy, so Smoke Bomb's use is the other half: both Blade Furies back, for a Flourish)
+          smoke: {
+            desc: 'The whole party takes 10% less damage for 10s. Both Blade Furies come back at once, and a Shadow Dance already running lasts 3s longer.',
+            effect(k) {
+              k.mitigate('party', 0.1, 10, { ab: this });
+              k.refill('fury');
+              const d = k.buffs.get('dance'); if (d && d.end > k.now) d.end += 3;
+            },
           },
         },
       }),
@@ -580,11 +607,18 @@ const SPECS = {
     {
       id: 'nightstalker', name: 'Nightstalker', title: 'The Knife Behind', accent: '#d0304a',
       blurb: 'Wait in the dark behind them. Then end it.',
-      focus: 'Burst from behind. Backstab hits very hard from the rear and Shadow Dance lasts longer, but standing anywhere else costs you more.',
-      passive: { name: 'From the Shadows', desc: 'Eviscerate becomes Backstab: much stronger from behind, weaker from the front. Shadow Dance lasts 14s.' },
-      build: () => ({
-        potMult: 0.896,
+      focus: 'Burst from behind. Backstab hits very hard from the rear, a Shadowstep sets up the next one, and Shadow Dance lasts longer, but standing anywhere else costs you more.',
+      gaugeTip: 'Strike gives 1 point, or 2 from behind. Backstab spends every point and hits for {d:115} more for each, with a {d:160} bonus at 5, and more again from behind. A sixth point is lost. A Shadowstep starts you Stalking: your next Backstab hits harder. Shadow Dance entered at 5 points lets the first Backstab in it keep them.',
+      passive: { name: 'From the Shadows', desc: 'Eviscerate becomes Backstab: much stronger from behind, weaker from the front. Shadowstep starts you Stalking: your next Backstab within 6s hits 6% harder. Shadow Dance lasts 14s.' },
+      build: base => {
+        const stepBase = base.abilities.find(a => a.id === 'step');
+        return {
+        potMult: 0.89,
         abilities: {
+          step: {
+            desc: 'Teleport behind the target. For 5s every hit counts as a positional, and you start Stalking: your next Backstab within 6s is 6% harder.',
+            effect(k) { stepBase.effect.call(this, k); k.buff('stalk', 6); },
+          },
           evis: {
             id: 'backstab', replaces: 'evis', name: 'Backstab', type: 'gcd', target: 'enemy', range: SPEC_MELEE, anim: 'attack',
             desc: 'Spend all combo points: {d:110} plus {d:115} per point, and {d:160} more at 5 points. From behind it hits {d:60} plus {d:30} per point harder; from the front, 25% weaker.',
@@ -594,7 +628,7 @@ const SPECS = {
               const cp = k.g.combo; k.g.combo = 0;
               const feint = k.talent('shadowblade_feint') && k.has('feint');
               const front = k.env.positional() === 'front' && !k.has('truenorth') && !k.has('dance') && !feint;
-              const mult = bladeMult(k) * (k.has('dance') ? 1.25 : 1) * (front ? 0.75 : 1);
+              const mult = bladeMult(k) * (k.has('dance') ? 1.25 : 1) * (front ? 0.75 : 1) * (k.consume('stalk') ? 1.06 : 1);
               const pot = 110 + 115 * cp + (cp >= 5 ? 160 : 0), bonus = 60 + 30 * cp;
               const o = bladeOpts(k, this, 'rear', bonus, mult);
               const r = k.damage(pot + (o.feint ? bonus : 0), o), hit = o.feint || r.posHit;
@@ -605,7 +639,8 @@ const SPECS = {
           },
           dance: { desc: 'Burst: 14s of faster attacks, every positional lands, and Backstab hits 25% harder. Enter it at 5 combo points and the first Backstab in it keeps them.', effect(k) { bladePoise(k); k.buff('dance', 14); k.g.endless = 0; if (k.perk('shadowblade_w3')) k.gain('combo', 2, 5); } },
         },
-      }),
+        };
+      },
     },
   ],
 
@@ -613,13 +648,14 @@ const SPECS = {
     {
       id: 'cataclysm', name: 'Cataclysm', title: 'The Falling Star', accent: '#ff4a2a',
       blurb: 'Call the sky down. Big, slow, and worth the wait.',
+      gaugeTip: 'Fireball gives 12, Meteor 20 (10 with Hot Streak) and Fire Blast 6. Every point of Heat adds 0.3% damage. At 100 you overheat: you lose 15% of your HP, Heat resets and you deal 20% less damage for 5s. Heat cools slowly while you aren\'t casting. Vent spends it all (at 90 or more it also lights Hot Streak), and brings a falling Meteor down at once with your Heat burning in its crater. While Smolder is up it can\'t boil over: it stops at 99.',
       focus: 'Huge single hits. Pyroblast becomes Meteor: a rune circle on the boss, then a meteor smashes it 1.5s later and leaves a burning crater.',
       passive: { name: 'Meteor', desc: 'Pyroblast becomes Meteor: it lands 1.5s after you cast it, hits for {d:700}, and leaves a burning crater. Hot Streak still makes it instant.' },
       build: base => {
         // Meteor counts as Pyroblast for crits and Hot Streak (its crater burn doesn't)
         const asPyro = o => (o && o.ab && o.ab.id === 'meteor' && !o.dot ? Object.assign({}, o, { ab: { id: 'pyro' } }) : o);
         return {
-          potMult: 0.758,
+          potMult: 0.773,
           init: () => Object.assign(base.init(), { meteors: [] }),
           critMod: (k, o) => base.critMod(k, asPyro(o)),
           onDamage: (k, amt, crit, o) => base.onDamage(k, amt, crit, asPyro(o)),
@@ -637,13 +673,13 @@ const SPECS = {
                 const hs = k.consume('hotstreak'), ab = this;
                 k.gain('heat', hs ? 10 : 20, 100);
                 const pot = hs ? 800 : 700;
-                if (hs && k.talent('pyromancer_twin')) k.after(2.1, () => { k.damage(pot * 0.1, { ab, extra: true }); k.fx('twinFlame'); });   // a second, smaller meteor
+                if (hs && k.talent('pyromancer_twin')) k.after(2.1, () => { k.damage(pot * 0.05, { ab, extra: true }); k.fx('twinFlame'); });   // a second, smaller meteor
                 if (hs) pyroStoke(k);
                 const m = { at: k.now + 1.5, heat: 0 };   // (a Vent while it falls: pyroVent brings it down now, its Heat in the crater)
                 k.g.meteors.push(m);
                 m.fn = () => {
                   k.damage(pot, { ab });
-                  if (hs && k.talent('pyromancer_chain') && !k.has('hotstreak') && k.now >= (k.g.chainAt || 0)) { k.g.chainAt = k.now + 10; k.buff('heating', 15); k.fx('chainReact'); }
+                  if (hs && k.talent('pyromancer_chain') && !k.has('hotstreak') && k.now >= (k.g.chainAt || 0)) { k.g.chainAt = k.now + 15; k.buff('heating', 15); k.fx('chainReact'); }
                   k.dot('crater', 50 + m.heat, 9, 3, { ab });
                   if (hs && k.perk('pyromancer_w2')) { k.dot('pyroburn', 70, 9, 3, { ab }); k.fx('empower'); }
                 };
@@ -657,6 +693,7 @@ const SPECS = {
     {
       id: 'sigilmancer', name: 'Sigilmancer', title: 'The Burning Circle', accent: '#ffb347',
       blurb: 'Draw the circle, stand inside, and burn brighter than anyone. Step out and the fire fades.',
+      gaugeTip: 'Fireball gives 12, Pyroblast 20 (10 with Hot Streak) and Fire Blast 6. Every point of Heat adds 0.3% damage. At 100 you overheat: you lose 15% of your HP, Heat resets and you deal 20% less damage for 5s. Heat cools slowly while you aren\'t casting. Vent spends it all (at 90 or more it also lights Hot Streak). While you stand in your Ember Circle you cast 20% faster and hit 15% harder.',
       focus: 'Positioning. Ember Circle makes you much stronger, but only while you stand in it, so where you plant it is the skill.',
       passive: { name: 'Ember Circle', desc: 'Combustion becomes Ember Circle: a circle of fire at your feet for 20s. Inside it you cast 20% faster and deal 15% more damage. Outside, nothing.' },
       build: base => {
@@ -692,22 +729,22 @@ const SPECS = {
 SPECS.alembist = [
   {
     id: 'apothecary', name: 'Apothecary', title: 'The Prepared Hand', accent: '#d8b070',
-    gaugeTip: 'Five slots. Vials ripen to full strength in 5s and spoil after 40s. Smart Throw picks for you (a hurt ally gets your strongest heal, anyone else your oldest bomb) until Shift+R moves the gold mark: then Throw takes the vial you marked. The three coals under the still are the Kiln: every vial you throw that is not a bomb lights one, and with all three lit your next Throw also launches a free Kiln Bomb for {d:900}.',
+    gaugeTip: 'Five slots, numbered 1 to 5 from the left. Vials ripen to full strength in 5s and spoil after 40s. Throw takes the vial on the left, or the one you marked with its number (the gold mark), and the mark holds until you throw. The three coals under the still are the Kiln: every vial you throw that is not a bomb lights one, and with all three lit your next Throw also launches a free Kiln Bomb for {d:900}.',
     blurb: 'Every shelf labelled, every cure ready before the wound. The planner\'s healer.',
-    focus: 'Planning. A deep bandolier that ripens fast, and Throw takes whichever vial you pick, so the right cure is always at hand.',
-    passive: { name: 'Well-Stocked', desc: 'Your bandolier holds 5 vials, and they ripen in 5s instead of 10s. Throw can take any vial: Shift+R moves the pick along the bandolier, and the pick holds until you throw.' },
+    focus: 'Planning. A deep bandolier that ripens fast, five vials to mark from, so the right cure is always at hand.',
+    passive: { name: 'Well-Stocked', desc: 'Your bandolier holds 5 vials, and they ripen in 5s instead of 10s. The number keys 1 to 5 mark any of them for your next Throw.' },
     build: base => ({
       potMult: base.potMult * 0.9,
-      alem: { slots: 5, ripe: 5, spoil: 40, pick: true },
+      alem: { slots: 5, ripe: 5, spoil: 40 },
       gauge: Object.assign({}, base.gauge, { max: 5 }),
       abilities: {
-        throw: { desc: 'Throw a vial at your heal target (1.25s): it shatters and splashes everyone close by; a bomb flies at the enemy instead. Shift+R picks the vial (it moves the gold mark along the bandolier, and the pick holds until you throw). Without a pick, Smart Throw chooses: an ally below 70% health gets your strongest heal, anyone else your oldest bomb (a Salt Ward or Salve first while a raidwide is on its way). Every vial that is not a bomb heats the Kiln by 1: at 3, your next Throw also launches a free Kiln Bomb for {d:900}. Vials ripen 30% stronger over 5s, and spoil after 40s.' },
+        throw: { desc: 'Throw a vial at your heal target (1.25s): it shatters and splashes everyone close by; a bomb flies at the enemy instead. Throw takes the vial on the left, or the one you marked with its number key, 1 to 5 (the mark holds until you throw, then goes back to the first). Every vial that is not a bomb heats the Kiln by 1: at 3, your next Throw also launches a free Kiln Bomb for {d:900}. Vials ripen 30% stronger over 5s, and spoil after 40s.' },
       },
     }),
   },
   {
     id: 'volatile', name: 'Volatile', title: 'The Unstable Mix', accent: '#ff8a3a',
-    gaugeTip: 'Every vial heats up to full strength in 4s, and its fuse burns out at 6s: still in the bandolier, it goes off on you at 60%. Catalyst makes the next brew take three reagents; three that make no Reaction brew the pair you put in twice, fully heated. Smart Throw: an ally below 70% health gets your strongest heal, anyone else your oldest bomb. The three coals under the still are the Kiln: every vial you throw that is not a bomb lights one, and with all three lit your next Throw also launches a free Kiln Bomb for {d:900}.',
+    gaugeTip: 'Every vial heats up to full strength in 4s, and its fuse burns out at 6s: still in the bandolier, it goes off on you at 60%. Catalyst makes the next brew take three reagents; three that make no Reaction brew the pair you put in twice, fully heated. Throw takes the vial on the left, or the one you marked with its number. The three coals under the still are the Kiln: every vial you throw that is not a bomb lights one, and with all three lit your next Throw also launches a free Kiln Bomb for {d:900}.',
     blurb: 'Nothing in the bandolier stays quiet for long. Some mixtures do things no book admits to.',
     focus: 'Reactions. Three-reagent brews make stronger, stranger vials you find by experimenting, but every vial is on a short fuse.',
     passive: { name: 'Short Fuse', desc: 'Every vial heats up to full strength in 4s and has a 6s fuse: if it\'s still in your bandolier when the fuse runs out, it goes off on you, weaker, and a bomb burns you. Distill becomes Catalyst.' },
@@ -715,7 +752,7 @@ SPECS.alembist = [
       potMult: base.potMult * 0.86,
       alem: { slots: 3, fuse: 6, heat: 4 },
       abilities: {
-        throw: { desc: 'Throw a vial at your heal target (1.25s): it shatters and splashes everyone close by. Smart Throw: an ally below 70% health gets your strongest heal, anyone else your Quickpowder (Galvanized: 10% more damage for 10s), else your oldest bomb, which flies at the enemy (while a raidwide is on its way, a Salt Ward or Salve goes first). Every vial that is not a bomb heats the Kiln by 1: at 3, your next Throw also launches a free Kiln Bomb for {d:900}. Vials heat up 30% stronger over 4s, and go off on you when their 6s fuse runs out.' },
+        throw: { desc: 'Throw a vial at your heal target (1.25s): it shatters and splashes everyone close by; a bomb flies at the enemy instead. Throw takes the vial on the left, or the one you marked with its number key (the mark holds until you throw, then goes back to the first). Every vial that is not a bomb heats the Kiln by 1: at 3, your next Throw also launches a free Kiln Bomb for {d:900}. Vials heat up 30% stronger over 4s, and go off on you when their 6s fuse runs out.' },
         distill: {
           id: 'catalyst', replaces: 'distill', name: 'Catalyst', type: 'ogcd', target: 'self', cd: 14, charges: 2, anim: 'cast', lock: 0.3,
           get desc() { return `Your next brew takes three reagents. Three that make a Reaction brew it; three that don't brew the pair you put in twice, fully heated. It glows while the still is empty.<div class="alem-book">${alemBook(alemSavedKnown(), true)}</div>`; },
@@ -867,11 +904,22 @@ Object.assign(SPECS, {
   driftblade: [
     {
       id: 'orbit', name: 'Orbit', title: 'The Circling Hawk', accent: '#a8f0c8',
-      gaugeTip: 'A Passing Strike gives 10, Hook Turn 15, Slipstream 15. Walking fills 15 a second; after 1.5s standing still it drains 15 a second. Circling close round your target builds Orbit (up to 5, gone 5s after you stop): at 5, Carve cuts on its own every 1.4s while you keep moving.',
+      gaugeTip: 'A Passing Strike gives 10, Hook Turn 15, Slipstream 15. Walking fills 15 a second; after 1.5s standing still it drains 15 a second. Circling close round your target builds Orbit (up to 5, gone 5s after you stop), and a Hook Turn is half a circle, 3 at once: at 5, Carve cuts on its own every 1.4s while you keep moving.',
       blurb: 'Round and round, a little closer every time. The hawk never lands.',
       focus: 'Smooth circles. Circling your target builds Orbit, and at full Orbit your sabre cuts on its own while you keep moving.',
-      passive: { name: 'Circling Hawk', desc: 'Every radian you circle round your target at close range adds a stack of Orbit (up to 5; they fade 5s after you stop circling). At 5, Carve strikes on its own every 1.4s while you move.' },
-      build: () => ({ potMult: 0.598, orbit: true }),
+      passive: { name: 'Circling Hawk', desc: 'Every radian you circle round your target at close range adds a stack of Orbit (up to 5; they fade 5s after you stop circling). Hook Turn swings you half a circle: 3 stacks at once. At 5, Carve strikes on its own every 1.4s while you move.' },
+      build: base => {
+        const hookBase = base.abilities.find(a => a.id === 'hook');
+        return {
+          potMult: 0.598, orbit: true,
+          abilities: {
+            hook: {
+              desc: 'Swing round your target to its far side with a cut for {d:260}, up to 40% stronger with Drift. Above 70 Drift it always crits. Gives 15 Drift and gives back a dash charge. Half a circle: it gives 3 Orbit.',
+              effect(k) { hookBase.effect.call(this, k); k.buff('orbit', 5, {}, 5, 3); },
+            },
+          },
+        };
+      },
     },
     {
       id: 'comet', name: 'Comet', title: 'The Long Charge', accent: '#ffd08a',
@@ -934,8 +982,9 @@ Object.assign(SPECS, {
       focus: 'Protecting the party. Digest turns every Morsel into a shield or a ward for your allies, each shape its own kind.',
       passive: { name: 'Iron Stomach', desc: 'Digest feeds the party instead of you: a Ring shields everyone for {s:150}, a Lance puts a {s:360} shield on whoever is hurt most, a Fang cuts the party\'s damage taken, a Spike makes the most hurt ally immune for 2s. You still heal 3% of your HP for each.' },
       build: () => ({
-        potMult: 0.88,
+        potMult: 0.89,
         abilities: {
+          iron: { desc: 'Clench: 40% less damage for 8s. Your gut grinds while it lasts: every Morsel your Digest takes counts twice: Rings and Lances shield twice as much, Fangs cut more (up to 30%), and the acid it leaves bites harder.' },
           digest: {
             desc: 'Digest every Morsel at once into protection for the party. Ring: a {s:150} shield on everyone. Lance: a {s:360} shield on whoever is hurt most. Fang: the party takes 15% less damage for 6s. Spike: the most hurt ally is immune for 2s. You heal 3% of your HP for each, and the acid makes your next Spit within 15s hit 50% harder for each (up to 100%).',
             effect(k) {
@@ -962,7 +1011,7 @@ Object.assign(SPECS, {
       focus: 'Protecting one ally. Co-sign a friend and part of everything that hits them goes onto your Ledger instead.',
       passive: { name: 'Co-Signer', desc: 'Lien becomes Co-Sign: for 10s, 30% of the damage an ally takes is written into your Ledger instead, and Settle pays it with the rest. Paying a co-signed line down with Collect heals the ally it was written for.' },
       build: () => ({
-        potMult: 0.9,
+        potMult: 0.89,
         abilities: {
           lien: {
             id: 'cosign', replaces: 'lien', name: 'Co-Sign', type: 'ogcd', target: 'ally', cd: 20, anim: 'cast', lock: 0.4,
@@ -1031,7 +1080,7 @@ SPECS.ironpalm = [
     focus: 'Long strings. Every named move builds Momentum, and moves of four inputs or more hit harder and build twice as much, but a string you break staggers you and knocks some of it away.',
     passive: { name: 'Avalanche', desc: 'Every named move adds Momentum: +2% damage, up to 8 (a move of four inputs or more adds 2), gone 4s after your last named move. Moves of four inputs or more hit 15% harder. A string you break staggers you for 0.2s and costs 2 Momentum. Temple Bell becomes Landslide.' },
     build: base => ({
-      potMult: base.potMult * 0.89,
+      potMult: base.potMult * 0.87,
       avalanche: true,
       abilities: {
         bell: {
@@ -1090,12 +1139,12 @@ Object.assign(SPECS, {
   marionettist: [
     {
       id: 'cuttingline', name: 'Cutting Line', title: 'The Bladed String', accent: '#ff6a8a',
-      gaugeTip: 'Builds from the Doll\'s hits; Grand Finale spends it. The strings reach 400 px, and they cut whatever they cross once a second. Taut String: the longer the line stays across, the brighter the red edge and the harder the cut.',
+      gaugeTip: 'Builds from Cue and the Doll\'s other moves (not its own Jabs); Grand Finale spends it. The strings reach 400 px, and they cut whatever they cross once a second. Taut String: the longer the line stays across, the brighter the red edge and the harder the cut.',
       blurb: 'Every string a blade. Stand right, and the stage itself bleeds.',
       focus: 'Positioning. The strings always cut what they cross and reach 400 px, and Cross-Cut is off the global cooldown with two charges.',
       passive: { name: 'Bladed String', desc: 'The strings reach 400 px before they tear, and they cut whatever enemy they cross for {d:48}, once a second. Taut String: every second the line stays across, the cut grows by {d:12}, up to {d:120}; the line leaving the enemy or a String tearing slackens it. Cross-Cut is off the global cooldown, with two charges.' },
       build: base => ({
-        potMult: base.potMult * 0.622,
+        potMult: base.potMult * 0.657,
         stretch: 400, bladed: true,
         abilities: {
           cross: { type: 'ogcd', charges: 2, cd: 9, lock: 0.4, desc: 'Off the global cooldown, two charges: your strings become blades and cut along the line between you and the Doll. With the enemy on that line it\'s a {d:560} cut and 2 Encore; otherwise it cuts nothing.' },
@@ -1104,7 +1153,7 @@ Object.assign(SPECS, {
     },
     {
       id: 'understudy', name: 'Understudy', title: 'Two Dolls on One Bar', accent: '#e8a0ff',
-      gaugeTip: 'Builds from the Dolls\' hits; Grand Finale spends it. The triangle between you and both Dolls is the Stage: an enemy inside it takes 10% more damage from the whole party.',
+      gaugeTip: 'Builds from Cue and the Dolls\' other moves (not their own Jabs); Grand Finale spends it. The triangle between you and both Dolls is the Stage: an enemy inside it takes 10% more damage from the whole party.',
       blurb: 'Two dolls, one bar, and a stage the whole party plays on.',
       focus: 'Teamwork. Two smaller Dolls, and the triangle between you and them is the Stage: an enemy standing in it takes more damage from everyone.',
       passive: { name: 'The Stage', desc: 'You work two Dolls, each hitting for a little over half. The triangle between you and both Dolls is the Stage: an enemy inside it takes 10% more damage from the whole party. W and Swap move the Doll nearest where you aim.' },
@@ -1115,11 +1164,12 @@ Object.assign(SPECS, {
         dolls: 2, dollMult: 0.58,
         // (each Doll hits at 58%: the numbers here are per Doll)
         abilities: {
-          jab: { desc: 'Each Doll in reach stabs for {d:145}. Builds 1 Encore.' },
-          pull: { desc: 'Fling the Doll nearest where you aim to that spot (within its strings\' reach). It cuts anything it passes through for {d:92.8}, and stays there until you pull it again or pick another target. Builds 1 Encore on a hit. Two charges.' },
+          cue: { desc: 'You snap your fingers: each Doll in reach lunges at once for a {d:104.4} stab, and their next three Jabs come twice as fast. Builds 1 Encore. On their own the Dolls jab for {d:23.2} each every 4s while you fight and they have the enemy in reach.' },
+          pull: { desc: 'Fling the Doll nearest where you aim to that spot (within its strings\' reach). It cuts anything it passes through for {d:92.8}, and stays there until you pull it again or pick another target. Builds 1 Encore on a hit. Every pull also ties all three Strings back, and gets limp Dolls up at once. Two charges.' },
           cross: { desc: 'Your strings become blades and cut along the lines between you and the Dolls. Each line with the enemy on it cuts for {d:324.8}, and a cut gives 2 Encore; otherwise it cuts nothing.' },
+          swap: { desc: 'You and the Doll nearest where you aim trade places in a flutter of silk. It\'s your escape, and the Doll takes your spot. Stage Cross: your next Cross-Cut within 6s cuts twice as hard and gives 1 more Encore.' },
           pirouette: { desc: 'The Dolls spin, each cutting all around it for {d:174}, and nothing can touch them for 1.5s. Builds 1 Encore.' },
-          finale: { desc: 'Spend 5 Encore: each Doll in reach performs a routine of five hits, each {d:92.8}. They can\'t move while it plays.' },
+          finale: { desc: 'Spend 5 Encore: each Doll in reach performs a routine of five hits, each {d:146.7}. They can\'t move while it plays.' },
         },
       }),
     },
@@ -1132,10 +1182,10 @@ Object.assign(SPECS, {
 SPECS.gloomsworn = [
   {
     id: 'duskward', name: 'Sentinel', title: 'The Long Vigil', accent: '#9ab8ff',
-    gaugeTip: 'Every hit you land fills 8 Gloom and every hit you take 6. Gloom Strike spends 40, Black Pall 30, Last Rite all of it. Out of combat the vessel drains, but only 1 a second. Full Gloom when a blow would kill you makes you Hollow.',
+    gaugeTip: 'Every hit you land fills 8 Gloom and every hit you take 6. Gloom Strike spends 40, Black Pall 30, Last Rite all of it. Out of combat the vessel drains, but only 1 a second. Full Gloom when a blow would kill you makes you Hollow: the whole party takes 15% less damage while you are, and your healer has 6s after it to pay the debt instead of 4s.',
     blurb: 'A wall that lasts. The dark keeps its watch over the others too.',
-    focus: 'Protecting the party. Your barriers last longer and chain on to the ally who needs one, Black Pall holds longer, and the vessel drains slower.',
-    passive: { name: 'Long Vigil', desc: 'Gloom Strike\'s barrier lasts 10s instead of 6s and a second barrier ({s:110}) falls on the most hurt ally. Black Pall lasts 8s. Gloom drains 1 a second out of combat instead of 2.5.' },
+    focus: 'Protecting the party. Your barriers last longer and chain on to the ally who needs one, and when you go Hollow the whole party is covered and your healer has longer to pay.',
+    passive: { name: 'Long Vigil', desc: 'Gloom Strike\'s barrier lasts 10s instead of 6s and a second barrier ({s:110}) falls on the most hurt ally. Black Pall lasts 8s. Gloom drains 1 a second out of combat instead of 2.5. While you are Hollow the whole party takes 15% less damage, and your healer has 6s after it ends to pay the debt instead of 4s.' },
     build: base => ({
       potMult: base.potMult * 0.995,   // balance knob (tools/simulate.js)
       sentinel: true, slowDecay: true,
@@ -1147,50 +1197,65 @@ SPECS.gloomsworn = [
   },
   {
     id: 'duskreaver', name: 'Reaver of Dusk', title: 'The Hollow Blade', accent: '#c85a8a',
-    gaugeTip: 'Every hit you land fills 8 Gloom and every hit you take 6. Gloom Strike spends 40, Black Pall 30, Last Rite all of it. Full Gloom when a blow would kill you makes you Hollow, for 10s instead of 8s, and Gloom Strike echoes while you are.',
+    gaugeTip: 'Every hit you land fills 8 Gloom and every hit you take 6. Gloom Strike spends 40, Dusk Reave 25 (nothing while you are Hollow), Last Rite all of it. Full Gloom when a blow would kill you makes you Hollow, for 10s instead of 8s, and Gloom Strike echoes while you are.',
     blurb: 'The dark is a weapon. Let it hollow you out, and cut.',
-    focus: 'Damage. You hit harder, Hollow lasts 10s, and while Hollow every Gloom Strike hits twice.',
-    passive: { name: 'Hollow Blade', desc: 'You deal 6% more damage. Hollow lasts 10s instead of 8s, and while you are Hollow Gloom Strike echoes, hitting again for 60%.' },
+    focus: 'Damage. You hit harder, you trade Black Pall for a cut of your own, and a Hollow is your window: 10s, free Reaves, and every Gloom Strike hits twice.',
+    passive: { name: 'Hollow Blade', desc: 'You deal 6% more damage. Black Pall becomes Dusk Reave. Hollow lasts 10s instead of 8s, and while you are Hollow Gloom Strike echoes, hitting again for 85%.' },
     build: base => ({
-      potMult: base.potMult * 0.94,
+      potMult: base.potMult * 0.985,   // balance knob (tools/simulate.js)
       hollowLong: true, hollowEcho: true,
       dmgMod: k => base.dmgMod(k) + 0.06,
+      abilities: {
+        pall: {
+          id: 'reave', replaces: 'pall', icon: 'strike', name: 'Dusk Reave', type: 'ogcd', target: 'enemy', range: SPEC_MELEE, cd: 30, lock: 0.5, anim: 'attack',
+          desc: 'Spend 25 Gloom (nothing while you are Hollow): a reaping cut for {d:600}, and the dark closes round the wound: you take 10% less damage for 5s.',
+          usable: k => (k.g.gloom || 0) >= 25 || gloomHollow(k),
+          glow: k => gloomHollow(k),
+          effect(k) {
+            if (!gloomHollow(k)) k.spend('gloom', 25);
+            k.damage(600, { ab: this });
+            k.mitigate('self', 0.1, 5 + (k.perk('gloomsworn_w3') ? 2 : 0), { ab: this });
+            if (k.talent('gloomsworn_bearer')) k.shield('party', 100, 8, { ab: this });
+          },
+          fx: { type: 'slash', color: '#c85a8a', r: 70, span: 2.4 },
+        },
+      },
     }),
   },
 ];
 
 // ===================================================================================================================
-// THRESHER (damage, class 19): the Sower's and the Grim's specs (the kit is in kits.js, after the Gloomsworn)
+// THRESHER (damage, class 19): the Wraith's (id sower) and the Grim's specs (the kit is in kits.js, after the Gloomsworn)
 // ===================================================================================================================
 SPECS.thresher = [
   {
-    id: 'sower', name: 'Sower', title: 'The Quick Hand', accent: '#9be06a',
-    gaugeTip: 'Four afflictions on the boss, each a bar that ripens: green (young, 2s), gold (ripe, until 6.5s), then rotten. Slash and Cleave lay all four between them, and Hook and the Wisp too. Reap pays gold in full, young 40%, rotten 65%.',
-    blurb: 'Plant everything, and quickly. The harvest never waits.',
-    focus: 'Pace. You act 10% faster, the afflictions ripen sooner and lay themselves, and a Reap is rarely short of anything.',
-    passive: { name: 'Quick Hands', desc: 'You act 10% faster. Slash lays a Drain as well as its Mark, Cleave lays a Bind, and Hook binds too. Afflictions are young for 2s and gold from then until 6.5s, then they rot: the window is shorter, and it comes sooner.' },
+    id: 'sower', name: 'Wraith', title: 'The Swift Shadow', accent: '#8fd8e8',
+    gaugeTip: 'Four afflictions on the boss, each a bar that darkens: pale (faint, 2s), gold (due, until 6.5s), then lapsed. Slash and Cleave lay all four between them, and Hook and the Wisp too. Reap pays gold in full, faint 40%, lapsed 65%.',
+    blurb: 'Mark everything, and quickly. The hour never waits.',
+    focus: 'Pace. You act 10% faster, the afflictions darken sooner and come quickly, and a Reap is rarely short of anything.',
+    passive: { name: 'Swift Shadow', desc: 'You act 10% faster. Slash lays a Drain as well as its Mark, Cleave lays a Bind, and Hook binds too. Afflictions are faint for 2s and gold from then until 6.5s, then they lapse: the window is shorter, and it comes sooner.' },
     build: base => ({
       potMult: base.potMult * 0.875,   // balance knob (tools/simulate.js)
       sower: true, young: 2, rot: 6.5,
       haste: () => 0.9,
       abilities: {
         slash: { desc: 'Two-hit combo on one button: Slash ({d:200}) > Cleave ({d:270}), a wide arc. Slash lays a Mark and a Drain on the boss and Cleave a Bind. Press the next hit within 1.2s of your recovery and a Backswing follows for {d:90}.' },
-        hook: { desc: 'Throw the chain: if you are not at the boss, pull yourself in, and cut for {d:150}. It plants a Thread and a Bind on the boss and ages the others by 1.5s. Two charges.' },
+        hook: { desc: 'Throw the chain: if you are not at the boss, pull yourself in, and cut for {d:150}. It lays a Thread and a Bind on the boss and ages the others by 1.5s. Two charges.' },
       },
     }),
   },
   {
     id: 'grim', name: 'Grim', title: 'The Patient Reaper', accent: '#c8a84a',
-    gaugeTip: 'Three afflictions on the boss (no Bind), each a bar that ripens slowly: green (young, 4s), gold (ripe, until 11s), then rotten. Reap pays gold in full, young 40%, and rotten 95%, and every payout is half again as big.',
-    blurb: 'Fewer afflictions, ripened slowly, and one great harvest.',
-    focus: 'Patience. A long gold window, a rotten payout that is hardly less, and a Reap 50% bigger on a longer cooldown.',
-    passive: { name: 'Patient Reaper', desc: 'Afflictions are young for 4s and gold until 11s, and Bind is never laid. Reap pays half again as much, a rotten affliction pays 95% instead of 65%, and its cooldown is 9s instead of 6s.' },
+    gaugeTip: 'Three afflictions on the boss (no Bind), each a bar that darkens slowly: pale (faint, 4s), gold (due, until 11s), then lapsed. Reap pays gold in full, faint 40%, and lapsed 95%, and every payout is half again as big.',
+    blurb: 'Fewer afflictions, darkened slowly, and one great reckoning.',
+    focus: 'Patience. A long gold window, a lapsed payout that is hardly less, and a Reap 50% bigger on a longer cooldown.',
+    passive: { name: 'Patient Reaper', desc: 'Afflictions are faint for 4s and gold until 11s, and Bind is never laid. Reap pays half again as much, a lapsed affliction pays 95% instead of 65%, and its cooldown is 9s instead of 6s. With no Bind to lay, Gloam Blink darkens every affliction on the boss by 2s instead.' },
     build: base => ({
-      potMult: base.potMult * 0.985,
-      young: 4, rot: 11, noAff: ['bind'], reapMult: 1.5, rotPay: 0.95, reapCd: 9,
+      potMult: base.potMult * 0.945,
+      young: 4, rot: 11, noAff: ['bind'], reapMult: 1.5, rotPay: 0.95, reapCd: 9, blinkAge: 2,
       abilities: {
-        reap: { desc: 'Spend every affliction on the boss. A cut for {d:180}, then each pays out: Mark {d:165}, Drain {d:150} (and mends you for 3% of your health) and Thread {d:255}. Gold pays in full, young 40%, rotten 95%. Glows when something is gold. Needs an affliction up.' },
-        blink: { glow: () => false, desc: 'Cut through the dark to the boss for {d:140}. The cut keeps your Backswing going, and you take 50% less damage for 1s. Two charges.' },
+        reap: { desc: 'Spend every affliction on the boss. A cut for {d:180}, then each pays out: Mark {d:165}, Drain {d:150} (and mends you for 3% of your health) and Thread {d:255}. Gold pays in full, faint 40%, lapsed 95%. Glows when something is gold. Needs an affliction up.' },
+        blink: { glow: k => thCount(k, 1) >= 2 && thCount(k, 2) === 0, desc: 'Cut through the dark to the boss for {d:140}, and every affliction on it darkens 2s. The cut keeps your Backswing going, and you take 50% less damage for 1s. Two charges.' },
         wisp: { desc: 'A wisp rises beside you for 15s and harries the boss, striking for {d:60} every 2.5s.' },
       },
     }),

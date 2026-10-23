@@ -358,10 +358,11 @@ const Sound = (() => {
     if (!manifestLoaded) { setTimeout(() => { if (musicWant === (id || null)) music.set(id, opts); }, 400); return; }
     applyMusic(musicWant, fade);
   });
-  // the harder variant: '<id>' -> '<id>-b', on the next bar when the tempo is known, else now with a 2 s fade
+  // the harder variant: '<id>' -> '<id>-hard' (the Hard track, else an older '<id>-b'), on the next bar when the tempo is
+  // known, else now with a 2 s fade
   let layerTimer = null;
   music.layer = id => safe(() => {
-    const b = id + '-b';
+    const b = hasTrack(id + '-hard') ? id + '-hard' : id + '-b';
     if (!hasTrack(b) || musicCur === b) return;
     musicWant = b;
     if (!ctx || !unlocked) return;

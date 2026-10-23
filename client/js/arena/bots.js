@@ -995,10 +995,19 @@ const BotAI = {
     // healers: raise, then keep people up
     if (bot.role === 'healer') {
       if (dead.length) {
+        // who first: a human, then a healer, then a tank
+        const first = dead.slice().sort((a, b) => (b.id < 1000) - (a.id < 1000) || (b.role === 'healer') - (a.role === 'healer') || (b.role === 'tank') - (a.role === 'tank'))[0];
         const r = k.abilities.findIndex(a => a.allowDead && a.type === 'gcd');
-        if (r >= 0 && readyIdx(r) && !moving) { bot.healTarget = dead[0].id; return r; }
+        // a raise is a long cast, and a healer shuffling after the boss is nearly always moving: rather than wait for a
+        // still moment that never comes, stop and cast it whenever standing here is about as safe as where it's headed
+        // (raid-host holds the bot still until stillUntil, and lets it go the moment that stops being true). Not while
+        // someone still standing is about to drop: keep them up first.
+        if (r >= 0 && readyIdx(r) && !(hurt[0] && hurt[0].f < 0.35)) {
+          const ct = k.castTime(ab(r)) || 0;
+          if (!ct || BotAI.stillOk(bot, view)) { bot.healTarget = first.id; if (ct) bot.stillUntil = view.t + ct + 0.15; return r; }
+        }
         const rw = idx('rewind');
-        if (rw >= 0 && readyIdx(rw)) { bot.healTarget = dead[0].id; return rw; }
+        if (rw >= 0 && readyIdx(rw)) { bot.healTarget = first.id; return rw; }
       }
       let low = hurt[0];
       // a Gloomsworn gone Hollow (held at 1 HP, its damage written down as a debt): heal it until the debt is covered
@@ -1246,6 +1255,8 @@ BOT_CLASS.ironpalm = {
     const next = (view.next || []).find(([n]) => BUSTER_CASTS.test(n)), toBuster = Math.min(hitIn, next ? next[1] + 3 : Infinity);
     const ri = idx('read'), si = idx('skin'), bi = idx('bell');
     if (free && ok(ri) && hitIn < 0.36 && hitIn > 0.03) return ri;
+    // Still Water: Read has two charges and comes back with Still Pond, so the raidwide is read too (a full Breath and a counter), keeping a charge for the buster
+    if (free && ok(ri) && k.def.stillWater && (k.has('pond') || k.charges(k.abilities[ri]) === 2) && view.mechs.some(m => m.type === 'raidwide' && m.resolveAt - view.t < 0.36 && m.resolveAt - view.t > 0.03)) return ri;
     if (free && ok(si) && hitIn < 3) return si;
     // in real trouble with no buster close: Iron Skin now rather than hold it for one that may come too late
     const me = view.players.find(p => p.id === bot.id);
@@ -1348,14 +1359,15 @@ BotAI.alembist = function (bot, k, view) {
   }
   if (!gcdFree) return null;
   const th = idx('throw');
-  const throwAt = (i, who) => { k.g.aim = i; bot.healTarget = who; return ready(th) ? th : null; };
+  // a bot marks the vial it wants, the way a player's number key does (kits.js alemMark), and aims at who should get it
+  const throwAt = (i, who) => { alemMark(k, i); bot.healTarget = who; return ready(th) ? th : null; };
 
   // a fallen ally and a Draught (or anything that raises) ready to go: throw it on them
   if (dead.length && k.now >= k.g.raiseAt) {
     const ri = vials.findIndex(v => ['DD', 'DQ', 'DDD'].includes(v.r));
     if (ri >= 0) return throwAt(ri, dead[0].id);
   }
-  // pick the vial to throw now, if any (a bot names the slot: Throw takes it, g.aim, whatever Smart Throw would pick)
+  // pick the vial to throw now, if any: the bot's own choice (players mark theirs by hand; Throw alone takes the oldest)
   const cands = vials.map((v, i) => i);
   let best = null;
   for (const i of cands) {
@@ -1470,6 +1482,12 @@ BotAI.partnersOf = function (view, id) {
   for (const th of view.threads || []) { if (th.a === id) out.add(th.b); else if (th.b === id) out.add(th.a); }
   return out;
 };
+// standing where it is costs the bot little more than walking to its planned spot (the planner's own danger score, which
+// knows every mechanic): safe enough to stand still for a cast
+BotAI.stillOk = function (bot, view) {
+  const p = bot.plan;
+  return !p || BotAI.danger(bot, bot.x, bot.y, view) <= BotAI.danger(bot, p.x, p.y, view) + 1200;
+};
 BotAI.dollDanger = function (view, x, y, within = 2.6) {
   const props = (view.props || []).filter(p => p.cover);
   for (const m of view.mechs) {
@@ -1532,9 +1550,9 @@ BotAI.threadweaver = function (bot, k, view) {
     if (!cradle && ready(shut) && weaveShuttleN(k) >= 2) return shut;
     // cut the web ourselves before a spread tears it (or when a thread is about to snap anyway, or someone tied is low)
     if (ready(snip) && mine.length) {
-      const strained = mine.some(th => lenOf(th) > 225);
+      const strained = mine.some(th => lenOf(th) > WEAVE.SNAP * 0.75), stretched = mine.some(th => lenOf(th) > WEAVE.SNAP * 0.5);   // (the snapping length is 550: cut early only when a thread is really being pulled)
       const lowTied = low && frac(low) < (shears ? 0.8 : 0.55) && linked(low.id);
-      if (tearing || strained || lowTied) { bot.healTarget = lowTied ? low.id : bot.id; return snip; }
+      if ((tearing && stretched) || strained || lowTied) { bot.healTarget = lowTied ? low.id : bot.id; return snip; }
     }
     // pull a tied ally out of what's about to land on them (Tie on someone already on our threads)
     if (ready(tie)) {
@@ -1553,9 +1571,9 @@ BotAI.threadweaver = function (bot, k, view) {
         if (m.type !== 'buster' || m.resolveAt - view.t > 4.5) continue;
         const t = alive.find(p => p.id === (m.target ?? m.follow));
         if (!t || (tank && t.id === tank.id) || linked(t.id) || [...this.partnersOf(view, t.id)].length) continue;
-        if (t.id === bot.id) { if (tank && dist(me, tank) < 245) { bot.healTarget = tank.id; k.g.tie = null; return tie; } continue; }
-        if (dist(me, t) < 200) { bot.healTarget = t.id; k.g.tie = null; return tie; }
-        const near = alive.filter(p => p.id !== t.id && p.id !== bot.id && dist(p, t) < 200).sort((a, b) => dist(a, t) - dist(b, t))[0];
+        if (t.id === bot.id) { if (tank && dist(me, tank) < WEAVE.SNAP * 0.6) { bot.healTarget = tank.id; k.g.tie = null; return tie; } continue; }
+        if (dist(me, t) < WEAVE.SNAP * 0.5) { bot.healTarget = t.id; k.g.tie = null; return tie; }
+        const near = alive.filter(p => p.id !== t.id && p.id !== bot.id && dist(p, t) < WEAVE.SNAP * 0.4).sort((a, b) => dist(a, t) - dist(b, t))[0];
         if (near && k.charges(k.abilities[tie]) >= 2) { bot.tiePair = { b: t.id, at: view.t }; bot.healTarget = near.id; k.g.tie = null; return tie; }
       }
     }
@@ -1564,8 +1582,8 @@ BotAI.threadweaver = function (bot, k, view) {
   if (weave) {
     const owed = view.mechs.some(m => m.type === 'buster' && m.resolveAt - view.t < 4.5 && (m.target ?? m.follow) !== bot.id && !linked(m.target ?? m.follow) && !(tank && (m.target ?? m.follow) === tank.id));
     if (!tearing && !owed && weave && ready(tie)) {
-      if (tank && !linked(tank.id) && dist(me, tank) < 240) { bot.healTarget = tank.id; k.g.tie = null; return tie; }
-      const loose = alive.filter(p => p.id !== bot.id && !linked(p.id) && dist(me, p) < 215).sort((a, b) => frac(a) - frac(b))[0];
+      if (tank && !linked(tank.id) && dist(me, tank) < WEAVE.SNAP * 0.6) { bot.healTarget = tank.id; k.g.tie = null; return tie; }
+      const loose = alive.filter(p => p.id !== bot.id && !linked(p.id) && dist(me, p) < WEAVE.SNAP * 0.5).sort((a, b) => frac(a) - frac(b))[0];
       if (loose && mine.length < weaveMax(k) && (k.charges(k.abilities[tie]) === 2 || frac(loose) < 0.7)) { bot.healTarget = loose.id; k.g.tie = null; return tie; }
     }
   }
@@ -1588,7 +1606,7 @@ BotAI.threadweaver = function (bot, k, view) {
   return null;
 };
 
-// (her threads reach 260 px: she stands off the boss's flank, close enough to the tank to keep them tied)
+// (her threads reach 550 px: she stands off the boss's flank, close enough to the tank to keep them tied)
 BOT_CLASS.threadweaver = {
   home(bot, view) {
     const b = view.boss, f = b.facing || 0, side = (bot.slot || 0) % 2 ? 1 : -1, a = f + side * 1.6;
@@ -1619,7 +1637,7 @@ BOT_CLASS.marionettist = {
     const idx = id => k.abilities.findIndex(a => a.id === id || a.replaces === id);
     const ok = i => { const a = k.abilities[i]; return i >= 0 && !!a && k.usable(a) && k.readyIn(a) <= 0.0001 && k.available(a); };
     const weave = k.gcdRemaining() > 0.55 && !k.cast;
-    const pull = idx('pull'), cross = idx('cross'), pir = idx('pirouette'), fin = idx('finale'), jab = idx('jab');
+    const pull = idx('pull'), cross = idx('cross'), pir = idx('pirouette'), fin = idx('finale'), cue = idx('cue');
     const e = mariEnemy(k), me = { x: bot.x, y: bot.y };
     bot.aim = null;
     // keep every Doll out of the red
@@ -1640,13 +1658,18 @@ BOT_CLASS.marionettist = {
         if (land && ok(pir) && k.gcdRemaining() <= 0 && !k.cast && k.abilities[pir].id === 'pirouette') return pir;
       }
     }
+    // a torn String or a limp Doll: Pull Strings ties all three back (it flings the Doll onto its mark across the boss)
+    if (e && ok(pull) && (mariLimp(k) || k.g.strings < 3) && (weave || mariLimp(k)) && !k.cast) {
+      const st = mariStation(k, 0, me, e);
+      if (!BotAI.dollDanger(view, st.x, st.y, 3)) { bot.aim = st; return pull; }
+    }
     if (weave && ok(cross) && k.abilities[cross].type === 'ogcd' && mariLineOn(k)) return cross;
     if (k.gcdRemaining() > 0 || k.cast || k.lockUntil > k.now) return null;
     const dollsSafe = k.g.dolls.every(d => !BotAI.dollDanger(view, d.x, d.y, 3.2));
     if (ok(fin) && k.g.encore >= 5 && dollsSafe) return fin;
     if (ok(cross) && k.abilities[cross].type === 'gcd' && mariLineOn(k)) return cross;
     if (ok(pir)) return pir;
-    if (ok(jab)) return jab;
+    if (ok(cue)) return cue;   // (the filler: the Doll jabs on its own, Cue speeds it up)
     return null;
   },
 };
@@ -1683,7 +1706,9 @@ BOT_CLASS.gloomsworn = {
     if (weave || (myBuster && k.gcdRemaining() > 0.1)) {
       if (ok(mantle) && (myBuster || (hp < 0.5 && !hollow))) return mantle;
       if (ok(rite) && hp < 0.35 && !hollow && gloom >= 20 && !myBuster) return rite;
-      if (ok(pall) && gloom >= 30 && !hollow && (BotAI.incoming(view, 4.5) >= 0.3 || (view.bossCast && RAID_CASTS.test(view.bossCast.name) && view.bossCast.left < 3 && BotAI.incoming(view, 4.5) >= 0.12))) return pall;
+      // (a Reaver of Dusk's Dusk Reave stands in Black Pall's place: a cut on cooldown, free in a Hollow, and not out of the Gloom a tankbuster is coming for)
+      if (k.abilities[pall] && k.abilities[pall].id === 'reave') { if (ok(pall) && (hollow || (gloom >= 55 && !busterSoon))) return pall; }
+      else if (ok(pall) && gloom >= 30 && !hollow && (BotAI.incoming(view, 4.5) >= 0.3 || (view.bossCast && RAID_CASTS.test(view.bossCast.name) && view.bossCast.left < 3 && BotAI.incoming(view, 4.5) >= 0.12))) return pall;
       if (ok(shade) && !k.has('shade') && gloom >= 50 && !hollow) return shade;   // (the echoes are for Gloom Strikes: step when the vessel can pay for two)
     }
     if (k.gcdRemaining() > 0 || k.cast || k.lockUntil > k.now) return null;
@@ -1693,7 +1718,7 @@ BOT_CLASS.gloomsworn = {
   },
 };
 
-// ======================================================================= Thresher (damage, class 19)
+// ======================================================================= Reaper (id thresher; damage, class 19)
 // Thresher: keep all four afflictions up (Hook for the Thread, Gloam Blink for the Bind, Slash and Cleave for the Mark and Drain),
 // Gather the young ones to gold or put a rotting set back, and Reap once the gold is in (or just before it rots). The Wisp on cooldown.
 // Inside Reaper's Gate it only strikes: each Slash is a Gate Strike. (A Reap held back for a boss that is nearly dead is not read:
@@ -1712,6 +1737,7 @@ BOT_CLASS.thresher = {
       if (ok(wisp) && (k.abilities[wisp].id === 'cull' ? on >= 3 : !k.has('wisp'))) return wisp;
       if (!floor && ok(hook) && thStage(k, 'thread') === 0) return hook;
       if (!floor && ok(blink) && thStage(k, 'bind') === 0 && !(k.def.noAff && k.def.noAff.indexOf('bind') >= 0)) return blink;
+      if (!floor && k.def.blinkAge && ok(blink) && young >= 2 && gold === 0) return blink;   // (a Grim's Blink ripens the afflictions)
       if (ok(gather)) {
         if (k.abilities[gather].id === 'sowing') { if (on <= 1) return gather; }
         else if (on >= 2 && (rot >= 1 || (ok(reap) && young >= 2 && gold === 0))) return gather;

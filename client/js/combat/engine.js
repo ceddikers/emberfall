@@ -15,7 +15,8 @@
 //                 both, def.poolRest(k) forces the resting pace). A move you can't pay for fails ('winded').
 //  - buffer       presses up to this early are buffered (instead of QUEUE_WINDOW), up to `bufferSize` of them, in order.
 //  - repeat:false a held key doesn't auto-repeat presses (main.js).
-//  - itemGcd      which presses count as a "GCD" for item effects (fast presses would otherwise proc them far more often).
+//  - itemGcd      how much of a "GCD" a press counts as for item effects (optional; by default its recovery over the
+//                 standard GCD, Kit.itemGcdShare, so fast presses don't proc them far more often).
 // def.moveFor(k, ab) may turn a press into the move it completes (a named string): that move is what fires, is shown
 // and is sent to everyone ('used' carries it; it names its button in `slot`). k.input says how the press came in.
 // Kits without `pacing` behave exactly as before.
@@ -118,7 +119,9 @@ class Kit {
     if (!(dt > 0 && dt < 1)) return;
     const resting = now - this.lastSpend >= (p.delay || 0) || (this.def.poolRest && this.def.poolRest(this));
     const rate = (resting ? (p.rest ?? p.regen) : p.regen) * (this.def.poolRate ? this.def.poolRate(this) : 1);
-    this.g[p.key] = Math.min(this.poolMax(), (this.g[p.key] || 0) + rate * dt);
+    const was = this.g[p.key] || 0;
+    this.g[p.key] = Math.min(this.poolMax(), was + rate * dt);
+    if (this.g[p.key] > was) this.fxGain(this.g[p.key] - was, true);   // (item effects: a gauge that fills on its own)
   }
 
   get now() { return this.env.now(); }
@@ -345,7 +348,7 @@ class Kit {
         if (e.icd) ready.set(e.id, this.now + e.icd);
         if (e.strike) this.damage(e.strike, { item: true });
         if (e.mend) this.env.emit({ type: 'heal', target: 'self', amount: Math.round((this.env.maxHp ? this.env.maxHp() : 0) * e.mend), crit: false });
-        if (e.ward) this.shield('self', e.ward, e.dur || 6);
+        if (e.ward) this.shield('self', e.ward, e.dur || 6, { tag: 'item' });   // (tagged: it never replaces a stronger shield, fight.js)
         if (e.cdr) for (const a of this.abilities) if (a.type === 'ogcd' && a !== ab) this.reduceCooldown(a.id, e.cdr);
         if (e.buff) {
           const bs = this.fxBuffs || (this.fxBuffs = new Map()), b = bs.get(e.id);
@@ -356,8 +359,8 @@ class Kit {
     } finally { this._inFx = false; }
   }
   // gauges that fill on their own (a little every frame) count once per 10 points
-  fxGain(n) {
-    if (n >= 1) { this.itemHook('gain'); return; }
+  fxGain(n, steady) {
+    if (n >= 1 && !steady) { this.itemHook('gain'); return; }
     this._gainAcc = (this._gainAcc || 0) + n;
     if (this._gainAcc >= 10) { this._gainAcc -= 10; this.itemHook('gain'); }
   }
@@ -473,10 +476,20 @@ class Kit {
     // a tank's taunt rides on this button (kits.js TAUNT_CARRY): the world taunts only if it's ready and wanted
     if (this.def.tauntOn && this.env.taunt && this.baseId(ab) === this.def.tauntOn) this.env.taunt(target);
     if (ab.ult) this.ultFire(ab);
+    const share = ab.type === 'gcd' ? this.itemGcdShare(ab) : 0;   // (read before the effect: a Distill it spends shortens the GCD)
     ab.effect(this, target);
     if (this.def.afterUse) this.def.afterUse(this, ab);
-    const asGcd = ab.type === 'gcd' && !(this.pace && this.pace.itemGcd && !this.pace.itemGcd(this, ab));
-    if (ab.type !== 'gcd' || asGcd) this.itemHook(asGcd ? 'gcd' : 'ogcd', ab);
+    if (ab.type !== 'gcd') this.itemHook('ogcd', ab);
+    else if ((this._gcdShare = (this._gcdShare || 0) + share) >= 0.999) { this._gcdShare -= 1; this.itemHook('gcd', ab); }
+  }
+  // how much of a GCD this press counts as for item effects: a standard GCD is one; a shorter one (an Alembist's reagents)
+  // and a press of a kit without a GCD (an Ironpalm's, by its recovery) count as their share, so fast presses don't proc
+  // "on a GCD" effects more often than anyone else's GCDs do
+  itemGcdShare(ab) {
+    if (this.pace && this.pace.itemGcd) return +this.pace.itemGcd(this, ab);
+    const t = this.gcdFree() ? (this.castTime(ab) || this.lockLen || ENGINE.ANIM_LOCK)
+      : ((typeof ab.recastGcd === 'function' ? ab.recastGcd(this) : ab.recastGcd) || ENGINE.GCD);
+    return Math.min(1, t / ENGINE.GCD);
   }
 
   update() {

@@ -259,7 +259,7 @@ The highest ceiling: newbies reach 70% of pro damage. The boss's hitbox ring sho
 **Healer kit synergy, Round 2 (2026-10-21).** Every healer button now plays off the others, and four healers can pick ONE ally to make stronger.
 - *Chronomancer:* **Paradox** (Shift from Haste back to Slow): an instant hit of potency 14 per Flux spent in that Haste window (`CHRONO_PARADOX`, about 5 damage per Flux), healing the party for half; stumbling out (0 Flux) gives none. Shift glows both ways (into Haste at 95+ Flux, back below 15). **Rewind** in Haste costs 25 Flux instead of a charge (that Flux feeds Paradox). **Stasis** reworked: 8 s of held Bolt heals (+25%), released to the party on the second press or at the end; never wasted; 60 s cooldown from the release. Bolt now carries a smaller share of the damage, so potMult fell (0.84 to 0.67; Echoist 0.53 to 0.47; Accelerant 0.80 to 0.70) and Bolt's heal shares rose to match (Slow 150% / Haste 60%; Echoist 135/56; Accelerant 114/71). Phase Strike and Stopwatch now act only on the shift into Haste (Phase's Bolt at 75%).
 - *Grovekeeper:* every Thornlash tick grows 2 Bloom (`GROVE_THORN_BLOOM`; pandemic already carried up to 9 s). **Rebirth** is instant on the living: a heal of potency 1100 and Wildheart; it glows when its target is down.
-- *Alembist:* **Distill** is a decision: on an empty still the next two reagents are instant (as before); with one reagent in, it doubles it into a fully ripe vial at once. Quickpowder Galvanizes the ally it lands on, and Smart Throw gives a healthy target the Quickpowder before a bomb.
+- *Alembist:* **Distill** is a decision: on an empty still the next two reagents are instant (as before); with one reagent in, it doubles it into a fully ripe vial at once. Quickpowder Galvanizes the ally it lands on, and Smart Throw gave a healthy target the Quickpowder before a bomb (Smart Throw is gone since: see *Marking a vial* in the Alembist section).
 - *Cleric / Threadweaver:* Intervention and Recall glow when their target is down; Benediction Blesses. The Threadweaver had no dead buttons left (Grand Loom ties Tapestry in).
 
 **Chosen-ally buffs** (`ALLY_BUFFS` in engine.js): Quickened (Accelerando / Echo Chamber / Time Warp: 12% haste, 15 s), Blessed (Benediction: +10% damage, 10 s), Wildheart (Rebirth on the living: +10% damage, 12 s), Galvanized (Quickpowder's target: +10% damage, 10 s). Data flow: the kit calls `k.allyBuff(target, id)`, which emits `{ type: 'allyBuff', target, id, kind, value, dur }`; a human's goes to the host as a `cev` (main.js accepts only a known id on a numeric target and resets its kind, value and duration from the table), a bot's goes straight in (raid-host.js botWorld). `RaidHost.onPlayerEvent` keeps it in `allyBuffs` per player id (the same buff again replaces the old one; nobody fallen) and broadcasts `{ t: 'abuff', to, id, kind, value, dur, from }`. Every client keeps `raid.abuffs`: your own kit reads the ones on you through `env.selfMods()` (`dmg` multiplies damage in `Kit.damage`, `haste` shortens casts and the GCD in `Kit.hasteMult`), bots through `RaidHost.allyMods(id)`; the party frames show a chip with the move's icon, your buff bar shows it too. Bots spend them on the damage dealer who has dealt the most (`BotAI.topDps`) while the party's burst is on (`view.burst`: a damage buff or a vulnerability on the boss), Accelerando on cooldown; a shielding move keeps a charge or waits for an upcoming tankbuster. The simulator has no allies, so it gives these no damage.
@@ -326,7 +326,8 @@ Two DPS built for players who want more to juggle. On the hero select their tile
 | Q | Ember | GCD (0.75 s) | Add Ember to the brew. Two reagents make a vial. |
 | W | Dew | GCD (0.75 s) | Add Dew. |
 | E | Salt | GCD (0.75 s) | Add Salt. |
-| R | Throw | GCD (1.0 s) | Throw the oldest vial at your heal target: it shatters and splashes everyone close by. Bombs fly at the enemy instead. |
+| R | Throw | GCD (1.0 s) | Throw the oldest vial (or the marked one) at your heal target: it shatters and splashes everyone close by. Bombs fly at the enemy instead. |
+| 1-3 | Mark a vial | free | Mark the vial in that place of the bandolier (left to right) for the next Throw. 1-5 for the Apothecary. |
 | D | Distill | oGCD | Your next two reagents come off the GCD at once (30 s cooldown). |
 | F | Grand Batch | oGCD | Fill every empty slot with copies of the last vial you brewed (120 s cooldown). |
 
@@ -341,7 +342,8 @@ Two DPS built for players who want more to juggle. On the hero select their tile
 
 - **The bandolier** holds 3 vials. A vial grows 30% stronger over 10 s (ripe), and spoils at 40 s (wasted).
 - Reagent order doesn't matter (Dew + Ember = Ember + Dew). A brew left half done stays in the still.
-- The gauge shows each vial's colour, ripeness and spoiling; its tooltip lists the recipes.
+- The gauge shows each vial's colour, ripeness and spoiling, and its place number under it; its tooltip lists the recipes.
+- **Marking a vial** (replaced Smart Throw, October 2026): the number keys mark the vial in that place of the bandolier, and the next R throws it at your heal target; an empty place does nothing. The mark sits on the vial itself (`g.mark`, its id), holds until you throw and then goes back to the first; with nothing marked R takes the leftmost (oldest). The marked vial stands raised over a gold chevron with a gold frame. While you play an Alembist the number keys are the vial keys (`vial1`-`vial5` in `keybinds.js`) and party selection moves to F1-F4 (`alemAlly1`-`alemAlly4`); every other class keeps 1-4 for allies. The class-only keys never clash with the party keys in the remap list. The mark lives on the owner's kit only: the throw's own events name the vial. Bots mark the vial they choose the same way (`alemMark`).
 
 *Ceiling:* keep the bandolier full of ripe vials of the right kind before the damage lands (Salt Ward before the buster, Steam before the raidwide), throw bombs only when nobody needs healing, and never let a vial spoil.
 
@@ -353,7 +355,7 @@ Two DPS built for players who want more to juggle. On the hero select their tile
 - **Distill** makes the next two reagents free of the GCD (an instant brew), rather than brewing a vial itself.
 - Reagents have a 0.75 s GCD and Throw 1.0 s, so a brew-and-throw takes about as long as one normal GCD heal.
 - **Volatile's Reactions** need a third reagent, which comes from **Catalyst** (replacing Distill, 2 charges, 14 s): while it lasts, a brew takes three reagents.
-- **Apothecary** picks which vial to throw with Shift+R (Shift is self-cast for every other healer).
+- **Apothecary** first picked its vial with Shift+R; since every Alembist marks vials with the number keys, the Apothecary simply has five to mark (1-5).
 <!-- /classes-b -->
 
 <!-- ironpalm -->
@@ -501,26 +503,27 @@ Single talents stay under +7% pro DPS; full builds +7 to +17%.
 | F | Tapestry | oGCD | 120 s. Ties the whole party into one web for 8 s: any hit on one of you is split evenly among everyone. |
 
 - **A thread** splits a hit on either end evenly between both ends, and a heal on one end runs 60% of the way down. Heals don't split.
-- **Threads snap** when their ends get more than 260 px apart, with a small heal (150) to both ends. A thread whose end dies is simply gone.
+- **Threads snap** when their ends get more than 550 px apart (260 until 2026-10-24), with a small heal (150) to both ends. A thread whose end dies is simply gone.
 - **Spool** fills from damage your threads carry (1.1 Spool per 1% of your max HP carried) and is spent by Mend Seam.
 
 *Ceiling:* tie the person about to be hit to someone healthy before the hit, read the arena to know which threads a spread mechanic will tear and Snap them yourself first, re-tie on the stack, and keep Tapestry for the hit that would kill. Newbies reach 53% of pro damage, the widest gap of any healer.
 
-**Marionettist, Puppeteer** (◆◆◆, complexity 4). Signature: **the Doll and its Strings**. Gauge: a little stage with five footlights (Encore, 0 to 5) and the three strings above it. The Marionettist stands back; a Doll on three strings does the fighting. Autos are the Doll's slap (30).
+**Marionettist, Puppeteer** (◆◆◆, complexity 4). Signature: **the Doll and its Strings**. Gauge: a little stage with five footlights (Encore, 0 to 5) and the three strings above it. The Marionettist stands back; a Doll on three strings does the fighting. She has no auto-attack of her own: the Doll jabs on its own (40, every 4 s while she fights and it has the enemy in reach; Cue makes the next three come every 2 s). No Encore from those.
 
 | Key | Skill | Type | What it does |
 |---|---|---|---|
-| Q | Jab | GCD | The Doll stabs: 250, +1 Encore. |
-| W | Pull Strings | oGCD | 2 charges, 10 s. Fling the Doll to where you aim (within reach). It cuts what it passes through and stays there until you pull it again or pick another target. |
+| Q | Cue | GCD | A finger snap: the Doll lunges for a 180 stab at once, and its next three Jabs come twice as fast. +1 Encore. The filler. |
+| W | Pull Strings | oGCD | 2 charges, 10 s. Fling the Doll to where you aim (within reach). It cuts what it passes through and stays there until you pull it again or pick another target. Every pull ties all three Strings back and gets a limp Doll up at once. |
 | E | Cross-Cut | GCD | 8 s. The strings become blades along the line from you to the Doll: 560 and +2 Encore if the enemy is on the line, nothing otherwise. |
 | R | Pirouette | GCD | 12 s. The Doll spins: 300 around it, and nothing can touch it for 1.5 s. +1 Encore, +1 more for a blow it spins through. Glows when a telegraph is about to land on the Doll. |
 | D | Swap | oGCD | 20 s. You and the Doll trade places. Stage Cross: the next Cross-Cut within 6 s cuts twice as hard and gives 1 more Encore. |
-| F | Grand Finale | GCD | 10 s, needs 5 Encore: spends it on five hits of 160. The Doll can't move while it plays. |
+| F | Grand Finale | GCD | 10 s, needs 5 Encore: spends it on five hits of 253 (about 100 on screen at base gear). The Doll can't move while it plays. |
 
 - **The Doll** works only the enemy you have picked (click or Tab): it stations itself on that enemy's far side. With none picked it stays where it is. Pull Strings parks it until you pull again or pick another target; Swap leaves it for 1.5 s. Bots keep the old 3 s hold.
-- **Strings:** three. One tears if the Doll is dragged past 300 px from you (it gets yanked back) or a boss mechanic lands on it. At 0 the Doll goes limp for 4 s and then all three come back; a torn string regrows after 15 s.
+- **Strings:** three. One tears if the Doll is dragged past 300 px from you (it gets yanked back) or a boss mechanic lands on it. At 0 the Doll goes limp for 4 s and then all three come back; a torn string regrows after 15 s. Pull Strings ties all three back at once and gets a limp Doll up.
+- **The rework (2026-10-24):** Jab became the Doll's own timed hit and Cue took Q; Pull Strings restrings; Grand Finale's hits went from 160 to 253. To keep the class's damage where it was, `potMult` went from 0.922 to 0.79, so every other number shows about 14% smaller (Cross-Cut about 221 on screen instead of 258), and Cutting Line's share rose from 0.622 to 0.657.
 
-*Ceiling:* the boss's mechanics are aimed at you, but your damage lives somewhere else. Keep the Doll out of the red with Pull and Pirouette, stand so the boss sits on your string line for every Cross-Cut, and start Grand Finale only when you've read the next five seconds. Newbies reach 81% of pro damage: the Doll keeps hitting even when you play badly; the gap is in keeping its Strings.
+*Ceiling:* the boss's mechanics are aimed at you, but your damage lives somewhere else. Keep the Doll out of the red with Pull and Pirouette, stand so the boss sits on your string line for every Cross-Cut, and start Grand Finale only when you've read the next five seconds. Newbies reach 69% of pro damage: the Doll keeps jabbing even when you play badly; the gap is in Grand Finales on time, the cut lines and using Pull Strings to tie the Strings back.
 
 **Specs.**
 - **Loomwright** (The Living Web): 5 threads, and heals run two links deep (60% to the far end, then 30% on through that ally's threads).
@@ -528,7 +531,7 @@ Single talents stay under +7% pro DPS; full builds +7 to +17%.
 - **Cutting Line** (The Bladed String): strings reach 400 px and cut any enemy they cross once a second (48, and Taut String: +12 for every second the line holds across, up to +72; it slackens when the line leaves or a String tears), and Cross-Cut is an oGCD with 2 charges on 9 s.
 - **Understudy** (Two Dolls on One Bar): two Dolls at 58% each. The triangle between you and both Dolls is **the Stage**: an enemy inside takes 10% more damage from the whole party.
 
-**Talents.** Threadweaver: Backstitch, Cross Stitch, Taut, Thimble, Reel In, Knotwork, Embroider (replaces Mend Seam), Full Bobbin, Tension, Grand Tapestry, Selvedge, Long Thread, Cat's Cradle (replaces Tighten), Heartstring, Double Knot. Marionettist: Flourish, Lunge, Counterweight, Body Double, Mended Strings, Stand-In, Tangle (replaces Pirouette), Encore! Encore!, Second Act, Curtain Call, On Cue, Quick Change, Red Curtain (replaces Swap), Twin Strings, Final Bow.
+**Talents.** Threadweaver: Backstitch, Cross Stitch, Taut, Thimble, Reel In, Knotwork, Embroider (replaces Mend Seam), Full Bobbin, Tension, Grand Tapestry, Selvedge, Long Thread, Cat's Cradle (replaces Tighten), Heartstring, Double Knot. Marionettist: Flourish, Lunge, Counterweight, Body Double, Safe Landing, Stand-In, Tangle (replaces Pirouette), Encore! Encore!, Second Act, Standing Ovation, On Cue, Quick Change, Red Curtain (replaces Swap), Twin Strings, Final Bow.
 
 **Host-side design.** Both classes need rules no single client can judge, so the host owns them (`fight.js`, the weave and Doll blocks):
 - **Threads live on the host.** Tie, Snap, Tighten and Tapestry are combat events; the host keeps the list, measures lengths every tick, snaps long threads, splits damage in `damagePlayer` (marked `shared` so it never splits twice; enrage, falls and self-damage are never split), runs heals down the threads, and logs what each thread carried for the last 5 s. It sends `thr` (the list) on change and `thrs` (snaps); it tells the weaver `carry` (Spool), `snapped` (Knotwork) and `tiefail` (the charge comes back). Tighten is a knockback toward the partner.
@@ -536,7 +539,7 @@ Single talents stay under +7% pro DPS; full builds +7 to +17%.
 - **Dolls and the Gorgemaw.** A mechanic a Gorgemaw swallows whole (a spread circle eaten for a teammate) never resolves, so it can't catch a Doll either; one the jaw only takes a bite of still resolves for everyone else, Doll included. Dolls themselves are never edible.
 - **Dolls are reported by their owner** (10 times a second: position, state, strings) and judged by the host: a mechanic resolving on a Doll that isn't safe, limp or out of date sends the owner `dollhit`. The host rebroadcasts every Doll as `dolls` so everyone draws them, and works out the Stage (an enemy inside an Understudy's triangle takes 10% more from everyone).
 - **The simulator and the town have no host**, so the kits fall back to counting their own threads and Dolls; the sim models thread snaps and Doll hits as part of each class's movement.
-- **On screen** (`arena/stagecraft.js`): threads bow loose when slack and pull straight, brighten and shiver near 260 px; a snap flicks apart; the Doll is a jointed wooden puppet (drawn in `heroes.js`) with one string per String left, reddening as it nears its reach; the Stage is chalked on the floor and lights while the boss is inside.
+- **On screen** (`arena/stagecraft.js`): threads bow loose when slack and pull straight, brighten and shiver near 550 px; a snap flicks apart; the Doll is a jointed wooden puppet (drawn in `heroes.js`) with one string per String left, reddening as it nears its reach; the Stage is chalked on the floor and lights while the boss is inside.
 
 **Design changes from the plan (`docs/plans/2026-10-new-classes.md`):**
 - **The Stage is +10%**, not 15%: 15% made an Understudy worth more than any DPS in the party.
@@ -580,7 +583,7 @@ The sim runs a 6-minute fight twice per class. The *pro* follows that class's op
 | Gorgemaw | 1076 | 1498 | 72% |
 | Oathbroker | 1197 | 1485 | 81% |
 | Threadweaver | 547 | 1038 | 53% |
-| Marionettist | 1870 | 2295 | 81% |
+| Marionettist | 1576 | 2290 | 69% |
 
 These numbers include auto-attacks. Each class's `potMult` was lowered when autos were added, so pro damage stayed where it was. Newbies gained a little, because autos keep hitting while they move or hesitate.
 
@@ -1072,6 +1075,8 @@ The user picked: **story vignettes**, **one per spec**, **built so the spec's tr
 | **Runeguard · Runeblade** (The Carved Edge) | Melee damage | Rune Strike becomes the **Rune Blade** combo (Cut > Carve), Glyph Burst becomes **Rune Cleave** (leaves a burning rune for 12 s), Mirror Aegis has two charges, Wards a little smaller. |
 | **Ironpalm · Still Water** (The Unmoving Pond) | Parrying | A perfect Read fills Breath to the top, on any hit; Read has two charges. Iron Skin becomes **Still Pond** (90 s): 25% less damage for 8 s, and Read comes back 0.8 s after each use. |
 | **Ironpalm · Avalanche Fist** (The Falling Mountain) | Long strings | Every named move adds **Momentum** (+3% damage, up to 8, gone 2.5 s after the last); moves of four inputs or more hit 20% harder. A broken or dropped string **staggers** you (0.7 s) and loses it all. Temple Bell becomes **Landslide**: the party mitigation, and 15 s in which strings can't drop and Momentum fills and holds. |
+| **Gloomsworn · Sentinel** (The Long Vigil) | Protecting the party | Gloom Strike's barrier lasts 10 s and a second one falls on the most hurt ally; Black Pall lasts 8 s; Gloom drains slowly out of combat. A Hollow covers the whole party (15% less damage while it lasts) and gives the healer 6 s after it to pay the debt instead of 4. |
+| **Gloomsworn · Reaver of Dusk** (The Hollow Blade) | Damage | 6% more damage. Black Pall becomes **Dusk Reave** (30 s, 25 Gloom, free while Hollow): a 600 cut and 10% less damage for 5 s. Hollow lasts 10 s and every Gloom Strike echoes (85%) while it does. |
 
 **Healers (design choices made together on 2026-10-19):**
 
@@ -1082,8 +1087,8 @@ The user picked: **story vignettes**, **one per spec**, **built so the spec's tr
 | **Grovekeeper · Lifebinder** (The Deep Roots) | Healing over time | Rejuvenate becomes **Lifebind**: it also takes root on the most hurt other ally. Bloom heals 30% more. |
 | **Grovekeeper · Moonwell** (The Silver Pool) | Placed healing | Wild Growth becomes **Moonwell**: a 12 s pool of moonlight at an ally's feet that heals everyone standing in it every 1.5 s (45 s cooldown). Bots step into it. |
 | **Chronomancer · Echoist** (The Second Voice) | Delayed healing | Temporal Bolt and Recall repeat 3 s later at half strength. Accelerando becomes **Echo Chamber**: the same party haste, and echoes are full strength while it lasts. |
-| **Chronomancer · Accelerant** (The Quickened Hour) | Party support | Haste drains Flux 40% slower and its Bolts heal the party more; Accelerando gives 15% for 20 s; Slow heals the link a little less. |
-| **Alembist · Apothecary** (The Prepared Hand) | A deep, planned stock | The bandolier holds 5 vials and they ripen in 5 s. Shift+R picks which vial Throw sends next (a chevron marks it). A little less potent per vial. |
+| **Chronomancer · Accelerant** (The Quickened Hour) | Party support | Haste drains Flux 40% slower and its Bolts heal the party more; Accelerando gives 15% for 20 s; Slow heals the link a little less. **Overclock:** every shift into Haste also hastens the party 6% for 10 s (once per 12 s), so you shift in as the burst begins. |
+| **Alembist · Apothecary** (The Prepared Hand) | A deep, planned stock | The bandolier holds 5 vials and they ripen in 5 s. The number keys 1-5 mark which vial Throw sends next (a gold chevron and frame mark it). A little less potent per vial. |
 | **Alembist · Volatile** (The Short Fuse) | Hidden recipes | Distill becomes **Catalyst** (2 charges, 14 s): your next brew takes three reagents and makes a **Reaction**. The seven Reactions are hidden: the Catalyst tooltip shows them sealed until you brew one, and found ones are saved per hero. Vials heat up in 4 s and then their **fuse** burns: 6 s later an unthrown vial goes off on you at 60% (bombs burn you). A wrong three-reagent mix fizzles. |
 
 **DPS (design choices made together on 2026-10-19; the Sigilmancer was the user's own idea, a Black Mage-style circle):**
@@ -1092,13 +1097,13 @@ The user picked: **story vignettes**, **one per spec**, **built so the spec's tr
 |---|---|---|
 | **Ranger · Sharpshooter** (The Still Eye) | Precision | Each second standing still adds Steady Aim (up to 5, +4% damage each); moving loses it. Piercing Arrow becomes **Aimed Shot**: a 2 s cast, a heavy hit (instant with Keen Eye). |
 | **Ranger · Venomstrike** (The Green Death) | Damage that ramps | Quick Shot stacks Acid on the target (up to 8, a growing burn). Piercing Arrow becomes **Caustic Arrow**, which bursts every stack. |
-| **Shadowblade · Bladedancer** (The Whirling Edge) | Steady damage from anywhere | Positionals always land. Shadowstep becomes **Blade Fury**, a spinning flurry (+1 combo point, two charges). **Tempo**: an Eviscerate at exactly 5 with no point spilled since the last adds a Tempo (up to 3); at 3 the next Blade Fury is a Flourish (650). A spilled point loses them. |
-| **Shadowblade · Nightstalker** (The Knife Behind) | Burst from behind | Eviscerate becomes **Backstab**: much stronger from behind, 25% weaker from the front. Shadow Dance lasts 14 s. |
+| **Shadowblade · Bladedancer** (The Whirling Edge) | Steady damage from anywhere | Positionals always land. Shadowstep becomes **Blade Fury**, a spinning flurry (+1 combo point, two charges). **Tempo**: an Eviscerate at exactly 5 with no point spilled since the last adds a Tempo (up to 3); at 3 the next Blade Fury is a Flourish (650). A spilled point loses them. Smoke Bomb readies both Blade Furies (a positional-free spec has no use for its True North). |
+| **Shadowblade · Nightstalker** (The Knife Behind) | Burst from behind | Eviscerate becomes **Backstab**: much stronger from behind, 25% weaker from the front. Shadowstep starts a **Stalk**: the next Backstab within 6 s hits 6% harder, so the step goes in right before the finisher. Shadow Dance lasts 14 s. |
 | **Pyromancer · Cataclysm** (The Falling Star) | Huge single hits | Pyroblast becomes **Meteor**: lands 1.5 s after the cast, hits harder, leaves a burning crater. Hot Streak still makes it instant. |
 | **Pyromancer · Sigilmancer** (The Burning Circle) | Positioning | Combustion becomes **Ember Circle**: a 20 s circle at your feet (45 s cooldown). Inside it you cast 20% faster and deal 15% more damage; outside, nothing. Bots stay in theirs. |
 | **Thermist · Pendulum** (The Swinging Weight) | Fast swings | Every spell moves the dial a step further; every crossing of 0 adds Momentum (up to 5, +4% damage each, gone after 6 s without a crossing). The Pendulum turns back a step short of the edge. |
 | **Thermist · Zenith** (The Burning Edge) | Holding the edge | At ±5 you stay in **Redline** instead of overloading: +20% damage and the edge spell instant, but Strain builds (11 a second) until you vent it or melt down. Equilibrium becomes **Bleed Off** (15 s): vents 60 Strain behind a shield. |
-| **Driftblade · Orbit** (The Circling Hawk) | Smooth circles | Circling your target at close range builds Orbit (a stack per radian, up to 5, fading 2.5 s after you stop); at 5, Carve strikes on its own every 1.4 s while you move. |
+| **Driftblade · Orbit** (The Circling Hawk) | Smooth circles | Circling your target at close range builds Orbit (a stack per radian, up to 5, fading 2.5 s after you stop); Hook Turn swings you half a circle, 3 stacks at once; at 5, Carve strikes on its own every 1.4 s while you move. |
 | **Driftblade · Comet** (The Long Charge) | Big, readable burst | Drift holds 200 and fills faster in straight lines. Crosswind becomes **Impact**: a charge clean through the target that releases everything at once (a sure crit from 160). |
 
 New support: kits can ask where their hero stands (`env.pos`, for the Sigilmancer's circle); heals can target `'lowest'` (the most hurt ally, optionally not a given one), healing pools on the floor (`pool` events, ticked in `fight.js`), and the Inquisitor's brand (`brand` events; `burstBrand` credits each burst to the Inquisitor).
@@ -1233,7 +1238,7 @@ The base Cleric gains least in damage because its talents mostly change healing 
 
 | Row | Talent | Effect |
 |---|---|---|
-| I | **Feint** | A Strike from the front is no longer wasted: it sets up a feint, and your next Eviscerate lands as a hit from the side wherever you stand. *Nightstalker:* A Strike from the front is no longer wasted: it sets up a feint, and your next Backstab lands as a hit from behind wherever you stand. |
+| I | **Feint** | A Strike from the front is no longer wasted: it sets up a feint, and your next Eviscerate lands as a hit from the side wherever you stand. *Nightstalker:* A Strike from the front is no longer wasted: it sets up a feint, and your next Backstab lands as a hit from behind wherever you stand. *Bladedancer:* A Strike never spills a combo point: at 4 points it gives only the 1 that fits, and your Tempo is safe. |
 | I | **Opportunist** | An Eviscerate while the boss is casting is always a critical hit. *Nightstalker:* A Backstab while the boss is casting is always a critical hit. |
 | I | **Ambush** | Shadowstep now strikes as you arrive: a stab from behind for a combo point. *Bladedancer:* Blade Fury's spin now gives a second combo point, but never one past 5. |
 | II | **Shadow Dodge** | A Shadowstep while the boss is casting also slips the blow: you take 50% less damage for 2s. *Bladedancer:* A Blade Fury while the boss is casting also slips the blow: you take 50% less damage for 2s. |
@@ -1242,7 +1247,7 @@ The base Cleric gains least in damage because its talents mostly change healing 
 | III | **Rupture** | **New move.** Venom Blade becomes Rupture: a finisher that spends all your combo points to open the boss up for 4s per point. While it bleeds, Eviscerate hits 15% harder, as with your poison. *Nightstalker:* Venom Blade becomes Rupture: a finisher that spends all your combo points to open the boss up for 4s per point. While it bleeds, Backstab hits 15% harder, as with your poison. |
 | III | **Relentless** | A 5-point Eviscerate has an even chance to give back 1 combo point. *Nightstalker:* A 5-point Backstab has an even chance to give back 1 combo point. |
 | III | **Sharpened Shadows** | A combo point that would spill past 5 now sharpens your next Eviscerate instead: 12% harder for each (up to 3). *Nightstalker:* A combo point that would spill past 5 now sharpens your next Backstab instead: 12% harder for each (up to 3). |
-| IV | **Shadow Clone** | Shadow Dance now calls a shadow that repeats your Eviscerates at 25%. *Nightstalker:* Shadow Dance now calls a shadow that repeats your Backstabs at 25%. |
+| IV | **Shadow Clone** | Shadow Dance now calls a shadow that repeats your Eviscerates at 20%. *Nightstalker:* Shadow Dance now calls a shadow that repeats your Backstabs at 20%. |
 | IV | **Shadow Sprint** | (The one number talent.) Shadowstep recharges 3s faster. *Bladedancer:* Blade Fury recharges 1s faster. |
 | IV | **Endless Dance** | Each 5-point finisher during Shadow Dance makes it last 1s longer (up to 4s). |
 | V | **Death Blossom** | **New move.** Smoke Bomb becomes Death Blossom (120s): you vanish into a storm of knives around the boss, six cuts over 1.5s that each give a combo point. The last is a free Eviscerate with everything you hold. *Nightstalker:* Smoke Bomb becomes Death Blossom (120s): you vanish into a storm of knives around the boss, six cuts over 1.5s that each give a combo point. The last is a free Backstab with everything you hold. |
@@ -1524,9 +1529,9 @@ Single talents stay at or under +5.8% pro DPS (Falling Mountain +5.8%, Deflect +
 
 **Gear:** weapon, armor and two accessories, per hero; the bag is shared by every hero you play, saved in the browser.
 - Stats: HP, Physical, Magical (each class reads one), Defense, Haste, Critical. No MP (every class already has its own resource) and no movement speed (mechanics are timed for one run speed).
-- Gear is modest on purpose: best-in-slot is roughly +15-25% output, and every stat is capped (`GEAR_CAPS`).
+- Gear is modest on purpose: best-in-slot is roughly +15-25% output, and every stat is capped (`GEAR_CAPS`: +180 HP, +160 Physical/Magical, +110 Defense, 12% Haste, 12% Critical; raised for set 2 on 2026-10-23, since set-1 gear alone tops out under the old 150/150/100/10/10).
 - Icons are drawn in code until painted ones arrive: briefs and the sheet layout are in `docs/art/item-icons.md`. Painted PNGs go in `client/items/<key>.png` and are listed in `client/items/manifest.json`; the game adds the rarity frame.
-- **Rarity is a property of the item** (October rework): each rarity is its own set of items, and power comes from rarity, not from the boss. There is no ladder between bosses: a Grubnak Legendary is as strong as a Hollow King Legendary. Bosses differ in themes, effects and party bonuses.
+- **Rarity is a property of the item** (October rework): each rarity is its own set of items, and power comes from rarity, not from the boss. Within a set there is no ladder between bosses: a Grubnak Legendary is as strong as a Hollow King Legendary. Bosses differ in themes, effects and party bonuses. **Set 2 is one step up** (2026-10-23): its pieces carry 1.15× the budget of a set-1 piece of the same rarity and show 8 more item levels (`SET2_STEP`, `SET2_ILVL` in items.js), and set 2's party bonuses come in a step early (two wearers get what set 1 asks three for). Otherwise wearing the new loot cost more in set-1 bonuses than it gained, and a party in set-1 gear beat set 2 Hard more often than one wearing its drops.
 
   | Rarity | Colour | Stat budget | Item level | What it is | Sells for |
   |---|---|---|---|---|---|

@@ -3,7 +3,8 @@
 
 const Keybinds = (() => {
   const KEY = 'emberfall.binds', LAYOUT_KEY = 'emberfall.layout';
-  // what can be bound, in the order the panel lists them (s0-s7: the hotbar's slots)
+  // what can be bound, in the order the panel lists them (s0-s7: the hotbar's slots). cls: live only while you play
+  // that class; not: live for every class but that one. Two actions clash only if some hero has both live at once.
   const ACTIONS = [
     { id: 's0', def: 'q' }, { id: 's1', def: 'w' }, { id: 's2', def: 'e' }, { id: 's3', def: 'r' },
     { id: 's4', def: 'd' }, { id: 's5', def: 'f' }, { id: 's6', def: ' ', name: 'Dash' }, { id: 's7', def: 't', name: 'Ultimate' },
@@ -11,8 +12,15 @@ const Keybinds = (() => {
     { id: 'bags', def: 'i', name: 'Inventory' }, { id: 'talents', def: 'n', name: 'Talents' },
     { id: 'journal', def: 'j', name: 'Journal' }, { id: 'logbook', def: 'l', name: 'Logbook' }, { id: 'options', def: 'k', name: 'Options' },
     { id: 'cycle', def: 'tab', name: 'Next enemy (Shift: back)' }, { id: 'hurt', def: '`', name: 'Select most hurt ally' }, { id: 'chat', def: 'enter', name: 'Chat' },
-    { id: 'ally1', def: '1', name: 'Select party member 1' }, { id: 'ally2', def: '2', name: 'Select party member 2' }, { id: 'ally3', def: '3', name: 'Select party member 3' }, { id: 'ally4', def: '4', name: 'Select party member 4' },
+    { id: 'ally1', def: '1', name: 'Select party member 1', not: 'alembist' }, { id: 'ally2', def: '2', name: 'Select party member 2', not: 'alembist' },
+    { id: 'ally3', def: '3', name: 'Select party member 3', not: 'alembist' }, { id: 'ally4', def: '4', name: 'Select party member 4', not: 'alembist' },
+    // the Alembist's own: the number keys mark the vial Throw takes (main.js), so party selection moves to F1-F4
+    ...[1, 2, 3, 4, 5].map(i => ({ id: 'vial' + i, def: String(i), name: `Mark vial ${i}`, cls: 'alembist' })),
+    ...[1, 2, 3, 4].map(i => ({ id: 'alemAlly' + i, def: 'f' + i, name: `Select party member ${i}`, cls: 'alembist' })),
   ];
+  const CLASS_KEYS = { alembist: { name: 'Alembist', note: 'Only while you play an Alembist: the number keys mark the vial your next Throw takes, and party selection moves to these keys. They never clash with the party keys above.' } };
+  const live = (a, cls) => (!a.cls || a.cls === cls) && a.not !== cls;
+  const clash = (a, b) => (a.cls ? live(b, a.cls) : b.cls ? live(a, b.cls) : true);
   // keys the game keeps for itself (chat, targeting, menus)
   const RESERVED = new Set(['escape', 'shift', 'alt', 'control', 'meta', 'mouse0', 'mouse1', 'mouse2', 'f3', 'f5', 'f11', 'f12']);
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -24,6 +32,8 @@ const Keybinds = (() => {
     try {
       const v = JSON.parse(localStorage.getItem(KEY) || 'null');
       if (v && typeof v === 'object') for (const a of ACTIONS) if (typeof v[a.id] === 'string' && v[a.id].length <= 12 && !RESERVED.has(v[a.id])) binds[a.id] = v[a.id];
+      // (an action newer than the saved keys starts unbound if its default is already taken by one it clashes with)
+      if (v && typeof v === 'object') for (const a of ACTIONS) if (!(a.id in v) && ACTIONS.some(o => o !== a && binds[o.id] === a.def && clash(o, a))) binds[a.id] = '';
     } catch (e) { /* the defaults */ }
     labels();
   }
@@ -49,8 +59,8 @@ const Keybinds = (() => {
   }
   // the key from an event (keyboard: e.key lower-cased; mouse: 'mouse' + button)
   const keyOf = e => (e.type && e.type.startsWith('mouse') ? 'mouse' + e.button : (e.key || '').toLowerCase());
-  // which action this key is bound to, or null
-  function actionOf(k) { for (const a of ACTIONS) if (binds[a.id] === k) return a.id; return null; }
+  // which action this key is bound to for a hero of class cls (the class-only keys: CLASS_KEYS), or null
+  function actionOf(k, cls) { if (!k) return null; for (const a of ACTIONS) if (binds[a.id] === k && live(a, cls)) return a.id; return null; }
   const keyFor = id => binds[id];
 
   // ---------------------------------------------------------------- the HUD layout
@@ -125,15 +135,21 @@ const Keybinds = (() => {
   // game settings shown here (main.js): { get() -> { frames, role, mouseover }, set(key, value) }
   let prefs = null;
   function render() {
-    panel.querySelector('.kb-list').innerHTML = ACTIONS.map(a => {
+    panel.querySelector('.kb-list').innerHTML = ACTIONS.map((a, i) => {
       const n = a.name || namer(Number(a.id.slice(1))) || `Skill ${Number(a.id.slice(1)) + 1}`;
-      return `<div class="kb-row"><span>${esc(n)}</span><button type="button" class="kb-key${capturing === a.id ? ' wait' : ''}" data-a="${a.id}">${capturing === a.id ? 'Press a key…' : esc(label(binds[a.id]))}</button></div>`;
+      const head = a.cls && (i === 0 || ACTIONS[i - 1].cls !== a.cls) && CLASS_KEYS[a.cls] ? `<div class="kb-sub"><b>${esc(CLASS_KEYS[a.cls].name)}</b><span class="kb-note">${esc(CLASS_KEYS[a.cls].note)}</span></div>` : '';
+      return `${head}<div class="kb-row"><span>${esc(n)}</span><button type="button" class="kb-key${capturing === a.id ? ' wait' : ''}" data-a="${a.id}">${capturing === a.id ? 'Press a key…' : esc(label(binds[a.id]))}</button></div>`;
     }).join('');
   }
   function bind(id, k) {
     if (RESERVED.has(k)) return false;
-    const other = actionOf(k);
-    if (other && other !== id) binds[other] = binds[id];   // the two swap
+    // an action that clashes with this one and has the key gives it up: the two swap (or, if the freed key clashes for it
+    // in turn, it's left unbound). The Alembist's own keys and the party keys they replace never clash.
+    const A = ACTIONS.find(a => a.id === id), old = binds[id];
+    for (const o of ACTIONS) {
+      if (o.id === id || binds[o.id] !== k || !clash(o, A)) continue;
+      binds[o.id] = ACTIONS.some(x => x.id !== o.id && x.id !== id && binds[x.id] === old && clash(x, o)) ? '' : old;
+    }
     binds[id] = k;
     save(); labels(); onChange();
     return true;
@@ -161,6 +177,7 @@ const Keybinds = (() => {
         <h4>Party and healing</h4>
         <div class="kb-foot kb-pref"><label for="kb-frames">Party frames</label><select id="kb-frames"><option value="left">In the corner</option><option value="strip">Above your skills</option></select><span class="kb-note kb-frames-note"></span></div>
         <div class="kb-foot kb-pref"><label class="kb-check"><input type="checkbox" id="kb-mouseover"> Mouseover casting</label><span class="kb-note">Point at a party frame or an ally and press a heal: it goes to them. Off: heals go to the ally you selected, or to you.</span></div>
+        <div class="kb-foot kb-pref"><label class="kb-check"><input type="checkbox" id="kb-selfbar"> Your own health bar</label><span class="kb-note">A small bar over your hero in a raid, like the one over your allies.</span></div>
         <h4>Audio</h4>
         ${[['master', 'Master'], ['sfx', 'Effects'], ['ui', 'Interface'], ['voice', 'Voices'], ['music', 'Music'], ['amb', 'Ambience']].map(([k, n]) => `<div class="kb-foot kb-scale kb-vol"><label for="kb-vol-${k}">${n}</label><input id="kb-vol-${k}" type="range" min="0" max="100" step="5" data-vol="${k}"><b></b></div>`).join('')}
         <div class="kb-foot"><label class="kb-check"><input type="checkbox" id="kb-mute"> Mute all sound</label></div>
@@ -195,6 +212,7 @@ const Keybinds = (() => {
       sc.addEventListener('input', () => { setScale(Number(sc.value) / 100); panel.querySelector('.kb-scale-v').textContent = sc.value + '%'; });
       panel.querySelector('#kb-frames').addEventListener('change', e => { if (prefs) prefs.set('frames', e.target.value); });
       panel.querySelector('#kb-mouseover').addEventListener('change', e => { if (prefs) prefs.set('mouseover', e.target.checked); });
+      panel.querySelector('#kb-selfbar').addEventListener('change', e => { if (prefs) prefs.set('selfbar', e.target.checked); });
       // sound (audio.js): every change applies at once and is saved with the game
       panel.querySelectorAll('[data-vol]').forEach(el => el.addEventListener('input', () => {
         if (typeof Sound !== 'undefined') Sound.set(el.dataset.vol, Number(el.value) / 100);
@@ -209,6 +227,7 @@ const Keybinds = (() => {
       panel.querySelector('#kb-frames').value = pv.frames;
       panel.querySelector('.kb-frames-note').textContent = pv.role ? `For your ${pv.role} heroes.` : '';
       panel.querySelector('#kb-mouseover').checked = !!pv.mouseover;
+      panel.querySelector('#kb-selfbar').checked = !!pv.selfbar;
     }
     if (typeof Sound !== 'undefined') {
       panel.querySelectorAll('[data-vol]').forEach(el => { el.value = Math.round((Sound.get(el.dataset.vol) ?? 0) * 100); el.nextElementSibling.textContent = el.value + '%'; });

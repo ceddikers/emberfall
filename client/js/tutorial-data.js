@@ -49,7 +49,7 @@ const TUTORIAL = {
           ] },
         { h: 'Allies', keys: ['1', '2', '3', '4', '`', 'Shift'],
           body: [
-            '1-4 lock the party frames in their order: tank, healer, then damage.',
+            '1-4 lock the party frames in their order: tank, healer, then damage. An Alembist\'s number keys mark its vials instead, so it takes F1-F4 for this.',
             '` locks the most hurt ally. Press it again within a second and a half to step to the next most hurt.',
             'A heal goes, in order, to: the party frame under your mouse, the ally under your cursor, your locked ally, the nearest ally to your cursor, then yourself. Shift + the key always means yourself.',
           ] },

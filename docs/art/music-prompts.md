@@ -6,8 +6,8 @@ Instrumental only. The game is dusky low fantasy: warm and a little rustic in to
 
 - **Two fields on most generators.** Suno-style tools have a short **Style** field (about 120 to 200 characters) and a longer **description / lyrics** field. Each piece below gives both: paste the style line into Style, and the structure block into the lyrics field (the `[Instrumental]` and `[Section]` tags tell it not to sing). For tools with one long box (Udio, ElevenLabs Music and similar), paste the **Full prompt** instead.
 - **Always add "no vocals, instrumental"** (already in each prompt). For the Hollow King, a wordless choir is wanted, so that prompt says "wordless choir, no lyrics".
-- **Looping.** No generator loops perfectly. Ask for the piece to start and end on the same chord or on a held drone, then trim it in an audio editor to a clean loop point (or crossfade the last 4 seconds into the first 4). Aim for 1:30 to 2:30 per track. Boss tracks work best as two parts (see "Phase variants"): a main loop, and a harder one the game crossfades to later in the fight.
-- **File names** follow `docs/art/sounds.md`: `mus-title`, `mus-town`, `mus-grubnak`, `mus-skitterra`, `mus-volkar`, `mus-hollowking`, `mus-victory`, `mus-wipe`. Phase variants add `-b` (`mus-grubnak-b`). Export `.ogg` (or `.mp3`), stereo, 44.1 kHz, about -16 LUFS so nothing is much louder than the rest.
+- **Looping.** No generator loops perfectly. Ask for the piece to start and end on the same chord or on a held drone, then trim it in an audio editor to a clean loop point (or crossfade the last 4 seconds into the first 4). Aim for 1:30 to 2:30 per track. Boss tracks come in two parts: a main loop, and a harder variant in the same key. On Normal the game crossfades into it at a bar line late in the fight (the moment is in brackets after each harder variant); on Hard it plays the whole fight.
+- **File names** follow `docs/art/sounds.md`: `mus-title`, `mus-town`, `mus-grubnak`, `mus-skitterra`, `mus-volkar`, `mus-hollowking`, `mus-wyrm`, `mus-titan`, `mus-archmage`, `mus-hydra`, `mus-pull`, `mus-victory`, `mus-wipe`. The harder variant adds `-hard` (`mus-grubnak-hard`). Export `.ogg` (or `.mp3`), stereo, 44.1 kHz, about -16 LUFS so nothing is much louder than the rest.
 - **Mix note.** Music sits under the telegraph and warning sounds: avoid a constant loud snare or cymbal wash in the top frequencies, and keep the low end tidy so effects stay readable. Each prompt already asks for that.
 - **Tempo and key** are given so the main loop and its harder variant can be switched at a bar line without a clash.
 
@@ -51,7 +51,7 @@ Instrumental only. The game is dusky low fantasy: warm and a little rustic in to
 
 ---
 
-## 3. Grubnak, the Ogre Chef (`mus-grubnak`, harder variant `mus-grubnak-b`)
+## 3. Grubnak, the Ogre Chef (`mus-grubnak`, harder variant `mus-grubnak-hard`)
 
 **What it is:** a ruined kitchen ruled by a huge, greasy, boastful ogre chef. Five courses: Appetiser, Mains, Flare-Up, Second Sitting, Dessert, escalating to a stove that is on fire. Rowdy and percussive, built out of kitchen clatter, but menacing and a bit grotesque, not a joke.
 
@@ -69,12 +69,12 @@ Instrumental only. The game is dusky low fantasy: warm and a little rustic in to
 
 **Full prompt:** Rowdy, menacing instrumental for a boss fight against a huge ogre chef in a filthy dungeon kitchen, around 112 BPM in E minor. A heavy stomping beat built from kick drum and floor toms with pots, pans, a cleaver on a board and a cast-iron skillet played as percussion, a lumbering tuba bass line, a creaky accordion and growling trombones carrying a heavy, slightly grotesque waltz-like melody that turns mean in the chorus. Greasy, loud and threatening rather than silly, with space in the middle for tension. No vocals, no electronic synths, no cymbal wash. Starts and ends on the same clanging pot rhythm so it loops.
 
-**Harder variant `mus-grubnak-b` (the burning stove, Second Sitting and Dessert) (Style):** `frantic dark-fantasy kitchen chaos, same key but faster, brass stabs, rushing snare, roaring fire, pots clattering, accelerating, instrumental, no vocals`
+**Harder variant `mus-grubnak-hard` (the burning stove, Second Sitting and Dessert) (Style):** `frantic dark-fantasy kitchen chaos, same key but faster, brass stabs, rushing snare, roaring fire, pots clattering, accelerating, instrumental, no vocals`
 Full prompt: the same melody as the main loop in the same key (E minor) and the same rhythmic clanging, but faster at about 140 BPM, with a driving snare, screaming brass stabs, rising string tremolos and a roaring, crackling low noise bed, as if the whole kitchen is on fire and orders are piling up. Frantic but never a wall of noise. No vocals. Ends on the same clanging pattern.
 
 ---
 
-## 4. Queen Skitterra, the Broodmother (`mus-skitterra`, harder variant `mus-skitterra-b`)
+## 4. Queen Skitterra, the Broodmother (`mus-skitterra`, harder variant `mus-skitterra-hard`)
 
 **What it is:** a silk-hung cave under the roots, venom and egg sacs, a patient hunter that turns frantic whenever the brood swarms. Tense and creeping.
 
@@ -91,12 +91,12 @@ Full prompt: the same melody as the main loop in the same key (E minor) and the 
 
 **Full prompt:** Creeping, patient dark-fantasy boss music for a giant spider queen in a silk-draped cave, around 84 BPM in F# minor. A deep drone, slow bowed string harmonics, a soft heartbeat-like low drum pulse, skittering pizzicato strings that suggest many small legs, and a thin, eerie melody on glass harmonica or celesta. Quiet but constantly uneasy, with a slowly rising tension that falls back to the drone. No vocals, no heavy drums, no electronic synths. It starts and ends on the same drone so it can loop.
 
-**Harder variant `mus-skitterra-b` (the swarms and enrage) (Style):** `frantic horror strings, skittering staccato, rising tremolo, dissonant brass hits, fast pulse, panic, instrumental, no vocals`
+**Harder variant `mus-skitterra-hard` (the swarms and enrage) (Style):** `frantic horror strings, skittering staccato, rising tremolo, dissonant brass hits, fast pulse, panic, instrumental, no vocals`
 Full prompt: the same key and drone as the main loop but at about 150 BPM: relentless staccato strings like a swarm, rising tremolo, harsh dissonant brass stabs, a fast driving low drum, and the eerie glass melody screaming high above. Panicked and relentless. No vocals. Ends on the same drone.
 
 ---
 
-## 5. Volkar, the Storm Titan (`mus-volkar`, harder variant `mus-volkar-b`)
+## 5. Volkar, the Storm Titan (`mus-volkar`, harder variant `mus-volkar-hard`)
 
 **What it is:** a storm peak, a titan of stone and lightning, thunder rolling across a cliff top. Big drums and storm, building through the phases. The most epic of the four.
 
@@ -114,12 +114,12 @@ Full prompt: the same key and drone as the main loop but at about 150 BPM: relen
 
 **Full prompt:** Epic, powerful instrumental for a boss fight against a storm titan on a mountain peak in a thunderstorm, around 100 BPM in C minor. Huge taiko and war drums, driving ostinato cellos and basses, low brass melody that rises into soaring heroic horns, rolling thunder and wind as texture, dramatic but not bombastic, leaving room in the mix for sound effects. No vocals, no electric guitars, no electronic dubstep elements. Starts and ends on distant thunder with a single drum hit so it loops.
 
-**Harder variant `mus-volkar-b` (the final phases, Heavens Fall) (Style):** `intense epic orchestral storm finale, fast war drums, choir-less brass fanfare, relentless strings, lightning crackle, climactic, instrumental, no vocals`
+**Harder variant `mus-volkar-hard` (the final phases, Heavens Fall) (Style):** `intense epic orchestral storm finale, fast war drums, choir-less brass fanfare, relentless strings, lightning crackle, climactic, instrumental, no vocals`
 Full prompt: the same theme and key as the main loop but faster, about 128 BPM, with relentless running strings, a pounding drum pattern, a full brass fanfare carrying the melody, rising pitch shifts like a storm breaking, and lightning crackle accents. Climactic, urgent, never silent. No vocals. Ends on the same thunder and drum hit.
 
 ---
 
-## 6. The Hollow King (`mus-hollowking`, harder variant `mus-hollowking-b`)
+## 6. The Hollow King (`mus-hollowking`, harder variant `mus-hollowking-hard`)
 
 **What it is:** a barrow, a long burial hall, a dead king in tarnished gold. A funeral march that turns into a war march. Choir, bells, solemn weight.
 
@@ -137,12 +137,12 @@ Full prompt: the same theme and key as the main loop but faster, about 128 BPM, 
 
 **Full prompt:** Solemn, majestic dark-fantasy boss music for a dead king in his burial hall, around 66 BPM in A minor. A slow funeral march with muffled timpani and low strings, a wordless male and female choir sustaining mournful chords (ahs and oohs only, no words), tolling church bells and low brass chorale, a thin cold solo violin in a sparse middle section. Heavy, ceremonial and haunted, not horror-jumpy. No lyrics, no electronic sounds. Starts and ends on a single tolling bell over a drone so it loops.
 
-**Harder variant `mus-hollowking-b` (the war march, after Royal Doom) (Style):** `dark fantasy war march, wordless choir, pounding timpani and snare, brass fanfare, bells, relentless, majestic, instrumental, no lyrics`
+**Harder variant `mus-hollowking-hard` (the war march, after Royal Doom) (Style):** `dark fantasy war march, wordless choir, pounding timpani and snare, brass fanfare, bells, relentless, majestic, instrumental, no lyrics`
 Full prompt: the same theme and key as the main loop but turned into a war march at about 108 BPM: snare and timpani marching, a defiant brass fanfare carrying the melody, the choir now loud and fierce (wordless), bells in the rhythm, relentless and grand. No lyrics. Ends on the single tolling bell.
 
 ---
 
-## 6b. Hrimgar, the Frost Titan (set 2, `mus-titan`, harder variant `mus-titan-b`)
+## 6b. Hrimgar, the Frost Titan (set 2, `mus-titan`, harder variant `mus-titan-hard`)
 
 **What it is:** a glacier plateau under the aurora; a slow giant, the ice itself the enemy. Deep choir drone, glacial bells, giant footfalls, built in layers of ice-crack percussion. Mood: pale blue, white, aurora green and violet.
 
@@ -160,12 +160,12 @@ Full prompt: the same theme and key as the main loop but turned into a war march
 
 **Full prompt:** Vast, cold dark-fantasy boss music for a frost giant on a glacier under the northern lights, around 60 BPM in D minor. A deep wordless male choir drone on open fifths, giant slow footfalls on frame drums, a low solo cello, glacial bells and glass-harmonica shimmer, and a percussion layer of cracking ice and struck frozen metal that grows a layer at a time as the piece goes on. A sparse middle with a distant wordless female voice over the drone. Heavy, patient, awe rather than fury. No lyrics, no electronic sounds. Starts and ends on a single bell over the drone so it loops.
 
-**Harder variant `mus-titan-b` (the Long Night onward) (Style):** `dark fantasy glacial war theme, deep choir, pounding frame drums, ice cracking percussion, rising brass, avalanche rumble, relentless, instrumental, no lyrics`
+**Harder variant `mus-titan-hard` (the Long Night onward) (Style):** `dark fantasy glacial war theme, deep choir, pounding frame drums, ice cracking percussion, rising brass, avalanche rumble, relentless, instrumental, no lyrics`
 Full prompt: the same theme and key at about 96 BPM: the footfalls become a march, brass carries the melody over a loud fierce wordless choir, ice-crack percussion on every beat, a low avalanche rumble underneath that swells at the end of each phrase. Ends on the single bell.
 
 ---
 
-## 6c. The Hydra of the Drowned Temple (set 2, `mus-hydra`, harder variant `mus-hydra-b`)
+## 6c. The Hydra of the Drowned Temple (set 2, `mus-hydra`, harder variant `mus-hydra-hard`)
 
 **What it is:** a flooded temple, black water, brass and moss, a pool with a gold sheen and a many-headed thing in it. Drums and a low choir, with a head-count layer: each head that rises adds an instrument, so the music thickens as the fight grows from three heads to nine. Dark, wet, ritual; menacing rather than epic.
 
@@ -184,12 +184,12 @@ Full prompt: the same theme and key at about 96 BPM: the footfalls become a marc
 
 **Full prompt:** Slow, dark, ritual instrumental for a boss fight against a many-headed hydra in a flooded temple, around 84 BPM in D minor. Deep frame drums, bowed double bass and cellos, a low wordless choir (oohs only), brass drones, water drips and bubbling as texture, bronze bells. Build it in layers: begin with drums and drone, then add a new instrument every sixteen bars so the music gains one voice per head, down to a sudden stripped bubbling heartbeat in the middle and a full thick return. Menacing, wet, never cheerful, leaving room in the mix for sound effects. No lyrics, no electric guitars, no electronic elements. Starts and ends on the water drip over the low drone so it loops.
 
-**Harder variant `mus-hydra-b` (the last acts, the Mother's Heart) (Style):** `intense dark ritual orchestral finale, pounding frame drums, choir chords, brass stabs, heartbeat bass, relentless strings, instrumental, no lyrics`
+**Harder variant `mus-hydra-hard` (the last acts, the Mother's Heart) (Style):** `intense dark ritual orchestral finale, pounding frame drums, choir chords, brass stabs, heartbeat bass, relentless strings, instrumental, no lyrics`
 Full prompt: the same theme and key but faster, about 112 BPM, with a pounding drum pattern, a thick wordless choir on rising chords, brass stabs on every strike, a heartbeat in the low bass, and tolling bells. Climactic, urgent, never silent. No lyrics. Ends on the same water drip and drum hit.
 
 ---
 
-## 6d. Azerath, the Sunken Archmage (set 2, `mus-archmage`, harder variant `mus-archmage-b`)
+## 6d. Azerath, the Sunken Archmage (set 2, `mus-archmage`, harder variant `mus-archmage-hard`)
 
 **What it is:** a drowned mage's tower, deep teal stone under standing water, seven circles of old spellwork glowing in four elements. Arcane strings and a wordless choir, with one motif that modulates by element: it is heard in four keys through the fight (fire, frost, lightning, void), and an electric undertone runs under the whole piece. Mood: deep teal, with orange, pale blue, yellow and violet each in its turn. Learned, ceremonial, a little sad; menacing rather than epic.
 
@@ -209,8 +209,32 @@ Full prompt: the same theme and key but faster, about 112 BPM, with a pounding d
 
 **Full prompt:** Learned, ceremonial dark-fantasy boss music for a drowned archmage's tower, around 76 BPM in D minor. A single short four-note motif is carried by different instruments and moves to a new key for each element: low cellos for fire, high strings and glass harmonica for frost, staccato violins over a faint crackling electric hum for lightning, bass clarinet and contrabass for the void. A wordless chamber choir, harp and celesta arpeggios, a low pipe organ drone, water drips as texture. A short stripped passage of choir and organ in the middle where the motif is handed from voice to voice. Eerie and dignified, a little sad, never cheerful, leaving room in the mix for sound effects. No lyrics, no guitars, no synth leads. Starts and ends on the water drip over the organ drone so it loops.
 
-**Harder variant `mus-archmage-b` (the last acts, the Convergence) (Style):** `intense dark arcane orchestral finale, driving strings ostinato, full choir chords, brass stabs, pipe organ, electric crackle, relentless, instrumental, no lyrics`
+**Harder variant `mus-archmage-hard` (the last acts, the Convergence) (Style):** `intense dark arcane orchestral finale, driving strings ostinato, full choir chords, brass stabs, pipe organ, electric crackle, relentless, instrumental, no lyrics`
 Full prompt: the same motif and key at about 108 BPM: a driving string ostinato, a full wordless choir on rising chords, brass stabs on every strike, the organ opened wide, and all four element colours of the motif played at once in different registers, with an electric crackle through the top. Climactic, urgent, never silent. No lyrics. Ends on the same water drip and organ chord.
+
+---
+
+## 6e. Vhalgrath, the Ember Wyrm (set 2, `mus-wyrm`, harder variant `mus-wyrm-hard`)
+
+**What it is:** a volcanic crater high in the Cinder Peaks: black rock, ash on the wind, the glow of lava under everything, and a tyrant dragon who owns the sky above it. The one boss with no choir: war drums and brass carry it. Two moods trade places through the piece, a heavy stomping weight on the ground and a wide soaring horn theme overhead. Mood: ember orange, ash grey, black.
+
+**Main loop (Style):** `dark fantasy dragon boss theme, heavy war drums, low brass ostinato, soaring French horn melody, anvil hits, string tremolo, volcanic rumble, fiery, instrumental, no vocals`
+
+**Structure block:**
+```
+[Instrumental]
+[Intro: a low volcanic rumble and crackling embers, one distant horn call, 4 bars]
+[Ground: heavy war drums in a slow stomping pattern, a low brass ostinato, an anvil strike on every fourth beat, 16 bars]
+[Sky: the drums drop to rolling timpani under string tremolo, a wide soaring French horn melody over rushing wind, 16 bars]
+[Ground: the stomp returns heavier, a brass rip like a roar at the end of each phrase, 16 bars]
+[Smoulder: only the rumble, a low bowed bass and crackling embers, 8 bars]
+[Return: the horn call over the stomp, ends on the volcanic rumble, 8 bars]
+```
+
+**Full prompt:** Heavy, fiery dark-fantasy boss music for a tyrant dragon in a volcanic crater, around 92 BPM in C minor. Big low war drums in a slow stomping pattern, a low brass ostinato of horns, trombones and tuba, anvil strikes, string tremolo, and a wide, soaring French horn melody that takes over in the middle as if the music has left the ground. Brass rips like a roar close the phrases. A volcanic rumble and crackling embers as texture, and a short stripped smouldering passage of rumble and bowed bass. Menacing and grand, hot rather than cold, leaving room in the mix for sound effects. No choir, no vocals, no electric guitars, no electronic sounds. Starts and ends on the volcanic rumble so it loops.
+
+**Harder variant `mus-wyrm-hard` (the last quarter of the fight) (Style):** `furious dark fantasy dragon battle theme, fast war drums, roaring brass rips, soaring horns, driving string ostinato, anvil hits, volcanic rumble, relentless, instrumental, no vocals`
+Full prompt: the same theme and key at about 120 BPM: the stomp becomes a gallop on the war drums, a driving string ostinato underneath, the soaring horn melody now carried by the full brass section, roaring brass rips on every phrase, anvils on the off-beats, and the volcanic rumble swelling at the end of each phrase. Furious and climactic, never silent. No vocals. Ends on the same volcanic rumble.
 
 ---
 
@@ -224,7 +248,9 @@ Full prompt: A short, warm, triumphant fantasy fanfare of 10 to 15 seconds, arou
 Style: `somber short fantasy sting, low strings, fading, defeated, instrumental`
 Full prompt: A short, low, somber instrumental sting of 6 to 8 seconds in D minor, slow low strings sinking and a single bell, fading to silence, defeated but not cruel. No vocals.
 
-**Pre-pull / countdown (optional, `mus-pull`, 4 seconds):** a tense rising drum roll and a held brass note that ends on a drum hit, to play during the 5-second pull countdown.
+**Before the pull (`mus-pull`, a 40 to 60 second loop):** plays from the moment the party walks into any boss room until the first blow lands, which can take minutes, so it loops, stays quiet and never reaches a climax. It is shared by all eight bosses, so it carries no boss's theme.
+Style: `tense dark fantasy pre-battle loop, low string drone, soft heartbeat drum, distant timpani rolls, held low brass, suspense, quiet, instrumental, no vocals`
+Full prompt: A quiet, tense instrumental loop of 40 to 60 seconds for the moments before a boss fight, around 70 BPM in D minor. A low string drone, a soft heartbeat on a frame drum, distant timpani rolls that swell and fall back, a held low brass note now and then, and a faint high string harmonic. Suspense that waits rather than builds: no melody to speak of, no climax, soft in the mix. No vocals. Starts and ends on the same drone so it loops seamlessly.
 
 ---
 

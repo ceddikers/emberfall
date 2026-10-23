@@ -57,7 +57,7 @@
     gorgemaw: ['ab-maw', 'ab-maw'], oathbroker: ['ab-ledger', 'ab-ledger'], ironpalm: ['ab-punch', 'ab-punch'],
     threadweaver: ['ab-thread', 'ab-thread'], marionettist: ['ab-stab', 'ab-thread'],
     gloomsworn: ['ab-slash', 'ab-shield'],
-    thresher: ['ab-slash', 'ab-nature'],
+    thresher: ['ab-slash', 'ab-wind'],
   };
   // every ability id per class: base kit, spec replacements (specs.js), talent moves, Ultimate, taunt, auto-attack
   const CLASS = {
@@ -142,20 +142,20 @@
       grandloom: ULT('threadweaver'), auto: 'ab-thread',
     },
     marionettist: {
-      jab: 'ab-stab', pull: 'ab-thread', cross: L('ab-thread', 'ab-stab'), pirouette: L('ab-slash', 'ab-thread'), swap: L('ab-thread', 'dash'), finale: L('ab-thread', 'ab-heavy'),
+      jab: 'ab-stab', cue: L('ab-thread', 'ab-stab'), pull: 'ab-thread', cross: L('ab-thread', 'ab-stab'), pirouette: L('ab-slash', 'ab-thread'), swap: L('ab-thread', 'dash'), finale: L('ab-thread', 'ab-heavy'),
       tangle: L('ab-thread', 'ab-dot'), redcurtain: L('ab-thread', 'ab-buff'), string: 'ab-thread',
       curtaincall: ULT('marionettist'), auto: 'ab-thread',
     },
     // Gloomsworn: heavy, low and metallic with a hollow breath under it; every move has its own voice (sfx-synth.js ABIL.gloomsworn)
     gloomsworn: {
       rend: 'ab-slash', strike: 'ab-heavy', shade: L('dash', 'ab-wind'), pall: L('ab-shield', 'ab-buff'), mantle: L('ab-shield', 'ab-buff'),
-      rite: L('ab-shield', 'ab-heal'), vigil: L('ab-shield', 'ab-holy'), pyre: L('ab-heavy', 'ab-fire'),
+      rite: L('ab-shield', 'ab-heal'), vigil: L('ab-shield', 'ab-holy'), pyre: L('ab-heavy', 'ab-fire'), reave: L('ab-slash', 'ab-heavy'),
       eclipsevigil: ULT('gloomsworn'), taunt: 'ab-taunt', auto: 'ab-slash',
     },
-    // Thresher: airy scythe sweeps with the dry rustle of afflictions and a ripe chime; every move has its own voice (sfx-synth.js ABIL.thresher)
+    // Reaper (class id thresher): long steel scythe sweeps with the hollow wind of afflictions and a toll where one comes due; every move has its own voice (sfx-synth.js ABIL.thresher)
     thresher: {
-      slash: L('ab-slash', 'ab-nature'), hook: L('ab-thread', 'ab-shot'), reap: L('ab-heavy', 'ab-slash'), gather: L('ab-nature', 'ab-buff'),
-      blink: L('ab-stab', 'dash'), wisp: L('ab-nature', 'ab-heal'), sowing: L('ab-nature', 'ab-dot'), cull: L('ab-heavy', 'ab-dot'),
+      slash: L('ab-slash', 'ab-wind'), hook: L('ab-thread', 'ab-shot'), reap: L('ab-heavy', 'ab-slash'), gather: L('ab-wind', 'ab-buff'),
+      blink: L('ab-stab', 'dash'), wisp: L('ab-wind', 'ab-heal'), sowing: L('ab-wind', 'ab-dot'), cull: L('ab-heavy', 'ab-dot'),
       gatestrike: L('ab-slash', 'ab-wind'), reapersgate: ULT('thresher'), auto: 'ab-melee-generic',
     },
   };

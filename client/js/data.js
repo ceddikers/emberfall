@@ -137,13 +137,13 @@ CLASSES.push({
   gameplan: 'Strikes and wounds fill your Gloom, and heavy blows, a pall over the whole party and your last rite spend it. Keep it full when the killing blow comes and you do not fall: you go Hollow, held at one health, hitting harder, every wound written down as a debt. Your healer must pay the debt back before the grace runs out, or the dark takes it from you. Once a minute, at most.',
 });
 
-// ---------------------------------------------------------------- Thresher (damage, class 19; docs/plans/2026-10-new-classes-2.md)
+// ---------------------------------------------------------------- Reaper (id thresher; damage, class 19; docs/plans/2026-10-new-classes-2.md)
 // No painted icons or portraits yet: the game draws its own icons until they are in.
 CLASSES.push({
-  id: 'thresher', name: 'Thresher', title: 'Afflict, Ripen, Reap', role: 'dps', difficulty: 3, complexity: 4, accent: '#9be06a',
+  id: 'thresher', name: 'Reaper', title: 'Mark, Wither, Reap', role: 'dps', difficulty: 3, complexity: 4, accent: '#8fd8e8',
   art: { icons: false, portraits: false },
-  tagline: 'Everything is ripe in its time. You only have to be there.',
-  gameplan: 'Your scythe lays four afflictions on the boss: a Mark that bleeds, a Drain that mends you, a Bind that pulses and a Thread that waits to be snapped. Each ripens, from green to gold and then to rot. Reap spends them all, and pays the most when they are gold, so cut, weave, and let the harvest come due. Once in a while step through the Gate, where nothing can touch you, and the fifth strike calls in all four at once.',
+  tagline: 'Every soul keeps its appointment. You only have to be there.',
+  gameplan: 'Your scythe lays four afflictions on the boss: a Mark that bleeds, a Drain that mends you, a Bind that pulses and a Thread that waits to be snapped. Each darkens, from pale to gold and then lapses. Reap spends them all, and pays the most when they are gold, so cut, weave, and let the toll come due. Once in a while step through the Gate, where nothing can touch you, and the fifth strike calls in all four at once.',
 });
 
 // Boss panel text: flavor only. Nothing here tells you how to deal with an attack.

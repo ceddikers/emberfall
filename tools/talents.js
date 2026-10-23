@@ -4,10 +4,12 @@
 //   node tools/talents.js ranger       (one class and its specs)
 // Machine-readable lines for tools/check.js:
 //   TALENT <class[:spec]> <id> <dps change %> <hps change %>
-//   BUILD  <class[:spec]> <base pro dps> <full build pro dps> <change %> <ids...>
+//   BUILD  <class[:spec]> <base pro dps> <full build pro dps> <change %> <ids...>            (rows I-V)
+//   BUILDALL <class:spec> <base pro dps> <full build pro dps> <change %> <ids...>          (rows I-VII: with the spec rows)
+// The spec rows (SPEC_TALENTS, VI and VII) are tried for their own spec only.
 const path = require('path');
 const { runSim } = require(path.join(__dirname, 'simulate.js'));
-const { TALENTS } = require(path.join(__dirname, '../client/js/combat/talents.js'));
+const { TALENTS, specTalentRows } = require(path.join(__dirname, '../client/js/combat/talents.js'));
 const { SPECS } = require(path.join(__dirname, '../client/js/combat/specs.js'));
 
 const RUNS = 5;
@@ -38,5 +40,19 @@ for (const cls of Object.keys(TALENTS)) {
     });
     const full = avg(cls, spec, new Set(picks));
     console.log(`BUILD ${name} ${base.dps.toFixed(0)} ${full.dps.toFixed(0)} ${pct(full.dps, base.dps).toFixed(1)} ${picks.join(' ')}`);
+    const sr = specTalentRows(cls, spec);
+    if (!sr) continue;
+    for (const row of sr) {
+      let best = null;
+      for (const t of row) {
+        const got = avg(cls, spec, new Set([t.id]));
+        const d = pct(got.dps, base.dps), h = pct(got.hps, base.hps);
+        console.log(`TALENT ${name} ${t.id} ${d.toFixed(1)} ${h.toFixed(1)}`);
+        if (!best || d > best.d) best = { id: t.id, d };
+      }
+      picks.push(best.id);
+    }
+    const all = avg(cls, spec, new Set(picks));
+    console.log(`BUILDALL ${name} ${base.dps.toFixed(0)} ${all.dps.toFixed(0)} ${pct(all.dps, base.dps).toFixed(1)} ${picks.join(' ')}`);
   }
 }
