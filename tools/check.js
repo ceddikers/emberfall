@@ -17,7 +17,7 @@ const BUILD_ALL_MAX = 24;   // ... and with the spec rows VI-VII too (talents.js
 // Normal is meant to take a real group several wipes, so a bot party only has to clear one run in RAID_RUNS
 const RAID_RUNS = 3;
 // bot raids: every boss, and every spec somewhere, with a fixed line-up so the result doesn't depend on a random spec
-const RAIDS = [   // [boss name, boss id, tank, healer, two DPS, optional 'gear=...' (bot-raid.js buildGear levels; set 2 Normal runs as a party with all of set 1 cleared: gear=post1)]
+const RAIDS = [   // [boss name, boss id, tank, healer, two DPS, optional 'gear=...' (bot-raid.js buildGear levels; set 2 Normal runs as a party with all of set 1 cleared: gear=post1), optional 'runs=N' (more tries than RAID_RUNS)]
   ['Grubnak', 'grubnak', 'bastion:base', 'cleric:aegis', 'ranger:sharpshooter', 'pyromancer:cataclysm'],
   ['Skitterra', 'skitterra', 'runeguard:runeblade', 'grovekeeper:moonwell', 'shadowblade:bladedancer', 'pyromancer:sigilmancer'],
   ['Volkar', 'volkar', 'bloodreaver:berserker', 'chronomancer:accelerant', 'ranger:venomstrike', 'pyromancer:base'],
@@ -61,7 +61,7 @@ const RAIDS = [   // [boss name, boss id, tank, healer, two DPS, optional 'gear=
   ['Vhalgrath', 'wyrm', 'runeguard:runeblade', 'grovekeeper:moonwell', 'shadowblade:bladedancer', 'pyromancer:sigilmancer', 'gear=post1'],
   // set 2: Hrimgar, the Frost Titan
   ['Hrimgar', 'titan', 'bastion:base', 'cleric:aegis', 'ranger:sharpshooter', 'pyromancer:cataclysm', 'gear=post1'],
-  ['Hrimgar', 'titan', 'runeguard:runeblade', 'grovekeeper:moonwell', 'shadowblade:bladedancer', 'pyromancer:sigilmancer', 'gear=post1'],
+  ['Hrimgar', 'titan', 'runeguard:runeblade', 'grovekeeper:moonwell', 'shadowblade:bladedancer', 'pyromancer:sigilmancer', 'gear=post1', 'runs=5'],   // (this line-up clears Hrimgar about 40%: five tries keep a chance miss rare)
   ['Volkar', 'volkar', 'bastion:base', 'threadweaver:base', 'marionettist:base', 'pyromancer:base'],
   // Gloomsworn (class 18): the base kit and each spec tanking a boss (a Hollow's saves: tools/hollow-test.js)
   ['Grubnak', 'grubnak', 'gloomsworn:base', 'cleric:base', 'ranger:base', 'pyromancer:base'],
@@ -689,12 +689,20 @@ function journalCheck() {
   else fail('Journals: no digits, within the word cap, every move is a real cast', out.slice(-900));
 }
 
+// ---------------------------------------------------------------- 3e. feats and titles (tools/feats-test.js)
+function featsCheck() {
+  const r = spawnSync(process.execPath, [path.join(__dirname, 'feats-test.js')], { cwd: ROOT, encoding: 'utf8' });
+  const out = (r.stdout || '') + (r.stderr || '');
+  if (r.status === 0 && /Feats OK/.test(out)) pass('Feats: data sound, party and result rules, earning and titles', out.trim().split(/\r?\n/).pop());
+  else fail('Feats: data sound, party and result rules, earning and titles', out.slice(-900));
+}
+
 async function heavy() {
   const trialIds = Object.values(SPECS).flat().map(s => s.id);
   const [sim, tal, ...raids] = await Promise.all([
     run([path.join(__dirname, 'simulate.js')]),
     run([path.join(__dirname, 'talents.js')]),
-    ...RAIDS.map(([, boss, ...rest]) => run([path.join(__dirname, 'bot-raid.js'), 'normal', String(RAID_RUNS), boss, rest.filter(a => !/^gear=/.test(a)).join(','), ...rest.filter(a => /^gear=/.test(a))])),
+    ...RAIDS.map(([, boss, ...rest]) => run([path.join(__dirname, 'bot-raid.js'), 'normal', (rest.find(a => /^runs=/.test(a)) || '').slice(5) || String(RAID_RUNS), boss, rest.filter(a => !/^(gear|runs)=/.test(a)).join(','), ...rest.filter(a => /^gear=/.test(a))])),
     ...trialIds.map(id => run([path.join(__dirname, 'bot-raid.js'), 'normal', '2', 'trial:' + id])),
     ...HARD_BOSSES.map(([, boss, gear]) => run([path.join(__dirname, 'bot-raid.js'), 'hard', '3', boss, HARD_COMP, ...(gear ? [gear] : [])])),
   ]);
@@ -751,7 +759,7 @@ async function heavy() {
 
   // bot raids: a bot party clears each boss on Normal at least once in RAID_RUNS
   RAIDS.forEach(([boss, , ...rest], i) => {
-    const comp = rest.filter(a => !/^gear=/.test(a)), gear = rest.find(a => /^gear=/.test(a));
+    const comp = rest.filter(a => !/^(gear|runs)=/.test(a)), gear = rest.find(a => /^gear=/.test(a));
     const r = raids[i], m = r.out.match(/cleared (\d+) of (\d+)/), name = `Bots clear ${boss} (Normal, ${comp.join(' ')}${gear ? ', ' + gear : ''})`;
     if (r.code === 0 && m && +m[1] >= 1) pass(name, `${m[1]} of ${m[2]}`);
     else fail(name, m ? `${m[1]} of ${m[2]}\n` + r.out.split('\n').filter(l => /^run /.test(l)).join('\n') : r.out.slice(-800));
@@ -781,6 +789,7 @@ async function heavy() {
   try { hollowCheck(); } catch (e) { fail('Hollow checked', e.stack); }
   try { journalCheck(); } catch (e) { fail('Journals checked', e.stack); }
   try { thresherArcCheck(); } catch (e) { fail('Thresher arc checked', e.stack); }
+  try { featsCheck(); } catch (e) { fail('Feats checked', e.stack); }
   try { pvpCheck(); } catch (e) { fail('PvP checked', e.stack); }
   await heavy();
   console.log('');

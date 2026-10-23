@@ -26,6 +26,7 @@ const Pastimes = (() => {
     s.feats = s.feats || {}; s.secrets = s.secrets || {}; s.stats = s.stats || {}; s.creel = s.creel || {};
     s.seenItems = s.seenItems || {}; s.flawless = s.flawless || {}; s.best = s.best || {}; s.story = s.story || {};
     s.bounty = s.bounty || { week: -1, prog: {}, done: {} };
+    s.marks = s.marks || {}; s.wipeRun = s.wipeRun || {};   // (marks: what fights and bouts said about you, feat-rules.js; wipeRun: wipes on a boss since you last beat it)
     return s;
   }
   const commit = () => Save.commit();
@@ -33,23 +34,38 @@ const Pastimes = (() => {
   const stat = k => st().stats[k] || 0;
 
   // ---------------------------------------------------------------- a small card that rises for a moment (a feat, a find)
-  function notice(kind, title, sub) {
-    if (typeof Sound !== 'undefined') Sound.play({ Feat: 'ui-feat', Caught: 'fish-catch', 'Bounty done': 'ui-bounty' }[kind] || 'ui-feat', { bus: kind === 'Caught' ? 'sfx' : 'ui', key: 'pt-notice', minGap: 0.3 });
+  // At most three show at once; a clear that earns many feats at once tells them one after another.
+  const pending = [], SHOWN_MAX = 3;
+  function notice(kind, title, sub) { pending.push({ kind, title, sub }); pump(); }
+  function pump() {
     let el = document.getElementById('pt-notice');
     if (!el) { el = document.createElement('div'); el.id = 'pt-notice'; document.body.appendChild(el); }
-    const card = document.createElement('div');
-    card.className = 'pt-card';
-    card.innerHTML = `<small>${esc(kind)}</small><b>${esc(title)}</b>${sub ? `<span>${esc(sub)}</span>` : ''}`;
-    el.appendChild(card);
-    setTimeout(() => card.classList.add('out'), 4200);
-    setTimeout(() => card.remove(), 5000);
+    while (pending.length && el.children.length < SHOWN_MAX) {
+      const { kind, title, sub } = pending.shift();
+      if (typeof Sound !== 'undefined') Sound.play({ Feat: 'ui-feat', Caught: 'fish-catch', 'Bounty done': 'ui-bounty' }[kind] || 'ui-feat', { bus: kind === 'Caught' ? 'sfx' : 'ui', key: 'pt-notice', minGap: 0.3 });
+      const card = document.createElement('div');
+      card.className = 'pt-card';
+      card.innerHTML = `<small>${esc(kind)}</small><b>${esc(title)}</b>${sub ? `<span>${esc(sub)}</span>` : ''}`;
+      el.appendChild(card);
+      setTimeout(() => card.classList.add('out'), 4200);
+      setTimeout(() => { card.remove(); pump(); }, 5000);
+    }
   }
 
   // ---------------------------------------------------------------- feats and titles
-  const anyClear = (boss, mode) => Object.values(Save.get('heroes') || {}).some(h => {
+  // (a clear counts from the fight's own mark too: the event comes before main.js writes the hero's record)
+  const anyClear = (boss, mode) => (mode ? !!st().marks[`clear:${boss}:${mode}`] : !!(st().marks[`clear:${boss}:normal`] || st().marks[`clear:${boss}:hard`])) || Object.values(Save.get('heroes') || {}).some(h => {
     const c = h && h.clears && h.clears[boss];
     return c && (mode ? (c[mode] | 0) > 0 : (c.normal | 0) + (c.hard | 0) > 0);
   });
+  // the heroes (class ids) that have beaten a boss on Hard: from the save's records, and from this tab's own marks
+  function hardClasses() {
+    const out = new Set();
+    for (const [id, h] of Object.entries(Save.get('heroes') || {})) if (h && h.clears && Object.values(h.clears).some(c => c && (c.hard | 0) > 0)) out.add(id);
+    for (const k of Object.keys(st().marks)) if (k.startsWith('hardcls:')) out.add(k.slice(8));
+    return out;
+  }
+  const hardRoles = () => new Set([...hardClasses()].map(id => (typeof CLASSES !== 'undefined' && CLASSES.find(c => c.id === id) || {}).role).filter(Boolean));
   const BOSS_IDS = set => (typeof BOSSES !== 'undefined' ? BOSSES.filter(b => !set || (b.set || 1) === set).map(b => b.id) : []);   // (set: only that set's bosses; the "all four" feats are set 1)
   function journalPages() {
     let n = 0;
@@ -63,9 +79,14 @@ const Pastimes = (() => {
   function met(c) {
     const s = st();
     switch (c && c.type) {
-      case 'clear': return c.boss ? anyClear(c.boss, c.mode) : BOSS_IDS().some(b => anyClear(b, c.mode));
-      case 'clearAll': return BOSS_IDS(1).every(b => anyClear(b, c.mode));
-      case 'clearNoDeaths': return c.boss ? !!(s.flawless[c.boss] && (c.mode ? s.flawless[c.boss][c.mode] : Object.values(s.flawless[c.boss]).some(Boolean))) : Object.values(s.flawless).some(f => c.mode ? f[c.mode] : Object.values(f).some(Boolean));
+      case 'clear': return c.boss ? anyClear(c.boss, c.mode) : BOSS_IDS(c.set).some(b => anyClear(b, c.mode));
+      case 'clearAll': return BOSS_IDS(c.set || 1).every(b => anyClear(b, c.mode));
+      case 'clearNoDeaths': return (c.boss ? [c.boss] : BOSS_IDS(c.set)).some(b => { const f = s.flawless[b]; return !!f && !!(c.mode ? f[c.mode] : Object.values(f).some(Boolean)); });
+      case 'mark': return !!s.marks[c.k];
+      case 'count': return stat(c.k) >= c.n;
+      case 'hardRole': return hardRoles().has(c.role);
+      case 'hardRoles': return ['tank', 'healer', 'dps'].every(r => hardRoles().has(r));
+      case 'hardClasses': return hardClasses().size >= c.n;
       case 'clearUnder': return (s.best[c.boss] || Infinity) <= c.secs;
       case 'pulls': return stat('pulls') >= c.n;
       case 'secrets': return Object.keys(s.secrets).length >= c.n;
@@ -82,12 +103,29 @@ const Pastimes = (() => {
       default: return false;
     }
   }
+  // how far along a counting feat is: [now, needed], or null for one that is simply done or not
+  function featProg(c) {
+    const s = st();
+    switch (c && c.type) {
+      case 'pulls': case 'practice': case 'feasts': case 'bounties': case 'emotes': return [stat(c.type), c.n];
+      case 'secrets': return [Object.keys(s.secrets).length, c.n];
+      case 'gifts': return [giftCount(), c.n];
+      case 'fish': return c.fish ? null : [stat('fish'), c.n || 1];
+      case 'journal': return [journalPages(), c.n];
+      case 'heroes': return [heroesCleared(), c.n];
+      case 'count': return c.n > 1 ? [stat(c.k), c.n] : null;
+      case 'hardClasses': return [hardClasses().size, c.n];
+      case 'hardRoles': return [['tank', 'healer', 'dps'].filter(r => hardRoles().has(r)).length, 3];
+      default: return null;
+    }
+  }
   function checkFeats(quiet) {
     const s = st();
     let any = false;
     for (const f of FEATS_()) {
       if (s.feats[f.id] || !met(f.check)) continue;
       s.feats[f.id] = Date.now(); any = true;
+      if (f.title && !s.title && !quiet) { s.title = f.id; if (deps) deps.onTitle(title()); }   // (the first title you earn is worn until you choose another)
       if (!quiet) notice('Feat', f.name, f.title ? `Title: ${f.title}` : f.desc);
     }
     if (any) commit();
@@ -108,12 +146,28 @@ const Pastimes = (() => {
     if (type === 'clear' && !d.practice) {
       if (!d.deaths) { const f = s.flawless[d.boss] = s.flawless[d.boss] || {}; f[d.mode] = 1; }
       if (d.secs > 0 && d.secs < (s.best[d.boss] || Infinity)) s.best[d.boss] = d.secs;
+      if (typeof FeatRules !== 'undefined') {
+        const b = typeof BOSSES !== 'undefined' ? BOSSES.find(x => x.id === d.boss) : null;
+        for (const m of FeatRules.clear(d, { set: b ? (b.set || 1) : 1, wipes: s.wipeRun[d.boss] | 0, score: typeof Scoring !== 'undefined' ? Scoring : null })) s.marks[m] = 1;
+      }
+      delete s.wipeRun[d.boss];
       commit();
       progress('clear', d);
     }
     if (type === 'feast') { bump('feasts'); progress('feast', d); }
     if (type === 'fish') { bump('fish'); bump('fish:' + d.id); progress('fish', d); }
-    if (type === 'emote') bump('emotes');
+    if (type === 'emote') { bump('emotes'); if (d.k) bump('emote:' + d.k); }
+    if (type === 'wipe' && !d.practice) { bump('wipes'); s.wipeRun[d.boss] = (s.wipeRun[d.boss] | 0) + 1; commit(); }
+    if (type === 'raise') bump('raises');
+    if (type === 'hollow' && d.ok) { s.marks['hollow:ok'] = 1; commit(); }
+    if (type === 'ctf' && (d.k === 'take' || d.k === 'cap' || d.k === 'return')) bump('ctf:' + d.k);   // (your own: main.js sends only what you did)
+    if (type === 'pvp' && typeof FeatRules !== 'undefined') {
+      for (const m of FeatRules.pvp(d)) s.marks[m] = 1;
+      const won = !!d.won && !d.draw;
+      s.stats['pvp:streak'] = won ? (s.stats['pvp:streak'] || 0) + 1 : 0;
+      s.stats['pvp:streakBest'] = Math.max(s.stats['pvp:streakBest'] || 0, s.stats['pvp:streak']);
+      commit();
+    }
     if (type === 'item' && d.key) { s.seenItems[d.key] = 1; commit(); }
     if (type === 'secret') progress('secrets', d);
     checkFeats();
@@ -412,11 +466,7 @@ const Pastimes = (() => {
     const tabs = [['feats', 'Feats'], ['secrets', 'Secrets'], ['armory', 'Armory'], ['catch', 'Catch'], ['fights', 'Fights']];
     let body = '';
     if (bookTab === 'feats') {
-      const fs = FEATS_(), got = fs.filter(f => s.feats[f.id]).length, titles = fs.filter(f => f.title && s.feats[f.id]);
-      body = `<div class="pt-title"><label>Title</label><select class="pt-title-pick"><option value="">None</option>${titles.map(f => `<option value="${f.id}"${s.title === f.id ? ' selected' : ''}>${esc(f.title)}</option>`).join('')}</select><small>${got} of ${fs.length} feats</small></div>
-        <div class="pt-feats">${[...fs.filter(f => s.feats[f.id]), ...fs.filter(f => !s.feats[f.id])].map(f => {
-          // (a feat for a boss you haven't reached keeps that boss a surprise)
-          const has = s.feats[f.id], hid = (f.hidden || (f.check && f.check.boss && !deps.bossOpen(f.check.boss))) && !has; return `<div class="pt-feat${has ? ' got' : ''}"><b>${hid ? '???' : esc(f.name)}</b><span>${hid ? 'A hidden feat.' : esc(f.desc)}</span>${f.title && !hid ? `<em>Title: ${esc(f.title)}</em>` : ''}</div>`; }).join('')}</div>`;
+      body = featsHtml(s);
     } else if (bookTab === 'secrets') {
       const all = SECRETS_(), got = all.filter(x => s.secrets[x.id]);
       body = `<p class="pt-note">${got.length} of ${all.length} found. Some only appear after a boss falls.</p><div class="pt-feats">${all.map(x => s.secrets[x.id] ? `<div class="pt-feat got"><b>${esc(x.name)}</b><span>${esc((x.lines || [])[0] || '')}</span></div>` : `<div class="pt-feat"><b>???</b><span>Not found yet.</span></div>`).join('')}</div>`;
@@ -433,8 +483,30 @@ const Pastimes = (() => {
     el.querySelector('.pt-body').innerHTML = `<nav class="pt-tabs">${tabs.map(([k, n]) => `<button type="button" data-tab="${k}" class="${bookTab === k ? 'on' : ''}">${n}</button>`).join('')}</nav>${body}`;
     el.querySelectorAll('[data-tab]').forEach(b => b.addEventListener('click', () => { bookTab = b.dataset.tab; renderBook(); }));
     el.querySelectorAll('.pt-fight').forEach(d => d.addEventListener('toggle', () => { if (d.open) openFight = d.dataset.at; else if (openFight === d.dataset.at) openFight = null; }));
-    const pick = el.querySelector('.pt-title-pick');
-    if (pick) pick.addEventListener('change', () => setTitle(pick.value));
+    el.querySelectorAll('[data-title]').forEach(b => b.addEventListener('click', () => { setTitle(b.dataset.title); renderBook(); }));
+  }
+
+  // the Feats tab: the title you wear, then every feat by section. A feat tied to a boss you haven't reached, or hidden by
+  // design, shows as ??? with a vague line, so the road stays a surprise.
+  const featGate = f => f.needs || (f.check && f.check.boss) || null;
+  function featsHtml(s) {
+    const fs = FEATS_(), cats = typeof FEAT_CATS !== 'undefined' ? FEAT_CATS : [['all', 'Feats']];
+    const got = fs.filter(f => s.feats[f.id]).length, titles = fs.filter(f => f.title && s.feats[f.id]);
+    const wearing = title();
+    const picker = `<div class="pt-title"><label>Title</label><div class="pt-titles"><button type="button" data-title=""${wearing ? '' : ' class="on"'}>None</button>${titles.map(f => `<button type="button" data-title="${f.id}" class="${s.title === f.id && wearing ? 'on' : ''}" data-tip="${esc(f.name)}">${esc(f.title)}</button>`).join('')}</div><small>${got} of ${fs.length} feats</small></div>`;
+    const card = f => {
+      const has = !!s.feats[f.id], g = featGate(f), hid = !has && (f.hidden || (g && !deps.bossOpen(g)));
+      if (hid) return `<div class="pt-feat hid"><b>???</b><span>${esc(f.hint || (g && !f.hidden ? 'A feat from further down the road.' : 'A hidden feat.'))}</span></div>`;
+      const pr = !has ? featProg(f.check) : null;
+      const bar = pr ? `<u class="pt-prog" data-tip="${Math.min(pr[0], pr[1])} of ${pr[1]}"><i style="width:${Math.round(Math.min(1, pr[0] / pr[1]) * 100)}%"></i></u>` : '';
+      return `<div class="pt-feat${has ? ' got' : ''}"><b>${esc(f.name)}</b><span>${esc(f.desc)}</span>${bar}${f.title ? `<em>Title: ${esc(f.title)}</em>` : ''}</div>`;
+    };
+    return picker + cats.map(([cid, cname]) => {
+      const list = fs.filter(f => (f.cat || cats[0][0]) === cid);
+      if (!list.length) return '';
+      const n = list.filter(f => s.feats[f.id]).length;
+      return `<h4 class="pt-cat">${esc(cname)}<small>${n} of ${list.length}</small></h4><div class="pt-feats">${[...list.filter(f => s.feats[f.id]), ...list.filter(f => !s.feats[f.id])].map(card).join('')}</div>`;
+    }).join('');
   }
 
   // ---------------------------------------------------------------- fights in the Logbook

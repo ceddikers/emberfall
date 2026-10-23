@@ -16,6 +16,9 @@ const TOWN_NPCS = [
       { when: { hero: 'shadowblade', notBeaten: ['grubnak'] },
         lines: ["Oh! I didn't hear you come up. Nobody ever hears you come up. It's very rude, dear."],
         choices: [{ text: 'Any news?', next: 'news' }, { text: 'Heard anything about the mountain?', next: 'summit' }, { text: 'Goodbye' }] },
+      { when: { beaten: ['archmage'] },
+        lines: ["There's a wet young man by the pond who says he swept a tower for forty years. I've told everyone.",
+          "Several told me back, which is how I know it's true. Nobody makes up forty years of sweeping."] },
       { when: { beaten: ['hollowking'] },
         lines: ["The Hollow King, gone! Six people told me and I've told twenty. The Barrow bells stopped at midnight, they say.",
           "And I'll tell you what else they say. The old court is talking now. The dead ones. To anyone who'll sit and listen."] },
@@ -63,6 +66,10 @@ const TOWN_NPCS = [
         lines: ["Did you get it back yet? Sergeant Hask keeps it in his pocket. His left pocket. I watched."] },
       { when: { hero: 'marionettist' },
         lines: ["Is your doll alive? Can it do a cartwheel? Can it do two cartwheels? Can I hold the strings? Just one string?"],
+        choices: [{ text: 'Why the long face, Pip?', next: 'marble' }, { text: 'Goodbye' }] },
+      { when: { beaten: ['titan'] },
+        lines: ["It SNOWED! Properly! I built a whole family by the Tankard, and the small one is the Frost Titan, because he's the grumpiest.",
+          "Can I keep them till summer? Please? Hask says snow doesn't keep. Hask doesn't keep anything."],
         choices: [{ text: 'Why the long face, Pip?', next: 'marble' }, { text: 'Goodbye' }] },
       { when: { beaten: ['hollowking'] },
         lines: ["I'm going to be the Hollow King in the harvest play. Mum says I can't, because he's properly dead now.",
@@ -196,6 +203,8 @@ const TOWN_NPCS = [
         choices: [{ text: 'Is yours real?', next: 'glass' }] },
       { when: { hero: 'oathbroker', beaten: ['grubnak'] },
         lines: ["A contract-knight. I've read your sort's fine print. I'll be paid in coin, thank you, not in promises."] },
+      { when: { beaten: ['wyrm'] },
+        lines: ["Dragon scales! Genuine! Hilde won't part with hers, so mine are from, ah, a different dragon. A smaller one. Very small. Local."] },
       { when: { beaten: ['hollowking'] },
         lines: ["With the Barrow quiet, the roads are safe and every trader in the realm is coming. Prices are falling. I'm furious."] },
       { when: { beaten: ['volkar'] },
@@ -231,6 +240,11 @@ const TOWN_NPCS = [
       { when: { hero: 'grovekeeper', notBeaten: ['skitterra'] },
         lines: ["Moss on your boots. Good moss. You can sit by my hut. Most can't."],
         choices: [{ text: 'Ask about the caves', next: 'silk' }, { text: 'Goodbye' }] },
+      { when: { beaten: ['hydra'], flags: ['fountain-nine'] },
+        lines: ["It said my name. In all nine of them, one after another. We are no longer on speaking terms."] },
+      { when: { beaten: ['hydra'] },
+        lines: ["The fountain has started answering. Years I waited. Now I'd like it to stop.",
+          "It has opinions about my hat."] },
       { when: { beaten: ['hollowking'] },
         lines: ["The King is gone, but his court remembers. The dead are very good at remembering. Go and listen to them."] },
       { when: { beaten: ['volkar'] },
@@ -321,6 +335,9 @@ const TOWN_NPCS = [
         choices: [{ text: 'Ask what she made of it', next: 'band' }, { text: 'Goodbye' }] },
       { when: { hero: 'pyromancer' },
         lines: ["Fire mage. Hands off my forge. The last one of you melted an anvil and called it a lesson."] },
+      { when: { beaten: ['wyrm'] },
+        lines: ["Forge won't cool. Three days and I've not touched the bellows. The iron remembers the wyrm's fire, apparently.",
+          "The scale by the door stays. Fennick offered forty gold for it. I told him where he could put it."] },
       { when: { beaten: ['hollowking'] },
         lines: ["Melt down a king's crown? No. Some things you leave alone. It sits on his statue and it stays there."] },
       { when: { beaten: ['volkar'] },
@@ -356,6 +373,10 @@ const TOWN_NPCS = [
         choices: [{ text: 'Give it back', next: 'lure' }] },
       { when: { hero: 'driftblade' },
         lines: ["You never stand still, do you. Fish can hear that, you know. Sit. Try it. It won't kill you."],
+        choices: [{ text: "I've got fish", next: 'shop' }, { text: 'Lose anything out here?', next: 'lost' }, { text: 'Goodbye' }] },
+      { when: { beaten: ['archmage'] },
+        lines: ["A man climbed out of my pond last night. Dripping, apologising, asking for a towel. No fish on him. I checked.",
+          "He's set up by the bank now, drawing circles in chalk. I said the fish don't mind. He said sorry. Twice."],
         choices: [{ text: "I've got fish", next: 'shop' }, { text: 'Lose anything out here?', next: 'lost' }, { text: 'Goodbye' }] },
       { when: { beaten: ['hollowking'] },
         lines: ["Something new in the pond since the bells stopped. Grey, and you can see the reeds through it.",
@@ -534,6 +555,40 @@ const TOWN_NPCS = [
         give: 'aldric-ring', set: 'aldric-thanks' },
     },
   },
+
+  // (set 2: Quill, Azerath's apprentice, walks up the pond's south-west shore and dries off beside the bank)
+  {
+    id: 'quill',
+    name: 'Quill', title: 'Apprentice',
+    look: { skin: '#dcc2a4', hair: '#7a8a96', coat: '#2e5a6a', apron: '#9ab8b0', hat: 'pointed', beard: false, build: 'slim', drip: true },
+    at: { x: 470, y: 1205 },
+    wander: 0,
+    arrives: 'archmage',
+    entrance: { from: { x: 430, y: 1590 }, via: [{ x: 430, y: 1330 }], lines: [
+      "Sorry! Sorry. Mind the water. It follows me about. I've stopped apologising to the floor.",
+      "Quill. I swept the Master's circles for forty years and was never once let draw one. He's gone now. The tower's quiet, and my bucket is finally empty.",
+      "I'd like to draw something at last. Wards, for the road. Come and see me, any of you. I only ask the price of chalk.",
+    ] },
+    talk: [
+      { when: { hero: 'pyromancer' },
+        lines: ["Fire! Real fire, not a candle held at arm's length. Please don't stand so close. I've only just stopped steaming."],
+        choices: [{ text: 'Draw me a ward', next: 'menu' }, { text: 'Goodbye' }] },
+      { when: { hero: 'runeguard' },
+        lines: ["You write wards too! Yours are tidier than mine. The Master would have said so, if he had ever said anything kind."],
+        choices: [{ text: 'Draw me a ward', next: 'menu' }, { text: 'Goodbye' }] },
+      { when: { beaten: ['hydra'] },
+        lines: ["I hear the temple's gone quiet as well. The Master used to say deep places keep their own counsel.",
+          "I think they just kept him. Sorry. That was grim. Chalk?"],
+        choices: [{ text: 'Draw me a ward', next: 'menu' }, { text: 'Goodbye' }] },
+      { when: {},
+        lines: ["Wards. Four of them, one at a time, an hour each. Chalk, a little gold, a steady hand. Mine's mostly steady."],
+        choices: [{ text: 'Draw me a ward', next: 'menu' }, { text: 'Goodbye' }] },
+    ],
+    nodes: {
+      menu: { lines: ["Pick one. It sits on you for an hour, and a new one rubs out the old. Hold still. It tickles."],
+        action: 'ward' },
+    },
+  },
 ];
 
 // Gifts NPCs can hand over (each at most once per hero). The engine turns these into real items.
@@ -553,11 +608,43 @@ const TOWN_GIFTS = {
 // `decor` is optional: a small extra thing to draw in town from then on (ignore it if not built).
 //   cookfire: a cookpot over a fire beside Gaspard; silk-lanterns: the plaza lamps glow pale silver;
 //   kites: two or three children's kites bobbing over the plaza; bunting: festival bunting strung across the plaza.
+//   (set 2: forge-embers, snowfall, chalk-circle, wishing-pool, all drawn in town-life.js; see docs/plans/town-life.md)
 const TOWN_UNLOCKS = {
   grubnak: { toast: 'The Scullery fires are out. A cook has come up the south road with a cart, and Grubnak\'s cleaver hangs on his statue.', trophy: 'cleaver', feast: true, decor: 'cookfire' },
   skitterra: { toast: 'The Broodmother\'s silk drapes her statue, the plaza lamps burn silver, and a bard has followed the news into town.', trophy: 'web', decor: 'silk-lanterns' },
   volkar: { toast: 'The sky over Emberfall is clear for the first time in years. The children have their kites out, and a fortune teller has arrived.', trophy: 'storm-glass', decor: 'kites' },
   hollowking: { toast: 'The Barrow bells are silent. The Hollow King\'s crown rests on his statue, and one of his guard has walked out of the portal.', trophy: 'crown', decor: 'bunting' },
+  // set 2 (details: docs/plans/town-life.md, "Set 2 additions (spoilers)")
+  wyrm: { toast: 'The Cinder Peaks have gone dark. Vhalgrath\'s scale glows on his statue, and the Forge has taken the last of the heat.', trophy: 'scale', decor: 'forge-embers' },
+  titan: { toast: 'A cold wind has come down from the White Reach. It is snowing lightly over Emberfall, and the children have been busy by the Tankard.', trophy: 'ice-shard', decor: 'snowfall' },
+  archmage: { toast: 'Water is running out of the Drowned Tower. A very damp apprentice has come round the pond with a chalk-box under his arm.', trophy: 'sigil', decor: 'chalk-circle' },
+  hydra: { toast: 'The Drowned Temple has gone still. A fang of the Mother hangs on her statue, and the fountain in the square is clear, with something gold shining at the bottom.', trophy: 'fang', decor: 'wishing-pool' },
+};
+
+// Quill's wards (the Archmage's apprentice): a small hour-long buff on yourself that stacks with a feast. `buff.stat` is
+// crit / def / haste / power and `pts` the percent: 2% is the most any ward gives (small numbers).
+const WARDS = [
+  { id: 'cinder', name: 'Cinder Ward', desc: 'A ring of chalk and one hot coal. Warm hands find the soft spot.', cost: 30, buff: { stat: 'crit', pts: 2 } },
+  { id: 'rime', name: 'Rime Ward', desc: 'Cold chalk, held steady. Blows land a little softer on whoever wears it.', cost: 30, buff: { stat: 'def', pts: 2 } },
+  { id: 'storm', name: 'Storm Ward', desc: 'Drawn quickly, because it will not sit still. You feel it in your knees.', cost: 30, buff: { stat: 'haste', pts: 2 } },
+  { id: 'void', name: 'Void Ward', desc: 'A mostly empty circle. The emptiness does the work. Do not look at the middle.', cost: 35, buff: { stat: 'power', pts: 2 } },
+];
+
+// The wishing pool (the town fountain, once the Hydra has fallen): a coin in, one of nine voices out. Each toss costs a
+// little, and now and then the water gives some back. Hearing all nine sets the flag 'fountain-nine'.
+const FOUNTAIN = {
+  cost: 5, giveBack: { chance: 0.125, gold: 12 },
+  voices: [
+    "Something small and sour answers: 'Wish for less. Less is kinder to the teeth.'",
+    "A slow voice, rolling in from far off: 'Everything you throw comes back. Eventually. Wet.'",
+    "A sweet, careful voice: 'Wish for something nice. I'll see that it stays nice. For a while.'",
+    "A crackle, and the smell of singed rope: 'Burn bright! Not that bright. Mind your eyebrows.'",
+    "Each word comes out as a little white breath: 'Wish for stillness. It keeps so well.'",
+    "A voice that cannot stay in one place: 'Wish quickly, quickly, I'm wanted elsewhere!'",
+    "A hush, as if something at the bottom were looking up at you: 'Nothing. I saw nothing. I always see nothing.'",
+    "A bubble, then a slow gurgle: 'Wish... later. Stay a while. Stay... a while.'",
+    "The oldest voice, patient and very tired: 'We were nine. Now we are one pool. Throw another. We like the sound.'",
+  ],
 };
 
 // The feasts the chef can serve (feast: true above). Small buffs for the party's next hour; small numbers only.

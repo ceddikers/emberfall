@@ -11,6 +11,9 @@ const TownLife = (() => {
   const UNLOCKS = typeof TOWN_UNLOCKS !== 'undefined' ? TOWN_UNLOCKS : {};
   const MEALS = typeof FEASTS !== 'undefined' ? FEASTS : [];
   const FEAST_MS = 60 * 60 * 1000;
+  const WARDLIST = typeof WARDS !== 'undefined' ? WARDS : [];     // Quill's wards (set 2)
+  const WISH = typeof FOUNTAIN !== 'undefined' ? FOUNTAIN : null;   // the wishing pool (set 2)
+  const WARD_MS = 60 * 60 * 1000;
   let deps = null;   // from main: { beaten(id), hero(), role(), now(), player, addItem(key), gold(), spendGold(n), toast(msg), orderFeast(id), focusCamera(x, y, secs), onFeast() }
 
   // ---------------------------------------------------------------- saved state
@@ -81,7 +84,7 @@ const TownLife = (() => {
     if (f) { el.innerHTML = `Well fed<b>${Math.ceil(f.left / 60000)}m</b>`; Tip.set(el, `<b>${esc(f.meal.name)}</b><em>+${f.meal.buff.pct}% ${{ hp: 'health', power: 'power', heal: 'healing', speed: 'speed' }[f.meal.buff.stat] || ''}</em>${esc(f.meal.desc)}`); }
   }
   function update(dt, now, inTown) {
-    if (deps && Math.floor(now) !== Math.floor(now - dt)) chip();
+    if (deps && Math.floor(now) !== Math.floor(now - dt)) { chip(); wardChip(); }
     if (feastSc && (!deps || !inTown)) endFeastScene(true);   // (a fight or the portal ends it at once)
     if (!deps || !inTown) return;
     // a boss beaten that town hasn't marked yet: its moment, one at a time
@@ -89,6 +92,7 @@ const TownLife = (() => {
     const p = deps.player;
     for (const f of folk) {
       f.st.t = now;
+      if (f.bubbleUntil && now > f.bubbleUntil) { f.bubble = null; f.bubbleUntil = 0; }
       if (!present(f)) continue;
       let moving = false;
       if (f.walk) {
@@ -161,6 +165,7 @@ const TownLife = (() => {
     const k = L.build === 'small' ? 0.72 : 1, wide = L.build === 'broad' ? 12 : L.build === 'slim' ? 8.5 : 10;
     ctx.save(); ctx.translate(f.x, f.y); ctx.scale(scale * k, scale * k);
     ellipse(ctx, 2, 5, 15, 11, 0, 'rgba(0,0,0,0.28)');
+    if (L.drip) drawPuddle(ctx, st.t);
     ctx.rotate(f.angle + (st.moving ? 0 : Math.sin(st.t * 0.6 + f.home.x) * 0.15));
     feet(ctx, st, '#2e2218');
     torso(ctx, coat, wide, 14);
@@ -187,9 +192,15 @@ const TownLife = (() => {
       else if (hat === 'chef') { circle(ctx, -1, 0, 7.5, '#f8f6f0', OUT, 1.5); circle(ctx, -3, -3, 4, '#ffffff'); circle(ctx, -3, 3, 4, '#ffffff'); circle(ctx, 1, 0, 4, '#ffffff'); }
       else if (hat === 'wide') { circle(ctx, 0, 0, 12, '#5a3e24', OUT, 1.5); circle(ctx, 0, 0, 6.5, '#6e4c2c', OUT, 1); }
       else if (hat === 'scarf') { circle(ctx, -1, 0, 7.8, coat, OUT, 1.5); ellipse(ctx, 5, 0, 3, 4.2, 0, skin); }
+      else if (hat === 'pointed') { circle(ctx, -1, 0, 10.5, '#244a58', OUT, 1.5); circle(ctx, -1, 0, 6.2, '#2e6070', OUT, 1.2); circle(ctx, -1, 0, 1.8, '#cfe8e4'); }
       else if (hat === 'crown') { for (let i = 0; i < 5; i++) { const a = i / 5 * Math.PI * 2; circle(ctx, Math.cos(a) * 6, Math.sin(a) * 6, 1.8, '#e8c15a', OUT, 0.8); } }
     }
     ctx.restore();
+  }
+  // a damp townsperson's puddle, with a ring or two spreading in it
+  function drawPuddle(ctx, t) {
+    ellipse(ctx, 4, 8, 24, 13, 0, 'rgba(84,150,176,0.36)', 'rgba(210,238,248,0.35)', 1);
+    for (let i = 0; i < 2; i++) { const q = (t * 0.7 + i * 0.5) % 1; ellipse(ctx, 4, 8, 6 + q * 18, 3 + q * 9, 0, null, 'rgba(220,244,252,' + (0.5 * (1 - q)).toFixed(2) + ')', 1); }
   }
   // trophies on beaten bosses' statues, and each unlock's little decoration
   function drawTrophy(ctx, kind, x, y, now) {
@@ -199,6 +210,10 @@ const TownLife = (() => {
     else if (kind === 'web') { ctx.strokeStyle = '#eef0ff'; ctx.lineWidth = 1; for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(Math.cos(a) * 11, Math.sin(a) * 11); ctx.stroke(); } for (const r of [4, 8, 11]) { ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.stroke(); } }
     else if (kind === 'storm-glass') { rrect(ctx, -5, -11, 10, 20, 4, 'rgba(160,220,255,0.55)', OUT, 1.5); line(ctx, -1, -6, 2, 0, '#fff7a0', 1.6); line(ctx, 2, 0, -1, 5, '#fff7a0', 1.6); }
     else if (kind === 'crown') { poly(ctx, [-10, 5, -11, -5, -5, 0, 0, -8, 5, 0, 11, -5, 10, 5], '#e8c15a', OUT, 1.5); }
+    else if (kind === 'scale') { ctx.rotate(-0.4); ellipse(ctx, 0, 0, 8.5, 12, 0, '#b8381c', OUT, 1.6); ellipse(ctx, -1, -1.5, 5.2, 8, 0, '#d8541f'); for (const y of [-5, 0, 5]) line(ctx, -4, y + 2, 0, y - 1, 'rgba(90,20,10,0.55)', 1.2), line(ctx, 0, y - 1, 4, y + 2, 'rgba(90,20,10,0.55)', 1.2); }
+    else if (kind === 'ice-shard') { poly(ctx, [0, -13, 5, -3, 3, 9, -3, 9, -5, -3], 'rgba(170,226,255,0.85)', OUT, 1.5); line(ctx, -1, -8, -1, 5, 'rgba(255,255,255,0.85)', 1.2); poly(ctx, [8, -2, 11, 5, 7, 9, 5, 4], 'rgba(200,240,255,0.8)', OUT, 1); }
+    else if (kind === 'sigil') { circle(ctx, 0, 0, 10.5, null, '#8fe0d0', 1.6); circle(ctx, 0, 0, 6, null, '#8fe0d0', 1.2); for (let i = 0; i < 7; i++) { const a = i / 7 * Math.PI * 2 - Math.PI / 2; circle(ctx, Math.cos(a) * 10.5, Math.sin(a) * 10.5, 1.9, ['#ff7a3a', '#8fd8ff', '#ffe45a', '#b07aff', '#dff7f0', '#dff7f0', '#dff7f0'][i], OUT, 0.8); } }
+    else if (kind === 'fang') { poly(ctx, [-4, -11, 4, -11, 5, -4, 1, 11, -5, -4], '#ece4c4', OUT, 1.5); line(ctx, 0, -9, 1, 3, 'rgba(120,100,60,0.5)', 1); circle(ctx, 1, 13, 1.6, '#8ac04a'); }
     ctx.restore();
   }
   function drawDecor(ctx, kind, now) {
@@ -220,6 +235,112 @@ const TownLife = (() => {
         const t = i / 12, x = a.x + (b.x - a.x) * t, y = (1 - t) * (1 - t) * a.y + 2 * (1 - t) * t * (p.y + 150) + t * t * b.y;
         poly(ctx, [x - 6, y, x + 6, y, x, y + 11 + Math.sin(now * 3 + i) * 1.5], ['#c84a4a', '#e8c15a', '#4a8ac8'][i % 3], OUT, 0.8);
       }
+    } else if (kind === 'forge-embers') {
+      decorSolid(kind, [{ x: SCALE_AT.x, y: SCALE_AT.y + 4, r: 15 }]);
+      drawForgeHeat(ctx, now);
+    } else if (kind === 'snowfall') {
+      decorSolid(kind, SNOWMEN.map(m => ({ x: m.x, y: m.y, r: 11 * m.s })));
+      drawFlurry(ctx, now);
+    } else if (kind === 'chalk-circle') {
+      drawChalkCircle(ctx, now);
+    } else if (kind === 'wishing-pool') {
+      drawWishingPool(ctx, now);
+    }
+  }
+
+  // ---------------------------------------------------------------- set 2 decor (docs/plans/town-life.md, "Set 2 additions")
+  // small solid things the new decor puts in the town, added once so nobody (and no NPC's walk) goes through them
+  const decorOn = {};
+  function decorSolid(kind, circles) {
+    if (decorOn[kind] || typeof COLLIDERS === 'undefined') return;
+    decorOn[kind] = true;
+    for (const c of circles) COLLIDERS.circles.push(c);
+  }
+  const SCALE_AT = { x: 1962, y: 920 };   // leaning on the Forge's front wall, west of its door
+  // the Forge burns hotter: embers lifting off the chimney, a warmer glow at the hearth and the door, the great scale by the wall
+  function drawForgeHeat(ctx, now) {
+    glow(ctx, 2124, 880, 78, '#ff6a1a', 0.2 + Math.sin(now * 6) * 0.05);
+    glow(ctx, 2040, 912, 64, '#ff8a3a', 0.1 + Math.sin(now * 4.4) * 0.03);
+    for (let i = 0; i < 16; i++) {
+      const q = (now * 0.3 + i / 16) % 1, x = 1948 + Math.sin(now * 1.3 + i * 2.1) * 9 * q + q * q * 34, y = 690 - q * 125;
+      glow(ctx, x, y, 7 + (1 - q) * 5, '#ff7a2a', (1 - q) * 0.35);
+      circle(ctx, x, y, 1.6 + (1 - q) * 1.8, 'rgba(255,' + Math.round(210 - q * 90) + ',90,' + Math.min(1, (1 - q) * 1.3).toFixed(2) + ')');
+    }
+    glow(ctx, 1948, 692, 30, '#ff7a2a', 0.22 + Math.sin(now * 5) * 0.05);
+    const { x, y } = SCALE_AT;
+    ellipse(ctx, x + 5, y + 14, 22, 9, 0, 'rgba(0,0,0,0.28)');
+    ctx.save(); ctx.translate(x, y); ctx.rotate(-0.3);
+    glow(ctx, 0, 0, 40, '#ff6a1a', 0.18 + Math.sin(now * 3) * 0.05);
+    ellipse(ctx, 0, 0, 17, 25, 0, '#a8321a', OUT, 2.2); ellipse(ctx, -2, -2, 12, 19, 0, '#c8461f');
+    for (const dy of [-12, -4, 4, 12]) { ctx.strokeStyle = 'rgba(70,14,8,0.5)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(-9, dy + 4); ctx.quadraticCurveTo(0, dy - 4, 9, dy + 4); ctx.stroke(); }
+    ellipse(ctx, 0, 0, 17, 25, 0, null, 'rgba(255,170,70,' + (0.5 + Math.sin(now * 3) * 0.15).toFixed(2) + ')', 1.6);
+    ctx.restore();
+  }
+  // a light flurry drifting across the whole town
+  function drawFlurry(ctx, now) {
+    for (let i = 0; i < 90; i++) {
+      const h1 = (i * 0.6180339) % 1, h2 = (i * 0.7548776 + 0.31) % 1, sp = 16 + (i % 5) * 5;
+      const x = ((h1 * 2400 + now * 7 + Math.sin(now * 0.6 + i) * 14) % 2400 + 2400) % 2400, y = (h2 * 1700 + now * sp) % 1700;
+      circle(ctx, x, y, 1.1 + (i % 3) * 0.45, 'rgba(244,250,255,' + (0.45 + (i % 4) * 0.08).toFixed(2) + ')');
+    }
+  }
+  // the snow family by the Tankard (drawn as entities, so heroes pass in front of and behind them)
+  const SNOWMEN = [{ x: 802, y: 722, s: 1.15, c: '#c84a4a' }, { x: 848, y: 746, s: 1, c: '#4a8ac8' }, { x: 776, y: 760, s: 0.68, c: '#e8c15a', grump: true }];
+  function drawSnowman(ctx, m) {
+    const { x, y, s } = m;
+    ellipse(ctx, x + 3 * s, y + 4 * s, 13 * s, 6 * s, 0, 'rgba(0,0,0,0.22)');
+    circle(ctx, x, y - 6 * s, 11 * s, '#f1f6fb', OUT, 1.8); circle(ctx, x - 3.5 * s, y - 9 * s, 4 * s, 'rgba(255,255,255,0.85)');
+    circle(ctx, x, y - 19 * s, 8 * s, '#f6fafe', OUT, 1.6);
+    line(ctx, x - 7.5 * s, y - 20 * s, x - 17 * s, y - 27 * s, '#4a3018', 1.7); line(ctx, x + 7.5 * s, y - 20 * s, x + 17 * s, y - 25 * s, '#4a3018', 1.7);
+    circle(ctx, x, y - 29 * s, 6.3 * s, '#fcfeff', OUT, 1.6);
+    rrect(ctx, x - 6.5 * s, y - 24.5 * s, 13 * s, 3 * s, 1.5, m.c, OUT, 1);
+    circle(ctx, x - 2.3 * s, y - 30.5 * s, 0.9 * s, '#1c1c20'); circle(ctx, x + 2.3 * s, y - 30.5 * s, 0.9 * s, '#1c1c20');
+    poly(ctx, [x - 0.9 * s, y - 28.3 * s, x + 0.9 * s, y - 28.3 * s, x, y - 24.6 * s], '#e8802a', OUT, 0.8);
+    circle(ctx, x, y - 19 * s, 0.9 * s, '#1c1c20'); circle(ctx, x, y - 14 * s, 0.9 * s, '#1c1c20');
+    if (m.grump) { line(ctx, x - 4 * s, y - 33 * s, x - 1 * s, y - 31.8 * s, '#1c1c20', 1); line(ctx, x + 4 * s, y - 33 * s, x + 1 * s, y - 31.8 * s, '#1c1c20', 1); }
+  }
+  // Quill's workshop on the bank: a chalk circle of seven small circles (four of them lit with an element), puddles, a pail, a chalk-box
+  const CHALK = { x: 470, y: 1215 };
+  const ELEM = ['#ff7a3a', '#8fd8ff', '#ffe45a', '#b07aff'];
+  function drawChalkCircle(ctx, now) {
+    const c = CHALK, T = Math.PI * 2;
+    glow(ctx, c.x, c.y, 112, '#5ad0c0', 0.1 + Math.sin(now * 1.3) * 0.03);
+    for (const [dx, dy, rx, ry] of [[-62, 46, 22, 9], [46, 62, 16, 7], [76, -18, 12, 6], [-16, -74, 14, 6], [-92, -10, 10, 5]]) ellipse(ctx, c.x + dx, c.y + dy, rx, ry, 0, 'rgba(84,150,176,0.34)', 'rgba(210,238,248,0.3)', 1);
+    circle(ctx, c.x, c.y, 80, null, 'rgba(244,240,226,0.5)', 2); circle(ctx, c.x, c.y, 72, null, 'rgba(244,240,226,0.32)', 1.2);
+    const pts = [];
+    for (let i = 0; i < 7; i++) { const a = i / 7 * T - Math.PI / 2 + now * 0.12; pts.push([c.x + Math.cos(a) * 50, c.y + Math.sin(a) * 50]); }
+    ctx.save(); ctx.strokeStyle = 'rgba(244,240,226,0.3)'; ctx.lineWidth = 1.2; ctx.beginPath();
+    for (let i = 0; i <= 7; i++) { const [x, y] = pts[(i * 2) % 7]; i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
+    ctx.stroke(); ctx.restore();
+    pts.forEach(([x, y], i) => {
+      const lit = i < 4, col = lit ? ELEM[i] : '#e8e2d0';
+      if (lit) glow(ctx, x, y, 17, col, 0.22 + Math.sin(now * 2 + i * 1.6) * 0.08);
+      circle(ctx, x, y, 7, null, 'rgba(244,240,226,0.62)', 1.6); if (lit) circle(ctx, x, y, 2.4, col);
+    });
+    circle(ctx, c.x, c.y, 13, null, 'rgba(244,240,226,0.55)', 1.5); circle(ctx, c.x, c.y, 4, 'rgba(160,236,224,' + (0.5 + Math.sin(now * 2.4) * 0.2).toFixed(2) + ')');
+    // the pail and the chalk-box at the circle's edge
+    ellipse(ctx, c.x + 94, c.y + 56, 11, 5, 0, 'rgba(0,0,0,0.25)');
+    circle(ctx, c.x + 92, c.y + 50, 9, '#8a5e32', OUT, 1.8); circle(ctx, c.x + 92, c.y + 50, 6, '#4a7a9a'); circle(ctx, c.x + 90, c.y + 48, 1.8, 'rgba(255,255,255,0.4)');
+    rrect(ctx, c.x - 98, c.y + 46, 22, 12, 2, '#c8b48a', OUT, 1.4); line(ctx, c.x - 94, c.y + 49, c.x - 80, c.y + 49, '#f6f2e6', 1.6); line(ctx, c.x - 94, c.y + 53, c.x - 82, c.y + 53, '#f6f2e6', 1.6);
+  }
+  // the wishing pool: coins glinting on the basin floor, nine soft lights round the rim, a ripple when someone makes a wish
+  const VOICE_COL = ['#a8e04a', '#4a9ae8', '#b05ae0', '#ff7a3a', '#bfe8ff', '#ffe45a', '#9a9a90', '#7a8a3a', '#e8c15a'];
+  const POOL_AT = { x: 1200, y: 960 };
+  let wishFx = null;   // { t0, col }: the ripple of the last toss
+  function drawWishingPool(ctx, now) {
+    const F = POOL_AT;
+    for (let i = 0; i < 13; i++) {
+      const a = i * 2.4 + 0.7, rr = 22 + (i * 37) % 40, tw = 0.5 + 0.5 * Math.sin(now * 2.2 + i * 1.7);
+      circle(ctx, F.x + Math.cos(a) * rr, F.y + Math.sin(a) * rr, 2.1, 'rgba(236,196,90,' + (0.5 + tw * 0.3).toFixed(2) + ')');
+      if (tw > 0.93) drawSpark(ctx, F.x + Math.cos(a) * rr, F.y + Math.sin(a) * rr, 3.4, (tw - 0.93) / 0.07);
+    }
+    for (let k = 0; k < 9; k++) {
+      const a = k / 9 * Math.PI * 2 - Math.PI / 2, p = (Math.sin(now * 1.4 - k * 0.7) + 1) / 2, x = F.x + Math.cos(a) * 75, y = F.y + Math.sin(a) * 75;
+      glow(ctx, x, y, 13, VOICE_COL[k], 0.14 + p * 0.26); circle(ctx, x, y, 2.2, VOICE_COL[k], OUT, 0.8);
+    }
+    if (wishFx) for (let i = 0; i < 3; i++) {
+      const q = (now - wishFx.t0 - i * 0.28) / 1.7;
+      if (q > 0 && q < 1) circle(ctx, F.x, F.y, 10 + q * 60, null, wishFx.col, 2.2 * (1 - q) + 0.5);
     }
   }
   // the ground layer (decor and trophies) and the folk themselves (as entities sorted with everyone else)
@@ -235,6 +356,7 @@ const TownLife = (() => {
   }
   function entities(scale) {
     const out = folk.filter(f => deps && present(f)).map(f => ({ kind: 'stagecraft', y: f.y, draw: ctx => drawFolk(ctx, f, scale) }));
+    if (deps && deps.beaten('titan') && state().seen.titan) for (const m of SNOWMEN) out.push({ kind: 'stagecraft', y: m.y, draw: ctx => drawSnowman(ctx, m) });
     if (feastSc) {
       for (const d of feastSc.diners) out.push({ kind: 'stagecraft', y: d.y, draw: ctx => drawDiner(ctx, d, scale) });
       out.push({ kind: 'stagecraft', y: 99999, draw: ctx => drawMealOver(ctx, feastSc ? feastSc.now : 0) });
@@ -608,8 +730,27 @@ const TownLife = (() => {
     return el;
   };
   function interactables() {
-    return folk.filter(f => deps && present(f) && !f.walk).map(f => ({ get x() { return f.x; }, get y() { return f.y; }, r: 22, reach: 80, label: f.d.name, open: () => startTalk(f) }));
+    const out = folk.filter(f => deps && present(f) && !f.walk).map(f => ({ get x() { return f.x; }, get y() { return f.y; }, r: 22, reach: 80, label: f.d.name, open: () => startTalk(f) }));
+    // the town fountain, once it has something to say (reach is from its middle: the basin is solid out to about 90)
+    if (deps && WISH && deps.beaten('hydra') && state().seen.hydra) out.push({ x: POOL_AT.x, y: POOL_AT.y, r: 70, reach: 125, label: 'Wishing pool', open: () => startTalk(POOL) });
+    return out;
   }
+  // the pool talks like a townsperson (the same dialogue box), but it is not one of the folk
+  const POOL = {
+    x: POOL_AT.x, y: POOL_AT.y + 80,
+    d: {
+      id: 'pool', name: 'The Fountain', title: 'Wishing pool', wander: 0,
+      talk: [
+        { when: { flags: ['fountain-nine'] },
+          lines: ["The water is still. Nine small ripples, then none. It seems to know you now."],
+          choices: [{ text: `Toss a coin in (${WISH ? WISH.cost : 5} gold)`, next: 'wish' }, { text: 'Goodbye' }] },
+        { when: {},
+          lines: ["The basin is clear and still, with a little gold shining at the bottom. It looks like it is waiting for something."],
+          choices: [{ text: `Toss a coin in (${WISH ? WISH.cost : 5} gold)`, next: 'wish' }, { text: 'Goodbye' }] },
+      ],
+      nodes: { wish: { action: 'wish' } },
+    },
+  };
   function startTalk(f) {
     const entry = f.d.talk.find(t => matches(t.when)) || f.d.talk[f.d.talk.length - 1];
     talk = { f, lines: entry.lines || [], i: 0, choices: entry.choices || null, node: entry };
@@ -618,10 +759,12 @@ const TownLife = (() => {
   function enterNode(id) {
     const n = talk && talk.f.d.nodes && talk.f.d.nodes[id];
     if (!n) { endTalk(); return; }
+    if (n.action === 'wish') { toss(); return; }
     talk.lines = n.lines || []; talk.i = 0; talk.choices = n.choices || null; talk.node = n;
     if (n.set) { state().flags[n.set] = 1; commit(); }
     if (n.give) give(n.give);
     render();
+    if (n.action === 'ward' && !(n.lines && n.lines.length)) openWards();
     if (n.action === 'feast' && !(n.lines && n.lines.length)) openFeasts();
     if (n.action === 'fish-shop' && !(n.lines && n.lines.length)) { endTalk(); deps.fishShop(); }
   }
@@ -638,6 +781,7 @@ const TownLife = (() => {
     if (!talk) return;
     if (talk.i < talk.lines.length - 1) { talk.i += 1; render(); return; }
     if (talk.node && talk.node.action === 'feast') { openFeasts(); return; }
+    if (talk.node && talk.node.action === 'ward') { openWards(); return; }
     if (talk.node && talk.node.action === 'fish-shop') { endTalk(); deps.fishShop(); return; }
     if (!talk.choices || !talk.choices.length) endTalk();
   }
@@ -653,7 +797,7 @@ const TownLife = (() => {
     const last = talk.i >= talk.lines.length - 1, d = talk.f.d;
     const choices = last && talk.choices && talk.choices.length ? `<div class="dl-choices">${talk.choices.map((c, i) => `<button type="button" data-c="${i}">${esc(c.text)}</button>`).join('')}</div>` : '';
     el.innerHTML = `<header><b>${esc(d.name)}</b><small>${esc(d.title || '')}</small><button type="button" class="dl-x" aria-label="Close">×</button></header>
-      <p class="dl-line">${esc(talk.lines[talk.i] || '')}</p>${choices || `<button type="button" class="dl-next">${last ? (talk.node && talk.node.action === 'feast' ? 'See the board' : talk.node && talk.node.action === 'fish-shop' ? 'Show the catch' : 'Goodbye') : 'Next'}</button>`}`;
+      <p class="dl-line">${esc(talk.lines[talk.i] || '')}</p>${choices || `<button type="button" class="dl-next">${last ? (talk.node && talk.node.action === 'feast' ? 'See the board' : talk.node && talk.node.action === 'ward' ? 'Choose a ward' : talk.node && talk.node.action === 'fish-shop' ? 'Show the catch' : 'Goodbye') : 'Next'}</button>`}`;
     el.classList.remove('hidden');
     if (typeof Sound !== 'undefined' && talk.lines[talk.i]) Sound.play('npc-talk', { vol: 0.6, key: 'npc-talk', minGap: 0.15 });
   }
@@ -692,15 +836,90 @@ const TownLife = (() => {
     // in town the meal is a little scene (the toast comes when it ends); anywhere else, just the toast
     if (!(deps.inTown && deps.inTown() && startFeastScene(m, by))) deps.toast(mealLine(m, by));
   }
-  // the feast's bonus as gear totals (inventory.js adds it)
+  // the feast's bonus (and a ward's, if you wear one) as gear totals (inventory.js adds it)
   function feastTotals(clsId) {
-    const f = feast();
-    if (!f) return null;
-    const { stat, pct } = f.meal.buff;
-    if (stat === 'hp') return { hp: Math.round(1100 * pct / 100) };
-    if (stat === 'speed') return { haste: pct };
-    if (stat === 'heal') { const c = CLASSES.find(x => x.id === clsId); return c && c.role === 'healer' ? { main: pct * 10 } : { hp: Math.round(1100 * pct / 200) }; }
-    return { main: pct * 10 };
+    const f = feast(), w = ward();
+    let out = null;
+    if (f) {
+      const { stat, pct } = f.meal.buff;
+      if (stat === 'hp') out = { hp: Math.round(1100 * pct / 100) };
+      else if (stat === 'speed') out = { haste: pct };
+      else if (stat === 'heal') { const c = CLASSES.find(x => x.id === clsId); out = c && c.role === 'healer' ? { main: pct * 10 } : { hp: Math.round(1100 * pct / 200) }; }
+      else out = { main: pct * 10 };
+    }
+    if (w) { out = out || {}; const { stat, pts } = w.ward.buff, k = WARD_KEY[stat], v = stat === 'def' || stat === 'power' ? pts * 10 : pts; out[k] = (out[k] || 0) + v; }
+    return out;
+  }
+
+  // ---------------------------------------------------------------- Quill's wards (set 2)
+  // One at a time, an hour each, on you alone (no host or network: the totals go out with your gear like a feast's).
+  const WARD_KEY = { crit: 'crit', def: 'def', haste: 'haste', power: 'main' };
+  const WARD_WORD = { crit: 'critical chance', def: 'less damage taken', haste: 'haste', power: 'power' };
+  const WARD_COL = { cinder: ['#ff7a3a', '#ffd27a'], rime: ['#8fd8ff', '#ffffff'], storm: ['#ffe45a', '#ffffff'], void: ['#b07aff', '#2a1050'] };
+  const wardText = w => (w.buff.stat === 'def' ? `${w.buff.pts}% less damage taken` : `+${w.buff.pts}% ${WARD_WORD[w.buff.stat] || ''}`);
+  function ward() {
+    const w = state().ward;
+    if (!w || !(w.until > Date.now())) return null;
+    const d = WARDLIST.find(x => x.id === w.id);
+    return d ? { ward: d, left: w.until - Date.now() } : null;
+  }
+  // the ward you wear, as a chip above the feast's (with the minutes left)
+  let wardKey = '';
+  function wardChip() {
+    let el = document.getElementById('ward-chip');
+    if (!el) { el = document.createElement('div'); el.id = 'ward-chip'; el.className = 'hidden'; document.body.appendChild(el); }
+    const w = ward(), key = w ? w.ward.id + Math.ceil(w.left / 60000) : '';
+    if (key === wardKey) return;
+    if (wardKey && !key && deps) deps.onFeast();   // (the ward rubbed out: gear numbers and the host's copy drop it)
+    wardKey = key;
+    el.classList.toggle('hidden', !w);
+    if (w) { el.innerHTML = `Warded<b>${Math.ceil(w.left / 60000)}m</b>`; Tip.set(el, `<b>${esc(w.ward.name)}</b><em>${esc(wardText(w.ward))}</em>${esc(w.ward.desc)}`); }
+  }
+  function openWards() {
+    const el = box(), g = deps.gold(), cur = ward();
+    el.innerHTML = `<header><b>Quill's wards</b><small>One at a time, an hour each, on you alone · <i class="coin"></i>${g}</small><button type="button" class="dl-x" aria-label="Close">×</button></header>
+      ${cur ? `<p class="dl-line">Warded: <b>${esc(cur.ward.name)}</b> · ${Math.ceil(cur.left / 60000)}m left. A new one rubs it out.</p>` : ''}
+      <div class="dl-feasts">${WARDLIST.map(w => `<button type="button" class="dl-feast" data-w="${w.id}"${g < w.cost ? ` disabled data-tip="${w.cost - g} gold short"` : ''}>
+        <b>${esc(w.name)}</b><span>${esc(w.desc)}</span><em>${esc(wardText(w))}</em><i class="coin"></i><u>${w.cost}</u></button>`).join('')}</div>`;
+    el.classList.remove('hidden');
+    el.querySelectorAll('.dl-feast').forEach(b => b.addEventListener('click', () => {
+      const w = WARDLIST.find(x => x.id === b.dataset.w);
+      if (!w || deps.gold() < w.cost) return;
+      deps.spendGold(w.cost);
+      state().ward = { id: w.id, until: Date.now() + WARD_MS }; commit();
+      deps.onFeast(); wardChip();
+      const q = talk && talk.f;
+      if (q && q.d.id === 'quill') { q.bubble = ['There. Don\'t scuff it.', 'Hold still... done. It tickles, I\'m told.', 'Chalk\'s dry. Go on, before it smudges.'][Math.floor(Math.random() * 3)]; q.bubbleUntil = deps.now() + 3.5; }
+      const p = deps.player, col = WARD_COL[w.id] || ['#ffffff', '#ffffff'];
+      try { if (p && typeof VFX !== 'undefined') VFX.burst(p.x, p.y, { color: col[0], color2: col[1], n: 22, speed: 170 }); } catch (e) { /* a flourish never blocks a purchase */ }
+      deps.toast(`Quill draws a ${w.name} on you: ${wardText(w)} for the hour.`);
+      endTalk();
+    }));
+  }
+
+  // ---------------------------------------------------------------- the wishing pool (set 2)
+  // A toss costs a little and brings one of nine voices, never the same one twice until all nine have spoken; now and then the
+  // water gives some gold back. Hearing all nine sets 'fountain-nine' (Tobble has a line for it).
+  function setTalk(lines, choices) { talk.lines = lines; talk.i = 0; talk.choices = choices; talk.node = null; render(); }
+  function toss() {
+    if (!talk || !WISH) return;
+    const s = state(), more = [{ text: `Toss another (${WISH.cost} gold)`, next: 'wish' }, { text: 'Goodbye' }];
+    if (deps.gold() < WISH.cost) { setTalk(['You have no coin to spare. The water waits, and does not seem offended.'], [{ text: 'Goodbye' }]); return; }
+    deps.spendGold(WISH.cost);
+    const n = WISH.voices.length;
+    let heard = Array.isArray(s.heard) ? s.heard : [], left = [];
+    for (let i = 0; i < n; i++) if (!heard.includes(i)) left.push(i);
+    if (!left.length) { heard = []; for (let i = 0; i < n; i++) left.push(i); }
+    const v = left[Math.floor(Math.random() * left.length)];
+    heard.push(v); s.heard = heard;
+    const lines = [WISH.voices[v]];
+    if (heard.length >= n && !s.flags['fountain-nine']) { s.flags['fountain-nine'] = 1; lines.push('That was the ninth. Every ripple settles at once, and the pool is very still.'); }
+    const gb = WISH.giveBack;
+    if (gb && Math.random() < gb.chance) { lines.push(`Something glints. The water gives ${gb.gold} gold back.`); try { if (typeof Inventory !== 'undefined') Inventory.addGold(gb.gold); } catch (e) { /* the wallet is the save's own */ } }
+    commit();
+    wishFx = { t0: deps.now(), col: VOICE_COL[v] };
+    snd('feast-clink', { vol: 0.6, rate: 1.15 });
+    setTalk(lines, more);
   }
 
   let listening = false;

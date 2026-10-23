@@ -9,6 +9,46 @@
 
 const BOT_NAMES = ['Brom', 'Ilsa', 'Tamsin', 'Oswin', 'Mira', 'Corvin'];
 
+// The pull review's record: a compact timeline of one pull, kept on the host and sent with the end-of-pull message so the
+// results card can show it to everyone. It only reads the sim's messages (never touches the fight). Times are tenths of a
+// second; names and hit kinds go through two small tables.
+//   hp: the boss's health in thousandths every 2 s from the pull, he: [t, thousandths] at the end, ph: [[t, course]] changes
+//   c: [[t, name, goal?]] the boss's named casts, h: [[t, who, name, kind, damage, avoidable, hits, span]] what landed on a player
+//   (hits of one move on one player within 1.5 s merge into one, steady ones into a run: span is its length), d: [[t, who, name, kind]] deaths, e: [[t, 0|1, who, other]]
+//   raises (0: by, target) and Limit Breaks (1: who, bars)
+class PullLog {
+  constructor() { this.nm = []; this.ki = []; this.hp = []; this.ph = []; this.c = []; this.h = []; this.d = []; this.e = []; this.last = {}; this.open = new Map(); this.phase = 1; }
+  idx(list, v) { let i = list.indexOf(v); if (i < 0) { i = list.length; list.push(v); } return i; }
+  rec(msg, t) {
+    const t10 = Math.round(t * 10);
+    if (msg.t === 'fb') {
+      if (msg.mx > 0 && t >= this.hp.length * 2 && this.hp.length < 600) this.hp.push(Math.round(msg.hp / msg.mx * 1000));
+      if (msg.ph != null && msg.ph !== this.phase && this.ph.length < 40) { this.phase = msg.ph; this.ph.push([t10, msg.ph]); }
+    } else if (msg.t === 'bcast') {
+      if (this.c.length < 300) this.c.push([t10, this.idx(this.nm, String(msg.name).slice(0, 40)), msg.goal != null ? 1 : 0]);
+    } else if (msg.t === 'pdmg') {
+      const amt = Math.round((msg.a || 0) + (msg.sh || 0)), av = msg.dd ? 1 : 0;
+      if (amt <= 0 && !av) return;
+      const mi = msg.n ? this.idx(this.nm, String(msg.n).slice(0, 40)) : -1, ki = this.idx(this.ki, String(msg.k || 'hit'));
+      this.last[msg.id] = [t10, mi, ki];
+      const key = msg.id + '|' + mi + '|' + ki + '|' + av, prev = this.open.get(key);
+      // (a named move's hits merge within 1.5 s; the steady kind, autos and ground ticks, run together up to 30 s at a time)
+      if (prev && t10 - prev.end <= (mi < 0 ? 50 : 15) && t10 - prev.r[0] <= 300) { prev.r[4] += amt; prev.r[6]++; prev.end = t10; prev.r[7] = t10 - prev.r[0]; }
+      else if (this.h.length < 600) { const r = [t10, msg.id, mi, ki, amt, av, 1, 0]; this.h.push(r); this.open.set(key, { r, end: t10 }); }
+    } else if (msg.t === 'fev' && msg.k === 'death') {
+      const l = this.last[msg.id];
+      if (this.d.length < 60) this.d.push(l && t10 - l[0] <= 5 ? [t10, msg.id, l[1], l[2]] : [t10, msg.id, -1, -1]);
+    } else if (msg.t === 'fev' && msg.k === 'raised') {
+      if (this.e.length < 80) this.e.push([t10, 0, msg.by, msg.id]);
+    } else if (msg.t === 'lb') {
+      if (this.e.length < 80) this.e.push([t10, 1, msg.id, msg.lv]);
+    }
+  }
+  out(end, t) {
+    return { nm: this.nm, ki: this.ki, hp: this.hp, he: [Math.round(t * 10), end.maxHp > 0 ? Math.round(end.hp / end.maxHp * 1000) : 0], ph: this.ph, c: this.c, h: this.h, d: this.d, e: this.e };
+  }
+}
+
 class RaidHost {
   constructor(opts) {
     this.def = opts.def; this.mode = opts.mode; this.humans = opts.humans; this.emitOut = opts.emit;
@@ -23,6 +63,7 @@ class RaidHost {
     ARENA.use(this.def.id);
     this.spawnR = Math.min(330, ARENA.inner - 70);   // bots start in a ring below the boss, clear of the walls
     this.bots = (opts.bots || []).map((cid, i) => this.makeBot(cid, i));
+    this.pull = new PullLog();   // (the pull review: PullLog above)
     this.sim = new FightSim(this.def, this.mode, () => this.allPlayers(), msg => this.onSimMsg(msg), rngSeed, { hpPct: this.bond.hp, waitPull: !!opts.waitPull, practiceFrom: opts.practiceFrom || 0 });
     this.lastBotBroadcast = -1;
   }
@@ -225,6 +266,8 @@ class RaidHost {
   }
   // ---------------------------------------------------------------- routing
   onSimMsg(msg) {
+    if (this.sim && this.sim.state === 'live') this.pull.rec(msg, this.sim.t);
+    if (msg.t === 'fight' && (msg.s === 'clear' || msg.s === 'wipe')) msg.pr = this.pull.out(msg, this.sim.t);   // (sent with the result: the results card's pull review)
     // things the bots need to know about themselves
     if (msg.t === 'fev') {
       const bot = this.bots.find(b => b.id === msg.id);

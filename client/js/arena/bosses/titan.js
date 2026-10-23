@@ -24,7 +24,7 @@
 
 const TITAN = {
   id: 'titan', name: 'Hrimgar', title: 'Warden of the White Reach',
-  hp: { normal: 5750000, hard: 5600000 },
+  hp: { normal: 5550000, hard: 5600000 },
   autoDmg: { normal: 1800, hard: 1980 },
   enrage: { normal: 600, hard: 590 },   // the cast starts here and lands 8 s later (10:08 / 9:58)
   enrageName: 'Endless Winter',

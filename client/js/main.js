@@ -1518,6 +1518,7 @@
     if (say) FX.text(at.x, at.y - 80, say, ours ? '#ff9a7a' : '#ffe08a', msg.k === 'cap' ? 20 : 15, 1.5, { kind: 'call' });
     const snd = { take: ours ? 'debuff-on' : 'loot-take', drop: 'chest-drop', return: 'cleanse', cap: ours ? 'debuff-on' : 'ult-ready' }[msg.k];
     if (SH && snd) SH.play(snd, { bus: 'ui', vol: 0.8 });
+    if (msg.id === Net.id && (msg.k === 'cap' || (msg.k === 'take' && !ours) || (msg.k === 'return' && ours))) Pastimes.event('ctf', { k: msg.k });   // (feats: only what you did)
   });
   Net.on('ctfDown', msg => { const C = raid && raid.pvp && raid.pvp.ctf; if (C && Number.isFinite(msg.secs)) C.down[msg.id] = now + msg.secs; });
   Net.on('ctfSpawn', msg => {
@@ -1540,6 +1541,7 @@
     raid.state = 'pvpover'; raid.pvp.state = 'over'; raid.pvp.sd = 0; raid.pvp.left = 0;
     if (actor && actor.kit.cast) actor.kit.cast = null;
     const won = msg.winner != null && msg.winner === raid.pvp.myTeam;
+    Pastimes.event('pvp', { won, draw: msg.winner == null, mode: raid.pvp.mode, stats: msg.stats, teams: msg.teams || raid.pvp.teams, myTeam: raid.pvp.myTeam, myId: Net.id });   // (feats)
     if (SH) { SH.castEnd(); SH.play(won ? 'clear' : 'wipe', { vol: 1 }); SH.music(won ? 'mus-victory' : 'mus-wipe', { fade: 1, loop: false }); }
     const P = raid.pvp;
     later(1.4, () => { if (raid && raid.pvp === P) PvpUI.result(msg, P, pvpName, { town: () => leaveRaid(true) }); });
@@ -1586,7 +1588,9 @@
     if (SH && (msg.s === 'clear' || msg.s === 'wipe')) { SH.castEnd(); SH.play(msg.s, { vol: 1 }); SH.music(msg.s === 'clear' ? 'mus-victory' : 'mus-wipe', { fade: 1, loop: false }); SH.vo(msg.s === 'clear' ? 'boss-death' : 'boss-wipe', { bossId: raid.def.id }); if (msg.s === 'clear') SH.vo('clear', { bossId: raid.def.id, classId: player.cls ? player.cls.id : null }); }
     if (player.cls && !raid.def.trial && !raid.practice && msg.s === 'clear') Journal.won(player.cls.id, raid.def.id);
     if (!raid.def.trial && msg.s === 'clear') Pastimes.event('clear', { boss: raid.def.id, mode: raid.mode, secs: Number(msg.time) || 0, practice: !!raid.practice,
-      deaths: Object.values(msg.stats || {}).reduce((n, x) => n + (x.deaths | 0), 0), avoidable: Object.values(msg.stats || {}).reduce((n, x) => n + (x.avoidable | 0), 0) });
+      deaths: Object.values(msg.stats || {}).reduce((n, x) => n + (x.deaths | 0), 0), avoidable: Object.values(msg.stats || {}).reduce((n, x) => n + (x.avoidable | 0), 0),
+      stats: msg.stats, myId: Net.id, alive: [...raid.party].filter(([, p]) => p.alive).map(([id]) => Number(id)) });   // (stats, myId, alive: feats read the party and your own tally, feat-rules.js)
+    if (!raid.def.trial && msg.s === 'wipe' && !raid.wipeSent) { raid.wipeSent = true; Pastimes.event('wipe', { boss: raid.def.id, practice: !!raid.practice }); }
     // a real pull (not a trial or a practice run) goes on the progression record
     if ((msg.s === 'clear' || msg.s === 'wipe') && !raid.def.trial && !raid.practice && msg.maxHp > 0) {
       const pct = msg.s === 'clear' ? 0 : Math.max(0, Math.min(100, Math.round(msg.hp / msg.maxHp * 1000) / 10));
@@ -2033,6 +2037,8 @@
     if (msg.k === 'taunt' && e && msg.id !== Net.id) playTaunt(e, enemyNow(msg.tg), false);   // (your own played when you pressed it)
     // the advanced tanks' moments (something eaten, a bill stamped): CLASS_FEV in ability-vfx.js
     if (typeof CLASS_FEV !== 'undefined' && CLASS_FEV[msg.k] && e) { VFX.setScale(msg.id === Net.id ? 1 : 0.6); try { CLASS_FEV[msg.k](msg, e, { mine: msg.id === Net.id, tgs: raid.tgs, now, boss: raid.bossDraw }); } finally { VFX.setScale(1); } }
+    if (msg.k === 'raised' && msg.by === Net.id && msg.id !== Net.id && !raid.pvp) Pastimes.event('raise', {});   // (feats)
+    if (msg.k === 'hollow' && msg.id === Net.id && !msg.on && msg.ok) Pastimes.event('hollow', { ok: 1 });
     if (msg.id !== Net.id || !actor) return;
     if (msg.k === 'eat' || msg.k === 'ledger' || msg.k === 'hollow') actor.notify(msg.k, msg);
     if (msg.k === 'perfect') actor.notify('perfect', msg);   // (msg.b: it was a tankbuster)
@@ -2254,6 +2260,7 @@
   function sendTitle(t) {
     t = typeof t === 'string' ? t.slice(0, 40) : null;
     player.title = t;
+    updateHeroName();
     if (!Net.online) return;
     if (Net.isHost) Net.broadcastAll({ t: 'ttl', id: Net.id, title: t }); else Net.send({ t: 'ttlreq', title: t });
   }
@@ -3287,7 +3294,7 @@
   }
   function updateHeroName() {
     $('hero-name').innerHTML = player.cls
-      ? `<span style="color:${ROLES[player.cls.role].color}">${player.cls.name}</span> · ${player.cls.title}`
+      ? `<span style="color:${ROLES[player.cls.role].color}">${player.cls.name}</span> · ${player.cls.title}${player.title ? `<em class="hn-title">${escapeHtml(player.title)}</em>` : ''}`
       : 'Wisp · no hero chosen';
   }
   function updatePartyList() {

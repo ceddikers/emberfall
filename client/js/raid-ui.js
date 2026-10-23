@@ -738,7 +738,7 @@ const RaidUI = (() => {
           <thead><tr><th>Player</th><th>Class</th><th>DPS</th><th>HPS</th><th>Taken</th><th data-tip="Hits from attacks that could have been avoided">Avoidable</th><th>Deaths</th></tr></thead>
           <tbody>${table}</tbody>
         </table>
-        ${best}${pullTimeline(raid, dur, deaths, deathName)}${deathLog}
+        ${best}${pullTimeline(raid, dur, deaths, deathName, msg)}${deathLog}
         ${raid.newPages && raid.newPages.length ? `<p class="res-pages">New in your journal: ${raid.newPages.map(n => `<b>${esc(n)}</b>`).join(', ')}<kbd>${typeof Keybinds !== 'undefined' ? Keybinds.label(Keybinds.keyFor('journal')) : 'J'}</kbd></p>` : ''}
         ${report}
         <div class="res-actions">
@@ -749,6 +749,8 @@ const RaidUI = (() => {
     el.classList.remove('hidden');
     el.querySelectorAll('button[data-a]').forEach(b => b.addEventListener('click', () => actions[b.dataset.a] && actions[b.dataset.a]()));
     el.querySelectorAll('.res-tl [data-t]').forEach(m => Tip.set(m, m.dataset.t));
+    const tlEl = el.querySelector('.res-tl.pr');
+    if (tlEl) tlEl.addEventListener('click', e => prClick(e, tlEl));
   }
   // The MVP (a clear only) and the category awards, from the contribution points (scoring.js). Only what went well: a wipe
   // shows the awards that were earned, or a quiet line. The full breakdown lives in the Logbook.
@@ -771,8 +773,10 @@ const RaidUI = (() => {
     if (typeof RAID_CASTS !== 'undefined' && RAID_CASTS.test(name)) return 'raid';
     return 'mech';
   }
-  function pullTimeline(raid, dur, deaths, deathName) {
-    const tl = raid.tl;
+  function pullTimeline(raid, dur, deaths, deathName, msg) {
+    const pr = msg && msg.pr && Array.isArray(msg.pr.h) ? msg.pr : null;   // (the host's record, sent with the result: every player has the same one)
+    prCtx = pr ? { pr, msg, raid, dur, deathName } : null;
+    const tl = pr ? { hp: pr.hp.map((v, i) => [i * 2, v / 1000]).concat([[pr.he[0] / 10, pr.he[1] / 1000]]), casts: pr.c.map(([t, n, g]) => [t / 10, pr.nm[n], g]) } : raid.tl;
     if (!tl || (!tl.hp.length && !tl.casts.length)) return '';
     const W = 600, X = t => (Math.max(0, Math.min(dur, t)) / dur * W).toFixed(1), Y = f => (8 + (1 - f) * 40).toFixed(1);
     const line = tl.hp.length ? `<polyline class="tl-hp" points="0,${Y(1)} ${tl.hp.map(([t, f]) => `${X(t)},${Y(f)}`).join(' ')}"/>` : '';
@@ -780,7 +784,93 @@ const RaidUI = (() => {
     for (let m = 60; m < dur; m += 60) ticks.push(`<line class="tl-min" x1="${X(m)}" x2="${X(m)}" y1="4" y2="66"/><text class="tl-lbl" x="${X(m)}" y="78">${m / 60}:00</text>`);
     const casts = tl.casts.map(([t, n, g]) => `<circle class="tl-c k-${castKind(raid, n, g)}" cx="${X(t)}" cy="58" r="3.4" data-t="${esc(`<b>${esc(n)}</b><em>${mmss(t)}</em>`)}"/>`).join('');
     const dead = deaths.map(({ d, s }) => `<g class="tl-d" transform="translate(${X(d.t)},8)" data-t="${esc(`<b>${esc(s.name)} fell</b><em>${mmss(d.t)} · ${esc(deathName(d))}</em>`)}"><rect x="-5" y="-5" width="10" height="10" fill="transparent"/><path d="M-3.5 -3.5 L3.5 3.5 M3.5 -3.5 L-3.5 3.5"/></g>`).join('');
-    return `<div class="res-tl"><h6>The pull</h6><svg viewBox="-6 0 612 82" preserveAspectRatio="none">${ticks.join('')}${line}${casts}${dead}</svg></div>`;
+    return `<div class="res-tl${pr ? ' pr' : ''}"><h6>The pull${pr ? '<button class="pr-open" type="button">Review the pull</button>' : ''}</h6><svg viewBox="-6 0 612 82" preserveAspectRatio="none">${ticks.join('')}${line}${casts}${dead}</svg>${pr ? pullReview() : ''}</div>`;
+  }
+
+  // ---------------------------------------------------------------- the pull review
+  // The results card's timeline of the pull, read from the host's record (raid-host.js PullLog): the boss's health, every move
+  // he made, and per player the hits they took (the avoidable ones lit), where they fell, were raised, or a Limit Break went
+  // off. Hover a mark for its name; click one for who was hit and for how much.
+  let prCtx = null;
+  const PR_KIND = { self: 'Self-inflicted', raidwide: 'Raid-wide blow', buster: 'Tank buster', stack: 'Stack', spread: 'Spread', tower: 'Tower', aoe: 'Ground blast', bait: 'Bait', cleave: 'Cleave', proximity: 'Blast', hit: 'A hit', doom: 'Doom' };
+  const SKULL = '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M6 .7C3.2.7 1.3 2.6 1.3 5.2c0 1.5.7 2.6 1.7 3.2v2.1h6V8.4c1-.6 1.7-1.7 1.7-3.2C10.7 2.6 8.8.7 6 .7Z" fill="currentColor"/><circle cx="4.2" cy="5.2" r="1.1" fill="#0a0908"/><circle cx="7.8" cy="5.2" r="1.1" fill="#0a0908"/><path d="M5.2 7.6h1.6v1.5H5.2z" fill="#0a0908"/></svg>';
+  // what a hit is called: the move that threw it, else what kind of blow it was (a bare kind borrows the name of a move that contains it)
+  function prName(pr, mi, ki, raid) {
+    if (mi >= 0) return pr.nm[mi];
+    const k = pr.ki[ki] || 'hit';
+    if (k === 'enrage') return raid.def.enrageName || 'Enrage';
+    if (HIT_KIND[k]) return HIT_KIND[k];
+    return pr.nm.find(n => n.toLowerCase().includes(k)) || PR_KIND[k] || (k[0].toUpperCase() + k.slice(1));
+  }
+  function pullReview() {
+    const { pr, msg, raid, dur } = prCtx, nm = (mi, ki) => prName(pr, mi, ki, raid);
+    const X = t => (Math.max(0, Math.min(dur, t / 10)) / dur * 100).toFixed(2);   // (t in tenths of a second -> percent along the axis)
+    const who = id => msg.stats[id];
+    const order = { tank: 0, healer: 1 };
+    const people = Object.entries(msg.stats).map(([id, st]) => ({ id: Number(id), st })).sort((a, b) => (order[a.st.role] ?? 2) - (order[b.st.role] ?? 2) || a.id - b.id);
+    // the boss's health (and the HP gates it passed), with the phase changes marked
+    const hpPts = pr.hp.map((v, i) => [i * 20, v]).concat([pr.he]).map(([t, v]) => `${X(t)},${((1 - v / 1000) * 100).toFixed(1)}`);
+    const gates = (raid.gates && raid.gates.length ? raid.gates.map(g => g[0]) : (raid.def.gates || []).map(g => typeof g === 'number' ? g : g.f)).filter(f => f > 0 && f < 1);
+    const gy = f => ((1 - f) * 100).toFixed(1);
+    const hpLane = `<svg viewBox="0 0 100 100" preserveAspectRatio="none">${gates.map(f => `<line class="pr-gate" x1="0" x2="100" y1="${gy(f)}" y2="${gy(f)}"/>`).join('')}<polygon class="pr-area" points="0,100 ${hpPts.join(' ')} ${X(pr.he[0])},100"/><polyline class="pr-line" points="${hpPts.join(' ')}"/></svg>${pr.ph.map(([t, n]) => `<span class="pr-ph" style="left:${X(t)}%"><i>${n}</i></span>`).join('')}`;
+    const tip = (a, b) => esc(`<b>${esc(a)}</b><em>${esc(b)}</em>`);
+    const casts = pr.c.map(([t, mi, g], i) => `<span class="pr-c k-${castKind(raid, pr.nm[mi], g)}" style="left:${X(t)}%" data-k="c${i}" data-t="${tip(pr.nm[mi], mmss(t / 10))}"></span>`).join('');
+    const rowFor = ({ id, st }) => {
+      const hits = pr.h.map((h, i) => [h, i]).filter(([h]) => h[1] === id).map(([h, i]) => {
+        const span = h[7] > 0 ? `;width:max(4px,${(h[7] / 10 / dur * 100).toFixed(2)}%)` : '';
+        return `<span class="pr-h${h[5] ? ' av' : h[7] > 0 ? ' run' : ''}" style="left:${X(h[0])}%${span}" data-k="h${i}" data-t="${tip(nm(h[2], h[3]), `${mmss(h[0] / 10)} · ${fmt(h[4])}${h[6] > 1 ? ` over ${h[6]} hits` : ''}${h[5] ? ' · avoidable' : ''}`)}"></span>`;
+      }).join('');
+      const marks = pr.e.map((e, i) => [e, i]).filter(([e]) => e[1] === 0 ? e[3] === id : e[2] === id).map(([e, i]) => e[1] === 0
+        ? `<span class="pr-r" style="left:${X(e[0])}%" data-k="r${i}" data-t="${tip('Raised', `${mmss(e[0] / 10)}${who(e[2]) && e[2] !== id ? ' by ' + who(e[2]).name : ''}`)}"></span>`
+        : `<span class="pr-l" style="left:${X(e[0])}%" data-k="l${i}" data-t="${tip('Limit Break', `${mmss(e[0] / 10)} · ${e[3]} bar${e[3] > 1 ? 's' : ''}`)}"></span>`).join('');
+      const dead = pr.d.map((d, i) => [d, i]).filter(([d]) => d[1] === id).map(([d, i]) => `<span class="pr-d" style="left:${X(d[0])}%" data-k="d${i}" data-t="${tip(st.name + ' fell', `${mmss(d[0] / 10)}${d[2] < 0 && d[3] < 0 ? '' : ' · ' + nm(d[2], d[3])}`)}">${SKULL}</span>`).join('');
+      return `<div class="pr-row"><span class="pr-who" style="--rc:${ROLES[st.role].color}"><i></i>${esc(st.name)}</span><div class="pr-lane">${hits}${marks}${dead}</div></div>`;
+    };
+    const step = dur > 240 ? 60 : dur > 100 ? 30 : 15;
+    const grid = [], axis = [];
+    for (let m = step; m < dur; m += step) { grid.push(`<i style="left:${X(m * 10)}%"></i>`); axis.push(`<span style="left:${X(m * 10)}%">${mmss(m)}</span>`); }
+    return `<div class="pr-body">
+      <div class="pr-plot"><div class="pr-grid">${grid.join('')}</div>
+        <div class="pr-row pr-hp"><span class="pr-who">Boss</span><div class="pr-lane">${hpLane}</div></div>
+        <div class="pr-row pr-mv"><span class="pr-who">Moves</span><div class="pr-lane">${casts}</div></div>
+        ${people.map(rowFor).join('')}
+        <div class="pr-row pr-ax"><span class="pr-who"></span><div class="pr-lane">${axis.join('')}</div></div>
+      </div>
+      <p class="pr-key"><span class="av">Avoidable hit</span><span class="ok">Other hit</span><span class="sk">${SKULL}Fell</span><span class="lb">Limit Break</span><span class="rz">Raised</span></p>
+      <div class="pr-detail"><em>Click a mark to see who was hit.</em></div>
+    </div>`;
+  }
+  function prClick(e, tlEl) {
+    if (e.target.closest('.pr-open')) { const open = tlEl.classList.toggle('open'); Tip.hide(); if (open) tlEl.scrollIntoView({ block: 'nearest' }); return; }
+    const n = e.target.closest('[data-k]');
+    if (!n || !prCtx) return;
+    const { pr, msg, raid } = prCtx, nm = (mi, ki) => prName(pr, mi, ki, raid), kind = n.dataset.k[0], i = Number(n.dataset.k.slice(1));
+    tlEl.querySelectorAll('.sel').forEach(x => x.classList.remove('sel'));
+    n.classList.add('sel');
+    const person = id => { const st = msg.stats[id]; return st ? `<b style="color:${ROLES[st.role].color}">${esc(st.name)}</b>` : '<b>Someone</b>'; };
+    const line = h => `<p class="${h[5] ? 'av' : ''}">${person(h[1])}<span>${fmt(h[4])}${h[6] > 1 ? ` <small>over ${h[6]} hits</small>` : ''}</span><em>${h[5] ? 'avoidable' : ''}</em></p>`;
+    const head = (title, sub) => `<h5>${esc(title)}<small>${esc(sub)}</small></h5>`;
+    let html = '';
+    if (kind === 'c') {
+      const [t, mi] = pr.c[i], nextSame = (pr.c.slice(i + 1).find(c => c[1] === mi) || [0, 0, 0])[0] || t + 250, end = Math.min(nextSame, t + 250);
+      const hits = pr.h.filter(h => h[2] === mi && h[0] >= t && h[0] < end);
+      html = head(pr.nm[mi], mmss(t / 10)) + (hits.length ? hits.map(line).join('') : '<p class="none">Nobody was hit by it.</p>');
+    } else if (kind === 'h') {
+      const r = pr.h[i], hits = r[2] >= 0 ? pr.h.filter(h => h[2] === r[2] && Math.abs(h[0] - r[0]) <= 30) : [r];
+      html = head(nm(r[2], r[3]), r[7] > 0 ? `${mmss(r[0] / 10)} to ${mmss((r[0] + r[7]) / 10)}` : mmss(r[0] / 10)) + hits.map(line).join('');
+    } else if (kind === 'd') {
+      const d = pr.d[i], st = msg.stats[d[1]];
+      const last = pr.h.filter(h => h[1] === d[1] && h[0] <= d[0] && h[0] + (h[7] || 0) >= d[0] - 100).slice(-4).reverse();
+      html = head(`${st ? st.name : 'Someone'} fell`, `${mmss(d[0] / 10)}${d[2] < 0 && d[3] < 0 ? '' : ' · ' + nm(d[2], d[3])}`)
+        + last.map(h => `<p class="dl${h[5] ? ' av' : ''}"><span class="when">${mmss(h[0] / 10)}</span><b>${esc(nm(h[2], h[3]))}</b><span>${fmt(h[4])}</span><em>${h[5] ? 'avoidable' : ''}</em></p>`).join('');
+    } else if (kind === 'r') {
+      const e2 = pr.e[i];
+      html = head('Raised', mmss(e2[0] / 10)) + `<p>${person(e2[3])}<span>got back up${msg.stats[e2[2]] && e2[2] !== e2[3] ? ' by ' + esc(msg.stats[e2[2]].name) : ''}</span></p>`;
+    } else if (kind === 'l') {
+      const e2 = pr.e[i];
+      html = head('Limit Break', mmss(e2[0] / 10)) + `<p>${person(e2[2])}<span>spent ${e2[3]} bar${e2[3] > 1 ? 's' : ''}</span></p>`;
+    }
+    tlEl.querySelector('.pr-detail').innerHTML = html;
   }
   // a specialization trial ends on its memory, not a damage table
   function trialResults(el, def, clear, actions) {
