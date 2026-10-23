@@ -64,7 +64,7 @@
     bastion: {
       blade: 'ab-slash', edge: L('ab-holy', 'ab-slash'), brace: 'ab-shield', oath: L('ab-buff', 'ab-holy'), banner: L('ab-buff', 'ab-taunt'), bulwark: L('ab-shield', 'ab-heavy'),
       bash: 'ab-heavy', zeal: L('ab-holy', 'ab-shield'), hallowed: L('ab-holy', 'ab-shield'), avatar: L('ab-holy', 'ab-buff'),
-      lastbastion: ULT('bastion'), taunt: 'ab-taunt', auto: 'ab-slash',
+      aegis: L('ab-shield', 'ab-holy'), lastbastion: ULT('bastion'), taunt: 'ab-taunt', auto: 'ab-slash',
     },
     bloodreaver: {
       hack: 'ab-slash', drain: L('ab-heavy', 'ab-dot'), letting: L('ab-slash', 'ab-dot'), frenzy: 'ab-buff', warcry: L('ab-taunt', 'ab-buff'), undying: L('ab-buff', 'ab-dot'),
@@ -101,7 +101,7 @@
     grovekeeper: {
       wrath: 'ab-nature', rejuv: L('ab-nature', 'ab-heal'), thorn: L('ab-nature', 'ab-slash'), growth: L('ab-nature', 'ab-heal'), bloom: L('ab-nature', 'ab-heal'), rebirth: L('ab-nature', 'ab-holy'),
       lifebind: L('ab-nature', 'ab-heal'), moonwell: L('ab-heal', 'ab-holy'), seed: L('ab-nature', 'ab-heal'), treant: L('ab-nature', 'ab-heavy'),
-      worldtree: ULT('grovekeeper'), auto: 'ab-nature',
+      canopy: L('ab-nature', 'ab-heal'), worldtree: ULT('grovekeeper'), auto: 'ab-nature',
     },
     chronomancer: {
       bolt: 'ab-time', rewind: L('ab-time', 'ab-heal'), shift: 'ab-time', accel: L('ab-time', 'ab-buff'), stasis: L('ab-time', 'ab-shield'), recall: L('ab-time', 'ab-heal'),
@@ -111,12 +111,12 @@
     thermist: {
       cinder: 'ab-fire', rime: 'ab-frost', flare: 'ab-fire', lance: L('ab-frost', 'ab-shot'), equil: 'ab-shield', invert: L('ab-fire', 'ab-frost'), shock: L('ab-fire', 'ab-frost'),
       bleed: L('ab-frost', 'ab-wind'), thermocline: L('ab-fire', 'ab-frost'), zero: L('ab-frost', 'ab-heavy'),
-      supernova: ULT('thermist'), novafrost: ULT('thermist'), auto: 'ab-fire',
+      meltdown: L('ab-fire', 'ab-frost'), supernova: ULT('thermist'), novafrost: ULT('thermist'), auto: 'ab-fire',
     },
     driftblade: {
       carve: 'ab-slash', slip: 'dash', hook: L('ab-slash', 'ab-wind'), cross: L('ab-wind', 'ab-slash'), still: 'ab-shield', gale: L('ab-wind', 'ab-buff'), pass: L('ab-slash', 'ab-wind'),
       impact: L('ab-wind', 'ab-heavy'), gyre: L('ab-wind', 'ab-slash'), tailspin: L('ab-wind', 'ab-slash'),
-      eyeofthegale: ULT('driftblade'), galeline: L('ab-wind', 'ab-slash'), eyestep: L('dash', 'ab-slash'), auto: 'ab-slash',
+      roost: L('ab-wind', 'ab-buff'), starfall: L('ab-slash', 'ab-heavy'), eyeofthegale: ULT('driftblade'), galeline: L('ab-wind', 'ab-slash'), eyestep: L('dash', 'ab-slash'), auto: 'ab-slash',
     },
     alembist: {
       throw: 'ab-alchemy', distill: 'ab-alchemy', ember: L('ab-alchemy', 'ab-fire'), dew: L('ab-alchemy', 'ab-heal'), salt: L('ab-alchemy', 'ab-shield'), quicksilver: L('ab-alchemy', 'ab-time'), batch: L('ab-alchemy', 'ab-buff'), catalyst: 'ab-alchemy', blend: L('ab-alchemy', 'ab-buff'),
@@ -131,7 +131,7 @@
     oathbroker: {
       collect: L('ab-ledger', 'ab-slash'), reneg: L('ab-ledger', 'ab-taunt'), settle: 'ab-ledger', lien: L('ab-ledger', 'ab-dot'), writ: L('ab-ledger', 'ab-shield'), default: L('ab-ledger', 'ab-heavy'),
       audit: 'ab-ledger', moratorium: L('ab-ledger', 'ab-shield'), cosign: L('ab-ledger', 'ab-shield'), foreclose: L('ab-ledger', 'ab-heavy'),
-      reckoning: ULT('oathbroker'), taunt: 'ab-taunt', auto: 'ab-ledger',
+      blanket: L('ab-ledger', 'ab-shield'), warrant: L('ab-ledger', 'ab-heavy'), reckoning: ULT('oathbroker'), taunt: 'ab-taunt', auto: 'ab-ledger',
     },
     ironpalm: {
       palm: 'ab-punch', fist: 'ab-punch', kick: 'ab-punch',
@@ -153,7 +153,7 @@
     gloomsworn: {
       rend: 'ab-slash', strike: 'ab-heavy', shade: L('dash', 'ab-wind'), pall: L('ab-shield', 'ab-buff'), mantle: L('ab-shield', 'ab-buff'),
       rite: L('ab-shield', 'ab-heal'), vigil: L('ab-shield', 'ab-holy'), pyre: L('ab-heavy', 'ab-fire'), reave: L('ab-slash', 'ab-heavy'),
-      eclipsevigil: ULT('gloomsworn'), taunt: 'ab-taunt', auto: 'ab-slash',
+      wardmantle: L('ab-shield', 'ab-wind'), pact: L('ab-heavy', 'ab-buff'), eclipsevigil: ULT('gloomsworn'), taunt: 'ab-taunt', auto: 'ab-slash',
     },
     // Reaper (class id thresher): long steel scythe sweeps with the hollow wind of afflictions and a toll where one comes due; every move has its own voice (sfx-synth.js ABIL.thresher)
     thresher: {
@@ -206,9 +206,9 @@
     .replace(/[’']/g, '').replace(/\+/g, ' plus ').replace(/−/g, ' minus ').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
   const MOVES = {
     grubnak: 'grease-fire tenderize mince double-chop chop-chop ladle-spin lid-slam meat-toss family-meal larder-toss gut-blast butchers-charge order-up rolling-meatballs flare-up flambe stockpot simmer whisk spice-rack boil-over last-orders gorge clogged-drains belly-flop cleaver-toss mise-en-place service dinner-rush',
-    skitterra: 'venom-mist silk-wrap eightfold-lunge silk-lines spin venom-spit strand-reel silk-reel brood acid-deluge into-the-dark from-the-dark venom-drip tightening-web the-swarm spiderlings chrysalis the-web-gives-way egg-sacs fang-rush spinneret-volley molt ceiling-ambush snare-weave',
+    skitterra: 'cocoon-drop venom-mist silk-wrap eightfold-lunge silk-lines spin venom-spit strand-reel silk-reel brood acid-deluge into-the-dark from-the-dark venom-drip tightening-web the-swarm spiderlings chrysalis the-web-gives-way egg-sacs fang-rush spinneret-volley molt ceiling-ambush snare-weave',
     volkar: 'pulse thunderclap titan-fist polarity-surge polarity-plus polarity-minus thunder-crash static-field rod-strike gale-slam storm-walls lightning-rods grounding-rods avalanche squall-line eye-of-the-storm still-air distant-thunder eye-closes gathering-storm thunderhead heavens-fall chain-lightning ball-lightning skyfall supercell',
-    hollowking: 'barrow-knell royal-gaze grave-cleave royal-doom lantern echo-knights barrow-bells coffin-lids the-long-night judgement sceptre-sweep barrow-stomp crown-of-graves the-charge-sheet royal-decree lights-out court-of-bones grave-marks the-king-rises royal-tithe dirge royal-audience funeral-march gravebind burial-rites writ-of-execution',
+    hollowking: 'sceptre-throw grave-summons barrow-knell royal-gaze grave-cleave royal-doom lantern echo-knights barrow-bells coffin-lids the-long-night judgement sceptre-sweep barrow-stomp crown-of-graves the-charge-sheet royal-decree lights-out court-of-bones grave-marks the-king-rises royal-tithe dirge royal-audience funeral-march gravebind burial-rites writ-of-execution',
     wyrm: 'tyrants-roar rending-claws ember-breath tail-lash magma-burst cinder-feast take-flight dragonfall twin-pass the-roost crater-boils twin-breath heart-burn wingbeat cinder-rain heart-flare ashfall',
     hydra: 'mothers-cry rending-maul acid-spray tidal-line venom-bloom flame-gout rime-crown stormcall stonegaze mire-spit searing submerge mothers-heart the-drowning regrowth tidal-dance hydras-gaze',
     titan: 'winters-howl glacial-fist rime-slam twin-slam fault-line icefall titans-sweep winters-grasp frostbite whiteout the-long-night avalanche glacial-stomp breath-of-winter titans-grip endless-winter',

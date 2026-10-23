@@ -504,6 +504,30 @@ Object.assign(TRIALS, {
   },
 });
 
+// ======================================================================= Tidecaller (healer, class 20)
+Object.assign(TRIALS, {
+  springtide: {
+    cls: 'tidecaller', spec: 'springtide', name: 'The High Water',
+    lore: ['The King\'s bells rang the court to its knees, and they rang on the hour.', 'The singer by the black lake let the water climb, and met every bell with the flood.'],
+    outro: 'Every bell met at high water. The Spring Tide rises.',
+    allies: ['bastion:base', 'ranger:base', 'pyromancer:base'], guard: 'allies', seconds: 60, enrage: 150, regen: 0,
+    script(f, k) {
+      // heavy knells on a steady beat, quiet between: the whole party hurt at once, and time for the water to climb again
+      k.loop([[4, () => k.knell(4200, 4)], [7, () => k.blow(8500, 4)], [7, () => k.knell(4200, 4)], [6, () => {}]]);
+    },
+  },
+  undertow: {
+    cls: 'tidecaller', spec: 'undertow', name: 'The Deep Pull',
+    lore: ['The court wore away a little at a time, a cut here, a chill there.', 'The singer pulled each hurt down into the deep and gave it back slowly.'],
+    outro: 'Nothing left to wear away. The Undertow holds.',
+    allies: ['bastion:base', 'ranger:base', 'shadowblade:base'], guard: 'allies', seconds: 60, enrage: 150, regen: 0,
+    script(f, k) {
+      // a long grind: small knells over and over and blows on the tank between them, never one great hit
+      k.loop([[3, () => k.knell(2200, 3)], [4, () => k.blow(8000, 3.5)], [3, () => k.knell(2200, 3)], [4, () => k.swing('stomp', 4500, 3.5)]]);
+    },
+  },
+});
+
 // the boss definition FightSim runs for a trial
 function trialDef(specId) {
   const T = TRIALS[specId];

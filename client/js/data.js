@@ -146,6 +146,15 @@ CLASSES.push({
   gameplan: 'Your scythe lays four afflictions on the boss: a Mark that bleeds, a Drain that mends you, a Bind that pulses and a Thread that waits to be snapped. Each darkens, from pale to gold and then lapses. Reap spends them all, and pays the most when they are gold, so cut, weave, and let the toll come due. Once in a while step through the Gate, where nothing can touch you, and the fifth strike calls in all four at once.',
 });
 
+// ---------------------------------------------------------------- Tidecaller (healer, class 20; docs/plans/2026-10-new-classes-3.md)
+// No painted icons or portraits yet: the game draws its own icons until they are in.
+CLASSES.push({
+  id: 'tidecaller', name: 'Tidecaller', title: 'The Voice of the Undertow', role: 'healer', difficulty: 2, complexity: 3, accent: '#3fb8a8',
+  art: { icons: false, portraits: false },
+  tagline: 'The sea doesn\'t hurry. Neither do I.',
+  gameplan: 'Your healing rises and falls like the sea. The tide climbs on its own; spend it as small sips while it\'s low, or wait for high water and let a surge wash over everyone. The skill is choosing when.',
+});
+
 // Boss panel text: flavor only. Nothing here tells you how to deal with an attack.
 const BOSSES = [
   {

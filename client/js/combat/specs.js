@@ -1341,3 +1341,51 @@ SPECS.thresher = [
     }),
   },
 ];
+
+// ===================================================================================================================
+// TIDECALLER (healer, class 20): the Spring Tide's and the Undertow's specs (the kit is in kits.js, after the Reaper)
+// ===================================================================================================================
+SPECS.tidecaller = [
+  {
+    id: 'springtide', name: 'Spring Tide', title: 'The Flood', accent: '#bff3ea',
+    gaugeTip: 'The tide rises from low to high over 12s, holds at the crest for 3s, then ebbs over 6s, and loops. Salt Spray and Swell push it up, Surge spends all of it. Current bends it; Breakwater stops the ebb.',
+    blurb: 'Huge surges, timed to the raidwides.',
+    focus: 'Big party healing at the crest. The crest holds longer, a Surge at high water leaves a shield and heals more, and Sip becomes Swell, a small heal that raises the tide.',
+    passive: { name: 'King Tide', desc: 'The crest holds 3s instead of 2s. A Surge at full high water heals 30% more (10% for each ally it reaches) and leaves a shield of {s:100} on the whole party. Sip becomes Swell.' },
+    build: base => ({
+      potMult: base.potMult * 1.05,   // balance knob (tools/simulate.js)
+      tideHold: 3, kingTide: true, surgeShield: true,
+      abilities: {
+        surge: { desc: '1.5s cast: spend all the tide in a wave that heals the whole party, from {h:120} at low water up to {h:480} at high water. At full high water it heals 30% more and leaves a shield of {s:100} on everyone.' },
+        sip: {
+          id: 'swell', replaces: 'sip', icon: 'sip', name: 'Swell', type: 'gcd', target: 'ally', anim: 'cast',
+          desc: 'Instant: heals one ally for {h:160}, and raises the tide instead of spending it.',
+          glow: k => !!k.g.lowWater,
+          effect(k, t) { tideSip(k, this, t, 160, -8); },
+          fx: { type: 'ring', color: '#d7f2ee', r: 36, onTarget: true },
+        },
+      },
+    }),
+  },
+  {
+    id: 'undertow', name: 'Undertow', title: 'The Deep Pull', accent: '#3a8a9a',
+    gaugeTip: 'The tide rises from low to high over 12s, holds at the crest for 2s, then ebbs over 6s, and loops. Salt Spray pushes it up, Sip takes a slice, Undertow spends all of it. Current bends it; Breakwater stops the ebb.',
+    blurb: 'Pull the hurt off your allies and give it back slowly.',
+    focus: 'Steady healing over time. Surge becomes Undertow, which heals the party over 8s and wraps you in a Deep Shield; Riptide Mark also shields its ally.',
+    passive: { name: 'Still Water', desc: 'Surge becomes Undertow. Riptide Mark also gives its ally a shield of {s:120} (the Deep takes the next blow). While your Deep Shield stands and you stand still, it seeps {h:30} to the most hurt ally every 2s.' },
+    build: base => ({
+      potMult: base.potMult * 1.0,   // balance knob (tools/simulate.js)
+      markDeep: true, stillWater: true,
+      abilities: {
+        riptide: { desc: 'Mark an ally: they heal {h:80} every 2s for 12s and take a shield of {s:120}, and when the tide next crests the mark pops for {h:200}.' },
+        surge: {
+          id: 'undertow', replaces: 'surge', icon: 'surge', name: 'Undertow', type: 'gcd', target: 'self', cast: k => tideSurgeCast(k), anim: 'big',
+          desc: '1.5s cast: spend all the tide and pull the party\'s hurt down into the deep. Everyone heals over 8s, from {h:140} at low water up to {h:550} at high water, and you take a Deep Shield of {s:150} up to {s:400} for 8s.',
+          glow: k => tideSurgeGlow(k),
+          effect(k) { tideUndertow(k, this); },
+          fx: { type: 'zone', style: 'wave', color: '#3a8a9a', r: 180, range: 0, dur: 1.4 },
+        },
+      },
+    }),
+  },
+];

@@ -50,6 +50,11 @@ const ENGINE = {
   AUTO_EVERY: 2.6,
   AUTO_ENGAGE: 8,
   ULT_THREAT: 0.5,   // the threat multiplier on a non-tank's Ultimate hits (a burst should not take the boss off its tank)
+  // Item effects that fire "on a critical hit" or "on an oGCD" are evened out between classes, so a class that crits on every
+  // tick (or presses a dozen oGCDs a minute) gains no more from them than one that crits now and then (or has two oGCDs):
+  // at most FX_CRIT_PER_MIN crits and FX_OGCD_PER_MIN oGCDs a minute count (the surplus is thinned evenly, Kit.fxPace), and
+  // a kit with few oGCDs counts a GCD as one after FX_OGCD_FLOOR s without any (so everyone lands between about 4 and 6 crits and 6 and 7.5 oGCDs a minute).
+  FX_CRIT_PER_MIN: 7, FX_OGCD_PER_MIN: 7.5, FX_OGCD_FLOOR: 10, FX_PACE_TAU: 30,
 };
 
 // Buffs a healer puts on ONE chosen ally (Kit.allyBuff): what each one does and how long, and its look (cls/icon: the
@@ -358,6 +363,29 @@ class Kit {
       }
     } finally { this._inFx = false; }
   }
+  // Even out a rate-driven trigger between classes (ENGINE.FX_*): tracks how often it happens (a 30 s moving rate) and lets
+  // events through evenly so no more than `perMin` of them a minute count. Returns true if this event counts.
+  fxPace(key, perMin) {
+    const st = this._fxPace || (this._fxPace = {}), p = st[key] || (st[key] = { r: 0, at: this.now, acc: 0 });
+    p.r = p.r * Math.exp(-(this.now - p.at) / ENGINE.FX_PACE_TAU) + 1 / ENGINE.FX_PACE_TAU;
+    p.at = this.now;
+    p.acc += Math.min(1, perMin / 60 / p.r);
+    if (p.acc < 0.999) return false;
+    p.acc -= 1;
+    return true;
+  }
+  // a critical hit or heal (every crit counts as one event; at most FX_CRIT_PER_MIN of them a minute reach the item effects)
+  fxCrit() {
+    const list = this.gear().fx;
+    if (list && list.length && this.fxPace('crit', ENGINE.FX_CRIT_PER_MIN)) this.itemHook('crit');
+  }
+  // an oGCD (or, in a kit that has few, a GCD standing in for one: resolve() above)
+  fxOgcd(ab) {
+    const list = this.gear().fx;
+    if (!list || !list.length) return;
+    this._ogAt = this.now;
+    if (this.fxPace('ogcd', ENGINE.FX_OGCD_PER_MIN)) this.itemHook('ogcd', ab);
+  }
   // gauges that fill on their own (a little every frame) count once per 10 points
   fxGain(n, steady) {
     if (n >= 1 && !steady) { this.itemHook('gain'); return; }
@@ -479,8 +507,12 @@ class Kit {
     const share = ab.type === 'gcd' ? this.itemGcdShare(ab) : 0;   // (read before the effect: a Distill it spends shortens the GCD)
     ab.effect(this, target);
     if (this.def.afterUse) this.def.afterUse(this, ab);
-    if (ab.type !== 'gcd') this.itemHook('ogcd', ab);
-    else if ((this._gcdShare = (this._gcdShare || 0) + share) >= 0.999) { this._gcdShare -= 1; this.itemHook('gcd', ab); }
+    if (ab.type !== 'gcd') this.fxOgcd(ab);
+    else {
+      if ((this._gcdShare = (this._gcdShare || 0) + share) >= 0.999) { this._gcdShare -= 1; this.itemHook('gcd', ab); }
+      if (this._ogAt == null) this._ogAt = this.now;
+      else if (this.now - this._ogAt > ENGINE.FX_OGCD_FLOOR) this.fxOgcd(ab);   // (a kit with few oGCDs: a GCD stands in)
+    }
   }
   // how much of a GCD this press counts as for item effects: a standard GCD is one; a shorter one (an Alembist's reagents)
   // and a press of a kit without a GCD (an Ironpalm's, by its recovery) count as their share, so fast presses don't proc
@@ -572,12 +604,15 @@ class Kit {
     const party = this.env.partyMods ? this.env.partyMods() : {};
     const tgt = this.env.targetMods ? this.env.targetMods() : {};
     const self = this.env.selfMods ? this.env.selfMods() : {};
-    const kitDmg = this.def.dmgMod ? this.def.dmgMod(this, opts) : 0;
+    // (an item's extra hit is the same "about 30 damage" for every class: it skips the class's balance knob, its own damage
+    // and crit modifiers, so a 45%-crit class does not hit a Brand twice as hard as everyone else)
+    const flat = !!opts.item;
+    const kitDmg = !flat && this.def.dmgMod ? this.def.dmgMod(this, opts) : 0;
     const gear = this.gear();
-    const critChance = opts.autoCrit ? 1 : ENGINE.BASE_CRIT + (gear.crit || 0) + (opts.crit || 0) + (party.crit || 0) + (this.def.critMod ? this.def.critMod(this, opts) : 0) + this.fxMod('crit');
+    const critChance = opts.autoCrit ? 1 : ENGINE.BASE_CRIT + (gear.crit || 0) + (flat ? 0 : (opts.crit || 0) + (party.crit || 0) + (this.def.critMod ? this.def.critMod(this, opts) : 0)) + this.fxMod('crit');
     const crit = this.rng() < critChance;
     const variance = 0.95 + this.rng() * 0.1;
-    const amount = Math.round(pot * ENGINE.POT_SCALE * (this.def.potMult || 1) * (1 + kitDmg) * (1 + (gear.power || 0)) * (1 + (party.dmg || 0)) * (1 + (tgt.vuln || 0)) *
+    const amount = Math.round(pot * ENGINE.POT_SCALE * (flat ? 1 : this.def.potMult || 1) * (1 + kitDmg) * (1 + (gear.power || 0)) * (1 + (party.dmg || 0)) * (1 + (tgt.vuln || 0)) *
       (1 - (self.dmgDown || 0)) * (1 + (self.dmg || 0)) * (opts.mult || 1) * (crit ? ENGINE.CRIT_MULT : 1) * variance * (1 + this.fxMod('dmg')));
     this.stats.damage += amount;
     if (party.dmg || tgt.vuln || self.dmg) this.stats.burstDamage += amount;
@@ -586,7 +621,7 @@ class Kit {
     this.env.emit({ type: 'damage', amount, crit, potency: pot, positional: posHit, ab: opts.ab, dot: !!opts.dot, auto: !!opts.auto, threat: opts.threat || (this.now < (this._ultThrUntil || 0) && this.def.role !== 'tank' ? ENGINE.ULT_THREAT : 1), tgt: opts.tgt });
     if (opts.item) return { amount, crit, posHit };   // an item's extra hit doesn't feed the kit or other items
     if (this.def.onDamage) this.def.onDamage(this, amount, crit, opts);
-    if (crit) this.itemHook('crit');
+    if (crit) this.fxCrit();
     return { amount, crit, posHit };
   }
   // Damage over time, ticking every `interval`. Re-applying keeps up to 30% of the old duration (pandemic).
@@ -606,7 +641,7 @@ class Kit {
     const self = this.def.healMod ? this.def.healMod(this, opts) : 0;
     const gear = this.gear();
     const crit = this.rng() < ENGINE.BASE_CRIT + (gear.crit || 0) + (opts.crit || 0) + this.fxMod('crit');
-    if (crit) this.itemHook('crit');
+    if (crit) this.fxCrit();
     return { amount: Math.round(potency * ENGINE.POT_SCALE * (1 + self) * (1 + (gear.power || 0)) * (crit ? ENGINE.CRIT_MULT : 1) * (0.95 + this.rng() * 0.1) * (1 + this.fxMod('heal'))), crit };
   }
   heal(target, potency, opts = {}) {

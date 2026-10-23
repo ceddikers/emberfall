@@ -37,7 +37,7 @@ function runSim(classId, skill, seed, specId, talents) {
   const human = mulberry(seed * 7 + 3); // separate stream for "human" randomness
   const state = { t: 0, moving: false, tookDamage: [], shield: null, mits: [], reflect: null, healDebt: 0, healing: 0, eff: 0, gcdHeals: 0, allyWards: [], petalShields: [] };
   const role = ['bastion', 'bloodreaver', 'runeguard', 'ironpalm'].includes(classId) || def.role === 'tank' ? 'tank'
-    : ['cleric', 'grovekeeper', 'chronomancer', 'alembist', 'threadweaver'].includes(classId) ? 'healer' : 'dps';
+    : ['cleric', 'grovekeeper', 'chronomancer', 'alembist', 'threadweaver', 'tidecaller'].includes(classId) ? 'healer' : 'dps';
   const maxHp = role === 'tank' ? 32000 : 21000;
   let lastPos = 'rear';
   const env = {
@@ -918,6 +918,52 @@ Object.assign(PRO, {
     if (k.gcdRemaining() > 0.0001) return null;
     if (reapReady && on > 0 && (gold >= Math.max(2, on - 1) || (soon && gold >= 1) || rot >= 2)) return I(k, 'reap');
     return I(k, 'slash');
+  },
+});
+
+// ---------------------------------------------------------------- Tidecaller (healer, class 20)
+// The pro bends the tide so the crest meets each raidwide (Current: push a rising tide up, turn an ebbing one back, hold a
+// crest), puts Breakwater down at high water as the raidwide lands, Surges at full high water when the party is hurt (or
+// before the crest lets go), keeps a Riptide Mark on the tank ahead of the crest, Sips at low water, and Sprays the rest.
+// The newbie answers the hints: Surge whenever the tide is over half and the party looks hurt, Sip otherwise.
+Object.assign(PRO, {
+  tidecaller(k, ctx) {
+    const debt = ctx.state.healDebt, toRw = ctx.nextRaidwide - ctx.t, g = k.g, tide = g.tide || 0;
+    const crestIn = g.tphase === 'rise' ? (100 - tide) / 100 * TIDE.RISE : 99;
+    const flood = tideFlood(k), full = tideFull(k);
+    if (weaveOk(k)) {
+      if (ready(k, 'breakwater') && toRw < 2 && tide >= 60) return I(k, 'breakwater');
+      if (ready(k, 'current') && !flood) {
+        if (g.tphase === 'ebb' && toRw < 7 && toRw > 1) return I(k, 'current');
+        if (g.tphase === 'rise' && toRw < 8 && crestIn > toRw + 0.3) return I(k, 'current');
+        if (g.tphase === 'hold' && toRw < 3 && g.holdEnd - k.now < toRw + 1) return I(k, 'current');
+        if (g.tphase === 'rise' && toRw > 14 && crestIn > 4) return I(k, 'current');   // (no raidwide near: just more crests)
+      }
+    }
+    if (k.gcdRemaining() > 0.0001 || k.cast) return null;
+    // (a steady cadence: one Surge every crest, a Riptide Mark ahead of it, a Sip only in an emergency)
+    const surgeCt = k.castTime(abOf(k, 'surge'));
+    const surgeOk = !surgeCt || castOk(k, ctx, surgeCt);
+    if (full && surgeOk && (flood || debt > 300 || (g.tphase === 'hold' && g.holdEnd - k.now < surgeCt + 0.6))) { ctx.state.gcdHeals++; return I(k, 'surge'); }
+    const rip = abOf(k, 'riptide');
+    if (ready(k, 'riptide')) {
+      if (rip.id === 'maelstrom') { if (crestIn < 4) { ctx.state.gcdHeals++; return I(k, 'riptide'); } }
+      else if (!tideMarked(k) && crestIn < 4) { ctx.state.gcdHeals++; return I(k, 'riptide'); }
+    }
+    if (debt > 20000 || (k.g.lowWater && debt > 8000)) { ctx.state.gcdHeals++; return I(k, 'sip'); }
+    return I(k, 'spray');
+  },
+});
+Object.assign(NEWBIE, {
+  tidecaller(k, ctx) {
+    const n = ctx.state.newbie || (ctx.state.newbie = { gcdSeenAt: null, delay: 0, ogcdSeen: {} });
+    if (ctx.state.healDebt > 3500 && k.gcdRemaining() <= 0.0001 && !k.cast && n.gcdSeenAt != null && ctx.t >= n.gcdSeenAt + n.delay) {
+      n.gcdSeenAt = null;
+      ctx.state.gcdHeals++;
+      if ((k.g.tide || 0) > 50 && !ctx.state.moving) return I(k, 'surge');
+      return n.roll < 0.3 && ready(k, 'riptide') ? I(k, 'riptide') : I(k, 'sip');
+    }
+    return genericNewbie(k, ctx);
   },
 });
 

@@ -809,7 +809,7 @@ function heroBody(ctx, cls, angle, st, opts, P) {
   ctx.translate(body.lunge + P.fwd, 0); ctx.rotate(body.twist + P.tw);
   const br = (1 + Math.sin((st.t + (st.phase || 0)) * 2.5) * 0.02) * (1 + big * 0.06);
   ctx.scale(br * P.sx, br * P.sy);
-  (cls ? HERO_ART[cls.id] : HERO_ART.wisp)(ctx, st);
+  (cls ? HERO_ART[cls.id] || HERO_ART.cleric : HERO_ART.wisp)(ctx, st);   // (a class not drawn yet borrows the Cleric's figure)
   if (cls && opts.spec && SPEC_ART[opts.spec]) SPEC_ART[opts.spec](ctx, st);
   if (cls) drawChannelFocus(ctx, cls, st, cls ? channelP(st) : -1);
   if (P.wave > 0) waveHand(ctx, st.t, P.wave);

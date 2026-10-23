@@ -73,6 +73,10 @@ const RAIDS = [   // [boss name, boss id, tank, healer, two DPS, optional 'gear=
   ['Skitterra', 'skitterra', 'bastion:base', 'grovekeeper:base', 'thresher:sower', 'ranger:base'],
   ['Volkar', 'volkar', 'bastion:base', 'cleric:base', 'thresher:grim', 'pyromancer:base'],
   ['the Hollow King', 'hollowking', 'bastion:base', 'cleric:base', 'thresher:base', 'ranger:base'],
+  // Tidecaller (class 20): the base kit and each spec healing a boss
+  ['Grubnak', 'grubnak', 'bastion:base', 'tidecaller:base', 'ranger:base', 'pyromancer:base'],
+  ['Skitterra', 'skitterra', 'bastion:base', 'tidecaller:springtide', 'ranger:base', 'shadowblade:base'],
+  ['Volkar', 'volkar', 'bastion:base', 'tidecaller:undertow', 'ranger:base', 'pyromancer:base'],
 ];
 // set 2: Azerath, the Sunken Archmage (Boss VII)
 RAIDS.push(

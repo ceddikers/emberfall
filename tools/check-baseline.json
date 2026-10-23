@@ -78,5 +78,9 @@
   "thresher": {
     "newbie": 1863,
     "pro": 2348
+  },
+  "tidecaller": {
+    "newbie": 657,
+    "pro": 1052
   }
 }

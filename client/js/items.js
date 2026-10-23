@@ -214,6 +214,15 @@ Object.assign(ITEM_PERKS, {
   thresher_a4: { ab: 'blink', text: 'Gloam Blink takes 70% off for 1s instead of 50%.' },
 });
 
+// ---------------------------------------------------------------- Tidecaller (healer, class 20)
+// Weapon shape: 'conch'. The base gear so the class exists; its enhancements (ITEM_PERKS) come with the content pass.
+CLASS_MAIN.tidecaller = 'mag';
+CLASS_GEAR.tidecaller = { wtype: 'conch', w: ['Driftwood Conch', 'Silk-Strung Conch', 'Storm-Shell Conch', 'Barrow-Pearl Conch', 'Conch of the Drowned Choir'], a: ["Tidewife's Wrap", "Weaver's Kelp Wrap", 'Stormsalt Wrap', 'Gravewater Wrap'] };
+Object.assign(ITEM_PERKS, {
+  tidecaller_w2: { ab: 'riptide', text: 'Riptide Mark\'s pop at the crest heals half again as much.' },
+  tidecaller_a2: { ab: 'breakwater', text: 'Breakwater lasts 2s longer.' },
+});
+
 // ---------------------------------------------------------------- item effects
 // Effects are data. The combat engine runs them in your own kit (Kit.itemHook / Kit.fxMod in engine.js), like the
 // enhancements; the host only ever sees the ordinary combat events they cause. An effect is either
@@ -223,7 +232,7 @@ Object.assign(ITEM_PERKS, {
 //          cdr (seconds off your other oGCD cooldowns), buff ({ mods } for `dur` s, up to `stacks`, shown as `name`).
 // Mods (conditions and buffs): dmg, heal (healing and shields), crit, haste (fractions), recast (oGCD cooldowns shorter).
 const FX_TRIGGERS = {
-  crit: 'a critical hit or heal', gcd: 'a GCD', ogcd: 'an oGCD', heal: 'a heal or shield you cast',
+  crit: 'a critical hit or heal (at most about seven a minute count: Kit.fxCrit)', gcd: 'a GCD', ogcd: 'an oGCD (about six to seven and a half a minute count, and a kit with few oGCDs counts a GCD now and then: Kit.fxOgcd)', heal: 'a heal or shield you cast',
   dash: 'a dash', gain: 'building your gauge (every 10 points of a gauge that fills on its own)',
 };
 const FX_CONDITIONS = { always: 'always', hpAbove: 'your HP above frac', hpBelow: 'your HP below frac' };
@@ -287,7 +296,7 @@ const ITEMS = {};
     { key: 'g_venom', name: 'Venom Pendant', slot: 'accessory', atype: 'amulet', tier: 2, rarity: L, base: { crit: 3, main: 12 },
       fx: [{ on: 'crit', icd: 3, strike: 60 }], fxText: 'Your critical hits inject venom: about 30 extra damage, once every 3 s.' },
     { key: 'm_broodeye', name: 'Eye of the Broodmother', slot: 'accessory', atype: 'broodeye', tier: 2, rarity: M, base: { main: 12, haste: 3 },
-      fx: [{ on: 'crit', buff: { haste: 0.015 }, dur: 10, stacks: 6, name: 'Brood Frenzy' }], fxText: 'Each critical hit gives Brood Frenzy: +1.5% haste for 10 s, stacking up to 6 times.' },
+      fx: [{ on: 'crit', buff: { haste: 0.02 }, dur: 10, stacks: 6, name: 'Brood Frenzy' }], fxText: 'Each critical hit gives Brood Frenzy: +2% haste for 10 s, stacking up to 6 times.' },
     { key: 'm_venomweave', name: 'Venomweave Shroud', slot: 'armor', atype: 'venomweave', tier: 2, rarity: M, base: { hp: 75, def: 50 },
       fx: [{ on: 'gcd', chance: 0.3, strike: 70 }], fxText: 'Each GCD has a 30% chance to bite for about 35 extra damage.' },
 
@@ -334,7 +343,7 @@ const ITEMS = {};
     { key: 'g_kindle', name: 'Kindling Pendant', slot: 'accessory', atype: 'amulet', tier: 5, rarity: L, base: { crit: 3, main: 12 },
       fx: [{ on: 'gcd', chance: 0.12, buff: { dmg: 0.05 }, dur: 8, name: 'Kindled' }], fxText: 'Your GCDs have a 12% chance to kindle +5% damage for 8 s.' },
     { key: 'm_wyrmheart', name: 'Heart of the Cinder Tyrant', slot: 'accessory', atype: 'torc', tier: 5, rarity: M, base: { main: 12, crit: 3 },
-      fx: [{ on: 'crit', buff: { dmg: 0.02 }, dur: 8, stacks: 5, name: 'Wyrmfire' }], fxText: 'Wyrmfire: each critical hit gives +2% damage for 8 s, stacking up to 5 times.' },
+      fx: [{ on: 'crit', buff: { dmg: 0.025 }, dur: 8, stacks: 5, name: 'Wyrmfire' }], fxText: 'Wyrmfire: each critical hit gives +2.5% damage for 8 s, stacking up to 5 times.' },
     { key: 'm_wyrmhide', name: 'Mantle of Cinder Hide', slot: 'armor', atype: 'thunderhead', tier: 5, rarity: M, base: { hp: 75, def: 50 },
       fx: [{ while: 'hpAbove', frac: 0.6, dmg: 0.05 }, { on: 'dash', icd: 10, ward: 140, dur: 6 }], fxText: 'While above 60% HP, +5% damage. After you dash, a cinder ward of about 70 holds for 6 s (once every 10 s).' },
 
@@ -379,13 +388,20 @@ const ITEMS = {};
     { key: 'g_ninthhead', name: 'Ninth Head Pendant', slot: 'accessory', atype: 'amulet', tier: 8, rarity: L, base: { crit: 3, main: 12 },
       fx: [{ on: 'crit', icd: 3, strike: 70 }], fxText: 'Your critical hits spit venom: about 35 extra damage, once every 3 s.' },
     { key: 'm_hydraeye', name: 'Eye of the Drowned Mother', slot: 'accessory', atype: 'broodeye', tier: 8, rarity: M, base: { main: 12, crit: 3 },
-      fx: [{ on: 'crit', buff: { dmg: 0.015 }, dur: 10, stacks: 6, name: 'Many Heads' }], fxText: 'Each critical hit grows another head: +1.5% damage for 10 s, stacking up to 6 times.' },
+      fx: [{ on: 'crit', buff: { dmg: 0.02 }, dur: 10, stacks: 6, name: 'Many Heads' }], fxText: 'Each critical hit grows another head: +2% damage for 10 s, stacking up to 6 times.' },
     { key: 'm_hydramantle', name: 'Mantle of Nine Heads', slot: 'armor', atype: 'chitin', tier: 8, rarity: M, base: { hp: 75, def: 50 },
       fx: [{ on: 'gcd', chance: 0.25, strike: 70 }, { on: 'heal', icd: 10, mend: 0.03 }], fxText: 'Each GCD has a 25% chance to bite for about 35 extra damage, and healing or shielding anyone mends 3% of your HP (once every 10 s).' },
   ];
   for (const it of gen) ITEMS[it.key] = it;
   // every effect gets an id (its proc cooldowns and buffs are tracked by it)
   for (const it of Object.values(ITEMS)) (it.fx || []).forEach((e, i) => { e.id = `${it.key}:${i}`; });
+  // the engine evens out the crit and oGCD triggers between classes (combat/engine.js ENGINE.FX_*): say so on the tooltip
+  for (const it of Object.values(ITEMS)) {
+    const on = new Set((it.fx || []).map(e => e.on)), note = [];
+    if (on.has('crit')) note.push('Only so many critical hits a minute count, so a kit that crits constantly gains no more than one that crits now and then.');
+    if (on.has('ogcd')) note.push('A kit with few oGCDs counts a GCD as one every so often.');
+    if (note.length) it.fxText += `<br><i>${note.join(' ')}</i>`;
+  }
 })();
 
 // the actual numbers on an item instance { key }, for a given class (class/general 'main' becomes phys or mag)

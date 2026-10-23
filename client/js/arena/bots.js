@@ -990,6 +990,7 @@ const BotAI = {
     const raidSoon = (view.next || []).some(([n, s]) => s < 6 && RAID_CASTS.test(n)) || !!(view.bossCast && RAID_CASTS.test(view.bossCast.name));
     if (bot.cls.id === 'alembist') return BotAI.alembist(bot, k, view);   // brews ahead and throws (below)
     if (bot.cls.id === 'threadweaver') return BotAI.threadweaver(bot, k, view);   // keeps a web (classes-c, below)
+    if (bot.cls.id === 'tidecaller') return BotAI.tidecaller(bot, k, view);   // rides the tide (class 20, below)
     // a damage dealer about to pull the boss off the tank eases off for a moment (the threat fades; the tank pulls ahead)
     if (BotAI.threatTight(bot, view) === 'stop') return null;
     // healers: raise, then keep people up
@@ -1607,6 +1608,42 @@ BotAI.threadweaver = function (bot, k, view) {
 };
 
 // (her threads reach 550 px: she stands off the boss's flank, close enough to the tank to keep them tied)
+// Tidecaller (healer, class 20): Surge at high water when a raidwide is casting or the party is low (and anything in a
+// Spring Flood), Sip at low tide on whoever is hurt, a Riptide Mark kept on the tank, Current to turn an ebbing tide before
+// a raidwide, Breakwater as one lands. Salt Spray the rest of the time.
+BotAI.tidecaller = function (bot, k, view) {
+  const idx = id => k.abilities.findIndex(a => a.id === id || a.replaces === id);
+  const ready = i => { const a = k.abilities[i]; return i >= 0 && k.usable(a) && k.readyIn(a) <= 0.0001 && k.available(a); };
+  const alive = view.players.filter(p => p.alive && !p.left), frac = p => p.hp / p.maxHp;
+  if (!alive.length) return null;
+  const hurt = [...alive].sort((a, b) => frac(a) - frac(b)), low = hurt[0];
+  const tank = alive.find(p => p.role === 'tank' && p.id !== bot.id);
+  const avg = alive.reduce((s, p) => s + frac(p), 0) / alive.length, hurtN = alive.filter(p => frac(p) < 0.8).length;
+  const casting = !!(view.bossCast && RAID_CASTS.test(view.bossCast.name));
+  const raidSoon = casting || (view.next || []).some(([n, s]) => s < 6 && RAID_CASTS.test(n)) || view.mechs.some(m => m.type === 'raidwide' && m.resolveAt - view.t < 5);
+  const raidNow = casting || view.mechs.some(m => m.type === 'raidwide' && m.resolveAt - view.t < 2.5);
+  const free = !k.cast && k.lockUntil <= k.now, weave = free && k.gcdRemaining() > 0.45;
+  const g = k.g, tide = g.tide || 0;
+  const spray = idx('spray'), sip = idx('sip'), rip = idx('riptide'), surge = idx('surge'), cur = idx('current'), wall = idx('breakwater');
+  if (weave) {
+    if (ready(wall) && raidNow && tide >= 50) return wall;
+    if (ready(cur) && raidSoon && !tideFlood(k) && (g.tphase === 'ebb' || (g.tphase === 'rise' && tide > 55))) return cur;
+  }
+  if (k.gcdRemaining() > 0.0001 || k.cast) return null;
+  const ct = k.castTime(k.abilities[surge]) || 0;
+  const wantSurge = tideFlood(k) || (tide >= 70 && (raidNow || avg < 0.65 || hurtN >= 3)) || (tideFull(k) && hurtN >= 2) || (avg < 0.45 && tide >= 35);
+  if (wantSurge && ready(surge)) {
+    if (!ct) return surge;
+    if (BotAI.stillOk(bot, view)) { bot.stillUntil = view.t + ct + 0.15; return surge; }
+  }
+  if (low && frac(low) < 0.4 && ready(sip)) { bot.healTarget = low.id; return sip; }
+  const ripAb = k.abilities[rip];
+  if (ripAb && ripAb.id === 'maelstrom') { if (ready(rip) && hurtN >= 2) return rip; }
+  else if (ready(rip) && !tideMarked(k)) { const t = tank && frac(tank) < 0.97 ? tank : (low && frac(low) < 0.9 ? low : tank); if (t) { bot.healTarget = t.id; return rip; } }
+  if (low && frac(low) < (tideLow(k) ? 0.78 : 0.6) && ready(sip)) { bot.healTarget = low.id; return sip; }
+  return ready(spray) ? spray : null;
+};
+
 BOT_CLASS.threadweaver = {
   home(bot, view) {
     const b = view.boss, f = b.facing || 0, side = (bot.slot || 0) % 2 ? 1 : -1, a = f + side * 1.6;

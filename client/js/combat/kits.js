@@ -5642,6 +5642,299 @@ ULTIMATES.thresher = {
 
 if (typeof module !== 'undefined') Object.assign(module.exports, { thArc, THRESH, thStage, thCount, thApply, thPayout, thReap, thSlash, thAge, thRipen, thY, thR });
 
+// ======================================================================= Tidecaller (healer, class 20; docs/plans/2026-10-new-classes-3.md §2)
+// The Tide: a water line (k.g.tide, 0-100) on its own clock. It rises from Low to High over TIDE.RISE s (k.g.tphase 'rise'),
+// holds at the top (the crest: 'hold', until k.g.holdEnd), then ebbs back to the floor over TIDE.EBB s ('ebb'), and loops.
+// Spending lowers the water and lets it ebb from there (a Sip barely lowers it, a Surge drains it to the floor); Salt
+// Spray and Current push it up. The cycle is readable and never random.
+// Gauge data for the HUD (gauges.js kind 'tide'): k.g.tide, k.g.tphase, k.g.holdEnd, k.g.floodUntil (Spring Flood),
+// k.g.wallUntil (Breakwater: no ebb), k.g.spring (Neap and Spring: this crest is a long one), k.g.mark ({ t, until }:
+// the Riptide Mark), tideNextCrest(k) (seconds to the next crest, for Tide Table's tick mark), k.g.deepUntil (Undertow).
+// fx events (k.fx, for ability-vfx.js): crest {spring}, slack (the floor), riptide {to}, riptidePop {to}, sip {low, free},
+// swell, surge {f, full, flood}, undertow {f}, current {dir: 'up'|'turn'|'hold'}, breakwater, ebbShield, flood, floodEnd,
+// leviathan, maelstrom {f}, tidalBore {f}, deepBell, brine {f}.
+const TIDE = { RISE: 12, HOLD: 2, EBB: 6, SIP: 10, LOW: 35, HIGH: 90, SPRAY: 4, CURRENT: 25, FLOOD: 6, WALL: 8 };
+const tideF = k => Math.max(0, Math.min(1, (k.g.tide || 0) / 100));
+const tideFlood = k => k.now < (k.g.floodUntil || 0);
+const tideFull = k => tideFlood(k) || k.g.tphase === 'hold';
+const tideHigh = k => tideFull(k) || (k.g.tide || 0) >= TIDE.HIGH;
+const tideLow = k => (k.g.tide || 0) < TIDE.LOW;
+const tideWall = k => k.now < (k.g.wallUntil || 0);
+const tideMarked = k => !!k.g.mark && k.now < k.g.mark.until;
+// how long the crest holds: 2s (a Spring Tide 3s), Deep Water +1s; Neap and Spring alternates short and long crests
+function tideHoldLen(k) {
+  let h = (k.def.tideHold || TIDE.HOLD) + (k.talent('tidecaller_deep') ? 1 : 0);
+  if (k.talent('tidecaller_neap')) h += k.g.spring ? 1.5 : -0.75;
+  return h;
+}
+// seconds until the next crest (Tide Table's tick mark on the gauge)
+function tideNextCrest(k) {
+  const t = k.g.tide || 0;
+  if (k.g.tphase === 'rise') return (100 - t) / 100 * TIDE.RISE;
+  if (k.g.tphase === 'hold') return Math.max(0, k.g.holdEnd - k.now) + TIDE.EBB + TIDE.RISE;
+  return t / 100 * TIDE.EBB + TIDE.RISE;
+}
+function tideCrest(k) {
+  k.g.crests = (k.g.crests || 0) + 1;
+  k.g.spring = !!k.talent('tidecaller_neap') && k.g.crests % 2 === 0;
+  k.g.tide = 100; k.g.tphase = 'hold'; k.g.holdEnd = k.now + tideHoldLen(k);
+  if (tideMarked(k)) tidePop(k);
+  k.fx('crest', { spring: k.g.spring ? 1 : 0 });
+}
+// the Riptide Mark pops at the crest
+function tidePop(k) {
+  const m = k.g.mark, ab = abBase(k, 'riptide');
+  k.g.mark = null;
+  const pop = k.perk('tidecaller_w2') ? 300 : 200;
+  k.heal(m.t, pop, { ab });
+  if (m.t2 != null) k.heal(m.t2, pop, { ab });   // (Grip of the Deep)
+  k.ultGain(2);
+  k.fx('riptidePop', { to: typeof m.t === 'number' ? m.t : null });
+}
+function tideGain(k, n) {
+  if (tideFlood(k)) return;
+  k.g.tide = Math.min(100, (k.g.tide || 0) + n);
+  if (k.g.tphase === 'rise' && k.g.tide >= 100) tideCrest(k);
+}
+function tideSpend(k, n) {
+  if (tideFlood(k)) return;
+  k.g.tide = Math.max(0, (k.g.tide || 0) - n);
+  if (k.g.tphase === 'hold') k.g.tphase = 'ebb';
+  if (k.g.tide <= 0) { k.g.tide = 0; k.g.tphase = 'rise'; }
+}
+function tideTick(k) {
+  const dt = Math.max(0, Math.min(0.5, k.now - (k.g.tAt ?? k.now))); k.g.tAt = k.now;
+  // Spring Flood: high water, held; when it ends the crest lets go (Leviathan: its last surge strikes the boss)
+  if (k.g.floodUntil) {
+    if (tideFlood(k)) { k.g.tide = 100; k.g.tphase = 'hold'; k.g.holdEnd = k.now; return; }
+    k.g.floodUntil = 0; k.g.holdEnd = k.now;
+    if (k.talent('tidecaller_leviathan') && k.g.floodSurges) { k.damage(600, { ab: k.ult }); k.fx('leviathan'); }
+    k.fx('floodEnd');
+  }
+  // Breakwater ends (Ebb Shield: the water it held drains into a shield on the party)
+  if (k.g.wallUntil && k.now >= k.g.wallUntil) {
+    k.g.wallUntil = 0;
+    if (k.talent('tidecaller_ebbshield') && (k.g.tide || 0) > 10) {
+      k.shield('party', 30 + 90 * tideF(k), 8, { ab: abBase(k, 'breakwater') });
+      k.g.tide = 0; k.g.tphase = 'rise';
+      k.fx('ebbShield');
+    }
+  }
+  // Moon Pull: every cast the boss begins pulls the tide a little higher
+  if (k.talent('tidecaller_moon')) onBossCast(k, () => { tideGain(k, 10); k.fx('moonPull'); });
+  const wall = tideWall(k);
+  if (k.g.tphase === 'rise') {
+    k.g.tide = (k.g.tide || 0) + 100 / TIDE.RISE * dt;
+    if (k.g.tide >= 100) tideCrest(k);
+  } else if (k.g.tphase === 'hold') {
+    if (k.now >= k.g.holdEnd && !wall) k.g.tphase = 'ebb';
+  } else if (!wall) {
+    k.g.tide -= 100 / TIDE.EBB * dt;
+    if (k.g.tide <= 0) {
+      k.g.tide = 0; k.g.tphase = 'rise';
+      if (k.talent('tidecaller_lowwater')) k.g.lowWater = true;
+      k.fx('slack');
+    }
+  }
+  // Still Water (Undertow): while you stand still, the Deep Shield seeps to whoever is hurt most
+  if (k.def.stillWater && k.now < (k.g.deepUntil || 0) && !(k.env.moving && k.env.moving()) && k.now >= (k.g.stillAt || 0)) {
+    k.g.stillAt = k.now + 2;
+    k.heal('lowest', 30, { ab: abBase(k, 'surge') });
+  }
+}
+// the heal a Surge (or a Tidal Bore) carries at this height of water
+function tideSurgePot(k, lo, hi) {
+  const full = tideFull(k);
+  let pot = lo + (hi - lo) * tideF(k);
+  if (k.def.kingTide && full) pot *= 1.3;   // (King Tide, the Spring Tide's passive: 10% for each ally it reaches)
+  if (k.talent('tidecaller_neap') && full && k.g.spring) pot *= 1.2;
+  return pot;
+}
+// after a Surge-like wave: the Spring Tide's shield, Brine Lash, the flood's own blow, the water spent, the charge
+function tideWave(k, ab, f, full) {
+  if (k.def.surgeShield && (full || (k.talent('tidecaller_overflow') && f >= 0.6))) k.shield('party', k.talent('tidecaller_overflow') ? 120 : 100, 8, { ab });
+  if (k.talent('tidecaller_brine')) { k.damage(15 + 40 * f, { ab }); k.fx('brine', { f: +f.toFixed(2) }); }
+  if (tideFlood(k)) { k.damage(250, { ab }); k.g.floodSurges = (k.g.floodSurges || 0) + 1; }
+  else { k.ultGain(2 + 6 * f); tideSpend(k, 100); }
+}
+function tideSurge(k, ab) {
+  const f = tideF(k), full = tideFull(k), flood = tideFlood(k);
+  k.heal('party', tideSurgePot(k, 120, 480), { ab });
+  k.fx('surge', { f: +f.toFixed(2), full: full ? 1 : 0, flood: flood ? 1 : 0 });
+  tideWave(k, ab, f, full);
+}
+const tideSurgeCast = k => (tideFlood(k) || (k.talent('tidecaller_sealegs') && tideWall(k)) || (k.talent('tidecaller_roguewave') && k.g.tphase === 'hold') ? 0 : 1.5);
+// Undertow (the Undertow spec's R): the water pulls the party's hurt down into your Deep Shield and gives it back over 8s
+function tideUndertow(k, ab) {
+  const f = tideF(k), full = tideFull(k);
+  const pot = tideSurgePot(k, 120, 480);
+  k.hot('party', pot / 4, 4, 2, { ab, id: 'undertow' });
+  k.g.deepAmt = k.shield('self', 150 + 250 * f, 8, { ab, tag: 'deep' });
+  k.g.deepUntil = k.now + 8;
+  if (k.talent('tidecaller_bell')) { const was = k.g.deepUntil; k.after(8, () => { if (k.g.deepUntil === was) { k.heal('party', 60 + 60 * f, { ab }); k.fx('deepBell'); } }); }
+  k.fx('undertow', { f: +f.toFixed(2) });
+  tideWave(k, ab, f, full);
+}
+function tideSip(k, ab, t, pot, cost) {
+  const free = !!k.g.lowWater, low = tideLow(k);
+  k.g.lowWater = false;
+  k.heal(t, pot * (low && cost > 0 ? 1.3 : 1) * (free ? 1.5 : 1), { ab });
+  if (cost > 0 && !free) tideSpend(k, cost); else if (cost < 0) tideGain(k, -cost);
+  if (k.talent('tidecaller_foam') && tideMarked(k) && k.g.mark.t === t) k.env.emit(Object.assign({ type: 'heal', target: 'lowest', not: t, ab }, { amount: k.healAmount(60, { ab }).amount }));
+  if (k.talent('tidecaller_seawall') && tideWall(k)) k.shield(t, 80, 6, { ab });
+  k.ultGain(1.5);
+  k.fx(cost < 0 ? 'swell' : 'sip', { low: low ? 1 : 0, free: free ? 1 : 0, to: typeof t === 'number' ? t : null });
+}
+function tideCurrent(k, ab) {
+  let dir;
+  if (k.g.tphase === 'rise') { dir = 'up'; tideGain(k, k.talent('tidecaller_table') ? 100 : TIDE.CURRENT); }
+  else if (k.g.tphase === 'hold') { dir = 'hold'; k.g.holdEnd += 2; }
+  else { dir = 'turn'; k.g.tphase = 'rise'; tideGain(k, 15); }
+  if (k.talent('tidecaller_tidewalk')) kitMove(k, 'dash', { d: 130 });
+  // Slack Water (Undertow): the Deep Shield's drain stops for 4s: it stands 4s longer and gives the party a little more
+  if (k.talent('tidecaller_slack') && k.now < (k.g.deepUntil || 0)) {
+    k.g.deepUntil += 4; k.shield('self', 100, k.g.deepUntil - k.now, { ab, tag: 'deep' }); k.hot('party', 40, 2, 2, { ab, id: 'slack' });
+  }
+  // Twin Currents: the first press leaves a second ready (cooldown counts from the second)
+  if (k.talent('tidecaller_twin')) {
+    if (!k.g.twinOut) { k.g.twinOut = true; k.cd[ab.id] = k.now; }
+    else k.g.twinOut = false;
+  }
+  k.fx('current', { dir });
+}
+const tideBossCasting = k => bossCasting(k);
+const tideSurgeGlow = k => tideFlood(k) || (tideHigh(k) && tideBossCasting(k));
+function tideSipGlow(k, ab) {
+  if (k.g.lowWater) return true;
+  if (!tideLow(k) || !k.env.allyHp) return false;
+  const t = k.env.target(ab), f = t != null && t !== true ? k.env.allyHp(t) : null;
+  return f != null && f < 0.7;
+}
+
+KITS.tidecaller = {
+  potMult: 1.157, // balance knob (tools/simulate.js)
+  auto: { kind: 'spark', potency: 25, range: RANGED },
+  gauge: { kind: 'tide', key: 'tide', max: 100, label: 'Tide' },
+  init: () => ({ tide: 30, tphase: 'rise', holdEnd: 0, mark: null, floodUntil: 0, wallUntil: 0, crests: 0 }),
+  tick: k => tideTick(k),
+  signature: 'The Tide',
+  floor: 'Press Q to attack. W heals one ally, best at low water. When the tide is high, R heals the whole party. E marks an ally; F before big hits.',
+  ceiling: [
+    'The tide rises on its own, holds at the crest, then ebbs. Sip at low water (it is stronger there) and save Surge for high water: a crest Surge heals four times what a low one does.',
+    'Line the crest up with the boss: Current pushes a rising tide up, turns an ebbing one back, and holds a crest 2s longer. Bend the cycle so high water meets each raidwide.',
+    'A Riptide Mark pops at the next crest. Mark the tank just before a crest that lands on a tankbuster.',
+    'Breakwater stops the ebb as well as cutting the damage: put it down at the crest and the water stays high for the whole raidwide.',
+    'Spring Flood holds high water for 6s and every Surge in it is free and instant. Save it for the fight\'s heaviest stretch.',
+  ],
+  abilities: [
+    {
+      id: 'spray', name: 'Salt Spray', type: 'gcd', target: 'enemy', range: RANGED, anim: 'cast',
+      desc: 'Instant: a lash of salt water at the boss for {d:280}. Nudges the tide up a little.',
+      effect(k) {
+        const pressure = k.talent('tidecaller_pressure') && k.now < (k.g.deepUntil || 0);
+        k.damage(280 * (pressure ? 1.07 : 1), { ab: this });
+        if (k.talent('tidecaller_spindrift') && tideHigh(k)) k.after(0.3, () => { k.damage(60, { ab: this }); k.fx('spindrift'); });
+        tideGain(k, TIDE.SPRAY);
+        k.ultGain(0.3);
+      },
+      fx: { type: 'projectile', color: '#bff3ea', range: RANGED, speed: 850 },
+    },
+    {
+      id: 'sip', name: 'Sip', type: 'gcd', target: 'ally', anim: 'cast',
+      desc: 'Instant: heals one ally for {h:210}. Costs a small slice of the tide; at low water it heals 30% more.',
+      glow(k) { return tideSipGlow(k, this); },
+      effect(k, t) { tideSip(k, this, t, 210, TIDE.SIP); },
+      fx: { type: 'ring', color: '#d7f2ee', r: 36, onTarget: true },
+    },
+    {
+      id: 'riptide', name: 'Riptide Mark', type: 'gcd', target: 'ally', cd: 12, anim: 'cast',
+      desc: 'Mark an ally: they heal {h:80} every 2s for 12s, and when the tide next crests the mark pops for {h:200}.',
+      glow: k => !tideMarked(k),
+      effect(k, t) {
+        k.hot(t, 80, 6, 2, { ab: this, id: 'riptide' });
+        k.g.mark = { t, until: k.now + 20 };
+        if (k.talent('tidecaller_grip')) { k.g.mark.t2 = 'lowest'; k.hot('lowest', 80, 6, 2, { ab: this, id: 'riptide2' }); }
+        if (k.talent('tidecaller_kelp')) k.mitigate(t, 0.05, 12, { ab: this });
+        if (k.def.markDeep) k.shield(t, 120, 10, { ab: this, tag: 'deep' });   // (Undertow: the Deep takes the next hit)
+        k.fx('riptide', { to: typeof t === 'number' ? t : null });
+      },
+      fx: { type: 'ring', color: '#5fd0c0', r: 44, onTarget: true },
+    },
+    {
+      id: 'surge', name: 'Surge', type: 'gcd', target: 'self', cast: k => tideSurgeCast(k), anim: 'big',
+      desc: '1.5s cast: spend all the tide in a wave that heals the whole party, from {h:120} at low water up to {h:480} at high water.',
+      glow: k => tideSurgeGlow(k),
+      effect(k) { tideSurge(k, this); },
+      fx: { type: 'zone', style: 'wave', color: '#bff3ea', r: 180, range: 0, dur: 1.2 },
+    },
+    {
+      id: 'current', name: 'Current', type: 'ogcd', target: 'self', cd: 20, anim: 'cast',
+      desc: 'Bend the tide. Rising, it climbs a quarter at once. Ebbing, it turns and rises again. At the crest, the crest holds 2s longer.',
+      glow: k => tideBossCasting(k) && k.g.tphase === 'ebb' && !tideFlood(k),
+      effect(k) { tideCurrent(k, this); },
+      fx: { type: 'aura', color: '#5fd0c0', r: 34, dur: 0.8 },
+    },
+    {
+      id: 'breakwater', name: 'Breakwater', type: 'ogcd', target: 'self', cd: 60, anim: 'big',
+      desc: 'A wall of water: the party takes 15% less damage for 8s, and while it stands the tide does not ebb.',
+      glow: k => tideBossCasting(k) && tideHigh(k),
+      effect(k) {
+        const dur = TIDE.WALL + (k.perk('tidecaller_a2') ? 2 : 0);
+        k.mitigate('party', 0.15, dur, { ab: this });
+        k.g.wallUntil = k.now + dur;
+        k.fx('breakwater');
+      },
+      fx: { type: 'zone', style: 'wave', color: '#5fd0c0', r: 160, range: 0, dur: 2 },
+    },
+  ],
+};
+
+// Spring Flood (T, instant): fills from the healing you do (Sip 1.5, a Surge 2-8 by the water, a Riptide pop 2, Salt Spray 0.3)
+ULTIMATES.tidecaller = {
+  id: 'springflood', name: 'Spring Flood', slot: 7, type: 'ogcd', ult: true, mode: 'instant', target: 'self', anim: 'big', icon: 'surge',
+  lock: 0.9, dr: 0.3,
+  charge: { rate: 0.4, keep: 0.5 },
+  desc: 'Call the spring flood: the whole party heals {h:300}, and the tide goes to high water and stays there for 6s. Every Surge in that time is instant, costs nothing and strikes the boss for {d:250}. ' +
+    'You take 30% less damage and can\'t be knocked back while you call it.' +
+    healUltCharge('1.5% for every Sip, 2% for every Surge and up to 8% at high water, 2% for every Riptide Mark that pops, a little for every Salt Spray,'),
+  effect(k) {
+    const ab = this;
+    k.g.floodUntil = k.now + TIDE.FLOOD; k.g.floodSurges = 0; k.g.tide = 100; k.g.tphase = 'hold';
+    k.fx('flood');
+    k.after(HEAL_ULT_LAND, () => k.heal('party', 300, { ab }));
+  },
+};
+
+// talent moves (rows III and V)
+talentMoves('tidecaller', {
+  tidecaller_maelstrom: {
+    id: 'maelstrom', replaces: 'riptide', icon: 'riptide', name: 'Maelstrom', type: 'gcd', target: 'self', cd: 15, anim: 'cast', talent: true,
+    desc: 'A whirlpool opens on the floor where you stand for 9s: allies in it heal every 1.5s, from {h:40} at low water up to {h:110} at high water (the height when you cast it).',
+    glow: k => tideHigh(k),
+    effect(k) {
+      const f = tideF(k);
+      k.env.emit({ type: 'splash', target: 'self', r: 0, pr: 130, ticks: 6, interval: 1.5, pa: k.healAmount(40 + 70 * f, { ab: this }).amount, ab: this });
+      k.fx('maelstrom', { f: +f.toFixed(2) });
+    },
+    fx: { type: 'zone', style: 'wave', color: '#5fd0c0', r: 130, range: 0, dur: 9 },
+  },
+  tidecaller_bore: {
+    id: 'bore', replaces: 'surge', icon: 'surge', name: 'Tidal Bore', type: 'gcd', target: 'self', anim: 'big', talent: true,
+    desc: 'Instant: spend all the tide in a wave rolled out ahead of you. It heals the party from {h:90} at low water up to {h:360} at high water, and breaks on the boss for {d:30} up to {d:100}.',
+    glow: k => tideSurgeGlow(k),
+    effect(k) {
+      const f = tideF(k), full = tideFull(k);
+      k.heal('party', tideSurgePot(k, 90, 360), { ab: this });
+      k.damage(30 + 70 * f, { ab: this });
+      k.fx('tidalBore', { f: +f.toFixed(2), aim: k.env.aim ? k.env.aim() : null });
+      tideWave(k, this, f, full);
+    },
+    fx: { type: 'cone', color: '#bff3ea', r: 220, span: 0.7 },
+  },
+});
+
+if (typeof module !== 'undefined') Object.assign(module.exports, { TIDE, tideF, tideFlood, tideFull, tideHigh, tideLow, tideWall, tideMarked, tideNextCrest, tideGain, tideSpend, tideSurge, tideUndertow, tideSip, tideSurgePot, tideSurgeGlow, tideSurgeCast, tideCurrent });
+
 // every tank's taunt carrier (TAUNT_CARRY, next to TAUNT): a spec's kit copies it from the base kit (specs.js specKit)
 for (const [cls, id] of Object.entries(TAUNT_CARRY)) if (KITS[cls]) KITS[cls].tauntOn = id;
 // ... and its Ultimate (ULTIMATES, next to TAUNT), copied the same way

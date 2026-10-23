@@ -669,6 +669,35 @@ Object.assign(TALENTS, {
   ],
 });
 
+// ----------------------------------------------------------------------- TIDECALLER (healer, class 20)
+TALENTS.tidecaller = [
+  [
+    { id: 'tidecaller_spindrift', name: 'Spindrift', ab: 'spray', text: 'Salt Spray thrown at high water breaks twice: a moment later the spray strikes again for {d:60}.' },
+    { id: 'tidecaller_foam', name: 'Foam', ab: 'sip', text: 'A Sip on the ally who wears your Riptide Mark foams over: the most hurt other ally heals {h:60}.', spec: { springtide: 'A Swell on the ally who wears your Riptide Mark foams over: the most hurt other ally heals {h:60}.' } },
+    { id: 'tidecaller_lowwater', name: 'Low Water', ab: 'sip', text: 'When the ebb touches the floor, your next Sip costs no tide and heals half again as much.', spec: { springtide: 'When the ebb touches the floor, your next Swell heals half again as much.' } },
+  ],
+  [
+    { id: 'tidecaller_kelp', name: 'Kelp Bind', ab: 'riptide', text: 'Riptide Mark also binds its ally in kelp: they take 5% less damage while it lasts.' },
+    { id: 'tidecaller_tidewalk', name: 'Tidewalk', ab: 'current', text: 'Current also carries you: you ride the water a short way in the direction you are heading.' },
+    { id: 'tidecaller_seawall', name: 'Seawall', ab: 'breakwater', text: 'While Breakwater stands, every Sip also raises a wall of {s:80} around its ally.', spec: { springtide: 'While Breakwater stands, every Swell also raises a wall of {s:80} around its ally.' } },
+  ],
+  [
+    { id: 'tidecaller_deep', name: 'Deep Water', ab: 'surge', text: 'The crest holds 1s longer.' },
+    { id: 'tidecaller_moon', name: 'Moon Pull', ab: 'current', text: 'Whenever the boss begins a cast, the moon pulls the tide 10 higher.' },
+    { id: 'tidecaller_maelstrom', name: 'Maelstrom', ab: 'riptide', grants: true, text: 'New move on E, in place of Riptide Mark. Maelstrom (15s): a whirlpool opens where you stand for 9s, and allies in it heal every 1.5s by the height of the tide when you cast it, from {h:40} up to {h:110}.' },
+  ],
+  [
+    { id: 'tidecaller_sealegs', name: 'Sea Legs', ab: 'breakwater', text: 'While Breakwater stands, Surge is instant: cast it on the move.', spec: { undertow: 'While Breakwater stands, Undertow is instant: cast it on the move.' } },
+    { id: 'tidecaller_ebbshield', name: 'Ebb Shield', ab: 'breakwater', text: 'When Breakwater falls, the water it held drains into a shield on the whole party, from {s:30} up to {s:120} by its height. The tide goes to the floor.' },
+    { id: 'tidecaller_twin', name: 'Twin Currents', ab: 'current', text: 'Current can be pressed twice in a row: after the first press a second waits, and the cooldown counts from the second.' },
+  ],
+  [
+    { id: 'tidecaller_leviathan', name: 'Leviathan', ab: 'surge', text: 'When Spring Flood ends after a Surge, the flood rises out of the deep and strikes the boss for {d:600}.', spec: { undertow: 'When Spring Flood ends after an Undertow, the flood rises out of the deep and strikes the boss for {d:600}.' } },
+    { id: 'tidecaller_bore', name: 'Tidal Bore', ab: 'surge', grants: true, text: 'New move on R, in place of Surge. Tidal Bore: instant, spend all the tide in a wave rolled out ahead of you. It heals the party from {h:90} up to {h:360} by the tide and breaks on the boss for {d:30} up to {d:100}.' },
+    { id: 'tidecaller_neap', name: 'Neap and Spring', ab: 'surge', text: 'The crests alternate short and long: a neap crest holds 0.75s less, a spring crest 1.5s more, and a Surge at a spring crest heals 20% more.', spec: { undertow: 'The crests alternate short and long: a neap crest holds 0.75s less, a spring crest 1.5s more, and an Undertow at a spring crest heals 20% more.' } },
+  ],
+];
+
 // ======================================================================= SPEC ROWS (VI and VII)
 // SPEC_TALENTS[classId][specId] = [rowVI, rowVII], each row two talents. The rows are bought once per hero (after row V,
 // TALENT_COSTS[5] and [6]) and open for both specs; each spec keeps its own pick in each (save.js specIds), and only the
@@ -1189,6 +1218,32 @@ Object.assign(SPEC_TALENTS, {
     ],
   },
 });
+
+// ----------------------------------------------------------------------- TIDECALLER
+SPEC_TALENTS.tidecaller = {
+  // Spring Tide, The Flood: huge surges at the crest
+  springtide: [
+    [
+      { id: 'tidecaller_roguewave', name: 'Rogue Wave', ab: 'surge', text: 'A Surge cast while the crest holds is instant.' },
+      { id: 'tidecaller_overflow', name: 'Overflow', ab: 'surge', text: 'The water spills over: a Surge cast with the tide above half also leaves its shield, and the shield is {s:120}.' },
+    ],
+    [
+      { id: 'tidecaller_table', name: 'Tide Table', ab: 'current', text: 'The gauge marks when the next crest arrives, and Current on a rising tide carries it straight to the crest.' },
+      { id: 'tidecaller_brine', name: 'Brine Lash', ab: 'surge', text: 'Surge also breaks on the boss, from {d:15} at low water up to {d:55} at high water.' },
+    ],
+  ],
+  // Undertow, The Deep Pull: pull the hurt down, give it back slowly
+  undertow: [
+    [
+      { id: 'tidecaller_bell', name: 'Drowned Bell', ab: 'surge', text: 'When your Deep Shield runs its course, a drowned bell tolls: the party heals {h:60} up to {h:120} by the water Undertow spent.' },
+      { id: 'tidecaller_grip', name: 'Grip of the Deep', ab: 'riptide', text: 'Riptide Mark pulls from two allies: the most hurt other ally is marked too, heals with it and pops with it.' },
+    ],
+    [
+      { id: 'tidecaller_pressure', name: 'Pressure', ab: 'spray', text: 'While your Deep Shield stands, Salt Spray hits 7% harder.' },
+      { id: 'tidecaller_slack', name: 'Slack Water', ab: 'current', text: 'Current pressed while your Deep Shield stands holds its drain: the shield stands 4s longer, topped up by {s:100}, and the party heals {h:40} twice.' },
+    ],
+  ],
+};
 
 // id -> { cls, row, col, t, spec? } (spec rows: row 5 or 6, and the spec they belong to)
 const TALENT_BY_ID = {};
