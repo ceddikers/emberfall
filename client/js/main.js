@@ -2160,7 +2160,7 @@
     switch (msg.k) {
       case 'spawn': BOSS_VFX.addSpawn(msg.x, msg.y, msg.kind); break;
       case 'death':
-        BOSS_VFX.addDeath(a ? a.x : msg.x, a ? a.y : msg.y);
+        BOSS_VFX.addDeath(a ? a.x : msg.x, a ? a.y : msg.y, a && a.kind);
         removeAdd(msg.id, 0.3);
         if (lockedEnemy === msg.id) lockedEnemy = null;
         break;

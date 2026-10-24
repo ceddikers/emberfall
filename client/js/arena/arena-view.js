@@ -318,39 +318,58 @@ const ArenaView = {
     c.save(); ARENA.trace(c, 0); c.clip();
     c.beginPath(); c.rect(x0, y0, W, W); c.clip();
     if (st === 1) {
-      // thick, polished ice: pale and bright, long reflections, a white rime at the edges
+      // thick, polished ice: pale and bright, long reflections, a white rime at the edges and a dark foot so it stands out
       const g = c.createLinearGradient(x0, y0, x0 + W, y0 + W);
-      g.addColorStop(0, '#e6f8ff'); g.addColorStop(0.5, '#c4e8f8'); g.addColorStop(1, '#d6f0fc');
+      g.addColorStop(0, '#eefaff'); g.addColorStop(0.5, '#c0e4f8'); g.addColorStop(1, '#d8f2fc');
       c.fillStyle = g; c.fillRect(x0, y0, W, W);
+      // deep facets inside the slab
+      for (let k = 0; k < 5; k++) { const a = r() * TAU, l = 60 + r() * 90, px = x0 + 30 + r() * (W - 60), py = y0 + 30 + r() * (W - 60); line(c, px - Math.cos(a) * l * 0.5, py - Math.sin(a) * l * 0.5, px + Math.cos(a) * l * 0.5, py + Math.sin(a) * l * 0.5, 'rgba(70,140,210,0.2)', 1.4); }
       for (let k = 0; k < 5; k++) { const sx = x0 - 20 + k * 50 + r() * 14; poly(c, [sx, y0, sx + 18, y0, sx + 18 - W * 0.6, y0 + W, sx - W * 0.6, y0 + W], `rgba(255,255,255,${0.12 + r() * 0.2})`); }
       for (let k = 0; k < 14; k++) { const sx = x0 + r() * W, sy = y0 + r() * W; circle(c, sx, sy, 0.8 + r() * 1.6, 'rgba(255,255,255,0.7)'); }
       glow(c, x0 + 60, y0 + 50, 80, '#ffffff', 0.35);
-      c.strokeStyle = 'rgba(255,255,255,0.85)'; c.lineWidth = 6; c.strokeRect(x0 + 3, y0 + 3, W - 6, W - 6);
-      c.strokeStyle = 'rgba(60,140,200,0.6)'; c.lineWidth = 1.5; c.strokeRect(x0 + 8, y0 + 8, W - 16, W - 16);
+      c.save(); c.globalCompositeOperation = 'lighter'; glow(c, x0 + W - 30, y0 + W - 30, 70, '#3affb0', 0.1); glow(c, x0 + 30, y0 + W - 40, 60, '#9a7aff', 0.08); c.restore();
+      c.strokeStyle = 'rgba(4,16,34,0.55)'; c.lineWidth = 2; c.strokeRect(x0 + 1, y0 + 1, W - 2, W - 2);
+      c.strokeStyle = 'rgba(255,255,255,0.9)'; c.lineWidth = 6; c.strokeRect(x0 + 4, y0 + 4, W - 8, W - 8);
+      c.strokeStyle = 'rgba(60,140,200,0.6)'; c.lineWidth = 1.5; c.strokeRect(x0 + 10, y0 + 10, W - 20, W - 20);
       for (const [cx, cy, sx, sy] of [[x0, y0, 1, 1], [x0 + W, y0, -1, 1], [x0, y0 + W, 1, -1], [x0 + W, y0 + W, -1, -1]]) {
         for (let k = 0; k < 5; k++) { const a = (k / 4) * Math.PI / 2; line(c, cx + sx * 6, cy + sy * 6, cx + sx * (6 + Math.cos(a) * 38), cy + sy * (6 + Math.sin(a) * 38), 'rgba(255,255,255,0.7)', 1.4); }
       }
     } else if (st === 2) {
-      // marked to go: dark cracks running through it, white at their lips
+      // marked to go: it reddens, dark cracks webbing it with a hot red heart, white at their lips
       c.fillStyle = 'rgba(10,30,60,0.22)'; c.fillRect(x0, y0, W, W);
-      for (let k = 0; k < 7; k++) {
-        let px = fl.x + (r() - 0.5) * 40, py = fl.y + (r() - 0.5) * 40, a = k * TAU / 7 + r() * 0.5;
+      c.fillStyle = 'rgba(255,60,50,0.1)'; c.fillRect(x0, y0, W, W);
+      glow(c, fl.x, fl.y, 120, '#ff4a3a', 0.2);
+      for (let k = 0; k < 9; k++) {
+        let px = fl.x + (r() - 0.5) * 40, py = fl.y + (r() - 0.5) * 40, a = k * TAU / 9 + r() * 0.5;
         c.beginPath(); c.moveTo(px, py);
         for (let s = 0; s < 5; s++) { a += (r() - 0.5) * 0.9; px += Math.cos(a) * (24 + r() * 26); py += Math.sin(a) * (24 + r() * 26); c.lineTo(px, py); }
         c.lineCap = 'round'; c.lineJoin = 'round';
-        c.strokeStyle = 'rgba(2,10,24,0.9)'; c.lineWidth = 5; c.stroke(); c.strokeStyle = 'rgba(235,248,255,0.8)'; c.lineWidth = 1.4; c.stroke();
+        c.strokeStyle = 'rgba(255,74,58,0.35)'; c.lineWidth = 9; c.stroke();
+        c.strokeStyle = 'rgba(2,10,24,0.9)'; c.lineWidth = 5; c.stroke(); c.strokeStyle = 'rgba(255,208,200,0.85)'; c.lineWidth = 1.4; c.stroke();
       }
     } else {
-      // sunk: black water, a few floes, a ragged white lip where the sheet used to be
+      // sunk: black water with the aurora in it, broken plates of the old sheet tilting in along every edge, a ragged white lip
       const g = c.createRadialGradient(fl.x, fl.y, 10, fl.x, fl.y, 150);
-      g.addColorStop(0, '#0f2c44'); g.addColorStop(1, '#040c18');
+      g.addColorStop(0, '#12304c'); g.addColorStop(1, '#030a16');
       c.fillStyle = g; c.fillRect(x0, y0, W, W);
+      c.save(); c.globalCompositeOperation = 'lighter'; glow(c, fl.x - 30, fl.y - 24, 70, '#3affb0', 0.13); glow(c, fl.x + 36, fl.y + 30, 64, '#9a7aff', 0.13); c.restore();
       for (let k = 0; k < 4; k++) ellipse(c, fl.x + (r() - 0.5) * 80, fl.y + (r() - 0.5) * 80, 24 + k * 18, 8 + k * 5, 0, null, 'rgba(120,190,240,0.18)', 1.2);
-      for (let k = 0; k < 6; k++) { const sx = x0 + 20 + r() * (W - 40), sy = y0 + 20 + r() * (W - 40), s = 6 + r() * 12; poly(c, [sx - s, sy + s * 0.3, sx - s * 0.2, sy - s * 0.7, sx + s * 0.8, sy - s * 0.3, sx + s * 0.6, sy + s * 0.6], '#cfeaff', 'rgba(8,20,40,0.8)', 1.2); }
+      for (let k = 0; k < 4; k++) { const sx = x0 + 34 + r() * (W - 68), sy = y0 + 34 + r() * (W - 68), s = 7 + r() * 12; poly(c, [sx - s, sy + s * 0.3, sx - s * 0.2, sy - s * 0.7, sx + s * 0.8, sy - s * 0.3, sx + s * 0.6, sy + s * 0.6], '#d8efff', 'rgba(4,16,34,0.85)', 1.4); }
+      // the plates: along each edge, slabs leaning down into the water (pale top face, a blue thickness)
+      for (const [ax, ay, tx, ty] of [[x0, y0, 1, 0], [x0 + W, y0, 0, 1], [x0 + W, y0 + W, -1, 0], [x0, y0 + W, 0, -1]]) {
+        const inx = -ty, iny = tx;
+        for (let j = 0; j < 5; j++) {
+          const u = (j + 0.5 + (r() - 0.5) * 0.5) / 5 * W, bx = ax + tx * u, by = ay + ty * u, w = 11 + r() * 8, d = 14 + r() * 16, sk = (r() - 0.5) * 8;
+          const P0 = [bx - tx * w, by - ty * w], P1 = [bx + tx * w, by + ty * w], P2 = [bx + tx * (w * 0.7 + sk) + inx * d, by + ty * (w * 0.7 + sk) + iny * d], P3 = [bx - tx * (w * 0.6 - sk) + inx * d * 0.8, by - ty * (w * 0.6 - sk) + iny * d * 0.8];
+          poly(c, [P0[0] - inx * 4, P0[1] - iny * 4, P1[0] - inx * 4, P1[1] - iny * 4, P1[0], P1[1], P0[0], P0[1]], '#5f9ccf');
+          poly(c, [...P0, ...P1, ...P2, ...P3], '#e4f4ff', 'rgba(4,16,34,0.85)', 1.6);
+          poly(c, [P0[0], P0[1], P1[0], P1[1], (P1[0] + P2[0]) / 2, (P1[1] + P2[1]) / 2, (P0[0] + P3[0]) / 2, (P0[1] + P3[1]) / 2], 'rgba(255,255,255,0.7)');
+        }
+      }
       c.beginPath();
       const jag = (ax, ay, bx2, by2) => { const n = 9; for (let i = 0; i <= n; i++) { const u = i / n, off = i % 2 ? 7 : -3; const dx = bx2 - ax, dy = by2 - ay, L = Math.hypot(dx, dy); c.lineTo(ax + dx * u - dy / L * off, ay + dy * u + dx / L * off); } };
       c.moveTo(x0, y0); jag(x0, y0, x0 + W, y0); jag(x0 + W, y0, x0 + W, y0 + W); jag(x0 + W, y0 + W, x0, y0 + W); jag(x0, y0 + W, x0, y0);
-      c.strokeStyle = '#eaf6ff'; c.lineWidth = 7; c.lineJoin = 'round'; c.stroke(); c.strokeStyle = 'rgba(8,20,40,0.8)'; c.lineWidth = 2; c.stroke();
+      c.strokeStyle = '#eaf6ff'; c.lineWidth = 5; c.lineJoin = 'round'; c.stroke(); c.strokeStyle = 'rgba(4,16,34,0.85)'; c.lineWidth = 2; c.stroke();
     }
     c.restore();
   },
@@ -367,6 +386,8 @@ const ArenaView = {
     if (room && room.floor) for (const fl of room.floor) {
       if (fl.kind !== 'sheet') continue;
       if (fl.st === 3) {
+        // cold mist lifting off the black water
+        for (let k = 0; k < 2; k++) { const q = (t * 0.18 + k / 2 + fl.i * 0.23) % 1; glow(ctx, fl.x + Math.sin(fl.i * 4 + k * 3) * 50 + Math.sin(t * 0.6 + k) * 10, fl.y + 30 - q * 70, 34 + q * 26, '#dff0ff', 0.14 * Math.sin(q * Math.PI)); }
         for (let k = 0; k < 3; k++) { const q = (t * 0.5 + k / 3 + fl.i * 0.17) % 1; ellipse(ctx, fl.x + Math.sin(fl.i * 3 + k * 2) * 60, fl.y + Math.cos(fl.i * 5 + k) * 50, 8 + q * 36, 3 + q * 12, 0, null, `rgba(160,210,255,${0.35 * (1 - q)})`, 1.2); }
       } else if (fl.st === 1) {
         const q = (t * 0.35 + fl.i * 0.31) % 1;
@@ -1210,7 +1231,7 @@ const ArenaView = {
       const r = p.r * (0.7 + 0.3 * life);
       if (p.tag === 'venom') { this.venomPool(ctx, p, r, k, t); continue; }
       if (p.tag === 'bloom' || p.tag === 'mire') { this.hydraPool(ctx, p, r, k, t); continue; }
-      if (p.tag === 'ember') { this.emberPool(ctx, p, r, k, t); continue; }
+      if (p.tag === 'ember') { if (this.floorFor && this.floorFor.startsWith('hydra@')) this.hydraEmber(ctx, p, r, k, t); else this.emberPool(ctx, p, r, k, t); continue; }
       // hot grease: a glossy brown pool, bubbling; it only burns (flames, an orange glow) once fire has reached it
       const lit = this.puddleLit(p, t);
       if (lit) glow(ctx, p.x, p.y, r * 1.25, '#ff6a2a', 0.18 * k);
@@ -1297,7 +1318,8 @@ const ArenaView = {
       const s = z.shape;
       if (z.tag === 'trail') { this.silkTrail(ctx, s, k, t); continue; }
       if (z.tag === 'stovefire') { this.stoveFire(ctx, z, t); continue; }
-      if (z.tag === 'acid') { this.acidFloor(ctx, z, k, t); continue; }
+      if (z.tag === 'flood') continue;   // (the Hydra's flood is painted by hydraRoom)
+      if (z.tag === 'acid') { if (this.floorFor && this.floorFor.startsWith('hydra@')) this.hydraAcid(ctx, z, k, t); else this.acidFloor(ctx, z, k, t); continue; }
       if (z.tag === 'writburn') { this.writBurn(ctx, z, t); continue; }
       if (z.tag === 'lava') { this.moltenFloor(ctx, z, k, t); continue; }
       ctx.save();
@@ -1317,40 +1339,9 @@ const ArenaView = {
     }
   },
 
-  // Vhalgrath's molten floor (a breath's cone, the boiling rim): glowing stone, a cracked crust drifting over it, a red rim
-  moltenFloor(ctx, z, k, t) {
-    const s = z.shape, R = ARENA.R;
-    ctx.save();
-    ARENA.trace(ctx, 2); ctx.clip();
-    SHAPES.trace(ctx, s); ctx.save(); ctx.clip();
-    const g = ctx.createRadialGradient(0, 0, 40, 0, 0, R * 1.3);
-    g.addColorStop(0, rgba('#ff9a3a', 0.5 * k)); g.addColorStop(1, rgba('#d43a0a', 0.42 * k));
-    ctx.fillStyle = g; ctx.fillRect(-R * 2, -R * 2, R * 4, R * 4);
-    // the crust: dark plates drifting on it, with the glow showing between
-    for (let i = 0; i < 46; i++) {
-      const x = (hash01(i * 3 + z.id) * 2 - 1) * R + Math.sin(t * 0.3 + i) * 10, y = (hash01(i * 7 + z.id) * 2 - 1) * R + Math.cos(t * 0.27 + i) * 10, w = 22 + hash01(i + 40) * 36;
-      ellipse(ctx, x, y, w, w * 0.6, i, rgba('#2a0e06', 0.55 * k));
-    }
-    for (let i = 0; i < 26; i++) { const x = (hash01(i * 5 + 3 + z.id) * 2 - 1) * R, y = (hash01(i * 11 + z.id) * 2 - 1) * R, q = (t * 0.6 + hash01(i)) % 1; circle(ctx, x, y - q * 18, 2 + q * 3, rgba('#ffd890', 0.7 * (1 - q) * k)); }
-    ctx.restore();
-    SHAPES.trace(ctx, s);
-    ctx.strokeStyle = rgba(BossTells.COL.danger, 0.85 * k); ctx.lineWidth = 2.5; ctx.stroke();   // a lasting hazard: red rim
-    ctx.restore();
-  },
-  // a pool of lava left where a Magma Burst or a Cinder Rain ember fell
-  emberPool(ctx, p, r, k, t) {
-    ctx.save(); ctx.globalAlpha = k;
-    glow(ctx, p.x, p.y, r * 1.4, '#ff6a1a', 0.3);
-    const g = ctx.createRadialGradient(p.x, p.y, r * 0.1, p.x, p.y, r);
-    g.addColorStop(0, '#ffd27a'); g.addColorStop(0.45, '#ff7a22'); g.addColorStop(1, '#8a2208');
-    ctx.fillStyle = g;
-    ctx.beginPath();
-    for (let i = 0; i <= 18; i++) { const a = i * TAU / 18, w = 1 + Math.sin(a * 3 + p.id) * 0.08 + Math.sin(a * 5 + t * 1.6) * 0.04, x = p.x + Math.cos(a) * r * w, y = p.y + Math.sin(a) * r * w; i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
-    ctx.closePath(); ctx.fill();
-    ctx.strokeStyle = rgba(BossTells.COL.danger, 0.85); ctx.lineWidth = 2.5; ctx.stroke();
-    for (let i = 0; i < 4; i++) { const q = (t * 0.7 + i / 4 + p.id * 0.13) % 1, a = i * 1.9 + p.id; circle(ctx, p.x + Math.cos(a) * r * 0.5, p.y + Math.sin(a) * r * 0.5, 2 + q * 5, null, `rgba(255,235,170,${0.6 * (1 - q)})`, 1.5); }
-    ctx.restore();
-  },
+  // Vhalgrath's molten floor (a breath's cone, the boiling rim) and the lava pools of his Magma Burst and Cinder Rain: wyrm-art.js
+  moltenFloor(ctx, z, k, t) { WYRM_ART.moltenFloor(ctx, z, k, t); },
+  emberPool(ctx, p, r, k, t) { WYRM_ART.emberPool(ctx, p, r, k, t); },
 
   // the silk Skitterra drags behind her on a Fang Rush (Hard): a sticky strip of tangled threads along her path
   silkTrail(ctx, s, k, t) {

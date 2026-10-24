@@ -529,7 +529,10 @@ const BOSS_ART = {
     ellipse(ctx, -2, 0, 30, 17, 0, null, rgba(ember, 0.35 + (props.heart ? 0.3 : 0)), 1.6);
     const pulse = 0.6 + Math.sin(t * 3.2) * 0.2;
     glow(ctx, 6, 0, props.heart ? 40 : 22, props.heart ? hot : ember, (props.heart ? 0.8 : 0.32) * pulse);
-    if (props.heart) { ellipse(ctx, 8, 0, 11, 9, 0, rgba(hot, 0.9), OUT, 1.5); glow(ctx, 8, 0, 18, '#ffffff', 0.55 * pulse); }
+    if (props.heart) {
+      ellipse(ctx, 8, 0, 11, 9, 0, rgba(hot, 0.9), OUT, 1.5); glow(ctx, 8, 0, 18, '#ffffff', 0.55 * pulse);
+      for (let i = 0; i < 7; i++) { const a = i * TAU / 7 + 0.3; line(ctx, 8 + Math.cos(a) * 10, Math.sin(a) * 8, 8 + Math.cos(a + 0.2) * 30, Math.sin(a + 0.2) * 22, rgba(hot, 0.7 * pulse), 1.6); }   // (light cracking out across his scales)
+    }
     // ---- front claws (Rending Claws: one rears back and rakes)
     const rake = props.claw ? -0.7 + s * 1.4 : 0;
     for (const sy of [-1, 1]) {
@@ -546,6 +549,7 @@ const BOSS_ART = {
     for (let k = 0; k < 4; k++) poly(ctx, [10 + k * 7, 5, 12 + k * 7, 0, 14 + k * 7, 5], bone, OUT, 0.8);
     ctx.restore();
     if (props.breath) { glow(ctx, 36, 0, 36, hot, 0.8 + Math.sin(t * 20) * 0.1); glow(ctx, 50, 0, 50, ember, 0.5); }
+    else if (props.roar || props.claw) glow(ctx, 34, 0, 26, ember, 0.6 + Math.sin(t * 14) * 0.1);   // (fire in the open mouth for a roar and the claws)
     ctx.save(); ctx.rotate(-open * 0.35);
     poly(ctx, [0, -11, 20, -11, 40, -4, 44, 0, 40, 3, 22, 3, 0, 8], hide, OUT, 2.5);   // skull and upper jaw
     for (let k = 0; k < 4; k++) poly(ctx, [12 + k * 7, 3, 14 + k * 7, 8, 16 + k * 7, 3], bone, OUT, 0.8);
@@ -607,6 +611,7 @@ const BOSS_ART = {
       circle(ctx, hx + 4, hy, ew, skin, OUT, 3);
       for (let k = -1; k <= 1; k++) poly(ctx, [hx + 12, hy + k * 5 - 2, hx + 20, hy + k * 5, hx + 12, hy + k * 5 + 3], ice, OUT, 1);
       circle(ctx, hx + 2, hy - 2, ew * 0.55, rgba(furHi, 0.5));
+      if (up && sy > 0 && typeof TI_ART !== 'undefined') TI_ART.fistGlow(ctx, hx, hy, t);   // (the raised fist in clear ice: titan-art.js)
     }
     // head: a broad brow, a beard of icicles, a crown of ice horns
     for (let k = 0; k < 7; k++) { const a = -1.1 + k * 0.37; poly(ctx, [18 + Math.cos(a - 0.14) * 11, Math.sin(a - 0.14) * 11, 20 + Math.cos(a) * (props.howl ? 30 : 24), Math.sin(a) * (props.howl ? 30 : 24), 18 + Math.cos(a + 0.14) * 11, Math.sin(a + 0.14) * 11], ice, OUT, 1.3); }
@@ -615,6 +620,7 @@ const BOSS_ART = {
     for (let k = -2; k <= 2; k++) poly(ctx, [24, k * 4.4 - 2, 32 + (2 - Math.abs(k)) * 3, k * 4.8, 24, k * 4.4 + 2], '#eaf6ff', OUT, 1);
     for (const sy of [-1, 1]) { poly(ctx, [14, 8 * sy, 6, 20 * sy, -6, 22 * sy, 6, 12 * sy], ice, OUT, 1.8); }
     if (props.howl || props.breath) ellipse(ctx, 29, 0, 4.5, 6 + (props.howl ? 3 : 0), 0, '#1a2a3a', OUT, 1.4);
+    if (props.howl && typeof TI_ART !== 'undefined') TI_ART.howlAura(ctx, t);   // (aurora out of his mouth: titan-art.js)
     glow(ctx, 25, 0, 14, eye, 0.5);
     circle(ctx, 26, -4.4, 2.4, eye); circle(ctx, 26, 4.4, 2.4, eye);
     // sparks of frost drifting off him
