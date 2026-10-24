@@ -14,7 +14,7 @@ const TANK_CDS = ['bulwark', 'zeal', 'undying', 'banner', 'sanctum', 'warcry', '
 const RAID_CASTS = /^(Grease Fire|Simmer|Venom Mist|Tightening Web|Thunderclap|Thunder Crash|Static Field|Polarity Surge|Skyfall|Barrow Knell|Grave Marks|Gathering Storm|Thunderhead|Royal Tithe|Dirge|Gut Blast|Flare-Up|Last Orders|Gorge|Boil Over|Heavens Fall|Arcane Burst|Convergence|The Tide Rises)$/;
 
 const BotAI = {
-  isMelee(cls) { return KITS[cls.id].abilities[0].range === 'melee'; },
+  isMelee(cls) { const r = KITS[cls.id].abilities[0].range; return r === 'melee' || (typeof r === 'number' && r <= 130); },   // (a Reaper's scythe reaches 1.5x melee: it still stands in)
 
   // where this bot would like to stand when nothing is happening
   // Which enemy to hit: tanks and healers stay on the boss. DPS split over a pair of adds (one each),
@@ -1820,38 +1820,35 @@ BOT_CLASS.gloomsworn = {
 };
 
 // ======================================================================= Reaper (id thresher; damage, class 19)
-// Reaper: keeps all four afflictions up and weighted (Hook for the Thread, Gloam Blink for the Bind, Slash and Cleave for the Mark
-// and Drain), Severs what it laid last once that is at full Weight (a Bind just before a telegraph lands, for the party's 10%),
-// and Reaps for the Full Toll, or before something runs out (sooner with an add in the arc). The Wisp on cooldown. Inside Reaper's
-// Gate it only strikes: each Slash is a Gate Strike. The Ultimate itself is pressed through BotAI.ult.
+// Reaper: swings a four-swing string and finishes it (a shorter one when a telegraph is about to land, so the marks are still laid and
+// there is room to move), Snaps when it holds three marks on something, a full crescent or marks about to run out, Void Star on a
+// marked target (or with the party's burst), Insane Reaper with the burst, Dusk Veil as a hit lands. Inside Arcane Gate it only swings
+// (five swings: the fifth is the release). The Ultimate itself is pressed through BotAI.ult. Oh GCD moves go in the gap after a finisher.
 BOT_CLASS.thresher = {
   act(bot, k, view) {
     const idx = id => k.abilities.findIndex(a => a.id === id || a.replaces === id);
     const ok = i => { const a = k.abilities[i]; return i >= 0 && !!a && k.usable(a) && k.readyIn(a) <= 0.0001 && k.available(a); };
-    const weave = k.gcdRemaining() > 0.55 && !k.cast && k.lockUntil <= k.now;
-    const max = thMaxW(k), avail = thAvail(k).length, on = thCount(k), full = thFull(k), total = thTotal(k), last = k.g.last;
-    const ending = THRESH.IDS.some(id => k.g.aff[id] && k.g.aff[id].until - k.now < 2.5);
-    const slash = idx('slash'), hook = idx('hook'), reap = idx('reap'), sever = idx('gather'), blink = idx('blink'), wisp = idx('wisp');
-    // a dash cut can land in something on the floor: not with a telegraph about to resolve
-    const floor = view.mechs.some(m => ['aoe', 'safe', 'tower', 'proximity', 'gale', 'drop', 'gaze', 'stack', 'spread'].includes(m.type) && m.resolveAt - view.t < 2.5);
-    const hit = view.mechs.some(m => m.resolveAt - view.t < 1.5 && m.resolveAt > view.t);   // (something about to land: a Bind's pop helps the party)
-    if (weave && !k.ultWin) {
-      if (ok(wisp) && (k.abilities[wisp].id === 'cull' ? total >= 6 : !k.has('wisp'))) return wisp;
-      if (!floor && ok(hook) && thW(k, 'thread') < max) return hook;
-      const bl = ok(blink) ? k.abilities[blink].id : null;
-      if (!floor && bl === 'hourglass' && k.readyIn(k.abilities[reap]) < 3) return blink;
-      if (!floor && bl === 'nightfall' && on >= 2 && full < on) return blink;
-      if (!floor && bl === 'blink' && (k.def.blinkDeepen ? last && thW(k, last) && thW(k, last) < max : thW(k, 'bind') < max)) return blink;
-      if (ok(sever)) {
-        if (k.abilities[sever].id === 'sowing') { if (on <= 1) return sever; }
-        else if (last && thW(k, last) && ((last === 'bind' && hit) || (thW(k, last) >= max && !ok(reap) && k.readyIn(k.abilities[reap]) > 2))) return sever;
-      }
+    const open = reapOpen(k), n = reapN(k), gate = !!k.ultWin;
+    const q = idx('string'), w = idx('finish'), snap = idx('snap'), star = idx('star'), veil = idx('veil'), frenzy = idx('frenzy');
+    const hit = view.mechs.some(m => m.resolveAt - view.t < 1.6 && m.resolveAt > view.t);
+    const marks = reapMostMarks(k), tm = reapTargetMarks(k).length;
+    const ending = reapAllMarks(k).some(e => e.kinds.some(kd => k.g.marks[e.id][kd].until - k.now < 3));
+    // a Phantom blinks about every 7s between strings (in place: a bot walks, it does not dash), so its next finisher is the teleport slash
+    if (k.def.phantom && !open && k.now >= (bot.rpBlink || 0) && bot.actor.dashReady(k.now)) { bot.rpBlink = k.now + 7; bot.actor.useDash(k.now, { from: { x: bot.x, y: bot.y }, to: { x: bot.x, y: bot.y }, through: false }); }
+    if (!open && k.gcdRemaining() > 0.4 && !k.cast && k.lockUntil <= k.now) {
+      if (ok(frenzy) && view.burst) return frenzy;
+      if (ok(veil) && hit) return veil;
+      if (ok(star) && (tm >= 3 || (view.burst && tm >= 2))) return star;
+      if (ok(snap) && (marks >= 4 || ((k.g.moon || 0) >= 100 && marks >= 2) || (ending && marks >= 1))) return snap;
     }
-    if (k.gcdRemaining() > 0 || k.cast || k.lockUntil > k.now) return null;
-    // an add in the scythe's arc as well as the main target: the Reap's wide cut pays twice, so it goes a little sooner
-    const crowd = k.env.enemiesNear ? k.env.enemiesNear(THRESH.ARC_R).length >= 2 : false;
-    if (!k.ultWin && ok(reap) && on > 0 && (full >= avail || ending || (crowd && on >= 2))) return reap;
-    return ok(slash) ? slash : null;
+    if (k.gcdRemaining() > 0 && !open) return null;
+    if (k.cast || k.lockUntil > k.now) return null;
+    if (gate) return ok(q) ? q : null;
+    // the finisher the target is missing a mark for (the longest first); four marks make a Full Harvest
+    const have = reapTargetMarks(k), missing = [4, 3, 2, 1].filter(i => !have.includes(REAP.KINDS[i - 1]));
+    const want = missing[0] || 4;   // (swings are instant: it can walk through a string, so a telegraph does not shorten it)
+    if (open && n >= want && ok(w)) return w;
+    return ok(q) ? q : (open && ok(w) ? w : null);
   },
 };
 

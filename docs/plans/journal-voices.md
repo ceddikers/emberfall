@@ -455,26 +455,26 @@ Each sheet: who they are, how they sound, what they notice, their tics, and two 
 
 ---
 
-### thresher — Reaper, Wraith of the Toll (dps)
+### thresher — Reaper, the Long Waltz and the Vanishing Edge (dps)
 
-**Who:** A slim, hooded figure in a long violet-black cloak, a pale mask, and a graceful crescent scythe that moves like a dance. Everyone keeps an appointment; she only has to be there on time.
+**Who:** A young woman in a wide straw sun hat and a white sundress, long fair hair, a white and silver scythe she carries like a dancing partner. Ink-black smoke and blue lightning follow the blade. Everyone keeps an appointment; she only has to be there on time.
 
-**Voice:** Cool, composed, darkly elegant. Quiet amusement, never cruel, never hurried. Short, precise sentences and a dry wit. Vocabulary of appointments and hours: the toll, a debt come due, a name on the list, the far shore, the mist, the dark, the dance. Addresses the boss with courtesy, as someone whose time is coming. (Debts and fine print belong to the Oathbroker; keep "debt" to a passing word.)
+**Voice:** A cheerful reaper (2026-10-24: the user wants her sunny). Bright, warm and unhurried, delighted by a well-kept appointment and kind about a missed one. She hums while she works, takes the dance and the hour as good news, and treats even a terrible boss as a guest who has simply not been seated yet. Short, light sentences with a smile in them, a little teasing, never cruel and never sinister. Vocabulary of appointments and hours: the hour, a name on the list, the far shore, the mist, the dance, a tidy step; plus sun-and-straw warmth (a hat, a hum, a skipped step). Addresses the boss with cheerful courtesy, as someone whose turn is coming. (Debts and fine print belong to the Oathbroker; keep "debt" to a passing word. Do not borrow the Grovekeeper's growing things or the Cleric's blessings: her cheer is about timing and tidiness, not healing.)
 
-**Notices:** Timing in the sense of when a thing comes due: the telegraph of a blow as an hour approaching, a mark that has darkened, a mark that has lapsed. Who is about to be called. Where the mist gathers and where it thins.
+**Notices:** Timing in the sense of when a thing comes due: the telegraph of a blow as an hour approaching, a mark that has darkened, a mark that has lapsed. Who is about to be called. Where the mist gathers and where it thins. A neat step, a good gap, a pleasant rhythm to a fight.
 
 **Tics:**
 - An appointment or the dance now and then (not every line): "the hour is not yet his".
-- Courteous farewells to the boss, as to someone expected: "He has an appointment.", "His name is on the list."
-- Sparing sign-offs: "Not yet.", "In time.", a faint "Hm." Most entries simply stop.
-- Never cheerful, never folksy, no "lovely".
+- Cheerful farewells to the boss, as to a guest who is expected: "He has an appointment, bless him.", "His name is on the list."
+- Sparing sign-offs: "Not yet!", "In time!", a small hum. Most entries simply stop.
+- Warm and a little teasing: "dear", "do mind the step", "off we go". No gushing, no exclamation in every line, no "lovely" more than once in a boss's whole journal.
 
 **Samples:**
-> Up he went, and the embers drew his road to one of the pits, the ring showing which. I stepped off the road and well clear of the pit, and let him go down it alone. His appointment, not mine.
+> Up he went, and the embers drew his road to one of the pits, the ring showing which. I stepped off the road and well clear of the pit, and let him go down it alone. His appointment, not mine, and what a tidy road to it.
 
-> Cut a head and the stump bleeds, and a blue ring opens at the column behind. Someone must stand in it until it closes, or two return in its place. The first cut grows back late, so take the mildest first. Not yet.
+> Cut a head and the stump bleeds, and a blue ring opens at the column behind. Someone must stand in it until it closes, or two return in its place. The first cut grows back late, so take the mildest first, and hum while you do. Not yet!
 
-**Don't:** make her sinister on purpose, or turn every entry into an appointment joke. She is never cruel, never hurried, and never speaks of farm or field.
+**Don't:** make her sinister on purpose, or turn every entry into an appointment joke. She is never cruel, never hurried, never sarcastic about the party, and never speaks of farm or field.
 
 ---
 

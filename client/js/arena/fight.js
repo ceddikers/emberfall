@@ -630,6 +630,7 @@ class FightSim {
       case 'snap': this.snapReel(pid); break;   // a dash snapped the silk reeling this player in
       case 'taunt': this.taunt(pid, typeof ev.tgt === 'string' ? ev.tgt : 'boss'); break;
       case 'horn': { const hp = this.players().find(q => q.id === pid); if (hp) this.boss.hornTo = { id: pid, until: this.t + Math.max(0.5, Math.min(2, Number(ev.dur) || 1.5)) }; break; }   // a Houndmaster's Hunting Horn: the boss's face swings toward the hunter for a beat (updateBoss)
+      case 'reaper': this.reaperEvent(pid, ev); break;   // a Reaper's Bind (holds an add), Thread (gathers adds) and Shade Step (slows them): reaperEvent
       case 'kensei': this.kenEvent(pid, ev); break;   // a Kenseier's deflect, step and Posture (KENSEI_HOST, the end of this file)
       case 'maw': case 'ledger': case 'gloom': if (this.classEvent) this.classEvent(pid, ev); break;   // Gorgemaw, Oathbroker, Gloomsworn (end of this file)
       case 'tie': case 'snip': case 'tighten': case 'tapestry': case 'tug': this.weaveEvent(pid, ev); break;   // Threadweaver (classes-c)
@@ -1165,7 +1166,7 @@ class FightSim {
         a.facing = Math.atan2(near.y - a.y, near.x - a.x);
         if (gd > stop) {
           const goal = this.props.length ? PROPS.steer(a, { x: gx, y: gy }, this.props, a.r * 0.8) : { x: gx, y: gy };
-          const step = Math.min(gd - stop, a.speed * dt), mv = Math.atan2(goal.y - a.y, goal.x - a.x);
+          const step = Math.min(gd - stop, a.speed * dt * this.addSpeedMult(a)), mv = Math.atan2(goal.y - a.y, goal.x - a.x);
           a.x += Math.cos(mv) * step; a.y += Math.sin(mv) * step;
           PROPS.collide(a, this.props, a.r * 0.8);
         }
@@ -1766,6 +1767,29 @@ Object.assign(FightSim.prototype, {
         return;
       }
     }
+  },
+  // a Reaper's marks on adds (the boss is never moved): hold (a Bind: one add stands still), gather (a Thread: adds near a spot are drawn
+  // toward it), field (Shade Step: adds crossing a spot are slowed). Bounded and clamped; nothing here touches the boss.
+  reaperEvent(pid, ev) {
+    const num = (v, lo, hi, d) => (Number.isFinite(+v) ? Math.max(lo, Math.min(hi, +v)) : d);
+    const a = typeof ev.tgt === 'string' ? this.adds.get(ev.tgt) : null;
+    if (ev.op === 'hold') { if (a) a.holdUntil = Math.max(a.holdUntil || 0, this.t + num(ev.dur, 0, 4, 2)); return; }
+    const x = num(ev.x, -4000, 4000, 0), y = num(ev.y, -4000, 4000, 0);
+    if (ev.op === 'field') { this.reaperFields = (this.reaperFields || []).filter(f => f.until > this.t).slice(-6); this.reaperFields.push({ x, y, r: num(ev.r, 20, 140, 90), until: this.t + num(ev.dur, 0, 6, 5) }); return; }
+    if (ev.op !== 'gather') return;
+    const r = num(ev.r, 0, 260, 220), dist = num(ev.dist, 0, 140, 120);
+    for (const c of this.adds.values()) {
+      const dx = x - c.x, dy = y - c.y, d = Math.hypot(dx, dy);
+      if (d > r + c.r || d < 1) continue;
+      const m = Math.min(dist, Math.max(0, d - 20));
+      c.x += dx / d * m; c.y += dy / d * m;
+      PROPS.collide(c, this.props, c.r * 0.8);
+    }
+    this.addsDirty = true;
+  },
+  addSpeedMult(a) {
+    if (a.holdUntil > this.t) return 0;
+    return this.reaperFields && this.reaperFields.some(f => f.until > this.t && Math.hypot(a.x - f.x, a.y - f.y) <= f.r + a.r) ? 0.5 : 1;
   },
   // the hit on p (amt, in small numbers) split evenly with everyone threaded to it: returns p's own share
   threadSplit(p, s, amt, opts) {

@@ -4,7 +4,7 @@
   meet: {
     bastion: "A tower gone under the sea, seven circles cut in the floor, and a wizard who never once sets foot on them. Two of us wore runes joined by a thread, and the next spell told them to close ranks or part. Wet boots, wrong guess. Gave ground.",
     gloomsworn: "A tower sunk to its windows, and a master who stayed at his desk while the water rose. I know a drowned place when I stand in one. Two of us were tied by a bright thread and told to close or part. I guessed wrong, quietly.",
-    thresher: "He keeps it like a salon, this one. Four kinds of weather in his floor and a wizard hovering over them like a chandelier. Two of us were tied with a thread and told to bunch or scatter. I scattered. It was the wrong answer.",
+    thresher: "He keeps it like a salon, this one. Four kinds of weather in his floor and a wizard hovering over them like a chandelier. Two of us were tied with a thread and told to bunch or scatter. I scattered. Wrong answer, but a fine step.",
     bloodreaver: "A floating old man with a staff and a drowned hall! I liked him at once. Then two of us wore runes and a thread, and the right answer was to stand close or far, and nobody told me which. I got burned for guessing. A good burn. I will guess better.",
     runeguard: "Seven circles carved into the floor, and a master who reads them as I read omens. Two of us bore runes and a thread between; the name of the next spell decided close or apart. I had not looked at the name. I will always look at the name now.",
     gorgemaw: "A sunken house with the kitchen gone to the fishes and the host floating over his own table, never sitting. Two guests tied with a thread and told to share a plate or not. I ate the wrong way. Cold soup, hot floor.",
@@ -30,7 +30,7 @@
   win: {
     bastion: "The Archmage is down and the circles have gone dark. We held the floor through four tempers of his, and the last where all of them lit at once. Boots wet to the knee. I would do it again, Sergeant.",
     gloomsworn: "The Archmage is down, and the circles have gone dark under the water. He kept his watch long after the sea came. So did we, and ours ended better. I stood a moment in the quiet of his tower. I have slept in worse.",
-    thresher: "He is down, and the circles went out one after another like candles at the end of a ball. A tidy man, for a wizard. The floor will take back the tower in time. I would have liked one more waltz on it.",
+    thresher: "He is down, and the circles went out one after another like candles at the end of a ball. What a tidy host, for a wizard. The floor will take back the tower in time. I would have liked one more waltz on it.",
     bloodreaver: "The old man is down! Every circle lit at the end and I took a burn from each, red, blue, yellow and violet, and loved every colour. A fine scar. A great tower, a better fight. Thank you, my friend.",
     runeguard: "Azerath is finished. The circles are dark, and every rune I could not read at first I read in time at the last. As foreseen, finally. I copied three of his sigils onto my cuff when no one was looking.",
     gorgemaw: "The host of the sunken house is down, and the last course came all at once, every burner lit. It was too much, and I loved it. The sea may have the kitchen now. I am full of ideas and not at all full.",
@@ -56,7 +56,7 @@
     "Arcane Burst": { hard: false, learned: {
       bastion: "Raw light across the whole room, and no shield for it. Mend first, then stand: the drill. I set my feet, came to it whole, and kept the line tight on the healer.",
       gloomsworn: "The burst took all of us. There was no corner to stand in, and the dark had no hand in it. I came to it whole, and let it go through me like a wave through a drowned door. Wet, mostly.",
-      thresher: "It lands on all of us across the whole floor. No shelter. Best answer is to be full of mending beforehand, a glass poured to the brim, and swing on through it. Light, that stuff.",
+      thresher: "It lands on all of us across the whole floor, and there is no shelter. Best answer is to be full of mending beforehand, a glass poured to the brim, and swing on through it. Light as a feather, really.",
       bloodreaver: "Raw light across the whole room, and nowhere to put my shield! It tickled me and hurt the others, which seems unfair. So we came to it topped up, and stood close to the healer. My friend, you can do better.",
       runeguard: "The Burst reaches every one of us and cannot be stepped from, warded, or read in time to flee. The only answer is to arrive whole. A plain entry in the margin. Some omens only tell you to prepare.",
       gorgemaw: "A course for the whole table, served at once; no one can eat it for another. We sat down to it well fed, swallowed, and asked for mending after. Thin, but filling.",
@@ -81,7 +81,7 @@
     "Arcane Lance": { hard: false, learned: {
       bastion: "The Lance was meant for me. A wide sweep in front of him; I watched his staff level and had the shield up in the last instant. The line stayed out of the arc. Held.",
       gloomsworn: "The Lance was meant for whoever stands at his front, and that was me. I drew the dark about me and took it whole, and the others kept out of the arc. A cold thing, a lance. Not the coldest.",
-      thresher: "A long wide sweep in front of him, aimed at our knight, a blade the width of a door. I kept to his flank and out of the arc. Anyone in front of him is cut down where they stand.",
+      thresher: "A long wide sweep in front of him, aimed at our knight, a blade the width of a door. I kept to his flank and out of the arc, humming. Anyone in front of him is cut down where they stand, so do mind the step.",
       bloodreaver: "The Lance! Right through me, a wide bright sweep in front of him, and it rattled my teeth. A good one. I took it, hit back while the ache was fresh, and the others kept clear. Cheers, old man.",
       runeguard: "His staff levelled and the arc before him was drawn upon the floor. A ward upon whoever stood in it, a breath before, and everyone else outside the sweep. It is the only blow of his that announces its victim by position.",
       gorgemaw: "The Lance is served to me alone, a broad sweep across the front of the table. I opened wide just before it and kept my friends off my plate. Sharp, with a long finish.",
@@ -106,7 +106,7 @@
     "Rune Mark": { hard: false, learned: {
       bastion: "Two of us wore runes and a thread between. The name of the next spell said close ranks or fall apart. I read his list and called it, once I learned to look. Read orders before moving.",
       gloomsworn: "A bright thread tied two of us together, a rune each. The name of the spell that followed said whether to close or part. A thread like that is a leash for the living. I read the list before anyone moved.",
-      thresher: "Two of us got a rune each and a thread between, a leash for two. The next spell on the list says whether to bunch or scatter. Read the list first. Moving before you have read it is dancing in the dark.",
+      thresher: "Two of us got a rune each and a thread between, a leash for two. The next spell on the list says whether to bunch or scatter. Read the list first, dear. Moving before you have read it is dancing in the dark.",
       bloodreaver: "Two of us got runes and a bright thread, linked together! The next spell on his list says close or far, and I stopped guessing and started reading. It cost me a few burns to learn. I would pay them again.",
       runeguard: "Two runes, two elements, a thread between the bearers; the name of the spell that follows tells them close or apart. I read the upcoming list at once, as one ought. A pleasure to find a mage who labels his work.",
       gorgemaw: "Two guests paired with a thread and a little rune each. The next dish on the menu tells them whether to share a plate or sit at opposite ends. I read the menu now.",
@@ -131,7 +131,7 @@
     "Cinder Rune": { hard: false, learned: {
       bastion: "Fire runes. Each bearer carried a ring of flame; the bearers marched to opposite ends, because close together a second fire showed between. The rest of us kept out of both. Dry boots.",
       gloomsworn: "Fire on two of us, a ring round each. They went to opposite ends, and the rest of us kept out of both rings. Stand them close and a second fire blooms between. I know about fires that start in the wrong place.",
-      thresher: "Two rings of fire, one on each marked soul. Place them far apart; they flare between if they are close. The rest of us keep out of both. A pyre for two, and no need to invite the neighbours.",
+      thresher: "Two rings of fire, one on each marked soul. Place them far apart; they flare between if they are close. The rest of us keep out of both. A bonfire for two, and no need to invite the neighbours.",
       bloodreaver: "A ring of fire on each of the pair! The rest of us kept out. The two bearers went far apart, because close together a second flame blooms between them and cooks both. I wanted to be one of them. I was.",
       runeguard: "Fire: a ring about each bearer, and the pair must be apart, for a second flame blooms between them if they stand close. It is shown a moment ahead, as a courtesy. I set the bearers at opposite ends of the room and stood outside both.",
       gorgemaw: "A flambe for two, each guest served in a ring of fire. Seat them at opposite ends of the table and leave both plates alone. Seat them close and a second dish flares up between them. Overdone.",
@@ -156,7 +156,7 @@
     "Rime Rune": { hard: false, learned: {
       bastion: "Frost runes: one blow, in a blue circle halfway between the pair, for all of us to share. The bearers closed up and the line fell in around them. Shoulder to shoulder.",
       gloomsworn: "Frost on a pair of us, and a blue circle halfway between them, one blow to be shared. They closed up, and the rest of us stood in the circle too. Nobody should take the cold alone. I know the cost of that.",
-      thresher: "Frost wants the pair brought in together, two guests walked to one table. A blue circle shows halfway between them; they close up, and the rest of us step in under it to share the cold.",
+      thresher: "Frost wants the pair brought in together, two guests walked to one table. A blue circle shows halfway between them; they close up, and the rest of us step in under it to share the cold. Cosy, really.",
       bloodreaver: "A blue circle between the pair, one great frost for all of us to share! I charged in with the others and let it spread across us. Not enough pain, but plenty of company. Very friendly cold.",
       runeguard: "Frost: the pair bears one shared blow, a blue circle halfway between them, and all of us enter it together, for a blow divided is a blow endured. The sequence is plain. Close up, then all within.",
       gorgemaw: "A cold dish for the whole table, served in a blue ring halfway between the pair. The two closed up, and we all sat down in the ring and took a share. Chilled. Refreshing.",
@@ -181,7 +181,7 @@
     "Storm Rune": { hard: false, learned: {
       bastion: "Lightning runes. A bolt ran from one bearer to the other, burning what lay between. They stood shoulder to shoulder, which made the bolt too short to matter. I kept the rest off the line.",
       gloomsworn: "A bolt runs from one bearer to the other and burns whatever is between. The pair stood shoulder to shoulder so the line was short, and the rest of us kept off it. A short road has little to burn.",
-      thresher: "A bolt runs between the two marked, scorching whatever lies in the line, a fuse set alight. If they stand shoulder to shoulder it is too short to catch anything. The rest of us keep off the line.",
+      thresher: "A bolt runs between the two marked, scorching whatever lies in the line, a fuse set alight. If they stand shoulder to shoulder it is too short to catch anything. The rest of us keep off the line, and keep it pleasant.",
       bloodreaver: "A bolt ran from one of the pair to the other and burned whatever stood between them! They stood shoulder to shoulder, which made the bolt a joke, and the rest of us kept clear. Disappointing, and safe.",
       runeguard: "Lightning: a bolt runs from one bearer to the other and burns anything on the line. Bring the bearers close, and the line is too short to harm; all others keep off it. Not hard, merely something one must remember at the time.",
       gorgemaw: "A spiced skewer run from one guest to the other, burning whatever is threaded on it. The pair sat elbow to elbow, so the skewer was a single mouthful, and nobody else was skewered. Tangy.",
@@ -206,7 +206,7 @@
     "Rift Rune": { hard: false, learned: {
       bastion: "Void runes, violet rings, quiet in the middle. The bearers went to opposite sides, since close together the void opens between them. The line kept out of both rings. Held.",
       gloomsworn: "The void, which I know, marked a pair of us with violet rings. They went to opposite sides, and the rest of us kept out of both. Bring them close and it opens between them. I would not stand in the middle of that.",
-      thresher: "A violet ring round each of the pair, hollow in the middle like a bell without a clapper. Keep them far apart and the rest of us outside both rings; close together, the void opens between them. Empty ground, that.",
+      thresher: "A violet ring round each of the pair, hollow in the middle like a bell without a clapper. Keep them far apart and the rest of us outside both rings; close together, the void opens between them. Quite an empty bell.",
       bloodreaver: "A violet ring round each of the pair, and a hole in the middle that eats whatever stands in it! The two went to opposite sides, and the rest of us stayed out of both. I'd have liked to jump in. Rude of me.",
       runeguard: "The void: a violet ring about each bearer with a quiet middle. The bearers part to opposite sides; close together, the void opens between them. I recorded the shape, since voids are seldom so kind as to tell one their size.",
       gorgemaw: "A violet ring with a hollow middle round each of the pair, like a crown of pastry with nothing inside. Keep out of both, and seat the pair far apart, or the void opens between them. Strange. I liked it.",
@@ -231,7 +231,7 @@
     "Pyre Rings": { hard: false, learned: {
       bastion: "Three rings in the floor. Two burned in turn; the third had no red on it and never caught. I held the line on that one, or on the first once it was ash. Plain ground, best ground.",
       gloomsworn: "Three rings in the floor, two burning in turn, the third left unmarked. I stood on the one with no red, or on the one already burned out. Fire goes out. The dead take comfort in that.",
-      thresher: "The floor is laid in three rings, and he burns two of them one after the other. The third is never painted. I stood there, or on the first once it had burned off. A quiet corner of the ballroom.",
+      thresher: "The floor is laid in three rings, and he burns two of them one after the other. The third is never painted. I stood there, or on the first once it had burned off. A quiet corner of the ballroom, and a pleasant one.",
       bloodreaver: "Three rings in the floor, and two of them burned one after the other! The third had no red on it. I stood there, or on the one burned out. Safe, boring, and warm. I would have liked a lick of it.",
       runeguard: "Three rings: the middle, the next, the outermost. Two burn, one after the other; the third is never painted, and so is safe, as is the first once spent. A very honest omission, for a sorcerer.",
       gorgemaw: "Three rings on the griddle, and the cook fires two of them in turn. The one with no red is the cool plate. I sat there, or on the first once it had gone cold. Seared.",
@@ -256,7 +256,7 @@
     "Ice Lances": { hard: false, learned: {
       bastion: "Lines of ice reached out through some of us and followed. When mine set, I stepped off it; nobody stood in another man's line. Orderly, for once.",
       gloomsworn: "Lines of ice ran out from him through some of us, and followed. When mine set, I stepped off it, and nobody stood in another's. A long straight line is a plain thing. I was grateful for plain.",
-      thresher: "Long icicles reach out from him through some of us, following until they set, like lines drawn across a page. When yours sets, step aside. And stay off your neighbour's line.",
+      thresher: "Long icicles reach out from him through some of us, following until they set, like lines drawn across a page. When yours sets, step aside, dear. And stay off your neighbour's line.",
       bloodreaver: "Lines of ice drove out through some of us, following us round the room! When mine set I stepped off it, and nobody stood in another's. A near miss, tidy. I could do with a worse one.",
       runeguard: "Lines of ice ran out from him through some of us, following until the last instant. When a line sets, its owner steps off it, and no one stands in another's. Mark each line's owner; it is the only way to read them.",
       gorgemaw: "Long icicles served out from my host through some of the guests, following them round the room. When mine set, I stepped aside, and kept out of the others' portions. Crisp.",
@@ -281,7 +281,7 @@
     "Leaping Bolt": { hard: false, learned: {
       bastion: "Lightning rings jumped from one man to the nearest, a heartbeat apart. We spread wide so it had no near man to jump to, and each walked out of his own ring.",
       gloomsworn: "Lightning on one of us, then on the nearest to him, then the next. A heartbeat apart each time. We spread wide so it had nobody near to jump to, and each walked out of their own ring. Loneliness has its uses.",
-      thresher: "A ring of lightning on one, then it hops to whoever is nearest, and hops again, a spark through dry paper. Spread wide so it has nobody to hop to, and walk out of your own ring when it comes.",
+      thresher: "A ring of lightning on one, then it hops to whoever is nearest, and hops again, a spark through dry paper. Spread wide so it has nobody to hop to, and walk out of your own ring when it comes. Off you go.",
       bloodreaver: "A ring of lightning on one of us, then on the next nearest, and the next! We spread wide so it had nowhere to jump, and each walked out of the ring when it came. I wanted it to jump to me. It didn't. Pity.",
       runeguard: "A ring of lightning on one of us, then on whoever stands nearest, then the nearest to him; each a heartbeat apart. Keep wide apart, so the jump has no one near; and walk out of your own ring. The order matters.",
       gorgemaw: "A spark passed round the table, from each guest to the nearest. We sat far apart so it had nobody to pass to, and each of us left our seat as it settled. Fizzy.",
@@ -306,7 +306,7 @@
     "Void Rifts": { hard: false, learned: {
       bastion: "Rifts opened under each of us where we stood, then again where we had walked. I moved off my ground and then moved again. Standing firm is for walls. This was for boots.",
       gloomsworn: "A rift opened under each of us, then again where we had gone. I stepped off, then stepped again. A man who has been put in the ground once is in no hurry to be put there twice.",
-      thresher: "Holes open under each of us, then again wherever we have moved to. Leave the first, then leave the second. The floor is no use if it has gone from under you. I decline to stand there.",
+      thresher: "Holes open under each of us, then again wherever we have moved to. Leave the first, then leave the second. The floor is no use if it has gone from under you, so I politely declined to stand there.",
       bloodreaver: "Rifts under every one of us, then again where we'd walked to! I moved off my spot, then moved again, feeling the edge go by like a sword. Not a scratch. A shame. Close, and close is fun.",
       runeguard: "Rifts open beneath each of us as we stand, and again where we moved to. Leave the first place; leave the second. It is the only floor-reading in the tower that rewards inattention to one's own feet.",
       gorgemaw: "The floor opened under my chair, then again where I had moved it. Leave the first seat, then leave the second. Hollow, like a souffle gone wrong.",
@@ -331,7 +331,7 @@
     "The Binding": { hard: false, learned: {
       bastion: "Four sigils woke and the elementals rose from the middle, slow, each following me. I marched each to the sigil of its own colour and held it there. The line kept on the Archmage and clear of the falling light.",
       gloomsworn: "Four sigils woke, and elementals rose from the middle to follow me, slow as the tide. I led each to the sigil of its own colour and held it there. The rest kept their blades in him. A strange watch, with company.",
-      thresher: "Four sigils, four spirits, and each follows our knight like a shadow. Walk it into the sigil of its own colour and hold it there a moment. One left loose blasts the room. The rest of us keep reaping him.",
+      thresher: "Four sigils, four spirits, and each follows our knight like a puppy. Walk it into the sigil of its own colour and hold it there a moment. One left loose blasts the room. The rest of us keep reaping him.",
       bloodreaver: "Elementals rose and followed me, and I led each into the sigil of its own colour and held it! Slow work, and I wanted to hit them. The others struck the old man and kept clear of the falling light. Hard on my temper.",
       runeguard: "Four sigils woke and elementals rose from the middle, each following the shield. I walked each into the sigil of its own colour and held it there. A great rite, correct in all its parts. One left unbound blasts the room.",
       gorgemaw: "Four sigils, four plates, each elemental walked to the plate of its own colour by our shield and held there a moment. Unbound, one spoils the whole meal. I kept eating at my host, off the falling light.",
@@ -356,7 +356,7 @@
     "Call of the Circle": { hard: false, learned: {
       bastion: "He called one elemental at a time, its colour naming its sigil. I walked it there; it followed; the line made room. Slow march, orderly.",
       gloomsworn: "One elemental at a time, and its colour named the sigil. I led it there, slowly, and the others made room for the procession. I have escorted worse company.",
-      thresher: "One spirit at a time, and the colour says which sigil it belongs in. Our knight walks it there, and the rest of us make room. A guest escorted to the right door through a crowded hall.",
+      thresher: "One spirit at a time, and the colour says which sigil it belongs in. Our knight walks it there, and the rest of us make room. A guest escorted to the right door through a crowded hall, and gracefully done.",
       bloodreaver: "One elemental at a time, and its colour says where it goes! The shield walks it there, and I gave him room, which is hard for me. I wanted to hit it. I hit the old man instead.",
       runeguard: "He calls them one at a time; its colour names its sigil. The shield walks it there, and the rest give room. A tidy, almost courtly arrangement, and as foreseen.",
       gorgemaw: "My host sent out one dish at a time, each coloured for its own plate. Our shield carried it there, and the rest of us made way for the waiter. Hot, then cold.",
@@ -381,7 +381,7 @@
     "Convergence": { hard: false, learned: {
       bastion: "Every sigil lit at once, each its own colour, and worse where two met. The clear floor was out by the wall between the sigils. I took the line there, clear of the overlaps. Held.",
       gloomsworn: "Every sigil lit together, each in its colour, and worse where two overlapped. The clear ground was by the wall, between the sigils. I took the watch out there. It was quiet, as the edges of things are.",
-      thresher: "All four sigils flare at once, and where two circles overlap the ground goes bad twice over. The clear ground lies out by the wall, between them. A rush for the exits. Everybody to the wall.",
+      thresher: "All four sigils flare at once, and where two circles overlap the ground goes bad twice over. The clear ground lies out by the wall, between them. Everybody to the wall, quick but never hurried.",
       bloodreaver: "All four sigils lit at once, and where two circles overlapped it hurt twice! I wanted a taste, but I took the others out to the clear ground by the wall between the sigils. It's no fun being sensible.",
       runeguard: "All four sigils lit together, each circle its own element, and where two overlapped a reaction filled the lens between. The floor out by the wall, between the sigils, was clear. I wrote the geometry in the margin and drew a small star beside it.",
       gorgemaw: "Every burner lit at once, and where two meet, the flavours fight. I took my plate to the edge of the table, by the wall between the sigils, clear of the clashes. Too much at once.",
@@ -406,7 +406,7 @@
     "Counterspell": { hard: true, learned: {
       bastion: "He cast it again, flung to the far side of the room, the copy drawn on the floor at once. Ground that had been clear could be hit. I looked across the room, not at my boots, and moved. Nobody stays on ground he trusts.",
       gloomsworn: "He threw the last spell again, to the far side of the room, drawn on the floor at once. Ground that was safe was not. I looked across the room, not at my feet, and moved. The dead learn to look behind them.",
-      thresher: "He throws the last pattern again, clean across the room, the copy showing at once. Ground that was clear is cut up like a shattered mirror. Look across, not down, and go.",
+      thresher: "He throws the last pattern again, clean across the room, the copy showing at once. Ground that was clear is cut up like a shattered mirror. Look across, not down, and off you go.",
       bloodreaver: "He threw the last spell again to the far side of the room, and it showed on the floor at once! Ground that was clear was suddenly hot. I looked across the room and moved. Twice the fun for half the reading.",
       runeguard: "He cast the last spell a second time, flung through the middle of the room to the far side, and the copy is drawn at once on the floor. Look across the room, not where you stand. I recorded the second casting, and the first, and the trap between them.",
       gorgemaw: "My host served the last course again, flipped through the middle of the table to the far side. The copy shows on the cloth at once. I moved my plate. Reheated.",
@@ -431,7 +431,7 @@
     "Rune Swap": { hard: true, learned: {
       bastion: "The runes jumped to two other men while we watched. The coming spell had not changed, so the new bearers closed ranks or kept apart as it asked. I stopped trusting names, and watched the runes.",
       gloomsworn: "The runes lifted off the first pair and landed on two others. The coming spell had not changed, so the new bearers did as it asked. The watch had to learn to read the second heads.",
-      thresher: "The runes lift off the first pair and land on two others, a pair of masks passed along. The spell to come is the same, so the new pair closes or parts as before. Follow the rune, not the face.",
+      thresher: "The runes lift off the first pair and land on two others, a pair of masks passed along at a party. The spell to come is the same, so the new pair closes or parts as before. Follow the rune, not the face.",
       bloodreaver: "The runes jumped off me! To two other heads! The coming spell hadn't changed, so whoever carried them now closed up or kept apart as it asked. I felt cheated of my part in it. Fair play.",
       runeguard: "After the Mark, the runes leapt to two other heroes, and the spell to come was unchanged. The new bearers close or part according to its element. I now read the head, not the tag. Well. I always read the tag too.",
       gorgemaw: "My host moved the place cards: the runes jumped to two other guests. The next dish had not changed, so the new pair sat close or apart as it required. A rearrangement, not a new course.",
@@ -456,7 +456,7 @@
     "Arcane Mark": { hard: true, learned: {
       bastion: "A blue ring rose where one of us had stood, drawn at once. The whole line walked into it, the marked man included, and we shared the blow.",
       gloomsworn: "A blue ring rose where one of us had stood, shown at once. We all walked into it, its owner too, and shared the blow. A weight carried by many is a lighter weight. I had never tried it.",
-      thresher: "A big blue ring springs up where one of us was standing, like a bloom of pale fire. All of us step into it, its owner too, and share out the blow. Wrong to leave a companion holding the whole of it.",
+      thresher: "A big blue ring springs up where one of us was standing, like a lamp of pale fire. All of us step into it, its owner too, and share out the blow. Never leave a companion holding the whole of it, dear.",
       bloodreaver: "A blue ring rose where one of us had stood, and we all charged in and shared the blow! The owner too. It was a gentle one, split so many ways. I wanted a bigger piece. Selfish, I know.",
       runeguard: "A blue ring rose on the spot where one of us had been, drawn at once. We all entered it, its owner among us, and divided the blow. His one honest piece of arithmetic. The sum divides.",
       gorgemaw: "A blue plate set where one guest had been sitting. We all came to it, the guest too, and shared it out. Cool, and filling.",

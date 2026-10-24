@@ -821,20 +821,22 @@ GAUGE_TIPS.gloomsworn = {
 
 // ======================================================================= Reaper (id thresher; damage, class 19)
 // Drawn icons (art.icons === false in data.js) and the gauge's tooltip; the painted set replaces them later.
-Object.assign(BUFF_NAMES, { wisp: 'Spirit Wisp', wispgift: 'Wisp\'s Gift', gate: 'Reaper\'s Gate', gleaning: 'Phantom Cut' });
-Object.assign(BUFF_ICON, { wisp: 'wisp', wispgift: 'wisp', gate: 'reapersgate', gleaning: 'slash' });
+Object.assign(BUFF_NAMES, { frenzy: 'Insane Reaper', deathmark: 'Death Mark', gatebreaker: 'Gatebreaker', blinked: 'Blinked', stepthrough: 'Step Through', afterimage: 'Afterimage' });
+Object.assign(BUFF_ICON, { frenzy: 'wisp', deathmark: 'slash', gatebreaker: 'reapersgate', blinked: 'blink', stepthrough: 'blink', afterimage: 'blink' });
 Object.assign(BUFF_TIPS, {
-  wisp: () => 'A wisp harries the boss, striking every 2.5s and binding it if nothing else has.',
-  wispgift: () => 'The wisp is spent: you deal 10% more damage.',
-  gate: () => 'You are out of the world: nothing can touch you. Every Slash is a Gate Strike that lays the next affliction at full Weight; the fifth pops all four.',
-  gleaning: () => 'Your next Slash or Cleave cuts a second time for 35%.',
+  frenzy: () => 'Insane Reaper: the party acts 10% faster (it stacks with other party haste), and your own swings come faster still.',
+  deathmark: () => 'Your next hits strike 30% harder (each swing or finisher uses one).',
+  gatebreaker: () => 'Gatebreaker: your finishers, Snaps and the release strike 25% harder until the Gate closes.',
+  blinked: () => 'Phantom: your next finisher teleports you to the far side of the target.',
+  stepthrough: () => 'Your next string starts at swing 2.',
+  afterimage: () => 'An afterimage waits: your next finisher is repeated at 50%.',
 });
 GAUGE_TIPS.thresher = {
-  desc: 'Four afflictions lie on the boss: Mark (a bleed, Slash), Drain (mends you, Cleave), Bind (pulses, Gloam Blink and the Wisp) and Thread (Hook). Each slot is its Weight: laying one again adds a pip and starts its time again (the line under it). Every Weight ticks and pays when popped. Reap pops them all; Sever only the one with the chevron, the one you laid last. The line under the slots is the Wisp\'s time.',
+  desc: 'The crescent fills with every mark a Snap pops (more for a Full Harvest). When it is full the next Snap is a Harvest Moon and pops every mark twice. The four runes under it are the marks on your target: Drain, Bind, Death Mark and Thread. The pips are the swings of your string.',
   state: k => {
-    const n = thCount(k), full = thFull(k);
-    if (k.has('gate')) return `Reaper's Gate: strike ${Math.min(5, (k.g.gate | 0) + 1)} of 5`;
-    return n ? `${n} up · Weight ${thTotal(k)}${full ? ' · ' + full + ' full' : ''}` : 'no afflictions up';
+    const n = reapN(k), m = reapTargetMarks(k).length;
+    if (k.has('gatebreaker')) return 'Gatebreaker';
+    return `${n ? 'swing ' + n + ' · ' : ''}${m} mark${m === 1 ? '' : 's'} on target${(k.g.moon || 0) >= 100 ? ' · Harvest Moon ready' : ''}`;
   },
 };
 (() => {

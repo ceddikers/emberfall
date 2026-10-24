@@ -56,22 +56,42 @@ const SoundHooks = (() => {
       play(n, mine ? { vol: 0.9, key: 'gloom-hollow', minGap: 0.3 } : { vol: 0.4, remote: true, at, key: 'gloom-hollow:' + (msg.id || ''), minGap: 0.5 });
     });
   }
-  // a Reaper's moments (class id thresher; ability-vfx.js KIT_VFX handlers call this): a pop (a rich ping at full Weight, a thinner one lighter,
-  // the Bind's fetter a dull thud; the pings climb for each one in a Reap), a Gate strike (a note that rises with each of the five) and its bloom
-  let popAt = -9, popN = 0;
+  // a Reaper's moments (class id thresher; ability-vfx.js KIT_VFX handlers call this): a string's swing (a thin blue edge that climbs for each of the four), the four finishers, the quake ring,
+  // a rune laid (a glassy chime, a different note for each kind and deeper when empowered), a mark popped by the Snap (a different pop for each kind, a doubled echo on a Harvest Moon),
+  // a Full Harvest, a Harvest Moon, the Void Star opening and collapsing, a string timing out, Dusk Veil, Insane Reaper, the Blink and the slashes that come with it, Danse Macabre and the Gate
+  // (a strike climbing for each empowered mark, Gatebreaker, the fifth swing's release, the close). The casts themselves sound from the ability (sfx-map.js). Yours full, anyone else's soft and placed
   function thresher(ev, d, mine, at, who) {
     if (!has()) return;
     safe(() => {
-      const rem = (key, vol) => ({ vol: vol * 0.45, remote: true, at, key: key + ':' + (who || ''), minGap: 0.1 });
-      if (ev === 'pop') {
-        const now = (typeof performance !== 'undefined' ? performance.now() : Date.now()) / 1000;
-        popN = now - popAt < 0.9 ? popN + 1 : 0; popAt = now;
-        const w = (d && d.w) || 1, o = mine ? { key: 'th-pop', minGap: 0.05, rate: 1 + Math.min(popN, 4) * 0.09 } : rem('th-pop', 0.6);
-        if (d && d.id === 'bind') play('thresher-rot', Object.assign({ vol: 0.6 }, o)); else if (d.full) play('gold-pop', Object.assign({ vol: 0.7 }, o)); else play('thresher-pop', Object.assign({ vol: 0.5 + 0.1 * w }, o));
-        return;
+      const o = (key, vol, extra) => Object.assign(mine ? { vol, key, minGap: 0.05 } : { vol: vol * 0.45, remote: true, at, key: key + ':' + (who || ''), minGap: 0.12 }, extra);
+      const n = Math.max(0, Math.min(4, (d && d.n) | 0)), id = d && d.id != null ? ':' + d.id : '';
+      const kd = d && /^(drain|bind|death|thread|phantom)$/.test(d.kind) ? d.kind : 'drain', emp = !!(d && d.emp);
+      if (ev === 'swing') play('reaper-swing', o('rp-swing', 0.45, { rate: 1 + n * 0.12 }));
+      else if (ev === 'finish') play('reaper-finish' + Math.max(1, Math.min(4, n || 1)), o('rp-finish', 0.8, { minGap: 0.2 }));
+      else if (ev === 'quake') play('reaper-quake', o('rp-quake', 0.7, { minGap: 0.3 }));
+      else if (ev === 'rune') play(emp ? 'reaper-rune-emp' : 'reaper-rune', o('rp-rune-' + kd + id, emp ? 0.5 : 0.4, { rate: { drain: 1, bind: 0.89, death: 0.75, thread: 1.33, phantom: 1.19 }[kd] * (emp ? 0.84 : 1) }));
+      else if (ev === 'snap-pop') {
+        const nm = 'reaper-pop-' + (kd === 'phantom' ? 'thread' : kd), op = o('rp-pop-' + kd + id, emp ? 0.8 : 0.65, { rate: emp ? 0.88 : 1 });
+        play(nm, op);
+        if (d && d.twice) setTimeout(() => safe(() => play(nm, Object.assign({}, op, { vol: op.vol * 0.6, rate: (op.rate || 1) * 0.95, key: op.key + 'b' }))), 130);
       }
-      if (ev === 'gate-strike') { const n = (d && d.n) | 0; play('thresher-gate-tone', mine ? { vol: 0.7, rate: 1 + n * 0.13, key: 'th-gate', minGap: 0.1 } : Object.assign(rem('th-gate', 0.7), { rate: 1 + n * 0.13 })); return; }
-      if (ev === 'gate-release') play('thresher-gate-bloom', mine ? { vol: 0.9, key: 'th-gate', minGap: 0.1 } : rem('th-gate', 0.9));
+      else if (ev === 'full-harvest') play('reaper-harvest', o('rp-harvest' + id, 0.75, { minGap: 0.1 }));
+      else if (ev === 'harvest-moon') play('reaper-moon', o('rp-moon', 0.7, { minGap: 0.3 }));
+      else if (ev === 'star-open') play('reaper-star-open', o('rp-star', 0.7, { minGap: 0.3 }));
+      else if (ev === 'star-collapse') play('reaper-star-collapse', o('rp-collapse', 0.85, { minGap: 0.3 }));
+      else if (ev === 'string-end') { if (d && d.ok === false) play('reaper-slack', o('rp-slack', 0.5, { minGap: 0.3 })); }
+      else if (ev === 'veil') play('reaper-veil', o('rp-veil', 0.6, { minGap: 0.3 }));
+      else if (ev === 'frenzy') play('reaper-frenzy', o('rp-frenzy', 0.55, { minGap: 0.3 }));
+      else if (ev === 'blink') play('reaper-blink', o('rp-blink', 0.5, { minGap: 0.1 }));
+      else if (ev === 'blink-slash') play('reaper-slash', o('rp-slash', 0.6, { minGap: 0.1 }));
+      else if (ev === 'phantom-slash') play('reaper-slash', o('rp-pslash', 0.45, { rate: 0.82, minGap: 0.1 }));
+      else if (ev === 'afterimage-hit') play('reaper-slash', o('rp-ahit', 0.4, { rate: 1.3, minGap: 0.1 }));
+      else if (ev === 'danse') play('reaper-danse', o('rp-danse' + id, 0.5, { minGap: 0.1 }));
+      else if (ev === 'gate-open') play('reaper-gate-open', o('rp-gate-open', 0.5, { minGap: 0.3 }));
+      else if (ev === 'gate-strike') play('reaper-gate-tone', o('rp-gate', 0.7, { rate: 1 + n * 0.13, minGap: 0.1 }));
+      else if (ev === 'gatebreaker') play('reaper-gatebreaker', o('rp-gb', 0.6, { minGap: 0.3 }));
+      else if (ev === 'gate-release') play('reaper-gate-bloom', o('rp-gate-rel', 0.9, { minGap: 0.2 }));
+      else if (ev === 'gate-close') play('reaper-gate-close', o('rp-gate-close', 0.5, { minGap: 0.3 }));
     });
   }
   // a Tidecaller's moments (class id tidecaller; ability-vfx.js KIT_VFX handlers call this): the crest (a pearl note and a wash of foam), slack water, a Riptide Mark

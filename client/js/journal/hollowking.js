@@ -4,7 +4,7 @@
   meet: {
     bastion: "A king who follows whoever holds him, plain enough, but his whole hall answers for him: bells, knights, coffins. More than one man's footing can cover. I told the line we had faced worse. That was a lie, and good for morale. Gave ground.",
     gloomsworn: "He is a king who is followed rather than fought: bells, knights and coffins, all at his word. I walked into the Barrow and nothing in it was surprised to see me. It is a strange thing, to be expected by the dead.",
-    thresher: "Barrows I know: cold earth, and what goes in does not always stay down. All he did came back off the walls a beat later, like an echo in a cellar. The old King inclined his crown to me. I think it was courtesy.",
+    thresher: "A barrow, how nice and quiet. Cold earth, and what goes in does not always stay down. All he did came back off the walls a beat later, like an echo in a cellar. The old King inclined his crown to me. Very correct of him.",
     bloodreaver: "The old bones hit like there's still meat on them! A greatsword that leaves the wound open and weeping, and I haven't bled like that since the north. I like him already. Don't tell the others. They'll want a turn.",
     runeguard: "A court has procedure, and the Barrow King keeps one: he calls, and a beat later the hall answers, and every sign he gives returns to be read again. I carried my best folio into the tomb and read the walls like a text. Not foreseen; now it is.",
     gorgemaw: "A cold table, no fire, no salt, every dish served twice, once by the King and again by his guests. A dead man's kitchen. After Volkar's austerity this is a famine. I ate nothing and learned a great deal. I will be back for every course.",
@@ -30,7 +30,7 @@
   win: {
     bastion: "The King went down and stayed down. At the last lantern I counted heads, every one on their feet. Something in my footing is different tonight, steadier, as though the floor had agreed to it. I wish the sergeant had seen it. Held.",
     gloomsworn: "The King is down and stays down. We carried the dark through to the last lantern. Something in me is quieter tonight, as if an old entry had been struck from a ledger. I stood a while in the doorway. The watch is not over. It is only different.",
-    thresher: "I laid him back down myself and set the stone gently. Something in me turned over down there too, like a cold thing that has waited out a long winter. Not yet. A barrow never rests, you know.",
+    thresher: "I laid him back down myself and set the stone gently. Rest well, old King. Something in me turned over down there too, a cold thing stirring after a long winter. Not yet! A barrow never quite rests, but tonight it will.",
     bloodreaver: "The old bones fell, and every wound he gave me is still warm. Best fight of my life. Something woke in me down there and has not gone back to sleep. It's hungry. Splendid. Now there are two of us.",
     runeguard: "The Barrow King is judged at last. I read every sign in his hall, and tonight I find new characters in myself that I did not inscribe. As foreseen? Not quite. I am delighted to be wrong.",
     gorgemaw: "The old cook has served his last course and left the table for good. I ate the whole night through, and still a new hunger woke in me, one I cannot name. It does not want bread. It does not want meat. I am interested.",
@@ -56,7 +56,7 @@
     'Barrow Knell': { hard: false, learned: {
       bastion: "The bell tolled and reached every one of us. Nothing to block, nothing to stand behind, so I stood near the healer and let the line close round me. My shield was no use. I held it up anyway, for the look of the thing.",
       gloomsworn: "The bell tolled and it reached every one of us. There was nothing to stand behind, so I kept us bunched by our healer and we took it upright. A bell is only a slow knock on a familiar door.",
-      thresher: "The bell comes due for every one of us at once, and no one is spared. I made sure I was whole before it tolled and kept at my work right through it. Tolling is only a slow way of saying farewell.",
+      thresher: "The bell tolls for every one of us at once, and no one is spared. I made sure I was whole before it rang and kept at my work right through it, humming. A toll is only a slow sort of farewell, and a gentle one if you are ready.",
       bloodreaver: "The bell rang right through my ribs. Barely a scratch, shameful, but the others feel it, so I stayed by the healers and let them top the rest up before it tolled. Somebody has to be considerate.",
       runeguard: "Folio the first: he lifts his head, and the bells draw breath. Nobody escapes the toll, so each of us must be whole before it sounds. I waited for the first note with my pen raised. It arrived on time. I felt vindicated and slightly ill.",
       gorgemaw: "The bell is a course served to the whole table at once, and I cannot eat it for anyone. So we sat close, came to it well fed, and swallowed it together. Thin broth, and cold, but every bowl was full. I counted.",
@@ -81,7 +81,7 @@
     'Sceptre Sweep': { hard: false, learned: {
       bastion: "He sweeps the sceptre across all the ground before him, and he faces me. His feet set as he winds it, and a man with set feet cannot turn. I stepped round to his flank, which is not my way; a shield is meant to face. The line was already behind him.",
       gloomsworn: "The sceptre cuts a wide arc before him, always toward me. I watched his feet stop; once they stop he cannot turn. I slipped past his shoulder, and the others had already taken the space behind him. Let him sweep an empty room.",
-      thresher: "His feet set, and the sceptre sweeps across the whole front of him like a scythe. I went round to his back before it came in; once he has begun he cannot turn. A fine arc, I will grant him. I know a scythe when I see one.",
+      thresher: "His feet set, and the sceptre sweeps across the whole front of him like a scythe. I slipped round to his back before it came in; once he has begun he cannot turn. A fine arc, I must say. I know a scythe when I see one, and that one is well kept.",
       bloodreaver: "The sceptre swept the whole front of the room, and I was in front, of course. He can't turn once he winds it, so I stepped round his side and let it whistle past. Not worth the scar. A dull crack, that. Disappointing.",
       runeguard: "Marginal note: sceptre drawn back, feet set; once begun he will not turn. So the ground before him is left entirely, for his side or his back, and returned to once it has passed. I felt very clever. The sceptre had not read the note.",
       gorgemaw: "The sweep is laid across the whole front of the table, and the King cannot turn the platter once he lifts it. The others dine at his back; some nights I bite into it myself. Generous, and bland, like a state banquet.",
@@ -106,7 +106,7 @@
     'Royal Gaze': { hard: false, learned: {
       bastion: "I was trained to face the enemy. He punishes it. When his eyes lit I turned my back on him in the last instant and turned again after. Every drill I ever learned screamed against it. I did it, and so did the line.",
       gloomsworn: "His eyes lit, and I did what a knight is taught never to do: showed him my back for a breath, then turned again. Looking at him is the thing that hurts. I have been hurt by looking at worse, and called it grief.",
-      thresher: "When his eyes kindle I turn my back on him and wait the beat out. Meet that look and you stand rooted until it lets you go. Then round again for the cut.",
+      thresher: "When his eyes kindle I turn my back on him and wait the beat out, and so should you, dear. Meet that look and you stand rooted until it lets you go. Then round again for a tidy cut.",
       bloodreaver: "Looked the King in the eye once. It froze me where I stood and hurt more than it should, and the second time hurt worse. Now I turn my back when his eyes kindle. Shameful, but sensible. Never repeat that.",
       runeguard: "His eyes kindle beneath the crown. Look elsewhere when it lands, even mid-step; whoever meets his gaze is held fast and marked, and a second meeting is crueller. I wrote this in the margin twice, and underlined it for a successor with poor eyesight.",
       gorgemaw: "His stare is the one dish I will not touch. Whoever meets his eyes is pinned to their chair, and served worse the second time. So I turned my back on him, rudely, like a man refusing a bad oyster. Sent it back.",
@@ -131,7 +131,7 @@
     'Royal Audience': { hard: true, learned: {
       bastion: "His crown blazed, and this time he wanted to be faced. I always face him; for once that was the whole duty. The line turned to him with me, square, chins up, nobody caught looking away. It felt like a parade. I enjoyed it more than I will say.",
       gloomsworn: "This time the crown blazed, and he wished to be seen. For once, facing the enemy was the entire duty. We all stood turned to the throne, and no one was caught looking away. A courtesy I had nearly forgotten how to pay.",
-      thresher: "Different light: the crown blazes, not the eyes, and this time I face him square. Turn your back on that one and it roots you all the same. Courteous of him, wanting to be looked at.",
+      thresher: "A different light: the crown blazes, not the eyes, and this time I face him square. Turn your back on that one and it roots you all the same. Rather sweet, really, wanting to be looked at.",
       bloodreaver: "When the crown blazes, look the King right in the face. Easy! The ones who showed him their backs were frozen and hurt. I grinned at him the whole time. He didn't grin back. No sense of humour, the dead.",
       runeguard: "The crown blazes, not the eyes, and the answer is the Gaze reversed: face him squarely as it lands. A careless reader confuses the two signs; I nearly did. Note to successor: do not confuse them. I mean it.",
       gorgemaw: "The King's crown blazed, and he demanded every guest face the head of the table. Turn your back on this host and you are pinned to your chair. I faced him with relish. The one meal where eye contact is the main course.",
@@ -156,7 +156,7 @@
     'Grave Cleave': { hard: false, learned: {
       bastion: "The greatsword came down on me alone, and it leaves the wound open after. Shield up in the last instant, the line kept clear of the ground in front of him, and I bled quietly. Complaining about a wound is for the infirmary. Held.",
       gloomsworn: "The great sword fell on me alone, and the cut it leaves does not close. I pulled the dark in at the last breath and bled where I stood. The others kept out of the space in front of him. I have worn open wounds before. They do not improve.",
-      thresher: "The greatsword comes due for our knight alone, so I keep out of the ground before him and work from his side. The wound goes on weeping after. Not mine to carry, that one.",
+      thresher: "The greatsword comes due for our knight alone, so I keep out of the ground before him and work from his side. The wound goes on weeping after. Not mine to carry, and our knight is brave about it.",
       bloodreaver: "The greatsword! A deep one, and it keeps bleeding long after. Lovely. I braced, let it land, then drank it back while it was still running. Hold still, old bones, and let me say thank you.",
       runeguard: "The greatsword lifts over me alone. A ward a breath before; the others well clear of the ground before him; our healers ready for the bleeding that follows, since the wound stays open. Even a sword has a footnote.",
       gorgemaw: "The greatsword is served to me alone, a heavy cut with a sauce that keeps running long after. I opened wide just before it, kept the others off my plate, and chewed. Rare, and good. Deeply unhygienic.",
@@ -181,7 +181,7 @@
     'Barrow Stomp': { hard: false, learned: {
       bastion: "He stamped and the ground round his feet broke. I gave ground, out past the edge with the line, and came back to him after. A knight who retreats on purpose is not a retreating knight. That is what I told myself.",
       gloomsworn: "His stamp broke the floor about his feet. I gave it up, stepped out beyond the edge with the rest, and returned once it was still. The ground opens on its own schedule. I have no quarrel with it.",
-      thresher: "A ring of earth shows at his feet before his foot comes down. I stepped back past its edge, let the ground heave, and walked straight back in. Broken ground after, but easily crossed.",
+      thresher: "A ring of earth shows at his feet before his foot comes down. I stepped back past its edge, let the ground heave, and walked straight back in. Broken ground after, but easily crossed. A neat little step.",
       bloodreaver: "He stamps, and the ground round him goes up. Tempting! But it's a dull hurt with nothing to it, so I stepped out with the others and came straight back to his face.",
       runeguard: "His foot raised, a ring of earth outlined about him: everyone, myself included, stands beyond its edge before it falls, then returns. The sign is generous with its warning. I appreciate that in a king.",
       gorgemaw: "A round platter of broken ground, served about the King's feet. I pushed back from the table with the others and came back after; some nights I take a bite. Crumbly, and gritty with centuries.",
@@ -206,7 +206,7 @@
     'Royal Doom': { hard: false, learned: {
       bastion: "He sentenced one of ours, never me. Lanterns appeared on the floor, and the doomed cannot lift one. I picked up the nearest and carried it to her side, boots loud on the flags. The light cured it. A good order is short and obeyed.",
       gloomsworn: "He named one of ours for doom. Lanterns burned about the hall, and the condemned cannot raise one. I lifted the nearest and carried it to her, and the light lifted the sentence. I have carried heavier to the dying.",
-      thresher: "He laid his sentence on one of ours, and they cannot lift a lantern while it sits on them. So I fetched the nearest light over before it came due. Not their hour yet, I told the King. He did not laugh.",
+      thresher: "He laid his sentence on one of ours, and they cannot lift a lantern while it sits on them. So I fetched the nearest light over to them before it came due. Not their hour yet, I told the King, kindly. He did not argue.",
       bloodreaver: "He dooms one of the others, never me, which is insulting. The doomed can't lift a lantern, so I grabbed one off the floor and ran it to them. Light cures it. Not a scratch to show for it. Dull rescue.",
       runeguard: "A sigil of death over one of us, never over me. Lanterns appear on the floor; another must lift one and bring its light near, for the doomed cannot. I am relieved to say I have the stamina for stairs and the wit for lanterns.",
       gorgemaw: "The King passes sentence on one of my guests. Lanterns appear about the hall; the doomed may not touch them, so I picked one up and brought it to the table. Light is the only sauce for it, and it is a thin sauce.",
@@ -231,7 +231,7 @@
     'Crown of Graves': { hard: false, learned: {
       bastion: "The whole hall broke open, all but the ground right at his feet. That is where I stand anyway. The line came in close behind me, where I could see them. It is a poor post for a coward and a fine one for a knight.",
       gloomsworn: "The graves opened across the hall, all but the stone at his own feet. That is my place anyway. I stood there, the others crowding in behind me, and the dark passed us by. It is the only floor in the Barrow that has never frightened me.",
-      thresher: "The whole hall opened its graves except the patch right at his feet. I went in close against him, quiet as a shadow, and waited it out. The dead keep a polite distance from their lord.",
+      thresher: "The whole hall opened its graves except the patch right at his feet. I tucked in close against him, quiet as a shadow, and waited it out. The dead keep a polite distance from their lord, bless them.",
       bloodreaver: "The whole hall erupted except right up against the King, which is exactly where I live. The others came in and hugged him with me. Not even a graze, for once.",
       runeguard: "Graves open across the hall, but not at his feet: the quiet middle. Close in on him before it lands. I had drawn this on my wall already as a diagram; the reality was less tidy and equally effective.",
       gorgemaw: "The whole hall was served, except the little plate at the King's feet. I was already sitting there, and the others crowded in beside me. Too much table, not enough food. Cozy, though.",
@@ -256,7 +256,7 @@
     'Echo Knights': { hard: false, learned: {
       bastion: "Two dead knights rose by the walls. Each remembers one of his swings as he makes it, then swings it again from where it stands. I watch what each one learned and move the line to match. A soldier who learns from the enemy is a good soldier.",
       gloomsworn: "Two dead knights stood at the walls, each keeping a swing he had seen and sending it back from where he stood. I learned which swing each had kept and moved away from where it would go. They remember. So do I.",
-      thresher: "His knights keep a swing apiece, the way a grave keeps its dead, and throw it up again from where they stand. I watched which swing flashed on which knight, and stood clear of that line when it came up.",
+      thresher: "His knights each keep a swing in reserve and throw it up again from where they stand. I watched which swing flashed on which knight, and stood clear of that line when it came up. Quite a tidy thing to watch.",
       bloodreaver: "His old guard rose and copied his swings, later, from where they stood. Two more friends to bleed for! I watch which swing each caught, and keep out of it anyway. Mostly.",
       runeguard: "A swing flashes on a knight as he makes it, and that knight now holds it. Read each knight's sigil, and when he replays it, treat it as the King's own, from there. Copyists! Even the dead cannot resist an annotation.",
       gorgemaw: "His guard reheat his dishes: each knight keeps one of his swings and serves it again from its own seat by the wall. Leftovers, but still hot. I note what each carried off, and dine accordingly.",
@@ -306,7 +306,7 @@
     'Coffin Lids': { hard: false, learned: {
       bastion: "He tore the lids off the coffins on both walls and sent them skidding across the floor. We stepped out of their path. Where they stop, they are cover for what comes next. I marked the nearest as my post and gave the order to take cover, since it was my turn to give one.",
       gloomsworn: "Lids flew off the coffins on both walls and slid across the hall. We stepped out of their paths. Where they stopped, they were shelter against the next blow. I rather liked them. A lid is a kind of grave that you can carry.",
-      thresher: "Lids came skidding off the coffins from both walls, and I stepped out of their paths before they arrived. Where they settle is shelter, and the Decree comes right behind. A coffin lid is a friendly thing, if you know it.",
+      thresher: "Lids came skidding off the coffins from both walls, and I stepped out of their paths before they arrived. Where they settle is shelter, and the Decree comes right behind. A coffin lid is a friendly thing, once you know it.",
       bloodreaver: "Coffin lids skidding at me across the floor! I stepped out of their lanes, reluctantly. They stop out in the hall, and you'll want to hide behind them very soon. Hiding. Me. I know.",
       runeguard: "Lids rattle on either wall, their paths drawn across the floor. Clear the paths; once they stop, they stand as cover for the Decree that follows. I took note of the stopping places. A good scholar reads where a sentence ends.",
       gorgemaw: "He slid two heavy platters down the table from the walls. Not food, alas: coffin lids. Out of their way, then behind them, because the next course is the Decree.",
@@ -331,7 +331,7 @@
     'Royal Decree': { hard: false, learned: {
       bastion: "A wave rolled down the hall from the throne. Only something solid between me and the throne kept it off, so I put a coffin lid there and kept my footing behind it. It cracked at the end, honest wood doing an honest job. Held.",
       gloomsworn: "A wave poured down the hall from the throne. Open air will not stop it, only something solid, so I crouched behind a fallen lid with the throne on its far side. It was not the worst bed I have had.",
-      thresher: "A wave rolls down the whole hall from the throne, and nothing standing in the open survives it. I crouched behind a fallen lid with the throne on its far side, as one waits out hail behind a wall.",
+      thresher: "A wave rolls down the whole hall from the throne, and nothing standing in the open survives it. I crouched behind a fallen lid with the throne on its far side, the way you wait out hail behind a wall. Snug enough.",
       bloodreaver: "A wave of grave-light down the whole hall. Can't take it head-on, not even me. Hid behind a coffin lid with the throne on its far side. Felt cowardly. Felt alive.",
       runeguard: "Light gathers at the throne; something solid between oneself and the throne, a lid or fallen stone, is the only answer, and the lid breaks after. I stood behind mine with my pen in hand. A fine place to write.",
       gorgemaw: "The Decree rolls down the hall from the throne, and there's no eating it. I crouched behind a coffin lid, throne on the far side. Some dishes are best left to pass. Cold. Gone off.",
@@ -356,7 +356,7 @@
     'Funeral March': { hard: true, learned: {
       bastion: "His dead marched across the hall in ranks, wall to wall. One lane through them stays open the whole way. I found it and brought the line into it, my footing never leaving the stone. The lane is somewhere new each time, and nothing paints it.",
       gloomsworn: "His dead walked the hall in ranks from wall to wall, and one lane stayed open the whole way. I found it and led the others through. It is never in the same place twice. They march well. I used to.",
-      thresher: "His dead came across the hall in ranks, wall to wall, each rank tidy. There is always one lane left open right through, or the gap behind a rank once it passes; I found it and stood in it. It moves from pull to pull, and nothing paints it.",
+      thresher: "His dead came across the hall in ranks, wall to wall, each rank so tidy. There is always one lane left open right through, or the gap behind a rank once it passes; I found it and stood in it. It moves from pull to pull, and nothing paints it.",
       bloodreaver: "His dead came marching in ranks from wall to wall! Lovely, but not even I stand in front of that. There's always one open gap through them; I stood in it, sulking. The lane falls somewhere different each time, and nothing marks it.",
       runeguard: "Ranks of the dead form along one wall; one lane stays open from wall to wall, or the ground behind a rank once it has passed. On these nights it falls somewhere different each time, and is never painted. Read it off the ranks. I did.",
       gorgemaw: "His dead paraded across the table in ranks, a procession of bones. Far too dry to eat. There's always one gap in the procession; I sat in it. It opens somewhere different each time, unpainted, like a good seating plan.",
@@ -381,7 +381,7 @@
     'Barrow Bells': { hard: false, learned: {
       bastion: "Two bells. Each wants a pair standing under it, or the whole line is doomed. I took a bell with a partner and held my ground beneath it, and did not look at the other bell once. I trusted the pair under it. That is duty too.",
       gloomsworn: "Two bells, and a pair must stand beneath each or we are all lost. I found a partner and stood under mine till the sound died. Being doomed is nothing new. I did not care to share it.",
-      thresher: "Two bells, and each wants a pair of us under it, paired like pallbearers. Leave one bare and the whole hall goes over at once. We picked our partners well before it came due.",
+      thresher: "Two bells, and each wants a pair of us under it, paired up like pallbearers. Leave one bare and the whole hall goes over at once. We chose our partners well before it came due, which is only polite.",
       bloodreaver: "Two bells, two of us under each. Miss one and everyone gets doomed! I grabbed a partner and a bell and stood there. Not much fun, but nobody died. Tragic, in its way.",
       runeguard: "Two bell-rings are drawn on the floor; a pair must stand beneath each, decided before they are needed, for an unrung bell dooms us all. I chose my partner on the stairs. It is rude to leave a partner to chance.",
       gorgemaw: "Two bells, each laid for two diners. Leave a bell unrung and every guest is doomed. I sat at one with a friend. A shared plate, sadly. But no one went hungry for the right reason.",
@@ -406,7 +406,7 @@
     'Lights Out': { hard: false, learned: {
       bastion: "Every brazier went dark, then the pair nearest the King flared back up. Whoever stood outside their light was caught, so I got the line into the light. Standing in the open feels wrong. Standing in the dark feels worse.",
       gloomsworn: "The braziers died, then the two nearest the King lit again. Outside their glow you are found. I took us into that light and left the darkness to him. He is welcome to it. I have my own.",
-      thresher: "Every brazier went out, then the pair nearest him took again. I got into that light before his eye came looking, the way one hurries in before the dark closes. Whoever is left out in the dark gets found.",
+      thresher: "Every brazier went out, then the pair nearest him took again. I got into that light before his eye came looking, the way you hurry in from the dusk. Whoever is left out in the dark gets found, so do mind the step.",
       bloodreaver: "Darkness! Then the braziers nearest the King flared back, and anyone outside their light got caught by his stare. I stood in the light, scowling. I like the dark. The dark doesn't love me back, here.",
       runeguard: "Every brazier dies; the pair nearest him flare back a breath later. Stand within their light before it lands, for his dread eye finds whoever stands in the dark. A text that is hard to read in the dark. I know. I tried.",
       gorgemaw: "The King blew out the candles. Then the pair nearest him relit, and anyone outside their glow was frozen. I sat by the fire. Atmosphere is everything at dinner, and so, as it turns out, is survival.",
@@ -431,7 +431,7 @@
     'Court of Bones': { hard: false, learned: {
       bastion: "He sat back on his throne, out of reach, and the coffins down the walls woke one by one. We broke each before it opened. When one did, I took the bones that climbed out, one at a time, and sent them back down.",
       gloomsworn: "He withdrew to his throne, out of reach, and the coffins along the walls woke one by one. We cracked each before it opened. Whatever got out of one, I met. They did not seem surprised either.",
-      thresher: "He settled on his throne and the coffins along the walls began to glow one after another. I cracked each before it could open, in the same order every time. Bones belong below. Room for one more? Not tonight.",
+      thresher: "He settled on his throne and the coffins along the walls began to glow one after another. I cracked each before it could open, in the same order every time. Bones belong below, bless them. Room for one more? Not tonight!",
       bloodreaver: "The King sat down, and coffins woke along the walls. Break them before they open! One opened and a skeleton crawled out. I let it bite me first, then broke it. Hardly a bite. Needs more teeth.",
       runeguard: "A coffin glows as it nears opening, in a fixed order down the walls. Break each before it opens; the order never changes. I wrote it on my sleeve. Do not, I add, judge a scholar by his sleeves.",
       gorgemaw: "The King retired from the table and left coffins to serve. Each glows before it opens; break it first, or a skeleton climbs out. All bone, no meat. I caught one anyway. Thin soup.",
@@ -481,7 +481,7 @@
     'Grave Summons': { hard: false, learned: {
       bastion: "The dead gathered on one of the young ones, never me, and the rest of us had to close on them, all but one. On harder nights a mark settles over each of us the moment it lands. Close in, then out. Stranger than drill.",
       gloomsworn: "The dead came together over one of the young ones, never me, and all but one of us went in to share it. On the harder nights marks fall on each of us right after: in together, then apart. I was never good at crowds. I learned.",
-      thresher: "The dead came up round one of the young ones, never our knight, and we crowded in on her, every hand but one. On the hard nights a ring comes over each head straight after: in for the one, then out to your own ground.",
+      thresher: "The dead came up round one of the young ones, never our knight, and we crowded in on her, every hand but one, and she was glad of it. On the hard nights a ring comes over each head straight after: in for the one, then out to your own ground.",
       bloodreaver: "The dead gathered on one of the others! Everyone pile in, nobody left out. And on the harder nights, straight after, a mark over each head. In, then out. I like it when the room runs.",
       runeguard: "The dead gather on one of the party, never the knight. All but one gather on them; on harder nights, the marks follow close behind, so scatter. I annotated this with arrows. In, then out. Two arrows, opposite directions.",
       gorgemaw: "The dead sat down at the table beside one guest, and the rest of us were asked to join. All but one, please. On hard nights, small plates follow a few breaths after: scatter. Crowded, then lonely.",
@@ -506,7 +506,7 @@
     'Grave Marks': { hard: false, learned: {
       bastion: "A mark over every one of us, each wanting its own ground. The line opened up, each man to his own patch, then closed again. Spacing is the oldest drill there is. It was good to see it done well.",
       gloomsworn: "Marks settled over every one of us. Each needed room to themselves, so we opened out, took our own places, and came together again when it was over. Alone together. I know the feeling.",
-      thresher: "A ring came up over every head, and each of us wanted a corner of our own. I took one to myself, no ring touching another, and walked back in once it had come in.",
+      thresher: "A ring came up over every head, and each of us wanted a corner of our own. I took one to myself, no ring touching another, and walked back in once it had come in. Rather like a dance where everyone has a square.",
       bloodreaver: "A mark over every head, mine too. Mine would hurt the others, so I took my own patch of floor. Two marks on one person is the one that hurts. Never been so polite in my life.",
       runeguard: "A circle at everyone's feet. Each of us on our own ground, no circle touching another. I paced mine out, as a surveyor would, and then re-paced it, as a scholar must.",
       gorgemaw: "A small plate under everyone. Each dines alone tonight. I kept to my own table; some nights I eat a friend's portion as well. Not this one, however hungry.",
@@ -531,7 +531,7 @@
     'The King Rises': { hard: false, learned: {
       bastion: "He rose from his throne, and his knights took new posts along the walls. The line had to learn new ground. I took him back and turned him away from them. A change of posting. The sergeant hated those.",
       gloomsworn: "He left the throne and his knights took new posts on the walls. All I had learnt of the room was wrong. I drew him back and turned his face from the others. A new watch, new corners. Same dark.",
-      thresher: "He got up off his throne, and his knights moved to fresh ground along the walls. Every echo comes from their new places now, so I walked the hall again before trusting it. Moved earth looks different.",
+      thresher: "He got up off his throne, and his knights moved to fresh ground along the walls. Every echo comes from their new places now, so I walked the hall again before trusting it. Moved earth looks different, and is worth a second look.",
       bloodreaver: "The King stood up again! And his knights moved, so everything from the walls came from new places. Back to his face, at last. I missed it. Sentimental, me.",
       runeguard: "He rises, and his knights move to new posts. Read the hall again; every echo now comes from where they stand now, not where they stood. I tore a page out and drew a new one.",
       gorgemaw: "The King returned to the table, and his guard changed seats. The leftovers come from new places now. I took my seat across from him again, and the napkin was cold.",
@@ -556,7 +556,7 @@
     'Royal Tithe': { hard: false, learned: {
       bastion: "He took his tithe, and every one of us dropped low at once. Shields laid beforehand stayed. He kept his blows off me while the healers mended the line before the Dirge. We held, and I will not say how close.",
       gloomsworn: "Everyone dropped low at the tithe, together. Shields laid beforehand survived it. I held the King's attention while the healers pulled us up ahead of the Dirge. A man may be borrowed from, and live.",
-      thresher: "He took his tithe of every one of us at once, the way a collector takes the best of a house. Shields laid on before it stay; it is only life he wants. I kept near the menders till they had me whole before the Dirge.",
+      thresher: "A tithe from every one of us at once, courteously taken. Shields laid on before it stay; it is only life he wants. I kept near the menders till they had me whole before the Dirge.",
       bloodreaver: "The King took his tithe: every one of us dropped near death at once. Glorious! For me. The others needed shields before it and mending after, before the Dirge. I was just happy to be invited.",
       runeguard: "He raises a hand over all of us. Shields laid before, for they are not life and he cannot take them; then every one of us mended before the Dirge. I laid mine on the pedantic grounds that I would rather be right than rich.",
       gorgemaw: "The King demanded a tithe: everyone drained low at once. Shields aren't life; he can't take them. The Dirge follows quickly, so mend before it. A meal that leaves you hungrier than before.",
@@ -581,7 +581,7 @@
     'Dirge': { hard: false, learned: {
       bastion: "The Dirge tolled through all of us after the tithe. No blocking it. The line came to it whole, mended in time. It is no honour to be spared by a song, but I took the honour.",
       gloomsworn: "The Dirge rang for everyone right behind the tithe, with nothing to stop it. The healers had us whole. That is the whole of the answer. He sings badly.",
-      thresher: "The Dirge follows the tithe close, and anyone still low goes over with it. I made sure I was mended before it came in. Not much time, but enough, if the menders start early.",
+      thresher: "The Dirge follows the tithe close, and anyone still low goes over with it. I made sure I was mended before it came in. Not much time, but enough, if the menders start early. A tight little step, and a doable one.",
       bloodreaver: "The Dirge comes right after the tithe. Small, but if you're still low it kills you. I was mended. Not a mark on me. A thin song for a thick-skinned man.",
       runeguard: "The Dirge follows the tithe a breath later. Everyone mended before it tolls. I made a note in the margin: beautiful, mournful, entirely survivable. The best songs are.",
       gorgemaw: "The Dirge is the after-dinner song, sung to all, and it kills those left hungry from the tithe. Mended before. Dull tune.",
@@ -606,7 +606,7 @@
     'Judgement': { hard: false, learned: {
       bastion: "Judgement: the swings from the banners, in that order, from him and both knights at once, each shown for an instant. I called the order to the line from memory, loud as drill. Not one man was in the wrong place.",
       gloomsworn: "Judgement is the banners made flesh: all their swings in the old order, thrown by him and both knights together, each glimpsed for a heartbeat. I spoke the order as it came. A condemned man remembers his sentence.",
-      thresher: "Judgement hands back every banner swing in the order they were shown, from him and both knights at once. I had learnt the order earlier, so I was moving before each landed, and ended close in for the Crown. As rehearsed.",
+      thresher: "Judgement hands back every banner swing in the order they were shown, from him and both knights at once. I had learnt the order earlier, so I was moving before each landed, and ended close in for the Crown. All as rehearsed, and rather pleasing.",
       bloodreaver: "Judgement! All the banner swings, from him and both knights at once, in order, barely shown. I knew the order and stepped right. Not a scratch. Half sorry.",
       runeguard: "The charges returned in order, from him and his knights together, each barely drawn. The order inscribed earlier; move a beat before each shows, and close on him for the Crown. I have never been so glad of my handwriting.",
       gorgemaw: "Judgement: the menu returns, every course at once, from the King and both his knights, each barely glimpsed. I knew the order. Ate nothing; dodged everything. A rare triumph of memory over appetite.",
@@ -631,7 +631,7 @@
     'The Long Night': { hard: false, learned: {
       bastion: "The braziers died and one lantern was left. Doom passed from one of us to the next, the next one's sigil glowing ahead, and whoever was cured carried the light on. A relay, in the dark. I have never run so carefully.",
       gloomsworn: "Every light failed but one lantern. Doom moved along our line, each next one glowing before their turn, and the lantern went with the cure. I kept the watch while it passed from hand to hand. It is a thing I know how to do.",
-      thresher: "One lantern left, and the doom passes down our line like a cold draught. The next one glows ahead of time, so whoever holds the light walks it over, and they carry it on in turn. Nobody went over before their hour.",
+      thresher: "One lantern left, and the doom passes down our line like a cold draught. The next one glows ahead of time, so whoever holds the light walks it over, and they carry it on in turn. Nobody went over before their hour, which pleased me.",
       bloodreaver: "The Long Night: one lantern left, and doom passing round us. The next one glows ahead; the lantern goes to them, and they carry it on. I carried it once. Grim and wonderful.",
       runeguard: "The next to be doomed glows ahead of time. Whoever holds the lantern walks it to them; once cured, they carry it on to the next. A sequence, rendered in light. I kept the list.",
       gorgemaw: "The King blew out every candle but one. Doom passes round the table, and the next guest glows ahead. Bring the lantern to them; they carry it on. A dessert to share, and an odd one.",
@@ -656,7 +656,7 @@
     'Gravebind': { hard: true, learned: {
       bastion: "A grave-chain bound two of us, never me. They kept close until it broke while the rest spread under their marks. I took the greatsword. Three duties, and the pair is drawn fresh every pull.",
       gloomsworn: "A chain of the grave tied two of us together, never me. They stayed close till it broke while everyone else kept clear of each other under their marks, and I had the great sword to deal with. Three jobs at once, and the pair is new every time.",
-      thresher: "A chain grew between two of us, never the knight, and a fresh pair every time. The two on the chain kept close as a pair of dancers until it snapped; the rest of us spread out under our rings.",
+      thresher: "A chain grew between two of us, never the knight, and a fresh pair every time. The two on the chain kept close as a pair of dancers until it snapped; the rest of us spread out under our rings. A pretty little waltz.",
       bloodreaver: "A grave-chain on two of the others, a different pair each pull! They huddled; the rest scattered under their marks. I took the greatsword. Busy night, three things at once. I loved it.",
       runeguard: "A chain between two of the party, never the knight, a different pair each time. The bound pair stay close until it breaks; the others apart under their marks; and I take the greatsword. Three scripts, one stage.",
       gorgemaw: "A chain bound two of my guests together, and it was a different two than last time. They stayed close; the others dined apart. I had the greatsword. Several courses at once, and none of them cooked.",
@@ -681,7 +681,7 @@
     'Burial Rites': { hard: true, learned: {
       bastion: "He dug a grave for each of us, each in our own colour. Which is whose changes every pull, so read your colour. Lines out, in close for the crown, then into my own grave before it shut. I have slept in worse beds.",
       gloomsworn: "He dug a grave apiece for us in the hall's centre, each its own colour, and shuffled whose is whose every time. I checked the colour of mine. Out wide for the lines, tight for the crown, then down into my grave before it shut. I have lain in one already.",
-      thresher: "He dug a grave for each of us in our own colours, in fresh places every time. In close for his crown, then each out to their own to lie still. Never another's; an empty grave brings the dead up for everyone. I do like a tidy grave.",
+      thresher: "He dug a grave for each of us in our own colours, in fresh places every time. In close for his crown, then each out to their own to lie still. Never another's; an empty grave brings the dead up for everyone. A tidy grave is a kindness.",
       bloodreaver: "The King dug us graves! One each, our own colour, but the places shuffle every pull. In close for his crown, then out and lie in your own. The one who strayed got a lovely wound, and we all paid for it.",
       runeguard: "Four graves round him, each in its owner's colour, their places drawn anew each pull. The writ, the crown in close, then each to their own before it closes; never another's. I lay in mine as one reads a draft: carefully, and aloud.",
       gorgemaw: "The King set four graves, one per guest, each in their own colour, and shuffled the seats each time. After his crown we each took our own place. Sit in another's and you're served a beating. Well presented.",
@@ -706,7 +706,7 @@
     'Writ of Execution': { hard: true, learned: {
       bastion: "Chained, every man of us, and the writ read out. My line went into a corner between the graves, and I stepped off it. It burns on, so aim with care; a line is a wall. One writ is torn up each pull, and I never learned whose.",
       gloomsworn: "A chain on each of us, the writ read aloud, and a beam of grave-light through every one, burning on after. Mine I turned into a corner between the graves and stepped away. One writ was struck from the record, and which one changes each time.",
-      thresher: "Chains on each of us and a line of grave-light through every chain. I aimed mine at a far corner between the graves, a lane nobody needs to cross, and stood off it. It keeps burning, so a badly aimed line walls somebody out.",
+      thresher: "Chains on each of us and a line of grave-light through every chain. I aimed mine at a far corner between the graves, a lane nobody needs to cross, and stood off it. It keeps burning, so a badly aimed line walls somebody out. Mind that step!",
       bloodreaver: "Chains on all of us, then a line out through each! Take your own, keep it off the others. They stay burning, so aim between the graves. One of us was pardoned, a different one each pull, lucky thing, and missed a good scar.",
       runeguard: "A chain to each of us, one hanging broken. Each points their line out between the graves, apart from the rest, and steps off; the lines burn on until the graves close. The broken chain is, I think, the part the court is sorry for.",
       gorgemaw: "The King chained his guests and sent a course of grave-light down each chain. Aim yours toward a corner, between the graves, for the line stays hot on the table. One guest's writ was torn up: no serving. Underseasoned.",

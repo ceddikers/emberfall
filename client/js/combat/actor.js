@@ -12,7 +12,8 @@ class CombatActor {
   constructor(cls, ent, world, rng = Math.random) {
     this.cls = cls; this.ent = ent; this.world = world;
     this.spec = ent.spec || null;
-    this.dash = { charges: DASH.charges, next: 0 };
+    this.dash = { charges: DASH.charges + ((cls.id === 'thresher' && typeof kitFor === 'function' && (kitFor(cls.id, ent.spec || null, null) || {}).dashPlus) || 0), next: 0 };
+    this.dashMax = this.dash.charges;   // (a Phantom's Blink holds one more)
     this.taunt = cls.role === 'tank' && typeof TAUNT !== 'undefined' ? { next: 0 } : null;   // tanks' taunt, on a carrier button (kits.js TAUNT_CARRY)
     const actor = this;
     // the kit with this hero's spec, and any moves its talents grant (TALENT_ABILITIES in kits.js)
@@ -22,7 +23,7 @@ class CombatActor {
       moving: () => world.moving(actor),
       canAuto: () => (world.canAuto ? world.canAuto(actor) : true),
       target: ab => {
-        if (ab.target === 'enemy') return world.findEnemy(actor, ab);
+        if (ab.target === 'enemy') { const r = actor.kit && actor.kit.def.reach ? actor.kit.def.reach(actor.kit, ab) : null; return world.findEnemy(actor, r ? Object.assign({}, ab, { range: r }) : ab); }   // (def.reach: a Reaper's scythe, longer with Long Reach)
         if (ab.target === 'ally') return world.allyTarget(actor, ab);
         return null;
       },
@@ -67,9 +68,9 @@ class CombatActor {
   }
   refundDash(now) {
     this.dashReady(now);
-    if (this.dash.charges >= DASH.charges) return false;
+    if (this.dash.charges >= this.dashMax) return false;
     this.dash.charges++;
-    if (this.dash.charges >= DASH.charges) this.dash.next = 0;
+    if (this.dash.charges >= this.dashMax) this.dash.next = 0;
     return true;
   }
   get abilities() { return this.kit.abilities; }
@@ -82,17 +83,18 @@ class CombatActor {
   onDeath() { this.kit.ultDeath(); }
 
   dashReady(now) {
-    while (this.dash.charges < DASH.charges && this.dash.next && now >= this.dash.next) {
+    while (this.dash.charges < this.dashMax && this.dash.next && now >= this.dash.next) {
       this.dash.charges++;
-      this.dash.next = this.dash.charges < DASH.charges ? this.dash.next + DASH.cd : 0;
+      this.dash.next = this.dash.charges < this.dashMax ? this.dash.next + DASH.cd : 0;
     }
     return this.dash.charges > 0;
   }
-  useDash(now) {
+  useDash(now, info) {
     if (!this.dashReady(now)) return false;
     this.dash.charges--;
     if (!this.dash.next) this.dash.next = now + DASH.cd;
     this.kit.itemHook('dash');   // item effects that fire on a dash
+    if (this.kit.def.onBlink) this.kit.def.onBlink(this.kit, info);   // (a Reaper's Blink: where from and to, and whether it went through a telegraph)
     return true;
   }
   dashFraction(now) { return this.dash.next ? Math.max(0, (this.dash.next - now) / DASH.cd) : 0; }

@@ -5389,374 +5389,422 @@ ULTIMATES.gloomsworn = {
 
 if (typeof module !== 'undefined') Object.assign(module.exports, { GLOOM, gloomGain, gloomEcho, gloomSend, gloomHollowNote, gloomStrikeReady, gloomDur, gloomGraceLen, gloomHollow, gloomAb });
 
-// ======================================================================= THRESHER (damage, class 19): afflict, weigh, reap
-// Four AFFLICTIONS (k.g.aff: id -> { w, until, next } or null) lie on the boss: Mark (Slash; a bleed), Drain (Cleave; ticks mend
-// you), Bind (Gloam Blink and the Wisp; a pulse) and Thread (Hook; no ticks, the heaviest pop). Each lasts THRESH.DUR s and has a
-// WEIGHT of 1 to THRESH.MAXW: laying one that is already up adds a Weight and starts its time again. Every Weight ticks. They do not
-// age or change colour: when to pop them is the fight's question, not a clock's. POPPING one pays its damage times its Weight and
-// sets off its own effect: Mark is the big hit, Drain mends you, Bind fetters the boss (the party takes less for a few seconds),
-// Thread snaps and gives a Hook charge back. Reap pops every one; Sever (the move keeps the id `gather`) rips out only the one
-// you laid last (k.g.last), harder. Spirit Wisp is a timed, cosmetic companion (like the Ranger's falcon: a damage over time and
-// a buff, nothing synced). Reaper's Gate (T) is a window: you vanish, every Slash is a Gate Strike that lays one affliction in
-// turn at full Weight, and the fifth pops all four.
-const THRESH = {
-  IDS: ['mark', 'drain', 'bind', 'thread'],
-  NAMES: { mark: 'Mark', drain: 'Drain', bind: 'Bind', thread: 'Thread' },
-  DUR: 15, MAXW: 3, TICK: 3,            // an affliction lasts DUR s from its last laying, up to MAXW Weight, and ticks every TICK s
-  TICKP: { mark: 20, drain: 12, bind: 18, thread: 0 }, DRAIN_HEAL: 0.005,   // per Weight, a tick (Drain's mend: of your health)
-  SWING: 1.2,                           // Backswing: the next hit pressed this soon after the last recovery
-  SLASH: 200, CLEAVE: 270, BACK: 90,
-  HOOK: 150, BLINK: 140, BLINK_MIT: 0.5,
-  BASE: 80, PAY: { mark: 130, drain: 90, bind: 90, thread: 140 },   // Reap: a base cut, and what each affliction pays for every Weight
-  FULL: 1.3, DRAIN_POP: 0.02, FETTER: 0.1, FETTER_DUR: 4,                       // Drain's pop mends 2% a Weight; Bind's: the party takes 10% less for 4s
-  REAP_CD: 8, SEVER_CD: 12, SEVER: 1.5,
-  KNELL: 150, U_KNELL: 3,               // the Full Toll: a Reap that pops every affliction at full Weight rings a knell, a last blow, and the Ultimate charges more
-  WISP_DUR: 15, WISP_HIT: 60, WISP_EVERY: 2.5, WISP_CD: 45, SAC: 320, SAC_BUFF: 0.1, SAC_DUR: 8,
-  U_REAP: 1.6, U_W: 0.5,                // Ultimate charge: a Reap, and every Weight it pops (a Sever: its Weight)
-  GATE: { DUR: 8, GCD: 1.0, STRIKE: 190, END: 260, MULT: 0.4 },   // (the fifth: every affliction as 3 Weight at full, MULT of that)
-  ARC: 2.1, ARC_R: 95, ARC_SHARE: 0.6,   // the scythe's wide arc (about 120 degrees, a little past melee): other enemies in it take 60% of the cut
+// ======================================================================= REAPER (id thresher; damage, class 19): the string, the marks, the Snap
+// Rebuilt after Scythe Evie (docs/plans/2026-10-reaper-rework.md). Q is a STRING: up to four quick swings on ONE global cooldown (the
+// GCD starts when the string ends, a finisher or about a second with no press). W is the FINISHER and ends it; what it does depends
+// on how many swings came first, and each leaves its own MARK on what it hits (k.g.marks: enemy id -> { x, y, drain|bind|death|thread|
+// phantom: { until, emp } }). E, Snap, pops every mark on every enemy, each its own way. A crescent (k.g.moon, 0-100) fills with
+// Snaps; at 100 the next Snap is a Harvest Moon and pops every mark twice. R, Void Star, opens a void at the target that collapses and
+// hits everything round it, harder for every mark on the target. D, Dusk Veil, is the defence; F, Insane Reaper, is the party's 60s haste.
+// The Blink is the class's dash (Space: actor.js useDash > def.onBlink). Arcane Gate (T) is a window of five-swing strings whose first
+// four swings lay empowered marks and whose fifth is an enhanced Snap. k.g.str = { n, start, until } is the string in hand.
+// fx events (ability-vfx.js): rune {id, kind, emp}, snap-pop {id, kind, twice}, full-harvest {id}, harvest-moon, star-open {x, y},
+// star-collapse {x, y, marks}, string-end {n, ok}, blink-slash, gate-open, gate-strike {n}, gate-release {n}, gatebreaker, gate-close.
+const REAP = {
+  KINDS: ['drain', 'bind', 'death', 'thread'],
+  NAMES: { drain: 'Drain', bind: 'Bind', death: 'Death Mark', thread: 'Thread', phantom: 'Phantom' },
+  REACH: 112,                                            // the scythe's reach (1.5x melee)
+  SWING_LOCK: 0.42, FIN_LOCK: 0.55, GAP: 1.3, GCD: 1.0,   // a swing, the finisher, the pause that ends a string, the GCD that follows it
+  MAX: 4,
+  SW: [72, 84, 98, 120],                                  // the four swings
+  SW_SPAN: [1.6, 2.8, 1.2, 3.6], SW_SHARE: 0.6,          // their arcs (radians), and what the others in the arc take
+  FIN: { 1: 190, 2: 215, 3: 250, 4: 300 }, FIN_SHARE: 0.75,
+  MARK_DUR: 20,
+  POP: { drain: 24, bind: 24, death: 30, thread: 42, phantom: 36 },
+  DRAIN_HEAL: 0.02, DEATH_DUR: 12, DEATH_HITS: 4, DEATH_MULT: 0.3,
+  FULL: 70, FULL_U: 6, MOON_PER: 10, MOON_FULL: 15,
+  SNAP_CD: 8,
+  STAR: 110, STAR_MARK: 30, STAR_R: 130, STAR_DELAY: 1.0, STAR_CD: 30, STAR_U: 12, STAR_RANGE: 420,
+  VEIL_CD: 30, VEIL_MIT: 0.35, VEIL_DUR: 4,
+  FRENZY_CD: 60, FRENZY_DUR: 15, HASTE: 0.1, FRENZY_SELF: 0.92,   // the party's haste, and a little more for the Reaper's own swings
+  BLINK_HOLD: 0.9,
+  GATE: { DUR: 8, MAX: 5, GCD: 1.0, EMP: 1.5, LIMIT: 3.2, GB: 0.25, LOCK: 1.0 },   // Arcane Gate: five swings, empowered marks pop 1.5x, four inside LIMIT s = Gatebreaker
+  U_TRICKLE: 0.35, SIM_PHANTOM: 80,
 };
-const thMaxW = k => k.def.maxW || THRESH.MAXW, thDur = k => k.def.affDur || THRESH.DUR;
-const thAvail = k => THRESH.IDS.filter(id => !(k.def.noAff && k.def.noAff.indexOf(id) >= 0));
-// an affliction's Weight (0: not up)
-const thW = (k, id) => { const a = k.g.aff[id]; return a && a.w > 0 ? a.w : 0; };
-const thCount = k => THRESH.IDS.filter(id => thW(k, id) > 0).length;
-const thFull = k => THRESH.IDS.filter(id => thW(k, id) >= thMaxW(k)).length;
-const thTotal = k => THRESH.IDS.reduce((s, id) => s + thW(k, id), 0);
-const thAb = (k, id) => k.abilities.find(a => k.baseId(a) === id) || k.baseAbilities.find(a => k.baseId(a) === id);
-// lay an affliction: a new one at `n` Weight, or `n` more on one that is up (to the most), its time started again.
-// o.full: at full Weight at once (Hourglass, the Gate's strikes); o.force: lays even what the spec never lays (the Gate)
-function thApply(k, id, n = 1, o = {}) {
-  if (!o.force && k.def.noAff && k.def.noAff.indexOf(id) >= 0) return;
-  const max = o.max || thMaxW(k), a = k.g.aff[id], full = o.full || k.now < (k.g.fullUntil || 0);   // (Hourglass, Wraith spec row VII)
-  const anchored = id === 'thread' && k.talent('thresher_anchor');   // (Anchored Thread, Wraith spec row VI: it never runs out)
-  const until = anchored ? Infinity : k.now + thDur(k);
-  if (!a) k.g.aff[id] = { w: full ? max : Math.min(max, n), until, next: k.now + THRESH.TICK };
-  else { if (a.w >= max) k.wasted(id + ' weight'); a.w = full ? max : Math.min(max, a.w + n); a.until = until; }
-  k.g.last = id;
-  k.fxGain(1);   // (item effects: an affliction laid builds the gauge)
-  k.fx('afflict', { id, w: k.g.aff[id].w, max, dur: anchored ? 0 : thDur(k) });
+const reapMax = k => (k.ultWin ? REAP.GATE.MAX : REAP.MAX);
+const reapDur = k => (k.talent('thresher_patient') ? 34 : REAP.MARK_DUR);
+const reapStr = k => k.g.str;
+const reapN = k => (k.g.str && k.g.str.n > 0 && k.now < k.g.str.until ? k.g.str.n : 0);   // swings in the string in hand (0: none)
+const reapOpen = k => reapN(k) > 0;
+const reapTg = id => (id === 'dummy' ? undefined : id);
+const reapAb = (k, id) => k.abilities.find(a => k.baseId(a) === id) || k.baseAbilities.find(a => k.baseId(a) === id);
+// the marks up on one enemy (expired ones dropped), and on every enemy
+function reapMarks(k, id) {
+  const m = k.g.marks[id];
+  if (!m) return [];
+  const out = [];
+  for (const kd of [...REAP.KINDS, 'phantom']) { if (m[kd] && m[kd].until > k.now) out.push(kd); else if (m[kd]) delete m[kd]; }
+  return out;
 }
-// every affliction that is up gains a Weight (Nightfall)
-function thDeepen(k) { for (const id of THRESH.IDS) if (thW(k, id)) thApply(k, id, 1); }
-// one affliction popped: its damage (PAY a Weight), and its own effect unless o.quiet (Cull)
-function thPop(k, ab, id, w, mult, o = {}) {
-  const full = !o.plain && (o.full || w >= thMaxW(k)), pay = THRESH.PAY[id] * (id === 'mark' && k.perk('thresher_a2') ? 1.2 : 1) * (full ? THRESH.FULL : 1);   // (at full Weight it pays 50% more)
-  k.damage(pay * w * mult, { ab, extra: true });
-  if (!o.quiet) {
-    if (id === 'drain') k.healRaw(k.talent('thresher_tithe') ? 'lowest' : 'self', k.env.maxHp() * THRESH.DRAIN_POP * w, { ab });
-    else if (id === 'bind') { k.mitigate('party', THRESH.FETTER, THRESH.FETTER_DUR, { ab }); k.fx('th-fetter'); }
-    else if (id === 'thread') { const h = thAb(k, 'hook'); if (h) k.refundCharge(h.id); }
-  }
-  k.fx('afflict-pop', { id, w, full });
+function reapAllMarks(k) {
+  const out = [];
+  for (const id of Object.keys(k.g.marks)) { const kinds = reapMarks(k, id); if (kinds.length) out.push({ id, kinds }); else delete k.g.marks[id]; }
+  return out;
 }
-// what a Reap (or the Gate's fifth strike, or Cull) pays: a base hit, then each affliction in turn. ws: id -> Weight
-function thPayout(k, ab, ws, o) {
-  let n = 0, total = 0;
-  k.damage(o.base * (o.baseMult || o.mult), { ab });
-  for (const id of THRESH.IDS) {
-    const w = ws[id];
-    if (!w) continue;
-    n++; total += w;
-    k.after(o.gap * n, () => thPop(k, ab, id, w, o.mult, o));
-  }
-  return { n, total };
+const reapPrim = k => k.env.target({ target: 'enemy', range: 2000 });
+const reapTargetMarks = k => { const t = reapPrim(k); return t && typeof t === 'object' ? reapMarks(k, t.id) : []; };
+const reapMostMarks = k => reapAllMarks(k).reduce((m, e) => Math.max(m, e.kinds.length), 0);
+// lay a mark on an enemy (a mark that is up has its time started again)
+function reapMark(k, e, kind, emp) {
+  if (!e || !kind) return;
+  const m = k.g.marks[e.id] || (k.g.marks[e.id] = {});
+  m.x = e.x; m.y = e.y;
+  if (m[kind] && m[kind].until > k.now) k.wasted(kind + ' mark');
+  m[kind] = { until: k.now + (emp ? 14 : reapDur(k)), emp: !!emp };
+  k.fx('rune', { id: e.id, kind, emp: !!emp, x: Math.round(e.x || 0), y: Math.round(e.y || 0) });
 }
-// the wide arc: every OTHER enemy (the boss or an add) in the arc in front of you takes `share` of the cut, through the
-// ordinary damage path (so threat, add HP and kill credit work). Needs a host with env.enemiesNear; without one (the dummy) nothing.
-function thArc(k, ab, pot, o = {}) {
-  if (!k.env.enemiesNear || !k.env.pos) return 0;
-  const me = k.env.pos(), e = k.env.target({ target: 'enemy', range: MELEE });
-  if (!me || !e || typeof e !== 'object') return 0;
-  const dir = Math.atan2(e.y - me.y, e.x - me.x), same = c => (c.id === 'dummy' || e.id === 'dummy' ? c.x === e.x && c.y === e.y : c.id === e.id);
-  let n = 0;
-  for (const c of k.env.enemiesNear(THRESH.ARC_R) || []) {
+// every enemy a shape catches round you, other than the one you aimed at: [{ id, x, y, r }]. o: { r, span, round } a cone/circle at
+// reach r; { ring } a circle of that radius round the target; { line, w } a lane toward the target. Without a host (the dummy
+// yard's one dummy, the simulator) nothing: the one you aimed at is all there is.
+function reapFoes(k, prim, o) {
+  if (!k.env.enemiesNear || !k.env.pos || !prim || typeof prim !== 'object') return [];
+  const me = k.env.pos(), reach = k.env.reachNow ? k.env.reachNow() : REAP.REACH, far = o.ring ? REAP.REACH + o.ring * 2 : Math.max(o.r || 0, o.line || 0, REAP.REACH) + 60;
+  if (!me) return [];
+  const dir = Math.atan2(prim.y - me.y, prim.x - me.x), same = c => (c.id === 'dummy' || prim.id === 'dummy' ? c.x === prim.x && c.y === prim.y : c.id === prim.id);
+  const out = [];
+  for (const c of k.env.enemiesNear(far) || []) {
     if (same(c)) continue;
     const dx = c.x - me.x, dy = c.y - me.y, d = Math.hypot(dx, dy), r = c.r || 0;
-    if (d - r > THRESH.ARC_R) continue;
-    let da = Math.abs(Math.atan2(dy, dx) - dir); if (da > Math.PI) da = 2 * Math.PI - da;
-    if (d > 0.001 && da - Math.asin(Math.min(1, r / d)) > THRESH.ARC / 2) continue;
-    k.damage(pot * (o.share || THRESH.ARC_SHARE), { ab, extra: true, tgt: c.id !== 'dummy' ? c.id : undefined });
-    k.fx('reap-add', { id: c.id, x: Math.round(c.x), y: Math.round(c.y) });
-    n++;
+    let ok = false;
+    if (o.ring) ok = Math.hypot(c.x - prim.x, c.y - prim.y) - r <= o.ring;
+    else if (o.line) { const al = dx * Math.cos(dir) + dy * Math.sin(dir), pe = Math.abs(-dx * Math.sin(dir) + dy * Math.cos(dir)); ok = al > -r && al - r <= o.line && pe - r <= (o.w || 24); }
+    else if (o.round) ok = d - r <= (o.r || reach);
+    else if (d - r <= (o.r || reach)) { let da = Math.abs(Math.atan2(dy, dx) - dir); if (da > Math.PI) da = 2 * Math.PI - da; ok = d < 0.001 || da - Math.asin(Math.min(1, r / d)) <= (o.span || 1) / 2; }
+    if (ok) out.push(c);
   }
-  return n;
+  return out;
 }
-const thWeights = k => { const ws = {}; for (const id of THRESH.IDS) ws[id] = thW(k, id); return ws; };
-// Reap, and what the talents add to it
-function thReap(k, ab) {
-  const ws = thWeights(k), m = k.def.reapMult || 1, max = thMaxW(k), vul = bossNow(k);
-  if (k.talent('thresher_wound') && vul && vul.vuln > 0) for (const id of THRESH.IDS) if (ws[id]) ws[id] = max;   // (Open Wound, Grim spec row VII: every affliction pays at full Weight)
-  const full = thAvail(k).every(id => ws[id] >= max);
-  thArc(k, ab, THRESH.BASE * m);
-  const r = thPayout(k, ab, ws, { base: THRESH.BASE, mult: m, gap: 0.14 });
-  for (const id of THRESH.IDS) if (ws[id]) k.g.aff[id] = null;
-  if (k.talent('thresher_second') && full && ws.mark) k.g.aff.mark = { w: 1, until: k.now + thDur(k), next: k.now + THRESH.TICK };   // (Unpaid Debt: after a Full Toll the Mark stays, light)
-  if (k.talent('thresher_joined') && k.has('wisp')) { k.after(0.3, () => k.damage(140, { ab, extra: true })); k.fx('wisp-strike'); }
-  if (k.talent('thresher_gleaning') && r.n >= 3) k.buff('gleaning', 10);
-  if (k.talent('thresher_fleet')) k.buff('fleet', 5);   // (Fleet Hour, Wraith spec row VI: see the Wraith's haste in specs.js)
-  if (k.talent('thresher_lasthour') && r.n >= 4) k.partyBuff('dmg', 0.04, 6, { ab });   // (Last Hour, Wraith spec row VII)
-  k.ultGain(THRESH.U_REAP + THRESH.U_W * r.total);
-  // the Full Toll: every affliction popped at full Weight, and the hour strikes (the Gate's release bloom and toll)
-  if (full) { k.after(0.14 * 5 + 0.1, () => { k.damage(THRESH.KNELL * m, { ab, extra: true }); k.fx('gate-release', { n: 4 }); }); k.ultGain(THRESH.U_KNELL); k.stats.knells = (k.stats.knells || 0) + 1; }
-  k.g.swingBy = k.now + k.gcdLen + THRESH.SWING;
-  k.fx('reap', { n: r.n, w: r.total, full });
-  return r;
+// a hit on the one you aimed at and a share of it on the others the shape caught (the ordinary damage path: threat, add HP and kill credit work)
+function reapHit(k, ab, prim, foes, pot, share, o = {}) {
+  k.damage(pot, Object.assign({ ab, hit: true }, o));
+  for (const c of foes) k.damage(pot * share, Object.assign({ ab, extra: true, hit: true, tgt: reapTg(c.id) }, o));
 }
-// Sever: the affliction laid last, popped alone and harder (Patient Blade, Grim spec row VI: at full Weight it pops twice)
-function thSever(k, ab) {
-  const id = k.g.last, w = thW(k, id);
-  if (!w) return;
-  const twice = k.talent('thresher_patient') && w >= thMaxW(k);
-  thPop(k, ab, id, w, THRESH.SEVER * (k.def.reapMult || 1));
-  if (twice) k.after(0.22, () => thPop(k, ab, id, w, THRESH.SEVER * (k.def.reapMult || 1)));
-  k.g.aff[id] = null;
-  if (k.talent('thresher_hush')) k.shield('self', 100, 6, { ab });
-  k.ultGain(THRESH.U_W * w);
-  k.fx('th-sever', { id, w, twice });
+// the string ends: a finisher (ok) or a pause. The one GCD starts now.
+function reapEnd(k, ok) {
+  const s = k.g.str;
+  if (!s || s.n <= 0) return;
+  const len = (k.ultWin ? REAP.GATE.GCD : REAP.GCD) * k.hasteMult();
+  k.gcdLen = len; k.gcdReady = k.now + len;
+  k.stats.gcds++; k.stats.gcdTime += len + Math.max(0, k.now - s.start);
+  if (!ok) k.stats.wasted['string cut short'] = (k.stats.wasted['string cut short'] || 0) + 1;
+  k.fx('string-end', { n: s.n, ok: !!ok });
+  k.g.str = { n: 0, start: 0, until: 0 };
 }
-// Slash and Cleave (the Gate's strikes are theirs, below)
-function thSlash(k, ab) {
-  const g = k.g, step = k.now < g.comboUntil ? g.step : 0, back = k.now <= g.swingBy, pot = step ? THRESH.CLEAVE : THRESH.SLASH;
-  k.damage(pot, { ab });
-  if (step) thArc(k, ab, pot);   // (Cleave is the wide arc)
-  if (step === 0) { if (k.def.sower) thApply(k, 'drain'); thApply(k, 'mark'); }
-  else { if (k.def.sower) thApply(k, 'bind'); thApply(k, 'drain'); }
-  g.step = (step + 1) % 2; g.comboUntil = k.now + 15;
-  if (k.consume('gleaning')) { k.after(0.2, () => k.damage(pot * 0.35, { ab, extra: true })); k.fx('backswing'); }
-  if (back) {
-    k.after(0.28, () => k.damage(THRESH.BACK * (k.perk('thresher_w1') ? 1.5 : 1), { ab, extra: true }));
-    if (k.talent('thresher_drag')) for (const id of THRESH.IDS) { const a = g.aff[id]; if (a && isFinite(a.until)) a.until = k.now + thDur(k); }   // (Dragging Edge: their time starts again)
-    k.fx('backswing');
+// Q: a swing. Short strings leave room to move, long ones hit harder.
+function reapSwing(k, ab) {
+  const g = k.g, now = k.now, gate = !!k.ultWin;
+  let s = g.str;
+  if (!s || s.n <= 0 || now >= s.until) {
+    s = g.str = { n: 0, start: now, until: now };
+    if (k.consume('stepthrough') || g.encore) { s.n = 1; g.encore = false; }   // (Step Through, Encore: the string starts at swing 2)
+    if (gate) g.gateT0 = now;
   }
-  g.swingBy = k.now + k.gcdLen + THRESH.SWING;
+  const n = s.n, prim = k.env.target(ab), rel = gate && n >= REAP.MAX;
+  s.n = n + 1;
+  s.until = now + (ab.lock || REAP.SWING_LOCK) + REAP.GAP * (k.def.gapMult || 1);
+  if (rel) { reapRelease(k, ab); return; }
+  const round = n === 2 && k.talent('thresher_pirouette'), pot = REAP.SW[Math.min(n, 3)] * (n === 3 && k.perk('thresher_w1') ? 1.3 : 1);
+  const foes = reapFoes(k, prim, { round, span: REAP.SW_SPAN[Math.min(n, 3)] });
+  reapHit(k, ab, prim, foes, pot, REAP.SW_SHARE);
+  if (k.talent('thresher_hungry') && foes.length >= 1) k.g.moon = Math.min(100, (k.g.moon || 0) + 3);   // (Hungry Scythe: a swing that catches two or more enemies)
+  k.fx('swing', { n, x: prim && prim.x ? Math.round(prim.x) : undefined, y: prim && prim.y ? Math.round(prim.y) : undefined });
+  // the Gate: each of the first four swings lays an empowered mark, in order
+  if (gate && n < 4 && prim) {
+    const kd = REAP.KINDS[n];
+    reapMark(k, prim, kd, true);
+    for (const c of foes) reapMark(k, c, kd, true);
+    k.fx('gate-strike', { n });
+    if (n === 3 && now - (g.gateT0 || now) <= REAP.GATE.LIMIT) { k.buff('gatebreaker', Math.max(0.5, k.ultLeft() + 0.5)); k.fx('gatebreaker'); }
+  }
+  k.fxGain(1);
 }
-function thSacrifice(k, ab) {
-  k.dots.delete('wisp'); k.clear('wisp'); k.g.wispOn = false;
-  k.damage(THRESH.SAC, { ab });
-  if (k.g.last && thW(k, k.g.last)) thApply(k, k.g.last, 1);
-  k.buff('wispgift', THRESH.SAC_DUR);
-  k.cd[ab.id] = Math.max(k.now, (k.g.wispAt || 0) + THRESH.WISP_CD);
-  k.fx('wisp-sacrifice');
+// W: the finisher. n swings came first.
+function reapFinish(k, ab) {
+  const g = k.g, s = g.str, n = Math.max(1, Math.min(4, s.n)), prim = k.env.target(ab);
+  const phantom = k.def.phantom && k.has('blinked');
+  let pot = REAP.FIN[n] * (n === 4 ? (k.def.fourthMult || 1) : 1) * (k.perk('thresher_w2') ? 1.25 : 1), foes, kind = REAP.KINDS[n - 1];
+  if (n === 1) foes = reapFoes(k, prim, { span: 0.8 });
+  else if (n === 2) foes = reapFoes(k, prim, { ring: 95 });
+  else if (n === 3) foes = reapFoes(k, prim, { line: 170, w: 26 });
+  else foes = reapFoes(k, prim, { span: 3.8, r: REAP.REACH + 14 });
+  reapHit(k, ab, prim, foes, pot, REAP.FIN_SHARE, { rel: false });
+  if (prim) {
+    reapMark(k, prim, kind);
+    if (n === 2 || n === 4) for (const c of foes) reapMark(k, c, kind);
+    if (n === 3) for (const c of foes) reapMark(k, c, kind);
+  }
+  if (n === 2 && prim) k.fx('quake', { x: Math.round(prim.x || 0), y: Math.round(prim.y || 0) });
+  if (n === 2) for (const c of [prim, ...foes]) if (c && c.id !== 'dummy' && c.id !== 'boss') reapHost(k, { op: 'hold', tgt: c.id, dur: 2 });
+  // Phantom: after a blink the finisher becomes a teleport slash to the far side, and leaves a Phantom mark
+  if (phantom && prim) {
+    k.clear('blinked');
+    k.teleport('around', { ab });
+    k.damage(REAP.SIM_PHANTOM, { ab, extra: true, hit: true });
+    reapMark(k, prim, 'phantom');
+    k.fx('phantom-slash');
+  }
+  // an Afterimage repeats the finisher
+  if (k.has('afterimage')) {
+    k.clear('afterimage');
+    k.after(0.5, () => { k.damage(pot * 0.5, { ab, extra: true, hit: true }); k.fx('afterimage-hit', { n }); });
+  }
+  k.fx('finish', { n, x: prim && prim.x ? Math.round(prim.x) : undefined, y: prim && prim.y ? Math.round(prim.y) : undefined });
+  // Encore: after the four-swing finisher the next string starts at swing 2
+  if (n === 4 && k.talent('thresher_encore')) g.encore = true;
+  k.fxGain(1);
+  reapEnd(k, true);
+}
+// a pop: one mark on one enemy, its damage and its own effect. mult: 2 for a Harvest Moon, 1.5 for an empowered mark (and the Gate's)
+function reapPop(k, ab, id, kd, m, mult, foes) {
+  const ms = k.g.marks[id], emp = ms && ms[kd] && ms[kd].emp;
+  const pot = REAP.POP[kd] * mult * (emp ? REAP.GATE.EMP : 1) * (k.perk('thresher_a2') ? 1.2 : 1);
+  k.damage(pot, { ab, extra: true, snap: true, gb: true, tgt: reapTg(id) });
+  if (kd === 'drain') {
+    k.healRaw(k.talent('thresher_tide') ? 'lowest' : 'self', k.env.maxHp() * REAP.DRAIN_HEAL * mult, { ab });   // (Black Tide: the most hurt ally)
+    if (k.talent('thresher_vein')) for (const c of foes || []) if (c.id !== id && Math.hypot(c.x - ms.x, c.y - ms.y) < 170) reapMark(k, c, 'drain');
+  } else if (kd === 'bind') {
+    if (id !== 'boss' && id !== 'dummy') reapHost(k, { op: 'hold', tgt: id, dur: 2.5 });
+    if (k.talent('thresher_debt')) k.mitigate('party', 0.08, 4, { ab });   // (Debt Collector)
+  } else if (kd === 'death') {
+    k.buff('deathmark', REAP.DEATH_DUR, {}, REAP.DEATH_HITS, REAP.DEATH_HITS);
+    k.buffs.get('deathmark').stacks = REAP.DEATH_HITS;
+  } else if (kd === 'thread') {
+    if (k.talent('thresher_gather') && ms) reapHost(k, { op: 'gather', x: Math.round(ms.x || 0), y: Math.round(ms.y || 0), r: 220, dist: 120 });
+    k.ultGain(1);
+    if (k.talent('thresher_toll') && k.env.refundDash) k.env.refundDash();   // (Last Toll)
+  }
+  k.fx('snap-pop', { id, kind: kd, twice: mult >= 2, emp: !!emp });
+  k.stats.pops = (k.stats.pops || 0) + 1;
+}
+function reapHost(k, ev) { if (k.env.emit) k.env.emit(Object.assign({ type: 'reaper' }, ev)); }
+// E: Snap. Every mark on every enemy pops. All four on one enemy is a Full Harvest. A full crescent is a Harvest Moon (every mark twice).
+// o.gate: the Gate's release (a Harvest Moon, whatever the crescent says, and the empowered marks pay 1.5x)
+function reapSnap(k, ab, o = {}) {
+  const g = k.g, moon = o.gate || g.moon >= 100, mult = moon ? 2 : 1, quick = k.talent('thresher_quick') && !o.gate;
+  const all = reapAllMarks(k), foes = k.env.enemiesNear ? (k.env.enemiesNear(2000) || []) : [];
+  let popped = 0, fulls = 0, i = 0;
+  const snapRecent = g.snapped || (g.snapped = []);
+  for (const e of all) {
+    // marks of enemies that are gone are dropped
+    if (foes.length && !foes.some(c => c.id === e.id)) { delete g.marks[e.id]; continue; }
+    let kinds = e.kinds;
+    const full = REAP.KINDS.every(kd => kinds.includes(kd));
+    if (quick) kinds = [kinds.slice().sort((a, b) => g.marks[e.id][a].until - g.marks[e.id][b].until)[0]];
+    const ms = g.marks[e.id];
+    for (const kd of kinds) { const at = i++ * 0.07; if (at > 0) k.after(at, () => reapPop(k, ab, e.id, kd, ms, mult, foes)); else reapPop(k, ab, e.id, kd, ms, mult, foes); popped++; snapRecent.push(k.now); }
+    if (full && !quick) {
+      fulls++;
+      k.after(i * 0.07 + 0.1, () => { k.damage(REAP.FULL * (moon ? 1.5 : 1), { ab, extra: true, snap: true, gb: true, tgt: reapTg(e.id) }); k.fx('full-harvest', { id: e.id }); });
+      k.ultGain(REAP.FULL_U);
+      if (k.talent('thresher_danse')) k.after(1.2, () => { k.damage(150, { ab, extra: true, tgt: reapTg(e.id) }); k.fx('danse', { id: e.id }); });   // (Danse Macabre: a dancing scythe swings once more)
+    }
+    for (const kd of kinds) delete ms[kd];
+  }
+  k.g.snapped = snapRecent.filter(t => k.now - t < 10);
+  g.moon = moon ? 0 : Math.min(100, (g.moon || 0) + popped * REAP.MOON_PER + fulls * REAP.MOON_FULL);
+  if (moon) { k.fx('harvest-moon'); k.stats.moons = (k.stats.moons || 0) + 1; }
+  k.stats.snaps = (k.stats.snaps || 0) + 1; k.stats.fulls = (k.stats.fulls || 0) + fulls;
+  k.fxGain(1);
+  return { popped, fulls };
+}
+// the Gate's fifth swing: an enhanced Snap
+function reapRelease(k, ab) {
+  const r = reapSnap(k, ab, { gate: true });
+  k.fx('gate-release', { n: r.popped, full: r.fulls });
+  reapEnd(k, true);
+  k.g.gateT0 = 0;
+}
+// Void Star's collapse
+function reapStarHit(k, ab, cx, cy, scale, primId) {
+  const near = k.env.enemiesNear ? (k.env.enemiesNear(560) || []) : [];
+  let hits = near.filter(c => Math.hypot(c.x - cx, c.y - cy) - (c.r || 0) <= REAP.STAR_R);
+  if (!near.length) hits = [{ id: primId || 'dummy', x: cx, y: cy, r: 0 }];
+  for (const c of hits) {
+    const marks = reapMarks(k, c.id).length;
+    k.damage((REAP.STAR + REAP.STAR_MARK * marks) * scale, { ab, extra: true, tgt: reapTg(c.id) });
+    if (k.talent('thresher_linger') && k.rng() < 0.2 + 0.2 * marks) { const open = REAP.KINDS.filter(kd => !reapMarks(k, c.id).includes(kd)); if (open.length) reapMark(k, c, open[Math.floor(k.rng() * open.length)]); }
+  }
+  k.fx('star-collapse', { x: Math.round(cx), y: Math.round(cy), marks: hits.length });
+}
+function reapStar(k, ab, scale) {
+  const t = k.env.target(ab);
+  let cx = t && t.x != null ? t.x : 0, cy = t && t.y != null ? t.y : 0;
+  if (k.talent('thresher_vanishing') && k.g.lastBlink) { cx = k.g.lastBlink.x; cy = k.g.lastBlink.y; }
+  k.fx('star-open', { x: Math.round(cx), y: Math.round(cy) });
+  k.after(REAP.STAR_DELAY, () => reapStarHit(k, ab, cx, cy, scale, t && t.id));
+  k.ultGain(REAP.STAR_U);
+  if (k.env.refundDash) k.env.refundDash();
+  k.stats.stars = (k.stats.stars || 0) + 1;
+}
+// the Blink (actor.js useDash > def.onBlink). info: { from, to, through }
+function reapBlink(k, info) {
+  const g = k.g, now = k.now, s = g.str;
+  info = info || {};
+  if (info.from) g.lastBlink = { x: info.from.x, y: info.from.y };
+  // a blink keeps the string (and with Unbroken Step adds a swing to it)
+  if (s && s.n > 0 && now < s.until) { s.until = Math.max(s.until, now + REAP.BLINK_HOLD); if (k.talent('thresher_unbroken') && s.n < reapMax(k) - 1) s.n++; }
+  k.buff('blinked', 4);
+  if (info.through) {
+    if (k.talent('thresher_step')) k.buff('stepthrough', 8);
+    if (k.talent('thresher_flicker') && k.env.refundDash) k.env.refundDash();
+  }
+  if (k.talent('thresher_afterimage')) k.buff('afterimage', 8);
+  if (k.talent('thresher_shade') && info.from) reapHost(k, { op: 'field', x: Math.round(info.from.x), y: Math.round(info.from.y), r: 90, dur: 5 });
+  if (k.talent('thresher_moonrise') && (g.moon || 0) >= 100 && k.env.enemiesNear && info.from && info.to) {
+    const a = info.from, b = info.to, dx = b.x - a.x, dy = b.y - a.y, L2 = dx * dx + dy * dy || 1;
+    for (const c of k.env.enemiesNear(500) || []) {
+      const t = Math.max(0, Math.min(1, ((c.x - a.x) * dx + (c.y - a.y) * dy) / L2)), d = Math.hypot(c.x - (a.x + dx * t), c.y - (a.y + dy * t));
+      if (d - (c.r || 0) <= 80) k.damage(150, { ab: reapAb(k, 'snap'), extra: true, tgt: reapTg(c.id) });
+    }
+    k.fx('blink-slash');
+  } else if (k.talent('thresher_moonrise') && (g.moon || 0) >= 100 && !k.env.enemiesNear) { k.damage(150, { ab: reapAb(k, 'snap'), extra: true }); k.fx('blink-slash'); }
+  k.fx('blink', { through: !!info.through });
 }
 
 KITS.thresher = {
-  potMult: 0.83,   // balance knob (tools/simulate.js)
+  potMult: 0.88,   // balance knob (tools/simulate.js)
   auto: { kind: 'slash', potency: 40, range: MELEE },
-  gauge: { kind: 'harvest', key: 'aff', max: 100, label: 'Toll', w: 150 },
-  init: () => ({ aff: {}, last: null, step: 0, comboUntil: 0, swingBy: 0, gate: 0, wispAt: -99, wispOn: false, castSeen: false }),
-  dmgMod: k => (k.has('wispgift') ? THRESH.SAC_BUFF : 0),
-  onDamage(k, amount, crit, opts) {
-    if (opts.dot && opts.ab && k.baseId(opts.ab) === 'wisp') { k.fx('wisp-strike'); if (!thW(k, 'bind')) thApply(k, 'bind'); }
+  gauge: { kind: 'crescent', key: 'moon', max: 100, label: 'Crescent', w: 150 },
+  init: () => ({ str: { n: 0, start: 0, until: 0 }, marks: {}, moon: 0, snapped: [], castSeen: false, encore: false, lastBlink: null, gateT0: 0 }),
+  moveFor(k, ab) { ab.lock = (k.baseId(ab) === 'finish' ? REAP.FIN_LOCK : REAP.SWING_LOCK) * k.hasteMult(); return ab; },
+  haste: k => (k.has('frenzy') ? REAP.FRENZY_SELF : 1),
+  dmgMod: (k, o) => (k.has('deathmark') && o.hit ? REAP.DEATH_MULT : 0) + (k.has('gatebreaker') && (o.gb || o.rel || (o.hit && o.ab && k.baseId(o.ab) === 'finish')) ? REAP.GATE.GB : 0),
+  reach: (k, ab) => (k.baseId(ab) === 'string' || k.baseId(ab) === 'finish' ? REAP.REACH * (k.talent('thresher_reach') ? 1.2 : 1) : null),
+  onBlink: reapBlink,
+  afterUse(k, ab) {
+    const b = k.baseId(ab);
+    if ((b === 'string' || b === 'finish') && k.has('deathmark')) k.consume('deathmark');
   },
   tick(k) {
-    const g = k.g, now = k.now, far = { target: 'enemy', range: 2000 };
-    for (const id of THRESH.IDS) {
-      const a = g.aff[id];
-      if (!a) continue;
-      // run out: gone (Grave Interest: it pays half its pop as it goes, with no effect)
-      if (now >= a.until) {
-        g.aff[id] = null;
-        if (k.talent('thresher_compost') && k.env.target(far)) { k.damage(THRESH.PAY[id] * a.w * 0.5 * (k.def.reapMult || 1), { ab: thAb(k, 'reap'), extra: true }); k.fx('afflict-pop', { id, w: a.w, fade: true }); }
-        else k.fx('afflict-fade', { id });
-        continue;
-      }
-      if (now < a.next) continue;
-      // every Weight ticks (Deepening Toll, Grim spec row VI: at full Weight twice as fast)
-      a.next = now + (k.talent('thresher_deepening') && a.w >= thMaxW(k) ? THRESH.TICK / 2 : THRESH.TICK);
-      if (!THRESH.TICKP[id] || !k.env.target(far)) continue;
-      k.damage(THRESH.TICKP[id] * a.w, { ab: thAb(k, id === 'mark' || id === 'drain' ? 'slash' : 'blink'), dot: true });
-      if (id === 'drain') { k.healRaw(k.talent('thresher_tithe') ? 'lowest' : 'self', k.env.maxHp() * THRESH.DRAIN_HEAL * a.w, { ab: thAb(k, 'slash') }); k.fx('drain-tick'); }
-      if (id === 'bind') k.fx('bind-pulse');
-    }
-    // (Omen of the Toll: a boss cast beginning brings Sever back)
-    onBossCast(k, () => { if (k.talent('thresher_omen')) { const s = thAb(k, 'gather'); if (s && s.id === 'gather') k.cd[s.id] = now; k.fx('omen'); } });
-    // the Wisp ran out on its own: with Sacrifice held the cooldown only starts now (counted from the summon)
-    if (g.wispOn && !k.has('wisp')) { g.wispOn = false; const w = thAb(k, 'wisp'); if (w) k.cd[w.id] = Math.max(k.cd[w.id] || 0, g.wispAt + THRESH.WISP_CD); }
+    const g = k.g, s = g.str;
+    if (s && s.n > 0 && k.now >= s.until) reapEnd(k, false);   // a pause ends the string
   },
-  signature: 'The Toll',
-  floor: 'Press Q to cut, and E when it glows: that is the reaping. Keep Q going, and weave the others when they are ready.',
+  signature: 'The String',
+  floor: 'Press Q to swing, four times, then W to finish it. Snap with E when it glows, and Void Star with R on a marked target.',
   ceiling: [
-    'Slash lays a Mark and Cleave a Drain; Hook lays a Thread and Gloam Blink binds. Laying one that is already up adds a Weight (up to 3) and starts its 15s again. Every Weight ticks, and every Weight pays when it is popped.',
-    'Each pops its own way: Mark is the big hit, Drain mends you, Bind fetters the boss (the party takes 10% less for 4s) and Thread snaps and gives a Hook charge back. Pop a Bind into a raidwide or a tankbuster.',
-    'Reap pops them all. One at full Weight pays 50% more, and all of them at full Weight is the Full Toll: a knell, one more heavy blow and more Ultimate charge. Popping early buys the effects when you need them; waiting buys Weight.',
-    'Sever rips out only the affliction you laid last, at half again its worth. Blink then Sever is a Bind popped on the moment; Hook then Sever, a Thread and a Hook charge back.',
-    'Backswing: press the next Q within 1.2s of your recovery and the scythe comes back round for a second hit. Every Reap you make keeps it going.',
-    'Reaper\'s Gate: every strike lays the next affliction at full Weight, and the fifth pops all four. Open it with the party\'s burst, or with a raidwide coming for the Bind.',
+    'Q is a string of up to four swings on one global cooldown: it starts when the string ends. W ends it, and what it does depends on how many swings came first. A short string leaves room to move; a long one hits harder.',
+    'Each finisher leaves a mark: a hook leaves Drain (Snap mends you), the quake ring Bind (adds are held), the skewer Death Mark (your next four hits strike harder) and the wide sweep Thread on everything in the arc. Marks last 20s.',
+    'Snap pops every mark on every enemy, each its own way. All four on one enemy is a Full Harvest, a burst. Snaps fill the crescent; when it is full the next Snap is a Harvest Moon and pops every mark twice.',
+    'Void Star opens a void of smoke at the target that collapses and hits everything round it, harder for every mark on the target (it uses none). It charges Arcane Gate and gives a Blink back. Time it on a stack of marks.',
+    'Insane Reaper is the party\'s 60s haste, 10% for 15s, and it stacks with a Chronomancer haste; your own swings come faster still. Line it up with everyone\'s burst. Blinking does not break a string.',
+    'Arcane Gate: five swings, each of the first four lays an empowered mark; land all four quickly for Gatebreaker. The fifth swing is a Snap that pops them all at once.',
   ],
   abilities: [
     {
-      id: 'slash', name: 'Slash', type: 'gcd', target: 'enemy', range: MELEE, anim: 'attack',
-      desc: 'Two-hit combo on one button: Slash ({d:200}) > Cleave ({d:270}), a wide arc. Slash lays a Mark on the boss (a bleed, {d:20} every 3s for every Weight) and Cleave a Drain ({d:12} every 3s for every Weight, and it mends you). Press the next hit within 1.2s of your recovery and a Backswing follows for {d:90}.',
-      label: k => ['Slash', 'Cleave'][k.now < k.g.comboUntil ? k.g.step : 0],
-      fxStep: k => (k.now < k.g.comboUntil ? k.g.step : 0),
-      effect(k) { thSlash(k, this); },
-      fx: { type: 'slash', color: '#9be06a', r: 64, span: 2.3 },
+      id: 'string', name: 'Scythe String', type: 'gcd', target: 'enemy', range: REAP.REACH, anim: 'attack',
+      recastGcd: () => 0.5, freeGcd: k => reapOpen(k) || k.now >= k.gcdReady - 0.0001,
+      label: k => ['Rising Cut', 'Backhand', 'Overhead', 'Reaping Circle', 'Release'][Math.min(reapN(k), k.ultWin ? 4 : 3)],
+      fxStep: k => reapN(k),
+      desc: `A string of up to four quick swings, in arcs: a rising cut ({d:${REAP.SW[0]}}), a backhand sweep ({d:${REAP.SW[1]}}), an overhead spin ({d:${REAP.SW[2]}}) and a reaping circle ({d:${REAP.SW[3]}}). The whole string and its finisher are one global cooldown, and it starts when the string ends: after W, or a second and a half with no press.`,
+      usable: k => reapN(k) < reapMax(k),
+      glow: k => reapN(k) < (k.ultWin ? REAP.GATE.MAX : REAP.MAX),
+      effect(k) { reapSwing(k, this); },
+      fx: { type: 'slash', color: '#7fb8ff', r: 70, span: 2.2 },
     },
     {
-      id: 'hook', name: 'Hook', type: 'ogcd', target: 'enemy', range: 320, charges: 2, cd: 12, lock: 0.4, anim: 'attack',
-      desc: 'Throw the chain: if you are not at the boss, pull yourself in, and cut for {d:150}. It lays a Thread on the boss: it does not tick, but it pays the most when popped, and snapping it gives a Hook charge back. Two charges.',
-      glow: k => !thW(k, 'thread'),
+      id: 'finish', name: 'Finisher', type: 'gcd', target: 'enemy', range: REAP.REACH, anim: 'bash',
+      recastGcd: () => 1.0, freeGcd: k => reapOpen(k),
+      label: k => ['Finisher', 'Hooking Cut', 'Quake', 'Skewer', 'Sweep'][reapN(k)],
+      fxStep: k => reapN(k),
+      desc: `Ends the string. After one swing a hooking cut ({d:${REAP.FIN[1]}}) leaves a Drain mark; after two, the blade driven into the floor ({d:${REAP.FIN[2]}}, a small ring) leaves a Bind that holds adds; after three, a skewer down a line ({d:${REAP.FIN[3]}}) leaves a Death Mark; after four, a wide sweep ({d:${REAP.FIN[4]}}) that leaves a Thread on everything in the arc. Needs a string in hand.`,
+      usable: k => reapOpen(k),
+      glow: k => reapN(k) >= REAP.MAX && !k.ultWin,
+      effect(k) { reapFinish(k, this); },
+      fx: { type: 'slash', color: '#a8d0ff', r: 80, span: 3.0 },
+    },
+    {
+      id: 'snap', name: 'Snap', type: 'ogcd', target: 'self', cd: REAP.SNAP_CD, lock: 0.5, anim: 'cast',
+      desc: 'Snap your fingers: every mark on every enemy pops, each its own way (Drain mends you, Bind holds adds, Death Mark makes your next four hits strike 30% harder, Thread hits hardest). All four on one enemy is a Full Harvest, and a burst. Fills the crescent; a full crescent makes the next Snap a Harvest Moon, which pops every mark twice. Needs a mark up.',
+      usable: k => reapAllMarks(k).length > 0,
+      glow: k => (k.g.moon || 0) >= 100 || reapMostMarks(k) >= 2,
+      effect(k) { reapSnap(k, this); },
+      fx: { type: 'aura', color: '#7fb8ff', r: 50, dur: 0.6 },
+    },
+    {
+      id: 'star', name: 'Void Star', type: 'ogcd', target: 'enemy', range: REAP.STAR_RANGE, cd: k => REAP.STAR_CD - (k.perk('thresher_w3') ? 5 : 0), lock: 0.6, anim: 'cast',
+      desc: `A void of black smoke with a blue core opens at your target, then collapses for {d:${REAP.STAR}} on everything round it, and {d:${REAP.STAR_MARK}} more for every mark on that enemy (none are used up). It charges Arcane Gate and gives a Blink back.`,
+      glow: k => reapTargetMarks(k).length >= 1,
+      effect(k) { reapStar(k, this, 1); },
+      fx: { type: 'zone', color: '#4a6aff', r: 90, range: 0, dur: 1.2 },
+    },
+    {
+      id: 'veil', name: 'Dusk Veil', type: 'ogcd', target: 'self', cd: REAP.VEIL_CD, lock: 0.5, anim: 'cast',
+      desc: `Draw a dark cloak round you: take ${Math.round(REAP.VEIL_MIT * 100)}% less damage for ${REAP.VEIL_DUR}s, and get a Blink charge back.`,
       effect(k) {
-        if (!k.env.target({ target: 'enemy', range: MELEE })) k.teleport('dash', { ab: this, d: 150 });
-        k.damage(THRESH.HOOK * (k.perk('thresher_w2') ? 1.3 : 1), { ab: this });
-        if (k.def.sower) thApply(k, 'bind');
-        const tw = thW(k, 'thread');
-        if (k.talent('thresher_weight') && tw >= thMaxW(k)) { thPop(k, this, 'thread', tw, k.def.reapMult || 1); k.g.aff.thread = null; }   // (Dread Weight: a full Thread snaps on the spot)
-        else thApply(k, 'thread');   // (last: it is the one a Sever takes)
-        k.g.swingBy = Math.max(k.g.swingBy, k.now + 3);
+        k.mitigate('self', k.perk('thresher_a4') ? 0.45 : REAP.VEIL_MIT, REAP.VEIL_DUR, { ab: this });
+        if (k.env.refundDash) k.env.refundDash();
+        if (k.talent('thresher_grave')) { const n = Math.min(8, (k.g.snapped || []).filter(t => k.now - t < 10).length); if (n) k.healRaw('self', k.env.maxHp() * 0.02 * n, { ab: this }); }
+        k.fx('veil');
       },
-      fx: { type: 'slash', color: '#7fc86a', r: 44, span: 1.1 },
+      fx: { type: 'aura', color: '#2a1840', r: 44, dur: 1.2 },
     },
     {
-      id: 'reap', name: 'Reap', type: 'gcd', target: 'enemy', range: MELEE, cd: k => k.def.reapCd || THRESH.REAP_CD, anim: 'bash',
-      desc: 'Pop every affliction on the boss. A cut for {d:80}, then each pays for every Weight it has: Mark {d:130}, Drain {d:90} (and mends you for 2% of your health), Bind {d:90} (and the party takes 10% less damage for 4s) and Thread {d:140} (and a Hook charge comes back). One at full Weight pays 50% more. Every one at full Weight is the Full Toll: the hour strikes for {d:320} more. Glows with three up. Needs an affliction up.',
-      usable: k => thCount(k) > 0,
-      glow: k => thCount(k) >= Math.min(3, thAvail(k).length),
-      effect(k) { thReap(k, this); },
-      fx: { type: 'slash', color: '#e8c84a', r: 76, span: 3.0 },
-    },
-    {
-      id: 'gather', icon: 'sever', name: 'Sever', type: 'ogcd', target: 'enemy', range: MELEE, cd: THRESH.SEVER_CD, lock: 0.5, anim: 'attack',
-      label: k => 'Sever' + (k.g.last && thW(k, k.g.last) ? ' ' + THRESH.NAMES[k.g.last] : ''),
-      desc: 'Rip out the affliction you laid last, alone: it pops at half again its worth, with its own effect (Mark the big hit, Drain a mend, Bind the party\'s 10% less for 4s, Thread a Hook charge). The others stay.',
-      usable: k => !!(k.g.last && thW(k, k.g.last)),
-      glow: k => !!(k.g.last && thW(k, k.g.last) >= thMaxW(k)),
-      effect(k) { thSever(k, this); },
-      fx: { type: 'slash', color: '#d8c84a', r: 50, span: 1.4 },
-    },
-    {
-      id: 'blink', name: 'Gloam Blink', type: 'ogcd', target: 'enemy', range: 320, charges: 2, cd: 15, lock: 0.4, anim: 'attack',
-      desc: 'Cut through the dark to the boss for {d:140} and bind it: a Bind pulses for {d:18} every 3s for every Weight. The cut keeps your Backswing going, and you take 50% less damage for 1s. Two charges.',
-      glow: k => !thW(k, 'bind'),
+      id: 'frenzy', name: 'Insane Reaper', type: 'ogcd', target: 'self', cd: REAP.FRENZY_CD, lock: 0.6, anim: 'big',
+      desc: `Evie's frenzy: the whole party acts ${Math.round(REAP.HASTE * 100)}% faster for ${REAP.FRENZY_DUR}s (it stacks with another party haste, such as a Chronomancer's), and your own swings come faster still.`,
+      glow: k => { const m = k.env.partyMods ? k.env.partyMods() : null, b = bossNow(k); return !!((m && m.dmg > 0.001) || (b && b.vuln > 0)); },
       effect(k) {
-        if (!k.env.target({ target: 'enemy', range: MELEE })) k.teleport('dash', { ab: this, d: 150 });
-        k.damage(THRESH.BLINK, { ab: this });
-        if (k.def.blinkDeepen) { const l = k.g.last; if (l && thW(k, l)) thApply(k, l, 1); }   // (a Grim binds nothing: its Blink deepens the one laid last)
-        else thApply(k, 'bind');
-        k.mitigate('self', k.perk('thresher_a4') ? 0.7 : THRESH.BLINK_MIT, 1, { ab: this });
-        if (k.talent('thresher_vanish')) k.mitigate('self', 1, 1.5, { ab: this, kind: 'invuln' });
-        k.g.swingBy = Math.max(k.g.swingBy, k.now + 3.5);
+        k.partyBuff('rhaste', REAP.HASTE, REAP.FRENZY_DUR, { ab: this });   // (its own kind: it adds to a Chronomancer's haste)
+        k.buff('frenzy', REAP.FRENZY_DUR);
+        k.fx('frenzy');
       },
-      fx: { type: 'slash', color: '#5a8a6a', r: 40, span: 1.1 },
-    },
-    {
-      id: 'wisp', name: 'Spirit Wisp', type: 'ogcd', target: 'self', cd: THRESH.WISP_CD, lock: 0.5, anim: 'cast',
-      label: k => (k.has('wisp') && k.talent('thresher_sacrifice') ? 'Sacrifice' : 'Spirit Wisp'),
-      usable: k => !k.has('wisp') || k.talent('thresher_sacrifice'),
-      desc: 'A wisp rises beside you for 15s and harries the boss, striking for {d:60} every 2.5s and binding it if nothing else has.',
-      glow: k => k.has('wisp') && k.talent('thresher_sacrifice') && thCount(k) >= 3,
-      effect(k) {
-        if (k.has('wisp')) { thSacrifice(k, this); return; }
-        const wd = k.perk('thresher_w3') ? 20 : THRESH.WISP_DUR;
-        k.buff('wisp', wd); k.g.wispAt = k.now; k.g.wispOn = true;
-        k.dot('wisp', THRESH.WISP_HIT, wd, THRESH.WISP_EVERY, { ab: this });
-        if (k.talent('thresher_sacrifice')) k.cd[this.id] = k.now + 1;
-        k.fx('wisp-summon');
-      },
-      fx: { type: 'aura', color: '#a8f0d0', r: 34, dur: 2 },
+      fx: { type: 'aura', color: '#c8283c', r: 60, dur: 1.4 },
     },
   ],
 };
 
 // talents that grant a new move (TALENT_ABILITIES, the shared system above)
-TALENT_ABILITIES.thresher_sowing = { cls: 'thresher', ab: {
-  id: 'sowing', replaces: 'gather', icon: 'sowing', name: 'Shroud', type: 'ogcd', target: 'enemy', range: 420, cd: 30, lock: 0.6, anim: 'cast',
-  desc: 'Cast the shroud: every affliction lands on the boss at once, a Weight more on any already up, and a cut for {d:70}.',
-  glow: k => thCount(k) <= 1,
-  effect(k) {
-    k.damage(70, { ab: this });
-    for (const id of THRESH.IDS) thApply(k, id);
-    k.fx('sowing');
-  },
-  fx: { type: 'zone', color: '#7fc86a', r: 90, range: 0, dur: 1.5 },
+TALENT_ABILITIES.thresher_twin = { cls: 'thresher', ab: {
+  id: 'twinstar', replaces: 'star', icon: 'star', name: 'Twin Stars', type: 'ogcd', target: 'enemy', range: REAP.STAR_RANGE, charges: 2, cd: k => 24 - (k.perk('thresher_w3') ? 4 : 0), lock: 0.6, anim: 'cast', talent: true,
+  desc: `Void Star holds two charges, each a little smaller: a void that collapses for {d:${Math.round(REAP.STAR * 0.7)}} on everything round it and {d:${Math.round(REAP.STAR_MARK * 0.7)}} more for every mark on that enemy. Each charges Arcane Gate and gives a Blink back.`,
+  glow: k => reapTargetMarks(k).length >= 1,
+  effect(k) { reapStar(k, this, 0.7); },
+  fx: { type: 'zone', color: '#4a6aff', r: 80, range: 0, dur: 1.2 },
 } };
-TALENT_ABILITIES.thresher_cull = { cls: 'thresher', ab: {
-  id: 'cull', replaces: 'wisp', icon: 'cull', name: 'Cull', type: 'ogcd', target: 'enemy', range: MELEE, cd: k => (k.perk('thresher_w3') ? 35 : 40), lock: 0.6, anim: 'big',   // (Spirit Wisp's enhancement: it comes back 5s sooner)
-  desc: 'Take what is owed now: every affliction on the boss pays out for its Weight (3 at the most), and none is spent (none of their effects go off). A cut for {d:80} first, then for every Weight Mark {d:130}, Drain {d:90}, Bind {d:90} and Thread {d:140}.',
-  usable: k => thCount(k) > 0,
-  glow: k => thTotal(k) >= 6,
-  effect(k) {
-    const ws = thWeights(k); for (const id of THRESH.IDS) ws[id] = Math.min(ws[id], THRESH.MAXW);
-    const r = thPayout(k, this, ws, { base: THRESH.BASE, mult: 1, gap: 0.14, quiet: true, plain: true });
-    k.ultGain(THRESH.U_REAP + THRESH.U_W * r.total);
-    k.fx('cull', { n: r.n });
-  },
-  fx: { type: 'slash', color: '#c8e84a', r: 70, span: 2.6 },
-} };
-// the spec rows VII (SPEC_TALENTS in talents.js): the Wraith's Hourglass and the Grim's Nightfall, each in the place of Gloam Blink
-// (a cut through the dark like the Blink's, with no Bind laid; one turns the glass so what you lay lands full, the other deepens it all)
-const thTimeMove = (id, name, cd, then, desc, glow) => ({
-  id, replaces: 'blink', icon: id, name, type: 'ogcd', target: 'enemy', range: 320, cd, lock: 0.4, anim: 'attack', talent: true, desc, glow,
-  effect(k) {
-    if (!k.env.target({ target: 'enemy', range: MELEE })) k.teleport('dash', { ab: this, d: 150 });
-    k.damage(THRESH.BLINK, { ab: this });
-    then(k);
-    k.mitigate('self', k.perk('thresher_a4') ? 0.7 : THRESH.BLINK_MIT, 1, { ab: this });
-    k.g.swingBy = Math.max(k.g.swingBy, k.now + 3.5);
-  },
-  fx: { type: 'slash', color: '#5a8a6a', r: 40, span: 1.1 },
-});
-talentMoves('thresher', {
-  thresher_hourglass: thTimeMove('hourglass', 'Hourglass', 28, k => { k.g.fullUntil = k.now + 5; },
-    'Cut through the dark to the boss for {d:140} and turn the glass: for 5s every affliction you lay lands at full Weight. You take 50% less damage for 1s.',
-    k => k.cdRemaining(thAb(k, 'reap')) < 4),
-  thresher_nightfall: thTimeMove('nightfall', 'Nightfall', 25, k => thDeepen(k),
-    'Cut through the dark to the boss for {d:140}, and every affliction on it gains a Weight. You take 50% less damage for 1s.',
-    k => thCount(k) >= 2 && thFull(k) < thCount(k)),
-});
 
-// Reaper's Gate (T). Fills from Reaps (more for every Weight they pop). A window of 8s: you vanish (nothing can touch you), and
-// every Slash is a Gate Strike on a 1s global cooldown that lays the next affliction in turn (Mark, Drain, Bind, Thread) at full
-// Weight (3 at the most); the fifth strike pops all four as 3 Weight at full, a heavy burst with every effect, and the cycle starts again.
-const GATE = THRESH.GATE, GATE_ORDER = ['mark', 'drain', 'bind', 'thread'];
-const thGateW = k => Math.min(thMaxW(k), THRESH.MAXW);
-ULTIMATES.thresher = {
-  id: 'reapersgate', name: 'Reaper\'s Gate', slot: 7, type: 'ogcd', ult: true, mode: 'window', target: 'enemy', range: 380, anim: 'big', icon: 'reapersgate',
-  lock: 0.6, dr: 0.3,
-  charge: { rate: 0.4, keep: 0.5 },
-  botOk: k => !!k.env.target({ target: 'enemy', range: 220 }),
-  desc: `Step through the Gate and out of the world for ${GATE.DUR}s: nothing can touch you, and you strike from behind your target. Slash becomes <b>Gate Strike</b> on a ${GATE.GCD}s global cooldown: each one cuts for {d:${GATE.STRIKE}} and lays the next affliction in turn (Mark, Drain, Bind, Thread) at full Weight. ` +
-    `The fifth strike pops all four as if at full Weight, with all their effects: {d:${GATE.END}}, then Mark {d:${Math.round(THRESH.PAY.mark * 3 * THRESH.FULL * GATE.MULT)}}, Drain {d:${Math.round(THRESH.PAY.drain * 3 * THRESH.FULL * GATE.MULT)}}, Bind {d:${Math.round(THRESH.PAY.bind * 3 * THRESH.FULL * GATE.MULT)}} and Thread {d:${Math.round(THRESH.PAY.thread * 3 * THRESH.FULL * GATE.MULT)}}. Your afflictions are spent (Open Gate keeps them). ` +
-    'You take 30% less damage and can\'t be knocked back while you step through.' +
-    `<div class="it-ult"><span><u>Charge:</u> ${THRESH.U_REAP}% for every Reap and ${THRESH.U_W} more for every Weight it pops (a Sever: its Weight), and a little on its own while you fight. It never drains; a fall keeps half.</span></div>`,
+TALENT_ABILITIES.thresher_gravewalk = { cls: 'thresher', ab: {
+  id: 'gravewalk', replaces: 'veil', icon: 'veil', name: 'Gravewalk', type: 'ogcd', target: 'self', cd: 30, lock: 0.5, anim: 'cast', talent: true,
+  desc: 'Step out of the world for 1.5s: nothing can touch you. You get a Blink charge back.',
   effect(k) {
-    k.mitigate('self', 1, GATE.DUR, { ab: this, kind: 'invuln' });
-    k.teleport('behind', { ab: this });
-    k.buff('gate', GATE.DUR);
-    k.g.gate = 0;
+    k.mitigate('self', 1, 1.5, { ab: this, kind: 'invuln' });
+    if (k.env.refundDash) k.env.refundDash();
+    k.fx('veil');
+  },
+  fx: { type: 'aura', color: '#2a1840', r: 44, dur: 1.5 },
+} };
+
+// Arcane Gate (T). Fills from Full Harvests, Void Star and a trickle. A window of 8s: you phase out as it opens (nothing touches you
+// while it does), and Q runs to five swings: each of the first four lays an empowered mark, in order (Drain, Bind, Death Mark,
+// Thread), four inside 3.2s makes you a Gatebreaker, and the fifth is a Snap that pops every mark at once.
+const GATE = REAP.GATE;
+ULTIMATES.thresher = {
+  id: 'arcanegate', name: 'Arcane Gate', slot: 7, type: 'ogcd', ult: true, mode: 'window', target: 'self', anim: 'big',
+  lock: GATE.LOCK, dr: 0.3,
+  charge: { rate: REAP.U_TRICKLE, keep: 0.5 },
+  botOk: k => !!k.env.target({ target: 'enemy', range: 220 }),
+  desc: `Open the Gate and phase out of the world while it does: nothing can touch you for a breath. For ${GATE.DUR}s your string runs to <b>five swings</b>. Each of the first four lays an <b>empowered</b> mark in turn (Drain, Bind, Death Mark, Thread); land all four within ${GATE.LIMIT}s and you become a <b>Gatebreaker</b>, with finishers and Snap ${Math.round(GATE.GB * 100)}% stronger until it closes. The fifth swing is the release: a Snap that pops every mark twice, the empowered ones ${GATE.EMP}x.` +
+    `<div class="it-ult"><span><u>Charge:</u> from Full Harvests, from Void Star, and a little on its own while you fight. It never drains; a fall keeps half.</span></div>`,
+  effect(k) {
+    k.mitigate('self', 1, GATE.LOCK + 0.3, { ab: this, kind: 'invuln' });
+    k.g.str = { n: 0, start: 0, until: 0 };
+    k.gcdReady = k.now;
     k.fx('gate-open');
   },
   window: {
     dur: GATE.DUR,
     over: {
-      slash: {
-        fxId: 'gatestrike', name: 'Gate Strike', recastGcd: GATE.GCD, anim: 'attack',
-        label: k => (k.g.gate >= 4 ? 'The Fifth' : 'Gate Strike'),
-        desc: `Reaper's Gate: a strike for {d:${GATE.STRIKE}} that lays the next affliction in turn (Mark, Drain, Bind, Thread) at full Weight. The fifth pops all four.`,
-        glow: k => k.g.gate >= 4,
-        effect(k) {
-          const n = k.g.gate | 0;
-          if (n < 4) {
-            k.damage(GATE.STRIKE, { ab: this });
-            thApply(k, GATE_ORDER[n], 1, { full: true, force: true, max: thGateW(k) });
-            k.g.gate = n + 1;
-            k.fx('gate-strike', { n });
-            return;
-          }
-          const ws = {}; for (const id of THRESH.IDS) ws[id] = thW(k, id) ? THRESH.MAXW : 0;
-          const r = thPayout(k, this, ws, { base: GATE.END, baseMult: 1, mult: GATE.MULT, gap: 0.12, full: true });
-          if (!k.talent('thresher_opengate')) for (const id of THRESH.IDS) k.g.aff[id] = null;
-          k.g.gate = 0;
-          k.fx('gate-release', { n: r.n });
-        },
+      string: {
+        fxId: 'gatecut', name: 'Gate Cut', glow: k => true,
+        label: k => ['Gate Cut', 'Gate Cut', 'Gate Cut', 'Gate Cut', 'Release'][Math.min(reapN(k), 4)],
+        desc: `Arcane Gate: a string of five. Each of the first four swings lays an empowered mark in order (Drain, Bind, Death Mark, Thread); the fifth is the release, a Snap that pops them all.`,
+        usable: k => reapN(k) < GATE.MAX,
+        effect(k) { reapSwing(k, this); },
       },
     },
-    onEnd(k) { k.clear('gate'); k.g.gate = 0; k.fx('gate-close'); },
+    onEnd(k) { k.clear('gatebreaker'); k.g.gateT0 = 0; k.fx('gate-close'); },
   },
 };
 
-if (typeof module !== 'undefined') Object.assign(module.exports, { thArc, THRESH, thW, thCount, thFull, thTotal, thMaxW, thAvail, thApply, thDeepen, thPop, thPayout, thReap, thSever, thSlash });
+if (typeof module !== 'undefined') Object.assign(module.exports, { REAP, reapN, reapOpen, reapMarks, reapAllMarks, reapMostMarks, reapTargetMarks, reapMax, reapSnap, reapFinish, reapSwing, reapStar, reapEnd, reapBlink });
 
 // ======================================================================= Tidecaller (healer, class 20; docs/plans/2026-10-new-classes-3.md §2)
 // The Tide: a water line (k.g.tide, 0-100) on its own clock. It rises from Low to High over TIDE.RISE s (k.g.tphase 'rise'),

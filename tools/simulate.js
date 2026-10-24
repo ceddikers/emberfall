@@ -48,7 +48,9 @@ function runSim(classId, skill, seed, specId, talents) {
     target: ab => (ab.body ? (state.inBody ? { id: 'dummy', x: 0, y: 0 } : null) : ab.target === 'ally' ? 'tank'
       : ab.target === 'enemy' ? (state.outOfRange && ab.range === 'melee' ? null : { id: 'dummy', x: 0, y: 0 }) : true),
     positional: want => (lastPos === 'want' ? want || 'rear' : lastPos),
-    partyMods: () => (inBurst(state.t) ? { dmg: 0.08 } : {}),
+    partyMods: () => Object.assign(inBurst(state.t) ? { dmg: 0.08, haste: +process.env.PARTY_HASTE || 0 } : {},   // (PARTY_HASTE=0.1: what the party's haste window, Insane Reaper's, is worth)
+      state.haste && state.t < state.haste.end ? { haste: state.haste.value } : {}),   // (a party haste someone gave: Insane Reaper)
+    refundDash: () => {},
     targetMods: () => ({}),
     selfMods: () => ({}),
     recentDamage: secs => state.tookDamage.filter(d => d.t > state.t - secs).reduce((s, d) => s + d.a, 0),
@@ -80,6 +82,7 @@ function runSim(classId, skill, seed, specId, talents) {
     // a Lanternkeeper's lanterns (kits.js lkShare): the host stand-in below (LAMP_SIM) heals with them once a second
     lamps: list => { state.lamps = list; },
     emit: ev => {
+      if (ev.type === 'partyBuff' && ev.kind === 'rhaste') state.haste = { value: ev.value, end: state.t + ev.dur };
       if (ev.type === 'heal' || ev.type === 'hot') {
         const amt = ev.type === 'hot' ? ev.amount * ev.ticks : ev.amount;
         state.healing += ev.target === 'party' ? amt * 4 : amt;
@@ -261,6 +264,40 @@ function newbieGlowOgcd(k, ctx, id) {
   return null;
 }
 const NEWBIE = {
+  // Reaper: the generic newbie between strings (oGCDs noticed late, a glowing Q), and inside one a masher: swings come 0.05-0.3s after the
+  // last lock, a glowing W (the fourth swing) is noticed 60% of the time (otherwise a pause, which can end the string), and now and then
+  // the string is finished early. It never plans the marks: what it lays is whatever the string it happened to make was.
+  thresher(k, ctx) {
+    const n = reapN(k);
+    if (!n) {
+      ctx.state.newbieR = null;
+      const nb = ctx.state.newbie || (ctx.state.newbie = { gcdSeenAt: null, delay: 0, ogcdSeen: {} });
+      // an oGCD that has come up is noticed 0.5-3s later (the generic newbie's rule), and pressed in the gap after a finisher
+      for (const ab of k.abilities) {
+        if (ab.type !== 'ogcd') continue;
+        if (!k.usable(ab) || k.readyIn(ab) > 0.0001) { nb.ogcdSeen[ab.id] = null; continue; }
+        if (nb.ogcdSeen[ab.id] == null) nb.ogcdSeen[ab.id] = ctx.t + 0.5 + ctx.human() * 2.5;
+        if (ctx.t >= nb.ogcdSeen[ab.id] && !k.cast && k.lockUntil <= k.now) { nb.ogcdSeen[ab.id] = null; return I(k, ab.id); }
+      }
+      // Q is always lit: it is started 0.05-0.3s after the global cooldown comes up
+      if (k.gcdRemaining() > 0.0001 || k.cast || k.lockUntil > k.now) { nb.gcdSeenAt = null; return null; }
+      if (nb.gcdSeenAt == null) { nb.gcdSeenAt = ctx.t; nb.delay = 0.05 + ctx.human() * 0.25; }
+      if (ctx.t < nb.gcdSeenAt + nb.delay) return null;
+      nb.gcdSeenAt = null;
+      return I(k, 'string');
+    }
+    if (k.lockUntil > k.now) return null;
+    const st = ctx.state.newbieR || (ctx.state.newbieR = { at: null });
+    if (st.at == null) {
+      st.at = ctx.t; st.delay = ctx.human() * 0.15;
+      st.pause = n >= REAP.MAX ? (ctx.human() < 0.6 ? 0 : 0.3 + ctx.human() * 0.4) : (ctx.human() < 0.05 ? 0.7 : 0);
+      st.early = n >= 1 && n < REAP.MAX && ctx.human() < 0.05;
+    }
+    if (ctx.t < st.at + st.delay + st.pause) return null;
+    st.at = null;
+    if (k.ultWin) return I(k, 'string');
+    return n >= REAP.MAX || st.early ? I(k, 'finish') : I(k, 'string');
+  },
   bastion(k, ctx) { const g = newbieGlowOgcd(k, ctx, 'brace'); return g != null ? (g < 0 ? null : g) : genericNewbie(k, ctx); },
   // Runeguard: the generic newbie, but a Spellwarden's glowing Ward (an ally-target GCD the generic one skips) is
   // answered like any glowing button: noticed 60% of the time, pressed 0.1-0.6s after the GCD is ready
@@ -959,31 +996,30 @@ Object.assign(PRO, {
   },
 });
 
-// ---------------------------------------------------------------- Thresher (damage, class 19)
-// The pro: keeps all four afflictions up and weighted (Hook for the Thread, Blink for the Bind, Q for the Mark and Drain), Severs
-// what it laid last once that is at full Weight while Reap is a while off, and Reaps only for the Full Toll or before something
-// runs out. The newbie is the generic one: it notices the glowing Reap 60% of the time and otherwise cuts.
+// ---------------------------------------------------------------- Reaper (id thresher; damage, class 19)
+// The pro: strings of four and a finisher (the Thread), Snaps once three marks are up or all four have been laid (a Full Harvest) or the
+// crescent is full, Void Star on a stack of marks or in the party's burst, Insane Reaper in the burst, and shortens a string into a
+// forced move. The newbie is the generic one: it notices the glowing buttons 60% of the time, otherwise swings, and finishes whenever.
 Object.assign(PRO, {
   thresher(k, ctx) {
-    const max = thMaxW(k), avail = thAvail(k).length, on = thCount(k), full = thFull(k), total = thTotal(k), last = k.g.last;
-    const ending = THRESH.IDS.some(id => k.g.aff[id] && k.g.aff[id].until - k.now < 2.5);
-    const reapReady = ready(k, 'reap'), reapIn = k.readyIn(abOf(k, 'reap'));
-    if (weaveOk(k)) {
-      const wisp = abOf(k, 'wisp');
-      if (wisp.id === 'cull') { if (ready(k, 'wisp') && total >= 6) return I(k, 'wisp'); }
-      else if (ready(k, 'wisp') && (!k.has('wisp') || (k.talent('thresher_sacrifice') && k.remaining('wisp') < 6 && on >= 3))) return I(k, 'wisp');
-      const hook = abOf(k, 'hook'), blink = abOf(k, 'blink');
-      // (the spec rows' Blink replacements: Hourglass just before a Reap, Nightfall to deepen what is up)
-      if (blink.id === 'hourglass') { if (ready(k, 'blink') && reapIn < 3) return I(k, 'blink'); }
-      else if (blink.id === 'nightfall') { if (ready(k, 'blink') && on >= 2 && full < on) return I(k, 'blink'); }
-      if (k.charges(hook) > 0 && thW(k, 'thread') < max) return I(k, 'hook');
-      if (blink.id === 'blink' && k.charges(blink) > 0 && (k.def.blinkDeepen ? last && thW(k, last) && thW(k, last) < max : thW(k, 'bind') < max)) return I(k, 'blink');
-      if (abOf(k, 'gather').id === 'sowing') { if (ready(k, 'gather') && on <= 1) return I(k, 'gather'); }
-      else if (ready(k, 'gather') && last && thW(k, last) >= max - 1 && reapIn > 4) return I(k, 'gather');
+    const n = reapN(k), open = n > 0, marks = reapMostMarks(k), tm = reapTargetMarks(k).length;
+    // (a Phantom blinks about every 6s: the dash is the world's, so the simulator tells the kit)
+    if (k.def.phantom && !open && ctx.t >= (ctx.state.nextBlink || 8)) { ctx.state.nextBlink = ctx.t + 6; k.def.onBlink(k, {}); }
+    if (!open && k.gcdRemaining() > 0.25 && !k.cast && k.lockUntil <= k.now + 0.0001) {   // (the one gap a string leaves: after the finisher)
+      if (ctx.inBurst(ctx.t) && ready(k, 'frenzy')) return I(k, 'frenzy');
+      if (ready(k, 'star') && (tm >= 3 || (ctx.inBurst(ctx.t) && tm >= 2))) return I(k, 'star');
+      if (ready(k, 'snap') && (marks >= 4 || (k.g.moon || 0) >= 100 && marks >= 2 || marks >= 3 && k.cdRemaining(abOf(k, 'star')) > 3)) return I(k, 'snap');
+      if (ready(k, 'veil') && k.env.hpFrac() < 0.5) return I(k, 'veil');
     }
-    if (k.gcdRemaining() > 0.0001) return null;
-    if (reapReady && on > 0 && (full >= avail - 1 || ending)) return I(k, 'reap');
-    return I(k, 'slash');
+    if (k.gcdRemaining() > 0.0001 && !open) return null;
+    if (k.lockUntil > k.now) return null;
+    if (k.ultWin) return I(k, 'string');
+    // the finisher the target is missing a mark for (the longest first): all four make a Full Harvest
+    const tl = reapTargetMarks(k), missing = [4, 3, 2, 1].filter(i => !tl.includes(REAP.KINDS[i - 1]));
+    // a forced move soon: finish short (the marks are still laid)
+    const want = ctx.moveSoon(ctx.t, 2.4) ? Math.min(2, missing[0] || 2) : (missing[0] || 4);
+    if (open && n >= want) return I(k, 'finish');   // (an n-swing string ends in the finisher that lays the n-th mark)
+    return I(k, 'string');
   },
 });
 
@@ -1348,3 +1384,4 @@ if (only) {
   }
 }
 }
+

@@ -231,6 +231,7 @@
     partyMods: () => {
       const m = { dmg: 0, crit: 0, haste: 0 };
       for (const b of (inArena() ? raid.pbuffs : town.buffs)) if (b.end > now) m[b.kind] = Math.max(m[b.kind] || 0, b.value);
+      if (m.rhaste) { m.haste = Math.min(0.35, (m.haste || 0) + m.rhaste); m.rhaste = 0; }   // (Insane Reaper's haste adds to a Chronomancer's: they stack)
       if (inArena() && raid.bond) { m.dmg += raid.bond.dmg; m.crit += raid.bond.crit; m.haste += raid.bond.haste; }   // gear party bonus
       return m;
     },
@@ -371,6 +372,7 @@
   const SIM_EVENTS = new Set(['damage', 'heal', 'hot', 'shield', 'mit', 'raise', 'rewind', 'selfDamage', 'targetDebuff', 'partyBuff', 'allyBuff', 'snap', 'pool', 'brand', 'taunt', 'splash',
     'maw', 'ledger', 'gloom',   // (the Gorgemaw's jaw, the Oathbroker's Ledger and the Gloomsworn's vessel: fight.js classEvent)
     'tie', 'snip', 'tighten', 'tapestry', 'tug',   // (the Threadweaver's threads: fight.js weaveEvent)
+    'reaper',   // (a Reaper's holds, gathers and fields on adds: fight.js reaperEvent)
     'lamp',   // (a Lanternkeeper's lanterns burst: fight.js lampEvent)
     'kensei',   // (a Kenseier's deflect, Mikiri Step and Posture: fight.js KENSEI_HOST)
     'horn',   // (a Houndmaster's Hunting Horn: fight.js, the boss's face)
@@ -990,13 +992,17 @@
   }
 
   function doDash() {
-    if (player.dashMove || player.kb || myDebuff('rooted') || !actor.useDash(now)) return;
+    if (player.dashMove || player.kb || myDebuff('rooted')) return;
     const m = mouseWorld();
     const to = player.target || m;
     let a = Math.atan2(to.y - player.y, to.x - player.x);
     if (Math.hypot(to.x - player.x, to.y - player.y) < 4) a = player.angle;
     const dest = { x: player.x + Math.cos(a) * DASH_DIST, y: player.y + Math.sin(a) * DASH_DIST };
     if (inArena()) clampArena(dest); else { dest.x = clamp(dest.x, 40, WORLD.w - 40); dest.y = clamp(dest.y, 40, WORLD.h - 40); }
+    // (a Reaper's Blink hears where it went from and to, and whether it crossed a telegraph: kits.js reapBlink)
+    const through = inArena() && [0, 0.34, 0.67, 1].some(f => world.danger(actor, player.x + (dest.x - player.x) * f, player.y + (dest.y - player.y) * f, 99));
+    if (!actor.useDash(now, { from: { x: player.x, y: player.y }, to: { x: dest.x, y: dest.y }, through })) return;
+    const blink = !!(actor.kit.def.blink);   // (a Blink is a teleport: it lands at once)
     KIT_VFX.dash(player, player.cls.accent);
     if (SH) SH.play('dash', { vol: 0.6 });
     // dashing snaps a Silk Reel (tell the host; show it right away)
@@ -1008,7 +1014,7 @@
       sendCombat({ type: 'snap' });
       BOSS_VFX.silkSnap(player, raid.bossDraw);
     }
-    player.dashMove = { sx: player.x, sy: player.y, tx: dest.x, ty: dest.y, t0: now };
+    player.dashMove = { sx: player.x, sy: player.y, tx: dest.x, ty: dest.y, t0: blink ? now - DASH_TIME : now };
     player.angle = a;
     if (player.target && Math.hypot(player.target.x - dest.x, player.target.y - dest.y) < 20) player.target = null;
     Net.send({ t: 'cast', i: 6, x: rnd(player.x), y: rnd(player.y), tx: rnd(dest.x), ty: rnd(dest.y), s: scene === 'arena' ? 1 : 0, c: +rnow.toFixed(3) });
@@ -1419,13 +1425,13 @@
     if (!host || !hostRoster.some(h => h.id === pid && !h.left)) return;
     const ev = msg.ev;
     if (!ev || !EV_TYPES.has(ev.type)) return;
-    for (const k of ['amount', 'pct', 'value', 'dur', 'secs', 'ticks', 'interval', 'threat', 'r', 'not', 'pair', 'mx', 'st', 'dp', 'hm', 'seam', 'both', 'mit', 'keep']) if (ev[k] !== undefined && !Number.isFinite(ev[k])) return;
+    for (const k of ['amount', 'pct', 'value', 'dur', 'secs', 'ticks', 'interval', 'threat', 'r', 'not', 'pair', 'mx', 'st', 'dp', 'hm', 'seam', 'both', 'mit', 'keep', 'x', 'y', 'dist']) if (ev[k] !== undefined && !Number.isFinite(ev[k])) return;
     if (ev.tgt !== undefined && typeof ev.tgt !== 'string' && !(pvpHost && Number.isInteger(ev.tgt))) return;   // (PvP: the opponent's player id)
     // a bad heal over time (thousands of ticks, no interval) could freeze the host; a party buff is one of the known
     // kinds, in sane bounds
     if (ev.type === 'hot' && (!(ev.ticks >= 1 && ev.ticks <= 20) || !(ev.interval >= 0.5 && ev.interval <= 10))) return;
     if (ev.type === 'partyBuff') {
-      if (!['dmg', 'crit', 'haste'].includes(ev.kind)) return;
+      if (!['dmg', 'crit', 'haste', 'rhaste'].includes(ev.kind)) return;
       ev.value = Math.max(0, Math.min(0.2, ev.value || 0)); ev.dur = Math.max(0, Math.min(30, ev.dur || 0));
     }
     // a buff on one chosen ally: only a known one (engine.js ALLY_BUFFS), at its own strength, on a player id
@@ -3689,7 +3695,7 @@
   });
 
   // ---------------------------------------------------------------- HUD bits
-  const PBUFF_NAMES = { dmg: 'Party damage up', crit: 'Party crit up', haste: 'Party haste' };
+  const PBUFF_NAMES = { dmg: 'Party damage up', crit: 'Party crit up', haste: 'Party haste', rhaste: 'Insane Reaper' };
   Hud.extra = () => {
     const out = [];
     const list = inArena() ? raid.pbuffs : town.buffs;

@@ -889,70 +889,35 @@ Object.assign(GAUGES, {
 });
 
 // ======================================================================= Reaper (id thresher; damage, class 19)
-// Toll (the gauge kind stays `harvest`): four slots, one per affliction on the boss (Mark, Drain, Bind, Thread). Each slot is a
-// stack of Weight pips from the foot up (as many as the spec holds: 2, 3 or 5), lit in the affliction's own colour; a slot at full
-// Weight glows. A fine line under each slot runs down with its seconds (none for an Anchored Thread), and the affliction's sigil sits
-// under that. The one you laid last (what Sever takes) wears a pale chevron over its slot. A fine line under them runs down with
-// the Wisp's seconds (a small blue flame at its end), and in the Gate five pips count the strikes (the fifth gold). An empty slot is
-// dark. The painted gauge replaces this later.
+// Crescent: a moon that fills from the foot with every mark a Snap pops. At full it blazes and the next Snap is a Harvest Moon. Under it
+// four small runes, one per mark on your target (Drain, Bind, Death Mark, Thread), dark until laid and running down with their time; a
+// row of pips above them counts the swings of the string in hand (five in the Gate, the fifth bright). The painted gauge replaces this later.
 Object.assign(GAUGES, {
-  harvest(c, k, w, h, t) {
-    const g = k.g, now = k.now, ids = THRESH.IDS, max = thMaxW(k), dur = k.def.affDur || THRESH.DUR;
-    const bw = 26, gap = 8, tot = ids.length * bw + (ids.length - 1) * gap, x0 = w / 2 - tot / 2, top = 8, bh = 48;
-    const hidden = id => !!(k.def.noAff && k.def.noAff.indexOf(id) >= 0);
-    const COL = { mark: '#ff6a6a', drain: '#ff8fd0', bind: '#b88cff', thread: '#dff2f0' };
-    // the affliction's glyph, small, under its slot
-    const mini = (id, x, y, s, col, dim) => {
-      c.save(); c.translate(x, y); c.lineCap = 'round'; c.lineJoin = 'round'; c.globalAlpha = dim ? 0.45 : 1;
-      const path = () => {
-        c.beginPath();
-        if (id === 'mark') { c.moveTo(0, -s); c.lineTo(s * 0.68, 0); c.lineTo(0, s); c.lineTo(-s * 0.68, 0); c.closePath(); c.moveTo(0, -s * 0.55); c.lineTo(0, s * 0.55); }
-        else if (id === 'drain') { c.moveTo(0, -s * 1.05); c.bezierCurveTo(s * 0.9, -s * 0.1, s * 0.8, s * 0.8, 0, s * 0.8); c.bezierCurveTo(-s * 0.8, s * 0.8, -s * 0.9, -s * 0.1, 0, -s * 1.05); }
-        else if (id === 'bind') { for (let i = 0; i < 3; i++) { const a = i * TAU / 3 - Math.PI / 2; c.save(); c.rotate(a); c.moveTo(s * 1.04, 0); c.ellipse(s * 0.42, 0, s * 0.62, s * 0.34, 0, 0, TAU); c.restore(); } }
-        else { for (let i = 0; i < 3; i++) { const lx = (i - 1) * s * 0.62, ly = (i - 1) * s * 0.62, rx = s * (i % 2 ? 0.42 : 0.3), ry = s * (i % 2 ? 0.3 : 0.42); c.moveTo(lx + rx, ly); c.ellipse(lx, ly, rx, ry, 0.6, 0, TAU); } }
-      };
-      c.strokeStyle = '#0c0a14'; c.lineWidth = 3.6; path(); c.stroke(); c.strokeStyle = col; c.lineWidth = 1.6; path(); c.stroke();
-      c.restore();
-    };
-    ids.forEach((id, i) => {
-      const x = x0 + i * (bw + gap), cx = x + bw / 2, a = g.aff[id], wt = a ? a.w : 0, col = COL[id], full = wt >= max, last = g.last === id && wt > 0;
-      if (hidden(id)) { rrect(c, x, top, bw, bh, 6, '#14131a', OUT, 2); label(c, '-', cx, top + bh / 2, '#4a4650', 12, 'system-ui', 700); return; }
-      if (full) glow(c, cx, top + bh / 2, bh * 0.75, col, 0.24 + 0.1 * Math.sin(t * 6 + i));
-      rrect(c, x, top, bw, bh, 6, '#100c1a', last ? '#e0f6ff' : OUT, last ? 2 : 2.4);
-      // the Weight pips, from the foot up
-      const ph = (bh - 6 - (max - 1) * 3) / max;
-      for (let p = 0; p < max; p++) {
-        const py = top + bh - 3 - (p + 1) * ph - p * 3, on = p < wt;
-        rrect(c, x + 3, py, bw - 6, ph, 2.5, on ? col : 'rgba(90,88,112,0.22)', on ? 'rgba(10,8,18,0.8)' : null, 1);
-        if (on) { c.save(); c.globalAlpha = 0.5; c.fillStyle = '#ffffff'; c.fillRect(x + 5, py + 1.2, bw - 10, 1.6); c.restore(); }
-      }
-      if (full) { c.save(); c.globalAlpha = 0.5 + Math.sin(t * 6 + i) * 0.3; rrect(c, x - 1, top - 1, bw + 2, bh + 2, 7, null, col, 2); c.restore(); }
-      // what Sever takes: a pale chevron over the slot
-      if (last) { c.save(); c.strokeStyle = '#e0f6ff'; c.lineWidth = 1.8; c.lineCap = 'round'; c.lineJoin = 'round'; c.beginPath(); c.moveTo(cx - 5, top - 7); c.lineTo(cx, top - 2.5); c.lineTo(cx + 5, top - 7); c.stroke(); c.restore(); }
-      // its seconds
-      const ty = top + bh + 4;
-      rrect(c, x, ty, bw, 3, 1.5, '#120e1c');
-      if (a && isFinite(a.until)) rrect(c, x, ty, Math.max(1.5, bw * Math.min(1, (a.until - now) / dur)), 3, 1.5, (a.until - now) < 3 ? '#ffffff' : col);
-      else if (a) rrect(c, x, ty, bw, 3, 1.5, col);
-      mini(id, cx, top + bh + 17, 6, wt ? col : '#5a5870', !wt);
+  crescent(c, k, w, h, t) {
+    const g = k.g, now = k.now, f = Math.max(0, Math.min(1, (g.moon || 0) / 100)), full = f >= 1, cx = w / 2, cy = 50, R = 34;
+    const COL = { drain: '#ff8fd0', bind: '#b88cff', death: '#ff6a6a', thread: '#dff2f0' };
+    if (full) glow(c, cx, cy, R * 1.9, '#9fd0ff', 0.28 + 0.1 * Math.sin(t * 6));
+    // the moon: a disc with a bite out of it, filled from the foot
+    c.save();
+    c.beginPath(); c.arc(cx, cy, R, 0, TAU); c.arc(cx + R * 0.42, cy - R * 0.1, R * 0.86, 0, TAU, true); c.closePath();
+    c.fillStyle = '#100c1a'; c.fill();
+    c.clip();
+    const fy = cy + R - 2 * R * f;
+    const gr = c.createLinearGradient(0, fy, 0, cy + R); gr.addColorStop(0, full ? '#ffffff' : '#cfe6ff'); gr.addColorStop(1, '#4a7ad0');
+    c.fillStyle = gr; c.fillRect(cx - R, fy, 2 * R, cy + R - fy);
+    c.restore();
+    c.save(); c.strokeStyle = full ? '#ffffff' : '#7fa8e0'; c.lineWidth = 2; c.beginPath(); c.arc(cx, cy, R, Math.PI * 0.55, Math.PI * 1.45); c.stroke(); c.restore();
+    // the swings of the string in hand
+    const n = reapN(k), max = reapMax(k), py = cy - R - 12;
+    for (let i = 0; i < max; i++) { const px = cx + (i - (max - 1) / 2) * 14, lit = i < n, last = k.ultWin && i === max - 1; circle(c, px, py, last ? 5 : 4, lit ? (last ? '#ffe27a' : '#9fd0ff') : '#120e1c', lit ? '#fff' : '#6a7a90', 1.4); }
+    // the marks on your target
+    const tm = reapTargetMarks(k), ms = (k.env.target({ target: 'enemy', range: 2000 }) || {}).id, rec = ms != null ? g.marks[ms] : null;
+    ['drain', 'bind', 'death', 'thread'].forEach((id, i) => {
+      const x = cx + (i - 1.5) * 26, y = cy + R + 16, up = tm.includes(id), col = COL[id];
+      if (up) glow(c, x, y, 13, col, 0.5);
+      circle(c, x, y, 7, up ? col : '#14111e', up ? '#fff' : '#4a4862', 1.6);
+      if (up && rec && rec[id]) { const fr = Math.max(0, Math.min(1, (rec[id].until - now) / 20)); rrect(c, x - 8, y + 11, 16, 3, 1.5, '#120e1c'); rrect(c, x - 8, y + 11, Math.max(1.5, 16 * fr), 3, 1.5, col); }
     });
-    // the Wisp's seconds, a fine line with a little pale flame at its end
-    const wl = k.has('wisp') ? k.remaining('wisp') : 0, wy = top + bh + 30;
-    rrect(c, x0, wy, tot, 4, 2, '#120e1c', OUT, 1);
-    if (wl > 0) {
-      const fw = (tot - 2) * Math.min(1, wl / THRESH.WISP_DUR);
-      rrect(c, x0 + 1, wy + 0.5, Math.max(2, fw), 3, 1.5, '#9ad4ff');
-      glow(c, x0 + 1 + fw, wy + 2, 7, '#7ec4ff', 0.8); circle(c, x0 + 1 + fw, wy + 2, 1.8, '#ffffff');
-    }
-    // inside the Gate: five pips, the fifth gold
-    if (k.has('gate')) {
-      const n = g.gate | 0;
-      for (let i = 0; i < 5; i++) {
-        const px = w / 2 + (i - 2) * 18, py = wy + 17, last = i === 4, lit = i < n;
-        if (lit) glow(c, px, py, last ? 12 : 9, last ? '#ffd65a' : '#8fd8e8', 0.5);
-        circle(c, px, py, last ? 6.5 : 5, lit ? (last ? '#ffe27a' : '#8fd8e8') : '#120e1c', last ? '#ffe27a' : '#6a7a90', 1.6);
-      }
-    }
   },
 });
 

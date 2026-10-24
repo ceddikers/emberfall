@@ -4,7 +4,7 @@
   meet: {
     bastion: "Nobody drilled me for ground that lets go on his say. I have held mud, stairs and a burning deck. He is slow, I will report that much; the floor is what I fell through. Gave ground, more than once, and not to him.",
     gloomsworn: "A giant keeping a night watch under green lights, and nobody coming to relieve him. I know that look. The ice broke under us and the black water was no stranger. I have been colder. Not by much.",
-    thresher: "He is magnificent. A whole country gone to hard frost and him standing in the middle of it, like the first thing ever made. I hurried across his ice and it dropped me in the black water. In time, I told myself, wet to the neck. Not yet, apparently.",
+    thresher: "He is magnificent. A whole country gone to hard frost and him standing in the middle of it, like the first thing ever made. I hurried across his ice and it dropped me in the black water. In time, I told myself, wet to the neck and laughing. Not yet, apparently!",
     bloodreaver: "Hah! He hits like a falling barn and I loved him for it. Then the floor gave way and I met the black water, which does not hit back, only takes. No scar to show for it. That is a grudge. I will be back, big one.",
     runeguard: "Each blow is carved on the ice an instant before it falls, the most courteous thing I have seen a giant do. The floor, though, keeps writing after. I read the blows well and the ground badly. Margin: learn the ground.",
     gorgemaw: "Chilled courses on a table of ice, every plate bigger than me. Slow service, but I do like a generous host. Then the table gave way and I went down with the soup. Cold, wet, hungry. Seconds, please, from somewhere drier.",
@@ -30,7 +30,7 @@
   win: {
     bastion: "The Titan is down. The plateau is quiet, the lights hang over it, the road north is open. I stood on bad ice the whole fight and the line never broke. Report ends here. I am going to sit down.",
     gloomsworn: "The giant has laid down his watch, and I stood the last of it for him. The lights hang over the plateau, cold and green. No one came to relieve him either. The road north is open. The watch is relieved.",
-    thresher: "Hrimgar has come in at last, and the Reach may sleep beneath its own snow. The lights were the colour of pale fire. Good ground to rest in. The road north is open. Something in me is nearly due.",
+    thresher: "Hrimgar has come in at last, and the Reach may sleep beneath its own snow. The lights were the colour of pale fire, and I watched them awhile. Good ground to rest in. The road north is open, and something in me is nearly due. I do not mind.",
     bloodreaver: "The big one fell like a mountain and the whole plateau shook! Every bruise he gave me is still cold and blue, the best I ever took. Thank you, my friend. Now the road north, and whatever waits up there.",
     runeguard: "The Frost Titan is down and the record of his anger is closed. Every blow he carved I read in time; the floor I read late, and that is entered as well, for my successor. The lights went quiet as a reading room.",
     gorgemaw: "The ice course is done. My host fell into his own pantry and the whole plateau went silent. Cold, clean, very slightly bitter, and magnificent. The road north promises warmer kitchens. I am still hungry.",
@@ -56,7 +56,7 @@
     "Winter's Howl": { hard: false, learned: {
       bastion: "Nothing to block, nothing to hold. Sergeant's rule for a thing like that: be in good order before it arrives. The healers had us stitched up before he drew breath, and I stood in the open and took it. Held.",
       gloomsworn: "The howl reaches every one of us, and the dark has no shelter from it. I made sure the watch was whole before his chest rose, then let the cold pass through me like the small hours. It always passes.",
-      thresher: "All of us at once, a killing frost with nowhere to hide. Best I can do is arrive full. I did, and kept swinging through it. It is only weather.",
+      thresher: "All of us at once, a killing frost with nowhere to hide. The best I can do is arrive full, so I did, and kept swinging through it. It is only weather, and weather keeps good time.",
       bloodreaver: "The howl went through my bones, and my friends' too, and they felt it worse than I did. Barely a scratch for me, shameful. So we were mended up before it came, and nobody fell. I'll hurt myself properly later.",
       runeguard: "His chest swelled and the lights above flickered, sign enough. It reaches all of us and no ward turns it; the only answer is to be whole before it sounds. Entered in the margin: some things are met, not stopped.",
       gorgemaw: "My host serves the howl to the whole table, iced, and I cannot eat it for anyone else. So the guests came to the table well fed and swallowed it together. A sharp, thin sort of dish. Brain-freezing.",
@@ -81,7 +81,7 @@
     'Glacial Fist': { hard: false, learned: {
       bastion: "The fist was mine alone. Sergeant always said watch the shoulder, not the hand. Shield up in the last instant, and the rest of the line stayed out of the wedge, as ordered.",
       gloomsworn: "The fist was meant for whoever keeps the front, and that was me. I drew the dark about me just before it fell and took it whole. The others stood outside the wedge, where the night is kinder.",
-      thresher: "Down it comes on our knight, a wedge as wide as a millstone. I kept to his flank and kept to my place. Anyone who wanders into the front of him is clipped, and it is never a clean cut.",
+      thresher: "Down it comes on our knight, a wedge as wide as a ballroom door. I kept to his flank and kept to my place. Anyone who wanders into the front of him is clipped, and it is never a clean cut. Do mind the step.",
       bloodreaver: "The fist! Square on me, a wedge of ice in front of him, and it rattled every tooth I have. A good one. I braced, took it, and hit back while it was still ringing. The others kept clear, bless them.",
       runeguard: "His arm drew back, and the wedge before him was drawn upon the ice, a courtesy. I set a ward upon whoever stands in it and had everyone else outside it, since it clips the careless. The sequence is plain once you have read it once.",
       gorgemaw: "The fist is the main course, served to one guest, and a great wedge of it. I opened wide just before and kept my friends off my plate. A little crunchy, as all ice is. Needs salt.",
@@ -106,7 +106,7 @@
     'Rime Slam': { hard: false, learned: {
       bastion: "It locked onto me and followed. I marched it off the line, away from my friends, and let it fall on empty ground. The sheet cracked after. Off it, boots first, before the water came. Held.",
       gloomsworn: "A ring followed me across the ice like a lantern on a night round. I led it away from the others, and when it fell the sheet split. I stepped off before the black water took it.",
-      thresher: "A ring dogs one of us across the ice, settles, falls. I walk mine to the edge, well clear of the others. Then I leave that ground: it cracks and goes under soon after. Poor footing, then.",
+      thresher: "A ring dogs one of us across the ice, settles, falls. I walk mine to the edge, well clear of the others. Then I leave that ground on time: it cracks and goes under soon after. Poor footing for a dance, then.",
       bloodreaver: "A ring chased me round the ice and I wanted to stand in it! I took it away from my friends instead, let it fall, and stepped off the cracked sheet before it sank. Not a scratch. Disappointing.",
       runeguard: "A ring fastened on one of us and followed. The sequence is: lead it from the rest, never across them; it lands; quit that sheet at once, for it cracks and sinks after. I have written this up for my successor in three columns.",
       gorgemaw: "A plate followed me round the table, and I was not to share it. I carried it off to a quiet corner, let it land, and left before the ice under it gave way. Chilled, and not my favourite temperature.",
@@ -131,7 +131,7 @@
     'Twin Slam': { hard: false, learned: {
       bastion: "Two marked, a beat between. Apart, both moving, like men crossing a bridge nobody should cross in step. Neither landed on the line. Then off the cracked sheets, no looking back.",
       gloomsworn: "Two rings, two of us, one after the other, like sentries on separate walls. We kept apart and kept walking, and both fell on empty ice. I left those sheets to the water.",
-      thresher: "Twice in a row, on two of us, the second hard behind the first. Keep apart, keep walking, and drop them on separate ground, not on each other's. Two frosts, one night. I would have preferred one.",
+      thresher: "Twice in a row, on two of us, the second hard behind the first. Keep apart, keep walking, and drop them on separate ground, not on each other's. Two frosts in one night is generous, if a little eager.",
       bloodreaver: "Two rings! Two of us chased, the second a beat behind. I wished one had been mine, and then it was. We kept apart and kept moving, and then off the cracked ice. I do like being wanted.",
       runeguard: "Two rings, two quarries, the second a beat behind the first; I counted them in the order they closed, which matters. The two keep apart and keep moving, and quit the sheets they crack. Note the order.",
       gorgemaw: "Two plates, two guests, one served a beat after the other. Each carried their own plate to a different corner and kept walking. Leave the cracked table after. Double portions, and I only got half.",
@@ -156,7 +156,7 @@
     'Fault Line': { hard: false, learned: {
       bastion: "A long crack came down the plateau at one of us. Sideways, never along it; every recruit knows to leave a charge by the flank. I would not stand on the red sheets after. I count my footing before I count my wounds.",
       gloomsworn: "A crack ran the length of the plateau toward one of us, wide as a road. I stepped aside, not along it. Each sheet it crossed turned red afterward, and I stayed off every one.",
-      thresher: "His fist cuts a long line across the ice at one of us. Step out sideways, never down it. Every sheet it crosses goes red and sinks. I stay off those. A poor night to swim.",
+      thresher: "His fist cuts a long line across the ice at one of us. Step out sideways, never down it. Every sheet it crosses goes red and sinks, so I stay off those. A fine floor for dancing, a poor one for swimming.",
       bloodreaver: "A great crack drove right at me, across the whole plateau! I stepped sideways out of it, and the ice it crossed went red and sank. A good line. Not a good place to stand.",
       runeguard: "His fist came down and a long wide line was drawn at one of us. Step out sideways, never along it; then shun every sheet marked red, for they sink. I have underlined the second half, since the first half is obvious.",
       gorgemaw: "Carved the whole table in one stroke, a long cut toward one guest. I stepped aside, not along the knife, and kept off every plate it marked red. They sink. Poor carving, honestly.",
@@ -181,7 +181,7 @@
     'Icefall': { hard: false, learned: {
       bastion: "Hailstorm. No post to hold in a hailstorm, nothing to raise a shield against when the shards fall from above. I kept marching and stepped out of every circle. Standing still was the only way to fail.",
       gloomsworn: "Shards dropped out of the lights like stars in the small hours, small rings, two of them on us. I kept walking and stepped out of every ring. A sentry who stands still gets buried.",
-      thresher: "Ice came down like hail, small rings all over, two of them on us. Hail ruins whatever stands still, so I kept moving and stepped clear of each one. A great many have been lost that way.",
+      thresher: "Ice came down like hail, small rings all over, two of them on us. Hail ruins whatever stands still, so I kept moving and stepped clear of each one, humming a quick tune. Light feet keep the hour polite.",
       bloodreaver: "Ice raining down! Little rings everywhere, two of them right on us. I kept moving and stepped out of each one. Small cuts, barely worth the name. I almost lingered in a ring to check.",
       runeguard: "Small rings bloom beneath the lights, two upon us, each answered by a shard a moment later. Keep moving; step out of every ring before the shard lands. It is the only sequence I can recommend without footnotes.",
       gorgemaw: "Crushed ice sprinkled over the whole table, little rings of it, two on the guests. I moved along and kept out of each. Garnish, nothing more. I would have liked a sauce.",
@@ -206,7 +206,7 @@
     "Titan's Sweep": { hard: false, learned: {
       bastion: "A huge slow arc across his front, meant for one of us. Big, but not a full circle. I took the line round to his flank and his back. A slow blow is honest about where it is going.",
       gloomsworn: "The giant swept a vast slow arc before him, turned toward one of us. It does not reach round behind him. I took the watch to his side, out of the arc, and let it pass.",
-      thresher: "He swings a huge slow arc in front of him, a scythe twice the length of mine, aimed at one of us. It does not reach his sides or back. I went round to his flank. I know scythes.",
+      thresher: "He swings a huge slow arc in front of him, a scythe twice the length of mine, aimed at one of us. It does not reach his sides or back, so I went round to his flank. I do know scythes, and it was a handsome one.",
       bloodreaver: "A sweep wide as a field, aimed at someone else! I wanted to stand in it, I admit. I went to his side instead, out of the arc. It does not reach behind him. Dull ground, to be fair.",
       runeguard: "A great arc drawn before him, turned on one of us; wide, but only a part of the circle. Go to his side or behind him. The arc is carved large and slow, so one has time to read it. I read it twice.",
       gorgemaw: "One huge sweep cleared the front of the table, aimed at one guest. Those at his elbow or behind him were untouched. I moved my chair. Generous portion, poorly aimed.",
@@ -231,7 +231,7 @@
     "Winter's Grasp": { hard: false, learned: {
       bastion: "Frost under a couple of us, and the sheet froze. Frozen ice will not crack under his blows, but it is slick as a wet barracks floor. I stepped on boots flat and with room to spare.",
       gloomsworn: "Frost rose from the feet of a couple of us, and the ice under each thickened and went glassy while the old frost thawed. Frozen ice will not crack, but it slides. I stepped on slowly, never toward the water.",
-      thresher: "Frost creeps out from under a couple of us and freezes the sheet where it lands; the old frost lets go. Frozen ice will not crack, it only slides, so step on gently and never toward the water. A polished floor, almost.",
+      thresher: "Frost creeps out from under a couple of us and freezes the sheet where it lands; the old frost lets go. Frozen ice will not crack, it only slides, so step on gently and never toward the water. A polished floor, almost, and rather fun.",
       bloodreaver: "Frost gripped a couple of us at the feet, and the sheet under each froze hard and glassy. His blows glance off frozen ice; good. But it slides. I stepped on toward nothing that bites. Bring back the bite.",
       runeguard: "Frost gathered at the feet of a couple of us, and the sheet beneath each froze while the old frost thawed. Frozen ice will not crack, but it is slick, so step on with room to spare. Recorded without drama.",
       gorgemaw: "Frost crept from under a couple of my fellow guests and glazed the sheet beneath each, like sugar on a pastry. Glazed plates do not crack, but they slide. I stepped on carefully. Crisp. Almost sweet.",
@@ -256,7 +256,7 @@
     'Frostbite': { hard: false, learned: {
       bastion: "One of ours went slow and blue, a ring trailing behind. We marched him to the nearest brazier, kept the road clear, and the fire drew the cold out. Nobody on my line gets left in the cold.",
       gloomsworn: "The cold took one of us and slowed him, a ring to share trailing behind. I walked him to the nearest brazier and kept the way clear of anything else. The fire drew it out. I know what the other end of that road looks like.",
-      thresher: "One of us catches the frost proper: slow, then stiff as a statue, with a ring trailing behind. The nearest brazier thaws them. Walk them there, clear the way, and do not dawdle. Nobody wants a gallery of frozen friends.",
+      thresher: "One of us catches the frost proper: slow, then stiff as a statue, with a ring trailing behind. The nearest brazier thaws them, so walk them there, clear the way, and do not dawdle. Nobody wants a gallery of frozen friends, however well posed.",
       bloodreaver: "The cold got into one of us and slowed him to a crawl, a ring trailing behind. I carried him to the nearest brazier and the fire took it out. Warmth is cheap. I just wish it were blood.",
       runeguard: "One of us was chilled, slowed, a ring to share trailing after. The remedy is the nearest brazier: a moment's warmth. The rest of us cleared the road to it. Untreated, the entry in my ledger reads frozen solid.",
       gorgemaw: "One of my fellow guests went cold and slow, a ring trailing after like a bad aftertaste. Nearest brazier, a moment's warmth, and the way kept clear. Neither, and he sets like jelly. I escorted him myself.",
@@ -281,7 +281,7 @@
     'Whiteout': { hard: false, learned: {
       bastion: "White over all of us, and nothing to dodge. We were mended before it came. When it cleared, every sunk sheet was ice again and I had ground under my boots. The first fair thing he did.",
       gloomsworn: "A white blast took every one of us at once, and the dark had nothing to say against it. We were whole before it came. When it cleared, every sunk sheet was ice again. The dead do not mind a good winter.",
-      thresher: "A big white sweep that finds every one of us, a drift pouring over a wall. Be whole before it comes. After, it is kinder: every sunk sheet is ice again, and the floor is fit to walk.",
+      thresher: "A big white sweep that finds every one of us, a drift pouring over a wall. Be whole before it comes. After, it is kinder: every sunk sheet is ice again, and the floor is fit to walk. A good dance floor once more.",
       bloodreaver: "A blinding white blast that found every one of us, and I laughed into it. Not a bad hit! We were mended before it came, and afterwards every sunk sheet was ice again. Fair trade.",
       runeguard: "The Whiteout reaches all and no ward turns it, so each must be whole before it sounds. Its one grace, recorded here: when it clears, every sunk sheet is ice again and the floor is restored to us.",
       gorgemaw: "A great white course served to all of us together, no one to eat it on another's behalf. We came to table mended. After, the missing sheets were whole again, which is the proper way to clear a table.",
@@ -306,7 +306,7 @@
     'The Long Night': { hard: false, learned: {
       bastion: "Lights low, and for a long while slow arcs from him, with frost called twice. Keep out of the arcs; whoever the frost marks chooses the ice by where they stand. I chose a sound post and stayed on it.",
       gloomsworn: "The lights dimmed and the plateau went truly dark, and I felt very nearly at home. Slow arcs from him, frost called twice. We stayed out of the arcs; whoever the frost chose set the ice by where they stood.",
-      thresher: "The lights went low and he swung one slow arc after another, the longest night there is, with frost called twice besides. Keep clear of the arcs. Whoever the frost marks lays the ice by where they stand.",
+      thresher: "The lights went low and he swung one slow arc after another, the longest night there is, with frost called twice besides. Keep clear of the arcs. Whoever the frost marks lays the ice by where they stand. A long waltz, and a patient one.",
       bloodreaver: "Dark, and a long night of slow arcs and frost called twice! I kept clear of the arcs, though it hurt not to stand in them. When the frost marked me, I picked my sheet by where I stood. Dull fight, tense nerves.",
       runeguard: "The lights dimmed; for a long time he swung great slow arcs, and frost was called twice. I kept clear of the arcs, as the sequence demands, while whoever the frost marked set the ice by where they stood. Preparation, not climax.",
       gorgemaw: "The lights dimmed and the cook swung great slow arcs, one after another, calling frost twice. We kept out of the arcs. Those the frost marked chose their sheet by where they stood. A long, patient course.",
@@ -331,7 +331,7 @@
     'Avalanche': { hard: false, learned: {
       bastion: "The plateau tilted at the end and snow came in lanes. Whatever was not frozen was marked red. I had the line on frozen ground before the first lane. Wet to the knees afterward, but standing. Held.",
       gloomsworn: "The plateau tilted and snow poured down in lanes, one after another. Whatever was not frozen was marked red. I stood the watch on a frozen sheet before the first lane. I have been buried before and did not care to repeat it.",
-      thresher: "The whole floor tips and the drift comes down in lanes, one after the other. Only the frozen sheets hold; the rest are marked red. Get onto a frozen one before the first lane. There is no room to dither.",
+      thresher: "The whole floor tips and the drift comes down in lanes, one after the other. Only the frozen sheets hold; the rest are marked red. Get onto a frozen one before the first lane. No room to dither, dear.",
       bloodreaver: "The plateau tipped and snow thundered down in lanes, one after another! Every sheet not frozen was marked red. We got up on the frozen ones before the first lane. I'd have liked to get hit by it, to be honest.",
       runeguard: "The plateau tipped and the snow ran in lanes, one after another. Every sheet not frozen was marked red. The sequence is simple: be upon a frozen sheet before the first lane. Everything the Titan prepared leads here.",
       gorgemaw: "At the end of the course the whole table tilted and the snow poured down in lanes, one after another. Only the frozen plates held; the rest were marked red. We took our seats on the frozen ones early. A grand finish.",
@@ -356,7 +356,7 @@
     'Glacial Stomp': { hard: true, learned: {
       bastion: "He stamped, and two rings of shards ran out behind it. Right after the foot landed I stepped under him, into the quiet circle at his heels. Closest was safest. I would never have believed it on the parade ground.",
       gloomsworn: "A stamp, then two rings of shards sweep out from him, one chasing the other. Right after the foot lands, the ring at his feet is calm. I went in close beside him and let them roll over. Even I hide from some things.",
-      thresher: "He stamps, and two rings of shards roll out from his feet like ripples through still water. Right after the foot lands the circle beneath him is quiet, so I stepped in and let both pass over me. The eye of the storm. Closest seat in the house.",
+      thresher: "He stamps, and two rings of shards roll out from his feet like ripples through still water. Right after the foot lands the circle beneath him is quiet, so I stepped in and let both pass over me. The eye of the storm, and the best seat in the house.",
       bloodreaver: "A stomp at his feet, then two rings of shards racing out! I stepped right in under him once the foot had landed and let both rings pass over. Closest I've been to his ankles. Lovely, and not a mark.",
       runeguard: "His foot lifts, and the sign is plain. Let it fall, then step at once into the quiet circle at his feet; the two rings of shards run outward, one after the other, and pass over. The safest place was beside the one who made it.",
       gorgemaw: "He stamped at the head of the table, and two rings of shards rolled outward. Once his foot had landed, I stepped to his feet and let both pass. The best seat is closest to the cook. Always.",
@@ -381,7 +381,7 @@
     'Breath of Winter': { hard: true, learned: {
       bastion: "A wedge of frost at one of us. It hardly hurt. But whatever it crossed froze and, a moment later, broke and sank, so I had the line off that ground before it went.",
       gloomsworn: "He breathed frost at one of us. It barely hurt, which I took personally. Whatever it crossed froze, then broke and sank a few moments later. I got the watch off it before it went.",
-      thresher: "His breath freezes a wedge of floor, aimed at one of us. It hardly stings. But every sheet it crosses freezes, breaks, and goes under. Get off those before they break. A poor night to wade.",
+      thresher: "His breath freezes a wedge of floor, aimed at one of us. It hardly stings. But every sheet it crosses freezes, breaks, and goes under, so get off those before they break. A poor night for wading, a lovely one for light feet.",
       bloodreaver: "His breath went into one of us in a wedge of frost, barely a scratch, shameful! But every sheet it crossed froze and then broke and sank. Disappointing hit, treacherous floor. I got off before the break.",
       runeguard: "A wedge of frost, aimed at one of us, a small claim with a large rider: every sheet it crosses freezes, then breaks and sinks a few moments later. The rider is the point. Quit those sheets.",
       gorgemaw: "His breath is a cold little cone of garnish, aimed at one guest, barely a mouthful. But every plate it touches freezes, then breaks and sinks. Quit those sheets, and quickly. A sneaky dish.",
@@ -406,7 +406,7 @@
     "Titan's Grip": { hard: true, learned: {
       bastion: "A ring followed one of us. Anyone in it when it closed was held fast, and a ring came up on them to share. The whole line ran to the held man and stood in it. Otherwise, out of the first ring. Nobody is held alone.",
       gloomsworn: "A ring followed one of us, and the fist closed on whoever stood in it. A ring to share came up on the held one, and we all went to stand in it. A man who has been held in the dark knows nobody leaves him there.",
-      thresher: "A ring follows one of us, and whoever is in it when it shuts is taken in the fist and held. Then a ring comes up on them, and everyone shuffles in to share it. Else keep out of the first, or be crushed.",
+      thresher: "A ring follows one of us, and whoever is in it when it shuts is taken in the fist and held. Then a ring comes up on them, and everyone shuffles in to share it, cosy as can be. Otherwise keep out of the first, dear, or be crushed.",
       bloodreaver: "A ring followed one of us, and the fist closed on whoever stood in it! If it caught you, a ring came up for the rest of us to share. I ran straight into it. Squeezing me is a poor idea.",
       runeguard: "A ring follows one of us; whoever is within when it closes is seized and held, and a ring to share rises on them. The answer is that every one of us goes to stand in it, or the held one is crushed. Otherwise, keep out of the first.",
       gorgemaw: "A ring followed one guest and the fist closed on anyone in it, holding them like a prize turkey. A ring to share came up and we all piled in beside them. Otherwise keep out of the first. Never leave a guest in the fist.",

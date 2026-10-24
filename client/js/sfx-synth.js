@@ -630,115 +630,119 @@
     'ab-lanternkeeper-hand': -1, 'ab-lanternkeeper-relight': -1.5, 'ab-lanternkeeper-set': 2, 'ab-lanternkeeper-stride': 3.5,
     'ab-lanternkeeper-trail': 4.5, 'ab-lanternkeeper-trim': 6.5, 'ab-lanternkeeper-wisp': 6.5, 'ab-ledger': 5,
     'ab-magic-generic': 0.5, 'ab-marionettist-auto': 9, 'ab-marionettist-cross': 2.5, 'ab-marionettist-crossfire': -1,
-    'ab-marionettist-cue': 1, 'ab-marionettist-cutcord': 2, 'ab-marionettist-finale': -1.5, 'ab-marionettist-jab': 7, 'ab-marionettist-pirouette': 1,
-    'ab-marionettist-pull': 5, 'ab-marionettist-redcurtain': 2, 'ab-marionettist-string': 4.5, 'ab-marionettist-strum': 2,
-    'ab-marionettist-swap': 0.5, 'ab-marionettist-tangle': 5, 'ab-maw': 1, 'ab-melee-generic': 0.5,
-    'ab-nature': 3.5, 'ab-oathbroker-audit': 5, 'ab-oathbroker-auto': 4.5, 'ab-oathbroker-blanket': -1,
-    'ab-oathbroker-cosign': 0.5, 'ab-oathbroker-default': -1, 'ab-oathbroker-foreclose': -2.5, 'ab-oathbroker-moratorium': -1.5,
-    'ab-oathbroker-reneg': 4.5, 'ab-oathbroker-warrant': -0.5, 'ab-oathbroker-writ': -1.5, 'ab-pyromancer-auto': 2,
-    'ab-pyromancer-circle': -1.5, 'ab-pyromancer-combust': -2, 'ab-pyromancer-fireball': -2.5, 'ab-pyromancer-fireblast': -2,
-    'ab-pyromancer-meteor': -3, 'ab-pyromancer-phoenix': -2, 'ab-pyromancer-phoenixblast': -2.5, 'ab-pyromancer-phoenixflame': -2,
-    'ab-pyromancer-pyro': -3.5, 'ab-pyromancer-vent': -1.5, 'ab-ranged-generic': 1, 'ab-ranger-aimed': 0.5,
-    'ab-ranger-auto': 8, 'ab-ranger-barrage': 1, 'ab-ranger-caustic': 6, 'ab-ranger-cloak': 0.5,
-    'ab-ranger-explosive': -3.5, 'ab-ranger-falcon': 1.5, 'ab-ranger-mark': 3.5, 'ab-ranger-pierce': 3.5,
-    'ab-ranger-quick': 6, 'ab-ranger-rapid': 1.5, 'ab-rune': 0.5, 'ab-runeguard-cleave': -3,
-    'ab-runeguard-glyph': -2.5, 'ab-runeguard-living': -2.5, 'ab-runeguard-mirror': -1.5, 'ab-runeguard-overload': -2.5,
-    'ab-runeguard-sanctum': -2, 'ab-runeguard-strike': -1, 'ab-runeguard-ward': -2, 'ab-runeguard-whirl': -1.5,
-    'ab-shadowblade-auto': 2.5, 'ab-shadowblade-backstab': 6, 'ab-shadowblade-blossom': 1, 'ab-shadowblade-dance': 1.5,
-    'ab-shadowblade-evis': 5.5, 'ab-shadowblade-fury': 0.5, 'ab-shadowblade-rupture': 1.5, 'ab-shadowblade-shadowcut': 1.5,
-    'ab-shadowblade-shadowedge': 0.5, 'ab-shadowblade-smoke': 1, 'ab-shadowblade-step': 2, 'ab-shadowblade-strike': 2,
-    'ab-shadowblade-venom': 2, 'ab-shield': 1.5, 'ab-shot': 6, 'ab-slash': 0.5,
-    'ab-stab': 1.5, 'ab-taunt': 4, 'ab-thermist-auto': 2, 'ab-thermist-sunset': -1.5,
+    'ab-marionettist-cue': 1, 'ab-marionettist-cutcord': 2, 'ab-marionettist-finale': -1.5, 'ab-marionettist-jab': 7,
+    'ab-marionettist-pirouette': 1, 'ab-marionettist-pull': 5, 'ab-marionettist-redcurtain': 2, 'ab-marionettist-string': 4.5,
+    'ab-marionettist-strum': 2, 'ab-marionettist-swap': 0.5, 'ab-marionettist-tangle': 5, 'ab-maw': 1,
+    'ab-melee-generic': 0.5, 'ab-nature': 3.5, 'ab-oathbroker-audit': 5, 'ab-oathbroker-auto': 4.5,
+    'ab-oathbroker-blanket': -1, 'ab-oathbroker-cosign': 0.5, 'ab-oathbroker-default': -1, 'ab-oathbroker-foreclose': -2.5,
+    'ab-oathbroker-moratorium': -1.5, 'ab-oathbroker-reneg': 4.5, 'ab-oathbroker-warrant': -0.5, 'ab-oathbroker-writ': -1.5,
+    'ab-pyromancer-auto': 2, 'ab-pyromancer-circle': -1.5, 'ab-pyromancer-combust': -2, 'ab-pyromancer-fireball': -2.5,
+    'ab-pyromancer-fireblast': -2, 'ab-pyromancer-meteor': -3, 'ab-pyromancer-phoenix': -2, 'ab-pyromancer-phoenixblast': -2.5,
+    'ab-pyromancer-phoenixflame': -2, 'ab-pyromancer-pyro': -3.5, 'ab-pyromancer-vent': -1.5, 'ab-ranged-generic': 1,
+    'ab-ranger-aimed': 0.5, 'ab-ranger-auto': 8, 'ab-ranger-barrage': 1, 'ab-ranger-caustic': 6,
+    'ab-ranger-cloak': 0.5, 'ab-ranger-explosive': -3.5, 'ab-ranger-falcon': 1.5, 'ab-ranger-mark': 3.5,
+    'ab-ranger-pierce': 3.5, 'ab-ranger-quick': 6, 'ab-ranger-rapid': 1.5, 'ab-rune': 0.5,
+    'ab-runeguard-cleave': -3, 'ab-runeguard-glyph': -2.5, 'ab-runeguard-living': -2.5, 'ab-runeguard-mirror': -1.5,
+    'ab-runeguard-overload': -2.5, 'ab-runeguard-sanctum': -2, 'ab-runeguard-strike': -1, 'ab-runeguard-ward': -2,
+    'ab-runeguard-whirl': -1.5, 'ab-shadowblade-auto': 2.5, 'ab-shadowblade-backstab': 6, 'ab-shadowblade-blossom': 1,
+    'ab-shadowblade-dance': 1.5, 'ab-shadowblade-evis': 5.5, 'ab-shadowblade-fury': 0.5, 'ab-shadowblade-rupture': 1.5,
+    'ab-shadowblade-shadowcut': 1.5, 'ab-shadowblade-shadowedge': 0.5, 'ab-shadowblade-smoke': 1, 'ab-shadowblade-step': 2,
+    'ab-shadowblade-strike': 2, 'ab-shadowblade-venom': 2, 'ab-shield': 1.5, 'ab-shot': 6,
+    'ab-slash': 0.5, 'ab-stab': 1.5, 'ab-taunt': 4, 'ab-thermist-auto': 2,
     'ab-thermist-cinder': -1.5, 'ab-thermist-equil': -0.5, 'ab-thermist-flare': -2.5, 'ab-thermist-invert': -1.5,
-    'ab-thermist-lance': -1, 'ab-thermist-redgiant': -2, 'ab-thermist-shock': -2.5, 'ab-thermist-thermocline': -1.5,
-    'ab-thermist-zero': -2, 'ab-thread': 4, 'ab-threadweaver-auto': 9, 'ab-threadweaver-cradle': -0.5,
-    'ab-threadweaver-embroider': 0.5, 'ab-threadweaver-mend': -1, 'ab-threadweaver-needle': 3.5, 'ab-threadweaver-shuttle': 0.5,
-    'ab-threadweaver-snip': 5.5, 'ab-threadweaver-tapestry': 1, 'ab-threadweaver-thrum': -2.5, 'ab-threadweaver-tie': 1,
-    'ab-thresher-auto': 2, 'ab-thresher-blink': 2.5, 'ab-thresher-cull': -1.5, 'ab-thresher-gatestrike': 2,
-    'ab-thresher-gather': 9, 'ab-thresher-hook': 3.5, 'ab-thresher-hourglass': 1, 'ab-thresher-nightfall': 0.5,
-    'ab-thresher-reap': -1.5, 'ab-thresher-slash': 0.5, 'ab-thresher-sowing': 5.5, 'ab-thresher-wisp': 6,
-    'ab-tidecaller-auto': 5, 'ab-tidecaller-bore': -2.5, 'ab-tidecaller-breakwater': 1, 'ab-tidecaller-current': 5.5,
-    'ab-tidecaller-maelstrom': 2.5, 'ab-tidecaller-riptide': 4.5, 'ab-tidecaller-sip': 1, 'ab-tidecaller-spray': 4.5,
-    'ab-tidecaller-springflood': -4, 'ab-tidecaller-surge': -3.5, 'ab-tidecaller-swell': 4, 'ab-tidecaller-undertow': 2,
-    'ab-time': -0.5, 'ab-wind': 5.5, 'amb-fountain': -11, 'amb-pond': -16.5,
-    'amb-tavern': -13, 'amb-town': -18.5, 'arrival': -8, 'bm-archmage-arcane-burst': -0.5,
-    'bm-archmage-arcane-mark': 2, 'bm-archmage-call-of-the-circle': 2.5, 'bm-archmage-cinder-rune': 1, 'bm-archmage-convergence': 1.5,
-    'bm-archmage-counterspell': 2.5, 'bm-archmage-ice-lances': 3, 'bm-archmage-leaping-bolt': 1, 'bm-archmage-pyre-rings': 1,
-    'bm-archmage-rift-rune': -1.5, 'bm-archmage-rime-rune': 0.5, 'bm-archmage-rune-mark': 2, 'bm-archmage-rune-swap': 2,
-    'bm-archmage-storm-rune': 2, 'bm-archmage-the-binding': 1.5, 'bm-archmage-the-tide-rises': 1, 'bm-archmage-void-rifts': -1,
-    'bm-grubnak-belly-flop': -1, 'bm-grubnak-butchers-charge': -0.5, 'bm-grubnak-chop-chop': 1, 'bm-grubnak-cleaver-toss': 1.5,
-    'bm-grubnak-clogged-drains': 3.5, 'bm-grubnak-dinner-rush': 3.5, 'bm-grubnak-double-chop': 1, 'bm-grubnak-family-meal': 0.5,
-    'bm-grubnak-flambe': -0.5, 'bm-grubnak-flare-up': -1.5, 'bm-grubnak-gorge': 2, 'bm-grubnak-grease-fire': 0.5,
-    'bm-grubnak-intro': -1, 'bm-grubnak-ladle-spin': 4, 'bm-grubnak-larder-toss': 2.5, 'bm-grubnak-lid-slam': -1.5,
-    'bm-grubnak-meat-toss': 1.5, 'bm-grubnak-mince': 1.5, 'bm-grubnak-mise-en-place': 4, 'bm-grubnak-order-up': -3,
-    'bm-grubnak-rolling-meatballs': 2.5, 'bm-grubnak-service': -1, 'bm-grubnak-simmer': 2, 'bm-grubnak-spice-rack': 0.5,
-    'bm-grubnak-stockpot': 1.5, 'bm-grubnak-tenderize': 1, 'bm-grubnak-whisk': 7, 'bm-hollowking-barrow-bells': -1.5,
-    'bm-hollowking-barrow-knell': 1.5, 'bm-hollowking-coffin-lids': 2, 'bm-hollowking-court-of-bones': 1.5, 'bm-hollowking-crown-of-graves': 3.5,
-    'bm-hollowking-dirge': 0.5, 'bm-hollowking-echo-knights': 4.5, 'bm-hollowking-funeral-march': 0.5, 'bm-hollowking-grave-cleave': 0.5,
-    'bm-hollowking-grave-marks': 4, 'bm-hollowking-grave-summons': 1.5, 'bm-hollowking-gravebind': 2.5, 'bm-hollowking-intro': 1.5,
-    'bm-hollowking-judgement': 0.5, 'bm-hollowking-lantern': 8.5, 'bm-hollowking-lights-out': 2, 'bm-hollowking-royal-audience': -1.5,
-    'bm-hollowking-royal-decree': -1, 'bm-hollowking-royal-doom': 1, 'bm-hollowking-royal-gaze': -1.5, 'bm-hollowking-sceptre-sweep': 3.5,
-    'bm-hollowking-sceptre-throw': 2, 'bm-hollowking-the-charge-sheet': 1.5, 'bm-hollowking-the-king-rises': -1, 'bm-hollowking-the-long-night': 1.5,
-    'bm-hollowking-writ-of-execution': 1.5, 'bm-hydra-acid-spray': 3, 'bm-hydra-flame-gout': 3, 'bm-hydra-intro': -3,
-    'bm-hydra-mire-spit': 2, 'bm-hydra-mothers-cry': -1.5, 'bm-hydra-mothers-heart': 0.5, 'bm-hydra-regrowth': 0.5,
-    'bm-hydra-rending-maul': 1.5, 'bm-hydra-rime-crown': 1, 'bm-hydra-searing': 2.5, 'bm-hydra-stonegaze': 0.5,
-    'bm-hydra-stormcall': 3, 'bm-hydra-the-drowning': -2.5, 'bm-hydra-tidal-dance': 3.5, 'bm-hydra-tidal-line': 2,
-    'bm-hydra-venom-bloom': 3, 'bm-skitterra-acid-deluge': 0.5, 'bm-skitterra-brood': 4.5, 'bm-skitterra-ceiling-ambush': 1,
-    'bm-skitterra-chrysalis': 4, 'bm-skitterra-cocoon-drop': 1.5, 'bm-skitterra-egg-sacs': 1.5, 'bm-skitterra-eightfold-lunge': 6.5,
-    'bm-skitterra-fang-rush': 2, 'bm-skitterra-from-the-dark': 2, 'bm-skitterra-into-the-dark': 2, 'bm-skitterra-intro': -1,
-    'bm-skitterra-molt': 8, 'bm-skitterra-silk-lines': 3.5, 'bm-skitterra-silk-reel': 3.5, 'bm-skitterra-silk-wrap': 2.5,
-    'bm-skitterra-snare-weave': 2, 'bm-skitterra-spiderlings': 11, 'bm-skitterra-spin': 8, 'bm-skitterra-spinneret-volley': 16,
-    'bm-skitterra-strand-reel': 5.5, 'bm-skitterra-the-swarm': 11.5, 'bm-skitterra-the-web-gives-way': 0.5, 'bm-skitterra-tightening-web': 2,
-    'bm-skitterra-venom-drip': 4, 'bm-skitterra-venom-mist': -1.5, 'bm-skitterra-venom-spit': 4, 'bm-titan-avalanche': 0.5,
-    'bm-titan-breath-of-winter': 1.5, 'bm-titan-endless-winter': -1.5, 'bm-titan-frostbite': 2.5, 'bm-titan-glacial-stomp': -0.5,
-    'bm-titan-icefall': 2.5, 'bm-titan-intro': -3, 'bm-titan-rime-slam': 0.5, 'bm-titan-titans-grip': 2.5,
-    'bm-titan-titans-sweep': 2, 'bm-titan-twin-slam': 2, 'bm-titan-whiteout': 1.5, 'bm-titan-winters-grasp': 2.5,
-    'bm-titan-winters-howl': -1, 'bm-volkar-avalanche': 0.5, 'bm-volkar-ball-lightning': 1.5, 'bm-volkar-chain-lightning': 3,
-    'bm-volkar-distant-thunder': 4, 'bm-volkar-eye-closes': 2, 'bm-volkar-eye-of-the-storm': 4.5, 'bm-volkar-gale-slam': 4,
-    'bm-volkar-gathering-storm': 0.5, 'bm-volkar-grounding-rods': 3, 'bm-volkar-heavens-fall': -1, 'bm-volkar-intro': -1.5,
-    'bm-volkar-lightning-rods': 9, 'bm-volkar-polarity-minus': 3, 'bm-volkar-polarity-plus': 3, 'bm-volkar-polarity-surge': 1.5,
-    'bm-volkar-pulse': 4.5, 'bm-volkar-rod-strike': 1.5, 'bm-volkar-skyfall': -0.5, 'bm-volkar-squall-line': 3,
-    'bm-volkar-static-field': 5, 'bm-volkar-still-air': 3, 'bm-volkar-storm-walls': 2, 'bm-volkar-supercell': 2,
-    'bm-volkar-thunder-crash': 1, 'bm-volkar-thunderclap': 1.5, 'bm-volkar-thunderhead': 2.5, 'bm-volkar-titan-fist': -1.5,
-    'bm-wyrm-cinder-rain': 7.5, 'bm-wyrm-ember-breath': 3.5, 'bm-wyrm-intro': -4, 'bm-wyrm-take-flight': 3.5,
-    'bm-wyrm-twin-breath': 3.5, 'boss-death': -2.5, 'boss-enrage': -2.5, 'boss-impact-heavy': 0.5,
-    'boss-impact-light': 7, 'boss-intro': -1.5, 'buff-on': -0.5, 'chest-drop': 3.5,
-    'chest-open': -5, 'cleanse': -5, 'clear': -4.5, 'crit': 4,
-    'dash': 6.5, 'debuff-on': -1, 'dummy-hit': 3, 'emote-cheer': -6.5,
-    'emote-laugh': -2, 'emote-wave': 2, 'feast-chew': 6.5, 'feast-clink': -5.5,
-    'feast-serve': -3.5, 'feast-sting': -2.5, 'fish-bite': 3, 'fish-cast': 1.5,
-    'fish-catch': -3, 'fish-lost': -0.5, 'fish-reel': -0.5, 'gloom-hollow-off': -2,
-    'gloom-hollow-on': 2, 'gold-pop': 5, 'gold-ripe': 3.5, 'heal-land': -2.5,
-    'hit-heavy': 5, 'hit-light': 9, 'hm-bark-ash': -0.5, 'hm-bark-ghost': 3.5,
-    'hm-bark-greyfang': 0.5, 'hm-bark-rust': 0.5, 'hm-bite': 8, 'hm-bite-big': 2.5,
-    'hm-bringdown': -3, 'hm-calloff': 1.5, 'hm-down': 3, 'hm-hamstring': 1,
-    'hm-horn': -6, 'hm-howl': -3.5, 'hm-longchase': 1.5, 'hm-mount': -1,
-    'hm-quarry': 6.5, 'hm-relay': 4, 'hm-rend': 0.5, 'hm-ridedown': 2.5,
-    'hm-snap': 7, 'hm-up': 2.5, 'hm-whistle-hold': -7.5, 'hm-whistle-pounce': -7,
-    'ken-blaze': 0.5, 'ken-break': -0.5, 'ken-deathblow': -2, 'ken-good': 8,
-    'ken-iai': 2.5, 'ken-miss': 7.5, 'ken-off': 4.5, 'ken-pass': 6.5,
-    'ken-perfect': 2, 'ken-pommel': 6.5, 'ken-redirect': 1, 'lamp-drop': 11,
-    'lamp-ember': 14.5, 'lamp-end': 6.5, 'lamp-eternal': 0.5, 'lamp-pilgrim': 4.5,
-    'lamp-pillar': 3, 'lamp-snuff': 5.5, 'lamp-sparks': 5, 'lb-fire': -1.5,
-    'lb-ready': -5, 'loot-take': -2, 'low-hp': -4.5, 'npc-talk': -6,
-    'ping': 2.5, 'pip-up': 12, 'portal-enter': -3, 'portal-hum': -22.5,
-    'pull-count': 0.5, 'pull-count-last': -3.5, 'pull-go': -2, 'revive': -2,
-    'shield-break': 5, 'shield-up': -4, 'stack-1': 8, 'stack-2': -2.5,
-    'step-grass': 8, 'step-stone': 8.5, 'step-wood': 1.5, 'story-page': 3.5,
-    'tg-aoe': 1.5, 'tg-buster': 1, 'tg-charge': 0.5, 'tg-gaze': 0.5,
-    'tg-knockback': 2.5, 'tg-raidwide': -0.5, 'tg-spread': 5.5, 'tg-stack': 1.5,
-    'thresher-gate-bloom': -2.5, 'thresher-gate-tone': 8.5, 'thresher-pop': 16, 'thresher-rot': 3,
-    'tide-bell': 1, 'tide-crash': -1.5, 'tide-crest': 4.5, 'tide-gull': 9.5,
-    'tide-pop': 1.5, 'tide-slack': 10.5, 'tide-wave': 2.5, 'title-sting': -3,
-    'ui-bounty': 0.5, 'ui-buy': -6, 'ui-click': 2, 'ui-close': -0.5,
-    'ui-equip': -2.5, 'ui-error': -3, 'ui-feat': -7, 'ui-gold': -4,
-    'ui-hover': 13, 'ui-secret': -6, 'ult-alembist': 0.5, 'ult-bastion': 1.5,
-    'ult-bloodreaver': 1, 'ult-driftblade': 6.5, 'ult-fire': -1.5, 'ult-gloomsworn': -1,
-    'ult-gorgemaw': 1, 'ult-grovekeeper': 2.5, 'ult-houndmaster': -3.5, 'ult-kenseier': -1.5,
-    'ult-lanternkeeper': -2, 'ult-marionettist': 0.5, 'ult-oathbroker': -1, 'ult-pyromancer': -1,
-    'ult-ranger': 3, 'ult-ready': -4, 'ult-runeguard': -1, 'ult-shadowblade': 4,
-    'ult-thermist': -1, 'ult-threadweaver': -1, 'ult-tidecaller': -2, 'waymark': 11.5,
-    'wipe': -2,
+    'ab-thermist-lance': -1, 'ab-thermist-redgiant': -2, 'ab-thermist-shock': -2.5, 'ab-thermist-sunset': -1.5,
+    'ab-thermist-thermocline': -1.5, 'ab-thermist-zero': -2, 'ab-thread': 4, 'ab-threadweaver-auto': 9,
+    'ab-threadweaver-cradle': -0.5, 'ab-threadweaver-embroider': 0.5, 'ab-threadweaver-mend': -1, 'ab-threadweaver-needle': 3.5,
+    'ab-threadweaver-shuttle': 0.5, 'ab-threadweaver-snip': 5.5, 'ab-threadweaver-tapestry': 1, 'ab-threadweaver-thrum': -2.5,
+    'ab-threadweaver-tie': 1, 'ab-thresher-auto': 2, 'ab-thresher-finish': 0.5, 'ab-thresher-frenzy': 0.5,
+    'ab-thresher-gatecut': 7, 'ab-thresher-gravewalk': 4.5, 'ab-thresher-snap': 9.5, 'ab-thresher-star': 2.5,
+    'ab-thresher-string': 7, 'ab-thresher-twinstar': 6, 'ab-thresher-veil': 2, 'ab-tidecaller-auto': 5,
+    'ab-tidecaller-bore': -2.5, 'ab-tidecaller-breakwater': 1, 'ab-tidecaller-current': 5.5, 'ab-tidecaller-maelstrom': 2.5,
+    'ab-tidecaller-riptide': 4.5, 'ab-tidecaller-sip': 1, 'ab-tidecaller-spray': 4.5, 'ab-tidecaller-springflood': -4,
+    'ab-tidecaller-surge': -3.5, 'ab-tidecaller-swell': 4, 'ab-tidecaller-undertow': 2, 'ab-time': -0.5,
+    'ab-wind': 5.5, 'amb-fountain': -11, 'amb-pond': -16.5, 'amb-tavern': -13,
+    'amb-town': -18.5, 'arrival': -8, 'bm-archmage-arcane-burst': -0.5, 'bm-archmage-arcane-mark': 2,
+    'bm-archmage-call-of-the-circle': 2.5, 'bm-archmage-cinder-rune': 1, 'bm-archmage-convergence': 1.5, 'bm-archmage-counterspell': 2.5,
+    'bm-archmage-ice-lances': 3, 'bm-archmage-leaping-bolt': 1, 'bm-archmage-pyre-rings': 1, 'bm-archmage-rift-rune': -1.5,
+    'bm-archmage-rime-rune': 0.5, 'bm-archmage-rune-mark': 2, 'bm-archmage-rune-swap': 2, 'bm-archmage-storm-rune': 2,
+    'bm-archmage-the-binding': 1.5, 'bm-archmage-the-tide-rises': 1, 'bm-archmage-void-rifts': -1, 'bm-grubnak-belly-flop': -1,
+    'bm-grubnak-butchers-charge': -0.5, 'bm-grubnak-chop-chop': 1, 'bm-grubnak-cleaver-toss': 1.5, 'bm-grubnak-clogged-drains': 3.5,
+    'bm-grubnak-dinner-rush': 3.5, 'bm-grubnak-double-chop': 1, 'bm-grubnak-family-meal': 0.5, 'bm-grubnak-flambe': -0.5,
+    'bm-grubnak-flare-up': -1.5, 'bm-grubnak-gorge': 2, 'bm-grubnak-grease-fire': 0.5, 'bm-grubnak-intro': -1,
+    'bm-grubnak-ladle-spin': 4, 'bm-grubnak-larder-toss': 2.5, 'bm-grubnak-lid-slam': -1.5, 'bm-grubnak-meat-toss': 1.5,
+    'bm-grubnak-mince': 1.5, 'bm-grubnak-mise-en-place': 4, 'bm-grubnak-order-up': -3, 'bm-grubnak-rolling-meatballs': 2.5,
+    'bm-grubnak-service': -1, 'bm-grubnak-simmer': 2, 'bm-grubnak-spice-rack': 0.5, 'bm-grubnak-stockpot': 1.5,
+    'bm-grubnak-tenderize': 1, 'bm-grubnak-whisk': 7, 'bm-hollowking-barrow-bells': -1.5, 'bm-hollowking-barrow-knell': 1.5,
+    'bm-hollowking-coffin-lids': 2, 'bm-hollowking-court-of-bones': 1.5, 'bm-hollowking-crown-of-graves': 3.5, 'bm-hollowking-dirge': 0.5,
+    'bm-hollowking-echo-knights': 4.5, 'bm-hollowking-funeral-march': 0.5, 'bm-hollowking-grave-cleave': 0.5, 'bm-hollowking-grave-marks': 4,
+    'bm-hollowking-grave-summons': 1.5, 'bm-hollowking-gravebind': 2.5, 'bm-hollowking-intro': 1.5, 'bm-hollowking-judgement': 0.5,
+    'bm-hollowking-lantern': 8.5, 'bm-hollowking-lights-out': 2, 'bm-hollowking-royal-audience': -1.5, 'bm-hollowking-royal-decree': -1,
+    'bm-hollowking-royal-doom': 1, 'bm-hollowking-royal-gaze': -1.5, 'bm-hollowking-sceptre-sweep': 3.5, 'bm-hollowking-sceptre-throw': 2,
+    'bm-hollowking-the-charge-sheet': 1.5, 'bm-hollowking-the-king-rises': -1, 'bm-hollowking-the-long-night': 1.5, 'bm-hollowking-writ-of-execution': 1.5,
+    'bm-hydra-acid-spray': 3, 'bm-hydra-flame-gout': 3, 'bm-hydra-intro': -3, 'bm-hydra-mire-spit': 2,
+    'bm-hydra-mothers-cry': -1.5, 'bm-hydra-mothers-heart': 0.5, 'bm-hydra-regrowth': 0.5, 'bm-hydra-rending-maul': 1.5,
+    'bm-hydra-rime-crown': 1, 'bm-hydra-searing': 2.5, 'bm-hydra-stonegaze': 0.5, 'bm-hydra-stormcall': 3,
+    'bm-hydra-the-drowning': -2.5, 'bm-hydra-tidal-dance': 3.5, 'bm-hydra-tidal-line': 2, 'bm-hydra-venom-bloom': 3,
+    'bm-skitterra-acid-deluge': 0.5, 'bm-skitterra-brood': 4.5, 'bm-skitterra-ceiling-ambush': 1, 'bm-skitterra-chrysalis': 4,
+    'bm-skitterra-cocoon-drop': 1.5, 'bm-skitterra-egg-sacs': 1.5, 'bm-skitterra-eightfold-lunge': 6.5, 'bm-skitterra-fang-rush': 2,
+    'bm-skitterra-from-the-dark': 2, 'bm-skitterra-into-the-dark': 2, 'bm-skitterra-intro': -1, 'bm-skitterra-molt': 8,
+    'bm-skitterra-silk-lines': 3.5, 'bm-skitterra-silk-reel': 3.5, 'bm-skitterra-silk-wrap': 2.5, 'bm-skitterra-snare-weave': 2,
+    'bm-skitterra-spiderlings': 11, 'bm-skitterra-spin': 8, 'bm-skitterra-spinneret-volley': 16, 'bm-skitterra-strand-reel': 5.5,
+    'bm-skitterra-the-swarm': 11.5, 'bm-skitterra-the-web-gives-way': 0.5, 'bm-skitterra-tightening-web': 2, 'bm-skitterra-venom-drip': 4,
+    'bm-skitterra-venom-mist': -1.5, 'bm-skitterra-venom-spit': 4, 'bm-titan-avalanche': 0.5, 'bm-titan-breath-of-winter': 1.5,
+    'bm-titan-endless-winter': -1.5, 'bm-titan-frostbite': 2.5, 'bm-titan-glacial-stomp': -0.5, 'bm-titan-icefall': 2.5,
+    'bm-titan-intro': -3, 'bm-titan-rime-slam': 0.5, 'bm-titan-titans-grip': 2.5, 'bm-titan-titans-sweep': 2,
+    'bm-titan-twin-slam': 2, 'bm-titan-whiteout': 1.5, 'bm-titan-winters-grasp': 2.5, 'bm-titan-winters-howl': -1,
+    'bm-volkar-avalanche': 0.5, 'bm-volkar-ball-lightning': 1.5, 'bm-volkar-chain-lightning': 3, 'bm-volkar-distant-thunder': 4,
+    'bm-volkar-eye-closes': 2, 'bm-volkar-eye-of-the-storm': 4.5, 'bm-volkar-gale-slam': 4, 'bm-volkar-gathering-storm': 0.5,
+    'bm-volkar-grounding-rods': 3, 'bm-volkar-heavens-fall': -1, 'bm-volkar-intro': -1.5, 'bm-volkar-lightning-rods': 9,
+    'bm-volkar-polarity-minus': 3, 'bm-volkar-polarity-plus': 3, 'bm-volkar-polarity-surge': 1.5, 'bm-volkar-pulse': 4.5,
+    'bm-volkar-rod-strike': 1.5, 'bm-volkar-skyfall': -0.5, 'bm-volkar-squall-line': 3, 'bm-volkar-static-field': 5,
+    'bm-volkar-still-air': 3, 'bm-volkar-storm-walls': 2, 'bm-volkar-supercell': 2, 'bm-volkar-thunder-crash': 1,
+    'bm-volkar-thunderclap': 1.5, 'bm-volkar-thunderhead': 2.5, 'bm-volkar-titan-fist': -1.5, 'bm-wyrm-cinder-rain': 7.5,
+    'bm-wyrm-ember-breath': 3.5, 'bm-wyrm-intro': -4, 'bm-wyrm-take-flight': 3.5, 'bm-wyrm-twin-breath': 3.5,
+    'boss-death': -2.5, 'boss-enrage': -2.5, 'boss-impact-heavy': 0.5, 'boss-impact-light': 7,
+    'boss-intro': -1.5, 'buff-on': -0.5, 'chest-drop': 3.5, 'chest-open': -5,
+    'cleanse': -5, 'clear': -4.5, 'crit': 4, 'dash': 6.5,
+    'debuff-on': -1, 'dummy-hit': 3, 'emote-cheer': -6.5, 'emote-laugh': -2,
+    'emote-wave': 2, 'feast-chew': 6.5, 'feast-clink': -5.5, 'feast-serve': -3.5,
+    'feast-sting': -2.5, 'fish-bite': 3, 'fish-cast': 1.5, 'fish-catch': -3,
+    'fish-lost': -0.5, 'fish-reel': -0.5, 'gloom-hollow-off': -2, 'gloom-hollow-on': 2,
+    'heal-land': -2.5, 'hit-heavy': 5, 'hit-light': 9, 'hm-bark-ash': -0.5,
+    'hm-bark-ghost': 3.5, 'hm-bark-greyfang': 0.5, 'hm-bark-rust': 0.5, 'hm-bite': 8,
+    'hm-bite-big': 2.5, 'hm-bringdown': -3, 'hm-calloff': 1.5, 'hm-down': 3,
+    'hm-hamstring': 1, 'hm-horn': -6, 'hm-howl': -3.5, 'hm-longchase': 1.5,
+    'hm-mount': -1, 'hm-quarry': 6.5, 'hm-relay': 4, 'hm-rend': 0.5,
+    'hm-ridedown': 2.5, 'hm-snap': 7, 'hm-up': 2.5, 'hm-whistle-hold': -7.5,
+    'hm-whistle-pounce': -7, 'ken-blaze': 0.5, 'ken-break': -0.5, 'ken-deathblow': -2,
+    'ken-good': 8, 'ken-iai': 2.5, 'ken-miss': 7.5, 'ken-off': 4.5,
+    'ken-pass': 6.5, 'ken-perfect': 2, 'ken-pommel': 6.5, 'ken-redirect': 1,
+    'lamp-drop': 11, 'lamp-ember': 14.5, 'lamp-end': 6.5, 'lamp-eternal': 0.5,
+    'lamp-pilgrim': 4.5, 'lamp-pillar': 3, 'lamp-snuff': 5.5, 'lamp-sparks': 5,
+    'lb-fire': -1.5, 'lb-ready': -5, 'loot-take': -2, 'low-hp': -4.5,
+    'npc-talk': -6, 'ping': 2.5, 'pip-up': 12, 'portal-enter': -3,
+    'portal-hum': -22.5, 'pull-count': 0.5, 'pull-count-last': -3.5, 'pull-go': -2,
+    'reaper-blink': 5.5, 'reaper-danse': 5, 'reaper-finish1': 4.5, 'reaper-finish2': -0.5,
+    'reaper-finish3': 1, 'reaper-finish4': -2, 'reaper-frenzy': -2.5, 'reaper-gate-bloom': -2.5,
+    'reaper-gate-close': -1, 'reaper-gate-open': 3.5, 'reaper-gate-tone': 8, 'reaper-gatebreaker': 1.5,
+    'reaper-harvest': -1, 'reaper-moon': 1.5, 'reaper-pop-bind': 4.5, 'reaper-pop-death': 3,
+    'reaper-pop-drain': 4, 'reaper-pop-thread': 9, 'reaper-rune': 12.5, 'reaper-rune-emp': 6,
+    'reaper-slack': 14.5, 'reaper-slash': 2.5, 'reaper-star-collapse': -2, 'reaper-star-open': 0.5,
+    'reaper-swing': 12, 'reaper-veil': -0.5, 'revive': -2, 'shield-break': 5,
+    'shield-up': -4, 'stack-1': 8, 'stack-2': -2.5, 'step-grass': 8,
+    'step-stone': 8.5, 'step-wood': 1.5, 'story-page': 3.5, 'tg-aoe': 1.5,
+    'tg-buster': 1, 'tg-charge': 0.5, 'tg-gaze': 0.5, 'tg-knockback': 2.5,
+    'tg-raidwide': -0.5, 'tg-spread': 5.5, 'tg-stack': 1.5, 'tide-bell': 1,
+    'tide-crash': -1.5, 'tide-crest': 4.5, 'tide-gull': 9.5, 'tide-pop': 1.5,
+    'tide-slack': 10.5, 'tide-wave': 2.5, 'title-sting': -3, 'ui-bounty': 0.5,
+    'ui-buy': -6, 'ui-click': 2, 'ui-close': -0.5, 'ui-equip': -2.5,
+    'ui-error': -3, 'ui-feat': -7, 'ui-gold': -4, 'ui-hover': 13,
+    'ui-secret': -6, 'ult-alembist': 0.5, 'ult-bastion': 1.5, 'ult-bloodreaver': 1,
+    'ult-driftblade': 6.5, 'ult-fire': -1.5, 'ult-gloomsworn': -1, 'ult-gorgemaw': 1,
+    'ult-grovekeeper': 2.5, 'ult-houndmaster': -3.5, 'ult-kenseier': -1.5, 'ult-lanternkeeper': -2,
+    'ult-marionettist': 0.5, 'ult-oathbroker': -1, 'ult-pyromancer': -1, 'ult-ranger': 3,
+    'ult-ready': -4, 'ult-runeguard': -1, 'ult-shadowblade': 4, 'ult-thermist': -1,
+    'ult-threadweaver': -1, 'ult-tidecaller': -2, 'waymark': 11.5, 'wipe': -2,
   };
   // @@TRIM-END
 
@@ -1399,14 +1403,18 @@
     gbreath: S => { S.noise({ color: 'pink', bp: 520, bp1: 360, q: 3.2, dur: 0.55, pts: [[0.16, 1], [0.55, 0]], peak: 0.17 }); S.voice({ f: 92, vowel: 'o', vowel1: 'u', breath: 1.4, dur: 0.5, peak: 0.06 }); },
     gtoll: S => { S.bell({ set: 'church', f: mf(35), dur: 1.7, peak: 0.2, beat: 0.9 }); S.thud({ f: 60, f1: 38, dur: 0.3, peak: 0.25, click: 0 }); },
     gcrack: S => { S.crack({ f: 1100, dur: 0.22, peak: 0.22 }); S.glass({ at: 0.02, f: mf(88), dur: 0.5, peak: 0.05 }); },
-    // Reaper (class id thresher): a scythe through cold air (a long whoosh of steel with a thin singing edge), the hollow wind and faint steel
-    // ring of a debt darkening, a tolling bell where something comes due, a lapsed (cracked, hollow) thud, the wisp's whisper, a run of chain links
-    tsweep: S => { S.whoosh({ color: 'pink', f: 450, f1: 2600, q: 0.7, dur: 0.38, peakAt: 0.5, peak: 0.42 }); S.noise({ at: 0.06, hp: 5200, dur: 0.22, pts: [[0.1, 1], [0.22, 0]], peak: 0.08 }); S.metal({ at: 0.08, set: 'bar', f: 3300, dur: 0.28, peak: 0.035, click: 0 }); },
-    trustle: S => { S.noise({ color: 'pink', bp: 700, bp1: 1500, q: 2.6, dur: 0.38, pts: [[0.12, 1], [0.38, 0]], peak: 0.12 }); S.noise({ at: 0.03, color: 'pink', bp: 3800, bp1: 2600, q: 3, dur: 0.3, pts: [[0.1, 1], [0.3, 0]], peak: 0.05 }); S.metal({ at: 0.05, set: 'bar', f: S.rr(2700, 3300), dur: 0.22, peak: 0.04, click: 0 }); },
-    tchime: S => { S.bell({ set: 'church', f: mf(76), dur: 1.1, peak: 0.1, beat: 0.8 }); S.glass({ at: 0.03, f: mf(95), dur: 0.8, peak: 0.04 }); },
-    trot: S => { S.thud({ f: 58, f1: 30, dur: 0.55, drive: 1.6, peak: 0.5 }); S.noise({ color: 'brown', lp: 380, dur: 0.4, pts: [[0.02, 1], [0.4, 0]], peak: 0.2 }); S.crack({ at: 0.04, f: 700, dur: 0.18, peak: 0.12 }); },
-    twisp: S => { S.noise({ color: 'pink', bp: 1900, bp1: 3200, q: 3.4, dur: 0.5, pts: [[0.25, 1], [0.5, 0]], peak: 0.1 }); S.voice({ f: 640, vowel: 'u', vowel1: 'i', breath: 1.6, dur: 0.45, peak: 0.05 }); S.glass({ at: 0.12, f: mf(96), dur: 0.5, peak: 0.04 }); },
-    tchain: S => { for (let i = 0; i < 5; i++) S.metal({ at: i * 0.028, set: 'bar', f: S.rr(1900, 2800), dur: 0.12, peak: 0.08, click: 0.2 }); S.scrape({ f: 5200, q: 3, rate: 90, dur: 0.16, pts: [[0.01, 1], [0.16, 0]], peak: 0.07 }); },
+    // Reaper (class id thresher): inky black smoke with blue lightning. Low muffled air and scythe steel (rpcut: a quick swish with a thin singing edge; rpink: the dark air
+    // that follows it), glassy blue crackle (rpspark), a finger snap (rpsnap), an inward breath (rpinhale), soft dark cloth (rpcloth), a vanish (rpvanish), a sharp whine (rpwhine)
+    // and the bright edge of the Gate's swings (rpedge)
+    rpcut: S => { S.whoosh({ color: 'pink', f: 700, f1: 3200, q: 0.8, dur: 0.2, peakAt: 0.55, peak: 0.3 }); S.noise({ at: 0.05, hp: 6000, dur: 0.1, pts: [[0.04, 1], [0.1, 0]], peak: 0.06 }); S.metal({ at: 0.07, set: 'bar', f: 3600, dur: 0.2, peak: 0.03, click: 0 }); },
+    rpink: S => { S.noise({ color: 'brown', lp: 520, lp1: 240, dur: 0.32, a: 0.04, pts: [[0.08, 1], [0.32, 0]], peak: 0.16 }); },
+    rpspark: S => { S.crackle({ f: 4200, dens: 1.8, dur: 0.22, pts: [[0.01, 1], [0.22, 0]], peak: 0.14 }); S.glass({ at: 0.01, f: mf(98), dur: 0.3, peak: 0.04 }); },
+    rpsnap: S => { S.noise({ hp: 2800, dur: 0.03, a: 0.0004, peak: 0.4 }); S.wood({ f: 1900, dur: 0.05, peak: 0.2 }); S.thud({ f: 240, f1: 150, dur: 0.05, peak: 0.12, click: 0 }); },
+    rpinhale: S => { S.whoosh({ color: 'pink', f: 2400, f1: 300, q: 1, dur: 0.4, peakAt: 0.8, peak: 0.22 }); S.tone({ f: mf(40), fm: [1.5, 1.5, 0.5], dur: 0.4, a: 0.3, swell: true, lp: 700, peak: 0.08 }); },
+    rpcloth: S => { S.noise({ color: 'brown', lp: 900, lp1: 1500, dur: 0.55, a: 0.18, pts: [[0.25, 1], [0.55, 0]], peak: 0.22 }); S.noise({ color: 'pink', bp: 400, bp1: 700, q: 0.8, dur: 0.5, a: 0.15, pts: [[0.25, 1], [0.5, 0]], peak: 0.1 }); },
+    rpvanish: S => { S.whoosh({ color: 'pink', f: 300, f1: 4200, q: 1.4, dur: 0.28, peakAt: 0.35, peak: 0.3 }); S.noise({ color: 'brown', lp: 600, lp1: 200, dur: 0.3, pts: [[0.03, 1], [0.3, 0]], peak: 0.16 }); S.glass({ at: 0.12, f: mf(96), dur: 0.4, peak: 0.04 }); },
+    rpwhine: S => { S.tone({ type: 'saw', f: 900, f1: 2800, glide: 0.35, dur: 0.4, lp: 5000, a: 0.02, pts: [[0.02, 1], [0.3, 0.8], [0.4, 0]], peak: 0.07 }); S.metal({ at: 0.02, set: 'bar', f: 2600, dur: 0.5, peak: 0.07, click: 0.4 }); S.scrape({ at: 0.02, f: 5400, q: 3, rate: 80, dur: 0.22, pts: [[0.02, 1], [0.22, 0]], peak: 0.06 }); },
+    rpedge: S => { B.zing(S, 0, 0.8, 0); S.glass({ f: mf(103), dur: 0.35, peak: 0.05 }); },
     // Threadweaver's Thrum: every held thread plucked at once, a soft warm rising strum that rings on (the heal and the cover over both ends)
     thrum: S => { [69, 72, 76, 79, 84].forEach((n, i) => S.pluck({ at: i * 0.05, f: mf(n), type: 'tri', dur: 0.9, bright: 6, peak: 0.13, pan: (i - 2) * 0.25 })); S.partials({ at: 0.25, set: 'hand', f: mf(88), dur: 1.1, peak: 0.05 }); S.noise({ color: 'pink', bp: 3000, q: 1, dur: 0.3, pts: [[0.1, 1], [0.3, 0]], peak: 0.03 }); },
     // Severance: shears closing (two bright blades meeting), then every thread letting go in a fast fall of snaps
@@ -1417,10 +1425,6 @@
     crossfire: S => { for (const sd of [-1, 1]) { S.noise({ bp: 900, bp1: 4200, q: 6, dur: 0.2, pts: [[0.16, 1], [0.2, 0]], peak: 0.3, pan: sd * 0.9 }); S.pluck({ at: 0.15, f: sd < 0 ? 196 : 208, bend: -4, dur: 0.6, bright: 20, peak: 0.2, pan: sd * 0.5 }); } S.thud({ at: 0.19, f: 150, f1: 70, dur: 0.14, peak: 0.22, lp: 600 }); S.crack({ at: 0.19, f: 1800, dur: 0.15, peak: 0.28 }); B.snap(S, 0.2, 1.1); S.metal({ at: 0.19, set: 'bar', f: 2200, dur: 0.3, peak: 0.06, click: 0.3 }); },
     // Gloomsworn's Dusk Reave: a slow, dragging reaping stroke, the shell splitting under it and a deep toll as the dark closes round the wound
     greave: S => { S.whoosh({ color: 'brown', f: 160, f1: 600, q: 0.8, dur: 0.5, peakAt: 0.6, peak: 0.5 }); S.scrape({ at: 0.1, f: 900, q: 2, rate: 40, dur: 0.3, pts: [[0.02, 1], [0.3, 0]], peak: 0.1 }); S.crack({ at: 0.32, f: 700, dur: 0.25, peak: 0.3 }); S.thud({ at: 0.32, f: 70, f1: 32, dur: 0.5, drive: 1.8, peak: 0.5 }); S.bell({ at: 0.34, set: 'church', f: mf(31), dur: 1.8, peak: 0.16, beat: 1.1 }); S.voice({ at: 0.38, f: 70, vowel: 'o', vowel1: 'u', breath: 1.5, dur: 0.8, peak: 0.07 }); },
-    // Reaper's Hourglass: the glass turned, ticks slowing to a stop over a trickle of sand and a high frozen note
-    hglass: S => { [0, 0.08, 0.19, 0.34, 0.55].forEach((at, i) => S.tick({ at: 0.1 + at, f: 2600 - i * 220, peak: 0.16 - i * 0.02 })); S.noise({ at: 0.08, hp: 6500, grain: 0.9, grainRate: 2, dur: 0.75, pts: [[0.1, 1], [0.75, 0]], peak: 0.07 }); S.glass({ at: 0.12, f: mf(93), dur: 1.3, peak: 0.07 }); S.glass({ at: 0.14, f: mf(100), dur: 1.1, peak: 0.04 }); },
-    // Reaper's Nightfall: ticks quickening faster and faster, the light draining down through a dark rush, a low hollow toll at the end
-    nfall: S => { [0, 0.2, 0.34, 0.44, 0.51, 0.56, 0.6, 0.63].forEach((at, i) => S.tick({ at, f: 1300 + i * 120, peak: 0.1 + i * 0.015 })); S.whoosh({ color: 'brown', f: 1600, f1: 180, q: 0.8, dur: 0.7, peakAt: 0.3, peak: 0.3 }); S.bell({ at: 0.62, set: 'church', f: mf(52), dur: 1.6, peak: 0.14, beat: 1.0 }); S.thud({ at: 0.62, f: 55, f1: 32, dur: 0.4, peak: 0.3, click: 0 }); },
     // Tidecaller (class id tidecaller): sea water. A surf wash (a pink hiss swelling in and pulling back), a conch horn (a soft breathy low
     // horn that scoops up into pitch), droplets and bubbles with a glass ping on them, a rush of tide, a heavy crash of water, a whirlpool
     // turning, a bell struck under water (dull and low-passed with bubbles), a stone wall (a low thud and a slap of wet), a pull down into the deep
@@ -1774,20 +1778,19 @@
       wardmantle: [['gbreath', 0.9, 0, 0.8], ['flutter', 0.4, 0, 0.6], ['shield', 1.1, 0.08, 0.9, 2], ['clang', 1.4, 0.12, 0.45]],
       pact: [['gtoll', 0.8, 0, 1], ['growl', 0.8, 0, 0.7], ['pulse', 1, 0.15, 0.9], ['gcrack', 0.9, 0.25, 0.6], ['gbreath', 0.6, 0.3, 0.7]],
     },
-    // Reaper (class id thresher): long steel scythe sweeps (tsweep) with the hollow wind of afflictions under them and a toll where something is collected
+    // Reaper (class id thresher): a quick scythe through dark air (rpcut over rpink) with blue sparks and a finger snap; every move has its own voice. The string's swings are short and light
+    // (pressed up to five times in two seconds); their rising note comes with the moment (sound-hooks.js SoundHooks.thresher 'swing'). The Gate's swings (Gate Cut) are the brighter edge
     thresher: {
-      slash: [['slash', 0.85, 0, 0.7, 1], ['tsweep', 1, 0, 1], ['trustle', 1.1, 0.08, 0.35]],
-      hook: [['tchain', 1, 0, 1], ['whoosh-down', 1.3, 0.06, 0.55], ['stab', 0.9, 0.16, 0.7, 0]],
-      reap: [['tsweep', 0.55, 0, 1], ['heavy', 0.75, 0.1, 0.9, 2], ['tchime', 0.8, 0.2, 0.5], ['trustle', 0.8, 0.12, 0.4]],
-      gather: [['tsweep', 1.35, 0, 0.7], ['tchain', 1.2, 0.05, 0.55], ['stab', 1.05, 0.1, 0.85, 1], ['tchime', 1.15, 0.18, 0.35]],   // (Sever: a short hooked rip, a link snapping)
-      blink: [['dash', 1.1, 0, 1, 1], ['tsweep', 1.4, 0.03, 0.6], ['stab', 1.2, 0.1, 0.7, 2], ['wind', 0.8, 0, 0.4]],
-      wisp: [['twisp', 1, 0, 1], ['sparkle', 1.2, 0.1, 0.5], ['hum', 1.8, 0, 0.3]],
-      sowing: [['wind', 1, 0, 0.7], ['gbreath', 1.3, 0, 0.6], ['trustle', 1.3, 0.05, 0.6], ['tchime', 0.7, 0.25, 0.4]],
-      cull: [['tsweep', 0.5, 0, 1], ['heavy', 0.6, 0.12, 1, 1], ['trot', 0.9, 0.14, 0.7], ['tchime', 0.6, 0.2, 0.5]],
-      gatestrike: [['tsweep', 1.1, 0, 0.8], ['slash', 1, 0, 0.6, 2], ['twisp', 1.3, 0.03, 0.4], ['tchime', 1.25, 0.08, 0.35]],
-      hourglass: [['dash', 1.3, 0, 0.7, 1], ['hglass', 1, 0.1, 1], ['tchime', 1.3, 0.45, 0.4]],
-      nightfall: [['dash', 0.8, 0, 0.7, 2], ['trustle', 0.8, 0, 0.5], ['nfall', 1, 0.08, 1]],
-      auto: [['slash', 0.8, 0, 0.6, 0], ['tsweep', 1.25, 0, 0.5]],
+      string: [['rpcut', 1, 0, 0.8], ['rpink', 1, 0.02, 0.3]],
+      finish: [['rpcut', 0.75, 0, 0.9], ['heavy', 0.8, 0.05, 0.6, 1], ['rpspark', 1, 0.06, 0.5]],
+      snap: [['rpsnap', 1, 0, 1], ['rpspark', 1.1, 0.02, 0.8], ['sparkle', 1.3, 0.04, 0.25]],
+      star: [['rpinhale', 1, 0, 0.9], ['rpspark', 0.75, 0.08, 0.4], ['boom', 0.8, 0.28, 0.25]],
+      twinstar: [['rpinhale', 1.4, 0, 0.8], ['rpspark', 1.2, 0.05, 0.5], ['rpedge', 1.2, 0.18, 0.4]],
+      veil: [['rpcloth', 1, 0, 1], ['wind', 0.6, 0, 0.35]],
+      gravewalk: [['rpvanish', 1, 0, 1], ['rpcloth', 1.4, 0, 0.4]],
+      frenzy: [['rpwhine', 1, 0, 1], ['rpink', 0.8, 0, 0.5]],
+      gatecut: [['rpcut', 1.3, 0, 0.8], ['rpedge', 1, 0.02, 0.7]],
+      auto: [['slash', 0.8, 0, 0.6, 0], ['rpcut', 1.25, 0, 0.5]],
     },
   };
   // Tidecaller (class id tidecaller): sea water, every move its own sound: a spray of salt water, a drop in a cupped hand, a rising swell, a whirl, a conch and a wave
@@ -1970,49 +1973,188 @@
     S.whoosh({ at: 0.5, color: 'brown', f: 300, f1: 2000, dur: 0.5, peakAt: 0.3, peak: 0.3 });
     [79, 84, 88, 91, 96].forEach((n, i) => S.glass({ at: 0.6 + i * 0.05, f: mf(n), dur: 0.9, peak: 0.07, pan: (i - 2) * 0.3 }));
   });
-  // Reaper (class id thresher): the Gate. A breath drawn in as the world falls away, the gateway opening on a low hum, five strikes climbing, a bloom
+  // Reaper (class id thresher): the Ultimate (Arcane Gate: a breath drawn in as the world tints violet, a low violet hum opening on two beating tones with a phasing shimmer of glass, the
+  // gateway settling on a soft bell), and the moments the kit sends (sound-hooks.js SoundHooks.thresher): a string's swing (a thin blue edge, pitched up for each of the four), the four
+  // finishers (a hooking flick, the blade into the ground with a crack of ink, a long skewer, the huge sweep), the quake ring, a rune laid (a tiny glassy chime, deeper when empowered), a
+  // mark popped by the Snap (a wet pop, a rope's twang, a dull thud with a high crack, a thin silver ping), a Full Harvest and a Harvest Moon, the Void Star opening (an inward hum) and
+  // collapsing (a deep muffled boom with crackle), a string timing out, Dusk Veil, Insane Reaper, the Blink and the slashes that come with it, Danse Macabre, and the Gate: a strike
+  // (a rising tone for each empowered mark), Gatebreaker, the fifth swing's blue-white release and the Gate closing
   def('ult-thresher', 'ult', S => {
-    S.space('hall', 0.45);
-    S.whoosh({ color: 'pink', f: 3200, f1: 240, q: 1.1, dur: 0.55, peakAt: 0.9, peak: 0.34 });
-    S.choir({ notes: [mf(45), mf(52)], vowel: 'u', vowel1: 'o', a: 0.5, dur: 1.4, peak: 0.1 });
-    S.tone({ f: mf(33), fm: [1.5, 2, 0.5], dur: 1.2, a: 0.5, swell: true, lp: 800, peak: 0.12 });
-    [0, 1, 2, 3, 4].forEach(i => { const at = 0.62 + i * 0.1; S.whoosh({ at, f: 1800 + i * 350, f1: 5200 + i * 300, q: 2, dur: 0.1, peak: 0.2, pan: i % 2 ? 0.35 : -0.35 }); S.glass({ at: at + 0.02, f: mf(79 + i * 2), dur: 0.5, peak: 0.05 }); });
-    S.bell({ at: 1.12, set: 'hand', f: mf(88), dur: 1.4, peak: 0.16 });
-    S.thud({ at: 1.12, f: 80, f1: 38, dur: 0.5, peak: 0.4 });
-    [84, 88, 91, 96].forEach((n, i) => S.glass({ at: 1.16 + i * 0.05, f: mf(n), dur: 0.9, peak: 0.06, pan: (i - 1.5) * 0.3 }));
+    S.space('hall', 0.5);
+    S.whoosh({ color: 'pink', f: 3200, f1: 240, q: 1.1, dur: 0.55, peakAt: 0.9, peak: 0.3 });
+    S.tone({ at: 0.45, f: mf(40), fm: [1.5, 2, 0.5], dur: 1.3, a: 0.55, swell: true, lp: 900, peak: 0.13 });
+    S.tone({ at: 0.45, f: mf(40), det: 14, vib: [4.5, 0.004, 0.2], dur: 1.3, a: 0.55, swell: true, lp: 700, peak: 0.1 });
+    S.choir({ at: 0.4, notes: [mf(52), mf(59)], vowel: 'u', vowel1: 'o', a: 0.6, dur: 1.3, peak: 0.09 });
+    [91, 95, 98, 103].forEach((n, i) => S.glass({ at: 0.75 + i * 0.1, f: mf(n), dur: 0.9, peak: 0.045, pan: i % 2 ? 0.35 : -0.35 }));
+    S.bell({ at: 1.25, set: 'hand', f: mf(76), dur: 1.1, peak: 0.1 });
+    S.thud({ at: 1.25, f: 74, f1: 36, dur: 0.5, peak: 0.28 });
   });
-  // an affliction coming due (yours only, soft: a far-off toll with a ghostly thread of air), and a payout's ping (rises for each one in a Reap)
-  def('gold-ripe', 'hud', S => {
-    S.bell({ set: 'church', f: mf(79), dur: 0.9, peak: 0.1, beat: 0.8 });
-    S.glass({ at: 0.07, f: mf(98), dur: 0.7, peak: 0.05 });
-    S.voice({ at: 0.02, f: 420, vowel: 'u', vowel1: 'i', breath: 1.6, dur: 0.4, peak: 0.025 });
+  def('reaper-swing', 'ab', S => {
+    S.noise({ color: 'pink', bp: 2600, bp1: 4200, q: 1.6, dur: 0.14, pts: [[0.03, 1], [0.14, 0]], peak: 0.12 });
+    S.glass({ at: 0.02, f: mf(93), dur: 0.28, peak: 0.05 });
+    S.metal({ at: 0.03, set: 'bar', f: 3800, dur: 0.14, peak: 0.03, click: 0 });
   });
-  def('gold-pop', 'hud', S => {
-    S.partials({ set: 'hand', f: mf(84), dur: 0.55, peak: 0.15 });
-    S.coins({ n: 1, f: 3600, spread: 0.02, peak: 0.1 });
-    S.glass({ at: 0.02, f: mf(96), dur: 0.4, peak: 0.05 });
+  def('reaper-finish1', 'ab', S => {
+    S.whoosh({ color: 'pink', f: 900, f1: 3800, q: 1, dur: 0.22, peakAt: 0.5, peak: 0.32 });
+    S.metal({ at: 0.12, set: 'bar', f: 3300, dur: 0.22, peak: 0.07, click: 0.5 });
+    S.scrape({ at: 0.1, f: 5000, q: 3, rate: 80, dur: 0.1, pts: [[0.01, 1], [0.1, 0]], peak: 0.06 });
+    S.glass({ at: 0.14, f: mf(91), dur: 0.5, peak: 0.06 });
   });
-  // a lapsed payout (a dull, cracked thud), a faint one (a small thin puff of cold air), a Gate strike (a bright climbing note: rate rises with each), the fifth's bloom
-  def('thresher-rot', 'ab', S => {
-    S.thud({ f: 62, f1: 34, dur: 0.45, drive: 1.5, peak: 0.5 });
-    S.noise({ color: 'brown', lp: 420, dur: 0.35, pts: [[0.02, 1], [0.35, 0]], peak: 0.18 });
-    S.crack({ at: 0.03, f: 700, dur: 0.18, peak: 0.1 });
+  def('reaper-finish2', 'ab', S => {
+    S.whoosh({ color: 'pink', f: 2200, f1: 300, q: 0.9, dur: 0.14, peakAt: 0.8, peak: 0.25 });
+    S.thud({ at: 0.13, f: 80, f1: 38, dur: 0.45, drive: 1.6, peak: 0.5 });
+    S.crack({ at: 0.13, f: 900, dur: 0.3, peak: 0.3 });
+    S.metal({ at: 0.14, set: 'plate', f: 230, dur: 0.5, peak: 0.07, click: 0.3 });
+    S.crackle({ at: 0.16, f: 3200, dens: 1.2, dur: 0.4, pts: [[0.03, 1], [0.4, 0]], peak: 0.12 });
+    S.noise({ at: 0.14, color: 'brown', lp: 480, dur: 0.4, pts: [[0.02, 1], [0.4, 0]], peak: 0.18 });
   });
-  def('thresher-pop', 'ab', S => {
-    S.noise({ color: 'pink', bp: 2400, bp1: 3400, q: 2.4, dur: 0.16, pts: [[0.04, 1], [0.16, 0]], peak: 0.13 });
-    S.glass({ at: 0.01, f: mf(91), dur: 0.2, peak: 0.04 });
+  def('reaper-finish3', 'ab', S => {
+    S.whoosh({ color: 'pink', f: 500, f1: 6000, q: 1.4, dur: 0.55, peakAt: 0.7, peak: 0.36 });
+    S.crackle({ at: 0.2, f: 4600, dens: 1.8, dur: 0.4, pts: [[0.05, 1], [0.4, 0]], peak: 0.12 });
+    S.noise({ at: 0.4, hp: 2500, dur: 0.05, a: 0.0006, peak: 0.25 });
+    S.metal({ at: 0.42, set: 'bar', f: 2700, dur: 0.4, peak: 0.08, click: 0.5 });
+    S.thud({ at: 0.42, f: 120, f1: 60, dur: 0.18, peak: 0.3 });
+    S.glass({ at: 0.45, f: mf(98), dur: 0.6, peak: 0.05 });
   });
-  def('thresher-gate-tone', 'ab', S => {
-    S.whoosh({ f: 1600, f1: 4800, q: 2, dur: 0.12, peak: 0.2 });
+  def('reaper-finish4', 'ab', S => {
+    S.space('room', 0.2);
+    S.whoosh({ color: 'brown', f: 140, f1: 900, q: 0.7, dur: 0.55, peakAt: 0.5, peak: 0.5 });
+    S.whoosh({ at: 0.04, color: 'pink', f: 500, f1: 3600, q: 0.8, dur: 0.5, peakAt: 0.55, peak: 0.34 });
+    [0, 1, 2, 3].forEach(i => { B.zing(S, 0.22 + i * 0.05, 0.9, (i - 1.5) * 0.45); S.glass({ at: 0.24 + i * 0.05, f: mf(88 + i * 3), dur: 0.7, peak: 0.045, pan: (i - 1.5) * 0.4 }); });
+    S.thud({ at: 0.3, f: 66, f1: 32, dur: 0.6, drive: 1.7, peak: 0.45 });
+    S.bell({ at: 0.3, set: 'church', f: mf(45), dur: 1.0, peak: 0.1, beat: 0.9 });
+  });
+  def('reaper-quake', 'ab', S => {
+    S.rumble({ dur: 0.9, f: 90, peak: 0.3, a: 0.04, grain: 0.5 });
+    S.thud({ f: 56, f1: 30, dur: 0.7, drive: 1.5, peak: 0.38 });
+    S.crackle({ at: 0.04, f: 1800, dens: 0.8, dur: 0.7, pts: [[0.1, 1], [0.7, 0]], peak: 0.14 });
+    S.noise({ color: 'brown', lp: 380, lp1: 140, dur: 0.8, pts: [[0.05, 1], [0.8, 0]], peak: 0.2 });
+  });
+  def('reaper-rune', 'ab', S => {
+    S.glass({ f: mf(91), dur: 0.4, peak: 0.07 });
+    S.glass({ at: 0.015, f: mf(98), dur: 0.28, peak: 0.03 });
+    S.noise({ hp: 6500, dur: 0.012, a: 0.0006, peak: 0.08 });
+  });
+  def('reaper-rune-emp', 'ab', S => {
+    S.glass({ f: mf(91), dur: 0.45, peak: 0.07 });
+    S.glass({ at: 0.015, f: mf(79), dur: 0.5, peak: 0.05 });
+    S.bell({ set: 'hand', f: mf(64), dur: 0.9, peak: 0.08 });
+    S.thud({ f: 90, f1: 55, dur: 0.18, peak: 0.16, click: 0 });
+  });
+  def('reaper-pop-drain', 'ab', S => {
+    S.bubbles({ n: 2, f: 500, f1: 1400, spread: 0.04, size: 0.03, peak: 0.22 });
+    S.noise({ color: 'pink', lp: 2000, lp1: 600, dur: 0.1, pts: [[0.01, 1], [0.1, 0]], peak: 0.16 });
+    S.glass({ at: 0.01, f: mf(91), dur: 0.25, peak: 0.04 });
+  });
+  def('reaper-pop-bind', 'ab', S => {
+    S.noise({ hp: 2500, dur: 0.03, a: 0.0005, peak: 0.2 });
+    S.pluck({ f: 196, bend: -5, dur: 0.5, bright: 18, peak: 0.22 });
+    S.pluck({ at: 0.01, f: 392, bend: -4, dur: 0.3, bright: 12, peak: 0.07 });
+  });
+  def('reaper-pop-death', 'ab', S => {
+    S.thud({ f: 90, f1: 45, dur: 0.3, drive: 1.4, peak: 0.5 });
+    S.crack({ at: 0.01, f: 2600, dur: 0.12, peak: 0.28 });
+    S.noise({ color: 'brown', lp: 320, dur: 0.25, pts: [[0.02, 1], [0.25, 0]], peak: 0.14 });
+  });
+  def('reaper-pop-thread', 'ab', S => {
+    S.glass({ f: mf(103), dur: 0.55, peak: 0.08 });
+    S.metal({ set: 'bar', f: 4200, dur: 0.3, peak: 0.04, click: 0.3 });
+    B.zing(S, 0, 0.45, 0);
+  });
+  def('reaper-harvest', 'ab', S => {
+    S.space('hall', 0.35);
+    S.bell({ set: 'church', f: mf(60), dur: 1.6, peak: 0.2, beat: 0.9 });
+    S.bell({ at: 0.02, set: 'hand', f: mf(84), dur: 1.1, peak: 0.1 });
+    S.noise({ color: 'brown', lp: 500, lp1: 200, dur: 0.8, a: 0.02, pts: [[0.1, 1], [0.8, 0]], peak: 0.2 });
+    S.glass({ at: 0.05, f: mf(96), dur: 0.8, peak: 0.05 });
+    S.thud({ f: 72, f1: 36, dur: 0.4, peak: 0.3 });
+  });
+  def('reaper-moon', 'ab', S => {
+    S.whoosh({ color: 'pink', f: 2000, f1: 7000, q: 2, dur: 0.3, peakAt: 0.6, peak: 0.2 });
+    [91, 95, 98, 103, 107].forEach((n, i) => S.glass({ at: 0.04 + i * 0.045, f: mf(n), dur: 0.8, peak: 0.055, pan: (i - 2) * 0.3 }));
+    S.tone({ at: 0.05, f: mf(84), fm: [2, 1.5, 0.4], dur: 0.7, a: 0.2, swell: true, lp: 3000, peak: 0.05 });
+  });
+  def('reaper-star-open', 'ab', S => {
+    S.space('room', 0.2);
+    S.whoosh({ color: 'pink', f: 3600, f1: 260, q: 1.2, dur: 1.0, peakAt: 0.9, peak: 0.3 });
+    S.tone({ f: mf(31), f1: mf(38), glide: 1, fm: [1.5, 2, 0.5], dur: 1.1, a: 0.7, swell: true, lp: 700, peak: 0.14 });
+    S.tone({ at: 0.1, f: mf(50), f1: mf(57), glide: 0.9, dur: 1.0, a: 0.7, swell: true, lp: 900, am: [9, 0.4], peak: 0.05 });
+    S.crackle({ at: 0.4, f: 4500, dens: 1.5, dur: 0.6, pts: [[0.5, 1], [0.6, 0.7]], peak: 0.08 });
+  });
+  def('reaper-star-collapse', 'ab', S => {
+    S.space('hall', 0.3);
+    S.thud({ f: 58, f1: 26, dur: 0.9, drive: 2, peak: 0.6 });
+    S.noise({ color: 'brown', lp: 260, lp1: 120, dur: 1.0, a: 0.01, pts: [[0.05, 1], [1, 0]], peak: 0.3 });
+    S.crack({ at: 0.02, f: 1200, dur: 0.3, peak: 0.2 });
+    S.crackle({ at: 0.03, f: 3200, dens: 1.2, dur: 0.8, pts: [[0.05, 1], [0.8, 0]], peak: 0.16 });
+    S.glass({ at: 0.1, f: mf(79), dur: 0.9, peak: 0.04 });
+  });
+  def('reaper-slack', 'ab', S => {
+    S.noise({ color: 'pink', bp: 1800, bp1: 700, q: 1, dur: 0.25, pts: [[0.03, 1], [0.25, 0]], peak: 0.09 });
+    S.crackle({ f: 2000, dens: 0.8, dur: 0.2, pts: [[0.02, 1], [0.2, 0]], peak: 0.05 });
+    S.tone({ f: 600, f1: 220, glide: 0.25, dur: 0.28, lp: 1200, a: 0.01, peak: 0.04 });
+  });
+  def('reaper-veil', 'ab', S => {
+    S.noise({ color: 'brown', lp: 700, lp1: 1400, dur: 0.9, a: 0.35, pts: [[0.4, 1], [0.9, 0]], peak: 0.25 });
+    S.tone({ f: mf(38), fm: [1.5, 1, 0.3], dur: 0.9, a: 0.4, swell: true, lp: 600, peak: 0.1 });
+    S.glass({ at: 0.5, f: mf(79), dur: 0.6, peak: 0.03 });
+  });
+  def('reaper-frenzy', 'ab', S => {
+    S.tone({ type: 'saw', f: 700, f1: 3400, glide: 0.6, dur: 0.7, lp: 6000, a: 0.02, vib: [18, 0.02, 0.1], pts: [[0.03, 1], [0.55, 0.9], [0.7, 0]], peak: 0.08 });
+    S.scrape({ at: 0.05, f: 4800, q: 3, rate: 90, dur: 0.5, pts: [[0.05, 1], [0.5, 0.8], [0.6, 0]], peak: 0.06 });
+    S.noise({ color: 'brown', lp: 300, dur: 0.7, a: 0.05, pts: [[0.2, 1], [0.7, 0]], peak: 0.2 });
+    S.crackle({ at: 0.3, f: 4200, dens: 1.8, dur: 0.4, pts: [[0.05, 1], [0.4, 0]], peak: 0.08 });
+  });
+  def('reaper-blink', 'ab', S => {
+    S.whoosh({ color: 'pink', f: 400, f1: 6000, q: 2, dur: 0.14, peakAt: 0.6, peak: 0.3 });
+    S.zap({ f: 200, f1: 900, dur: 0.12, peak: 0.07 });
+    S.noise({ color: 'brown', lp: 500, dur: 0.18, pts: [[0.02, 1], [0.18, 0]], peak: 0.14 });
+    S.crack({ at: 0.1, f: 3000, dur: 0.12, peak: 0.12 });
+  });
+  def('reaper-slash', 'ab', S => {
+    S.whoosh({ color: 'pink', f: 900, f1: 4500, q: 0.9, dur: 0.16, peakAt: 0.5, peak: 0.3 });
+    S.crack({ at: 0.08, f: 2200, dur: 0.15, peak: 0.2 });
+    S.glass({ at: 0.08, f: mf(95), dur: 0.35, peak: 0.05 });
+  });
+  def('reaper-danse', 'ab', S => {
+    [0, 0.09, 0.18].forEach((at, i) => {
+      S.whoosh({ at, color: 'pink', f: 800 + i * 250, f1: 3600 + i * 400, q: 0.9, dur: 0.14, peakAt: 0.5, peak: 0.22, pan: (i - 1) * 0.5 });
+      S.glass({ at: at + 0.06, f: mf(88 + i * 4), dur: 0.4, peak: 0.05, pan: (i - 1) * 0.5 });
+    });
+    S.crack({ at: 0.24, f: 2400, dur: 0.12, peak: 0.14 });
+  });
+  def('reaper-gate-open', 'ab', S => {
+    S.space('hall', 0.4);
+    S.tone({ f: mf(52), fm: [1.5, 1.5, 0.4], dur: 0.7, a: 0.35, swell: true, lp: 1200, peak: 0.08 });
+    [86, 91, 95].forEach((n, i) => S.glass({ at: 0.08 + i * 0.1, f: mf(n), dur: 0.7, peak: 0.04, pan: (i - 1) * 0.4 }));
+    S.whoosh({ color: 'pink', f: 3000, f1: 800, q: 1, dur: 0.5, peakAt: 0.4, peak: 0.1 });
+  });
+  def('reaper-gate-tone', 'ab', S => {
+    S.whoosh({ f: 1800, f1: 5200, q: 2, dur: 0.12, peak: 0.2 });
     S.glass({ at: 0.02, f: mf(79), dur: 0.6, peak: 0.07 });
     S.partials({ at: 0.02, set: 'hand', f: mf(72), dur: 0.5, peak: 0.07 });
+    S.crackle({ at: 0.02, f: 4400, dens: 1.8, dur: 0.14, pts: [[0.01, 1], [0.14, 0]], peak: 0.06 });
   });
-  def('thresher-gate-bloom', 'ab', S => {
+  def('reaper-gatebreaker', 'ab', S => {
+    S.metal({ set: 'bar', f: 2400, dur: 0.5, peak: 0.1, click: 0.6 });
+    B.zing(S, 0, 1, -0.3); B.zing(S, 0.05, 1, 0.3);
+    [88, 95, 100].forEach((n, i) => S.glass({ at: 0.04 + i * 0.05, f: mf(n), dur: 0.8, peak: 0.06 }));
+    S.thud({ f: 100, f1: 60, dur: 0.2, peak: 0.25 });
+  });
+  def('reaper-gate-bloom', 'ab', S => {
     S.space('hall', 0.4);
     S.thud({ f: 76, f1: 36, dur: 0.6, drive: 1.8, peak: 0.5 });
     S.bell({ set: 'hand', f: mf(84), dur: 1.5, peak: 0.16 });
     S.choir({ at: 0.03, notes: [mf(60), mf(67), mf(72)], vowel: 'a', a: 0.12, dur: 1.2, peak: 0.1 });
+    S.crack({ at: 0.02, f: 1500, dur: 0.35, peak: 0.25 });
+    S.crackle({ at: 0.04, f: 3600, dens: 1.5, dur: 0.6, pts: [[0.05, 1], [0.6, 0]], peak: 0.1 });
     [84, 88, 91, 96, 100].forEach((n, i) => S.glass({ at: 0.06 + i * 0.045, f: mf(n), dur: 0.9, peak: 0.06, pan: (i - 2) * 0.3 }));
+  });
+  def('reaper-gate-close', 'ab', S => {
+    S.space('hall', 0.35);
+    S.tone({ f: mf(45), f1: mf(33), glide: 0.8, fm: [1.5, 1.5, 0.3], dur: 0.9, a: 0.05, lp: 800, pts: [[0.05, 1], [0.9, 0]], peak: 0.1 });
+    S.whoosh({ color: 'pink', f: 2400, f1: 200, q: 1, dur: 0.6, peakAt: 0.2, peak: 0.14 });
+    [96, 91, 86].forEach((n, i) => S.glass({ at: i * 0.1, f: mf(n), dur: 0.6, peak: 0.035 }));
   });
   // Tidecaller (class id tidecaller): the Ultimate (a long conch call over a great rush of water with a bell under it), and the moments the kit sends
   // (sound-hooks.js SoundHooks.tidecaller): the crest (a pearl note and a wash of foam), slack water (a soft pulling-back), a Riptide Mark popping (a bubble

@@ -216,16 +216,17 @@ HERO_GUIDE.gloomsworn = {
     { keys: ['w', 't'], text: 'Eclipse of the Vigil with the vessel full: a huge blow, a barrier on the whole party and 10% less damage for 6s. It empties the vessel.' },
   ],
 };
-// Thresher (damage, class 19)
+// Reaper (damage, class 19; the id stays thresher)
 HERO_GUIDE.thresher = {
-  passive: { name: 'The Toll', icon: 'reap', desc: 'Four afflictions lie on the boss, each in its own slot: Mark (a bleed), Drain (mends you), Bind (pulses) and Thread (waits to be snapped). Laying one that is already up adds a Weight (up to 3) and starts its 15s again. Every Weight ticks, and every Weight pays when you pop it. Each pops its own way: Mark is the big hit, Drain mends you, Bind fetters the boss so the party takes 10% less for 4s, and Thread gives a Hook charge back. At full Weight an affliction pays 50% more.' },
+  passive: { name: 'The String', icon: 'slash', desc: 'Q is a string: up to four quick swings on one global cooldown, which starts when the string ends. W ends it, and what it does depends on how many swings came first. Each finisher leaves its own mark (Drain, Bind, Death Mark, Thread). Snap pops every mark on every enemy, and all four on one enemy is a Full Harvest.' },
   combos: [
-    { keys: ['q', 'q'], text: 'Slash lays a Mark, Cleave a Drain. Keep pressing Q: a hit pressed within 1.2s of your last recovery adds a Backswing, a free second cut.' },
-    { keys: ['w', 'd'], text: 'Hook lays the Thread and Gloam Blink binds. Both keep your Backswing going, so use them between your Slashes, and keep laying them: every press is another Weight.' },
-    { keys: ['q', 'q', 'e'], text: 'Reap pops them all. E glows with three up. Every one at full Weight is the Full Toll: the hour strikes again for a heavy blow, so build the Weight before you cash it, unless you need what a pop gives now.' },
-    { keys: ['d', 'r'], text: 'Sever rips out only the affliction you laid last (the chevron on the gauge), at half again its worth. Blink then Sever as a raidwide lands: the Bind\'s fetter is on the party just when it hurts.' },
-    { keys: ['f'], text: 'Spirit Wisp as soon as it is ready: it strikes every 2.5s for 15s and binds the boss if nothing else has. With the Sacrifice talent, press it again to pop it for a big hit and a Weight on the affliction you laid last.' },
-    { keys: ['t', 'q', 'q', 'q', 'q', 'q'], text: 'Reaper\'s Gate when T is full: nothing can touch you for 8s. Press Q once a second: each strike lays the next affliction at full Weight, and the fifth, The Fifth, pops all four. Do not stop at four.' },
+    { keys: ['q', 'w'], text: 'One swing and a finisher: a hooking cut that leaves a Drain. A short string leaves you room to move, so use it when a telegraph is about to land.' },
+    { keys: ['q', 'q', 'q', 'q', 'w'], text: 'Four swings and the wide sweep: the hardest finisher, and a Thread on everything in the arc, adds included. W glows on the fourth swing. A pause of a second and a half ends a string with no finisher.' },
+    { keys: ['q', 'w', 'q', 'q', 'w', 'q', 'q', 'q', 'w', 'q', 'q', 'q', 'q', 'w', 'e'], text: 'Lay all four marks on one enemy (a string of one, two, three and four), then Snap: a Full Harvest. Marks last 20s. E glows once two are up.' },
+    { keys: ['r'], text: 'Void Star on a marked target: a void of smoke that collapses and hits everything round it, harder for every mark on that enemy, and it uses none. It charges Arcane Gate and gives a Blink back.' },
+    { keys: ['f'], text: 'Insane Reaper with the burst of the party: everyone acts 10% faster for 15s, and your swings faster still. It stacks with a Chronomancer haste.' },
+    { keys: ['space', 'q'], text: 'Blink does not break a string, and Dusk Veil gives a charge back. Use them to leave a telegraph with your string still in hand.' },
+    { keys: ['t', 'q', 'q', 'q', 'q', 'q'], text: 'Arcane Gate when T is full: you phase out as it opens, and Q runs to five swings. The first four lay empowered marks (land them fast for Gatebreaker), and the fifth is a Snap that pops them all at once.' },
   ],
 };
 // Tidecaller (healer, class 20)

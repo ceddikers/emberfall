@@ -495,6 +495,7 @@ class RaidHost {
   partyMods() {
     const m = { dmg: 0, crit: 0, haste: 0 };
     for (const b of this.partyBuffs) if (b.end > this.sim.t) m[b.kind] = Math.max(m[b.kind] || 0, b.value);
+    if (m.rhaste) { m.haste = Math.min(0.35, (m.haste || 0) + m.rhaste); m.rhaste = 0; }   // (Insane Reaper's haste adds to a Chronomancer's: they stack)
     // the gear party bonus stacks on top of buffs (bots get it too)
     m.dmg += this.bond.dmg; m.crit += this.bond.crit; m.haste += this.bond.haste;
     return m;

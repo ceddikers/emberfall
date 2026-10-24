@@ -1885,118 +1885,157 @@ SPEC_ART.duskward = function (ctx, st) {
   glow(ctx, 0, 0, 20, '#7aa8f0', 0.1);
 };
 
-// Reaper (the class id stays `thresher`; damage, class 19): a slim, elegant figure in a long black-violet cloak with a deep
-// hood and a pale porcelain mask, a faint teal soul-glow behind its eyes and a soul-wisp on a fine chain at the hip. The scythe
-// is graceful: a black snath with violet bands, a hooked crescent blade of pale silver curling back with a teal edge and a soul-ribbon
-// streaming from its head. In the Reaper's Gate (st.thMist, set by ability-vfx.js) the body goes to mist.
+// Reaper (the class id stays `thresher`; damage, class 19): a young woman in a wide, frayed straw sun hat that shades her face, long
+// pale-blonde hair streaming behind her and a plain white sundress (gathered neckline, a thin bow, ruffled straps). She carries a
+// tall white scythe: a slender silver crescent with a fine pale-blue edge on a white snath, a ring and two spikes where blade meets
+// pole. Her magic is inky black smoke and blue lightning, so a thin wisp and one blue spark curl off the blade; the dress and hat stay
+// clean. In the Reaper's Gate (st.thMist, set by ability-vfx.js) the body phases out: half-transparent with a violet tint.
+// Dancer (The Long Waltz): hem and hair flare, a ribbon of smoke and lightning spirals after the blade, a moon charm on the hat band.
+// Phantom (The Vanishing Edge): dusk-toned, the hat shadow deep across the eyes, the hem dissolving to smoke, after-images behind.
 HERO_ART.thresher = function (ctx, st) {
-  const void_ = '#0c0a14', vioD = '#2a1840', vioM = '#4a2a6a', vioL = '#7a5aa8', bone = '#e8e4dc', boneD = '#b8b2c4', teal = '#8fd8e8', pale = '#e0f6ff';
-  const grim = HERO_SPEC === 'grim';
+  const dancer = HERO_SPEC === 'dancer', phantom = HERO_SPEC === 'phantom';
+  const dress = phantom ? '#dfe3f0' : '#f8f6f0', dressS = phantom ? '#b7bfd8' : '#d6d9e6';
+  const hat = phantom ? '#c8b283' : '#e6cf96', hatL = phantom ? '#dccb9f' : '#f4e6bc', hatD = phantom ? '#8a7448' : '#b8975a';
+  const hair = phantom ? '#e0d8bc' : '#f8efc8', hairD = phantom ? '#bfb48e' : '#e6d49a', skin = '#f6dcc4';
+  const blue = '#7fb8ff', edge = phantom ? '#4a6aff' : blue, ink = '#10121f';
   const mist = st.thMist && typeof FX !== 'undefined' && FX.now < st.thMist;
   const s = swing(actP(st, 'attack')), bash = pulse(actP(st, 'bash')), big = pulse(actP(st, 'big')), cast = pulse(actP(st, 'cast')), pa = actP(st, 'attack');
-  const wave = Math.sin(st.t * 3.4) * 1.8 + (st.moving ? Math.sin(st.t * 10) * 2.2 : 0);
+  const F = dancer ? 1.4 : 1;
+  const wave = (Math.sin(st.t * 3.4) * 1.8 + (st.moving ? Math.sin(st.t * 10) * 2.2 : 0)) * (dancer ? 1.35 : 1);
   const fl = 0.75 + 0.25 * Math.sin(st.t * 6.1 + 1);
-  const cloakC = grim ? '#1a0f2a' : vioD, linC = grim ? '#2e1a46' : vioM;
+  const HX = -3, HRX = 10.2, HRY = 12.4;                                   // the hat: centre and brim radii
+  const flow = (pts, fill, stroke, lw) => {
+    const n = pts.length, mid = i => { const a = pts[i % n], b = pts[(i + 1) % n]; return [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]; };
+    ctx.beginPath(); const m0 = mid(n - 1); ctx.moveTo(m0[0], m0[1]);
+    for (let i = 0; i < n; i++) { const m = mid(i); ctx.quadraticCurveTo(pts[i][0], pts[i][1], m[0], m[1]); }
+    ctx.closePath(); ctx.lineJoin = 'round';
+    if (fill) { ctx.fillStyle = fill; ctx.fill(); } if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lw; ctx.stroke(); }
+  };
+  const strand = (x0, y0, x1, y1, x2, y2, w, col) => {
+    ctx.save(); ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.quadraticCurveTo(x1, y1, x2, y2);
+    ctx.strokeStyle = '#8c7a4c'; ctx.lineWidth = w + 1; ctx.stroke(); ctx.strokeStyle = col; ctx.lineWidth = w; ctx.stroke(); ctx.restore();
+  };
   ctx.save();
-  if (mist) ctx.globalAlpha = 0.34 + 0.1 * Math.sin(st.t * 7);
-  // the long cloak behind: three pointed tails that stream, a violet lining inside and a thin teal edge on the longest
-  const hem = [[-9, -11], [-16, -10], [-22 + wave * 0.5, -13], [-31 + wave, -8], [-24 + wave, -4], [-37 + wave * 1.3, 0], [-24 + wave, 4], [-31 + wave, 8], [-22 + wave * 0.5, 13], [-16, 10], [-9, 11]];
-  poly(ctx, [-3, -8].concat(...hem, [-3, 8]), cloakC, OUT, 2);
-  poly(ctx, [-6, -5, -16, -5.5, -27 + wave, -3.5, -34 + wave * 1.2, 0, -27 + wave, 3.5, -16, 5.5, -6, 5], linC);
-  ctx.save(); ctx.globalAlpha = (mist ? 0.5 : 0.7) * fl; ctx.strokeStyle = teal; ctx.lineWidth = 0.9; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-  ctx.beginPath(); ctx.moveTo(-24 + wave, -4); ctx.lineTo(-37 + wave * 1.3, 0); ctx.lineTo(-24 + wave, 4); ctx.stroke(); ctx.restore();
-  circle(ctx, -35 + wave * 1.3, 0, 1.1, teal);
-  feet(ctx, st, '#1a1226');
-  torso(ctx, cloakC, 7.4, 12.2);
-  line(ctx, -2, -9, 3, 8, linC, 1.2);                                    // the fall of the cloak at the chest
-  // slim mantle points over the shoulders, a thread of teal at each edge
-  for (const sy of [-1, 1]) {
-    poly(ctx, [-3, 7.8 * sy, 2, 14.6 * sy, 7, 13 * sy, 6, 9.4 * sy, 3, 7.4 * sy], vioM, OUT, 1.5);
-    line(ctx, 2.5, 13.4 * sy, 6.4, 12.4 * sy, teal, 0.8);
+  if (mist) { ctx.globalAlpha = 0.34 + 0.1 * Math.sin(st.t * 7); glow(ctx, -2, 0, 28, '#9a6ae0', 0.4); }
+  // phantom: faint after-images of the hat and shoulders, left behind the figure
+  if (phantom) for (const [ox, al] of [[-9 + Math.sin(st.t * 7), 0.3], [-18 + Math.sin(st.t * 5 + 1) * 1.4, 0.17]]) {
+    ctx.save(); ctx.globalAlpha *= al; ctx.translate(ox, 0);
+    ellipse(ctx, -1, 0, 8.5, 12.5, 0, '#8fa4f0'); ellipse(ctx, HX, 0, HRX, HRY, 0.08, '#6f86e0', '#c8d4ff', 1); ctx.restore();
   }
-  // a narrow sash with a clasp, and the soul-wisp at the hip on a fine chain (on the left, clear of the swing)
-  line(ctx, -5, -8.5, -5, 8.5, void_, 2); circle(ctx, -5, 0, 1.6, vioL, OUT, 0.8);
-  line(ctx, -1, -9.5, 1.5, -12.6, vioL, 0.8);
-  glow(ctx, 2.2, -14.2, 8, teal, 0.34 * fl);
-  poly(ctx, [2.2, -17.2, 4.2, -14.4, 3.2, -12, 1.2, -12, 0.2, -14.4], pale, OUT, 0.8);
-  circle(ctx, 2.2, -14, 1, '#ffffff');
+  // the sundress: a gathered skirt behind, its scalloped hem swaying (the dusk Phantom's dissolves into smoke)
+  ctx.save(); if (phantom) ctx.globalAlpha *= 0.82;
+  const sk = [[2, -10], [-4, -14], [-11, -14.8], [-17 * F + wave * 0.4, -12.5], [-21 * F + wave, -7], [-19 * F + wave, -3], [-24 * F + wave * 1.2, 0.5], [-19 * F + wave, 4], [-21 * F + wave, 7.5], [-17 * F + wave * 0.5, 12.5], [-11, 14.8], [-4, 14], [2, 10]];
+  flow(sk, dress, OUT, 1.8);
+  ctx.save(); ctx.strokeStyle = dressS; ctx.lineWidth = 0.9; ctx.lineCap = 'round';
+  for (const [a, b, c] of [[-14, -9, -20], [-14, -4, -21], [-14, 0, -23], [-14, 4, -21], [-14, 9, -20]]) { ctx.beginPath(); ctx.moveTo(-6, b * 0.5); ctx.quadraticCurveTo(-10, b * 0.9, c * F + wave * (0.6 + Math.abs(b) * 0.02), b * 1.1); ctx.stroke(); }
+  ctx.restore();
+  ctx.restore();
+  feet(ctx, st, '#e8cbb0');
+  torso(ctx, dress, 8.6, 12.6);
+  line(ctx, -5, -9, -5, 9, dressS, 1);                                    // the gathered fall of the bodice
+  // ruffled shoulder straps
+  for (const sy of [-1, 1]) for (let i = 0; i < 3; i++) circle(ctx, 1.2 - i * 2.6, 12.6 * sy + (i === 1 ? 0.8 * sy : 0), 2.5, dress, OUT, 1.1);
+  // the long blonde hair: a soft mass falling down the back and streaming behind with the walk, loose locks at its ends
+  { const hx = F > 1 ? 1.2 : 1, hy = F > 1 ? 1.15 : 1, w = wave, sw = st.moving ? Math.sin(st.t * 10) * 1.5 : Math.sin(st.t * 2.2) * 0.6;
+    flow([[-6, -6.5], [-13, -8.6 * hy], [-21 * hx + w * 0.5, -9 * hy], [-29 * hx + w, -6.5 * hy], [-26 * hx + w, -3], [-33 * hx + w * 1.3, 0.5], [-26 * hx + w, 3.2], [-30 * hx + w * 1.1, 6.8 * hy], [-21 * hx + w * 0.5, 9 * hy], [-13, 8.6 * hy], [-6, 6.5]], hair, OUT, 1.5);
+    ctx.save(); ctx.strokeStyle = hairD; ctx.lineWidth = 0.8; ctx.lineCap = 'round';
+    for (let k = -3; k <= 3; k++) { ctx.beginPath(); ctx.moveTo(-8, k * 1.9); ctx.quadraticCurveTo(-18 * hx + w * 0.3, k * 2.5 * hy + sw * 0.4, (-27 - (3 - Math.abs(k)) * 1.2) * hx + w * (0.8 + Math.abs(k) * 0.08), k * 2.1 * hy + sw * 0.6); ctx.stroke(); }
+    ctx.restore();
+    strand(-20 * hx + w * 0.5, -8.8 * hy, -26 * hx + w, -12 * hy + sw, -32 * hx + w * 1.2, -9.5 * hy + sw * 1.5, 1.1, hair);
+    strand(-20 * hx + w * 0.5, 8.8 * hy, -26 * hx + w, 12 * hy - sw, -31 * hx + w * 1.2, 10 * hy - sw * 1.5, 1.1, hair); }
+  // the thin bow at the neckline
+  poly(ctx, [7.8, 5.2, 11.2, 3.2, 11, 7.2], '#fbfaf5', OUT, 0.9); poly(ctx, [7.8, 5.2, 4.4, 3.4, 4.6, 7.4], '#fbfaf5', OUT, 0.9);
+  circle(ctx, 7.8, 5.2, 1, dressS, OUT, 0.6);
   // the scythe: held two-handed on the right; the whole arm swings it round
   const dir = swingDir(st), rot = 0.55 + dir * s * 1.35 - big * 1.5 - cast * 0.5 + bash * 0.25;
-  const blade = grim ? '#e8e2d8' : '#e4eaf2', edge = teal;
+  const white = '#f2f4fa', whiteD = '#c8d0e2';
   ctx.save(); ctx.translate(5, 10); ctx.rotate(rot);
-  // the snath: slender and black, ringed with violet at the grips, a small teardrop weight at the heel
-  poly(ctx, [-12, -1.2, 16, -1.5, 32, -1.2, 32, 1.2, 16, 1.5, -12, 1.2], void_, OUT, 1.3);
-  line(ctx, -10, -0.3, 31, -0.3, vioM, 0.8);
-  for (const gx of [3, 20]) rrect(ctx, gx, -2.1, 2.6, 4.2, 0.9, vioL, OUT, 0.8);
-  poly(ctx, [-12, 0, -16, -2, -19, 0, -16, 2], vioM, OUT, 1);
-  circle(ctx, -15, 0, 0.9, teal);
-  // the blade: a true scythe's crescent, hooked off the head of the snath and curling back towards the hands (as in the
-  // portrait), widest at the bend and drawn to a fine point; a collar of violet at its root, the inner edge lit teal
-  circle(ctx, 32, 0, 2.6, vioM, OUT, 1.1); circle(ctx, 32, 0, 1, teal);
-  ctx.save();
-  if (grim) { ctx.translate(32, 0); ctx.scale(0.92, 0.92); ctx.translate(-32, 0); }
-  const scythe = () => { ctx.beginPath(); ctx.moveTo(30, 3.4); ctx.bezierCurveTo(41, -1, 39, -17, 25, -21); ctx.bezierCurveTo(19, -22.4, 13, -21.4, 8, -18.6);
-    ctx.bezierCurveTo(14, -18.6, 25.5, -16, 29.6, -6.5); ctx.lineTo(29.4, -2.6); ctx.closePath(); };
-  ctx.fillStyle = blade; ctx.strokeStyle = OUT; ctx.lineWidth = 1.4; ctx.lineJoin = 'round'; scythe(); ctx.fill(); ctx.stroke();
-  ctx.save(); ctx.strokeStyle = grim ? '#cfc8bc' : '#c8d4e4'; ctx.lineWidth = 0.7; ctx.beginPath(); ctx.moveTo(35.5, -4); ctx.bezierCurveTo(36, -12, 32, -17.5, 24, -19.4); ctx.stroke(); ctx.restore();   // the spine's sheen
-  // thorny violet cracks running through the pale blade, a bone-coloured mount where it meets the snath
-  for (const [x0, y0, x1, y1, x2, y2] of [[33.6, -5, 31.6, -7.4, 32.4, -9.4], [32.4, -13.2, 29.4, -13.8, 29, -16.4], [24.6, -17.6, 22.6, -19.6, 20, -19], [17, -19.6, 15.4, -18.6, 13.4, -19.4]]) {
-    ctx.save(); ctx.strokeStyle = grim ? '#2a1840' : '#5a3a7a'; ctx.lineWidth = 0.7; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); ctx.restore();
+  poly(ctx, [-12, -1.3, 16, -1.6, 32, -1.3, 32, 1.3, 16, 1.6, -12, 1.3], white, OUT, 1.3);
+  line(ctx, -10, 0.5, 31, 0.5, whiteD, 0.7);
+  for (const gx of [3, 20]) rrect(ctx, gx, -2.2, 3, 4.4, 0.9, blue, OUT, 0.8);
+  poly(ctx, [-12, 0, -16, -2, -19, 0, -16, 2], whiteD, OUT, 1);
+  circle(ctx, -15, 0, 0.9, blue);
+  // the crescent blade: long, slender, drawn to a fine point curling back toward the hands
+  const blade = () => { ctx.beginPath(); ctx.moveTo(30, 3.2); ctx.bezierCurveTo(40, -1, 37.5, -16, 24, -20.6); ctx.bezierCurveTo(17, -22.6, 10.5, -21.2, 5.5, -17.6);
+    ctx.bezierCurveTo(12, -18.4, 25, -16.8, 29.4, -7.2); ctx.lineTo(29.2, -2.4); ctx.closePath(); };
+  ctx.fillStyle = '#eef2fa'; ctx.strokeStyle = OUT; ctx.lineWidth = 1.4; ctx.lineJoin = 'round'; blade(); ctx.fill(); ctx.stroke();
+  ctx.save(); ctx.strokeStyle = '#c4d0e6'; ctx.lineWidth = 0.7; ctx.beginPath(); ctx.moveTo(35.4, -4); ctx.bezierCurveTo(35.8, -12, 31.6, -17.2, 24, -19); ctx.stroke(); ctx.restore();   // the spine's sheen
+  // the ornate head: a ring and two spikes where blade meets pole
+  poly(ctx, [30.6, 3.4, 34.4, 9.8, 35.2, 3], white, OUT, 1); poly(ctx, [34.4, 1.4, 43, 3.8, 35, -1.4], white, OUT, 1);
+  circle(ctx, 32, 0.4, 3.3, white, OUT, 1.1); circle(ctx, 32, 0.4, 1.7, null, '#9fb4d8', 0.9); circle(ctx, 32, 0.4, 0.6, blue);
+  // the fine blue edge on the blade's inner curve
+  ctx.save(); ctx.globalAlpha = (mist ? 0.5 : 1) * Math.min(1, 0.95 * fl); ctx.strokeStyle = edge; ctx.lineWidth = phantom ? 1.5 : 1.2; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(29.3, -3.2); ctx.lineTo(29.4, -7.2); ctx.bezierCurveTo(25, -16.8, 12, -18.4, 5.9, -17.6); ctx.stroke(); ctx.restore();
+  glow(ctx, 22, -15, 11, edge, (phantom ? 0.24 : 0.14) * fl); circle(ctx, 5.8, -17.6, 1, '#ffffff');
+  // a very faint wisp of black smoke and one thin blue spark curling off the blade
+  for (let i = 0; i < 3; i++) {
+    const q = (st.t * 0.55 + i / 3) % 1;
+    ctx.save(); ctx.globalAlpha *= Math.sin(q * Math.PI) * 0.3; circle(ctx, 27 - i * 8 + Math.sin(q * 5 + i) * 2, -20 - q * 8, 1.6 + q * 2.4, ink); ctx.restore();
   }
-  poly(ctx, [28.4, 3.4, 31.6, 5.2, 35, 2.4, 35.2, -2.6, 31.4, -3.8, 28.6, -1.6], bone, OUT, 1);
-  circle(ctx, 32, 0.4, 1.1, '#d8b04a', OUT, 0.5);
-  ctx.save(); ctx.globalAlpha = (mist ? 0.5 : 1) * Math.min(1, 0.95 * fl); ctx.strokeStyle = edge; ctx.lineWidth = 1.3; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-  ctx.beginPath(); ctx.moveTo(29.2, -3.6); ctx.lineTo(29.4, -6.6); ctx.bezierCurveTo(25.4, -15.6, 14.4, -18.2, 8.8, -18.5); ctx.stroke();
+  { const k = Math.floor(st.t * 9), j = x => Math.sin(k * 12.9 + x * 4.1) * 1.4, on = Math.sin(st.t * 3.1) > -0.2;
+    if (on) { ctx.save(); ctx.globalAlpha *= 0.65; ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = edge; ctx.lineWidth = 0.8; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      ctx.beginPath(); ctx.moveTo(34.5, -6); ctx.lineTo(37 + j(1), -10 + j(2)); ctx.lineTo(35.5 + j(3), -13 + j(4)); ctx.lineTo(38.5 + j(5), -17 + j(6)); ctx.stroke(); ctx.restore(); } }
+  // Dancer: a ribbon of ink with thin blue lightning spiralling after the blade
+  if (dancer) {
+    ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    for (let pass = 0; pass < 3; pass++) {
+      ctx.beginPath();
+      for (let i = 0; i <= 12; i++) { const u = i / 12, x = 6 - u * 28, y = -17.5 + Math.sin(u * 7 - st.t * 5 + (pass === 2 ? Math.PI : 0)) * (2.4 + u * 4.5) - u * 7; i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
+      ctx.globalAlpha = (mist ? 0.3 : 1) * (pass ? 0.85 : 0.5); ctx.strokeStyle = pass ? edge : ink; ctx.lineWidth = pass ? 0.8 : 3.6; ctx.stroke();
+    }
+    ctx.restore();
+  }
   ctx.restore();
-  glow(ctx, 27, -14, 12, edge, 0.2 * fl); circle(ctx, 8.6, -18.6, 1.1, '#ffffff');
+  smear(ctx, 5, 10, 36, 0.55 + dir * 1.35, rot, phantom ? '#8aa0ff' : '#bfd8ff', strikeAmt(pa) * 0.8, 7);
+  // arms and hands (bare) on the snath
+  const h2x = 5 + 20 * Math.cos(rot), h2y = 10 + 20 * Math.sin(rot);
+  limb(ctx, [0, 9.5, 5, 10], skin, 2.6);
+  hand(ctx, 5, 10, skin); hand(ctx, h2x, h2y, skin);
+  // the face: a chin and soft pink lips peeking out under the front of the brim
+  ellipse(ctx, HX + HRX + 1.4, -0.6, 2.8, 3.6, 0, skin);
+  ellipse(ctx, HX + HRX + 3, -0.2, 0.8, 1.5, 0, '#e89aa4');
+  // the straw sun hat: a wide woven disc with a darker rim, a pale crown and ribbon band, and a fray of loose straw round the edge
+  ctx.save(); ctx.translate(0, 0);
+  for (let i = 0; i < 20; i++) {
+    const a = i * TAU / 20 + (i % 3) * 0.07, ex = HX + Math.cos(a) * HRX, ey = Math.sin(a) * HRY, L = 1.4 + ((i * 7) % 5) * 0.55, b = a + 0.22 * (i % 2 ? 1 : -1);
+    line(ctx, ex, ey, ex + Math.cos(b) * L, ey + Math.sin(b) * L, i % 2 ? hatD : hatL, 0.7);
+  }
+  ellipse(ctx, HX, 0, HRX, HRY, 0.08, hat, OUT, 1.6);
+  ellipse(ctx, HX, 0, HRX - 1.2, HRY - 1.2, 0.08, null, hatD, 0.8);
+  ctx.save(); ctx.strokeStyle = rgba(hatD, 0.45); ctx.lineWidth = 0.5;
+  for (const f of [0.86, 0.72]) { ctx.beginPath(); ctx.ellipse(HX, 0, HRX * f, HRY * f, 0.08, 0, TAU); ctx.stroke(); }
+  for (let i = 0; i < 8; i++) { const a = i * TAU / 8 + 0.3; ctx.beginPath(); ctx.moveTo(HX + Math.cos(a) * 5.8, Math.sin(a) * 6); ctx.lineTo(HX + Math.cos(a) * (HRX - 2), Math.sin(a) * (HRY - 2)); ctx.stroke(); }
   ctx.restore();
-  // a soul-ribbon from the head of the snath, streaming behind the swing
-  ctx.save(); ctx.globalAlpha = (mist ? 0.4 : 0.75) * fl; ctx.strokeStyle = teal; ctx.lineWidth = 1.2; ctx.lineCap = 'round';
-  ctx.beginPath(); ctx.moveTo(32, 0); ctx.bezierCurveTo(26, 5 + wave * 0.3, 19, 2, 12, 7 - wave * 0.3); ctx.stroke(); ctx.restore();
+  ellipse(ctx, -2 * 0 + HX + 0.3, 0, 5, 5.2, 0, hatL, OUT, 1.2);                     // the crown
+  ellipse(ctx, HX + 0.3 - 1.4, -1.6, 2.6, 2.2, 0, shade(hatL, 0.35));
+  ellipse(ctx, HX + 0.3, 0, 5, 5.2, 0, null, '#fbfaf4', 1.4);                          // the pale ribbon band
+  for (const sy of [-1, 1]) line(ctx, HX - 4.2, 3.4 * sy, HX - 10 + wave * 0.5, 5.2 * sy + wave * 0.3 * sy, '#fbfaf4', 1);
+  circle(ctx, HX - 4.4, 3.6, 1, '#fbfaf4', OUT, 0.5);
   ctx.restore();
-  smear(ctx, 5, 10, 36, 0.55 + dir * 1.35, rot, grim ? '#e8c868' : teal, strikeAmt(pa) * 0.8, 7);
-  hand(ctx, 5, 10, vioD); hand(ctx, 5 + 20 * Math.cos(rot), 10 + 20 * Math.sin(rot), vioD);
-  // the deep hood, peaked and trailing at the back, and the pale mask in the shadow of it with a faint teal glow behind the eyes
-  poly(ctx, [-3, -6.2, -16, 0, -3, 6.2], void_, OUT, 1.8);
-  ellipse(ctx, -2, 0, 8.4, 7.6, 0, cloakC, OUT, 2);
-  ellipse(ctx, -3.5, -2.2, 3.2, 2.2, 0, shade(cloakC, 0.2));
-  ellipse(ctx, 3.4, 0, 5, 5.2, 0, void_);                                    // the shadowed hollow
-  glow(ctx, 5, 0, 9, teal, 0.34 * fl);
-  ellipse(ctx, 5.2, 0, 3.4, 4.3, 0, bone, OUT, 0.9);                         // the porcelain mask
-  line(ctx, 3.3, 0, 7.4, 0, boneD, 0.7);
-  ctx.save(); ctx.globalAlpha = Math.min(1, 0.9 * fl + 0.1); line(ctx, 5.9, -1.9, 6.9, -1.4, teal, 1.1); line(ctx, 5.9, 1.9, 6.9, 1.4, teal, 1.1); ctx.restore();
-  glow(ctx, 6.4, 0, 4.5, pale, 0.4 * fl);
-  ellipse(ctx, 0.8, 0, 8.4, 7.6, 0, null, shade(cloakC, 0.1), 1.6);          // the hood's lip
+  if (phantom) {
+    // dusk: the hat's shadow deep across the eyes, a cold blue shade over the crown, the hem going to blue-black smoke
+    ellipse(ctx, HX + HRX - 1.6, -0.4, 3.4, 6, 0, 'rgba(14,18,48,0.45)');
+    ellipse(ctx, HX, 0, HRX - 1, HRY - 1, 0.08, 'rgba(24,32,90,0.14)');
+    for (let i = 0; i < 6; i++) {
+      const q = (st.t * 0.6 + i / 6) % 1, y0 = (i - 2.5) * 4.6;
+      ctx.save(); ctx.globalAlpha *= (1 - q) * 0.5; circle(ctx, -17 - q * 12 + wave * 0.5, y0 + Math.sin(st.t * 2 + i) * 2, 2.6 + q * 3, i % 2 ? ink : '#1e2a66'); ctx.restore();
+    }
+  }
   ctx.restore();
   if (mist) for (let i = 0; i < 4; i++) { const q = (st.t * 0.9 + i / 4) % 1; ctx.save(); ctx.globalAlpha = (1 - q) * 0.4; circle(ctx, -4 - q * 10, (i - 1.5) * 5 + Math.sin(st.t * 3 + i) * 2, 3 + q * 4, '#b8a8d8'); ctx.restore(); }
 };
 Object.assign(SPEC_ART, {
-  // Wraith: wisps of soul-mist trailing off the shoulders and cloak, a pale glint drifting off each hand
-  sower(ctx, st) {
-    // the cloak torn to ragged shreds streaming back, violet and black, cyan speed-light caught in them
-    for (let i = 0; i < 5; i++) {
-      const y0 = (i - 2) * 5.4, w = Math.sin(st.t * 5 + i * 1.7) * 2.6, L = 14 + (i % 2) * 6 + Math.abs(i - 2) * -1.5;
-      poly(ctx, [-17, y0 - 1.6, -17 - L * 0.5, y0 + w - 2.4, -17 - L, y0 + w * 1.4, -17 - L * 0.55, y0 + w + 1, -17, y0 + 1.6], i % 2 ? '#2a1840' : '#0c0a14', OUT, 1);
-      line(ctx, -19, y0, -17 - L * 0.8, y0 + w * 1.2, '#4a2a6a', 0.7);
-    }
-    for (let i = 0; i < 4; i++) {
-      const q = (st.t * 0.7 + i / 4) % 1, y0 = (i % 2 ? 1 : -1) * (5 + (i >> 1) * 4);
-      ctx.save(); ctx.globalAlpha = (1 - q) * 0.55; ctx.strokeStyle = '#8fd8e8'; ctx.lineWidth = 2 - q; ctx.lineCap = 'round';
-      ctx.beginPath(); ctx.moveTo(-6 - q * 6, y0); ctx.quadraticCurveTo(-14 - q * 14, y0 + Math.sin(q * 6 + i) * 4, -22 - q * 18, y0 + Math.sin(q * 5 + i * 2) * 6); ctx.stroke(); ctx.restore();
-    }
-    for (let i = 0; i < 3; i++) { const q = (st.t * 0.8 + i / 3) % 1; ctx.save(); ctx.globalAlpha = (1 - q) * 0.7; circle(ctx, 8 + q * 8, 7 + (i - 1) * 4 + Math.sin(q * 6 + i) * 2, 1 - q * 0.4, '#e0f6ff'); ctx.restore(); }
+  // Dancer: a small bright crescent moon charm at the hat band, a pale shimmer round the swaying hem (the flare and the blade's ribbon are in the class art)
+  dancer(ctx, st) {
+    const x = -3 + 0.3 + 1.6, y = -4.9, tw = 0.6 + 0.4 * Math.sin(st.t * 2.4);
+    glow(ctx, x, y, 6, '#bfd8ff', 0.3 * tw);
+    ctx.save(); ctx.beginPath(); ctx.arc(x, y, 2.3, -2.3, 2.3); ctx.arc(x + 1.1, y, 1.8, 2.3, -2.3, true); ctx.closePath();
+    ctx.fillStyle = '#fff6d0'; ctx.fill(); ctx.strokeStyle = OUT; ctx.lineWidth = 0.6; ctx.stroke(); ctx.restore();
   },
-  // Grim: an hourglass of gold sand at the hip (what is coming due) and a dim glow along the cloak's hem
-  grim(ctx, st) {
-    // a gold clock ring behind the hood (twelve tick marks) and an hourglass of gold sand at the hip on its chain
-    ctx.save(); ctx.globalAlpha = 0.55; ctx.rotate(st.t * 0.12);
-    circle(ctx, -3, 0, 20, null, '#d8b04a', 1.1);
-    for (let i = 0; i < 12; i++) { const a = i * TAU / 12, r0 = i % 3 ? 17.6 : 16.4; line(ctx, -3 + Math.cos(a) * r0, Math.sin(a) * r0, -3 + Math.cos(a) * 20, Math.sin(a) * 20, '#d8b04a', i % 3 ? 0.9 : 1.5); }
-    ctx.restore();
-    glow(ctx, -3, 12, 7, '#ffd65a', 0.16 + Math.sin(st.t * 2) * 0.04);
-    poly(ctx, [-5.2, 9.6, -1.4, 9.6, -3.3, 12.2, -1.4, 14.8, -5.2, 14.8, -3.3, 12.2], '#ffe9a0', OUT, 0.9);
-    line(ctx, -5.6, 9.6, -1, 9.6, '#d8b04a', 1.1); line(ctx, -5.6, 14.8, -1, 14.8, '#d8b04a', 1.1);
-    poly(ctx, [-4.2, 14.6, -3.3, 13, -2.4, 14.6], '#c8903a');
+  // Phantom: the dusk look is in the class art (deeper shadow, smoke hem, after-images, electric edge); here a few blue-black motes drifting off the shoulders
+  phantom(ctx, st) {
+    for (let i = 0; i < 3; i++) { const q = (st.t * 0.7 + i / 3) % 1; ctx.save(); ctx.globalAlpha = (1 - q) * 0.55; circle(ctx, 4 - q * 10, (i - 1) * 9, 1.1 - q * 0.4, '#8aa0ff'); ctx.restore(); }
   },
 });
 

@@ -4,7 +4,7 @@
   meet: {
     bastion: "Grubnak runs a kitchen like a bad parade ground: grease on the flagstones, fire in the corners, and a sergeant with two cleavers who never stands down. I lost my footing twice before I understood the room. Laced my boots tighter tonight. We go back at dawn.",
     gloomsworn: "The Cook. Fire along the floor, oil underfoot, cleavers for whoever stands in front. I have been struck by worse and kept my post. What I mind is the sliding; a dead man should at least be allowed to stand still. We go back in tomorrow.",
-    thresher: "Grubnak keeps his kitchen as a host keeps a long dinner: every course arriving at once, nobody permitted to leave. Greasy floor, a hot stove, a cleaver for whoever stands in front. We were not ready for him yet. Time enough to learn the steps.",
+    thresher: "Grubnak keeps his kitchen like a host with a very long dinner: every course arriving at once and nobody permitted to leave. Greasy floor, hot stove, a cleaver for whoever stands in front. We were not ready for him yet, but there is time enough to learn the steps.",
     bloodreaver: "The big one hits like a side of beef falling off its hook, and never stops serving. Grease, fire, cleavers, all of it in my face. I am in love. Tomorrow I bleed for him properly, and he can keep the apron.",
     runeguard: "The Chef is legible once one knows his instruments; each cleaver, ladle and lid is written on him before it falls. Tonight I copied out only the first page, and misread half. Tomorrow I will have the whole text, and the margin notes besides.",
     gorgemaw: "At last, a kitchen that never stops sending out plates. My host's menu is long and his hand with the seasoning heavy, and the grease is a crime against honest fat. I sampled everything and lost my chair. Tomorrow I eat properly.",
@@ -30,7 +30,7 @@
   win: {
     bastion: "Grubnak is down. Every course, every cleaver, and the line stood through all of it. I walked out of that kitchen on ruined boots and my own two feet. Post kept. The captain would have been proud.",
     gloomsworn: "The Cook is down, and all of us still stand. I stayed a while by his cold stove. He fed many to that fire. I was fed to a different one, long ago, and it was kinder.",
-    thresher: "Grubnak came in at last, the whole long service of him, and went down heavily onto his own kitchen floor. Every course came due, and we were standing where we should be for each. I will miss him a little. His name was on the list, and there was room.",
+    thresher: "Grubnak came in at last, the whole long service of him, and went down on his own kitchen floor. Every course came due, and we were standing where we should be for each. His name was on the list, bless him, and I shall miss him a little.",
     bloodreaver: "The big one is down, and I have a scar from every course he served. Best meal I ever bled for. Shame it's over. Somebody tell the next one he has a standard to meet.",
     runeguard: "The Chef has fallen. Every sign came in its order, and every answer was ready a breath before it was needed. I have copied the whole text into my margins at last. As foreseen; though I will admit the third chapter surprised me.",
     gorgemaw: "My host is finished, and so is his menu: every course eaten, every dish sent back to him in pieces. I took his ladle as a keepsake. A long, heavy, mediocre meal, and I am sorry it has ended.",
@@ -56,7 +56,7 @@
     'Grease Fire': { hard: false, learned: {
       bastion: "Arms up, and the oil under the whole kitchen lit at once. Nothing for a shield to meet. We closed up on the healer, were mended before the flames rose, and stood in it together. Held.",
       gloomsworn: "He raised his arms and the oil lit under every one of us. There was nothing in that room to stand behind, so we crowded the healer and were mended before the fire rose. I have been warmer than this, once, at the end.",
-      thresher: "Up went his arms, and the oil took light beneath the whole kitchen at once. There is no stepping round a fire like that. We drew in about the healer and were mended ahead of it. It burns out; it always does.",
+      thresher: "Up went his arms and the oil caught under the whole kitchen at once, with nowhere clever to step. So we gathered about the healer and were mended ahead of it. It burns out in its own time.",
       bloodreaver: "The whole floor flared at once, and I barely felt it, which is shameful. The soft ones did, so we huddled at the healer's elbow and were mended before the grease caught. Warm work, though.",
       runeguard: "Arms raised, and the sheen of oil widens under every one of us: a sentence with no way out of it. The only answer is to stand by the healer and be whole before it catches. I wrote that in the margin before it burned.",
       gorgemaw: "Course the first: the whole floor set alight at once, no seat spared. There was no plate to send back, so we sat close to the healer and swallowed it together. Rancid oil, overcooked, and the cook seemed proud of it.",
@@ -81,7 +81,7 @@
     'Mince': { hard: false, learned: {
       bastion: "One cleaver caught the light and that whole half of the kitchen was condemned. I kept his face on me while the line crossed to the dull half. Nobody on the bright side when it fell. A good drill.",
       gloomsworn: "One cleaver caught the light, and that half of the kitchen was spoken for. I kept his eyes on me while the others stepped over to the dull half. Nobody was buried today.",
-      thresher: "One cleaver caught the light, and that half of the floor was the half due the blow. I strolled over to the dull half before it fell and went on working from there. Read the glint, cross the floor. Quite simple.",
+      thresher: "One cleaver caught the light, and that half of the floor was the half due the blow. I took a stroll to the dull half before it fell and carried on working from there. Read the glint, cross the floor, and what a tidy step it is.",
       bloodreaver: "One cleaver glinted and that whole half of the room was about to get chopped. Tempting, very. But I crossed to the dull side like a good lad. Scars keep, and the big one will offer another.",
       runeguard: "A glint along one cleaver is the heading of the page: that half of the floor is the chapter he means to strike. Cross to the other before it falls. I have underlined the glint twice.",
       gorgemaw: "One flash of steel and he carved the room in halves, the lit half for the chop. Crude knife-work, no finesse. I moved my chair to the dull half and watched from a safe seat. Hacked, not cut.",
@@ -106,7 +106,7 @@
     'Double Chop': { hard: true, learned: {
       bastion: "On the hard nights he chops both halves, the glinting side first, the other right behind it. We stood on the dull half, then crossed into the ground he had just cut. Fresh-cut floor does not get cut twice. Held.",
       gloomsworn: "He cuts both halves, the bright one first and the dull one after, when the nights are harder. We waited on the dull side, then crossed into what he had just cut. The only safe place in that kitchen is behind the blade.",
-      thresher: "He cuts the floor twice on the hard nights, glinting half first, the dull one after. I waited on the dull side, and when the first came down I stepped onto the half it had just struck. Ground already struck does not come due again.",
+      thresher: "On the hard nights he cuts the floor twice, the glinting half first and the dull one after. I waited on the dull side, and the moment the first came down I hopped onto the half it had just struck. Ground already struck does not come due again, which is neat.",
       bloodreaver: "Both halves, one after the other! I waited on the dull side, and the instant the glinting half came down I walked straight into it. Clever, my friend. Not clever enough.",
       runeguard: "Not foreseen; now it is. The glinting half falls first and the dull half is struck behind it; wait on the dull side, then cross to the freshly cut ground. I added a second column to the page. The order is the answer.",
       gorgemaw: "Unsure of his portions, the cook chopped both halves of the table in turn. I sat the first out on the dull side and moved to the cleared plate for the second. Fussy, and wasteful with the knife.",
@@ -131,7 +131,7 @@
     'Ladle Spin': { hard: false, learned: {
       bastion: "He whirled the ladle round himself, scalding anything close. I stepped off him with the line, out past the edge, and came straight back in once it stopped. Gave ground on purpose. First time I have called a retreat a plan.",
       gloomsworn: "He swung the ladle about himself and scalded all who stood close. I walked away, the others with me, and returned the moment it stopped. Out, then in. I have done both in my time.",
-      thresher: "Grubnak whirled his ladle and scalded everything near him. I stepped back past the edge of it, leaned on my scythe a moment, and walked back in when it stopped. No hurry.",
+      thresher: "Grubnak whirled his ladle and scalded everything near him, so I stepped back past the edge of it and leaned on my scythe, humming. When the steam stopped I strolled back in. No hurry at all.",
       bloodreaver: "Soup flew in a ring round his ladle, and I backed off for once. Hated it! Then straight back in for the next good hit, scalded boots and all.",
       runeguard: "The ladle swings low and soup churns about his feet: a ring is drawn before the spin. Step outside it; return once it has turned. The ring is the inscription, and the spin is only its reading aloud.",
       gorgemaw: "Soup, served by flinging it round in a circle. I declined, stepped back past the splash, and returned for the next course. Thin, and much too hot for the pleasure of it.",
@@ -156,7 +156,7 @@
     'Lid Slam': { hard: false, learned: {
       bastion: "He lifted the lid overhead and everything away from him took the slam. I stood under his chin and the line closed in behind me. Under him is the only safe ground in the room. Odd, but correct.",
       gloomsworn: "The lid went up, and everything away from him took the slam. The only shelter was under his chin, so I stood there and the others pressed in behind. The dark taught me to stand where the fear is.",
-      thresher: "When the lid went up, the whole kitchen away from him came due at once, all but the ground beneath his chin. So I tucked in against him, close as a shadow, and let it fall on empty floor.",
+      thresher: "When the lid went up, the whole kitchen away from him came due at once, all but the ground beneath his chin. So I tucked in right against him, close as the last step of a waltz, and let it fall on empty floor.",
       bloodreaver: "The lid went up and the shock rolled out over the whole room, except right at his belly. So in we came, nose to apron with my friend. Cosy.",
       runeguard: "The lid held aloft throws a shadow outward, and the quiet lies beneath it. Come in under him before it falls; the far ground is where the sentence lands. I trust the inscription over my own instincts here.",
       gorgemaw: "He lifted the lid on his dish and smacked the whole room with it, except those seated right at his elbow. I always sit close to the kitchen; one learns where the food is. Underwhelming.",
@@ -181,7 +181,7 @@
     'Tenderize': { hard: false, learned: {
       bastion: "A red ring settled on me and followed me about while he wound up, then locked, and his ghost cleaver came down on it edge first. I braced in the last instant and took it whole; the others kept clear of my ring. Held.",
       gloomsworn: "The ring ran after me until it locked, and the cleaver fell out of the air onto it, edge first. I drew the dark in and took it whole; there was nowhere to go and no reason to. The rest kept out of the ring.",
-      thresher: "A red ring crept after our shield and set, and then the ghost of the cleaver came down on it, edge first, neat as a signature. The knight cannot step aside from that one, so he takes it and the rest of us stay well out of his circle. In time.",
+      thresher: "A red ring crept after our shield and set, and then the ghost of a cleaver came down on it, edge first and neat as a signature. The knight cannot step aside from that one, so he takes it, bless him, and the rest of us keep well out of his circle. In time!",
       bloodreaver: "Tenderize! The ring stuck to me like a hound, locked, and down came his ghost cleaver, edge first, right through me. A good one; I took it full and drank it back, and the others kept out of my circle. A fine scar.",
       runeguard: "The omen: a red ring that follows me until it locks, and then the spectral cleaver falls upon it, edge first. It cannot be outrun, so the answer is a ward laid a breath before, while the rest keep outside the ring. As foreseen.",
       gorgemaw: "The signature dish, dropped from above onto my plate: his ghost cleaver, edge first, on the ring that trailed me. I could not step out of it, so I opened wide and swallowed it whole while my friends kept off my side of the table. Meaty.",
@@ -206,7 +206,7 @@
     'Meat Toss': { hard: false, learned: {
       bastion: "Grubnak hung a slab over each of the others, every one wanting its own patch of floor. They dropped theirs at the edges, apart, away from the line. Footing kept. The stain thins in time, shrinking and dimming, and is gone altogether if fire reaches it.",
       gloomsworn: "Slabs hung over the others, each wanting a place of its own, each leaving grease where it landed. They went to the edges and apart. The stain thins with time, and fire eats it at once. I remember where each fell.",
-      thresher: "A slab hung over my head, darkening. I carried it off to the wall, away from the others, and let it drop where nobody stands. The patch fades in its own hour, shrinking and dimming, and fire takes it at once, so I mind where it lies.",
+      thresher: "A slab hung over my head, darkening, so I carried it off to the wall, well away from the others, and let it drop where nobody stands. The patch fades in its own hour, shrinking and dimming. Fire takes it at once, so do mind where it lies.",
       bloodreaver: "He hung steaks over the others, never me, insulting. They each took a corner and left the grease out by the walls, not under my feet. Clean floor to bleed on. The stains shrink and dim after a while, or burn off if fire finds them.",
       runeguard: "A steak on a chain over each of us save the one before him; the grease it leaves is a mark that will outlast the page. Walk apart to the edge and let it fall there. It dims and shrinks with time, and fire ends it at once.",
       gorgemaw: "Steaks dangled over my friends but not me, which I took personally. They carried their plates apart, to the walls, so the grease would not pool under the table. The stains shrink and dim in the end, and fire clears them faster.",
@@ -231,7 +231,7 @@
     'Family Meal': { hard: false, learned: {
       bastion: "A silver cloche came down over one of ours. One plate for the whole table. The line gathered under it and shared the blow, and I joined them the moment I could leave my post. Split, it was light work.",
       gloomsworn: "A silver cloche came down over one of our own, and one plate does not feed a table. We went under it together and split the blow, and I stood in the ring too. Split, it is a small thing for each.",
-      thresher: "A silver cloche came down over one of our number, and one portion for the whole table is lighter when split. We all walked in under it, as mourners to a heavy bier, and the weight went light.",
+      thresher: "A silver cloche came down over one of our number, and a single portion for the whole table is lighter when shared. So we all walked in under it, like guests squeezing onto one bench, and the weight went light.",
       bloodreaver: "Family Meal! One big plate, split between us all. We crowded in under the cloche, shoulder to shoulder, and I made sure to be there for my share. It hurts less shared. Pity.",
       runeguard: "A silver cloche lowered over one of us is a clause that names the whole company. All gather beneath it and divide the blow; the fewer present, the heavier each share. I checked my arithmetic twice.",
       gorgemaw: "A platter for the whole table, under a silver lid! My friends gathered beneath the cloche and I joined them, and we shared it out. I would have eaten it all alone, frankly. Rich, but shared.",
@@ -256,7 +256,7 @@
     'Larder Toss': { hard: false, learned: {
       bastion: "He hurled casks at the two of ours standing farthest off. They stepped out from under before it landed and left the casks on open floor. Solid cover. We kept them for the next blast, and I counted them like rations.",
       gloomsworn: "Casks came flying at the two of us standing furthest out. We sidestepped at the last moment and left them lying in the open, where they make shelter. Keep them away from the Cook, or he gathers them in.",
-      thresher: "He flung casks at the two of us farthest out. Whoever's it was led it onto open ground, stepped off at the last, and left it standing: good shelter later. Not near Grubnak, mind, or he catches it.",
+      thresher: "He flung casks at the two of us farthest out. Whoever's it was led it onto open ground, stepped off at the last and left it standing, which is good shelter for later. Not near Grubnak, dear, or he catches it.",
       bloodreaver: "Barrels, thrown at whoever stood furthest off! They dodged; pity, a barrel to the face is honest work. The casks stayed where they fell, and those were worth keeping.",
       runeguard: "The shelf is torn loose and a circle trails the two farthest of us. Carry it somewhere useful, step aside before it lands, and keep the cask; it is shelter for what follows. Written in the margin: not near him.",
       gorgemaw: "He flung his own larder at the two guests farthest from the table. They let the casks land beside them, not on them, and kept them as furniture. Poor service. Good barrels.",
@@ -281,7 +281,7 @@
     'Gut Blast': { hard: false, learned: {
       bastion: "He roared across the whole kitchen. No shield blocks that. I put a cask between myself and Grubnak like the rest of the line and kept still behind it. Held.",
       gloomsworn: "He roared through the whole kitchen, and only something solid turns that. A cask went between me and him, and the others crouched behind their own. Even I hide from some things.",
-      thresher: "His belly swelled and I knew that look, a bull before a bellow. It reaches the whole kitchen, and only something solid stops it, so I sat behind a cask, or the pot later, with him on the far side. Quite cosy.",
+      thresher: "His belly swelled and I knew that look, the deep breath before a bellow. It reaches the whole kitchen and only something solid stops it, so I tucked in behind a cask, or the pot later, with him on the far side. Quite cosy.",
       bloodreaver: "He bellowed so hard it shook the walls. Even I hid behind a barrel for that one; it is a scar with nothing in it. Cask between us, then back to work.",
       runeguard: "His belly swells and the breath is drawn deep; the blast leaves a shadow behind anything solid. A cask between oneself and him, or the pot later, and the sentence cannot reach. I told the others where to kneel.",
       gorgemaw: "Revolting manners: the ogre belched at the entire dining room. I ducked behind a cask with my friends, him on the far side, and let the stench pass. Sent it back.",
@@ -306,7 +306,7 @@
     "Butcher's Charge": { hard: false, learned: {
       bastion: "He lowered his head at me and charged till he hit something. I put bare brick behind me, stepped aside at the last, and he hit the wall and stood dazed. The line kept off his path. Not the stove, not the casks.",
       gloomsworn: "He lowered his head at me and ran. I had bare brick at my back, waited, and slid aside at the last breath. He met the wall and stood dazed, and the others kept off his road. I have been a door for worse.",
-      thresher: "He put his head down at our knight and ran like a bull through a fence. I kept off that line, and when our knight led him into the brick and he stood there dazed, that was my moment for the cut. His hour, entirely.",
+      thresher: "He put his head down at our knight and charged. I kept off that line, and when the knight led him into the brick and he stood there dazed, it was the perfect moment for a good long cut. A tidy bit of timing, that.",
       bloodreaver: "He lowered his head and came for me, my friend! I led him at bare brick and stepped aside, and he hit it like a drunk. Stuck and dazed, so I carved into him. Not the casks, not the stove.",
       runeguard: "His head lowers toward me and a path is drawn to the far wall. Aim it at brick, never the stove or our casks, and step aside once it sets. Dazed, he bleeds more freely. I rather enjoyed the geometry.",
       gorgemaw: "Headfirst at me, like a bull at a gate. I stood with bare brick at my back and stepped aside, and he ate the wall instead. Stuck, dazed, and still not full. A fitting course for him.",
@@ -331,7 +331,7 @@
     'Chop Chop': { hard: false, learned: {
       bastion: "One cleaver glinted, and the ladle or lid on his back said what came after. We crossed to the dull half, then went out for the ladle or in for the lid. Two orders, one drill.",
       gloomsworn: "A glint on one cleaver, and a ladle or lid on his back to follow. We moved to the dull side first, then out for the ladle or in for the lid. I read both before taking a step.",
-      thresher: "A glint on one cleaver and a tool on his back behind it: two appointments, and I like to see both before I attend either. Dull half first, then out for the ladle or in for the lid.",
+      thresher: "A glint on one cleaver and a tool on his back behind it: two appointments, and I like to know both before I attend either. Dull half first, then out for the ladle or in for the lid. Off we go.",
       bloodreaver: "Chop, then whatever's on his back! Glinting half first, so I took the other side. Then the lid meant in, the ladle meant out. Two lessons in one breath, my friend.",
       runeguard: "He speaks twice: the glinting cleaver names the half, and the tool on his back names what follows. The dull half first, then in for the lid or out for the ladle. A two-line verse, and I had it by heart.",
       gorgemaw: "A two-course dish: first the minced half, then whatever hung on his back, ladle or lid. I sat on the dull side, then took the right seat for the second. Hurried, but edible.",
@@ -356,7 +356,7 @@
     'Order Up!': { hard: false, learned: {
       bastion: "One plate each, laid round the kitchen and served in turn. I took mine and stood on it like a sentry on a painted square until it was dished. None left unmanned, and none left on the counter.",
       gloomsworn: "Plates were laid round the kitchen, one for each of us, served in turn. Each kept a plate and stood on it until it was taken. I wait well. The dead have practice.",
-      thresher: "Plates went down all round the kitchen, one apiece, the fullest rim served first. I stood on my own and waited to be served, which is more patience than most guests show.",
+      thresher: "Plates went down all round the kitchen, one apiece, the fullest rim served first. I stood on my own and waited to be served, like a good guest, which is more patience than most show.",
       bloodreaver: "A plate for each of us, served in turn round the room. I took mine and stood on it until the rim ran full. An empty plate left alone hurts everyone, and that's not a scar worth having.",
       runeguard: "Cloches round the kitchen, their rims filling at different rates; the fullest is served next, working round from the top left. Each claims one plate. I claimed mine early and marked it with a rune.",
       gorgemaw: "Plates for every guest, laid round the room. I took mine, of course, as did my friends, each of us standing on our own until served. A plate left on the counter is an insult to the whole kitchen.",
@@ -381,7 +381,7 @@
     'Rolling Meatballs': { hard: false, learned: {
       bastion: "He lobbed meatballs against the walls. Each wobbled with its lane drawn across the room, then rolled straight. I kept my footing out of every lane until the last had passed. Ground between lanes is good ground.",
       gloomsworn: "Meatballs wobbled at the walls and rolled straight, each lane drawn across the floor. I stood between the lanes and let them pass. It is the one fair thing in that kitchen: it tells you where death will roll.",
-      thresher: "Meatballs rocked against the walls, each with its path drawn straight out ahead of it. I stood between two paths and watched them go by. A tidy kitchen, for such a messy cook.",
+      thresher: "Meatballs rocked against the walls, each with its path drawn straight out ahead of it. I stood between two paths and watched them trundle by. A tidy kitchen, for such a messy cook.",
       bloodreaver: "Giant meatballs, rolling across the room! I'd love to be hit by one, but it knocks you sideways and that's undignified. Out of their lanes until they pass.",
       runeguard: "Each meatball lands at the wall and wobbles, its lane drawn across the kitchen before it rolls. Stand clear of every lane until all have passed. It is nearly polite of him to underline his own sentences.",
       gorgemaw: "Meatballs rolled across the dining room instead of being served. I would have eaten them had they held still. Stood between the lanes and watched them go by. Overcooked, and impolite.",
@@ -406,7 +406,7 @@
     'Flare-Up': { hard: false, learned: {
       bastion: "The Cook heaved his pot onto the stove and the top of the kitchen caught for good. We were off that ground before it lit, mended against the heat. A smaller parade ground after, but I only need enough floor to stand on.",
       gloomsworn: "He heaved the stockpot on the stove and the top of the kitchen caught, for good. We were off that end before it lit, and braced for the heat. A smaller room, but all of us in it.",
-      thresher: "He heaved the stockpot onto the stove and the top of the kitchen went up in flame, and it stays burning. I had walked down out of that end before it caught. A smaller kitchen after, but room enough to work.",
+      thresher: "He heaved the stockpot onto the stove and the top of the kitchen went up in flame, and there it stays. I had strolled down out of that end before it caught. A smaller kitchen after, but room enough to dance.",
       bloodreaver: "He set his own stove alight, the whole top of the room! The heat reached everyone, a good warm scar. Then I stayed out of the fire for the rest of the night. Burn once, learn.",
       runeguard: "The stockpot is lifted toward the stove. Abandon the top of the kitchen before it catches, for it burns from then on, and have everyone whole for the heat that follows. I drew a line across the floor plan.",
       gorgemaw: "The cook scorched his own kitchen and left us standing in the smoke. Out of the top of the room before it caught, then. The heat seasoned everyone. Badly burnt, and all of it his fault.",
@@ -431,7 +431,7 @@
     'Flambé': { hard: false, learned: {
       bastion: "Brandy laid in stripes and lit one after another. I stood where the fire would come last, then took the ground behind the flame. Old grease I kept my boots off; boots are the one kit I cannot requisition.",
       gloomsworn: "Brandy ran across the floor in stripes and the fire took them one by one. I stood where it would come last, and when it had passed I walked onto the ashes. The old grease I would not touch; it remembers.",
-      thresher: "He laid brandy in stripes and lit them one after another. I waited in a stripe that would go late, then walked onto the one already burnt out; nothing left to catch there, and no hurry. The old grease I kept clear of.",
+      thresher: "He laid brandy in stripes and lit them one after another. I waited in a stripe that would go late, then stepped onto the one already burnt out, where there was nothing left to catch. The old grease I kept clear of, naturally.",
       bloodreaver: "Stripes of brandy, catching one after another! I waited, then stepped in behind the flames onto ground already burnt. Grease stains in a stripe go up too. Kept my boots off them.",
       runeguard: "Brandy in stripes, a blue flame running along each before it catches. Step into the stripe that has just burnt, behind the fire, and keep clear of old grease. A fire reads from one end to the other like anything else.",
       gorgemaw: "The whole floor flambéed, stripe by stripe. Pretentious. I stepped into each stripe once it had burnt and kept off the old grease. Too much brandy, too little steak.",
@@ -456,7 +456,7 @@
     'Stockpot': { hard: false, learned: {
       bastion: "After the fire he dragged the stockpot down to the middle. It is solid. It stops a charge and shelters from his roar. Marked it as ground to work from. A fixed point is worth any number of good intentions.",
       gloomsworn: "When the fire was done he dragged the pot to the middle of the room. It does not move. It stops his charge and keeps his roar off us, so I fought near it. A thing that will not move is a comfort.",
-      thresher: "After the fire he dragged the stockpot down to the middle and left it, solid as a tomb. It turns his charge and keeps his roar off us, so I learned to work near it. Mind its boiling, though; that comes in its own hour.",
+      thresher: "After the fire he dragged the stockpot down to the middle and left it, good and solid. It turns his charge and keeps his roar off us, so I work near it, humming. Mind its boiling, though; that comes in its own hour.",
       bloodreaver: "A pot hauled into the middle of the room, solid as a wall. Good shelter when he roars, and something to ram his face into later.",
       runeguard: "He leaps to the centre with the stockpot, and there it stays: shelter from his roar, a place to aim his charge, and a source of rings to read. It is the first fixed word on a page of moving ones.",
       gorgemaw: "At last a centrepiece: a stockpot dragged to the middle of the table, solid enough to shelter behind and something to drive him into. The broth smelled of nothing. Bland.",
@@ -481,7 +481,7 @@
     'Simmer': { hard: false, learned: {
       bastion: "The pot boiled over in rings, out from the rim and then back in. I stood clear of each until it had boiled, then stepped in behind it. Step, wait, step. Easy ground, if you count.",
       gloomsworn: "The pot boiled in rings, going out and then returning. I waited just beyond a ring and moved in as it passed over. Arrive after the blow, as the dead do.",
-      thresher: "Rings boiled out of the pot and back in again, like a pond with a stone dropped in it. I waited outside each and stepped in as it passed. Quiet ground behind a wave.",
+      thresher: "Rings boiled out of the pot and back in again, like ripples from a stone in a pond. I waited outside each and stepped in as it passed. Quiet ground behind a wave, and a pretty rhythm to it.",
       bloodreaver: "Rings of boiling water off the pot, out and then back in. I waited, then followed each ring just after it boiled. Barely touched me. Shame.",
       runeguard: "The coils go dull, then red, then white, ring by ring: the colour is the clock. Step into the ring that has just boiled, outward on the first wave, inward on the second. As foreseen.",
       gorgemaw: "The pot boiled over, ring after ring, out and then in. I followed each ring once it had boiled. The broth was thin and the service slow. Sent it back.",
@@ -506,7 +506,7 @@
     'Whisk': { hard: false, learned: {
       bastion: "A cross of beams through him that turned, a notch at a time. I kept to the gap between beams and walked round with it. Slow work. A turning wall is only a very orderly parade.",
       gloomsworn: "Beams crossed in him, turning slowly one notch at a time. I found the open wedge and went round with it. Slow things suit me.",
-      thresher: "He had a cross of beams through him, turning a notch at a time, slow as a clock hand. I found a gap between two arms and strolled round with it. No hurry; it never hurries.",
+      thresher: "He had a cross of beams through him, turning a notch at a time like the hand of a clock. I found the gap between two arms and strolled round with it. Never hurried, that one, and neither was I.",
       bloodreaver: "A cross of light swung round the room, a notch at a time. I walked with the gap and took no wound. Embarrassing.",
       runeguard: "Wire loops form a cross through him and turn by stages. Stand in the gap between its arms and walk with the turn, keeping pace. Pleasingly regular; I could have set my watch by it.",
       gorgemaw: "Air, whisked in a cross through the room, turning as he went. I walked round with the gap. All air, no substance. Underseasoned.",
@@ -531,7 +531,7 @@
     'Spice Rack': { hard: false, learned: {
       bastion: "Jars of spice poured on set spots, and one followed each of the others. They carried theirs clear of everyone and stepped off before it poured. Then ladle or lid. I held the middle and kept my eyes on his back.",
       gloomsworn: "Spice rained on fixed spots, and a jar chased each of us about the floor. We drew ours away and slid aside before it poured. Ladle or lid came after. Two dangers, one watch.",
-      thresher: "Jars of spice hung over certain spots, and one hung over me and followed like a crow. I led mine away from everyone and stepped aside before it poured, then looked to his back for ladle or lid. Two appointments, one evening.",
+      thresher: "Jars of spice hung over certain spots, and one hung over me and followed along like a shy little cloud. I led mine away from everyone and stepped aside before it poured, then looked to his back for ladle or lid. Two appointments, one evening.",
       bloodreaver: "Spice jars poured all over the floor, and one over each of the soft ones. They moved off theirs before it poured. Then ladle or lid, straight after. Spicy!",
       runeguard: "Jars shake over set places, and one over each of us not before him. Carry yours to clear floor and step off before it pours, then heed the tool that follows. The fixed spots I copied into the plan; the wandering jars I trusted to the others.",
       gorgemaw: "He seasoned the floor, and each guest besides. My friends led their jars away and stepped aside before they poured, then ladle or lid. Over-seasoned, and not a grain on the meat.",
@@ -556,7 +556,7 @@
     'Boil Over': { hard: false, learned: {
       bastion: "He boiled over, and the closer you stood, the worse it scalded. We all got as far from him as the room allowed, me included. A post is no use if you are cooked at it.",
       gloomsworn: "He boiled over; the closer, the worse the scald. We all went to the far side of the kitchen, me included. A post can be left briefly, when the post itself burns.",
-      thresher: "He boiled over, and the nearer I stood the worse it scalded. So I walked to the far wall, as far as the kitchen goes, and came back to him once it settled.",
+      thresher: "He boiled over, and the nearer I stood the worse it scalded. So I strolled to the far wall, as far as the kitchen goes, and came back to him once it settled.",
       bloodreaver: "Boil Over! Closer means hotter. I wanted to stand next to him for it. I didn't. Ran to the far wall like everyone else, and still came away with a good scald.",
       runeguard: "Rolling heat and bubbles gather about him, and the harm falls away with distance. All of us to the walls, then, as far from him as the room allows. A short rule, and nobody argued with it.",
       gorgemaw: "As every bad cook eventually does, he boiled over. Closer was hotter, so even I backed off to the walls. A scalding broth, and no one to thank for it.",
@@ -581,7 +581,7 @@
     'Last Orders': { hard: false, learned: {
       bastion: "After the trolley came silence, then Last Orders on the whole room. No step escapes it. We gathered by the healer, mended in the quiet, and braced shoulder to shoulder.",
       gloomsworn: "The trolley, a long hush, then Last Orders on all of us. Nowhere to step. We pressed round the healer in the hush and were mended ahead of it. I make good use of silence.",
-      thresher: "A hush after the trolley, the kind you get before a roof gives way. We gathered round our healer in it and got mended, so Last Orders found us ready.",
+      thresher: "A hush fell after the trolley, the kind that comes just before the music starts. We gathered round our healer in it and got mended, so Last Orders found us ready.",
       bloodreaver: "Last Orders: a scorcher across everyone. We came in close, got mended in the quiet before it, and took it together. A good one! The best one.",
       runeguard: "A hush follows the trolley; then he calls it. Use the silence to gather and mend before the blast that reaches all of us. Silence, in his kitchen, is a punctuation mark, and I have learned to read it.",
       gorgemaw: "After the trolley the cook paused, then called Last Orders and threw the last of his kitchen at everyone. We gathered, mended, and swallowed it together. A filling course.",
@@ -606,7 +606,7 @@
     'Gorge': { hard: false, learned: {
       bastion: "At the end he just ate, and every mouthful hit all of us, harder each time. Nothing to hold but the line. We had to put him down fast. Held, long enough.",
       gloomsworn: "In the end he only ate, and each mouthful struck every one of us harder than the last. Nothing to hide behind, so we killed him fast. The dark kept me upright to the end.",
-      thresher: "At the end Grubnak only ate, and every bite came in on all of us, heavier each time. Nothing to dodge, so I put everything into the cut and brought him in before he finished his supper. A hungry man, courteously ended.",
+      thresher: "At the end Grubnak only ate, and every bite came in on all of us, heavier each time. Nothing to dodge, so I put everything into the cut and brought him in before he finished his supper. A hungry man, and an appointment kept.",
       bloodreaver: "Gorging, every bite hitting us all, harder each time! Wonderful. But you cannot outlast it, so we hit him with everything until he fell.",
       runeguard: "He eats. Each bite reaches us all and grows heavier; it cannot be outlasted, only ended. Strike with everything that remains. The last page is always shorter than one hopes.",
       gorgemaw: "He began to eat his own cooking, and every bite hurt his guests more. A rival at the table! I made very sure he did not finish his meal.",
@@ -631,7 +631,7 @@
     'Clogged Drains': { hard: true, learned: {
       bastion: "Grease pooled round the drains for good, and any fire lights it. I marked every drain on my map and kept the line off those patches. Bad footing is one thing; burning footing is another.",
       gloomsworn: "The drains backed up and the grease stayed round them. Fire will find it sooner or later, so I took the fight somewhere else and left that patch to the dark.",
-      thresher: "On the harder nights the drains backed up and grease pooled round them and stayed, a dark standing water. Any spark sets it burning. I kept off that ground all evening and worked the drier floor.",
+      thresher: "On the harder nights the drains backed up, and grease pooled round them and stayed, dark and shiny. Any spark sets it burning, so I kept off that ground all evening and worked the drier floor.",
       bloodreaver: "The drains backed up and spat grease round them for good. It burns when fire finds it. I kept my boots off it. A fine scar is one thing; burning feet are another.",
       runeguard: "A gurgle from the drains, and the grease pools round each and stays; when fire comes, it burns. Mark the drains, keep off their grease. I added each to the floor plan in red.",
       gorgemaw: "On the harder nights the drains back up, pooling grease round them for good. A filthy kitchen. Harmless until fire reaches it, then I keep well clear. Disgusting.",
@@ -656,7 +656,7 @@
     'Belly Flop': { hard: true, learned: {
       bastion: "He flopped down where he stood, which is a thing he does on the harder nights. Out from under him, and open floor at my back, because the shock threw us. Then ladle out, lid in. A wall behind you is worse than the blow.",
       gloomsworn: "On the harder nights he dropped flat on the spot. I moved out from beneath him with clear floor at my back, because the shock throws us, then read his back for ladle or lid. I know what falling feels like.",
-      thresher: "He simply lay down on the spot like a felled tree, on the hard nights. I scrambled out from under with open floor behind me, since the shock shoves, and read his back: ladle, out; lid, in.",
+      thresher: "On the hard nights he simply lay down on the spot, flat as a dropped tray. I stepped out from under with open floor behind me, since the shock shoves, and read his back: ladle, out; lid, in.",
       bloodreaver: "The big one flopped belly first, my friend! Out from under, then thrown back; open floor behind me, not a wall. Then the tool on his back said in or out. A fine fall.",
       runeguard: "His shadow swells beneath him, and the tool on his back names the sequel. Out from under, open floor behind to land on, then in or out as the tool decrees. I now check my back for walls before I check my front.",
       gorgemaw: "Belly first onto his own floor. Out from under him, with open floor behind me for when the shock threw me. Then ladle or lid. Overweight, both of us.",
@@ -681,7 +681,7 @@
     'Cleaver Toss': { hard: true, learned: {
       bastion: "He sent cleavers down lines at the two farthest from him. They turned the lines clear of us, stepped aside, and the steel came home the way it went. Stay off both ways. Thorough.",
       gloomsworn: "Two of us, farthest out, had cleavers sent along a line. Each turned theirs from the rest and stepped aside, and the blades came home by the way they went. I stayed off the line, out and back.",
-      thresher: "He threw cleavers down lines at the two of us farthest off, and they come back up the same line. Each walked their line clear of the rest of us and stepped off it, and I kept off both ways. A line is a line, coming or going.",
+      thresher: "He threw cleavers down lines at the two of us farthest off, and they come back up the same line. Each led their line clear of the rest of us and stepped off it, and I kept off both ways. A line is a line, coming or going, and easy to mind.",
       bloodreaver: "Cleavers thrown at the two furthest off, along lines! Off the line. Then they come back along the same line. I've had a cleaver in the back before; overrated.",
       runeguard: "Score marks run from him to the two farthest of us. Point the line away from the others, step off as it sharpens, and stay off: it returns the same way. The second reading is the one I nearly forgot.",
       gorgemaw: "The cook threw his cleavers at the two farthest guests and then called them back. We pointed the lines away from each other, stepped off, and waited. A tired dish.",
@@ -706,7 +706,7 @@
     'Mise en Place': { hard: true, learned: {
       bastion: "Three tools laid on the pass, left to right, the cleaver toward one side of its board. I put the order and the side in my book. Nothing hit us. It always comes later; that is what laying out means.",
       gloomsworn: "Three tools were set on the pass, left to right, the cleaver nearer one end of its board. I recited the order and the side to myself. All of it returns. I keep things.",
-      thresher: "Three tools laid out in a line along the pass, left to right, the cleaver nearer one end of its board. Nothing hurt yet. I tucked the order and the side away to keep.",
+      thresher: "Three tools laid out in a line along the pass, left to right, the cleaver sitting nearer one end of its board. Nothing hurt yet, so I tucked the order and the side away to keep, the way one pockets a dance card.",
       bloodreaver: "Tools laid out like he was planning something: cleaver, ladle, lid, in some order, and the cleaver lying to one side. Remember it. He serves them later.",
       runeguard: "Three tools laid upon the pass, left to right, the cleaver resting toward one side of its board. Record the order and the side; they return later in that sequence. This is the table of contents.",
       gorgemaw: "Tools set out on the pass, left to right, as if preparing a banquet, the cleaver lying to one side. I committed the order to memory. Pretentious, but it is the one menu I trust.",
@@ -731,7 +731,7 @@
     'Service!': { hard: true, learned: {
       bastion: "The tools came off the pass in the order he had laid them. The cleaver chops its side, the ladle means out, the lid means in, one after another. A drill I had been handed in advance.",
       gloomsworn: "The order on the pass was the order we lived. Cleaver for its half of the floor, ladle for out, lid for in. I called each a breath ahead so nobody had to guess.",
-      thresher: "Cleaver, ladle, lid: he served them in the order he had laid them out, and I took them one by one. Cleaver for its half, ladle to get out, lid to get in. Never late.",
+      thresher: "Cleaver, ladle, lid: he served them in the order he had laid them out, and I took them one by one. Cleaver for its half, ladle to get out, lid to get in. Not once late, which pleased me.",
       bloodreaver: "Service! In the order he had laid them: cleaver's side chopped, ladle sent us out, lid drew us in. Good rhythm, my friend. I enjoyed it.",
       runeguard: "The sign was given long before: the order on the pass. The cleaver chops its side, the ladle sends us out, the lid draws us in, each in turn. As foreseen; and I did foresee it.",
       gorgemaw: "He served his laid-out tools in their order: the cleaver's side chopped, the ladle outward, the lid inward. A tasting menu. Sent most of it back.",
@@ -756,7 +756,7 @@
     'Dinner Rush': { hard: true, learned: {
       bastion: "Hung plates over the four of us, set where we stood, the nearest served first. My post was the first: his east flank, near enough to smell the stove. The second sat west, inside the lid's quiet; the last two stayed out past the ladle. I never left his side.",
       gloomsworn: "A plate hung over each of us, set down where we stood, the nearest dished up first. I took his east side, then the west edge of the lid's quiet, beside the second plate. The far two stood out past the ladle. I do not mind standing near what wants me dead.",
-      thresher: "Hot plates came down over every head wherever we happened to stand, and he serves the nearest first, each in turn. I took the east flank while his cleaver chopped the west, then walked round inside the lid's quiet. The far pair waited past the ladle.",
+      thresher: "Hot plates came down over every head wherever we happened to stand, and he serves the nearest first, each in turn. I took the east flank while his cleaver chopped the west, then strolled round inside the lid's quiet. The far pair waited past the ladle. A busy dance, and a lovely one.",
       bloodreaver: "A plate wherever we stood, the nearest served first! I took the first at his east side as the cleaver chopped the west, then went to his west inside the lid's quiet, beside the next plate. Then out for the ladle. A lovely rush!",
       runeguard: "Four plates, four places, and the order is a matter of distance: the nearest is served first. One goes at his east flank, one at his west where the lid's quiet thins, and two out beyond the ladle. A plate set too near comes up too soon. I drew the whole as a small map.",
       gorgemaw: "A dinner rush: a hot plate over every guest, nearest served first. I ate the first at his east elbow, then sat in at his west, inside the lid's quiet, beside the second plate rather than on it. Two more far out past the ladle.",

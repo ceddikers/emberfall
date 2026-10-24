@@ -480,26 +480,27 @@ Object.assign(TRIALS, {
 });
 
 // ======================================================================= Reaper (id thresher; damage, class 19)
+// (first pass: the shapes of the old trials, new names; the real trials come with the Reaper's content stage)
 Object.assign(TRIALS, {
-  sower: {
-    cls: 'thresher', spec: 'sower', name: 'The Swift Reckoning',
-    lore: ['The Barrow\'s dead woke restless the night the King fell.', 'Whoever marked them fast enough walked out before dawn.'],
-    outro: 'The names are struck. The Wraith walks on.',
-    allies: ['bastion:base', 'cleric:base'], seconds: 55, enrage: 66, regen: 0,
-    script(f, k) {
-      // short gaps between blows: the afflictions have to be laid quickly and reaped on the run
-      k.loop([[3, () => k.swing('stomp', 5500, 3)], [4, () => k.knell(2500)], [4, () => k.blow(8500, 3.5)], [4, () => k.swing('sweep', 5500, 3.5, Math.PI / 2)]]);
-    },
-  },
-  grim: {
-    cls: 'thresher', spec: 'grim', name: 'The Long Wait',
-    lore: ['The old reaper never hurried a soul.', 'Each came due at its hour, and he was there.'],
-    outro: 'The last name is struck. The Grim waits for the next.',
+  dancer: {
+    cls: 'thresher', spec: 'dancer', name: 'The Long Waltz',
+    lore: ['The old ballroom under the Barrow never emptied.', 'Whoever kept the rhythm to the end was let out before the last bar.'],
+    outro: 'The music stops. The Dancer walks on.',
     allies: ['bastion:base', 'cleric:base'], seconds: 56, enrage: 70, regen: 0,
     script(f, k) {
-      // long quiet stretches and then a heavy blow: time to build every affliction deep, and a reason to hold a Bind's pop for the blow
+      // long quiet stretches and then a heavy blow: room for a whole string and its sweep
       f.boss.anchor = true;
       k.loop([[6, () => k.blow(9500, 4)], [7, () => k.knell(2800)], [6, () => k.swing('stomp', 6500, 4)], [6, () => k.knell(2800)]]);
+    },
+  },
+  phantom: {
+    cls: 'thresher', spec: 'phantom', name: 'The Vanishing Edge',
+    lore: ['The dead of the Barrow woke restless the night the King fell.', 'Whoever was never where the blow landed walked out before dawn.'],
+    outro: 'Nothing was there to strike. The Phantom walks on.',
+    allies: ['bastion:base', 'cleric:base'], seconds: 55, enrage: 66, regen: 0,
+    script(f, k) {
+      // short gaps between blows: a Blink out of each, a finisher on the other side
+      k.loop([[3, () => k.swing('stomp', 5500, 3)], [4, () => k.knell(2500)], [4, () => k.blow(8500, 3.5)], [4, () => k.swing('sweep', 5500, 3.5, Math.PI / 2)]]);
     },
   },
 });

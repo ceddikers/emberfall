@@ -637,34 +637,36 @@ Object.assign(TALENTS, {
   ],
 });
 
-// ======================================================================= THRESHER (damage, class 19)
-// New behaviour, one plain number (Ferryman's Haste). Rows III and V grant a move (TALENT_ABILITIES in kits.js).
+// ======================================================================= REAPER (id thresher; damage, class 19)
+// Rebuilt after Scythe Evie (docs/plans/2026-10-reaper-rework.md). New behaviour, one plain number (Quick Harvest's cooldown). Rows III
+// and V grant a move (TALENT_ABILITIES in kits.js). The picks of the old Weight tree are cleared on reading (Save.talents matches a
+// pick by id): the rows stay bought.
 Object.assign(TALENTS, {
   thresher: [
     [
-      { id: 'thresher_drag', name: 'Dragging Edge', ab: 'slash', text: 'A Backswing drags the toll along: every affliction on the boss starts its time again.' },
-      { id: 'thresher_weight', name: 'Dread Weight', ab: 'hook', text: 'A Hook on a Thread already at full Weight snaps it on the spot: it pops, with its Hook charge back, instead of being laid again.' },
-      { id: 'thresher_gleaning', name: 'Phantom Cut', ab: 'reap', text: 'A Reap that pops three or more afflictions makes your next Slash or Cleave cut again for 35% a moment later.' },
+      { id: 'thresher_linger', name: 'Lingering Star', ab: 'star', text: 'Void Star\'s collapse can seed a mark that is missing on what it hits. The more marks the enemy already has, the likelier: 20% with none, up to 100% with four.' },
+      { id: 'thresher_hungry', name: 'Hungry Scythe', ab: 'string', text: 'A swing that catches two or more enemies fills the crescent by 3.' },
+      { id: 'thresher_tide', name: 'Black Tide', ab: 'snap', text: 'A Drain that pops mends the most hurt ally instead of you.' },
     ],
     [
-      { id: 'thresher_vanish', name: 'Vanishing Cut', ab: 'blink', text: 'Gloam Blink now takes you out of the world for 1.5s: nothing can touch you.' },
-      { id: 'thresher_tithe', name: 'Tithe', ab: 'reap', text: 'Drain, its ticks and its payout in a Reap, now mend the most hurt ally instead of you.' },
-      { id: 'thresher_hush', name: 'Hush', ab: 'gather', text: 'Sever also wraps you in a barrier of {s:100} for 6s.' },
+      { id: 'thresher_step', name: 'Step Through', ab: 'string', text: 'Blinking through a telegraph makes your next string start at swing 2.' },
+      { id: 'thresher_reach', name: 'Long Reach', ab: 'string', text: 'The scythe reaches 20% further.' },
+      { id: 'thresher_debt', name: 'Debt Collector', ab: 'snap', text: 'A Bind that pops makes the whole party take 8% less damage for 4s.' },
     ],
     [
-      { id: 'thresher_sowing', name: 'Shroud', ab: 'gather', grants: true, text: 'New move on R, in place of Sever. Shroud (30s): every affliction lands on the boss at once, a Weight more on any already up, and a cut for {d:70}.' },
-      { id: 'thresher_compost', name: 'Grave Interest', ab: 'reap', text: 'Nothing runs out for nothing: an affliction that runs out unpopped pays half its pop damage as it goes.' },
-      { id: 'thresher_second', name: 'Unpaid Debt', ab: 'reap', text: 'A Full Toll does not take the Mark away: it stays on the boss with 1 Weight.' },
+      { id: 'thresher_twin', name: 'Twin Stars', ab: 'star', grants: true, text: 'New move on R, in place of Void Star. Twin Stars: two charges (24s to recharge), each a little smaller, at 70% of the damage.' },
+      { id: 'thresher_gather', name: 'Gathering Threads', ab: 'snap', text: 'A Thread that pops draws the adds near it together, toward where it sat.' },
+      { id: 'thresher_vein', name: 'Open Vein', ab: 'snap', text: 'Snap spreads Drain: every enemy near one whose Drain pops is marked with a Drain of its own.' },
     ],
     [
-      { id: 'thresher_sacrifice', name: 'Sacrifice', ab: 'wisp', text: 'Press F again while the Wisp is out to burst it: a blow for {d:320}, the affliction you laid last gains a Weight, and you deal 10% more damage for 8s. Its cooldown counts from the moment it was summoned.' },
-      { id: 'thresher_joined', name: 'Joined Swing', ab: 'reap', text: 'With the Wisp out, Reap makes it strike too: a second cut for {d:140}.' },
-      { id: 'thresher_quick', name: 'Ferryman\'s Haste', ab: 'gather', cd: { gather: -3 }, text: 'Sever recharges 3s faster.' },
+      { id: 'thresher_patient', name: 'Patient Death', ab: 'finish', text: 'Marks last 34s instead of 20s: time to build all four before a Snap.' },
+      { id: 'thresher_quick', name: 'Quick Harvest', ab: 'snap', cd: { snap: -4 }, text: 'Snap comes back in 4s instead of 8s, but pops only the oldest mark on each enemy.' },
+      { id: 'thresher_toll', name: 'Last Toll', ab: 'snap', text: 'A Thread that pops gives a Blink charge back.' },
     ],
     [
-      { id: 'thresher_cull', name: 'Cull', ab: 'wisp', grants: true, text: 'New move on F, in place of Spirit Wisp. Cull (40s): take what is owed now. Every affliction on the boss pays out for its Weight (3 at the most), and none is spent (none of their effects go off).' },
-      { id: 'thresher_opengate', name: 'Open Gate', ab: 'reap', text: 'The fifth strike of Reaper\'s Gate no longer spends the afflictions: they stay on the boss, all four at full Weight.' },
-      { id: 'thresher_omen', name: 'Omen of the Toll', ab: 'gather', text: 'Whenever the boss begins a cast, Sever is ready again at once.' },
+      { id: 'thresher_gravewalk', name: 'Gravewalk', ab: 'veil', grants: true, text: 'New move on D, in place of Dusk Veil. Gravewalk (30s): step out of the world for 1.5s, where nothing can touch you, and get a Blink charge back.' },
+      { id: 'thresher_moonrise', name: 'Moonrise', ab: 'snap', text: 'With a full crescent your Blink is a slash through its whole path: every enemy it crosses takes {d:150}. The crescent is not spent.' },
+      { id: 'thresher_grave', name: 'Grave Ward', ab: 'veil', text: 'Dusk Veil mends you for 2% of your health for every mark you have snapped in the last 10s (up to 8).' },
     ],
   ],
 });
@@ -1163,28 +1165,26 @@ Object.assign(SPEC_TALENTS, {
     ],
   },
   thresher: {
-    // Wraith, The Swift Shadow: pace, and an hour that never waits
-    sower: [
+    // Dancer, The Long Waltz: long strings, the four-swing finisher
+    dancer: [
       [
-        { id: 'thresher_anchor', name: 'Anchored Thread', ab: 'hook', text: 'The Thread never runs out: it stays on the boss until it is popped.' },
-        { id: 'thresher_fleet', name: 'Fleet Hour', ab: 'reap', text: 'Every Reap quickens you: you act 12% faster for 5s.' },
+        { id: 'thresher_encore', name: 'Encore', ab: 'finish', text: 'After a four-swing finisher the next string starts at swing 2.' },
+        { id: 'thresher_pirouette', name: 'Pirouette', ab: 'string', text: 'The third swing spins and hits everything all round you.' },
       ],
       [
-        { id: 'thresher_hourglass', name: 'Hourglass', ab: 'blink', grants: true,
-          text: 'New move on D, in place of Gloam Blink. Hourglass (28s): cut through the dark to the boss for {d:140} and turn the glass: for 5s every affliction you lay lands at full Weight, and you take 50% less damage for 1s.' },
-        { id: 'thresher_lasthour', name: 'Last Hour', ab: 'reap', text: 'A Reap that pops all four afflictions tolls the hour for everyone: the whole party deals 4% more damage for 6s.' },
+        { id: 'thresher_danse', name: 'Danse Macabre', ab: 'snap', text: 'A Full Harvest leaves a dancing scythe behind: it swings once more a moment later for {d:150}.' },
+        { id: 'thresher_unbroken', name: 'Unbroken Step', ab: 'string', text: 'A Blink adds a swing to the string you hold, instead of only keeping it.' },
       ],
     ],
-    // Grim, The Patient Reaper: build it deep, then one great reckoning
-    grim: [
+    // Phantom, The Vanishing Edge: Blink chains
+    phantom: [
       [
-        { id: 'thresher_deepening', name: 'Deepening Toll', ab: 'reap', text: 'An affliction at full Weight ticks twice as fast.' },
-        { id: 'thresher_patient', name: 'Patient Blade', ab: 'gather', text: 'Sever on an affliction at full Weight pops it twice.' },
+        { id: 'thresher_afterimage', name: 'Afterimage', ab: 'finish', text: 'A Blink leaves an afterimage that repeats your next finisher at 50% a moment later.' },
+        { id: 'thresher_shade', name: 'Shade Step', ab: 'veil', text: 'A Blink leaves a short dark field where you stood: adds that cross it move at half pace for 5s.' },
       ],
       [
-        { id: 'thresher_nightfall', name: 'Nightfall', ab: 'blink', grants: true,
-          text: 'New move on D, in place of Gloam Blink. Nightfall (25s): cut through the dark to the boss for {d:140}, and every affliction on it gains a Weight. You take 50% less damage for 1s.' },
-        { id: 'thresher_wound', name: 'Open Wound', ab: 'reap', text: 'While the boss is Vulnerable, a Reap pays every affliction as if it were at full Weight.' },
+        { id: 'thresher_flicker', name: 'Flicker', ab: 'veil', text: 'Blinking through a telegraph gives the charge back.' },
+        { id: 'thresher_vanishing', name: 'Vanishing Point', ab: 'star', text: 'Void Star opens where you last blinked from, instead of at your target.' },
       ],
     ],
   },

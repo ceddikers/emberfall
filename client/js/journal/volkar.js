@@ -4,7 +4,7 @@
   meet: {
     bastion: "No door to hold, no wall at my back: a mountaintop with weather from every side and a gold or blue charge crawling over each of us. I set my feet and found the footing was wind. The sergeant never trained me for that. Report: we need a new drill.",
     gloomsworn: "Volkar never left his summit. The wind came at us from every side while a gold or blue charge crawled across each of us. I have been run through by a blade. Weather is slower, and it does not stop at the wound.",
-    thresher: "After the ogre's kitchen and the spiders' cellar, open sky. He hung a charge on each of us, gold or blue, like a tag on a toe, and never stirred from his summit. I inclined my head to him. Folk who take a storm lightly are sent for early.",
+    thresher: "After the ogre's kitchen and the spiders' cellar, open sky! He hung a charge on each of us, gold or blue, like a ribbon on a hat, and never stirred from his summit. I tipped my hat to him, a guest whose turn is coming, and hummed the whole climb.",
     bloodreaver: "A mountain with lightning for blood! After the ogre's cleavers and the queen's fangs, every bolt left a mark, and between the bolts the wind kept biting. I counted bruises until I ran out of fingers. Old thunder-belly and I are going to be friends.",
     runeguard: "A fresh page for Volkar: cloud before the clap, sparks along the floor before the blow, charges that pair and arc. A long text, legible, though written in a hand like forked lightning. I left the margins wide for my successor.",
     gorgemaw: "A kitchen on a mountaintop, in the rain, where every dish is lightning and the salt is blown in on the wind. Grubnak at least owned a stove. I rather admired the austerity. I left hungry, which is the point of austerity.",
@@ -30,7 +30,7 @@
   win: {
     bastion: "He fell. The wind was still shoving as he went, bad footing to the last. I counted heads on the summit, every one present, then let my knees shake where only the mountain could see. Held.",
     gloomsworn: "The sky came down on us again and again, and we held it up between us until he went down. The mountain is quiet. I stood the whole way, and it is a long while since standing felt like something I had chosen.",
-    thresher: "He is down, and the sky has gone quiet. Every hand of us walked down that mountain, which is more than most storms allow. I said a few kind words over him, as one does. His name is struck from the list.",
+    thresher: "He is down, and the sky has gone quiet. Every one of us walked down that mountain, which is more than most storms allow, and I hummed the whole way. I said a few kind words over him, as one does. His name is struck from the list.",
     bloodreaver: "He went down still crackling, and I carried every bolt he gave me down the mountain like medals. Best bruises of my life. Old thunder-belly, you were magnificent, and I will find another like you.",
     runeguard: "The last page of the Titan's text was his own fall, and I had half-read it some while before. The storm runs to its final line and goes quiet. I have inscribed a colophon in my own hand. As foreseen.",
     gorgemaw: "The sky was the last course, and we ate it together, all of us at one table, rain in the soup. Then the kitchen went quiet. A long meal, honest and bracing. I am still hungry, and I take that as a compliment to the cook.",
@@ -56,7 +56,7 @@
     'Thunderclap': { hard: false, learned: {
       bastion: "Cloud over the summit, light gone. A clap that reaches every man cannot be blocked, so I stopped trying and stood beside the healers like a man at a funeral. It was only loud. Headcount after: all present.",
       gloomsworn: "The light drained out of the sky and the clap went through all of us at once. There was nothing to stand behind. I let the healers fill us beforehand and took the rest as it came. It was only noise, and I know quiet.",
-      thresher: "Clouds went over the summit and the light went with them, as it does before a proper downpour. Then the clap landed on every one of us at once, no shelter to be had. So I let the menders fill me first. In time.",
+      thresher: "Clouds went over the summit and the light went with them, which is how a proper downpour sends word ahead. The clap landed on every one of us at once, no shelter to be had, so I let the menders fill me first. In time!",
       bloodreaver: "Sky went black and then cracked open over all of us at once. A decent sting! I stood there grinning while the others winced. Come to it whole, then drink the rest back on the next few blows.",
       runeguard: "Provisional reading: when the summit darkens under rolling cloud, the clap that follows reaches everyone and cannot be stepped out of. Each wound must be closed beforehand. Easy to foresee. Harder to bear, but I managed.",
       gorgemaw: "When the clouds roll in, the cook serves everyone the same plate at the same instant. It cannot be sent back, only swallowed, so we came to table full beforehand. Thin broth, but the whole room had to drink it.",
@@ -81,7 +81,7 @@
     'Titan Fist': { hard: false, learned: {
       bastion: "Lightning ran down his arm toward me. I waited for the shoulder to drop and braced in the last instant, knowing the blow would not stop at me, and sent the others to the flank, out of the path behind. A shield is for the man in front. Everyone else needs orders.",
       gloomsworn: "Lightning crept down his arm toward me. I let the fist fall, drew the dark in tight at the last, and kept the others out of the path behind. It does not stop at the first body. I am used to being the first.",
-      thresher: "Lightning ran up his arm toward our knight, and the fist was due. It goes down a long line, through the knight and out the other side. So I worked from his flank, well off that line, and let it come in empty.",
+      thresher: "Lightning ran up his arm toward our knight, and the fist was due. It goes down a long line, through the knight and out the other side, so I took my place at his flank, well off that line, and let it arrive to an empty room. Tidy.",
       bloodreaver: "Lightning crawled down his arm and the fist came for me alone. A good one! I took it full and hit back while it still burned, and kept the others out from behind me, where it carries on. Share a bruise, not a hole.",
       runeguard: "Lightning gathers along the line between the Titan and me, and the blow does not end where I stand. A ward a breath before, and nobody else in that line. On the harder climb it leaves me charged; I decline the next rod. Written in the margin.",
       gorgemaw: "A signature dish, sent down a long crackling table to me alone. I opened wide just as it landed, and made sure no one sat behind me to share it. Peppery, I'll grant him. Seconds welcome.",
@@ -106,7 +106,7 @@
     'Polarity Surge': { hard: false, learned: {
       bastion: "Gold or blue on each of us. Orders, then: pair off, opposite colours, shoulder to shoulder, and keep your own kind away, since two of a kind arc and burn. I found my blue and stood by him like a man on parade.",
       gloomsworn: "Gold or blue, each of us. When the surge came I went to the opposite colour, near enough to touch, and kept my own kind away. Two of a kind in one place is how it kills. Opposites cancel. I could say something about that.",
-      thresher: "Gold and blue, like two flames at a wake. When the surge came due I stood beside one of the other colour, near enough to touch, and kept my own colour well off. Stand like beside like and the whole line scorches.",
+      thresher: "Gold and blue, like two partners at the start of a dance. When the surge came due I stood beside one of the other colour, near enough to touch, and kept my own colour well away. Like beside like, and the whole line scorches.",
       bloodreaver: "Two golds together make a terrible arc; one alone, a nasty bite; gold beside blue, barely a tickle. Shameful! But I found my blue and stood close anyway, grumbling. Bruises are for choosing.",
       runeguard: "Arcs crackle between like charges before the surge, and a calm thread joins unlike ones; I drew it in the margin. Each of us stands beside an opposite charge, with no like charge within reach. Simple, once annotated.",
       gorgemaw: "The surge is a pairing dish: gold with blue, never gold with gold, and never eaten alone at a table for one. I sat beside my blue companion and it came out almost bland. An excellent pairing, if I say so.",
@@ -131,7 +131,7 @@
     'Thunder Crash': { hard: false, learned: {
       bastion: "A cloud over each gold. My blue partner and I stood under mine and split the crash, and the other pair kept their distance. Then everybody scattered from the static, fast, no marching. The one order I enjoyed giving.",
       gloomsworn: "Clouds hung over the gold ones. My blue partner and I took the one over mine and split the crash, while the other pair stood far off. When it passed we scattered from the static. Half a crash is survivable. I have survived worse halves.",
-      thresher: "A cloud darkened over each gold one of us. Each pair stood under their own and took the rain together, the pairs a good distance apart. Then the static came in behind, so we broke off, every hand to their own ground.",
+      thresher: "A cloud darkened over each gold one of us. Each pair stood under their own and took the rain together, the pairs a good distance apart, two neat little parties. Then the static came in behind, so we broke off, every one to their own ground.",
       bloodreaver: "A cloud over my partner's head. I stood right under it with her and took my half, a good meaty half, then scattered before the static. Half a crash each. Fair, for a mountain.",
       runeguard: "A storm cloud over every gold. Each gold's blue partner stands beneath it to share the blow, the pairs well apart; and then, at once, everyone scatters, for static follows hard behind. I underlined the word scatters.",
       gorgemaw: "A cloud over each gold head: a sharing plate. My partner and I split ours down the middle, the other pair kept to their own table, and then we all left our seats before the static arrived. Generous portion.",
@@ -156,7 +156,7 @@
     'Static Field': { hard: false, learned: {
       bastion: "Static on every head, and each needed ground to themselves. I took my patch, planted my boots and kept the others in sight. Nobody crowded. Whatever else you say of the line, it knows its spacing.",
       gloomsworn: "Static took hold of every one of us, and each needed room apart. I found my own bare place and stayed on it. A man who has been buried does not mind a small space.",
-      thresher: "Static crept onto every head together, and each of us wanted a patch with a gap round it. I wandered out to my corner and let it go over me, humming. Hold still, little spark. Nearly done.",
+      thresher: "Static crept onto every head together, and each of us wanted a patch with a gap round it. I wandered out to my corner and let it go over me, humming. Dear little spark, do hold still. Nearly done.",
       bloodreaver: "A ring of static over every head. Mine alone, nobody else's in it. I took my own patch and stood there dying of boredom while it fizzled. Even I won't bleed on a friend.",
       runeguard: "A ring of static gathers over every head, and each ring wants clear ground of its own. No ring may touch another; I sketched the spacing on the flyleaf, and the party fanned out accordingly. Elegant, and survivable.",
       gorgemaw: "Every guest got a little plate of static, and nobody should eat off their neighbour's. I kept to my own end of the table. Dull, but tidy, like a meal in a monastery.",
@@ -181,7 +181,7 @@
     'Rod Strike': { hard: false, learned: {
       bastion: "A ring burned down over my head. I put my back to the nearest standing stone and the bolt struck the rock, not me. The next pair took other stones, since a struck stone needs time. I have worn worse armour than granite.",
       gloomsworn: "The ring sat on my head like a crown. I went to the nearest stone, turned my back to it, and the lightning went into the stone. Next pair, different stones; a stone struck once needs a rest. Not unlike me.",
-      thresher: "A ring settled on my head, and I took it the bolt was close. I backed against the nearest standing stone and the lightning went into it. The next pair used different stones; a struck one needs resting, as a blade does.",
+      thresher: "A ring settled on my head, which meant the bolt was close. I stepped back against the nearest standing stone and the lightning went into it, tidy as you like. The next pair used different stones, since a struck one needs resting, as a blade does.",
       bloodreaver: "Marked! I ran to a standing stone and the bolt hit the rock instead of me. A pity. The next pair went to different stones; strike one twice in a hurry and it bursts on everyone near.",
       runeguard: "A burning ring over a head: that person stands against a standing stone, and the bolt goes into the rock. The second pair must choose untouched stones, since a freshly struck one discharges. I wrote untouched twice, and underlined it.",
       gorgemaw: "A bolt meant for me, so I carried it to a standing stone and let the rock be the plate. The second pair used fresh stones; a used one spits back at the table. Once, mouth open, I simply swallowed mine.",
@@ -206,7 +206,7 @@
     'Gale Slam': { hard: false, learned: {
       bastion: "He drew breath. Where a rod stood I stepped into the still air behind it, away from him; with none, I closed in on him so the throw stopped short of the rocks. Charge the enemy, my sergeant said. For once it was safe advice.",
       gloomsworn: "He sucked in a breath and the wind threw us outward. If a rod was near I sheltered in the calm behind it, the side away from him; if none, I closed in beside him and flew only a short way. I have been thrown farther by worse.",
-      thresher: "He drew breath, and I knew what was coming: a gale to scatter ash. A rod near meant I tucked in on its far side from him; with none, I stood right at his knees, so the throw ran out before the rocks. Close is safest, with some things.",
+      thresher: "He drew breath, and a gale to scatter ash was coming. With a rod near I tucked in on its far side from him; with none I stood right at his knees, so the throw ran out before the rocks. Close is the safe seat, for once, dear.",
       bloodreaver: "Old thunder-belly breathed and threw us at the walls. Slammed into stone? Not even an honest wound. So: behind a standing rod, out of the wind, or close in, where the throw lands on open floor.",
       runeguard: "The Titan draws breath. The still air stands behind a rod, on the side away from him; with no rod, one stands near enough that the throw ends short of wall and stone. I recorded both readings, since it will come again.",
       gorgemaw: "A dish made of wind alone, and it hurls the diner across the room. One eats it in the lee of a standing rod; with no rods, close to the cook, so one lands nowhere hard. All air, no substance.",
@@ -231,7 +231,7 @@
     'Storm Walls': { hard: false, learned: {
       bastion: "Walls of wind swung round him slowly, like spokes. I kept my place in the gap and marched with them, step for step, and stood behind a boulder where one lay. It was almost drill.",
       gloomsworn: "Walls of wind swung round him slowly, like cartwheel spokes. I found the gap and shuffled round with it. A boulder nearby was something to put between me and the wall. I was glad of the company.",
-      thresher: "Walls of wind went round him slow as a clock hand. I found the gap between two spokes and walked along with it, unhurried. A boulder, once, made a fine bit of shelter. Never rush a turning wheel, I say.",
+      thresher: "Walls of wind went round him slow as a clock hand. I found the gap between two spokes and walked along with it, unhurried, humming. A boulder made a fine bit of shelter, once. Never rush a turning wheel.",
       bloodreaver: "Walls of wind wheeling round him! I stood in the gap and walked with it, hitting him the whole way round. A wall would sting, but walking is free.",
       runeguard: "Lines of wind are drawn outward from the Titan and turn. One stands in the gap between them and walks with the turning, never against it; a boulder's lee holds, but only once. Pedantic, perhaps. Also alive.",
       gorgemaw: "The revolving dessert trolley: walls of wind, turning. I walked with the gap between them, never into them, and sheltered behind a boulder when one had been laid. Overwhipped, yet refreshing.",
@@ -256,7 +256,7 @@
     'Chain Lightning': { hard: true, learned: {
       bastion: "A bolt gathered over our healer while his fist came at me. She walked clear of everyone, and the rest of us stood well apart, so it had nobody to leap to. I took the fist alone. Two duties, one pair of hands. Held.",
       gloomsworn: "A bolt gathered over our healer as his fist came for me. She walked away from everyone and the others kept apart, so it had nothing to jump to. I took the fist myself. It was mine to take.",
-      thresher: "A bolt gathered over our healer while his fist fell on the knight. She strode off alone, and the rest of us spaced out well apart, like candles in a wind, so the lightning had nowhere to jump. Good spacing saves lives.",
+      thresher: "A bolt gathered over our healer while his fist fell on the knight. She strode off alone, and the rest of us spaced out well apart, a polite distance each, so the lightning had nowhere to jump. A good gap is a kindness.",
       bloodreaver: "Lightning over our healer's head, itching to jump. She walked off alone and I kept my distance from her and everyone. Hard not to share; I love to share. But every leap hurts someone new.",
       runeguard: "A cell gathers over one of us, ringed by how far it can leap. That one walks clear of everyone, and the rest stand apart from each other besides, so the bolt finds no second body. I diagrammed the ring. It is a good ring.",
       gorgemaw: "A dish that hops from plate to plate. Its first diner walked away from the table; the rest of us sat far apart. Once, mouth open, I let it hop into me and end there. Still hungry.",
@@ -281,7 +281,7 @@
     'Lightning Rods': { hard: false, learned: {
       bastion: "Iron rods in the rock, each wanting one of us when the bolt fell. I took one, and stood out of the next while I still crackled. The rods stayed up after, good cover. I would have posted a guard on them.",
       gloomsworn: "Iron rods were set in the stone, each hungry for one of us when the bolt came. I took one, then sat out the next while I still crackled. They stood on after, as shelter. Nothing wasted.",
-      thresher: "Iron rods stood in the stone like grave markers, each waiting on one of us for the bolt. I took a rod, then let someone else have the next while I still crackled. Good shelter afterwards, those rods. I would have kept them.",
+      thresher: "Iron rods stood in the stone, each waiting on one of us for the bolt. I took a rod, then let someone else have the next while I still crackled, taking turns like a good dance. Good shelter afterwards, those rods. I would have kept them.",
       bloodreaver: "A rod for each of us to catch. I took one and the bolt went straight through me. Lovely. The next rod I left alone; twice running would floor even me. Probably.",
       runeguard: "Iron rods are driven into the rock, and one of us belongs in each before the bolt falls. Whoever is still charged from a rod stands aside for the next. An empty rod strikes us all; I underlined empty.",
       gorgemaw: "Rods of iron, one per guest, each serving a single bolt. I took mine. A second helping while still buzzing from the first is poison, so I left that course to others. No rod goes uneaten.",
@@ -306,7 +306,7 @@
     'Avalanche': { hard: false, learned: {
       bastion: "He stamped and boulders rolled across the summit in lanes. I stood between the lanes and let them go by, then got behind one for the walls of wind. A boulder makes a decent redoubt if you arrive first.",
       gloomsworn: "Boulders came down the summit in lanes after his stamp. I waited between the lanes, then took the lee of a stone for the wind walls that follow. Cold comfort, a rock. I have had colder.",
-      thresher: "He stamped and the boulders came down in lines, like a landslide. I stood in the gap between the lines and let them roll past. Once they settled I kept one at my back for the wind walls. Nothing like a stone at your back.",
+      thresher: "He stamped and the boulders came down in lines, like a landslide. I stood in the gap between the lines and let them roll past, humming. Once they settled I kept one at my back for the wind walls. A stone at your back is a steady partner.",
       bloodreaver: "He stomped and rocks came rolling down marked lanes. Flattened by a rock? No honour in that. Stepped out of the lane, then hid behind the boulder when the walls came. Hiding. I know. Tell nobody.",
       runeguard: "The stamp, and lanes marked across the summit. One stands between the lanes as the boulders roll, then behind the boulders for the walls of wind that follow. A stone is a stone; a stone in the right place is a ward.",
       gorgemaw: "He stamped and the boulders came rolling down the table in lanes. One does not eat rocks. I stepped between the lanes, then sat behind a boulder when the walls of wind came round. Far too dry.",
@@ -331,7 +331,7 @@
     'Squall Line': { hard: false, learned: {
       bastion: "The storm's edge closed on one side and opened on the other, and the dry ground walked slowly round him. The line walked with it, step for step, never outside. Marching order, in other words.",
       gloomsworn: "The storm closed on one side and opened on the other, so the dry place travelled slowly round him. We walked with it, all of us, and none stepped out into the rain. Slow processions are a thing I know.",
-      thresher: "The storm's edge shut on one side and opened on the other, so the dry patch crept round him like a shadow round a pillar. We went with it together and never stepped out into the rain. A slow walk, and a dry one.",
+      thresher: "The storm's edge shut on one side and opened on the other, so the dry patch crept round him like a shadow round a pillar. We went with it together and never stepped out into the rain. A slow walk, a dry one, and rather pleasant.",
       bloodreaver: "The safe ground crawled round him and outside it the storm bit every heartbeat. Tempting, but no. I walked round with it and kept hitting him.",
       runeguard: "The safe ground slides off its centre, with a ghost of where it goes next. One walks with it round the Titan, inside its edge, and keeps striking; he is always within it. The ghost is the footnote that saves you.",
       gorgemaw: "The table itself moved round the cook, and past its edge the storm served nothing but sparks. I walked with the table, eating as I went. Inconvenient service, but I finished my plate.",
@@ -356,7 +356,7 @@
     'Ball Lightning': { hard: true, learned: {
       bastion: "Orbs of lightning drifted off the cliff edge and across the summit. I watched each one's heading and stepped off its path. Slow is not the same as harmless. A recruit learns that with his first slow horse.",
       gloomsworn: "Lightning orbs rose along the cliff and wandered across the summit. I marked each one's bearing and kept out of its way. I know something about slow things that arrive anyway.",
-      thresher: "Orbs came off the cliff and drifted over the summit, slow as drifting ash, each down its own straight line. I watched which way each was heading, stepped off its line, and went back to work. No hurry.",
+      thresher: "Orbs came off the cliff and drifted over the summit, slow as drifting ash, each down its own straight line. I watched which way each was heading, stepped off its line, and went back to work. Plenty of time, dears.",
       bloodreaver: "Balls of lightning wandering across the summit. Touch one and it bursts and flings you. I stepped aside. Not every scar is worth having.",
       runeguard: "Orbs are born of falling bolts at the cliff edge, each marked with its heading. One reads every path and stands clear of all of them as they drift through. Reading, not reflex: that is the discipline.",
       gorgemaw: "Little floating morsels of lightning, drifting across the table. They burst in the mouth, and not pleasantly. I stepped aside of each one's path. Fizzy, and best left on the tray.",
@@ -381,7 +381,7 @@
     'Eye of the Storm': { hard: false, learned: {
       bastion: "The wind dropped and nothing struck. I kept on him, kept the line together, watched for what came next. On the harder climb our colours turn over in this quiet; I checked mine twice, like buckles.",
       gloomsworn: "The wind fell away. The sky opened. Nothing came. I kept at him and waited for the next thing, which is most of what a watch is. On the harder climbs our colours flip in this calm; I checked mine.",
-      thresher: "Wind dropped, sky cleared, nothing fell: a suspicious sort of quiet. I kept working and kept looking. On the harder climb the colours swap over here, so I checked mine. Quiet is the time to check who is missing.",
+      thresher: "Wind dropped, sky cleared, nothing fell: a suspicious sort of quiet, and I rather like those. I kept working and kept looking. On the harder climb the colours swap over here, so I checked mine. Quiet is the time to see who is missing.",
       bloodreaver: "The storm stopped! No more biting from the sky. Too quiet. I kept hitting him, and on the hard climb I checked my colour twice; it flips when the calm comes.",
       runeguard: "The clouds part and the storm's steady grind ceases. One rests, mends, strikes; and on the harder ascent one reads one's charge anew, for it reverses. I footnoted it in red, and I am rarely so dramatic.",
       gorgemaw: "A palate cleanser: the storm stops, the air goes still. The cook stays at table, so I kept eating. On the harder climb, everyone's colour turns over, like a crêpe.",
@@ -406,7 +406,7 @@
     'Still Air': { hard: false, learned: {
       bastion: "Stones lit, gold and blue. I took the one matching my colour and stood at it like a sentry at a gate. Every stone needed a man, or the whole summit would pay for it.",
       gloomsworn: "The stones lit, gold and blue. I took the one that matched me, stood by it alone, and waited for the eye to shut. Not one stone was left empty. A post is a post, even without a gate.",
-      thresher: "The standing stones lit gold and blue. I took the one that matched me and stood by it alone till the calm passed. Every stone had somebody; nothing left bare. An empty stone does mischief.",
+      thresher: "The standing stones lit gold and blue. I took the one that matched me and stood by it alone till the calm passed. Every stone had somebody and nothing was left bare, as it should be. An empty stone is a missed appointment.",
       bloodreaver: "Stones lit up gold and blue. Found one of my own colour and stood at it alone. Wrong colour, it strikes you. Empty stone, it strikes everyone, and I'd rather my friends' bruises were earned.",
       runeguard: "The stones kindle, gold and blue. Each of us goes to a stone of our own charge, one apiece, there before the Eye closes; none left empty. I stood at mine and read the other stones aloud, so no one erred.",
       gorgemaw: "The stones lit like places set at table, gold and blue, one per guest. I sat at a place of my own colour. Sit at the wrong one and it bites; leave one empty and it throws a tantrum at everyone.",
@@ -431,7 +431,7 @@
     'Distant Thunder': { hard: false, learned: {
       bastion: "Thunder, far off. Nothing reached us. I kept my post at my stone and did not flinch, though I felt the others watching to see whether I would.",
       gloomsworn: "Thunder rolled somewhere far away and nothing touched us. I stayed beside my stone and did not flinch. Standing still is one thing the dead do well.",
-      thresher: "Thunder rolled away over the far hills, somebody else's weather. Nothing came in on us. I stayed at my stone and did not go wandering off to look. Not yet.",
+      thresher: "Thunder rolled away over the far hills, somebody else's weather. Nothing came in on us. I stayed at my stone and did not go wandering off to look. Not yet!",
       bloodreaver: "Thunder, way off over the peaks. Not a scratch! Shameful. I kept swinging.",
       runeguard: "Thunder, far off: a sign without a blow, only the storm gathering beyond the eye. No answer is needed. I wrote that down, and then wrote it again for emphasis. Not foreseen; now it is.",
       gorgemaw: "Thunder rumbled in the distance, like a kitchen clattering in another building. Nothing was served. I kept eating.",
@@ -456,7 +456,7 @@
     'Eye Closes': { hard: false, learned: {
       bastion: "The calm ended. I was at my stone, in my colour, when it did, and the storm came back down on the line. First rule of a post: be on it when the bell goes.",
       gloomsworn: "At my stone, in my colour, when the calm ended. Then the storm returned, and I stood in it as I stand in everything.",
-      thresher: "The calm ended the way a fine evening turns. By then I was by my stone, my own colour, and the weather came straight back, shaking itself like a dog come in from the rain.",
+      thresher: "The calm ended the way a fine evening turns. By then I was by my stone, my own colour, and the weather came straight back, shaking itself like a dog come in from the rain. Rude, but expected.",
       bloodreaver: "The quiet broke. I was at a stone of my own colour when it did, as I should be. Then the sky came back, biting. Good. I missed it.",
       runeguard: "The calm draws shut, and one must be at one's stone, of one's own charge, before it closes; then brace for the storm resumed. I was early. I am always early. It is my one vanity.",
       gorgemaw: "The calm closed and the kitchen roared back to life. I was seated at my own place, the right colour. Then the next course.",
@@ -481,7 +481,7 @@
     'Gathering Storm': { hard: false, learned: {
       bastion: "Static settled on all of us and bit, over and over. I kept close to the healers with my guard ready and let them mend the line as it went. It held by a thread. A good thread, well tied.",
       gloomsworn: "Static settled on all of us and kept biting. I stayed close to the healers so they could keep us mended. Held up by a thread, and I know the sensation.",
-      thresher: "Static settled on all of us and stung, over and over, like a swarm of wasps. I kept close by the menders so they could tend us all at once, and kept working while it lasted. Prickly lot, storms.",
+      thresher: "Static settled on all of us and stung, over and over, like a swarm of wasps. I kept close by the menders so they could tend us all at once, and kept working through it, humming. Prickly company, storms, but company all the same.",
       bloodreaver: "The storm gathered in all of us at once, biting again and again, more than any of us could carry alone! I kept hitting to drink it back, and the healers did the rest. Bleed first, then drink.",
       runeguard: "Static clings to every one of us, and bites again and again. One gathers near the healers, keeps every ward in hand, and expects the Thunderhead behind it. The pattern is sequence, not surprise.",
       gorgemaw: "A long tasting menu: every guest served static, over and over, and a great dish to finish. Too much for anyone to eat alone, so we sat together by the healers and they kept us topped up.",
@@ -506,7 +506,7 @@
     'Thunderhead': { hard: false, learned: {
       bastion: "The static broke as one great blast on all of us. I had my guard saved for that moment, the healers had the line whole first, and we took it standing. Headcount after: all present, and swearing.",
       gloomsworn: "The static broke all at once over every one of us. I had saved my strength for it and the healers had us full beforehand. Being whole is worth a great deal. I did not always know that.",
-      thresher: "All that static came due at once and broke on every one of us. I knew it was coming, so I had my guard up and came in mended beforehand. Nothing to step out of; only to be ready.",
+      thresher: "All that static came due at once and broke on every one of us. I knew the hour was coming, so I had my guard up and came in mended beforehand. Nothing to step out of, only to be ready, and I was.",
       bloodreaver: "The Thunderhead broke on all of us. A fine scar! I took it with everything I had left and drank back what I could.",
       runeguard: "The static's ticking ceases, which is the sign. Every ward raised, the wounded mended first, and then the Thunderhead breaks over us. As foreseen, and as survived.",
       gorgemaw: "The final course: a Thunderhead served to everyone at once. One eats it whole, with every bit of fortitude one brought to table. Heavy, but I was hungry.",
@@ -531,7 +531,7 @@
     'Skyfall': { hard: true, learned: {
       bastion: "He called the sky down on the spot where one of us stood. The nearer you are, the worse it falls. I gave ground away from it, as far as the edge allowed. A retreat on orders, my own.",
       gloomsworn: "He dropped the sky on the spot where one of us had been. The closer you are, the harder it lands. I went as far from it as the summit allowed. Even I hide from some things.",
-      thresher: "The weather picked the spot where one of us had stood and brought the sky down on it. The nearer you stand, the harder it falls, so I walked off to the far edge of the summit and let it land on empty rock. Wrong place for a funeral.",
+      thresher: "The weather picked the spot where one of us had stood and brought the sky down on it. The nearer you stand, the harder it falls, so I strolled to the far edge of the summit and let it land on empty rock. An appointment nobody was keeping.",
       bloodreaver: "Thunder-belly called the sky down where one of us stood. Got as far from that spot as I could. Even I don't want that one.",
       runeguard: "The clouds open over the spot where one of us stood as he called it. The distance is the ward: everyone as far from that spot as the summit permits. A rare case where retreat is doctrine.",
       gorgemaw: "The sky itself, served on one spot, the plate where a guest had stood. The closer you sit, the larger the portion. I sat at the far end of the table.",
@@ -556,7 +556,7 @@
     'Heavens Fall': { hard: false, learned: {
       bastion: "The sky came down on a marked spot at his side. All of us stood in it together, gold and blue both, and held it up as a line. Each fall was heavier than the last. My arms shook. Nobody dropped it.",
       gloomsworn: "Under the falling sky a circle was painted at his side. We crowded into it, mixed colours, and split the load. Each blow weighed more than the one before. The watch carries what it must.",
-      thresher: "A patch was drawn at his side, and the sky meant to land on it. Every one of us crowded in, mixed colours, shoulder to shoulder, and shared the weight. It got heavier each time. Not once did anyone fall.",
+      thresher: "A patch was drawn at his side, and the sky meant to land on it. Every one of us crowded in, mixed colours, shoulder to shoulder, and shared the weight. It got heavier each time, and not one of us fell. Do mind the step, dear.",
       bloodreaver: "The sky came down and all of us stood under it together, gold and blue mixed. Every fall a little heavier. Better and better! A bruise shared is a bruise halved, and I never thought I'd say that.",
       runeguard: "A column of sky is marked on the floor beside the Titan. The whole party stands within it, both charges present, sharing the blow. Each fall is heavier than the last, so the page grows darker as it goes.",
       gorgemaw: "The last course, shared by all at one table: the sky itself. Everyone in the circle, gold and blue both, splitting the plate. Richer each time.",
@@ -581,7 +581,7 @@
     'Grounding Rods': { hard: true, learned: {
       bastion: "Orders for the harder climb: a rod over each gold, planted wherever he stands. Put them a stride off Volkar, east and west, level with him. I watched the rods go in, then went to my partner's.",
       gloomsworn: "Hard climb: every gold one of us had an iron rod hanging above, planted wherever they happened to stand. Ours went in east and west of Volkar, level with him, and the blues came to join them. I went to my partner's as soon as it was in.",
-      thresher: "Harder climb: a rod hangs over every gold one of us and goes into the floor wherever it stands. So we stood the golds a stride out either side of Volkar, level with him, east and west, and the blues wandered over to meet them. A neat pair of pillars.",
+      thresher: "Harder climb: a rod hangs over every gold one of us and goes into the floor wherever it stands. So we stood the golds a stride out either side of Volkar, level with him, east and west, and the blues wandered over to meet them. A tidy pair of pillars.",
       bloodreaver: "Iron rods over the two golds, hammered in where they stood. A stride off the mountain, one east, one west, level with him. I found my partner's rod and stayed by it. No scar. Pity.",
       runeguard: "An iron rod hangs over each gold charge, and it stays wherever they stand. Plant them a stride to either side of the Titan, east and west, in the very row he stands in; the blue partners mark where they fall and join them. Placement is the whole text.",
       gorgemaw: "The cook handed each gold guest an iron skewer, planted wherever they stood. Ours went a stride to either side of him, east and west, level with his middle, like cutlery laid properly. I joined my partner at hers. Correctly set, for once.",

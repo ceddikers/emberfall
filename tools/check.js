@@ -70,8 +70,8 @@ const RAIDS = [   // [boss name, boss id, tank, healer, two DPS, optional 'gear=
   ['the Hollow King', 'hollowking', 'gloomsworn:base', 'alembist:base', 'ranger:base', 'pyromancer:base'],
   // Thresher (class 19): the base kit and each spec as the damage dealer
   ['Grubnak', 'grubnak', 'bastion:base', 'cleric:base', 'thresher:base', 'pyromancer:base'],
-  ['Skitterra', 'skitterra', 'bastion:base', 'grovekeeper:base', 'thresher:sower', 'ranger:base'],
-  ['Volkar', 'volkar', 'bastion:base', 'cleric:base', 'thresher:grim', 'pyromancer:base'],
+  ['Skitterra', 'skitterra', 'bastion:base', 'grovekeeper:base', 'thresher:dancer', 'ranger:base'],
+  ['Volkar', 'volkar', 'bastion:base', 'cleric:base', 'thresher:phantom', 'pyromancer:base'],
   ['the Hollow King', 'hollowking', 'bastion:base', 'cleric:base', 'thresher:base', 'ranger:base'],
   // Tidecaller (class 20): the base kit and each spec healing a boss
   ['Grubnak', 'grubnak', 'bastion:base', 'tidecaller:base', 'ranger:base', 'pyromancer:base'],
@@ -669,12 +669,12 @@ function hollowCheck() {
   else fail('Hollow: debt, healing, death, bypasses', out.slice(-900));
 }
 
-// ---------------------------------------------------------------- 3c. the Thresher's wide arc (tools/thresher-arc-test.js)
-function thresherArcCheck() {
-  const r = spawnSync(process.execPath, [path.join(__dirname, 'thresher-arc-test.js')], { cwd: ROOT, encoding: 'utf8' });
+// ---------------------------------------------------------------- 3c. the Reaper's string, marks, Snap and Gate (tools/reaper-test.js)
+function reaperCheck() {
+  const r = spawnSync(process.execPath, [path.join(__dirname, 'reaper-test.js')], { cwd: ROOT, encoding: 'utf8' });
   const out = (r.stdout || '') + (r.stderr || '');
-  if (r.status === 0 && /Thresher arc OK/.test(out)) pass('Thresher: Reap arcs onto adds in front, not behind', out.trim().split(/\r?\n/).pop());
-  else fail('Thresher: Reap arcs onto adds in front, not behind', out.slice(-900));
+  if (r.status === 0 && /Reaper OK/.test(out)) pass('Reaper: string, finishers, marks, Snap, Void Star, Gate', out.trim().split(/\r?\n/).pop());
+  else fail('Reaper: string, finishers, marks, Snap, Void Star, Gate', out.slice(-900));
 }
 
 // ---------------------------------------------------------------- 3f. the Kenseier's deflect and the boss's Posture (tools/kenseier-test.js)
@@ -845,7 +845,7 @@ async function heavy() {
   try { rejoinCheck(); } catch (e) { fail('Rejoin checked', e.stack); }
   try { stampCheck(); } catch (e) { fail('Stamps checked', e.stack); }
   try { journalCheck(); } catch (e) { fail('Journals checked', e.stack); }
-  try { thresherArcCheck(); } catch (e) { fail('Thresher arc checked', e.stack); }
+  try { reaperCheck(); } catch (e) { fail('Reaper checked', e.stack); }
   try { featsCheck(); } catch (e) { fail('Feats checked', e.stack); }
   try { pvpCheck(); } catch (e) { fail('PvP checked', e.stack); }
   await heavy();

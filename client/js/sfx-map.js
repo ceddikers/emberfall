@@ -159,11 +159,11 @@
       rite: L('ab-shield', 'ab-heal'), vigil: L('ab-shield', 'ab-holy'), pyre: L('ab-heavy', 'ab-fire'), reave: L('ab-slash', 'ab-heavy'),
       wardmantle: L('ab-shield', 'ab-wind'), pact: L('ab-heavy', 'ab-buff'), eclipsevigil: ULT('gloomsworn'), taunt: 'ab-taunt', auto: 'ab-slash',
     },
-    // Reaper (class id thresher): long steel scythe sweeps with the hollow wind of afflictions and a toll where one comes due; every move has its own voice (sfx-synth.js ABIL.thresher)
+    // Reaper (class id thresher): inky black smoke with blue lightning, a quick scythe through low muffled air with glassy blue crackle; every move has its own voice (sfx-synth.js ABIL.thresher), and the moments
+    // the kit sends (a swing's rising note, the four finishers, runes, the Snap's pops, the Void Star, the Gate's strikes and release) go through SoundHooks.thresher
     thresher: {
-      slash: L('ab-slash', 'ab-wind'), hook: L('ab-thread', 'ab-shot'), reap: L('ab-heavy', 'ab-slash'), gather: L('ab-wind', 'ab-buff'),
-      blink: L('ab-stab', 'dash'), wisp: L('ab-wind', 'ab-heal'), sowing: L('ab-wind', 'ab-dot'), cull: L('ab-heavy', 'ab-dot'), hourglass: L('ab-stab', 'ab-time'), nightfall: L('ab-stab', 'ab-wind'),
-      gatestrike: L('ab-slash', 'ab-wind'), reapersgate: ULT('thresher'), auto: 'ab-melee-generic',
+      string: L('ab-slash', 'ab-wind'), finish: L('ab-heavy', 'ab-slash'), snap: L('ab-buff', 'ab-stab'), star: L('ab-wind', 'ab-time'), veil: L('ab-shield', 'ab-wind'), frenzy: L('ab-buff', 'ab-slash'),
+      arcanegate: ULT('thresher'), gatecut: L('ab-slash', 'ab-stab'), twinstar: L('ab-wind', 'ab-time'), gravewalk: L('ab-wind', 'dash'), auto: 'ab-melee-generic',
     },
     // Tidecaller (class id tidecaller): sea water, surf, a conch, droplets and a bell under the waves; every move has its own voice (sfx-synth.js ABIL.tidecaller)
     tidecaller: {

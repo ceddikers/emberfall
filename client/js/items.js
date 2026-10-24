@@ -205,13 +205,13 @@ Object.assign(ITEM_PERKS, {
 // ---------------------------------------------------------------- Thresher (damage, class 19)
 // Weapon shape: 'scythe' (a long black snath, a pale crescent blade). Placeholder item art until the painted set is in.
 CLASS_MAIN.thresher = 'phys';
-CLASS_GEAR.thresher = { wtype: 'scythe', w: ["Recruit's Sickle", 'Carving-Hall Scythe', 'Silkcleaver Scythe', 'Stormbled Scythe', 'Scythe of the Last Toll'], a: ['Scullery-Night Leathers', 'Webwatch Leathers', 'Stormvigil Leathers', 'Shroud of the Last Toll'] };
+CLASS_GEAR.thresher = { wtype: 'scythe', w: ["Recruit's Sickle", 'Carving-Hall Scythe', 'Silkcleaver Scythe', 'Stormbled Scythe', 'Scythe of the Last Harvest'], a: ['Scullery-Night Leathers', 'Webwatch Leathers', 'Stormvigil Leathers', 'Shroud of the Last Harvest'] };
 Object.assign(ITEM_PERKS, {
-  thresher_w1: { ab: 'slash', text: 'A Backswing cuts for 50% more.' },
-  thresher_a2: { ab: 'reap', text: 'A popped Mark pays 20% more.' },
-  thresher_w2: { ab: 'hook', text: 'Hook cuts for 30% more.' },
-  thresher_w3: { ab: 'wisp', text: 'Spirit Wisp lasts 20s instead of 15s (Cull recharges 5s sooner).' },
-  thresher_a4: { ab: 'blink', text: 'Gloam Blink takes 70% off for 1s instead of 50%.' },
+  thresher_w1: { ab: 'string', text: 'The fourth swing cuts for 30% more.' },
+  thresher_a2: { ab: 'snap', text: 'Popped marks pay 20% more.' },
+  thresher_w2: { ab: 'finish', text: 'Finishers cut for 25% more.' },
+  thresher_w3: { ab: 'star', text: 'Void Star comes back 5s sooner.' },
+  thresher_a4: { ab: 'veil', text: 'Dusk Veil takes 45% off instead of 35%.' },
 });
 
 // ---------------------------------------------------------------- Tidecaller (healer, class 20)

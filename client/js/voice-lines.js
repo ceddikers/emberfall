@@ -72,7 +72,7 @@ const VoiceLines = (() => {
         adj: 'theatrical, eerie, playful', ref: 'A puppeteer who speaks for two: themself and the Doll. Androgynous, unsettlingly sweet, like a stage host in an empty theatre.' } },
     thresher: { name: 'Reaper', color: '#8fd8e8', hint: { pitch: 1.0, rate: 0.95 },
       dir: { age: 'thirties', accent: 'cool, precise, faintly continental', pacing: 'unhurried, measured, a pause before the word that matters',
-        adj: 'composed, elegant, quietly amused', ref: 'A slim, hooded reaper with a pale mask and a graceful scythe, who keeps appointments rather than hunting. Cool and courteous, a dry wit, never cruel and never in a hurry.' } },
+        adj: 'composed, elegant, quietly amused', ref: 'A young reaper in a wide straw sun hat and a white sundress, with long fair hair and a pale scythe, who keeps appointments rather than hunting. Cool and courteous, a dry wit, never cruel and never in a hurry.' } },
     tidecaller: { name: 'Tidecaller', color: '#3fb8a8', hint: { pitch: 1.1, rate: 0.8 },
       dir: { age: 'thirties', accent: 'soft, coastal, a long vowel at the end of every phrase', pacing: 'slow, sing-song, never hurried, a breath before the last word',
         adj: 'patient, salt-wise, warm', ref: 'A tall barefoot singer who has listened to the sea all her life and finds most things in a hurry mildly funny. Low and unhurried, a lilt that rises and ebbs like a swell; never mystical or breathy for effect.' } },
@@ -248,7 +248,7 @@ const VoiceLines = (() => {
       low: ['Hollow! Heal me, now!', 'The debt is rising!', 'Heal me! I am running out of self!'],
       ult: ['Eclipse of the Vigil.', 'Let the dark pour out.', 'Stand in my shadow!'],
       victory: ['The watch is relieved.', 'Dawn. I remember dawn.'] },
-    // Reaper (id thresher): a hooded, elegant reaper who keeps appointments; cool, composed, darkly amused, never in a hurry
+    // Reaper (id thresher): an elegant reaper in a straw hat and a white sundress who keeps appointments; cool, composed, darkly amused, never in a hurry
     thresher: { chance: 0.13,
       move: ['Mind the mist.', 'Gliding.', 'Lightly now.', 'In time.', 'The next step.', 'Without a sound.', 'Just passing.', 'Round the edge.'],
       select: ['Reaper. Yes?', 'Someone is due.', 'I keep a long list.', 'The scythe is ready.'],
