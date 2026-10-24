@@ -11,7 +11,6 @@
 
 // a rough damage per second per role (the boss files' big-number units), to size the Shade for the party it meets
 const TRIAL_RATE = { tank: 1300, healer: 800, dps: 2000 };
-const TRIAL_HP_SCALE = [0.42, 0.62, 0.82, 1];   // fight.js scale.hp by party size
 
 // the Hollow King's moves, with the tags his telegraphs and effects already know
 function trialMoves(f) {
@@ -533,8 +532,7 @@ function trialDef(specId) {
   const T = TRIALS[specId];
   if (!T) return null;
   const party = [CLASSES.find(c => c.id === T.cls).role, ...T.allies.map(a => CLASSES.find(c => c.id === a.split(':')[0]).role)];
-  const n = Math.min(4, party.length);
-  const hp = Math.round(T.seconds * party.reduce((s, r) => s + TRIAL_RATE[r], 0) / TRIAL_HP_SCALE[n - 1]);
+  const hp = Math.round(T.seconds * party.reduce((s, r) => s + TRIAL_RATE[r], 0));
   return {
     id: 'hollowking', trial: specId, name: `Shade of the Hollow King`, title: T.name,
     hp: { normal: hp, hard: hp }, autoDmg: { normal: 1300, hard: 1300 },

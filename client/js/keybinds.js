@@ -69,7 +69,7 @@ const Keybinds = (() => {
   // game's own positioning stay as they are underneath).
   const PIECES = [
     { sel: '#combat-hud', name: 'Hotbar' }, { sel: '#pf-wrap', name: 'Party frames' }, { sel: '#boss-bar', name: 'Boss bar' },
-    { sel: '#raid-left', name: 'Threat & progress' }, { sel: '#live-meter', name: 'Damage meter' }, { id: 'metermode', def: 'b', name: 'Meter: next view' }, { sel: '#waymarks', name: 'Markers' },
+    { sel: '#raid-left', name: 'Progress' }, { sel: '#live-meter', name: 'Damage meter' }, { id: 'metermode', def: 'b', name: 'Meter: next view' }, { sel: '#waymarks', name: 'Markers' },
     { sel: '#lb-gauge', name: 'Limit Break' }, { sel: '#minimap', name: 'Minimap' }, { sel: '#target-frame', name: 'Target' }, { sel: '#focus-frame', name: 'Focus' },
   ];
   let layout = {};
