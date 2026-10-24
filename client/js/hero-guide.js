@@ -217,14 +217,14 @@ HERO_GUIDE.gloomsworn = {
 };
 // Thresher (damage, class 19)
 HERO_GUIDE.thresher = {
-  passive: { name: 'The Toll', icon: 'reap', desc: 'Four afflictions darken on the boss, each in its own bar: Mark (a bleed), Drain (mends you), Bind (pulses) and Thread (waits to be snapped). Each is faint (pale) for 3s, then gold for 5s, then lapsed. Reap spends them all: gold pays in full, faint only 40%, lapsed 65%. A hit lays only an affliction that is not up or has lapsed, so you never reset a darkening one: the gold comes on its own, and the only way to waste it is to wait too long.' },
+  passive: { name: 'The Toll', icon: 'reap', desc: 'Four afflictions lie on the boss, each in its own slot: Mark (a bleed), Drain (mends you), Bind (pulses) and Thread (waits to be snapped). Laying one that is already up adds a Weight (up to 3) and starts its 15s again. Every Weight ticks, and every Weight pays when you pop it. Each pops its own way: Mark is the big hit, Drain mends you, Bind fetters the boss so the party takes 10% less for 4s, and Thread gives a Hook charge back. At full Weight an affliction pays 50% more.' },
   combos: [
     { keys: ['q', 'q'], text: 'Slash lays a Mark, Cleave a Drain. Keep pressing Q: a hit pressed within 1.2s of your last recovery adds a Backswing, a free second cut.' },
-    { keys: ['w', 'd'], text: 'Hook lays the Thread and Gloam Blink binds. Both keep your Backswing going, so use them between your Slashes. When all four bars are up, stop: nothing more can be laid until one darkens or rots.' },
-    { keys: ['q', 'q', 'e'], text: 'Wait for gold, then Reap. E glows when any bar is in its gold stretch (the marked part): press it when most of them are. Too early pays 40%, too late 65%. All four gold at once is the Full Toll: the hour strikes again, so a beat of waiting for the fourth is worth it.' },
-    { keys: ['r', 'e'], text: 'Beckon puts every bar on the edge of gold at once. Press it, then Reap: you can cash the full toll early, or hold the gold for the moment the party bursts.' },
-    { keys: ['f'], text: 'Spirit Wisp as soon as it is ready: it strikes every 2.5s for 15s and binds the boss if nothing else has. With the Sacrifice talent, press it again to pop it for a big hit and a damage bonus.' },
-    { keys: ['t', 'q', 'q', 'q', 'q', 'q'], text: 'Reaper\'s Gate when T is full: nothing can touch you for 8s. Press Q once a second: each strike lays the next affliction, and the fifth, The Fifth, releases all four fully due. Do not stop at four.' },
+    { keys: ['w', 'd'], text: 'Hook lays the Thread and Gloam Blink binds. Both keep your Backswing going, so use them between your Slashes, and keep laying them: every press is another Weight.' },
+    { keys: ['q', 'q', 'e'], text: 'Reap pops them all. E glows with three up. Every one at full Weight is the Full Toll: the hour strikes again for a heavy blow, so build the Weight before you cash it, unless you need what a pop gives now.' },
+    { keys: ['d', 'r'], text: 'Sever rips out only the affliction you laid last (the chevron on the gauge), at half again its worth. Blink then Sever as a raidwide lands: the Bind\'s fetter is on the party just when it hurts.' },
+    { keys: ['f'], text: 'Spirit Wisp as soon as it is ready: it strikes every 2.5s for 15s and binds the boss if nothing else has. With the Sacrifice talent, press it again to pop it for a big hit and a Weight on the affliction you laid last.' },
+    { keys: ['t', 'q', 'q', 'q', 'q', 'q'], text: 'Reaper\'s Gate when T is full: nothing can touch you for 8s. Press Q once a second: each strike lays the next affliction at full Weight, and the fifth, The Fifth, pops all four. Do not stop at four.' },
   ],
 };
 // Tidecaller (healer, class 20)

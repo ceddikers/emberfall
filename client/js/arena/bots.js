@@ -1838,35 +1838,37 @@ BOT_CLASS.gloomsworn = {
 };
 
 // ======================================================================= Reaper (id thresher; damage, class 19)
-// Thresher: keep all four afflictions up (Hook for the Thread, Gloam Blink for the Bind, Slash and Cleave for the Mark and Drain),
-// Gather the young ones to gold or put a rotting set back, and Reap once the gold is in (or just before it rots). The Wisp on cooldown.
-// Inside Reaper's Gate it only strikes: each Slash is a Gate Strike. (A Reap held back for a boss that is nearly dead is not read:
-// the view carries no boss health here.) The Ultimate itself is pressed through BotAI.ult, its botOk wanting an affliction up.
+// Reaper: keeps all four afflictions up and weighted (Hook for the Thread, Gloam Blink for the Bind, Slash and Cleave for the Mark
+// and Drain), Severs what it laid last once that is at full Weight (a Bind just before a telegraph lands, for the party's 10%),
+// and Reaps for the Full Toll, or before something runs out (sooner with an add in the arc). The Wisp on cooldown. Inside Reaper's
+// Gate it only strikes: each Slash is a Gate Strike. The Ultimate itself is pressed through BotAI.ult.
 BOT_CLASS.thresher = {
   act(bot, k, view) {
     const idx = id => k.abilities.findIndex(a => a.id === id || a.replaces === id);
     const ok = i => { const a = k.abilities[i]; return i >= 0 && !!a && k.usable(a) && k.readyIn(a) <= 0.0001 && k.available(a); };
     const weave = k.gcdRemaining() > 0.55 && !k.cast && k.lockUntil <= k.now;
-    const on = thCount(k), gold = thCount(k, 2), young = thCount(k, 1), rot = thCount(k, 3), R = thR(k);
-    const soon = THRESH.IDS.some(id => thStage(k, id) === 2 && k.now - k.g.aff[id] > R - 1.5);
-    const slash = idx('slash'), hook = idx('hook'), reap = idx('reap'), gather = idx('gather'), blink = idx('blink'), wisp = idx('wisp');
+    const max = thMaxW(k), avail = thAvail(k).length, on = thCount(k), full = thFull(k), total = thTotal(k), last = k.g.last;
+    const ending = THRESH.IDS.some(id => k.g.aff[id] && k.g.aff[id].until - k.now < 2.5);
+    const slash = idx('slash'), hook = idx('hook'), reap = idx('reap'), sever = idx('gather'), blink = idx('blink'), wisp = idx('wisp');
     // a dash cut can land in something on the floor: not with a telegraph about to resolve
     const floor = view.mechs.some(m => ['aoe', 'safe', 'tower', 'proximity', 'gale', 'drop', 'gaze', 'stack', 'spread'].includes(m.type) && m.resolveAt - view.t < 2.5);
+    const hit = view.mechs.some(m => m.resolveAt - view.t < 1.5 && m.resolveAt > view.t);   // (something about to land: a Bind's pop helps the party)
     if (weave && !k.ultWin) {
-      if (ok(wisp) && (k.abilities[wisp].id === 'cull' ? on >= 3 : !k.has('wisp'))) return wisp;
-      if (!floor && ok(hook) && thStage(k, 'thread') === 0) return hook;
-      if (!floor && ok(blink) && thStage(k, 'bind') === 0 && !(k.def.noAff && k.def.noAff.indexOf('bind') >= 0)) return blink;
-      if (!floor && k.def.blinkAge && ok(blink) && young >= 2 && gold === 0) return blink;   // (a Grim's Blink ripens the afflictions)
-      if (ok(gather)) {
-        if (k.abilities[gather].id === 'sowing') { if (on <= 1) return gather; }
-        else if (on >= 2 && (rot >= 1 || (ok(reap) && young >= 2 && gold === 0))) return gather;
+      if (ok(wisp) && (k.abilities[wisp].id === 'cull' ? total >= 6 : !k.has('wisp'))) return wisp;
+      if (!floor && ok(hook) && thW(k, 'thread') < max) return hook;
+      const bl = ok(blink) ? k.abilities[blink].id : null;
+      if (!floor && bl === 'hourglass' && k.readyIn(k.abilities[reap]) < 3) return blink;
+      if (!floor && bl === 'nightfall' && on >= 2 && full < on) return blink;
+      if (!floor && bl === 'blink' && (k.def.blinkDeepen ? last && thW(k, last) && thW(k, last) < max : thW(k, 'bind') < max)) return blink;
+      if (ok(sever)) {
+        if (k.abilities[sever].id === 'sowing') { if (on <= 1) return sever; }
+        else if (last && thW(k, last) && ((last === 'bind' && hit) || (thW(k, last) >= max && !ok(reap) && k.readyIn(k.abilities[reap]) > 2))) return sever;
       }
     }
     if (k.gcdRemaining() > 0 || k.cast || k.lockUntil > k.now) return null;
     // an add in the scythe's arc as well as the main target: the Reap's wide cut pays twice, so it goes a little sooner
     const crowd = k.env.enemiesNear ? k.env.enemiesNear(THRESH.ARC_R).length >= 2 : false;
-    const toll = on === 4 && gold === 3 && rot === 0 && !soon && !crowd;   // (the Full Toll: a beat more for the fourth gold)
-    if (!k.ultWin && ok(reap) && on > 0 && ((gold >= Math.max(2, on - 1) && !toll) || (soon && gold >= 1) || rot >= 2 || (crowd && gold >= Math.max(1, on - 2)))) return reap;
+    if (!k.ultWin && ok(reap) && on > 0 && (full >= avail || ending || (crowd && on >= 2))) return reap;
     return ok(slash) ? slash : null;
   },
 };

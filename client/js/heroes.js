@@ -1885,7 +1885,7 @@ SPEC_ART.duskward = function (ctx, st) {
 
 // Reaper (the class id stays `thresher`; damage, class 19): a slim, elegant figure in a long black-violet cloak with a deep
 // hood and a pale porcelain mask, a faint teal soul-glow behind its eyes and a soul-wisp on a fine chain at the hip. The scythe
-// is long and graceful: a black snath with violet bands, a slender crescent blade of pale silver with a teal edge and a soul-ribbon
+// is graceful: a black snath with violet bands, a hooked crescent blade of pale silver curling back with a teal edge and a soul-ribbon
 // streaming from its head. In the Reaper's Gate (st.thMist, set by ability-vfx.js) the body goes to mist.
 HERO_ART.thresher = function (ctx, st) {
   const void_ = '#0c0a14', vioD = '#2a1840', vioM = '#4a2a6a', vioL = '#7a5aa8', bone = '#e8e4dc', boneD = '#b8b2c4', teal = '#8fd8e8', pale = '#e0f6ff';
@@ -1922,33 +1922,38 @@ HERO_ART.thresher = function (ctx, st) {
   const dir = swingDir(st), rot = 0.55 + dir * s * 1.35 - big * 1.5 - cast * 0.5 + bash * 0.25;
   const blade = grim ? '#e8e2d8' : '#e4eaf2', edge = teal;
   ctx.save(); ctx.translate(5, 10); ctx.rotate(rot);
-  // the snath: long, slender and black, ringed with violet at the grips, a small teardrop weight at the heel
-  poly(ctx, [-14, -1.2, 20, -1.5, 40, -1.2, 40, 1.2, 20, 1.5, -14, 1.2], void_, OUT, 1.3);
-  line(ctx, -12, -0.3, 39, -0.3, vioM, 0.8);
-  for (const gx of [4, 24]) rrect(ctx, gx, -2.1, 2.6, 4.2, 0.9, vioL, OUT, 0.8);
-  poly(ctx, [-14, 0, -18, -2, -21, 0, -18, 2], vioM, OUT, 1);
-  circle(ctx, -17, 0, 0.9, teal);
-  // the blade: a long slender crescent swept forward from the head, a collar of violet at its root, the edge lit teal
-  circle(ctx, 40, 0, 2.6, vioM, OUT, 1.1); circle(ctx, 40, 0, 1, teal);
-  const bl = grim ? 0.92 : 1;
-  poly(ctx, [37, 2.2, 46, -2.8, 58, -9.5, 72, -14.5, 86, -13.5, 96 * bl, -7, 85, -10, 72, -10, 58, -5.2, 47, 1.8, 40, 4.2], blade, OUT, 1.4);
-  line(ctx, 46, -2, 71, -12, grim ? '#cfc8bc' : '#c8d4e4', 0.7);                // the spine's sheen
+  // the snath: slender and black, ringed with violet at the grips, a small teardrop weight at the heel
+  poly(ctx, [-12, -1.2, 16, -1.5, 32, -1.2, 32, 1.2, 16, 1.5, -12, 1.2], void_, OUT, 1.3);
+  line(ctx, -10, -0.3, 31, -0.3, vioM, 0.8);
+  for (const gx of [3, 20]) rrect(ctx, gx, -2.1, 2.6, 4.2, 0.9, vioL, OUT, 0.8);
+  poly(ctx, [-12, 0, -16, -2, -19, 0, -16, 2], vioM, OUT, 1);
+  circle(ctx, -15, 0, 0.9, teal);
+  // the blade: a true scythe's crescent, hooked off the head of the snath and curling back towards the hands (as in the
+  // portrait), widest at the bend and drawn to a fine point; a collar of violet at its root, the inner edge lit teal
+  circle(ctx, 32, 0, 2.6, vioM, OUT, 1.1); circle(ctx, 32, 0, 1, teal);
+  ctx.save();
+  if (grim) { ctx.translate(32, 0); ctx.scale(0.92, 0.92); ctx.translate(-32, 0); }
+  const scythe = () => { ctx.beginPath(); ctx.moveTo(30, 3.4); ctx.bezierCurveTo(41, -1, 39, -17, 25, -21); ctx.bezierCurveTo(19, -22.4, 13, -21.4, 8, -18.6);
+    ctx.bezierCurveTo(14, -18.6, 25.5, -16, 29.6, -6.5); ctx.lineTo(29.4, -2.6); ctx.closePath(); };
+  ctx.fillStyle = blade; ctx.strokeStyle = OUT; ctx.lineWidth = 1.4; ctx.lineJoin = 'round'; scythe(); ctx.fill(); ctx.stroke();
+  ctx.save(); ctx.strokeStyle = grim ? '#cfc8bc' : '#c8d4e4'; ctx.lineWidth = 0.7; ctx.beginPath(); ctx.moveTo(35.5, -4); ctx.bezierCurveTo(36, -12, 32, -17.5, 24, -19.4); ctx.stroke(); ctx.restore();   // the spine's sheen
   // thorny violet cracks running through the pale blade, a bone-coloured mount where it meets the snath
-  for (const [x0, y0, x1, y1, x2, y2] of [[52, -3.4, 55, -6.6, 54, -8.4], [62, -6.4, 65, -9.6, 67, -9.2], [74, -11.2, 76, -8.6, 79, -9.4], [82, -11.2, 83, -9.4, 86, -9.8]]) {
+  for (const [x0, y0, x1, y1, x2, y2] of [[33.6, -5, 31.6, -7.4, 32.4, -9.4], [32.4, -13.2, 29.4, -13.8, 29, -16.4], [24.6, -17.6, 22.6, -19.6, 20, -19], [17, -19.6, 15.4, -18.6, 13.4, -19.4]]) {
     ctx.save(); ctx.strokeStyle = grim ? '#2a1840' : '#5a3a7a'; ctx.lineWidth = 0.7; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); ctx.restore();
   }
-  poly(ctx, [37, 3, 40, 5.4, 44, 2.6, 46, -2.6, 42, -4, 38, -2], bone, OUT, 1);
-  circle(ctx, 41.5, 0.4, 1.1, '#d8b04a', OUT, 0.5);
+  poly(ctx, [28.4, 3.4, 31.6, 5.2, 35, 2.4, 35.2, -2.6, 31.4, -3.8, 28.6, -1.6], bone, OUT, 1);
+  circle(ctx, 32, 0.4, 1.1, '#d8b04a', OUT, 0.5);
   ctx.save(); ctx.globalAlpha = (mist ? 0.5 : 1) * Math.min(1, 0.95 * fl); ctx.strokeStyle = edge; ctx.lineWidth = 1.3; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-  ctx.beginPath(); ctx.moveTo(40, 3.8); ctx.quadraticCurveTo(54, -1.6, 72, -9.6); ctx.quadraticCurveTo(84, -9.8, 94 * bl, -6.8); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(29.2, -3.6); ctx.lineTo(29.4, -6.6); ctx.bezierCurveTo(25.4, -15.6, 14.4, -18.2, 8.8, -18.5); ctx.stroke();
   ctx.restore();
-  glow(ctx, 70, -9, 16, edge, 0.2 * fl); circle(ctx, 94 * bl, -6.8, 1.1, '#ffffff');
+  glow(ctx, 27, -14, 12, edge, 0.2 * fl); circle(ctx, 8.6, -18.6, 1.1, '#ffffff');
+  ctx.restore();
   // a soul-ribbon from the head of the snath, streaming behind the swing
   ctx.save(); ctx.globalAlpha = (mist ? 0.4 : 0.75) * fl; ctx.strokeStyle = teal; ctx.lineWidth = 1.2; ctx.lineCap = 'round';
-  ctx.beginPath(); ctx.moveTo(40, 0); ctx.bezierCurveTo(32, 5 + wave * 0.3, 24, 2, 16, 7 - wave * 0.3); ctx.stroke(); ctx.restore();
+  ctx.beginPath(); ctx.moveTo(32, 0); ctx.bezierCurveTo(26, 5 + wave * 0.3, 19, 2, 12, 7 - wave * 0.3); ctx.stroke(); ctx.restore();
   ctx.restore();
-  smear(ctx, 5, 10, 42, 0.55 + dir * 1.35, rot, grim ? '#e8c868' : teal, strikeAmt(pa) * 0.8, 7);
-  hand(ctx, 5, 10, vioD); hand(ctx, 5 + 24 * Math.cos(rot), 10 + 24 * Math.sin(rot), vioD);
+  smear(ctx, 5, 10, 36, 0.55 + dir * 1.35, rot, grim ? '#e8c868' : teal, strikeAmt(pa) * 0.8, 7);
+  hand(ctx, 5, 10, vioD); hand(ctx, 5 + 20 * Math.cos(rot), 10 + 20 * Math.sin(rot), vioD);
   // the deep hood, peaked and trailing at the back, and the pale mask in the shadow of it with a faint teal glow behind the eyes
   poly(ctx, [-3, -6.2, -16, 0, -3, 6.2], void_, OUT, 1.8);
   ellipse(ctx, -2, 0, 8.4, 7.6, 0, cloakC, OUT, 2);

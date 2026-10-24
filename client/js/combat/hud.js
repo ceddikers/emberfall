@@ -821,15 +821,15 @@ Object.assign(BUFF_ICON, { wisp: 'wisp', wispgift: 'wisp', gate: 'reapersgate', 
 Object.assign(BUFF_TIPS, {
   wisp: () => 'A wisp harries the boss, striking every 2.5s and binding it if nothing else has.',
   wispgift: () => 'The wisp is spent: you deal 10% more damage.',
-  gate: () => 'You are out of the world: nothing can touch you. Every Slash is a Gate Strike that lays the next affliction; the fifth releases all four fully due.',
+  gate: () => 'You are out of the world: nothing can touch you. Every Slash is a Gate Strike that lays the next affliction at full Weight; the fifth pops all four.',
   gleaning: () => 'Your next Slash or Cleave cuts a second time for 35%.',
 });
 GAUGE_TIPS.thresher = {
-  desc: 'Four afflictions darken on the boss: Mark (a bleed, Slash), Drain (mends you, Cleave), Bind (pulses, Gloam Blink and the Wisp) and Thread (Hook). Each bar fills as its affliction ages: pale while faint, gold while due (the marked stretch), then lapsed. Reap spends them all: gold pays in full, faint 40%, lapsed 65%. A hit only lays an affliction that is not up or has lapsed; Beckon puts them all back on the edge of gold. The line under the bars is the Wisp\'s time.',
+  desc: 'Four afflictions lie on the boss: Mark (a bleed, Slash), Drain (mends you, Cleave), Bind (pulses, Gloam Blink and the Wisp) and Thread (Hook). Each slot is its Weight: laying one again adds a pip and starts its time again (the line under it). Every Weight ticks and pays when popped. Reap pops them all; Sever only the one with the chevron, the one you laid last. The line under the slots is the Wisp\'s time.',
   state: k => {
-    const n = THRESH.IDS.filter(id => thStage(k, id)).length, gold = thCount(k, 2), rot = thCount(k, 3);
+    const n = thCount(k), full = thFull(k);
     if (k.has('gate')) return `Reaper's Gate: strike ${Math.min(5, (k.g.gate | 0) + 1)} of 5`;
-    return n ? `${n} up · ${gold} gold${rot ? ' · ' + rot + ' lapsed' : ''}` : 'no afflictions up';
+    return n ? `${n} up · Weight ${thTotal(k)}${full ? ' · ' + full + ' full' : ''}` : 'no afflictions up';
   },
 };
 (() => {
@@ -845,9 +845,11 @@ GAUGE_TIPS.thresher = {
     ink(c, 3.6, K); c.beginPath(); c.moveTo(-3, 0); c.lineTo(L, 0); c.stroke();
     ink(c, 2.2, A); c.beginPath(); c.moveTo(-2, 0); c.lineTo(L, 0); c.stroke();
     c.fillStyle = body; c.strokeStyle = K; c.lineWidth = 1.6; c.beginPath();
-    c.moveTo(L - 3, fl * 2); c.quadraticCurveTo(L + 10, fl * -7, L + 26, fl * -22 * 0.8); c.quadraticCurveTo(L + 30, fl * -16, L + 22, fl * -12); c.quadraticCurveTo(L + 8, fl * -2, L - 1, fl * 6); c.closePath(); c.fill(); c.stroke();
-    ink(c, 1.5, edge); c.beginPath(); c.moveTo(L - 1, fl * 5); c.quadraticCurveTo(L + 9, fl * -1, L + 21, fl * -12); c.stroke();
-    glowDot(c, L + 16, fl * -10, 9, edge, 0.5);
+    // (the hero's blade, heroes.js: a crescent hooked off the head and curling back towards the hands)
+    c.moveTo(L - 3, fl * 3); c.bezierCurveTo(L + 10, fl * -2, L + 10, fl * -16, L - 2, fl * -21); c.bezierCurveTo(L - 8, fl * -23, L - 14, fl * -22, L - 18, fl * -19);
+    c.bezierCurveTo(L - 12, fl * -19, L - 1, fl * -15, L + 1, fl * -6); c.closePath(); c.fill(); c.stroke();
+    ink(c, 1.5, edge); c.beginPath(); c.moveTo(L + 1, fl * -6); c.bezierCurveTo(L - 1, fl * -15, L - 12, fl * -19, L - 17, fl * -19); c.stroke();
+    glowDot(c, L - 4, fl * -15, 9, edge, 0.5);
     c.restore();
   };
   // a swoosh: the wide crescent a swing leaves, pointed at both ends, from angle a0 to a1 on a circle (cx, cy, r)
@@ -905,12 +907,13 @@ GAUGE_TIPS.thresher = {
       for (const [x, y] of [[44, 14], [52, 24], [48, 34]]) { glowDot(c, x, y, 6, G, 0.7); dot(c, x, y, 2, G2); }
       glowDot(c, 50, 12, 10, G2, 0.7);
     },
-    // four threads of four colours drawn tight to one knot
-    gather: c => {
-      const pts = [[14, 14, 'mark', '#ff6a6a'], [50, 14, 'drain', '#ff8fd0'], [14, 50, 'bind', '#b88cff'], [50, 50, 'thread', '#dff2f0']];
-      for (const [x, y, , col] of pts) { ink(c, 2, col); c.beginPath(); c.moveTo(x, y); c.quadraticCurveTo((x + 32) / 2 + (y < 32 ? 6 : -6), (y + 32) / 2 + (x < 32 ? -6 : 6), 32, 32); c.stroke(); }
-      for (const [x, y, id, col] of pts) glyphIcon(c, id, x, y, 7, col);
-      glowDot(c, 32, 32, 14, G2, 0.8); ink(c, 2.4, G); c.beginPath(); c.arc(32, 32, 7, 0, TAU); c.stroke(); dot(c, 32, 32, 3, W);
+    // Sever (the move's id stays gather, its icon is sever): one sigil torn out on the hook of a blade, the other three dim behind it
+    sever: c => {
+      for (const [x, y, id] of [[12, 50, 'drain'], [30, 56, 'bind'], [48, 52, 'thread']]) { c.save(); c.globalAlpha = 0.4; glyphIcon(c, id, x, y, 6, S); c.restore(); }
+      ink(c, 5, K); c.beginPath(); c.moveTo(6, 40); c.lineTo(58, 12); c.stroke(); ink(c, 2.4, W); c.beginPath(); c.moveTo(6, 40); c.lineTo(58, 12); c.stroke();
+      glowDot(c, 34, 22, 16, '#ff6a6a', 0.55); glyphIcon(c, 'mark', 34, 22, 11, '#ff6a6a');
+      scythe(c, 4, 60, 18, 36, { edge: G2 });
+      for (const [x, y] of [[48, 18], [54, 28], [44, 8]]) { glowDot(c, x, y, 5, G, 0.7); dot(c, x, y, 1.6, G2); }
     },
     // a flickering cut: a pale scythe left standing and the cuts that crossed the foe
     blink: c => {
@@ -958,6 +961,8 @@ GAUGE_TIPS.thresher = {
   };
   ICONS.reapersgate = ICONS.gate;
   ICON_GLYPHS.thresher = ICONS;
+  // Sever has no painting yet: its drawn icon until icons/thresher/sever.png loads (the rest of the class is painted)
+  if (typeof ICON_ART !== 'undefined') ICON_ART.thresher = id => (id === 'sever' && typeof ArtProbe !== 'undefined' && ArtProbe.ok('icons/thresher/sever.png') !== true ? drawnIcon('thresher', 'sever', true) : null);
 })();
 
 // ======================================================================= Tidecaller (healer, class 20)

@@ -141,7 +141,7 @@ CLASSES.push({
 CLASSES.push({
   id: 'thresher', name: 'Reaper', title: 'Mark, Wither, Reap', role: 'dps', difficulty: 3, complexity: 4, accent: '#8fd8e8',
   tagline: 'Every soul keeps its appointment. You only have to be there.',
-  gameplan: 'Your scythe lays four afflictions on the boss: a Mark that bleeds, a Drain that mends you, a Bind that pulses and a Thread that waits to be snapped. Each darkens, from pale to gold and then lapses. Reap spends them all, and pays the most when they are gold, so cut, weave, and let the toll come due. Once in a while step through the Gate, where nothing can touch you, and the fifth strike calls in all four at once.',
+  gameplan: 'Your scythe lays four afflictions on the boss: a Mark that bleeds, a Drain that mends you, a Bind that pulses and a Thread that waits to be snapped. Lay them again to give them Weight, then pop them: Reap takes them all, Sever only the one you laid last, and each pops its own way, a heavy cut, a mend, a fetter that spares the party, a Hook back. Once in a while step through the Gate, where nothing can touch you, and the fifth strike calls in all four at once.',
 });
 
 // ---------------------------------------------------------------- Tidecaller (healer, class 20; docs/plans/2026-10-new-classes-3.md)

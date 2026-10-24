@@ -497,7 +497,7 @@ Object.assign(TRIALS, {
     outro: 'The last name is struck. The Grim waits for the next.',
     allies: ['bastion:base', 'cleric:base'], seconds: 56, enrage: 70, regen: 0,
     script(f, k) {
-      // long quiet stretches and then a heavy blow: time to let everything come due, and a reason to hold the Reap for the right moment
+      // long quiet stretches and then a heavy blow: time to build every affliction deep, and a reason to hold a Bind's pop for the blow
       f.boss.anchor = true;
       k.loop([[6, () => k.blow(9500, 4)], [7, () => k.knell(2800)], [6, () => k.swing('stomp', 6500, 4)], [6, () => k.knell(2800)]]);
     },

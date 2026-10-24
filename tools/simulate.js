@@ -956,32 +956,29 @@ Object.assign(PRO, {
 });
 
 // ---------------------------------------------------------------- Thresher (damage, class 19)
-// The pro: lays all four afflictions (Hook for the Thread, Blink for the Bind, Q for the Mark and Drain), Gathers the young ones
-// to gold, and Reaps when the gold is in, or just before it rots. The newbie is the generic one: it notices the glowing Reap
-// 60% of the time and otherwise cuts.
+// The pro: keeps all four afflictions up and weighted (Hook for the Thread, Blink for the Bind, Q for the Mark and Drain), Severs
+// what it laid last once that is at full Weight while Reap is a while off, and Reaps only for the Full Toll or before something
+// runs out. The newbie is the generic one: it notices the glowing Reap 60% of the time and otherwise cuts.
 Object.assign(PRO, {
   thresher(k, ctx) {
-    const on = thCount(k), gold = thCount(k, 2), young = thCount(k, 1), rot = thCount(k, 3);
-    const R = thR(k), soon = THRESH.IDS.some(id => thStage(k, id) === 2 && k.now - k.g.aff[id] > R - 1.5);
-    const reapReady = ready(k, 'reap');
+    const max = thMaxW(k), avail = thAvail(k).length, on = thCount(k), full = thFull(k), total = thTotal(k), last = k.g.last;
+    const ending = THRESH.IDS.some(id => k.g.aff[id] && k.g.aff[id].until - k.now < 2.5);
+    const reapReady = ready(k, 'reap'), reapIn = k.readyIn(abOf(k, 'reap'));
     if (weaveOk(k)) {
       const wisp = abOf(k, 'wisp');
-      if (wisp.id === 'cull') { if (ready(k, 'wisp') && on >= 3) return I(k, 'wisp'); }
+      if (wisp.id === 'cull') { if (ready(k, 'wisp') && total >= 6) return I(k, 'wisp'); }
       else if (ready(k, 'wisp') && (!k.has('wisp') || (k.talent('thresher_sacrifice') && k.remaining('wisp') < 6 && on >= 3))) return I(k, 'wisp');
       const hook = abOf(k, 'hook'), blink = abOf(k, 'blink');
-      // (the spec rows' Blink replacements: Hourglass holds the gold for the Reap, Nightfall hurries the faint ones)
-      if (blink.id === 'hourglass') { if (ready(k, 'blink') && gold >= 2 && !reapReady) return I(k, 'blink'); }
-      else if (blink.id === 'nightfall') { if (ready(k, 'blink') && young >= 2 && gold === 0) return I(k, 'blink'); }
-      if (k.charges(hook) > 0 && thStage(k, 'thread') === 0) return I(k, 'hook');
-      if (k.charges(blink) > 0 && thStage(k, 'bind') === 0 && !(k.def.noAff && k.def.noAff.indexOf('bind') >= 0)) return I(k, 'blink');
-      if (k.def.blinkAge && k.charges(blink) > 0 && young >= 2 && gold === 0) return I(k, 'blink');   // (a Grim's Blink ripens the afflictions)
+      // (the spec rows' Blink replacements: Hourglass just before a Reap, Nightfall to deepen what is up)
+      if (blink.id === 'hourglass') { if (ready(k, 'blink') && reapIn < 3) return I(k, 'blink'); }
+      else if (blink.id === 'nightfall') { if (ready(k, 'blink') && on >= 2 && full < on) return I(k, 'blink'); }
+      if (k.charges(hook) > 0 && thW(k, 'thread') < max) return I(k, 'hook');
+      if (blink.id === 'blink' && k.charges(blink) > 0 && (k.def.blinkDeepen ? last && thW(k, last) && thW(k, last) < max : thW(k, 'bind') < max)) return I(k, 'blink');
       if (abOf(k, 'gather').id === 'sowing') { if (ready(k, 'gather') && on <= 1) return I(k, 'gather'); }
-      else if (ready(k, 'gather') && on >= 2 && (rot >= 1 || (reapReady && young >= 2 && gold === 0))) return I(k, 'gather');
+      else if (ready(k, 'gather') && last && thW(k, last) >= max - 1 && reapIn > 4) return I(k, 'gather');
     }
     if (k.gcdRemaining() > 0.0001) return null;
-    // (the Full Toll: with all four up and three gold, a beat more for the fourth, unless one is about to lapse)
-    const toll = on === 4 && gold === 3 && rot === 0 && !soon;
-    if (reapReady && on > 0 && ((gold >= Math.max(2, on - 1) && !toll) || (soon && gold >= 1) || rot >= 2)) return I(k, 'reap');
+    if (reapReady && on > 0 && (full >= avail - 1 || ending)) return I(k, 'reap');
     return I(k, 'slash');
   },
 });

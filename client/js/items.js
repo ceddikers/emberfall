@@ -208,8 +208,8 @@ CLASS_MAIN.thresher = 'phys';
 CLASS_GEAR.thresher = { wtype: 'scythe', w: ["Recruit's Sickle", 'Carving-Hall Scythe', 'Silkcleaver Scythe', 'Stormbled Scythe', 'Scythe of the Last Toll'], a: ['Scullery-Night Leathers', 'Webwatch Leathers', 'Stormvigil Leathers', 'Shroud of the Last Toll'] };
 Object.assign(ITEM_PERKS, {
   thresher_w1: { ab: 'slash', text: 'A Backswing cuts for 50% more.' },
-  thresher_a2: { ab: 'reap', text: 'A rotten affliction pays 80% instead of 65% (a Grim\'s pays in full).' },
-  thresher_w2: { ab: 'hook', text: 'Hook ages the afflictions by 2.5s instead of 1.5s.' },
+  thresher_a2: { ab: 'reap', text: 'A popped Mark pays 20% more.' },
+  thresher_w2: { ab: 'hook', text: 'Hook cuts for 30% more.' },
   thresher_w3: { ab: 'wisp', text: 'Spirit Wisp lasts 20s instead of 15s (Cull recharges 5s sooner).' },
   thresher_a4: { ab: 'blink', text: 'Gloam Blink takes 70% off for 1s instead of 50%.' },
 });
