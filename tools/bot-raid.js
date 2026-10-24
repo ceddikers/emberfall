@@ -6,6 +6,8 @@
 //   10-run job play (tools/check.js cuts long jobs into pieces that way); WHY=1 prints the last hits before each death, NEXT=1 the upcoming-moves feed
 //   gear=fresh|mid|full|post1|post2 (or GEAR=...) gives every bot representative player gear (see buildGear below); FEAST=pie|stew|broth|tarts
 //   picks the meal for 'full', 'post1' and 'post2' (default pie, none at the other levels). SUMMARY=1 prints one machine-readable line only.
+//   stop=clear stops after the first clear (only tools/check.js passes it, for its final yes-or-no; for data, play every run): the runs
+//   before it play exactly as without it, and the closing lines count the runs played.
 const path = require('path');
 const load = (p) => require(path.join(__dirname, '../client/js', p));
 Object.assign(global, load('arena/shapes.js'), load('data.js'), load('combat/engine.js'), load('combat/kits.js'), load('combat/specs.js'),
@@ -27,11 +29,12 @@ const { TRIALS, trialDef } = load('arena/trials.js');
 const ITEMSMOD = load('items.js');
 const FEASTS_ = { stew: { stat: 'hp', pct: 3 }, pie: { stat: 'power', pct: 3 }, broth: { stat: 'heal', pct: 3 }, tarts: { stat: 'speed', pct: 2 } };   // town-npcs.js FEASTS
 let gearLevel = process.env.GEAR || '';
-let mode = 'normal', runs = 3, comp = 'bastion,cleric,ranger,pyromancer'.split(','), def = GRUBNAK, seed0 = 1000, first = 0;
+let mode = 'normal', runs = 3, comp = 'bastion,cleric,ranger,pyromancer'.split(','), def = GRUBNAK, seed0 = 1000, first = 0, stopOnClear = false;
 for (const a of process.argv.slice(2)) {
   if (a === 'normal' || a === 'hard') mode = a;
   else if (/^seed=\d+$/.test(a)) seed0 = Number(a.slice(5));   // a different set of seeds (default 1000)
   else if (/^first=\d+$/.test(a)) first = Number(a.slice(6));
+  else if (a === 'stop=clear') stopOnClear = true;
   else if (/^gear=\w+$/.test(a)) gearLevel = a.slice(5);
   else if (/^\d+$/.test(a)) runs = Number(a);
   else if (DEFS[a]) def = DEFS[a];
@@ -174,6 +177,7 @@ for (let r = first; r < first + runs; r++) {
   if (hollow.started) log(`   Hollow: ${hollow.started} started, ${hollow.saved} saved, ${hollow.failed} fell`);
   for (const k of Object.keys(hollow)) hollowTot[k] += hollow[k];
   if (Object.keys(kinds).length) log('   failed: ' + Object.entries(kinds).map(([k, n]) => `${k} ${n}`).join(', '));
+  if (stopOnClear && host.sim.state === 'clear') { log(`stopped after the first clear (run ${r + 1})`); runs = r - first + 1; break; }
 }
 log(`cleared ${clears} of ${runs}`);
 if (hollowTot.started) log(`Hollow over ${runs} runs: ${hollowTot.started} started, ${hollowTot.saved} saved, ${hollowTot.failed} fell`);
