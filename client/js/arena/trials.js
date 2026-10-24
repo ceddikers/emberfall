@@ -277,7 +277,7 @@ Object.assign(TRIALS, {
     outro: 'The edge holds. The Zenith burns bright.',
     allies: ['bastion:base', 'cleric:base'], seconds: 60, enrage: 70, regen: 0,
     script(f, k) {
-      // long, quiet stretches where nothing makes you move: the time to hold the edge
+      // long, quiet stretches where nothing makes you move: the time to hold the edge for a full Corona
       f.boss.anchor = true;
       k.loop([[5, () => k.blow(9000, 4)], [9, () => k.knell(2500)], [9, () => k.swing('stomp', 5000, 4)]]);
     },

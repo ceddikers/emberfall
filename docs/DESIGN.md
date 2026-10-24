@@ -315,7 +315,7 @@ Two DPS built for players who want more to juggle. On the hero select their tile
 - **Thermal Shock is measured from the peak since the last crossing**, not from wherever the dial happened to be one cast ago, so a swing is a plan you build over several casts. A crossing from a peak under 3 is just a crossing.
 - **Glacier Lance is single-target** (like every other move in the game), not a piercing line.
 - **Overheat and Frostbite** are different on purpose: Overheat costs HP and locks fire; Frostbite only slows casts. Either way you lose the swing.
-- **Zenith's Redline** replaces overloading at ±5 with a +20% window that builds Strain (11 a second at the edge, −20 a second off it); full Strain is a meltdown (the dial snaps to 0, you lose 12% HP and take a 4 s Overheat or Frostbite). Equilibrium becomes **Bleed Off** (15 s: vents 60 Strain behind a shield of 160).
+- **Zenith's Corona** (reworked 2026-10-24, replacing Redline and Strain): an edge cast is instant and a sure crit as in the base kit, but lights a Corona and keeps you at the edge instead; the third (the fifth in Red Giant) leaves you On the Brink. The next Thermal Shock spends every Corona, +25% each; they fade 12 s after the last edge cast. Equilibrium becomes **Sunset** (30 s): every Corona falls on the target as a star (170 potency each), then it is Equilibrium. Spec rows: Solar Wind (Sunset keeps the dial at the edge) / Slag Plate (a small shield per Corona); Red Giant (in Inversion's place, 60 s: hold up to 5 Corona for 8 s, the 4th and 5th edge casts +50%) / Red Alert (a boss cast while you hold 2+ Corona readies Sunset).
 - **Pendulum** moves the dial a step further with every spell and gains Momentum (+4% per crossing, up to 5, gone after 6 s without one), so its swings come faster but land closer to the edge.
 - **Carve's follow-through** (a second cut at 50+ Drift) replaced "Carve doesn't stop you moving": every GCD in the game already lets you move, so the line said nothing.
 - **Hook Turn mirrors you through the target** (to the point opposite where you stood), which reads clearly and is the same rule for players and bots.
@@ -1061,7 +1061,7 @@ The user picked: **story vignettes**, **one per spec**, **built so the spec's tr
 | Cataclysm | The Falling Star | He holds the middle of the hall and barely moves. Meteor. |
 | Sigilmancer | The Burning Circle | His sceptre sweeps one side of the hall, then the other; straight behind him never burns. A circle that stays safe. |
 | Pendulum | The Swinging Weight | Short stretches between marks, blows and stomps, no room for long casts. Quick swings that keep crossing. |
-| Zenith | The Burning Edge | He holds his ground and the stretches between attacks are long and quiet. Holding Redline and venting in time. |
+| Zenith | The Burning Edge | He holds his ground and the stretches between attacks are long and quiet. Holding the edge for a full Corona, then the long swing across. |
 | Orbit | The Circling Hawk | His sceptre sweeps one side of the hall, then the next quarter, then the far side: whoever keeps circling stays out of it. |
 | Comet | The Long Charge | In close, then far out, then in again (rings and stomps): long straight runs across the hall. |
 | Apothecary | The Long Vigil | The bells stay quiet for a long while, then ring three times in a row. A deep bandolier brewed in the quiet. |
@@ -1112,7 +1112,7 @@ The user picked: **story vignettes**, **one per spec**, **built so the spec's tr
 | **Pyromancer · Cataclysm** (The Falling Star) | Huge single hits | Pyroblast becomes **Meteor**: lands 1.5 s after the cast, hits harder, leaves a burning crater. Hot Streak still makes it instant. |
 | **Pyromancer · Sigilmancer** (The Burning Circle) | Positioning | Combustion becomes **Ember Circle**: a 20 s circle at your feet (45 s cooldown). Inside it you cast 20% faster and deal 15% more damage; outside, nothing. Bots stay in theirs. |
 | **Thermist · Pendulum** (The Swinging Weight) | Fast swings | Every spell moves the dial a step further; every crossing of 0 adds Momentum (up to 5, +4% damage each, gone after 6 s without a crossing). The Pendulum turns back a step short of the edge. |
-| **Thermist · Zenith** (The Burning Edge) | Holding the edge | At ±5 you stay in **Redline** instead of overloading: +20% damage and the edge spell instant, but Strain builds (11 a second) until you vent it or melt down. Equilibrium becomes **Bleed Off** (15 s): vents 60 Strain behind a shield. |
+| **Thermist · Zenith** (The Burning Edge) | Holding the edge | At ±5 the edge spell is instant, always crits and lights a **Corona** instead of moving you: hold for up to 3, then swing across; the next Thermal Shock is 25% stronger per Corona. Equilibrium becomes **Sunset** (30 s): the Corona falls as stars, then the dial snaps to 0 behind a shield. |
 | **Driftblade · Orbit** (The Circling Hawk) | Smooth circles | Circling your target at close range builds Orbit (a stack per radian, up to 5, fading 2.5 s after you stop); Hook Turn swings you half a circle, 3 stacks at once; at 5, Carve strikes on its own every 1.4 s while you move; every whole unbroken loop ends in a Full Circle dive that gives 10 Drift. |
 | **Driftblade · Comet** (The Long Charge) | Big, readable burst | Drift holds 200 and fills faster in straight lines. Crosswind becomes **Impact**: a charge clean through the target that releases everything at once (a sure crit from 160). |
 
@@ -1353,18 +1353,18 @@ Built under the newer rule (2026-10-19): talents are mostly new moves and change
 | I | **Banked Embers** | A Cinder Bolt cast at +3 or hotter now leaves an ember in the target (up to 3). Your next Thermal Shock sets every ember off. |
 | I | **Flicker** | Rime Shard is now instant while the dial is cold, and Cinder Bolt while it is hot. |
 | I | **Afterglow** | A Flare or Glacier Lance cast at its own edge now leaves the target burning or freezing for 9s. |
-| II | **Cold Front** | An Equilibrium that drops the dial 4 or more steps now also gives the whole party 10% less damage for 6s. *Zenith:* a Bleed Off that vents 40 or more Strain. |
-| II | **Phase Step** | Equilibrium now also blinks you 150 px the way you're heading. *Zenith:* Bleed Off does. |
+| II | **Cold Front** | An Equilibrium that drops the dial 4 or more steps now also gives the whole party 10% less damage for 6s. *Zenith:* a Sunset that drops 2 or more stars. |
+| II | **Phase Step** | Equilibrium now also blinks you 150 px the way you're heading. *Zenith:* Sunset does. |
 | II | **Thermal Skin** | Every Thermal Shock now also wraps you in a shield worth part of its strength. |
 | III | **Thermocline** | New move on Q, in place of Cinder Bolt: instant, swings the dial 2 steps toward the other side (3 for *Pendulum*) and counts as that element; hits harder the further from 0 you started. |
-| III | **Latent Heat** | Overloading no longer locks or burns you: the heat is banked and your next Thermal Shock is half again as strong. *Zenith:* the same for a meltdown. |
+| III | **Latent Heat** | Overloading no longer locks or burns you: the heat is banked and your next Thermal Shock is half again as strong. |
 | III | **Rebound** | After a Thermal Shock, your next spell is instant (within 10s). |
 | IV | **Polar Vortex** | Inversion now leaves a vortex on the target that strikes every 1.5s for 6s. |
-| IV | **Equilibrium Pulse** | Equilibrium now sets off the heat it snaps away: from 3 or more steps out, a Thermal Shock as if you had swung that far. *Zenith:* Bleed Off in Redline sets off a Shock of 3. |
+| IV | **Equilibrium Pulse** | Equilibrium now sets off the heat it snaps away: from 3 or more steps out, a Thermal Shock as if you had swung that far. *Zenith:* Sunset does. |
 | IV | **Solstice** | Inversion now flips the dial back 5s later: a smaller Shock if it's still far enough from 0. |
 | V | **Absolute Zero** | New move on W, in place of Rime Shard: a 2s cast on a 45s cooldown that plunges the dial straight to −5 wherever it was, hitting harder the further it fell (from the hot side that crossing is a Shock of up to 10). |
 | V | **Conduction** | Thermal Shock now arcs: a second, smaller Shock strikes the target 1s later. |
-| V | **Twin Stars** | A Flare or Glacier Lance cast at its own edge now fires a second, smaller bolt after it. *Zenith:* cast in Redline. |
+| V | **Twin Stars** | A Flare or Glacier Lance cast at its own edge now fires a second, smaller bolt after it. *Zenith:* only the cast that fills the Corona, at 45%. |
 
 #### Driftblade
 

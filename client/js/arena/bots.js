@@ -1150,25 +1150,24 @@ const BOT_CLASS = {
       const ok = i => { const a = k.abilities[i]; return !!a && k.usable(a) && k.readyIn(a) <= 0.0001 && k.available(a); };
       const t = k.g.temp, weave = k.gcdRemaining() > 0.65 && !k.cast;
       const inv = idx('invert'), eq = idx('equil');
-      if (weave && ok(inv) && Math.abs(t) >= 4) return inv;
-      if (k.def.redline) { if (weave && ok(eq) && (k.g.strain || 0) >= 50 && Math.abs(t) >= 5) return eq; }
-      else if (weave && ok(eq)) {
+      // (Red Giant, Zenith's move in Inversion's place: at the edge with the Corona building)
+      if (weave && ok(inv) && (k.abilities[inv].id === 'redgiant' ? Math.abs(t) >= 5 && k.stacks('corona') >= 2 : Math.abs(t) >= 4)) return inv;
+      if (weave && ok(eq)) {
         // Equilibrium as mitigation: a big hit on the way and the dial near 0 anyway (or in real trouble)
         const big = view.bossCast && view.bossCast.left < 2.5 && /Knell|Boil|Thunderclap|Eye of the Storm|Skybreak|Moonset|Last Call|Devour/.test(view.bossCast.name);
         const me = view.players.find(p => p.id === bot.id);
-        if ((big && Math.abs(t) <= 2) || (me && me.hp / me.maxHp < 0.35)) return eq;
+        // (Zenith's Sunset: also when the Corona is full and a big hit is coming, the stars and the shield at once)
+        if ((big && (Math.abs(t) <= 2 || (k.def.corona && k.stacks('corona') >= 3))) || (me && me.hp / me.maxHp < 0.35)) return eq;
       }
       if (k.gcdRemaining() > 0 || k.cast || k.lockUntil > k.now) return null;
       const plan = thermPlan(k), dir = plan === 'cinder' || plan === 'flare' ? 1 : -1;
       const brink = k.has('brink') ? k.buffs.get('brink').data.el : 0, sb = k.def.stepBonus || 0;
-      // Zenith: Strain building with Bleed Off still cooling: step off the edge with the quick spell of the other element, in time
-      if (k.def.redline && Math.abs(t) >= 5 && (k.g.strain || 0) >= 45 && !ok(eq)) { const q = idx(t > 0 ? 'rime' : 'cinder'); if (ok(q) && !(moving && k.castTime(k.abilities[q]))) return q; }
       for (const id of [...new Set([plan, dir > 0 ? 'cinder' : 'rime', 'rime', 'cinder', 'lance', 'flare'])]) {
         const i = idx(id), a = k.abilities[i];
         if (!ok(i) || (moving && k.castTime(a))) continue;
         const el = a.el || 0, big = id === 'flare' || id === 'lance';
         if (el && brink === el) continue;
-        if (el && !(big && thermEdgeCast(k, el)) && !k.def.redline && Math.abs(t + el * ((big ? 2 : 1) + sb)) > 5) continue;
+        if (el && !(big && thermEdgeCast(k, el)) && Math.abs(t + el * ((big ? 2 : 1) + sb)) > 5) continue;
         return i;
       }
       return null;

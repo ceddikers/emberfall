@@ -2121,15 +2121,18 @@ function kitSegDist(px, py, ax, ay, bx, by) {
 // got on that side since it last crossed. A spell that carries the dial across 0 after a peak of 3 or more detonates
 // a Thermal Shock sized by the whole swing (the peak plus how far past 0 it landed): +5 down to -1 is a swing of 6.
 // Pushing past ±5 overloads you: Overheat (fire locked for 3s, and you burn) or Frostbite (casts 30% slower for 3s).
-// Zenith (k.def.redline) holds the edge instead, building Strain. Pendulum (k.def.stepBonus) moves it a step further.
-const THERMIST = { STEP: 0.08, EDGE: 5, SHOCK_MIN: 3, SHOCK_BASE: -120, SHOCK_PER: 105, REDLINE: 0.2, STRAIN: 11 };
+// Zenith (k.def.corona) holds the edge for a run of crits, building Corona. Pendulum (k.def.stepBonus) moves it a step further.
+const THERMIST = { STEP: 0.08, EDGE: 5, SHOCK_MIN: 3, SHOCK_BASE: -120, SHOCK_PER: 105 };
+// Zenith: every edge cast adds a Corona and keeps you at the edge; the one that fills it (3, or 5 in Red Giant) leaves you
+// On the Brink. The next Thermal Shock spends them all (+25% each); Sunset drops them as falling stars. They fade 12s after the last edge cast.
+const CORONA = { MAX: 3, GIANT: 5, SHOCK: 0.25, FADE: 12, STAR: 170, SLAG: 40, GIANT_DUR: 8, GIANT_HIT: 1.5 };
+const coronaCap = k => (k.has('redgiant') ? CORONA.GIANT : CORONA.MAX);
 const THERM_SHOCK = { id: 'shock', name: 'Thermal Shock' };
 const thermAt = (k, n) => Math.abs(k.g.temp) >= n;
-const thermRedline = k => !!k.def.redline && thermAt(k, THERMIST.EDGE);
 // a spell's bonus from where the dial stands: +8% per step on its own side (both sides count while Attuned)
 function thermMult(k, el) {
   const t = k.g.temp, side = k.has('attuned') ? Math.abs(t) : Math.max(0, el * t);
-  return (1 + THERMIST.STEP * side) * (thermRedline(k) || k.has('embered') ? 1 + THERMIST.REDLINE : 1);   // (Controlled Meltdown: the heat lingers)
+  return 1 + THERMIST.STEP * side;
 }
 // is this element's big spell being cast at its own edge (Flare at +5, Glacier Lance at -5)?
 const thermEdgeCast = (k, el) => k.g.temp === el * THERMIST.EDGE;
@@ -2141,24 +2144,37 @@ function thermCast(k, el, base, edge) {
 }
 
 // one Thermist spell: el +1 fire / -1 frost, moving the dial `steps` (plus Pendulum's extra step) after it hits.
-// o.edge: a big spell with the edge rule (at its own edge: instant, a sure crit, and On the Brink instead of moving).
+// o.edge: a big spell with the edge rule (at its own edge: instant, a sure crit, and On the Brink instead of moving;
+// for a Zenith a Corona instead, and On the Brink only once the Corona is full).
 function thermSpell(k, ab, el, steps, pot, o = {}) {
   const edge = !!o.edge && thermEdgeCast(k, el);
   k.consume('rebound');
   if (o.edge) k.consume('flicker');
   else if (o.quick && k.talent('thermist_flicker')) k.buff('flicker', 6);   // Flicker: a quick spell readies an instant big one
   thermBrink(k, el);
-  const mult = thermMult(k, el) * (o.mult || 1) * thermPerk(k, ab, el);
-  const r = k.damage(pot, { ab, mult, autoCrit: edge && !k.def.redline });
-  if (edge && k.talent('thermist_twin')) k.after(0.3, () => { k.damage(pot * (k.def.redline ? 0.09 : 0.3), { ab, mult, extra: true }); k.fx('twin', { el }); });
-  if (edge && k.talent('thermist_afterglow')) k.dot(el > 0 ? 'afterglow' : 'afterfrost', k.def.redline ? 30 : 42, 9, 3, { ab });
+  // (Red Giant: the edge casts past the usual three, the 4th and 5th, burn half again as hot)
+  const giant = edge && k.def.corona && k.stacks('corona') >= CORONA.MAX;
+  const mult = thermMult(k, el) * (o.mult || 1) * thermPerk(k, ab, el) * (giant ? CORONA.GIANT_HIT : 1);
+  const r = k.damage(pot, { ab, mult, autoCrit: edge });
+  // (Twin Stars: a Zenith's twin follows only the edge cast that fills the Corona, at 45%)
+  if (edge && k.talent('thermist_twin') && (!k.def.corona || k.stacks('corona') + 1 >= coronaCap(k))) k.after(0.3, () => { k.damage(pot * (k.def.corona ? 0.45 : 0.3), { ab, mult, extra: true }); k.fx('twin', { el }); });
+  if (edge && k.talent('thermist_afterglow')) k.dot(el > 0 ? 'afterglow' : 'afterfrost', 42, 9, 3, { ab });
   if (el > 0 && k.talent('thermist_embers') && k.g.temp >= 3) k.g.embers = Math.min(3, (k.g.embers || 0) + 1);
   if (edge) k.ultGain(THERM_ULT.GAIN_EDGE);   // (Supernova: an edge cast)
-  if (edge && !k.def.redline) k.buff('brink', 6, { el });   // held at the edge: the same element next overloads you
+  if (edge && k.def.corona) thermCorona(k, el);
+  else if (edge) k.buff('brink', 6, { el });   // held at the edge: the same element next overloads you
   else thermMove(k, el * (steps + (k.def.stepBonus || 0)));
   return r;
 }
 const thermPerk = (k, ab, el) => (((ab.replaces || ab.id) === 'cinder' && k.perk('thermist_w1') && k.g.temp >= 3) ? 1.2 : (ab.id === 'lance' && k.perk('thermist_w3') && k.g.temp <= -3) ? 1.15 : 1) * (el ? 1 : 1);
+// Zenith: an edge cast adds a Corona and keeps you at the edge; the one that fills it leaves you On the Brink
+function thermCorona(k, el) {
+  const cap = coronaCap(k);
+  k.buff('corona', CORONA.FADE, { el }, cap, 1);
+  k.fx('corona', { n: k.stacks('corona'), el });
+  if (k.talent('thermist_slag')) k.shield('self', CORONA.SLAG, 6, { ab: abBase(k, 'flare') });   // (Slag Plate, Zenith's spec row VI)
+  if (k.stacks('corona') >= cap) k.buff('brink', 6, { el });
+}
 // On the Brink: the next spell decides. The same element overloads you; the other one is safe.
 function thermBrink(k, el) {
   if (!k.has('brink')) return;
@@ -2170,19 +2186,20 @@ function thermMove(k, delta) {
   let t1 = k.g.temp + delta;
   if (Math.abs(t1) > THERMIST.EDGE) {
     t1 = Math.sign(t1) * THERMIST.EDGE;
-    if (!k.def.redline) thermOverload(k, Math.sign(delta));   // Zenith stays in Redline instead
+    thermOverload(k, Math.sign(delta));
   }
   if (t1 !== k.g.temp) k.fxGain(1);   // (item effects: the dial moving builds the gauge)
   k.g.temp = t1;
   thermSettle(k, t1, 1);
 }
 // the dial has landed on t1: a crossing after a big enough peak is a Thermal Shock; then the side and peak update
-function thermSettle(k, t1, shockMult) {
+// (o.keep: a Shock that leaves a Zenith's Corona for the next one, Solstice's echo)
+function thermSettle(k, t1, shockMult, o) {
   const g = k.g;
   if (t1 !== 0 && g.side && Math.sign(t1) !== g.side) {
     const swing = g.peak + Math.abs(t1);
     if (g.peak >= THERMIST.SHOCK_MIN) {
-      thermShock(k, swing, shockMult, Math.sign(t1));
+      thermShock(k, swing, shockMult, Math.sign(t1), o);
     }
     if (k.def.momentum) k.buff('momentum', 6, {}, 5, 1);   // Pendulum: every crossing swings harder
     if (k.talent('thermist_counterweight')) k.shield('self', 30 * k.stacks('momentum'), 6, { ab: THERM_SHOCK });   // (Counterweight, Pendulum's spec row VI)
@@ -2193,13 +2210,15 @@ function thermSettle(k, t1, shockMult) {
   const turn = THERMIST.EDGE - (k.def.stepBonus || 0);
   if (t1 >= turn) g.dir = -1; else if (t1 <= -turn) g.dir = 1;
 }
-function thermShock(k, swing, mult = 1, to = 1) {
+function thermShock(k, swing, mult = 1, to = 1, o = {}) {
   if (k.g.latent) { mult *= 1.5; k.g.latent = 0; }
+  const corona = o.keep ? 0 : k.stacks('corona');   // (Zenith: the Shock spends every Corona, +25% each)
+  if (corona) { mult *= 1 + CORONA.SHOCK * corona; k.clear('corona'); }
   const pot = Math.max(0, THERMIST.SHOCK_BASE + THERMIST.SHOCK_PER * swing) * mult;
   const r = k.damage(pot, { ab: THERM_SHOCK, autoCrit: k.talent('thermist_crescendo') && k.stacks('momentum') >= 5 });   // (Crescendo, Pendulum's spec row VI)
   k.stats.shocks = (k.stats.shocks || 0) + 1;
   k.ultGain(THERM_ULT.GAIN_SWING * swing * (k.def.stepBonus ? THERM_ULT.PEND : 1));   // (Supernova; Pendulum shocks far more often)
-  k.fx('shock', { s: swing, c: to });
+  k.fx('shock', { s: swing, c: to, corona });
   if (k.g.embers) { const n = k.g.embers; k.g.embers = 0; k.after(0.3, () => { for (let i = 0; i < n; i++) k.damage(95, { ab: THERM_SHOCK, extra: true }); k.fx('embers', { n }); }); }
   if (k.talent('thermist_skin')) k.shield('self', pot * 0.3, 6, { ab: THERM_SHOCK });
   if (k.talent('thermist_rebound')) k.buff('rebound', 10);
@@ -2212,47 +2231,39 @@ function thermOverload(k, el) {
   if (el > 0) { k.buff('overheat', 3); k.selfDamage(0.08); k.fx('overheat'); }
   else { k.buff('frostbite', 3); k.fx('frostbite'); }
 }
-// Zenith: Strain builds while you hold the edge; full Strain is a meltdown (the dial snaps to 0 and you pay for it)
+// the boss beginning a cast: Tolling Bell (Pendulum) swings the dial, Red Alert (Zenith) readies Sunset
 function thermTick(k) {
-  const g = k.g, dt = k.now - (g.lastT ?? k.now);
-  g.lastT = k.now;
+  const g = k.g;
   // Tolling Bell (Pendulum's spec row VII): the boss begins a cast and the dial swings two steps toward the other side
   const cast = bossCasting(k);
   if (k.talent('thermist_bell') && cast && !g.bellSeen) { const s = Math.sign(g.temp) || (g.side || 1); thermMove(k, -s); k.fx('invert'); }
+  // Red Alert (Zenith's spec row VII): the boss begins a cast while you hold 2 or more Corona, and Sunset is ready at once
+  if (k.talent('thermist_alert') && cast && !g.bellSeen && k.stacks('corona') >= 2) { k.refill('sunset'); k.fx('empower'); }
   g.bellSeen = cast;
-  if (!k.def.redline || !(dt > 0 && dt < 1)) return;
-  // Zenith's spec rows: Slag Plate (reaching the edge wraps you in a shield, once in 10s), Red Alert (a cast while you hold the edge readies Bleed Off)
-  const edge = thermAt(k, THERMIST.EDGE);
-  if (edge && !g.wasEdge && k.talent('thermist_slag') && k.now >= (g.slagAt || 0)) { g.slagAt = k.now + 10; k.shield('self', 100, 8, { ab: abBase(k, 'flare') }); }
-  if (edge && cast && !g.alertSeen && k.talent('thermist_alert')) { k.refill('bleed'); k.fx('empower'); }
-  g.wasEdge = edge; g.alertSeen = cast;
-  if (thermAt(k, THERMIST.EDGE)) {
-    g.strain = Math.min(100, (g.strain || 0) + THERMIST.STRAIN * dt);
-    k.buff('redline', 0.3);
-    if (g.strain >= 100) thermMeltdown(k);
-  } else g.strain = Math.max(0, (g.strain || 0) - 20 * dt);
-}
-function thermMeltdown(k) {
-  const el = Math.sign(k.g.temp) || 1;
-  Object.assign(k.g, { strain: 0, temp: 0, side: 0, peak: 0 });
-  k.clear('redline');
-  k.stats.overloads = (k.stats.overloads || 0) + 1;
-  if (k.talent('thermist_latent')) { k.g.latent = 1; k.fx('latent'); return; }
-  k.selfDamage(0.12); k.buff(el > 0 ? 'overheat' : 'frostbite', 4); k.fx(el > 0 ? 'overheat' : 'frostbite');
 }
 // Equilibrium: the dial snaps to 0 behind a shield sized by how far it fell
-function thermEquil(k, ab) {
+// (o.stay: Sunset with Solar Wind leaves the dial where it is, the shield still sized as if it fell; o.big: Cold Front's test)
+function thermEquil(k, ab, o = {}) {
   const fell = Math.abs(k.g.temp), from = Math.sign(k.g.temp);
   k.shield('self', 70 * Math.max(1, fell) * (k.perk('thermist_a2') ? 1.5 : 1), 8, { ab });
   k.clear('brink');
+  if (o.stay) { thermUtility(k, ab, o.big); return; }
   // the dial snaps to 0 but the swing is kept: side and peak stay, so the next spell across 0 still detonates a Shock
   // sized by the stored peak (unless Equilibrium Pulse sets that heat off right here)
   k.g.temp = 0;
   if (k.talent('thermist_deadcentre')) { k.buff('momentum', 6, {}, 5, 1); k.fx('empower'); }   // (Dead Centre, Pendulum's spec row VII: it counts as a crossing for Momentum)
-  thermUtility(k, ab, fell >= 4);
+  thermUtility(k, ab, o.big ?? fell >= 4);
   if (fell >= THERMIST.SHOCK_MIN && k.talent('thermist_pulse')) { Object.assign(k.g, { side: 0, peak: 0 }); thermShock(k, fell, 1, -from); }
 }
-// the Equilibrium / Bleed Off talents that don't depend on which one it is
+// Sunset (Zenith, in Equilibrium's place): every Corona falls on the target as a star, then it is Equilibrium
+function thermSunset(k, ab) {
+  const n = k.stacks('corona');
+  k.clear('corona');
+  for (let i = 0; i < n; i++) k.after(0.2 + 0.12 * i, () => k.damage(CORONA.STAR, { ab, extra: true }));
+  if (n) k.fx('sunset', { n });
+  thermEquil(k, ab, { stay: k.talent('thermist_solarwind'), big: n >= 2 });   // (Solar Wind, Zenith's spec row VI)
+}
+// the Equilibrium / Sunset talents that don't depend on which one it is
 function thermUtility(k, ab, big) {
   if (big && k.talent('thermist_front')) k.mitigate('party', 0.1, 6, { ab });
   if (k.talent('thermist_phase')) k.teleport('dash', { ab, d: 150 });
@@ -2264,13 +2275,13 @@ function thermInvert(k, ab) {
   k.buff('attuned', k.perk('thermist_a4') ? 14 : 10);
   if (t0) { k.g.temp = -t0; thermSettle(k, -t0, k.perk('thermist_w2') ? 1.95 : 1.5); }
   if (k.talent('thermist_vortex')) k.dot('vortex', 55, 6, 1.5, { ab });
-  if (k.talent('thermist_solstice')) k.after(5, () => { const t = k.g.temp; if (t) { k.g.temp = -t; thermSettle(k, -t, 0.6); k.fx('invert'); } });
+  if (k.talent('thermist_solstice')) k.after(5, () => { const t = k.g.temp; if (t) { k.g.temp = -t; thermSettle(k, -t, 0.6, { keep: true }); k.fx('invert'); } });
 }
 // which spell keeps the swing going (the glowing button): the edge spell, the big step, or the small step
 function thermPlan(k) {
   const t = k.g.temp, sb = k.def.stepBonus || 0, s = Math.sign(t);
   const brink = k.has('brink') ? k.buffs.get('brink').data.el : 0;
-  if (Math.abs(t) === THERMIST.EDGE && !brink && !(s > 0 && k.has('overheat')) && (!k.def.redline || (k.g.strain || 0) < 60)) return s > 0 ? 'flare' : 'lance';
+  if (Math.abs(t) === THERMIST.EDGE && !brink && !(s > 0 && k.has('overheat'))) return s > 0 ? 'flare' : 'lance';
   let dir = brink ? -brink : Math.abs(t) === THERMIST.EDGE ? -s : (k.g.dir || 1);
   if (dir > 0 && k.has('overheat')) dir = -1;
   for (let pass = 0; pass < 2; pass++, dir = -dir) {
@@ -2284,7 +2295,7 @@ KITS.thermist = {
   potMult: 0.88, // balance knob (tools/simulate.js)
   auto: { kind: 'thermo', potency: 25, range: RANGED },  // passive auto-attack (see ENGINE.AUTO_EVERY)
   gauge: { kind: 'dial', key: 'temp', max: 5, label: 'Temperature' },
-  init: () => ({ temp: 0, side: 0, peak: 0, dir: 1, strain: 0, embers: 0, latent: 0 }),
+  init: () => ({ temp: 0, side: 0, peak: 0, dir: 1, embers: 0, latent: 0 }),
   haste: k => (k.has('frostbite') ? 1.3 : 1),
   tick: k => thermTick(k),
   // (On the Brink simply runs out after 6s: only casting the same element again overloads you)
@@ -2844,19 +2855,16 @@ talentMoves('pyromancer', {
 });
 // Thermist (Zenith's spec row VII: SPEC_TALENTS in talents.js)
 talentMoves('thermist', {
-  thermist_meltdown: {
-    id: 'meltdown', replaces: 'invert', icon: 'invert', name: 'Controlled Meltdown', type: 'ogcd', target: 'enemy', range: RANGED, cd: 60, anim: 'big', talent: true,
-    desc: 'Let go on purpose (from 3 or more steps out): all your Strain goes out in one blast, {d:200} plus {d:5} for every point, and the dial snaps to 0 with a Thermal Shock half again as strong as the swing. Nothing burns, nothing seizes up, and for 6s your spells still hit as hard as in Redline.',
-    usable: k => thermAt(k, THERMIST.SHOCK_MIN),
-    glow: k => (k.g.strain || 0) >= 65,
+  thermist_redgiant: {
+    id: 'redgiant', replaces: 'invert', icon: 'invert', name: 'Red Giant', type: 'ogcd', target: 'self', cd: 60, anim: 'big', talent: true,
+    desc: `For ${CORONA.GIANT_DUR}s you swell: you can hold up to ${CORONA.GIANT} Corona at the edge instead of ${CORONA.MAX}, and the 4th and 5th edge casts hit half again as hard. If you're On the Brink with a full Corona, it lets you hold on.`,
+    glow: k => thermAt(k, THERMIST.EDGE) && k.stacks('corona') >= 2,
     effect(k) {
-      const s = k.g.strain || 0, fell = Math.abs(k.g.temp), from = Math.sign(k.g.temp);
-      k.g.strain = 0; k.clear('redline'); k.clear('brink');
-      k.damage(200 + 5 * s, { ab: this });
-      k.g.temp = 0; Object.assign(k.g, { side: 0, peak: 0 });
-      thermShock(k, fell, 1.5, -from); k.buff('embered', 6); k.fx('empower');
+      k.buff('redgiant', CORONA.GIANT_DUR);
+      // a full three no longer fills the Corona: the Brink it set is lifted
+      if (k.has('brink') && k.stacks('corona') < CORONA.GIANT) k.clear('brink');
     },
-    fx: { type: 'ring', color: '#ff7a5a', r: 60, range: RANGED },
+    fx: { type: 'aura', color: '#ff5a3a', r: 40, dur: 1.2 },
   },
 });
 // Cleric
@@ -2955,7 +2963,7 @@ TALENT_ABILITIES.alembist_quicksilver = { cls: 'alembist', ab: Object.assign(ale
     'A reagent (1s) that takes Salt\'s place. Quicksilver + Quicksilver is a Silver Mirror, Quicksilver + Dew a Silver Tonic, Quicksilver + Ember a Fulminate. It glows while a raidwide is on its way and you hold no Silver Mirror, Salt Ward or Salve.'),
   { replaces: 'salt', icon: 'salt', talent: true }) };
 
-if (typeof module !== 'undefined') Object.assign(module.exports, { kitMoveDest, kitSegDist, THERMIST, thermSpell, thermMove, thermSettle, thermShock, thermBrink, thermMult, thermAt,
+if (typeof module !== 'undefined') Object.assign(module.exports, { kitMoveDest, kitSegDist, THERMIST, CORONA, thermCorona, thermSunset, thermSpell, thermMove, thermSettle, thermShock, thermBrink, thermMult, thermAt,
   thermEdgeCast, thermEquil, thermUtility, thermInvert, thermPlan, thermTick, thermOverload, DRIFT, DRIFT_BODY, DRIFT_NEAR, DRIFT_REACH, driftAdd, driftTick, driftPass, driftK, driftMax,
   driftSpend, driftHook, driftRiposte, driftLoop, TALENT_ABILITIES });
 

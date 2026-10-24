@@ -957,29 +957,22 @@ Object.assign(SPECS, {
     },
     {
       id: 'zenith', name: 'Zenith', title: 'The Burning Edge', accent: '#ff5a6a',
-      gaugeTip: 'Fire spells turn the dial toward Blaze and frost toward Rime; each step from 0 is +8% damage for that side. At ±5 you stay in Redline: +20% damage, your edge spell is instant, and pushing further doesn\'t overload you. Strain builds 11 a second in Redline and fades outside it; at 100 you melt down. A crossing of 0 after reaching 3 or more sets off a Thermal Shock.',
-      blurb: 'Hold the edge. Feel it burn. Let go a moment before it takes you.',
-      focus: 'Holding the edge. At ±5 you stay in Redline, where every spell is stronger, but Strain builds until you vent it or melt down.',
-      passive: { name: 'Redline', desc: 'At +5 or -5 you stay in Redline instead of overloading: every spell hits 20% harder and your edge spell is instant. Each second there builds Strain; full Strain melts you down (the dial snaps to 0, you burn, and that element seizes up for 4s: Overheat or Frostbite). Equilibrium becomes Bleed Off.' },
+      gaugeTip: 'Fire spells turn the dial toward Blaze and frost toward Rime; each step from 0 is +8% damage for that side. A crossing of 0 after reaching 3 or more sets off a Thermal Shock. The sparks by the edge are your Corona: each edge cast lights one and keeps you there, and the third leaves you On the Brink. Your next Shock spends them all, 25% stronger for each. They fade 12s after your last edge cast.',
+      blurb: 'Climb to the top. Burn there a while. Then fall, and make it count.',
+      focus: 'Slow, heavy swings. At the edge you hold for three sure crits, building Corona, then swing all the way across for a Thermal Shock they make far bigger.',
+      passive: { name: 'Corona', desc: 'At its own edge your Flare or Glacier Lance is instant and always crits, and lights a Corona instead of moving you: you can hold the edge for up to 3 (the third leaves you On the Brink). Your next Thermal Shock spends every Corona, 25% stronger for each. They fade 12s after your last edge cast. Equilibrium becomes Sunset.' },
       build: () => ({
-        potMult: 0.84,
-        redline: true,
+        potMult: 0.76,   // balance knob (tools/simulate.js)
+        corona: true,
         abilities: {
-          flare: { desc: '2s cast: a burst of fire for {d:400}. Turns the dial 2 toward Blaze. In Redline at +5 it\'s instant and keeps you there.' },
-          lance: { desc: '2s cast: a lance of ice for {d:400}. Turns the dial 2 toward Rime. In Redline at -5 it\'s instant and keeps you there.' },
+          flare: { desc: '2s cast: a burst of fire for {d:400}. Turns the dial 2 toward Blaze. At +5 it\'s instant, always crits and lights a Corona, keeping you at the edge. The third leaves you On the Brink: if your next spell is fire too, you overheat.' },
+          lance: { desc: '2s cast: a lance of ice for {d:400}. Turns the dial 2 toward Rime. At -5 it\'s instant, always crits and lights a Corona, keeping you at the edge. The third leaves you On the Brink: if your next spell is frost too, you get frostbite.' },
           equil: {
-            id: 'bleed', replaces: 'equil', name: 'Bleed Off', type: 'ogcd', target: 'self', cd: 15, anim: 'cast',
-            desc: 'Vent 60 Strain without leaving the edge. The heat you let go wraps you in a shield of {s:160}.',
-            glow: k => (k.g.strain || 0) >= 55,
-            effect(k) {
-              const vented = Math.min(60, k.g.strain || 0);
-              k.g.strain = Math.max(0, (k.g.strain || 0) - 60);
-              k.shield('self', 160 * (k.perk('thermist_a2') ? 1.5 : 1), 6, { ab: this });
-              if (k.talent('thermist_pressure') && vented > 0) { k.damage(2.5 * vented, { ab: this, extra: true }); k.fx('empower'); }   // (Pressure Release, spec row VI)
-              thermUtility(k, this, vented >= 40);
-              if (k.talent('thermist_pulse') && thermAt(k, THERMIST.EDGE)) thermShock(k, 3, 1, Math.sign(k.g.temp));
-            },
-            fx: { type: 'aura', color: '#ff8a6a', r: 34, dur: 1.2 },
+            id: 'sunset', replaces: 'equil', icon: 'equil', name: 'Sunset', type: 'ogcd', target: 'self', cd: 30, anim: 'cast',   // (Equilibrium's icon until thermist/sunset is painted, docs/art/spec-icons.md)
+            desc: 'Every Corona you hold falls on the target as a star, {d:170} each. Then the dial snaps back to 0 behind a shield: {s:70} for every step it fell. The swing is kept, so your next spell across 0 still sets off a Thermal Shock (without the Corona). It also clears On the Brink.',
+            glow: k => bossCasting(k) && (thermAt(k, 3) || k.stacks('corona') >= 2),
+            effect(k) { thermSunset(k, this); },
+            fx: { type: 'aura', color: '#ffb05a', r: 34, dur: 1.2 },
           },
         },
       }),

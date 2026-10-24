@@ -193,8 +193,10 @@
   *Replaces Accelerando.* a clock face with three fading copies of itself rippling outward, like an echo.
 
 ### Thermist
-- **Bleed Off** — `icons/thermist/bleed.png` (Zenith)
-  *Replaces Equilibrium.* a brass pressure valve on a pipe, wrenched open, three thick curls of white steam blasting out of it, a small red needle gauge on the pipe sitting in the red.
+- **Sunset** — `icons/thermist/sunset.png` (Zenith)
+  *Replaces Equilibrium.* a low crimson-gold sun half sunk behind a dark horizon line, three small white-hot stars falling from the sky above it toward the ground, a thin pale shield arc curving over the whole.
+- **Red Giant** — `icons/thermist/redgiant.png` (Zenith talent, replaces Inversion; list it in talent-icons.json once painted)
+  a swollen deep-red star filling the frame, its rim boiling with flares, five small white sparks fanned round its upper edge.
 
 ### Driftblade
 - **Impact** — `icons/driftblade/impact.png` (Comet)
