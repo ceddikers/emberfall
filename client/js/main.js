@@ -3856,6 +3856,15 @@
   // --- specializations on the hero page: the base class and its two specs as tabs. A spec shows what it
   // specializes in, its passive, and every move it adds or changes (with the move it replaced).
   let selSpec = null, tipsTab = 'first', selShown = null;
+  // A long note on the hero page shows its first sentence(s) with a pip; the whole text is a tooltip on the line.
+  // note() hands out the data-note attribute, and bindNotes() registers the tips once the markup is in the page.
+  const selNotes = [];
+  const brief = (text, n = 1) => {
+    const s = String(text).split(/(?<=[.!?])\s+/);
+    return s.length > n ? { head: s.slice(0, n).join(' '), more: true } : { head: String(text), more: false };
+  };
+  const note = (b, full) => { if (!b.more) return ''; selNotes.push(full); return ` data-note="${selNotes.length - 1}"`; };
+  const bindNotes = root => root.querySelectorAll('[data-note]').forEach(el => { const t = selNotes[Number(el.dataset.note)]; Tip.set(el, () => t); });
   // move text shows exact numbers (numbers.js) for the hero a page is about: the one on the hero page, else yours
   Num.setContext(() => (!sel.classList.contains('hidden') && !selDetail.classList.contains('hidden') && selShown
     ? { cls: selShown.id, spec: selSpec } : { cls: player.cls && player.cls.id, spec: player.spec }));
@@ -3873,13 +3882,15 @@
     // the class's longest page and switching tabs never resizes or moves anything
     const pane = s => {
       const spec = s.id && specOf(cls.id, s.id), sk = kitFor(cls.id, s.id || null);
-      if (!spec) return `<p class="spec-focus">The class as it was made: every specialization starts from here and changes a few things. Pick one to see what it changes.</p>`;
+      if (!spec) return `<p class="spec-focus">The class as it was made. Pick a specialization to see what it changes.</p>`;
       const changes = sk.abilities.map((a, i) => ({ a, was: kit.abilities[i], i })).filter(c => c.a !== c.was);
-      return `<p class="spec-focus"><u>Specializes in</u> ${spec.focus}</p>
-        <div class="spec-passive"><h5>${spec.passive.name}</h5><p>${spec.passive.desc}</p></div>
-        <div class="spec-moves">${changes.map(c => `<div class="spec-move" data-i="${c.i}">
-          <i class="ab-icon ${c.a.type}" style="background-image:url(${abilityIcon(cls.id, abilityIconId(c.a))})"></i>
-          <div><b><kbd>${KEYS[c.i]}</kbd>${c.a.name}${c.a.id !== c.was.id ? `<em>New, replaces ${c.was.name}</em>` : '<em>Changed</em>'}</b><p>${c.a.desc}</p></div></div>`).join('')}</div>`
+      const foc = brief(spec.focus), pas = brief(spec.passive.desc);
+      const pip = b => (b.more ? '<i class="more"></i>' : '');
+      // the changed moves are a row of icons; each one's tooltip says what the spec did to it
+      return `<p class="spec-focus"${note(foc, spec.focus)}><u>Specializes in</u> ${foc.head}${pip(foc)}</p>
+        <div class="spec-passive"${note(pas, `<b>${spec.passive.name}</b>${spec.passive.desc}`)}><h5>${spec.passive.name}</h5><p>${pas.head}${pip(pas)}</p></div>
+        <div class="spec-moves"><u>Changes</u>${changes.map(c => `<span class="spec-move ${c.a.type}${c.a.id !== c.was.id ? ' new' : ''}" data-i="${c.i}">
+          <i class="ab-icon ${c.a.type}" style="background-image:url(${abilityIcon(cls.id, abilityIconId(c.a))})"></i><kbd>${KEYS[c.i]}</kbd></span>`).join('')}</div>`
         + trialCard(cls, spec, Save.specState(cls.id, spec.id));
     };
     const panes = all.map(s => `<div class="spec-pane${(s.id || null) === (selSpec || null) ? ' on' : ''}" data-spec="${s.id || ''}"${(s.id || null) === (selSpec || null) ? '' : ' aria-hidden="true"'}>${Num.fill(pane(s), { cls: cls.id, spec: s.id || null })}</div>`).join('');
@@ -3888,14 +3899,19 @@
     box.querySelectorAll('.trial-go').forEach(tb => tb.addEventListener('click', () => { if (!tb.getAttribute('aria-disabled')) beginTrial(cls, tb.dataset.spec); }));
     box.querySelectorAll('.spec-pane').forEach(p => {
       const sk = kitFor(cls.id, p.dataset.spec || null);
-      p.querySelectorAll('.spec-move').forEach(m => { const i = Number(m.dataset.i); Tip.set(m, () => abilityTip(cls, sk.abilities[i])); });
+      p.querySelectorAll('.spec-move').forEach(m => {
+        const i = Number(m.dataset.i), a = sk.abilities[i], was = kit.abilities[i];
+        const what = a.id !== was.id ? `New, replaces ${was.name}` : 'Changed by this specialization';
+        Tip.set(m, () => `<div class="tip-chg">${what}</div>${abilityTip(cls, a)}${a.id === was.id ? `<div class="tip-was"><u>Base</u> ${was.desc}</div>` : ''}`);
+      });
     });
+    bindNotes(box);
   }
   // under a sealed or trial-ready spec: the trial's name and memory, and the way in once it's open
   function trialCard(cls, spec, state) {
     const T = TRIALS[spec.id];
     if (state === 'open' || !T) return '';
-    if (state === 'locked') return `<div class="spec-trial locked"><h5>${T.name}</h5><p>Sealed until one of your heroes has cleared the Hollow King.</p></div>`;
+    if (state === 'locked') return `<div class="spec-trial locked"><h5>${T.name}</h5><p>Sealed until a hero clears the Hollow King.</p></div>`;
     return `<div class="spec-trial"><h5>${T.name}</h5><p>${T.lore[0]}</p>
       ${trialGo(spec.id)}${BarrowGate.isOpen() ? '<small class="spec-gatehint">Trials are also taken at the Barrow Gate.</small>' : ''}</div>`;
   }
@@ -3964,13 +3980,16 @@
     const takenBy = [...remotes.values()].filter(r => r.cls === cls).map(r => escapeHtml(r.name));
     selDetail.style.setProperty('--a', cls.accent);
     selDetail.style.setProperty('--c', ROLES[cls.role].color);
+    selNotes.length = 0;
+    const plan = brief(cls.gameplan, 2);
     $('sel-flavor').innerHTML = `
       <h2>${cls.name}</h2>
       <div class="sub"><span class="role-tag" style="--c:${ROLES[cls.role].color}">${ROLES[cls.role].name}</span>${cls.title}
         <span class="diff" data-tip="Difficulty ${cls.difficulty} of 3">${diamonds(cls.difficulty)}</span></div>
       <p class="tagline">“${cls.tagline}”</p>
-      <p>${cls.gameplan}</p>
+      <p class="gameplan"${note(plan, cls.gameplan)}>${plan.head}${plan.more ? '<i class="more"></i>' : ''}</p>
       ${takenBy.length ? `<p class="taken">Also picked by ${takenBy.join(', ')}</p>` : ''}`;
+    bindNotes($('sel-flavor'));
     const keys = $('sel-keys');
     selSpec = player.cls === cls ? (player.spec || null) : Save.spec(cls.id);
     const renderKit = () => {
@@ -3986,12 +4005,15 @@
         b.addEventListener('mouseenter', () => { playPreview(i); preview.nextDemo = now + 2.5; });
       });
       if (preview) preview.lis = [...keys.querySelectorAll('.key-cell')];
+      selNotes.length = 0;
       renderSpecBox(cls, kit, renderKit);
       renderChoose(cls);
       // tips are written for the base class; under a spec the key chips show its moves and it adds its own line first
       const spec = specOf(cls.id, selSpec);
+      const pdesc = (spec && spec.classPassive) || guide.passive.desc, pb = brief(pdesc);
       $('sel-passive').innerHTML = `<i class="ab-icon passive" style="background-image:url(${abilityIcon(cls.id, guide.passive.icon)})"></i>
-        <div><h4>Passive · ${guide.passive.name}</h4><p>${Num.fill((spec && spec.classPassive) || guide.passive.desc)}</p></div>`;
+        <div${note(pb, `<b>${guide.passive.name}</b>${pdesc}`)}><h4>Passive · ${guide.passive.name}</h4><p>${Num.fill(pb.head)}${pb.more ? '<i class="more"></i>' : ''}</p></div>`;
+      bindNotes($('sel-passive'));
       // one page of tips at a time (tabs), so the hero page fits on one screen
       const tabs = [
         ...(spec ? [{ k: 'spec', name: spec.name, html: `<p>${spec.blurb}</p>` }] : []),
