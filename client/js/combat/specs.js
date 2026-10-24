@@ -1396,8 +1396,8 @@ SPECS.lanternkeeper = [
     id: 'beacon', name: 'Beacon', title: 'The Fixed Star', accent: '#ffd27a',
     gaugeTip: 'Embers light your lanterns. One comes back every 5s, and every third Trim the Wick gives one more. Set Lantern and Hand Lantern cost one, Relight two.',
     blurb: 'A few bright fixed lights, big heals.',
-    focus: 'Two tall Great Beacons with wide glows that never burn below half. Pick their spots well: they can\'t be carried, and allies who hold still in them take less damage.',
-    passive: { name: 'Steady Glow', desc: 'Set Lantern becomes Great Beacon. Allies who stand still in a Great Beacon\'s glow for 3s take 5% less damage while they stay.' },
+    focus: 'Two tall Great Beacons with wide glows that never burn below half. Allies inside them take less damage, and Call the Beacon pulls one to your feet when the party moves on.',
+    passive: { name: 'Steady Glow', desc: 'Set Lantern becomes Great Beacon. Carry the Flame becomes Call the Beacon. Allies inside a Great Beacon\'s glow take 8% less damage while they stay.' },
     build: base => ({
       potMult: base.potMult * 1.0,   // balance knob (tools/simulate.js)
       steadyGlow: true,
@@ -1405,12 +1405,12 @@ SPECS.lanternkeeper = [
         set: {
           id: 'beacon', replaces: 'set', icon: 'beacon', name: 'Great Beacon', type: 'gcd', target: 'self', anim: 'big',
           usable: k => k.g.emb >= 1,
-          desc: 'Instant, 1 Ember: raise a Great Beacon at your feet. For 18s everyone in its wide glow heals {h:65} every second; its wick never burns below half, and it can\'t be carried. Two at most: a third snuffs the oldest.',
+          desc: 'Instant, 1 Ember: raise a Great Beacon at your feet. For 18s everyone in its wide glow heals {h:65} every second; its wick never burns below half. Two at most: a third snuffs the oldest.',
           glow: k => k.g.emb >= 1 && k.g.lan.filter(l => l.kind === 'beacon').length < 2,
           effect(k) { lkBeacon(k, this); },
           fx: { type: 'ring', color: '#ffd27a', r: 60, onTarget: false },
         },
-        carry: { desc: 'Pick up your nearest lantern (within a short throw) and set it down at your feet. It keeps its wick. Great Beacons stay put: only your other lights can be carried.' },
+        carry: { name: 'Call the Beacon', desc: 'Pull your nearest Great Beacon (within a long throw) to your feet. It keeps its wick, the damage cut in its glow comes with it at once, and the glow pulses {h:150} for everyone in it as it lands.' },
       },
     }),
   },
@@ -1418,8 +1418,8 @@ SPECS.lanternkeeper = [
     id: 'wayfarer', name: 'Wayfarer', title: 'The Road Lamp', accent: '#ff9f5a',
     gaugeTip: 'Embers light your lanterns. One comes back every 5s, and every third Trim the Wick gives one more. Lamplighter\'s Stride and Hand Lantern cost one, Relight two.',
     blurb: 'Lights trail behind you as you move: healing on the go.',
-    focus: 'Small lights fall wherever you walk. Lead the party through the fight and the light follows; Trailblaze drags every light along with you.',
-    passive: { name: 'Road Worn', desc: 'Set Lantern becomes Lamplighter\'s Stride and Carry the Flame becomes Trailblaze. You heal 10% more while moving; stand still for 3s and your newest light dims.' },
+    focus: 'Small lights fall wherever you walk. Lead the party through the fight and the light follows, and the walking itself mends whoever is hurt most; Trailblaze drags every light along with you.',
+    passive: { name: 'Road Worn', desc: 'Set Lantern becomes Lamplighter\'s Stride and Carry the Flame becomes Trailblaze. You heal 10% more while moving, and every few steps you walk a light lands on the most hurt ally near you, healing them {h:110}. Stand still for 3s and your newest light dims.' },
     build: base => ({
       potMult: base.potMult * 1.1,   // balance knob (tools/simulate.js)
       roadWorn: true,

@@ -6076,7 +6076,7 @@ if (typeof module !== 'undefined') Object.assign(module.exports, { TIDE, tideF, 
 //   stride, drop {x, y} (a small light), trail {dx, dy}, festival, wisp, eternal {x, y}, sparks {x, y}, pillar {x, y}.
 // ===================================================================================================================
 const LANTERN = { R: 110, LIFE: 18, BURN: 12, HAND_R: 90, HAND_LIFE: 12, MAX: 3, EMB_MAX: 4, EMB_EVERY: 5, TRIM: 0.25, REACH: 200,
-  BEACON_R: 150, BEACON_MAX: 2, SMALL_R: 75, SMALL_LIFE: 6, SMALL_MAX: 6, STRIDE: 10, STEP: 60, FLOAT_R: 70, FLOAT_LIFE: 12, LIGHT: 8,
+  BEACON_R: 150, CALL_REACH: 420, CALL_POT: 150, WAY_STEP: 80, WAY_CD: 1.5, WAY_POT: 110, BEACON_MAX: 2, SMALL_R: 75, SMALL_LIFE: 6, SMALL_MAX: 6, STRIDE: 10, STEP: 60, FLOAT_R: 70, FLOAT_LIFE: 12, LIGHT: 8,
   FLARE: 340 };   // (Flare's burst for each glow: big enough to lift a party out of a Hard raidwide)
 const LK_KIND = { floor: 0, beacon: 1, hand: 2, small: 3, float: 4, eternal: 5 };
 const lkEmbMax = k => (k.talent('lanternkeeper_hoard') ? 5 : LANTERN.EMB_MAX);
@@ -6085,6 +6085,8 @@ const lkPos = k => (k.env.pos ? k.env.pos() : { x: 0, y: 0 });
 const lkFloor = l => l.on == null;   // (on the floor: not hung on anyone)
 // the lanterns Carry the Flame can pick up: on the floor, not a Great Beacon or the Eternal Lamp
 const lkMovable = l => (l.kind === 'floor' || l.kind === 'small');
+// ...and for a Beacon, only its Great Beacons (Call the Beacon)
+const lkCarryable = k => (k.def.steadyGlow ? (l => l.kind === 'beacon') : lkMovable);
 const lkStub = l => l.wick <= 0.02;
 function lkEmber(k, n = 1) {
   const was = k.g.emb;
@@ -6137,6 +6139,14 @@ function lkTick(k) {
   if (k.now < (g.strideUntil || 0) && moving) {
     g.strideDist += step;
     while (g.strideDist >= LANTERN.STEP) { g.strideDist -= LANTERN.STEP; lkSmall(k); }
+  }
+  // Road Worn (Wayfarer): every few steps a light lands on the most hurt ally in reach (the host picks them, fight.js lampEvent)
+  if (k.def.roadWorn && moving) {
+    g.wayDist = (g.wayDist || 0) + step;
+    if (g.wayDist >= LANTERN.WAY_STEP && k.now >= (g.wayAt || 0)) {
+      g.wayDist = 0; g.wayAt = k.now + LANTERN.WAY_CD;
+      k.env.emit({ type: 'lamp', op: 'waylight', amount: k.healAmount(LANTERN.WAY_POT, { ab: abBase(k, 'set') }).amount });
+    }
   }
   if (k.talent('lanternkeeper_pilgrim') && g.moveFor >= 5 && !g.pilgrim) { g.pilgrim = true; k.fx('lk-pilgrim'); }
   // the wicks burn down (a Great Beacon never below half, the Eternal Lamp never; Lighthouse holds them all)
@@ -6200,14 +6210,15 @@ function lkFlare(k, ab, half) {
   }
   let pot = LANTERN.FLARE * (half ? 0.5 : 1);
   if (g.pilgrim && !half) { pot *= 1.3; g.pilgrim = false; }
-  const sh = k.talent('lanternkeeper_flareshield') && !half ? lkShieldAmt(k, 120) : 0;
-  lkBurst(k, k.healAmount(pot, { ab }).amount, Object.assign({ all: lkLight(k) ? 1 : 0 }, sh ? { sh, full: 1 } : null));
+  const ward = k.talent('lanternkeeper_flareshield'), sh = lkShieldAmt(k, half ? 50 : ward ? 240 : 100);   // (a Flare shields everyone it reaches; Flare Shield makes it far stronger)
+  lkBurst(k, k.healAmount(pot, { ab }).amount, { all: lkLight(k) ? 1 : 0, sh });
+  if (ward && !half) { k.partyBuff('haste', 0.1, 6, { ab }); k.hot('party', 30, 3, 2, { ab, id: 'flareward' }); }
   k.itemHook('heal');
   if (!half) for (const l of g.lan) if (l.kind !== 'eternal' && !lkLight(k)) l.wick = Math.max(l.kind === 'beacon' ? 0.5 : 0, l.wick - 1 / 3);
   k.fx('lk-flare', { n: g.lan.length, all: lkLight(k) ? 1 : 0, twin: half ? 1 : 0 });
 }
 const lkShieldAmt = (k, pot) => Math.round(pot * ENGINE.POT_SCALE * (1 + (k.def.healMod ? k.def.healMod(k, {}) : 0)) * (1 + (k.gear().power || 0)) * (1 + k.fxMod('heal')));
-function lkCarryReach(k) { return k.talent('lanternkeeper_longtoss') ? LANTERN.REACH * 2 : LANTERN.REACH; }
+function lkCarryReach(k) { const r = k.def.steadyGlow ? LANTERN.CALL_REACH : LANTERN.REACH; return k.talent('lanternkeeper_longtoss') ? r * 2 : r; }
 
 KITS.lanternkeeper = {
   potMult: 1.09, // balance knob (tools/simulate.js)
@@ -6217,6 +6228,7 @@ KITS.lanternkeeper = {
   tick: k => lkTick(k),
   // the host's word on the lanterns (fight.js lampTick, twice a second): how many allies stood in a glow (n: ally-pulses)
   onNotify(k, type, d) {
+    if (type === 'relit' && d.w && d.to != null) { k.fx('lk-hang', { to: d.to }); return; }
     if (type !== 'lit') return;
     k.g.inGlow = d.c || 0;
     k.ultGain((d.n || 0) * 0.08);
@@ -6277,8 +6289,8 @@ KITS.lanternkeeper = {
       fx: { type: 'ring', color: '#ffd89a', r: 36, onTarget: true },
     },
     {
-      id: 'flare', name: 'Flare', type: 'ogcd', target: 'self', cd: 20, anim: 'big',
-      desc: 'Every lantern bursts at once: everyone in a glow heals {h:340}, once for every glow they stand in. Each wick burns down a stage.',
+      id: 'flare', name: 'Flare', type: 'ogcd', target: 'self', cd: 12, anim: 'big',
+      desc: 'Every lantern bursts at once: everyone in a glow heals {h:340}, once for every glow they stand in, and takes a shield of {s:100}. Each wick burns down a stage.',
       glow: k => { const b = bossNow(k); return !!(b && b.wide) && k.g.lan.length > 0 && (k.g.inGlow >= 2 || lkLight(k)); },
       effect(k) {
         lkFlare(k, this, false);
@@ -6289,15 +6301,16 @@ KITS.lanternkeeper = {
     {
       id: 'carry', name: 'Carry the Flame', type: 'ogcd', target: 'self', cd: 15, charges: 2, anim: 'cast',
       desc: 'Pick up your nearest lantern (within a short throw) and set it down at your feet. It keeps its wick. Great Beacons stay put.',
-      usable: k => !!lkNearest(k, lkPos(k), l => lkMovable(l) && Math.hypot(l.x - lkPos(k).x, l.y - lkPos(k).y) <= lkCarryReach(k)),
-      glow: k => { const n = lkNearest(k, lkPos(k), lkMovable); return !!n && n.d > 130 && n.d <= lkCarryReach(k); },
+      usable: k => !!lkNearest(k, lkPos(k), l => lkCarryable(k)(l) && Math.hypot(l.x - lkPos(k).x, l.y - lkPos(k).y) <= lkCarryReach(k)),
+      glow: k => { const n = lkNearest(k, lkPos(k), lkCarryable(k)); return !!n && n.d > 130 && n.d <= lkCarryReach(k); },
       effect(k) {
-        const p = lkPos(k), n = lkNearest(k, p, l => lkMovable(l) && Math.hypot(l.x - p.x, l.y - p.y) <= lkCarryReach(k));
+        const p = lkPos(k), n = lkNearest(k, p, l => lkCarryable(k)(l) && Math.hypot(l.x - p.x, l.y - p.y) <= lkCarryReach(k));
         if (!n) return;
         const fx = n.l.x, fy = n.l.y;
         n.l.x = p.x; n.l.y = p.y;
         if (k.perk('lanternkeeper_a2')) n.l.wick = Math.min(1, n.l.wick + 1 / 3);
         k.fx('lk-carry', { fx: Math.round(fx), fy: Math.round(fy), x: Math.round(p.x), y: Math.round(p.y) });
+        if (k.def.steadyGlow) { const id = n.l.id, amt = k.healAmount(LANTERN.CALL_POT, { ab: this }).amount; k.after(0.15, () => lkBurst(k, amt, { lid: id })); }   // (Call the Beacon: the glow pulses once the host has seen it land)
         if (k.talent('lanternkeeper_nightwalk')) kitMove(k, 'dash', { d: 90, ab: this });
       },
       fx: { type: 'aura', color: '#ffd89a', r: 30, dur: 0.4 },
@@ -6413,7 +6426,7 @@ function lkTrail(k, ab) {
   });
 }
 
-if (typeof module !== 'undefined') Object.assign(module.exports, { LANTERN, LK_KIND, lkEmbMax, lkLight, lkNearest, lkMovable, lkStub, lkCarryReach, lkPos, lkAdd, lkSmall, lkPlaced, lkBeacon, lkStride, lkTrail });
+if (typeof module !== 'undefined') Object.assign(module.exports, { LANTERN, LK_KIND, lkEmbMax, lkLight, lkNearest, lkMovable, lkStub, lkCarryReach, lkCarryable, lkPos, lkAdd, lkSmall, lkPlaced, lkBeacon, lkStride, lkTrail });
 
 // ===================================================================================================================
 // KENSEIER (tank, class 22; docs/plans/2026-10-new-classes-3.md, section 4): every blow has a beat. Catch it.

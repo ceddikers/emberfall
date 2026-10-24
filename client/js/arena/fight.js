@@ -1922,17 +1922,17 @@ Object.assign(FightSim.prototype, {
 // out the wick, its gear and Lighthouse), w the wick (0-100), k the kind (0 floor, 1 Great Beacon, 2 hand, 3 small,
 // 4 floating, 5 eternal). on: an ally it hangs on (or 'c', the party's centre), placed at that ally plus ox, oy.
 //   - Once a second every alive player inside a glow heals that lantern's h (glows stack). all: everyone counts (Lighthouse).
-//   - st (Steady Glow): standing still in it for 3s, 5% less damage while there. ln (Lighthouse Keeper): its most hurt
+//   - st (Steady Glow): 8% less damage while inside it. ln (Lighthouse Keeper): its most hurt
 //     player heals 30% more. sg (Signal Fire): with two of them, a player on the line between (outside both) heals half.
 //     hh (Hearth): 6s in its glow heals hh, and again every 6s more.
 //   - 'lamp' events: op 'burst' (every lantern, or lid's: everyone in its glow heals amount and takes a shield sh;
-//     full: only those at full health take the shield, instead of the heal), op 'relight' (the most hurt player inside
-//     any glow heals amount; last: under 20% they can't fall for 3s, once every 90s).
+//     full: only those at full health take the shield, instead of the heal), op 'waylight' (a Wayfarer's step-light: the most hurt player within WAY_R of the owner heals amount),
+//     op 'relight' (the most hurt player inside any glow heals amount; last: under 20% they can't fall for 3s, once every 90s).
 //   - The owner hears what its lanterns did ('fev' lit, every pulse: n ally-pulses healed, c players in a glow).
 //   - Everyone gets the list ('lamps', 10 a second) to draw other keepers' lanterns.
 // Nothing here is trusted: positions, radii and amounts are clamped like any other combat event.
 // ===================================================================================================================
-const LAMP_HOST = { MAX: 12, R: 220, HEAL: 2000, STALE: 1.5, PULSE: 1, STILL: 3, STEADY: 0.05, LINE: 30, HEARTH: 6, LAST_CD: 90, THREAT: 0.33 };
+const LAMP_HOST = { MAX: 12, R: 220, HEAL: 2000, STALE: 1.5, PULSE: 1, STEADY: 0.08, WAY_R: 240, LINE: 30, HEARTH: 6, LAST_CD: 90, THREAT: 0.33 };
 Object.assign(FightSim.prototype, {
   // a lantern's heal: like any heal, but it draws only a third of the usual healing threat (a light that never stops
   // would otherwise pull the boss onto its keeper)
@@ -1992,6 +1992,18 @@ Object.assign(FightSim.prototype, {
           if (sh && (!ev.full || full) && p.s.shield < sh) this.giveShield(pid, p.id, p.s, sh, 8);
         }
       }
+    } else if (ev.op === 'waylight') {
+      // a light lands on the most hurt ally within reach of the walker (the walker too)
+      const me = al.find(p => p.id === pid);
+      if (!me) return;
+      let best = null, bf = 0.99;
+      for (const p of al) {
+        const f = p.s.hp / p.s.maxHp;
+        if (f < bf && Math.hypot(p.x - me.x, p.y - me.y) <= LAMP_HOST.WAY_R) { bf = f; best = p; }
+      }
+      if (!best) return;
+      this.lampHeal(pid, best.id, amt);
+      this.emit({ t: 'fev', k: 'relit', id: pid, to: best.id, w: 1 });
     } else if (ev.op === 'relight') {
       let best = null, bf = Infinity;
       // the most hurt ally (one standing in a glow first, unless someone outside is far worse off)
@@ -2009,16 +2021,11 @@ Object.assign(FightSim.prototype, {
   lampTick() {
     if (!this.lamps || !this.lamps.size) return;
     const al = this.alive(), live = this.liveLamps();
-    // Steady Glow: who has stood still (and since when)
-    this.stillAt = this.stillAt || new Map();
-    for (const p of al) {
-      const o = this.stillAt.get(p.id);
-      if (!o || Math.hypot(o.x - p.x, o.y - p.y) > 4) this.stillAt.set(p.id, { x: p.x, y: p.y, t: this.t });
-    }
+    // Steady Glow: everyone inside a Great Beacon's glow takes less damage while there
     for (const [pid, l, at] of live) {
       if (!l.st) continue;
       for (const p of al) {
-        if (this.t - this.stillAt.get(p.id).t < LAMP_HOST.STILL || !this.inLamp(p, l, at)) continue;
+        if (!this.inLamp(p, l, at)) continue;
         const m = p.s.mits.find(x => x.lampSt);
         if (m) m.end = this.t + 0.25; else p.s.mits.push({ pct: LAMP_HOST.STEADY, start: this.t, end: this.t + 0.25, lampSt: true, from: pid });
       }

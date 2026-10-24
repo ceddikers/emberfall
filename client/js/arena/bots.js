@@ -1661,7 +1661,7 @@ BotAI.lanternkeeper = function (bot, k, view) {
     // a lantern left behind: carry it to where the party is now
     const ca = k.abilities[carry];
     if (ca && ca.id === 'carry' && ready(carry) && nearMe >= 2) {
-      const n = lkNearest(k, me, l => lkMovable(l) && Math.hypot(l.x - me.x, l.y - me.y) <= lkCarryReach(k));
+      const n = lkNearest(k, me, l => lkCarryable(k)(l) && Math.hypot(l.x - me.x, l.y - me.y) <= lkCarryReach(k));
       if (n && n.d > 110 && covers(n.l) < 2 && !BotAI.danger(bot, me.x, me.y, view)) return carry;
     }
     if (ca && ca.id === 'trail' && ready(carry) && g.lan.filter(l => l.kind === 'small').length >= 3 && covers(g.lan.filter(l => l.kind === 'small').slice(-1)[0]) < 2 && nearMe < 2) return carry;
@@ -1669,7 +1669,7 @@ BotAI.lanternkeeper = function (bot, k, view) {
   if (k.gcdRemaining() > 0.0001 || k.cast) return null;
   // an emergency: Relight's heal (or a wisp) on the most hurt
   const ra = k.abilities[rel];
-  if (ready(rel) && low && frac(low) < (g.emb >= 3 ? 0.4 : 0.25)) return rel;
+  if (ready(rel) && low && frac(low) < (g.emb >= 4 ? 0.85 : g.emb >= 3 ? 0.6 : 0.25)) return rel;   // (spare Embers are spent: they come back every 5s and stop at 4)
   if (ready(rel) && ra.id === 'relight' && floor.filter(l => lkStub(l)).length >= 2 && avg < 0.8) return rel;
   if (ready(rel) && ra.id === 'wisp' && low && frac(low) < 0.6) return rel;
   const handUp = g.lan.some(l => l.kind === 'hand' && l.end - k.now > 1.5);
