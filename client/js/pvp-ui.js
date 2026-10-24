@@ -277,7 +277,7 @@ const PvpUI = (() => {
     const watching = humans.filter(h => !placed.has(h.id));
     panel.innerHTML = `<header><h3>The Arena</h3><button type="button" class="close" aria-label="Close">×</button></header>
       <p class="pr-note">${esc(m.note)} A short bout, then back to town. Nothing is won but the bout.</p>
-      <div class="pv-modes">${MODES.map(x => `<button type="button" class="btn2${x.id === L.mode ? ' on' : ''}" data-mode="${x.id}"${host ? '' : ' disabled'}><b>${x.name}</b><small>${x.tag}</small></button>`).join('')}</div>
+      <div class="pv-modes">${MODES.map(x => `<button type="button" class="btn2${x.id === L.mode ? ' on' : ''}" data-mode="${x.id}"${host ? '' : ' disabled data-tip="Only the host picks the mode"'}><b>${x.name}</b><small>${x.tag}</small></button>`).join('')}</div>
       <div class="pv-sides">${L.sides.map((sd, s) => `<section style="--sc:${SIDE_COL[s]}"><h4>${SIDES[s]}</h4><ul>${sd.slice(0, m.size).map((x, i) => slot(x, s, i)).join('')}</ul></section>`).join('<em class="pv-vs">vs</em>')}</div>
       ${watching.length ? `<p class="pr-note">Watching: ${watching.map(h => esc(h.name)).join(', ')}</p>` : ''}
       <footer>${placed.has(me) && !host ? '<button type="button" class="btn2" data-act="side">Change sides</button>' : ''}${host ? '<button type="button" class="cta" data-act="start">Start the bout</button>' : '<p class="pr-note">The host starts the bout.</p>'}</footer>`;

@@ -475,7 +475,8 @@ const Pastimes = (() => {
     } else if (bookTab === 'armory') {
       const keys = Object.keys(ITEMS).filter(k => !ITEMS[k].gift && ITEMS[k].tier > 0), seen = new Set([...Object.keys(s.seenItems), ...deps.items().map(i => i.key)]);
       const have = keys.filter(k => seen.has(k)).length;
-      body = `<p class="pt-note">${have} of ${keys.length} pieces held at least once.</p><div class="pt-armory">${keys.map(k => { const it = ITEMS[k], on = seen.has(k); return `<i class="${on ? 'on' : ''}" style="--rc:${RARITY[it.rarity].color}${on ? `;background-image:url(${deps.iconURL(k)})` : ''}" data-tip="${on ? esc(it.name) : '???'}"></i>`; }).join('')}</div>`;
+      body = `<p class="pt-note">${have} of ${keys.length} pieces held at least once.</p>${[...new Set(keys.map(k => ITEMS[k].tier))].sort((x, y) => x - y).map(t => { const ks = keys.filter(k => ITEMS[k].tier === t);   // (by tier: a blank run reads as "not yet", not as broken)
+        return `<h4 class="pt-cat">Tier ${t}<small>${ks.filter(k => seen.has(k)).length} of ${ks.length}</small></h4><div class="pt-armory">${ks.map(k => { const it = ITEMS[k], on = seen.has(k); return `<i class="${on ? 'on' : ''}" style="--rc:${RARITY[it.rarity].color}${on ? `;background-image:url(${deps.iconURL(k)})` : ''}" data-tip="${on ? esc(it.name) : '???'}"></i>`; }).join('')}</div>`; }).join('')}`;
     } else if (bookTab === 'fights') {
       body = fightsHtml();
     } else {

@@ -1544,7 +1544,7 @@ const DASH = { charges: 2, cd: 12 };
 // name: the taunt's name; icon: the borrowed icon the taunt's own painting sits on.
 const TAUNT = {
   cd: 20, range: 500, lock: 0.6,
-  hold: 'the boss is yours from then on, until you fall or the other tank takes him (an add is fixed on you for 6s, with your threat on it jumping to 10% above the highest)',
+  hold: 'the boss is yours from then on, until you fall or the other tank takes it (an add is fixed on you for 6s, with your threat on it jumping to 10% above the highest)',
   bastion: {
     name: 'Challenge', icon: 'banner',
     desc: 'The challenge steadies you like a Perfect Block: +10 Resolve, and your next Blade Chain counters for +150.',

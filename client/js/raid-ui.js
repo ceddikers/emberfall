@@ -583,7 +583,7 @@ const RaidUI = (() => {
       const tip = `<b>${esc(x.r.name)}</b><em>${esc(CLASSES.find(c => c.id === x.r.cls)?.name || '')}${x.r.bot ? ' · bot' : ''}</em>` + (s0
         ? Object.entries(s0.pts).map(([k, v]) => `${Scoring.LABEL[k]} ${Math.round(v)}`).join('<br>') + (s0.pen.avoid ? `<br>Avoidable hits -${s0.pen.avoid}` : '') + (s0.pen.deaths ? `<br>Deaths -${s0.pen.deaths}` : '') + '<br><em>Live: settles when the fight ends</em>'
         : `Damage ${fmt(x.d)}/s<br>Healing ${fmt(x.h)}/s<br>Taken ${fmt(x.tk)}`);
-      return `<div class="lm-row${x.id === myId ? ' me' : ''}" style="--rc:${ROLES[x.r.role].color}" data-tip="${esc(tip)}"><small>${i + 1}</small><i class="pf-role">${ROLE_GLYPH[x.r.role] || ''}</i><span>${esc(x.r.name)}</span><b>${scoreOn ? Math.round(x.v) : rate(x.v)}<u>${unit}</u></b><div class="lm-bar">${bar}</div></div>`;
+      return `<div class="lm-row${x.id === myId ? ' me' : ''}" style="--rc:${ROLES[x.r.role].color}" data-th="${esc(tip)}"><small>${i + 1}</small><i class="pf-role">${ROLE_GLYPH[x.r.role] || ''}</i><span>${esc(x.r.name)}</span><b>${scoreOn ? Math.round(x.v) : rate(x.v)}<u>${unit}</u></b><div class="lm-bar">${bar}</div></div>`;
     }).join('');
     // the pace: ahead of or behind the damage the boss's remaining health asks for before the enrage
     let pace = '';
@@ -592,6 +592,7 @@ const RaidUI = (() => {
       pace = `<div class="lm-need ${ok ? 'ahead' : 'behind'}"><span>Boss ${fmt(left)}</span>${enr ? `<b>Need ${rate(need)}/s <em>${ok ? '▲' : '▼'}</em></b>` : `<b>${proj < 5999 ? mmss(proj) + ' to kill' : ''}</b>`}</div>${enr ? `<div class="lm-need"><span>Enrage in ${mmss(tl)}</span>${proj < 5999 ? `<b>Kill in ${mmss(proj)}</b>` : ''}</div>` : ''}`;
     }
     el.innerHTML = `<h6>${tabs}</h6>${body}<div class="lm-sum"><span>${mmss(ft)}</span><b>${scoreOn ? 'Contribution so far' : `Party ${rate(sumV)}${unit}`}</b></div>${pace}`;
+    el.querySelectorAll('[data-th]').forEach(r => Tip.set(r, r.dataset.th));   // (the tips carry markup: Tip.set, not data-tip, which is escaped)
   }
 
   // ---------------------------------------------------------------- asking for a raise
@@ -818,11 +819,12 @@ const RaidUI = (() => {
     el.classList.remove('hidden');
     el.querySelectorAll('button[data-a]').forEach(b => b.addEventListener('click', () => actions[b.dataset.a] && actions[b.dataset.a]()));
     el.querySelectorAll('.res-tl [data-t]').forEach(m => Tip.set(m, m.dataset.t));
+    el.querySelectorAll('.res-awards [data-th]').forEach(m => Tip.set(m, m.dataset.th));   // (award tips carry markup)
     const tlEl = el.querySelector('.res-tl.pr');
     if (tlEl) tlEl.addEventListener('click', e => prClick(e, tlEl));
   }
   // The MVP (a clear only) and the category awards, from the contribution points (scoring.js). Only what went well: a wipe
-  // shows the awards that were earned, or a quiet line. The full breakdown lives in the Logbook.
+  // shows the awards that were earned, or nothing. The full breakdown lives in the Logbook.
   const CROWN = '<svg viewBox="0 0 16 12" aria-hidden="true"><path d="M1.5 10.5 0.8 3.2 4.6 6.4 8 1.5 11.4 6.4 15.2 3.2 14.5 10.5Z" fill="currentColor"/></svg>';
   function honorsBlock(msg, clear, dur, myId) {
     if (typeof Scoring === 'undefined' || !msg.stats) return '';
@@ -830,8 +832,8 @@ const RaidUI = (() => {
     const aw = Scoring.awards(msg.stats, sc, { clear, time: dur });
     const who = id => msg.stats[id];
     const mvp = mv != null ? `<p class="res-mvp${mv === myId ? ' me' : ''}" style="--rc:${ROLES[who(mv).role].color}"><i class="crown">${CROWN}</i><small>MVP</small><b>${esc(who(mv).name)}</b><em>${esc(CLASSES.find(c => c.id === who(mv).cls)?.name || '')} · ${sc[mv].total} contribution</em></p>` : '';
-    const row = aw.length ? `<div class="res-awards">${aw.map(a => `<span class="${a.who === myId ? 'me' : ''}" data-tip="${esc(`<b>${a.name}</b>${a.tip}`)}"><small>${a.name}</small><b>${esc(who(a.who).name)}</b></span>`).join('')}</div>`
-      : !clear ? '<p class="res-effort">Best effort</p>' : '';
+    const row = aw.length ? `<div class="res-awards">${aw.map(a => `<span class="${a.who === myId ? 'me' : ''}" data-th="${esc(`<b>${a.name}</b>${a.tip}`)}"><small>${a.name}</small><b>${esc(who(a.who).name)}</b></span>`).join('')}</div>`
+      : '';
     return mvp || row ? `<div class="res-honors">${mvp}${row}</div>` : '';
   }
   // the pull at a glance: the boss's health over time, every cast he made (coloured by kind), and every death

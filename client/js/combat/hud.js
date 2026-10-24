@@ -287,7 +287,7 @@ const Hud = {
     const art = (ab, i) => (i < 6 ? `url(${abilityIcon(cls.id, abilityIconId(ab))})` : ab.ult ? ultIconBg(cls.id) : '');
     row.innerHTML = items.map((ab, i) => `
       <div class="slot ${ab.type}${art(ab, i) ? ' has-art' : ''}${ab.ult ? ' ult' : ''}" data-i="${i}" style="--a:${cls.accent};--fx:${(ab.fx && ab.fx.color) || cls.accent}">
-        <div class="icon"${art(ab, i) ? ` style="background-image:${art(ab, i)}"` : ''}>${art(ab, i) ? '' : ab.name.replace(/^The /, '')[0]}</div>
+        <div class="icon"${art(ab, i) ? ` style="background-image:${art(ab, i)}"` : ''}>${art(ab, i) ? '' : ab.id === 'dash' ? '»' : ab.name.replace(/^The /, '')[0]}</div>
         <kbd>${SLOT_KEYS[i]}</kbd>
         <div class="sweep"></div>
         <span class="gl" aria-hidden="true"></span><span class="fl" aria-hidden="true"></span>

@@ -63,8 +63,7 @@ const TalentPanel = (() => {
       let tier = `<div class="tal-tier"><b>${ROMAN[r]}</b><small>${sealed && r < 5 ? '' : rowName(r, kit, sp)}</small>`;
       if (next) tier += `<button class="tal-unlock" data-r="${r}" ${gold < cost || locked ? 'disabled' : ''}${gold < cost ? ` data-tip="${cost - gold} gold short"` : locked ? ' data-tip="Locked during a raid"' : ''}>${coin}${cost}</button>`;
       tier += '</div>';
-      const cards = row.map((t, c) => {
-        if (sealed) return '<div class="tal-card sealed" aria-hidden="true"><i></i><span></span><span></span></div>';
+      const cards = sealed ? `<div class="tal-card tal-lock" aria-disabled="true"><span>Opens after row ${ROMAN[r - 1]}</span><u>${coin}${cost}</u></div>` : row.map((t, c) => {
         const picked = open && pickOf(r) === c;
         return `<button class="tal-card${picked ? ' picked' : ''}${next ? ' preview' : ''}" data-r="${r}" data-c="${c}"${!open || locked ? ' aria-disabled="true"' : ''}>
           <i class="ab-icon" style="background-image:url(${abilityIcon(cls.id, (mv => (mv ? abilityIconId(Object.assign({ fromTalent: t.id }, mv)) : t.ab))(typeof talentMoveFor === 'function' && talentMoveFor(cls.id, spec, t.id)))})"></i>

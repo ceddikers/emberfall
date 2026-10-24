@@ -1913,3 +1913,9 @@ body.in-pvp #boss-bar, body.in-pvp #boss-cast, body.in-pvp #lb-gauge, body.in-pv
 #whats-new ul { margin: 0; padding: 0 0 0 16px; }
 #whats-new li { margin: 5px 0; font-size: 13px; line-height: 1.5; color: var(--ink); }
 #whats-new li::marker { color: var(--gold-dim); }
+
+/* polish: lists and talents */
+.tal-card.tal-lock { grid-column: 1 / -1; align-items: center; justify-content: center; gap: 10px; min-height: 44px; background: #0c0a08; border-color: #201a14; }
+.tal-lock span { color: #7d7466; font-family: var(--fantasy); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; }
+.tal-lock u { text-decoration: none; color: #8f8470; font-size: 12px; font-variant-numeric: tabular-nums; }
+.inv-cells .inv-none { grid-column: 1 / -1; margin: 28px 0; text-align: center; color: var(--muted); font-size: 13px; }

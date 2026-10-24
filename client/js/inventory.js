@@ -590,7 +590,8 @@ const Inventory = (() => {
       .sort((a, b) => itemRarity(b) - itemRarity(a) || SLOT_ORDER[ITEMS[a.key].slot] - SLOT_ORDER[ITEMS[b.key].slot] || ITEMS[a.key].name.localeCompare(ITEMS[b.key].name));
     const cells = $q('.inv-cells');
     const n = Math.max(24, Math.ceil(list.length / 6) * 6);
-    cells.innerHTML = Array.from({ length: n }, (_, i) => {
+    const NONE = { all: 'Nothing in the bag yet.', weapon: 'No weapons yet.', armor: 'No armor yet.', accessory: 'No accessories yet.' };
+    cells.innerHTML = !list.length ? `<p class="inv-none">${NONE[filter] || 'Nothing here yet.'}</p>` : Array.from({ length: n }, (_, i) => {
       const inst = list[i];
       if (!inst) return '<div class="cell empty"></div>';
       const usable = slotsFor(inst).some(s => canEquip(inst, clsId, s));
@@ -616,8 +617,8 @@ const Inventory = (() => {
     const others = wornBy(inst).filter(c => c !== clsId);
     const careful = itemRarity(inst) >= R_LEGENDARY || others.length;
     const sellTip = others.length ? `Worn by your ${others.map(c => CLASSES.find(x => x.id === c).name).join(', ')}` : '';
-    btns.push(`<select class="send-to" ${locked || worn.length ? 'disabled' : ''} aria-label="Send to another hero"><option value="">Send to…</option>${CLASSES.filter(c => c.id !== clsId).map(c => `<option value="${c.id}">${c.name}</option>`).join('')}</select>`);
-    btns.push(`<button class="btn2 sell" data-act="sell" ${locked || worn.length ? 'disabled' : ''}${sellTip ? ` data-tip="${sellTip}"` : ''}>Sell ${coin}${sellPrice(inst)}</button>`);
+    btns.push(`<select class="send-to" ${locked || worn.length ? 'disabled' : ''}${worn.length && !locked ? ' data-tip="Take it off first"' : ''} aria-label="Send to another hero"><option value="">Send to…</option>${CLASSES.filter(c => c.id !== clsId).map(c => `<option value="${c.id}">${c.name}</option>`).join('')}</select>`);
+    btns.push(`<button class="btn2 sell" data-act="sell" ${locked || worn.length ? 'disabled' : ''}${worn.length && !locked ? ' data-tip="Take it off first"' : sellTip ? ` data-tip="${sellTip}"` : ''}>Sell ${coin}${sellPrice(inst)}</button>`);
     det.innerHTML = `<img src="${iconURL(inst)}" alt=""><div class="det-text">${itemTip(inst, clsId)}</div><div class="det-btns">${btns.join('')}</div>
       ${locked ? '<p class="inv-hint">Gear is locked during a raid.</p>' : ''}`;
     const st = det.querySelector('.send-to');

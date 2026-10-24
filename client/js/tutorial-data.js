@@ -112,8 +112,8 @@ const TUTORIAL = {
       id: 'threat', title: 'Taunts & adds',
       pages: [
         { h: 'Who the boss is on', body: [
-          'The boss stays on the tank who taunted last, or on the tank he started on. Damage and healing do not move him.',
-          'If that tank falls he goes to the other tank and stays there, even after a raise. With every tank down he goes for the nearest player, and the first tank raised takes him back.',
+          'The boss stays on the tank who taunted last, or on the tank it started on. Damage and healing do not move him.',
+          'If that tank falls it goes to the other tank and stays there, even after a raise. With every tank down it goes for the nearest player, and the first tank raised takes it back.',
           'An eye on a party frame marks who the boss is attacking.',
         ] },
         { h: 'Taunt',
