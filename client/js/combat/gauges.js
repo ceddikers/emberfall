@@ -338,6 +338,8 @@ Object.assign(GAUGES, {
     label(c, String(Math.floor(g.drift || 0)), cx, cy + 34, '#d8fff0', 13, 'system-ui', 800);
     // Orbit: stacks as five beads on a ring; Stillpoint holds the gauge (a line across it); Gale Run doubles the rim
     if (k.def.orbit) { const n = k.stacks('orbit'); for (let i = 0; i < 5; i++) { const a = -Math.PI / 2 + i * TAU / 5 + t * 0.6; circle(c, cx + Math.cos(a) * 22, cy + Math.sin(a) * 22, 2.6, i < n ? '#e8fff2' : '#22343a', OUT, 0.8); } }
+    // ... and the loop you're flying toward Full Circle: a thin ring inside the beads that closes as you go round
+    if (k.def.orbit && g.loop > 0) { c.beginPath(); c.arc(cx, cy, 16, -Math.PI / 2, -Math.PI / 2 + Math.min(TAU, g.loop)); c.lineWidth = 1.6; c.strokeStyle = g.loop > TAU * 0.8 ? '#ffffff' : 'rgba(232,255,242,0.6)'; c.stroke(); }
     if (k.has('still')) line(c, cx - R - 6, cy, cx + R + 6, cy, '#f2e6c8', 1.5);
     if (k.has('gale')) { c.save(); c.globalAlpha = 0.5 + Math.sin(t * 9) * 0.25; c.beginPath(); c.arc(cx, cy, R + 9, a0, a1); c.lineWidth = 1.5; c.strokeStyle = col; c.stroke(); c.restore(); }
     if (k.has('tailwind')) { glow(c, w - 18, 18, 9, '#ffffff', 0.5); poly(c, [w - 24, 14, w - 12, 18, w - 24, 22], '#e8fff8', OUT, 1); }

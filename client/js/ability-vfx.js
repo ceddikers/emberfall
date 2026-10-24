@@ -3101,6 +3101,10 @@ function windLaneBoost(x, y, vx, vy, now) {
         V.hit(t.x, t.y, col, 0.45 + 0.15 * i);
         if (last) { V.spikeburst(t.x, t.y, { r: 30 + 12 * n, n: 8 + 2 * n, color: col, core: '#ffffff', ink: DRIFT_PAINT.INK, dur: 0.3, z: 18 }); DRIFT_PAINT.leaves(t.x, t.y, { n: 2 + n, speed: 180 }); if (n >= 3) shake(2 + n * 0.5); } }); }, { atTarget: true }),
     orbitcut: Object.assign((e, target) => { const t = target || e; V.slash(t.x, t.y + 10, Math.random() * 6.28, { r: 46, span: 1.6, color: '#a8f0c8', w: 0.35, dur: 0.2 }); }, { atTarget: true }),
+    // Full Circle (Orbit): the loop closes and the hawk stoops: a steep pale streak down onto the target, a cut across it and a ring of wind
+    stoop: Object.assign((e, target) => { const t = target || e, a = Math.atan2(t.y - e.y, t.x - e.x);
+      DRIFT_PAINT.streaks(t.x, t.y - 30, Math.PI / 2 + (a > 0 ? -0.35 : 0.35), { n: 3, back: 120, on: 40, w: 6, gap: 9, color: '#e8fff2', dur: 0.28, stay: 0.5, leaves: 2 });
+      OLD_PAINT.later(0.1, () => { V.slash(t.x, t.y + 8, a + Math.PI / 2, { r: 58, span: 1.8, color: '#a8f0c8', w: 0.45, dur: 0.24, sparks: 4 }); V.shock(t.x, t.y, { r: 64, color: '#a8f0c8', dur: 0.3, w: 2.5 }); V.hit(t.x, t.y, '#e8fff2', 0.7); }); }, { atTarget: true }),
     // (online refs: a Kaeshi echo) a wide pale smear swung the other way and a slit across the body
     crescent: Object.assign((e, target) => { const t = target || e, a = Math.atan2(t.y - e.y, t.x - e.x); V.slash(e.x, e.y, a, { r: 80, span: 2.8, color: windCol(e), w: 0.55, dur: 0.3, sparks: 5 });
       OLD_PAINT.smear(e.x, e.y, a, { r: 88, span: 2.6, w: 10, color: windCol(e), core: '#ffffff', ink: DRIFT_PAINT.INK, dur: 0.26, flip: true, lines: 2 }); OLD_PAINT.later(0.08, () => dbSlit(t.x, t.y, a + Math.PI / 2, 44, windCol(e), { w: 4 })); }, { atTarget: true }),
@@ -3557,6 +3561,10 @@ function windLaneBoost(x, y, vx, vy, now) {
     aftershock: Object.assign((e, target) => { const t = target || e; V.shock(t.x, t.y, { r: 110, color: '#c8a070', dur: 0.5, w: 6 }); V.debris(t.x, t.y, { n: 6, color: '#7a6a58' }); V.decal(t.x, t.y, { style: 'crack', r: 50, dur: 1.8, a: 0.5, seed: Math.random() * 6 }); shake(3); }, { atTarget: true }),
     // Thousand Palms (Echoing Palm talent): three faint palm prints, half a second behind
     'echo-palm': Object.assign((e, target) => { const t = target || e; for (let i = 0; i < 3; i++) FX.later(i * 0.08, () => print(t.x + rand(-16, 16), t.y + rand(-10, 10), Math.atan2(t.y - e.y, t.x - e.x), '#ffe0b0', 0.9, 0.35)); }, { atTarget: true }),
+    // Perfect Form (talent): a move pressed all Crisp lands again: a pale gold ghost of the blow, one big print, a clean ring and a glint
+    perfectForm: Object.assign((e, target) => { const t = target || e, a = Math.atan2(t.y - e.y, t.x - e.x);
+      print(t.x, t.y, a, '#fff2c8', 1.4, 0.45); V.shock(t.x, t.y, { r: 60, color: '#fff6d8', dur: 0.3, w: 3 });
+      V.glint(t.x, t.y - 10, { color: '#ffffff', size: 26 }); V.sparks(t.x, t.y, { color: '#ffe0b0', n: 6, angle: a, spread: 0.8, speed: 260 }); }, { atTarget: true }),
     // Temple Bell (Resounding Gong talent): the bell rings again 8s later
     gong: e => { for (let i = 0; i < 2; i++) V.shock(e.x, e.y, { r: 140 + i * 40, color: '#ffd27a', dur: 0.6, w: 5 - i * 2, delay: i * 0.15 }); },
   });

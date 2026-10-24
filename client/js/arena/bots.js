@@ -1213,6 +1213,8 @@ const BOT_CLASS = {
         // with a telegraph on the floor: a short shuffle round where a melee would stand (still walking, so Drift holds;
         // the dodging scores pull it wherever is safe), instead of standing still and bleeding Drift
         if (busy) return { x: b.x + side + Math.sin(th * 1.4) * 55, y: b.y + 110 + Math.cos(th * 1.4) * 20 };
+        // Orbit: fly whole loops round it close in (each one ends in a Full Circle dive), not a line through it
+        if (bot.actor && bot.actor.kit.def.orbit) { const r = FIGHT.BOSS_R + 50; return { x: b.x + Math.cos(th) * r, y: b.y + Math.sin(th) * r }; }
         // a long, thin loop through its middle, wide enough to run clean through the body, never so wide that the far
         // ends are out of sabre reach
         const s = Math.sin(th) * 115, u = Math.cos(th) * 40 - 20;

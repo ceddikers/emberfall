@@ -854,7 +854,7 @@ Object.assign(PRO, {
         if (live && !g.clean) { const on = ipMoves(k).filter(e => e.seq.startsWith(live) && e.seq.length > live.length).sort((a, b) => b.seq.length - a.seq.length); P.plan = on.length ? on[0].seq : null; }
         else {
           const swallow = k.talent('ironpalm_swallow');
-          const cost = s => [...s].reduce((a, x) => a + IP_COST[x] * (k.talent('ironpalm_clean') ? 0 : 0.6), 0);
+          const cost = s => [...s].reduce((a, x) => a + IP_COST[x] * 0.6, 0);
           const main = swallow ? 'KLHKK' : 'LLHKK';
           if (toBuster < 7 && toBuster > 1.6 && !k.has('wall')) P.plan = 'HKK';
           else if (k.dotRemaining('bruise') < 2.5) P.plan = 'HHK';
@@ -863,7 +863,7 @@ Object.assign(PRO, {
           else P.plan = main;
           if (g.breath < cost(P.plan) + 2) {
             // short of Breath: Flowing Palms in rhythm breathes without stopping (Crisp, finished under 40: Breath back)
-            if (g.breath >= cost('LLL') + 1 && !k.talent('ironpalm_clean')) P.plan = 'LLL';
+            if (g.breath >= cost('LLL') + 1) P.plan = 'LLL';
             else if (g.breath >= cost('KL') && !swallow) P.plan = 'KL';
             else { P.resting = true; P.plan = null; }
           }

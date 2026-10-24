@@ -989,18 +989,19 @@ Object.assign(SPECS, {
   driftblade: [
     {
       id: 'orbit', name: 'Orbit', title: 'The Circling Hawk', accent: '#a8f0c8',
-      gaugeTip: 'A Passing Strike gives 10, Hook Turn 15, Slipstream 15. Walking fills 15 a second; after 1.5s standing still it drains 15 a second. Circling close round your target builds Orbit (up to 5, gone 5s after you stop), and a Hook Turn is half a circle, 3 at once: at 5, Carve cuts on its own every 1.4s while you keep moving.',
+      gaugeTip: 'A Passing Strike gives 10, Hook Turn 15, Slipstream 15. Walking fills 15 a second; after 1.5s standing still it drains 15 a second. Circling close round your target builds Orbit (up to 5, gone 5s after you stop), and a Hook Turn is half a circle, 3 at once: at 5, Carve cuts on its own every 1.4s while you keep moving. Every whole loop you fly unbroken round it ends in a Full Circle dive.',
       blurb: 'Round and round, a little closer every time. The hawk never lands.',
-      focus: 'Smooth circles. Circling your target builds Orbit, and at full Orbit your sabre cuts on its own while you keep moving.',
-      passive: { name: 'Circling Hawk', desc: 'Every radian you circle round your target at close range adds a stack of Orbit (up to 5; they fade 5s after you stop circling). Hook Turn swings you half a circle: 3 stacks at once. At 5, Carve strikes on its own every 1.4s while you move.' },
+      focus: 'Smooth circles. Circling your target builds Orbit, at full Orbit your sabre cuts on its own while you keep moving, and every whole loop ends in a diving strike.',
+      passive: { name: 'Circling Hawk', desc: 'Every radian you circle round your target at close range adds a stack of Orbit (up to 5; they fade 5s after you stop circling). Hook Turn swings you half a circle: 3 stacks at once. At 5, Carve strikes on its own every 1.4s while you move. Full Circle: every whole loop you fly round it without stopping ends in a dive for {d:70} (up to 30% more with Drift) that gives 10 Drift. A Hook Turn is half a loop.' },
       build: base => {
         const hookBase = base.abilities.find(a => a.id === 'hook');
         return {
-          potMult: 0.598, orbit: true,
+          potMult: 0.54, orbit: true,
           abilities: {
             hook: {
-              desc: 'Swing round your target to its far side with a cut for {d:260}, up to 40% stronger with Drift. Above 70 Drift it always crits. Gives 15 Drift and gives back a dash charge. Half a circle: it gives 3 Orbit.',
-              effect(k) { hookBase.effect.call(this, k); k.buff('orbit', 5, {}, 5, 3); },
+              desc: 'Swing round your target to its far side with a cut for {d:260}, up to 40% stronger with Drift. Above 70 Drift it always crits. Gives 15 Drift and gives back a dash charge. Half a circle: it gives 3 Orbit and counts as half a loop toward Full Circle.',
+              // (half a circle: 3 Orbit, and half of a Full Circle's loop; the jump itself isn't counted again)
+              effect(k) { hookBase.effect.call(this, k); k.buff('orbit', 5, {}, 5, 3); k.g.orbA = null; driftLoop(k, Math.PI); },
             },
           },
         };

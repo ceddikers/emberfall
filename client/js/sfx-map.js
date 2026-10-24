@@ -118,7 +118,7 @@
       meltdown: L('ab-fire', 'ab-frost'), supernova: ULT('thermist'), novafrost: ULT('thermist'), auto: 'ab-fire',
     },
     driftblade: {
-      carve: 'ab-slash', slip: 'dash', hook: L('ab-slash', 'ab-wind'), cross: L('ab-wind', 'ab-slash'), still: 'ab-shield', gale: L('ab-wind', 'ab-buff'), pass: L('ab-slash', 'ab-wind'),
+      carve: 'ab-slash', slip: 'dash', hook: L('ab-slash', 'ab-wind'), cross: L('ab-wind', 'ab-slash'), still: 'ab-shield', gale: L('ab-wind', 'ab-buff'), pass: L('ab-slash', 'ab-wind'), stoop: L('ab-wind', 'ab-heavy'),
       impact: L('ab-wind', 'ab-heavy'), gyre: L('ab-wind', 'ab-slash'), tailspin: L('ab-wind', 'ab-slash'),
       roost: L('ab-wind', 'ab-buff'), starfall: L('ab-slash', 'ab-heavy'), eyeofthegale: ULT('driftblade'), galeline: L('ab-wind', 'ab-slash'), eyestep: L('dash', 'ab-slash'), auto: 'ab-slash',
     },
