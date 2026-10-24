@@ -164,8 +164,8 @@ const RaidUI = (() => {
     const order = { tank: 0, healer: 1, dps: 2 };
     const list = [...roster].sort((a, b) => order[a.role] - order[b.role] || a.id - b.id);
     $('party-frames').innerHTML = list.map((r, i) => `
-      <div class="pf" data-id="${r.id}" style="--rc:${ROLES[r.role].color}">
-        <kbd class="pf-key" style="color:${FIGHT.SLOTS[i % 4]};border-color:${FIGHT.SLOTS[i % 4]}">${i + 1}</kbd>
+      <div class="pf" data-id="${r.id}" style="--rc:${ROLES[r.role].color};--pc:${FIGHT.SLOTS[i % 4]}">
+        <kbd class="pf-key" style="color:var(--pc);border-color:var(--pc)">${i + 1}</kbd>
         <div class="pf-main">
           <div class="pf-name"><i class="pf-role">${ROLE_GLYPH[r.role] || ''}</i><span>${esc(r.name)}</span><b class="pf-aggro" data-tip="The boss is attacking them">${GLYPH.aggro}</b><i class="pf-ult" data-tip="Their Ultimate is ready"></i><small>${esc(CLASSES.find(c => c.id === r.cls)?.name || '')}${r.bot ? ' · bot' : ''}</small></div>
           <div class="pf-hp"><div class="trail"></div><div class="hp"></div><div class="inc"></div><div class="sh"></div><div class="hl"></div><span></span></div>
