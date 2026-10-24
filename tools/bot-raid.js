@@ -2,7 +2,8 @@
 // and gives a rough idea of clear times and death counts.
 //   node tools/bot-raid.js [normal|hard] [runs] [classes comma-separated] [boss id]
 //   e.g. node tools/bot-raid.js normal 5 skitterra   (arguments can come in any order; the boss defaults to grubnak)
-//   seed=N uses another set of seeds; WHY=1 prints the last hits before each death, NEXT=1 the upcoming-moves feed
+//   seed=N uses another set of seeds; first=K starts at run K (0-based) of the set, so first=5 with 5 runs plays what runs 6-10 of a
+//   10-run job play (tools/check.js cuts long jobs into pieces that way); WHY=1 prints the last hits before each death, NEXT=1 the upcoming-moves feed
 //   gear=fresh|mid|full|post1|post2 (or GEAR=...) gives every bot representative player gear (see buildGear below); FEAST=pie|stew|broth|tarts
 //   picks the meal for 'full', 'post1' and 'post2' (default pie, none at the other levels). SUMMARY=1 prints one machine-readable line only.
 const path = require('path');
@@ -26,10 +27,11 @@ const { TRIALS, trialDef } = load('arena/trials.js');
 const ITEMSMOD = load('items.js');
 const FEASTS_ = { stew: { stat: 'hp', pct: 3 }, pie: { stat: 'power', pct: 3 }, broth: { stat: 'heal', pct: 3 }, tarts: { stat: 'speed', pct: 2 } };   // town-npcs.js FEASTS
 let gearLevel = process.env.GEAR || '';
-let mode = 'normal', runs = 3, comp = 'bastion,cleric,ranger,pyromancer'.split(','), def = GRUBNAK, seed0 = 1000;
+let mode = 'normal', runs = 3, comp = 'bastion,cleric,ranger,pyromancer'.split(','), def = GRUBNAK, seed0 = 1000, first = 0;
 for (const a of process.argv.slice(2)) {
   if (a === 'normal' || a === 'hard') mode = a;
   else if (/^seed=\d+$/.test(a)) seed0 = Number(a.slice(5));   // a different set of seeds (default 1000)
+  else if (/^first=\d+$/.test(a)) first = Number(a.slice(6));
   else if (/^gear=\w+$/.test(a)) gearLevel = a.slice(5);
   else if (/^\d+$/.test(a)) runs = Number(a);
   else if (DEFS[a]) def = DEFS[a];
@@ -123,7 +125,7 @@ log(`${def.name}, ${mode}, ${comp.join('/')}`);
 
 let clears = 0, totDeaths = 0, totClearT = 0;
 const hollowTot = { started: 0, saved: 0, failed: 0 };   // a Gloomsworn's Hollow (fight.js HOLLOW_HOST), over every run
-for (let r = 0; r < runs; r++) {
+for (let r = first; r < first + runs; r++) {
   const casts = [];
   const host = new RaidHost({ def, mode, humans: () => [], bots: comp, seed: seed0 + r * 77, bond: GEARSET ? GEARSET.bond : undefined, emit: msg => {
     if (msg.t === 'bcast') casts.push(msg.name);

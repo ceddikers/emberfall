@@ -2,13 +2,20 @@
 // It parses every script, checks the data and the shared math, compares class balance with the recorded baseline,
 // has a bot party clear every built boss on Normal, and runs each boss once on Hard. Exit code 0 means everything passed.
 //   node tools/check.js --update-baseline   (after an intended balance change: record the new numbers)
+//   node tools/check.js --full              (always run everything; without it, a tree that changed nothing the game or the tools
+//                                            load since the last full pass only gets the cheap checks: the docs-only lane, section 6)
+// All the work runs as child processes in one pool (section 3 + 4), the slowest first, and the end of the run shows where the time went.
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
+const crypto = require('crypto');
 const { spawn, spawnSync } = require('child_process');
 
 const ROOT = path.join(__dirname, '..');
 const BASELINE = path.join(__dirname, 'check-baseline.json');
 const UPDATE = process.argv.includes('--update-baseline');
+const FULL = UPDATE || process.argv.includes('--full');
+const STAGE = (process.argv.find(a => a.startsWith('--stage=')) || '').slice(8);   // (internal: this process is a child that runs one in-process stage)
 const DPS_TOLERANCE = 0.08;   // a class's pro DPS may drift this far from the baseline before it counts as a change
 const SPEC_TOLERANCE = 0.05;  // a specialization's pro DPS may differ this much from its own base class
 const TALENT_MAX = 7;    // one talent may add at most this much pro DPS (%) to its class or spec (tools/talents.js)
@@ -106,16 +113,18 @@ const HARD_BOSSES = [['Grubnak', 'grubnak'], ['Skitterra', 'skitterra'], ['Volka
 HARD_BOSSES.push(['the Hydra', 'hydra', 'gear=post2']);
 HARD_BOSSES.push(['Azerath', 'archmage', 'gear=post2']);
 const results = [];
-const pass = (name, detail = '') => results.push({ ok: true, name, detail });
-const fail = (name, detail = '') => results.push({ ok: false, name, detail });
+let into = results;   // where pass() and fail() write: the stage being read (see stage)
+const pass = (name, detail = '') => into.push({ ok: true, name, detail });
+const fail = (name, detail = '') => into.push({ ok: false, name, detail });
+// each stage's results go in a bucket of their own, and the buckets print in this order (children finish in any order)
+const BUCKETS = ['syntax', 'core', 'hollow', 'kenseier', 'houndmaster', 'rejoin', 'stamps', 'journal', 'reaper', 'feats', 'pvp', 'heavy'];
+const buckets = {};
+const stage = (name, fn) => { const prev = into; into = buckets[name] || (buckets[name] = []); try { return fn(); } finally { into = prev; } };
 
 // ---------------------------------------------------------------- 1. every script parses
-function syntax() {
-  const files = [];
-  const walk = d => { for (const f of fs.readdirSync(d, { withFileTypes: true })) { const p = path.join(d, f.name); if (f.isDirectory()) walk(p); else if (f.name.endsWith('.js')) files.push(p); } };
-  walk(path.join(ROOT, 'client', 'js')); walk(path.join(ROOT, 'tools')); walk(path.join(ROOT, 'server'));
+function syntax(files, rs) {   // (each file went through `node --check` in the pool, see main)
   const bad = [];
-  for (const f of files) { const r = spawnSync(process.execPath, ['--check', f], { encoding: 'utf8' }); if (r.status !== 0) bad.push(`${path.relative(ROOT, f)}: ${(r.stderr || '').split('\n').find(l => /Error/.test(l)) || 'parse error'}`); }
+  files.forEach((f, i) => { if (rs[i].code !== 0) bad.push(`${path.relative(ROOT, f)}: ${rs[i].out.split('\n').find(l => /Error/.test(l)) || 'parse error'}`); });
   if (bad.length) fail('Scripts parse', bad.join('\n'));
   else pass('Scripts parse', `${files.length} files`);
 }
@@ -576,15 +585,35 @@ function talents() {
   else pass('Talents line up with the kits', `${ids.size} talents (${Object.values(SPEC_TALENTS).reduce((a, x) => a + Object.values(x).flat(2).length, 0)} in spec rows), ${used.size} read by the kits`);
 }
 
-// ---------------------------------------------------------------- 3 + 4. balance sim and bot raids (run side by side)
-function run(args) {
+// ---------------------------------------------------------------- 3 + 4. the pool every child process goes through
+const POOL = Math.max(2, +process.env.CHECK_JOBS || os.cpus().length - 1);   // children at a time (this process only waits on them); CHECK_JOBS=n overrides
+const START = Date.now(), JOBS = [], waiting = [], live = new Set();
+process.on('exit', () => { for (const c of live) c.kill(); });   // (a check that is stopped doesn't leave its children running)
+let active = 0, pumping = false;
+// run(args, { group, weight }): `node <args>` in a child; resolves { code, out } (stdout, then stderr) when it closes. Waiting jobs
+// start longest first (weight is a rough number of seconds), so the last ones to run are the short ones
+function run(args, opts = {}) {
   return new Promise(resolve => {
-    const p = spawn(process.execPath, args, { cwd: ROOT });
-    let out = '';
-    p.stdout.on('data', d => { out += d; }); p.stderr.on('data', d => { out += d; });
-    p.on('close', code => resolve({ code, out }));
+    waiting.push(Object.assign({ args, resolve }, opts));
+    if (!pumping) { pumping = true; setImmediate(pump); }   // (lets the caller queue its whole batch first, so the order holds)
   });
 }
+function pump() {
+  pumping = false;
+  waiting.sort((a, b) => (b.weight || 0) - (a.weight || 0));
+  while (active < POOL && waiting.length) {
+    const j = waiting.shift(), start = Date.now();
+    let so = '', se = '', done = false;
+    active++;
+    const p = spawn(process.execPath, j.args, { cwd: ROOT });
+    live.add(p);
+    const finish = (code, extra = '') => { if (done) return; done = true; active--; live.delete(p); JOBS.push({ group: j.group, start, end: Date.now() }); j.resolve({ code, out: so + se + extra }); pump(); };
+    p.stdout.on('data', d => { so += d; }); p.stderr.on('data', d => { se += d; });
+    p.on('error', e => finish(-1, String(e)));
+    p.on('close', code => finish(code));
+  }
+}
+
 // ---------------------------------------------------------------- 3. choreographed timelines
 // Bosses rebuilt as one authored, non-looping fight (f.course in fight.js). The script is played with a party that
 // can't die and doesn't fight; whenever a course's sets run out the boss drops to that course's gate, so the run shows
@@ -660,47 +689,42 @@ function timelines() {
 // ---------------------------------------------------------------- 3b. the Gloomsworn's Hollow (tools/hollow-test.js)
 // A killing blow at full Gloom starts it, damage becomes debt, healing pays it (shields at half), an unpaid debt kills when the
 // grace ends, doom / the enrage / a fall bypass it, a revive clears it; then healer bots have to save a Hollow tank.
-function hollowCheck() {
-  const r = spawnSync(process.execPath, [path.join(__dirname, 'hollow-test.js')], { cwd: ROOT, encoding: 'utf8' });
-  const out = (r.stdout || '') + (r.stderr || '');
-  if (r.status === 0 && /Hollow OK/.test(out)) pass('Hollow: debt, healing, death, bypasses', out.trim().split('\n').pop());
+function hollowCheck(r) {
+  const out = r.out;
+  if (r.code === 0 && /Hollow OK/.test(out)) pass('Hollow: debt, healing, death, bypasses', out.trim().split('\n').pop());
   else fail('Hollow: debt, healing, death, bypasses', out.slice(-900));
 }
 
 // ---------------------------------------------------------------- 3c. the Reaper's string, marks, Snap and Gate (tools/reaper-test.js)
-function reaperCheck() {
-  const r = spawnSync(process.execPath, [path.join(__dirname, 'reaper-test.js')], { cwd: ROOT, encoding: 'utf8' });
-  const out = (r.stdout || '') + (r.stderr || '');
-  if (r.status === 0 && /Reaper OK/.test(out)) pass('Reaper: string, finishers, marks, Snap, Void Star, Gate', out.trim().split(/\r?\n/).pop());
+function reaperCheck(r) {
+  const out = r.out;
+  if (r.code === 0 && /Reaper OK/.test(out)) pass('Reaper: string, finishers, marks, Snap, Void Star, Gate', out.trim().split(/\r?\n/).pop());
   else fail('Reaper: string, finishers, marks, Snap, Void Star, Gate', out.slice(-900));
 }
 
 // ---------------------------------------------------------------- 3f. the Kenseier's deflect and the boss's Posture (tools/kenseier-test.js)
 // A press either side of a blow is judged Perfect or Good (and a late one gives the blow back), Mikiri Step, reach, Off-balance,
 // Posture to a Break (stagger, damage window, the script slid, held through a cast), Ember Duel, shields; then the kit and host together.
-function kenseierCheck() {
-  const r = spawnSync(process.execPath, [path.join(__dirname, 'kenseier-test.js')], { cwd: ROOT, encoding: 'utf8' });
-  const out = (r.stdout || '') + (r.stderr || '');
-  if (r.status === 0 && /Kenseier OK/.test(out)) pass('Kenseier: deflect timing, Posture, Break, bypasses', out.trim().split(/\r?\n/).pop());
+function kenseierCheck(r) {
+  const out = r.out;
+  if (r.code === 0 && /Kenseier OK/.test(out)) pass('Kenseier: deflect timing, Posture, Break, bypasses', out.trim().split(/\r?\n/).pop());
   else fail('Kenseier: deflect timing, Posture, Break, bypasses', out.slice(-900));
 }
 
 // ---------------------------------------------------------------- 3g. the Houndmaster's hounds (tools/houndmaster-test.js)
 // The pair the hounds hold decides the finisher, free hounds drift and held ones do not, Hold and pounce, Call Off, Wild Hunt, a telegraph
 // downing a hound (host and kit), the 'hounds' message, and a Houndmaster bot in a headless raid.
-function houndmasterCheck() {
-  const r = spawnSync(process.execPath, [path.join(__dirname, 'houndmaster-test.js')], { cwd: ROOT, encoding: 'utf8' });
-  const out = (r.stdout || '') + (r.stderr || '');
-  if (r.status === 0 && /Houndmaster OK/.test(out)) pass('Houndmaster: pairs, drift and hold, pounce, Call Off, Wild Hunt, the hounds on the host', out.trim().split(/\r?\n/).pop());
+function houndmasterCheck(r) {
+  const out = r.out;
+  if (r.code === 0 && /Houndmaster OK/.test(out)) pass('Houndmaster: pairs, drift and hold, pounce, Call Off, Wild Hunt, the hounds on the host', out.trim().split(/\r?\n/).pop());
   else fail('Houndmaster: pairs, drift and hold, pounce, Call Off, Wild Hunt, the hounds on the host', out.slice(-900));
 }
 
 // ---------------------------------------------------------------- 3i. a dropped link: hold, rejoin, snapshot (tools/rejoin-test.js)
 // net.js holds a dropped joiner's slot and takes the same player back; the host's stand-in bot and its snapshot of the fight hold for every boss.
-function rejoinCheck() {
-  const r = spawnSync(process.execPath, [path.join(__dirname, 'rejoin-test.js')], { cwd: ROOT, encoding: 'utf8' });
-  const out = (r.stdout || '') + (r.stderr || '');
-  if (r.status === 0 && /Rejoin OK/.test(out)) pass('Rejoin: held slot, stand-in, snapshot', out.trim().split(/\r?\n/).pop());
+function rejoinCheck(r) {
+  const out = r.out;
+  if (r.code === 0 && /Rejoin OK/.test(out)) pass('Rejoin: held slot, stand-in, snapshot', out.trim().split(/\r?\n/).pop());
   else fail('Rejoin: held slot, stand-in, snapshot', out.slice(-900));
 }
 
@@ -718,13 +742,12 @@ function stampCheck() {
 // ---------------------------------------------------------------- 3e. the PvP Arena (tools/pvp-sim.js)
 // A few bot duels, a 2v2 and a capture the flag: every match ends (a knockout, captures or the clock) without errors, never
 // in a blink, never past the clock.
-function pvpCheck() {
-  const runs = [['duel', '3', 'ranger', 'bastion'], ['duel', '2', 'cleric', 'shadowblade'], ['team', '2', 'bastion', 'pyromancer', 'gorgemaw', 'cleric'], ['ctf', '2', 'bastion', 'ranger', 'gorgemaw', 'cleric']];
+function pvpCheck(rs) {   // (one child per entry of PVP_RUNS)
   const bad = [], lens = [];
-  for (const a of runs) {
-    const r = spawnSync(process.execPath, [path.join(__dirname, 'pvp-sim.js'), ...a], { cwd: ROOT, encoding: 'utf8' });
-    const out = (r.stdout || '') + (r.stderr || ''), ms = [...out.matchAll(/^run \d+: (\w+) .*? at ([\d.]+)s/gm)];
-    if (r.status !== 0 || ms.length !== +a[1]) { bad.push(`${a.join(' ')}:\n${out.slice(-600)}`); continue; }
+  for (const [i, a] of PVP_RUNS.entries()) {
+    const r = rs[i];
+    const out = r.out, ms = [...out.matchAll(/^run \d+: (\w+) .*? at ([\d.]+)s/gm)];
+    if (r.code !== 0 || ms.length !== +a[1]) { bad.push(`${a.join(' ')}:\n${out.slice(-600)}`); continue; }
     const ctf = a[0] === 'ctf';
     for (const m of ms) { lens.push(+m[2]); if (!(ctf ? /^(caps|time)$/ : /^(ko|time)$/).test(m[1]) || +m[2] < 10 || +m[2] > (ctf ? 370 : 200)) bad.push(`${a.join(' ')}: ${m[0]}`); }
   }
@@ -733,33 +756,74 @@ function pvpCheck() {
 }
 
 // ---------------------------------------------------------------- 3d. the boss journals (tools/journal-lint.js)
-function journalCheck() {
-  const r = spawnSync(process.execPath, [path.join(__dirname, 'journal-lint.js')], { cwd: ROOT, encoding: 'utf8' });
-  const out = (r.stdout || '') + (r.stderr || '');
-  if (r.status === 0 && /journal-lint: clean/.test(out)) pass('Journals: no digits, within the word cap, every move is a real cast', out.trim().split(/\r?\n/).pop());
+function journalCheck(r) {
+  const out = r.out;
+  if (r.code === 0 && /journal-lint: clean/.test(out)) pass('Journals: no digits, within the word cap, every move is a real cast', out.trim().split(/\r?\n/).pop());
   else fail('Journals: no digits, within the word cap, every move is a real cast', out.slice(-900));
 }
 
 // ---------------------------------------------------------------- 3e. feats and titles (tools/feats-test.js)
-function featsCheck() {
-  const r = spawnSync(process.execPath, [path.join(__dirname, 'feats-test.js')], { cwd: ROOT, encoding: 'utf8' });
-  const out = (r.stdout || '') + (r.stderr || '');
-  if (r.status === 0 && /Feats OK/.test(out)) pass('Feats: data sound, party and result rules, earning and titles', out.trim().split(/\r?\n/).pop());
+function featsCheck(r) {
+  const out = r.out;
+  if (r.code === 0 && /Feats OK/.test(out)) pass('Feats: data sound, party and result rules, earning and titles', out.trim().split(/\r?\n/).pop());
   else fail('Feats: data sound, party and result rules, earning and titles', out.slice(-900));
 }
 
+// ---------------------------------------------------------------- 5. the runs: everything goes into one pool
+// Every heavy piece of work (bot raids, the balance sim, talents, the test scripts) is a child process in one pool of POOL at a time, the
+// longest first, so the machine stays full from the first second to the last. A long job is cut into pieces that play exactly what
+// the whole job would (same seeds, same runs per item) and their output is joined, so the verdicts below read the same lines.
+const SIM_PARTS = 4;    // tools/simulate.js --part=i/n
+const RAID_CHUNK = 5;   // a bot raid of more runs than this goes out in pieces of this many (bot-raid.js first=K)
+const joinOut = rs => ({ code: rs.find(r => r.code !== 0) ? rs.find(r => r.code !== 0).code : 0, out: rs.map(r => r.out).join('') });
+// the pieces of one raid: their "cleared a of b" lines add up to one
+function joinRaid(rs) {
+  if (rs.length === 1) return rs[0];
+  const sum = [0, 0];
+  const out = rs.map(r => r.out.replace(/^cleared (\d+) of (\d+)\r?\n?/m, (m, a, b) => { sum[0] += +a; sum[1] += +b; return ''; })).join('');
+  return { code: joinOut(rs).code, out: out + `cleared ${sum[0]} of ${sum[1]}\n` };
+}
+const raidJob = (mode, runs, boss, comp, extra, group) => {
+  const bot = path.join(__dirname, 'bot-raid.js'), pieces = [];
+  for (let first = 0; first < runs; first += RAID_CHUNK) {
+    const n = Math.min(RAID_CHUNK, runs - first);
+    pieces.push(run([bot, mode, String(n), boss, ...(comp ? [comp] : []), ...extra, ...(first ? ['first=' + first] : [])], { group, weight: n * 3 }));
+  }
+  return Promise.all(pieces).then(joinRaid);
+};
+
+// the test scripts that print a marker line when they are happy: [bucket, script, how the verdict reads it, name if it crashes, weight]
+const TESTS = [
+  ['hollow', 'hollow-test.js', hollowCheck, 'Hollow checked', 2],
+  ['kenseier', 'kenseier-test.js', kenseierCheck, 'Kenseier checked', 2],
+  ['houndmaster', 'houndmaster-test.js', houndmasterCheck, 'Houndmaster checked', 4],
+  ['rejoin', 'rejoin-test.js', rejoinCheck, 'Rejoin checked', 14],
+  ['journal', 'journal-lint.js', journalCheck, 'Journals checked', 1],
+  ['reaper', 'reaper-test.js', reaperCheck, 'Reaper checked', 2],
+  ['feats', 'feats-test.js', featsCheck, 'Feats checked', 1],
+];
+const PVP_RUNS = [['duel', '3', 'ranger', 'bastion'], ['duel', '2', 'cleric', 'shadowblade'], ['team', '2', 'bastion', 'pyromancer', 'gorgemaw', 'cleric'], ['ctf', '2', 'bastion', 'ranger', 'gorgemaw', 'cleric']];
+
+// hands a finished child's verdict to the right bucket; a verdict that throws is a failure, as it always was
+const settle = (bucket, crashed, rs, verdict) => stage(bucket, () => { try { verdict(rs); } catch (e) { fail(crashed, e.stack); } });
+
 async function heavy() {
+  const { SPECS, specOf } = require(path.join(ROOT, 'client/js', 'combat/specs.js'));
+  const { TALENTS } = require(path.join(ROOT, 'client/js', 'combat/talents.js'));
   const trialIds = Object.values(SPECS).flat().map(s => s.id);
   const [sim, tal, ...raids] = await Promise.all([
-    run([path.join(__dirname, 'simulate.js')]),
-    run([path.join(__dirname, 'talents.js')]),
-    ...RAIDS.map(([, boss, ...rest]) => run([path.join(__dirname, 'bot-raid.js'), 'normal', (rest.find(a => /^runs=/.test(a)) || '').slice(5) || String(RAID_RUNS), boss, rest.filter(a => !/^(gear|runs)=/.test(a)).join(','), ...rest.filter(a => /^gear=/.test(a))])),
-    ...trialIds.map(id => run([path.join(__dirname, 'bot-raid.js'), 'normal', '2', 'trial:' + id])),
-    ...HARD_BOSSES.map(([, boss, gear]) => run([path.join(__dirname, 'bot-raid.js'), 'hard', '3', boss, HARD_COMP, ...(gear ? [gear] : [])])),
+    Promise.all(Array.from({ length: SIM_PARTS }, (_, i) => run([path.join(__dirname, 'simulate.js'), `--part=${i}/${SIM_PARTS}`], { group: 'balance sim', weight: 4 }))).then(joinOut),
+    Promise.all(Object.keys(TALENTS).map(cls => run([path.join(__dirname, 'talents.js'), cls], { group: 'talents', weight: 6 }))).then(joinOut),
+    ...RAIDS.map(([, boss, ...rest]) => raidJob('normal', +((rest.find(a => /^runs=/.test(a)) || '').slice(5) || RAID_RUNS), boss, rest.filter(a => !/^(gear|runs)=/.test(a)).join(','), rest.filter(a => /^gear=/.test(a)), 'bot raids')),
+    ...trialIds.map(id => raidJob('normal', 2, 'trial:' + id, '', [], 'spec trials')),
+    ...HARD_BOSSES.map(([, boss, gear]) => raidJob('hard', 3, boss, HARD_COMP, gear ? [gear] : [], 'hard smoke')),
   ]);
   const hards = raids.splice(RAIDS.length + trialIds.length);
   const trials = raids.splice(RAIDS.length);
+  stage('heavy', () => verdicts(sim, tal, raids, trials, hards, trialIds, specOf));
+}
 
+function verdicts(sim, tal, raids, trials, hards, trialIds, specOf) {
   // balance: each class's pro DPS against the baseline
   const now = {};
   for (const line of sim.out.split('\n')) { const m = line.match(/^(\w+)\s+(\d+)\s+(\d+)\s+(\d+)%/); if (m) now[m[1]] = { newbie: +m[2], pro: +m[3] }; }
@@ -831,28 +895,112 @@ async function heavy() {
   else pass('Spec trials can be passed', `all ${trialIds.length}, by a bot playing the spec`);
 }
 
-(async () => {
-  const t0 = Date.now();
-  syntax();
-  try { scoring(); } catch (e) { fail('Contribution points score sensibly', e.stack); }
-  try { data(); } catch (e) { fail('Data checks ran', e.stack); }
-  try { timelines(); } catch (e) { fail('Timelines checked', e.stack); }
-  try { hollowCheck(); } catch (e) { fail('Hollow checked', e.stack); }
-  try { kenseierCheck(); } catch (e) { fail('Kenseier checked', e.stack); }
-  try { houndmasterCheck(); } catch (e) { fail('Houndmaster checked', e.stack); }
-  try { rejoinCheck(); } catch (e) { fail('Rejoin checked', e.stack); }
-  try { stampCheck(); } catch (e) { fail('Stamps checked', e.stack); }
-  try { journalCheck(); } catch (e) { fail('Journals checked', e.stack); }
-  try { reaperCheck(); } catch (e) { fail('Reaper checked', e.stack); }
-  try { featsCheck(); } catch (e) { fail('Feats checked', e.stack); }
-  try { pvpCheck(); } catch (e) { fail('PvP checked', e.stack); }
-  await heavy();
+
+// ---------------------------------------------------------------- 6. the docs-only lane
+// The game and the tools never load anything under docs/, any *.md, or .claude/. After every full pass the check records a
+// fingerprint of everything else (the name and content of each file in the working tree, tracked or not, committed or not) in the
+// repository's shared git dir, so every worktree and every chat sees it. A run whose fingerprint was already passed has changed nothing
+// the game or the tools can see, so it only runs the cheap checks (every script parses, the index.html stamps, the journals) and says
+// so. Any other change, committed or not, makes a different fingerprint and gets the full run. `--full` always runs everything.
+const git = (args, input) => { const r = spawnSync('git', args, { cwd: ROOT, encoding: 'utf8', input, maxBuffer: 1 << 28 }); return r.status === 0 ? r.stdout : null; };
+const docsOnly = p => /^(docs|\.claude)\//.test(p) || /\.md$/i.test(p);
+function snapshot() {   // Map: path -> content hash, for every file the game or the tools could load; null if git can't say
+  const list = git(['ls-files', '-z', '--cached', '--others', '--exclude-standard', '--', '.', ':(exclude)docs', ':(exclude).claude', ':(exclude)*.md']);
+  if (list == null) return null;
+  const files = [...new Set(list.split('\0').filter(Boolean))].filter(p => !docsOnly(p) && fs.existsSync(path.join(ROOT, p))).sort();
+  const hashes = git(['hash-object', '--stdin-paths'], files.join('\n') + '\n');
+  if (hashes == null) return null;
+  const hs = hashes.split('\n');
+  return new Map(files.map((p, i) => [p, hs[i]]));
+}
+const fingerprint = snap => crypto.createHash('sha1').update([...snap].map(([p, h]) => p + ' ' + h).join('\n')).digest('hex');
+function markerFile() { const d = git(['rev-parse', '--git-common-dir']); return d ? path.join(path.resolve(ROOT, d.trim()), 'emberfall-check-passed') : null; }
+function passedBefore(fp) {
+  try { return fs.readFileSync(markerFile(), 'utf8').split('\n').some(l => l.split(' ')[0] === fp); } catch (e) { return false; }
+}
+function recordPass(fp) {
+  const file = markerFile(); if (!file) return;
+  let lines = []; try { lines = fs.readFileSync(file, 'utf8').split('\n').filter(l => l && l.split(' ')[0] !== fp); } catch (e) { /* first pass */ }
+  const head = (git(['rev-parse', '--short', 'HEAD']) || '').trim();
+  lines.push(`${fp} ${new Date().toISOString()} ${head}`);
+  fs.writeFileSync(file, lines.slice(-20).join('\n') + '\n');
+}
+// the same files with the same content (--update-baseline rewrites the baseline file itself during the run: that one may differ)
+function sameTree(a, b) {
+  const skip = path.relative(ROOT, BASELINE).replace(/\\/g, '/');
+  const keys = new Set([...a.keys(), ...b.keys()]);
+  for (const k of keys) if (a.get(k) !== b.get(k) && !(UPDATE && k === skip)) return false;
+  return true;
+}
+
+// ---------------------------------------------------------------- 7. the timing summary
+function timing(wall) {
+  const groups = new Map();
+  for (const j of JOBS) {
+    const g = groups.get(j.group) || { n: 0, work: 0, longest: 0, end: 0 };
+    const s = (j.end - j.start) / 1000;
+    g.n++; g.work += s; g.longest = Math.max(g.longest, s); g.end = Math.max(g.end, (j.end - START) / 1000);
+    groups.set(j.group, g);
+  }
+  console.log(`\nTiming: ${wall.toFixed(0)}s in all, up to ${POOL} children at a time (jobs / seconds of work / longest job / done at)`);
+  for (const [name, g] of [...groups].sort((x, y) => y[1].work - x[1].work)) console.log(`  ${name.padEnd(14)} ${String(g.n).padStart(3)} jobs ${g.work.toFixed(0).padStart(5)}s work ${g.longest.toFixed(1).padStart(6)}s longest ${g.end.toFixed(0).padStart(5)}s`);
+}
+
+// ---------------------------------------------------------------- 8. go
+async function main() {
+  stage('stamps', () => { try { stampCheck(); } catch (e) { fail('Stamps checked', e.stack); } });   // (first: it may rewrite index.html, which the fingerprint then includes)
+  const before = snapshot(), fp = before && fingerprint(before);
+  const lane = !FULL && before && passedBefore(fp) ? 'docs' : 'full';
+  if (lane === 'docs') console.log('Docs-only lane: nothing the game or the tools load has changed since the last full pass (node tools/check.js --full runs everything).');
+  else if (!FULL && before) console.log('Full run: something the game or the tools load has changed since the last full pass.');
+  const todo = [];
+  // every script parses
+  const files = [];
+  const walk = d => { for (const f of fs.readdirSync(d, { withFileTypes: true })) { const p = path.join(d, f.name); if (f.isDirectory()) walk(p); else if (f.name.endsWith('.js')) files.push(p); } };
+  walk(path.join(ROOT, 'client', 'js')); walk(path.join(ROOT, 'tools')); walk(path.join(ROOT, 'server'));
+  todo.push(Promise.all(files.map(f => run(['--check', f], { group: 'parse', weight: 0 }))).then(rs => stage('syntax', () => syntax(files, rs))));
+  for (const [bucket, file, verdict, crashed, weight] of TESTS) {
+    if (lane === 'docs' && bucket !== 'journal') continue;
+    todo.push(run([path.join(__dirname, file)], { group: bucket, weight }).then(r => settle(bucket, crashed, r, verdict)));
+  }
+  if (lane === 'full') {
+    todo.push(run([__filename, '--stage=core'], { group: 'core', weight: 8 }).then(r => stage('core', () => adopt(r))));
+    todo.push(Promise.all(PVP_RUNS.map(a => run([path.join(__dirname, 'pvp-sim.js'), ...a], { group: 'pvp', weight: 2 }))).then(rs => settle('pvp', 'PvP checked', rs, pvpCheck)));
+    todo.push(heavy());
+  }
+  await Promise.all(todo);
+
   console.log('');
-  for (const r of results) {
+  const all = BUCKETS.flatMap(b => buckets[b] || []);
+  for (const r of all) {
     console.log(`${r.ok ? 'PASS' : 'FAIL'}  ${r.name}${r.detail && r.ok ? `  (${r.detail})` : ''}`);
     if (!r.ok && r.detail) console.log(r.detail.split('\n').map(l => '      ' + l).join('\n'));
   }
-  const bad = results.filter(r => !r.ok).length;
-  console.log(`\n${bad ? `${bad} check${bad > 1 ? 's' : ''} failed` : 'All checks passed'} in ${((Date.now() - t0) / 1000).toFixed(0)}s`);
+  const bad = all.filter(r => !r.ok).length;
+  const wall = (Date.now() - START) / 1000;
+  timing(wall);
+  if (!bad && lane === 'full' && before) {   // record the pass, unless a file changed while it ran
+    const after = snapshot();
+    if (after && sameTree(before, after)) recordPass(fingerprint(after));
+    else console.log('\n(files changed while the check ran, so this pass is not recorded for the docs-only lane)');
+  }
+  console.log(`\n${bad ? `${bad} check${bad > 1 ? 's' : ''} failed` : `All checks passed${lane === 'docs' ? ' (docs-only)' : ''}`} in ${wall.toFixed(0)}s`);
   process.exit(bad ? 1 : 0);
-})();
+}
+
+// `--stage=core`: the checks that run in this process and share its globals (scoring, data, timelines), in a child of their own so
+// the pool stays full while they run; the results go back as one line
+function core() {
+  try { scoring(); } catch (e) { fail('Contribution points score sensibly', e.stack); }
+  try { data(); } catch (e) { fail('Data checks ran', e.stack); }
+  try { timelines(); } catch (e) { fail('Timelines checked', e.stack); }
+  console.log('@@RESULTS ' + JSON.stringify(results));
+}
+function adopt(r) {
+  const line = r.out.split(/\r?\n/).filter(l => l.startsWith('@@RESULTS ')).pop();
+  if (!line) fail('Data, scoring and timeline checks ran', r.out.slice(-900));
+  else for (const x of JSON.parse(line.slice(10))) into.push(x);
+}
+
+if (STAGE === 'core') core();
+else main().catch(e => { console.error(e); process.exit(2); });

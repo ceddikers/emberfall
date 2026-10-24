@@ -1350,13 +1350,15 @@ if (require.main !== module) module.exports = { runSim, FIGHT_LEN };
 else main();
 function main() {
 // every class, then each of its specializations as "class:spec" (or one of either, given as an argument)
-const only = process.argv[2];
+// --part=i/n plays every n-th entry from i (0-based) with the same runs and seeds as a whole run: tools/check.js splits the job that way
+const part = /^--part=(\d+)\/(\d+)$/.exec(process.argv[2] || '');
+const only = part ? null : process.argv[2];
 const entries = [];
 for (const c of Object.keys(KITS)) {
   entries.push([c, null]);
   for (const s of SPECS[c] || []) entries.push([c, s.id]);
 }
-const picked = only ? entries.filter(([c, s]) => (s ? `${c}:${s}` : c) === only) : entries;
+const picked = part ? entries.filter((e, i) => i % +part[2] === +part[1]) : only ? entries.filter(([c, s]) => (s ? `${c}:${s}` : c) === only) : entries;
 const RUNS = only ? 8 : 5;
 const rows = [];
 for (const [cls, spec] of picked) {
