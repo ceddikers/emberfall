@@ -1028,6 +1028,13 @@ body.placing-mark canvas { cursor: crosshair; }
 #down-veil .rez-ask.asked { cursor: default; color: var(--muted); border-color: #3a2a1c; }
 #down-veil .rez-ask kbd { font: 600 9px/13px inherit; padding: 0 4px; border: 1px solid #3a2a1c; border-radius: 2px; color: #f2d38a; background: #050403; letter-spacing: 0; }
 .chip.rez { background: #1a1608; border-color: #c9973f; color: #f2d38a; }
+.chip.away { background: #141318; border-color: #4a4656; color: #aaa4b8; }
+/* the quiet line while a dropped tab wins its place back: no modal, the raid keeps drawing behind it */
+#link-status { position: fixed; left: 50%; top: 14px; transform: translate(-50%, -6px); z-index: 45; opacity: 0; pointer-events: none; transition: opacity .3s, transform .3s;
+  background: #12100df0; border: 1px solid var(--line); border-radius: 3px; padding: 5px 14px; font-size: 12px; color: #cfc8da; white-space: nowrap; }
+#link-status.show { opacity: 1; transform: translate(-50%, 0); }
+#link-status.back { border-color: #3e5c2c; color: #dcf2c8; }
+body.link-lost #combat-hud { opacity: .55; }
 #down-veil .recap { pointer-events: auto; width: 320px; padding: 8px 10px; background: #0a0807e8; border: 1px solid #3a2a1c; border-radius: 3px; box-shadow: 0 0 0 1px #000, 0 8px 22px #000a; }
 #down-veil .recap h6 { margin: 0 0 6px; font-family: var(--fantasy); font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
 #down-veil .rc-row { display: grid; grid-template-columns: 1fr auto 78px 38px; align-items: baseline; gap: 8px; padding: 3px 0 3px 8px; border-left: 2px solid transparent; font-size: 12px; color: #d8cdb8; }

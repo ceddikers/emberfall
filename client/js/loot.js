@@ -20,13 +20,23 @@ const Loot = (() => {
 
   // ---------------------------------------------------------------- host
   let hc = null, seq = 0, nseq = 0;
-  function hostOpen(boss, mode, humans, at) {
+  // run: the raid run's id (main.js raidRid), so a chest id is scoped to its run
+  function hostOpen(boss, mode, humans, at, run = 0) {
     if (hc) hostClose();
     const classes = [...new Set(humans.map(h => h[1]))];
     const keys = rollChest(boss, mode, classes, Math.random);
     const id = ((Date.now() / 1000) | 0) % 100000 * 100 + (++seq % 100);
-    hc = { id, boss, who: new Map(humans), items: keys.map(key => [++nseq, key, 0]) };
-    deps.broadcast({ t: 'chest', id, boss, mode, items: hc.items, who: humans, gold: clearGold(boss, mode), at: at ? [Math.round(at.x), Math.round(at.y)] : null });
+    hc = { id, boss, who: new Map(humans), items: keys.map(key => [++nseq, key, 0]), acked: new Set(),
+      msg: { t: 'chest', id, run, boss, mode, who: humans, gold: clearGold(boss, mode), at: at ? [Math.round(at.x), Math.round(at.y)] : null } };
+    deps.broadcast(Object.assign({ items: hc.items }, hc.msg));
+  }
+  // a player says the chest reached them (gold paid, panel ready): it is never sent to them again
+  function hostAck(pid, m) { if (hc && m && m.id === hc.id) hc.acked.add(pid); }
+  // The chest as it stands now, for a player who rejoined and never confirmed it (null: nothing to send). Not for a Resync:
+  // a player who has the chest keeps it, and the client ignores a chest it has already opened (onChest) in any case.
+  function hostChestFor(pid) {
+    if (!hc || !hc.who.has(pid) || hc.acked.has(pid)) return null;
+    return Object.assign({ items: hc.items.map(x => x.slice()) }, hc.msg);
   }
   function hostTake(pid, m) {
     const c = hc;
@@ -83,10 +93,16 @@ const Loot = (() => {
   const itemSpan = key => `<span style="color:${RARITY[ITEMS[key].rarity].color}">[${esc(ITEMS[key].name)}]</span>`;
   const cleanItems = items => (Array.isArray(items) ? items.filter(x => Array.isArray(x) && Number.isInteger(x[0]) && ITEMS[x[1]]).slice(0, MAX) : []);
 
+  const opened = new Set();   // chests this tab has opened (run:id): the gold is paid once, however many times the host sends one
   function onChest(m) {
     if (!m || !Array.isArray(m.who)) return;
     const me = m.who.find(w => Array.isArray(w) && w[0] === deps.myId());
     if (!me) return;   // you weren't in that raid
+    const key = (m.run || 0) + ':' + m.id;
+    if (opened.has(key)) { deps.send({ t: 'cack', id: m.id }); return; }   // (already opened here: no gold, no new panel)
+    opened.add(key);
+    if (opened.size > 40) opened.delete(opened.values().next().value);
+    deps.send({ t: 'cack', id: m.id });
     ch = { id: m.id, boss: m.boss, items: cleanItems(m.items), cls: me[1], gold: Math.max(0, Math.min(1000, m.gold | 0)),
       at: Array.isArray(m.at) && m.at.every(Number.isFinite) ? { x: m.at[0], y: m.at[1] } : null, open: false, putting: false, born: performance.now() };
     if (ch.gold) { deps.addGold(ch.gold); chatLine(`<b>You</b> received <span class="gold-txt">${ch.gold} gold</span>`); }
@@ -162,5 +178,5 @@ const Loot = (() => {
   // leaving the raid: the panel goes (the host settles the chest)
   function leave() { close(); ch = null; pending.clear(); deps && deps.unescrowAll(); }
 
-  return { init(d) { deps = d; }, hostOpen, hostTake, hostPut, hostClose, onChest, onState, onGot, onPutOk, onSalvage, open, close, isOpen, reveal, chestAt, leave };
+  return { init(d) { deps = d; }, hostOpen, hostAck, hostChestFor, hostTake, hostPut, hostClose, onChest, onState, onGot, onPutOk, onSalvage, open, close, isOpen, reveal, chestAt, leave };
 })();

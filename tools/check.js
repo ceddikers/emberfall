@@ -697,6 +697,15 @@ function houndmasterCheck() {
   else fail('Houndmaster: pairs, drift and hold, pounce, Call Off, Wild Hunt, the hounds on the host', out.slice(-900));
 }
 
+// ---------------------------------------------------------------- 3i. a dropped link: hold, rejoin, snapshot (tools/rejoin-test.js)
+// net.js holds a dropped joiner's slot and takes the same player back; the host's stand-in bot and its snapshot of the fight hold for every boss.
+function rejoinCheck() {
+  const r = spawnSync(process.execPath, [path.join(__dirname, 'rejoin-test.js')], { cwd: ROOT, encoding: 'utf8' });
+  const out = (r.stdout || '') + (r.stderr || '');
+  if (r.status === 0 && /Rejoin OK/.test(out)) pass('Rejoin: held slot, stand-in, snapshot', out.trim().split(/\r?\n/).pop());
+  else fail('Rejoin: held slot, stand-in, snapshot', out.slice(-900));
+}
+
 // ---------------------------------------------------------------- 3h. cache-busting stamps (tools/stamp.js)
 // Every local script and stylesheet in client/index.html carries ?v=<hash of the file>, so a deploy never mixes fresh files
 // with cached ones. The check brings the stamps up to date itself (index.html then goes in with the commit) and fails only
@@ -833,6 +842,7 @@ async function heavy() {
   try { hollowCheck(); } catch (e) { fail('Hollow checked', e.stack); }
   try { kenseierCheck(); } catch (e) { fail('Kenseier checked', e.stack); }
   try { houndmasterCheck(); } catch (e) { fail('Houndmaster checked', e.stack); }
+  try { rejoinCheck(); } catch (e) { fail('Rejoin checked', e.stack); }
   try { stampCheck(); } catch (e) { fail('Stamps checked', e.stack); }
   try { journalCheck(); } catch (e) { fail('Journals checked', e.stack); }
   try { thresherArcCheck(); } catch (e) { fail('Thresher arc checked', e.stack); }
