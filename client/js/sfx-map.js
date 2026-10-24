@@ -150,7 +150,7 @@
     },
     marionettist: {
       jab: 'ab-stab', cue: L('ab-thread', 'ab-stab'), pull: 'ab-thread', cross: L('ab-thread', 'ab-stab'), pirouette: L('ab-slash', 'ab-thread'), swap: L('ab-thread', 'dash'), finale: L('ab-thread', 'ab-heavy'),
-      tangle: L('ab-thread', 'ab-dot'), redcurtain: L('ab-thread', 'ab-buff'), string: 'ab-thread', strum: L('ab-thread', 'ab-stab'), crossfire: L('ab-thread', 'ab-heavy'),
+      tangle: L('ab-thread', 'ab-dot'), cutcord: L('ab-thread', 'ab-heavy'), redcurtain: L('ab-thread', 'ab-buff'), string: 'ab-thread', strum: L('ab-thread', 'ab-stab'), crossfire: L('ab-thread', 'ab-heavy'),
       curtaincall: ULT('marionettist'), auto: 'ab-thread',
     },
     // Gloomsworn: heavy, low and metallic with a hollow breath under it; every move has its own voice (sfx-synth.js ABIL.gloomsworn)

@@ -3941,6 +3941,13 @@ function windLaneBoost(x, y, vx, vy, now) {
       for (const d of ds) { mariTwang(ent, d, { dur: 0.3, amp: 6 }); V.glint(d.x, d.y, { color: '#ffffff', size: 24, z: 26 }); V.smoke(d.x, d.y, { n: 2, color: '#f0c8d8', size: 18, a: 0.3, speed: 50 }); MP.petals(d.x, d.y, { n: 4, speed: 140, life: 0.9 }); }
       const st = finSetup(ent, c.tx, c.ty, n, ext);
       for (let i = 0; i < n; i++) c.later(0.06 + MARI_FIN.GAP * i, () => { if (!st.ext) finBeat(ent, st, i, c.cam); }); },
+    // Cut the Cord (talent, on R): the strings twitch red, one parts at the bar with a crack of sparks and whips loose,
+    // and the Doll, cut free, drives a crimson spike through the enemy, a white-gold star and petals where it lands
+    cutcord: c => { const ent = c.ent, tx = c.tx, ty = c.ty, MP = MARI_PAINT; act(ent, 'jab');
+      for (const d of dollsOf(ent)) mariTwang(ent, d, { dur: 0.28, amp: 9, color: '#ff5a7a' });
+      const b = mariBar(ent); V.sparks(b.x, b.y, { color: '#ff8a9a', n: 9, speed: 260 }); V.glint(b.x, b.y, { color: '#ffffff', size: 22, z: 18 });
+      c.later(0.12, () => { for (const d of dollsOf(ent)) { OLD_PAINT.thrust(d.x, d.y, tx, ty, { w: 9, color: '#e0203c', core: '#ffffff', ink: '#2a0410', head: true, dur: 0.2, z: 18 }); V.glint(d.x, d.y, { color: '#ffe6a8', size: 20, z: 24 }); } });
+      c.later(0.22, () => { V.spikeburst(tx, ty, { r: 52, n: 12, color: '#e0203c', core: '#fff0f4', ink: '#2a0410', dur: 0.32, z: 24 }); V.shock(tx, ty, { r: 76, color: '#ffd27a', dur: 0.32, w: 3 }); MP.petals(tx, ty, { n: 9, speed: 210, life: 1.3 }); }); },
     // Tangle: the Doll lunges and its strings wind round the enemy in rose and gold loops that tighten
     tangle: c => { act(c.ent, 'jab'); const tx = c.tx, ty = c.ty;
       V.fx({ dur: 0.9, layer: 'air', draw: (cc, p, t, e) => { const k = Math.min(1, (1 - p) / 0.3) * e.a; for (let i = 0; i < 4; i++) { const R = 44 * (1 - p * 0.45); V.neonPath(cc, i % 2 ? '#ffd27a' : '#ff5a7a', 1.4, k, () => cc.ellipse(tx, ty - 30, R, R * 0.35, i * Math.PI / 4 + t * 2, 0, TAU)); } } });
@@ -3996,6 +4003,9 @@ function windLaneBoost(x, y, vx, vy, now) {
     limp: e => { for (const dl of dollsOf(e)) { V.smoke(dl.x, dl.y, { n: 5, color: '#8a7a78', size: 20, a: 0.45, speed: 30 }); V.debris(dl.x, dl.y, { n: 3, color: '#c89a64', speed: 0.5 }); } },
     // (painted pass) the Doll comes back to life: let down again on gold strings (the Doll Summon panel)
     unlimp: e => { for (const dl of dollsOf(e)) { V.glint(dl.x, dl.y, { color: '#ffffff', size: 22, z: 30 }); threadOut(e, dl, { color: '#ffd27a', w: 1.2, grow: 0.2, dur: 0.5 }); MARI_PAINT.dollDrop(dl.x, dl.y, { dur: 0.5 }); MARI_PAINT.petals(dl.x, dl.y, { n: 5, speed: 110, life: 1.1 }); } },
+    // Riposte (talent): every fourth Jab, a gold counter-slash at the Doll that made it and a gold star on the enemy
+    riposte: (e, t, d) => { const dl = dollsOf(e)[(d && d.i) | 0]; if (!dl || !t) return; const a = Math.atan2(t.y - dl.y, t.x - dl.x);
+      OLD_PAINT.later(0.05, () => { V.slash(dl.x, dl.y, a - 0.5, { r: 48, span: 1.2, color: '#ffd27a', w: 0.4, dur: 0.2 }); V.glint(t.x, t.y - 20, { color: '#ffe6a8', size: 26, z: 22 }); V.sparks(t.x, t.y - 16, { color: '#ffd27a', n: 4, angle: a, spread: 0.6, speed: 200 }); }); },
     flourish: (e, t) => { for (const dl of dollsOf(e)) V.slash(dl.x, dl.y, (t ? Math.atan2(t.y - dl.y, t.x - dl.x) : 0) + 0.6, { r: 42, span: 1, color: '#ff9ab0', w: 0.35, dur: 0.18, flip: true }); },
     // (QA) bubble, not the hex shield (~450 canvas calls a Doll for a half-second flicker), and a petal ring to sell it
     standin: e => { for (const dl of dollsOf(e)) { V.shield(dl, { color: '#f0a8cc', dur: 0.5, r: 30 }); V.shock(dl.x, dl.y, { r: 40, color: '#ff9ab0', dur: 0.3, w: 2.5 }); } },
@@ -4023,7 +4033,13 @@ function windLaneBoost(x, y, vx, vy, now) {
     // Cue): quicker and brighter, a white-cored rose lunge with a gold glint and two gold sparks, no petals
     'mari-jab': (e, t, d) => { const fast = !!(d && d.fast); act(e, 'jab'); mariJabSnd(e, fast);
       if (!t) return;
-      for (const dl of dollsOf(e)) { const a = Math.atan2(t.y - dl.y, t.x - dl.x), L = Math.min(110, Math.max(40, Math.hypot(t.x - dl.x, t.y - dl.y))), dx = dl.x, dy = dl.y, px = dx + Math.cos(a) * L, py = dy + Math.sin(a) * L;
+      const one = d && d.i >= 0 ? d.i : -1, ds = dollsOf(e).filter((x, j) => one < 0 || j === one);
+      // (Long Arms) out of reach: a thin crimson lash runs down a string from the Doll to the enemy
+      if (d && d.far) { for (const dl of ds) { const ax = dl.x, ay = dl.y - 12;
+        V.fx({ dur: 0.22, layer: 'air', draw: (cc, p, tt, fx) => { const k = fx.a * (1 - p), q = Math.min(1, p / 0.35);
+          V.neonPath(cc, '#ff5a7a', 1.4, k, () => { cc.moveTo(ax, ay); cc.lineTo(ax + (t.x - ax) * q, ay + (t.y - 20 - ay) * q); }); } });
+        OLD_PAINT.later(0.08, () => V.hit(t.x, t.y, '#ffb0c4', 0.4)); } return; }
+      for (const dl of ds) { const a = Math.atan2(t.y - dl.y, t.x - dl.x), L = Math.min(110, Math.max(40, Math.hypot(t.x - dl.x, t.y - dl.y))), dx = dl.x, dy = dl.y, px = dx + Math.cos(a) * L, py = dy + Math.sin(a) * L;
         if (fast) { OLD_PAINT.thrust(dx, dy, px, py, { w: 6, color: '#ff3a5c', core: '#ffffff', ink: '#2a0410', head: true, dur: 0.14, z: 16 });
           OLD_PAINT.later(0.04, () => { V.hit(px, py, '#ffd0dc', 0.5); V.glint(px, py, { color: '#ffe6a8', size: 22, z: 18 }); V.sparks(px, py - 14, { color: '#ffd27a', n: 2, angle: a, spread: 0.5, speed: 220 }); });
         } else { OLD_PAINT.later(0.03, () => OLD_PAINT.thrust(dx, dy, px, py, { w: 6, color: '#e0203c', core: '#ffe6ec', ink: '#2a0410', head: true, dur: 0.2, z: 16 }));

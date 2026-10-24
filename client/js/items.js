@@ -183,11 +183,11 @@ Object.assign(ITEM_PERKS, {
   threadweaver_w2: { ab: 'mend', text: 'A Mend Seam that spends Spool (and Embroider) heals 20% more.' },
   threadweaver_w3: { ab: 'snip', text: 'Snap releases 25% more of what each thread carried.' },
   threadweaver_a4: { ab: 'tapestry', text: 'Tapestry lasts 10s instead of 8s.' },
-  marionettist_w1: { ab: 'cue', text: 'Cue reaches: with the Doll out of reach, it lunges back onto its mark across your target and stabs.' },
+  marionettist_w1: { ab: 'cue', text: 'Cue also ties one torn String back.' },
   marionettist_a2: { ab: 'swap', text: 'Swap (or Red Curtain) also sends the Doll out quick: its next three Jabs come twice as fast, as after a Cue.' },
   marionettist_w2: { ab: 'cross', text: 'A Cross-Cut that crosses the enemy builds 3 Encore instead of 2.' },
   marionettist_w3: { ab: 'finale', text: 'Grand Finale also gives back a charge of Pull Strings.' },
-  marionettist_a4: { ab: 'pirouette', text: 'Nothing can touch the Doll for 3s after Pirouette instead of 1.5s (and for 3s after Tangle).' },
+  marionettist_a4: { ab: 'pirouette', text: 'Nothing can touch the Doll for 3s after Pirouette instead of 1.5s (and for 3s after Tangle or Cut the Cord).' },
 });
 
 // ---------------------------------------------------------------- Gloomsworn (tank, class 18)

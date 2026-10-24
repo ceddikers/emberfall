@@ -95,6 +95,9 @@ Object.assign(BUFF_ICON, { read: 'read', wall: 'kick', opening: 'fist', wind: 'b
 // Houndmaster: Mark the Quarry, Call Off's guard, and the bleed that sharpens the bites (the loot)
 Object.assign(BUFF_NAMES, { mounted: 'Riding Greyfang', quarry: 'Quarry Marked', guarded: 'Hounds on Guard', rendbite: 'Bloodied Bites' });
 Object.assign(BUFF_ICON, { mounted: 'mount', quarry: 'quarry', guarded: 'calloff', rendbite: 'finisher' });
+// Marionettist: Strung, one stack per String still tied (no timer: it lasts as long as the Strings do)
+Object.assign(BUFF_NAMES, { strung: 'Strung' });
+Object.assign(BUFF_ICON, { strung: 'pull' });
 GAUGE_TIPS.ironpalm = {
   desc: `Every press costs Breath: Light ${IP_INPUT.L.cost}, Heavy ${IP_INPUT.H.cost}, Kick ${IP_INPUT.K.cost} (${Math.round(IRONPALM.CRISP_SAVE * 100)}% less when Crisp). It refills ${IRONPALM.pool.regen} a second while you fight and ${IRONPALM.pool.rest} a second once you stop for half a moment. Below ${IRONPALM.WINDED} you're winded until it's back to ${IRONPALM.RECOVER}: every press is a weak tap, and it refills at the resting pace (${Math.round(IRONPALM.TAP_REFILL * 100)}% of it while you keep tapping). Crane Step gives some back, Flowing Palms with all three palms Crisp gives ${IRONPALM.FLOW_BREATH} back when it leaves you under ${IRONPALM.FLOW_LOW}, and a Read gives 15.`,
   state: k => (k.has('opening') ? 'Opening: Heavy is Thousand Palms' : k.has('offbal') ? 'Off balance: Read the next blow' : k.g.winded ? 'Winded: breathe' : k.has('wind') ? 'Second Wind' : 'Steady'),
@@ -124,6 +127,7 @@ const BUFF_TIPS = {
   keen: n => `Your next ${n('pierce')} hits harder and gives its charge back. Banks up to two.`,
   smoulder: () => 'Your Heat can\'t boil over: it stops at 99.',
   oncue: n => `Your next ${n('cross')} cuts twice as hard and gives 1 more Encore.`,
+  strung: () => 'Each String still tied to the Doll gives you 5% more damage and makes its Jabs 5% faster. A torn String takes its share with it.',
   tempo: n => `At three Tempo your next ${n('step')} is a Flourish. A spilled combo point loses them all.`,
   stalk: n => `Your next ${n('evis')} hits 6% harder.`,
   barrage: n => `Your next ${n('quick')} hits three times as hard and gives triple Focus.`,
@@ -180,7 +184,7 @@ const BUFF_TIPS = {
   bellows: () => 'You take 30% less damage, Breath refills half again as fast, and every named move you finish sends out a shockwave and gives back 6 Breath.',
 };
 // buffs refreshed every moment while a condition holds (the timer means nothing there)
-const BUFF_UNTIMED = new Set(['incircle', 'redline']);
+const BUFF_UNTIMED = new Set(['incircle', 'redline', 'strung']);
 // the damage classes' Ultimates (kits.js "ULTIMATES · DAMAGE CLASSES"): what they leave on you
 Object.assign(BUFF_NAMES, { starfall: 'Starfall', curtaincall: 'Curtain Call' });
 Object.assign(BUFF_ICON, { starfall: 'barrage', curtaincall: 'swap' });
@@ -543,7 +547,7 @@ const Hud = {
     if (!b) return '';
     if (b.own && BUFF_TIPS[id] && k) {
       const nm = base => { const ab = k.abilities.find(x => (x.replaces || x.id) === base); return ab ? ab.name : base; };
-      return `<b>${BUFF_NAMES[id]}</b>${b.left != null ? `<em>${Math.ceil(b.left)}s</em>` : ''}${BUFF_TIPS[id](nm)}`;
+      return `<b>${BUFF_NAMES[id]}${b.stacks > 1 ? ` ×${b.stacks}` : ''}</b>${b.left != null ? `<em>${Math.ceil(b.left)}s</em>` : ''}${BUFF_TIPS[id](nm)}`;
     }
     const head = `<b>${b.name}${b.stacks > 1 ? ` ×${b.stacks}` : ''}</b>${b.left != null ? `<em>${Math.ceil(b.left)}s</em>` : b.label ? `<em>${b.label}</em>` : ''}`;
     return head + (b.tip ? tipAttr(b.tip) : '');
@@ -629,7 +633,7 @@ GAUGE_TIPS.threadweaver = {
   state: k => { const n = weaveCount(k); return `${n} thread${n === 1 ? '' : 's'}` + (k.g.spool >= WEAVE.MEND_COST ? ' · Mend Seam instant' : ''); },
 };
 GAUGE_TIPS.marionettist = {
-  desc: 'Strings (top): three tie you to the Doll. One tears if it strays past their reach or a blow lands on it, and grows back after 15s; with none left the Doll lies limp for 4s. Pull Strings ties all three back and gets a limp Doll up at once. Encore (the footlights) builds from Cue and the Doll\'s other moves (not its own Jabs), and 1 more for a blow it spins through under Pirouette; Grand Finale spends all 5.',
+  desc: 'Strings (top): three tie you to the Doll. One tears if it strays past their reach or a blow lands on it, and grows back after 15s; with none left the Doll lies limp for 4s. Pull Strings ties all three back and gets a limp Doll up at once. Encore (the footlights) builds from Cue and the Doll\'s other moves (not its own Jabs), and 1 more for a blow it spins through under Pirouette; Grand Finale spends all 5. Strung: each String still tied gives you 5% more damage and 5% faster Jabs.',
   state: k => (mariLimp(k) ? 'Limp' : `${k.g.strings} String${k.g.strings === 1 ? '' : 's'}`) + ` · Encore ${k.g.encore || 0} / 5` + (k.g.quick ? ` · ${k.g.quick} quick Jab${k.g.quick === 1 ? '' : 's'}` : ''),
 };
 function drawnIcon(classId, abilityId, force = false) {

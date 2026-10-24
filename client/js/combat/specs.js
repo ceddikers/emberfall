@@ -1228,7 +1228,7 @@ Object.assign(SPECS, {
       focus: 'Positioning. The strings always cut what they cross and reach 400 px, and Cross-Cut is off the global cooldown with two charges.',
       passive: { name: 'Bladed String', desc: 'The strings reach 400 px before they tear, and they cut whatever enemy they cross for {d:48}, once a second. Taut String: every second the line stays across, the cut grows by {d:12}, up to {d:120}; the line leaving the enemy or a String tearing slackens it. Cross-Cut is off the global cooldown, with two charges.' },
       build: base => ({
-        potMult: base.potMult * 0.657,
+        potMult: base.potMult * 0.66,
         stretch: 400, bladed: true,
         abilities: {
           cross: { type: 'ogcd', charges: 2, cd: 9, lock: 0.4, desc: 'Off the global cooldown, two charges: your strings become blades and cut along the line between you and the Doll. With the enemy on that line it\'s a {d:560} cut and 2 Encore; otherwise it cuts nothing.' },
@@ -1248,7 +1248,7 @@ Object.assign(SPECS, {
         dolls: 2, dollMult: 0.58,
         // (each Doll hits at 58%: the numbers here are per Doll)
         abilities: {
-          cue: { desc: 'You snap your fingers: each Doll in reach lunges at once for a {d:104.4} stab, and their next three Jabs come twice as fast. Builds 1 Encore. On their own the Dolls jab for {d:23.2} each every 4s while you fight and they have the enemy in reach.' },
+          cue: { desc: 'You snap your fingers: each Doll in reach lunges at once for a {d:104.4} stab, and their next three Jabs come twice as fast. Builds 1 Encore. On their own the Dolls jab for {d:23.2} each every 4s all through a fight while they have the enemy in reach, whatever you press (5% faster for each String still tied).' },
           pull: { desc: 'Fling the Doll nearest where you aim to that spot (within its strings\' reach). It cuts anything it passes through for {d:92.8}, and stays there until you pull it again or pick another target. Builds 1 Encore on a hit. Every pull also ties all three Strings back, and gets limp Dolls up at once. Two charges.' },
           cross: { desc: 'Your strings become blades and cut along the lines between you and the Dolls. Each line with the enemy on it cuts for {d:324.8}, and a cut gives 2 Encore; otherwise it cuts nothing.' },
           swap: { desc: 'You and the Doll nearest where you aim trade places in a flutter of silk. It\'s your escape, and the Doll takes your spot. Stage Cross: your next Cross-Cut within 6s cuts twice as hard and gives 1 more Encore.' },

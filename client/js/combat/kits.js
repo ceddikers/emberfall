@@ -4292,9 +4292,11 @@ function alemUltThrow(k, v, t, m) {
 // notice). At 0 it goes limp for 4s and comes back with 3; Pull Strings ties all three back at once (and revives it).
 // Encore (0-5) builds from Cue and the other moves and pays for Grand Finale. The Doll jabs on its own (mariJab) while
 // you fight and it has the enemy in reach: every JAB_EVERY s, or JAB_FAST s for the QUICK jabs after a Cue.
-// STAGE: Stage Cross's window after a Swap.
+// STAGE: Stage Cross's window after a Swap. STRUNG: every String still tied gives 5% more damage and 5% faster Jabs (the
+// Strung buff, mariStrung).
 const MARI = { STRETCH: 300, REACH: 64, SPEED: 360, LIMP: 4, REGEN: 15, YANK: 1.2, RING: 24, TAUT: 12, TAUT_MAX: 72, STAGE: 6, FINALE: 253,
-  JAB: 40, JAB_EVERY: 4, JAB_FAST: 2, QUICK: 3, CUE: 180, FLOURISH: 100 };
+  JAB: 40, JAB_EVERY: 4, JAB_FAST: 2, QUICK: 3, CUE: 180, FLOURISH: 100, STRUNG: 0.05,
+  RIPOSTE: 90, RIPOSTE_EVERY: 4, LASH: 0.7, CORD: 480 };
 const MARI_STRING = { id: 'string', name: 'Bladed String' };
 const MARI_JAB = { id: 'jab', name: 'Jab' };   // (the Doll's own jab: no button, its hits are named for the meters)
 const MARI_FAR = { target: 'enemy', range: 2000 };
@@ -4303,6 +4305,15 @@ const mariEnemy = k => k.env.target(MARI_FAR);
 const mariER = e => (e && e.r) || (e && e.id && e.id !== 'boss' && e.id !== 'dummy' ? 34 : 70);
 const mariPos = k => (k.env.pos ? k.env.pos() : { x: 0, y: 0 });
 const mariLimp = k => k.now < (k.g.limpUntil || 0);
+// a live fight: the Doll works the boss and jabs on its own, whatever you press (kits.js bossNow is null outside one)
+const mariFight = k => !!(k.env.boss && k.env.boss());
+// Strung: the Strings still tied (none while the Doll lies limp), each 5% more damage and 5% faster Jabs, kept as a buff for the tracker
+const mariTied = k => (mariLimp(k) ? 0 : k.g.strings | 0);
+function mariStrung(k) {
+  const n = mariTied(k);
+  if (!n) { k.buffs.delete('strung'); return; }
+  k.buff('strung', 3600, {}, 3).stacks = n;
+}
 // the Doll(s) close enough to hit the enemy
 function mariInReach(k, e = mariEnemy(k)) {
   if (!e || mariLimp(k)) return [];
@@ -4332,6 +4343,7 @@ function mariLose(k, i, why) {
   if (mariLimp(k) || now < (g.loseAt || 0)) return;
   g.loseAt = now + 0.4;   // one blow costs one String, even if it lands on both Dolls
   if (why === 'hit' && k.talent('marionettist_standin') && now < (g.swapAt || -9) + 3) { k.fx('standin'); return; }
+  if (why === 'far' && k.talent('marionettist_slack')) return;   // (Slack Line: it is only yanked back)
   g.strings = Math.max(0, g.strings - 1); g.taut = 0;   // (a torn String slackens Taut String)
   g.regenAt = now + MARI.REGEN;
   k.stats.strings = (k.stats.strings || 0) + 1;
@@ -4347,7 +4359,7 @@ function mariEncore(k, n) { k.gain('encore', n, 5); }
 // the Doll's next QUICK Jabs come twice as fast (Cue; the first one JAB_FAST from now)
 function mariQuick(k) {
   const g = k.g;
-  g.quick = MARI.QUICK;
+  g.quick = MARI.QUICK * g.dolls.length;   // (the Understudy's Dolls take turns: three each)
   const due = g.jabAt > k.now ? g.jabAt : Infinity;   // (a jab already on its way comes no later than it would have)
   g.jabAt = Math.max(k.now + 0.6, Math.min(due, k.now + MARI.JAB_FAST * k.hasteMult()));
 }
@@ -4356,14 +4368,27 @@ function mariQuick(k) {
 // a Cue flourishes into a second stab
 function mariJab(k) {
   const g = k.g, now = k.now;
-  if (now < (g.jabAt || 0) || now - k.engagedAt > ENGINE.AUTO_ENGAGE || (k.env.canAuto && !k.env.canAuto())) return;
+  // (it keeps jabbing all through a fight, or while you have an enemy picked, not only after you press a button at one)
+  const engaged = now - k.engagedAt <= ENGINE.AUTO_ENGAGE || mariFight(k) || !!(k.env.picked && k.env.picked());
+  if (now < (g.jabAt || 0) || !engaged || (k.env.canAuto && !k.env.canAuto())) return;
   if (g.dolls.some(d => d.mode === 'finale')) return;
-  const fast = (g.quick || 0) > 0, n = mariHit(k, MARI_JAB, MARI.JAB, { auto: true });
+  // (the Understudy's two Dolls take turns, each on half the beat: the next one in reach, or the other)
+  const two = g.dolls.length > 1, e = mariEnemy(k), near = mariInReach(k, e);
+  let only = two ? ((g.jabI | 0) % 2) : -1;
+  if (two && !near.includes(g.dolls[only]) && near.length) only = g.dolls.indexOf(near[0]);
+  const fast = (g.quick || 0) > 0, rip = k.talent('marionettist_riposte') && ((g.jabN | 0) + 1) % MARI.RIPOSTE_EVERY === 0;
+  let n = mariHit(k, MARI_JAB, rip ? MARI.RIPOSTE : MARI.JAB, { auto: true, only });
+  // Long Arms: out of reach, it jabs down the strings from wherever it stands (weaker)
+  const lash = !n && k.talent('marionettist_longarms') && !!e && !mariLimp(k);
+  if (lash) { n = 1; k.damage(MARI.JAB * MARI.LASH * (k.def.dollMult || 1), { ab: MARI_JAB, auto: true, tgt: e.id !== 'dummy' ? e.id : undefined }); }
   if (!n) return;
+  if (two) g.jabI = only + 1;
   if (fast) g.quick--;
-  g.jabAt = now + (g.quick > 0 ? MARI.JAB_FAST : MARI.JAB_EVERY) * k.hasteMult();
+  g.jabN = (g.jabN | 0) + 1;
+  if (rip && !lash) { mariEncore(k, 1); k.fx('riposte', { i: Math.max(0, only) }); }   // (Riposte: every fourth Jab)
+  g.jabAt = now + (g.quick > 0 ? MARI.JAB_FAST : MARI.JAB_EVERY) * k.hasteMult() / (1 + MARI.STRUNG * mariTied(k)) / (two ? 2 : 1);   // (Strung)
   k.stats.jabs = (k.stats.jabs || 0) + 1;
-  k.fx('mari-jab', { fast });
+  k.fx('mari-jab', { fast, i: only, far: lash });
   if (fast && !g.quick && k.talent('marionettist_flourish')) { k.after(0.25, () => mariHit(k, MARI_JAB, MARI.FLOURISH, { extra: true })); k.fx('flourish'); }
 }
 // Pull Strings ties every String back and revives a limp Doll
@@ -4372,6 +4397,7 @@ function mariRestring(k) {
   if (n <= 0) return 0;
   if (revived) { g.limpUntil = 0; for (const d of g.dolls) { d.mode = 'idle'; d.until = 0; } }
   g.strings = 3;
+  mariEncore(k, revived ? 1 : n);   // (Retie: 1 Encore for each String tied back; 1 for getting a limp Doll up)
   k.fx('restring', { n, revived });
   return n;
 }
@@ -4392,7 +4418,8 @@ function mariTick(k) {
     if (d.mode === 'idle') {
       // it only works a target you have chosen; with none it stays where it was put, and is only brought along when you
       // walk it to the end of its strings
-      const c = k.env.picked ? k.env.picked() : e;
+      // (in a fight with nothing picked it goes to work on the enemy you face)
+      const c = k.env.picked ? (k.env.picked() || (mariFight(k) ? e : null)) : e;
       const here = Math.hypot(d.x - p.x, d.y - p.y);
       if (c && c.id !== g.pickId) { g.pickId = c.id; for (const o of g.dolls) o.manual = false; }   // a new target sends them back to work
       if (d.manual) { /* put there by Pull Strings: it stays */ }
@@ -4432,6 +4459,7 @@ function mariTick(k) {
     if (e && L.lines.some(s => kitSegDist(e.x, e.y, s[0], s[1], s[2], s[3]) <= mariER(e) + 10)) k.damage(45 * L.m, { ab: abBase(k, 'cross'), tgt: e.id, extra: true });
     if (L.left <= 0) g.linger = null;
   }
+  mariStrung(k);
   mariJab(k);
   mariShare(k);
 }
@@ -4442,7 +4470,9 @@ function mariShare(k) {
 }
 // one Doll attack: every Doll in reach hits (each at the Understudy's smaller share)
 function mariHit(k, ab, pot, o = {}) {
-  const e = mariEnemy(k), ds = mariInReach(k, e);
+  const e = mariEnemy(k);
+  let ds = mariInReach(k, e);
+  if (o.only != null) { if (o.only >= 0) ds = ds.filter(d => d === k.g.dolls[o.only]); o = Object.assign({}, o); delete o.only; }
   if (!e || !ds.length) return 0;
   const m = k.def.dollMult || 1;
   let total = 0;
@@ -4462,7 +4492,7 @@ function mariCross(k, ab) {
   k.fx('cut', { n: hits });
   if (hits && k.talent('marionettist_house') && mariInStage(k)) k.partyBuff('dmg', 0.04, 8, { ab });   // (Packed House, Understudy spec row VI)
   if (hits) { mariEncore(k, 2 + (cue ? 1 : 0) + (k.perk('marionettist_w2') ? 1 : 0)); k.stats.cuts = (k.stats.cuts || 0) + 1; k.ultGain(MARI_ULT.GAIN_CUT); }   // (Curtain Call)
-  else { k.stats.misses = (k.stats.misses || 0) + 1; if (k.talent('marionettist_counterweight')) k.reduceCooldown(ab.id, (k.recast(ab) || 8) / 2); }
+  else k.stats.misses = (k.stats.misses || 0) + 1;
   if (k.talent('marionettist_twin')) k.g.linger = { lines, next: k.now + 1, left: 2, m };
 }
 // a telegraph about to land on a Doll (Pirouette glows: spin through it)
@@ -4495,10 +4525,11 @@ function mariAim(k) {
 }
 
 KITS.marionettist = {
-  potMult: 0.79, // balance knob (tools/simulate.js)
+  potMult: 0.713, // balance knob (tools/simulate.js; Strung pays the rest)
   // (no auto-attack of your own: the Doll jabs on its own, mariJab)
   gauge: { kind: 'marionette', key: 'encore', max: 5, label: 'Encore' },
   dolls: 1,
+  dmgMod: k => MARI.STRUNG * mariTied(k),   // (Strung: 5% per String tied)
   init: () => ({ encore: 0, strings: 3, dolls: [], limpUntil: 0, regenAt: 0, jabAt: 0, quick: 0 }),
   tick: k => mariTick(k),
   onNotify(k, type, d) {
@@ -4511,7 +4542,7 @@ KITS.marionettist = {
   floor: 'Stand back from the boss: the Doll does the fighting and jabs on its own. Press E when it glows, R when it\'s ready, F at full Encore, and Q when nothing else is up. Keep the Doll out of the red with W, which also ties its Strings back.',
   ceiling: [
     'Your attacks come from the Doll, not from you. It drifts to the far side of the boss on its own, but you have to keep it out of telegraphs: W sends it where you aim.',
-    'Three Strings tie you together. One tears if the Doll is pulled past 300 px from you or a blow lands on it; at 0 it goes limp for 4s. Every Pull Strings ties all three back and gets a limp Doll up at once, so keep a charge for after a blow.',
+    'Three Strings tie you together, and each one still tied gives you 5% more damage and 5% faster Jabs (Strung). One tears if the Doll is pulled past 300 px from you or a blow lands on it; at 0 it goes limp for 4s. Every Pull Strings ties all three back and gets a limp Doll up at once, so keep a charge for after a blow.',
     'Cue makes the Doll\'s next three Jabs come twice as fast. It is your filler: press it when nothing else is up, ideally once the last quick Jab has landed.',
     'Cross-Cut cuts along the line between you and the Doll: with the boss between you it\'s your biggest hit. Stand where the line crosses the boss.',
     'Grand Finale spends 5 Encore on five hits, but the Doll can\'t move while it plays. Look at what\'s coming before you start the show, and don\'t let full Encore sit: every point past 5 is lost.',
@@ -4521,12 +4552,14 @@ KITS.marionettist = {
     {
       id: 'cue', name: 'Cue', type: 'gcd', target: 'enemy', range: 640, anim: 'cast',
       desc: `You snap your fingers: the Doll lunges at once for a {d:${MARI.CUE}} stab, and its next three Jabs come twice as fast. Builds 1 Encore. ` +
-        `On its own the Doll jabs for {d:${MARI.JAB}} every ${MARI.JAB_EVERY}s while you fight and it has the enemy in reach.`,
-      usable: k => mariReady(k) || (k.perk('marionettist_w1') && !mariLimp(k) && !!mariEnemy(k)),
+        `Out of reach, the Doll lunges back onto its mark across the enemy first. ` +
+        `On its own the Doll jabs for {d:${MARI.JAB}} every ${MARI.JAB_EVERY}s all through a fight while it has the enemy in reach, whatever you press (5% faster for each String still tied).`,
+      usable: k => !mariLimp(k) && !!mariEnemy(k),
       effect(k) {
         const e = mariEnemy(k);
+        if (k.perk('marionettist_w1') && k.g.strings < 3) { k.g.strings++; k.g.regenAt = k.now + MARI.REGEN; }   // (its item perk: a String tied back)
         // (the Doll's reach: out of reach, it lunges back onto its mark across the enemy first)
-        if (e && !mariReady(k) && k.perk('marionettist_w1')) {
+        if (e && !mariReady(k)) {
           const p = mariPos(k);
           k.g.dolls.forEach((d, i) => { const st = mariStation(k, i, p, e); d.x = st.x; d.y = st.y; d.mode = 'idle'; d.manual = false; });
           mariShare(k);
@@ -4540,7 +4573,7 @@ KITS.marionettist = {
     },
     {
       id: 'pull', name: 'Pull Strings', type: 'ogcd', target: 'none', charges: 2, cd: 10, anim: 'cast', lock: 0.35,
-      desc: 'Fling the Doll to where you aim (within its strings\' reach). It cuts anything it passes through for {d:160}, and stays there until you pull it again or pick another target. Builds 1 Encore on a hit. Every pull also ties all three Strings back, and gets a limp Doll up at once. Two charges.',
+      desc: 'Fling the Doll to where you aim (within its strings\' reach). It cuts anything it passes through for {d:160}, and stays there until you pull it again or pick another target. Builds 1 Encore on a hit. Every pull also ties all three Strings back (1 Encore for each one tied back), and gets a limp Doll up at once. Two charges.',
       usable: k => k.g.dolls.length > 0,
       effect(k) {
         const p = mariPos(k), aim = mariAim(k), i = mariPick(k, aim), d = k.g.dolls[i];
@@ -4557,7 +4590,7 @@ KITS.marionettist = {
         if (k.env.collide) k.env.collide(d, 14);
         k.fx('pull', { i });
         if (e && kitSegDist(e.x, e.y, from.x, from.y, d.x, d.y) <= mariER(e) + 18) {
-          k.damage(160 * (k.talent('marionettist_lunge') ? 1.4 : 1) * (k.def.dollMult || 1), { ab: this, tgt: e.id !== 'dummy' ? e.id : undefined });
+          k.damage(160 * (k.def.dollMult || 1), { ab: this, tgt: e.id !== 'dummy' ? e.id : undefined });
           mariEncore(k, 1 + (k.talent('marionettist_presence') && mariInStage(k) ? 1 : 0));   // (Stage Presence)
         }
         mariShare(k);
@@ -4597,9 +4630,7 @@ KITS.marionettist = {
         kitMove(k, 'point', { x: Math.round(d.x), y: Math.round(d.y), ab: this });
         d.x = p.x; d.y = p.y; d.mode = 'post'; d.until = k.now + 1.5; d.manual = false;
         k.g.swapAt = k.now; k.buff('oncue', MARI.STAGE);
-        if (k.talent('marionettist_bodydouble')) k.shield('self', 150, 5, { ab: this });
         if (k.perk('marionettist_a2')) mariQuick(k);
-        if (k.talent('marionettist_cue')) { const c = abBase(k, 'cross'); if (c) k.reduceCooldown(c.id, 3); }
         if (k.talent('marionettist_together') && mariInStage(k)) k.mitigate('party', 0.08, 5, { ab: this });   // (Stand Together, Understudy spec row VII)
         if (k.consume('curtaincall')) mariBow(k, this);   // (Curtain Call: the bow)
         k.fx('swap', { i });
@@ -4610,16 +4641,17 @@ KITS.marionettist = {
     {
       id: 'finale', name: 'Grand Finale', type: 'gcd', target: 'enemy', range: 640, cd: 10, anim: 'big',
       desc: `Spend 5 Encore: the Doll performs a routine of five hits, each {d:${MARI.FINALE}}. It can't move while it plays.`,
-      usable: k => k.g.encore >= 5 && mariReady(k),
+      usable: k => k.g.encore >= (k.talent('marionettist_intermission') ? 3 : 5) && mariReady(k),
       glow: k => k.g.encore >= 5,
       effect(k) {
-        const E = k.g.encore, ab = this, hits = 5, gap = 0.45, end = k.now + gap * hits + 0.2;
-        k.g.encore = k.talent('marionettist_encore') ? 2 : 0;
+        // (Intermission: from 3 Encore, a beat for each; Full House: a sixth beat with all three Strings tied)
+        const E = k.g.encore, ab = this, six = k.talent('marionettist_fullhouse') && mariTied(k) === 3, hits = Math.min(5, E) + (six ? 1 : 0), gap = 0.45, end = k.now + gap * hits + 0.2;
+        k.g.encore = 0;
         k.ultGain(MARI_ULT.GAIN_FINALE * E);   // (Curtain Call)
         for (const d of k.g.dolls) { d.mode = 'finale'; d.until = end; }
         // one beat per hit (the routine's look follows them); Standing Ovation: the last one sends the Doll out quick
         for (let i = 0; i < hits; i++) k.after(gap * i, () => {
-          mariHit(k, ab, MARI.FINALE);
+          mariHit(k, ab, MARI.FINALE * (six && i === hits - 1 ? 0.5 : 1));   // (Full House: the sixth is a bow, half as hard)
           k.fx('finale-beat', { i, n: hits });
           if (i === hits - 1 && k.talent('marionettist_curtain')) mariQuick(k);
           if (k.talent('marionettist_garrote')) {   // (Garrote, Cutting Line spec row VII: each beat the line cuts as well, at 40% of its strength)
@@ -4695,9 +4727,29 @@ talentMoves('marionettist', {
     fx: { color: '#d03050' },
   },
 });
-// (the Understudy's two Dolls each hit at 58%: its Tangle says so in numbers)
+talentMoves('marionettist', {
+  marionettist_cutcord: {
+    id: 'cutcord', replaces: 'pirouette', icon: 'pirouette', name: 'Cut the Cord', type: 'gcd', target: 'enemy', range: 640, cd: 12, anim: 'big', talent: true,
+    desc: `Snip one of your Strings on purpose: the Doll, cut loose, strikes for {d:${MARI.CORD}}, builds 2 Encore, and nothing can touch it for 1.5s. The String grows back as a torn one does, or the next Pull Strings ties it back (and its Encore with it). Needs two Strings tied.`,
+    usable: k => mariReady(k) && mariTied(k) >= 2,
+    glow: k => mariTied(k) === 3 && k.charges(abBase(k, 'pull') || {}) > 0,
+    effect(k) {
+      const safe = k.perk('marionettist_a4') ? 3 : 1.5;   // (Pirouette's enhancement: 3s)
+      for (const d of k.g.dolls) d.safe = k.now + safe;
+      const n = mariHit(k, this, MARI.CORD);
+      if (!n) return;
+      k.g.strings--; k.g.regenAt = k.now + MARI.REGEN;   // (snipped, not torn: Taut String holds)
+      mariEncore(k, 2);
+      k.fx('cutcord');
+    },
+    fx: { color: '#ff5a7a' },
+  },
+});
+// (the Understudy's two Dolls each hit at 58%: its Tangle and Cut the Cord say so in numbers)
 TALENT_ABILITIES.marionettist_tangle.spec = { understudy: Object.assign({}, TALENT_ABILITIES.marionettist_tangle.ab, {
   desc: 'Each Doll in reach winds its strings round the enemy: a {d:92.8} cut now, and it bleeds {d:22} every 2s for 10s. Builds 1 Encore.' }) };
+TALENT_ABILITIES.marionettist_cutcord.spec = { understudy: Object.assign({}, TALENT_ABILITIES.marionettist_cutcord.ab, {
+  desc: 'Snip one of your Strings on purpose: each Doll in reach, cut loose, strikes for {d:278.4}, it builds 2 Encore, and nothing can touch them for 1.5s. The String grows back as a torn one does, or the next Pull Strings ties it back (and its Encore with it). Needs two Strings tied.' }) };
 
 // ---- SPEC ROWS VII (SPEC_TALENTS in talents.js): the moves they grant
 // Loomwright's Thrum and Shears' Severance
@@ -4762,7 +4814,7 @@ talentMoves('marionettist', {
 });
 
 if (typeof module !== 'undefined') Object.assign(module.exports, { WEAVE, weaveMax, weaveHosted, weaveThreads, weaveCount, weaveStrained, weaveSpool, weaveCarry, weaveSnapped, weaveLoose, weaveTieGlow, weaveTiedTo, weaveTie, weaveSnip, weaveTighten, weaveShuttleN, weaveShuttle,
-  MARI, MARI_STRING, MARI_JAB, MARI_FAR, mariStretch, mariEnemy, mariER, mariPos, mariLimp, mariInReach, mariReady, mariStation, mariPick, mariLose, mariEncore, mariQuick, mariJab, mariRestring, mariTick, mariShare, mariHit, mariCross,
+  MARI, MARI_STRING, MARI_JAB, MARI_FAR, mariStretch, mariFight, mariTied, mariStrung, mariEnemy, mariER, mariPos, mariLimp, mariInReach, mariReady, mariStation, mariPick, mariLose, mariEncore, mariQuick, mariJab, mariRestring, mariTick, mariShare, mariHit, mariCross,
   mariLineOn, mariAim, mariInStage, mariChordOn });
 
 // ======================================================================= ULTIMATES · DAMAGE CLASSES
