@@ -2168,9 +2168,9 @@ Object.assign(FightSim.prototype, {
 //    The 'fb' message carries it as po: [p, max, break seconds left, held full, recovering, builder] (kenPack).
 //  - a deflect is a window (s.defl, from the press, `dur` long) held against the next auto or tankbuster that lands on the
 //    Kenseier, or, with reach (Warden), on an ally within it. A hit inside the window judges the press by how far apart they
-//    are (KENSEI.judge: 2 Perfect within 0.12 s, 1 Good within the window): Perfect takes the blow whole, Good takes half.
+//    are (KENSEI.judge: 2 Perfect within 0.09 s, 1 Good within the window): Perfect takes the blow whole, Good takes a third off.
 //    A press just AFTER a blow (within the window) gives it back: the hit is in kenHits for half a second, and the press
-//    refunds what it cost, whole or half. Mikiri Step (s.step) lets an avoidable hit that lands during it pass through.
+//    refunds what it cost, whole or a third. Mikiri Step (s.step) lets an avoidable hit that lands during it pass through.
 //  - Off-balance (s.offbal): +10% damage taken, and its deflects are ignored.
 // ===================================================================================================================
 Object.assign(FightSim.prototype, {
@@ -2278,7 +2278,7 @@ Object.assign(FightSim.prototype, {
     }
     return win ? this.kenResolve(owner, win, p, pre, opts.kind === 'buster', null) : null;
   },
-  // judge a press against a hit (late: the hit's record when the press came after it). Perfect takes the blow whole, Good half.
+  // judge a press against a hit (late: the hit's record when the press came after it). Perfect takes the blow whole, Good a third off.
   kenResolve(owner, win, victim, pre, buster, late) {
     const t = this.t, q = KENSEI.judge(late ? t - late.t : t - win.start, win.dur);
     if (!q) return null;
@@ -2287,7 +2287,7 @@ Object.assign(FightSim.prototype, {
     if (win.sh > 0) this.kenGuard(owner, win);
     if (q === 2) this.stats[owner.id].perfects++;
     this.emit({ t: 'fev', k: 'kdef', id: owner.id, q, b: buster ? 1 : 0, a: Math.round(pre), late: late ? 1 : 0, to: victim.id !== owner.id ? victim.id : null, p: +KENSEI.frac(this.kenPost()).toFixed(2) });
-    return { mult: q === 2 ? 0 : 0.5, q };
+    return { mult: q === 2 ? 0 : 2 / 3, q };
   },
   // Guard Stance: a deflect shields the nearest ally (or two)
   kenGuard(owner, win) {
