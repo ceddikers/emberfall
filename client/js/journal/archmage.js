@@ -24,6 +24,7 @@
     tidecaller: "A tower drowned to its windows, and I felt at home, for the sea had been here first. Two of us wore runes on a bright thread, and the name of the spell to follow said whether to close or part. I guessed wrong once, and then I learned to read.",
     lanternkeeper: "A tower drowned to its windows, and two of us wore runes on a bright thread while the rest waited to be told why. I guessed wrong once, and my lantern burned in the wrong half of the room. Tomorrow I read the spell before I light. Keep your light.",
     kenseier: "A tower drowned in the sea, seven circles cut in the floor, and a wizard who never steps on them. Two of us wore runes joined by a thread, and the next spell named whether to close or part. I read it late. His staff, at least, keeps an honest count.",
+    houndmaster: "Drowned tower, circles cut in the floor, and a wizard who never steps on them. Two of us got runes with a thread between, and the dogs couldn't tell friend from spell. Guessed wrong on the order. Learn the order, then hunt.",
   },
   // the first time this hero beats him
   win: {
@@ -49,6 +50,7 @@
     tidecaller: "The circles went dark and the water in the tower stood still, slack at last. He had four moods and a fifth where all of them lit together, and we came through each. I stayed a while in his quiet. Mind the tide.",
     lanternkeeper: "The circles went dark one by one and the tower stood quiet. He had four moods and a fifth where all of them lit at once, and we came through every one. I left a lantern burning on the bottom stair. Walk where it's warm.",
     kenseier: "The Archmage is down and the circles are dark. Each of his tempers kept time differently, and by the last I could hear them all. I wiped the blade and the water ran off it. Ash settles.",
+    houndmaster: "Wizard's down and the circles have gone dark. Learnt his spells the way you learn a poacher's rounds. Rust sniffed the staff and sneezed. Good dogs. We had him by supper.",
   },
   moves: {
     "Arcane Burst": { hard: false, learned: {
@@ -74,6 +76,7 @@
       tidecaller: "A flash across the whole room, and no corner of it was shaded. A blow like that is only weather, so I had let the water climb beforehand, and each of us came to it full and left it standing.",
       lanternkeeper: "A flash across the whole room, with no corner shaded. I had the lanterns lit and the party close, and let them all burst as the light gathered. Everyone met it already mended, and left it standing.",
       kenseier: "Raw light across the whole room, and no corner of it shaded. I stood close to the healer, came to it whole, and took it. A blow with no beat is one a blade cannot meet.",
+      houndmaster: "Raw light across the whole room, no corner shaded. Stood close by the healer, dogs at my heels, came to it whole, and took it. Nothing to do but be ready.",
     } },
     "Arcane Lance": { hard: false, learned: {
       bastion: "The Lance was meant for me. A wide sweep in front of him; I watched his staff level and had the shield up in the last instant. The line stayed out of the arc. Held.",
@@ -98,6 +101,7 @@
       tidecaller: "A long bright sweep in front of him, meant for our knight. I watched the staff level and sent the water to him before it fell, while the rest of us kept to the flanks, out of the arc, like boats off a bar.",
       lanternkeeper: "A long bright lance swept the front of the room, meant for our knight. I hung a lantern on him before it fell, and the rest of us stood out of the arc, at the flanks.",
       kenseier: "The Lance was meant for me, a wide sweep before him. I watched his staff level and met it with the blade as it landed. The others stayed out of the arc. The staff always levels first, which is a courtesy.",
+      houndmaster: "Wide sweep in front of him, meant for the shield-man. Kept to his flank, dogs too. Anyone in the arc gets cut. His staff levels first, so you see it coming.",
     } },
     "Rune Mark": { hard: false, learned: {
       bastion: "Two of us wore runes and a thread between. The name of the next spell said close ranks or fall apart. I read his list and called it, once I learned to look. Read orders before moving.",
@@ -122,6 +126,7 @@
       tidecaller: "Two of us wore runes on a bright thread, and the spell named next on his list said what to do: close up, or part. I read it first, as one reads a tide table before launching, and called it, and the pair went the right way.",
       lanternkeeper: "Two of us carried runes joined by a bright thread. The next spell on his list was named, and the name told the pair whether to stand together or apart. I read it off and called it before they had finished looking up.",
       kenseier: "Two of us carried runes joined by a bright thread, and the name of the spell to come said whether to close or to part. I read his list before moving, once I had learned to look. The order is the beat.",
+      houndmaster: "Runes on two of us with a bright thread between. The next spell on his list says close up or spread out. Read it before moving. Once you can read it, it's easy.",
     } },
     "Cinder Rune": { hard: false, learned: {
       bastion: "Fire runes. Each bearer carried a ring of flame; the bearers marched to opposite ends, because close together a second fire showed between. The rest of us kept out of both. Dry boots.",
@@ -146,6 +151,7 @@
       tidecaller: "Fire rings on the pair, and fire with a neighbour makes a second fire between. They went to opposite ends of the room, and the rest of us stayed outside both rings. I carried the water out to them.",
       lanternkeeper: "Fire ringed each of the pair, and two fires near one another breed a third between them. So they took opposite ends of the room, and everyone else kept away from both blazes, lanterns included.",
       kenseier: "The fire runes put a ring on each bearer, and a second fire between them if they stood close. So they stood far apart, at opposite ends, and we kept clear of the rings.",
+      houndmaster: "Fire runes on two of us. Stood close, a second fire blooms between. So the pair went to opposite ends, and the rest of us stayed clear of both rings. Dogs with the rest.",
     } },
     "Rime Rune": { hard: false, learned: {
       bastion: "Frost runes: one blow, in a blue circle halfway between the pair, for all of us to share. The bearers closed up and the line fell in around them. Shoulder to shoulder.",
@@ -170,6 +176,7 @@
       tidecaller: "Frost on the pair, and a blue circle halfway between them where the blow was to be shared. They closed up and the rest of us came in beside them, all together in the circle, so the cold was divided like a catch.",
       lanternkeeper: "Frost on the pair, and a blue circle halfway between them for the blow to be shared. They closed up, and the rest of us stepped in beside them. Four of us in one circle, and a lantern at its heart.",
       kenseier: "Frost runes, with a blue circle halfway between the pair where one blow would land, to be shared. The bearers came together and the rest of us joined them in it. Divided among us, the cold was small.",
+      houndmaster: "Frost runes. Blue circle lands halfway between the pair, and one blow for the lot of us to share. Bearers walked together and we all piled in beside them, hounds included.",
     } },
     "Storm Rune": { hard: false, learned: {
       bastion: "Lightning runes. A bolt ran from one bearer to the other, burning what lay between. They stood shoulder to shoulder, which made the bolt too short to matter. I kept the rest off the line.",
@@ -194,6 +201,7 @@
       tidecaller: "A bolt ran from one bearer to the other and burned whatever lay between. The pair stood shoulder to shoulder, so it had no road to run, and everyone else kept off the line as I would keep off a rip.",
       lanternkeeper: "Lightning ran along the thread between the pair and scorched whatever stood in its way. They stood close, shoulder to shoulder, leaving the bolt nowhere to go, and the rest of us stayed off the line. I lit nothing near it.",
       kenseier: "Lightning runes, and a bolt between the two bearers that burned whatever stood in its path. Standing side by side gave it no path at all. The rest of us stayed off the line anyway, out of respect.",
+      houndmaster: "Lightning runes, a bolt between the bearers burning whatever lies between. Bearers stood close, so the line was short. Rest of us stayed off it anyway. Heel.",
     } },
     "Rift Rune": { hard: false, learned: {
       bastion: "Void runes, violet rings, quiet in the middle. The bearers went to opposite sides, since close together the void opens between them. The line kept out of both rings. Held.",
@@ -218,6 +226,7 @@
       tidecaller: "Violet rings on the pair, hollow in the middle, and close together the void opened between them. They went to opposite sides of the room and the rest of us stayed clear of both rings. Far apart, it was a still pool and no more.",
       lanternkeeper: "Violet rings on the pair, hollow in the middle, and when they stand close the void opens between them. They went to opposite sides and the rest of us stayed clear of both rings. Far apart, the hollow does nothing at all.",
       kenseier: "Void runes: a violet ring on each bearer, hollow in the middle. Close together they opened a void between them. They went to opposite sides and we kept out of the rings. Far apart, it was nothing.",
+      houndmaster: "Void runes, a violet ring on each bearer, hollow in the middle. Close together they open a void between. Bearers went to opposite ends and the rest of us kept out of both rings.",
     } },
     "Pyre Rings": { hard: false, learned: {
       bastion: "Three rings in the floor. Two burned in turn; the third had no red on it and never caught. I held the line on that one, or on the first once it was ash. Plain ground, best ground.",
@@ -242,6 +251,7 @@
       tidecaller: "Three rings in the floor, two burning in turn. The third wore no red and never caught, so I stood on it, or on the first once it had ebbed to ash. The bare ring was dry ground, and I was glad of it.",
       lanternkeeper: "Of the three rings in the floor, two burned one after the other. The bare one, without red, was the place to be, and so was the first once it had gone to ash. I carried my lantern there and stood in its glow.",
       kenseier: "Three rings were cut in the floor and two of them burned in turn. The third stayed plain, never red. I took that one, or the first after it had gone to ash. Plain ground was the answer, and I was glad of it.",
+      houndmaster: "Three rings cut in the floor, two burning in turn. The third stays plain. Stood on that one, or on the first once it burnt out. Whistled the dogs onto plain ground.",
     } },
     "Ice Lances": { hard: false, learned: {
       bastion: "Lines of ice reached out through some of us and followed. When mine set, I stepped off it; nobody stood in another man's line. Orderly, for once.",
@@ -266,6 +276,7 @@
       tidecaller: "Lines of ice ran out through some of us and followed, then set. When mine locked I stepped off it, and kept out of everyone else's, the way one keeps out of another boat's wake.",
       lanternkeeper: "Lines of ice ran out through some of us and followed, then set. When mine locked I stepped off it, and kept out of everyone else's. I set my lantern outside every line.",
       kenseier: "Ice ran from some of us in long lines, following, then locked in place. The moment mine locked I walked off it, and I stayed out of everyone else's. Once set, a line is a stroke already finished.",
+      houndmaster: "Lines of ice ran out from some of us and chased, then set hard. Soon as mine set I stepped off it and kept clear of the others'. Whistled the hounds off them too.",
     } },
     "Leaping Bolt": { hard: false, learned: {
       bastion: "Lightning rings jumped from one man to the nearest, a heartbeat apart. We spread wide so it had no near man to jump to, and each walked out of his own ring.",
@@ -290,6 +301,7 @@
       tidecaller: "A ring of lightning fell on one of us, then leapt to whoever stood nearest, a heartbeat apart. We kept far apart so it had no near one to leap to, and each walked out of their own ring as it landed.",
       lanternkeeper: "Lightning fell in a ring on one of us, then leapt to whoever stood nearest. So nobody stood near anybody: we spread wide, and each walked out of their own ring as it landed. Scattered people are poorly served by a lantern. I trimmed the wicks and waited.",
       kenseier: "Lightning ringed one of us and hunted the nearest body, a heartbeat later. Every one of us stood apart, so it found nothing to hunt, and each stepped out of their own ring. Distance is its own kind of guard.",
+      houndmaster: "Lightning ringed one of us, then jumped to the nearest body. Everyone stood wide, so it had nothing to find. Stepped out of my own ring. Kept the dogs apart too.",
     } },
     "Void Rifts": { hard: false, learned: {
       bastion: "Rifts opened under each of us where we stood, then again where we had walked. I moved off my ground and then moved again. Standing firm is for walls. This was for boots.",
@@ -314,6 +326,7 @@
       tidecaller: "The floor opened under each of us where we stood, and again where we had walked. I left my place, and then the next one, and kept moving like a tide that does not stay. Standing still was the only mistake.",
       lanternkeeper: "The floor opened under each of us where we stood, and again where we had walked. Standing still was the only mistake. I picked my lantern up and kept moving with it; a lamp left behind is a lamp lost.",
       kenseier: "Rifts opened under each of us where we stood, and again where we had walked. I left my ground, and then the next. Stillness has its place, and this was not it.",
+      houndmaster: "Rifts opened under each of us where we stood, and again where we'd walked. Left my ground and then the next. Don't stop. Dogs keep moving too, heel.",
     } },
     "The Binding": { hard: false, learned: {
       bastion: "Four sigils woke and the elementals rose from the middle, slow, each following me. I marched each to the sigil of its own colour and held it there. The line kept on the Archmage and clear of the falling light.",
@@ -338,6 +351,7 @@
       tidecaller: "Four sigils woke and the elementals rose from the middle, slow, following our knight. He led each to the sigil of its own colour and held it there while I kept his water high, and the rest of us struck at the Archmage, out of the falling light.",
       lanternkeeper: "Elementals climbed out of four sigils and plodded after our knight. He walked each to the sigil that matched it and kept it there, and I kept a lantern hung on him the whole while. The rest of us went for the Archmage, away from the falling light.",
       kenseier: "Four sigils woke and four elementals climbed out of the middle, slowly, all after me. I led each to the sigil that matched its colour and held it there, and the others struck at the Archmage, out of the falling light. A long walk, and every step counted.",
+      houndmaster: "Four sigils woke and four elementals climbed out, after the shield-man. He led each to the sigil of its own colour and held it. The rest of us struck the wizard, off the falling light. Kept the dogs off the elementals.",
     } },
     "Call of the Circle": { hard: false, learned: {
       bastion: "He called one elemental at a time, its colour naming its sigil. I walked it there; it followed; the line made room. Slow march, orderly.",
@@ -362,6 +376,7 @@
       tidecaller: "One at a time he called them, and the colour of each named its sigil. Our knight walked it there and the rest of us made room along the way. I went beside him with a little water for the road. No hurry.",
       lanternkeeper: "He summoned them singly, and each elemental's colour named the sigil it belonged to. Our knight led it across, the rest of us cleared his road, and I walked beside him with a lantern. Not a thing to hurry.",
       kenseier: "He called them one at a time, the colour naming its sigil. I walked each there, it followed, and the others made room. No hurry, but no pause either.",
+      houndmaster: "He called the elementals one at a time, the colour naming the sigil. The shield-man walks each there. Everyone else cleared the path. No hurry, no pause.",
     } },
     "Convergence": { hard: false, learned: {
       bastion: "Every sigil lit at once, each its own colour, and worse where two met. The clear floor was out by the wall between the sigils. I took the line there, clear of the overlaps. Held.",
@@ -386,6 +401,7 @@
       tidecaller: "Every sigil lit at once, and worse where two met. The clear floor lay out by the wall, between the sigils, and we gathered there, a quiet cove in a loud bay. I had the water high before we went.",
       lanternkeeper: "Every sigil lit at once, and worse where two met. The clear floor lay out by the wall, between the sigils, and we gathered there. I set a lantern in that quiet corner before they lit, so we had a light to go to.",
       kenseier: "Every sigil lit together, brighter where two overlapped. The clear floor was out by the wall, between the sigils, so we went there and waited. A quiet gap between loud notes, and the only place to stand.",
+      houndmaster: "Every sigil lit at once, worse where two overlap. Clear ground out by the wall, between the sigils. Whole pack went there and waited. A gap between loud notes.",
     } },
     "Counterspell": { hard: true, learned: {
       bastion: "He cast it again, flung to the far side of the room, the copy drawn on the floor at once. Ground that had been clear could be hit. I looked across the room, not at my boots, and moved. Nobody stays on ground he trusts.",
@@ -410,6 +426,7 @@
       tidecaller: "He cast the last spell again, thrown across the room, and the floor showed it at once. Ground that had been calm was a rip now. I looked across the whole room, not down at my feet, and moved before the water turned.",
       lanternkeeper: "He threw the last spell again to the far side of the room, and the floor showed it at once. Ground that was clear was clear no longer. I looked across the whole room, not at my feet, and moved my lanterns before the floor did.",
       kenseier: "He cast the last spell again, flung across the room, its copy drawn on the floor at once. Ground that had been clear could be hit. I looked across the whole room, not at my feet, and moved. Never trust a quiet place.",
+      houndmaster: "He threw the last spell again across the room, its copy drawn on the floor at once. Ground that was clear can be hit now. Looked across the room, not at my boots, and moved. Dogs too.",
     } },
     "Rune Swap": { hard: true, learned: {
       bastion: "The runes jumped to two other men while we watched. The coming spell had not changed, so the new bearers closed ranks or kept apart as it asked. I stopped trusting names, and watched the runes.",
@@ -434,6 +451,7 @@
       tidecaller: "The runes slipped from the pair and settled on two others, as a rip moves a sandbar. The coming spell had not changed, so the new pair closed or parted just as it told them. I stopped watching names and watched who wore them.",
       lanternkeeper: "The runes jumped to two other people. What the next spell asked of the pair had not changed, so the new bearers did it, together or apart. I quit watching the names and began watching the runes.",
       kenseier: "The runes slid off the two bearers onto two others while we watched. The spell that was coming had not changed, so the new pair closed or parted exactly as it told them. Names mean nothing; I followed the runes.",
+      houndmaster: "Runes jumped to two others while we watched. Same spell coming, so the new pair did what it said. Watched the heads, not the runes. Whistled the dogs clear of the new pair.",
     } },
     "Arcane Mark": { hard: true, learned: {
       bastion: "A blue ring rose where one of us had stood, drawn at once. The whole line walked into it, the marked man included, and we shared the blow.",
@@ -458,6 +476,7 @@
       tidecaller: "A blue ring rose where one of us had stood. We all walked into it, its owner too, and shared the blow, which is how a heavy wave is made small. I raised the water as we went in.",
       lanternkeeper: "A blue ring rose where one of us had stood. All of us walked into it, its owner too, to share the blow. I set a lantern in the middle, and we stood four in one glow.",
       kenseier: "A blue ring rose where one of us had stood, drawn at once. We all walked into it, the marked one with us, and shared the blow. Many hands on one hilt. Breathe, then strike.",
+      houndmaster: "A blue ring rose where one of us had stood. All of us walked into it, the marked one with us, and split the blow. Called the dogs in as well. Many hands, light load.",
     } },
   },
 };

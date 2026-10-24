@@ -24,6 +24,7 @@
     tidecaller: "She sits in her pool and does not move, and the heads come at us round the ring of columns in turn. Still water gone sour, and not any sea of mine. I cut the cruellest first, and it came back larger. The gentlest first, then.",
     lanternkeeper: "She sits in her pool and does not move, and the heads come at us round the ring of columns in turn. I lit the temple evenly, and the heads found the dark between. We cut the cruellest first and it came back larger. Gentlest first, then. Keep your light.",
     kenseier: "She never moves, only sits in the pool, and the heads come round the ring of columns, each on its own beat. I cut the hardest first, and it came back larger. The gentlest first, then. The Mother keeps a stern rhythm. Catch the beat.",
+    houndmaster: "Great Mother in a stagnant pool, never moves. Heads on long necks pick a target in turn round the columns. Cut the hardest head first and it came back bigger. Take the softest. Rust nearly drowned learning that.",
   },
   // the first time this hero beats her
   win: {
@@ -49,6 +50,7 @@
     tidecaller: "The pool lay flat and black between the columns. Not slack water, which still breathes, but a stillness with nothing under it. I sang over it anyway, low, for she was a mother. Something in the deep answered me, a little nearer than before.",
     lanternkeeper: "The pool lay flat and black between the columns, and nothing moved in it. She was a mother, and I took off my hat. Four of us walked out. I left a lantern burning on the temple steps. Walk where it's warm.",
     kenseier: "The Mother is down and the pool is still. Every head had its count, and the last silence was the longest. I sat by the water with the others and said little.",
+    houndmaster: "Mother's down and the pool's gone still. Nine heads, nine lanes, and the dogs came out with only a soaking. Good dogs. We had her by supper, a late one.",
   },
   moves: {
     "Mother's Cry": { hard: false, learned: {
@@ -74,6 +76,7 @@
       tidecaller: "Her cry ran through the columns and the water alike and reached every one of us. I raised the tide before she opened her mouth, and again as she rose from the dive, for it comes a second time. Nothing to stand behind but a full shore.",
       lanternkeeper: "Her cry went through the columns and reached every one of us, and it comes a second time as she rises from the dive. I let the lanterns burst for the first, and brought every wick back to gold for the second.",
       kenseier: "She cried, and it reached all of us, columns and water alike. No blade turns a cry. We were mended before it came, took it standing, and were ready again when it came as she surfaced.",
+      houndmaster: "She cried and it reached all of us, columns and water alike. Nowhere to hide. Mended before it came, dogs close, took it standing. It comes again when she surfaces.",
     } },
     'Rending Maul': { hard: false, learned: {
       bastion: "The great jaws came down on me, a wide sweep in front of her. I watched the neck draw back, shield up in the last instant, and the line stood clear of the sweep. A bite like that is just a very large drill.",
@@ -98,6 +101,7 @@
       tidecaller: "The jaws came down on our knight, wide in front of her and nothing behind. I had the water high about him before the bite landed, and the rest of us kept to her flanks, out of the arc.",
       lanternkeeper: "A bite landed on our knight; there was nothing at her back, only the front. I put a lantern on him beforehand. The rest of us stood well to the sides.",
       kenseier: "The great jaws came down on me, a wide sweep before her. I watched the neck draw back, and met them with the blade as they landed. The others stayed clear of the sweep. The neck draws back, then falls: a very clear count.",
+      houndmaster: "Great jaws came down on the shield-man, a wide sweep in front of her. Watched the neck draw back and kept to her flank. Dogs behind me, out of the arc.",
     } },
     'Acid Spray': { hard: false, learned: {
       bastion: "Acid in a cone, aimed at one of the line and fixed on where they stood when the head began. It does not turn. Sideways the moment it points, and off the burning middle after.",
@@ -122,6 +126,7 @@
       tidecaller: "One head spat acid in a cone, fixed on the place its mark had stood when the spit began. It never turned. By then the mark was a long step aside, and the rest of us stayed off the middle, which stayed bitter.",
       lanternkeeper: "One head spat acid in a cone, fixed on the place its mark had stood when the spit began. It never turns. The mark stepped aside early, and the rest of us stayed off the middle, where the acid lay. My lanterns stayed off it too.",
       kenseier: "A cone of acid at one of us, fixed on where they stood as the head began. It does not turn. They stepped aside the moment the head pointed, and stayed off the burning middle after. The head always warns before it spits.",
+      houndmaster: "A head swung round and spat at one of us, aimed at where they stood when it began. Won't follow. Stepped aside as soon as it pointed, kept the hounds off the burning middle. Sit.",
     } },
     'Tidal Line': { hard: false, learned: {
       bastion: "A lane of water drove straight through one of us. Narrow, and long. Whoever stood in it stepped aside, either way. A line is only dangerous to a man who stays in it.",
@@ -146,6 +151,7 @@
       tidecaller: "A narrow lane of water ran clean across the temple through one of us, her water and none of mine. One does not swim against a rip; one steps out of its side. A step either way, and it passed.",
       lanternkeeper: "A narrow lane of water ran straight across the temple through one of us. A step to either side, no more, and it passed. I set my lanterns to the sides of the lane, never across it.",
       kenseier: "Water ran in a narrow lane through one of the others, a long way and a straight one. They stepped out of it to either side. It has no beat to catch; there is only the road, and not being on it.",
+      houndmaster: "Water ran in a narrow lane through one of us, a long straight road. Stepped off it, either side. Called the dogs off it as well.",
     } },
     'Venom Bloom': { hard: false, learned: {
       bastion: "Poison marked one of the line, more than one man could carry. We closed in on him, all but whoever stood in a ring, and split it. Then out of the bog it left. Shoulder to shoulder; I would call it drill.",
@@ -170,6 +176,7 @@
       tidecaller: "Poison marked one of us, more than one could carry. We closed in on the marked one, all but whoever stood in a stump's ring, and split it like a catch among boats. Then out of the bog before it dragged. The water was high before it burst.",
       lanternkeeper: "Poison marked one of us, more than one could bear. We closed in on the marked one, all but whoever stood in a stump's ring, and split it among us. Then we left the bog it made. I lit the place where we gathered.",
       kenseier: "Poison settled on one of us, more than one body could carry. All of us but those in a ring closed in on them and divided it, then left the bog it made. Divided, it was a light thing.",
+      houndmaster: "Poison on one of us, more than one body can carry. Everyone but those ringed closed in and shared it, dogs too, then left the bog it made. Shared, it's small.",
     } },
     'Flame Gout': { hard: false, learned: {
       bastion: "Fire on a pair of the line, a ring following each. Apart, as far as the temple allowed, so neither caught the other's. The rest of us kept off the embers after. Plain work.",
@@ -194,6 +201,7 @@
       tidecaller: "Fire on two of us, a ring following each. Far apart, as far as the temple allowed, so neither burned in the other's; and everyone off the embers afterwards. Two fires on one deck is a lost ship.",
       lanternkeeper: "Fire fell on two of us, a ring following each. They went as far apart as the temple allowed, so neither burned in the other's, and everyone kept off the embers afterwards. I kept my lanterns off them too.",
       kenseier: "A ring of fire followed each of two of the others. They walked far apart so neither ring met the other, and the rest of us stayed off the embers they left behind.",
+      houndmaster: "Fire on a pair of us, a ring following each. Split far apart so each took only their own. Kept off the embers they left. Dogs on the safe side.",
     } },
     'Rime Crown': { hard: false, learned: {
       bastion: "Report: the ice ring is safe only at its two ends. Close beneath the jaw, or out past the rim. I put the line at the near end and kept every boot off the middle ground. Held.",
@@ -218,6 +226,7 @@
       tidecaller: "Ice ringed the head, with a hollow quiet at its throat. Safe close in beneath the chin, or well past the rim; the wide cold band between is where the water locks. I stood far out past the edge and sang from there.",
       lanternkeeper: "A head rimed over with ice, quiet at its throat. Close beneath the chin was fine, and so was far outside the rim; the wide cold band between was not. I took my lanterns far out, beyond the edge.",
       kenseier: "The ring of ice left room only at its two ends: right under the jaw, or out past the rim. We took the near end and stayed off the middle. A ring with a quiet end is a courtesy.",
+      houndmaster: "Ring of ice round the head. Right under the chin's quiet, and so is out past the rim. Middle's a bad place to be. Took the outside, a longer reach for the knife-work. Dogs followed.",
     } },
     'Stormcall': { hard: false, learned: {
       bastion: "Lightning fanned from one head in three lanes, the middle through a man of ours. The gaps between were good ground, and so was the far side. Held.",
@@ -242,6 +251,7 @@
       tidecaller: "A head fanned lightning in three lanes, the middle one through whoever it had picked. Between the lanes lay dry ground, and so did the far side. I kept to a gap in the squall and watched the water on the one chosen.",
       lanternkeeper: "A head fanned three lanes of lightning, the middle one on whoever it chose. The gaps between lanes were dry. I stood in one with my lantern, and kept a light on the chosen.",
       kenseier: "One head fanned lightning out in three lanes, the middle lane running through one of us. The spaces between were free, and so was the far side. I stood in a gap, eyes on the head.",
+      houndmaster: "One head fanned lightning in three lanes, the middle one through somebody. Stood in a gap between, or right out wide. Called the hounds in beside me. Never in a lane.",
     } },
     'Stonegaze': { hard: false, learned: {
       bastion: "One head stared at everything it could see. The columns were cover: I put the line behind one, stone between us and the head. The ground behind its own column is nearest.",
@@ -266,6 +276,7 @@
       tidecaller: "One head turned its eye on everything it could see. Stone between us and the head was the only shelter, and the nearest was behind its own column. We crowded into the lee of it like boats behind a mole.",
       lanternkeeper: "One head fixed its eye on all it could see, and nothing but stone could shelter us. The nearest stone was a column. We crowded behind it, the column between us and the head, and I put my lantern in its shadow.",
       kenseier: "One head stared at everything in sight. A stare has no beat for a blade to catch, so we went behind the columns, stone between us and the head. Cover was always close, behind each column.",
+      houndmaster: "One head stared at everything it could see. Got a column between us. Cover's close, behind each column. Dogs under the column with me, noses down.",
     } },
     'Mire Spit': { hard: false, learned: {
       bastion: "Bog came down on several of the line, a ring on each. We stepped out of our own rings and kept apart, then off the mire it left. There is nothing to plant a boot on in that stuff.",
@@ -290,6 +301,7 @@
       tidecaller: "Bog fell on three of us, a ring on each. Out of our own rings and apart from one another, then off the mire it made. It drags at the ankle like wet sand on the ebb, and I would not have it keep us.",
       lanternkeeper: "Bog fell on three of us, a ring on each. We stepped out of our own rings and apart from one another, then off the mire it left, which drags at the ankle. I lit no lantern on that ground.",
       kenseier: "Several of us were ringed with bog. Each stepped out of their own ring and stayed clear of the others, and none of us stood in the mire after. A soft floor is no friend to a blade.",
+      houndmaster: "Bog rings on several of us. Each stepped out of their own and stayed clear of the others, and off the mire after. Soft floor's no friend to a hound.",
     } },
     'Searing': { hard: false, learned: {
       bastion: "A cut head left a bleeding stump and a blue ring at the foot of its column. I stood in the ring until it closed and it sealed. Miss it and a pair grow back. Gentlest first, always.",
@@ -314,6 +326,7 @@
       tidecaller: "Cut a head and its stump bled, and a blue ring opened at the foot of the column. Someone had to stand in it until it closed, or two more heads came up. I let a few swells pass in it myself. Gentlest head first.",
       lanternkeeper: "Cut a head and the stump bled, and a blue ring opened at the foot of the column. Someone had to stand in it until it closed, or two more heads grew. I took a turn with a lantern at my feet. The gentlest head first.",
       kenseier: "Cut a head and it bleeds from the stump, and a blue ring opens at the foot of its column. I stood in that ring until the stump sealed. Leave it open and two heads return. Gentlest first, I now know; I began with the cruellest.",
+      houndmaster: "Cut a head and the stump bleeds, and a blue ring opens at the foot of its column. Somebody stays in that ring till it shuts, or two heads come back. Softest head first, mind.",
     } },
     'Submerge': { hard: false, learned: {
       bastion: "She dived and the water rose. Slow wading, bad footing. Heads came up at the columns one after another, a ring showing each. The line stayed out of the rings and cut each head before it struck. Gave ground, held.",
@@ -338,6 +351,7 @@
       tidecaller: "She went under and the whole temple filled, thigh-deep and dragging. Heads broke the surface by the columns, one at a time, a ring on the floor before each. We stayed off the ring and cut every head down before it struck. I know water that rises; this rose wrong.",
       lanternkeeper: "She dived, and the temple flooded, thigh-deep and slow. Heads came up at the columns one at a time, each with a ring on the floor first. We kept out of the rings and cut every head before it could strike, wading with a lantern held high.",
       kenseier: "She dived and the water rose, slow and awkward to wade. Heads came up at the columns one after another, a ring showing each. We kept out of the rings and cut each head before it struck.",
+      houndmaster: "She dived and the temple flooded, slow wading. Heads came up at the columns with a ring showing where. Kept out of the rings and cut each head before it struck.",
     } },
     "Mother's Heart": { hard: false, learned: {
       bastion: "She sealed herself at the end. Each head we had cut struck again from its stump, in the order we cut them, then the living all at once. I had the order by heart, and marched the line clear of each in turn.",
@@ -362,6 +376,7 @@
       tidecaller: "She sealed herself, and every head we had cut struck again from its stump in the order we cut them, then the living ones together. I had that order the way a pilot has the reefs, and walked us clear of each in turn.",
       lanternkeeper: "She sealed herself, and every head we had cut struck again from its stump in the order we cut them, then the living ones together. I held the order as I would a row of lamps along a quay, and walked us clear of each.",
       kenseier: "At the end she sealed herself in, and every head we had cut struck again from its stump in the order we cut them, then the living all at once. I kept the order in my head, and we moved clear of each stroke on its beat.",
+      houndmaster: "She shut herself away, and each head we'd cut came back from its stump in the order we cut them, then the live ones all together. Held the order in my head and stepped clear of each. Good dogs.",
     } },
     'Regrowth': { hard: true, learned: {
       bastion: "On the harder ground, a missed ring grew back more heads than before. Nobody leaves a ring early now. I stood each one to the end.",
@@ -386,6 +401,7 @@
       tidecaller: "On the harder nights a stump left unseared put up three heads, not two. So no ring stood empty. Someone was in each from the first moment to the close, the way a mooring is never left unmanned.",
       lanternkeeper: "On the hard nights a stump left unseared put up three heads, not two. So no ring stood empty: someone was in each from the first moment until it closed.",
       kenseier: "On the harder ground a ring left open grew back more heads than before. No one left a ring early after that. I stayed in each until it closed.",
+      houndmaster: "Hard nights a ring left open grows more heads than before. Stayed in each ring till it closed, and nobody left early. Sit, stay.",
     } },
     'Tidal Dance': { hard: true, learned: {
       bastion: "Two heads crossed their water lanes over and over, each pass a step further round. The wedges between were never painted. The line shifted to the next one on every crossing. Drill, once you see the count.",
@@ -410,6 +426,7 @@
       tidecaller: "Lanes of water from two heads crossed, and crossed again, each time a notch round. The safe ground was the unpainted wedge between them, and it moved with every crossing. We stepped on, wedge by wedge, ahead of the water, and nobody stood still.",
       lanternkeeper: "Two heads laid lanes of water that crossed and crossed again, a notch further round each time. The wedge left unpainted between them was the place to be, and it moved with every crossing. We stepped on from wedge to wedge, and I carried the light after us.",
       kenseier: "Two heads swept lanes of water across each other, again and again, each pass turned a little further. The safe wedges between were never drawn, so I counted instead, and stepped to the next on each crossing. It is a dance, if you know the steps.",
+      houndmaster: "Two heads dragged water lanes across one another, each pass a notch further round. Safe wedges between are never painted. Counted the passes and stepped on to the next gap each crossing.",
     } },
     "Hydra's Gaze": { hard: true, learned: {
       bastion: "Every eye she has watched the middle of the temple at once. Only the ground by the outer stones was safe. I had the line against the wall before it ended. Back to the stones, as any sentry knows.",
@@ -434,6 +451,7 @@
       tidecaller: "Every eye she had watched the whole middle of the temple at once, and only the ground by the outer wall was safe. I took the party to the stones, backs to them, before it ended, and kept the water high where we gathered.",
       lanternkeeper: "On the hard nights every eye turned to the middle of the temple, and the only safe ground was by the outer wall. We went to the stones, backs against them, before it began, and I set a lantern against the wall with us.",
       kenseier: "Every eye she has watched the middle of the temple at once. Only the ground by the outer stones was safe, so we were against the wall before it ended. A stare cannot be parried; it can only be put behind stone.",
+      houndmaster: "Every eye she has watched the middle of the temple. Only ground by the outer stones was safe. Got the whole pack to the wall before it ended. Stone at your back.",
     } },
   },
 };

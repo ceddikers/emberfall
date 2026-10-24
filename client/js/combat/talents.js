@@ -1330,6 +1330,37 @@ TALENTS.kenseier = [
   ],
 ];
 
+// ----------------------------------------------------------------------- HOUNDMASTER (melee damage, class 23): rows I-V
+// New behaviour, one plain number (Thick Coat). Rows III and V grant a move (Howl on W, The Long Chase on F: TALENT_ABILITIES in
+// kits.js). The talents act on the hounds and the pair they hold (kits.js hd* helpers).
+TALENTS.houndmaster = [
+  [
+    { id: 'houndmaster_heelnip', name: 'Heel Nip', ab: 'knife', text: 'The third knife hit also sends whichever hound is nearer to the place that would make a pair with the other one. Nothing happens if they already hold a pair, or are on guard.' },
+    { id: 'houndmaster_scentline', name: 'Scent Line', ab: 'flank', text: 'Whistle: Flank sends the hound straight through the boss, and it bites on the way for {d:120}.' },
+    { id: 'houndmaster_echobark', name: 'Echo Bark', ab: 'finisher', text: 'A finisher of the same pair twice in a row repeats a moment later at 20% of its strength.' },
+  ],
+  [
+    { id: 'houndmaster_guarddog', name: 'Guard Dog', ab: 'calloff', text: 'Call Off also sets a hound between you and the next hit: a {s:200} shield on you for 8s (once per Call Off).' },
+    { id: 'houndmaster_fetch', name: 'Fetch', ab: 'calloff', text: 'Call Off also drags you 150 toward the nearest hound as it sets off to you. It never takes you into the boss.' },
+    { id: 'houndmaster_thickcoat', name: 'Thick Coat', ab: 'calloff', text: 'A downed hound is back on its feet after 6s instead of 10s.' },
+  ],
+  [
+    { id: 'houndmaster_sharedkill', name: 'Shared Kill', ab: 'finisher', text: 'A finisher on a boss below 30% health gives back 20 Bond.' },
+    { id: 'houndmaster_howl', name: 'Howl', ab: 'flank', grants: true, text: 'New move on W, in place of Whistle: Flank. Howl (25s): both hounds throw back their heads. The whole party deals 5% more damage for 8s, and both hounds hold where they stand (a second press of the Hold button pounces).' },
+    { id: 'houndmaster_runningbond', name: 'Running Bond', ab: 'finisher', text: 'Bond fills while a hound runs to a new place: 5 a second for each one that is on the move.' },
+  ],
+  [
+    { id: 'houndmaster_bloodscent', name: 'Blood Scent', ab: 'quarry', text: 'Mark the Quarry spreads to the nearest add: while it lasts, every bite also bites it.' },
+    { id: 'houndmaster_drive', name: 'Drive', ab: 'quarry', text: 'While the Mark lasts, Whistle: Flank has no cooldown.' },
+    { id: 'houndmaster_cornered', name: 'Cornered', ab: 'quarry', text: 'When the Mark ends, both hounds pounce at once and land behind the boss.' },
+  ],
+  [
+    { id: 'houndmaster_kingofpack', name: 'King of the Pack', ab: 'finisher', text: 'The spectral hounds of Wild Hunt stay for 4s after it ends.' },
+    { id: 'houndmaster_longchase', name: 'The Long Chase', ab: 'quarry', grants: true, text: 'New move on F, in place of Mark the Quarry. The Long Chase (45s): the pack runs a lap round the boss. Each quarter it passes bites for {d:250} and gives 4 Bond, and the lap ends with both hounds behind the boss: a Bring Down.' },
+    { id: 'houndmaster_alpha', name: 'Alpha', ab: 'finisher', text: 'A Bring Down is a sure critical hit when both hounds have their own Bond full.' },
+  ],
+];
+
 // ----------------------------------------------------------------------- KENSEIER
 SPEC_TALENTS.kenseier = {
   // Deathblade, The Kill Stroke: all in on the parry and the Deathblow
@@ -1352,6 +1383,32 @@ SPEC_TALENTS.kenseier = {
     [
       { id: 'kenseier_sharedpoise', name: 'Shared Poise', ab: 'deflect', text: 'A Perfect deflect for an ally gives them a {s:100} shield for 3s.' },
       { id: 'kenseier_turnedtide', name: 'Turned Tide', ab: 'deathblow', text: 'A blow you turn back with Redirect adds 10 Posture to the boss, or 20 for a tankbuster.' },
+    ],
+  ],
+};
+
+// ----------------------------------------------------------------------- HOUNDMASTER
+SPEC_TALENTS.houndmaster = {
+  // Pack Leader, The Two-Dog Hunt: both hounds, coordinated pounces, Relay
+  packleader: [
+    [
+      { id: 'houndmaster_pincerdrill', name: 'Pincer Drill', ab: 'finisher', text: 'A Rend sets its bleed on the nearest add as well, if the fight has one. In Wild Hunt every finisher does.' },
+      { id: 'houndmaster_tagteam', name: 'Tag Team', ab: 'calloff', text: 'After a Relay, your next finisher (within 20s) counts every pair: its own blow, with Rend\'s bleed and Hamstring\'s weakness as well.' },
+    ],
+    [
+      { id: 'houndmaster_huntinghorn', name: 'Hunting Horn', ab: 'pounce', text: 'A pounce that has landed sounds the horn: for a beat the boss turns its face toward you (it keeps its target), and the hounds keep their sides through the swing.' },
+      { id: 'houndmaster_littermates', name: 'Littermates', ab: 'knife', text: 'When one hound bites, the other bites too one time in five.' },
+    ],
+  ],
+  // Lone Wolf, The Rider: one great hound you ride in for big bursts
+  lonewolf: [
+    [
+      { id: 'houndmaster_saddleborn', name: 'Saddle Born', ab: 'flank', text: 'Mount lasts 2s longer.' },
+      { id: 'houndmaster_leapoff', name: 'Leap Off', ab: 'flank', text: 'Ride Down lands where you aim, up to 220 from where you were.' },
+    ],
+    [
+      { id: 'houndmaster_oldscars', name: 'Old Scars', ab: 'calloff', text: 'Greyfang takes 30% less damage from raidwides.' },
+      { id: 'houndmaster_fangknife', name: 'Fang and Knife', ab: 'knife', text: 'A knife hit makes the bite that follows it, if it comes within a moment, hit twice as hard. The third hit\'s bite always does.' },
     ],
   ],
 };

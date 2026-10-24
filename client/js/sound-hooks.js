@@ -127,6 +127,34 @@ const SoundHooks = (() => {
       else if (ev === 'iai') play('ken-iai', o('ken-iai', 0.7));
     });
   }
+  // a Houndmaster's moments (class id houndmaster; ability-vfx.js KIT_VFX handlers call this): Hold's and Pounce's whistles (Flank's and Call Off's are the moves themselves), a bark for each hound (Rust lower,
+  // Ash quicker, Greyfang deep, the Wild Hunt ghosts far off), a bite and a big one, the pair finishers, the pounce landing, Call Off arriving, Relay, a hound downed and back up, the Quarry marked,
+  // the horn of Wild Hunt, Mount, Ride Down, Howl and the Long Chase. Yours full, anyone else's soft and placed
+  function houndmaster(ev, d, mine, at, who) {
+    if (!has()) return;
+    safe(() => {
+      const o = (key, vol, extra) => Object.assign(mine ? { vol, key, minGap: 0.05 } : { vol: vol * 0.45, remote: true, at, key: key + ':' + (who || ''), minGap: 0.15 }, extra);
+      const hid = d && typeof d.hound === 'string' ? d.hound : '';
+      if (ev === 'whistle') { if (d && d.kind === 'hold') play('hm-whistle-hold', o('hm-wh', 0.7, { minGap: 0.3 })); else if (d && d.kind === 'pounce') play('hm-whistle-pounce', o('hm-wp', 0.75, { minGap: 0.3 })); }
+      else if (ev === 'bark') play(hid === 'ash' ? 'hm-bark-ash' : hid === 'greyfang' ? 'hm-bark-greyfang' : /^sp/.test(hid) ? 'hm-bark-ghost' : 'hm-bark-rust', o('hm-bark-' + hid, 0.6, { minGap: 0.2 }));
+      else if (ev === 'bite') play(d && d.big ? 'hm-bite-big' : 'hm-bite', o('hm-bite-' + hid, d && d.big ? 0.75 : 0.45, { minGap: d && d.big ? 0.12 : 0.08 }));
+      else if (ev === 'finisher') {
+        const p = d && d.pair;
+        play(p === 'rend' ? 'hm-rend' : p === 'hamstring' ? 'hm-hamstring' : p === 'bringdown' ? 'hm-bringdown' : 'hm-snap', o('hm-fin', 0.85, { minGap: 0.2 }));
+      }
+      else if (ev === 'pounce') play('hm-pounce', o('hm-pounce', 0.7, { minGap: 0.3 }));
+      else if (ev === 'calloff') play('hm-calloff', o('hm-calloff', 0.6, { minGap: 0.3 }));
+      else if (ev === 'relay') play('hm-relay', o('hm-relay', 0.6, { minGap: 0.3 }));
+      else if (ev === 'houndDown') { if (mine || (d && d.hound)) play('hm-down', o('hm-down-' + hid, 0.65, { minGap: 0.3 })); }
+      else if (ev === 'houndUp') play('hm-up', o('hm-up-' + hid, 0.55, { minGap: 0.3 }));
+      else if (ev === 'quarry') play('hm-quarry', o('hm-quarry', 0.6, { minGap: 0.3 }));
+      else if (ev === 'wildhunt') play('hm-horn', o('hm-horn', 0.8, { minGap: 0.5 }));
+      else if (ev === 'mount') play('hm-mount', o('hm-mount', 0.65, { minGap: 0.3 }));
+      else if (ev === 'ridedown') play('hm-ridedown', o('hm-ridedown', 0.8, { minGap: 0.3 }));
+      else if (ev === 'howl') play('hm-howl', o('hm-howl', 0.75, { minGap: 0.5 }));
+      else if (ev === 'longchase') play('hm-longchase', o('hm-longchase', 0.7, { minGap: 0.5 }));
+    });
+  }
   // your own cast bar's quiet hum
   let castHum = null;
   // (a cast gets a soft, higher 'gathering' blip of its own sound at the press, a very quiet hum under the bar, and the full
@@ -284,7 +312,7 @@ const SoundHooks = (() => {
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wireUI); else wireUI();
   }
 
-  return { play, vo, ability, auto, hollow, thresher, tidecaller, lanternkeeper, kenseier, castStart, castEnd, stacks, telegraph, bossCast, impact, music, phase, bossTrack, tick, stopBeds, ground, TG };
+  return { play, vo, ability, auto, hollow, thresher, tidecaller, lanternkeeper, kenseier, houndmaster, castStart, castEnd, stacks, telegraph, bossCast, impact, music, phase, bossTrack, tick, stopBeds, ground, TG };
 })();
 
 if (typeof module !== 'undefined') module.exports = { SoundHooks };

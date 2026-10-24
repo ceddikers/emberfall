@@ -2,7 +2,7 @@
 
 Every spoken line in the game, for recording with an AI voice tool. **Generated** from `client/js/voice-lines.js` by `node tools/audio/voice-manifest.js --doc`: change a line there, then regenerate this page, so the game and the script never drift apart.
 
-**693 files** (572 hero, 121 boss), about **23.7 minutes** of audio in all. The recommended minimum set is **80 files**, about 3.2 minutes.
+**719 files** (598 hero, 121 boss), about **24.5 minutes** of audio in all. The recommended minimum set is **80 files**, about 3.2 minutes.
 
 ## How to record and deliver
 
@@ -59,11 +59,12 @@ The move and select lines of four favourites (Bastion, Ranger, Pyromancer, Cleri
 | Tidecaller | 26 | 61 s |
 | Lanternkeeper | 26 | 64 s |
 | Kenseier | 26 | 52 s |
+| Houndmaster | 26 | 47 s |
 | Grubnak | 38 | 82 s |
 | Queen Skitterra | 30 | 73 s |
 | Volkar | 24 | 52 s |
 | The Hollow King | 29 | 89 s |
-| **All** | **693** | **23.7 min** |
+| **All** | **719** | **24.5 min** |
 
 ## Bosses
 
@@ -1073,5 +1074,43 @@ The move and select lines of four favourites (Bastion, Ranger, Pyromancer, Cleri
 | `hero-kenseier-ult-3.ogg` | Now. All of it. | shouted, full voice |
 | `hero-kenseier-victory-1.ogg` | Ash settles. | *Victory (after a boss falls)* · satisfied, a little tired |
 | `hero-kenseier-victory-2.ogg` | Well struck. Well met. | satisfied, a little tired |
+
+### Houndmaster
+
+**Voice:** gruff, dry, fond of his dogs. A lean huntsman of the old road, fur collar and leather cap, who talks to his two hounds more than to people. Low and weathered, few words, a country turn of phrase; the orders to the dogs are the softest thing he says.
+
+- **Age:** fifties
+- **Accent:** rural, rough, dropped endings
+- **Pacing:** clipped, gruff, a low aside to the dogs between phrases
+- **Device-speech fallback:** pitch 0.8, rate 0.9
+
+| File | Line | Delivery |
+|---|---|---|
+| `hero-houndmaster-move-1.ogg` | Walk on. | *Move (told to go somewhere)* · brisk acknowledgement |
+| `hero-houndmaster-move-2.ogg` | Heel. | brisk acknowledgement |
+| `hero-houndmaster-move-3.ogg` | This way, lads. | brisk acknowledgement |
+| `hero-houndmaster-move-4.ogg` | Aye, going. | brisk acknowledgement |
+| `hero-houndmaster-move-5.ogg` | Keep close. | brisk acknowledgement |
+| `hero-houndmaster-move-6.ogg` | Easy, now. | brisk acknowledgement |
+| `hero-houndmaster-move-7.ogg` | Come on, then. | brisk acknowledgement |
+| `hero-houndmaster-move-8.ogg` | Off we go. | brisk acknowledgement |
+| `hero-houndmaster-select-1.ogg` | Houndmaster. Aye. | *Select (clicked on)* · attentive, in character |
+| `hero-houndmaster-select-2.ogg` | Rust. Ash. Ready. | attentive, in character |
+| `hero-houndmaster-select-3.ogg` | Dogs are keen. | attentive, in character |
+| `hero-houndmaster-select-4.ogg` | What are we hunting? | attentive, in character |
+| `hero-houndmaster-down-1.ogg` | Heel... heel... | *Down (falls in battle)* · pained, fading out |
+| `hero-houndmaster-down-2.ogg` | Mind the dogs... | pained, fading out |
+| `hero-houndmaster-down-3.ogg` | Good... dogs... | pained, fading out |
+| `hero-houndmaster-revive-1.ogg` | Up, then. | *Revived* · a breath in, relieved |
+| `hero-houndmaster-revive-2.ogg` | Aye, I am up. Get off, Rust. | a breath in, relieved |
+| `hero-houndmaster-revive-3.ogg` | Good dogs. Thank you. | a breath in, relieved |
+| `hero-houndmaster-low-1.ogg` | I am bleeding, lads! | *Low health* · urgent, strained |
+| `hero-houndmaster-low-2.ogg` | Call them in! | urgent, strained |
+| `hero-houndmaster-low-3.ogg` | Heal me, quick! | urgent, strained |
+| `hero-houndmaster-ult-1.ogg` | Wild Hunt! | *Ultimate (shouted as it fires)* · shouted, full voice |
+| `hero-houndmaster-ult-2.ogg` | Loose the pack! | shouted, full voice |
+| `hero-houndmaster-ult-3.ogg` | Run him down! | shouted, full voice |
+| `hero-houndmaster-victory-1.ogg` | Good dogs. | *Victory (after a boss falls)* · satisfied, a little tired |
+| `hero-houndmaster-victory-2.ogg` | Had him by supper. | satisfied, a little tired |
 
 ★ = in the recommended minimum set.

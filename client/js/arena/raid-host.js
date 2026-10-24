@@ -151,7 +151,7 @@ class RaidHost {
       next: sim.upcoming(3).map(e => [e.name, e.t - sim.t]),
       debuffs: id => { const s = sim.ps.get(id); const out = {}; if (s) for (const k in s.debuffs) if (s.debuffs[k] > sim.t) out[k] = Math.max(0.01, s.debuffs[k] - sim.t); return out; },   // seconds left
       // classes-c: the Threadweavers' threads and Tapestry, and every Marionettist's Dolls
-      threads: sim.threads || [], tapestry: sim.tapestry && sim.tapestry.end > sim.t ? sim.tapestry : null, dolls: sim.liveDolls(),
+      threads: sim.threads || [], tapestry: sim.tapestry && sim.tapestry.end > sim.t ? sim.tapestry : null, dolls: sim.liveDolls(), hounds: sim.liveHounds(),
       // a healer bot's chosen-ally buff (bots.js BotAI.allyBuff): the party's burst is on (a damage buff or a vulnerability
       // on the boss), how much each player has dealt, and the buffs already on them
       burst: this.partyBuffs.some(x => x.kind === 'dmg' && x.end > sim.t) || b.vulnEnd > sim.t,
@@ -283,6 +283,7 @@ class RaidHost {
         if (msg.k === 'eat' || msg.k === 'ledger' || msg.k === 'hollow') bot.actor.notify(msg.k, msg);   // (the advanced tanks: fight.js classEvent)
         if (msg.k === 'carry' || msg.k === 'snapped' || msg.k === 'dollhit' || msg.k === 'tiefail') bot.actor.notify(msg.k, msg);   // classes-c
         if (msg.k === 'lit' || msg.k === 'relit') bot.actor.notify(msg.k, msg);   // a Lanternkeeper's lanterns (fight.js LANTERNS)
+        if (msg.k === 'houndhit') bot.actor.notify(msg.k, msg);   // a Houndmaster's hound caught in a telegraph (fight.js HOUNDS)
         if (msg.k === 'kdef' || msg.k === 'kbrk' || msg.k === 'kbend') bot.actor.notify(msg.k, msg);   // a Kenseier's deflect and Breaks (fight.js KENSEI_HOST)
       }
     }
@@ -405,6 +406,10 @@ class RaidHost {
       collide: (actor, o, r) => { ARENA.clamp(o, 16); if (host.sim.props.length) PROPS.collide(o, host.sim.props, r); },
       dolls: (actor, list) => host.sim.setDoll(bot.id, list),
       lamps: (actor, list) => host.sim.setLamps(bot.id, list),   // a Lanternkeeper bot's lanterns go straight to the host
+      // a Houndmaster bot's hounds go straight to the host; the boss's facing is where its hounds' sides are measured from; Shift is the bot's own say (bot.shift)
+      hounds: (actor, list) => host.sim.setHounds(bot.id, list),
+      bossFace: () => host.sim.boss.facing,
+      shift: () => !!bot.shift,
       // the taunt carrier went off (engine.js resolve): taunt only what botTaunt asked for
       taunt: actor => {
         const w = bot.tauntWant; bot.tauntWant = null;

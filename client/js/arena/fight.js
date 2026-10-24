@@ -387,6 +387,7 @@ class FightSim {
     if (this.updateClass) this.updateClass(dt);   // Ledgers coming due (end of this file)
     this.weaveTick(dt); this.dollTick(dt);   // classes-c: threads and Dolls (block at the end of this file)
     this.lampTick(dt);   // the Lanternkeeper's lanterns (LANTERNS, the end of this file)
+    this.houndTick(dt);   // the Houndmaster's hounds (HOUNDS, the end of this file)
     for (const id in this.lastHit) if (this.t - this.lastHit[id] <= 2.5) this.stats[id].up += dt;   // (seconds with a blow on the boss or an add in the last 2.5 s)
     this.updatePlayers(dt);
     if (this.state !== 'live') return;
@@ -420,6 +421,7 @@ class FightSim {
     this.rollers.clear(); this.reels.clear(); this.sweeps.clear();
     this.weaveClear();   // classes-c: threads, Tapestry and Dolls
     this.lampClear();   // the Lanternkeeper's lanterns
+    this.houndClear();   // the Houndmaster's hounds
     this.events = []; this.broadcastNext(true);
     this.broadcastAdds();
     this.broadcastParty();
@@ -445,6 +447,7 @@ class FightSim {
       else { b.x += dx / d * step; b.y += dy / d * step; }
     } else if (tank && !b.cast && !b.lockFacing && !b.untargetable && !stunned) {
       b.facing = Math.atan2(tank.y - b.y, tank.x - b.x);
+      if (b.hornTo && b.hornTo.until > this.t) { const hp = this.players().find(q => q.id === b.hornTo.id); if (hp) b.facing = Math.atan2(hp.y - b.y, hp.x - b.x); }   // (Hunting Horn: only its face; its target and its walk stay the tank's)
       const d = Math.hypot(tank.x - b.x, tank.y - b.y);
       if (d > FIGHT.MELEE && !b.anchor && !(b.holdUntil > this.t)) {
         // round any prop in the way rather than pushing into it
@@ -620,6 +623,7 @@ class FightSim {
       }
       case 'snap': this.snapReel(pid); break;   // a dash snapped the silk reeling this player in
       case 'taunt': this.taunt(pid, typeof ev.tgt === 'string' ? ev.tgt : 'boss'); break;
+      case 'horn': { const hp = this.players().find(q => q.id === pid); if (hp) this.boss.hornTo = { id: pid, until: this.t + Math.max(0.5, Math.min(2, Number(ev.dur) || 1.5)) }; break; }   // a Houndmaster's Hunting Horn: the boss's face swings toward the hunter for a beat (updateBoss)
       case 'kensei': this.kenEvent(pid, ev); break;   // a Kenseier's deflect, step and Posture (KENSEI_HOST, the end of this file)
       case 'maw': case 'ledger': case 'gloom': if (this.classEvent) this.classEvent(pid, ev); break;   // Gorgemaw, Oathbroker, Gloomsworn (end of this file)
       case 'tie': case 'snip': case 'tighten': case 'tapestry': case 'tug': this.weaveEvent(pid, ev); break;   // Threadweaver (classes-c)
@@ -1047,6 +1051,7 @@ class FightSim {
     if (!fail && this.avoidCount === av0 && m.type !== 'raidwide' && m.type !== 'knockback' && m.type !== 'safe' && m.type !== 'drop' && !(m.group && m.group.lb)) this.lbGain(FIGHT.LB.CLEAN);
     if (m.group) m.group.lb = true;   // (a group of circles fills the gauge once)
     this.dollMech(m, cov);   // a Marionettist's Doll caught in it (classes-c)
+    this.houndMech(m, cov);   // a Houndmaster's hound caught in it (HOUNDS, the end of this file)
     if (cov) for (const pr of cov.chip) this.hitProp(pr, 1, m.tag);
     if (m.onResolve) m.onResolve(inside, hits, cov);
   }
@@ -2050,6 +2055,92 @@ Object.assign(FightSim.prototype, {
   lampClear() {
     if (this.lamps && this.lamps.size) { this.lamps.clear(); this.emit({ t: 'lamps', l: [] }); }
     this.lampsShown = false;
+  },
+});
+
+// ===================================================================================================================
+// HOUNDS: the Houndmaster's hounds, host side (kits.js HOUND, drawn by kennel.js). One block of FightSim methods; the core
+// calls in with one line each: tick (houndTick), resolveMech (houndMech), end (houndClear).
+// Each Houndmaster reports where its hounds are (setHounds: a human's client 10 times a second, a bot's kit every tick):
+// up to 8 { x, y, mode, slot, id } (mode: run | hold | guard | pounce | bite | down; slot: left | right | front | behind | null).
+// A telegraph that resolves over a hound ('houndhit' to its owner, with the hound's id) downs it, the same shapes that hit a
+// player: circles and cones, spreads, a tankbuster's cleave, a cover blast it isn't sheltered from (w: 1), rollers and storm
+// walls. A hound that is down, on its way to its owner (Call Off: guard) or in mid-pounce is not touched, and neither are
+// the spectral hounds of Wild Hunt (ids sp0..sp3). Bosses and bots never target a hound; it's never in alive() or players().
+// Everyone gets the list ('hounds', 10 a second) to draw: [[owner, [[x, y, mode, slot, id], ...]], ...].
+// ===================================================================================================================
+const HOUND_HOST = { STALE: 1.5, PAD: 12, MAX: 8, MODES: ['run', 'hold', 'guard', 'pounce', 'bite', 'down'], SLOTS: ['left', 'right', 'front', 'behind'] };
+Object.assign(FightSim.prototype, {
+  // a Houndmaster's hounds (rows as { x, y, mode, slot, id } or [x, y, mode, slot, id])
+  setHounds(pid, list) {
+    if (!Array.isArray(list) || !this.ps.has(pid)) return;
+    const n = v => Math.max(-2000, Math.min(2000, Math.round(Number(v) || 0)));
+    const row = d => (Array.isArray(d) ? { x: d[0], y: d[1], mode: d[2], slot: d[3], id: d[4] } : d || {});
+    this.hounds = this.hounds || new Map();
+    this.hounds.set(pid, { l: list.slice(0, HOUND_HOST.MAX).map(row).map(d => ({ x: n(d.x), y: n(d.y), mode: HOUND_HOST.MODES.includes(d.mode) ? d.mode : 'run',
+      slot: HOUND_HOST.SLOTS.includes(d.slot) ? d.slot : null, id: String(d.id == null ? '' : d.id).slice(0, 12) })), at: this.t });
+  },
+  // the hounds whose owners are alive and still reporting: [[ownerId, hound, index]] (the downed ones too: they are drawn as down)
+  liveHounds() {
+    const out = [];
+    if (!this.hounds) return out;
+    for (const [pid, H] of this.hounds) {
+      const s = this.ps.get(pid);
+      if (!s || !s.alive || this.t - H.at > HOUND_HOST.STALE) continue;
+      H.l.forEach((d, i) => out.push([pid, d, i]));
+    }
+    return out;
+  },
+  // can a telegraph touch this hound at all?
+  houndOpen(d) { return d.mode !== 'down' && d.mode !== 'guard' && d.mode !== 'pounce' && !/^sp/.test(d.id); },
+  houndHit(pid, d, w) { this.emit({ t: 'fev', k: 'houndhit', id: pid, h: d.id, w: w ? 1 : 0 }); },
+  houndMech(m, cov) {
+    if (!this.hounds || !this.hounds.size) return;
+    const props = cov ? this.props.filter(pr => pr.cover) : null;
+    for (const [pid, d] of this.liveHounds()) {
+      if (!this.houndOpen(d)) continue;
+      const shadowed = cov && PROPS.shadowing(m.src.x, m.src.y, d.x, d.y, props);
+      if (m.type === 'aoe' || m.type === 'spread' || m.type === 'buster') { if (SHAPES.contains(m.shape, d.x, d.y, HOUND_HOST.PAD) && !shadowed) this.houndHit(pid, d, false); }
+      else if (m.type === 'raidwide' && cov && !shadowed) this.houndHit(pid, d, true);
+    }
+  },
+  houndTick() {
+    if (!this.hounds || !this.hounds.size) { if (this.houndsShown) { this.houndsShown = false; this.emit({ t: 'hounds', l: [] }); } return; }
+    const live = this.liveHounds();
+    // rollers and storm walls run over a hound as they would a player (once each)
+    this.houndMemo = this.houndMemo || {};
+    for (const [pid, d] of live) {
+      if (!this.houndOpen(d)) continue;
+      for (const [id, r] of this.rollers) {
+        if (this.t < r.rollAt) continue;
+        const pos = this.rollerPos(r, this.t), key = 'r' + id + ':' + pid + ':' + d.id;
+        if (!this.houndMemo[key] && Math.hypot(d.x - pos.x, d.y - pos.y) < r.r + HOUND_HOST.PAD) { this.houndMemo[key] = this.t; this.houndHit(pid, d, false); }
+      }
+      for (const [id, sw] of this.sweeps) {
+        if (this.t < sw.startAt) continue;
+        const a0 = this.sweepAngle(sw, this.t);
+        for (let k = 0; k < sw.arms; k++) {
+          const a = a0 + k * Math.PI * 2 / sw.arms, c = Math.cos(a), sn = Math.sin(a), dx = d.x - sw.x, dy = d.y - sw.y;
+          const key = 's' + id + ':' + k + ':' + pid + ':' + d.id;
+          if (dx * c + dy * sn < 0 || Math.abs(-dx * sn + dy * c) > sw.w / 2 + HOUND_HOST.PAD || this.t - (this.houndMemo[key] ?? -9) < 1.5) continue;
+          if (sw.cover && PROPS.shadowing(sw.x, sw.y, d.x, d.y, this.props, q => q.kind === sw.cover)) continue;
+          this.houndMemo[key] = this.t; this.houndHit(pid, d, false);
+        }
+      }
+    }
+    // where every hound is, for everyone to draw (owners draw their own from their kit): [owner, [[x, y, mode, slot, id], ...]]
+    if (this.t - (this.houndSent ?? -9) >= 0.1 - 1e-6) {
+      this.houndSent = this.t;
+      const by = new Map();
+      for (const [pid, d] of live) { if (!by.has(pid)) by.set(pid, []); by.get(pid).push([d.x, d.y, d.mode, d.slot, d.id]); }
+      this.houndsShown = by.size > 0;
+      this.emit({ t: 'hounds', l: [...by].map(([pid, l]) => [pid, l]), c: +this.t.toFixed(3) });
+    }
+  },
+  houndClear() {
+    this.houndMemo = {};
+    if (this.hounds && this.hounds.size) { this.hounds.clear(); this.emit({ t: 'hounds', l: [] }); }
+    this.houndsShown = false;
   },
 });
 

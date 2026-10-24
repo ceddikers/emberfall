@@ -55,6 +55,9 @@ class CombatActor {
       threads: () => (world.threads ? world.threads(actor) : null),
       dolls: list => { if (world.dolls) world.dolls(actor, list); },
       lamps: list => { if (world.lamps) world.lamps(actor, list); },   // a Lanternkeeper's lanterns (kits.js lkShare; the host heals with them)
+      hounds: list => { if (world.hounds) world.hounds(actor, list); },   // a Houndmaster's hounds (kennel.js draws them; the host damages them with telegraphs)
+      bossFace: enemy => (world.bossFace ? world.bossFace(actor, enemy) : Math.PI / 2),   // the facing of the enemy a Houndmaster works (its hounds' left and right are the boss's own)
+      shift: () => (world.shift ? !!world.shift(actor) : false),   // Shift held at the press (Whistle: Flank sends the other hound)
       danger: (x, y, within) => (world.danger ? world.danger(actor, x, y, within) : false),   // a telegraph landing on a spot within `within` s (Pirouette's glow)
       // a tank pressed its taunt carrier (kits.js TAUNT_CARRY): the world taunts if the taunt is ready and the enemy
       // (the move's target, or the one you face) is on someone else
@@ -70,6 +73,8 @@ class CombatActor {
     return true;
   }
   get abilities() { return this.kit.abilities; }
+  // how much quicker (or slower) the kit has you on your feet right now (a Lone Wolf riding Greyfang: kits.js HDS.SPEED), read by the walk in main.js
+  moveMult() { const f = this.kit.def.moveMult; return f ? f(this.kit) : 1; }
   press(i) { return this.kit.press(i); }
   update() { this.kit.update(); }
   notify(type, data) { this.kit.notify(type, data); }

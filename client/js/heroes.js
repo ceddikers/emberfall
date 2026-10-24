@@ -2352,3 +2352,115 @@ Object.assign(SPEC_ART, {
     ctx.globalAlpha *= 0.6; ctx.lineWidth = 0.8; ctx.beginPath(); ctx.arc(2, 0, 22.5, a0 + 0.1, a0 + 0.85); ctx.stroke(); ctx.restore();
   },
 });
+
+// ---------------------------------------------------------------- Houndmaster (melee DPS, class 23)
+// A lean huntsman in a moss-green coat with a thick pale fur collar and a leather cap with a rust feather in the band, a tan belt with a long
+// skinning knife in his right hand and a hunting horn slung at his left hip. Rests with the knife low and forward; the knife swings on a cut;
+// a whistle (anim 'cast' / 'big') brings his left hand to his mouth around a small bone whistle, with a curve of notes; Wild Hunt lifts the horn
+// to his lips. (The hounds are arena/kennel.js; the notes, bites and dust are ABILITY_VFX.houndmaster and KIT_VFX.)
+function houndmasterKnife(st) {
+  const s = swing(actP(st, 'attack')), dir = swingDir(st), big = pulse(actP(st, 'big'));
+  const rot = 0.32 + dir * s * 1.15 - big * 0.9, px = 7.5 + 2.5 * Math.max(0, s) - big * 2, py = 9.2 - 1.2 * big, c = Math.cos(rot), sn = Math.sin(rot);
+  return { s, big, rot, px, py, c, sn, tx: px + c * 26, ty: py + sn * 26 };
+}
+HERO_ART.houndmaster = function (ctx, st) {
+  const moss = '#5a7a46', mossD = '#3d5632', tan = '#b08a5a', tanD = '#7c5d38', fur = '#cfc7b3', furD = '#a39b88', skin = '#c9946a', rust = '#c46a3a', brass = '#c9a23f', boot = '#2b2218';
+  const K = houndmasterKnife(st), cast = Math.max(castAmt(st), 0), big = K.big, now = st.t;
+  const wave = Math.sin(now * 3) * 1.4 + (st.moving ? Math.sin(now * 10) * 2 : 0);
+  // the long coat's back panel: a split skirt of moss with a darker lining, swaying when he walks
+  poly(ctx, [-3, -11.5, -12, -13, -21 + wave, -10, -24 + wave, -5, -22 + wave * 1.1, -1.2, -24 + wave, 1.2, -22 + wave * 1.1, 5, -24 + wave, 10, -21 + wave, 10, -12, 13, -3, 11.5], moss, OUT, 2);
+  line(ctx, -8, 0, -22 + wave, 0, mossD, 1.6); line(ctx, -7, -6, -20 + wave * 0.8, -6.5, mossD, 0.9); line(ctx, -7, 6, -20 + wave * 0.8, 6.5, mossD, 0.9);
+  feet(ctx, st, boot);
+  torso(ctx, moss, 9.6, 14.2);
+  // leather straps across the coat, a tan belt with a brass buckle, a pouch on the left hip and the knife's sheath on the right
+  line(ctx, -5.5, -11.5, 4.5, 8.5, tanD, 3.6); line(ctx, -5.5, -11.5, 4.5, 8.5, tan, 2.1);
+  rrect(ctx, -2.6, -13.6, 3.6, 27.2, 1.2, tan, OUT, 1.1); rrect(ctx, -2, -2.6, 2.6, 4.4, 0.8, brass, OUT, 0.8);
+  rrect(ctx, -3.6, -14.2, 5.4, 5, 1.4, tanD, OUT, 1); circle(ctx, -0.9, -11.7, 0.8, brass);
+  rrect(ctx, -4.5, 10.4, 11, 3.2, 1.4, tanD, OUT, 1);
+  // the hunting horn: a brass curl slung at the left hip, its bell out to the front (Wild Hunt lifts it to his lips)
+  if (big < 0.25) {
+    ctx.save(); ctx.translate(-0.5, -13.6); ctx.rotate(0.35);
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = OUT; ctx.lineWidth = 5.4;
+    ctx.beginPath(); ctx.moveTo(-6, 1.5); ctx.bezierCurveTo(-6, -6, 6, -7, 9, -1); ctx.stroke();
+    ctx.strokeStyle = brass; ctx.lineWidth = 3.2; ctx.beginPath(); ctx.moveTo(-6, 1.5); ctx.bezierCurveTo(-6, -6, 6, -7, 9, -1); ctx.stroke();
+    ctx.strokeStyle = '#f0d98a'; ctx.lineWidth = 0.9; ctx.beginPath(); ctx.moveTo(-5.6, 0.2); ctx.bezierCurveTo(-5, -5, 4.5, -5.8, 7.4, -1.4); ctx.stroke();
+    ellipse(ctx, 9.4, -0.8, 2.6, 3.6, -0.4, brass, OUT, 1); ellipse(ctx, 9.7, -0.8, 1.1, 1.9, -0.4, '#3a2a14');
+    ctx.restore();
+  }
+  // the right arm and the long knife (a swing carries it round; rest has it forward and low)
+  limb(ctx, [1, 11, (1 + K.px) / 2 + 1, (11 + K.py) / 2 + 1.5, K.px, K.py], moss, 4.4);
+  ctx.save(); ctx.translate(K.px, K.py); ctx.rotate(K.rot);
+  if (K.s > 0.15 || K.big > 0.2) glow(ctx, 18, 0, 12, '#ffffff', 0.12 + K.s * 0.2);
+  rrect(ctx, -6, -1.5, 8, 3, 1.2, tanD, OUT, 1); for (let i = 0; i < 3; i++) line(ctx, -5 + i * 2.5, -1.4, -3.8 + i * 2.5, 1.4, tan, 0.8);
+  circle(ctx, -6.4, 0, 1.7, brass, OUT, 0.8); line(ctx, -6.4, 0, -10, 3 + Math.sin(now * 5) * 1, rust, 1.2);   // a dented brass pommel, a rust thong swinging from it
+  rrect(ctx, 1.4, -3.6, 2, 7.2, 0.8, brass, OUT, 0.9);
+  ctx.beginPath(); ctx.moveTo(3.4, -2.3); ctx.lineTo(23, -2.4); ctx.quadraticCurveTo(29, -0.2, 28, 1.4); ctx.lineTo(23, 2.3); ctx.lineTo(3.4, 2.1); ctx.closePath();
+  ctx.lineJoin = 'round'; ctx.fillStyle = '#c9ccd0'; ctx.fill(); ctx.strokeStyle = OUT; ctx.lineWidth = 1.5; ctx.stroke();
+  line(ctx, 4.5, -0.6, 25, -0.4, '#8f949a', 0.9); line(ctx, 5, 1.4, 24, 1.5, '#eef0f2', 0.7);
+  ctx.restore();
+  hand(ctx, K.px, K.py, skin);
+  // the left hand: relaxed at his side, then up to his mouth around a small bone whistle when he whistles
+  const wq = Math.min(1, cast * 1.3), lx = 4 + wq * 5.4, ly = -10.5 + wq * 8;
+  limb(ctx, [1, -11, (1 + lx) / 2 - 0.5, (-11 + ly) / 2 - 1, lx, ly], moss, 4.4);
+  hand(ctx, lx, ly, skin);
+  if (wq > 0.25) {
+    ctx.save(); ctx.globalAlpha = wq;
+    ellipse(ctx, lx + 1.6, ly - 0.2, 2.4, 1.2, 0.2, '#efe4c6', OUT, 0.8); circle(ctx, lx + 2.8, ly - 0.2, 0.6, '#3a2a14');
+    ctx.strokeStyle = '#f2e6c8'; ctx.lineCap = 'round'; ctx.lineWidth = 1.1;
+    for (let i = 0; i < 2; i++) { const r = 5 + i * 3.2 + (1 - wq) * 3; ctx.globalAlpha = wq * (0.8 - i * 0.3); ctx.beginPath(); ctx.arc(lx + 2, ly, r, -0.7, 0.7); ctx.stroke(); }
+    ctx.restore();
+  }
+  // Wild Hunt: the horn raised to his lips, its bell flaring forward, brass shining
+  if (big >= 0.25) {
+    const hb = Math.min(1, (big - 0.25) / 0.4);
+    ctx.save(); ctx.translate(8.5, -2.4); ctx.rotate(-0.2);
+    ctx.lineCap = 'round'; ctx.strokeStyle = OUT; ctx.lineWidth = 5.4; ctx.beginPath(); ctx.moveTo(-2, 2); ctx.bezierCurveTo(1, 8, 10, 8, 14, 1); ctx.stroke();
+    ctx.strokeStyle = brass; ctx.lineWidth = 3.2; ctx.beginPath(); ctx.moveTo(-2, 2); ctx.bezierCurveTo(1, 8, 10, 8, 14, 1); ctx.stroke();
+    ellipse(ctx, 15.4, 0.6, 2.4, 4.8 * hb + 1, 0.2, brass, OUT, 1); ellipse(ctx, 15.8, 0.6, 1, 2.6 * hb + 0.4, 0.2, '#3a2a14');
+    glow(ctx, 15, 0.6, 12, '#ffe2a0', 0.4 * hb);
+    ctx.restore();
+    hand(ctx, 7.5, -3.4, skin);
+  }
+  // the fur collar: a thick ring of pale tufts round the neck
+  const nT = 11;
+  for (let i = 0; i < nT; i++) { const a = i * TAU / nT + 0.3, r = 8.8 + (i % 2) * 0.7; circle(ctx, 0.2 + Math.cos(a) * r * 0.9, Math.sin(a) * r, 3.1, i % 2 ? fur : furD, OUT, 1); }
+  circle(ctx, 0.3, 0, 8.4, fur, OUT, 1.2);
+  // the head: a leather cap with a short front brim and a rust feather tucked in its band, the face a sliver at the front
+  ellipse(ctx, 6.4, 0, 2.6, 4.3, 0, skin, OUT, 1);
+  line(ctx, 7.6, -1.4, 8.4, -0.4, '#3a2a1a', 0.8);
+  circle(ctx, 0.2, 0, 7, tanD, OUT, 1.8);
+  circle(ctx, -0.8, -2, 2.2, tan);
+  ctx.save(); ctx.strokeStyle = rgba(OUT, 0.55); ctx.lineWidth = 0.7; ctx.lineCap = 'round';
+  for (let i = 0; i < 6; i++) { const a = i * TAU / 6 + 0.3; ctx.beginPath(); ctx.moveTo(0.2 + Math.cos(a) * 2, Math.sin(a) * 2); ctx.lineTo(0.2 + Math.cos(a) * 6.6, Math.sin(a) * 6.6); ctx.stroke(); }
+  ctx.restore();
+  poly(ctx, [5.2, -4.4, 9.3, -2.8, 9.3, 2.8, 5.2, 4.4], tan, OUT, 1.2);
+  ctx.save(); ctx.strokeStyle = rust; ctx.lineWidth = 0.7; ctx.lineCap = 'round'; ctx.beginPath(); ctx.arc(0.2, 0, 6.2, -2.4, -1.2); ctx.stroke(); ctx.restore();
+  const fw = Math.sin(now * 4) * 0.8 + (st.moving ? Math.sin(now * 12) * 1.2 : 0);
+  limb(ctx, [-1, -6, -4 + fw * 0.4, -8.4, -8 + fw, -9.2], rust, 1.7);
+};
+Object.assign(SPEC_ART, {
+  // Pack Leader: two tabs of leather hung from his belt, one rust and one ash grey (his hounds' spare collars), and a brass whistle on a chain
+  // at his chest that glints when he whistles
+  packleader(ctx, st) {
+    const now = st.t, cast = Math.max(castAmt(st), 0), sw = Math.sin(now * 3) * 0.6 + (st.moving ? Math.sin(now * 9) * 1.2 : 0);
+    for (const [y, col] of [[7.2, '#c46a3a'], [10.2, '#b8b2a8']]) {
+      limb(ctx, [-2.2, y, -4.8 + sw * 0.4, y + 0.6, -7.2 + sw, y + 1.4], col, 2);
+      circle(ctx, -7.6 + sw, y + 1.5, 1.1, '#c9a23f', OUT, 0.7);
+    }
+    ctx.save(); ctx.strokeStyle = 'rgba(201,162,63,0.8)'; ctx.lineWidth = 0.9; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(2.2, -6); ctx.quadraticCurveTo(5.8, -1.2, 3.4, 4.6); ctx.stroke(); ctx.restore();
+    ellipse(ctx, 3.4, 4.8, 2.1, 1.1, 0.4, '#c9a23f', OUT, 0.8);
+    if (cast > 0.1) glow(ctx, 3.4, 4.8, 7, '#fff0b8', 0.5 * cast);
+  },
+  // Lone Wolf: a grey wolf pelt over his shoulders and back, the paws at his chest; a leather saddle strap crosses his coat and a coil of rope
+  // hangs at his right hip
+  lonewolf(ctx, st) {
+    const now = st.t, sw = Math.sin(now * 2.6) * 1.1 + (st.moving ? Math.sin(now * 9) * 1.8 : 0);
+    poly(ctx, [-3, -12, -11, -13.4, -19 + sw, -10, -23 + sw, -4, -21 + sw * 1.1, 0, -23 + sw, 4, -19 + sw, 10, -11, 13.4, -3, 12, -1, 6, -1, -6], '#8b8e93', OUT, 1.8);
+    poly(ctx, [-4, -9, -12, -9.4, -18 + sw, -6, -20 + sw, 0, -18 + sw, 6, -12, 9.4, -4, 9], '#a7aaaf');
+    for (const [x, y] of [[-9, -7], [-13, -2.4], [-13, 2.4], [-9, 7], [-17, 0]]) line(ctx, x, y, x - 3.2 + sw * 0.15, y * 1.06, '#6a6d72', 1.1);
+    for (const sy of [-1, 1]) { ellipse(ctx, 1.6, sy * 5.2, 2.4, 1.6, sy * 0.4, '#8b8e93', OUT, 1); for (const k of [-1, 0, 1]) circle(ctx, 3.6, sy * 5.2 + k * 1, 0.5, '#e8e6e0'); }
+    line(ctx, -6, 11.5, 5, -9, '#2b1c10', 3.2); line(ctx, -6, 11.5, 5, -9, '#6b4a2b', 1.9);
+    ctx.save(); ctx.strokeStyle = OUT; ctx.lineWidth = 5.6; ctx.beginPath(); ctx.ellipse(-3, 12.4, 3.6, 3, 0, 0, TAU); ctx.stroke(); ctx.strokeStyle = '#c8b48a'; ctx.lineWidth = 3.2; ctx.stroke();
+    ctx.strokeStyle = '#8a7650'; ctx.lineWidth = 0.8; ctx.setLineDash([1.2, 1.6]); ctx.stroke(); ctx.restore();
+  },
+});

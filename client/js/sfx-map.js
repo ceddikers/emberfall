@@ -61,6 +61,7 @@
     tidecaller: ['ab-heal', 'ab-wind'],
     lanternkeeper: ['ab-heal', 'ab-buff'],
     kenseier: ['ab-slash', 'ab-shield'],
+    houndmaster: ['ab-slash', 'ab-wind'],
   };
   // every ability id per class: base kit, spec replacements (specs.js), talent moves, Ultimate, taunt, auto-attack
   const CLASS = {
@@ -182,6 +183,13 @@
       cut: L('ab-slash', 'ab-fire'), deflect: L('ab-shield', 'ab-slash'), mikiri: L('dash', 'ab-wind'), deathblow: L('ab-slash', 'ab-heavy'), mantle: L('ab-shield', 'ab-buff'),
       guard: L('ab-shield', 'ab-heavy'), iai: L('ab-shield', 'ab-stab'), thousandcuts: ULT('kenseier'), whirlwind: L('ab-slash', 'ab-wind'), duel: L('ab-buff', 'ab-fire'),
       taunt: 'ab-taunt', auto: 'ab-slash',
+    },
+    // Houndmaster (class id houndmaster): bone whistles, leather, fur and a brass horn; every move has its own voice (sfx-synth.js ABIL.houndmaster) and the moments the kit sends (Hold's and
+    // Pounce's whistles, a bark for each hound, the bites, the pair finishers, the horn of Wild Hunt) go through SoundHooks.houndmaster
+    houndmaster: {
+      knife: L('ab-slash', 'ab-melee-generic'), flank: L('ab-wind', 'ab-buff'), finisher: L('ab-heavy', 'ab-slash'), pounce: L('ab-wind', 'ab-melee-generic'), calloff: L('ab-wind', 'ab-buff'),
+      quarry: L('ab-buff', 'ab-wind'), wildhunt: ULT('houndmaster'), relay: L('ab-wind', 'dash'), mount: L('dash', 'ab-heavy'), ridedown: L('ab-slash', 'ab-heavy'), howl: L('ab-buff', 'ab-wind'),
+      longchase: L('dash', 'ab-wind'), auto: 'ab-slash',
     },
   };
   // Every ability has its own voice, ab-<class>-<id> (sfx-synth.js ABIL: the families above layered at their own

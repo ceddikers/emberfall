@@ -82,6 +82,9 @@ const VoiceLines = (() => {
     kenseier: { name: 'Kenseier', color: '#ff8a3d', hint: { pitch: 0.85, rate: 0.9 },
       dir: { age: 'forties', accent: 'quiet, level, plain and low', pacing: 'unhurried, terse, a breath before the last word',
         adj: 'calm, exacting, dryly respectful', ref: 'A masked swordsman of the old ember-watch who teaches the blade by example. Low, level and spare; never loud, never boastful, with a faint dry warmth for a worthy opponent.' } },
+    houndmaster: { name: 'Houndmaster', color: '#c46a3a', hint: { pitch: 0.8, rate: 0.9 },
+      dir: { age: 'fifties', accent: 'rural, rough, dropped endings', pacing: 'clipped, gruff, a low aside to the dogs between phrases',
+        adj: 'gruff, dry, fond of his dogs', ref: 'A lean huntsman of the old road, fur collar and leather cap, who talks to his two hounds more than to people. Low and weathered, few words, a country turn of phrase; the orders to the dogs are the softest thing he says.' } },
     // --- bosses
     grubnak: { name: 'Grubnak', boss: true, color: '#7fa650', hint: { pitch: 0.4, rate: 0.95 },
       dir: { age: 'big, middle-aged ogre', accent: 'broad, rich, a showman chef', pacing: 'loud, rolling, savouring words',
@@ -281,6 +284,15 @@ const VoiceLines = (() => {
       low: ['I am off the beat!', 'My guard is cracking!', 'Heal me, now!'],
       ult: ['Thousand Cuts!', 'Every beat, at once!', 'Now. All of it.'],
       victory: ['Ash settles.', 'Well struck. Well met.'] },
+    // Houndmaster: a lean huntsman with two lurchers, Rust and Ash; gruff, few words, talks to the dogs as much as the party
+    houndmaster: { chance: 0.13,
+      move: ['Walk on.', 'Heel.', 'This way, lads.', 'Aye, going.', 'Keep close.', 'Easy, now.', 'Come on, then.', 'Off we go.'],
+      select: ['Houndmaster. Aye.', 'Rust. Ash. Ready.', 'Dogs are keen.', 'What are we hunting?'],
+      down: ['Heel... heel...', 'Mind the dogs...', 'Good... dogs...'],
+      revive: ['Up, then.', 'Aye, I am up. Get off, Rust.', 'Good dogs. Thank you.'],
+      low: ['I am bleeding, lads!', 'Call them in!', 'Heal me, quick!'],
+      ult: ['Wild Hunt!', 'Loose the pack!', 'Run him down!'],
+      victory: ['Good dogs.', 'Had him by supper.'] },
 
   };
 

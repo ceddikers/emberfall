@@ -6707,6 +6707,683 @@ TALENT_ABILITIES.kenseier_duel = { cls: 'kenseier', ab: {
 
 if (typeof module !== 'undefined') Object.assign(module.exports, { KENSEI, kenStep, kenBroken, kenOff, kenPoise, kenPosture, kenDeflect, kenOnDeflect, kenOnBreak, kenDeathblow, kenBreakSecs, kenCross });
 
+// ---------------------------------------------------------------- Houndmaster (melee damage, class 23): two hounds and the word they spell
+// docs/plans/2026-10-new-classes-3.md section 3. The hounds (k.g.hounds; one for the Lone Wolf, four more spectral ones in Wild
+// Hunt: the list is general) live in the kit like the Marionettist's Dolls: they run to a station on the ring round the enemy,
+// bite on their own (hdBite), take the boss's telegraphs as pets (the host's 'houndhit') and come back 10s after going down.
+//  - A station is an angle round the enemy (h.ring, absolute) and a slot (h.slot: 'left' | 'right' | 'front' | 'behind', measured
+//    from the enemy's facing; null while the hound is on its way). Two arrived hounds make a PAIR (hdPairOf): left + right
+//    Rend, front + behind Hamstring, both behind Bring Down. The Pack Finisher is whichever pair stands.
+//  - A free hound drifts: every few seconds it picks a flank again, and a boss that turns sends it round (its ring is fixed in
+//    the world, so the turn changes its slot, and it picks again a moment later). An ordered hound (Whistle: Flank, a pounce)
+//    and any hound while Hold is up keep their slot through a turn instead (their ring follows the facing).
+//  - Whistle: Flank sends the next hound to where you point (the side of the enemy nearest the cursor; with the cursor on the
+//    enemy, the flank nearest you). Whistle: Hold freezes both slots; pressed again, both pounce and land behind.
+// Bond (k.g.bond, shared, and each hound's own) is built by bites and spent by the finisher. Wild Hunt makes every pair count.
+// Hooks for specs and talents: hdBite, hdOrder, hdDown, hdRevive, hdAfterPounce, hdFinish, hdPairOf; k.def.hounds (ids), k.def.solo
+// (the pair is the hound's slot and yours), k.def.houndHp, k.def.houndMult.
+const HOUND = { RING: 36, SPEED: 330, LEAP: 650, GUARD_SPEED: 700, SPREAD: 0.28, ARRIVE: 38, REACH: 74, HOLD: 15, ORDER: 10, LAND_HOLD: 6, DRIFT: [6, 10], TURN: 0.5,
+  HP: 100, HIT: 100, HIT_WIDE: 60, REGEN: 8, RESPAWN: 10, BITE: 55, BITE_EVERY: 3, BITE_BOND: 5, KNIFE_BOND: 7, POUNCE: 250, COST: 40,
+  GUARD: 5, GUARD_DR: 0.2, QUARRY: 12, QUARRY_FAST: 1.5, WILD_DUR: 10, WILD_EVERY: 2, WILD_BITE: 55,
+  REND: 420, REND_TICK: 50, HAMSTRING: 480, HAM_VULN: 0.05, HAM_DUR: 10, BRING: 700, SNAP: 300 };
+const HD_FAR = { target: 'enemy', range: 2000 };
+const HD_BITE = { id: 'bite', name: 'Bite' };   // (a hound's own bite: no button, its hits are named for the meters)
+const HD_BLEED = { id: 'rend', name: 'Rend' };
+const HD_OFF = { front: 0, right: Math.PI / 2, behind: Math.PI, left: -Math.PI / 2 };   // (from the enemy's facing; y runs down, so +90 degrees is its right hand)
+const HD_NAMES = { rend: 'Rend', hamstring: 'Hamstring', bringdown: 'Bring Down', snap: 'Snap' };
+const hdWrap = a => { while (a > Math.PI) a -= Math.PI * 2; while (a < -Math.PI) a += Math.PI * 2; return a; };
+const hdER = e => mariER(e);
+const hdEnemy = k => (k.env.picked && k.env.picked()) || k.env.target(HD_FAR);
+const hdFace = (k, e) => { if (k.now < (k.g.hornUntil || 0)) return k.g.hornFace; const f = k.env.bossFace ? k.env.bossFace(e) : null; return typeof f === 'number' && isFinite(f) ? f : Math.PI / 2; };
+const hdStep = k => (k.now < k.g.comboUntil ? k.g.step : 0);
+const hdWild = k => !!(k.ultWin && k.ultWin.ab.id === 'wildhunt');
+const hdHolding = k => k.now < (k.g.holdUntil || 0);
+const hdQuarry = k => k.now < (k.g.markUntil || 0);
+const hdReal = k => k.g.hounds.filter(h => !h.spectral);
+const hdLiveReal = k => hdReal(k).filter(h => h.mode !== 'down');
+function hdSlotOf(ang, F) { const r = hdWrap(ang - F), a = Math.abs(r); return a < Math.PI / 4 ? 'front' : a > Math.PI * 3 / 4 ? 'behind' : r > 0 ? 'right' : 'left'; }
+// where a free hound drifts to next: a flank (a lone Greyfang may also pick the back of the enemy, where you are likely to stand)
+function hdDriftGoal(k) { if (k.def.solo) { const r = k.rng(); return r < 1 / 3 ? 'left' : r < 2 / 3 ? 'right' : 'behind'; } return k.rng() < 0.5 ? 'left' : 'right'; }
+// the pair a set of slots makes: the two flanks, front and back, or two behind (null: nothing special)
+function hdPairOf(slots) {
+  const has = s => slots.indexOf(s) >= 0;
+  if (has('left') && has('right')) return 'rend';
+  if (has('front') && has('behind')) return 'hamstring';
+  if (slots.filter(s => s === 'behind').length >= 2) return 'bringdown';
+  return null;
+}
+// where you stand round the enemy (the Lone Wolf's half of the pair)
+function hdYourSlot(k, e) {
+  if (!e) return null;
+  const p = mariPos(k);
+  return Math.hypot(p.x - e.x, p.y - e.y) <= hdER(e) + 220 ? hdSlotOf(Math.atan2(p.y - e.y, p.x - e.x), hdFace(k, e)) : null;
+}
+// the slots the pair is made of right now: the arrived hounds' (and yours, for a single hound)
+function hdSlots(k) {
+  const out = hdLiveReal(k).filter(h => h.slot).map(h => h.slot);
+  if (k.def.solo) { const s = hdYourSlot(k, hdEnemy(k)); if (s) out.push(s); }
+  return out;
+}
+const hdPairNow = k => (hdEnemy(k) ? hdPairIn(k, hdSlots(k)) || hdRelayed(k) : null);
+// (the Lone Wolf's pair is Greyfang's place and yours, and you on a flank with it behind is a Bring Down as well: the Pack)
+function hdPairIn(k, s) { return k.def.solo && s.length === 2 && s[0] === 'behind' && (s[1] === 'left' || s[1] === 'right') ? 'bringdown' : hdPairOf(s); }
+function hdMake(k, id, i, p, o = {}) {
+  return Object.assign({ id, x: p.x + (i % 2 ? 40 : -40), y: p.y - 30 + (i > 1 ? 24 : 0), face: 0, slot: null, bond: 0, hp: k.def.houndHp || HOUND.HP, maxHp: k.def.houndHp || HOUND.HP,
+    downUntil: 0, mode: 'run', spectral: false, goal: null, ring: null, spread: i % 2 ? HOUND.SPREAD : -HOUND.SPREAD, orderUntil: 0, driftAt: 0, biteAt: 1 + k.rng() * 2, biteFxUntil: 0,
+    safe: 0, shield: false, leapEnd: 0 }, o);
+}
+function hdSpawn(k, p) { (k.def.hounds || ['rust', 'ash']).forEach((id, i) => k.g.hounds.push(hdMake(k, id, i, p))); }
+function hdRevive(k, h) {
+  const p = mariPos(k);
+  Object.assign(h, { mode: 'run', hp: h.maxHp, downUntil: 0, x: p.x + (h.spread > 0 ? 40 : -40), y: p.y - 30, goal: null, ring: null, driftAt: 0, orderUntil: 0, biteAt: k.now + 1.5, bond: 0 });
+  k.fx('houndUp', { hound: h.id });
+}
+// a hound goes down (a telegraph): it comes back after RESPAWN seconds (Thick Coat: 6)
+function hdDown(k, h) {
+  if (h.mode === 'down') return;
+  h.mode = 'down'; h.hp = 0; h.slot = null; h.bond = 0; h.shield = false;
+  h.downUntil = k.now + (k.talent('houndmaster_thickcoat') ? 6 : HOUND.RESPAWN);
+  k.stats.houndsDown = (k.stats.houndsDown || 0) + 1;
+  k.fx('houndDown', { hound: h.id });
+}
+// the host's 'houndhit': a telegraph resolved over this hound (w: a raidwide that a cover would have stopped). Pets take what a
+// player would: a hound on its way to you (Call Off), in mid-pounce or with a shield up does not go down
+function hdHit(k, d) {
+  const h = k.g.hounds.find(x => x.id === d.h);
+  if (!h || h.spectral || h.mode === 'down' || h.mode === 'guard' || h.mode === 'pounce' || k.now < h.safe) return;
+  if (h.shield) { h.shield = false; k.fx('houndShield', { hound: h.id }); return; }
+  h.hp -= d.w ? HOUND.HIT_WIDE * (k.talent('houndmaster_oldscars') ? 0.7 : 1) : HOUND.HIT;   // (Old Scars: Greyfang takes 30% less from a raidwide)
+  if (h.hp <= 0) hdDown(k, h);
+}
+// the add nearest the enemy you work (Blood Scent): any other enemy in reach of the hounds, never the dummy
+function hdAddNear(k, e) {
+  const list = (k.env.enemiesNear ? k.env.enemiesNear(600) : null) || [];
+  let best = null, bd = Infinity;
+  for (const c of list) {
+    if (!c || c.id === 'dummy' || c.id === e.id) continue;
+    const d = Math.hypot(c.x - e.x, c.y - e.y);
+    if (d < bd) { bd = d; best = c; }
+  }
+  return best;
+}
+// a hound bites (its own timer, the third knife hit, Mark the Quarry): damage, and Bond for it and the pack
+// (o.mult: a bigger bite, o.bond: the Bond it gives, o.ab: a move's own name for the meters)
+function hdBite(k, h, e, o = {}) {
+  const m = (k.perk('houndmaster_w1') && k.has('rendbite') ? 1.1 : 1) * (k.def.houndMult || 1) * (o.mult || 1) * hdFang(k, h);
+  const dmg = (h.spectral ? HOUND.WILD_BITE : HOUND.BITE) * m;
+  k.damage(dmg, { ab: o.ab || HD_BITE, tgt: e.id !== 'dummy' ? e.id : undefined, auto: true });
+  if (hdQuarry(k) && k.talent('houndmaster_bloodscent')) {   // (Blood Scent: the Mark has spread to the nearest add, and every bite bites it too)
+    const ad = hdAddNear(k, e);
+    if (ad) k.damage(dmg, { ab: o.ab || HD_BITE, tgt: ad.id, auto: true });
+  }
+  h.biteFxUntil = k.now + 0.3;
+  if (!h.spectral) {
+    const n = (o.bond != null ? o.bond : HOUND.BITE_BOND) * (hdQuarry(k) ? 2 : 1) * (k.def.bondMult || 1);   // (One Heart: Greyfang's bites give you more Bond)
+    k.gain('bond', n, 100);
+    h.bond = Math.min(100, h.bond + n);
+  }
+  k.stats.bites = (k.stats.bites || 0) + 1;
+  k.fx('bite', { hound: h.id, big: !!o.big });
+  if (!o.echo && !h.spectral && k.talent('houndmaster_littermates')) hdLitter(k, h, e);   // (Littermates)
+}
+// every hound in reach of the enemy bites at once (the third knife hit, the Quarry's first moment)
+function hdBiteAll(k, o = {}) {
+  const e = hdEnemy(k);
+  if (!e) return;
+  const R = hdER(e) + HOUND.REACH;
+  for (const h of hdLiveReal(k)) if (h.mode !== 'guard' && h.mode !== 'pounce' && Math.hypot(h.x - e.x, h.y - e.y) <= R) { hdBite(k, h, e, o); h.biteAt = Math.max(h.biteAt, k.now + 1.2); }
+}
+// send a hound to a slot round the enemy and keep it there for ORDER seconds (through the enemy's turns)
+function hdOrder(k, h, slot) {
+  const e = hdEnemy(k);
+  if (!e) return;
+  h.goal = slot; h.ring = hdFace(k, e) + HD_OFF[slot]; h.orderUntil = k.now + HOUND.ORDER; h.driftAt = k.now + HOUND.ORDER + 4; h.slot = null;
+  if (h.mode !== 'guard' && h.mode !== 'pounce') h.mode = 'run';
+}
+// where the cursor points: the side of the enemy nearest it; on the enemy itself (or no cursor), the flank nearest you
+function hdAimSlot(k, e, h) {
+  const F = hdFace(k, e), aim = k.env.aim ? k.env.aim() : null, p = mariPos(k);
+  if (aim && Math.hypot(aim.x - e.x, aim.y - e.y) > hdER(e) + 24) return hdSlotOf(Math.atan2(aim.y - e.y, aim.x - e.x), F);
+  const s = Math.sin(hdWrap(Math.atan2(p.y - e.y, p.x - e.x) - F));
+  return Math.abs(s) < 0.15 ? (h.spread > 0 ? 'right' : 'left') : s > 0 ? 'right' : 'left';
+}
+// Whistle: Flank
+function hdWhistle(k) {
+  const e = hdEnemy(k), live = hdLiveReal(k);
+  if (!e || !live.length) return null;
+  let h = live.find(x => x.id === k.g.next) || live[0];
+  if (live.length > 1 && k.env.shift && k.env.shift()) h = live.find(x => x !== h);
+  const other = live.find(x => x !== h);
+  const wasFront = h.slot === 'front';
+  k.g.next = (other || h).id;
+  hdOrder(k, h, hdAimSlot(k, e, h));
+  k.fx('whistle', { hound: h.id, kind: 'flank' });
+  if (k.talent('houndmaster_scentline')) hdBite(k, h, e, { mult: 120 / HOUND.BITE, big: true, ab: abBase(k, 'flank') });   // (Scent Line: the hound bites on its way through the boss)
+  if (wasFront && k.perk('houndmaster_w2')) { const fl = abBase(k, 'flank'); if (fl) k.resetCooldown(fl); }   // (item houndmaster_w2: a hound sent from the front, and the Whistle is ready again at once)
+  return h;
+}
+// Whistle: Hold, first press: both hounds freeze where they are (or where they are going)
+function hdHold(k, ab) {
+  const e = hdEnemy(k), g = k.g;
+  if (!e) return;
+  g.holdUntil = k.now + HOUND.HOLD;
+  const F = hdFace(k, e);
+  for (const h of hdLiveReal(k)) {
+    if (!h.goal) { h.ring = Math.atan2(h.y - e.y, h.x - e.x); h.goal = hdSlotOf(h.ring, F); }
+    h.mode = 'hold';
+  }
+  if (ab.charges) k.refundCharge(ab.id); else k.cd[ab.id] = k.now + 0.7;   // (a charged Pounce, Pack Leader: the hold costs no charge)
+  // (the hold itself is not the move: a second press may come at once, and that one pounces)
+  k.fx('whistle', { hound: 'all', kind: 'hold' });
+}
+// Whistle, second press: both hounds pounce, a hit each, and land behind
+function hdPounce(k) {
+  const e = hdEnemy(k), g = k.g;
+  if (!e) return;
+  g.holdUntil = 0; g.pouncing = true;
+  const F = hdFace(k, e), ids = [];
+  for (const h of hdLiveReal(k)) {
+    if (h.mode === 'guard') continue;
+    h.mode = 'pounce'; h.goal = 'behind'; h.ring = F + Math.PI; h.leapEnd = k.now + 1.3; h.orderUntil = k.now + 1.3; h.slot = null; ids.push(h.id);
+  }
+  k.fx('whistle', { hound: 'all', kind: 'pounce' });
+  k.fx('pounce', { hounds: ids });
+}
+function hdLand(k, h, e) {
+  h.mode = 'hold'; h.goal = 'behind'; h.orderUntil = k.now + HOUND.LAND_HOLD; h.driftAt = k.now + HOUND.LAND_HOLD + 4;
+  if (e) k.damage(HOUND.POUNCE * (k.def.houndMult || 1), { ab: abBase(k, 'pounce') || HD_BITE, tgt: e.id !== 'dummy' ? e.id : undefined });
+  k.stats.pounces = (k.stats.pounces || 0) + 1;
+}
+// every pouncer has landed: the pair they made (Pack Leader and the loot hook in here)
+function hdAfterPounce(k) {
+  const pair = hdPairNow(k);
+  if (pair && k.def.pounceBond) k.gain('bond', k.def.pounceBond, 100);   // (Pack Leader: a pounce that forms a pair gives 20 Bond)
+  if (k.talent('houndmaster_huntinghorn')) hdHorn(k);   // (Hunting Horn)
+  if (pair && k.perk('houndmaster_w3')) {   // (Pounce: 10 Bond for every hound that lands in a pair)
+    const n = hdLiveReal(k).filter(h => h.slot).length;
+    k.gain('bond', 10 * n, 100);
+  }
+  k.stats.pounceKeeps = (k.stats.pounceKeeps || 0) + (pair === 'bringdown' ? 1 : 0);
+}
+// Call Off: both hounds run to you and stand guard
+function hdCallOff(k, ab) {
+  const g = k.g;
+  if (k.talent('houndmaster_fetch')) hdFetch(k, ab);   // (Fetch: read the hounds' places before they set off)
+  if (k.talent('houndmaster_guarddog') && hdLiveReal(k).length) { k.shield('self', 200, 8, { ab, tag: 'houndblock' }); k.fx('houndShield', { hound: hdLiveReal(k)[0].id }); }   // (Guard Dog: a hound takes the next hit)
+  g.guardUntil = k.now + HOUND.GUARD;
+  for (const h of hdLiveReal(k)) { h.mode = 'guard'; h.slot = null; h.safe = Math.max(h.safe, k.now + HOUND.GUARD + 0.2); if (k.perk('houndmaster_a2')) h.shield = true; }   // (Call Off's enhancement: a small shield on each)
+  k.mitigate('self', HOUND.GUARD_DR, HOUND.GUARD, { ab });
+  k.buff('guarded', HOUND.GUARD);
+  k.fx('calloff');
+  k.fx('whistle', { hound: 'all', kind: 'call' });
+}
+// the Pack Finisher: the pair decides the move. Wild Hunt: every pair at once (Bring Down's blow, Rend's bleed, Hamstring's weakness), free
+function hdFinish(k, ab) {
+  const e = hdEnemy(k), g = k.g, wild = hdWild(k), pair = hdPairNow(k);
+  if (!wild) k.spend('bond', HOUND.COST);
+  const tgt = e && e.id !== 'dummy' ? e.id : undefined;
+  const key = wild ? 'bringdown' : pair || 'snap';
+  const pot = { rend: HOUND.REND, hamstring: HOUND.HAMSTRING, bringdown: HOUND.BRING, snap: HOUND.SNAP }[key];
+  const prev = g.lastFin ? g.lastFin.pair : null;
+  const alpha = key === 'bringdown' && k.talent('houndmaster_alpha') && hdFullBond(k);   // (Alpha: both hounds at full Bond, and a Bring Down is a sure crit)
+  k.damage(pot, { ab, tgt, autoCrit: alpha });
+  if (wild || key === 'rend') {
+    k.dot('rend', HOUND.REND_TICK, 6, 1.5, { ab: HD_BLEED, tgt });
+    k.buff('rendbite', 6);   // (the loot: a bleed makes the bites hit harder)
+  }
+  if (wild || key === 'hamstring') k.debuffTarget('vuln', HOUND.HAM_VULN, HOUND.HAM_DUR, { ab });
+  for (const h of hdLiveReal(k)) { h.bond = Math.max(0, h.bond - HOUND.COST); if (h.mode !== 'guard' && h.mode !== 'pounce') h.biteFxUntil = k.now + 0.4; }
+  g.lastFin = { pair: key, at: k.now };
+  if (alpha) k.stats.alphas = (k.stats.alphas || 0) + 1;
+  // (Echo Bark: the same pair twice in a row, and the pack bites it again a moment later at 20%)
+  if (k.talent('houndmaster_echobark') && prev === key && key !== 'snap') {
+    k.after(0.4, () => { k.damage(pot * 0.2, { ab, tgt }); for (const h of hdLiveReal(k)) k.fx('bite', { hound: h.id, big: true }); k.stats.echoes = (k.stats.echoes || 0) + 1; });
+  }
+  // (Shared Kill: a finisher on a boss below 30% gives 20 Bond back)
+  if (k.talent('houndmaster_sharedkill')) { const b = bossNow(k); if (b && b.hp != null && b.hp < 0.3) k.gain('bond', 20, 100); }
+  // (item houndmaster_a4: a Snap brings a downed hound back on its feet at once)
+  if (key === 'snap' && k.perk('houndmaster_a4')) for (const h of hdReal(k)) if (h.mode === 'down') hdRevive(k, h);
+  k.stats.finishers = (k.stats.finishers || 0) + 1;
+  k.stats['fin_' + key] = (k.stats['fin_' + key] || 0) + 1;
+  k.fx('finisher', Object.assign({ pair: key }, wild ? { all: 1 } : null));
+  return key;
+}
+// ---- the talents (talents.js TALENTS.houndmaster, rows I-V)
+// Alpha: every hound the kit keeps has its own Bond full (a hound that is down is not full)
+function hdFullBond(k) {
+  const live = hdLiveReal(k);
+  return live.length >= (k.def.hounds ? k.def.hounds.length : 2) && live.every(h => h.bond >= 99.5);
+}
+// Heel Nip: the third knife hit sends the hound nearer to it to the place that makes a pair with the other (a hold, a guard, a pounce or Wild Hunt leaves them be)
+const HD_MATE = { left: ['right'], right: ['left'], front: ['behind'], behind: ['front', 'behind'] };
+function hdNip(k) {
+  const e = hdEnemy(k), live = hdLiveReal(k);
+  if (!e || live.length !== 2 || hdWild(k) || hdHolding(k) || live.some(h => h.mode === 'guard' || h.mode === 'pounce')) return;
+  const F = hdFace(k, e), goal = h => h.goal || (h.ring != null ? hdSlotOf(h.ring, F) : null);
+  const ga = goal(live[0]), gb = goal(live[1]);
+  if (!ga || !gb || hdPairOf([ga, gb])) return;
+  let best = null;
+  for (const [h, o] of [[live[0], live[1]], [live[1], live[0]]]) for (const s of HD_MATE[goal(o)]) {
+    const d = Math.abs(hdWrap(F + HD_OFF[s] - Math.atan2(h.y - e.y, h.x - e.x)));
+    if (!best || d < best.d) best = { h, s, d };
+  }
+  if (best) { hdOrder(k, best.h, best.s); k.stats.nips = (k.stats.nips || 0) + 1; }
+}
+// Fetch: Call Off drags you up to 150 toward the nearest hound, and never into the enemy
+function hdFetch(k, ab) {
+  const p = mariPos(k), e = hdEnemy(k), live = hdLiveReal(k);
+  if (!live.length) return;
+  let h = live[0];
+  for (const x of live) if (Math.hypot(x.x - p.x, x.y - p.y) < Math.hypot(h.x - p.x, h.y - p.y)) h = x;
+  const dist = Math.hypot(h.x - p.x, h.y - p.y), step = Math.min(150, dist - 40);
+  if (step < 20) return;
+  const dest = { x: p.x + (h.x - p.x) / dist * step, y: p.y + (h.y - p.y) / dist * step };
+  if (e) {
+    const keep = hdER(e) + 30, dd = Math.hypot(dest.x - e.x, dest.y - e.y);
+    if (dd < keep) { dest.x = e.x + (dest.x - e.x) / (dd || 1) * keep; dest.y = e.y + (dest.y - e.y) / (dd || 1) * keep; }
+  }
+  kitMove(k, 'point', { ab, x: Math.round(dest.x), y: Math.round(dest.y), d: Math.round(step) });
+}
+// Howl: both hounds hold where they are (as Whistle: Hold's first press does, without its fx and cooldown), so the Hold button now pounces
+function hdFreeze(k) {
+  const e = hdEnemy(k);
+  if (!e) return;
+  k.g.holdUntil = k.now + HOUND.HOLD;
+  const F = hdFace(k, e);
+  for (const h of hdLiveReal(k)) {
+    if (h.mode === 'guard' || h.mode === 'pounce') continue;
+    if (!h.goal) { h.ring = Math.atan2(h.y - e.y, h.x - e.x); h.goal = hdSlotOf(h.ring, F); }
+    h.mode = 'hold';
+  }
+}
+// The Long Chase: the pack runs a lap round the enemy (fx 'longchase' lays four hits a third of a second apart), each quarter bites,
+// and it ends in the Pack pair, both behind
+function hdChase(k, ab) {
+  const e = hdEnemy(k);
+  if (!e) return;
+  for (const h of hdLiveReal(k)) if (h.mode !== 'guard' && h.mode !== 'pounce') hdOrder(k, h, 'behind');
+  for (let q = 1; q <= 4; q++) k.after(q * 0.31, () => {
+    const live = hdLiveReal(k), en = hdEnemy(k);
+    if (live.length && en) hdBite(k, live[(q - 1) % live.length], en, { mult: 250 / HOUND.BITE, bond: 4, big: true, ab });
+  });
+  k.stats.chases = (k.stats.chases || 0) + 1;
+  k.fx('longchase');
+}
+// a telegraph about to land on a hound that is not safe (Call Off glows)
+const hdDanger =k => !!k.env.danger && k.g.hounds.some(h => !h.spectral && h.mode !== 'down' && h.mode !== 'guard' && h.mode !== 'pounce' && k.now >= h.safe && k.env.danger(h.x, h.y, 1.5));
+// one step toward a spot: round the ring (not through the enemy) when near it, straight otherwise
+function hdMove(h, to, e, R, speed, dt) {
+  let nx, ny;
+  const hr = e ? Math.hypot(h.x - e.x, h.y - e.y) : 0;
+  if (e && to.a != null && hr < R + 70 && hr > 20) {
+    const cur = Math.atan2(h.y - e.y, h.x - e.x), da = hdWrap(to.a - cur), mx = speed * dt / Math.max(40, hr);
+    const a = cur + Math.max(-mx, Math.min(mx, da)), r = hr + Math.max(-speed * dt * 0.8, Math.min(speed * dt * 0.8, R - hr));
+    nx = e.x + Math.cos(a) * r; ny = e.y + Math.sin(a) * r;
+  } else {
+    const dx = to.x - h.x, dy = to.y - h.y, L = Math.hypot(dx, dy);
+    if (L < 0.5) return false;
+    const s = Math.min(L, speed * dt * (L > 200 ? 1.5 : 1));
+    nx = h.x + dx / L * s; ny = h.y + dy / L * s;
+  }
+  const moved = Math.hypot(nx - h.x, ny - h.y);
+  if (moved > 0.4) h.face = Math.atan2(ny - h.y, nx - h.x);
+  h.x = nx; h.y = ny;
+  return moved > 0.4;
+}
+function hdTick(k) {
+  const g = k.g, now = k.now, dt = now - (g.lastT ?? now);
+  g.lastT = now;
+  const p = mariPos(k), e = hdEnemy(k);
+  if (!g.hounds.length) hdSpawn(k, p);
+  if (!(dt > 0 && dt < 0.5)) { hdShare(k); return; }
+  g.all = hdWild(k);
+  if (g.spectralUntil && now >= g.spectralUntil) { g.hounds = g.hounds.filter(h => !h.spectral); g.spectralUntil = 0; g.huntUntil = 0; }
+  if (g.guardUntil && now >= g.guardUntil) { g.guardUntil = 0; for (const h of g.hounds) if (h.mode === 'guard') h.mode = 'run'; }
+  const near = !!e && Math.hypot(e.x - p.x, e.y - p.y) < 900;
+  const er = e ? hdER(e) : 70, R = er + HOUND.RING, F = e ? hdFace(k, e) : 0;
+  let turned = false;
+  if (e) { if (g.face0 == null) g.face0 = F; if (Math.abs(hdWrap(F - g.face0)) > HOUND.TURN) { turned = true; g.face0 = F; } }
+  const held = hdHolding(k), engaged = now - k.engagedAt <= ENGINE.AUTO_ENGAGE && (!k.env.canAuto || k.env.canAuto());
+  let pouncers = 0;
+  g.hounds.forEach((h, i) => {
+    if (h.mode === 'down') { if (now < h.downUntil) return; hdRevive(k, h); }
+    h.hp = Math.min(h.maxHp, h.hp + HOUND.REGEN * dt);
+    let to, speed = HOUND.SPEED, ringed = false;
+    if (h.mode === 'guard') { to = now < (g.mountUntil || 0) ? { x: p.x, y: p.y + 6 } : { x: p.x + (i % 2 ? 34 : -34), y: p.y + 22 }; speed = HOUND.GUARD_SPEED; }   // (mounted: Greyfang is under you)
+    else if (e && near) {
+      const locked = held || now < h.orderUntil || h.mode === 'pounce';
+      if (locked && h.goal) { h.ring = F + HD_OFF[h.goal]; h.driftAt = Math.max(h.driftAt, now + HOUND.DRIFT[0] + k.rng() * (HOUND.DRIFT[1] - HOUND.DRIFT[0])); }
+      else if (!locked) {
+        if (turned) h.driftAt = Math.min(h.driftAt, now + 0.4 + k.rng() * 0.8);
+        if (h.ring == null || now >= h.driftAt) { h.goal = hdDriftGoal(k); h.ring = F + HD_OFF[h.goal]; h.driftAt = now + HOUND.DRIFT[0] + k.rng() * (HOUND.DRIFT[1] - HOUND.DRIFT[0]); }
+      }
+      const a = h.ring + (h.spectral ? 0 : h.spread);
+      to = { x: e.x + Math.cos(a) * R, y: e.y + Math.sin(a) * R, a };
+      ringed = true;
+      if (h.mode === 'pounce') speed = HOUND.LEAP;
+    } else { to = { x: p.x + (i % 2 ? 46 : -46), y: p.y + 30 }; h.ring = null; h.goal = null; }
+    const moved = hdMove(h, to, ringed ? e : null, R, speed, dt);
+    if (k.env.collide) k.env.collide(h, 14);
+    const arrived = ringed && Math.hypot(h.x - to.x, h.y - to.y) <= HOUND.ARRIVE;
+    h.slot = arrived ? hdSlotOf(h.ring, F) : null;
+    if (moved && !arrived && ringed && !h.spectral && k.talent('houndmaster_runningbond')) {   // (Running Bond: 5 Bond a second for each hound on its way to a new place, paid out in whole points)
+      g.runBond = (g.runBond || 0) + 5 * dt;
+      if (g.runBond >= 1) { const n = Math.floor(g.runBond); g.runBond -= n; k.gain('bond', n, 100); }
+    }
+    if (!moved && e) h.face = Math.atan2(e.y - h.y, e.x - h.x);
+    if (h.mode === 'pounce') {
+      if (arrived || now >= h.leapEnd) hdLand(k, h, e); else pouncers++;
+    }
+    if (h.mode !== 'guard' && h.mode !== 'pounce') h.mode = now < h.biteFxUntil ? 'bite' : (held || now < h.orderUntil) ? 'hold' : 'run';
+    // the hound's own bite
+    if (e && h.mode !== 'guard' && h.mode !== 'pounce' && now >= h.biteAt) {
+      if (engaged && Math.hypot(h.x - e.x, h.y - e.y) <= er + HOUND.REACH) {
+        hdBite(k, h, e);
+        h.biteAt = now + (h.spectral ? HOUND.WILD_EVERY : HOUND.BITE_EVERY) / (hdQuarry(k) ? HOUND.QUARRY_FAST : 1) * k.hasteMult();
+      } else h.biteAt = now + 0.25;
+    }
+  });
+  if (g.pouncing && !pouncers) { g.pouncing = false; hdAfterPounce(k); }
+  g.pair = hdPairNow(k) || (g.all ? 'bringdown' : null);
+  hdShare(k);
+}
+// tell the world where the hounds are (the host judges telegraphs on them; other players draw them)
+function hdShare(k) {
+  if (!k.env.hounds) return;
+  k.env.hounds(k.g.hounds.map(h => ({ id: h.id, x: Math.round(h.x), y: Math.round(h.y), face: +h.face.toFixed(2), slot: h.slot, mode: h.mode, spectral: h.spectral,
+    hp: Math.round(h.hp), maxHp: h.maxHp, bond: Math.round(h.bond), shield: !!h.shield, ring: h.ring == null ? null : +h.ring.toFixed(2) })));
+}
+
+KITS.houndmaster = {
+  potMult: 1.06,   // balance knob (tools/simulate.js)
+  auto: { kind: 'slash', potency: 40, range: MELEE },
+  gauge: { kind: 'pack', key: 'bond', max: 100, label: 'Bond', w: 190 },
+  init: () => ({ hounds: [], pair: null, bond: 0, holdUntil: 0, markUntil: 0, huntUntil: 0, mountUntil: 0, guardUntil: 0, next: 'rust', step: 0, comboUntil: 0, all: false, spectralUntil: 0, face0: null, lastT: null }),
+  tick: k => hdTick(k),
+  onNotify(k, type, d) { if (type === 'houndhit') hdHit(k, d); },
+  signature: 'The Pack',
+  floor: 'Press Q for the combo. E when it glows. W when it glows, with the cursor off to a side of the boss. D when a hound stands in the red. F with the party\'s burst.',
+  ceiling: [
+    'Your hounds bite on their own and stand where they like: every few seconds each one picks a flank again, so left and right (a pincer) happens about half the time. Whatever pair they hold when you press E is your finisher.',
+    'Pincer (a hound on each flank) is Rend, front and back is Hamstring, both behind is Bring Down. Anything else, Snap. Whistle: Flank sends the next hound to the side of the boss your cursor is over; with the cursor on the boss, the flank nearest you. Shift sends the other hound.',
+    'When the boss turns, free hounds drift round with it and pick again. Whistle: Hold keeps them where they are through a turn; pressed again they pounce, hit, and land behind: Bring Down.',
+    'Bring Down before Mark the Quarry, Hamstring before the party\'s burst so its weakness is up, Rend the rest of the time. Bond is built by every bite and spent 40 at a time: do not let it sit at full.',
+    'Hounds take the boss\'s red like a pet: a hound caught in it goes down for 10s. Call Off sends them to you, and you take less damage while they guard.',
+  ],
+  abilities: [
+    {
+      id: 'knife', name: 'Hunting Knife', type: 'gcd', target: 'enemy', range: MELEE, lock: 0.3, anim: 'attack',
+      desc: 'Three-hit combo on one button: Slash ({d:160}) > Skin ({d:180}) > Gut ({d:230}). The third hit lets both hounds bite at once, and every bite builds Bond.',
+      label: k => ['Slash', 'Skin', 'Gut'][hdStep(k)],
+      fxStep: k => hdStep(k),
+      effect(k) {
+        const step = hdStep(k);
+        k.damage([160, 180, 230][step], { ab: this });
+        if (step === 2) { hdBiteAll(k, { bond: HOUND.KNIFE_BOND, big: true }); if (k.talent('houndmaster_heelnip')) hdNip(k); k.g.step = 0; } else k.g.step = step + 1;
+        k.g.comboUntil = k.now + 15;
+      },
+      fx: { type: 'slash', color: '#c9b18a', r: 52, span: 1.5 },
+    },
+    {
+      id: 'flank', name: 'Whistle: Flank', type: 'ogcd', target: 'none', cd: 2.5, lock: 0.3, anim: 'cast',
+      desc: 'Send the next hound (Rust, then Ash; hold Shift for the other) to where you point: the side of the boss nearest your cursor. With the cursor on the boss it takes the flank nearest you. The hound stays there through the boss\'s turns for 10s. It glows when a hound stands in front of the boss, or when the two hounds make no pair.',
+      usable: k => !!hdEnemy(k) && hdLiveReal(k).length > 0,
+      glow: k => !k.g.all && (k.g.hounds.some(h => !h.spectral && h.slot === 'front') || (hdLiveReal(k).length >= 2 && !k.g.pair)),
+      effect(k) {
+        hdWhistle(k);
+        if (k.talent('houndmaster_drive') && hdQuarry(k)) k.resetCooldown(this);   // (Drive: no cooldown while the Mark lasts)
+      },
+      fx: { type: 'aura', color: '#e8d9a8', r: 30, dur: 0.8 },
+    },
+    {
+      id: 'finisher', name: 'Pack Finisher', type: 'gcd', target: 'enemy', range: MELEE, lock: 0.3, anim: 'big',
+      desc: `Spend 40 Bond; the move is whichever pair the hounds hold. <b>Rend</b> (the hounds on both flanks): {d:${HOUND.REND + 4 * HOUND.REND_TICK}} with a bleed. <b>Hamstring</b> (front and behind): {d:${HOUND.HAMSTRING}}, and the boss takes 5% more damage for ${HOUND.HAM_DUR}s. ` +
+        `<b>Bring Down</b> (both behind): {d:${HOUND.BRING}}. No pair: <b>Snap</b>, {d:${HOUND.SNAP}}. It glows with 40 Bond and a pair held.`,
+      label: k => HD_NAMES[hdWild(k) ? 'bringdown' : hdPairNow(k) || 'snap'],
+      usable: k => hdWild(k) || (k.g.bond || 0) >= HOUND.COST,
+      glow: k => (hdWild(k) || (k.g.bond || 0) >= HOUND.COST) && !!k.g.pair,
+      effect(k) { hdFinish(k, this); },
+      fx: { type: 'slash', color: '#c46a3a', r: 70, span: 2.2 },
+    },
+    {
+      id: 'pounce', name: 'Whistle: Hold', type: 'ogcd', target: 'none', cd: 10, lock: 0.3, anim: 'cast',
+      desc: `Tap: both hounds hold their spot, and will not drift when the boss turns or moves (${HOUND.HOLD}s). Press again: both pounce for {d:${HOUND.POUNCE}} each and land behind the boss, which is a Bring Down pair. The cooldown starts with the pounce.`,
+      label: k => (hdHolding(k) ? 'Pounce' : 'Whistle: Hold'),
+      usable: k => !!hdEnemy(k) && hdLiveReal(k).length > 0,
+      glow: k => hdHolding(k) && k.g.pair !== 'bringdown',
+      effect(k) { if (hdHolding(k)) hdPounce(k); else hdHold(k, this); },
+      fx: { type: 'aura', color: '#c46a3a', r: 34, dur: 0.8 },
+    },
+    {
+      id: 'calloff', name: 'Call Off', type: 'ogcd', target: 'none', cd: 30, lock: 0.3, anim: 'cast',
+      desc: `Both hounds sprint to you and stand guard for ${HOUND.GUARD}s: you take 20% less damage, and nothing can touch them. A hound caught in a boss telegraph goes down for ${HOUND.RESPAWN}s, so this is what saves them. It glows when a telegraph is about to land on a hound.`,
+      usable: k => hdLiveReal(k).length > 0,
+      glow: k => hdDanger(k),
+      effect(k) { hdCallOff(k, this); },
+      fx: { type: 'aura', color: '#b8b2a8', r: 40, dur: 1.2 },
+    },
+    {
+      id: 'quarry', name: 'Mark the Quarry', type: 'ogcd', target: 'none', cd: 60, lock: 0.4, anim: 'big',
+      desc: `Tie a red cloth on the boss: for ${HOUND.QUARRY}s the hounds bite 50% faster and every Bond you gain is doubled. Both hounds bite at once as you do it.`,
+      usable: k => !!hdEnemy(k),
+      effect(k) {
+        k.g.markUntil = k.now + HOUND.QUARRY; k.buff('quarry', HOUND.QUARRY);
+        if (k.talent('houndmaster_cornered')) k.after(HOUND.QUARRY, () => { if (hdLiveReal(k).length) hdPounce(k); });   // (Cornered: the Mark ends in a pounce from both hounds)
+        hdBiteAll(k);
+        k.fx('quarry');
+      },
+      fx: { type: 'aura', color: '#c46a3a', r: 46, dur: 1.5 },
+    },
+  ],
+};
+
+// Wild Hunt (T, a 10s window). Fills from the Bond a finisher spends. Four spectral hounds come out of the dark and take the four
+// sides of the enemy: every pair counts as all three at once (the Pack Finisher is Bring Down's blow with Rend's bleed and
+// Hamstring's weakness as well), and the finisher costs no Bond. The spectral hounds bite too.
+ULTIMATES.houndmaster = {
+  id: 'wildhunt', name: 'Wild Hunt', slot: 7, type: 'ogcd', ult: true, mode: 'window', target: 'enemy', range: RANGED, anim: 'big', icon: 'wildhunt',
+  lock: 0.8, dr: 0.3,
+  burst: 'quarry',   // (bots open it with Mark the Quarry up)
+  charge: { rate: 0.3, keep: 0.5, spend: { bond: 0.07 } },
+  botOk: k => hdLiveReal(k).length > 0 && !!hdEnemy(k),
+  desc: `The pack answers the horn. Four spectral hounds take the four sides of your target for ${HOUND.WILD_DUR}s and bite as they stand. Every pair counts as all three at once: the Pack Finisher is Bring Down's {d:${HOUND.BRING}} with Rend's bleed and Hamstring's weakness as well, and it costs no Bond. ` +
+    'You take 30% less damage and can\'t be knocked back while you sound the horn.' +
+    '<div class="it-ult"><span><u>Charge:</u> 7% for every 100 Bond a finisher spends, and a little on its own while you fight. It never drains; a fall keeps half.</span></div>',
+  effect(k) {
+    const g = k.g, e = hdEnemy(k), p = mariPos(k);
+    g.hounds = g.hounds.filter(h => !h.spectral);
+    g.spectralUntil = k.now + HOUND.WILD_DUR + 0.2; g.huntUntil = k.now + HOUND.WILD_DUR;
+    ['left', 'right', 'front', 'behind'].forEach((slot, i) => {
+      const h = hdMake(k, 'sp' + i, i, p, { spectral: true, goal: slot, spread: 0, orderUntil: k.now + HOUND.WILD_DUR + 5, hp: 1, maxHp: 1, biteAt: k.now + 0.8 + i * 0.3 });
+      h.ring = (e ? hdFace(k, e) : 0) + HD_OFF[slot];
+      g.hounds.push(h);
+    });
+    if (k.perk('houndmaster_w7') && e) for (let i = 0; i < 4; i++) k.damage(HOUND.POUNCE, { ab: HD_BITE, tgt: e.id !== 'dummy' ? e.id : undefined });   // (the loot: the pack opens with a pounce)
+    k.fx('wildhunt');
+  },
+  window: {
+    dur: HOUND.WILD_DUR,
+    onEnd(k) { k.g.spectralUntil = k.now + (k.talent('houndmaster_kingofpack') ? 4 : 0.01); },   // (King of the Pack: the spectral hounds stay 4s more)
+  },
+};
+
+// talents that grant a new move (row III's Howl in Whistle: Flank's place, row V's The Long Chase in Mark the Quarry's)
+TALENT_ABILITIES.houndmaster_howl = { cls: 'houndmaster', ab: {
+  id: 'howl', replaces: 'flank', icon: 'howl', name: 'Howl', type: 'ogcd', target: 'none', cd: 25, lock: 0.4, anim: 'cast', talent: true,
+  desc: `Both hounds throw back their heads: the whole party deals 5% more damage for 8s, and both hounds hold where they stand (${HOUND.HOLD}s). Press the Hold button to pounce from there.`,
+  usable: k => hdLiveReal(k).length > 0,
+  effect(k) {
+    k.partyBuff('dmg', 0.05, 8, { ab: this });
+    hdFreeze(k);
+    k.fx('howl');
+  },
+  fx: { type: 'ring', color: '#fff4d0', r: 60 },
+} };
+TALENT_ABILITIES.houndmaster_longchase = { cls: 'houndmaster', ab: {
+  id: 'longchase', replaces: 'quarry', icon: 'longchase', name: 'The Long Chase', type: 'ogcd', target: 'none', cd: 45, lock: 0.4, anim: 'big', talent: true,
+  desc: 'Send the pack on a lap round the boss: each quarter it passes bites for {d:250} and gives 4 Bond, and the lap ends with both hounds behind the boss, which is a Bring Down pair.',
+  usable: k => !!hdEnemy(k) && hdLiveReal(k).length > 0,
+  effect(k) { hdChase(k, this); },
+  fx: { type: 'aura', color: '#c46a3a', r: 46, dur: 1.5 },
+} };
+
+// ---------------------------------------------------------------- Houndmaster: the specs (specs.js SPECS.houndmaster) and their talent rows VI-VII (talents.js SPEC_TALENTS.houndmaster)
+// Pack Leader: Pounce keeps two charges and a pounce that lands in a pair gives 20 Bond (k.def.pounceBond); Call Off is Relay, the two hounds
+//   trade places (and bite as they break away); Harmony (hdHarmony, the spec's dmgMod) makes a finisher on a pair you did not use last time hit 10% harder.
+// Lone Wolf: Greyfang alone (k.def.hounds, solo, houndHp, houndMult), the pair is its place and yours, One Heart gives half as much Bond again for its bites
+//   (k.def.bondMult), and Whistle: Flank is Mount: for 6s Greyfang is under you, you run quicker (k.def.moveMult), the knife is a mounted charge,
+//   and the same button is Ride Down (the bar swaps to it, hdSyncBar), which ends the ride with a blow. The cooldown starts with the dismount.
+const HDS = { RELAY_SAFE: 1.6, LITTER: 0.2, HORN: 1.5, TAG: 20, MOUNT: 6, PAUSE: 0.5, CHARGE: 260, RIDE: 550, LEAP: 220, SPEED: 1.5, HARMONY: 0.1 };
+const hdMounted = k => k.now < (k.g.mountUntil || 0);
+const hdRelayed = k => (k.g.relayHold && k.now < k.g.relayHold.until ? k.g.relayHold.pair : null);
+
+// Relay: the two hounds trade places (each keeps its order for as long as one lasts), safe on the way, and both bite as they break away
+function hdRelay(k, ab) {
+  const e = hdEnemy(k), live = hdLiveReal(k), g = k.g;
+  if (!e || live.length < 2) return;
+  const F = hdFace(k, e), [a, b] = live;
+  g.relayHold = { pair: hdPairNow(k), until: k.now + HDS.RELAY_SAFE };   // (the pair holds through the swap: the finisher right after a Relay still has it)
+  const slotOf = h => h.goal || hdSlotOf(Math.atan2(h.y - e.y, h.x - e.x), F);
+  const sa = slotOf(a), sb = slotOf(b);
+  for (const [h, to] of [[a, sb], [b, sa]]) {   // (not hdOrder: a Relay does not lock the hounds for ten seconds, only long enough to get there)
+    h.goal = to; h.ring = F + HD_OFF[to]; h.slot = null; h.orderUntil = Math.max(h.orderUntil, k.now + 3); h.driftAt = Math.max(h.driftAt, k.now + 5);
+    if (h.mode !== 'guard') h.mode = 'run';
+    h.safe = Math.max(h.safe, k.now + HDS.RELAY_SAFE);
+  }
+  hdBiteAll(k, { big: true });
+  g.relayAt = k.now;
+  if (k.talent('houndmaster_tagteam')) g.tagUntil = k.now + HDS.TAG;   // (Tag Team: the next finisher counts every pair)
+  k.stats.relays = (k.stats.relays || 0) + 1;
+  k.fx('relay');
+}
+// Harmony: a finisher on a pair you did not use last time (and its bleed) hits 10% harder
+function hdHarmony(k, o) {
+  const ab = o && o.ab;
+  if (!ab || !k.def.harmony) return 0;
+  if (ab.id === 'finisher' && !o.dot) {
+    const key = hdWild(k) ? 'bringdown' : hdPairNow(k) || 'snap', l = k.g.lastFin;
+    k.g.harm = !l || l.pair !== key;
+  }
+  return (ab.id === 'finisher' || ab.id === 'rend') && k.g.harm ? HDS.HARMONY : 0;
+}
+// after any move of a spec: the finisher's riders (Tag Team, Pincer Drill)
+function hdSpecAfter(k, ab) {
+  if (ab.id !== 'finisher' || !k.g.lastFin) return;
+  const g = k.g, e = hdEnemy(k), tgt = e && e.id !== 'dummy' ? e.id : undefined, key = g.lastFin.pair, wild = hdWild(k);
+  let rend = wild || key === 'rend';
+  if (k.talent('houndmaster_tagteam') && k.now < (g.tagUntil || 0)) {   // (Tag Team: after a Relay the next finisher counts every pair: its own blow, with Rend's bleed and Hamstring's weakness)
+    g.tagUntil = 0;
+    if (!rend) { k.dot('rend', HOUND.REND_TICK, 6, 1.5, { ab: HD_BLEED, tgt }); k.buff('rendbite', 6); rend = true; }
+    if (!wild && key !== 'hamstring') k.debuffTarget('vuln', HOUND.HAM_VULN, HOUND.HAM_DUR, { ab });
+    k.stats.tagTeams = (k.stats.tagTeams || 0) + 1;
+  }
+  if (rend && e && k.talent('houndmaster_pincerdrill')) {   // (Pincer Drill: Rend's bleed jumps to an add)
+    const ad = hdAddNear(k, e);
+    if (ad) { k.dot('rend2', HOUND.REND_TICK, 6, 1.5, { ab: HD_BLEED, tgt: ad.id }); k.stats.drills = (k.stats.drills || 0) + 1; }
+  }
+}
+// Littermates: one hound bites, and the other bites too one time in five
+function hdLitter(k, h, e) {
+  if (k.rng() >= HDS.LITTER) return;
+  const o = hdLiveReal(k).find(x => x !== h && x.mode !== 'guard' && x.mode !== 'pounce' && Math.hypot(x.x - e.x, x.y - e.y) <= hdER(e) + HOUND.REACH);
+  if (!o) return;
+  hdBite(k, o, e, { echo: true, bond: 0 });
+  k.stats.litters = (k.stats.litters || 0) + 1;
+}
+// Hunting Horn: a pounce that has landed sounds the horn: the boss's face swings toward you for a beat (the host, fight.js 'horn'), and the hounds
+// keep to the side it faced when the horn sounded, so the swing does not send them round the boss
+function hdHorn(k) {
+  const e = hdEnemy(k);
+  if (!e) return;
+  k.g.hornFace = hdFace(k, e); k.g.hornUntil = k.now + HDS.HORN + 0.3;
+  k.env.emit({ type: 'horn', dur: HDS.HORN });
+  k.stats.horns = (k.stats.horns || 0) + 1;
+}
+// Fang and Knife: a knife hit makes the next bite of Greyfang's double
+function hdFang(k, h) { if (k.g.fang > k.now && !h.spectral) { k.g.fang = 0; return 2; } return 1; }
+
+// ---- Lone Wolf: the ride
+// Mount: Greyfang goes under you for a few seconds. The cooldown is left for the dismount to start (Ride Down's own press does, or the ride running out)
+function hdMount(k, ab) {
+  const g = k.g, p = mariPos(k), dur = HDS.MOUNT + (k.talent('houndmaster_saddleborn') ? 2 : 0);
+  g.mountUntil = k.now + dur; g.mountAt = k.now; g.pouncing = false; g.holdUntil = 0;
+  for (const h of hdLiveReal(k)) { h.mode = 'guard'; h.slot = null; h.goal = null; h.ring = null; h.x = p.x; h.y = p.y + 6; h.safe = Math.max(h.safe, g.mountUntil + 0.3); }
+  k.buff('mounted', dur);
+  k.cd[ab.id] = k.now + HDS.PAUSE;
+  k.stats.mounts = (k.stats.mounts || 0) + 1;
+  k.fx('mount');
+  hdSyncBar(k);
+}
+// the ride ends (Ride Down, or it ran out): Greyfang is back on its feet at your side and picks a flank
+function hdDismount(k, rode) {
+  const g = k.g;
+  if (!g.mountUntil) return;
+  g.mountUntil = 0; k.clear('mounted');
+  const p = mariPos(k);
+  for (const h of hdLiveReal(k)) {
+    if (h.mode === 'guard' && !(k.now < (g.guardUntil || 0))) h.mode = 'run';
+    h.x = p.x; h.y = p.y + 6; h.goal = null; h.ring = null; h.driftAt = 0; h.orderUntil = 0; h.biteAt = Math.max(h.biteAt, k.now + 1); h.safe = Math.max(h.safe, k.now + 0.6);
+  }
+  const mt = k.abById('mount');
+  if (!rode && mt) k.cd[mt.id] = Math.max(k.cd[mt.id] || 0, k.now + k.recast(mt));
+  hdSyncBar(k);
+}
+// the mounted charge: your blow, and Greyfang under you bites with it
+function hdMountedCharge(k, ab) {
+  k.damage(HDS.CHARGE, { ab });
+  const e = hdEnemy(k), h = hdLiveReal(k)[0];
+  if (e && h) hdBite(k, h, e, { bond: HOUND.KNIFE_BOND, big: true });
+}
+// Ride Down: the leap off, a blow at the enemy; with Leap Off you land where you aim
+function hdRideDown(k, ab) {
+  const e = hdEnemy(k), tgt = e && e.id !== 'dummy' ? e.id : undefined;
+  k.damage(HDS.RIDE, { ab, tgt });
+  if (k.talent('houndmaster_leapoff')) {   // (Leap Off: short of the cursor, but no further than a leap)
+    const aim = k.env.aim ? k.env.aim() : null, p = mariPos(k);
+    if (aim) {
+      const d = Math.hypot(aim.x - p.x, aim.y - p.y), L = Math.min(d, HDS.LEAP);
+      if (L > 30) kitMove(k, 'point', { ab, x: Math.round(p.x + (aim.x - p.x) / d * L), y: Math.round(p.y + (aim.y - p.y) / d * L), d: Math.round(L) });
+    }
+  }
+  k.stats.rideDowns = (k.stats.rideDowns || 0) + 1;
+  hdDismount(k, true);
+  k.fx('ridedown');
+}
+// the bar while you ride: Mount's button is Ride Down (same slot and cooldown, its own name and icon; other players are told 'ridedown')
+const HD_RIDE = new WeakMap();
+function hdRideFace(a) {
+  let f = HD_RIDE.get(a);
+  if (!f) {
+    f = Object.defineProperties({}, Object.getOwnPropertyDescriptors(a));
+    const set = (n, v) => Object.defineProperty(f, n, { value: v, writable: true, configurable: true, enumerable: true });
+    set('name', 'Ride Down'); set('icon', 'ridedown'); set('fxId', 'ridedown'); set('target', 'enemy'); set('range', RANGED); set('anim', 'big');
+    set('desc', `Leap off Greyfang at the enemy for {d:${HDS.RIDE}}. The ride ends and Mount's cooldown starts.`);
+    set('usable', k => !!hdEnemy(k)); set('glow', () => true);
+    set('effect', function (k) { hdRideDown(k, this); });
+    set('fx', { type: 'slash', color: '#b8b2a8', r: 66, span: 2.2 });
+    HD_RIDE.set(a, f);
+  }
+  return f;
+}
+function hdSyncBar(k) {
+  if (!k.def.solo) return;
+  const base = k.baseAbilities, want = hdMounted(k) ? base.map(a => (a.id === 'mount' ? hdRideFace(a) : a)) : base;
+  if (k.abilities.length === want.length && k.abilities.every((a, i) => a === want[i])) return;
+  k.swapBar(want);
+}
+// every tick of a spec: the ride running out, Greyfang kept under you, the bar following
+function hdSpecTick(k) {
+  const g = k.g;
+  if (g.mountUntil) {
+    if (k.now >= g.mountUntil) hdDismount(k, false);
+    else for (const h of hdLiveReal(k)) if (h.mode !== 'guard') h.mode = 'guard';
+  }
+  hdSyncBar(k);
+}
+if (typeof module !== 'undefined') Object.assign(module.exports, { HDS, hdDanger, hdMountedCharge, hdMounted, hdRelay, hdHarmony, hdSpecAfter, hdMount, hdDismount, hdRideDown, hdRideFace, hdSyncBar, hdSpecTick });
+
+if (typeof module !== 'undefined') Object.assign(module.exports, { HOUND, HD_OFF, hdHolding, hdPairOf, hdSlotOf, hdTick, hdWrap, hdLiveReal, hdWild, hdPairNow, hdOrder, hdDown, hdHit, hdEnemy, hdFace });
+
 // every tank's taunt carrier (TAUNT_CARRY, next to TAUNT): a spec's kit copies it from the base kit (specs.js specKit)
 for (const [cls, id] of Object.entries(TAUNT_CARRY)) if (KITS[cls]) KITS[cls].tauntOn = id;
 // ... and its Ultimate (ULTIMATES, next to TAUNT), copied the same way

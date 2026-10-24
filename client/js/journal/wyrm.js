@@ -24,6 +24,7 @@
     tidecaller: "Past the road the sky is the larger water, and I had not learned its tides. The Wyrm walked after the knight, then rose and came down wherever he pleased, and I mended half a swell behind him all night. Tomorrow I plan the water for his flights.",
     lanternkeeper: "Past the road the sky is the larger dark, and I had never lit it. The Wyrm came down wherever he pleased, and my lanterns were never where we needed them. Tomorrow I light where he will land, not where he has been. Keep your light.",
     kenseier: "A dragon has no rhythm worth the name: he walks, he rises, he comes down where he pleases. I spent the night learning the one beat he kept, his claws on me, and watching the sky for the rest. Tomorrow I count the Wyrm. Catch the beat.",
+    houndmaster: "Black dragon, flies when he likes and lands where he pleases. No tracking a thing that won't stay put. Both dogs flat on their bellies the whole night. Tomorrow I watch where he comes from, not where he went.",
   },
   // the first time this hero beats him
   win: {
@@ -49,6 +50,7 @@
     tidecaller: "Vhalgrath is down, and the crater lies quiet as a dry harbour. The water was high every time he fell on us, and it held. A long way past the road, and the sea gives back.",
     lanternkeeper: "Vhalgrath is down, and the crater is cooling. Four of us climbed out of it, and the lanterns I set were still burning when we left. A long way from any street. I'll leave one burning on the rim.",
     kenseier: "The Wyrm is down and the crater is quiet. He was the first enemy whose rests I had to learn as well as his strokes. I sat on a warm stone and let the ash fall. Ash settles.",
+    houndmaster: "Dragon's down and the crater's gone quiet. Ash found a warm stone and Rust found the bones. Good dogs. Had him by supper, a late and smoky one.",
   },
   moves: {
     "Tyrant's Roar": { hard: false, learned: {
@@ -74,6 +76,7 @@
       tidecaller: "The roar rolled over every one of us, and there is no hiding from sound. We stood close, and I let the water climb as he lifted his head, so it was already high when the roar broke. A gull rides out the loudest gale.",
       lanternkeeper: "The roar rolled over every one of us, and there is no hiding from sound. We stood close inside my glows, and I let every lantern burst as he lifted his head, so the roar fell on a party already mended.",
       kenseier: "He roared, and it reached every one of us. A blade cannot turn a sound, so we gathered by the healer and took it standing. Mended first, then still. That answers all such blows.",
+      houndmaster: "He roared, and it reached every one of us. Nowhere to hide from a noise. Stood by the healer, dogs against my legs, mended first, then took it upright.",
     } },
     'Rending Claws': { hard: false, learned: {
       bastion: "The claws came down on me alone, a wide rake in front of him. I waited for the shoulder to drop, shield up in the last instant, and kept the others out of the arc. Claws like that make the Barrow King seem a gentleman.",
@@ -98,6 +101,7 @@
       tidecaller: "The claws were meant for the knight alone, a wide rake in front of him, so the rest of us kept to his sides. I watched his shoulder and had the water high around the knight before it fell, not after.",
       lanternkeeper: "The claws were for our knight alone, a wide rake in front of him, so the rest of us kept to his sides. I had a lantern hung on the knight before the blow and kept its wick gold.",
       kenseier: "The claws came down on me alone, a wide rake before him. I met them with the blade as they landed, and the others stayed out of the arc. Each rake had the same count, and by the end I answered it without thinking.",
+      houndmaster: "Claws came down on the shield-man, a wide rake in front of him. Kept to his flank, outside the rake. Dogs too. Don't send a hound at his face.",
     } },
     'Ember Breath': { hard: false, learned: {
       bastion: "He breathed at one of us, not me, and the fan of fire followed them. I kept the line clear of the long flames and off the glowing ground it left behind. Fire does not respect a post. I do.",
@@ -122,6 +126,7 @@
       tidecaller: "The fire hunted one of us and followed whoever it chose across the floor. They waited for the last moment and stepped out sideways; the rest kept clear of its length, and all of us kept off the glowing ground it left. Scorched floor stays hot a long while.",
       lanternkeeper: "The fire hunted one of us and followed them across the floor. They waited until the last moment and stepped out sideways. The rest kept clear of its length, and I set my lanterns well away from the scorch it left.",
       kenseier: "He breathed at one of the others and the fan of fire followed them. We kept clear of the long flames and off the glowing ground it left. It is a long stroke, not a quick one. Plenty of time to leave.",
+      houndmaster: "He breathed on one of us, flame following them nearly to the last. Sidestepped late, never backed away. The scorched floor lingers, so keep the hounds off it. Heel.",
     } },
     'Tail Lash': { hard: false, learned: {
       bastion: "He swept the tail round behind him, not in front. I held my place at his front and the line stood to his sides. Whoever stood at his back learned it quickly. A tail is a rear guard of its own.",
@@ -146,6 +151,7 @@
       tidecaller: "The tail swept the ground behind him, where nobody with sense ought to be. We kept to his front and his flanks, and the ones who wandered round his back came away rinsed. The stern of a ship is the part that swings.",
       lanternkeeper: "The tail swept the ground behind him, where nobody with sense stands. We kept to his front and his flanks, and my lanterns went there too, never at his back.",
       kenseier: "He swept the tail behind him, not before. I kept my place at his front, and the others stood to his sides. Whoever stood at his back learned the beat quickly. A tail is a second blade, and it sits where the first is not.",
+      houndmaster: "Tail swung behind him, wide. Kept to his flank and sent the dogs the same way. Anyone who stood at his back found out. Hounds too, if you're careless.",
     } },
     'Magma Burst': { hard: false, learned: {
       bastion: "The marks came up over the others, not me. I held his front while each took their own patch of floor and stepped off their own pool when it struck. A quiet job, for once: keeping him pointed away.",
@@ -170,6 +176,7 @@
       tidecaller: "Marks rose over every head but the knight's. Each of us walked off to a patch of floor of our own, away from the rest, and stepped out of the pool the moment it broke, for the pools stay. A quiet shore is a safe one.",
       lanternkeeper: "Marks rose over every head but the knight's. Each of us went to a patch of floor alone, and stepped out of the pool the instant it burst, since the pools stay. I made sure no lantern of mine sat in one.",
       kenseier: "Marks rose over the others and left me alone. I kept his head turned away from them while they each went to their own patch and stepped clear of the pool as it landed. A quiet duty: only holding his eyes.",
+      houndmaster: "Marks over the others, none on me. Kept his head turned from them while they each went to their own patch and stepped clear of the pool. Dull job, a necessary one.",
     } },
     'Cinder Feast': { hard: false, learned: {
       bastion: "He marked one of us for a hit that had to be shared. I closed the line on them and took my share, standing in the ring, and we split it. Duty is lighter in numbers. I would not say so to a recruit.",
@@ -194,6 +201,7 @@
       tidecaller: "He marked one of us for a blow too heavy to bear alone, and the blue ring on the floor was the answer. We all stood in it together, I too, and shared it into a size the water could mend. Many drops, one tide. Mind the tide.",
       lanternkeeper: "He marked one of us for a blow too heavy to bear alone, and the blue ring on the floor was the answer. We all stood in it together, and I put a lantern in the middle. Four of us, one ring, the blow split four ways.",
       kenseier: "He marked one of the others for a hit that wanted sharing. We closed on them, I with the rest, and split it. Each took a part, and a hard stroke became a light touch.",
+      houndmaster: "One of the others was marked for a hit that wants sharing. Closed on them, dogs too, and split it. Many mouths to a carcass. Light work.",
     } },
     'Dragonfall': { hard: false, learned: {
       bastion: "He rose, and embers drew a line across the floor from the sky to a scorched pit. The line and the circle at its end were what hurt. I held the ground, clear of both. I refuse to be impressed by a falling dragon. I am a little impressed.",
@@ -218,6 +226,7 @@
       tidecaller: "He climbed out of sight, and a trail of embers drew his road across the floor to the ring where he would land. The road hurts and so does the ring, so we stood clear of both. A storm read early can be sailed round.",
       lanternkeeper: "Up he went out of sight, and a trail of embers drew his road across the floor to the ring where he would come down. Road and ring both hurt. I walked the party out of the way of both and lit nothing there.",
       kenseier: "He rose, and embers drew a line across the floor from the sky to a scorched pit. The line and the circle at its end were what hurt. I stayed clear of both. Even a falling dragon announces where he will land, which is more than most do.",
+      houndmaster: "Ember line from the rim down to one of three pits, ring at the far end. Stayed clear of both, sideways, and called the dogs off the line. He tells you where he'll land. Be elsewhere.",
     } },
     'Twin Pass': { hard: false, learned: {
       bastion: "Two lines of embers at once. He flew the first without landing, then came round on the second and came down. Clear of the first was not enough. I moved twice with no rest between. A dragon gives a man no time to form up.",
@@ -242,6 +251,7 @@
       tidecaller: "Two roads of ember at once: he flew the first and came down on the second. We left the first road and then the second without a pause between, like stepping over two rip channels in a row. Rest came after, with the water settled.",
       lanternkeeper: "Two roads of ember at once: he flew over the first and came down on the second. We left the first and then the second without a pause between, and I set my lantern beyond both, where we would be after.",
       kenseier: "He flew two ember lines at once: the first overhead, no landing, then round onto the second to come down. Leaving the first was not enough. I moved, and moved again before I could rest. The second step is the one a lazy swordsman forgets.",
+      houndmaster: "Two ember lines. First he only passes, second he lands. Out of the first, then out of the second. Don't stop between. Dogs don't know there's a second, so I called them twice.",
     } },
     'The Roost': { hard: false, learned: {
       bastion: "He perched on the rim and shook his burning scales onto the floor, three at a time, and two whelps came down with them. The line kept moving off the scales and put the whelps down. Standing still would have been the first mistake.",
@@ -266,6 +276,7 @@
       tidecaller: "He perched on the rim and shook burning scales down in threes, always one over someone, and two whelps came with them. We kept walking off the scales and put the whelps down before he dropped. I fed the water small and often while it rained.",
       lanternkeeper: "He perched on the rim and shook burning scales down in threes, always one over someone, with two whelps alongside. We kept walking off the scales and put the whelps down before he dropped. My lanterns trailed behind us.",
       kenseier: "He perched on the rim and shook burning scales loose, three at a time, with two whelps falling among them. We kept stepping off the scales and cut the whelps down. The one who stops to watch is the one who burns.",
+      houndmaster: "He perched on the rim and shook burning scales down, three at a time, two whelps among them. Kept stepping off scales and put the dogs on the whelps. Down before he drops. Good dogs.",
     } },
     'Crater Boils': { hard: false, learned: {
       bastion: "The ring of floor by the rim began to glow, and it stayed that way. From then on we fought on the inner ground only. I kept the line in from the edge for the rest of the night. A smaller yard to drill in, but a yard.",
@@ -290,6 +301,7 @@
       tidecaller: "The outer ring of the floor began to boil and never stopped. We kept inside it for the rest of the night, closer together, which suited me; the water goes further in a smaller pool. The rim is a shore I no longer walk.",
       lanternkeeper: "The rim of the floor began to boil and never stopped. After that we fought in a smaller circle, and I drew the lanterns in with us. The same light goes further in a smaller room. The edge is a street I no longer walk.",
       kenseier: "The ring of floor near the rim began to glow and kept glowing. After that we fought on the inner ground and never the edge. Less floor, and a floor I am used to.",
+      houndmaster: "Floor by the rim started glowing and kept it. After that we fought on the inner ground, never the edge. Smaller field, shorter lanes. Keep the hounds in from the rim.",
     } },
     'Twin Breath': { hard: false, learned: {
       bastion: "Two fans of fire at two of us, the second a heartbeat after the first. The line watched the first go and did not step into the second. Eyes up before feet. My sergeant's rule, borrowed.",
@@ -314,6 +326,7 @@
       tidecaller: "Two fans of fire at two of us, one right behind the other. We stepped sideways out of the first and looked before the next step, for the second lay waiting. The foam of the first wave hides the second.",
       lanternkeeper: "Two fans of fire, one hard on the heels of the other, each aimed at one of us. Sidestep the first, then look before you step again: the second was waiting. My lantern went clear of the first before I put it down.",
       kenseier: "Two fans of fire at two of us, the second a heartbeat after the first. We watched the first go and did not step into the second. Read the second stroke before leaving the first.",
+      houndmaster: "Two fans of fire at two of us, one right after the other. Watched the first go and did not hop into the second. Dogs held. Read both before you run.",
     } },
     'Heart Burn': { hard: false, learned: {
       bastion: "The Heart opened and he could not be hurt. Scorch marks bloomed at the three pits one after another, and the last one marked where the fire would not reach. The line stood round it, off the mark. Held.",
@@ -338,6 +351,7 @@
       tidecaller: "The Heart opened and he could not be hurt. Three scorches bloomed one after another, and the last marked the one island the great fire would spare. Its quiet ground is wider than the scorch, so we gathered round the mark, never on it, with the water brimming. Wait for the water.",
       lanternkeeper: "The Heart opened and he could not be hurt. Three scorches bloomed one after another, and the last marked the one island the great fire would spare. We gathered round the mark, never on it, and I kept the wicks full against the heat.",
       kenseier: "The Heart opened and he was beyond harm. Marks of scorch bloomed at the three pits in turn; the last named the place the fire would spare. We stood about it, never on it. Ash settles.",
+      houndmaster: "Heart opened and he was beyond harm. Scorch showed at the three pits in turn, the last where the fire spares. Stood around it, not on it. Hard to wait. Easy to be wrong.",
     } },
     'Wingbeat': { hard: true, learned: {
       bastion: "His wings beat as he flew, and everything near the line was shoved away from it. I stood far enough from the line that it only nudged me, and held my footing. A man can be moved. The trick is to be asked politely.",
@@ -362,6 +376,7 @@
       tidecaller: "On the hard nights his wings shoved everyone near the flight line outward, toward the wall. Well back is not the same as merely clear: we stood far off from the line and felt only a nudge. Big water pushes everything near it.",
       lanternkeeper: "The hard nights added a wingbeat that shoved anyone near his flight line out toward the wall. Merely clear was not enough; far was. We stood far, felt a nudge, and I kept my lanterns back there with us.",
       kenseier: "His wings beat as he flew, and everything near the line was shoved away from it. I stood far enough from it that it only nudged me. A push is not a wound. Let it carry you, then plant your feet again.",
+      houndmaster: "Wings beat and everything near the line was thrown clear. Stood well back so it only nudged me, dogs behind. A push isn't a wound. Plant your feet again.",
     } },
     'Cinder Rain': { hard: true, learned: {
       bastion: "Embers fell across the crater, each in a little circle that burned afterwards. I held my ground, watched for the circles, and moved only when one landed near me. A man under rain does not need to run.",
@@ -386,6 +401,7 @@
       tidecaller: "Embers fell all over the crater, each leaving a small pool that burned. I kept walking, stepped round each as it landed, kept off the pools afterwards, and fed the water in little drops. Rain is patient, and so are we.",
       lanternkeeper: "Embers fell all over the crater, each leaving a small pool that burned. I kept walking, stepped round each one as it landed, and kept my lanterns off the pools. Nobody stood still under that rain.",
       kenseier: "Each ember had its small circle drawn before it fell, and burned the ground after. I stood quiet and stepped aside only for the ones that came near. Rain asks no one to run, only to be elsewhere.",
+      houndmaster: "Each ember had its small circle drawn before it fell. Kept moving, stepped out of those that came near, and kept the dogs moving too. Pools stay a while. Mind them.",
     } },
     'Heart Flare': { hard: true, learned: {
       bastion: "The Heart flared. One of us was marked for a hit we had to share, so I closed the line on them; and the moment it landed we scattered, each to our own patch. Two orders in one breath. The line took both.",
@@ -410,6 +426,7 @@
       tidecaller: "A ring over one of us to be shared, and we closed on it together. The moment it landed, marks fell over every head and we scattered, each to our own ground. In, then out, like the tide, and a good singer knows which half she is in.",
       lanternkeeper: "A ring over one of us, to be shared, and we closed in on it together. The moment it landed, marks fell over every head and we scattered, each to our own ground. In first, then out. I left a lantern at the ring and walked away from it.",
       kenseier: "The Heart flared. One of the others was marked for a blow that wanted sharing, so we closed on them, and once it landed we parted, each to a patch of our own. Together, then apart: two beats.",
+      houndmaster: "Heart flared. One of the others was marked to share, so we closed on them. Then marks on everyone, and each went to their own patch. Together, then apart. Dogs the same.",
     } },
   },
 };

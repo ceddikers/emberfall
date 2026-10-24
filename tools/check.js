@@ -687,6 +687,16 @@ function kenseierCheck() {
   else fail('Kenseier: deflect timing, Posture, Break, bypasses', out.slice(-900));
 }
 
+// ---------------------------------------------------------------- 3g. the Houndmaster's hounds (tools/houndmaster-test.js)
+// The pair the hounds hold decides the finisher, free hounds drift and held ones do not, Hold and pounce, Call Off, Wild Hunt, a telegraph
+// downing a hound (host and kit), the 'hounds' message, and a Houndmaster bot in a headless raid.
+function houndmasterCheck() {
+  const r = spawnSync(process.execPath, [path.join(__dirname, 'houndmaster-test.js')], { cwd: ROOT, encoding: 'utf8' });
+  const out = (r.stdout || '') + (r.stderr || '');
+  if (r.status === 0 && /Houndmaster OK/.test(out)) pass('Houndmaster: pairs, drift and hold, pounce, Call Off, Wild Hunt, the hounds on the host', out.trim().split(/\r?\n/).pop());
+  else fail('Houndmaster: pairs, drift and hold, pounce, Call Off, Wild Hunt, the hounds on the host', out.slice(-900));
+}
+
 // ---------------------------------------------------------------- 3e. the PvP Arena (tools/pvp-sim.js)
 // A few bot duels, a 2v2 and a capture the flag: every match ends (a knockout, captures or the clock) without errors, never
 // in a blink, never past the clock.
@@ -811,6 +821,7 @@ async function heavy() {
   try { timelines(); } catch (e) { fail('Timelines checked', e.stack); }
   try { hollowCheck(); } catch (e) { fail('Hollow checked', e.stack); }
   try { kenseierCheck(); } catch (e) { fail('Kenseier checked', e.stack); }
+  try { houndmasterCheck(); } catch (e) { fail('Houndmaster checked', e.stack); }
   try { journalCheck(); } catch (e) { fail('Journals checked', e.stack); }
   try { thresherArcCheck(); } catch (e) { fail('Thresher arc checked', e.stack); }
   try { featsCheck(); } catch (e) { fail('Feats checked', e.stack); }

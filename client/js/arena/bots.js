@@ -1871,6 +1871,87 @@ BOT_CLASS.thresher = {
   },
 };
 
+// ======================================================================= Houndmaster (damage, class 23)
+// Cycles the pairs Pincer (Rend) > Surround (Hamstring) > Pack (Bring Down): points the Whistle at the side each hound is missing from
+// the pair (the hound it sends is the next one: bot.shift stays off), a Hold and a pounce for the Pack when the key is ready; Call Off
+// the moment a telegraph is about to land on a hound; the finisher once its pair stands (or Bond is going to waste); Mark the Quarry
+// with the party's burst. Wild Hunt is pressed through BotAI.ult (burst: with the Quarry up) and its free finishers are simply pressed.
+const HD_BOT_WANT = [['left', 'right'], ['front', 'behind'], ['behind', 'behind']];
+const HD_BOT_PAIR = ['rend', 'hamstring', 'bringdown'];
+// A Lone Wolf bot (Greyfang alone, so the pair is its place and the bot's own): it stands on the flank opposite Greyfang's (any flank when Greyfang
+// is behind, which is a Pack), puts Greyfang behind with a Hold and a pounce in the party's burst, rides on every Mount, charges with the knife and
+// leaps off (Ride Down) after two charges or just before the ride ends. Call Off the moment a telegraph is about to land on Greyfang, Mark the Quarry with the burst.
+function hdSoloAct(bot, k, view) {
+  const idx = id => k.abilities.findIndex(a => a.id === id || a.replaces === id);
+  const ok = i => { const a = k.abilities[i]; return i >= 0 && !!a && k.usable(a) && k.readyIn(a) <= 0.0001 && k.available(a); };
+  const weave = k.gcdRemaining() > 0.55 && !k.cast && k.lockUntil <= k.now;
+  const W = idx('flank'), E = idx('finisher'), R = idx('pounce'), D = idx('calloff'), F = idx('quarry'), Q = idx('knife');
+  const e = hdEnemy(k), gf = hdLiveReal(k)[0], g = k.g, riding = hdMounted(k);
+  if (weave && e) {
+    if (riding) {
+      if (ok(W) && (k.now - g.mountAt >= 4.6 || g.mountUntil - k.now < 1.3)) return W;   // (Ride Down)
+    } else {
+      if (ok(D) && gf && gf.mode !== 'guard' && gf.mode !== 'pounce' && BotAI.dollDanger(view, gf.x, gf.y, 1.6)) return D;
+      if (W >= 0 && k.abilities[W].id === 'howl' && ok(W) && (view.burst || view.t - (bot.hdHAt || 0) > 30)) { bot.hdHAt = view.t; return W; }
+      if (ok(F)) {
+        if (bot.hdQAt == null) bot.hdQAt = view.t;
+        if (view.burst || view.t - bot.hdQAt > 20) { bot.hdQAt = null; return F; }
+      } else bot.hdQAt = null;
+      if (view.burst && gf && ok(R) && (hdHolding(k) || gf.slot !== 'behind')) return R;   // (a hold, then the pounce that puts Greyfang behind)
+      if (W >= 0 && k.abilities[W].id === 'mount' && ok(W) && gf && gf.mode !== 'guard' && gf.mode !== 'pounce') return W;
+    }
+  }
+  if (k.gcdRemaining() > 0 || k.cast || k.lockUntil > k.now) return null;
+  const bond = g.bond || 0, pair = hdPairNow(k);
+  if (!riding && ok(E) && (hdWild(k) || (bond >= 40 && (pair || bond >= 90)))) return E;
+  return ok(Q) ? Q : null;
+}
+BOT_CLASS.houndmaster = {
+  home(bot, view) {
+    const b = view.boss, f = b.facing || 0, k = bot.actor && bot.actor.kit;
+    let a = f + Math.PI;
+    if (k && k.def.solo) {   // (the other half of the pair: the flank across from Greyfang's, or either flank if it is behind)
+      const gf = hdLiveReal(k)[0], s = gf && (gf.goal || gf.slot);
+      if (s === 'left') a = f + HD_OFF.right; else if (s === 'right') a = f + HD_OFF.left; else if (s === 'behind') a = f + HD_OFF[(bot.slot || 0) % 2 ? 'right' : 'left'];
+    }
+    return { x: b.x + Math.cos(a) * 105, y: b.y + Math.sin(a) * 105 };
+  },
+  act(bot, k, view, moving) {
+    const idx = id => k.abilities.findIndex(a => a.id === id || a.replaces === id);
+    const ok = i => { const a = k.abilities[i]; return i >= 0 && !!a && k.usable(a) && k.readyIn(a) <= 0.0001 && k.available(a); };
+    const weave = k.gcdRemaining() > 0.55 && !k.cast && k.lockUntil <= k.now;
+    const W = idx('flank'), E = idx('finisher'), R = idx('pounce'), D = idx('calloff'), F = idx('quarry'), Q = idx('knife');
+    const e = hdEnemy(k), live = hdLiveReal(k), g = k.g;
+    bot.aim = null; bot.shift = false;
+    if (k.def.solo) return hdSoloAct(bot, k, view);
+    if (g.lastFin && g.lastFin.at !== bot.hdFinAt) { bot.hdFinAt = g.lastFin.at; bot.hdPlan = ((bot.hdPlan || 0) + 1) % 3; }   // (the next pair after each finisher)
+    const plan = bot.hdPlan || 0, want = HD_BOT_WANT[plan];
+    if (weave && e) {
+      if (ok(D) && live.some(h => h.mode !== 'guard' && h.mode !== 'pounce' && BotAI.dollDanger(view, h.x, h.y, 1.6))) return D;
+      if (W >= 0 && k.abilities[W].id === 'howl' && ok(W) && (view.burst || view.t - (bot.hdHAt || 0) > 30)) { bot.hdHAt = view.t; return W; }   // (a Howl on W, if a bot holds the talent: with the party's burst. The Long Chase on F goes through the Quarry's own line)
+      if (ok(F)) {
+        if (bot.hdQAt == null) bot.hdQAt = view.t;
+        if (view.burst || view.t - bot.hdQAt > 20) { bot.hdQAt = null; return F; }
+      } else bot.hdQAt = null;
+      if (live.length === 2 && !hdWild(k) && live.map(h => h.goal).sort().join() !== want.slice().sort().join()) {
+        if (plan === 2 && ok(R)) return R;   // (a hold, then the pounce that lands both behind)
+        if (!(plan === 2 && hdHolding(k)) && ok(W) && k.abilities[W].id === 'flank') {
+          const h = live.find(x => x.id === g.next) || live[0], o = live.find(x => x !== h), rest = want.slice();
+          const oi = o ? rest.indexOf(o.goal) : -1;
+          if (oi >= 0) rest.splice(oi, 1);
+          const f = hdFace(k, e) + HD_OFF[rest[0] || want[0]], r = mariER(e) + 90;
+          bot.aim = { x: e.x + Math.cos(f) * r, y: e.y + Math.sin(f) * r };
+          return W;
+        }
+      }
+    }
+    if (k.gcdRemaining() > 0 || k.cast || k.lockUntil > k.now) return null;
+    const bond = g.bond || 0, pair = hdPairNow(k);
+    if (ok(E) && (hdWild(k) || (bond >= 40 && ((pair && (pair === HD_BOT_PAIR[plan] || bond >= 60)) || bond >= 90)))) return E;
+    return ok(Q) ? Q : null;
+  },
+};
+
 // ======================================================================= Kenseier (tank, class 22)
 // Every blow aimed at the bot has a beat: the boss's next auto (view.autoAt, the moment the host will swing, held back by a
 // Break, a stun or a pause) and every tankbuster telegraph on it. A Warden's deflect also reaches an ally in range, so a buster on

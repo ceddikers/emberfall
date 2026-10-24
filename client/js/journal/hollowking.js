@@ -24,6 +24,7 @@
     tidecaller: "The King calls, and his court answers a beat behind, like surf coming back off a sea wall. I had thought only the water did that. I stood in his hall and listened a long while, for the gap between the call and the answer.",
     lanternkeeper: "The Hollow King calls and his court answers a beat behind, in a long hall with every lamp out but a few. We were hurt in the dark corners I had not lit. Tomorrow I count the corners first. Keep your light.",
     kenseier: "A dead king, and courteous: every blow of his has manners, slow, with a bow. His hall answers for him, bells and knights and coffins, a beat behind. I was late to most of it. Tomorrow I learn the court's count. Catch the beat.",
+    houndmaster: "Dead king in a long hall, courteous as a vicar. His knights answer for him from the walls a beat behind. Rust wouldn't cross the threshold and I don't blame him. Tomorrow we learn the hall. Heel.",
   },
   // the first time this hero beats him
   win: {
@@ -49,6 +50,7 @@
     tidecaller: "He lay still, and the hall went quiet as slack water. I stood at the last lantern a long while, and something in the deep under me shifted, the way the sea shifts before a tide turns. The sea gives back.",
     lanternkeeper: "The King lies still and the hall is quiet at last. I left a lantern burning at the foot of the empty throne. He kept his court in the dark a long time, and one small light seemed owed. Four of us came out. Walk where it's warm.",
     kenseier: "The King lies still. I laid the blade across my knees by the last lantern and listened, and for the first time the hall had no beat at all. He was a good opponent. Ash settles.",
+    houndmaster: "King's laid down. Quiet hall, one lantern left, and both dogs asleep against the throne steps. Good dogs. Had him by supper, and it was a long supper.",
   },
   moves: {
     'Barrow Knell': { hard: false, learned: {
@@ -74,6 +76,7 @@
       tidecaller: "The bell tolled for every one of us, with no cover from it. I had brought the water up high before the sound, and kept the party bunched in my reach, so it broke on a shore already full.",
       lanternkeeper: "The bell tolled for every one of us, and nothing in the hall could turn it. I kept the party bunched inside my glows and let every lantern burst as the sound began. A bell that finds a full room has little to take.",
       kenseier: "The bell tolled for every one of us, and a blade cannot turn a bell. We stood close by the healer and took it upright. A slow toll, and I almost counted it.",
+      houndmaster: "Bell tolled for every one of us. Nowhere to dodge a bell. Stood by the healer, dogs close, and took it upright. Slow toll, and it's over.",
     } },
     'Sceptre Sweep': { hard: false, learned: {
       bastion: "He sweeps the sceptre across all the ground before him, and he faces me. His feet set as he winds it, and a man with set feet cannot turn. I stepped round to his flank, which is not my way; a shield is meant to face. The line was already behind him.",
@@ -98,6 +101,7 @@
       tidecaller: "He sets his feet to swing, and a king with set feet cannot turn. I kept behind him with the rest and sang from there, while our knight slid round to his flank. The sceptre swept a great deal of bare floor.",
       lanternkeeper: "Before the sweep he plants his feet, and then he cannot turn. We kept behind him, all of us, and I set my lantern there. Our knight stood off at the flank. The sceptre cleared a great deal of empty floor.",
       kenseier: "A wide arc, always toward me. His feet set as he wound it up, and a man with set feet cannot turn. I stepped through the sweep as it came, and the others were already behind him. A step in the right beat is a door.",
+      houndmaster: "A wide arc at the shield-man, his feet set while he winds up. Kept the dogs and myself in the back quarter and let him sweep empty floor. Funny to watch, truth be told.",
     } },
     'Royal Gaze': { hard: false, learned: {
       bastion: "I was trained to face the enemy. He punishes it. When his eyes lit I turned my back on him in the last instant and turned again after. Every drill I ever learned screamed against it. I did it, and so did the line.",
@@ -122,6 +126,7 @@
       tidecaller: "When his eyes lit I turned my back to him, and turned round again once it had passed. It is the looking that hurts, and the second look hurts worse. I watched the wall for a breath and the water did not mind.",
       lanternkeeper: "When his eyes lit I turned my back and held my lantern low. It is the looking that hurts, and the second look hurts worse. I studied the wall until it had passed.",
       kenseier: "His eyes lit. I showed him my back for a breath, which every teacher of the blade forbids, and turned again after. It was his gaze that cut, not his hand. The eyes were the blade, and I learned to look away from it.",
+      houndmaster: "His eyes lit. Don't look. Turned my back till it passed, then spun round and carried on. Meet the stare and you're pinned. Had to whistle Rust round, he stares back.",
     } },
     'Royal Audience': { hard: true, learned: {
       bastion: "His crown blazed, and this time he wanted to be faced. I always face him; for once that was the whole duty. The line turned to him with me, square, chins up, nobody caught looking away. It felt like a parade. I enjoyed it more than I will say.",
@@ -146,6 +151,7 @@
       tidecaller: "His crown blazed, and this once the sea wanted facing. I had turned away from habit and the cold pinned me fast. After that I stood square to him, face lifted, and let the water rise behind me.",
       lanternkeeper: "On the hard nights his crown blazed, and that time we were to face him. I had turned away from habit, and the cold pinned me where I stood. After that I faced him square, lantern raised.",
       kenseier: "This time the crown blazed, and he wished to be faced. For once the whole duty was to look at him. We turned to the throne together, chins up, and none was caught looking away. A courtesy, and a strange one.",
+      houndmaster: "Hard nights it's the crown that burns, not the eyes. Face it, square on. Back turned this time and you're pinned. Opposite of last. Called the dogs round to face the throne with me.",
     } },
     'Grave Cleave': { hard: false, learned: {
       bastion: "The greatsword came down on me alone, and it leaves the wound open after. Shield up in the last instant, the line kept clear of the ground in front of him, and I bled quietly. Complaining about a wound is for the infirmary. Held.",
@@ -170,6 +176,7 @@
       tidecaller: "The greatsword fell on our knight alone and left a wound that kept weeping. I raised the water under him before the blow and kept it lapping at the bleeding until it closed. The rest of us stayed off the ground before the King.",
       lanternkeeper: "The greatsword fell on our knight alone, and the wound kept bleeding after. I hung a lantern on him beforehand and kept its wick high until the cut closed. The rest of us stayed off the floor before the King.",
       kenseier: "The great sword came down on me alone, and the cut it leaves stays open. I met it with the blade as it fell, and the others kept clear of the ground before him. A late press, and I would have borne the wound. Catch the beat.",
+      houndmaster: "Great blade down on the shield-man alone, and the wound keeps bleeding. Nobody else in front of it. Watched from the flank, dogs behind me. Not my job, and I'm glad of it.",
     } },
     'Barrow Stomp': { hard: false, learned: {
       bastion: "He stamped and the ground round his feet broke. I gave ground, out past the edge with the line, and came back to him after. A knight who retreats on purpose is not a retreating knight. That is what I told myself.",
@@ -194,6 +201,7 @@
       tidecaller: "The floor broke in a ring about his feet. Those near him stepped out past its edge, and went back in once the stone lay quiet. There is no arguing with a tide line; one simply stands on the right side of it.",
       lanternkeeper: "The floor broke in a ring about his feet. Those near him stepped out past its edge and went back in once the stone lay still. I set my lantern outside the ring, so they had a warm place to wait.",
       kenseier: "His stamp broke the ground about his feet. We stepped out past its edge together and came back when it was still. A stamp is only a beat with a floor under it.",
+      houndmaster: "A stamp broke the ground at his feet. Stepped out past the edge with the dogs and came back once it stilled. Easy to read. Still, you'll lose a hound to it if you forget.",
     } },
     'Royal Doom': { hard: false, learned: {
       bastion: "He sentenced one of ours, never me. Lanterns appeared on the floor, and the doomed cannot lift one. I picked up the nearest and carried it to her side, boots loud on the flags. The light cured it. A good order is short and obeyed.",
@@ -218,6 +226,7 @@
       tidecaller: "The sentence fell on one of the others, and she could not lift a lantern herself. So I went for the nearest light, being unsentenced, and carried it over the flags to her. Its glow was enough to lift the doom.",
       lanternkeeper: "He passed sentence on one of us, and only a light could answer it. The condemned cannot carry one, so I took a lantern from the hall and set it at her feet. I have set down a lamp for a stranger before. The doom let go.",
       kenseier: "One of ours was sentenced to doom. Lanterns burned across the hall, and the sentenced cannot lift one, so I carried the nearest to them. The light lifted it. A short errand, and a quiet one.",
+      houndmaster: "A sigil sat on one of ours, and lanterns burned round the hall. The doomed can't lift one, so the nearest hand fetched it. Mine. Ran it over. Good dogs for holding the door.",
     } },
     'Crown of Graves': { hard: false, learned: {
       bastion: "The whole hall broke open, all but the ground right at his feet. That is where I stand anyway. The line came in close behind me, where I could see them. It is a poor post for a coward and a fine one for a knight.",
@@ -242,6 +251,7 @@
       tidecaller: "The whole hall broke up like ice, all but the still water at his feet. That is the eye of it. We came in close, near enough to hear his breathing, and I kept the tide high behind us.",
       lanternkeeper: "The whole hall broke up like ice, all but the still ground at his feet. We came in close, right under the crown, and I set my lanterns in that quiet and kept them burning.",
       kenseier: "The graves opened across the whole hall, all but the stone at his feet. That is where I stand anyway. The others crowded in close behind me, and the opening passed us by. His feet are the quietest place in the Barrow.",
+      houndmaster: "The graves opened across the hall, all but the stone at his feet. Gave up my distance and went in close, the dogs in tight with me. Short line, short temper.",
     } },
     'Echo Knights': { hard: false, learned: {
       bastion: "Two dead knights rose by the walls. Each remembers one of his swings as he makes it, then swings it again from where it stands. I watch what each one learned and move the line to match. A soldier who learns from the enemy is a good soldier.",
@@ -266,6 +276,7 @@
       tidecaller: "Two of his old guard rose by the walls, each keeping one of his swings to send back from where it stood. I watched for the flash on each, to learn which it had taken, and led the party out of the way it would be thrown.",
       lanternkeeper: "Two of his old guard rose, each keeping one of his swings to throw back from where it stood. I watched which swing each had taken, as I would mark which lamp in a street was lit, and led the party clear of where it would land.",
       kenseier: "Two dead knights rose by the walls. Each remembers one swing of his, makes it, and then makes it again from where it stands. I watched which each had kept and moved the line to match. The echo is always a beat late, and a beat is enough.",
+      houndmaster: "Two dead knights by the walls, each keeping one swing and repeating it from where it stands. Watched which swing each kept and shifted the dogs to match. An echo comes late, mind.",
     } },
     'The Charge Sheet': { hard: false, learned: {
       bastion: "Banners above his throne lit one at a time, each with one of his swings, and nothing fell. I said the order to the line until we had it, like drill. It comes back later. On the hard nights the order is drawn fresh; read the banners every time.",
@@ -290,6 +301,7 @@
       tidecaller: "Banners lit above the throne, a swing on each, and not a drop fell. I watched them as I would a sky for the order of the clouds, and kept it, for it returns. On the hard nights it is drawn fresh each pull, so I read the sky again.",
       lanternkeeper: "Banners lit above the throne, a swing on each, and nothing fell. I counted them off like lamps along a street, first to last, and kept the order, for it comes back. On the hard nights it is drawn fresh, so I read it again.",
       kenseier: "Banners over the throne lit one at a time, each carrying a swing of his, and nothing fell. I recited the order until all of us knew it. It returns later. On the harder nights it is drawn fresh, so read the banners again each time.",
+      houndmaster: "Banners over the throne lit one at a time, each carrying a swing of his. Nothing fell. Said the order over to myself till I had it, and to the dogs. It comes back later. Hard nights it's drawn fresh.",
     } },
     'Coffin Lids': { hard: false, learned: {
       bastion: "He tore the lids off the coffins on both walls and sent them skidding across the floor. We stepped out of their path. Where they stop, they are cover for what comes next. I marked the nearest as my post and gave the order to take cover, since it was my turn to give one.",
@@ -314,6 +326,7 @@
       tidecaller: "He tore the lids off the coffins and sent them skidding in from both walls. We stepped out of their lanes, and where they came to rest I marked the nearest. A fallen lid is a breakwater, and wood floats.",
       lanternkeeper: "He tore the lids off his coffins and sent them skidding in from both walls. We kept out of their lanes, and where they came to rest I set a lantern behind the nearest. A lid on its side makes decent shelter.",
       kenseier: "He tore the lids off the coffins on both walls and sent them sliding across the hall. We stepped out of their paths. Where they stopped, they were cover for what came next. I marked the nearest and kept it close.",
+      houndmaster: "He tore the lids off and sent them skidding in from both walls. Out of their lanes, dogs with me. Where they stop is cover for what comes next. Marked the nearest.",
     } },
     'Royal Decree': { hard: false, learned: {
       bastion: "A wave rolled down the hall from the throne. Only something solid between me and the throne kept it off, so I put a coffin lid there and kept my footing behind it. It cracked at the end, honest wood doing an honest job. Held.",
@@ -338,6 +351,7 @@
       tidecaller: "The decree came down the hall from the throne like a bore up a river. Only something solid broke it, so I set a fallen lid between myself and the king, and tucked the others in behind their own.",
       lanternkeeper: "The decree rolled down from the throne, and only something solid broke it. I stood behind a fallen lid with my lantern at my back, and tucked the others in behind theirs. One lid for each of us.",
       kenseier: "A wave rolled down the hall from the throne. Open air would not stop it, only something solid, so I crouched behind a coffin lid with the throne on its far side. Honest wood. It cracked at the end and did its work.",
+      houndmaster: "A wave down the hall from the throne. Open air won't stop it, only something solid. Got behind a coffin lid with the throne on the other side, dogs underneath. Good plain wood.",
     } },
     'Funeral March': { hard: true, learned: {
       bastion: "His dead marched across the hall in ranks, wall to wall. One lane through them stays open the whole way. I found it and brought the line into it, my footing never leaving the stone. The lane is somewhere new each time, and nothing paints it.",
@@ -362,6 +376,7 @@
       tidecaller: "His dead crossed the hall in ranks, wall to wall, like waves that never quite break, and one lane stayed open the whole way through. It lies somewhere new each time, unmarked. I read the gaps and led us along the dry one.",
       lanternkeeper: "His dead crossed the hall in ranks, wall to wall, and one lane stayed open the whole way through. It lay somewhere new each pull. I read the gaps between the ranks and led the party down the open lane, lantern first.",
       kenseier: "His dead marched across the hall in ranks. One lane through them stayed open from wall to wall, and nothing painted it; I found it and brought everyone in. It moves each time. They kept better time than most soldiers.",
+      houndmaster: "His dead marched across in ranks, wall to wall. One lane through stayed open and nothing painted it. Found it, took the dogs through. It moves each pull. Eyes first, feet after.",
     } },
     'Barrow Bells': { hard: false, learned: {
       bastion: "Two bells. Each wants a pair standing under it, or the whole line is doomed. I took a bell with a partner and held my ground beneath it, and did not look at the other bell once. I trusted the pair under it. That is duty too.",
@@ -386,6 +401,7 @@
       tidecaller: "Two bells, and two of us must stand beneath each, or the whole party is lost. I took my place under one with a partner before the bells came, and stayed there till the ringing died, two by two like gulls on a rail.",
       lanternkeeper: "Two bells, and two of us beneath each, or all of us are lost. Before they sounded I paired everyone off and took my place under one with my partner, and we stayed until the ringing stopped. Two bells, two pairs.",
       kenseier: "Two bells, and a pair must stand under each or all of us are doomed. I took a partner and stood beneath mine until the sound died. I never looked at the other bell. Trust the pair under it.",
+      houndmaster: "Two bells tolling. If a pair isn't stood under each, the lot of us are doomed. I took the far one with the healer and never glanced at the other. Trust whoever's under it, and keep the dogs well clear.",
     } },
     'Lights Out': { hard: false, learned: {
       bastion: "Every brazier went dark, then the pair nearest the King flared back up. Whoever stood outside their light was caught, so I got the line into the light. Standing in the open feels wrong. Standing in the dark feels worse.",
@@ -410,6 +426,7 @@
       tidecaller: "Every fire in the hall went dark, and then the two nearest the King came back. The dark is where it finds you. I steered the party into their glow, the way boats steer for a lamp on a far headland.",
       lanternkeeper: "Every fire in the hall went out, and only the two nearest the King came back. I called everyone into their glow at once. Whoever stayed in the dark was caught, and I counted heads to be sure.",
       kenseier: "Every brazier went dark, then the two nearest the King flared back. Outside their glow we would be found, so I took everyone into the light. The dark was his, for a breath. I let him keep it.",
+      houndmaster: "Every fire went dark, then two flared back by the King. Out there you're found, so we took everyone into the light, dogs in my coat. Dark's his, for a spell.",
     } },
     'Court of Bones': { hard: false, learned: {
       bastion: "He sat back on his throne, out of reach, and the coffins down the walls woke one by one. We broke each before it opened. When one did, I took the bones that climbed out, one at a time, and sent them back down.",
@@ -434,6 +451,7 @@
       tidecaller: "He withdrew to his throne, out of reach, and the coffins down the walls woke in turn, a long swell of them. We broke each before its lid could lift. Whatever got out, I kept the water on whoever met it.",
       lanternkeeper: "He withdrew to his throne, out of reach, and the coffins along the walls woke one by one. We broke each before its lid could lift. The one that got out met our knight, and I had a lantern hung on him already.",
       kenseier: "The King withdrew to his throne, beyond reach, and the coffins along the walls began to wake one by one. We cracked each before it could open. I took on whatever climbed out, one at a time, and sent it back to its box.",
+      houndmaster: "He sat down out of reach, and the coffins along the walls began to wake. Cracked each before it could open. Sent the dogs at whatever crawled out. Easy work, that.",
     } },
     'Sceptre Throw': { hard: false, learned: {
       bastion: "From his throne he hurled his sceptre at whoever stood farthest from him, and the aim followed them to the last moment. I made sure the farthest was someone who could walk clear. On the harder nights the two farthest each take one.",
@@ -458,6 +476,7 @@
       tidecaller: "From his throne he flung the sceptre at whoever stood farthest from him, and its line followed them like a gull following a fish. They stepped sideways only at the last. The farthest, wisely, was someone quick.",
       lanternkeeper: "From the throne he hurled the sceptre at whoever stood farthest, the line following them to the last moment. They stepped sideways at the end. I kept my lanterns out of the line, and a light on whoever ran.",
       kenseier: "The sceptre came from the throne, aimed at the one farthest away and following them almost to the end. So the farthest had to be someone quick on their feet. On the harder nights it goes to the two farthest, one each.",
+      houndmaster: "Sceptre flew from the throne at the one stood furthest, following them nearly to the end. Stepped off at the last. Hard nights it goes to the two furthest. Stand far, be quick.",
     } },
     'Grave Summons': { hard: false, learned: {
       bastion: "The dead gathered on one of the young ones, never me, and the rest of us had to close on them, all but one. On harder nights a mark settles over each of us the moment it lands. Close in, then out. Stranger than drill.",
@@ -482,6 +501,7 @@
       tidecaller: "The summons fell on one of the others, never our knight, and it was heavy. We closed on her together, streams into a river, and the weight grew thin among many. On the harder nights marks followed soon after, and we scattered at once.",
       lanternkeeper: "The dead gathered on one of the others, never our knight, and it was heavy. We closed on her together so the weight was split among us all. On the harder nights marks followed soon after, and we scattered at once.",
       kenseier: "The dead gathered on one of the others, and all but one of us went in to share it. On the harder nights marks settle on each of us right after: in together, then apart. I went in, and came out again on the next beat.",
+      houndmaster: "The dead gathered on one of the others, and all but one of us went in to share it. Hard nights marks follow. In together, then out. Dogs in with me, then out again.",
     } },
     'Grave Marks': { hard: false, learned: {
       bastion: "A mark over every one of us, each wanting its own ground. The line opened up, each man to his own patch, then closed again. Spacing is the oldest drill there is. It was good to see it done well.",
@@ -506,6 +526,7 @@
       tidecaller: "A mark hung over every head, and each of us needed a patch of floor alone. We drew apart like boats leaving harbour, each in our own water, and I eased the ones who flinched afterwards.",
       lanternkeeper: "A mark hung over every head, and each of us needed a patch of floor alone. We drew apart, and afterward I walked my lantern round the four patches, topping up whoever had flinched.",
       kenseier: "A mark settled on every one of us, each wanting its own ground. We opened out, each to a patch, and came together when it passed. The space between is as much a part of the fight as the blows.",
+      houndmaster: "A mark on every head. Spread like beaters, each to our own ground, and came back together when it passed. Held the dogs to their own patch too. Quiet work.",
     } },
     'The King Rises': { hard: false, learned: {
       bastion: "He rose from his throne, and his knights took new posts along the walls. The line had to learn new ground. I took him back and turned him away from them. A change of posting. The sergeant hated those.",
@@ -530,6 +551,7 @@
       tidecaller: "He stood up from the throne, and his knights took new places along the walls. The old shore was gone. I learned the new coast, where each echo would come from, and walked the others over it before it mattered.",
       lanternkeeper: "He stood from his throne and his old knights took new places along the walls. The hall I had lit was the wrong hall. I learned where each echo would come from now and walked the party over the new ground before it mattered.",
       kenseier: "He rose from the throne, and his knights took new posts along the walls. All I had learned of the room was wrong. I drew him back and turned him away from the others. New floor, new count.",
+      houndmaster: "He got up off the throne and his knights took new posts. All I'd learnt of the room was wrong. Drew him round, away from the others. New floor, new tracks. Heel.",
     } },
     'Royal Tithe': { hard: false, learned: {
       bastion: "He took his tithe, and every one of us dropped low at once. Shields laid beforehand stayed. He kept his blows off me while the healers mended the line before the Dirge. We held, and I will not say how close.",
@@ -554,6 +576,7 @@
       tidecaller: "He took his tithe and we all dropped to the shallows at once. A ward of water is not life, and it stays, so I raised those first, then drew everyone back up before the Dirge. He held his blows from our knight meanwhile.",
       lanternkeeper: "He took a tithe from every one of us at once. A shield is not life and it stays, so I put the shields up first, then brought everyone back to full before the Dirge. He held his blows from our knight meanwhile.",
       kenseier: "The tithe took all of us down low together. Whatever was laid on us beforehand survived it. I kept his eyes on me while the healers lifted us ahead of the Dirge. Close, and I will not say how close.",
+      houndmaster: "Tithe dropped the whole company low in one go. A shield laid on beforehand lived through it. Kept his eyes on me while healers topped everyone ahead of the Dirge. Near thing.",
     } },
     'Dirge': { hard: false, learned: {
       bastion: "The Dirge tolled through all of us after the tithe. No blocking it. The line came to it whole, mended in time. It is no honour to be spared by a song, but I took the honour.",
@@ -578,6 +601,7 @@
       tidecaller: "The Dirge followed the tithe, soft as surf on shingle and as hard to turn aside. There was nothing to stand behind. I had filled the party to the brim beforehand, and it passed over a full basin.",
       lanternkeeper: "The Dirge followed the tithe, soft as a lullaby and as hard to turn. There was nothing to stand behind. I had every lantern lit and every wick gold, and let them burst as it began.",
       kenseier: "The Dirge rang through all of us right behind the tithe, with nothing to cross. The healers had us whole beforehand, and that was the whole answer. He keeps the slowest funeral time I have heard.",
+      houndmaster: "Dirge came right behind the tithe, on all of us, nothing to cross. Healers had us whole before, and that was the whole answer. Dogs pressed in close. Funeral time, that.",
     } },
     'Judgement': { hard: false, learned: {
       bastion: "Judgement: the swings from the banners, in that order, from him and both knights at once, each shown for an instant. I called the order to the line from memory, loud as drill. Not one man was in the wrong place.",
@@ -602,6 +626,7 @@
       tidecaller: "Every swing from the banners, in the order they had lit, thrown by him and both knights, each shown for a heartbeat. I had the order by heart and moved us ahead of each, as one reads a tide table.",
       lanternkeeper: "The banners lit, and then every swing came down in the order they had shown, thrown by the King and both knights for a single heartbeat each. I knew the row of them lamp by lamp, and had us a step ahead of every blow.",
       kenseier: "Judgement was the banners made real: all their swings, in the old order, thrown by him and both knights together, each glimpsed for an instant. I spoke the order as it came, a breath ahead. No one stood in the wrong place.",
+      houndmaster: "All the banners made real: their swings in the old order, from him and both knights at once, each barely shown. Said the order as it came, a breath ahead. Nobody in the wrong place.",
     } },
     'The Long Night': { hard: false, learned: {
       bastion: "The braziers died and one lantern was left. Doom passed from one of us to the next, the next one's sigil glowing ahead, and whoever was cured carried the light on. A relay, in the dark. I have never run so carefully.",
@@ -626,6 +651,7 @@
       tidecaller: "The braziers died and one lantern was left, and the sentence passed from one of us to the next. The next to fall glowed ahead of time; whoever held the light walked it to them, and they carried it on. I walked, not ran, as on a tide flat.",
       lanternkeeper: "One lantern left in the whole hall, and the doom passing from one of us to the next. The next to fall glowed ahead of their turn. Whoever held the light walked it over to them. I walked, never ran, and kept my own lanterns close behind.",
       kenseier: "Every light failed but one lantern. Doom passed from one of us to the next, each next one glowing before their turn, and the lantern went with the cure. I kept the count so no hand reached late.",
+      houndmaster: "Every light failed but one lantern. Doom passed from one of us to the next, each glowing before their turn, and the lantern carried the cure. Carried it to the next. Dogs walked beside me, quiet.",
     } },
     'Gravebind': { hard: true, learned: {
       bastion: "A grave-chain bound two of us, never me. They kept close until it broke while the rest spread under their marks. I took the greatsword. Three duties, and the pair is drawn fresh every pull.",
@@ -650,6 +676,7 @@
       tidecaller: "A grave-chain bound me to one of the others, a different one each pull, and we kept close until it broke while everyone else held to their own marks. Two boats on one line; neither can drift off.",
       lanternkeeper: "On the hard nights a grave-chain bound me to one of the others, a different one each pull, and we stayed close until it broke while the rest held to their own marks. A pair on one chain, and I kept a lantern between us.",
       kenseier: "A chain of the grave tied two of the others together, never me. They stayed close until it snapped, and everyone else kept to their marks apart. I had the great sword to meet besides. The pair is new every time.",
+      houndmaster: "A chain tied two of the others, never the shield-man. They stood close till it snapped, and the rest of us kept to our marks apart. Different pair each time. Called the dogs off the chain.",
     } },
     'Burial Rites': { hard: true, learned: {
       bastion: "He dug a grave for each of us, each in our own colour. Which is whose changes every pull, so read your colour. Lines out, in close for the crown, then into my own grave before it shut. I have slept in worse beds.",
@@ -674,6 +701,7 @@
       tidecaller: "Graves opened for each of us in our own colours, and whose is whose is drawn fresh every pull. I found mine, walked the lines out, then in for the crown, then to my own bed before the lid came down. Another's grave is struck.",
       lanternkeeper: "A grave opened for each of us in our own colour, and which is whose changes every pull. I read the colours, kept to the lines, came in for the crown, and was lying in my own bed before the lid fell. Four graves, four of us.",
       kenseier: "He dug a grave apiece for us, each its own colour, shuffled each time, so I read mine first. Out wide for the lines, in tight for the crown, then into my own grave before the lid came.",
+      houndmaster: "A grave each, coloured to match, and the colours are shuffled every pull, so I looked for mine first. Wide for the lines, close for the crown, then home to my own before the lid shut. Don't borrow another's.",
     } },
     'Writ of Execution': { hard: true, learned: {
       bastion: "Chained, every man of us, and the writ read out. My line went into a corner between the graves, and I stepped off it. It burns on, so aim with care; a line is a wall. One writ is torn up each pull, and I never learned whose.",
@@ -698,6 +726,7 @@
       tidecaller: "A chain from him to each of us, and a line of grave-light through every one, left burning. I aimed mine into a corner, between the graves, and stepped away, for a line laid across a grave dams the road to it. One writ is torn up each pull.",
       lanternkeeper: "A chain ran from the King to each of us, and a line of grave-light through each chain stayed lit. We turned ours into the gaps between graves and stepped away, since a line across a grave blocks the road to it. One writ is torn up each pull.",
       kenseier: "Chains, and a writ read over each of us, and from every chain a beam of grave-light that went on burning. I laid mine across a corner between the graves and left its line. One of the writs is struck each pull, and it is never the same one.",
+      houndmaster: "A chain on each of us and a line of grave-light burning out of every one. Laid mine across a corner between the graves, away from the rest, then stepped off. It burns after. Mind the hounds.",
     } },
   },
 };

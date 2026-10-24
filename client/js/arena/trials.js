@@ -610,4 +610,34 @@ Object.assign(TRIALS, {
   },
 });
 
+// ======================================================================= Houndmaster (melee damage, class 23)
+Object.assign(TRIALS, {
+  packleader: {
+    cls: 'houndmaster', spec: 'packleader', name: 'The Court Hunt',
+    lore: ['The court hunted on the barrow downs, two hounds to a huntsman.', 'The huntsman lost neither: whichever stood in the red went to the other\'s side before it fell.'],
+    outro: 'Both hounds home, and the quarry down. The Pack Leader whistles them in.',
+    allies: ['bastion:base', 'cleric:base'], seconds: 55, enrage: 65, regen: 0,
+    script(f, k) {
+      // snares dropped on the flanks of the Shade, one side then the other: the hound that stands in one has to be somewhere else by the time it springs
+      const B = f.boss;
+      const snare = (side, dmg) => () => {
+        const a = B.facing + side * Math.PI / 2, x = B.x + Math.cos(a) * 125, y = B.y + Math.sin(a) * 125;
+        f.cast('Hound Snare', f.ct(3.5), 'stomp');
+        f.mech({ type: 'aoe', shape: { kind: 'circle', x, y, r: 105 }, delay: f.ct(3.5), dmg, tag: 'stomp' });
+      };
+      k.loop([[3, snare(-1, 4000)], [5, snare(1, 4000)], [5, () => k.blow(9000, 4)], [5, snare(1, 4000)], [5, () => k.knell(2500)]]);
+    },
+  },
+  lonewolf: {
+    cls: 'houndmaster', spec: 'lonewolf', name: 'The Long Ride',
+    lore: ['The King\'s riders crossed the barrow downs in a single run, and none of them looked back.', 'One huntsman rode a hound as big as a horse, and got off only to strike.'],
+    outro: 'The ride is run. The Lone Wolf gets down and walks home.',
+    allies: ['bastion:base', 'cleric:base'], seconds: 55, enrage: 70, regen: 0,
+    script(f, k) {
+      // in close, then far out, then in again: long runs across the hall, and a rider covers them
+      k.loop([[3, () => k.swing('ring', 6000, 4)], [5.5, () => k.swing('stomp', 6000, 4)], [5.5, () => k.blow(9000, 4)], [5, () => k.swing('ring', 6000, 4)], [5.5, () => k.knell(2500)]]);
+    },
+  },
+});
+
 if (typeof module !== 'undefined') module.exports = { TRIALS, trialDef, trialMoves };

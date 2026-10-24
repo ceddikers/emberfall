@@ -1,6 +1,6 @@
 # Boss journal: the voice bible
 
-Every hero keeps a journal. When a player sees a boss move and lives through it, that hero writes one entry about it, that night, by the fire, in their own voice. There are 22 journals and eight bosses, written by several writers at once, so this page is the shared reference. Read the rules first, then the hero you're writing.
+Every hero keeps a journal. When a player sees a boss move and lives through it, that hero writes one entry about it, that night, by the fire, in their own voice. There are 23 journals and eight bosses, written by several writers at once, so this page is the shared reference. Read the rules first, then the hero you're writing.
 
 Sources for every voice: the class tagline and gameplan (`client/js/data.js`), the spec blurbs (`client/js/combat/specs.js`), the passives (`client/js/hero-guide.js`) and the trial lore (`client/js/arena/trials.js`). A voice grows out of the class's own puzzle: what the hero *does* in a fight decides what they *notice* in one.
 
@@ -548,6 +548,30 @@ Each sheet: who they are, how they sound, what they notice, their tics, and two 
 
 ---
 
+### houndmaster — Houndmaster, The Huntsman of the Old Road (melee damage)
+
+**Who:** A lean huntsman in a fur-collared green coat and a leather cap, a horn on his hip and a long skinning knife. He walks the old road with two lurchers, Rust (the lower bark, rust collar) and Ash (ash collar). He hunts the way a countryman does: patient, practical, never in a hurry to be thanked.
+
+**Voice:** Gruff, few words, and half of them to the dogs. Short plain sentences, often without a subject ("Walked it out to the wall."). Country turns of phrase: a plough team, a bull's belly, beaters, a poacher's rounds, a vicar, feeding time, a lead. He talks to Rust and Ash as he writes ("Sit.", "Heel.", "Easy, lads.") and about them as he would about two good hands, and the boss is "the big lad" or "the old bull", not a villain. He keeps the hounds in the tactic: they are called off a line, held back from a ring, put on the little ones, or crowded under a pillar with him.
+
+**Notices:** Where the hounds can and cannot stand: what rolls, what burns, what a dog would chase into harm, and the dry spot under a pillar or a lid where all three of them fit. Beyond that he reads a fight like tracks: which way it came, where it ended, who is furthest out. He says the real move first and the dog second.
+
+**Tics:**
+- Talking to the dogs in the middle of a line: "Sit." / "Heel." / "Easy, lads." / "Rust would have found every last one, silly lad."
+- "The shield-man" for whoever stands in front (never "the tank"), "the big lad" for a large boss, "the healer" for the healer.
+- Country comparisons, one per entry at most: "like walking a dog round a post", "like standing under a bull's belly".
+- Drops the subject: "Stood on mine till it was dished." "Walked it out to the wall."
+- Sparing sign-offs, about one entry in four: "Good dogs.", "Heel.", "We'll have him by supper." (the last is for a win, a long night or an easy kill). Most entries end on a short flat clause.
+
+**Samples:**
+> Fat's burning under the lot of us, dogs and all. No running from a floor. Whistled the pair in tight beside the healer, got mended before it caught, and sat it out together. Good dogs.
+
+> Head down, and he ran for the shield-man. Kept the dogs off his road and off the stove. He hit the brick and stood dazed, and that's when we went in. Heel.
+
+**Don't:** make him a second Ranger (no lanes, no "clean line", no solitary hunter: he has company and talks to it) or a second Gorgemaw (no food talk beyond feeding the dogs). He never uses the hotbar names ("Flank", "Pounce", "Call Off", "Quarry", "Pack", "Bond", "Wild Hunt", "Rend"): he whistled a dog round, called them in, held them, or put them on something. No digits and no spelled-out times.
+
+---
+
 ## Quick reference: who notices what
 
 | Hero | Sees a fight as | Signature verdict |
@@ -574,6 +598,7 @@ Each sheet: who they are, how they sound, what they notice, their tics, and two 
 | tidecaller | the rhythm of the water: when it is high, when a blow lands, who is next | "Mind the tide." / "Wait for the water." |
 | lanternkeeper | where the party will stand next, and whether a light is already there | "Keep your light." / "I'll leave one burning." |
 | kenseier | the beat of a blow, and whether it can be met with a blade | "Catch the beat." / "Breathe, then strike." / "Ash settles." |
+| houndmaster | where two hounds can stand, and what would catch them there | "Good dogs." / "Heel." / "We'll have him by supper." |
 
 **Pairs most likely to blur, and how to keep them apart:**
 - Bastion / Ironpalm / Runeguard (all "brace before the blow"): Bastion holds his ground, Ironpalm answers a word, Runeguard foresaw it.
@@ -587,4 +612,6 @@ Each sheet: who they are, how they sound, what they notice, their tics, and two 
 - Lanternkeeper / Pyromancer (both fire): Pyromancer burns and boasts; Lanternkeeper tends a small light and says so softly. Pyromancer stands still to burn; Lanternkeeper walks ahead to light the next corner.
 - Kenseier / Ironpalm (both breath and rhythm): Ironpalm answers a word, replies, and ends "Breathe."; Kenseier counts the beat of a blow, meets it with the blade and ends on ash. Ironpalm's nouns are speech and conversation; Kenseier's are the beat, the stroke and the edge.
 - Kenseier / Bastion / Gloomsworn (all three tanks who take the blow): Bastion braces and holds the line ("Held."); Gloomsworn takes the wound and jokes about being dead; Kenseier turns the blow aside on its beat and has a dry nod for the boss. He never says "footing", "post" or "line", which are Bastion's.
+- Houndmaster / Ranger (both hunters): Ranger stands off alone, few words, "Clean line."; Houndmaster has company, talks to his two dogs mid-sentence, says "the shield-man" and "the big lad", and keeps the hounds in every tactic.
+- Houndmaster / Gorgemaw / Marionettist (all with a retinue): Gorgemaw serves courses, Marionettist stages a company; Houndmaster only ever has two dogs, and they get orders ("Sit.", "Heel."), never cues or menus.
 - Shadowblade / Marionettist (both theatrical): Shadowblade is noir and alone; Marionettist is the stage and the whole company.

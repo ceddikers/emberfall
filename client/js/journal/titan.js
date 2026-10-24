@@ -24,6 +24,7 @@
     tidecaller: "Hrimgar is weather with a face: a giant on a plateau of ice, green lights above him, and a floor that is only a thin lid on very black water. I fell through it twice before I stopped trusting it. He is slow. The ice is what hurries.",
     lanternkeeper: "Hrimgar is weather with a face: a giant on a plateau of ice, green lights above, and a floor that is a lid over black water. I set a lantern on a sheet that sank and watched it go down burning. Tomorrow I light only ice that holds. Keep your light.",
     kenseier: "Hrimgar is slow, and a slow enemy has the clearest beat there is. His fist I could count. The ice, which lets go on its own account, I could not, and I fell through it twice. Tomorrow I count the giant and the floor. Catch the beat.",
+    houndmaster: "Big old bull on the ice, slow as a plough horse and shows every swing. It's the ground that bites. Lost Rust through a sheet, fished him out cursing. Watch your feet, not the bull. Heel.",
   },
   // the first time this hero beats him
   win: {
@@ -49,6 +50,7 @@
     tidecaller: "He settled at last like a sea going flat, and the lights hung over the plateau as if nothing had happened. The cold went out of the air by degrees. I stood a long while on a sheet that held, and sang for it.",
     lanternkeeper: "He settled at last, and the green lights hung over the plateau as if nothing had happened. The cold went out of the air by degrees. Four of us stood on a sheet that held. I left a lantern burning on the thickest ice. Walk where it's warm.",
     kenseier: "Hrimgar is down. The plateau is quiet and the green lights hang over it. His blows were the slowest I have met, and I answered the last on its beat. I sat on the ice and it held.",
+    houndmaster: "Old bull's down and the lights hang green over the ice. Dry dogs, dry boots, quiet night. Good dogs. Had him by supper, and the ice held.",
   },
   moves: {
     "Winter's Howl": { hard: false, learned: {
@@ -74,6 +76,7 @@
       tidecaller: "No wall to stand behind, and no sense in running from weather. I watched his great chest rise and let the water climb to its crest, so the howl crossed a shore that was already full. Everyone came through blue and grumbling.",
       lanternkeeper: "No wall to stand behind, and no sense in running from weather. I kept everyone close inside the glows and let every lantern burst as he drew breath. We came through blue and grumbling, but upright.",
       kenseier: "A howl across the plateau, and nothing to meet with a blade. The healers had us stitched before he drew breath, and I stood in the open and took it. Some blows are won before they land.",
+      houndmaster: "A howl across the plateau, nowhere to go. Came to it mended, dogs against my legs, and stood in the open. Frost on my beard after.",
     } },
     'Glacial Fist': { hard: false, learned: {
       bastion: "The fist was mine alone. Sergeant always said watch the shoulder, not the hand. Shield up in the last instant, and the rest of the line stayed out of the wedge, as ordered.",
@@ -98,6 +101,7 @@
       tidecaller: "The fist came down in a wide wedge before him, meant for the knight, while the rest of us kept to his flanks. I had the water high on the knight a few swells ahead, and the blow lost itself in it.",
       lanternkeeper: "The fist fell in a wide wedge in front of him, meant for our knight, so the rest of us kept to his flanks. I hung a lantern on the knight before it came, and kept the wick high.",
       kenseier: "The fist was mine alone. I watched the shoulder, not the hand, and met it with the blade as it fell. The others stayed out of the wedge behind. He is slow enough to teach with.",
+      houndmaster: "Fist down a wide wedge in front of him, meant for the shield-man. Kept to his flank, out of the wedge. Strays get clipped. Dogs too, so keep 'em back.",
     } },
     'Rime Slam': { hard: false, learned: {
       bastion: "It locked onto me and followed. I marched it off the line, away from my friends, and let it fall on empty ground. The sheet cracked after. Off it, boots first, before the water came. Held.",
@@ -122,6 +126,7 @@
       tidecaller: "A ring followed one of us across the ice, close on their heels. They walked it out and away from the rest and let it fall alone, then left that sheet quickly, for it cracks and sinks soon after. I kept the water on them while they went.",
       lanternkeeper: "A ring chased one of us over the ice, close behind. They towed it clear of the party and let it land, then got off that sheet, which sinks soon after. I never lit a lantern on it.",
       kenseier: "A mark locked onto me and followed. I led it away from the others and let it fall on empty ground. The sheet cracked after, so I left it before the water came. A blow that follows can be led.",
+      houndmaster: "A ring locked on me and followed. Led it away from the others, dogs too, and let it drop on empty ground. Sheet cracked after, so I was off it before the water came.",
     } },
     'Twin Slam': { hard: false, learned: {
       bastion: "Two marked, a beat between. Apart, both moving, like men crossing a bridge nobody should cross in step. Neither landed on the line. Then off the cracked sheets, no looking back.",
@@ -146,6 +151,7 @@
       tidecaller: "Two of us were marked, the second a heartbeat behind the first. They went apart and kept walking, so both rings fell on open ice and well away from each other, and then they left the cracked sheets. I fed the water to each in turn, like a tide on two beaches.",
       lanternkeeper: "Two of us were marked a heartbeat apart. Each walked off in a different direction, so both rings landed on open ice far from each other, and then they left the cracked sheets behind. I stayed central, where either could be mended.",
       kenseier: "Two marked, a beat apart. They went away from each other, both moving, so neither landed on the rest. Then off the cracked sheets without looking back. Two strokes, and each wanted its own answer.",
+      houndmaster: "Two of us marked, a beat apart. Went in different directions, both walking, so neither landed on the rest. Then off the cracked sheets, no looking back.",
     } },
     'Fault Line': { hard: false, learned: {
       bastion: "A long crack came down the plateau at one of us. Sideways, never along it; every recruit knows to leave a charge by the flank. I would not stand on the red sheets after. I count my footing before I count my wounds.",
@@ -170,6 +176,7 @@
       tidecaller: "A long crack ran across the plateau at one of us, wide as a river mouth. They stepped out sideways, never along it, and every sheet it crossed turned red and sank. I stayed off the red. Black water is cold company.",
       lanternkeeper: "A long crack ran across the plateau toward one of us. They stepped out sideways, never along it, and every sheet it crossed turned red and sank. I set a lantern only on ice that was not red.",
       kenseier: "A long crack ran down the plateau at one of the others. Sideways, never along it. Afterwards I would not stand on the red sheets. The crack is slow and plain, and I still counted it twice.",
+      houndmaster: "A long crack ran down the plateau at one of us. Went sideways, never along it. Stayed off the red sheets after. Called the dogs off the line.",
     } },
     'Icefall': { hard: false, learned: {
       bastion: "Hailstorm. No post to hold in a hailstorm, nothing to raise a shield against when the shards fall from above. I kept marching and stepped out of every circle. Standing still was the only way to fail.",
@@ -194,6 +201,7 @@
       tidecaller: "Shards fell from the lights in small rings, and two of the rings were meant for us. Nobody stood still: we stepped out of each ring as it showed and kept walking. To a walker, hail is only weather that passes.",
       lanternkeeper: "Shards fell from the lights in small rings, two of them meant for us. Nobody stood still: we stepped out of each ring as it showed. I walked with my lantern in hand, and set it down only when the sky was quiet.",
       kenseier: "Hailstorm. No blade turns shards from above, so I kept moving and stepped out of every circle as it fell. Standing still was the only way to be wrong.",
+      houndmaster: "Shards from the sky, small rings, two on us. Kept moving, stepped out of each. Standing still's the only way to be wrong. Dogs on the move too.",
     } },
     "Titan's Sweep": { hard: false, learned: {
       bastion: "A huge slow arc across his front, meant for one of us. Big, but not a full circle. I took the line round to his flank and his back. A slow blow is honest about where it is going.",
@@ -218,6 +226,7 @@
       tidecaller: "A vast slow arc swept before him toward one of us, wide but not all the way round. The marked one went to his side or behind him, where the swing never reaches, and I went along. A long way round, for a long swing.",
       lanternkeeper: "The big slow arc swung toward one of us, wide but not a full circle. Safe was beside him or behind him. The marked one went there, and I walked my lantern over to meet them.",
       kenseier: "A huge slow arc across his front, aimed at one of the others, and not a full circle. We went round to his flank and his back. I admired how plainly it announced itself.",
+      houndmaster: "Slow great arc across his front, turned toward one of us, never a full circle. Went round to his side or his back and brought the dogs. Plenty of time to stroll it.",
     } },
     "Winter's Grasp": { hard: false, learned: {
       bastion: "Frost under a couple of us, and the sheet froze. Frozen ice will not crack under his blows, but it is slick as a wet barracks floor. I stepped on boots flat and with room to spare.",
@@ -242,6 +251,7 @@
       tidecaller: "Frost crept from beneath two of us and froze the sheet each stood on when it landed. Frozen ice will not crack, but it is slick, so we stepped onto it gently and never toward the water. I stood where I wanted ice, and ice came.",
       lanternkeeper: "Frost crept up under two of us and froze whatever sheet they stood on, so they chose their ground with care. Frozen ice will not crack but it is slick, so we stepped onto it gently, away from the water.",
       kenseier: "Frost under a couple of us, and the sheet froze. Frozen ice will not break under his blows, but it is slick, so I walked it flat and slowly. Slow is also a beat.",
+      houndmaster: "Frost under a couple of us and the sheet froze. Frozen won't break, but it's slick. Stepped on with room and walked flat. Whistled the dogs on easy. Never toward water.",
     } },
     'Frostbite': { hard: false, learned: {
       bastion: "One of ours went slow and blue, a ring trailing behind. We marched him to the nearest brazier, kept the road clear, and the fire drew the cold out. Nobody on my line gets left in the cold.",
@@ -266,6 +276,7 @@
       tidecaller: "The cold got into one of us and slowed them, a ring trailing behind. I kept the water on them while they limped to the nearest brazier and the others cleared the road. Had they not reached the fire in time, we would all have waded into the ring with them.",
       lanternkeeper: "Cold crept into one of us and slowed them, a ring trailing in their wake. I hung a lantern on them for the long walk to the nearest brazier, and the rest of us cleared the road. Without the fire, we would all have shared the ring.",
       kenseier: "A ring trailed one of the others, and they went slow and blue. We walked them to the nearest brazier, kept the way clear, and the fire pulled the cold out. No one is left in the cold alone.",
+      houndmaster: "One of us chilled, slow and blue with a ring after them. Walked them to the nearest brazier, kept the way clear. If they can't make it, stand in the ring with them.",
     } },
     'Whiteout': { hard: false, learned: {
       bastion: "White over all of us, and nothing to dodge. We were mended before it came. When it cleared, every sunk sheet was ice again and I had ground under my boots. The first fair thing he did.",
@@ -290,6 +301,7 @@
       tidecaller: "A white blast reached every one of us at once, and I had the water full before it came. When it cleared, the sunk sheets had frozen over again. The sea gives back, sometimes sooner than I hoped.",
       lanternkeeper: "A white blast reached every one of us at once. I had every wick gold and the party in close, and let the lanterns burst as it came. When it cleared, the sunk sheets had frozen over again.",
       kenseier: "White across all of us and nothing to dodge. We were mended before it came. When it cleared, every sunk sheet had frozen again and I had ground to stand on. A kindness, after.",
+      houndmaster: "White across all of us, nothing to dodge. Came mended. After, every sunk sheet was ice again. Back to work.",
     } },
     'The Long Night': { hard: false, learned: {
       bastion: "Lights low, and for a long while slow arcs from him, with frost called twice. Keep out of the arcs; whoever the frost marks chooses the ice by where they stand. I chose a sound post and stayed on it.",
@@ -314,6 +326,7 @@
       tidecaller: "The lights dimmed, a heavy blow fell on all of us at the start, and then came slow arcs for a long while, with the frost called twice. We kept out of the arcs, and the marked ones stood where they wanted ice, for it set where they stood. A long tide, kept steady.",
       lanternkeeper: "The lights dimmed, a heavy blow fell on all of us at the start, and then slow arcs came for a long while, with the frost called twice. We kept out of the arcs, and the marked chose their ground with care. I kept the wicks trimmed the whole way.",
       kenseier: "The lights went low, and for a long while there were only slow arcs from him, and frost called twice. I kept out of the arcs, and whoever was marked chose the ice by where they stood. I kept to a sound sheet and kept count.",
+      houndmaster: "Lights sank low. Long slow swings from him and frost called out twice. Stayed out of the swings. Whoever the frost named picked their ice by where they stood. Dogs kept to the sound sheets.",
     } },
     'Avalanche': { hard: false, learned: {
       bastion: "The plateau tilted at the end and snow came in lanes. Whatever was not frozen was marked red. I had the line on frozen ground before the first lane. Wet to the knees afterward, but standing. Held.",
@@ -338,6 +351,7 @@
       tidecaller: "At the end the plateau tipped and snow ran down in lanes, one after another. Whatever was not frozen glowed red. I walked onto a frozen sheet before the first lane and stayed there while the snow went by on either side, like a river round a stone.",
       lanternkeeper: "At the end the plateau tipped and snow ran down in lanes, one after another. Every sheet not frozen showed red. I carried my lanterns onto a frozen sheet before the first lane, and the party followed the light.",
       kenseier: "At the end the plateau tilted and the snow came down in lanes, with every unfrozen sheet painted red. We stood on ice that had set before the first lane fell, and the snow went by on either side.",
+      houndmaster: "Right at the end the whole plateau tipped and snow came down in lanes, every bare sheet painted red. Got the pack onto ice that had set before the first lane. Snow went round us both sides.",
     } },
     'Glacial Stomp': { hard: true, learned: {
       bastion: "He stamped, and two rings of shards ran out behind it. Right after the foot landed I stepped under him, into the quiet circle at his heels. Closest was safest. I would never have believed it on the parade ground.",
@@ -362,6 +376,7 @@
       tidecaller: "He stamped, and two rings of shards ran out one behind the other. When the foot had landed I stepped in close under him, to the quiet at his heels, and the rings went round us. A strange shore to stand on, but a dry one.",
       lanternkeeper: "He stamped, and two rings of shards ran out, one after the other. When the foot had landed, we stepped in close under him, where the rings pass over. A strange place to stand, and the safest.",
       kenseier: "His foot came down and two rings of shards ran out from it. I waited for the landing, then stepped in beneath him to the quiet circle at his heels. The nearest place was safest, which felt wrong and was right.",
+      houndmaster: "His foot hit and two rings of shards rolled out. Waited for the landing, then ducked in right under his heels, dogs behind. Closest spot's the safe one. Felt backwards, was right.",
     } },
     'Breath of Winter': { hard: true, learned: {
       bastion: "A wedge of frost at one of us. It hardly hurt. But whatever it crossed froze and, a moment later, broke and sank, so I had the line off that ground before it went.",
@@ -386,6 +401,7 @@
       tidecaller: "His breath came at one of us in a wedge, so light it hardly stung. But every sheet it crossed froze, then broke and sank a few swells later, so I walked off them while they were still hard. The gentle ones are the rip beneath the calm.",
       lanternkeeper: "His breath came at one of us in a wedge, so light it hardly stung. But every sheet it crossed froze, then broke and sank soon after. I walked off them while they were still hard, lantern in hand.",
       kenseier: "A wedge of frost at one of the others, mild as a breath. The danger was what it left: ground that froze, then broke and sank soon after. We were off it before the crack.",
+      houndmaster: "Frost cone at one of us, hardly a sting. It's what's underfoot after: sheets that freeze, then crack and sink. Off them quick, hounds too, before they go.",
     } },
     "Titan's Grip": { hard: true, learned: {
       bastion: "A ring followed one of us. Anyone in it when it closed was held fast, and a ring came up on them to share. The whole line ran to the held man and stood in it. Otherwise, out of the first ring. Nobody is held alone.",
@@ -410,6 +426,7 @@
       tidecaller: "A ring followed one of us, and his fist closed on whoever stood in it. Then a second ring rose on the held one, and we all waded in to share it, or they were crushed. Before that, I kept clear of the first ring. No one drowns alone if the rest wade in.",
       lanternkeeper: "A ring followed one of us, and his fist closed on whoever stood in it. Then a second ring rose on the held one, and the rest of us waded in to share it. Before that, keep clear of the first. I set a lantern in the second.",
       kenseier: "A ring followed one of the others. Whoever was in it when it closed was held fast, and a ring rose on them to be shared. All of us ran to the held one and stood in it. Keep out of the first ring and the rest is easy.",
+      houndmaster: "A ring tracked one of us. Whoever's inside when it shuts is held, and a share ring rises on them. Everyone ran in. Otherwise keep out of the first. Don't leave a hand alone in there.",
     } },
   },
 };

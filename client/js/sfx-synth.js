@@ -616,7 +616,10 @@
     'ab-grovekeeper-bloom': -1.5, 'ab-grovekeeper-canopy': -2, 'ab-grovekeeper-growth': -1, 'ab-grovekeeper-lifebind': -2,
     'ab-grovekeeper-moonwell': -2, 'ab-grovekeeper-rebirth': -1.5, 'ab-grovekeeper-rejuv': -1.5, 'ab-grovekeeper-seed': -1,
     'ab-grovekeeper-thorn': 1.5, 'ab-grovekeeper-treant': -1.5, 'ab-heal': -1.5, 'ab-heavy': -1,
-    'ab-holy': -2, 'ab-ironpalm-auto': 0.5, 'ab-ironpalm-bell': -1.5, 'ab-ironpalm-bellows': 1,
+    'ab-holy': -2, 'ab-houndmaster-auto': 2.5, 'ab-houndmaster-calloff': -5.5, 'ab-houndmaster-finisher': 1,
+    'ab-houndmaster-flank': -7, 'ab-houndmaster-howl': -3, 'ab-houndmaster-knife': 0.5, 'ab-houndmaster-longchase': -6.5,
+    'ab-houndmaster-mount': 5, 'ab-houndmaster-pounce': 5.5, 'ab-houndmaster-quarry': 5, 'ab-houndmaster-relay': -6.5,
+    'ab-houndmaster-ridedown': 0.5, 'ab-ironpalm-auto': 0.5, 'ab-ironpalm-bell': -1.5, 'ab-ironpalm-bellows': 1,
     'ab-ironpalm-breaker': -1, 'ab-ironpalm-crane': 3.5, 'ab-ironpalm-dragon': -2.5, 'ab-ironpalm-drop': -2.5,
     'ab-ironpalm-flow': -0.5, 'ab-ironpalm-gate': -1, 'ab-ironpalm-kick': 5, 'ab-ironpalm-ox': -1.5,
     'ab-ironpalm-palm': -0.5, 'ab-ironpalm-palms': -1.5, 'ab-ironpalm-pond': -0.5, 'ab-ironpalm-slide': -1,
@@ -706,30 +709,36 @@
     'feast-serve': -3.5, 'feast-sting': -2.5, 'fish-bite': 3, 'fish-cast': 1.5,
     'fish-catch': -3, 'fish-lost': -0.5, 'fish-reel': -0.5, 'gloom-hollow-off': -2,
     'gloom-hollow-on': 2, 'gold-pop': 5, 'gold-ripe': 3.5, 'heal-land': -2.5,
-    'hit-heavy': 5, 'hit-light': 9, 'ken-blaze': 0.5, 'ken-break': -0.5,
-    'ken-deathblow': -2, 'ken-good': 8, 'ken-iai': 2.5, 'ken-miss': 7.5,
-    'ken-off': 4.5, 'ken-pass': 6.5, 'ken-perfect': 2, 'ken-pommel': 6.5,
-    'ken-redirect': 1, 'lamp-drop': 11, 'lamp-ember': 14.5, 'lamp-end': 6.5,
-    'lamp-eternal': 0.5, 'lamp-pilgrim': 4.5, 'lamp-pillar': 3, 'lamp-snuff': 5.5,
-    'lamp-sparks': 5, 'lb-fire': -1.5, 'lb-ready': -5, 'loot-take': -2,
-    'low-hp': -4.5, 'npc-talk': -6, 'ping': 2.5, 'pip-up': 12,
-    'portal-enter': -3, 'portal-hum': -22.5, 'pull-count': 0.5, 'pull-count-last': -3.5,
-    'pull-go': -2, 'revive': -2, 'shield-break': 5, 'shield-up': -4,
-    'stack-1': 8, 'stack-2': -2.5, 'step-grass': 8, 'step-stone': 8.5,
-    'step-wood': 1.5, 'story-page': 3.5, 'tg-aoe': 1.5, 'tg-buster': 1,
-    'tg-charge': 0.5, 'tg-gaze': 0.5, 'tg-knockback': 2.5, 'tg-raidwide': -0.5,
-    'tg-spread': 5.5, 'tg-stack': 1.5, 'thresher-gate-bloom': -2.5, 'thresher-gate-tone': 8.5,
-    'thresher-pop': 16, 'thresher-rot': 3, 'tide-bell': 1, 'tide-crash': -1.5,
-    'tide-crest': 4.5, 'tide-gull': 9.5, 'tide-pop': 1.5, 'tide-slack': 10.5,
-    'tide-wave': 2.5, 'title-sting': -3, 'ui-bounty': 0.5, 'ui-buy': -6,
-    'ui-click': 2, 'ui-close': -0.5, 'ui-equip': -2.5, 'ui-error': -3,
-    'ui-feat': -7, 'ui-gold': -4, 'ui-hover': 13, 'ui-secret': -6,
-    'ult-alembist': 0.5, 'ult-bastion': 1.5, 'ult-bloodreaver': 1, 'ult-driftblade': 6.5,
-    'ult-fire': -1.5, 'ult-gloomsworn': -1, 'ult-gorgemaw': 1, 'ult-grovekeeper': 2.5,
-    'ult-kenseier': -1.5, 'ult-lanternkeeper': -2, 'ult-marionettist': 0.5, 'ult-oathbroker': -1,
-    'ult-pyromancer': -1, 'ult-ranger': 3, 'ult-ready': -4, 'ult-runeguard': -1,
-    'ult-shadowblade': 4, 'ult-thermist': -1, 'ult-threadweaver': -1, 'ult-tidecaller': -2,
-    'waymark': 11.5, 'wipe': -2,
+    'hit-heavy': 5, 'hit-light': 9, 'hm-bark-ash': -0.5, 'hm-bark-ghost': 3.5,
+    'hm-bark-greyfang': 0.5, 'hm-bark-rust': 0.5, 'hm-bite': 8, 'hm-bite-big': 2.5,
+    'hm-bringdown': -3, 'hm-calloff': 1.5, 'hm-down': 3, 'hm-hamstring': 1,
+    'hm-horn': -6, 'hm-howl': -3.5, 'hm-longchase': 1.5, 'hm-mount': -1,
+    'hm-quarry': 6.5, 'hm-relay': 4, 'hm-rend': 0.5, 'hm-ridedown': 2.5,
+    'hm-snap': 7, 'hm-up': 2.5, 'hm-whistle-hold': -7.5, 'hm-whistle-pounce': -7,
+    'ken-blaze': 0.5, 'ken-break': -0.5, 'ken-deathblow': -2, 'ken-good': 8,
+    'ken-iai': 2.5, 'ken-miss': 7.5, 'ken-off': 4.5, 'ken-pass': 6.5,
+    'ken-perfect': 2, 'ken-pommel': 6.5, 'ken-redirect': 1, 'lamp-drop': 11,
+    'lamp-ember': 14.5, 'lamp-end': 6.5, 'lamp-eternal': 0.5, 'lamp-pilgrim': 4.5,
+    'lamp-pillar': 3, 'lamp-snuff': 5.5, 'lamp-sparks': 5, 'lb-fire': -1.5,
+    'lb-ready': -5, 'loot-take': -2, 'low-hp': -4.5, 'npc-talk': -6,
+    'ping': 2.5, 'pip-up': 12, 'portal-enter': -3, 'portal-hum': -22.5,
+    'pull-count': 0.5, 'pull-count-last': -3.5, 'pull-go': -2, 'revive': -2,
+    'shield-break': 5, 'shield-up': -4, 'stack-1': 8, 'stack-2': -2.5,
+    'step-grass': 8, 'step-stone': 8.5, 'step-wood': 1.5, 'story-page': 3.5,
+    'tg-aoe': 1.5, 'tg-buster': 1, 'tg-charge': 0.5, 'tg-gaze': 0.5,
+    'tg-knockback': 2.5, 'tg-raidwide': -0.5, 'tg-spread': 5.5, 'tg-stack': 1.5,
+    'thresher-gate-bloom': -2.5, 'thresher-gate-tone': 8.5, 'thresher-pop': 16, 'thresher-rot': 3,
+    'tide-bell': 1, 'tide-crash': -1.5, 'tide-crest': 4.5, 'tide-gull': 9.5,
+    'tide-pop': 1.5, 'tide-slack': 10.5, 'tide-wave': 2.5, 'title-sting': -3,
+    'ui-bounty': 0.5, 'ui-buy': -6, 'ui-click': 2, 'ui-close': -0.5,
+    'ui-equip': -2.5, 'ui-error': -3, 'ui-feat': -7, 'ui-gold': -4,
+    'ui-hover': 13, 'ui-secret': -6, 'ult-alembist': 0.5, 'ult-bastion': 1.5,
+    'ult-bloodreaver': 1, 'ult-driftblade': 6.5, 'ult-fire': -1.5, 'ult-gloomsworn': -1,
+    'ult-gorgemaw': 1, 'ult-grovekeeper': 2.5, 'ult-houndmaster': -3.5, 'ult-kenseier': -1.5,
+    'ult-lanternkeeper': -2, 'ult-marionettist': 0.5, 'ult-oathbroker': -1, 'ult-pyromancer': -1,
+    'ult-ranger': 3, 'ult-ready': -4, 'ult-runeguard': -1, 'ult-shadowblade': 4,
+    'ult-thermist': -1, 'ult-threadweaver': -1, 'ult-tidecaller': -2, 'waymark': 11.5,
+    'wipe': -2,
   };
   // @@TRIM-END
 
@@ -1460,6 +1469,39 @@
     lkchime: S => { [88, 93, 97].forEach((n, i) => S.glass({ at: i * 0.05, f: mf(n), dur: 0.8, peak: 0.07, pan: (i - 1) * 0.3 })); },
     lkstep: S => { S.wood({ f: 300, dur: 0.07, peak: 0.12 }); S.wood({ at: 0.14, f: 340, dur: 0.07, peak: 0.1 }); S.noise({ at: 0.01, color: 'pink', lp: 1400, dur: 0.12, pts: [[0.01, 1], [0.12, 0]], peak: 0.05 }); },
   };
+  // Houndmaster (class id houndmaster): bone whistles, leather and fur, paws on earth, a brass horn. The whistles are two-tone and each command has its own: Flank two rising notes,
+  // Hold one long steady one, Pounce three sharp rising ones, Call Off a falling slide and a short low note. The hounds bark: Rust low and gruff, Ash higher and quicker, Greyfang
+  // one deep one with a growl under it, the Wild Hunt ghosts breathy and far off. Bites are the snap of teeth; Rend's claws are two long scrapes that cross
+  const whn = (S, at, f, f1, dur, pk) => {
+    S.tone({ at, f, f1, glide: dur * 0.45, dur, a: 0.012, vib: [30, 0.012, 0.04], lp: 6200, pts: [[0.015, 1], [dur * 0.7, 0.8], [dur, 0]], peak: pk });
+    S.tone({ at, f: f * 2.01, f1: f1 ? f1 * 2.01 : null, glide: dur * 0.45, dur, a: 0.012, lp: 7000, pts: [[0.015, 1], [dur * 0.7, 0.7], [dur, 0]], peak: pk * 0.18 });
+    S.noise({ at, color: 'white', bp: f1 || f, q: 9, dur, a: 0.01, pts: [[0.012, 1], [dur * 0.7, 0.6], [dur, 0]], peak: pk * 0.4 });
+  };
+  const hbark = (S, at, f, dur, pk) => {
+    S.voice({ at, f, f1: f * 0.62, vowel: 'a', vowel1: 'o', dur, breath: 0.45, lp: 2400, peak: pk });
+    S.noise({ at, color: 'pink', bp: f * 6, q: 1.4, dur: dur * 0.5, a: 0.002, pts: [[0.004, 1], [dur * 0.5, 0]], peak: pk * 0.5 });
+    S.thud({ at, f: f * 0.8, f1: f * 0.5, dur: dur * 0.6, peak: pk * 0.5, click: 0 });
+  };
+  const hhowl = (S, at, f, pk, len) => {
+    S.voice({ at, f, f1: f * 1.9, vowel: 'o', vowel1: 'u', dur: len * 0.42, breath: 0.2, lp: 2200, peak: pk, a: 0.04 });
+    S.voice({ at: at + len * 0.4, f: f * 1.9, f1: f * 1.55, vowel: 'u', vowel1: 'o', dur: len * 0.6, breath: 0.2, lp: 2000, peak: pk * 0.9 });
+  };
+  Object.assign(ACC, {
+    hmwf: S => { whn(S, 0, 1850, 1900, 0.13, 0.13); whn(S, 0.14, 2500, 2560, 0.24, 0.13); },
+    hmwh: S => { whn(S, 0, 2100, 1960, 0.58, 0.12); },
+    hmwp: S => { whn(S, 0, 2300, 2420, 0.07, 0.14); whn(S, 0.09, 2700, 2820, 0.07, 0.14); whn(S, 0.18, 3150, 3320, 0.1, 0.14); },
+    hmwc: S => { whn(S, 0, 2700, 1750, 0.3, 0.13); whn(S, 0.34, 1750, 1760, 0.14, 0.12); },
+    hmcloth: S => { S.noise({ color: 'pink', lp: 2200, lp1: 700, dur: 0.14, pts: [[0.02, 1], [0.14, 0]], peak: 0.16 }); S.noise({ at: 0.01, color: 'white', hp: 5200, dur: 0.08, pts: [[0.01, 1], [0.08, 0]], peak: 0.04 }); },
+    hmsteel: S => { S.metal({ set: 'bar', f: 3000, dur: 0.18, peak: 0.08, click: 0.5 }); S.scrape({ at: 0.01, f: 5000, q: 3, rate: 60, dur: 0.1, pts: [[0.01, 1], [0.1, 0]], peak: 0.05 }); },
+    hmpuff: S => { S.noise({ color: 'pink', bp: 1800, q: 0.8, dur: 0.12, a: 0.02, pts: [[0.03, 1], [0.12, 0]], peak: 0.1 }); },
+    hmbreath: S => { S.noise({ color: 'pink', bp: 900, bp1: 1900, q: 0.9, dur: 0.18, a: 0.04, pts: [[0.06, 1], [0.18, 0]], peak: 0.14 }); S.wood({ at: 0.15, f: 900, dur: 0.03, peak: 0.1 }); },
+    hmpaws: S => { for (let i = 0; i < 6; i++) { S.thud({ at: i * 0.045 + S.rr(0, 0.01), f: S.rr(110, 150), f1: 70, dur: 0.06, peak: 0.1 + (i % 2) * 0.03, click: 0 }); S.noise({ at: i * 0.045, color: 'pink', lp: 1400, dur: 0.04, pts: [[0.004, 1], [0.04, 0]], peak: 0.05 }); } },
+    hmgrowl: S => { S.noise({ color: 'brown', lp: 380, dur: 0.5, a: 0.06, pts: [[0.12, 1], [0.5, 0]], peak: 0.2 }); S.tone({ type: 'saw', f: 85, f1: 62, glide: 0.45, dur: 0.5, am: [22, 0.8], lp: 520, a: 0.05, peak: 0.1 }); },
+    hmknot: S => { S.crack({ f: 1800, dur: 0.08, peak: 0.2 }); S.noise({ at: 0.005, color: 'white', hp: 3200, dur: 0.05, pts: [[0.004, 1], [0.05, 0]], peak: 0.08 }); },
+    hmsnap: S => { S.crack({ f: 3600, dur: 0.05, peak: 0.25 }); S.wood({ at: 0.002, f: 1300, dur: 0.04, peak: 0.18 }); S.noise({ at: 0.002, color: 'white', hp: 6000, dur: 0.03, pts: [[0.002, 1], [0.03, 0]], peak: 0.06 }); },
+    hmhowl: S => { hhowl(S, 0, 300, 0.1, 1.1); hhowl(S, 0.14, 240, 0.08, 1.0); },
+    hmclaws: S => { S.scrape({ f: 4300, q: 2.6, rate: 70, dur: 0.3, pts: [[0.02, 1], [0.3, 0]], peak: 0.1, pan: -0.3 }); S.scrape({ at: 0.06, f: 3600, q: 2.6, rate: 55, dur: 0.3, pts: [[0.02, 1], [0.3, 0]], peak: 0.1, pan: 0.3 }); },
+  });
   function layer(S, l) {
     const [name, p, at, g, v] = Array.isArray(l) ? l : [l];
     const fn = ACC[name] || FN['ab-' + name] || FN[name];
@@ -1795,6 +1837,24 @@
     trail: [['dash', 1.2, 0, 0.7, 0], ['lkchain', 1.3, 0.02, 0.8], ['lkchime', 1.6, 0.1, 0.5]],
     beaconflare: [['lkfwoomp', 0.9, 0, 1], ['lkgong', 1.2, 0.02, 0.8], ['lkchime', 1.1, 0.06, 0.7], ['lkspark', 0.8, 0.04, 0.8]],
   };
+  // Houndmaster (class id houndmaster): every move its own sound. The whistles of Flank and Call Off are the moves themselves; Hold / Pounce is one button, so its press is only a breath
+  // and a click of the lips and the right whistle (Hold's one long note, Pounce's three) comes with the moment (sound-hooks.js SoundHooks.houndmaster). The knife is steel and leather,
+  // Mark the Quarry a cloth snapped out and knotted, Relay both whistles close together, Mount paws and leather, Ride Down a drop and a cut, Howl the pack's voices, the Long Chase a
+  // sharp note and a gallop (Wild Hunt is the Ultimate, ult-houndmaster)
+  ABIL.houndmaster = {
+    auto: [['slash', 0.85, 0, 0.6, 0], ['hmcloth', 1.3, 0, 0.4]],
+    knife: [['slash', 0.95, 0, 0.9, 1], ['hmsteel', 1, 0.03, 0.5]],
+    flank: [['hmwf', 1, 0, 1], ['hmpuff', 1, 0, 0.3]],
+    finisher: [['hmsnap', 1, 0, 0.9], ['heavy', 0.9, 0.04, 0.6, 1], ['hmgrowl', 1, 0, 0.4]],
+    pounce: [['hmbreath', 1, 0, 1], ['hmcloth', 0.8, 0.12, 0.5]],
+    calloff: [['hmwc', 1, 0, 1], ['hmpaws', 1, 0.12, 0.6]],
+    quarry: [['hmcloth', 0.7, 0, 0.9], ['hmknot', 1, 0.08, 0.8], ['buff', 1.2, 0.1, 0.4, 1]],
+    relay: [['hmwf', 1.3, 0, 0.8], ['hmwc', 1.1, 0.18, 0.8], ['hmpaws', 1.2, 0.08, 0.5]],
+    mount: [['hmpaws', 0.6, 0, 0.9], ['hmcloth', 0.6, 0.04, 0.7], ['hmgrowl', 0.7, 0.1, 0.5]],
+    ridedown: [['whoosh-down', 1, 0, 0.7], ['slash', 0.8, 0.05, 0.9, 2], ['heavy', 0.8, 0.2, 0.7, 0]],
+    howl: [['hmhowl', 1, 0, 1], ['buff', 0.9, 0.1, 0.4, 2]],
+    longchase: [['hmwh', 1.4, 0, 0.8], ['hmpaws', 1.3, 0.1, 0.8], ['whoosh-up', 1.2, 0.05, 0.4]],
+  };
   for (const cls in ABIL) for (const id in ABIL[cls]) { const spec = ABIL[cls][id]; def('ab-' + cls + '-' + id, 'ab', S => { for (const l of spec) layer(S, l); }); }
 
   // ---------------------------------------------------------------------------------------------- Ultimate signatures
@@ -2069,6 +2129,42 @@
     S.crack({ at: 0.08, f: 3000, dur: 0.18, peak: 0.3 });
     S.metal({ at: 0.09, set: 'bar', f: 3800, dur: 0.4, peak: 0.1, click: 0.6 });
   });
+  // Houndmaster (class id houndmaster): the Ultimate (Wild Hunt: a hunting horn sounded twice, a pack of ghostly howls answering out of the dark, a deep thud as they break and run), and the
+  // moments the kit sends (sound-hooks.js SoundHooks.houndmaster): the whistles of Hold and Pounce, a bark for each hound, a bite and a big one, Rend (two scrapes crossing), Hamstring (a low
+  // tearing cut and a stumble), Bring Down (the leap and a heavy landing), Snap, the pounce landing, Call Off arriving, Relay, a hound downed and back on its feet, the Quarry marked, the
+  // horn of Wild Hunt, Mount, Ride Down, Howl and the Long Chase
+  def('ult-houndmaster', 'ult', S => {
+    S.space('hall', 0.5);
+    S.horn({ f: mf(52), dur: 0.8, peak: 0.34 });
+    S.horn({ at: 0.62, f: mf(59), dur: 1.0, peak: 0.34 });
+    [0, 0.12, 0.26].forEach((at, i) => hhowl(S, 0.9 + at, [260, 310, 230][i], 0.08, 1.1));
+    S.thud({ at: 1.5, f: 70, f1: 34, dur: 0.6, drive: 1.8, peak: 0.5 });
+    S.noise({ at: 1.5, color: 'pink', lp: 2400, lp1: 400, dur: 0.7, a: 0.03, pts: [[0.08, 1], [0.7, 0]], peak: 0.2 });
+    [86, 91, 95].forEach((n, i) => S.glass({ at: 1.5 + i * 0.06, f: mf(n), dur: 0.9, peak: 0.05, pan: (i - 1) * 0.3 }));
+  });
+  def('hm-whistle-hold', 'ab', S => { ACC.hmwh(S); });
+  def('hm-whistle-pounce', 'ab', S => { ACC.hmwp(S); });
+  def('hm-bark-rust', 'ab', S => { hbark(S, 0, 140, 0.17, 0.3); hbark(S, 0.23, 128, 0.2, 0.3); });
+  def('hm-bark-ash', 'ab', S => { hbark(S, 0, 235, 0.12, 0.26); hbark(S, 0.16, 250, 0.11, 0.24); hbark(S, 0.31, 225, 0.13, 0.24); });
+  def('hm-bark-greyfang', 'ab', S => { hbark(S, 0, 96, 0.3, 0.38); S.noise({ at: 0.08, color: 'brown', lp: 360, dur: 0.45, a: 0.05, pts: [[0.12, 1], [0.45, 0]], peak: 0.14 }); });
+  def('hm-bark-ghost', 'ab', S => { S.space('hall', 0.55); hbark(S, 0, 205, 0.2, 0.18); S.glass({ at: 0.05, f: mf(88), dur: 0.9, peak: 0.04 }); S.noise({ at: 0.02, color: 'white', hp: 4800, dur: 0.4, pts: [[0.05, 1], [0.4, 0]], peak: 0.03 }); });
+  def('hm-bite', 'ab', S => { ACC.hmsnap(S); S.thud({ f: 120, f1: 70, dur: 0.1, peak: 0.22, click: 0 }); });
+  def('hm-bite-big', 'ab', S => { ACC.hmsnap(S); S.thud({ f: 90, f1: 46, dur: 0.22, peak: 0.45, drive: 1.2 }); ACC.hmgrowl(S); S.crack({ at: 0.01, f: 1500, dur: 0.1, peak: 0.2 }); });
+  def('hm-rend', 'ab', S => { ACC.hmclaws(S); S.whoosh({ color: 'white', f: 900, f1: 3600, q: 1.2, dur: 0.26, peakAt: 0.4, peak: 0.22 }); S.thud({ at: 0.13, f: 100, f1: 56, dur: 0.22, peak: 0.45, drive: 1.2 }); S.glass({ at: 0.14, f: mf(92), dur: 0.5, peak: 0.05 }); });
+  def('hm-hamstring', 'ab', S => { S.whoosh({ color: 'pink', f: 1400, f1: 300, q: 0.9, dur: 0.28, peakAt: 0.3, peak: 0.26 }); S.noise({ at: 0.08, color: 'white', bp: 2400, bp1: 900, q: 1.4, dur: 0.18, pts: [[0.02, 1], [0.18, 0]], peak: 0.16 }); S.thud({ at: 0.2, f: 130, f1: 70, dur: 0.14, peak: 0.35, click: 0 }); S.thud({ at: 0.34, f: 105, f1: 55, dur: 0.2, peak: 0.4, drive: 1.1 }); S.noise({ at: 0.3, color: 'pink', lp: 1400, lp1: 300, dur: 0.3, pts: [[0.03, 1], [0.3, 0]], peak: 0.1 }); });
+  def('hm-bringdown', 'ab', S => { S.space('room', 0.2); S.whoosh({ color: 'pink', f: 500, f1: 2000, q: 0.9, dur: 0.3, peakAt: 0.8, peak: 0.3 }); S.thud({ at: 0.28, f: 66, f1: 32, dur: 0.6, drive: 1.9, peak: 0.6 }); S.crack({ at: 0.28, f: 900, dur: 0.16, peak: 0.28 }); S.noise({ at: 0.3, color: 'brown', lp: 700, lp1: 150, dur: 0.6, pts: [[0.05, 1], [0.6, 0]], peak: 0.3 }); hbark(S, 0.1, 110, 0.2, 0.25); });
+  def('hm-snap', 'ab', S => { ACC.hmsnap(S); S.thud({ at: 0.01, f: 140, f1: 80, dur: 0.1, peak: 0.25, click: 0 }); });
+  def('hm-pounce', 'ab', S => { S.whoosh({ color: 'pink', f: 600, f1: 1600, q: 0.9, dur: 0.22, peakAt: 0.6, peak: 0.22 }); S.thud({ at: 0.48, f: 96, f1: 50, dur: 0.22, peak: 0.45, drive: 1.1 }); S.noise({ at: 0.48, color: 'pink', lp: 1800, lp1: 400, dur: 0.3, pts: [[0.03, 1], [0.3, 0]], peak: 0.12 }); });
+  def('hm-calloff', 'ab', S => { ACC.hmpaws(S); S.thud({ at: 0.3, f: 100, f1: 60, dur: 0.16, peak: 0.3, click: 0 }); S.thud({ at: 0.36, f: 112, f1: 64, dur: 0.16, peak: 0.28, click: 0 }); S.noise({ at: 0.3, color: 'pink', lp: 1600, dur: 0.2, pts: [[0.02, 1], [0.2, 0]], peak: 0.08 }); });
+  def('hm-relay', 'ab', S => { S.whoosh({ color: 'pink', f: 700, f1: 1500, q: 1, dur: 0.3, peakAt: 0.5, peak: 0.16, pan: -0.5 }); S.whoosh({ at: 0.04, color: 'pink', f: 1500, f1: 700, q: 1, dur: 0.3, peakAt: 0.5, peak: 0.16, pan: 0.5 }); ACC.hmpaws(S); });
+  def('hm-down', 'ab', S => { S.tone({ f: 520, f1: 210, glide: 0.35, dur: 0.4, am: [8, 0.5], lp: 1400, a: 0.01, peak: 0.12 }); S.thud({ at: 0.02, f: 110, f1: 55, dur: 0.22, peak: 0.3 }); S.noise({ at: 0.04, color: 'pink', lp: 1300, lp1: 300, dur: 0.3, pts: [[0.03, 1], [0.3, 0]], peak: 0.1 }); });
+  def('hm-up', 'ab', S => { hbark(S, 0, 190, 0.15, 0.22); S.glass({ at: 0.06, f: mf(90), dur: 0.6, peak: 0.05 }); S.glass({ at: 0.11, f: mf(95), dur: 0.6, peak: 0.04 }); });
+  def('hm-quarry', 'ab', S => { S.noise({ color: 'pink', lp: 2400, lp1: 600, dur: 0.2, pts: [[0.02, 1], [0.2, 0]], peak: 0.2 }); ACC.hmknot(S); S.glass({ at: 0.1, f: mf(86), dur: 0.7, peak: 0.05 }); });
+  def('hm-horn', 'ab', S => { S.space('hall', 0.45); S.horn({ f: mf(52), dur: 0.9, peak: 0.36 }); S.horn({ at: 0.55, f: mf(59), dur: 0.9, peak: 0.34 }); });
+  def('hm-mount', 'ab', S => { ACC.hmpaws(S); S.thud({ at: 0.05, f: 90, f1: 50, dur: 0.2, peak: 0.35 }); hbark(S, 0.08, 100, 0.22, 0.3); });
+  def('hm-ridedown', 'ab', S => { S.thud({ f: 72, f1: 36, dur: 0.4, drive: 1.5, peak: 0.5 }); S.noise({ color: 'pink', lp: 1800, lp1: 300, dur: 0.4, pts: [[0.03, 1], [0.4, 0]], peak: 0.16 }); S.scrape({ at: 0.1, f: 4200, q: 2.6, rate: 60, dur: 0.18, pts: [[0.02, 1], [0.18, 0]], peak: 0.08 }); S.crack({ at: 0.12, f: 1400, dur: 0.1, peak: 0.25 }); });
+  def('hm-howl', 'ab', S => { S.space('hall', 0.4); ACC.hmhowl(S); hhowl(S, 0.3, 275, 0.07, 0.9); });
+  def('hm-longchase', 'ab', S => { for (let i = 0; i < 14; i++) S.thud({ at: i * 0.09 + S.rr(0, 0.015), f: S.rr(100, 140), f1: 62, dur: 0.07, peak: 0.12 + (i % 2) * 0.04, click: 0 }); [1, 2, 3, 4].forEach(q => { S.crack({ at: q * 0.31, f: 3200, dur: 0.05, peak: 0.14 }); S.thud({ at: q * 0.31, f: 96, f1: 52, dur: 0.16, peak: 0.3, click: 0 }); }); });
   // Lanternkeeper (class id lanternkeeper): the Ultimate (Lighthouse: a great flame taking hold, a brass bell tolling and a low choir swelling under a rising shimmer of
   // glass), and the moments the kit sends (sound-hooks.js SoundHooks.lanternkeeper): an Ember gained (a tiny warm tick), a lantern snuffed (a puff and a thread of smoke),
   // a small light dropped (a soft catch), the Lighthouse going dark (the hum falling away), the Eternal Lamp lit (a bell and a long hum), Trailing Sparks (a spit of

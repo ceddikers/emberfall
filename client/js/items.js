@@ -253,6 +253,23 @@ Object.assign(ITEM_PERKS, {
   kenseier_w8: { ab: 'deflect', text: 'Thousand Cuts also charges a little from Good deflects.' },
 });
 
+// ---------------------------------------------------------------- Houndmaster (melee damage, class 23)
+// Weapon shape: 'hunting knife' (a broad skinning blade, tan-leather grip). Placeholder item art until the painted set is in.
+// Enhancements follow the Kenseier's shape (w1 Grubnak, a2 and w2 Skitterra, w3 Volkar, a4 the Hollow King) plus one set-2 piece:
+// w7, the Archmage's knife (`set2` in CLASS_GEAR). There is no trinket slot (gear is weapon, armour and two generic accessories),
+// so the collar is not an item.
+CLASS_MAIN.houndmaster = 'phys';
+CLASS_GEAR.houndmaster = { wtype: 'hunting knife', w: ['Kennel Knife', 'Webcut Skinner', 'Ember-Forged Skinner', 'Barrow-Hound Knife', 'Knife of the Hollow Hunt'], a: ["Kennelman's Jerkin", 'Silkhide Jerkin', 'Stormhide Jerkin', 'Gravehound Jerkin'],
+  set2: { w7: 'Skinner of the Spectral Hunt' } };
+Object.assign(ITEM_PERKS, {
+  houndmaster_w1: { ab: 'finisher', text: "A Rend's bleed also makes your hounds' bites hit 10% harder." },
+  houndmaster_a2: { ab: 'calloff', text: 'Call Off also gives the hounds a small shield.' },
+  houndmaster_w2: { ab: 'flank', text: 'Whistle: Flank is ready again at once when it sends a hound that was standing in front.' },
+  houndmaster_w3: { ab: 'pounce', text: 'Pounce gives 10 Bond per hound that lands in a pair.' },
+  houndmaster_a4: { ab: 'finisher', text: 'A Snap also brings a downed hound back on its feet at once.' },
+  houndmaster_w7: { ab: 'pounce', text: 'Wild Hunt opens with a pounce from all four spectral hounds.' },
+});
+
 // ---------------------------------------------------------------- item effects
 // Effects are data. The combat engine runs them in your own kit (Kit.itemHook / Kit.fxMod in engine.js), like the
 // enhancements; the host only ever sees the ordinary combat events they cause. An effect is either

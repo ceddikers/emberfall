@@ -24,6 +24,7 @@
     tidecaller: "A mountaintop is only a headland with the sea drawn out of it, and all the weather here was his. He hung a charge on each of us, gold or blue, like a ring on a gull's leg, and I kept the water high and watched which way the sky leaned.",
     lanternkeeper: "The summit was all his weather. He hung a charge on each of us, gold or blue, and I lit lanterns on the wrong ground twice before I saw how the colours pair. Tomorrow I learn his round before I light it. Keep your light.",
     kenseier: "A mountaintop, and weather with a rhythm to it, if one waits. Each of us wore a charge, gold or blue, and his fist came down toward me slow as a bell. I mistimed the first two and heard about it from the sky. Catch the beat.",
+    houndmaster: "Bare mountaintop and a sky that changes its mind. Gold or blue on each of us, and the big lad's fist coming down slow. Ash wouldn't stop looking up. Neither would I. Back tomorrow, with a better plan.",
   },
   // the first time this hero beats him
   win: {
@@ -49,6 +50,7 @@
     tidecaller: "He went down and the wind went with him, slack water at last on a high place. Every one of us walked off that mountain, and I let the tide run out of me slowly. The sea gives back.",
     lanternkeeper: "The storm went out of him slowly, like a wick running dry. All four of us walked down off that mountain, and I left a lantern burning on the highest stone, where the weather cannot reach it. I'll leave one burning.",
     kenseier: "Volkar is down and the wind has stopped trying to move me. His fist had the slowest beat I have ever answered, and the longest silence after. I stood in it a while.",
+    houndmaster: "Sky's quiet. Rust's shaking the rain off, Ash is asleep on my boots, and my coat will never be dry. Good dogs. Had him by supper, and a wet one.",
   },
   moves: {
     'Thunderclap': { hard: false, learned: {
@@ -74,6 +76,7 @@
       tidecaller: "The sky darkened and a great clap reached all of us at once, with no corner of the summit to hide in. I had the water at the crest as the clouds closed, so it broke on a full shore and nobody went down.",
       lanternkeeper: "The clouds closed over the summit and a clap meant for all of us was on its way, with no corner to hide in. I let every lantern burst as the sky went dark, and the party stood in glow upon glow. It struck a room already mended.",
       kenseier: "The light drained from the sky, and a clap went through all of us at once. There is nothing to cross with a blade in thunder. The healers filled us beforehand and I stood in the open and took it. It was only loud.",
+      houndmaster: "Sky went dark, then a clap through all of us. Nowhere to hide from weather. Came to it mended, dogs at my knee, and just stood in it. Only loud.",
     } },
     'Titan Fist': { hard: false, learned: {
       bastion: "Lightning ran down his arm toward me. I waited for the shoulder to drop and braced in the last instant, knowing the blow would not stop at me, and sent the others to the flank, out of the path behind. A shield is for the man in front. Everyone else needs orders.",
@@ -98,6 +101,7 @@
       tidecaller: "Lightning crept down his arm toward our knight, and a swell like that does not stop at the first rock; it runs on up the beach. I kept the others off the line behind him and sent the water to the knight just before the fist fell.",
       lanternkeeper: "Lightning crept down his arm, and the blow was for our knight. I hung a lantern on him before the fist came down, and the rest of us kept off the line behind him, since the bolt runs on past.",
       kenseier: "Lightning crept down his arm toward me. I let the fist come, met it with the blade as it fell, and the others stayed clear of the path behind. A slow blow, and very honest about its beat. Breathe, then strike.",
+      houndmaster: "Lightning crept down his arm. Fist then came down a long lane straight through the shield-man. Kept out of that lane, off to the side, and held the hounds back too.",
     } },
     'Polarity Surge': { hard: false, learned: {
       bastion: "Gold or blue on each of us. Orders, then: pair off, opposite colours, shoulder to shoulder, and keep your own kind away, since two of a kind arc and burn. I found my blue and stood by him like a man on parade.",
@@ -122,6 +126,7 @@
       tidecaller: "Gold or blue on each of us, and like charges fight each other the way two rips do. I went and found my opposite, close enough to touch, and kept all of my own colour well away from me.",
       lanternkeeper: "Gold or blue on each of us, and like colours fight. I went to my opposite and stood close enough to share one glow, and kept every other of my own colour at arm's length.",
       kenseier: "Gold or blue on each of us. Opposite colours went together, close enough to touch, and kept their own kind away, since two alike arc and burn. I found my partner and stood beside him. Opposites cancel.",
+      houndmaster: "Gold or blue on each of us. Unlike colours stood together, like colours stood off, for two of a kind spark and burn. Found my opposite and went shoulder to shoulder. Dogs kept out of it.",
     } },
     'Thunder Crash': { hard: false, learned: {
       bastion: "A cloud over each gold. My blue partner and I stood under mine and split the crash, and the other pair kept their distance. Then everybody scattered from the static, fast, no marching. The one order I enjoyed giving.",
@@ -146,6 +151,7 @@
       tidecaller: "Clouds gathered over the golds, and each blue went to stand under their gold's cloud so the weight was shared, the two pairs far apart. When it broke we all ran from the static like spray off a rock, and I mended in the running.",
       lanternkeeper: "Clouds gathered over the golds, and each blue went in under their gold's cloud to share the weight, the two pairs well apart. When it broke we all ran from the static. Two pairs, two lanterns, one for each.",
       kenseier: "A cloud hung over each gold one. My blue partner and I took the crash together under mine, and the other pair kept off. Then everyone scattered from the static. Shared, it was bearable. Alone, it would not have been.",
+      houndmaster: "A cloud hung over each gold one. My partner and I stood under it together, other pair well off, then everyone scattered from the static. Shared, it's a knock. Alone, it's a funeral.",
     } },
     'Static Field': { hard: false, learned: {
       bastion: "Static on every head, and each needed ground to themselves. I took my patch, planted my boots and kept the others in sight. Nobody crowded. Whatever else you say of the line, it knows its spacing.",
@@ -170,6 +176,7 @@
       tidecaller: "A ring of static sat over every head, and rings that touch only make a worse sea. Each of us took a patch of floor alone, spaced like gulls along a rail. When it cleared I walked the shingle of them and topped up whoever had been nicked.",
       lanternkeeper: "A ring of static hung over every head, and rings that touch make it worse. Each of us took a patch of floor alone. When it cleared I went round with my lantern and topped up whoever had been nicked.",
       kenseier: "Static took hold of each of us, and each needed room apart. I found my own bare patch and stayed on it. A blade needs room to move, and so, it turns out, does everything else.",
+      houndmaster: "Static took hold of each of us. Each wanted a bare patch of their own, so we spread like beaters and stayed put till it went off. Held the hounds out of everyone's way.",
     } },
     'Rod Strike': { hard: false, learned: {
       bastion: "A ring burned down over my head. I put my back to the nearest standing stone and the bolt struck the rock, not me. The next pair took other stones, since a struck stone needs time. I have worn worse armour than granite.",
@@ -194,6 +201,7 @@
       tidecaller: "Two of us wore the marks, and each stood hard against a standing stone so the bolt broke on the rock like a wave on a cliff. The next pair went to other stones, since a stone just struck is not ready to be struck again.",
       lanternkeeper: "Two of us were marked, and each stood against a standing stone so the bolt broke on rock. The next pair used different stones, since a stone just struck is not ready again. I kept my lantern between the stones, within reach of all.",
       kenseier: "A ring settled over my head. I could not turn a bolt, so I put the nearest standing stone between us, and it went into the rock. The next pair used different stones; a struck stone must rest.",
+      houndmaster: "A ring settled on my head. Ran to the nearest standing stone and put my shoulder to it, and the bolt took the rock. Next pair used other stones. A struck stone needs rest.",
     } },
     'Gale Slam': { hard: false, learned: {
       bastion: "He drew breath. Where a rod stood I stepped into the still air behind it, away from him; with none, I closed in on him so the throw stopped short of the rocks. Charge the enemy, my sergeant said. For once it was safe advice.",
@@ -218,6 +226,7 @@
       tidecaller: "He drew a long breath, and a breath that long goes out as a gale that throws us outward. I stood in the still lee behind a rod, away from him. With none standing, I stayed close in beside him, where the throw ran out before the rocks.",
       lanternkeeper: "He drew a long breath that would throw us outward. We sheltered in the lee of a standing rod, with the rod between us and him. When none stood, we kept close in beside him, where the shove ran out before the rocks.",
       kenseier: "He drew breath. Where a rod stood I sheltered in the still air behind it, on the side away from him; where none did, I closed in on him so the throw stopped short of the rocks. The nearest place was the safest.",
+      houndmaster: "He drew breath and the wind threw us outward. Behind a rod, out of the wind, you stand still. No rod, go in close, so the throw runs out before the rocks. Dogs go in under my coat.",
     } },
     'Storm Walls': { hard: false, learned: {
       bastion: "Walls of wind swung round him slowly, like spokes. I kept my place in the gap and marched with them, step for step, and stood behind a boulder where one lay. It was almost drill.",
@@ -242,6 +251,7 @@
       tidecaller: "Walls of wind swung slowly round him, and I walked in the gap at their own pace, the way a tide follows the moon. A boulder gave shelter once, for a single pass. There was no hurry, though the wall behind kept its own time.",
       lanternkeeper: "Walls of wind swung slowly round him. We walked in the gap at the wall's own pace, and a boulder sheltered us once, for a single pass. I trailed a lantern behind me, so the party kept to the gap by its light.",
       kenseier: "Walls of wind swung round him slowly, like spokes. I kept to the gap and went round with it, behind a boulder where one lay. The slowest beat I know, and easy to miss if you stare at your feet.",
+      houndmaster: "Walls of wind swing round him like spokes. Found the gap and walked round with it, boulders at my back where there were any. Slow as a plough team. Don't stare at your feet.",
     } },
     'Chain Lightning': { hard: true, learned: {
       bastion: "A bolt gathered over our healer while his fist came at me. She walked clear of everyone, and the rest of us stood well apart, so it had nobody to leap to. I took the fist alone. Two duties, one pair of hands. Held.",
@@ -266,6 +276,7 @@
       tidecaller: "The bolt gathered over my own head while his fist fell on our knight, so I walked away from everyone and the rest kept well apart, leaving it nothing to leap to. It struck me once and went out like a spent wave. I had filled my own water beforehand.",
       lanternkeeper: "On the hard nights the bolt gathered over my head just as the fist fell on our knight. I walked away from everyone, lamp and all, and the others kept apart to give it nothing to jump to. It struck me once and went out.",
       kenseier: "A bolt gathered over our healer while his fist came for me. She walked away from everyone and the rest of us kept apart, so it had nothing to leap to. I met the fist alone. Two beats at once, one pair of hands.",
+      houndmaster: "A bolt gathered over the healer. She walked off alone and the rest of us kept apart, so it had nowhere to jump. Kept the dogs apart too. Close dogs carry sparks.",
     } },
     'Lightning Rods': { hard: false, learned: {
       bastion: "Iron rods in the rock, each wanting one of us when the bolt fell. I took one, and stood out of the next while I still crackled. The rods stayed up after, good cover. I would have posted a guard on them.",
@@ -290,6 +301,7 @@
       tidecaller: "Iron rods rose from the rock, each wanting one of us when the bolt fell. I took one, and kept out of the next while I still crackled. Afterwards the rods stood on as cover, which the sea would call a fair trade.",
       lanternkeeper: "Iron rods rose from the stone, one wanting each of us. Four rods, four of us, and I took mine. Whoever had been struck kept out of the next, still crackling, and afterwards the rods stood on as cover.",
       kenseier: "Rods stood in the stone, one for each of us when the bolt fell. I took mine, and rested through the next while the charge still clung to me. They stayed standing after, and I used them as cover. A good tool does not vanish after use.",
+      houndmaster: "Rods drove into the stone, one for each of us. Took mine and sat out the next while the charge clung to me. They stand afterwards, good cover. Heel, and don't touch.",
     } },
     'Avalanche': { hard: false, learned: {
       bastion: "He stamped and boulders rolled across the summit in lanes. I stood between the lanes and let them go by, then got behind one for the walls of wind. A boulder makes a decent redoubt if you arrive first.",
@@ -314,6 +326,7 @@
       tidecaller: "He stamped and boulders rolled across the summit in lanes. I waited in the gaps between them and let them go by like swell past a pier, then slipped in behind one for the walls of wind that followed.",
       lanternkeeper: "He stamped and boulders rolled across the summit in lanes. I set my lantern in the gap between two lanes and we waited there, then slipped behind a boulder for the walls of wind that followed.",
       kenseier: "He stamped and boulders rolled across the summit in lanes. I waited between the lanes and let them pass, then took the lee of a stone for the wind walls that follow. A rock is a patient ally.",
+      houndmaster: "He stamped, and boulders rolled in lanes. Stood between the lanes and let them go by, then got in the lee of one for the wind walls after. Called the dogs in off the lanes.",
     } },
     'Squall Line': { hard: false, learned: {
       bastion: "The storm's edge closed on one side and opened on the other, and the dry ground walked slowly round him. The line walked with it, step for step, never outside. Marching order, in other words.",
@@ -338,6 +351,7 @@
       tidecaller: "The dry ground drifted slowly round him with the storm raging at its edge, so I walked with it, my little flock inside, and called in anyone who strayed toward the rain. A long slow circle, like the moon over a harbour.",
       lanternkeeper: "The dry ground drifted slowly round him with the storm raging at its edge. I walked with it, my lanterns coming along behind, and called in anyone who strayed toward the rain.",
       kenseier: "The storm closed on one side and opened on the other, and the dry ground walked slowly round him. We walked with it, all of us, never outside it. A slow step, repeated, is the whole of the lesson.",
+      houndmaster: "Dry ground drifted slowly round him. Walked with it, all of us, never outside the edge. Dogs at heel, keeping inside it too.",
     } },
     'Ball Lightning': { hard: true, learned: {
       bastion: "Orbs of lightning drifted off the cliff edge and across the summit. I watched each one's heading and stepped off its path. Slow is not the same as harmless. A recruit learns that with his first slow horse.",
@@ -362,6 +376,7 @@
       tidecaller: "Orbs rose off the cliff edge and wandered across the summit, slow as a tide coming over the flats and just as sure. I read each one's heading and stepped off its path in good time. Slow is not harmless.",
       lanternkeeper: "On the hard nights orbs rose over the cliff edge and wandered across the summit. They are slow, and slow is easy to read. I watched each heading, set my lantern where none was bound, and stepped off the paths in good time.",
       kenseier: "Orbs of lightning rose off the cliff and wandered across the summit. I marked each one's heading and stayed off its road. It is a very slow blow, and it still counts.",
+      houndmaster: "Orbs of lightning drift in off the cliff on straight lines. Read each heading and stepped off the road. Held the dogs, who'd chase a firefly into a fire.",
     } },
     'Eye of the Storm': { hard: false, learned: {
       bastion: "The wind dropped and nothing struck. I kept on him, kept the line together, watched for what came next. On the harder climb our colours turn over in this quiet; I checked mine twice, like buckles.",
@@ -386,6 +401,7 @@
       tidecaller: "The wind dropped and nothing came: slack water, and the best hour to fill everyone to the brim. On the harder climb our colours turn over in this stillness, so I looked at mine, and then at theirs.",
       lanternkeeper: "The wind dropped and nothing came. I used the quiet to bring every wick back to gold and mend everyone to the brim. On the harder climb our colours turn over in this stillness, so I looked at mine, and then at theirs.",
       kenseier: "The wind fell and nothing struck. I stayed on him and watched for what came next, which is most of the work. On the harder climbs our colours turn over in this quiet; I checked mine twice. A rest is also a beat.",
+      houndmaster: "Wind dropped and nothing struck. Stayed on him, watched for the next thing. On the harder climbs our colours turn over in this quiet. Checked mine twice. Easy, lads.",
     } },
     'Still Air': { hard: false, learned: {
       bastion: "Stones lit, gold and blue. I took the one matching my colour and stood at it like a sentry at a gate. Every stone needed a man, or the whole summit would pay for it.",
@@ -410,6 +426,7 @@
       tidecaller: "The stones lit gold and blue. I went to the one that matched me and stood there, one to a stone, none left empty, as a good tide leaves no shingle dry. A wrong colour or a bare stone, and the whole shore pays.",
       lanternkeeper: "The stones lit gold and blue. I went to the one that matched me, one to a stone, none left bare, and set a lantern on mine. A wrong colour or an empty stone and the whole party pays.",
       kenseier: "The stones lit, gold and blue. I took the one that matched me, stood at it, and waited for the eye to shut. Every stone needed someone. I let the quiet pass over me.",
+      houndmaster: "Stones lit, gold and blue. Took the one that matched me and stood there till the eye shut. Wrong colour, you're struck. Empty stone, everyone is. Dogs sat down beside me.",
     } },
     'Distant Thunder': { hard: false, learned: {
       bastion: "Thunder, far off. Nothing reached us. I kept my post at my stone and did not flinch, though I felt the others watching to see whether I would.",
@@ -434,6 +451,7 @@
       tidecaller: "Thunder, far off, over some other sea. Nothing fell on us. I kept to my stone and let the water rise a little further, in case the quiet was lying.",
       lanternkeeper: "Thunder, far off. Nothing fell on us. I stayed on my stone and trimmed the wicks, in case the quiet was lying.",
       kenseier: "Thunder, far away, and nothing reached us. I stayed at my stone and did not flinch, though I felt the others glance to see if I would. Stillness is the long breath before the stroke.",
+      houndmaster: "Thunder over the far peaks, and nothing landed. Stayed at my stone. Ash growled at it, which did no good. Wait.",
     } },
     'Eye Closes': { hard: false, learned: {
       bastion: "The calm ended. I was at my stone, in my colour, when it did, and the storm came back down on the line. First rule of a post: be on it when the bell goes.",
@@ -458,6 +476,7 @@
       tidecaller: "The calm turned like the tide. I was already at my stone in my colour when it did, and the storm came back down on the rest of the summit. Arriving early costs nothing.",
       lanternkeeper: "The calm closed, and the storm came back down over the rest of the summit. We were on our stones already, each in the right colour, lanterns lit. Arriving early costs nothing.",
       kenseier: "The calm ended, and I was at my stone, in my colour, when it did. The storm came back down on all of us. A rest ends, and the next beat comes. Be ready on the last quiet one.",
+      houndmaster: "Calm ended and I stood at my stone in my own colour. The storm came back down on the rest a breath later. Be on your stone before the quiet runs out.",
     } },
     'Gathering Storm': { hard: false, learned: {
       bastion: "Static settled on all of us and bit, over and over. I kept close to the healers with my guard ready and let them mend the line as it went. It held by a thread. A good thread, well tied.",
@@ -482,6 +501,7 @@
       tidecaller: "Static settled on every one of us and stung again and again, small nicks and many. I kept close to the others, gave a little water to whoever bled, steadily, and let the rest of the tide climb behind it. Wait for the water.",
       lanternkeeper: "Static settled on all of us and stung again and again, a small nick each time. I kept the party close and the wicks full, and let the lanterns do the small work while I saved the large for later.",
       kenseier: "Static settled on all of us and bit, again and again. I stayed close to the healers and let them keep us mended. Nothing to meet with a blade, only to outlast, a bite at a time.",
+      houndmaster: "Static settled on all of us, biting again and again. Stayed near the healers and let them keep us whole. Nothing to dodge, only to bear.",
     } },
     'Thunderhead': { hard: false, learned: {
       bastion: "The static broke as one great blast on all of us. I had my guard saved for that moment, the healers had the line whole first, and we took it standing. Headcount after: all present, and swearing.",
@@ -506,6 +526,7 @@
       tidecaller: "The static gathered itself and broke over all of us as one blow. By then the water stood at the crest and each of us had raised our own guard, so it fell on a full shore and not one of us went down.",
       lanternkeeper: "The static gathered and broke over all of us as one blow. Each of us had raised our own guard, and I let every lantern burst as it fell, so it landed on a party already mended.",
       kenseier: "The static broke as one great blast over every one of us. I wore the ash for it, and the healers had us full beforehand. A blow you cannot turn is best met whole.",
+      houndmaster: "It broke over all of us in one blast. Healers had us full beforehand, and that was the answer. Dogs close in by the healer. Sit tight.",
     } },
     'Skyfall': { hard: true, learned: {
       bastion: "He called the sky down on the spot where one of us stood. The nearer you are, the worse it falls. I gave ground away from it, as far as the edge allowed. A retreat on orders, my own.",
@@ -530,6 +551,7 @@
       tidecaller: "He called the sky down on the spot where one of us had stood, and the nearer you are, the harder it falls. I walked out to the far edge of the summit, as far as the shore allowed, and the water followed me.",
       lanternkeeper: "On the hard climb he called the sky down on the spot where one of us had stood, and the nearer you were, the harder it fell. I carried my lantern out to the far edge of the summit and the party came after.",
       kenseier: "He dropped the sky on the spot where one of us stood. The nearer, the harder it landed. I went as far from it as the summit allowed. Some blows are for leaving.",
+      houndmaster: "He dropped the sky on the spot where someone stood. Nearer you are, the harder it lands. Got as far from it as the summit allowed, dogs too. Good dogs.",
     } },
     'Heavens Fall': { hard: false, learned: {
       bastion: "The sky came down on a marked spot at his side. All of us stood in it together, gold and blue both, and held it up as a line. Each fall was heavier than the last. My arms shook. Nobody dropped it.",
@@ -554,6 +576,7 @@
       tidecaller: "A marked patch at his side, and the whole sky coming down on it, each fall heavier than the last. We stood in it together, gold and blue, and shared the weight, and I raised the water again after every fall.",
       lanternkeeper: "A marked patch at his side, and the sky coming down on it again and again, each fall heavier. We all stood in it together, gold and blue, to share the weight. I set my lantern in the middle and kept the wicks full between falls.",
       kenseier: "A circle was painted at his side, and the sky came down into it, over and over. All of us crowded in, gold beside blue, and split each fall. Each landed heavier than the last, and nobody stepped out early. We shared the count.",
+      houndmaster: "He painted a circle by his side and the sky dropped into it again and again, harder each time. Gold and blue went in together and shared every fall. Not a soul left early. Dogs stayed out of it.",
     } },
     'Grounding Rods': { hard: true, learned: {
       bastion: "Orders for the harder climb: a rod over each gold, planted wherever he stands. Put them a stride off Volkar, east and west, level with him. I watched the rods go in, then went to my partner's.",
@@ -578,6 +601,7 @@
       tidecaller: "A rod hung over each gold and went into the floor wherever they stood. We set ours a stride either side of Volkar, east and west, level with him, as straight as a tideline, and each blue came to their partner's rod.",
       lanternkeeper: "On the hard climb a rod hung over each gold and drove into the floor where they stood. So the golds stood a stride either side of Volkar, east and west, level with him, and each blue came to their partner's rod. Two rods, two lights.",
       kenseier: "Hard climb: a rod hangs over every gold one and sticks in the ground where they happen to be. Ours stood east and west of Volkar, level with him and a stride out. The blues came over to them, and I went to my partner as soon as his was in.",
+      houndmaster: "Hard climb. A rod hangs over each gold one and sticks wherever they happen to be standing. Ours went east and west of the big lad, level with him. Blues came over to their partners.",
     } },
     'Supercell': { hard: true, learned: {
       bastion: "Three fronts: west, north, east. Each dies on a rod and leaves calm behind it. My partner and I walked our rod's far sides in turn, always within Volkar's reach, and took the cell with everyone after, mended.",
@@ -602,6 +626,7 @@
       tidecaller: "Three fronts, one on the heels of the next: west, then north, then east. Each pair circled their rod, east side, south side, west side, never straying far from Volkar. When the last passed, the cell broke over us, and the water was high before it.",
       lanternkeeper: "Three fronts crossed the summit, one on the heels of the next: west, then north, then east. Each pair circled their rod, east side, south side, west side, close in to Volkar. I let every lantern burst as the last front passed and the cell broke.",
       kenseier: "Fronts came from the west, then the north, then the east, each dying on a rod and leaving calm behind. My partner and I circled our rod, always within his reach, and took the last blow with the rest, mended. A count of three.",
+      houndmaster: "Fronts rolled in from west, north, then east, each one dying on a rod and leaving calm. My partner and I walked round our rod, never out of reach of him. Last blow, took it mended, all together.",
     } },
   },
 };

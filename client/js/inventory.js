@@ -381,6 +381,15 @@ const Inventory = (() => {
         for (const y of [3, 7, 11]) stroke(() => { c.moveTo(-2.5, y); c.lineTo(2.5, y + 2); }, '#8a867e', 1);
         shape(() => c.arc(0, 16, 2.6, 0, Math.PI * 2), '#ff8a3d', 1.5);
         break;
+      case 'hunting knife':   // Houndmaster: a broad skinning blade with a belly curve, a brass guard, a tan leather grip with a rust-red thong
+        c.rotate(-Math.PI / 4);
+        shape(() => { c.moveTo(-3.2, -5); c.lineTo(-3.2, -22); c.quadraticCurveTo(-2, -31, 4, -33); c.quadraticCurveTo(7, -22, 3.6, -5); c.closePath(); }, '#c9ccc4');
+        stroke(() => { c.moveTo(-0.6, -7); c.lineTo(-0.6, -26); }, '#8e938c', 1);
+        shape(() => c.rect(-6.5, -5, 13, 2.8), '#a8843a', 1.6);
+        shape(() => c.rect(-2.5, -2.2, 5, 14), '#9a7448', 1.8);
+        stroke(() => { c.moveTo(-2.5, 2); c.lineTo(2.5, 4); c.moveTo(-2.5, 6); c.lineTo(2.5, 8); }, '#c46a3a', 1.4);
+        shape(() => c.arc(0, 13.5, 2.4, 0, Math.PI * 2), '#a8843a', 1.5);
+        break;
       case 'scythe':   // Reaper: a long black snath ringed with violet, a slender pale crescent blade with a teal edge
         c.rotate(0.35);
         stroke(() => { c.moveTo(-1, 30); c.lineTo(1, -22); }, '#0c0a14', 3);

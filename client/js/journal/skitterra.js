@@ -24,6 +24,7 @@
     tidecaller: "Pillars, silk and a great slow spider in the middle of it all: a tide pool at noon, still and close, with everything in it waiting for its hour. I stood well back from her face and listened for her rhythm. She has one.",
     lanternkeeper: "Pillars, silk and one great spider in the middle of the dark. I lit a lantern wherever the web was thin and found them all too far from where we fought. Tomorrow I light the fighting ground first and the walking ground after. Keep your light.",
     kenseier: "A spider the size of a hall, and she moves like a blade that has never needed to hurry. Her legs came down on a beat I had not learned yet, and her silk was in my boots by dawn. Tomorrow I count the Queen. Catch the beat.",
+    houndmaster: "Spider the size of a barn, and she hunts from the dark the way I do. Rust hates the webs and he was right. Pillars everywhere, and silk in the boots. Tomorrow we learn where the pillars stand. Heel.",
   },
   // the first time this hero beats her
   win: {
@@ -49,6 +50,7 @@
     tidecaller: "She fell at the hub with the web gone from under us, and the cave went slack as water after the turn. Every one of us walked out on our own feet. I sang a while for the quiet. The sea gives back.",
     lanternkeeper: "She fell at the hub and the web went slack beneath us. Four of us went in and four walked out, with the lanterns burned low but not out. I left a light on the pillar by the way home. Walk where it's warm.",
     kenseier: "The Queen is down. Her blows came softly and on time, and I learned to answer each. I left the web as one leaves a practice floor, with thanks to the thing that kept me on it.",
+    houndmaster: "Queen's down. Silk off the dogs' coats took the whole evening, and not a growl out of either. Good dogs. Had her by supper, and a late one.",
   },
   moves: {
     'Venom Mist': { hard: false, learned: {
@@ -74,6 +76,7 @@
       tidecaller: "Her breath came green over the whole cave, and by now I knew its hour. I drew everyone in close and let the water climb until it was high when the mist arrived, so it broke on a full shore.",
       lanternkeeper: "Her breath rolled green across the whole cave, and no pillar could turn it. I kept the lanterns close and the party closer, and let them all burst as the mist arrived. Everyone was already mended when it reached them.",
       kenseier: "Her breath rolled over the whole cave, and a blade cannot turn a mist. We drew in beside the healer before it reached us and stood in it together. Some blows are only outlasted.",
+      houndmaster: "Her breath rolled over the whole cave. Nothing to dodge, so we crowded the healer and stood in it together, dogs pressed to my legs. Mended before it came. Sit tight.",
     } },
     'Silk Wrap': { hard: false, learned: {
       bastion: "She swung the wrap at me with her forelegs, and the sweep in front of her reaches wide. Shield up in the last instant, the line kept clear of her front. It pinned my feet after. Bad footing, at last meant literally.",
@@ -98,6 +101,7 @@
       tidecaller: "The heavy wrap was meant for the knight alone, who held her front while the rest of us kept to her flanks. I watched her legs rise and had the water at its crest on him as the silk fell. It pinned his feet after.",
       lanternkeeper: "The heavy wrap was for our knight alone, who held her front while the rest of us kept to her flanks. I hung a lantern on him as her legs rose, so the glow was on him when the silk fell, and left it there while he was held fast.",
       kenseier: "Her forelegs swept at me, wide across her front. I met them with the blade as they landed, and the others stayed off her face. A late press leaves the silk on my feet, which is a lesson in itself.",
+      houndmaster: "Forelegs swept wide at the shield-man. Kept to her flank, well outside the arc, and the dogs with me. Stay off her face and she can't reach you.",
     } },
     'Eightfold Lunge': { hard: false, learned: {
       bastion: "Her legs lit up in order, and she struck each way and its opposite at once, turning as she went. I stepped onto the ground the last strike had just left and followed it round. Ground just struck is spent.",
@@ -122,6 +126,7 @@
       tidecaller: "Her legs lit in turn, a strike each way and then the turn of her. Ground just struck is slack water, so after each blow I walked onto the place it had left and went round with her, never ahead.",
       lanternkeeper: "Her legs lit one after another, a strike each way and then a turn of her whole body. I stayed behind the last blow and never ahead of the next, carrying a light round the spider as she turned.",
       kenseier: "Her legs lit one by one, and each stabbed forward and back as she turned. I counted the strokes, waited for the last, then stepped onto the ground it had left and went round with her. The beat was in the order.",
+      houndmaster: "Her legs lit up in turn, and each stabbed ahead and behind as she wheeled. Counted the lights, waited till the last one, then went onto the ground she'd left. Dogs behind me.",
     } },
     'Silk Lines': { hard: false, learned: {
       bastion: "She strung lines between pairs of us. A long line wanted its ends far apart; on the hard nights a short one wanted its pair side by side. Each pair kept its ground until the silk let go. Orders are orders, even from a spider.",
@@ -146,6 +151,7 @@
       tidecaller: "Silk joined us in pairs, and the length told what it wanted: a long line wanted its two far apart until it drew straight, a short one, on the hard nights, wanted them shoulder to shoulder. Each pair stayed put until it let go.",
       lanternkeeper: "Silk tied us into pairs, and the length said what it wanted: a long line, far apart until it ran straight; a short one, on the hard nights, shoulder to shoulder. We kept still until it let go. I lit each pair's patch of floor on its own.",
       kenseier: "Silk tied us in pairs, and the length said what to do: a long thread meant stand far apart, and on the hard nights a short one meant stand close. Then it was a matter of staying put until it parted. I have waited longer for less.",
+      houndmaster: "Silk tied us two by two. Long thread, stand far apart; on the hard nights a short one, stand close. Then stay put till it parts. Told the dogs to stay too. Rust doesn't.",
     } },
     'Spin': { hard: false, learned: {
       bastion: "Threads strung pillar to pillar round the middle. Crossing one stings and pins the feet, so we walked round and broke the knots at the pillars to cut them for good. I logged the knots left to right. Neat footing, afterwards.",
@@ -170,6 +176,7 @@
       tidecaller: "Threads ran from pillar to pillar about the middle, and anyone who walked through was stung and held. I went round. The others broke the knot at each pillar's foot, and the thread fell with it. A knot is only a held breath.",
       lanternkeeper: "Threads ran between the pillars around the middle, and anyone who walked through was stung and held. I went round. The others broke the knot at each pillar's foot, which dropped that thread, and I kept a lantern beside the knots for them.",
       kenseier: "Threads ran from pillar to pillar round the middle, and crossing one stings and pins. We kept round them and broke the knots at the pillars, so the cuts stayed cut. I learned the knots in order, left to right, like a form.",
+      houndmaster: "Threads strung between the pillars, and crossing one stings and pins you. Kept round them and cut the knots at the pillar ends. Held the dogs back, they'd have run straight through. Heel.",
     } },
     'Venom Spit': { hard: false, learned: {
       bastion: "She spat a narrow line at those of us farthest from her. They stepped aside as it came and kept to the edge, so the venom pooled by the wall, away from our ground. I kept my eyes on her face, as always.",
@@ -194,6 +201,7 @@
       tidecaller: "She spat a thin green line at whoever stood farthest from her, and the poison pooled where it fell. Those at the edge stepped aside late, so the pool lay against the wall and out of the water we were using.",
       lanternkeeper: "She spat at whoever stood farthest from her, and the venom lay where it fell. Those at the edge stepped off at the last breath, so the pools ended up by the wall. I kept my lanterns off that edge and the party off the pools.",
       kenseier: "A thin line of venom went at those farthest from her. They stepped aside as it flew and stayed near the edge, so it pooled by the wall, off our floor. My work was to keep her eyes on me.",
+      houndmaster: "She spits at whoever stands furthest. That was me. Stepped aside at the last and kept to the edge so the pool stayed by the wall. Dogs stayed home near the middle.",
     } },
     'Egg Sacs': { hard: true, learned: {
       bastion: "Egg sacs fell round the web, each wanting one of us on it. One soldier to each sac, feet planted; the goo holds you a moment after. Leave one empty and it bursts on everyone. Hard nights only, and I counted them like rations.",
@@ -218,6 +226,7 @@
       tidecaller: "On the hard nights she laid sacs across the web, each wanting a body to trample it. I took the nearest. The goo held my feet a long breath after, and a sac left whole bursts over every one of us.",
       lanternkeeper: "On the hard nights she laid sacs across the web, and each needed someone to walk onto it. Whoever did was held for a moment, so I hung a lantern on them. A sac left whole bursts over all of us. One light for each, none left unclaimed.",
       kenseier: "Sacs fell round the web, each wanting one body on it. I took one and planted my feet, and the goo held me a while after. A sac left bare bursts on all of us, so none was left bare.",
+      houndmaster: "Sacs on the web, one body to each. Took one, planted my feet, stomped it. Goo holds you a while after. A bare sac bursts on everybody, so none went bare.",
     } },
     'Strand Reel': { hard: false, learned: {
       bastion: "She shot a strand to a far pillar and hauled herself down it. Anyone on that line is hit and stuck. We stepped off it, and I marched to her pillar to put my face where hers would turn. A post can move, if it must.",
@@ -242,6 +251,7 @@
       tidecaller: "She shot a line to a far pillar and hauled herself down it like a rip, catching whatever lay in the channel. We stood out of that lane. She rested at the pillar after, and the knight and the close fighters walked over to her.",
       lanternkeeper: "She shot a line to a far pillar and hauled herself along it, striking whatever lay in the lane. We kept out of the lane. She rested at the pillar after, and I carried my lantern across to wherever the close fighters had gone after her.",
       kenseier: "She shot a strand to a far pillar and hauled herself down it. Anyone on the line was struck and stuck, so we stepped off it. I walked to her pillar ahead of her and stood where she would land facing me.",
+      houndmaster: "She shot a strand to a far pillar and hauled herself along it. Stepped off the line, and the dogs too. Anyone on the road gets knocked flat and stuck.",
     } },
     'Fang Rush': { hard: true, learned: {
       bastion: "On the hard nights she charges whoever stands farthest. Her line follows them until just before. They stepped aside late, or put a pillar in her way. Then nobody walks the silk she drags.",
@@ -266,6 +276,7 @@
       tidecaller: "She ran down whoever stood farthest, the path following them until the very last. They stepped aside late, or put a pillar between, and she met stone. I kept off the silk she dragged behind her.",
       lanternkeeper: "She ran down whoever stood farthest, her path following them until the last instant. They put a pillar between themselves and her, and she met stone. Then I kept every light well away from the silk she trailed behind.",
       kenseier: "She ran down whoever stood farthest, the line trailing them until late. A late step aside, or a pillar in her road, and she went by. Then nobody walked the silk she dragged.",
+      houndmaster: "She ran down the furthest of us. A pillar in her road and she hit stone. Never walk the silk she drags behind. Called the hounds in so she couldn't pick them off.",
     } },
     'Brood': { hard: false, learned: {
       bastion: "The ripest eggs hatched, a spiderling on each side of the web. They must die together, or the survivor goes wild. We brought both low evenly and finished them in the same breath. Two posts, one order.",
@@ -290,6 +301,7 @@
       tidecaller: "Her young hatched two at a time on opposite sides of the web, and neither will die alone; the one left standing goes wild. We eased both down level, like a tide on two shores, and ended them in the same breath.",
       lanternkeeper: "Her young hatched two at a time, and the one left standing goes wild. We took each pair down together and level, and finished them in the same breath. Two young, two glows kept steady, and no wick burned to a stub.",
       kenseier: "The ripest eggs hatched, one spiderling to a side. They must die together, or the survivor goes wild. We cut both down level and finished them on the same beat. One count for two blades.",
+      houndmaster: "Two spiderlings hatched, one each side. Kill one alone and the other goes wild, so both went down together. Sent a dog at each. Fewer eggs earlier, fewer fangs now.",
     } },
     'Silk Reel': { hard: false, learned: {
       bastion: "She hooked whoever stood farthest from her and reeled them in. A quick bound away the moment it pulls snaps the thread; reaching her means a bite. I keep her ready for whoever arrives, but nobody should arrive.",
@@ -314,6 +326,7 @@
       tidecaller: "A thread hooked the farthest of us and began to haul. One sharp leap away, just as it pulls, snaps it before she can bite. On the hard nights it hooked me as well, which I took as a compliment to my distance.",
       lanternkeeper: "A thread hooked the farthest of us and began to haul. A sharp leap away, just as it pulls, snaps it before she can bite. On the hard nights it found me too. I leapt, and set my lantern down where I landed.",
       kenseier: "She hooked whoever stood farthest and reeled them in. A sharp leap away just as it tightens snaps the thread. The beat of it is the pull itself. Reach her, and she bites.",
+      houndmaster: "She hooked me, for I stood furthest. Pulled against it, then a sharp leap as it tightened, and the thread snapped. Better yet, don't stand furthest.",
     } },
     'Acid Deluge': { hard: false, learned: {
       bastion: "She went to the middle, reared up and sprayed the whole cave. Only a pillar's shadow is safe, so the line got behind one together. Each pillar that shelters someone takes a crack. Stone gives ground before steel does.",
@@ -338,6 +351,7 @@
       tidecaller: "She went to the middle, reared, and rained acid on the whole cave. The only dry place was the lee of a pillar, so we crowded behind one together. Each pillar that shelters us wears down, so I chose a sound one.",
       lanternkeeper: "She went to the middle, reared, and rained acid across the cave. The only dry place was the lee of a pillar, so I set a lantern behind a sound one and we crowded into its glow. A pillar that has sheltered us once wears thin. I chose one that had not.",
       kenseier: "She reared in the middle and sprayed the whole cave. The only dry place was a pillar's shade, so we all packed in behind one together. The pillar took the scar. A pillar is a fine shield, and never complains.",
+      houndmaster: "She reared in the middle and sprayed the cave. Only dry spot was a pillar's shade, so we packed in behind one together, dogs underneath. Pillar takes the scar.",
     } },
     'Into the Dark': { hard: false, learned: {
       bastion: "She climbed into the dark, out of reach, and the lights failed. No face to hold. So I put my weight on the knots of her threads and the eggs until she came down. Idle hands are not a soldier's way.",
@@ -362,6 +376,7 @@
       tidecaller: "She climbed out of reach and the cave dimmed to pools of light. With no face to turn toward, it was slack water, and slack water is for working: we broke the knots on her threads, then the eggs, until she came down.",
       lanternkeeper: "She climbed out of reach and the cave dimmed to pools of light. A lamplighter knows this part: keep the lamps burning. I kept one lit by each knot while the others cut the threads and then the eggs, until she came down.",
       kenseier: "She climbed out of sight and the lights failed. With no face to hold, I cut the knots of her threads and then the eggs until she came down. A quiet floor is only a rest between beats.",
+      houndmaster: "She climbed out of sight and the lights failed. Nothing to bite, so I cut the knots on her threads and then the eggs till she came down. Dogs sat quiet. Patience.",
     } },
     'From the Dark': { hard: false, learned: {
       bastion: "Her shadow ran overhead along a thread, and she dropped at its far end. We left that ground. A thread already cut, she cannot use, so she hunts: the farthest of us gets the drop, and it follows them until the last moment.",
@@ -386,6 +401,7 @@
       tidecaller: "A shadow ran along any thread left whole, and she dropped where it ended, so we left that ground. Where a thread was cut she hunted the farthest of us instead, the ring following until the last; I stepped clear then. Twice, on the hard nights.",
       lanternkeeper: "A shadow slid down every thread left whole and she landed at its end, so I kept my lights off that patch. A cut thread sent her after the farthest of us, the ring chasing them to the last moment, and on the hard nights she did it twice.",
       kenseier: "Her shadow ran along an unbroken thread overhead, and she dropped where it ended, so we left that ground. Where we had cut the thread, she chose the farthest of us instead, her ring trailing them to the last. Watch the thread, not the spider.",
+      houndmaster: "Her shadow ran along an uncut thread overhead and she dropped where it ended, so we quit that ground. Cut the thread and she picks the furthest one instead. Look to the thread, not the beast.",
     } },
     'Cocoon Drop': { hard: false, learned: {
       bastion: "A cocoon fell on one of the young ones, never me, and the dead weight of it wanted us all. Everyone in, all but one at least; on the hard nights, every last one of us. The line closed on whoever it was.",
@@ -410,6 +426,7 @@
       tidecaller: "A cocoon fell on one of us, never the knight, and its weight wanted sharing. All but one went in under it on an ordinary night, every last one on the hard nights. I went in with the rest and kept the water level.",
       lanternkeeper: "Something heavy came down on one of us, never the knight, and it wanted company. On an ordinary night all but one stood in beneath it; on the hard nights, all of us. I set a lantern on the mark first, so we closed in on a light.",
       kenseier: "A cocoon fell on one of the others, and its weight wanted all of us beneath it but one; on the hard nights, every last one. I went in with the rest. Under it together, it was a quiet thing.",
+      houndmaster: "A cocoon came down on one of the others. All of us went under it, hard nights and easy. Called the dogs in with me. Under it together, it's a light thing.",
     } },
     'Venom Drip': { hard: false, learned: {
       bastion: "Venom gathered over each of our heads and followed us. Every one of us needed our own patch of floor. The line opened out, kept its distance until it fell, and closed again after. Orderly, for a retreat.",
@@ -434,6 +451,7 @@
       tidecaller: "Venom gathered over every head and followed us. Each took a patch of floor to themselves, well apart, so no drop fell on two. Then we drew in again, and I let the water rise as we closed.",
       lanternkeeper: "Venom hung over every head and followed us about. Each of us took a patch of floor apart from the rest, so no drop fell on two, and then we drew back in toward my lantern. Four patches, four of us.",
       kenseier: "Venom gathered above each of us and followed. Each wanted floor of their own, so we scattered, let it fall, and came back together. I kept moving until it landed. Stillness belongs to the other beats.",
+      houndmaster: "Venom gathered over each of us and followed. Everyone to their own ground, spread like beaters, then back together once it fell. Kept the dogs moving too. Still dogs get dripped on.",
     } },
     'Tightening Web': { hard: false, learned: {
       bastion: "Down she came in the middle, and the landing went through every one of us. The outer web stayed sticky from then on, so the line fights within the rim. Ground lost, and accounted for.",
@@ -458,6 +476,7 @@
       tidecaller: "She came down in the middle and the landing went through all of us; I had the water high beforehand. After that the outer web stayed sticky as pitch on a hull, so I sang from inside the rim, as did everyone.",
       lanternkeeper: "She dropped into the middle, and the landing reached all of us, so I let every lantern burst as she fell. After that the outer web turned sticky. I moved my lights inward and kept the party inside the rim.",
       kenseier: "She landed in the middle and the shock ran through all of us. The outer web was sticky from then on, so we fought inside the rim and no farther. Less floor, fewer places to be wrong.",
+      houndmaster: "She came back down in the middle and the shock ran through us all. The outer web's sticky from then on, so we kept inside the rim, dogs included. Less floor, fewer mistakes.",
     } },
     'Spinneret Volley': { hard: true, learned: {
       bastion: "Silk rained on everyone but me, a glob at a time, each following its target until just before it fell. They kept moving, apart from each other, and I kept her still. Hard nights only; the line learns to walk.",
@@ -482,6 +501,7 @@
       tidecaller: "Silk rained on all of us but the knight, each glob following its mark until the last moment. We walked, steady and apart, as on shingle with the tide coming in, and let every one fall behind us.",
       lanternkeeper: "On the hard nights silk rained on all of us but the knight, each glob following its mark until the last moment. We kept walking, apart, and let them fall behind us. I walked with the rest and left a light trailing, and nothing caught me standing still.",
       kenseier: "Silk rained on everyone but me, globs that tracked their marks until the last moment. They kept moving and kept apart, and I kept her looking at me. My part was to be a still target. Theirs was to be a hard one.",
+      houndmaster: "Silk on all of us but the shield-man, each glob chasing its mark and stopping just short. Kept walking, steady, away from the others. Whistled the dogs clear as well.",
     } },
     'Molt': { hard: true, learned: {
       bastion: "On the hard nights she shed her skin, and the husk struck her last pattern of legs again while she began a new one elsewhere. I kept the old pattern in mind and watched both. A husk is a shield with no one behind it.",
@@ -506,6 +526,7 @@
       tidecaller: "She slipped out of her skin, and the empty shell swung her last pattern of legs again, on the spot, while she started a fresh one. I kept the old one in mind like a tide table and read both at once.",
       lanternkeeper: "On the hard nights she slipped her skin, and the empty husk swung her last pattern of legs again where it lay, while she began a new one. I held the old pattern as I would the order of a row of lamps, and watched both.",
       kenseier: "She shed her skin, and the husk repeated her last strikes from where it stood while she began new ones elsewhere. I kept the old pattern in mind and watched both spiders. An echo has its own beat, a little late.",
+      houndmaster: "She shed her skin, and the husk repeated her last blows from where it stood while she started new ones elsewhere. Watched both of them. The old one's slow and a little late.",
     } },
     'Ceiling Ambush': { hard: true, learned: {
       bastion: "On the hard nights she climbed into the ceiling and her shadow crossed to where one of us stood. Her landing was drawn on the floor, plain as a chalk mark. We left it; whoever stays is thrown into the walls.",
@@ -530,6 +551,7 @@
       tidecaller: "She went into the ceiling and her shadow slid over to where one of us stood. Her landing was drawn on the floor. We were off it before she fell, since whoever stays is thrown into the walls. There was no need to hurry, only to be elsewhere.",
       lanternkeeper: "Up she went into the ceiling, and her shadow settled over one of us. The ring on the floor was where she would land. The whole party left it, lights and all, because anyone who stays is flung at the walls.",
       kenseier: "She vanished into the roof and her shadow crossed to where one of us stood. Where she would land was drawn on the floor, plain as a line of chalk. We left it bare, for whoever stays is thrown against the wall.",
+      houndmaster: "She went up into the roof, and her shadow slid to someone's spot. Landing's drawn on the floor, plain. Left it empty before she dropped. Whoever stays gets thrown. Hounds called in.",
     } },
     'The Swarm': { hard: false, learned: {
       bastion: "Every clutch left standing hatched at once, in pairs that must die together. I took them onto me and the line cut each pair level. Every egg we broke earlier was one less to fight. Quartermaster's arithmetic.",
@@ -554,6 +576,7 @@
       tidecaller: "Every clutch we had spared hatched at once, in pairs, and each pair had to fall together. The fewer eggs left standing, the less water I had to spend. We brought each pair down level and ended it in one breath.",
       lanternkeeper: "All the clutches we had spared hatched together, in pairs, and every pair had to be finished at the same moment. Each egg broken earlier was one less lamp to tend afterward. We took each pair down evenly.",
       kenseier: "All the eggs we had left hatched together, in pairs, and a pair must fall as one. I held them on me while the rest cut each pair down level. The eggs we broke earlier never hatched, and I was grateful to our past selves. Ash settles.",
+      houndmaster: "Every clutch we left hatched at once, in pairs, and a pair has to fall together or the last one runs wild. Dog on each. Eggs broken early never hatch. Good dogs.",
     } },
     'Chrysalis': { hard: false, learned: {
       bastion: "She wrapped herself in silk at the hub, and it closes slowly. No blow to brace for, so I struck it with the rest of the line, everything we had, before it shut. It tore. She came out staggered and open.",
@@ -578,6 +601,7 @@
       tidecaller: "She wrapped herself in silk at the hub, slowly, and only a little venom came at us while it closed. I kept the party on their feet and the water high, and everyone gave it all they had before it shut. It tore, and she fell out dazed.",
       lanternkeeper: "At the hub she began to wind herself shut, slowly, and a little venom fell while the silk closed. I held every lantern bright and kept us on our feet so the others could spend all they had. Before it sealed it tore, and she tumbled out dazed.",
       kenseier: "She began to wrap herself in silk at the hub, and she was slow about it. No blow came for me to meet, so I struck the cocoon with the rest, all we had, before it shut. It tore, and she fell out dazed.",
+      houndmaster: "She started wrapping herself in silk at the hub, slow about it. Everything I had went into the cocoon before it closed. It tore, and she fell out staggered. Sent both dogs in.",
     } },
     'The Web Gives Way': { hard: false, learned: {
       bastion: "The floor fell ring by ring from the walls, each ring shuddering first. The worst footing I have ever known, and it was going out from under me. We moved inward, onto the hub, the spokes, or silk we never cut. Held.",
@@ -602,6 +626,7 @@
       tidecaller: "The floor went ring by ring from the walls inward, each ring shuddering first. At the first tremble we walked in, to the hub, the spokes, or any silk left whole. A tide takes a beach from its edges.",
       lanternkeeper: "The floor went ring by ring from the walls inward, and each ring shuddered first. At the first tremble we walked in, to the hub, the spokes, or any silk left whole. I picked my lanterns up and set them down ahead of the edge, nearer the middle each time.",
       kenseier: "The web fell away in rings from the walls inward, each ring trembling first. We drew in to the hub, the spokes, or any silk we had not cut. The tremble is the beat: leave the ring as it begins.",
+      houndmaster: "Whole web's coming down, a ring at a time from the wall, each shivering first. Pulled the pack in to the middle and the spokes, or any silk left uncut. See a ring shake, you leave it. Heel.",
     } },
     'Snare Weave': { hard: true, learned: {
       bastion: "Snares over every inch, woven twice from the hub, and three clear pockets each time. I took the one beside her, then the next round. Egg-bearers dropped theirs where they stood. Cramped, but a pocket is a post.",
@@ -626,6 +651,7 @@
       tidecaller: "She laid snares over the whole web, twice over, and left only three clear pockets each time, one by her for the knight and two far out. We went pocket to pocket as she turned. The two with eggs let them fall in the pocket just left.",
       lanternkeeper: "Snares covered the whole web, twice, and each time only three pockets stayed clear: one by her for the knight, two far out. We followed her turning from pocket to pocket, and the pair with eggs left them in the pocket just quit. I lit each new one.",
       kenseier: "Snares lay across the floor from her hub, woven twice, with three clear pockets each time. I took the one beside her, then the next. Those carrying eggs set them down where they stood. Cramped, and quiet, which suits me.",
+      houndmaster: "Snares on every inch but three holes, then three more a turn on. Took the near hole, then the next, dogs in my tracks. Egg-bearers set the egg down where they stood.",
     } },
   },
 };

@@ -210,6 +210,9 @@
       if (inArena()) return positionalOf(player, { x: raid.boss.x, y: raid.boss.y, facing: raid.boss.f });
       return lastEnemy ? positionalOf(player, { x: lastEnemy.x, y: lastEnemy.y, facing: Math.PI / 2 }) : 'front';
     },
+    // a Houndmaster (kennel.js): the facing of the enemy it works (the hounds' left and right are the boss's own) and Shift held at the press
+    bossFace: () => (inArena() && raid.boss && Number.isFinite(raid.boss.f) ? raid.boss.f : Math.PI / 2),
+    shift: () => shiftDown,
     allyTarget: (a, ab) => allyTargetId(ab),
     gearMods: () => Inventory.mods(player.cls && player.cls.id),
     talents: () => activeTalents(),
@@ -250,7 +253,8 @@
       // (hitIn / hitKind: the Kenseier's closing ring, the next blow aimed at you; posture: the bar on the boss, fight.js kenPack)
       const ring = kenRing();
       return { casting: !!c, castLeft: c ? c.start + c.dur - now : 0, next: n, onMe: raid.boss.tg === Net.id, vuln: raid.boss.v || 0, selfVuln: !!(s && s.vuln), wide: !!wide,
-        hitIn: ring ? ring.at : null, hitKind: ring ? ring.kind : null, posture: raid.posture || null };
+        hitIn: ring ? ring.at : null, hitKind: ring ? ring.kind : null, posture: raid.posture || null,
+        hp: raid.boss && raid.boss.mx > 0 ? Math.max(0, Math.min(1, raid.boss.hp / raid.boss.mx)) : null };   // (the boss's health 0..1: a Houndmaster's Shared Kill)
     },
     maxHp: () => { const s = myState(); return s ? s.maxHp : playerBaseHp(player.cls ? player.cls.role : 'dps') + (Inventory.mods(player.cls && player.cls.id).hp || 0); },
     onEvent: (a, ev) => onKitEvent(ev),
@@ -266,6 +270,7 @@
     threads: () => (inArena() ? Stagecraft.threadsOf(Net.id, entById) : null),
     dolls: (a, list) => Stagecraft.setMine(list, player.cls && player.cls.id, actor && actor.kit),
     lamps: (a, list) => Lamps.setMine(list, now),   // a Lanternkeeper's lanterns (lanterns.js; sent to the host 10 times a second)
+    hounds: (a, list) => Kennel.setMine(list, player.cls && player.cls.id, actor && actor.kit),   // a Houndmaster's hounds (kennel.js; sent to the host 10 times a second)
     // a telegraph about to land on a spot (a circle, cone, spread or cleave due within `within` s): Pirouette glows for its Doll
     danger: (a, x, y, within) => inArena() && [...raid.tgs.values()].some(tg => tg.gone == null && !tg.hidden && ['aoe', 'spread', 'buster'].includes(tg.type) &&
       tg.start + tg.dur - now <= within && SHAPES.contains(tg.live || tg.shape, x, y, 12)),
@@ -365,6 +370,7 @@
     'tie', 'snip', 'tighten', 'tapestry', 'tug',   // (the Threadweaver's threads: fight.js weaveEvent)
     'lamp',   // (a Lanternkeeper's lanterns burst: fight.js lampEvent)
     'kensei',   // (a Kenseier's deflect, Mikiri Step and Posture: fight.js KENSEI_HOST)
+    'horn',   // (a Houndmaster's Hunting Horn: fight.js, the boss's face)
     'lb',   // (a Limit Break: fight.js limitBreak)
     'ult']);   // (an Ultimate pressed, for the contribution score: kitFx)
   const EV_FIELDS = ['type', 'amount', 'crit', 'target', 'ticks', 'interval', 'id', 'dur', 'tag', 'pct', 'kind', 'value', 'secs', 'threat', 'tgt', 'r', 'not',
@@ -1413,6 +1419,14 @@
     const ok = d => Array.isArray(d) && Number.isFinite(d[0]) && Number.isFinite(d[1]) && Math.abs(d[0]) < 2000 && Math.abs(d[1]) < 2000;
     host.sim.setDoll(pid, msg.l.slice(0, 2).filter(ok).map(d => ({ x: d[0], y: d[1], st: Number(d[2]) || 0, s: Number(d[3]) || 0 })));
   });
+  // a Houndmaster's hounds, from its own client (kennel.js): [[x, y, mode, slot, houndId], ...], at most eight; the host gets { id, x, y, mode, slot } objects, like the host client's own list
+  Net.onHost('hound', (pid, msg) => {
+    const host = pvpHost || raidHost;
+    if (!host || typeof host.sim.setHounds !== 'function' || !hostRoster.some(h => h.id === pid && !h.left) || !Array.isArray(msg.l)) return;
+    const ID = /^(rust|ash|greyfang|sp[0-3])$/, MODE = ['run', 'hold', 'guard', 'pounce', 'bite', 'down'], SLOT = ['left', 'right', 'front', 'behind'];
+    const ok = d => Array.isArray(d) && Number.isFinite(d[0]) && Number.isFinite(d[1]) && Math.abs(d[0]) < 2000 && Math.abs(d[1]) < 2000 && typeof d[4] === 'string' && ID.test(d[4]);
+    host.sim.setHounds(pid, msg.l.slice(0, 8).filter(ok).map(d => ({ id: d[4], x: d[0], y: d[1], mode: MODE.includes(d[2]) ? d[2] : 'run', slot: SLOT.includes(d[3]) ? d[3] : null })));
+  });
   // a Lanternkeeper's lanterns, from its own client: [{ id, x, y, r, h, w, k, ... }] (fight.js setLamps clamps them)
   Net.onHost('lamp', (pid, msg) => {
     const host = pvpHost || raidHost;
@@ -1498,7 +1512,7 @@
     player.target = null; player.interact = null; player.dashMove = null; player.kb = null; player.angle = -Math.PI / 2;
     lockedAlly = null; lastEnemy = null;
     Stagecraft.reset();   // threads and Dolls (classes-c)
-    Lamps.reset();
+    Lamps.reset(); Kennel.reset();
     makeActor();
     for (const rm of remotes.values()) rm.ultReady = false;   // (everyone starts the raid with an empty Ultimate)
     RaidUI.resetRoster();
@@ -1543,7 +1557,7 @@
     player.target = null; player.dashMove = null; player.kb = null;
     lockedAlly = null; lockedEnemy = null;
     Stagecraft.reset();
-    Lamps.reset();
+    Lamps.reset(); Kennel.reset();
     makeActor();
     setSceneUI();
     updateCamera(0, true);
@@ -1740,7 +1754,7 @@
       const pct = msg.s === 'clear' ? 0 : Math.max(0, Math.min(100, Math.round(msg.hp / msg.maxHp * 1000) / 10));
       raid.prog = progRecord(raid.def.id, raid.mode, { pct, ph: Number(msg.ph) || 1, time: Math.round(msg.time || 0), clear: msg.s === 'clear' ? 1 : 0, at: Date.now() });
     }
-    fadeTelegraphs(); raid.tethers.clear(); Stagecraft.endFight(); Lamps.reset(); raid.lunges = []; raid.eggs = null; raid.rollers.clear(); raid.reels.clear(); player.reel = null;
+    fadeTelegraphs(); raid.tethers.clear(); Stagecraft.endFight(); Lamps.reset(); Kennel.endFight(); raid.lunges = []; raid.eggs = null; raid.rollers.clear(); raid.reels.clear(); player.reel = null;
     raid.sweeps.clear(); raid.edgeWarn = null; for (const p of raid.posts.values()) p.end = Math.min(p.end, now + 1);
     raid.doom.clear(); raid.lanterns = raid.lanterns.filter(l => l.last); for (const k of raid.knights.values()) k.gone = k.gone || now;
     if (msg.s === 'clear') raid.night = false;   // the Long Night lifts when he falls
@@ -2191,7 +2205,7 @@
     if (msg.k === 'reflect') actor.notify('reflect', msg);
     if (msg.k === 'read') actor.notify('read', msg);   // an Ironpalm's Read caught a hit (msg.b: it was a tankbuster)
     if (msg.k === 'shieldEnd') actor.notify('shieldEnd', msg);
-    if (msg.k === 'carry' || msg.k === 'snapped' || msg.k === 'dollhit' || msg.k === 'tiefail') actor.notify(msg.k, msg);   // threads and Dolls (classes-c)
+    if (msg.k === 'carry' || msg.k === 'snapped' || msg.k === 'dollhit' || msg.k === 'houndhit' || msg.k === 'tiefail') actor.notify(msg.k, msg);   // threads and Dolls (classes-c)
     if (msg.k === 'lit' || msg.k === 'relit') actor.notify(msg.k, msg);   // what your lanterns healed (fight.js LANTERNS)
     if (msg.k === 'kdef' || msg.k === 'kbrk' || msg.k === 'kbend') actor.notify(msg.k, msg);   // a Kenseier's deflect and Breaks (fight.js KENSEI_HOST)
     if (msg.k === 'death') { actor.kit.cast = null; actor.kit.queued = null; actor.kit.queuedO = null; actor.kit.inbuf.length = 0; player.target = null; player.dashMove = null; }
@@ -2200,6 +2214,7 @@
   Net.on('thr', msg => { if (raid) Stagecraft.onThreads(msg, now); });
   Net.on('thrs', msg => { if (raid) Stagecraft.onSnaps(msg, now, entById); });
   Net.on('dolls', msg => { if (raid) Stagecraft.onDolls(msg, now, Net.id); });
+  Net.on('hounds', msg => { if (raid) Kennel.onHounds(msg, now, Net.id); });   // every Houndmaster's hounds (kennel.js)
   Net.on('lamps', msg => { if (raid) Lamps.onList(msg, Net.id); });   // every Lanternkeeper's lanterns (lanterns.js)
   // a healer's buff on one chosen ally (raid-host.js allyBuffs): every client keeps them all, for the party frames
   Net.on('abuff', msg => {
@@ -2460,6 +2475,10 @@
     else if (!e.repeat && selfCast && selfCast.i === idx) selfCast = null;
     pressSlot(idx);
   }
+  let shiftDown = false;   // (Shift held at a key press: a Houndmaster's Whistle: Flank sends the other hound)
+  window.addEventListener('keydown', e => { shiftDown = !!e.shiftKey; }, true);
+  window.addEventListener('keyup', e => { shiftDown = !!e.shiftKey; }, true);
+  window.addEventListener('blur', () => { shiftDown = false; });
   window.addEventListener('keydown', e => {
     if (e.key === 'Alt') e.preventDefault();   // (Alt is the ping wheel: it must never pull focus to the browser's menu)
     if (!started) return;
@@ -2549,7 +2568,11 @@
       const l = Lamps.S.mine;
       if (Net.isHost && (pvpHost || raidHost)) (pvpHost || raidHost).sim.setLamps(Net.id, l); else Net.send({ t: 'lamp', l });
     }
-    Stagecraft.update(now, dt);
+    // your hounds to the host, 10 times a second (the host's own go straight in)
+    if (inArena() && raid.state === 'live' && Kennel.dueMine(now)) {
+      if (Net.isHost && (pvpHost || raidHost)) { const sim = (pvpHost || raidHost).sim; if (typeof sim.setHounds === 'function') sim.setHounds(Net.id, Kennel.S.mine.l); } else Net.send({ t: 'hound', l: Kennel.wireMine() });
+    }
+    Stagecraft.update(now, dt); Kennel.update(now, dt);
     updateRemotes(dt);
     if (scene === 'town') updateTown(dt); else updateArena(dt);
     TownLife.update(dt, now, scene === 'town' && started);
@@ -2583,7 +2606,7 @@
       if (d <= stopAt) player.target = null;
       else {
         const reeled = inArena() && player.reel && now >= player.reel.pullAt;
-        const slow = (actP(player.st, 'brace') >= 0 ? 0.4 : 1) * (myDebuff('slowed') ? FIGHT.SLOWED : 1) * (reeled ? 0.4 : 1) * windLaneBoost(player.x, player.y, dx, dy, FX.now);   // a Driftblade's Slipstream lane
+        const slow = (actP(player.st, 'brace') >= 0 ? 0.4 : 1) * (myDebuff('slowed') ? FIGHT.SLOWED : 1) * (reeled ? 0.4 : 1) * windLaneBoost(player.x, player.y, dx, dy, FX.now) * (actor.moveMult ? actor.moveMult() : 1);   // a Driftblade's Slipstream lane, a Lone Wolf's ride
         const step = Math.min(d, MOVE_SPEED * slow * (scene === 'town' ? TOWN_PACE : 1) * (pvpCarrying() ? CTF.SLOW : 1) * dt);   // (town is walked a little quicker)
         const ox = player.x, oy = player.y;
         player.x += dx / d * step; player.y += dy / d * step;
@@ -3179,13 +3202,14 @@
     const townRemotes = [...remotes.values()].filter(r => r.scene === 0);
     const scEnv = { entById, me: Net.id, town: true };   // your Doll(s) follow you round town too (classes-c)
     Stagecraft.drawFloor(ctx, now, scEnv);
+    Kennel.drawFloor(ctx, now, scEnv);
     Lamps.drawFloor(ctx, now, scEnv);   // your lanterns light the training yard too
     Pastimes.drawGround(ctx, now);
     BarrowGate.drawGround(ctx, now);
     TownLife.drawGround(ctx, now, TOWN.pedestals, BOSSES.map(b => b.id));
     TOWN.pedestals.forEach((pd, i) => { if (BOSSES[i]) drawPlaque(ctx, pd, bossOpen(BOSSES[i]) ? BOSSES[i].name : 'Sealed'); });
     for (const h of lineup) drawDeckPad(ctx, h.home ? h.home.x : h.x, h.home ? h.home.y : h.y, lineup.filter(o => o.cls.role === h.cls.role).length > 3);
-    const ents = [...lineup, keeper, trainer, ...statues, ...dummies, player, ...townRemotes, ...Stagecraft.entities(now, scEnv), ...TownLife.entities(HERO_SCALE), ...BarrowGate.entities(now)].filter(e => !TownLife.hides(e));
+    const ents = [...lineup, keeper, trainer, ...statues, ...dummies, player, ...townRemotes, ...Stagecraft.entities(now, scEnv), ...Kennel.entities(now, scEnv), ...TownLife.entities(HERO_SCALE), ...BarrowGate.entities(now)].filter(e => !TownLife.hides(e));
     ents.sort((a, b) => a.y - b.y);
     for (const e of ents) { if (e.kind === 'stagecraft') e.draw(ctx); else drawEntity(e); }
     Stagecraft.drawOver(ctx, now, scEnv);
@@ -3266,6 +3290,7 @@
     FX.draw(ctx, true);
     VFX.draw(ctx, 'ground');
     Lamps.drawFloor(ctx, now, { entById, me: Net.id, party: units });   // lantern glows: faint, and under every telegraph (lanterns.js)
+    Kennel.drawFloor(ctx, now, { entById, me: Net.id, boss: bd });   // a Houndmaster's position arcs round the boss: faint, under every telegraph (kennel.js)
     ArenaView.drawTelegraphs(ctx, raid.tgs, now, tellEnv);
     BossTells.drawRollers(ctx, raid.rollers, now, tellEnv);
     BossTells.drawSweeps(ctx, raid.sweeps, now, tellEnv);
@@ -3299,7 +3324,7 @@
     const knights = [...raid.knights.values()].map(k => ({ kind: 'knight', y: k.y, k }));
     const lants = raid.lanterns.filter(l => l.carrier == null).map(l => ({ kind: 'lantern', y: l.y, l }));
     const roomProps = raid.room.props.map(pr => ({ kind: 'prop', y: pr.y + (pr.shape === 'rect' ? 0 : pr.r * 0.4), pr }));
-    const all = [...ents, ...(raid.pvp ? [] : [bossEnt]), ...adds, ...husks, ...posts, ...knights, ...lants, ...roomProps, ...Stagecraft.entities(now, scEnv)].sort((a, b) => a.y - b.y);
+    const all = [...ents, ...(raid.pvp ? [] : [bossEnt]), ...adds, ...husks, ...posts, ...knights, ...lants, ...roomProps, ...Stagecraft.entities(now, scEnv), ...Kennel.entities(now, scEnv)].sort((a, b) => a.y - b.y);
     const bossDef = BOSSES.find(x => x.id === raid.def.id);
     for (const e of all) {
       if (e === bossEnt) {

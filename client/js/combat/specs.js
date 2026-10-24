@@ -1145,7 +1145,7 @@ SPECS.ironpalm = [
     focus: 'Reading blows. Every perfect Read fills your Breath to the top, Read has two charges, and Still Pond lets you read every blow for a while.',
     passive: { name: 'Still Water', desc: 'A perfect Read fills your Breath to the top, on any hit. Read has two charges. Iron Skin becomes Still Pond.' },
     build: base => ({
-      potMult: base.potMult * 1.01,   // balance knob (tools/simulate.js)
+      potMult: base.potMult * 1.02,   // balance knob (tools/simulate.js)
       stillWater: true,
       abilities: {
         read: { charges: 2, desc: 'Drop into a reading stance for 1.2s: 20% less damage. A hit that lands in its first 0.4s is read: it lands at half strength, you counter for {d:63}, and your Breath fills to the top. Read a tankbuster (or any blow after Iron Ox) and your next Heavy is a free, Crisp Thousand Palms, 30% stronger. Two charges.' },
@@ -1489,5 +1489,86 @@ SPECS.kenseier = [
         deathblow: { desc: 'Only while the boss is Broken: a Deathblow for {d:900} that heals you for 15% of your health, and ends the Break early. Out of a Break this is Redirect (8s cooldown, once you have turned a blow aside in the last 8s): the last blow you deflected goes back at the boss for 30% of what it would have dealt, up to {d:500}.' },
       },
     }),
+  },
+];
+
+// ===================================================================================================================
+// HOUNDMASTER (melee damage, class 23): the Pack Leader's and the Lone Wolf's specs (the kit and the spec hooks are in kits.js, after Wild Hunt)
+// ===================================================================================================================
+SPECS.houndmaster = [
+  {
+    id: 'packleader', name: 'Pack Leader', title: 'The Two-Dog Hunt', accent: '#c46a3a',
+    gaugeTip: 'Every bite builds Bond, and your finisher spends 40. A pounce that lands both hounds in a pair gives 20 at once. Relay makes both hounds bite as they trade places.',
+    blurb: 'Both hounds, worked hard: more pounces, and the hounds trade places on your word.',
+    focus: 'Coordination. Pounce keeps two charges, a pounce that lands the hounds in a pair pays Bond, and Relay swaps the hounds when one stands in the red. Change the pair from finisher to finisher: Harmony pays for it.',
+    passive: { name: 'Harmony', desc: 'A finisher on a pair you did not use last time does 10% more. Pounce has a second charge, and a pounce that forms a pair gives 20 Bond. Call Off becomes Relay.' },
+    build: base => ({
+      potMult: base.potMult * 0.915,   // balance knob (tools/simulate.js)
+      pounceBond: 20, harmony: true,
+      dmgMod: (k, o) => (base.dmgMod ? base.dmgMod(k, o) : 0) + hdHarmony(k, o),
+      afterUse: (k, ab) => { if (base.afterUse) base.afterUse(k, ab); hdSpecAfter(k, ab); },
+      abilities: {
+        pounce: {
+          charges: 2,
+          desc: `Tap: both hounds hold their spot, and will not drift when the boss turns or moves (${HOUND.HOLD}s). Press again: both pounce for {d:${HOUND.POUNCE}} each and land behind the boss, which is a Bring Down pair; a pounce that lands in a pair gives 20 Bond. Two charges, ${10}s each: the hold costs none, the pounce takes one.`,
+        },
+        calloff: {
+          id: 'relay', replaces: 'calloff', name: 'Relay', type: 'ogcd', target: 'none', cd: 20, lock: 0.3, anim: 'cast',
+          desc: `The two hounds trade places at once, each biting for {d:${HOUND.BITE}} as it breaks away, and neither can be touched on the way. It glows when a telegraph is about to land on a hound: the one in the red takes the place the other stood in. Call Off kept them at your side; Relay keeps them working.`,
+          usable: k => !!hdEnemy(k) && hdLiveReal(k).length >= 2 && hdLiveReal(k).every(h => h.mode !== 'pounce'),
+          glow: k => hdDanger(k),
+          effect(k) { hdRelay(k, this); },
+          fx: { type: 'aura', color: '#c46a3a', r: 40, dur: 1 },
+        },
+      },
+    }),
+  },
+  {
+    id: 'lonewolf', name: 'Lone Wolf', title: 'The Rider', accent: '#b8b2a8',
+    gaugeTip: 'One hound, so every pair is Greyfang\'s place and yours. Its bites give half again the Bond, and your finisher spends 40. Riding, Greyfang is under you and bites with your charges.',
+    blurb: 'One great hound, and the two of you move as one. Ride in for the big blows.',
+    focus: 'Position and the ride. Greyfang is bigger and bites harder, and you are the second half of every pair, so where you stand counts. Mount for a quick ride, a mounted charge, and a blow from the saddle.',
+    passive: { name: 'One Heart', desc: 'You have one hound, Greyfang, bigger than the pack: it fights with your buffs, and its bites give half again the Bond. A pair is Greyfang\'s place and yours; you on a flank with it behind is a Bring Down. Whistle: Flank becomes Mount.' },
+    build: base => {
+      const knife = base.abilities.find(a => a.id === 'knife');
+      const mount = {
+        id: 'mount', replaces: 'flank', name: 'Mount', type: 'ogcd', target: 'none', cd: 30, lock: 0.4, anim: 'big',
+        desc: `Climb onto Greyfang for ${HDS.MOUNT}s: you run half as fast again, Hunting Knife is a mounted charge for {d:${HDS.CHARGE}} with a bite from Greyfang under you, and this button is Ride Down, a leap off at the enemy for {d:${HDS.RIDE}} that ends the ride. Greyfang bites only with your charges while it carries you. The cooldown starts when you get off.`,
+        usable: k => !!hdEnemy(k) && hdLiveReal(k).length > 0,
+        effect(k) { hdMount(k, this); },
+        fx: { type: 'aura', color: '#b8b2a8', r: 40, dur: 1 },
+      };
+      const stand = Object.defineProperties({}, Object.getOwnPropertyDescriptors(hdRideFace(mount)));
+      stand.id = 'ridedown';   // (how other players find the move a cast names: abilityById looks in `moves`)
+      return {
+        potMult: base.potMult * 1.02,   // balance knob (tools/simulate.js)
+        hounds: ['greyfang'], solo: true, houndHp: 220, houndMult: 1.5, bondMult: 1.5,
+        moveMult: k => (hdMounted(k) ? HDS.SPEED : 1),
+        moves: [stand],
+        tick: k => { base.tick(k); hdSpecTick(k); },
+        onDamage: (k, a, c, o) => { if (base.onDamage) base.onDamage(k, a, c, o); if (o && o.ab && o.ab.id === 'knife' && k.talent('houndmaster_fangknife')) k.g.fang = k.now + 0.6; },   // (Fang and Knife)
+        abilities: {
+          knife: {
+            label: k => (hdMounted(k) ? 'Charge' : knife.label(k)),
+            desc: `Three-hit combo on one button: Slash ({d:160}) > Skin ({d:180}) > Gut ({d:230}). The third hit lets Greyfang bite, and every bite builds Bond. Riding, this is a mounted charge for {d:${HDS.CHARGE}}, with a bite from Greyfang.`,
+            effect(k) {
+              if (hdMounted(k)) { hdMountedCharge(k, this); k.g.comboUntil = k.now + 15; return; }
+              knife.effect.call(this, k);
+            },
+          },
+          flank: mount,
+          finisher: {
+            desc: `Spend 40 Bond; the move is whichever pair Greyfang and you make. <b>Rend</b> (one of you on each flank): {d:${HOUND.REND + 4 * HOUND.REND_TICK}} with a bleed. <b>Hamstring</b> (one in front, one behind): {d:${HOUND.HAMSTRING}}, and the boss takes 5% more damage for ${HOUND.HAM_DUR}s. ` +
+              `<b>Bring Down</b> (both behind, or you on a flank with Greyfang behind): {d:${HOUND.BRING}}. No pair: <b>Snap</b>, {d:${HOUND.SNAP}}. It glows with 40 Bond and a pair held.`,
+          },
+          pounce: {
+            usable: k => !hdMounted(k) && !!hdEnemy(k) && hdLiveReal(k).length > 0,
+            desc: `Tap: Greyfang holds its spot, and will not drift when the boss turns or moves (${HOUND.HOLD}s). Press again: it pounces for {d:${Math.round(HOUND.POUNCE * 1.5)}} and lands behind the boss. With you on a flank, that is a Bring Down. The cooldown starts with the pounce.`,
+          },
+          calloff: { desc: `Greyfang sprints to you and stands guard for ${HOUND.GUARD}s: you take 20% less damage, and nothing can touch it. A hound caught in a boss telegraph goes down for ${HOUND.RESPAWN}s, so this is what saves it. It glows when a telegraph is about to land on Greyfang.` },
+          quarry: { desc: `Tie a red cloth on the boss: for ${HOUND.QUARRY}s Greyfang bites 50% faster and every Bond you gain is doubled. It bites at once as you do it.` },
+        },
+      };
+    },
   },
 ];

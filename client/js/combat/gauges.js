@@ -1222,3 +1222,98 @@ Object.assign(GAUGES, {
     }
   },
 });
+
+// ======================================================================= Houndmaster (melee DPS, class 23)
+// Pack: a hound's portrait for each hound (Rust in a rust collar, Ash in an ash-grey one; Lone Wolf has Greyfang alone, bigger and greyer),
+// each in a ring in its collar colour with a little compass under it for its place round the boss (the boss in the middle, facing up: left
+// flank, right flank, front, behind) and its own Bond bar. Between the two the pair they hold is a word in its colour (Rend gold, Hamstring
+// green, Bring Down lilac, none grey) with a line joining the portraits. The shared Bond (what the finisher spends, a notch at 40) runs along
+// the bottom. A downed hound is grey with a cross and the seconds to its return; Mark the Quarry rims the whole gauge in gold, Wild Hunt
+// puts four pale ghosts in the middle. The painted gauge replaces this later. (Registered under 'pack', and under the class id and 'hounds'
+// in case the kit names it either.)
+(() => {
+  const PAIRC = { rend: '#f0c050', hamstring: '#9ad46a', bringdown: '#c8a8ff' }, PAIRN = { rend: 'REND', hamstring: 'HAMSTRING', bringdown: 'BRING DOWN' };
+  const COATS = { rust: ['#8f7a63', '#6c5845'], ash: ['#948f86', '#6f6a62'], greyfang: ['#8b8e93', '#5f6368'] };
+  const COLS = { rust: '#c46a3a', ash: '#b8b2a8', greyfang: '#d6d0c4' };
+  const NAMES = { rust: 'RUST', ash: 'ASH', greyfang: 'GREYFANG' };
+  const SLOTV = { front: [0, -1], behind: [0, 1], left: [-1, 0], right: [1, 0] };
+  // a hound's head in profile, facing right: a narrow muzzle, a folded ear, a collar at the neck. Centred on (x, y), r the portrait's radius.
+  function head(c, x, y, r, id, down) {
+    const [c1, c2] = COATS[id] || COATS.rust, col = down ? '#6e6a64' : COLS[id] || '#b8b2a8', s = r / 20;
+    c.save(); c.translate(x, y); c.scale(s, s);
+    if (down) c.globalAlpha = 0.55;
+    // neck and collar
+    poly(c, [-14, 18, -9, -2, 3, -3, 7, 18], c1, OUT, 1.6);
+    poly(c, [-12.5, 8, 6.2, 8, 6.8, 13, -13.4, 13], col, OUT, 1.2);
+    circle(c, -3, 14.4, 1.7, down ? '#8a847c' : '#d8b25a', OUT, 0.8);
+    // skull, a long narrow muzzle, the nose
+    ellipse(c, -1, -5, 9, 8, 0, c1, OUT, 1.8);
+    poly(c, [4, -7, 18, -3.2, 18.4, 0.6, 4, 3.6], shade(c1, 0.08), OUT, 1.6);
+    line(c, 6, 1, 17, 0.6, c2, 0.8);
+    circle(c, 18, -1.6, 1.8, '#1a1416');
+    // the ear folded back, the eye
+    poly(c, [-3, -11, -11, -5, -12, 3, -6, -2], c2, OUT, 1.2);
+    if (down) { line(c, 3, -8, 6.5, -5, '#1a1416', 1.2); line(c, 6.5, -8, 3, -5, '#1a1416', 1.2); }
+    else circle(c, 4.5, -6.4, 1.4, '#15100c');
+    if (id === 'greyfang' && !down) { line(c, 0, -10.5, 3.5, -6.5, '#e4e6e8', 0.9); line(c, 1.5, -11, 5, -7, '#e4e6e8', 0.8); }
+    c.restore();
+  }
+  // the compass for a place round the boss
+  function compass(c, x, y, slot, col, t, away) {
+    circle(c, x, y, 7.5, '#16121a', OUT, 1.4);
+    circle(c, x, y, 2.4, '#3a3040');
+    line(c, x, y - 2.4, x, y - 5.2, '#5a4a6a', 1);   // the boss's nose, up
+    const v = SLOTV[slot];
+    if (v) { c.save(); circle(c, x + v[0] * 5.6, y + v[1] * 5.6, 2.1 + 0.3 * Math.sin(t * 6), col, OUT, 0.8); c.restore(); }
+    else { c.save(); c.setLineDash([2, 2.5]); c.strokeStyle = away ? '#7a6f86' : '#5a4a6a'; c.lineWidth = 1; c.beginPath(); c.arc(x, y, 5.6, 0, TAU); c.stroke(); c.restore(); }
+  }
+  GAUGES.pack = function (c, k, w, h, t) {
+    const g = k.g, now = k.now, hs = Array.isArray(g.hounds) ? g.hounds.filter(o => o && !o.spectral) : [], solo = k.def && k.def.spec === 'lonewolf' || hs.length === 1;
+    const pair = g.pair, pc = g.all ? '#fff4d0' : PAIRC[pair], mark = now < (g.markUntil || 0), hunt = now < (g.huntUntil || 0) || !!g.all, mount = now < (g.mountUntil || 0);
+    const bond = Math.max(0, Math.min(100, g.bond || 0)), cx = w / 2, R = solo ? 25 : 21, cy = 31;
+    const pl = 0.5 + 0.5 * Math.sin(t * 6);
+    // the gold rim while the quarry is marked
+    if (mark) { c.save(); c.globalAlpha = 0.5 + 0.25 * pl; c.strokeStyle = '#f0c050'; c.lineWidth = 2; c.beginPath(); c.roundRect(2, 2, w - 4, h - 4, 10); c.stroke(); c.restore(); }
+    if (hunt) glow(c, cx, cy, 30, '#bfe9ff', 0.25 + 0.1 * pl);
+    const xs = solo ? [cx] : [cx - Math.min(60, w * 0.3), cx + Math.min(60, w * 0.3)];
+    const list = solo ? hs.slice(0, 1) : hs.slice(0, 2);
+    // the line joining the pair, lit in its colour
+    if (!solo && list.length === 2) {
+      c.save(); c.lineCap = 'round';
+      line(c, xs[0] + R, cy, xs[1] - R, cy, 'rgba(10,8,14,0.8)', 4.5);
+      line(c, xs[0] + R, cy, xs[1] - R, cy, pc ? rgba(pc, 0.55 + 0.3 * pl) : '#3a3340', pc ? 2.4 : 1.6);
+      c.restore();
+    }
+    list.forEach((o, i) => {
+      const x = xs[i], down = o.mode === 'down' || (o.downUntil || 0) > now, col = COLS[o.id] || '#b8b2a8';
+      if (!down && o.mode === 'bite') glow(c, x, cy, R + 8, col, 0.35 + 0.2 * pl);
+      circle(c, x, cy, R, down ? '#1c1a1e' : '#1a2016', OUT, 2);
+      c.save(); c.beginPath(); c.arc(x, cy, R - 1, 0, TAU); c.clip(); head(c, x + 1, cy + 3, R * 0.92, o.id, down); c.restore();
+      c.save(); c.beginPath(); c.arc(x, cy, R, 0, TAU); c.lineWidth = 2.6; c.strokeStyle = down ? '#5a5650' : col; c.globalAlpha = down ? 0.7 : 1; c.stroke(); c.restore();
+      if (!down && o.mode === 'hold') { c.save(); c.strokeStyle = rgba(col, 0.8); c.lineWidth = 1; c.beginPath(); c.arc(x, cy, R + 4, 0, TAU); c.setLineDash([3, 3]); c.stroke(); c.restore(); }
+      if (!down && o.shield) { c.save(); c.strokeStyle = 'rgba(242,230,200,0.8)'; c.lineWidth = 1.4; c.beginPath(); c.arc(x, cy, R + 3, 0.2, TAU - 0.2); c.stroke(); c.restore(); }
+      if (down) label(c, Math.max(0, Math.ceil((o.downUntil || 0) - now)) + 's', x, cy + 4, '#d8d2c6', 12, 'system-ui', 800);
+      // the compass and the Bond bar under it
+      compass(c, x, cy + R + 13, down ? null : o.slot, col, t, !down && !o.slot);
+      const bx = x - 22, by = cy + R + 24, bw = 44, bf = Math.max(0, Math.min(1, (o.bond || 0) / 100));
+      rrect(c, bx, by, bw, 5, 2.5, '#17121a', OUT, 1);
+      if (bf > 0.01) rrect(c, bx + 0.5, by + 0.5, Math.max(3, (bw - 1) * bf), 4, 2, down ? '#6e6a64' : col);
+      label(c, NAMES[o.id] || '', x, cy - R - 3, down ? '#8a847c' : '#e8dcc0', 8, 'system-ui', 800);
+    });
+    if (!list.length) { circle(c, cx, cy, R, '#1a2016', OUT, 2); label(c, '?', cx, cy + 5, '#8a847c', 16, 'system-ui', 800); }
+    // the word the pair makes
+    const by2 = h - 12;
+    label(c, g.all ? 'ALL THREE' : pair ? PAIRN[pair] : 'NO PAIR', cx, by2 - 6, pc || '#8f8a96', 10, 'system-ui', 800);
+    if (mount) label(c, 'RIDING', cx, 9, '#f0c050', 9, 'system-ui', 800);
+    else if (mark) label(c, 'QUARRY', cx, 9, '#f0c050', 9, 'system-ui', 800);
+    // the shared Bond along the bottom: a notch where the finisher can be paid for (40), lit once it can
+    const bw2 = Math.min(w - 36, 150), bx2 = cx - bw2 / 2;
+    rrect(c, bx2, by2, bw2, 7, 3.5, '#17121a', OUT, 1.2);
+    if (bond > 0.5) { c.save(); c.beginPath(); c.roundRect(bx2 + 0.5, by2 + 0.5, bw2 - 1, 6, 3); c.clip(); c.fillStyle = bond >= 40 ? (pc || '#e8c15a') : '#8a7a5a'; c.fillRect(bx2 + 0.5, by2 + 0.5, (bw2 - 1) * bond / 100, 6); c.fillStyle = 'rgba(255,255,255,0.3)'; c.fillRect(bx2 + 0.5, by2 + 0.5, (bw2 - 1) * bond / 100, 1.5); c.restore(); }
+    line(c, bx2 + bw2 * 0.4, by2 - 1, bx2 + bw2 * 0.4, by2 + 8, bond >= 40 ? '#fff4d0' : '#c8b88a', 1.4);
+    label(c, String(Math.floor(bond)), bx2 + bw2 + 14, by2 + 7, bond >= 40 ? '#fff4d0' : '#c8b88a', 11, 'system-ui', 800);
+    // Wild Hunt: four pale ghosts running along the top edge of the Bond bar
+    if (hunt && !solo) for (let i = 0; i < 4; i++) { const gx = cx - 12 + i * 8 + Math.sin(t * 3 + i) * 1.5; c.save(); c.globalAlpha = 0.5 + 0.25 * Math.sin(t * 5 + i); circle(c, gx, cy + 2 + (i % 2) * 5, 2.4, '#d8f0ff'); c.restore(); }
+  };
+  GAUGES.hounds = GAUGES.pack; GAUGES.houndmaster = GAUGES.pack; GAUGES.kennel = GAUGES.pack;
+})();

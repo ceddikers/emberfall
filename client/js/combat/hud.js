@@ -92,6 +92,9 @@ Object.assign(BUFF_NAMES, { read: 'Read', wall: 'Tiger Wall', opening: 'Opening'
   guard: 'Guard Open', pond: 'Still Pond', slide: 'Landslide', bellows: 'Bellows Stance' });
 BAD_BUFFS.add('stagger');
 Object.assign(BUFF_ICON, { read: 'read', wall: 'kick', opening: 'fist', wind: 'bell', skin: 'skin', rush: 'fist', stagger: 'kick', guard: 'palm', pond: 'pond', slide: 'slide', bellows: 'bellows' });
+// Houndmaster: Mark the Quarry, Call Off's guard, and the bleed that sharpens the bites (the loot)
+Object.assign(BUFF_NAMES, { mounted: 'Riding Greyfang', quarry: 'Quarry Marked', guarded: 'Hounds on Guard', rendbite: 'Bloodied Bites' });
+Object.assign(BUFF_ICON, { mounted: 'mount', quarry: 'quarry', guarded: 'calloff', rendbite: 'finisher' });
 GAUGE_TIPS.ironpalm = {
   desc: `Every press costs Breath: Light ${IP_INPUT.L.cost}, Heavy ${IP_INPUT.H.cost}, Kick ${IP_INPUT.K.cost} (${Math.round(IRONPALM.CRISP_SAVE * 100)}% less when Crisp). It refills ${IRONPALM.pool.regen} a second while you fight and ${IRONPALM.pool.rest} a second once you stop for half a moment. Below ${IRONPALM.WINDED} you're winded until it's back to ${IRONPALM.RECOVER}: every press is a weak tap, and it refills at the resting pace (${Math.round(IRONPALM.TAP_REFILL * 100)}% of it while you keep tapping). Crane Step gives some back, Flowing Palms with all three palms Crisp gives ${IRONPALM.FLOW_BREATH} back when it leaves you under ${IRONPALM.FLOW_LOW}, and a Read gives 15.`,
   state: k => (k.has('opening') ? 'Opening: Heavy is Thousand Palms' : k.has('offbal') ? 'Off balance: Read the next blow' : k.g.winded ? 'Winded: breathe' : k.has('wind') ? 'Second Wind' : 'Steady'),
@@ -1142,6 +1145,141 @@ GAUGE_TIPS.kenseier = {
       c.fillStyle = '#6a8fb6'; c.strokeStyle = INK; c.lineWidth = 2; c.beginPath(); c.arc(32, 36, 6, 0, TAU); c.fill(); c.stroke();
       c.beginPath(); c.moveTo(22, 58); c.quadraticCurveTo(22, 44, 32, 44); c.quadraticCurveTo(42, 44, 42, 58); c.closePath(); c.fill(); c.stroke();
       blade(c, 6, 22, 58, 22, 5);
+    },
+  };
+})();
+
+// ======================================================================= Houndmaster (melee DPS, class 23)
+// Drawn icons (art.icons === false in data.js) and the gauge's tooltip; the painted set (docs/art/paint-next.md) replaces them later.
+// Moss green, tan leather, ash grey, one rust-orange accent.
+GAUGE_TIPS.houndmaster = {
+  desc: 'Your two hounds (Lone Wolf: Greyfang alone, with you as the second piece) move on their own and take the places you whistle them to: left flank, right flank, front or behind the boss. Where they stand when you finish is the pair: both on the flanks is Rend, front and behind is Hamstring, both behind is Bring Down. Each portrait\'s bar is its Bond; the long bar is the Bond your finisher spends (40). A hound a telegraph catches is downed until its timer runs out.',
+  state: k => {
+    const g = k.g, now = k.now, n = { rend: 'Rend', hamstring: 'Hamstring', bringdown: 'Bring Down' };
+    if (g.all) return 'Wild Hunt: every pair at once';
+    return (g.pair ? 'Pair: ' + n[g.pair] : 'No pair: Snap') + (now < (g.markUntil || 0) ? ' · quarry marked' : '') + (now < (g.mountUntil || 0) ? ' · riding' : '');
+  },
+  extra: () => '<div style="margin-top:6px;opacity:.85">The faint arcs round the boss are where your hounds stand, in their collar colours; when they make a pair both light in its colour (gold Rend, green Hamstring, lilac Bring Down). Whistle: Hold keeps them where they are while the boss turns.</div>',
+};
+(() => {
+  const MS = '#5a7a46', TN = '#b08a5a', AS = '#b8b2a8', RU = '#c46a3a', HD = '#8f7a63', HD2 = '#6c5845', IV = '#f2e6c8', GR = '#8b8e93', INK = '#10140c';
+  const ink = (c, w = 3, col = IV) => { c.strokeStyle = col; c.lineWidth = w; c.lineCap = 'round'; c.lineJoin = 'round'; };
+  // a lean hound in side view facing right, centred on (x, y), s its length/40, tilted by rot; leg swing lg (-1..1); collar colour
+  const hound = (c, x, y, s = 1, rot = 0, col = RU, o = {}) => {
+    const coat = o.coat || HD, dark = o.dark || HD2, lg = o.lg == null ? 0.6 : o.lg;
+    c.save(); c.translate(x, y); c.rotate(rot); c.scale(s, s); c.lineJoin = 'round'; c.lineCap = 'round';
+    // legs, tail
+    ink(c, 3, dark); c.beginPath(); c.moveTo(-9, 3); c.lineTo(-13 - lg * 5, 11); c.moveTo(-5, 4); c.lineTo(-6 + lg * 4, 12); c.moveTo(9, 3); c.lineTo(13 + lg * 5, 10); c.moveTo(5, 4); c.lineTo(6 - lg * 4, 11); c.stroke();
+    ink(c, 2.2, dark); c.beginPath(); c.moveTo(-14, -3); c.quadraticCurveTo(-21, -4, -23, -11); c.stroke();
+    // body: deep chest, tucked waist
+    c.fillStyle = coat; c.strokeStyle = INK; c.lineWidth = 1.8;
+    c.beginPath(); c.moveTo(-14, -2); c.quadraticCurveTo(-8, -9, 0, -6); c.quadraticCurveTo(8, -9, 13, -5); c.lineTo(13, 4); c.quadraticCurveTo(6, 7, 1, 2); c.quadraticCurveTo(-6, 6, -14, 3); c.closePath(); c.fill(); c.stroke();
+    // neck, head, narrow muzzle, ear, collar
+    c.beginPath(); c.moveTo(11, -5); c.lineTo(16, -11); c.lineTo(21, -12); c.lineTo(31, -8.5); c.lineTo(31, -6.5); c.lineTo(21, -5); c.lineTo(15, 2); c.closePath(); c.fill(); c.stroke();
+    c.fillStyle = dark; c.beginPath(); c.moveTo(17, -11); c.lineTo(14, -6); c.lineTo(19, -8); c.closePath(); c.fill();
+    ink(c, 3, col); c.beginPath(); c.moveTo(13.5, -4); c.lineTo(16, 1); c.stroke();
+    c.fillStyle = INK; c.beginPath(); c.arc(31, -8, 1.3, 0, TAU); c.fill(); c.beginPath(); c.arc(23, -9, 1, 0, TAU); c.fill();
+    c.restore();
+  };
+  const ghost = (c, x, y, s, a = 0.8) => { c.save(); c.globalAlpha = a; hound(c, x, y, s, 0, '#eaf7ff', { coat: '#cfe4f2', dark: '#9cbdd6' }); c.restore(); };
+  const star = (c, x, y, r, col) => { c.fillStyle = col; c.beginPath(); for (let i = 0; i < 10; i++) { const a = i * TAU / 10 - Math.PI / 2, rr = i % 2 ? r * 0.45 : r; c.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); } c.closePath(); c.fill(); ink(c, 1.4, INK); c.stroke(); };
+  const arrow = (c, x0, y0, x1, y1, col = IV, w = 3) => { ink(c, w, col); c.beginPath(); c.moveTo(x0, y0); c.lineTo(x1, y1); c.stroke(); const a = Math.atan2(y1 - y0, x1 - x0); c.fillStyle = col; c.beginPath(); c.moveTo(x1 + Math.cos(a) * 5, y1 + Math.sin(a) * 5); c.lineTo(x1 + Math.cos(a + 2.5) * 6, y1 + Math.sin(a + 2.5) * 6); c.lineTo(x1 + Math.cos(a - 2.5) * 6, y1 + Math.sin(a - 2.5) * 6); c.closePath(); c.fill(); };
+  const whistle = (c, x, y, s = 1) => { c.save(); c.translate(x, y); c.scale(s, s); ink(c, 1.4, TN); c.beginPath(); c.arc(-8, -6, 7, 0.3, 4.2); c.stroke(); c.fillStyle = '#efe4c6'; c.strokeStyle = INK; c.lineWidth = 1.6; c.beginPath(); c.ellipse(0, 0, 9, 5, -0.3, 0, TAU); c.fill(); c.stroke(); c.fillStyle = INK; c.beginPath(); c.arc(4, -1.5, 1.3, 0, TAU); c.fill(); c.restore(); };
+  ICON_GLYPHS.houndmaster = {
+    // a skinning knife swung across, three arcs behind it, a rust thong
+    knife: c => {
+      for (const [r, w, col] of [[22, 2.4, 'rgba(184,178,168,0.45)'], [17, 2.4, 'rgba(184,178,168,0.7)'], [12, 2.4, AS]]) { ink(c, w, col); c.beginPath(); c.arc(30, 42, r, -2.6, -1.0); c.stroke(); }
+      c.save(); c.translate(12, 54); c.rotate(-0.78); ink(c, 1, INK);
+      c.fillStyle = TN; c.fillRect(0, -3, 12, 6); c.strokeStyle = INK; c.lineWidth = 1.6; c.strokeRect(0, -3, 12, 6);
+      c.fillStyle = '#c9a23f'; c.fillRect(12, -5, 3, 10); c.strokeRect(12, -5, 3, 10);
+      c.fillStyle = '#d4d8dc'; c.beginPath(); c.moveTo(15, -4); c.lineTo(42, -4); c.quadraticCurveTo(50, -1, 48, 3); c.lineTo(15, 3); c.closePath(); c.fill(); c.stroke();
+      ink(c, 1, '#ffffff'); c.beginPath(); c.moveTo(17, -1.5); c.lineTo(40, -1.5); c.stroke();
+      ink(c, 2, RU); c.beginPath(); c.moveTo(0, 0); c.quadraticCurveTo(-6, 5, -9, 2); c.stroke();
+      c.restore();
+      for (const [x, y] of [[44, 12], [50, 18], [40, 8]]) { c.fillStyle = RU; c.fillRect(x, y, 3, 3); }
+    },
+    // a whistle with a curved arrow going round to the right
+    flank: c => {
+      whistle(c, 18, 50, 0.95);
+      ink(c, 3.2, AS); c.beginPath(); c.moveTo(24, 40); c.bezierCurveTo(30, 14, 58, 10, 56, 40); c.stroke();
+      ink(c, 2, 'rgba(184,178,168,0.6)'); c.beginPath(); c.moveTo(26, 46); c.bezierCurveTo(36, 24, 50, 24, 50, 42); c.stroke();
+      arrow(c, 56, 36, 56, 44, AS, 3); c.strokeStyle = AS; c.lineWidth = 2; c.beginPath(); c.arc(56, 50, 4, 0, TAU); c.stroke();
+    },
+    // two lean muzzles meeting, a rust starburst between, two claw lines under it
+    finisher: c => {
+      star(c, 32, 28, 15, RU);
+      for (const s of [-1, 1]) {
+        c.save(); c.translate(32 + s * 3, 29); c.scale(s, 1); c.fillStyle = HD; c.strokeStyle = INK; c.lineWidth = 1.8; c.lineJoin = 'round';
+        c.beginPath(); c.moveTo(0, -5); c.lineTo(-12, -9); c.lineTo(-22, -3); c.lineTo(-22, 8); c.lineTo(-10, 12); c.lineTo(0, 6); c.closePath(); c.fill(); c.stroke();
+        c.fillStyle = '#f6f2e8'; for (let i = 0; i < 3; i++) { c.beginPath(); c.moveTo(-1 - i * 3.4, -3); c.lineTo(-3 - i * 3.4, 2.5); c.lineTo(-4.4 - i * 3.4, -3); c.closePath(); c.fill(); }
+        ink(c, 3, s < 0 ? RU : AS); c.beginPath(); c.moveTo(-8, 4); c.lineTo(-11, 12); c.stroke();
+        c.restore();
+      }
+      ink(c, 2.6, IV); for (const dx of [-7, 7]) { c.beginPath(); c.moveTo(32 + dx - 6, 50); c.lineTo(32 + dx + 6, 60); c.stroke(); }
+    },
+    // a hound mid-leap, a dotted arc, a dust ring where it lands
+    pounce: c => {
+      c.save(); c.strokeStyle = AS; c.lineWidth = 1.6; c.setLineDash([2.5, 3.5]); c.beginPath(); c.moveTo(6, 52); c.quadraticCurveTo(26, 4, 52, 46); c.stroke(); c.restore();
+      c.save(); c.strokeStyle = 'rgba(184,178,168,0.8)'; c.lineWidth = 2; c.beginPath(); c.ellipse(52, 53, 8, 3.2, 0, 0, TAU); c.stroke(); c.restore();
+      hound(c, 29, 26, 0.95, -0.55, RU, { lg: 1.1 });
+      ink(c, 1.8, AS); for (const y of [34, 40, 46]) { c.beginPath(); c.moveTo(6, y); c.lineTo(14, y - 2); c.stroke(); }
+    },
+    // two hounds, a rust collar and an ash one, running to a boot
+    calloff: c => {
+      hound(c, 20, 20, 0.62, 0.2, RU, { lg: 0.8 }); hound(c, 30, 34, 0.62, 0.2, AS, { lg: -0.8, coat: '#948f86', dark: '#6f6a62' });
+      c.fillStyle = TN; c.strokeStyle = INK; c.lineWidth = 1.8; c.beginPath(); c.moveTo(42, 38); c.lineTo(50, 38); c.lineTo(52, 52); c.lineTo(60, 54); c.lineTo(60, 58); c.lineTo(40, 58); c.closePath(); c.fill(); c.stroke();
+      c.save(); c.strokeStyle = AS; c.lineWidth = 1.6; c.beginPath(); c.ellipse(50, 58, 12, 4, 0, 0, TAU); c.stroke(); c.restore();
+      ink(c, 1.8, 'rgba(242,230,200,0.7)'); for (const y of [16, 24, 30]) { c.beginPath(); c.moveTo(2, y); c.lineTo(8, y); c.stroke(); }
+    },
+    // a rust cloth knotted on a bare branch
+    quarry: c => {
+      ink(c, 4.5, '#2a2018'); c.beginPath(); c.moveTo(8, 58); c.lineTo(30, 30); c.lineTo(52, 8); c.stroke(); ink(c, 2.6, '#6a5238'); c.beginPath(); c.moveTo(8, 58); c.lineTo(30, 30); c.lineTo(52, 8); c.stroke();
+      ink(c, 2.4, '#2a2018'); c.beginPath(); c.moveTo(30, 30); c.lineTo(14, 22); c.moveTo(38, 22); c.lineTo(42, 38); c.stroke();
+      c.fillStyle = RU; c.strokeStyle = INK; c.lineWidth = 1.8; c.beginPath(); c.moveTo(24, 36); c.quadraticCurveTo(26, 26, 36, 24); c.lineTo(58, 32); c.quadraticCurveTo(52, 36, 56, 44); c.lineTo(36, 38); c.quadraticCurveTo(30, 44, 24, 36); c.closePath(); c.fill(); c.stroke();
+      c.fillStyle = RU; for (const [x, y] of [[16, 40], [20, 50], [44, 14]]) { c.beginPath(); c.arc(x, y, 2.6, 0, TAU); c.fill(); c.stroke(); }
+    },
+    // a ghostly pack of four under the moon
+    wildhunt: c => {
+      c.fillStyle = '#f2ecd2'; c.beginPath(); c.arc(46, 14, 8, 0, TAU); c.fill(); c.fillStyle = 'rgba(40,52,38,1)'; c.beginPath(); c.arc(50, 12, 7, 0, TAU); c.fill();
+      glow(c, 32, 40, 30, '#9fd8ff', 0.25);
+      ghost(c, 16, 52, 0.5, 0.5); ghost(c, 30, 46, 0.58, 0.65); ghost(c, 22, 34, 0.6, 0.8); ghost(c, 40, 38, 0.66, 0.95);
+    },
+    // two hounds changing places along crossing curves
+    relay: c => {
+      c.fillStyle = RU; c.strokeStyle = INK; c.lineWidth = 1.8; c.beginPath(); c.arc(14, 46, 7, 0, TAU); c.fill(); c.stroke(); c.fillStyle = AS; c.beginPath(); c.arc(50, 46, 7, 0, TAU); c.fill(); c.stroke();
+      ink(c, 3, RU); c.beginPath(); c.moveTo(16, 38); c.bezierCurveTo(16, 10, 44, 10, 48, 30); c.stroke(); arrow(c, 47, 24, 48, 33, RU, 3);
+      ink(c, 3, AS); c.beginPath(); c.moveTo(48, 38); c.bezierCurveTo(48, 20, 20, 20, 17, 32); c.stroke(); arrow(c, 18, 27, 17, 35, AS, 3);
+    },
+    // a figure riding a huge grey hound
+    mount: c => {
+      hound(c, 30, 40, 1.15, 0, '#d6d0c4', { coat: GR, dark: '#5f6368', lg: 0.7 });
+      c.fillStyle = MS; c.strokeStyle = INK; c.lineWidth = 1.8; c.beginPath(); c.ellipse(28, 22, 6, 9, 0, 0, TAU); c.fill(); c.stroke(); c.fillStyle = TN; c.beginPath(); c.arc(28, 11, 4.4, 0, TAU); c.fill(); c.stroke();
+      c.fillStyle = '#b08a5a'; c.fillRect(21, 29, 14, 4); ink(c, 1.6, RU); c.beginPath(); c.moveTo(34, 20); c.lineTo(42, 28); c.stroke();
+      ink(c, 1.8, 'rgba(242,230,200,0.7)'); for (const y of [34, 42, 50]) { c.beginPath(); c.moveTo(3, y); c.lineTo(9, y); c.stroke(); }
+    },
+    // a figure dropping off the hound with a slash arrow down
+    ridedown: c => {
+      hound(c, 20, 50, 0.7, 0, '#d6d0c4', { coat: GR, dark: '#5f6368' });
+      c.fillStyle = MS; c.strokeStyle = INK; c.lineWidth = 1.8; c.beginPath(); c.ellipse(40, 22, 5.5, 8, 0.5, 0, TAU); c.fill(); c.stroke(); c.fillStyle = TN; c.beginPath(); c.arc(44, 11, 4.2, 0, TAU); c.fill(); c.stroke();
+      arrow(c, 52, 20, 56, 52, AS, 3.4); ink(c, 2.2, '#ffffff'); c.beginPath(); c.moveTo(46, 34); c.lineTo(58, 36); c.stroke();
+      c.save(); c.strokeStyle = 'rgba(184,178,168,0.8)'; c.lineWidth = 2; c.beginPath(); c.ellipse(54, 57, 9, 3.2, 0, 0, TAU); c.stroke(); c.restore();
+    },
+    // a hound's head thrown back, notes sweeping out from it
+    howl: c => {
+      c.save(); c.translate(26, 46); c.rotate(-1.05); c.fillStyle = HD; c.strokeStyle = INK; c.lineWidth = 1.8; c.lineJoin = 'round';
+      c.beginPath(); c.moveTo(-10, 12); c.lineTo(-6, -4); c.lineTo(4, -8); c.lineTo(22, -3); c.lineTo(22, 0); c.lineTo(6, 3); c.lineTo(4, 14); c.closePath(); c.fill(); c.stroke();
+      c.fillStyle = HD2; c.beginPath(); c.moveTo(-2, -6); c.lineTo(-9, -1); c.lineTo(-4, 3); c.closePath(); c.fill();
+      ink(c, 3.2, RU); c.beginPath(); c.moveTo(-8, 9); c.lineTo(3, 10); c.stroke();
+      c.restore();
+      ink(c, 2.6, IV); for (const [r, a] of [[12, 1], [19, 0.75], [26, 0.5]]) { c.save(); c.globalAlpha = a; c.beginPath(); c.arc(40, 14, r, 3.3, 4.2); c.stroke(); c.restore(); }
+      c.fillStyle = '#f2ecd2'; c.beginPath(); c.arc(52, 12, 5, 0, TAU); c.fill();
+    },
+    // a lap round a dot, a hound at the front of it
+    longchase: c => {
+      ink(c, 3, AS); c.beginPath(); c.arc(32, 34, 20, 0.5, TAU - 0.9); c.stroke(); arrow(c, 52, 24, 52, 32, AS, 3);
+      c.fillStyle = '#5a3a2a'; c.strokeStyle = INK; c.lineWidth = 1.8; c.beginPath(); c.arc(32, 34, 8, 0, TAU); c.fill(); c.stroke();
+      hound(c, 17, 20, 0.55, -0.5, RU, { lg: 1 });
+      ink(c, 1.8, 'rgba(242,230,200,0.7)'); for (const [x, y] of [[8, 34], [10, 40], [16, 47]]) { c.beginPath(); c.arc(x, y, 1.2, 0, TAU); c.stroke(); }
     },
   };
 })();

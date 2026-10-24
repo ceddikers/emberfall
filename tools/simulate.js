@@ -61,6 +61,10 @@ function runSim(classId, skill, seed, specId, talents) {
     allyHp: () => (state.aimHp != null ? state.aimHp : state.healDebt > 3500 ? 0.6 : 0.95),
     // a telegraph about to land on a spot: the blow the Marionettist mover has coming for the Doll (Pirouette glows)
     danger: (x, y, within) => state.dollHitAt != null && state.dollHitAt - state.t <= within,
+    // a Houndmaster's cursor (the side of the boss it points its Whistle at), which way the boss faces, and Shift (state.shift)
+    aim: () => state.aim || null,
+    bossFace: () => state.bossFace || 0,
+    shift: () => !!state.shift,
     defaultLink: () => 'tank',
     talents: () => talents || null,
     // the boss as talents see it (kits.js bossNow): busters and raidwides are 2.5s casts; the tank is its target
@@ -611,6 +615,19 @@ const MOVERS = {
       if (state.hitBlock !== Math.floor(t / 15)) { state.hitBlock = Math.floor(t / 15); state.dollHitAt = t + human() * 15; }
     }
     if (state.dollHitAt != null && t >= state.dollHitAt) { state.dollHitAt = null; state.kit.notify('dollhit', { i: 0 }); }
+  },
+  // Houndmaster (class 23): stands behind the boss; the boss turns now and then (the hounds' flanks go round with it), and a telegraph
+  // lands on a hound now and then: a pro has called them off by then (its Call Off glows), a newbie often has not
+  houndmaster(state, skill, human) {
+    const t = state.t;
+    state.bossFace = Math.floor(t / 35) * 1.3;
+    // (a Lone Wolf is half of every pair: the pro walks to the slot its plan wants, a moment after it decides; a newbie stays behind the boss)
+    if (state.kit.def.solo && skill === 'pro') {
+      if (state.wantSlot && state.wantSlot !== state.mySlot && t >= state.slotAt) state.mySlot = state.wantSlot;
+      state.posFn = () => { const a = state.bossFace + HD_OFF[state.mySlot || 'behind']; return { x: Math.cos(a) * 140, y: Math.sin(a) * 140 }; };
+    } else state.posFn = () => (state.kit.def.solo ? (() => { const a = state.bossFace + Math.PI; return { x: Math.cos(a) * 140, y: Math.sin(a) * 140 }; })() : { x: -140, y: 0 });
+    if (state.hitBlock !== Math.floor(t / (skill === 'pro' ? 45 : 30))) { state.hitBlock = Math.floor(t / (skill === 'pro' ? 45 : 30)); state.dollHitAt = t + 8 + human() * 20; }
+    if (state.dollHitAt != null && t >= state.dollHitAt) { state.dollHitAt = null; const hs = state.kit.g.hounds.filter(h => !h.spectral); const h = hs[Math.floor(human() * hs.length)]; if (h) state.kit.notify('houndhit', { h: h.id }); }
   },
   // Threadweaver: every mechanic that moves the party pulls a thread apart
   threadweaver(state) {
@@ -1199,6 +1216,97 @@ Object.assign(NEWBIE, {
     if (n.noticeGlow && k.glows(db) && k.usable(db) && k.readyIn(db) <= 0.0001) return I(k, 'deathblow');   // (the Break's glow, or a Redirect's)
     if (n.roll < 0.25) { const o = k.abilities.filter(a => a.type === 'gcd' && k.usable(a) && k.readyIn(a) <= 0.0001); if (o.length > 1) return I(k, o[1 + Math.floor(ctx.human() * (o.length - 1))].id); }
     return 0;
+  },
+});
+
+// ---------------------------------------------------------------- Houndmaster (damage, class 23)
+// The pro plans the pair the next finisher wants and sends the hounds there: Bring Down inside the party's burst (Mark the Quarry
+// goes up with it; a Hold and a pounce when the key is ready, two Whistles behind otherwise), Hamstring just before it, Rend the rest
+// of the time. It points the Whistle at a side of the boss (state.aim), calls the hounds off a telegraph the moment Call Off glows, and
+// presses the finisher when the pair stands. The newbie never moves the hounds: Mark the Quarry on cooldown, Call Off when the glow
+// is noticed, and the finisher whenever Bond is full (a Snap, or the pair the hounds drifted into).
+const HD_WANT = { rend: ['left', 'right'], hamstring: ['front', 'behind'], bringdown: ['behind', 'behind'] };
+const hdPlan = (k, ctx) => (ctx.inBurst(ctx.t) || k.has('quarry') ? 'bringdown' : ctx.burstSoon(ctx.t) ? 'hamstring' : 'rend');
+// The Lone Wolf pro is the other half of every pair: Greyfang on a flank, it stands on the other; a Hold and a pounce put Greyfang behind (in the
+// burst), and then any flank makes the Pack. It rides Mount whenever it is ready, charges, and leaps off just before the ride runs out.
+function proLoneWolf(k, ctx) {
+  const g = k.g, st = ctx.state, t = ctx.t, gf = hdLiveReal(k)[0], plan = hdPlan(k, ctx), riding = hdMounted(k);
+  if (!gf) return k.gcdRemaining() > 0.0001 || k.cast ? null : I(k, 'knife');
+  let want = st.wantSlot || 'behind';
+  if (!riding) {
+    if (plan === 'bringdown') want = want === 'left' || want === 'right' ? want : 'left';
+    else if (gf.slot === 'left') want = 'right';
+    else if (gf.slot === 'right') want = 'left';
+    else if (gf.slot === 'behind') want = want === 'left' || want === 'right' ? want : 'left';
+  }
+  if (want !== st.wantSlot) { st.wantSlot = want; st.slotAt = t + 0.7; }
+  if (weaveOk(k)) {
+    if (riding) { if (((st.ridePress || 0) >= (k.talent('houndmaster_saddleborn') ? 3 : 2) || g.mountUntil - t < 1.4) && ready(k, 'flank')) return I(k, 'flank'); }
+    else {
+      if (ready(k, 'calloff') && k.glows(abOf(k, 'calloff'))) return I(k, 'calloff');
+      if (ready(k, 'quarry') && ctx.inBurst(t)) return I(k, 'quarry');
+      if (plan === 'bringdown' && ready(k, 'pounce') && gf.slot !== 'behind') return I(k, 'pounce');
+      if (ready(k, 'flank') && !hdHolding(k)) { st.ridePress = 0; return I(k, 'flank'); }
+    }
+  }
+  if (k.gcdRemaining() > 0.0001 || k.cast) return null;
+  const bond = g.bond || 0, pair = hdPairNow(k);
+  if (!riding && ready(k, 'finisher') && bond >= 40 && (pair || bond >= 90)) return I(k, 'finisher');
+  st.ridePress = riding ? (st.ridePress || 0) + 1 : 0;   // (charges made on this ride)
+  return I(k, 'knife');
+}
+Object.assign(PRO, {
+  houndmaster(k, ctx) {
+    if (k.def.solo) return proLoneWolf(k, ctx);
+    const g = k.g, st = ctx.state, t = ctx.t, live = hdLiveReal(k), plan = hdPlan(k, ctx), want = HD_WANT[plan];
+    const bond0 = g.bond || 0;
+    if (weaveOk(k)) {
+      if (ready(k, 'calloff') && k.glows(abOf(k, 'calloff'))) return I(k, 'calloff');
+      // (Tag Team: a Relay right before the finisher, for its second rider)
+      if (k.talent('houndmaster_tagteam') && ready(k, 'calloff') && bond0 >= 40 && hdPairNow(k) === 'bringdown') return I(k, 'calloff');
+      if (ready(k, 'quarry') && ctx.inBurst(t)) return I(k, 'quarry');
+      if (live.length === 2 && live.map(h => h.goal).sort().join() !== want.slice().sort().join()) {
+        if (plan === 'bringdown' && ready(k, 'pounce')) return I(k, 'pounce');
+        if (!(plan === 'bringdown' && hdHolding(k)) && ready(k, 'flank')) {
+          const h = live.find(x => x.id === g.next) || live[0], o = live.find(x => x !== h), rest = want.slice();
+          const oi = o ? rest.indexOf(o.goal) : -1;
+          if (oi >= 0) rest.splice(oi, 1);
+          const f = st.bossFace + HD_OFF[rest[0] || want[0]];
+          st.aim = { x: Math.cos(f) * 170, y: Math.sin(f) * 170 };
+          return I(k, 'flank');
+        }
+      }
+    }
+    if (k.gcdRemaining() > 0.0001 || k.cast) return null;
+    const bond = g.bond || 0, pair = hdPairNow(k);
+    if (ready(k, 'finisher') && bond >= 40 && ((pair && (pair === plan || bond >= 60)) || bond >= 90)) return I(k, 'finisher');
+    return I(k, 'knife');
+  },
+});
+Object.assign(NEWBIE, {
+  houndmaster(k, ctx) {
+    const n = ctx.state.newbie || (ctx.state.newbie = { gcdSeenAt: null, delay: 0, ogcdSeen: {} });
+    const gl = newbieGlowOgcd(k, ctx, 'calloff');
+    if (gl != null && gl >= 0) return gl;
+    if (k.def.solo && hdMounted(k)) {   // (Ride Down glows: noticed 60% of the time, 0.1-0.6s late)
+      const rd = abOf(k, 'flank');
+      if (k.readyIn(rd) <= 0.0001) {
+        if (n.rideAt == null) { n.rideAt = ctx.t + 0.1 + ctx.human() * 0.5; n.rideGo = ctx.human() < 0.6; }
+        if (n.rideGo && ctx.t >= n.rideAt) { n.rideAt = null; n.rideGo = false; return I(k, 'flank'); }
+      }
+    } else n.rideAt = null;
+    for (const id of k.def.solo ? ['quarry', 'flank'] : ['quarry']) {   // (Mark the Quarry and Mount: pressed a little after they come up)
+      if (id === 'flank' && hdMounted(k)) continue;
+      const ab = abOf(k, id);
+      if (!k.usable(ab) || k.readyIn(ab) > 0.0001) { n.ogcdSeen[id] = null; continue; }
+      if (n.ogcdSeen[id] == null) n.ogcdSeen[id] = ctx.t + 0.5 + ctx.human() * 2.5;
+      if (ctx.t >= n.ogcdSeen[id] && !k.cast) { n.ogcdSeen[id] = null; return I(k, id); }
+    }
+    if (k.gcdRemaining() > 0.0001 || k.cast || k.lockUntil > k.now) { n.gcdSeenAt = null; return null; }
+    if (n.gcdSeenAt === null) { n.gcdSeenAt = ctx.t; n.delay = 0.1 + ctx.human() * 0.5; }
+    if (ctx.t < n.gcdSeenAt + n.delay) return null;
+    n.gcdSeenAt = null;
+    return ready(k, 'finisher') && (k.g.bond || 0) >= 40 ? I(k, 'finisher') : 0;
   },
 });
 

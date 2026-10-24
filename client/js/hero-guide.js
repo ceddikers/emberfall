@@ -264,3 +264,15 @@ HERO_GUIDE.lanternkeeper = {
     { keys: ['t', 'r'], text: 'Lighthouse when T is full: for 8s the whole room counts as inside every glow, the lanterns heal double and no wick burns down, and Flare is ready again. Fire it as the heaviest stretch begins.' },
   ],
 };
+// Houndmaster (melee damage, class 23)
+HERO_GUIDE.houndmaster = {
+  passive: { name: 'The Pack', icon: 'finisher', desc: 'Your two hounds, Rust and Ash, run on their own and bite as you strike. Where they stand around the boss makes a pair, and the pair decides your finisher: both on the flanks is a Rend, one in front and one behind a Hamstring, both behind a Bring Down. Anything else is a plain Snap. Their bites fill the Bond bar; the finisher spends it. The hounds take boss damage like anyone: a downed hound is back in 10s.' },
+  combos: [
+    { keys: ['q', 'q', 'q'], text: 'Knife, knife, knife: the third cut lets both hounds bite, and that is where Bond comes from. Keep the combo rolling while you place the hounds.' },
+    { keys: ['w', 'w', 'e'], text: 'Whistle a hound to each flank, then the finisher: a Rend, with a bleed. W glows when a hound is standing in front, wasting its time, or when no pair is made.' },
+    { keys: ['r', 'r', 'e'], text: 'Tap R to hold the hounds where they stand, so they do not drift when the boss turns, and tap it again to Pounce: both leap and land behind for a Bring Down. R glows when the landing would make the pack.' },
+    { keys: ['d'], text: 'Call Off when a red telegraph covers a hound: both sprint to you and stand guard, and you take 20% less for 5s. A hound that is hit while down is no use to the pack.' },
+    { keys: ['f', 'e', 'e'], text: 'Mark the Quarry before the party\'s burst: for 12s the hounds bite 50% faster and Bond fills double, so line up the pair first and spend it twice.' },
+    { keys: ['t', 'e'], text: 'Wild Hunt when T is full: four spectral hounds join, every pair counts as all three at once and the finisher costs nothing. Spend it as the party bursts.' },
+  ],
+};

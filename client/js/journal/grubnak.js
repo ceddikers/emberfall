@@ -24,6 +24,7 @@
     tidecaller: "Grubnak keeps his kitchen like a harbour in a gale, all spray and heat and not a breath of slack water. Every course reached all of us at once, and I kept the water low when it should have been high. Tomorrow I plan the tide around his courses.",
     lanternkeeper: "Grubnak's kitchen is all fire and grease, and I lit my lanterns where we were standing instead of where we would be. They were burned low before anyone reached them. Tomorrow I walk the round first and light ahead of the courses. Keep your light.",
     kenseier: "Grubnak shouts, but his swings keep an honest count. I mistimed most of them tonight and the kitchen floor took the rest of my pride. I will learn his beat before I learn his menu. Catch the beat.",
+    houndmaster: "Big lad in a greasy kitchen, and Rust hates the smell. Fire in the corners, fat underfoot, cleavers for whoever stands in front. Lost both dogs to the floor before I learnt the room. Tomorrow we walk it first.",
   },
   // the first time this hero beats him
   win: {
@@ -49,6 +50,7 @@
     tidecaller: "The cook is down, and his kitchen lies quiet as slack water. I let the water rise for every course and ebb between them, and it was high each time he struck. Strange to miss the noise. The sea gives back.",
     lanternkeeper: "The cook is down, and his kitchen is dark and cool at last. Every course had a light waiting where we stood: three lamps, four of us, and no wick burned to a stub. I left one burning by the cold stove. Walk where it's warm.",
     kenseier: "The cook is down and the kitchen is quiet. Every cleaver had its beat, and by the end I was answering them without thinking. I cleaned the blade before the grease could set. Ash settles.",
+    houndmaster: "He's down and the kitchen's quiet. Rust got the marrowbone, Ash got the scraps, and I got the stew. Good dogs. Had him by supper, near enough.",
   },
   moves: {
     'Grease Fire': { hard: false, learned: {
@@ -74,6 +76,7 @@
       tidecaller: "The oil lit under the whole floor, and there was nowhere to stand but together. I gathered everyone close and let the water climb before the flames did, so it was already high when the fire broke. A tide that arrives late is only weather.",
       lanternkeeper: "His arms went up and the oil took light under every one of us. There was no corner to hide in, so we crowded close around two lanterns, and I let them burst as the flames rose. Everyone was inside a glow before it caught.",
       kenseier: "The oil lit under every one of us. A blade has nothing to meet in a fire that comes up from the floor. We closed up on the healer beforehand and let the mending land first. Some blows are only outlasted.",
+      houndmaster: "Fat's burning under the lot of us, dogs and all. No running from a floor. Whistled the pair in tight beside the healer, got mended before it caught, and sat it out together. Good dogs.",
     } },
     'Mince': { hard: false, learned: {
       bastion: "One cleaver caught the light and that whole half of the kitchen was condemned. I kept his face on me while the line crossed to the dull half. Nobody on the bright side when it fell. A good drill.",
@@ -98,6 +101,7 @@
       tidecaller: "One cleaver flashed, and that half of the kitchen was as good as the shingle under a breaking wave. We crossed to the dull half while he was still raising it, and the knight held his gaze. Nobody was left on the bright side.",
       lanternkeeper: "One cleaver flashed, and that half of the floor was to be chopped. I picked my lantern up and set it down on the dull side, and the others followed the light across. Nobody was left standing on the bright half.",
       kenseier: "A cleaver caught the light, and that half of the kitchen was his. I kept his face on me while the others crossed to the dull half. A glint is a warning, and I was glad to be given one.",
+      houndmaster: "One cleaver caught the light, so that half was spoken for. Sent the dogs round to the dull side before I crossed myself. Bright side's no place for a hound.",
     } },
     'Double Chop': { hard: true, learned: {
       bastion: "On the hard nights he chops both halves, the glinting side first, the other right behind it. We stood on the dull half, then crossed into the ground he had just cut. Fresh-cut floor does not get cut twice. Held.",
@@ -122,6 +126,7 @@
       tidecaller: "On the hard nights he swung twice, the bright half and then the dull. We waited on the dull half, then walked across onto the ground he had just cut, like walking the sand a wave has only just left.",
       lanternkeeper: "On the hard nights he swung twice, the bright half and then the dull. We stood on the dull side while the first blow fell, then crossed onto the cut ground, and I carried my lantern over only once it had landed. The light moved when we did.",
       kenseier: "The bright half first, then the dull half right behind it. The others waited on the dull half and crossed into the ground he had just cut. Two strokes, and I admired how the second followed the first.",
+      houndmaster: "Bright half first, then the dull half right behind it. We stood on the dull half and stepped over into the turf he'd just chopped. Dogs first, me after. Chopped ground stays quiet.",
     } },
     'Ladle Spin': { hard: false, learned: {
       bastion: "He whirled the ladle round himself, scalding anything close. I stepped off him with the line, out past the edge, and came straight back in once it stopped. Gave ground on purpose. First time I have called a retreat a plan.",
@@ -146,6 +151,7 @@
       tidecaller: "He turned the ladle about himself and the ring of soup scalded all who stood near. Those at his feet walked out past the edge, I with them, and we came back in on the slack once it had stopped. There was no hurry in it.",
       lanternkeeper: "He turned the ladle about himself and the ring of soup scalded all who stood close. Those at his feet stepped out past its edge, and I hung a lantern on our knight so the glow went with him. Out of the ring, and the light still on him.",
       kenseier: "He spun the ladle about himself and scalded the ground near him. We stepped out past its edge together and came back the moment it stilled. A retreat is a stroke too, if it is timed.",
+      houndmaster: "He spun the ladle and scalded everything near him. Walked out past its edge with the dogs and came back the moment it stilled. Don't be greedy, lads. Heel.",
     } },
     'Lid Slam': { hard: false, learned: {
       bastion: "He lifted the lid overhead and everything away from him took the slam. I stood under his chin and the line closed in behind me. Under him is the only safe ground in the room. Odd, but correct.",
@@ -170,6 +176,7 @@
       tidecaller: "The lid went up and the whole room away from him was to be flattened. Odd to learn it, but the calm was at the eye of the storm: we stood right beneath his chin and let it break around us. A squall has a still middle.",
       lanternkeeper: "The lid went up, and the safe place was right under his chin, which is a hard place to walk to. I set a lantern there first, so there was a warm spot to walk toward. We stood in the glow and the slam passed over us.",
       kenseier: "The lid went up and the far floor took the slam. Under his chin was the one quiet place, so I stood there and the others pressed in behind me. I like a blow whose safe place sits closest to its owner.",
+      houndmaster: "Lid goes up and the far floor takes the slam. Only dry spot is right under his chin, so in we went, dogs behind me. Like standing under a bull's belly. Ugly, but it works.",
     } },
     'Tenderize': { hard: false, learned: {
       bastion: "A red ring settled on me and followed me about while he wound up, then locked, and his ghost cleaver came down on it edge first. I braced in the last instant and took it whole; the others kept clear of my ring. Held.",
@@ -194,6 +201,7 @@
       tidecaller: "A red ring settled on the knight and trailed him until it set, and the ghost cleaver fell on it. He could not step aside, so I had the water high around him before it landed, and the rest of us kept out of his ring. Mind the tide.",
       lanternkeeper: "A red ring settled on our knight and followed him until it set. I hung a lantern on him and kept the wick high, and the rest of us stayed out of his circle. The glow was already there when the ghost cleaver fell. I'll leave one burning.",
       kenseier: "The ring followed me until it locked, and a cleaver fell out of the air onto it. I met it with the blade just as it landed, and the others kept clear of my ring. Breathe, then strike.",
+      houndmaster: "A ring ran after the shield-man, and a cleaver fell out of the sky onto it. Kept the dogs well clear of his circle till it came down. Not yours, not your patch.",
     } },
     'Meat Toss': { hard: false, learned: {
       bastion: "Grubnak hung a slab over each of the others, every one wanting its own patch of floor. They dropped theirs at the edges, apart, away from the line. Footing kept. The stain thins in time, shrinking and dimming, and is gone altogether if fire reaches it.",
@@ -218,6 +226,7 @@
       tidecaller: "A slab hung over each of us but the knight, and every one wanted a patch of floor to itself. I walked to the wall with mine and let it fall well apart from the others. The stain ebbs and thins in time, and fire takes it at once.",
       lanternkeeper: "A slab hung over each of us but the knight, and each wanted its own patch of floor. I took mine to the wall alone, and left a lantern in the middle of the room for us to gather at after. The grease thins in time; fire takes it sooner.",
       kenseier: "Slabs hung over the others, each wanting floor of its own. They walked to the edges and dropped them well apart. The stain thins with time, and fire clears it at once. I kept the cook looking at me.",
+      houndmaster: "Slab hung over my head. Walked it out to the wall, clear of the rest, and let it drop there. Kept Rust back or he'd have rolled in it. Fire clears the stain quick enough.",
     } },
     'Family Meal': { hard: false, learned: {
       bastion: "A silver cloche came down over one of ours. One plate for the whole table. The line gathered under it and shared the blow, and I joined them the moment I could leave my post. Split, it was light work.",
@@ -242,6 +251,7 @@
       tidecaller: "A silver cloche came down on one of us, and one body cannot carry that blow alone. We all came in beneath it and shared it, many hands on one rope, and the water I had raised carried the rest. Split, it was a ripple.",
       lanternkeeper: "A cloche came down on one of us, and one body cannot carry that blow alone. We all came in beneath it, with a lantern set in the middle so the glow covered every one of us. Four of us, one light, and the blow was split.",
       kenseier: "A silver cloche came down on one of ours, one plate for the whole table. We all went under it and split the blow, and I left my place to join them when I could. Between us it was no more than a tap.",
+      houndmaster: "Big silver lid came down on one of us, one plate for the whole table. Called the dogs in and we all squeezed under it. Shared, it's a rap on the knuckles.",
     } },
     'Larder Toss': { hard: false, learned: {
       bastion: "He hurled casks at the two of ours standing farthest off. They stepped out from under before it landed and left the casks on open floor. Solid cover. We kept them for the next blast, and I counted them like rations.",
@@ -266,6 +276,7 @@
       tidecaller: "Casks came for the two of us standing farthest out. We led them onto open floor, stepped aside at the last, and left them lying, for a cask is a rock to shelter behind. Never near the cook, who gathers them in.",
       lanternkeeper: "Casks came for the two of us standing farthest out. I was not one of them, so I kept my lanterns with the party and watched the pair lead theirs onto open floor and step aside at the last. Leave the casks lying, but never near the cook, who gathers them in.",
       kenseier: "Casks flew at the two standing farthest out. They stepped aside at the last moment and left them lying on open floor. A cask is a wall that arrives on its own. We kept them away from the cook, who gathers them in.",
+      houndmaster: "Casks come for the two stood furthest out. Led mine onto open floor and stepped off at the last, and it just lies there. Not near the big lad, he gathers them up. Ash'd chase it, mind.",
     } },
     'Gut Blast': { hard: false, learned: {
       bastion: "He roared across the whole kitchen. No shield blocks that. I put a cask between myself and Grubnak like the rest of the line and kept still behind it. Held.",
@@ -290,6 +301,7 @@
       tidecaller: "He drew a great breath for a roar that would cross the whole kitchen, and only something solid turned it. I crouched in the lee of a cask with the ogre on its far side, as a gull does behind a rock in a gale.",
       lanternkeeper: "He drew breath for a roar that would cross the whole kitchen, and only something solid would turn it. I set a lantern behind a cask, on the side away from him, and we crowded into its warm lee.",
       kenseier: "He drew a great breath and roared across the kitchen. There is nothing to cross a blade with in a roar, so I put a cask between us and crouched, as the others did. Even a quiet man hides from the loud ones.",
+      houndmaster: "He roared across the whole kitchen. Can't outrun a noise, but you can sit behind a barrel. Put a cask between us, dogs under my arm, and waited it out.",
     } },
     "Butcher's Charge": { hard: false, learned: {
       bastion: "He lowered his head at me and charged till he hit something. I put bare brick behind me, stepped aside at the last, and he hit the wall and stood dazed. The line kept off his path. Not the stove, not the casks.",
@@ -314,6 +326,7 @@
       tidecaller: "He lowered his head at the knight and ran until he met something. Our knight led him to bare brick, away from the stove and the casks, and slid aside at the last, while the rest of us stayed off the road. He stood dazed after, a ship run aground.",
       lanternkeeper: "He ran at our knight with his head down. The knight led him to bare brick, clear of the stove and the casks, while I kept a lantern on him and the rest stayed off the road. The cook stood dazed against the wall, and the lamp was still burning.",
       kenseier: "He lowered his head at me and ran. I stood with bare brick behind me and stepped through his road at the last breath, and the cook met the wall and stood dazed. The others kept off the stove and the casks. Catch the beat.",
+      houndmaster: "Head down, and he ran for the shield-man. Kept the dogs off his road and off the stove. He hit the brick and stood dazed, and that's when we went in. Heel.",
     } },
     'Chop Chop': { hard: false, learned: {
       bastion: "One cleaver glinted, and the ladle or lid on his back said what came after. We crossed to the dull half, then went out for the ladle or in for the lid. Two orders, one drill.",
@@ -338,6 +351,7 @@
       tidecaller: "A glint on one cleaver, and a ladle or a lid on his back to follow. We crossed to the dull half first, and then went out for the ladle or in for the lid. Two swells, one behind the other, and neither hard alone.",
       lanternkeeper: "A glint on one cleaver, and a ladle or a lid on his back to follow. I carried my lantern to the dull half first, and then out for the ladle or in for the lid. Two moves, and the light kept ahead of us for both.",
       kenseier: "A glint on one cleaver, and a ladle or a lid on his back to follow. We took the dull half first, then went out for the ladle or in for the lid. Two beats, and the second is the one that catches people.",
+      houndmaster: "A glint on one cleaver, then a ladle or a lid on his back. Dull half first, then out for the ladle or in for the lid. Two things to read, so I read them twice.",
     } },
     'Order Up!': { hard: false, learned: {
       bastion: "One plate each, laid round the kitchen and served in turn. I took mine and stood on it like a sentry on a painted square until it was dished. None left unmanned, and none left on the counter.",
@@ -362,6 +376,7 @@
       tidecaller: "A plate for each of us, served round the room one after another, the fullest rim first. I took mine and stood on it until it was dished. On the harder nights there were more plates than mouths, and we shared them so none ate twice running.",
       lanternkeeper: "A plate was set down for each of us in turn, and I counted them against our heads, one to one. I stood on mine in the warm of my own lantern until it was dished. When there were spare plates, we took turns, so nobody stood on one twice before the rest had.",
       kenseier: "A plate for each of us, served round the kitchen in turn. I took mine and stood on it until it was dished. Each plate had its own wait. Nothing here wanted a blade, only patience.",
+      houndmaster: "A plate each, served round the room in turn. Stood on mine till it was dished. Counted heads against plates twice, since the dogs won't. Patience, boys.",
     } },
     'Rolling Meatballs': { hard: false, learned: {
       bastion: "He lobbed meatballs against the walls. Each wobbled with its lane drawn across the room, then rolled straight. I kept my footing out of every lane until the last had passed. Ground between lanes is good ground.",
@@ -386,6 +401,7 @@
       tidecaller: "They wobbled against the walls and then rolled straight across, each lane drawn on the floor. I stood between the lanes and let them pass like long waves along a quay. A little patience, and the floor was mine again.",
       lanternkeeper: "They wobbled against the walls and then rolled straight across, each lane drawn on the floor. I set my lantern between two lanes and stood beside it, and the others came to the light and out of the way.",
       kenseier: "Meatballs wobbled against the walls, then rolled straight along lanes drawn on the floor. I stood between the lanes and let them pass. A blow that announces its road is a courteous one.",
+      houndmaster: "Meatballs wobble at the wall, then roll the lane straight across. Stood between the lanes and held the dogs back, for a hound will chase anything that rolls. Sit.",
     } },
     'Flare-Up': { hard: false, learned: {
       bastion: "The Cook heaved his pot onto the stove and the top of the kitchen caught for good. We were off that ground before it lit, mended against the heat. A smaller parade ground after, but I only need enough floor to stand on.",
@@ -410,6 +426,7 @@
       tidecaller: "He set the pot on the stove and the top of the kitchen burned for good. We came down out of it before it caught, and I kept the water high against the heat that reached us anyway. A smaller room, but the sea is still the sea.",
       lanternkeeper: "He put the pot on the stove and the top of the kitchen burned for good. We came down out of it before it caught. The heat reaches everyone anyway, so I kept the wicks topped up and let the lanterns burst as it came.",
       kenseier: "He set the pot on the stove and the top of the kitchen caught for good. We came down off that ground before it lit, with the mending already laid. A smaller room, but a room.",
+      houndmaster: "Pot on the stove, and the top of the room burns for good. Walked down off it before it caught, dogs with me. Smaller yard, still a yard.",
     } },
     'Flambé': { hard: false, learned: {
       bastion: "Brandy laid in stripes and lit one after another. I stood where the fire would come last, then took the ground behind the flame. Old grease I kept my boots off; boots are the one kit I cannot requisition.",
@@ -434,6 +451,7 @@
       tidecaller: "Brandy lay across the floor in stripes and caught one after another. I waited, then stepped onto the stripe that had already burnt, and kept clear of the old grease, which goes up with it. Burnt ground is a beach after the wave.",
       lanternkeeper: "Stripes of brandy caught one after another. I waited for one to burn out, then carried my lantern across onto the black of it and the rest came after. Old grease in a stripe goes up with it, so keep off that.",
       kenseier: "Brandy lay in stripes and lit one after another. I waited for the flame to pass, then stepped onto the stripe that had already burnt, and kept off the old grease. Burnt ground does not burn twice.",
+      houndmaster: "Brandy laid in stripes, lit one after the other. Waited for the flame to pass and stepped onto cold ash. Kept the dogs off the old grease. Good dogs.",
     } },
     'Stockpot': { hard: false, learned: {
       bastion: "After the fire he dragged the stockpot down to the middle. It is solid. It stops a charge and shelters from his roar. Marked it as ground to work from. A fixed point is worth any number of good intentions.",
@@ -458,6 +476,7 @@
       tidecaller: "He dragged the pot to the middle and left it, and a thing that stays put is worth a good deal. It turns his roar aside, and the knight can lead his charge into it. I took my stand close by and watched the rings it gives off.",
       lanternkeeper: "He dragged the pot to the middle and left it, and it turns his roar aside. I kept my lanterns in its shelter but not too close, since the pot gives off rings. A thing that stays put is a fine lamp-post to count from.",
       kenseier: "He dragged the pot to the middle and left it. It turns his charge and shelters us from his roar, so I fought close beside it. A fixed point is a fine thing for a man who counts.",
+      houndmaster: "He dragged a pot to the middle and left it. Turns his charge, shelters us from the roar. Kept the dogs lying behind it. Mind the rings round it, though.",
     } },
     'Simmer': { hard: false, learned: {
       bastion: "The pot boiled over in rings, out from the rim and then back in. I stood clear of each until it had boiled, then stepped in behind it. Step, wait, step. Easy ground, if you count.",
@@ -482,6 +501,7 @@
       tidecaller: "The pot boiled in rings, out and then back in. I waited for each to pass over and stepped into the ground it had left, never ahead of the water. Follow the swell; do not go out to meet it.",
       lanternkeeper: "The pot boiled in rings, out and then back in. I stepped into the ground each ring had just left and carried the light in after me, never ahead of it. We were never standing where a ring was about to be.",
       kenseier: "The pot boiled in rings, out and then back in. I waited just outside each until it passed, then stepped in behind it. One beat to wait, one to go. He keeps good time, for a cook.",
+      houndmaster: "Pot boils in rings, out and then back in. Stood just outside each till it passed, then stepped in behind. Held the dogs, who'd have run right into it. Sit.",
     } },
     'Whisk': { hard: false, learned: {
       bastion: "A cross of beams through him that turned, a notch at a time. I kept to the gap between beams and walked round with it. Slow work. A turning wall is only a very orderly parade.",
@@ -506,6 +526,7 @@
       tidecaller: "A cross of beams turned through him, a notch at a time. I found the open wedge between them and walked round with it, at the pace of the moon over a harbour, never against the turn. Slow work suits me.",
       lanternkeeper: "A cross of beams turned through the kitchen a notch at a time. I found the open wedge and walked round with it, trailing a lantern behind me, so the party had a light to follow around the room.",
       kenseier: "Beams crossed inside him and turned one notch at a time. There was an open wedge between them, and I went round with it, step for step, never against it. The beat was the turning itself. Slow, and honest.",
+      houndmaster: "Beams cross inside him and turn slow. Found the open wedge and walked round with it, never against, the dogs a step behind me. Like walking a dog round a post.",
     } },
     'Spice Rack': { hard: false, learned: {
       bastion: "Jars of spice poured on set spots, and one followed each of the others. They carried theirs clear of everyone and stepped off before it poured. Then ladle or lid. I held the middle and kept my eyes on his back.",
@@ -530,6 +551,7 @@
       tidecaller: "Jars poured on fixed places, and one followed each of us but the knight. We carried ours well apart and stepped off before it poured, and the ladle or the lid came right behind. I kept the water ready for both.",
       lanternkeeper: "A jar hung over every one of us but the knight, and others poured on the same spots as before. I walked mine away from the rest and moved off before it tipped. Then the ladle or the lid, with a lantern waiting on whichever side we ran to.",
       kenseier: "Spice poured on fixed spots, and a jar chased each of the others. They drew theirs away from everyone and stepped aside before it fell. I watched his back for the ladle or the lid, which came after.",
+      houndmaster: "Jars on fixed spots and one hunting each of us. Drew mine away from the rest and stepped off at the last. Then watched his back for the ladle or the lid.",
     } },
     'Boil Over': { hard: false, learned: {
       bastion: "He boiled over, and the closer you stood, the worse it scalded. We all got as far from him as the room allowed, me included. A post is no use if you are cooked at it.",
@@ -554,6 +576,7 @@
       tidecaller: "The nearer to him, the worse the scald, so we all went to the far walls, the knight too. I raised the water as we ran, so it was high when the heat broke. The edge of a wave is gentler than its heart.",
       lanternkeeper: "The nearer to him, the worse the scald, so we went to the far walls, the knight too. I set the lanterns on the far side before he began, so there was a light to run to. The edge of it is gentle, if you are early.",
       kenseier: "He boiled over, and the nearer you stood, the worse it scalded. All of us went to the far side of the room, I included. No blade turns a scald. Better to be far, and come back to him cool.",
+      houndmaster: "He boils over, and the nearer you stand the worse it scalds. Made for the far wall, dogs ahead of me. Back to him once it cools.",
     } },
     'Last Orders': { hard: false, learned: {
       bastion: "After the trolley came silence, then Last Orders on the whole room. No step escapes it. We gathered by the healer, mended in the quiet, and braced shoulder to shoulder.",
@@ -578,6 +601,7 @@
       tidecaller: "After the trolley came a long hush, and I spent every breath of it. We gathered close and I filled the water to the brim, so when the great blow fell on all of us it broke on a full shore. Wait for the water.",
       lanternkeeper: "After the trolley came a long hush, and I spent every breath of it. We stood close, every wick brought back to gold, and when the great blow fell on all of us I let every lantern burst at once. Three glows over four of us. Keep your light.",
       kenseier: "A trolley, a long hush, then Last Orders on the whole room. Nowhere to step and nothing to cross. We gathered by the healer in the quiet and were mended before it fell. I have rarely valued a hush more.",
+      houndmaster: "Trolley rolls in, long hush, then the whole room gets it. Gathered by the healer in the quiet, dogs too, and got mended first. Nothing to dodge. The hush is your warning.",
     } },
     'Gorge': { hard: false, learned: {
       bastion: "At the end he just ate, and every mouthful hit all of us, harder each time. Nothing to hold but the line. We had to put him down fast. Held, long enough.",
@@ -602,6 +626,7 @@
       tidecaller: "At the end he only ate, and each mouthful struck all of us harder than the last. The water cannot stay high for ever against that, so the others struck him down fast while I held us up. He was only hungry. The sea knows that too.",
       lanternkeeper: "At the end he only ate, and each mouthful struck all of us harder than the last. The wicks burned low faster than I could trim them, so I topped them up and let them burst, and the others struck him down quickly. He was only hungry. I left one burning.",
       kenseier: "At the end he only ate, and every mouthful struck all of us, harder each time. No beat to catch, only a clock running. We put him down quickly. A fine cook, to the last mouthful.",
+      houndmaster: "He only eats now, every mouthful worse than the last. No hiding, just killing him quick. Sent the dogs in with everything I had. Good dogs.",
     } },
     'Clogged Drains': { hard: true, learned: {
       bastion: "Grease pooled round the drains for good, and any fire lights it. I marked every drain on my map and kept the line off those patches. Bad footing is one thing; burning footing is another.",
@@ -626,6 +651,7 @@
       tidecaller: "On the hard nights the drains backed up and grease lay round them for good, and fire always finds grease. I kept everyone off those patches. Slick shingle is bad footing; burning shingle is worse.",
       lanternkeeper: "On the hard nights the drains backed up and grease pooled round them for good, and fire always finds grease. I kept every lantern well clear of those patches, and the others with them. A lamp near spilled oil is a lesson a lamplighter learns once.",
       kenseier: "The drains backed up and the grease stayed round them for good. Any fire would light it, so I marked each drain and fought elsewhere. A patch that waits to burn is only a fuse, and I do not stand on fuses.",
+      houndmaster: "Drains backed up and the fat stays round them for good. A spark and it goes up. Marked each one and kept the dogs off. Rust would have found every last one, silly lad.",
     } },
     'Belly Flop': { hard: true, learned: {
       bastion: "He flopped down where he stood, which is a thing he does on the harder nights. Out from under him, and open floor at my back, because the shock threw us. Then ladle out, lid in. A wall behind you is worse than the blow.",
@@ -650,6 +676,7 @@
       tidecaller: "He dropped flat where he stood and the shock threw us outward. I got out from under him with open floor at my back, for a wall or a cask hurts more than the blow, then read his back for the ladle or the lid.",
       lanternkeeper: "He fell flat where he stood and the floor kicked us outward. I made sure there was open floor behind me, since a wall or a cask hurts more than the blow, and walked my lantern clear of him. Then his back showed the ladle or the lid.",
       kenseier: "On the harder nights he dropped flat where he stood. I moved out from under him with clear floor behind me, since the shock throws a man, then read his back for ladle or lid. A wall at my back would have been worse than the blow.",
+      houndmaster: "He flopped flat where he stood. Out from under him with open floor behind, since it throws you. Then read his back for ladle or lid. Don't leave a dog beneath him.",
     } },
     'Cleaver Toss': { hard: true, learned: {
       bastion: "He sent cleavers down lines at the two farthest from him. They turned the lines clear of us, stepped aside, and the steel came home the way it went. Stay off both ways. Thorough.",
@@ -674,6 +701,7 @@
       tidecaller: "Cleavers flew along lines at the two of us farthest out, and came home the way they went. Each turned the line away from the others, stepped off it, and stayed off until the steel was back. A rip runs out and in on the same path.",
       lanternkeeper: "Cleavers flew down lines at the two of us farthest out, and came back along the same lines. I was not one of the pair, so I kept my glow away from those lines while they aimed them clear of everyone and stayed off until the steel came home.",
       kenseier: "A cleaver was thrown at each of the two farthest out, and it came back the way it left. They turned their lines from the rest and stepped off at the last, and I kept out of the lane both ways. A fine bit of throwing.",
+      houndmaster: "Cleavers thrown at the two furthest out, and they come back the way they went. Turned mine away from the rest and stepped off at the last. Called the dogs off the lane both ways.",
     } },
     'Mise en Place': { hard: true, learned: {
       bastion: "Three tools laid on the pass, left to right, the cleaver toward one side of its board. I put the order and the side in my book. Nothing hit us. It always comes later; that is what laying out means.",
@@ -698,6 +726,7 @@
       tidecaller: "Three tools were laid on the pass, left to right, and the cleaver lay toward one side of its board. I kept the order and the side the way one keeps a tide table; the serving comes much later.",
       lanternkeeper: "Three tools were laid on the pass, left to right, and the cleaver lay toward one side of its board. I counted them off like lamps along a street: first, second, third, and which side. The serving comes much later.",
       kenseier: "Three tools laid on the pass, left to right, the cleaver nearer one end of its board. I said the order and the side to myself like a form. Nothing hit us. What is laid out is struck later.",
+      houndmaster: "Three tools laid out on the pass. Learnt the order and which side the cleaver lay, and said it over to the dogs, since they never argue. He uses them later, in that order.",
     } },
     'Service!': { hard: true, learned: {
       bastion: "The tools came off the pass in the order he had laid them. The cleaver chops its side, the ladle means out, the lid means in, one after another. A drill I had been handed in advance.",
@@ -722,6 +751,7 @@
       tidecaller: "The tools came off the pass in the order he had laid them: the cleaver took its side, the ladle sent us out, the lid brought us in. I had the table by heart, so we were already moving when each one came.",
       lanternkeeper: "He served the tools in the order he had laid them: the cleaver's side first, then the ladle to send us out, then the lid to bring us in. I had walked that row in my head, as I would a street of lamps, and each step already had its light.",
       kenseier: "The tools came off the pass in the order he had laid them: cleaver for its half, ladle for out, lid for in. I called each a breath ahead of him. A fight handed over as a song, and I only had to keep time.",
+      houndmaster: "Tools come off the pass in the order he laid them: cleaver's half, ladle out, lid in. Moved myself and the dogs a beat ahead of each. Easy as feeding time.",
     } },
     'Dinner Rush': { hard: true, learned: {
       bastion: "Hung plates over the four of us, set where we stood, the nearest served first. My post was the first: his east flank, near enough to smell the stove. The second sat west, inside the lid's quiet; the last two stayed out past the ladle. I never left his side.",
@@ -746,6 +776,7 @@
       tidecaller: "A hot plate hung over each of us and was set down where we stood, the nearest to him served first. The first stood at his east side, the next at the west edge of the lid's quiet, and I went far out past the ladle with the last, to be served late.",
       lanternkeeper: "A scalding dish hung over each of us and dropped where we stood, the closest to him first. I counted them off: the first at his east, the next just inside the lid's quiet on the west, mine out past the ladle, last. Four dishes for four of us.",
       kenseier: "The plates were served nearest first. I stood on the first, at his east side, and kept him looking at me. The next waited west, within the lid's quiet, and the last two out past the ladle. Each had its turn.",
+      houndmaster: "Plates land where we stand, nearest served first. Took the near one at his flank and held the dogs back from the rest. Last ones stood well out past the ladle. Served last, eat last.",
     } },
   },
 };

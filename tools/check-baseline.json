@@ -47,10 +47,6 @@
     "newbie": 1433,
     "pro": 2407
   },
-  "alembist": {
-    "newbie": 632,
-    "pro": 1090
-  },
   "gorgemaw": {
     "newbie": 1076,
     "pro": 1498
@@ -90,5 +86,9 @@
   "kenseier": {
     "newbie": 1096,
     "pro": 1529
+  },
+  "houndmaster": {
+    "newbie": 1645,
+    "pro": 2364
   }
 }

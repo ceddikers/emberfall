@@ -9238,3 +9238,329 @@ Object.assign(KIT_VFX, {
     snd(e, 'pilgrim', null);
   };
 })();
+
+// ======================================================================= Houndmaster (melee DPS, class 23): the Pack
+// Moss and leather, bone and rust. A whistle is two thin curved lines of notes running from the Houndmaster to the hound it calls (cream for
+// Flank, moss green for Hold, rust for Pounce, ash for Call Off). The finisher is read from the pair: Rend two bundles of claw lines
+// crossing on the boss in gold, Hamstring a low green cut at its feet with dust kicked up as it stumbles, Bring Down both hounds leaping and
+// a dust ring in lilac and bone, Snap a single clean bite. The hounds themselves are drawn by arena/kennel.js (Kennel.act poses them: a
+// bite, a leap, a bark, a howl); everything here is the light, dust and lines around them. Nothing is painted red or blue on the floor (those
+// are telegraphs); the pair colours are gold, green and lilac. The kit's moments (k.fx names) land as KIT_VFX: whistle, bite, finisher,
+// pounce, calloff, relay, houndDown, houndUp, quarry, wildhunt, mount, ridedown, howl, longchase. The class's cues go through
+// SoundHooks.houndmaster (whistles, barks, bites, the horn).
+(() => {
+  const V = VFX, TAU = Math.PI * 2, rnd = (a, b) => a + Math.random() * (b - a), shake = s => vfxShake(s);
+  const LEAF = '#9ad46a', MOSSL = '#b8d49a', BONE = '#f2e6c8', ASH = '#b8b2a8', RUST = '#c46a3a', RUST2 = '#e8905a', GOLD = '#f0c050', LILAC = '#c8a8ff', SPECT = '#bfe9ff', DUST = '#cfc4ae', SOOT = '#14100c', TANL = '#d8b684';
+  const PAIRC = { rend: GOLD, hamstring: LEAF, bringdown: LILAC, snap: BONE };
+  const NOTEC = { flank: [BONE, ASH], hold: [MOSSL, LEAF], pounce: [RUST2, RUST], call: [ASH, DUST] };
+  const later = (e, d, fn) => { const sc = FX.camFor(e) ? 1 : 0.6; FX.later(d, () => { V.setScale(sc); try { fn(); } finally { V.setScale(1); } }); };
+  const G = () => (typeof window !== 'undefined' && window.__game) || null;
+  const isMe = e => { const g = G(); return !!g && e === g.player; };
+  const ownerOf = e => (e && e.kind === 'player' ? (typeof Net !== 'undefined' ? Net.id : 0) : e && e.id);
+  const snd = (e, ev, d) => { try { if (typeof SoundHooks !== 'undefined' && SoundHooks.houndmaster) SoundHooks.houndmaster(ev, d, isMe(e), e, e.id); } catch (err) { /* sound never stops a frame */ } };
+  const ok = Number.isFinite;
+  const BR = () => (typeof FIGHT !== 'undefined' && FIGHT.BOSS_R) || 70;
+  const bossPos = () => { const g = G(), r = g && g.raid; return r && r.state === 'live' && r.bossDraw ? { x: r.bossDraw.x, y: r.bossDraw.y } : null; };
+  const foe = (t, e) => (t && ok(t.x) && ok(t.y) ? { x: t.x, y: t.y } : bossPos() || { x: e.x + Math.cos(e.angle || 0) * 90, y: e.y + Math.sin(e.angle || 0) * 90 });
+  const hounds = e => (typeof Kennel !== 'undefined' ? Kennel.houndsOf(ownerOf(e), typeof Net !== 'undefined' ? Net.id : 0) : []);
+  const houndAt = (e, id) => hounds(e).find(h => h.id === id) || null;
+  const pose = (e, id, kind) => { if (typeof Kennel !== 'undefined') Kennel.act(ownerOf(e), id, kind, FX.now || 0); };
+  const bodyY = e => e.y - 14 - (e.lift || 0);
+  const aim = c => Math.atan2(c.ty - c.y, c.tx - c.x);
+  const reach = (c, d) => { const a = aim(c), dist = Math.hypot(c.tx - c.x, c.ty - c.y), r = Math.min(d, dist); return { x: c.x + Math.cos(a) * r, y: c.y + Math.sin(a) * r }; };
+
+  // ---- pieces
+  // the notes of a whistle: two thin curved lines from a to b (a floor point each), a few note-heads riding along them, a small ring where it lands
+  function notes(a, b, kind, o = {}) {
+    const [c1, c2] = NOTEC[kind] || NOTEC.flank, dur = o.dur ?? 0.8, bow = o.bow ?? 30, sgn = o.dir || (Math.random() < 0.5 ? 1 : -1);
+    const ax = a.x, ay = a.y - 24, bx = b.x, by = b.y - 12, dx = bx - ax, dy = by - ay, L = Math.hypot(dx, dy) || 1, nx = -dy / L, ny = dx / L;
+    const mx = (ax + bx) / 2 + nx * bow * sgn, my = (ay + by) / 2 + ny * bow * sgn - 12;
+    const pt = (u, off) => [(1 - u) * (1 - u) * ax + 2 * (1 - u) * u * mx + u * u * bx + nx * off, (1 - u) * (1 - u) * ay + 2 * (1 - u) * u * my + u * u * by + ny * off];
+    V.fx({ dur, layer: 'air', draw: (c, p, t, e) => {
+      const q = Math.min(1, t / 0.3), k = e.a * Math.min(1, (1 - p) / 0.5);
+      if (k < 0.02) return;
+      c.save(); c.lineCap = 'round';
+      for (const [cl, off, w] of [[c1, -2, 1.8], [c2, 2.4, 1.4]]) {
+        c.strokeStyle = SOOT; c.globalAlpha = 0.3 * k; c.lineWidth = w + 2;
+        c.beginPath(); for (let i = 0; i <= 16; i++) { const [x, y] = pt(q * i / 16, off); i ? c.lineTo(x, y) : c.moveTo(x, y); } c.stroke();
+        c.strokeStyle = cl; c.globalAlpha = 0.85 * k; c.lineWidth = w; c.setLineDash([9, 5]); c.lineDashOffset = -t * 40;
+        c.beginPath(); for (let i = 0; i <= 16; i++) { const [x, y] = pt(q * i / 16, off); i ? c.lineTo(x, y) : c.moveTo(x, y); } c.stroke(); c.setLineDash([]);
+      }
+      // note-heads: a round head with a stem and a flag, riding the curve
+      for (let i = 0; i < 3; i++) {
+        const u = Math.min(q, ((t * 1.4 + i / 3) % 1) * q);
+        if (u < 0.04) continue;
+        const [x, y] = pt(u, 0), bob = Math.sin(t * 14 + i * 2) * 2;
+        c.globalAlpha = k * Math.sin(Math.min(1, u / q) * Math.PI) * 0.95; c.fillStyle = i % 2 ? c1 : c2; c.strokeStyle = SOOT; c.lineWidth = 1.2;
+        c.beginPath(); c.ellipse(x, y + bob, 3, 2.3, -0.4, 0, TAU); c.fill(); c.stroke();
+        c.strokeStyle = i % 2 ? c1 : c2; c.lineWidth = 1.5; c.beginPath(); c.moveTo(x + 2.6, y + bob - 1); c.lineTo(x + 2.6, y + bob - 9); c.quadraticCurveTo(x + 6.5, y + bob - 8, x + 5.5, y + bob - 4); c.stroke();
+      }
+      c.restore();
+    } });
+    const sc = typeof V.scale === 'number' ? V.scale : 1;
+    FX.later(0.3, () => { V.setScale(sc); try { V.shock(bx, b.y, { r0: 4, r: 24, color: c1, dur: 0.3, w: 2 }); V.glint(bx, b.y, { color: c1, size: 14, z: 20 }); } finally { V.setScale(1); } });
+  }
+  // a lens of light from (x0, y0) to (x1, y1), thickest in the middle: one claw line
+  function lens(c, x0, y0, x1, y1, w) { const mx = (x0 + x1) / 2, my = (y0 + y1) / 2, nx = -(y1 - y0), ny = x1 - x0, L = Math.hypot(nx, ny) || 1; c.beginPath(); c.moveTo(x0, y0); c.quadraticCurveTo(mx + nx / L * w, my + ny / L * w, x1, y1); c.quadraticCurveTo(mx - nx / L * w * 0.2, my - ny / L * w * 0.2, x0, y0); c.fill(); }
+  // claw lines through a point: `n` parallel strokes along each of the given angles, drawn in over 0.1s, then fading. col is the main colour
+  function claws(x, y, angs, o = {}) {
+    const n = o.n ?? 3, len = o.len ?? 70, gap = o.gap ?? 11, col = o.color || GOLD, core = o.core || '#ffffff', dur = o.dur ?? 0.55, delay = o.delay;
+    V.fx({ dur, delay, layer: 'air', draw: (c, p, t, e) => {
+      const g = Math.min(1, t / 0.1), k = e.a * (1 - Math.max(0, (p - 0.35) / 0.65));
+      if (k < 0.02) return;
+      c.save(); c.translate(x, y);
+      angs.forEach((a, ai) => {
+        const ca = Math.cos(a), sa = Math.sin(a), nx = -sa, ny = ca, st = ai * 0.06;
+        const gg = Math.max(0, Math.min(1, (t - st) / 0.1));
+        for (let i = 0; i < n; i++) {
+          const off = (i - (n - 1) / 2) * gap, x0 = nx * off - ca * len / 2, y0 = ny * off - sa * len / 2, x1 = x0 + ca * len * gg, y1 = y0 + sa * len * gg;
+          c.globalAlpha = 0.45 * k; c.fillStyle = SOOT; lens(c, x0, y0, x1, y1, 7);
+          c.globalCompositeOperation = 'lighter'; c.globalAlpha = 0.9 * k; c.fillStyle = col; lens(c, x0, y0, x1, y1, 5);
+          c.globalAlpha = k; c.fillStyle = core; lens(c, x0 + (x1 - x0) * 0.3, y0 + (y1 - y0) * 0.3, x1, y1, 1.8); c.globalCompositeOperation = 'source-over';
+        }
+      });
+      c.restore();
+    } });
+  }
+  // a dust ring and a cloud, kicked up where something heavy lands
+  function thump(x, y, s = 1, col = DUST) {
+    V.shock(x, y, { r0: 6, r: 52 * s, color: col, dur: 0.4, w: 3.4 });
+    V.smoke(x, y, { n: Math.round(6 * s), r: 8 * s, color: col, size: 18 * s, a: 0.5, speed: 70 * s });
+  }
+  // a pair of fangs closing on a point (the bite mark): two curved teeth meeting, a spark between them
+  function fangs(x, y, ang, s = 1, col = BONE) {
+    V.fx({ dur: 0.36, layer: 'air', draw: (c, p, t, e) => {
+      const g = Math.min(1, t / 0.08), k = e.a * (1 - Math.max(0, (p - 0.4) / 0.6)), gap = (1 - g) * 12 * s + 1.5 * s;
+      if (k < 0.02) return;
+      c.save(); c.translate(x, y); c.rotate(ang); c.lineJoin = 'round';
+      for (const sd of [-1, 1]) {
+        c.beginPath(); c.moveTo(-9 * s, sd * (gap + 9 * s)); c.quadraticCurveTo(-1 * s, sd * (gap + 7 * s), 8 * s, sd * gap); c.quadraticCurveTo(0, sd * (gap + 2 * s), -9 * s, sd * (gap + 9 * s)); c.closePath();
+        c.globalAlpha = 0.5 * k; c.strokeStyle = SOOT; c.lineWidth = 3.2; c.stroke(); c.globalAlpha = k; c.fillStyle = col; c.fill();
+      }
+      c.restore();
+    } });
+  }
+
+  // ---- the abilities (the cast itself; what comes of it is the moments below)
+  ABILITY_VFX.houndmaster = {
+    // Hunting Knife: three cuts of a broad blade, steel and tan, the third heavier
+    knife: c => {
+      const a = aim(c), s = c.step | 0;
+      V.slash(c.x, c.y, a, { r: 48 + s * 8, span: 1.5 + s * 0.35, color: s === 2 ? TANL : '#e8ecee', core: '#ffffff', dur: 0.22, w: 0.3 + s * 0.06, flip: s === 1, sparks: 1 + s });
+      c.later(0.07, () => { const p = reach(c, 62); V.hit(p.x, p.y, s === 2 ? TANL : '#dfe4e8', 0.34 + s * 0.16); });
+    },
+    // Whistle: Flank: a glint at the lips (the notes to the hound are the 'whistle' moment)
+    flank: c => { const a = c.ent.angle || 0; V.glint(c.x + Math.cos(a) * 12, bodyY(c.ent) + Math.sin(a) * 6, { color: BONE, size: 16, z: 6 }); },
+    // Pack Finisher: a lunge of the knife; the pair's strike is the 'finisher' moment
+    finisher: c => { V.slash(c.x, c.y, aim(c), { r: 56, span: 1.7, color: BONE, core: '#ffffff', dur: 0.24, w: 0.32, sparks: 3 }); },
+    // Whistle: Hold / Pounce: a sharp glint at the lips, a rust spark
+    pounce: c => { const a = c.ent.angle || 0; V.glint(c.x + Math.cos(a) * 12, bodyY(c.ent) + Math.sin(a) * 6, { color: RUST2, size: 18, z: 6 }); V.sparks(c.x, c.y, { color: RUST2, n: 4, speed: 180, z: 22, up: 120 }); },
+    // Call Off: a ring of ash at his boots where they will stand guard
+    calloff: c => { V.shock(c.x, c.y, { r0: 8, r: 50, color: ASH, dur: 0.4, w: 3 }); V.smoke(c.x, c.y, { n: 2, r: 8, color: DUST, size: 14, a: 0.35, speed: 40 }); },
+    // Mark the Quarry: a strip of rust cloth snapped out toward the boss
+    quarry: c => { const p = reach(c, 40); V.glint(p.x, p.y, { color: RUST2, size: 24, z: 28 }); V.flash(c.x, bodyY(c.ent), 30, RUST, 0.2); },
+    // Wild Hunt: the horn lifted (the blast and the pack are the 'wildhunt' moment, a beat later)
+    wildhunt: c => {
+      if (c.cam) { c.cam.dim(0.2, 1.2); c.cam.punch(0.03, 0.4); }
+      V.charge(c.x, c.y, { color: GOLD, r: 50, n: 10, dur: 0.3, follow: c.ent });
+      V.glint(c.x, bodyY(c.ent), { color: '#fff4d0', size: 30, z: 6 });
+    },
+    // Relay: the whistle twice, quick (the swap is the 'relay' moment)
+    relay: c => { V.glint(c.x, bodyY(c.ent), { color: BONE, size: 18, z: 6 }); c.later(0.1, () => V.glint(c.x, bodyY(c.ent), { color: ASH, size: 14, z: 6 })); },
+    // Mount: a hop up and a swirl of dust (the mounted run is the 'mount' moment)
+    mount: c => { V.smoke(c.x, c.y, { n: 4, r: 10, color: DUST, size: 18, a: 0.45, speed: 60 }); V.shock(c.x, c.y, { r0: 6, r: 44, color: ASH, dur: 0.3, w: 2.6 }); },
+    // Ride Down: the knife swung down from the saddle
+    ridedown: c => { V.slash(c.x, c.y, aim(c), { r: 66, span: 2.2, color: TANL, core: '#ffffff', dur: 0.28, w: 0.34, sparks: 4 }); },
+    // Howl: a glint as he throws his head back
+    howl: c => { V.glint(c.x, bodyY(c.ent), { color: '#fff4d0', size: 22, z: 8 }); },
+    // The Long Chase: a sharp whistle and a spray of dust
+    longchase: c => { V.glint(c.x, bodyY(c.ent), { color: MOSSL, size: 20, z: 6 }); V.smoke(c.x, c.y, { n: 3, r: 8, color: DUST, size: 14, a: 0.4, speed: 50 }); },
+  };
+
+  // ---- the moments
+  // a whistle: notes from the Houndmaster to the hound it calls (d.hound; none: to each of them), in the colour of the command
+  KIT_VFX.whistle = (e, target, d) => {
+    const kind = d && NOTEC[d.kind] ? d.kind : 'flank', ids = d && d.hound && d.hound !== 'all' ? [d.hound] : hounds(e).filter(h => !h.spectral && !h.down).map(h => h.id);
+    const me = { x: e.x, y: e.y };
+    ids.forEach((id, i) => {
+      const h = houndAt(e, id); if (!h) return;
+      later(e, i * 0.05, () => { const h2 = houndAt(e, id) || h; notes(me, { x: h2.x, y: h2.y }, kind, { dir: i ? -1 : 1 }); });
+      // the hound answers: a short bark a beat later (not for a Hold: it just stills)
+      if (kind !== 'hold') later(e, 0.22 + i * 0.07, () => { pose(e, id, 'bark'); snd(e, 'bark', { hound: id }); });
+      else pose(e, id, 'bark');
+    });
+    snd(e, 'whistle', { kind });
+  };
+  // a bite: the hound snaps at the boss's edge (a set of fangs, a crumb of sparks); a big one (a finisher's) adds a ring
+  KIT_VFX.bite = (e, target, d) => {
+    const b = foe(target, e), h = d && d.hound ? houndAt(e, d.hound) : null, big = !!(d && d.big), R = BR();
+    const ang = h ? Math.atan2(b.y - h.y, b.x - h.x) : e.angle || 0, sx = h ? h.x : b.x - Math.cos(ang) * R, sy = h ? h.y : b.y - Math.sin(ang) * R;
+    const px = b.x - Math.cos(ang) * R * 0.78, py = b.y - Math.sin(ang) * R * 0.78;
+    pose(e, h ? h.id : null, 'bite');
+    fangs(px, py - 16, ang, big ? 1.35 : 0.9, big ? BONE : '#e8e0d0');
+    V.sparks(px, py, { color: big ? GOLD : TANL, n: big ? 7 : 3, speed: 240, z: 16, up: 90 });
+    if (big) { V.shock(px, py, { r0: 4, r: 34, color: BONE, dur: 0.28, w: 2.4 }); shake(1.2); }
+    snd(e, 'bite', { big: big ? 1 : 0, hound: d && d.hound });
+  };
+  // the finisher, by the pair
+  KIT_VFX.finisher = (e, target, d) => {
+    const b = foe(target, e), pair = d && PAIRC[d.pair] ? d.pair : 'snap', col = PAIRC[pair], R = BR(), a = Math.atan2(b.y - e.y, b.x - e.x), cy = b.y - 34;
+    for (const h of hounds(e)) if (!h.spectral && !h.down) pose(e, h.id, 'bite');
+    if (pair === 'rend') {
+      // two bundles of claw lines crossing on the boss, bright gold, and a spray of gold with a few rust drops
+      claws(b.x, cy, [a + 0.75, a - 0.75], { color: GOLD, core: '#fff8dc', len: R * 1.5, gap: 12 });
+      later(e, 0.05, () => { V.hit(b.x, cy + 10, GOLD, 0.8); V.sparks(b.x, cy, { color: GOLD, n: 9, speed: 320, z: 30, up: 150 }); V.sparks(b.x, cy, { color: RUST, n: 4, speed: 200, z: 30, up: 60 }); shake(2.2); });
+    } else if (pair === 'hamstring') {
+      // a low cut across the boss's feet, then a stumble: dust kicked up and a short green ring that settles
+      const fy = b.y + R * 0.55, ang = a + Math.PI / 2;
+      V.slash(b.x, fy, ang, { r: R * 0.95, span: 1.7, color: LEAF, core: '#f0ffd8', dur: 0.3, w: 0.26, flat: 0.4, sparks: 3 });
+      claws(b.x, fy - 8, [a + Math.PI / 2 + 0.25], { n: 2, color: LEAF, core: '#f0ffd8', len: R * 1.3, gap: 9, dur: 0.45 });
+      later(e, 0.1, () => { V.smoke(b.x - R * 0.4, fy, { n: 3, r: 10, color: DUST, size: 18, a: 0.5, speed: 70 }); V.smoke(b.x + R * 0.4, fy, { n: 3, r: 10, color: DUST, size: 18, a: 0.5, speed: 70 }); V.shock(b.x, fy, { r0: 10, r: R * 0.95, color: LEAF, dur: 0.5, w: 2.6 }); V.hit(b.x, fy - 6, LEAF, 0.6); shake(1.6); });
+    } else if (pair === 'bringdown') {
+      // both hounds leap together at the boss, then the ring of dust and the weight of it coming down
+      for (const h of hounds(e)) if (!h.spectral) pose(e, h.id, 'leap');
+      later(e, 0.28, () => {
+        thump(b.x, b.y + R * 0.2, 1.6, DUST); V.shock(b.x, b.y + R * 0.2, { r0: 14, r: R * 1.8, color: LILAC, dur: 0.55, w: 3.4 });
+        V.hit(b.x, cy + 12, LILAC, 1); V.sparks(b.x, cy, { color: BONE, n: 10, speed: 360, z: 30, up: 160 }); shake(4);
+      });
+      V.glint(b.x, cy, { color: LILAC, size: 38, z: 30 });
+    } else {
+      // Snap: one clean bite
+      fangs(b.x - Math.cos(a) * R * 0.7, b.y - Math.sin(a) * R * 0.7 - 14, a, 1, BONE);
+      V.hit(b.x - Math.cos(a) * R * 0.7, b.y - Math.sin(a) * R * 0.7, BONE, 0.5);
+    }
+    snd(e, 'finisher', { pair });
+  };
+  KIT_VFX.finisher.atTarget = true;
+  KIT_VFX.bite.atTarget = true;
+  // a pounce: both hounds leap, a sharp whistle's notes in rust, a dust ring where each lands
+  KIT_VFX.pounce = (e, target, d) => {
+    const ids = d && Array.isArray(d.hounds) ? d.hounds : hounds(e).filter(h => !h.spectral).map(h => h.id), me = { x: e.x, y: e.y };
+    ids.forEach((id, i) => {
+      pose(e, id, 'leap');
+      const h = houndAt(e, id);
+      if (h) { notes(me, { x: h.x, y: h.y }, 'pounce', { dir: i ? -1 : 1, dur: 0.6, bow: 22 }); V.smoke(h.x, h.y, { n: 2, r: 6, color: DUST, size: 12, a: 0.4, speed: 40 }); }
+      later(e, 0.5, () => { const h2 = houndAt(e, id); if (h2) { thump(h2.x, h2.y, 0.8, DUST); V.hit(h2.x, h2.y - 10, RUST2, 0.4); } });
+      later(e, 0.05 + i * 0.04, () => { snd(e, 'bark', { hound: id, bold: 1 }); });
+    });
+    snd(e, 'pounce', null);
+    shake(0.8);
+  };
+  KIT_VFX.pounce.atTarget = true;
+  // Call Off: both hounds sprint home, the notes in ash, speed streaks behind them and a ring where they stand guard
+  KIT_VFX.calloff = (e) => {
+    const me = { x: e.x, y: e.y };
+    hounds(e).filter(h => !h.spectral).forEach((h, i) => {
+      notes(me, { x: h.x, y: h.y }, 'call', { dir: i ? -1 : 1, dur: 0.6, bow: 18 });
+      V.sparks(h.x, h.y, { color: DUST, n: 4, speed: 140, z: 6, up: 30 });
+      pose(e, h.id, 'bark');
+    });
+    later(e, 0.3, () => { V.shock(e.x, e.y, { r0: 10, r: 58, color: ASH, dur: 0.5, w: 3 }); V.shock(e.x, e.y, { r0: 14, r: 40, color: BONE, dur: 0.4, w: 1.6 }); });
+    snd(e, 'calloff', null);
+  };
+  // Relay: the two hounds change places along crossing curves, a puff at each end
+  KIT_VFX.relay = (e) => {
+    const hs = hounds(e).filter(h => !h.spectral);
+    if (hs.length >= 2) {
+      notes(hs[0], hs[1], 'flank', { dir: 1, bow: 24, dur: 0.7 }); notes(hs[1], hs[0], 'call', { dir: 1, bow: 24, dur: 0.7 });
+      for (const h of hs) { V.smoke(h.x, h.y, { n: 3, r: 8, color: DUST, size: 14, a: 0.4, speed: 50 }); V.glint(h.x, h.y, { color: h.id === 'rust' ? RUST2 : ASH, size: 18, z: 18 }); pose(e, h.id, 'bark'); }
+    }
+    snd(e, 'relay', null);
+  };
+  // a hound caught by a telegraph: a puff of grey and a pale wisp lifting off it; it comes back with a bright ring
+  KIT_VFX.houndDown = (e, target, d) => {
+    const h = d && d.hound ? houndAt(e, d.hound) : null; if (!h) return;
+    V.smoke(h.x, h.y, { n: 5, r: 8, color: '#a9a49a', size: 16, a: 0.5, speed: 50 });
+    V.glint(h.x, h.y, { color: '#d8d2c6', size: 20, z: 24 }); V.shock(h.x, h.y, { r0: 4, r: 30, color: '#8f8a84', dur: 0.4, w: 2 });
+    snd(e, 'houndDown', { hound: d.hound });
+  };
+  KIT_VFX.houndUp = (e, target, d) => {
+    const h = d && d.hound ? houndAt(e, d.hound) : null; if (!h) return;
+    V.shock(h.x, h.y, { r0: 6, r: 44, color: MOSSL, dur: 0.45, w: 2.6 }); V.glint(h.x, h.y, { color: BONE, size: 22, z: 24 });
+    V.sparks(h.x, h.y, { color: MOSSL, n: 5, speed: 200, z: 20, up: 120 });
+    pose(e, d.hound, 'bark'); snd(e, 'houndUp', { hound: d.hound });
+  };
+  // Mark the Quarry: a strip of rust cloth knotted in the air over the boss, fluttering, with rust-orange motes drawn from the boss to the hounds
+  KIT_VFX.quarry = (e, target) => {
+    const b = foe(target, e), R = BR();
+    V.fx({ dur: 1.5, layer: 'air', draw: (c, p, t, f) => {
+      const k = f.a * Math.min(1, t / 0.12) * Math.min(1, (1 - p) / 0.35); if (k < 0.02) return;
+      const x = b.x, y = b.y - R * 1.15 - 10 + Math.sin(t * 3) * 2, fl = Math.sin(t * 9) * 3;
+      c.save(); c.globalAlpha = k;
+      c.strokeStyle = SOOT; c.lineWidth = 5; c.lineCap = 'round'; c.beginPath(); c.moveTo(x - 11, y + 7); c.lineTo(x + 5, y - 5); c.stroke();   // the branch
+      c.fillStyle = RUST; c.strokeStyle = SOOT; c.lineWidth = 1.4; c.lineJoin = 'round';
+      c.beginPath(); c.moveTo(x - 3, y - 2); c.quadraticCurveTo(x + 6, y - 9 + fl * 0.3, x + 16, y - 4 + fl); c.lineTo(x + 20 + fl, y + 2); c.quadraticCurveTo(x + 12, y + 1 - fl * 0.4, x + 4, y + 5); c.closePath(); c.fill(); c.stroke();
+      c.beginPath(); c.moveTo(x - 3, y - 1); c.quadraticCurveTo(x - 4, y + 9 + fl * 0.4, x + 1, y + 16 + fl); c.lineTo(x + 5, y + 10); c.quadraticCurveTo(x + 2, y + 5, x + 3, y + 1); c.closePath(); c.fill(); c.stroke();
+      c.restore();
+      V.glowAt(c, x, y, 18, RUST2, 0.4 * k);
+    } });
+    V.shock(b.x, b.y - 6, { r0: R * 0.9, r: R * 1.15, color: RUST2, dur: 0.5, w: 2, layer: 'ground' });
+    V.charge(b.x, b.y - 30, { color: RUST2, r: R * 1.1, n: 10, dur: 0.5 });
+    for (const h of hounds(e)) if (!h.spectral) { V.flash(h.x, h.y - 14, 26, RUST2, 0.3); pose(e, h.id, 'bark'); }
+    snd(e, 'quarry', null);
+  };
+  KIT_VFX.quarry.atTarget = true;
+  // Wild Hunt: the horn. A golden ring rolls out from him, a pale light passes over the ground, and four ghosts break from the air round the boss
+  KIT_VFX.wildhunt = (e, target) => {
+    const b = foe(target, e);
+    V.shock(e.x, e.y, { r0: 10, r: 190, color: GOLD, dur: 0.7, w: 4 }); V.shock(e.x, e.y, { r0: 10, r: 130, color: '#fff4d0', dur: 0.55, w: 2, delay: 0.06 });
+    V.flash(e.x, bodyY(e), 70, GOLD, 0.35);
+    shake(2);
+    later(e, 0.18, () => {
+      for (const h of hounds(e)) if (h.spectral) {
+        V.shock(h.x, h.y, { r0: 4, r: 38, color: SPECT, dur: 0.5, w: 2.6 }); V.flash(h.x, h.y - 16, 40, SPECT, 0.45);
+        V.smoke(h.x, h.y, { n: 4, r: 8, color: '#cfe8f6', size: 18, a: 0.4, speed: 40 }); V.glint(h.x, h.y, { color: '#eaf7ff', size: 26, z: 26 });
+        pose(e, h.id, 'howl');
+      }
+      V.charge(b.x, b.y - 30, { color: SPECT, r: BR() * 1.6, n: 14, dur: 0.5 });
+    });
+    snd(e, 'wildhunt', null);
+  };
+  KIT_VFX.wildhunt.atTarget = true;
+  // Mount: he swings onto Greyfang; dust and grey streaks. Ride Down: the hop off, a ring where he lands
+  KIT_VFX.mount = (e) => {
+    const g = hounds(e).find(h => h.id === 'greyfang') || { x: e.x, y: e.y };
+    V.smoke(g.x, g.y, { n: 5, r: 10, color: DUST, size: 18, a: 0.45, speed: 70 }); V.shock(g.x, g.y, { r0: 8, r: 50, color: '#a9acb0', dur: 0.4, w: 3 });
+    V.glint(e.x, bodyY(e), { color: '#e4e6e8', size: 22, z: 12 }); pose(e, 'greyfang', 'bark');
+    snd(e, 'mount', null);
+  };
+  KIT_VFX.ridedown = (e, target) => {
+    const b = foe(target, e), R = BR(), a = Math.atan2(b.y - e.y, b.x - e.x);
+    thump(e.x, e.y, 1.2, DUST);
+    claws(b.x, b.y - 30, [a + 1.2], { n: 3, color: TANL, core: '#ffffff', len: R * 1.4, gap: 12 });
+    later(e, 0.05, () => { V.hit(b.x, b.y - 24, TANL, 0.9); V.sparks(b.x, b.y - 24, { color: TANL, n: 8, speed: 300, z: 28, up: 140 }); shake(3); });
+    pose(e, 'greyfang', 'bite');
+    snd(e, 'ridedown', null);
+  };
+  KIT_VFX.ridedown.atTarget = true;
+  // Howl: both hounds throw their heads back; pale curved lines rise from each and a gold ring spreads out round the party
+  KIT_VFX.howl = (e) => {
+    for (const h of hounds(e)) {
+      pose(e, h.id, 'howl');
+      V.fx({ dur: 1.1, layer: 'air', draw: (c, p, t, f) => {
+        const k = f.a * Math.sin(Math.min(1, p) * Math.PI) * 0.9; if (k < 0.02) return;
+        c.save(); c.strokeStyle = '#fff4d0'; c.lineCap = 'round'; c.lineWidth = 1.8;
+        for (let i = 0; i < 3; i++) { const r = 14 + i * 9 + p * 22; c.globalAlpha = k * (1 - i * 0.28); c.beginPath(); c.arc(h.x + 8, h.y - 34, r, -1.9, -0.9); c.stroke(); }
+        c.restore();
+      } });
+      V.glint(h.x, h.y - 30, { color: '#fff4d0', size: 18, z: 4 });
+    }
+    V.shock(e.x, e.y, { r0: 10, r: 150, color: GOLD, dur: 0.8, w: 2.6 });
+    for (let i = 0; i < 6; i++) V.spawn({ x: e.x + rnd(-40, 40), y: e.y + rnd(-20, 20), z: 10, vz: rnd(30, 60), life: rnd(0.8, 1.3), size: rnd(3, 5), size1: 0, color: GOLD, kind: 'glow' });
+    snd(e, 'howl', null);
+  };
+  // The Long Chase: the pack runs a lap round the boss; a dotted dust trail follows the ring, each quarter it passes lands a hit
+  KIT_VFX.longchase = (e, target) => {
+    const b = foe(target, e), R = BR() + 12, a0 = Math.atan2(e.y - b.y, e.x - b.x);
+    V.fx({ dur: 1.7, layer: 'ground', draw: (c, p, t, f) => {
+      const run = Math.min(1, t / 1.25), k = f.a * Math.min(1, (1 - p) / 0.3) * 0.5;
+      if (k < 0.02) return;
+      c.save(); c.strokeStyle = DUST; c.lineWidth = 3; c.lineCap = 'round'; c.setLineDash([2, 9]); c.lineDashOffset = -t * 30; c.globalAlpha = k;
+      c.beginPath(); c.arc(b.x, b.y, R, a0, a0 + TAU * run); c.stroke(); c.restore();
+    } });
+    for (let q = 1; q <= 4; q++) later(e, q * 0.31, () => { const a = a0 + q * Math.PI / 2, x = b.x + Math.cos(a) * R, y = b.y + Math.sin(a) * R; V.hit(x, y - 10, TANL, 0.5); thump(x, y, 0.6, DUST); fangs(b.x + Math.cos(a) * (R - 18), b.y + Math.sin(a) * (R - 18) - 14, a + Math.PI, 0.8, BONE); });
+    for (const h of hounds(e)) if (!h.spectral) pose(e, h.id, 'bite');
+    snd(e, 'longchase', null);
+  };
+  KIT_VFX.longchase.atTarget = true;
+})();
