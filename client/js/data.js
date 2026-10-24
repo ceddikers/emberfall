@@ -161,9 +161,9 @@ CLASSES.push({
 });
 
 // ---------------------------------------------------------------- Kenseier (tank, class 22; docs/plans/2026-10-new-classes-3.md)
-// No painted icons or portraits yet: the game draws its own icons until they are in.
+// Painted icons and portraits are in (client/icons, client/portraits).
 CLASSES.push({
-  id: 'kenseier', name: 'Kenseier', title: 'The Ashen Guard', role: 'tank', difficulty: 4, complexity: 3, accent: '#ff8a3d',
+  id: 'kenseier', name: 'Kenseier', title: 'The Ashen Guard', role: 'tank', difficulty: 3, complexity: 3, accent: '#ff8a3d',
   tagline: 'Every blow has a beat. Catch it.',
   gameplan: 'Meet the boss\'s blows with your blade. A deflect pressed just as a blow lands turns it aside and wears down the boss\'s Posture; a clumsy one still blocks a little. Fill the bar and the boss Breaks: a short window where the whole party hits harder and your Deathblow lands. Only you can build it.',
 });
