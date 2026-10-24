@@ -254,7 +254,7 @@ class RaidHost {
       const s = sim.ps.get(p.id) || {};
       // a Gloomsworn's Hollow, for the healer bots (BotAI.hollowNeed): the debt, what has been healed back, and the seconds left
       const hl = s.hollow, t = sim.t;
-      return { id: p.id, x: p.x, y: p.y, role: p.role, alive: !!s.alive, hp: s.hp || 0, maxHp: s.maxHp || 1, left: s.left, threat: s.threat || 0,
+      return { id: p.id, x: p.x, y: p.y, role: p.role, alive: !!s.alive, hp: s.hp || 0, maxHp: s.maxHp || 1, left: s.left,
         hollow: !!hl, debt: hl ? hl.debt : 0, healed: hl ? hl.heal : 0, hollowLeft: hl ? Math.max(0, hl.until - t) : 0, graceLeft: hl ? Math.max(0, hl.graceUntil - t) : 0 };
     });
     const b = sim.boss, lamps = sim.liveLamps ? sim.liveLamps() : [];

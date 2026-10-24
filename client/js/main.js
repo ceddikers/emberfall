@@ -2003,14 +2003,14 @@
     raid.rc = msg.rc > 0 ? msg.rc : 0;   // seconds of 'recovering' left (fight.js FIGHT.REC)
     raid.dc = msg.dc > 0 ? msg.dc : 0;   // the party's deaths this pull (raise sickness grows with them: fight.js FIGHT.SICK)
     const listed = new Set();
-    for (const [id, hp, maxHp, shield, alive, dd, vuln, mit, weak, debuffs, threat, hots, hol] of msg.ps) {
+    for (const [id, hp, maxHp, shield, alive, dd, vuln, mit, weak, debuffs, hots, hol] of msg.ps) {
       listed.add(id);
       const s = raid.party.get(id);
       // a Gloomsworn's Hollow: [on, debt, healed, seconds left, grace left] (party frames: raid-ui.js; its own gauge: the kit)
       if (s) s.hollow = Array.isArray(hol) && hol[0] ? { debt: hol[1], healed: hol[2], left: hol[3], grace: hol[4], at: now } : null;
       if (id === Net.id && actor && actor.cls.id === 'gloomsworn') actor.notify('hollowtick', Array.isArray(hol) && hol[0] ? { on: 1, debt: hol[1], healed: hol[2], left: hol[3], grace: hol[4] } : { on: 0 });
       if (SH && s && id === Net.id && s.alive && alive) { if (shield > 0 && !(s.shield > 0)) SH.play('shield-up', { vol: 0.6, key: 'shield-up', minGap: 0.5 }); if (Array.isArray(debuffs) && debuffs.length > (Array.isArray(s.debuffs) ? s.debuffs.length : 0)) SH.play('debuff-on', { vol: 0.75, key: 'debuff-on', minGap: 0.4 }); }
-      if (s) Object.assign(s, { hp, maxHp, shield, alive: !!alive, dd, vuln, mit, weak, debuffs, threat: threat || 0, hots: hots || [], left: false });
+      if (s) Object.assign(s, { hp, maxHp, shield, alive: !!alive, dd, vuln, mit, weak, debuffs, hots: hots || [], left: false });
     }
     // the host stops listing anyone who left the raid; don't leave their last numbers frozen on the frames
     for (const [id, s] of raid.party) if (!listed.has(id) && !s.left) Object.assign(s, { left: true, alive: false, hp: 0, shield: 0, hots: [], debuffs: [] });

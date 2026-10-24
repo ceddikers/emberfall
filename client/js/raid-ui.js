@@ -49,7 +49,7 @@ const RaidUI = (() => {
   const HOT_ICON = { petal: ['cleric', 'petal', 'Dawn Petal'], prayer: ['cleric', 'prayer', 'Prayer Circle'], rejuv: ['grovekeeper', 'rejuv', 'Rejuvenate'], growth: ['grovekeeper', 'growth', 'Wild Growth'] };
 
   let docked = 'left', onDock = null, hudObserved = false, lastState = '';
-  let root, frames = {}, onFrame = null, rosterKey = '', lastT = 0, bossTrail = 1, roster = [], threatKey = '', nextKey = '', statusKey = '';
+  let root, frames = {}, onFrame = null, rosterKey = '', lastT = 0, bossTrail = 1, roster = [], nextKey = '', statusKey = '';
 
   function init(handlers) {
     onFrame = handlers.onFrame;
@@ -65,7 +65,7 @@ const RaidUI = (() => {
         <div class="bb-next hidden"></div>
       </div>
       <div id="boss-cast" class="hidden"><i class="bc-icon"></i><div class="bc-body"><small>Next</small><b class="bc-name"></b><div class="bc-bar"><div class="fill"></div></div></div><em class="bc-left"></em></div>
-      <div id="raid-left"><div id="pf-wrap"><button id="pf-dock" class="pf-dock" type="button"></button><div id="party-frames"></div><div id="lb-gauge" class="hidden"><small>Limit</small><div class="lb-bars"><i><b></b></i><i><b></b></i><i><b></b></i></div><kbd class="lb-key">G</kbd></div></div><div id="threat-meter" class="hidden"></div><div id="prog" class="hidden"></div></div>
+      <div id="raid-left"><div id="pf-wrap"><button id="pf-dock" class="pf-dock" type="button"></button><div id="party-frames"></div><div id="lb-gauge" class="hidden"><small>Limit</small><div class="lb-bars"><i><b></b></i><i><b></b></i><i><b></b></i></div><kbd class="lb-key">G</kbd></div></div><div id="prog" class="hidden"></div></div>
       <div id="party-strip"></div>
       <div id="countdown" class="hidden"></div>
       <div id="boss-intro" class="hidden"><small></small><b></b><i></i><q></q></div>
@@ -130,7 +130,7 @@ const RaidUI = (() => {
     document.body.appendChild(res);
   }
 
-  // 'left' (under the corner, with the threat meter) or 'strip' (a row above the hotbar, close to where you look)
+  // 'left' (under the corner, with the progress record) or 'strip' (a row above the hotbar, close to where you look)
   const DOCK_ICON = {
     left: svg('<path d="M1.5 9.5h9M3.5 7.5l2.5 2 2.5-2M6 2v7.5" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>'),
     strip: svg('<path d="M1.5 2.5h9M3.5 4.5 6 2.5l2.5 2M6 10V2.5" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>'),
@@ -161,7 +161,7 @@ const RaidUI = (() => {
   function setRoster(list0) {
     const key = list0.map(r => r.id).join(',');
     if (key === rosterKey) return;
-    rosterKey = key; roster = list0; threatKey = '';   // (kept for the threat meter's names and roles)
+    rosterKey = key; roster = list0;
     const order = { tank: 0, healer: 1, dps: 2 };
     const list = [...roster].sort((a, b) => order[a.role] - order[b.role] || a.id - b.id);
     $('party-frames').innerHTML = list.map((r, i) => `
@@ -228,7 +228,6 @@ const RaidUI = (() => {
     castFrame(raid, now);
     upcoming(raid, now);
     bossStatus(raid, now, myId, marks);
-    threatMeter(raid, myId);
     limitGauge(raid, myId, dt);
     recoverCue(raid);
     deathCounter(raid);
@@ -727,7 +726,7 @@ const RaidUI = (() => {
     root.querySelector('.bb-hp .gates').innerHTML = g.map(([f, wall]) => `<i class="${wall ? 'wall' : ''}${wall && raid.wallLabel ? ' up' : ''}" style="left:${(f * 100).toFixed(2)}%"></i>`).join('');
   }
 
-  // icons under the boss's health: Hunter's Mark, a damage-up, a taunt's fixation, the Inquisitor's brand and the last
+  // icons under the boss's health: Hunter's Mark, a damage-up, the Inquisitor's brand and the last
   // minute before the enrage (all from the host), then your own damage over time (from your kit)
   const iconBg = (cls, id) => `url(${abilityIcon(cls, id)})`;
   function bossStatus(raid, now, myId, marks) {
@@ -743,9 +742,6 @@ const RaidUI = (() => {
           const mine = who === myId;
           items.push({ k: kind, c: 'debuff' + (mine ? '' : ' theirs'), bg: iconBg('cleric', 'smite'), n: val,
             tip: `<b>Judgment</b><em>${val} charge${val === 1 ? '' : 's'} · ${secs}s${mine ? ' · yours' : ''}</em>Each hit from an ally bursts a charge in holy fire.` });
-        } else if (kind === 'fix') {
-          const r = roster.find(x => x.id === who), t = r && typeof TAUNT !== 'undefined' && TAUNT[r.cls];
-          items.push({ k: kind, c: 'buff', bg: t ? tauntIconBg(r.cls) : '', glyph: GLYPH.aggro, n: secs, tip: `<b>${t ? t.name : 'Taunted'}</b><em>${secs}s</em>Fixed on ${esc(r ? r.name : 'a tank')}.` });
         }
       }
       const enr = raid.def.enrage && raid.def.enrage[raid.mode];
@@ -767,29 +763,6 @@ const RaidUI = (() => {
     statusKey = key;
     el.innerHTML = items.map(it => `<b class="bst ${it.c}">${it.bg ? `<u style="background-image:${it.bg}"></u>` : `<u class="g">${it.glyph}</u>`}<i>${it.n}</i>${it.stack ? `<s>${it.stack}</s>` : ''}</b>`).join('');
     [...el.children].forEach((ch, i) => Tip.set(ch, items[i].tip));
-  }
-
-  // threat on the boss as a share of the top, among those he can turn to: the tanks while one stands (fight.js tank():
-  // nobody else can pull him, so with one tank there's nothing to show), everyone left once they're all down. Your row
-  // is lit; a tank at 90% or more of the one he's on turns amber (he'd swap).
-  function threatMeter(raid, myId) {
-    const el = $('threat-meter'), all = [];
-    for (const r of roster) { const p = raid.party.get(r.id); if (p && p.alive && !p.left) all.push({ r, th: p.threat || 0 }); }
-    const tanks = all.filter(x => x.r.role === 'tank'), rows = tanks.length ? tanks : all;
-    const top = rows.reduce((m, x) => Math.max(m, x.th), 0);
-    const show = raid.state === 'live' && rows.length >= 2 && top > 0;
-    rows.sort((a, b) => b.th - a.th || a.r.id - b.r.id);
-    const onId = raid.boss && raid.boss.tg;
-    const view = show ? rows.map(x => ({ x, pct: Math.round(x.th / top * 100), warn: x.r.id !== onId && x.th >= top * 0.9 })) : [];
-    const key = view.map(v => `${v.x.r.id}:${v.pct}:${v.warn ? 1 : 0}`).join('|');
-    if (key === threatKey) return;
-    threatKey = key;
-    el.classList.toggle('hidden', !show);
-    el.innerHTML = show ? `<h6>Threat</h6>` + view.map(({ x, pct, warn }) => `
-      <div class="tm-row${x.r.id === myId ? ' me' : ''}${warn ? ' warn' : ''}" style="--rc:${ROLES[x.r.role].color}">
-        <i class="pf-role">${ROLE_GLYPH[x.r.role] || ''}</i><span>${esc(x.r.name)}</span><b>${pct}%</b>
-        <div class="tm-bar"><i style="width:${pct}%"></i></div>
-      </div>`).join('') : '';
   }
 
   // ---------------------------------------------------------------- town training meter
@@ -1010,7 +983,7 @@ const RaidUI = (() => {
     if (k.overheats) out.push(['Overheats', String(k.overheats), 'bad', 'Vent before Heat reaches 100.']);
     if (k.lags) out.push(['Ran out of Flux', String(k.lags), 'bad', 'Shift back to Slow before Flux hits zero.']);
     if (st) {
-      if (st.avoidable) out.push(['Avoidable hits', String(st.avoidable), st.avoidable <= 2 ? 'ok' : 'bad', 'Each one gives Damage Down and Vulnerability.']);
+      if (st.avoidable) out.push(['Avoidable hits', String(st.avoidable), st.avoidable <= 2 ? 'ok' : 'bad', 'Each one gives Vulnerability, and some moves Damage Down too.']);
       if (st.deaths) out.push(['Deaths', String(st.deaths), 'bad', '']);
     }
     return `<div class="res-report"><h3>Your fight · ${esc(mine.cls.name)}</h3>${out.map(([n, v, cls, tip]) =>

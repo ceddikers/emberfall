@@ -104,31 +104,27 @@ const TUTORIAL = {
           'Break what the fight asks you to break (eggs, knots, coffins) before it is too late, and kill linked adds together.',
         ] },
         { h: 'Who counts as "the tank"', body: [
-          'Many targeted moves pick from everyone except the boss\'s current target. That is always a tank while one stands; with every tank down, whoever holds aggro is treated as the tank: they get the buster and skip the spreads.',
+          'Many targeted moves pick from everyone except the boss\'s current target. That is always a tank while one stands; with every tank down, whoever the boss turns to is treated as the tank: they get the buster and skip the spreads.',
         ] },
       ],
     },
     {
-      id: 'threat', title: 'Threat & taunts',
+      id: 'threat', title: 'Taunts & adds',
       pages: [
-        { h: 'How threat builds', body: [
-          'Damage on the boss is threat. Tanks make 2.75 times as much; healing makes a fifth of its size, for the healer.',
-          'Threat fades about 5% a second, so only the last 20 seconds or so count.',
-          'While a tank stands the boss stays on a tank, whatever anyone else does: with two tanks, the one with more threat. Only with every tank down does he turn to whoever has the most.',
-        ] },
-        { h: 'The threat meter', body: [
-          'Under the party frames: the tanks as a share of the top threat, when there are two; with every tank down, everyone left, so you can see who he turns to next. Your row is lit.',
+        { h: 'Who the boss is on', body: [
+          'The boss stays on the tank who taunted last, or on the tank he started on. Damage and healing do not move him.',
+          'If that tank falls he goes to the other tank and stays there, even after a raise. With every tank down he goes for the nearest player, and the first tank raised takes him back.',
           'An eye on a party frame marks who the boss is attacking.',
         ] },
         { h: 'Taunt',
           body: [
             'Tanks only, and it rides on one of your own skills: the Bastion\'s Brace, the Bloodreaver\'s Bloodletting, the Runeguard\'s Rune Strike, the Ironpalm\'s Read, the Gorgemaw\'s Open Wide and the Oathbroker\'s Renegotiate.',
-            'Use that skill while the enemy you face is attacking someone else and it taunts as well: your threat jumps to 10% above the highest, and the boss stays on you for 3 seconds whatever anyone does (an add: 6 seconds). On the boss, that hands him between two tanks, or takes him back after a raise. 20 second cooldown. If the boss is already on you, it is just the skill.',
-            'A small mark above the skill shows the taunt is ready, and its seconds while it cools. An icon under the boss bar shows the fixation. You cannot taunt a boss that is out of reach.',
+            'Use that skill while the enemy you face is attacking someone else and it taunts as well: the boss is yours from then on, until you fall or the other tank taunts. On an add, your threat on it jumps to 10% above the highest and it is fixed on you for 6 seconds. 20 second cooldown. If the boss is already on you, it is just the skill.',
+            'A small mark above the skill shows the taunt is ready, and its seconds while it cools. You cannot taunt a boss that is out of reach.',
           ] },
-        { h: 'Deaths and adds', body: [
-          'Dying wipes your threat. A raised player comes back with none.',
-          'An add goes for the nearest player until someone hits it, then for the most threat on it. Taunt works on adds.',
+        { h: 'Adds', body: [
+          'Adds do keep threat. An add goes for the nearest player until someone hits it, then for whoever has done the most to it, tanks counting 2.75 times. That fades about 5% a second, and dying wipes it.',
+          'Taunt works on adds.',
         ] },
       ],
     },
@@ -205,7 +201,7 @@ const TUTORIAL = {
         ] },
         { h: 'The boss bar', body: [
           'Health, a trail of recent damage, the difficulty and the fight clock ("Unengaged" before the pull). It dims while he is out of reach.',
-          'Icons under it: Staggered (it takes more damage), Fury (its hits land harder), a taunt\'s fixation, debuffs your party put on him, and the enrage timer in the last minute.',
+          'Icons under it: Staggered (it takes more damage), Fury (its hits land harder), debuffs your party put on him, and the enrage timer in the last minute.',
         ] },
         { h: 'Auto-attacks', body: [
           'It winds up just before each auto-attack on its target.',
@@ -260,9 +256,9 @@ const TUTORIAL = {
       id: 'status', title: 'Status effects',
       pages: [
         { h: 'From mistakes', body: [
-          'Every avoidable hit gives you Damage Down (10% less damage dealt for 10 seconds) and Vulnerability.',
+          'Every avoidable hit gives you Vulnerability. Some moves also give Damage Down (10% less damage dealt for 10 seconds).',
           'Vulnerability: in a raid, each stack is 50% more damage taken, up to double, for 15 seconds. Two mistakes close together can kill you.',
-          'Standing in a lasting puddle, fire or thread gives Damage Down but no Vulnerability.',
+          'Standing in a lasting puddle, fire or thread gives no Vulnerability.',
         ] },
         { h: 'Movement', body: [
           'Slowed: you move at about half speed (silk, venom, sticky ground).',

@@ -647,7 +647,7 @@ kbd { border-radius: 3px; background: #1d1813; border-color: #4a3d2c; color: var
 .chip.hot u { display: block; width: 14px; height: 14px; background: center / cover no-repeat; border-right: 1px solid #000; }
 .chip.hot.theirs { opacity: .6; }
 
-/* the left column in a raid: party frames, then the threat meter under them */
+/* the left column in a raid: party frames, then the progression record under them */
 #raid-left { position: fixed; left: 14px; top: 14px; width: 244px; z-index: 4; display: grid; gap: 6px; align-content: start; }
 #raid-left #party-frames { position: static; width: auto; }
 /* the frames' dock button sits on their top-right corner, quiet until you point at it */
@@ -664,18 +664,6 @@ kbd { border-radius: 3px; background: #1d1813; border-color: #4a3d2c; color: var
 #party-strip .pf-name small { display: none; }
 #party-strip .pf-dock { right: -8px; top: -8px; }
 @media (max-width: 900px) { #party-strip #party-frames { grid-auto-flow: row; grid-template-columns: repeat(2, 176px); grid-auto-columns: auto; } }
-#threat-meter { padding: 5px 8px 6px; background: linear-gradient(90deg, #15120fe0, #100e0cc8); border: 1px solid var(--line-soft); border-radius: 3px; pointer-events: none; }
-#threat-meter h6 { margin: 0 0 3px; font-size: 9.5px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; font-variant: small-caps; color: var(--muted); }
-.tm-row { display: grid; grid-template-columns: 12px minmax(0, 1fr) auto; align-items: center; column-gap: 5px; padding: 1px 3px 2px; border-left: 1px solid transparent; }
-.tm-row.me { background: #ffffff08; border-left-color: var(--gold-dim); }
-.tm-row .pf-role svg { width: 9px; height: 9px; }
-.tm-row span { font-size: 11px; color: #d8cdb8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.tm-row.me span { color: var(--gold-hi); }
-.tm-row b { font-size: 10.5px; font-weight: 600; color: #cfc5b2; font-variant-numeric: tabular-nums; letter-spacing: .02em; }
-.tm-bar { grid-column: 2 / -1; height: 2px; margin-top: 1px; background: #00000080; }
-.tm-bar i { display: block; height: 100%; background: color-mix(in srgb, var(--rc) 55%, #8a7a60); transition: width .2s; }
-.tm-row.warn b, .tm-row.warn span { color: #e8b070; }
-.tm-row.warn .tm-bar i { background: #c8823a; }
 
 /* under the boss's health: what's on it (icon, seconds), and under the cast bar the moves still to come */
 .bb-status { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 4px; min-height: 0; pointer-events: auto; }
@@ -1071,7 +1059,7 @@ body.link-lost #combat-hud { opacity: .55; }
 #callouts .co-text { min-width: 0; height: 26px; padding: 0 6px; background: #14100c; border: 1px solid #3a2a1c; border-radius: 2px; color: #ece4d4; font: inherit; font-size: 12px; }
 #callouts .co-text:focus { outline: none; border-color: #8a6a3a; }
 #callouts .btn2 { height: 26px; padding: 0 8px; font-size: 11px; }
-/* the progression record, under the threat meter */
+/* the progression record, under the party frames */
 #prog { padding: 5px 8px 7px; background: linear-gradient(90deg, #15120fe0, #100e0cc8); border: 1px solid var(--line-soft); border-radius: 3px; }
 #prog.hidden { display: none; }
 #prog h6 { display: flex; justify-content: space-between; margin: 0 0 2px; font-family: var(--fantasy); font-size: 9.5px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
@@ -1500,7 +1488,6 @@ body:has(#raid-ui.pf-strip:not(.hidden)) #chat-log { width: min(360px, calc(50vw
 #focus-frame { top: auto; bottom: calc(var(--hud-top, 150px) + 16px); }
 #boss-cast { top: max(26%, calc(var(--bb-bottom, 110px) + 110px)); }
 /* meter headers alike; the old cool tints warmed */
-#threat-meter h6 { font-family: var(--fantasy); font-variant: normal; letter-spacing: .16em; }
 #lb-gauge { border-color: var(--line-soft); }
 #chat-log div { background: #0f0d0bc8; border-radius: 2px; border-left: 1px solid var(--line-soft); }
 #chat-input { background: #0f0d0bf0; border: 1px solid var(--line); border-radius: 3px; }
@@ -1792,7 +1779,7 @@ body:has(#raid-ui.pf-strip:not(.hidden)) #captions { bottom: calc(var(--hud-top,
 .chip.hollow i s { display: block; height: 100%; background: #5fe08a; }
 .pf.hollow { box-shadow: inset 0 0 0 1px #9a7ad8aa; }
 /* the PvP Arena (pvp-ui.js): the lobby, the bout's HUD and its result card; a bout hides the raid's boss parts */
-body.in-pvp #boss-bar, body.in-pvp #boss-cast, body.in-pvp #lb-gauge, body.in-pvp #threat-meter, body.in-pvp #prog, body.in-pvp #rc-cue, body.in-pvp #dc-count, body.in-pvp #waymarks { display: none !important; }
+body.in-pvp #boss-bar, body.in-pvp #boss-cast, body.in-pvp #lb-gauge, body.in-pvp #prog, body.in-pvp #rc-cue, body.in-pvp #dc-count, body.in-pvp #waymarks { display: none !important; }
 #pvp-lobby { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 20; width: 460px; max-width: calc(100vw - 32px); padding: 12px 14px 14px; background: #0d0b0af4; border: 1px solid #3a2a1c; border-radius: 3px; box-shadow: 0 0 0 1px #000, 0 14px 34px #000c; }
 #pvp-lobby.hidden { display: none; }
 #pvp-lobby header { display: flex; align-items: center; justify-content: space-between; }

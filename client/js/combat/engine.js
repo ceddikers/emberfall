@@ -49,7 +49,7 @@ const ENGINE = {
   // enemy skill in the last AUTO_ENGAGE seconds. Each kit sets its own { kind, potency, range } in `auto`.
   AUTO_EVERY: 2.6,
   AUTO_ENGAGE: 8,
-  ULT_THREAT: 0.5,   // the threat multiplier on a non-tank's Ultimate hits (a burst should not take the boss off its tank)
+  ULT_THREAT: 0.5,   // the threat multiplier on a non-tank's Ultimate hits (a burst should not pull an add off its target)
   // Item effects that fire "on a critical hit" or "on an oGCD" are evened out between classes, so a class that crits on every
   // tick (or presses a dozen oGCDs a minute) gains no more from them than one that crits now and then (or has two oGCDs):
   // at most FX_CRIT_PER_MIN crits and FX_OGCD_PER_MIN oGCDs a minute count (the surplus is thinned evenly, Kit.fxPace), and
