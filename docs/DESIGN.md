@@ -382,7 +382,7 @@ The first class built on a different **pacing**: there is **no GCD**. Light, Hea
 | Q | Light (palm) | input | 40, 0.38 s recovery, 12 Breath. Adds **L** to the string. |
 | W | Heavy (fist) | input | 64, 0.6 s recovery, 18 Breath. Adds **H**. |
 | E | Kick | input | 52, 0.48 s recovery, 15 Breath. Adds **K**. |
-| R | Read | oGCD | 6 s: a 1.2 s reading stance (20% less damage). A hit landing in its first 0.4 s is **read**: half damage, a counter (63, double threat) and 15 Breath. A read **tankbuster** gives an **Opening**: the next Heavy within 4 s is a free Thousand Palms, 30% stronger. Doesn't break the string. |
+| R | Read | oGCD | 6 s: a 1.2 s reading stance (20% less damage). A hit landing in its first 0.4 s is **read**: half damage, a counter (63) and 15 Breath. A read **tankbuster** gives an **Opening**: the next Heavy within 4 s is a free Thousand Palms, 30% stronger. Doesn't break the string. |
 | D | Iron Skin | oGCD | 120 s: 40% less damage for 10 s, and Breath refills at its resting pace the whole time. |
 | F | Temple Bell | oGCD | 60 s: the party takes 10% less damage for 8 s; you get **Second Wind** for 15 s (Breath refills twice as fast, +10% damage). |
 | (Read) | Beckoning Palm | taunt | The shared taunt, carried by Read; calling it out steadies your breathing (+30 Breath). |
@@ -393,11 +393,11 @@ The first class built on a different **pacing**: there is **no GCD**. Light, Hea
 |---|---|---|---|
 | Crane Step | K L | 24 | Gives back 22 Breath without stopping. |
 | Flowing Palms | L L L | 50 | Cheap and simple. All three palms Crisp and left under 40 Breath: 12 Breath back (breathing without stopping). |
-| Rising Gate | L L H | 60 | A launcher, triple threat. The next input gets 1.3 s instead of 0.8 s. |
+| Rising Gate | L L H | 60 | A launcher: 30% less damage taken for 1.5 s while the boss is in the air. The next input gets 1.3 s instead of 0.8 s. |
 | Heaven's Drop | L L H K K | 140 | Rising Gate carried on: an axe kick onto the airborne boss. |
 | Tiger Wall | H K K | 18 | 25% less damage for 5 s (strung before a buster). |
 | Stone Breaker | H H K | 55 | Bruise: a 20-potency tick every 3 s for 15 s. |
-| Iron Ox | H H H | 90 | Double threat. Off balance: Read is ready again at once, and a blow Read within 4 s opens like a tankbuster (the next Heavy is a free, Crisp Thousand Palms). Ox > Read the next auto > Heavy. |
+| Iron Ox | H H H | 90 | Off balance: Read is ready again at once, and a blow Read within 4 s opens like a tankbuster (the next Heavy is a free, Crisp Thousand Palms). Ox > Read the next auto > Heavy. |
 | Thousand Palms | L K H H | 170 | The finisher: five extra strikes in a flurry. |
 
 - **Strings.** A press that continues a known string adds to it; one that fits no string **breaks** it and starts a new one. Waiting longer than the **window** (0.8 s after the last recovery ends, 1.3 s after Rising Gate) **drops** it. After a finished move any key just starts the next string (no break). Strings branch: H H, then H is Iron Ox and K is Stone Breaker; L L H is a move on its own and also the start of Heaven's Drop.

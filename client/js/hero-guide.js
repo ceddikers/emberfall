@@ -126,7 +126,7 @@ const HERO_GUIDE = {
 HERO_GUIDE.ironpalm = {
   passive: { name: 'Strings', icon: 'fist', desc: 'No global cooldown. Every press of Light, Heavy or Kick is a quick hit that costs Breath, and strings of them pressed in rhythm become named moves. A press made just as the last one recovers is Crisp: 10% harder, and 40% cheaper in Breath. The glowing key lights on that beat.' },
   combos: [
-    { keys: ['q', 'q', 'w'], text: 'Rising Gate: a launcher that draws the boss to you.' },
+    { keys: ['q', 'q', 'w'], text: 'Rising Gate: a launcher. You take less damage while the boss is in the air.' },
     { keys: ['q', 'q', 'w', 'e', 'e'], text: 'Rising Gate, then two Kicks: Heaven\'s Drop on the airborne boss. While it is in the air any key carries on.' },
     { keys: ['q', 'e', 'w', 'w'], text: 'Thousand Palms, the finisher.' },
     { keys: ['w', 'e', 'e'], text: 'Tiger Wall, a blocking stance, before a heavy blow. W W E is Stone Breaker, W W W Iron Ox.' },

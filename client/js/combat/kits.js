@@ -3621,6 +3621,7 @@ if (typeof module !== 'undefined') Object.assign(module.exports, { MAW, MAW_TYPE
 const IRONPALM = {
   WINDOW: 0.8,       // after a press's recovery ends, the string waits this long for the next input
   JUGGLE: 1.3,       // ... after Rising Gate (the boss is in the air)
+  GATE_GUARD: 0.3,   // ... and while it is, you take this much less damage (for JUGGLE + 0.2 s: the 1.5s the tooltip gives)
   CRISP: 0.3,        // a press made in this first moment after the recovery ends (not buffered early) is Crisp
   CRISP_SAVE: 0.4,   // ... it costs 40% less Breath
   CRISP_HIT: 0.1,    // ... and hits 10% harder
@@ -3656,7 +3657,8 @@ const IP_MOVES = [
   ipMove('flow', 'Flowing Palms', 'LLL', { bonus: 70, desc: 'Three quick open palms, the last one pushed through for {d:122}. Cheap and simple, and a way to breathe without stopping: if all three palms land Crisp and leave you under 40 Breath, they give 12 back.',
     finish(k) { const ks = k.g.keys.slice(-3); if (ks.length === 3 && ks.every(e => e.crisp) && k.g.breath < IRONPALM.FLOW_LOW) { ipBreath(k, IRONPALM.FLOW_BREATH); k.stats.flowCrisp = (k.stats.flowCrisp || 0) + 1; k.fx('flowBreath'); } } }),
   ipMove('gate', 'Rising Gate', 'LLH', { bonus: 42, threat: 3, anim: 'uppercut', alt: { ironpalm_swallow: 'KLH' },
-    desc: 'A launching uppercut for {d:125} that draws the boss to you (triple threat). The boss is in the air: the next input has longer to come, and any key you press carries the string on to Heaven\'s Drop.' }),
+    desc: 'A launching uppercut for {d:125}. The boss is in the air: you take 30% less damage for 1.5s, the next input has longer to come, and any key you press carries the string on to Heaven\'s Drop.',
+    finish(k, mv) { k.mitigate('self', IRONPALM.GATE_GUARD, IRONPALM.JUGGLE + 0.2, { ab: mv }); } }),
   ipMove('drop', 'Heaven\'s Drop', 'LLHKK', { bonus: 98, anim: 'axe', lock: 0.62, alt: { ironpalm_swallow: 'KLHKK' },
     desc: 'Rising Gate, then two kicks: an axe kick brought down on the airborne boss for {d:166}.',
     finish(k, mv) { if (k.talent('ironpalm_mountain')) k.after(1, () => { k.damage(40, { ab: mv }); k.fx('aftershock'); }); } }),
@@ -3664,7 +3666,7 @@ const IP_MOVES = [
     finish(k, mv) { k.mitigate('self', 0.25, 5, { ab: mv }); k.buff('wall', 5); if (k.talent('ironpalm_shirt')) k.shield('self', 130, 5, { ab: mv }); } }),
   ipMove('breaker', 'Stone Breaker', 'HHK', { bonus: 39, desc: 'A crushing kick to the knee for {d:107}: the boss is Bruised and takes {d:20} every 3s for 15s.',
     finish(k, mv) { k.dot('bruise', 20, 15, 3, { ab: mv }); } }),
-  ipMove('ox', 'Iron Ox', 'HHH', { bonus: 63, threat: 2, desc: 'Three heavy blows, the last driven home with the whole body for {d:146} (double threat). It throws the boss off balance: Read is ready again at once, and the next blow you Read within 4s opens it up as a tankbuster does (your next Heavy is a free Thousand Palms).',
+  ipMove('ox', 'Iron Ox', 'HHH', { bonus: 63, threat: 2, desc: 'Three heavy blows, the last driven home with the whole body for {d:146}. It throws the boss off balance: Read is ready again at once, and the next blow you Read within 4s opens it up as a tankbuster does (your next Heavy is a free Thousand Palms).',
     finish(k) { k.reduceCooldown(ipAbId(k, 'read'), 99); k.buff('offbal', IRONPALM.OFFBAL); k.fx('oxStagger'); } }),
   ipMove('palms', 'Thousand Palms', 'LKHH', { flurry: 5, bonus: 119, anim: 'flurry', lock: 0.75, desc: 'The finisher: a storm of open palms, five strikes of {d:24} on top of the blow ({d:83}).',
     finish(k, mv, st) {
@@ -3929,7 +3931,7 @@ ULTIMATES.ironpalm = {
   lock: 1.1, dr: 0.5,
   charge: { rate: 0.47, keep: 0.5 },
   desc: 'The grand string: every string you know, in one breath. Crane Step, Flowing Palms, Rising Gate, Heaven\'s Drop, Tiger Wall, Stone Breaker, Iron Ox and Thousand Palms land one after another, {d:110} each, ' +
-    'and the last palm drives a shockwave through your target for {d:800} (triple threat). The boss is Bruised ({d:20} every 3s for 15s), you hold Tiger Wall\'s stance (25% less damage for 5s), and your Breath fills to the top. ' +
+    'and the last palm drives a shockwave through your target for {d:800}. The boss is Bruised ({d:20} every 3s for 15s), you hold Tiger Wall\'s stance (25% less damage for 5s), and your Breath fills to the top. ' +
     'The shockwave rings out over the party like Temple Bell: everyone takes 15% less damage for 8s. ' +
     'You take 50% less damage and can\'t be knocked back during the flurry.' +
     '<div class="it-ult"><span><u>Charge:</u> 0.15% for every press of a string (0.18% if it\'s Crisp), 0.25% for every named move, 1.5% for every Read (3% on a tankbuster), and a little on its own while you fight. It never drains; a fall keeps half.</span></div>',
