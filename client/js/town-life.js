@@ -796,7 +796,7 @@ const TownLife = (() => {
     if (!talk) { el.classList.add('hidden'); return; }
     const last = talk.i >= talk.lines.length - 1, d = talk.f.d;
     const choices = last && talk.choices && talk.choices.length ? `<div class="dl-choices">${talk.choices.map((c, i) => `<button type="button" data-c="${i}">${esc(c.text)}</button>`).join('')}</div>` : '';
-    el.innerHTML = `<header><b>${esc(d.name)}</b><small>${esc(d.title || '')}</small><button type="button" class="dl-x" aria-label="Close">×</button></header>
+    el.innerHTML = `<header><b>${esc(d.name)}</b><small>${esc(d.title || '')}</small><button type="button" class="dl-x" aria-label="Close" data-tip="Close (Esc)">×</button></header>
       <p class="dl-line">${esc(talk.lines[talk.i] || '')}</p>${choices || `<button type="button" class="dl-next">${last ? (talk.node && talk.node.action === 'feast' ? 'See the board' : talk.node && talk.node.action === 'ward' ? 'Choose a ward' : talk.node && talk.node.action === 'fish-shop' ? 'Show the catch' : 'Goodbye') : 'Next'}</button>`}`;
     el.classList.remove('hidden');
     if (typeof Sound !== 'undefined' && talk.lines[talk.i]) Sound.play('npc-talk', { vol: 0.6, key: 'npc-talk', minGap: 0.15 });
@@ -814,7 +814,7 @@ const TownLife = (() => {
   }
   function openFeasts() {
     const el = box(), g = deps.gold(), cur = feast();
-    el.innerHTML = `<header><b>Gaspard's board</b><small>One order feeds everyone in town, for an hour · <i class="coin"></i>${g}</small><button type="button" class="dl-x" aria-label="Close">×</button></header>
+    el.innerHTML = `<header><b>Gaspard's board</b><small>Feast · for the whole town, an hour · <i class="coin"></i>${g}</small><button type="button" class="dl-x" aria-label="Close" data-tip="Close (Esc)">×</button></header>
       ${cur ? `<p class="dl-line">Well fed: <b>${esc(cur.meal.name)}</b> · ${Math.ceil(cur.left / 60000)}m left. A new order replaces it.</p>` : ''}
       <div class="dl-feasts">${MEALS.map(m => `<button type="button" class="dl-feast" data-f="${m.id}"${g < m.cost ? ` disabled data-tip="${m.cost - g} gold short"` : ''}>
         <b>${esc(m.name)}</b><span>${esc(m.desc)}</span><em>+${m.buff.pct}% ${{ hp: 'health', power: 'power', heal: 'healing', speed: 'speed' }[m.buff.stat] || ''}</em><i class="coin"></i><u>${m.cost}</u></button>`).join('')}</div>`;
@@ -877,7 +877,7 @@ const TownLife = (() => {
   }
   function openWards() {
     const el = box(), g = deps.gold(), cur = ward();
-    el.innerHTML = `<header><b>Quill's wards</b><small>One at a time, an hour each, on you alone · <i class="coin"></i>${g}</small><button type="button" class="dl-x" aria-label="Close">×</button></header>
+    el.innerHTML = `<header><b>Quill's wards</b><small>Ward · on you alone, an hour · <i class="coin"></i>${g}</small><button type="button" class="dl-x" aria-label="Close" data-tip="Close (Esc)">×</button></header>
       ${cur ? `<p class="dl-line">Warded: <b>${esc(cur.ward.name)}</b> · ${Math.ceil(cur.left / 60000)}m left. A new one rubs it out.</p>` : ''}
       <div class="dl-feasts">${WARDLIST.map(w => `<button type="button" class="dl-feast" data-w="${w.id}"${g < w.cost ? ` disabled data-tip="${w.cost - g} gold short"` : ''}>
         <b>${esc(w.name)}</b><span>${esc(w.desc)}</span><em>${esc(wardText(w))}</em><i class="coin"></i><u>${w.cost}</u></button>`).join('')}</div>`;

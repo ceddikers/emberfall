@@ -74,7 +74,7 @@ const Journal = (() => {
     if (!panel) {
       panel = document.createElement('div');
       panel.id = 'journal'; panel.className = 'hidden';
-      panel.innerHTML = `<header><h3>Journal</h3><button type="button" class="close" aria-label="Close">×</button></header><div class="jr-book"></div>`;
+      panel.innerHTML = `<header><h3>Journal</h3><button type="button" class="close" aria-label="Close" data-tip="Close (Esc)">×</button></header><div class="jr-book"></div>`;
       document.body.appendChild(panel);
       panel.addEventListener('mousedown', e => e.stopPropagation());
       panel.addEventListener('click', e => {

@@ -7,22 +7,23 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=72e07937">
+<link rel="stylesheet" href="style.css?v=122acc0b">
 </head>
 <body>
 <canvas id="game"></canvas>
 
 <div id="hud-tl">
   <div class="town">Emberfall</div>
-  <div id="hero-name"></div><button type="button" id="opt-btn" aria-label="Options" data-tip="Options: keys, HUD and sound volume"><svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path fill="currentColor" d="M6.9 1h2.2l.4 1.9 1.3.6 1.7-1 1.5 1.5-1 1.7.6 1.3 1.9.4v2.2l-1.9.4-.6 1.3 1 1.7-1.5 1.5-1.7-1-1.3.6-.4 1.9H6.9l-.4-1.9-1.3-.6-1.7 1-1.5-1.5 1-1.7-.6-1.3L1 9.1V6.9l1.9-.4.6-1.3-1-1.7 1.5-1.5 1.7 1 1.3-.6zM8 5.6a2.4 2.4 0 1 0 0 4.8 2.4 2.4 0 0 0 0-4.8z"/></svg></button>
+  <div id="hero-name"></div><button type="button" id="opt-btn" aria-label="Options"><svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path fill="currentColor" d="M6.9 1h2.2l.4 1.9 1.3.6 1.7-1 1.5 1.5-1 1.7.6 1.3 1.9.4v2.2l-1.9.4-.6 1.3 1 1.7-1.5 1.5-1.7-1-1.3.6-.4 1.9H6.9l-.4-1.9-1.3-.6-1.7 1-1.5-1.5 1-1.7-.6-1.3L1 9.1V6.9l1.9-.4.6-1.3-1-1.7 1.5-1.5 1.7 1 1.3-.6zM8 5.6a2.4 2.4 0 1 0 0 4.8 2.4 2.4 0 0 0 0-4.8z"/></svg></button>
   <button type="button" id="snd-btn" aria-label="Sound on or off" data-tip="Sound: click to mute or unmute"><svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path fill="currentColor" d="M2 6h3l4-3.5v11L5 10H2z"/><path class="snd-on" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" d="M11 5.5a3.5 3.5 0 0 1 0 5M12.8 3.6a6 6 0 0 1 0 8.8"/><path class="snd-off" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" d="M11 5.5l4 5M15 5.5l-4 5"/></svg></button>
+  <div id="panel-keys"></div>
   <div id="objective"></div>
 </div>
 <canvas id="minimap"></canvas>
 <div id="party"></div>
 <div id="chat-log"></div>
 <input id="chat-input" class="hidden" maxlength="120" placeholder="Say something… (Enter to send)" autocomplete="off">
-<button type="button" id="menu-chip" data-tip="Settings: keys, HUD layout, interface size, your data"><kbd>Esc</kbd> Menu</button>
+<button type="button" id="menu-chip"><kbd>Esc</kbd> Options</button>
 <button type="button" id="meter-btn" aria-label="Damage meter" data-tip="Damage meter"><svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path fill="currentColor" d="M2 13V9h2.6v4zM6.7 13V3h2.6v10zM11.4 13V6h2.6v7z"/></svg></button>
 <div id="help"><kbd>Right-click</kbd> move · <kbd>Left-click</kbd> interact · <kbd>Q</kbd><kbd>W</kbd><kbd>E</kbd><kbd>R</kbd><kbd>D</kbd><kbd>F</kbd> skills · <kbd>Space</kbd> dash · <kbd>Enter</kbd> chat</div>
 <div id="toast"></div>
@@ -31,7 +32,7 @@
 
 <div id="overlay" class="hidden">
   <div class="panel hidden" id="boss-panel">
-    <button class="close" aria-label="Close">×</button>
+    <button class="close" aria-label="Close" data-tip="Close (Esc)">×</button>
     <header><h2>Raid Board</h2><p>Four bosses hold the King's Road, and the wild realm lies beyond it. The gate opens on them one at a time.</p><button type="button" class="btn2" id="tutorial-btn">Tutorial</button></header>
     <div class="panel-body">
       <nav class="list" id="boss-list"></nav>
@@ -88,19 +89,19 @@
 <script src="js/data.js?v=9a13e63b"></script>
 <script src="js/save.js?v=cf673049"></script>
 <script src="js/audio.js?v=06beca34"></script>
-<script src="js/ui-tip.js?v=f79c1429"></script>
+<script src="js/ui-tip.js?v=404e1f32"></script>
 <script src="js/heroes.js?v=3aa0dd8d"></script>
 <script src="js/bosses.js?v=a2239acc"></script>
 <script src="js/hydra-art.js?v=a33a5764"></script>
 <script src="js/town.js?v=c375c9b5"></script>
 <script src="js/combat/engine.js?v=ed51a47d"></script>
-<script src="js/combat/kits.js?v=ece63160"></script>
+<script src="js/combat/kits.js?v=972dbae7"></script>
 <script src="js/combat/specs.js?v=635f6ef7"></script>
 <script src="js/combat/talents.js?v=a45d2bc0"></script>
 <script src="js/combat/numbers.js?v=7fbe15f4"></script>
 <script src="js/combat/actor.js?v=9291a7d0"></script>
 <script src="js/combat/gauges.js?v=7cec8175"></script>
-<script src="js/combat/hud.js?v=b076ac39"></script>
+<script src="js/combat/hud.js?v=6de2a46a"></script>
 <script src="js/arena/shapes.js?v=0c35690d"></script>
 <script src="js/arena/scoring.js?v=ab67abf8"></script>
 <script src="js/arena/fight.js?v=e158f1a7"></script>
@@ -133,12 +134,12 @@
 <script src="js/hero-guide.js?v=3a08cbd4"></script>
 <script src="js/items.js?v=e156f775"></script>
 <script src="js/town-npcs.js?v=2b837221"></script>
-<script src="js/inventory.js?v=1d8d4a91"></script>
-<script src="js/talent-panel.js?v=0c6c61ba"></script>
-<script src="js/loot.js?v=b8d54cc3"></script>
+<script src="js/inventory.js?v=69590705"></script>
+<script src="js/talent-panel.js?v=afd54ca1"></script>
+<script src="js/loot.js?v=8beeabb7"></script>
 <script src="js/boss-icons.js?v=1f057323"></script>
-<script src="js/pings.js?v=6ac7d7b1"></script>
-<script src="js/keybinds.js?v=f32857aa"></script>
+<script src="js/pings.js?v=277369ff"></script>
+<script src="js/keybinds.js?v=9a85de10"></script>
 <script src="js/journal/grubnak.js?v=bb05b1b5"></script>
 <script src="js/journal/skitterra.js?v=ba63ea3e"></script>
 <script src="js/journal/volkar.js?v=3e405ff6"></script>
@@ -147,13 +148,13 @@
 <script src="js/journal/hydra.js?v=1b75bc37"></script>
 <script src="js/journal/titan.js?v=008daa5f"></script>
 <script src="js/journal/archmage.js?v=035e3c45"></script>
-<script src="js/journal.js?v=4176b722"></script>
-<script src="js/town-life.js?v=f64d9836"></script>
+<script src="js/journal.js?v=81982e8d"></script>
+<script src="js/town-life.js?v=efefbe7c"></script>
 <script src="js/barrow-gate.js?v=a7c78df9"></script>
-<script src="js/tutorial-data.js?v=2ac4a9c8"></script>
-<script src="js/tutorial.js?v=d804b797"></script>
-<script src="js/raid-ui.js?v=77595cd9"></script>
-<script src="js/pvp-ui.js?v=4a0aa30f"></script>
+<script src="js/tutorial-data.js?v=9aa17d44"></script>
+<script src="js/tutorial.js?v=585a56cf"></script>
+<script src="js/raid-ui.js?v=5fe636ce"></script>
+<script src="js/pvp-ui.js?v=7158b14f"></script>
 <script src="js/net.js?v=ebb3939d"></script>
 <script src="js/debug-overlay.js?v=3b92eecd"></script>
 <script src="js/story-data.js?v=b6f2fe84"></script>
@@ -162,14 +163,14 @@
 <script src="js/feat-rules.js?v=c66284c4"></script>
 <script src="js/bounty-data.js?v=e6dbff4b"></script>
 <script src="js/fish-data.js?v=5c841eb2"></script>
-<script src="js/pastimes.js?v=cb223c93"></script>
+<script src="js/pastimes.js?v=0dc5c59c"></script>
 <script src="js/title.js?v=f236adbd"></script>
-<script src="js/whats-new.js?v=5dbd1b7f"></script>
+<script src="js/whats-new.js?v=1089f7e7"></script>
 <script src="js/sfx-synth.js?v=ac0dbdeb"></script>
 <script src="js/sfx-map.js?v=a8dd85bc"></script>
 <script src="js/voice-lines.js?v=5478348e"></script>
 <script src="js/captions.js?v=a8217b9b"></script>
 <script src="js/sound-hooks.js?v=915470d6"></script>
-<script src="js/main.js?v=ae3a4391"></script>
+<script src="js/main.js?v=36b4c7f6"></script>
 </body>
 </html>

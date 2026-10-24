@@ -1262,7 +1262,7 @@
   function renderPractice() {
     const ids = Object.keys(PRACTICE_PHASES).filter(id => bossOpen(BOSSES.find(b => b.id === id))), pk = practicePick;
     if (!ids.includes(pk.boss)) pk.boss = ids[0];
-    practicePanel.innerHTML = `<header><h3>Practice Hall</h3><button type="button" class="close" aria-label="Close">×</button></header>
+    practicePanel.innerHTML = `<header><h3>Practice Hall</h3><button type="button" class="close" aria-label="Close" data-tip="Close (Esc)">×</button></header>
       <p class="pr-note">Any fight, from any phase. No loot, no clears; the progression record doesn't see it.${Net.isHost ? '' : ' Only the host can start one.'}</p>
       <h4>Fight</h4><div class="pr-row">${ids.map(id => `<button type="button" class="btn2${pk.boss === id ? ' on' : ''}" data-boss="${id}">${escapeHtml(RAID_DEFS[id] ? RAID_DEFS[id].name : id)}</button>`).join('')}</div>
       <h4>Difficulty</h4><div class="pr-row">${['normal', 'hard'].map(m => `<button type="button" class="btn2${pk.mode === m ? ' on' : ''}"${m === 'hard' && !hardOpen(BOSSES.find(b => b.id === pk.boss)) ? ' disabled data-tip="Hard is still locked"' : ''} data-mode="${m}">${m === 'hard' ? 'Hard' : 'Normal'}</button>`).join('')}</div>
@@ -1299,7 +1299,7 @@
     if (!cls) body = `<p class="bg-note">The gate has no name to call yet. Choose a hero at the Gilded Tankard, then come back.</p><button type="button" class="btn2 bg-pick">Choose a hero</button>`;
     else if (!specs.length) body = `<p class="bg-note">${cls.name} has no specializations to prove yet.</p>`;
     else body = `<div class="bg-hero"><i style="background:${ROLES[cls.role].color}"></i><b>${cls.name}</b><small>${cls.title}</small></div>${specs.map(s => gateCard(cls, s)).join('')}`;
-    barrowPanel.innerHTML = Num.fill(`<header><h3>The Barrow Gate</h3><button type="button" class="close" aria-label="Close">×</button></header>
+    barrowPanel.innerHTML = Num.fill(`<header><h3>The Barrow Gate</h3><button type="button" class="close" aria-label="Close" data-tip="Close (Esc)">×</button></header>
       <p class="bg-lede">The Hollow King's Shade keeps his hall as it was. Each memory is a short trial, fought alone with the allies it remembers.</p>${body}`);
   }
   // one specialization at the gate: who it is, whether its trial is passed, and the way in
@@ -1653,13 +1653,18 @@
     updateHelp();
     updateHeroName();
   }
-  // the key line at the bottom (a hero with an Ultimate also gets its key)
+  // the key line at the bottom (a hero with an Ultimate also gets its key), all read from the binds; in town a
+  // short line also names the panel keys
   function updateHelp() {
+    const K = id => `<kbd>${Keybinds.label(Keybinds.keyFor(id))}</kbd>`;
+    const al = !!(player.cls && player.cls.id === 'alembist');   // (the Alembist's party keys are F1-F4)
     const tauntKey = actor && actor.kit.ult ? ` · <kbd>${KEYS[7]}</kbd> ultimate` : '';
-    const hurtKey = healerish() ? ' · <kbd>&#96;</kbd> most hurt' : '';
+    const hurtKey = healerish() ? ` · ${K('hurt')} most hurt` : '';
     $('help').innerHTML = scene === 'arena'
-      ? `<kbd>Right-click</kbd> move · <kbd>Left-click</kbd> ally or frame to target · <kbd>1</kbd>-<kbd>4</kbd> target party${hurtKey} · <kbd>Shift</kbd>+skill on yourself · <kbd>${KEYS[6]}</kbd> dash${tauntKey}`
-      : `<kbd>Right-click</kbd> move · <kbd>Left-click</kbd> interact · ${KEYS.slice(0, 6).map(k => `<kbd>${k}</kbd>`).join('')} skills · <kbd>${KEYS[6]}</kbd> dash${tauntKey} · <kbd>Enter</kbd> chat · <kbd>${Keybinds.label(Keybinds.keyFor('options'))}</kbd> options`;
+      ? `<kbd>Right-click</kbd> move · <kbd>Left-click</kbd> ally or frame to target · ${K(al ? 'alemAlly1' : 'ally1')}-${K(al ? 'alemAlly4' : 'ally4')} target party${hurtKey} · <kbd>Shift</kbd>+skill on yourself · <kbd>${KEYS[6]}</kbd> dash${tauntKey}`
+      : `<kbd>Right-click</kbd> move · <kbd>Left-click</kbd> interact · ${KEYS.slice(0, 6).map(k => `<kbd>${k}</kbd>`).join('')} skills · <kbd>${KEYS[6]}</kbd> dash${tauntKey} · ${K('chat')} chat`;
+    const pk = $('panel-keys');
+    if (pk) pk.innerHTML = `${K('bags')} bags · ${K('talents')} talents · ${K('journal')} journal · ${K('logbook')} logbook`;
   }
 
   function clampArena(e) {
@@ -2529,6 +2534,9 @@
     Keybinds.openPanel({
       cls: player.cls ? player.cls.id : null,
       resync: requestResync,
+      canResync: () => !Net.isHost && !Net.solo,   // (a host or solo player always sees the fight as it is)
+      callouts: () => Pings.openPanel(),
+      inRaid: () => inArena(),
       namer: i => (i < 6 && actor && actor.abilities[i] ? actor.abilities[i].name : i === 7 && actor && actor.kit.ult ? actor.kit.ult.name : null),
       onChange: () => { document.querySelectorAll('#ability-row .slot').forEach(el => { const k = el.querySelector('kbd'); if (k) k.textContent = SLOT_KEYS[Number(el.dataset.i)]; }); updateHelp(); },
       prefs: player.cls ? {
@@ -4156,7 +4164,7 @@
       const t = bossThumbs[i], open = bossOpen(boss);
       t.b.classList.toggle('sealed', !open);
       t.b.querySelector('b').textContent = open ? boss.name : 'Sealed';
-      t.b.querySelector('small').textContent = open ? `Boss ${ROMAN[i]} · ${boss.title}` : `Boss ${ROMAN[i]} · beat ${bossOpen(BOSSES[i - 1]) ? BOSSES[i - 1].name : `Boss ${ROMAN[i - 1]}`} to open`;
+      t.b.querySelector('small').textContent = open ? `Boss ${ROMAN[i]} · ${boss.title}` : `Boss ${ROMAN[i]} · after ${bossOpen(BOSSES[i - 1]) ? BOSSES[i - 1].name : `Boss ${ROMAN[i - 1]}`}`;
     });
   }
   let raidMode = 'normal', raidFill = true;
@@ -4497,11 +4505,11 @@
     const name = nameInput.value.trim().slice(0, 16) || 'Adventurer';
     Save.set('name', name);
     joinErr.textContent = '';
-    if (mode === 'join' && codeInput.value.length !== 4) { joinErr.textContent = 'Enter the 4-letter room code from your host.'; return; }
+    if (mode === 'join' && codeInput.value.length !== 4) { joinErr.textContent = 'Enter the four-letter room code from your host.'; return; }
     if (mode !== 'solo' && typeof Peer === 'undefined') { joinErr.textContent = 'Could not load the networking library. Check your connection, or play solo.'; return; }
     const btn = { host: hostBtn, join: joinBtn, solo: soloBtn }[mode], label = btn.textContent;
     hostBtn.disabled = joinBtn.disabled = soloBtn.disabled = true;
-    btn.textContent = mode === 'host' ? 'Opening...' : mode === 'join' ? 'Joining...' : 'Starting...';
+    btn.textContent = mode === 'host' ? 'Opening…' : mode === 'join' ? 'Joining…' : 'Starting…';
     try {
       const msg = mode === 'host' ? await Net.host(name) : mode === 'join' ? await Net.join(codeInput.value, name) : await Net.startSolo(name);
       player.name = msg.name;
@@ -4519,7 +4527,7 @@
     if (!player.cls) { const lh = rememberedHero(); if (lh) chooseHero(lh.cls, lh.spec); else openSelect(null); }   // (no remembered hero: the first time, hero select as ever)
     else { Net.send({ t: 'cls', id: player.cls.id, spec: player.spec }); sendGear(); }   // back after a lost connection: tell the new room who we are
     updatePartyList();
-    toast(Net.solo ? `Welcome to Emberfall, ${player.name}. Bots fill the empty slots.` : Net.isHost ? `Hosting · room code ${Net.room}` : `Welcome to Emberfall, ${player.name}.`);
+    toast(Net.solo ? `Welcome to Emberfall, ${player.name}. Bots fill the empty slots.` : Net.isHost ? `Hosting. Room code ${Net.room}.` : `Welcome to Emberfall, ${player.name}.`);
   }
   hostBtn.addEventListener('click', () => enter('host'));
   soloBtn.addEventListener('click', () => enter('solo'));
@@ -4530,7 +4538,7 @@
     const link = /^https?:/.test(location.protocol) ? `${location.origin}${location.pathname}#${Net.room}` : Net.room;
     navigator.clipboard.writeText(link).then(
       () => toast(link === Net.room ? `Room code copied: ${Net.room}.` : 'Invite link copied.'),
-      () => toast(`Room code: ${Net.room}`));
+      () => toast(`Room code: ${Net.room}.`));
   });
 
   // clicking your locked ally's frame again lets go of them
@@ -4578,8 +4586,14 @@
     },
   });
   const bagBtn = document.createElement('button');
-  bagBtn.id = 'bag-btn'; bagBtn.dataset.tip = 'Inventory';
-  bagBtn.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22"><path d="M8 7V6a4 4 0 0 1 8 0v1h2.5l1.5 14H4L5.5 7H8zm2 0h4V6a2 2 0 0 0-4 0v1z" fill="currentColor"/></svg>';
+  bagBtn.id = 'bag-btn'; bagBtn.type = 'button'; bagBtn.setAttribute('aria-label', 'Inventory');
+  // a satchel: strap, body, flap and buckle
+  bagBtn.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8.5 8.5V6.6A1.6 1.6 0 0 1 10.1 5h3.8a1.6 1.6 0 0 1 1.6 1.6v1.9"/><path d="M5.2 8.5h13.6a1 1 0 0 1 1 1.1l-.9 9.4a1.5 1.5 0 0 1-1.5 1.4H6.6a1.5 1.5 0 0 1-1.5-1.4l-.9-9.4a1 1 0 0 1 1-1.1z"/><path d="M4.4 12.4c2.2 2.1 5 3 7.6 3s5.4-.9 7.6-3"/><rect x="10.4" y="13.6" width="3.2" height="3.4" rx=".6" fill="currentColor" stroke="none"/></svg>';
+  // the panel buttons read their key from the binds, so a rebind shows in the tip
+  const keyTip = (name, id) => () => `${name} (${Keybinds.label(Keybinds.keyFor(id))})`;
+  Tip.set(bagBtn, keyTip('Inventory', 'bags'));
+  Tip.set($('opt-btn'), keyTip('Options', 'options'));
+  Tip.set($('menu-chip'), keyTip('Options', 'options'));
   bagBtn.addEventListener('click', () => { if (started && !selOpen()) { TalentPanel.close(); Inventory.toggle(); } });
   document.body.appendChild(bagBtn);
   TalentPanel.init({

@@ -15,6 +15,7 @@ kbd { font-family: inherit; font-size: 11px; font-weight: 700; padding: 1px 5px;
 
 /* HUD */
 #hud-tl { position: fixed; left: 16px; top: 14px; pointer-events: none; text-shadow: 0 2px 4px #000a; max-width: 340px; }
+#panel-keys { display: inline-block; margin-top: 4px; padding: 2px 8px; font-size: 11.5px; color: #cfc5ae; background: #0f0d0bc8; border: 1px solid var(--line-soft); border-radius: 3px; }   /* the panel keys in town, under the hero name */
 #hud-tl .town { font-family: var(--fantasy); font-weight: 800; font-size: 26px; color: var(--gold); letter-spacing: 1px; }
 #hero-name { font-size: 14px; margin-top: 2px; }
 #objective { margin-top: 8px; font-size: 13px; line-height: 1.45; background: #0d0b12b8; border: 1px solid #d8b45a55; border-radius: 8px; padding: 8px 10px; color: #e9dfc8; text-shadow: none; }
@@ -82,6 +83,8 @@ ul.abilities .ab-icon.ogcd { border-radius: 50%; }
 .panel header p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
 .close { position: absolute; right: 12px; top: 8px; background: none; border: none; color: var(--muted); font-size: 30px; cursor: pointer; line-height: 1; }
 .close:hover { color: #fff; }
+/* keyboard focus: a thin gold ring (the mouse never shows it) */
+button:focus-visible, select:focus-visible, summary:focus-visible, [tabindex]:focus-visible, input[type=range]:focus-visible, input[type=checkbox]:focus-visible { outline: 1px solid var(--gold); outline-offset: 2px; }
 .panel-body { display: grid; grid-template-columns: 250px 1fr; }
 nav.list { border-right: 1px solid #d8b45a22; padding: 8px 10px 14px; }
 .role-head { font-family: var(--fantasy); font-weight: 700; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; margin: 12px 6px 4px; }
@@ -139,7 +142,7 @@ ul.abilities span { font-size: 13px; color: var(--muted); }
 #join-note { color: var(--muted); font-size: 12px; margin: 6px 0 0; line-height: 1.5; }
 #join-note code { background: #0d0b12; padding: 1px 5px; border-radius: 4px; }
 
-.linkish { margin-top: 14px; background: none; border: none; color: var(--gold); font: inherit; font-size: 13px; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.linkish { margin-top: 10px; background: none; border: none; color: var(--gold); font: inherit; font-size: 13px; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
 .linkish:hover { color: #fff3d8; }
 .linkish:disabled { opacity: .5; cursor: default; }
 
@@ -1140,7 +1143,7 @@ body.link-lost #combat-hud { opacity: .55; }
 #live-meter .lm-need.ahead b em { color: var(--mh); }
 #live-meter .lm-need.behind b { color: #e8b070; }
 /* the meter's switch, beside the menu chip (in a raid) */
-#meter-btn { display: none; position: fixed; left: 92px; bottom: 14px; z-index: 5; width: 27px; height: 27px; padding: 0; place-items: center; color: var(--muted); background: #0d0b12c8; border: 1px solid var(--line-soft); border-radius: 3px; cursor: pointer; }
+#meter-btn { display: none; position: fixed; left: 122px; bottom: 14px; z-index: 5; width: 27px; height: 27px; padding: 0; place-items: center; color: var(--muted); background: #0d0b12c8; border: 1px solid var(--line-soft); border-radius: 3px; cursor: pointer; }
 body.in-raid #meter-btn { display: inline-grid; }
 #meter-btn:hover, #meter-btn.on { color: var(--gold-hi); border-color: var(--gold-dim); }
 /* the results screen: a new best and the death log */
@@ -1193,7 +1196,7 @@ body.in-raid #meter-btn { display: inline-grid; }
 #options h4 { margin: 12px 0 4px; font-family: var(--fantasy); font-size: 10.5px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
 #options .close { background: none; border: 0; color: var(--muted); font-size: 18px; cursor: pointer; }
 #options .kb-note { margin: 0 0 6px; font-size: 11px; color: var(--muted); }
-#options .kb-list { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 14px; }
+#options .kb-list { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 14px; height: 344px; overflow-y: auto; align-content: start; }   /* (a class with extra keys scrolls: the panel keeps one size) */
 #options .kb-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 1px 0; font-size: 12px; color: #e6dcc8; }
 #options .kb-row span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #options .kb-key { min-width: 54px; padding: 2px 8px; font: inherit; font-size: 11.5px; font-weight: 700; color: #f2e6c8; background: #14100c; border: 1px solid #3a2a1c; border-bottom-width: 2px; border-radius: 2px; cursor: pointer; }
@@ -1900,8 +1903,8 @@ body.in-pvp #boss-bar, body.in-pvp #boss-cast, body.in-pvp #lb-gauge, body.in-pv
 @keyframes bb-post-hold { 50% { filter: brightness(1.45); } }
 .bb-post.rec .fill { filter: saturate(.55) brightness(.9); }
 /* What's new: the changelog from the join card */
-#whats-new-btn { display: block; margin: 6px auto 0; }
-#whats-new-btn.unread::after { content: ''; display: inline-block; width: 6px; height: 6px; margin-left: 7px; vertical-align: 2px; border-radius: 50%; background: var(--gold-hi); box-shadow: 0 0 6px var(--gold); }
+#whats-new-btn { display: block; position: relative; margin: 10px auto 0; }
+#whats-new-btn.unread::after { content: ''; position: absolute; left: calc(100% + 7px); top: 50%; width: 6px; height: 6px; margin-top: -3px; border-radius: 50%; background: var(--gold-hi); box-shadow: 0 0 6px var(--gold); }
 #whats-new { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; padding: 16px; background: #050403d0; backdrop-filter: blur(2px); }
 #whats-new .wn-card { position: relative; width: min(640px, 100%); max-height: calc(100vh - 32px); display: flex; flex-direction: column; background: linear-gradient(#1b1713, #12100d); border: 1px solid var(--line); border-top: 1px solid var(--gold-dim); box-shadow: 0 20px 60px #000c; }
 #whats-new header { padding: 18px 22px 12px; border-bottom: 1px solid var(--line-soft); }

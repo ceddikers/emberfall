@@ -7,8 +7,8 @@ const WhatsNew = (() => {
         ['New hero: the Houndmaster', [
           'A melee hunter with two hounds, the first player pets. Where they stand when you strike decides your finisher: one on each flank, one in front and one behind, or both at the boss\'s back.',
           'Pack Leader and Lone Wolf specs, talents, spec trials, a bot that plays him, his own look, sounds, loot, guide, journals and voice.',
-          'Painted portraits for the hero and both specs, twelve painted ability icons and nine painted items. His drawn model now matches the portraits, and Rust, Greyfang and Ash each have their own coat.',
-          'First tuning from your feedback: Call Off on a shorter cooldown, a faster Whistle, finishers from any range, Mount comes back sooner, Pack Leader keeps Call Off, Drive and the Whistle perk reworked, Scent Line limited, and the bot calls the hounds off the red sooner.',
+          'Painted portraits for the hero and both specs, 12 painted ability icons and 9 painted items. His drawn model now matches the portraits, and Rust, Greyfang and Ash each have their own coat.',
+          'First tuning from your feedback: a shorter Call Off cooldown, a faster Whistle, finishers from any range, and a bot that calls the hounds off the red sooner.',
         ]],
         ['The Reaper, rebuilt', [
           'A new kit: a Q string with W finishers that leave Drain, Bind, Death Mark and Thread marks, then Snap, Void Star, Dusk Veil, Blink and a five-swing Arcane Gate.',
@@ -46,12 +46,11 @@ const WhatsNew = (() => {
           'Each party slot has its own colour on its ring, nameplate, ping, frame and minimap dot.',
         ]],
         ['Interface', [
-          'The Esc menu is four tabs (Keys, Interface, Audio, Data) at one fixed size. Class keys show only for that class, key names are shorter, and long notes moved into tooltips.',
+          'Options is four tabs (Keys, Interface, Audio, Data) at one fixed size. Class keys show only for that class, and long notes moved into tooltips.',
           'Your own health bar is on by default.',
           'Spec tabs no longer resize the hero page.',
           'Painted icons for Cue, Strum, Shuttle and Sever.',
           'Every update now loads fresh files, so a deploy never mixes new code with cached old code.',
-          'This page.',
         ]],
       ],
     },
@@ -67,7 +66,7 @@ const WhatsNew = (() => {
     root = document.createElement('div');
     root.id = 'whats-new';
     root.className = 'hidden';
-    root.innerHTML = `<div class="wn-card" role="dialog" aria-label="What's new">
+    root.innerHTML = `<div class="wn-card" role="dialog" aria-modal="true" aria-label="What's new">
       <button class="close" type="button" aria-label="Close" data-tip="Close (Esc)">×</button>
       <header><h2>What's new</h2></header>
       <div class="wn-body">${LOG.map(u => `<article>
@@ -84,6 +83,7 @@ const WhatsNew = (() => {
     if (!root) build();
     root.classList.remove('hidden');
     root.querySelector('.wn-body').scrollTop = 0;
+    root.querySelector('.close').focus();   // (keyboard users land in the dialog, not behind it)
     markSeen();
     if (link) link.classList.remove('unread');
   }

@@ -6,7 +6,7 @@ const Tip = (() => {
   el.id = 'tip'; el.className = 'hidden';
   document.body.appendChild(el);
   const fns = new WeakMap();
-  let cur = null, shown = '', mx = -1, my = -1;
+  let cur = null, shown = '', mx = -1, my = -1, byKey = false;
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
   function owner(t) {
@@ -40,9 +40,19 @@ const Tip = (() => {
     }
     if (cur && !el.classList.contains('hidden')) place();
   }
-  document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; check(); }, { passive: true });
+  document.addEventListener('mousemove', e => { byKey = false; mx = e.clientX; my = e.clientY; check(); }, { passive: true });
   document.addEventListener('mouseleave', () => { mx = -1; hide(); });
   setInterval(check, 250);
+
+  // keyboard focus shows the tip too, at the focused element (mouse focus does not)
+  document.addEventListener('focusin', e => {
+    const t = e.target;
+    if (!t || t.nodeType !== 1 || !t.matches(':focus-visible') || !owner(t)) return;
+    const r = t.getBoundingClientRect();
+    mx = r.left + Math.min(r.width / 2, 40); my = r.bottom - 2; byKey = true;
+    check();
+  });
+  document.addEventListener('focusout', () => { if (byKey) { byKey = false; mx = -1; hide(); } });
 
   function set(node, html) { fns.set(node, html); }
   function hide() { cur = null; shown = ''; el.classList.add('hidden'); }

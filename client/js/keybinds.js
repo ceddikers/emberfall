@@ -13,14 +13,14 @@ const Keybinds = (() => {
     { id: 'resync', def: '', name: 'Resync with the host' },   // (unbound until you choose a key)
     { id: 'bags', def: 'i', name: 'Inventory' }, { id: 'talents', def: 'n', name: 'Talents' },
     { id: 'journal', def: 'j', name: 'Journal' }, { id: 'logbook', def: 'l', name: 'Logbook' }, { id: 'options', def: 'k', name: 'Options' },
-    { id: 'cycle', def: 'tab', name: 'Next enemy (Shift: back)' }, { id: 'hurt', def: '`', name: 'Most hurt ally' }, { id: 'chat', def: 'enter', name: 'Chat' },
+    { id: 'cycle', def: 'tab', name: 'Next enemy' }, { id: 'hurt', def: '`', name: 'Most hurt ally' }, { id: 'chat', def: 'enter', name: 'Chat' },
     { id: 'ally1', def: '1', name: 'Party member 1', not: 'alembist' }, { id: 'ally2', def: '2', name: 'Party member 2', not: 'alembist' },
     { id: 'ally3', def: '3', name: 'Party member 3', not: 'alembist' }, { id: 'ally4', def: '4', name: 'Party member 4', not: 'alembist' },
     // the Alembist's own: the number keys mark the vial Throw takes (main.js), so party selection moves to F1-F4
     ...[1, 2, 3, 4, 5].map(i => ({ id: 'vial' + i, def: String(i), name: `Mark vial ${i}`, cls: 'alembist' })),
     ...[1, 2, 3, 4].map(i => ({ id: 'alemAlly' + i, def: 'f' + i, name: `Party member ${i}`, cls: 'alembist' })),
   ];
-  const CLASS_KEYS = { alembist: { name: 'Alembist', note: 'Only while you play an Alembist: the number keys mark the vial your next Throw takes, and party selection moves to these keys. They never clash with the party keys above.' } };
+  const CLASS_KEYS = { alembist: { name: 'Alembist', note: 'Number keys mark a vial for Throw; the party moves to F1-F4.' } };
   const live = (a, cls) => (!a.cls || a.cls === cls) && a.not !== cls;
   const clash = (a, b) => (a.cls ? live(b, a.cls) : b.cls ? live(a, b.cls) : true);
   // keys the game keeps for itself (chat, targeting, menus)
@@ -70,7 +70,7 @@ const Keybinds = (() => {
   // game's own positioning stay as they are underneath).
   const PIECES = [
     { sel: '#combat-hud', name: 'Hotbar' }, { sel: '#pf-wrap', name: 'Party frames' }, { sel: '#boss-bar', name: 'Boss bar' },
-    { sel: '#raid-left', name: 'Progress' }, { sel: '#live-meter', name: 'Damage meter' }, { id: 'metermode', def: 'b', name: 'Meter: next view' }, { sel: '#waymarks', name: 'Markers' },
+    { sel: '#raid-left', name: 'Progress' }, { sel: '#live-meter', name: 'Damage meter' }, { sel: '#waymarks', name: 'Markers' },
     { sel: '#lb-gauge', name: 'Limit Break' }, { sel: '#minimap', name: 'Minimap' }, { sel: '#target-frame', name: 'Target' }, { sel: '#focus-frame', name: 'Focus' },
   ];
   let layout = {};
@@ -137,7 +137,7 @@ const Keybinds = (() => {
   // game settings shown here (main.js): { get() -> { frames, role, mouseover }, set(key, value) }
   let prefs = null;
   // Resync (main.js requestResync): asks the host for the fight as it stands
-  let resync = null;
+  let resync = null, canResync = () => true, callouts = null, inRaid = () => false;
   const TABS = [['keys', 'Keys'], ['ui', 'Interface'], ['audio', 'Audio'], ['data', 'Data']];
   let tab = 'keys';
   try { const v = localStorage.getItem('emberfall.optionsTab'); if (TABS.some(t => t[0] === v)) tab = v; } catch (e) { /* the first tab */ }
@@ -150,7 +150,7 @@ const Keybinds = (() => {
   function render() {
     // a class's own keys show only while you play that class (CLASS_KEYS)
     panel.querySelector('.kb-list').innerHTML = ACTIONS.map((a, i) => {
-      if (a.cls && a.cls !== heroCls) return '';
+      if (!live(a, heroCls) || (a.id === 'resync' && !canResync())) return '';   // (the other class's keys; Resync for a host or solo player, who always sees the fight as it is)
       const n = a.name || namer(Number(a.id.slice(1))) || `Skill ${Number(a.id.slice(1)) + 1}`;
       const head = a.cls && (i === 0 || ACTIONS[i - 1].cls !== a.cls) && CLASS_KEYS[a.cls] ? `<div class="kb-sub"><b>${esc(CLASS_KEYS[a.cls].name)}</b><span class="kb-note">${esc(CLASS_KEYS[a.cls].note)}</span></div>` : '';
       return `${head}<div class="kb-row"><span>${esc(n)}</span><button type="button" class="kb-key${capturing === a.id ? ' wait' : ''}" data-a="${a.id}">${capturing === a.id ? 'Press a key…' : esc(label(binds[a.id]))}</button></div>`;
@@ -175,26 +175,30 @@ const Keybinds = (() => {
     const k = keyOf(e);
     if (k === 'escape') { capturing = null; render(); return; }
     if (bind(capturing, k)) { capturing = null; render(); }
-    else { const b = panel.querySelector(`[data-a="${capturing}"]`); if (b) b.textContent = `${label(k)} is kept`; }
+    else {
+      const id = capturing, b = panel.querySelector(`[data-a="${id}"]`);
+      if (b) { b.textContent = `${label(k)} is kept`; setTimeout(() => { if (capturing === id && b.isConnected) b.textContent = 'Press a key…'; }, 1500); }
+    }
   }
   function openPanel(opts = {}) {
-    heroCls = opts.cls !== undefined ? opts.cls : heroCls; namer = opts.namer || namer; onChange = opts.onChange || onChange; prefs = opts.prefs || prefs; resync = opts.resync || resync;
+    heroCls = opts.cls !== undefined ? opts.cls : heroCls; namer = opts.namer || namer; onChange = opts.onChange || onChange; prefs = opts.prefs || prefs; resync = opts.resync || resync; canResync = opts.canResync || canResync; callouts = opts.callouts || callouts; inRaid = opts.inRaid || inRaid;
     if (!panel) {
       panel = document.createElement('div');
       panel.id = 'options'; panel.className = 'hidden';
       // four tabs; every page shares one cell, so the panel keeps one size whichever tab is open
-      const vols = [['master', 'Master'], ['sfx', 'Effects'], ['ui', 'Interface'], ['voice', 'Voices'], ['music', 'Music'], ['amb', 'Ambience']];
-      panel.innerHTML = `<header><h3>Options</h3><button type="button" class="close" aria-label="Close">×</button></header>
+      const vols = [['master', 'Master'], ['sfx', 'Effects'], ['ui', 'Menus'], ['voice', 'Voices'], ['music', 'Music'], ['amb', 'Ambience']];
+      panel.innerHTML = `<header><h3>Options</h3><button type="button" class="close" aria-label="Close" data-tip="Close (Esc)">×</button></header>
         <nav class="inv-tabs kb-tabs">${TABS.map(([id, n]) => `<button type="button" data-tab="${id}">${n}</button>`).join('')}</nav>
         <div class="kb-pages">
           <section data-page="keys">
             <div class="kb-list"></div>
             <div class="kb-foot"><button type="button" class="btn2 kb-reset">Reset keys</button><span class="kb-note">Click a key, then press the new one. Taking a key swaps it.</span></div>
+            <p class="kb-note kb-fixed">Alt-drag: ping wheel · Middle-click: ping · Shift + skill: on yourself · Shift + next enemy: back</p>
           </section>
           <section data-page="ui">
             <div class="kb-foot kb-scale"><label for="kb-scale">Interface size</label><input id="kb-scale" type="range" min="80" max="140" step="5"><b class="kb-scale-v"></b></div>
-            <div class="kb-foot"><button type="button" class="btn2 kb-arrange" data-tip="Drag any piece of the HUD where you like it. Best done in a raid, where every piece shows.">Arrange the HUD</button></div>
-            <div class="kb-foot"><button type="button" class="btn2 kb-resync" data-tip="If what you see in a raid looks off, this asks the host for the fight as it stands and redraws it, without leaving. A key can be set for it under Keys.">Resync with the host</button></div>
+            <div class="kb-foot"><button type="button" class="btn2 kb-arrange">Arrange the HUD</button><button type="button" class="btn2 kb-callouts" data-tip="Edit the pings and callouts you send to your party.">Callouts…</button></div>
+            <div class="kb-foot kb-resync-row"><button type="button" class="btn2 kb-resync" data-tip="If what you see in a raid looks off, this asks the host for the fight as it stands and redraws it, without leaving. A key can be set for it under Keys.">Resync with the host</button></div>
             <div class="kb-foot kb-pref"><label for="kb-frames">Party frames</label><select id="kb-frames"><option value="left">In the corner</option><option value="strip">Above your skills</option></select><span class="kb-note kb-frames-note"></span></div>
             <div class="kb-foot kb-pref"><label class="kb-check" data-tip="Point at a party frame or an ally and press a heal: it goes to them. Off: heals go to the ally you selected, or to you."><input type="checkbox" id="kb-mouseover"> Mouseover casting</label></div>
             <div class="kb-foot kb-pref"><label class="kb-check" data-tip="A small bar over your hero in a raid, like the one over your allies."><input type="checkbox" id="kb-selfbar"> Your own health bar</label></div>
@@ -221,11 +225,15 @@ const Keybinds = (() => {
         if (t.dataset.tab) { showTab(t.dataset.tab); render(); return; }
         if (t.classList.contains('kb-reset')) { for (const a of ACTIONS) binds[a.id] = a.def; save(); labels(); onChange(); render(); return; }
         if (t.classList.contains('kb-arrange')) { closePanel(); arrange(true); return; }
+        if (t.classList.contains('kb-callouts')) { closePanel(); if (callouts) callouts(); return; }
         if (t.classList.contains('kb-resync')) { if (resync) resync(); return; }
         if (t.classList.contains('kb-wipe')) {
-          // two presses, the second within five seconds, and a last browser confirm
-          if (!t.dataset.armed || Date.now() - Number(t.dataset.armed) > 5000) { t.dataset.armed = String(Date.now()); t.textContent = 'Press again to delete everything'; t.classList.add('armed'); return; }
-          if (!confirm('Delete every hero, item, gold, journal and setting in this browser and start over?')) { delete t.dataset.armed; t.textContent = 'Delete all data'; t.classList.remove('armed'); return; }
+          // two presses, the second within five seconds (the button disarms itself after that)
+          if (!t.dataset.armed) {
+            t.dataset.armed = '1'; t.textContent = 'Press again to delete everything'; t.classList.add('armed');
+            setTimeout(() => { delete t.dataset.armed; t.textContent = 'Delete all data'; t.classList.remove('armed'); }, 5000);
+            return;
+          }
           try { for (const k of Object.keys(localStorage)) if (k.startsWith('emberfall')) localStorage.removeItem(k); } catch (e) { /* storage unavailable */ }
           location.reload();
           return;
@@ -262,6 +270,9 @@ const Keybinds = (() => {
       panel.querySelector('#kb-captions').checked = !!Sound.get('captions');
       panel.querySelector('#kb-speech').checked = !!Sound.get('speech');
     }
+    panel.querySelector('.kb-resync-row').classList.toggle('hidden', !canResync());
+    panel.querySelector('.kb-arrange').dataset.tip = inRaid() ? 'Drag any piece of the HUD where you like it.' : 'Drag any piece of the HUD where you like it. The boss bar, meter and markers only show in a raid.';
+    panel.querySelector('.kb-callouts').classList.toggle('hidden', !callouts);
     showTab(tab);
     render();
     panel.classList.remove('hidden');

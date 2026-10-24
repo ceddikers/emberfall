@@ -215,7 +215,7 @@ const Pings = (() => {
     if (!panel) {
       panel = document.createElement('div');
       panel.id = 'callouts'; panel.className = 'hidden';
-      panel.innerHTML = `<header><h3>Callouts</h3><button type="button" class="close" aria-label="Close">×</button></header>
+      panel.innerHTML = `<header><h3>Callouts</h3><button type="button" class="close" aria-label="Close" data-tip="Close (Esc)">×</button></header>
         <p class="co-note">The ping wheel's eight slots, clockwise from the top. Images stay in this browser and travel only inside your pings.</p>
         <div class="co-sheet"><button type="button" class="btn2 co-sheet-btn">Load a sheet</button><span class="co-libn"></span><button type="button" class="btn2 co-lib-clear">Clear emotes</button></div>
         <div class="co-list"></div>

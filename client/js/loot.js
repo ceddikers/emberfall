@@ -153,7 +153,7 @@ const Loot = (() => {
       const mine = deps.myItems();
       putting = `<div class="loot-put">${mine.length ? mine.filter(i => !pending.has(i.uid)).map(i => `<button class="lp-item" data-uid="${i.uid}" style="--rc:${RARITY[ITEMS[i.key].rarity].color}"><img src="${deps.iconURL(i.key)}" alt=""></button>`).join('') : '<p class="loot-empty">Nothing to put in (worn gear stays on).</p>'}</div>`;
     }
-    root.innerHTML = `<div class="loot-head"><h4>Spoils</h4>${boss ? `<small>${esc(boss.name)}</small>` : ''}<button class="loot-x" type="button" aria-label="Close">×</button></div>
+    root.innerHTML = `<div class="loot-head"><h4>Spoils</h4>${boss ? `<small>${esc(boss.name)}</small>` : ''}<button class="loot-x" type="button" aria-label="Close" data-tip="Close (Esc)">×</button></div>
       <div class="loot-cards">${cards}</div>
       <div class="loot-foot"><button class="btn2 loot-putbtn" type="button"${ch.items.length >= MAX ? ' disabled data-tip="The chest is full"' : ''}>${ch.putting ? 'Done' : 'Put something in'}</button><small>Take what you like. Put an item in to trade it.</small></div>${putting}`;
     root.classList.remove('hidden');

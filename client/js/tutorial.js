@@ -45,7 +45,7 @@ const Tutorial = (() => {
     if (!panel) {
       panel = document.createElement('div');
       panel.id = 'tutorial'; panel.className = 'hidden';
-      panel.innerHTML = `<header><h3>Tutorial</h3><small>Everything worth knowing before a pull</small><button type="button" class="close" aria-label="Close">×</button></header><div class="tu-body"><nav class="tu-side"></nav><article class="tu-main"></article></div>`;
+      panel.innerHTML = `<header><h3>Tutorial</h3><small>Everything worth knowing before a pull</small><button type="button" class="close" aria-label="Close" data-tip="Close (Esc)">×</button></header><div class="tu-body"><nav class="tu-side"></nav><article class="tu-main"></article></div>`;
       document.body.appendChild(panel);
       panel.addEventListener('mousedown', e => e.stopPropagation());
       panel.addEventListener('click', e => {
