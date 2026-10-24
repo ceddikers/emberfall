@@ -70,7 +70,7 @@ const RaidUI = (() => {
       <div id="countdown" class="hidden"></div>
       <div id="boss-intro" class="hidden"><small></small><b></b><i></i><q></q></div>
       <div id="trial-lore" class="hidden"><b></b><p></p><p></p></div>
-      <div id="down-veil" class="hidden"><span>Down</span><div class="recap"></div></div>
+      <div id="down-veil" class="hidden"><span>Down</span><button id="rez-ask" class="rez-ask hidden" type="button"></button><div class="recap"></div></div>
       <div id="waymarks" class="hidden">${['A', 'B', 'C', 'D', '1', '2', '3', '4'].map(k => `<button type="button" class="wm wm-${/\d/.test(k) ? 'sq' : 'ci'}" data-k="${k}">${k}</button>`).join('')}<button type="button" class="wm wm-clear" data-k="*">${svg('<path d="M3 3l6 6M9 3 3 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>')}</button><button type="button" class="wm wm-pull" data-k="#">${svg('<circle cx="6" cy="6.6" r="4.2" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M6 4.2v2.6l1.6 1M4.6 1.2h2.8" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>')}</button><button type="button" class="wm wm-callouts" data-k="@">${svg('<path d="M2 2.5h8v5H5.5L3 9.5v-2H2Z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>')}</button></div>
       <button id="raid-leave" class="btn2" type="button">Leave raid</button>`;
     document.body.appendChild(root);
@@ -90,6 +90,7 @@ const RaidUI = (() => {
     const wm = $('waymarks');
     wm.addEventListener('mousedown', e => e.stopPropagation());
     wm.addEventListener('click', e => { const b = e.target.closest('.wm'); if (!b) return; if (b.dataset.k === '*') handlers.onWaymark({ all: 'clear' }); else if (b.dataset.k === '@') handlers.onCallouts(); else if (b.dataset.k === '#') handlers.onPullIn(); else handlers.onPlaceMark(b.dataset.k); });
+    $('rez-ask').addEventListener('click', () => { if (handlers.onRezAsk) handlers.onRezAsk(); });
     wm.addEventListener('contextmenu', e => { const b = e.target.closest('.wm'); if (b && !'*@#'.includes(b.dataset.k)) { e.preventDefault(); handlers.onWaymark({ k: b.dataset.k, clear: true }); } });
     for (const b of wm.children) b.dataset.tip = b.dataset.k === '*' ? 'Pick up every waymark' : b.dataset.k === '@' ? 'Callouts: the ping wheel (Alt + drag). Middle-click pings.' : b.dataset.k === '#' ? 'Pull in 5: the boss engages when the count runs out' : `Waymark ${b.dataset.k}: click, then click the floor. Right-click to pick it up.`;
     castFrameDrag();
@@ -297,6 +298,7 @@ const RaidUI = (() => {
       setS(f.cast, casting ? marks.casting.frac : 0);
       f.row.classList.toggle('casting', !!casting);
       const chips = [];
+      if (!p.alive && !p.left && raid.rezAsks && raid.rezAsks[id]) chips.push(`<b class="chip rez" data-tip="Asked for a raise">Raise?</b>`);
       for (const [hid, secs, from] of p.hots || []) {
         const h = HOT_ICON[hid];
         if (h) chips.push(`<b class="chip hot${from === myId ? '' : ' theirs'}" data-tip="${h[2]}: healing over time"><u style="background-image:url(${abilityIcon(h[0], h[1])})"></u>${secs}</b>`);
@@ -323,6 +325,7 @@ const RaidUI = (() => {
     const me = raid.party.get(myId);
     const down = !!me && !me.alive && raid.state === 'live';
     $('down-veil').classList.toggle('hidden', !down);
+    rezAsk(down ? raid : null, myId);
     deathRecap(down ? raid : null, now);
   }
 
@@ -563,6 +566,25 @@ const RaidUI = (() => {
     el.innerHTML = `<h6>${tabs}</h6>${body}<div class="lm-sum"><span>${mmss(ft)}</span><b>${scoreOn ? 'Contribution so far' : `Party ${rate(sumV)}${unit}`}</b></div>${pace}`;
   }
 
+  // ---------------------------------------------------------------- asking for a raise
+  // On the Down screen, while a healer stands: ask them to raise you (main.js askRaise). Once asked it says so, and your
+  // frame carries the ask for everyone until you're back up.
+  let rezKey = '';
+  function rezAsk(raid, myId) {
+    const el = $('rez-ask');
+    const healer = !!raid && !raid.def.trial && !raid.pvp && roster.some(r => r.role === 'healer' && r.id !== myId && (p => p && p.alive && !p.left)(raid.party.get(r.id)));
+    const asked = healer && !!(raid.rezAsks && raid.rezAsks[myId]);
+    const kk = typeof Keybinds !== 'undefined' ? Keybinds.label(Keybinds.keyFor('rezask')) : 'H';
+    const key = !healer ? '' : asked ? 'asked' : 'ask:' + kk;
+    if (key === rezKey) return;
+    rezKey = key;
+    el.classList.toggle('hidden', !healer);
+    el.classList.toggle('asked', asked);
+    el.disabled = asked;
+    el.innerHTML = asked ? 'Raise asked for' : `Ask for a raise${kk !== '—' ? ` <kbd>${esc(kk)}</kbd>` : ''}`;
+    Tip.set(el, asked ? '<b>Raise asked for</b>Your healers see it on your frame.' : '<b>Ask for a raise</b>Your healers see it on your frame; a healer bot raises you first once it can stand for the cast.');
+  }
+
   // ---------------------------------------------------------------- the death recap
   // On the Down screen: the hits in the last 10 s before you fell, the killing blow on top. Each is named by the move it
   // came from; hits that aren't part of a move are named by what they are.
@@ -718,16 +740,18 @@ const RaidUI = (() => {
     [...el.children].forEach((ch, i) => Tip.set(ch, items[i].tip));
   }
 
-  // threat on the boss as a share of the top (the tank at 100%); your row is lit, and a non-tank at 90% or more of
-  // the tank's threat turns amber
+  // threat on the boss as a share of the top, among those he can turn to: the tanks while one stands (fight.js tank():
+  // nobody else can pull him, so with one tank there's nothing to show), everyone left once they're all down. Your row
+  // is lit; a tank at 90% or more of the one he's on turns amber (he'd swap).
   function threatMeter(raid, myId) {
-    const el = $('threat-meter'), rows = [];
-    for (const r of roster) { const p = raid.party.get(r.id); if (p && p.alive && !p.left) rows.push({ r, th: p.threat || 0 }); }
+    const el = $('threat-meter'), all = [];
+    for (const r of roster) { const p = raid.party.get(r.id); if (p && p.alive && !p.left) all.push({ r, th: p.threat || 0 }); }
+    const tanks = all.filter(x => x.r.role === 'tank'), rows = tanks.length ? tanks : all;
     const top = rows.reduce((m, x) => Math.max(m, x.th), 0);
-    const tankTh = rows.reduce((m, x) => (x.r.role === 'tank' ? Math.max(m, x.th) : m), 0);
     const show = raid.state === 'live' && rows.length >= 2 && top > 0;
     rows.sort((a, b) => b.th - a.th || a.r.id - b.r.id);
-    const view = show ? rows.map(x => ({ x, pct: Math.round(x.th / top * 100), warn: x.r.role !== 'tank' && tankTh > 0 && x.th >= tankTh * 0.9 })) : [];
+    const onId = raid.boss && raid.boss.tg;
+    const view = show ? rows.map(x => ({ x, pct: Math.round(x.th / top * 100), warn: x.r.id !== onId && x.th >= top * 0.9 })) : [];
     const key = view.map(v => `${v.x.r.id}:${v.pct}:${v.warn ? 1 : 0}`).join('|');
     if (key === threatKey) return;
     threatKey = key;

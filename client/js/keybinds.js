@@ -9,6 +9,7 @@ const Keybinds = (() => {
     { id: 's0', def: 'q' }, { id: 's1', def: 'w' }, { id: 's2', def: 'e' }, { id: 's3', def: 'r' },
     { id: 's4', def: 'd' }, { id: 's5', def: 'f' }, { id: 's6', def: ' ', name: 'Dash' }, { id: 's7', def: 't', name: 'Ultimate' },
     { id: 'focus', def: 'v', name: 'Set focus' }, { id: 'limit', def: 'g', name: 'Limit Break' }, { id: 'meter', def: 'm', name: 'Damage meter' }, { id: 'metermode', def: 'b', name: 'Meter: next view' },
+    { id: 'rezask', def: 'h', name: 'Ask for a raise (while down)' },
     { id: 'bags', def: 'i', name: 'Inventory' }, { id: 'talents', def: 'n', name: 'Talents' },
     { id: 'journal', def: 'j', name: 'Journal' }, { id: 'logbook', def: 'l', name: 'Logbook' }, { id: 'options', def: 'k', name: 'Options' },
     { id: 'cycle', def: 'tab', name: 'Next enemy (Shift: back)' }, { id: 'hurt', def: '`', name: 'Select most hurt ally' }, { id: 'chat', def: 'enter', name: 'Chat' },

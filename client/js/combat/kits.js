@@ -630,8 +630,9 @@ const KITS = {
         fx: { type: 'zone', style: 'holy', color: '#ffe680', r: 160, range: 0, dur: 3 },
       },
       {
-        id: 'intervene', name: 'Intervention', type: 'gcd', target: 'ally', cast: 2.5, cd: 30, anim: 'big', allowDead: true,
-        desc: '2.5s cast: bring a fallen ally back to life, or heal a living one for {h:1200}.',
+        id: 'intervene', name: 'Intervention', type: 'gcd', target: 'ally', cd: 30, anim: 'big', allowDead: true,
+        cast: k => (targetDown(k, 'intervene') ? RAISE_CAST : 2.5),   // (every raise takes RAISE_CAST)
+        desc: '5s cast: bring a fallen ally back to life. On a living one it is a 2.5s cast that heals them for {h:1200}.',
         glow: k => targetDown(k, 'intervene'),
         effect(k, t) { if (k.env.isDead(t)) k.raise(t, { ab: this }); else k.heal(t, 1200, { ab: this }); },
         fx: { type: 'zone', style: 'pillar', color: '#fff6c8', r: 50, range: 0, dur: 1.6, onTarget: true },
@@ -738,8 +739,8 @@ const KITS = {
       },
       {
         id: 'rebirth', name: 'Rebirth', type: 'gcd', target: 'ally', cd: 30, anim: 'big', allowDead: true, allyBuff: 'wildheart',
-        cast: k => (groveRebirthDead(k) ? 2.5 : 0),
-        desc: '2.5s cast: bring a fallen ally back. On a living ally it is instant: it heals them for {h:1100} and fills them with Wildheart, 10% more damage dealt for 12s. Spend it on a damage dealer in the burst, or keep it for the raise.',
+        cast: k => (groveRebirthDead(k) ? RAISE_CAST : 0),
+        desc: '5s cast: bring a fallen ally back. On a living ally it is instant: it heals them for {h:1100} and fills them with Wildheart, 10% more damage dealt for 12s. Spend it on a damage dealer in the burst, or keep it for the raise.',
         glow: k => groveRebirthDead(k),
         effect(k, t) { if (k.env.isDead(t)) k.raise(t, { ab: this }); else { k.heal(t, 1100, { ab: this }); k.allyBuff(t, 'wildheart', { ab: this }); } },
         fx: { type: 'zone', style: 'roots', color: '#a8ff9a', r: 50, range: 0, dur: 1.6, onTarget: true },
@@ -826,8 +827,8 @@ const KITS = {
       },
       {
         id: 'recall', name: 'Recall', type: 'gcd', target: 'ally', cd: 30, anim: 'big', allowDead: true,
-        cast: k => (k.talent('chronomancer_lastmoment') && chronoLate(k) ? 0 : 2.5),   // (Last Moment, a talent)
-        desc: '2.5s cast: bring a fallen ally back, or heal a living one for {h:1400}.',
+        cast: k => (k.talent('chronomancer_lastmoment') && chronoLate(k) ? 0 : targetDown(k, 'recall') ? RAISE_CAST : 2.5),   // (Last Moment, a talent)
+        desc: '5s cast: bring a fallen ally back. On a living one it is a 2.5s cast that heals them for {h:1400}.',
         glow: k => targetDown(k, 'recall'),
         effect(k, t) { if (k.env.isDead(t)) { k.raise(t, { ab: this }); chronoSecondChance(k, this, t); } else k.heal(t, 1400, { ab: this }); },
         fx: { type: 'ring', style: 'rewind', color: '#9ff4ff', r: 50, onTarget: true },
@@ -852,6 +853,8 @@ function castHold(k, on, dur, max) { const b = bossNow(k); return on && b && b.c
 const hpOf = k => (k.env.hpFrac ? k.env.hpFrac() : 1);
 const abBase = (k, id) => k.abilities.find(a => k.baseId(a) === id);
 // is the ally this move would land on fallen? (a healer's raise glows then: Intervention, Recall, Rebirth)
+// a raise's cast, for every class (a heal from the same button on a living ally keeps its own)
+const RAISE_CAST = 5;
 function targetDown(k, id) { const ab = abBase(k, id), t = ab && k.env.target(ab); return typeof t === 'number' && !!k.env.isDead(t); }
 // a move that moves you (main.js kitMove): 'back' (away from the enemy), 'forward', 'ally' (toward ev.to), 'point' (x, y)
 function kitMove(k, where, o = {}) { k.env.emit(Object.assign({ type: 'teleport', where }, o)); }
@@ -1361,7 +1364,7 @@ function clericTick(k) {
 // ----------------------------------------------------------------- Grovekeeper
 // Bloom from each Thornlash tick (grovekeeper onDamage): keeping the thorns up feeds the heal loop
 const GROVE_THORN_BLOOM = 2, GROVE_THORN_FEED = 1, GROVE_DRIFT = 0.9;   // (a Wrath feeds the thorns 1s; Bloom on someone above 90% drifts to the most hurt)
-// is Rebirth's target fallen? (then it's the 2.5s raise, and it glows; on the living it's instant)
+// is Rebirth's target fallen? (then it's the 5s raise, and it glows; on the living it's instant)
 const groveRebirthDead = k => targetDown(k, 'rebirth');
 function groveGain(k, n) {
   const over = (k.g.bloom || 0) + n - 100;
@@ -1539,7 +1542,7 @@ const DASH = { charges: 2, cd: 12 };
 // name: the taunt's name (the fixation icon under the boss bar shows it); icon: the icon that fixation wears.
 const TAUNT = {
   cd: 20, range: 500, lock: 0.6,
-  hold: 'your threat jumps to 10% above the highest, and the boss stays on you for 3s whatever anyone else does (an add, for 6s)',
+  hold: 'your threat jumps to 10% above the highest, and the boss stays on you for 3s whatever anyone else does (an add, for 6s). The boss never leaves a standing tank for anyone else, so on him it hands him between tanks',
   bastion: {
     name: 'Challenge', icon: 'banner',
     desc: 'The challenge steadies you like a Perfect Block: +10 Resolve, and your next Blade Chain counters for +150.',

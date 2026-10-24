@@ -809,9 +809,9 @@ const BotAI = {
     return best;
   },
 
-  // Tanks: what to taunt right now, if anything: the boss when it's on someone who isn't a tank, otherwise an add in
-  // reach that's chewing on someone else. An add only gets the taunt while nobody is close to pulling the boss, so the
-  // taunt is still there when the boss needs it.
+  // Tanks: what to taunt right now, if anything: the boss when it's on someone who isn't a tank (only while no tank
+  // stood: fight.js tank()), otherwise an add in reach that's chewing on someone else. Nobody else can pull the boss off
+  // a standing tank, so damage dealers' threat never holds the taunt back.
   tauntTarget(bot, view) {
     if (bot.role !== 'tank' || typeof TAUNT === 'undefined') return null;
     const al = view.players.filter(p => p.alive), byId = id => al.find(p => p.id === id);
@@ -819,34 +819,9 @@ const BotAI = {
     const reach = (x, y, r) => Math.hypot(x - bot.x, y - bot.y) - r <= TAUNT.range;
     const b = view.boss;
     if (!b.untargetable && view.bossTarget != null && view.bossTarget !== bot.id && notTank(view.bossTarget) && reach(b.x, b.y, FIGHT.BOSS_R)) return 'boss';
-    const me = byId(bot.id);
-    if (!me) return null;
-    // the boss's next move is about to start: a tankbuster can hide in any step (Titan Fist inside a Chain Lightning) and is
-    // aimed at whoever the boss is on when its cast STARTS, so with a damage dealer close behind take the lead now, rather
-    // than taunt back after the blow is aimed
-    const nb = (view.next || [])[0];
-    if (nb && nb[1] < 2.2 && !b.untargetable && !view.bossCast && reach(b.x, b.y, FIGHT.BOSS_R) && al.some(p => p.role !== 'tank' && p.threat > me.threat * 0.85)) { bot.tauntPre = true; return 'boss'; }
-    // still on us but a damage dealer is right behind (the threat list shows it): taunt before it turns, not after
-    if (!b.untargetable && view.bossTarget === bot.id && reach(b.x, b.y, FIGHT.BOSS_R) && al.some(p => p.role !== 'tank' && p.threat > me.threat * 0.93)) return 'boss';
-    if (al.some(p => p.role !== 'tank' && p.threat > me.threat * 0.85)) return null;
+    if (!byId(bot.id)) return null;
     for (const a of view.adds || []) if (a.target != null && a.target !== bot.id && notTank(a.target) && !(a.fix && a.fix.until > view.t) && reach(a.x, a.y, a.r)) return a.id;
     return null;
-  },
-  // a damage dealer's threat against the tank's (the threat list): 'ult' when an Ultimate's burst would tip it over,
-  // 'stop' when the next hits would take the boss off the tank. Nothing while the tank is down or it's on an add.
-  threatTight(bot, view) {
-    if (bot.role !== 'dps' || view.boss.untargetable || (bot.wantEnemy && bot.wantEnemy !== 'hold')) return null;
-    const al = view.players.filter(p => p.alive && !p.left), me = al.find(p => p.id === bot.id);
-    const tanks = al.filter(p => p.role === 'tank');
-    if (!me || !tanks.length) return null;
-    const T = Math.max(...tanks.map(p => p.threat));
-    // (easing off only while every tank's taunt is spent: with one ready, the tank takes it back itself)
-    const spent = !view.tauntAt || tanks.every(p => view.t - view.tauntAt(p.id) < 19);
-    // the boss's next move starts in a moment (a tankbuster may be in it, aimed at whoever he is on): with the taunt spent,
-    // nobody in reach of the lead adds to it
-    const nb = (view.next || [])[0];
-    if (nb && nb[1] < 2.5 && spent && me.threat > T * 0.88) return 'stop';
-    return me.threat > T * 0.97 && spent ? 'stop' : me.threat > T * 0.8 ? 'ult' : null;
   },
   // Skitterra's Eightfold Lunge, planned through: her lit legs give every strike (a cone and its opposite, turning 45
   // degrees a step) and the moment it lands, so work out a path round her that is clear of each strike as it lands and
@@ -946,8 +921,6 @@ const BotAI = {
     const t = view.t, held = t - (bot.ultFullAt ?? (bot.ultFullAt = t));
     if (k.cast) return false;
     // (ult.botOk: the class's own "worth pressing now", e.g. Focus pooled or a swing stored; ignored past 30s held)
-    // (a burst with the threat lead thin would turn the boss: wait for the tank to pull ahead, unless it's nearly dead)
-    if (bot.role === 'dps' && ctx.bossFrac > 0.04 && held < 25 && this.threatTight(bot, view) === 'stop') return false;
     if (bot.role === 'dps') return (!k.ult.botOk || k.ult.botOk(k) || held > 30) && (ctx.mods.dmg > 0 || ctx.dpsCheck || ctx.bossFrac < 0.15 || held > 20 || !!(k.ult.burst && k.has(k.ult.burst)) || !!(view.posture && view.posture[2] > 0.5));   // (a Kenseier's Break is the party's window: cash in)
     const tid = bot.role === 'tank' && bot.cls && bot.cls.id;
     const onMe = m => (m.target ?? m.follow) == null || (m.target ?? m.follow) === bot.id;
@@ -996,21 +969,24 @@ const BotAI = {
     if (bot.cls.id === 'threadweaver') return BotAI.threadweaver(bot, k, view);   // keeps a web (classes-c, below)
     if (bot.cls.id === 'tidecaller') return BotAI.tidecaller(bot, k, view);   // rides the tide (class 20, below)
     if (bot.cls.id === 'lanternkeeper') return BotAI.lanternkeeper(bot, k, view);   // lights the floor where the party stands (class 21, below)
-    // a damage dealer about to pull the boss off the tank eases off for a moment (the threat fades; the tank pulls ahead)
-    if (BotAI.threatTight(bot, view) === 'stop') return null;
     // healers: raise, then keep people up
     if (bot.role === 'healer') {
       if (dead.length) {
-        // who first: a human, then a healer, then a tank
-        const first = dead.slice().sort((a, b) => (b.id < 1000) - (a.id < 1000) || (b.role === 'healer') - (a.role === 'healer') || (b.role === 'tank') - (a.role === 'tank'))[0];
+        // who first: whoever asked for it from the Down screen, then a human, then a healer, then a tank
+        const asked = BotAI.raiseFirst(dead, view);
+        const first = asked || dead.slice().sort((a, b) => (b.id < 1000) - (a.id < 1000) || (b.role === 'healer') - (a.role === 'healer') || (b.role === 'tank') - (a.role === 'tank'))[0];
         const r = k.abilities.findIndex(a => a.allowDead && a.type === 'gcd');
         // a raise is a long cast, and a healer shuffling after the boss is nearly always moving: rather than wait for a
         // still moment that never comes, stop and cast it whenever standing here is about as safe as where it's headed
         // (raid-host holds the bot still until stillUntil, and lets it go the moment that stops being true). Not while
-        // someone still standing is about to drop: keep them up first.
-        if (r >= 0 && readyIdx(r) && !(hurt[0] && hurt[0].f < 0.35)) {
+        // someone still standing is about to drop: keep them up first (an asked-for raise waits only for someone lower).
+        // (the target first: a raise's cast time can depend on who it's aimed at, kits.js targetDown)
+        if (r >= 0 && readyIdx(r) && !(hurt[0] && hurt[0].f < (asked ? 0.25 : 0.35))) {
+          const was = bot.healTarget;
+          bot.healTarget = first.id;
           const ct = k.castTime(ab(r)) || 0;
-          if (!ct || BotAI.stillOk(bot, view)) { bot.healTarget = first.id; if (ct) bot.stillUntil = view.t + ct + 0.15; return r; }
+          if (!ct || BotAI.stillOk(bot, view)) { if (ct) bot.stillUntil = view.t + ct + 0.15; bot.raiseFor = { id: first.id, until: view.t + ct + 0.5 }; return r; }
+          bot.healTarget = was;
         }
         const rw = idx('rewind');
         if (rw >= 0 && readyIdx(rw)) { bot.healTarget = first.id; return rw; }
@@ -1371,7 +1347,7 @@ BotAI.alembist = function (bot, k, view) {
   // a fallen ally and a Draught (or anything that raises) ready to go: throw it on them
   if (dead.length && k.now >= k.g.raiseAt) {
     const ri = vials.findIndex(v => ['DD', 'DQ', 'DDD'].includes(v.r));
-    if (ri >= 0) return throwAt(ri, dead[0].id);
+    if (ri >= 0) return throwAt(ri, (BotAI.raiseFirst(dead, view) || dead[0]).id);
   }
   // pick the vial to throw now, if any: the bot's own choice (players mark theirs by hand; Throw alone takes the oldest)
   const cands = vials.map((v, i) => i);
@@ -1487,6 +1463,11 @@ BotAI.partnersOf = function (view, id) {
   const out = new Set();
   for (const th of view.threads || []) { if (th.a === id) out.add(th.b); else if (th.b === id) out.add(th.a); }
   return out;
+};
+// the fallen player a healer bot raises first: the earliest who asked for it from the Down screen (raid-host rezAsk), or null
+BotAI.raiseFirst = function (dead, view) {
+  for (const id of view.rezAsks || []) { const p = dead.find(q => q.id === id); if (p) return p; }
+  return null;
 };
 // standing where it is costs the bot little more than walking to its planned spot (the planner's own danger score, which
 // knows every mechanic): safe enough to stand still for a cast

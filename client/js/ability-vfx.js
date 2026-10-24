@@ -6268,7 +6268,7 @@ function windLaneBoost(x, y, vx, vy, now) {
     for (let i = 0; i < 10; i++) { const a = rand(0, TAU), d = rand(30, 150); V.spawn({ x: c.x + Math.cos(a) * d, y: c.y + Math.sin(a) * d * 0.6, z: 0, vz: rand(260, 380), life: 0.5, size: 9, color: i % 3 ? '#ffe0a0' : CHRONO_HASTE, stretch: 5 }); }
     const w = c.tent; if (w && w !== ent) c.later(0.15, () => chronoQuickMark(w)); else chronoQuickMark(ent);
   };
-  // Recall (2.5s cast: raise, or a big heal): time runs back on the ally. A small dial spins backwards under them,
+  // Recall (5s cast to raise, 2.5s for a big heal): time runs back on the ally. A small dial spins backwards under them,
   // ring arrows close in, a shaft of time-light falls and their afterimage snaps back into them with a white burst
   ABILITY_VFX.chronomancer.recall = c => {
     const w = c.tent || { x: c.tx, y: c.ty }, follow = c.tent || null;
