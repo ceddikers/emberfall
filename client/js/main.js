@@ -2349,6 +2349,7 @@
   // Options (K): keys and the HUD (keybinds.js)
   function openOptions() {
     Keybinds.openPanel({
+      cls: player.cls ? player.cls.id : null,
       namer: i => (i < 6 && actor && actor.abilities[i] ? actor.abilities[i].name : i === 7 && actor && actor.kit.ult ? actor.kit.ult.name : null),
       onChange: () => { document.querySelectorAll('#ability-row .slot').forEach(el => { const k = el.querySelector('kbd'); if (k) k.textContent = SLOT_KEYS[Number(el.dataset.i)]; }); updateHelp(); },
       prefs: player.cls ? {

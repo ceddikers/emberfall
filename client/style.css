@@ -1195,9 +1195,9 @@ body.in-raid #meter-btn { display: inline-grid; }
 #options .close { background: none; border: 0; color: var(--muted); font-size: 18px; cursor: pointer; }
 #options .kb-note { margin: 0 0 6px; font-size: 11px; color: var(--muted); }
 #options .kb-list { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 14px; }
-#options .kb-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 2px 0; font-size: 12px; color: #e6dcc8; }
+#options .kb-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 1px 0; font-size: 12px; color: #e6dcc8; }
 #options .kb-row span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-#options .kb-key { min-width: 54px; padding: 3px 8px; font: inherit; font-size: 11.5px; font-weight: 700; color: #f2e6c8; background: #14100c; border: 1px solid #3a2a1c; border-bottom-width: 2px; border-radius: 2px; cursor: pointer; }
+#options .kb-key { min-width: 54px; padding: 2px 8px; font: inherit; font-size: 11.5px; font-weight: 700; color: #f2e6c8; background: #14100c; border: 1px solid #3a2a1c; border-bottom-width: 2px; border-radius: 2px; cursor: pointer; }
 #options .kb-key:hover { border-color: #c89a5a; }
 #options .kb-key.wait { color: #e8c15a; border-color: #e8c15a; font-weight: 500; }
 #options .kb-sub { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 2px; margin: 8px 0 2px; padding-top: 8px; border-top: 1px solid #2a1f15; }
@@ -1205,6 +1205,12 @@ body.in-raid #meter-btn { display: inline-grid; }
 #options .kb-sub .kb-note { margin: 0; }
 #options .kb-foot { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
 #options .kb-foot .kb-note { margin: 0; }
+/* the tabs: every page shares one cell, so the panel keeps the size of the tallest page whichever tab is open */
+#options .kb-tabs { margin: 8px 0 10px; }
+#options .kb-pages { display: grid; }
+#options .kb-pages > section { grid-area: 1 / 1; align-self: start; display: grid; gap: 10px; align-content: start; }
+#options .kb-pages > section > .kb-foot, #options .kb-pages > section > .kb-note { margin: 0; }
+#options .kb-pages > section.off { visibility: hidden; pointer-events: none; }
 /* arranging the HUD */
 .hud-ghost { position: fixed; z-index: 30; border: 1px dashed #e8c15a; background: #e8c15a14; cursor: move; }
 .hud-ghost.hidden { display: none; }

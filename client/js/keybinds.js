@@ -9,15 +9,15 @@ const Keybinds = (() => {
     { id: 's0', def: 'q' }, { id: 's1', def: 'w' }, { id: 's2', def: 'e' }, { id: 's3', def: 'r' },
     { id: 's4', def: 'd' }, { id: 's5', def: 'f' }, { id: 's6', def: ' ', name: 'Dash' }, { id: 's7', def: 't', name: 'Ultimate' },
     { id: 'focus', def: 'v', name: 'Set focus' }, { id: 'limit', def: 'g', name: 'Limit Break' }, { id: 'meter', def: 'm', name: 'Damage meter' }, { id: 'metermode', def: 'b', name: 'Meter: next view' },
-    { id: 'rezask', def: 'h', name: 'Ask for a raise (while down)' },
+    { id: 'rezask', def: 'h', name: 'Ask for a raise' },
     { id: 'bags', def: 'i', name: 'Inventory' }, { id: 'talents', def: 'n', name: 'Talents' },
     { id: 'journal', def: 'j', name: 'Journal' }, { id: 'logbook', def: 'l', name: 'Logbook' }, { id: 'options', def: 'k', name: 'Options' },
-    { id: 'cycle', def: 'tab', name: 'Next enemy (Shift: back)' }, { id: 'hurt', def: '`', name: 'Select most hurt ally' }, { id: 'chat', def: 'enter', name: 'Chat' },
-    { id: 'ally1', def: '1', name: 'Select party member 1', not: 'alembist' }, { id: 'ally2', def: '2', name: 'Select party member 2', not: 'alembist' },
-    { id: 'ally3', def: '3', name: 'Select party member 3', not: 'alembist' }, { id: 'ally4', def: '4', name: 'Select party member 4', not: 'alembist' },
+    { id: 'cycle', def: 'tab', name: 'Next enemy (Shift: back)' }, { id: 'hurt', def: '`', name: 'Most hurt ally' }, { id: 'chat', def: 'enter', name: 'Chat' },
+    { id: 'ally1', def: '1', name: 'Party member 1', not: 'alembist' }, { id: 'ally2', def: '2', name: 'Party member 2', not: 'alembist' },
+    { id: 'ally3', def: '3', name: 'Party member 3', not: 'alembist' }, { id: 'ally4', def: '4', name: 'Party member 4', not: 'alembist' },
     // the Alembist's own: the number keys mark the vial Throw takes (main.js), so party selection moves to F1-F4
     ...[1, 2, 3, 4, 5].map(i => ({ id: 'vial' + i, def: String(i), name: `Mark vial ${i}`, cls: 'alembist' })),
-    ...[1, 2, 3, 4].map(i => ({ id: 'alemAlly' + i, def: 'f' + i, name: `Select party member ${i}`, cls: 'alembist' })),
+    ...[1, 2, 3, 4].map(i => ({ id: 'alemAlly' + i, def: 'f' + i, name: `Party member ${i}`, cls: 'alembist' })),
   ];
   const CLASS_KEYS = { alembist: { name: 'Alembist', note: 'Only while you play an Alembist: the number keys mark the vial your next Throw takes, and party selection moves to these keys. They never clash with the party keys above.' } };
   const live = (a, cls) => (!a.cls || a.cls === cls) && a.not !== cls;
@@ -132,11 +132,22 @@ const Keybinds = (() => {
   }
 
   // ---------------------------------------------------------------- the Options panel
-  let panel = null, capturing = null, namer = () => null, onChange = () => {};
+  let panel = null, capturing = null, namer = () => null, onChange = () => {}, heroCls = null;
   // game settings shown here (main.js): { get() -> { frames, role, mouseover }, set(key, value) }
   let prefs = null;
+  const TABS = [['keys', 'Keys'], ['ui', 'Interface'], ['audio', 'Audio'], ['data', 'Data']];
+  let tab = 'keys';
+  try { const v = localStorage.getItem('emberfall.optionsTab'); if (TABS.some(t => t[0] === v)) tab = v; } catch (e) { /* the first tab */ }
+  function showTab(id) {
+    tab = id; capturing = null;
+    try { localStorage.setItem('emberfall.optionsTab', id); } catch (e) { /* not remembered */ }
+    panel.querySelectorAll('[data-tab]').forEach(b => b.classList.toggle('on', b.dataset.tab === id));
+    panel.querySelectorAll('[data-page]').forEach(p => p.classList.toggle('off', p.dataset.page !== id));
+  }
   function render() {
+    // a class's own keys show only while you play that class (CLASS_KEYS)
     panel.querySelector('.kb-list').innerHTML = ACTIONS.map((a, i) => {
+      if (a.cls && a.cls !== heroCls) return '';
       const n = a.name || namer(Number(a.id.slice(1))) || `Skill ${Number(a.id.slice(1)) + 1}`;
       const head = a.cls && (i === 0 || ACTIONS[i - 1].cls !== a.cls) && CLASS_KEYS[a.cls] ? `<div class="kb-sub"><b>${esc(CLASS_KEYS[a.cls].name)}</b><span class="kb-note">${esc(CLASS_KEYS[a.cls].note)}</span></div>` : '';
       return `${head}<div class="kb-row"><span>${esc(n)}</span><button type="button" class="kb-key${capturing === a.id ? ' wait' : ''}" data-a="${a.id}">${capturing === a.id ? 'Press a key…' : esc(label(binds[a.id]))}</button></div>`;
@@ -164,28 +175,37 @@ const Keybinds = (() => {
     else { const b = panel.querySelector(`[data-a="${capturing}"]`); if (b) b.textContent = `${label(k)} is kept`; }
   }
   function openPanel(opts = {}) {
-    namer = opts.namer || namer; onChange = opts.onChange || onChange; prefs = opts.prefs || prefs;
+    heroCls = opts.cls !== undefined ? opts.cls : heroCls; namer = opts.namer || namer; onChange = opts.onChange || onChange; prefs = opts.prefs || prefs;
     if (!panel) {
       panel = document.createElement('div');
       panel.id = 'options'; panel.className = 'hidden';
+      // four tabs; every page shares one cell, so the panel keeps one size whichever tab is open
+      const vols = [['master', 'Master'], ['sfx', 'Effects'], ['ui', 'Interface'], ['voice', 'Voices'], ['music', 'Music'], ['amb', 'Ambience']];
       panel.innerHTML = `<header><h3>Options</h3><button type="button" class="close" aria-label="Close">×</button></header>
-        <h4>Keys</h4><p class="kb-note">Click a key, then press the new one (a mouse's side buttons work too). Taking a key another action had swaps them.</p>
-        <div class="kb-list"></div>
-        <div class="kb-foot"><button type="button" class="btn2 kb-reset">Reset keys</button></div>
-        <h4>Interface</h4>
-        <div class="kb-foot"><button type="button" class="btn2 kb-arrange">Arrange the HUD</button><span class="kb-note">Best done in a raid, where every piece shows.</span></div>
-        <div class="kb-foot kb-scale"><label for="kb-scale">Interface size</label><input id="kb-scale" type="range" min="80" max="140" step="5"><b class="kb-scale-v"></b></div>
-        <h4>Party and healing</h4>
-        <div class="kb-foot kb-pref"><label for="kb-frames">Party frames</label><select id="kb-frames"><option value="left">In the corner</option><option value="strip">Above your skills</option></select><span class="kb-note kb-frames-note"></span></div>
-        <div class="kb-foot kb-pref"><label class="kb-check"><input type="checkbox" id="kb-mouseover"> Mouseover casting</label><span class="kb-note">Point at a party frame or an ally and press a heal: it goes to them. Off: heals go to the ally you selected, or to you.</span></div>
-        <div class="kb-foot kb-pref"><label class="kb-check"><input type="checkbox" id="kb-selfbar"> Your own health bar</label><span class="kb-note">A small bar over your hero in a raid, like the one over your allies.</span></div>
-        <h4>Audio</h4>
-        ${[['master', 'Master'], ['sfx', 'Effects'], ['ui', 'Interface'], ['voice', 'Voices'], ['music', 'Music'], ['amb', 'Ambience']].map(([k, n]) => `<div class="kb-foot kb-scale kb-vol"><label for="kb-vol-${k}">${n}</label><input id="kb-vol-${k}" type="range" min="0" max="100" step="5" data-vol="${k}"><b></b></div>`).join('')}
-        <div class="kb-foot"><label class="kb-check"><input type="checkbox" id="kb-mute"> Mute all sound</label></div>
-        <div class="kb-foot"><label class="kb-check"><input type="checkbox" id="kb-captions"> Subtitles for voice lines</label></div>
-        <div class="kb-foot"><label class="kb-check"><input type="checkbox" id="kb-speech"> Use device speech when no voice file exists</label><span class="kb-note">Your browser's own voice: it sounds robotic.</span></div>
-        <h4>Your data</h4>
-        <div class="kb-foot"><button type="button" class="btn2 kb-wipe">Delete all data</button><span class="kb-note">Heroes, gear, gold, journals, progress and settings in this browser. It can't be undone.</span></div>`;
+        <nav class="inv-tabs kb-tabs">${TABS.map(([id, n]) => `<button type="button" data-tab="${id}">${n}</button>`).join('')}</nav>
+        <div class="kb-pages">
+          <section data-page="keys">
+            <div class="kb-list"></div>
+            <div class="kb-foot"><button type="button" class="btn2 kb-reset">Reset keys</button><span class="kb-note">Click a key, then press the new one. Taking a key swaps it.</span></div>
+          </section>
+          <section data-page="ui">
+            <div class="kb-foot kb-scale"><label for="kb-scale">Interface size</label><input id="kb-scale" type="range" min="80" max="140" step="5"><b class="kb-scale-v"></b></div>
+            <div class="kb-foot"><button type="button" class="btn2 kb-arrange" data-tip="Drag any piece of the HUD where you like it. Best done in a raid, where every piece shows.">Arrange the HUD</button></div>
+            <div class="kb-foot kb-pref"><label for="kb-frames">Party frames</label><select id="kb-frames"><option value="left">In the corner</option><option value="strip">Above your skills</option></select><span class="kb-note kb-frames-note"></span></div>
+            <div class="kb-foot kb-pref"><label class="kb-check" data-tip="Point at a party frame or an ally and press a heal: it goes to them. Off: heals go to the ally you selected, or to you."><input type="checkbox" id="kb-mouseover"> Mouseover casting</label></div>
+            <div class="kb-foot kb-pref"><label class="kb-check" data-tip="A small bar over your hero in a raid, like the one over your allies."><input type="checkbox" id="kb-selfbar"> Your own health bar</label></div>
+          </section>
+          <section data-page="audio">
+            ${vols.map(([k, n]) => `<div class="kb-foot kb-scale kb-vol"><label for="kb-vol-${k}">${n}</label><input id="kb-vol-${k}" type="range" min="0" max="100" step="5" data-vol="${k}"><b></b></div>`).join('')}
+            <div class="kb-foot"><label class="kb-check"><input type="checkbox" id="kb-mute"> Mute all sound</label></div>
+            <div class="kb-foot"><label class="kb-check"><input type="checkbox" id="kb-captions"> Subtitles for voice lines</label></div>
+            <div class="kb-foot"><label class="kb-check" data-tip="Your browser's own voice reads lines that have no recording. It sounds robotic."><input type="checkbox" id="kb-speech"> Device speech for missing voices</label></div>
+          </section>
+          <section data-page="data">
+            <div class="kb-foot"><button type="button" class="btn2 kb-wipe">Delete all data</button></div>
+            <p class="kb-note">Heroes, gear, gold, journals, progress and settings in this browser. It can't be undone.</p>
+          </section>
+        </div>`;
       document.body.appendChild(panel);
       panel.addEventListener('mousedown', e => {
         e.stopPropagation();
@@ -194,6 +214,7 @@ const Keybinds = (() => {
       panel.addEventListener('click', e => {
         const t = e.target;
         if (t.classList.contains('close')) { closePanel(); return; }
+        if (t.dataset.tab) { showTab(t.dataset.tab); render(); return; }
         if (t.classList.contains('kb-reset')) { for (const a of ACTIONS) binds[a.id] = a.def; save(); labels(); onChange(); render(); return; }
         if (t.classList.contains('kb-arrange')) { closePanel(); arrange(true); return; }
         if (t.classList.contains('kb-wipe')) {
@@ -236,7 +257,7 @@ const Keybinds = (() => {
       panel.querySelector('#kb-captions').checked = !!Sound.get('captions');
       panel.querySelector('#kb-speech').checked = !!Sound.get('speech');
     }
-    capturing = null;
+    showTab(tab);
     render();
     panel.classList.remove('hidden');
   }
