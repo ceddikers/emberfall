@@ -8497,6 +8497,385 @@ Object.assign(KIT_VFX, {
   };
 })();
 
+// ======================================================================= Kenseier (tank, class 22): the Beat
+// Ash and ember. Colours: ash grey and charcoal for the cloak and the dull blows, ember orange (#ff8a3d) for the blade's fire, white-gold
+// for the clean ones. A Perfect deflect is a bright white-orange spark and a short ring; a Good one a duller grey spark; a miss a thin
+// whiff of ash. A Break cracks across the boss in gold and holds for as long as it lasts; the Deathblow is one long slash with an ember
+// trail that fades behind it (and a brief hush of the screen, never a shake); Thousand Cuts a ring of a thousand thin cuts. Nothing here
+// is painted on the floor beyond a thin ring, and nothing is red or blue (those are telegraphs). The kit's moments (every name starts
+// with ken-) land here as KIT_VFX: ken-perfect, ken-good, ken-miss, ken-pass, ken-break, ken-off, ken-deathblow, ken-pommel, ken-redirect,
+// ken-iai, ken-iai-stance, ken-mantle, ken-blaze, ken-guard, ken-duel, ken-step, ken-spin, ken-thousand. The class's cues go through
+// SoundHooks.kenseier.
+(() => {
+  const V = VFX, TAU = Math.PI * 2, rnd = (a, b) => a + Math.random() * (b - a), shake = s => vfxShake(s);
+  const ASH = '#8a8478', GREY = '#b8b2a8', DUST = '#d8d0c4', CHAR = '#2b2926', SOOT = '#14110f', EMB = '#ff8a3d', EMB2 = '#ffb070', GOLD = '#ffd27a', WGOLD = '#fff0c0', HOT = '#ffe2a0';
+  const later = (e, d, fn) => { const sc = FX.camFor(e) ? 1 : 0.6; FX.later(d, () => { V.setScale(sc); try { fn(); } finally { V.setScale(1); } }); };
+  const G = () => (typeof window !== 'undefined' && window.__game) || null;
+  const isMe = e => { const g = G(); return !!g && e === g.player; };
+  const snd = (e, ev, d) => { try { if (typeof SoundHooks !== 'undefined' && SoundHooks.kenseier) SoundHooks.kenseier(ev, d, isMe(e), e, e.id); } catch (err) { /* sound never stops a frame */ } };
+  const ok = Number.isFinite;
+  const bodyY = e => e.y - 14 - (e.lift || 0);
+  const bossPos = () => { const g = G(), r = g && g.raid; return r && r.state === 'live' && r.bossDraw ? { x: r.bossDraw.x, y: r.bossDraw.y } : null; };
+  const foe = t => (t && ok(t.x) && ok(t.y) ? { x: t.x, y: t.y } : bossPos());
+  const front = (e, d) => { const a = e.angle || 0; return { x: e.x + Math.cos(a) * d, y: e.y + Math.sin(a) * d * 0.8 }; };
+  const BR = () => (typeof FIGHT !== 'undefined' && FIGHT.BOSS_R) || 70;
+
+  // ---- pieces
+  // metal on metal where a blow is met: a star, a flash, a spray of sparks and a short ring standing at the point of contact (x, y on the floor, z up)
+  function clash(x, y, o = {}) {
+    const s = o.s ?? 1, col = o.color || EMB, core = o.core || WGOLD, z = o.z ?? 26;
+    V.spawn({ x, y, z, life: 0.2, size: 50 * s, size1: 12 * s, color: core, kind: 'star', vr: 3 });
+    V.flash(x, y - z, 32 * s, col, 0.14);
+    V.sparks(x, y, { color: o.spark || col, n: Math.round((o.n ?? 9) * s), speed: 330 * s, z, up: 150, life: 0.9, size: 8 });
+    V.shock(x, y - z, { r0: 4, r: 36 * s, color: o.ring || col, dur: o.dur ?? 0.24, w: 2.6, layer: 'air', flat: 1 });
+  }
+  // a thin slash from a to b (screen points): the head runs ahead in `run`s, the stroke is thickest in the middle, an ink under it, an ember body and a
+  // white-gold edge, and the older end fades first so an ember trail is left behind it, shedding embers. onHit runs as the head lands
+  function streak(ax, ay, bx, by, o = {}) {
+    const dur = o.dur ?? 0.9, run = o.run ?? 0.12, W = o.w ?? 5, bow = o.bow ?? 8, col = o.color || EMB, core = o.core || WGOLD, N = o.n ?? 16, embers = o.embers ?? 0.5;
+    const dx = bx - ax, dy = by - ay, L = Math.hypot(dx, dy) || 1, nx = -dy / L, ny = dx / L;
+    const at = q => [ax + dx * q + nx * Math.sin(q * Math.PI) * bow, ay + dy * q + ny * Math.sin(q * Math.PI) * bow];
+    return V.fx({ dur, layer: 'air', draw: (c, p, t, e) => {
+      const head = Math.min(1, t / run), fade = Math.max(0, 1 - Math.max(0, t - run) / (dur - run)), hq = Math.floor(head * N);
+      if (e.a * fade < 0.02) return;
+      c.save(); c.lineCap = 'round';
+      for (const [cl, wm, al, add] of [[SOOT, 2.2, 0.3, false], [col, 1.25, 0.75, true], [core, 0.5, 0.95, true]]) {
+        c.strokeStyle = cl; c.globalCompositeOperation = add ? 'lighter' : 'source-over';
+        for (let i = 0; i < hq; i++) {
+          const q0 = i / N, q1 = (i + 1) / N, qm = (q0 + q1) / 2, kk = e.a * Math.pow(fade, 1.6 - qm * 0.9);
+          c.globalAlpha = Math.min(1, al * kk); c.lineWidth = W * wm * Math.pow(Math.sin(Math.PI * Math.min(0.98, Math.max(0.02, qm))), 0.6) + 0.4;
+          const [x0, y0] = at(q0), [x1, y1] = at(q1); c.beginPath(); c.moveTo(x0, y0); c.lineTo(x1, y1); c.stroke();
+        }
+      }
+      c.restore();
+      if (t < run + 0.12) { const [hx, hy] = at(head), k = e.a * fade; V.glowAt(c, hx, hy, 14 + W * 2, col, 0.7 * k); V.glowAt(c, hx, hy, 6 + W, '#ffffff', 0.8 * k); }
+    }, tick: p => {
+      const t = p * dur;
+      if (embers > 0 && t > run * 0.3 && t < run + 0.6 && Math.random() < embers) { const [px, py] = at(Math.random() * Math.min(1, t / run)); V.spawn({ x: px, y: py + 20, z: 20, vx: rnd(-20, 20), vz: rnd(10, 50), g: 60, life: rnd(0.5, 0.9), size: rnd(3, 6), size1: 0, color: Math.random() < 0.5 ? col : GOLD, kind: 'glow' }); }
+    }, done: () => { if (o.onHit) o.onHit(bx, by); } });
+  }
+  // a lingering effect that follows the same rules everywhere: in over a moment, out over the last stretch, `cut = true` fades it at once (a stance
+  // spent, a Break ended early). draw(c, k, t, fx) every frame
+  function lingerFx(dur, layer, draw, o = {}) {
+    return V.fx({ dur, layer, tick: o.tick, draw: (c, p, t, f) => {
+      if (f.cut && f.cutT == null) f.cutT = t;
+      const k = f.a * Math.min(1, t / (o.inT ?? 0.15), Math.max(0, (f.dur - t) / (o.outT ?? 0.5))) * (f.cutT != null ? Math.max(0, 1 - (t - f.cutT) / 0.25) : 1);
+      if (k > 0.015) draw(c, k, t, f);
+    } });
+  }
+  // the gold crack of a Break: one jagged line across the boss from shoulder to hip with two branches, drawn in over a moment, then held
+  // pulsing with light leaking out of it and gold motes falling from it, until the Break ends (or a Deathblow ends it)
+  function crackShape(R) {
+    const a = [-0.7 * R, -0.95 * R], b = [0.65 * R, 0.9 * R], n = 8, dx = b[0] - a[0], dy = b[1] - a[1], L = Math.hypot(dx, dy), nx = -dy / L, ny = dx / L;
+    const main = [a];
+    for (let i = 1; i < n; i++) { const q = i / n, j = rnd(-0.12, 0.12) * R; main.push([a[0] + dx * q + nx * j, a[1] + dy * q + ny * j]); }
+    main.push(b);
+    const out = [main];
+    for (const i of [2, 5]) {
+      const s = Math.random() < 0.5 ? -1 : 1, pts = [main[i]]; let [x, y] = main[i], ang = Math.atan2(dy, dx) + s * rnd(0.6, 1.1);
+      for (let m = 0; m < 3; m++) { ang += rnd(-0.35, 0.35); const l = rnd(0.12, 0.22) * R; x += Math.cos(ang) * l; y += Math.sin(ang) * l; pts.push([x, y]); }
+      out.push(pts);
+    }
+    return out;
+  }
+  function partial(c, pts, f) {
+    const n = pts.length - 1, upto = Math.max(0, Math.min(1, f)) * n;
+    c.beginPath(); c.moveTo(pts[0][0], pts[0][1]);
+    for (let i = 1; i <= n; i++) { if (i <= upto) c.lineTo(pts[i][0], pts[i][1]); else { const q = upto - (i - 1); if (q > 0) c.lineTo(pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * q, pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * q); break; } }
+  }
+  function breakCrack(secs) {
+    const R = BR(), shape = crackShape(R);
+    let last = bossPos() || { x: 0, y: 0 };
+    return V.fx({ dur: secs + 0.4, layer: 'air', draw: (c, p, t, f) => {
+      if (f.cut && f.cutT == null) f.cutT = t;
+      const bp = bossPos() || last; last = bp;
+      const k = f.a * Math.min(1, t / 0.05) * Math.max(0, Math.min(1, (f.dur - t) / 0.4)) * (f.cutT != null ? Math.max(0, 1 - (t - f.cutT) / 0.25) : 1);
+      if (k < 0.02) return;
+      const grow = easeOut(Math.min(1, t / 0.22)), pulse = 0.78 + 0.22 * Math.sin(t * 6), cx = bp.x, cy = bp.y - 34;
+      c.save(); c.translate(cx, cy); c.lineCap = 'round'; c.lineJoin = 'round';
+      for (const [cl, w, al, add] of [[SOOT, 6.5, 0.45, false], [GOLD, 3.4, 0.85, true], [WGOLD, 1.3, 0.95, true]]) {
+        c.strokeStyle = cl; c.lineWidth = w; c.globalAlpha = al * k * (add ? pulse : 1); c.globalCompositeOperation = add ? 'lighter' : 'source-over';
+        shape.forEach((pts, i) => { partial(c, pts, i ? (grow - 0.35) / 0.65 : grow); c.stroke(); });
+      }
+      c.restore();
+      V.glowAt(c, cx, cy, R * 0.9, GOLD, 0.14 * k * pulse);
+    }, tick: () => { const bp = bossPos(); if (bp && Math.random() < 0.25) V.spawn({ x: bp.x + rnd(-0.5, 0.5) * BR(), y: bp.y + rnd(-0.1, 0.5) * BR(), z: rnd(20, 70), vz: rnd(-10, 14), vx: rnd(-6, 6), life: rnd(0.6, 1), size: rnd(3, 6), size1: 0, color: Math.random() < 0.5 ? GOLD : WGOLD, kind: Math.random() < 0.4 ? 'star' : 'glow' }); } });
+  }
+  // a four-pointed star (the dazed ones circling an Off-balance head)
+  function star4(c, x, y, r, fill) {
+    c.beginPath();
+    for (let i = 0; i < 8; i++) { const a = i / 8 * TAU - Math.PI / 2, d = i % 2 ? r * 0.38 : r; i ? c.lineTo(x + Math.cos(a) * d, y + Math.sin(a) * d) : c.moveTo(x + Math.cos(a) * d, y + Math.sin(a) * d); }
+    c.closePath(); c.fillStyle = fill; c.fill(); c.strokeStyle = CHAR; c.lineWidth = 1; c.stroke();
+  }
+  // a ring of thin cuts through a point: n chords at every angle, staggered over `span`s, each drawn in at once and gone in a moment
+  function flurry(x, y, o = {}) {
+    const n = o.n ?? 30, R = o.r ?? 100, span = o.span ?? 0.5, ln = Array.from({ length: n }, (_, i) => {
+      const th = rnd(0, Math.PI), hl = rnd(0.55, 1) * R, ox = rnd(-0.35, 0.35) * R, oy = rnd(-0.35, 0.35) * R;
+      return { dx: Math.cos(th) * hl, dy: Math.sin(th) * hl * 0.8, ox, oy, s: i / n * span + rnd(0, 0.03), w: rnd(1.6, 3) };
+    });
+    return V.fx({ dur: span + 0.5, delay: o.delay, layer: 'air', draw: (c, p, t, e) => {
+      c.save(); c.lineCap = 'round'; c.globalCompositeOperation = 'lighter';
+      for (let pass = 0; pass < 2; pass++) {
+        c.strokeStyle = pass ? WGOLD : EMB;
+        for (const l of ln) {
+          const u = t - l.s; if (u < 0 || u > 0.4) continue;
+          const g = Math.min(1, u / 0.05), fade = 1 - Math.max(0, (u - 0.05) / 0.35), x0 = x + l.ox - l.dx, y0 = y + l.oy - l.dy;
+          c.globalAlpha = (pass ? 0.95 : 0.7) * e.a * fade; c.lineWidth = pass ? l.w * 0.4 : l.w;
+          c.beginPath(); c.moveTo(x0, y0); c.lineTo(x0 + l.dx * 2 * g, y0 + l.dy * 2 * g); c.stroke();
+        }
+      }
+      c.restore();
+    } });
+  }
+
+  // ---- the abilities (the cast itself; what comes of it is the moments below)
+  const aim = c => Math.atan2(c.ty - c.y, c.tx - c.x);
+  const reach = (c, d) => { const a = aim(c), dist = Math.hypot(c.tx - c.x, c.ty - c.y), r = Math.min(d, dist); return { x: c.x + Math.cos(a) * r, y: c.y + Math.sin(a) * r }; };
+  ABILITY_VFX.kenseier = {
+    // Cut, Rising Cut, Ember Cut: an ember slash each, the second the other way up, the third wider with a white-gold core and a heavier hit
+    cut: c => {
+      const a = aim(c), s = c.step | 0;
+      V.slash(c.x, c.y, a, { r: 52 + s * 8, span: 1.5 + s * 0.4, color: EMB, core: WGOLD, dur: 0.24, w: 0.34 + s * 0.08, flip: s === 1, sparks: 2 + s * 2 });
+      c.later(0.08, () => { const p = reach(c, 70); V.hit(p.x, p.y, s === 2 ? EMB2 : EMB, 0.4 + s * 0.2); if (s === 2) V.sparks(p.x, p.y, { color: GOLD, n: 5, speed: 260, up: 160 }); });
+    },
+    // Deflect: the blade lifted to meet the blow (what it meets is ken-perfect / ken-good / ken-miss)
+    deflect: c => { const p = front(c.ent, 24); V.glint(p.x, p.y, { color: WGOLD, size: 16, z: 30 }); V.shock(c.x, c.y, { r0: 8, r: 34, color: GREY, dur: 0.24, w: 2 }); },
+    // Mikiri Step: a puff of dust at the boots (the streaks behind are ken-step)
+    mikiri: c => { V.smoke(c.x, c.y, { n: 2, r: 8, color: ASH, size: 16, a: 0.4, speed: 40 }); V.shock(c.x, c.y, { r0: 6, r: 40, color: GREY, dur: 0.3, w: 2.4 }); },
+    // Deathblow, Pommel and Redirect (one button): the blade drawn in a wide arc (the blow itself is ken-deathblow / ken-pommel / ken-redirect)
+    deathblow: c => { V.slash(c.x, c.y, aim(c), { r: 70, span: 2.2, color: WGOLD, core: '#ffffff', dur: 0.28, w: 0.3, sparks: 3 }); },
+    // Ash Mantle: a burst of ash round the hero (the cloak is ken-mantle)
+    mantle: c => { V.smoke(c.x, c.y, { n: 6, r: 12, color: ASH, size: 22, a: 0.45, speed: 60 }); V.shock(c.x, c.y, { r0: 8, r: 70, color: GREY, dur: 0.5, w: 3 }); },
+    // Guard Stance: the blade planted point down, a ring of white-gold from it (the shield plate is ken-guard)
+    guard: c => { const p = front(c.ent, 22); V.sparks(p.x, p.y, { color: GOLD, n: 7, speed: 200, z: 2, up: 220 }); V.shock(c.x, c.y, { r0: 8, r: 56, color: GOLD, dur: 0.4, w: 3.4 }); },
+    // Iai Stance: the blade sheathed, a thin glint at the hip (the held breath is ken-iai-stance)
+    iai: c => { const a = c.ent.angle || 0; V.glint(c.x + Math.sin(a) * 12, c.y - Math.cos(a) * 12, { color: HOT, size: 18, z: 22 }); },
+    // Whirlwind Slash: the hero crouches into the spin (the spin is ken-spin)
+    whirlwind: c => { V.glint(c.x, c.y, { color: EMB2, size: 20, z: 24 }); V.smoke(c.x, c.y, { n: 2, r: 8, color: ASH, size: 14, a: 0.35, speed: 40 }); },
+    // Ember Duel: a spark struck off the blade (the link to the boss is ken-duel)
+    duel: c => { const p = front(c.ent, 26); V.glint(p.x, p.y, { color: EMB, size: 20, z: 28 }); V.sparks(p.x, p.y, { color: EMB, n: 5, speed: 220, z: 28, up: 120 }); },
+    // Thousand Cuts: the breath drawn, embers pulled to the blade, a white-gold light at the heart (the cuts are ken-thousand, a beat later)
+    thousandcuts: c => {
+      if (c.cam) { c.cam.dim(0.26, 1.2); c.cam.punch(0.035, 0.4); }
+      V.charge(c.x, c.y, { color: EMB2, r: 56, n: 12, dur: 0.3, follow: c.ent });
+      V.glint(c.x, c.y, { color: WGOLD, size: 32, z: 40 });
+      V.flash(c.x, bodyY(c.ent), 56, EMB, 0.3);
+      V.shock(c.x, c.y, { r0: 10, r: 80, color: HOT, dur: 0.45, w: 3 });
+    },
+  };
+
+  // ---- the moments
+  // a Perfect: a bright white-orange spark and a short ring where the blow was met (bigger on a tankbuster, with a ring along the floor); stepping in front
+  // of an ally draws a thin ember line from them to you
+  KIT_VFX['ken-perfect'] = (e, target, d) => {
+    const bust = d && d.b, s = bust ? 1.45 : 1.15, p = front(e, 26);
+    clash(p.x, p.y, { s, color: HOT, core: '#ffffff', spark: WGOLD, ring: WGOLD, n: 12 });
+    V.shock(p.x, p.y - 26, { r0: 6, r: 56 * s, color: EMB, dur: 0.34, w: 2.2, layer: 'air', flat: 1, delay: 0.03 });
+    V.glint(p.x, p.y, { color: '#ffffff', size: 26 * s, z: 26 });
+    V.sparks(p.x, p.y, { color: EMB, n: 6, speed: 260, z: 26, up: 120, size: 7 });
+    if (bust) { V.shock(e.x, e.y, { r0: 8, r: 76, color: EMB, dur: 0.4, w: 3.4 }); shake(3); } else shake(1.2);
+    if (d && d.to != null && target && ok(target.x) && target !== e) {
+      streak(target.x, target.y - 14, e.x, e.y - 14, { dur: 0.4, run: 0.1, w: 2.4, bow: 6, color: EMB, core: WGOLD, n: 8, embers: 0.2 });
+      V.shock(target.x, target.y, { r0: 6, r: 38, color: GOLD, dur: 0.3, w: 2.2 });
+    }
+    if (d && d.up) { V.glint(e.x, e.y - 44, { color: WGOLD, size: 24, z: 40 }); V.shock(e.x, e.y, { r0: 10, r: 60, color: GOLD, dur: 0.4, w: 2.4 }); }
+    snd(e, 'perfect', d);
+  };
+  // a Good: a duller grey spark, smaller, ash on the air
+  KIT_VFX['ken-good'] = (e, target, d) => {
+    const s = d && d.b ? 1.05 : 0.8, p = front(e, 26);
+    clash(p.x, p.y, { s, color: GREY, core: DUST, spark: GREY, ring: ASH, n: 6, dur: 0.2 });
+    V.smoke(p.x, p.y, { n: 2, r: 4, color: ASH, size: 12, a: 0.35, speed: 28 });
+    if (d && d.to != null && target && ok(target.x) && target !== e) streak(target.x, target.y - 14, e.x, e.y - 14, { dur: 0.36, run: 0.1, w: 2, bow: 6, color: GREY, core: DUST, n: 8, embers: 0 });
+    snd(e, 'good', d);
+  };
+  // a press with nothing to meet: a thin grey whiff of the blade and a few flecks of ash falling
+  KIT_VFX['ken-miss'] = (e) => {
+    const a = e.angle || 0;
+    V.slash(e.x, e.y, a, { r: 34, span: 1.1, color: GREY, core: DUST, dur: 0.16, w: 0.2, sparks: 0, ink: 0.4 });
+    V.smoke(e.x, e.y, { n: 1, r: 6, color: ASH, size: 12, a: 0.3, speed: 22 });
+    for (let i = 0; i < 3; i++) V.spawn({ x: e.x + Math.cos(a) * 26 + rnd(-8, 8), y: e.y + Math.sin(a) * 20 + rnd(-4, 4), z: 26, vz: rnd(-30, 10), vx: rnd(-10, 10), life: 0.5, size: rnd(2, 4), size1: 0, color: DUST, kind: 'glow', add: false });
+    snd(e, 'miss', null);
+  };
+  // Mikiri Step landing: the blow goes through the hero. Thin pale streaks cross the body front to back, a ring and a glint, a few embers
+  KIT_VFX['ken-pass'] = (e) => {
+    const a = e.angle || 0, ca = Math.cos(a), sa = Math.sin(a), y = bodyY(e);
+    for (let i = 0; i < 3; i++) streak(e.x + ca * 42 - sa * (i - 1) * 7, y + sa * 30 + (i - 1) * 7, e.x - ca * 36 - sa * (i - 1) * 7, y - sa * 24 + (i - 1) * 7, { dur: 0.4, run: 0.09, w: 3.4 - i * 0.7, bow: 0, color: DUST, core: '#ffffff', n: 8, embers: 0 });
+    V.shock(e.x, e.y, { r0: 8, r: 52, color: EMB2, dur: 0.35, w: 3 });
+    V.glint(e.x, e.y, { color: HOT, size: 22, z: 28 });
+    V.sparks(e.x, e.y, { color: EMB, n: 6, speed: 220, z: 26, up: 100 });
+    snd(e, 'pass', null);
+  };
+  // Mikiri Step pressed: grey streaks of the step behind the hero and a puff of dust
+  KIT_VFX['ken-step'] = (e) => {
+    later(e, 0.05, () => {
+      const a = (e.angle || 0) + Math.PI, y = bodyY(e);
+      for (let i = 0; i < 3; i++) { const o = (i - 1) * 9, L = 54 + i * 10; streak(e.x + Math.cos(a) * 8 - Math.sin(a) * o, y + Math.sin(a) * 6 + Math.cos(a) * o * 0.6, e.x + Math.cos(a) * L - Math.sin(a) * o, y + Math.sin(a) * L * 0.8 + Math.cos(a) * o * 0.6, { dur: 0.34, run: 0.08, w: 2.6, bow: 0, color: GREY, core: DUST, n: 8, embers: 0 }); }
+      V.smoke(e.x, e.y, { n: 3, r: 8, color: ASH, size: 16, a: 0.4, speed: 45 });
+    });
+  };
+  // a Break: the boss is cracked across in gold (it holds for as long as the Break lasts), a gold flash and ring and a spray of sparks
+  KIT_VFX['ken-break'] = Object.assign((e, target, d) => {
+    const b = foe(target), cam = FX.camFor(e), secs = (d && d.s) || 4;
+    snd(e, 'break', d);
+    if (!b) return;
+    if (e._kenCrack) e._kenCrack.cut = true;
+    V.flash(b.x, b.y - 34, 90, GOLD, 0.2);
+    V.shock(b.x, b.y, { r: 120, color: GOLD, dur: 0.45, w: 5 }); V.shock(b.x, b.y, { r: 80, color: WGOLD, dur: 0.35, w: 2.4, delay: 0.05 });
+    V.sparks(b.x, b.y, { color: GOLD, n: 14, speed: 380, z: 34, up: 140 });
+    V.glint(b.x, b.y, { color: WGOLD, size: 34, z: 34 });
+    e._kenCrack = breakCrack(secs);
+    if (cam) { cam.punch(0.025, 0.3); cam.flash('#fff0c0', 0.1, 0.25); }
+    shake(2.5);
+  }, { atTarget: true });
+  // Off-balance: a dull ring of ash, a puff, and three dazed stars circling the head until it passes
+  KIT_VFX['ken-off'] = (e) => {
+    const DUR = 1.9;
+    V.smoke(e.x, e.y, { n: 4, r: 10, color: ASH, size: 20, a: 0.5, speed: 50 });
+    V.shock(e.x, e.y, { r0: 8, r: 56, color: ASH, dur: 0.4, w: 3.5 });
+    V.flash(e.x, bodyY(e), 36, GREY, 0.16);
+    V.fx({ dur: DUR, layer: 'air', draw: (c, p, t, f) => {
+      const k = f.a * Math.min(1, t / 0.1, (DUR - t) / 0.35); if (k < 0.02) return;
+      c.save(); c.globalAlpha = k;
+      for (let i = 0; i < 3; i++) { const an = t * 4.2 + i * TAU / 3; star4(c, e.x + Math.cos(an) * 16, e.y - 46 - (e.lift || 0) + Math.sin(an) * 5, 4.6, i % 2 ? GREY : DUST); }
+      c.restore();
+    } });
+    snd(e, 'off', null);
+  };
+  // the Deathblow: one long slash across the boss with an ember trail that fades behind it, a soft bloom where it passes the middle, a brief hush of the
+  // screen (your own hero only) and no shake. The crack of the Break splits at the same moment (unless it is Thousand Cuts' free one: that Break goes on)
+  KIT_VFX['ken-deathblow'] = Object.assign((e, target, d) => {
+    const b = foe(target), cam = FX.camFor(e), u = d && d.u;
+    snd(e, 'deathblow', d);
+    if (!b) return;
+    if (!u && e._kenCrack) { e._kenCrack.cut = true; e._kenCrack = null; }
+    const R = BR(), cy = b.y - 34, ax = b.x - R * 1.35, ay = cy - R * 0.9, bx = b.x + R * 1.35, by = cy + R * 0.9;
+    if (cam) cam.dim(0.16, 0.55);
+    streak(ax, ay, bx, by, { dur: 1.1, run: 0.13, w: u ? 8 : 6, bow: 12, color: EMB, core: WGOLD, n: 22, embers: 0.7 });
+    later(e, 0.07, () => {
+      V.flash(b.x, cy, 64, HOT, 0.26);
+      V.sparks(b.x, b.y, { color: GOLD, n: 8, speed: 300, z: 34, up: 160, life: 1.1 });
+      V.motes(b.x, b.y, { color: EMB2, n: 6, r: 30, rise: 0.7 });
+      if (u) V.shock(b.x, b.y, { r: 110, color: WGOLD, dur: 0.5, w: 3.4 });
+    });
+  }, { atTarget: true });
+  // Pommel: a dull blunt knock at the edge of the boss nearest the hero: a small grey burst, a ring, a little ash
+  KIT_VFX['ken-pommel'] = Object.assign((e, target) => {
+    const b = foe(target);
+    snd(e, 'pommel', null);
+    if (!b) return;
+    const a = Math.atan2(b.y - e.y, b.x - e.x), r = BR() * 0.7, hx = b.x - Math.cos(a) * r, hy = b.y - Math.sin(a) * r * 0.8;
+    V.spikeburst(hx, hy, { r: 34, n: 9, color: GREY, core: WGOLD, ink: CHAR, dur: 0.24, z: 22 });
+    V.shock(hx, hy - 22, { r0: 4, r: 30, color: DUST, dur: 0.26, w: 2.4, layer: 'air', flat: 1 });
+    V.sparks(hx, hy, { color: DUST, n: 5, speed: 220, z: 22, up: 100 });
+    V.smoke(hx, hy, { n: 2, r: 4, color: ASH, size: 14, a: 0.4, speed: 30 });
+  }, { atTarget: true });
+  // Redirect: the blow turned aside goes back at the boss as an ember streak from the hero's blade, landing in a burst (bigger for a tankbuster)
+  KIT_VFX['ken-redirect'] = Object.assign((e, target, d) => {
+    const b = foe(target), bust = d && d.b;
+    snd(e, 'redirect', d);
+    if (!b) return;
+    const p = front(e, 22);
+    V.glint(p.x, p.y, { color: HOT, size: 22, z: 26 });
+    streak(p.x, p.y - 26, b.x, b.y - 30, { dur: 0.6, run: 0.2, w: bust ? 6 : 4.5, bow: -22, color: EMB, core: WGOLD, n: 14, embers: 0.6, onHit: () => {
+      V.hit(b.x, b.y - 16, bust ? EMB2 : EMB, bust ? 0.8 : 0.55);
+      if (bust) V.spikeburst(b.x, b.y, { r: 62, n: 12, color: EMB, core: WGOLD, ink: CHAR, dur: 0.3, z: 30 });
+    } });
+  }, { atTarget: true });
+  // Iai: the counter-cut after a Perfect, one clean white-gold stroke across the boss and a small hit
+  KIT_VFX['ken-iai'] = Object.assign((e, target) => {
+    const b = foe(target);
+    if (e._kenIai) { e._kenIai.cut = true; e._kenIai = null; }
+    snd(e, 'iai', null);
+    if (!b) return;
+    const a = Math.atan2(b.y - e.y, b.x - e.x), nx = -Math.sin(a), ny = Math.cos(a), cy = b.y - 30, L = BR() * 1.1;
+    streak(b.x + nx * L, cy + ny * L * 0.6, b.x - nx * L, cy - ny * L * 0.6, { dur: 0.6, run: 0.08, w: 5, bow: 6, color: HOT, core: '#ffffff', n: 16, embers: 0.4 });
+    later(e, 0.05, () => { V.hit(b.x, b.y - 16, HOT, 0.6); V.sparks(b.x, b.y, { color: GOLD, n: 6, speed: 280, z: 30, up: 140 }); });
+  }, { atTarget: true });
+  // Iai Stance: a ring of held breath draws in round the feet, a glint at the hip, then a thin quiet ring stays until the counter is spent
+  KIT_VFX['ken-iai-stance'] = (e) => {
+    if (e._kenIai) e._kenIai.cut = true;
+    later(e, 0.08, () => {
+      V.fx({ dur: 0.7, layer: 'ground', draw: (c, p, t, f) => { const R = 70 - 44 * easeOut(p), k = f.a * Math.min(1, p / 0.1) * (1 - p * 0.4); V.neonRing(c, e.x, e.y + 3, R, HOT, 2.4, k, 0.78); } });
+      V.glint(e.x, e.y, { color: HOT, size: 24, z: 26 });
+      V.motes(e.x, e.y, { color: HOT, n: 6, r: 16, rise: 0.8 });
+      e._kenIai = lingerFx(6, 'ground', (c, k, t) => { V.neonRing(c, e.x, e.y + 3, 26 + Math.sin(t * 5) * 1.2, HOT, 1.8, 0.5 * k, 0.78); });
+    });
+  };
+  // Ash Mantle: the cloak is pulled round: ash and a ring, then a soft ash-grey shape holds about the hero with embers running along its hem and flakes of ash
+  // lifting off it for as long as the Mantle lasts
+  KIT_VFX['ken-mantle'] = (e, target, d) => {
+    if (e._kenMantle) e._kenMantle.cut = true;
+    later(e, 0.1, () => {
+      V.smoke(e.x, e.y, { n: 7, r: 14, color: ASH, size: 24, a: 0.5, speed: 55 });
+      V.shock(e.x, e.y, { r0: 8, r: 64, color: GREY, dur: 0.5, w: 3 });
+      V.flash(e.x, bodyY(e), 44, DUST, 0.2);
+      V.motes(e.x, e.y, { color: DUST, n: 10, r: 24, rise: 0.9, kind: 'glow' });
+      e._kenMantle = lingerFx((d && d.dur) || 8, 'air', (c, k, t) => {
+        const x = e.x, y = bodyY(e) + 4, sw = Math.sin(t * 2.2);
+        c.save(); c.translate(x, y);
+        const g = c.createRadialGradient(0, 0, 4, 0, 0, 30); g.addColorStop(0, rgba(ASH, 0)); g.addColorStop(0.7, rgba(ASH, 0.2)); g.addColorStop(1, rgba(GREY, 0.32));
+        c.globalAlpha = k; c.fillStyle = g; c.beginPath(); c.ellipse(0, 2, 26, 30 + sw * 1.5, 0, 0, TAU); c.fill();
+        c.strokeStyle = rgba(GREY, 0.5); c.lineWidth = 1.4; c.stroke();
+        c.restore();
+        for (let i = 0; i < 3; i++) { const a = t * 1.3 + i * TAU / 3; V.glowAt(c, x + Math.cos(a) * 26, y + 2 + Math.sin(a) * 30, 6, EMB, 0.55 * k); }
+      }, { tick: () => { if (Math.random() < 0.35) V.spawn({ x: e.x + rnd(-20, 20), y: e.y + rnd(-8, 8), z: rnd(6, 40), vz: rnd(10, 40), vx: rnd(-8, 8), life: rnd(0.7, 1.2), size: rnd(3, 6), size1: 0, color: Math.random() < 0.8 ? DUST : EMB, kind: 'glow', add: false }); } });
+    });
+  };
+  // Blazing Mantle: the cloak catches as it ends: a ring of ember and a burst at the hero, and (when you turned blows in it) fire thrown at the boss, bigger for each
+  KIT_VFX['ken-blaze'] = Object.assign((e, target, d) => {
+    const n = Math.min(5, (d && d.n) || 0), b = foe(target), s = 0.8 + 0.12 * n;
+    V.flash(e.x, bodyY(e), 60 * s, EMB, 0.26);
+    V.spikeburst(e.x, e.y, { r: 60 * s, n: 12, color: EMB, core: WGOLD, ink: CHAR, dur: 0.34, z: 14 });
+    V.shock(e.x, e.y, { r0: 10, r: 96 * s, color: EMB2, dur: 0.5, w: 4 });
+    V.motes(e.x, e.y, { color: EMB, n: 8, r: 28, rise: 1.1 });
+    if (n > 0 && b) V.missile(e.x, e.y, b.x, b.y, { style: 'fire', color: EMB, speed: 800, size: 0.6 + 0.1 * n, arc: 30, onHit: (x, y) => V.hit(x, y, EMB2, 0.45 + 0.1 * n) });
+    snd(e, 'blaze', d);
+  }, { atTarget: true });
+  // Guard Stance: the blade planted, a ring of gold and a front plate of light held before the hero for the stance's 6s
+  KIT_VFX['ken-guard'] = (e) => {
+    later(e, 0.08, () => {
+      V.flash(e.x, bodyY(e), 50, GOLD, 0.22);
+      V.shock(e.x, e.y, { r0: 10, r: 72, color: GOLD, dur: 0.5, w: 4 }); V.shock(e.x, e.y, { r0: 6, r: 46, color: WGOLD, dur: 0.4, w: 2.4, delay: 0.06 });
+      V.glint(e.x, e.y, { color: WGOLD, size: 28, z: 40 });
+      V.shield(e, { color: GOLD, dur: 6, r: 42, shape: 'front' });
+    });
+  };
+  // Ember Duel: a ring of ember at the hero's feet and a thin dashed line of it running to the boss, drifting toward it, for the duel's 10s
+  KIT_VFX['ken-duel'] = (e) => {
+    if (e._kenDuel) e._kenDuel.cut = true;
+    later(e, 0.05, () => {
+      V.flash(e.x, bodyY(e), 50, EMB, 0.22);
+      V.shock(e.x, e.y, { r0: 10, r: 90, color: EMB, dur: 0.5, w: 4 });
+      e._kenDuel = lingerFx(10, 'ground', (c, k, t) => {
+        V.neonRing(c, e.x, e.y + 3, 44 + Math.sin(t * 3) * 1.5, EMB, 1.8, 0.45 * k, 0.78);
+        const bp = bossPos();
+        if (bp) { c.save(); c.setLineDash([4, 9]); c.lineDashOffset = -t * 18; c.strokeStyle = EMB; c.globalAlpha = 0.28 * k; c.lineWidth = 1.6; c.lineCap = 'round'; c.beginPath(); c.moveTo(e.x, e.y + 2); c.lineTo(bp.x, bp.y + 2); c.stroke(); c.restore(); }
+      });
+    });
+  };
+  // Whirlwind Slash: three crescents of ember turn through a full circle, a ring runs out
+  KIT_VFX['ken-spin'] = (e, target, d) => {
+    const n = Math.max(1, (d && d.n) || 1);
+    for (let i = 0; i < 3; i++) later(e, i * 0.05, () => V.slash(e.x, e.y, (e.angle || 0) + i * TAU / 3, { r: 78, span: 2.0, color: EMB, core: WGOLD, dur: 0.24, sparks: 2 }));
+    V.shock(e.x, e.y, { r0: 14, r: 112, color: EMB2, dur: 0.4, w: 3 });
+    V.sparks(e.x, e.y, { color: GOLD, n: 5 + Math.min(n, 6) * 2, speed: 300, z: 20, up: 120 });
+  };
+  // Thousand Cuts: a ring of a thousand thin cuts through the boss, over half a second, ending in a ring of ember and white-gold (the Deathblow that follows is
+  // ken-deathblow). Yours is a soft flash and a small push, not a shake
+  KIT_VFX['ken-thousand'] = Object.assign((e, target) => {
+    const b = foe(target), cam = FX.camFor(e);
+    if (!b) return;
+    const R = BR(), cy = b.y - 30;
+    later(e, 0.15, () => {
+      flurry(b.x, cy, { n: 30, r: R * 1.35, span: 0.5 });
+      V.shock(b.x, b.y, { r0: 20, r: R * 1.6, color: EMB, dur: 0.6, w: 4, delay: 0.5 }); V.shock(b.x, b.y, { r0: 10, r: R * 1.2, color: WGOLD, dur: 0.5, w: 2.4, delay: 0.55 });
+      V.flash(b.x, cy, 90, WGOLD, 0.3);
+      if (cam) cam.flash('#fff0c0', 0.12, 0.4);
+    });
+  }, { atTarget: true });
+})();
+
 // ======================================================================= Lanternkeeper (healer, class 21): the Last Light
 // Lantern light: warm gold and amber on soot and iron, a white-hot heart in every flame, embers thrown off as sparks, a thin
 // ring of light that shows how far a glow reaches (once, when it is lit, and never a filled disc: the floor stays clear so a

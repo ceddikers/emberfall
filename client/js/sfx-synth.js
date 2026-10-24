@@ -620,91 +620,96 @@
     'ab-ironpalm-breaker': -1, 'ab-ironpalm-crane': 3.5, 'ab-ironpalm-dragon': -2.5, 'ab-ironpalm-drop': -2.5,
     'ab-ironpalm-flow': -0.5, 'ab-ironpalm-gate': -1, 'ab-ironpalm-kick': 5, 'ab-ironpalm-ox': -1.5,
     'ab-ironpalm-palm': -0.5, 'ab-ironpalm-palms': -1.5, 'ab-ironpalm-pond': -0.5, 'ab-ironpalm-slide': -1,
-    'ab-ironpalm-wall': -0.5, 'ab-lanternkeeper-auto': 4.5, 'ab-lanternkeeper-beacon': -1, 'ab-lanternkeeper-beaconflare': -1,
-    'ab-lanternkeeper-carry': 1.5, 'ab-lanternkeeper-festival': 1.5, 'ab-lanternkeeper-flare': -1.5, 'ab-lanternkeeper-hand': -1,
-    'ab-lanternkeeper-relight': -1.5, 'ab-lanternkeeper-set': 2, 'ab-lanternkeeper-stride': 3.5, 'ab-lanternkeeper-trail': 4.5,
-    'ab-lanternkeeper-trim': 6.5, 'ab-lanternkeeper-wisp': 6.5, 'ab-ledger': 5, 'ab-magic-generic': 0.5,
-    'ab-marionettist-auto': 9, 'ab-marionettist-cross': 2.5, 'ab-marionettist-crossfire': -1, 'ab-marionettist-cue': 1,
-    'ab-marionettist-finale': -1.5, 'ab-marionettist-jab': 7, 'ab-marionettist-pirouette': 1, 'ab-marionettist-pull': 5,
-    'ab-marionettist-redcurtain': 2, 'ab-marionettist-string': 4.5, 'ab-marionettist-strum': 2, 'ab-marionettist-swap': 0.5,
-    'ab-marionettist-tangle': 5, 'ab-maw': 1, 'ab-melee-generic': 0.5, 'ab-nature': 3.5,
-    'ab-oathbroker-audit': 5, 'ab-oathbroker-auto': 4.5, 'ab-oathbroker-blanket': -1, 'ab-oathbroker-cosign': 0.5,
-    'ab-oathbroker-default': -1, 'ab-oathbroker-foreclose': -2.5, 'ab-oathbroker-moratorium': -1.5, 'ab-oathbroker-reneg': 4.5,
-    'ab-oathbroker-warrant': -0.5, 'ab-oathbroker-writ': -1.5, 'ab-pyromancer-auto': 2, 'ab-pyromancer-circle': -1.5,
-    'ab-pyromancer-combust': -2, 'ab-pyromancer-fireball': -2.5, 'ab-pyromancer-fireblast': -2, 'ab-pyromancer-meteor': -3,
-    'ab-pyromancer-phoenix': -2, 'ab-pyromancer-phoenixblast': -2.5, 'ab-pyromancer-phoenixflame': -2, 'ab-pyromancer-pyro': -3.5,
-    'ab-pyromancer-vent': -1.5, 'ab-ranged-generic': 1, 'ab-ranger-aimed': 0.5, 'ab-ranger-auto': 8,
-    'ab-ranger-barrage': 1, 'ab-ranger-caustic': 6, 'ab-ranger-cloak': 0.5, 'ab-ranger-explosive': -3.5,
-    'ab-ranger-falcon': 1.5, 'ab-ranger-mark': 3.5, 'ab-ranger-pierce': 3.5, 'ab-ranger-quick': 6,
-    'ab-ranger-rapid': 1.5, 'ab-rune': 0.5, 'ab-runeguard-cleave': -3, 'ab-runeguard-glyph': -2.5,
-    'ab-runeguard-living': -2.5, 'ab-runeguard-mirror': -1.5, 'ab-runeguard-overload': -2.5, 'ab-runeguard-sanctum': -2,
-    'ab-runeguard-strike': -1, 'ab-runeguard-ward': -2, 'ab-runeguard-whirl': -1.5, 'ab-shadowblade-auto': 2.5,
-    'ab-shadowblade-backstab': 6, 'ab-shadowblade-blossom': 1, 'ab-shadowblade-dance': 1.5, 'ab-shadowblade-evis': 5.5,
-    'ab-shadowblade-fury': 0.5, 'ab-shadowblade-rupture': 1.5, 'ab-shadowblade-shadowcut': 1.5, 'ab-shadowblade-shadowedge': 0.5,
-    'ab-shadowblade-smoke': 1, 'ab-shadowblade-step': 2, 'ab-shadowblade-strike': 2, 'ab-shadowblade-venom': 2,
-    'ab-shield': 1.5, 'ab-shot': 6, 'ab-slash': 0.5, 'ab-stab': 1.5,
-    'ab-taunt': 4, 'ab-thermist-auto': 2, 'ab-thermist-bleed': 1, 'ab-thermist-cinder': -1.5,
-    'ab-thermist-equil': -0.5, 'ab-thermist-flare': -2.5, 'ab-thermist-invert': -1.5, 'ab-thermist-lance': -1,
-    'ab-thermist-meltdown': -2, 'ab-thermist-shock': -2.5, 'ab-thermist-thermocline': -1.5, 'ab-thermist-zero': -2,
-    'ab-thread': 4, 'ab-threadweaver-auto': 9, 'ab-threadweaver-cradle': -0.5, 'ab-threadweaver-embroider': 0.5,
-    'ab-threadweaver-mend': -1, 'ab-threadweaver-needle': 3.5, 'ab-threadweaver-shuttle': 0.5, 'ab-threadweaver-snip': 5.5,
-    'ab-threadweaver-tapestry': 1, 'ab-threadweaver-thrum': -2.5, 'ab-threadweaver-tie': 1, 'ab-thresher-auto': 2,
-    'ab-thresher-blink': 2.5, 'ab-thresher-cull': -1.5, 'ab-thresher-gatestrike': 2, 'ab-thresher-gather': 9,
-    'ab-thresher-hook': 3.5, 'ab-thresher-hourglass': 1, 'ab-thresher-nightfall': 0.5, 'ab-thresher-reap': -1.5,
-    'ab-thresher-slash': 0.5, 'ab-thresher-sowing': 5.5, 'ab-thresher-wisp': 6, 'ab-tidecaller-auto': 5,
-    'ab-tidecaller-bore': -2.5, 'ab-tidecaller-breakwater': 1, 'ab-tidecaller-current': 5.5, 'ab-tidecaller-maelstrom': 2.5,
-    'ab-tidecaller-riptide': 4.5, 'ab-tidecaller-sip': 1, 'ab-tidecaller-spray': 4.5, 'ab-tidecaller-springflood': -4,
-    'ab-tidecaller-surge': -3.5, 'ab-tidecaller-swell': 4, 'ab-tidecaller-undertow': 2, 'ab-time': -0.5,
-    'ab-wind': 5.5, 'amb-fountain': -11, 'amb-pond': -16.5, 'amb-tavern': -13,
-    'amb-town': -18.5, 'arrival': -8, 'bm-archmage-arcane-burst': -0.5, 'bm-archmage-arcane-mark': 2,
-    'bm-archmage-call-of-the-circle': 2.5, 'bm-archmage-cinder-rune': 1, 'bm-archmage-convergence': 1.5, 'bm-archmage-counterspell': 2.5,
-    'bm-archmage-ice-lances': 3, 'bm-archmage-leaping-bolt': 1, 'bm-archmage-pyre-rings': 1, 'bm-archmage-rift-rune': -1.5,
-    'bm-archmage-rime-rune': 0.5, 'bm-archmage-rune-mark': 2, 'bm-archmage-rune-swap': 2, 'bm-archmage-storm-rune': 2,
-    'bm-archmage-the-binding': 1.5, 'bm-archmage-the-tide-rises': 1, 'bm-archmage-void-rifts': -1, 'bm-grubnak-belly-flop': -1,
-    'bm-grubnak-butchers-charge': -0.5, 'bm-grubnak-chop-chop': 1, 'bm-grubnak-cleaver-toss': 1.5, 'bm-grubnak-clogged-drains': 3.5,
-    'bm-grubnak-dinner-rush': 3.5, 'bm-grubnak-double-chop': 1, 'bm-grubnak-family-meal': 0.5, 'bm-grubnak-flambe': -0.5,
-    'bm-grubnak-flare-up': -1.5, 'bm-grubnak-gorge': 2, 'bm-grubnak-grease-fire': 0.5, 'bm-grubnak-intro': -1,
-    'bm-grubnak-ladle-spin': 4, 'bm-grubnak-larder-toss': 2.5, 'bm-grubnak-lid-slam': -1.5, 'bm-grubnak-meat-toss': 1.5,
-    'bm-grubnak-mince': 1.5, 'bm-grubnak-mise-en-place': 4, 'bm-grubnak-order-up': -3, 'bm-grubnak-rolling-meatballs': 2.5,
-    'bm-grubnak-service': -1, 'bm-grubnak-simmer': 2, 'bm-grubnak-spice-rack': 0.5, 'bm-grubnak-stockpot': 1.5,
-    'bm-grubnak-tenderize': 1, 'bm-grubnak-whisk': 7, 'bm-hollowking-barrow-bells': -1.5, 'bm-hollowking-barrow-knell': 1.5,
-    'bm-hollowking-coffin-lids': 2, 'bm-hollowking-court-of-bones': 1.5, 'bm-hollowking-crown-of-graves': 3.5, 'bm-hollowking-dirge': 0.5,
-    'bm-hollowking-echo-knights': 4.5, 'bm-hollowking-funeral-march': 0.5, 'bm-hollowking-grave-cleave': 0.5, 'bm-hollowking-grave-marks': 4,
-    'bm-hollowking-grave-summons': 1.5, 'bm-hollowking-gravebind': 2.5, 'bm-hollowking-intro': 1.5, 'bm-hollowking-judgement': 0.5,
-    'bm-hollowking-lantern': 8.5, 'bm-hollowking-lights-out': 2, 'bm-hollowking-royal-audience': -1.5, 'bm-hollowking-royal-decree': -1,
-    'bm-hollowking-royal-doom': 1, 'bm-hollowking-royal-gaze': -1.5, 'bm-hollowking-sceptre-sweep': 3.5, 'bm-hollowking-sceptre-throw': 2,
-    'bm-hollowking-the-charge-sheet': 1.5, 'bm-hollowking-the-king-rises': -1, 'bm-hollowking-the-long-night': 1.5, 'bm-hollowking-writ-of-execution': 1.5,
-    'bm-hydra-acid-spray': 3, 'bm-hydra-flame-gout': 3, 'bm-hydra-intro': -3, 'bm-hydra-mire-spit': 2,
-    'bm-hydra-mothers-cry': -1.5, 'bm-hydra-mothers-heart': 0.5, 'bm-hydra-regrowth': 0.5, 'bm-hydra-rending-maul': 1.5,
-    'bm-hydra-rime-crown': 1, 'bm-hydra-searing': 2.5, 'bm-hydra-stonegaze': 0.5, 'bm-hydra-stormcall': 3,
-    'bm-hydra-the-drowning': -2.5, 'bm-hydra-tidal-dance': 3.5, 'bm-hydra-tidal-line': 2, 'bm-hydra-venom-bloom': 3,
-    'bm-skitterra-acid-deluge': 0.5, 'bm-skitterra-brood': 4.5, 'bm-skitterra-ceiling-ambush': 1, 'bm-skitterra-chrysalis': 4,
-    'bm-skitterra-cocoon-drop': 1.5, 'bm-skitterra-egg-sacs': 1.5, 'bm-skitterra-eightfold-lunge': 6.5, 'bm-skitterra-fang-rush': 2,
-    'bm-skitterra-from-the-dark': 2, 'bm-skitterra-into-the-dark': 2, 'bm-skitterra-intro': -1, 'bm-skitterra-molt': 8,
-    'bm-skitterra-silk-lines': 3.5, 'bm-skitterra-silk-reel': 3.5, 'bm-skitterra-silk-wrap': 2.5, 'bm-skitterra-snare-weave': 2,
-    'bm-skitterra-spiderlings': 11, 'bm-skitterra-spin': 8, 'bm-skitterra-spinneret-volley': 16, 'bm-skitterra-strand-reel': 5.5,
-    'bm-skitterra-the-swarm': 11.5, 'bm-skitterra-the-web-gives-way': 0.5, 'bm-skitterra-tightening-web': 2, 'bm-skitterra-venom-drip': 4,
-    'bm-skitterra-venom-mist': -1.5, 'bm-skitterra-venom-spit': 4, 'bm-titan-avalanche': 0.5, 'bm-titan-breath-of-winter': 1.5,
-    'bm-titan-endless-winter': -1.5, 'bm-titan-frostbite': 2.5, 'bm-titan-glacial-stomp': -0.5, 'bm-titan-icefall': 2.5,
-    'bm-titan-intro': -3, 'bm-titan-rime-slam': 0.5, 'bm-titan-titans-grip': 2.5, 'bm-titan-titans-sweep': 2,
-    'bm-titan-twin-slam': 2, 'bm-titan-whiteout': 1.5, 'bm-titan-winters-grasp': 2.5, 'bm-titan-winters-howl': -1,
-    'bm-volkar-avalanche': 0.5, 'bm-volkar-ball-lightning': 1.5, 'bm-volkar-chain-lightning': 3, 'bm-volkar-distant-thunder': 4,
-    'bm-volkar-eye-closes': 2, 'bm-volkar-eye-of-the-storm': 4.5, 'bm-volkar-gale-slam': 4, 'bm-volkar-gathering-storm': 0.5,
-    'bm-volkar-grounding-rods': 3, 'bm-volkar-heavens-fall': -1, 'bm-volkar-intro': -1.5, 'bm-volkar-lightning-rods': 9,
-    'bm-volkar-polarity-minus': 3, 'bm-volkar-polarity-plus': 3, 'bm-volkar-polarity-surge': 1.5, 'bm-volkar-pulse': 4.5,
-    'bm-volkar-rod-strike': 1.5, 'bm-volkar-skyfall': -0.5, 'bm-volkar-squall-line': 3, 'bm-volkar-static-field': 5,
-    'bm-volkar-still-air': 3, 'bm-volkar-storm-walls': 2, 'bm-volkar-supercell': 2, 'bm-volkar-thunder-crash': 1,
-    'bm-volkar-thunderclap': 1.5, 'bm-volkar-thunderhead': 2.5, 'bm-volkar-titan-fist': -1.5, 'bm-wyrm-cinder-rain': 7.5,
-    'bm-wyrm-ember-breath': 3.5, 'bm-wyrm-intro': -4, 'bm-wyrm-take-flight': 3.5, 'bm-wyrm-twin-breath': 3.5,
-    'boss-death': -2.5, 'boss-enrage': -2.5, 'boss-impact-heavy': 0.5, 'boss-impact-light': 7,
-    'boss-intro': -1.5, 'buff-on': -0.5, 'chest-drop': 3.5, 'chest-open': -5,
-    'cleanse': -5, 'clear': -4.5, 'crit': 4, 'dash': 6.5,
-    'debuff-on': -1, 'dummy-hit': 3, 'emote-cheer': -6.5, 'emote-laugh': -2,
-    'emote-wave': 2, 'feast-chew': 6.5, 'feast-clink': -5.5, 'feast-serve': -3.5,
-    'feast-sting': -2.5, 'fish-bite': 3, 'fish-cast': 1.5, 'fish-catch': -3,
-    'fish-lost': -0.5, 'fish-reel': -0.5, 'gloom-hollow-off': -2, 'gloom-hollow-on': 2,
-    'gold-pop': 5, 'gold-ripe': 3.5, 'heal-land': -2.5, 'hit-heavy': 5,
-    'hit-light': 9, 'lamp-drop': 11, 'lamp-ember': 14.5, 'lamp-end': 6.5,
+    'ab-ironpalm-wall': -0.5, 'ab-kenseier-auto': 2, 'ab-kenseier-cut': 1, 'ab-kenseier-deathblow': 1,
+    'ab-kenseier-deflect': 7.5, 'ab-kenseier-duel': 1.5, 'ab-kenseier-guard': 0.5, 'ab-kenseier-mantle': 1.5,
+    'ab-kenseier-mikiri': 9, 'ab-kenseier-whirlwind': 10.5, 'ab-lanternkeeper-auto': 4.5, 'ab-lanternkeeper-beacon': -1,
+    'ab-lanternkeeper-beaconflare': -1, 'ab-lanternkeeper-carry': 1.5, 'ab-lanternkeeper-festival': 1.5, 'ab-lanternkeeper-flare': -1.5,
+    'ab-lanternkeeper-hand': -1, 'ab-lanternkeeper-relight': -1.5, 'ab-lanternkeeper-set': 2, 'ab-lanternkeeper-stride': 3.5,
+    'ab-lanternkeeper-trail': 4.5, 'ab-lanternkeeper-trim': 6.5, 'ab-lanternkeeper-wisp': 6.5, 'ab-ledger': 5,
+    'ab-magic-generic': 0.5, 'ab-marionettist-auto': 9, 'ab-marionettist-cross': 2.5, 'ab-marionettist-crossfire': -1,
+    'ab-marionettist-cue': 1, 'ab-marionettist-finale': -1.5, 'ab-marionettist-jab': 7, 'ab-marionettist-pirouette': 1,
+    'ab-marionettist-pull': 5, 'ab-marionettist-redcurtain': 2, 'ab-marionettist-string': 4.5, 'ab-marionettist-strum': 2,
+    'ab-marionettist-swap': 0.5, 'ab-marionettist-tangle': 5, 'ab-maw': 1, 'ab-melee-generic': 0.5,
+    'ab-nature': 3.5, 'ab-oathbroker-audit': 5, 'ab-oathbroker-auto': 4.5, 'ab-oathbroker-blanket': -1,
+    'ab-oathbroker-cosign': 0.5, 'ab-oathbroker-default': -1, 'ab-oathbroker-foreclose': -2.5, 'ab-oathbroker-moratorium': -1.5,
+    'ab-oathbroker-reneg': 4.5, 'ab-oathbroker-warrant': -0.5, 'ab-oathbroker-writ': -1.5, 'ab-pyromancer-auto': 2,
+    'ab-pyromancer-circle': -1.5, 'ab-pyromancer-combust': -2, 'ab-pyromancer-fireball': -2.5, 'ab-pyromancer-fireblast': -2,
+    'ab-pyromancer-meteor': -3, 'ab-pyromancer-phoenix': -2, 'ab-pyromancer-phoenixblast': -2.5, 'ab-pyromancer-phoenixflame': -2,
+    'ab-pyromancer-pyro': -3.5, 'ab-pyromancer-vent': -1.5, 'ab-ranged-generic': 1, 'ab-ranger-aimed': 0.5,
+    'ab-ranger-auto': 8, 'ab-ranger-barrage': 1, 'ab-ranger-caustic': 6, 'ab-ranger-cloak': 0.5,
+    'ab-ranger-explosive': -3.5, 'ab-ranger-falcon': 1.5, 'ab-ranger-mark': 3.5, 'ab-ranger-pierce': 3.5,
+    'ab-ranger-quick': 6, 'ab-ranger-rapid': 1.5, 'ab-rune': 0.5, 'ab-runeguard-cleave': -3,
+    'ab-runeguard-glyph': -2.5, 'ab-runeguard-living': -2.5, 'ab-runeguard-mirror': -1.5, 'ab-runeguard-overload': -2.5,
+    'ab-runeguard-sanctum': -2, 'ab-runeguard-strike': -1, 'ab-runeguard-ward': -2, 'ab-runeguard-whirl': -1.5,
+    'ab-shadowblade-auto': 2.5, 'ab-shadowblade-backstab': 6, 'ab-shadowblade-blossom': 1, 'ab-shadowblade-dance': 1.5,
+    'ab-shadowblade-evis': 5.5, 'ab-shadowblade-fury': 0.5, 'ab-shadowblade-rupture': 1.5, 'ab-shadowblade-shadowcut': 1.5,
+    'ab-shadowblade-shadowedge': 0.5, 'ab-shadowblade-smoke': 1, 'ab-shadowblade-step': 2, 'ab-shadowblade-strike': 2,
+    'ab-shadowblade-venom': 2, 'ab-shield': 1.5, 'ab-shot': 6, 'ab-slash': 0.5,
+    'ab-stab': 1.5, 'ab-taunt': 4, 'ab-thermist-auto': 2, 'ab-thermist-bleed': 1,
+    'ab-thermist-cinder': -1.5, 'ab-thermist-equil': -0.5, 'ab-thermist-flare': -2.5, 'ab-thermist-invert': -1.5,
+    'ab-thermist-lance': -1, 'ab-thermist-meltdown': -2, 'ab-thermist-shock': -2.5, 'ab-thermist-thermocline': -1.5,
+    'ab-thermist-zero': -2, 'ab-thread': 4, 'ab-threadweaver-auto': 9, 'ab-threadweaver-cradle': -0.5,
+    'ab-threadweaver-embroider': 0.5, 'ab-threadweaver-mend': -1, 'ab-threadweaver-needle': 3.5, 'ab-threadweaver-shuttle': 0.5,
+    'ab-threadweaver-snip': 5.5, 'ab-threadweaver-tapestry': 1, 'ab-threadweaver-thrum': -2.5, 'ab-threadweaver-tie': 1,
+    'ab-thresher-auto': 2, 'ab-thresher-blink': 2.5, 'ab-thresher-cull': -1.5, 'ab-thresher-gatestrike': 2,
+    'ab-thresher-gather': 9, 'ab-thresher-hook': 3.5, 'ab-thresher-hourglass': 1, 'ab-thresher-nightfall': 0.5,
+    'ab-thresher-reap': -1.5, 'ab-thresher-slash': 0.5, 'ab-thresher-sowing': 5.5, 'ab-thresher-wisp': 6,
+    'ab-tidecaller-auto': 5, 'ab-tidecaller-bore': -2.5, 'ab-tidecaller-breakwater': 1, 'ab-tidecaller-current': 5.5,
+    'ab-tidecaller-maelstrom': 2.5, 'ab-tidecaller-riptide': 4.5, 'ab-tidecaller-sip': 1, 'ab-tidecaller-spray': 4.5,
+    'ab-tidecaller-springflood': -4, 'ab-tidecaller-surge': -3.5, 'ab-tidecaller-swell': 4, 'ab-tidecaller-undertow': 2,
+    'ab-time': -0.5, 'ab-wind': 5.5, 'amb-fountain': -11, 'amb-pond': -16.5,
+    'amb-tavern': -13, 'amb-town': -18.5, 'arrival': -8, 'bm-archmage-arcane-burst': -0.5,
+    'bm-archmage-arcane-mark': 2, 'bm-archmage-call-of-the-circle': 2.5, 'bm-archmage-cinder-rune': 1, 'bm-archmage-convergence': 1.5,
+    'bm-archmage-counterspell': 2.5, 'bm-archmage-ice-lances': 3, 'bm-archmage-leaping-bolt': 1, 'bm-archmage-pyre-rings': 1,
+    'bm-archmage-rift-rune': -1.5, 'bm-archmage-rime-rune': 0.5, 'bm-archmage-rune-mark': 2, 'bm-archmage-rune-swap': 2,
+    'bm-archmage-storm-rune': 2, 'bm-archmage-the-binding': 1.5, 'bm-archmage-the-tide-rises': 1, 'bm-archmage-void-rifts': -1,
+    'bm-grubnak-belly-flop': -1, 'bm-grubnak-butchers-charge': -0.5, 'bm-grubnak-chop-chop': 1, 'bm-grubnak-cleaver-toss': 1.5,
+    'bm-grubnak-clogged-drains': 3.5, 'bm-grubnak-dinner-rush': 3.5, 'bm-grubnak-double-chop': 1, 'bm-grubnak-family-meal': 0.5,
+    'bm-grubnak-flambe': -0.5, 'bm-grubnak-flare-up': -1.5, 'bm-grubnak-gorge': 2, 'bm-grubnak-grease-fire': 0.5,
+    'bm-grubnak-intro': -1, 'bm-grubnak-ladle-spin': 4, 'bm-grubnak-larder-toss': 2.5, 'bm-grubnak-lid-slam': -1.5,
+    'bm-grubnak-meat-toss': 1.5, 'bm-grubnak-mince': 1.5, 'bm-grubnak-mise-en-place': 4, 'bm-grubnak-order-up': -3,
+    'bm-grubnak-rolling-meatballs': 2.5, 'bm-grubnak-service': -1, 'bm-grubnak-simmer': 2, 'bm-grubnak-spice-rack': 0.5,
+    'bm-grubnak-stockpot': 1.5, 'bm-grubnak-tenderize': 1, 'bm-grubnak-whisk': 7, 'bm-hollowking-barrow-bells': -1.5,
+    'bm-hollowking-barrow-knell': 1.5, 'bm-hollowking-coffin-lids': 2, 'bm-hollowking-court-of-bones': 1.5, 'bm-hollowking-crown-of-graves': 3.5,
+    'bm-hollowking-dirge': 0.5, 'bm-hollowking-echo-knights': 4.5, 'bm-hollowking-funeral-march': 0.5, 'bm-hollowking-grave-cleave': 0.5,
+    'bm-hollowking-grave-marks': 4, 'bm-hollowking-grave-summons': 1.5, 'bm-hollowking-gravebind': 2.5, 'bm-hollowking-intro': 1.5,
+    'bm-hollowking-judgement': 0.5, 'bm-hollowking-lantern': 8.5, 'bm-hollowking-lights-out': 2, 'bm-hollowking-royal-audience': -1.5,
+    'bm-hollowking-royal-decree': -1, 'bm-hollowking-royal-doom': 1, 'bm-hollowking-royal-gaze': -1.5, 'bm-hollowking-sceptre-sweep': 3.5,
+    'bm-hollowking-sceptre-throw': 2, 'bm-hollowking-the-charge-sheet': 1.5, 'bm-hollowking-the-king-rises': -1, 'bm-hollowking-the-long-night': 1.5,
+    'bm-hollowking-writ-of-execution': 1.5, 'bm-hydra-acid-spray': 3, 'bm-hydra-flame-gout': 3, 'bm-hydra-intro': -3,
+    'bm-hydra-mire-spit': 2, 'bm-hydra-mothers-cry': -1.5, 'bm-hydra-mothers-heart': 0.5, 'bm-hydra-regrowth': 0.5,
+    'bm-hydra-rending-maul': 1.5, 'bm-hydra-rime-crown': 1, 'bm-hydra-searing': 2.5, 'bm-hydra-stonegaze': 0.5,
+    'bm-hydra-stormcall': 3, 'bm-hydra-the-drowning': -2.5, 'bm-hydra-tidal-dance': 3.5, 'bm-hydra-tidal-line': 2,
+    'bm-hydra-venom-bloom': 3, 'bm-skitterra-acid-deluge': 0.5, 'bm-skitterra-brood': 4.5, 'bm-skitterra-ceiling-ambush': 1,
+    'bm-skitterra-chrysalis': 4, 'bm-skitterra-cocoon-drop': 1.5, 'bm-skitterra-egg-sacs': 1.5, 'bm-skitterra-eightfold-lunge': 6.5,
+    'bm-skitterra-fang-rush': 2, 'bm-skitterra-from-the-dark': 2, 'bm-skitterra-into-the-dark': 2, 'bm-skitterra-intro': -1,
+    'bm-skitterra-molt': 8, 'bm-skitterra-silk-lines': 3.5, 'bm-skitterra-silk-reel': 3.5, 'bm-skitterra-silk-wrap': 2.5,
+    'bm-skitterra-snare-weave': 2, 'bm-skitterra-spiderlings': 11, 'bm-skitterra-spin': 8, 'bm-skitterra-spinneret-volley': 16,
+    'bm-skitterra-strand-reel': 5.5, 'bm-skitterra-the-swarm': 11.5, 'bm-skitterra-the-web-gives-way': 0.5, 'bm-skitterra-tightening-web': 2,
+    'bm-skitterra-venom-drip': 4, 'bm-skitterra-venom-mist': -1.5, 'bm-skitterra-venom-spit': 4, 'bm-titan-avalanche': 0.5,
+    'bm-titan-breath-of-winter': 1.5, 'bm-titan-endless-winter': -1.5, 'bm-titan-frostbite': 2.5, 'bm-titan-glacial-stomp': -0.5,
+    'bm-titan-icefall': 2.5, 'bm-titan-intro': -3, 'bm-titan-rime-slam': 0.5, 'bm-titan-titans-grip': 2.5,
+    'bm-titan-titans-sweep': 2, 'bm-titan-twin-slam': 2, 'bm-titan-whiteout': 1.5, 'bm-titan-winters-grasp': 2.5,
+    'bm-titan-winters-howl': -1, 'bm-volkar-avalanche': 0.5, 'bm-volkar-ball-lightning': 1.5, 'bm-volkar-chain-lightning': 3,
+    'bm-volkar-distant-thunder': 4, 'bm-volkar-eye-closes': 2, 'bm-volkar-eye-of-the-storm': 4.5, 'bm-volkar-gale-slam': 4,
+    'bm-volkar-gathering-storm': 0.5, 'bm-volkar-grounding-rods': 3, 'bm-volkar-heavens-fall': -1, 'bm-volkar-intro': -1.5,
+    'bm-volkar-lightning-rods': 9, 'bm-volkar-polarity-minus': 3, 'bm-volkar-polarity-plus': 3, 'bm-volkar-polarity-surge': 1.5,
+    'bm-volkar-pulse': 4.5, 'bm-volkar-rod-strike': 1.5, 'bm-volkar-skyfall': -0.5, 'bm-volkar-squall-line': 3,
+    'bm-volkar-static-field': 5, 'bm-volkar-still-air': 3, 'bm-volkar-storm-walls': 2, 'bm-volkar-supercell': 2,
+    'bm-volkar-thunder-crash': 1, 'bm-volkar-thunderclap': 1.5, 'bm-volkar-thunderhead': 2.5, 'bm-volkar-titan-fist': -1.5,
+    'bm-wyrm-cinder-rain': 7.5, 'bm-wyrm-ember-breath': 3.5, 'bm-wyrm-intro': -4, 'bm-wyrm-take-flight': 3.5,
+    'bm-wyrm-twin-breath': 3.5, 'boss-death': -2.5, 'boss-enrage': -2.5, 'boss-impact-heavy': 0.5,
+    'boss-impact-light': 7, 'boss-intro': -1.5, 'buff-on': -0.5, 'chest-drop': 3.5,
+    'chest-open': -5, 'cleanse': -5, 'clear': -4.5, 'crit': 4,
+    'dash': 6.5, 'debuff-on': -1, 'dummy-hit': 3, 'emote-cheer': -6.5,
+    'emote-laugh': -2, 'emote-wave': 2, 'feast-chew': 6.5, 'feast-clink': -5.5,
+    'feast-serve': -3.5, 'feast-sting': -2.5, 'fish-bite': 3, 'fish-cast': 1.5,
+    'fish-catch': -3, 'fish-lost': -0.5, 'fish-reel': -0.5, 'gloom-hollow-off': -2,
+    'gloom-hollow-on': 2, 'gold-pop': 5, 'gold-ripe': 3.5, 'heal-land': -2.5,
+    'hit-heavy': 5, 'hit-light': 9, 'ken-blaze': 0.5, 'ken-break': -0.5,
+    'ken-deathblow': -2, 'ken-good': 8, 'ken-iai': 2.5, 'ken-miss': 7.5,
+    'ken-off': 4.5, 'ken-pass': 6.5, 'ken-perfect': 2, 'ken-pommel': 6.5,
+    'ken-redirect': 1, 'lamp-drop': 11, 'lamp-ember': 14.5, 'lamp-end': 6.5,
     'lamp-eternal': 0.5, 'lamp-pilgrim': 4.5, 'lamp-pillar': 3, 'lamp-snuff': 5.5,
     'lamp-sparks': 5, 'lb-fire': -1.5, 'lb-ready': -5, 'loot-take': -2,
     'low-hp': -4.5, 'npc-talk': -6, 'ping': 2.5, 'pip-up': 12,
@@ -721,10 +726,10 @@
     'ui-feat': -7, 'ui-gold': -4, 'ui-hover': 13, 'ui-secret': -6,
     'ult-alembist': 0.5, 'ult-bastion': 1.5, 'ult-bloodreaver': 1, 'ult-driftblade': 6.5,
     'ult-fire': -1.5, 'ult-gloomsworn': -1, 'ult-gorgemaw': 1, 'ult-grovekeeper': 2.5,
-    'ult-lanternkeeper': -2, 'ult-marionettist': 0.5, 'ult-oathbroker': -1, 'ult-pyromancer': -1,
-    'ult-ranger': 3, 'ult-ready': -4, 'ult-runeguard': -1, 'ult-shadowblade': 4,
-    'ult-thermist': -1, 'ult-threadweaver': -1, 'ult-tidecaller': -2, 'waymark': 11.5,
-    'wipe': -2,
+    'ult-kenseier': -1.5, 'ult-lanternkeeper': -2, 'ult-marionettist': 0.5, 'ult-oathbroker': -1,
+    'ult-pyromancer': -1, 'ult-ranger': 3, 'ult-ready': -4, 'ult-runeguard': -1,
+    'ult-shadowblade': 4, 'ult-thermist': -1, 'ult-threadweaver': -1, 'ult-tidecaller': -2,
+    'waymark': 11.5, 'wipe': -2,
   };
   // @@TRIM-END
 
@@ -1422,6 +1427,18 @@
     tpull: S => { S.whoosh({ color: 'brown', f: 1500, f1: 150, q: 0.8, dur: 0.7, peakAt: 0.25, peak: 0.36 }); S.noise({ color: 'pink', bp: 500, bp1: 300, q: 3, dur: 0.6, pts: [[0.15, 1], [0.6, 0]], peak: 0.12 }); },
     tmoon: S => { S.glass({ f: mf(91), dur: 0.7, peak: 0.07 }); S.partials({ at: 0.03, set: 'hand', f: mf(84), dur: 0.6, peak: 0.05 }); },
     tgull: S => { [0, 0.26].forEach((at, i) => S.tone({ at, f: 2600 - i * 200, f1: 1700, glide: 0.2, dur: 0.24, vib: [28, 0.03, 0], lp: 5000, a: 0.02, peak: 0.05 })); },
+    // Kenseier (class id kenseier): steel on ash and ember. A clean blade sweep with a thread of scrape on it, a spit of ember, a blade drawn from a scabbard (a long
+    // scrape ending in a ring of bar metal), a soft hiss of ash and cloth, a sword planted (a thud with a low plate ring), a spinning rush of air, a dull wooden knock,
+    // a hush of breath, a low iron toll, and a run of tiny cuts
+    knsweep: S => { S.whoosh({ color: 'white', f: 900, f1: 3800, q: 1.3, dur: 0.22, peakAt: 0.5, peak: 0.26 }); S.scrape({ at: 0.01, f: 5200, q: 3, rate: 60, dur: 0.12, pts: [[0.02, 1], [0.12, 0]], peak: 0.05 }); },
+    knember: S => { S.crackle({ f: 2600, dens: 1.2, dur: 0.3, pts: [[0.03, 1], [0.3, 0]], peak: 0.1 }); S.noise({ color: 'pink', lp: 2200, lp1: 800, dur: 0.25, pts: [[0.03, 1], [0.25, 0]], peak: 0.07 }); },
+    kndraw: S => { S.scrape({ f: 4200, q: 3, rate: 80, dur: 0.22, pts: [[0.02, 1], [0.22, 0]], peak: 0.12 }); S.metal({ at: 0.2, set: 'bar', f: 3400, dur: 0.35, peak: 0.09, click: 0.6 }); },
+    knash: S => { S.noise({ color: 'pink', lp: 1500, lp1: 600, dur: 0.6, a: 0.08, pts: [[0.2, 1], [0.6, 0]], peak: 0.16 }); S.noise({ at: 0.05, color: 'white', hp: 5200, grain: 0.9, grainRate: 1.4, dur: 0.55, pts: [[0.1, 1], [0.55, 0]], peak: 0.05 }); },
+    knplant: S => { S.thud({ f: 90, f1: 48, dur: 0.35, drive: 1.2, peak: 0.45 }); S.metal({ at: 0.01, set: 'plate', f: 300, dur: 0.7, peak: 0.14, strike: 0.4 }); },
+    knspin: S => { S.whoosh({ color: 'white', f: 600, f1: 2600, q: 1, dur: 0.5, peakAt: 0.45, am: [9, 0.6], peak: 0.3 }); S.scrape({ at: 0.04, f: 4800, q: 3, rate: 45, dur: 0.3, pts: [[0.05, 1], [0.3, 0]], peak: 0.04 }); },
+    knknock: S => { S.wood({ f: 420, dur: 0.1, peak: 0.2 }); S.thud({ f: 130, f1: 70, dur: 0.14, peak: 0.3, click: 0 }); },
+    knhush: S => { S.noise({ color: 'pink', lp: 1200, lp1: 200, dur: 0.7, a: 0.06, pts: [[0.2, 1], [0.7, 0]], peak: 0.18 }); S.noise({ at: 0.05, color: 'white', hp: 4500, hp1: 1500, dur: 0.5, pts: [[0.1, 1], [0.5, 0]], peak: 0.04 }); },
+    kntoll: S => { S.bell({ set: 'hand', f: mf(50), dur: 0.9, peak: 0.16, beat: 0.8, lp: 1800 }); S.thud({ f: 100, f1: 60, dur: 0.2, peak: 0.25, click: 0 }); },
     // Lanternkeeper (class id lanternkeeper): iron and brass, a flame and the light of it. A clink of a small iron lantern set down (a short ring of bar
     // metal with a dull knock under it), a thick iron post planted (a deep thud and a low plate ring), a chain rattled (a run of links), a match
     // struck (a quick scrape, a hiss and the pop of the head catching), a flame taking hold (a soft rush rising into a low warm swell), a bit of
@@ -1745,6 +1762,21 @@
     bore: [['trush', 1.3, 0, 1], ['tcrash', 1, 0.25, 0.7], ['tconch', 1.4, 0, 0.5]],
     auto: [['whoosh-up', 1.6, 0, 0.9], ['tfoam', 1.5, 0.02, 1], ['tdrop', 1.6, 0.04, 0.5]],
   };
+  // Kenseier (class id kenseier): steel on ash and ember, every move its own sound: three cuts (a clean sweep with an ember on the end), the blade lifted to meet a blow
+  // (a thin draw; what it meets is a clang or a clank from the moment), a quick step through, the blade drawn for the Deathblow, a cloak of ash, a sword planted, a
+  // blade sheathed and waited on, a spin, and an ember duel struck up with a beat (Thousand Cuts is the Ultimate, ult-kenseier)
+  ABIL.kenseier = {
+    auto: [['slash', 0.8, 0, 0.6, 0], ['knsweep', 1.25, 0, 0.55]],
+    cut: [['slash', 0.9, 0, 0.9, 1], ['knsweep', 1, 0, 0.7], ['knember', 1, 0.05, 0.5]],
+    deflect: [['kndraw', 1.5, 0, 0.7], ['knknock', 1.6, 0.03, 0.4]],
+    mikiri: [['dash', 1.2, 0, 0.6, 0], ['knash', 1.4, 0, 0.5], ['knsweep', 0.7, 0.02, 0.4]],
+    deathblow: [['kndraw', 0.8, 0, 0.8], ['knhush', 1, 0.02, 0.7], ['heavy', 0.7, 0.1, 0.5, 1]],
+    mantle: [['knash', 0.9, 0, 1], ['shield', 0.5, 0, 0.7, 1], ['kntoll', 0.6, 0.1, 0.4]],
+    guard: [['knplant', 1, 0, 1], ['shield', 0.8, 0.05, 0.7, 2], ['kntoll', 1.2, 0.1, 0.4]],
+    iai: [['knhush', 0.8, 0, 0.5], ['knknock', 2.2, 0.15, 0.9], ['kndraw', 0.6, 0.02, 0.5]],
+    whirlwind: [['knspin', 1, 0, 1], ['knsweep', 1.2, 0.08, 0.6], ['knember', 1.1, 0.1, 0.4]],
+    duel: [['kntoll', 0.7, 0, 0.9], ['knember', 0.9, 0.04, 0.7], ['knknock', 1.1, 0.22, 0.6], ['knknock', 1.1, 0.42, 0.6]],
+  };
   // Lanternkeeper (class id lanternkeeper): iron, brass and flame, every move its own sound: a spit of ember, a snip of the shears, a lantern set down and its flame
   // catching, a Great Beacon planted, a lantern hooked on an ally, a burst of every light at once, a chain dragged and a lantern tossed, a match struck, a wisp,
   // a flock of paper lanterns, a walk that drops little lights, a dash dragging them along, and the beam of the Lighthouse
@@ -1961,6 +1993,81 @@
     S.noise({ color: 'pink', bp: 1800, bp1: 500, q: 0.6, dur: 0.9, pts: [[0.05, 1], [0.9, 0]], peak: 0.36 });
     S.noise({ at: 0.03, color: 'white', hp: 4000, grain: 0.8, dur: 0.7, pts: [[0.05, 1], [0.7, 0]], peak: 0.1 });
     [84, 88, 91].forEach((n, i) => S.glass({ at: 0.2 + i * 0.05, f: mf(n), dur: 0.8, peak: 0.05 }));
+  });
+  // Kenseier (class id kenseier): the Ultimate (Thousand Cuts: a drawn breath, a run of tiny cuts quickening into a rush, then one deep thud and a glass crack), and the
+  // moments the kit sends (sound-hooks.js SoundHooks.kenseier): a Perfect (a high clean clang), a Good (a duller clank), a press with nothing to meet (a thin whiff), a step
+  // through a blow, a Break (a glass crack with a gold ring-out), Off-balance (a dull stagger), the Deathblow (a drawn-out whoosh and then a thump), a Pommel's knock, a
+  // Redirect (the blow sent back), Blazing Mantle catching, and Iai's counter-cut
+  def('ult-kenseier', 'ult', S => {
+    S.space('hall', 0.4);
+    S.noise({ color: 'pink', lp: 1400, lp1: 250, dur: 0.5, a: 0.04, pts: [[0.15, 1], [0.5, 0]], peak: 0.16 });
+    for (let i = 0; i < 22; i++) { const at = 0.2 + 0.7 * (1 - Math.pow(1 - i / 22, 1.8)); S.tick({ at, f: 2200 + i * 110, peak: 0.1 + i * 0.004 }); if (i % 3 === 0) S.scrape({ at, f: 5400, q: 3, rate: 70, dur: 0.06, pts: [[0.005, 1], [0.06, 0]], peak: 0.06 }); }
+    S.whoosh({ at: 0.35, color: 'white', f: 700, f1: 4200, q: 1.1, dur: 0.6, peakAt: 0.9, peak: 0.26 });
+    S.thud({ at: 0.98, f: 68, f1: 32, dur: 0.7, drive: 2, peak: 0.55 });
+    S.crack({ at: 0.98, f: 2800, dur: 0.3, peak: 0.35 });
+    [88, 93, 97, 100].forEach((n, i) => S.glass({ at: 1.0 + i * 0.045, f: mf(n), dur: 0.9, peak: 0.06, pan: (i - 1.5) * 0.3 }));
+    S.bell({ at: 1.0, set: 'hand', f: mf(50), dur: 1.4, peak: 0.12, beat: 0.8, lp: 1600 });
+  });
+  def('ken-perfect', 'ab', S => {
+    S.metal({ set: 'bar', f: 2700, dur: 0.6, peak: 0.2, click: 0.9, spread: 4 });
+    S.partials({ at: 0.004, set: 'service', f: 1500, dur: 0.8, peak: 0.1, spread: 3, strike: 0.3 });
+    S.glass({ at: 0.01, f: mf(100), dur: 0.7, peak: 0.05 });
+    S.noise({ hp: 7000, dur: 0.05, a: 0.0006, pts: [[0.004, 1], [0.05, 0]], peak: 0.1 });
+  });
+  def('ken-good', 'ab', S => {
+    S.metal({ set: 'plate', f: 540, dur: 0.22, peak: 0.2, click: 0.7, lp: 3200 });
+    S.thud({ f: 150, f1: 90, dur: 0.12, peak: 0.3, click: 0 });
+    S.wood({ at: 0.004, f: 700, dur: 0.07, peak: 0.12 });
+  });
+  def('ken-miss', 'ab', S => {
+    S.whoosh({ color: 'pink', f: 900, f1: 450, q: 0.8, dur: 0.18, peakAt: 0.3, peak: 0.16 });
+    S.wood({ at: 0.13, f: 300, dur: 0.06, peak: 0.1 });
+  });
+  def('ken-pass', 'ab', S => {
+    S.whoosh({ color: 'white', f: 500, f1: 2800, q: 1, dur: 0.24, peakAt: 0.55, peak: 0.2 });
+    S.noise({ at: 0.04, color: 'pink', lp: 1800, lp1: 500, dur: 0.2, pts: [[0.03, 1], [0.2, 0]], peak: 0.08 });
+    S.tick({ at: 0.2, f: 3600, peak: 0.07 }); S.glass({ at: 0.2, f: mf(96), dur: 0.4, peak: 0.03 });
+  });
+  def('ken-break', 'ab', S => {
+    S.space('room', 0.2);
+    S.crack({ f: 2600, dur: 0.28, peak: 0.5 });
+    [0, 0.03, 0.055, 0.09, 0.13, 0.17].forEach((at, i) => S.glass({ at: 0.01 + at, f: S.rr(2200, 4200), dur: 0.5 - i * 0.04, peak: 0.1, pan: S.rr(-0.4, 0.4) }));
+    S.thud({ at: 0.01, f: 110, f1: 55, dur: 0.22, peak: 0.4, drive: 1.3 });
+    S.glass({ at: 0.2, f: mf(98), dur: 1.0, peak: 0.07 });
+    S.noise({ at: 0.02, hp: 5000, grain: 0.9, grainRate: 2, dur: 0.4, pts: [[0.05, 1], [0.4, 0]], peak: 0.08 });
+  });
+  def('ken-off', 'ab', S => {
+    S.thud({ f: 110, f1: 50, dur: 0.3, peak: 0.45, drive: 1.2 });
+    S.tone({ at: 0.04, f: 260, f1: 120, glide: 0.35, dur: 0.4, am: [9, 0.5], lp: 900, a: 0.01, peak: 0.1 });
+    S.metal({ set: 'plate', f: 260, dur: 0.3, peak: 0.1, click: 0.3, lp: 1800 });
+  });
+  def('ken-deathblow', 'ab', S => {
+    S.space('room', 0.25);
+    S.whoosh({ color: 'pink', f: 260, f1: 3400, q: 0.9, dur: 0.5, peakAt: 0.9, peak: 0.34 });
+    S.scrape({ at: 0.05, f: 5200, q: 3, rate: 50, dur: 0.35, pts: [[0.06, 1], [0.35, 0]], peak: 0.05 });
+    S.thud({ at: 0.46, f: 72, f1: 34, dur: 0.6, drive: 1.8, peak: 0.55 });
+    S.crack({ at: 0.46, f: 900, dur: 0.18, peak: 0.2 });
+    S.metal({ at: 0.48, set: 'plate', f: 220, dur: 0.7, peak: 0.1, strike: 0.3 });
+  });
+  def('ken-pommel', 'ab', S => {
+    S.wood({ f: 380, dur: 0.1, peak: 0.25 });
+    S.thud({ f: 120, f1: 65, dur: 0.16, peak: 0.35, click: 0.2 });
+    S.metal({ at: 0.01, set: 'bar', f: 1500, dur: 0.12, peak: 0.07, click: 0.3 });
+  });
+  def('ken-redirect', 'ab', S => {
+    S.whoosh({ color: 'white', f: 2800, f1: 700, q: 1, dur: 0.2, peakAt: 0.3, peak: 0.2 });
+    S.metal({ at: 0.17, set: 'plate', f: 900, dur: 0.35, peak: 0.16, click: 0.8 });
+    S.thud({ at: 0.18, f: 130, f1: 70, dur: 0.14, peak: 0.25, click: 0 });
+  });
+  def('ken-blaze', 'ab', S => {
+    S.noise({ color: 'pink', lp: 300, lp1: 2800, fd: 0.4, dur: 0.5, a: 0.03, pts: [[0.15, 1], [0.5, 0]], peak: 0.3 });
+    S.crackle({ at: 0.05, f: 3000, dens: 1.5, dur: 0.4, pts: [[0.03, 1], [0.4, 0]], peak: 0.1 });
+    S.thud({ at: 0.12, f: 80, f1: 46, dur: 0.3, peak: 0.4 });
+  });
+  def('ken-iai', 'ab', S => {
+    S.scrape({ f: 6000, q: 3, rate: 90, dur: 0.1, pts: [[0.01, 1], [0.1, 0]], peak: 0.12 });
+    S.crack({ at: 0.08, f: 3000, dur: 0.18, peak: 0.3 });
+    S.metal({ at: 0.09, set: 'bar', f: 3800, dur: 0.4, peak: 0.1, click: 0.6 });
   });
   // Lanternkeeper (class id lanternkeeper): the Ultimate (Lighthouse: a great flame taking hold, a brass bell tolling and a low choir swelling under a rising shimmer of
   // glass), and the moments the kit sends (sound-hooks.js SoundHooks.lanternkeeper): an Ember gained (a tiny warm tick), a lantern snuffed (a puff and a thread of smoke),

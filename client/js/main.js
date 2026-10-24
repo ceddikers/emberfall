@@ -345,12 +345,12 @@
   function healerish() { return actor && actor.abilities.some(a => a.target === 'ally'); }
   // the next blow aimed at you, for a Kenseier's ring: a boss auto while it is on you, or a tankbuster telegraph that names you.
   // { at: seconds until it lands (a little negative: it just did), kind: 'auto' | 'buster' }, or null
-  function kenRing() {
+  function kenRing(id = Net.id) {   // (id: whose blow; the ring is drawn for every Kenseier in the raid, drawKenRing)
     if (!inArena() || !raid || raid.state !== 'live') return null;
     let best = null;
-    if (raid.boss.tg === Net.id && raid.nextAutoAt != null) best = { at: raid.nextAutoAt - now, kind: 'auto' };
+    if (raid.boss.tg === id && raid.nextAutoAt != null) best = { at: raid.nextAutoAt - now, kind: 'auto' };
     for (const tg of raid.tgs.values()) {
-      if (tg.type !== 'buster' || tg.gone != null || !(tg.target === Net.id || tg.follow === Net.id)) continue;
+      if (tg.type !== 'buster' || tg.gone != null || !(tg.target === id || tg.follow === id)) continue;
       const at = tg.start + tg.dur - now;
       if (at > -0.3 && (!best || at < best.at)) best = { at, kind: 'buster' };
     }
@@ -2854,6 +2854,34 @@
     const b = raid.bossDraw, dx = e.x - b.x, dy = e.y - b.y, d = Math.hypot(dx, dy);
     e.st.hurt = { t0: now, k, ax: d > 1 ? dx / d : -Math.cos(e.angle), ay: d > 1 ? dy / d : -Math.sin(e.angle) };
   }
+  // A Kenseier's beat: a thin ring closing on their feet for the next blow aimed at them (a boss auto while it is on them, or a
+  // tankbuster that names them), so it meets the feet exactly as the blow lands. Drawn for every viewer, never hidden. The fixed
+  // ring at the feet is where it ends; both turn white-gold inside the Perfect window (+-0.12s, KENSEI.PERFECT); an auto's ring is
+  // pale, a tankbuster's ember-orange and doubled. It stays a moment after the blow (the Good window runs 0.3s either side).
+  function drawKenRing(e) {
+    if (!inArena() || !raid || raid.state !== 'live' || !e.cls || e.cls.id !== 'kenseier') return;
+    const id = e.id === undefined ? Net.id : e.id, ps = raid.party.get(id);
+    if ((ps && !ps.alive) || raid.boss.u || (raid.posture && raid.posture.broken > 0)) return;
+    const r = kenRing(id), LEAD = 1.2;
+    if (!r || r.at > LEAD) return;
+    const hs = heroScale(), cx = e.x, cy = e.y - (e.lift || 0) + 2 * hs, R0 = 21 * hs, SQ = 0.8, buster = r.kind === 'buster';
+    const perfect = Math.abs(r.at) <= (typeof KENSEI !== 'undefined' ? KENSEI.PERFECT : 0.12), after = r.at < 0;
+    const lead = clamp(r.at / LEAD, 0, 1), fade = after ? clamp(1 + r.at / 0.3, 0, 1) : 1;
+    const col = perfect ? '#fff3c4' : buster ? '#ff8a3d' : '#e6e0d4', rad = R0 + (after ? -r.at * 40 * hs : lead * 38 * hs * (2 - lead));
+    ctx.save(); ctx.lineCap = 'round';
+    // every ring is stroked twice, a dark underline then the colour, so it reads on a pale floor as well as a dark one
+    const ring = (rr, color, w, alpha) => {
+      ctx.beginPath(); ctx.ellipse(cx, cy, rr, rr * SQ, 0, 0, TAU);
+      ctx.globalAlpha = alpha * 0.55; ctx.strokeStyle = '#14100c'; ctx.lineWidth = w + 2.4; ctx.stroke();
+      ctx.globalAlpha = alpha; ctx.strokeStyle = color; ctx.lineWidth = w; ctx.stroke();
+    };
+    // where it ends: a ring at the feet, lit gold in the Perfect window
+    ring(R0, perfect ? '#ffd27a' : '#d8d2c4', perfect ? 2.6 : 1.4, (0.5 + (perfect ? 0.5 : 0)) * fade);
+    // the ring itself: closing from outside, brightening as it comes; a tankbuster brings a second one right behind
+    for (let i = 0; i < (buster ? 2 : 1); i++) ring(rad + (after ? 0 : i * 7 * hs * lead), col, (buster ? 2.6 : 2) * (perfect ? 1.3 : 1), (0.45 + 0.55 * (1 - lead)) * fade * (i ? 0.7 : 1));
+    if (perfect) { ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'lighter'; glow(ctx, cx, cy, R0 * 1.5, '#ffd27a', 0.28 * fade); }
+    ctx.restore();
+  }
   function drawEntity(e) {
     switch (e.kind) {
       case 'hero': drawHero(ctx, e.cls, e.x, e.y, e.angle, e.st, HERO_SCALE); break;
@@ -2880,6 +2908,7 @@
         }
         const em = Pastimes.emoteLook(e, now);
         drawHero(ctx, e.cls, e.x, e.y, e.angle, e.st, heroScale(), { lift: e.lift, spec: e.spec, emote: em || null });
+        drawKenRing(e);
         // what's on them, on the body (heroes.js drawHeroStatus): shields and defensives, chosen-ally buffs, Slowed,
         // Damage Down, Vulnerability, a bleed or venom
         if (ps) {

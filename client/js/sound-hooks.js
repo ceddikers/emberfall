@@ -107,6 +107,26 @@ const SoundHooks = (() => {
       else if (ev === 'pilgrim') { if (mine) play('lamp-pilgrim', o('lk-pilgrim', 0.5)); }
     });
   }
+  // a Kenseier's moments (class id kenseier; ability-vfx.js KIT_VFX handlers call this): a Perfect (a high clean clang, lower on a tankbuster), a Good (a duller clank),
+  // a deflect with nothing to meet, a step through a blow, a Break's glass crack, the stagger of going Off-balance, the Deathblow's drawn-out whoosh and thump, a Pommel,
+  // a Redirect, Blazing Mantle catching and Iai's counter-cut. The casts themselves sound from the ability (sfx-map.js). Yours full, anyone else's soft and placed
+  function kenseier(ev, d, mine, at, who) {
+    if (!has()) return;
+    safe(() => {
+      const o = (key, vol, extra) => Object.assign(mine ? { vol, key, minGap: 0.05 } : { vol: vol * 0.45, remote: true, at, key: key + ':' + (who || ''), minGap: 0.15 }, extra);
+      if (ev === 'perfect') play('ken-perfect', o('ken-perfect', 0.85, d && d.b ? { rate: 0.82 } : null));
+      else if (ev === 'good') play('ken-good', o('ken-good', 0.7, d && d.b ? { rate: 0.85 } : null));
+      else if (ev === 'miss') { if (mine) play('ken-miss', o('ken-miss', 0.5)); }
+      else if (ev === 'pass') play('ken-pass', o('ken-pass', 0.6));
+      else if (ev === 'break') play('ken-break', o('ken-break', 0.8, { minGap: 0.3 }));
+      else if (ev === 'off') { if (mine) play('ken-off', o('ken-off', 0.6, { minGap: 0.3 })); }
+      else if (ev === 'deathblow') play('ken-deathblow', o('ken-deathblow', d && d.u ? 0.95 : 0.8, { minGap: 0.3 }));
+      else if (ev === 'pommel') play('ken-pommel', o('ken-pommel', 0.6));
+      else if (ev === 'redirect') play('ken-redirect', o('ken-redirect', 0.7, d && d.b ? { rate: 0.9 } : null));
+      else if (ev === 'blaze') play('ken-blaze', o('ken-blaze', 0.7, { minGap: 0.3 }));
+      else if (ev === 'iai') play('ken-iai', o('ken-iai', 0.7));
+    });
+  }
   // your own cast bar's quiet hum
   let castHum = null;
   // (a cast gets a soft, higher 'gathering' blip of its own sound at the press, a very quiet hum under the bar, and the full
@@ -264,7 +284,7 @@ const SoundHooks = (() => {
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wireUI); else wireUI();
   }
 
-  return { play, vo, ability, auto, hollow, thresher, tidecaller, lanternkeeper, castStart, castEnd, stacks, telegraph, bossCast, impact, music, phase, bossTrack, tick, stopBeds, ground, TG };
+  return { play, vo, ability, auto, hollow, thresher, tidecaller, lanternkeeper, kenseier, castStart, castEnd, stacks, telegraph, bossCast, impact, music, phase, bossTrack, tick, stopBeds, ground, TG };
 })();
 
 if (typeof module !== 'undefined') module.exports = { SoundHooks };

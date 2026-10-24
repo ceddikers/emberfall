@@ -60,6 +60,7 @@
     thresher: ['ab-slash', 'ab-wind'],
     tidecaller: ['ab-heal', 'ab-wind'],
     lanternkeeper: ['ab-heal', 'ab-buff'],
+    kenseier: ['ab-slash', 'ab-shield'],
   };
   // every ability id per class: base kit, spec replacements (specs.js), talent moves, Ultimate, taunt, auto-attack
   const CLASS = {
@@ -174,6 +175,13 @@
       trim: L('ab-stab', 'ab-fire'), set: L('ab-shield', 'ab-fire'), beacon: L('ab-heavy', 'ab-fire'), hand: L('ab-buff', 'ab-heal'), flare: L('ab-fire', 'ab-heal'),
       carry: L('ab-thread', 'dash'), trail: L('dash', 'ab-wind'), stride: L('ab-heal', 'ab-wind'), relight: L('ab-fire', 'ab-heal'), wisp: L('ab-wind', 'ab-heal'),
       festival: L('ab-buff', 'ab-wind'), lighthouse: ULT('lanternkeeper'), beaconflare: L('ab-fire', 'ab-holy'), auto: 'ab-magic-generic',
+    },
+    // Kenseier (class id kenseier): steel on ash and ember, a blade drawn and a blow met; every move has its own voice (sfx-synth.js ABIL.kenseier), and the moments the kit
+    // sends (a Perfect's clang, a Good's clank, a Break's crack, the Deathblow's whoosh and thump) go through SoundHooks.kenseier
+    kenseier: {
+      cut: L('ab-slash', 'ab-fire'), deflect: L('ab-shield', 'ab-slash'), mikiri: L('dash', 'ab-wind'), deathblow: L('ab-slash', 'ab-heavy'), mantle: L('ab-shield', 'ab-buff'),
+      guard: L('ab-shield', 'ab-heavy'), iai: L('ab-shield', 'ab-stab'), thousandcuts: ULT('kenseier'), whirlwind: L('ab-slash', 'ab-wind'), duel: L('ab-buff', 'ab-fire'),
+      taunt: 'ab-taunt', auto: 'ab-slash',
     },
   };
   // Every ability has its own voice, ab-<class>-<id> (sfx-synth.js ABIL: the families above layered at their own

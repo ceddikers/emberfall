@@ -6642,7 +6642,7 @@ KITS.kenseier = {
         k.buff('mantle', dur);
         k.g.mantlePerf = 0;
         if (k.talent('kenseier_blazing')) k.after(dur, () => { const n = k.g.mantlePerf || 0; if (n > 0) k.damage(100 * n, { ab: this, threat: 2 }); k.fx('ken-blaze', { n }); });   // (Blazing Mantle)
-        k.fx('ken-mantle');
+        k.fx('ken-mantle', { dur });
       },
       fx: { type: 'aura', color: '#8a8478', r: 36, dur: 2.5 },
     },

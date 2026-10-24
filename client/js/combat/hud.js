@@ -1072,3 +1072,76 @@ GAUGE_TIPS.lanternkeeper = {
   },
   extra: () => '<div style="margin-top:6px;opacity:.85">The coals in the cage are your Embers; the ring on the next one closes as it comes back. The sparks are your Trims toward the next Ember. Each small lantern beside it is a light you have out, its flame its wick: red is nearly a stub.</div>',
 };
+
+// ======================================================================= Kenseier (tank, class 22)
+// Drawn icons (art.icons === false in data.js) and the gauge's tooltip; the painted set replaces them later. Ash grey, charcoal, ember orange.
+GAUGE_TIPS.kenseier = {
+  desc: 'The ring is your Poise. A deflect with no blow to meet costs 12, a blow that hits you without one 15 (30 for a tankbuster); it refills once nothing has hit you for a moment. At nothing you are Off-balance for 2s: no deflects, 10% more damage taken.',
+  state: k => {
+    const g = k.g, now = k.now;
+    if (now < (g.offUntil || 0)) return `Off-balance: ${Math.ceil(g.offUntil - now)}s`;
+    if (now < (g.breakUntil || 0)) return `The boss is Broken: ${Math.ceil(g.breakUntil - now)}s · Deathblow`;
+    return `${Math.floor(g.poise || 0)} Poise` + (now < (g.noDefl || 0) ? ' · blade resting' : '');
+  },
+  extra: () => '<div style="margin-top:6px;opacity:.85">The white-gold bar under the boss\'s name is its Posture: only your deflects fill it. The ring that closes on your feet is the next blow aimed at you; press W as it lands.</div>',
+};
+(() => {
+  const AS = '#a29d94', AL = '#d8d3c9', CH = '#2b2b31', EM = '#ff8a3d', HOT = '#ffd9b0', GD = '#ffe2a0', INK = '#0e0e12';
+  const ink = (c, w = 3, col = AL) => { c.strokeStyle = col; c.lineWidth = w; c.lineCap = 'round'; c.lineJoin = 'round'; };
+  const glowDot = (c, x, y, r, col = EM, a = 1) => { const g = c.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, col); g.addColorStop(1, 'rgba(255,138,61,0)'); c.save(); c.globalAlpha = a; c.fillStyle = g; c.beginPath(); c.arc(x, y, r, 0, TAU); c.fill(); c.restore(); };
+  // a blade lying from (x0, y0) to (x1, y1): a pale body, an ember edge on one side
+  const blade = (c, x0, y0, x1, y1, wd = 4, edge = EM) => {
+    const a = Math.atan2(y1 - y0, x1 - x0), len = Math.hypot(x1 - x0, y1 - y0);
+    c.save(); c.translate(x0, y0); c.rotate(a);
+    c.fillStyle = AL; c.strokeStyle = INK; c.lineWidth = 2; c.lineJoin = 'round';
+    c.beginPath(); c.moveTo(0, -wd / 2); c.lineTo(len - 4, -wd / 2); c.lineTo(len, wd * 0.15); c.lineTo(len - 4, wd / 2); c.lineTo(0, wd / 2); c.closePath(); c.fill(); c.stroke();
+    ink(c, 1.6, edge); c.beginPath(); c.moveTo(2, wd / 2 - 0.4); c.lineTo(len - 3, wd / 2 - 0.4); c.stroke();
+    c.fillStyle = '#d8b25a'; c.fillRect(-1, -wd / 2 - 1.5, 3, wd + 3); c.restore();
+  };
+  const spark = (c, x, y, r, col = '#ffffff') => { glowDot(c, x, y, r * 1.8, EM, 0.7); ink(c, 1.8, col); for (let i = 0; i < 8; i++) { const a = i * TAU / 8 + 0.2, r1 = i % 2 ? r * 0.6 : r; c.beginPath(); c.moveTo(x + Math.cos(a) * 2, y + Math.sin(a) * 2); c.lineTo(x + Math.cos(a) * r1, y + Math.sin(a) * r1); c.stroke(); } };
+  ICON_GLYPHS.kenseier = {
+    // an ember-edged cut: one blade sweeping across, three trailing arcs
+    cut: c => {
+      glowDot(c, 34, 32, 26, EM, 0.3);
+      for (const [r, w, col] of [[22, 3, '#9a4a20'], [18, 2.6, EM], [14, 2, HOT]]) { ink(c, w, col); c.beginPath(); c.arc(30, 40, r, -2.5, -0.9); c.stroke(); }
+      blade(c, 10, 52, 52, 12, 5);
+    },
+    // a blade meeting a claw: a pale blade rising to meet three dark claws, a white spark between them
+    deflect: c => {
+      blade(c, 12, 54, 44, 22, 5);
+      c.fillStyle = '#4a3a3a'; c.strokeStyle = INK; c.lineWidth = 2; c.lineJoin = 'round';
+      for (const dx of [-8, 0, 8]) { c.beginPath(); c.moveTo(34 + dx, 6); c.quadraticCurveTo(38 + dx, 16, 40 + dx, 26 - Math.abs(dx) * 0.3); c.quadraticCurveTo(32 + dx, 18, 34 + dx, 6); c.closePath(); c.fill(); c.stroke(); }
+      spark(c, 40, 24, 11);
+    },
+    // a footstep through a red line: two footprints, a red stripe cut across the middle
+    mikiri: c => {
+      c.save(); c.globalAlpha = 0.85; ink(c, 5, '#c43a30'); c.beginPath(); c.moveTo(6, 30); c.lineTo(58, 22); c.stroke(); ink(c, 1.6, '#ff9a86'); c.beginPath(); c.moveTo(6, 30); c.lineTo(58, 22); c.stroke(); c.restore();
+      for (const [x, y, a, al] of [[20, 52, -0.2, 0.55], [30, 40, -0.2, 0.8], [42, 12, -0.2, 1]]) { c.save(); c.translate(x, y); c.rotate(a); c.globalAlpha = al; c.fillStyle = AL; c.strokeStyle = INK; c.lineWidth = 1.8; c.beginPath(); c.ellipse(0, 0, 5, 9, 0, 0, TAU); c.fill(); c.stroke(); c.beginPath(); c.ellipse(0, -11, 3.4, 3.4, 0, 0, TAU); c.fill(); c.stroke(); c.restore(); }
+    },
+    // a single killing slash across a cracked bar: a bar split by a bright diagonal stroke
+    deathblow: c => {
+      glowDot(c, 32, 32, 28, GD, 0.28);
+      c.fillStyle = '#2a2024'; c.strokeStyle = INK; c.lineWidth = 2; c.beginPath(); c.roundRect(6, 24, 52, 14, 3); c.fill(); c.stroke();
+      c.fillStyle = '#f0d28a'; c.beginPath(); c.roundRect(7, 25, 22, 12, 2); c.fill(); c.beginPath(); c.roundRect(35, 25, 22, 12, 2); c.fill();
+      ink(c, 1.4, INK); c.beginPath(); c.moveTo(30, 24); c.lineTo(27, 31); c.lineTo(33, 34); c.lineTo(31, 38); c.stroke();
+      blade(c, 8, 58, 56, 6, 5, '#ffffff');
+    },
+    // a cloak of ash: a pale hooded drape with a dark hem, ember flecks on it
+    mantle: c => {
+      glowDot(c, 32, 34, 26, EM, 0.25);
+      c.fillStyle = AS; c.strokeStyle = INK; c.lineWidth = 2.4; c.lineJoin = 'round';
+      c.beginPath(); c.moveTo(32, 6); c.bezierCurveTo(46, 8, 52, 24, 56, 54); c.lineTo(8, 54); c.bezierCurveTo(12, 24, 18, 8, 32, 6); c.closePath(); c.fill(); c.stroke();
+      c.fillStyle = '#6c6861'; c.beginPath(); c.moveTo(32, 12); c.bezierCurveTo(40, 14, 44, 26, 46, 54); c.lineTo(32, 54); c.closePath(); c.fill();
+      ink(c, 1.2, '#6c6861'); for (const x of [18, 25, 39, 46]) { c.beginPath(); c.moveTo(x, 30); c.lineTo(x - (32 - x) * 0.1, 52); c.stroke(); }
+      ink(c, 2.2, EM); c.beginPath(); c.moveTo(8, 54); c.lineTo(56, 54); c.stroke();
+      for (const [x, y, r] of [[22, 22, 1.8], [44, 34, 1.6], [16, 42, 1.4], [50, 14, 1.5], [36, 46, 1.4]]) { c.fillStyle = HOT; c.beginPath(); c.arc(x, y, r, 0, TAU); c.fill(); }
+    },
+    // a blade held across an ally: a pale blade laid across the top, a small figure sheltered beneath it, a gold arc over them
+    guard: c => {
+      ink(c, 2.4, GD); c.beginPath(); c.arc(32, 44, 20, Math.PI * 1.15, Math.PI * 1.85); c.stroke();
+      c.fillStyle = '#6a8fb6'; c.strokeStyle = INK; c.lineWidth = 2; c.beginPath(); c.arc(32, 36, 6, 0, TAU); c.fill(); c.stroke();
+      c.beginPath(); c.moveTo(22, 58); c.quadraticCurveTo(22, 44, 32, 44); c.quadraticCurveTo(42, 44, 42, 58); c.closePath(); c.fill(); c.stroke();
+      blade(c, 6, 22, 58, 22, 5);
+    },
+  };
+})();

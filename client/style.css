@@ -1856,3 +1856,24 @@ body.in-pvp #boss-bar, body.in-pvp #boss-cast, body.in-pvp #lb-gauge, body.in-pv
 #barrow .gate-spec .trial-go { justify-self: start; padding: 8px 22px; font-size: 12px; }
 #barrow .bg-pick { padding: 6px 16px; font-size: 12px; }
 .spec-gatehint { display: block; margin-top: 2px; font-size: 11px; color: var(--muted); font-style: italic; }
+
+/* the boss's Posture (a Kenseier in the party; raid-ui.js posture): a white-gold bar under the HP bar, a grey back-fill for what is
+   draining away, a crack across it in a Break, a slow pulse while it holds full through a cast */
+.bb-post { position: relative; height: 6px; margin-top: 4px; background: #0a0807; border: 1px solid #000; border-radius: 2px; box-shadow: 0 0 0 1px #4a4232; overflow: hidden; pointer-events: auto; transform-origin: 50% 50%; }
+.bb-post.hidden { display: none; }
+.bb-post .back, .bb-post .fill { position: absolute; inset: 0; width: 100%; transform: translateX(-100%); will-change: transform; }
+.bb-post .back { background: #8f8a80; opacity: .6; }
+.bb-post .fill { background: linear-gradient(#fff6d2, #ecc86c 55%, #b8923a); box-shadow: inset 0 1px 0 #ffffff66; transition: transform .1s; }
+.bb-post .crack { position: absolute; inset: 0; opacity: 0; pointer-events: none; transition: opacity .15s;
+  background: linear-gradient(70deg, transparent calc(11% - 1.5px), #0a0807 calc(11% - 1.5px) calc(11% + 1.5px), transparent calc(11% + 1.5px)),
+    linear-gradient(115deg, transparent calc(29% - 1.5px), #0a0807 calc(29% - 1.5px) calc(29% + 1.5px), transparent calc(29% + 1.5px)),
+    linear-gradient(75deg, transparent calc(46% - 1.5px), #0a0807 calc(46% - 1.5px) calc(46% + 1.5px), transparent calc(46% + 1.5px)),
+    linear-gradient(112deg, transparent calc(64% - 1.5px), #0a0807 calc(64% - 1.5px) calc(64% + 1.5px), transparent calc(64% + 1.5px)),
+    linear-gradient(68deg, transparent calc(81% - 1.5px), #0a0807 calc(81% - 1.5px) calc(81% + 1.5px), transparent calc(81% + 1.5px)),
+    linear-gradient(118deg, transparent calc(93% - 1.5px), #0a0807 calc(93% - 1.5px) calc(93% + 1.5px), transparent calc(93% + 1.5px)); }
+.bb-post.brk { box-shadow: 0 0 0 1px #ffe2a0, 0 0 10px 1px #ffd27acc; }
+.bb-post.brk .fill { background: linear-gradient(#ffffff, #fff0b8 60%, #f0c75a); }
+.bb-post.brk .crack { opacity: 1; }
+.bb-post.hold { box-shadow: 0 0 0 1px #d8b45a, 0 0 8px #ffd27a88; animation: bb-post-hold .9s ease-in-out infinite; }
+@keyframes bb-post-hold { 50% { filter: brightness(1.45); } }
+.bb-post.rec .fill { filter: saturate(.55) brightness(.9); }

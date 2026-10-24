@@ -60,6 +60,7 @@ const RaidUI = (() => {
       <div id="boss-bar">
         <div class="bb-top"><b class="bb-name"></b><span class="bb-mode"></span><em class="bb-tot"></em><span class="bb-time"></span></div>
         <div class="bb-hp"><div class="trail"></div><div class="fill"></div><div class="ticks"></div><div class="gates"></div><div class="vuln"></div><div class="goal hidden"></div><span></span></div>
+        <div class="bb-post hidden"><div class="back"></div><div class="fill"></div><div class="crack"></div></div>
         <div class="bb-status"></div>
         <div class="bb-next hidden"></div>
       </div>
@@ -102,6 +103,7 @@ const RaidUI = (() => {
     $('pf-dock').addEventListener('click', () => { dock(docked === 'strip' ? 'left' : 'strip'); if (onDock) onDock(docked); });
     dock('left');
     Tip.set($('lb-gauge'), () => limitTip());
+    Tip.set(root.querySelector('.bb-post'), () => postureTip());   // (a Kenseier in the party: the boss's Posture)
     // the boss plate grows with its status row and upcoming moves: keep the target frame just below it (style.css)
     if (typeof ResizeObserver !== 'undefined') {
       const bb = $('boss-bar');
@@ -213,6 +215,7 @@ const RaidUI = (() => {
     setText(q('.bb-hp span'), `${(frac * 100).toFixed(1)}%`);
     q('#boss-bar').classList.toggle('untargetable', !!b.u);
     q('#boss-bar').classList.toggle('walled', !!raid.wallLabel);   // sealed at a gate (fight.js raiseWall)
+    posture(raid, now, dt);
     gateTicks(raid);
     q('#boss-bar').classList.toggle('stopped', paused(raid, now));   // a Time Stop (fight.js pauseBoss)
     castFrame(raid, now);
@@ -430,6 +433,32 @@ const RaidUI = (() => {
     rcShown = rc;
     el.classList.toggle('hidden', rc <= 0);
     if (rc > 0) el.innerHTML = `Recovering<b>${rc}s</b>`;
+  }
+  // a Kenseier in the party: the boss's Posture under its name (main.js raid.posture from the 'fb' message: p, max, broken (seconds of the
+  // Break left), hold (full, held until a cast ends), rec (recovering), by). White-gold fill; a grey back-fill holds the level it is
+  // recovering from; a Break flashes the bar and cracks it, then drains it over the Break's seconds; a held bar pulses full.
+  let postTrail = 0, postBroke = false, postBrkMax = 4;
+  function posture(raid, now, dt) {
+    const bar = q('.bb-post'), P = raid.posture, on = !!P && raid.state === 'live';
+    bar.classList.toggle('hidden', !on);
+    if (!on) { postTrail = 0; postBroke = false; return; }
+    const frac = P.max ? Math.max(0, Math.min(1, P.p / P.max)) : 0, brk = P.broken > 0;
+    if (brk && !postBroke) {
+      postBrkMax = Math.max(0.5, P.broken);
+      if (bar.animate) bar.animate([{ filter: 'brightness(3.2)', transform: 'scaleY(1.9)' }, { filter: 'brightness(1.6)', transform: 'scaleY(1.2)', offset: 0.3 }, { filter: 'brightness(1)', transform: 'scaleY(1)' }], { duration: 520, easing: 'ease-out' });
+    }
+    postBroke = brk;
+    if (brk) postTrail = 0;
+    else if (P.rec && postTrail > frac) { /* recovering: the grey keeps the level it is draining from */ }
+    else postTrail = frac >= postTrail ? frac : Math.max(frac, postTrail - dt * 3);
+    setX(q('.bb-post .fill'), brk ? Math.min(1, P.broken / postBrkMax) : frac);
+    setX(q('.bb-post .back'), postTrail);
+    bar.classList.toggle('brk', brk);
+    bar.classList.toggle('hold', !!P.hold && !brk);
+    bar.classList.toggle('rec', !!P.rec && !brk);
+  }
+  function postureTip() {
+    return '<b>Posture</b>Only a Kenseier\'s deflects fill it. When it is full the boss Breaks: it staggers and casts nothing, and the party hits harder until the Break ends or a Deathblow lands. It holds full through a cast and breaks when the cast ends. It drains slowly if nothing adds to it; the grey is what is draining away.';
   }
   function limitTip() {
     const L = FIGHT.LB, pct = a => a.slice(1).map(x => Math.round(x * 1000) / 10).join(' / ') + '%';

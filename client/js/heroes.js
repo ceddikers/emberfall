@@ -1910,3 +1910,99 @@ Object.assign(SPEC_ART, {
     }
   },
 });
+
+// ---------------------------------------------------------------- Kenseier (tank, class 22)
+// A tall figure in an ash-grey haori over dark lacquered plates, wide sleeves, a cloth mask and a headband whose tails stream behind,
+// one long single-edged blade held two-handed with an ember-orange edge. Rests low and out to the right; Deflect (anim 'guard')
+// brings it flat across the front with a spark where it meets the blow; the cuts swing it; big moves lift it.
+// (The Perfect spark, rings and trails are ABILITY_VFX.kenseier; the closing ring on the feet is main.js drawKenRing.)
+function kenseierBlade(st) {
+  const s = swing(actP(st, 'attack')), g = pulse(actP(st, 'guard')), big = pulse(actP(st, 'big')), dir = swingDir(st);
+  const rot = 0.5 + dir * s * 1.0 - g * 2.05 - big * 1.5;
+  const px = 8 + 5 * g - 2 * big, py = 9 + 1.5 * g - 3 * big, c = Math.cos(rot), sn = Math.sin(rot);
+  return { rot, px, py, g, big, s, c, sn, tx: px + c * 38, ty: py + sn * 38, mx: px + c * 24, my: py + sn * 24 };
+}
+HERO_ART.kenseier = function (ctx, st) {
+  const ash = '#a29d94', ashL = '#c8c3b9', ashD = '#6c6861', char = '#2b2b31', charD = '#1b1b20', charL = '#46464e', ember = '#ff8a3d', hot = '#ffd9b0';
+  const B = kenseierBlade(st), now = st.t, fl = 0.85 + 0.15 * Math.sin(now * 7.1) + 0.05 * Math.sin(now * 13);
+  const wave = Math.sin(now * 3) * 1.6 + (st.moving ? Math.sin(now * 10) * 2.2 : 0);
+  // the haori's long back panel: ash grey with an ember thread along the hem, pleats down it
+  poly(ctx, [-3, -12, -15, -13.5, -24 + wave, -10, -28 + wave, -4, -26 + wave * 1.1, 0, -28 + wave, 4, -24 + wave, 10, -15, 13.5, -3, 12], ash, OUT, 2);
+  for (const y of [-7, -3.5, 0, 3.5, 7]) line(ctx, -8, y * 1.1, -22 + wave * 0.8, y * 1.15, ashD, 0.9);
+  ctx.save(); ctx.strokeStyle = rgba(ember, 0.75 * fl); ctx.lineWidth = 1.1; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.beginPath(); ctx.moveTo(-24 + wave, -10); ctx.lineTo(-28 + wave, -4); ctx.lineTo(-26 + wave * 1.1, 0); ctx.lineTo(-28 + wave, 4); ctx.lineTo(-24 + wave, 10); ctx.stroke(); ctx.restore();
+  feet(ctx, st, charD);
+  torso(ctx, char, 9.5, 14);
+  // the lacquered shoulder plates (sode): three stacked lames each side, a rim of ash on the top one
+  for (const sy of [-1, 1]) {
+    for (let i = 0; i < 3; i++) ellipse(ctx, 0.5 - i * 1.3, (11.5 + i * 1.2) * sy, 5.4, 3.6, 0.12 * sy, i === 0 ? charL : i === 1 ? char : charD, OUT, 1.2);
+    ellipse(ctx, 0.5, 11.5 * sy, 4.2, 2.6, 0.12 * sy, null, rgba(ashL, 0.45), 0.8);
+  }
+  // the haori over the chest: two ash panels crossing, an ember-orange piping at the lapel, the obi knotted at the hip
+  ellipse(ctx, -2, 0, 6.4, 13.6, 0, ash, OUT, 1.6);
+  line(ctx, -5, -11, 3.5, 9, ashD, 1.3); line(ctx, 3, -11, -5, 9, ashD, 1.3);
+  line(ctx, -5, -11, 3.5, 9, rgba(ember, 0.8), 0.7);
+  rrect(ctx, -4.6, -12.6, 3.2, 25.2, 1, charD, OUT, 1); line(ctx, -3, -11.4, -3, 11.4, rgba(ember, 0.55), 0.7);
+  circle(ctx, -3, 12.6, 1.8, ember, OUT, 0.8);
+  // the arms: wide ash sleeves to the hands, the leading (right) hand at the tsuba, the other at the pommel
+  const hx2 = B.px - B.c * 8, hy2 = B.py - B.sn * 8;
+  limb(ctx, [1, 11, (1 + B.px) / 2 + 1, (11 + B.py) / 2 + 2, B.px, B.py], ash, 4.6);
+  limb(ctx, [1, -11, (1 + hx2) / 2, (-11 + hy2) / 2 - 1.5, hx2, hy2], ash, 4.6);
+  // the blade (local space: along +x from the hand): grip wrapped in ash, a round charcoal guard, a gold collar, a long single edge
+  ctx.save(); ctx.translate(B.px, B.py); ctx.rotate(B.rot);
+  glow(ctx, 20, 1.2, 15 + B.g * 5, ember, (0.16 + B.g * 0.2 + B.s * 0.2) * fl);
+  poly(ctx, [-12, -1.6, 0, -1.6, 0, 1.6, -12, 1.6], charD, OUT, 1.2);
+  for (let i = 0; i < 4; i++) line(ctx, -11 + i * 3, -1.4, -9 + i * 3, 1.4, ash, 0.9);
+  circle(ctx, -12.4, 0, 1.9, charL, OUT, 0.9);
+  ellipse(ctx, 0.8, 0, 1.8, 4.6, 0, charL, OUT, 1.2); ellipse(ctx, 0.8, 0, 0.9, 2.6, 0, '#d8b25a');
+  ctx.beginPath(); ctx.moveTo(2, -1.9); ctx.lineTo(33, -2.5); ctx.quadraticCurveTo(39.5, -1.9, 39, 0.9); ctx.lineTo(33, 2.8); ctx.lineTo(2, 2.1); ctx.closePath();
+  ctx.lineJoin = 'round'; ctx.fillStyle = '#d6d2c9'; ctx.fill(); ctx.strokeStyle = OUT; ctx.lineWidth = 1.5; ctx.stroke();
+  line(ctx, 3, -0.6, 32, -0.9, '#a7a39a', 0.9);   // the ridge of the blade
+  ctx.save(); ctx.globalAlpha = Math.min(1, 0.95 * fl); line(ctx, 3, 1.7, 37, 1.9, ember, 1.8); line(ctx, 4, 1.65, 34, 1.75, hot, 0.7); ctx.restore();   // the ember edge
+  ctx.restore();
+  // a spark where the blade meets a blow (Deflect: its press brings the blade flat across the front)
+  if (B.g > 0.35) {
+    glow(ctx, B.mx, B.my, 12 * B.g, '#ffffff', 0.5 * B.g); glow(ctx, B.mx, B.my, 17 * B.g, ember, 0.5 * B.g);
+    ctx.save(); ctx.strokeStyle = hot; ctx.lineCap = 'round'; ctx.lineWidth = 1.1; ctx.globalAlpha = B.g;
+    for (let i = 0; i < 5; i++) { const a = i * 1.26 + 0.4, r0 = 2 + B.g * 2, r1 = 6 + B.g * 6 + (i % 2) * 3; ctx.beginPath(); ctx.moveTo(B.mx + Math.cos(a) * r0, B.my + Math.sin(a) * r0); ctx.lineTo(B.mx + Math.cos(a) * r1, B.my + Math.sin(a) * r1); ctx.stroke(); }
+    ctx.restore();
+  }
+  hand(ctx, hx2, hy2, charD); hand(ctx, B.px, B.py, charD);
+  // the head: a dark topknot, an ash headband with its tails streaming behind, the lower face under a charcoal cloth mask, two ember glints
+  const tl = Math.sin(now * 5) * 1.4 + (st.moving ? Math.sin(now * 12) * 2 : 0);
+  limb(ctx, [-6.5, -2, -13 + tl * 0.4, -3 - tl, -20 + tl, -2 + tl * 1.3], ashL, 1.8);
+  limb(ctx, [-6.5, 2, -13 + tl * 0.4, 3 + tl * 0.6, -19 + tl, 4 + tl * 1.1], ash, 1.8);
+  circle(ctx, 0.5, 0, 7.5, charD, OUT, 2);
+  circle(ctx, -1.6, -2.4, 2.5, charL);
+  circle(ctx, -6.2, 0, 2.5, charD, OUT, 1);   // the topknot
+  ctx.save(); ctx.strokeStyle = ashL; ctx.lineWidth = 2.3; ctx.lineCap = 'round'; ctx.beginPath(); ctx.arc(0.5, 0, 6.2, -1.45, 1.45); ctx.stroke();
+  ctx.strokeStyle = rgba(ember, 0.7); ctx.lineWidth = 0.7; ctx.beginPath(); ctx.arc(0.5, 0, 7.1, -1.2, 1.2); ctx.stroke(); ctx.restore();
+  ellipse(ctx, 6.3, 0, 2.6, 4.4, 0, char, OUT, 1);   // the mask
+  line(ctx, 5.4, -3.2, 7.4, 0, charL, 0.8); line(ctx, 7.4, 0, 5.4, 3.2, charL, 0.8);
+  circle(ctx, 6.9, -1.9, 0.75, ember); circle(ctx, 6.9, 1.9, 0.75, ember);
+  glow(ctx, 7, 0, 5, ember, 0.28 * fl);
+};
+Object.assign(SPEC_ART, {
+  // Deathblade: the edge burns hotter, sparks lifting off the tip, an ember-orange sash knotted at the back streaming behind
+  deathblade(ctx, st) {
+    const B = kenseierBlade(st), now = st.t, wv = Math.sin(now * 3.4) * 1.6 + (st.moving ? Math.sin(now * 10) * 2.2 : 0);
+    ctx.save(); ctx.strokeStyle = '#ff8a3d'; ctx.lineCap = 'round';
+    for (const [w0, a, dy] of [[2.6, 0.9, 0], [1.2, 0.6, 2.2]]) { ctx.globalAlpha = a; ctx.lineWidth = w0; ctx.beginPath(); ctx.moveTo(-4, 11); ctx.quadraticCurveTo(-13 + wv * 0.4, 14 + dy, -21 + wv, 12 + dy + wv * 0.8); ctx.stroke(); }
+    ctx.restore();
+    glow(ctx, B.tx, B.ty, 11 + B.s * 6, '#ff6a2a', 0.34);
+    for (let i = 0; i < 4; i++) {
+      const q = (now * 0.9 + i / 4) % 1, x = B.mx + (B.tx - B.mx) * (i / 3) + Math.sin(q * 7 + i * 2) * 2.5, y = B.my + (B.ty - B.my) * (i / 3) - q * 11;
+      ctx.save(); ctx.globalAlpha = Math.sin(q * Math.PI) * 0.9; circle(ctx, x, y, 1.1 + (i % 2) * 0.5, i % 2 ? '#ffd9b0' : '#ff8a3d'); ctx.restore();
+    }
+  },
+  // Warden of the Ash: a pale ash mantle over the left shoulder and a thin pale arc standing off the left side, turning with the blade
+  warden(ctx, st) {
+    const B = kenseierBlade(st), now = st.t;
+    ellipse(ctx, 0.5, -11.2, 6.6, 4.4, -0.1, '#d9d4ca', OUT, 1.3);
+    ellipse(ctx, 0, -11.4, 4.6, 2.8, -0.1, null, 'rgba(255,138,61,0.55)', 0.8);
+    for (let i = 0; i < 3; i++) { const x = -4 - i * 2.2, sw = Math.sin(now * 2.6 + i) * 0.8; ellipse(ctx, x + sw, -14 - i * 0.6, 2.2, 1.1, 0.3, '#b8b3a8', OUT, 0.7); }
+    ctx.save(); ctx.strokeStyle = '#e8e2d6'; ctx.lineCap = 'round'; ctx.lineWidth = 1.5; ctx.globalAlpha = 0.45 + 0.35 * B.g + 0.1 * Math.sin(now * 2);
+    const a0 = -2.2 - B.g * 0.5; ctx.beginPath(); ctx.arc(2, 0, 20, a0, a0 + 1.1); ctx.stroke();
+    ctx.globalAlpha *= 0.6; ctx.lineWidth = 0.8; ctx.beginPath(); ctx.arc(2, 0, 22.5, a0 + 0.1, a0 + 0.85); ctx.stroke(); ctx.restore();
+  },
+});

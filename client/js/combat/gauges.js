@@ -1168,3 +1168,57 @@ Object.assign(GAUGES, {
     }
   },
 });
+
+// ======================================================================= Kenseier (tank, class 22)
+// Poise: a lacquered guard disc (a tsuba) ringed by twenty segments that fill ember-orange, running low to a flickering red; the
+// blade stands upright in the middle of it. Off-balance greys the ring out, cracks the disc and counts its seconds down; while the
+// boss is Broken (the party's window) the disc rings white-gold and the blade burns bright. A short ash bar under it is the key's
+// rest after a deflect that caught nothing. The boss's Posture is not here: it is under the boss's name (raid-ui.js). The painted
+// gauge replaces this later.
+Object.assign(GAUGES, {
+  poise(c, k, w, h, t) {
+    const g = k.g, now = k.now, v = Math.max(0, Math.min(1, (g.poise || 0) / 100)), cx = w / 2, cy = 46, R = 33;
+    const off = now < (g.offUntil || 0), brk = now < (g.breakUntil || 0), rest = now < (g.noDefl || 0), low = v < 0.3;
+    const EM = '#ff8a3d', HOT = '#ffd9b0', GOLD = '#ffe2a0', ASH = '#a29d94', pl = 0.5 + 0.5 * Math.sin(t * 7);
+    // the light behind the disc
+    if (brk) glow(c, cx, cy, R + 22, GOLD, 0.34 + 0.12 * pl);
+    else if (off) glow(c, cx, cy, R + 14, '#ff4a3a', 0.2 + 0.1 * pl);
+    else if (v > 0.55) glow(c, cx, cy, R + 12, EM, 0.16 * v);
+    circle(c, cx, cy, R, '#16161b', OUT, 2.4);
+    circle(c, cx, cy, R - 12, '#0f0f13', brk ? GOLD : '#34343c', 1.4);
+    // the segments, clockwise from the top; the last lit one is partial
+    const n = 20, step = TAU / n;
+    for (let i = 0; i < n; i++) {
+      const a0 = -Math.PI / 2 + i * step + 0.05, fill = Math.max(0, Math.min(1, v * n - i));
+      c.beginPath(); c.arc(cx, cy, R - 6, a0, a0 + step - 0.1); c.lineWidth = 6; c.lineCap = 'butt';
+      c.strokeStyle = '#26262d'; c.stroke();
+      if (fill <= 0.01) continue;
+      c.globalAlpha = off ? 0.55 : low ? 0.65 + 0.35 * pl : 1;
+      c.strokeStyle = off ? '#7a766f' : brk ? GOLD : low ? '#ff5a3a' : v > 0.8 ? '#ffa45c' : EM;
+      c.beginPath(); c.arc(cx, cy, R - 6, a0, a0 + (step - 0.1) * fill); c.stroke(); c.globalAlpha = 1;
+    }
+    // the blade standing in the disc: a wrapped grip, a guard, a long pale blade with its edge
+    const bx = cx, by = cy + 11;
+    rrect(c, bx - 1.6, by - 2, 3.2, 9, 1, '#1b1b20', OUT, 1); line(c, bx - 1.6, by, bx + 1.6, by + 2, ASH, 0.8); line(c, bx - 1.6, by + 3, bx + 1.6, by + 5, ASH, 0.8);
+    ellipse(c, bx, by - 3, 5, 1.6, 0, '#46464e', OUT, 1);
+    c.beginPath(); c.moveTo(bx - 1.8, by - 4); c.lineTo(bx - 1.8, by - 23); c.quadraticCurveTo(bx - 1.6, by - 27, bx + 2.2, by - 28); c.lineTo(bx + 2.2, by - 4); c.closePath();
+    c.fillStyle = brk ? '#fff6e0' : '#cfcbc2'; c.fill(); c.lineWidth = 1.2; c.strokeStyle = OUT; c.stroke();
+    c.save(); c.globalAlpha = off ? 0.35 : 0.65 + 0.35 * v; line(c, bx + 1.8, by - 5, bx + 1.8, by - 26, brk ? '#ffffff' : EM, 1.3); c.restore();
+    if (brk) glow(c, bx, by - 16, 16, GOLD, 0.45 + 0.15 * pl);
+    // Off-balance: a crack across the disc and the ring greyed
+    if (off) {
+      c.save(); c.strokeStyle = '#ff6a4a'; c.lineWidth = 1.4; c.lineCap = 'round'; c.lineJoin = 'round'; c.globalAlpha = 0.9;
+      c.beginPath(); c.moveTo(cx - 20, cy - 12); c.lineTo(cx - 8, cy - 4); c.lineTo(cx - 12, cy + 4); c.lineTo(cx + 2, cy + 8); c.lineTo(cx + 6, cy + 18); c.moveTo(cx - 8, cy - 4); c.lineTo(cx + 4, cy - 14); c.stroke(); c.restore();
+    }
+    // the words under it
+    const ty = cy + R + 14;
+    if (off) label(c, 'OFF-BALANCE ' + Math.max(0, (g.offUntil || 0) - now).toFixed(1) + 's', cx, ty, '#ff9a86', 11, 'system-ui', 800);
+    else if (brk) label(c, 'BREAK ' + Math.max(0, (g.breakUntil || 0) - now).toFixed(1) + 's', cx, ty, '#ffe9b0', 12, 'system-ui', 800);
+    else label(c, String(Math.floor(g.poise || 0)) + ' Poise', cx, ty, low ? '#ff9a86' : '#f2e6c8', 12, 'system-ui', 800);
+    // the key resting after a deflect that caught nothing
+    if (rest) {
+      const q = Math.max(0, Math.min(1, ((g.noDefl || 0) - now) / (typeof KENSEI !== 'undefined' ? KENSEI.LOCK : 0.6)));
+      rrect(c, cx - 22, h - 6, 44, 4, 2, '#1c1c22', OUT, 1); rrect(c, cx - 21.5, h - 5.5, Math.max(2, 43 * q), 3, 1.5, ASH);
+    }
+  },
+});
