@@ -17,6 +17,8 @@ Each of the four bosses (Grubnak, Skitterra, Volkar, the Hollow King) becomes a 
 
 ## 2. Design rules (these override anything older in the docs)
 
+0. **Start from the questions.** Before designing a new boss, answer the questions in `docs/DESIGN.md` ("Finding a fight's idea: questions to ask", with the Hollow King's answers as the example) and write the answers there under the boss's heading. They are a guideline, not a constraint.
+
 1. **Telegraphs are never hidden, on any difficulty.** This reverses the current Hard design. Delete the "Hard drops the outline / some mechanics stay fully hidden" behaviour (`tg.hidden`, `outline: false`, Hard's body-tell-only mechanics in `client/js/arena/boss-tells.js` and the boss files). Every avoidable hit shows its exact danger area on the floor from the moment it is cast until it lands. Body tells (the boss's pose, the prop in its hand) stay as an extra clue, never a substitute. Hard gets harder by other levers (section 6).
 2. **No riddles or instruction text.** Nothing on screen may tell you what to do or pose a puzzle in words. Cast bars show the attack's name; the world shows the rest.
 3. **Thinking mechanics are welcome.** Teamwork and problem-solving *through movement and telegraphs* is the goal: pairing, ordering, soaking, passing, baiting, using cover, reading what the room will do next, stored mechanics that replay. The earlier "no logic puzzles" rule only ever meant "no riddle text". Do not strip thinking out of fights.
@@ -81,7 +83,7 @@ Also decide how long the fight is for 1 to 3 players (boss HP scales 42 / 62 / 8
 
 ## 6. Hard mode without hidden telegraphs
 
-Keep Hard's existing multipliers (casts 15% faster, 25% more damage) and its three Hard-only moves per boss. Add difficulty through the FF14 "layers", never through hiding the floor:
+Keep Hard's existing multipliers (casts 15% faster, 25% more damage) and its Hard-only moves per boss (at least three, at most about six). Add difficulty through the FF14 "layers", never through hiding the floor:
 - stored mechanics replayed later (the Hollow King's knights are the pattern);
 - two known mechanics resolving at once;
 - role-split or marked-player targeting (the tank gets a different mechanic from the healer);

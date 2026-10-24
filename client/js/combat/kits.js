@@ -1536,13 +1536,14 @@ const DASH = { charges: 2, cd: 12 };
 // Every tank's taunt rides on one of its own buttons (the carrier, TAUNT_CARRY below: a cheap, short-cooldown press the
 // tank uses anyway), so T is free for the Ultimate. The taunt is smart: pressing the carrier taunts only when the taunt
 // is ready and the enemy you face is on someone else (Kit.resolve calls env.taunt; CombatActor and the worlds in
-// main.js / raid-host.js decide). The host applies the shared part (FightSim.taunt in fight.js): threat to the top +
-// 10%, the boss fixed on you for 3s, an add for 6s. Each class's own part also feeds its gauge (use(k), run by
-// CombatActor.useTaunt), and has its own look (KIT_VFX.taunt in ability-vfx.js). cd matches FIGHT.TAUNT_CD.
-// name: the taunt's name (the fixation icon under the boss bar shows it); icon: the icon that fixation wears.
+// main.js / raid-host.js decide). The host applies the shared part (FightSim.taunt in fight.js): the boss is on you from
+// then on (until you fall or the other tank taunts); an add gets threat to the top + 10% and is fixed on you for 6s.
+// Each class's own part also feeds its gauge (use(k), run by CombatActor.useTaunt), and has its own look (KIT_VFX.taunt
+// in ability-vfx.js). cd matches FIGHT.TAUNT_CD.
+// name: the taunt's name; icon: the borrowed icon the taunt's own painting sits on.
 const TAUNT = {
   cd: 20, range: 500, lock: 0.6,
-  hold: 'your threat jumps to 10% above the highest, and the boss stays on you for 3s whatever anyone else does (an add, for 6s). The boss never leaves a standing tank for anyone else, so on him it hands him between tanks',
+  hold: 'the boss is yours from then on, until you fall or the other tank takes him (an add is fixed on you for 6s, with your threat on it jumping to 10% above the highest)',
   bastion: {
     name: 'Challenge', icon: 'banner',
     desc: 'The challenge steadies you like a Perfect Block: +10 Resolve, and your next Blade Chain counters for +150.',
@@ -1566,15 +1567,6 @@ const tauntNote = (classId, ab) => {
   const t = TAUNT[classId];
   if (!t || !ab || TAUNT_CARRY[classId] !== (ab.replaces || ab.id)) return '';
   return `<div class="it-taunt"><span><u>Taunt · ${t.name}:</u> while the enemy you face is attacking someone else, this also taunts it (once every ${TAUNT.cd}s): ${TAUNT.hold}. ${t.desc}</span></div>`;
-};
-// CSS background for the taunt's icon (the fixation under the boss bar): its own painting, the borrowed icon underneath
-// (a class with no painted icons yet, data.js art.icons === false, draws its own: hud.js abilityIcon)
-const tauntIconBg = classId => {
-  const cls = typeof CLASSES !== 'undefined' && CLASSES.find(c => c.id === classId);
-  if (cls && cls.art && cls.art.icons === false && typeof abilityIcon !== 'undefined') return `url(${abilityIcon(classId, 'taunt')})`;
-  // every tank's taunt is painted; the borrowed icon stays underneath in case a new tank's isn't yet
-  const own = `icons/${classId}/taunt.png`, borrowed = `icons/${classId}/${(TAUNT[classId] || {}).icon}.png`;
-  return `url(${own}), url(${borrowed})`;
 };
 
 // ======================================================================= ULTIMATES (T, slot 7)
@@ -2075,7 +2067,7 @@ KITS.alembist = {
 
 if (typeof module !== 'undefined') {
   // the talent helpers the specs share (a browser has them as globals)
-  module.exports = { KITS, DASH, TAUNT, TAUNT_CARRY, tauntNote, tauntIconBg, ULTIMATES, ultIconBg, ultMeta, bastionUltHits, MELEE, RANGED, bossNow, bossCasting, onBossCast, castHold, hpOf, abBase, targetDown, kitMove,
+  module.exports = { KITS, DASH, TAUNT, TAUNT_CARRY, tauntNote, ULTIMATES, ultIconBg, ultMeta, bastionUltHits, MELEE, RANGED, bossNow, bossCasting, onBossCast, castHold, hpOf, abBase, targetDown, kitMove,
     BASTION, bastionCanEdge, bastionRadiate, bastionTurned, bastionBanner, bastionGain, bastionCost, bastionSpend, bastionBraceDur, bastionInHallow, bastionBlade, bastionEdge, bastionGuard, bastionPerfect, bastionTick,
     REAVER, reaverBank, reaverWound, reaverWarm, reaverCash, reaverDrainOk, reaverDrainGlow, reaverDrainCost, reaverTick, reaverGain, reaverHackHeal, reaverDrainPot, reaverAfterDrain, reaverRetaliate, reaverLetting, reaverExpire,
     runeGain, runeSpent, runeEmergency, runeWardCost, runeWardUp, runeWardEnd, runeGlyph, runeGlyphguard, runeGlyphguardEnd,
