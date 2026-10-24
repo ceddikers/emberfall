@@ -105,7 +105,7 @@ function gameScripts() {
   // the game's own script order (client/index.html), minus the UI / network layer the gallery replaces
   const html = fs.readFileSync(path.join(CLIENT, 'index.html'), 'utf8');
   const SKIP = /(^|\/)(main|net|title|tutorial|raid-ui|debug-overlay|journal|town-life|town-secrets|pastimes|keybinds|pings|inventory|talent-panel|loot|hero-guide|save)\.js$/;
-  return [...html.matchAll(/<script\s+src="([^"]+)"/g)].map(m => m[1]).filter(s => !/^https?:/.test(s) && !SKIP.test(s));
+  return [...html.matchAll(/<script\s+src="([^"]+)"/g)].map(m => m[1].split('?')[0]).filter(s => !/^https?:/.test(s) && !SKIP.test(s));
 }
 function startServer() {
   const scripts = gameScripts();

@@ -697,6 +697,17 @@ function houndmasterCheck() {
   else fail('Houndmaster: pairs, drift and hold, pounce, Call Off, Wild Hunt, the hounds on the host', out.slice(-900));
 }
 
+// ---------------------------------------------------------------- 3h. cache-busting stamps (tools/stamp.js)
+// Every local script and stylesheet in client/index.html carries ?v=<hash of the file>, so a deploy never mixes fresh files
+// with cached ones. The check brings the stamps up to date itself (index.html then goes in with the commit) and fails only
+// when index.html names a file that does not exist.
+function stampCheck() {
+  const { stamp } = require('./stamp.js');
+  const { n, stale, missing } = stamp(true);
+  if (missing.length) fail('index.html stamps: every script and stylesheet exists', missing.join(', '));
+  else pass('index.html stamps: every script and stylesheet exists', `${n} files` + (stale.length ? `, restamped ${stale.length}: ${stale.slice(0, 6).join(', ')}${stale.length > 6 ? ' ...' : ''}` : ', all current'));
+}
+
 // ---------------------------------------------------------------- 3e. the PvP Arena (tools/pvp-sim.js)
 // A few bot duels, a 2v2 and a capture the flag: every match ends (a knockout, captures or the clock) without errors, never
 // in a blink, never past the clock.
@@ -822,6 +833,7 @@ async function heavy() {
   try { hollowCheck(); } catch (e) { fail('Hollow checked', e.stack); }
   try { kenseierCheck(); } catch (e) { fail('Kenseier checked', e.stack); }
   try { houndmasterCheck(); } catch (e) { fail('Houndmaster checked', e.stack); }
+  try { stampCheck(); } catch (e) { fail('Stamps checked', e.stack); }
   try { journalCheck(); } catch (e) { fail('Journals checked', e.stack); }
   try { thresherArcCheck(); } catch (e) { fail('Thresher arc checked', e.stack); }
   try { featsCheck(); } catch (e) { fail('Feats checked', e.stack); }
