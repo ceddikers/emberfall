@@ -818,8 +818,7 @@ body:has(#loot:not(.hidden)) #results { padding-right: 332px; }
 .lc-btn { padding: 4px 0; font: inherit; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink); background: var(--panel-2);
   border: 1px solid var(--line); border-radius: 2px; cursor: pointer; }
 .lc-btn:hover:not(:disabled) { background: #26201a; border-color: var(--gold-dim); }
-.lc-btn.need:not(:disabled) { color: var(--gold-hi); border-color: var(--gold-dim); }
-.lc-btn.pass { color: var(--muted); }
+.lc-btn.usable:not(:disabled) { color: var(--gold-hi); border-color: var(--gold-dim); }
 .lc-btn:disabled { opacity: .4; cursor: default; }
 .lc-res { display: flex; justify-content: space-between; gap: 8px; margin-top: 7px; font-size: 12px; color: #d4cab8; font-variant-numeric: tabular-nums; }
 .lc-res b { font-weight: 700; }

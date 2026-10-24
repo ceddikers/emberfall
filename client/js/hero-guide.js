@@ -251,7 +251,7 @@ HERO_GUIDE.kenseier = {
     { keys: ['w', 'r'], text: 'When the Break comes, hold Deathblow for the party\'s burst: {d:900}, and it heals you, but it ends the Break early. Out of a Break, R is a Pommel (or a Redirect, as a Warden of the Ash).' },
     { keys: ['d', 'w'], text: 'Ash Mantle before a tankbuster: 40% less damage, and every deflect inside it counts as Good at least, so a late press still turns the blow.' },
     { keys: ['f', 'w'], text: 'Guard Stance when the party is about to take a hit: for 6s every deflect of yours also shields the nearest ally. As a Deathblade it becomes Iai Stance: your next Perfect is followed by a counter-cut.' },
-    { keys: ['t'], text: 'Thousand Cuts when T is full: the boss Breaks at once and a free Deathblow lands at double strength. Perfects fill it, so save it for the heaviest stretch.' },
+    { keys: ['t'], text: 'Flash of Ash when T is full: the boss Breaks at once and a free Deathblow lands at double strength. Perfects fill it, so save it for the heaviest stretch.' },
   ],
 };
 // Lanternkeeper (healer, class 21)

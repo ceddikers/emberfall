@@ -181,7 +181,7 @@
     // sends (a Perfect's clang, a Good's clank, a Break's crack, the Deathblow's whoosh and thump) go through SoundHooks.kenseier
     kenseier: {
       cut: L('ab-slash', 'ab-fire'), deflect: L('ab-shield', 'ab-slash'), mikiri: L('dash', 'ab-wind'), deathblow: L('ab-slash', 'ab-heavy'), mantle: L('ab-shield', 'ab-buff'),
-      guard: L('ab-shield', 'ab-heavy'), iai: L('ab-shield', 'ab-stab'), thousandcuts: ULT('kenseier'), whirlwind: L('ab-slash', 'ab-wind'), duel: L('ab-buff', 'ab-fire'),
+      guard: L('ab-shield', 'ab-heavy'), iai: L('ab-shield', 'ab-stab'), flashofash: ULT('kenseier'), whirlwind: L('ab-slash', 'ab-wind'), duel: L('ab-buff', 'ab-fire'),
       taunt: 'ab-taunt', auto: 'ab-slash',
     },
     // Houndmaster (class id houndmaster): bone whistles, leather, fur and a brass horn; every move has its own voice (sfx-synth.js ABIL.houndmaster) and the moments the kit sends (Hold's and

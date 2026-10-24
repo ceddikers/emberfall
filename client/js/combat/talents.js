@@ -1326,7 +1326,7 @@ TALENTS.kenseier = [
   [
     { id: 'kenseier_grand', name: 'Grand Deathblow', ab: 'deathblow', text: 'A Deathblow in the first second of a Break hits 20% harder.' },
     { id: 'kenseier_duel', name: 'Ember Duel', ab: 'guard', grants: true, text: 'New move on F, in place of Guard Stance. Ember Duel (90s): for 10s the boss\'s autos come at a steady beat, every 2s exactly, and every Perfect deflect adds double Posture.' },
-    { id: 'kenseier_lastspark', name: 'Last Spark', ab: 'deathblow', text: 'When you Break the boss yourself, Thousand Cuts charges by a quarter (not on the Break Thousand Cuts makes).' },
+    { id: 'kenseier_lastspark', name: 'Last Spark', ab: 'deathblow', text: 'When you Break the boss yourself, Flash of Ash charges by a quarter (not on the Break Flash of Ash makes).' },
   ],
 ];
 

@@ -356,12 +356,10 @@ function items() {
     }
     CHEST_ODDS[mode].forEach((pct, i) => { const got = counts[i + 1] / n * 100; if (Math.abs(got - pct) > 4) probs.push(`${boss} ${mode}: ${RARITY[i + 1].name} ${got.toFixed(1)}% (want about ${pct}%)`); });
   }
-  // Need / Greed / Pass: Need beats Greed, all passing salvages, and who may Need what
-  const w1 = lootWinner([[1, LOOT_GREED], [2, LOOT_NEED], [3, LOOT_PASS]], rng), w0 = lootWinner([[1, LOOT_PASS], [2, LOOT_PASS]], rng), wg = lootWinner([[4, LOOT_GREED]], rng);
-  if (!w1 || w1.w !== 2 || w1.c !== LOOT_NEED || !(w1.r >= 1 && w1.r <= 100) || w0 !== null || !wg || wg.w !== 4) probs.push(`lootWinner: ${JSON.stringify({ w1, w0, wg })}`);
+  // who can use what (the chest marks the items your hero can use)
   const needs = [['bastion_w1', 'bastion', true], ['bastion_w1', 'cleric', false], ['g_cleaver', 'ranger', true], ['g_cleaver', 'cleric', false],
     ['g_apron', 'cleric', true], ['m_crown', 'bastion', true], ['cleric_a2', 'grovekeeper', false]];
-  for (const [k, c, want] of needs) if (canNeed(k, c) !== want) probs.push(`canNeed(${k}, ${c}) should be ${want}`);
+  for (const [k, c, want] of needs) if (canUse(k, c) !== want) probs.push(`canUse(${k}, ${c}) should be ${want}`);
   // gold: per boss, doubled on Hard; selling follows rarity
   if (clearGold('grubnak', 'normal') !== 40 || clearGold('hollowking', 'hard') !== 120 || clearGold('nobody', 'normal') !== 0) probs.push('clear gold is off');
   if (RARITY.map(r => r.sell).join() !== '2,8,15,30,60') probs.push('sell prices are off');

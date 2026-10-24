@@ -1811,7 +1811,7 @@
   };
   // Kenseier (class id kenseier): steel on ash and ember, every move its own sound: three cuts (a clean sweep with an ember on the end), the blade lifted to meet a blow
   // (a thin draw; what it meets is a clang or a clank from the moment), a quick step through, the blade drawn for the Deathblow, a cloak of ash, a sword planted, a
-  // blade sheathed and waited on, a spin, and an ember duel struck up with a beat (Thousand Cuts is the Ultimate, ult-kenseier)
+  // blade sheathed and waited on, a spin, and an ember duel struck up with a beat (Flash of Ash is the Ultimate, ult-kenseier)
   ABIL.kenseier = {
     auto: [['slash', 0.8, 0, 0.6, 0], ['knsweep', 1.25, 0, 0.55]],
     cut: [['slash', 0.9, 0, 0.9, 1], ['knsweep', 1, 0, 0.7], ['knember', 1, 0.05, 0.5]],
@@ -2198,7 +2198,7 @@
     S.noise({ at: 0.03, color: 'white', hp: 4000, grain: 0.8, dur: 0.7, pts: [[0.05, 1], [0.7, 0]], peak: 0.1 });
     [84, 88, 91].forEach((n, i) => S.glass({ at: 0.2 + i * 0.05, f: mf(n), dur: 0.8, peak: 0.05 }));
   });
-  // Kenseier (class id kenseier): the Ultimate (Thousand Cuts: a drawn breath, a run of tiny cuts quickening into a rush, then one deep thud and a glass crack), and the
+  // Kenseier (class id kenseier): the Ultimate (Flash of Ash: a drawn breath, a run of tiny cuts quickening into a rush, then one deep thud and a glass crack), and the
   // moments the kit sends (sound-hooks.js SoundHooks.kenseier): a Perfect (a high clean clang), a Good (a duller clank), a press with nothing to meet (a thin whiff), a step
   // through a blow, a Break (a glass crack with a gold ring-out), Off-balance (a dull stagger), the Deathblow (a drawn-out whoosh and then a thump), a Pommel's knock, a
   // Redirect (the blow sent back), Blazing Mantle catching, and Iai's counter-cut

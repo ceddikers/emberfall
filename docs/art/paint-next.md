@@ -68,7 +68,7 @@ Cel-shaded cartoon fantasy game ability icon, one bold object filling most of th
 
 ### Ultimate
 
-**Thousand Cuts** → `client/icons/kenseier/thousandcuts.png`
+**Flash of Ash** → `client/icons/kenseier/flashofash.png`
 ```text
 Cel-shaded cartoon fantasy game ability icon, one big bold object filling the square, thick dark outline, flat colours with one hard shadow, a thin flat gold rim along its top edge, light from the upper left. Charcoal background; ash-grey and pale steel, one ember-orange accent (#ff8a3d), white-gold (#ffe2a0) only for the boss's Posture bar and a Break. Subject: A round arena floor seen at a slant, a dark ash-grey ellipse with a tight tangle of many thin pale diagonal slash lines crossing over it, in the middle one bold white-gold slash from the lower left to the upper right, ember-orange sparks flung off it, and a white-gold crack running up through the centre of the picture; the tangle is thin and calm, the one gold slash is the largest shape. No glow, no gradients, no people, no faces, no hands, no text, no border, no samurai armour, no ninja, no oni mask, no cherry blossom, no red sun, no kanji, no dragon, no blood.
 ```
@@ -319,7 +319,7 @@ Cel-shaded 90s fantasy anime portrait, head and shoulders, three-quarter view, c
 - [x] `client/icons/kenseier/redirect.png`
 - [x] `client/icons/kenseier/whirlwind.png`
 - [x] `client/icons/kenseier/duel.png`
-- [x] `client/icons/kenseier/thousandcuts.png`
+- [x] `client/icons/kenseier/flashofash.png`
 - [x] `client/items/kenseier_w0.png`
 - [x] `client/items/kenseier_w1.png`
 - [x] `client/items/kenseier_w2.png`

@@ -8603,7 +8603,7 @@ Object.assign(KIT_VFX, {
 // Ash and ember. Colours: ash grey and charcoal for the cloak and the dull blows, ember orange (#ff8a3d) for the blade's fire, white-gold
 // for the clean ones. A Perfect deflect is a bright white-orange spark and a short ring; a Good one a duller grey spark; a miss a thin
 // whiff of ash. A Break cracks across the boss in gold and holds for as long as it lasts; the Deathblow is one long slash with an ember
-// trail that fades behind it (and a brief hush of the screen, never a shake); Thousand Cuts a ring of a thousand thin cuts. Nothing here
+// trail that fades behind it (and a brief hush of the screen, never a shake); Flash of Ash a ring of a thousand thin cuts. Nothing here
 // is painted on the floor beyond a thin ring, and nothing is red or blue (those are telegraphs). The kit's moments (every name starts
 // with ken-) land here as KIT_VFX: ken-perfect, ken-good, ken-miss, ken-pass, ken-break, ken-off, ken-deathblow, ken-pommel, ken-redirect,
 // ken-iai, ken-iai-stance, ken-mantle, ken-blaze, ken-guard, ken-duel, ken-step, ken-spin, ken-thousand. The class's cues go through
@@ -8756,8 +8756,8 @@ Object.assign(KIT_VFX, {
     whirlwind: c => { V.glint(c.x, c.y, { color: EMB2, size: 20, z: 24 }); V.smoke(c.x, c.y, { n: 2, r: 8, color: ASH, size: 14, a: 0.35, speed: 40 }); },
     // Ember Duel: a spark struck off the blade (the link to the boss is ken-duel)
     duel: c => { const p = front(c.ent, 26); V.glint(p.x, p.y, { color: EMB, size: 20, z: 28 }); V.sparks(p.x, p.y, { color: EMB, n: 5, speed: 220, z: 28, up: 120 }); },
-    // Thousand Cuts: the breath drawn, embers pulled to the blade, a white-gold light at the heart (the cuts are ken-thousand, a beat later)
-    thousandcuts: c => {
+    // Flash of Ash: the breath drawn, embers pulled to the blade, a white-gold light at the heart (the cuts are ken-thousand, a beat later)
+    flashofash: c => {
       if (c.cam) { c.cam.dim(0.26, 1.2); c.cam.punch(0.035, 0.4); }
       V.charge(c.x, c.y, { color: EMB2, r: 56, n: 12, dur: 0.3, follow: c.ent });
       V.glint(c.x, c.y, { color: WGOLD, size: 32, z: 40 });
@@ -8845,7 +8845,7 @@ Object.assign(KIT_VFX, {
     snd(e, 'off', null);
   };
   // the Deathblow: one long slash across the boss with an ember trail that fades behind it, a soft bloom where it passes the middle, a brief hush of the
-  // screen (your own hero only) and no shake. The crack of the Break splits at the same moment (unless it is Thousand Cuts' free one: that Break goes on)
+  // screen (your own hero only) and no shake. The crack of the Break splits at the same moment (unless it is Flash of Ash' free one: that Break goes on)
   KIT_VFX['ken-deathblow'] = Object.assign((e, target, d) => {
     const b = foe(target), cam = FX.camFor(e), u = d && d.u;
     snd(e, 'deathblow', d);
@@ -8963,7 +8963,7 @@ Object.assign(KIT_VFX, {
     V.shock(e.x, e.y, { r0: 14, r: 112, color: EMB2, dur: 0.4, w: 3 });
     V.sparks(e.x, e.y, { color: GOLD, n: 5 + Math.min(n, 6) * 2, speed: 300, z: 20, up: 120 });
   };
-  // Thousand Cuts: a ring of a thousand thin cuts through the boss, over half a second, ending in a ring of ember and white-gold (the Deathblow that follows is
+  // Flash of Ash: a ring of a thousand thin cuts through the boss, over half a second, ending in a ring of ember and white-gold (the Deathblow that follows is
   // ken-deathblow). Yours is a soft flash and a small push, not a shake
   KIT_VFX['ken-thousand'] = Object.assign((e, target) => {
     const b = foe(target), cam = FX.camFor(e);

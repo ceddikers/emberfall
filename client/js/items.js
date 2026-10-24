@@ -250,7 +250,7 @@ Object.assign(ITEM_PERKS, {
   kenseier_w2: { ab: 'mikiri', text: 'A Mikiri Step that lets a blow pass through you also readies your next Ember Cut as the third cut.' },
   kenseier_w3: { ab: 'mantle', text: 'Ash Mantle lasts 10s instead of 8s.' },
   kenseier_a4: { ab: 'deathblow', text: 'A Deathblow in the first second of a Break leaves the party a short shield.' },
-  kenseier_w8: { ab: 'deflect', text: 'Thousand Cuts also charges a little from Good deflects.' },
+  kenseier_w8: { ab: 'deflect', text: 'Flash of Ash also charges a little from Good deflects.' },
 });
 
 // ---------------------------------------------------------------- Houndmaster (melee damage, class 23)
@@ -558,7 +558,7 @@ function partyBonus(counts) {
 // ---------------------------------------------------------------- loot chests
 // A clear drops a chest: 4 items on Normal, 5 on Hard. Each item rolls its rarity first, then picks an item of that
 // rarity from the boss's table. Class items only roll for classes a human in the run plays (bots don't count).
-// Then everyone rolls Need / Greed / Pass on each (main.js + loot.js).
+// The chest is first come: anyone takes an item and the party can trade it on (loot.js).
 const BOSS_TIER = { grubnak: 1, skitterra: 2, volkar: 3, hollowking: 4, wyrm: 5, titan: 6, archmage: 7, hydra: 8 };
 const CHEST_SIZE = { normal: 4, hard: 5 };
 const CHEST_ODDS = {   // percent by rarity: [Uncommon, Rare, Legendary, Mythic]
@@ -600,24 +600,9 @@ function chestChances(bossId, mode, classes, n = 20000) {
   for (const k in hits) hits[k] /= n;
   return hits;
 }
-// Need / Greed / Pass: picks are [[playerId, choice]] with choice 0 pass, 1 greed, 2 need. Everyone who didn't pass
-// rolls 1-100; the best Need wins, otherwise the best Greed (ties roll again). -> { w: id, c, r } or null (all passed)
-const LOOT_PASS = 0, LOOT_GREED = 1, LOOT_NEED = 2;
-function lootWinner(picks, rng) {
-  for (const c of [LOOT_NEED, LOOT_GREED]) {
-    const ids = picks.filter(p => p[1] === c).map(p => p[0]);
-    if (!ids.length) continue;
-    for (let tries = 0; tries < 20; tries++) {
-      const rolls = ids.map(id => [id, 1 + Math.floor(rng() * 100)]);
-      const best = Math.max(...rolls.map(x => x[1])), top = rolls.filter(x => x[1] === best);
-      if (top.length === 1 || tries === 19) return { w: top[0][0], c, r: best };
-    }
-  }
-  return null;
-}
-// can this hero Need it? class items: that class; weapons: the matching main stat; armour and accessories: anyone
-const canNeed = (key, clsId) => !!ITEMS[key] && slotsFor({ key }).some(s => canEquip({ key }, clsId, s));
+// can this hero use it? class items: that class; weapons: the matching main stat; armour and accessories: anyone
+const canUse = (key, clsId) => !!ITEMS[key] && slotsFor({ key }).some(s => canEquip({ key }, clsId, s));
 
 if (typeof module !== 'undefined') module.exports = { ITEMS, GEAR_CAPS, CLASS_MAIN, RARITY, itemStats, itemRarity, canEquip, gearTotals, gearMods, sanitizeGear,
   PARTY_BONUS, gearSources, sanitizeSources, partyBonus, ITEM_PERKS, TIERS, FX_TRIGGERS, FX_CONDITIONS, FX_ACTIONS, FX_MODS, FX_KEYS,
-  BOSS_TIER, LOOT_TABLES, CHEST_ODDS, CHEST_SIZE, rollChest, chestChances, lootWinner, canNeed, clearGold, sellPrice, LOOT_PASS, LOOT_GREED, LOOT_NEED };
+  BOSS_TIER, LOOT_TABLES, CHEST_ODDS, CHEST_SIZE, rollChest, chestChances, canUse, clearGold, sellPrice };

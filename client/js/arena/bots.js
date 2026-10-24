@@ -928,7 +928,7 @@ const BotAI = {
       !!(view.bossCast && BUSTER_CASTS.test(view.bossCast.name) && view.bossCast.left < 3 && view.bossTarget === bot.id));
     // (a Gorgemaw never bites with a tankbuster on its way: the lock would cost it the Open Wide that eats the buster)
     if (tid === 'gorgemaw' && buster) return false;
-    // (a Kenseier's Thousand Cuts is a Break on demand: into the party's burst, never into a Break already open, and not with a blow
+    // (a Kenseier's Flash of Ash is a Break on demand: into the party's burst, never into a Break already open, and not with a blow
     // inside its animation lock's reach, which a press would cost the deflect)
     if (tid === 'kenseier') return !(view.posture && view.posture[2] > 0) && !BotAI.kenHits(bot, view, 0).some(h => h.at - t < 1.3) && (!!view.burst || held > 12);
     if (held > 35) return true;

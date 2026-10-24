@@ -423,7 +423,7 @@ The move and select lines of four favourites (Bastion, Ranger, Pyromancer, Cleri
 | `hero-shadowblade-low-1.ogg` | I'm bleeding out here. | *Low health* · urgent, strained |
 | `hero-shadowblade-low-2.ogg` | Too close. Too close. | urgent, strained |
 | `hero-shadowblade-low-3.ogg` | A mend. Quietly. | urgent, strained |
-| `hero-shadowblade-ult-1.ogg` | Thousand Cuts. | *Ultimate (shouted as it fires)* · hissed, not shouted |
+| `hero-shadowblade-ult-1.ogg` | Flash of Ash. | *Ultimate (shouted as it fires)* · hissed, not shouted |
 | `hero-shadowblade-ult-2.ogg` | Don't blink. | shouted, full voice |
 | `hero-shadowblade-ult-3.ogg` | You're already cut. | shouted, full voice |
 | `hero-shadowblade-victory-1.ogg` | Clean. Quiet. Done. | *Victory (after a boss falls)* · satisfied, a little tired |
@@ -1069,7 +1069,7 @@ The move and select lines of four favourites (Bastion, Ranger, Pyromancer, Cleri
 | `hero-kenseier-low-1.ogg` | I am off the beat! | *Low health* · urgent, strained |
 | `hero-kenseier-low-2.ogg` | My guard is cracking! | urgent, strained |
 | `hero-kenseier-low-3.ogg` | Heal me, now! | urgent, strained |
-| `hero-kenseier-ult-1.ogg` | Thousand Cuts! | *Ultimate (shouted as it fires)* · shouted, full voice |
+| `hero-kenseier-ult-1.ogg` | Flash of Ash! | *Ultimate (shouted as it fires)* · shouted, full voice |
 | `hero-kenseier-ult-2.ogg` | Every beat, at once! | shouted, full voice |
 | `hero-kenseier-ult-3.ogg` | Now. All of it. | shouted, full voice |
 | `hero-kenseier-victory-1.ogg` | Ash settles. | *Victory (after a boss falls)* · satisfied, a little tired |

@@ -282,7 +282,7 @@ const VoiceLines = (() => {
       down: ['Late... by a beat...', 'The count... slips...', 'Ash... settles...'],
       revive: ['Breathe. Again.', 'Back on the beat.', 'Thank you. I was late.'],
       low: ['I am off the beat!', 'My guard is cracking!', 'Heal me, now!'],
-      ult: ['Thousand Cuts!', 'Every beat, at once!', 'Now. All of it.'],
+      ult: ['Flash of Ash!', 'Every beat, at once!', 'Now. All of it.'],
       victory: ['Ash settles.', 'Well struck. Well met.'] },
     // Houndmaster: a lean huntsman with two lurchers, Rust and Ash; gruff, few words, talks to the dogs as much as the party
     houndmaster: { chance: 0.13,

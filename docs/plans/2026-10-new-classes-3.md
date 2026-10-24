@@ -247,7 +247,7 @@ Portrait: a huntsman kneeling with two hounds, horn on his hip, misty green wood
 | R | **Deathblow** | GCD | Only during Break: {d:900} and heals you 15%; it ends the Break early. Out of Break: **Pommel** ({d:200}, +5 Posture). |
 | D | **Ash Mantle** | oGCD, 60 s | 40% less damage for 8 s; deflects in the mantle always count as Good at least. The tank cooldown. |
 | F | **Guard Stance** | oGCD, 90 s | For 6 s your deflects also shield the nearest ally ({h:150}). Party utility. |
-| T | **Ultimate — Thousand Cuts** *(instant)* | own charge | Fill the boss's Posture to full and Break it at once, then a free Deathblow at double strength. Charge fills from Perfect deflects. |
+| T | **Ultimate — Flash of Ash** *(instant)* | own charge | Fill the boss's Posture to full and Break it at once, then a free Deathblow at double strength. Charge fills from Perfect deflects. |
 
 **Glows:** W lights in time with the closing ring (a thin flash on the key at the Perfect moment); R during a Break; E when a frontal is aimed at you; D on a tankbuster cast; T when charged.
 
@@ -271,7 +271,7 @@ Portrait: a huntsman kneeling with two hounds, horn on his hip, misty green wood
 | II survival/utility | **Iron Breath** (gauge): Poise recovers twice as fast while you're not hit. | **Long Step** (E): Mikiri Step carries you twice as far. | **Second Wind** (D): Ash Mantle has a 45 s cooldown *(the plain-number talent)*. |
 | III gauge | **Crack** (Posture): Breaks leave the bar starting a third full afterward. | **Shatter** (Posture): a Perfect deflect on a tankbuster Breaks at once if Posture is above half. | **Whirlwind Slash** *(grants, replaces E)*: a spin that adds 4 Posture per enemy hit (adds count); for fights with adds. |
 | IV big cooldowns | **Fireside Guard** (F): Guard Stance shields two allies. | **Unbroken** (D): while Ash Mantle is up, a miss costs no Poise. | **Blazing Mantle** (D): Ash Mantle ends in a burst for {d:300} per Perfect deflect inside it. |
-| V capstone | **Grand Deathblow** (R): a Deathblow at the very start of a Break deals 30% more. | **Ember Duel** *(grants, replaces F)*: for 10 s the boss's autos come at a steady beat (every 2 s exactly) and every Perfect adds double Posture. | **Last Spark** (T): Thousand Cuts charge refills by a quarter on a Break you built yourself. |
+| V capstone | **Grand Deathblow** (R): a Deathblow at the very start of a Break deals 30% more. | **Ember Duel** *(grants, replaces F)*: for 10 s the boss's autos come at a steady beat (every 2 s exactly) and every Perfect adds double Posture. | **Last Spark** (T): Flash of Ash charge refills by a quarter on a Break you built yourself. |
 | VI Deathblade | **Cleaving Death**: Deathblow also hits adds near the boss. | **Patient Edge**: Breaks you didn't spend a Deathblow on within 2 s give the party +5% damage instead. | |
 | VII Deathblade | **Crane Form**: Iai Stance's counter-cut adds 10 Posture. | **Double Stroke**: Deathblow strikes twice, the second at 40%. | |
 | VI Warden | **Long Guard**: cross-deflect range 180 instead of 120. | **Ember Return**: Redirect also heals you by what it deals. | |
@@ -282,7 +282,7 @@ Portrait: a huntsman kneeling with two hounds, horn on his hip, misty green wood
 - **kenseier_w1** (Grubnak): "A Perfect deflect heals you for about 2% of your HP."
 - **kenseier_a2** (Volkar): "Off-balance lasts 1 s instead of 2."
 - **kenseier_w4** (Hollow King): "Deathblow during the first second of a Break leaves a short party shield."
-- **kenseier_w8** (Hydra, set 2): "Thousand Cuts charges a little from Good deflects too."
+- **kenseier_w8** (Hydra, set 2): "Flash of Ash charges a little from Good deflects too."
 
 ### Visuals and sound
 A tall figure in an ash-grey haori over dark lacquered plates, a single long blade with an ember-orange edge, a cloth mask. Palette: ash grey, charcoal, ember orange (#ff8a3d), white-gold Posture. VFX: Perfect deflect is a bright white-orange spark and a short ring; Good is a duller grey spark; Break cracks the boss's Posture bar and draws a gold crack across the boss sprite; Deathblow is a single long slash with a fading ember trail and a brief screen hush (no screen shake beyond the existing level). Sounds: a high clean clang for Perfect, a duller clank for Good, a glass-crack for Break, a drawn-out whoosh then thump for Deathblow.

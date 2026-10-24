@@ -1,4 +1,4 @@
-// The nine class kits. Design rules (see docs/DESIGN.md for the reasoning):
+// The class kits. Design rules (see docs/DESIGN.md for the reasoning):
 //  - Easy to learn: the main combo/filler is ONE button, and buttons glow when they're a good press.
 //    Mashing the glowing buttons is a complete, working rotation.
 //  - Hard to master: every class has a resource that can overcap and is worth pooling, a 60s burst to line up
@@ -6609,7 +6609,7 @@ function kenOnDeflect(k, d) {
   g.lastDef = { a: d.a || 0, b: d.b ? 1 : 0, at: k.now, q: d.q };
   if (d.q === 2) kenPerfectHit(k, d);
   else {
-    if (k.perk('kenseier_w8')) k.ultGain(d.b ? 1.2 : 0.6);   // (item kenseier_w8: a Good deflect charges Thousand Cuts a third of a Perfect)
+    if (k.perk('kenseier_w8')) k.ultGain(d.b ? 1.2 : 0.6);   // (item kenseier_w8: a Good deflect charges Flash of Ash a third of a Perfect)
     k.fx('ken-good', { b: d.b ? 1 : 0, late: d.late ? 1 : 0, to: d.to != null ? d.to : null });
     // Feint (row I): a Good deflect leaves a moment to turn it into a Perfect with your Pommel (or Redirect)
     if (k.talent('kenseier_feint') && k.now >= (g.pommelAt || 0) && !kenBroken(k)) { g.feintUntil = k.now + 1.2; g.feint = { a: d.a, b: d.b, to: d.to }; }
@@ -6619,7 +6619,7 @@ function kenOnDeflect(k, d) {
 function kenPerfectHit(k, d) {
   const g = k.g, ab = abBase(k, 'deflect');
   k.stats.perfects = (k.stats.perfects || 0) + 1;
-  k.ultGain(d.b ? 3.6 : 1.8);   // (Thousand Cuts)
+  k.ultGain(d.b ? 3.6 : 1.8);   // (Flash of Ash)
   if (k.perk('kenseier_w1')) k.healRaw('self', k.env.maxHp() * 0.02, { ab });   // (item kenseier_w1: a Perfect heals you about 2% of your HP)
   if (k.talent('kenseier_riposte') && k.now >= (g.riposteAt || 0)) { g.riposteAt = k.now + 10; g.step = 2; g.comboUntil = k.now + 15; }   // (Riposte: the next Ember Cut is the third, at most once every 10s)
   if (k.def.deadly && k.has('iai')) {   // (Deathblade: the counter-cut follows the Perfect)
@@ -6647,12 +6647,12 @@ function kenOnBreak(k, d) {
   g.breakUntil = at + (d.secs || KENSEI.BREAK); g.breakAt = at; g.dbUsed = false;
   k.stats.breaks = (k.stats.breaks || 0) + 1;
   g.feintUntil = 0;
-  if (k.talent('kenseier_lastspark') && !(at - (g.thousandAt ?? -9) < 1.5)) k.ultGain(25);   // (Last Spark: a Break you built charges Thousand Cuts a quarter; not the Break Thousand Cuts itself forces)
+  if (k.talent('kenseier_lastspark') && !(at - (g.thousandAt ?? -9) < 1.5)) k.ultGain(25);   // (Last Spark: a Break you built charges Flash of Ash a quarter; not the Break Flash of Ash itself forces)
   // Patient Edge (Deathblade, row VI): a Break you did not spend a Deathblow on within 2 s gives the party +5% damage instead
   if (k.talent('kenseier_patient')) k.after(2, () => { if (g.breakAt === at && !g.dbUsed && kenBroken(k)) k.partyBuff('dmg', 0.05, Math.max(0.5, g.breakUntil - k.now), { ab: abBase(k, 'deathblow') }); });
   k.fx('ken-break', { s: d.secs || KENSEI.BREAK });
 }
-// the Deathblow, a free one under Thousand Cuts (o.ult), and its follow-ups
+// the Deathblow, a free one under Flash of Ash (o.ult), and its follow-ups
 function kenDeathblow(k, ab, o = {}) {
   const g = k.g, mult = o.mult || 1, early = k.now - (g.breakAt || 0) <= 1.2;
   const pot = 820 * mult * (!o.ult && early && k.talent('kenseier_grand') ? 1.2 : 1);
@@ -6818,9 +6818,9 @@ Object.assign(TAUNT, {
 });
 TAUNT_CARRY.kenseier = 'cut';
 
-// Thousand Cuts (T, instant): Perfect deflects fill it (1.8% each, 3.6% on a tankbuster, a little on its own while you fight)
+// Flash of Ash (T, instant): Perfect deflects fill it (1.8% each, 3.6% on a tankbuster, a little on its own while you fight)
 ULTIMATES.kenseier = {
-  id: 'thousandcuts', name: 'Thousand Cuts', slot: 7, type: 'ogcd', ult: true, mode: 'instant', target: 'enemy', range: MELEE, anim: 'big', icon: 'thousandcuts',
+  id: 'flashofash', name: 'Flash of Ash', slot: 7, type: 'ogcd', ult: true, mode: 'instant', target: 'enemy', range: MELEE, anim: 'big', icon: 'flashofash',
   lock: 1.0, dr: 0.3,
   charge: { rate: 0.35, keep: 0.5 },
   desc: 'A thousand cuts in the space of a breath: the boss\'s Posture fills at once and it Breaks, and then a free Deathblow lands at double strength, {d:1800}, healing you for 15%. The Deathblow does not end this Break. (A cast that is under way holds the Break until it ends.) ' +

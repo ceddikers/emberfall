@@ -293,7 +293,7 @@ const pdmgs = (sent, id = 1) => sent.filter(m => m.t === 'pdmg' && m.id === id);
   check(kit2.g.poise < 100 && sim2.ps.get(1).hp < sim2.ps.get(1).maxHp, `undeflected hits cost Poise and health (poise ${kit2.g.poise.toFixed(0)})`);
 }
 
-// 13. Last Spark: a Break the Kenseier built charges Thousand Cuts by a quarter; the Break Thousand Cuts forces does not refund it
+// 13. Last Spark: a Break the Kenseier built charges Flash of Ash by a quarter; the Break Flash of Ash forces does not refund it
 {
   let t = 0;
   const mk = tal => new Kit(kitFor('kenseier', null), { now: () => t, rng: Math.random, moving: () => false, target: () => ({ id: 'boss', x: 0, y: -40 }), positional: () => 'rear', partyMods: () => ({}), targetMods: () => ({}), selfMods: () => ({}),
@@ -301,11 +301,11 @@ const pdmgs = (sent, id = 1) => sent.filter(m => m.t === 'pdmg' && m.id === id);
   const a = mk(['kenseier_lastspark']), b = mk([]);
   a.g.ult = 0; b.g.ult = 0;
   a.notify('kbrk', { secs: 4 }); b.notify('kbrk', { secs: 4 });
-  check(near(a.ultCharge(), 25), `Last Spark charges Thousand Cuts a quarter on a Break (${a.ultCharge()})`);
+  check(near(a.ultCharge(), 25), `Last Spark charges Flash of Ash a quarter on a Break (${a.ultCharge()})`);
   check(b.ultCharge() === 0, `no charge from a Break without Last Spark (${b.ultCharge()})`);
   t += 10; ULTIMATES.kenseier.effect.call(ULTIMATES.kenseier, a);
   const was = a.ultCharge(); t += 0.2; a.notify('kbrk', { secs: 4 });
-  check(near(a.ultCharge(), was), `the Break Thousand Cuts forces gives Last Spark nothing (${was} -> ${a.ultCharge()})`);
+  check(near(a.ultCharge(), was), `the Break Flash of Ash forces gives Last Spark nothing (${was} -> ${a.ultCharge()})`);
   t += 20; a.notify('kbrk', { secs: 4 });
   check(near(a.ultCharge(), was + 25), `a later Break of your own charges again (${a.ultCharge()})`);
 }
@@ -362,10 +362,10 @@ const pdmgs = (sent, id = 1) => sent.filter(m => m.t === 'pdmg' && m.id === id);
   check(P().hold && !P().until, "a full bar holds through the heavy swing's wind-up");
   t += 0.7; sim.t = t; sim.boss.cast = null; sim.kenTick(0.05);
   check(!P().hold && P().until > t, 'and Breaks as it lands');
-  // Thousand Cuts: the whole bar at once (a Break), then the free Deathblow, which does not end it
+  // Flash of Ash: the whole bar at once (a Break), then the free Deathblow, which does not end it
   t += 6; sim.t = t; P().until = 0; P().p = 0; kit = new Kit(kitFor('kenseier', null), env); kit.update();
   ULTIMATES.kenseier.effect.call(ULTIMATES.kenseier, kit);
-  check(P().until > t && kenBroken(kit), 'Thousand Cuts Breaks the dummy at once');
+  check(P().until > t && kenBroken(kit), 'Flash of Ash Breaks the dummy at once');
   t += 0.6; kit.update(); check(P().until > t && kenBroken(kit), 'and its free Deathblow does not end the Break');
   // Ember Duel's beat and the Break's length for a Deathblade are the kit's own words, passed on as they are
   t += 10; sim.t = t; sim.kenTick(0.05); sim.kenTick(0.05);

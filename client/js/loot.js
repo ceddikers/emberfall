@@ -143,10 +143,10 @@ const Loot = (() => {
     const boss = (typeof BOSSES !== 'undefined' && BOSSES.find(b => b.id === ch.boss)) || null;
     const clsName = (CLASSES.find(c => c.id === ch.cls) || {}).name || 'hero';
     const cards = ch.items.length ? ch.items.map(([n, key, by]) => {
-      const it = ITEMS[key], rar = RARITY[it.rarity], use = canNeed(key, ch.cls);
+      const it = ITEMS[key], rar = RARITY[it.rarity], use = canUse(key, ch.cls);
       return `<div class="loot-card" data-n="${n}" style="--rc:${rar.color}">
         <div class="lc-item"><img src="${deps.iconURL(key)}" alt=""><div><b>${esc(it.name)}</b><small>${rar.name} · ${SLOT_NAME[it.slot]}${by ? ` · from ${esc(deps.nameOf(by))}` : ''}</small></div></div>
-        <div class="lc-acts one"><button class="lc-btn${use ? ' need' : ''}" data-take="${n}"${use ? '' : ` data-tip="Your ${esc(clsName)} can't use this"`}>Take</button></div></div>`;
+        <div class="lc-acts one"><button class="lc-btn${use ? ' usable' : ''}" data-take="${n}"${use ? '' : ` data-tip="Your ${esc(clsName)} can't use this"`}>Take</button></div></div>`;
     }).join('') : '<p class="loot-empty">Nothing left in the chest.</p>';
     let putting = '';
     if (ch.putting) {
