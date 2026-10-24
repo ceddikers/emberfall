@@ -69,10 +69,10 @@ const AZERATH = {
     const TAU = Math.PI * 2;
     const { ELS, RULE, SPELL, TAG, SIG, NAME } = AZ;
     const dmg = {
-      burst: H ? 16000 : 19100, lance: H ? 22500 : 17500, pyre: H ? 25200 : 21000, fire: H ? 20800 : 22500, react: H ? 24300 : 20250, frost: H ? 43200 : 46800,
-      beam: H ? 24300 : 20250, void: H ? 21600 : 18000, voidSelf: H ? 10400 : 10800, ice: H ? 25200 : 21000, bolt: H ? 19800 : 16500, rift: H ? 21600 : 18000,
-      conv: H ? 27900 : 23250, lens: H ? 18000 : 15000, counter: H ? 21600 : 18000, mark: H ? 43200 : 46800, pulse: H ? 16200 : 13500, surge: H ? 21600 : 22500,
-      elBite: H ? 1500 : 1200,
+      burst: H ? 16000 : 20200, lance: H ? 22500 : 18600, pyre: H ? 25200 : 22300, fire: H ? 20800 : 23900, react: H ? 24300 : 21500, frost: H ? 43200 : 49600,
+      beam: H ? 24300 : 21500, void: H ? 21600 : 19100, voidSelf: H ? 10400 : 11400, ice: H ? 25200 : 22300, bolt: H ? 19800 : 17500, rift: H ? 21600 : 19100,
+      conv: H ? 27900 : 24600, lens: H ? 18000 : 15900, counter: H ? 21600 : 19100, mark: H ? 43200 : 49600, pulse: H ? 16200 : 14300, surge: H ? 21600 : 23900,
+      elBite: H ? 1500 : 1300,
     };
     const S = (...steps) => steps.filter(Boolean);
     const live = id => f.alive().find(p => p.id === id);

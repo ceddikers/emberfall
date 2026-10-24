@@ -649,6 +649,40 @@ Shared rules for every fight:
   - The sticky web fades when it ends.
   - Entering or leaving a raid fades up from black.
 
+### Finding a fight's idea: questions to ask (a guideline, added 2026-10-24)
+
+The Hollow King is the fight players liked most: fair and hard on both difficulties, and every part of it feels like it belongs. The questions below are a way to look for that quality in a new fight. They are a **guideline and a suggestion, not a rule**: a fight can answer some of them loosely, leave one open, or break one on purpose if that makes it better. Use them as a lens when designing a boss and again when reviewing one; they never decide on their own that a move has to go.
+
+One thing to avoid: the Hollow King's own idea (he acts, and the court answers a beat later with a replay) is his. A new fight should find its own answer to question 3, not borrow his.
+
+**The questions**
+1. **What is happening in this room?** The premise, as a story a player could tell after one pull.
+2. **What question does the fight keep asking the player?** The one thing they are always trying to read.
+3. **What is the rule a player learns?** The pattern that, once understood, explains moves they haven't seen yet.
+4. **How does the fight warn before it tests?** Where the player sees what's coming, and how that warning belongs to the premise.
+5. **What does each act add?** How the fight builds, chapter by chapter, and what each chapter is called.
+6. **How does it end?** What the last stretch feels like, and how it shows the fight's idea most clearly.
+7. **What does Hard change?** How Hard raises the pressure on the same idea.
+8. **Where does luck come in, and how can a player read it?** Random targets and shuffles, and what lets a player respond to them.
+9. **What do the tank and the healer feel?** How the idea reaches the roles that aren't dodging.
+10. **What is this fight's own?** What it does that no other fight in the game does.
+11. **What will players talk about afterwards?** The moment they'll remember.
+
+**How the Hollow King answers them**
+1. **The room:** a trial in the court of the dead. He summons you, hears testimony, holds court on his throne, gives his verdict, and the last lights go out for the long night.
+2. **The question:** "What did I just see?"
+3. **The rule:** he calls (a swing, a Gaze, a decree) and the court answers a fixed beat later: the knights replay his swing, the coffins stir, the bells toll. Every move is a call or an answer.
+4. **The warning:** the warning is the call itself. A knight flashes the swing it is remembering; the Charge Sheet's three banners show Judgement's swings long before they land; in the long night the next Doom target's sigil glows six seconds ahead.
+5. **The acts:** The Summons (his calls, one at a time), Testimony (the knights start answering), Court of Bones (he sits out of reach while the coffins wake), The Verdict (calls and answers overlap, then Judgement), The Long Night (one lantern, Doom passing in a fixed order).
+6. **The ending:** the braziers die and one lantern is left. Doom passes from player to player in a known order and the lantern passes on touch: the whole fight's idea of watching and answering, in the dark, under the most pressure.
+7. **Hard:** the calls and answers overlap more, two swings and two echoes at once, and the floor tells are shorter. Nothing is hidden; it is the same reading, faster.
+8. **Luck:** Royal Doom, Grave Marks and the gathering dead land on random heroes, but each one is called before it lands, so a random draw is still something you read and answer.
+9. **Tank and healer:** the tank carries Grave Cleave and decides where his swings point, which decides where the knights' replays land. The healer gets the Royal Tithe, a heal check you can see coming (everyone drops to a third, then the Dirge eight seconds later), and the lantern runs in the dark.
+10. **His own:** stored swings that come back from somewhere else. The fight is a memory test of his own moves.
+11. **The moment:** the Long Night's lantern relay, and Judgement replaying the Charge Sheet from three places at once.
+
+**Future bosses:** every new boss writes its own answers here, under its own heading, when it is designed (set 3 on), and an existing boss can add its answers when it is next reworked.
+
 ### Boss I: Grubnak, the Ogre Chef (built, playable on Normal and Hard; rebuilt as a choreographed fight 2026-10-20)
 
 The dinner rush in the Scullery. One authored service, the same on every pull, that never lets up: four courses, each faster than the last, and a kitchen that catches fire half-way through. He never leaves the floor (the only boss with no downtime). The question he keeps asking is **where do I stand?** It covers where your puddle goes down, where the casks land, which wall his charge hits and which plate is yours. Pilot plan and the choices behind it: `docs/plans/2026-10-grubnak-pilot.md`.

@@ -26,7 +26,7 @@
 
 const SKITTERRA = {
   id: 'skitterra', name: 'Queen Skitterra', title: 'Spider Broodmother',
-  hp: { normal: 3305000, hard: 4065000 },
+  hp: { normal: 3305000, hard: 4105000 },
   autoDmg: { normal: 1800, hard: 1650 },
   enrage: { normal: 602, hard: 612 },   // the cast starts here and lands 8 s later (10:10 / 10:20)
   enrageName: 'Devour',
@@ -46,12 +46,12 @@ const SKITTERRA = {
     const B = f.boss;
     const TAU = Math.PI * 2;
     const dmg = {
-      mist: H ? 9200 : 11050, wrap: H ? 28100 : 33800, lunge: H ? 11900 : 16900, tether: H ? 17300 : 20800, spit: H ? 11350 : 15600, pool: H ? 2400 : 2850,
-      bite: H ? 2150 : 2100, fury: H ? 5950 : 7150, beam: H ? 6500 : 7800, reel: H ? 16200 : 22100,
-      sac: H ? 5400 : 6500, sacFail: H ? 10800 : 13000, fang: H ? 16200 : 19500, glob: H ? 11900 : 14300, snare: H ? 10800 : 13000,
-      deluge: H ? 17300 : 19500, strand: H ? 11900 : 14300, ambush: H ? 17300 : 20800, slam: H ? 5400 : 6500,
+      mist: H ? 9400 : 11050, wrap: H ? 28700 : 33800, lunge: H ? 12100 : 16900, tether: H ? 17600 : 20800, spit: H ? 11600 : 15600, pool: H ? 2400 : 2850,
+      bite: H ? 2200 : 2100, fury: H ? 6100 : 7150, beam: H ? 6600 : 7800, reel: H ? 16500 : 22100,
+      sac: H ? 5500 : 6500, sacFail: H ? 11000 : 13000, fang: H ? 16500 : 19500, glob: H ? 12100 : 14300, snare: H ? 11000 : 13000,
+      deluge: H ? 17600 : 19500, strand: H ? 12100 : 14300, ambush: H ? 17600 : 20800, slam: H ? 5500 : 6500,
       clutchHp: 24000, knotHp: 24000, broodHp: H ? 30000 : 26000, swarmHp: H ? 16000 : 18000,
-      sting: H ? 3250 : 3900, drop: H ? 14050 : 16900, drip: H ? 7550 : 9100, fall: H ? 15100 : 18200, cocoon: H ? 18350 : 14300,
+      sting: H ? 3300 : 3900, drop: H ? 14300 : 16900, drip: H ? 7700 : 9100, fall: H ? 15400 : 18200, cocoon: H ? 18700 : 14300,
     };
     const LONG = 420, SHORT = 150;
     const S = (...steps) => steps.filter(Boolean);

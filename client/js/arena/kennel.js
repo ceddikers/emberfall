@@ -2,7 +2,7 @@
 // rules (it damages hounds with boss telegraphs, and holds each player's hounds the way it holds the Marionettist's Dolls). Every client draws:
 //   - every Houndmaster's hounds: your own straight from your kit (smooth, no lag), everyone else's from the host's 'hounds' list
 //     (about 10 a second, eased). Rust and Ash are lean grey-brown lurchers in a few curves, with a long thin tail and soft ears that move
-//     (a rust collar, an ash-grey collar); Greyfang, the Lone Wolf's one hound, is bigger and greyer with a dark collar and old scars;
+//     (a rust collar, an ash-grey collar); Greyfang, the Lone Wolf's one hound, is bigger and greyer with a studded rust collar and old scars;
 //     Wild Hunt's four are ghosts, pale and glowing, trailing wisps. A hound that is Holding crouches with its ears up and a faint ring
 //     under it, one that is Guarding stands by its master, one that bites snaps its jaws, one that pounces is stretched in the air with a
 //     shadow left on the ground, and a downed hound lies on its side, grey and still.
@@ -15,7 +15,7 @@ const Kennel = (() => {
   const TAU2 = Math.PI * 2;
   const S = { mine: null, mineSeen: -9, sentAt: -9, others: new Map(), acts: new Map(), rec: new Map(), now: 0, env: null };
   const COAT = { rust: ['#8f7a63', '#6c5845'], ash: ['#948f86', '#6f6a62'], greyfang: ['#8b8e93', '#5f6368'], sp: ['#cfe4f2', '#9cbdd6'] };
-  const COLLAR = { rust: '#c46a3a', ash: '#b8b2a8', greyfang: '#3b342c', sp: '#eaf7ff' };
+  const COLLAR = { rust: '#c46a3a', ash: '#b8b2a8', greyfang: '#c46a3a', sp: '#eaf7ff' };
   const PAIR = { rend: '#f0c050', hamstring: '#9ad46a', bringdown: '#c8a8ff' };
   const MODES = new Set(['run', 'hold', 'guard', 'pounce', 'bite', 'down']);
   const SLOTS = new Set(['left', 'right', 'front', 'behind']);
@@ -215,6 +215,18 @@ const Kennel = (() => {
     for (const [px, py, rx, ry, fc] of parts) ellipse(ctx, px, py, rx, ry, 0, fc);
     ellipse(ctx, -2.5, 0, 9.5, 2, 0, c2);   // the darker line down the back
     if (!sp) { ctx.save(); ctx.globalAlpha = 0.5; ctx.strokeStyle = c2; ctx.lineWidth = 0.8; ctx.lineCap = 'round'; for (const rx of [3, 5.5, 8]) { ctx.beginPath(); ctx.moveTo(rx, -4.3); ctx.quadraticCurveTo(rx - 0.8, -2.6, rx, -1.4); ctx.moveTo(rx, 4.3); ctx.quadraticCurveTo(rx - 0.8, 2.6, rx, 1.4); ctx.stroke(); } ctx.restore(); }
+    // coat markings, as in the painted portraits: Rust and Greyfang are brindled (dark tiger stripes across the back), Ash is a
+    // merle (dark patches scattered over the grey); fixed shapes, so the coat doesn't shimmer as the hound moves
+    if (!sp) {
+      ctx.save(); ctx.globalAlpha = down ? 0.35 : 0.45;
+      if (id === 'ash') {
+        for (const [mx, my, mr] of [[-9, -2.4, 1.6], [-5.5, 2.6, 1.3], [-1.5, -2.2, 1.1], [2.5, 3, 1.5], [6.5, -3.2, 1.2], [-11.5, 1.8, 1]]) ellipse(ctx, mx, my, mr * 1.3, mr, 0.4, '#4e4a45');
+      } else {
+        ctx.strokeStyle = shade(c2, -0.25); ctx.lineWidth = 0.9; ctx.lineCap = 'round';
+        for (const bx of [-12, -9.5, -6.5, -3.5, -0.5, 2.5, 6]) { ctx.beginPath(); ctx.moveTo(bx, -4.4); ctx.quadraticCurveTo(bx + 1.2, -2.2, bx + 0.4, -0.8); ctx.moveTo(bx + 0.6, 4.4); ctx.quadraticCurveTo(bx + 1.6, 2.2, bx + 0.8, 0.8); ctx.stroke(); }
+      }
+      ctx.restore();
+    }
     if (grey) {   // Greyfang's old scars across the shoulder and flank, a pale chest
       ctx.save(); ctx.strokeStyle = '#d6d8da'; ctx.lineWidth = 0.9; ctx.lineCap = 'round'; ctx.globalAlpha = 0.8;
       ctx.beginPath(); ctx.moveTo(1, -3.6); ctx.lineTo(3.4, -1.6); ctx.moveTo(-0.6, -2.4); ctx.lineTo(1.8, -0.5); ctx.moveTo(-7, 3.2); ctx.lineTo(-5, 1.2); ctx.stroke(); ctx.restore();

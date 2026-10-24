@@ -23,7 +23,7 @@
 
 const VOLKAR = {
   id: 'volkar', name: 'Volkar', title: 'The Storm Titan',
-  hp: { normal: 3620000, hard: 4445000 },
+  hp: { normal: 3620000, hard: 4510000 },
   autoDmg: { normal: 1450, hard: 1550 },
   enrage: { normal: 592, hard: 607 },   // the cast starts here and lands 8 s later (10:00 / 10:15)
   enrageName: 'Skybreak',
@@ -45,12 +45,12 @@ const VOLKAR = {
     const B = f.boss;
     const TAU = Math.PI * 2;
     const dmg = {
-      clap: H ? 7800 : 7450, fist: H ? 26400 : 23000, surgeAlone: H ? 10200 : 9800, surgeSame: H ? 18000 : 17250, surgePair: H ? 2400 : 2300,
-      storm: H ? 1900 : 1850, thunderhead: H ? 6000 : 5750,
-      crash: H ? 15600 : 14950, field: H ? 6600 : 6300, rod: H ? 6000 : 5750, rodAgain: H ? 14400 : 13800, rodFail: H ? 14400 : 13800, slam: H ? 10800 : 10350, wall: H ? 11400 : 12650, edge: H ? 14400 : 13800, pulse: H ? 360 : 300,
-      chain: H ? 8400 : 8050, orb: H ? 14400 : 13800, skyfall: H ? 43200 : 41400,
-      strike: H ? 10800 : 9200, strikeOpen: H ? 21600 : 17250, discharge: H ? 14400 : 13800, grounded: H ? 10800 : 10350, boulder: H ? 14400 : 12650, fall: H ? 18000 : 17250,
-      squall: H ? 7200 : 6900, still: H ? 10800 : 10350, stillWrong: H ? 14400 : 13800, heavens: H ? 33600 : 32200, front: H ? 9000 : 8650,
+      clap: H ? 8300 : 7450, fist: H ? 28000 : 23000, surgeAlone: H ? 10800 : 9800, surgeSame: H ? 19100 : 17250, surgePair: H ? 2500 : 2300,
+      storm: H ? 2000 : 1850, thunderhead: H ? 6400 : 5750,
+      crash: H ? 16500 : 14950, field: H ? 7000 : 6300, rod: H ? 6400 : 5750, rodAgain: H ? 15300 : 13800, rodFail: H ? 15300 : 13800, slam: H ? 11400 : 10350, wall: H ? 12100 : 12650, edge: H ? 15300 : 13800, pulse: H ? 400 : 300,
+      chain: H ? 8900 : 8050, orb: H ? 15300 : 13800, skyfall: H ? 45800 : 41400,
+      strike: H ? 11400 : 9200, strikeOpen: H ? 22900 : 17250, discharge: H ? 15300 : 13800, grounded: H ? 11400 : 10350, boulder: H ? 15300 : 12650, fall: H ? 19100 : 17250,
+      squall: H ? 7600 : 6900, still: H ? 11400 : 10350, stillWrong: H ? 15300 : 13800, heavens: H ? 35600 : 32200, front: H ? 9500 : 8650,
     };
     const S = (...steps) => steps.filter(Boolean);
     const room = f.room = { squall: null, eye: false };
