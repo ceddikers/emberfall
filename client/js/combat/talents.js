@@ -642,29 +642,29 @@ Object.assign(TALENTS, {
 Object.assign(TALENTS, {
   thresher: [
     [
-      { id: 'thresher_drag', name: 'Dragging Edge', ab: 'slash', text: 'A Backswing now drags the toll along: it ages every affliction on the boss by 1s.' },
-      { id: 'thresher_weight', name: 'Dread Weight', ab: 'hook', text: 'Hook now lays a Bind as well as its Thread.', spec: { sower: 'Hook now lays a Mark as well as its Thread and Bind.', grim: 'Hook now lays a Mark as well as its Thread.' } },
-      { id: 'thresher_gleaning', name: 'Phantom Cut', ab: 'reap', text: 'A Reap that cashes in two or more gold afflictions makes your next Slash or Cleave cut again for 35% a moment later.' },
+      { id: 'thresher_drag', name: 'Dragging Edge', ab: 'slash', text: 'A Backswing drags the toll along: every affliction on the boss starts its time again.' },
+      { id: 'thresher_weight', name: 'Dread Weight', ab: 'hook', text: 'A Hook on a Thread already at full Weight snaps it on the spot: it pops, with its Hook charge back, instead of being laid again.' },
+      { id: 'thresher_gleaning', name: 'Phantom Cut', ab: 'reap', text: 'A Reap that pops three or more afflictions makes your next Slash or Cleave cut again for 35% a moment later.' },
     ],
     [
       { id: 'thresher_vanish', name: 'Vanishing Cut', ab: 'blink', text: 'Gloam Blink now takes you out of the world for 1.5s: nothing can touch you.' },
       { id: 'thresher_tithe', name: 'Tithe', ab: 'reap', text: 'Drain, its ticks and its payout in a Reap, now mend the most hurt ally instead of you.' },
-      { id: 'thresher_hush', name: 'Hush', ab: 'gather', text: 'Beckon also wraps you in a barrier of {s:100} for 6s.' },
+      { id: 'thresher_hush', name: 'Hush', ab: 'gather', text: 'Sever also wraps you in a barrier of {s:100} for 6s.' },
     ],
     [
-      { id: 'thresher_sowing', name: 'Shroud', ab: 'gather', grants: true, text: 'New move on R, in place of Beckon. Shroud (25s): all four afflictions land on the boss at once, faint (any that is already darkening is left to darken), and a cut for {d:100}.' },
-      { id: 'thresher_compost', name: 'Grave Interest', ab: 'reap', text: 'A lapse you reap is not wasted: every lapsed affliction a Reap cashes in leaves the boss bleeding for {d:30} every 2s for 8s.' },
-      { id: 'thresher_second', name: 'Unpaid Debt', ab: 'reap', text: 'A gold affliction a Reap cashes in is not spent: it stays on the boss, a moment from due again.' },
+      { id: 'thresher_sowing', name: 'Shroud', ab: 'gather', grants: true, text: 'New move on R, in place of Sever. Shroud (30s): every affliction lands on the boss at once, a Weight more on any already up, and a cut for {d:70}.' },
+      { id: 'thresher_compost', name: 'Grave Interest', ab: 'reap', text: 'Nothing runs out for nothing: an affliction that runs out unpopped pays half its pop damage as it goes.' },
+      { id: 'thresher_second', name: 'Unpaid Debt', ab: 'reap', text: 'A Full Toll does not take the Mark away: it stays on the boss with 1 Weight.' },
     ],
     [
-      { id: 'thresher_sacrifice', name: 'Sacrifice', ab: 'wisp', text: 'Press F again while the Wisp is out to burst it: a blow for {d:320}, every faint affliction comes due at once, and you deal 10% more damage for 8s. Its cooldown counts from the moment it was summoned.' },
+      { id: 'thresher_sacrifice', name: 'Sacrifice', ab: 'wisp', text: 'Press F again while the Wisp is out to burst it: a blow for {d:320}, the affliction you laid last gains a Weight, and you deal 10% more damage for 8s. Its cooldown counts from the moment it was summoned.' },
       { id: 'thresher_joined', name: 'Joined Swing', ab: 'reap', text: 'With the Wisp out, Reap makes it strike too: a second cut for {d:140}.' },
-      { id: 'thresher_quick', name: 'Ferryman\'s Haste', ab: 'gather', cd: { gather: -4 }, text: 'Beckon recharges 4s faster.' },
+      { id: 'thresher_quick', name: 'Ferryman\'s Haste', ab: 'gather', cd: { gather: -3 }, text: 'Sever recharges 3s faster.' },
     ],
     [
-      { id: 'thresher_cull', name: 'Cull', ab: 'wisp', grants: true, text: 'New move on F, in place of Spirit Wisp. Cull (40s): take what is owed now. Every affliction on the boss pays out as if it were gold, whatever its age, and none is spent.' },
-      { id: 'thresher_opengate', name: 'Open Gate', ab: 'reap', text: 'The fifth strike of Reaper\'s Gate no longer spends the afflictions: they stay on the boss, all four fully due.' },
-      { id: 'thresher_omen', name: 'Omen of the Toll', ab: 'gather', text: 'Whenever the boss begins a cast, every affliction that is still faint comes due at once.' },
+      { id: 'thresher_cull', name: 'Cull', ab: 'wisp', grants: true, text: 'New move on F, in place of Spirit Wisp. Cull (40s): take what is owed now. Every affliction on the boss pays out for its Weight (3 at the most), and none is spent (none of their effects go off).' },
+      { id: 'thresher_opengate', name: 'Open Gate', ab: 'reap', text: 'The fifth strike of Reaper\'s Gate no longer spends the afflictions: they stay on the boss, all four at full Weight.' },
+      { id: 'thresher_omen', name: 'Omen of the Toll', ab: 'gather', text: 'Whenever the boss begins a cast, Sever is ready again at once.' },
     ],
   ],
 });
@@ -1166,25 +1166,25 @@ Object.assign(SPEC_TALENTS, {
     // Wraith, The Swift Shadow: pace, and an hour that never waits
     sower: [
       [
-        { id: 'thresher_anchor', name: 'Anchored Thread', ab: 'hook', text: 'The Thread does not darken: after its first faint moment it stays gold on the boss until a Reap spends it.' },
+        { id: 'thresher_anchor', name: 'Anchored Thread', ab: 'hook', text: 'The Thread never runs out: it stays on the boss until it is popped.' },
         { id: 'thresher_fleet', name: 'Fleet Hour', ab: 'reap', text: 'Every Reap quickens you: you act 12% faster for 5s.' },
       ],
       [
         { id: 'thresher_hourglass', name: 'Hourglass', ab: 'blink', grants: true,
-          text: 'New move on D, in place of Gloam Blink. Hourglass (28s): cut through the dark to the boss for {d:140} and turn the glass: for 5s no affliction on the boss darkens or lapses, and you take 50% less damage for 1s.' },
-        { id: 'thresher_lasthour', name: 'Last Hour', ab: 'reap', text: 'A Reap that cashes in four gold afflictions tolls the hour for everyone: the whole party deals 4% more damage for 6s.' },
+          text: 'New move on D, in place of Gloam Blink. Hourglass (28s): cut through the dark to the boss for {d:140} and turn the glass: for 5s every affliction you lay lands at full Weight, and you take 50% less damage for 1s.' },
+        { id: 'thresher_lasthour', name: 'Last Hour', ab: 'reap', text: 'A Reap that pops all four afflictions tolls the hour for everyone: the whole party deals 4% more damage for 6s.' },
       ],
     ],
-    // Grim, The Patient Reaper: let it darken, then one great reckoning
+    // Grim, The Patient Reaper: build it deep, then one great reckoning
     grim: [
       [
-        { id: 'thresher_deepening', name: 'Deepening Toll', ab: 'reap', text: 'A due affliction pays more the longer it waits: 8% more for every second past due, up to 40% more.' },
-        { id: 'thresher_darken', name: 'Let It Darken', ab: 'reap', text: 'Reap now leaves faint afflictions alone: they stay on the boss to darken, and pay nothing.' },
+        { id: 'thresher_deepening', name: 'Deepening Toll', ab: 'reap', text: 'An affliction at full Weight ticks twice as fast.' },
+        { id: 'thresher_patient', name: 'Patient Blade', ab: 'gather', text: 'Sever on an affliction at full Weight pops it twice.' },
       ],
       [
         { id: 'thresher_nightfall', name: 'Nightfall', ab: 'blink', grants: true,
-          text: 'New move on D, in place of Gloam Blink. Nightfall (25s): cut through the dark to the boss for {d:140}. For 5s every affliction on it darkens three times as fast, and you take 50% less damage for 1s.' },
-        { id: 'thresher_wound', name: 'Open Wound', ab: 'reap', text: 'While the boss is Vulnerable, a Reap pays every affliction as if it were gold, whatever its age.' },
+          text: 'New move on D, in place of Gloam Blink. Nightfall (25s): cut through the dark to the boss for {d:140}, and every affliction on it gains a Weight. You take 50% less damage for 1s.' },
+        { id: 'thresher_wound', name: 'Open Wound', ab: 'reap', text: 'While the boss is Vulnerable, a Reap pays every affliction as if it were at full Weight.' },
       ],
     ],
   },

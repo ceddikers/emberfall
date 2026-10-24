@@ -7253,12 +7253,13 @@ Object.assign(KIT_VFX, {
 })();
 
 // ======================================================================= Reaper (class id thresher; damage, class 19): the Toll
-// A long scythe and a pale soul-fire on its edge. Colours: void black and deep violet for the body of a swing, a violet vein
-// through the middle, a pale teal soul rim on the cutting edge. The four AFFLICTIONS come due on the boss and are drawn there
-// as small floating sigils (mark: a rune; drain: a drop; bind: a knot; thread: a chain): faint, they are pale teal, gold when
-// due (a warm glow and a pulse), and lapsed they go a dull grey-violet and droop. Reap's colour and burst follow what it
-// collects: gold is warm and big, faint a pale teal flutter, lapsed a heavy grey-violet thud. The Wisp is a small blue-white
-// flame spirit that orbits the hero; the Gate turns the hero to mist (heroes.js reads st.thMist).
+// A curved scythe and a pale soul-fire on its edge. Colours: void black and deep violet for the body of a swing, a violet vein
+// through the middle, a pale teal soul rim on the cutting edge. The four AFFLICTIONS sit on the boss as small floating sigils, each
+// in its own colour (mark: a red rune; drain: a rose drop; bind: a violet knot; thread: a pale chain), with a ring of Weight pips
+// round it (a sigil at full Weight glows and is outlined white). A pop flies the sigil into the boss and goes off its own way:
+// Mark a deep red cut, Drain rose drops back to the hero, Bind a violet fetter closing on the boss (and a shimmer on the party),
+// Thread a chain that snaps. Reap's burst grows with the Weight it pops; Sever tears out one sigil on the hook of a blade. The
+// Wisp is a small blue-white flame spirit that orbits the hero; the Gate turns the hero to mist (heroes.js reads st.thMist).
 // The sigil state is each hero's own (e._thAff, from the kit's moments) except for your own hero, which reads the kit.
 (() => {
   const V = VFX, TAU = Math.PI * 2, rnd = (a, b) => a + Math.random() * (b - a), shake = s => vfxShake(s), OP = OLD_PAINT;
@@ -7275,21 +7276,19 @@ Object.assign(KIT_VFX, {
   // the small sound cues of the class (sound-hooks.js SoundHooks.thresher): yours full, anyone else's soft and placed
   const snd = (e, ev, d) => { try { if (typeof SoundHooks !== 'undefined' && SoundHooks.thresher) SoundHooks.thresher(ev, d, isMe(e), e, e.id); } catch (err) { /* sound never stops a frame */ } };
 
-  // ---- the toll on the boss: what stage each affliction is at, and where the boss is
-  const TIMES = { sower: [2, 6.5], grim: [4, 11] }, LIFE = 6;
-  const times = e => TIMES[e.spec] || [3, 8];
+  // ---- the toll on the boss: each affliction's Weight and its time, and where the boss is
   const aff = e => e._thAff || (e._thAff = {});
-  // 0 not up, 1 faint, 2 due (gold), 3 lapsed (+ its age and the stretches). Your own hero reads the kit; the rest, what the moments told
+  // { w, max, left, dur }: your own hero reads the kit; the rest, what the moments told (afflict: its Weight, the most, its time)
   function info(e, id) {
     const g = G(), kit = g && isMe(e) && g.actor && g.actor.kit && g.actor.kit.g && g.actor.kit.g.aff && e.cls && e.cls.id === 'thresher' ? g.actor.kit : null;
-    let Y, R, at, now;
-    if (kit) { Y = typeof thY === 'function' ? thY(kit) : 3; R = typeof thR === 'function' ? thR(kit) : 8; at = kit.g.aff[id]; now = kit.now; }
-    else { [Y, R] = times(e); at = aff(e)[id]; now = FX.now; }
-    if (at == null) return { st: 0, age: 0, Y, R };
-    const age = now - at;
-    return { st: age < Y ? 1 : age < R ? 2 : age < R + LIFE ? 3 : 0, age, Y, R };
+    if (kit) {
+      const a = kit.g.aff[id], max = typeof thMaxW === 'function' ? thMaxW(kit) : 3;
+      return a && a.w > 0 ? { w: a.w, max, left: a.until - kit.now, dur: kit.def.affDur || 15, last: kit.g.last === id } : { w: 0, max };
+    }
+    const a = aff(e)[id];
+    if (!a || !(a.until > FX.now)) return { w: 0, max: (a && a.max) || 3 };
+    return { w: a.w, max: a.max, left: a.until - FX.now, dur: a.dur, last: e._thLast === id };
   }
-  const counts = e => { const n = { 1: 0, 2: 0, 3: 0, n: 0 }; for (const id of IDS) { const s = info(e, id).st; if (s) { n[s]++; n.n++; } } return n; };
   const foe = e => {
     const g = G(), r = g && g.raid;
     if (r && r.state === 'live' && r.bossDraw && !(r.boss && r.boss.u)) return { x: r.bossDraw.x, y: r.bossDraw.y, r: (typeof FIGHT !== 'undefined' && FIGHT.BOSS_R) || 70 };
@@ -7336,11 +7335,13 @@ Object.assign(KIT_VFX, {
     } });
   }
   // the scythe lying along th from (x, y): a thin snath and a crescent blade, pale. A fading afterimage of it, not the iron
-  function scytheGhost(c, x, y, th, k, col = SOUL, L = 54) {
+  // (the hero's own blade, heroes.js: a crescent hooked off the head and curling back towards the hands)
+  function scytheGhost(c, x, y, th, k, col = SOUL, L = 42) {
     if (k < 0.02) return;
     c.save(); c.translate(x, y); c.rotate(th); c.globalCompositeOperation = 'lighter';
     c.globalAlpha = 0.5 * k; c.strokeStyle = col; c.lineWidth = 2; c.beginPath(); c.moveTo(-10, 0); c.lineTo(L, 0); c.stroke();
-    c.beginPath(); c.moveTo(L - 2, 1); c.quadraticCurveTo(L + 12, -3, L + 22, -14); c.quadraticCurveTo(L + 10, -8, L - 6, 5); c.closePath();
+    c.beginPath(); c.moveTo(L - 2, 4); c.bezierCurveTo(L + 12, -1, L + 9, -22, L - 9, -27); c.bezierCurveTo(L - 17, -29, L - 25, -27, L - 31, -24);
+    c.bezierCurveTo(L - 23, -24, L - 8, -21, L - 3, -8); c.closePath();
     c.globalAlpha = 0.3 * k; c.fillStyle = col; c.fill(); c.globalAlpha = 0.9 * k; c.lineWidth = 1.5; c.stroke();
     c.restore();
   }
@@ -7350,7 +7351,7 @@ Object.assign(KIT_VFX, {
   // the air, nothing on the floor. o.s scales it; body/mid/rim colour it. It crosses the target at about hold + swing/2
   function phantom(x, y, o = {}) {
     const s = o.s ?? 1, hold = Math.max(0.01, o.hold ?? 0.12), sw = o.swing ?? 0.16, fade = o.fade ?? 0.36, dur = hold + sw + fade, fl = o.flip ? -1 : 1;
-    const body = o.body || INK, mid = o.mid || VIO, rim = o.rim || SOUL2, L = 95 * s, B = 66 * s, px = x - fl * L * 0.85, py = y - 30 - L * 0.45;
+    const body = o.body || INK, mid = o.mid || VIO, rim = o.rim || SOUL2, L = 80 * s, B = 66 * s, px = x - fl * L * 0.85, py = y - 30 - L * 0.45;
     const th0 = -Math.PI / 2 - 0.3, th1 = Math.PI * 0.42;
     V.fx({ dur, layer: 'air', draw: (c, p, t, e) => {
       const rise = easeOut(Math.min(1, t / hold)), q = t < hold ? 0 : easeOut(Math.min(1, (t - hold) / sw)), k = e.a * Math.min(1, t / 0.06) * (1 - Math.max(0, (t - hold - sw) / fade));
@@ -7371,12 +7372,14 @@ Object.assign(KIT_VFX, {
       // the scythe itself: the snath out from the pivot and the blade hooked at its end, an ink body, a coloured vein, a pale edge
       c.rotate(th);
       c.globalAlpha = 0.75 * k; c.strokeStyle = body; c.lineWidth = 6 * s; c.beginPath(); c.moveTo(L * 0.15, 0); c.lineTo(L + 4 * s, 0); c.stroke();
-      const blade = () => { c.beginPath(); c.moveTo(L, -7 * s); c.quadraticCurveTo(L + B * 0.6, B * 0.3, L - B * 0.15, B); c.quadraticCurveTo(L + B * 0.18, B * 0.38, L - 2 * s, 8 * s); c.closePath(); };
+      // (the hero's blade, larger: a crescent hooked off the head, widest at the bend, curling back to a point)
+      const blade = () => { c.beginPath(); c.moveTo(L - 2 * s, -6 * s); c.bezierCurveTo(L + B * 0.62, -B * 0.02, L + B * 0.5, B * 0.8, L - B * 0.1, B * 0.95);
+        c.bezierCurveTo(L - B * 0.3, B, L - B * 0.5, B * 0.92, L - B * 0.62, B * 0.8); c.bezierCurveTo(L - B * 0.42, B * 0.8, L + B * 0.3, B * 0.62, L + 2 * s, 8 * s); c.closePath(); };
       c.globalAlpha = 0.85 * k; c.fillStyle = body; blade(); c.fill();
       c.globalCompositeOperation = 'lighter';
       c.globalAlpha = 0.5 * k; c.strokeStyle = mid; c.lineWidth = 2.4 * s; c.beginPath(); c.moveTo(L * 0.15, 0); c.lineTo(L, 0); c.stroke();
       c.globalAlpha = 0.6 * k; c.fillStyle = mid; blade(); c.fill();
-      c.globalAlpha = k; c.strokeStyle = rim; c.lineWidth = 1.8 * s; c.beginPath(); c.moveTo(L - B * 0.15, B); c.quadraticCurveTo(L + B * 0.18, B * 0.38, L - 2 * s, 8 * s); c.stroke();
+      c.globalAlpha = k; c.strokeStyle = rim; c.lineWidth = 1.8 * s; c.beginPath(); c.moveTo(L - B * 0.62, B * 0.8); c.bezierCurveTo(L - B * 0.42, B * 0.8, L + B * 0.3, B * 0.62, L + 2 * s, 8 * s); c.stroke();
       c.restore();
       if (t < hold + sw) V.glowAt(c, px + fl * Math.cos(th) * (L + B * 0.3), py + Math.sin(th) * (L + B * 0.3), 16 * s, rim, 0.6 * k);
     } });
@@ -7386,8 +7389,9 @@ Object.assign(KIT_VFX, {
   const dust = (x, y, col, n = 3, r = 16) => V.smoke(x, y, { n, r, color: col, size: 22, a: 0.5, speed: 40, life: 0.9 });
 
   // ---- the sigils (screen space, one size)
+  // a sigil in its own colour; st 2 is at full Weight (brighter, outlined white)
   function glyph(c, id, x, y, st, t, size) {
-    const S = size, gold = st === 2, rot = st === 3, col = rot ? ROT : gold ? GOLD : SOUL;   // faint pale teal, due gold, lapsed grey-violet
+    const S = size, gold = st === 2, rot = false, col = AFC[id];
     c.save(); c.translate(x, y + (rot ? 3 + Math.sin(t * 2) * 0.6 : 0)); c.lineCap = 'round'; c.lineJoin = 'round';
     const trace = () => {
       c.beginPath();
@@ -7401,12 +7405,13 @@ Object.assign(KIT_VFX, {
     else {
       c.globalCompositeOperation = 'lighter'; c.fillStyle = col; c.globalAlpha = 0.28; trace(); c.fill();
       c.globalAlpha = gold ? 1 : 0.9; c.strokeStyle = col; c.lineWidth = 1.7; trace(); c.stroke();
-      if (gold) { c.globalAlpha = 0.9; c.strokeStyle = GOLD2; c.lineWidth = 0.8; trace(); c.stroke(); }
+      if (gold) { c.globalAlpha = 0.9; c.strokeStyle = '#ffffff'; c.lineWidth = 0.8; trace(); c.stroke(); }
     }
     if (id === 'drain' && !rot) { c.globalCompositeOperation = 'lighter'; for (let i = 0; i < 2; i++) { const q = (t * 0.9 + i * 0.5) % 1; c.globalAlpha = (1 - q) * 0.9; c.fillStyle = col; c.beginPath(); c.arc((i ? 0.4 : -0.4) * S, S * 1.0 + q * S * 1.2, 1.5, 0, TAU); c.fill(); } }
     c.restore();
   }
-  // the row of glyphs over the boss: one effect per hero, drawn from its state, alive while any affliction is up
+  // the row of glyphs over the boss: one effect per hero, drawn from its state, alive while any affliction is up. Round each sigil
+  // its Weight pips (lit in its colour), a thin arc of its time left, and over the one laid last (what Sever takes) a pale chevron
   function glyphs(e) {
     if (e._thGl && e._thGl.alive && FX.now - e._thGl.last < 1) return;   // (a pull or a scene change clears every effect: one that has stopped drawing is made again)
     const me = { alive: true, last: FX.now, idle: 0, was: [0, 0, 0, 0], born: [-9, -9, -9, -9] };
@@ -7418,20 +7423,24 @@ Object.assign(KIT_VFX, {
       let any = 0;
       IDS.forEach((id, i) => {
         const q = info(e, id);
-        if (q.st !== me.was[i]) { if (q.st === 2 && me.was[i] === 1 && isMe(e)) snd(e, 'ripe'); me.was[i] = q.st; if (q.st) me.born[i] = t; }
-        if (!q.st) return;
+        if (q.w !== me.was[i]) { if (q.w > me.was[i]) me.born[i] = t; me.was[i] = q.w; }
+        if (!q.w) return;
         any = 1;
-        const pos = slot(f, i), pop = easeOut(Math.min(1, (t - me.born[i]) / 0.22)), END = q.R + LIFE, k = fx.a * pop;
-        const sz = 8 * (0.7 + 0.3 * pop) * (q.st === 2 ? 1 + 0.08 * Math.sin(t * 8 + i) : 1);
-        if (q.st === 2) V.glowAt(c, pos.x, pos.y, 22 + 4 * Math.sin(t * 8 + i), GOLD, 0.5 * k);
-        // the age ring: a faint track with the gold (due) stretch marked, the age drawn over it
-        c.save(); c.translate(pos.x, pos.y); c.rotate(-Math.PI / 2); c.lineCap = 'round';
-        const a0 = TAU * (q.Y / END), a1 = TAU * (q.R / END);
-        c.globalAlpha = 0.4 * k; c.strokeStyle = INK; c.lineWidth = 4; c.beginPath(); c.arc(0, 0, 14, 0, TAU); c.stroke();
-        c.globalAlpha = 0.9 * k; c.strokeStyle = 'rgba(255,214,90,0.5)'; c.lineWidth = 2.2; c.beginPath(); c.arc(0, 0, 14, a0, a1); c.stroke();
-        c.globalAlpha = 0.95 * k; c.strokeStyle = q.st === 3 ? ROT : q.st === 2 ? GOLD2 : SOUL; c.lineWidth = 1.5; c.beginPath(); c.arc(0, 0, 14, 0, Math.min(TAU, TAU * q.age / END)); c.stroke();
+        const pos = slot(f, i), pop = easeOut(Math.min(1, (t - me.born[i]) / 0.22)), k = fx.a * Math.min(1, 0.6 + 0.4 * pop), full = q.w >= q.max;
+        const sz = 8 * (0.85 + 0.15 * pop) * (full ? 1 + 0.08 * Math.sin(t * 8 + i) : 1);
+        if (full) V.glowAt(c, pos.x, pos.y, 22 + 4 * Math.sin(t * 8 + i), AFC[id], 0.45 * k);
+        c.save(); c.translate(pos.x, pos.y); c.lineCap = 'round';
+        // its time: a thin arc that runs down (white in its last seconds)
+        if (q.dur && isFinite(q.left)) { c.globalAlpha = 0.85 * k; c.strokeStyle = q.left < 3 ? '#ffffff' : 'rgba(224,246,255,0.55)'; c.lineWidth = 1.2; c.beginPath(); c.arc(0, 0, 15.5, -Math.PI / 2, -Math.PI / 2 + TAU * Math.max(0, Math.min(1, q.left / q.dur))); c.stroke(); }
+        // the Weight pips round its foot
+        for (let j = 0; j < q.max; j++) {
+          const an = Math.PI / 2 + (j - (q.max - 1) / 2) * 0.42, px = Math.cos(an) * 13, py = Math.sin(an) * 13, on = j < q.w;
+          c.globalAlpha = (on ? 1 : 0.45) * k; c.fillStyle = on ? AFC[id] : INK; c.strokeStyle = INK; c.lineWidth = 1.4;
+          c.beginPath(); c.arc(px, py, on ? 2.6 : 2, 0, TAU); c.fill(); c.stroke();
+        }
+        if (q.last) { c.globalAlpha = 0.9 * k; c.strokeStyle = SOUL2; c.lineWidth = 1.6; c.beginPath(); c.moveTo(-4, -22); c.lineTo(0, -18.5); c.lineTo(4, -22); c.stroke(); }
         c.restore();
-        c.save(); c.globalAlpha = k; glyph(c, id, pos.x, pos.y, q.st, t, sz); c.restore();
+        c.save(); c.globalAlpha = k; glyph(c, id, pos.x, pos.y, full ? 2 : 1, t, sz); c.restore();
       });
       me.idle = any ? 0 : me.idle + 1 / 60;
       if (me.idle > 3) { me.alive = false; if (e._thGl === me) e._thGl = null; fx.dur = 0; }
@@ -7508,27 +7517,27 @@ Object.assign(KIT_VFX, {
         } });
       });
     },
-    // Reap: the great sweeping cut. Its colour follows what is due on the boss at that moment: warm for gold, pale teal for faint,
-    // a heavy grey-violet for lapsed (the payout itself is KIT_VFX.reap)
+    // Reap: the great sweeping cut. Gold for a Full Toll (every affliction at full Weight), the deep violet otherwise; it grows with
+    // the count (the payout itself is KIT_VFX.reap)
     reap: c => {
-      // (melee pass) what it cashes is read from the payout the kit just sent (KIT_VFX.reap: e._thReap), since your own afflictions are
-      // already spent; the sweep grows with the count and carries one thin arc per affliction, in the colour of its stage
+      // (melee pass) what it pops is read from the payout the kit just sent (KIT_VFX.reap: e._thReap), since your own afflictions are
+      // already spent; the sweep grows with the count and carries one thin arc per affliction, in its own colour
       const e = c.ent, a = Math.atan2(c.ty - c.y, c.tx - c.x), R = e._thReap && FX.now - e._thReap.at < 0.6 ? e._thReap : null;
-      const n = R ? { 1: R.n - R.gold - R.rot, 2: R.gold, 3: R.rot, n: R.n } : counts(e), kind = n[3] > n[2] ? 'rot' : n[2] ? 'gold' : 'young';
-      const P = { gold: { body: GOLDD, mid: GOLD, rim: GOLD2 }, young: { body: DEEP, mid: UMBRA, rim: SOUL2 }, rot: { body: ROTD, mid: ROT, rim: ROTHI } }[kind];
-      const big = 1 + 0.16 * Math.min(4, n.n);
+      const n = R ? R.n : IDS.filter(id => info(e, id).w).length, full = !!(R && R.full);
+      const P = full ? { body: GOLDD, mid: GOLD, rim: GOLD2 } : { body: DEEP, mid: UMBRA, rim: SOUL2 };
+      const big = 1 + 0.16 * Math.min(4, n);
       crescent(c.x, c.y, a, { r: 88 * big, span: 3.5, w: 36, tail: 0.5, dur: 0.55, z: 14, ...P });
-      if (R) R.st.filter(Boolean).forEach((s, i) => c.later(0.04 + i * 0.05, () => crescent(c.x, c.y, a, { r: (74 + i * 9) * big, span: 3.0 + i * 0.12, w: 9, tail: 0.3, dur: 0.34, flip: i % 2 === 0, z: 18 + i * 2, body: INK, mid: s === 2 ? GOLD : s === 3 ? ROT : UMBRA, rim: s === 2 ? GOLD2 : s === 3 ? ROTHI : SOUL2 })));
+      if (R) R.st.forEach((s, i) => { if (s) c.later(0.04 + i * 0.05, () => crescent(c.x, c.y, a, { r: (74 + i * 9) * big, span: 3.0 + i * 0.12, w: 9, tail: 0.3, dur: 0.34, flip: i % 2 === 0, z: 18 + i * 2, body: INK, mid: AFC[IDS[i]], rim: SOUL2 })); });
       c.later(0.1, () => crescent(c.x, c.y, a, { r: 70 * big, span: 2.8, w: 18, tail: 0.35, dur: 0.4, flip: true, body: INK, mid: VIO, rim: P.rim }));
       c.later(0.3, () => crescent(c.x, c.y, a, { r: 100 * big, span: 2.4, w: 12, tail: 0.3, dur: 0.35, body: INK, mid: P.mid, rim: P.rim, flip: true }));
       V.glint(c.x + Math.cos(a) * 40, c.y + Math.sin(a) * 30 - 40, { color: P.rim, size: 28, z: 40 });
-      if (kind === 'rot') dust(c.x + Math.cos(a) * 30, c.y + Math.sin(a) * 20, '#1c1828', 3, 20); else souls(c.x + Math.cos(a) * 30, c.y + Math.sin(a) * 20, 5, P.rim);
+      souls(c.x + Math.cos(a) * 30, c.y + Math.sin(a) * 20, 5, P.rim);
     },
-    // Beckon (was Gather): the hero crooks a finger, a ring of soul-light closing in on the hands (the threads themselves: KIT_VFX.gather)
+    // Sever (the id stays gather): a short, hooked upward cut, the blade's tip leading (the tearing-out itself: KIT_VFX['th-sever'])
     gather: c => {
-      V.charge(c.x, c.y, { color: SOUL, r: 56, n: 10, dur: 0.4, follow: c.ent });
-      V.glint(c.x, c.y - 34, { color: SOUL2, size: 26, z: 36 });
-      V.shock(c.x, c.y, { r: 64, r0: 8, color: SOUL, dur: 0.4, w: 3 });
+      const a = Math.atan2(c.ty - c.y, c.tx - c.x), p = reach(c, 50);
+      crescent(c.x, c.y, a, { r: 58, span: 1.9, w: 20, tail: 0.25, dur: 0.3, flip: true, body: INK, mid: VIO, rim: SOUL2 });
+      c.later(0.08, () => { V.hit(p.x, p.y, SOUL2, 0.6); V.sparks(p.x, p.y, { color: SOUL2, n: 4, angle: a - 0.6, spread: 0.8, speed: 240 }); });
     },
     // Gloam Blink: a flicker cut. The hero is gone from where they stood, a pale scythe afterimage stays and fades, and two cuts cross on the boss
     blink: c => {
@@ -7612,106 +7621,103 @@ Object.assign(KIT_VFX, {
   // ---- afflictions: laid, popped, and the pulses that run while they last
   KIT_VFX.afflict = T((e, target, d) => {
     const id = d && d.id; if (!id) return;
-    noteFoe(e, target); aff(e)[id] = FX.now; glyphs(e);
+    noteFoe(e, target); aff(e)[id] = { w: d.w || 1, max: d.max || 3, until: d.dur ? FX.now + d.dur : Infinity, dur: d.dur || 0 }; e._thLast = id; glyphs(e);
     const f = foe(e) || target; if (!f) return;
-    const col = AFC[id], s = glyphAt(e, id);
+    const col = AFC[id], s = glyphAt(e, id), full = d.w && d.max && d.w >= d.max;
     V.shock(f.x, f.y, { r: 50, color: col, dur: 0.35, w: 3 });
-    V.motes(f.x, f.y, { color: col, n: 3, r: 18, kind: 'star', size: 7 });
-    if (s) fly(f.x, f.y - 24, s.x, s.y, col, 0.32, 18, 7);
+    V.motes(f.x, f.y, { color: col, n: full ? 5 : 3, r: 18, kind: 'star', size: 7 });
+    if (s) { fly(f.x, f.y - 24, s.x, s.y, col, 0.32, 18, 7); if (full) later(e, 0.3, () => V.glint(s.x, s.y, { color: '#ffffff', size: 18, z: 30 })); }
   });
-  KIT_VFX['afflict-pop'] = T((e, target, d) => {
-    const id = d && d.id, s = (d && d.s) || 2; if (!id) return;
+  // an affliction ran out unpopped: its sigil sinks and fades
+  KIT_VFX['afflict-fade'] = T((e, target, d) => {
+    const id = d && d.id; if (!id) return;
     noteFoe(e, target);
+    const gp = glyphAt(e, id); aff(e)[id] = null;
+    if (gp) V.smoke(gp.x, gp.y, { n: 2, r: 8, color: '#2a2438', size: 14, a: 0.4, speed: 20, life: 0.8 });
+  });
+  // one affliction popped (by a Reap, a Sever, the Gate, Cull or Grave Interest): the sigil flies into the boss and goes off its own way,
+  // bigger for more Weight. (melee pass) the pops of one Reap are a run of strokes: each a little bigger than the one before (idx)
+  KIT_VFX['afflict-pop'] = T((e, target, d) => {
+    const id = d && d.id, w = (d && d.w) || 1; if (!id) return;
+    noteFoe(e, target);
+    const gp0 = glyphAt(e, id);
     if (!(e._thKeep > FX.now)) aff(e)[id] = null;
     const f = foe(e) || target; if (!f) return;
-    // (melee pass) the pops of one Reap are a run of strokes: each is a little bigger than the one before (idx), with its own snick
-    // across the boss in the colour of its stage
     const R = e._thReap, idx = R && FX.now - R.at < 1.4 ? ++R.pops : 1, up = 1 + 0.12 * (idx - 1);
-    const gp = glyphAt(e, id) || { x: f.x, y: f.y - 80 }, m = (id === 'thread' ? 1.25 : 1) * up, sc = s === 2 ? GOLD2 : s === 3 ? ROTHI : AFC[id];
-    fly(gp.x, gp.y, f.x, f.y - 20, s === 2 ? GOLD : s === 3 ? ROT : AFC[id], 0.16, 10, 8);
+    const gp = gp0 || { x: f.x, y: f.y - 80 }, m = (0.8 + 0.15 * w) * up, col = AFC[id], fade = d && d.fade;
+    fly(gp.x, gp.y, f.x, f.y - 20, col, 0.16, 10, 6 + w * 1.5);
     later(e, 0.14, () => {
-      cutMark(f.x, f.y, Math.atan2(f.y - e.y, f.x - e.x) + (idx % 2 ? 0.9 : -0.9), (34 + 8 * idx) * (s === 2 ? 1.2 : 1), { w: 4 + idx, color: sc, dur: 0.28 });
-      V.hit(f.x, f.y, sc, 0.35 + 0.1 * idx);
+      const a = Math.atan2(f.y - e.y, f.x - e.x);
+      cutMark(f.x, f.y, a + (idx % 2 ? 0.9 : -0.9), (30 + 8 * idx) * m, { w: 3 + idx + w, color: col, dur: 0.28 });
+      V.hit(f.x, f.y, col, 0.3 + 0.1 * idx + 0.05 * w);
       snd(e, 'pop', d);
-      if (s === 2) {
-        V.flash(f.x, f.y - 20, 54 * m, GOLD, 0.2);
-        V.spikeburst(f.x, f.y, { r: 46 * m, n: 12, color: GOLD, core: GOLD2, ink: GOLDD, dur: 0.3, z: 14 });
-        V.shock(f.x, f.y, { r: 84 * m, color: GOLD, dur: 0.4, w: 4 });
-        V.motes(f.x, f.y, { color: GOLD2, n: 5, r: 22, kind: 'star', size: 9 });
-        V.burst(gp.x, gp.y, { color: GOLD, color2: GOLD2, n: 8, speed: 140, kind: 'star', flash: false, size: 10 });
-        shake(1 + m);
-      } else if (s === 3) {
-        V.shock(f.x, f.y, { r: 60 * m, color: ROT, dur: 0.4, w: 5 });
-        dust(f.x, f.y, '#1c1828', 3, 18); V.debris(f.x, f.y, { n: 4, color: '#2a2438', speed: 0.7 });
-        V.burst(gp.x, gp.y, { color: ROT, n: 5, speed: 90, kind: 'glow', flash: false, size: 9 });
-        shake(1);
+      if (fade) { V.shock(f.x, f.y, { r: 50 * m, color: col, dur: 0.4, w: 3 }); return; }
+      if (id === 'mark') {
+        // the big one: a deep red cut and a spiked burst
+        V.spikeburst(f.x, f.y, { r: 42 * m, n: 10 + w, color: col, core: '#ffd0d0', ink: '#3a0a12', dur: 0.3, z: 14 });
+        cutMark(f.x, f.y, a - 0.6, 56 * m, { w: 6 + w, color: '#ffd0d0' });
+        V.shock(f.x, f.y, { r: 80 * m, color: col, dur: 0.4, w: 4 });
+        shake(1 + w * 0.5);
+      } else if (id === 'drain') {
+        // rose drops run from the boss back to the hero, and a mend lands on them
+        V.shock(f.x, f.y, { r: 60 * m, color: col, dur: 0.35, w: 3 });
+        for (let i = 0; i < 2 + w; i++) FX.later(i * 0.06, () => fly(f.x + rnd(-16, 16), f.y - 20, e.x, bodyY(e), col, 0.38, 26, 7));
+        later(e, 0.4, () => V.plus(e.x, e.y, { color: '#ffd0ea', n: 2 + w }));
+      } else if (id === 'bind') {
+        // the fetter: violet chains close round the boss, and the party's share of it (a shimmer) is the Bind's gift
+        V.fx({ dur: 0.6, layer: 'air', draw: (c, p, t, fx) => { const k = fx.a * (1 - Math.max(0, (p - 0.5) / 0.5)); c.save(); c.translate(f.x, f.y - 10); for (let i = 0; i < 3; i++) { c.save(); c.rotate(i * TAU / 3 + p * 1.4); V.neonRing(c, 0, 0, f.r * (1.1 - 0.35 * easeOut(p)) * (0.85 + i * 0.1), col, 2, k, 0.5); c.restore(); } c.restore(); } });
+        V.shock(f.x, f.y, { r: 90 * m, color: col, dur: 0.45, w: 4 });
       } else {
-        V.shock(f.x, f.y, { r: 56 * m, color: AFC[id], dur: 0.35, w: 3 });
-        V.motes(f.x, f.y, { color: SOUL, n: 4, r: 20, kind: 'star', size: 10 });
+        // the Thread snaps: a pale chain flicks out from the boss and breaks, and the hook light runs back to the hero
+        V.sparks(f.x, f.y, { color: col, n: 6 + w * 2, angle: a + Math.PI, spread: 1.6, speed: 260 });
+        V.spikeburst(f.x, f.y, { r: 38 * m, n: 8, color: col, core: '#ffffff', ink: DEEP, dur: 0.26, z: 14 });
+        fly(f.x, f.y - 20, e.x, bodyY(e), SOUL2, 0.3, 14, 6);
+        shake(1);
       }
     });
   });
+  // the Bind's gift: the party takes less for a few seconds (a soft violet shimmer on your own hero)
+  KIT_VFX['th-fetter'] = e => { V.shock(e.x, e.y, { r: 44, r0: 10, color: AFC.bind, dur: 0.45, w: 3 }); V.motes(e.x, e.y, { color: AFC.bind, n: 4, r: 16, kind: 'star', size: 7 }); };
   // (melee pass) Reap's payout reads as a toll collected: the sweep (the recipe) and the base cut open it, each affliction then pops in turn
-  // (afflict-pop, a little bigger each time, in its own stage's colour), and the burst on the boss comes last and is sized by what was
-  // collected: how many (m), how many due/gold (taller light, more rings, a hit-stop), how many lapsed (a heavier, greyer thud). The count
-  // is kept on the hero (e._thReap) for the pops and for the recipe, which runs just after this
+  // (afflict-pop, a little bigger each time, in its own colour and way), and the burst on the boss comes last, sized by the Weight popped
+  // (w) and how many (n); a Full Toll (every one at full Weight) is gold and tall, with a hit-stop. The count is kept on the hero (e._thReap)
   KIT_VFX.reap = T((e, target, d) => {
     noteFoe(e, target);
     const f = foe(e) || target; if (!f) return;
     d = d || {};
-    const gold = d.gold | 0, rot = d.rot | 0, n = d.n | 0, young = Math.max(0, n - gold - rot);
-    // which stage each affliction was at: the glyphs' last drawn state (your own kit has already let them go), else counted off
-    let st = e._thGl && e._thGl.was ? e._thGl.was.slice() : null;
-    if (!st || st.filter(Boolean).length !== n) { st = [0, 0, 0, 0]; let g = gold, r = rot, y = young; for (let i = 0; i < 4 && g + r + y > 0; i++) { if (g > 0) { st[i] = 2; g--; } else if (y > 0) { st[i] = 1; y--; } else { st[i] = 3; r--; } } }
-    e._thReap = { at: FX.now, n, gold, rot, st, pops: 0 };
-    const a = Math.atan2(f.y - e.y, f.x - e.x), kind = rot > gold ? 'rot' : gold ? 'gold' : 'young';
-    // the base cut
+    const n = d.n | 0, w = d.w | 0, full = !!d.full;
+    const st = IDS.map(id => (info(e, id).w ? 1 : 0));
+    e._thReap = { at: FX.now, n, st, full, pops: 0 };
+    const a = Math.atan2(f.y - e.y, f.x - e.x), body = full ? GOLDD : DEEP, mid = full ? GOLD : UMBRA, rim = full ? GOLD2 : SOUL2;
     later(e, 0.08, () => {
-      V.spikeburst(f.x, f.y, { r: 36, n: 8, color: kind === 'gold' ? GOLD : kind === 'rot' ? ROT : UMBRA, core: kind === 'rot' ? ROTHI : SOUL2, ink: kind === 'gold' ? GOLDD : kind === 'rot' ? ROTD : DEEP, dur: 0.24 });
-      cutMark(f.x, f.y, a + 0.8, 52, { w: 6, color: kind === 'gold' ? GOLD2 : kind === 'rot' ? ROTHI : SOUL });
-      V.glint(f.x, f.y, { color: kind === 'gold' ? GOLD2 : SOUL2, size: 26, z: 24 });
+      V.spikeburst(f.x, f.y, { r: 36, n: 8, color: mid, core: rim, ink: body, dur: 0.24 });
+      cutMark(f.x, f.y, a + 0.8, 52, { w: 6, color: rim });
+      V.glint(f.x, f.y, { color: rim, size: 26, z: 24 });
       shake(1.5);
     });
     // (online-refs pass) a toll of two or more brings the ghost scythe down through the boss as the closing burst lands
-    // (Gibbet/Gallows' spectral blade, Malefic Rapture's single close): sized by the count and the gold, coloured by the kind
-    if (n >= 2) later(e, 0.14 * n + 0.02, () => phantom(f.x, f.y, { s: 0.7 + 0.1 * n + 0.06 * gold, flip: e.x > f.x, ...({ gold: { body: GOLDD, mid: GOLD, rim: GOLD2 }, rot: { body: ROTD, mid: ROT, rim: ROTHI }, young: { body: DEEP, mid: UMBRA, rim: SOUL2 } })[kind] }));
+    // (Gibbet/Gallows' spectral blade, Malefic Rapture's single close): sized by the Weight, gold for a Full Toll
+    if (n >= 2) later(e, 0.14 * n + 0.02, () => phantom(f.x, f.y, { s: 0.7 + 0.04 * Math.min(12, w) + (full ? 0.2 : 0), flip: e.x > f.x, body, mid, rim }));
     later(e, 0.14 * n + 0.22, () => {
-      const m = 0.7 + 0.18 * n;
-      if (kind === 'gold') {
+      const m = 0.7 + 0.05 * Math.min(12, w) + 0.1 * n;
+      V.spikeburst(f.x, f.y, { r: 56 * m, n: 12 + Math.min(10, w), color: mid, core: rim, ink: body, dur: 0.36 });
+      V.shock(f.x, f.y, { r: 110 * m, color: mid, dur: 0.48, w: 6 });
+      cutMark(f.x, f.y, a + 0.8, 62 * m, { w: 7, color: rim }); cutMark(f.x, f.y, a - 0.8, 52 * m, { w: 5, color: SOUL2 });
+      if (full) {
         V.flash(f.x, f.y - 20, 80 * m, GOLD2, 0.24);
-        V.spikeburst(f.x, f.y, { r: 70 * m, n: 12 + 2 * gold, color: GOLD, core: GOLD2, ink: GOLDD, dur: 0.38 });
-        V.shock(f.x, f.y, { r: 130 * m, color: GOLD, dur: 0.5, w: 7 }); V.shock(f.x, f.y, { r: 90 * m, color: GOLD2, dur: 0.4, w: 3, delay: 0.06 });
-        V.pillar(f.x, f.y, { r: 24 * m, h: 130 + 30 * gold, color: GOLD, dur: 0.5 });
-        V.motes(f.x, f.y, { color: GOLD2, n: 6 + gold * 2, r: 30, kind: 'star', size: 11 });
-        cutMark(f.x, f.y, a + 0.8, 70 * m, { w: 8, color: GOLD2 }); cutMark(f.x, f.y, a - 0.8, 60 * m, { w: 6, color: SOUL2 });
-        if (gold >= 3) V.shock(f.x, f.y, { r: 175 * m, color: GOLD2, dur: 0.6, w: 3, delay: 0.12 });
-        shake(3 + gold);
-      } else if (kind === 'rot') {
-        V.spikeburst(f.x, f.y, { r: 58 * m, n: 14, color: ROT, core: ROTHI, ink: ROTD, dur: 0.4 });
-        V.shock(f.x, f.y, { r: 100 * m, color: ROT, dur: 0.5, w: 8 }); V.shock(f.x, f.y, { r: 60 * m, color: ROTD, dur: 0.4, w: 9, delay: 0.04 });
-        dust(f.x, f.y, '#1c1828', 5, 26); V.debris(f.x, f.y, { n: 8, color: '#2a2438' });
-        V.decal(f.x, f.y, { style: 'crack', r: 46 * m, dur: 2.4, a: 0.4, seed: Math.random() * 6 });
-        cutMark(f.x, f.y, a + 0.8, 56 * m, { w: 8, color: ROTHI });
-        shake(4);
-      } else {
-        V.spikeburst(f.x, f.y, { r: 52 * m, n: 12, color: UMBRA, core: SOUL2, ink: DEEP, dur: 0.34 });
-        V.shock(f.x, f.y, { r: 96 * m, color: SOUL, dur: 0.45, w: 5 });
-        V.motes(f.x, f.y, { color: SOUL, n: 8, r: 30, kind: 'star', size: 11 });
-        cutMark(f.x, f.y, a + 0.8, 56 * m, { w: 6 });
-        shake(2);
-      }
-      // a mixed toll carries the other colours too
-      if (young && kind !== 'young') V.shock(f.x, f.y, { r: 70, color: SOUL, dur: 0.4, w: 3, delay: 0.05 });
-      if (rot && kind !== 'rot') dust(f.x, f.y, '#1c1828', 2, 16);
-      if (gold && kind !== 'gold') V.motes(f.x, f.y, { color: GOLD, n: 3, r: 20, kind: 'star', size: 9 });
-      // one pip per affliction cashed, flung out of the burst in the colour of its stage
+        V.pillar(f.x, f.y, { r: 24 * m, h: 160, color: GOLD, dur: 0.5 });
+        V.shock(f.x, f.y, { r: 170 * m, color: GOLD2, dur: 0.6, w: 3, delay: 0.12 });
+        V.motes(f.x, f.y, { color: GOLD2, n: 10, r: 30, kind: 'star', size: 11 });
+      } else V.motes(f.x, f.y, { color: SOUL, n: 4 + Math.min(6, w), r: 26, kind: 'star', size: 10 });
+      shake(2 + Math.min(4, w * 0.4) + (full ? 2 : 0));
+      // one sigil per affliction popped, flung out of the burst in its own colour
       V.fx({ dur: 0.5, layer: 'air', draw: (c, p, t, fx) => {
         const k = fx.a * (1 - Math.max(0, (p - 0.5) / 0.5)), q = easeOut(Math.min(1, p / 0.6)); if (k < 0.02) return;
         let j = 0;
         st.forEach((s, i) => { if (!s) return; const ang = -Math.PI / 2 + (j++ - (n - 1) / 2) * 0.55, R = 20 + 56 * q, px = f.x + Math.cos(ang) * R * 0.8, py = f.y - 26 + Math.sin(ang) * R * 0.8 - 20 * q;
-          glyph(c, IDS[i], px, py, s, t, 5 + 3 * (1 - p)); });
+          glyph(c, IDS[i], px, py, full ? 2 : 1, t, 5 + 3 * (1 - p)); });
       } });
-      if (e.st && typeof hitStop === 'function') hitStop(e.st, 0.05 + 0.015 * n + 0.01 * gold, FX.now);
+      if (e.st && typeof hitStop === 'function') hitStop(e.st, 0.04 + 0.01 * n + 0.004 * w + (full ? 0.03 : 0), FX.now);
     });
   });
   // Backswing: the scythe comes back round the other way, a violet-tinged crescent
@@ -7734,24 +7740,22 @@ Object.assign(KIT_VFX, {
     const a = Math.atan2(d.y - e.y, d.x - e.x);
     later(e, 0.1, () => { cutMark(d.x, d.y, a + 0.9, 40, { w: 5 }); cutMark(d.x, d.y, a - 0.7, 28, { w: 3, color: VIO, dur: 0.28 }); V.hit(d.x, d.y, SOUL, 0.5); V.sparks(d.x, d.y, { color: SOUL, n: 4, angle: a, spread: 1, speed: 220 }); });
   };
-  // Beckon (was Gather): soul-threads run from each sigil down to the hero and are drawn in, the sigils flashing gold as they come due
-  KIT_VFX.gather = T((e, target) => {
+  // Sever (the move keeps the id gather): the blade's hook goes through the sigil laid last and tears it out down into the boss
+  KIT_VFX['th-sever'] = T((e, target, d) => {
     noteFoe(e, target);
-    const [Y] = times(e); for (const id of IDS) if (aff(e)[id] != null) aff(e)[id] = FX.now - Y;
-    const f = foe(e); if (!f) return;
-    IDS.forEach((id, i) => {
-      if (!info(e, id).st && !isMe(e)) return;
-      const s = slot(f, i);
-      V.fx({ dur: 0.7, layer: 'air', delay: i * 0.05, draw: (c, p, t, fx) => {
-        const k = fx.a * Math.min(1, p / 0.1) * (1 - Math.max(0, (p - 0.75) / 0.25)), hx = e.x, hy = bodyY(e), q = easeOut(Math.min(1, p / 0.8));
-        const sag = (1 - q) * 46 + 4, mx = (s.x + hx) / 2 + Math.sin(i * 2 + t * 6) * 6 * (1 - q), my = (s.y + hy) / 2 + sag;
-        V.neonPath(c, i % 2 ? SOUL : '#dff2f0', 1.1, k * 0.75, () => { c.moveTo(s.x, s.y); c.quadraticCurveTo(mx, my, hx, hy); });
-        const u = q, px = (1 - u) * (1 - u) * s.x + 2 * (1 - u) * u * mx + u * u * hx, py = (1 - u) * (1 - u) * s.y + 2 * (1 - u) * u * my + u * u * hy;
-        V.glowAt(c, px, py, 9, SOUL2, 0.8 * k); V.glowAt(c, px, py, 18, SOUL, 0.3 * k);
-        if (p < 0.3) V.glowAt(c, s.x, s.y, 24 * (1 - p / 0.3), GOLD, 0.7 * k);
-      } });
-    });
-    V.shock(e.x, e.y, { r: 50, r0: 10, color: SOUL, dur: 0.4, w: 3, delay: 0.4 });
+    const id = d && d.id; if (!id) return;
+    const f = foe(e) || target, gp = glyphAt(e, id); if (!f) return;
+    const col = AFC[id], fl = e.x > f.x ? -1 : 1;
+    if (gp) V.fx({ dur: 0.5, layer: 'air', draw: (c, p, t, fx) => {
+      const k = fx.a * (1 - Math.max(0, (p - 0.6) / 0.4)), q = easeOut(Math.min(1, p / 0.35));
+      c.save(); c.translate(gp.x, gp.y); c.scale(fl, 1); c.rotate(-0.9 + q * 1.6); c.lineCap = 'round';
+      c.globalAlpha = 0.85 * k; c.fillStyle = INK; c.beginPath(); c.moveTo(-26, 4); c.bezierCurveTo(-12, -22, 16, -24, 24, -4); c.bezierCurveTo(14, -14, -4, -12, -18, 6); c.closePath(); c.fill();
+      c.globalCompositeOperation = 'lighter'; c.globalAlpha = k; c.strokeStyle = d.twice ? GOLD2 : SOUL2; c.lineWidth = 2; c.beginPath(); c.moveTo(-18, 6); c.bezierCurveTo(-4, -12, 14, -14, 24, -4); c.stroke();
+      c.restore();
+      V.glowAt(c, gp.x, gp.y, 20 * (1 - p), col, 0.8 * k);
+    } });
+    later(e, 0.2, () => { if (gp) V.burst(gp.x, gp.y, { color: col, color2: '#ffffff', n: 8, speed: 150, kind: 'star', flash: false, size: 9 }); cutMark(f.x, f.y, Math.atan2(f.y - e.y, f.x - e.x) - 0.9, 60, { w: 7, color: col }); shake(2); });
+    if (d.twice) later(e, 0.42, () => { cutMark(f.x, f.y, Math.atan2(f.y - e.y, f.x - e.x) + 0.9, 60, { w: 7, color: GOLD2 }); V.glint(f.x, f.y, { color: GOLD2, size: 24, z: 24 }); shake(2); });
   });
   // Shroud (was Sowing): a shroud of dark mist falls over the boss like a drawn veil, and four sigils are pressed onto the floor under it
   KIT_VFX.sowing = T((e, target) => {
@@ -7800,13 +7804,12 @@ Object.assign(KIT_VFX, {
       shake(5); if (e.st && typeof hitStop === 'function') hitStop(e.st, 0.09, FX.now);
     });
   });
-  // Omen: the boss darkens and the whole toll comes due in a breath, a gold pulse running along the sigils
+  // Omen: the boss begins a cast and Sever is back: a pale glint runs along the sigils
   KIT_VFX.omen = T((e, target) => {
     noteFoe(e, target);
-    const [Y] = times(e); for (const id of IDS) if (aff(e)[id] != null && FX.now - aff(e)[id] < Y) aff(e)[id] = FX.now - Y;
     const f = foe(e) || target; if (!f) return;
-    V.shock(f.x, f.y, { r: 110, color: GOLD, dur: 0.6, w: 4 });
-    IDS.forEach((id, i) => { const s = slot(f, i); V.fx({ dur: 0.5, layer: 'air', delay: i * 0.06, draw: (c, p, t, fx) => V.glowAt(c, s.x, s.y, 18 + 22 * p, GOLD2, 0.7 * (1 - p) * fx.a) }); });
+    V.shock(f.x, f.y, { r: 90, color: SOUL, dur: 0.5, w: 3 });
+    IDS.forEach((id, i) => { const s = slot(f, i); V.fx({ dur: 0.45, layer: 'air', delay: i * 0.05, draw: (c, p, t, fx) => V.glowAt(c, s.x, s.y, 14 + 16 * p, SOUL2, 0.6 * (1 - p) * fx.a) }); });
   });
   // Bind: the knot tightens on the boss (a violet pulse)
   KIT_VFX['bind-pulse'] = T((e, target) => {

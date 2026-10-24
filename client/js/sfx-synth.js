@@ -1779,7 +1779,7 @@
       slash: [['slash', 0.85, 0, 0.7, 1], ['tsweep', 1, 0, 1], ['trustle', 1.1, 0.08, 0.35]],
       hook: [['tchain', 1, 0, 1], ['whoosh-down', 1.3, 0.06, 0.55], ['stab', 0.9, 0.16, 0.7, 0]],
       reap: [['tsweep', 0.55, 0, 1], ['heavy', 0.75, 0.1, 0.9, 2], ['tchime', 0.8, 0.2, 0.5], ['trustle', 0.8, 0.12, 0.4]],
-      gather: [['trustle', 0.9, 0, 0.8], ['swirl', 1.2, 0, 0.6], ['tchime', 0.95, 0.22, 0.45]],
+      gather: [['tsweep', 1.35, 0, 0.7], ['tchain', 1.2, 0.05, 0.55], ['stab', 1.05, 0.1, 0.85, 1], ['tchime', 1.15, 0.18, 0.35]],   // (Sever: a short hooked rip, a link snapping)
       blink: [['dash', 1.1, 0, 1, 1], ['tsweep', 1.4, 0.03, 0.6], ['stab', 1.2, 0.1, 0.7, 2], ['wind', 0.8, 0, 0.4]],
       wisp: [['twisp', 1, 0, 1], ['sparkle', 1.2, 0.1, 0.5], ['hum', 1.8, 0, 0.3]],
       sowing: [['wind', 1, 0, 0.7], ['gbreath', 1.3, 0, 0.6], ['trustle', 1.3, 0.05, 0.6], ['tchime', 0.7, 0.25, 0.4]],

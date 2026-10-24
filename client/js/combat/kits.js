@@ -5387,77 +5387,78 @@ ULTIMATES.gloomsworn = {
 
 if (typeof module !== 'undefined') Object.assign(module.exports, { GLOOM, gloomGain, gloomEcho, gloomSend, gloomHollowNote, gloomStrikeReady, gloomDur, gloomGraceLen, gloomHollow, gloomAb });
 
-// ======================================================================= THRESHER (damage, class 19): afflict, ripen, reap
-// Four AFFLICTIONS (k.g.aff: id -> the second it was laid) build on the boss: Mark (Slash; a damage over time that keeps
-// ticking after its bonus is paid), Drain (Cleave; heals you a little while it lasts), Bind (Gloam Blink and the Wisp; a pulse
-// of damage every few seconds) and Thread (Hook; planted, snapped for burst). They RIPEN with age: young (green) for the first
-// few seconds, gold while ripe, then rotten. A hit lays an affliction that is not up, or one that has rotted; a ripe one is left to
-// ripen. Reap spends them all: gold pays in full, young a little, rotten a smaller, messy payout. Gather puts every affliction
-// back on the young/ripe edge (so it is gold at once, and its rot is reset). Spirit Wisp is a timed, cosmetic companion
-// (like the Ranger's falcon: a damage over time and a buff, nothing synced). Reaper's Gate (T) is a window: you vanish, every
-// Slash is a Gate Strike that lays one affliction in turn, and the fifth releases all four at full ripeness.
+// ======================================================================= THRESHER (damage, class 19): afflict, weigh, reap
+// Four AFFLICTIONS (k.g.aff: id -> { w, until, next } or null) lie on the boss: Mark (Slash; a bleed), Drain (Cleave; ticks mend
+// you), Bind (Gloam Blink and the Wisp; a pulse) and Thread (Hook; no ticks, the heaviest pop). Each lasts THRESH.DUR s and has a
+// WEIGHT of 1 to THRESH.MAXW: laying one that is already up adds a Weight and starts its time again. Every Weight ticks. They do not
+// age or change colour: when to pop them is the fight's question, not a clock's. POPPING one pays its damage times its Weight and
+// sets off its own effect: Mark is the big hit, Drain mends you, Bind fetters the boss (the party takes less for a few seconds),
+// Thread snaps and gives a Hook charge back. Reap pops every one; Sever (the move keeps the id `gather`) rips out only the one
+// you laid last (k.g.last), harder. Spirit Wisp is a timed, cosmetic companion (like the Ranger's falcon: a damage over time and
+// a buff, nothing synced). Reaper's Gate (T) is a window: you vanish, every Slash is a Gate Strike that lays one affliction in
+// turn at full Weight, and the fifth pops all four.
 const THRESH = {
   IDS: ['mark', 'drain', 'bind', 'thread'],
   NAMES: { mark: 'Mark', drain: 'Drain', bind: 'Bind', thread: 'Thread' },
-  YOUNG: 3, ROT: 8, LIFE: 6,            // young under YOUNG s, gold until ROT s, rotten after; gone LIFE s later
+  DUR: 15, MAXW: 3, TICK: 3,            // an affliction lasts DUR s from its last laying, up to MAXW Weight, and ticks every TICK s
+  TICKP: { mark: 20, drain: 12, bind: 18, thread: 0 }, DRAIN_HEAL: 0.005,   // per Weight, a tick (Drain's mend: of your health)
   SWING: 1.2,                           // Backswing: the next hit pressed this soon after the last recovery
   SLASH: 200, CLEAVE: 270, BACK: 90,
-  HOOK: 150, HOOK_AGE: 1.5, BLINK: 140, BLINK_MIT: 0.5,
-  MARK_DOT: 28, MARK_DUR: 12, BIND: 60, BIND_EVERY: 4, DRAIN_EVERY: 3, DRAIN_HEAL: 0.012, DRAIN_POP: 0.03,
-  BASE: 120, PAY: { mark: 110, drain: 100, bind: 110, thread: 170 },   // Reap: a base hit and what each affliction pays at gold
-  P_YOUNG: 0.4, P_ROT: 0.65, REAP_CD: 6,
-  KNELL: 180, U_KNELL: 3,               // the Full Toll: a Reap that cashes all four at gold rings a knell, a last blow, and the Ultimate charges more
-  GATHER_CD: 20,
+  HOOK: 150, BLINK: 140, BLINK_MIT: 0.5,
+  BASE: 80, PAY: { mark: 130, drain: 90, bind: 90, thread: 140 },   // Reap: a base cut, and what each affliction pays for every Weight
+  FULL: 1.3, DRAIN_POP: 0.02, FETTER: 0.1, FETTER_DUR: 4,                       // Drain's pop mends 2% a Weight; Bind's: the party takes 10% less for 4s
+  REAP_CD: 8, SEVER_CD: 12, SEVER: 1.5,
+  KNELL: 150, U_KNELL: 3,               // the Full Toll: a Reap that pops every affliction at full Weight rings a knell, a last blow, and the Ultimate charges more
   WISP_DUR: 15, WISP_HIT: 60, WISP_EVERY: 2.5, WISP_CD: 45, SAC: 320, SAC_BUFF: 0.1, SAC_DUR: 8,
-  U_REAP: 1.6, U_GOLD: 1.2, U_OTHER: 0.4,                              // Ultimate charge: a Reap, and each affliction it cashes
-  GATE: { DUR: 8, GCD: 1.0, STRIKE: 190, END: 260, MULT: 1.3 },
+  U_REAP: 1.6, U_W: 0.5,                // Ultimate charge: a Reap, and every Weight it pops (a Sever: its Weight)
+  GATE: { DUR: 8, GCD: 1.0, STRIKE: 190, END: 260, MULT: 0.4 },   // (the fifth: every affliction as 3 Weight at full, MULT of that)
   ARC: 2.1, ARC_R: 95, ARC_SHARE: 0.6,   // the scythe's wide arc (about 120 degrees, a little past melee): other enemies in it take 60% of the cut
 };
-const thY = k => k.def.young || THRESH.YOUNG, thR = k => k.def.rot || THRESH.ROT;
-// 0: not up, 1: young, 2: gold (ripe), 3: rotten
-function thStage(k, id) {
-  const at = k.g.aff[id];
-  if (at == null) return 0;
-  const a = k.now - at;
-  return a < thY(k) ? 1 : a < thR(k) || (id === 'thread' && k.talent('thresher_anchor')) ? 2 : 3;   // (Anchored Thread, Wraith spec row VI: it never lapses)
-}
-const thCount = (k, stage) => THRESH.IDS.filter(id => (stage ? thStage(k, id) === stage : thStage(k, id) > 0)).length;
+const thMaxW = k => k.def.maxW || THRESH.MAXW, thDur = k => k.def.affDur || THRESH.DUR;
+const thAvail = k => THRESH.IDS.filter(id => !(k.def.noAff && k.def.noAff.indexOf(id) >= 0));
+// an affliction's Weight (0: not up)
+const thW = (k, id) => { const a = k.g.aff[id]; return a && a.w > 0 ? a.w : 0; };
+const thCount = k => THRESH.IDS.filter(id => thW(k, id) > 0).length;
+const thFull = k => THRESH.IDS.filter(id => thW(k, id) >= thMaxW(k)).length;
+const thTotal = k => THRESH.IDS.reduce((s, id) => s + thW(k, id), 0);
 const thAb = (k, id) => k.abilities.find(a => k.baseId(a) === id) || k.baseAbilities.find(a => k.baseId(a) === id);
-// lay an affliction: one that is not up, or has lapsed, starts again faint; a darkening one is left to darken
-function thApply(k, id) {
-  if (k.def.noAff && k.def.noAff.indexOf(id) >= 0) return;
-  const st = thStage(k, id);
-  if (st !== 0 && st !== 3) return;
-  k.g.aff[id] = k.now;
+// lay an affliction: a new one at `n` Weight, or `n` more on one that is up (to the most), its time started again.
+// o.full: at full Weight at once (Hourglass, the Gate's strikes); o.force: lays even what the spec never lays (the Gate)
+function thApply(k, id, n = 1, o = {}) {
+  if (!o.force && k.def.noAff && k.def.noAff.indexOf(id) >= 0) return;
+  const max = o.max || thMaxW(k), a = k.g.aff[id], full = o.full || k.now < (k.g.fullUntil || 0);   // (Hourglass, Wraith spec row VII)
+  const anchored = id === 'thread' && k.talent('thresher_anchor');   // (Anchored Thread, Wraith spec row VI: it never runs out)
+  const until = anchored ? Infinity : k.now + thDur(k);
+  if (!a) k.g.aff[id] = { w: full ? max : Math.min(max, n), until, next: k.now + THRESH.TICK };
+  else { if (a.w >= max) k.wasted(id + ' weight'); a.w = full ? max : Math.min(max, a.w + n); a.until = until; }
+  k.g.last = id;
   k.fxGain(1);   // (item effects: an affliction laid builds the gauge)
-  if (id === 'bind') k.g.bindAt = k.now + THRESH.BIND_EVERY;
-  if (id === 'drain') k.g.drainAt = k.now + THRESH.DRAIN_EVERY;
-  if (id === 'mark') k.dot('mark', THRESH.MARK_DOT, THRESH.MARK_DUR, 3, { ab: thAb(k, 'slash') });
-  k.fx('afflict', { id });
+  k.fx('afflict', { id, w: k.g.aff[id].w, max, dur: anchored ? 0 : thDur(k) });
 }
-// every affliction that is up darkens by `secs` (it counts as that much older)
-function thAge(k, secs) { for (const id of THRESH.IDS) if (k.g.aff[id] != null) k.g.aff[id] -= secs; }
-// ... or to the faint/due edge at the least
-function thRipen(k) { for (const id of THRESH.IDS) if (k.g.aff[id] != null && k.now - k.g.aff[id] < thY(k)) k.g.aff[id] = k.now - thY(k); }
-const thGold = k => thCount(k, 2) > 0;
-// Deepening Toll (Grim spec row VI): a due affliction pays 8% more for every second it has waited past due, up to 40% more
-const thDue = (k, id) => (k.talent('thresher_deepening') && k.g.aff[id] != null ? 1 + Math.min(0.4, 0.08 * Math.max(0, k.now - k.g.aff[id] - thY(k))) : 1);
-// what a Reap (or the Gate's fifth strike, or Cull) pays: a base hit, then each affliction in turn. stage: id -> 1|2|3
-function thPayout(k, ab, stage, o) {
-  let n = 0, gold = 0, rot = 0;
-  k.damage(o.base * o.mult, { ab });
-  for (const id of THRESH.IDS) {
-    const s = stage[id];
-    if (!s) continue;
-    n++; if (s === 2) gold++; if (s === 3) rot++;
-    const f = s === 1 ? THRESH.P_YOUNG : s === 2 ? thDue(k, id) : o.rotPay;
-    k.after(o.gap * n, () => {
-      k.damage(THRESH.PAY[id] * f * o.mult, { ab, extra: true });
-      if (id === 'drain' && s !== 3) k.healRaw(k.talent('thresher_tithe') ? 'lowest' : 'self', k.env.maxHp() * THRESH.DRAIN_POP * (s === 2 ? 1 : 0.5), { ab });
-      k.fx('afflict-pop', { id, s });
-    });
+// every affliction that is up gains a Weight (Nightfall)
+function thDeepen(k) { for (const id of THRESH.IDS) if (thW(k, id)) thApply(k, id, 1); }
+// one affliction popped: its damage (PAY a Weight), and its own effect unless o.quiet (Cull)
+function thPop(k, ab, id, w, mult, o = {}) {
+  const full = !o.plain && (o.full || w >= thMaxW(k)), pay = THRESH.PAY[id] * (id === 'mark' && k.perk('thresher_a2') ? 1.2 : 1) * (full ? THRESH.FULL : 1);   // (at full Weight it pays 50% more)
+  k.damage(pay * w * mult, { ab, extra: true });
+  if (!o.quiet) {
+    if (id === 'drain') k.healRaw(k.talent('thresher_tithe') ? 'lowest' : 'self', k.env.maxHp() * THRESH.DRAIN_POP * w, { ab });
+    else if (id === 'bind') { k.mitigate('party', THRESH.FETTER, THRESH.FETTER_DUR, { ab }); k.fx('th-fetter'); }
+    else if (id === 'thread') { const h = thAb(k, 'hook'); if (h) k.refundCharge(h.id); }
   }
-  return { n, gold, rot };
+  k.fx('afflict-pop', { id, w, full });
+}
+// what a Reap (or the Gate's fifth strike, or Cull) pays: a base hit, then each affliction in turn. ws: id -> Weight
+function thPayout(k, ab, ws, o) {
+  let n = 0, total = 0;
+  k.damage(o.base * (o.baseMult || o.mult), { ab });
+  for (const id of THRESH.IDS) {
+    const w = ws[id];
+    if (!w) continue;
+    n++; total += w;
+    k.after(o.gap * n, () => thPop(k, ab, id, w, o.mult, o));
+  }
+  return { n, total };
 }
 // the wide arc: every OTHER enemy (the boss or an add) in the arc in front of you takes `share` of the cut, through the
 // ordinary damage path (so threat, add HP and kill credit work). Needs a host with env.enemiesNear; without one (the dummy) nothing.
@@ -5479,41 +5480,51 @@ function thArc(k, ab, pot, o = {}) {
   }
   return n;
 }
-const thStages = k => { const st = {}; for (const id of THRESH.IDS) st[id] = thStage(k, id); return st; };
-function thCharge(k, r) { k.ultGain(THRESH.U_REAP + THRESH.U_GOLD * r.gold + THRESH.U_OTHER * (r.n - r.gold)); }
+const thWeights = k => { const ws = {}; for (const id of THRESH.IDS) ws[id] = thW(k, id); return ws; };
 // Reap, and what the talents add to it
 function thReap(k, ab) {
-  const st = thStages(k), m = k.def.reapMult || 1;
-  const vul = bossNow(k);
-  if (k.talent('thresher_wound') && vul && vul.vuln > 0) for (const id of THRESH.IDS) if (st[id]) st[id] = 2;   // (Open Wound, Grim spec row VII: everything pays as gold)
-  if (k.talent('thresher_darken')) for (const id of THRESH.IDS) if (st[id] === 1) st[id] = 0;   // (Let It Darken, Grim spec row VI: the faint ones stay)
+  const ws = thWeights(k), m = k.def.reapMult || 1, max = thMaxW(k), vul = bossNow(k);
+  if (k.talent('thresher_wound') && vul && vul.vuln > 0) for (const id of THRESH.IDS) if (ws[id]) ws[id] = max;   // (Open Wound, Grim spec row VII: every affliction pays at full Weight)
+  const full = thAvail(k).every(id => ws[id] >= max);
   thArc(k, ab, THRESH.BASE * m);
-  const r = thPayout(k, ab, st, { base: THRESH.BASE, mult: m, rotPay: k.def.rotPay ? (k.perk('thresher_a2') ? 1 : k.def.rotPay) : (k.perk('thresher_a2') ? 0.8 : THRESH.P_ROT), gap: 0.14 });
-  for (const id of THRESH.IDS) if (st[id]) k.g.aff[id] = k.talent('thresher_second') && st[id] === 2 ? k.now - thY(k) * 0.6 : null;   // (Unpaid Debt: a gold one stays, just faint)
-  if (k.talent('thresher_compost') && r.rot > 0) k.dot('compost', 30 * r.rot, 8, 2, { ab });
+  const r = thPayout(k, ab, ws, { base: THRESH.BASE, mult: m, gap: 0.14 });
+  for (const id of THRESH.IDS) if (ws[id]) k.g.aff[id] = null;
+  if (k.talent('thresher_second') && full && ws.mark) k.g.aff.mark = { w: 1, until: k.now + thDur(k), next: k.now + THRESH.TICK };   // (Unpaid Debt: after a Full Toll the Mark stays, light)
   if (k.talent('thresher_joined') && k.has('wisp')) { k.after(0.3, () => k.damage(140, { ab, extra: true })); k.fx('wisp-strike'); }
-  if (k.talent('thresher_gleaning') && r.gold >= 2) k.buff('gleaning', 10);
+  if (k.talent('thresher_gleaning') && r.n >= 3) k.buff('gleaning', 10);
   if (k.talent('thresher_fleet')) k.buff('fleet', 5);   // (Fleet Hour, Wraith spec row VI: see the Wraith's haste in specs.js)
-  if (k.talent('thresher_lasthour') && r.gold >= 4) k.partyBuff('dmg', 0.04, 6, { ab });   // (Last Hour, Wraith spec row VII)
-  thCharge(k, r);
-  // the Full Toll: all four cashed at gold, and the hour strikes (the Gate's release bloom and toll)
-  if (r.gold >= 4) { k.after(0.14 * 5 + 0.1, () => { k.damage(THRESH.KNELL * m, { ab, extra: true }); k.fx('gate-release', { n: 4 }); }); k.ultGain(THRESH.U_KNELL); k.stats.knells = (k.stats.knells || 0) + 1; }
+  if (k.talent('thresher_lasthour') && r.n >= 4) k.partyBuff('dmg', 0.04, 6, { ab });   // (Last Hour, Wraith spec row VII)
+  k.ultGain(THRESH.U_REAP + THRESH.U_W * r.total);
+  // the Full Toll: every affliction popped at full Weight, and the hour strikes (the Gate's release bloom and toll)
+  if (full) { k.after(0.14 * 5 + 0.1, () => { k.damage(THRESH.KNELL * m, { ab, extra: true }); k.fx('gate-release', { n: 4 }); }); k.ultGain(THRESH.U_KNELL); k.stats.knells = (k.stats.knells || 0) + 1; }
   k.g.swingBy = k.now + k.gcdLen + THRESH.SWING;
-  k.fx('reap', { gold: r.gold, n: r.n, rot: r.rot });
+  k.fx('reap', { n: r.n, w: r.total, full });
   return r;
+}
+// Sever: the affliction laid last, popped alone and harder (Patient Blade, Grim spec row VI: at full Weight it pops twice)
+function thSever(k, ab) {
+  const id = k.g.last, w = thW(k, id);
+  if (!w) return;
+  const twice = k.talent('thresher_patient') && w >= thMaxW(k);
+  thPop(k, ab, id, w, THRESH.SEVER * (k.def.reapMult || 1));
+  if (twice) k.after(0.22, () => thPop(k, ab, id, w, THRESH.SEVER * (k.def.reapMult || 1)));
+  k.g.aff[id] = null;
+  if (k.talent('thresher_hush')) k.shield('self', 100, 6, { ab });
+  k.ultGain(THRESH.U_W * w);
+  k.fx('th-sever', { id, w, twice });
 }
 // Slash and Cleave (the Gate's strikes are theirs, below)
 function thSlash(k, ab) {
   const g = k.g, step = k.now < g.comboUntil ? g.step : 0, back = k.now <= g.swingBy, pot = step ? THRESH.CLEAVE : THRESH.SLASH;
   k.damage(pot, { ab });
   if (step) thArc(k, ab, pot);   // (Cleave is the wide arc)
-  if (step === 0) { thApply(k, 'mark'); if (k.def.sower) thApply(k, 'drain'); }
-  else { thApply(k, 'drain'); if (k.def.sower) thApply(k, 'bind'); }
+  if (step === 0) { if (k.def.sower) thApply(k, 'drain'); thApply(k, 'mark'); }
+  else { if (k.def.sower) thApply(k, 'bind'); thApply(k, 'drain'); }
   g.step = (step + 1) % 2; g.comboUntil = k.now + 15;
   if (k.consume('gleaning')) { k.after(0.2, () => k.damage(pot * 0.35, { ab, extra: true })); k.fx('backswing'); }
   if (back) {
     k.after(0.28, () => k.damage(THRESH.BACK * (k.perk('thresher_w1') ? 1.5 : 1), { ab, extra: true }));
-    if (k.talent('thresher_drag')) thAge(k, 1);
+    if (k.talent('thresher_drag')) for (const id of THRESH.IDS) { const a = g.aff[id]; if (a && isFinite(a.until)) a.until = k.now + thDur(k); }   // (Dragging Edge: their time starts again)
     k.fx('backswing');
   }
   g.swingBy = k.now + k.gcdLen + THRESH.SWING;
@@ -5521,55 +5532,60 @@ function thSlash(k, ab) {
 function thSacrifice(k, ab) {
   k.dots.delete('wisp'); k.clear('wisp'); k.g.wispOn = false;
   k.damage(THRESH.SAC, { ab });
-  thRipen(k);
+  if (k.g.last && thW(k, k.g.last)) thApply(k, k.g.last, 1);
   k.buff('wispgift', THRESH.SAC_DUR);
   k.cd[ab.id] = Math.max(k.now, (k.g.wispAt || 0) + THRESH.WISP_CD);
   k.fx('wisp-sacrifice');
 }
 
 KITS.thresher = {
-  potMult: 1.04,   // balance knob (tools/simulate.js)
+  potMult: 0.83,   // balance knob (tools/simulate.js)
   auto: { kind: 'slash', potency: 40, range: MELEE },
   gauge: { kind: 'harvest', key: 'aff', max: 100, label: 'Toll', w: 150 },
-  init: () => ({ aff: {}, step: 0, comboUntil: 0, swingBy: 0, bindAt: 0, drainAt: 0, gate: 0, wispAt: -99, wispOn: false, castSeen: false }),
+  init: () => ({ aff: {}, last: null, step: 0, comboUntil: 0, swingBy: 0, gate: 0, wispAt: -99, wispOn: false, castSeen: false }),
   dmgMod: k => (k.has('wispgift') ? THRESH.SAC_BUFF : 0),
   onDamage(k, amount, crit, opts) {
-    if (opts.dot && opts.ab && k.baseId(opts.ab) === 'wisp') { k.fx('wisp-strike'); if (thStage(k, 'bind') === 0) thApply(k, 'bind'); }
+    if (opts.dot && opts.ab && k.baseId(opts.ab) === 'wisp') { k.fx('wisp-strike'); if (!thW(k, 'bind')) thApply(k, 'bind'); }
   },
   tick(k) {
-    const g = k.g, now = k.now, life = thR(k) + THRESH.LIFE, far = { target: 'enemy', range: 2000 };
-    for (const id of THRESH.IDS) if (g.aff[id] != null && now - g.aff[id] >= life && !(id === 'thread' && k.talent('thresher_anchor'))) g.aff[id] = null;   // (it has fallen away)
-    // Hourglass (Wraith) stops the hour on the boss; Nightfall (Grim) darkens it three times as fast (the spec rows VII)
-    const dtt = g.thT == null ? 0 : Math.min(0.5, now - g.thT); g.thT = now;
-    if (dtt > 0 && now < (g.stopUntil || 0)) { for (const id of THRESH.IDS) if (g.aff[id] != null) g.aff[id] += dtt; }
-    else if (dtt > 0 && now < (g.hastenUntil || 0)) { for (const id of THRESH.IDS) if (g.aff[id] != null) g.aff[id] -= 2 * dtt; }
-    // Bind pulses while it is up and not lapsed; Drain mends you the same way
-    if (g.aff.bind != null && now >= g.bindAt) {
-      g.bindAt = now + THRESH.BIND_EVERY;
-      if (thStage(k, 'bind') < 3 && k.env.target(far)) { k.damage(THRESH.BIND, { ab: thAb(k, 'blink'), extra: true }); k.fx('bind-pulse'); }
+    const g = k.g, now = k.now, far = { target: 'enemy', range: 2000 };
+    for (const id of THRESH.IDS) {
+      const a = g.aff[id];
+      if (!a) continue;
+      // run out: gone (Grave Interest: it pays half its pop as it goes, with no effect)
+      if (now >= a.until) {
+        g.aff[id] = null;
+        if (k.talent('thresher_compost') && k.env.target(far)) { k.damage(THRESH.PAY[id] * a.w * 0.5 * (k.def.reapMult || 1), { ab: thAb(k, 'reap'), extra: true }); k.fx('afflict-pop', { id, w: a.w, fade: true }); }
+        else k.fx('afflict-fade', { id });
+        continue;
+      }
+      if (now < a.next) continue;
+      // every Weight ticks (Deepening Toll, Grim spec row VI: at full Weight twice as fast)
+      a.next = now + (k.talent('thresher_deepening') && a.w >= thMaxW(k) ? THRESH.TICK / 2 : THRESH.TICK);
+      if (!THRESH.TICKP[id] || !k.env.target(far)) continue;
+      k.damage(THRESH.TICKP[id] * a.w, { ab: thAb(k, id === 'mark' || id === 'drain' ? 'slash' : 'blink'), dot: true });
+      if (id === 'drain') { k.healRaw(k.talent('thresher_tithe') ? 'lowest' : 'self', k.env.maxHp() * THRESH.DRAIN_HEAL * a.w, { ab: thAb(k, 'slash') }); k.fx('drain-tick'); }
+      if (id === 'bind') k.fx('bind-pulse');
     }
-    if (g.aff.drain != null && now >= g.drainAt) {
-      g.drainAt = now + THRESH.DRAIN_EVERY;
-      const s = thStage(k, 'drain');
-      if (s < 3 && k.env.target(far)) { k.healRaw(k.talent('thresher_tithe') ? 'lowest' : 'self', k.env.maxHp() * THRESH.DRAIN_HEAL * (s === 2 ? 1.5 : 1), { ab: thAb(k, 'slash') }); k.fx('drain-tick'); }
-    }
-    onBossCast(k, () => { if (k.talent('thresher_omen')) { thRipen(k); k.fx('omen'); } });
+    // (Omen of the Toll: a boss cast beginning brings Sever back)
+    onBossCast(k, () => { if (k.talent('thresher_omen')) { const s = thAb(k, 'gather'); if (s && s.id === 'gather') k.cd[s.id] = now; k.fx('omen'); } });
     // the Wisp ran out on its own: with Sacrifice held the cooldown only starts now (counted from the summon)
     if (g.wispOn && !k.has('wisp')) { g.wispOn = false; const w = thAb(k, 'wisp'); if (w) k.cd[w.id] = Math.max(k.cd[w.id] || 0, g.wispAt + THRESH.WISP_CD); }
   },
   signature: 'The Toll',
   floor: 'Press Q to cut, and E when it glows: that is the reaping. Keep Q going, and weave the others when they are ready.',
   ceiling: [
-    'Slash lays a Mark and Cleave a Drain; Hook lays a Thread and Gloam Blink binds. An affliction is faint for 3s (pale), gold for the next 5s, then lapsed. Reap pays gold in full, faint 40%, lapsed 65%: watch the gauge, and Reap when most of it is gold. All four at gold is the Full Toll: a knell, one more heavy blow and more Ultimate charge, worth a beat of waiting.',
-    'A hit only lays an affliction that is not up or has lapsed: it does not reset one that is darkening. So the gold comes of its own accord, and lapsing comes of waiting.',
-    'Beckon puts every affliction back on the edge of due, gold at once and its lapse reset. Use it to Reap early, or to hold the gold for the party\'s burst.',
+    'Slash lays a Mark and Cleave a Drain; Hook lays a Thread and Gloam Blink binds. Laying one that is already up adds a Weight (up to 3) and starts its 15s again. Every Weight ticks, and every Weight pays when it is popped.',
+    'Each pops its own way: Mark is the big hit, Drain mends you, Bind fetters the boss (the party takes 10% less for 4s) and Thread snaps and gives a Hook charge back. Pop a Bind into a raidwide or a tankbuster.',
+    'Reap pops them all. One at full Weight pays 50% more, and all of them at full Weight is the Full Toll: a knell, one more heavy blow and more Ultimate charge. Popping early buys the effects when you need them; waiting buys Weight.',
+    'Sever rips out only the affliction you laid last, at half again its worth. Blink then Sever is a Bind popped on the moment; Hook then Sever, a Thread and a Hook charge back.',
     'Backswing: press the next Q within 1.2s of your recovery and the scythe comes back round for a second hit. Every Reap you make keeps it going.',
-    'Reaper\'s Gate: every hit lays the next affliction in turn, and the fifth strike releases all four fully due. Open it with your afflictions up, and the party\'s burst.',
+    'Reaper\'s Gate: every strike lays the next affliction at full Weight, and the fifth pops all four. Open it with the party\'s burst, or with a raidwide coming for the Bind.',
   ],
   abilities: [
     {
       id: 'slash', name: 'Slash', type: 'gcd', target: 'enemy', range: MELEE, anim: 'attack',
-      desc: 'Two-hit combo on one button: Slash ({d:200}) > Cleave ({d:270}), a wide arc. Slash lays a Mark on the boss and Cleave a Drain. Press the next hit within 1.2s of your recovery and a Backswing follows for {d:90}.',
+      desc: 'Two-hit combo on one button: Slash ({d:200}) > Cleave ({d:270}), a wide arc. Slash lays a Mark on the boss (a bleed, {d:20} every 3s for every Weight) and Cleave a Drain ({d:12} every 3s for every Weight, and it mends you). Press the next hit within 1.2s of your recovery and a Backswing follows for {d:90}.',
       label: k => ['Slash', 'Cleave'][k.now < k.g.comboUntil ? k.g.step : 0],
       fxStep: k => (k.now < k.g.comboUntil ? k.g.step : 0),
       effect(k) { thSlash(k, this); },
@@ -5577,48 +5593,45 @@ KITS.thresher = {
     },
     {
       id: 'hook', name: 'Hook', type: 'ogcd', target: 'enemy', range: 320, charges: 2, cd: 12, lock: 0.4, anim: 'attack',
-      desc: 'Throw the chain: if you are not at the boss, pull yourself in, and cut for {d:150}. It lays a Thread on the boss and ages Mark, Drain and Bind by 1.5s. Two charges.',
-      glow: k => thStage(k, 'thread') === 0,
+      desc: 'Throw the chain: if you are not at the boss, pull yourself in, and cut for {d:150}. It lays a Thread on the boss: it does not tick, but it pays the most when popped, and snapping it gives a Hook charge back. Two charges.',
+      glow: k => !thW(k, 'thread'),
       effect(k) {
         if (!k.env.target({ target: 'enemy', range: MELEE })) k.teleport('dash', { ab: this, d: 150 });
-        thAge(k, k.perk('thresher_w2') ? 2.5 : THRESH.HOOK_AGE);
-        k.damage(THRESH.HOOK, { ab: this });
-        thApply(k, 'thread');
+        k.damage(THRESH.HOOK * (k.perk('thresher_w2') ? 1.3 : 1), { ab: this });
         if (k.def.sower) thApply(k, 'bind');
-        if (k.talent('thresher_weight')) thApply(k, k.def.sower || (k.def.noAff && k.def.noAff.indexOf('bind') >= 0) ? 'mark' : 'bind');   // (Dread Weight: a Bind; a Sower already binds and a Grim never does, so it lays a Mark)
+        const tw = thW(k, 'thread');
+        if (k.talent('thresher_weight') && tw >= thMaxW(k)) { thPop(k, this, 'thread', tw, k.def.reapMult || 1); k.g.aff.thread = null; }   // (Dread Weight: a full Thread snaps on the spot)
+        else thApply(k, 'thread');   // (last: it is the one a Sever takes)
         k.g.swingBy = Math.max(k.g.swingBy, k.now + 3);
       },
       fx: { type: 'slash', color: '#7fc86a', r: 44, span: 1.1 },
     },
     {
       id: 'reap', name: 'Reap', type: 'gcd', target: 'enemy', range: MELEE, cd: k => k.def.reapCd || THRESH.REAP_CD, anim: 'bash',
-      desc: 'Spend every affliction on the boss. A cut for {d:120}, then each pays out: Mark {d:110}, Drain {d:100} (and mends you for 3% of your health), Bind {d:110} and Thread {d:170}. Gold pays in full, faint 40%, lapsed 65%. All four at gold is the Full Toll: the hour strikes for {d:180} more. Glows when something is gold. Needs an affliction up.',
+      desc: 'Pop every affliction on the boss. A cut for {d:80}, then each pays for every Weight it has: Mark {d:130}, Drain {d:90} (and mends you for 2% of your health), Bind {d:90} (and the party takes 10% less damage for 4s) and Thread {d:140} (and a Hook charge comes back). One at full Weight pays 50% more. Every one at full Weight is the Full Toll: the hour strikes for {d:320} more. Glows with three up. Needs an affliction up.',
       usable: k => thCount(k) > 0,
-      glow: k => thGold(k),
+      glow: k => thCount(k) >= Math.min(3, thAvail(k).length),
       effect(k) { thReap(k, this); },
       fx: { type: 'slash', color: '#e8c84a', r: 76, span: 3.0 },
     },
     {
-      id: 'gather', name: 'Beckon', type: 'ogcd', target: 'self', cd: THRESH.GATHER_CD, lock: 0.8, anim: 'cast',
-      desc: 'Pull every affliction on the boss back to the edge of due: gold at once, with the lapse reset. It does not lay any that are not up.',
-      usable: k => thCount(k) > 0,
-      glow: k => thCount(k, 3) > 0 || (thCount(k, 1) >= 2 && thCount(k, 2) === 0),
-      effect(k) {
-        for (const id of THRESH.IDS) if (k.g.aff[id] != null) k.g.aff[id] = k.now - thY(k);
-        if (k.talent('thresher_hush')) k.shield('self', 100, 6, { ab: this });
-        k.fx('gather');
-      },
-      fx: { type: 'aura', color: '#d8c84a', r: 40, dur: 1.5 },
+      id: 'gather', icon: 'sever', name: 'Sever', type: 'ogcd', target: 'enemy', range: MELEE, cd: THRESH.SEVER_CD, lock: 0.5, anim: 'attack',
+      label: k => 'Sever' + (k.g.last && thW(k, k.g.last) ? ' ' + THRESH.NAMES[k.g.last] : ''),
+      desc: 'Rip out the affliction you laid last, alone: it pops at half again its worth, with its own effect (Mark the big hit, Drain a mend, Bind the party\'s 10% less for 4s, Thread a Hook charge). The others stay.',
+      usable: k => !!(k.g.last && thW(k, k.g.last)),
+      glow: k => !!(k.g.last && thW(k, k.g.last) >= thMaxW(k)),
+      effect(k) { thSever(k, this); },
+      fx: { type: 'slash', color: '#d8c84a', r: 50, span: 1.4 },
     },
     {
       id: 'blink', name: 'Gloam Blink', type: 'ogcd', target: 'enemy', range: 320, charges: 2, cd: 15, lock: 0.4, anim: 'attack',
-      desc: 'Cut through the dark to the boss for {d:140} and bind it: a Bind pulses for {d:60} every 4s while it lasts. The cut keeps your Backswing going, and you take 50% less damage for 1s. Two charges.',
-      glow: k => thStage(k, 'bind') === 0,
+      desc: 'Cut through the dark to the boss for {d:140} and bind it: a Bind pulses for {d:18} every 3s for every Weight. The cut keeps your Backswing going, and you take 50% less damage for 1s. Two charges.',
+      glow: k => !thW(k, 'bind'),
       effect(k) {
         if (!k.env.target({ target: 'enemy', range: MELEE })) k.teleport('dash', { ab: this, d: 150 });
         k.damage(THRESH.BLINK, { ab: this });
-        thApply(k, 'bind');
-        if (k.def.blinkAge) thAge(k, k.def.blinkAge);   // (a Grim binds nothing: its Blink darkens what is on the boss instead)
+        if (k.def.blinkDeepen) { const l = k.g.last; if (l && thW(k, l)) thApply(k, l, 1); }   // (a Grim binds nothing: its Blink deepens the one laid last)
+        else thApply(k, 'bind');
         k.mitigate('self', k.perk('thresher_a4') ? 0.7 : THRESH.BLINK_MIT, 1, { ab: this });
         if (k.talent('thresher_vanish')) k.mitigate('self', 1, 1.5, { ab: this, kind: 'invuln' });
         k.g.swingBy = Math.max(k.g.swingBy, k.now + 3.5);
@@ -5630,7 +5643,7 @@ KITS.thresher = {
       label: k => (k.has('wisp') && k.talent('thresher_sacrifice') ? 'Sacrifice' : 'Spirit Wisp'),
       usable: k => !k.has('wisp') || k.talent('thresher_sacrifice'),
       desc: 'A wisp rises beside you for 15s and harries the boss, striking for {d:60} every 2.5s and binding it if nothing else has.',
-      glow: k => k.has('wisp') && k.talent('thresher_sacrifice') && thCount(k, 1) + thCount(k, 2) >= 3,
+      glow: k => k.has('wisp') && k.talent('thresher_sacrifice') && thCount(k) >= 3,
       effect(k) {
         if (k.has('wisp')) { thSacrifice(k, this); return; }
         const wd = k.perk('thresher_w3') ? 20 : THRESH.WISP_DUR;
@@ -5646,8 +5659,8 @@ KITS.thresher = {
 
 // talents that grant a new move (TALENT_ABILITIES, the shared system above)
 TALENT_ABILITIES.thresher_sowing = { cls: 'thresher', ab: {
-  id: 'sowing', replaces: 'gather', icon: 'sowing', name: 'Shroud', type: 'ogcd', target: 'enemy', range: 420, cd: 25, lock: 0.6, anim: 'cast',
-  desc: 'Cast the shroud: all four afflictions land on the boss at once, faint (any that is darkening is left to darken), and a cut for {d:70}.',
+  id: 'sowing', replaces: 'gather', icon: 'sowing', name: 'Shroud', type: 'ogcd', target: 'enemy', range: 420, cd: 30, lock: 0.6, anim: 'cast',
+  desc: 'Cast the shroud: every affliction lands on the boss at once, a Weight more on any already up, and a cut for {d:70}.',
   glow: k => thCount(k) <= 1,
   effect(k) {
     k.damage(70, { ab: this });
@@ -5658,52 +5671,53 @@ TALENT_ABILITIES.thresher_sowing = { cls: 'thresher', ab: {
 } };
 TALENT_ABILITIES.thresher_cull = { cls: 'thresher', ab: {
   id: 'cull', replaces: 'wisp', icon: 'cull', name: 'Cull', type: 'ogcd', target: 'enemy', range: MELEE, cd: k => (k.perk('thresher_w3') ? 35 : 40), lock: 0.6, anim: 'big',   // (Spirit Wisp's enhancement: it comes back 5s sooner)
-  desc: 'Take what is owed now: every affliction on the boss pays out as if it were gold, whatever its age, and none is spent. A cut for {d:120} first, then Mark {d:110}, Drain {d:100}, Bind {d:110} and Thread {d:170}.',
+  desc: 'Take what is owed now: every affliction on the boss pays out for its Weight (3 at the most), and none is spent (none of their effects go off). A cut for {d:80} first, then for every Weight Mark {d:130}, Drain {d:90}, Bind {d:90} and Thread {d:140}.',
   usable: k => thCount(k) > 0,
-  glow: k => thCount(k) >= 3,
+  glow: k => thTotal(k) >= 6,
   effect(k) {
-    const st = {}; for (const id of THRESH.IDS) st[id] = thStage(k, id) ? 2 : 0;
-    const r = thPayout(k, this, st, { base: THRESH.BASE, mult: k.def.reapMult || 1, rotPay: 1, gap: 0.14 });
-    thCharge(k, r);
+    const ws = thWeights(k); for (const id of THRESH.IDS) ws[id] = Math.min(ws[id], THRESH.MAXW);
+    const r = thPayout(k, this, ws, { base: THRESH.BASE, mult: 1, gap: 0.14, quiet: true, plain: true });
+    k.ultGain(THRESH.U_REAP + THRESH.U_W * r.total);
     k.fx('cull', { n: r.n });
   },
   fx: { type: 'slash', color: '#c8e84a', r: 70, span: 2.6 },
 } };
 // the spec rows VII (SPEC_TALENTS in talents.js): the Wraith's Hourglass and the Grim's Nightfall, each in the place of Gloam Blink
-// (a cut through the dark like the Blink's, with no Bind laid; one stops the hour on the boss, the other quickens it)
-const thTimeMove = (id, name, cd, key, desc, glow) => ({
+// (a cut through the dark like the Blink's, with no Bind laid; one turns the glass so what you lay lands full, the other deepens it all)
+const thTimeMove = (id, name, cd, then, desc, glow) => ({
   id, replaces: 'blink', icon: id, name, type: 'ogcd', target: 'enemy', range: 320, cd, lock: 0.4, anim: 'attack', talent: true, desc, glow,
   effect(k) {
     if (!k.env.target({ target: 'enemy', range: MELEE })) k.teleport('dash', { ab: this, d: 150 });
     k.damage(THRESH.BLINK, { ab: this });
-    k.g[key] = k.now + 5;
+    then(k);
     k.mitigate('self', k.perk('thresher_a4') ? 0.7 : THRESH.BLINK_MIT, 1, { ab: this });
     k.g.swingBy = Math.max(k.g.swingBy, k.now + 3.5);
   },
   fx: { type: 'slash', color: '#5a8a6a', r: 40, span: 1.1 },
 });
 talentMoves('thresher', {
-  thresher_hourglass: thTimeMove('hourglass', 'Hourglass', 28, 'stopUntil',
-    'Cut through the dark to the boss for {d:140} and turn the glass: for 5s no affliction on the boss darkens or lapses. You take 50% less damage for 1s.',
-    k => thCount(k, 2) >= 2),
-  thresher_nightfall: thTimeMove('nightfall', 'Nightfall', 25, 'hastenUntil',
-    'Cut through the dark to the boss for {d:140}. For 5s every affliction on it darkens three times as fast. You take 50% less damage for 1s.',
-    k => thCount(k, 1) >= 2 && thCount(k, 2) === 0),
+  thresher_hourglass: thTimeMove('hourglass', 'Hourglass', 28, k => { k.g.fullUntil = k.now + 5; },
+    'Cut through the dark to the boss for {d:140} and turn the glass: for 5s every affliction you lay lands at full Weight. You take 50% less damage for 1s.',
+    k => k.cdRemaining(thAb(k, 'reap')) < 4),
+  thresher_nightfall: thTimeMove('nightfall', 'Nightfall', 25, k => thDeepen(k),
+    'Cut through the dark to the boss for {d:140}, and every affliction on it gains a Weight. You take 50% less damage for 1s.',
+    k => thCount(k) >= 2 && thFull(k) < thCount(k)),
 });
 
-// Reaper's Gate (T). Fills from Reaps (more for every gold affliction they cash). A window of 8s: you vanish (nothing can touch
-// you), and every Slash is a Gate Strike on a 1s global cooldown that lays the next affliction in turn (Mark, Drain, Bind, Thread);
-// the fifth strike releases all four fully due, a heavy burst, and the cycle starts again.
+// Reaper's Gate (T). Fills from Reaps (more for every Weight they pop). A window of 8s: you vanish (nothing can touch you), and
+// every Slash is a Gate Strike on a 1s global cooldown that lays the next affliction in turn (Mark, Drain, Bind, Thread) at full
+// Weight (3 at the most); the fifth strike pops all four as 3 Weight at full, a heavy burst with every effect, and the cycle starts again.
 const GATE = THRESH.GATE, GATE_ORDER = ['mark', 'drain', 'bind', 'thread'];
+const thGateW = k => Math.min(thMaxW(k), THRESH.MAXW);
 ULTIMATES.thresher = {
   id: 'reapersgate', name: 'Reaper\'s Gate', slot: 7, type: 'ogcd', ult: true, mode: 'window', target: 'enemy', range: 380, anim: 'big', icon: 'reapersgate',
   lock: 0.6, dr: 0.3,
   charge: { rate: 0.4, keep: 0.5 },
-  botOk: k => !!k.env.target({ target: 'enemy', range: 220 }) && thCount(k) >= 1,
-  desc: `Step through the Gate and out of the world for ${GATE.DUR}s: nothing can touch you, and you strike from behind your target. Slash becomes <b>Gate Strike</b> on a ${GATE.GCD}s global cooldown: each one cuts for {d:${GATE.STRIKE}} and lays the next affliction in turn (Mark, Drain, Bind, Thread). ` +
-    `The fifth strike releases all four fully due: {d:${GATE.END}} and every affliction paying at gold, ${Math.round((GATE.MULT - 1) * 100)}% more. Your afflictions are spent (Open Gate keeps them). ` +
+  botOk: k => !!k.env.target({ target: 'enemy', range: 220 }),
+  desc: `Step through the Gate and out of the world for ${GATE.DUR}s: nothing can touch you, and you strike from behind your target. Slash becomes <b>Gate Strike</b> on a ${GATE.GCD}s global cooldown: each one cuts for {d:${GATE.STRIKE}} and lays the next affliction in turn (Mark, Drain, Bind, Thread) at full Weight. ` +
+    `The fifth strike pops all four as if at full Weight, with all their effects: {d:${GATE.END}}, then Mark {d:${Math.round(THRESH.PAY.mark * 3 * THRESH.FULL * GATE.MULT)}}, Drain {d:${Math.round(THRESH.PAY.drain * 3 * THRESH.FULL * GATE.MULT)}}, Bind {d:${Math.round(THRESH.PAY.bind * 3 * THRESH.FULL * GATE.MULT)}} and Thread {d:${Math.round(THRESH.PAY.thread * 3 * THRESH.FULL * GATE.MULT)}}. Your afflictions are spent (Open Gate keeps them). ` +
     'You take 30% less damage and can\'t be knocked back while you step through.' +
-    `<div class="it-ult"><span><u>Charge:</u> ${THRESH.U_REAP}% for every Reap, ${THRESH.U_GOLD} more for every gold affliction it cashes (${THRESH.U_OTHER} for the others), and a little on its own while you fight. It never drains; a fall keeps half.</span></div>`,
+    `<div class="it-ult"><span><u>Charge:</u> ${THRESH.U_REAP}% for every Reap and ${THRESH.U_W} more for every Weight it pops (a Sever: its Weight), and a little on its own while you fight. It never drains; a fall keeps half.</span></div>`,
   effect(k) {
     k.mitigate('self', 1, GATE.DUR, { ab: this, kind: 'invuln' });
     k.teleport('behind', { ab: this });
@@ -5717,26 +5731,19 @@ ULTIMATES.thresher = {
       slash: {
         fxId: 'gatestrike', name: 'Gate Strike', recastGcd: GATE.GCD, anim: 'attack',
         label: k => (k.g.gate >= 4 ? 'The Fifth' : 'Gate Strike'),
-        desc: `Reaper's Gate: a strike for {d:${GATE.STRIKE}} that lays the next affliction in turn (Mark, Drain, Bind, Thread). The fifth releases all four fully due.`,
+        desc: `Reaper's Gate: a strike for {d:${GATE.STRIKE}} that lays the next affliction in turn (Mark, Drain, Bind, Thread) at full Weight. The fifth pops all four.`,
         glow: k => k.g.gate >= 4,
         effect(k) {
           const n = k.g.gate | 0;
           if (n < 4) {
             k.damage(GATE.STRIKE, { ab: this });
-            const id = GATE_ORDER[n];
-            if (k.g.aff[id] == null || thStage(k, id) === 3) {
-              k.g.aff[id] = k.now;
-              if (id === 'bind') k.g.bindAt = k.now + THRESH.BIND_EVERY;
-              if (id === 'drain') k.g.drainAt = k.now + THRESH.DRAIN_EVERY;
-              if (id === 'mark') k.dot('mark', THRESH.MARK_DOT, THRESH.MARK_DUR, 3, { ab: this });
-              k.fx('afflict', { id });
-            }
+            thApply(k, GATE_ORDER[n], 1, { full: true, force: true, max: thGateW(k) });
             k.g.gate = n + 1;
             k.fx('gate-strike', { n });
             return;
           }
-          const st = {}; for (const id of THRESH.IDS) st[id] = 2;
-          const r = thPayout(k, this, st, { base: GATE.END, mult: GATE.MULT, rotPay: 1, gap: 0.12 });
+          const ws = {}; for (const id of THRESH.IDS) ws[id] = thW(k, id) ? THRESH.MAXW : 0;
+          const r = thPayout(k, this, ws, { base: GATE.END, baseMult: 1, mult: GATE.MULT, gap: 0.12, full: true });
           if (!k.talent('thresher_opengate')) for (const id of THRESH.IDS) k.g.aff[id] = null;
           k.g.gate = 0;
           k.fx('gate-release', { n: r.n });
@@ -5747,7 +5754,7 @@ ULTIMATES.thresher = {
   },
 };
 
-if (typeof module !== 'undefined') Object.assign(module.exports, { thArc, THRESH, thStage, thCount, thApply, thPayout, thReap, thSlash, thAge, thRipen, thY, thR });
+if (typeof module !== 'undefined') Object.assign(module.exports, { thArc, THRESH, thW, thCount, thFull, thTotal, thMaxW, thAvail, thApply, thDeepen, thPop, thPayout, thReap, thSever, thSlash });
 
 // ======================================================================= Tidecaller (healer, class 20; docs/plans/2026-10-new-classes-3.md §2)
 // The Tide: a water line (k.g.tide, 0-100) on its own clock. It rises from Low to High over TIDE.RISE s (k.g.tphase 'rise'),

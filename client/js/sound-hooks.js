@@ -56,19 +56,18 @@ const SoundHooks = (() => {
       play(n, mine ? { vol: 0.9, key: 'gloom-hollow', minGap: 0.3 } : { vol: 0.4, remote: true, at, key: 'gloom-hollow:' + (msg.id || ''), minGap: 0.5 });
     });
   }
-  // a Reaper's moments (class id thresher; ability-vfx.js KIT_VFX handlers call this): an affliction coming due (a soft far toll, your own hero only), a
-  // payout's ping, cracked thud or faint puff (the pings climb for each one in a Reap), a Gate strike (a note that rises with each of the five) and its bloom
+  // a Reaper's moments (class id thresher; ability-vfx.js KIT_VFX handlers call this): a pop (a rich ping at full Weight, a thinner one lighter,
+  // the Bind's fetter a dull thud; the pings climb for each one in a Reap), a Gate strike (a note that rises with each of the five) and its bloom
   let popAt = -9, popN = 0;
   function thresher(ev, d, mine, at, who) {
     if (!has()) return;
     safe(() => {
       const rem = (key, vol) => ({ vol: vol * 0.45, remote: true, at, key: key + ':' + (who || ''), minGap: 0.1 });
-      if (ev === 'ripe') { if (mine) play('gold-ripe', { vol: 0.4, key: 'gold-ripe', minGap: 0.2 }); return; }
       if (ev === 'pop') {
         const now = (typeof performance !== 'undefined' ? performance.now() : Date.now()) / 1000;
         popN = now - popAt < 0.9 ? popN + 1 : 0; popAt = now;
-        const s = (d && d.s) || 2, o = mine ? { key: 'th-pop', minGap: 0.05, rate: 1 + Math.min(popN, 4) * 0.09 } : rem('th-pop', 0.6);
-        if (s === 2) play('gold-pop', Object.assign({ vol: 0.7 }, o)); else if (s === 3) play('thresher-rot', Object.assign({ vol: 0.7 }, o)); else play('thresher-pop', Object.assign({ vol: 0.6 }, o));
+        const w = (d && d.w) || 1, o = mine ? { key: 'th-pop', minGap: 0.05, rate: 1 + Math.min(popN, 4) * 0.09 } : rem('th-pop', 0.6);
+        if (d && d.id === 'bind') play('thresher-rot', Object.assign({ vol: 0.6 }, o)); else if (d.full) play('gold-pop', Object.assign({ vol: 0.7 }, o)); else play('thresher-pop', Object.assign({ vol: 0.5 + 0.1 * w }, o));
         return;
       }
       if (ev === 'gate-strike') { const n = (d && d.n) | 0; play('thresher-gate-tone', mine ? { vol: 0.7, rate: 1 + n * 0.13, key: 'th-gate', minGap: 0.1 } : Object.assign(rem('th-gate', 0.7), { rate: 1 + n * 0.13 })); return; }

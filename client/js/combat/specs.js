@@ -1308,32 +1308,32 @@ SPECS.gloomsworn = [
 SPECS.thresher = [
   {
     id: 'sower', name: 'Wraith', title: 'The Swift Shadow', accent: '#8fd8e8',
-    gaugeTip: 'Four afflictions on the boss, each a bar that darkens: pale (faint, 2s), gold (due, until 6.5s), then lapsed. Slash and Cleave lay all four between them, and Hook and the Wisp too. Reap pays gold in full, faint 40%, lapsed 65%.',
-    blurb: 'Mark everything, and quickly. The hour never waits.',
-    focus: 'Pace. You act 10% faster, the afflictions darken sooner and come quickly, and a Reap is rarely short of anything.',
-    passive: { name: 'Swift Shadow', desc: 'You act 10% faster. Slash lays a Drain as well as its Mark, Cleave lays a Bind, and Hook binds too. Afflictions are faint for 2s and gold from then until 6.5s, then they lapse: the window is shorter, and it comes sooner.' },
+    gaugeTip: 'Four afflictions on the boss, each with up to 2 Weight and 10s to run. Slash and Cleave lay all four between them, and Hook and the Wisp too. Every Weight ticks, and pays when it is popped.',
+    blurb: 'Mark everything, and quickly. Pop it often.',
+    focus: 'Pace. You act 10% faster, everything is laid twice as fast, and Reap comes back sooner: small pops, often, and their effects with them.',
+    passive: { name: 'Swift Shadow', desc: 'You act 10% faster. Slash lays a Drain as well as its Mark, Cleave lays a Bind, and Hook binds too. Afflictions hold 2 Weight at the most and run out after 10s, and Reap comes back in 6s instead of 8s.' },
     build: base => ({
-      potMult: base.potMult * 0.875,   // balance knob (tools/simulate.js)
-      sower: true, young: 2, rot: 6.5,
+      potMult: base.potMult * 0.79,   // balance knob (tools/simulate.js)
+      sower: true, maxW: 2, affDur: 10, reapCd: 6,
       haste: k => 0.9 * (k.has('fleet') ? 0.88 : 1),   // (Fleet Hour, spec row VI: a Reap quickens you a little more)
       abilities: {
-        slash: { desc: 'Two-hit combo on one button: Slash ({d:200}) > Cleave ({d:270}), a wide arc. Slash lays a Mark and a Drain on the boss and Cleave a Bind. Press the next hit within 1.2s of your recovery and a Backswing follows for {d:90}.' },
-        hook: { desc: 'Throw the chain: if you are not at the boss, pull yourself in, and cut for {d:150}. It lays a Thread and a Bind on the boss and ages the others by 1.5s. Two charges.' },
+        slash: { desc: 'Two-hit combo on one button: Slash ({d:200}) > Cleave ({d:270}), a wide arc. Slash lays a Drain and a Mark on the boss and Cleave a Bind and a Drain. Press the next hit within 1.2s of your recovery and a Backswing follows for {d:90}.' },
+        hook: { desc: 'Throw the chain: if you are not at the boss, pull yourself in, and cut for {d:150}. It lays a Bind and a Thread on the boss: the Thread does not tick, but it pays the most when popped, and snapping it gives a Hook charge back. Two charges.' },
       },
     }),
   },
   {
     id: 'grim', name: 'Grim', title: 'The Patient Reaper', accent: '#c8a84a',
-    gaugeTip: 'Three afflictions on the boss (no Bind), each a bar that darkens slowly: pale (faint, 4s), gold (due, until 11s), then lapsed. Reap pays gold in full, faint 40%, and lapsed 95%, and every payout is half again as big.',
-    blurb: 'Fewer afflictions, darkened slowly, and one great reckoning.',
-    focus: 'Patience. A long gold window, a lapsed payout that is hardly less, and a Reap 50% bigger on a longer cooldown.',
-    passive: { name: 'Patient Reaper', desc: 'Afflictions are faint for 4s and gold until 11s, and Bind is never laid. Reap pays half again as much, a lapsed affliction pays 95% instead of 65%, and its cooldown is 9s instead of 6s. With no Bind to lay, Gloam Blink darkens every affliction on the boss by 2s instead.' },
+    gaugeTip: 'Three afflictions on the boss (no Bind), each with up to 5 Weight and 20s to run. Every Weight ticks, and pays half again as much when it is popped.',
+    blurb: 'Fewer afflictions, built deep, and one great reckoning.',
+    focus: 'Patience. Afflictions stack to 5 Weight and last 20s, and Reap pays 50% more on a longer cooldown: few pops, each one heavy.',
+    passive: { name: 'Patient Reaper', desc: 'Afflictions hold 5 Weight at the most and run out after 20s, and Bind is never laid. Reap and Sever pay half again as much, and Reap\'s cooldown is 10s instead of 8s. With no Bind to lay, Gloam Blink adds a Weight to the affliction you laid last instead.' },
     build: base => ({
-      potMult: base.potMult * 0.945,
-      young: 4, rot: 11, noAff: ['bind'], reapMult: 1.5, rotPay: 0.95, reapCd: 9, blinkAge: 2,
+      potMult: base.potMult * 0.845,
+      maxW: 5, affDur: 20, noAff: ['bind'], reapMult: 1.5, reapCd: 10, blinkDeepen: true,
       abilities: {
-        reap: { desc: 'Spend every affliction on the boss. A cut for {d:180}, then each pays out: Mark {d:165}, Drain {d:150} (and mends you for 3% of your health) and Thread {d:255}. Gold pays in full, faint 40%, lapsed 95%. Glows when something is gold. Needs an affliction up.' },
-        blink: { glow: k => thCount(k, 1) >= 2 && thCount(k, 2) === 0, desc: 'Cut through the dark to the boss for {d:140}, and every affliction on it darkens 2s. The cut keeps your Backswing going, and you take 50% less damage for 1s. Two charges.' },
+        reap: { desc: 'Pop every affliction on the boss. A cut for {d:120}, then each pays for every Weight it has: Mark {d:195}, Drain {d:135} (and mends you for 2% of your health) and Thread {d:210} (and a Hook charge comes back). One at 5 Weight pays 50% more. All three at 5 Weight is the Full Toll: the hour strikes for {d:480} more. Glows with all three up. Needs an affliction up.' },
+        blink: { glow: k => !!(k.g.last && thW(k, k.g.last) && thW(k, k.g.last) < thMaxW(k)), desc: 'Cut through the dark to the boss for {d:140}, and the affliction you laid last gains a Weight. The cut keeps your Backswing going, and you take 50% less damage for 1s. Two charges.' },
         wisp: { desc: 'A wisp rises beside you for 15s and harries the boss, striking for {d:60} every 2.5s.' },
       },
     }),

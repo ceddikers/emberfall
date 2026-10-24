@@ -889,20 +889,19 @@ Object.assign(GAUGES, {
 });
 
 // ======================================================================= Reaper (id thresher; damage, class 19)
-// Toll (the gauge kind stays `harvest`): four meters, one per affliction on the boss (Mark, Drain, Bind, Thread). Each is a tall
-// bar that fills as its affliction ages through three stretches: pale teal (faint), a GOLD stretch bracketed on both sides and
-// ruled with fine lines (due: this is the moment to Reap), then grey-violet and cracked (lapsed). The affliction's sigil sits
-// under its bar and takes the stage's colour; a bar in its gold glows and pulses, a lapsed one droops. A fine line under them runs down with
-// the Wisp's seconds (a small blue flame at its end), and in the Gate five pips count the strikes (the fifth gold). An empty
-// bar is a dark slot. The painted gauge replaces this later.
+// Toll (the gauge kind stays `harvest`): four slots, one per affliction on the boss (Mark, Drain, Bind, Thread). Each slot is a
+// stack of Weight pips from the foot up (as many as the spec holds: 2, 3 or 5), lit in the affliction's own colour; a slot at full
+// Weight glows. A fine line under each slot runs down with its seconds (none for an Anchored Thread), and the affliction's sigil sits
+// under that. The one you laid last (what Sever takes) wears a pale chevron over its slot. A fine line under them runs down with
+// the Wisp's seconds (a small blue flame at its end), and in the Gate five pips count the strikes (the fifth gold). An empty slot is
+// dark. The painted gauge replaces this later.
 Object.assign(GAUGES, {
   harvest(c, k, w, h, t) {
-    const g = k.g, now = k.now, ids = THRESH.IDS, Y = thY(k), R = thR(k), END = R + THRESH.LIFE;
-    const bw = 26, gap = 8, tot = ids.length * bw + (ids.length - 1) * gap, x0 = w / 2 - tot / 2, top = 6, bh = 52;
+    const g = k.g, now = k.now, ids = THRESH.IDS, max = thMaxW(k), dur = k.def.affDur || THRESH.DUR;
+    const bw = 26, gap = 8, tot = ids.length * bw + (ids.length - 1) * gap, x0 = w / 2 - tot / 2, top = 8, bh = 48;
     const hidden = id => !!(k.def.noAff && k.def.noAff.indexOf(id) >= 0);
-    const FAINT = '#8fd8e8';   // a faint (young) affliction's colour, whichever it is: the shape tells them apart
-    const yY = top + bh - bh * (Y / END), yR = top + bh - bh * (R / END);   // where gold begins and ends
-    // the affliction's glyph, small, under its bar
+    const COL = { mark: '#ff6a6a', drain: '#ff8fd0', bind: '#b88cff', thread: '#dff2f0' };
+    // the affliction's glyph, small, under its slot
     const mini = (id, x, y, s, col, dim) => {
       c.save(); c.translate(x, y); c.lineCap = 'round'; c.lineJoin = 'round'; c.globalAlpha = dim ? 0.45 : 1;
       const path = () => {
@@ -916,39 +915,29 @@ Object.assign(GAUGES, {
       c.restore();
     };
     ids.forEach((id, i) => {
-      const x = x0 + i * (bw + gap), cx = x + bw / 2, at = g.aff[id], age = at == null ? -1 : now - at, st = thStage(k, id);
-      const col = st === 2 ? '#ffd65a' : st === 3 ? '#8a82a0' : st === 1 ? FAINT : '#5a5870';
+      const x = x0 + i * (bw + gap), cx = x + bw / 2, a = g.aff[id], wt = a ? a.w : 0, col = COL[id], full = wt >= max, last = g.last === id && wt > 0;
       if (hidden(id)) { rrect(c, x, top, bw, bh, 6, '#14131a', OUT, 2); label(c, '-', cx, top + bh / 2, '#4a4650', 12, 'system-ui', 700); return; }
-      if (st === 2) glow(c, cx, top + bh / 2, bh * 0.75, '#ffd65a', 0.28 + 0.12 * Math.sin(t * 7 + i));
-      rrect(c, x, top, bw, bh, 6, '#100c1a', OUT, 2.4);
-      c.save(); c.beginPath(); c.roundRect(x + 1.5, top + 1.5, bw - 3, bh - 3, 5); c.clip();
-      // the three stretches: faint teal at the foot, the gold (due) band ruled with fine lines, the lapsed grey-violet above it
-      c.fillStyle = 'rgba(143,216,232,0.16)'; c.fillRect(x, yY, bw, top + bh - yY);
-      c.fillStyle = 'rgba(255,214,90,0.22)'; c.fillRect(x, yR, bw, yY - yR);
-      c.strokeStyle = 'rgba(255,226,130,0.38)'; c.lineWidth = 1;
-      for (let yy = yR + 3; yy < yY; yy += 4) { c.beginPath(); c.moveTo(x, yy); c.lineTo(x + bw, yy); c.stroke(); }
-      c.fillStyle = 'rgba(120,108,150,0.22)'; c.fillRect(x, top, bw, yR - top);
-      if (age >= 0) {
-        const fh = Math.min(bh, bh * (age / END)), fy = top + bh - fh;
-        const gr = c.createLinearGradient(0, top + bh, 0, fy), q = Math.max(0.01, age);
-        gr.addColorStop(0, '#4a9db4'); gr.addColorStop(Math.min(1, Y / q), '#a8eaf6');
-        gr.addColorStop(Math.min(1, Y / q + 0.001), '#f2c84a'); gr.addColorStop(Math.min(1, R / q), '#ffe27a');
-        gr.addColorStop(Math.min(1, R / q + 0.001), '#7a7096'); gr.addColorStop(1, '#4a4262');
-        c.fillStyle = gr; c.fillRect(x, fy, bw, fh);
-        c.fillStyle = 'rgba(255,255,255,0.55)'; c.fillRect(x, fy, bw, 2);
-        if (st === 3) { c.strokeStyle = 'rgba(10,8,18,0.85)'; c.lineWidth = 1; for (let n = 0; n < 4; n++) { const cyy = top + 6 + n * 9; c.beginPath(); c.moveTo(x + 3, cyy); c.lineTo(x + 9 + (n % 2) * 6, cyy + 4); c.lineTo(x + 7, cyy + 8); c.stroke(); } }
+      if (full) glow(c, cx, top + bh / 2, bh * 0.75, col, 0.24 + 0.1 * Math.sin(t * 6 + i));
+      rrect(c, x, top, bw, bh, 6, '#100c1a', last ? '#e0f6ff' : OUT, last ? 2 : 2.4);
+      // the Weight pips, from the foot up
+      const ph = (bh - 6 - (max - 1) * 3) / max;
+      for (let p = 0; p < max; p++) {
+        const py = top + bh - 3 - (p + 1) * ph - p * 3, on = p < wt;
+        rrect(c, x + 3, py, bw - 6, ph, 2.5, on ? col : 'rgba(90,88,112,0.22)', on ? 'rgba(10,8,18,0.8)' : null, 1);
+        if (on) { c.save(); c.globalAlpha = 0.5; c.fillStyle = '#ffffff'; c.fillRect(x + 5, py + 1.2, bw - 10, 1.6); c.restore(); }
       }
-      c.restore();
-      // the gold stretch bracketed at both sides: the Reap window, readable with the bar empty
-      const bk = st === 2 ? '#fff0a0' : '#e0b84a';
-      for (const sx of [x - 2.5, x + bw + 2.5]) { const dx = sx < x ? 3 : -3; c.strokeStyle = bk; c.lineWidth = 1.8; c.lineCap = 'round'; c.beginPath(); c.moveTo(sx + dx, yR); c.lineTo(sx, yR); c.lineTo(sx, yY); c.lineTo(sx + dx, yY); c.stroke(); }
-      if (st === 2) { c.save(); c.globalAlpha = 0.55 + Math.sin(t * 7 + i) * 0.3; rrect(c, x - 1, top - 1, bw + 2, bh + 2, 7, null, '#ffe27a', 2); c.restore(); }
-      if (st === 3) rrect(c, x - 1, top - 1, bw + 2, bh + 2, 7, null, 'rgba(160,150,190,0.85)', 1.6);
-      if (age >= 0) { const my = top + bh - bh * Math.min(1, age / END); line(c, x - 3, my, x + bw + 3, my, '#ffffff', 1.4); }
-      mini(id, cx, top + bh + 13 + (st === 3 ? 2 : 0), 6, col, st === 0);
+      if (full) { c.save(); c.globalAlpha = 0.5 + Math.sin(t * 6 + i) * 0.3; rrect(c, x - 1, top - 1, bw + 2, bh + 2, 7, null, col, 2); c.restore(); }
+      // what Sever takes: a pale chevron over the slot
+      if (last) { c.save(); c.strokeStyle = '#e0f6ff'; c.lineWidth = 1.8; c.lineCap = 'round'; c.lineJoin = 'round'; c.beginPath(); c.moveTo(cx - 5, top - 7); c.lineTo(cx, top - 2.5); c.lineTo(cx + 5, top - 7); c.stroke(); c.restore(); }
+      // its seconds
+      const ty = top + bh + 4;
+      rrect(c, x, ty, bw, 3, 1.5, '#120e1c');
+      if (a && isFinite(a.until)) rrect(c, x, ty, Math.max(1.5, bw * Math.min(1, (a.until - now) / dur)), 3, 1.5, (a.until - now) < 3 ? '#ffffff' : col);
+      else if (a) rrect(c, x, ty, bw, 3, 1.5, col);
+      mini(id, cx, top + bh + 17, 6, wt ? col : '#5a5870', !wt);
     });
     // the Wisp's seconds, a fine line with a little pale flame at its end
-    const wl = k.has('wisp') ? k.remaining('wisp') : 0, wy = top + bh + 28;
+    const wl = k.has('wisp') ? k.remaining('wisp') : 0, wy = top + bh + 30;
     rrect(c, x0, wy, tot, 4, 2, '#120e1c', OUT, 1);
     if (wl > 0) {
       const fw = (tot - 2) * Math.min(1, wl / THRESH.WISP_DUR);

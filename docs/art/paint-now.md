@@ -284,7 +284,8 @@ Then copy `client/icons/boss/archmage/the-binding.png` to `client/icons/boss/arc
 - [x] `client/icons/thresher/slash.png`
 - [x] `client/icons/thresher/hook.png`
 - [x] `client/icons/thresher/reap.png`
-- [x] `client/icons/thresher/gather.png`
+- [x] `client/icons/thresher/gather.png` (Beckon, no longer shown)
+- [ ] `client/icons/thresher/sever.png` (Sever, prompt 4 in icon-prompts.md)
 - [x] `client/icons/thresher/blink.png`
 - [x] `client/icons/thresher/wisp.png`
 - [x] `client/icons/thresher/sowing.png`
