@@ -24,7 +24,10 @@ const FIGHT = {
   THREAT_FADE: 0.05,
   EV_THREAT_MAX: 3,
   TAUNT_LEAD: 1.1, TAUNT_FIX: 3, TAUNT_ADD_FIX: 6, TAUNT_CD: 20,
-  RAISE_WEAKNESS: 0.25,
+  // Raise sickness: a raised player deals and heals PCT less for DUR s. A cast raise is the light kind, an instant raise
+  // (a talent, Rewind, a Draught) the heavy one; every earlier death of the party this pull adds PER_DEATH to both, up to
+  // MAX. The Limit Break's raise leaves none.
+  SICK: { cast: { pct: 0.15, dur: 20 }, instant: { pct: 0.3, dur: 30 }, PER_DEATH: { pct: 0.05, dur: 5 }, MAX: { pct: 0.5, dur: 45 } },
   PERFECT_WINDOW: 0.8,   // Bastion's Brace
   READ_WINDOW: 0.4,      // Ironpalm's Read ('parry'): a hit in its first 0.4 s is caught (halved, and the kit hears 'read')
   SLOWED: 0.55,          // move speed while 'slowed' (webs, venom); 'rooted' stops movement and dashes
@@ -517,7 +520,7 @@ class FightSim {
       }
       case 'damage': {
         let amt = Math.max(0, Math.min(15000, ev.amount | 0));
-        if (s.weakEnd > this.t) amt = Math.round(amt * (1 - FIGHT.RAISE_WEAKNESS));
+        if (s.weakEnd > this.t) amt = Math.round(amt * (1 - (s.weakPct || 0)));
         // ev.tgt names the enemy it was aimed at: 'boss' (or nothing) or an add's id
         if (ev.tgt != null && ev.tgt !== 'boss') {
           const a = this.adds.get(ev.tgt);
@@ -541,6 +544,7 @@ class FightSim {
       case 'ult': st.ults++; break;   // (an Ultimate pressed: main.js kitFx, raid-host bots)
       case 'heal': {
         const tid = ev.target === 'party' ? null : this.resolveTarget(pid, ev.target, ev.not);
+        if (s.weakEnd > this.t) ev = Object.assign({}, ev, { amount: Math.round((ev.amount || 0) * (1 - (s.weakPct || 0))) });   // (raise sickness)
         this.applyHeal(pid, tid, ev.amount, ev.target === 'party');
         if (tid != null) this.threadHeal(pid, tid, ev.amount, ev.seam);   // a heal runs down the threads (classes-c)
         break;
@@ -549,7 +553,7 @@ class FightSim {
         for (const tid of targetsOf(ev.target)) {
           const ts = this.ps.get(tid); if (!ts || !ts.alive) continue;
           ts.hots = ts.hots.filter(h => !(h.from === pid && h.id === ev.id));
-          ts.hots.push({ from: pid, id: ev.id, amount: ev.amount, ticks: ev.ticks, interval: ev.interval, next: this.t + ev.interval });
+          ts.hots.push({ from: pid, id: ev.id, amount: s.weakEnd > this.t ? Math.round(ev.amount * (1 - (s.weakPct || 0))) : ev.amount, ticks: ev.ticks, interval: ev.interval, next: this.t + ev.interval });
         }
         break;
       case 'shield':
@@ -572,7 +576,7 @@ class FightSim {
         break;
       case 'raise': {
         const ts = this.ps.get(ev.target);
-        if (ts && !ts.alive && !ts.left) this.revive(ev.target, ts, 0.5, pid);
+        if (ts && !ts.alive && !ts.left) this.revive(ev.target, ts, 0.5, pid, ev.instant ? 'instant' : 'cast');
         break;
       }
       case 'rewind': {
@@ -593,7 +597,7 @@ class FightSim {
         if (!ts.alive) {
           if (this.t - ts.diedAt <= secs) {
             const before = ts.hist.filter(h => h[0] >= ts.diedAt - secs).reduce((m, h) => Math.max(m, h[1]), ts.maxHp * 0.3);
-            this.revive(tid, ts, before / ts.maxHp, pid, true);
+            this.revive(tid, ts, before / ts.maxHp, pid, 'instant');
           }
         } else {
           const best = ts.hist.filter(h => h[0] >= this.t - secs).reduce((m, h) => Math.max(m, h[1]), ts.hp);
@@ -681,10 +685,18 @@ class FightSim {
     if (br.charges <= 0) b.brand = null;
   }
 
-  revive(tid, ts, frac, by, rewound) {
+  // the party's deaths this pull, and the sickness the next raise of a kind ('cast' or 'instant') leaves (FIGHT.SICK)
+  partyDeaths() { return Object.values(this.stats).reduce((n, st) => n + st.deaths, 0); }
+  sickness(kind, deaths = this.partyDeaths()) {
+    const S = FIGHT.SICK, b = S[kind] || S.cast, n = Math.max(0, deaths - 1);
+    return { pct: Math.min(S.MAX.pct, b.pct + n * S.PER_DEATH.pct), dur: Math.min(S.MAX.dur, b.dur + n * S.PER_DEATH.dur) };
+  }
+  // kind: 'cast' or 'instant' (raise sickness, FIGHT.SICK) or 'none' (the Limit Break)
+  revive(tid, ts, frac, by, kind = 'cast') {
     const rs = this.stats[by]; if (rs && by !== tid) rs.raises++;
     ts.alive = true; ts.hollow = null; ts.hp = Math.round(ts.maxHp * Math.max(0.1, Math.min(1, frac)));
-    ts.weakEnd = rewound ? 0 : this.t + 20; ts.threat = ts.role === 'tank' ? 1 : 0; ts.hist = []; this.dropThreat(tid);
+    const sick = kind === 'none' ? null : this.sickness(kind);
+    ts.weakEnd = sick ? this.t + sick.dur : 0; ts.weakPct = sick ? sick.pct : 0; ts.threat = ts.role === 'tank' ? 1 : 0; ts.hist = []; this.dropThreat(tid);
     ts.mits.push({ pct: 1, start: this.t, end: this.t + FIGHT.REVIVE_SAFE, kind: 'invuln', from: by });   // a moment to find their feet
     this.emit({ t: 'fev', k: 'raised', id: tid, by });
   }
@@ -861,7 +873,7 @@ class FightSim {
     this.lb -= lv * L.BAR; this.lbUsedAt = this.t;
     this.emit({ t: 'lb', id: pid, lv, role: s.role });
     // any living role's Limit Break at three bars raises the fallen (a healer is often the one who is down)
-    if (lv >= 3) for (const [tid, ts] of this.ps) if (!ts.alive && !ts.left) this.revive(tid, ts, L.RAISE, pid);
+    if (lv >= 3) for (const [tid, ts] of this.ps) if (!ts.alive && !ts.left) this.revive(tid, ts, L.RAISE, pid, 'none');
     if (s.role === 'tank') {
       for (const p of this.alive()) { const ts = this.ps.get(p.id); ts.mits.push({ pct: L.TANK[lv], start: this.t, end: this.t + L.TANK_DUR, kind: 'lb', from: pid }); }
     } else if (s.role === 'healer') {
@@ -1446,10 +1458,10 @@ class FightSim {
       const hots = s.hots.map(h => [h.id, Math.max(1, Math.ceil((h.ticks - 1) * h.interval + h.next - this.t)), h.from]);
       list.push([id, Math.round(s.hp), s.maxHp, Math.round(s.shield), s.alive ? 1 : 0,
         s.dmgDownEnd > this.t ? Math.ceil(s.dmgDownEnd - this.t) : 0, s.vulnEnd > this.t ? Math.round(s.vuln * 100) : 0,
-        Math.round((1 - mit) * 100), s.weakEnd > this.t ? 1 : 0, debuffs, Math.round(s.threat), hots,
+        Math.round((1 - mit) * 100), s.weakEnd > this.t ? [Math.round((s.weakPct || 0) * 100), Math.ceil(s.weakEnd - this.t)] : 0, debuffs, Math.round(s.threat), hots,
         s.hollow ? [1, Math.round(s.hollow.debt), Math.round(s.hollow.heal), +Math.max(0, s.hollow.until - this.t).toFixed(1), +Math.max(0, s.hollow.graceUntil - this.t).toFixed(1)] : 0]);   // (a Gloomsworn's Hollow: on, debt, healed, seconds left, grace left)
     }
-    this.emit({ t: 'fps', ps: list, lb: Math.round(this.lb), rc: this.recoverEnd > this.t ? Math.ceil(this.recoverEnd - this.t) : 0 });
+    this.emit({ t: 'fps', ps: list, lb: Math.round(this.lb), dc: this.partyDeaths(), rc: this.recoverEnd > this.t ? Math.ceil(this.recoverEnd - this.t) : 0 });
   }
 }
 

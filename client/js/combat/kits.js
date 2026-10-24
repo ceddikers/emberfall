@@ -632,7 +632,7 @@ const KITS = {
       {
         id: 'intervene', name: 'Intervention', type: 'gcd', target: 'ally', cd: 30, anim: 'big', allowDead: true,
         cast: k => (targetDown(k, 'intervene') ? RAISE_CAST : 2.5),   // (every raise takes RAISE_CAST)
-        desc: '5s cast: bring a fallen ally back to life. On a living one it is a 2.5s cast that heals them for {h:1200}.',
+        desc: '5s cast: bring a fallen ally back to life. They rise with Raise Sickness: 15% less damage and healing for 20s, more for every fall this pull. On a living one it is a 2.5s cast that heals them for {h:1200}.',
         glow: k => targetDown(k, 'intervene'),
         effect(k, t) { if (k.env.isDead(t)) k.raise(t, { ab: this }); else k.heal(t, 1200, { ab: this }); },
         fx: { type: 'zone', style: 'pillar', color: '#fff6c8', r: 50, range: 0, dur: 1.6, onTarget: true },
@@ -740,7 +740,7 @@ const KITS = {
       {
         id: 'rebirth', name: 'Rebirth', type: 'gcd', target: 'ally', cd: 30, anim: 'big', allowDead: true, allyBuff: 'wildheart',
         cast: k => (groveRebirthDead(k) ? RAISE_CAST : 0),
-        desc: '5s cast: bring a fallen ally back. On a living ally it is instant: it heals them for {h:1100} and fills them with Wildheart, 10% more damage dealt for 12s. Spend it on a damage dealer in the burst, or keep it for the raise.',
+        desc: '5s cast: bring a fallen ally back. They rise with Raise Sickness: 15% less damage and healing for 20s, more for every fall this pull. On a living ally it is instant: it heals them for {h:1100} and fills them with Wildheart, 10% more damage dealt for 12s. Spend it on a damage dealer in the burst, or keep it for the raise.',
         glow: k => groveRebirthDead(k),
         effect(k, t) { if (k.env.isDead(t)) k.raise(t, { ab: this }); else { k.heal(t, 1100, { ab: this }); k.allyBuff(t, 'wildheart', { ab: this }); } },
         fx: { type: 'zone', style: 'roots', color: '#a8ff9a', r: 50, range: 0, dur: 1.6, onTarget: true },
@@ -778,7 +778,7 @@ const KITS = {
       },
       {
         id: 'rewind', name: 'Rewind', type: 'ogcd', target: 'ally', charges: 2, cd: 30, anim: 'cast', allowDead: true,
-        desc: 'Set an ally\'s HP back to its highest point in the last 4s (revives them if they died in that time). They become your link. In Haste it costs 25 Flux instead of a charge (while you have the Flux), and that Flux feeds Paradox.',
+        desc: 'Set an ally\'s HP back to its highest point in the last 4s (revives them if they died in that time; a revive is instant, so it leaves heavy Raise Sickness: 30% less damage and healing for 30s, more for every fall this pull). They become your link. In Haste it costs 25 Flux instead of a charge (while you have the Flux), and that Flux feeds Paradox.',
         effect(k, t) {
           chronoRewindCost(k, this);
           k.rewind(t, k.perk('chronomancer_a4') ? 6 : 4, { ab: this }); k.g.link = t; k.ultGain(2); /* (Time Reversal) */ if (k.perk('chronomancer_w2')) k.shield(t, 250, 8, { ab: this }); if (k.talent('chronomancer_hourglass')) k.mitigate(t, 0.15, 6, { ab: this });
@@ -828,7 +828,7 @@ const KITS = {
       {
         id: 'recall', name: 'Recall', type: 'gcd', target: 'ally', cd: 30, anim: 'big', allowDead: true,
         cast: k => (k.talent('chronomancer_lastmoment') && chronoLate(k) ? 0 : targetDown(k, 'recall') ? RAISE_CAST : 2.5),   // (Last Moment, a talent)
-        desc: '5s cast: bring a fallen ally back. On a living one it is a 2.5s cast that heals them for {h:1400}.',
+        desc: '5s cast: bring a fallen ally back. They rise with Raise Sickness: 15% less damage and healing for 20s, more for every fall this pull. On a living one it is a 2.5s cast that heals them for {h:1400}.',
         glow: k => targetDown(k, 'recall'),
         effect(k, t) { if (k.env.isDead(t)) { k.raise(t, { ab: this }); chronoSecondChance(k, this, t); } else k.heal(t, 1400, { ab: this }); },
         fx: { type: 'ring', style: 'rewind', color: '#9ff4ff', r: 50, onTarget: true },
@@ -1731,7 +1731,7 @@ const ALEMBIC = {
   },
   // two-reagent recipes, keyed by their reagents in sorted order. kind: heal | bomb | ward | salve | quick
   recipes: {
-    DD: { name: 'Mending Draught', color: '#4fe0c0', glyph: 'plus', kind: 'heal', text: 'a {h:480} splash heal. It raises a fallen ally it lands on (once every 30s).' },
+    DD: { name: 'Mending Draught', color: '#4fe0c0', glyph: 'plus', kind: 'heal', text: 'a {h:480} splash heal. It raises a fallen ally it lands on (once every 30s). A raise this way is instant, so it leaves heavy Raise Sickness: 30% less damage and healing for 30s, more for every fall this pull.' },
     EE: { name: 'Fire Bomb', color: '#ff5a1a', glyph: 'flame', kind: 'bomb', text: 'flies at the enemy and hits for {d:360}.' },
     SS: { name: 'Salt Ward', color: '#f4ecd2', glyph: 'ward', kind: 'ward', text: 'a circle of salt: allies inside take 20% less damage for 6s.' },
     DE: { name: 'Steam', color: '#bfe8ec', glyph: 'cloud', kind: 'heal', text: 'a healing cloud: everyone inside heals {h:80} every 1.5s for 9s.' },
@@ -1745,7 +1745,7 @@ const ALEMBIC = {
   // Volatile's Reactions: three reagents (Quicksilver counts as Salt). Sealed in the tooltips until you've brewed one.
   reactions: {
     EEE: { name: 'Dragon\'s Breath', color: '#ff3a10', glyph: 'flame', kind: 'bomb', text: 'a {d:560} fire bomb that leaves the enemy burning for {d:70} every 3s for 12s.' },
-    DDD: { name: 'Elixir of Life', color: '#6fffd0', glyph: 'plus', kind: 'heal', text: 'a {h:620} splash heal that lingers as a healing mist ({h:60} every 1.5s), and raises the fallen.' },
+    DDD: { name: 'Elixir of Life', color: '#6fffd0', glyph: 'plus', kind: 'heal', text: 'a {h:620} splash heal that lingers as a healing mist ({h:60} every 1.5s), and raises the fallen. A raise this way is instant, so it leaves heavy Raise Sickness: 30% less damage and healing for 30s, more for every fall this pull.' },
     SSS: { name: 'Bastion Salt', color: '#fff6dc', glyph: 'ward', kind: 'ward', text: 'a wide salt circle: allies inside take 25% less damage for 8s.' },
     DES: { name: 'Philosopher\'s Draught', color: '#e6c8ff', glyph: 'star', kind: 'heal', text: 'heals the whole party for {h:300} and shields them for {s:180}, wherever they stand.' },
     DEE: { name: 'Brimstone', color: '#ff9a3a', glyph: 'cloud', kind: 'bomb', text: 'a {d:360} bomb on the enemy, and a healing cloud ({h:70} every 1.5s) at your heal target.' },
@@ -2871,7 +2871,7 @@ talentMoves('thermist', {
 talentMoves('cleric', {
   cleric_bloom: {
     id: 'dawnbloom', replaces: 'intervene', icon: 'intervene', name: 'Bloom of Dawn', type: 'gcd', target: 'ally', cd: 30, anim: 'big', allowDead: true, talent: true,
-    desc: 'Instant: spend all your Petals on one ally. A fallen ally rises at once; a living one is healed for {h:500} per Petal. Every Petal counts toward Dawnstar.',
+    desc: 'Instant: spend all your Petals on one ally. A fallen ally rises at once, with heavy Raise Sickness (30% less damage and healing for 30s, more for every fall this pull); a living one is healed for {h:500} per Petal. Every Petal counts toward Dawnstar.',
     usable: k => k.g.petals >= 1,
     effect(k, t) {
       const n = k.g.petals; k.g.petals = 0;
@@ -2896,7 +2896,7 @@ talentMoves('cleric', {
 talentMoves('grovekeeper', {
   grovekeeper_seed: {
     id: 'seed', replaces: 'rebirth', icon: 'rebirth', name: 'Seed of Renewal', type: 'gcd', target: 'ally', cd: 30, anim: 'big', allowDead: true, talent: true,
-    desc: 'Instant: spend 40 Bloom to plant a seed on an ally for 20s. If they fall while it grows, they spring back up at once; if not, it blooms into a {h:900} heal when it ends. On a fallen ally, it raises them at once.',
+    desc: 'Instant: spend 40 Bloom to plant a seed on an ally for 20s. If they fall while it grows, they spring back up at once; if not, it blooms into a {h:900} heal when it ends. On a fallen ally, it raises them at once. Either raise is instant, so it leaves heavy Raise Sickness: 30% less damage and healing for 30s, more for every fall this pull.',
     usable: k => k.g.bloom >= 40,
     effect(k, t) {
       k.spend('bloom', 40);

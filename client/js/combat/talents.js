@@ -262,7 +262,7 @@ const TALENTS = {
     ],
     [
       { id: 'cleric_bloom', name: 'Bloom of Dawn', ab: 'intervene', grants: true,
-        text: 'Intervention becomes Bloom of Dawn (30s, instant): spend all your Petals on one ally. A fallen ally rises at once; a living one is healed for {h:500} per Petal. Every Petal counts toward Dawnstar.' },
+        text: 'Intervention becomes Bloom of Dawn (30s, instant): spend all your Petals on one ally. A fallen ally rises at once, with heavy Raise Sickness; a living one is healed for {h:500} per Petal. Every Petal counts toward Dawnstar.' },
       { id: 'cleric_favour', name: 'Sun\'s Favour', ab: 'smite', text: 'Dawnstar gives back a Petal.' },
       { id: 'cleric_firstlight', name: 'First Light', ab: 'mend', text: 'While Dawnstar is ready, Mend now casts instantly.', spec: { aegis: 'While Dawnstar is ready, Divine Barrier now casts instantly.' } },
     ],
@@ -296,7 +296,7 @@ const TALENTS = {
     ],
     [
       { id: 'grovekeeper_seed', name: 'Seed of Renewal', ab: 'rebirth', grants: true,
-        text: 'Rebirth becomes Seed of Renewal (30s, instant): spend 40 Bloom to plant a seed on an ally for 20s. If they fall while it grows, they spring back up at once; if not, it blooms into a {h:900} heal when it ends. On a fallen ally, it raises them at once.' },
+        text: 'Rebirth becomes Seed of Renewal (30s, instant): spend 40 Bloom to plant a seed on an ally for 20s. If they fall while it grows, they spring back up at once; if not, it blooms into a {h:900} heal when it ends. On a fallen ally, it raises them at once. Either raise is instant, so it leaves heavy Raise Sickness: 30% less damage and healing for 30s, more for every fall this pull.' },
       { id: 'grovekeeper_spill', name: 'Spillover', ab: 'bloom', text: 'Bloom that would spill past 100 now seeps into a healing patch under the most hurt ally ({h:60} every 1.5s for 6s).' },
       { id: 'grovekeeper_cycle', name: 'Cycle of Life', ab: 'wrath', text: 'An Awakened Wrath gives back 20 Bloom.' },
     ],
@@ -323,7 +323,7 @@ const TALENTS = {
     [
       { id: 'chronomancer_practiced', name: 'Practiced Rewind', ab: 'rewind', cd: { rewind: -6 }, text: 'Rewind recharges 6s faster.' },
       { id: 'chronomancer_dejavu', name: 'Deja Vu', ab: 'rewind', text: 'Rewind now also snaps you back to where you stood when you last pressed Shift (if that was in the last 10s).' },
-      { id: 'chronomancer_lastmoment', name: 'Last Moment', ab: 'recall', text: 'While the boss\'s cast is about to land (1.5s or less left), Recall casts instantly.' },
+      { id: 'chronomancer_lastmoment', name: 'Last Moment', ab: 'recall', text: 'While the boss\'s cast is about to land (1.5s or less left), Recall casts instantly. A raise cast that way is instant, so it leaves heavy Raise Sickness.' },
     ],
     [
       { id: 'chronomancer_bubble', name: 'Time Bubble', ab: 'stasis', grants: true,

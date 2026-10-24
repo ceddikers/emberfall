@@ -231,6 +231,7 @@ const RaidUI = (() => {
     threatMeter(raid, myId);
     limitGauge(raid, myId, dt);
     recoverCue(raid);
+    deathCounter(raid);
 
     // countdown before the pull
     const cd = $('countdown');
@@ -317,7 +318,7 @@ const RaidUI = (() => {
       if (p.mit) chips.push(`<b class="chip mit" data-tip="Taking ${p.mit}% less damage">${GLYPH.shield}${p.mit}%</b>`);
       if (p.dd) chips.push(`<b class="chip bad" data-tip="Damage Down: dealing 10% less damage">${GLYPH.down}${p.dd}</b>`);
       if (p.vuln) chips.push(`<b class="chip bad" data-tip="Vulnerability: taking ${p.vuln}% more damage">${GLYPH.vuln}${p.vuln}%</b>`);
-      if (p.weak) chips.push(`<b class="chip bad" data-tip="Weakness: recently revived, dealing less damage">${GLYPH.weak}</b>`);
+      if (p.weak) { const [wp, ws] = Array.isArray(p.weak) ? p.weak : [0, 0]; chips.push(`<b class="chip bad" data-tip="Raise Sickness: just raised, dealing and healing ${wp}% less for ${ws}s more">${GLYPH.weak}${wp ? wp + '%' : ''}</b>`); }
       for (const [k, s] of p.debuffs || []) chips.push(`<b class="chip bad" data-tip="${DEBUFF_INFO[k] || k}">${GLYPH[k] || ''}${s}</b>`);
       const key = chips.join('');
       if (key !== f.key) { f.key = key; f.st.innerHTML = key; }
@@ -443,6 +444,33 @@ const RaidUI = (() => {
     el.classList.toggle('hidden', rc <= 0);
     if (rc > 0) el.innerHTML = `Recovering<b>${rc}s</b>`;
   }
+  // the party's deaths this pull, beside the gauge (shared by everyone); its tip says what the next raise will cost
+  // (fight.js FIGHT.SICK: the same sum as FightSim.sickness)
+  let dcShown = '', dcRaid = null;
+  function nextSickness(deaths, kind) {
+    const S = FIGHT.SICK, b = S[kind], n = Math.max(0, deaths);   // (the next death is the one the raise answers)
+    return { pct: Math.round(Math.min(S.MAX.pct, b.pct + n * S.PER_DEATH.pct) * 100), dur: Math.min(S.MAX.dur, b.dur + n * S.PER_DEATH.dur) };
+  }
+  function deathCounter(raid) {
+    const gauge = $('lb-gauge'); if (!gauge) return;
+    let el = $('dc-count');
+    if (!el) {
+      el = document.createElement('div'); el.id = 'dc-count'; el.className = 'hidden';
+      ($('rc-cue') || gauge).insertAdjacentElement('afterend', el);
+      Tip.set(el, () => {
+        const raid = dcRaid, d = (raid && raid.dc) || 0, down = raid ? [...raid.party.values()].some(q => !q.alive && !q.left) : false;
+        const n = down ? d : d + 1, c = nextSickness(n - 1, 'cast'), i = nextSickness(n - 1, 'instant');
+        return `<b>Deaths</b>The party has fallen ${d === 1 ? 'once' : d + ' times'} this pull. Every fall makes the next raise cost more.`
+          + `<br><br>${down ? 'The next raise' : 'A raise after the next fall'}:<br>Cast raise: ${c.pct}% less damage and healing for ${c.dur}s<br>Instant raise: ${i.pct}% less for ${i.dur}s<br>Limit Break: none`;
+      });
+    }
+    dcRaid = raid;
+    const show = raid.state === 'live' && !raid.def.trial && !raid.pvp, d = raid.dc || 0, key = show + ':' + d;
+    if (key === dcShown) return;
+    dcShown = key;
+    el.classList.toggle('hidden', !show);
+    if (show) el.innerHTML = `Deaths<b>${d}</b>`;
+  }
   // a Kenseier in the party: the boss's Posture under its name (main.js raid.posture from the 'fb' message: p, max, broken (seconds of the
   // Break left), hold (full, held until a cast ends), rec (recovering), by). White-gold fill; a grey back-fill holds the level it is
   // recovering from; a Break flashes the bar and cracks it, then drains it over the Break's seconds; a held bar pulses full.
@@ -482,7 +510,7 @@ const RaidUI = (() => {
     const what = lbRole === 'tank' ? `<b>Stand Fast</b>The party takes ${pct(L.TANK)} less damage for ${L.TANK_DUR}s.`
       : lbRole === 'healer' ? `<b>Rekindle</b>Heals the party for ${pct(L.HEAL)} of their health.`
       : `<b>Emberfall</b>One blow worth ${pct(L.DPS)} of the boss's health.`;
-    const raise = '<br><br><b>Raise</b>With all three bars, a Limit Break from any role also raises every fallen ally.';
+    const raise = '<br><br><b>Raise</b>With all three bars, a Limit Break from any role also raises every fallen ally, with no Raise Sickness.';
     return `<b>Limit Break</b><em>${lbBars} of 3 bars · ${typeof Keybinds !== 'undefined' ? Keybinds.label(Keybinds.keyFor('limit')) : 'G'}</em>Every whole bar is spent at once, by whoever presses first. Filled by mechanics met cleanly and checks passed.<br><br>${what}${raise}`;
   }
 

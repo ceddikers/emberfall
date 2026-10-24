@@ -214,6 +214,8 @@ The highest ceiling: newbies reach 70% of pro damage. The boss's hitbox ring sho
 
 ### Healers
 
+**Raise Sickness.** A raised player deals and heals less for a while (`FIGHT.SICK`). A cast raise leaves 15% for 20 s; an instant raise (Bloom of Dawn, Seed of Renewal, Last Moment, Rewind, the Alembist's Draughts) leaves 30% for 30 s. Every earlier death of the party this pull adds 5% and 5 s, up to 50% for 45 s. The Limit Break's raise leaves none. The party's deaths show beside the Limit gauge, and its tooltip gives the next raise's cost.
+
 **Cleric, Priest of Dawn** (◆◇◇). Signature: **Petal economy**. Gauge: a sundial with 3 petals.
 
 | Key | Skill | Type | What it does |

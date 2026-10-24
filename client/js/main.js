@@ -345,7 +345,7 @@
     return s != null ? s : Net.id;
   }
   function mouseoverOn() { return Save.setting('mouseover', true) !== false; }
-  function selfBarOn() { return Save.setting('selfbar', false) === true; }
+  function selfBarOn() { return Save.setting('selfbar', true) !== false; }   // (on unless turned off in Options)
   // how far out you've scrolled the raid camera (1 = the usual framing; the wheel takes it out to 0.8)
   function camOut() { const v = Number(Save.setting('camout', 1)); return v >= 0.8 && v <= 1 ? v : 1; }
   function healerish() { return actor && actor.abilities.some(a => a.target === 'ally'); }
@@ -377,7 +377,8 @@
     'up', 'sh', 'cl', 'pa', 'ps', 'pr', 'fol',   // (a thrown vial's splash: fight.js splash())
     'all', 'op', 'older', 'mark', 'freeze', 'drop', 'merge', 'hit', 'push', 'due', 'col', 'small', 'tithe', 'mult',   // (jaw and Ledger orders)
     'pair', 'mx', 'st', 'dp', 'hm', 'seam', 'both', 'mit', 'keep', 'ub',
-    'lid', 'full', 'last'];   // (a lantern's burst: fight.js lampEvent)   // (threads; ub: a hit of an Ultimate or its window)
+    'lid', 'full', 'last',
+    'instant'];   // (an instant raise: the heavier raise sickness, fight.js FIGHT.SICK)   // (a lantern's burst: fight.js lampEvent)   // (threads; ub: a hit of an Ultimate or its window)
   function packEv(ev) {
     const o = {};
     for (const k of EV_FIELDS) if (ev[k] !== undefined) o[k] = ev[k];
@@ -1828,6 +1829,7 @@
     if (!raid) return;
     if (Number.isFinite(msg.lb)) raid.lb = msg.lb;
     raid.rc = msg.rc > 0 ? msg.rc : 0;   // seconds of 'recovering' left (fight.js FIGHT.REC)
+    raid.dc = msg.dc > 0 ? msg.dc : 0;   // the party's deaths this pull (raise sickness grows with them: fight.js FIGHT.SICK)
     const listed = new Set();
     for (const [id, hp, maxHp, shield, alive, dd, vuln, mit, weak, debuffs, threat, hots, hol] of msg.ps) {
       listed.add(id);

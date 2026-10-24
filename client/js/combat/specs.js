@@ -464,7 +464,7 @@ const SPECS = {
               },
             },
             recall: {
-              desc: '5s cast: bring a fallen ally back. On a living one it is a 2.5s cast that heals them for {h:1400}, and the heal repeats 3s later at half strength.',
+              desc: '5s cast: bring a fallen ally back. They rise with Raise Sickness: 15% less damage and healing for 20s, more for every fall this pull. On a living one it is a 2.5s cast that heals them for {h:1400}, and the heal repeats 3s later at half strength.',
               effect(k, t) {
                 if (k.env.isDead(t)) { k.raise(t, { ab: this }); chronoSecondChance(k, this, t); return; }
                 k.heal(t, 1400, { ab: this });

@@ -538,7 +538,8 @@ class Kit {
       } else if (now >= c.end) {
         this.cast = null;
         this.lockUntil = now + ENGINE.CAST_LOCK_EXTRA;
-        this.resolve(c.ab, this.needsTarget(c.ab) ? (this.env.target(c.ab) || c.target) : null);
+        this._fromCast = true;   // (a raise from a finished cast is the light raise sickness: raise())
+        try { this.resolve(c.ab, this.needsTarget(c.ab) ? (this.env.target(c.ab) || c.target) : null); } finally { this._fromCast = false; }
       }
     }
     for (const slot of ['queued', 'queuedO']) {
@@ -691,7 +692,8 @@ class Kit {
   }
   debuffTarget(kind, value, dur, opts = {}) { this.env.emit({ type: 'targetDebuff', kind, value, dur, ab: opts.ab }); }
   selfDamage(pctMaxHp, opts = {}) { this.env.emit({ type: 'selfDamage', pct: pctMaxHp, ab: opts.ab }); }
-  raise(target, opts = {}) { this.env.emit({ type: 'raise', target, ab: opts.ab }); }
+  // instant: not at the end of a cast (a talent, a seed, a Draught), which leaves the heavier raise sickness (fight.js FIGHT.SICK)
+  raise(target, opts = {}) { this.env.emit({ type: 'raise', target, ab: opts.ab, instant: !this._fromCast }); }
   rewind(target, secs, opts = {}) { this.env.emit({ type: 'rewind', target, secs, ab: opts.ab }); }
   // where: 'behind' (the target's back), or a kit move: 'dash' (d px toward where you're heading), 'around' (to the far
   // side of the target), 'through' (a charge through the target, d px past it). The world moves you (kitMoveDest).
