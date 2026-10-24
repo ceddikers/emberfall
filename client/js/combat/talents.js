@@ -755,7 +755,7 @@ const SPEC_TALENTS = {
     berserker: [
       [
         { id: 'bloodreaver_painfuel', name: 'Pain Is Fuel', ab: 'hack', text: 'A heavy hit on you (a tenth of your HP or more) pours 15 Rage into you.' },
-        { id: 'bloodreaver_scar', name: 'Scar Tissue', ab: 'drain', text: 'A Rampage thrown below 50% HP scars over the wound: you take 15% less damage for 5s.' },
+        { id: 'bloodreaver_scar', name: 'Scar Tissue', ab: 'drain', text: 'A Rampage thrown below 50% HP throws its guard over the most hurt ally too: 15% less damage for 3s.' },
       ],
       [
         { id: 'bloodreaver_bloodbath', name: 'Bloodbath', ab: 'letting', grants: true,

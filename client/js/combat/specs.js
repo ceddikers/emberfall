@@ -113,7 +113,7 @@ const SPECS = {
         abilities: {
           drain: {
             id: 'rampage', replaces: 'drain', name: 'Rampage', type: 'gcd', target: 'enemy', range: SPEC_MELEE, anim: 'attack',
-            desc: 'Spend 40 Rage: a wild blow for {d:320}, up to {d:250} more the more the bank holds (the damage you took since your last Rampage, 6s at most). Within 1.2s of a hit that took a tenth of your HP your blood is warm: {d:340} more; after that the bank has gone cold and counts for 30%. It hits harder the lower your HP (up to 70% harder near death) and heals you for 20% of the bank.',
+            desc: 'Spend 40 Rage: a wild blow for {d:320}, up to {d:250} more the more the bank holds (the damage you took since your last Rampage, 6s at most). Within 1.2s of a hit that took a tenth of your HP your blood is warm: {d:340} more; after that the bank has gone cold and counts for 30%. It hits harder the lower your HP (up to 70% harder near death) and heals you for 20% of the bank. It also guards you: 15% less damage for 2s, or 35% for 3s when thrown below half HP.',
             usable: k => reaverDrainOk(k),
             glow: k => reaverDrainGlow(k) || (k.g.blood >= 40 && k.env.hpFrac() < 0.5),
             effect(k) {
@@ -669,29 +669,27 @@ const SPECS = {
     {
       id: 'nightstalker', name: 'Nightstalker', title: 'The Knife Behind', accent: '#d0304a',
       blurb: 'Wait in the dark behind them. Then end it.',
-      focus: 'Burst from behind. Backstab hits very hard from the rear, a Shadowstep sets up the next one, and Shadow Dance lasts longer, but standing anywhere else costs you more.',
+      focus: 'Burst from behind. Backstab hits very hard from the rear, a Shadowstep sets up the next one and carries you out of a blow, and Shadow Dance lasts longer.',
       gaugeTip: 'Strike gives 1 point, or 2 from behind. Backstab spends every point and hits for {d:115} more for each, with a {d:160} bonus at 5, and more again from behind. A sixth point is lost. A Shadowstep starts you Stalking: your next Backstab hits harder. Shadow Dance entered at 5 points lets the first Backstab in it keep them.',
-      passive: { name: 'From the Shadows', desc: 'Eviscerate becomes Backstab: much stronger from behind, weaker from the front. Shadowstep starts you Stalking: your next Backstab within 6s hits 6% harder. Shadow Dance lasts 14s.' },
+      passive: { name: 'From the Shadows', desc: 'Eviscerate becomes Backstab: much stronger from behind. Shadowstep starts you Stalking (your next Backstab within 6s hits 6% harder) and nothing can touch you for 1s. Shadow Dance lasts 14s.' },
       build: base => {
         const stepBase = base.abilities.find(a => a.id === 'step');
         return {
-        potMult: 0.89,
+        potMult: 0.93,
         abilities: {
           step: {
-            desc: 'Teleport behind the target. For 5s every hit counts as a positional, and you start Stalking: your next Backstab within 6s is 6% harder.',
-            effect(k) { stepBase.effect.call(this, k); k.buff('stalk', 6); },
+            desc: 'Teleport behind the target, and nothing can touch you for 1s. For 5s every hit counts as a positional, and you start Stalking: your next Backstab within 6s is 6% harder.',
+            effect(k) { stepBase.effect.call(this, k); k.buff('stalk', 6); k.mitigate('self', 1, 1, { ab: this, kind: 'invuln' }); },   // (a dodge as well: Shadowstep is untouchable for 1s)
           },
           evis: {
             id: 'backstab', replaces: 'evis', name: 'Backstab', type: 'gcd', target: 'enemy', range: SPEC_MELEE, anim: 'attack',
-            desc: 'Spend all combo points: {d:110} plus {d:115} per point, and {d:160} more at 5 points. From behind it hits {d:60} plus {d:30} per point harder; from the front, 25% weaker.',
+            desc: 'Spend all combo points: {d:110} plus {d:115} per point, and {d:160} more at 5 points. From behind it hits {d:60} plus {d:30} per point harder.',
             usable: k => k.g.combo >= 1,
             glow: k => k.g.combo >= 5 || (k.g.combo >= 4 && k.env.positional() === 'rear'),
             effect(k) {
               const cp = k.g.combo; k.g.combo = 0;
-              const feint = k.talent('shadowblade_feint') && k.has('feint');
-              const front = k.env.positional() === 'front' && !k.has('truenorth') && !k.has('dance') && !feint;
               const stalked = k.has('stalk');
-              const mult = bladeMult(k) * (k.has('dance') ? 1.25 : 1) * (front ? 0.75 : 1) * (k.consume('stalk') ? 1.06 : 1);
+              const mult = bladeMult(k) * (k.has('dance') ? 1.25 : 1) * (k.consume('stalk') ? 1.06 : 1);
               const pot = 110 + 115 * cp + (cp >= 5 ? 160 : 0), bonus = 60 + 30 * cp;
               const o = bladeOpts(k, this, 'rear', bonus, mult);
               if (stalked && k.talent('shadowblade_deaddrop')) o.crit = (o.crit || 0) + 0.3;   // (Dead Drop, spec row VI)
@@ -1186,10 +1184,10 @@ Object.assign(SPECS, {
       gaugeTip: 'Fills as your threads carry damage. Up to 5 threads, and a heal runs two links deep: 60% to the far end, 30% on through its threads.',
       blurb: 'One web over the whole party, every strand known by touch.',
       focus: 'A network. Up to five threads, and heals travel two links deep, so a web built before the hit heals everyone it touches.',
-      passive: { name: 'Living Web', desc: 'You can hold 5 threads instead of 3, and a heal runs two links deep: 60% to the far end of each thread, then 30% on through that ally\'s own threads.' },
+      passive: { name: 'Living Web', desc: 'You can hold 5 threads instead of 3, and a heal runs two links deep: 60% to the far end of each thread, then 30% on through that ally\'s own threads. A raidwide is not shared along the threads; instead every thread rings, healing both its ends for 40% of what they took.' },
       build: base => ({
         potMult: base.potMult * 0.93,
-        maxThreads: 5, deep: true,
+        maxThreads: 5, deep: true, ring: 0.4,
         abilities: {
           tie: { desc: 'Tie your target to yourself with a glowing thread. Press it on a second ally within 2s and those two are tied to each other instead. On an ally already on your threads, it pulls them up to 220 px along the thread toward its far end instead: yank someone out of a puddle. Up to 5 threads; tying another drops your oldest. Two charges.' },
           shuttle: { desc: 'Instant: throw the shuttle down every thread you hold. It strikes the boss for {d:120} per thread (five threads: {d:600}), and each Thread on you tugs a {h:120} heal to whichever end of it is more hurt.' },
@@ -1201,10 +1199,10 @@ Object.assign(SPECS, {
       gaugeTip: 'Fills as your threads carry damage. Your threads hold 60% more of what they carry, and every thread Snap cuts gives back 10 Spool.',
       blurb: 'Tie it, let it take the strain, then cut it loose with a flourish.',
       focus: 'Burst healing. Threads store more, and Snap is your main heal on a short cooldown that pays you back. A Tie that pulls an ally also shields them.',
-      passive: { name: 'Sharp Shears', desc: 'Snap recharges in 8s, releases 60% more of what a thread carried, and every thread it cuts gives back 10 Spool. A Tie that pulls an ally along a thread also wraps them in a {s:260} shield for 2s.' },
+      passive: { name: 'Sharp Shears', desc: 'Snap recharges in 8s, releases 60% more of what a thread carried, and every thread it cuts gives back 10 Spool. A raidwide is not shared along the threads; every thread rings, healing both its ends for 25% of what they took. A Tie that pulls an ally along a thread also wraps them in a {s:260} shield for 2s.' },
       build: base => ({
         potMult: base.potMult * 1.06,
-        store: 1.6, snipSpool: 10, snipPot: 170, lash: true, shuttleCut: 8,
+        store: 1.6, ring: 0.25, snipSpool: 10, snipPot: 170, lash: true, shuttleCut: 8,
         abilities: {
           snip: { cd: 8, desc: 'Cut the threads on your target (all of yours, if it has none). Each one releases 60% more than the damage it carried in the last 5s as a heal to both its ends (at least {h:170}), and gives back 10 Spool.' },
           shuttle: { desc: 'Instant: throw the shuttle down every thread you hold, and down the cut ends of every thread Snap cut in the last 8s. It strikes the boss for {d:120} per thread, up to 5 ({d:600}), and each Thread on you tugs a {h:120} heal to whichever end of it is more hurt.' },
@@ -1217,15 +1215,17 @@ Object.assign(SPECS, {
   marionettist: [
     {
       id: 'cuttingline', name: 'Cutting Line', title: 'The Bladed String', accent: '#ff6a8a',
-      gaugeTip: 'Builds from Cue and the Doll\'s other moves (not its own Jabs); Grand Finale spends it. The strings reach 400 px, and they cut whatever they cross once a second. Taut String: the longer the line stays across, the brighter the red edge and the harder the cut.',
+      gaugeTip: 'Builds from Cue and the Doll\'s other moves (not its own Jabs); Grand Finale spends it. The strings reach 400 px, and they cut whatever they cross once a second. Taut String: the longer the line stays across, the brighter the red edge and the harder the cut, and Cross-Cut and Grand Finale cash it in.',
       blurb: 'Every string a blade. Stand right, and the stage itself bleeds.',
       focus: 'Positioning. The strings always cut what they cross and reach 400 px, and Cross-Cut is off the global cooldown with two charges.',
-      passive: { name: 'Bladed String', desc: 'The strings reach 400 px before they tear, and they cut whatever enemy they cross for {d:48}, once a second. Taut String: every second the line stays across, the cut grows by {d:12}, up to {d:120}; the line leaving the enemy or a String tearing slackens it. Cross-Cut is off the global cooldown, with two charges.' },
+      passive: { name: 'Bladed String', desc: 'The strings reach 400 px before they tear, and they cut whatever enemy they cross for {d:48}, once a second. Taut String: every second the line stays across, the cut grows by {d:12}, up to {d:120}; the line leaving the enemy or a String tearing slackens it. Cross-Cut is off the global cooldown, with two charges, and the strings are Drawn Tight: Cross-Cut and Grand Finale cut up to 50% harder the longer the line has stayed across the enemy with all three Strings tied (10s for the most). A torn String, a String left untied or a line that leaves the enemy slackens it.' },
+      // (a pro keeps the line drawn tight on the dummy, but a raid breaks it often: it aims above its class here so the raid index lands level)
+      balance: 1.12,
       build: base => ({
-        potMult: base.potMult * 0.66,
+        potMult: base.potMult * 0.66 * 0.98,   // balance knob (Draw Tight lifts it)
         stretch: 400, bladed: true,
         abilities: {
-          cross: { type: 'ogcd', charges: 2, cd: 9, lock: 0.4, desc: 'Off the global cooldown, two charges: your strings become blades and cut along the line between you and the Doll. With the enemy on that line it\'s a {d:560} cut and 2 Encore; otherwise it cuts nothing.' },
+          cross: { type: 'ogcd', charges: 2, cd: 9, lock: 0.4, desc: 'Off the global cooldown, two charges: your strings become blades and cut along the line between you and the Doll. With the enemy on that line it\'s a {d:560} cut, up to 50% harder with a long unbroken line, and 2 Encore; otherwise it cuts nothing.' },
         },
       }),
     },
@@ -1458,8 +1458,8 @@ SPECS.kenseier = [
       potMult: base.potMult * 0.9,   // balance knob (tools/simulate.js)
       deadly: true,
       abilities: {
-        deflect: { desc: 'Meet the next blow with your blade. Pressed within a blink of a boss auto or tankbuster landing on you, either side of it, it turns the blow aside (Perfect: no damage, +25 Posture, +37 on a tankbuster) and a little further out it halves it (Good: +8 Posture). No cooldown, but pressed with no blow to meet it costs a little Poise and the key rests for a moment.' },
-        deathblow: { desc: 'Only while the boss is Broken (a Break lasts 5s): a Deathblow for {d:900} that heals you for 15% of your health, ends the Break early, and leaves the boss taking 5% more damage from you for 10s. Out of a Break this is a Pommel: {d:200} and +5 Posture (8s cooldown).' },
+        deflect: { desc: 'Meet the next blow with your blade. Pressed within a blink of a boss auto or tankbuster landing on you, either side of it, it turns the blow aside (Perfect: no damage, +25 Posture, +37 on a tankbuster) and a little further out it takes a third off it (Good: +8 Posture). No cooldown, but pressed with no blow to meet it costs a little Poise and the key rests for a moment.' },
+        deathblow: { desc: 'Only while the boss is Broken (a Break lasts 5s): a Deathblow for {d:820} that heals you for 15% of your health, ends the Break early, and leaves the boss taking 5% more damage from you for 10s. Out of a Break this is a Pommel: {d:200} and +5 Posture (8s cooldown).' },
         guard: {
           id: 'iai', replaces: 'guard', icon: 'iai', name: 'Iai Stance', type: 'ogcd', target: 'self', cd: 90, lock: 0.5, anim: 'big',
           desc: 'Sheathe the blade and wait, for 6s: your next Perfect deflect is followed at once by a counter-cut for {d:450}.',
@@ -1479,8 +1479,8 @@ SPECS.kenseier = [
       potMult: base.potMult * 1.0,   // balance knob (tools/simulate.js)
       warden: true,
       abilities: {
-        deflect: { desc: 'Meet the next blow with your blade, or step in front of an ally within 120 of you and meet theirs. Pressed within a blink of a boss auto or tankbuster landing, either side of it, it turns the blow aside (Perfect: no damage, +18 Posture, +30 on a tankbuster) and a little further out it halves it (Good: +8 Posture). For an ally it costs your Poise a little. No cooldown, but pressed with no blow to meet it costs a little Poise and the key rests for a moment.' },
-        deathblow: { desc: 'Only while the boss is Broken: a Deathblow for {d:900} that heals you for 15% of your health, and ends the Break early. Out of a Break this is Redirect (8s cooldown, once you have turned a blow aside in the last 8s): the last blow you deflected goes back at the boss for 30% of what it would have dealt, up to {d:500}.' },
+        deflect: { desc: 'Meet the next blow with your blade, or step in front of an ally within 120 of you and meet theirs. Pressed within a blink of a boss auto or tankbuster landing, either side of it, it turns the blow aside (Perfect: no damage, +18 Posture, +30 on a tankbuster) and a little further out it takes a third off it (Good: +8 Posture). For an ally it costs your Poise a little. No cooldown, but pressed with no blow to meet it costs a little Poise and the key rests for a moment.' },
+        deathblow: { desc: 'Only while the boss is Broken: a Deathblow for {d:820} that heals you for 15% of your health, and ends the Break early. Out of a Break this is Redirect (8s cooldown, once you have turned a blow aside in the last 8s): the last blow you deflected goes back at the boss for 30% of what it would have dealt, up to {d:500}.' },
       },
     }),
   },

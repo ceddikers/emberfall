@@ -213,46 +213,8 @@ const BOSS_VFX = (() => {
     tihowl() { roomTint('#9fd8ff', 0.2, 0.8); shake(9); },
     tiwhite() { roomTint('#f0faff', 0.45, 1.0); shake(8); },
     tinight() { roomTint('#304a80', 0.25, 1.0); shake(8); },
-    // Vhalgrath
-    // the dive lands: a slam that rolls out from the pit, the floor cracking and throwing up embers and rock
-    dragonfall(tg) {
-      const s = tg.live;
-      shockAt(s.x, s.y, { r: s.r * 1.3, color: '#ffb04a', w: 9, dur: 0.6, flat: 1 });
-      shockAt(s.x, s.y, { r: s.r * 0.8, color: '#fff0c0', w: 5, dur: 0.4, flat: 1, delay: 0.05 });
-      shapeFlash(s, '#ff7a22', { a: 0.34, dur: 0.6 });
-      for (const q of scatter(s, 12)) after(rand(0, 0.25), () => { VFX.sparks(q.x, q.y, { color: '#ffd27a', n: 4, speed: 300 }); VFX.smoke(q.x, q.y, { n: 1, color: '#3a2a26', size: 32, a: 0.5, speed: 80 }); });
-      AFT.decal(s.x, s.y, { style: 'crack', r: s.r * 0.7, dur: 6, a: 0.6, seed: s.x * 0.01 + s.y * 0.013 });
-      shake(14);
-    },
-    // the breath goes: fire down the whole cone
-    breath(tg) {
-      const s = tg.live;
-      shapeFlash(s, '#ff8a2a', { a: 0.36, dur: 0.6 });
-      sweep(s, '#ffe0a0', 0.5);
-      for (const q of scatter(s, 14)) after(rand(0, 0.3), () => VFX.sparks(q.x, q.y, { color: '#ffd27a', n: 3, speed: 240 }));
-      shake(7);
-    },
-    // the tail comes round behind him
-    taillash(tg) { const s = tg.live; shapeFlash(s, '#e8c8a0', { a: 0.3, dur: 0.45 }); sweep(s, '#ffffff', 0.35); for (const q of scatter(s, 8)) VFX.smoke(q.x, q.y, { n: 1, color: '#6a4a3a', size: 30, a: 0.5, speed: 120 }); shake(9); },
-    // the Roar: the whole crater flares and rocks
-    roar() { roomTint('#ff8a3a', 0.22, 0.8); shake(10); },
-    heartburn(tg) { roomTint('#ff5a1a', 0.3, 1.0); shake(16); },
-    scorch(tg) { const s = tg.live; shockAt(s.x, s.y, { r: s.r * 1.2, color: '#ffb04a', w: 6, dur: 0.45, flat: 1 }); shapeFlash(s, '#ff7a22', { a: 0.4, dur: 0.5 }); VFX.sparks(s.x, s.y, { color: '#ffd27a', n: 8, speed: 280 }); shake(6); },
-    // the Hydra (hydra.js)
-    acid(tg) { const s = tg.live; shapeFlash(s, '#b8f04a', { a: 0.36, dur: 0.6 }); sweep(s, '#e8ffb0', 0.45); for (const q of scatter(s, 12)) after(rand(0, 0.3), () => VFX.splash(q.x, q.y, { color: '#9ccc2e', n: 5, speed: 0.8 })); shake(6); },
-    tide(tg) { const s = tg.live; shapeFlash(s, '#7ffff0', { a: 0.34, dur: 0.55 }); sweep(s, '#d8fffa', 0.4); for (const q of scatter(s, 10)) after(rand(0, 0.25), () => VFX.splash(q.x, q.y, { color: '#4fd8cc', n: 5, speed: 1 })); shake(7); },
-    bloom(tg) { const s = tg.live; shockAt(s.x, s.y, { r: s.r * 1.3, color: '#e0a0ff', w: 7, dur: 0.5, flat: 1 }); shapeFlash(s, '#b060f0', { a: 0.36, dur: 0.6 }); VFX.splash(s.x, s.y, { color: '#a050e0', n: 14, speed: 1.3 }); VFX.smoke(s.x, s.y, { n: 4, color: '#5a2a80', size: 34, a: 0.5, speed: 70 }); shake(6); },
-    gout(tg) { const s = tg.live; shockAt(s.x, s.y, { r: s.r * 1.2, color: '#ffb060', w: 6, dur: 0.45, flat: 1 }); shapeFlash(s, '#ff8a2a', { a: 0.4, dur: 0.5 }); VFX.sparks(s.x, s.y, { color: '#ffd27a', n: 10, speed: 280 }); shake(5); },
-    rime(tg) { const s = tg.live; shapeFlash(s, '#bfe8ff', { a: 0.34, dur: 0.6 }); shockAt(s.x, s.y, { r: s.r, color: '#e8f8ff', w: 8, dur: 0.6, flat: 1 }); for (const q of scatter(s, 12)) after(rand(0, 0.3), () => VFX.sparks(q.x, q.y, { color: '#e8f8ff', n: 3, speed: 200 })); shake(7); },
-    storm(tg) { const s = tg.live; shapeFlash(s, '#fff6a0', { a: 0.3, dur: 0.4 }); sweep(s, '#ffffff', 0.3); for (const q of scatter(s, 6)) after(rand(0, 0.2), () => VFX.lightning(q.x + rand(-14, 14), q.y - 280, q.x, q.y, { color: '#fff6a0', jag: 22, dur: 0.35 })); shake(8); },
-    gaze(tg) { roomTint('#e8e8f8', 0.22, 0.7); const s = tg.live; if (s) VFX.sparks(s.x, s.y, { color: '#ffffff', n: 8, speed: 260 }); shake(9); },
-    mirespit(tg) { const s = tg.live; shockAt(s.x, s.y, { r: s.r * 1.2, color: '#d8b868', w: 6, dur: 0.45, flat: 1 }); VFX.splash(s.x, s.y, { color: '#7a5a2a', n: 12, speed: 1.1 }); shake(4); },
-    sear(tg) { const s = tg.live; VFX.pillar(s.x, s.y, { r: 40, h: 150, color: '#ffb060', dur: 0.6 }); shockAt(s.x, s.y, { r: s.r * 1.4, color: '#ffd27a', w: 6, dur: 0.5, flat: 1 }); VFX.sparks(s.x, s.y, { color: '#ffd27a', n: 10, speed: 260 }); },
-    rise(tg) { const s = tg.live; shockAt(s.x, s.y, { r: s.r * 1.3, color: '#a8f0e8', w: 8, dur: 0.55, flat: 1 }); VFX.splash(s.x, s.y, { color: '#4fd8cc', n: 16, speed: 1.4 }); shake(6); },
-    cry() { roomTint('#e8d890', 0.16, 0.7); shake(7); },
-    surge() { roomTint('#4fd8cc', 0.22, 0.9); shake(9); },
-    heartbeat() { roomTint('#ffd870', 0.3, 1.0); shake(12); },
-    hgaze(tg) { roomTint('#e8e8f8', 0.28, 0.9); const s = tg.live; shockAt(s.x, s.y, { r: s.r, color: '#ffffff', w: 8, dur: 0.6, flat: 1 }); shake(12); },
+    // Vhalgrath: every tag of his lands in wyrm-art.js
+    // the Hydra: her impacts live in hydra-view.js (HY_FX)
     // Grubnak
     // Chop Chop: the ghost cleaver comes down beside him and the cut runs along his line, wall to wall: a burst of
     // sparks racing out both ways, tiles jumping, and a gouge left glowing in the floor
@@ -910,6 +872,12 @@ const BOSS_VFX = (() => {
   function impact(tg, msg, ctx) {
     // Azerath: every tag of his lands in archmage-art.js
     if (ctx && ctx.boss === 'archmage' && typeof AZ_ART !== 'undefined') { AZ_ART.impact(tg, ctx, { shapeFlash, shockAt, scatter, after, shake, roomTint, sweep }); return; }
+    // Hrimgar: his moves land in titan-art.js (a tag it does not know falls through to the older drawing below)
+    if (ctx && ctx.boss === 'titan' && typeof TI_ART !== 'undefined' && TI_ART.impact(tg, msg, ctx, { shapeFlash, shockAt, scatter, after, shake, roomTint, sweep })) return;
+    // Vhalgrath: wyrm-art.js has the look of every move of his (a tag it does not know falls through to the shared ones)
+    if (ctx && ctx.boss === 'wyrm' && typeof WYRM_ART !== 'undefined' && WYRM_ART.impact(tg, ctx, { shapeFlash, shockAt, scatter, after, shake, roomTint, sweep, AFT })) return;
+    // the Hydra: every move of hers lands in hydra-view.js (HY_FX)
+    if (ctx && ctx.boss === 'hydra' && typeof HY_FX !== 'undefined' && HY_FX.impact(tg, ctx, { shapeFlash, shockAt, scatter, after, shake, roomTint, sweep, streak, bang, AFT, coverShadows, clipOut, AR: AR() })) return;
     // (an untagged raidwide washes the room in the boss's own colour, softly, instead of a grey-white veil)
     if (tg.type === 'raidwide') { (IMPACT[tg.tag] || (() => { roomTint({ grubnak: '#ff8a3a', skitterra: '#b070ff', volkar: '#7fc8ff', hollowking: '#6dff9a', wyrm: '#ff8a3a', titan: '#9fd8ff' }[ctx && ctx.boss] || '#ffffff', 0.15); shake(6); }))(tg, ctx); return; }
     if (tg.type === 'proximity') { (IMPACT[tg.tag] || IMPACT.boil)(tg); shake(10); return; }
@@ -1054,6 +1022,7 @@ const BOSS_VFX = (() => {
     if (bossKind === 'grubnak' && anim === 'gorge') gorgeVortex(bossDraw, dur);
     if (bossKind === 'skitterra' && anim === 'chrysalis') chrysalis(bossDraw, dur);
     const key = castKey(bossKind, anim, name), sh = SH(bossDraw);
+    if (bossKind === 'wyrm' && typeof WYRM_ART !== 'undefined') WYRM_ART.cast(sh, bossDraw, dur, anim, name, { drawIn, emit, beat, P });   // (wyrm-art.js: what gathers on him for each move)
     if (anim === 'enrage') enrageStart(bossKind, bossDraw, dur);
     else { const fx = CAST_FX[bossKind] && CAST_FX[bossKind][(CAST_USE[bossKind] && CAST_USE[bossKind][key]) || key]; if (fx) fx(sh, bossDraw, dur); }
     const pal = CAST_COLOR[bossKind] || {}, color = anim === 'enrage' ? (ENR[bossKind] || '#ff3a2a') : pal[anim] || pal.def || '#ffffff';
@@ -1085,11 +1054,13 @@ const BOSS_VFX = (() => {
   }
   function addSpawn(x, y, kind) {
     if (kind === 'skeleton') return coffinBurst(x + Math.sign(x) * 40, y);
+    if (kind === 'whelp' && typeof WYRM_ART !== 'undefined') return WYRM_ART.whelpSpawn(x, y, { shockAt, shake });   // (an ember whelp: wyrm-art.js)
     VFX.swirl(x, y, { r: 60, color: '#c8ff6a', dur: 0.7, arms: 3 });
     VFX.burst(x, y, { color: '#e8ff9a', color2: '#ffffff', n: 14, speed: 200 });
     VFX.smoke(x, y, { color: '#d8e8b0', n: 6, size: 26, a: 0.6, speed: 70 });
   }
-  function addDeath(x, y) {
+  function addDeath(x, y, kind) {
+    if (kind === 'whelp' && typeof WYRM_ART !== 'undefined') return WYRM_ART.whelpDeath(x, y, { shockAt, shake, after });
     VFX.charge(x, y - 10, { color: '#c070ff', n: 10, r: 60, dur: 0.3 });
     after(0.28, () => {
       VFX.burst(x, y, { color: '#c070ff', color2: '#ffffff', n: 18, speed: 260, size: 15 });
@@ -1457,55 +1428,11 @@ const BOSS_VFX = (() => {
     boulder: { color: '#6a6460', dust: '#c8c0b0', size: 1.4 }, brazier: { color: '#2f3337', dust: '#7a8a80', size: 0.9 },
   };
   // The Hydra's head moments (hydra.js: propfx k 'hcast' a head winding up, 'stump' a head cut, 'sear' the stump burned,
-  // 'regrow' it left to sprout, 'rise' the Mother's heads coming up, 'echo' a cut head's memory striking in the Heart)
-  const HY_COL = { acid: '#b8f04a', tide: '#7ffff0', venom: '#e0a0ff', flame: '#ffb060', frost: '#e8f8ff', storm: '#fff6a0', gaze: '#ffffff', mire: '#d8b868' };
-  function hydraFx(msg) {
-    const col = HY_COL[msg.el] || '#ffffff';
-    if (msg.k === 'hcast') {
-      const dur = msg.dur || 3, big = msg.s ? 1 : 0.65;
-      VFX.fx({ dur, layer: 'air', draw: (c, p, t, e) => {
-        const k = e.a * Math.min(1, p / 0.12) * Math.min(1, (1 - p) / 0.06) * big;
-        c.save(); c.globalAlpha = k;
-        VFX.glowAt(c, msg.x, msg.y - 20, 12 + p * 30, col, 0.25 + 0.5 * p);
-        for (let i = 0; i < 6; i++) { const a = i * TAU / 6 + t * 3, d = (1 - p) * 46 + 8; VFX.glowAt(c, msg.x + Math.cos(a) * d, msg.y - 20 + Math.sin(a) * d * 0.7, 6, col, 0.5 * p); }
-        c.restore(); c.globalAlpha = 1;
-      } });
-    } else if (msg.k === 'stump') {
-      shockAt(msg.x, msg.y, { r: 90, color: col, w: 6, dur: 0.5, flat: 1 });
-      VFX.splash(msg.x, msg.y - 20, { color: '#8a2a1a', n: 14, speed: 1.4 });
-      VFX.smoke(msg.x, msg.y - 10, { n: 4, color: '#2a3a2a', size: 30, a: 0.5, speed: 60 });
-      AFT.decal(msg.x, msg.y, { style: 'crack', r: 40, dur: 10, a: 0.5, seed: msg.x * 0.01 });
-      shake(7);
-    } else if (msg.k === 'sear') {
-      VFX.pillar(msg.x, msg.y, { r: 36, h: 150, color: '#ffb060', dur: 0.8 });
-      VFX.pillar(msg.px, msg.py, { r: 30, h: 120, color: '#ffd27a', dur: 0.7 });
-      shockAt(msg.x, msg.y, { r: 110, color: '#ffd27a', w: 7, dur: 0.5, flat: 1 });
-      VFX.sparks(msg.x, msg.y - 20, { color: '#ffd27a', n: 14, speed: 300 });
-      VFX.smoke(msg.x, msg.y - 20, { n: 5, color: '#4a3a30', size: 34, a: 0.55, speed: 80 });
-      shake(5);
-    } else if (msg.k === 'regrow') {
-      shockAt(msg.x, msg.y, { r: 120, color: col, w: 7, dur: 0.6, flat: 1 });
-      VFX.splash(msg.x, msg.y - 20, { color: '#4f9a4a', n: 18, speed: 1.5 });
-      roomTint('#4f9a4a', 0.1, 0.5);
-      shake(7);
-    } else if (msg.k === 'rise') {
-      shockAt(0, 0, { r: 160, color: '#a8f0e8', w: 10, dur: 0.7, flat: 1 });
-      shockAt(0, 0, { r: 300, color: '#7ffff0', w: 6, dur: 0.9, flat: 1, delay: 0.1 });
-      VFX.splash(0, 0, { color: '#4fd8cc', n: 24, speed: 1.6 });
-      shake(8);
-    } else if (msg.k === 'echo') {
-      VFX.fx({ dur: 1.4, layer: 'air', draw: (c, p, t, e) => {
-        const k = e.a * (1 - p);
-        c.save(); c.globalAlpha = k;
-        VFX.glowAt(c, msg.x, msg.y - 22, 46 * (0.6 + 0.6 * p), col, 0.7);
-        c.restore(); c.globalAlpha = 1;
-      } });
-      shockAt(msg.x, msg.y, { r: 130, color: col, w: 6, dur: 0.6, flat: 1 });
-    } else return false;
-    return true;
-  }
+  // 'regrow' it left to sprout, 'rise' the Mother's heads coming up, 'echo' a cut head's memory striking in the Heart): hydra-view.js
+  function hydraFx(msg) { return typeof HY_FX !== 'undefined' && HY_FX.prop(msg, { shockAt, shake, roomTint, bang }); }
   function propFx(msg, room, entById, bossKind) {
     if (hydraFx(msg)) return;
+    if (bossKind === 'titan' && typeof TI_ART !== 'undefined' && TI_ART.propFx(msg, room, entById, { shockAt })) return;   // (Hrimgar: frozen solid, warmed: titan-art.js)
     const st = PROP_STUFF[msg.kind] || { color: '#6a6a72', dust: '#b0b0b8', size: 1 };
     if (msg.k === 'chip') {
       VFX.debris(msg.x, msg.y - 20, { color: st.color, n: 5, speed: 0.8, size: st.size * 0.8 });
@@ -2066,6 +1993,8 @@ const BOSS_VFX = (() => {
       emit(sh, dur + 2, 0.5, () => { const q = scatter({ kind: 'circle', x: 0, y: 0, r: AR() - 40 }, 1)[0]; if (q) VFX.spawn({ x: q.x, y: q.y, z: rand(60, 140), vz: -rand(10, 30), vx: rand(-15, 15), life: rand(1.2, 2), size: rand(3, 5), size1: 1, color: '#e8f4ff' }); });
     },
   };
+  // The Tide Rises (Azerath): dark water climbs in from the wall and the foam line closes on the middle of the floor (archmage-art.js)
+  ENRAGE_SEQ.archmage = (sh, b, dur) => { if (typeof AZ_ART !== 'undefined') own(sh, VFX.fx({ dur: dur + 3, layer: 'ground', draw: (c, p, t, e) => AZ_ART.tide(c, t, dur, e.a) })); };
   // Last Call's table: set in front of him, kicked up end over end, landing upside down with a crash of plates
   function tableFlip(sh, b, dur) {
     const f = b.f || 0, ca = Math.cos(f), sa = Math.sin(f), x0 = b.x + ca * 120, y0 = b.y + sa * 120, L = 150, Wd = 70;
@@ -2082,10 +2011,13 @@ const BOSS_VFX = (() => {
       c.restore(); c.globalAlpha = 1;
     } }));
   }
+  // the Drowning builds: the water climbs and white hands reach up out of it (hydra-view.js)
+  ENRAGE_SEQ.hydra = (sh, b, dur) => HY_FX.enrage(sh, b, dur, { own, wash, scatter, shockAt, shake, roomTint, AR: AR() });
   // the lethal moment (once): each boss's own end of the world, then the wipe follows
   function enrageLand(kind, b) {
     const sh = SH(b); if (sh.landed || sh.death) return; sh.landed = true;
     shake(14);
+    if (kind === 'hydra' && typeof HY_FX !== 'undefined' && HY_FX.enrageLand(b, { scatter, shockAt, roomTint, AR: AR() })) return;
     if (kind === 'grubnak') {
       softFlash(sh, '#ff6a2a', 0.35, 0.7);
       bang(b.x, b.y - 20, 240, { n: 20, dur: 0.6, hole: 0.42, fill: '#ff8a2a', core: '#ffd27a' });   // (a ring of flame spikes round him: he stays in sight, no white-out)

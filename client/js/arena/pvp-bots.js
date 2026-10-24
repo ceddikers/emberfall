@@ -35,7 +35,7 @@ const PvpBots = {
   // the raid view (raid-host.js view()) with no boss mechanics, the opponent as the boss and the team as the party
   view(host, bot, foe) {
     const sim = host.sim, tm = sim.teamOf(bot.id), t = sim.t;
-    const players = sim.players().filter(p => sim.teamOf(p.id) === tm).map(p => ({ id: p.id, x: p.x, y: p.y, role: p.role, alive: !!p.s.alive, hp: p.s.hp, maxHp: p.s.maxHp, left: false, threat: 0,
+    const players = sim.players().filter(p => sim.teamOf(p.id) === tm).map(p => ({ id: p.id, x: p.x, y: p.y, role: p.role, alive: !!p.s.alive, hp: p.s.hp, maxHp: p.s.maxHp, left: false,
       hollow: !!p.s.hollow, debt: p.s.hollow ? p.s.hollow.debt : 0, healed: p.s.hollow ? p.s.hollow.heal : 0, hollowLeft: p.s.hollow ? Math.max(0, p.s.hollow.until - t) : 0, graceLeft: p.s.hollow ? Math.max(0, p.s.hollow.graceUntil - t) : 0 }));
     return {
       t, boss: foe ? { x: foe.x, y: foe.y, facing: foe.a || 0, untargetable: false } : { x: 0, y: 0, facing: 0, untargetable: true },

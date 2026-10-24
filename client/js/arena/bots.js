@@ -1093,6 +1093,8 @@ const BotAI = {
       const a = ab(i);
       if (a.type !== 'ogcd' || !readyIdx(i)) continue;
       let markMit = false;
+      // a Nightstalker's Shadowstep is a dodge too: take it just as a blow is about to land on this spot
+      if (a.id === 'step' && k.def.spec === 'nightstalker' && BotAI.dollDanger(view, bot.x, bot.y, 0.8)) return i;
       if (k.gcdRemaining() < 0.65 && !k.cast) continue;
       if (a.target === 'ally' || (hotAndHurt && a.id === 'fireblast')) continue;
       // a step that puts you behind the boss (Shadowstep) isn't taken with floor about to land: it could land you in it
@@ -1724,6 +1726,16 @@ BOT_CLASS.threadweaver = {
   },
 };
 
+// Nightstalker: stands behind the boss, where Backstab pays the most (Shadowstep as a dodge is in the general oGCD pass above)
+BOT_CLASS.shadowblade = {
+  home(bot, view) {
+    const k = bot.actor && bot.actor.kit;
+    if (!k || k.def.spec !== 'nightstalker') return null;
+    const b = view.boss, a = (b.facing || 0) + Math.PI;
+    return { x: b.x + Math.cos(a) * 110, y: b.y + Math.sin(a) * 110 };
+  },
+};
+
 // Marionettist: stands off a flank of the boss at a comfortable reach (so the Doll's station is across it and the line
 // crosses the boss), keeps the Doll out of telegraphs with Pull Strings (Pirouette at the last moment when no charge is
 // left), never starts Grand Finale with something about to land on the Doll, and Cross-Cuts whenever the line is on.
@@ -1973,8 +1985,8 @@ BOT_CLASS.kenseier = {
     for (const h of hits) {
       if (h.at - t > 1.2 || K.plans.some(p => same(p, h) || (!p.skip && Math.abs(p.for - h.at) < 0.35))) continue;
       const g = Math.sqrt(-2 * Math.log(1 - u(h.at, 2) * 0.999999)) * Math.cos(2 * Math.PI * u(h.at, 3));
-      const jit = bot.sloppy ? (u(h.at, 1) * 2 - 1) * 0.3 : Math.max(-0.08, Math.min(0.08, g * 0.045));
-      K.plans.push({ kind: h.kind, for: h.at, at: h.at + jit - 0.045, skip: u(h.at, 4) < (bot.sloppy ? 0.15 : 0.02), done: false });
+      const jit = bot.sloppy ? (u(h.at, 1) * 2 - 1) * 0.3 : Math.max(-0.22, Math.min(0.22, g * 0.075));
+      K.plans.push({ kind: h.kind, for: h.at, at: h.at + jit - 0.045, skip: u(h.at, 4) < (bot.sloppy ? 0.15 : 0.05), done: false });
     }
     const planNear = within => K.plans.some(p => !p.done && !p.skip && p.at - t < within && p.at - t > -0.1);
     const defl = idx('deflect'), cut = idx('cut'), db = idx('deathblow'), mantle = idx('mantle'), guard = idx('guard'), mk = idx('mikiri');
