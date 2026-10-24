@@ -21,6 +21,9 @@
     chronomancer: "He rises, he falls, he lands, and each time he lands I am standing in the wrong place. The warning is long, the beat is exact, and I found it only on the fourth try. Larger country, same lesson. Not my first time.",
     alembist: "Specimen: one dragon, very old, very warm. Symptoms: burns, shocks, and a floor that bites for some time after. Shelves ran low by the first descent. One flask went off. Not mine! Beyond the road, other people's flasks go off. Noted.",
     threadweaver: "He hovers over the whole crater like a loose thread and drops where he pleases. My stitches kept running into the last place he had been. A sloppy seam, entirely mine, and a long way from home with no spare thread.",
+    tidecaller: "Past the road the sky is the larger water, and I had not learned its tides. The Wyrm walked after the knight, then rose and came down wherever he pleased, and I mended half a swell behind him all night. Tomorrow I plan the water for his flights.",
+    lanternkeeper: "Past the road the sky is the larger dark, and I had never lit it. The Wyrm came down wherever he pleased, and my lanterns were never where we needed them. Tomorrow I light where he will land, not where he has been. Keep your light.",
+    kenseier: "A dragon has no rhythm worth the name: he walks, he rises, he comes down where he pleases. I spent the night learning the one beat he kept, his claws on me, and watching the sky for the rest. Tomorrow I count the Wyrm. Catch the beat.",
   },
   // the first time this hero beats him
   win: {
@@ -43,6 +46,9 @@
     chronomancer: "He fell, and I did not have to undo a thing. That is the first time with a dragon. I shall be proud of us, I suppose. I am now. And a little afraid of how large the next thing is.",
     alembist: "Result: one dragon, extinguished. Shelves nearly bare, every patient alive. A new reagent has appeared in the heart of the crater, not mine. Labelled: do not touch. Touched anyway. Mildly warm.",
     threadweaver: "He is unpicked at last, and the whole hem came home. There is a seam in the sky where he used to hang, and I did not tie it. Pulled it tight regardless. Needle up, and breathing again.",
+    tidecaller: "Vhalgrath is down, and the crater lies quiet as a dry harbour. The water was high every time he fell on us, and it held. A long way past the road, and the sea gives back.",
+    lanternkeeper: "Vhalgrath is down, and the crater is cooling. Four of us climbed out of it, and the lanterns I set were still burning when we left. A long way from any street. I'll leave one burning on the rim.",
+    kenseier: "The Wyrm is down and the crater is quiet. He was the first enemy whose rests I had to learn as well as his strokes. I sat on a warm stone and let the ash fall. Ash settles.",
   },
   moves: {
     "Tyrant's Roar": { hard: false, learned: {
@@ -65,6 +71,9 @@
       chronomancer: "The roar lands just after his throat swells. I had everyone mended in the moment before; next time, which was last time, I will start earlier. I rather enjoyed the echo. It went on a long while.",
       alembist: "Ailment: the roar, felt by everyone, no hiding from it. Remedy: the whole party whole before it sounds, the big brew poured just ahead. Front shelf, and tape down the corks; things rattle in a crater.",
       threadweaver: "The roar ran along every thread at once. No tying it off. We stood close, I pulled the slack tight, and we took it in common. Mind the slack; it is the first thing a dragon finds.",
+      tidecaller: "The roar rolled over every one of us, and there is no hiding from sound. We stood close, and I let the water climb as he lifted his head, so it was already high when the roar broke. A gull rides out the loudest gale.",
+      lanternkeeper: "The roar rolled over every one of us, and there is no hiding from sound. We stood close inside my glows, and I let every lantern burst as he lifted his head, so the roar fell on a party already mended.",
+      kenseier: "He roared, and it reached every one of us. A blade cannot turn a sound, so we gathered by the healer and took it standing. Mended first, then still. That answers all such blows.",
     } },
     'Rending Claws': { hard: false, learned: {
       bastion: "The claws came down on me alone, a wide rake in front of him. I waited for the shoulder to drop, shield up in the last instant, and kept the others out of the arc. Claws like that make the Barrow King seem a gentleman.",
@@ -86,6 +95,9 @@
       chronomancer: "The claws come down on the beat after the shoulder drops. I warded our knight in the gap before it, and was early. Not for the first time, nor the last, nor, possibly, the current.",
       alembist: "The claws, one heavy rake, front of him only: a blue ward on whoever stands there, and everyone else kept out of the arc. Label it plainly. A heavy rake needs a heavy bottle.",
       threadweaver: "The rake landed on our knight, and it ran down my thread to the archer, so neither took all of it. A neat seam. Keep to the sides, you lot, and leave the front to him.",
+      tidecaller: "The claws were meant for the knight alone, a wide rake in front of him, so the rest of us kept to his sides. I watched his shoulder and had the water high around the knight before it fell, not after.",
+      lanternkeeper: "The claws were for our knight alone, a wide rake in front of him, so the rest of us kept to his sides. I had a lantern hung on the knight before the blow and kept its wick gold.",
+      kenseier: "The claws came down on me alone, a wide rake before him. I met them with the blade as they landed, and the others stayed out of the arc. Each rake had the same count, and by the end I answered it without thinking.",
     } },
     'Ember Breath': { hard: false, learned: {
       bastion: "He breathed at one of us, not me, and the fan of fire followed them. I kept the line clear of the long flames and off the glowing ground it left behind. Fire does not respect a post. I do.",
@@ -107,6 +119,9 @@
       chronomancer: "The fire tracks its quarry until the last breath. I stepped aside on that note and not before. The ground burned for a time after. Next time, which was last time, I stood further off.",
       alembist: "A cone of fire at one of us, tracking, and a floor that burns afterwards: step aside late, then keep off the glow. Label the floor too: this side hot.",
       threadweaver: "The fire chased one stitch across the floor. Wait for the last moment, step out sideways, and keep every thread off the glowing ground. A burnt hem is a sloppy hem.",
+      tidecaller: "The fire hunted one of us and followed whoever it chose across the floor. They waited for the last moment and stepped out sideways; the rest kept clear of its length, and all of us kept off the glowing ground it left. Scorched floor stays hot a long while.",
+      lanternkeeper: "The fire hunted one of us and followed them across the floor. They waited until the last moment and stepped out sideways. The rest kept clear of its length, and I set my lanterns well away from the scorch it left.",
+      kenseier: "He breathed at one of the others and the fan of fire followed them. We kept clear of the long flames and off the glowing ground it left. It is a long stroke, not a quick one. Plenty of time to leave.",
     } },
     'Tail Lash': { hard: false, learned: {
       bastion: "He swept the tail round behind him, not in front. I held my place at his front and the line stood to his sides. Whoever stood at his back learned it quickly. A tail is a rear guard of its own.",
@@ -128,6 +143,9 @@
       chronomancer: "He turns his shoulder, and the tail comes round a moment later, behind him. I was already at his side. I knew it, I think. This time I did.",
       alembist: "The tail, a wide sweep behind him: stand at his flanks or his front and nowhere in the arc. The shelf behind him is not safe either, I found. Moved it.",
       threadweaver: "The tail swept his back, and anyone stitched in there came away torn. Mind the seam. My stitches stand at his flanks now.",
+      tidecaller: "The tail swept the ground behind him, where nobody with sense ought to be. We kept to his front and his flanks, and the ones who wandered round his back came away rinsed. The stern of a ship is the part that swings.",
+      lanternkeeper: "The tail swept the ground behind him, where nobody with sense stands. We kept to his front and his flanks, and my lanterns went there too, never at his back.",
+      kenseier: "He swept the tail behind him, not before. I kept my place at his front, and the others stood to his sides. Whoever stood at his back learned the beat quickly. A tail is a second blade, and it sits where the first is not.",
     } },
     'Magma Burst': { hard: false, learned: {
       bastion: "The marks came up over the others, not me. I held his front while each took their own patch of floor and stepped off their own pool when it struck. A quiet job, for once: keeping him pointed away.",
@@ -149,6 +167,9 @@
       chronomancer: "The marks appear, and a moment later they land, pool and all. I had stepped off mine by then. I did. I will.",
       alembist: "Marks over each of us, then a puddle of molten rock: apart from each other for the mark, then off the puddle at once. Keep the flasks well apart, too.",
       threadweaver: "Each mark wanted its own seam, so I cut the threads before they snapped and tied them again after we regrouped. And off the molten patch. Mind the slack.",
+      tidecaller: "Marks rose over every head but the knight's. Each of us walked off to a patch of floor of our own, away from the rest, and stepped out of the pool the moment it broke, for the pools stay. A quiet shore is a safe one.",
+      lanternkeeper: "Marks rose over every head but the knight's. Each of us went to a patch of floor alone, and stepped out of the pool the instant it burst, since the pools stay. I made sure no lantern of mine sat in one.",
+      kenseier: "Marks rose over the others and left me alone. I kept his head turned away from them while they each went to their own patch and stepped clear of the pool as it landed. A quiet duty: only holding his eyes.",
     } },
     'Cinder Feast': { hard: false, learned: {
       bastion: "He marked one of us for a hit that had to be shared. I closed the line on them and took my share, standing in the ring, and we split it. Duty is lighter in numbers. I would not say so to a recruit.",
@@ -170,6 +191,9 @@
       chronomancer: "The ring blooms, and a moment later it lands. I was inside it before, with the others, so it came divided. Nearly nobody was undone.",
       alembist: "One of us marked for a blow too large to bear alone: everyone in the ring at once, to divide the dose. Mind the pool, too. Shared bottles, shared burns.",
       threadweaver: "The ring wanted all of us together, so I tied the threads in close and we stood in it as one. Divided among us, it was nothing.",
+      tidecaller: "He marked one of us for a blow too heavy to bear alone, and the blue ring on the floor was the answer. We all stood in it together, I too, and shared it into a size the water could mend. Many drops, one tide. Mind the tide.",
+      lanternkeeper: "He marked one of us for a blow too heavy to bear alone, and the blue ring on the floor was the answer. We all stood in it together, and I put a lantern in the middle. Four of us, one ring, the blow split four ways.",
+      kenseier: "He marked one of the others for a hit that wanted sharing. We closed on them, I with the rest, and split it. Each took a part, and a hard stroke became a light touch.",
     } },
     'Dragonfall': { hard: false, learned: {
       bastion: "He rose, and embers drew a line across the floor from the sky to a scorched pit. The line and the circle at its end were what hurt. I held the ground, clear of both. I refuse to be impressed by a falling dragon. I am a little impressed.",
@@ -191,6 +215,9 @@
       chronomancer: "The line is drawn well before he comes, and the ring blooms on the pit he picks. I had stepped off the line at the first note. For once.",
       alembist: "A dive: a line of embers, a ring at the end of it, and three pits to pick from. Off the line and out of the ring. Label the pits: left, middle, hot.",
       threadweaver: "He cut across the crater like a pulled thread, and the ring marked where he'd stitch it down. I got every stitch off the line and out of the ring.",
+      tidecaller: "He climbed out of sight, and a trail of embers drew his road across the floor to the ring where he would land. The road hurts and so does the ring, so we stood clear of both. A storm read early can be sailed round.",
+      lanternkeeper: "Up he went out of sight, and a trail of embers drew his road across the floor to the ring where he would come down. Road and ring both hurt. I walked the party out of the way of both and lit nothing there.",
+      kenseier: "He rose, and embers drew a line across the floor from the sky to a scorched pit. The line and the circle at its end were what hurt. I stayed clear of both. Even a falling dragon announces where he will land, which is more than most do.",
     } },
     'Twin Pass': { hard: false, learned: {
       bastion: "Two lines of embers at once. He flew the first without landing, then came round on the second and came down. Clear of the first was not enough. I moved twice with no rest between. A dragon gives a man no time to form up.",
@@ -212,6 +239,9 @@
       chronomancer: "Two lines, two notes: the second lands once the first has gone over. I left the first, then the second. This time I did.",
       alembist: "A double dive: the first line is only a pass; the second ends in a landing. Clear of both, in that order. Label both lines. I did, in chalk, on the floor, until it burned.",
       threadweaver: "Two long threads across the crater, the first only passing through, the second tying down at a pit. We stepped clear of one and then the other. No dawdling between.",
+      tidecaller: "Two roads of ember at once: he flew the first and came down on the second. We left the first road and then the second without a pause between, like stepping over two rip channels in a row. Rest came after, with the water settled.",
+      lanternkeeper: "Two roads of ember at once: he flew over the first and came down on the second. We left the first and then the second without a pause between, and I set my lantern beyond both, where we would be after.",
+      kenseier: "He flew two ember lines at once: the first overhead, no landing, then round onto the second to come down. Leaving the first was not enough. I moved, and moved again before I could rest. The second step is the one a lazy swordsman forgets.",
     } },
     'The Roost': { hard: false, learned: {
       bastion: "He perched on the rim and shook his burning scales onto the floor, three at a time, and two whelps came down with them. The line kept moving off the scales and put the whelps down. Standing still would have been the first mistake.",
@@ -233,6 +263,9 @@
       chronomancer: "He shakes, and the scales fall just after, three at a time, always one under somebody. I was moving at the first. The whelps burst at the end if they linger, so I put them down early.",
       alembist: "The Roost: burning scales in threes, two whelps, a recess of some length. Keep moving, put the whelps down before he lands, or they burst. Shelve with the scorch kit. I have a scorch kit now.",
       threadweaver: "The scales fell like loose pins, three at a time, always one over one of mine. Keep moving, keep the whelps down; they burst if they are still there when he comes to the ground.",
+      tidecaller: "He perched on the rim and shook burning scales down in threes, always one over someone, and two whelps came with them. We kept walking off the scales and put the whelps down before he dropped. I fed the water small and often while it rained.",
+      lanternkeeper: "He perched on the rim and shook burning scales down in threes, always one over someone, with two whelps alongside. We kept walking off the scales and put the whelps down before he dropped. My lanterns trailed behind us.",
+      kenseier: "He perched on the rim and shook burning scales loose, three at a time, with two whelps falling among them. We kept stepping off the scales and cut the whelps down. The one who stops to watch is the one who burns.",
     } },
     'Crater Boils': { hard: false, learned: {
       bastion: "The ring of floor by the rim began to glow, and it stayed that way. From then on we fought on the inner ground only. I kept the line in from the edge for the rest of the night. A smaller yard to drill in, but a yard.",
@@ -254,6 +287,9 @@
       chronomancer: "The rim begins to glow after he stamps, and from then on it will have always been glowing. We stayed in from the edge. The room was smaller, and so was the margin.",
       alembist: "The ring of floor by the rim burns for good: stay in from the edge. Shelve nothing near it. Moved the tea. Very sad.",
       threadweaver: "The edge unpicked itself into fire, and no thread will hold there. Keep every stitch in from the rim. A smaller hem, but a cleaner one.",
+      tidecaller: "The outer ring of the floor began to boil and never stopped. We kept inside it for the rest of the night, closer together, which suited me; the water goes further in a smaller pool. The rim is a shore I no longer walk.",
+      lanternkeeper: "The rim of the floor began to boil and never stopped. After that we fought in a smaller circle, and I drew the lanterns in with us. The same light goes further in a smaller room. The edge is a street I no longer walk.",
+      kenseier: "The ring of floor near the rim began to glow and kept glowing. After that we fought on the inner ground and never the edge. Less floor, and a floor I am used to.",
     } },
     'Twin Breath': { hard: false, learned: {
       bastion: "Two fans of fire at two of us, the second a heartbeat after the first. The line watched the first go and did not step into the second. Eyes up before feet. My sergeant's rule, borrowed.",
@@ -275,6 +311,9 @@
       chronomancer: "The second breath follows the first. I left the first on its note, and stayed out of the second on its. The second was the hard one.",
       alembist: "Two breaths, a beat apart, at two targets: leave the first sideways, check the second, then move again. Label both flasks. First flask: now. Second: not yet.",
       threadweaver: "Two fans of fire, one behind the other. Step out sideways from the first, and check the second before pulling anyone through. Never mend over a smoking stitch.",
+      tidecaller: "Two fans of fire at two of us, one right behind the other. We stepped sideways out of the first and looked before the next step, for the second lay waiting. The foam of the first wave hides the second.",
+      lanternkeeper: "Two fans of fire, one hard on the heels of the other, each aimed at one of us. Sidestep the first, then look before you step again: the second was waiting. My lantern went clear of the first before I put it down.",
+      kenseier: "Two fans of fire at two of us, the second a heartbeat after the first. We watched the first go and did not step into the second. Read the second stroke before leaving the first.",
     } },
     'Heart Burn': { hard: false, learned: {
       bastion: "The Heart opened and he could not be hurt. Scorch marks bloomed at the three pits one after another, and the last one marked where the fire would not reach. The line stood round it, off the mark. Held.",
@@ -296,6 +335,9 @@
       chronomancer: "Three marks, three beats, and the last is where the fire does not fall. I knew from the second mark which it would be. I stood there before it bloomed. I did.",
       alembist: "A floor-wide fire, three marks in turn, one island. The last mark is the island; stand round it, not on it. Label the third flask. Third flask: safe. Others: not.",
       threadweaver: "The fire came over the whole floor but one hole in it. Three marks, and the last is the hole. I drew everyone to it, round the mark and not on it. Whip-stitched the edge, in my head.",
+      tidecaller: "The Heart opened and he could not be hurt. Three scorches bloomed one after another, and the last marked the one island the great fire would spare. Its quiet ground is wider than the scorch, so we gathered round the mark, never on it, with the water brimming. Wait for the water.",
+      lanternkeeper: "The Heart opened and he could not be hurt. Three scorches bloomed one after another, and the last marked the one island the great fire would spare. We gathered round the mark, never on it, and I kept the wicks full against the heat.",
+      kenseier: "The Heart opened and he was beyond harm. Marks of scorch bloomed at the three pits in turn; the last named the place the fire would spare. We stood about it, never on it. Ash settles.",
     } },
     'Wingbeat': { hard: true, learned: {
       bastion: "His wings beat as he flew, and everything near the line was shoved away from it. I stood far enough from the line that it only nudged me, and held my footing. A man can be moved. The trick is to be asked politely.",
@@ -317,6 +359,9 @@
       chronomancer: "The gust comes just before the dive itself, and everyone near the line is thrown. I stood far back at that moment. Last time, which was next time, I stood closer, and learned.",
       alembist: "The Wingbeat, a gust along the line that throws everyone near it. Stand well back, or accept the wall. The wall is not a cure. I have the bruise to prove it.",
       threadweaver: "His wings pulled every thread near the line out sideways, and one stitch hit the wall. Stand well back from the line, and keep clear of the edge.",
+      tidecaller: "On the hard nights his wings shoved everyone near the flight line outward, toward the wall. Well back is not the same as merely clear: we stood far off from the line and felt only a nudge. Big water pushes everything near it.",
+      lanternkeeper: "The hard nights added a wingbeat that shoved anyone near his flight line out toward the wall. Merely clear was not enough; far was. We stood far, felt a nudge, and I kept my lanterns back there with us.",
+      kenseier: "His wings beat as he flew, and everything near the line was shoved away from it. I stood far enough from it that it only nudged me. A push is not a wound. Let it carry you, then plant your feet again.",
     } },
     'Cinder Rain': { hard: true, learned: {
       bastion: "Embers fell across the crater, each in a little circle that burned afterwards. I held my ground, watched for the circles, and moved only when one landed near me. A man under rain does not need to run.",
@@ -338,6 +383,9 @@
       chronomancer: "Each ember lands after the one before. I stepped aside from the first, and the next, and the next. I kept the rhythm, mostly.",
       alembist: "Many small circles, each leaving a pool: keep moving, step clear of each in turn. Do not shelve anything on the floor. This is a rule now.",
       threadweaver: "Embers fell like pins across the whole floor, each a small hole in the cloth. Step clear of each, and off the pools they leave.",
+      tidecaller: "Embers fell all over the crater, each leaving a small pool that burned. I kept walking, stepped round each as it landed, kept off the pools afterwards, and fed the water in little drops. Rain is patient, and so are we.",
+      lanternkeeper: "Embers fell all over the crater, each leaving a small pool that burned. I kept walking, stepped round each one as it landed, and kept my lanterns off the pools. Nobody stood still under that rain.",
+      kenseier: "Each ember had its small circle drawn before it fell, and burned the ground after. I stood quiet and stepped aside only for the ones that came near. Rain asks no one to run, only to be elsewhere.",
     } },
     'Heart Flare': { hard: true, learned: {
       bastion: "The Heart flared. One of us was marked for a hit we had to share, so I closed the line on them; and the moment it landed we scattered, each to our own patch. Two orders in one breath. The line took both.",
@@ -359,6 +407,9 @@
       chronomancer: "The second part lands just after the first, and I moved on that note. The first is shared, the second is not. I stood in the ring a beat too long once.",
       alembist: "A shared dose, then a separate one for each: together first, then apart. Keep the flasks in two groups. Group one: shared. Group two: personal. No mixing! Ever.",
       threadweaver: "The first was shared, so I drew every thread in tight; the second was for each, so I cut them loose the instant the first landed. A neat piece of cutting.",
+      tidecaller: "A ring over one of us to be shared, and we closed on it together. The moment it landed, marks fell over every head and we scattered, each to our own ground. In, then out, like the tide, and a good singer knows which half she is in.",
+      lanternkeeper: "A ring over one of us, to be shared, and we closed in on it together. The moment it landed, marks fell over every head and we scattered, each to our own ground. In first, then out. I left a lantern at the ring and walked away from it.",
+      kenseier: "The Heart flared. One of the others was marked for a blow that wanted sharing, so we closed on them, and once it landed we parted, each to a patch of our own. Together, then apart: two beats.",
     } },
   },
 };

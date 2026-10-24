@@ -21,6 +21,9 @@
     chronomancer: "He is so slow that I kept moving early, and then late. Each crack comes in its own time and I did not know the times. I will have learned them by now. I did not, quite. Remind me. No, do not.",
     alembist: "Specimen: one giant of ice, slow, large, labelled in advance by the floor. Everything in my satchel froze solid by the second blow and one flask cracked, loudly. Not my fault. Possibly my fault. Dry the shelves.",
     threadweaver: "The great lump is slow as a winter evening, but the floor under him comes apart like a rotten hem. My stitches slid and sank in every direction. A sloppy seam, and the sloppiness was mine. Measure the ice before pinning anyone to it.",
+    tidecaller: "Hrimgar is weather with a face: a giant on a plateau of ice, green lights above him, and a floor that is only a thin lid on very black water. I fell through it twice before I stopped trusting it. He is slow. The ice is what hurries.",
+    lanternkeeper: "Hrimgar is weather with a face: a giant on a plateau of ice, green lights above, and a floor that is a lid over black water. I set a lantern on a sheet that sank and watched it go down burning. Tomorrow I light only ice that holds. Keep your light.",
+    kenseier: "Hrimgar is slow, and a slow enemy has the clearest beat there is. His fist I could count. The ice, which lets go on its own account, I could not, and I fell through it twice. Tomorrow I count the giant and the floor. Catch the beat.",
   },
   // the first time this hero beats him
   win: {
@@ -43,6 +46,9 @@
     chronomancer: "He fell. I will have known he would. The lights moved overhead, taking their time, the way I should have. The road north is open, and nobody had to be undone at the end. Nearly nobody.",
     alembist: "Specimen defeated! The lights were a lovely reaction, green and slow. I salvaged two flasks and one eyebrow. Road north open. Label for the shelf: do not store in the cold. Do not store near me.",
     threadweaver: "He's down. The lights hung over the plateau like a bolt of silk shaken out, and every stitch of mine was still tied to me, sound at the seams. The road north is open. Put the kettle on.",
+    tidecaller: "He settled at last like a sea going flat, and the lights hung over the plateau as if nothing had happened. The cold went out of the air by degrees. I stood a long while on a sheet that held, and sang for it.",
+    lanternkeeper: "He settled at last, and the green lights hung over the plateau as if nothing had happened. The cold went out of the air by degrees. Four of us stood on a sheet that held. I left a lantern burning on the thickest ice. Walk where it's warm.",
+    kenseier: "Hrimgar is down. The plateau is quiet and the green lights hang over it. His blows were the slowest I have met, and I answered the last on its beat. I sat on the ice and it held.",
   },
   moves: {
     "Winter's Howl": { hard: false, learned: {
@@ -65,6 +71,9 @@
       chronomancer: "The howl lands one beat after his chest fills. I had everyone mended in the moment before, which is a good place to be. Last time, which was next time, I was a beat late and regretted it.",
       alembist: "Observation: the howl, felt by everyone, nothing to hide behind. Dose everyone well before it sounds and keep the strong flask uncorked for right after. Shelf kept warm. Mostly warm.",
       threadweaver: "The howl ran along every thread at once, and a cold that size can't be tied off. So I made sure we stood whole and close, and pulled us in tight so it ran through all of us evenly. Mind the slack.",
+      tidecaller: "No wall to stand behind, and no sense in running from weather. I watched his great chest rise and let the water climb to its crest, so the howl crossed a shore that was already full. Everyone came through blue and grumbling.",
+      lanternkeeper: "No wall to stand behind, and no sense in running from weather. I kept everyone close inside the glows and let every lantern burst as he drew breath. We came through blue and grumbling, but upright.",
+      kenseier: "A howl across the plateau, and nothing to meet with a blade. The healers had us stitched before he drew breath, and I stood in the open and took it. Some blows are won before they land.",
     } },
     'Glacial Fist': { hard: false, learned: {
       bastion: "The fist was mine alone. Sergeant always said watch the shoulder, not the hand. Shield up in the last instant, and the rest of the line stayed out of the wedge, as ordered.",
@@ -86,6 +95,9 @@
       chronomancer: "The fist lands a beat after the shoulder drops, a slow beat. I will have warded our knight in the moment before. I did. The rest of us were already outside the wedge, which is where I have always stood.",
       alembist: "Note on the fist: one heavy wedge in front of him, and a ward goes on whoever stands there; everyone else stays out. It also clips the curious. I was curious. Page torn, shoulder sore.",
       threadweaver: "The fist landed on our knight, and I'd tied him to the archer, so it ran down the thread and neither took all of it. The rest of my stitches kept out of the wedge. Mind the slack.",
+      tidecaller: "The fist came down in a wide wedge before him, meant for the knight, while the rest of us kept to his flanks. I had the water high on the knight a few swells ahead, and the blow lost itself in it.",
+      lanternkeeper: "The fist fell in a wide wedge in front of him, meant for our knight, so the rest of us kept to his flanks. I hung a lantern on the knight before it came, and kept the wick high.",
+      kenseier: "The fist was mine alone. I watched the shoulder, not the hand, and met it with the blade as it fell. The others stayed out of the wedge behind. He is slow enough to teach with.",
     } },
     'Rime Slam': { hard: false, learned: {
       bastion: "It locked onto me and followed. I marched it off the line, away from my friends, and let it fall on empty ground. The sheet cracked after. Off it, boots first, before the water came. Held.",
@@ -107,6 +119,9 @@
       chronomancer: "It follows its quarry, locks, and falls a beat later. Take it from the others, then leave the sheet, for it sinks a beat behind. I will have been clear in time. I was. Mostly in time.",
       alembist: "Observation: a ring follows one of us, then lands. Lead it away from the others, then step off that sheet, for it cracks and sinks soon after. I labelled the sheet. I should not have done it standing on it.",
       threadweaver: "A ring followed one stitch round the floor. I let that thread out long, away from the others, and pulled it back once the ring fell, before the sheet sank. The key is not to pull while it's being sewn.",
+      tidecaller: "A ring followed one of us across the ice, close on their heels. They walked it out and away from the rest and let it fall alone, then left that sheet quickly, for it cracks and sinks soon after. I kept the water on them while they went.",
+      lanternkeeper: "A ring chased one of us over the ice, close behind. They towed it clear of the party and let it land, then got off that sheet, which sinks soon after. I never lit a lantern on it.",
+      kenseier: "A mark locked onto me and followed. I led it away from the others and let it fall on empty ground. The sheet cracked after, so I left it before the water came. A blow that follows can be led.",
     } },
     'Twin Slam': { hard: false, learned: {
       bastion: "Two marked, a beat between. Apart, both moving, like men crossing a bridge nobody should cross in step. Neither landed on the line. Then off the cracked sheets, no looking back.",
@@ -128,6 +143,9 @@
       chronomancer: "The first ring falls, and the second a beat behind it. The two must keep apart and keep moving through both beats. I will have stopped after the first. Once. It was enough to learn it.",
       alembist: "Two rings, two of us, a beat apart. Keep apart, keep moving, quit the cracked sheets. Two flasks, two shelves, no contact between them. I mean it this time, and so do the rings.",
       threadweaver: "Two stitches pulled at once, the second a beat behind. I sent them in opposite directions and kept both moving, so the threads never crossed. Cross two threads and you've a knot nobody enjoys.",
+      tidecaller: "Two of us were marked, the second a heartbeat behind the first. They went apart and kept walking, so both rings fell on open ice and well away from each other, and then they left the cracked sheets. I fed the water to each in turn, like a tide on two beaches.",
+      lanternkeeper: "Two of us were marked a heartbeat apart. Each walked off in a different direction, so both rings landed on open ice far from each other, and then they left the cracked sheets behind. I stayed central, where either could be mended.",
+      kenseier: "Two marked, a beat apart. They went away from each other, both moving, so neither landed on the rest. Then off the cracked sheets without looking back. Two strokes, and each wanted its own answer.",
     } },
     'Fault Line': { hard: false, learned: {
       bastion: "A long crack came down the plateau at one of us. Sideways, never along it; every recruit knows to leave a charge by the flank. I would not stand on the red sheets after. I count my footing before I count my wounds.",
@@ -149,6 +167,9 @@
       chronomancer: "The line is drawn, then struck a beat later. Out of it sideways on the first beat. The sheets it crosses sink a few beats after that; I will have left them already. I had.",
       alembist: "Note, in red ink: a long wide line across the plateau at one of us. Out sideways. Every sheet it crosses is marked red and sinks after. Do not set anything down there. I set something down there.",
       threadweaver: "A long rip ran across the whole cloth at one stitch. Out sideways, never along the tear. Every sheet it crossed went red, and the threads stayed off those. Mend the tear later, not while it's open.",
+      tidecaller: "A long crack ran across the plateau at one of us, wide as a river mouth. They stepped out sideways, never along it, and every sheet it crossed turned red and sank. I stayed off the red. Black water is cold company.",
+      lanternkeeper: "A long crack ran across the plateau toward one of us. They stepped out sideways, never along it, and every sheet it crossed turned red and sank. I set a lantern only on ice that was not red.",
+      kenseier: "A long crack ran down the plateau at one of the others. Sideways, never along it. Afterwards I would not stand on the red sheets. The crack is slow and plain, and I still counted it twice.",
     } },
     'Icefall': { hard: false, learned: {
       bastion: "Hailstorm. No post to hold in a hailstorm, nothing to raise a shield against when the shards fall from above. I kept marching and stepped out of every circle. Standing still was the only way to fail.",
@@ -170,6 +191,9 @@
       chronomancer: "Each shard lands a beat after its ring appears. I will have stepped out of every one on its beat. I kept the rhythm, mostly, and hummed it, which helped.",
       alembist: "Ice came down in small rings, two on us, and nothing left on the floor survived. Moving is the only cure. I left a flask on the floor. It was a good flask. Entry closed.",
       threadweaver: "Ice fell like dropped pins, small rings all over, two on my stitches. Keep moving, step out of each. Pins always find the one who stops to look.",
+      tidecaller: "Shards fell from the lights in small rings, and two of the rings were meant for us. Nobody stood still: we stepped out of each ring as it showed and kept walking. To a walker, hail is only weather that passes.",
+      lanternkeeper: "Shards fell from the lights in small rings, two of them meant for us. Nobody stood still: we stepped out of each ring as it showed. I walked with my lantern in hand, and set it down only when the sky was quiet.",
+      kenseier: "Hailstorm. No blade turns shards from above, so I kept moving and stepped out of every circle as it fell. Standing still was the only way to be wrong.",
     } },
     "Titan's Sweep": { hard: false, learned: {
       bastion: "A huge slow arc across his front, meant for one of us. Big, but not a full circle. I took the line round to his flank and his back. A slow blow is honest about where it is going.",
@@ -191,6 +215,9 @@
       chronomancer: "The arc is drawn long before it falls, and it falls slowly. I will have been at his side already, out of it. It covers most of the front and none of the back. Sensible planning, on his part.",
       alembist: "Label for the shelf: front of him unsafe, back of him excellent. The sweep is huge and slow, aimed at one of us, and not a full circle. To his side or behind. I reached it with all my vials still unbroken, which is a first.",
       threadweaver: "The arc swept the front of the floor like shears across a bolt, aimed at one stitch. I pulled every thread to his side and behind him, out of the cut. A clean cut, but not our cloth.",
+      tidecaller: "A vast slow arc swept before him toward one of us, wide but not all the way round. The marked one went to his side or behind him, where the swing never reaches, and I went along. A long way round, for a long swing.",
+      lanternkeeper: "The big slow arc swung toward one of us, wide but not a full circle. Safe was beside him or behind him. The marked one went there, and I walked my lantern over to meet them.",
+      kenseier: "A huge slow arc across his front, aimed at one of the others, and not a full circle. We went round to his flank and his back. I admired how plainly it announced itself.",
     } },
     "Winter's Grasp": { hard: false, learned: {
       bastion: "Frost under a couple of us, and the sheet froze. Frozen ice will not crack under his blows, but it is slick as a wet barracks floor. I stepped on boots flat and with room to spare.",
@@ -212,6 +239,9 @@
       chronomancer: "The frost lands a beat after it gathers, and the sheet under each freezes; the old thaws a beat later. Frozen will not crack. Frozen slides. I will have stepped on carefully. I slid.",
       alembist: "Frost from the feet of a couple of us, and the sheet freezes while the old frost thaws. Frozen sheets resist his blows but are slick as a spilled tincture. Step on with room. Store accordingly, and do not run.",
       threadweaver: "Frost came up from under a few stitches and glazed the cloth beneath each. Glazed cloth won't tear, but it slips. Step on with room to spare, and leave the tension loose.",
+      tidecaller: "Frost crept from beneath two of us and froze the sheet each stood on when it landed. Frozen ice will not crack, but it is slick, so we stepped onto it gently and never toward the water. I stood where I wanted ice, and ice came.",
+      lanternkeeper: "Frost crept up under two of us and froze whatever sheet they stood on, so they chose their ground with care. Frozen ice will not crack but it is slick, so we stepped onto it gently, away from the water.",
+      kenseier: "Frost under a couple of us, and the sheet froze. Frozen ice will not break under his blows, but it is slick, so I walked it flat and slowly. Slow is also a beat.",
     } },
     'Frostbite': { hard: false, learned: {
       bastion: "One of ours went slow and blue, a ring trailing behind. We marched him to the nearest brazier, kept the road clear, and the fire drew the cold out. Nobody on my line gets left in the cold.",
@@ -233,6 +263,9 @@
       chronomancer: "One of us slowed, a ring trailing behind. The brazier cures it, but it must be reached before the freeze finishes. We cleared a path to the nearest and walked him in. I will have been quicker next time. I was.",
       alembist: "One of us, slowed, a ring to share: the nearest brazier, a moment's warmth. Fallback: all share the ring. Untreated: frozen solid, and I have no label for that.",
       threadweaver: "One stitch went cold and slow, a ring trailing behind. I walked her to the nearest brazier, cleared the thread, and the fire drew the cold out of her. If she can't reach it, we all sew into the ring together.",
+      tidecaller: "The cold got into one of us and slowed them, a ring trailing behind. I kept the water on them while they limped to the nearest brazier and the others cleared the road. Had they not reached the fire in time, we would all have waded into the ring with them.",
+      lanternkeeper: "Cold crept into one of us and slowed them, a ring trailing in their wake. I hung a lantern on them for the long walk to the nearest brazier, and the rest of us cleared the road. Without the fire, we would all have shared the ring.",
+      kenseier: "A ring trailed one of the others, and they went slow and blue. We walked them to the nearest brazier, kept the way clear, and the fire pulled the cold out. No one is left in the cold alone.",
     } },
     'Whiteout': { hard: false, learned: {
       bastion: "White over all of us, and nothing to dodge. We were mended before it came. When it cleared, every sunk sheet was ice again and I had ground under my boots. The first fair thing he did.",
@@ -254,6 +287,9 @@
       chronomancer: "The whiteout lands on everyone, and I had the mending in place a moment before. After it, every sunk sheet is ice again, as if the whole lake had been unsunk. I do like an undoing.",
       alembist: "Whiteout, felt by all. Pour the strong flask in advance and have everyone whole before it sounds. Side effect: every sunk sheet restored to ice. A welcome reaction. I shall note it in green.",
       threadweaver: "A blinding white seam of cold, and it ran through every thread. We were all whole before it came. After, the sunk sheets came up again as ice, like a hem let down. Neat, for once.",
+      tidecaller: "A white blast reached every one of us at once, and I had the water full before it came. When it cleared, the sunk sheets had frozen over again. The sea gives back, sometimes sooner than I hoped.",
+      lanternkeeper: "A white blast reached every one of us at once. I had every wick gold and the party in close, and let the lanterns burst as it came. When it cleared, the sunk sheets had frozen over again.",
+      kenseier: "White across all of us and nothing to dodge. We were mended before it came. When it cleared, every sunk sheet had frozen again and I had ground to stand on. A kindness, after.",
     } },
     'The Long Night': { hard: false, learned: {
       bastion: "Lights low, and for a long while slow arcs from him, with frost called twice. Keep out of the arcs; whoever the frost marks chooses the ice by where they stand. I chose a sound post and stayed on it.",
@@ -275,6 +311,9 @@
       chronomancer: "A long dim stretch, slow arcs, frost twice. Out of the arcs. The marked set the ice by where they stand. Every beat felt like three. I will have stood in the right place both times.",
       alembist: "Dimmed lights, great slow arcs, frost called twice. Out of the arcs; the frost-marked choose the sheet by where they stand. Preparation for later. Bring a candle.",
       threadweaver: "The lights dimmed and he swung slow arcs for a good long while, with frost called twice. We stayed out of the cuts; whoever the frost marked chose the sheet by where they stood. Put the stitches where you can see them.",
+      tidecaller: "The lights dimmed, a heavy blow fell on all of us at the start, and then came slow arcs for a long while, with the frost called twice. We kept out of the arcs, and the marked ones stood where they wanted ice, for it set where they stood. A long tide, kept steady.",
+      lanternkeeper: "The lights dimmed, a heavy blow fell on all of us at the start, and then slow arcs came for a long while, with the frost called twice. We kept out of the arcs, and the marked chose their ground with care. I kept the wicks trimmed the whole way.",
+      kenseier: "The lights went low, and for a long while there were only slow arcs from him, and frost called twice. I kept out of the arcs, and whoever was marked chose the ice by where they stood. I kept to a sound sheet and kept count.",
     } },
     'Avalanche': { hard: false, learned: {
       bastion: "The plateau tilted at the end and snow came in lanes. Whatever was not frozen was marked red. I had the line on frozen ground before the first lane. Wet to the knees afterward, but standing. Held.",
@@ -296,6 +335,9 @@
       chronomancer: "The plateau tips, and the snow comes down in lanes, one after another, each a beat behind the last. Every sheet not frozen is red. We stood on frozen ones before the first lane. I would have been there sooner, but I wasn't.",
       alembist: "The plateau tips and the snow comes in lanes, one after another, every sheet not frozen marked red. Everyone on frozen sheets before the first lane. Prepared earlier, I hope. I put my flasks in my pockets, just in case.",
       threadweaver: "The plateau tipped and the snow came down in lanes, one behind the other, like a bolt unrolled. Every sheet not frozen was marked red. I pulled every stitch onto a frozen sheet before the first lane. Mind the slack.",
+      tidecaller: "At the end the plateau tipped and snow ran down in lanes, one after another. Whatever was not frozen glowed red. I walked onto a frozen sheet before the first lane and stayed there while the snow went by on either side, like a river round a stone.",
+      lanternkeeper: "At the end the plateau tipped and snow ran down in lanes, one after another. Every sheet not frozen showed red. I carried my lanterns onto a frozen sheet before the first lane, and the party followed the light.",
+      kenseier: "At the end the plateau tilted and the snow came down in lanes, with every unfrozen sheet painted red. We stood on ice that had set before the first lane fell, and the snow went by on either side.",
     } },
     'Glacial Stomp': { hard: true, learned: {
       bastion: "He stamped, and two rings of shards ran out behind it. Right after the foot landed I stepped under him, into the quiet circle at his heels. Closest was safest. I would never have believed it on the parade ground.",
@@ -317,6 +359,9 @@
       chronomancer: "The stamp lands, then two rings, one after the other. Right after the foot lands, the circle at his feet is calm. I stepped in on the beat. Early, you're struck; late, you've missed the lull.",
       alembist: "A stomp, then two rings of shards outward. Once the foot lands, step into the quiet circle at his feet and let the rings pass. Not before. Learned the hard way, in the margin, in smoke.",
       threadweaver: "He stomped, then two rings of shards ran outward. Once the foot was down I pulled every stitch in close to him, and the rings passed over the hem. Draw the thread in tight, then let it go slack.",
+      tidecaller: "He stamped, and two rings of shards ran out one behind the other. When the foot had landed I stepped in close under him, to the quiet at his heels, and the rings went round us. A strange shore to stand on, but a dry one.",
+      lanternkeeper: "He stamped, and two rings of shards ran out, one after the other. When the foot had landed, we stepped in close under him, where the rings pass over. A strange place to stand, and the safest.",
+      kenseier: "His foot came down and two rings of shards ran out from it. I waited for the landing, then stepped in beneath him to the quiet circle at his heels. The nearest place was safest, which felt wrong and was right.",
     } },
     'Breath of Winter': { hard: true, learned: {
       bastion: "A wedge of frost at one of us. It hardly hurt. But whatever it crossed froze and, a moment later, broke and sank, so I had the line off that ground before it went.",
@@ -338,6 +383,9 @@
       chronomancer: "The breath hurts little. The ground it crossed freezes, then breaks and sinks a few beats later. I will have left it already. I did, somewhere around the second beat, and it was enough.",
       alembist: "Mild symptoms, severe side effects. A cone of frost at one of us that barely stings, and every sheet it crosses freezes, then breaks and sinks. Leave those sheets before they break. I did not read the label first.",
       threadweaver: "His breath came at one stitch, light as lace. But every sheet it crossed froze, then broke and sank. I pulled the thread off those sheets before the break. The lace is the trap, not the cloth.",
+      tidecaller: "His breath came at one of us in a wedge, so light it hardly stung. But every sheet it crossed froze, then broke and sank a few swells later, so I walked off them while they were still hard. The gentle ones are the rip beneath the calm.",
+      lanternkeeper: "His breath came at one of us in a wedge, so light it hardly stung. But every sheet it crossed froze, then broke and sank soon after. I walked off them while they were still hard, lantern in hand.",
+      kenseier: "A wedge of frost at one of the others, mild as a breath. The danger was what it left: ground that froze, then broke and sank soon after. We were off it before the crack.",
     } },
     "Titan's Grip": { hard: true, learned: {
       bastion: "A ring followed one of us. Anyone in it when it closed was held fast, and a ring came up on them to share. The whole line ran to the held man and stood in it. Otherwise, out of the first ring. Nobody is held alone.",
@@ -359,6 +407,9 @@
       chronomancer: "A ring follows one of us. Whoever is in it when it closes is held, and a ring to share comes up. Everyone in, before the crush, a beat early if possible. Otherwise stay out. I will have stayed out. I did.",
       alembist: "A ring follows; whoever is inside when it closes is held, and a ring to share appears. Everyone into it, or they are crushed. Otherwise keep out. No exceptions, and, for once, no spills.",
       threadweaver: "A ring followed one stitch. When it closed, he gripped whoever was inside, and a ring to share came up on them. Every thread drew in tight around the held one, or they're crushed. Otherwise keep out of the first ring.",
+      tidecaller: "A ring followed one of us, and his fist closed on whoever stood in it. Then a second ring rose on the held one, and we all waded in to share it, or they were crushed. Before that, I kept clear of the first ring. No one drowns alone if the rest wade in.",
+      lanternkeeper: "A ring followed one of us, and his fist closed on whoever stood in it. Then a second ring rose on the held one, and the rest of us waded in to share it. Before that, keep clear of the first. I set a lantern in the second.",
+      kenseier: "A ring followed one of the others. Whoever was in it when it closed was held fast, and a ring rose on them to be shared. All of us ran to the held one and stood in it. Keep out of the first ring and the rest is easy.",
     } },
   },
 };

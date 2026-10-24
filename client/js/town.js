@@ -30,6 +30,9 @@ const TOWN = {
   spawn: { x: 1200, y: 1180 },
   // the Arena (PvP, pvp-ui.js draws it): a stone pit south of the Training Yard, its gate on the north rim
   arena: { x: 1990, y: 1405, w: 230, h: 160, door: { x: 2105, y: 1398 } },
+  // the Barrow Gate (barrow-gate.js draws it): the way back into the Hollow King's hall for the spec trials, in the north-east
+  // beside the east terrace. It only exists once a hero has cleared the Hollow King.
+  barrow: { x: 2000, y: 225 },
 };
 
 const COLLIDERS = { rects: [], circles: [] };

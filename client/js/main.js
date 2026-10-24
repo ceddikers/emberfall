@@ -246,7 +246,10 @@
       const RW = typeof RAID_CASTS !== 'undefined' ? RAID_CASTS : null;
       const wide = (c && RW && RW.test(c.name)) || [...raid.tgs.values()].some(tg => tg.type === 'raidwide' && tg.gone == null && now < tg.start + tg.dur) ||
         !!(RW && raid.bnext && raid.bnext.l.some(e => { const left = e[1] - (now - raid.bnext.at); return RW.test(e[0]) && left > -0.5 && left < 5; }));
-      return { casting: !!c, castLeft: c ? c.start + c.dur - now : 0, next: n, onMe: raid.boss.tg === Net.id, vuln: raid.boss.v || 0, selfVuln: !!(s && s.vuln), wide: !!wide };
+      // (hitIn / hitKind: the Kenseier's closing ring, the next blow aimed at you; posture: the bar on the boss, fight.js kenPack)
+      const ring = kenRing();
+      return { casting: !!c, castLeft: c ? c.start + c.dur - now : 0, next: n, onMe: raid.boss.tg === Net.id, vuln: raid.boss.v || 0, selfVuln: !!(s && s.vuln), wide: !!wide,
+        hitIn: ring ? ring.at : null, hitKind: ring ? ring.kind : null, posture: raid.posture || null };
     },
     maxHp: () => { const s = myState(); return s ? s.maxHp : playerBaseHp(player.cls ? player.cls.role : 'dps') + (Inventory.mods(player.cls && player.cls.id).hp || 0); },
     onEvent: (a, ev) => onKitEvent(ev),
@@ -261,6 +264,7 @@
     },
     threads: () => (inArena() ? Stagecraft.threadsOf(Net.id, entById) : null),
     dolls: (a, list) => Stagecraft.setMine(list, player.cls && player.cls.id, actor && actor.kit),
+    lamps: (a, list) => Lamps.setMine(list, now),   // a Lanternkeeper's lanterns (lanterns.js; sent to the host 10 times a second)
     // a telegraph about to land on a spot (a circle, cone, spread or cleave due within `within` s): Pirouette glows for its Doll
     danger: (a, x, y, within) => inArena() && [...raid.tgs.values()].some(tg => tg.gone == null && !tg.hidden && ['aoe', 'spread', 'buster'].includes(tg.type) &&
       tg.start + tg.dur - now <= within && SHAPES.contains(tg.live || tg.shape, x, y, 12)),
@@ -339,17 +343,33 @@
   // how far out you've scrolled the raid camera (1 = the usual framing; the wheel takes it out to 0.8)
   function camOut() { const v = Number(Save.setting('camout', 1)); return v >= 0.8 && v <= 1 ? v : 1; }
   function healerish() { return actor && actor.abilities.some(a => a.target === 'ally'); }
+  // the next blow aimed at you, for a Kenseier's ring: a boss auto while it is on you, or a tankbuster telegraph that names you.
+  // { at: seconds until it lands (a little negative: it just did), kind: 'auto' | 'buster' }, or null
+  function kenRing() {
+    if (!inArena() || !raid || raid.state !== 'live') return null;
+    let best = null;
+    if (raid.boss.tg === Net.id && raid.nextAutoAt != null) best = { at: raid.nextAutoAt - now, kind: 'auto' };
+    for (const tg of raid.tgs.values()) {
+      if (tg.type !== 'buster' || tg.gone != null || !(tg.target === Net.id || tg.follow === Net.id)) continue;
+      const at = tg.start + tg.dur - now;
+      if (at > -0.3 && (!best || at < best.at)) best = { at, kind: 'buster' };
+    }
+    return best && best.at > -0.3 ? best : null;
+  }
 
   // --- kit events
   const SIM_EVENTS = new Set(['damage', 'heal', 'hot', 'shield', 'mit', 'raise', 'rewind', 'selfDamage', 'targetDebuff', 'partyBuff', 'allyBuff', 'snap', 'pool', 'brand', 'taunt', 'splash',
     'maw', 'ledger', 'gloom',   // (the Gorgemaw's jaw, the Oathbroker's Ledger and the Gloomsworn's vessel: fight.js classEvent)
     'tie', 'snip', 'tighten', 'tapestry', 'tug',   // (the Threadweaver's threads: fight.js weaveEvent)
+    'lamp',   // (a Lanternkeeper's lanterns burst: fight.js lampEvent)
+    'kensei',   // (a Kenseier's deflect, Mikiri Step and Posture: fight.js KENSEI_HOST)
     'lb',   // (a Limit Break: fight.js limitBreak)
     'ult']);   // (an Ultimate pressed, for the contribution score: kitFx)
   const EV_FIELDS = ['type', 'amount', 'crit', 'target', 'ticks', 'interval', 'id', 'dur', 'tag', 'pct', 'kind', 'value', 'secs', 'threat', 'tgt', 'r', 'not',
     'up', 'sh', 'cl', 'pa', 'ps', 'pr', 'fol',   // (a thrown vial's splash: fight.js splash())
     'all', 'op', 'older', 'mark', 'freeze', 'drop', 'merge', 'hit', 'push', 'due', 'col', 'small', 'tithe', 'mult',   // (jaw and Ledger orders)
-    'pair', 'mx', 'st', 'dp', 'hm', 'seam', 'both', 'mit', 'keep', 'ub'];   // (threads; ub: a hit of an Ultimate or its window)
+    'pair', 'mx', 'st', 'dp', 'hm', 'seam', 'both', 'mit', 'keep', 'ub',
+    'lid', 'full', 'last'];   // (a lantern's burst: fight.js lampEvent)   // (threads; ub: a hit of an Ultimate or its window)
   function packEv(ev) {
     const o = {};
     for (const k of EV_FIELDS) if (ev[k] !== undefined) o[k] = ev[k];
@@ -1146,6 +1166,51 @@
   function closePractice() { if (practicePanel) practicePanel.classList.add('hidden'); }
   const practiceOpen = () => !!practicePanel && !practicePanel.classList.contains('hidden');
 
+  // ---------------------------------------------------------------- the Barrow Gate (barrow-gate.js)
+  // The spec trials taken at the town's second portal: this hero's two specializations, each with its trial. Starting one is
+  // the hero panel's own button (trialGo / beginTrial below), so solo and host-only exactly as there.
+  let barrowPanel = null;
+  function openBarrow() {
+    if (scene !== 'town') return;
+    if (!barrowPanel) {
+      barrowPanel = document.createElement('div');
+      barrowPanel.id = 'barrow'; barrowPanel.className = 'hidden';
+      document.body.appendChild(barrowPanel);
+      barrowPanel.addEventListener('mousedown', e => e.stopPropagation());
+      barrowPanel.addEventListener('click', e => {
+        const t = e.target.closest('button');
+        if (!t) return;
+        if (t.classList.contains('close')) { closeBarrow(); return; }
+        if (t.classList.contains('bg-pick')) { closeBarrow(); openSelect(null); return; }
+        if (t.classList.contains('trial-go') && !t.getAttribute('aria-disabled')) beginTrial(player.cls, t.dataset.spec);
+      });
+    }
+    renderBarrow();
+    barrowPanel.classList.remove('hidden');
+  }
+  function renderBarrow() {
+    const cls = player.cls, specs = (cls && SPECS[cls.id]) || [];
+    let body;
+    if (!cls) body = `<p class="bg-note">The gate has no name to call yet. Choose a hero at the Gilded Tankard, then come back.</p><button type="button" class="btn2 bg-pick">Choose a hero</button>`;
+    else if (!specs.length) body = `<p class="bg-note">${cls.name} has no specializations to prove yet.</p>`;
+    else body = `<div class="bg-hero"><i style="background:${ROLES[cls.role].color}"></i><b>${cls.name}</b><small>${cls.title}</small></div>${specs.map(s => gateCard(cls, s)).join('')}`;
+    barrowPanel.innerHTML = Num.fill(`<header><h3>The Barrow Gate</h3><button type="button" class="close" aria-label="Close">×</button></header>
+      <p class="bg-lede">The Hollow King's Shade keeps his hall as it was. Each memory is a short trial, fought alone with the allies it remembers.</p>${body}`);
+  }
+  // one specialization at the gate: who it is, whether its trial is passed, and the way in
+  function gateCard(cls, spec) {
+    const T = TRIALS[spec.id];
+    if (!T) return '';
+    const passed = Save.trialDone(cls.id, spec.id);
+    return `<div class="spec-trial gate-spec${passed ? ' passed' : ''}" style="--sa:${spec.accent || cls.accent}">
+      <div class="gs-head"><b>${spec.name}</b><small>${spec.title}</small><em class="gs-state">${passed ? 'Passed' : 'Open'}</em></div>
+      <p class="gs-focus">${spec.focus}</p>
+      <h5>${T.name}</h5><p class="gs-lore">${T.lore[0]}</p>
+      ${trialGo(spec.id, passed ? 'Walk it again' : 'Begin the trial', passed ? 'You leave the memory wearing this specialization.' : '')}</div>`;
+  }
+  function closeBarrow() { if (barrowPanel) barrowPanel.classList.add('hidden'); }
+  const barrowOpen = () => !!barrowPanel && !barrowPanel.classList.contains('hidden');
+
   // ---------------------------------------------------------------- progression (this browser)
   // Every pull of a boss on a difficulty: where its health ended, the phase reached and how long it went. Kept for the
   // last 40 pulls; the best is the lowest health ever reached (a clear is 0).
@@ -1279,6 +1344,12 @@
     const ok = d => Array.isArray(d) && Number.isFinite(d[0]) && Number.isFinite(d[1]) && Math.abs(d[0]) < 2000 && Math.abs(d[1]) < 2000;
     host.sim.setDoll(pid, msg.l.slice(0, 2).filter(ok).map(d => ({ x: d[0], y: d[1], st: Number(d[2]) || 0, s: Number(d[3]) || 0 })));
   });
+  // a Lanternkeeper's lanterns, from its own client: [{ id, x, y, r, h, w, k, ... }] (fight.js setLamps clamps them)
+  Net.onHost('lamp', (pid, msg) => {
+    const host = pvpHost || raidHost;
+    if (!host || !host.sim.setLamps || !hostRoster.some(h => h.id === pid && !h.left) || !Array.isArray(msg.l)) return;
+    host.sim.setLamps(pid, msg.l);
+  });
   Net.onHost('rleave', pid => {
     const h = hostRoster.find(x => x.id === pid);
     if (h) { h.left = true; if (raidHost) raidHost.sim.removePlayer(pid); if (pvpHost) pvpHost.sim.removePlayer(pid); }
@@ -1358,6 +1429,7 @@
     player.target = null; player.interact = null; player.dashMove = null; player.kb = null; player.angle = -Math.PI / 2;
     lockedAlly = null; lastEnemy = null;
     Stagecraft.reset();   // threads and Dolls (classes-c)
+    Lamps.reset();
     makeActor();
     for (const rm of remotes.values()) rm.ultReady = false;   // (everyone starts the raid with an empty Ultimate)
     RaidUI.resetRoster();
@@ -1384,6 +1456,7 @@
     if (scene !== 'arena') return;
     const wasPvp = !!(raid && raid.pvp);
     if (wasPvp) { document.body.classList.remove('in-pvp'); PvpUI.leave(); }
+    const wasTrial = trialPrevSpec !== undefined;
     if (trialPrevSpec !== undefined) {
       player.spec = trialPrevSpec; trialPrevSpec = undefined;
       if (player.cls) Net.send({ t: 'cls', id: player.cls.id, spec: player.spec });
@@ -1397,9 +1470,11 @@
     RaidUI.hideResults();
     player.x = TOWN.portal.x + (Math.random() - 0.5) * 80; player.y = TOWN.portal.y + TOWN.portal.r + 30;
     if (wasPvp && TOWN.arena) { player.x = TOWN.arena.door.x + (Math.random() - 0.5) * 60; player.y = TOWN.arena.door.y - 50; }   // (out of the Arena's gate)
+    if (wasTrial && BarrowGate.isOpen()) { const sp = BarrowGate.exitSpot(); player.x = sp.x; player.y = sp.y; }   // (a trial lets you out at the Barrow Gate)
     player.target = null; player.dashMove = null; player.kb = null;
     lockedAlly = null; lockedEnemy = null;
     Stagecraft.reset();
+    Lamps.reset();
     makeActor();
     setSceneUI();
     updateCamera(0, true);
@@ -1596,7 +1671,7 @@
       const pct = msg.s === 'clear' ? 0 : Math.max(0, Math.min(100, Math.round(msg.hp / msg.maxHp * 1000) / 10));
       raid.prog = progRecord(raid.def.id, raid.mode, { pct, ph: Number(msg.ph) || 1, time: Math.round(msg.time || 0), clear: msg.s === 'clear' ? 1 : 0, at: Date.now() });
     }
-    fadeTelegraphs(); raid.tethers.clear(); Stagecraft.endFight(); raid.lunges = []; raid.eggs = null; raid.rollers.clear(); raid.reels.clear(); player.reel = null;
+    fadeTelegraphs(); raid.tethers.clear(); Stagecraft.endFight(); Lamps.reset(); raid.lunges = []; raid.eggs = null; raid.rollers.clear(); raid.reels.clear(); player.reel = null;
     raid.sweeps.clear(); raid.edgeWarn = null; for (const p of raid.posts.values()) p.end = Math.min(p.end, now + 1);
     raid.doom.clear(); raid.lanterns = raid.lanterns.filter(l => l.last); for (const k of raid.knights.values()) k.gone = k.gone || now;
     if (msg.s === 'clear') raid.night = false;   // the Long Night lifts when he falls
@@ -1647,6 +1722,8 @@
     raid.bossStatus = Array.isArray(msg.bs) ? msg.bs : [];   // what's on the boss (fight.js bossStatus)
     if (Array.isArray(msg.g)) raid.gates = msg.g;   // the HP gates (ticks on the boss bar) and the wall's label while the boss is sealed (fight.js raiseWall)
     raid.wallLabel = msg.wl || null;
+    // a Kenseier in the party: the boss's Posture bar and Break (fight.js kenPack), for the HUD and the kit (world.boss)
+    raid.posture = Array.isArray(msg.po) ? { p: msg.po[0], max: msg.po[1], broken: msg.po[2], hold: !!msg.po[3], rec: !!msg.po[4], by: msg.po[5], at: now } : null;
     if (SH && raid.state === 'live' && msg.mx > 0 && Math.floor(msg.hp / msg.mx * 20) !== raid.hpBucket) { raid.hpBucket = Math.floor(msg.hp / msg.mx * 20); SH.vo('boss-hp', { bossId: raid.def.id, hp: msg.hp, maxHp: msg.mx }); }   // (every 5%)
     if (msg.ph != null && msg.ph !== raid.ph) { const first = raid.ph == null; raid.ph = msg.ph; if (SH && raid.state === 'live') { SH.phase(raid.def.id, msg.ph); if (!first) SH.vo('boss-phase', { bossId: raid.def.id, n: msg.ph }); } }
   });
@@ -2046,12 +2123,15 @@
     if (msg.k === 'read') actor.notify('read', msg);   // an Ironpalm's Read caught a hit (msg.b: it was a tankbuster)
     if (msg.k === 'shieldEnd') actor.notify('shieldEnd', msg);
     if (msg.k === 'carry' || msg.k === 'snapped' || msg.k === 'dollhit' || msg.k === 'tiefail') actor.notify(msg.k, msg);   // threads and Dolls (classes-c)
+    if (msg.k === 'lit' || msg.k === 'relit') actor.notify(msg.k, msg);   // what your lanterns healed (fight.js LANTERNS)
+    if (msg.k === 'kdef' || msg.k === 'kbrk' || msg.k === 'kbend') actor.notify(msg.k, msg);   // a Kenseier's deflect and Breaks (fight.js KENSEI_HOST)
     if (msg.k === 'death') { actor.kit.cast = null; actor.kit.queued = null; actor.kit.queuedO = null; actor.kit.inbuf.length = 0; player.target = null; player.dashMove = null; }
   });
   // the Threadweavers' threads, their snaps, and every Marionettist's Dolls (classes-c, stagecraft.js)
   Net.on('thr', msg => { if (raid) Stagecraft.onThreads(msg, now); });
   Net.on('thrs', msg => { if (raid) Stagecraft.onSnaps(msg, now, entById); });
   Net.on('dolls', msg => { if (raid) Stagecraft.onDolls(msg, now, Net.id); });
+  Net.on('lamps', msg => { if (raid) Lamps.onList(msg, Net.id); });   // every Lanternkeeper's lanterns (lanterns.js)
   // a healer's buff on one chosen ally (raid-host.js allyBuffs): every client keeps them all, for the party frames
   Net.on('abuff', msg => {
     if (!raid || !ALLY_BUFFS[msg.id]) return;
@@ -2088,7 +2168,7 @@
     if (scene !== 'town') return null;
     const m = mouseWorld();
     let best = null, bd = Infinity;
-    for (const it of [...interactables, ...lineup.map(h => ({ x: h.x, y: h.y, r: 24, reach: 80, label: h.cls.name, open: () => openHeroPanel(h.cls) })), ...TownLife.interactables(), ...Pastimes.interactables()]) {
+    for (const it of [...interactables, ...lineup.map(h => ({ x: h.x, y: h.y, r: 24, reach: 80, label: h.cls.name, open: () => openHeroPanel(h.cls) })), ...TownLife.interactables(), ...Pastimes.interactables(), ...BarrowGate.interactables()]) {
       const d = Math.hypot(m.x - it.x, m.y - it.y);
       if (d < it.r && d < bd) { best = it; bd = d; }
     }
@@ -2209,6 +2289,14 @@
     now: () => now,
     onFeast: () => { Inventory.refresh(); sendGear(); },
   });
+  // ---- the Barrow Gate (barrow-gate.js): appears once a hero has cleared the Hollow King; its panel is openBarrow
+  BarrowGate.init({
+    open: () => openBarrow(),
+    banner: text => TownLife.banner(text),
+    focus: pt => { camFocus = { f: pt, until: now + 5 }; },
+    busy: () => TownLife.busy() || TownLife.isTalking() || panelOpen() || practiceOpen(),
+    sound: () => { if (typeof Sound !== 'undefined') Sound.play('arrival', { vol: 0.8 }); },
+  });
   Inventory.setExtra(clsId => TownLife.feastTotals(clsId));
   const feastAt = new Map();
   function hostFeast(pid, m) {
@@ -2308,6 +2396,7 @@
     if (!started) return;
     if (e.key === 'Escape' && Pings.panelOpen()) { Pings.closePanel(); return; }
     if (e.key === 'Escape' && practiceOpen()) { closePractice(); return; }
+    if (e.key === 'Escape' && barrowOpen()) { closeBarrow(); return; }
     if (e.key === 'Escape' && Keybinds.panelOpen()) { Keybinds.closePanel(); return; }
     if (e.key === 'Escape' && Journal.isOpen()) { Journal.close(); return; }
     if (e.key === 'Escape' && Tutorial.isOpen()) { Tutorial.close(); return; }
@@ -2386,11 +2475,17 @@
       const l = Stagecraft.S.mine.l;
       if (Net.isHost && (pvpHost || raidHost)) (pvpHost || raidHost).sim.setDoll(Net.id, l); else Net.send({ t: 'doll', l: l.map(d => [d.x, d.y, d.st, d.s]) });
     }
+    // your lanterns to the host, 10 times a second (the host's own go straight in)
+    if (inArena() && raid.state === 'live' && Lamps.dueMine(now)) {
+      const l = Lamps.S.mine;
+      if (Net.isHost && (pvpHost || raidHost)) (pvpHost || raidHost).sim.setLamps(Net.id, l); else Net.send({ t: 'lamp', l });
+    }
     Stagecraft.update(now, dt);
     updateRemotes(dt);
     if (scene === 'town') updateTown(dt); else updateArena(dt);
     TownLife.update(dt, now, scene === 'town' && started);
     Pastimes.update(now, scene === 'town' && started);
+    BarrowGate.update(dt, now, scene === 'town' && started);
     if (scene === 'town') TownLife.checkDistance(); else if (TownLife.isTalking()) TownLife.endTalk();
     updateCamera(dt);
   }
@@ -2977,14 +3072,17 @@
     const townRemotes = [...remotes.values()].filter(r => r.scene === 0);
     const scEnv = { entById, me: Net.id, town: true };   // your Doll(s) follow you round town too (classes-c)
     Stagecraft.drawFloor(ctx, now, scEnv);
+    Lamps.drawFloor(ctx, now, scEnv);   // your lanterns light the training yard too
     Pastimes.drawGround(ctx, now);
+    BarrowGate.drawGround(ctx, now);
     TownLife.drawGround(ctx, now, TOWN.pedestals, BOSSES.map(b => b.id));
     TOWN.pedestals.forEach((pd, i) => { if (BOSSES[i]) drawPlaque(ctx, pd, bossOpen(BOSSES[i]) ? BOSSES[i].name : 'Sealed'); });
     for (const h of lineup) drawDeckPad(ctx, h.home ? h.home.x : h.x, h.home ? h.home.y : h.y, lineup.filter(o => o.cls.role === h.cls.role).length > 3);
-    const ents = [...lineup, keeper, trainer, ...statues, ...dummies, player, ...townRemotes, ...Stagecraft.entities(now, scEnv), ...TownLife.entities(HERO_SCALE)].filter(e => !TownLife.hides(e));
+    const ents = [...lineup, keeper, trainer, ...statues, ...dummies, player, ...townRemotes, ...Stagecraft.entities(now, scEnv), ...TownLife.entities(HERO_SCALE), ...BarrowGate.entities(now)].filter(e => !TownLife.hides(e));
     ents.sort((a, b) => a.y - b.y);
     for (const e of ents) { if (e.kind === 'stagecraft') e.draw(ctx); else drawEntity(e); }
     Stagecraft.drawOver(ctx, now, scEnv);
+    Lamps.drawOver(ctx, now, scEnv);
 
     drawScreenFx('dim');
     VFX.draw(ctx, 'air');
@@ -3008,6 +3106,7 @@
     if (player.cls) { const tt = Save.talents(player.cls.id); if (tt.picks.some((p, r) => r < tt.rows && p == null)) label(ctx, '!', trainer.x, trainer.y - 52 + bob, '#ffd65a', 26, 'Cinzel, Georgia, serif', 800); }
     for (const d of dummies) if (d.spar && Math.hypot(player.x - d.x, player.y - d.y) < 260) label(ctx, 'Sparring Dummy', d.x, d.y - 46, '#ffb0a0', 11);
     Pastimes.drawOver(ctx, now);
+    BarrowGate.drawOver(ctx, now);
     TownLife.drawLabels(ctx, label, f => Math.hypot(player.x - f.x, player.y - f.y) < 220);
     for (const r of townRemotes) if (!TownLife.hides(r)) playerTag(r, false);
     if (!TownLife.hides(player)) playerTag(player, true);
@@ -3059,6 +3158,7 @@
     // effect never sits over a mechanic; the telegraph rims are drawn over both again below (BossTells.rims)
     FX.draw(ctx, true);
     VFX.draw(ctx, 'ground');
+    Lamps.drawFloor(ctx, now, { entById, me: Net.id, party: units });   // lantern glows: faint, and under every telegraph (lanterns.js)
     ArenaView.drawTelegraphs(ctx, raid.tgs, now, tellEnv);
     BossTells.drawRollers(ctx, raid.rollers, now, tellEnv);
     BossTells.drawSweeps(ctx, raid.sweeps, now, tellEnv);
@@ -3145,6 +3245,7 @@
       if (a && b && now <= th.end) ArenaView.tether(ctx, a, b, th, now, raid.mode === 'hard');
     }
     Stagecraft.drawOver(ctx, now, scEnv);
+    Lamps.drawOver(ctx, now, { entById, me: Net.id, party: units });
     drawScreenFx('dim');
     VFX.draw(ctx, 'air');
     // add health bars
@@ -3239,6 +3340,7 @@
     dot(TOWN.portal.x, TOWN.portal.y, 4.5, '#b080ff');
     for (const b of TOWN.houses) if (b.hall) dot(b.x + b.w / 2, b.y + b.h / 2, 4, '#7fd0a0');
     if (TOWN.arena) dot(TOWN.arena.x + TOWN.arena.w / 2, TOWN.arena.y + TOWN.arena.h / 2, 4, '#e8a05a');
+    if (BarrowGate.isOpen()) dot(TOWN.barrow.x, TOWN.barrow.y, 4, '#8fe3dc');   // (the Barrow Gate, once it has risen)
     dot(keeper.x, keeper.y, 3.5, '#ffd65a');
     dot(trainer.x, trainer.y, 3, '#f0d48a');
     for (const r of remotes.values()) if (r.scene === 0) dot(r.x, r.y, 3.5, r.cls ? ROLES[r.cls.role].color : '#dffaff');
@@ -3340,6 +3442,7 @@
   function closePanels() {
     Tutorial.close();
     overlay.classList.add('hidden'); bossPanel.classList.add('hidden');
+    closeBarrow();
     sel.classList.add('hidden');
     Inventory.close();
     TalentPanel.close();
@@ -3440,22 +3543,27 @@
     box.innerHTML = Num.fill(`<h4>Specialization</h4><div class="spec-tabs">${tabs}</div>${body}`);
     box.querySelectorAll('.spec-tab').forEach(b => b.addEventListener('click', () => { selSpec = b.dataset.spec || null; rerender(); }));
     const tb = box.querySelector('.trial-go');
-    if (tb) tb.addEventListener('click', () => {
-      if (tb.getAttribute('aria-disabled') || scene !== 'town') return;
-      if (player.cls !== cls) chooseHero(cls);
-      closePanels();
-      startTrial(tb.dataset.spec);
-    });
+    if (tb) tb.addEventListener('click', () => { if (!tb.getAttribute('aria-disabled')) beginTrial(cls, tb.dataset.spec); });
     box.querySelectorAll('.spec-move').forEach(m => { const i = Number(m.dataset.i); Tip.set(m, () => abilityTip(cls, sk.abilities[i])); });
   }
   // under a sealed or trial-ready spec: the trial's name and memory, and the way in once it's open
   function trialCard(cls, spec, state) {
     const T = TRIALS[spec.id];
     if (state === 'open' || !T) return '';
-    if (state === 'locked') return `<div class="spec-trial locked"><h5>${T.name}</h5><p>Sealed until this hero has cleared the Hollow King.</p></div>`;
-    const host = Net.isHost && scene === 'town';
+    if (state === 'locked') return `<div class="spec-trial locked"><h5>${T.name}</h5><p>Sealed until one of your heroes has cleared the Hollow King.</p></div>`;
     return `<div class="spec-trial"><h5>${T.name}</h5><p>${T.lore[0]}</p>
-      <button class="cta trial-go" type="button" data-spec="${spec.id}"${host ? '' : ' aria-disabled="true" data-tip="Trials are solo. Begin one from town while you are hosting or playing alone."'}>Begin the trial</button></div>`;
+      ${trialGo(spec.id)}${BarrowGate.isOpen() ? '<small class="spec-gatehint">Trials are also taken at the Barrow Gate.</small>' : ''}</div>`;
+  }
+  // the way into a trial (the hero panel's card and the Barrow Gate share it): only the host, from town, plays one
+  function trialGo(specId, label = 'Begin the trial', tip = '') {
+    const host = Net.isHost && scene === 'town';
+    return `<button class="cta trial-go" type="button" data-spec="${specId}"${host ? (tip ? ` data-tip="${tip}"` : '') : ' aria-disabled="true" data-tip="Trials are solo. Begin one from town while you are hosting or playing alone."'}>${label}</button>`;
+  }
+  function beginTrial(cls, specId) {
+    if (scene !== 'town' || !cls) return;
+    if (player.cls !== cls) chooseHero(cls);
+    closePanels();
+    startTrial(specId);
   }
   function renderChoose(cls) {
     const btn = $('sel-choose'), spec = specOf(cls.id, selSpec);
@@ -3989,7 +4097,7 @@
     remotes.clear(); updatePartyList();
     if (scene === 'arena') leaveRaid(false);
     closePanels(); if (Inventory.isOpen()) Inventory.toggle();
-    Journal.close(); Tutorial.close(); Keybinds.closePanel(); Keybinds.arrange(false); Pings.closePanel(); closePractice();
+    Journal.close(); Tutorial.close(); Keybinds.closePanel(); Keybinds.arrange(false); Pings.closePanel(); closePractice(); closeBarrow();
     TownLife.endTalk(); Loot.leave(); TalentPanel.close();
     chatInput.classList.add('hidden'); chatInput.blur();
     started = false;
@@ -4108,7 +4216,7 @@
   // Handy for poking at the game from the browser console.
   window.__game = {
     player, remotes, get actor() { return actor; }, get raid() { return raid; }, get raidHost() { return raidHost; },
-    openHeroPanel, openBossPanel, chooseHero, startRaid, startTrial, openSelect, pressSlot, leaveRaid, CLASSES, BOSSES,
+    openHeroPanel, openBossPanel, openBarrow, chooseHero, startRaid, startTrial, openSelect, pressSlot, leaveRaid, CLASSES, BOSSES,
     // testing aid: advance the game clock by hand (for screenshots in throttled preview panes)
     // (it also unmutes FX/VFX: a hidden preview pane is still being watched through screenshots)
     step(sec = 0.5) { FX.muted = false; VFX.mute(false); for (let t = 0; t < sec; t += 1 / 60) { now += 1 / 60; rOff += 1 / 60; rnow = realNow(); update(1 / 60); } render(); renderPanels(); updateTargetFrame(); Hud.update(now, now); },

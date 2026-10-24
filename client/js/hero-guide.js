@@ -69,7 +69,7 @@ const HERO_GUIDE = {
     ],
   },
   cleric: {
-    passive: { name: 'Dawnstar', icon: 'petal', desc: 'Dawn Petals regrow every 15s. Every third Petal you spend turns your next Smite into Dawnstar, an instant attack for {d:950}; a Mend counts as half a Petal, and a Petal that grows past 3 blooms by itself onto the most hurt ally. Healing becomes damage.' },
+    passive: { name: 'Dawnstar', icon: 'petal', desc: 'Dawn Petals regrow every 15s. Every third Petal you spend turns your next Smite into Dawnstar, an instant attack for {d:950}; a Mend counts as half a Petal (a whole one once your Petals run dry), and a Petal that grows past 3 blooms by itself onto the most hurt ally. Healing becomes damage.' },
     combos: [
       { keys: ['e', 'e', 'e', 'q'], text: 'Three Petals on hurt allies, then fire Dawnstar.' },
       { keys: ['r'], text: 'Prayer Circle before a raidwide (not after) for mitigation plus regen.' },
@@ -205,10 +205,10 @@ HERO_GUIDE.marionettist = {
 };
 // Gloomsworn (tank, class 18)
 HERO_GUIDE.gloomsworn = {
-  passive: { name: 'Hollow', icon: 'rite', desc: 'The Gloom meter fills as you fight: 8 for every hit you land, 6 for every hit you take. Keep it FULL when something big is coming. If a blow would kill you while it is full, you do not die: you go Hollow for 8s. You cannot drop below 1 HP and you hit 30% harder, but every point of damage you take is written down as a debt, and your healer must heal at least that much by the time the 4s after Hollow ends, or you fall. So when Hollow starts: call for heals, press Black Mantle, stay out of the next hit. Spending Gloom (Gloom Strike, Black Pall, Last Rite) empties the very thing that saves you. Once a minute.' },
+  passive: { name: 'Hollow', icon: 'rite', desc: 'The Gloom meter fills as you fight: 8 for every hit you land, 6 for every hit you take. Keep it FULL when something big is coming. If a blow would kill you while it is full, you do not die: you go Hollow for 8s. You cannot drop below 1 HP and you hit 30% harder, but every point of damage you take is written down as a debt, and your healer must heal at least that much by the time the 4s after Hollow ends, or you fall. So when Hollow starts: call for heals, press Black Mantle, stay out of the next hit. Spending Gloom (Gloom Strike, Black Pall, Last Rite) empties the very thing that saves you, and a full vessel is armour of its own: while it brims you take 10% less damage. When the Hollow lands the vessel breaks into 40 Gloom of dregs, both Gloom Strikes come back and the shade stands behind them: spend it all. Once a minute.' },
   combos: [
     { keys: ['q', 'q', 'q'], text: 'Rend, Sunder, Gloaming: every hit fills the vessel, and the combo carries your taunt (+20 Gloom).' },
-    { keys: ['e', 'w', 'w'], text: 'Shade Step, then two Gloom Strikes inside 4s: both echo for a second blow. Step only when you hold the Gloom for both.' },
+    { keys: ['e', 'w', 'w'], text: 'Shade Step, then two Gloom Strikes inside 4s: both echo for a second blow. E glows when you hold the Gloom for both.' },
     { keys: ['d', 'q', 'q'], text: 'Black Mantle as the tankbuster lands on you (40% less, +15 Gloom), then keep striking. Hollow already started? Press it at once: it cuts every blow while you are down to 1 HP, so your healer has less debt to pay back.' },
     { keys: ['r'], text: 'Black Pall on the raidwide that matters: 25% less for the whole party for 6s, for 30 Gloom. Do not cast it with a full vessel unless the raid needs it more than your Hollow.' },
     { keys: ['f'], text: 'Last Rite when you are low: all your Gloom becomes a barrier and a heal. It leaves the vessel empty, so there is no Hollow behind it.' },
@@ -221,9 +221,46 @@ HERO_GUIDE.thresher = {
   combos: [
     { keys: ['q', 'q'], text: 'Slash lays a Mark, Cleave a Drain. Keep pressing Q: a hit pressed within 1.2s of your last recovery adds a Backswing, a free second cut.' },
     { keys: ['w', 'd'], text: 'Hook lays the Thread and Gloam Blink binds. Both keep your Backswing going, so use them between your Slashes. When all four bars are up, stop: nothing more can be laid until one darkens or rots.' },
-    { keys: ['q', 'q', 'e'], text: 'Wait for gold, then Reap. E glows when any bar is in its gold stretch (the marked part): press it when most of them are. Too early pays 40%, too late 65%.' },
+    { keys: ['q', 'q', 'e'], text: 'Wait for gold, then Reap. E glows when any bar is in its gold stretch (the marked part): press it when most of them are. Too early pays 40%, too late 65%. All four gold at once is the Full Toll: the hour strikes again, so a beat of waiting for the fourth is worth it.' },
     { keys: ['r', 'e'], text: 'Beckon puts every bar on the edge of gold at once. Press it, then Reap: you can cash the full toll early, or hold the gold for the moment the party bursts.' },
     { keys: ['f'], text: 'Spirit Wisp as soon as it is ready: it strikes every 2.5s for 15s and binds the boss if nothing else has. With the Sacrifice talent, press it again to pop it for a big hit and a damage bonus.' },
     { keys: ['t', 'q', 'q', 'q', 'q', 'q'], text: 'Reaper\'s Gate when T is full: nothing can touch you for 8s. Press Q once a second: each strike lays the next affliction, and the fifth, The Fifth, releases all four fully due. Do not stop at four.' },
+  ],
+};
+// Tidecaller (healer, class 20)
+HERO_GUIDE.tidecaller = {
+  passive: { name: 'The Tide', icon: 'surge', desc: 'A water line rises on its own over 12s, holds at the crest for 2s, ebbs over 6s, and starts again. Sip is stronger while it is low, and Surge heals from {h:120} at the floor to {h:480} at the crest. Spending lowers the water: a Sip takes a slice, a Surge takes it all.' },
+  combos: [
+    { keys: ['w', 'w', 'w'], text: 'Sip while the water is low: it heals 30% more there, and the tide climbs back before the next hit.' },
+    { keys: ['r'], text: 'Surge when the tide is high and the boss is casting a raidwide. It glows when the two meet. A Surge at the floor is a fraction of that.' },
+    { keys: ['e', 'q'], text: 'Mark the tank just before a crest that lands on a tankbuster: the mark pops for {h:200} when the water crests. Salt Spray in the gaps nudges the tide up.' },
+    { keys: ['d', 'r'], text: 'Current while the tide is ebbing turns it round, and on a rising tide it climbs a quarter at once. Bend the cycle so the crest meets the raidwide, then Surge.' },
+    { keys: ['f', 'r'], text: 'Breakwater at the crest: the party takes 15% less and the water does not ebb while it stands, so a raidwide is met by full water.' },
+    { keys: ['t', 'r', 'r'], text: 'Spring Flood heals the party and holds high water for 6s: every Surge in it is instant, free and strikes the boss. Save it for the heaviest stretch.' },
+  ],
+};
+// Kenseier (tank, class 22)
+HERO_GUIDE.kenseier = {
+  passive: { name: 'The Beat', icon: 'deflect', desc: 'Every boss auto and tankbuster has a beat, and a ring closes on your feet to count it down. Press Deflect as it closes: a Perfect (a blink either side of the hit) turns it aside and adds 18 Posture to the boss (30 on a tankbuster), a Good halves it for 8. Only you can fill the boss\'s Posture. At full it Breaks: 4s of stagger, no casts, and everyone deals 15% more. A press with no blow to meet, or a blow taken without one, costs Poise, and with none left you are Off-balance for 2s: no deflects, 10% more damage taken.' },
+  combos: [
+    { keys: ['w', 'w', 'w'], text: 'Deflect every swing as the ring closes, not before: a miss costs Poise and locks the key for a moment. A steady run of Perfects is the whole rotation. W glows at the Perfect moment.' },
+    { keys: ['q', 'q', 'q'], text: 'Ember Cut between the blows: the third cut adds 8 Posture and carries your taunt. With the boss on someone else, a single press is the third cut and pulls it.' },
+    { keys: ['e'], text: 'Mikiri Step as a frontal or a charge lands on you: it passes through untouched and adds 25 Posture. It glows when a telegraph is about to land where you stand.' },
+    { keys: ['w', 'r'], text: 'When the Break comes, hold Deathblow for the party\'s burst: {d:900}, and it heals you, but it ends the Break early. Out of a Break, R is a Pommel (or a Redirect, as a Warden of the Ash).' },
+    { keys: ['d', 'w'], text: 'Ash Mantle before a tankbuster: 40% less damage, and every deflect inside it counts as Good at least, so a late press still turns the blow.' },
+    { keys: ['f', 'w'], text: 'Guard Stance when the party is about to take a hit: for 6s every deflect of yours also shields the nearest ally. As a Deathblade it becomes Iai Stance: your next Perfect is followed by a counter-cut.' },
+    { keys: ['t'], text: 'Thousand Cuts when T is full: the boss Breaks at once and a free Deathblow lands at double strength. Perfects fill it, so save it for the heaviest stretch.' },
+  ],
+};
+// Lanternkeeper (healer, class 21)
+HERO_GUIDE.lanternkeeper = {
+  passive: { name: 'Lanterns', icon: 'set', desc: 'Your lanterns heal everyone in their glow every second, {h:55} from a floor lantern and {h:80} from a Hand Lantern, and half that once the wick burns down to a stub. Embers light them: one comes back every 5s, and every third Trim the Wick gives one more.' },
+  combos: [
+    { keys: ['w', 'e', 'q', 'q', 'q'], text: 'Light the ground the party is about to stand on, hang a Hand Lantern on the knight, then Trim the Wick in the gaps. Each bolt tops up the nearest wick, and every third gives an Ember back.' },
+    { keys: ['w', 'd'], text: 'Set a lantern where the fight is going to be, then Carry the Flame to bring the old one after you. A moved lantern keeps its wick, so a good pull of the light costs nothing.' },
+    { keys: ['r'], text: 'Flare when the boss starts a blast that reaches everyone and two allies stand in glows: it lights up when they do. Glows that overlap stack, so draw the party in where two meet.' },
+    { keys: ['f'], text: 'Relight when two wicks are down to stubs: every wick back to full and the most hurt ally heals {h:320}. Do not spend it on gold wicks.' },
+    { keys: ['q', 'q', 'q', 'w'], text: 'Every third Trim the Wick gives an Ember, so a steady run of bolts pays for the next lantern. Do not sit at full Embers: the next one is wasted.' },
+    { keys: ['t', 'r'], text: 'Lighthouse when T is full: for 8s the whole room counts as inside every glow, the lanterns heal double and no wick burns down, and Flare is ready again. Fire it as the heaviest stretch begins.' },
   ],
 };

@@ -132,7 +132,6 @@ CLASSES.push(
 // No painted icons or portraits yet: the game draws its own icons until they are in.
 CLASSES.push({
   id: 'gloomsworn', name: 'Gloomsworn', title: 'Undying Vigil', role: 'tank', difficulty: 3, complexity: 3, accent: '#7a5aa8',
-  art: { icons: false, portraits: false },
   tagline: 'The dark keeps the watch. It does not let go.',
   gameplan: 'Strikes and wounds fill your Gloom, and heavy blows, a pall over the whole party and your last rite spend it. Keep it full when the killing blow comes and you do not fall: you go Hollow, held at one health, hitting harder, every wound written down as a debt. Your healer must pay the debt back before the grace runs out, or the dark takes it from you. Once a minute, at most.',
 });
@@ -141,7 +140,6 @@ CLASSES.push({
 // No painted icons or portraits yet: the game draws its own icons until they are in.
 CLASSES.push({
   id: 'thresher', name: 'Reaper', title: 'Mark, Wither, Reap', role: 'dps', difficulty: 3, complexity: 4, accent: '#8fd8e8',
-  art: { icons: false, portraits: false },
   tagline: 'Every soul keeps its appointment. You only have to be there.',
   gameplan: 'Your scythe lays four afflictions on the boss: a Mark that bleeds, a Drain that mends you, a Bind that pulses and a Thread that waits to be snapped. Each darkens, from pale to gold and then lapses. Reap spends them all, and pays the most when they are gold, so cut, weave, and let the toll come due. Once in a while step through the Gate, where nothing can touch you, and the fifth strike calls in all four at once.',
 });
@@ -153,6 +151,24 @@ CLASSES.push({
   art: { icons: false, portraits: false },
   tagline: 'The sea doesn\'t hurry. Neither do I.',
   gameplan: 'Your healing rises and falls like the sea. The tide climbs on its own; spend it as small sips while it\'s low, or wait for high water and let a surge wash over everyone. The skill is choosing when.',
+});
+
+// ---------------------------------------------------------------- Lanternkeeper (healer, class 21; docs/plans/2026-10-new-classes-3.md)
+// No painted icons or portraits yet: the game draws its own icons until they are in.
+CLASSES.push({
+  id: 'lanternkeeper', name: 'Lanternkeeper', title: 'The Keeper of the Last Light', role: 'healer', difficulty: 2, complexity: 4, accent: '#ffc46b',
+  art: { icons: false, portraits: false },
+  tagline: 'Every dark corner gets a light. Every light gets a keeper.',
+  gameplan: 'Set lanterns where the party will stand, hang one on whoever is taking the hits, and keep them lit. Lanterns heal everyone in their glow, so the skill is placement: be where the fight is going, not where it was.',
+});
+
+// ---------------------------------------------------------------- Kenseier (tank, class 22; docs/plans/2026-10-new-classes-3.md)
+// No painted icons or portraits yet: the game draws its own icons until they are in.
+CLASSES.push({
+  id: 'kenseier', name: 'Kenseier', title: 'The Ashen Guard', role: 'tank', difficulty: 4, complexity: 3, accent: '#ff8a3d',
+  art: { icons: false, portraits: false },
+  tagline: 'Every blow has a beat. Catch it.',
+  gameplan: 'Meet the boss\'s blows with your blade. A deflect pressed just as a blow lands turns it aside and wears down the boss\'s Posture; a clumsy one still blocks a little. Fill the bar and the boss Breaks: a short window where the whole party hits harder and your Deathblow lands. Only you can build it.',
 });
 
 // Boss panel text: flavor only. Nothing here tells you how to deal with an attack.

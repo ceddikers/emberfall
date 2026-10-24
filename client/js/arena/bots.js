@@ -578,7 +578,8 @@ const BotAI = {
     const cir = bot.actor && bot.actor.kit.g.circle;
     if (cir && cir.end > view.t + 1 && Math.hypot(cir.x - px, cir.y - py) > cir.r - 18) pen += 700;
     // a friendly healing pool (Moonwell): worth stepping into if it's close, for everyone but the tank
-    if (bot.role !== 'tank') for (const pl of view.pools || []) if (Math.hypot(pl.x - px, pl.y - py) < pl.r - 25 && Math.hypot(pl.x - bot.x, pl.y - bot.y) < pl.r + 260) pen -= 450;
+    // (a Lanternkeeper's glows count once however many overlap, so stacked lights never outweigh a telegraph)
+    if (bot.role !== 'tank') { let lit = false; for (const pl of view.pools || []) if (Math.hypot(pl.x - px, pl.y - py) < pl.r - 25 && Math.hypot(pl.x - bot.x, pl.y - bot.y) < pl.r + 260) { if (pl.lamp) { if (lit) continue; lit = true; } pen -= 450; } }
     // the closing edge: be well inside where the wall is about to jump to
     const en = view.edgeNext;
     if (en && en.at - view.t < 6) { const over = Math.hypot(px, py) - (en.r - 60); if (over > 0) pen += 5000 + over * 50; }
@@ -947,13 +948,16 @@ const BotAI = {
     // (ult.botOk: the class's own "worth pressing now", e.g. Focus pooled or a swing stored; ignored past 30s held)
     // (a burst with the threat lead thin would turn the boss: wait for the tank to pull ahead, unless it's nearly dead)
     if (bot.role === 'dps' && ctx.bossFrac > 0.04 && held < 25 && this.threatTight(bot, view) === 'stop') return false;
-    if (bot.role === 'dps') return (!k.ult.botOk || k.ult.botOk(k) || held > 30) && (ctx.mods.dmg > 0 || ctx.dpsCheck || ctx.bossFrac < 0.15 || held > 20 || !!(k.ult.burst && k.has(k.ult.burst)));
+    if (bot.role === 'dps') return (!k.ult.botOk || k.ult.botOk(k) || held > 30) && (ctx.mods.dmg > 0 || ctx.dpsCheck || ctx.bossFrac < 0.15 || held > 20 || !!(k.ult.burst && k.has(k.ult.burst)) || !!(view.posture && view.posture[2] > 0.5));   // (a Kenseier's Break is the party's window: cash in)
     const tid = bot.role === 'tank' && bot.cls && bot.cls.id;
     const onMe = m => (m.target ?? m.follow) == null || (m.target ?? m.follow) === bot.id;
     const buster = !!tid && (view.mechs.some(m => m.type === 'buster' && m.resolveAt - t < 3 && onMe(m)) ||
       !!(view.bossCast && BUSTER_CASTS.test(view.bossCast.name) && view.bossCast.left < 3 && view.bossTarget === bot.id));
     // (a Gorgemaw never bites with a tankbuster on its way: the lock would cost it the Open Wide that eats the buster)
     if (tid === 'gorgemaw' && buster) return false;
+    // (a Kenseier's Thousand Cuts is a Break on demand: into the party's burst, never into a Break already open, and not with a blow
+    // inside its animation lock's reach, which a press would cost the deflect)
+    if (tid === 'kenseier') return !(view.posture && view.posture[2] > 0) && !BotAI.kenHits(bot, view, 0).some(h => h.at - t < 1.3) && (!!view.burst || held > 12);
     if (held > 35) return true;
     if (bot.role === 'tank') {
       if (ctx.healCheck) return true;
@@ -991,6 +995,7 @@ const BotAI = {
     if (bot.cls.id === 'alembist') return BotAI.alembist(bot, k, view);   // brews ahead and throws (below)
     if (bot.cls.id === 'threadweaver') return BotAI.threadweaver(bot, k, view);   // keeps a web (classes-c, below)
     if (bot.cls.id === 'tidecaller') return BotAI.tidecaller(bot, k, view);   // rides the tide (class 20, below)
+    if (bot.cls.id === 'lanternkeeper') return BotAI.lanternkeeper(bot, k, view);   // lights the floor where the party stands (class 21, below)
     // a damage dealer about to pull the boss off the tank eases off for a moment (the threat fades; the tank pulls ahead)
     if (BotAI.threatTight(bot, view) === 'stop') return null;
     // healers: raise, then keep people up
@@ -1566,7 +1571,7 @@ BotAI.threadweaver = function (bot, k, view) {
   }
   if (free) {
     // a heavy blow aimed at someone: tie them to us, or (too far from us) to whoever stands nearest them, two Ties in a row
-    if (bot.tiePair && view.t - bot.tiePair.at < 3 && ready(tie)) { bot.healTarget = bot.tiePair.b; bot.tiePair = null; return tie; }
+    if (bot.tiePair && view.t - bot.tiePair.at < 1.6 && ready(tie)) { bot.healTarget = bot.tiePair.b; bot.tiePair = null; return tie; }
     if (ready(tie)) {
       for (const m of view.mechs) {
         if (m.type !== 'buster' || m.resolveAt - view.t > 4.5) continue;
@@ -1642,6 +1647,83 @@ BotAI.tidecaller = function (bot, k, view) {
   else if (ready(rip) && !tideMarked(k)) { const t = tank && frac(tank) < 0.97 ? tank : (low && frac(low) < 0.9 ? low : tank); if (t) { bot.healTarget = t.id; return rip; } }
   if (low && frac(low) < (tideLow(k) ? 0.78 : 0.6) && ready(sip)) { bot.healTarget = low.id; return sip; }
   return ready(spray) ? spray : null;
+};
+
+// Lanternkeeper (healer, class 21): stands among the party and sets a lantern wherever two or more allies gather with
+// none lit yet, keeps a Hand Lantern on the tank, carries a lantern left behind (lighting no one) to where the party has
+// moved, Flares as a raidwide lands (or when the party is low) with two allies in a glow, and Relights two stubs, or the
+// most hurt ally in an emergency. Trim the Wick the rest of the time. A Wayfarer walks its Stride through the party;
+// a Festival is released when the party is hurt.
+BotAI.lanternkeeper = function (bot, k, view) {
+  const idx = id => k.abilities.findIndex(a => a.id === id || a.replaces === id);
+  const ready = i => { const a = k.abilities[i]; return i >= 0 && k.usable(a) && k.readyIn(a) <= 0.0001 && k.available(a); };
+  const alive = view.players.filter(p => p.alive && !p.left), frac = p => p.hp / p.maxHp;
+  if (!alive.length) return null;
+  const hurt = [...alive].sort((a, b) => frac(a) - frac(b)), low = hurt[0];
+  const tank = alive.find(p => p.role === 'tank' && p.id !== bot.id);
+  const avg = alive.reduce((s, p) => s + frac(p), 0) / alive.length, hurtN = alive.filter(p => frac(p) < 0.85).length;
+  const raidNow = !!(view.bossCast && RAID_CASTS.test(view.bossCast.name)) || view.mechs.some(m => m.type === 'raidwide' && m.resolveAt - view.t < 2.5);
+  const free = !k.cast && k.lockUntil <= k.now, weave = free && k.gcdRemaining() > 0.45;
+  const g = k.g, me = { x: bot.x, y: bot.y };
+  const at = l => { if (l.on == null) return l; const p = alive.find(q => q.id === l.on); return p ? { x: p.x + l.ox, y: p.y + l.oy } : null; };
+  const covers = l => { const c = at(l); return c ? alive.filter(p => Math.hypot(p.x - c.x, p.y - c.y) <= l.r).length : 0; };
+  const floor = g.lan.filter(l => l.on == null && l.kind !== 'eternal');
+  const lit = new Set();
+  for (const l of g.lan) { const c = at(l); if (c) for (const p of alive) if (Math.hypot(p.x - c.x, p.y - c.y) <= l.r) lit.add(p.id); }
+  const nearMe = alive.filter(p => p.role !== 'tank' && Math.hypot(p.x - me.x, p.y - me.y) <= LANTERN.R * 0.9).length;
+  const flare = idx('flare'), carry = idx('carry'), set = idx('set'), hand = idx('hand'), rel = idx('relight'), trim = idx('trim');
+  if (weave) {
+    // Flare as a raidwide lands, or as soon as the hurt stand in the light (it is back every 20s: use it)
+    const hurtLit = alive.filter(p => lit.has(p.id) && frac(p) < 0.85).length;
+    if (ready(flare) && g.lan.length && (lit.size >= 2 || lkLight(k)) && (raidNow || hurtLit >= 2 || (hurtLit >= 1 && avg < 0.9) || lkLight(k))) return flare;
+    // a lantern left behind: carry it to where the party is now
+    const ca = k.abilities[carry];
+    if (ca && ca.id === 'carry' && ready(carry) && nearMe >= 2) {
+      const n = lkNearest(k, me, l => lkMovable(l) && Math.hypot(l.x - me.x, l.y - me.y) <= lkCarryReach(k));
+      if (n && n.d > 110 && covers(n.l) < 2 && !BotAI.danger(bot, me.x, me.y, view)) return carry;
+    }
+    if (ca && ca.id === 'trail' && ready(carry) && g.lan.filter(l => l.kind === 'small').length >= 3 && covers(g.lan.filter(l => l.kind === 'small').slice(-1)[0]) < 2 && nearMe < 2) return carry;
+  }
+  if (k.gcdRemaining() > 0.0001 || k.cast) return null;
+  // an emergency: Relight's heal (or a wisp) on the most hurt
+  const ra = k.abilities[rel];
+  if (ready(rel) && low && frac(low) < (g.emb >= 3 ? 0.4 : 0.25)) return rel;
+  if (ready(rel) && ra.id === 'relight' && floor.filter(l => lkStub(l)).length >= 2 && avg < 0.8) return rel;
+  if (ready(rel) && ra.id === 'wisp' && low && frac(low) < 0.6) return rel;
+  const handUp = g.lan.some(l => l.kind === 'hand' && l.end - k.now > 1.5);
+  if (ready(hand) && tank && !handUp && (frac(tank) < 0.8 || g.emb >= 3)) { bot.healTarget = tank.id; return hand; }
+  // someone hurt and out of every glow: the Hand Lantern goes to them (the tank is fine)
+  const lost = hurt.find(p => p.id !== bot.id && p.role !== 'tank' && frac(p) < 0.55 && !lit.has(p.id));
+  if (ready(hand) && lost && (!tank || frac(tank) > 0.6)) { bot.healTarget = lost.id; return hand; }
+  const sa = k.abilities[set];
+  if (ready(set) && sa) {
+    if (sa.id === 'stride') { if (k.now >= (g.strideUntil || 0) && (hurtN >= 1 || g.emb >= 3)) return set; }
+    else if (sa.id === 'festival') { if (!g.lan.some(l => l.kind === 'float' && l.end - k.now > 1.5) && hurtN >= 2) return set; }
+    else {
+      // somewhere two allies stand with no lantern lit over them, or a lantern about to go out over them
+      // (the party comes to a glow: bots step into healing on the floor, bots.js move)
+      const here = floor.filter(l => Math.hypot(l.x - me.x, l.y - me.y) < l.r * 0.6 && l.end - k.now > 3);
+      const lighting = floor.filter(l => l.end - k.now > 3 && covers(l) >= 2).length;
+      // (a party under steady raidwides gets a second light right over the first: glows stack, so long as none is snuffed for it)
+      const cap = sa.id === 'beacon' ? LANTERN.BEACON_MAX : LANTERN.MAX, fresh = floor.filter(l => l.kind === 'floor' || l.kind === 'beacon').length < cap;
+      if (!BotAI.danger(bot, me.x, me.y, view) && ((!here.length && lighting < 1) || (fresh && nearMe >= 2 && hurtN >= 2 && here.length < 2))) return set;
+    }
+  }
+  if (low && frac(low) < 0.55 && g.emb >= 2 && ready(rel)) return rel;
+  return ready(trim) ? trim : null;
+};
+
+// she stands among the party (the middle of everyone but the tank), so a lantern at her feet lights the most of them
+BOT_CLASS.lanternkeeper = {
+  home(bot, view) {
+    const b = view.boss, others = view.players.filter(p => p.alive && !p.left && p.id !== bot.id && p.role !== 'tank');
+    if (!others.length) return null;
+    const c = others.reduce((a, p) => ({ x: a.x + p.x / others.length, y: a.y + p.y / others.length }), { x: 0, y: 0 });
+    const d = Math.hypot(c.x - b.x, c.y - b.y) || 1, keep = Math.max(d, 210);
+    // a Wayfarer keeps walking a small loop through them while its Stride is lit, so its lights fall among them
+    const k = bot.actor && bot.actor.kit, walk = bot.spec === 'wayfarer' && k && k.now < (k.g.strideUntil || 0) ? 55 : 0, a = view.t * 1.6;
+    return ARENA.clamp({ x: b.x + (c.x - b.x) / d * keep + Math.cos(a) * walk, y: b.y + (c.y - b.y) / d * keep + Math.sin(a) * walk }, 60);
+  },
 };
 
 BOT_CLASS.threadweaver = {
@@ -1783,8 +1865,82 @@ BOT_CLASS.thresher = {
     if (k.gcdRemaining() > 0 || k.cast || k.lockUntil > k.now) return null;
     // an add in the scythe's arc as well as the main target: the Reap's wide cut pays twice, so it goes a little sooner
     const crowd = k.env.enemiesNear ? k.env.enemiesNear(THRESH.ARC_R).length >= 2 : false;
-    if (!k.ultWin && ok(reap) && on > 0 && (gold >= Math.max(2, on - 1) || (soon && gold >= 1) || rot >= 2 || (crowd && gold >= Math.max(1, on - 2)))) return reap;
+    const toll = on === 4 && gold === 3 && rot === 0 && !soon && !crowd;   // (the Full Toll: a beat more for the fourth gold)
+    if (!k.ultWin && ok(reap) && on > 0 && ((gold >= Math.max(2, on - 1) && !toll) || (soon && gold >= 1) || rot >= 2 || (crowd && gold >= Math.max(1, on - 2)))) return reap;
     return ok(slash) ? slash : null;
+  },
+};
+
+// ======================================================================= Kenseier (tank, class 22)
+// Every blow aimed at the bot has a beat: the boss's next auto (view.autoAt, the moment the host will swing, held back by a
+// Break, a stun or a pause) and every tankbuster telegraph on it. A Warden's deflect also reaches an ally in range, so a buster on
+// one of them close enough is a beat too. Each beat gets ONE planned press at (its time + a skill jitter): a pro is about
+// +-0.08 s (a bell of 0.045 s, never past 0.08), a sloppy bot (bot.sloppy = true) a flat +-0.3 s and lets one in seven go by.
+// The jitter comes from the beat's time, not the host's dice, so a seed replays the same way. A press after the blow still
+// counts too (the host gives the blow back, and the Poise), but a press a hair before the blow reads better than one a hair after, so the plan sits 0.045 s early.
+BotAI.kenHits = function (bot, view, reach) {
+  const out = [], t = view.t;
+  if (view.autoAt != null && view.bossTarget === bot.id && !view.boss.untargetable && view.autoAt > t - 0.01) out.push({ at: view.autoAt, kind: 'auto', own: true });
+  const me = view.players.find(p => p.id === bot.id);
+  for (const m of view.mechs) {
+    if (m.type !== 'buster' || m.resolveAt <= t) continue;
+    const tg = m.target ?? m.follow;
+    if (tg === bot.id) out.push({ at: m.resolveAt, kind: 'buster', own: true });
+    else if (reach > 0 && tg != null && me) {
+      const a = view.players.find(p => p.id === tg);
+      if (a && a.alive && Math.hypot(a.x - me.x, a.y - me.y) <= reach - 10) out.push({ at: m.resolveAt, kind: 'buster', own: false });
+    }
+  }
+  return out.sort((a, b) => a.at - b.at);
+};
+BOT_CLASS.kenseier = {
+  act(bot, k, view) {
+    const idx = id => k.abilities.findIndex(a => a.id === id || a.replaces === id);
+    const ok = i => { const a = k.abilities[i]; return i >= 0 && !!a && k.usable(a) && k.readyIn(a) <= 0.0001 && k.available(a); };
+    const t = view.t, K = bot.ken || (bot.ken = { plans: [] });
+    const hits = BotAI.kenHits(bot, view, kenCross(k));
+    const same = (p, h) => Math.abs(h.at - p.for) < 0.04;
+    // (a done plan stays while its blow is still ahead, so it is not made twice; an undone one whose blow has gone stays a moment for a late press)
+    const broken = !!(view.posture && view.posture[2] > 0);   // (a Break holds the boss's autos back: a press planned for one would meet nothing)
+    K.plans = K.plans.filter(p => (p.done ? hits.some(h => same(p, h)) : hits.some(h => same(p, h)) || (t - p.at < 0.4 && !(broken && p.kind === 'auto'))));
+    const u = (at, n) => { const x = Math.sin((at + n * 0.37) * 91.7 + bot.id * 7.13) * 43758.5453; return x - Math.floor(x); };
+    for (const h of hits) {
+      if (h.at - t > 1.2 || K.plans.some(p => same(p, h) || (!p.skip && Math.abs(p.for - h.at) < 0.35))) continue;
+      const g = Math.sqrt(-2 * Math.log(1 - u(h.at, 2) * 0.999999)) * Math.cos(2 * Math.PI * u(h.at, 3));
+      const jit = bot.sloppy ? (u(h.at, 1) * 2 - 1) * 0.3 : Math.max(-0.08, Math.min(0.08, g * 0.045));
+      K.plans.push({ kind: h.kind, for: h.at, at: h.at + jit - 0.045, skip: u(h.at, 4) < (bot.sloppy ? 0.15 : 0.02), done: false });
+    }
+    const planNear = within => K.plans.some(p => !p.done && !p.skip && p.at - t < within && p.at - t > -0.1);
+    const defl = idx('deflect'), cut = idx('cut'), db = idx('deathblow'), mantle = idx('mantle'), guard = idx('guard'), mk = idx('mikiri');
+    // the press itself (it queues behind a short animation lock; a locked or Off-balance Kenseier lets the beat go)
+    const due = K.plans.find(p => !p.done && !p.skip && t >= p.at);
+    if (due) {
+      due.done = true;
+      const a = k.abilities[defl];
+      if (a && k.usable(a) && k.available(a) && !k.cast) return defl;
+    }
+    const weave = k.gcdRemaining() > 0.5 && !k.cast && k.lockUntil <= k.now;
+    const ownBuster = hits.find(h => h.own && h.kind === 'buster');
+    // Ash Mantle ahead of a tankbuster aimed at it (after a deflect press's lock, before the next beat)
+    if (k.lockUntil <= k.now && !k.cast && ownBuster && ownBuster.at - t < 2.6 && ownBuster.at - t > 0.8 && ok(mantle) && !planNear(0.65)) return mantle;
+    if (weave && !planNear(0.65)) {
+      // Guard Stance / Iai Stance / Ember Duel: up as a blow of its own is about to come
+      if (ok(guard) && hits.some(h => h.own && h.at - t < 2.5)) return guard;
+      if (ok(mk)) {
+        if (k.abilities[mk].id === 'whirlwind') { if ((k.env.enemiesNear ? k.env.enemiesNear(110) : [1]).length > 0) return mk; }
+        else {
+          // Mikiri Step through a frontal that is about to land where it stands (it passes through: no hit, +Posture)
+          const me = view.players.find(p => p.id === bot.id);
+          const land = me && view.mechs.some(m => m.type === 'aoe' && m.avoidable !== false && !m.cover && m.resolveAt - t > 0.1 && m.resolveAt - t < 0.4 && SHAPES.contains(m.shape, me.x, me.y, 14));
+          if (land) return mk;
+        }
+      }
+    }
+    if (k.gcdRemaining() > 0.0001 || k.cast || k.lockUntil > k.now || planNear(0.35)) return null;
+    if (kenBroken(k)) return ok(db) ? db : null;
+    // (Pommel; a Warden's Redirect only for a blow worth sending back, a tankbuster's)
+    if (ok(db) && (!k.def.warden || (k.g.lastDef && k.g.lastDef.a >= 0.15 * k.env.maxHp()))) return db;
+    return ok(cut) ? cut : null;
   },
 };
 

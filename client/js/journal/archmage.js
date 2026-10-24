@@ -21,6 +21,9 @@
     chronomancer: "A man floating in the middle of a drowned tower, casting in tempos I am almost sure I have heard before. Two of us wore runes and a thread and had to close or part. I will have chosen right by now. I did not. Not yet.",
     alembist: "Specimen: one archmage, sunken, still working. A colleague, in a sense, and I covet his notes. Ailments: four elements in rotation, two runes tied by a thread. Note: the name of the spell to come tells the pair to close or part. I did not check the name.",
     threadweaver: "A wizard tying two of my stitches together with a bright thread of his own, without so much as asking. The nerve. The next spell decided whether to pull it tight or let it out, and I guessed. Wrong. A sloppy seam, and his, but my fault.",
+    tidecaller: "A tower drowned to its windows, and I felt at home, for the sea had been here first. Two of us wore runes on a bright thread, and the name of the spell to follow said whether to close or part. I guessed wrong once, and then I learned to read.",
+    lanternkeeper: "A tower drowned to its windows, and two of us wore runes on a bright thread while the rest waited to be told why. I guessed wrong once, and my lantern burned in the wrong half of the room. Tomorrow I read the spell before I light. Keep your light.",
+    kenseier: "A tower drowned in the sea, seven circles cut in the floor, and a wizard who never steps on them. Two of us wore runes joined by a thread, and the next spell named whether to close or part. I read it late. His staff, at least, keeps an honest count.",
   },
   // the first time this hero beats him
   win: {
@@ -43,6 +46,9 @@
     chronomancer: "He fell. I knew he would, somewhere in my second attempt, or my third. The circles went out together, which was just as I had remembered. Nobody had to be undone at the end, or only the once.",
     alembist: "Result: one archmage, retired. Shelves bare, every patient alive. His notes are waterlogged and fascinating, and I have taken two pages for study. Label: do not read aloud. I have already read aloud.",
     threadweaver: "He's down, and the thread he tied me with came loose of its own accord, as any good knot does. Every one of my stitches came out dry-ish and in one piece. The seams held. I'll darn the tower's curtains if it asks.",
+    tidecaller: "The circles went dark and the water in the tower stood still, slack at last. He had four moods and a fifth where all of them lit together, and we came through each. I stayed a while in his quiet. Mind the tide.",
+    lanternkeeper: "The circles went dark one by one and the tower stood quiet. He had four moods and a fifth where all of them lit at once, and we came through every one. I left a lantern burning on the bottom stair. Walk where it's warm.",
+    kenseier: "The Archmage is down and the circles are dark. Each of his tempers kept time differently, and by the last I could hear them all. I wiped the blade and the water ran off it. Ash settles.",
   },
   moves: {
     "Arcane Burst": { hard: false, learned: {
@@ -65,6 +71,9 @@
       chronomancer: "The burst lands a beat after his hands part. I had everyone mended just before, which was the moment I'd chosen for it last time, or next time. I forget which. It worked.",
       alembist: "Observation: the Burst, felt by all, nothing to step from. Dose everyone before it comes and keep the big flask uncorked for after. Front shelf. Do not shake.",
       threadweaver: "The Burst ran along every thread at once, and there's no tying that off. I made sure the whole hem was whole before it came, and pulled the slack tight after. No snags.",
+      tidecaller: "A flash across the whole room, and no corner of it was shaded. A blow like that is only weather, so I had let the water climb beforehand, and each of us came to it full and left it standing.",
+      lanternkeeper: "A flash across the whole room, with no corner shaded. I had the lanterns lit and the party close, and let them all burst as the light gathered. Everyone met it already mended, and left it standing.",
+      kenseier: "Raw light across the whole room, and no corner of it shaded. I stood close to the healer, came to it whole, and took it. A blow with no beat is one a blade cannot meet.",
     } },
     "Arcane Lance": { hard: false, learned: {
       bastion: "The Lance was meant for me. A wide sweep in front of him; I watched his staff level and had the shield up in the last instant. The line stayed out of the arc. Held.",
@@ -86,6 +95,9 @@
       chronomancer: "The lance falls a beat after his staff lowers. I had our knight warded in the moment before, which I will have done. The rest of us stood at his sides, outside the arc, where I have always stood.",
       alembist: "Label it plainly: do not stand in front of the staff. One heavy sweep, front of him only, at whoever holds him. A guard on our shield, and everyone else out of the arc. I stood at the side, clutching my satchel.",
       threadweaver: "The Lance landed on our knight, wide across the front of him, and I ran a little of it down a thread so he did not take all of it. Every other stitch at his flanks. Mind the slack.",
+      tidecaller: "A long bright sweep in front of him, meant for our knight. I watched the staff level and sent the water to him before it fell, while the rest of us kept to the flanks, out of the arc, like boats off a bar.",
+      lanternkeeper: "A long bright lance swept the front of the room, meant for our knight. I hung a lantern on him before it fell, and the rest of us stood out of the arc, at the flanks.",
+      kenseier: "The Lance was meant for me, a wide sweep before him. I watched his staff level and met it with the blade as it landed. The others stayed out of the arc. The staff always levels first, which is a courtesy.",
     } },
     "Rune Mark": { hard: false, learned: {
       bastion: "Two of us wore runes and a thread between. The name of the next spell said close ranks or fall apart. I read his list and called it, once I learned to look. Read orders before moving.",
@@ -107,6 +119,9 @@
       chronomancer: "Two runes, a thread between, and the next spell named in the feed: close, or part. I read the name before the beat, which is the correct beat to read it on. It took me a few tries to remember to.",
       alembist: "Two runes, two elements, a thread between their bearers. The runes alone tell you nothing; read the next spell on his list and it says whether the pair close up or part. Underline the list. Underline it twice.",
       threadweaver: "He stitched two of mine together with a bright thread and a rune each. The next spell on his list says pull it tight or let it out. I read the list before I touch the slack now. His work, my tension.",
+      tidecaller: "Two of us wore runes on a bright thread, and the spell named next on his list said what to do: close up, or part. I read it first, as one reads a tide table before launching, and called it, and the pair went the right way.",
+      lanternkeeper: "Two of us carried runes joined by a bright thread. The next spell on his list was named, and the name told the pair whether to stand together or apart. I read it off and called it before they had finished looking up.",
+      kenseier: "Two of us carried runes joined by a bright thread, and the name of the spell to come said whether to close or to part. I read his list before moving, once I had learned to look. The order is the beat.",
     } },
     "Cinder Rune": { hard: false, learned: {
       bastion: "Fire runes. Each bearer carried a ring of flame; the bearers marched to opposite ends, because close together a second fire showed between. The rest of us kept out of both. Dry boots.",
@@ -128,6 +143,9 @@
       chronomancer: "The rings land together and the third flame blooms between them if they stand close, a beat after. The pair went to opposite ends before the beat. I will have been far from my partner already, as I was.",
       alembist: "A ring of fire round each bearer. Keep them well apart and everyone else outside both rings; close bearers brew a second burst between them. Store apart, like anything that goes off.",
       threadweaver: "Fire wants the thread let all the way out: the pair at opposite ends, a ring of flame round each, and the rest of my stitches clear of both. Pulled too short, it caught alight in the middle.",
+      tidecaller: "Fire rings on the pair, and fire with a neighbour makes a second fire between. They went to opposite ends of the room, and the rest of us stayed outside both rings. I carried the water out to them.",
+      lanternkeeper: "Fire ringed each of the pair, and two fires near one another breed a third between them. So they took opposite ends of the room, and everyone else kept away from both blazes, lanterns included.",
+      kenseier: "The fire runes put a ring on each bearer, and a second fire between them if they stood close. So they stood far apart, at opposite ends, and we kept clear of the rings.",
     } },
     "Rime Rune": { hard: false, learned: {
       bastion: "Frost runes: one blow, in a blue circle halfway between the pair, for all of us to share. The bearers closed up and the line fell in around them. Shoulder to shoulder.",
@@ -149,6 +167,9 @@
       chronomancer: "A blue circle opens between the pair, a beat before the blow. The pair closed up and we all stood in, in good time. I remember it. I was there already, and so was the cold.",
       alembist: "One heavy cold blow in a blue circle between the bearers. Bearers together, everyone in the circle, the dose divided. Shelve with the warming draughts.",
       threadweaver: "Frost wants the thread pulled tight: the pair walked together, the blue circle sat between them, and I drew every stitch into it so the cold was shared. Pulled it tight and the cold ran off.",
+      tidecaller: "Frost on the pair, and a blue circle halfway between them where the blow was to be shared. They closed up and the rest of us came in beside them, all together in the circle, so the cold was divided like a catch.",
+      lanternkeeper: "Frost on the pair, and a blue circle halfway between them for the blow to be shared. They closed up, and the rest of us stepped in beside them. Four of us in one circle, and a lantern at its heart.",
+      kenseier: "Frost runes, with a blue circle halfway between the pair where one blow would land, to be shared. The bearers came together and the rest of us joined them in it. Divided among us, the cold was small.",
     } },
     "Storm Rune": { hard: false, learned: {
       bastion: "Lightning runes. A bolt ran from one bearer to the other, burning what lay between. They stood shoulder to shoulder, which made the bolt too short to matter. I kept the rest off the line.",
@@ -170,6 +191,9 @@
       chronomancer: "The bolt runs from one to the other, a beat after the runes flare. They stood shoulder to shoulder, so it had no distance to run. The rest of us stayed off the line. I will have done this before.",
       alembist: "Note: a bolt running bearer to bearer, burning all between. Bearers side by side, line kept short, everyone else off it. Insulate the shelf. Insulate the alchemist.",
       threadweaver: "Lightning runs the thread itself, so I pulled it tight: the pair side by side, the bolt with nowhere to go, and the rest of my stitches well off the line. A short seam carries no charge.",
+      tidecaller: "A bolt ran from one bearer to the other and burned whatever lay between. The pair stood shoulder to shoulder, so it had no road to run, and everyone else kept off the line as I would keep off a rip.",
+      lanternkeeper: "Lightning ran along the thread between the pair and scorched whatever stood in its way. They stood close, shoulder to shoulder, leaving the bolt nowhere to go, and the rest of us stayed off the line. I lit nothing near it.",
+      kenseier: "Lightning runes, and a bolt between the two bearers that burned whatever stood in its path. Standing side by side gave it no path at all. The rest of us stayed off the line anyway, out of respect.",
     } },
     "Rift Rune": { hard: false, learned: {
       bastion: "Void runes, violet rings, quiet in the middle. The bearers went to opposite sides, since close together the void opens between them. The line kept out of both rings. Held.",
@@ -191,6 +215,9 @@
       chronomancer: "The rings land on the pair and the void opens between them a beat later if they stand close. They went to opposite sides before the beat. I will have been far from my partner, as I must.",
       alembist: "Violet ring round each bearer, quiet centre. Everyone else out of the rings, bearers well apart; brought close, they open the void between them. Do not mix. I mixed once. We do not discuss it.",
       threadweaver: "The void wants the thread let out to its full length: the pair at opposite ends, a violet ring round each, my stitches outside both. Pulled too short, the void opened in the middle of the seam.",
+      tidecaller: "Violet rings on the pair, hollow in the middle, and close together the void opened between them. They went to opposite sides of the room and the rest of us stayed clear of both rings. Far apart, it was a still pool and no more.",
+      lanternkeeper: "Violet rings on the pair, hollow in the middle, and when they stand close the void opens between them. They went to opposite sides and the rest of us stayed clear of both rings. Far apart, the hollow does nothing at all.",
+      kenseier: "Void runes: a violet ring on each bearer, hollow in the middle. Close together they opened a void between them. They went to opposite sides and we kept out of the rings. Far apart, it was nothing.",
     } },
     "Pyre Rings": { hard: false, learned: {
       bastion: "Three rings in the floor. Two burned in turn; the third had no red on it and never caught. I held the line on that one, or on the first once it was ash. Plain ground, best ground.",
@@ -212,6 +239,9 @@
       chronomancer: "Three rings; the first burns, then the second, and the third is never touched. I will have been on the third already, or on the first after it was ash. It is the order that decides it.",
       alembist: "Three rings of floor, two burning in turn. The ring with no red on it is safe, as is the first ring once spent. Label the rings. Do not label them while burning.",
       threadweaver: "He burned the floor in three hems, two in turn. The one with no red never catches; I gathered every stitch there, or into the first hem once it had burned out. Mind the slack.",
+      tidecaller: "Three rings in the floor, two burning in turn. The third wore no red and never caught, so I stood on it, or on the first once it had ebbed to ash. The bare ring was dry ground, and I was glad of it.",
+      lanternkeeper: "Of the three rings in the floor, two burned one after the other. The bare one, without red, was the place to be, and so was the first once it had gone to ash. I carried my lantern there and stood in its glow.",
+      kenseier: "Three rings were cut in the floor and two of them burned in turn. The third stayed plain, never red. I took that one, or the first after it had gone to ash. Plain ground was the answer, and I was glad of it.",
     } },
     "Ice Lances": { hard: false, learned: {
       bastion: "Lines of ice reached out through some of us and followed. When mine set, I stepped off it; nobody stood in another man's line. Orderly, for once.",
@@ -233,6 +263,9 @@
       chronomancer: "The line follows until the beat it sets. Step off your own on that beat, and not onto another's. I stepped off, and then stepped back, because I forget what I did. Do not step back.",
       alembist: "Lines of ice through several of us, following until they lock. Step out of yours when it sets, never into another's. Keep the shelves out of line, too.",
       threadweaver: "Lines of ice ran through some of my stitches like basting threads, following them. When each locked, its stitch stepped out, and nobody sat on anyone else's line. Basting always comes out.",
+      tidecaller: "Lines of ice ran out through some of us and followed, then set. When mine locked I stepped off it, and kept out of everyone else's, the way one keeps out of another boat's wake.",
+      lanternkeeper: "Lines of ice ran out through some of us and followed, then set. When mine locked I stepped off it, and kept out of everyone else's. I set my lantern outside every line.",
+      kenseier: "Ice ran from some of us in long lines, following, then locked in place. The moment mine locked I walked off it, and I stayed out of everyone else's. Once set, a line is a stroke already finished.",
     } },
     "Leaping Bolt": { hard: false, learned: {
       bastion: "Lightning rings jumped from one man to the nearest, a heartbeat apart. We spread wide so it had no near man to jump to, and each walked out of his own ring.",
@@ -254,6 +287,9 @@
       chronomancer: "A ring of lightning on one, then on the nearest a heartbeat later, then the next. We spread wide beforehand, and each walked out of their ring on the beat. I will have spread wide earlier next time.",
       alembist: "Lightning on one, jumping to the nearest, a heartbeat apart. Everyone well apart, and walk out of your own ring. Store reactive flasks separately, preferably in another county.",
       threadweaver: "The bolt ran from one stitch to the nearest like a needle down a hem. I let the slack out so nobody was close, and each walked out of their own ring. A loose hem carries nothing.",
+      tidecaller: "A ring of lightning fell on one of us, then leapt to whoever stood nearest, a heartbeat apart. We kept far apart so it had no near one to leap to, and each walked out of their own ring as it landed.",
+      lanternkeeper: "Lightning fell in a ring on one of us, then leapt to whoever stood nearest. So nobody stood near anybody: we spread wide, and each walked out of their own ring as it landed. Scattered people are poorly served by a lantern. I trimmed the wicks and waited.",
+      kenseier: "Lightning ringed one of us and hunted the nearest body, a heartbeat later. Every one of us stood apart, so it found nothing to hunt, and each stepped out of their own ring. Distance is its own kind of guard.",
     } },
     "Void Rifts": { hard: false, learned: {
       bastion: "Rifts opened under each of us where we stood, then again where we had walked. I moved off my ground and then moved again. Standing firm is for walls. This was for boots.",
@@ -275,6 +311,9 @@
       chronomancer: "The rift opens beneath, then again where they went. Leave on the beat, and leave again on the next. I will have moved twice. It was exactly twice. I counted. It was three.",
       alembist: "Rifts beneath each of us, then again where we moved. Leave your spot, then leave the new one. Do not set a flask down. I set a flask down. It is in the void now, with the others.",
       threadweaver: "The void opened under every stitch, then again where they had moved. Keep them walking, off the first and off the second. A needle that stands still gets pricked.",
+      tidecaller: "The floor opened under each of us where we stood, and again where we had walked. I left my place, and then the next one, and kept moving like a tide that does not stay. Standing still was the only mistake.",
+      lanternkeeper: "The floor opened under each of us where we stood, and again where we had walked. Standing still was the only mistake. I picked my lantern up and kept moving with it; a lamp left behind is a lamp lost.",
+      kenseier: "Rifts opened under each of us where we stood, and again where we had walked. I left my ground, and then the next. Stillness has its place, and this was not it.",
     } },
     "The Binding": { hard: false, learned: {
       bastion: "Four sigils woke and the elementals rose from the middle, slow, each following me. I marched each to the sigil of its own colour and held it there. The line kept on the Archmage and clear of the falling light.",
@@ -296,6 +335,9 @@
       chronomancer: "The sigils woke, and the elementals follow the shield in order, one at a time. Each must be led to the sigil of its own colour and held. I will have struck him a hundred times in that interval. It felt like it.",
       alembist: "Four sigils, elementals following our shield. Each led into the sigil of its own colour and held; the rest keep striking him, off the falling light. Label by colour. Do not put the red one near the blue.",
       threadweaver: "Our knight threaded each elemental behind him to the sigil of its own colour and held it there. One left loose tears the whole hem. The rest of us kept stitching at him, off the falling light.",
+      tidecaller: "Four sigils woke and the elementals rose from the middle, slow, following our knight. He led each to the sigil of its own colour and held it there while I kept his water high, and the rest of us struck at the Archmage, out of the falling light.",
+      lanternkeeper: "Elementals climbed out of four sigils and plodded after our knight. He walked each to the sigil that matched it and kept it there, and I kept a lantern hung on him the whole while. The rest of us went for the Archmage, away from the falling light.",
+      kenseier: "Four sigils woke and four elementals climbed out of the middle, slowly, all after me. I led each to the sigil that matched its colour and held it there, and the others struck at the Archmage, out of the falling light. A long walk, and every step counted.",
     } },
     "Call of the Circle": { hard: false, learned: {
       bastion: "He called one elemental at a time, its colour naming its sigil. I walked it there; it followed; the line made room. Slow march, orderly.",
@@ -317,6 +359,9 @@
       chronomancer: "One elemental at a time, colour first, then sigil. The shield leads it there; we give room, in order. I have seen this walk before. I think I will see it again.",
       alembist: "Ailment: one elemental per call. Remedy: its colour names its sigil; our shield walks it there, the rest give room. Label by colour, as always. Do not put the red one near the blue.",
       threadweaver: "He called one at a time, and the colour said which sigil it was sewn to. Our knight walked it there and the rest of my stitches kept clear of the seam. Mind the slack.",
+      tidecaller: "One at a time he called them, and the colour of each named its sigil. Our knight walked it there and the rest of us made room along the way. I went beside him with a little water for the road. No hurry.",
+      lanternkeeper: "He summoned them singly, and each elemental's colour named the sigil it belonged to. Our knight led it across, the rest of us cleared his road, and I walked beside him with a lantern. Not a thing to hurry.",
+      kenseier: "He called them one at a time, the colour naming its sigil. I walked each there, it followed, and the others made room. No hurry, but no pause either.",
     } },
     "Convergence": { hard: false, learned: {
       bastion: "Every sigil lit at once, each its own colour, and worse where two met. The clear floor was out by the wall between the sigils. I took the line there, clear of the overlaps. Held.",
@@ -338,6 +383,9 @@
       chronomancer: "All four sigils light together, and where two meet the floor reacts a beat later. The clear ground is by the wall, between them. I will have stood there already. I had; I was early for once.",
       alembist: "Every sigil lit at once, overlaps worse. The clear ground is by the wall between the sigils, away from where two circles meet. Do not mix reagents. Do not mix anything.",
       threadweaver: "Every circle lit at once, and the overlaps were where the seams pucker. I took my stitches to the hem by the wall, between the sigils, clear of the overlaps. Pucker means pain.",
+      tidecaller: "Every sigil lit at once, and worse where two met. The clear floor lay out by the wall, between the sigils, and we gathered there, a quiet cove in a loud bay. I had the water high before we went.",
+      lanternkeeper: "Every sigil lit at once, and worse where two met. The clear floor lay out by the wall, between the sigils, and we gathered there. I set a lantern in that quiet corner before they lit, so we had a light to go to.",
+      kenseier: "Every sigil lit together, brighter where two overlapped. The clear floor was out by the wall, between the sigils, so we went there and waited. A quiet gap between loud notes, and the only place to stand.",
     } },
     "Counterspell": { hard: true, learned: {
       bastion: "He cast it again, flung to the far side of the room, the copy drawn on the floor at once. Ground that had been clear could be hit. I looked across the room, not at my boots, and moved. Nobody stays on ground he trusts.",
@@ -359,6 +407,9 @@
       chronomancer: "The last spell again, thrown to the far side a few moments after the first, the copy drawn at once. I looked across the room and moved. I have done this before. I have not enjoyed it before, either.",
       alembist: "Second dose: the last spell's areas again, mirrored through the middle. Read the copy at once, look across the room, move. I would have liked to bottle it.",
       threadweaver: "He turned the last pattern inside out, through the middle, to the far side. The copy shows at once. I looked across the whole hem and moved my stitches. A pattern is no good once it has been repeated.",
+      tidecaller: "He cast the last spell again, thrown across the room, and the floor showed it at once. Ground that had been calm was a rip now. I looked across the whole room, not down at my feet, and moved before the water turned.",
+      lanternkeeper: "He threw the last spell again to the far side of the room, and the floor showed it at once. Ground that was clear was clear no longer. I looked across the whole room, not at my feet, and moved my lanterns before the floor did.",
+      kenseier: "He cast the last spell again, flung across the room, its copy drawn on the floor at once. Ground that had been clear could be hit. I looked across the whole room, not at my feet, and moved. Never trust a quiet place.",
     } },
     "Rune Swap": { hard: true, learned: {
       bastion: "The runes jumped to two other men while we watched. The coming spell had not changed, so the new bearers closed ranks or kept apart as it asked. I stopped trusting names, and watched the runes.",
@@ -380,6 +431,9 @@
       chronomancer: "The runes jump to two other heads a beat after they land. The coming spell is the same, so the new bearers close or part as it says. I will have kept my eyes on the thread, not the face. Did.",
       alembist: "Runes jump to two others. The coming spell is unchanged; the new bearers close or part as its element requires. Relabel the bearers. Quickly, with a steady hand.",
       threadweaver: "He unpicked the thread and sewed it onto two other stitches. The coming spell had not changed, so the new pair pulled tight or let out as it asked. A good tailor undoes a seam without a trace. He is a good tailor.",
+      tidecaller: "The runes slipped from the pair and settled on two others, as a rip moves a sandbar. The coming spell had not changed, so the new pair closed or parted just as it told them. I stopped watching names and watched who wore them.",
+      lanternkeeper: "The runes jumped to two other people. What the next spell asked of the pair had not changed, so the new bearers did it, together or apart. I quit watching the names and began watching the runes.",
+      kenseier: "The runes slid off the two bearers onto two others while we watched. The spell that was coming had not changed, so the new pair closed or parted exactly as it told them. Names mean nothing; I followed the runes.",
     } },
     "Arcane Mark": { hard: true, learned: {
       bastion: "A blue ring rose where one of us had stood, drawn at once. The whole line walked into it, the marked man included, and we shared the blow.",
@@ -401,6 +455,9 @@
       chronomancer: "A blue ring rose where one of us had stood, a beat after they left it. We all stepped in, the owner too, and divided the blow. I'd already been standing in it. I think. It was simply the moment.",
       alembist: "A blue ring on the spot where one of us stood. Everyone in, owner included, the dose divided. Label the old spot. Do not drop anything there.",
       threadweaver: "A blue ring came up where one of my stitches had been, and I drew every thread back into it, its owner too, and we shared the blow. A heavy cloth is carried by many hands.",
+      tidecaller: "A blue ring rose where one of us had stood. We all walked into it, its owner too, and shared the blow, which is how a heavy wave is made small. I raised the water as we went in.",
+      lanternkeeper: "A blue ring rose where one of us had stood. All of us walked into it, its owner too, to share the blow. I set a lantern in the middle, and we stood four in one glow.",
+      kenseier: "A blue ring rose where one of us had stood, drawn at once. We all walked into it, the marked one with us, and shared the blow. Many hands on one hilt. Breathe, then strike.",
     } },
   },
 };

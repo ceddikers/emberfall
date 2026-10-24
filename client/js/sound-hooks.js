@@ -75,6 +75,38 @@ const SoundHooks = (() => {
       if (ev === 'gate-release') play('thresher-gate-bloom', mine ? { vol: 0.9, key: 'th-gate', minGap: 0.1 } : rem('th-gate', 0.9));
     });
   }
+  // a Tidecaller's moments (class id tidecaller; ability-vfx.js KIT_VFX handlers call this): the crest (a pearl note and a wash of foam), slack water, a Riptide Mark
+  // popping, the wave of a Surge (its pitch follows how high the water was), the Drowned Bell, the flood's gulls and the Leviathan's crash. Yours full, anyone else's soft and placed
+  function tidecaller(ev, d, mine, at, who) {
+    if (!has()) return;
+    safe(() => {
+      const o = (key, vol, extra) => Object.assign(mine ? { vol, key, minGap: 0.1 } : { vol: vol * 0.45, remote: true, at, key: key + ':' + (who || ''), minGap: 0.2 }, extra);
+      if (ev === 'crest') play('tide-crest', o('tc-crest', 0.5));
+      else if (ev === 'slack') { if (mine) play('tide-slack', o('tc-slack', 0.3)); }
+      else if (ev === 'pop') play('tide-pop', o('tc-pop', 0.7));
+      else if (ev === 'surge') { const f = (d && d.f) || 0; play('tide-wave', o('tc-wave', 0.5 + 0.4 * f, { rate: 0.85 + 0.4 * f })); }
+      else if (ev === 'bell') play('tide-bell', o('tc-bell', 0.8));
+      else if (ev === 'flood') setTimeout(() => safe(() => play('tide-gull', o('tc-gull', 0.35))), 800);
+      else if (ev === 'leviathan') play('tide-crash', o('tc-crash', 0.9));
+    });
+  }
+  // a Lanternkeeper's moments (class id lanternkeeper; ability-vfx.js KIT_VFX handlers call this): an Ember gained, a lantern snuffed, a small light dropped by the
+  // Stride, the Lighthouse going dark, the Eternal Lamp lit, Trailing Sparks, a Pillar of Flame and Pilgrim's Pace. The casts themselves sound from the ability
+  // (sfx-map.js). Yours full, anyone else's soft and placed; the drops of a Stride are very quiet and rate-limited
+  function lanternkeeper(ev, d, mine, at, who) {
+    if (!has()) return;
+    safe(() => {
+      const o = (key, vol, extra) => Object.assign(mine ? { vol, key, minGap: 0.1 } : { vol: vol * 0.45, remote: true, at, key: key + ':' + (who || ''), minGap: 0.25 }, extra);
+      if (ev === 'ember') { if (mine) play('lamp-ember', o('lk-ember', 0.5)); }
+      else if (ev === 'snuff') play('lamp-snuff', o('lk-snuff', 0.5));
+      else if (ev === 'drop') play('lamp-drop', o('lk-drop', 0.35, { minGap: 0.3 }));
+      else if (ev === 'end') { if (mine) play('lamp-end', o('lk-end', 0.5)); }
+      else if (ev === 'eternal') play('lamp-eternal', o('lk-eternal', 0.7));
+      else if (ev === 'sparks') play('lamp-sparks', o('lk-sparks', 0.55));
+      else if (ev === 'pillar') play('lamp-pillar', o('lk-pillar', 0.6, { minGap: 0.5 }));
+      else if (ev === 'pilgrim') { if (mine) play('lamp-pilgrim', o('lk-pilgrim', 0.5)); }
+    });
+  }
   // your own cast bar's quiet hum
   let castHum = null;
   // (a cast gets a soft, higher 'gathering' blip of its own sound at the press, a very quiet hum under the bar, and the full
@@ -232,7 +264,7 @@ const SoundHooks = (() => {
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wireUI); else wireUI();
   }
 
-  return { play, vo, ability, auto, hollow, thresher, castStart, castEnd, stacks, telegraph, bossCast, impact, music, phase, bossTrack, tick, stopBeds, ground, TG };
+  return { play, vo, ability, auto, hollow, thresher, tidecaller, lanternkeeper, castStart, castEnd, stacks, telegraph, bossCast, impact, music, phase, bossTrack, tick, stopBeds, ground, TG };
 })();
 
 if (typeof module !== 'undefined') module.exports = { SoundHooks };

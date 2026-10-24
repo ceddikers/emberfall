@@ -1,6 +1,6 @@
 # Boss journal: the voice bible
 
-Every hero keeps a journal. When a player sees a boss move and lives through it, that hero writes one entry about it, that night, by the fire, in their own voice. There are 19 journals and eight bosses, written by several writers at once, so this page is the shared reference. Read the rules first, then the hero you're writing.
+Every hero keeps a journal. When a player sees a boss move and lives through it, that hero writes one entry about it, that night, by the fire, in their own voice. There are 22 journals and eight bosses, written by several writers at once, so this page is the shared reference. Read the rules first, then the hero you're writing.
 
 Sources for every voice: the class tagline and gameplan (`client/js/data.js`), the spec blurbs (`client/js/combat/specs.js`), the passives (`client/js/hero-guide.js`) and the trial lore (`client/js/arena/trials.js`). A voice grows out of the class's own puzzle: what the hero *does* in a fight decides what they *notice* in one.
 
@@ -478,6 +478,75 @@ Each sheet: who they are, how they sound, what they notice, their tics, and two 
 
 ---
 
+### tidecaller — Tidecaller, The Voice of the Undertow (healer)
+
+**Who:** A tall barefoot singer in sea-blue wraps, a great conch on a strap. Her healing rises and falls like the sea; she has learned that the skill is not hurrying, it is choosing when to let the water come.
+
+**Voice:** Slow, sing-song, salt-wise. Talks of weather, depth and patience, and never rushes a sentence: long, rolling clauses that ebb into a short one. Vocabulary of water: high water and low, the ebb, the crest, slack water, the swell, a rip, the undertow, brine, spray, shingle, the shore, gulls, the moon. Comfortable with large things (a titan is weather, a dragon a bad tide); the boss is a sea to be read, not an enemy to be hated. Warm, a little amused at how fast everyone else is.
+
+**Notices:** Rhythm over a long span: how long until the water is high, when a blow will land on the crest or in the trough, who is taking the next hit and whether the water will be ready. She plans her tide around the blow and says so. She counts nothing aloud (no numbers); she says "a long breath", "a few swells", "when the water had risen".
+
+**Tics:**
+- Time in water: "by high water", "on the ebb", "a rising tide", "the water was already high when it came".
+- Calls the boss's moves weather or sea states ("a squall", "a rip", "a swell from nowhere").
+- Sparing sign-offs: "Mind the tide.", "The sea gives back.", "Wait for the water." Most entries simply ebb out on a quiet clause.
+- Patient where others are frantic: "There was no hurry. There never is."
+
+**Samples:**
+> He hits on his own time. I let the water climb and kept it climbing, so it was high when he finally swung, and the blast broke on a shore that was already full. Mind the tide.
+
+> Small things, many of them, and each a little nick. I sipped at whoever bled and let the water rise behind it. The sea is patient too. Wait for the water.
+
+**Don't:** let her become mystical or vague. Every entry still holds the real way to survive, said in water. She is never in a hurry and never smug, and she does not use "sip", "surge" or the other hotbar names: she says "the water" and what she did with it.
+
+---
+
+### lanternkeeper — Lanternkeeper, The Keeper of the Last Light (healer)
+
+**Who:** A short figure in a long soot-grey coat and a wide hat, an iron lantern on a pole and a smaller one at the hip. A night-watch lamplighter who walks the round at dusk. Healing, to her, is lighting the place before anyone has to stand in the dark of it.
+
+**Voice:** Calm, patient, kind. Small plain sentences, one thing at a time, and she counts: "three lights, four of us", "one lantern for each of them". Vocabulary of the lamplighter's trade: the round, the wick, oil, soot, brass, a match, a lamp-post, dusk and the small hours, a draught, a dark corner, a glow, the lit side and the unlit side. She never calls the boss a villain; he is a draught, a long night, a thing that puts lights out. Slightly rueful and a little dry about her own tidiness, but always gentle. Quieter and plainer than the Cleric, who prays, and warmer than the Alembist, who labels.
+
+**Notices:** Where the party will be standing next. She reads a fight as a street that needs lighting ahead of the walkers: the ring that is about to land, the corner the marks will send them to, who is carrying the weight and so wants a lantern hung on them. She says what she lit and *where*, and that it was lit before they arrived. She counts lights and people, but never seconds or percentages (no digits, no spelled-out times): "a long breath", "while the lamps were still warm", "before the wicks burned low".
+
+**Tics:**
+- Counting lights against people: "Three lights, four of us." "One on the floor, one on the shield."
+- "I lit it first." / "It was already burning when they got there." Light placed *ahead*, not after.
+- Wicks as a gauge of time: "while the wicks were gold", "once they had burned to stubs", "the lamps burn low".
+- Moves a lamp with her hands when the party must shift: "I picked it up and set it down where they were going."
+- Sparing sign-offs: "Keep your light.", "I'll leave one burning.", "Walk where it's warm." Most entries just end on a quiet, practical clause.
+
+**Samples:**
+> The ring was drawn on the floor long before it landed. I lit a lantern at the edge where we would all be standing, and was already there when the rest came in. Three lights, four of us, and enough glow to go round. Keep your light.
+
+> He struck at the shield again and again. I hung a lantern on our knight and left it there. A small steady glow beats a clever one that arrives late. I'll leave one burning.
+
+**Don't:** make her mystical, holy or a second Cleric (no prayers, no grace) or a second Tidecaller (no weather, no water, no slow sing-song). She does not use the hotbar names ("Flare", "Relight", "Hand Lantern", "Carry the Flame"); she says what she did: hung a light on someone, let every lantern burst, topped up the wicks, picked a lamp up and set it down. She is never in a hurry and never smug, and she never speaks of farm, field, tide or appointments.
+
+---
+
+### kenseier — Kenseier, The Ashen Guard (tank)
+
+**Who:** A tall figure in an ash-grey haori over dark lacquered plates, a cloth mask, one long blade with an ember-orange edge. A swordsman of the old ember-watch who meets every blow with the blade, and who thinks of a fight as a lesson with a very large teacher in it.
+
+**Voice:** Quiet, terse, a teacher of the blade. Short level sentences, nothing raised. He talks about the beat of a blow (the count, the long breath before it, the rest after it) and about timing: early, late, on the beat. Vocabulary: the beat, the count, the stroke, the cut, the sweep, a rest between strokes, ash, the blade, the edge, a form. Dry respect for the boss; a heavy blow is "honest", "courteous", "slow enough to teach with", and a boss who is good at his work gets a short nod. He writes about the blow he met and, with equal care, about the ones a blade cannot meet (a roar, a mist, a stare), which he simply outlasts, or puts stone in front of.
+
+**Notices:** Whether a blow has a beat he can count, and whether it is aimed at him. A blow aimed at him he meets with the blade, as it lands, and turns aside; a sweep or a charge he steps through; the heavy ones he is ready for with the ash drawn about him. A blow with no beat (a blast across the room, weather, a stare) he says plainly the blade cannot turn, and he says what the party did instead. He keeps count of orders and rests, and calls them a beat ahead.
+
+**Tics:**
+- Counting in beats, not numbers: "the second stroke", "a beat late", "on the landing", "a heartbeat after".
+- "Met it with the blade as it landed" for a blow he turned; "stepped through" for a sweep or charge he crossed.
+- A small dry nod to the boss: "honest", "a courtesy", "he keeps good time, for a cook".
+- Sparing sign-offs, about one entry in ten: "Catch the beat.", "Breathe, then strike.", "Ash settles." Most entries simply end on a short clause.
+
+**Samples:**
+> His heavy strike comes after the long breath. I met it with the blade as it fell, and the others kept off the ground behind. A slow blow, and very honest about its beat. Breathe, then strike.
+
+> A mist across the whole cave, and a blade cannot turn a mist. We drew in beside the healer before it reached us and stood in it together. Some blows are only outlasted.
+
+**Don't:** make him a second Ironpalm (no "Breathe." as a verdict, no conversation: breath is only the gap before a blow here) or a second Bastion or Gloomsworn (no footing, no post, no "Held.", no dry remarks about being dead). He does not use the hotbar names ("Deflect", "Mikiri Step", "Ash Mantle", "Guard Stance", "Deathblow", "Posture", "Break"): he says he met a blow, stepped through it, drew the ash about him, or that the boss's guard cracked. He never calls himself a tank, never boasts, and never explains like a tooltip.
+
+---
 
 ## Quick reference: who notices what
 
@@ -502,6 +571,9 @@ Each sheet: who they are, how they sound, what they notice, their tics, and two 
 | marionettist | staging, cues and the company | (stage directions) |
 | gloomsworn | a post kept, and a wound already written down | a dry aside about being dead |
 | thresher | what is coming due, what has lapsed, and the hour of the appointment | "Not yet." |
+| tidecaller | the rhythm of the water: when it is high, when a blow lands, who is next | "Mind the tide." / "Wait for the water." |
+| lanternkeeper | where the party will stand next, and whether a light is already there | "Keep your light." / "I'll leave one burning." |
+| kenseier | the beat of a blow, and whether it can be met with a blade | "Catch the beat." / "Breathe, then strike." / "Ash settles." |
 
 **Pairs most likely to blur, and how to keep them apart:**
 - Bastion / Ironpalm / Runeguard (all "brace before the blow"): Bastion holds his ground, Ironpalm answers a word, Runeguard foresaw it.
@@ -510,4 +582,9 @@ Each sheet: who they are, how they sound, what they notice, their tics, and two 
 - Gloomsworn / Bastion (both tanks who take the blow): Bastion braces a shield at the last instant and ends "Held."; Gloomsworn lets the wound in, draws the dark about him, and makes a dry remark about having died. Different verbs, different endings, and never the same nouns for the ground ("footing", "line" are Bastion's).
 - Reaper / Oathbroker (both speak of what is owed): Oathbroker reads terms and fine print and ends "So noted."; Reaper keeps appointments and the hour, and ends "Not yet."
 - Reaper / Gloomsworn (both at ease with death): Gloomsworn takes the blow and makes a dry remark about having died; Reaper is the one who calls the hour, courteous and unhurried.
+- Tidecaller / Grovekeeper / Cleric (all patient, all heal before): Cleric prays for people, Grovekeeper plants for the season, Tidecaller lets the water rise so it is high when the blow lands and talks in long ebbing clauses about depth and weather.
+- Lanternkeeper / Cleric / Tidecaller (all patient, all heal before): Cleric prays for people, Tidecaller lets the water rise, Lanternkeeper lights the place ahead of the walkers and counts lights against people. Her nouns are wick, glow, brass and the round; she never prays and never speaks of water.
+- Lanternkeeper / Pyromancer (both fire): Pyromancer burns and boasts; Lanternkeeper tends a small light and says so softly. Pyromancer stands still to burn; Lanternkeeper walks ahead to light the next corner.
+- Kenseier / Ironpalm (both breath and rhythm): Ironpalm answers a word, replies, and ends "Breathe."; Kenseier counts the beat of a blow, meets it with the blade and ends on ash. Ironpalm's nouns are speech and conversation; Kenseier's are the beat, the stroke and the edge.
+- Kenseier / Bastion / Gloomsworn (all three tanks who take the blow): Bastion braces and holds the line ("Held."); Gloomsworn takes the wound and jokes about being dead; Kenseier turns the blow aside on its beat and has a dry nod for the boss. He never says "footing", "post" or "line", which are Bastion's.
 - Shadowblade / Marionettist (both theatrical): Shadowblade is noir and alone; Marionettist is the stage and the whole company.

@@ -32,13 +32,13 @@ const T = VL.TABLE;
 
 // ---------------------------------------------------------------- data
 const CLASSES = ['bastion', 'bloodreaver', 'runeguard', 'ranger', 'shadowblade', 'pyromancer', 'cleric', 'grovekeeper', 'chronomancer',
-  'thermist', 'driftblade', 'alembist', 'gorgemaw', 'oathbroker', 'ironpalm', 'threadweaver', 'marionettist', 'gloomsworn', 'thresher'];
+  'thermist', 'driftblade', 'alembist', 'gorgemaw', 'oathbroker', 'ironpalm', 'threadweaver', 'marionettist', 'gloomsworn', 'thresher', 'tidecaller', 'lanternkeeper', 'kenseier'];
 const COUNTS = { move: 8, select: 4, down: 3, revive: 3, low: 3, ult: 3, victory: 2 };
 for (const c of CLASSES) for (const k of Object.keys(COUNTS)) {
   const e = T[`hero-${c}-${k}`];
   ok(e && e.texts.length === COUNTS[k], `hero-${c}-${k}: ${COUNTS[k]} variants (has ${e ? e.texts.length : 'none'})`);
 }
-ok(Object.keys(VL.HEROES).length === 19, '19 classes');
+ok(Object.keys(VL.HEROES).length === 22, '22 classes');
 for (const c of CLASSES) { const ch = T[`hero-${c}-move`].chance; ok(ch >= 0.12 && ch <= 0.18, `${c} move chance ${ch} in 0.12-0.18`); }
 const PHASES = { grubnak: 5, skitterra: 4, volkar: 4, hollowking: 6 };
 for (const b of Object.keys(PHASES)) {

@@ -74,6 +74,8 @@ const Pastimes = (() => {
   }
   function giftCount() { const g = (Save.get('town') || {}).gifts || {}; return Object.values(g).reduce((n, h) => n + Object.keys(h || {}).length, 0); }
   function trialCount() { let n = 0; for (const h of Object.values(Save.get('heroes') || {})) n += Object.keys((h && h.trials) || {}).length; return n; }
+  // a count of heroes: n, or 'all' for every hero in the roster (it grows as classes are added)
+  const need = n => (n === 'all' ? (typeof CLASSES !== 'undefined' ? CLASSES.length : 19) : n);
   function heroesCleared() { return Object.values(Save.get('heroes') || {}).filter(h => h && h.clears && Object.values(h.clears).some(c => c && (c.normal || c.hard))).length; }
   function maxRarity() { let r = -1; for (const i of deps.items()) { const it = ITEMS[i.key]; if (it && it.rarity > r) r = it.rarity; } for (const k of Object.keys(st().seenItems)) { const it = ITEMS[k]; if (it && it.rarity > r) r = it.rarity; } return r; }
   function met(c) {
@@ -86,7 +88,7 @@ const Pastimes = (() => {
       case 'count': return stat(c.k) >= c.n;
       case 'hardRole': return hardRoles().has(c.role);
       case 'hardRoles': return ['tank', 'healer', 'dps'].every(r => hardRoles().has(r));
-      case 'hardClasses': return hardClasses().size >= c.n;
+      case 'hardClasses': return hardClasses().size >= need(c.n);
       case 'clearUnder': return (s.best[c.boss] || Infinity) <= c.secs;
       case 'pulls': return stat('pulls') >= c.n;
       case 'secrets': return Object.keys(s.secrets).length >= c.n;
@@ -95,7 +97,7 @@ const Pastimes = (() => {
       case 'fish': return c.fish ? (s.stats['fish:' + c.fish] || 0) > 0 : stat('fish') >= (c.n || 1);
       case 'journal': return journalPages() >= c.n;
       case 'bounties': return stat('bounties') >= c.n;
-      case 'heroes': return heroesCleared() >= c.n;
+      case 'heroes': return heroesCleared() >= need(c.n);
       case 'emotes': return stat('emotes') >= c.n;
       case 'items': return maxRarity() >= c.rarity;
       case 'practice': return stat('practice') >= c.n;
@@ -112,9 +114,9 @@ const Pastimes = (() => {
       case 'gifts': return [giftCount(), c.n];
       case 'fish': return c.fish ? null : [stat('fish'), c.n || 1];
       case 'journal': return [journalPages(), c.n];
-      case 'heroes': return [heroesCleared(), c.n];
+      case 'heroes': return [heroesCleared(), need(c.n)];
       case 'count': return c.n > 1 ? [stat(c.k), c.n] : null;
-      case 'hardClasses': return [hardClasses().size, c.n];
+      case 'hardClasses': return [hardClasses().size, need(c.n)];
       case 'hardRoles': return [['tank', 'healer', 'dps'].filter(r => hardRoles().has(r)).length, 3];
       default: return null;
     }

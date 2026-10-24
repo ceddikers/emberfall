@@ -1,7 +1,7 @@
 // The specialization trials: one short story vignette per spec, a memory of the Hollow King's court fought against
 // his Shade in the Barrow. Each fight is built so the spec's trick is the natural answer; nothing on screen says what
 // to do (the spec page already explains the moves), and a failed try just goes back to town to try again.
-// Clearing a spec's trial unlocks it for that hero (save.js); the trials open once that hero has cleared the Hollow King.
+// Clearing a spec's trial unlocks it for that hero (save.js); the trials open once any of the player's heroes has cleared the Hollow King.
 //
 // A trial: { cls, spec, name, lore: [two lines shown as it begins], outro (shown when it's won), allies: bot entries,
 //   seconds (how long it should take: sizes the Shade), enrage, regen (share of max HP everyone gets back per second),
@@ -558,5 +558,56 @@ function trialDef(specId) {
     },
   };
 }
+
+// ======================================================================= Lanternkeeper (healer, class 21)
+Object.assign(TRIALS, {
+  beacon: {
+    cls: 'lanternkeeper', spec: 'beacon', name: 'The Fixed Star',
+    lore: ['The court gathered where the old fires had burned, and the bells rang them down.', 'The keeper raised two tall lights and the court stood fast in them.'],
+    outro: 'Two lights stood, and nobody left them. The Beacon burns.',
+    allies: ['bastion:base', 'ranger:base', 'pyromancer:base'], guard: 'allies', seconds: 60, enrage: 150, regen: 0,
+    script(f, k) {
+      // the whole party hurt together, again and again: a light everyone stands in pays for itself
+      k.loop([[4, () => k.knell(3200, 4)], [6, () => k.blow(8000, 4)], [5, () => k.knell(3200, 4)], [5, () => {}]]);
+    },
+  },
+  wayfarer: {
+    cls: 'lanternkeeper', spec: 'wayfarer', name: 'The Road Lamp',
+    lore: ['The court was never still: the dead walked, and the living had to walk with them.', 'The keeper walked ahead, and the light came after.'],
+    outro: 'Every road lit behind you. The Wayfarer walks on.',
+    allies: ['bastion:base', 'ranger:base', 'shadowblade:base'], guard: 'allies', seconds: 60, enrage: 150, regen: 0,
+    script(f, k) {
+      // steady knells and blows on the tank: healing that keeps up while you move
+      k.loop([[3, () => k.knell(2400, 3)], [4, () => k.blow(8000, 3.5)], [3, () => k.knell(2400, 3)], [4, () => k.swing('stomp', 4500, 3.5)]]);
+    },
+  },
+});
+
+// ======================================================================= Kenseier (tank, class 22)
+Object.assign(TRIALS, {
+  deathblade: {
+    cls: 'kenseier', spec: 'deathblade', name: 'The Last Duel',
+    lore: ['The King\'s champion never raised his voice, and never missed a beat.', 'He let every stroke come, and answered the one that broke the other man\'s guard.'],
+    outro: 'The guard breaks, and the duel with it. The Deathblade finishes what it began.',
+    allies: ['ranger:base'], seconds: 55, enrage: 80, regen: 0.01,
+    script(f, k, me) {
+      // quick strokes at the knight on an even count, a heavy cleave among them: every one is a beat to catch, and a guard that breaks is the opening for the stroke that ends it
+      const stroke = () => k.blow(5200, 2, 'Sword Stroke', me.id);
+      k.loop([[2.5, stroke], [3, stroke], [3.2, stroke], [3.5, () => k.blow(9000, 3, 'Grave Cleave', me.id)], [4.5, () => k.swing('stomp', 4500, 3.5)]]);
+    },
+  },
+  warden: {
+    cls: 'kenseier', spec: 'warden', name: 'The Turned Blade',
+    lore: ['The King\'s court was never safe from its own guards.', 'The warden stepped between each blade and the one it was meant for, and sent it home.'],
+    outro: 'Every blade finds its way home. The Warden of the Ash holds the line.',
+    allies: ['cleric:base', 'shadowblade:base'], guard: 'allies', seconds: 58, enrage: 150, regen: 0.004,
+    script(f, k, me) {
+      // heavy strokes at the others as often as at the knight: the blade has to be where the next one lands
+      const other = () => f.alive().find(p => p.id !== me.id && p.role === 'dps') || f.alive().find(p => p.id !== me.id);
+      const at = (dmg, name) => () => { const t = other(); if (t) k.blow(dmg, 3.2, name, t.id); };
+      k.loop([[3, () => k.blow(6000, 3, 'Grave Strike', me.id)], [4, at(5200, 'Lunge at the Court')], [4, () => k.knell(2800)], [4, at(5200, 'Lunge at the Court')], [4, () => k.swing('stomp', 4500, 3.5)]]);
+    },
+  },
+});
 
 if (typeof module !== 'undefined') module.exports = { TRIALS, trialDef, trialMoves };

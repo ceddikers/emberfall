@@ -104,12 +104,12 @@ const FEATS = [
     check: { type: 'hardRoles' } },
   { id: 'hard-five', cat: 'mastery', name: 'Wide Repertoire', desc: 'Defeat a boss on Hard with 5 different heroes.', title: null, hidden: false,
     check: { type: 'hardClasses', n: 5 } },
-  { id: 'hard-all', cat: 'mastery', name: 'Every Hero, Hard', desc: 'Defeat a boss on Hard with all 19 heroes.', title: 'Hero of Heroes', hidden: false,
-    check: { type: 'hardClasses', n: 19 } },
+  { id: 'hard-all', cat: 'mastery', name: 'Every Hero, Hard', desc: 'Defeat a boss on Hard with every hero.', title: 'Hero of Heroes', hidden: false,
+    check: { type: 'hardClasses', n: 'all' } },
   { id: 'many-hands', cat: 'mastery', name: 'Many Hands', desc: 'Defeat a boss with 4 different heroes.', title: null, hidden: false,
     check: { type: 'heroes', n: 4 } },
-  { id: 'every-seat', cat: 'mastery', name: 'Every Seat at the Table', desc: 'Defeat a boss with all 19 heroes.', title: 'Of Many Faces', hidden: false,
-    check: { type: 'heroes', n: 19 } },
+  { id: 'every-seat', cat: 'mastery', name: 'Every Seat at the Table', desc: 'Defeat a boss with every hero.', title: 'Of Many Faces', hidden: false,
+    check: { type: 'heroes', n: 'all' } },
 
   // ---------------------------------------------------------------- your own fights
   { id: 'hand-up', cat: 'self', name: 'Hand Up', desc: 'Raise a fallen ally.', title: null, hidden: false,

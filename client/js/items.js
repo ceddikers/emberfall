@@ -215,12 +215,42 @@ Object.assign(ITEM_PERKS, {
 });
 
 // ---------------------------------------------------------------- Tidecaller (healer, class 20)
-// Weapon shape: 'conch'. The base gear so the class exists; its enhancements (ITEM_PERKS) come with the content pass.
+// Weapon shape: 'conch'. Enhancements follow the usual shape: w1 (Grubnak), a2 and w2 (Skitterra), w3 (Volkar), a4 (the Hollow King).
 CLASS_MAIN.tidecaller = 'mag';
 CLASS_GEAR.tidecaller = { wtype: 'conch', w: ['Driftwood Conch', 'Silk-Strung Conch', 'Storm-Shell Conch', 'Barrow-Pearl Conch', 'Conch of the Drowned Choir'], a: ["Tidewife's Wrap", "Weaver's Kelp Wrap", 'Stormsalt Wrap', 'Gravewater Wrap'] };
 Object.assign(ITEM_PERKS, {
-  tidecaller_w2: { ab: 'riptide', text: 'Riptide Mark\'s pop at the crest heals half again as much.' },
+  tidecaller_w1: { ab: 'surge', text: 'A Surge cast at high water leaves a sliver of tide (about 1.5s of rising) instead of draining to the floor (a Tidal Bore and an Undertow too).' },
   tidecaller_a2: { ab: 'breakwater', text: 'Breakwater lasts 2s longer.' },
+  tidecaller_w2: { ab: 'riptide', text: 'Riptide Mark pops twice at the crest: the second pop comes 1.5s after the first, at half.' },
+  tidecaller_w3: { ab: 'surge', text: 'Every Surge (or Tidal Bore, or Undertow) fills Spring Flood a little more: 1% more, up to 2.5% more at high water.' },
+  tidecaller_a4: { ab: 'current', text: 'Current also washes a little health over the whole party.' },
+});
+
+// ---------------------------------------------------------------- Lanternkeeper (healer, class 21)
+// Weapon shape: 'lantern'. Both enhancements sit on Skitterra's pair (a2 and w2): they are the two perks the kit checks
+// (kits.js k.perk('lanternkeeper_w2') / ('lanternkeeper_a2')). The Grubnak, Volkar and Hollow King pieces are Rare with the
+// boss's shared small effect (CLASS_FX), like every class's non-enhanced pieces; a w1, w3 or a4 enhancement needs a kit hook first.
+CLASS_MAIN.lanternkeeper = 'mag';
+CLASS_GEAR.lanternkeeper = { wtype: 'lantern', w: ['Tallow Lamp', 'Spider-Glass Lantern', 'Forge-Iron Lantern', 'Grave-Candle Lantern', 'Lantern of the Hollow King'], a: ["Lamplighter's Coat", 'Silkwick Coat', 'Soot-Black Coat', 'Barrow-Warden Coat'] };
+Object.assign(ITEM_PERKS, {
+  lanternkeeper_w2: { ab: 'hand', text: 'A Hand Lantern hangs on for 3s more, and a lantern you set (a Great Beacon too) burns 1s longer.' },
+  lanternkeeper_a2: { ab: 'carry', text: 'Carry the Flame tops up the wick of the lantern you move by a third (as much as a Flare burns off). Trailblaze does the same for every small light it drags.' },
+});
+
+// ---------------------------------------------------------------- Kenseier (tank, class 22)
+// Weapon shape: 'ashblade' (a long single-edged blade, ember along the edge). Placeholder item art until the painted set is in.
+// Enhancements follow the usual shape (w1 Grubnak, a2 and w2 Skitterra, w3 Volkar, a4 the Hollow King) and add the one set-2
+// piece the design asks for: w8, the Hydra's blade (`set2` in CLASS_GEAR: a class item of a later tier, built like the rest).
+CLASS_MAIN.kenseier = 'phys';
+CLASS_GEAR.kenseier = { wtype: 'ashblade', w: ["Watchman's Ashblade", 'Silk-Wrapped Ashblade', 'Forgefire Ashblade', 'Barrow Ashblade', 'Ashblade of the Last Watch'], a: ['Ember-Watch Haori', 'Webweave Haori', 'Stormash Haori', 'Gravestill Haori'],
+  set2: { w8: 'Ashblade of the Ninth Cut' } };
+Object.assign(ITEM_PERKS, {
+  kenseier_w1: { ab: 'deflect', text: 'A Perfect deflect heals you for about 2% of your HP.' },
+  kenseier_a2: { ab: 'deflect', text: 'Off-balance lasts 1s instead of 2s.' },
+  kenseier_w2: { ab: 'mikiri', text: 'A Mikiri Step that lets a blow pass through you also readies your next Ember Cut as the third cut.' },
+  kenseier_w3: { ab: 'mantle', text: 'Ash Mantle lasts 10s instead of 8s.' },
+  kenseier_a4: { ab: 'deathblow', text: 'A Deathblow in the first second of a Break leaves the party a short shield.' },
+  kenseier_w8: { ab: 'deflect', text: 'Thousand Cuts also charges a little from Good deflects.' },
 });
 
 // ---------------------------------------------------------------- item effects
@@ -266,6 +296,12 @@ const ITEMS = {};
   for (const [cls, g] of Object.entries(CLASS_GEAR)) {
     g.w.forEach((name, tier) => { const key = `${cls}_w${tier}`; ITEMS[key] = Object.assign({ key, name, slot: 'weapon', cls, main: CLASS_MAIN[cls], wtype: g.wtype, tier, rarity: classRarity(key, tier), base: edge(BASE.weapon) }, classFx(key, tier)); });
     g.a.forEach((name, i) => { const tier = i + 1, key = `${cls}_a${tier}`; ITEMS[key] = Object.assign({ key, name, slot: 'armor', cls, tier, atype: 'class', rarity: classRarity(key, tier), base: edge(BASE.armor) }, classFx(key, tier)); });
+    // (a later tier's class piece, `set2: { w8: name }` or `{ a7: name }`: the same build as the rest, with the set-2 step in itemStats)
+    for (const [slotKey, name] of Object.entries(g.set2 || {})) {
+      const isW = slotKey[0] === 'w', tier = +slotKey.slice(1), key = `${cls}_${slotKey}`;
+      ITEMS[key] = isW ? Object.assign({ key, name, slot: 'weapon', cls, main: CLASS_MAIN[cls], wtype: g.wtype, tier, rarity: classRarity(key, tier), base: edge(BASE.weapon) }, classFx(key, tier))
+        : Object.assign({ key, name, slot: 'armor', cls, tier, atype: 'class', rarity: classRarity(key, tier), base: edge(BASE.armor) }, classFx(key, tier));
+    }
   }
   const U = R_UNCOMMON, R = R_RARE, L = R_LEGENDARY, M = R_MYTHIC;
   const gen = [

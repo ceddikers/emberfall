@@ -113,6 +113,7 @@ class FightSim {
   addPlayer(p) {
     if (this.ps.has(p.id)) return;
     // gear (humans only, already capped by the host): flat HP and a little damage reduction
+    if (p.cls === 'kenseier') this.postureOn = true;   // (a Kenseier in the party: the boss carries Posture, KENSEI_HOST at the end of this file)
     const gear = p.gear || {};
     const maxHp = Math.round((playerBaseHp(p.role) + Math.max(0, Math.min(180, gear.hp || 0))) * (1 + (this.hpPct || 0)));   // (items.js GEAR_CAPS)
     this.ps.set(p.id, { id: p.id, role: p.role, hp: maxHp, maxHp, alive: true, def: Math.max(0, Math.min(0.11, (gear.def || 0) / 1000)), shield: 0, shieldEnd: 0, shieldMax: 0, shieldFrom: null, shieldTag: null,
@@ -385,6 +386,7 @@ class FightSim {
     for (const fn of this.tickers) fn(dt);
     if (this.updateClass) this.updateClass(dt);   // Ledgers coming due (end of this file)
     this.weaveTick(dt); this.dollTick(dt);   // classes-c: threads and Dolls (block at the end of this file)
+    this.lampTick(dt);   // the Lanternkeeper's lanterns (LANTERNS, the end of this file)
     for (const id in this.lastHit) if (this.t - this.lastHit[id] <= 2.5) this.stats[id].up += dt;   // (seconds with a blow on the boss or an add in the last 2.5 s)
     this.updatePlayers(dt);
     if (this.state !== 'live') return;
@@ -417,6 +419,7 @@ class FightSim {
     this.mechs.clear(); this.puddles = []; this.tethers.clear(); this.adds.clear(); this.zones = []; this.healPools = [];
     this.rollers.clear(); this.reels.clear(); this.sweeps.clear();
     this.weaveClear();   // classes-c: threads, Tapestry and Dolls
+    this.lampClear();   // the Lanternkeeper's lanterns
     this.events = []; this.broadcastNext(true);
     this.broadcastAdds();
     this.broadcastParty();
@@ -428,12 +431,13 @@ class FightSim {
     const b = this.boss;
     if (b.cast && this.t >= b.cast.end) b.cast = null;
     if (b.anim && this.t >= b.anim.end) b.anim = null;
+    if (this.postureOn) this.kenTick(dt);   // (Posture: a Break running out, recovery)
     const tank = this.tank();
     b.target = tank ? tank.id : null;
     if (b.target != null && this.stats[b.target]) this.stats[b.target].aggro += dt;   // (aggro seconds: scoring.js)
     // stuck in a wall after a charge, or held by a Time Stop (pauseBoss): no walking, turning or autos (a scripted
     // move already under way, moveTo, still finishes)
-    const stunned = b.stunUntil > this.t || b.pauseUntil > this.t;
+    const stunned = b.stunUntil > this.t || b.pauseUntil > this.t || !!(b.post && b.post.until > this.t);   // (a Break: KENSEI_HOST)
     if (b.moveTo) {
       const dx = b.moveTo.x - b.x, dy = b.moveTo.y - b.y, d = Math.hypot(dx, dy);
       const step = (b.moveTo.speed || 400) * dt;
@@ -452,7 +456,7 @@ class FightSim {
       }
     }
     if (tank && !b.untargetable && !stunned && !(b.noAutoUntil > this.t) && this.t >= b.autoAt) {
-      b.autoAt = this.t + FIGHT.AUTO_EVERY;
+      b.autoAt = this.t + (b.duelUntil > this.t ? KENSEI.DUEL_EVERY : FIGHT.AUTO_EVERY);   // (Ember Duel: a steady beat)
       const d = Math.hypot(tank.x - b.x, tank.y - b.y);
       if (d < FIGHT.MELEE * 1.5) {
         this.emit({ t: 'banim', name: 'auto', dur: 0.5 });
@@ -608,6 +612,7 @@ class FightSim {
         break;
       }
       case 'splash': this.splash(pid, ev); break;   // a thrown vial (Alembist)
+      case 'lamp': this.lampEvent(pid, ev); break;   // a Lanternkeeper's lanterns burst (LANTERNS, the end of this file)
       case 'brand': {  // Judgment on the boss: allies' next hits burst for the Inquisitor's damage
         const b = this.boss, old = b.brand && b.brand.from === pid && b.brand.end > this.t ? b.brand.charges : 0;
         b.brand = { from: pid, charges: Math.min(8, old + Math.min(8, ev.ticks | 0)), amount: Math.max(0, Math.min(3000, ev.amount | 0)), end: this.t + 15 };
@@ -615,6 +620,7 @@ class FightSim {
       }
       case 'snap': this.snapReel(pid); break;   // a dash snapped the silk reeling this player in
       case 'taunt': this.taunt(pid, typeof ev.tgt === 'string' ? ev.tgt : 'boss'); break;
+      case 'kensei': this.kenEvent(pid, ev); break;   // a Kenseier's deflect, step and Posture (KENSEI_HOST, the end of this file)
       case 'maw': case 'ledger': case 'gloom': if (this.classEvent) this.classEvent(pid, ev); break;   // Gorgemaw, Oathbroker, Gloomsworn (end of this file)
       case 'tie': case 'snip': case 'tighten': case 'tapestry': case 'tug': this.weaveEvent(pid, ev); break;   // Threadweaver (classes-c)
     }
@@ -751,6 +757,14 @@ class FightSim {
       mult *= 1 - m.pct;
     }
     if (invuln) mult = 0;
+    // a Kenseier's Off-balance, Mikiri Step and deflect (KENSEI_HOST, the end of this file)
+    let kd = null, kPre = 0;
+    if (this.postureOn && !opts.raw && !opts.nomit) {
+      if (s.offbal > this.t) mult *= 1 + KENSEI.OFF_DMG;
+      kPre = amt * mult;
+      kd = this.kenIncoming(p, s, kPre, opts);
+      if (kd) mult *= kd.mult;
+    }
     if (perfect || read || reflect) this.stats[p.id].perfects++;   // (a Brace, Read or Reflect that caught the hit)
     if (perfect) {
       s.mits = s.mits.filter(m => m !== perfect);
@@ -790,7 +804,9 @@ class FightSim {
     const pd = { t: 'pdmg', id: p.id, a: amt, k: opts.kind || 'hit', hp: Math.max(0, s.hp), dd: opts.avoidable ? 1 : 0 };
     if (opts.n) pd.n = opts.n;   // the move it came from (the death recap)
     if (absorbed > 0) pd.sh = absorbed;
-    if (s.hollow && amt > 0) pd.hl = 1;   // (taken as Hollow debt: hp stays at 1)
+    if (s.hollow && amt > 0) pd.hl = 1;
+    if (kd) pd.df = kd.q;   // (a deflect caught it: 2 Perfect, 1 Good, 3 Mikiri Step)
+    else if (this.postureOn && amt > 0 && (opts.kind === 'auto' || opts.kind === 'buster')) this.kenNote(p, kPre, amt, opts);   // (kept for a deflect pressed just after)   // (taken as Hollow debt: hp stays at 1)
     this.emit(pd);
     if (s.hp <= 0) {
       s.hp = 0; s.alive = false; s.shield = 0; s.mits = []; s.hots = []; s.threat = 0; s.diedAt = this.t; this.dropThreat(p.id);
@@ -1389,7 +1405,7 @@ class FightSim {
       u: b.untargetable ? 1 : 0, v: b.vulnEnd > this.t ? b.vuln : 0, ft: Math.round(this.t * 10) / 10, ph: this.phase,
       na: +(b.autoAt - this.t).toFixed(2),  // time to the next auto-attack, so clients can show the wind-up
       c: +this.t.toFixed(3),                // the fight clock, so clients can space the boss's moves evenly (interp.js)
-      bs: this.bossStatus(),                // what's on the boss, for the icons under the boss bar (raid-ui.js)
+      bs: this.bossStatus(), po: this.postureOn ? this.kenPack() : undefined,                // what's on the boss, for the icons under the boss bar (raid-ui.js)
       g: this.gateMsg(), wl: this.wall ? this.wall.label : undefined });   // the HP gates for the bar's ticks, and the wall's label while it holds
     if (this.adds.size || this.addsDirty) this.broadcastAdds();
   }
@@ -1504,6 +1520,7 @@ Object.assign(FightSim.prototype, {
     return amt;
   },
   classDeath(p, s) {
+    s.defl = null; s.step = null; s.offbal = 0;   // (a Kenseier's deflect, step and Off-balance end with it)
     s.maw = null; s.hollow = null; s.glm = null;   // (a Hollow ends with the knight)
     if (s.led) { s.led.e = []; s.led.cosign = null; s.led.ver++; }
   },
@@ -1724,9 +1741,9 @@ Object.assign(FightSim.prototype, {
         this.tapestry = { from: pid, end: this.t + num(ev.dur, 0, 10), keep: !!ev.keep };
         this.weaveDirty = true;
         return;
-      case 'tug': {   // Needle: each thread on the weaver heals whoever is on its far end
-        const amt = num(ev.amount, 0, 3000);
-        for (const th of this.threads) if (th.from === pid && (th.a === pid || th.b === pid)) this.applyHeal(pid, th.a === pid ? th.b : th.a, amt);
+      case 'tug': {   // Needle: each thread on the weaver heals whichever of its two ends is more hurt (the far end on a tie)
+        const amt = num(ev.amount, 0, 3000), hp = id => { const q = this.ps.get(id); return q && q.alive ? q.hp / Math.max(1, q.maxHp) : 2; };
+        for (const th of this.threads) if (th.from === pid && (th.a === pid || th.b === pid)) { const far = th.a === pid ? th.b : th.a; this.applyHeal(pid, hp(pid) < hp(far) ? pid : far, amt); }
         return;
       }
     }
@@ -1878,4 +1895,305 @@ Object.assign(FightSim.prototype, {
   },
 });
 
-if (typeof module !== 'undefined') module.exports = { FIGHT, FightSim, segDist, playerBaseHp, MAW_HOST, WEAVE_HOST, DOLL_HOST, HOLLOW_HOST };
+// ===================================================================================================================
+// LANTERNS: the Lanternkeeper's lanterns, host side (kits.js LANTERN; drawn by lanterns.js). One block of FightSim
+// methods; the core calls in with one line each: tick (lampTick), onEvent ('lamp' bursts: lampEvent), end (lampClear).
+// The owner's kit keeps its lanterns and reports them (setLamps: a human's client 10 times a second, a bot's kit every
+// tick): [{ id, x, y, r, h, w, k, on?, ox?, oy?, all?, st?, ln?, sg?, hh? }]. h is what one pulse heals (the kit works
+// out the wick, its gear and Lighthouse), w the wick (0-100), k the kind (0 floor, 1 Great Beacon, 2 hand, 3 small,
+// 4 floating, 5 eternal). on: an ally it hangs on (or 'c', the party's centre), placed at that ally plus ox, oy.
+//   - Once a second every alive player inside a glow heals that lantern's h (glows stack). all: everyone counts (Lighthouse).
+//   - st (Steady Glow): standing still in it for 3s, 5% less damage while there. ln (Lighthouse Keeper): its most hurt
+//     player heals 30% more. sg (Signal Fire): with two of them, a player on the line between (outside both) heals half.
+//     hh (Hearth): 6s in its glow heals hh, and again every 6s more.
+//   - 'lamp' events: op 'burst' (every lantern, or lid's: everyone in its glow heals amount and takes a shield sh;
+//     full: only those at full health take the shield, instead of the heal), op 'relight' (the most hurt player inside
+//     any glow heals amount; last: under 20% they can't fall for 3s, once every 90s).
+//   - The owner hears what its lanterns did ('fev' lit, every pulse: n ally-pulses healed, c players in a glow).
+//   - Everyone gets the list ('lamps', 10 a second) to draw other keepers' lanterns.
+// Nothing here is trusted: positions, radii and amounts are clamped like any other combat event.
+// ===================================================================================================================
+const LAMP_HOST = { MAX: 12, R: 220, HEAL: 2000, STALE: 1.5, PULSE: 1, STILL: 3, STEADY: 0.05, LINE: 30, HEARTH: 6, LAST_CD: 90, THREAT: 0.33 };
+Object.assign(FightSim.prototype, {
+  // a lantern's heal: like any heal, but it draws only a third of the usual healing threat (a light that never stops
+  // would otherwise pull the boss onto its keeper)
+  lampHeal(pid, tid, amt) {
+    const s = this.ps.get(pid), was = s ? s.threat : 0;
+    this.applyHeal(pid, tid, amt);
+    if (s) s.threat = was + (s.threat - was) * LAMP_HOST.THREAT;
+  },
+  setLamps(pid, list) {
+    if (!Array.isArray(list) || !this.ps.has(pid)) return;
+    const n = (v, lo, hi) => Math.max(lo, Math.min(hi, Math.round(Number(v) || 0)));
+    this.lamps = this.lamps || new Map();
+    const old = this.lamps.get(pid);
+    const l = list.slice(0, LAMP_HOST.MAX).filter(o => o && typeof o === 'object').map(o => {
+      const on = o.on === 'c' ? 'c' : o.on === 'self' ? pid : Number.isFinite(o.on) ? o.on : null;
+      return { id: n(o.id, 0, 1e9), x: n(o.x, -2000, 2000), y: n(o.y, -2000, 2000), r: n(o.r, 0, LAMP_HOST.R), h: n(o.h, 0, LAMP_HOST.HEAL), w: n(o.w, 0, 100), k: n(o.k, 0, 5),
+        on, ox: n(o.ox, -200, 200), oy: n(o.oy, -200, 200), all: o.all ? 1 : 0, st: o.st ? 1 : 0, ln: o.ln ? 1 : 0, sg: o.sg ? 1 : 0, hh: n(o.hh, 0, LAMP_HOST.HEAL) };
+    });
+    this.lamps.set(pid, { l, at: this.t, next: old ? old.next : this.t + LAMP_HOST.PULSE, inside: old ? old.inside : new Map(), lastAt: old ? old.lastAt : -999 });
+  },
+  // where a lantern is now (one hung on an ally goes where they go; 'c', over the party's centre)
+  lampAt(l, al) {
+    if (l.on == null) return l;
+    if (l.on === 'c') {
+      if (!al.length) return null;
+      const c = al.reduce((a, p) => ({ x: a.x + p.x / al.length, y: a.y + p.y / al.length }), { x: 0, y: 0 });
+      return { x: c.x + l.ox, y: c.y + l.oy };
+    }
+    const p = al.find(q => q.id === l.on);
+    return p ? { x: p.x + l.ox, y: p.y + l.oy } : null;
+  },
+  // the live lanterns: [[ownerId, lantern, {x, y}]]
+  liveLamps() {
+    const out = [];
+    if (!this.lamps || !this.lamps.size) return out;
+    const al = this.alive();
+    for (const [pid, L] of this.lamps) {
+      const s = this.ps.get(pid);
+      if (!s || !s.alive || this.t - L.at > LAMP_HOST.STALE) continue;
+      for (const l of L.l) { const at = this.lampAt(l, al); if (at) out.push([pid, l, at]); }
+    }
+    return out;
+  },
+  inLamp(p, l, at) { return !!l.all || Math.hypot(p.x - at.x, p.y - at.y) <= l.r; },
+  lampEvent(pid, ev) {
+    const L = this.lamps && this.lamps.get(pid);
+    if (!L || this.state !== 'live') return;
+    const al = this.alive(), mine = this.liveLamps().filter(e => e[0] === pid), amt = Math.max(0, Math.min(3000, Number(ev.amount) || 0));
+    if (ev.op === 'burst') {
+      const sh = Math.max(0, Math.min(3000, Number(ev.sh) || 0));
+      for (const [, l, at] of mine) {
+        if (ev.lid != null && l.id !== ev.lid) continue;
+        for (const p of al) {
+          if (!(ev.all || this.inLamp(p, l, at))) continue;
+          const full = p.s.hp >= p.s.maxHp - 0.5;
+          if (amt && !(ev.full && full)) this.lampHeal(pid, p.id, amt);
+          if (sh && (!ev.full || full) && p.s.shield < sh) this.giveShield(pid, p.id, p.s, sh, 8);
+        }
+      }
+    } else if (ev.op === 'relight') {
+      let best = null, bf = Infinity;
+      // the most hurt ally (one standing in a glow first, unless someone outside is far worse off)
+      for (const p of al) {
+        const f = p.s.hp / p.s.maxHp + (mine.some(([, l, at]) => this.inLamp(p, l, at)) ? 0 : 0.15);
+        if (f < bf) { bf = f; best = p; }
+      }
+      if (!best) return;
+      const f = best.s.hp / best.s.maxHp;
+      this.lampHeal(pid, best.id, amt);
+      if (ev.last && f < 0.2 && this.t - L.lastAt >= LAMP_HOST.LAST_CD) { L.lastAt = this.t; best.s.mits.push({ pct: 0, kind: 'living', start: this.t, end: this.t + 3, from: pid }); }
+      this.emit({ t: 'fev', k: 'relit', id: pid, to: best.id });
+    }
+  },
+  lampTick() {
+    if (!this.lamps || !this.lamps.size) return;
+    const al = this.alive(), live = this.liveLamps();
+    // Steady Glow: who has stood still (and since when)
+    this.stillAt = this.stillAt || new Map();
+    for (const p of al) {
+      const o = this.stillAt.get(p.id);
+      if (!o || Math.hypot(o.x - p.x, o.y - p.y) > 4) this.stillAt.set(p.id, { x: p.x, y: p.y, t: this.t });
+    }
+    for (const [pid, l, at] of live) {
+      if (!l.st) continue;
+      for (const p of al) {
+        if (this.t - this.stillAt.get(p.id).t < LAMP_HOST.STILL || !this.inLamp(p, l, at)) continue;
+        const m = p.s.mits.find(x => x.lampSt);
+        if (m) m.end = this.t + 0.25; else p.s.mits.push({ pct: LAMP_HOST.STEADY, start: this.t, end: this.t + 0.25, lampSt: true, from: pid });
+      }
+    }
+    if (this.state === 'live') for (const [pid, L] of this.lamps) {
+      if (this.t < L.next) continue;
+      L.next = Math.max(L.next + LAMP_HOST.PULSE, this.t - 0.5);
+      const mine = live.filter(e => e[0] === pid);
+      if (!mine.length) continue;
+      let n = 0;
+      const lit = new Set();
+      for (const [, l, at] of mine) {
+        const inside = al.filter(p => this.inLamp(p, l, at));
+        // Lighthouse Keeper: the most hurt one inside heals 30% more
+        const lean = l.ln && inside.length ? inside.reduce((a, b) => (b.s.hp / b.s.maxHp < a.s.hp / a.s.maxHp ? b : a)) : null;
+        for (const p of inside) { this.lampHeal(pid, p.id, l.h * (p === lean ? 1.3 : 1)); n++; lit.add(p.id); }
+        // Hearth: seconds in a Great Beacon's glow
+        if (l.hh) for (const p of al) {
+          const key = l.id + ':' + p.id, was = L.inside.get(key) || 0;
+          if (!inside.includes(p)) { L.inside.set(key, 0); continue; }
+          if (was + LAMP_HOST.PULSE >= LAMP_HOST.HEARTH) { this.lampHeal(pid, p.id, l.hh); L.inside.set(key, 0); } else L.inside.set(key, was + LAMP_HOST.PULSE);
+        }
+      }
+      // Signal Fire: the line between two Great Beacons
+      const sig = mine.filter(([, l]) => l.sg && l.k === 1);
+      if (sig.length >= 2) {
+        const [[, l1, a], [, l2, b]] = sig;
+        for (const p of al) {
+          if (this.inLamp(p, l1, a) || this.inLamp(p, l2, b) || segDist(p.x, p.y, a.x, a.y, b.x, b.y) > LAMP_HOST.LINE) continue;
+          this.lampHeal(pid, p.id, (l1.h + l2.h) / 4); n++; lit.add(p.id);
+        }
+      }
+      this.emit({ t: 'fev', k: 'lit', id: pid, n, c: lit.size });
+    }
+    // where every lantern is, for everyone to draw (owners draw their own from their kit): [owner, [[x, y, r, w, k, on, ox, oy, all], ...]]
+    if (this.t - (this.lampSent ?? -9) >= 0.1) {
+      this.lampSent = this.t;
+      const by = [];
+      for (const [pid, L] of this.lamps) {
+        const s = this.ps.get(pid);
+        if (!s || !s.alive || this.t - L.at > LAMP_HOST.STALE) continue;
+        by.push([pid, L.l.map(l => [l.x, l.y, l.r, l.w, l.k, l.on, l.ox, l.oy, l.all])]);
+      }
+      if (by.length || this.lampsShown) this.emit({ t: 'lamps', l: by });
+      this.lampsShown = by.length > 0;
+    }
+  },
+  lampClear() {
+    if (this.lamps && this.lamps.size) { this.lamps.clear(); this.emit({ t: 'lamps', l: [] }); }
+    this.lampsShown = false;
+  },
+});
+
+// ===================================================================================================================
+// KENSEIER (tank, class 22): Posture and the deflect, host side (KENSEI and the kit are in kits.js). Everything runs through
+// the one 'kensei' event (kits.js, the Kenseier block, lists its ops) and answers with fev 'kdef' / 'kbrk' / 'kbend'.
+//  - boss.post (KENSEI.make): the boss's Posture. Only a Kenseier fills it (kenAdd). At full it Breaks (kenBreak): for the
+//    Break's length (4 s, 5 s for a Deathblade) it is staggered (stunned: no walking, turning or autos), the party's blows
+//    land 15% harder (boss.exposed), and the script is slid out of the way (kenSlide: no casts, as Time Stop does). It
+//    never Breaks during a scripted cast: the bar holds full (post.hold) until the cast ends. post.until is the Break's end.
+//    The 'fb' message carries it as po: [p, max, break seconds left, held full, recovering, builder] (kenPack).
+//  - a deflect is a window (s.defl, from the press, `dur` long) held against the next auto or tankbuster that lands on the
+//    Kenseier, or, with reach (Warden), on an ally within it. A hit inside the window judges the press by how far apart they
+//    are (KENSEI.judge: 2 Perfect within 0.12 s, 1 Good within the window): Perfect takes the blow whole, Good takes half.
+//    A press just AFTER a blow (within the window) gives it back: the hit is in kenHits for half a second, and the press
+//    refunds what it cost, whole or half. Mikiri Step (s.step) lets an avoidable hit that lands during it pass through.
+//  - Off-balance (s.offbal): +10% damage taken, and its deflects are ignored.
+// ===================================================================================================================
+Object.assign(FightSim.prototype, {
+  kenPost() { const b = this.boss; return b.post || (b.post = KENSEI.make()); },
+  kenCasting() { const b = this.boss; return !!(b.cast && this.t < b.cast.end); },
+  // the bar for the 'fb' message: [p, max, break seconds left, held full, recovering, who built it]
+  kenPack() {
+    const P = this.kenPost(), t = this.t;
+    return [+P.p.toFixed(1), KENSEI.MAX, P.until > t ? +(P.until - t).toFixed(1) : 0, P.hold ? 1 : 0, KENSEI.recovering(P, t) ? 1 : 0, P.by ?? 0];
+  },
+  // every tick: a Break running out, a held bar breaking as the cast ends, recovery
+  kenTick(dt) {
+    const P = this.kenPost(), r = KENSEI.tick(P, this.t, dt, this.kenCasting());
+    if (r === 'end') this.emit({ t: 'fev', k: 'kbend', id: P.by ?? 0 });
+    else if (r === 'break') this.kenBreak(P.by);
+    if (this.kenHits && this.kenHits.length) this.kenHits = this.kenHits.filter(h => this.t - h.t < 1);
+  },
+  // add Posture from pid (o.full: all of it). A Break begins if it fills (and the boss is not casting).
+  kenAdd(pid, n, o = {}) {
+    const b = this.boss;
+    if (b.untargetable || this.state !== 'live') return;
+    const r = KENSEI.add(this.kenPost(), o.full ? KENSEI.MAX : n, this.t, { secs: o.secs, keep: o.keep, by: pid, casting: this.kenCasting() });
+    if (r === 'break') this.kenBreak(pid);
+  },
+  kenBreak(pid) {
+    const b = this.boss, P = this.kenPost(), secs = P.until - this.t;
+    const was = b.exposedUntil > this.t ? (b.exposed || 0) : 0;
+    b.exposed = Math.max(was, KENSEI.BREAK_DMG); b.exposedUntil = Math.max(b.exposedUntil || 0, P.until);   // (staggered: takes more, boss 'damage' event)
+    if (this.stats[pid]) this.stats[pid].breaks = (this.stats[pid].breaks || 0) + 1;
+    this.kenSlide(secs);
+    this.emit({ t: 'fev', k: 'kbrk', id: pid ?? 0, secs: +secs.toFixed(1) });
+  },
+  // the boss does not cast while it is Broken: its script's next steps slide out by the Break's length, as a Time Stop slides
+  // them (pauseBoss), but without the stop's frost, guard or length limit. Not where a Time Stop would not take (a phase change,
+  // a check, the enrage run-up...): the stagger and the damage window still stand.
+  kenSlide(dur) {
+    if (!(dur > 0) || this.pauseBlock(dur)) return false;
+    const t = this.t, cur = this.curCourse;
+    for (const e of this.events) if (e.step && e.t > t) e.t += dur;
+    this.events.sort((a, c) => a.t - c.t);
+    cur.seams = cur.seams.map(s => (s > t ? s + dur : s)); cur.end += dur;
+    this.pauseShift = (this.pauseShift || 0) + dur;
+    if (this.onPause) this.onPause(dur);
+    this.broadcastNext(true);
+    return true;
+  },
+  kenEvent(pid, ev) {
+    const s = this.ps.get(pid), me = this.players().find(q => q.id === pid);
+    if (!s || !me || !s.alive || me.cls !== 'kenseier') return;
+    this.postureOn = true;
+    const t = this.t, num = (v, a, b, d) => (Number.isFinite(+v) ? Math.max(a, Math.min(b, +v)) : d);
+    const secs = num(ev.secs, 2, 8, KENSEI.BREAK), keep = num(ev.keep, 0, 0.6, 0);
+    switch (ev.op) {
+      case 'deflect': {
+        if (s.offbal > t) return;   // (Off-balance: no deflects)
+        const dur = num(ev.dur, 0.2, 0.6, KENSEI.GOOD);
+        const win = { start: t, end: t + dur, dur, pp: num(ev.amount, 0, 60, KENSEI.POST.perfect), pg: num(ev.value, 0, 30, KENSEI.POST.good), pb: num(ev.mult, 0, 80, KENSEI.POST.buster),
+          r: num(ev.r, 0, 220, 0), sh: num(ev.sh, 0, 400, 0), ticks: num(ev.ticks, 1, 2, 1), secs, keep };
+        s.defl = win;
+        // a press just after the blow: it gives the blow back (the newest hit that this press can reach)
+        let rec = null;
+        for (const h of this.kenHits || []) {
+          if (h.done || t - h.t > dur || (rec && h.t < rec.t)) continue;
+          const v = this.players().find(q => q.id === h.id);
+          if (!v || !v.s.alive || (v.id !== pid && !(win.r > 0 && Math.hypot(v.x - me.x, v.y - me.y) <= win.r))) continue;
+          rec = h;
+        }
+        if (rec) {
+          rec.done = true;
+          const vic = this.players().find(q => q.id === rec.id), r = this.kenResolve(me, win, vic, rec.pre, rec.buster, rec);
+          if (r) {
+            const vs = vic.s, back = Math.min(vs.maxHp - vs.hp, rec.amt * (1 - r.mult));
+            if (back > 0) { vs.hp += back; this.stats[vic.id].taken -= back; this.stats[vic.id].mitigated += Math.round(back); }
+          }
+        }
+        break;
+      }
+      case 'step': s.step = { until: t + num(ev.dur, 0.2, 0.8, 0.45), amount: num(ev.amount, 0, 60, KENSEI.POST.mikiri), secs, keep }; break;
+      case 'posture': this.kenAdd(pid, num(ev.amount, 0, 60, 0), { secs, keep, full: !!ev.full }); break;
+      case 'end': KENSEI.endBreak(this.kenPost(), t); break;   // (a Deathblow: the Break is over, kenTick says so)
+      case 'off': s.offbal = t + num(ev.dur, 0, 4, KENSEI.OFF); s.defl = null; break;
+      case 'duel': { const b = this.boss; b.duelUntil = t + num(ev.dur, 0, 12, KENSEI.DUEL); b.autoAt = Math.min(b.autoAt, t + KENSEI.DUEL_EVERY); break; }
+    }
+  },
+  // a hit about to land on p (pre: what it would deal after mitigation): a Mikiri Step lets an avoidable one through; a deflect
+  // window of p's own (or an ally's with reach) catches an auto or tankbuster. Returns { mult, q } (damagePlayer), or null.
+  kenIncoming(p, s, pre, opts) {
+    if (!(pre > 0)) return null;
+    const t = this.t;
+    if (s.step && s.step.until > t && opts.avoidable && !opts.noVuln) {
+      const st = s.step; s.step = null;
+      this.kenAdd(p.id, st.amount, st);
+      this.emit({ t: 'fev', k: 'kdef', id: p.id, q: 3, a: Math.round(pre), p: +KENSEI.frac(this.kenPost()).toFixed(2) });
+      return { mult: 0, q: 3 };
+    }
+    if (opts.kind !== 'auto' && opts.kind !== 'buster') return null;
+    let owner = null, win = null;
+    if (s.defl && s.defl.end > t) { owner = p; win = s.defl; }
+    else {
+      for (const q of this.alive()) {
+        const w = q.s.defl;
+        if (q.id === p.id || !w || w.end <= t || !(w.r > 0) || q.s.offbal > t || Math.hypot(q.x - p.x, q.y - p.y) > w.r) continue;
+        owner = q; win = w; break;
+      }
+    }
+    return win ? this.kenResolve(owner, win, p, pre, opts.kind === 'buster', null) : null;
+  },
+  // judge a press against a hit (late: the hit's record when the press came after it). Perfect takes the blow whole, Good half.
+  kenResolve(owner, win, victim, pre, buster, late) {
+    const t = this.t, q = KENSEI.judge(late ? t - late.t : t - win.start, win.dur);
+    if (!q) return null;
+    owner.s.defl = null;
+    this.kenAdd(owner.id, q === 2 ? (buster ? win.pb : win.pp) : win.pg, win);
+    if (win.sh > 0) this.kenGuard(owner, win);
+    if (q === 2) this.stats[owner.id].perfects++;
+    this.emit({ t: 'fev', k: 'kdef', id: owner.id, q, b: buster ? 1 : 0, a: Math.round(pre), late: late ? 1 : 0, to: victim.id !== owner.id ? victim.id : null, p: +KENSEI.frac(this.kenPost()).toFixed(2) });
+    return { mult: q === 2 ? 0 : 0.5, q };
+  },
+  // Guard Stance: a deflect shields the nearest ally (or two)
+  kenGuard(owner, win) {
+    const near = this.alive().filter(q => q.id !== owner.id).sort((a, b) => Math.hypot(a.x - owner.x, a.y - owner.y) - Math.hypot(b.x - owner.x, b.y - owner.y)).slice(0, win.ticks);
+    for (const q of near) if (q.s.shield < win.sh) { this.ward(owner.id, q.id, q.s, true); this.giveShield(owner.id, q.id, q.s, win.sh, 6); }
+  },
+  // a blow that landed with no deflect to meet it, kept half a second for a press that comes just after
+  kenNote(p, pre, amt, opts) {
+    (this.kenHits || (this.kenHits = [])).push({ t: this.t, id: p.id, pre, amt, buster: opts.kind === 'buster', done: false });
+    if (this.kenHits.length > 12) this.kenHits.shift();
+  },
+});
+
+if (typeof module !== 'undefined') module.exports = { FIGHT, FightSim, segDist, playerBaseHp, MAW_HOST, WEAVE_HOST, DOLL_HOST, HOLLOW_HOST, LAMP_HOST };

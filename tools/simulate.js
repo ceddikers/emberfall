@@ -37,7 +37,7 @@ function runSim(classId, skill, seed, specId, talents) {
   const human = mulberry(seed * 7 + 3); // separate stream for "human" randomness
   const state = { t: 0, moving: false, tookDamage: [], shield: null, mits: [], reflect: null, healDebt: 0, healing: 0, eff: 0, gcdHeals: 0, allyWards: [], petalShields: [] };
   const role = ['bastion', 'bloodreaver', 'runeguard', 'ironpalm'].includes(classId) || def.role === 'tank' ? 'tank'
-    : ['cleric', 'grovekeeper', 'chronomancer', 'alembist', 'threadweaver', 'tidecaller'].includes(classId) ? 'healer' : 'dps';
+    : ['cleric', 'grovekeeper', 'chronomancer', 'alembist', 'threadweaver', 'tidecaller', 'lanternkeeper'].includes(classId) ? 'healer' : 'dps';
   const maxHp = role === 'tank' ? 32000 : 21000;
   let lastPos = 'rear';
   const env = {
@@ -73,6 +73,8 @@ function runSim(classId, skill, seed, specId, talents) {
     // where you stand: away from your spot while a mechanic moves you (and now and then for a newbie), so a Sigilmancer leaves its circle
     // (a class that plays on the move, the Driftblade, gets a path from its mover: circles for Orbit, long lines for Comet)
     pos: () => (state.posFn ? state.posFn(state.t) : state.away ? { x: 999, y: 0 } : { x: 0, y: 0 }),
+    // a Lanternkeeper's lanterns (kits.js lkShare): the host stand-in below (LAMP_SIM) heals with them once a second
+    lamps: list => { state.lamps = list; },
     emit: ev => {
       if (ev.type === 'heal' || ev.type === 'hot') {
         const amt = ev.type === 'hot' ? ev.amount * ev.ticks : ev.amount;
@@ -88,6 +90,7 @@ function runSim(classId, skill, seed, specId, talents) {
         const amt = (ev.amount || 0) * hits + (ev.sh || 0) * hits * 0.8 + ((ev.pa || 0) + (ev.ps || 0) * 0.6) * (ev.ticks || 0) * 2.4;
         state.healing += amt; state.eff += Math.min(state.healDebt, amt); state.healDebt = Math.max(0, state.healDebt - amt);
       }
+      if (ev.type === 'lamp') { LAMP_SIM.event(state, ev); return; }   // (a Lanternkeeper's Flare and Relight)
       // Judgment (Inquisitor): the party's hits burst every charge soon after
       if (ev.type === 'brand') k.stats.damage += ev.amount * ev.ticks;
       // a shield on an ally (Aegis): counts as healing; a Petal shield on the tank soaks most of it and comes back now and then
@@ -101,6 +104,7 @@ function runSim(classId, skill, seed, specId, talents) {
       if (ev.type === 'shield' && ev.target === 'party') { state.eff += Math.min(state.healDebt, ev.amount * 4); state.healDebt = Math.max(0, state.healDebt - ev.amount * 4); }
       // a tank's own cut (a Berserker's Bloodbath) is damage taken: it feeds the bank and lowers HP
       if (ev.type === 'selfDamage' && role === 'tank') { state.tookDamage.push({ t: state.t, a: maxHp * (ev.pct || 0) }); return; }
+      if (KEN_SIM.emit(state, k, ev)) { if (ev.op === 'duel') nextAuto = Math.min(nextAuto, state.t + KENSEI.DUEL_EVERY); return; }   // (a Kenseier's deflect, Posture and Ember Duel)
       if (TANK_SIM.emit(state, k, ev)) return;   // the advanced tanks' jaw and Ledger (below)
       if (ev.type === 'mit' && ev.target === 'self') {
         if (ev.kind === 'reflect') state.reflect = state.t + ev.dur;
@@ -131,11 +135,12 @@ function runSim(classId, skill, seed, specId, talents) {
     if (read) { state.mits = state.mits.filter(m => m !== read); k.notify('read', { b: kind === 'buster' ? 1 : 0 }); }
     let amt = raw * mult;
     amt = TANK_SIM.hit(state, k, amt, kind);
+    if (classId === 'kenseier') amt = KEN_SIM.hit(state, k, amt, kind);   // (a Kenseier's deflect: KEN_SIM below)
     if (state.shield) {
       const used = Math.min(state.shield.amt, amt); state.shield.amt -= used; amt -= used;
       if (state.shield.amt <= 0) { k.notify('shieldEnd', { tag: state.shield.tag, frac: 1 }); state.shield = null; }
     }
-    if (amt > 0) k.notify('taken', { a: amt });   // (a Gloomsworn's vessel fills for every hit it takes)
+    if (amt > 0) k.notify('taken', { a: amt, k: kind, df: state.kenDf });   // (a Gloomsworn's vessel fills for every hit it takes)
     state.tookDamage.push({ t: state.t, a: amt });
   }
 
@@ -164,10 +169,11 @@ function runSim(classId, skill, seed, specId, talents) {
     // classes that move on purpose (the Driftblade) walk their own path on top of that
     if (MOVERS[classId]) MOVERS[classId](state, skill, human, specId);
     if (role === 'tank') {
-      if (state.t >= nextAuto) { nextAuto += AUTO_EVERY; hitTank(AUTO_DMG, 'auto'); }
+      if (state.t >= nextAuto) { nextAuto += state.kenDuel > state.t ? KENSEI.DUEL_EVERY : AUTO_EVERY; hitTank(AUTO_DMG, 'auto'); }
       if (state.t >= nextBuster) { nextBuster += BUSTER_EVERY; hitTank(BUSTER_DMG, 'buster'); lastBusterAt = state.t; }
       if (state.t >= nextRaidwide) { nextRaidwide += RAIDWIDE_EVERY; hitTank(RAIDWIDE_DMG, 'raidwide'); }
       TANK_SIM.tick(state, k, hitTank);
+      if (classId === 'kenseier') KEN_SIM.tick(state, k, nextBuster, nextRaidwide);
       // (an ally's Ward breaks all the way if a tankbuster or raidwide landed while it was up; otherwise it soaks a little)
       const lastRw = nextRaidwide - RAIDWIDE_EVERY, during = (w, at) => at >= w.start && at <= w.end;
       for (const w of state.allyWards) if (state.t >= w.end) { w.done = true; k.notify('shieldEnd', { tag: 'ward', frac: during(w, lastBusterAt) || during(w, lastRw) ? 1 : 0.3 }); }
@@ -177,6 +183,7 @@ function runSim(classId, skill, seed, specId, talents) {
     if (role === 'healer') {
       healerIncoming();
       for (const p of state.petalShields) if (state.t >= p.at) { p.done = true; k.notify('shieldEnd', { tag: 'petal', frac: 0.8 }); }
+      if (state.lamps) LAMP_SIM.tick(state, k);   // (a Lanternkeeper's lanterns pulse once a second)
       state.petalShields = state.petalShields.filter(p => !p.done);
     }
     // positional: pros are where they want to be most of the time; newbies wander
@@ -533,9 +540,48 @@ const PRO = {
 };
 
 // ---------------------------------------------------------------- advanced classes (Thermist, Driftblade)
+// LAMP_SIM: the host's lanterns (fight.js LANTERNS) as the simulator sees them. The party stands round the middle
+// (0, 0) where the healer stands too, so a lantern set there catches most of it (the wider the glow, the more of the
+// four); one set while the healer was away (999, 0) catches nobody. A hand lantern reaches its ally and now and then a
+// second one, the floating lanterns about one and a half, Lighthouse all four.
+const LAMP_SIM = {
+  inGlow(l) {
+    if (l.all) return 4;
+    if (l.on === 'c') return 1.2;
+    if (l.on != null) return 1.4;
+    return Math.hypot(l.x, l.y) <= l.r ? Math.min(3.6, 1 + l.r / 55) : 0;
+  },
+  add(state, amt) { state.healing += amt; state.eff += Math.min(state.healDebt, amt); state.healDebt = Math.max(0, state.healDebt - amt); },
+  tick(state, k) {
+    if (state.t < (state.lampNext || 1)) return;
+    state.lampNext = (state.lampNext || 1) + 1;
+    let n = 0, c = 0;
+    for (const l of state.lamps) {
+      const m = LAMP_SIM.inGlow(l);
+      LAMP_SIM.add(state, l.h * m + (l.ln && m ? l.h * 0.3 : 0) + (l.hh ? l.hh / 6 * m * 0.6 : 0));
+      n += m; c = Math.max(c, m);
+    }
+    if (state.lamps.length) k.notify('lit', { n, c: Math.round(c) });
+  },
+  event(state, ev) {
+    if (ev.op === 'relight') { LAMP_SIM.add(state, ev.amount || 0); return; }
+    for (const l of state.lamps || []) {
+      if (ev.lid != null && l.id !== ev.lid) continue;
+      const m = ev.all ? 4 : LAMP_SIM.inGlow(l);
+      LAMP_SIM.add(state, (ev.amount || 0) * m * (ev.full ? 0.6 : 1) + (ev.sh || 0) * m * (ev.full ? 0.3 : 0.6));
+    }
+  },
+};
+
 // MOVERS: classes whose damage depends on how they move get a path every tick (state.moving, state.inBody: running
 // through the target right now, state.posFn: where they are, for circles and straight lines).
 const MOVERS = {
+  // a Wayfarer pro keeps walking a slow loop through the party, so its small lights fall where everyone stands
+  lanternkeeper(state, skill, human, specId) {
+    if (specId !== 'wayfarer' || skill !== 'pro' || state.away) { state.posFn = null; return; }
+    state.moving = true;
+    state.posFn = tt => ({ x: Math.cos(tt * 0.8) * 40, y: Math.sin(tt * 0.8) * 40 });
+  },
   driftblade(state, skill, human, specId) {
     const t = state.t;
     if (skill === 'pro') {
@@ -916,7 +962,9 @@ Object.assign(PRO, {
       else if (ready(k, 'gather') && on >= 2 && (rot >= 1 || (reapReady && young >= 2 && gold === 0))) return I(k, 'gather');
     }
     if (k.gcdRemaining() > 0.0001) return null;
-    if (reapReady && on > 0 && (gold >= Math.max(2, on - 1) || (soon && gold >= 1) || rot >= 2)) return I(k, 'reap');
+    // (the Full Toll: with all four up and three gold, a beat more for the fourth, unless one is about to lapse)
+    const toll = on === 4 && gold === 3 && rot === 0 && !soon;
+    if (reapReady && on > 0 && ((gold >= Math.max(2, on - 1) && !toll) || (soon && gold >= 1) || rot >= 2)) return I(k, 'reap');
     return I(k, 'slash');
   },
 });
@@ -967,8 +1015,192 @@ Object.assign(NEWBIE, {
   },
 });
 
+// ---------------------------------------------------------------- Lanternkeeper (healer, class 21)
+// The pro keeps two lanterns lit where the party stands (sets a new one as an old one runs out, never while a mechanic
+// has moved it away), a Hand Lantern on the tank, Flares as a raidwide lands, Carries a lantern left behind back to the
+// party, and Relights two stubs when the party is hurt. Trim the Wick the rest of the time. A Wayfarer keeps its Stride
+// going as it walks. The newbie answers the hints: lanterns at its feet wherever it is, Flare whenever it is up, the
+// Hand Lantern when the party looks hurt, never a Carry unless it glows (and then only now and then).
+const lkAtParty = l => l.on == null && Math.hypot(l.x, l.y) <= l.r;
+Object.assign(PRO, {
+  lanternkeeper(k, ctx) {
+    const g = k.g, debt = ctx.state.healDebt, toRw = ctx.nextRaidwide - ctx.t, away = ctx.state.away;
+    const floor = g.lan.filter(l => l.kind === 'floor' || l.kind === 'beacon' || l.kind === 'float');
+    const lit = floor.filter(l => (l.on != null || lkAtParty(l)) && l.end - k.now > 2.5);
+    const spec = k.def.spec;
+    if (weaveOk(k)) {
+      if (ready(k, 'flare') && g.lan.length && toRw < 1.2 && toRw > 0.2) return I(k, 'flare');
+      if (ready(k, 'flare') && g.lan.length && debt > 16000 && ctx.nextRaidwide - ctx.t > 14) return I(k, 'flare');
+      const c = abOf(k, 'carry');
+      if (c.id === 'carry' && !away && k.charges(c) > 0 && k.usable(c) && g.lan.some(l => lkMovable(l) && !lkAtParty(l))) return I(k, 'carry');
+    }
+    if (k.gcdRemaining() > 0.0001 || k.cast) return null;
+    const set = abOf(k, 'set'), hand = abOf(k, 'hand'), rel = abOf(k, 'relight');
+    if (ready(k, 'hand') && !g.lan.some(l => l.kind === 'hand') && (debt > 11000 || (g.emb >= lkEmbMax(k) && debt > 3000))) { ctx.state.gcdHeals++; return I(k, 'hand'); }
+    if (!away && ready(k, 'set')) {
+      if (set.id === 'stride') { if (k.now >= g.strideUntil - 0.5 && (debt > 5000 || g.emb >= lkEmbMax(k))) { ctx.state.gcdHeals++; return I(k, 'set'); } }
+      else if (set.id === 'festival') { if (!g.lan.some(l => l.kind === 'float' && l.end - k.now > 1.5)) { ctx.state.gcdHeals++; return I(k, 'set'); } }
+      else if (lit.length < 1 || (lit.length < 2 && debt > 15000)) { ctx.state.gcdHeals++; return I(k, 'set'); }
+    }
+    if (ready(k, 'relight')) {
+      if (rel.id === 'wisp') { if (debt > 9000) { ctx.state.gcdHeals++; return I(k, 'relight'); } }
+      else if (g.lan.filter(l => l.kind !== 'hand' && l.wick < 0.25).length >= 2 && debt > 9000) { ctx.state.gcdHeals++; return I(k, 'relight'); }
+    }
+    return I(k, 'trim');
+  },
+});
+Object.assign(NEWBIE, {
+  lanternkeeper(k, ctx) {
+    const n = ctx.state.newbie || (ctx.state.newbie = { gcdSeenAt: null, delay: 0, ogcdSeen: {} });
+    const fl = abOf(k, 'flare');
+    if (k.usable(fl) && k.readyIn(fl) <= 0.0001 && k.g.lan.length) {
+      if (n.ogcdSeen.flare == null) n.ogcdSeen.flare = ctx.t + 0.5 + ctx.human() * 2.5;
+      if (ctx.t >= n.ogcdSeen.flare && !k.cast) { n.ogcdSeen.flare = null; return I(k, 'flare'); }
+    } else n.ogcdSeen.flare = null;
+    const g = newbieGlowOgcd(k, ctx, 'carry');
+    if (g != null && g >= 0) return g;
+    if (k.gcdRemaining() > 0.0001 || k.cast || k.lockUntil > k.now) { n.gcdSeenAt = null; return null; }
+    if (n.gcdSeenAt === null) { n.gcdSeenAt = ctx.t; n.delay = 0.1 + ctx.human() * 0.5; n.noticeGlow = ctx.human() < 0.6; n.roll = ctx.human(); }
+    if (ctx.t < n.gcdSeenAt + n.delay) return null;
+    n.gcdSeenAt = null;
+    if (ctx.state.healDebt > 3500) {
+      if (ready(k, 'hand') && n.roll < 0.5) { ctx.state.gcdHeals++; return I(k, 'hand'); }
+      if (ready(k, 'set') && (k.glows(abOf(k, 'set')) || n.roll < 0.3)) { ctx.state.gcdHeals++; return I(k, 'set'); }
+    }
+    for (const id of ['set', 'hand', 'relight']) if (n.noticeGlow && ready(k, id) && k.glows(abOf(k, id))) { ctx.state.gcdHeals++; return I(k, id); }
+    return 0;
+  },
+});
+
 // healer DPS also gets healing debt cleared by damage-heals (Chronomancer); count Bolt heals against the debt
 // (handled by env.emit 'heal').
+
+// ---------------------------------------------------------------- Kenseier (tank, class 22)
+// KEN_SIM stands in for the host (fight.js KENSEI_HOST): a deflect window held against the tank's autos and busters (judged by
+// how far the press is from the blow, either side: KENSEI.judge; a press just after a blow gives it back), the boss's Posture
+// (KENSEI.add / tick: a full bar Breaks unless the boss is casting; busters and raidwides are 2.5s casts here) and the
+// notices the kit hears ('kdef', 'kbrk', 'kbend'). Mikiri Step has nothing to meet here (no frontals): it is not pressed.
+// The pro deflects each blow with a press about 0.06 s either side of it (gaussian: now and then a Good), keeping clear of it
+// with everything else (a press right before it would put the key behind an animation lock), Ash Mantle ahead of a buster,
+// a Deathblow the moment a Break begins, the Pommel when it is ready. The newbie presses around the blow (0.34 s either way,
+// about a third of the swings Perfect, most of the rest Good, a few missed, and one in five let go by), notices the Break's
+// glow 60% of the time, Ash Mantle on a glowing buster 60% of the time, and presses the rest of the oGCDs when it sees them.
+const KEN_FRONTAL = { first: 17, every: 30 };   // (the simulator's boss swings a frontal attack at the tank this often)
+const KEN_SIM = {
+  P: state => state.kenP || (state.kenP = KENSEI.make()),
+  add(state, k, n, o) {
+    const r = KENSEI.add(KEN_SIM.P(state), n, state.t, { secs: o.secs, keep: o.keep, by: 1, casting: !!state.kenCasting });
+    if (r === 'break') k.notify('kbrk', { secs: KEN_SIM.P(state).until - state.t });
+  },
+  gain(state, k, q, buster, w, pre, late) {
+    KEN_SIM.add(state, k, q === 2 ? (buster ? w.pb : w.pp) : w.pg, w);
+    k.notify('kdef', { q, b: buster ? 1 : 0, a: pre, late: late ? 1 : 0, p: KENSEI.frac(KEN_SIM.P(state)) });
+  },
+  emit(state, k, ev) {
+    if (ev.type !== 'kensei') return false;
+    const t = state.t;
+    if (ev.op === 'deflect') {
+      const w = { start: t, end: t + ev.dur, dur: ev.dur, pp: ev.amount, pg: ev.value, pb: ev.mult, secs: ev.secs, keep: ev.keep };
+      state.kenWin = w;
+      const h = state.kenHit;   // a blow just before the press: it comes back
+      if (h && !h.done && t - h.t <= ev.dur) {
+        h.done = true;
+        const q = KENSEI.judge(t - h.t, ev.dur);
+        if (q) { state.kenWin = null; KEN_SIM.gain(state, k, q, h.b, w, h.pre, true); }
+      }
+    } else if (ev.op === 'posture') KEN_SIM.add(state, k, ev.full ? KENSEI.MAX : ev.amount, ev);
+    else if (ev.op === 'end') KENSEI.endBreak(KEN_SIM.P(state), t);
+    else if (ev.op === 'duel') state.kenDuel = t + ev.dur;
+    else if (ev.op === 'step') state.kenStep = { until: t + ev.dur, amount: ev.amount, secs: ev.secs, keep: ev.keep };
+    return true;
+  },
+  // a blow lands on the tank: a window that covers it turns it aside (0 or half), otherwise it is kept for a late press
+  hit(state, k, amt, kind) {
+    state.kenDf = 0;
+    if (kind !== 'auto' && kind !== 'buster') return amt;
+    const t = state.t, w = state.kenWin, b = kind === 'buster';
+    if (w && t >= w.start && t <= w.end) {
+      const q = KENSEI.judge(t - w.start, w.dur);
+      if (q) { state.kenWin = null; state.kenDf = q; KEN_SIM.gain(state, k, q, b, w, amt, false); return q === 2 ? 0 : amt * 0.5; }
+    }
+    if (amt > 0) state.kenHit = { t, pre: amt, b, done: false };
+    return amt;
+  },
+  tick(state, k, nextBuster, nextRaidwide) {
+    const P = KEN_SIM.P(state), t = state.t;
+    state.kenCasting = nextBuster - t < 2.5 || nextRaidwide - t < 2.5;
+    // a frontal attack every KEN_FRONTAL s (the boss's cone or charge): a Mikiri Step under way when it lands passes through it, +25 Posture
+    if (state.kenFrontal == null) state.kenFrontal = KEN_FRONTAL.first;
+    if (t >= state.kenFrontal) {
+      state.kenFrontal += KEN_FRONTAL.every;
+      const st = state.kenStep;
+      if (st && t <= st.until) { state.kenStep = null; KEN_SIM.add(state, k, st.amount, st); k.notify('kdef', { q: 3, a: 0, p: KENSEI.frac(P) }); }
+    }
+    const r = KENSEI.tick(P, t, DT, state.kenCasting);
+    if (r === 'end') k.notify('kbend', {});
+    else if (r === 'break') k.notify('kbrk', { secs: P.until - t });
+  },
+};
+// the deflect plan: each blow gets one press at (the blow's time + a jitter); returns true on the step it is due.
+// sample() gives the jitter, skip is the chance the swing is let go by. Presses are pinned to the 0.05 s step: a press lands
+// 0 to 0.05 s later than planned, so the plan is that much early.
+function kenDeflectDue(ctx, sample, skip) {
+  const s = ctx.state, K = s.kenPlan || (s.kenPlan = { last: -1, list: [] });
+  const hitAt = Math.min(ctx.nextAuto, ctx.nextBuster);
+  if (hitAt > K.last) { K.last = hitAt; K.list.push({ at: hitAt + sample() - 0.025, skip: ctx.human() < skip, done: false }); }
+  K.list = K.list.filter(p => ctx.t - p.at < 1);
+  const p = K.list.find(q => !q.done && ctx.t >= q.at);
+  if (!p) return false;
+  p.done = true;
+  return !p.skip;
+}
+// is a planned deflect press due within `within` s (or just was)? Anything pressed now would sit behind its animation lock.
+const kenPlanNear = (ctx, within) => (ctx.state.kenPlan ? ctx.state.kenPlan.list.some(p => !p.done && !p.skip && p.at - ctx.t < within && p.at - ctx.t > -0.1) : false);
+const kenGauss = ctx => () => Math.sqrt(-2 * Math.log(1 - ctx.human() * 0.999999)) * Math.cos(2 * Math.PI * ctx.human());
+Object.assign(PRO, {
+  kenseier(k, ctx) {
+    const toB = ctx.nextBuster - ctx.t, g = kenGauss(ctx);
+    if (kenDeflectDue(ctx, () => g() * 0.055, 0) && ready(k, 'deflect')) return I(k, 'deflect');
+    // Feint: a Good deflect turned into a Perfect with the Pommel (off the global cooldown)
+    const db = abOf(k, 'deathblow');
+    if (db.freeGcd && db.freeGcd(k) && ready(k, 'deathblow') && !kenPlanNear(ctx, 0.35)) return I(k, 'deathblow');
+    if (weaveOk(k) && !kenPlanNear(ctx, 0.6)) {
+      if (toB < 2.2 && toB > 1.0 && ready(k, 'mantle')) return I(k, 'mantle');
+      if (ready(k, 'guard')) return I(k, 'guard');   // (Iai Stance, Ember Duel; Guard Stance's shield is the party's)
+      const mk = abOf(k, 'mikiri'), toF = (ctx.state.kenFrontal ?? KEN_FRONTAL.first) - ctx.t;
+      if (mk && mk.id === 'whirlwind') { if (ready(k, 'mikiri')) return I(k, 'mikiri'); }
+      else if (ready(k, 'mikiri') && toF < 0.3 && toF > 0.05) return I(k, 'mikiri');   // (stepped through the frontal as it lands)
+    }
+    if (k.gcdRemaining() > 0.0001 || k.cast || k.lockUntil > k.now || kenPlanNear(ctx, 0.35)) return null;   // (the animation lock of the last press waited out: a Pommel is the move to reach for)
+    if (kenBroken(k)) return I(k, 'deathblow');
+    // (a Pommel; a Warden's Redirect only for a blow worth sending back, the tankbuster: an auto's is worth less than a cut)
+    if (ready(k, 'deathblow') && (!k.def.warden || (k.g.lastDef && k.g.lastDef.a >= 0.15 * k.env.maxHp()))) return I(k, 'deathblow');
+    return 0;
+  },
+});
+Object.assign(NEWBIE, {
+  kenseier(k, ctx) {
+    const n = ctx.state.newbie || (ctx.state.newbie = { gcdSeenAt: null, delay: 0, ogcdSeen: {} });
+    if (kenDeflectDue(ctx, () => (ctx.human() < 0.5 ? -1 : 1) * (0.08 + ctx.human() * 0.30), 0.2) && ready(k, 'deflect')) return I(k, 'deflect');
+    const g = newbieGlowOgcd(k, ctx, 'mantle');
+    if (g != null && g >= 0) return g;
+    // the other oGCDs: noticed 0.5-3 s after they come up
+    for (const id of ['guard', 'mikiri']) {
+      const ab = abOf(k, id);
+      if (!ab || !k.usable(ab) || k.readyIn(ab) > 0.0001) { if (ab) n.ogcdSeen[ab.id] = null; continue; }
+      if (n.ogcdSeen[ab.id] == null) n.ogcdSeen[ab.id] = ctx.t + 0.5 + ctx.human() * 2.5;
+      if (ctx.t >= n.ogcdSeen[ab.id] && !k.cast) { n.ogcdSeen[ab.id] = null; return I(k, id); }
+    }
+    if (k.gcdRemaining() > 0.0001 || k.cast || k.lockUntil > k.now) { n.gcdSeenAt = null; return null; }
+    if (n.gcdSeenAt === null) { n.gcdSeenAt = ctx.t; n.delay = 0.1 + ctx.human() * 0.5; n.noticeGlow = ctx.human() < 0.6; n.roll = ctx.human(); }
+    if (ctx.t < n.gcdSeenAt + n.delay) return null;
+    n.gcdSeenAt = null;
+    const db = abOf(k, 'deathblow');
+    if (n.noticeGlow && k.glows(db) && k.usable(db) && k.readyIn(db) <= 0.0001) return I(k, 'deathblow');   // (the Break's glow, or a Redirect's)
+    if (n.roll < 0.25) { const o = k.abilities.filter(a => a.type === 'gcd' && k.usable(a) && k.readyIn(a) <= 0.0001); if (o.length > 1) return I(k, o[1 + Math.floor(ctx.human() * (o.length - 1))].id); }
+    return 0;
+  },
+});
 
 // ---------------------------------------------------------------- run
 if (require.main !== module) module.exports = { runSim, FIGHT_LEN };

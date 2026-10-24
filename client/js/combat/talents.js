@@ -698,6 +698,35 @@ TALENTS.tidecaller = [
   ],
 ];
 
+// ----------------------------------------------------------------------- LANTERNKEEPER (healer, class 21)
+TALENTS.lanternkeeper = [
+  [
+    { id: 'lanternkeeper_spark', name: 'Spark Chain', ab: 'trim', text: 'Trim the Wick leaps on to your second nearest lantern and tops up its wick too.' },
+    { id: 'lanternkeeper_moth', name: 'Moth Light', ab: 'trim', text: 'Each Trim the Wick sends a moth to the lantern it tops up: everyone in that glow heals {h:30}.' },
+    { id: 'lanternkeeper_emberward', name: 'Ember Ward', ab: 'set', text: 'A lantern set down while the boss is casting pulses as the cast lands: a shield of {s:60} on everyone in its glow.', spec: { beacon: 'A Great Beacon raised while the boss is casting pulses as the cast lands: a shield of {s:60} on everyone in its glow.', wayfarer: 'The first light of a Lamplighter\'s Stride begun while the boss is casting pulses as the cast lands: a shield of {s:60} on everyone in its glow.' } },
+  ],
+  [
+    { id: 'lanternkeeper_ward', name: 'Lantern Ward', ab: 'hand', text: 'Whoever carries your Hand Lantern takes 10% less damage while it hangs on them.' },
+    { id: 'lanternkeeper_longtoss', name: 'Long Toss', ab: 'carry', text: 'Carry the Flame reaches twice as far.', spec: { wayfarer: 'Trailblaze dashes twice as far.' } },
+    { id: 'lanternkeeper_nightwalk', name: 'Night Walk', ab: 'carry', text: 'Carrying a lantern carries you too: you dash a short way on in the direction you are heading.', spec: { wayfarer: 'Trailblaze also tops up the wick of every light it drags.' } },
+  ],
+  [
+    { id: 'lanternkeeper_hoard', name: 'Hoarded Embers', ab: 'set', text: 'You can hold 5 Embers instead of 4.' },
+    { id: 'lanternkeeper_emberfall', name: 'Ember Fall', ab: 'set', text: 'A lantern that goes out with its wick burned to a stub gives you an Ember back.', spec: { wayfarer: 'Every fourth small light that goes out gives you an Ember back.' } },
+    { id: 'lanternkeeper_wisp', name: 'Will-o\'-Wisp', ab: 'relight', grants: true, text: 'New move on F, in place of Relight. Will-o\'-Wisp (10s), 1 Ember: a wandering wisp floats to the most hurt ally and heals them {h:50} every second for 6s.' },
+  ],
+  [
+    { id: 'lanternkeeper_twin', name: 'Twin Flare', ab: 'flare', text: 'Flare bursts twice: the second a beat after the first, at half strength.' },
+    { id: 'lanternkeeper_flareshield', name: 'Flare Shield', ab: 'flare', text: 'Anyone a Flare reaches at full health takes a shield of {s:120} instead.' },
+    { id: 'lanternkeeper_shadow', name: 'Shadow Catch', ab: 'flare', text: 'Flare first pulls every lantern on the floor up to 40 paces toward you.' },
+  ],
+  [
+    { id: 'lanternkeeper_eternal', name: 'Eternal Lamp', ab: 'set', text: 'Lighthouse leaves a lantern at your feet that never burns down, healing {h:10} every second for the rest of the pull.' },
+    { id: 'lanternkeeper_festival', name: 'Lantern Festival', ab: 'set', grants: true, text: 'New move on W, in place of Set Lantern. Lantern Festival (12s), 1 Ember: release five floating lanterns that drift over the party for 12s, each healing everyone under it {h:11} every second.' },
+    { id: 'lanternkeeper_lastlight', name: 'Last Light', ab: 'relight', text: 'If Relight\'s heal lands on an ally under 20% health, they can\'t fall for 3s (once every 90s).' },
+  ],
+];
+
 // ======================================================================= SPEC ROWS (VI and VII)
 // SPEC_TALENTS[classId][specId] = [rowVI, rowVII], each row two talents. The rows are bought once per hero (after row V,
 // TALENT_COSTS[5] and [6]) and open for both specs; each spec keeps its own pick in each (save.js specIds), and only the
@@ -1241,6 +1270,88 @@ SPEC_TALENTS.tidecaller = {
     [
       { id: 'tidecaller_pressure', name: 'Pressure', ab: 'spray', text: 'While your Deep Shield stands, Salt Spray hits 7% harder.' },
       { id: 'tidecaller_slack', name: 'Slack Water', ab: 'current', text: 'Current pressed while your Deep Shield stands holds its drain: the shield stands 4s longer, topped up by {s:100}, and the party heals {h:40} twice.' },
+    ],
+  ],
+};
+
+// ----------------------------------------------------------------------- LANTERNKEEPER
+SPEC_TALENTS.lanternkeeper = {
+  // Beacon, The Fixed Star: a few bright fixed lights
+  beacon: [
+    [
+      { id: 'lanternkeeper_keeper', name: 'Lighthouse Keeper', ab: 'set', text: 'A Great Beacon leans toward the most hurt ally in its glow: its pulse heals them 30% more.' },
+      { id: 'lanternkeeper_signal', name: 'Signal Fire', ab: 'set', text: 'While two Great Beacons are lit, a line of light joins them: anyone standing on it, outside both glows, heals half a pulse every second.' },
+    ],
+    [
+      { id: 'lanternkeeper_hearth', name: 'Hearth', ab: 'set', text: 'An ally who stays in a Great Beacon\'s glow for 6s heals {h:90}, and again for every 6s more they stay.' },
+      { id: 'lanternkeeper_pillar', name: 'Pillar of Flame', ab: 'set', text: 'A Great Beacon with the boss in its glow scorches it for {d:15} every 3s.' },
+    ],
+  ],
+  // Wayfarer, The Road Lamp: lights that follow you
+  wayfarer: [
+    [
+      { id: 'lanternkeeper_pathfinder', name: 'Pathfinder', ab: 'carry', text: 'Trailblaze drops two small lights along its way, and they heal double.' },
+      { id: 'lanternkeeper_breadcrumbs', name: 'Breadcrumbs', ab: 'set', text: 'Your three newest small lights glow 30% brighter and last 4s longer.' },
+    ],
+    [
+      { id: 'lanternkeeper_pilgrim', name: 'Pilgrim\'s Pace', ab: 'flare', text: 'Keep moving for 5s without stopping and your next Flare heals 30% more.' },
+      { id: 'lanternkeeper_sparks', name: 'Trailing Sparks', ab: 'set', text: 'Walk back through a small light of yours and it flares to full and stings the boss for {d:60} (once per light).' },
+    ],
+  ],
+};
+
+// ----------------------------------------------------------------------- KENSEIER (tank, class 22)
+TALENTS.kenseier = [
+  [
+    { id: 'kenseier_riposte', name: 'Riposte', ab: 'deflect', text: 'A Perfect deflect makes your next Ember Cut skip to the third step (at most once every 10s).' },
+    { id: 'kenseier_emberedge', name: 'Ember Edge', ab: 'cut', text: 'The third cut sets a burn on the boss that adds 1 Posture a second for 6s.' },
+    { id: 'kenseier_feint', name: 'Feint', ab: 'deathblow', text: 'Right after a Good deflect, Pommel can be pressed at once, off the global cooldown, to turn that deflect into a Perfect: the Posture you missed comes with it, and everything a Perfect sets off. It needs the Pommel ready (8s cooldown).',
+      spec: { warden: 'Right after a Good deflect, Redirect can be pressed at once, off the global cooldown, to turn that deflect into a Perfect: the Posture you missed comes with it, and everything a Perfect sets off. It needs Redirect ready (8s cooldown).' } },
+  ],
+  [
+    { id: 'kenseier_ironbreath', name: 'Iron Breath', ab: 'deflect', text: 'Poise refills twice as fast while you are not being hit.' },
+    { id: 'kenseier_longstep', name: 'Long Step', ab: 'mikiri', text: 'Mikiri Step carries you twice as far.' },
+    { id: 'kenseier_secondwind', name: 'Second Wind', ab: 'mantle', cd: { mantle: -15 }, text: 'Ash Mantle has a 45s cooldown.' },
+  ],
+  [
+    { id: 'kenseier_crack', name: 'Crack', ab: 'deathblow', text: 'A Break leaves the boss\'s Posture bar starting at 25 afterward, instead of empty.' },
+    { id: 'kenseier_shatter', name: 'Shatter', ab: 'deflect', text: 'A Perfect deflect on a tankbuster Breaks the boss at once if its Posture is above half.' },
+    { id: 'kenseier_whirlwind', name: 'Whirlwind Slash', ab: 'mikiri', grants: true, text: 'New move on E, in place of Mikiri Step. Whirlwind Slash (12s): a spin that cuts every enemy in reach for {d:50} and adds 4 Posture for each one it hits, so adds count. For fights with adds.' },
+  ],
+  [
+    { id: 'kenseier_fireside', name: 'Fireside Guard', ab: 'guard', text: 'Guard Stance shields two allies instead of one.', spec: { deathblade: 'Iai Stance\'s counter-cut also shields the most hurt ally for {s:150}.' } },
+    { id: 'kenseier_unbroken', name: 'Unbroken', ab: 'mantle', text: 'While Ash Mantle is up, a deflect that catches nothing costs no Poise.' },
+    { id: 'kenseier_blazing', name: 'Blazing Mantle', ab: 'mantle', text: 'Ash Mantle ends in a burst of ember: {d:100} for every Perfect deflect you made inside it.' },
+  ],
+  [
+    { id: 'kenseier_grand', name: 'Grand Deathblow', ab: 'deathblow', text: 'A Deathblow in the first second of a Break hits 20% harder.' },
+    { id: 'kenseier_duel', name: 'Ember Duel', ab: 'guard', grants: true, text: 'New move on F, in place of Guard Stance. Ember Duel (90s): for 10s the boss\'s autos come at a steady beat, every 2s exactly, and every Perfect deflect adds double Posture.' },
+    { id: 'kenseier_lastspark', name: 'Last Spark', ab: 'deathblow', text: 'When you Break the boss, Thousand Cuts charges by a quarter.' },
+  ],
+];
+
+// ----------------------------------------------------------------------- KENSEIER
+SPEC_TALENTS.kenseier = {
+  // Deathblade, The Kill Stroke: all in on the parry and the Deathblow
+  deathblade: [
+    [
+      { id: 'kenseier_cleave', name: 'Cleaving Death', ab: 'deathblow', text: 'Deathblow also cuts every add near the boss, for 60% of its strength.' },
+      { id: 'kenseier_patient', name: 'Patient Edge', ab: 'deathblow', text: 'A Break you did not spend a Deathblow on within 2s gives the party +5% damage for what is left of it, instead.' },
+    ],
+    [
+      { id: 'kenseier_crane', name: 'Crane Form', ab: 'guard', text: 'Iai Stance\'s counter-cut adds 10 Posture.' },
+      { id: 'kenseier_double', name: 'Double Stroke', ab: 'deathblow', text: 'Deathblow strikes twice: a second, smaller stroke ({d:110}) follows a moment later.' },
+    ],
+  ],
+  // Warden of the Ash, The Turning Blade: turn the blow from your allies, or back on the boss
+  warden: [
+    [
+      { id: 'kenseier_longguard', name: 'Long Guard', ab: 'deflect', text: 'Deflect reaches an ally within 180 of you instead of 120.' },
+      { id: 'kenseier_emberreturn', name: 'Ember Return', ab: 'deathblow', text: 'Redirect also heals you for what it deals.' },
+    ],
+    [
+      { id: 'kenseier_sharedpoise', name: 'Shared Poise', ab: 'deflect', text: 'A Perfect deflect for an ally gives them a {s:100} shield for 3s.' },
+      { id: 'kenseier_turnedtide', name: 'Turned Tide', ab: 'deathblow', text: 'A tankbuster you turn back with Redirect adds 20 Posture to the boss.' },
     ],
   ],
 };

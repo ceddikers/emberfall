@@ -205,7 +205,7 @@ const SPECS = {
       focus: 'Melee damage. A sword combo, a cleave that leaves a burning rune, and two reflects; smaller Wards.',
       passive: { name: 'Rune-Carved', desc: 'Rune Strike becomes a two-hit combo, Glyph Burst a cleave that leaves a burning rune, and Mirror Aegis has two charges. Wards are a little smaller ({s:600} instead of {s:650}).' },
       build: () => ({
-        potMult: 0.585,
+        potMult: 0.56,
         init: () => ({ runes: 0, step: 0, comboUntil: 0 }),
         abilities: {
           strike: {
@@ -230,7 +230,7 @@ const SPECS = {
           },
           glyph: {
             id: 'cleave', replaces: 'glyph', name: 'Rune Cleave', type: 'gcd', target: 'enemy', range: SPEC_MELEE, anim: 'attack',
-            desc: 'Spend 3 Runes: a cleaving cut for {d:660} that leaves a burning rune on the target, {d:85} every 3s for 12s.',
+            desc: 'Spend 3 Runes: a cleaving cut for {d:660} that leaves a burning rune on the target, {d:85} every 3s for 12s. A rune still burning when you cleave again detonates: the rest of its burn lands at once.',
             usable: k => k.g.runes >= (k.has('counter') ? 1 : 3),   // (Counterstroke, spec row VII: two Runes less after a reflect)
             glow: k => k.g.runes >= (k.has('counter') ? 1 : 3),
             effect(k) {
@@ -238,6 +238,10 @@ const SPECS = {
               k.consume('counter'); k.spend('runes', cost);
               const pot = k.has('overload') ? 860 : 660;
               k.damage(pot, { ab: this });
+              // (a rune still burning detonates: the ticks it had left land now instead of being clipped)
+              const left = Math.floor(k.dotRemaining('brand') / 3 + 0.01);
+              if (left > 0) { k.damage(left * (k.g.brandPot || 85), { ab: this }); k.fx('glyphEcho'); }
+              k.g.brandPot = k.has('overload') ? 110 : 85;
               k.dot('brand', k.has('overload') ? 110 : 85, 12, 3, { ab: this });
               if (k.perk('runeguard_w2')) k.gain('runes', 1, 3);
               runeGlyph(k, this, pot, cost);
@@ -300,7 +304,7 @@ const SPECS = {
       balance: 1.12,   // a damage spec: aims for this share of the base Cleric's damage (tools/check.js)
       passive: { name: 'Judgment', desc: 'Smite brands the boss: your allies\' next 2 hits on it burst with holy fire ({d:70} each), counted as your damage. Dawn Petals regrow every 20s. Benediction becomes Condemn.' },
       build: base => ({
-        potMult: 0.69,
+        potMult: 0.645,
         tick(k) {
           const every = 20;
           if (k.g.petalAt === null) k.g.petalAt = k.now + every;
@@ -548,7 +552,7 @@ const SPECS = {
             id: 'aimed', replaces: 'pierce', name: 'Aimed Shot', type: 'gcd', target: 'enemy', range: SPEC_RANGED, charges: 2, cd: 12, anim: 'attack',
             cast: k => (k.has('keen') ? 0 : 2),
             desc: '2s cast: a carefully aimed shot for {d:620}, two charges; cast at 5 Steady Aim it hits for {d:850}, and your Steady Aim stays. With Keen Eye it\'s instant, hits for {d:760} and gives the charge back.',
-            glow: k => k.has('keen') || k.charges(k.abById('aimed')) === 2,
+            glow: k => k.has('keen') || k.charges(k.abById('aimed')) === 2 || (k.stacks('aim') >= 5 && k.charges(k.abById('aimed')) > 0),   // (a full breath: the still shot)
             effect(k) {
               const keen = k.consume('keen');
               let r, pot = 760;
@@ -1193,8 +1197,8 @@ Object.assign(SPECS, {
         potMult: base.potMult * 0.93,
         maxThreads: 5, deep: true,
         abilities: {
-          tie: { desc: 'Tie your target to yourself with a glowing thread. Press it on a second ally within 4s and those two are tied to each other instead. On an ally already on your threads, it pulls them up to 220 px along the thread toward its far end instead: yank someone out of a puddle. Up to 5 threads; tying another drops your oldest. Two charges.' },
-          shuttle: { desc: 'Instant: throw the shuttle down every thread you hold. It strikes the boss for {d:120} per thread (five threads: {d:600}), and each Thread on you tugs a {h:100} heal to whoever is on its far end.' },
+          tie: { desc: 'Tie your target to yourself with a glowing thread. Press it on a second ally within 2s and those two are tied to each other instead. On an ally already on your threads, it pulls them up to 220 px along the thread toward its far end instead: yank someone out of a puddle. Up to 5 threads; tying another drops your oldest. Two charges.' },
+          shuttle: { desc: 'Instant: throw the shuttle down every thread you hold. It strikes the boss for {d:120} per thread (five threads: {d:600}), and each Thread on you tugs a {h:120} heal to whichever end of it is more hurt.' },
         },
       }),
     },
@@ -1209,8 +1213,8 @@ Object.assign(SPECS, {
         store: 1.6, snipSpool: 10, snipPot: 170, lash: true, shuttleCut: 8,
         abilities: {
           snip: { cd: 8, desc: 'Cut the threads on your target (all of yours, if it has none). Each one releases 60% more than the damage it carried in the last 5s as a heal to both its ends (at least {h:170}), and gives back 10 Spool.' },
-          shuttle: { desc: 'Instant: throw the shuttle down every thread you hold, and down the cut ends of every thread Snap cut in the last 8s. It strikes the boss for {d:120} per thread, up to 5 ({d:600}), and each Thread on you tugs a {h:100} heal to whoever is on its far end.' },
-          tie: { desc: 'Tie your target to yourself with a glowing thread. Press it on a second ally within 4s and those two are tied to each other instead. On an ally already on your threads, it snaps them up to 220 px along the thread toward its far end instead, and wraps them in a {s:260} shield for 2s. Up to 3 threads; tying another drops your oldest. Two charges.' },
+          shuttle: { desc: 'Instant: throw the shuttle down every thread you hold, and down the cut ends of every thread Snap cut in the last 8s. It strikes the boss for {d:120} per thread, up to 5 ({d:600}), and each Thread on you tugs a {h:120} heal to whichever end of it is more hurt.' },
+          tie: { desc: 'Tie your target to yourself with a glowing thread. Press it on a second ally within 2s and those two are tied to each other instead. On an ally already on your threads, it snaps them up to 220 px along the thread toward its far end instead, and wraps them in a {s:260} shield for 2s. Up to 3 threads; tying another drops your oldest. Two charges.' },
         },
       }),
     },
@@ -1262,7 +1266,7 @@ Object.assign(SPECS, {
 SPECS.gloomsworn = [
   {
     id: 'duskward', name: 'Sentinel', title: 'The Long Vigil', accent: '#9ab8ff',
-    gaugeTip: 'Every hit you land fills 8 Gloom and every hit you take 6. Gloom Strike spends 40, Black Pall 30, Last Rite all of it. Out of combat the vessel drains, but only 1 a second. Full Gloom when a blow would kill you makes you Hollow: the whole party takes 15% less damage while you are, and your healer has 6s after it to pay the debt instead of 4s.',
+    gaugeTip: 'Every hit you land fills 8 Gloom and every hit you take 6. Gloom Strike spends 40, Black Pall 30, Last Rite all of it. Out of combat the vessel drains, but only 1 a second. Full Gloom when a blow would kill you makes you Hollow: the whole party takes 15% less damage while you are, and your healer has 6s after it to pay the debt instead of 4s. A full vessel also hardens you (10% less damage taken), and a Hollow leaves 40 Gloom of dregs with both Gloom Strikes back and echoing.',
     blurb: 'A wall that lasts. The dark keeps its watch over the others too.',
     focus: 'Protecting the party. Your barriers last longer and chain on to the ally who needs one, and when you go Hollow the whole party is covered and your healer has longer to pay.',
     passive: { name: 'Long Vigil', desc: 'Gloom Strike\'s barrier lasts 10s instead of 6s and a second barrier ({s:110}) falls on the most hurt ally. Black Pall lasts 8s. Gloom drains 1 a second out of combat instead of 2.5. While you are Hollow the whole party takes 15% less damage, and your healer has 6s after it ends to pay the debt instead of 4s.' },
@@ -1270,14 +1274,14 @@ SPECS.gloomsworn = [
       potMult: base.potMult * 0.995,   // balance knob (tools/simulate.js)
       sentinel: true, slowDecay: true,
       abilities: {
-        strike: { desc: 'Spend 40 Gloom: a heavy blow for {d:540} that wraps you in a barrier of {s:150} for 10s, and the ally who is hurt most in one of {s:110}. Two charges. Needs 40 Gloom.' },
+        strike: { desc: 'Spend 40 Gloom: a heavy blow for {d:760} that wraps you in a barrier of {s:150} for 10s, and the ally who is hurt most in one of {s:110}. Two charges. Needs 40 Gloom.' },
         pall: { desc: 'Spend 30 Gloom: a pall falls over the whole party, 25% less damage taken for 8s.' },
       },
     }),
   },
   {
     id: 'duskreaver', name: 'Reaver of Dusk', title: 'The Hollow Blade', accent: '#c85a8a',
-    gaugeTip: 'Every hit you land fills 8 Gloom and every hit you take 6. Gloom Strike spends 40, Dusk Reave 25 (nothing while you are Hollow), Last Rite all of it. Full Gloom when a blow would kill you makes you Hollow, for 10s instead of 8s, and Gloom Strike echoes while you are.',
+    gaugeTip: 'Every hit you land fills 8 Gloom and every hit you take 6. Gloom Strike spends 40, Dusk Reave 25 (nothing while you are Hollow), Last Rite all of it. Full Gloom when a blow would kill you makes you Hollow, for 10s instead of 8s, and Gloom Strike echoes while you are. A full vessel also hardens you (10% less damage taken), and a Hollow leaves 40 Gloom of dregs with both Gloom Strikes back and echoing.',
     blurb: 'The dark is a weapon. Let it hollow you out, and cut.',
     focus: 'Damage. You hit harder, you trade Black Pall for a cut of your own, and a Hollow is your window: 10s, free Reaves, and every Gloom Strike hits twice.',
     passive: { name: 'Hollow Blade', desc: 'You deal 6% more damage. Black Pall becomes Dusk Reave. Hollow lasts 10s instead of 8s, and while you are Hollow Gloom Strike echoes, hitting again for 85%.' },
@@ -1287,7 +1291,7 @@ SPECS.gloomsworn = [
       dmgMod: k => base.dmgMod(k) + 0.06,
       abilities: {
         pall: {
-          id: 'reave', replaces: 'pall', icon: 'strike', name: 'Dusk Reave', type: 'ogcd', target: 'enemy', range: SPEC_MELEE, cd: 30, lock: 0.5, anim: 'attack',
+          id: 'reave', replaces: 'pall', icon: 'reave', name: 'Dusk Reave', type: 'ogcd', target: 'enemy', range: SPEC_MELEE, cd: 30, lock: 0.5, anim: 'attack',
           desc: 'Spend 25 Gloom (nothing while you are Hollow): a reaping cut for {d:600}, and the dark closes round the wound: you take 10% less damage for 5s.',
           usable: k => (k.g.gloom || 0) >= 25 || gloomHollow(k),
           glow: k => gloomHollow(k),
@@ -1358,7 +1362,7 @@ SPECS.tidecaller = [
       abilities: {
         surge: { desc: '1.5s cast: spend all the tide in a wave that heals the whole party, from {h:120} at low water up to {h:480} at high water. At full high water it heals 30% more and leaves a shield of {s:100} on everyone.' },
         sip: {
-          id: 'swell', replaces: 'sip', icon: 'sip', name: 'Swell', type: 'gcd', target: 'ally', anim: 'cast',
+          id: 'swell', replaces: 'sip', name: 'Swell', type: 'gcd', target: 'ally', anim: 'cast',
           desc: 'Instant: heals one ally for {h:160}, and raises the tide instead of spending it.',
           glow: k => !!k.g.lowWater,
           effect(k, t) { tideSip(k, this, t, 160, -8); },
@@ -1379,12 +1383,110 @@ SPECS.tidecaller = [
       abilities: {
         riptide: { desc: 'Mark an ally: they heal {h:80} every 2s for 12s and take a shield of {s:120}, and when the tide next crests the mark pops for {h:200}.' },
         surge: {
-          id: 'undertow', replaces: 'surge', icon: 'surge', name: 'Undertow', type: 'gcd', target: 'self', cast: k => tideSurgeCast(k), anim: 'big',
+          id: 'undertow', replaces: 'surge', name: 'Undertow', type: 'gcd', target: 'self', cast: k => tideSurgeCast(k), anim: 'big',
           desc: '1.5s cast: spend all the tide and pull the party\'s hurt down into the deep. Everyone heals over 8s, from {h:140} at low water up to {h:550} at high water, and you take a Deep Shield of {s:150} up to {s:400} for 8s.',
           glow: k => tideSurgeGlow(k),
           effect(k) { tideUndertow(k, this); },
           fx: { type: 'zone', style: 'wave', color: '#3a8a9a', r: 180, range: 0, dur: 1.4 },
         },
+      },
+    }),
+  },
+];
+
+// ===================================================================================================================
+// LANTERNKEEPER (healer, class 21): the Beacon's and the Wayfarer's specs (the kit is in kits.js, after the Tidecaller)
+// ===================================================================================================================
+SPECS.lanternkeeper = [
+  {
+    id: 'beacon', name: 'Beacon', title: 'The Fixed Star', accent: '#ffd27a',
+    gaugeTip: 'Embers light your lanterns. One comes back every 5s, and every third Trim the Wick gives one more. Set Lantern and Hand Lantern cost one, Relight two.',
+    blurb: 'A few bright fixed lights, big heals.',
+    focus: 'Two tall Great Beacons with wide glows that never burn below half. Pick their spots well: they can\'t be carried, and allies who hold still in them take less damage.',
+    passive: { name: 'Steady Glow', desc: 'Set Lantern becomes Great Beacon. Allies who stand still in a Great Beacon\'s glow for 3s take 5% less damage while they stay.' },
+    build: base => ({
+      potMult: base.potMult * 1.0,   // balance knob (tools/simulate.js)
+      steadyGlow: true,
+      abilities: {
+        set: {
+          id: 'beacon', replaces: 'set', icon: 'set', name: 'Great Beacon', type: 'gcd', target: 'self', anim: 'big',
+          usable: k => k.g.emb >= 1,
+          desc: 'Instant, 1 Ember: raise a Great Beacon at your feet. For 18s everyone in its wide glow heals {h:65} every second; its wick never burns below half, and it can\'t be carried. Two at most: a third snuffs the oldest.',
+          glow: k => k.g.emb >= 1 && k.g.lan.filter(l => l.kind === 'beacon').length < 2,
+          effect(k) { lkBeacon(k, this); },
+          fx: { type: 'ring', color: '#ffd27a', r: 60, onTarget: false },
+        },
+        carry: { desc: 'Pick up your nearest lantern (within a short throw) and set it down at your feet. It keeps its wick. Great Beacons stay put: only your other lights can be carried.' },
+      },
+    }),
+  },
+  {
+    id: 'wayfarer', name: 'Wayfarer', title: 'The Road Lamp', accent: '#ff9f5a',
+    gaugeTip: 'Embers light your lanterns. One comes back every 5s, and every third Trim the Wick gives one more. Lamplighter\'s Stride and Hand Lantern cost one, Relight two.',
+    blurb: 'Lights trail behind you as you move: healing on the go.',
+    focus: 'Small lights fall wherever you walk. Lead the party through the fight and the light follows; Trailblaze drags every light along with you.',
+    passive: { name: 'Road Worn', desc: 'Set Lantern becomes Lamplighter\'s Stride and Carry the Flame becomes Trailblaze. You heal 10% more while moving; stand still for 3s and your newest light dims.' },
+    build: base => ({
+      potMult: base.potMult * 1.1,   // balance knob (tools/simulate.js)
+      roadWorn: true,
+      abilities: {
+        set: {
+          id: 'stride', replaces: 'set', icon: 'set', name: 'Lamplighter\'s Stride', type: 'gcd', target: 'self', anim: 'cast',
+          usable: k => k.g.emb >= 1,
+          desc: 'Instant, 1 Ember: for 10s, every few steps you take drops a small light behind you. Each glows for 6s and heals everyone in it {h:25} every second. Six at most.',
+          glow: k => k.g.emb >= 1 && k.now >= (k.g.strideUntil || 0),
+          effect(k) { lkStride(k, this); },
+          fx: { type: 'aura', color: '#ff9f5a', r: 30, dur: 0.6 },
+        },
+        carry: {
+          id: 'trail', replaces: 'carry', icon: 'carry', name: 'Trailblaze', type: 'ogcd', target: 'self', cd: 15, charges: 2, anim: 'cast',
+          desc: 'Dash ahead, and every small light you have dropped is dragged along with you, keeping its place behind you.',
+          glow: k => k.g.lan.filter(l => l.kind === 'small').length >= 3 && k.g.inGlow < 2,
+          effect(k) { lkTrail(k, this); },
+          fx: { type: 'aura', color: '#ff9f5a', r: 30, dur: 0.4 },
+        },
+      },
+    }),
+  },
+];
+
+// ===================================================================================================================
+// KENSEIER (tank, class 22): the Deathblade's and the Warden of the Ash's specs (the kit is in kits.js, before the taunt loop at its end)
+// ===================================================================================================================
+SPECS.kenseier = [
+  {
+    id: 'deathblade', name: 'Deathblade', title: 'The Kill Stroke', accent: '#ff8a3d',
+    gaugeTip: 'Poise falls 12 for a deflect with no blow to meet and 15 for a blow taken without one (30 for a tankbuster), and refills 8 a second once nothing has hit you for a moment. At nothing you are Off-balance for 2s. The boss\'s Posture, under its nameplate, is what your deflects fill.',
+    blurb: 'All in on the parry and the killing stroke.',
+    focus: 'Breaks and Deathblows. Your Perfect deflects add more Posture, a Break lasts longer, and a stance gives your next Perfect a counter-cut.',
+    passive: { name: 'Killing Edge', desc: 'A Deathblow leaves the boss taking 5% more damage from you for 10s. Perfect deflects add 25 Posture (37 on a tankbuster) and a Break lasts 5s. Guard Stance becomes Iai Stance.' },
+    build: base => ({
+      potMult: base.potMult * 0.9,   // balance knob (tools/simulate.js)
+      deadly: true,
+      abilities: {
+        deflect: { desc: 'Meet the next blow with your blade. Pressed within a blink of a boss auto or tankbuster landing on you, either side of it, it turns the blow aside (Perfect: no damage, +25 Posture, +37 on a tankbuster) and a little further out it halves it (Good: +8 Posture). No cooldown, but pressed with no blow to meet it costs a little Poise and the key rests for a moment.' },
+        deathblow: { desc: 'Only while the boss is Broken (a Break lasts 5s): a Deathblow for {d:900} that heals you for 15% of your health, ends the Break early, and leaves the boss taking 5% more damage from you for 10s. Out of a Break this is a Pommel: {d:200} and +5 Posture (8s cooldown).' },
+        guard: {
+          id: 'iai', replaces: 'guard', icon: 'guard', name: 'Iai Stance', type: 'ogcd', target: 'self', cd: 90, lock: 0.5, anim: 'big',
+          desc: 'Sheathe the blade and wait, for 6s: your next Perfect deflect is followed at once by a counter-cut for {d:450}.',
+          effect(k) { k.buff('iai', 6); k.fx('ken-iai-stance'); },
+          fx: { type: 'ring', color: '#ffe2a0', r: 50 },
+        },
+      },
+    }),
+  },
+  {
+    id: 'warden', name: 'Warden of the Ash', title: 'The Turning Blade', accent: '#b8b2a8',
+    gaugeTip: 'Poise falls 12 for a deflect with no blow to meet and 15 for a blow taken without one (30 for a tankbuster), and refills 8 a second once nothing has hit you for a moment. Stepping in front of an ally costs 10 (5 on a Perfect). At nothing you are Off-balance for 2s. The boss\'s Posture, under its nameplate, is what your deflects fill.',
+    blurb: 'Turn the blow from your allies, or back on the boss.',
+    focus: 'Protecting the party. Your deflect reaches an ally, every Perfect cuts the damage everyone takes, and Pommel becomes Redirect: the last blow you turned goes back at the boss.',
+    passive: { name: 'Ash Wall', desc: 'Every Perfect deflect gives the party a tiny 2% damage cut for 4s (up to three at once). Deflect reaches an ally within 120 of you, and Pommel becomes Redirect.' },
+    build: base => ({
+      potMult: base.potMult * 1.0,   // balance knob (tools/simulate.js)
+      warden: true,
+      abilities: {
+        deflect: { desc: 'Meet the next blow with your blade, or step in front of an ally within 120 of you and meet theirs. Pressed within a blink of a boss auto or tankbuster landing, either side of it, it turns the blow aside (Perfect: no damage, +18 Posture, +30 on a tankbuster) and a little further out it halves it (Good: +8 Posture). For an ally it costs your Poise a little. No cooldown, but pressed with no blow to meet it costs a little Poise and the key rests for a moment.' },
+        deathblow: { desc: 'Only while the boss is Broken: a Deathblow for {d:900} that heals you for 15% of your health, and ends the Break early. Out of a Break this is Redirect (8s cooldown, once you have turned a blow aside in the last 8s): the last blow you deflected goes back at the boss for 30% of what it would have dealt, up to {d:500}.' },
       },
     }),
   },

@@ -54,6 +54,7 @@ class CombatActor {
       collide: (o, r) => { if (world.collide) world.collide(actor, o, r); },
       threads: () => (world.threads ? world.threads(actor) : null),
       dolls: list => { if (world.dolls) world.dolls(actor, list); },
+      lamps: list => { if (world.lamps) world.lamps(actor, list); },   // a Lanternkeeper's lanterns (kits.js lkShare; the host heals with them)
       danger: (x, y, within) => (world.danger ? world.danger(actor, x, y, within) : false),   // a telegraph landing on a spot within `within` s (Pirouette's glow)
       // a tank pressed its taunt carrier (kits.js TAUNT_CARRY): the world taunts if the taunt is ready and the enemy
       // (the move's target, or the one you face) is on someone else

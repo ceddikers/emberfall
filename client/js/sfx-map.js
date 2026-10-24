@@ -58,6 +58,8 @@
     threadweaver: ['ab-thread', 'ab-thread'], marionettist: ['ab-stab', 'ab-thread'],
     gloomsworn: ['ab-slash', 'ab-shield'],
     thresher: ['ab-slash', 'ab-wind'],
+    tidecaller: ['ab-heal', 'ab-wind'],
+    lanternkeeper: ['ab-heal', 'ab-buff'],
   };
   // every ability id per class: base kit, spec replacements (specs.js), talent moves, Ultimate, taunt, auto-attack
   const CLASS = {
@@ -160,6 +162,18 @@
       slash: L('ab-slash', 'ab-wind'), hook: L('ab-thread', 'ab-shot'), reap: L('ab-heavy', 'ab-slash'), gather: L('ab-wind', 'ab-buff'),
       blink: L('ab-stab', 'dash'), wisp: L('ab-wind', 'ab-heal'), sowing: L('ab-wind', 'ab-dot'), cull: L('ab-heavy', 'ab-dot'), hourglass: L('ab-stab', 'ab-time'), nightfall: L('ab-stab', 'ab-wind'),
       gatestrike: L('ab-slash', 'ab-wind'), reapersgate: ULT('thresher'), auto: 'ab-melee-generic',
+    },
+    // Tidecaller (class id tidecaller): sea water, surf, a conch, droplets and a bell under the waves; every move has its own voice (sfx-synth.js ABIL.tidecaller)
+    tidecaller: {
+      spray: L('ab-wind', 'ab-heal'), sip: L('ab-heal', 'ab-wind'), riptide: L('ab-heal', 'ab-wind'), surge: L('ab-heal', 'ab-wind'), current: L('ab-wind', 'ab-heal'),
+      breakwater: L('ab-shield', 'ab-wind'), springflood: ULT('tidecaller'), swell: L('ab-heal', 'ab-wind'), undertow: L('ab-heal', 'ab-shield'),
+      maelstrom: L('ab-wind', 'ab-heal'), bore: L('ab-wind', 'ab-heal'), auto: 'ab-ranged-generic',
+    },
+    // Lanternkeeper (class id lanternkeeper): iron and brass, a struck match and a flame taking hold, chains, a bell and glass chimes; every move has its own voice (sfx-synth.js ABIL.lanternkeeper)
+    lanternkeeper: {
+      trim: L('ab-stab', 'ab-fire'), set: L('ab-shield', 'ab-fire'), beacon: L('ab-heavy', 'ab-fire'), hand: L('ab-buff', 'ab-heal'), flare: L('ab-fire', 'ab-heal'),
+      carry: L('ab-thread', 'dash'), trail: L('dash', 'ab-wind'), stride: L('ab-heal', 'ab-wind'), relight: L('ab-fire', 'ab-heal'), wisp: L('ab-wind', 'ab-heal'),
+      festival: L('ab-buff', 'ab-wind'), lighthouse: ULT('lanternkeeper'), beaconflare: L('ab-fire', 'ab-holy'), auto: 'ab-magic-generic',
     },
   };
   // Every ability has its own voice, ab-<class>-<id> (sfx-synth.js ABIL: the families above layered at their own

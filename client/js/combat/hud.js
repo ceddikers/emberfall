@@ -48,7 +48,7 @@ const GAUGE_TIPS = {
     state: k => `+${Math.round(k.g.heat * 0.3)}% damage`,
   },
   cleric: {
-    desc: 'You get a Petal every 15s, up to 3; one that grows past 3 blooms by itself onto the most hurt ally. Dawn Petal spends one. Every third Petal spent turns your next Smite into Dawnstar, and a Mend counts as half a Petal.',
+    desc: 'You get a Petal every 15s, up to 3; one that grows past 3 blooms by itself onto the most hurt ally. Dawn Petal spends one. Every third Petal spent turns your next Smite into Dawnstar, and a Mend counts as half a Petal (a whole one with none in hand).',
     state: k => (k.g.bloom >= 3 ? 'Dawnstar ready' : `Dawnstar ${k.g.bloom} / 3`) + (k.g.petals < 3 && k.g.petalAt != null ? ` · next Petal ${Math.max(0, Math.ceil(k.g.petalAt - k.now))}s` : ''),
   },
   grovekeeper: { desc: 'Each Rejuvenate tick gives 5. Bloom spends 50.' },
@@ -814,7 +814,7 @@ GAUGE_TIPS.gloomsworn = {
 // ======================================================================= Reaper (id thresher; damage, class 19)
 // Drawn icons (art.icons === false in data.js) and the gauge's tooltip; the painted set replaces them later.
 Object.assign(BUFF_NAMES, { wisp: 'Spirit Wisp', wispgift: 'Wisp\'s Gift', gate: 'Reaper\'s Gate', gleaning: 'Phantom Cut' });
-Object.assign(BUFF_ICON, { wisp: 'wisp', wispgift: 'wisp', gate: 'gate', gleaning: 'slash' });
+Object.assign(BUFF_ICON, { wisp: 'wisp', wispgift: 'wisp', gate: 'reapersgate', gleaning: 'slash' });
 Object.assign(BUFF_TIPS, {
   wisp: () => 'A wisp harries the boss, striking every 2.5s and binding it if nothing else has.',
   wispgift: () => 'The wisp is spent: you deal 10% more damage.',
@@ -956,3 +956,119 @@ GAUGE_TIPS.thresher = {
   ICONS.reapersgate = ICONS.gate;
   ICON_GLYPHS.thresher = ICONS;
 })();
+
+// ======================================================================= Tidecaller (healer, class 20)
+// Drawn icons (art.icons === false in data.js) and the gauge's tooltip; the painted set replaces them later.
+GAUGE_TIPS.tidecaller = {
+  desc: 'The tide rises from low to high over 12s, holds at the crest for 2s, then ebbs over 6s, and loops. Salt Spray pushes it up a little, Sip takes a slice, Surge spends all of it. Current bends it; Breakwater stops the ebb.',
+  state: k => {
+    const g = k.g, now = k.now, nc = typeof tideNextCrest === 'function' ? tideNextCrest(k) : 0;
+    if (now < (g.floodUntil || 0)) return `Spring Flood: ${Math.ceil(g.floodUntil - now)}s of high water`;
+    const word = g.tphase === 'hold' ? 'at the crest' : g.tphase === 'ebb' ? 'ebbing' : (g.tide || 0) < 35 ? 'low water' : 'rising';
+    return word + (g.tphase === 'hold' ? '' : ` · crest in ${Math.ceil(nc)}s`) + (now < (g.wallUntil || 0) ? ' · held by Breakwater' : '') + (g.mark && now < g.mark.until ? ` · Mark ${nc <= g.mark.until - now + 0.2 ? 'pops at the crest' : 'lapses first'}` : '');
+  },
+  extra: k => `<div style="margin-top:6px;opacity:.85">The vial is the water. Its tinted foot is low water, where Sip heals 30% more; the pearl at its head is the crest. The ring is the Riptide Mark: green when it will pop at the next crest, rust when it will lapse first. ${k && k.def && k.def.markDeep ? 'The dark bar is your Deep Shield. ' : ''}${k && k.talent && k.talent('tidecaller_table') ? 'The strip shows the next 20s, with a pearl tick where the next crest lands.' : ''}</div>`,
+};
+(() => {
+  // deep teal for the sea, foam white for the crest, a pearl for the glint, moon-gold only for the flood, slate for stone
+  const T = '#3fb8a8', T2 = '#8fe8d8', D = '#17606c', INK = '#0c1c26', F = '#eaf8f5', P = '#d7f2ee', M = '#fff0b8', SL = '#7a8e9a', SLD = '#4a5d6a';
+  const ink = (c, w = 3, col = F) => { c.strokeStyle = col; c.lineWidth = w; c.lineCap = 'round'; c.lineJoin = 'round'; };
+  const glowDot = (c, x, y, r, col = T2, a = 1) => { const g = c.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, col); g.addColorStop(1, 'rgba(63,184,168,0)'); c.save(); c.globalAlpha = a; c.fillStyle = g; c.beginPath(); c.arc(x, y, r, 0, TAU); c.fill(); c.restore(); };
+  const dot = (c, x, y, r, col) => { c.fillStyle = col; c.beginPath(); c.arc(x, y, r, 0, TAU); c.fill(); };
+  // a water drop: pointed at the top, round at the bottom, a hard highlight
+  const drop = (c, x, y, s, col = T2) => {
+    c.save(); c.translate(x, y); c.scale(s, s); c.fillStyle = col; c.strokeStyle = INK; c.lineWidth = 2 / s;
+    c.beginPath(); c.moveTo(0, -12); c.bezierCurveTo(9, -2, 8, 8, 0, 8); c.bezierCurveTo(-8, 8, -9, -2, 0, -12); c.closePath(); c.fill(); c.stroke();
+    c.fillStyle = '#ffffff'; c.beginPath(); c.ellipse(-3, 1, 1.8, 3.4, 0.4, 0, TAU); c.fill(); c.restore();
+  };
+  // a rolling wave line across the icon: (x0..x1) at height y, n crests of height a
+  const ripple = (c, x0, x1, y, a, n, col, w = 3, ph = 0) => { ink(c, w, col); c.beginPath(); for (let x = x0; x <= x1; x += 2) { const yy = y + Math.sin((x - x0) / (x1 - x0) * n * TAU + ph) * a; x === x0 ? c.moveTo(x, yy) : c.lineTo(x, yy); } c.stroke(); };
+  // a spiral from the centre outward: turns, max radius, start angle
+  const spiral = (c, cx, cy, r, turns, a0, col, w) => { ink(c, w, col); c.beginPath(); const N = 40 * turns; for (let i = 0; i <= N; i++) { const q = i / N, a = a0 + q * turns * TAU, rr = 2 + q * r; i ? c.lineTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr) : c.moveTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr); } c.stroke(); };
+  const arrow = (c, x, y, dir, s, col) => { c.fillStyle = col; c.strokeStyle = INK; c.lineWidth = 1.8; c.lineJoin = 'round'; c.beginPath(); c.moveTo(x, y - dir * s * 1.2); c.lineTo(x + s * 0.9, y + dir * s * 0.1); c.lineTo(x + s * 0.34, y + dir * s * 0.1); c.lineTo(x + s * 0.34, y + dir * s * 1.2); c.lineTo(x - s * 0.34, y + dir * s * 1.2); c.lineTo(x - s * 0.34, y + dir * s * 0.1); c.lineTo(x - s * 0.9, y + dir * s * 0.1); c.closePath(); c.fill(); c.stroke(); };
+  // the cresting wave: a curling swell with a foam lip, a body dark at the foot and bright at the lip
+  const wave = (c, x, y, s, col = T) => {
+    c.save(); c.translate(x, y); c.scale(s, s);
+    c.fillStyle = col; c.strokeStyle = INK; c.lineWidth = 2.4 / s; c.lineJoin = 'round';
+    c.beginPath(); c.moveTo(-26, 18); c.bezierCurveTo(-24, 0, -12, -14, 4, -18); c.bezierCurveTo(16, -22, 26, -14, 24, -4); c.bezierCurveTo(18, -12, 10, -10, 8, -2); c.bezierCurveTo(10, 8, 18, 14, 26, 18); c.closePath(); c.fill(); c.stroke();
+    c.fillStyle = D; c.beginPath(); c.moveTo(-26, 18); c.bezierCurveTo(-24, 8, -14, 0, -4, -2); c.bezierCurveTo(-2, 8, 6, 14, 14, 18); c.closePath(); c.fill();
+    ink(c, 1.6 / s, F); c.beginPath(); c.moveTo(-14, -6); c.bezierCurveTo(-8, -14, 0, -18, 6, -18); c.stroke();
+    c.fillStyle = F; for (const [fx, fy, fr] of [[20, -12, 3], [24, -4, 2.4], [14, -17, 2.2], [26, -9, 1.6]]) { c.beginPath(); c.arc(fx, fy, fr, 0, TAU); c.fill(); }
+    c.restore();
+  };
+  const ICONS = {
+    // a thin lash of salt water flying up-right and breaking into foam and drops
+    spray: c => {
+      for (const [dy, w, col] of [[10, 5, D], [4, 4, T], [-2, 3, T2]]) { ink(c, w, col); c.beginPath(); c.moveTo(8, 52 + dy * 0.2); c.bezierCurveTo(20, 46 - dy * 0.3, 32, 36 + dy * 0.2, 46, 22 + dy * 0.3); c.stroke(); }
+      glowDot(c, 50, 20, 14, F, 0.7); c.save(); c.translate(50, 20); ink(c, 2.4, F); for (let i = 0; i < 8; i++) { const a = i * TAU / 8; c.beginPath(); c.moveTo(Math.cos(a) * 4, Math.sin(a) * 4); c.lineTo(Math.cos(a) * (i % 2 ? 8 : 12), Math.sin(a) * (i % 2 ? 8 : 12)); c.stroke(); } c.restore();
+      for (const [x, y, r] of [[40, 14, 2.6], [58, 32, 2.4], [30, 22, 2], [56, 10, 1.8]]) dot(c, x, y, r, T2);
+    },
+    // one drop falling into a cupped hand of water
+    sip: c => {
+      drop(c, 32, 20, 1.15);
+      c.fillStyle = D; c.strokeStyle = INK; c.lineWidth = 2.4; c.beginPath(); c.moveTo(10, 38); c.bezierCurveTo(12, 56, 52, 56, 54, 38); c.bezierCurveTo(44, 46, 20, 46, 10, 38); c.closePath(); c.fill(); c.stroke();
+      ink(c, 2, T2); c.beginPath(); c.ellipse(32, 42, 14, 4, 0, 0, TAU); c.stroke(); ink(c, 1.4, F); c.beginPath(); c.ellipse(32, 42, 7, 2, 0, 0, TAU); c.stroke();
+    },
+    // a whirl set in a ring (the mark on a shoulder)
+    riptide: c => {
+      glowDot(c, 32, 32, 28, T, 0.35); c.fillStyle = INK; c.beginPath(); c.arc(32, 32, 22, 0, TAU); c.fill(); ink(c, 3, T); c.beginPath(); c.arc(32, 32, 22, 0, TAU); c.stroke();
+      spiral(c, 32, 32, 17, 2.1, 0.4, T2, 3.4); spiral(c, 32, 32, 14, 1.7, 3.5, F, 1.6); dot(c, 32, 32, 3.4, F);
+      for (let i = 0; i < 3; i++) { const a = i * TAU / 3 + 0.5; dot(c, 32 + Math.cos(a) * 28, 32 + Math.sin(a) * 28, 2, P); }
+    },
+    // the great cresting wave
+    surge: c => { glowDot(c, 32, 36, 30, T, 0.3); wave(c, 32, 36, 1.2); ripple(c, 4, 60, 56, 1.8, 3, T2, 2.4); },
+    // an arrow up and an arrow down over a water line: the tide turned
+    current: c => {
+      ripple(c, 6, 58, 46, 2.5, 3, T2, 3.2); ripple(c, 6, 58, 54, 2, 3, D, 2.6, 1.4);
+      arrow(c, 22, 24, -1, 9, '#8fe8d8'); arrow(c, 42, 22, 1, 9, '#ffb8a0');
+      ink(c, 1.8, F); c.beginPath(); c.arc(32, 14, 6, 3.4, 5.9); c.stroke();
+    },
+    // a stone wall of blocks standing in the sea, foam breaking on its face
+    breakwater: c => {
+      c.fillStyle = SL; c.strokeStyle = INK; c.lineWidth = 2.2; c.lineJoin = 'round';
+      for (let r = 0; r < 3; r++) for (let b = 0; b < 3 - (r === 1 ? 1 : 0); b++) { const bw = r === 1 ? 17 : 15, bx = r === 1 ? 9 + b * 22 : 6 + b * 18; c.fillStyle = r === 0 ? SL : SLD; c.beginPath(); c.roundRect(bx + (r === 1 ? 4 : 0), 8 + r * 14, bw + 7, 13, 2); c.fill(); c.stroke(); }
+      c.fillStyle = D; c.strokeStyle = INK; c.beginPath(); c.moveTo(2, 50); for (let x = 2; x <= 62; x += 4) c.lineTo(x, 48 + Math.sin(x * 0.4) * 2); c.lineTo(62, 62); c.lineTo(2, 62); c.closePath(); c.fill(); c.stroke();
+      ripple(c, 4, 60, 48, 2, 4, F, 2.4); for (const [x, y] of [[14, 44], [30, 42], [48, 44], [58, 40]]) dot(c, x, y, 2.2, F);
+    },
+    // the flooded arena under a full moon
+    springflood: c => {
+      glowDot(c, 32, 20, 26, M, 0.5); dot(c, 32, 20, 12, M); c.strokeStyle = INK; c.lineWidth = 2.2; c.beginPath(); c.arc(32, 20, 12, 0, TAU); c.stroke(); dot(c, 28, 17, 3, '#fffbe6'); dot(c, 37, 24, 2, '#e8d890');
+      c.fillStyle = D; c.strokeStyle = INK; c.lineWidth = 2.4; c.beginPath(); c.ellipse(32, 46, 27, 12, 0, 0, TAU); c.fill(); c.stroke();
+      ink(c, 2, T2); c.beginPath(); c.ellipse(32, 46, 21, 8, 0, 0, TAU); c.stroke(); ink(c, 1.6, F); c.beginPath(); c.ellipse(32, 46, 12, 4.4, 0, 0, TAU); c.stroke();
+      ripple(c, 12, 52, 46, 1.6, 3, F, 1.6);
+      ink(c, 2.2, M); c.beginPath(); c.moveTo(26, 36); c.lineTo(24, 56); c.moveTo(32, 34); c.lineTo(32, 58); c.moveTo(38, 36); c.lineTo(40, 56); c.stroke();
+    },
+    // Swell: a drop on a rising swell (a cheap heal that lifts the tide)
+    swell: c => { drop(c, 32, 22, 1.1); ripple(c, 6, 58, 46, 3, 2.5, T2, 3.4); ripple(c, 6, 58, 54, 2, 2.5, D, 2.6, 1); arrow(c, 52, 24, -1, 6, '#8fe8d8'); },
+    // Undertow: a hand-like swirl dragged down into dark water, an arrow sinking with it
+    undertow: c => {
+      c.fillStyle = '#10343f'; c.beginPath(); c.arc(32, 36, 24, 0, TAU); c.fill(); ink(c, 2.6, D); c.beginPath(); c.arc(32, 36, 24, 0, TAU); c.stroke();
+      spiral(c, 32, 40, 18, 1.8, 1.2, '#2c8fa6', 3.4); spiral(c, 32, 40, 14, 1.4, 4.4, T2, 1.8);
+      c.save(); c.translate(32, 18); ink(c, 3.4, P); c.beginPath(); c.moveTo(-6, -10); c.lineTo(-6, 4); c.moveTo(0, -12); c.lineTo(0, 4); c.moveTo(6, -10); c.lineTo(6, 4); c.stroke(); ink(c, 3.6, '#2c8fa6'); c.beginPath(); c.moveTo(-8, 6); c.quadraticCurveTo(0, 14, 8, 6); c.stroke(); c.restore();
+      arrow(c, 52, 48, 1, 6, '#2c8fa6'); for (const [x, y, r] of [[14, 52, 2.2], [18, 44, 1.6], [48, 20, 1.8]]) { ink(c, 1.2, F); c.beginPath(); c.arc(x, y, r, 0, TAU); c.stroke(); }
+    },
+    // Maelstrom: a wide whirlpool, foam arms turning into the dark eye
+    maelstrom: c => {
+      c.fillStyle = D; c.strokeStyle = INK; c.lineWidth = 2.6; c.beginPath(); c.ellipse(32, 34, 28, 22, 0, 0, TAU); c.fill(); c.stroke();
+      for (let i = 0; i < 3; i++) spiral(c, 32, 34, 24, 1.5, i * TAU / 3, i % 2 ? T2 : F, 3 - i * 0.5);
+      c.fillStyle = INK; c.beginPath(); c.ellipse(32, 34, 5, 4, 0, 0, TAU); c.fill(); ink(c, 1.6, T); c.beginPath(); c.ellipse(32, 34, 5, 4, 0, 0, TAU); c.stroke();
+    },
+    // Tidal Bore: a long wave front driven to the right, a chevron of foam at its head
+    bore: c => {
+      for (const [y, col, w] of [[44, D, 7], [34, T, 6], [24, T2, 5]]) { ink(c, w, col); c.beginPath(); c.moveTo(6, y + 4); c.bezierCurveTo(18, y - 4, 30, y + 6, 44, y - 2); c.stroke(); }
+      c.fillStyle = F; c.strokeStyle = INK; c.lineWidth = 2.2; c.lineJoin = 'round'; c.beginPath(); c.moveTo(60, 34); c.lineTo(44, 14); c.lineTo(46, 24); c.lineTo(38, 34); c.lineTo(46, 44); c.lineTo(44, 54); c.closePath(); c.fill(); c.stroke();
+      for (const [x, y] of [[30, 12], [18, 16], [34, 56]]) dot(c, x, y, 2, T2);
+    },
+  };
+  ICON_GLYPHS.tidecaller = ICONS;
+})();
+
+// ======================================================================= Lanternkeeper (healer, class 21)
+GAUGE_TIPS.lanternkeeper = {
+  desc: 'Embers light your lanterns. One comes back every 5s, and every third Trim the Wick gives one more. Wicks burn down while a lantern is lit; a short wick heals less.',
+  state: k => {
+    const g = k.g, now = k.now, max = typeof lkEmbMax === 'function' ? lkEmbMax(k) : 4, lit = (g.lan || []).length;
+    return `${g.emb || 0} of ${max} Embers · ${lit} ${lit === 1 ? 'light' : 'lights'} out` + (now < (g.lightUntil || 0) ? ` · Lighthouse ${Math.ceil(g.lightUntil - now)}s` : '') + (now < (g.strideUntil || 0) ? ` · Stride ${Math.ceil(g.strideUntil - now)}s` : '');
+  },
+  extra: () => '<div style="margin-top:6px;opacity:.85">The coals in the cage are your Embers; the ring on the next one closes as it comes back. The sparks are your Trims toward the next Ember. Each small lantern beside it is a light you have out, its flame its wick: red is nearly a stub.</div>',
+};

@@ -21,6 +21,9 @@
     chronomancer: "A single long piece, the same every time, and only ever louder. I knew the first bars, which was unsettling, since I am fairly sure it was our first hearing. Fairly. The thunder will correct me.",
     alembist: "Specimen: Volkar, one mountain, damp. After the ogre's kitchen I thought I knew about hot; he is lightning, rain in the reagents, and wind lifting the labels off my bottles. Half a shelf spoiled. The red bottle survived. Phew.",
     threadweaver: "After the spider queen's webs I thought I knew about threads. The old windbag shoved us apart and yanked us together all fight long, gold to blue, and every thread I tied the wind tried to snap. I scolded my stitches, then mended them, in that order.",
+    tidecaller: "A mountaintop is only a headland with the sea drawn out of it, and all the weather here was his. He hung a charge on each of us, gold or blue, like a ring on a gull's leg, and I kept the water high and watched which way the sky leaned.",
+    lanternkeeper: "The summit was all his weather. He hung a charge on each of us, gold or blue, and I lit lanterns on the wrong ground twice before I saw how the colours pair. Tomorrow I learn his round before I light it. Keep your light.",
+    kenseier: "A mountaintop, and weather with a rhythm to it, if one waits. Each of us wore a charge, gold or blue, and his fist came down toward me slow as a bell. I mistimed the first two and heard about it from the sky. Catch the beat.",
   },
   // the first time this hero beats him
   win: {
@@ -43,6 +46,9 @@
     chronomancer: "He fell at the end of his long piece, and for once I needn't hear it again. Or I did, many times, and this was the last. The silence is the part I do not recognise. Pleasantly new.",
     alembist: "Result: Volkar, cured. Treatment: patience, in many doses, and everyone together at the end. Shelf bare, workshop intact, one small fire, entirely deliberate. I intend to sleep for a week.",
     threadweaver: "The windbag fell and the threads held, every one, the whole hem drawn tight under the falling sky. Not a sloppy seam left on that mountain. I sat down and put the needle away, which I do not do lightly.",
+    tidecaller: "He went down and the wind went with him, slack water at last on a high place. Every one of us walked off that mountain, and I let the tide run out of me slowly. The sea gives back.",
+    lanternkeeper: "The storm went out of him slowly, like a wick running dry. All four of us walked down off that mountain, and I left a lantern burning on the highest stone, where the weather cannot reach it. I'll leave one burning.",
+    kenseier: "Volkar is down and the wind has stopped trying to move me. His fist had the slowest beat I have ever answered, and the longest silence after. I stood in it a while.",
   },
   moves: {
     'Thunderclap': { hard: false, learned: {
@@ -65,6 +71,9 @@
       chronomancer: "Clouds, then the clap, then ringing: always in that order, and it reaches everyone. So I mended them all while the sky was still darkening, which is, or will be, just enough. I seem to be good at clouds.",
       alembist: "Dose everyone during the darkening, not after, because the clap reaches the whole summit and there's nowhere to hide a person. Red bottle, the big one, poured over the lot of us as the clouds closed. Ears still ringing. Cork popped.",
       threadweaver: "You cannot darn a sound. The clap pulled on every thread at once, so I had the whole party mended and tied together before the clouds closed. It tugged each stitch and not one snapped. Good cloth, this lot.",
+      tidecaller: "The sky darkened and a great clap reached all of us at once, with no corner of the summit to hide in. I had the water at the crest as the clouds closed, so it broke on a full shore and nobody went down.",
+      lanternkeeper: "The clouds closed over the summit and a clap meant for all of us was on its way, with no corner to hide in. I let every lantern burst as the sky went dark, and the party stood in glow upon glow. It struck a room already mended.",
+      kenseier: "The light drained from the sky, and a clap went through all of us at once. There is nothing to cross with a blade in thunder. The healers filled us beforehand and I stood in the open and took it. It was only loud.",
     } },
     'Titan Fist': { hard: false, learned: {
       bastion: "Lightning ran down his arm toward me. I waited for the shoulder to drop and braced in the last instant, knowing the blow would not stop at me, and sent the others to the flank, out of the path behind. A shield is for the man in front. Everyone else needs orders.",
@@ -86,6 +95,9 @@
       chronomancer: "The fist lands when his arm stops glowing, and not before. I had our shield mended in the gap, and stood off the line behind him, where the blow keeps going. Nobody needed undoing. This time.",
       alembist: "One enormous blow for our shield, carrying on in a line behind him, which I learned by standing there. Blue bottle for the shield beforehand, everyone else out of the line. I have labelled that stretch of floor: contents under pressure.",
       threadweaver: "The fist went for our shield and ran on down the line behind him. I kept every stitch of mine off that line and ran a thread to the shield to share the weight. Cloth tears where it's pulled, my loves. Mind where you stand.",
+      tidecaller: "Lightning crept down his arm toward our knight, and a swell like that does not stop at the first rock; it runs on up the beach. I kept the others off the line behind him and sent the water to the knight just before the fist fell.",
+      lanternkeeper: "Lightning crept down his arm, and the blow was for our knight. I hung a lantern on him before the fist came down, and the rest of us kept off the line behind him, since the bolt runs on past.",
+      kenseier: "Lightning crept down his arm toward me. I let the fist come, met it with the blade as it fell, and the others stayed clear of the path behind. A slow blow, and very honest about its beat. Breathe, then strike.",
     } },
     'Polarity Surge': { hard: false, learned: {
       bastion: "Gold or blue on each of us. Orders, then: pair off, opposite colours, shoulder to shoulder, and keep your own kind away, since two of a kind arc and burn. I found my blue and stood by him like a man on parade.",
@@ -107,6 +119,9 @@
       chronomancer: "I found my opposite before the surge, stood close, and kept my own colour out of reach. The arcs between like charges are the warning; I heeded them. Frequently. Possibly in advance.",
       alembist: "Mixing guide: gold and blue. One of each, close together: inert, lovely. Two of a kind: violent. One alone: still bad. So everyone beside one opposite! (I did not need to test this. I tested it anyway.)",
       threadweaver: "Gold tied to blue, close, a short thread between, and no two golds in reach of each other. Anyone left alone took the whole surge. Pairs, like socks: lose one and the other's no use.",
+      tidecaller: "Gold or blue on each of us, and like charges fight each other the way two rips do. I went and found my opposite, close enough to touch, and kept all of my own colour well away from me.",
+      lanternkeeper: "Gold or blue on each of us, and like colours fight. I went to my opposite and stood close enough to share one glow, and kept every other of my own colour at arm's length.",
+      kenseier: "Gold or blue on each of us. Opposite colours went together, close enough to touch, and kept their own kind away, since two alike arc and burn. I found my partner and stood beside him. Opposites cancel.",
     } },
     'Thunder Crash': { hard: false, learned: {
       bastion: "A cloud over each gold. My blue partner and I stood under mine and split the crash, and the other pair kept their distance. Then everybody scattered from the static, fast, no marching. The one order I enjoyed giving.",
@@ -128,6 +143,9 @@
       chronomancer: "Under the cloud in pairs, the pairs apart, and then scatter just after the crash, because the static is right on its heels. I keep hearing the whole business as a single bar of music.",
       alembist: "Two heavy bottles, one over each gold: each pair shares its own cloud, pairs kept well apart, and everybody scatters the instant it lands, because the static is steeping behind it. Ask me how I learned the pairs-apart part. Actually don't.",
       threadweaver: "Each gold had a cloud, so I tied each blue to their gold, close, and kept the pairs well apart. Then I cut every thread at once and they scattered before the static. Snip, snip, away you go.",
+      tidecaller: "Clouds gathered over the golds, and each blue went to stand under their gold's cloud so the weight was shared, the two pairs far apart. When it broke we all ran from the static like spray off a rock, and I mended in the running.",
+      lanternkeeper: "Clouds gathered over the golds, and each blue went in under their gold's cloud to share the weight, the two pairs well apart. When it broke we all ran from the static. Two pairs, two lanterns, one for each.",
+      kenseier: "A cloud hung over each gold one. My blue partner and I took the crash together under mine, and the other pair kept off. Then everyone scattered from the static. Shared, it was bearable. Alone, it would not have been.",
     } },
     'Static Field': { hard: false, learned: {
       bastion: "Static on every head, and each needed ground to themselves. I took my patch, planted my boots and kept the others in sight. Nobody crowded. Whatever else you say of the line, it knows its spacing.",
@@ -149,6 +167,9 @@
       chronomancer: "Static over every head; it follows the crash by a moment, which I am sure I had already noticed. Each of us to our own ground, far apart, and together again afterwards. Rehearsed.",
       alembist: "Shelf rule: nothing volatile touches anything else. Static on each of us spills onto anyone near, so everyone apart, one apiece, single doses afterwards. Lesson from the old workshop. Ceiling still missing.",
       threadweaver: "Each of my stitches carried a ring of static, and those must never overlap. I let out all the slack, everyone apart, then drew them back in once it cleared. Tidy. Needle between my teeth the whole while.",
+      tidecaller: "A ring of static sat over every head, and rings that touch only make a worse sea. Each of us took a patch of floor alone, spaced like gulls along a rail. When it cleared I walked the shingle of them and topped up whoever had been nicked.",
+      lanternkeeper: "A ring of static hung over every head, and rings that touch make it worse. Each of us took a patch of floor alone. When it cleared I went round with my lantern and topped up whoever had been nicked.",
+      kenseier: "Static took hold of each of us, and each needed room apart. I found my own bare patch and stayed on it. A blade needs room to move, and so, it turns out, does everything else.",
     } },
     'Rod Strike': { hard: false, learned: {
       bastion: "A ring burned down over my head. I put my back to the nearest standing stone and the bolt struck the rock, not me. The next pair took other stones, since a struck stone needs time. I have worn worse armour than granite.",
@@ -170,6 +191,9 @@
       chronomancer: "Two marked, then two more a little later. Each goes to a stone and lets the bolt find it; the second pair uses the stones the first left alone, since a struck stone remembers. I have been struck before, I think.",
       alembist: "Ailment: a bolt marked for me. Remedy: stand against a standing stone and let the rock have it. A used stone stays charged a while, so the next pair uses fresh ones or it spoils for everyone near. Hugged mine. Slightly warm.",
       threadweaver: "The marked ones walked to a stone each and stood right against it. The next pair went to other stones. Everyone else kept their hem well clear of the struck rocks. Never press cloth to a hot iron.",
+      tidecaller: "Two of us wore the marks, and each stood hard against a standing stone so the bolt broke on the rock like a wave on a cliff. The next pair went to other stones, since a stone just struck is not ready to be struck again.",
+      lanternkeeper: "Two of us were marked, and each stood against a standing stone so the bolt broke on rock. The next pair used different stones, since a stone just struck is not ready again. I kept my lantern between the stones, within reach of all.",
+      kenseier: "A ring settled over my head. I could not turn a bolt, so I put the nearest standing stone between us, and it went into the rock. The next pair used different stones; a struck stone must rest.",
     } },
     'Gale Slam': { hard: false, learned: {
       bastion: "He drew breath. Where a rod stood I stepped into the still air behind it, away from him; with none, I closed in on him so the throw stopped short of the rocks. Charge the enemy, my sergeant said. For once it was safe advice.",
@@ -191,6 +215,9 @@
       chronomancer: "He breathes in, and a moment later the wind throws everyone outward. Behind a standing rod nothing moves you; with no rods, close to him, the throw ends before the rocks. I have been thrown enough times to know.",
       alembist: "Everyone thrown outward, hard into any rock: shelter behind a standing rod, on the side away from him, or if there are none, stand close, so the landing is open floor. Do not shake the bottles during landing! I shook them.",
       threadweaver: "When he breathed I drew everyone in behind the standing rods, where the air was still. With none, I pulled the party in close round him, so the throw ended before the rocks. Tight, tight, tight. Pulled it tight.",
+      tidecaller: "He drew a long breath, and a breath that long goes out as a gale that throws us outward. I stood in the still lee behind a rod, away from him. With none standing, I stayed close in beside him, where the throw ran out before the rocks.",
+      lanternkeeper: "He drew a long breath that would throw us outward. We sheltered in the lee of a standing rod, with the rod between us and him. When none stood, we kept close in beside him, where the shove ran out before the rocks.",
+      kenseier: "He drew breath. Where a rod stood I sheltered in the still air behind it, on the side away from him; where none did, I closed in on him so the throw stopped short of the rocks. The nearest place was the safest.",
     } },
     'Storm Walls': { hard: false, learned: {
       bastion: "Walls of wind swung round him slowly, like spokes. I kept my place in the gap and marched with them, step for step, and stood behind a boulder where one lay. It was almost drill.",
@@ -212,6 +239,9 @@
       chronomancer: "The walls turn at an even tempo, and walking with them in the gap is rather like keeping time. A boulder shelters for one pass, and then it is gone. I have walked this circle already, I believe.",
       alembist: "Walls of wind turning slowly round him: walk in the gap between, at their pace. A boulder shelters from one pass, then spoils. I tried a second pass. Not recommended. Eyebrow still regrowing.",
       threadweaver: "The walls turned round him and I kept the party in the gap, walking together, nobody lagging into the wall behind. A boulder covered us once. A lagging stitch gets caught. Mind the slack.",
+      tidecaller: "Walls of wind swung slowly round him, and I walked in the gap at their own pace, the way a tide follows the moon. A boulder gave shelter once, for a single pass. There was no hurry, though the wall behind kept its own time.",
+      lanternkeeper: "Walls of wind swung slowly round him. We walked in the gap at the wall's own pace, and a boulder sheltered us once, for a single pass. I trailed a lantern behind me, so the party kept to the gap by its light.",
+      kenseier: "Walls of wind swung round him slowly, like spokes. I kept to the gap and went round with it, behind a boulder where one lay. The slowest beat I know, and easy to miss if you stare at your feet.",
     } },
     'Chain Lightning': { hard: true, learned: {
       bastion: "A bolt gathered over our healer while his fist came at me. She walked clear of everyone, and the rest of us stood well apart, so it had nobody to leap to. I took the fist alone. Two duties, one pair of hands. Held.",
@@ -233,6 +263,9 @@
       chronomancer: "The bolt gathers over me as the fist lands on our shield; two things at once, which I dislike. I walk off from everyone, the others keep apart, and it strikes only me. I will have mended the shield on the way.",
       alembist: "A bolt over me, wanting to leap! Walk away from everyone, and the others keep apart too. Dose the shield before walking, since his fist lands at the same moment. Without a label, I'd have missed it.",
       threadweaver: "The bolt gathered over me, so I cut every thread and walked off alone, and the others kept well apart. It struck once and found nothing to run along. A cut thread conducts nothing.",
+      tidecaller: "The bolt gathered over my own head while his fist fell on our knight, so I walked away from everyone and the rest kept well apart, leaving it nothing to leap to. It struck me once and went out like a spent wave. I had filled my own water beforehand.",
+      lanternkeeper: "On the hard nights the bolt gathered over my head just as the fist fell on our knight. I walked away from everyone, lamp and all, and the others kept apart to give it nothing to jump to. It struck me once and went out.",
+      kenseier: "A bolt gathered over our healer while his fist came for me. She walked away from everyone and the rest of us kept apart, so it had nothing to leap to. I met the fist alone. Two beats at once, one pair of hands.",
     } },
     'Lightning Rods': { hard: false, learned: {
       bastion: "Iron rods in the rock, each wanting one of us when the bolt fell. I took one, and stood out of the next while I still crackled. The rods stayed up after, good cover. I would have posted a guard on them.",
@@ -254,6 +287,9 @@
       chronomancer: "One of us to each rod, and whoever caught the last one sits this one out, still humming. An empty rod strikes everyone; a rod caught twice running strikes one person very hard. I said so beforehand. I always do.",
       alembist: "One fresh person per rod, please. Anyone still charged from the last spoils if dosed again, so keep them off it, and never leave a rod empty. The rods stay standing afterwards. Label them: reusable.",
       threadweaver: "One rod, one stitch: I sent a person to each, and kept the one still humming from the last away from the new ones. Nobody left a rod empty. The rods made good pins afterwards.",
+      tidecaller: "Iron rods rose from the rock, each wanting one of us when the bolt fell. I took one, and kept out of the next while I still crackled. Afterwards the rods stood on as cover, which the sea would call a fair trade.",
+      lanternkeeper: "Iron rods rose from the stone, one wanting each of us. Four rods, four of us, and I took mine. Whoever had been struck kept out of the next, still crackling, and afterwards the rods stood on as cover.",
+      kenseier: "Rods stood in the stone, one for each of us when the bolt fell. I took mine, and rested through the next while the charge still clung to me. They stayed standing after, and I used them as cover. A good tool does not vanish after use.",
     } },
     'Avalanche': { hard: false, learned: {
       bastion: "He stamped and boulders rolled across the summit in lanes. I stood between the lanes and let them go by, then got behind one for the walls of wind. A boulder makes a decent redoubt if you arrive first.",
@@ -275,6 +311,9 @@
       chronomancer: "He stamps, the boulders roll a moment later, and the walls of wind follow on their heels. Between the lanes, then behind a boulder. I have the whole phrase by heart. Possibly from earlier.",
       alembist: "Boulders roll down marked lanes: stand between the lanes. Afterwards the boulders shelter from the walls of wind, once each, so use them before they spoil. (They don't spoil. It's an expression.)",
       threadweaver: "He stamped, and I pulled the lot of them out of the boulders' lanes. When the rocks settled, we tucked in behind them for the walls of wind. A neat seam, that.",
+      tidecaller: "He stamped and boulders rolled across the summit in lanes. I waited in the gaps between them and let them go by like swell past a pier, then slipped in behind one for the walls of wind that followed.",
+      lanternkeeper: "He stamped and boulders rolled across the summit in lanes. I set my lantern in the gap between two lanes and we waited there, then slipped behind a boulder for the walls of wind that followed.",
+      kenseier: "He stamped and boulders rolled across the summit in lanes. I waited between the lanes and let them pass, then took the lee of a stone for the wind walls that follow. A rock is a patient ally.",
     } },
     'Squall Line': { hard: false, learned: {
       bastion: "The storm's edge closed on one side and opened on the other, and the dry ground walked slowly round him. The line walked with it, step for step, never outside. Marching order, in other words.",
@@ -296,6 +335,9 @@
       chronomancer: "The safe ground circles him once, slowly, and you walk with it, inside the edge, the whole way. I could see where it would be a moment before it got there. I usually was.",
       alembist: "A storm everywhere but a circle that travels slowly round him: walk with it, inside the edge, and keep working. Stirring while walking is a skill I have had to learn. Mostly stirred.",
       threadweaver: "The safe ground slid round him, and I herded my stitches along inside it, nobody straggling at the edge. A slow walk, and a tidy one. I was rather proud.",
+      tidecaller: "The dry ground drifted slowly round him with the storm raging at its edge, so I walked with it, my little flock inside, and called in anyone who strayed toward the rain. A long slow circle, like the moon over a harbour.",
+      lanternkeeper: "The dry ground drifted slowly round him with the storm raging at its edge. I walked with it, my lanterns coming along behind, and called in anyone who strayed toward the rain.",
+      kenseier: "The storm closed on one side and opened on the other, and the dry ground walked slowly round him. We walked with it, all of us, never outside it. A slow step, repeated, is the whole of the lesson.",
     } },
     'Ball Lightning': { hard: true, learned: {
       bastion: "Orbs of lightning drifted off the cliff edge and across the summit. I watched each one's heading and stepped off its path. Slow is not the same as harmless. A recruit learns that with his first slow horse.",
@@ -317,6 +359,9 @@
       chronomancer: "The orbs come one after another, spaced like slow notes. Read each heading and step off its path. I stepped aside in good time, or will have.",
       alembist: "Orbs drift over, burst on touch, and arrive staggered: read each heading, stand off the path, don't relax after the first. I relaxed after the first. It was a lovely bang, I'm told.",
       threadweaver: "Orbs drifted slowly across, and I nudged my stitches out of their paths, one at a time. Nobody snagged on one. The archer came close. I said nothing. I did look.",
+      tidecaller: "Orbs rose off the cliff edge and wandered across the summit, slow as a tide coming over the flats and just as sure. I read each one's heading and stepped off its path in good time. Slow is not harmless.",
+      lanternkeeper: "On the hard nights orbs rose over the cliff edge and wandered across the summit. They are slow, and slow is easy to read. I watched each heading, set my lantern where none was bound, and stepped off the paths in good time.",
+      kenseier: "Orbs of lightning rose off the cliff and wandered across the summit. I marked each one's heading and stayed off its road. It is a very slow blow, and it still counts.",
     } },
     'Eye of the Storm': { hard: false, learned: {
       bastion: "The wind dropped and nothing struck. I kept on him, kept the line together, watched for what came next. On the harder climb our colours turn over in this quiet; I checked mine twice, like buckles.",
@@ -338,6 +383,9 @@
       chronomancer: "The storm stops, long enough to mend everyone: the rest before the second movement. On the harder climb the colours swap as it opens; I noticed, I'm sure, either now or earlier.",
       alembist: "The storm stops, so restock everyone while it's quiet. On the harder climb, charges reverse here, so relabel your bottles! A good moment to find the cork. Still looking.",
       threadweaver: "The wind dropped and I used the quiet to mend every frayed thread. On the harder climb everyone's colour flips here, so I re-tied the pairs. Press flat while you can.",
+      tidecaller: "The wind dropped and nothing came: slack water, and the best hour to fill everyone to the brim. On the harder climb our colours turn over in this stillness, so I looked at mine, and then at theirs.",
+      lanternkeeper: "The wind dropped and nothing came. I used the quiet to bring every wick back to gold and mend everyone to the brim. On the harder climb our colours turn over in this stillness, so I looked at mine, and then at theirs.",
+      kenseier: "The wind fell and nothing struck. I stayed on him and watched for what came next, which is most of the work. On the harder climbs our colours turn over in this quiet; I checked mine twice. A rest is also a beat.",
     } },
     'Still Air': { hard: false, learned: {
       bastion: "Stones lit, gold and blue. I took the one matching my colour and stood at it like a sentry at a gate. Every stone needed a man, or the whole summit would pay for it.",
@@ -359,6 +407,9 @@
       chronomancer: "The stones light early; the calm closes much later. Each of us to a stone of our own colour, one apiece, and there before the end. I was there early. Possibly very early.",
       alembist: "Lit stones, gold and blue, each wanting exactly one person of its colour. Wrong colour spoils the dose; an empty stone spoils everyone. Labelled the stones in my head. Gold: yellow bottle. Which is silly, I know.",
       threadweaver: "The stones lit gold and blue, and I sent each stitch to a stone of its own colour, one apiece. Nobody doubled up, and none stood empty. A dropped stitch is a hole, and a hole is a draught.",
+      tidecaller: "The stones lit gold and blue. I went to the one that matched me and stood there, one to a stone, none left empty, as a good tide leaves no shingle dry. A wrong colour or a bare stone, and the whole shore pays.",
+      lanternkeeper: "The stones lit gold and blue. I went to the one that matched me, one to a stone, none left bare, and set a lantern on mine. A wrong colour or an empty stone and the whole party pays.",
+      kenseier: "The stones lit, gold and blue. I took the one that matched me, stood at it, and waited for the eye to shut. Every stone needed someone. I let the quiet pass over me.",
     } },
     'Distant Thunder': { hard: false, learned: {
       bastion: "Thunder, far off. Nothing reached us. I kept my post at my stone and did not flinch, though I felt the others watching to see whether I would.",
@@ -380,6 +431,9 @@
       chronomancer: "Thunder from far off, all sound and no strike. A rest in the music. I spent it well, or will.",
       alembist: "Distant thunder; nothing lands. Keep brewing. Used the lull to find my left shoe.",
       threadweaver: "Thunder far off, nothing came of it. I took the chance to rethread my needle.",
+      tidecaller: "Thunder, far off, over some other sea. Nothing fell on us. I kept to my stone and let the water rise a little further, in case the quiet was lying.",
+      lanternkeeper: "Thunder, far off. Nothing fell on us. I stayed on my stone and trimmed the wicks, in case the quiet was lying.",
+      kenseier: "Thunder, far away, and nothing reached us. I stayed at my stone and did not flinch, though I felt the others glance to see if I would. Stillness is the long breath before the stroke.",
     } },
     'Eye Closes': { hard: false, learned: {
       bastion: "The calm ended. I was at my stone, in my colour, when it did, and the storm came back down on the line. First rule of a post: be on it when the bell goes.",
@@ -401,6 +455,9 @@
       chronomancer: "The calm closes on the beat, and you are at your stone by then or you are too late. I was. Probably. Then the second half begins.",
       alembist: "The calm is ending: be at your stone, own colour, before it shuts, because the storm resumes at once. Kettle on. Unattended. Please do not mention it.",
       threadweaver: "The calm closed with every stitch at its own stone, right colour. Then I drew them in for the storm. All pinned.",
+      tidecaller: "The calm turned like the tide. I was already at my stone in my colour when it did, and the storm came back down on the rest of the summit. Arriving early costs nothing.",
+      lanternkeeper: "The calm closed, and the storm came back down over the rest of the summit. We were on our stones already, each in the right colour, lanterns lit. Arriving early costs nothing.",
+      kenseier: "The calm ended, and I was at my stone, in my colour, when it did. The storm came back down on all of us. A rest ends, and the next beat comes. Be ready on the last quiet one.",
     } },
     'Gathering Storm': { hard: false, learned: {
       bastion: "Static settled on all of us and bit, over and over. I kept close to the healers with my guard ready and let them mend the line as it went. It held by a thread. A good thread, well tied.",
@@ -422,6 +479,9 @@
       chronomancer: "Static, again and again, a steady pulse on everyone. I mend on every pulse and never fall behind, because the Thunderhead lands right after. I keep good time.",
       alembist: "Static on everyone, stinging repeatedly, then the Thunderhead. So: everyone close, mending poured continuously, shelf empty by the end. Worth it. Every drop.",
       threadweaver: "Static on every stitch, again and again. I tied them all together, close, so nobody took the stinging alone. Pulled it tight.",
+      tidecaller: "Static settled on every one of us and stung again and again, small nicks and many. I kept close to the others, gave a little water to whoever bled, steadily, and let the rest of the tide climb behind it. Wait for the water.",
+      lanternkeeper: "Static settled on all of us and stung again and again, a small nick each time. I kept the party close and the wicks full, and let the lanterns do the small work while I saved the large for later.",
+      kenseier: "Static settled on all of us and bit, again and again. I stayed close to the healers and let them keep us mended. Nothing to meet with a blade, only to outlast, a bite at a time.",
     } },
     'Thunderhead': { hard: false, learned: {
       bastion: "The static broke as one great blast on all of us. I had my guard saved for that moment, the healers had the line whole first, and we took it standing. Headcount after: all present, and swearing.",
@@ -443,6 +503,9 @@
       chronomancer: "The Thunderhead lands at the end of the static, on the downbeat. Everyone whole, every guard raised. I will have undone one, at most.",
       alembist: "One great blast after the static: everyone topped up, every guard raised, brewed well in advance. If it goes wrong, stand clear. I would.",
       threadweaver: "The Thunderhead broke over the whole hem. I had every stitch mended and snug beforehand. Nothing snapped. I checked twice anyway.",
+      tidecaller: "The static gathered itself and broke over all of us as one blow. By then the water stood at the crest and each of us had raised our own guard, so it fell on a full shore and not one of us went down.",
+      lanternkeeper: "The static gathered and broke over all of us as one blow. Each of us had raised our own guard, and I let every lantern burst as it fell, so it landed on a party already mended.",
+      kenseier: "The static broke as one great blast over every one of us. I wore the ash for it, and the healers had us full beforehand. A blow you cannot turn is best met whole.",
     } },
     'Skyfall': { hard: true, learned: {
       bastion: "He called the sky down on the spot where one of us stood. The nearer you are, the worse it falls. I gave ground away from it, as far as the edge allowed. A retreat on orders, my own.",
@@ -464,6 +527,9 @@
       chronomancer: "He calls it on where someone stands, and it falls a few breaths later. Go as far from that spot as you can. I will have been there before.",
       alembist: "The sky is falling on one spot, and the cure is distance, as much as possible. The nearer, the worse. I don't need to test this one. Really.",
       threadweaver: "The sky fell on where one of my stitches had stood. I pulled everyone to the far edge, all together, and not one of them had to be told twice.",
+      tidecaller: "He called the sky down on the spot where one of us had stood, and the nearer you are, the harder it falls. I walked out to the far edge of the summit, as far as the shore allowed, and the water followed me.",
+      lanternkeeper: "On the hard climb he called the sky down on the spot where one of us had stood, and the nearer you were, the harder it fell. I carried my lantern out to the far edge of the summit and the party came after.",
+      kenseier: "He dropped the sky on the spot where one of us stood. The nearer, the harder it landed. I went as far from it as the summit allowed. Some blows are for leaving.",
     } },
     'Heavens Fall': { hard: false, learned: {
       bastion: "The sky came down on a marked spot at his side. All of us stood in it together, gold and blue both, and held it up as a line. Each fall was heavier than the last. My arms shook. Nobody dropped it.",
@@ -485,6 +551,9 @@
       chronomancer: "The sky comes down on a marked spot, again and again, each one heavier. All of us in it, both colours, every time. I started counting, and lost count, and started again. Something like a hymn.",
       alembist: "The sky on a marked spot: everyone in, both colours, and heavier each time. The last dose is always the largest. Stir slowly.",
       threadweaver: "The sky came down on a marked spot. I pulled every stitch into it, gold and blue together, and held on. Heavier each time. My thimble has a dent in it now.",
+      tidecaller: "A marked patch at his side, and the whole sky coming down on it, each fall heavier than the last. We stood in it together, gold and blue, and shared the weight, and I raised the water again after every fall.",
+      lanternkeeper: "A marked patch at his side, and the sky coming down on it again and again, each fall heavier. We all stood in it together, gold and blue, to share the weight. I set my lantern in the middle and kept the wicks full between falls.",
+      kenseier: "A circle was painted at his side, and the sky came down into it, over and over. All of us crowded in, gold beside blue, and split each fall. Each landed heavier than the last, and nobody stepped out early. We shared the count.",
     } },
     'Grounding Rods': { hard: true, learned: {
       bastion: "Orders for the harder climb: a rod over each gold, planted wherever he stands. Put them a stride off Volkar, east and west, level with him. I watched the rods go in, then went to my partner's.",
@@ -506,6 +575,9 @@
       chronomancer: "The rods come down over the golds, and where they stand they stay until the storm has passed. A stride east of Volkar, a stride west, level with him. The blues join a little later. I knew it mattered. It does.",
       alembist: "Where the golds stand, the rods stay. So: east and west of him, a stride out, in his own row, and no shuffling. Blues to their partner's rod. Placement is the whole recipe, and I have written it on my hand.",
       threadweaver: "Rods hung over my two golds, so I placed them like pins: a stride off either side of the old windbag, east and west, level with him. Each blue stitched to their partner's rod. Straight lines, if you please.",
+      tidecaller: "A rod hung over each gold and went into the floor wherever they stood. We set ours a stride either side of Volkar, east and west, level with him, as straight as a tideline, and each blue came to their partner's rod.",
+      lanternkeeper: "On the hard climb a rod hung over each gold and drove into the floor where they stood. So the golds stood a stride either side of Volkar, east and west, level with him, and each blue came to their partner's rod. Two rods, two lights.",
+      kenseier: "Hard climb: a rod hangs over every gold one and sticks in the ground where they happen to be. Ours stood east and west of Volkar, level with him and a stride out. The blues came over to them, and I went to my partner as soon as his was in.",
     } },
     'Supercell': { hard: true, learned: {
       bastion: "Three fronts: west, north, east. Each dies on a rod and leaves calm behind it. My partner and I walked our rod's far sides in turn, always within Volkar's reach, and took the cell with everyone after, mended.",
@@ -527,6 +599,9 @@
       chronomancer: "West, north, east, each front starting before the last has passed, the same three bars every time. Round the rod: east side, south side, west side, a step early each. Then the cell breaks on everyone, on the last note; I had mended them already.",
       alembist: "Brew for a supercell: three fronts in a row, each stopped by a rod. Circle your rod, east, south, west, and stay near him. The cell breaks over everyone at the end, so the whole party gets a dose before the last front is out.",
       threadweaver: "Fronts from the west, the north, the east, one on another's heels. I kept each pair tight round their rod: east side, south side, west side, never leaving the old windbag. Then the cell broke over the whole hem, and I'd mended every stitch first. Mind the slack.",
+      tidecaller: "Three fronts, one on the heels of the next: west, then north, then east. Each pair circled their rod, east side, south side, west side, never straying far from Volkar. When the last passed, the cell broke over us, and the water was high before it.",
+      lanternkeeper: "Three fronts crossed the summit, one on the heels of the next: west, then north, then east. Each pair circled their rod, east side, south side, west side, close in to Volkar. I let every lantern burst as the last front passed and the cell broke.",
+      kenseier: "Fronts came from the west, then the north, then the east, each dying on a rod and leaving calm behind. My partner and I circled our rod, always within his reach, and took the last blow with the rest, mended. A count of three.",
     } },
   },
 };

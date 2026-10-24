@@ -29,7 +29,7 @@ const check = (ok, what) => { if (!ok) probs.push(what); };
     // a feat for the second road must stay hidden until its boss is open
     const set2 = (f.check.boss && (BOSSES.find(b => b.id === f.check.boss) || {}).set === 2) || f.check.set === 2;
     check(!set2 || f.needs || (f.check.boss && f.check.boss !== 'grubnak'), `${f.id}: a set 2 feat needs a gate (needs / check.boss)`);
-    if (f.check.type === 'hardClasses' || f.check.type === 'heroes') check(f.check.n <= CLASSES.length, `${f.id}: asks for more heroes than exist`);
+    if (f.check.type === 'hardClasses' || f.check.type === 'heroes') check(f.check.n === 'all' || f.check.n <= CLASSES.length, `${f.id}: asks for more heroes than exist`);
     if (f.check.type === 'mark') check(f.check.k, `${f.id}: a mark check needs k`);
   }
   check(FEATS.length >= 60, `expected at least 60 feats, have ${FEATS.length}`);

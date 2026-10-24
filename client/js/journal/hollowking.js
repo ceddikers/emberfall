@@ -21,6 +21,9 @@
     chronomancer: "His Majesty does everything twice: once himself, and again through his court, a beat later. I thought I had heard that echo before. I had not, which is the odd part. I felt cheated of a memory.",
     alembist: "Specimen: one dead king, cold, very much awake. Symptoms: more than I could label in a night. Two lanterns broken, neither deliberate, which stings. The shelves will need restocking. Also my nerves, which are not kept on a shelf.",
     threadweaver: "His lordship keeps a hall full of loose threads: knights, bells, coffins, lanterns. My stitches wandered all over it. The sloppiest hem I have ever seen, and it was mine. Needle clenched in my teeth the whole night.",
+    tidecaller: "The King calls, and his court answers a beat behind, like surf coming back off a sea wall. I had thought only the water did that. I stood in his hall and listened a long while, for the gap between the call and the answer.",
+    lanternkeeper: "The Hollow King calls and his court answers a beat behind, in a long hall with every lamp out but a few. We were hurt in the dark corners I had not lit. Tomorrow I count the corners first. Keep your light.",
+    kenseier: "A dead king, and courteous: every blow of his has manners, slow, with a bow. His hall answers for him, bells and knights and coffins, a beat behind. I was late to most of it. Tomorrow I learn the court's count. Catch the beat.",
   },
   // the first time this hero beats him
   win: {
@@ -43,6 +46,9 @@
     chronomancer: "We beat him before the moon set, and I did not have to undo a thing. That is new. Something in me already knows what comes next, and has not told me yet. Rude. I will have found out.",
     alembist: "Result: one king, deceased, permanently. Shelves empty, every patient alive. A new reagent has appeared in me that I certainly did not brew, and it is warm. Label: unknown. Do not shake.",
     threadweaver: "His lordship is unpicked for good and the whole hem came home. There is a new thread in me now, in a colour I don't recognise, and I did not spin it. Needle down. Pulled it tight regardless.",
+    tidecaller: "He lay still, and the hall went quiet as slack water. I stood at the last lantern a long while, and something in the deep under me shifted, the way the sea shifts before a tide turns. The sea gives back.",
+    lanternkeeper: "The King lies still and the hall is quiet at last. I left a lantern burning at the foot of the empty throne. He kept his court in the dark a long time, and one small light seemed owed. Four of us came out. Walk where it's warm.",
+    kenseier: "The King lies still. I laid the blade across my knees by the last lantern and listened, and for the first time the hall had no beat at all. He was a good opponent. Ash settles.",
   },
   moves: {
     'Barrow Knell': { hard: false, learned: {
@@ -65,6 +71,9 @@
       chronomancer: "The toll lands a beat after he lifts his head. I had everyone mended in the moment before; next time, which was last time, I shall start a little earlier. A good bell, on reflection. Very punctual.",
       alembist: "Ailment: the bell, felt by everyone, nowhere to hide. Remedy: the whole party whole before it tolls, the big brew poured just ahead. Front shelf, please. And I shall stop the cork squeaking; it spoiled the effect.",
       threadweaver: "The bell pulled on every thread at once. Nothing to dodge, so I had the whole party mended before it tolled and drew everyone in close. Thread that has been tugged in company holds.",
+      tidecaller: "The bell tolled for every one of us, with no cover from it. I had brought the water up high before the sound, and kept the party bunched in my reach, so it broke on a shore already full.",
+      lanternkeeper: "The bell tolled for every one of us, and nothing in the hall could turn it. I kept the party bunched inside my glows and let every lantern burst as the sound began. A bell that finds a full room has little to take.",
+      kenseier: "The bell tolled for every one of us, and a blade cannot turn a bell. We stood close by the healer and took it upright. A slow toll, and I almost counted it.",
     } },
     'Sceptre Sweep': { hard: false, learned: {
       bastion: "He sweeps the sceptre across all the ground before him, and he faces me. His feet set as he winds it, and a man with set feet cannot turn. I stepped round to his flank, which is not my way; a shield is meant to face. The line was already behind him.",
@@ -86,6 +95,9 @@
       chronomancer: "He sets his feet, then sweeps the whole front of the hall. Behind him, that bar is quiet. I was standing there already, I think. Not the first time I have hidden behind a king.",
       alembist: "The sceptre goes across the whole front of the room, and his feet fix once he winds it. Remedy: stand at his back. Cheap, effective, no brewing required. I had the vial out anyway. Put it away. Sheepish.",
       threadweaver: "He swept the whole front of the hall, and one of my stitches was snagged right in it. Behind him, everyone; he can't turn once he starts. Mind which end of a king you stand at.",
+      tidecaller: "He sets his feet to swing, and a king with set feet cannot turn. I kept behind him with the rest and sang from there, while our knight slid round to his flank. The sceptre swept a great deal of bare floor.",
+      lanternkeeper: "Before the sweep he plants his feet, and then he cannot turn. We kept behind him, all of us, and I set my lantern there. Our knight stood off at the flank. The sceptre cleared a great deal of empty floor.",
+      kenseier: "A wide arc, always toward me. His feet set as he wound it up, and a man with set feet cannot turn. I stepped through the sweep as it came, and the others were already behind him. A step in the right beat is a door.",
     } },
     'Royal Gaze': { hard: false, learned: {
       bastion: "I was trained to face the enemy. He punishes it. When his eyes lit I turned my back on him in the last instant and turned again after. Every drill I ever learned screamed against it. I did it, and so did the line.",
@@ -107,6 +119,9 @@
       chronomancer: "His eyes light, and a moment later whoever is looking at him is held. Looked once, held; looked twice, worse. I turn away on the cue now. Last time I knew that already, and looked anyway. Fascinating.",
       alembist: "Symptoms: frozen where you stand, worse on a second dose. Remedy: your back to him as it lands, even mid-step. It likes to arrive while the knights are swinging. (Do not look to check. I checked.)",
       threadweaver: "Whoever looks him in the eye is pinned like cloth under a needle, and it pricks worse the second time. My stitches turn their backs on him now, like sensible sheep.",
+      tidecaller: "When his eyes lit I turned my back to him, and turned round again once it had passed. It is the looking that hurts, and the second look hurts worse. I watched the wall for a breath and the water did not mind.",
+      lanternkeeper: "When his eyes lit I turned my back and held my lantern low. It is the looking that hurts, and the second look hurts worse. I studied the wall until it had passed.",
+      kenseier: "His eyes lit. I showed him my back for a breath, which every teacher of the blade forbids, and turned again after. It was his gaze that cut, not his hand. The eyes were the blade, and I learned to look away from it.",
     } },
     'Royal Audience': { hard: true, learned: {
       bastion: "His crown blazed, and this time he wanted to be faced. I always face him; for once that was the whole duty. The line turned to him with me, square, chins up, nobody caught looking away. It felt like a parade. I enjoyed it more than I will say.",
@@ -128,6 +143,9 @@
       chronomancer: "Crown, not eyes: at that signal he must be faced. I turned to him a moment early, I'm sure. I did. Those with their backs to him were held. I confess I enjoyed being right about the order.",
       alembist: "Ailment: the blazing crown. Symptoms: freezing, but only for those with their backs to him. Remedy: face him as it lands. Shelve well apart from the Gaze; the labels look alike. (I swapped them. Once. Educational.)",
       threadweaver: "His crown blazed, and every stitch had to face him. One turned away and was pinned fast. A sloppy seam, and I told her so. Chin up, all of you, needle ready.",
+      tidecaller: "His crown blazed, and this once the sea wanted facing. I had turned away from habit and the cold pinned me fast. After that I stood square to him, face lifted, and let the water rise behind me.",
+      lanternkeeper: "On the hard nights his crown blazed, and that time we were to face him. I had turned away from habit, and the cold pinned me where I stood. After that I faced him square, lantern raised.",
+      kenseier: "This time the crown blazed, and he wished to be faced. For once the whole duty was to look at him. We turned to the throne together, chins up, and none was caught looking away. A courtesy, and a strange one.",
     } },
     'Grave Cleave': { hard: false, learned: {
       bastion: "The greatsword came down on me alone, and it leaves the wound open after. Shield up in the last instant, the line kept clear of the ground in front of him, and I bled quietly. Complaining about a wound is for the infirmary. Held.",
@@ -149,6 +167,9 @@
       chronomancer: "The greatsword lands on our knight, and the bleeding keeps time after it, drop by drop. I had him shielded before, and mended through the echo. I believe I have done this before. Several times, in the same order.",
       alembist: "The greatsword on our knight, then a bleeding that keeps on. Give the blue bottle before it falls and a slow green cure for the bleeding after, and keep both on the near shelf. Nearer. No, nearer. Ah.",
       threadweaver: "The greatsword landed on our knight, and I ran a thread to take some of it off him. The wound keeps pulling after; I held the seam mended till it closed, and did not let go.",
+      tidecaller: "The greatsword fell on our knight alone and left a wound that kept weeping. I raised the water under him before the blow and kept it lapping at the bleeding until it closed. The rest of us stayed off the ground before the King.",
+      lanternkeeper: "The greatsword fell on our knight alone, and the wound kept bleeding after. I hung a lantern on him beforehand and kept its wick high until the cut closed. The rest of us stayed off the floor before the King.",
+      kenseier: "The great sword came down on me alone, and the cut it leaves stays open. I met it with the blade as it fell, and the others kept clear of the ground before him. A late press, and I would have borne the wound. Catch the beat.",
     } },
     'Barrow Stomp': { hard: false, learned: {
       bastion: "He stamped and the ground round his feet broke. I gave ground, out past the edge with the line, and came back to him after. A knight who retreats on purpose is not a retreating knight. That is what I told myself.",
@@ -170,6 +191,9 @@
       chronomancer: "He lifts his foot; a moment later the ground about him breaks. Out on the lift, back in once it settles. A little dance. I have known the steps for ages.",
       alembist: "The ground at his feet, broken. Remedy: out of the ring before it falls, no reagents required. His knights serve it again later from where they stand; not on the label yet. Adding it now.",
       threadweaver: "He stamped, and everyone near him had to step back out of the ring. A neat little hem round him, and nobody inside it. Tack it down, and back in.",
+      tidecaller: "The floor broke in a ring about his feet. Those near him stepped out past its edge, and went back in once the stone lay quiet. There is no arguing with a tide line; one simply stands on the right side of it.",
+      lanternkeeper: "The floor broke in a ring about his feet. Those near him stepped out past its edge and went back in once the stone lay still. I set my lantern outside the ring, so they had a warm place to wait.",
+      kenseier: "His stamp broke the ground about his feet. We stepped out past its edge together and came back when it was still. A stamp is only a beat with a floor under it.",
     } },
     'Royal Doom': { hard: false, learned: {
       bastion: "He sentenced one of ours, never me. Lanterns appeared on the floor, and the doomed cannot lift one. I picked up the nearest and carried it to her side, boots loud on the flags. The light cured it. A good order is short and obeyed.",
@@ -191,6 +215,9 @@
       chronomancer: "Sentence passed, on a short clock. The doomed cannot lift a lantern, so someone else must carry one over before the last tick. I did, with a moment to spare. I am, on balance, a punctual saviour.",
       alembist: "Doom is fatal if neglected. Cure: lantern light, carried over by someone not doomed, because the patient cannot dose herself. Spare lanterns gutter out once the cure is done. Do not store them near the paraffin. Learned that.",
       threadweaver: "He doomed one of mine, and she can't fetch a lantern herself. Another stitch carries the light to her; a lantern left on the floor helps nobody. Quick as a cut.",
+      tidecaller: "The sentence fell on one of the others, and she could not lift a lantern herself. So I went for the nearest light, being unsentenced, and carried it over the flags to her. Its glow was enough to lift the doom.",
+      lanternkeeper: "He passed sentence on one of us, and only a light could answer it. The condemned cannot carry one, so I took a lantern from the hall and set it at her feet. I have set down a lamp for a stranger before. The doom let go.",
+      kenseier: "One of ours was sentenced to doom. Lanterns burned across the hall, and the sentenced cannot lift one, so I carried the nearest to them. The light lifted it. A short errand, and a quiet one.",
     } },
     'Crown of Graves': { hard: false, learned: {
       bastion: "The whole hall broke open, all but the ground right at his feet. That is where I stand anyway. The line came in close behind me, where I could see them. It is a poor post for a coward and a fine one for a knight.",
@@ -212,6 +239,9 @@
       chronomancer: "On the downbeat the whole hall breaks open but the ground at his feet. In on the bar before, all of us. I ran in early; I always do. It is the one habit I can rely on.",
       alembist: "The whole hall cracked open, but not the ground at his feet, so stand there. From a knight the safe ground is at that knight's feet instead. Note for the shelf. Several shelves, actually. Everything rattles.",
       threadweaver: "Everywhere broke but the ground at his feet, so I pulled the whole party in tight round him. Not one loose stitch left out in the hall. It was cramped. It was alive.",
+      tidecaller: "The whole hall broke up like ice, all but the still water at his feet. That is the eye of it. We came in close, near enough to hear his breathing, and I kept the tide high behind us.",
+      lanternkeeper: "The whole hall broke up like ice, all but the still ground at his feet. We came in close, right under the crown, and I set my lanterns in that quiet and kept them burning.",
+      kenseier: "The graves opened across the whole hall, all but the stone at his feet. That is where I stand anyway. The others crowded in close behind me, and the opening passed us by. His feet are the quietest place in the Barrow.",
     } },
     'Echo Knights': { hard: false, learned: {
       bastion: "Two dead knights rose by the walls. Each remembers one of his swings as he makes it, then swings it again from where it stands. I watch what each one learned and move the line to match. A soldier who learns from the enemy is a good soldier.",
@@ -233,6 +263,9 @@
       chronomancer: "The knights are his echo: each catches one swing as he makes it and plays it back later from the walls. I've always liked an echo. I dodged both. I may have dodged them yesterday.",
       alembist: "Two knights, each storing one of his swings and replaying it later from its own spot. Note which swing went to which knight, and dodge from that knight's position. Colour-code them. Red for left. I forget which is left.",
       threadweaver: "Two knights rose, each holding onto one of his swings to replay from the walls. I keep a thread on which one took what, and move everyone out of its way.",
+      tidecaller: "Two of his old guard rose by the walls, each keeping one of his swings to send back from where it stood. I watched for the flash on each, to learn which it had taken, and led the party out of the way it would be thrown.",
+      lanternkeeper: "Two of his old guard rose, each keeping one of his swings to throw back from where it stood. I watched which swing each had taken, as I would mark which lamp in a street was lit, and led the party clear of where it would land.",
+      kenseier: "Two dead knights rose by the walls. Each remembers one swing of his, makes it, and then makes it again from where it stands. I watched which each had kept and moved the line to match. The echo is always a beat late, and a beat is enough.",
     } },
     'The Charge Sheet': { hard: false, learned: {
       bastion: "Banners above his throne lit one at a time, each with one of his swings, and nothing fell. I said the order to the line until we had it, like drill. It comes back later. On the hard nights the order is drawn fresh; read the banners every time.",
@@ -254,6 +287,9 @@
       chronomancer: "He plays the melody once on the banners, a sigil for each note. Learn it now; later he plays it back fast. I knew it before he finished, which, admittedly, was last time. On the hard nights the melody changes. I listened properly.",
       alembist: "Banners over the throne, lit in order, one swing on each, and nothing lands yet. Write the order down somewhere you won't lose it. On the hard nights it is redrawn each pull. Re-write it. In ink. Not the green one.",
       threadweaver: "Banners lit above the throne one after another, a swing on each. Nothing fell. I basted the order into my memory, because it all comes back in sequence. On the hard nights it changes each pull, so I unpicked and re-sewed it every time.",
+      tidecaller: "Banners lit above the throne, a swing on each, and not a drop fell. I watched them as I would a sky for the order of the clouds, and kept it, for it returns. On the hard nights it is drawn fresh each pull, so I read the sky again.",
+      lanternkeeper: "Banners lit above the throne, a swing on each, and nothing fell. I counted them off like lamps along a street, first to last, and kept the order, for it comes back. On the hard nights it is drawn fresh, so I read it again.",
+      kenseier: "Banners over the throne lit one at a time, each carrying a swing of his, and nothing fell. I recited the order until all of us knew it. It returns later. On the harder nights it is drawn fresh, so read the banners again each time.",
     } },
     'Coffin Lids': { hard: false, learned: {
       bastion: "He tore the lids off the coffins on both walls and sent them skidding across the floor. We stepped out of their path. Where they stop, they are cover for what comes next. I marked the nearest as my post and gave the order to take cover, since it was my turn to give one.",
@@ -275,6 +311,9 @@
       chronomancer: "The lids skid in from the walls; a moment later, he decrees. Out of their path on the first beat, behind them on the second. I was hiding there already. It does feel like cheating.",
       alembist: "Coffin lids skidding in from the walls along fixed lanes: out of the lanes. They stop and stand as cover, and cover is needed straight after. Shelve the lids by the door. Ready, and quick.",
       threadweaver: "Lids came skidding in from both walls. We stepped out of their way, then tucked in behind them. Neat as a hem.",
+      tidecaller: "He tore the lids off the coffins and sent them skidding in from both walls. We stepped out of their lanes, and where they came to rest I marked the nearest. A fallen lid is a breakwater, and wood floats.",
+      lanternkeeper: "He tore the lids off his coffins and sent them skidding in from both walls. We kept out of their lanes, and where they came to rest I set a lantern behind the nearest. A lid on its side makes decent shelter.",
+      kenseier: "He tore the lids off the coffins on both walls and sent them sliding across the hall. We stepped out of their paths. Where they stopped, they were cover for what came next. I marked the nearest and kept it close.",
     } },
     'Royal Decree': { hard: false, learned: {
       bastion: "A wave rolled down the hall from the throne. Only something solid between me and the throne kept it off, so I put a coffin lid there and kept my footing behind it. It cracked at the end, honest wood doing an honest job. Held.",
@@ -296,6 +335,9 @@
       chronomancer: "The decree comes just after the lids settle. Behind them, throne on the far side, by the downbeat. Next time, which was this time, I will have been there first.",
       alembist: "Light from the throne, down the whole hall: put something solid between you and the throne, lid or fallen stone. The lid breaks. A single-use container; I should have brought spares. Do I own spares? No.",
       threadweaver: "The decree rolled down from the throne, and only those with a lid between them and it were spared. I tucked the lot of them behind in a neat row, and put the needle in my hat.",
+      tidecaller: "The decree came down the hall from the throne like a bore up a river. Only something solid broke it, so I set a fallen lid between myself and the king, and tucked the others in behind their own.",
+      lanternkeeper: "The decree rolled down from the throne, and only something solid broke it. I stood behind a fallen lid with my lantern at my back, and tucked the others in behind theirs. One lid for each of us.",
+      kenseier: "A wave rolled down the hall from the throne. Open air would not stop it, only something solid, so I crouched behind a coffin lid with the throne on its far side. Honest wood. It cracked at the end and did its work.",
     } },
     'Funeral March': { hard: true, learned: {
       bastion: "His dead marched across the hall in ranks, wall to wall. One lane through them stays open the whole way. I found it and brought the line into it, my footing never leaving the stone. The lane is somewhere new each time, and nothing paints it.",
@@ -317,6 +359,9 @@
       chronomancer: "Rank after rank, evenly spaced, and one lane open on every beat. Stand in it and the march passes round you. I knew where it was. It lands somewhere new each time, unmarked, which is a flaw in the arrangement.",
       alembist: "Ranks of the dead across the whole hall: stand in the one lane they leave open, or on the floor just behind a rank once it passes. No brew. The lane is somewhere new each time, and never marked. Mark it with chalk? Not allowed.",
       threadweaver: "His dead marched across the hall in rows. One gap stays open all the way through, like the gap in a seam. We went into it, one by one. It opens somewhere new each time, unmarked.",
+      tidecaller: "His dead crossed the hall in ranks, wall to wall, like waves that never quite break, and one lane stayed open the whole way through. It lies somewhere new each time, unmarked. I read the gaps and led us along the dry one.",
+      lanternkeeper: "His dead crossed the hall in ranks, wall to wall, and one lane stayed open the whole way through. It lay somewhere new each pull. I read the gaps between the ranks and led the party down the open lane, lantern first.",
+      kenseier: "His dead marched across the hall in ranks. One lane through them stayed open from wall to wall, and nothing painted it; I found it and brought everyone in. It moves each time. They kept better time than most soldiers.",
     } },
     'Barrow Bells': { hard: false, learned: {
       bastion: "Two bells. Each wants a pair standing under it, or the whole line is doomed. I took a bell with a partner and held my ground beneath it, and did not look at the other bell once. I trusted the pair under it. That is duty too.",
@@ -338,6 +383,9 @@
       chronomancer: "Two bells, two to each. Leave one empty and all of us are doomed. The pairs were set before the bells appeared. I chose mine already; I choose it again every time.",
       alembist: "Two bells, a pair under each, and an empty bell dooms everyone. Settle the pairs before the bells appear. Mine was our knight. A flask-sized fear, but shared. Safer with company.",
       threadweaver: "Two bells, two stitches threaded under each. Leave one empty and the whole hem is doomed. A bell without a pair is a dropped stitch, and I won't have it.",
+      tidecaller: "Two bells, and two of us must stand beneath each, or the whole party is lost. I took my place under one with a partner before the bells came, and stayed there till the ringing died, two by two like gulls on a rail.",
+      lanternkeeper: "Two bells, and two of us beneath each, or all of us are lost. Before they sounded I paired everyone off and took my place under one with my partner, and we stayed until the ringing stopped. Two bells, two pairs.",
+      kenseier: "Two bells, and a pair must stand under each or all of us are doomed. I took a partner and stood beneath mine until the sound died. I never looked at the other bell. Trust the pair under it.",
     } },
     'Lights Out': { hard: false, learned: {
       bastion: "Every brazier went dark, then the pair nearest the King flared back up. Whoever stood outside their light was caught, so I got the line into the light. Standing in the open feels wrong. Standing in the dark feels worse.",
@@ -359,6 +407,9 @@
       chronomancer: "Every fire out; a moment later two come back, near him. Into their light before the next beat. I was standing there when they lit. You learn where the fire will be.",
       alembist: "Total darkness: the braziers nearest him relight, so stand in their light, because in the dark he catches you. (My lamp went out too. Spilled oil. Not a metaphor.)",
       threadweaver: "The fires all went out, then the two nearest him came back. I drew everyone into their light before it landed. No loose threads left in the dark.",
+      tidecaller: "Every fire in the hall went dark, and then the two nearest the King came back. The dark is where it finds you. I steered the party into their glow, the way boats steer for a lamp on a far headland.",
+      lanternkeeper: "Every fire in the hall went out, and only the two nearest the King came back. I called everyone into their glow at once. Whoever stayed in the dark was caught, and I counted heads to be sure.",
+      kenseier: "Every brazier went dark, then the two nearest the King flared back. Outside their glow we would be found, so I took everyone into the light. The dark was his, for a breath. I let him keep it.",
     } },
     'Court of Bones': { hard: false, learned: {
       bastion: "He sat back on his throne, out of reach, and the coffins down the walls woke one by one. We broke each before it opened. When one did, I took the bones that climbed out, one at a time, and sent them back down.",
@@ -380,6 +431,9 @@
       chronomancer: "The coffins wake one at a time, evenly spaced, in the same order. Break each before its turn. I knew the order. I did. It was a pleasure.",
       alembist: "Coffins waking one by one: break each before it opens, because an opened coffin spoils into a skeleton. Clear the shelf in order. Left to right, labelled, no dust. (There was dust.)",
       threadweaver: "He sat on his throne while the coffins woke, one by one. We broke them before they opened. Tidy work. One seam at a time, snip, snip.",
+      tidecaller: "He withdrew to his throne, out of reach, and the coffins down the walls woke in turn, a long swell of them. We broke each before its lid could lift. Whatever got out, I kept the water on whoever met it.",
+      lanternkeeper: "He withdrew to his throne, out of reach, and the coffins along the walls woke one by one. We broke each before its lid could lift. The one that got out met our knight, and I had a lantern hung on him already.",
+      kenseier: "The King withdrew to his throne, beyond reach, and the coffins along the walls began to wake one by one. We cracked each before it could open. I took on whatever climbed out, one at a time, and sent it back to its box.",
     } },
     'Sceptre Throw': { hard: false, learned: {
       bastion: "From his throne he hurled his sceptre at whoever stood farthest from him, and the aim followed them to the last moment. I made sure the farthest was someone who could walk clear. On the harder nights the two farthest each take one.",
@@ -401,6 +455,9 @@
       chronomancer: "The sceptre flies from the throne to whoever is farthest, the line tracking until the last breath. Step off. I was somewhere else. On harder nights, the two farthest, which is a different somewhere.",
       alembist: "A sceptre thrown from the throne at the farthest of us, tracking until a moment before: step off the line in time. Two farthest on harder nights. Whoever is farthest, beware. Stay near the cupboard.",
       threadweaver: "He threw his sceptre from the throne at my farthest stitch, the aim following her until the end. She stepped off it. On harder nights it goes for the two farthest. Nobody wanders when I am watching.",
+      tidecaller: "From his throne he flung the sceptre at whoever stood farthest from him, and its line followed them like a gull following a fish. They stepped sideways only at the last. The farthest, wisely, was someone quick.",
+      lanternkeeper: "From the throne he hurled the sceptre at whoever stood farthest, the line following them to the last moment. They stepped sideways at the end. I kept my lanterns out of the line, and a light on whoever ran.",
+      kenseier: "The sceptre came from the throne, aimed at the one farthest away and following them almost to the end. So the farthest had to be someone quick on their feet. On the harder nights it goes to the two farthest, one each.",
     } },
     'Grave Summons': { hard: false, learned: {
       bastion: "The dead gathered on one of the young ones, never me, and the rest of us had to close on them, all but one. On harder nights a mark settles over each of us the moment it lands. Close in, then out. Stranger than drill.",
@@ -422,6 +479,9 @@
       chronomancer: "The dead gather on one of us, never the knight. Everyone in, all but one. On harder nights the marks follow moments later: in, then out. I was already moving. I had moved before.",
       alembist: "The dead gather on one of us, so all but one close on them; on harder nights, a mark on each of us moments later, so out again at once. Crowd, then disperse. Do not run with flasks.",
       threadweaver: "The dead gathered on one of my lot. I drew the rest in, all but one; on harder nights the marks follow moments later, and the threads must go slack again at once.",
+      tidecaller: "The summons fell on one of the others, never our knight, and it was heavy. We closed on her together, streams into a river, and the weight grew thin among many. On the harder nights marks followed soon after, and we scattered at once.",
+      lanternkeeper: "The dead gathered on one of the others, never our knight, and it was heavy. We closed on her together so the weight was split among us all. On the harder nights marks followed soon after, and we scattered at once.",
+      kenseier: "The dead gathered on one of the others, and all but one of us went in to share it. On the harder nights marks settle on each of us right after: in together, then apart. I went in, and came out again on the next beat.",
     } },
     'Grave Marks': { hard: false, learned: {
       bastion: "A mark over every one of us, each wanting its own ground. The line opened up, each man to his own patch, then closed again. Spacing is the oldest drill there is. It was good to see it done well.",
@@ -443,6 +503,9 @@
       chronomancer: "Marks over every head; on the next beat each lands. Each of us apart by then. I was alone already, and I will be, again, in a moment.",
       alembist: "A mark on everyone: spread out, no circles touching, and a dose for all after. One small fire, deliberate. The rest, accident. Tidy now.",
       threadweaver: "A mark over each head. I let the threads go slack so each stitch had its own floor, then pulled them all tight again after. A sound seam, loosened on purpose.",
+      tidecaller: "A mark hung over every head, and each of us needed a patch of floor alone. We drew apart like boats leaving harbour, each in our own water, and I eased the ones who flinched afterwards.",
+      lanternkeeper: "A mark hung over every head, and each of us needed a patch of floor alone. We drew apart, and afterward I walked my lantern round the four patches, topping up whoever had flinched.",
+      kenseier: "A mark settled on every one of us, each wanting its own ground. We opened out, each to a patch, and came together when it passed. The space between is as much a part of the fight as the blows.",
     } },
     'The King Rises': { hard: false, learned: {
       bastion: "He rose from his throne, and his knights took new posts along the walls. The line had to learn new ground. I took him back and turned him away from them. A change of posting. The sergeant hated those.",
@@ -464,6 +527,9 @@
       chronomancer: "He rises; the knights move. The echoes come from new places now. I adjusted before it happened. That is, I think I did. Next time I will have.",
       alembist: "He rises, and his knights move to new posts. Relabel the shelves: the echoes come from new places now. Left shelf is now the right. Don't ask. Everything has swapped.",
       threadweaver: "He rose, and his knights moved to new walls. I pinned everyone to the new pattern. Unpick the old; sew the new.",
+      tidecaller: "He stood up from the throne, and his knights took new places along the walls. The old shore was gone. I learned the new coast, where each echo would come from, and walked the others over it before it mattered.",
+      lanternkeeper: "He stood from his throne and his old knights took new places along the walls. The hall I had lit was the wrong hall. I learned where each echo would come from now and walked the party over the new ground before it mattered.",
+      kenseier: "He rose from the throne, and his knights took new posts along the walls. All I had learned of the room was wrong. I drew him back and turned him away from the others. New floor, new count.",
     } },
     'Royal Tithe': { hard: false, learned: {
       bastion: "He took his tithe, and every one of us dropped low at once. Shields laid beforehand stayed. He kept his blows off me while the healers mended the line before the Dirge. We held, and I will not say how close.",
@@ -485,6 +551,9 @@
       chronomancer: "The tithe lands; a moment later, the Dirge. Shields before the first note, mending between. I did it before and I did it again, and the second time was better. It usually is.",
       alembist: "The Tithe drains all of us low. Shields before, since he can't take those, then a big dose for everyone before the Dirge. Shelves emptied. All the good bottles gone. I regret nothing.",
       threadweaver: "He took his tithe from everyone at once. Shields before; they stay. Then I pulled the whole hem back up before the Dirge. It hung by a stitch. I held the stitch.",
+      tidecaller: "He took his tithe and we all dropped to the shallows at once. A ward of water is not life, and it stays, so I raised those first, then drew everyone back up before the Dirge. He held his blows from our knight meanwhile.",
+      lanternkeeper: "He took a tithe from every one of us at once. A shield is not life and it stays, so I put the shields up first, then brought everyone back to full before the Dirge. He held his blows from our knight meanwhile.",
+      kenseier: "The tithe took all of us down low together. Whatever was laid on us beforehand survived it. I kept his eyes on me while the healers lifted us ahead of the Dirge. Close, and I will not say how close.",
     } },
     'Dirge': { hard: false, learned: {
       bastion: "The Dirge tolled through all of us after the tithe. No blocking it. The line came to it whole, mended in time. It is no honour to be spared by a song, but I took the honour.",
@@ -506,6 +575,9 @@
       chronomancer: "The Dirge, just after the tithe. Soft, but it finishes the low. I mended them all in time. I have the tune by heart: it ends the same way.",
       alembist: "The Dirge: soft, but fatal to the low. Everyone mended before it, same shelf as the Tithe. Mind the stoppers. Low volume, high stakes.",
       threadweaver: "The Dirge tolled through the whole hem after the tithe. Soft, but it snaps any thread still frayed. I had them all mended.",
+      tidecaller: "The Dirge followed the tithe, soft as surf on shingle and as hard to turn aside. There was nothing to stand behind. I had filled the party to the brim beforehand, and it passed over a full basin.",
+      lanternkeeper: "The Dirge followed the tithe, soft as a lullaby and as hard to turn. There was nothing to stand behind. I had every lantern lit and every wick gold, and let them burst as it began.",
+      kenseier: "The Dirge rang through all of us right behind the tithe, with nothing to cross. The healers had us whole beforehand, and that was the whole answer. He keeps the slowest funeral time I have heard.",
     } },
     'Judgement': { hard: false, learned: {
       bastion: "Judgement: the swings from the banners, in that order, from him and both knights at once, each shown for an instant. I called the order to the line from memory, loud as drill. Not one man was in the wrong place.",
@@ -527,6 +599,9 @@
       chronomancer: "Judgement plays the banner melody back fast, from him and both knights. I knew the tune; we moved on the beat before each note. I might have hummed it. I may have been humming it all week.",
       alembist: "Judgement: every banner swing in order, from him and both knights at once. The order, memorised earlier: out of each circle, out of each front, in close for the ring. Memory, it turns out, stores better than any shelf.",
       threadweaver: "Judgement: every banner swing in order, from him and both knights. We moved together, from memory, like a well-drilled needle-line. Pulled it tight.",
+      tidecaller: "Every swing from the banners, in the order they had lit, thrown by him and both knights, each shown for a heartbeat. I had the order by heart and moved us ahead of each, as one reads a tide table.",
+      lanternkeeper: "The banners lit, and then every swing came down in the order they had shown, thrown by the King and both knights for a single heartbeat each. I knew the row of them lamp by lamp, and had us a step ahead of every blow.",
+      kenseier: "Judgement was the banners made real: all their swings, in the old order, thrown by him and both knights together, each glimpsed for an instant. I spoke the order as it came, a breath ahead. No one stood in the wrong place.",
     } },
     'The Long Night': { hard: false, learned: {
       bastion: "The braziers died and one lantern was left. Doom passed from one of us to the next, the next one's sigil glowing ahead, and whoever was cured carried the light on. A relay, in the dark. I have never run so carefully.",
@@ -548,6 +623,9 @@
       chronomancer: "The Long Night: doom passes from one to the next, the next glowing a moment ahead. The lantern follows. I carried it already. I carry it again. The night is long, but the beats are short.",
       alembist: "The Long Night: one lantern, doom passing round. Carry the lantern to whoever glows next; once cured, they carry it on. One reagent, shared. The cleverest recipe in the book: use one flask, and pass it on.",
       threadweaver: "One lantern, and doom passing from one to the next. The next glows ahead; the light goes to them, and they carry it on. A single thread, handed down the row.",
+      tidecaller: "The braziers died and one lantern was left, and the sentence passed from one of us to the next. The next to fall glowed ahead of time; whoever held the light walked it to them, and they carried it on. I walked, not ran, as on a tide flat.",
+      lanternkeeper: "One lantern left in the whole hall, and the doom passing from one of us to the next. The next to fall glowed ahead of their turn. Whoever held the light walked it over to them. I walked, never ran, and kept my own lanterns close behind.",
+      kenseier: "Every light failed but one lantern. Doom passed from one of us to the next, each next one glowing before their turn, and the lantern went with the cure. I kept the count so no hand reached late.",
     } },
     'Gravebind': { hard: true, learned: {
       bastion: "A grave-chain bound two of us, never me. They kept close until it broke while the rest spread under their marks. I took the greatsword. Three duties, and the pair is drawn fresh every pull.",
@@ -569,6 +647,9 @@
       chronomancer: "A chain bound two of us, never the knight, a different two each time. We stayed close until it broke, a few breaths later. The others apart. I knew who. I do not know how.",
       alembist: "Gravebind: two of us, chained, drawn fresh each pull. Stay close until it breaks, the rest apart under marks, and the greatsword falls on our knight at the same time. Three bottles uncorked, three hands on them.",
       threadweaver: "A grave-chain bound two of my stitches, a different two every time. They kept close, no slack, until it broke. The rest kept apart. Slack in the wrong place, and the whole hem comes apart.",
+      tidecaller: "A grave-chain bound me to one of the others, a different one each pull, and we kept close until it broke while everyone else held to their own marks. Two boats on one line; neither can drift off.",
+      lanternkeeper: "On the hard nights a grave-chain bound me to one of the others, a different one each pull, and we stayed close until it broke while the rest held to their own marks. A pair on one chain, and I kept a lantern between us.",
+      kenseier: "A chain of the grave tied two of the others together, never me. They stayed close until it snapped, and everyone else kept to their marks apart. I had the great sword to meet besides. The pair is new every time.",
     } },
     'Burial Rites': { hard: true, learned: {
       bastion: "He dug a grave for each of us, each in our own colour. Which is whose changes every pull, so read your colour. Lines out, in close for the crown, then into my own grave before it shut. I have slept in worse beds.",
@@ -590,6 +671,9 @@
       chronomancer: "The graves open in our colours, the places drawn anew each pull, and close a while later, after the writ and the crown. I walked out to mine in good time, plenty of beats to spare.",
       alembist: "Four graves, one per hero, each labelled in their colour, the labels reshuffled each pull. In close for the crown, then everyone to their own before it shuts. An empty grave raises the dead on us all. Colour-code the corks. Please.",
       threadweaver: "He dug a grave for each of us, each in its own colour, the places drawn fresh each pull. After the crown each went to their own. One wandered into the wrong one. A sloppy seam.",
+      tidecaller: "Graves opened for each of us in our own colours, and whose is whose is drawn fresh every pull. I found mine, walked the lines out, then in for the crown, then to my own bed before the lid came down. Another's grave is struck.",
+      lanternkeeper: "A grave opened for each of us in our own colour, and which is whose changes every pull. I read the colours, kept to the lines, came in for the crown, and was lying in my own bed before the lid fell. Four graves, four of us.",
+      kenseier: "He dug a grave apiece for us, each its own colour, shuffled each time, so I read mine first. Out wide for the lines, in tight for the crown, then into my own grave before the lid came.",
     } },
     'Writ of Execution': { hard: true, learned: {
       bastion: "Chained, every man of us, and the writ read out. My line went into a corner between the graves, and I stepped off it. It burns on, so aim with care; a line is a wall. One writ is torn up each pull, and I never learned whose.",
@@ -611,6 +695,9 @@
       chronomancer: "Pardoned, this time, which was last time: my writ was torn. The others aimed theirs between the graves and stepped off as it fired. The lines burn on until the graves close. I might have known.",
       alembist: "The Writ: a line through each of us that stays burning. Aim it between the graves, away from the others, and step off. My own writ came torn, so I brewed where I liked. Lucky. Whoever draws the short card, I salute you.",
       threadweaver: "My writ was torn, so I tended my stitches from wherever I liked. Each sent their line out to a corner, between the graves, so the burning lines left every path open.",
+      tidecaller: "A chain from him to each of us, and a line of grave-light through every one, left burning. I aimed mine into a corner, between the graves, and stepped away, for a line laid across a grave dams the road to it. One writ is torn up each pull.",
+      lanternkeeper: "A chain ran from the King to each of us, and a line of grave-light through each chain stayed lit. We turned ours into the gaps between graves and stepped away, since a line across a grave blocks the road to it. One writ is torn up each pull.",
+      kenseier: "Chains, and a writ read over each of us, and from every chain a beam of grave-light that went on burning. I laid mine across a corner between the graves and left its line. One of the writs is struck each pull, and it is never the same one.",
     } },
   },
 };

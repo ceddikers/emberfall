@@ -82,5 +82,13 @@
   "tidecaller": {
     "newbie": 657,
     "pro": 1052
+  },
+  "lanternkeeper": {
+    "newbie": 693,
+    "pro": 1048
+  },
+  "kenseier": {
+    "newbie": 1096,
+    "pro": 1529
   }
 }

@@ -371,6 +371,16 @@ const Inventory = (() => {
         shape(() => c.rect(-2.5, -1, 5, 16), '#1a1420', 2);
         shape(() => c.arc(0, 17, 3.8, 0, Math.PI * 2), '#b08aff', 2);
         break;
+      case 'ashblade':   // Kenseier: a long, slightly curved single-edged blade, ash-grey with an ember-orange edge, a round charcoal guard and a wrapped grip
+        c.rotate(-Math.PI / 4);
+        shape(() => { c.moveTo(-3.5, -4); c.lineTo(-3.5, -26); c.quadraticCurveTo(-2.5, -32, 3.5, -34); c.lineTo(3.5, -4); c.closePath(); }, '#b4b0a8');
+        stroke(() => { c.moveTo(3.2, -6); c.lineTo(3.2, -32); }, '#ff8a3d', 1.6);
+        stroke(() => { c.moveTo(-1, -6); c.lineTo(-1, -28); }, '#8a867e', 1);
+        shape(() => c.ellipse(0, -2, 8, 2.6, 0, 0, Math.PI * 2), '#3a3836', 1.8);
+        shape(() => c.rect(-2.5, -0.5, 5, 15), '#2a2826', 1.8);
+        for (const y of [3, 7, 11]) stroke(() => { c.moveTo(-2.5, y); c.lineTo(2.5, y + 2); }, '#8a867e', 1);
+        shape(() => c.arc(0, 16, 2.6, 0, Math.PI * 2), '#ff8a3d', 1.5);
+        break;
       case 'scythe':   // Reaper: a long black snath ringed with violet, a slender pale crescent blade with a teal edge
         c.rotate(0.35);
         stroke(() => { c.moveTo(-1, 30); c.lineTo(1, -22); }, '#0c0a14', 3);

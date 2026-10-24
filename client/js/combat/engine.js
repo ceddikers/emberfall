@@ -430,7 +430,7 @@ class Kit {
   readyIn(ab) {
     let t = Math.max(0, this.lockUntil - this.now);
     if (this.cast && !ab.duringCast) t = Math.max(t, this.cast.end - this.now + ENGINE.CAST_LOCK_EXTRA);
-    if (ab.type === 'gcd') t = Math.max(t, this.gcdRemaining());
+    if (ab.type === 'gcd' && !(ab.freeGcd && ab.freeGcd(this))) t = Math.max(t, this.gcdRemaining());   // (ab.freeGcd(k): a GCD move that is off the global cooldown right now: the Kenseier's Feint)
     t = Math.max(t, this.cdRemaining(ab));
     return t;
   }
@@ -474,12 +474,12 @@ class Kit {
     // (a paced kit: the press may complete a named move, which brings its own animation lock)
     const mv = ct > 0 || !this.def.moveFor ? ab : (this.def.moveFor(this, ab) || ab);
     const lock = mv.lock ?? ab.lock ?? ENGINE.ANIM_LOCK;
-    if (ab.type === 'gcd' && !this.gcdFree()) {
+    if (ab.type === 'gcd' && !this.gcdFree() && !(ab.freeGcd && ab.freeGcd(this))) {
       this.gcdLen = ((typeof ab.recastGcd === 'function' ? ab.recastGcd(this) : ab.recastGcd) || ENGINE.GCD) * this.hasteMult();
       this.gcdReady = this.now + this.gcdLen;
       this.stats.gcds++;
       this.stats.gcdTime += this.gcdLen;
-    } else if (ab.type === 'gcd') { this.stats.gcds++; this.stats.gcdTime += ct || lock; }   // no GCD: uptime is time spent in your moves
+    } else if (ab.type === 'gcd' && this.gcdFree()) { this.stats.gcds++; this.stats.gcdTime += ct || lock; }   // no GCD: uptime is time spent in your moves
     if (ab.type === 'ogcd' || ab.cd) this.startCooldown(ab);
     const pool = this.pace && this.pace.pool, cost = pool ? this.costOf(ab) : 0;
     // (the resting pace counts from the end of the move's recovery, not the press: a chain of presses each made as
@@ -502,7 +502,8 @@ class Kit {
     // client matches the hit the kit really made (ability-vfx.js: Blade Chain, Hack & Maul)
     this.env.emit({ type: 'used', ab, target, st: ab.fxStep ? ab.fxStep(this) : undefined });
     // a tank's taunt rides on this button (kits.js TAUNT_CARRY): the world taunts only if it's ready and wanted
-    if (this.def.tauntOn && this.env.taunt && this.baseId(ab) === this.def.tauntOn) this.env.taunt(target);
+    // (def.tauntWhen(k, ab): a carrier that only carries on some presses, the Kenseier's third Ember Cut)
+    if (this.def.tauntOn && this.env.taunt && this.baseId(ab) === this.def.tauntOn && (!this.def.tauntWhen || this.def.tauntWhen(this, ab))) this.env.taunt(target);
     if (ab.ult) this.ultFire(ab);
     const share = ab.type === 'gcd' ? this.itemGcdShare(ab) : 0;   // (read before the effect: a Distill it spends shortens the GCD)
     ab.effect(this, target);

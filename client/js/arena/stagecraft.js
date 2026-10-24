@@ -1,14 +1,14 @@
 // Threads and Dolls on screen (classes-c). Everything here is drawing and bookkeeping; the host owns the rules
 // (fight.js, the weave block). Every client draws:
 //   - the Threadweavers' threads ('thr' from the host): glowing lines between allies that bow loose when slack and
-//     pull straight, brighten and shiver as they near their snapping length (260 px); a snap ('thrs') flicks apart.
+//     pull straight, brighten and shiver as they near their snapping length (550 px); a snap ('thrs') flicks apart.
 //     Tapestry ties everyone: a woven ring of gold-lilac threads round the party while it lasts.
 //   - every Marionettist's Doll(s): your own straight from your kit (smooth, no lag), everyone else's from the host's
 //     'dolls' list (10 a second, eased). Strings run from the control bar to each Doll, one line per String left,
 //     drawn taut and reddening as the Doll nears the strings' reach. An Understudy's Stage is chalked on the floor
 //     between the three of them, and lit while the boss stands in it.
 const Stagecraft = (() => {
-  const SNAP = 260;
+  const SNAP = 550;   // (fight.js WEAVE_HOST.SNAP)
   const S = {
     threads: [], tapestry: null, dolls: new Map(), stage: 0, mine: null, sentAt: -9, acts: new Map(),
   };

@@ -958,3 +958,213 @@ Object.assign(GAUGES, {
     }
   },
 });
+
+// ======================================================================= Tidecaller (healer, class 20)
+// Tide: a tall glass vial of sea water that rises on its own clock, holds at the crest and ebbs. The surface ripples and a
+// small arrow beside it says which way the water is going; the foot of the vial is tinted for LOW water (where Sip is
+// stronger, 35) and its head for the crest (90 and up), where a pearl marker waits and shrinks away over the hold. Spring
+// Flood floods the vial gold-white with a ring running down its seconds; Breakwater lays stone blocks over it (the water
+// is held) with a bar of its seconds. Beside it: the Riptide Mark (a whirl in a ring that runs down, green when the mark will
+// pop at the next crest, rust when it will lapse first), the Deep Shield (Undertow: a dark bar draining), a free Sip drop
+// (Low Water) and, with Tide Table, a strip of the next 20s with a pearl tick where the next crest lands. The painted gauge
+// replaces this later.
+const TIDE_G = { he: -1, h0: 2 };
+Object.assign(GAUGES, {
+  tide(c, k, w, h, t) {
+    const g = k.g, now = k.now, f = Math.max(0, Math.min(1, (g.tide || 0) / 100)), ph = g.tphase || 'rise';
+    const flood = now < (g.floodUntil || 0), wall = now < (g.wallUntil || 0), deep = now < (g.deepUntil || 0), mark = g.mark && now < g.mark.until ? g.mark : null;
+    const cx = 34, vw = 30, top = 12, vh = 90, bot = top + vh, x0 = cx - vw / 2, TEAL = '#3fb8a8', FOAM = '#eaf8f5', PEARL = '#d7f2ee';
+    const lowY = bot - vh * 0.35, hiY = bot - vh * 0.9, hold = ph === 'hold' && !flood;
+    if (g.holdEnd !== TIDE_G.he) { TIDE_G.he = g.holdEnd; TIDE_G.h0 = Math.max(0.5, (g.holdEnd || 0) - now); }
+    const pulse = 0.5 + 0.5 * Math.sin(t * 6);
+    // the light round the vial: gold-white in a flood, pearl at the crest, a faint teal once the water is up
+    if (flood) glow(c, cx, top + vh / 2, 62, '#fff0b8', 0.32 + 0.1 * pulse);
+    else if (hold || f > 0.9) glow(c, cx, top + 10, 44, PEARL, 0.18 + 0.1 * pulse);
+    else if (f > 0.4) glow(c, cx, bot - vh * f * 0.5, 40, TEAL, 0.1 * f);
+    const shape = () => { c.beginPath(); c.roundRect(x0, top, vw, vh, 12); };
+    shape(); c.fillStyle = '#0c1c26'; c.fill();
+    c.save(); shape(); c.clip();
+    // the low-water band and the crest band, tinted behind the water
+    c.fillStyle = 'rgba(63,184,168,0.12)'; c.fillRect(x0, lowY, vw, bot - lowY);
+    c.fillStyle = 'rgba(215,242,238,0.13)'; c.fillRect(x0, top, vw, hiY - top);
+    // the water: a gradient from deep teal to pale, a rippling surface with a lighter swell riding it
+    const sy = bot - vh * f, amp = ph === 'ebb' ? 1.3 : 1.9;
+    const gr = c.createLinearGradient(0, sy, 0, bot);
+    if (flood) { gr.addColorStop(0, '#fffbe6'); gr.addColorStop(0.5, '#8fe8dc'); gr.addColorStop(1, '#2a9a98'); }
+    else if (deep) { gr.addColorStop(0, '#6ad0d8'); gr.addColorStop(0.5, '#2c8fa6'); gr.addColorStop(1, '#12506a'); }
+    else { gr.addColorStop(0, f > 0.9 ? '#e8fbf6' : '#8fe8d8'); gr.addColorStop(0.45, '#3fb8a8'); gr.addColorStop(1, '#17606c'); }
+    c.fillStyle = gr; c.beginPath(); c.moveTo(x0, bot);
+    for (let x = x0; x <= x0 + vw + 1; x += 3) c.lineTo(x, sy + Math.sin(x * 0.32 + t * 3.2) * amp + Math.sin(x * 0.15 - t * 1.7) * 0.8);
+    c.lineTo(x0 + vw, bot); c.closePath(); c.fill();
+    c.fillStyle = 'rgba(255,255,255,0.14)'; c.beginPath(); c.moveTo(x0, bot);
+    for (let x = x0; x <= x0 + vw + 1; x += 3) c.lineTo(x, sy + 5 + Math.sin(x * 0.22 - t * 2.4) * 1.6);
+    c.lineTo(x0 + vw, bot); c.closePath(); c.fill();
+    // the surface line and bubbles rising from the floor
+    if (f > 0.02) { c.strokeStyle = FOAM; c.globalAlpha = 0.9; c.lineWidth = 1.4; c.beginPath(); for (let x = x0; x <= x0 + vw; x += 3) { const yy = sy + Math.sin(x * 0.32 + t * 3.2) * amp + Math.sin(x * 0.15 - t * 1.7) * 0.8; x === x0 ? c.moveTo(x, yy) : c.lineTo(x, yy); } c.stroke(); c.globalAlpha = 1; }
+    if (f > 0.1) for (let i = 0; i < 4; i++) { const q = (t * 0.5 + i * 0.27) % 1, by = bot - 4 - q * (vh * f - 6), bx = x0 + 7 + ((i * 7) % 16) + Math.sin(q * 9 + i) * 2; c.fillStyle = 'rgba(234,248,245,' + (0.55 * (1 - q)).toFixed(2) + ')'; c.beginPath(); c.arc(bx, by, 1.1 + (i % 2) * 0.6, 0, TAU); c.fill(); }
+    // Breakwater: stone blocks laid over the vial, and the water held
+    if (wall) {
+      c.fillStyle = 'rgba(120,138,150,0.34)'; c.fillRect(x0, top, vw, vh);
+      c.strokeStyle = 'rgba(20,28,36,0.8)'; c.lineWidth = 1;
+      for (let r = 0; r < 9; r++) { const yy = top + r * 10; c.beginPath(); c.moveTo(x0, yy); c.lineTo(x0 + vw, yy); c.stroke(); for (let b = 0; b < 2; b++) { const bx = x0 + (r % 2 ? 7 : 15) + b * 15; c.beginPath(); c.moveTo(bx, yy); c.lineTo(bx, yy + 10); c.stroke(); } }
+    }
+    c.restore();
+    shape(); c.lineWidth = 2.6; c.strokeStyle = flood ? '#fff0b8' : wall ? '#9fb2be' : hold ? PEARL : f > 0.4 ? '#4aa8a0' : '#3a5a66'; c.stroke();
+    // the marks on the vial: low water (Sip is stronger) at 35, the crest at 90
+    for (const [yy, col] of [[lowY, TEAL], [hiY, PEARL]]) { line(c, x0 + vw + 1, yy, x0 + vw + 6, yy, col, 1.6); line(c, x0 - 6, yy, x0 - 1, yy, col, 1.6); }
+    label(c, 'low', x0 - 10, lowY + 3, 'rgba(120,214,200,0.8)', 7, 'system-ui', 700);
+    // the pearl at the crest: it glows while the crest holds and a ring over the vial's head runs down with its seconds
+    const pearlY = top - 1;
+    if (hold) {
+      const left = Math.max(0, (g.holdEnd || 0) - now), q = Math.min(1, left / TIDE_G.h0);
+      glow(c, cx, pearlY + 6, 18, '#ffffff', 0.45 + 0.2 * pulse);
+      c.beginPath(); c.arc(cx, top + 14, 20, -Math.PI / 2 - Math.PI * q * 0.6, -Math.PI / 2 + Math.PI * q * 0.6); c.lineWidth = 2.4; c.lineCap = 'round'; c.strokeStyle = g.spring ? '#ffe9a0' : PEARL; c.stroke();
+    }
+    circle(c, cx, pearlY + 3, hold ? 4.2 : 3.2, hold ? '#ffffff' : 'rgba(215,242,238,0.55)', '#26404a', 1.2);
+    if (g.spring) { glow(c, cx, pearlY + 3, 9, '#ffe9a0', 0.5); circle(c, cx, pearlY + 3, 1.6, '#ffe9a0'); }
+    // which way the water is going: a small arrow at the surface on the right of the vial
+    const ax = x0 + vw + 11, ay = Math.max(top + 8, Math.min(bot - 8, sy));
+    const dirc = flood ? '#fff0b8' : ph === 'rise' ? '#8fe8d8' : ph === 'ebb' ? '#ff9a7a' : PEARL;
+    if (ph === 'hold' || wall) { c.fillStyle = dirc; c.fillRect(ax - 4, ay - 1.3, 8, 2.6); }
+    else { const up = ph === 'rise' ? 1 : -1, bob = Math.sin(t * 5) * 1.2 * up; poly(c, [ax, ay - 5 * up - bob, ax + 4.5, ay + 1 * up - bob, ax - 4.5, ay + 1 * up - bob], dirc, '#10202a', 1); }
+    // the right column: what the water is doing, the Mark, the Deep Shield, the foot strip
+    const rx = 74, nc = typeof tideNextCrest === 'function' ? tideNextCrest(k) : 0;
+    const word = flood ? 'FLOOD' : wall ? 'HELD' : ph === 'rise' ? (f >= 0.9 ? 'High' : f < 0.35 ? 'Low' : 'Rising') : ph === 'hold' ? 'CREST' : 'Ebbing';
+    label(c, word, rx + 24, top + 9, flood ? '#fff0b8' : wall ? '#c4d2da' : ph === 'ebb' ? '#ffb8a0' : hold ? '#ffffff' : '#bff3ea', 13, 'system-ui', 800);
+    const sub = flood ? Math.max(0, g.floodUntil - now).toFixed(1) + 's' : wall ? Math.max(0, g.wallUntil - now).toFixed(1) + 's held' : hold ? 'now' : 'crest ' + Math.ceil(nc) + 's';
+    label(c, sub, rx + 24, top + 22, 'rgba(210,235,232,0.75)', 9, 'system-ui', 600);
+    // the Riptide Mark: a whirl in a ring that runs down over its 20s
+    const my = top + 48, left = mark ? Math.max(0, mark.until - now) : 0, willPop = mark && nc <= left + 0.2;
+    const mcol = !mark ? '#3a5a66' : willPop ? '#8fe8a8' : '#e0916a';
+    glow(c, rx + 10, my, 16, mcol, mark ? 0.22 + (willPop && nc < 3 ? 0.14 * pulse : 0) : 0);
+    circle(c, rx + 10, my, 12, 'rgba(12,28,38,0.9)', '#1a2e3a', 1.4);
+    if (mark) { c.beginPath(); c.arc(rx + 10, my, 12, -Math.PI / 2, -Math.PI / 2 + TAU * Math.min(1, left / 20)); c.lineWidth = 2.6; c.lineCap = 'round'; c.strokeStyle = mcol; c.stroke(); }
+    c.save(); c.translate(rx + 10, my); c.rotate(t * (mark ? 1.4 : 0.3)); c.strokeStyle = mcol; c.globalAlpha = mark ? 1 : 0.6; c.lineWidth = 1.6; c.lineCap = 'round';
+    c.beginPath(); for (let i = 0; i <= 22; i++) { const a = i * 0.46, r = 1.2 + i * 0.26; c.lineTo(Math.cos(a) * r, Math.sin(a) * r); } c.stroke(); c.restore();
+    label(c, mark ? 'Mark' : 'no Mark', rx + 38, my - 1, mark ? '#d7f2ee' : 'rgba(140,170,176,0.75)', 9, 'system-ui', 700);
+    label(c, mark ? (willPop ? 'pops ' + Math.ceil(nc) + 's' : 'lapses') : '', rx + 38, my + 10, mcol, 8.5, 'system-ui', 700);
+    // the Deep Shield (Undertow): a dark bar of its seconds
+    const dy = top + 68;
+    if (deep) { const dl = Math.max(0, g.deepUntil - now), dw = 56; rrect(c, rx, dy, dw, 6, 3, '#0e2230', OUT, 1); rrect(c, rx + 0.5, dy + 0.5, Math.max(2, (dw - 1) * Math.min(1, dl / 10)), 5, 2.5, '#2c8fa6'); label(c, 'Deep ' + dl.toFixed(0) + 's', rx + dw / 2, dy + 16, '#8fd8e4', 8.5, 'system-ui', 700); }
+    // a free Sip waiting (Low Water): a drop
+    if (g.lowWater) { glow(c, rx + 6, dy + 3, 12, '#bff3ea', 0.4 + 0.2 * pulse); poly(c, [rx + 6, dy - 5, rx + 10.5, dy + 3, rx + 6, dy + 8, rx + 1.5, dy + 3], '#d7f2ee', '#10202a', 1); label(c, 'free Sip', rx + 32, dy + 6, '#d7f2ee', 8.5, 'system-ui', 700); }
+    // Tide Table: the next 20 seconds on a strip, a pearl tick where the next crest lands (the cycle is 20s)
+    if (k.talent && k.talent('tidecaller_table')) {
+      const sw = 56, sy2 = h - 11, px = rx + sw * Math.max(0, Math.min(1, nc / 20));
+      rrect(c, rx, sy2, sw, 5, 2.5, '#0e2230', OUT, 1);
+      c.fillStyle = 'rgba(63,184,168,0.4)'; c.fillRect(rx + 1, sy2 + 0.5, Math.max(0, px - rx - 1), 4);
+      line(c, px, sy2 - 4, px, sy2 + 9, '#ffffff', 1.6); circle(c, px, sy2 - 5, 2, PEARL, '#10202a', 0.8);
+    }
+  },
+});
+
+// ======================================================================= Lanternkeeper (healer, class 21)
+// Embers: a hanging iron lantern, its roof and bars in iron with brass trim, and in the bottom of its cage a bed of coals, one for
+// every Ember you can hold (4, or 5 with Hoarded Embers). A lit coal glows orange with a white-gold heart; the next one warms as
+// its 5 seconds come round (a thin ring closing on it). The flame standing over the bed is how full you are: a stub with one coal,
+// a tall gold tongue with the cage full. Two small sparks under the lantern are the Trim count (the third bolt gives an Ember).
+// Beside it, the wicks: one small lantern for each light you have out (a hanging hand lantern has its hook), its flame shrinking
+// from tall gold to a red stub as the wick burns down, so the lanterns that need a Trim or a Relight can be seen from here.
+// Lamplighter's Stride shows its seconds as a small bar; Lighthouse sets two beams turning behind the lantern and a ring of its
+// seconds round it. The painted gauge replaces this later.
+const LK_FLAME = w => (w > 0.66 ? '#ffd27a' : w > 0.33 ? '#ffa94a' : w > 0.02 ? '#ff7a3a' : '#c8452a');
+// a teardrop of flame standing on (x, y), h tall, bending a little with sway
+function lkFlameShape(c, x, y, h, w, sway) {
+  c.beginPath(); c.moveTo(x + sway, y - h);
+  c.quadraticCurveTo(x + w * 0.9 + sway * 0.4, y - h * 0.38, x, y);
+  c.quadraticCurveTo(x - w * 0.9 + sway * 0.4, y - h * 0.38, x + sway, y - h);
+  c.closePath();
+}
+Object.assign(GAUGES, {
+  embers(c, k, w, h, t) {
+    const g = k.g, now = k.now, max = typeof lkEmbMax === 'function' ? lkEmbMax(k) : 4, emb = Math.max(0, Math.min(max, g.emb || 0));
+    const every = typeof LANTERN !== 'undefined' ? LANTERN.EMB_EVERY : 5, frac = emb >= max ? 0 : Math.max(0, Math.min(1, (g.embAt || 0) / every));
+    const lit = now < (g.lightUntil || 0), stride = now < (g.strideUntil || 0), f = emb / max;
+    const cx = 42, IRON = '#2b2620', IRON2 = '#46403a', BRASS = '#b98f45', pulse = 0.5 + 0.5 * Math.sin(t * 6);
+    const flick = Math.sin(t * 11) * 0.5 + Math.sin(t * 17.3) * 0.5;
+    // Lighthouse: two beams turning behind the lantern, a ring of its seconds
+    if (lit) {
+      const left = Math.max(0, (g.lightUntil || 0) - now), q = Math.min(1, left / (typeof LANTERN !== 'undefined' ? LANTERN.LIGHT : 8));
+      c.save(); c.globalCompositeOperation = 'lighter';
+      for (let b = 0; b < 2; b++) {
+        const a = t * 0.9 + b * Math.PI;
+        c.fillStyle = 'rgba(255,214,140,0.16)'; c.beginPath(); c.moveTo(cx, 58); c.lineTo(cx + Math.cos(a - 0.13) * 90, 58 + Math.sin(a - 0.13) * 90); c.lineTo(cx + Math.cos(a + 0.13) * 90, 58 + Math.sin(a + 0.13) * 90); c.closePath(); c.fill();
+      }
+      c.restore();
+      glow(c, cx, 58, 56, '#fff0c8', 0.22 + 0.06 * pulse);
+      c.beginPath(); c.arc(cx, 58, 40, -Math.PI / 2, -Math.PI / 2 + TAU * q); c.lineWidth = 2; c.lineCap = 'round'; c.strokeStyle = 'rgba(255,236,190,0.8)'; c.stroke();
+    } else if (f > 0.05) glow(c, cx, 70, 38 + 10 * f, '#ff9f3a', 0.1 + 0.16 * f);
+    // the chain and ring, the roof with its finial
+    line(c, cx, 0, cx, 8, IRON2, 1.6); circle(c, cx, 10.5, 3, null, BRASS, 1.6);
+    poly(c, [cx - 7, 17, cx + 7, 17, cx + 21, 28, cx - 21, 28], IRON, OUT, 1.6);
+    line(c, cx - 15, 24, cx + 15, 24, BRASS, 1.2); circle(c, cx, 15.5, 2.2, BRASS, OUT, 0.8);
+    // the cage: dark glass, the warm inside, the flame over the coals
+    const top = 28, bot = 90, x0 = cx - 21, cw = 42;
+    c.save(); c.beginPath(); c.rect(x0, top, cw, bot - top); c.clip();
+    c.fillStyle = '#15100c'; c.fillRect(x0, top, cw, bot - top);
+    const warm = lit ? 0.62 : 0.12 + 0.4 * f;
+    const gr = c.createRadialGradient(cx, bot - 8, 2, cx, bot - 8, 48); gr.addColorStop(0, `rgba(${lit ? '255,236,190' : '255,170,70'},${warm.toFixed(3)})`); gr.addColorStop(1, 'rgba(255,150,50,0)');
+    c.fillStyle = gr; c.fillRect(x0, top, cw, bot - top);
+    if (emb > 0.05 || lit) {
+      const fh = lit ? 50 : 7 + 40 * f, fw = lit ? 10 : 4.5 + 5 * f, sw = flick * (1 + f);
+      lkFlameShape(c, cx, bot - 6, fh * (0.94 + 0.06 * flick), fw, sw); c.fillStyle = lit ? '#ffe9b0' : '#ff9f3a'; c.fill();
+      lkFlameShape(c, cx, bot - 6, fh * 0.72, fw * 0.66, sw * 0.8); c.fillStyle = lit ? '#fff6dc' : '#ffc46b'; c.fill();
+      lkFlameShape(c, cx, bot - 6, fh * 0.4, fw * 0.36, sw * 0.5); c.fillStyle = '#fffdf0'; c.fill();
+    }
+    c.restore();
+    // the bed of coals: one per Ember
+    const span = max > 1 ? 30 : 0;
+    for (let i = 0; i < max; i++) {
+      const x = cx - span / 2 + (max > 1 ? span * i / (max - 1) : 0), y = 84.5, a = Math.max(0, Math.min(1, emb - i)), next = i === Math.floor(emb) && emb < max;
+      const r = 4.2, rock = [x - r, y + 1, x - r * 0.7, y - r * 0.9, x + r * 0.2, y - r, x + r, y - r * 0.2, x + r * 0.8, y + r * 0.9, x - r * 0.1, y + r];
+      if (a > 0.02) glow(c, x, y, 11, '#ff8a3a', 0.55 * a + 0.1 * a * flick);
+      poly(c, rock, a > 0.02 ? `rgb(${Math.round(70 + 185 * a)},${Math.round(34 + 70 * a)},${Math.round(20 + 14 * a)})` : '#241b16', a > 0.02 ? '#5a2a10' : '#4a3d33', 1);
+      if (a > 0.02) circle(c, x - 0.5, y - 0.5, 1.1 + 1.2 * a, `rgba(255,${Math.round(190 + 40 * a)},${Math.round(110 + 60 * a)},${(0.55 + 0.45 * a).toFixed(2)})`);
+      if (next && frac > 0.02) {
+        glow(c, x, y, 8, '#ff9f3a', 0.3 * frac);
+        c.beginPath(); c.arc(x, y, 6.2, -Math.PI / 2, -Math.PI / 2 + TAU * frac); c.lineWidth = 1.4; c.lineCap = 'round'; c.strokeStyle = 'rgba(255,196,107,0.9)'; c.stroke();
+      }
+    }
+    // the bars and rails over the front of the cage, the base with its feet
+    for (const bx of [x0, cx - 10.5, cx + 10.5, x0 + cw]) line(c, bx, top, bx, bot, IRON, bx === x0 || bx === x0 + cw ? 3 : 2.2);
+    for (const bx of [x0, cx - 10.5, cx + 10.5, x0 + cw]) line(c, bx - 0.5, top + 1, bx - 0.5, bot - 1, IRON2, 0.8);
+    rrect(c, x0 - 2, top - 2.5, cw + 4, 4.5, 1.5, IRON, OUT, 1.2); line(c, x0, top - 0.5, x0 + cw, top - 0.5, BRASS, 1);
+    rrect(c, x0 - 2, bot, cw + 4, 7, 2, IRON, OUT, 1.4); line(c, x0, bot + 1.5, x0 + cw, bot + 1.5, BRASS, 1);
+    for (const fx of [x0 + 1, x0 + cw - 1]) poly(c, [fx - 3, bot + 7, fx + 3, bot + 7, fx + 2, bot + 11, fx - 2, bot + 11], IRON, OUT, 1);
+    // the number, and the Trim sparks (two: the third bolt gives an Ember)
+    label(c, String(Math.round(emb)), cx, 113, f >= 1 ? '#ffe2a0' : '#f2e6c8', 13, 'system-ui', 800);
+    for (let i = 0; i < 2; i++) {
+      const on = (g.trims || 0) > i, x = cx + 18 + i * 9, y = 108;
+      if (on) glow(c, x, y, 7, '#ffc46b', 0.5);
+      poly(c, [x, y - 3.4, x + 2.6, y, x, y + 3.4, x - 2.6, y], on ? '#ffd27a' : '#241b16', on ? '#fff0c0' : '#4a3d33', 0.9);
+    }
+    // the wicks: a small lantern for every light out, its flame the wick
+    label(c, 'wicks', 108, 11, 'rgba(214,186,130,0.7)', 8, 'system-ui', 700);
+    const lan = (g.lan || []).filter(l => l.kind !== 'float').slice(-6);
+    if (!lan.length) {
+      label(c, 'none lit', 108, 44, 'rgba(160,140,110,0.6)', 9, 'system-ui', 600);
+      for (let i = 0; i < 3; i++) rrect(c, 93 + i * 15 - 4, 52, 8, 6, 1.5, 'rgba(36,27,22,0.8)', 'rgba(74,61,51,0.8)', 1);
+    }
+    lan.forEach((l, i) => {
+      const x = 93 + (i % 3) * 15, yb = (i < 3 ? 42 : 72), wk = Math.max(0, Math.min(1, l.wick)), big = l.kind === 'beacon', eternal = l.kind === 'eternal';
+      const col = eternal ? '#fff0c8' : LK_FLAME(wk), fh = eternal ? 11 : 2 + 11 * wk, sw = Math.sin(t * 9 + i * 2) * 0.6;
+      if (big) line(c, x, yb + 5, x, yb + 12, IRON2, 2);
+      if (l.on != null && l.kind === 'hand') { c.beginPath(); c.arc(x, yb - 15.5, 2.6, Math.PI, 0); c.lineWidth = 1.1; c.strokeStyle = BRASS; c.stroke(); }
+      glow(c, x, yb - fh * 0.5, 7 + fh * 0.4, col, 0.3);
+      lkFlameShape(c, x, yb - 1, fh, 2.7, sw); c.fillStyle = col; c.fill();
+      if (wk > 0.34 || eternal) { lkFlameShape(c, x, yb - 1, fh * 0.5, 1.2, sw * 0.5); c.fillStyle = '#fffbea'; c.fill(); }
+      rrect(c, x - 4.4, yb - 1, 8.8, 6.2, 1.4, IRON, OUT, 1); line(c, x - 4, yb + 0.5, x + 4, yb + 0.5, BRASS, 0.9);
+      if (wk <= 0.02 && !eternal) circle(c, x, yb - 2.2, 1.3, '#c8452a');
+    });
+    // Lamplighter's Stride: the seconds left to drop lights, a small bar
+    if (stride) {
+      const left = Math.max(0, (g.strideUntil || 0) - now), q = Math.min(1, left / (typeof LANTERN !== 'undefined' ? LANTERN.STRIDE : 10));
+      rrect(c, 88, 92, 38, 5, 2.5, '#1d1612', OUT, 1); rrect(c, 88.5, 92.5, Math.max(2, 37 * q), 4, 2, '#ff9f5a');
+      label(c, 'Stride ' + left.toFixed(0) + 's', 107, 105, '#ffb98a', 8.5, 'system-ui', 700);
+    }
+    if (lit) {
+      const left = Math.max(0, (g.lightUntil || 0) - now);
+      label(c, 'Lighthouse ' + left.toFixed(0) + 's', 98, stride ? 114 : 100, '#fff0c8', 8, 'system-ui', 800);
+    }
+  },
+});

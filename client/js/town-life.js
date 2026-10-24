@@ -928,5 +928,7 @@ const TownLife = (() => {
     if (!feastSc || e.repeat || (e.type === 'keydown' && ['Shift', 'Control', 'Alt', 'Meta'].includes(e.key))) return;
     if (deps.now() - feastSc.t0 > 0.25) endFeastScene(true);
   }
-  return { init(d) { deps = d; if (!listening && typeof window !== 'undefined') { listening = true; window.addEventListener('keydown', skipInput, true); window.addEventListener('mousedown', skipInput, true); } }, update, entities, drawGround, drawLabels, interactables, isTalking, endTalk, checkDistance, feast, feastTotals, eat, startArrival, hides, feastScene: () => feastSc };
+  return { init(d) { deps = d; if (!listening && typeof window !== 'undefined') { listening = true; window.addEventListener('keydown', skipInput, true); window.addEventListener('mousedown', skipInput, true); } }, update, entities, drawGround, drawLabels, interactables, isTalking, endTalk, checkDistance, feast, feastTotals, eat, startArrival, hides, feastScene: () => feastSc,
+    // a boss's own town moment is playing or still due (the Barrow Gate, barrow-gate.js, waits its turn), and the banner they share
+    busy: () => !!scene || !!feastSc || Object.keys(UNLOCKS).some(b => deps && deps.beaten(b) && !state().seen[b]), banner };
 })();

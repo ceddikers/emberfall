@@ -126,9 +126,11 @@ class RaidHost {
       return { id: p.id, x: p.x, y: p.y, role: p.role, alive: !!s.alive, hp: s.hp || 0, maxHp: s.maxHp || 1, left: s.left, threat: s.threat || 0,
         hollow: !!hl, debt: hl ? hl.debt : 0, healed: hl ? hl.heal : 0, hollowLeft: hl ? Math.max(0, hl.until - t) : 0, graceLeft: hl ? Math.max(0, hl.graceUntil - t) : 0 };
     });
-    const b = sim.boss;
+    const b = sim.boss, lamps = sim.liveLamps ? sim.liveLamps() : [];
     return {
       t: sim.t, boss: { x: b.x, y: b.y, facing: b.facing, untargetable: b.untargetable }, bossTarget: b.target,
+      autoAt: Math.max(b.autoAt, b.noAutoUntil || 0, b.stunUntil || 0, b.pauseUntil || 0, (b.post && b.post.until) || 0),   // (when the boss next swings at its target: a Kenseier bot times its deflect to it, bots.js BotAI.kenHits)
+      posture: sim.postureOn ? sim.kenPack() : null,   // (a Kenseier in the party: [p, max, break seconds left, held full, recovering, builder], for the bots: fight.js KENSEI_HOST)
       bossCast: b.cast ? { name: b.cast.name, left: b.cast.end - sim.t } : null,
       mechs: [...sim.mechs.values()], puddles: sim.puddles, players,
       bossId: sim.def.id, dmgScale: sim.scale.dmg * (sim.hard ? 1.25 : 1), mitLog: this.mitLog,   // (what a telegraph's raw dmg comes to on a player, before mitigation)
@@ -138,7 +140,9 @@ class RaidHost {
       polarity: sim.polarity || null, posts: (sim.posts || []).filter(c => c.end > sim.t), edgeNext: sim.edgeNext || null,
       pendingCut: sim.pendingCut || null,   // (Hard) the wedge of the summit about to break away
       // the Hollow King: lanterns, who is doomed (and when it kills), and the knights' replays still to come
-      lanterns: sim.lanterns || [], doomed: sim.doomed || null, echoPlan: sim.echoPlan || [], night: !!sim.night, pools: sim.healPools,
+      lanterns: sim.lanterns || [], doomed: sim.doomed || null, echoPlan: sim.echoPlan || [], night: !!sim.night,
+      // healing on the floor worth standing in: pools (Moonwell, vials) and every Lanternkeeper's glows; lamps: [[owner, lantern, { x, y }]] (fight.js LANTERNS)
+      pools: lamps.length ? sim.healPools.concat(lamps.filter(([, l, at]) => !l.all && l.r >= 50 && Math.hypot(at.x - b.x, at.y - b.y) > 200).map(([, l, at]) => ({ x: at.x, y: at.y, r: l.r, lamp: true }))) : sim.healPools, lamps,
       // Azerath: the Rune Pair (who carries the runes, and whether the coming spell wants them together or apart) and the Binding
       runes: sim.runePair || null, binding: sim.binding || null,
       // the room: solid props (cover, walls to bait a charge into), burning grease, and boss-specific room state
@@ -278,6 +282,8 @@ class RaidHost {
         if (msg.k === 'shieldEnd') bot.actor.notify('shieldEnd', msg);
         if (msg.k === 'eat' || msg.k === 'ledger' || msg.k === 'hollow') bot.actor.notify(msg.k, msg);   // (the advanced tanks: fight.js classEvent)
         if (msg.k === 'carry' || msg.k === 'snapped' || msg.k === 'dollhit' || msg.k === 'tiefail') bot.actor.notify(msg.k, msg);   // classes-c
+        if (msg.k === 'lit' || msg.k === 'relit') bot.actor.notify(msg.k, msg);   // a Lanternkeeper's lanterns (fight.js LANTERNS)
+        if (msg.k === 'kdef' || msg.k === 'kbrk' || msg.k === 'kbend') bot.actor.notify(msg.k, msg);   // a Kenseier's deflect and Breaks (fight.js KENSEI_HOST)
       }
     }
     if (msg.t === 'pdmg') { const bot = this.bots.find(b => b.id === msg.id); if (bot) { bot.taken.push({ t: this.sim.t, a: msg.a }); while (bot.taken.length && bot.taken[0].t < this.sim.t - 30) bot.taken.shift(); if (msg.a > 0) bot.actor.notify('taken', msg); } }   // (a Gloomsworn bot's vessel fills for every hit it takes)
@@ -398,6 +404,7 @@ class RaidHost {
       aim: () => bot.aim || bot.plan || null,
       collide: (actor, o, r) => { ARENA.clamp(o, 16); if (host.sim.props.length) PROPS.collide(o, host.sim.props, r); },
       dolls: (actor, list) => host.sim.setDoll(bot.id, list),
+      lamps: (actor, list) => host.sim.setLamps(bot.id, list),   // a Lanternkeeper bot's lanterns go straight to the host
       // the taunt carrier went off (engine.js resolve): taunt only what botTaunt asked for
       taunt: actor => {
         const w = bot.tauntWant; bot.tauntWant = null;
@@ -451,8 +458,8 @@ class RaidHost {
             break;
           }
           case 'heal': case 'hot': case 'shield': case 'mit': case 'raise': case 'rewind':
-          case 'selfDamage': case 'targetDebuff': case 'partyBuff': case 'allyBuff': case 'pool': case 'brand': case 'splash': case 'maw': case 'ledger': case 'gloom':
-          case 'tie': case 'snip': case 'tighten': case 'tapestry': case 'tug':   // classes-c
+          case 'selfDamage': case 'targetDebuff': case 'partyBuff': case 'allyBuff': case 'pool': case 'brand': case 'splash': case 'maw': case 'ledger': case 'gloom': case 'lamp':
+          case 'tie': case 'snip': case 'tighten': case 'tapestry': case 'tug': case 'kensei':   // classes-c (and a Kenseier's deflect and Posture)
             host.onPlayerEvent(bot.id, ev);
             // a shield or damage cut on the whole party: its flash on every member (KIT_VFX.partyWard; once for a move that does both)
             if ((ev.type === 'shield' || ev.type === 'mit') && ev.target === 'party' && !(host.sim.t - (bot.wardAt ?? -9) < 0.3)) {

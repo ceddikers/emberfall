@@ -1,5 +1,7 @@
 # Music prompts: menu, town, the bosses, and the short stings
 
+> The copy-paste versions in `music-now.md` are the current ones: from Volkar on, the boss tracks there are faster and more epic than the briefs below.
+
 Instrumental only. The game is dusky low fantasy: warm and a little rustic in town, heavier and darker inside the bosses' halls. Nothing cartoonish, nothing comedic in the melody itself. Each piece is written to loop under a fight or a screen, so the arrangement matters more than a big ending.
 
 ## How to use these
@@ -89,7 +91,7 @@ Full prompt: the same melody as the main loop in the same key (E minor) and the 
 [Release: drops back to the drone and the heartbeat, 8 bars, ends on the same drone]
 ```
 
-**Full prompt:** Creeping, patient dark-fantasy boss music for a giant spider queen in a silk-draped cave, around 84 BPM in F# minor. A deep drone, slow bowed string harmonics, a soft heartbeat-like low drum pulse, skittering pizzicato strings that suggest many small legs, and a thin, eerie melody on glass harmonica or celesta. Quiet but constantly uneasy, with a slowly rising tension that falls back to the drone. No vocals, no heavy drums, no electronic synths. It starts and ends on the same drone so it can loop.
+**Full prompt:** Creeping, patient dark-fantasy boss music for a giant spider queen in a silk-draped cave, around 100 BPM in F# minor. A deep drone, slow bowed string harmonics, a soft heartbeat-like low drum pulse, skittering pizzicato strings that suggest many small legs, and a thin, eerie melody on glass harmonica or celesta. Quiet but constantly uneasy, with a slowly rising tension that falls back to the drone. No vocals, no heavy drums, no electronic synths. It starts and ends on the same drone so it can loop.
 
 **Harder variant `mus-skitterra-hard` (the swarms and enrage) (Style):** `frantic horror strings, skittering staccato, rising tremolo, dissonant brass hits, fast pulse, panic, instrumental, no vocals`
 Full prompt: the same key and drone as the main loop but at about 150 BPM: relentless staccato strings like a swarm, rising tremolo, harsh dissonant brass stabs, a fast driving low drum, and the eerie glass melody screaming high above. Panicked and relentless. No vocals. Ends on the same drone.

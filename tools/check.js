@@ -77,6 +77,15 @@ const RAIDS = [   // [boss name, boss id, tank, healer, two DPS, optional 'gear=
   ['Grubnak', 'grubnak', 'bastion:base', 'tidecaller:base', 'ranger:base', 'pyromancer:base'],
   ['Skitterra', 'skitterra', 'bastion:base', 'tidecaller:springtide', 'ranger:base', 'shadowblade:base'],
   ['Volkar', 'volkar', 'bastion:base', 'tidecaller:undertow', 'ranger:base', 'pyromancer:base'],
+  // Lanternkeeper (class 21): the base kit and each spec healing a boss
+  ['Grubnak', 'grubnak', 'bastion:base', 'lanternkeeper:base', 'ranger:base', 'pyromancer:base'],
+  ['Skitterra', 'skitterra', 'bastion:base', 'lanternkeeper:beacon', 'ranger:base', 'shadowblade:base'],
+  ['Volkar', 'volkar', 'bastion:base', 'lanternkeeper:wayfarer', 'ranger:base', 'pyromancer:base'],
+  // Kenseier (class 22): the base kit and each spec tanking a boss
+  ['Grubnak', 'grubnak', 'kenseier:base', 'cleric:base', 'ranger:base', 'pyromancer:base'],
+  ['Skitterra', 'skitterra', 'kenseier:deathblade', 'grovekeeper:base', 'ranger:base', 'shadowblade:base'],
+  ['Volkar', 'volkar', 'kenseier:warden', 'cleric:base', 'ranger:base', 'pyromancer:base'],
+  ['the Hollow King', 'hollowking', 'kenseier:base', 'alembist:base', 'ranger:base', 'pyromancer:base'],
 ];
 // set 2: Azerath, the Sunken Archmage (Boss VII)
 RAIDS.push(
@@ -668,6 +677,16 @@ function thresherArcCheck() {
   else fail('Thresher: Reap arcs onto adds in front, not behind', out.slice(-900));
 }
 
+// ---------------------------------------------------------------- 3f. the Kenseier's deflect and the boss's Posture (tools/kenseier-test.js)
+// A press either side of a blow is judged Perfect or Good (and a late one gives the blow back), Mikiri Step, reach, Off-balance,
+// Posture to a Break (stagger, damage window, the script slid, held through a cast), Ember Duel, shields; then the kit and host together.
+function kenseierCheck() {
+  const r = spawnSync(process.execPath, [path.join(__dirname, 'kenseier-test.js')], { cwd: ROOT, encoding: 'utf8' });
+  const out = (r.stdout || '') + (r.stderr || '');
+  if (r.status === 0 && /Kenseier OK/.test(out)) pass('Kenseier: deflect timing, Posture, Break, bypasses', out.trim().split(/\r?\n/).pop());
+  else fail('Kenseier: deflect timing, Posture, Break, bypasses', out.slice(-900));
+}
+
 // ---------------------------------------------------------------- 3e. the PvP Arena (tools/pvp-sim.js)
 // A few bot duels, a 2v2 and a capture the flag: every match ends (a knockout, captures or the clock) without errors, never
 // in a blink, never past the clock.
@@ -791,6 +810,7 @@ async function heavy() {
   try { data(); } catch (e) { fail('Data checks ran', e.stack); }
   try { timelines(); } catch (e) { fail('Timelines checked', e.stack); }
   try { hollowCheck(); } catch (e) { fail('Hollow checked', e.stack); }
+  try { kenseierCheck(); } catch (e) { fail('Kenseier checked', e.stack); }
   try { journalCheck(); } catch (e) { fail('Journals checked', e.stack); }
   try { thresherArcCheck(); } catch (e) { fail('Thresher arc checked', e.stack); }
   try { featsCheck(); } catch (e) { fail('Feats checked', e.stack); }

@@ -2,7 +2,7 @@
 
 Every spoken line in the game, for recording with an AI voice tool. **Generated** from `client/js/voice-lines.js` by `node tools/audio/voice-manifest.js --doc`: change a line there, then regenerate this page, so the game and the script never drift apart.
 
-**615 files** (494 hero, 121 boss), about **20.8 minutes** of audio in all. The recommended minimum set is **80 files**, about 3.2 minutes.
+**693 files** (572 hero, 121 boss), about **23.7 minutes** of audio in all. The recommended minimum set is **80 files**, about 3.2 minutes.
 
 ## How to record and deliver
 
@@ -55,12 +55,15 @@ The move and select lines of four favourites (Bastion, Ranger, Pyromancer, Cleri
 | Threadweaver | 26 | 47 s |
 | Gloomsworn | 26 | 62 s |
 | Marionettist | 26 | 49 s |
-| Reaper | 26 | 51 s |
+| Reaper | 26 | 49 s |
+| Tidecaller | 26 | 61 s |
+| Lanternkeeper | 26 | 64 s |
+| Kenseier | 26 | 52 s |
 | Grubnak | 38 | 82 s |
 | Queen Skitterra | 30 | 73 s |
 | Volkar | 24 | 52 s |
 | The Hollow King | 29 | 89 s |
-| **All** | **615** | **20.8 min** |
+| **All** | **693** | **23.7 min** |
 
 ## Bosses
 
@@ -935,7 +938,7 @@ The move and select lines of four favourites (Bastion, Ranger, Pyromancer, Cleri
 | `hero-thresher-move-3.ogg` | Lightly now. | brisk acknowledgement |
 | `hero-thresher-move-4.ogg` | In time. | brisk acknowledgement |
 | `hero-thresher-move-5.ogg` | The next step. | brisk acknowledgement |
-| `hero-thresher-move-6.ogg` | Quietly. | brisk acknowledgement |
+| `hero-thresher-move-6.ogg` | Without a sound. | brisk acknowledgement |
 | `hero-thresher-move-7.ogg` | Just passing. | brisk acknowledgement |
 | `hero-thresher-move-8.ogg` | Round the edge. | brisk acknowledgement |
 | `hero-thresher-select-1.ogg` | Reaper. Yes? | *Select (clicked on)* · attentive, in character |
@@ -956,5 +959,119 @@ The move and select lines of four favourites (Bastion, Ranger, Pyromancer, Cleri
 | `hero-thresher-ult-3.ogg` | The toll is called! | shouted, full voice |
 | `hero-thresher-victory-1.ogg` | Every name, in its hour. | *Victory (after a boss falls)* · satisfied, a little tired |
 | `hero-thresher-victory-2.ogg` | Another appointment kept. | satisfied, a little tired |
+
+### Tidecaller
+
+**Voice:** patient, salt-wise, warm. A tall barefoot singer who has listened to the sea all her life and finds most things in a hurry mildly funny. Low and unhurried, a lilt that rises and ebbs like a swell; never mystical or breathy for effect.
+
+- **Age:** thirties
+- **Accent:** soft, coastal, a long vowel at the end of every phrase
+- **Pacing:** slow, sing-song, never hurried, a breath before the last word
+- **Device-speech fallback:** pitch 1.1, rate 0.8
+
+| File | Line | Delivery |
+|---|---|---|
+| `hero-tidecaller-move-1.ogg` | Slowly, with the water. | *Move (told to go somewhere)* · brisk acknowledgement |
+| `hero-tidecaller-move-2.ogg` | The tide goes that way. | brisk acknowledgement |
+| `hero-tidecaller-move-3.ogg` | Walking the shore. | brisk acknowledgement |
+| `hero-tidecaller-move-4.ogg` | Wait for the water. | brisk acknowledgement |
+| `hero-tidecaller-move-5.ogg` | No hurry. Going. | brisk acknowledgement |
+| `hero-tidecaller-move-6.ogg` | Mind the tide. | brisk acknowledgement |
+| `hero-tidecaller-move-7.ogg` | Ebbing over. | brisk acknowledgement |
+| `hero-tidecaller-move-8.ogg` | Following the swell. | brisk acknowledgement |
+| `hero-tidecaller-select-1.ogg` | The water is rising. | *Select (clicked on)* · attentive, in character |
+| `hero-tidecaller-select-2.ogg` | Tidecaller. Listening. | attentive, in character |
+| `hero-tidecaller-select-3.ogg` | Who is thirsty? | attentive, in character |
+| `hero-tidecaller-select-4.ogg` | The sea is patient. | attentive, in character |
+| `hero-tidecaller-down-1.ogg` | The tide... goes out... | *Down (falls in battle)* · pained, fading out |
+| `hero-tidecaller-down-2.ogg` | Slack water... | pained, fading out |
+| `hero-tidecaller-down-3.ogg` | The sea... takes me... | pained, fading out |
+| `hero-tidecaller-revive-1.ogg` | The sea gives back. | *Revived* · a breath in, relieved |
+| `hero-tidecaller-revive-2.ogg` | Up with the tide. | a breath in, relieved |
+| `hero-tidecaller-revive-3.ogg` | Thank you. The water was cold. | a breath in, relieved |
+| `hero-tidecaller-low-1.ogg` | The water is low! | *Low health* · urgent, strained |
+| `hero-tidecaller-low-2.ogg` | I am on the ebb! | urgent, strained |
+| `hero-tidecaller-low-3.ogg` | Low tide, low tide! | urgent, strained |
+| `hero-tidecaller-ult-1.ogg` | Spring Flood! | *Ultimate (shouted as it fires)* · shouted, full voice |
+| `hero-tidecaller-ult-2.ogg` | Let the sea come in! | shouted, full voice |
+| `hero-tidecaller-ult-3.ogg` | High water, everyone! | shouted, full voice |
+| `hero-tidecaller-victory-1.ogg` | The sea settles. | *Victory (after a boss falls)* · satisfied, a little tired |
+| `hero-tidecaller-victory-2.ogg` | The tide turns, as it does. | satisfied, a little tired |
+
+### Lanternkeeper
+
+**Voice:** patient, kind, dry. A short night-watch lamplighter in a long soot-grey coat, who has walked the same streets at dusk for thirty years. Low, warm and plain; she counts things out loud without noticing and is never in a hurry. Not a priest and not a singer: a neighbour with a ladder and a box of matches.
+
+- **Age:** late forties
+- **Accent:** soft, plain, a little hoarse from the night air
+- **Pacing:** unhurried, gentle, counting under her breath, a pause before the last word
+- **Device-speech fallback:** pitch 1, rate 0.85
+
+| File | Line | Delivery |
+|---|---|---|
+| `hero-lanternkeeper-move-1.ogg` | Lighting the way. | *Move (told to go somewhere)* · brisk acknowledgement |
+| `hero-lanternkeeper-move-2.ogg` | One light ahead. | brisk acknowledgement |
+| `hero-lanternkeeper-move-3.ogg` | Going on ahead. | brisk acknowledgement |
+| `hero-lanternkeeper-move-4.ogg` | Mind the dark corner. | brisk acknowledgement |
+| `hero-lanternkeeper-move-5.ogg` | Stay by the glow. | brisk acknowledgement |
+| `hero-lanternkeeper-move-6.ogg` | Coming with the lamp. | brisk acknowledgement |
+| `hero-lanternkeeper-move-7.ogg` | I will light it first. | brisk acknowledgement |
+| `hero-lanternkeeper-move-8.ogg` | Following the round. | brisk acknowledgement |
+| `hero-lanternkeeper-select-1.ogg` | Lanternkeeper. Who needs a light? | *Select (clicked on)* · attentive, in character |
+| `hero-lanternkeeper-select-2.ogg` | Three lights, four of us. | attentive, in character |
+| `hero-lanternkeeper-select-3.ogg` | The lamp is lit. | attentive, in character |
+| `hero-lanternkeeper-select-4.ogg` | Keep your light. | attentive, in character |
+| `hero-lanternkeeper-down-1.ogg` | The wick... runs low... | *Down (falls in battle)* · pained, fading out |
+| `hero-lanternkeeper-down-2.ogg` | Leave... one burning... | pained, fading out |
+| `hero-lanternkeeper-down-3.ogg` | So dark... so soon... | pained, fading out |
+| `hero-lanternkeeper-revive-1.ogg` | Lit again. | *Revived* · a breath in, relieved |
+| `hero-lanternkeeper-revive-2.ogg` | Someone left a light. | a breath in, relieved |
+| `hero-lanternkeeper-revive-3.ogg` | Thank you. It was dark. | a breath in, relieved |
+| `hero-lanternkeeper-low-1.ogg` | My wick is low! | *Low health* · urgent, strained |
+| `hero-lanternkeeper-low-2.ogg` | Light me, I am going out! | urgent, strained |
+| `hero-lanternkeeper-low-3.ogg` | I am down to the stub! | urgent, strained |
+| `hero-lanternkeeper-ult-1.ogg` | Light every corner! | *Ultimate (shouted as it fires)* · shouted, full voice |
+| `hero-lanternkeeper-ult-2.ogg` | The whole room, lit! | shouted, full voice |
+| `hero-lanternkeeper-ult-3.ogg` | Everyone into the light! | shouted, full voice |
+| `hero-lanternkeeper-victory-1.ogg` | All the lamps still burn. | *Victory (after a boss falls)* · satisfied, a little tired |
+| `hero-lanternkeeper-victory-2.ogg` | Four of us. Walk where it is warm. | satisfied, a little tired |
+
+### Kenseier
+
+**Voice:** calm, exacting, dryly respectful. A masked swordsman of the old ember-watch who teaches the blade by example. Low, level and spare; never loud, never boastful, with a faint dry warmth for a worthy opponent.
+
+- **Age:** forties
+- **Accent:** quiet, level, plain and low
+- **Pacing:** unhurried, terse, a breath before the last word
+- **Device-speech fallback:** pitch 0.85, rate 0.9
+
+| File | Line | Delivery |
+|---|---|---|
+| `hero-kenseier-move-1.ogg` | On the beat. | *Move (told to go somewhere)* · brisk acknowledgement |
+| `hero-kenseier-move-2.ogg` | A step, no more. | brisk acknowledgement |
+| `hero-kenseier-move-3.ogg` | A quiet step. | brisk acknowledgement |
+| `hero-kenseier-move-4.ogg` | Going. | brisk acknowledgement |
+| `hero-kenseier-move-5.ogg` | Mind the count. | brisk acknowledgement |
+| `hero-kenseier-move-6.ogg` | Through, not away. | brisk acknowledgement |
+| `hero-kenseier-move-7.ogg` | Catch the beat. | brisk acknowledgement |
+| `hero-kenseier-move-8.ogg` | As you say. | brisk acknowledgement |
+| `hero-kenseier-select-1.ogg` | Kenseier. Ready. | *Select (clicked on)* · attentive, in character |
+| `hero-kenseier-select-2.ogg` | Every blow has a beat. | attentive, in character |
+| `hero-kenseier-select-3.ogg` | Breathe, then strike. | attentive, in character |
+| `hero-kenseier-select-4.ogg` | The blade is ready. | attentive, in character |
+| `hero-kenseier-down-1.ogg` | Late... by a beat... | *Down (falls in battle)* · pained, fading out |
+| `hero-kenseier-down-2.ogg` | The count... slips... | pained, fading out |
+| `hero-kenseier-down-3.ogg` | Ash... settles... | pained, fading out |
+| `hero-kenseier-revive-1.ogg` | Breathe. Again. | *Revived* · a breath in, relieved |
+| `hero-kenseier-revive-2.ogg` | Back on the beat. | a breath in, relieved |
+| `hero-kenseier-revive-3.ogg` | Thank you. I was late. | a breath in, relieved |
+| `hero-kenseier-low-1.ogg` | I am off the beat! | *Low health* · urgent, strained |
+| `hero-kenseier-low-2.ogg` | My guard is cracking! | urgent, strained |
+| `hero-kenseier-low-3.ogg` | Heal me, now! | urgent, strained |
+| `hero-kenseier-ult-1.ogg` | Thousand Cuts! | *Ultimate (shouted as it fires)* · shouted, full voice |
+| `hero-kenseier-ult-2.ogg` | Every beat, at once! | shouted, full voice |
+| `hero-kenseier-ult-3.ogg` | Now. All of it. | shouted, full voice |
+| `hero-kenseier-victory-1.ogg` | Ash settles. | *Victory (after a boss falls)* · satisfied, a little tired |
+| `hero-kenseier-victory-2.ogg` | Well struck. Well met. | satisfied, a little tired |
 
 ★ = in the recommended minimum set.

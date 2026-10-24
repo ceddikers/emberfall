@@ -21,6 +21,9 @@
     chronomancer: "Grubnak serves in courses, each a little faster than the last, in the same order every time. I knew that already, of course, which is the trouble with knowing. Tonight we learned only the first bars of the tune.",
     alembist: "Ailment: one ogre with a kitchen, and a kitchen with opinions. Note for the shelf: he labels everything in advance and we did not. Collected a jar of the grease for study. It sparked. Two small fires, neither of them mine, I swear.",
     threadweaver: "That ogre ran us ragged round his greasy kitchen, and my little stitches wandered off to every corner of it. Ripped seams, frayed hems, and not one of them tied to anyone. Disgraceful needlework, mine. Tomorrow we hold the hem.",
+    tidecaller: "Grubnak keeps his kitchen like a harbour in a gale, all spray and heat and not a breath of slack water. Every course reached all of us at once, and I kept the water low when it should have been high. Tomorrow I plan the tide around his courses.",
+    lanternkeeper: "Grubnak's kitchen is all fire and grease, and I lit my lanterns where we were standing instead of where we would be. They were burned low before anyone reached them. Tomorrow I walk the round first and light ahead of the courses. Keep your light.",
+    kenseier: "Grubnak shouts, but his swings keep an honest count. I mistimed most of them tonight and the kitchen floor took the rest of my pride. I will learn his beat before I learn his menu. Catch the beat.",
   },
   // the first time this hero beats him
   win: {
@@ -43,6 +46,9 @@
     chronomancer: "Grubnak fell on the last bar, as he was always going to. I'd say I knew, but this time I truly didn't have to undo a single thing, and that is a different pleasure. I hummed his tune on the way out.",
     alembist: "Ailment: one ogre chef. Remedy: patience, labels, and a party that stood where I told it. Shelves nearly empty, jar of grease rescued. One explosion, which was celebratory and therefore does not count.",
     threadweaver: "The ogre's down and not one thread snapped the whole service. My little stitches held from first course to last, and not a seam in the hem has gone. I would make him an apron, but he is too big. Pulled it tight.",
+    tidecaller: "The cook is down, and his kitchen lies quiet as slack water. I let the water rise for every course and ebb between them, and it was high each time he struck. Strange to miss the noise. The sea gives back.",
+    lanternkeeper: "The cook is down, and his kitchen is dark and cool at last. Every course had a light waiting where we stood: three lamps, four of us, and no wick burned to a stub. I left one burning by the cold stove. Walk where it's warm.",
+    kenseier: "The cook is down and the kitchen is quiet. Every cleaver had its beat, and by the end I was answering them without thinking. I cleaned the blade before the grease could set. Ash settles.",
   },
   moves: {
     'Grease Fire': { hard: false, learned: {
@@ -65,6 +71,9 @@
       chronomancer: "Arms up, oil out, fire a beat later; everyone burns, every time. We gathered on the upbeat and I had them mended before it caught. Next time, which was this time, nobody needed undoing.",
       alembist: "Ailment: oil under the whole party, lit a moment after his arms go up. Remedy: everyone gathered near me, wounds closed beforehand. Note: no dose cures it after; brew it first, and keep the brandy well away.",
       threadweaver: "Grease under every stitch at once. I drew the whole hem in close around me before it caught and shared the burn between us, evenly, the way a good seam shares strain. Nobody frayed.",
+      tidecaller: "The oil lit under the whole floor, and there was nowhere to stand but together. I gathered everyone close and let the water climb before the flames did, so it was already high when the fire broke. A tide that arrives late is only weather.",
+      lanternkeeper: "His arms went up and the oil took light under every one of us. There was no corner to hide in, so we crowded close around two lanterns, and I let them burst as the flames rose. Everyone was inside a glow before it caught.",
+      kenseier: "The oil lit under every one of us. A blade has nothing to meet in a fire that comes up from the floor. We closed up on the healer beforehand and let the mending land first. Some blows are only outlasted.",
     } },
     'Mince': { hard: false, learned: {
       bastion: "One cleaver caught the light and that whole half of the kitchen was condemned. I kept his face on me while the line crossed to the dull half. Nobody on the bright side when it fell. A good drill.",
@@ -86,6 +95,9 @@
       chronomancer: "The cleaver glints, a beat, then that whole half is gone. I had crossed to the dull side before the glint finished; I always will have. It is the only promptness I am proud of.",
       alembist: "Label: the glinting cleaver. Meaning: that half of the kitchen is about to be chopped. Dose: stand in the other half. I wrote it on the shelf in large letters, and underlined it in something that smoked.",
       threadweaver: "A cleaver winked on one side of that ogre, and he cut that half clean out of the pattern. I gathered my stitches on the other half before it fell. He cuts a poor line, but a straight one.",
+      tidecaller: "One cleaver flashed, and that half of the kitchen was as good as the shingle under a breaking wave. We crossed to the dull half while he was still raising it, and the knight held his gaze. Nobody was left on the bright side.",
+      lanternkeeper: "One cleaver flashed, and that half of the floor was to be chopped. I picked my lantern up and set it down on the dull side, and the others followed the light across. Nobody was left standing on the bright half.",
+      kenseier: "A cleaver caught the light, and that half of the kitchen was his. I kept his face on me while the others crossed to the dull half. A glint is a warning, and I was glad to be given one.",
     } },
     'Double Chop': { hard: true, learned: {
       bastion: "On the hard nights he chops both halves, the glinting side first, the other right behind it. We stood on the dull half, then crossed into the ground he had just cut. Fresh-cut floor does not get cut twice. Held.",
@@ -107,6 +119,9 @@
       chronomancer: "Glinting half, then the echo on the other. I waited out the first beat on the dull side and was in the cut half for the second. A canon in two voices. Obvious in hindsight, which is the only sight I have.",
       alembist: "Two doses, one after another: the glinting half, then the other. Wait in the half that doesn't glint, then cross into the one that just fell. Order matters, as with reagents, and I have the eyebrows to prove it.",
       threadweaver: "Glinting half first, the other right behind it. I kept my stitches on the dull side, then drew them across into the cut half all together, no strays. Mind the slack.",
+      tidecaller: "On the hard nights he swung twice, the bright half and then the dull. We waited on the dull half, then walked across onto the ground he had just cut, like walking the sand a wave has only just left.",
+      lanternkeeper: "On the hard nights he swung twice, the bright half and then the dull. We stood on the dull side while the first blow fell, then crossed onto the cut ground, and I carried my lantern over only once it had landed. The light moved when we did.",
+      kenseier: "The bright half first, then the dull half right behind it. The others waited on the dull half and crossed into the ground he had just cut. Two strokes, and I admired how the second followed the first.",
     } },
     'Ladle Spin': { hard: false, learned: {
       bastion: "He whirled the ladle round himself, scalding anything close. I stepped off him with the line, out past the edge, and came straight back in once it stopped. Gave ground on purpose. First time I have called a retreat a plan.",
@@ -128,6 +143,9 @@
       chronomancer: "The ladle comes round once: out on the wind-up, back in on the beat after. A short, dull little tune. I have heard it more times than the cook has stirred it.",
       alembist: "Ailment: scalding soup in a ring round him. Remedy: stand outside the ring until the ladle stops. Note: soup, unlike brandy, does not explode. A pity.",
       threadweaver: "The ladle came round and my stitches stepped out of the soup all at once, nice and even, then came back in together. It is a pleasure when people move like one seam.",
+      tidecaller: "He turned the ladle about himself and the ring of soup scalded all who stood near. Those at his feet walked out past the edge, I with them, and we came back in on the slack once it had stopped. There was no hurry in it.",
+      lanternkeeper: "He turned the ladle about himself and the ring of soup scalded all who stood close. Those at his feet stepped out past its edge, and I hung a lantern on our knight so the glow went with him. Out of the ring, and the light still on him.",
+      kenseier: "He spun the ladle about himself and scalded the ground near him. We stepped out past its edge together and came back the moment it stilled. A retreat is a stroke too, if it is timed.",
     } },
     'Lid Slam': { hard: false, learned: {
       bastion: "He lifted the lid overhead and everything away from him took the slam. I stood under his chin and the line closed in behind me. Under him is the only safe ground in the room. Odd, but correct.",
@@ -149,6 +167,9 @@
       chronomancer: "Lid up, everyone in, and then the slam rolls out past us. The middle is quiet every time. I was standing there before I decided to.",
       alembist: "Ailment: everything away from him slammed flat. Remedy: stand close underneath. Note: counterintuitive. Label twice, in different inks.",
       threadweaver: "The lid went up and I drew every thread in tight to his boots before it fell. Anyone left slack at the edges would have been flattened. Pulled it tight.",
+      tidecaller: "The lid went up and the whole room away from him was to be flattened. Odd to learn it, but the calm was at the eye of the storm: we stood right beneath his chin and let it break around us. A squall has a still middle.",
+      lanternkeeper: "The lid went up, and the safe place was right under his chin, which is a hard place to walk to. I set a lantern there first, so there was a warm spot to walk toward. We stood in the glow and the slam passed over us.",
+      kenseier: "The lid went up and the far floor took the slam. Under his chin was the one quiet place, so I stood there and the others pressed in behind me. I like a blow whose safe place sits closest to its owner.",
     } },
     'Tenderize': { hard: false, learned: {
       bastion: "A red ring settled on me and followed me about while he wound up, then locked, and his ghost cleaver came down on it edge first. I braced in the last instant and took it whole; the others kept clear of my ring. Held.",
@@ -170,6 +191,9 @@
       chronomancer: "The ring follows the knight, locks, and the cleaver arrives a beat later, edge first, onto where he already is. There's nothing to dodge, so I had mended him before it landed, and the rest stood out of his circle. Sensible, not clever.",
       alembist: "Ailment: one ghost cleaver, edge first, onto the ring that tracks our shield. Remedy: dose him before it lands, not after, and everyone else out of his circle. Note: do not stand beside the patient.",
       threadweaver: "The ring trailed our knight till it set, and the cleaver fell on it, edge first. I had tied his thread to mine already, so a little of the weight ran down the seam to me, and everyone else kept out of his circle. A neat seam.",
+      tidecaller: "A red ring settled on the knight and trailed him until it set, and the ghost cleaver fell on it. He could not step aside, so I had the water high around him before it landed, and the rest of us kept out of his ring. Mind the tide.",
+      lanternkeeper: "A red ring settled on our knight and followed him until it set. I hung a lantern on him and kept the wick high, and the rest of us stayed out of his circle. The glow was already there when the ghost cleaver fell. I'll leave one burning.",
+      kenseier: "The ring followed me until it locked, and a cleaver fell out of the air onto it. I met it with the blade just as it landed, and the others kept clear of my ring. Breathe, then strike.",
     } },
     'Meat Toss': { hard: false, learned: {
       bastion: "Grubnak hung a slab over each of the others, every one wanting its own patch of floor. They dropped theirs at the edges, apart, away from the line. Footing kept. The stain thins in time, shrinking and dimming, and is gone altogether if fire reaches it.",
@@ -191,6 +215,9 @@
       chronomancer: "Steaks over all but the knight; each walks to their own spot by the wall and drops it. The grease stays, shrinking and dimming a little with every beat, and fire clears it at once. I chose my spot last time; I chose it again.",
       alembist: "Steaks over all but our shield, each leaving grease and then a stain that waits for fire. Each to their own spot by the wall. Grease is a reagent; I labelled where it went. It shrinks and dims in time, and fire ends it at once.",
       threadweaver: "Steaks over my stitches. I loosened every thread so each could walk to the wall alone and leave their grease out of the way. The stain shrinks and dims in time, or burns away if fire reaches it. Then back together.",
+      tidecaller: "A slab hung over each of us but the knight, and every one wanted a patch of floor to itself. I walked to the wall with mine and let it fall well apart from the others. The stain ebbs and thins in time, and fire takes it at once.",
+      lanternkeeper: "A slab hung over each of us but the knight, and each wanted its own patch of floor. I took mine to the wall alone, and left a lantern in the middle of the room for us to gather at after. The grease thins in time; fire takes it sooner.",
+      kenseier: "Slabs hung over the others, each wanting floor of its own. They walked to the edges and dropped them well apart. The stain thins with time, and fire clears it at once. I kept the cook looking at me.",
     } },
     'Family Meal': { hard: false, learned: {
       bastion: "A silver cloche came down over one of ours. One plate for the whole table. The line gathered under it and shared the blow, and I joined them the moment I could leave my post. Split, it was light work.",
@@ -212,6 +239,9 @@
       chronomancer: "The cloche goes down over one; on the beat everyone is under it with them, and the blow is split. I was there first. I usually am. It is the only advantage of the job.",
       alembist: "One heavy portion, served to one. Dilution works on most things, so everyone went under the cloche and it divided between us. Note: it works on soup as well. I checked on the way out.",
       threadweaver: "A cloche came down over one of my stitches, and I drew every thread tight to bring the whole hem in under it. Shared among us all, it barely stung.",
+      tidecaller: "A silver cloche came down on one of us, and one body cannot carry that blow alone. We all came in beneath it and shared it, many hands on one rope, and the water I had raised carried the rest. Split, it was a ripple.",
+      lanternkeeper: "A cloche came down on one of us, and one body cannot carry that blow alone. We all came in beneath it, with a lantern set in the middle so the glow covered every one of us. Four of us, one light, and the blow was split.",
+      kenseier: "A silver cloche came down on one of ours, one plate for the whole table. We all went under it and split the blow, and I left my place to join them when I could. Between us it was no more than a tap.",
     } },
     'Larder Toss': { hard: false, learned: {
       bastion: "He hurled casks at the two of ours standing farthest off. They stepped out from under before it landed and left the casks on open floor. Solid cover. We kept them for the next blast, and I counted them like rations.",
@@ -233,6 +263,9 @@
       chronomancer: "Casks at the two farthest, a beat after the shelf comes loose. Step aside before it lands and leave it where it's useful. The roar comes after. It always comes after.",
       alembist: "Casks thrown at the two of us farthest off. Step out from under, but land them somewhere useful. Note for the shelf: casks are not waste. They are shelter. Keep them, and do not sit on the full ones.",
       threadweaver: "The two stitches farthest out got a cask each. I let their threads out so they could lead the casks to clear floor and step aside, and then we had something to hide behind. Slack, used on purpose, is no sin.",
+      tidecaller: "Casks came for the two of us standing farthest out. We led them onto open floor, stepped aside at the last, and left them lying, for a cask is a rock to shelter behind. Never near the cook, who gathers them in.",
+      lanternkeeper: "Casks came for the two of us standing farthest out. I was not one of them, so I kept my lanterns with the party and watched the pair lead theirs onto open floor and step aside at the last. Leave the casks lying, but never near the cook, who gathers them in.",
+      kenseier: "Casks flew at the two standing farthest out. They stepped aside at the last moment and left them lying on open floor. A cask is a wall that arrives on its own. We kept them away from the cook, who gathers them in.",
     } },
     'Gut Blast': { hard: false, learned: {
       bastion: "He roared across the whole kitchen. No shield blocks that. I put a cask between myself and Grubnak like the rest of the line and kept still behind it. Held.",
@@ -254,6 +287,9 @@
       chronomancer: "Belly swells, a long held beat, then the roar. Cask between you and him before the beat ends. I learned that the hard way once. Once was enough, and I made sure of it.",
       alembist: "One roar, whole kitchen, and the only remedy is a cask, or the pot after the fire, between you and him. Note: each blast cracks the casks, and on the harder nights a cask shelters only two.",
       threadweaver: "He drew breath and I pulled every one of my stitches behind a cask, him on the far side. Anyone left hanging out in the open would have heard from me afterwards.",
+      tidecaller: "He drew a great breath for a roar that would cross the whole kitchen, and only something solid turned it. I crouched in the lee of a cask with the ogre on its far side, as a gull does behind a rock in a gale.",
+      lanternkeeper: "He drew breath for a roar that would cross the whole kitchen, and only something solid would turn it. I set a lantern behind a cask, on the side away from him, and we crowded into its warm lee.",
+      kenseier: "He drew a great breath and roared across the kitchen. There is nothing to cross a blade with in a roar, so I put a cask between us and crouched, as the others did. Even a quiet man hides from the loud ones.",
     } },
     "Butcher's Charge": { hard: false, learned: {
       bastion: "He lowered his head at me and charged till he hit something. I put bare brick behind me, stepped aside at the last, and he hit the wall and stood dazed. The line kept off his path. Not the stove, not the casks.",
@@ -275,6 +311,9 @@
       chronomancer: "Head down, the path follows the knight, and a beat before he goes it stops following. Aim at brick, step aside on that beat. He was dazed, as I had known he would be. A lovely long pause.",
       alembist: "Ailment: one ogre in a straight line until he hits something. Remedy: aim him at bare brick, off our line, never the stove or our casks. The stove erupts; I wrote that one twice.",
       threadweaver: "He charges our knight until he hits something. I pulled my stitches off his line, and our knight brought him round to a bare wall, not the casks, not the stove. Straight lines are easy to avoid.",
+      tidecaller: "He lowered his head at the knight and ran until he met something. Our knight led him to bare brick, away from the stove and the casks, and slid aside at the last, while the rest of us stayed off the road. He stood dazed after, a ship run aground.",
+      lanternkeeper: "He ran at our knight with his head down. The knight led him to bare brick, clear of the stove and the casks, while I kept a lantern on him and the rest stayed off the road. The cook stood dazed against the wall, and the lamp was still burning.",
+      kenseier: "He lowered his head at me and ran. I stood with bare brick behind me and stepped through his road at the last breath, and the cook met the wall and stood dazed. The others kept off the stove and the casks. Catch the beat.",
     } },
     'Chop Chop': { hard: false, learned: {
       bastion: "One cleaver glinted, and the ladle or lid on his back said what came after. We crossed to the dull half, then went out for the ladle or in for the lid. Two orders, one drill.",
@@ -296,6 +335,9 @@
       chronomancer: "Chop, then the tool a beat behind. The glint picks the half, his back picks in or out. A two-bar phrase. I have heard it so often now that I hum it.",
       alembist: "Two labels at once. First: the glinting cleaver, that half chopped. Second: the tool on his back, ladle out, lid in. Read both labels before pouring. I once skipped one, and the ceiling still has the mark.",
       threadweaver: "The glinting half first, then the tool on his back: out for the ladle, in for the lid. I moved my stitches as one piece, twice, and dropped none. Mind the slack.",
+      tidecaller: "A glint on one cleaver, and a ladle or a lid on his back to follow. We crossed to the dull half first, and then went out for the ladle or in for the lid. Two swells, one behind the other, and neither hard alone.",
+      lanternkeeper: "A glint on one cleaver, and a ladle or a lid on his back to follow. I carried my lantern to the dull half first, and then out for the ladle or in for the lid. Two moves, and the light kept ahead of us for both.",
+      kenseier: "A glint on one cleaver, and a ladle or a lid on his back to follow. We took the dull half first, then went out for the ladle or in for the lid. Two beats, and the second is the one that catches people.",
     } },
     'Order Up!': { hard: false, learned: {
       bastion: "One plate each, laid round the kitchen and served in turn. I took mine and stood on it like a sentry on a painted square until it was dished. None left unmanned, and none left on the counter.",
@@ -317,6 +359,9 @@
       chronomancer: "Plates in a ring, each rim filling toward its own beat, served round from the top left. Each of us on our own plate when it's served. I knew which was mine, having stood on it before.",
       alembist: "One plate per guest, served in order round from the top left, fullest rim first. Assign the plates beforehand. An unserved plate spoils for everyone, and I have the burn scars to prove it.",
       threadweaver: "A plate for each stitch, served round the room in turn. I let the threads out so everyone could reach their own and stand on it. Nobody's plate left bare.",
+      tidecaller: "A plate for each of us, served round the room one after another, the fullest rim first. I took mine and stood on it until it was dished. On the harder nights there were more plates than mouths, and we shared them so none ate twice running.",
+      lanternkeeper: "A plate was set down for each of us in turn, and I counted them against our heads, one to one. I stood on mine in the warm of my own lantern until it was dished. When there were spare plates, we took turns, so nobody stood on one twice before the rest had.",
+      kenseier: "A plate for each of us, served round the kitchen in turn. I took mine and stood on it until it was dished. Each plate had its own wait. Nothing here wanted a blade, only patience.",
     } },
     'Rolling Meatballs': { hard: false, learned: {
       bastion: "He lobbed meatballs against the walls. Each wobbled with its lane drawn across the room, then rolled straight. I kept my footing out of every lane until the last had passed. Ground between lanes is good ground.",
@@ -338,6 +383,9 @@
       chronomancer: "They land, they wobble, a beat, then they roll, one after another. Stand between the lanes until the last has passed. I had counted them before the first landed.",
       alembist: "Meatballs, large, rolling. Stand outside every lane; each wobbles first and shows its path. Note: when they come with the plates, the plates sit between the lanes. Kept the leftovers for study.",
       threadweaver: "Meatballs wobble at the wall, then roll straight across. I let my stitches out between their lanes and gathered them back once the lanes had gone quiet. Easy needlework, with a bit of nerve.",
+      tidecaller: "They wobbled against the walls and then rolled straight across, each lane drawn on the floor. I stood between the lanes and let them pass like long waves along a quay. A little patience, and the floor was mine again.",
+      lanternkeeper: "They wobbled against the walls and then rolled straight across, each lane drawn on the floor. I set my lantern between two lanes and stood beside it, and the others came to the light and out of the way.",
+      kenseier: "Meatballs wobbled against the walls, then rolled straight along lanes drawn on the floor. I stood between the lanes and let them pass. A blow that announces its road is a courteous one.",
     } },
     'Flare-Up': { hard: false, learned: {
       bastion: "The Cook heaved his pot onto the stove and the top of the kitchen caught for good. We were off that ground before it lit, mended against the heat. A smaller parade ground after, but I only need enough floor to stand on.",
@@ -359,6 +407,9 @@
       chronomancer: "Pot on the stove, a beat, then fire across the top for the rest of the fight, and a wave of heat. We had left the top by then. We were all very punctual.",
       alembist: "The top of the kitchen is ablaze for good, and the heat reaches everyone. Out before it catches, everyone mended first. Note: smaller workshop now, and I miss the shelves at that end.",
       threadweaver: "The whole top of the kitchen alight, and it never went out. I drew my stitches down out of it before it caught, and we took the heat close together. Hems burn first, so keep them tucked.",
+      tidecaller: "He set the pot on the stove and the top of the kitchen burned for good. We came down out of it before it caught, and I kept the water high against the heat that reached us anyway. A smaller room, but the sea is still the sea.",
+      lanternkeeper: "He put the pot on the stove and the top of the kitchen burned for good. We came down out of it before it caught. The heat reaches everyone anyway, so I kept the wicks topped up and let the lanterns burst as it came.",
+      kenseier: "He set the pot on the stove and the top of the kitchen caught for good. We came down off that ground before it lit, with the mending already laid. A smaller room, but a room.",
     } },
     'Flambé': { hard: false, learned: {
       bastion: "Brandy laid in stripes and lit one after another. I stood where the fire would come last, then took the ground behind the flame. Old grease I kept my boots off; boots are the one kit I cannot requisition.",
@@ -380,6 +431,9 @@
       chronomancer: "The stripes catch in order, a beat apart. I step into each the moment after it's burnt, a tune I was humming before it started. Old grease catches when its stripe does.",
       alembist: "Brandy in stripes, catching in turn, and every grease stain in them lights. Step into a stripe that has already burnt. Note: this is exactly how flambé is meant to work, and I am furious he does it better.",
       threadweaver: "Stripes of brandy caught one by one, so I pulled my stitches into the burnt stripes behind the flames, well away from the old grease. The cleanest pass of the night.",
+      tidecaller: "Brandy lay across the floor in stripes and caught one after another. I waited, then stepped onto the stripe that had already burnt, and kept clear of the old grease, which goes up with it. Burnt ground is a beach after the wave.",
+      lanternkeeper: "Stripes of brandy caught one after another. I waited for one to burn out, then carried my lantern across onto the black of it and the rest came after. Old grease in a stripe goes up with it, so keep off that.",
+      kenseier: "Brandy lay in stripes and lit one after another. I waited for the flame to pass, then stepped onto the stripe that had already burnt, and kept off the old grease. Burnt ground does not burn twice.",
     } },
     'Stockpot': { hard: false, learned: {
       bastion: "After the fire he dragged the stockpot down to the middle. It is solid. It stops a charge and shelters from his roar. Marked it as ground to work from. A fixed point is worth any number of good intentions.",
@@ -401,6 +455,9 @@
       chronomancer: "Pot to the middle, a leap and a thud. It stays. Cover from the roar, a wall for the charge, and the rings come next, out then in. A fixed note in a restless piece.",
       alembist: "Note for the shelf: the stockpot, now in the middle. Uses: shelter from the roar, a wall for the charge. Hazard: it boils over in rings. Label both, and do not lick the rim.",
       threadweaver: "He planted that pot in the middle for good. Something to tie the hem behind when he roars, and our knight can lead his charge into it. Finally, a fixed point to sew to.",
+      tidecaller: "He dragged the pot to the middle and left it, and a thing that stays put is worth a good deal. It turns his roar aside, and the knight can lead his charge into it. I took my stand close by and watched the rings it gives off.",
+      lanternkeeper: "He dragged the pot to the middle and left it, and it turns his roar aside. I kept my lanterns in its shelter but not too close, since the pot gives off rings. A thing that stays put is a fine lamp-post to count from.",
+      kenseier: "He dragged the pot to the middle and left it. It turns his charge and shelters us from his roar, so I fought close beside it. A fixed point is a fine thing for a man who counts.",
     } },
     'Simmer': { hard: false, learned: {
       bastion: "The pot boiled over in rings, out from the rim and then back in. I stood clear of each until it had boiled, then stepped in behind it. Step, wait, step. Easy ground, if you count.",
@@ -422,6 +479,9 @@
       chronomancer: "Rings out, a beat apart, then back in. I step in behind each as it passes; the second wave is the first one backwards. I noticed that before it happened, which is cheating, but quietly.",
       alembist: "Ailment: rings of boiling water from the pot, outward, then inward. Remedy: step into each ring just after it boils. Note: a pot simmering is how most of my mistakes begin.",
       threadweaver: "The rings boil out from the pot and back in. I kept my stitches walking just behind each ring as it boiled, no one ahead of the thread. Pulled it tight.",
+      tidecaller: "The pot boiled in rings, out and then back in. I waited for each to pass over and stepped into the ground it had left, never ahead of the water. Follow the swell; do not go out to meet it.",
+      lanternkeeper: "The pot boiled in rings, out and then back in. I stepped into the ground each ring had just left and carried the light in after me, never ahead of it. We were never standing where a ring was about to be.",
+      kenseier: "The pot boiled in rings, out and then back in. I waited just outside each until it passed, then stepped in behind it. One beat to wait, one to go. He keeps good time, for a cook.",
     } },
     'Whisk': { hard: false, learned: {
       bastion: "A cross of beams through him that turned, a notch at a time. I kept to the gap between beams and walked round with it. Slow work. A turning wall is only a very orderly parade.",
@@ -443,6 +503,9 @@
       chronomancer: "A cross through him, turning a notch each beat. Walk with the gap, on the beat. The spin was the same last time. It will be again.",
       alembist: "A cross of beams, turning in steps. Stand in the gap and go round with it, the way it turns. Write it on the label. Stir with, never against.",
       threadweaver: "A cross of beams turning through him, a notch at a time. I walked my stitches round with the gap like thread winding onto a bobbin, all together, nobody lagging. Mind the slack.",
+      tidecaller: "A cross of beams turned through him, a notch at a time. I found the open wedge between them and walked round with it, at the pace of the moon over a harbour, never against the turn. Slow work suits me.",
+      lanternkeeper: "A cross of beams turned through the kitchen a notch at a time. I found the open wedge and walked round with it, trailing a lantern behind me, so the party had a light to follow around the room.",
+      kenseier: "Beams crossed inside him and turned one notch at a time. There was an open wedge between them, and I went round with it, step for step, never against it. The beat was the turning itself. Slow, and honest.",
     } },
     'Spice Rack': { hard: false, learned: {
       bastion: "Jars of spice poured on set spots, and one followed each of the others. They carried theirs clear of everyone and stepped off before it poured. Then ladle or lid. I held the middle and kept my eyes on his back.",
@@ -464,6 +527,9 @@
       chronomancer: "Jars on set spots, one following each of us; it stops following a beat before it pours. Step off then. Ladle or lid right after. I have danced this one.",
       alembist: "A jar over each of us but our shield, plus fixed spots on the floor. Carry yours to clear floor, step off before it pours. Note: a wasteful use of good spice, and I say that as someone who has set fire to cinnamon.",
       threadweaver: "A jar followed each of my stitches; I let them out apart so no two poured together, then gathered them in for the ladle or lid. Two jobs, one tidy seam.",
+      tidecaller: "Jars poured on fixed places, and one followed each of us but the knight. We carried ours well apart and stepped off before it poured, and the ladle or the lid came right behind. I kept the water ready for both.",
+      lanternkeeper: "A jar hung over every one of us but the knight, and others poured on the same spots as before. I walked mine away from the rest and moved off before it tipped. Then the ladle or the lid, with a lantern waiting on whichever side we ran to.",
+      kenseier: "Spice poured on fixed spots, and a jar chased each of the others. They drew theirs away from everyone and stepped aside before it fell. I watched his back for the ladle or the lid, which came after.",
     } },
     'Boil Over': { hard: false, learned: {
       bastion: "He boiled over, and the closer you stood, the worse it scalded. We all got as far from him as the room allowed, me included. A post is no use if you are cooked at it.",
@@ -485,6 +551,9 @@
       chronomancer: "Heat swells off him, a long beat, then it boils over. Every step away is a step less burnt. We were all at the walls by the end of the beat.",
       alembist: "Scalding heat, worse the nearer you stand. Distance, all of us, to the walls, and a dose ready before. Note: boiling over is the worst thing a pot can do. I know. I have been the pot.",
       threadweaver: "The nearer to him, the worse the scald, so I let every thread out to the walls, our knight's too, and pulled them back once it had boiled. Even a good seam needs room.",
+      tidecaller: "The nearer to him, the worse the scald, so we all went to the far walls, the knight too. I raised the water as we ran, so it was high when the heat broke. The edge of a wave is gentler than its heart.",
+      lanternkeeper: "The nearer to him, the worse the scald, so we went to the far walls, the knight too. I set the lanterns on the far side before he began, so there was a light to run to. The edge of it is gentle, if you are early.",
+      kenseier: "He boiled over, and the nearer you stood, the worse it scalded. All of us went to the far side of the room, I included. No blade turns a scald. Better to be far, and come back to him cool.",
     } },
     'Last Orders': { hard: false, learned: {
       bastion: "After the trolley came silence, then Last Orders on the whole room. No step escapes it. We gathered by the healer, mended in the quiet, and braced shoulder to shoulder.",
@@ -506,6 +575,9 @@
       chronomancer: "Silence after the trolley; the blast comes after it, every time. We gathered in the silence and were whole by the bell. I was ready. I am nearly always ready after the fact.",
       alembist: "One great blast at everyone, after a long silence. Use the silence: everyone mended and gathered. Note: the shelf should still hold something by then. Mine held two vials and a biscuit.",
       threadweaver: "In the quiet after the trolley I drew the whole hem in close and mended every stitch, right to the selvedge. Then Last Orders hit us all, and the seam held.",
+      tidecaller: "After the trolley came a long hush, and I spent every breath of it. We gathered close and I filled the water to the brim, so when the great blow fell on all of us it broke on a full shore. Wait for the water.",
+      lanternkeeper: "After the trolley came a long hush, and I spent every breath of it. We stood close, every wick brought back to gold, and when the great blow fell on all of us I let every lantern burst at once. Three glows over four of us. Keep your light.",
+      kenseier: "A trolley, a long hush, then Last Orders on the whole room. Nowhere to step and nothing to cross. We gathered by the healer in the quiet and were mended before it fell. I have rarely valued a hush more.",
     } },
     'Gorge': { hard: false, learned: {
       bastion: "At the end he just ate, and every mouthful hit all of us, harder each time. Nothing to hold but the line. We had to put him down fast. Held, long enough.",
@@ -527,6 +599,9 @@
       chronomancer: "Each bite on the beat, harder each time. No undoing that for ever. So the others hurried, and I kept time.",
       alembist: "Every bite he takes hurts all of us more, and there is no remedy, not for long. Empty the shelves and end him. I threw everything I owned, including the vial I was saving for my birthday.",
       threadweaver: "He ate, and every bite tugged at every stitch, harder each time. A thread won't hold for ever, so we cut him down quickly, before anything frayed.",
+      tidecaller: "At the end he only ate, and each mouthful struck all of us harder than the last. The water cannot stay high for ever against that, so the others struck him down fast while I held us up. He was only hungry. The sea knows that too.",
+      lanternkeeper: "At the end he only ate, and each mouthful struck all of us harder than the last. The wicks burned low faster than I could trim them, so I topped them up and let them burst, and the others struck him down quickly. He was only hungry. I left one burning.",
+      kenseier: "At the end he only ate, and every mouthful struck all of us, harder each time. No beat to catch, only a clock running. We put him down quickly. A fine cook, to the last mouthful.",
     } },
     'Clogged Drains': { hard: true, learned: {
       bastion: "Grease pooled round the drains for good, and any fire lights it. I marked every drain on my map and kept the line off those patches. Bad footing is one thing; burning footing is another.",
@@ -548,6 +623,9 @@
       chronomancer: "The drains back up and the grease stays. It's harmless until the fire comes. Then it's not. I remember where the drains are the way one remembers a bad day.",
       alembist: "Grease round the drains, permanently. Harmless alone; with fire, it burns. Keep off it when fire is coming. Note: a reagent waiting for its partner. I have felt that.",
       threadweaver: "The drains overflowed and grease ringed them for good. Fire lights it. I kept my stitches away from the drains so nothing burned. Stains and fire both ruin good cloth.",
+      tidecaller: "On the hard nights the drains backed up and grease lay round them for good, and fire always finds grease. I kept everyone off those patches. Slick shingle is bad footing; burning shingle is worse.",
+      lanternkeeper: "On the hard nights the drains backed up and grease pooled round them for good, and fire always finds grease. I kept every lantern well clear of those patches, and the others with them. A lamp near spilled oil is a lesson a lamplighter learns once.",
+      kenseier: "The drains backed up and the grease stayed round them for good. Any fire would light it, so I marked each drain and fought elsewhere. A patch that waits to burn is only a fuse, and I do not stand on fuses.",
     } },
     'Belly Flop': { hard: true, learned: {
       bastion: "He flopped down where he stood, which is a thing he does on the harder nights. Out from under him, and open floor at my back, because the shock threw us. Then ladle out, lid in. A wall behind you is worse than the blow.",
@@ -569,6 +647,9 @@
       chronomancer: "He flops, a beat, then the shock throws us. Out from under first, open floor behind. Then the tool on his back on the next beat. I will have heard this one before.",
       alembist: "One ogre, flopping. Out from under, open floor behind for the throw. Then the tool on his back: ladle out, lid in. Note: casks behind you hurt. I know the exact bruise.",
       threadweaver: "He flopped and the shock threw my stitches apart, so I made sure each had open floor behind. Then in or out for the tool on his back. I will not have them landing in a wall like dropped buttons.",
+      tidecaller: "He dropped flat where he stood and the shock threw us outward. I got out from under him with open floor at my back, for a wall or a cask hurts more than the blow, then read his back for the ladle or the lid.",
+      lanternkeeper: "He fell flat where he stood and the floor kicked us outward. I made sure there was open floor behind me, since a wall or a cask hurts more than the blow, and walked my lantern clear of him. Then his back showed the ladle or the lid.",
+      kenseier: "On the harder nights he dropped flat where he stood. I moved out from under him with clear floor behind me, since the shock throws a man, then read his back for ladle or lid. A wall at my back would have been worse than the blow.",
     } },
     'Cleaver Toss': { hard: true, learned: {
       bastion: "He sent cleavers down lines at the two farthest from him. They turned the lines clear of us, stepped aside, and the steel came home the way it went. Stay off both ways. Thorough.",
@@ -590,6 +671,9 @@
       chronomancer: "Cleaver out along its line, then back along it. The second pass is the one people forget. I remembered, having forgotten it already.",
       alembist: "Two cleavers, two lines, out and back. Point yours away from the others, step off, wait for it to come home. Note: they return. Things always return, especially the ones I throw away.",
       threadweaver: "Two cleaver lines to my farthest stitches. I had them point their lines away from the hem, step off, and stay off till the cleavers flew home. Out and back, like a needle.",
+      tidecaller: "Cleavers flew along lines at the two of us farthest out, and came home the way they went. Each turned the line away from the others, stepped off it, and stayed off until the steel was back. A rip runs out and in on the same path.",
+      lanternkeeper: "Cleavers flew down lines at the two of us farthest out, and came back along the same lines. I was not one of the pair, so I kept my glow away from those lines while they aimed them clear of everyone and stayed off until the steel came home.",
+      kenseier: "A cleaver was thrown at each of the two farthest out, and it came back the way it left. They turned their lines from the rest and stepped off at the last, and I kept out of the lane both ways. A fine bit of throwing.",
     } },
     'Mise en Place': { hard: true, learned: {
       bastion: "Three tools laid on the pass, left to right, the cleaver toward one side of its board. I put the order and the side in my book. Nothing hit us. It always comes later; that is what laying out means.",
@@ -611,6 +695,9 @@
       chronomancer: "Three tools, left to right, and the cleaver's side. I will need that later; I needed it last time.",
       alembist: "Specimens on the pass: three tools, laid left to right, the cleaver to one side. Serving order, I suspect. Labelled on my wrist, since the shelf was elsewhere.",
       threadweaver: "Three tools laid on the pass, left to right, the cleaver to one side. I stitched the order into my memory, in that order, and bit the thread.",
+      tidecaller: "Three tools were laid on the pass, left to right, and the cleaver lay toward one side of its board. I kept the order and the side the way one keeps a tide table; the serving comes much later.",
+      lanternkeeper: "Three tools were laid on the pass, left to right, and the cleaver lay toward one side of its board. I counted them off like lamps along a street: first, second, third, and which side. The serving comes much later.",
+      kenseier: "Three tools laid on the pass, left to right, the cleaver nearer one end of its board. I said the order and the side to myself like a form. Nothing hit us. What is laid out is struck later.",
     } },
     'Service!': { hard: true, learned: {
       bastion: "The tools came off the pass in the order he had laid them. The cleaver chops its side, the ladle means out, the lid means in, one after another. A drill I had been handed in advance.",
@@ -632,6 +719,9 @@
       chronomancer: "Service! The tools come in the order they were laid, a beat apart: cleaver's side, ladle out, lid in. I had heard the melody long before he wrote it.",
       alembist: "Three tools in the order laid out. The cleaver's side chopped, ladle out, lid in, in turn. Note: the label from earlier paid off. I may frame it.",
       threadweaver: "The tools came out in order, and I moved my stitches with each: the cleaver's side cleared, out for the ladle, in for the lid. Another neat seam.",
+      tidecaller: "The tools came off the pass in the order he had laid them: the cleaver took its side, the ladle sent us out, the lid brought us in. I had the table by heart, so we were already moving when each one came.",
+      lanternkeeper: "He served the tools in the order he had laid them: the cleaver's side first, then the ladle to send us out, then the lid to bring us in. I had walked that row in my head, as I would a street of lamps, and each step already had its light.",
+      kenseier: "The tools came off the pass in the order he had laid them: cleaver for its half, ladle for out, lid for in. I called each a breath ahead of him. A fight handed over as a song, and I only had to keep time.",
     } },
     'Dinner Rush': { hard: true, learned: {
       bastion: "Hung plates over the four of us, set where we stood, the nearest served first. My post was the first: his east flank, near enough to smell the stove. The second sat west, inside the lid's quiet; the last two stayed out past the ladle. I never left his side.",
@@ -653,6 +743,9 @@
       chronomancer: "Three beats, the nearest plate first. His east side on the first, as the cleaver takes the west; his west side on the second, just inside the lid's quiet; the far two together on the third, past the ladle. Set one too near and it comes up off the beat.",
       alembist: "Dosage by distance: a hot plate for each of us, nearest served first. First dose at his east side, second at his west on the lid's quiet edge, last two far out past the ladle. Note: the first patient is too full for another, so leave room beside the second.",
       threadweaver: "Hot plates pinned over every stitch where it stood, the nearest served first. East side of him for the first, west side inside the lid's quiet for the second, the last two out beyond the ladle. The near pair went east, then in, then out. The far pair never budged.",
+      tidecaller: "A hot plate hung over each of us and was set down where we stood, the nearest to him served first. The first stood at his east side, the next at the west edge of the lid's quiet, and I went far out past the ladle with the last, to be served late.",
+      lanternkeeper: "A scalding dish hung over each of us and dropped where we stood, the closest to him first. I counted them off: the first at his east, the next just inside the lid's quiet on the west, mine out past the ladle, last. Four dishes for four of us.",
+      kenseier: "The plates were served nearest first. I stood on the first, at his east side, and kept him looking at me. The next waited west, within the lid's quiet, and the last two out past the ladle. Each had its turn.",
     } },
   },
 };

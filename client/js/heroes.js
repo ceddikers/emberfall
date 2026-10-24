@@ -1676,3 +1676,237 @@ Object.assign(SPEC_ART, {
   // Grim: an hourglass of gold sand at the hip (what is coming due) and a dim glow along the cloak's hem
   grim(ctx, st) { glow(ctx, -3, 12, 7, '#ffd65a', 0.16 + Math.sin(st.t * 2) * 0.04); rrect(ctx, -4.4, 10.4, 2.8, 4.6, 0.8, '#ffe9a0', OUT, 0.9); line(ctx, -4.4, 12.7, -1.6, 12.7, '#8a6a20', 0.8); },
 });
+
+// ---------------------------------------------------------------- Tidecaller (healer, class 20)
+// A tall barefoot sea-priest in wet sea-blue wraps: a slate shawl hung with kelp fringe, hair in heavy wet ropes with pearl
+// ties, a great conch on a leather strap (lifted to the lips for a cast, with arcs of sound off its flared mouth) and a
+// small sphere of sea water floating over the open left hand. Spring Tide: a pale moon-halo and pearls circling; Undertow:
+// dark water curling off the wraps and bubbles rising. The tide ring at the feet (HERO_TRAIL.tidecaller) rises and falls with
+// the Tide: your own hero reads the kit, everyone else's runs a clock reset by the kit's crest / slack moments (ability-vfx.js).
+function tidecallerLevel(st) {
+  const g = typeof window !== 'undefined' && window.__game, kit = g && g.player && g.player.st === st && g.actor && g.actor.kit;
+  if (kit && kit.g && kit.g.tphase) {
+    const q = kit.g, now = kit.now;
+    return { f: Math.max(0, Math.min(1, (q.tide || 0) / 100)), ph: q.tphase, flood: now < (q.floodUntil || 0), wall: now < (q.wallUntil || 0), deep: now < (q.deepUntil || 0) };
+  }
+  const m = st && st.tm, now = typeof FX !== 'undefined' ? FX.now : (st ? st.t : 0);
+  let ph = m ? m.ph : 'rise', f = m ? m.f0 : 0.3, el = m ? now - m.t0 : 0;
+  const hold = (m && m.hold) || 2;
+  if (ph === 'rise') { f += el / 12; if (f >= 1) { el = (f - 1) * 12; f = 1; ph = 'hold'; } }
+  if (ph === 'hold') { if (el > hold) { el -= hold; ph = 'ebb'; } else f = 1; }
+  if (ph === 'ebb') { f = 1 - el / 6; if (f <= 0) { f = (-f) * 6 / 12; ph = 'rise'; } }
+  return { f: Math.max(0, Math.min(1, f)), ph, flood: !!(m && m.flood && now < m.flood), wall: !!(m && m.wall && now < m.wall), deep: !!(m && m.deep && now < m.deep) };
+}
+HERO_ART.tidecaller = function (ctx, st) {
+  const wrap = '#2f9ea2', wrapD = '#1d6a78', teal = '#3fb8a8', foam = '#eaf8f5', pearl = '#d7f2ee', slate = '#6a7f8c';
+  const skin = '#a2704e', rope = '#4a7a86', kelp = '#3f6a48', shell = '#f4e6d6', shellD = '#cba890', leather = '#6b4a2b';
+  const cast = castAmt(st), big = pulse(actP(st, 'big')), now = st.t;
+  const wave = Math.sin(now * 2.6) * 1.8 + (st.moving ? Math.sin(now * 9) * 2.2 : 0);
+  // the long wet wrap trailing behind: a wavy hem with a thread of foam along it
+  const hem = [[-9, -11], [-17, -12], [-24 + wave, -9], [-28 + wave, -5], [-27 + wave, -1], [-31 + wave * 1.1, 2], [-27 + wave, 5], [-28 + wave, 9], [-23 + wave, 12], [-16, 11], [-9, 10]];
+  // (a closed curve through the points' midpoints: soft, flowing edges, not spikes)
+  const flow = (pts, fill, stroke, lw) => {
+    const n = pts.length, mid = i => { const a = pts[i % n], b = pts[(i + 1) % n]; return [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]; };
+    ctx.beginPath(); const m0 = mid(n - 1); ctx.moveTo(m0[0], m0[1]);
+    for (let i = 0; i < n; i++) { const m = mid(i); ctx.quadraticCurveTo(pts[i][0], pts[i][1], m[0], m[1]); }
+    ctx.closePath(); ctx.lineJoin = 'round';
+    if (fill) { ctx.fillStyle = fill; ctx.fill(); } if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lw; ctx.stroke(); }
+  };
+  flow([[-3, -9]].concat(hem, [[-3, 9]]), wrapD, OUT, 2);
+  flow([[-6, -5], [-15, -6], [-22 + wave, -4], [-27 + wave, 0], [-22 + wave, 4], [-15, 6], [-6, 5]], wrap);
+  ctx.save(); ctx.strokeStyle = foam; ctx.globalAlpha = 0.8; ctx.lineWidth = 1.2; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.beginPath(); ctx.moveTo(-24 + wave, -9); ctx.quadraticCurveTo(-28 + wave, -5, -27 + wave, -1); ctx.quadraticCurveTo(-31 + wave * 1.1, 2, -27 + wave, 5); ctx.quadraticCurveTo(-28 + wave, 9, -23 + wave, 12); ctx.stroke();
+  for (let i = 0; i < 3; i++) { const q = (now * 0.5 + i / 3) % 1; ctx.globalAlpha = Math.sin(q * Math.PI) * 0.6; circle(ctx, -24 - q * 14 + wave * 0.8, (i - 1) * 6, 1.1, foam); }
+  ctx.restore();
+  feet(ctx, st, skin);
+  torso(ctx, wrap, 9.5, 14);
+  // wraps crossing the chest, pale at the edge
+  line(ctx, -5, -11, 4, 9, wrapD, 2.2); line(ctx, 3, -11, -5, 9, wrapD, 2.2);
+  line(ctx, -5, -11, 4, 9, pearl, 0.7); line(ctx, 3, -11, -5, 9, pearl, 0.7);
+  // the slate shawl over the shoulders, kelp hanging from its back edge
+  ellipse(ctx, -2.5, 0, 6.2, 15.5, 0, slate, OUT, 1.7);
+  ellipse(ctx, -1.5, -3, 2.6, 7, 0.2, shade(slate, 0.16));
+  for (let i = -3; i <= 3; i++) ellipse(ctx, -9 + Math.abs(i) * 0.2 + Math.sin(now * 2 + i) * 0.6, i * 4.2, 3, 1.3, 0.25 * i, kelp, OUT, 0.8);
+  // the conch's strap
+  line(ctx, -4, -12, 5, 11, leather, 1.8);
+  circle(ctx, 5, 11, 1.4, '#d8b25a', OUT, 0.8);
+  // the open left hand: a small sphere of sea water, a ripple round it
+  const sx = 11 + cast * 3, sy = -11 - cast * 1.5, pr = 3.6 + cast * 1.4 + Math.sin(now * 3.4) * 0.35;
+  hand(ctx, 6.5, -10.5, skin);
+  glow(ctx, sx, sy, pr * 3.2, teal, 0.35 + cast * 0.3);
+  circle(ctx, sx, sy, pr, '#58cfc0', OUT, 1.1);
+  circle(ctx, sx - pr * 0.3, sy - pr * 0.35, pr * 0.42, '#e6fbf6');
+  ctx.save(); ctx.strokeStyle = pearl; ctx.lineWidth = 0.8; ctx.globalAlpha = 0.5 + 0.3 * Math.sin(now * 3);
+  ctx.beginPath(); ctx.ellipse(sx, sy, pr + 2.6 + Math.sin(now * 2.2) * 0.8, pr * 0.55 + 1.4, 0, 0, TAU); ctx.stroke(); ctx.restore();
+  // the conch: at the hip at rest, brought up to the lips to cast (the spire to the mouth, the flared lip out front)
+  const k = Math.min(1, cast * 1.15 + big * 0.5), cx = 9 + 8 * k, cy = 13.5 - 11 * k, ca = 0.12 - 0.3 * k;
+  ctx.save(); ctx.translate(cx, cy); ctx.rotate(ca);
+  ctx.beginPath(); ctx.moveTo(-10, 0.2); ctx.quadraticCurveTo(-5, -5.5, 3, -5.8); ctx.quadraticCurveTo(10, -5.4, 10, 0); ctx.quadraticCurveTo(10, 5.4, 3, 5.8); ctx.quadraticCurveTo(-5, 5.5, -10, 0.2); ctx.closePath();
+  ctx.lineJoin = 'round'; ctx.fillStyle = shell; ctx.fill(); ctx.strokeStyle = OUT; ctx.lineWidth = 1.5; ctx.stroke();
+  ellipse(ctx, 7, 0, 2.6, 4.4, 0, '#e8a8a0', OUT, 0.9);
+  ctx.save(); ctx.strokeStyle = shellD; ctx.lineWidth = 0.9; ctx.lineCap = 'round';
+  for (const [x0, w0] of [[-5.5, 2.6], [-2, 3.8], [1.8, 4.6]]) { ctx.beginPath(); ctx.ellipse(x0, 0, 1.1, w0, 0, -1.2, 1.2); ctx.stroke(); }
+  ctx.restore();
+  ellipse(ctx, -3, -2, 4, 1.2, 0.2, shade(shell, 0.4));
+  ctx.restore();
+  hand(ctx, cx - 2, cy + 1, skin);
+  // sound off the conch's mouth while it's up: three arcs of foam-white and teal going out
+  if (k > 0.35) {
+    const ox = cx + Math.cos(ca) * 10, oy = cy + Math.sin(ca) * 10;
+    ctx.save(); ctx.lineCap = 'round';
+    for (let i = 0; i < 3; i++) { const q = (now * 2.4 + i / 3) % 1; ctx.globalAlpha = Math.sin(q * Math.PI) * 0.7 * k; ctx.strokeStyle = i % 2 ? teal : foam; ctx.lineWidth = 1.5 - q * 0.6; ctx.beginPath(); ctx.arc(ox, oy, 3 + q * 12, ca - 0.7, ca + 0.7); ctx.stroke(); }
+    ctx.restore();
+  }
+  // the head: hair in heavy wet ropes, a pearl at the brow, the face a sliver at the front
+  hairBack(ctx, rope, 8, 6.5);
+  for (const [y0, y1, e] of [[-4.5, -9.5, 0.3], [4.5, 8.5, -0.3]]) { limb(ctx, [-3, y0, -9, y0 * 1.5 + e * 3, -15 + wave * 0.3, y1], OUT, 3.4); limb(ctx, [-3, y0, -9, y0 * 1.5 + e * 3, -15 + wave * 0.3, y1], rope, 2.2); circle(ctx, -16 + wave * 0.3, y1 + (y1 > 0 ? 0.6 : -0.6), 1.5, pearl, OUT, 0.8); }
+  limb(ctx, [-2, 0, -10, 1, -19 + wave * 0.5, 0.5], OUT, 3.4); limb(ctx, [-2, 0, -10, 1, -19 + wave * 0.5, 0.5], shade(rope, 0.1), 2.2); circle(ctx, -20 + wave * 0.5, 0.5, 1.5, teal, OUT, 0.8);
+  hairHead(ctx, rope, skin);
+  circle(ctx, 5.4, -2.8, 1.5, pearl, OUT, 0.7);
+  circle(ctx, 4.8, 3.6, 1.1, shell, OUT, 0.6);
+  glow(ctx, 5.4, -2.8, 4, '#ffffff', 0.35);
+};
+Object.assign(SPEC_ART, {
+  // Spring Tide: a pale moon-halo at the back of the head and three pearls circling the shoulders
+  springtide(ctx, st) {
+    glow(ctx, -1, 0, 15, '#bff3ea', 0.22 + Math.sin(st.t * 1.6) * 0.05);
+    ctx.save(); ctx.strokeStyle = '#eaf8f5'; ctx.globalAlpha = 0.7; ctx.lineWidth = 1.5; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.arc(-1, 0, 11.5, 1.8, 4.5); ctx.stroke(); ctx.restore();
+    for (let i = 0; i < 3; i++) { const a = st.t * 1.3 + i * TAU / 3, x = Math.cos(a) * 16 - 1, y = Math.sin(a) * 15, back = Math.sin(a) < 0; ctx.save(); ctx.globalAlpha = back ? 0.5 : 1; glow(ctx, x, y, 5, '#ffffff', 0.45); circle(ctx, x, y, 1.9, '#f2fbf8', OUT, 0.7); ctx.restore(); }
+  },
+  // Undertow: dark water curling off the wraps, bubbles rising
+  undertow(ctx, st) {
+    for (let i = 0; i < 3; i++) {
+      const q = (st.t * 0.6 + i / 3) % 1, y0 = (i - 1) * 8;
+      ctx.save(); ctx.globalAlpha = (1 - q) * 0.55; ctx.strokeStyle = '#1d5668'; ctx.lineWidth = 2.6 - q; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(-8 - q * 4, y0); ctx.quadraticCurveTo(-16 - q * 12, y0 + Math.sin(q * 6 + i * 2) * 5, -24 - q * 14, y0 + Math.sin(q * 5 + i) * 7); ctx.stroke(); ctx.restore();
+    }
+    for (let i = 0; i < 4; i++) { const q = (st.t * 0.7 + i / 4) % 1; ctx.save(); ctx.globalAlpha = Math.sin(q * Math.PI) * 0.7; circle(ctx, -2 + Math.sin(q * 7 + i * 2) * 9, 7 - q * 22 + (i % 2 ? 7 : -9), 1.2 + (i % 2) * 0.5, null, '#9fe0e8', 0.8); ctx.restore(); }
+  },
+});
+// the tide ring round the feet: a wave ring that swells and brightens with the water (foam at the crest, a flooded sheen
+// under Spring Flood, stone blocks while Breakwater stands, a darker ring while a Deep Shield holds)
+HERO_TRAIL.tidecaller = function (ctx, x, y, st, scale, spec) {
+  if (!st || st.t == null) return;
+  const L = tidecallerLevel(st), f = L.flood ? 1 : L.f, t = st.t, amp = 0.7 + 2.2 * f, rx = 22.5 + 3 * f, ry = 17.5 + 2.2 * f, sq = ry / rx;
+  const col = L.flood ? '#ffffff' : L.deep ? '#2c8fa6' : '#3fb8a8', hi = L.flood ? '#fff6d0' : '#eaf8f5';
+  ctx.save(); ctx.translate(0, 3);
+  if (f > 0.05) { const gr = ctx.createRadialGradient(0, 0, 4, 0, 0, rx); gr.addColorStop(0, rgba(col, 0)); gr.addColorStop(1, rgba(col, 0.1 + 0.16 * f)); ctx.fillStyle = gr; ctx.beginPath(); ctx.ellipse(0, 0, rx, ry, 0, 0, TAU); ctx.fill(); }
+  const ring = (rr, ph, w, color, a) => {
+    ctx.beginPath();
+    for (let i = 0; i <= 36; i++) { const an = i / 36 * TAU, d = rr + Math.sin(an * 6 + t * 2.2 + ph) * amp, px = Math.cos(an) * d, py = Math.sin(an) * d * sq; if (i) ctx.lineTo(px, py); else ctx.moveTo(px, py); }
+    ctx.closePath(); ctx.strokeStyle = rgba(color, a); ctx.lineWidth = w; ctx.lineJoin = 'round'; ctx.stroke();
+  };
+  ring(rx, 0, 1.4 + 2.2 * f, col, 0.22 + 0.5 * f);
+  if (f > 0.25) ring(rx * 0.9, 2, 1 + f, hi, 0.12 + 0.4 * f);
+  if (L.wall) for (let i = 0; i < 12; i++) { const an = i / 12 * TAU + 0.13; ctx.save(); ctx.translate(Math.cos(an) * rx, Math.sin(an) * ry); ctx.rotate(an + Math.PI / 2); ctx.fillStyle = rgba('#6b7e8a', 0.9); ctx.strokeStyle = rgba('#1a1622', 0.8); ctx.lineWidth = 0.8; ctx.fillRect(-3, -2, 6, 4); ctx.strokeRect(-3, -2, 6, 4); ctx.restore(); }
+  // foam beads riding the ring near the crest
+  if (f > 0.7) for (let i = 0; i < 7; i++) { const an = i / 7 * TAU + t * (L.ph === 'ebb' ? -0.4 : 0.5), d = Math.sin(an * 6 + t * 2.2) * amp; ctx.globalAlpha = Math.min(1, (f - 0.7) * 3); circle(ctx, Math.cos(an) * (rx + d), Math.sin(an) * (ry + d * sq) - 0.5, 1.3, hi); }
+  ctx.globalAlpha = 1; ctx.restore();
+};
+
+// ---------------------------------------------------------------- Lanternkeeper (healer, class 21)
+// A night warden in a long soot-grey coat with a deep cowl, brass buttons and belt, the face a lit sliver inside the hood. In the
+// right hand a long staff with a crook, and from the crook hangs an iron lantern: seen from above, a cage with a gold flame in it and
+// a warm pool round it, the flame as tall as the Embers in the kit (your own hero reads them; everyone else's stands at about three
+// quarters). Casting lifts the lantern and throws four spikes of light; Lighthouse turns a long pale beam round it. A small lantern
+// hangs from the belt at the left hip and an ember glows in the left palm. Beacon: a short brass post strapped across the back with a
+// steady flame on it; Wayfarer: a travel pack with three little lights swinging from it and an ember-orange scarf streaming behind.
+function lanternkeeperLevel(st) {
+  const g = typeof window !== 'undefined' && window.__game, kit = g && g.player && g.player.st === st && g.actor && g.actor.kit;
+  const now = typeof FX !== 'undefined' ? FX.now : (st ? st.t : 0);
+  if (kit && kit.g && kit.g.lan) {
+    const max = typeof lkEmbMax === 'function' ? lkEmbMax(kit) : 4;
+    return { f: Math.max(0, Math.min(1, (kit.g.emb || 0) / max)), light: kit.now < (kit.g.lightUntil || 0), stride: kit.now < (kit.g.strideUntil || 0) };
+  }
+  const m = st && st.lk;
+  return { f: 0.75, light: !!(m && m.light && now < m.light), stride: !!(m && m.stride && now < m.stride) };
+}
+HERO_ART.lanternkeeper = function (ctx, st) {
+  const coat = '#4a463f', coatD = '#2c2925', coatL = '#625d54', brass = '#b98f45', brassL = '#e0b866', iron = '#2b2620', skin = '#b07a52', gold = '#ffc46b', hood = '#3a3630';
+  const cast = castAmt(st), big = pulse(actP(st, 'big')), now = st.t, L = lanternkeeperLevel(st), f = L.f;
+  const wave = Math.sin(now * 2.6) * 1.6 + (st.moving ? Math.sin(now * 9) * 2.2 : 0);
+  const fl = 0.9 + 0.1 * Math.sin(now * 9.3) + 0.06 * Math.sin(now * 17);
+  // the long coat trailing behind: a scalloped hem that stirs, lit a little along its edge by the lanterns
+  const hem = [-6, -11, -14, -12.5, -21 + wave * 0.5, -10, -25 + wave, -6, -23 + wave, -2.5, -28 + wave * 1.1, 0.5, -23 + wave, 3.5, -26 + wave, 7, -20 + wave * 0.5, 10.5, -13, 12.5, -6, 11];
+  poly(ctx, hem, coatD, OUT, 2);
+  line(ctx, -8, -5, -20 + wave * 0.5, -4, coat, 1.2); line(ctx, -8, 5, -20 + wave * 0.5, 4, coat, 1.2); line(ctx, -8, 0, -22 + wave * 0.8, 0.5, coat, 1);
+  ctx.save(); ctx.strokeStyle = gold; ctx.globalAlpha = (0.16 + 0.2 * f) * fl; ctx.lineWidth = 1; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.beginPath(); ctx.moveTo(-25 + wave, -6); ctx.lineTo(-23 + wave, -2.5); ctx.lineTo(-28 + wave * 1.1, 0.5); ctx.lineTo(-23 + wave, 3.5); ctx.lineTo(-26 + wave, 7); ctx.stroke(); ctx.restore();
+  feet(ctx, st, '#1e1b17');
+  torso(ctx, coat, 9.5, 14.5);
+  // the capelet over the shoulders with a brass edge, a belt across the middle with its buckle, buttons down the front
+  ellipse(ctx, -1.5, 0, 7, 15.8, 0, coatD, OUT, 1.7);
+  ellipse(ctx, -1.5, 0, 5.4, 14, 0, null, rgba(brass, 0.55), 0.9);
+  ellipse(ctx, 0, -3, 2.8, 7.4, 0.15, shade(coatD, 0.12));
+  rrect(ctx, -3.6, -13.6, 2.8, 27.2, 1, '#3a2c1c', OUT, 1); line(ctx, -2.2, -12.4, -2.2, 12.4, brass, 0.8);
+  rrect(ctx, -4.4, -2.6, 4.2, 5.2, 1, brass, OUT, 1); rrect(ctx, -3.4, -1.3, 2.2, 2.6, 0.6, iron);
+  for (const bx of [3.2, 6.4]) { circle(ctx, bx, 0, 1, brass, OUT, 0.6); }
+  // the small lantern at the left hip
+  glow(ctx, 0, -13.4, 7 + f * 2, gold, (0.16 + 0.12 * f) * fl);
+  circle(ctx, 0, -13.4, 3.1, iron, OUT, 1.1); circle(ctx, 0, -13.4, 1.9, '#ffb04a'); circle(ctx, 0, -13.4, 0.8 + 0.4 * f, '#fff0b8');
+  // the left hand: an ember cupped in the palm (flares when you cast)
+  hand(ctx, 7, -9.2, skin);
+  glow(ctx, 8.6, -9.4, 5 + cast * 4, '#ff9a3a', 0.45 + cast * 0.4); circle(ctx, 8.6, -9.4, 1.1 + cast * 0.8, '#ffd27a');
+  // the staff with its crook, and the lantern hanging from it
+  const tx = 22 + cast * 3 + big * 2, ty = 11.5 - cast * 1.2;
+  limb(ctx, [-6, 13.5, 6, 12.5, tx - 1, ty], '#5a4630', 2.4);
+  ctx.save(); ctx.strokeStyle = OUT; ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.beginPath(); ctx.arc(tx - 1, ty - 0.5, 2.9, -2.4, 1.2); ctx.stroke();
+  ctx.strokeStyle = brassL; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(tx - 1, ty - 0.5, 2.9, -2.4, 1.2); ctx.stroke(); ctx.restore();
+  // the pale beam while Lighthouse stands: a long wedge turning slowly round the lantern, faint
+  if (L.light) {
+    const ba = now * 1.2;
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    for (let b = 0; b < 2; b++) { const a = ba + b * Math.PI; ctx.fillStyle = 'rgba(255,224,160,0.2)'; ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(tx + Math.cos(a - 0.1) * 70, ty + Math.sin(a - 0.1) * 70); ctx.lineTo(tx + Math.cos(a + 0.1) * 70, ty + Math.sin(a + 0.1) * 70); ctx.closePath(); ctx.fill(); }
+    ctx.restore();
+  }
+  glow(ctx, tx, ty, 13 + cast * 8 + f * 5 + (L.light ? 8 : 0), L.light ? '#fff0c8' : gold, (0.34 + f * 0.2 + cast * 0.3) * fl);
+  if (cast > 0.05 || big > 0.05) {
+    const k = Math.max(cast, big);
+    ctx.save(); ctx.strokeStyle = '#ffe9b0'; ctx.lineCap = 'round'; ctx.lineWidth = 1.5; ctx.globalAlpha = 0.85 * k;
+    for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2 + Math.PI / 4 + now * 0.8; ctx.beginPath(); ctx.moveTo(tx + Math.cos(a) * 6.5, ty + Math.sin(a) * 6.5); ctx.lineTo(tx + Math.cos(a) * (10 + 6 * k), ty + Math.sin(a) * (10 + 6 * k)); ctx.stroke(); }
+    ctx.restore();
+  }
+  // the lantern from above: an iron cage round a lit core, four bars, a brass roof cap
+  circle(ctx, tx, ty, 5.6, iron, OUT, 1.4);
+  circle(ctx, tx, ty, 4.1, '#ffb04a'); circle(ctx, tx, ty, 2.5 + f * 1.1 + (L.light ? 0.8 : 0), L.light ? '#fff6dc' : '#ffe08a'); circle(ctx, tx + 0.3, ty - 0.3, 1.1 + f * 0.6, '#fffdf0');
+  ctx.save(); ctx.strokeStyle = iron; ctx.lineWidth = 1.2; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(tx - 4.6, ty); ctx.lineTo(tx + 4.6, ty); ctx.moveTo(tx, ty - 4.6); ctx.lineTo(tx, ty + 4.6); ctx.stroke(); ctx.restore();
+  circle(ctx, tx, ty, 1.7, brass, OUT, 0.7);
+  hand(ctx, 7.5, 12.2, skin);
+  // the hood: a deep cowl with a short pointed tail, its inside lit warm at the front, the face a sliver, two glints for eyes
+  poly(ctx, [-4, -5.4, -12.5, 0, -4, 5.4], hood, OUT, 1.6);
+  circle(ctx, 0.5, 0, 7.9, hood, OUT, 2);
+  circle(ctx, -1.8, -2.4, 2.8, shade(hood, 0.2)); ellipse(ctx, -2.2, 1.8, 3.4, 2.2, 0.4, shade(hood, -0.1));
+  line(ctx, -2, -6.4, -6.2, -3.6, coatL, 0.9); line(ctx, -2, 6.4, -6.2, 3.6, coatL, 0.9);
+  ellipse(ctx, 6, 0, 3, 5.2, 0, '#17120d', OUT, 0.9);
+  ellipse(ctx, 7, 0, 1.7, 3.3, 0, skin);
+  glow(ctx, 7.2, 0, 6.5, gold, (0.22 + 0.2 * f) * fl);
+  circle(ctx, 7.6, -1.2, 0.55, '#fff0c8'); circle(ctx, 7.6, 1.2, 0.55, '#fff0c8');
+  circle(ctx, -1.2, -5.2, 1.2, brass, OUT, 0.7);
+};
+Object.assign(SPEC_ART, {
+  // Beacon: a short brass post strapped across the back with a steady flame on it (it does not flicker: the fixed star)
+  beacon(ctx, st) {
+    const gold = '#ffd27a', f = lanternkeeperLevel(st).f;
+    glow(ctx, -9.5, -8.5, 12 + f * 4, gold, 0.28 + 0.1 * f);
+    line(ctx, -9.5, -8.5, -9.5, 8, '#6b5531', 2.4); line(ctx, -9.5, -8.5, -9.5, 8, '#b98f45', 1);
+    rrect(ctx, -12.2, 3.5, 5.4, 2.2, 0.8, '#b98f45', OUT, 0.8);
+    circle(ctx, -9.5, -9.4, 3.6, '#2b2620', OUT, 1.1); circle(ctx, -9.5, -9.4, 2.4, '#ffe0a0'); circle(ctx, -9.5, -9.4, 1.1, '#fffdf0');
+    line(ctx, -14, -2.5, -5, 2.5, '#3a2c1c', 1.6);
+  },
+  // Wayfarer: a travel pack on the back with three small lights swinging from it, and an ember-orange scarf streaming behind
+  wayfarer(ctx, st) {
+    const now = st.t, sw = Math.sin(now * 3) * 1.2 + (st.moving ? Math.sin(now * 9) * 2.4 : 0);
+    ctx.save(); ctx.strokeStyle = '#ff9f5a'; ctx.lineCap = 'round';
+    for (const [w0, a] of [[3.2, 1], [1.4, 0.6]]) { ctx.globalAlpha = a; ctx.lineWidth = w0; ctx.beginPath(); ctx.moveTo(-3, -5); ctx.quadraticCurveTo(-13 + sw * 0.4, -9 - sw, -22 + sw, -6 + sw * 1.4 - (a < 1 ? 3 : 0)); ctx.stroke(); }
+    ctx.restore();
+    ellipse(ctx, -9.5, 0, 5.4, 8.8, 0, '#6b4a2b', OUT, 1.5); ellipse(ctx, -9.5, 0, 3.3, 6.4, 0, '#8a6238');
+    line(ctx, -4.6, -5.6, 2, -9, '#3a2c1c', 1.3); line(ctx, -4.6, 5.6, 2, 9, '#3a2c1c', 1.3);
+    rrect(ctx, -14.4, -2.2, 3.2, 4.4, 0.8, '#b98f45', OUT, 0.7);
+    for (let i = 0; i < 3; i++) {
+      const y0 = -6.5 + i * 6.5, sx = -16 - Math.abs(sw) * 0.3 - i * 0.6, sy = y0 + Math.sin(now * 3.4 + i * 2) * 1 + sw * 0.4;
+      line(ctx, -13, y0 * 0.7, sx, sy, '#3a2c1c', 0.8);
+      glow(ctx, sx, sy, 5.5, '#ff9f5a', 0.4 + 0.1 * Math.sin(now * 8 + i)); circle(ctx, sx, sy, 1.9, '#2b2620', OUT, 0.7); circle(ctx, sx, sy, 1, '#ffd27a');
+    }
+  },
+});

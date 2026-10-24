@@ -1127,6 +1127,8 @@ const KIT_VFX = {
     vfxShake(1 + 5 * f);
   }, { atTarget: true }),
   'rune-echo': e => { VFX.crystals(e.x, e.y, { color: '#8e98ff', n: 8, r: 44, h: 50 }); VFX.burst(e.x, e.y, { color: '#d0d6ff', n: 14, speed: 240 }); },
+  // Oathbroker: a Collect strike pays off the Ledger's last line: the books stamped clean in gold over the knight
+  paidFull: e => { VFX.sigil(e.x, e.y, { r: 34, style: 'hex', color: '#f0d890', dur: 0.5, spin: 2 }); VFX.burst(e.x, e.y - 24, { color: '#f0d890', color2: '#ffffff', n: 10, speed: 160, kind: 'star' }); if (globalThis.FX && FX.text) FX.text(e.x, e.y - 58, 'Paid', '#f0d890', 13); },
   reflect: (e, target) => { if (target) VFX.beam(e.x, e.y, target.x, target.y, { color: '#e4e8ff', w: 12, dur: 0.4 }); VFX.burst(e.x, e.y, { color: '#ffffff', color2: '#dde3ff', n: 16, speed: 260, kind: 'star' }); },
   overheat: e => { VFX.flare(e.x, e.y, { n: 24, color: '#ff2a1a', r: 18 }); VFX.shock(e.x, e.y, { r: 90, color: '#ff3a1a', dur: 0.4 }); },
   dawnstar: (e, target) => { const t = target || e; /* (QA: whited out the boss) */ VFX.beam(t.x, t.y - 300, t.x, t.y, { color: '#ffe680', w: 11, dur: 0.45 }); VFX.burst(t.x, t.y, { color: '#ffe680', color2: '#ffffff', n: 20, speed: 320, kind: 'star', flashR: 44 }); VFX.sigil(t.x, t.y, { r: 90, style: 'star4', color: '#ffe680', dur: 0.9, spin: 4 });
@@ -3341,7 +3343,7 @@ function windLaneBoost(x, y, vx, vy, now) {
       if (o.mine) shake(2);
     },
     bill(msg, e) { const big = msg.s; seal(e.x, e.y + 4, big ? 30 : 16 + Math.min(14, (msg.a || 0) / 8), big ? GOLD : WAX, 0.9); if (!big) V.flash(e.x, e.y - 10, 20, WAX, 0.15); },
-    default(msg, e, o) { pages(e.x, e.y, 14); V.shock(e.x, e.y, { r: 110, color: LIL, dur: 0.45, w: 5 }); if (msg.b > 0 && o.boss) { stamp(o.boss.x, o.boss.y, WAX, true); pages(o.boss.x, o.boss.y, 8); } },
+    default(msg, e, o) { if (msg.b > 0 && o.boss && FX.text) FX.text(o.boss.x, o.boss.y - 70, String(Math.round(msg.b)), '#ff9a7a', 14 + Math.min(10, msg.b / 400)); pages(e.x, e.y, 14); V.shock(e.x, e.y, { r: 110, color: LIL, dur: 0.45, w: 5 }); if (msg.b > 0 && o.boss) { stamp(o.boss.x, o.boss.y, WAX, true); pages(o.boss.x, o.boss.y, 8); } },
   };
 
   // the sparring dummy: the yard plays the host's part for the jaw and the Ledger
@@ -7918,5 +7920,942 @@ Object.assign(KIT_VFX, {
     V.shock(e.x, e.y, { r: 90, color: SOUL, dur: 0.5, w: 5 });
     dust(e.x, e.y, '#c8bce0', 5, 20); souls(e.x, e.y, 8, SOUL, 22);
     V.glint(e.x, e.y - 34, { color: SOUL2, size: 28, z: 36 });
+  };
+})();
+
+// ======================================================================= Tidecaller (healer, class 20): the Tide
+// Sea water, foam and moonlight. Colours: a deep teal body, sea-green and pale teal in the light, foam white on every crest,
+// a pearl for the glints, moon-gold only under Spring Flood, dark ink edges on the bold shapes, wet slate for stone. Heals rise
+// (columns of water strands with bubbles and droplets climbing, a foam crown at the crest), damage breaks outward (a foam
+// starburst), and a wave that rolls across the floor is only ever a thin wavy ring of foam and teal (never a filled disc, so
+// it can't read as a soak); the standing walls of water are airy bands with a foam lip. The kit's moments (k.fx) land here as
+// KIT_VFX: crest, slack, riptide, riptidePop, sip, swell, surge, undertow, current, breakwater, ebbShield, flood, floodEnd,
+// leviathan, maelstrom, tidalBore, deepBell, brine, spindrift, moonPull. Each hero's picture reads the tide from them too
+// (e.st.tm: heroes.js tidecallerLevel), and the sound cues of the class go through SoundHooks.tidecaller.
+(() => {
+  const V = VFX, TAU = Math.PI * 2, rnd = (a, b) => a + Math.random() * (b - a), shake = s => vfxShake(s);
+  const TEAL = '#3fb8a8', TEAL2 = '#8fe8d8', DEEP = '#17606c', DEEPER = '#0f3f4c', FOAM = '#eaf8f5', PEARL = '#d7f2ee', MOON = '#fff0b8', INK = '#0c1c26', SLATE = '#6b7e8a', UNDER = '#2c8fa6';
+  const later = (e, d, fn) => { const sc = FX.camFor(e) ? 1 : 0.6; FX.later(d, () => { V.setScale(sc); try { fn(); } finally { V.setScale(1); } }); };
+  const bodyY = e => e.y - 14 - (e.lift || 0);
+  const G = () => (typeof window !== 'undefined' && window.__game) || null;
+  const isMe = e => { const g = G(); return !!g && e === g.player; };
+  const party = () => { const l = typeof FX.party === 'function' ? FX.party() : [FX.me]; return (l || []).filter(w => w && w.x != null); };
+  const snd = (e, ev, d) => { try { if (typeof SoundHooks !== 'undefined' && SoundHooks.tidecaller) SoundHooks.tidecaller(ev, d, isMe(e), e, e.id); } catch (err) { /* sound never stops a frame */ } };
+  const tm = (e, o) => { if (e && e.st) e.st.tm = Object.assign(e.st.tm || {}, o); };
+  const aimAng = (e, target, d) => {
+    const a = d && d.aim;
+    if (a && typeof a === 'object' && isFinite(a.x) && isFinite(a.y)) return Math.atan2(a.y - e.y, a.x - e.x);
+    if (typeof a === 'number' && isFinite(a)) return a;
+    if (target && isFinite(target.x)) return Math.atan2(target.y - e.y, target.x - e.x);
+    return e.angle || 0;
+  };
+
+  // ---- pieces
+  // droplets thrown up and falling back (they stay as water: no additive glow)
+  function drops(x, y, o = {}) {
+    const n = o.n ?? 8, sp = o.speed ?? 110, up = o.up ?? 200;
+    for (let i = 0; i < n; i++) {
+      const a = o.angle != null ? o.angle + rnd(-(o.spread ?? 0.6), o.spread ?? 0.6) : Math.random() * TAU, s = rnd(0.4, 1) * sp;
+      V.spawn({ x, y, z: o.z ?? 10, vx: Math.cos(a) * s, vy: Math.sin(a) * s * 0.7, vz: rnd(0.4, 1) * up, g: 520, drag: 0.03, life: rnd(0.55, 0.9), size: rnd(8, 13) * (o.size ?? 1), color: i % 3 ? (o.color || TEAL2) : FOAM, kind: 'drop', add: false, rot: 0 });
+    }
+  }
+  // a wavy ring path on the floor
+  function wavyRing(c, x, y, r, amp, n, ph, flat) {
+    c.beginPath();
+    for (let i = 0; i <= 56; i++) { const a = i / 56 * TAU, d = r + Math.sin(a * n + ph) * amp; const px = x + Math.cos(a) * d, py = y + Math.sin(a) * d * flat; if (i) c.lineTo(px, py); else c.moveTo(px, py); }
+    c.closePath();
+  }
+  // a ring of water rolling out across the floor: a dark ink edge, a teal band and a foam crest riding it, beads of foam on it.
+  // Thin on purpose: the floor under it stays clear
+  function rollRing(x, y, o = {}) {
+    const r0 = o.r0 ?? 10, r1 = o.r ?? 120, dur = o.dur ?? 0.8, col = o.color || TEAL, w = o.w ?? 6, flat = o.flat ?? 0.78, n = o.n ?? 9;
+    V.fx({ dur, delay: o.delay, layer: 'ground', draw: (c, p, t, e) => {
+      const q = easeOut(p), R = r0 + (r1 - r0) * q, k = e.a * Math.min(1, p / 0.08) * (1 - Math.pow(p, 1.6)), amp = 1.2 + 3.2 * (1 - p), ph = t * (o.spin ?? 6);
+      if (k < 0.02) return;
+      const ww = w * (1 - p * 0.5);
+      c.save(); c.lineJoin = 'round';
+      wavyRing(c, x, y, R, amp, n, ph, flat); c.globalAlpha = 0.5 * k; c.strokeStyle = INK; c.lineWidth = ww + 3; c.stroke();
+      c.globalAlpha = 0.85 * k; c.strokeStyle = col; c.lineWidth = ww; c.stroke();
+      c.globalCompositeOperation = 'lighter'; wavyRing(c, x, y, R + 1, amp, n, ph + 0.6, flat); c.globalAlpha = 0.95 * k; c.strokeStyle = FOAM; c.lineWidth = Math.max(1, ww * 0.38); c.stroke();
+      c.restore();
+      if (o.beads !== false) for (let i = 0; i < 10; i++) { const a = i / 10 * TAU + t * 0.7, d = R + Math.sin(a * n + ph) * amp; V.glowAt(c, x + Math.cos(a) * d, y + Math.sin(a) * d * flat, 3 + ww * 0.3, FOAM, 0.7 * k); }
+    } });
+  }
+  // a wall of water standing round a point: the near half of a ring with height h, a deep body, a bright foam lip that heaves, a thin
+  // ink line along the foot. `fade` runs it out over its last stretch
+  function waveWall(x, y, o = {}) {
+    const R0 = o.r0 ?? 20, R1 = o.r ?? 150, h0 = o.h ?? 46, dur = o.dur ?? 0.9, flat = o.flat ?? 0.62, span = o.span ?? Math.PI, a0 = o.a0 ?? 0, grow = o.grow ?? 0.5, col = o.color || TEAL;
+    return V.fx({ dur, delay: o.delay, layer: 'air', draw: (c, p, t, e) => {
+      const q = easeOut(Math.min(1, p / grow)), R = R0 + (R1 - R0) * q, h = h0 * (0.35 + 0.65 * Math.sin(Math.min(1, p / grow) * Math.PI * 0.5)) * (1 - 0.25 * Math.max(0, (p - grow) / (1 - grow)));
+      const k = e.a * Math.min(1, p / 0.1, (1 - p) / (o.out ?? 0.35)) * (o.alpha ?? 1);
+      if (k < 0.02) return;
+      const N = 30, pt = i => { const a = a0 + span * i / N; return [x + Math.cos(a) * R, y + Math.sin(a) * R * flat, a]; };
+      const lip = (i, a) => -h - Math.sin(a * (o.waves ?? 10) - t * 7) * 2.6 - Math.sin(a * 4 + t * 3) * 2;
+      c.save(); c.lineJoin = 'round'; c.lineCap = 'round';
+      // the body: foot to lip
+      c.beginPath();
+      for (let i = 0; i <= N; i++) { const [px, py] = pt(i); i ? c.lineTo(px, py) : c.moveTo(px, py); }
+      for (let i = N; i >= 0; i--) { const [px, py, a] = pt(i); c.lineTo(px, py + lip(i, a)); }
+      c.closePath();
+      const gr = c.createLinearGradient(0, y - h, 0, y + R * flat); gr.addColorStop(0, rgba(PEARL, 0.78)); gr.addColorStop(0.35, rgba(col, 0.62)); gr.addColorStop(1, rgba(DEEP, 0.55));
+      c.globalAlpha = k; c.fillStyle = gr; c.fill();
+      // strands of current running through the body
+      c.globalCompositeOperation = 'lighter'; c.strokeStyle = FOAM; c.lineWidth = 1.2; c.globalAlpha = 0.28 * k;
+      for (let s = 1; s <= 2; s++) { c.beginPath(); for (let i = 0; i <= N; i++) { const [px, py, a] = pt(i); const yy = py + lip(i, a) * (0.35 + 0.22 * s) + Math.sin(a * 7 + t * 4 + s) * 2; i ? c.lineTo(px, yy) : c.moveTo(px, yy); } c.stroke(); }
+      c.globalCompositeOperation = 'source-over';
+      // the foot line and the foam lip
+      c.globalAlpha = 0.8 * k; c.strokeStyle = INK; c.lineWidth = 2.4; c.beginPath(); for (let i = 0; i <= N; i++) { const [px, py] = pt(i); i ? c.lineTo(px, py) : c.moveTo(px, py); } c.stroke();
+      c.globalAlpha = k; c.strokeStyle = FOAM; c.lineWidth = 3.2; c.beginPath(); for (let i = 0; i <= N; i++) { const [px, py, a] = pt(i); const yy = py + lip(i, a); i ? c.lineTo(px, yy) : c.moveTo(px, yy); } c.stroke();
+      c.strokeStyle = TEAL2; c.lineWidth = 1.4; c.globalAlpha = 0.8 * k; c.beginPath(); for (let i = 0; i <= N; i++) { const [px, py, a] = pt(i); const yy = py + lip(i, a) + 3; i ? c.lineTo(px, yy) : c.moveTo(px, yy); } c.stroke();
+      c.restore();
+      if (p < grow) for (let i = 0; i < 6; i++) { const [px, py, a] = pt(Math.round(i / 5 * N)); V.glowAt(c, px, py + lip(0, a) , 5, FOAM, 0.6 * k); }
+    } });
+  }
+  // a column of rising water strands over a point (a heal): sine strands climbing, bubbles and droplets going up with them,
+  // a foam crown at the top that opens, a pearl glint. h and r scale with how big the heal is
+  function column(x, y, o = {}) {
+    const r = o.r ?? 24, h = o.h ?? 110, dur = o.dur ?? 0.9, col = o.color || TEAL2, follow = o.follow || null, n = o.n ?? 5;
+    V.fx({ dur, delay: o.delay, layer: 'air', draw: (c, p, t, e) => {
+      const cx = follow ? follow.x : x, cy = follow ? follow.y : y;
+      const up = easeOut(Math.min(1, p / 0.32)), k = e.a * Math.min(1, p / 0.06) * (1 - Math.max(0, (p - 0.5) / 0.5)), hh = h * up;
+      if (k < 0.02) return;
+      c.save(); c.lineCap = 'round';
+      V.glowAt(c, cx, cy - hh * 0.4, r * 1.8 + hh * 0.2, col, 0.22 * k);
+      for (let i = 0; i < n; i++) {
+        const xo = (i - (n - 1) / 2) / ((n - 1) / 2 || 1) * r * 0.85, hi = hh * (0.7 + 0.3 * Math.sin(i * 2.3));
+        const path = () => { c.beginPath(); for (let s = 0; s <= 12; s++) { const q = s / 12, yy = cy - hi * q, sw = Math.sin(t * 6 + i * 1.4 - q * 5) * 3.4 * (0.4 + q) + xo * (1 + q * 0.12); s ? c.lineTo(cx + sw, yy) : c.moveTo(cx + sw, yy); } };
+        c.globalAlpha = 0.5 * k; c.strokeStyle = INK; c.lineWidth = 5.2; path(); c.stroke();
+        c.globalAlpha = 0.8 * k; c.strokeStyle = col; c.lineWidth = 3.2; path(); c.stroke();
+        c.globalCompositeOperation = 'lighter'; c.globalAlpha = 0.7 * k; c.strokeStyle = FOAM; c.lineWidth = 1; path(); c.stroke(); c.globalCompositeOperation = 'source-over';
+      }
+      // the crown: foam leaves opening off the top of the column
+      if (up > 0.6) { const o2 = (up - 0.6) / 0.4, ty = cy - hh; c.globalAlpha = 0.85 * k; c.fillStyle = FOAM; c.strokeStyle = INK; c.lineWidth = 1.2;
+        for (let i = 0; i < 5; i++) { const a = -Math.PI / 2 + (i - 2) * 0.5; c.save(); c.translate(cx, ty + 4); c.rotate(a + Math.PI / 2); c.beginPath(); c.ellipse(0, -7 * o2, 2.6 * o2, 8 * o2, 0, 0, TAU); c.fill(); c.stroke(); c.restore(); }
+      }
+      c.restore();
+    }, tick: (p, dt, e) => { if (p < 0.6 && Math.random() < 0.45) V.spawn({ x: (follow ? follow.x : x) + rnd(-r, r), y: (follow ? follow.y : y) + rnd(-6, 6), z: rnd(2, 14), vz: rnd(60, 130), vx: rnd(-8, 8), life: rnd(0.5, 0.9), size: rnd(4, 8), size1: 0, color: Math.random() < 0.5 ? FOAM : col, kind: Math.random() < 0.5 ? 'glow' : 'star' }); } });
+  }
+  // a whirl of water: spiral arms and a foam eye. On the floor (flat) or standing in the air; follow keeps it on a moving entity
+  function whirl(x, y, o = {}) {
+    const r = o.r ?? 30, dur = o.dur ?? 1, flat = o.flat ?? 1, col = o.color || TEAL2, spin = o.spin ?? 2.4, arms = o.arms ?? 2, layer = o.layer || 'air', follow = o.follow || null, dy = o.dy ?? 0, cap = o.a ?? 1;
+    return V.fx({ dur, delay: o.delay, layer, draw: (c, p, t, e) => {
+      const cx = follow ? follow.x + (o.dx || 0) : x, cy = follow ? follow.y - (follow.lift || 0) + dy : y;
+      const k = e.a * cap * Math.min(1, p / (o.inT ?? 0.12), (1 - p) / (o.outT ?? 0.3)), g = easeOut(Math.min(1, p / 0.2));
+      if (k < 0.02) return;
+      c.save(); c.translate(cx, cy); c.scale(1, flat); c.lineCap = 'round';
+      for (let a = 0; a < arms; a++) {
+        const path = () => { c.beginPath(); for (let i = 0; i <= 26; i++) { const q = i / 26, an = a * TAU / arms + t * spin * (o.dir ?? 1) + q * 3.2 * (o.dir ?? 1), rr = (2 + q * r) * g; i ? c.lineTo(Math.cos(an) * rr, Math.sin(an) * rr) : c.moveTo(Math.cos(an) * rr, Math.sin(an) * rr); } };
+        c.globalAlpha = 0.5 * k; c.strokeStyle = INK; c.lineWidth = (o.w ?? 3.6) + 2.4; path(); c.stroke();
+        c.globalAlpha = 0.9 * k; c.strokeStyle = a % 2 ? col : TEAL; c.lineWidth = o.w ?? 3.6; path(); c.stroke();
+        c.globalCompositeOperation = 'lighter'; c.globalAlpha = 0.8 * k; c.strokeStyle = FOAM; c.lineWidth = Math.max(1, (o.w ?? 3.6) * 0.32); path(); c.stroke(); c.globalCompositeOperation = 'source-over';
+      }
+      c.restore();
+      V.glowAt(c, cx, cy, r * 0.4, FOAM, 0.5 * k); V.glowAt(c, cx, cy, r * 0.9, col, 0.2 * k);
+    } });
+  }
+  // a quick lash of water from a to b on a curve: three strands, the head running ahead and the tail catching up, droplets shed.
+  // onHit runs as the head lands
+  function lash(ax, ay, bx, by, o = {}) {
+    const dur = o.dur ?? 0.24, bow = o.bow ?? 24, col = o.color || TEAL2, d = Math.hypot(bx - ax, by - ay) || 1, nx = -(by - ay) / d, ny = (bx - ax) / d, z0 = o.z ?? 26;
+    const at = (q, s) => { const w = Math.sin(q * Math.PI) * bow * s; return [ax + (bx - ax) * q + nx * w, ay + (by - ay) * q + ny * w - Math.sin(q * Math.PI) * 14 - z0 * (1 - q) - 8 * q]; };
+    V.fx({ dur: dur + 0.14, layer: 'air', draw: (c, p, t, e) => {
+      const head = Math.min(1, t / dur), tail = Math.max(0, (t - 0.06) / dur - 0.2), k = e.a * (1 - Math.max(0, (t - dur) / 0.14));
+      if (head <= tail || k < 0.02) return;
+      c.save(); c.lineCap = 'round'; c.lineJoin = 'round';
+      for (const [s, w, cl, a] of [[1, 8, INK, 0.5], [1, 5.5, TEAL, 0.9], [0.55, 3, col, 0.95], [1.4, 1.6, FOAM, 0.9]]) {
+        c.globalAlpha = a * k; c.strokeStyle = cl; c.lineWidth = w; c.beginPath();
+        for (let i = 0; i <= 14; i++) { const q = tail + (head - tail) * i / 14, [px, py] = at(q, s); i ? c.lineTo(px, py) : c.moveTo(px, py); }
+        c.stroke();
+      }
+      c.restore();
+      const [hx, hy] = at(head, 1); V.glowAt(c, hx, hy, 12, FOAM, 0.6 * k);
+    }, tick: () => { const q = Math.random(), [px, py] = at(q, 1); V.spawn({ x: px, y: py + z0 * 0.3, z: z0 * 0.4, vx: rnd(-30, 30), vy: rnd(-10, 20), vz: rnd(10, 60), g: 400, life: 0.4, size: rnd(5, 8), color: Math.random() < 0.5 ? FOAM : TEAL2, kind: 'drop', add: false, rot: 0 }); }, done: () => { if (o.onHit) o.onHit(bx, by); } });
+  }
+  // a foam burst on a target: bold, spiky and inked (damage goes outward), pale teal over white
+  function foamBurst(x, y, o = {}) {
+    const s = o.s ?? 1;
+    V.spikeburst(x, y, { r: 52 * s, n: 12, color: TEAL, core: FOAM, ink: DEEPER, dur: 0.32 });
+    V.flash(x, y - 16, 40 * s, FOAM, 0.2);
+    V.shock(x, y, { r: 52 * s, color: FOAM, dur: 0.36, w: 3.4 });
+    drops(x, y, { n: Math.round(10 * s), speed: 140 * s, up: 220 * s, size: s });
+  }
+  // a small glyph hovering over an ally's shoulder: the Riptide Mark's whirl in a ring, for as long as it lasts
+  function markGlyph(ent, o = {}) {
+    const dur = o.dur ?? 20;
+    return V.fx({ dur, layer: 'air', draw: (c, p, t, e) => {
+      const x = ent.x + 15, y = ent.y - 40 - (ent.lift || 0) + Math.sin(t * 2.2) * 2.4, k = e.a * Math.min(1, t / 0.2) * (0.75 + 0.2 * Math.sin(t * 4)), R = 9;
+      V.glowAt(c, x, y, 20, TEAL2, 0.35 * k);
+      c.save(); c.translate(x, y); c.globalAlpha = k; c.fillStyle = 'rgba(12,28,38,0.85)'; c.beginPath(); c.arc(0, 0, R, 0, TAU); c.fill();
+      c.strokeStyle = TEAL; c.lineWidth = 1.8; c.stroke(); c.lineCap = 'round'; c.strokeStyle = FOAM; c.lineWidth = 1.5; c.rotate(t * 1.8); c.beginPath();
+      for (let i = 0; i <= 18; i++) { const q = i / 18, an = q * 5.2, rr = 1 + q * (R - 3); i ? c.lineTo(Math.cos(an) * rr, Math.sin(an) * rr) : c.moveTo(Math.cos(an) * rr, Math.sin(an) * rr); }
+      c.stroke(); c.restore();
+    } });
+  }
+  // a plus climbing off an ally: the heal reads as a heal (small; the water carries the rest)
+  const healMark = (x, y, n = 3) => V.plus(x, y, { color: PEARL, n });
+  // ring of foam and pearl on an ally for a small heal
+  function allyLand(w, o = {}) {
+    const s = o.s ?? 1, strong = !!o.strong;
+    rollRing(w.x, w.y, { r0: 6, r: 34 * s + (strong ? 10 : 0), dur: 0.55, w: 4, n: 6 });
+    column(w.x, w.y, { r: 14 * s, h: 62 * s + (strong ? 24 : 0), dur: 0.8, n: 4, follow: w });
+    V.flash(w.x, bodyY(w), 28 * s, PEARL, 0.2);
+    healMark(w.x, w.y, strong ? 4 : 2);
+    drops(w.x, w.y, { n: strong ? 8 : 5, speed: 40, up: 150, size: 0.8 });
+  }
+
+  // ---- the abilities (the cast itself: the hand, the conch, what flies; what comes of it is the moments below)
+  ABILITY_VFX.tidecaller = {
+    // Salt Spray: a lash of salt water to the boss that breaks into a foam starburst, a wet splash and a few shed droplets
+    spray: c => {
+      const e = c.ent, a = Math.atan2(c.ty - c.y, c.tx - c.x), sx = c.x + Math.cos(a) * 20 - Math.sin(a) * 9, sy = c.y + Math.sin(a) * 14 + Math.cos(a) * 3;
+      V.sparks(sx, sy - 24, { color: FOAM, n: 3, speed: 120, life: 0.6 });
+      lash(sx, sy, c.tx, c.ty, { dur: Math.max(0.16, Math.min(0.3, Math.hypot(c.tx - c.x, c.ty - c.y) / 1100)), bow: 22, onHit: (x, y) => {
+        foamBurst(x, y, { s: 0.8 });
+        V.puddle(x, y + 8, { r: 22, color: TEAL, dark: DEEPER, dur: 1.6, bubbles: false, fumes: false });
+        snd(e, 'spray', null);
+      } });
+    },
+    // Sip: a small drop leaves the sphere over the hand and arcs to the ally (the landing is the 'sip' moment)
+    sip: c => { const w = c.tent || { x: c.tx, y: c.ty }; lash(c.x + 10, c.y - 6, w.x, w.y, { dur: 0.2, bow: 14, z: 30 }); },
+    swell: c => { const w = c.tent || { x: c.tx, y: c.ty }; lash(c.x + 10, c.y - 6, w.x, w.y, { dur: 0.22, bow: 18, z: 30, color: PEARL }); },
+    // Riptide Mark: a spinning orb of water goes out to the ally's shoulder (the mark itself is the 'riptide' moment)
+    riptide: c => {
+      const w = c.tent || { x: c.tx, y: c.ty }, e = c.ent;
+      lash(c.x + 10, c.y - 6, w.x + 14, w.y - 20, { dur: 0.28, bow: 26, z: 34, color: TEAL });
+      whirl(c.x + 12, c.y - 30, { r: 12, dur: 0.3, flat: 0.8, w: 2.4 });
+    },
+    // Surge: the conch is sounded, arcs of sound going out ahead (the wave is the 'surge' moment, which carries how high the water was)
+    surge: c => {
+      const a = Math.atan2(c.ty - c.y, c.tx - c.x), e = c.ent;
+      for (let i = 0; i < 3; i++) V.fx({ dur: 0.5, delay: i * 0.07, layer: 'air', draw: (cx, p, t, f) => {
+        const R = 16 + 44 * easeOut(p), k = f.a * (1 - p) * 0.8; if (k < 0.02) return;
+        cx.save(); cx.translate(c.x + Math.cos(a) * 14, c.y - 24); cx.lineCap = 'round'; cx.strokeStyle = INK; cx.globalAlpha = 0.4 * k; cx.lineWidth = 5; cx.beginPath(); cx.arc(0, 0, R, a - 0.7, a + 0.7); cx.stroke();
+        cx.strokeStyle = i % 2 ? TEAL2 : FOAM; cx.globalAlpha = k; cx.lineWidth = 2.6 - i * 0.5; cx.beginPath(); cx.arc(0, 0, R, a - 0.7, a + 0.7); cx.stroke(); cx.restore();
+      } });
+    },
+    undertow: c => ABILITY_VFX.tidecaller.surge(c),
+    // Current: a turn of the hand; the water answers (the 'current' moment)
+    current: c => { V.glint(c.x + 11, c.y - 36, { color: PEARL, size: 22, z: 30 }); },
+    // Breakwater: the conch struck down, a rumble of foam at the feet (the wall is the 'breakwater' moment)
+    breakwater: c => { rollRing(c.x, c.y, { r0: 8, r: 70, dur: 0.5, w: 5 }); drops(c.x, c.y, { n: 6, speed: 80, up: 160 }); },
+    // Maelstrom: the whirl opens at the feet (its body is the 'maelstrom' moment)
+    maelstrom: c => { V.glint(c.x + 11, c.y - 34, { color: TEAL2, size: 22, z: 30 }); },
+    bore: c => ABILITY_VFX.tidecaller.surge(c),
+    // Spring Flood: the conch blown long and high, three rings of sound, a pearl flash (the flood is the 'flood' moment)
+    springflood: c => {
+      const e = c.ent, cam = c.cam;
+      if (cam) { cam.flash('#d7f2ee', 0.2, 0.5); cam.punch(0.04, 0.5); }
+      for (let i = 0; i < 4; i++) V.fx({ dur: 0.9, delay: i * 0.1, layer: 'air', draw: (cx, p, t, f) => {
+        const R = 20 + 70 * easeOut(p), k = f.a * (1 - p); if (k < 0.02) return;
+        cx.save(); cx.translate(c.x, c.y - 26); cx.scale(1, 0.55); cx.strokeStyle = i % 2 ? TEAL2 : PEARL; cx.globalAlpha = k * 0.9; cx.lineWidth = 3 - i * 0.4; cx.beginPath(); cx.arc(0, 0, R, 0, TAU); cx.stroke(); cx.restore();
+      } });
+      V.glint(c.x, c.y - 40, { color: MOON, size: 36, z: 40 });
+    },
+  };
+
+  // ---- the moments
+  // the crest: the water tops out. A pearl glints at the hero's head, a ring of foam stands up round their feet and lets go;
+  // a long (Spring) crest is brighter and goes gold
+  KIT_VFX.crest = (e, target, d) => {
+    const spring = d && d.spring, col = spring ? MOON : FOAM;
+    tm(e, { ph: 'hold', t0: FX.now, f0: 1, hold: spring ? 3.5 : 2 });
+    V.glint(e.x, e.y - 44, { color: spring ? MOON : PEARL, size: spring ? 30 : 22, z: 40 });
+    rollRing(e.x, e.y, { r0: 14, r: spring ? 74 : 56, dur: 0.7, w: 4, color: spring ? '#d8c880' : TEAL, n: 7 });
+    for (let i = 0; i < (spring ? 10 : 6); i++) { const a = i / (spring ? 10 : 6) * TAU; V.spawn({ x: e.x + Math.cos(a) * 20, y: e.y + Math.sin(a) * 15, z: 6, vz: rnd(50, 100), life: 0.8, size: 8, size1: 0, color: col, kind: 'star', vr: 2 }); }
+    snd(e, 'crest', d);
+  };
+  // slack water: the ebb gives out at the floor: the ring settles in on itself, a few bubbles
+  KIT_VFX.slack = (e) => {
+    tm(e, { ph: 'rise', t0: FX.now, f0: 0 });
+    V.fx({ dur: 0.7, layer: 'ground', draw: (c, p, t, f) => { const R = 34 - 22 * easeOut(p), k = f.a * (1 - p) * 0.6; if (k < 0.02) return; V.neonRing(c, e.x, e.y + 3, R, TEAL, 2, k, 0.78); } });
+    for (let i = 0; i < 4; i++) V.spawn({ x: e.x + rnd(-14, 14), y: e.y + rnd(-6, 8), z: 2, vz: rnd(25, 55), life: rnd(0.7, 1), size: rnd(5, 8), size1: 0, color: PEARL, kind: 'glow' });
+    snd(e, 'slack', null);
+  };
+  // the Riptide Mark: a whirl in a ring over the ally's shoulder for as long as the mark lasts, a small whirlpool opening under their feet
+  KIT_VFX.riptide = (e, target, d) => {
+    const w = target || e;
+    if (e._tcMark) e._tcMark.dur = 0;
+    later(e, 0.22, () => {
+      V.flash(w.x, bodyY(w), 34, TEAL2, 0.2);
+      whirl(w.x, w.y, { r: 26, dur: 0.8, flat: 0.55, layer: 'ground', spin: 4, w: 3 });
+      rollRing(w.x, w.y, { r0: 8, r: 36, dur: 0.5, w: 3.4, n: 6 });
+      e._tcMark = markGlyph(w);
+      snd(e, 'riptide', d);
+    });
+  };
+  // the mark pops at the crest: the whirl bursts, a column of water goes up the ally's side, foam and pearl, a ring runs out
+  KIT_VFX.riptidePop = (e, target, d) => {
+    const w = target || e;
+    if (e._tcMark) { e._tcMark.dur = 0; e._tcMark = null; }
+    V.flash(w.x, bodyY(w), 56, FOAM, 0.26);
+    column(w.x, w.y, { r: 22, h: 120, dur: 1, n: 5, follow: w });
+    rollRing(w.x, w.y, { r0: 8, r: 70, dur: 0.7, w: 5 });
+    whirl(w.x, w.y, { r: 30, dur: 0.5, flat: 0.55, layer: 'ground', spin: -6, w: 3 });
+    V.shock(w.x, w.y, { r: 60, color: FOAM, dur: 0.4, w: 3 });
+    healMark(w.x, w.y, 5); drops(w.x, w.y, { n: 10, speed: 70, up: 200 });
+    V.glint(w.x, w.y - 40, { color: PEARL, size: 28, z: 40 });
+    snd(e, 'pop', d);
+  };
+  // Sip and Swell land: a drop on the ally, ripples, a short column. At low water (the heal is 30% stronger) it is bigger and a
+  // second ring follows; a free Sip (Low Water) has a pearl glint
+  KIT_VFX.sip = (e, target, d) => {
+    const w = target || e, low = d && d.low, free = d && d.free;
+    later(e, 0.2, () => V.spawn({ x: w.x, y: w.y, z: 70, vz: -240, life: 0.2, size: 12, size1: 8, color: TEAL2, kind: 'drop', add: false, rot: 0 }));
+    later(e, 0.37, () => {
+      allyLand(w, { s: low ? 1.2 : 1, strong: low });
+      if (low) rollRing(w.x, w.y, { r0: 6, r: 52, dur: 0.6, w: 3, delay: 0.1, color: TEAL2 });
+      if (free) V.glint(w.x, w.y - 38, { color: PEARL, size: 24, z: 38 });
+    });
+  };
+  KIT_VFX.swell = (e, target, d) => {
+    const w = target || e;
+    later(e, 0.22, () => {
+      allyLand(w, { s: 0.9 });
+      // the tide climbs: three chevrons of pearl rise off the ring at the caster's feet
+      for (let i = 0; i < 3; i++) V.fx({ dur: 0.7, delay: i * 0.1, layer: 'air', draw: (c, p, t, f) => {
+        const k = f.a * Math.sin(p * Math.PI) * 0.9, y = e.y - 4 - 34 * easeOut(p) - i * 5; if (k < 0.02) return;
+        c.save(); c.strokeStyle = PEARL; c.globalAlpha = k; c.lineWidth = 2.4; c.lineCap = 'round'; c.lineJoin = 'round'; c.beginPath(); c.moveTo(e.x - 8, y + 5); c.lineTo(e.x, y - 2); c.lineTo(e.x + 8, y + 5); c.stroke(); c.restore();
+      } });
+    });
+  };
+  // Surge: a wave of water goes out from the caster in a ring, and everyone it touches is lifted by a column of water. It is
+  // as high as the water was (f): at low water a gentle swell, at the crest a great wall with a foam crown over every ally;
+  // under Spring Flood it runs gold-white and carries more
+  KIT_VFX.surge = (e, target, d) => {
+    const f = (d && d.f) ?? 0.5, full = d && d.full, flood = d && d.flood, col = flood ? MOON : TEAL, R = 120 + 90 * f, h = 28 + 46 * f;
+    const cam = FX.camFor(e);
+    later(e, 0.05, () => {
+      V.flash(e.x, bodyY(e), 50 + 50 * f, flood ? MOON : FOAM, 0.28);
+      waveWall(e.x, e.y, { r0: 18, r: R, h, dur: 1.0, color: col, grow: 0.55, out: 0.4, waves: 9 });
+      rollRing(e.x, e.y, { r0: 16, r: R + 10, dur: 0.95, w: 3 + 5 * f, color: col });
+      rollRing(e.x, e.y, { r0: 10, r: R * 0.7, dur: 0.8, w: 3, delay: 0.1, color: TEAL2, beads: false });
+      drops(e.x, e.y, { n: 8 + Math.round(10 * f), speed: 120 + 110 * f, up: 200 + 100 * f });
+      if (cam && f > 0.4) { cam.punch(0.02 + 0.03 * f, 0.4); if (full || flood) cam.flash(flood ? '#fff4c8' : '#d7f2ee', 0.12, 0.4); }
+      if (f > 0.5) shake(2 + 3 * f);
+      for (const w of party()) {
+        const dist = Math.hypot(w.x - e.x, w.y - e.y), dl = 0.12 + dist / (R + 10) * 0.55;
+        FX.later(dl, () => {
+          V.setScale(FX.camFor(e) ? 1 : 0.6);
+          try {
+            column(w.x, w.y, { r: 14 + 8 * f, h: 56 + 90 * f, dur: 0.9, n: 4 + Math.round(f * 2), follow: w, color: flood ? '#fff6d8' : TEAL2 });
+            V.flash(w.x, bodyY(w), 30 + 24 * f, flood ? MOON : PEARL, 0.22);
+            rollRing(w.x, w.y, { r0: 6, r: 30 + 24 * f, dur: 0.6, w: 3.4, n: 6 });
+            healMark(w.x, w.y, 2 + Math.round(2 * f));
+            if (full || flood) { V.glint(w.x, w.y - 52, { color: flood ? MOON : PEARL, size: 26, z: 52 }); drops(w.x, w.y, { n: 6, speed: 60, up: 200 }); }
+          } finally { V.setScale(1); }
+        });
+      }
+    });
+    snd(e, 'surge', d);
+  };
+  // Undertow: the party's hurt is pulled down into dark water: a dark ring of water draws in round each ally, ribbons of dark
+  // teal run from them to the caster, who is wrapped in a Deep Shield (a dome over a ring of runes, dark teal, for its 8s) while
+  // the water gives it back to everyone in a slow pulse of rising droplets
+  KIT_VFX.undertow = (e, target, d) => {
+    const f = (d && d.f) ?? 0.5, cam = FX.camFor(e);
+    tm(e, { deep: FX.now + 8 });
+    later(e, 0.05, () => {
+      V.flash(e.x, bodyY(e), 44 + 40 * f, UNDER, 0.3);
+      for (const w of party()) {
+        if (w === e) continue;
+        V.fx({ dur: 0.7, layer: 'ground', draw: (c, p, t, fx) => { const R = 44 * (1 - easeOut(p)) + 8, k = fx.a * Math.min(1, p / 0.1) * (1 - p) * 0.9; if (k < 0.02) return;
+          c.save(); c.lineJoin = 'round'; wavyRing(c, w.x, w.y, R, 2.4, 6, -t * 7, 0.78); c.globalAlpha = 0.5 * k; c.strokeStyle = INK; c.lineWidth = 6; c.stroke(); c.globalAlpha = k; c.strokeStyle = UNDER; c.lineWidth = 3.6; c.stroke(); c.restore(); } });
+        // a ribbon of dark water from the ally to the caster
+        const ax = w.x, ay = w.y - 10, bx = e.x, by = e.y - 10, dx = bx - ax, dy = by - ay, L = Math.hypot(dx, dy) || 1, nx = -dy / L, ny = dx / L, bow = 26;
+        V.fx({ dur: 0.7, layer: 'air', draw: (c, p, t, fx) => {
+          const head = easeOut(Math.min(1, p / 0.55)), tail = Math.max(0, (p - 0.2) / 0.8), k = fx.a * (1 - Math.max(0, (p - 0.6) / 0.4)); if (head <= tail) return;
+          c.save(); c.lineCap = 'round'; c.lineJoin = 'round';
+          for (const [w2, cl, a] of [[8, INK, 0.5], [5, DEEP, 0.9], [2.4, UNDER, 1]]) { c.globalAlpha = a * k; c.strokeStyle = cl; c.lineWidth = w2; c.beginPath();
+            for (let i = 0; i <= 14; i++) { const q = tail + (head - tail) * i / 14, wv = Math.sin(q * Math.PI) * bow + Math.sin(q * 12 - t * 10) * 2.4; const px = ax + dx * q + nx * wv, py = ay + dy * q + ny * wv - Math.sin(q * Math.PI) * 14; i ? c.lineTo(px, py) : c.moveTo(px, py); } c.stroke(); }
+          c.restore();
+        } });
+        FX.later(0.45, () => { V.setScale(FX.camFor(e) ? 1 : 0.6); try { V.motes(w.x, w.y, { color: UNDER, n: 3, r: 14, rise: 0.5 }); } finally { V.setScale(1); } });
+      }
+      // the Deep Shield: a dark teal dome over a rune ring, for as long as it lasts
+      FX.later(0.35, () => {
+        V.setScale(FX.camFor(e) ? 1 : 0.6);
+        try {
+          V.shield(e, { color: UNDER, dur: 8, r: 36, shape: 'bubble' });
+          vfxLingerSettle(V.sigil(e.x, e.y, { r: 46, style: 'runes', color: TEAL, dur: 8, spin: -0.6, follow: e }), 0.3, 1);
+          V.shock(e.x, e.y, { r: 90, color: UNDER, dur: 0.5, w: 6 }); V.shock(e.x, e.y, { r: 60, color: TEAL2, dur: 0.45, w: 3, delay: 0.05 });
+          if (cam) cam.punch(0.02, 0.4);
+        } finally { V.setScale(1); }
+      });
+      // the water gives back: a slow pulse of droplets rising off everyone, four times over the shield's life
+      for (let n = 1; n <= 4; n++) FX.later(n * 2, () => { V.setScale(FX.camFor(e) ? 1 : 0.6); try { for (const w of party()) { V.motes(w.x, w.y, { color: TEAL2, n: 3, r: 14, rise: 0.7 }); healMark(w.x, w.y, 1); } } finally { V.setScale(1); } });
+    });
+    snd(e, 'undertow', d);
+  };
+  // Current: the tide is bent. Rising: a shove, three chevrons of teal climb round the feet; turned: the water folds back on
+  // itself in a circling arrow; held at the crest: the pearl ring stands and flares
+  KIT_VFX.current = (e, target, d) => {
+    const dir = (d && d.dir) || 'up';
+    if (dir === 'up') {
+      tm(e, { f0: Math.min(1, ((e.st && e.st.tm && e.st.tm.f0) || 0.3) + 0.25) });
+      for (let i = 0; i < 3; i++) V.fx({ dur: 0.8, delay: i * 0.1, layer: 'air', draw: (c, p, t, f) => {
+        const k = f.a * Math.sin(p * Math.PI), y = e.y - 4 - 46 * easeOut(p); if (k < 0.02) return;
+        c.save(); c.strokeStyle = TEAL2; c.globalAlpha = k; c.lineWidth = 3; c.lineCap = 'round'; c.lineJoin = 'round'; c.beginPath(); c.moveTo(e.x - 14, y + 7); c.lineTo(e.x, y - 4); c.lineTo(e.x + 14, y + 7); c.stroke(); c.restore();
+      } });
+      rollRing(e.x, e.y, { r0: 10, r: 54, dur: 0.6, w: 4 });
+    } else if (dir === 'turn') {
+      V.fx({ dur: 0.8, layer: 'air', draw: (c, p, t, f) => {
+        const k = f.a * Math.sin(p * Math.PI), a0 = -Math.PI / 2 + p * TAU * 1.1; if (k < 0.02) return;
+        c.save(); c.translate(e.x, e.y - 14); c.scale(1, 0.62); c.lineCap = 'round'; c.lineWidth = 4.4; c.globalAlpha = 0.5 * k; c.strokeStyle = INK; c.beginPath(); c.arc(0, 0, 30, a0 - 2.4, a0); c.stroke();
+        c.globalAlpha = k; c.strokeStyle = TEAL2; c.lineWidth = 2.8; c.beginPath(); c.arc(0, 0, 30, a0 - 2.4, a0); c.stroke();
+        const hx = Math.cos(a0) * 30, hy = Math.sin(a0) * 30; c.fillStyle = FOAM; c.beginPath(); c.moveTo(hx + Math.cos(a0 + 1.57) * 6, hy + Math.sin(a0 + 1.57) * 6); c.lineTo(hx + Math.cos(a0) * 8, hy + Math.sin(a0) * 8); c.lineTo(hx - Math.cos(a0 + 1.57) * 6, hy - Math.sin(a0 + 1.57) * 6); c.closePath(); c.fill(); c.restore();
+      } });
+      rollRing(e.x, e.y, { r0: 54, r: 14, dur: 0.6, w: 3.4 });
+    } else {
+      if (e.st && e.st.tm) e.st.tm.hold = (e.st.tm.hold || 2) + 2;
+      V.glint(e.x, e.y - 44, { color: PEARL, size: 26, z: 40 }); V.shock(e.x, e.y, { r: 62, color: PEARL, dur: 0.5, w: 4 });
+    }
+    snd(e, 'current', d);
+  };
+  // Breakwater: a wall of water stands up round the party, a ring of rising sea that holds for its 8s. It flares as it lands and
+  // then settles to a faint, airy band with a foam lip (nothing painted on the floor to hide a telegraph)
+  KIT_VFX.breakwater = (e, target, d) => {
+    tm(e, { wall: FX.now + 8 });
+    const cam = FX.camFor(e);
+    later(e, 0.05, () => {
+      V.flash(e.x, bodyY(e), 70, FOAM, 0.3);
+      rollRing(e.x, e.y, { r0: 14, r: 170, dur: 0.9, w: 7 });
+      V.shock(e.x, e.y, { r: 160, color: TEAL2, dur: 0.6, w: 4, delay: 0.08 });
+      vfxLingerSettle(waveWall(e.x, e.y, { r0: 150, r: 156, h: 62, dur: 8, color: TEAL, grow: 0.04, out: 0.06, waves: 12, alpha: 0.9 }), 0.2, 0.9);
+      V.fx({ dur: 8, layer: 'ground', draw: (c, p, t, f) => {
+        const k = f.a * 0.5 * Math.min(1, p / 0.05, (1 - p) / 0.06) * (0.5 + 0.2 * Math.sin(t * 3)); if (k < 0.02) return;
+        c.save(); wavyRing(c, e.x, e.y, 156, 2.2, 12, t * 2, 0.62); c.strokeStyle = FOAM; c.globalAlpha = k; c.lineWidth = 1.6; c.stroke(); c.restore();
+      }, tick: p => { if (Math.random() < 0.2) { const a = Math.random() * TAU; V.spawn({ x: e.x + Math.cos(a) * 156, y: e.y + Math.sin(a) * 156 * 0.62, z: rnd(20, 50), vz: rnd(8, 24), life: 0.8, size: rnd(4, 7), size1: 0, color: FOAM, kind: 'glow' }); } } });
+      drops(e.x, e.y, { n: 12, speed: 150, up: 240 });
+      if (cam) cam.punch(0.03, 0.5);
+      shake(4);
+    });
+    snd(e, 'breakwater', d);
+  };
+  // Ebb Shield: the held water drains out of the wall into a shield on everyone: a ring pulled in to the feet and a faint dome on each
+  KIT_VFX.ebbShield = (e) => {
+    tm(e, { wall: 0 });
+    rollRing(e.x, e.y, { r0: 150, r: 20, dur: 0.7, w: 5 });
+    for (const w of party()) { V.shield(w, { color: TEAL2, dur: 0.9, r: 34 }); V.sparks(w.x, w.y - 10, { color: FOAM, n: 4, speed: 130 }); }
+  };
+  // Spring Flood: the tide goes to the crest and stays there. A great ring of foam runs out, the whole party is washed with water
+  // and light, and for its 6s the hero stands in moonlight with slow rings of water going out and droplets drifting up; then the
+  // water drops away ('floodEnd')
+  KIT_VFX.flood = (e, target, d) => {
+    const cam = FX.camFor(e);
+    tm(e, { ph: 'hold', t0: FX.now, f0: 1, hold: 6, flood: FX.now + 6 });
+    if (e._tcFlood) e._tcFlood.dur = 0;
+    later(e, 0.2, () => {
+      if (cam) { cam.flash('#e8fbf6', 0.26, 0.5); cam.punch(0.06, 0.6); }
+      V.flash(e.x, bodyY(e), 150, MOON, 0.34);
+      waveWall(e.x, e.y, { r0: 18, r: 260, h: 70, dur: 1.2, color: TEAL, grow: 0.6, out: 0.4, waves: 12, span: TAU, a0: 0 });
+      rollRing(e.x, e.y, { r0: 16, r: 280, dur: 1.2, w: 10, color: TEAL });
+      rollRing(e.x, e.y, { r0: 10, r: 200, dur: 1.0, w: 5, delay: 0.12, color: MOON, beads: false });
+      rollRing(e.x, e.y, { r0: 10, r: 130, dur: 0.8, w: 4, delay: 0.24, color: TEAL2 });
+      V.pillar(e.x, e.y, { r: 36, h: 360, color: PEARL, dur: 0.9 });
+      drops(e.x, e.y, { n: 18, speed: 220, up: 320 });
+      shake(7);
+      for (const w of party()) FX.later(0.15 + Math.hypot(w.x - e.x, w.y - e.y) / 600, () => { V.setScale(FX.camFor(e) ? 1 : 0.6); try { column(w.x, w.y, { r: 20, h: 150, dur: 1.0, n: 5, follow: w, color: '#dff8f0' }); V.flash(w.x, bodyY(w), 44, MOON, 0.26); healMark(w.x, w.y, 5); V.glint(w.x, w.y - 54, { color: MOON, size: 30, z: 54 }); } finally { V.setScale(1); } });
+      // the six seconds: moon-glints on the water, a slow ring every second and a half, droplets drifting up round the hero
+      const sc = FX.camFor(e) ? 1 : 0.6, DUR = 6;
+      e._tcFlood = V.fx({ dur: DUR, layer: 'ground', draw: (c, p, t, f) => {
+        const k = f.a * Math.min(1, p / 0.08, (1 - p) / 0.12); if (k < 0.02) return;
+        c.save(); c.globalCompositeOperation = 'lighter';
+        for (let i = 0; i < 2; i++) { wavyRing(c, e.x, e.y, 34 + i * 10 + Math.sin(t * 2 + i) * 2, 2.4, 8, t * 2 + i, 0.78); c.strokeStyle = i ? TEAL2 : MOON; c.globalAlpha = (0.55 - i * 0.2) * k; c.lineWidth = 2.4; c.stroke(); }
+        c.restore(); V.glowAt(c, e.x, e.y, 60, MOON, 0.16 * k);
+      }, tick: p => {
+        if (Math.random() < 0.3) { const a = Math.random() * TAU, r = rnd(14, 44); V.spawn({ x: e.x + Math.cos(a) * r, y: e.y + Math.sin(a) * r * 0.7, z: 4, vz: rnd(30, 70), life: rnd(0.8, 1.3), size: rnd(5, 9), size1: 0, color: Math.random() < 0.5 ? MOON : FOAM, kind: Math.random() < 0.4 ? 'star' : 'glow' }); }
+      } });
+      for (let i = 1; i <= 3; i++) FX.later(i * 1.5, () => { V.setScale(sc); try { rollRing(e.x, e.y, { r0: 20, r: 110, dur: 0.9, w: 3.4, color: i % 2 ? TEAL2 : MOON, beads: false }); } finally { V.setScale(1); } });
+    });
+    snd(e, 'flood', d);
+  };
+  // the flood drops away: a last ring drawn in and a breath of mist
+  KIT_VFX.floodEnd = (e) => {
+    if (e._tcFlood) { e._tcFlood.dur = 0; e._tcFlood = null; }
+    tm(e, { flood: 0, ph: 'ebb', t0: FX.now, f0: 1, hold: 0 });
+    rollRing(e.x, e.y, { r0: 120, r: 20, dur: 0.8, w: 5, color: TEAL });
+    V.smoke(e.x, e.y, { n: 5, color: PEARL, size: 22, a: 0.35, speed: 36 });
+    snd(e, 'floodEnd', null);
+  };
+  // Leviathan: the last surge of the flood summons a great wave that breaks on the boss. A wall of water stands up behind it, curls
+  // over and crashes down: a huge foam starburst, a wide ring, droplets thrown high and a heavy shake
+  KIT_VFX.leviathan = (e, target, d) => {
+    const g = G(), r = g && g.raid, f = r && r.state === 'live' && r.bossDraw ? { x: r.bossDraw.x, y: r.bossDraw.y } : target || { x: e.x + 200 * Math.cos(e.angle || 0), y: e.y + 200 * Math.sin(e.angle || 0) };
+    const cam = FX.camFor(e), a = Math.atan2(f.y - e.y, f.x - e.x);
+    V.fx({ dur: 0.9, layer: 'air', draw: (c, p, t, fx) => {
+      const rise = easeOut(Math.min(1, p / 0.5)), fall = p > 0.55 ? easeOut((p - 0.55) / 0.3) : 0, k = fx.a * Math.min(1, p / 0.1) * (1 - Math.max(0, (p - 0.85) / 0.15)); if (k < 0.02) return;
+      const hh = 190 * rise * (1 - 0.8 * fall), ww = 150;
+      c.save(); c.translate(f.x, f.y + 18); c.lineJoin = 'round';
+      c.beginPath(); c.moveTo(-ww, 0); c.bezierCurveTo(-ww * 0.7, -hh * 0.5, -ww * 0.3, -hh, ww * 0.25 * (1 - fall), -hh * 1.02); c.bezierCurveTo(ww * 0.9, -hh * 0.95, ww * 1.05, -hh * 0.3, ww, 0); c.closePath();
+      const gr = c.createLinearGradient(0, -hh, 0, 0); gr.addColorStop(0, rgba(FOAM, 0.95)); gr.addColorStop(0.3, rgba(TEAL, 0.85)); gr.addColorStop(1, rgba(DEEP, 0.8));
+      c.globalAlpha = k; c.fillStyle = gr; c.fill(); c.strokeStyle = INK; c.lineWidth = 3; c.globalAlpha = 0.8 * k; c.stroke();
+      c.globalAlpha = k; c.strokeStyle = FOAM; c.lineWidth = 4; c.beginPath(); c.moveTo(-ww * 0.8, -hh * 0.45); c.bezierCurveTo(-ww * 0.4, -hh * 0.9, ww * 0.1, -hh * 1.0, ww * 0.4, -hh * 0.96); c.stroke();
+      c.restore();
+    } });
+    FX.later(0.52, () => { V.setScale(cam ? 1 : 0.6); try {
+      if (cam) { cam.flash('#e8fbf6', 0.2, 0.4); cam.punch(0.07, 0.5); }
+      V.spikeburst(f.x, f.y, { r: 130, n: 18, color: TEAL, core: FOAM, ink: DEEPER, dur: 0.5 });
+      V.flash(f.x, f.y - 20, 150, FOAM, 0.3);
+      rollRing(f.x, f.y, { r0: 20, r: 230, dur: 0.9, w: 9 });
+      V.shock(f.x, f.y, { r: 190, color: TEAL2, dur: 0.6, w: 5, delay: 0.05 });
+      drops(f.x, f.y, { n: 28, speed: 260, up: 420 });
+      V.decal(f.x, f.y, { style: 'crack', r: 70, dur: 3, a: 0.4, seed: Math.random() * 6 });
+      shake(10);
+    } finally { V.setScale(1); } });
+    snd(e, 'leviathan', d);
+  };
+  // Maelstrom: a whirlpool opens on the floor where the caster stands and turns for its 9s: spiral arms of teal and foam round a dark
+  // eye, a thin foam ring at its edge, droplets spinning up. How high the water was (f) sets how bright
+  KIT_VFX.maelstrom = (e, target, d) => {
+    const f = (d && d.f) ?? 0.4, x = e.x, y = e.y, R = 130, DUR = 9, cam = FX.camFor(e);
+    later(e, 0.05, () => {
+      V.flash(x, y - 10, 60, TEAL2, 0.25);
+      rollRing(x, y, { r0: 10, r: R, dur: 0.7, w: 5 });
+      const arms = V.fx({ dur: DUR, layer: 'ground', draw: (c, p, t, fx) => {
+        const k = fx.a * Math.min(1, p / 0.08, (1 - p) / 0.12) * (0.55 + 0.3 * f), g = easeOut(Math.min(1, p / 0.12)); if (k < 0.02) return;
+        // the dark eye
+        const gr = c.createRadialGradient(x, y, 2, x, y, R * 0.5 * g); gr.addColorStop(0, rgba(DEEPER, 0.7)); gr.addColorStop(1, rgba(DEEPER, 0));
+        c.save(); c.translate(x, y); c.scale(1, 0.62); c.translate(-x, -y); c.globalAlpha = k; c.fillStyle = gr; c.beginPath(); c.arc(x, y, R * 0.5 * g, 0, TAU); c.fill(); c.restore();
+        c.save(); c.translate(x, y); c.scale(1, 0.62); c.lineCap = 'round';
+        for (let a = 0; a < 3; a++) {
+          const path = () => { c.beginPath(); for (let i = 0; i <= 30; i++) { const q = i / 30, an = a * TAU / 3 + t * 2.2 + q * 3.6, rr = (4 + q * (R - 8)) * g; i ? c.lineTo(Math.cos(an) * rr, Math.sin(an) * rr) : c.moveTo(Math.cos(an) * rr, Math.sin(an) * rr); } };
+          c.globalAlpha = 0.5 * k; c.strokeStyle = INK; c.lineWidth = 7; path(); c.stroke();
+          c.globalAlpha = 0.85 * k; c.strokeStyle = a % 2 ? TEAL2 : TEAL; c.lineWidth = 4.4; path(); c.stroke();
+          c.globalCompositeOperation = 'lighter'; c.globalAlpha = 0.8 * k; c.strokeStyle = FOAM; c.lineWidth = 1.5; path(); c.stroke(); c.globalCompositeOperation = 'source-over';
+        }
+        c.restore();
+        c.save(); wavyRing(c, x, y, R * g, 2.4, 14, t * 3, 0.62); c.strokeStyle = FOAM; c.globalAlpha = 0.5 * k; c.lineWidth = 2; c.stroke(); c.restore();
+      }, tick: p => { if (Math.random() < 0.3) { const a = Math.random() * TAU, r = rnd(10, R * 0.9); V.spawn({ x: x + Math.cos(a) * r, y: y + Math.sin(a) * r * 0.62, z: 2, vz: rnd(30, 80), life: rnd(0.6, 1), size: rnd(5, 8), size1: 0, color: Math.random() < 0.5 ? FOAM : TEAL2, kind: 'glow', orbit: { x, y, a, r, w: 2.4, dr: -r * 0.5, flat: 0.62 } }); } } });
+      vfxLingerSettle(arms, 0.55, 1.2);
+      if (cam) cam.punch(0.02, 0.4);
+    });
+    snd(e, 'maelstrom', d);
+  };
+  // Tidal Bore: a long wave front rolled out ahead, a foam crest riding its face, heaving forward to the far end where it breaks;
+  // higher water (f) rolls it taller and farther
+  KIT_VFX.tidalBore = (e, target, d) => {
+    const f = (d && d.f) ?? 0.5, a = aimAng(e, target, d), len = 200 + 60 * f, wid = 130 + 30 * f, h = 30 + 36 * f, cam = FX.camFor(e);
+    later(e, 0.04, () => {
+      V.flash(e.x + Math.cos(a) * 20, bodyY(e), 50, FOAM, 0.24);
+      V.fx({ dur: 0.9, layer: 'air', draw: (c, p, t, fx) => {
+        const q = easeOut(Math.min(1, p / 0.8)), k = fx.a * Math.min(1, p / 0.08) * (1 - Math.max(0, (p - 0.72) / 0.28)); if (k < 0.02) return;
+        const D = 26 + (len - 26) * q, cx = e.x + Math.cos(a) * D, cy = e.y + Math.sin(a) * D, hh = h * (0.5 + 0.5 * Math.sin(Math.min(1, q) * Math.PI * 0.8));
+        c.save(); c.translate(cx, cy); c.rotate(a); c.lineJoin = 'round'; c.lineCap = 'round';
+        // the front: a long curved crest across the way it travels (x is the way it goes, y across)
+        const N = 22, pts = i => { const s = (i / N - 0.5) * wid * (0.6 + 0.4 * q), bend = -Math.pow(s / wid, 2) * 70; return [bend, s]; };
+        c.beginPath(); for (let i = 0; i <= N; i++) { const [px, py] = pts(i); i ? c.lineTo(px, py) : c.moveTo(px, py); } for (let i = N; i >= 0; i--) { const [px, py] = pts(i); c.lineTo(px - 28 * (0.5 + 0.5 * Math.sin(i / N * Math.PI)), py); } c.closePath();
+        const gr = c.createLinearGradient(0, 0, -28, 0); gr.addColorStop(0, rgba(FOAM, 0.85)); gr.addColorStop(1, rgba(TEAL, 0.5)); c.globalAlpha = k; c.fillStyle = gr; c.fill();
+        c.globalAlpha = 0.7 * k; c.strokeStyle = INK; c.lineWidth = 2.4; c.beginPath(); for (let i = 0; i <= N; i++) { const [px, py] = pts(i); i ? c.lineTo(px - 28 * (0.5 + 0.5 * Math.sin(i / N * Math.PI)), py) : c.moveTo(px - 28 * (0.5 + 0.5 * Math.sin(i / N * Math.PI)), py); } c.stroke();
+        c.globalAlpha = k; c.strokeStyle = FOAM; c.lineWidth = 4.2; c.beginPath(); for (let i = 0; i <= N; i++) { const [px, py] = pts(i); const wob = Math.sin(i * 1.9 - t * 10) * 2.6; i ? c.lineTo(px + wob, py) : c.moveTo(px + wob, py); } c.stroke();
+        c.restore(); void hh;
+      }, tick: p => { if (p < 0.8 && Math.random() < 0.7) { const D = 26 + (len - 26) * easeOut(p / 0.8), s = rnd(-0.5, 0.5) * wid * 0.7; V.spawn({ x: e.x + Math.cos(a) * D - Math.sin(a) * s, y: e.y + Math.sin(a) * D + Math.cos(a) * s, z: rnd(4, 18), vz: rnd(20, 70), vx: Math.cos(a) * 60, vy: Math.sin(a) * 60, life: 0.5, size: rnd(5, 9), size1: 0, color: Math.random() < 0.5 ? FOAM : TEAL2, kind: 'drop', add: false, rot: 0 }); } } });
+      FX.later(0.7, () => { V.setScale(cam ? 1 : 0.6); try { const bx = e.x + Math.cos(a) * len, by = e.y + Math.sin(a) * len; V.hit(bx, by, TEAL2, 0.8); rollRing(bx, by, { r0: 10, r: 60, dur: 0.5, w: 4 }); drops(bx, by, { n: 10, speed: 140, up: 220 }); } finally { V.setScale(1); } });
+      for (const w of party()) { const rel = Math.atan2(w.y - e.y, w.x - e.x), dist = Math.hypot(w.x - e.x, w.y - e.y); if (w !== e && Math.abs(Math.atan2(Math.sin(rel - a), Math.cos(rel - a))) < 0.7 && dist < len + 40) FX.later(0.1 + dist / 320, () => { V.setScale(cam ? 1 : 0.6); try { allyLand(w, { s: 1, strong: true }); } finally { V.setScale(1); } }); }
+      if (cam) cam.punch(0.03, 0.4);
+    });
+    snd(e, 'bore', d);
+  };
+  // Drowned Bell: the Deep Shield breaks and rings: a bell of dark teal water hangs over the hero, tolls once and bursts into a ring and
+  // a fall of bubbles that heals the party
+  KIT_VFX.deepBell = (e) => {
+    const cam = FX.camFor(e);
+    V.fx({ dur: 1.1, layer: 'air', draw: (c, p, t, fx) => {
+      const up = easeOut(Math.min(1, p / 0.25)), k = fx.a * Math.min(1, p / 0.1) * (1 - Math.max(0, (p - 0.55) / 0.45)), sw = Math.sin(p * 30) * 0.12 * (1 - p), R = 15 * up; if (k < 0.02) return;
+      c.save(); c.translate(e.x, e.y - 62); c.rotate(sw); c.lineJoin = 'round';
+      c.beginPath(); c.moveTo(-R, 10); c.bezierCurveTo(-R, -4, -R * 0.5, -16, 0, -16); c.bezierCurveTo(R * 0.5, -16, R, -4, R, 10); c.lineTo(R * 1.2, 14); c.lineTo(-R * 1.2, 14); c.closePath();
+      c.globalAlpha = k; c.fillStyle = UNDER; c.fill(); c.strokeStyle = INK; c.lineWidth = 2; c.stroke();
+      c.fillStyle = rgba(FOAM, 0.6); c.beginPath(); c.ellipse(-R * 0.4, -4, 2.4, 7, 0.2, 0, TAU); c.fill(); c.fillStyle = PEARL; c.beginPath(); c.arc(0, 17, 3, 0, TAU); c.fill(); c.stroke();
+      c.restore();
+    } });
+    FX.later(0.45, () => { V.setScale(cam ? 1 : 0.6); try {
+      V.shock(e.x, e.y, { r: 150, color: UNDER, dur: 0.6, w: 6 }); V.shock(e.x, e.y, { r: 100, color: FOAM, dur: 0.5, w: 3, delay: 0.06 });
+      for (const w of party()) { V.motes(w.x, w.y, { color: TEAL2, n: 6, r: 18, rise: 0.8 }); healMark(w.x, w.y, 3); V.flash(w.x, bodyY(w), 28, PEARL, 0.2); }
+      if (cam) cam.punch(0.02, 0.4);
+    } finally { V.setScale(1); } });
+    snd(e, 'bell', null);
+  };
+  // Brine Lash: a Surge's salt flung at the boss: a salt-white starburst, crystals thrown off; bigger with the water
+  KIT_VFX.brine = (e, target, d) => {
+    const f = (d && d.f) ?? 0.5, t = target || { x: e.x + Math.cos(e.angle || 0) * 200, y: e.y + Math.sin(e.angle || 0) * 200 }, g = G(), r = g && g.raid, p = r && r.state === 'live' && r.bossDraw ? { x: r.bossDraw.x, y: r.bossDraw.y } : t;
+    later(e, 0.3, () => { lash(e.x, e.y, p.x, p.y, { dur: 0.24, bow: 30, color: FOAM, onHit: (x, y) => { foamBurst(x, y, { s: 0.8 + 0.5 * f }); for (let i = 0; i < 8; i++) V.spawn({ x, y, z: 14, vx: rnd(-120, 120), vy: rnd(-80, 80), vz: rnd(60, 200), g: 460, life: 0.7, size: rnd(5, 8), color: '#ffffff', kind: 'shard', add: false }); } }); });
+  };
+  // Spindrift: a second, smaller lash of spray after the first, high water thrown after it
+  KIT_VFX.spindrift = (e, target) => {
+    const g = G(), r = g && g.raid, p = r && r.state === 'live' && r.bossDraw ? { x: r.bossDraw.x, y: r.bossDraw.y } : target;
+    if (!p) return;
+    lash(e.x + 10, e.y - 6, p.x, p.y, { dur: 0.22, bow: 16, color: FOAM, onHit: (x, y) => foamBurst(x, y, { s: 0.55 }) });
+  };
+  // Moon Pull: a raidwide heals through and the moon draws the tide up a little: a pearl crescent rises off the ring at the feet
+  KIT_VFX.moonPull = (e) => {
+    tm(e, { f0: Math.min(1, ((e.st && e.st.tm && e.st.tm.f0) || 0.3) + 0.1) });
+    V.fx({ dur: 0.9, layer: 'air', draw: (c, p, t, fx) => {
+      const k = fx.a * Math.sin(p * Math.PI), y = e.y - 18 - 38 * easeOut(p); if (k < 0.02) return;
+      c.save(); c.translate(e.x, y); c.globalAlpha = k; c.fillStyle = PEARL; c.strokeStyle = INK; c.lineWidth = 1.4; c.beginPath(); c.arc(0, 0, 9, 0.9, TAU - 0.9); c.arc(4, 0, 7, TAU - 1.1, 1.1, true); c.closePath(); c.fill(); c.stroke(); c.restore();
+      V.glowAt(c, e.x, y, 18, PEARL, 0.3 * k);
+    } });
+    rollRing(e.x, e.y, { r0: 14, r: 44, dur: 0.6, w: 3, color: PEARL, beads: false });
+  };
+})();
+
+// ======================================================================= Lanternkeeper (healer, class 21): the Last Light
+// Lantern light: warm gold and amber on soot and iron, a white-hot heart in every flame, embers thrown off as sparks, a thin
+// ring of light that shows how far a glow reaches (once, when it is lit, and never a filled disc: the floor stays clear so a
+// telegraph under it reads, and nothing here is red or blue), rays for a burst, a pale tall beam for the Lighthouse. Wayfarer's
+// lights are ember-orange. The lanterns themselves are drawn by arena/lanterns.js (Lamps); this file is the moments. The kit's
+// events (every name starts with lk-) land here as KIT_VFX: lk-place, lk-hang, lk-flare, lk-carry, lk-relight, lk-trim,
+// lk-ember, lk-snuff, lk-lighthouse, lk-lighthouseEnd, lk-stride, lk-drop, lk-trail, lk-festival, lk-wisp, lk-eternal,
+// lk-sparks, lk-pillar, lk-pilgrim. The hero's picture reads Lighthouse and Stride from them (e.st.lk: heroes.js
+// lanternkeeperLevel), and the class's cues go through SoundHooks.lanternkeeper.
+(() => {
+  const V = VFX, TAU = Math.PI * 2, rnd = (a, b) => a + Math.random() * (b - a), shake = s => vfxShake(s);
+  const AMBER = '#ffc46b', GOLD = '#ffd27a', EMB = '#ff9a3a', PALE = '#fff0c8', IRON = '#2b2620', BRASS = '#b98f45', ROAD = '#ff9f5a', SMOKE = '#8a8078';
+  const later = (e, d, fn) => { const sc = FX.camFor(e) ? 1 : 0.6; FX.later(d, () => { V.setScale(sc); try { fn(); } finally { V.setScale(1); } }); };
+  const G = () => (typeof window !== 'undefined' && window.__game) || null;
+  const isMe = e => { const g = G(); return !!g && e === g.player; };
+  const party = () => { const l = typeof FX.party === 'function' ? FX.party() : [FX.me]; return (l || []).filter(w => w && w.x != null); };
+  const snd = (e, ev, d) => { try { if (typeof SoundHooks !== 'undefined' && SoundHooks.lanternkeeper) SoundHooks.lanternkeeper(ev, d, isMe(e), e, e.id); } catch (err) { /* sound never stops a frame */ } };
+  const lk = (e, o) => { if (e && e.st) e.st.lk = Object.assign(e.st.lk || {}, o); };
+  const ok = v => Number.isFinite(v);
+  // where the staff's lantern hangs (heroes.js: the crook at about 22 ahead and 11.5 to the right of the hero), and the lantern at the left hip
+  const staff = e => { const a = e.angle || 0, c = Math.cos(a), s = Math.sin(a); return { x: e.x + c * 22 - s * 11.5, y: e.y + s * 22 + c * 11.5 }; };
+  const hip = e => { const a = e.angle || 0; return { x: e.x + Math.sin(a) * 13.4, y: e.y - Math.cos(a) * 13.4 }; };
+  const bossPos = () => { const g = G(), r = g && g.raid; return r && r.state === 'live' && r.bossDraw ? { x: r.bossDraw.x, y: r.bossDraw.y } : null; };
+  const hpf = w => (w.hp != null && w.maxHp ? w.hp / w.maxHp : 1);
+  // the caster's lanterns where they stand now: yours from the kit's own list, anyone else's from the host's (arena/lanterns.js)
+  function spotsOf(e) {
+    const L = typeof Lamps !== 'undefined' ? Lamps : null;
+    if (!L || !L.S) return [];
+    const raw = isMe(e) ? (L.S.mine || []) : (L.S.others && L.S.others.get(e.id)) || [], us = party(), out = [];
+    for (const l of raw) {
+      let x = l.x, y = l.y, hung = false;
+      if (l.on === 'c') { if (us.length) { x = us.reduce((s, u) => s + u.x, 0) / us.length + (l.ox || 0); y = us.reduce((s, u) => s + u.y, 0) / us.length + (l.oy || 0); } }
+      else if (l.on != null) { const w = l.on === 'self' ? e : us.find(u => u.id === l.on); if (!w) continue; x = w.x; y = w.y; hung = true; }
+      if (ok(x) && ok(y)) out.push({ x, y, r: l.r || 80, w: (l.w ?? 100) / 100, k: l.k, hung });
+    }
+    return out;
+  }
+
+  // ---- pieces
+  // a thin ring of light on the floor, going out: how far a glow reaches
+  const ringOut = (x, y, r, o = {}) => V.shock(x, y, { r0: o.r0 ?? 8, r, color: o.color || AMBER, dur: o.dur ?? 0.6, w: o.w ?? 2.2, delay: o.delay, layer: o.layer });
+  // thin tapered rays going out from a point, turning slowly, and gone
+  function rays(x, y, o = {}) {
+    const n = o.n ?? 8, L = o.r ?? 40, col = o.color || PALE, spin = o.spin ?? 0.6, w = o.w ?? 3, z = o.z ?? 0;
+    V.fx({ dur: o.dur ?? 0.5, delay: o.delay, layer: 'air', draw: (c, p, t, e) => {
+      const k = e.a * Math.min(1, p / 0.12) * (1 - p) * (o.alpha ?? 0.9), len = L * easeOut(Math.min(1, p / 0.5));
+      if (k < 0.02) return;
+      c.save(); c.translate(x, y - z); c.globalCompositeOperation = 'lighter'; c.fillStyle = col; c.globalAlpha = Math.min(1, k);
+      for (let i = 0; i < n; i++) { c.save(); c.rotate(i / n * TAU + t * spin + (o.a0 || 0)); c.beginPath(); c.moveTo(len * 0.12, -w * 0.5); c.lineTo(len, 0); c.lineTo(len * 0.12, w * 0.5); c.closePath(); c.fill(); c.restore(); }
+      c.restore();
+      V.glowAt(c, x, y - z, L * 0.6, col, 0.3 * k);
+    } });
+  }
+  // a flame that grows, flickers and dies back, standing at a point
+  function flameLick(x, y, o = {}) {
+    const h0 = o.h ?? 26, w0 = o.w ?? 6, col = o.color || AMBER;
+    V.fx({ dur: o.dur ?? 0.6, delay: o.delay, layer: 'air', draw: (c, p, t, e) => {
+      const g = Math.pow(Math.sin(Math.min(1, p) * Math.PI), 0.7), h = h0 * g, w = w0 * (0.5 + 0.5 * g);
+      if (h < 1) return;
+      const sw = Math.sin(t * 20) * w * 0.25;
+      c.save(); c.translate(x, y - (o.z ?? 4));
+      V.glowAt(c, 0, -h * 0.5, h * 1.1 + 8, col, 0.5 * e.a);
+      for (const [s, cl, a] of [[1, col, 0.9], [0.62, PALE, 0.95], [0.3, '#ffffff', 1]]) {
+        c.globalAlpha = Math.min(1, a * e.a); c.fillStyle = cl; c.beginPath(); c.moveTo(sw * s, -h * s); c.quadraticCurveTo(w * s, -h * 0.4 * s, 0, 0); c.quadraticCurveTo(-w * s, -h * 0.4 * s, sw * s, -h * s); c.fill();
+      }
+      c.restore();
+    } });
+  }
+  // a glowing ember flying from a to b on a curve, shedding sparks; onHit runs as it lands
+  function orb(ax, ay, bx, by, o = {}) {
+    const dur = o.dur ?? 0.3, arc = o.arc ?? 24, col = o.color || AMBER, sz = o.size ?? 1;
+    const at = q => [ax + (bx - ax) * q, ay + (by - ay) * q - Math.sin(q * Math.PI) * arc];
+    V.fx({ dur, delay: o.delay, layer: 'air', tick: p => { if (Math.random() < 0.7) { const [px, py] = at(p); V.spawn({ x: px, y: py + 10, z: 10, vx: rnd(-20, 20), vy: rnd(-10, 10), vz: rnd(10, 50), life: rnd(0.25, 0.5), size: rnd(4, 8) * sz, size1: 0, color: Math.random() < 0.4 ? PALE : col, kind: 'glow' }); } },
+      draw: (c, p, t, e) => { const [px, py] = at(p), [qx, qy] = at(Math.max(0, p - 0.18)); V.streakTo(c, qx, qy, px, py, 4 * sz, col, 0.8 * e.a); V.glowAt(c, px, py, 12 * sz, col, 0.9 * e.a); V.glowAt(c, px, py, 5 * sz, '#ffffff', 0.9 * e.a); },
+      done: () => { if (o.onHit) o.onHit(bx, by); } });
+  }
+  // a jet of flame running from a to b (wavy strands, the head running ahead), a hit where it lands
+  function jet(ax, ay, bx, by, o = {}) {
+    const dur = o.dur ?? 0.4, d = Math.hypot(bx - ax, by - ay) || 1, nx = -(by - ay) / d, ny = (bx - ax) / d;
+    V.fx({ dur: dur + 0.16, layer: 'air', draw: (c, p, t, e) => {
+      const head = Math.min(1, t / dur), tail = Math.max(0, (t - 0.1) / dur - 0.2), k = e.a * (1 - Math.max(0, (t - dur) / 0.16));
+      if (head <= tail || k < 0.02) return;
+      c.save(); c.lineCap = 'round'; c.lineJoin = 'round'; c.globalCompositeOperation = 'lighter';
+      for (const [w, cl, a, amp] of [[6, EMB, 0.5, 6], [3.4, AMBER, 0.85, 4], [1.6, PALE, 1, 2]]) {
+        c.globalAlpha = Math.min(1, a * k); c.strokeStyle = cl; c.lineWidth = w; c.beginPath();
+        for (let i = 0; i <= 14; i++) { const q = tail + (head - tail) * i / 14, wv = Math.sin(q * 11 - t * 24) * amp; const px = ax + (bx - ax) * q + nx * wv, py = ay + (by - ay) * q + ny * wv; i ? c.lineTo(px, py) : c.moveTo(px, py); }
+        c.stroke();
+      }
+      c.restore();
+    }, done: () => { if (o.onHit) o.onHit(bx, by); } });
+  }
+  // two blades of light closing on a point: the snip of the shears
+  function snip(x, y, z = 10) {
+    V.fx({ dur: 0.2, layer: 'air', draw: (c, p, t, e) => {
+      const k = e.a * (1 - p), gap = 9 * (1 - easeOut(Math.min(1, p / 0.6)));
+      c.save(); c.translate(x, y - z); c.globalCompositeOperation = 'lighter'; c.strokeStyle = PALE; c.lineCap = 'round'; c.lineWidth = 1.8; c.globalAlpha = Math.min(1, k);
+      c.beginPath(); c.moveTo(-9, -gap - 3); c.lineTo(9, gap * 0.3); c.moveTo(-9, gap + 3); c.lineTo(9, -gap * 0.3); c.stroke(); c.restore();
+    } });
+  }
+
+  // ---- the abilities (the cast itself: the staff, the spark, what flies; what comes of it is the moments below)
+  ABILITY_VFX.lanternkeeper = {
+    // Trim the Wick: a bolt of ember from the staff's lantern, the shears snipping where it lands
+    trim: c => {
+      const s = staff(c.ent), d = Math.hypot(c.tx - s.x, c.ty - s.y);
+      V.sparks(s.x, s.y - 10, { color: GOLD, n: 3, speed: 140, life: 0.6 });
+      orb(s.x, s.y - 12, c.tx, c.ty - 6, { dur: Math.max(0.14, Math.min(0.3, d / 1100)), arc: 10, onHit: (x, y) => { V.hit(x, y, AMBER, 0.8); snip(x, y - 4, 12); } });
+    },
+    // Set Lantern: the staff swings low, a ring of light opens at the feet (the lantern itself is the 'lk-place' moment)
+    set: c => { const s = staff(c.ent); V.glint(s.x, s.y - 14, { color: PALE, size: 20, z: 14 }); ringOut(c.x, c.y, 36, { r0: 6, dur: 0.4, w: 2 }); V.sparks(c.x, c.y, { color: GOLD, n: 4, speed: 150, up: 120 }); },
+    // Great Beacon: heavier, a dust ring and a thump of the post going in
+    beacon: c => {
+      const s = staff(c.ent);
+      V.glint(s.x, s.y - 14, { color: PALE, size: 26, z: 14 }); ringOut(c.x, c.y, 54, { r0: 6, dur: 0.45, w: 2.6 });
+      V.smoke(c.x, c.y, { n: 3, color: '#8a8478', size: 16, a: 0.35, speed: 30 }); V.sparks(c.x, c.y, { color: GOLD, n: 6, speed: 190, up: 140 });
+    },
+    // Hand Lantern: a hook of light thrown from the staff to the ally (the lantern hanging is the 'lk-hang' moment)
+    hand: c => {
+      const s = staff(c.ent), w = c.tent || { x: c.tx, y: c.ty };
+      V.sparks(s.x, s.y - 10, { color: GOLD, n: 3, speed: 140, life: 0.6 });
+      orb(s.x, s.y - 12, w.x + 14, w.y - 34, { dur: 0.22, arc: 16, color: GOLD, size: 0.8 });
+    },
+    // Flare: the staff thrown up, rays off its lantern (every lantern bursts in 'lk-flare')
+    flare: c => { const s = staff(c.ent); rays(s.x, s.y, { z: 14, r: 40, n: 6, dur: 0.45 }); V.flash(s.x, s.y - 14, 34, PALE, 0.18); },
+    // Carry the Flame: a scoop of the staff and a gust of sparks at the feet
+    carry: c => { const s = staff(c.ent); V.sparks(s.x, s.y - 8, { color: GOLD, n: 4, speed: 180, up: 100 }); V.glint(s.x, s.y - 14, { color: AMBER, size: 18, z: 14 }); },
+    // Trailblaze: an ember-orange streak at the feet as the dash begins
+    trail: c => { V.sparks(c.x, c.y, { color: ROAD, n: 8, speed: 220, up: 90, angle: (c.ent.angle || 0) + Math.PI, spread: 0.7 }); ringOut(c.x, c.y, 30, { r0: 6, dur: 0.35, w: 2, color: ROAD }); },
+    // Lamplighter's Stride: a stamp of the boot, ember-orange sparks
+    stride: c => { V.sparks(c.x, c.y, { color: ROAD, n: 6, speed: 170, up: 110 }); V.glint(c.x, c.y - 24, { color: ROAD, size: 20, z: 24 }); },
+    // Relight: a match struck on the staff's lantern, the flame jumping (the lanterns relighting is the 'lk-relight' moment)
+    relight: c => { const s = staff(c.ent); V.sparks(s.x, s.y - 12, { color: '#ffe9b0', n: 6, speed: 220, up: 140 }); V.flash(s.x, s.y - 14, 30, PALE, 0.18); },
+    // Will-o'-the-Wisp: a pale spark lifts off the lantern (the wisp is the 'lk-wisp' moment)
+    wisp: c => { const s = staff(c.ent); V.glint(s.x, s.y - 18, { color: PALE, size: 22, z: 18 }); V.motes(s.x, s.y, { color: PALE, n: 4, r: 8, rise: 0.9 }); },
+    // Lantern Festival: the staff raised, a fan of sparks thrown up
+    festival: c => { const s = staff(c.ent); rays(s.x, s.y, { z: 14, r: 36, n: 5, dur: 0.5, color: AMBER }); V.sparks(s.x, s.y - 12, { color: GOLD, n: 8, speed: 150, up: 260, spread: 0.6, angle: -Math.PI / 2 }); },
+    // Lighthouse: the staff raised high, a flare of white-gold, three rings of light going out across the room (thin and in the air, so no telegraph is hidden)
+    lighthouse: c => {
+      const s = staff(c.ent), cam = c.cam;
+      if (cam) { cam.flash('#fff2cf', 0.2, 0.5); cam.punch(0.05, 0.5); }
+      V.flash(s.x, s.y - 16, 90, PALE, 0.3); rays(s.x, s.y, { z: 16, r: 70, n: 10, dur: 0.7, w: 4 });
+      for (let i = 0; i < 3; i++) V.shock(c.x, c.y - 20, { r0: 14, r: 150 + i * 70, color: i % 2 ? AMBER : PALE, dur: 0.8, w: 2.4, delay: i * 0.1, layer: 'air' });
+      V.glint(s.x, s.y - 22, { color: PALE, size: 36, z: 22 });
+    },
+    // Lighthouse Flare (the Lighthouse's own Flare): the same burst, bigger rays at the staff
+    beaconflare: c => { const s = staff(c.ent); rays(s.x, s.y, { z: 14, r: 64, n: 10, dur: 0.55, w: 4 }); V.flash(s.x, s.y - 14, 60, PALE, 0.24); },
+  };
+  // the auto-attack: a small ember bolt off the staff
+  SPARK.lanternkeeper = c => {
+    const s = staff(c.ent), d = Math.hypot(c.tx - s.x, c.ty - s.y);
+    orb(s.x, s.y - 12, c.tx, c.ty - 6, { dur: Math.max(0.1, Math.min(0.26, d / 1300)), arc: 6, size: 0.55, onHit: (x, y) => V.hit(x, y, AMBER, 0.4) });
+  };
+
+  // ---- the moments
+  // a lantern set on the floor: the flame takes, sparks fly, and a thin ring shows how far its glow reaches (once). A Great Beacon is
+  // a column of light with a thump of dust
+  KIT_VFX['lk-place'] = (e, target, d) => {
+    const x = d && ok(d.x) ? d.x : e.x, y = d && ok(d.y) ? d.y : e.y, beacon = !!(d && d.kind === 'beacon'), R = beacon ? 150 : 110;
+    later(e, 0.05, () => {
+      V.flash(x, y - 10, beacon ? 60 : 38, AMBER, 0.24);
+      V.sparks(x, y, { color: GOLD, n: beacon ? 12 : 7, speed: 210, up: 170, z: 8 });
+      flameLick(x, y, { h: beacon ? 38 : 22, w: beacon ? 8 : 5, z: beacon ? 40 : 14 });
+      ringOut(x, y, R, { dur: 0.7, w: 2.2, r0: 10 });
+      V.motes(x, y, { color: AMBER, n: 4, r: 10, rise: 0.8 });
+      if (beacon) {
+        V.pillar(x, y, { r: 16, h: 150, color: GOLD, dur: 0.9 });
+        ringOut(x, y, R * 0.6, { dur: 0.55, w: 2, r0: 8, delay: 0.08, color: PALE });
+        V.smoke(x, y, { n: 4, color: '#8a8478', size: 18, a: 0.38, speed: 40 });
+        shake(2);
+      }
+    });
+  };
+  // a Hand Lantern hung on an ally: a hook of light settles on their shoulder, a warm ring opens round them
+  KIT_VFX['lk-hang'] = (e, target, d) => {
+    const w = target || e;
+    later(e, 0.2, () => {
+      V.flash(w.x + 14, w.y - 34, 30, GOLD, 0.22); V.glint(w.x + 14, w.y - 38, { color: PALE, size: 22, z: 36 });
+      ringOut(w.x, w.y, 90, { dur: 0.6, w: 2.2, r0: 10 });
+      V.sparks(w.x + 14, w.y - 34, { color: GOLD, n: 5, speed: 130, up: 90 }); V.plus(w.x, w.y, { color: PALE, n: 2 });
+    });
+  };
+  // Flare: every lantern bursts at once. Rays off each, a ring showing its reach, sparks and a flame; everyone it heals gets a plus and a
+  // wash of gold, more for every glow they stand in; with the Lighthouse up it reaches the whole room
+  KIT_VFX['lk-flare'] = (e, target, d) => {
+    const all = !!(d && d.all), twin = !!(d && d.twin), kk = twin ? 0.6 : 1, spots = spotsOf(e), us = party(), s = staff(e), cam = FX.camFor(e);
+    later(e, 0.05, () => {
+      rays(s.x, s.y, { z: 14, r: 46 * kk, n: 8, dur: 0.5 }); V.flash(s.x, s.y - 14, 40 * kk, PALE, 0.2);
+      for (const l of spots.slice(0, 12)) {
+        V.flash(l.x, l.y - 14, 30 + l.r * 0.22, AMBER, 0.28);
+        ringOut(l.x, l.y, l.r, { dur: 0.55, w: 2.4 });
+        rays(l.x, l.y, { z: 16, r: 26 + l.r * 0.15, n: 7, dur: 0.5, color: GOLD, alpha: 0.8 });
+        V.sparks(l.x, l.y, { color: GOLD, n: Math.round(8 * kk), speed: 250, up: 210 });
+        flameLick(l.x, l.y, { h: 30 * kk, w: 7, z: l.hung ? 30 : 14 });
+      }
+      if (!spots.length) ringOut(e.x, e.y, 90, { dur: 0.5 });
+      for (const w of us) {
+        let n = 0; for (const l of spots) if (all || Math.hypot(w.x - l.x, w.y - l.y) <= l.r) n++;
+        if (!n) continue;
+        FX.later(0.16, () => { V.setScale(FX.camFor(e) ? 1 : 0.6); try { V.plus(w.x, w.y, { color: PALE, n: Math.min(5, 1 + n) }); V.motes(w.x, w.y, { color: GOLD, n: 2 + n * 2, r: 14, rise: 0.8 }); V.flash(w.x, w.y - 14, 22 + n * 5, GOLD, 0.2); } finally { V.setScale(1); } });
+      }
+      if (cam && (all || spots.length > 1)) cam.punch(0.015 + 0.01 * Math.min(3, spots.length), 0.3);
+      if (all && cam) cam.flash('#fff2cf', 0.1, 0.3);
+    });
+  };
+  // Carry the Flame: a lantern's light is lifted off one spot and thrown to another on a high curve, shedding sparks
+  KIT_VFX['lk-carry'] = (e, target, d) => {
+    if (!d || !ok(d.fx) || !ok(d.x)) return;
+    V.flash(d.fx, d.fy - 12, 30, AMBER, 0.2); V.sparks(d.fx, d.fy, { color: GOLD, n: 5, speed: 170, up: 150 });
+    orb(d.fx, d.fy - 18, d.x, d.y - 18, { dur: 0.34, arc: 46, color: GOLD, size: 1.1, onHit: (x, y) => {
+      V.flash(x, y - 12, 34, AMBER, 0.22); V.sparks(x, y, { color: GOLD, n: 6, speed: 190, up: 160 }); ringOut(x, y, 60, { dur: 0.45, w: 2 }); flameLick(x, y, { h: 20, w: 5, z: 14 });
+    } });
+  };
+  // Relight: a match is struck, the staff's flame jumps, and every wick is lit again in turn, a flame leaping up each with a glint
+  KIT_VFX['lk-relight'] = (e, target, d) => {
+    const spots = spotsOf(e), s = staff(e);
+    V.sparks(s.x, s.y - 12, { color: '#ffe9b0', n: 5, speed: 180, up: 130 });
+    later(e, 0.15, () => {
+      flameLick(s.x, s.y, { h: 36, w: 8, z: 14 }); V.flash(s.x, s.y - 14, 46, PALE, 0.22); V.plus(e.x, e.y, { color: PALE, n: 3 });
+      spots.slice(0, 10).forEach((l, i) => FX.later(0.05 + i * 0.06, () => {
+        V.setScale(FX.camFor(e) ? 1 : 0.6);
+        try {
+          flameLick(l.x, l.y, { h: 34, w: 7, color: GOLD, z: l.hung ? 30 : 14 }); V.motes(l.x, l.y, { color: GOLD, n: 5, r: 10, rise: 1 });
+          ringOut(l.x, l.y, 34, { dur: 0.4, w: 2, r0: 6 }); V.glint(l.x, l.y - 24, { color: PALE, size: 20, z: 24 });
+        } finally { V.setScale(1); }
+      }));
+    });
+  };
+  // Trim the Wick relit a lantern: a bright pinch of light, a small flame jumping and a glint
+  KIT_VFX['lk-trim'] = (e, target, d) => {
+    if (!d || !ok(d.x)) return;
+    V.flash(d.x, d.y - 12, 22, GOLD, 0.18); V.glint(d.x, d.y - 24, { color: PALE, size: 18, z: 24 });
+    V.sparks(d.x, d.y, { color: GOLD, n: 4, speed: 140 }); flameLick(d.x, d.y, { h: 18, w: 4, z: 14, dur: 0.45 });
+  };
+  // an Ember gained: a spark pops off the lantern at the hip
+  KIT_VFX['lk-ember'] = (e) => {
+    const h = hip(e);
+    V.spawn({ x: h.x, y: h.y, z: 10, vz: 40, life: 0.5, size: 12, size1: 0, color: EMB, kind: 'glow' });
+    V.sparks(h.x, h.y, { color: GOLD, n: 3, speed: 110, up: 110, z: 10, life: 0.8 });
+    snd(e, 'ember', null);
+  };
+  // a lantern gone out: its flame shrinks to a red spark and a thread of smoke goes up
+  KIT_VFX['lk-snuff'] = (e, target, d) => {
+    if (!d || !ok(d.x)) return;
+    V.smoke(d.x, d.y, { n: 3, color: '#6a625a', size: 15, a: 0.45, speed: 18 });
+    V.motes(d.x, d.y, { color: EMB, n: 2, r: 4, rise: 0.4, size: 6 });
+    V.spawn({ x: d.x, y: d.y, z: 12, life: 0.35, size: 12, size1: 0, color: '#c8452a', kind: 'glow' });
+    snd(e, 'snuff', d);
+  };
+  // Lighthouse: a tall pale beam stands up from the staff's lantern for its 8s with a soft glow round it, a ring of light at the
+  // feet and motes climbing the beam; the whole party is washed with gold once a second. (Faint on the floor: the beam is a column in
+  // the air, nothing sweeps the ground)
+  KIT_VFX['lk-lighthouse'] = (e, target, d) => {
+    const DUR = 8, cam = FX.camFor(e), sc = cam ? 1 : 0.6;
+    lk(e, { light: FX.now + DUR });
+    if (e._lkLight) e._lkLight.dur = 0;
+    const s0 = staff(e);
+    if (cam) cam.flash('#fff2cf', 0.14, 0.4);
+    V.flash(s0.x, s0.y - 20, 110, PALE, 0.3);
+    e._lkLight = V.fx({ dur: DUR, layer: 'air', draw: (c, p, t, f) => {
+      const k = f.a * Math.min(1, p / 0.08, (1 - p) / 0.1); if (k < 0.02) return;
+      const s = staff(e), up = easeOut(Math.min(1, t / 0.5)), h = 360 * up, w = 18 + Math.sin(t * 6) * 1.5;
+      c.save(); c.globalCompositeOperation = 'lighter';
+      c.globalAlpha = Math.min(1, 0.5 * k); c.drawImage(V.sprite('column', GOLD), s.x - w, s.y - 8 - h, w * 2, h);
+      c.globalAlpha = Math.min(1, 0.55 * k); c.drawImage(V.sprite('column', '#ffffff'), s.x - w * 0.22, s.y - 8 - h * 0.95, w * 0.44, h * 0.95);
+      c.restore();
+      V.glowAt(c, s.x, s.y - 14, 60, PALE, 0.26 * k);
+      V.neonRing(c, e.x, e.y + 3, 26 + Math.sin(t * 3) * 1.5, GOLD, 1.4, 0.5 * k, 0.78);
+    }, tick: (p) => {
+      if (Math.random() < 0.4) { const s = staff(e); V.spawn({ x: s.x + rnd(-8, 8), y: s.y, z: rnd(10, 120), vz: rnd(30, 70), vx: rnd(-6, 6), life: rnd(0.7, 1.2), size: rnd(4, 8), size1: 0, color: Math.random() < 0.5 ? PALE : GOLD, kind: Math.random() < 0.4 ? 'star' : 'glow' }); }
+    } });
+    for (let i = 1; i <= 8; i++) FX.later(i, () => { V.setScale(sc); try { for (const w of party()) { V.motes(w.x, w.y, { color: GOLD, n: 2, r: 14, rise: 0.7 }); if (i % 2 === 0) V.plus(w.x, w.y, { color: PALE, n: 1 }); } } finally { V.setScale(1); } });
+  };
+  // the Lighthouse goes dark: the beam folds down into the lantern, a ring drawn in and a last glint
+  KIT_VFX['lk-lighthouseEnd'] = (e) => {
+    if (e._lkLight) { e._lkLight.dur = 0; e._lkLight = null; }
+    lk(e, { light: 0 });
+    const s = staff(e);
+    V.glint(s.x, s.y - 20, { color: PALE, size: 26, z: 20 }); V.motes(s.x, s.y, { color: GOLD, n: 6, r: 10, rise: 1.2 });
+    V.fx({ dur: 0.6, layer: 'ground', draw: (c, p, t, f) => { const R = 70 - 50 * easeOut(p), k = f.a * (1 - p) * 0.5; if (k < 0.02) return; V.neonRing(c, e.x, e.y + 3, R, GOLD, 1.6, k, 0.78); } });
+    snd(e, 'end', null);
+  };
+  // Lamplighter's Stride begins: ember-orange sparks at the boots and a ring of light, for the 10s the lights fall behind you
+  KIT_VFX['lk-stride'] = (e) => {
+    lk(e, { stride: FX.now + 10 });
+    V.flash(e.x, e.y - 8, 34, ROAD, 0.2); ringOut(e.x, e.y, 38, { r0: 8, dur: 0.45, w: 2.2, color: ROAD });
+    V.sparks(e.x, e.y, { color: ROAD, n: 7, speed: 180, up: 110 }); V.motes(e.x, e.y, { color: ROAD, n: 4, r: 10, rise: 0.8 });
+  };
+  // a small light dropped behind a walker: a little flame catching, quick and cheap
+  KIT_VFX['lk-drop'] = (e, target, d) => {
+    if (!d || !ok(d.x)) return;
+    V.flash(d.x, d.y - 8, 16, ROAD, 0.15); flameLick(d.x, d.y, { h: 12, w: 3.5, dur: 0.4, z: 6, color: ROAD });
+    V.motes(d.x, d.y, { color: AMBER, n: 2, r: 5, rise: 0.5, size: 6 });
+    snd(e, 'drop', null);
+  };
+  // Trailblaze dragged the small lights along: a streak of ember-orange from where each stood to where it stands, and a glint at each end
+  KIT_VFX['lk-trail'] = (e, target, d) => {
+    const dx = d && ok(d.dx) ? d.dx : 0, dy = d && ok(d.dy) ? d.dy : 0;
+    V.sparks(e.x, e.y, { color: ROAD, n: 8, speed: 220, up: 90, angle: Math.atan2(-dy, -dx), spread: 0.6 });
+    for (const l of spotsOf(e).filter(l => l.k === 3).slice(0, 8)) {
+      V.fx({ dur: 0.45, layer: 'air', draw: (c, p, t, f) => { const k = f.a * (1 - p) * 0.8; if (k < 0.02) return; V.streakTo(c, l.x - dx * (1 - easeOut(p)), l.y - dy * (1 - easeOut(p)) - 10, l.x, l.y - 10, 3, ROAD, k); } });
+      V.glint(l.x, l.y - 14, { color: ROAD, size: 16, z: 14 });
+    }
+  };
+  // Lantern Festival: five paper lanterns released: a flare at the staff and a glint of light at each as it lifts
+  KIT_VFX['lk-festival'] = (e) => {
+    const s = staff(e), cam = FX.camFor(e);
+    V.flash(s.x, s.y - 14, 60, AMBER, 0.28); rays(s.x, s.y, { z: 14, r: 48, n: 6, dur: 0.5, color: AMBER });
+    later(e, 0.1, () => {
+      for (const l of spotsOf(e).filter(l => l.k === 4).slice(0, 5)) { V.flash(l.x, l.y - 30, 26, AMBER, 0.22); V.glint(l.x, l.y - 34, { color: PALE, size: 18, z: 34 }); V.sparks(l.x, l.y - 24, { color: GOLD, n: 3, speed: 90, up: 80 }); }
+      V.motes(e.x, e.y, { color: AMBER, n: 8, r: 40, rise: 1 });
+      if (cam) cam.punch(0.02, 0.3);
+    });
+  };
+  // Will-o'-the-Wisp: a pale flame lifts off the lantern and drifts to the most hurt ally, then rides over their shoulder for its 6s
+  // giving a small pulse of light each second
+  KIT_VFX['lk-wisp'] = (e) => {
+    const us = party().filter(w => w !== e), w = us.length ? us.reduce((a, b) => (hpf(b) < hpf(a) ? b : a)) : e, s = staff(e), FLY = 0.7, DUR = 6.7;
+    const sc = FX.camFor(e) ? 1 : 0.6;
+    V.fx({ dur: DUR, layer: 'air', tick: () => { if (Math.random() < 0.5) { V.spawn({ x: w.x, y: w.y - 40, z: 6, vz: rnd(10, 40), life: rnd(0.4, 0.7), size: rnd(3, 6), size1: 0, color: PALE, kind: 'glow' }); } },
+      draw: (c, p, t, f) => {
+        const k = f.a * Math.min(1, t / 0.1, (DUR - t) / 0.4); if (k < 0.02) return;
+        const q = Math.min(1, t / FLY), hx = w.x + Math.cos(t * 2.2) * 14, hy = w.y - 40 + Math.sin(t * 3) * 3 - (w.lift || 0);
+        const x = q < 1 ? s.x + (hx - s.x) * easeOut(q) : hx, y = q < 1 ? s.y - 14 + (hy - s.y + 14) * easeOut(q) - Math.sin(q * Math.PI) * 26 : hy;
+        V.glowAt(c, x, y, 17, PALE, 0.55 * k); V.glowAt(c, x, y, 7, '#ffffff', 0.8 * k);
+        c.save(); c.globalAlpha = Math.min(1, 0.9 * k); c.fillStyle = '#fffbea'; c.beginPath(); c.moveTo(x + Math.sin(t * 12) * 0.8, y - 7); c.quadraticCurveTo(x + 3.4, y - 1, x, y + 3); c.quadraticCurveTo(x - 3.4, y - 1, x + Math.sin(t * 12) * 0.8, y - 7); c.fill(); c.restore();
+      } });
+    for (let i = 1; i <= 6; i++) FX.later(FLY + i * 0.9, () => { V.setScale(sc); try { V.plus(w.x, w.y, { color: PALE, n: 1 }); V.motes(w.x, w.y, { color: PALE, n: 3, r: 10, rise: 0.8 }); ringOut(w.x, w.y, 28, { dur: 0.4, w: 1.8, r0: 6, color: PALE }); } finally { V.setScale(1); } });
+  };
+  // the Eternal Lamp is lit: a column of white-gold, rings of light, a long glint; the lamp stays for the rest of the pull
+  KIT_VFX['lk-eternal'] = (e, target, d) => {
+    const x = d && ok(d.x) ? d.x : e.x, y = d && ok(d.y) ? d.y : e.y;
+    later(e, 0.2, () => {
+      V.pillar(x, y, { r: 20, h: 220, color: PALE, dur: 1.2 }); V.flash(x, y - 14, 80, PALE, 0.3);
+      ringOut(x, y, 110, { dur: 0.8, w: 2.4, color: PALE }); ringOut(x, y, 60, { dur: 0.6, w: 2, delay: 0.1, color: GOLD });
+      V.glint(x, y - 36, { color: PALE, size: 34, z: 36 }); V.motes(x, y, { color: PALE, n: 8, r: 14, rise: 1 });
+    });
+    snd(e, 'eternal', null);
+  };
+  // Trailing Sparks: a small light you walked back through flares and throws sparks, one flying to the boss
+  KIT_VFX['lk-sparks'] = (e, target, d) => {
+    if (!d || !ok(d.x)) return;
+    V.sparks(d.x, d.y, { color: GOLD, n: 10, speed: 300, up: 250 }); V.hit(d.x, d.y - 6, AMBER, 0.5);
+    const b = bossPos();
+    if (b) orb(d.x, d.y - 14, b.x, b.y, { dur: 0.3, arc: 30, size: 0.7, onHit: (x, y) => V.hit(x, y, AMBER, 0.45) });
+    snd(e, 'sparks', null);
+  };
+  // Pillar of Flame: a jet of fire from a Great Beacon's head to the boss in its glow, a hit and embers where it lands
+  KIT_VFX['lk-pillar'] = (e, target, d) => {
+    if (!d || !ok(d.x)) return;
+    const b = bossPos(), hx = d.x, hy = d.y - 50;
+    V.flash(hx, hy, 34, EMB, 0.2);
+    if (b) jet(hx, hy, b.x, b.y - 8, { dur: 0.36, onHit: (x, y) => { V.hit(x, y, '#ffb050', 0.55); V.sparks(x, y, { color: GOLD, n: 5, speed: 200, up: 180 }); } });
+    else flameLick(d.x, d.y, { h: 44, w: 8, z: 44 });
+    snd(e, 'pillar', null);
+  };
+  // Pilgrim's Pace: five seconds on the move and the next Flare is stronger: a glint over the head and a ring at the boots
+  KIT_VFX['lk-pilgrim'] = (e) => {
+    V.glint(e.x, e.y - 44, { color: PALE, size: 22, z: 40 }); ringOut(e.x, e.y, 32, { r0: 6, dur: 0.45, w: 2, color: ROAD });
+    V.motes(e.x, e.y, { color: ROAD, n: 4, r: 10, rise: 0.9 });
+    snd(e, 'pilgrim', null);
   };
 })();

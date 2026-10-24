@@ -175,9 +175,10 @@ const Save = (() => {
     normalBeaten: bossId => Object.values(data.heroes).some(h => h && h.clears && h.clears[bossId] && (h.clears[bossId].normal | 0) > 0),
     hardBeaten: bossId => Object.values(data.heroes).some(h => h && h.clears && h.clears[bossId] && (h.clears[bossId].hard | 0) > 0),
     clears: (classId, bossId) => ((data.heroes[classId] || { clears: {} }).clears[bossId] || { normal: 0, hard: 0 }),
-    // specializations: a hero's trials open once it has cleared the Hollow King (any difficulty), and passing a
+    // specializations: a hero's trials open once any hero has cleared the Hollow King (any difficulty), and passing a
     // spec's trial unlocks that spec for the hero (trials.js)
-    trialsOpen(classId) { const c = this.clears(classId, 'hollowking'); return c.normal + c.hard > 0; },
+    // spec trials open for every hero once any hero has cleared the Hollow King (account-wide; each spec still needs its own trial)
+    trialsOpen(classId) { return Object.keys(data.heroes).some(id => { const c = this.clears(id, 'hollowking'); return c.normal + c.hard > 0; }); },
     trialDone: (classId, specId) => !!(((data.heroes[classId] || {}).trials || {})[specId]),
     recordTrial(classId, specId) {
       const h = data.heroes[classId] = data.heroes[classId] || { clears: {} };

@@ -18,7 +18,7 @@ const PVP = {
   // damage per second in a duel; healers lower, as they also heal). Missing: 1.
   CLASS: { thermist: 0.46, ranger: 0.52, thresher: 0.74, gloomsworn: 0.7, bloodreaver: 0.72, marionettist: 0.75, shadowblade: 0.98,
     oathbroker: 0.72, runeguard: 0.78, driftblade: 0.96, ironpalm: 0.9, gorgemaw: 0.92, pyromancer: 0.89, bastion: 1.0,
-    alembist: 0.6, cleric: 1.35, grovekeeper: 1.5, chronomancer: 1.35, threadweaver: 1.5 },
+    alembist: 0.6, cleric: 1.35, grovekeeper: 1.5, chronomancer: 1.35, threadweaver: 1.5, tidecaller: 1.3 },
   HEAL: 0.28, SHIELD: 0.35,          // heals (and heals over time, pools, vials) and shields given in PvP
   MIT_DUR: 6,                      // a damage cut lasts at most this long in PvP
   TEAM_HP: { tank: 1.0, healer: 1.15, dps: 1.15 },   // max health in PvP, a share of the raid value (playerBaseHp + gear)

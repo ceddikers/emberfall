@@ -264,6 +264,16 @@ The highest ceiling: newbies reach 70% of pro damage. The boss's hitbox ring sho
 
 **Chosen-ally buffs** (`ALLY_BUFFS` in engine.js): Quickened (Accelerando / Echo Chamber / Time Warp: 12% haste, 15 s), Blessed (Benediction: +10% damage, 10 s), Wildheart (Rebirth on the living: +10% damage, 12 s), Galvanized (Quickpowder's target: +10% damage, 10 s). Data flow: the kit calls `k.allyBuff(target, id)`, which emits `{ type: 'allyBuff', target, id, kind, value, dur }`; a human's goes to the host as a `cev` (main.js accepts only a known id on a numeric target and resets its kind, value and duration from the table), a bot's goes straight in (raid-host.js botWorld). `RaidHost.onPlayerEvent` keeps it in `allyBuffs` per player id (the same buff again replaces the old one; nobody fallen) and broadcasts `{ t: 'abuff', to, id, kind, value, dur, from }`. Every client keeps `raid.abuffs`: your own kit reads the ones on you through `env.selfMods()` (`dmg` multiplies damage in `Kit.damage`, `haste` shortens casts and the GCD in `Kit.hasteMult`), bots through `RaidHost.allyMods(id)`; the party frames show a chip with the move's icon, your buff bar shows it too. Bots spend them on the damage dealer who has dealt the most (`BotAI.topDps`) while the party's burst is on (`view.burst`: a damage buff or a vulnerability on the boss), Accelerando on cooldown; a shielding move keeps a charge or waits for an upcoming tankbuster. The simulator has no allies, so it gives these no damage.
 
+**Fun pass (2026-10-24)** on the nine classes that ranked lowest. Small changes that give each one a payoff moment or remove a trap; the details are in the tooltips and the hero guide.
+- *Gloomsworn:* **Brimming** (10% less damage taken while the vessel is full) makes banking Gloom pay; **Hollow** breaks the vessel into 40 Gloom of dregs, refills both Gloom Strike charges and keeps Shade Step's echo up for the whole Hollow. Strike glows only in those windows; Shade Step glows with Gloom for two Strikes.
+- *Grovekeeper:* every Wrath that lands feeds Thornlash 1 s (up to its full 30 s). **Bloom drift:** a Bloom heal on someone above 90% goes to the most hurt ally instead.
+- *Reaper:* **Full Toll:** a Reap that cashes all four afflictions at gold adds a 180 blow and 3 Ultimate charge (the Gate's release look and sound). Shroud's cut is 70.
+- *Cleric:* a **Mend** cast with no Petals in hand counts a whole Petal toward Dawnstar.
+- *Runeguard:* in Runeblade, a **Rune Cleave** cast while the burning rune still runs lands its remaining ticks at once instead of clipping them.
+- *Oathbroker:* a gold **Paid** stamp when a Collect strike clears the Ledger's last line (at most every 6 s), and a number over the boss for what Default or Foreclose made it pay.
+- *Threadweaver:* the fray warning now uses the real snap length; a pair needs two Ties within 2 s (was 4); every tug heals whichever end of the thread is more hurt.
+- *Ranger / Thermist:* Barrage glows inside Hunter's Mark or when the Mark is over 25 s away; Aimed Shot glows at 5 Steady Aim; Equilibrium glows while the boss casts and the dial stands 3 or more steps out.
+
 ### Advanced DPS (added 2026-10-19)
 
 Two DPS built for players who want more to juggle. On the hero select their tiles carry small complexity pips (data.js `complexity`: Thermist 3, Driftblade 2), separate from the difficulty diamonds. Both run on the same rules as the first nine: six keys plus the dash, small numbers, a class gauge drawn as its own shape, kits run on each client and report to the host.
@@ -495,7 +505,7 @@ Single talents stay under +7% pro DPS; full builds +7 to +17%.
 
 | Key | Skill | Type | What it does |
 |---|---|---|---|
-| Q | Needle | GCD | 1.5 s cast, 270. Each Thread on you tugs a small heal (100) to whoever is on its far end. |
+| Q | Needle | GCD | 1.5 s cast, 270. Each Thread on you tugs a small heal (120) to whichever end of it is more hurt. |
 | W | Tie | oGCD | 2 charges, 6 s. Tie your target to yourself with a thread. Press it on a second ally within 4 s and those two are tied to each other instead. Up to 3 threads; a fourth drops the oldest. |
 | E | Mend Seam | GCD | 1.8 s cast, 440 heal that runs down every thread on the target at full strength. With 35 Spool it spends it, is instant and heals 35% more. |
 | R | Snap | oGCD | 25 s. Cut the threads on your target (all of yours if it has none); each releases what it carried in the last 5 s as a heal to both ends (at least 200). |
@@ -1017,7 +1027,7 @@ Each class picks one of two specializations, or keeps the base kit. Rules:
 - **Balanced against the base class:** both specs' pro DPS stay within 5% of their class in `tools/simulate.js` (a check enforces it). A spec can aim off on purpose with `balance` (the Inquisitor aims for 112% of the Cleric's damage, paid for with less healing).
 - **A new look:** each spec draws extra gear or effects on the hero (`SPEC_ART` in `heroes.js`); painted portraits and icons come from `docs/art/spec-icons.md`.
 - **Bots play them too:** a bot fills its slot with the base kit or either spec, a third of the time each.
-- **Earned, per hero:** a hero's specs are sealed until it clears the Hollow King (any difficulty). That opens one trial per spec, and passing a spec's trial unlocks it for that hero for good. See *Spec trials* below.
+- **Earned, per hero:** specs are sealed until any of the player's heroes clears the Hollow King (any difficulty; account-wide since 2026-10-24). That opens one trial per spec for every hero, and passing a spec's trial unlocks it for that hero for good. See *Spec trials* below.
 
 The hero page shows the base class and both specs as tabs. A spec shows what it specializes in, its passive, and every move it adds or changes (new moves say what they replace); changed keys get a gold mark. A sealed tab is dimmed with an outlined diamond (its tooltip says how it opens); a tab whose trial is open has a glowing blue diamond, and its page ends in a card with the trial's name, its first lore line and **Begin the trial**. The Choose button stays off for a spec that isn't unlocked, so you can read every spec before you earn it.
 
