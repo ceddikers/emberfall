@@ -6235,7 +6235,7 @@ function lkPlaced(k, ab, l) {
 
 // Lighthouse (T, a window of 8s): fills from the healing your lanterns do (about 1% for every dozen ally-seconds in a glow)
 ULTIMATES.lanternkeeper = {
-  id: 'lighthouse', name: 'Lighthouse', slot: 7, type: 'ogcd', ult: true, mode: 'window', target: 'self', anim: 'big', icon: 'flare',
+  id: 'lighthouse', name: 'Lighthouse', slot: 7, type: 'ogcd', ult: true, mode: 'window', target: 'self', anim: 'big', icon: 'lighthouse',
   lock: 0.9, dr: 0.3,
   charge: { rate: 0.4, keep: 0.5 },
   desc: 'A tall beam rises from your lantern. For 8s the whole room counts as inside every glow, every lantern heals double and no wick burns down, and Flare is ready again. ' +
@@ -6262,7 +6262,7 @@ ULTIMATES.lanternkeeper = {
 // talent moves (rows III and V)
 talentMoves('lanternkeeper', {
   lanternkeeper_wisp: {
-    id: 'wisp', replaces: 'relight', icon: 'relight', name: 'Will-o\'-Wisp', type: 'gcd', target: 'self', cd: 10, anim: 'cast', talent: true,
+    id: 'wisp', replaces: 'relight', icon: 'wisp', name: 'Will-o\'-Wisp', type: 'gcd', target: 'self', cd: 10, anim: 'cast', talent: true,
     usable: k => k.g.emb >= 1,
     desc: 'Instant, 1 Ember: a wandering wisp floats to the most hurt ally and heals them {h:50} every second for 6s.',
     glow: k => k.g.emb >= 2,
@@ -6274,7 +6274,7 @@ talentMoves('lanternkeeper', {
     fx: { type: 'ring', color: '#fff0c8', r: 30, onTarget: false },
   },
   lanternkeeper_festival: {
-    id: 'festival', replaces: 'set', icon: 'set', name: 'Lantern Festival', type: 'gcd', target: 'self', cd: 12, anim: 'big', talent: true,
+    id: 'festival', replaces: 'set', icon: 'festival', name: 'Lantern Festival', type: 'gcd', target: 'self', cd: 12, anim: 'big', talent: true,
     usable: k => k.g.emb >= 1,
     desc: 'Instant, 1 Ember: release five floating lanterns that drift over the party for 12s. Each heals everyone under it {h:11} every second.',
     glow: k => k.g.emb >= 1 && !k.g.lan.some(l => l.kind === 'float'),
@@ -6667,7 +6667,7 @@ TAUNT_CARRY.kenseier = 'cut';
 
 // Thousand Cuts (T, instant): Perfect deflects fill it (1.8% each, 3.6% on a tankbuster, a little on its own while you fight)
 ULTIMATES.kenseier = {
-  id: 'thousandcuts', name: 'Thousand Cuts', slot: 7, type: 'ogcd', ult: true, mode: 'instant', target: 'enemy', range: MELEE, anim: 'big', icon: 'deathblow',
+  id: 'thousandcuts', name: 'Thousand Cuts', slot: 7, type: 'ogcd', ult: true, mode: 'instant', target: 'enemy', range: MELEE, anim: 'big', icon: 'thousandcuts',
   lock: 1.0, dr: 0.3,
   charge: { rate: 0.35, keep: 0.5 },
   desc: 'A thousand cuts in the space of a breath: the boss\'s Posture fills at once and it Breaks, and then a free Deathblow lands at double strength, {d:1800}, healing you for 15%. The Deathblow does not end this Break. (A cast that is under way holds the Break until it ends.) ' +
@@ -6684,7 +6684,7 @@ ULTIMATES.kenseier = {
 
 // talents that grant a new move (row III's Whirlwind Slash in Mikiri Step's place, row V's Ember Duel in Guard Stance's)
 TALENT_ABILITIES.kenseier_whirlwind = { cls: 'kenseier', ab: {
-  id: 'whirlwind', replaces: 'mikiri', icon: 'mikiri', name: 'Whirlwind Slash', type: 'ogcd', target: 'self', cd: 12, lock: 0.5, anim: 'attack', talent: true,
+  id: 'whirlwind', replaces: 'mikiri', icon: 'whirlwind', name: 'Whirlwind Slash', type: 'ogcd', target: 'self', cd: 12, lock: 0.5, anim: 'attack', talent: true,
   desc: 'Spin with the blade drawn: every enemy within reach is cut for {d:50}, and adds 4 Posture to the boss for each one hit (the adds count).',
   effect(k) {
     const near = (k.env.enemiesNear ? k.env.enemiesNear(110) : null) || [{ id: 'boss' }];
@@ -6695,7 +6695,7 @@ TALENT_ABILITIES.kenseier_whirlwind = { cls: 'kenseier', ab: {
   fx: { type: 'ring', color: '#ffb070', r: 110 },
 } };
 TALENT_ABILITIES.kenseier_duel = { cls: 'kenseier', ab: {
-  id: 'duel', replaces: 'guard', icon: 'guard', name: 'Ember Duel', type: 'ogcd', target: 'self', cd: 90, lock: 0.5, anim: 'big', talent: true,
+  id: 'duel', replaces: 'guard', icon: 'duel', name: 'Ember Duel', type: 'ogcd', target: 'self', cd: 90, lock: 0.5, anim: 'big', talent: true,
   desc: 'For 10s the boss strikes to a steady beat, every 2s exactly, and every Perfect deflect adds double Posture.',
   effect(k) {
     k.g.duelUntil = k.now + KENSEI.DUEL; k.buff('duel', KENSEI.DUEL);

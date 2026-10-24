@@ -87,6 +87,7 @@ function flame(ctx, x, y, r, t) {
 const HERO_ART = {
   bastion(ctx, st) {
     const steel = '#9fb0c6', blue = '#3d6fb6', gold = '#e8c15a';
+    const crus = HERO_SPEC === 'crusader';   // the Crusader's cape is gold and a white sun-tabard hangs down the back (the sword gets a sun on its guard)
     const s = swing(actP(st, 'attack'));
     const bash = pulse(actP(st, 'bash'));
     const pb = actP(st, 'brace');
@@ -94,14 +95,20 @@ const HERO_ART = {
     const big = pulse(actP(st, 'big'));
     const front = Math.max(bash, brace);
     const wave = Math.sin(st.t * 4) * 1.5 + (st.moving ? Math.sin(st.t * 11) * 2 : 0);
-    poly(ctx, [-4, -12, -19, -13 + wave * 0.5, -23 + wave, 0, -19, 13 - wave * 0.5, -4, 12], blue, OUT, 2);
+    poly(ctx, [-4, -12, -19, -13 + wave * 0.5, -23 + wave, 0, -19, 13 - wave * 0.5, -4, 12], crus ? '#e6bd4c' : blue, OUT, 2);
+    if (crus) {
+      line(ctx, -6, -10, -20 + wave * 0.5, -5, '#f6dc8a', 1.2); line(ctx, -6, 10, -20 + wave * 0.5, 5, '#f6dc8a', 1.2);
+      rrect(ctx, -17, -4.6, 11, 9.2, 2, '#f6efd8', OUT, 1.3);
+      circle(ctx, -11.5, 0, 2.3, gold, OUT, 0.8);
+      for (let i = 0; i < 8; i++) { const a = i * TAU / 8; line(ctx, -11.5 + Math.cos(a) * 2.6, Math.sin(a) * 2.6, -11.5 + Math.cos(a) * 4, Math.sin(a) * 4, gold, 1); }
+    }
     feet(ctx, st, '#5d6878');
     torso(ctx, steel);
     for (const sy of [-1, 1]) { ellipse(ctx, 0, 12 * sy, 6, 5, 0, '#8796ab', OUT, 1.5); circle(ctx, 0.5, 12 * sy, 1.4, gold, OUT, 0.8); }
     // the plumed great-helm, carried at the hip
     circle(ctx, -6, 13, 4, steel, OUT, 1.5);
     line(ctx, -3.6, 11.2, -3.6, 14.8, '#2a3140', 1.4);
-    ellipse(ctx, -9, 13, 3.6, 1.6, 0, '#c43b3b', OUT, 1.2);
+    ellipse(ctx, -9, 13, 4.2, 1.8, 0, '#c43b3b', OUT, 1.2); ellipse(ctx, -10.5, 10.8, 3.4, 1.4, -0.5, '#d9514a', OUT, 1);
     // sword (with a bright arc while it cuts)
     const dir = swingDir(st), rot = 0.35 + dir * s * 1.1 - big * 1.3, pa = actP(st, 'attack');
     smear(ctx, 7, 12, 24, 0.35 + dir * 1.1, rot, '#cfe0ff', strikeAmt(pa), 7);
@@ -109,6 +116,7 @@ const HERO_ART = {
     poly(ctx, [2, -2, 22, -2, 27, 0, 22, 2, 2, 2], '#e3e9f0', OUT, 1.5);
     line(ctx, 4, 0, 21, 0, '#b8c2cf', 1);
     rrect(ctx, -0.5, -5.5, 3, 11, 1, gold, OUT, 1.2);
+    if (crus) { circle(ctx, 1, 0, 3.4, gold, OUT, 1); circle(ctx, 1, 0, 1.4, '#fff3c0'); }
     rrect(ctx, -6, -1.6, 5.5, 3.2, 1, '#6b4a2b', OUT, 1);
     ctx.restore();
     hand(ctx, 7, 12, steel);
@@ -116,7 +124,9 @@ const HERO_ART = {
     ctx.save(); ctx.translate(7 + 9 * front, -12 + 11 * front); ctx.rotate(-0.45 * (1 - front));
     rrect(ctx, -3.5, -13, 7, 26, 3, blue, OUT, 2);
     rrect(ctx, -1.8, -10.5, 3.6, 21, 1.5, null, gold, 1.4);
-    circle(ctx, 0, 0, 2.6, gold, OUT, 1);
+    // a gold fleur-de-lis, as on the painted shield
+    line(ctx, 0, -7, 0, 8, gold, 1.5); poly(ctx, [0, -10, 1.9, -6, 0, -3.4, -1.9, -6], gold, OUT, 0.6);
+    for (const sx of [-1, 1]) ellipse(ctx, 2.2 * sx, 0.5, 1.6, 0.9, sx * 0.7, gold, OUT, 0.5);
     ctx.restore();
     // bare head: short, tousled platinum-blond hair
     for (const sy of [-1, 0, 1]) poly(ctx, [-4, 3 * sy - 2.4, -10.5, 4.5 * sy, -4, 3 * sy + 2.4], '#e6d390', OUT, 1.2);
@@ -124,16 +134,19 @@ const HERO_ART = {
   },
 
   bloodreaver(ctx, st) {
-    const leather = '#6e2b2b', iron = '#5b5f66', bone = '#e8dcc0';
+    const berserk = HERO_SPEC === 'berserker', hemo = HERO_SPEC === 'hemomancer';
+    const leather = berserk ? '#c4825c' : hemo ? '#2a2226' : '#5e2626', iron = '#5b5f66', bone = hemo ? '#8a7a56' : '#a8946a';
     const s = swing(actP(st, 'attack'));
     const wave = Math.sin(st.t * 4) * 1.5 + (st.moving ? Math.sin(st.t * 11) * 2 : 0);
-    poly(ctx, [-4, -11, -17, -12, -20 + wave, -6, -15, -3, -22 + wave, 1, -16, 5, -20 + wave, 10, -4, 11], '#4a1416', OUT, 2);
+    poly(ctx, [-4, -11, -17, -12, -20 + wave, -6, -15, -3, -22 + wave, 1, -16, 5, -20 + wave, 10, -4, 11], hemo ? '#8a1424' : '#4a1416', OUT, 2);
     feet(ctx, st, '#3a1a1a');
     torso(ctx, leather, 9.5, 14.5);
-    // heavy fur mantle across the shoulders, a bronze clasp
-    const fur = '#7a6450';
-    ellipse(ctx, -3, 0, 7, 16, 0, fur, OUT, 1.8);
-    for (const sy of [-1, 1]) for (let i = 0; i < 3; i++) circle(ctx, -1 - i * 3.2, (13.5 - i * 0.8) * sy, 3, i % 2 ? fur : shade(fur, 0.14), OUT, 1.1);
+    // heavy fur mantle across the shoulders (the Berserker keeps it on one shoulder, bare and scarred on the other; the Hemomancer wears a red cloak), a bronze clasp
+    const fur = hemo ? '#8a1a2a' : '#7a6450';
+    ellipse(ctx, -3, 0, 7, 16, 0, berserk ? leather : fur, OUT, 1.8);
+    for (const sy of [-1, 1]) for (let i = 0; i < 3; i++) { if (berserk && sy > 0) continue; circle(ctx, -1 - i * 3.2, (13.5 - i * 0.8) * sy, 3, i % 2 ? fur : shade(fur, 0.14), OUT, 1.1); }
+    if (berserk) { ctx.save(); ctx.strokeStyle = '#9a3a2a'; ctx.lineWidth = 1; ctx.lineCap = 'round'; for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.moveTo(-5 + i * 3, 8 + i * 0.8); ctx.lineTo(-2 + i * 3, 13 + i * 0.4); ctx.stroke(); } ctx.restore(); }
+    if (hemo) { line(ctx, 2, -12, 3, 12, '#9a8a60', 0.9); for (const sy of [-1, 1]) poly(ctx, [1, 8 * sy, 3.4, 10 * sy, 1, 12.4 * sy, -1, 10 * sy], '#c0102a', OUT, 0.8); }
     circle(ctx, 4, -6, 2, '#c08a3a', OUT, 1);
     // two-handed axe (a heavy red-tinged arc while it chops)
     const dir = swingDir(st), rot = 0.1 + dir * s * 1.3;
@@ -147,7 +160,7 @@ const HERO_ART = {
     ctx.restore();
     // a wild red mane spilling out behind the helm, two braids bound in bronze
     const mane = '#b8461f';
-    hairBack(ctx, mane, 10, 7);
+    hairBack(ctx, mane, berserk ? 13 : 10, berserk ? 8 : 7);
     for (const sy of [-1, 1]) braid(ctx, -1, 6.5 * sy, -8, 10.5 * sy, mane, '#c08a3a', 3);
     if (HERO_SPEC === 'berserker') {
       // the Berserker fights bare-headed: the wild mane, nothing between it and the sky
@@ -162,21 +175,30 @@ const HERO_ART = {
       }
       circle(ctx, 1, 0, 7.5, iron, OUT, 2);
       circle(ctx, 2.5, -2.5, 2.6, '#7d828b');
+      rrect(ctx, 3, -0.9, 5.4, 1.8, 0.8, '#3e4248', OUT, 0.8);   // the nose-guard
       ellipse(ctx, 6.4, 0, 1.9, 3.8, 0, '#c99a7a');
       circle(ctx, 6.4, -1.9, 0.8, '#2a1a14'); circle(ctx, 6.4, 1.9, 0.8, '#2a1a14');
+      if (!hemo) for (const sy of [-1, 1]) line(ctx, 5.4, 3.4 * sy, 7.6, 1.8 * sy, '#d8482a', 1);   // red war paint across the cheeks
     }
-    ellipse(ctx, 8.6, 0, 2.6, 3.8, 0, mane, OUT, 1.2);   // the beard
+    ellipse(ctx, 8.8, 0, 3, 4.2, 0, mane, OUT, 1.2);   // the beard
   },
 
   runeguard(ctx, st) {
-    const robe = '#5b3fa0', trim = '#c9b8ff', silver = '#b9c0cc';
+    // a deep-violet cloak and hood with a pale rune-patterned border, black under-robes, engraved silver pauldrons and a
+    // silver compass-star clasp (Spellwarden: the cloak goes midnight blue with an ice-blue border; Runeblade: hood down, see its spec look)
+    const sw = HERO_SPEC === 'spellwarden';
+    const robe = sw ? '#2c3270' : '#4a2f8a', trim = sw ? '#bcd8ff' : '#d3c6ff', silver = '#b9c0cc', hoodC = sw ? '#3a3a7e' : '#4b2f90', skin = '#dcae86';
     const cast = castAmt(st);
     const fr = pulse(actP(st, 'big'));
-    feet(ctx, st, '#2e2250');
+    feet(ctx, st, '#1c1a30');
     ellipse(ctx, -2, 0, 11, 15, 0, robe, OUT, 2);
-    ellipse(ctx, -2, 0, 8, 12, 0, null, rgba('#c9b8ff', 0.5), 1.2);
-    ellipse(ctx, 0, -11, 5.5, 4.5, 0, silver, OUT, 1.5);
-    ellipse(ctx, 0, 11, 5.5, 4.5, 0, silver, OUT, 1.5);
+    ellipse(ctx, -2, 0, 8, 12, 0, null, rgba(trim, 0.55), 1.4);
+    for (const sy of [-1, 1]) {
+      ellipse(ctx, 0, 11 * sy, 6.2, 4.8, 0, silver, OUT, 1.5);
+      line(ctx, -2.4, 11 * sy, 2.4, 11 * sy, '#6a7080', 0.8); line(ctx, 0, 11 * sy - 2.4, 0, 11 * sy + 2.4, '#6a7080', 0.8);   // the engraved star on each pauldron
+    }
+    // the compass-star clasp and its dangling cord at the chest
+    circle(ctx, 6.4, 0, 2.5, silver, OUT, 1); circle(ctx, 6.4, 0, 1, sw ? '#7ab0ff' : '#9b6cf0');
     // floating hex shield on the left, swings to the front for Mirror Aegis
     const hx = 7 + fr * 9, hy = -19 + fr * 19;
     glow(ctx, hx, hy, 16, '#a98bff', 0.35 + fr * 0.3);
@@ -184,15 +206,16 @@ const HERO_ART = {
     hexagon(ctx, hx, hy, 4.5, null, rgba('#ffffff', 0.7), 1);
     for (const sy of [-1, 1]) {
       glow(ctx, 8 + cast * 5, 10 * sy, 7, '#b18cff', 0.4 + cast * 0.5);
-      hand(ctx, 8 + cast * 5, 10 * sy, '#d9c8ff');
+      hand(ctx, 8 + cast * 5, 10 * sy, skin);
     }
-    // violet hood up, its rim banded in pale lavender runes; the face shows, navy-black hair across the brow
-    circle(ctx, 0, 0, 8, '#4b3590', OUT, 2);
-    circle(ctx, -1.5, -2.4, 2.6, '#5d46a8');
-    ellipse(ctx, 4.8, 0, 2.6, 4.6, 0, '#ecd2bc');
+    // violet hood up, its rim banded in pale runes; the face shows, navy-black hair across the brow
+    circle(ctx, 0, 0, 8, hoodC, OUT, 2);
+    circle(ctx, -1.5, -2.4, 2.6, shade(hoodC, 0.12));
+    ellipse(ctx, 4.8, 0, 2.6, 4.6, 0, skin);
     ellipse(ctx, 3.6, 0, 1.5, 4.6, 0, '#1c2140');
     poly(ctx, [3.6, -3.2, 6.6, -1.2, 3.8, 0.4], '#1c2140');
-    ctx.strokeStyle = '#d9ccff'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(0.6, 0, 6.6, -1.15, 1.15); ctx.stroke();
+    ctx.strokeStyle = trim; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0.6, 0, 6.6, -1.15, 1.15); ctx.stroke();
+    for (const a of [-0.95, -0.55, -0.15, 0.25, 0.65, 1.05]) circle(ctx, 0.6 + Math.cos(a) * 6.6, Math.sin(a) * 6.6, 0.5, hoodC);   // the rune diamonds along the border
     // slate rune stones orbiting, their carvings filled with lavender
     for (let i = 0; i < 3; i++) {
       const a = st.t * 1.6 + i * TAU / 3, r = 24 + cast * 8;
@@ -204,18 +227,26 @@ const HERO_ART = {
   },
 
   ranger(ctx, st) {
-    const cloak = '#3f7a3a', leather = '#7a5636', hood = '#2f5f2b', skin = '#c98e64', hair = '#a8441e';
+    // a dark-green cloak over cream shirt sleeves and a brown leather corset, gold buckles and bracers; tan skin, long auburn hair
+    // (Venomstrike: the cloak's deep hood is up over the head, drawn by its spec look)
+    const venom = HERO_SPEC === 'venomstrike';
+    const cloak = venom ? '#25452b' : '#2f5f38', leather = '#6a4528', hood = venom ? '#1f3a26' : '#2f5f38', skin = '#b97a4c', hair = '#b0401c', gold = '#d8b04a', shirt = '#eadfc4';
     const pa = actP(st, 'attack');
     const nocked = pa >= 0 && pa < 0.6;
     const pull = nocked ? easeOut(pa / 0.6) : 0;
-    // quiver on the back
+    // quiver on the back, a gold band on it, white-fletched arrows
     ctx.save(); ctx.translate(-8, 5); ctx.rotate(0.5);
     rrect(ctx, -9, -3, 17, 6, 2, leather, OUT, 1.5);
-    for (const o of [-1.5, 1.5]) poly(ctx, [-9, o - 1.5, -13, o, -9, o + 1.5], '#6fbf52', OUT, 1);
+    rrect(ctx, 3, -3.2, 2.2, 6.4, 0.8, gold, OUT, 0.8);
+    for (const o of [-1.5, 1.5]) { poly(ctx, [-9, o - 1.5, -13, o, -9, o + 1.5], '#f2ecdc', OUT, 1); line(ctx, -9, o, -12, o, '#3f7a3a', 0.8); }
     ctx.restore();
     feet(ctx, st, '#4b3a28');
     poly(ctx, [-6, -10, -16, -4, -16, 4, -6, 10], shade(cloak, -0.15), OUT, 1.5);
     ellipse(ctx, -2, 0, 10, 14.5, 0, cloak, OUT, 2);
+    // cream shirt sleeves at the shoulders with a gold-buckled leather strap across the chest and a gold leaf clasp
+    for (const sy of [-1, 1]) { ellipse(ctx, 2, 11.5 * sy, 5.2, 4, 0.3 * sy, shirt, OUT, 1.3); rrect(ctx, 0.2, 10 * sy - 1.2, 3, 2.4, 0.6, gold, OUT, 0.7); }
+    line(ctx, -5, -9, 4, 6, leather, 2.6); rrect(ctx, -0.6, -2.4, 3, 3.6, 0.7, gold, OUT, 0.8);
+    ellipse(ctx, 3.2, -6.5, 1.9, 1.3, -0.5, gold, OUT, 0.8);
     // bow (string pulls back while attacking)
     // after the release the string thrums for a moment and the bow kicks back
     const after = pa >= 0.6 ? (pa - 0.6) / 0.4 : -1;
@@ -226,37 +257,54 @@ const HERO_ART = {
     ctx.lineCap = 'round'; ctx.lineWidth = 5.5; ctx.strokeStyle = OUT; ctx.stroke();
     ctx.lineWidth = 3; ctx.strokeStyle = leather; ctx.stroke();
     tracePath(ctx, [11, -15, sx, 0, 11, 15]); ctx.lineWidth = 1; ctx.strokeStyle = '#efe8d8'; ctx.stroke();
+    for (const sy of [-1, 1]) poly(ctx, [10, 14 * sy, 12.4, 14.4 * sy, 14, 17.8 * sy, 11, 17 * sy], gold, OUT, 0.9);   // gold caps on the limb tips
     if (nocked) {
       line(ctx, sx, 0, sx + 22, 0, '#d8c8a0', 2);
-      poly(ctx, [sx + 22, -2.5, sx + 27, 0, sx + 22, 2.5], '#cfd6de', OUT, 1);
+      poly(ctx, [sx + 22, -2.5, sx + 28, 0, sx + 22, 2.5], gold, OUT, 1);
     }
-    hand(ctx, 16.5, 0, '#6b4a30');   // brown leather gloves
-    hand(ctx, nocked ? sx : 6, nocked ? 0 : 9, '#6b4a30');
+    ellipse(ctx, 18, 0, 2.6, 5.4, 0, gold, OUT, 1);   // the gold-wrapped grip
+    hand(ctx, 16.5, 0, '#5a3c26');   // dark brown leather gloves
+    hand(ctx, nocked ? sx : 6, nocked ? 0 : 9, '#5a3c26');
+    for (const [hx, hy] of [[16.5, 0], [nocked ? sx : 6, nocked ? 0 : 9]]) line(ctx, hx - 3.5, hy - 2.2, hx - 3.5, hy + 2.2, gold, 1.5);   // a gold bracer cuff on each wrist
     // hood down around the shoulders; long auburn hair with one thick braid, pointed half-elf ears
     ellipse(ctx, -5, 0, 4.5, 9, 0, hood, OUT, 1.5);
-    hairBack(ctx, hair, 8, 6);
+    hairBack(ctx, hair, 9, 6.5);
     braid(ctx, -2, 6, -11, 10, hair, '#c9a24a', 5);
+    ellipse(ctx, -5, -5.5, 1.8, 1.2, 0, '#d8b04a', OUT, 0.6);   // a gold hair clasp
     hairHead(ctx, hair, skin, 7.6);
-    for (const sy of [-1, 1]) poly(ctx, [0, 6.2 * sy, 1.4, 12.5 * sy, 4.2, 6 * sy], '#d8a074', OUT, 1.1);   // pointed half-elf ears
+    for (const sy of [-1, 1]) poly(ctx, [0, 6.2 * sy, 1.4, 12.5 * sy, 4.2, 6 * sy], '#c4885a', OUT, 1.1);   // pointed half-elf ears
   },
 
   shadowblade(ctx, st) {
-    const cloth = '#2b2433', scarf = '#a32640';
+    // black lacquered armour with silver diamond plates and buckled straps, a long crimson scarf, black gloves, long black hair
+    // (Bladedancer: curved blades, silver bracers and a violet scarf; Nightstalker: a red-lined black hood, see its spec look)
+    const dancer = HERO_SPEC === 'bladedancer';
+    const cloth = '#1f1a28', scarf = dancer ? '#7a45b8' : '#b0203a', silver = '#c4c8d4', skin = '#dcb496', glove = '#16131c';
     const pa = actP(st, 'attack');
     let l = 0, r = 0;
     if (pa >= 0) { if (pa < 0.5) l = pulse(pa / 0.5); else r = pulse((pa - 0.5) / 0.5); }
-    const pts = [];
-    for (let i = 0; i < 7; i++) pts.push(-3 - i * 4, Math.sin(st.t * 8 - i * 0.9) * i * 0.8);
-    limb(ctx, pts, scarf, 3.5);
-    feet(ctx, st, '#1a1620');
+    const pts = [], pts2 = [];
+    for (let i = 0; i < 8; i++) { pts.push(-3 - i * 4, Math.sin(st.t * 8 - i * 0.9) * i * 0.8); pts2.push(-3 - i * 3.2, -3 + Math.sin(st.t * 7 - i * 1.1 + 1) * i * 0.9 - i * 0.5); }
+    limb(ctx, pts2, shade(scarf, -0.15), 2.8);
+    limb(ctx, pts, scarf, 3.8);
+    feet(ctx, st, '#14111a');
     torso(ctx, cloth, 8.5, 13);
     ellipse(ctx, -1, 0, 6, 10, 0, null, rgba('#9b5cd0', 0.65), 1.2);   // purple trim
+    // silver diamond plates on the shoulders, a buckled strap across the chest
+    for (const sy of [-1, 1]) { poly(ctx, [-1, 10.6 * sy, 2.4, 12.4 * sy, 5.6, 10.6 * sy, 2.4, 8.4 * sy], silver, OUT, 1); poly(ctx, [1.2, 10.6 * sy, 2.4, 11.6 * sy, 3.8, 10.6 * sy, 2.4, 9.6 * sy], '#5a5668'); }
+    line(ctx, -5, -8, 4, 7, '#2e2838', 2.2); rrect(ctx, -0.8, -2, 3, 3.4, 0.7, silver, OUT, 0.8);
     const dagger = (x, y, rot) => {
       ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
-      poly(ctx, [1, -1.8, 13, 0, 1, 1.8], '#dfe3ec', OUT, 1.3);
-      rrect(ctx, -0.5, -3.5, 2, 7, 0.8, '#7b3fa0', OUT, 1);
+      if (dancer) {
+        ctx.beginPath(); ctx.moveTo(1, -1.8); ctx.quadraticCurveTo(14, -3.6, 21, 3.4); ctx.quadraticCurveTo(12, 0.6, 1, 1.8); ctx.closePath();
+        ctx.fillStyle = '#e8ecf6'; ctx.fill(); ctx.strokeStyle = OUT; ctx.lineWidth = 1.3; ctx.stroke();
+      } else poly(ctx, [1, -1.8, 13, 0, 1, 1.8], '#dfe3ec', OUT, 1.3);
+      rrect(ctx, -0.5, -3.5, 2, 7, 0.8, '#8a8c9c', OUT, 1);
+      rrect(ctx, -5, -1.2, 5, 2.4, 0.8, '#2a2438', OUT, 0.8);
+      line(ctx, -5, 0, -8, 1.4, '#7b3fa0', 1.3);   // the violet tassel on the pommel
       ctx.restore();
-      hand(ctx, x, y, '#3d3447');
+      hand(ctx, x, y, glove);
+      if (dancer) line(ctx, x - 3.4, y - 2.2, x - 3.4, y + 2.2, silver, 1.6);   // a silver bracer ring at the wrist
     };
     // autos stab with one blade (alternating); abilities stab with both
     if (st.action && st.action.alt != null && st.action.type === 'attack') { if (st.action.alt) { r = Math.max(l, r); l = 0; } else { l = Math.max(l, r); r = 0; } }
@@ -268,32 +316,42 @@ const HERO_ART = {
     }
     dagger(8 + l * 9, -9 + l * 5, -0.15 + l * 0.15);
     dagger(8 + r * 9, 9 - r * 5, 0.15 - r * 0.15);
-    // shaggy black hair spiking back, a pale face, the mask pulled down under the chin
-    for (const sy of [-1, -0.35, 0.35, 1]) poly(ctx, [-3, 3.5 * sy - 1.6, -11, 6 * sy, -3, 3.5 * sy + 1.6], '#1a1720', OUT, 1.1);
-    hairHead(ctx, '#1a1720', '#e8d8cc', 7.5);
+    // long black hair, a pale-gold face with one silver earring
+    hairBack(ctx, '#14111c', 10, 6.5);
+    hairHead(ctx, '#14111c', skin, 7.5);
     circle(ctx, -1.6, -2.3, 1.6, '#3a3550');   // a blue-black sheen
+    circle(ctx, 1, 7.4, 0.9, silver, OUT, 0.5);
   },
 
   pyromancer(ctx, st) {
-    const robe = '#b8401f', trim = '#f2c84b', hat = '#7a2414', skin = '#f0c9a0';
+    // a crimson cloak over a black bodice, tall black collar edged in gold; a gold-banded crimson witch hat with a red gem
+    // (Sigilmancer: the hat and cloak go midnight blue, Cataclysm: a deeper blood red)
+    const sig = HERO_SPEC === 'sigilmancer', cata = HERO_SPEC === 'cataclysm';
+    const robe = sig ? '#262a4c' : cata ? '#8a1c16' : '#a82a1a', trim = '#f2c84b', hat = sig ? '#232846' : cata ? '#8a1c1c' : '#9a2020', skin = '#f0c9a0', inner = '#1a1218';
     const cast = castAmt(st);
-    feet(ctx, st, '#4a1a10');
+    feet(ctx, st, '#3a1410');
     ellipse(ctx, -2, 0, 10.5, 14.5, 0, robe, OUT, 2);
     ellipse(ctx, -2, 0, 7.5, 11.5, 0, null, rgba(trim, 0.7), 1.2);
-    // tome in the left hand, fire orb in the right
-    rrect(ctx, 5, -15, 7, 8, 1.5, '#5a2a6b', OUT, 1.3);
+    // the tall pointed collar at each shoulder, black with a gold edge; a red gem clasp between them
+    for (const sy of [-1, 1]) poly(ctx, [-4, 8.5 * sy, 1, 15.5 * sy, 7, 11.5 * sy, 5, 7.5 * sy], inner, rgba(trim, 0.9), 1.1);
+    circle(ctx, 5.5, 0, 1.6, '#e0283a', OUT, 0.8);
+    // left hand open at the side with a flared orange cuff, the right holding a fire up on one finger
+    ellipse(ctx, 4, -12, 4.6, 3.4, -0.4, sig ? '#d65a2a' : '#e8741f', OUT, 1.2);
     hand(ctx, 8, -9.5, skin);
     const ox = 14 + cast * 8, oy = 9 - cast * 6;
+    ellipse(ctx, ox - 8, oy + 3, 4.6, 3.4, 0.5, sig ? '#d65a2a' : '#e8741f', OUT, 1.2);
     hand(ctx, ox - 5, oy + 1, skin);
     flame(ctx, ox, oy, 4.5 + cast * 3, st.t);
     // long, wavy flame-red hair spilling out from under the brim
-    hairBack(ctx, '#d2401e', 11, 8);
-    // wide witch hat seen from above, a red gem on its gold band, tip flopping backwards
+    hairBack(ctx, '#d8381a', 11, 8);
+    // wide witch hat seen from above, a gold-stitched edge, a gem brooch on the band, a crystal dangling from the tip flopped backwards
     circle(ctx, 0, 0, 10.5, hat, OUT, 2);
-    circle(ctx, 0, 0, 7, null, trim, 1.5);
-    circle(ctx, 7, 0, 1.6, '#e0283a', OUT, 0.9);
+    circle(ctx, 0, 0, 9.4, null, rgba(trim, 0.55), 0.8);
+    circle(ctx, 0, 0, 7, null, '#b88a3a', 1.7);
     poly(ctx, [-1, -5, -1, 5, -14, 3], shade(hat, 0.12), OUT, 1.5);
     circle(ctx, -1, 0, 5, shade(hat, 0.12), OUT, 1.5);
+    poly(ctx, [-15.5, 3, -14, 5, -15.5, 8, -17, 5], '#d8d0c0', OUT, 0.8);   // the dangling crystal
+    circle(ctx, 7, 0, 2.5, trim, OUT, 0.9); circle(ctx, 7, 0, 1.3, '#e0283a');   // the gem brooch
   },
 
   cleric(ctx, st) {
@@ -301,9 +359,15 @@ const HERO_ART = {
     const cast = castAmt(st);
     feet(ctx, st, '#8a7a5a');
     ellipse(ctx, -2, 0, 10.5, 14.5, 0, robe, OUT, 2);
-    rrect(ctx, -12, -2.5, 20, 5, 2, blue);
-    ellipse(ctx, 0, -11.5, 5, 4, 0, gold, OUT, 1.3);
-    ellipse(ctx, 0, 11.5, 5, 4, 0, gold, OUT, 1.3);
+    // the stole down the back: blue edged in gold (the Aegis wears plain white with gold diamonds, the Inquisitor a red-orange stole)
+    const aegis = HERO_SPEC === 'aegis', inq = HERO_SPEC === 'inquisitor';
+    rrect(ctx, -12, -2.5, 20, 5, 2, aegis ? '#f8f2e0' : inq ? '#d8501c' : blue);
+    rrect(ctx, -12, -2.5, 20, 5, 2, null, gold, 0.9);
+    rrect(ctx, -9.5, -12.5, 4.6, 25, 2, aegis ? '#f8f2e0' : inq ? '#d8501c' : blue, OUT, 1.2);   // and over both shoulders
+    rrect(ctx, -8.6, -11.8, 2.8, 23.6, 1.4, null, gold, 0.8);
+    if (aegis) for (const x of [-9, -4, 1]) poly(ctx, [x, 0, x + 1.5, -1.4, x + 3, 0, x + 1.5, 1.4], gold);
+    if (inq) { circle(ctx, -5, 0, 1.7, null, gold, 1); circle(ctx, -5, 0, 0.5, gold); }
+    for (const sy of [-1, 1]) { ellipse(ctx, 0, 11.5 * sy, 5, 4, 0, gold, OUT, 1.3); circle(ctx, 0, 11.5 * sy, 1.7, '#f7de8a', OUT, 0.7); }   // gold sun pauldrons
     // sun staff
     const tx = 22 + cast * 3;
     limb(ctx, [-5, 13, tx, 11], '#c9a040', 2.5);
@@ -321,51 +385,79 @@ const HERO_ART = {
     // white hood up, deep brown face, a neat grey beard
     circle(ctx, 1, 0, 7.6, '#f6f2e8', OUT, 2);
     circle(ctx, -1, -2.3, 2.6, '#ffffff');
+    ctx.save(); ctx.strokeStyle = gold; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(1, 0, 6.6, -2.1, 2.1); ctx.stroke(); ctx.restore();   // the hood's gold edge
     ellipse(ctx, 5.6, 0, 2.4, 4.2, 0, skin);
+    for (const sy of [-1, 1]) ellipse(ctx, 4.2, 4.3 * sy, 2.2, 1.1, 0.5 * sy, '#c4c4c8');   // grey hair at the temples
     ellipse(ctx, 7.8, 0, 1.7, 3, 0, '#d4cfc6', OUT, 0.8);
     // halo
     glow(ctx, 1, 0, 16, '#ffe680', 0.25 + cast * 0.3);
     circle(ctx, 1, 0, 10.5 + Math.sin(st.t * 3) * 0.6, null, gold, 2);
   },
 
+  // Grovekeeper: an old woman in a deep-green hooded cloak with a mantle of layered leaves, pale antlers rising from the
+  // hood, a long silver braid with blossoms, a twisted ivy-wound staff. Lifebinder goes hoodless (silver hair, pink under-robe,
+  // a crown of leaves and blossoms); Moonwell wears a blue hood banded in silver.
   grovekeeper(ctx, st) {
-    const robe = '#6b5a3a', leaf = '#5fbf4a', bark = '#5a3d22', bone = '#d8c8a0';
+    const moon = HERO_SPEC === 'moonwell', life = HERO_SPEC === 'lifebinder';
+    const robe = moon ? '#25368a' : '#2f5a2e', hoodC = moon ? '#2c3f96' : '#4b7d38', leaf = '#5fbf4a', leafD = '#3f8a34', bark = '#5a3d22', bone = '#e8e0c8', silver = '#dcdce2', skin = '#d8a874';
     const cast = castAmt(st);
     feet(ctx, st, '#3d2f1c');
     ellipse(ctx, -2, 0, 10.5, 14.5, 0, robe, OUT, 2);
-    ellipse(ctx, -2, 0, 7, 11, 0, null, rgba(leaf, 0.5), 1.2);
-    ellipse(ctx, 0, -12, 7, 3.6, 0.4, leaf, OUT, 1.4);
-    ellipse(ctx, 0, 12, 7, 3.6, -0.4, leaf, OUT, 1.4);
-    // gnarled staff
+    ellipse(ctx, -2, 0, 7, 11, 0, null, moon ? rgba('#c8d4f0', 0.55) : rgba(leaf, 0.5), 1.2);
+    if (life) ellipse(ctx, 2.5, 0, 3.6, 8.5, 0, '#e8a0b8', OUT, 1);
+    // the mantle: leaves layered over each shoulder (a plain heavy cloak for the Moonwell)
+    for (const sy of [-1, 1]) {
+      if (moon) { ellipse(ctx, -1, 12.2 * sy, 6.5, 4, 0.2 * sy, '#1e2c78', OUT, 1.4); ellipse(ctx, 0, 11.5 * sy, 3.6, 2, 0.2 * sy, '#32469c'); continue; }
+      for (let i = 0; i < 4; i++) ellipse(ctx, -5 + i * 3.4, sy * (11.6 + (i % 2) * 1.1), 4.2, 2.2, sy * (0.55 - i * 0.2), i % 2 ? leaf : leafD, OUT, 0.9);
+    }
+    // gnarled staff, ivy wound round it
     const tx = 23 + cast * 3;
     limb(ctx, [-5, 13, 4, 14.5, 12, 11.5, tx - 2, 13], bark, 2.6);
+    for (const [x, y, a] of [[1, 12.2, -0.5], [7, 13.6, 0.5], [13, 11.4, -0.4], [17, 12.6, 0.5]]) ellipse(ctx, x, y, 2.3, 1.1, a, leaf, OUT, 0.7);
+    circle(ctx, 9.5, 12.6, 1.3, '#fff4f6', OUT, 0.6); circle(ctx, 9.5, 12.6, 0.5, '#f0b8c8');
     ellipse(ctx, tx - 3, 9, 4, 2, -0.6, leaf, OUT, 1);
     ellipse(ctx, tx - 3, 17, 4, 2, 0.6, leaf, OUT, 1);
-    glow(ctx, tx, 13, 12 + cast * 8, '#8fff7a', 0.5 + cast * 0.4);
-    circle(ctx, tx, 13, 3.4, '#b8ff9a', OUT, 1.2);
-    hand(ctx, 7, 13, '#c9a27a');
-    hand(ctx, 8, -10, '#c9a27a');
-    // antlers
-    for (const sy of [-1, 1]) {
+    glow(ctx, tx, 13, 12 + cast * 8, moon ? '#a9c4ff' : '#8fff7a', 0.5 + cast * 0.4);
+    circle(ctx, tx, 13, 3.4, moon ? '#dbe6ff' : '#b8ff9a', OUT, 1.2);
+    hand(ctx, 7, 13, skin);
+    hand(ctx, 8, -10, skin);
+    // antlers, branching, pale as bone (the Lifebinder and Moonwell leave them off)
+    if (!life && !moon) for (const sy of [-1, 1]) {
       limb(ctx, [-1, 4 * sy, -6, 11 * sy, -12, 13 * sy], bone, 2);
       limb(ctx, [-5, 9.5 * sy, -3, 15 * sy], bone, 1.8);
+      limb(ctx, [-9, 12 * sy, -13, 17 * sy], bone, 1.6);
     }
-    // a long silver braid over one shoulder
-    braid(ctx, -2, -5.5, -11, -9.5, '#dcdce2', '#8a6a3a', 5);
-    // mossy, leafy hood with a few small white flowers; the face at the front
-    circle(ctx, 0.5, 0, 7.2, '#4f5a2a', OUT, 2);
-    circle(ctx, -1, -2, 2.4, '#6b7a3a');
-    ellipse(ctx, 5, 0, 2.3, 4, 0, '#d8b08a');
-    for (const [fx, fy] of [[-2.5, 3.5], [1.5, -4.5], [-4.5, -1]]) { circle(ctx, fx, fy, 1.6, '#fff4f6', OUT, 0.6); circle(ctx, fx, fy, 0.6, '#f0b8c8'); }
-    // drifting leaves
+    // a long silver braid over one shoulder, a blossom at its tie
+    braid(ctx, -2, -5.5, -11, -9.5, silver, moon ? '#9aa4b8' : '#8a6a3a', 5);
+    if (!moon) { circle(ctx, -9.5, -8.6, 1.5, '#fff4f6', OUT, 0.6); circle(ctx, -9.5, -8.6, 0.6, '#f0a8bc'); }
+    // the head. Base: a mossy leaf-lined hood with silver hair at the face. Lifebinder: bare silver hair. Moonwell: a blue hood.
+    if (life) {
+      hairBack(ctx, silver, 8, 6.5);
+      circle(ctx, 0.5, 0, 7.2, silver, OUT, 2);
+      circle(ctx, -1.5, -2.2, 2.4, '#f2f2f6');
+      ellipse(ctx, 5.2, 0, 2.5, 4.2, 0, skin);
+      poly(ctx, [3.2, -3.6, 7, -1.4, 4, 0.2], silver);
+    } else {
+      circle(ctx, 0.5, 0, 7.4, hoodC, OUT, 2);
+      circle(ctx, -1, -2, 2.4, shade(hoodC, 0.15));
+      if (!moon) for (let i = 0; i < 5; i++) { const a = 2.3 + i * 0.45; ellipse(ctx, 0.5 + Math.cos(a) * 7.2, Math.sin(a) * 7.2, 2.4, 1.2, a, i % 2 ? leaf : leafD, OUT, 0.7); }
+      ellipse(ctx, 5, 0, 2.3, 4, 0, skin);
+      for (const sy of [-1, 1]) ellipse(ctx, 4.6, 3.9 * sy, 2.7, 1.3, 0.55 * sy, silver, OUT, 0.6);
+    }
+    if (!moon) for (const [fx, fy] of [[-2.5, 3.5], [1.5, -4.5], [-4.5, -1]]) { circle(ctx, fx, fy, 1.6, '#fff4f6', OUT, 0.6); circle(ctx, fx, fy, 0.6, '#f0b8c8'); }
+    // drifting leaves (pale motes for the Moonwell)
     for (let i = 0; i < 3; i++) {
       const a = st.t * 0.9 + i * 2.1, r = 20 + Math.sin(st.t * 1.3 + i) * 4;
-      ellipse(ctx, Math.cos(a) * r, Math.sin(a) * r, 2.6, 1.3, a * 2, leaf, OUT, 0.8);
+      if (moon) circle(ctx, Math.cos(a) * r, Math.sin(a) * r, 1.3, '#dbe6ff');
+      else ellipse(ctx, Math.cos(a) * r, Math.sin(a) * r, 2.6, 1.3, a * 2, leaf, OUT, 0.8);
     }
   },
 
   chronomancer(ctx, st) {
-    const robe = '#1f4d6b', trim = '#3fd0d0', silver = '#c8d4dc';
+    // the class is a deep teal coat with silver trim; the Accelerant's is red-brown with gold, the Echoist's navy with gold
+    const acc = HERO_SPEC === 'accelerant', echo = HERO_SPEC === 'echoist';
+    const robe = acc ? '#8a3624' : echo ? '#1d2a5e' : '#1c4560', trim = acc ? '#ffc94a' : echo ? '#8f86ff' : '#3fd0d0', silver = acc || echo ? '#d8b24a' : '#c8d4dc';
+    const aura = acc ? '#ffd36a' : echo ? '#b49cff' : '#5ff0ff';
     const cast = castAmt(st);
     // rotating clock face on the ground
     ctx.save(); ctx.rotate(st.t * 0.6);
@@ -378,23 +470,35 @@ const HERO_ART = {
     feet(ctx, st, '#102a3a');
     ellipse(ctx, -2, 0, 10.5, 14.5, 0, robe, OUT, 2);
     ellipse(ctx, -2, 0, 7.5, 11.5, 0, null, rgba(silver, 0.6), 1.2);
-    // floating hourglass
+    // a star-compass brooch on the left shoulder, its chain looping to an hourglass medallion at the right hip
+    ctx.save(); ctx.strokeStyle = silver; ctx.lineWidth = 0.9; ctx.beginPath(); ctx.moveTo(-1, -12.5); ctx.quadraticCurveTo(15, 0, 1.5, 12); ctx.stroke(); ctx.restore();
+    circle(ctx, -1, -12.5, 2.5, silver, OUT, 1); circle(ctx, -1, -12.5, 1, robe);
+    circle(ctx, 1.5, 12, 3, silver, OUT, 1.1); poly(ctx, [0.2, 10.6, 2.8, 10.6, 1.5, 12, 2.8, 13.4, 0.2, 13.4, 1.5, 12], robe);
+    // floating hourglass (brass caps)
     ctx.save(); ctx.translate(5, -21 + Math.sin(st.t * 2) * 1.5); ctx.rotate(Math.sin(st.t) * 0.3 + cast * Math.PI);
     poly(ctx, [-3.5, -5, 3.5, -5, 0, 0, 3.5, 5, -3.5, 5, 0, 0], rgba('#e8f4f8', 0.6), silver, 1.2);
     poly(ctx, [-2, 3.5, 2, 3.5, 0, 1], '#e8c15a');
+    line(ctx, -4, -5, 4, -5, '#c8a24a', 1.7); line(ctx, -4, 5, 4, 5, '#c8a24a', 1.7);
     ctx.restore();
     for (const sy of [-1, 1]) {
       const hx = 8 + (sy > 0 ? cast * 5 : 0);
-      glow(ctx, hx, 9.5 * sy, 7, '#5ff0ff', 0.35 + cast * 0.5);
+      glow(ctx, hx, 9.5 * sy, 7, aura, 0.35 + cast * 0.5);
       hand(ctx, hx, 9.5 * sy, '#f0d6c0');
     }
     // high silver-trimmed collar behind the head, long wavy chestnut hair, small round gold spectacles
-    ellipse(ctx, -3.5, 0, 4, 10, 0, '#173a52', OUT, 1.5);
+    ellipse(ctx, -3.5, 0, 4, 10, 0, shade(robe, -0.2), OUT, 1.5);
     ellipse(ctx, -3.5, 0, 4, 10, 0, null, silver, 1);
-    hairBack(ctx, '#7a4426', 9, 6.5);
-    hairHead(ctx, '#7a4426', '#f0d6c0', 7.6);
-    for (const sy of [-1, 1]) circle(ctx, 6.6, 1.8 * sy, 1.15, null, '#e8c15a', 0.9);
-    line(ctx, 6.6, -0.7, 6.6, 0.7, '#e8c15a', 0.8);
+    hairBack(ctx, '#80482a', acc ? 7 : 10, acc ? 7 : 6.5);
+    if (acc) for (const sy of [-1, 1]) line(ctx, -9, 2.2 * sy, -14, 4 * sy, '#1a1418', 1.6);   // the black ribbon tying it back
+    hairHead(ctx, '#80482a', '#f0d6c0', 7.6);
+    if (acc) {
+      // brass goggles pushed up on the brow, one great glass in them
+      ctx.save(); ctx.strokeStyle = '#c8a24a'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(0.5, 0, 6.6, -2.2, -0.2); ctx.stroke(); ctx.restore();
+      circle(ctx, 2.2, -3.4, 2.7, '#c8a24a', OUT, 1); circle(ctx, 2.2, -3.4, 1.8, '#1f2a22'); circle(ctx, 1.6, -4, 0.6, 'rgba(255,255,255,0.7)');
+    } else {
+      for (const sy of [-1, 1]) circle(ctx, 6.6, 1.8 * sy, 1.15, null, '#e8c15a', 0.9);
+      line(ctx, 6.6, -0.7, 6.6, 0.7, '#e8c15a', 0.8);
+    }
   },
 
   // Players who have not picked a hero yet float around as a wisp.
@@ -493,16 +597,18 @@ const SPEC_ART = {
     const pb = actP(st, 'brace'), brace = pb < 0 ? 0 : Math.min(1, pb / 0.12, (1 - pb) / 0.12);
     const front = Math.max(pulse(actP(st, 'bash')), brace);
     ctx.save(); ctx.translate(8 + 9 * front, -13 + 12 * front); ctx.rotate(-0.45 * (1 - front));
-    rrect(ctx, -4.5, -17, 9, 34, 3, '#c9d6e6', OUT, 2);
-    rrect(ctx, -2.4, -14, 4.8, 28, 1.5, null, '#3d6fb6', 1.6);
-    line(ctx, 0, -12, 0, 12, '#3d6fb6', 1.4); line(ctx, -2, -4, 2, -4, '#3d6fb6', 1.4);
+    // plain scuffed steel, a gold border, studded with rivets, a gold fleur-cross down the face (as in the painting)
+    rrect(ctx, -4.5, -17, 9, 34, 3, '#b4bfcd', OUT, 2);
+    rrect(ctx, -2.8, -15, 5.6, 30, 1.8, null, '#e8c15a', 1.5);
+    for (const [x, y] of [[-3.2, -15], [3.2, -15], [-3.2, 15], [3.2, 15], [-3.2, 0], [3.2, 0]]) circle(ctx, x, y, 0.8, '#e8c15a', OUT, 0.5);
+    line(ctx, 0, -11, 0, 12, '#e8c15a', 1.5); line(ctx, -3, -4, 3, -4, '#e8c15a', 1.5);
+    poly(ctx, [0, -14, 1.8, -10.5, 0, -8, -1.8, -10.5], '#e8c15a', OUT, 0.6);
+    for (const sx of [-1, 1]) ellipse(ctx, 2.4 * sx, 0.5, 1.4, 0.8, sx * 0.7, '#e8c15a', OUT, 0.5);
     ctx.restore();
   },
   // Crusader: a gold tabard over the plate and a blade that glows with dawnlight
   crusader(ctx, st) {
-    // the gold tabard shows on the back below the head, a sun on it
-    rrect(ctx, -14, -5, 8, 10, 2, '#e8c15a', OUT, 1.2);
-    circle(ctx, -10, 0, 2.6, null, '#fff3c0', 1.2);
+    // (the gold cape, the white sun-tabard and the sun guard are drawn with the class art; here, dawnlight on the blade)
     glow(ctx, 18, 14, 16, '#ffe9a0', 0.35 + Math.sin(st.t * 3) * 0.1);
   },
   // Berserker: helm off (see HERO_ART.bloodreaver), orange war paint across the face, rage smouldering off him
@@ -516,6 +622,9 @@ const SPEC_ART = {
     circle(ctx, -3, -2.6, 2.8, '#922033');
     ellipse(ctx, 5.4, 0, 2.4, 4.2, 0, '#c99a7a');
     ellipse(ctx, 8.2, 0, 2.4, 3.6, 0, '#b8461f', OUT, 1.1);
+    // the horned circlet at the brow, a ruby in it
+    ctx.save(); ctx.strokeStyle = '#8a7a56'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(-1, 0, 8.6, -0.55, 0.55); ctx.stroke(); ctx.restore();
+    poly(ctx, [6.6, 0, 7.6, -1.2, 8.6, 0, 7.6, 1.2], '#c0102a', OUT, 0.7);
     for (let i = 0; i < 3; i++) {
       const a = st.t * 1.4 + i * TAU / 3, x = Math.cos(a) * 25, y = Math.sin(a) * 23;
       glow(ctx, x, y, 8, '#ff2d4b', 0.45);
@@ -523,19 +632,34 @@ const SPEC_ART = {
       circle(ctx, x - 0.8, y - 0.8, 0.9, '#ff9aa8');
     }
   },
-  // Spellwarden: pale blue sigils on the robe (the rune ring is under them)
-  spellwarden(ctx) {
+  // Spellwarden: pale blue sigils on the robe (the rune ring is under them), the cloak's ice-blue border (see HERO_ART.runeguard),
+  // a gold compass medallion with a diamond tassel at the chest, and the right palm held open and glowing blue
+  spellwarden(ctx, st) {
     ellipse(ctx, -2, 0, 8, 12, 0, null, rgba('#9fd8ff', 0.7), 1.4);
+    circle(ctx, 6.4, 0, 2.7, '#d8b04a', OUT, 1); circle(ctx, 6.4, 0, 1.2, '#7ab0ff');
+    poly(ctx, [8.6, 0.2, 11, -0.8, 12.6, 0.4, 11, 1.8], '#d8b04a', OUT, 0.8);
+    const k = Math.sin(st.t * 2) * 0.1;
+    glow(ctx, 14, 10, 9, '#8fc8ff', 0.4);
+    for (let i = -2; i <= 2; i++) line(ctx, 13, 10, 17.5, 10 + i * 2.1 + k, '#e0b890', 1.7);   // the open fingers
   },
-  // Runeblade: a rune-carved sword in the right hand
+  // Runeblade: the hood thrown back, tousled black hair and a clear face; a long silver rune-carved sword with a violet glowing
+  // channel and a silver star crossguard, held in a black glove
   runeblade(ctx, st) {
     const s = swing(actP(st, 'attack'));
+    ellipse(ctx, -4.5, 0, 4.4, 9, 0, '#4a2f8a', OUT, 1.5);   // the cloak gathered round the neck
+    for (const sy of [-1, -0.35, 0.35, 1]) poly(ctx, [-3, 3.6 * sy - 1.6, -10.5, 6 * sy, -3, 3.6 * sy + 1.6], '#15131f', OUT, 1.1);
+    hairHead(ctx, '#15131f', '#dcae86', 8.2);
+    circle(ctx, -1.6, -2.3, 1.6, '#3a3556');
     ctx.save(); ctx.translate(9, 11); ctx.rotate(0.3 + s * 1.2);
-    poly(ctx, [2, -2.2, 24, -2.2, 29, 0, 24, 2.2, 2, 2.2], '#d9ccff', OUT, 1.5);
-    for (let i = 0; i < 3; i++) circle(ctx, 8 + i * 6, 0, 1.1, '#c58cff');
-    glow(ctx, 16, 0, 12, '#c58cff', 0.3);
-    rrect(ctx, -0.5, -5, 3, 10, 1, '#7b5cf0', OUT, 1.1);
+    poly(ctx, [2, -2.8, 26, -2.8, 32, 0, 26, 2.8, 2, 2.8], '#cfd4e0', OUT, 1.5);
+    line(ctx, 4, 0, 28, 0, '#9b7cf0', 1.8);
+    for (let i = 0; i < 4; i++) circle(ctx, 9 + i * 5, 0, 0.9, '#efe6ff');
+    glow(ctx, 17, 0, 13, '#a98bff', 0.32);
+    poly(ctx, [-0.5, -1, 1.5, -6.5, 3.4, -1, 5, 0, 3.4, 1, 1.5, 6.5, -0.5, 1], '#b9c0cc', OUT, 1.1);   // the crossguard
+    circle(ctx, 1.5, 0, 1.1, '#9b6cf0');
+    rrect(ctx, -6, -1.4, 5.5, 2.8, 1, '#2a2438', OUT, 1);
     ctx.restore();
+    hand(ctx, 9, 11, '#1c1a24');
   },
   // Aegis: a small golden half-dome of light hovering over the shoulders
   aegis(ctx, st) {
@@ -553,18 +677,23 @@ const SPEC_ART = {
     glow(ctx, 9, 9.5, 8, '#ff8a2a', 0.45 + Math.sin(st.t * 5) * 0.12);
     circle(ctx, 9, 9.5, 2.2, null, '#ffc070', 1.2);
   },
-  // Lifebinder: a crown of leaves and two blossoms
+  // Lifebinder: a crown of leaves with pink blossoms woven through the silver hair, a pink sash across the robe
   lifebinder(ctx) {
+    line(ctx, -7, -9, 5, 8, '#e8a0b8', 2.4);
     for (let i = 0; i < 7; i++) { const a = -1.4 + i * 0.47; ellipse(ctx, Math.cos(a) * 8.5, Math.sin(a) * 8.5, 2.8, 1.3, a, i % 2 ? '#5fdf8a' : '#8fffb0', OUT, 0.6); }
-    circle(ctx, -6, -6, 2, '#ffd0e8', OUT, 0.6); circle(ctx, -6, 6, 2, '#ffd0e8', OUT, 0.6);
+    for (const [x, y] of [[-6, -6], [-6, 6], [3, -8], [6.5, 6.5]]) { circle(ctx, x, y, 2.3, '#f4a8c0', OUT, 0.7); circle(ctx, x, y, 0.8, '#fff4f6'); }
   },
-  // Moonwell: a pale crescent moon floating behind the head, silver light on the robe
+  // Moonwell: a silver band stitched across the hood, a crescent brooch, a pale crescent moon floating behind the head
   moonwell(ctx, st) {
     ctx.save(); ctx.translate(-14, -10 + Math.sin(st.t * 1.5) * 1.2);
     glow(ctx, 0, 0, 10, '#a9c4ff', 0.45);
     ctx.fillStyle = '#eef2ff'; ctx.beginPath(); ctx.arc(0, 0, 4.5, 0, TAU); ctx.arc(1.8, -0.8, 3.8, 0, TAU, true); ctx.fill('evenodd');
     ctx.restore();
     ellipse(ctx, -2, 0, 8, 12, 0, null, rgba('#a9c4ff', 0.6), 1.2);
+    ctx.save(); ctx.strokeStyle = '#d6dcea'; ctx.lineWidth = 1.8; ctx.lineCap = 'round'; ctx.beginPath(); ctx.arc(0.5, 0, 6.6, -1.25, 1.25); ctx.stroke();
+    ctx.strokeStyle = '#8a96b4'; ctx.lineWidth = 0.6; ctx.beginPath(); ctx.arc(0.5, 0, 7.4, -1.2, 1.2); ctx.stroke(); ctx.restore();
+    circle(ctx, 1.5, -11, 2.6, '#cfd6e6', OUT, 0.9);
+    ctx.fillStyle = '#25368a'; ctx.beginPath(); ctx.arc(1.5, -11, 1.5, 0, TAU); ctx.arc(2.3, -11.4, 1.3, 0, TAU, true); ctx.fill('evenodd');
   },
   // Echoist: a faint second outline that trails a moment behind
   echoist(ctx, st) {
@@ -578,41 +707,76 @@ const SPEC_ART = {
     ctx.save(); ctx.globalAlpha = 0.35 + Math.sin(st.t * 2) * 0.1;
     ctx.setLineDash([3, 5]); line(ctx, 14, 0, 46, 0, '#f2d27a', 1.2); ctx.setLineDash([]);
     ctx.restore();
+    poly(ctx, [46, -2.4, 51, 0, 46, 2.4], '#e8c15a', OUT, 0.8);   // a gold broadhead at the end of the aim line
     glow(ctx, 6, -2, 5, '#fff2c0', 0.6); circle(ctx, 6, -2, 1.4, '#fff8e0');
+    rrect(ctx, 3.6, 6.4, 3.4, 5.4, 1, '#d8b04a', OUT, 0.9);   // a heavy gold bracer on the draw arm
   },
-  // Venomstrike: green-dripping arrowheads in the quiver and a toxic haze
+  // Venomstrike: the dark-green cloak's deep hood up over the auburn hair (a sliver of face under it), green-dripping
+  // arrowheads in the quiver, a haze of acid bubbles
   venomstrike(ctx, st) {
     for (let i = 0; i < 3; i++) { const x = -12 + i * 2.5, y = -9 + i * 2; poly(ctx, [x, y - 3, x + 2, y, x, y + 3, x - 2, y], '#9aff4a', OUT, 0.8); }
     glow(ctx, -10, -5, 9, '#7adf3a', 0.3 + Math.sin(st.t * 3) * 0.08);
+    // the hood, over everything above the shoulders: a lighter green rim at the front, the face a sliver within it
+    ellipse(ctx, -2.5, 0, 9.4, 10.2, 0, '#1f3a26', OUT, 1.8);
+    ellipse(ctx, -4.5, -3, 3.6, 2.4, 0, '#2c5234');
+    ellipse(ctx, 5.2, 0, 2.6, 4.2, 0, '#b97a4c');
+    ellipse(ctx, 3.6, 0, 1.5, 4.6, 0, '#a8401c');
+    poly(ctx, [3.6, -3.4, 6.6, -1.3, 3.8, 0.4], '#a8401c');
+    ctx.strokeStyle = '#3a6a42'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(-0.2, 0, 8.3, -1.05, 1.05); ctx.stroke();
+    circle(ctx, 4, 8.6, 1.5, '#d8b04a', OUT, 0.7);   // a brass clasp at the throat
+    for (let i = 0; i < 3; i++) { const q = (st.t * 0.55 + i / 3) % 1; ctx.save(); ctx.globalAlpha = Math.sin(q * Math.PI) * 0.85; circle(ctx, -9 - q * 5 + i * 2, -9 - q * 9, 1.1 + (i % 2) * 0.5, '#b8ff5a', OUT, 0.5); ctx.restore(); }
   },
-  // Bladedancer: a second curved blade in the off hand, both trailing a silver shimmer
+  // Bladedancer: two curved silver blades (see HERO_ART.shadowblade), silver bracers, and a swirl of silver light and violet ribbon
+  // winding round them
   bladedancer(ctx, st) {
     const s = swing(actP(st, 'attack'));
     ctx.save(); ctx.translate(8, -10); ctx.rotate(-0.5 - s * 1.4);
-    ctx.strokeStyle = '#e8ecff'; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.arc(0, 0, 14, -0.2, 1.1); ctx.stroke();
+    ctx.strokeStyle = '#e8ecff'; ctx.lineWidth = 2.4; ctx.globalAlpha = 0.8; ctx.beginPath(); ctx.arc(0, 0, 14, -0.2, 1.1); ctx.stroke();
+    ctx.restore();
+    ctx.save(); ctx.translate(8, 10); ctx.rotate(0.5 + s * 1.4);
+    ctx.strokeStyle = '#e8ecff'; ctx.lineWidth = 2.4; ctx.globalAlpha = 0.8; ctx.beginPath(); ctx.arc(0, 0, 14, -1.1, 0.2); ctx.stroke();
     ctx.restore();
     glow(ctx, 0, 0, 22, '#e0c8ff', 0.15);
+    for (let i = 0; i < 3; i++) { const a = st.t * 2 + i * TAU / 3; glow(ctx, 8 + Math.cos(a) * 12, Math.sin(a) * 15, 3, '#f4eaff', 0.55); }
   },
-  // Nightstalker: a black hood lined in red, pulled low over the face
+  // Nightstalker: a black cloak lined in red over the shoulders, the hood pulled low (a red rim)
   nightstalker(ctx) {
+    poly(ctx, [-2, -12, -13, -15, -22, -7, -17, -2, -23, 5, -14, 15, -2, 12], '#0e0c12', OUT, 1.8);
+    poly(ctx, [-4, -9, -12, -11, -18, -6, -14, -1, -18, 4, -12, 11, -4, 9], '#6a1424');
     ellipse(ctx, -1.5, 0, 9, 9.5, 0, '#141118', OUT, 1.6);
     ctx.strokeStyle = '#b0203a'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(-0.5, 0, 7.6, -1.1, 1.1); ctx.stroke();
-    ellipse(ctx, 5.8, 0, 2, 3.6, 0, '#e8d8cc');
+    ellipse(ctx, 5.8, 0, 2, 3.6, 0, '#dcb496');
     ellipse(ctx, 4.6, 0, 1.4, 4, 0, '#1a1720');
     poly(ctx, [4.6, -2.2, 7, -0.6, 4.6, 0.9], '#1a1720');
   },
   // Cataclysm: a small burning rock orbiting overhead, trailing smoke
   cataclysm(ctx, st) {
+    // red gem clasps on the cloak, a grey curl of smoke off the hat tip, and a burning rock orbiting, a flame trailing it
+    for (const sy of [-1, 1]) { circle(ctx, 1.5, 11 * sy, 1.9, '#f2c84b', OUT, 0.8); circle(ctx, 1.5, 11 * sy, 1, '#e0283a'); }
+    for (let i = 0; i < 3; i++) {
+      const q = (st.t * 0.6 + i / 3) % 1;
+      ctx.save(); ctx.globalAlpha = (1 - q) * 0.5; circle(ctx, -15 - q * 8 + Math.sin(q * 7 + i) * 2, 6 + q * 3, 1.8 + q * 2.6, '#9a8f8c'); ctx.restore();
+    }
     const a = st.t * 1.6, x = Math.cos(a) * 20, y = Math.sin(a) * 18;
     glow(ctx, x, y, 10, '#ff4a2a', 0.5);
-    circle(ctx, x, y, 3.5, '#4a2a22', OUT, 1); circle(ctx, x - 1, y - 1, 1.2, '#ffb050');
+    for (let i = 1; i <= 3; i++) { const b = a - i * 0.22; glow(ctx, Math.cos(b) * 20, Math.sin(b) * 18, 5 - i, '#ff8a2a', 0.45 / i); }
+    poly(ctx, [x - 4, y - 1, x - 1.5, y - 3.8, x + 3, y - 2.6, x + 4, y + 1, x + 1, y + 3.8, x - 3, y + 2.6], '#3a2420', OUT, 1);
+    circle(ctx, x - 1, y - 1, 1.2, '#ffb050');
+    circle(ctx, x + 1.5, y + 1.4, 0.7, '#ff7a2a');
   },
-  // Sigilmancer: a little ring of ember glyphs turning around the hands
+  // Sigilmancer: a wide band of burning sigils turning round the whole figure, and a second flame lit in the open left hand
   sigilmancer(ctx, st) {
-    ctx.save(); ctx.translate(8, 0); ctx.rotate(st.t * 1.2);
-    circle(ctx, 0, 0, 13, null, rgba('#ffb347', 0.55), 1.3);
-    for (let i = 0; i < 6; i++) { const a = i * TAU / 6; glow(ctx, Math.cos(a) * 13, Math.sin(a) * 13, 4, '#ffcf7a', 0.7); }
+    ctx.save(); ctx.translate(3, 0); ctx.rotate(st.t * 0.9); ctx.scale(1, 0.84);
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    circle(ctx, 0, 0, 20, null, rgba('#ff9a2a', 0.5), 2.6); circle(ctx, 0, 0, 20, null, rgba('#ffe08a', 0.8), 0.9); circle(ctx, 0, 0, 15.5, null, rgba('#ff9a2a', 0.4), 0.9);
     ctx.restore();
+    for (let i = 0; i < 6; i++) {
+      const a = i * TAU / 6, x = Math.cos(a) * 17.8, y = Math.sin(a) * 17.8;
+      glow(ctx, x, y, 4.6, '#ffcf7a', 0.65);
+      poly(ctx, [x, y - 2.8, x + 1, y - 1, x + 2.8, y, x + 1, y + 1, x, y + 2.8, x - 1, y + 1, x - 2.8, y, x - 1, y - 1], '#fff0b0');
+    }
+    ctx.restore();
+    flame(ctx, 14, -10, 2.8 + castAmt(st) * 1.8, st.t + 1);
   },
   // Accelerant: a golden clock-hand ring spinning fast around them
   accelerant(ctx, st) {
@@ -628,7 +792,7 @@ const SPEC_ART = {
 // coat under a leather apron, a bandolier of coloured vials across the chest, and a smoking copper still on her back.
 // The right hand flicks a vial out on a throw; the left steadies the strap.
 HERO_ART.alembist = function (ctx, st) {
-  const coat = '#56603e', apron = '#8a5a34', copper = '#b8743a', skin = '#e8c4a0', hair = '#7a3e24', brass = '#d8a84a';
+  const coat = '#4f5a38', apron = '#d9cdaa', copper = '#b8743a', skin = '#d9a276', hair = '#a8401f', brass = '#d8a84a';
   const cast = castAmt(st);
   // the still on her back: a copper pot, a coiled swan neck over the shoulder, a chimney puffing steam
   for (let i = 0; i < 3; i++) {
@@ -644,34 +808,55 @@ HERO_ART.alembist = function (ctx, st) {
   torso(ctx, coat, 9.5, 14);
   ellipse(ctx, 1.5, 0, 6.5, 10.5, 0, apron, OUT, 1.5);           // the apron front
   line(ctx, 4, -6, 4, 6, 'rgba(40,20,10,0.4)', 1);
-  // the bandolier, slung over one shoulder and round the front of the coat, with four vials in its loops
+  // the apron is cream and well used: red and brown stains
+  circle(ctx, -1.5, 3, 1.7, 'rgba(150,50,40,0.5)'); circle(ctx, 2, -3.5, 1.2, 'rgba(120,70,40,0.45)'); circle(ctx, -3, -2, 0.9, 'rgba(150,50,40,0.4)'); circle(ctx, 3.2, 5, 0.9, 'rgba(120,70,40,0.45)');
+  // the green work-coat's open collar, turned back at each shoulder
+  for (const sy of [-1, 1]) poly(ctx, [-3, 6.5 * sy, 3.5, 9.5 * sy, 5.5, 7 * sy, 1, 4.5 * sy], coat, OUT, 1.1);
+  // the bandolier, slung over one shoulder and round the front of the coat, with three vials in its loops (red, blue, clear)
   const strap = q => ({ x: -2 + Math.sin(q * Math.PI) * 11.5, y: -13 + q * 25 });
   ctx.beginPath(); for (let q = 0; q <= 1.001; q += 0.1) { const p = strap(q); ctx.lineTo(p.x, p.y); }
   ctx.lineCap = 'round'; ctx.lineWidth = 4.6; ctx.strokeStyle = OUT; ctx.stroke(); ctx.lineWidth = 3; ctx.strokeStyle = '#6b4424'; ctx.stroke();
-  const vials = ['#4fe0c0', '#ff5a1a', '#f4ecd2', '#ffd23a'];
-  vials.forEach((col, i) => { const p = strap(0.2 + i * 0.2); rrect(ctx, p.x - 1.9, p.y - 2.5, 3.8, 5, 1.2, col, OUT, 1); circle(ctx, p.x + 1.9, p.y, 0.9, '#9a6a3a'); });
+  const vials = ['#d8344a', '#3a5ee0', '#e8f0f4'];
+  vials.forEach((col, i) => { const p = strap(0.3 + i * 0.2); rrect(ctx, p.x - 1.9, p.y - 2.5, 3.8, 5, 1.2, col, OUT, 1); circle(ctx, p.x + 1.9, p.y, 0.9, '#9a6a3a'); });
   // hands: the left on the strap, the right holding a vial out (further on a throw)
   hand(ctx, 7, -10, '#6b4a30');
   const vx = 9 + cast * 8, vy = 11 - cast * 4;
-  glow(ctx, vx + 3, vy, 6 + cast * 5, '#4fe0c0', 0.25 + cast * 0.4);
-  rrect(ctx, vx + 1, vy - 2.6, 5, 5.2, 1.6, '#4fe0c0', OUT, 1.1);
+  // (a round flask of amber, as in the painting)
+  glow(ctx, vx + 3.6, vy, 6 + cast * 5, '#ffc040', 0.25 + cast * 0.4);
+  rrect(ctx, vx + 4.4, vy - 1.1, 3.4, 2.2, 0.8, '#d8e8ec', OUT, 0.9);
+  circle(ctx, vx + 3.6, vy, 3.1, '#f0b830', OUT, 1.1); circle(ctx, vx + 2.8, vy - 1, 0.9, 'rgba(255,255,255,0.7)');
   hand(ctx, vx, vy, '#6b4a30');
   // the bun with a glass rod through it, then the head, then the goggles
   circle(ctx, -7.5, 0, 4.4, hair, OUT, 1.5); circle(ctx, -8.4, -1.2, 1.6, shade(hair, 0.18));
   line(ctx, -10, -5, -5, 5, '#cfe8ee', 1.4);
   hairHead(ctx, hair, skin, 7.4);
-  ctx.strokeStyle = '#5a3a24'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(0.5, 0, 7.2, -1.25, 1.25); ctx.stroke();   // the goggle strap
+  // the goggles: pushed up on the brow (dark lenses) normally, over her eyes in orange glass (Volatile), hung round her neck (Apothecary)
+  const eyes = HERO_SPEC === 'volatile', neck = HERO_SPEC === 'apothecary';
+  ctx.strokeStyle = '#5a3a24'; ctx.lineWidth = 1.6; ctx.beginPath();
+  if (eyes) ctx.arc(0.5, 0, 7.2, -1.25, 1.25);
+  else if (!neck) { ctx.arc(0.5, 0, 7.2, 0.25, 1.9); ctx.moveTo(0.5 + Math.cos(-1.9) * 7.2, Math.sin(-1.9) * 7.2); ctx.arc(0.5, 0, 7.2, -1.9, -0.25); }
+  ctx.stroke();
+  const gx = eyes ? 6 : neck ? 9.8 : 2.4;
   for (const sy of [-1, 1]) {
-    circle(ctx, 6, 2.5 * sy, 2.3, HERO_SPEC === 'volatile' ? '#ffb070' : '#7fd8c0', OUT, 1);
-    circle(ctx, 6, 2.5 * sy, 2.3, null, brass, 1);
-    circle(ctx, 5.4, 2.5 * sy - 0.8, 0.7, 'rgba(255,255,255,0.8)');
+    circle(ctx, gx, 2.5 * sy, 2.3, eyes ? '#ffb070' : '#2a2c30', OUT, 1);
+    circle(ctx, gx, 2.5 * sy, 2.3, null, brass, 1);
+    circle(ctx, gx - 0.6, 2.5 * sy - 0.8, 0.7, 'rgba(255,255,255,0.8)');
+  }
+  if (neck) {
+    // a few small white flowers and a sprig of green tucked in her hair
+    circle(ctx, -1.5, -7.2, 1.2, '#f6f2e4', OUT, 0.6); circle(ctx, 1, -7.8, 1, '#f6f2e4', OUT, 0.6); circle(ctx, -1.5, -7.2, 0.45, '#e8c040');
+    ellipse(ctx, -4, -7.6, 2, 0.9, 0.5, '#6f9a4a', OUT, 0.6);
   }
 };
 // Apothecary: a second strap of vials crossing the first, dried herbs bundled on the still, a label tag
 SPEC_ART.apothecary = function (ctx, st) {
-  // a satchel of labelled jars at the hip
-  rrect(ctx, -6, -18, 9, 6, 1.8, '#7a5434', OUT, 1.4);
-  for (const [x, col] of [[-4, '#7ff0a8'], [-1, '#bfe8ec'], [1.6, '#ffd23a']]) { circle(ctx, x, -18.5, 1.3, col, OUT, 0.8); }
+  // a big brown satchel of labelled jars and herbs at the hip, lavender and leaves sprouting from it
+  for (const [x, h, col] of [[-6.5, 7, '#9a7ac8'], [-4.5, 9, '#8a6ab8'], [-2.5, 7.5, '#a888d4']]) { line(ctx, x, -17, x - 0.5, -17 - h, '#5f8a3a', 1); circle(ctx, x - 0.5, -17 - h, 1.1, col); circle(ctx, x - 0.7, -17 - h * 0.7, 0.9, col); }
+  for (const [x, a] of [[-0.5, -0.9], [-8.5, -2.3]]) ellipse(ctx, x, -19.5, 3.4, 1.2, a, '#6f9a4a', OUT, 0.6);
+  rrect(ctx, -10, -20, 14, 8, 2, '#7a4a2a', OUT, 1.4);
+  line(ctx, -10, -17, 4, -17, 'rgba(30,16,8,0.5)', 1);
+  rrect(ctx, -4.2, -18.2, 3.2, 3.6, 0.6, '#d8a84a', OUT, 0.8);
+  for (const [x, col] of [[-8, '#7ff0a8'], [-5.5, '#bfe8ec'], [2, '#ffd23a']]) { circle(ctx, x, -20.4, 1.2, col, OUT, 0.7); }
   rrect(ctx, -3.5, -14.6, 4, 1.8, 0.4, '#efe2c0');
   for (let i = 0; i < 3; i++) ellipse(ctx, -19 + i * 1.5, 5 + i * 1.2, 3.2, 1.3, 0.8 + i * 0.3, i % 2 ? '#7aa04a' : '#9ab85a', OUT, 0.7);
   rrect(ctx, -12, 6, 4, 3, 0.6, '#efe2c0', OUT, 0.8);
@@ -684,9 +869,12 @@ SPEC_ART.volatile = function (ctx, st) {
     const q = (st.t * 1.8 + i / 3) % 1, a = i * 2.1 + st.t;
     glow(ctx, -15 + Math.cos(a) * (6 + q * 8), Math.sin(a) * (6 + q * 8), 3.5, '#ffb040', 0.9 * (1 - q));
   }
-  const fx = -2 + Math.sin(0.4 * Math.PI) * 11.5, fy = -13 + 0.4 * 25;
-  line(ctx, fx + 1.9, fy, fx + 5, fy - 1.5, '#d8c8a8', 0.9);
-  glow(ctx, fx + 5, fy - 1.5, 4 + Math.sin(st.t * 30), '#ffd070', 0.9);
+  // the held flask is the bomb: a lit fuse on its neck, sparks spitting off it
+  const c = castAmt(st), fx = 9 + c * 8 + 7.6, fy = 11 - c * 4;
+  line(ctx, fx - 0.5, fy, fx + 2.8, fy - 2, '#d8c8a8', 0.9);
+  glow(ctx, fx + 2.8, fy - 2, 5 + Math.sin(st.t * 30), '#ffd070', 0.9);
+  for (let i = 0; i < 3; i++) { const q = (st.t * 2.6 + i / 3) % 1, a = -0.9 + i * 0.9; circle(ctx, fx + 2.8 + Math.cos(a) * q * 7, fy - 2 + Math.sin(a) * q * 7, 0.9 * (1 - q) + 0.2, '#ffe08a'); }
+  glow(ctx, 0, 0, 22, '#ff8a2a', 0.1 + Math.sin(st.t * 5) * 0.03);
 };
 
 // the spec of the hero being drawn right now, for the few class looks a spec changes underneath (the Berserker's helm)
@@ -1056,7 +1244,11 @@ Object.assign(HERO_ART, {
     limb(ctx, [0, 10, 4.5, 12.5, rx, ry], robe, 4.2);
     hand(ctx, rx, ry, skin);
     flame(ctx, rx + 3, ry, 3.2 + cast * 2.5, st.t);
+    // a blue and a red tassel hang at the chest on gold caps; a brass clock collar rings the neck under the silver hair
+    for (const [ty, col] of [[-3.6, '#3a6fd0'], [3.6, '#d8402a']]) { line(ctx, 6.5, ty, 9.4, ty * 1.15, col, 2.2); circle(ctx, 6.2, ty, 1.2, '#d8b04a', OUT, 0.7); }
+    circle(ctx, 0.3, 0, 8.6, '#b8903a', OUT, 1.3); circle(ctx, 0.3, 0, 8.6, null, '#e0c068', 0.8);
     hairHead(ctx, hair, skin, 7.4);
+    for (const [ty, col] of [[-6.4, '#3a6fd0'], [6.4, '#d8402a']]) { circle(ctx, 1.6, ty, 1.1, '#d8b04a', OUT, 0.6); line(ctx, 1.6, ty, 1.2, ty * 1.28, col, 1.6); }   // the tassels on the hair ties
     circle(ctx, -2, -2.5, 1.4, '#ffffff');
     // a spark and a snowflake circling each other over the shoulders
     const a = st.t * 1.8, ex = Math.cos(a) * 15, ey = Math.sin(a) * 13;
@@ -1068,7 +1260,7 @@ Object.assign(HERO_ART, {
 
   // Driftblade: a light duellist in a slate coat, a long jade ribbon scarf streaming behind, a curved sabre in the right hand.
   driftblade(ctx, st) {
-    const coat = '#33475c', sash = '#3fc29d', skin = '#d6a37c', hair = '#1d272b';
+    const coat = '#2f4580', sash = '#4cbf98', skin = '#d49a6a', hair = '#12151e';
     const pa = actP(st, 'attack'), s = swing(pa), sd = swingDir(st);
     const pb = actP(st, 'brace'), brace = pb < 0 ? 0 : Math.min(1, pb / 0.1, (1 - pb) / 0.15);
     const dash = pulse(actP(st, 'dash'));
@@ -1080,7 +1272,11 @@ Object.assign(HERO_ART, {
     poly(ctx, [pts[tip], pts[tip + 1] - 2.2, pts[tip] - 4, pts[tip + 1], pts[tip], pts[tip + 1] + 2.2], sash, OUT, 1);
     feet(ctx, st, '#1e252c');
     torso(ctx, coat, 8.5, 13);
-    line(ctx, -6, -9, 3, 10, sash, 2.4);
+    line(ctx, -6, -9, 3, 10, sash, 3.2);
+    // grey-gold cloud embroidery on the shoulders and a pale trim along the collar
+    ctx.save(); ctx.strokeStyle = '#b0a07a'; ctx.lineWidth = 1; ctx.lineCap = 'round';
+    for (const sy of [-1, 1]) { ctx.beginPath(); ctx.arc(-1, 9.5 * sy, 2.4, 0.4, 4.6); ctx.stroke(); ctx.beginPath(); ctx.arc(2.6, 8.4 * sy, 1.3, 0, 5); ctx.stroke(); }
+    ctx.restore();
     // off hand back for balance (forward to steady the blade while bracing)
     hand(ctx, 2 + brace * 9, -11 + brace * 4, skin);
     // the sabre: held low and back, swept across on attacks, held flat across the front to parry
@@ -1089,36 +1285,55 @@ Object.assign(HERO_ART, {
     ctx.fillStyle = '#e4ecf2'; ctx.strokeStyle = OUT; ctx.lineWidth = 1.4;
     ctx.beginPath(); ctx.moveTo(2, -1.6); ctx.quadraticCurveTo(15, -3.2, 27, -6.5); ctx.quadraticCurveTo(16, 0.5, 2, 1.6); ctx.closePath(); ctx.fill(); ctx.stroke();
     line(ctx, 4, -0.4, 22, -4.2, '#ffffff', 0.8);
-    ellipse(ctx, 1, 0, 1.4, 4, 0, '#c8a24a', OUT, 1);
+    circle(ctx, 1, 0, 3.3, '#c8a24a', OUT, 1); circle(ctx, 1, 0, 1.2, '#2a2418');   // the round gold guard
+    line(ctx, -1, 1.5, -6, 4.5, '#2f8a68', 0.9); circle(ctx, -4, 3.6, 1, '#3a9a78', OUT, 0.6); circle(ctx, -6.4, 4.8, 1.1, '#3a9a78', OUT, 0.6);   // green-bead tassel
     ctx.restore();
     if (pa >= 0) smear(ctx, 9, 10, 24, 0.5 + 1.25 * sd, 0.5 - 1.5 * sd * strikeAmt(pa), '#7ff0d0', strikeAmt(pa));
     hand(ctx, 9 + brace * 4, 10 - brace * 4, skin);
     // dark hair swept back into a high tail
-    poly(ctx, [-3, -2.6, -14, Math.sin(st.t * 6) * 1.5, -3, 2.6], hair, OUT, 1.2);
+    poly(ctx, [-3, -2.8, -9, -1.2, -17, Math.sin(st.t * 6) * 1.8, -9, 1.6, -3, 2.8], hair, OUT, 1.2);
     hairHead(ctx, hair, skin, 7.3);
-    circle(ctx, -4.5, 0, 1.4, sash, OUT, 0.8);
+    // the jade ribbon knotted round the tail
+    ellipse(ctx, -5.6, -1.9, 2.4, 1.1, -0.5, sash, OUT, 0.8); ellipse(ctx, -5.6, 1.9, 2.4, 1.1, 0.5, sash, OUT, 0.8); circle(ctx, -4.6, 0, 1.4, sash, OUT, 0.8);
   },
 });
 
 Object.assign(SPEC_ART, {
-  // Pendulum: a brass bob swinging from the waist on a short chain
+  // Pendulum: an ornate brass bob swinging on a fine chain from the fire hand, a few gold arcs of time trailing it
   pendulum(ctx, st) {
-    const a = Math.sin(st.t * 2.4) * 0.9, bx = -6 + Math.cos(Math.PI + a) * -2, by = Math.sin(a) * 14;
-    line(ctx, -5, 0, -12 + bx * 0.2, by, '#c8a24a', 1.1);
-    circle(ctx, -12 + bx * 0.2, by, 3, '#d8b25a', OUT, 1.1);
-    circle(ctx, -12.8 + bx * 0.2, by - 0.8, 1, '#fff2c0');
+    const cast = castAmt(st), rx = 10 + cast * 6, ry = 10 - cast * 2;
+    const a = Math.sin(st.t * 2.4) * 0.9, bx = rx + 2 + Math.sin(a) * 8, by = ry + 9 + Math.cos(a) * 1.5;
+    line(ctx, rx, ry, bx, by, '#d8b25a', 1);
+    ctx.save(); ctx.globalAlpha = 0.45; ctx.strokeStyle = '#ffe9a0'; ctx.lineWidth = 0.9;
+    ctx.beginPath(); ctx.arc(rx + 2, ry - 1, 10.5, 0.5, 1.5); ctx.stroke(); ctx.beginPath(); ctx.arc(rx + 2, ry - 1, 13, 0.55, 1.45); ctx.stroke(); ctx.restore();
+    circle(ctx, bx, by, 3.2, '#d8b25a', OUT, 1.1);
+    circle(ctx, bx, by, 1.7, '#b8903a', OUT, 0.6);
+    circle(ctx, bx - 0.9, by - 0.9, 0.9, '#fff2c0');
+    poly(ctx, [bx - 1, by + 2.8, bx, by + 5, bx + 1, by + 2.8], '#d8b25a', OUT, 0.7);
   },
-  // Zenith: a small crown of flame and frost over the brow, burning brighter in Redline
+  // Zenith: a small crown of flame and frost over the brow, burning brighter in Redline; ice shards breaking off the frozen arm, fire licking up the other
   zenith(ctx, st) {
     for (let i = 0; i < 5; i++) {
       const a = -1.1 + i * 0.55, x = Math.cos(a) * 7.8, y = Math.sin(a) * 7.8, hot = i >= 2;
       glow(ctx, x, y, 4, hot ? '#ff7a3a' : '#8fd4ff', 0.5 + Math.sin(st.t * 7 + i) * 0.15);
       poly(ctx, [x - 1.2, y - 1.2, x + Math.cos(a) * 3, y + Math.sin(a) * 3, x + 1.2, y + 1.2], hot ? '#ffb05a' : '#cfeeff', OUT, 0.7);
     }
+    for (let i = 0; i < 4; i++) {
+      const q = (st.t * 0.5 + i / 4) % 1, x = 2 + i * 4.2, y = -17 - Math.sin(q * Math.PI) * 4 + (i % 2) * 2.4;
+      ctx.save(); ctx.globalAlpha = 0.85; ctx.translate(x, y); ctx.rotate(0.6 * i - 0.8);
+      poly(ctx, [-2.6, 0, 0, -1, 3, 0, 0, 1], '#e8f8ff', '#7ab8e8', 0.7); ctx.restore();
+    }
+    const cast = castAmt(st), rx = 13 + cast * 6, ry = 10 - cast * 2;
+    for (let i = 0; i < 3; i++) {
+      const j = Math.sin(st.t * 14 + i * 2) * 1.2;
+      poly(ctx, [rx - 1, ry + (i - 1) * 2.6, rx + 5 + j, ry + (i - 1) * 3.6 - 1.5, rx + 8 + j * 1.5 + i, ry + (i - 1) * 4.4 - 4, rx + 4, ry + (i - 1) * 2 + 1], i === 1 ? '#ffe27a' : '#ff8a2a');
+    }
   },
   // Orbit: a dashed ring of wind turning round them, a feather riding it
   orbit(ctx, st) {
     ctx.save(); ctx.rotate(st.t * 2.2);
+    // (the scarf's ribbons wind round them, the Orbit's look in the painting)
+    for (const [a0, a1] of [[0.3, 2.3], [3.4, 5.4]]) { ctx.strokeStyle = rgba('#8fe0b8', 0.7); ctx.lineWidth = 2.6; ctx.lineCap = 'round'; ctx.beginPath(); ctx.arc(0, 0, 20, a0, a1); ctx.stroke(); }
     ctx.setLineDash([5, 6]); circle(ctx, 0, 0, 22, null, rgba('#a8f0c8', 0.55), 1.3); ctx.setLineDash([]);
     ellipse(ctx, 22, 0, 3.4, 1.3, 1.57, '#e8fff2', OUT, 0.8);
     ctx.restore();
@@ -1137,107 +1352,136 @@ CHANNEL.thermist = { focus: [16, 0], color: '#ff9a6a', hot: '#e8f6ff', mote: 'em
 
 // ---------------------------------------------------------------- the advanced tanks (Gorgemaw, Oathbroker)
 Object.assign(HERO_ART, {
-  // Gorgemaw: a huge armoured glutton. A great round belly in banded leather under bronze plates, two enormous
-  // gauntlets, and a helm whose jaw-plate hinges open at the front (wide while Open Wide is up, a snap when it eats).
+  // Gorgemaw: a huge armoured glutton. A great round belly in riveted gold-brass plate under grey steel pauldrons, a
+  // stained cream napkin tucked under the chin, two enormous gold gauntlets, and a steel helm with a gold slotted visor
+  // pushed up on top; ginger hair and beard frame a ruddy face whose cheeks hinge open at the front (wide while Open
+  // Wide is up, a snap when it eats).
   gorgemaw(ctx, st) {
-    const bronze = '#b8743a', iron = '#4a3f3a', hide = '#7a4a30', skin = '#c88a64';
+    const gold = '#b8902a', goldD = '#8a6a1c', goldL = '#e6c25a', steel = '#8d939c', cloth = '#4a4a54', ginger = '#d9622e', skin = '#f2b684', napkin = '#f1e8d2';
     const s = swing(actP(st, 'attack')), dir = swingDir(st), pa = actP(st, 'attack');
     const open = Math.max(0, Math.min(1, ((st.jawUntil || 0) - st.t) / 0.15)), chomp = st.chompAt != null && st.t - st.chompAt < 0.25 ? 1 - (st.t - st.chompAt) / 0.25 : 0;
     const gape = Math.max(open * (st.jawAll > st.t ? 1.4 : 1), chomp * 0.6);
-    feet(ctx, st, '#3a2a22');
-    // the belly: wider than any other hero, bands of hide and a bronze plate on top
-    ellipse(ctx, -1, 0, 13, 18, 0, hide, OUT, 2.2);
-    for (const k of [-0.55, 0, 0.55]) ellipse(ctx, -1 + 2, k * 14, 10, 2.2, 0, shade(hide, -0.18));
-    ellipse(ctx, 1, 0, 8, 11, 0, bronze, OUT, 1.8);
-    ellipse(ctx, 2.5, -3, 3.5, 5, 0, shade(bronze, 0.25));
-    for (const sy of [-1, 1]) circle(ctx, 4, 7 * sy, 1.2, '#ffd8a0', OUT, 0.6);
-    // pauldrons
-    for (const sy of [-1, 1]) { ellipse(ctx, -2, 15 * sy, 7, 5.5, 0, iron, OUT, 1.8); ellipse(ctx, -1, 15 * sy, 4, 3, 0, bronze); }
+    feet(ctx, st, '#3a2f2a');
+    // the belly: wider than any other hero, a gold-brass breastplate bulging over banded plates, studded with rivets
+    ellipse(ctx, -1, 0, 13, 18, 0, goldD, OUT, 2.2);
+    for (const k of [-0.55, 0, 0.55]) ellipse(ctx, -1 + 2, k * 14, 10, 2.2, 0, shade(goldD, -0.22));
+    ellipse(ctx, 1, 0, 8, 11, 0, gold, OUT, 1.8);
+    ellipse(ctx, 2.5, -3, 3.5, 5, 0, goldL);
+    for (const sy of [-1, 1]) { circle(ctx, 4, 7 * sy, 1.2, '#fff0b0', OUT, 0.6); circle(ctx, -6, 10 * sy, 0.9, '#fff0b0', OUT, 0.5); }
+    // pauldrons: grey riveted steel
+    for (const sy of [-1, 1]) { ellipse(ctx, -2, 15 * sy, 7, 5.5, 0, steel, OUT, 1.8); ellipse(ctx, -1, 15 * sy, 4, 3, 0, shade(steel, 0.28)); circle(ctx, -4.6, 15 * sy, 0.8, '#e4e8ee'); circle(ctx, 1.4, 15 * sy, 0.8, '#e4e8ee'); }
+    // the napkin tucked under the chin, spotted with gravy
+    poly(ctx, [-1, -9.5, 6, -11.5, 13, -6.5, 15.5, 0, 13, 6.5, 6, 11.5, -1, 9.5], napkin, OUT, 1.4);
+    line(ctx, 6, -10, 12, -3, shade(napkin, -0.15), 0.8); line(ctx, 6, 10, 12, 3, shade(napkin, -0.15), 0.8);
+    for (const [x, y, r] of [[12.2, -3.4, 1], [13.6, 2.4, 0.8], [10.4, 5.4, 1.1]]) circle(ctx, x, y, r, '#b86a2e');
     // the gauntlets: the left braced, the right swinging in a cuff (and both forward at the mouth when it eats)
     const rot = 0.2 + dir * s * 1.1;
-    if (pa >= 0) smear(ctx, 4, 14, 20, 0.2 + dir * 1.1, rot, '#ffd0a0', strikeAmt(pa), 8);
+    if (pa >= 0) smear(ctx, 4, 14, 20, 0.2 + dir * 1.1, rot, '#ffd8a0', strikeAmt(pa), 8);
     ctx.save(); ctx.translate(4, 14); ctx.rotate(rot);
-    limb(ctx, [0, 0, 9, 1], iron, 6);
-    circle(ctx, 13, 1, 6, bronze, OUT, 1.8); for (let i = 0; i < 3; i++) line(ctx, 15, -3 + i * 3, 18, -3 + i * 3, OUT, 1.2);
+    limb(ctx, [0, 0, 9, 1], cloth, 6);
+    circle(ctx, 13, 1, 6, gold, OUT, 1.8); circle(ctx, 11.6, -1, 2.2, goldL); for (let i = 0; i < 3; i++) line(ctx, 15, -3 + i * 3, 18, -3 + i * 3, OUT, 1.2);
     ctx.restore();
     const lf = gape * 4;
-    limb(ctx, [2, -14, 9 + lf, -15 + lf * 0.5], iron, 6);
-    circle(ctx, 12 + lf, -15 + lf * 0.5, 6, bronze, OUT, 1.8);
-    // the helm: a domed iron bowl and the hinged jaw-plate in front, its teeth showing when it opens
-    circle(ctx, 1, 0, 8.6, iron, OUT, 2);
-    circle(ctx, -1, -2.5, 3, shade(iron, 0.2));
-    const ja = 0.15 + gape * 0.75;
+    limb(ctx, [2, -14, 9 + lf, -15 + lf * 0.5], cloth, 6);
+    circle(ctx, 12 + lf, -15 + lf * 0.5, 6, gold, OUT, 1.8); circle(ctx, 10.6 + lf, -17 + lf * 0.5, 2.2, goldL);
+    // ginger hair and beard behind the helm
+    for (const sy of [-1, 1]) ellipse(ctx, -2.5, 8.2 * sy, 4.4, 3.2, 0.35 * sy, ginger, OUT, 1.2);
+    // the helm: a domed steel bowl, a gold slotted visor pushed up along the crown
+    circle(ctx, 1, 0, 8.6, steel, OUT, 2);
+    circle(ctx, -1, -2.5, 3, shade(steel, 0.25));
+    ellipse(ctx, 0, 0, 7.6, 3, 0, gold, OUT, 1.2);
+    for (let i = 0; i < 4; i++) line(ctx, -3.6 + i * 2.4, -1.6, -3.6 + i * 2.4, 1.6, goldD, 0.9);
+    circle(ctx, 6.6, 0, 0.9, goldL, OUT, 0.5);
+    // the face: ruddy cheeks on two hinged plates, a ginger beard along their edges, teeth showing when it opens
+    const ja = 0.15 + gape * 0.75, tA = Math.min(1, gape * 3.5);
     for (const sy of [-1, 1]) {
       ctx.save(); ctx.translate(5, 0); ctx.rotate(sy * ja);
-      poly(ctx, [0, 0, 7, sy * 1, 8.5, sy * 6.5, 1, sy * 7.5], bronze, OUT, 1.4);
-      for (let i = 0; i < 3; i++) poly(ctx, [2 + i * 2.2, sy * 1.2, 3.1 + i * 2.2, sy * 3.4, 4.2 + i * 2.2, sy * 1.2], '#fff4e0');
+      poly(ctx, [0, 0, 7, sy * 1, 8.5, sy * 6.5, 1, sy * 7.5], skin, OUT, 1.4);
+      poly(ctx, [1, sy * 7.5, 8.5, sy * 6.5, 8.1, sy * 5.5, 1.6, sy * 6.2], ginger);
+      circle(ctx, 3, sy * 3.4, 1.5, 'rgba(240,100,100,0.5)');
+      if (tA > 0.05) { ctx.save(); ctx.globalAlpha = tA; for (let i = 0; i < 3; i++) poly(ctx, [2 + i * 2.2, sy * 1.2, 3.1 + i * 2.2, sy * 3.4, 4.2 + i * 2.2, sy * 1.2], '#fff4e0'); ctx.restore(); }
       ctx.restore();
     }
     if (gape > 0.1) { glow(ctx, 9, 0, 6 + gape * 6, st.jawAll > st.t ? '#ff6a3a' : '#ffb070', 0.35 * gape); ellipse(ctx, 8, 0, 2 + gape * 2, 2 + gape * 4, 0, '#2a0e08'); }
     line(ctx, 3, -5.5, 3, 5.5, '#2a2422', 1.2);
-    circle(ctx, 4.5, -3, 1, '#ffb070'); circle(ctx, 4.5, 3, 1, '#ffb070');
+    circle(ctx, 4.5, -3, 0.9, '#2a1c14'); circle(ctx, 4.5, 3, 0.9, '#2a1c14');
   },
 
   // Oathbroker: a grey-robed contract-knight. A long grey surcoat over plate, a hooded half-helm, a ledger book
   // chained at the left hip, and a sealing-stamp mace in the right hand (its square head stamps on every hit).
   oathbroker(ctx, st) {
-    const robe = '#7a7684', plate = '#a8a8b4', wax = '#c04a5a', vellum = '#e8e0cc', lil = '#b8a8e0', skin = '#e0c0a4';
+    const robe = '#5e5c6a', plate = '#a8abb6', wax = '#c0364a', vellum = '#e8e0cc', lil = '#b8a0e0', skin = '#e8c4a4', gold = '#c8a040', hair = '#e2cb86';
     const s = swing(actP(st, 'attack')), dir = swingDir(st), pa = actP(st, 'attack'), big = pulse(actP(st, 'big'));
     const wave = Math.sin(st.t * 3.5) * 1.2 + (st.moving ? Math.sin(st.t * 11) * 2 : 0);
     // the surcoat's long tails
     poly(ctx, [-4, -11, -18, -11 + wave * 0.4, -21 + wave, -3, -21 + wave, 3, -18, 11 - wave * 0.4, -4, 11], robe, OUT, 2);
-    line(ctx, -6, 0, -20 + wave, 0, shade(robe, -0.25), 1.2);
+    line(ctx, -6, 0, -20 + wave, 0, lil, 2.6); circle(ctx, -14 + wave * 0.6, 0, 1.5, lil, OUT, 0.7);   // the lilac stripe down the surcoat, a fleur at its heart
     feet(ctx, st, '#3a3844');
     torso(ctx, plate, 9, 14);
     ellipse(ctx, -1.5, 0, 6.5, 12, 0, robe, OUT, 1.4);
     line(ctx, 3.5, -8, 3.5, 8, lil, 1.4);
-    for (const sy of [-1, 1]) { ellipse(ctx, -0.5, 12.5 * sy, 6, 4.5, 0, plate, OUT, 1.5); line(ctx, -4, 12.5 * sy, 2.5, 12.5 * sy, shade(plate, -0.3), 1); }
+    for (const sy of [-1, 1]) { ellipse(ctx, -0.5, 12.5 * sy, 6, 4.5, 0, plate, OUT, 1.5); line(ctx, -4, 12.5 * sy, 2.5, 12.5 * sy, shade(plate, -0.3), 1); circle(ctx, 1.4, 10.4 * sy, 1.7, gold, OUT, 0.7); circle(ctx, 1.4, 10.4 * sy, 0.6, '#fff0b0'); }   // gold fleur medallions at the shoulders
     // the ledger: a thick book on a chain at the left hip, swaying
     const bs = Math.sin(st.t * 2.2) * 1.2;
-    ctx.save(); ctx.setLineDash([1.6, 1.2]); line(ctx, -2, -12, -7, -17 + bs, '#c8c8d0', 1.4); ctx.setLineDash([]); ctx.restore();
+    ctx.save(); ctx.setLineDash([1.6, 1.2]); line(ctx, -2, -12, -7, -17 + bs, gold, 1.4); ctx.setLineDash([]); ctx.restore();
     ctx.save(); ctx.translate(-8, -18 + bs); ctx.rotate(-0.25);
-    rrect(ctx, -5, -3.5, 10, 7, 1.2, '#4a3a4a', OUT, 1.4); rrect(ctx, -4, -2.6, 8, 5.2, 0.8, vellum); circle(ctx, 0, 0, 1.6, wax, OUT, 0.6);
+    rrect(ctx, -5, -3.5, 10, 7, 1.2, '#2e2428', OUT, 1.4); rrect(ctx, -4, -2.6, 8, 5.2, 0.8, vellum); circle(ctx, 0, 0, 2, wax, OUT, 0.6); for (const [cx, cy] of [[-4.6, -3.1], [4.6, -3.1], [-4.6, 3.1], [4.6, 3.1]]) circle(ctx, cx, cy, 0.9, gold);
     ctx.restore();
     // the stamp-mace: a shaft and a square seal head, brought down on every hit (and raised high for the big ones)
     const rot = 0.25 + dir * s * 1.15 - big * 1.2;
     if (pa >= 0) smear(ctx, 7, 11, 22, 0.25 + dir * 1.15, rot, lil, strikeAmt(pa), 6);
     ctx.save(); ctx.translate(7, 11); ctx.rotate(rot);
-    rrect(ctx, -3, -1.3, 22, 2.6, 1, '#5a4a3a', OUT, 1.2);
-    rrect(ctx, 18, -5, 7, 10, 1.5, plate, OUT, 1.6); rrect(ctx, 24, -4, 2, 8, 0.6, wax);
+    rrect(ctx, -3, -1.3, 22, 2.6, 1, gold, OUT, 1.2);
+    rrect(ctx, 18, -5, 7, 10, 1.5, gold, OUT, 1.6); rrect(ctx, 24, -4, 2.6, 8, 0.6, wax, OUT, 0.6); line(ctx, 20.5, -3.4, 20.5, 3.4, shade(gold, -0.3), 0.9);
     ctx.restore();
     hand(ctx, 7, 11, plate);
     hand(ctx, 6, -10, plate);
     // hood over a steel half-helm, a sliver of face
     circle(ctx, 0.5, 0, 7.8, robe, OUT, 2);
+    ctx.save(); ctx.strokeStyle = lil; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(0.5, 0, 6.6, -1.1, 1.1); ctx.stroke(); ctx.restore();   // the hood's lilac lining
     ellipse(ctx, 3, 0, 4.5, 5.5, 0, plate, OUT, 1.2);
     ellipse(ctx, 6.4, 0, 1.8, 3.2, 0, skin);
+    for (const sy of [-1, 1]) ellipse(ctx, 5.2, 4.3 * sy, 2.3, 1.2, 0.5 * sy, hair, OUT, 0.6);   // blonde hair at the face
     line(ctx, 3, -4.5, 3, 4.5, '#3a3844', 1);
+    poly(ctx, [3.6, 0, 2.2, -1.4, 0.6, 0, 2.2, 1.4], gold, OUT, 0.6);   // the circlet's fleur
     circle(ctx, -2, -2.2, 2, shade(robe, 0.18));
   },
 });
 Object.assign(SPEC_ART, {
-  // Glutton: a feast-napkin tied under the helm, and a fat gold belt round the belly
-  glutton(ctx) {
-    ellipse(ctx, -1, 0, 13.5, 18.5, 0, null, '#e8c15a', 2.2);
-    poly(ctx, [8, -5, 14, 0, 8, 5], '#f4f0e4', OUT, 1.2);
-    circle(ctx, -1, 13, 1.8, '#ffd27a', OUT, 0.8);
+  // Glutton: a glazed drumstick in the left gauntlet (up at the mouth when it eats), gravy down the napkin, a grin of rosy cheeks
+  glutton(ctx, st) {
+    const open = Math.max(0, Math.min(1, ((st.jawUntil || 0) - st.t) / 0.15)), chomp = st.chompAt != null && st.t - st.chompAt < 0.25 ? 1 - (st.t - st.chompAt) / 0.25 : 0;
+    const lf = Math.max(open * (st.jawAll > st.t ? 1.4 : 1), chomp * 0.6) * 4, hx = 12 + lf, hy = -15 + lf * 0.5;
+    limb(ctx, [hx - 3.5, hy + 3.5, hx + 1, hy - 0.5], '#efe6d0', 1.8);
+    circle(ctx, hx - 4.2, hy + 4.2, 1.5, '#efe6d0', OUT, 0.8);
+    ellipse(ctx, hx + 3.6, hy - 3.4, 5.4, 3.7, -0.55, '#8a4a22', OUT, 1.3);
+    ellipse(ctx, hx + 2.8, hy - 4.6, 2.8, 1.4, -0.55, '#c98348');
+    for (const [x, y] of [[9.6, 1.2], [12, -5.2], [8.2, 5.4]]) circle(ctx, x, y, 0.9, '#8a4a22');
   },
-  // Gizzard: grey stone plates set into the belly, glowing warm while it digests
+  // Gizzard: the belly polished to a mirror shine, warm light welling up through the plate while it digests
   gizzard(ctx, st) {
-    for (const [x, y] of [[-4, -8], [-4, 8], [-7, 0]]) poly(ctx, [x - 3, y - 3, x + 3, y - 3.5, x + 3.5, y + 3, x - 3, y + 3.5], '#9a948a', OUT, 1);
-    glow(ctx, 0, 0, 16, '#ffc070', 0.12 + Math.sin(st.t * 3) * 0.05);
+    const g = 0.14 + Math.sin(st.t * 3) * 0.05;
+    glow(ctx, 0, 0, 17, '#ffc070', g);
+    ctx.save(); ctx.strokeStyle = 'rgba(255,244,200,0.75)'; ctx.lineCap = 'round'; ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.arc(-1, 0, 10.5, 2.3, 3.5); ctx.stroke(); ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(-1, 0, 12.2, 2.5, 3.2); ctx.stroke(); ctx.restore();
+    for (const [x, y] of [[-3, -5], [-3, 5], [-8, 0]]) { circle(ctx, x, y, 1.4, '#f3d37a', OUT, 0.7); circle(ctx, x - 0.3, y - 0.3, 0.5, '#fffbe6'); }
   },
   // Guarantor: a gold chain across the chest to a second seal, gold trim on the pauldrons
-  guarantor(ctx) {
+  guarantor(ctx, st) {
     ctx.save(); ctx.setLineDash([1.6, 1.2]); line(ctx, 3, -11, 3, 11, '#e8c15a', 1.4); ctx.setLineDash([]); ctx.restore();
     circle(ctx, 4, 0, 2.4, '#ffd27a', OUT, 0.9);
     for (const sy of [-1, 1]) ellipse(ctx, -0.5, 12.5 * sy, 6, 4.5, 0, null, '#e8c15a', 1.2);
+    // the ledger held open: its pages spread to both sides of the cover, gold at the corners
+    ctx.save(); ctx.translate(-8, -18 + Math.sin(st.t * 2.2) * 1.2); ctx.rotate(-0.25);
+    for (const sx of [-1, 1]) { rrect(ctx, sx < 0 ? -10.4 : 4.6, -3.2, 5.8, 6.4, 0.8, '#efe6cc', OUT, 1); line(ctx, sx * 7.4, -1.6, sx * 7.4, 1.6, '#a89a78', 0.6); }
+    for (const [cx, cy] of [[-9.6, -2.6], [9.6, -2.6], [-9.6, 2.6], [9.6, 2.6]]) circle(ctx, cx, cy, 0.8, '#d8a840');
+    ctx.restore();
   },
   // Collector: a red sash hung with coin pouches and wax seals
   collector(ctx) {
-    line(ctx, -6, -10, 3, 10, '#a02838', 2.6);
+    line(ctx, -6, -10, 3, 10, '#b02a3a', 3);
     for (const [x, y] of [[-3, -4], [0, 3]]) circle(ctx, x, y, 1.9, '#d8a040', OUT, 0.8);
-    circle(ctx, -5, 7, 1.6, '#c04a5a', OUT, 0.7);
+    for (const [x, y] of [[-6, 6.4], [-3.4, 8.6], [-0.6, 9.4]]) { line(ctx, x, y - 2.2, x, y, '#d8a040', 0.7); circle(ctx, x, y, 1.5, '#d8a040', OUT, 0.7); circle(ctx, x, y, 0.6, '#c0364a'); }   // hung with gold medallions and seals
   },
 });
 // ======================================================================= Threadweaver and Marionettist (classes-c)
@@ -1246,11 +1490,11 @@ Object.assign(HERO_ART, {
   // of thread at her belt, and a needle as long as a rapier in her right hand, a glowing thread run through its eye and
   // looped back to her left. The needle thrusts on her casts.
   threadweaver(ctx, st) {
-    const dress = '#3a2a4a', shawl = '#9a86c8', hat = '#2e2140', skin = '#efd0b4', hair = '#d8d0e8', thread = '#cbb8ff';
+    const dress = '#2a1e36', shawl = '#a68ccf', hat = '#4a2a58', skin = '#e4bd94', hair = '#26222e', thread = '#cbb8ff';
     const cast = castAmt(st), pa = actP(st, 'attack'), thrust = Math.max(cast, pa >= 0 ? strikeAmt(pa) : 0);
     feet(ctx, st, '#1e1626');
     // three spools on the belt at her back, each a different thread
-    [['#ff9ab8', -9, -7], ['#9ad8ff', -11, 0], ['#ffe08a', -9, 7]].forEach(([c, x, y]) => {
+    [['#b79ae0', -9, -7], ['#9a7acd', -11, 0], ['#c8b0ee', -9, 7]].forEach(([c, x, y]) => {
       ellipse(ctx, x, y, 3.4, 2.4, 0, '#8a5a32', OUT, 1.1);
       ellipse(ctx, x, y, 2.4, 1.8, 0, c);
       line(ctx, x - 2.4, y, x + 2.4, y, shade(c, 0.25), 0.7);
@@ -1258,6 +1502,7 @@ Object.assign(HERO_ART, {
     torso(ctx, dress, 9, 13.5);
     // the shawl: a pointed drape over the shoulders, a darker hem stitched in a running line
     poly(ctx, [-6, -13, 4, -10, 6, 0, 4, 10, -6, 13, -2, 0], shawl, OUT, 1.5);
+    for (const [x, y] of [[-3, -9], [0, -6.5], [2.4, -3.4], [-3.4, -5], [2.6, 3.4], [0, 6.6], [-3, 9], [-3.2, 5], [2.4, 0]]) circle(ctx, x, y, 0.9, '#7a62a8');   // the crochet's open holes
     ctx.save(); ctx.setLineDash([1.6, 1.8]); limb(ctx, [-4, -10, 3, -8, 4.5, 0, 3, 8, -4, 10], '#e8deff', 0.7); ctx.restore();
     // the needle: held low in the right hand, a long silver spike forward, the eye near the grip
     const nx = 8 + thrust * 9, ny = 9 - thrust * 5, ang = -0.14 - thrust * 0.18;
@@ -1266,6 +1511,7 @@ Object.assign(HERO_ART, {
     line(ctx, 0, -0.5, 22, -0.3, '#ffffff', 0.6);
     ellipse(ctx, -2.5, 0, 2.6, 1.6, 0, '#c8a24a', OUT, 0.9);
     circle(ctx, -2.5, 0, 0.8, '#1a1226');
+    circle(ctx, -6.2, 0, 2.5, null, '#c8a24a', 1.4);   // the gold ring grip
     ctx.restore();
     // the thread: from the needle's eye back to her left hand, glowing, swaying
     const ex = nx - 2.5 * Math.cos(ang), ey = ny - 2.5 * Math.sin(ang), lx = 6 + cast * 3, ly = -11;
@@ -1277,16 +1523,18 @@ Object.assign(HERO_ART, {
     hand(ctx, lx, ly, skin);
     glow(ctx, lx, ly, 5 + cast * 4, thread, 0.3 + cast * 0.3);
     // pale hair spilling from under the hat, then the hat: a wide brim seen from above, a band, the tip flopped back
-    hairBack(ctx, hair, 8, 7);
+    hairBack(ctx, hair, 9, 7.6);
+    for (const [x, y] of [[-9, -5], [-12, 1], [-9, 6], [-14, -2]]) ellipse(ctx, x, y, 2.6, 1.2, 0.5, '#8a8694');   // grey streaks in the curls
     circle(ctx, 0, 0, 7, skin, OUT, 1.5);
     ellipse(ctx, -0.5, 0, 12.5, 12, 0, hat, OUT, 1.8);
     ellipse(ctx, -1.2, -1.2, 9, 8.5, 0, shade(hat, 0.08));
-    circle(ctx, -1, 0, 6, null, '#b89cff', 1.4);   // the hat band
+    circle(ctx, -1, 0, 6, null, '#7a5aa8', 1.7);   // the hat band
     ctx.save(); ctx.translate(-2, 0); ctx.rotate(Math.PI + Math.sin(st.t * 1.3) * 0.2);
     poly(ctx, [0, -4.2, 9, -2, 14, 2.5, 7, 3, 0, 4.2], shade(hat, 0.12), OUT, 1.2);
     circle(ctx, 14, 2.5, 1.4, '#ffe08a', OUT, 0.7);
     ctx.restore();
-    circle(ctx, 3.5, -4.5, 1.6, '#ff9ab8', OUT, 0.8);   // a pincushion flower on the brim
+    circle(ctx, 4.6, -5, 2.1, '#d8b04a', OUT, 0.8); circle(ctx, 4.6, -5, 1, '#9a5ad0');   // the gold brooch and violet stone on the band
+    for (const o of [-1.4, 0, 1.4]) line(ctx, 3.2 + o, -7.4, 5.6 + o * 2, -11, '#d8b04a', 0.9);   // three needles pinned in it
   },
 
   // Marionettist: a slight puppeteer in stagehand black. A close black hood with a pale face, a black jerkin, and a
@@ -1295,11 +1543,15 @@ Object.assign(HERO_ART, {
   marionettist(ctx, st) {
     const black = '#1c1a22', black2 = '#2c2834', skin = '#f0dccb', wood = '#9a6a3c', accent = '#c84a8c';
     const cast = castAmt(st), pa = actP(st, 'attack'), jerk = Math.max(cast, pa >= 0 ? strikeAmt(pa) : 0), big = pulse(actP(st, 'big'));
+    const wv = Math.sin(st.t * 2.4) * 0.8 + (st.moving ? Math.sin(st.t * 10) * 1.6 : 0);
+    // the cloak: a short black cape that hangs off the shoulders and stirs behind them
+    poly(ctx, [-4, -11, -12, -10.5, -17 + wv, -5, -18 + wv, 0, -17 + wv, 5, -12, 10.5, -4, 11], '#25222d', OUT, 1.6);
+    line(ctx, -7, -6, -15 + wv * 0.8, -3.5, '#34303e', 1); line(ctx, -7, 6, -15 + wv * 0.8, 3.5, '#34303e', 1);
     feet(ctx, st, '#121016');
     torso(ctx, black, 7.5, 12);
     line(ctx, -5, -8, -5, 8, black2, 1.4);
-    // a red ribbon at the throat, the only colour on them
-    poly(ctx, [3, -2.5, 6.5, 0, 3, 2.5, 4.4, 0], accent, OUT, 0.8);
+    // brass buttons at the shoulders where the jerkin fastens (the lacing and the collar button are hidden under the hood from above)
+    for (const sy of [-1, 1]) circle(ctx, 1.5, 8.8 * sy, 1.2, '#c8923a', OUT, 0.6);
     // the control bar: a cross of wood held out in front, tipping with each command
     const tilt = Math.sin(st.t * 2.2) * 0.06 + jerk * 0.45 * (st.action && st.action.alt ? -1 : 1) + big * Math.sin(st.t * 18) * 0.25;
     ctx.save(); ctx.translate(13 + jerk * 3, 0); ctx.rotate(tilt);
@@ -1308,43 +1560,56 @@ Object.assign(HERO_ART, {
     for (const y of [-10, 10]) circle(ctx, 0, y, 1.6, '#e2bb58', OUT, 0.7);
     circle(ctx, 6, 0, 1.6, '#e2bb58', OUT, 0.7);
     ctx.restore();
-    hand(ctx, 11 + jerk * 3, -7, skin);
-    hand(ctx, 11 + jerk * 3, 7, skin);
+    hand(ctx, 11 + jerk * 3, -7, '#141218');
+    hand(ctx, 11 + jerk * 3, 7, '#141218');   // black gloves
     // the hood: black all round, a pale face showing at the front
     circle(ctx, 0, 0, 7.2, black2, OUT, 1.6);
     ellipse(ctx, 3.2, 0, 3.4, 4.6, 0, skin);
     poly(ctx, [-6.5, -3, -11.5, 0, -6.5, 3], black2, OUT, 1);   // the hood's point, hanging back
     circle(ctx, -1.2, -2.5, 1.6, '#3a3644');
+    poly(ctx, [1.2, -4.8, 5.4, -4.2, 5.6, -2.4, 6.6, -0.5, 4.8, -0.4, 4.8, 1.6, 5.4, 4.2, 1.2, 4.8], '#0e0c12');   // black bangs falling over the brow
+    circle(ctx, 6.3, -1.5, 0.5, '#0e0c12'); circle(ctx, 6.3, 1.5, 0.5, '#0e0c12');
   },
 });
 
 Object.assign(SPEC_ART, {
-  // Loomwright: a little frame of threads strung round her like a loom, slowly turning
+  // Loomwright: a small wooden loom frame strung with blue and violet warp threads at her side, a woven patch growing on it,
+  // a blue spool beside it, and loose threads of light slowly turning round her
   loomwright(ctx, st) {
     ctx.save(); ctx.rotate(st.t * 0.4);
     for (let i = 0; i < 6; i++) {
       const a = i * TAU / 6, b = a + TAU / 6 * 2;
-      line(ctx, Math.cos(a) * 21, Math.sin(a) * 21, Math.cos(b) * 21, Math.sin(b) * 21, rgba('#9ab8ff', 0.4), 0.8);
-      glow(ctx, Math.cos(a) * 21, Math.sin(a) * 21, 3, '#c8d8ff', 0.6);
+      line(ctx, Math.cos(a) * 21, Math.sin(a) * 21, Math.cos(b) * 21, Math.sin(b) * 21, rgba('#7a98ff', 0.35), 0.8);
+      glow(ctx, Math.cos(a) * 21, Math.sin(a) * 21, 3, '#b8c8ff', 0.55);
     }
     ctx.restore();
+    ctx.save(); ctx.translate(-4, -21); ctx.rotate(-0.12);
+    rrect(ctx, -11, -4.5, 22, 9, 1, '#2c1e16', OUT, 1.2);
+    for (let i = 0; i < 9; i++) line(ctx, -9.5 + i * 2.4, -3.6, -9.5 + i * 2.4, 3.6, i % 2 ? '#8a7af0' : '#5a8af0', 0.9);
+    rrect(ctx, -10, 0.5, 20, 3.4, 0.6, '#6a58b8');
+    rrect(ctx, -11, -4.5, 22, 9, 1, null, '#9a6a3c', 1.6);
+    ctx.restore();
+    ellipse(ctx, 9, -20, 2.4, 1.8, 0, '#5a8af0', OUT, 0.9); ellipse(ctx, 9, -20, 1.6, 1.1, 0, '#9ab8ff');
   },
-  // Shears: a great pair of silver shears hanging at her hip, opening and closing
+  // Shears: a great pair of silver shears in her left hand, held open and snipping, a lilac tassel from the handle
   shears(ctx, st) {
-    const o = 0.18 + Math.max(0, Math.sin(st.t * 1.6)) * 0.25;
-    ctx.save(); ctx.translate(-3, 13); ctx.rotate(Math.PI * 0.85);
+    const o = 0.2 + Math.max(0, Math.sin(st.t * 1.6)) * 0.28, cast = castAmt(st), hx = 6 + cast * 3, hy = -11;
+    ctx.save(); ctx.translate(hx, hy); ctx.rotate(-0.28);
     for (const s of [-1, 1]) {
       ctx.save(); ctx.rotate(s * o);
-      poly(ctx, [0, -1, 14, -0.4, 16, 0, 14, 0.6, 0, 1], '#e4ecf2', OUT, 1);
-      circle(ctx, -3.5, s * 1.5, 2.6, null, '#ff9ab8', 1.4);
+      poly(ctx, [1, -1.4, 20, -0.3, 24, 0, 20, 0.5, 1, 1.4], '#e4ecf2', OUT, 1);
+      line(ctx, 3, 0, 20, 0, '#ffffff', 0.5);
+      circle(ctx, -3.6, s * 1.9, 2.5, null, '#c8d0dc', 1.6);
       ctx.restore();
     }
-    circle(ctx, 0, 0, 1.2, '#c8a24a', OUT, 0.6);
+    circle(ctx, 1, 0, 1.2, '#c8a24a', OUT, 0.6);
+    line(ctx, -5, 2.4, -9, 6, '#c8a8f0', 1.2); circle(ctx, -9.4, 6.4, 1, '#c8a8f0', OUT, 0.5);
     ctx.restore();
+    hand(ctx, hx, hy, '#e4bd94');
   },
   // Cutting Line: the strings run red at the bar, and a coil of bright wire hangs at the hip
   cuttingline(ctx, st) {
-    for (let i = 0; i < 3; i++) circle(ctx, -6, -9 + i * 1.6, 2.6 - i * 0.3, null, rgba('#ff6a8a', 0.7), 0.9);
+    for (let i = 0; i < 3; i++) circle(ctx, -6, -9 + i * 1.6, 2.6 - i * 0.3, null, rgba('#e8ecf4', 0.85), 0.9);   // a coil of bright silver wire
     glow(ctx, 14, 0, 9, '#ff6a8a', 0.18 + Math.sin(st.t * 4) * 0.06);
   },
   // Understudy: a second, smaller control bar slung across the back
@@ -1353,6 +1618,7 @@ Object.assign(SPEC_ART, {
     rrect(ctx, -1.4, -8, 2.8, 16, 1, '#8a5a32', OUT, 1.1);
     rrect(ctx, -4.5, -1.2, 9, 2.4, 1, '#9a6a3c', OUT, 1);
     ctx.restore();
+    poly(ctx, [-9, -5, -12.5, -7.6, -12.5, -2.4], '#f2e6d4', OUT, 0.8); poly(ctx, [-9, -5, -5.5, -7.6, -5.5, -2.4], '#f2e6d4', OUT, 0.8); circle(ctx, -9, -5, 1.2, '#c8404c', OUT, 0.6);   // a second Doll's cream bow tied to it
     glow(ctx, 0, 0, 22, '#e8a0ff', 0.06 + Math.sin(st.t * 1.4) * 0.03);
   },
 });
@@ -1461,8 +1727,8 @@ const HERO_TRAIL = {
 // jabs open-palmed (Light), the rear hand drives a straight (Heavy), a leg snaps out (Kick); uppercut, axe kick, a
 // flurry of palms, and forearms crossed for guard. Hits freeze for a beat (hitStop in draw-util.js).
 HERO_ART.ironpalm = function (ctx, st) {
-  const gi = HERO_SPEC === 'stillwater' ? '#9cc4dc' : HERO_SPEC === 'avalanche' ? '#c8875a' : '#f0a73a';
-  const sash = HERO_SPEC === 'stillwater' ? '#2e4a66' : '#7a2430', skin = '#d9a07a', wrap = '#ece0c8', iron = '#8e9aa8';
+  const gi = HERO_SPEC === 'stillwater' ? '#86b4dc' : HERO_SPEC === 'avalanche' ? '#e8902a' : '#eba521';
+  const sash = HERO_SPEC === 'stillwater' ? '#233a78' : '#8a2230', skin = '#b9743f', wrap = HERO_SPEC === 'stillwater' ? '#d8bc92' : '#ece0c8', stone = HERO_SPEC === 'avalanche', iron = stone ? '#7c766f' : '#4e4e58';
   const p = actP(st), raw = p >= 0 && st.action ? st.action.type : null;
   const type = raw === 'attack' ? (st.action.alt ? 'fist' : 'palm') : raw;   // auto-attacks: a jab, then a straight
   const ease = q => (q < 0 ? 0 : q < 0.35 ? easeOut(q / 0.35) : 1 - easeOut((q - 0.35) / 0.65));   // out fast, back slower
@@ -1485,7 +1751,7 @@ HERO_ART.ironpalm = function (ctx, st) {
   rrect(ctx, -4.5, -11, 3, 22, 1, sash, OUT, 1.1);
   poly(ctx, [-4, 10, -11, 13 + Math.sin(st.t * 4) * 1.5, -9, 8], sash, OUT, 1);
   // prayer beads
-  for (let i = 0; i < 9; i++) { const a = -1.3 + i * 0.32; circle(ctx, 1 + Math.cos(a) * 7.5, Math.sin(a) * 7.5, 1.1, '#4a2a1e', null); }
+  for (let i = 0; i < 9; i++) { const a = -1.3 + i * 0.32, bx = 1 + Math.cos(a) * 7.5, by = Math.sin(a) * 7.5; circle(ctx, bx, by, 1.5, '#4a2616', OUT, 0.5); circle(ctx, bx - 0.4, by - 0.4, 0.5, '#8a5a3a'); }
   // arms: guard up; which hand moves depends on the strike
   let L = [8, -8], R = [7, 9], open = false;
   if (type === 'palm') { L = [8 + k * 16, -8 + k * 6]; open = true; }
@@ -1499,7 +1765,7 @@ HERO_ART.ironpalm = function (ctx, st) {
     limb(ctx, [(sx + hx * 2) / 3, (sy + hy * 2) / 3, hx, hy], wrap, 3.2);   // the cloth wraps up the forearm
     const r = up ? 4.4 + k * 1.6 : 3.8;
     if (open && sy < 0 || (type === 'flurry' && p >= 0)) { ellipse(ctx, hx + 1, hy, r * 1.1, r * 1.3, 0, wrap, OUT, 1.4); line(ctx, hx + 2.5, hy - 2, hx + 2.5, hy + 2, 'rgba(90,60,40,0.4)', 0.8); }
-    else { circle(ctx, hx, hy, r, wrap, OUT, 1.4); rrect(ctx, hx + r * 0.2, hy - r * 0.8, r * 0.7, r * 1.6, 1, iron, OUT, 0.9); }   // iron over the knuckles
+    else { circle(ctx, hx, hy, r, wrap, OUT, 1.4); rrect(ctx, hx + r * 0.2, hy - r * 0.8, r * (stone ? 1.1 : 0.7), r * 1.6, stone ? 1.8 : 1, iron, OUT, 0.9); if (stone) { line(ctx, hx + r * 0.75, hy - r * 0.5, hx + r * 0.75, hy + r * 0.5, OUT, 0.7); circle(ctx, hx + r * 0.5, hy - r * 0.2, 0.7, '#a8a29a'); } }   // iron (or, for Avalanche, rubble) over the knuckles
   };
   arm(1, -10, L, type === 'palm');
   arm(1, 10, R, type === 'fist' || type === 'uppercut');
@@ -1512,6 +1778,7 @@ HERO_ART.ironpalm = function (ctx, st) {
   ellipse(ctx, 5.4, 0, 1.4, 4.6, 0, shade(skin, -0.2));
   circle(ctx, -7, 0, 2.6, '#2a1c16', OUT, 1.2);
   line(ctx, -9.5, 0, -12, Math.sin(st.t * 5) * 1.2, '#2a1c16', 1.6);
+  ctx.save(); ctx.strokeStyle = HERO_SPEC === 'stillwater' ? '#233a78' : '#9a2a38'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(-5.2, -2.2); ctx.lineTo(-5.2, 2.2); ctx.stroke(); ctx.restore();   // the cord round the knot
   ctx.restore();
 };
 CHANNEL.ironpalm = { focus: [12, 0], color: '#ffb84a', hot: '#fff0c8', mote: 'mote' };
@@ -1526,14 +1793,20 @@ Object.assign(SPEC_ART, {
   avalanche(ctx, st) {
     for (const sy of [-1, 1]) { const x = 9, y = 8.5 * sy; glow(ctx, x, y, 8, '#d08a5a', 0.15 + Math.sin(st.t * 4 + sy) * 0.05); }
     for (let i = 0; i < 3; i++) { const q = (st.t * 1.3 + i / 3) % 1; circle(ctx, 6 - q * 6, (i - 1) * 9, 1 - q * 0.6, '#8a6a50'); }
+    // loose rubble drifting round the stone-bound fists
+    for (let i = 0; i < 4; i++) {
+      const a = st.t * 1.1 + i * 1.57, x = 11 + Math.cos(a) * 4.5, y = (i % 2 ? 1 : -1) * (9.5 + Math.sin(a * 1.3) * 3), r = 1.5 + (i % 2) * 0.6;
+      poly(ctx, [x - r, y - r * 0.4, x - r * 0.2, y - r, x + r, y - r * 0.2, x + r * 0.5, y + r, x - r * 0.8, y + r * 0.7], i % 2 ? '#9a948c' : '#6c665f', OUT, 0.7);
+    }
   },
 });
 // Gloomsworn (tank, class 18): a hooded dark knight in bruised-violet plate. The helm is cracked and lit from within (a
 // cold teal-white), a crown of cracked shadow stands round the back of it, the cloak is ragged and trails behind, and a
 // black greatsword with a pale light in its fuller rides at the right hip. The Reaver of Dusk burns brighter in the cracks.
 HERO_ART.gloomsworn = function (ctx, st) {
-  const plate = '#5a3f7e', plateD = '#3a2a58', ink = '#14101e', cloak = '#1d1430', ghost = '#bff8ee', vio = '#9a6ae0';
-  const reaver = HERO_SPEC === 'duskreaver';
+  const plate = '#5a3f7e', plateD = '#3a2a58', ink = '#14101e', cloak = '#1d1430', vio = '#9a6ae0';
+  const reaver = HERO_SPEC === 'duskreaver';   // the Reaver of Dusk fights bare-headed, wild black hair, the cracks lit rose-pink instead of cold teal
+  const ghost = reaver ? '#ff8ab8' : '#bff8ee';
   const s = swing(actP(st, 'attack')), bash = pulse(actP(st, 'bash')), big = pulse(actP(st, 'big')), pa = actP(st, 'attack');
   const wave = Math.sin(st.t * 3.2) * 1.8 + (st.moving ? Math.sin(st.t * 10) * 2.4 : 0);
   const fl = (0.72 + 0.28 * Math.sin(st.t * 5.3 + 1)) * (reaver ? 1.25 : 1);
@@ -1573,7 +1846,17 @@ HERO_ART.gloomsworn = function (ctx, st) {
   // the hood and the cracked helm; a crown of shadow shards stands round the back of it
   poly(ctx, [-5, -6.5, -15, 0, -5, 6.5], cloak, OUT, 1.8);
   ellipse(ctx, -3, 0, 8.6, 8.2, 0, cloak, OUT, 2);
-  const n = reaver ? 9 : 7;
+  if (reaver) {
+    hairBack(ctx, '#261f33', 12, 8);
+    hairHead(ctx, '#261f33', '#a07a62', 7.8);
+    ellipse(ctx, 7.6, 0, 2.5, 3.8, 0, '#17121a', OUT, 1);                       // the dark beard
+    ellipse(ctx, 9.4, 0.8, 1, 1.5, 0, '#c4c0c0');                                // a grey tuft at the chin
+    ctx.save(); ctx.strokeStyle = ghost; ctx.lineWidth = 0.9; ctx.lineCap = 'round'; ctx.globalAlpha = Math.min(1, 0.9 * fl);
+    ctx.beginPath(); ctx.moveTo(5.2, -2.6); ctx.lineTo(6.6, -1.2); ctx.lineTo(5.8, 0.3); ctx.moveTo(4.4, 2.4); ctx.lineTo(5.6, 3.8); ctx.stroke();   // cracks of light in the scarred face
+    ctx.restore();
+    glow(ctx, 6, 0, 5, ghost, 0.3 * fl);
+  } else {
+  const n = 7;
   for (let i = 0; i < n; i++) {
     const a = 1.75 + i * (2.64 / (n - 1)), tip = 12.5 + (i % 2) * 2.6 + Math.sin(st.t * 2.6 + i * 1.7) * 0.7, w = 0.2;
     poly(ctx, [1 + Math.cos(a - w) * 6.4, Math.sin(a - w) * 6.4, 1 + Math.cos(a) * tip, Math.sin(a) * tip, 1 + Math.cos(a + w) * 6.4, Math.sin(a + w) * 6.4], ink, OUT, 1.1);
@@ -1587,6 +1870,17 @@ HERO_ART.gloomsworn = function (ctx, st) {
   ellipse(ctx, 5.8, 0, 1.7, 3.8, 0, '#0a0612');
   glow(ctx, 6.4, 0, 6.5, ghost, 0.5 * fl);
   circle(ctx, 6.3, -1.8, 0.9, '#f4fffb'); circle(ctx, 6.3, 1.8, 0.9, '#f4fffb');
+  }
+};
+// Duskward: the vigil kept, two pale-blue rings of light standing round them like the arcs behind the painted knight, a cold
+// teal glint on the plate (the Reaver's look is inside HERO_ART.gloomsworn)
+SPEC_ART.duskward = function (ctx, st) {
+  ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  ctx.strokeStyle = '#7aa8f0'; ctx.lineWidth = 1.6; ctx.globalAlpha = 0.5 + Math.sin(st.t * 2) * 0.1;
+  ctx.beginPath(); ctx.arc(-1, 0, 19, -2.3, 2.3); ctx.stroke();
+  ctx.globalAlpha *= 0.65; ctx.lineWidth = 1.1; ctx.beginPath(); ctx.arc(-1, 0, 22.5, -2.1, 2.1); ctx.stroke();
+  ctx.restore();
+  glow(ctx, 0, 0, 20, '#7aa8f0', 0.1);
 };
 
 // Reaper (the class id stays `thresher`; damage, class 19): a slim, elegant figure in a long black-violet cloak with a deep
@@ -1626,7 +1920,7 @@ HERO_ART.thresher = function (ctx, st) {
   circle(ctx, 2.2, -14, 1, '#ffffff');
   // the scythe: held two-handed on the right; the whole arm swings it round
   const dir = swingDir(st), rot = 0.55 + dir * s * 1.35 - big * 1.5 - cast * 0.5 + bash * 0.25;
-  const blade = grim ? '#6a5a88' : '#e4eaf2', edge = grim ? '#c8a8ff' : teal;
+  const blade = grim ? '#e8e2d8' : '#e4eaf2', edge = teal;
   ctx.save(); ctx.translate(5, 10); ctx.rotate(rot);
   // the snath: long, slender and black, ringed with violet at the grips, a small teardrop weight at the heel
   poly(ctx, [-14, -1.2, 20, -1.5, 40, -1.2, 40, 1.2, 20, 1.5, -14, 1.2], void_, OUT, 1.3);
@@ -1638,7 +1932,13 @@ HERO_ART.thresher = function (ctx, st) {
   circle(ctx, 40, 0, 2.6, vioM, OUT, 1.1); circle(ctx, 40, 0, 1, teal);
   const bl = grim ? 0.92 : 1;
   poly(ctx, [37, 2.2, 46, -2.8, 58, -9.5, 72, -14.5, 86, -13.5, 96 * bl, -7, 85, -10, 72, -10, 58, -5.2, 47, 1.8, 40, 4.2], blade, OUT, 1.4);
-  line(ctx, 46, -2, 71, -12, grim ? '#9a86bc' : '#c8d4e4', 0.7);                // the spine's sheen
+  line(ctx, 46, -2, 71, -12, grim ? '#cfc8bc' : '#c8d4e4', 0.7);                // the spine's sheen
+  // thorny violet cracks running through the pale blade, a bone-coloured mount where it meets the snath
+  for (const [x0, y0, x1, y1, x2, y2] of [[52, -3.4, 55, -6.6, 54, -8.4], [62, -6.4, 65, -9.6, 67, -9.2], [74, -11.2, 76, -8.6, 79, -9.4], [82, -11.2, 83, -9.4, 86, -9.8]]) {
+    ctx.save(); ctx.strokeStyle = grim ? '#2a1840' : '#5a3a7a'; ctx.lineWidth = 0.7; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); ctx.restore();
+  }
+  poly(ctx, [37, 3, 40, 5.4, 44, 2.6, 46, -2.6, 42, -4, 38, -2], bone, OUT, 1);
+  circle(ctx, 41.5, 0.4, 1.1, '#d8b04a', OUT, 0.5);
   ctx.save(); ctx.globalAlpha = (mist ? 0.5 : 1) * Math.min(1, 0.95 * fl); ctx.strokeStyle = edge; ctx.lineWidth = 1.3; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
   ctx.beginPath(); ctx.moveTo(40, 3.8); ctx.quadraticCurveTo(54, -1.6, 72, -9.6); ctx.quadraticCurveTo(84, -9.8, 94 * bl, -6.8); ctx.stroke();
   ctx.restore();
@@ -1647,7 +1947,7 @@ HERO_ART.thresher = function (ctx, st) {
   ctx.save(); ctx.globalAlpha = (mist ? 0.4 : 0.75) * fl; ctx.strokeStyle = teal; ctx.lineWidth = 1.2; ctx.lineCap = 'round';
   ctx.beginPath(); ctx.moveTo(40, 0); ctx.bezierCurveTo(32, 5 + wave * 0.3, 24, 2, 16, 7 - wave * 0.3); ctx.stroke(); ctx.restore();
   ctx.restore();
-  smear(ctx, 5, 10, 42, 0.55 + dir * 1.35, rot, grim ? '#c8a8ff' : teal, strikeAmt(pa) * 0.8, 7);
+  smear(ctx, 5, 10, 42, 0.55 + dir * 1.35, rot, grim ? '#e8c868' : teal, strikeAmt(pa) * 0.8, 7);
   hand(ctx, 5, 10, vioD); hand(ctx, 5 + 24 * Math.cos(rot), 10 + 24 * Math.sin(rot), vioD);
   // the deep hood, peaked and trailing at the back, and the pale mask in the shadow of it with a faint teal glow behind the eyes
   poly(ctx, [-3, -6.2, -16, 0, -3, 6.2], void_, OUT, 1.8);
@@ -1666,6 +1966,12 @@ HERO_ART.thresher = function (ctx, st) {
 Object.assign(SPEC_ART, {
   // Wraith: wisps of soul-mist trailing off the shoulders and cloak, a pale glint drifting off each hand
   sower(ctx, st) {
+    // the cloak torn to ragged shreds streaming back, violet and black, cyan speed-light caught in them
+    for (let i = 0; i < 5; i++) {
+      const y0 = (i - 2) * 5.4, w = Math.sin(st.t * 5 + i * 1.7) * 2.6, L = 14 + (i % 2) * 6 + Math.abs(i - 2) * -1.5;
+      poly(ctx, [-17, y0 - 1.6, -17 - L * 0.5, y0 + w - 2.4, -17 - L, y0 + w * 1.4, -17 - L * 0.55, y0 + w + 1, -17, y0 + 1.6], i % 2 ? '#2a1840' : '#0c0a14', OUT, 1);
+      line(ctx, -19, y0, -17 - L * 0.8, y0 + w * 1.2, '#4a2a6a', 0.7);
+    }
     for (let i = 0; i < 4; i++) {
       const q = (st.t * 0.7 + i / 4) % 1, y0 = (i % 2 ? 1 : -1) * (5 + (i >> 1) * 4);
       ctx.save(); ctx.globalAlpha = (1 - q) * 0.55; ctx.strokeStyle = '#8fd8e8'; ctx.lineWidth = 2 - q; ctx.lineCap = 'round';
@@ -1674,7 +1980,17 @@ Object.assign(SPEC_ART, {
     for (let i = 0; i < 3; i++) { const q = (st.t * 0.8 + i / 3) % 1; ctx.save(); ctx.globalAlpha = (1 - q) * 0.7; circle(ctx, 8 + q * 8, 7 + (i - 1) * 4 + Math.sin(q * 6 + i) * 2, 1 - q * 0.4, '#e0f6ff'); ctx.restore(); }
   },
   // Grim: an hourglass of gold sand at the hip (what is coming due) and a dim glow along the cloak's hem
-  grim(ctx, st) { glow(ctx, -3, 12, 7, '#ffd65a', 0.16 + Math.sin(st.t * 2) * 0.04); rrect(ctx, -4.4, 10.4, 2.8, 4.6, 0.8, '#ffe9a0', OUT, 0.9); line(ctx, -4.4, 12.7, -1.6, 12.7, '#8a6a20', 0.8); },
+  grim(ctx, st) {
+    // a gold clock ring behind the hood (twelve tick marks) and an hourglass of gold sand at the hip on its chain
+    ctx.save(); ctx.globalAlpha = 0.55; ctx.rotate(st.t * 0.12);
+    circle(ctx, -3, 0, 20, null, '#d8b04a', 1.1);
+    for (let i = 0; i < 12; i++) { const a = i * TAU / 12, r0 = i % 3 ? 17.6 : 16.4; line(ctx, -3 + Math.cos(a) * r0, Math.sin(a) * r0, -3 + Math.cos(a) * 20, Math.sin(a) * 20, '#d8b04a', i % 3 ? 0.9 : 1.5); }
+    ctx.restore();
+    glow(ctx, -3, 12, 7, '#ffd65a', 0.16 + Math.sin(st.t * 2) * 0.04);
+    poly(ctx, [-5.2, 9.6, -1.4, 9.6, -3.3, 12.2, -1.4, 14.8, -5.2, 14.8, -3.3, 12.2], '#ffe9a0', OUT, 0.9);
+    line(ctx, -5.6, 9.6, -1, 9.6, '#d8b04a', 1.1); line(ctx, -5.6, 14.8, -1, 14.8, '#d8b04a', 1.1);
+    poly(ctx, [-4.2, 14.6, -3.3, 13, -2.4, 14.6], '#c8903a');
+  },
 });
 
 // ---------------------------------------------------------------- Tidecaller (healer, class 20)
@@ -1698,8 +2014,8 @@ function tidecallerLevel(st) {
   return { f: Math.max(0, Math.min(1, f)), ph, flood: !!(m && m.flood && now < m.flood), wall: !!(m && m.wall && now < m.wall), deep: !!(m && m.deep && now < m.deep) };
 }
 HERO_ART.tidecaller = function (ctx, st) {
-  const wrap = '#2f9ea2', wrapD = '#1d6a78', teal = '#3fb8a8', foam = '#eaf8f5', pearl = '#d7f2ee', slate = '#6a7f8c';
-  const skin = '#a2704e', rope = '#4a7a86', kelp = '#3f6a48', shell = '#f4e6d6', shellD = '#cba890', leather = '#6b4a2b';
+  const wrap = '#34689a', wrapD = '#214a74', teal = '#3fb8a8', foam = '#eaf8f5', pearl = '#efe8dc', slate = '#4a7cae';
+  const skin = '#b27a52', rope = '#18232d', kelp = '#2a8a80', shell = '#f4e6d6', shellD = '#cba890', leather = '#6b4a2b';
   const cast = castAmt(st), big = pulse(actP(st, 'big')), now = st.t;
   const wave = Math.sin(now * 2.6) * 1.8 + (st.moving ? Math.sin(now * 9) * 2.2 : 0);
   // the long wet wrap trailing behind: a wavy hem with a thread of foam along it
@@ -1727,9 +2043,11 @@ HERO_ART.tidecaller = function (ctx, st) {
   ellipse(ctx, -2.5, 0, 6.2, 15.5, 0, slate, OUT, 1.7);
   ellipse(ctx, -1.5, -3, 2.6, 7, 0.2, shade(slate, 0.16));
   for (let i = -3; i <= 3; i++) ellipse(ctx, -9 + Math.abs(i) * 0.2 + Math.sin(now * 2 + i) * 0.6, i * 4.2, 3, 1.3, 0.25 * i, kelp, OUT, 0.8);
-  // the conch's strap
+  // the conch's strap, and the spiral-shell brooch that pins the shawl at the shoulder
   line(ctx, -4, -12, 5, 11, leather, 1.8);
   circle(ctx, 5, 11, 1.4, '#d8b25a', OUT, 0.8);
+  circle(ctx, 1, -12.6, 2.8, shell, OUT, 1); ctx.save(); ctx.strokeStyle = shellD; ctx.lineWidth = 0.7; ctx.beginPath(); ctx.arc(1, -12.6, 1.8, 0.4, 5.2); ctx.arc(1, -12.6, 0.9, 1, 5.5); ctx.stroke(); ctx.restore();
+  for (const [bx, by] of [[-1.5, -14.6], [-4, -13.6], [2.4, -15.4]]) circle(ctx, bx, by, 0.9, pearl, OUT, 0.5);
   // the open left hand: a small sphere of sea water, a ripple round it
   const sx = 11 + cast * 3, sy = -11 - cast * 1.5, pr = 3.6 + cast * 1.4 + Math.sin(now * 3.4) * 0.35;
   hand(ctx, 6.5, -10.5, skin);
@@ -1762,6 +2080,7 @@ HERO_ART.tidecaller = function (ctx, st) {
   for (const [y0, y1, e] of [[-4.5, -9.5, 0.3], [4.5, 8.5, -0.3]]) { limb(ctx, [-3, y0, -9, y0 * 1.5 + e * 3, -15 + wave * 0.3, y1], OUT, 3.4); limb(ctx, [-3, y0, -9, y0 * 1.5 + e * 3, -15 + wave * 0.3, y1], rope, 2.2); circle(ctx, -16 + wave * 0.3, y1 + (y1 > 0 ? 0.6 : -0.6), 1.5, pearl, OUT, 0.8); }
   limb(ctx, [-2, 0, -10, 1, -19 + wave * 0.5, 0.5], OUT, 3.4); limb(ctx, [-2, 0, -10, 1, -19 + wave * 0.5, 0.5], shade(rope, 0.1), 2.2); circle(ctx, -20 + wave * 0.5, 0.5, 1.5, teal, OUT, 0.8);
   hairHead(ctx, rope, skin);
+  for (const [px, py] of [[-1, -7.2], [1.6, -6.4], [-3.2, 7], [0, 7.4], [2.4, 6]]) circle(ctx, px, py, 0.95, pearl, OUT, 0.5);   // pearls strung through the hair
   circle(ctx, 5.4, -2.8, 1.5, pearl, OUT, 0.7);
   circle(ctx, 4.8, 3.6, 1.1, shell, OUT, 0.6);
   glow(ctx, 5.4, -2.8, 4, '#ffffff', 0.35);
@@ -1772,10 +2091,19 @@ Object.assign(SPEC_ART, {
     glow(ctx, -1, 0, 15, '#bff3ea', 0.22 + Math.sin(st.t * 1.6) * 0.05);
     ctx.save(); ctx.strokeStyle = '#eaf8f5'; ctx.globalAlpha = 0.7; ctx.lineWidth = 1.5; ctx.lineCap = 'round';
     ctx.beginPath(); ctx.arc(-1, 0, 11.5, 1.8, 4.5); ctx.stroke(); ctx.restore();
+    for (let i = 0; i < 9; i++) { const a = 1.9 + i * 0.3; circle(ctx, -1 + Math.cos(a) * 13.4, Math.sin(a) * 13.4, 0.9, '#f6f0e6', OUT, 0.5); }   // a loose arc of pearls over the hair
     for (let i = 0; i < 3; i++) { const a = st.t * 1.3 + i * TAU / 3, x = Math.cos(a) * 16 - 1, y = Math.sin(a) * 15, back = Math.sin(a) < 0; ctx.save(); ctx.globalAlpha = back ? 0.5 : 1; glow(ctx, x, y, 5, '#ffffff', 0.45); circle(ctx, x, y, 1.9, '#f2fbf8', OUT, 0.7); ctx.restore(); }
   },
   // Undertow: dark water curling off the wraps, bubbles rising
   undertow(ctx, st) {
+    // the blue cloak drawn up over the head as a hood (a sliver of face, black hair at the brow), kelp hanging off the hem
+    ellipse(ctx, -2.5, 0, 9.6, 10.4, 0, '#2f5f92', OUT, 1.8);
+    ellipse(ctx, -5, -3.2, 3.6, 2.4, 0, '#4a7cae');
+    ellipse(ctx, 5.2, 0, 2.6, 4.2, 0, '#b27a52');
+    ellipse(ctx, 3.8, 0, 1.4, 4.4, 0, '#18232d');
+    poly(ctx, [3.8, -3.2, 6.6, -1.2, 4, 0.4], '#18232d');
+    ctx.strokeStyle = '#6a98c8'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(-0.2, 0, 8.4, -1.05, 1.05); ctx.stroke();
+    for (const sy of [-1, 1]) circle(ctx, 2.4, 9.2 * sy, 0.9, '#efe8dc', OUT, 0.5);
     for (let i = 0; i < 3; i++) {
       const q = (st.t * 0.6 + i / 3) % 1, y0 = (i - 1) * 8;
       ctx.save(); ctx.globalAlpha = (1 - q) * 0.55; ctx.strokeStyle = '#1d5668'; ctx.lineWidth = 2.6 - q; ctx.lineCap = 'round';
@@ -1839,14 +2167,16 @@ HERO_ART.lanternkeeper = function (ctx, st) {
   ellipse(ctx, -1.5, 0, 7, 15.8, 0, coatD, OUT, 1.7);
   ellipse(ctx, -1.5, 0, 5.4, 14, 0, null, rgba(brass, 0.55), 0.9);
   ellipse(ctx, 0, -3, 2.8, 7.4, 0.15, shade(coatD, 0.12));
-  rrect(ctx, -3.6, -13.6, 2.8, 27.2, 1, '#3a2c1c', OUT, 1); line(ctx, -2.2, -12.4, -2.2, 12.4, brass, 0.8);
+  rrect(ctx, -3.6, -13.6, 2.8, 27.2, 1, '#6b4a2b', OUT, 1); line(ctx, -2.2, -12.4, -2.2, 12.4, brass, 0.8);
+  line(ctx, -4.5, -12, 4.5, 9.5, '#2b1c10', 3.6); line(ctx, -4.5, -12, 4.5, 9.5, '#7a5230', 2.2);   // the leather strap across the chest
+  rrect(ctx, -1.8, -3.4, 3.4, 4.4, 0.8, brass, OUT, 0.8); rrect(ctx, -0.9, -2.2, 1.6, 2, 0.5, iron);
   rrect(ctx, -4.4, -2.6, 4.2, 5.2, 1, brass, OUT, 1); rrect(ctx, -3.4, -1.3, 2.2, 2.6, 0.6, iron);
   for (const bx of [3.2, 6.4]) { circle(ctx, bx, 0, 1, brass, OUT, 0.6); }
   // the small lantern at the left hip
   glow(ctx, 0, -13.4, 7 + f * 2, gold, (0.16 + 0.12 * f) * fl);
   circle(ctx, 0, -13.4, 3.1, iron, OUT, 1.1); circle(ctx, 0, -13.4, 1.9, '#ffb04a'); circle(ctx, 0, -13.4, 0.8 + 0.4 * f, '#fff0b8');
   // the left hand: an ember cupped in the palm (flares when you cast)
-  hand(ctx, 7, -9.2, skin);
+  hand(ctx, 7, -9.2, '#6b4a2e');
   glow(ctx, 8.6, -9.4, 5 + cast * 4, '#ff9a3a', 0.45 + cast * 0.4); circle(ctx, 8.6, -9.4, 1.1 + cast * 0.8, '#ffd27a');
   // the staff with its crook, and the lantern hanging from it
   const tx = 22 + cast * 3 + big * 2, ty = 11.5 - cast * 1.2;
@@ -1872,17 +2202,23 @@ HERO_ART.lanternkeeper = function (ctx, st) {
   circle(ctx, tx, ty, 4.1, '#ffb04a'); circle(ctx, tx, ty, 2.5 + f * 1.1 + (L.light ? 0.8 : 0), L.light ? '#fff6dc' : '#ffe08a'); circle(ctx, tx + 0.3, ty - 0.3, 1.1 + f * 0.6, '#fffdf0');
   ctx.save(); ctx.strokeStyle = iron; ctx.lineWidth = 1.2; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(tx - 4.6, ty); ctx.lineTo(tx + 4.6, ty); ctx.moveTo(tx, ty - 4.6); ctx.lineTo(tx, ty + 4.6); ctx.stroke(); ctx.restore();
   circle(ctx, tx, ty, 1.7, brass, OUT, 0.7);
-  hand(ctx, 7.5, 12.2, skin);
-  // the hood: a deep cowl with a short pointed tail, its inside lit warm at the front, the face a sliver, two glints for eyes
-  poly(ctx, [-4, -5.4, -12.5, 0, -4, 5.4], hood, OUT, 1.6);
-  circle(ctx, 0.5, 0, 7.9, hood, OUT, 2);
-  circle(ctx, -1.8, -2.4, 2.8, shade(hood, 0.2)); ellipse(ctx, -2.2, 1.8, 3.4, 2.2, 0.4, shade(hood, -0.1));
-  line(ctx, -2, -6.4, -6.2, -3.6, coatL, 0.9); line(ctx, -2, 6.4, -6.2, 3.6, coatL, 0.9);
-  ellipse(ctx, 6, 0, 3, 5.2, 0, '#17120d', OUT, 0.9);
-  ellipse(ctx, 7, 0, 1.7, 3.3, 0, skin);
-  glow(ctx, 7.2, 0, 6.5, gold, (0.22 + 0.2 * f) * fl);
-  circle(ctx, 7.6, -1.2, 0.55, '#fff0c8'); circle(ctx, 7.6, 1.2, 0.55, '#fff0c8');
-  circle(ctx, -1.2, -5.2, 1.2, brass, OUT, 0.7);
+  hand(ctx, 7.5, 12.2, '#6b4a2e');
+  // the braid over the shoulder, dark with a few grey streaks, a leather tie at its end
+  braid(ctx, -3, -8, -14, -12, '#3a2e28', '#7a5230', 5);
+  line(ctx, -5, -8.6, -8.6, -10, '#9a948c', 0.7); line(ctx, -9, -10.2, -12, -11.4, '#9a948c', 0.6);
+  // the hat: a wide soft brim in worn slate, a dented crown, a brass badge on the band; the face a sliver under its front edge
+  ellipse(ctx, -1.6, 0, 10, 11, 0, '#57534a', OUT, 2);
+  ellipse(ctx, -2, 0, 8.2, 9.2, 0, null, rgba('#1e1b17', 0.4), 1);
+  ellipse(ctx, 6.4, 0, 3.4, 5.4, 0, '#17120d', OUT, 0.9);
+  ellipse(ctx, 7.4, 0, 2, 3.4, 0, skin);
+  circle(ctx, 6.6, 2.3, 0.9, rgba('#2b2620', 0.55));
+  glow(ctx, 7.6, 0, 6.5, gold, (0.22 + 0.2 * f) * fl);
+  circle(ctx, 8.1, -1.3, 0.6, '#2a1c14'); circle(ctx, 8.1, 1.3, 0.6, '#2a1c14');
+  ellipse(ctx, -2, -8, 3.8, 2.2, 0.3, coatL, OUT, 0.8);   // the brim's soft fold
+  circle(ctx, -1.2, 0, 6.2, '#66615a', OUT, 1.7);
+  circle(ctx, -1.2, 0, 5.6, null, '#26221d', 1.3);
+  circle(ctx, -2.8, -2.4, 2.4, shade('#66615a', 0.22));
+  circle(ctx, 3.2, -4.2, 1.7, brass, OUT, 0.7); circle(ctx, 3.2, -4.2, 0.6, brassL);
 };
 Object.assign(SPEC_ART, {
   // Beacon: a short brass post strapped across the back with a steady flame on it (it does not flicker: the fixed star)
@@ -1929,6 +2265,7 @@ HERO_ART.kenseier = function (ctx, st) {
   // the haori's long back panel: ash grey with an ember thread along the hem, pleats down it
   poly(ctx, [-3, -12, -15, -13.5, -24 + wave, -10, -28 + wave, -4, -26 + wave * 1.1, 0, -28 + wave, 4, -24 + wave, 10, -15, 13.5, -3, 12], ash, OUT, 2);
   for (const y of [-7, -3.5, 0, 3.5, 7]) line(ctx, -8, y * 1.1, -22 + wave * 0.8, y * 1.15, ashD, 0.9);
+  for (const [x, y, r] of [[-13, -5, 1.9], [-18, 5.5, 1.5], [-10.5, 7.5, 1.2], [-20, -1, 1.1]]) ellipse(ctx, x + wave * 0.5, y, r * 1.4, r, 0.5, rgba(charD, 0.55));   // burn scars
   ctx.save(); ctx.strokeStyle = rgba(ember, 0.75 * fl); ctx.lineWidth = 1.1; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
   ctx.beginPath(); ctx.moveTo(-24 + wave, -10); ctx.lineTo(-28 + wave, -4); ctx.lineTo(-26 + wave * 1.1, 0); ctx.lineTo(-28 + wave, 4); ctx.lineTo(-24 + wave, 10); ctx.stroke(); ctx.restore();
   feet(ctx, st, charD);
@@ -1936,7 +2273,7 @@ HERO_ART.kenseier = function (ctx, st) {
   // the lacquered shoulder plates (sode): three stacked lames each side, a rim of ash on the top one
   for (const sy of [-1, 1]) {
     for (let i = 0; i < 3; i++) ellipse(ctx, 0.5 - i * 1.3, (11.5 + i * 1.2) * sy, 5.4, 3.6, 0.12 * sy, i === 0 ? charL : i === 1 ? char : charD, OUT, 1.2);
-    ellipse(ctx, 0.5, 11.5 * sy, 4.2, 2.6, 0.12 * sy, null, rgba(ashL, 0.45), 0.8);
+    ellipse(ctx, 0.5, 11.5 * sy, 4.2, 2.6, 0.12 * sy, null, rgba(ember, 0.7), 0.8);
   }
   // the haori over the chest: two ash panels crossing, an ember-orange piping at the lapel, the obi knotted at the hip
   ellipse(ctx, -2, 0, 6.4, 13.6, 0, ash, OUT, 1.6);
@@ -1948,6 +2285,10 @@ HERO_ART.kenseier = function (ctx, st) {
   const hx2 = B.px - B.c * 8, hy2 = B.py - B.sn * 8;
   limb(ctx, [1, 11, (1 + B.px) / 2 + 1, (11 + B.py) / 2 + 2, B.px, B.py], ash, 4.6);
   limb(ctx, [1, -11, (1 + hx2) / 2, (-11 + hy2) / 2 - 1.5, hx2, hy2], ash, 4.6);
+  for (const [sx, sy, hx, hy] of [[1, 11, B.px, B.py], [1, -11, hx2, hy2]]) {   // the forearms in black kote, bound with rope
+    limb(ctx, [sx + (hx - sx) * 0.5, sy + (hy - sy) * 0.5 + (sy < 0 ? -0.8 : 1), hx, hy], char, 4.4);
+    ellipse(ctx, sx + (hx - sx) * 0.72, sy + (hy - sy) * 0.72, 1, 2.6, Math.atan2(hy - sy, hx - sx), null, ashL, 1);
+  }
   // the blade (local space: along +x from the hand): grip wrapped in ash, a round charcoal guard, a gold collar, a long single edge
   ctx.save(); ctx.translate(B.px, B.py); ctx.rotate(B.rot);
   glow(ctx, 20, 1.2, 15 + B.g * 5, ember, (0.16 + B.g * 0.2 + B.s * 0.2) * fl);
@@ -1958,6 +2299,7 @@ HERO_ART.kenseier = function (ctx, st) {
   ctx.beginPath(); ctx.moveTo(2, -1.9); ctx.lineTo(33, -2.5); ctx.quadraticCurveTo(39.5, -1.9, 39, 0.9); ctx.lineTo(33, 2.8); ctx.lineTo(2, 2.1); ctx.closePath();
   ctx.lineJoin = 'round'; ctx.fillStyle = '#d6d2c9'; ctx.fill(); ctx.strokeStyle = OUT; ctx.lineWidth = 1.5; ctx.stroke();
   line(ctx, 3, -0.6, 32, -0.9, '#a7a39a', 0.9);   // the ridge of the blade
+  for (const [x, y] of [[8, -1.2], [14, 0.1], [19.5, -1.4], [26, -0.2], [30, -1.5]]) circle(ctx, x, y, 0.75, '#8a6a4a');   // old rust
   ctx.save(); ctx.globalAlpha = Math.min(1, 0.95 * fl); line(ctx, 3, 1.7, 37, 1.9, ember, 1.8); line(ctx, 4, 1.65, 34, 1.75, hot, 0.7); ctx.restore();   // the ember edge
   ctx.restore();
   // a spark where the blade meets a blow (Deflect: its press brings the blade flat across the front)
@@ -1972,6 +2314,8 @@ HERO_ART.kenseier = function (ctx, st) {
   const tl = Math.sin(now * 5) * 1.4 + (st.moving ? Math.sin(now * 12) * 2 : 0);
   limb(ctx, [-6.5, -2, -13 + tl * 0.4, -3 - tl, -20 + tl, -2 + tl * 1.3], ashL, 1.8);
   limb(ctx, [-6.5, 2, -13 + tl * 0.4, 3 + tl * 0.6, -19 + tl, 4 + tl * 1.1], ash, 1.8);
+  poly(ctx, [-20 + tl, -2 + tl * 1.3, -23 + tl, -4 + tl * 1.3, -22 + tl, -1 + tl * 1.3, -24 + tl, 0.5 + tl * 1.3], ashL, OUT, 0.8);   // torn ends
+  poly(ctx, [-19 + tl, 4 + tl * 1.1, -22 + tl, 2.6 + tl * 1.1, -21.5 + tl, 5 + tl * 1.1, -23.5 + tl, 6 + tl * 1.1], ash, OUT, 0.8);
   circle(ctx, 0.5, 0, 7.5, charD, OUT, 2);
   circle(ctx, -1.6, -2.4, 2.5, charL);
   circle(ctx, -6.2, 0, 2.5, charD, OUT, 1);   // the topknot
@@ -1989,6 +2333,7 @@ Object.assign(SPEC_ART, {
     ctx.save(); ctx.strokeStyle = '#ff8a3d'; ctx.lineCap = 'round';
     for (const [w0, a, dy] of [[2.6, 0.9, 0], [1.2, 0.6, 2.2]]) { ctx.globalAlpha = a; ctx.lineWidth = w0; ctx.beginPath(); ctx.moveTo(-4, 11); ctx.quadraticCurveTo(-13 + wv * 0.4, 14 + dy, -21 + wv, 12 + dy + wv * 0.8); ctx.stroke(); }
     ctx.restore();
+    poly(ctx, [-21 + wv, 12 + wv * 0.8, -25 + wv, 10.5 + wv * 0.8, -23.5 + wv, 13.5 + wv * 0.8, -26 + wv, 14.5 + wv * 0.8], '#ff8a3d', OUT, 0.7);   // the torn tip
     glow(ctx, B.tx, B.ty, 11 + B.s * 6, '#ff6a2a', 0.34);
     for (let i = 0; i < 4; i++) {
       const q = (now * 0.9 + i / 4) % 1, x = B.mx + (B.tx - B.mx) * (i / 3) + Math.sin(q * 7 + i * 2) * 2.5, y = B.my + (B.ty - B.my) * (i / 3) - q * 11;
@@ -2000,6 +2345,7 @@ Object.assign(SPEC_ART, {
     const B = kenseierBlade(st), now = st.t;
     ellipse(ctx, 0.5, -11.2, 6.6, 4.4, -0.1, '#d9d4ca', OUT, 1.3);
     ellipse(ctx, 0, -11.4, 4.6, 2.8, -0.1, null, 'rgba(255,138,61,0.55)', 0.8);
+    for (const [x, y] of [[-1.5, -11], [1.8, -12.4], [3.4, -10.2], [-3.4, -12.6]]) poly(ctx, [x - 1.1, y, x, y - 0.9, x + 1.1, y, x, y + 0.9], '#7a756c');   // the mantle's dark diamonds
     for (let i = 0; i < 3; i++) { const x = -4 - i * 2.2, sw = Math.sin(now * 2.6 + i) * 0.8; ellipse(ctx, x + sw, -14 - i * 0.6, 2.2, 1.1, 0.3, '#b8b3a8', OUT, 0.7); }
     ctx.save(); ctx.strokeStyle = '#e8e2d6'; ctx.lineCap = 'round'; ctx.lineWidth = 1.5; ctx.globalAlpha = 0.45 + 0.35 * B.g + 0.1 * Math.sin(now * 2);
     const a0 = -2.2 - B.g * 0.5; ctx.beginPath(); ctx.arc(2, 0, 20, a0, a0 + 1.1); ctx.stroke();

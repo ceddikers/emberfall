@@ -6,308 +6,6 @@ The full style text lives in `icon-prompts.md` and `item-icons.md` if a result d
 
 ---
 
-## Reaper (damage; folder `thresher`)
-
-### Items
-**Recruit's Sickle** → `client/items/thresher_w0.png`
-```text
-Cel-shaded cartoon fantasy game item icon, one object centred, thick dark outline, flat colours with one hard shadow, plain dark background with a lighter circle behind it. Scythe on the diagonal. Colours: void black, deep violet and bone-white with one pale soul-fire teal detail. A short plain sickle, bent dark-wood handle, dull nicked iron blade, a loop of grey cord round the grip, no light in it. No glow, no gradients, no hands, no text, no border.
-```
-
-**Carving-Hall Scythe** → `client/items/thresher_w1.png`
-```text
-Cel-shaded cartoon fantasy game item icon, one object centred, thick dark outline, flat colours with one hard shadow, plain dark background with a lighter circle behind it. Scythe on the diagonal. Colours: void black, deep violet and bone-white with one pale soul-fire teal detail. A scythe with a broad square-tipped cleaver-like blade bent into a crescent, a darkened brass ferrule, a thin teal line along the edge. No glow, no gradients, no hands, no text, no border.
-```
-
-**Silkcleaver Scythe** → `client/items/thresher_w2.png`
-```text
-Cel-shaded cartoon fantasy game item icon, one object centred, thick dark outline, flat colours with one hard shadow, plain dark background with a lighter circle behind it. Scythe on the diagonal. Colours: void black, deep violet and bone-white with one pale soul-fire teal detail. A scythe with the snath wrapped in pale spider-silk, a small web etched on the blade, a strand of silk on the tip, a thin teal edge. No glow, no gradients, no hands, no text, no border.
-```
-
-**Stormbled Scythe** → `client/items/thresher_w3.png`
-```text
-Cel-shaded cartoon fantasy game item icon, one object centred, thick dark outline, flat colours with one hard shadow, plain dark background with a lighter circle behind it. Scythe on the diagonal. Colours: void black, deep violet and bone-white with one pale soul-fire teal detail. A slate-dark scythe with a blue-white lightning crack down the blade, a rain-dark leather grip, the snath bound with a wet cord. No glow, no gradients, no hands, no text, no border.
-```
-
-**Scythe of the Last Toll** → `client/items/thresher_w4.png`
-```text
-Cel-shaded cartoon fantasy game item icon, one object centred, thick dark outline, flat colours with one hard shadow, plain dark background with a lighter circle behind it. Scythe on the diagonal. Colours: void black, deep violet and bone-white with one pale soul-fire teal detail. A tall slender bone-white scythe with a long graceful crescent, a bright teal line burning the whole edge, a small flat gold bell hanging from the snath heel, a faint violet vein in the blade. No glow, no gradients, no hands, no text, no border.
-```
-
-**Scullery-Night Leathers** → `client/items/thresher_a1.png`
-```text
-Cel-shaded cartoon fantasy game item icon, one object centred, thick dark outline, flat colours with one hard shadow, plain dark background with a lighter circle behind it. Fitted coat or hooded cloak on its own, front view. Colours: void black, deep violet and bone-white with one pale soul-fire teal detail. A fitted void-black leather coat with a scorched apron-strap from one shoulder, a deep-violet mantle, big brass buttons, a small hip lantern with a teal flame. No glow, no gradients, no hands, no text, no border.
-```
-
-**Webwatch Leathers** → `client/items/thresher_a2.png`
-```text
-Cel-shaded cartoon fantasy game item icon, one object centred, thick dark outline, flat colours with one hard shadow, plain dark background with a lighter circle behind it. Fitted coat or hooded cloak on its own, front view. Colours: void black, deep violet and bone-white with one pale soul-fire teal detail. A dark leather coat with overlapping pale chitin shoulder plates, a ragged silk hood folded at the collar, eight small amber studs. No glow, no gradients, no hands, no text, no border.
-```
-
-**Stormvigil Leathers** → `client/items/thresher_a3.png`
-```text
-Cel-shaded cartoon fantasy game item icon, one object centred, thick dark outline, flat colours with one hard shadow, plain dark background with a lighter circle behind it. Fitted coat or hooded cloak on its own, front view. Colours: void black, deep violet and bone-white with one pale soul-fire teal detail. A slate-violet leather coat rain-darkened at the hem, a deep hood, a thin blue-white lightning stitch down the centre seam. No glow, no gradients, no hands, no text, no border.
-```
-
-**Shroud of the Last Toll** → `client/items/thresher_a4.png`
-```text
-Cel-shaded cartoon fantasy game item icon, one object centred, thick dark outline, flat colours with one hard shadow, plain dark background with a lighter circle behind it. Fitted coat or hooded cloak on its own, front view. Colours: void black, deep violet and bone-white with one pale soul-fire teal detail. A long void-black hooded cloak torn at the hem into ribbons mended with violet thread, a bone-white high collar, a small gold bell clasp, a small teal glow inside the hood. No glow, no gradients, no hands, no text, no border.
-```
-
----
-
-## Tidecaller (healer)
-
-### Portraits
-**Tidecaller** → `client/portraits/tidecaller.png`
-```text
-Cel-shaded 90s fantasy anime portrait, head and shoulders, three-quarter view, clean line art, flat two-tone shading, expressive face, plain one-colour background with one simple shape behind the head. A calm sea-priest in her thirties, warm brown face, wide patient mouth, sea-grey eyes, wet hair ropes tied with small pearls, slate-blue shawl with a kelp fringe, blowing a great spiral conch with a chipped lip, fine salt spray drifting off it. Flat deep-teal background with a darker vignette, accent #3fb8a8 only in the cloth and water. No glow, no airbrushing, no sparkly eyes, no text, no border.
-```
-
-**Spring Tide** → `client/portraits/tidecaller-springtide.png`
-```text
-Cel-shaded 90s fantasy anime portrait, head and shoulders, three-quarter view, clean line art, flat two-tone shading, expressive face, plain one-colour background with one simple shape behind the head. The same sea-priest as Spring Tide: at the crest of the tide, wet hair ropes lifted as on a swell, small pearls circling her head in a flat ring, conch lowered at her side, eyes closed, open joyful smile, a foam-white wavy line behind her shoulders. Pale sea-foam background with a flat full-moon circle behind the head; accent #bff3ea in the foam and moon only. No glow, no airbrushing, no sparkly eyes, no text, no border.
-```
-
-**Undertow** → `client/portraits/tidecaller-undertow.png`
-```text
-Cel-shaded 90s fantasy anime portrait, head and shoulders, three-quarter view, clean line art, flat two-tone shading, expressive face, plain one-colour background with one simple shape behind the head. The same sea-priest as Undertow: slate shawl pulled up over her hair as a hood, face fully visible, eyes half-lidded and patient, conch held against her chest, dark water curling off her wraps in flat swirls with a few round bubbles. Deep dark-teal background with a downward spiral behind the head; accent #3a8a9a in the swirls only. No glow, no airbrushing, no sparkly eyes, no text, no border.
-```
-
-### Ability icons
-**Salt Spray** → `client/icons/tidecaller/spray.png`
-```text
-Cel-shaded cartoon fantasy game ability icon, one bold object filling most of the square, thick dark outline, flat colours with one hard shadow, light from the upper left, magic as flat solid shapes. Deep-teal background; sea-green and foam-white, pearl-white accent, slate grey for stone, pale moon-gold only for the flood. Subject: A thin lash of sea water curving from lower left to upper right, three tapered strands (deep teal, sea-green, foam-white), breaking at the tip into a small foam starburst with four drops flung off, the starburst pearl-white. No glow, no gradients, no people, no faces, no hands, no text, no border, no fish, no mermaid, no trident, no anchor, no ship.
-```
-
-**Sip** → `client/icons/tidecaller/sip.png`
-```text
-Cel-shaded cartoon fantasy game ability icon, one bold object filling most of the square, thick dark outline, flat colours with one hard shadow, light from the upper left, magic as flat solid shapes. Deep-teal background; sea-green and foam-white, pearl-white accent, slate grey for stone, pale moon-gold only for the flood. Subject: One big round-bottomed water drop with a white highlight falling into a shell-shaped bowl of sea-green water, two ripple rings at the landing, one pearl-white glint on the drop. No glow, no gradients, no people, no faces, no hands, no text, no border, no fish, no mermaid, no trident, no anchor, no ship.
-```
-
-**Riptide Mark** → `client/icons/tidecaller/riptide.png`
-```text
-Cel-shaded cartoon fantasy game ability icon, one bold object filling most of the square, thick dark outline, flat colours with one hard shadow, light from the upper left, magic as flat solid shapes. Deep-teal background; sea-green and foam-white, pearl-white accent, slate grey for stone, pale moon-gold only for the flood. Subject: A flat double spiral (whirlpool from above) inside a thick deep-teal ring, a small dark eye at its centre, three round pearl beads set round the ring like a clock, one pearl-white. No glow, no gradients, no people, no faces, no hands, no text, no border, no fish, no mermaid, no trident, no anchor, no ship.
-```
-
-**Surge** → `client/icons/tidecaller/surge.png`
-```text
-Cel-shaded cartoon fantasy game ability icon, one bold object filling most of the square, thick dark outline, flat colours with one hard shadow, light from the upper left, magic as flat solid shapes. Deep-teal background; sea-green and foam-white, pearl-white accent, slate grey for stone, pale moon-gold only for the flood. Subject: One great cresting wave curling to the right, deep-teal body with a darker lower tone, a thick pearl-white foam lip with five round foam beads flying off, three small wavy lines beneath. No glow, no gradients, no people, no faces, no hands, no text, no border, no fish, no mermaid, no trident, no anchor, no ship.
-```
-
-**Current** → `client/icons/tidecaller/current.png`
-```text
-Cel-shaded cartoon fantasy game ability icon, one bold object filling most of the square, thick dark outline, flat colours with one hard shadow, light from the upper left, magic as flat solid shapes. Deep-teal background; sea-green and foam-white, pearl-white accent, slate grey for stone, pale moon-gold only for the flood. Subject: Two wavy water lines across the lower half, above them two bold flat arrows side by side, the left up in sea-green, the right down in pale coral, a thin pearl-white turning arc between them. No glow, no gradients, no people, no faces, no hands, no text, no border, no fish, no mermaid, no trident, no anchor, no ship.
-```
-
-**Breakwater** → `client/icons/tidecaller/breakwater.png`
-```text
-Cel-shaded cartoon fantasy game ability icon, one bold object filling most of the square, thick dark outline, flat colours with one hard shadow, light from the upper left, magic as flat solid shapes. Deep-teal background; sea-green and foam-white, pearl-white accent, slate grey for stone, pale moon-gold only for the flood. Subject: A short wall of rough slate-grey stone blocks in three offset rows (two, one, two) standing in the sea, a foam-white wavy line below, waves breaking on its face with a few foam beads thrown up. No glow, no gradients, no people, no faces, no hands, no text, no border, no fish, no mermaid, no trident, no anchor, no ship.
-```
-
-**Swell (Spring Tide, replaces Sip)** → `client/icons/tidecaller/swell.png`
-```text
-Cel-shaded cartoon fantasy game ability icon, one bold object filling most of the square, thick dark outline, flat colours with one hard shadow, light from the upper left, magic as flat solid shapes. Deep-teal background; sea-green and foam-white, pearl-white accent, slate grey for stone, pale moon-gold only for the flood. Subject: A small water drop on top of a long rolling swell of two wavy lines rising from lower left to upper right, a bold pearl-white arrow pointing up at the upper right; gentle and rounded, no spikes. No glow, no gradients, no people, no faces, no hands, no text, no border, no fish, no mermaid, no trident, no anchor, no ship.
-```
-
-**Undertow (Undertow spec, replaces Surge)** → `client/icons/tidecaller/undertow.png`
-```text
-Cel-shaded cartoon fantasy game ability icon, one bold object filling most of the square, thick dark outline, flat colours with one hard shadow, light from the upper left, magic as flat solid shapes. Deep-teal background; sea-green and foam-white, pearl-white accent, slate grey for stone, pale moon-gold only for the flood. Subject: A dark round pool of deep-teal water from above with a downward-pulling double spiral, a sea-green wave-shaped bowl over it, a bold dark-teal arrow pointing down into it, three foam rings rising off its edge; heavier than Surge. No glow, no gradients, no people, no faces, no hands, no text, no border, no fish, no mermaid, no trident, no anchor, no ship.
-```
-
-### Talent-move icons
-**Maelstrom (replaces Riptide Mark)** → `client/icons/tidecaller/maelstrom.png`
-```text
-Cel-shaded cartoon fantasy game ability icon, one bold object filling most of the square, thick dark outline, flat colours with one hard shadow, light from the upper left, magic as flat solid shapes. Deep-teal background; sea-green and foam-white, pearl-white accent, slate grey for stone, pale moon-gold only for the flood. Subject: A wide whirlpool from above, three foam-white and sea-green spiral arms turning into a small dark eye, a thin wavy foam edge, four drops flying outward; bigger and flatter than the Riptide Mark, no ring border. No glow, no gradients, no people, no faces, no hands, no text, no border, no fish, no mermaid, no trident, no anchor, no ship.
-```
-
-**Tidal Bore (replaces Surge)** → `client/icons/tidecaller/bore.png`
-```text
-Cel-shaded cartoon fantasy game ability icon, one bold object filling most of the square, thick dark outline, flat colours with one hard shadow, light from the upper left, magic as flat solid shapes. Deep-teal background; sea-green and foam-white, pearl-white accent, slate grey for stone, pale moon-gold only for the flood. Subject: A long wave front driven right across the square: three stacked wavy bands (deep teal, sea-green, foam-white) ending in a bold foam-white chevron arrowhead, speed lines trailing left, three drops; a line, not a curl. No glow, no gradients, no people, no faces, no hands, no text, no border, no fish, no mermaid, no trident, no anchor, no ship.
-```
-
-### Ultimate
-**Spring Flood** → `client/icons/tidecaller/springflood.png`
-```text
-Cel-shaded cartoon fantasy game ability icon, one big bold object filling the square, thick dark outline, flat colours with one hard shadow, a thin flat gold rim along its top edge, light from the upper left. Deep-teal background; sea-green and foam-white, pearl-white accent, pale moon-gold for the moon. Subject: A pale moon-gold full moon with three small craters at the top, below it a slanted flooded arena floor, a deep-teal ellipse with two foam-white wave rings, a tall pale water column rising to the moon, four pearl beads along the ring. No glow, no gradients, no people, no faces, no hands, no text, no border, no fish, no mermaid, no trident, no anchor, no ship.
-```
-
-### Items
-**Driftwood Conch** → `client/items/tidecaller_w0.png`
-```text
-Cel-shaded cartoon fantasy game item icon, one object centred, thick dark outline, flat colours with one hard shadow, plain dark background with a lighter circle behind it. Conch shell on its strap, standing upright. Colours: deep teal, sea-green and foam-white with one pearl-white detail. A plain pale spiral conch with a chipped lip, a salt-crusted leather strap, dry dull surface, no shine. No glow, no gradients, no hands, no text, no border.
-```
-
-**Silk-Strung Conch** → `client/items/tidecaller_w1.png`
-```text
-Cel-shaded cartoon fantasy game item icon, one object centred, thick dark outline, flat colours with one hard shadow, plain dark background with a lighter circle behind it. Conch shell on its strap, standing upright. Colours: deep teal, sea-green and foam-white with one pearl-white detail. A pale conch wrapped in a net of fine spider-silk threads, two small chitin beads on its strap, a strand of silk on the lip. No glow, no gradients, no hands, no text, no border.
-```
-
-**Storm-Shell Conch** → `client/items/tidecaller_w2.png`
-```text
-Cel-shaded cartoon fantasy game item icon, one object centred, thick dark outline, flat colours with one hard shadow, plain dark background with a lighter circle behind it. Conch shell on its strap, standing upright. Colours: deep teal, sea-green and foam-white with one pearl-white detail. A slate-grey conch with a blue-white lightning crack spiralling through its whorls, a rain-dark strap, a few round water beads on the shell. No glow, no gradients, no hands, no text, no border.
-```
-
-**Barrow-Pearl Conch** → `client/items/tidecaller_w3.png`
-```text
-Cel-shaded cartoon fantasy game item icon, one object centred, thick dark outline, flat colours with one hard shadow, plain dark background with a lighter circle behind it. Conch shell on its strap, standing upright. Colours: deep teal, sea-green and foam-white with one pearl-white detail. A dull grey-white conch with a large tarnished pearl set in its mouth, hairline cracks along the spiral, a ragged grave-cloth strap. No glow, no gradients, no hands, no text, no border.
-```
-
-**Conch of the Drowned Choir** → `client/items/tidecaller_w4.png`
-```text
-Cel-shaded cartoon fantasy game item icon, one object centred, thick dark outline, flat colours with one hard shadow, plain dark background with a lighter circle behind it. Conch shell on its strap, standing upright. Colours: deep teal, sea-green and foam-white with one pearl-white detail. A tall deep-teal spiral conch with a flared pale mouth ringed by small pearls, a bright pearl-white ridge line, a tarnished gold collar, a braided kelp strap hung with three pearls. No glow, no gradients, no hands, no text, no border.
-```
-
-**Tidewife's Wrap** → `client/items/tidecaller_a1.png`
-```text
-Cel-shaded cartoon fantasy game item icon, one object centred, thick dark outline, flat colours with one hard shadow, plain dark background with a lighter circle behind it. Cloth wrap garment on its own, front view. Colours: deep teal, sea-green and foam-white with one pearl-white detail. A sea-blue wrap crossed over the chest and tied at the hip with a rope belt, a salt-stained hem, a small shell clasp at the shoulder. No glow, no gradients, no hands, no text, no border.
-```
-
-**Weaver's Kelp Wrap** → `client/items/tidecaller_a2.png`
-```text
-Cel-shaded cartoon fantasy game item icon, one object centred, thick dark outline, flat colours with one hard shadow, plain dark background with a lighter circle behind it. Cloth wrap garment on its own, front view. Colours: deep teal, sea-green and foam-white with one pearl-white detail. An olive kelp-green wrap stitched with a faint pale web pattern, a fringe of dried kelp ribbons along the shoulder, a chitin clasp. No glow, no gradients, no hands, no text, no border.
-```
-
-**Stormsalt Wrap** → `client/items/tidecaller_a3.png`
-```text
-Cel-shaded cartoon fantasy game item icon, one object centred, thick dark outline, flat colours with one hard shadow, plain dark background with a lighter circle behind it. Cloth wrap garment on its own, front view. Colours: deep teal, sea-green and foam-white with one pearl-white detail. A slate-blue wrap rain-darkened at the hem with white salt streaks, a high collar, copper toggles, a thin blue-white lightning stitch down the centre seam. No glow, no gradients, no hands, no text, no border.
-```
-
-**Gravewater Wrap** → `client/items/tidecaller_a4.png`
-```text
-Cel-shaded cartoon fantasy game item icon, one object centred, thick dark outline, flat colours with one hard shadow, plain dark background with a lighter circle behind it. Cloth wrap garment on its own, front view. Colours: deep teal, sea-green and foam-white with one pearl-white detail. A deep-teal wrap gone grey-green at the edges, torn into ragged strips like wet burial cloth, a tarnished gold shell clasp at the shoulder, one bright pearl-white pearl on the chest. No glow, no gradients, no hands, no text, no border.
-```
-
----
-
-## Lanternkeeper (healer)
-
-### Portraits
-**Lanternkeeper** → `client/portraits/lanternkeeper.png`
-```text
-Cel-shaded 90s fantasy anime portrait, head and shoulders, three-quarter view, clean line art, flat two-tone shading, expressive face, plain one-colour background with one simple shape behind the head. A short sturdy woman in her forties, weathered olive-tan skin, laugh lines, calm dark-brown eyes, a soot smudge on one cheek, grey-streaked plait escaping a wide soot-grey hat with a brass pin, high-collared coat, an iron cage lantern held by her face with a flat ember-gold teardrop flame, patient and amused. Dark night-blue background with a pale amber disc behind the head; accent #ffc46b in flame and disc only. No glow, no airbrushing, no sparkly eyes, no text, no border.
-```
-
-**Beacon** → `client/portraits/lanternkeeper-beacon.png`
-```text
-Cel-shaded 90s fantasy anime portrait, head and shoulders, three-quarter view, clean line art, flat two-tone shading, expressive face, plain one-colour background with one simple shape behind the head. The same lamplighter as the Beacon: standing tall and square, hat pushed back, lantern raised high on its pole above her head, steady resolute look ahead, a tall iron post behind her shoulder topped with a curled flat ember-gold flame. Deep navy background with a tall pale gold vertical beam behind the head; accent #ffd27a in the flame and beam only. No glow, no airbrushing, no sparkly eyes, no text, no border.
-```
-
-**Wayfarer** → `client/portraits/lanternkeeper-wayfarer.png`
-```text
-Cel-shaded 90s fantasy anime portrait, head and shoulders, three-quarter view, clean line art, flat two-tone shading, expressive face, plain one-colour background with one simple shape behind the head. The same lamplighter as the Wayfarer: mid-stride, collar turned up, hat tilted, coat swept sideways, pole lantern swinging, a line of three shrinking flat teardrop lights drifting off behind her shoulder, half-smile, eyes on the horizon. Dusky sienna-orange background with a few bold diagonal wind bands behind the head; accent #ff9f5a in the lights and bands only. No glow, no airbrushing, no sparkly eyes, no text, no border.
-```
-
-### Ability icons
-**Trim the Wick** → `client/icons/lanternkeeper/trim.png`
-```text
-Cel-shaded cartoon fantasy game ability icon, one bold object filling most of the square, thick dark outline, flat colours with one hard shadow, light from the upper left, magic as flat solid shapes. Night-blue background; soot-grey iron and brass, ember-gold accent. Subject: Brass wick-trimming scissors closing on a lamp wick at the lower left, a flat ember-gold spark leaping from the cut tip up and right as a short bolt with a tapered tail, two speed lines. No glow, no gradients, no people, no faces, no hands, no text, no border, no halo round flames, no soft light pools.
-```
-
-**Set Lantern** → `client/icons/lanternkeeper/set.png`
-```text
-Cel-shaded cartoon fantasy game ability icon, one bold object filling most of the square, thick dark outline, flat colours with one hard shadow, light from the upper left, magic as flat solid shapes. Night-blue background; soot-grey iron and brass, ember-gold accent. Subject: A squat iron cage lantern on a flagstone, flat ember-gold teardrop flame, two thin concentric ring outlines on the stone round its base (outlines only), a small brass handle folded on top. No glow, no gradients, no people, no faces, no hands, no text, no border, no halo round flames, no soft light pools.
-```
-
-**Hand Lantern** → `client/icons/lanternkeeper/hand.png`
-```text
-Cel-shaded cartoon fantasy game ability icon, one bold object filling most of the square, thick dark outline, flat colours with one hard shadow, light from the upper left, magic as flat solid shapes. Night-blue background; soot-grey iron and brass, ember-gold accent. Subject: An iron lantern hanging from the curved tip of a brass shepherd's-crook hook, a leather strap round the hook's neck, flat ember-gold flame, three tapered speed lines as it swings right. No glow, no gradients, no people, no faces, no hands, no text, no border, no halo round flames, no soft light pools.
-```
-
-**Flare** → `client/icons/lanternkeeper/flare.png`
-```text
-Cel-shaded cartoon fantasy game ability icon, one bold object filling most of the square, thick dark outline, flat colours with one hard shadow, light from the upper left, magic as flat solid shapes. Night-blue background; soot-grey iron and brass, ember-gold accent. Subject: An iron cage lantern with its door flung open, a bold flat ember-gold star burst of eight pointed rays exploding out of it, a thick ring round the burst, a few round sparks. No glow, no gradients, no people, no faces, no hands, no text, no border, no halo round flames, no soft light pools.
-```
-
-**Carry the Flame** → `client/icons/lanternkeeper/carry.png`
-```text
-Cel-shaded cartoon fantasy game ability icon, one bold object filling most of the square, thick dark outline, flat colours with one hard shadow, light from the upper left, magic as flat solid shapes. Night-blue background; soot-grey iron and brass, ember-gold accent. Subject: An iron lantern tilted mid-toss at the lower left, a flat ember-gold flame trail arcing to a thin ring outline on the ground at the upper right, three tapered speed lines along the arc. No glow, no gradients, no people, no faces, no hands, no text, no border, no halo round flames, no soft light pools.
-```
-
-**Relight** → `client/icons/lanternkeeper/relight.png`
-```text
-Cel-shaded cartoon fantasy game ability icon, one bold object filling most of the square, thick dark outline, flat colours with one hard shadow, light from the upper left, magic as flat solid shapes. Night-blue background; soot-grey iron and brass, ember-gold accent. Subject: A long wooden match with a red head at the lower left, a curled ember-gold flame jumping from its tip to the wick of a small lamp at the upper right, which catches in a small star burst. No glow, no gradients, no people, no faces, no hands, no text, no border, no halo round flames, no soft light pools.
-```
-
-### Spec-move icons
-**Great Beacon (Beacon, replaces Set Lantern)** → `client/icons/lanternkeeper/beacon.png`
-```text
-Cel-shaded cartoon fantasy game ability icon, one bold object filling most of the square, thick dark outline, flat colours with one hard shadow, light from the upper left, magic as flat solid shapes. Night-blue background; soot-grey iron and brass, ember-gold accent. Subject: A tall iron post on a stone base topped by a wide bowl-cage holding a tall flat ember-gold flame with curled tips, four short brace struts, one broad ring outline on the ground round the base. No glow, no gradients, no people, no faces, no hands, no text, no border, no halo round flames, no soft light pools.
-```
-
-**Lamplighter's Stride (Wayfarer, replaces Set Lantern)** → `client/icons/lanternkeeper/stride.png`
-```text
-Cel-shaded cartoon fantasy game ability icon, one bold object filling most of the square, thick dark outline, flat colours with one hard shadow, light from the upper left, magic as flat solid shapes. Night-blue background; soot-grey iron and brass, ember-gold accent. Subject: Three bootprints climbing diagonally from lower left to upper right, each holding a small flat ember-gold teardrop flame, shrinking into the distance, two speed lines beside the first. No glow, no gradients, no people, no faces, no hands, no text, no border, no halo round flames, no soft light pools.
-```
-
-**Trailblaze (Wayfarer, replaces Carry the Flame)** → `client/icons/lanternkeeper/trail.png`
-```text
-Cel-shaded cartoon fantasy game ability icon, one bold object filling most of the square, thick dark outline, flat colours with one hard shadow, light from the upper left, magic as flat solid shapes. Night-blue background; soot-grey iron and brass, ember-gold accent. Subject: Three small iron cage lanterns strung on one taut rope, dragged right behind a bold chevron arrowhead, their flat ember-gold flames streaming backwards, long speed lines. No glow, no gradients, no people, no faces, no hands, no text, no border, no halo round flames, no soft light pools.
-```
-
-### Talent-move icons
-**Will-o'-Wisp (replaces Relight)** → `client/icons/lanternkeeper/wisp.png`
-```text
-Cel-shaded cartoon fantasy game ability icon, one bold object filling most of the square, thick dark outline, flat colours with one hard shadow, light from the upper left, magic as flat solid shapes. Night-blue background; soot-grey iron and brass, ember-gold accent. Subject: A small drifting teardrop flame in pale cream-yellow with a long curling tail, a dotted curved trail to a thin ring outline at the upper right, three tiny star sparks; a flame with no body, not a creature. No glow, no gradients, no people, no faces, no hands, no text, no border, no halo round flames, no soft light pools.
-```
-
-**Lantern Festival (replaces Set Lantern)** → `client/icons/lanternkeeper/festival.png`
-```text
-Cel-shaded cartoon fantasy game ability icon, one bold object filling most of the square, thick dark outline, flat colours with one hard shadow, light from the upper left, magic as flat solid shapes. Night-blue background; soot-grey iron and brass, ember-gold accent. Subject: Five round paper lanterns floating up in a loose fan, thin ribs and small tassels, ember-gold and warm orange, the middle one largest, a few tiny star dots between. No glow, no gradients, no people, no faces, no hands, no text, no border, no halo round flames, no soft light pools.
-```
-
-### Ultimate
-**Lighthouse** → `client/icons/lanternkeeper/lighthouse.png`
-```text
-Cel-shaded cartoon fantasy game ability icon, one big bold object filling the square, thick dark outline, flat colours with one hard shadow, a thin flat gold rim along its top edge, light from the upper left. Night-blue background; soot-grey stone and brass, ember-gold accent. Subject: A tall slim soot-grey stone lighthouse with a brass lantern room, a wide flat ember-gold beam fanning right across the square, a slanted dark arena floor below with three small iron cage lanterns catching the beam. No glow, no gradients, no people, no faces, no hands, no text, no border, no halo round flames, no soft light pools.
-```
-
-### Items
-**Tallow Lamp** → `client/items/lanternkeeper_w0.png`
-```text
-Cel-shaded cartoon fantasy game item icon, one object centred, thick dark outline, flat colours with one hard shadow, plain dark background with a lighter circle behind it. Hand lantern standing upright with its handle on top. Colours: soot grey and brass with one ember-gold detail. A dented tin hand lantern with a bent wire handle, a cracked horn window, a grey tallow stub inside, no flame lit. No glow, no gradients, no hands, no text, no border.
-```
-
-**Spider-Glass Lantern** → `client/items/lanternkeeper_w1.png`
-```text
-Cel-shaded cartoon fantasy game item icon, one object centred, thick dark outline, flat colours with one hard shadow, plain dark background with a lighter circle behind it. Hand lantern standing upright with its handle on top. Colours: soot grey and brass with one ember-gold detail. An iron lantern with a pale spider-silk web spun across each glass pane, a chitin-leg hook handle, a small ember-gold flame behind the webs. No glow, no gradients, no hands, no text, no border.
-```
-
-**Forge-Iron Lantern** → `client/items/lanternkeeper_w2.png`
-```text
-Cel-shaded cartoon fantasy game item icon, one object centred, thick dark outline, flat colours with one hard shadow, plain dark background with a lighter circle behind it. Hand lantern standing upright with its handle on top. Colours: soot grey and brass with one ember-gold detail. A heavy black riveted forge-iron lantern with a short chimney, a twisted iron loop handle, soot streaks down its sides, a steady ember-gold flame in the window. No glow, no gradients, no hands, no text, no border.
-```
-
-**Grave-Candle Lantern** → `client/items/lanternkeeper_w3.png`
-```text
-Cel-shaded cartoon fantasy game item icon, one object centred, thick dark outline, flat colours with one hard shadow, plain dark background with a lighter circle behind it. Hand lantern standing upright with its handle on top. Colours: soot grey and brass with one ember-gold detail. A slate-grey lantern with a thick pale grave-candle inside, wax dripping, one cracked pane, a rain-dark chain handle, a small ember-gold flame. No glow, no gradients, no hands, no text, no border.
-```
-
-**Lantern of the Hollow King** → `client/items/lanternkeeper_w4.png`
-```text
-Cel-shaded cartoon fantasy game item icon, one object centred, thick dark outline, flat colours with one hard shadow, plain dark background with a lighter circle behind it. Hand lantern standing upright with its handle on top. Colours: soot grey and brass with one ember-gold detail. A tall near-black iron lantern topped with a small crown of tarnished gold points, tarnished gold ribs, a bright ember-gold flame, a pale teal-grey ghost-light seam along one rib. No glow, no gradients, no hands, no text, no border.
-```
-
-**Lamplighter's Coat** → `client/items/lanternkeeper_a1.png`
-```text
-Cel-shaded cartoon fantasy game item icon, one object centred, thick dark outline, flat colours with one hard shadow, plain dark background with a lighter circle behind it. Long coat on its own, front view. Colours: soot grey and brass with one ember-gold detail. A long soot-grey coat with a high collar and brass buttons, a patched elbow, a coil of wick-cord and a small lantern hanging at the belt. No glow, no gradients, no hands, no text, no border.
-```
-
-**Silkwick Coat** → `client/items/lanternkeeper_a2.png`
-```text
-Cel-shaded cartoon fantasy game item icon, one object centred, thick dark outline, flat colours with one hard shadow, plain dark background with a lighter circle behind it. Long coat on its own, front view. Colours: soot grey and brass with one ember-gold detail. A soot-grey coat with pale spider-silk web lining showing at the cuffs and collar, chitin buttons, a silk wick-cord looped at the hip. No glow, no gradients, no hands, no text, no border.
-```
-
-**Soot-Black Coat** → `client/items/lanternkeeper_a3.png`
-```text
-Cel-shaded cartoon fantasy game item icon, one object centred, thick dark outline, flat colours with one hard shadow, plain dark background with a lighter circle behind it. Long coat on its own, front view. Colours: soot grey and brass with one ember-gold detail. A near-black coat smeared with soot, a wide storm collar, tarnished brass buckles, a thin blue-white lightning stitch down the centre seam. No glow, no gradients, no hands, no text, no border.
-```
-
-**Barrow-Warden Coat** → `client/items/lanternkeeper_a4.png`
-```text
-Cel-shaded cartoon fantasy game item icon, one object centred, thick dark outline, flat colours with one hard shadow, plain dark background with a lighter circle behind it. Long coat on its own, front view. Colours: soot grey and brass with one ember-gold detail. A long grey greatcoat with a short hooded cape, a small ember-gold lantern-shaped clasp at the throat, a ragged hem dusted with ash-grey grave dust. No glow, no gradients, no hands, no text, no border.
-```
-
 ---
 
 ## Marionettist and Threadweaver (one or two icons each)
@@ -594,66 +292,66 @@ Then copy `client/icons/boss/archmage/the-binding.png` to `client/icons/boss/arc
 - [x] `client/icons/thresher/hourglass.png`
 - [x] `client/icons/thresher/nightfall.png`
 - [x] `client/icons/thresher/reapersgate.png`
-- [ ] `client/items/thresher_w0.png`
-- [ ] `client/items/thresher_w1.png`
-- [ ] `client/items/thresher_w2.png`
-- [ ] `client/items/thresher_w3.png`
-- [ ] `client/items/thresher_w4.png`
-- [ ] `client/items/thresher_a1.png`
-- [ ] `client/items/thresher_a2.png`
-- [ ] `client/items/thresher_a3.png`
-- [ ] `client/items/thresher_a4.png`
+- [x] `client/items/thresher_w0.png`
+- [x] `client/items/thresher_w1.png`
+- [x] `client/items/thresher_w2.png`
+- [x] `client/items/thresher_w3.png`
+- [x] `client/items/thresher_w4.png`
+- [x] `client/items/thresher_a1.png`
+- [x] `client/items/thresher_a2.png`
+- [x] `client/items/thresher_a3.png`
+- [x] `client/items/thresher_a4.png`
 
 ### Tidecaller (23)
-- [ ] `client/portraits/tidecaller.png`
-- [ ] `client/portraits/tidecaller-springtide.png`
-- [ ] `client/portraits/tidecaller-undertow.png`
-- [ ] `client/icons/tidecaller/spray.png`
-- [ ] `client/icons/tidecaller/sip.png`
-- [ ] `client/icons/tidecaller/riptide.png`
-- [ ] `client/icons/tidecaller/surge.png`
-- [ ] `client/icons/tidecaller/current.png`
-- [ ] `client/icons/tidecaller/breakwater.png`
-- [ ] `client/icons/tidecaller/swell.png`
-- [ ] `client/icons/tidecaller/undertow.png`
-- [ ] `client/icons/tidecaller/maelstrom.png`
-- [ ] `client/icons/tidecaller/bore.png`
-- [ ] `client/icons/tidecaller/springflood.png`
-- [ ] `client/items/tidecaller_w0.png`
-- [ ] `client/items/tidecaller_w1.png`
-- [ ] `client/items/tidecaller_w2.png`
-- [ ] `client/items/tidecaller_w3.png`
-- [ ] `client/items/tidecaller_w4.png`
-- [ ] `client/items/tidecaller_a1.png`
-- [ ] `client/items/tidecaller_a2.png`
-- [ ] `client/items/tidecaller_a3.png`
-- [ ] `client/items/tidecaller_a4.png`
+- [x] `client/portraits/tidecaller.png`
+- [x] `client/portraits/tidecaller-springtide.png`
+- [x] `client/portraits/tidecaller-undertow.png`
+- [x] `client/icons/tidecaller/spray.png`
+- [x] `client/icons/tidecaller/sip.png`
+- [x] `client/icons/tidecaller/riptide.png`
+- [x] `client/icons/tidecaller/surge.png`
+- [x] `client/icons/tidecaller/current.png`
+- [x] `client/icons/tidecaller/breakwater.png`
+- [x] `client/icons/tidecaller/swell.png`
+- [x] `client/icons/tidecaller/undertow.png`
+- [x] `client/icons/tidecaller/maelstrom.png`
+- [x] `client/icons/tidecaller/bore.png`
+- [x] `client/icons/tidecaller/springflood.png`
+- [x] `client/items/tidecaller_w0.png`
+- [x] `client/items/tidecaller_w1.png`
+- [x] `client/items/tidecaller_w2.png`
+- [x] `client/items/tidecaller_w3.png`
+- [x] `client/items/tidecaller_w4.png`
+- [x] `client/items/tidecaller_a1.png`
+- [x] `client/items/tidecaller_a2.png`
+- [x] `client/items/tidecaller_a3.png`
+- [x] `client/items/tidecaller_a4.png`
 
 ### Lanternkeeper (24)
-- [ ] `client/portraits/lanternkeeper.png`
-- [ ] `client/portraits/lanternkeeper-beacon.png`
-- [ ] `client/portraits/lanternkeeper-wayfarer.png`
-- [ ] `client/icons/lanternkeeper/trim.png`
-- [ ] `client/icons/lanternkeeper/set.png`
-- [ ] `client/icons/lanternkeeper/hand.png`
-- [ ] `client/icons/lanternkeeper/flare.png`
-- [ ] `client/icons/lanternkeeper/carry.png`
-- [ ] `client/icons/lanternkeeper/relight.png`
-- [ ] `client/icons/lanternkeeper/beacon.png`
-- [ ] `client/icons/lanternkeeper/stride.png`
-- [ ] `client/icons/lanternkeeper/trail.png`
-- [ ] `client/icons/lanternkeeper/wisp.png`
-- [ ] `client/icons/lanternkeeper/festival.png`
-- [ ] `client/icons/lanternkeeper/lighthouse.png`
-- [ ] `client/items/lanternkeeper_w0.png`
-- [ ] `client/items/lanternkeeper_w1.png`
-- [ ] `client/items/lanternkeeper_w2.png`
-- [ ] `client/items/lanternkeeper_w3.png`
-- [ ] `client/items/lanternkeeper_w4.png`
-- [ ] `client/items/lanternkeeper_a1.png`
-- [ ] `client/items/lanternkeeper_a2.png`
-- [ ] `client/items/lanternkeeper_a3.png`
-- [ ] `client/items/lanternkeeper_a4.png`
+- [x] `client/portraits/lanternkeeper.png`
+- [x] `client/portraits/lanternkeeper-beacon.png`
+- [x] `client/portraits/lanternkeeper-wayfarer.png`
+- [x] `client/icons/lanternkeeper/trim.png`
+- [x] `client/icons/lanternkeeper/set.png`
+- [x] `client/icons/lanternkeeper/hand.png`
+- [x] `client/icons/lanternkeeper/flare.png`
+- [x] `client/icons/lanternkeeper/carry.png`
+- [x] `client/icons/lanternkeeper/relight.png`
+- [x] `client/icons/lanternkeeper/beacon.png`
+- [x] `client/icons/lanternkeeper/stride.png`
+- [x] `client/icons/lanternkeeper/trail.png`
+- [x] `client/icons/lanternkeeper/wisp.png`
+- [x] `client/icons/lanternkeeper/festival.png`
+- [x] `client/icons/lanternkeeper/lighthouse.png`
+- [x] `client/items/lanternkeeper_w0.png`
+- [x] `client/items/lanternkeeper_w1.png`
+- [x] `client/items/lanternkeeper_w2.png`
+- [x] `client/items/lanternkeeper_w3.png`
+- [x] `client/items/lanternkeeper_w4.png`
+- [x] `client/items/lanternkeeper_a1.png`
+- [x] `client/items/lanternkeeper_a2.png`
+- [x] `client/items/lanternkeeper_a3.png`
+- [x] `client/items/lanternkeeper_a4.png`
 
 ### Marionettist and Threadweaver (3)
 - [ ] `client/icons/marionettist/cue.png`

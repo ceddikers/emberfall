@@ -306,30 +306,30 @@ Cel-shaded 90s fantasy anime portrait, head and shoulders, three-quarter view, c
 ## Checklist (48 files)
 
 ### Kenseier (24)
-- [ ] `client/portraits/kenseier.png`
-- [ ] `client/portraits/kenseier-deathblade.png`
-- [ ] `client/portraits/kenseier-warden.png`
-- [ ] `client/icons/kenseier/cut.png`
-- [ ] `client/icons/kenseier/deflect.png`
-- [ ] `client/icons/kenseier/mikiri.png`
-- [ ] `client/icons/kenseier/deathblow.png`
-- [ ] `client/icons/kenseier/mantle.png`
-- [ ] `client/icons/kenseier/guard.png`
-- [ ] `client/icons/kenseier/iai.png`
-- [ ] `client/icons/kenseier/redirect.png`
-- [ ] `client/icons/kenseier/whirlwind.png`
-- [ ] `client/icons/kenseier/duel.png`
-- [ ] `client/icons/kenseier/thousandcuts.png`
-- [ ] `client/items/kenseier_w0.png`
-- [ ] `client/items/kenseier_w1.png`
-- [ ] `client/items/kenseier_w2.png`
-- [ ] `client/items/kenseier_w3.png`
-- [ ] `client/items/kenseier_w4.png`
-- [ ] `client/items/kenseier_w8.png`
-- [ ] `client/items/kenseier_a1.png`
-- [ ] `client/items/kenseier_a2.png`
-- [ ] `client/items/kenseier_a3.png`
-- [ ] `client/items/kenseier_a4.png`
+- [x] `client/portraits/kenseier.png`
+- [x] `client/portraits/kenseier-deathblade.png`
+- [x] `client/portraits/kenseier-warden.png`
+- [x] `client/icons/kenseier/cut.png`
+- [x] `client/icons/kenseier/deflect.png`
+- [x] `client/icons/kenseier/mikiri.png`
+- [x] `client/icons/kenseier/deathblow.png`
+- [x] `client/icons/kenseier/mantle.png`
+- [x] `client/icons/kenseier/guard.png`
+- [x] `client/icons/kenseier/iai.png`
+- [x] `client/icons/kenseier/redirect.png`
+- [x] `client/icons/kenseier/whirlwind.png`
+- [x] `client/icons/kenseier/duel.png`
+- [x] `client/icons/kenseier/thousandcuts.png`
+- [x] `client/items/kenseier_w0.png`
+- [x] `client/items/kenseier_w1.png`
+- [x] `client/items/kenseier_w2.png`
+- [x] `client/items/kenseier_w3.png`
+- [x] `client/items/kenseier_w4.png`
+- [x] `client/items/kenseier_w8.png`
+- [x] `client/items/kenseier_a1.png`
+- [x] `client/items/kenseier_a2.png`
+- [x] `client/items/kenseier_a3.png`
+- [x] `client/items/kenseier_a4.png`
 
 ### Houndmaster (24)
 - [ ] `client/portraits/houndmaster.png`

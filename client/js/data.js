@@ -148,7 +148,6 @@ CLASSES.push({
 // No painted icons or portraits yet: the game draws its own icons until they are in.
 CLASSES.push({
   id: 'tidecaller', name: 'Tidecaller', title: 'The Voice of the Undertow', role: 'healer', difficulty: 2, complexity: 3, accent: '#3fb8a8',
-  art: { icons: false, portraits: false },
   tagline: 'The sea doesn\'t hurry. Neither do I.',
   gameplan: 'Your healing rises and falls like the sea. The tide climbs on its own; spend it as small sips while it\'s low, or wait for high water and let a surge wash over everyone. The skill is choosing when.',
 });
@@ -157,7 +156,6 @@ CLASSES.push({
 // No painted icons or portraits yet: the game draws its own icons until they are in.
 CLASSES.push({
   id: 'lanternkeeper', name: 'Lanternkeeper', title: 'The Keeper of the Last Light', role: 'healer', difficulty: 2, complexity: 4, accent: '#ffc46b',
-  art: { icons: false, portraits: false },
   tagline: 'Every dark corner gets a light. Every light gets a keeper.',
   gameplan: 'Set lanterns where the party will stand, hang one on whoever is taking the hits, and keep them lit. Lanterns heal everyone in their glow, so the skill is placement: be where the fight is going, not where it was.',
 });
@@ -166,7 +164,6 @@ CLASSES.push({
 // No painted icons or portraits yet: the game draws its own icons until they are in.
 CLASSES.push({
   id: 'kenseier', name: 'Kenseier', title: 'The Ashen Guard', role: 'tank', difficulty: 4, complexity: 3, accent: '#ff8a3d',
-  art: { icons: false, portraits: false },
   tagline: 'Every blow has a beat. Catch it.',
   gameplan: 'Meet the boss\'s blows with your blade. A deflect pressed just as a blow lands turns it aside and wears down the boss\'s Posture; a clumsy one still blocks a little. Fill the bar and the boss Breaks: a short window where the whole party hits harder and your Deathblow lands. Only you can build it.',
 });

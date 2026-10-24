@@ -1409,7 +1409,7 @@ SPECS.lanternkeeper = [
       steadyGlow: true,
       abilities: {
         set: {
-          id: 'beacon', replaces: 'set', icon: 'set', name: 'Great Beacon', type: 'gcd', target: 'self', anim: 'big',
+          id: 'beacon', replaces: 'set', icon: 'beacon', name: 'Great Beacon', type: 'gcd', target: 'self', anim: 'big',
           usable: k => k.g.emb >= 1,
           desc: 'Instant, 1 Ember: raise a Great Beacon at your feet. For 18s everyone in its wide glow heals {h:65} every second; its wick never burns below half, and it can\'t be carried. Two at most: a third snuffs the oldest.',
           glow: k => k.g.emb >= 1 && k.g.lan.filter(l => l.kind === 'beacon').length < 2,
@@ -1431,7 +1431,7 @@ SPECS.lanternkeeper = [
       roadWorn: true,
       abilities: {
         set: {
-          id: 'stride', replaces: 'set', icon: 'set', name: 'Lamplighter\'s Stride', type: 'gcd', target: 'self', anim: 'cast',
+          id: 'stride', replaces: 'set', icon: 'stride', name: 'Lamplighter\'s Stride', type: 'gcd', target: 'self', anim: 'cast',
           usable: k => k.g.emb >= 1,
           desc: 'Instant, 1 Ember: for 10s, every few steps you take drops a small light behind you. Each glows for 6s and heals everyone in it {h:25} every second. Six at most.',
           glow: k => k.g.emb >= 1 && k.now >= (k.g.strideUntil || 0),
@@ -1439,7 +1439,7 @@ SPECS.lanternkeeper = [
           fx: { type: 'aura', color: '#ff9f5a', r: 30, dur: 0.6 },
         },
         carry: {
-          id: 'trail', replaces: 'carry', icon: 'carry', name: 'Trailblaze', type: 'ogcd', target: 'self', cd: 15, charges: 2, anim: 'cast',
+          id: 'trail', replaces: 'carry', icon: 'trail', name: 'Trailblaze', type: 'ogcd', target: 'self', cd: 15, charges: 2, anim: 'cast',
           desc: 'Dash ahead, and every small light you have dropped is dragged along with you, keeping its place behind you.',
           glow: k => k.g.lan.filter(l => l.kind === 'small').length >= 3 && k.g.inGlow < 2,
           effect(k) { lkTrail(k, this); },
@@ -1467,7 +1467,7 @@ SPECS.kenseier = [
         deflect: { desc: 'Meet the next blow with your blade. Pressed within a blink of a boss auto or tankbuster landing on you, either side of it, it turns the blow aside (Perfect: no damage, +25 Posture, +37 on a tankbuster) and a little further out it halves it (Good: +8 Posture). No cooldown, but pressed with no blow to meet it costs a little Poise and the key rests for a moment.' },
         deathblow: { desc: 'Only while the boss is Broken (a Break lasts 5s): a Deathblow for {d:900} that heals you for 15% of your health, ends the Break early, and leaves the boss taking 5% more damage from you for 10s. Out of a Break this is a Pommel: {d:200} and +5 Posture (8s cooldown).' },
         guard: {
-          id: 'iai', replaces: 'guard', icon: 'guard', name: 'Iai Stance', type: 'ogcd', target: 'self', cd: 90, lock: 0.5, anim: 'big',
+          id: 'iai', replaces: 'guard', icon: 'iai', name: 'Iai Stance', type: 'ogcd', target: 'self', cd: 90, lock: 0.5, anim: 'big',
           desc: 'Sheathe the blade and wait, for 6s: your next Perfect deflect is followed at once by a counter-cut for {d:450}.',
           effect(k) { k.buff('iai', 6); k.fx('ken-iai-stance'); },
           fx: { type: 'ring', color: '#ffe2a0', r: 50 },
