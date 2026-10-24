@@ -783,12 +783,22 @@ function joinRaid(rs) {
   const out = rs.map(r => r.out.replace(/^cleared (\d+) of (\d+)\r?\n?/m, (m, a, b) => { sum[0] += +a; sum[1] += +b; return ''; })).join('');
   return { code: joinOut(rs).code, out: out + `cleared ${sum[0]} of ${sum[1]}\n` };
 }
-const raidJob = (mode, runs, boss, comp, extra, group) => {
+// early = a line-up that only needs one clear (the "Bots clear" lines): its pieces go out one after another, each with bot-raid.js
+// stop=clear, and the rest are never started once one has cleared. Different line-ups still run side by side in the pool. Only this final
+// check does that; bot-raid.js on its own plays every run.
+const raidJob = (mode, runs, boss, comp, extra, group, early) => {
   const bot = path.join(__dirname, 'bot-raid.js'), pieces = [];
-  for (let first = 0; first < runs; first += RAID_CHUNK) {
-    const n = Math.min(RAID_CHUNK, runs - first);
-    pieces.push(run([bot, mode, String(n), boss, ...(comp ? [comp] : []), ...extra, ...(first ? ['first=' + first] : [])], { group, weight: n * 3 }));
-  }
+  const job = first => { const n = Math.min(RAID_CHUNK, runs - first); return run([bot, mode, String(n), boss, ...(comp ? [comp] : []), ...extra, ...(early ? ['stop=clear'] : []), ...(first ? ['first=' + first] : [])], { group, weight: n * 3 }); };
+  if (early) return (async () => {
+    const rs = [];
+    for (let first = 0; first < runs; first += RAID_CHUNK) {
+      const r = await job(first);
+      rs.push(r);
+      if (r.code === 0 && /^run \d+: clear /m.test(r.out)) break;
+    }
+    return joinRaid(rs);
+  })();
+  for (let first = 0; first < runs; first += RAID_CHUNK) pieces.push(job(first));
   return Promise.all(pieces).then(joinRaid);
 };
 
@@ -814,7 +824,7 @@ async function heavy() {
   const [sim, tal, ...raids] = await Promise.all([
     Promise.all(Array.from({ length: SIM_PARTS }, (_, i) => run([path.join(__dirname, 'simulate.js'), `--part=${i}/${SIM_PARTS}`], { group: 'balance sim', weight: 4 }))).then(joinOut),
     Promise.all(Object.keys(TALENTS).map(cls => run([path.join(__dirname, 'talents.js'), cls], { group: 'talents', weight: 6 }))).then(joinOut),
-    ...RAIDS.map(([, boss, ...rest]) => raidJob('normal', +((rest.find(a => /^runs=/.test(a)) || '').slice(5) || RAID_RUNS), boss, rest.filter(a => !/^(gear|runs)=/.test(a)).join(','), rest.filter(a => /^gear=/.test(a)), 'bot raids')),
+    ...RAIDS.map(([, boss, ...rest]) => raidJob('normal', +((rest.find(a => /^runs=/.test(a)) || '').slice(5) || RAID_RUNS), boss, rest.filter(a => !/^(gear|runs)=/.test(a)).join(','), rest.filter(a => /^gear=/.test(a)), 'bot raids', true)),
     ...trialIds.map(id => raidJob('normal', 2, 'trial:' + id, '', [], 'spec trials')),
     ...HARD_BOSSES.map(([, boss, gear]) => raidJob('hard', 3, boss, HARD_COMP, gear ? [gear] : [], 'hard smoke')),
   ]);
@@ -872,11 +882,12 @@ function verdicts(sim, tal, raids, trials, hards, trialIds, specOf) {
     else pass('Talents balanced', `${talRows.length} talent runs, every one at most +${TALENT_MAX}%; best full build +${top.toFixed(1)}%${allRows.length ? `, with spec rows +${Math.max(...allRows.map(m => +m[4])).toFixed(1)}% (max ${BUILD_ALL_MAX}%)` : ''}`);
   }
 
-  // bot raids: a bot party clears each boss on Normal at least once in RAID_RUNS
+  // bot raids: a bot party clears each boss on Normal at least once in RAID_RUNS (it stops at the first clear; a fail has played them all)
   RAIDS.forEach(([boss, , ...rest], i) => {
     const comp = rest.filter(a => !/^(gear|runs)=/.test(a)), gear = rest.find(a => /^gear=/.test(a));
     const r = raids[i], m = r.out.match(/cleared (\d+) of (\d+)/), name = `Bots clear ${boss} (Normal, ${comp.join(' ')}${gear ? ', ' + gear : ''})`;
-    if (r.code === 0 && m && +m[1] >= 1) pass(name, `${m[1]} of ${m[2]}`);
+    const won = r.out.match(/^run (\d+): clear /m);   // (the pool stops a line-up at its first clear: raidJob early)
+    if (r.code === 0 && m && +m[1] >= 1) pass(name, won ? `cleared on run ${won[1]}` : `${m[1]} of ${m[2]}`);
     else fail(name, m ? `${m[1]} of ${m[2]}\n` + r.out.split('\n').filter(l => /^run /.test(l)).join('\n') : r.out.slice(-800));
   });
 
