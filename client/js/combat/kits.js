@@ -1002,7 +1002,8 @@ function reaverAfterDrain(k, ab, healed, tide) {
   if (k.talent('bloodreaver_second') && healed > mx * (k.def.spec === 'berserker' ? 0.1 : 0.15)) { reaverGain(k, 20); k.fx('secondHelping'); }
   if (k.talent('bloodreaver_hemorrhage')) { k.dot('hemorrhage', 30, 9, 3, { ab }); k.fx('hemorrhage'); }
   // the spec rows VI-VII: Scar Tissue (Berserker), Spill Over and Blood Font (Hemomancer)
-  if (k.talent('bloodreaver_scar') && hpOf(k) < 0.5) { k.mitigate('self', 0.15, 5, { ab }); k.fx('cauterize'); }
+  if (k.def.spec === 'berserker') { const low = hpOf(k) < 0.5; k.mitigate('self', low ? 0.35 : 0.15, low ? 3 : 2, { ab }); }   // (a Rampage guards you for a moment, better below half HP)
+  if (k.talent('bloodreaver_scar') && hpOf(k) < 0.5) { k.mitigate('lowest', 0.15, 3, { ab }); k.fx('cauterize'); }
   if (k.talent('bloodreaver_spill')) { const over = healed - (1 - hpOf(k)) * mx; if (over > 1) { k.healRaw('lowest', over, { ab }); k.fx('secondHelping'); } }
   if (k.talent('bloodreaver_font') && k.now >= (k.g.fontAt || 0)) {
     k.g.fontAt = k.now + 20;
@@ -1536,13 +1537,14 @@ const DASH = { charges: 2, cd: 12 };
 // Every tank's taunt rides on one of its own buttons (the carrier, TAUNT_CARRY below: a cheap, short-cooldown press the
 // tank uses anyway), so T is free for the Ultimate. The taunt is smart: pressing the carrier taunts only when the taunt
 // is ready and the enemy you face is on someone else (Kit.resolve calls env.taunt; CombatActor and the worlds in
-// main.js / raid-host.js decide). The host applies the shared part (FightSim.taunt in fight.js): threat to the top +
-// 10%, the boss fixed on you for 3s, an add for 6s. Each class's own part also feeds its gauge (use(k), run by
-// CombatActor.useTaunt), and has its own look (KIT_VFX.taunt in ability-vfx.js). cd matches FIGHT.TAUNT_CD.
-// name: the taunt's name (the fixation icon under the boss bar shows it); icon: the icon that fixation wears.
+// main.js / raid-host.js decide). The host applies the shared part (FightSim.taunt in fight.js): the boss is on you from
+// then on (until you fall or the other tank taunts); an add gets threat to the top + 10% and is fixed on you for 6s.
+// Each class's own part also feeds its gauge (use(k), run by CombatActor.useTaunt), and has its own look (KIT_VFX.taunt
+// in ability-vfx.js). cd matches FIGHT.TAUNT_CD.
+// name: the taunt's name; icon: the borrowed icon the taunt's own painting sits on.
 const TAUNT = {
   cd: 20, range: 500, lock: 0.6,
-  hold: 'your threat jumps to 10% above the highest, and the boss stays on you for 3s whatever anyone else does (an add, for 6s). The boss never leaves a standing tank for anyone else, so on him it hands him between tanks',
+  hold: 'the boss is yours from then on, until you fall or the other tank takes him (an add is fixed on you for 6s, with your threat on it jumping to 10% above the highest)',
   bastion: {
     name: 'Challenge', icon: 'banner',
     desc: 'The challenge steadies you like a Perfect Block: +10 Resolve, and your next Blade Chain counters for +150.',
@@ -1566,15 +1568,6 @@ const tauntNote = (classId, ab) => {
   const t = TAUNT[classId];
   if (!t || !ab || TAUNT_CARRY[classId] !== (ab.replaces || ab.id)) return '';
   return `<div class="it-taunt"><span><u>Taunt · ${t.name}:</u> while the enemy you face is attacking someone else, this also taunts it (once every ${TAUNT.cd}s): ${TAUNT.hold}. ${t.desc}</span></div>`;
-};
-// CSS background for the taunt's icon (the fixation under the boss bar): its own painting, the borrowed icon underneath
-// (a class with no painted icons yet, data.js art.icons === false, draws its own: hud.js abilityIcon)
-const tauntIconBg = classId => {
-  const cls = typeof CLASSES !== 'undefined' && CLASSES.find(c => c.id === classId);
-  if (cls && cls.art && cls.art.icons === false && typeof abilityIcon !== 'undefined') return `url(${abilityIcon(classId, 'taunt')})`;
-  // every tank's taunt is painted; the borrowed icon stays underneath in case a new tank's isn't yet
-  const own = `icons/${classId}/taunt.png`, borrowed = `icons/${classId}/${(TAUNT[classId] || {}).icon}.png`;
-  return `url(${own}), url(${borrowed})`;
 };
 
 // ======================================================================= ULTIMATES (T, slot 7)
@@ -2075,7 +2068,7 @@ KITS.alembist = {
 
 if (typeof module !== 'undefined') {
   // the talent helpers the specs share (a browser has them as globals)
-  module.exports = { KITS, DASH, TAUNT, TAUNT_CARRY, tauntNote, tauntIconBg, ULTIMATES, ultIconBg, ultMeta, bastionUltHits, MELEE, RANGED, bossNow, bossCasting, onBossCast, castHold, hpOf, abBase, targetDown, kitMove,
+  module.exports = { KITS, DASH, TAUNT, TAUNT_CARRY, tauntNote, ULTIMATES, ultIconBg, ultMeta, bastionUltHits, MELEE, RANGED, bossNow, bossCasting, onBossCast, castHold, hpOf, abBase, targetDown, kitMove,
     BASTION, bastionCanEdge, bastionRadiate, bastionTurned, bastionBanner, bastionGain, bastionCost, bastionSpend, bastionBraceDur, bastionInHallow, bastionBlade, bastionEdge, bastionGuard, bastionPerfect, bastionTick,
     REAVER, reaverBank, reaverWound, reaverWarm, reaverCash, reaverDrainOk, reaverDrainGlow, reaverDrainCost, reaverTick, reaverGain, reaverHackHeal, reaverDrainPot, reaverAfterDrain, reaverRetaliate, reaverLetting, reaverExpire,
     runeGain, runeSpent, runeEmergency, runeWardCost, runeWardUp, runeWardEnd, runeGlyph, runeGlyphguard, runeGlyphguardEnd,
@@ -4029,7 +4022,7 @@ function weaveTie(k, ab, t) {
   }
   g.tie = pair != null ? null : { t, at: now };
   const sh = k.healAmount(150, { ab }).amount;
-  k.env.emit({ type: 'tie', target: t, pair, mx: weaveMax(k), amount: sh, st: k.def.store || 1, dp: k.def.deep ? 1 : 0, hm: k.talent('threadweaver_skein') ? 6 : 0, ab });
+  k.env.emit({ type: 'tie', target: t, pair, mx: weaveMax(k), amount: sh, st: k.def.store || 1, dp: k.def.deep ? 1 : 0, rg: k.def.ring || 0, hm: k.talent('threadweaver_skein') ? 6 : 0, ab });
   if (!weaveHosted(k) && pair == null) g.n = Math.min(weaveMax(k), (g.n || 0) + 1);
   if (k.talent('threadweaver_crossstitch')) { k.heal(t, 110, { ab }); if (pair != null) k.heal(pair, 110, { ab }); }
   if (k.perk('threadweaver_a2')) k.shield(t, 120, 6, { ab });
@@ -4332,7 +4325,7 @@ function alemUltThrow(k, v, t, m) {
 // Strung buff, mariStrung).
 const MARI = { STRETCH: 300, REACH: 64, SPEED: 360, LIMP: 4, REGEN: 15, YANK: 1.2, RING: 24, TAUT: 12, TAUT_MAX: 72, STAGE: 6, FINALE: 253,
   JAB: 40, JAB_EVERY: 4, JAB_FAST: 2, QUICK: 3, CUE: 180, FLOURISH: 100, STRUNG: 0.05,
-  RIPOSTE: 90, RIPOSTE_EVERY: 4, LASH: 0.7, CORD: 480 };
+  DRAW: 0.5, HELD: 10, RIPOSTE: 90, RIPOSTE_EVERY: 4, LASH: 0.7, CORD: 480 };
 const MARI_STRING = { id: 'string', name: 'Bladed String' };
 const MARI_JAB = { id: 'jab', name: 'Jab' };   // (the Doll's own jab: no button, its hits are named for the meters)
 const MARI_FAR = { target: 'enemy', range: 2000 };
@@ -4380,7 +4373,7 @@ function mariLose(k, i, why) {
   g.loseAt = now + 0.4;   // one blow costs one String, even if it lands on both Dolls
   if (why === 'hit' && k.talent('marionettist_standin') && now < (g.swapAt || -9) + 3) { k.fx('standin'); return; }
   if (why === 'far' && k.talent('marionettist_slack')) return;   // (Slack Line: it is only yanked back)
-  g.strings = Math.max(0, g.strings - 1); g.taut = 0;   // (a torn String slackens Taut String)
+  g.strings = Math.max(0, g.strings - 1); g.taut = g.held = 0;   // (a torn String slackens Taut String)
   g.regenAt = now + MARI.REGEN;
   k.stats.strings = (k.stats.strings || 0) + 1;
   k.fx('strtear', { i, w: why === 'hit' ? 1 : 0 });
@@ -4481,11 +4474,11 @@ function mariTick(k) {
     const R = mariER(e) + 10;
     const n = g.dolls.filter(d => kitSegDist(e.x, e.y, p.x, p.y, d.x, d.y) <= R).length;
     if (n) {
-      g.lineAt = now + 1; k.damage((48 + (g.taut || 0)) * n, { ab: MARI_STRING, tgt: e.id, extra: true }); g.taut = Math.min(MARI.TAUT_MAX, (g.taut || 0) + MARI.TAUT);
+      g.lineAt = now + 1; g.held = g.strings >= 3 ? (g.held || 0) + 1 : 0; k.damage((48 + (g.taut || 0)) * n, { ab: MARI_STRING, tgt: e.id, extra: true }); g.taut = Math.min(MARI.TAUT_MAX, (g.taut || 0) + MARI.TAUT);
       if (k.talent('marionettist_saw') && (g.sawN = (g.sawN || 0) + 1) % 5 === 0) { const c = abBase(k, 'cross'); if (c) k.reduceCooldown(c.id, 1.5); }   // (Saw, Cutting Line spec row VI)
     }
-    else g.taut = 0;
-  } else if (k.def.bladed && (!e || mariLimp(k))) g.taut = 0;
+    else g.taut = g.held = 0;
+  } else if (k.def.bladed && (!e || mariLimp(k))) g.taut = g.held = 0;
   // Held Breath (Cutting Line spec row VI): the boss begins a cast, and the line draws tight
   if (k.talent('marionettist_breath')) onBossCast(k, () => { g.taut = MARI.TAUT_MAX; k.buff('heldbreath', 8); });
   // Twin Strings: a Cross-Cut's line lingers and cuts whatever still crosses it
@@ -4515,15 +4508,18 @@ function mariHit(k, ab, pot, o = {}) {
   ds.forEach(() => { total += k.damage(pot * m, Object.assign({ ab, tgt: e.id !== 'dummy' ? e.id : undefined }, o)).amount; });
   return ds.length;
 }
+// Draw Tight (Cutting Line): the longer the line has been held across the enemy unbroken, the harder Cross-Cut and Grand Finale cut
+const mariDraw = k => k.def.bladed ? 1 + MARI.DRAW * Math.min(1, (k.g.held || 0) / MARI.HELD) : 1;
 function mariCross(k, ab) {
   const e = mariEnemy(k), p = mariPos(k);
   if (!e || mariLimp(k)) return;
   const R = mariER(e) + 12, m = k.def.dollMult || 1, lines = [], cue = k.consume('oncue');   // (On Cue: a Swap just before)
   const breath = k.consume('heldbreath') ? 1.5 : 1;   // (Held Breath, Cutting Line spec row VI)
+  const draw = mariDraw(k);
   let hits = 0;
   for (const d of k.g.dolls) {
     lines.push([p.x, p.y, d.x, d.y]);
-    if (kitSegDist(e.x, e.y, p.x, p.y, d.x, d.y) <= R) { hits++; k.damage(560 * m * (cue ? 2 : 1) * breath, { ab, tgt: e.id !== 'dummy' ? e.id : undefined }); }
+    if (kitSegDist(e.x, e.y, p.x, p.y, d.x, d.y) <= R) { hits++; k.damage(560 * m * (cue ? 2 : 1) * breath * draw, { ab, tgt: e.id !== 'dummy' ? e.id : undefined }); }
   }
   k.fx('cut', { n: hits });
   if (hits && k.talent('marionettist_house') && mariInStage(k)) k.partyBuff('dmg', 0.04, 8, { ab });   // (Packed House, Understudy spec row VI)
@@ -4687,7 +4683,7 @@ KITS.marionettist = {
         for (const d of k.g.dolls) { d.mode = 'finale'; d.until = end; }
         // one beat per hit (the routine's look follows them); Standing Ovation: the last one sends the Doll out quick
         for (let i = 0; i < hits; i++) k.after(gap * i, () => {
-          mariHit(k, ab, MARI.FINALE * (six && i === hits - 1 ? 0.5 : 1));   // (Full House: the sixth is a bow, half as hard)
+          mariHit(k, ab, MARI.FINALE * mariDraw(k) * (six && i === hits - 1 ? 0.5 : 1));   // (Full House: the sixth is a bow, half as hard)
           k.fx('finale-beat', { i, n: hits });
           if (i === hits - 1 && k.talent('marionettist_curtain')) mariQuick(k);
           if (k.talent('marionettist_garrote')) {   // (Garrote, Cutting Line spec row VII: each beat the line cuts as well, at 40% of its strength)
@@ -6124,7 +6120,7 @@ if (typeof module !== 'undefined') Object.assign(module.exports, { TIDE, tideF, 
 //   stride, drop {x, y} (a small light), trail {dx, dy}, festival, wisp, eternal {x, y}, sparks {x, y}, pillar {x, y}.
 // ===================================================================================================================
 const LANTERN = { R: 110, LIFE: 18, BURN: 12, HAND_R: 90, HAND_LIFE: 12, MAX: 3, EMB_MAX: 4, EMB_EVERY: 5, TRIM: 0.25, REACH: 200,
-  BEACON_R: 150, BEACON_MAX: 2, SMALL_R: 75, SMALL_LIFE: 6, SMALL_MAX: 6, STRIDE: 10, STEP: 60, FLOAT_R: 70, FLOAT_LIFE: 12, LIGHT: 8,
+  BEACON_R: 150, CALL_REACH: 420, CALL_POT: 150, WAY_STEP: 80, WAY_CD: 1.5, WAY_POT: 110, BEACON_MAX: 2, SMALL_R: 75, SMALL_LIFE: 6, SMALL_MAX: 6, STRIDE: 10, STEP: 60, FLOAT_R: 70, FLOAT_LIFE: 12, LIGHT: 8,
   FLARE: 340 };   // (Flare's burst for each glow: big enough to lift a party out of a Hard raidwide)
 const LK_KIND = { floor: 0, beacon: 1, hand: 2, small: 3, float: 4, eternal: 5 };
 const lkEmbMax = k => (k.talent('lanternkeeper_hoard') ? 5 : LANTERN.EMB_MAX);
@@ -6133,6 +6129,8 @@ const lkPos = k => (k.env.pos ? k.env.pos() : { x: 0, y: 0 });
 const lkFloor = l => l.on == null;   // (on the floor: not hung on anyone)
 // the lanterns Carry the Flame can pick up: on the floor, not a Great Beacon or the Eternal Lamp
 const lkMovable = l => (l.kind === 'floor' || l.kind === 'small');
+// ...and for a Beacon, only its Great Beacons (Call the Beacon)
+const lkCarryable = k => (k.def.steadyGlow ? (l => l.kind === 'beacon') : lkMovable);
 const lkStub = l => l.wick <= 0.02;
 function lkEmber(k, n = 1) {
   const was = k.g.emb;
@@ -6185,6 +6183,14 @@ function lkTick(k) {
   if (k.now < (g.strideUntil || 0) && moving) {
     g.strideDist += step;
     while (g.strideDist >= LANTERN.STEP) { g.strideDist -= LANTERN.STEP; lkSmall(k); }
+  }
+  // Road Worn (Wayfarer): every few steps a light lands on the most hurt ally in reach (the host picks them, fight.js lampEvent)
+  if (k.def.roadWorn && moving) {
+    g.wayDist = (g.wayDist || 0) + step;
+    if (g.wayDist >= LANTERN.WAY_STEP && k.now >= (g.wayAt || 0)) {
+      g.wayDist = 0; g.wayAt = k.now + LANTERN.WAY_CD;
+      k.env.emit({ type: 'lamp', op: 'waylight', amount: k.healAmount(LANTERN.WAY_POT, { ab: abBase(k, 'set') }).amount });
+    }
   }
   if (k.talent('lanternkeeper_pilgrim') && g.moveFor >= 5 && !g.pilgrim) { g.pilgrim = true; k.fx('lk-pilgrim'); }
   // the wicks burn down (a Great Beacon never below half, the Eternal Lamp never; Lighthouse holds them all)
@@ -6248,14 +6254,15 @@ function lkFlare(k, ab, half) {
   }
   let pot = LANTERN.FLARE * (half ? 0.5 : 1);
   if (g.pilgrim && !half) { pot *= 1.3; g.pilgrim = false; }
-  const sh = k.talent('lanternkeeper_flareshield') && !half ? lkShieldAmt(k, 120) : 0;
-  lkBurst(k, k.healAmount(pot, { ab }).amount, Object.assign({ all: lkLight(k) ? 1 : 0 }, sh ? { sh, full: 1 } : null));
+  const ward = k.talent('lanternkeeper_flareshield'), sh = lkShieldAmt(k, half ? 50 : ward ? 240 : 100);   // (a Flare shields everyone it reaches; Flare Shield makes it far stronger)
+  lkBurst(k, k.healAmount(pot, { ab }).amount, { all: lkLight(k) ? 1 : 0, sh });
+  if (ward && !half) { k.partyBuff('haste', 0.1, 6, { ab }); k.hot('party', 30, 3, 2, { ab, id: 'flareward' }); }
   k.itemHook('heal');
   if (!half) for (const l of g.lan) if (l.kind !== 'eternal' && !lkLight(k)) l.wick = Math.max(l.kind === 'beacon' ? 0.5 : 0, l.wick - 1 / 3);
   k.fx('lk-flare', { n: g.lan.length, all: lkLight(k) ? 1 : 0, twin: half ? 1 : 0 });
 }
 const lkShieldAmt = (k, pot) => Math.round(pot * ENGINE.POT_SCALE * (1 + (k.def.healMod ? k.def.healMod(k, {}) : 0)) * (1 + (k.gear().power || 0)) * (1 + k.fxMod('heal')));
-function lkCarryReach(k) { return k.talent('lanternkeeper_longtoss') ? LANTERN.REACH * 2 : LANTERN.REACH; }
+function lkCarryReach(k) { const r = k.def.steadyGlow ? LANTERN.CALL_REACH : LANTERN.REACH; return k.talent('lanternkeeper_longtoss') ? r * 2 : r; }
 
 KITS.lanternkeeper = {
   potMult: 1.09, // balance knob (tools/simulate.js)
@@ -6265,6 +6272,7 @@ KITS.lanternkeeper = {
   tick: k => lkTick(k),
   // the host's word on the lanterns (fight.js lampTick, twice a second): how many allies stood in a glow (n: ally-pulses)
   onNotify(k, type, d) {
+    if (type === 'relit' && d.w && d.to != null) { k.fx('lk-hang', { to: d.to }); return; }
     if (type !== 'lit') return;
     k.g.inGlow = d.c || 0;
     k.ultGain((d.n || 0) * 0.08);
@@ -6325,8 +6333,8 @@ KITS.lanternkeeper = {
       fx: { type: 'ring', color: '#ffd89a', r: 36, onTarget: true },
     },
     {
-      id: 'flare', name: 'Flare', type: 'ogcd', target: 'self', cd: 20, anim: 'big',
-      desc: 'Every lantern bursts at once: everyone in a glow heals {h:340}, once for every glow they stand in. Each wick burns down a stage.',
+      id: 'flare', name: 'Flare', type: 'ogcd', target: 'self', cd: 12, anim: 'big',
+      desc: 'Every lantern bursts at once: everyone in a glow heals {h:340}, once for every glow they stand in, and takes a shield of {s:100}. Each wick burns down a stage.',
       glow: k => { const b = bossNow(k); return !!(b && b.wide) && k.g.lan.length > 0 && (k.g.inGlow >= 2 || lkLight(k)); },
       effect(k) {
         lkFlare(k, this, false);
@@ -6337,15 +6345,16 @@ KITS.lanternkeeper = {
     {
       id: 'carry', name: 'Carry the Flame', type: 'ogcd', target: 'self', cd: 15, charges: 2, anim: 'cast',
       desc: 'Pick up your nearest lantern (within a short throw) and set it down at your feet. It keeps its wick. Great Beacons stay put.',
-      usable: k => !!lkNearest(k, lkPos(k), l => lkMovable(l) && Math.hypot(l.x - lkPos(k).x, l.y - lkPos(k).y) <= lkCarryReach(k)),
-      glow: k => { const n = lkNearest(k, lkPos(k), lkMovable); return !!n && n.d > 130 && n.d <= lkCarryReach(k); },
+      usable: k => !!lkNearest(k, lkPos(k), l => lkCarryable(k)(l) && Math.hypot(l.x - lkPos(k).x, l.y - lkPos(k).y) <= lkCarryReach(k)),
+      glow: k => { const n = lkNearest(k, lkPos(k), lkCarryable(k)); return !!n && n.d > 130 && n.d <= lkCarryReach(k); },
       effect(k) {
-        const p = lkPos(k), n = lkNearest(k, p, l => lkMovable(l) && Math.hypot(l.x - p.x, l.y - p.y) <= lkCarryReach(k));
+        const p = lkPos(k), n = lkNearest(k, p, l => lkCarryable(k)(l) && Math.hypot(l.x - p.x, l.y - p.y) <= lkCarryReach(k));
         if (!n) return;
         const fx = n.l.x, fy = n.l.y;
         n.l.x = p.x; n.l.y = p.y;
         if (k.perk('lanternkeeper_a2')) n.l.wick = Math.min(1, n.l.wick + 1 / 3);
         k.fx('lk-carry', { fx: Math.round(fx), fy: Math.round(fy), x: Math.round(p.x), y: Math.round(p.y) });
+        if (k.def.steadyGlow) { const id = n.l.id, amt = k.healAmount(LANTERN.CALL_POT, { ab: this }).amount; k.after(0.15, () => lkBurst(k, amt, { lid: id })); }   // (Call the Beacon: the glow pulses once the host has seen it land)
         if (k.talent('lanternkeeper_nightwalk')) kitMove(k, 'dash', { d: 90, ab: this });
       },
       fx: { type: 'aura', color: '#ffd89a', r: 30, dur: 0.4 },
@@ -6461,7 +6470,7 @@ function lkTrail(k, ab) {
   });
 }
 
-if (typeof module !== 'undefined') Object.assign(module.exports, { LANTERN, LK_KIND, lkEmbMax, lkLight, lkNearest, lkMovable, lkStub, lkCarryReach, lkPos, lkAdd, lkSmall, lkPlaced, lkBeacon, lkStride, lkTrail });
+if (typeof module !== 'undefined') Object.assign(module.exports, { LANTERN, LK_KIND, lkEmbMax, lkLight, lkNearest, lkMovable, lkStub, lkCarryReach, lkCarryable, lkPos, lkAdd, lkSmall, lkPlaced, lkBeacon, lkStride, lkTrail });
 
 // ===================================================================================================================
 // KENSEIER (tank, class 22; docs/plans/2026-10-new-classes-3.md, section 4): every blow has a beat. Catch it.
@@ -6487,7 +6496,7 @@ if (typeof module !== 'undefined') Object.assign(module.exports, { LANTERN, LK_K
 // ken-step, ken-spin, ken-thousand.
 // ===================================================================================================================
 const KENSEI = {
-  PERFECT: 0.12, GOOD: 0.3, GOOD_MANTLE: 0.5, LOCK: 0.6,   // deflect windows (s, either side of the hit; Ash Mantle widens the Good one), the lockout after a miss
+  PERFECT: 0.09, GOOD: 0.22, GOOD_MANTLE: 0.5, LOCK: 0.6,   // deflect windows (s, either side of the hit; Ash Mantle widens the Good one), the lockout after a miss
   MAX: 200,                          // the boss's Posture bar (a Good deflect on every swing breaks it about every 45 s, a Perfect on every swing about every 25 s)
   REST: 4, RECOVER: 5,               // the bar recovers RECOVER a second once nothing has added to it for REST s
   BREAK: 4, BREAK_DEADLY: 5, BREAK_DMG: 0.15,   // a Break: the stagger's length, and how much more the boss takes from the party
@@ -6646,7 +6655,7 @@ function kenOnBreak(k, d) {
 // the Deathblow, a free one under Thousand Cuts (o.ult), and its follow-ups
 function kenDeathblow(k, ab, o = {}) {
   const g = k.g, mult = o.mult || 1, early = k.now - (g.breakAt || 0) <= 1.2;
-  const pot = 900 * mult * (!o.ult && early && k.talent('kenseier_grand') ? 1.2 : 1);
+  const pot = 820 * mult * (!o.ult && early && k.talent('kenseier_grand') ? 1.2 : 1);
   const r = k.damage(pot, { ab, threat: 2 });
   k.healRaw('self', k.env.maxHp() * 0.15, { ab });
   if (k.def.deadly) k.buff('killing', 10);   // (Killing Edge: the boss takes 5% more from you for 10 s)
@@ -6704,7 +6713,7 @@ KITS.kenseier = {
     if (type === 'kdef') kenOnDeflect(k, d);
     else if (type === 'kbrk') kenOnBreak(k, d);
     else if (type === 'kbend') { k.g.breakUntil = 0; }
-    else if (type === 'taken') {   // a blow you took without a deflect costs Poise (a Good deflect's half does not: pdmg's df)
+    else if (type === 'taken') {   // a blow you took without a deflect costs Poise (a Good deflect's two-thirds does not: pdmg's df)
       if (!(d.a > 0) || d.df || !(d.k === 'auto' || d.k === 'buster')) return;
       const cost = d.k === 'buster' ? KENSEI.HIT_BUSTER : KENSEI.HIT;
       k.g.lastTake = { at: k.now, cost };
@@ -6714,7 +6723,7 @@ KITS.kenseier = {
   signature: 'The Beat',
   floor: 'Press Q for the combo. W when it glows, just as a blow lands. R when it glows, D before a big hit, F when the party is about to be hit.',
   ceiling: [
-    'Every boss auto and tankbuster has a beat, and the ring closing on your feet counts it down. Press W as it closes: within a blink of the hit is Perfect (no damage, +18 Posture, +30 on a tankbuster), a little further is Good (half damage, +8).',
+    'Every boss auto and tankbuster has a beat, and the ring closing on your feet counts it down. Press W as it closes: within a blink of the hit is Perfect (no damage, +18 Posture, +30 on a tankbuster), a little further is Good (a third off, +8).',
     'Pressing W with no blow to meet costs Poise and locks the key for a moment. Poise also drains when a blow hits you with no deflect; at nothing you are Off-balance for 2s: no deflects, 10% more damage taken. It refills quickly while you are not hit.',
     'Posture is the boss\'s, and only you can fill it. At full the boss Breaks: 4s of stagger, no casts, and everyone deals 15% more. A full bar holds until a cast ends. Deathblow (R) in a Break hits for {d:900}, but it ends the Break: line it up with the party\'s burst.',
     'Mikiri Step (E) is a small step through an attack: let one land as you move and it passes through you untouched, for 25 Posture.',
@@ -6740,7 +6749,7 @@ KITS.kenseier = {
     },
     {
       id: 'deflect', name: 'Deflect', type: 'ogcd', target: 'self', lock: 0.2, anim: 'guard',
-      desc: 'Meet the next blow with your blade. Pressed within a blink of a boss auto or tankbuster landing on you, either side of it, it turns the blow aside (Perfect: no damage, +18 Posture, +30 on a tankbuster) and a little further out it halves it (Good: +8 Posture). No cooldown, but pressed with no blow to meet it costs a little Poise and the key rests for a moment.',
+      desc: 'Meet the next blow with your blade. Pressed within a blink of a boss auto or tankbuster landing on you, either side of it, it turns the blow aside (Perfect: no damage, +18 Posture, +30 on a tankbuster) and a little further out it takes a third off it (Good: +8 Posture). No cooldown, but pressed with no blow to meet it costs a little Poise and the key rests for a moment.',
       usable: k => !kenOff(k) && k.now >= (k.g.noDefl || 0),
       glow: k => { const b = bossNow(k); return !kenOff(k) && !!(b && b.hitIn != null && b.hitIn <= 0.14 && b.hitIn >= -0.1); },
       effect(k) { kenDeflect(k, this); },
@@ -6759,7 +6768,7 @@ KITS.kenseier = {
     },
     {
       id: 'deathblow', name: 'Deathblow', type: 'gcd', target: 'enemy', range: MELEE, lock: 0.3, anim: 'attack',
-      desc: 'Only while the boss is Broken: a Deathblow for {d:900} that heals you for 15% of your health, and ends the Break early. Out of a Break this is a Pommel: {d:200} and +5 Posture (8s cooldown).',
+      desc: 'Only while the boss is Broken: a Deathblow for {d:820} that heals you for 15% of your health, and ends the Break early. Out of a Break this is a Pommel: {d:200} and +5 Posture (8s cooldown).',
       label: k => (kenBroken(k) ? 'Deathblow' : k.def.warden ? 'Redirect' : 'Pommel'),
       usable: k => kenBroken(k) || (k.now >= (k.g.pommelAt || 0) && (!k.def.warden || !!(k.g.lastDef && k.now - k.g.lastDef.at < 8))),
       // (Feint, row I: right after a Good deflect the Pommel is off the global cooldown)

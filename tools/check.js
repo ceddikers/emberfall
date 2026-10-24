@@ -79,7 +79,7 @@ const RAIDS = [   // [boss name, boss id, tank, healer, two DPS, optional 'gear=
   ['Volkar', 'volkar', 'bastion:base', 'tidecaller:undertow', 'ranger:base', 'pyromancer:base'],
   // Lanternkeeper (class 21): the base kit and each spec healing a boss
   ['Grubnak', 'grubnak', 'bastion:base', 'lanternkeeper:base', 'ranger:base', 'pyromancer:base'],
-  ['Skitterra', 'skitterra', 'bastion:base', 'lanternkeeper:beacon', 'ranger:base', 'shadowblade:base', 'runs=8'],   // (this line-up clears Skitterra about 15% at base gear: eight tries)
+  ['Skitterra', 'skitterra', 'bastion:base', 'lanternkeeper:beacon', 'ranger:base', 'shadowblade:base', 'runs=20'],   // (this line-up clears Skitterra about 15% at base gear: twenty tries, so a dry run is rare)
   ['Volkar', 'volkar', 'bastion:base', 'lanternkeeper:wayfarer', 'ranger:base', 'pyromancer:base'],
   // Kenseier (class 22): the base kit and each spec tanking a boss
   ['Grubnak', 'grubnak', 'kenseier:base', 'cleric:base', 'ranger:base', 'pyromancer:base'],

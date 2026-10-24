@@ -67,7 +67,7 @@ const TITAN = {
     const waters = new Map();             // sheet -> its water zone
     const sink = i => {
       setSheet(i, 3);
-      const z = { id: f.nextMechId++, effect: 'burn', tag: 'drown', last: {}, shape: rectOf(i), dmg: dmg.water, startAt: f.t, end: 1e9 };
+      const z = { id: f.nextMechId++, effect: 'burn', tag: 'drown', ddown: true, last: {}, shape: rectOf(i), dmg: dmg.water, startAt: f.t, end: 1e9 };
       f.zones.push(z); waters.set(i, z);
       // the lake freezes over again after a while on its own (and sooner at a Whiteout)
       f.afterKeep(32, () => thaw(i));
@@ -225,13 +225,13 @@ const TITAN = {
       const cast = f.ct(2.6), stackAt = f.ct(10), solidAt = f.ct(15.5), n = f.alive().length;
       f.cast('Frostbite', cast, 'cast');
       f.debuff(t.id, 'frostbite', solidAt);
-      const m = f.mech({ type: 'stack', shape: { kind: 'circle', x: t.x, y: t.y, r: 130 }, delay: stackAt, dmg: dmg.cold * Math.min(n, 4) / 4, follow: t.id, need: H ? n : Math.max(1, n - 1), tag: 'tifrost' });
+      const m = f.mech({ type: 'stack', shape: { kind: 'circle', x: t.x, y: t.y, r: 130 }, delay: stackAt, dmg: dmg.cold * Math.min(n, 4) / 4, follow: t.id, need: H ? n : Math.max(1, n - 1), tag: 'tifrost', ddown: true });
       chilled.set(t.id, { m, warm: 0 });
       f.afterKeep(solidAt, () => {
         if (!chilled.has(t.id)) return;
         chilled.delete(t.id);
         const q = f.alive().find(z => z.id === t.id);
-        if (q) { f.damagePlayer(q, dmg.frozen, { kind: 'frozen', avoidable: true, n: 'Frostbite' }); f.debuff(q.id, 'rooted', 3); f.emit({ t: 'propfx', k: 'freeze', x: Math.round(q.x), y: Math.round(q.y) }); }
+        if (q) { f.damagePlayer(q, dmg.frozen, { kind: 'frozen', avoidable: true, ddown: true, n: 'Frostbite' }); f.debuff(q.id, 'rooted', 3); f.emit({ t: 'propfx', k: 'freeze', x: Math.round(q.x), y: Math.round(q.y) }); }
       });
     };
     // Whiteout: the aurora flares, a blinding snow, and every sunk sheet is ice again
@@ -297,7 +297,7 @@ const TITAN = {
       const d = f.ct(4.6);
       f.cast('Breath of Winter', d, 'breath');
       const m = f.mech({ type: 'aoe', shape: { kind: 'cone', x: B.x, y: B.y, r: 780, arc: 0.9, angle: Math.atan2(t.y - B.y, t.x - B.x) }, delay: d, dmg: dmg.breath,
-        aimFromBoss: t.id, lockAt: 1.1, tag: 'tibreath',
+        aimFromBoss: t.id, lockAt: 1.1, tag: 'tibreath', ddown: true,
         onResolve: () => {
           const s = m.shape, got = [];
           for (let i = 0; i < 20; i++) {

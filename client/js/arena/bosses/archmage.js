@@ -129,7 +129,7 @@ const AZERATH = {
       const order = [0, 1, 2].filter(i => i !== safe);
       if (f.rng() < 0.5) order.reverse();
       f.cast('Pyre Rings', d, 'pyre');
-      order.forEach((ri, j) => f.aoe(RINGS[ri], d + j * gap, dmg.pyre, { tag: 'azFire' }));
+      order.forEach((ri, j) => f.aoe(RINGS[ri], d + j * gap, dmg.pyre, { tag: 'azFire', ddown: true }));
     };
     // Ice Lances: a line out of him through each of two heroes (three on Hard), following them until a moment before it goes
     const iceLances = () => {
@@ -138,7 +138,7 @@ const AZERATH = {
       const d = f.ct(4.8);
       f.cast('Ice Lances', d, 'lances');
       for (const p of pool) {
-        const m = f.mech({ type: 'aoe', shape: { kind: 'rect', x: B.x, y: B.y, angle: Math.atan2(p.y - B.y, p.x - B.x), len: 620, w: 110 }, delay: d, dmg: dmg.ice, tag: 'azFrost', aimFromBoss: p.id, lockAt: 1.2,
+        const m = f.mech({ type: 'aoe', shape: { kind: 'rect', x: B.x, y: B.y, angle: Math.atan2(p.y - B.y, p.x - B.x), len: 620, w: 110 }, delay: d, dmg: dmg.ice, tag: 'azFrost', ddown: true, aimFromBoss: p.id, lockAt: 1.2,
           onResolve: () => memo(m) });
       }
     };
@@ -163,9 +163,9 @@ const AZERATH = {
     const voidRifts = () => {
       const d = f.ct(4.4), n = H ? 4 : 3;
       f.cast('Void Rifts', d, 'rifts');
-      for (const p of f.shuffle(f.alive()).slice(0, n)) rec({ kind: 'circle', x: Math.round(p.x), y: Math.round(p.y), r: 120 }, d, dmg.rift, { tag: 'azVoid' });
+      for (const p of f.shuffle(f.alive()).slice(0, n)) rec({ kind: 'circle', x: Math.round(p.x), y: Math.round(p.y), r: 120 }, d, dmg.rift, { tag: 'azVoid', ddown: true });
       f.afterKeep(f.ct(2.5), () => {
-        for (const p of f.shuffle(f.alive()).slice(0, n)) rec({ kind: 'circle', x: Math.round(p.x), y: Math.round(p.y), r: 120 }, f.ct(2.6), dmg.rift, { tag: 'azVoid' });
+        for (const p of f.shuffle(f.alive()).slice(0, n)) rec({ kind: 'circle', x: Math.round(p.x), y: Math.round(p.y), r: 120 }, f.ct(2.6), dmg.rift, { tag: 'azVoid', ddown: true });
       });
     };
 
@@ -345,8 +345,8 @@ const AZERATH = {
       const flip = s => { const o = Object.assign({}, s); o.x = -s.x; o.y = -s.y; if (s.angle != null) o.angle = s.angle + Math.PI; return o; };
       const group = new Set(), n = f.alive().length;
       for (const e of m.list.slice(0, 5)) {
-        if (e.type === 'stack') f.mech({ type: 'stack', shape: flip(e.shape), delay: dd, dmg: e.dmg * 0.9, need: n, tag: e.tag });
-        else f.aoe(flip(e.shape), dd, dmg.counter, { tag: e.tag, group });
+        if (e.type === 'stack') f.mech({ type: 'stack', shape: flip(e.shape), delay: dd, dmg: e.dmg * 0.9, need: n, tag: e.tag, color: 'echo' });   // (color: only the drawing reads it: an echo of the last spell)
+        else f.aoe(flip(e.shape), dd, dmg.counter, { tag: e.tag, group, color: 'echo' });
       }
     };
     // Arcane Mark: one hero's own elemental rises where they stood: a blow for everyone to share, on that spot

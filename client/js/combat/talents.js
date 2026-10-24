@@ -709,8 +709,8 @@ TALENTS.lanternkeeper = [
   ],
   [
     { id: 'lanternkeeper_ward', name: 'Lantern Ward', ab: 'hand', text: 'Whoever carries your Hand Lantern takes 10% less damage while it hangs on them.' },
-    { id: 'lanternkeeper_longtoss', name: 'Long Toss', ab: 'carry', text: 'Carry the Flame reaches twice as far.', spec: { wayfarer: 'Trailblaze dashes twice as far.' } },
-    { id: 'lanternkeeper_nightwalk', name: 'Night Walk', ab: 'carry', text: 'Carrying a lantern carries you too: you dash a short way on in the direction you are heading.', spec: { wayfarer: 'Trailblaze also tops up the wick of every light it drags.' } },
+    { id: 'lanternkeeper_longtoss', name: 'Long Toss', ab: 'carry', text: 'Carry the Flame reaches twice as far.', spec: { beacon: 'Call the Beacon reaches twice as far.', wayfarer: 'Trailblaze dashes twice as far.' } },
+    { id: 'lanternkeeper_nightwalk', name: 'Night Walk', ab: 'carry', text: 'Carrying a lantern carries you too: you dash a short way on in the direction you are heading.', spec: { beacon: 'Calling a Beacon carries you too: you dash a short way on in the direction you are heading.', wayfarer: 'Trailblaze also tops up the wick of every light it drags.' } },
   ],
   [
     { id: 'lanternkeeper_hoard', name: 'Hoarded Embers', ab: 'set', text: 'You can hold 5 Embers instead of 4.' },
@@ -719,7 +719,7 @@ TALENTS.lanternkeeper = [
   ],
   [
     { id: 'lanternkeeper_twin', name: 'Twin Flare', ab: 'flare', text: 'Flare bursts twice: the second a beat after the first, at half strength.' },
-    { id: 'lanternkeeper_flareshield', name: 'Flare Shield', ab: 'flare', text: 'Anyone a Flare reaches at full health takes a shield of {s:120} instead.' },
+    { id: 'lanternkeeper_flareshield', name: 'Flare Shield', ab: 'flare', text: 'The shield a Flare gives grows to {s:240}, and for 6s the whole party acts 10% faster and heals {h:30} every 2s.' },
     { id: 'lanternkeeper_shadow', name: 'Shadow Catch', ab: 'flare', text: 'Flare first pulls every lantern on the floor up to 40 paces toward you.' },
   ],
   [
@@ -757,7 +757,7 @@ const SPEC_TALENTS = {
     berserker: [
       [
         { id: 'bloodreaver_painfuel', name: 'Pain Is Fuel', ab: 'hack', text: 'A heavy hit on you (a tenth of your HP or more) pours 15 Rage into you.' },
-        { id: 'bloodreaver_scar', name: 'Scar Tissue', ab: 'drain', text: 'A Rampage thrown below 50% HP scars over the wound: you take 15% less damage for 5s.' },
+        { id: 'bloodreaver_scar', name: 'Scar Tissue', ab: 'drain', text: 'A Rampage thrown below 50% HP throws its guard over the most hurt ally too: 15% less damage for 3s.' },
       ],
       [
         { id: 'bloodreaver_bloodbath', name: 'Bloodbath', ab: 'letting', grants: true,

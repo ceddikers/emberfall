@@ -20,6 +20,8 @@ const HY_EL = {
 
 (function () {
   const BRASS = '#b8903a', BRASS_L = '#e8c870', MOSS = '#2f5a3a', MOSS_D = '#16301f', MOSS_L = '#4f8a55', BELLY = '#a9b684';
+  // black-green hide with the head's own colour showing only where it matters (crest, eyes, mouth, scale ticks)
+  const mixc = (a, b, q) => { const pa = hexToRgb(a), pb = hexToRgb(b); return '#' + pa.map((v, i) => Math.round(v + (pb[i] - v) * q).toString(16).padStart(2, '0')).join(''); };
 
   // a neck: a tube from (-L, 0) running up to the head at (0, 0), swaying; wider at the root
   function neck(ctx, L, t, seed, el, w0, w1, lesser) {
@@ -37,7 +39,7 @@ const HY_EL = {
     for (const p of up) ctx.lineTo(...p);
     for (let i = dn.length - 1; i >= 0; i--) ctx.lineTo(...dn[i]);
     ctx.closePath();
-    ctx.fillStyle = el.dark; ctx.fill(); ctx.lineJoin = 'round'; ctx.lineWidth = 2.4; ctx.strokeStyle = OUT; ctx.stroke();
+    ctx.fillStyle = mixc('#14271d', el.dark, 0.3); ctx.fill(); ctx.lineJoin = 'round'; ctx.lineWidth = 2.4; ctx.strokeStyle = OUT; ctx.stroke();
     // a paler belly down one side, scale ticks across the back
     ctx.beginPath(); ctx.moveTo(...dn[0]); for (const p of dn) ctx.lineTo(...p);
     for (let i = dn.length - 1; i >= 0; i--) { const m = pts[i]; ctx.lineTo(dn[i][0] * 0.55 + m[0] * 0.45, dn[i][1] * 0.55 + m[1] * 0.45); }
@@ -56,6 +58,7 @@ const HY_EL = {
     const lesser = variant === 's', elder = variant === 'e', water = variant === 'w';
     const ap = actP(st, 'attack'), strike = ap >= 0 ? Math.sin(ap * Math.PI) : 0;   // lunges and opens at an attack
     const k = lesser || water ? 0.78 : elder ? 1.18 : 1;
+    const skin = mixc('#22402f', E.col, 0.3), jawc = mixc('#12231a', E.dark, 0.55);
     // the water: a ripple ring where a flood head breaks the surface
     if (water) for (let i = 0; i < 2; i++) { const q = (t * 0.8 + i * 0.5) % 1; ellipse(ctx, 0, 6, 30 + q * 40, (30 + q * 40) * 0.6, 0, null, rgba('#a8f0e8', 0.5 * (1 - q)), 2); }
     if (elder) glow(ctx, 0, 0, 70, BRASS_L, 0.18 + 0.08 * Math.sin(t * 3));
@@ -70,17 +73,18 @@ const HY_EL = {
     if (elKey === 'storm') for (let i = -2; i <= 2; i++) poly(ctx, [-6, i * 4, -20 - Math.abs(i) * 2, i * 9, -6, i * 4 + 3], E.col, OUT, 1.4);
     if (elKey === 'frost') for (let i = -2; i <= 2; i++) poly(ctx, [-4, i * 4, -9 - (2 - Math.abs(i)) * 5, i * 8, -2, i * 4 + 3], rgba('#e8f8ff', 0.9), OUT, 1.3);
     if (elKey === 'flame') for (const sy of [-1, 1]) { poly(ctx, [4, 8 * sy, -8, 22 * sy, -16, 24 * sy, -6, 12 * sy], '#3a1a10', OUT, 1.6); glow(ctx, -12, 22 * sy, 10, E.glow, 0.4 + 0.2 * Math.sin(t * 8)); }
-    if (elKey === 'mire') ellipse(ctx, -4, 0, 14, 11, 0, E.col, OUT, 2);   // a bloated throat sac
+    if (elKey === 'mire') ellipse(ctx, -4, 0, 14, 11, 0, mixc('#22402f', E.col, 0.55), OUT, 2);   // a bloated throat sac
     // skull
-    ellipse(ctx, 2, 0, 18, 12.5, 0, E.col, OUT, 2.4);
+    ellipse(ctx, 2, 0, 18, 12.5, 0, skin, OUT, 2.4);
     ellipse(ctx, 0, -4, 12, 5, 0, rgba('#ffffff', 0.18));
     for (let i = 0; i < 4; i++) line(ctx, -8 + i * 5, -10, -6 + i * 5, -6, rgba(E.dark, 0.7), 1.4);
     // snout and jaws: the lower jaw drops at an attack
     ctx.save(); ctx.translate(14, 3); ctx.rotate(open * 0.7);
-    poly(ctx, [0, 0, 18, 1, 25, 4, 24, 7, 8, 8, -2, 6], E.dark, OUT, 2);
+    poly(ctx, [0, 0, 18, 1, 25, 4, 24, 7, 8, 8, -2, 6], jawc, OUT, 2);
     for (let i = 0; i < 3; i++) poly(ctx, [5 + i * 5, 0, 6.5 + i * 5, -5, 8 + i * 5, 0], '#f2ecd8', OUT, 0.8);
     ctx.restore();
-    poly(ctx, [10, -9, 28, -6, 38, -2, 38, 2, 26, 4, 10, 5], E.col, OUT, 2.2);
+    poly(ctx, [10, -9, 28, -6, 38, -2, 38, 2, 26, 4, 10, 5], skin, OUT, 2.2);
+    line(ctx, 14, -7, 36, -2.4, rgba(E.col, 0.7), 1.6);   // a stripe of its colour along the snout
     for (let i = 0; i < 3; i++) poly(ctx, [16 + i * 6, 3, 17.5 + i * 6, 9 + strike * 3, 19 + i * 6, 3], '#f2ecd8', OUT, 0.9);
     circle(ctx, 33, -3, 1.3, E.dark);
     // the mouth's own light while it casts

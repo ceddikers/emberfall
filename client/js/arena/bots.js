@@ -1093,6 +1093,8 @@ const BotAI = {
       const a = ab(i);
       if (a.type !== 'ogcd' || !readyIdx(i)) continue;
       let markMit = false;
+      // a Nightstalker's Shadowstep is a dodge too: take it just as a blow is about to land on this spot
+      if (a.id === 'step' && k.def.spec === 'nightstalker' && BotAI.dollDanger(view, bot.x, bot.y, 0.8)) return i;
       if (k.gcdRemaining() < 0.65 && !k.cast) continue;
       if (a.target === 'ally' || (hotAndHurt && a.id === 'fireblast')) continue;
       // a step that puts you behind the boss (Shadowstep) isn't taken with floor about to land: it could land you in it
@@ -1661,7 +1663,7 @@ BotAI.lanternkeeper = function (bot, k, view) {
     // a lantern left behind: carry it to where the party is now
     const ca = k.abilities[carry];
     if (ca && ca.id === 'carry' && ready(carry) && nearMe >= 2) {
-      const n = lkNearest(k, me, l => lkMovable(l) && Math.hypot(l.x - me.x, l.y - me.y) <= lkCarryReach(k));
+      const n = lkNearest(k, me, l => lkCarryable(k)(l) && Math.hypot(l.x - me.x, l.y - me.y) <= lkCarryReach(k));
       if (n && n.d > 110 && covers(n.l) < 2 && !BotAI.danger(bot, me.x, me.y, view)) return carry;
     }
     if (ca && ca.id === 'trail' && ready(carry) && g.lan.filter(l => l.kind === 'small').length >= 3 && covers(g.lan.filter(l => l.kind === 'small').slice(-1)[0]) < 2 && nearMe < 2) return carry;
@@ -1669,7 +1671,7 @@ BotAI.lanternkeeper = function (bot, k, view) {
   if (k.gcdRemaining() > 0.0001 || k.cast) return null;
   // an emergency: Relight's heal (or a wisp) on the most hurt
   const ra = k.abilities[rel];
-  if (ready(rel) && low && frac(low) < (g.emb >= 3 ? 0.4 : 0.25)) return rel;
+  if (ready(rel) && low && frac(low) < (g.emb >= 4 ? 0.85 : g.emb >= 3 ? 0.6 : 0.25)) return rel;   // (spare Embers are spent: they come back every 5s and stop at 4)
   if (ready(rel) && ra.id === 'relight' && floor.filter(l => lkStub(l)).length >= 2 && avg < 0.8) return rel;
   if (ready(rel) && ra.id === 'wisp' && low && frac(low) < 0.6) return rel;
   const handUp = g.lan.some(l => l.kind === 'hand' && l.end - k.now > 1.5);
@@ -1721,6 +1723,16 @@ BOT_CLASS.threadweaver = {
       return ARENA.clamp({ x: o.x + Math.cos(ta) * back, y: o.y + Math.sin(ta) * back }, 60);
     }
     return { x: b.x + Math.cos(a) * 165, y: b.y + Math.sin(a) * 165 };
+  },
+};
+
+// Nightstalker: stands behind the boss, where Backstab pays the most (Shadowstep as a dodge is in the general oGCD pass above)
+BOT_CLASS.shadowblade = {
+  home(bot, view) {
+    const k = bot.actor && bot.actor.kit;
+    if (!k || k.def.spec !== 'nightstalker') return null;
+    const b = view.boss, a = (b.facing || 0) + Math.PI;
+    return { x: b.x + Math.cos(a) * 110, y: b.y + Math.sin(a) * 110 };
   },
 };
 
@@ -1970,8 +1982,8 @@ BOT_CLASS.kenseier = {
     for (const h of hits) {
       if (h.at - t > 1.2 || K.plans.some(p => same(p, h) || (!p.skip && Math.abs(p.for - h.at) < 0.35))) continue;
       const g = Math.sqrt(-2 * Math.log(1 - u(h.at, 2) * 0.999999)) * Math.cos(2 * Math.PI * u(h.at, 3));
-      const jit = bot.sloppy ? (u(h.at, 1) * 2 - 1) * 0.3 : Math.max(-0.08, Math.min(0.08, g * 0.045));
-      K.plans.push({ kind: h.kind, for: h.at, at: h.at + jit - 0.045, skip: u(h.at, 4) < (bot.sloppy ? 0.15 : 0.02), done: false });
+      const jit = bot.sloppy ? (u(h.at, 1) * 2 - 1) * 0.3 : Math.max(-0.22, Math.min(0.22, g * 0.075));
+      K.plans.push({ kind: h.kind, for: h.at, at: h.at + jit - 0.045, skip: u(h.at, 4) < (bot.sloppy ? 0.15 : 0.05), done: false });
     }
     const planNear = within => K.plans.some(p => !p.done && !p.skip && p.at - t < within && p.at - t > -0.1);
     const defl = idx('deflect'), cut = idx('cut'), db = idx('deathblow'), mantle = idx('mantle'), guard = idx('guard'), mk = idx('mikiri');
