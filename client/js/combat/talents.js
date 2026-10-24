@@ -356,27 +356,27 @@ Object.assign(TALENTS, {
     [
       { id: 'thermist_embers', name: 'Banked Embers', ab: 'cinder', text: 'A Cinder Bolt cast at +3 or hotter now leaves an ember in the target (up to 3). Your next Thermal Shock sets every ember off, {d:95} each.' },
       { id: 'thermist_flicker', name: 'Flicker', ab: 'rime', text: 'A Cinder Bolt or Rime Shard now makes your next Flare or Glacier Lance instant (within 6s).' },
-      { id: 'thermist_afterglow', name: 'Afterglow', ab: 'flare', text: 'A Flare or Glacier Lance cast at its own edge now leaves the target burning or freezing for {d:42} every 3s for 9s.', spec: { zenith: 'A Flare or Glacier Lance cast at its own edge now leaves the target burning or freezing for {d:30} every 3s for 9s.' } },
+      { id: 'thermist_afterglow', name: 'Afterglow', ab: 'flare', text: 'A Flare or Glacier Lance cast at its own edge now leaves the target burning or freezing for {d:42} every 3s for 9s.' },
     ],
     [
-      { id: 'thermist_front', name: 'Cold Front', ab: 'equil', text: 'An Equilibrium that drops the dial 4 or more steps now also gives the whole party 10% less damage for 6s.', spec: { zenith: 'A Bleed Off that vents 40 or more Strain now also gives the whole party 10% less damage for 6s.' } },
-      { id: 'thermist_phase', name: 'Phase Step', ab: 'equil', text: 'Equilibrium now also blinks you 150 px the way you\'re heading.', spec: { zenith: 'Bleed Off now also blinks you 150 px the way you\'re heading.' } },
+      { id: 'thermist_front', name: 'Cold Front', ab: 'equil', text: 'An Equilibrium that drops the dial 4 or more steps now also gives the whole party 10% less damage for 6s.', spec: { zenith: 'A Sunset that drops 2 or more stars now also gives the whole party 10% less damage for 6s.' } },
+      { id: 'thermist_phase', name: 'Phase Step', ab: 'equil', text: 'Equilibrium now also blinks you 150 px the way you\'re heading.', spec: { zenith: 'Sunset now also blinks you 150 px the way you\'re heading.' } },
       { id: 'thermist_skin', name: 'Thermal Skin', ab: 'invert', text: 'Every Thermal Shock now also wraps you in a shield worth 30% of its strength.' },
     ],
     [
       { id: 'thermist_thermocline', name: 'Thermocline', ab: 'cinder', grants: true, text: 'New move on Q, in place of Cinder Bolt. Thermocline: an instant {d:170} bolt that swings the dial 2 steps toward the other side and counts as that element. It hits 8% harder for every step from 0 you started.', spec: { pendulum: 'New move on Q, in place of Cinder Bolt. Thermocline: an instant {d:170} bolt that swings the dial 3 steps toward the other side and counts as that element. It hits 8% harder for every step from 0 you started.' } },
-      { id: 'thermist_latent', name: 'Latent Heat', ab: 'flare', text: 'Overloading no longer locks or burns you: the extra heat is banked instead, and your next Thermal Shock releases it half again as strong.', spec: { zenith: 'A meltdown no longer burns you or locks an element: the dial still snaps to 0, and your next Thermal Shock is half again as strong.' } },
+      { id: 'thermist_latent', name: 'Latent Heat', ab: 'flare', text: 'Overloading no longer locks or burns you: the extra heat is banked instead, and your next Thermal Shock releases it half again as strong.' },
       { id: 'thermist_rebound', name: 'Rebound', ab: 'lance', text: 'After a Thermal Shock, your next spell is now instant (within 10s).' },
     ],
     [
       { id: 'thermist_vortex', name: 'Polar Vortex', ab: 'invert', text: 'Inversion now leaves a vortex on the target that strikes for {d:55} every 1.5s for 6s.' },
-      { id: 'thermist_pulse', name: 'Equilibrium Pulse', ab: 'equil', text: 'Equilibrium now sets off the heat it snaps away: from 3 or more steps out, a Thermal Shock as if you had swung that far.', spec: { zenith: 'Bleed Off in Redline now also sets off a Thermal Shock as if you had swung 3.' } },
-      { id: 'thermist_solstice', name: 'Solstice', ab: 'invert', text: 'Inversion now flips the dial back 5s later: a Shock at 60% strength if it\'s still far enough from 0.' },
+      { id: 'thermist_pulse', name: 'Equilibrium Pulse', ab: 'equil', text: 'Equilibrium now sets off the heat it snaps away: from 3 or more steps out, a Thermal Shock as if you had swung that far.', spec: { zenith: 'Sunset now sets off the heat it snaps away: from 3 or more steps out, a Thermal Shock as if you had swung that far.' } },
+      { id: 'thermist_solstice', name: 'Solstice', ab: 'invert', text: 'Inversion now flips the dial back 5s later: a Shock at 60% strength if it\'s still far enough from 0.', spec: { zenith: 'Inversion now flips the dial back 5s later: a Shock at 60% strength if it\'s still far enough from 0. That Shock leaves your Corona for the next one.' } },
     ],
     [
       { id: 'thermist_zero', name: 'Absolute Zero', ab: 'rime', grants: true, text: 'New move on W, in place of Rime Shard. Absolute Zero: a 2s cast on a 45s cooldown that plunges the dial straight to -5, wherever it was. It hits for {d:100}, plus {d:15} for every step it fell.' },
       { id: 'thermist_conduct', name: 'Conduction', ab: 'invert', text: 'Thermal Shock now arcs: a second Shock, 15% as strong, strikes the target 1s later.' },
-      { id: 'thermist_twin', name: 'Twin Stars', ab: 'flare', text: 'A Flare or Glacier Lance cast at its own edge now fires a second bolt after it, at 30% strength.', spec: { zenith: 'A Flare or Glacier Lance cast in Redline now fires a second bolt after it, at 9% strength.' } },
+      { id: 'thermist_twin', name: 'Twin Stars', ab: 'flare', text: 'A Flare or Glacier Lance cast at its own edge now fires a second bolt after it, at 30% strength.', spec: { zenith: 'A Flare or Glacier Lance that fills your Corona now fires a second bolt after it, at 45% strength.' } },
     ],
   ],
 
@@ -974,7 +974,7 @@ SPEC_TALENTS.pyromancer = {
   ],
 };
 
-// ---- THERMIST: Pendulum (the swinging weight: Momentum) and Zenith (the burning edge: Redline, Strain)
+// ---- THERMIST: Pendulum (the swinging weight: Momentum) and Zenith (the burning edge: Corona, Sunset)
 SPEC_TALENTS.thermist = {
   pendulum: [
     [
@@ -988,13 +988,13 @@ SPEC_TALENTS.thermist = {
   ],
   zenith: [
     [
-      { id: 'thermist_pressure', name: 'Pressure Release', ab: 'equil', text: 'Bleed Off no longer lets the heat go to waste: it scalds the boss for {d:25} for every 10 Strain it vents.' },
-      { id: 'thermist_slag', name: 'Slag Plate', ab: 'flare', text: 'Each time you reach the edge, slag cools over you in a shield of {s:100} for 8s (once every 10s).' },
+      { id: 'thermist_solarwind', name: 'Solar Wind', ab: 'equil', text: 'Sunset no longer moves the dial: the stars fall and the shield comes up as if it had dropped to 0, but you stay at the edge, free to light a fresh Corona.' },
+      { id: 'thermist_slag', name: 'Slag Plate', ab: 'flare', text: 'Each Corona you light cools over you as slag: a shield of {s:40} for 6s.' },
     ],
     [
-      { id: 'thermist_meltdown', name: 'Controlled Meltdown', ab: 'invert', grants: true,
-        text: 'Inversion becomes Controlled Meltdown (60s): let go on purpose, from 3 or more steps out. All your Strain goes out in one blast, {d:200} plus {d:5} for every point, and the dial snaps to 0 with a Thermal Shock half again as strong as the swing. Nothing burns, nothing seizes up, and for 6s your spells still hit as hard as in Redline.' },
-      { id: 'thermist_alert', name: 'Red Alert', ab: 'equil', text: 'Whenever the boss begins a cast while you hold the edge, Bleed Off comes off cooldown at once.' },
+      { id: 'thermist_redgiant', name: 'Red Giant', ab: 'invert', grants: true,
+        text: 'Inversion becomes Red Giant (60s): for 8s you can hold up to 5 Corona at the edge instead of 3, and the 4th and 5th edge casts hit half again as hard. Pressed On the Brink with a full three, it lets you hold on.' },
+      { id: 'thermist_alert', name: 'Red Alert', ab: 'equil', text: 'Whenever the boss begins a cast while you hold 2 or more Corona, Sunset comes off cooldown at once.' },
     ],
   ],
 };

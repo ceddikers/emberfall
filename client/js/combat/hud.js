@@ -19,7 +19,7 @@ const BUFF_NAMES = {
   combust: 'Combustion', heating: 'Heating Up', hotstreak: 'Hot Streak', burnt: 'Burnt Out', growth: 'Wild Growth',
   awaken: 'Awakened', surge: 'Surge', lag: 'Time Lag', radiant: 'Radiant', verdict: 'Swift Verdict', chamber: 'Echo Chamber', moonlit: 'Moonlit', aim: 'Steady Aim', incircle: 'Ember Circle',
   // the advanced classes
-  brink: 'On the Brink', overheat: 'Overheat', frostbite: 'Frostbite', attuned: 'Attuned', momentum: 'Momentum', redline: 'Redline', rebound: 'Rebound', flicker: 'Flicker',
+  brink: 'On the Brink', overheat: 'Overheat', frostbite: 'Frostbite', attuned: 'Attuned', momentum: 'Momentum', corona: 'Corona', redgiant: 'Red Giant', rebound: 'Rebound', flicker: 'Flicker',
   still: 'Stillpoint', gale: 'Gale Run', orbit: 'Orbit', tailwind: 'Tailwind',
   looseend: 'Loose End',
 };
@@ -29,7 +29,7 @@ const BUFF_ICON = {
   oath: 'oath', frenzy: 'frenzy', gorge: 'drain', undying: 'undying', overload: 'overload', markself: 'mark', keen: 'pierce',
   barrage: 'barrage', truenorth: 'step', dance: 'dance', combust: 'combust', heating: 'fireblast', hotstreak: 'pyro', burnt: 'vent',
   growth: 'growth', awaken: 'bloom', surge: 'shift', lag: 'shift', radiant: 'edge', verdict: 'smite', chamber: 'accel', moonlit: 'growth', aim: 'pierce', incircle: 'combust',
-  brink: 'flare', overheat: 'cinder', frostbite: 'rime', attuned: 'invert', momentum: 'equil', redline: 'flare', rebound: 'lance', flicker: 'rime',
+  brink: 'flare', overheat: 'cinder', frostbite: 'rime', attuned: 'invert', momentum: 'equil', corona: 'flare', redgiant: 'invert', rebound: 'lance', flicker: 'rime',
   still: 'still', gale: 'gale', orbit: 'slip', tailwind: 'hook',
   looseend: 'needle',
 };
@@ -58,7 +58,7 @@ const GAUGE_TIPS = {
   },
   thermist: {
     desc: 'Fire spells push the dial right, frost spells push it left. Each step from 0 makes that side\'s spells 8% stronger. Cross 0 after reaching 3 or more and the swing detonates as a Thermal Shock. Past +5 you overheat, past -5 you freeze.',
-    state: k => (k.g.peak >= 3 && k.g.side ? `Shock armed (${k.g.peak})` : 'Shock not armed') + (k.def.redline ? ` · Strain ${Math.floor(k.g.strain || 0)}` : ''),
+    state: k => (k.g.peak >= 3 && k.g.side ? `Shock armed (${k.g.peak})` : 'Shock not armed') + (k.def.corona && k.stacks('corona') ? ` · Corona ${k.stacks('corona')}` : ''),
   },
   driftblade: {
     desc: 'A Passing Strike gives 10, Hook Turn 15, Slipstream 15, and walking 15 a second. After 1.5s standing still it drains 15 a second. Most of your cuts hit harder the fuller it is. Crosswind spends it all.',
@@ -161,7 +161,8 @@ const BUFF_TIPS = {
   frostbite: () => 'Your casts are 30% slower.',
   attuned: () => 'Every step from 0 makes both fire and frost spells stronger.',
   momentum: () => 'You deal 4% more damage for each stack. Cross 0 again within 6s to keep them.',
-  redline: () => 'You\'re at the edge: your spells hit 20% harder and your edge spell is instant. Strain is building.',
+  corona: n => `Your next Thermal Shock is 25% stronger for each stack. ${n('equil')} drops them on the target as stars instead.`,
+  redgiant: () => 'You can hold up to 5 Corona at the edge, and the 4th and 5th edge casts hit half again as hard.',
   rebound: () => 'Your next spell is instant.',
   still: () => 'Your Drift holds instead of draining.',
   gale: () => 'Your Drift can\'t drain, and Passing Strikes hit three times as hard.',
@@ -180,7 +181,7 @@ const BUFF_TIPS = {
   bellows: () => 'You take 30% less damage, Breath refills half again as fast, and every named move you finish sends out a shockwave and gives back 6 Breath.',
 };
 // buffs refreshed every moment while a condition holds (the timer means nothing there)
-const BUFF_UNTIMED = new Set(['incircle', 'redline']);
+const BUFF_UNTIMED = new Set(['incircle']);
 // the damage classes' Ultimates (kits.js "ULTIMATES · DAMAGE CLASSES"): what they leave on you
 Object.assign(BUFF_NAMES, { starfall: 'Starfall', curtaincall: 'Curtain Call' });
 Object.assign(BUFF_ICON, { starfall: 'barrage', curtaincall: 'swap' });

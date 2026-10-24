@@ -114,8 +114,8 @@
     },
     thermist: {
       cinder: 'ab-fire', rime: 'ab-frost', flare: 'ab-fire', lance: L('ab-frost', 'ab-shot'), equil: 'ab-shield', invert: L('ab-fire', 'ab-frost'), shock: L('ab-fire', 'ab-frost'),
-      bleed: L('ab-frost', 'ab-wind'), thermocline: L('ab-fire', 'ab-frost'), zero: L('ab-frost', 'ab-heavy'),
-      meltdown: L('ab-fire', 'ab-frost'), supernova: ULT('thermist'), novafrost: ULT('thermist'), auto: 'ab-fire',
+      sunset: L('ab-holy', 'ab-shield'), thermocline: L('ab-fire', 'ab-frost'), zero: L('ab-frost', 'ab-heavy'),
+      redgiant: L('ab-fire', 'ab-buff'), supernova: ULT('thermist'), novafrost: ULT('thermist'), auto: 'ab-fire',
     },
     driftblade: {
       carve: 'ab-slash', slip: 'dash', hook: L('ab-slash', 'ab-wind'), cross: L('ab-wind', 'ab-slash'), still: 'ab-shield', gale: L('ab-wind', 'ab-buff'), pass: L('ab-slash', 'ab-wind'),

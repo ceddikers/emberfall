@@ -1311,7 +1311,7 @@ Object.assign(SPEC_ART, {
     circle(ctx, bx - 0.9, by - 0.9, 0.9, '#fff2c0');
     poly(ctx, [bx - 1, by + 2.8, bx, by + 5, bx + 1, by + 2.8], '#d8b25a', OUT, 0.7);
   },
-  // Zenith: a small crown of flame and frost over the brow, burning brighter in Redline; ice shards breaking off the frozen arm, fire licking up the other
+  // Zenith: a small crown of flame and frost over the brow (the Corona); ice shards breaking off the frozen arm, fire licking up the other
   zenith(ctx, st) {
     for (let i = 0; i < 5; i++) {
       const a = -1.1 + i * 0.55, x = Math.cos(a) * 7.8, y = Math.sin(a) * 7.8, hot = i >= 2;

@@ -296,11 +296,17 @@ Object.assign(GAUGES, {
     if (k.has('overheat') || k.has('frostbite')) label(c, k.has('overheat') ? 'OVERHEAT' : 'FROSTBITE', cx, cy + 22, k.has('overheat') ? '#ff7a4a' : '#9ad8ff', 10, 'Cinzel, Georgia, serif', 800);
     else label(c, (tv > 0 ? '+' : '') + tv, cx, cy + 22, tv > 0 ? '#ffc890' : tv < 0 ? '#bfe2ff' : '#f2e6c8', 14, 'system-ui', 800);
     if (k.has('attuned')) { c.save(); c.globalAlpha = 0.5 + Math.sin(t * 5) * 0.2; arc(-max, max, R - 10, '#e8d8ff', 1.5); c.restore(); }
-    // Zenith: Strain fills a thin red arc under the dial; Redline lights it
-    if (k.def.redline) {
-      const sv = Math.min(1, (g.strain || 0) / 100);
-      c.beginPath(); c.arc(cx, cy, R - 14, Math.PI * 0.75, Math.PI * 0.25, true); c.lineWidth = 3; c.strokeStyle = '#2a1418'; c.stroke();
-      if (sv > 0) { c.beginPath(); c.arc(cx, cy, R - 14, Math.PI * 0.75, Math.PI * 0.75 - sv * Math.PI * 1.5, true); c.strokeStyle = sv > 0.6 ? (Math.sin(t * 14) > 0 ? '#ff4a5a' : '#ffb0a0') : '#ff5a6a'; c.stroke(); }
+    // Zenith: the Corona, sparks fanned out past the edge they were lit at (3, or 5 in Red Giant); a full crown pulses
+    if (k.def.corona) {
+      const cap = k.has('redgiant') ? 5 : 3, n = k.stacks('corona'), cb = k.has('corona') ? k.buffs.get('corona') : null;
+      const s = (cb && cb.data.el) || Math.sign(tv) || 1, full = n >= cap, fading = cb && k.remaining('corona') < 2;
+      for (let i = 0; i < cap; i++) {
+        const a = ang(s * (max - 0.6 - i * 0.62)), r = R + 16, x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r, lit = i < n;
+        const col = s > 0 ? (i >= 3 ? '#ff5a3a' : '#ffd27a') : (i >= 3 ? '#7ab8ff' : '#d8f0ff');
+        if (lit) glow(c, x, y, full ? 9 : 7, col, (full ? 0.65 + Math.sin(t * 10) * 0.25 : 0.55) * (fading ? 0.5 + Math.sin(t * 16) * 0.5 : 1));
+        const r0 = lit ? 4.5 : 3.4, r1 = r0 * 0.38;
+        poly(c, [x, y - r0, x + r1, y - r1, x + r0, y, x + r1, y + r1, x, y + r0, x - r1, y + r1, x - r0, y, x - r1, y - r1], lit ? col : '#2a2026', lit ? '#ffffff' : 'rgba(242,230,200,0.3)', 1);
+      }
     }
     // Pendulum: Momentum pips
     if (k.def.momentum) { const m = k.stacks('momentum'); for (let i = 0; i < 3; i++) circle(c, cx - 12 + i * 12, cy + 38, 3, i < m ? '#ffb08a' : '#2a2026', OUT, 1); }

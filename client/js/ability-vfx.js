@@ -2888,7 +2888,8 @@ function windLaneBoost(x, y, vx, vy, now) {
   // (online-refs pass, docs/art/vfx-online-refs/thermist.md) was this big spell cast at its own edge (instant, a sure
   // crit, On the Brink just set)? Your own hero only: the kit says so; anyone else's plays the plain cast
   const thermEdgeHit = c => { const g = typeof window !== 'undefined' && window.__game, k = c.mine && g && g.actor && g.actor.kit;
-    return !!(k && typeof k.has === 'function' && k.has('brink') && (typeof k.remaining !== 'function' || k.remaining('brink') >= 5.7)); };
+    const fresh = (id, d) => k.has(id) && (typeof k.remaining !== 'function' || k.remaining(id) >= d);
+    return !!(k && typeof k.has === 'function' && (fresh('brink', 5.7) || fresh('corona', 11.7))); };   // (a Zenith's edge cast lights a Corona instead)
   // the edge cast's crit beat: a white-hot four-point star (long on the vertical) flashing over the hit, a sharp ring
   // in the element's colour; gone in a third of a second
   function thermCritStar(x, y, col) {
@@ -2939,9 +2940,15 @@ function windLaneBoost(x, y, vx, vy, now) {
     zero: c => { V.ink(c.tx, c.ty, { r: 70, dur: 0.6 }); V.sigil(c.tx, c.ty, { r: 70, style: 'hex', color: '#cfeeff', dur: 0.6, spin: 6 });
       c.later(0.25, () => { V.pillar(c.tx, c.ty, { r: 40, h: 240, color: '#bfe6ff', dur: 0.9 }); V.crystals(c.tx, c.ty, { color: '#d8f2ff', n: 10, r: 60, h: 64, dur: 1.4 }); V.spikeburst(c.tx, c.ty, { r: 70, n: 16, ...ICE, dur: 0.4 }); V.shock(c.tx, c.ty, { r: 140, color: '#cfeeff', dur: 0.6, w: 7 }); shake(4); });
       c.later(0.7, () => V.smoke(c.tx, c.ty, { n: 7, r: 60, color: '#d8e8f0', size: 32, a: 0.3, speed: 20, life: 2.2 })); },
-    // Zenith's Bleed Off: steam blasting off the mage, a pale shield, and the red Strain venting upward
-    bleed: c => { V.smoke(c.x, c.y, { n: 9, r: 26, color: '#e8e0e0', size: 30, a: 0.45, speed: 70, life: 1.3 }); V.shock(c.x, c.y, { r: 80, color: '#ff8a8a', dur: 0.4, w: 4 }); V.shield(c.ent, { color: '#ffd0c0', dur: 1.2, r: 38 });
-      for (let i = 0; i < 8; i++) V.spawn({ x: c.x + (Math.random() - 0.5) * 30, y: c.y, z: 10, vz: 120 + Math.random() * 80, life: 0.7, size: 8, size1: 0, color: '#ff5a6a' }); },
+    // Zenith's Sunset (in Equilibrium's place): a low gold sun sinks behind the mage into the dual ring, the shield
+    // closing over in sunset colours (the stars it drops on the boss are the kit's 'sunset' moment)
+    sunset: c => { const TP = THERM_PAINT; TP.dualRing(c.ent, { r: 66, dur: 1.2 });
+      V.fx({ dur: 0.9, layer: 'air', follow: c.ent, draw: (ctx, p, t, e) => { const x = e.follow.x, y = e.follow.y - 34 + easeOut(p) * 30, k = e.a * (1 - p);
+        V.glowAt(ctx, x, y, 34, '#ff9a4a', 0.5 * k); V.glowAt(ctx, x, y, 14, '#fff0b0', k); } });
+      c.later(0.15, () => { V.shield(c.ent, { color: '#ffd8a8', dur: 1.3, r: 40 }); V.shock(c.ent.x, c.ent.y, { r: 96, color: '#ffb05a', dur: 0.4, w: 3.5 }); }); },
+    // Red Giant (Zenith talent): the mage swells with a deep red glow, a slow pulsing halo for as long as it lasts
+    redgiant: c => { V.charge(c.x, c.y, { color: '#ff5a3a', r: 60, n: 12, dur: 0.3, follow: c.ent });
+      c.later(0.3, () => { V.shock(c.ent.x, c.ent.y, { r: 120, color: '#ff6a3a', dur: 0.55, w: 6 }); V.flash(c.ent.x, c.ent.y - 20, 70, '#ff8a5a', 0.3); V.aura(c.ent, { color: '#ff5a3a', dur: 8, r: 34, rate: 0.12 }); shake(2); }); },
   };
 
   // (online refs, docs/art/vfx-online-refs/driftblade.md) Driftblade: the cut shows on the body as a thin bright slit that
@@ -3075,6 +3082,16 @@ function windLaneBoost(x, y, vx, vy, now) {
     }, { atTarget: true }),
     // Ember Store (talent): banked embers fly from the mage into the target after a Shock
     embers: Object.assign((e, target, d) => { if (!target) return; for (let i = 0; i < ((d && d.n) || 1); i++) FX.later(i * 0.08, () => V.missile(e.x, e.y, target.x, target.y, { style: 'fire', color: '#ff8a3a', speed: 800, size: 0.6, arc: 30 + i * 12, onHit: (x, y) => V.hit(x, y, '#ffb050', 0.5) })); }, { atTarget: true }),
+    // Zenith's Corona: a spark lights over the mage's brow in the element's colour, one more for each held (a full three ring out)
+    corona: (e, target, d) => { const n = Math.max(1, Math.min(5, (d && d.n) || 1)), ice = d && d.el < 0, col = ice ? '#cfeeff' : n >= 4 ? '#ff7a4a' : '#ffd27a';
+      for (let i = 0; i < n; i++) { const a = -Math.PI / 2 + (i - (n - 1) / 2) * 0.5; V.glint(e.x + Math.cos(a) * 16, e.y - 30 + Math.sin(a) * 10, { color: col, size: i === n - 1 ? 18 : 10 }); }
+      if (n >= 3) V.shock(e.x, e.y, { r: 60, color: col, dur: 0.3, w: 2.5 }); },
+    // Sunset: every Corona falls on the boss as a star, one after another (kits.js thermSunset deals them 0.2s on, 0.12s apart)
+    sunset: Object.assign((e, target, d) => { if (!target) return; const n = Math.max(1, Math.min(5, (d && d.n) || 1));
+      for (let i = 0; i < n; i++) FX.later(0.08 + 0.12 * i, () => { const x = target.x + (i - (n - 1) / 2) * 16, y = target.y + (i % 2 ? 6 : -4);
+        V.lightfall(x, y, { color: i >= 3 ? '#ff7a4a' : '#ffd27a', r: 22, h: 260, dur: 0.5, feathers: 0 });
+        FX.later(0.12, () => { V.spikeburst(x, y, { r: 34, n: 9, ...FIRE, dur: 0.26 }); V.hit(x, y, '#ffe0a0', 0.6); if (i === n - 1) shake(1 + n * 0.5); }); });
+    }, { atTarget: true }),
     // Latent Charge (talent): an overload banked instead of burned: a pale bead sinking into the mage
     latent: e => { V.swirl(e.x, e.y, { r: 36, color: '#e8d8ff', dur: 0.5, inward: true, follow: e }); V.flash(e.x, e.y - 20, 30, '#e8d8ff', 0.3); },
     frostbite: e => { V.crystals(e.x, e.y, { color: '#bfe6ff', n: 6, r: 24, h: 30, dur: 1 }); V.shock(e.x, e.y, { r: 70, color: '#9ad8ff', dur: 0.4 }); },

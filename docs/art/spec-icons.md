@@ -102,7 +102,8 @@ Only moves that are new to a spec need an icon. Changed moves (for example Senti
 - No new moves. Every spell swings the dial a step further; the icons stay.
 
 **Thermist · Zenith** (crimson and white-hot)
-20. **Bleed Off** (`thermist/bleed`), replaces Equilibrium: a brass pressure valve on a pipe, wrenched open, three thick curls of white steam blasting out of it, a small red needle gauge on the pipe sitting in the red.
+20. **Sunset** (`thermist/sunset`), replaces Equilibrium: a low crimson-gold sun half sunk behind a dark horizon line, three small white-hot stars falling from the sky above it toward the ground, a thin pale shield arc curving over the whole.
+- Talent move **Red Giant** (`thermist/redgiant`), replaces Inversion: a swollen deep-red star filling the frame, its rim boiling with flares, five small white sparks fanned round its upper edge.
 
 **Driftblade · Orbit** (mint)
 - No new moves. Passing Strikes and laps round the target do the work; the icons stay.

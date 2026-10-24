@@ -651,19 +651,19 @@ function thermOverloads(k, id) {
   const brink = k.has('brink') ? k.buffs.get('brink').data.el : 0;
   if (brink && brink === s.el) return true;
   if (s.safe || s.edge) return false;
-  return Math.abs(s.to) > 5 && !k.def.redline;
+  return Math.abs(s.to) > 5;
 }
 Object.assign(PRO, {
   thermist(k, ctx) {
     const t = k.g.temp;
     // Inversion at the edge: a swing of 10, half again as strong (in a burst window when one is close)
-    // Controlled Meltdown (a talent in Inversion's place): let go with the Strain well up
-    if (abOf(k, 'invert').id === 'meltdown') { if (ready(k, 'invert') && weaveOk(k) && (k.g.strain || 0) >= 60) return I(k, 'invert'); }
+    // Red Giant (Zenith's talent in Inversion's place): at the edge with the Corona building
+    if (abOf(k, 'invert').id === 'redgiant') { if (ready(k, 'invert') && weaveOk(k) && Math.abs(t) >= 5 && k.stacks('corona') >= 2) return I(k, 'invert'); }
     else if (ready(k, 'invert') && weaveOk(k) && Math.abs(t) >= 5 && (ctx.inBurst(ctx.t) || (ctx.t % BURST_EVERY) < 40)) return I(k, 'invert');
     // Dead Centre (a Pendulum talent): Equilibrium keeps the Momentum alive when it is about to lapse
     if (k.talent('thermist_deadcentre') && ready(k, 'equil') && weaveOk(k) && k.stacks('momentum') >= 2 && k.remaining('momentum') < 2.5) return I(k, 'equil');
-    // Zenith: vent Strain before it melts you down, without leaving the edge
-    if (k.def.redline && ready(k, 'equil') && weaveOk(k) && k.g.strain >= 50 && Math.abs(t) >= 5) return I(k, 'equil');
+    // Zenith with Solar Wind: Sunset on a full Corona (the stars), then light a fresh one at the edge
+    if (k.def.corona && ready(k, 'equil') && weaveOk(k) && k.stacks('corona') >= 3 && k.talent('thermist_solarwind')) return I(k, 'equil');
     if (k.gcdRemaining() > 0.0001 || k.cast) return null;
     const plan = thermPlan(k), dir = plan === 'cinder' || plan === 'flare' ? 1 : -1;
     // Absolute Zero from high up is a swing of up to 10
