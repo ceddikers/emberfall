@@ -3743,6 +3743,7 @@
     if (!player.cls || scene !== 'town') return;
     player.spec = specOf(player.cls.id, specId) && Save.specState(player.cls.id, specId) === 'open' ? specId : null;
     Save.setSpec(player.cls.id, player.spec);
+    Save.setLastHero(player.cls.id, player.spec);
     closePanels();
     const spec = specOf(player.cls.id, player.spec);
     heroPickFx(player, spec ? { accent: spec.accent } : player.cls);
@@ -3906,6 +3907,11 @@
     VFX.pillar(e.x, e.y, { r: 30, h: 220, color: cls.accent, dur: 1.1, follow: e });
     VFX.burst(e.x, e.y, { color: cls.accent, color2: '#ffffff', n: 18, speed: 220 });
   }
+  // the hero you last played, if the game still has that class (its spec only while the spec is still open to you), or null
+  function rememberedHero() {
+    const l = Save.lastHero(), cls = l && CLASSES.find(c => c.id === l.cls);
+    return cls ? { cls, spec: l.spec && specOf(cls.id, l.spec) && Save.specState(cls.id, l.spec) === 'open' ? l.spec : null } : null;
+  }
   function chooseHero(cls, specId) {
     if (typeof cls === 'string') cls = CLASSES.find(c => c.id === cls);   // (window.__game.chooseHero('thresher') from a console: an id without its class left drawHero reading ROLES[undefined])
     if (!cls) return;
@@ -3914,6 +3920,7 @@
     // the spec picked on the hero page, or the one this hero last played
     if (specId !== undefined) Save.setSpec(cls.id, specOf(cls.id, specId) ? specId : null);
     player.spec = specOf(cls.id, Save.spec(cls.id)) ? Save.spec(cls.id) : null;
+    Save.setLastHero(cls.id, player.spec);   // (the next visit, or joining a friend, starts as this hero)
     closePanels();
     heroPickFx(player, cls);
     Inventory.grantStarter(cls.id);
@@ -4304,7 +4311,7 @@
     Title.hide();
     started = true;
     Inventory.showGoldHud(scene !== 'arena');
-    if (!player.cls) openSelect(null);
+    if (!player.cls) { const lh = rememberedHero(); if (lh) chooseHero(lh.cls, lh.spec); else openSelect(null); }   // (no remembered hero: the first time, hero select as ever)
     else { Net.send({ t: 'cls', id: player.cls.id, spec: player.spec }); sendGear(); }   // back after a lost connection: tell the new room who we are
     updatePartyList();
     toast(Net.solo ? `Welcome to Emberfall, ${player.name}. Bots fill the empty slots.` : Net.isHost ? `Hosting · room code ${Net.room}` : `Welcome to Emberfall, ${player.name}.`);
