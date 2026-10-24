@@ -10,6 +10,7 @@ const Keybinds = (() => {
     { id: 's4', def: 'd' }, { id: 's5', def: 'f' }, { id: 's6', def: ' ', name: 'Dash' }, { id: 's7', def: 't', name: 'Ultimate' },
     { id: 'focus', def: 'v', name: 'Set focus' }, { id: 'limit', def: 'g', name: 'Limit Break' }, { id: 'meter', def: 'm', name: 'Damage meter' }, { id: 'metermode', def: 'b', name: 'Meter: next view' },
     { id: 'rezask', def: 'h', name: 'Ask for a raise' },
+    { id: 'resync', def: '', name: 'Resync with the host' },   // (unbound until you choose a key)
     { id: 'bags', def: 'i', name: 'Inventory' }, { id: 'talents', def: 'n', name: 'Talents' },
     { id: 'journal', def: 'j', name: 'Journal' }, { id: 'logbook', def: 'l', name: 'Logbook' }, { id: 'options', def: 'k', name: 'Options' },
     { id: 'cycle', def: 'tab', name: 'Next enemy (Shift: back)' }, { id: 'hurt', def: '`', name: 'Most hurt ally' }, { id: 'chat', def: 'enter', name: 'Chat' },
@@ -135,6 +136,8 @@ const Keybinds = (() => {
   let panel = null, capturing = null, namer = () => null, onChange = () => {}, heroCls = null;
   // game settings shown here (main.js): { get() -> { frames, role, mouseover }, set(key, value) }
   let prefs = null;
+  // Resync (main.js requestResync): asks the host for the fight as it stands
+  let resync = null;
   const TABS = [['keys', 'Keys'], ['ui', 'Interface'], ['audio', 'Audio'], ['data', 'Data']];
   let tab = 'keys';
   try { const v = localStorage.getItem('emberfall.optionsTab'); if (TABS.some(t => t[0] === v)) tab = v; } catch (e) { /* the first tab */ }
@@ -175,7 +178,7 @@ const Keybinds = (() => {
     else { const b = panel.querySelector(`[data-a="${capturing}"]`); if (b) b.textContent = `${label(k)} is kept`; }
   }
   function openPanel(opts = {}) {
-    heroCls = opts.cls !== undefined ? opts.cls : heroCls; namer = opts.namer || namer; onChange = opts.onChange || onChange; prefs = opts.prefs || prefs;
+    heroCls = opts.cls !== undefined ? opts.cls : heroCls; namer = opts.namer || namer; onChange = opts.onChange || onChange; prefs = opts.prefs || prefs; resync = opts.resync || resync;
     if (!panel) {
       panel = document.createElement('div');
       panel.id = 'options'; panel.className = 'hidden';
@@ -191,6 +194,7 @@ const Keybinds = (() => {
           <section data-page="ui">
             <div class="kb-foot kb-scale"><label for="kb-scale">Interface size</label><input id="kb-scale" type="range" min="80" max="140" step="5"><b class="kb-scale-v"></b></div>
             <div class="kb-foot"><button type="button" class="btn2 kb-arrange" data-tip="Drag any piece of the HUD where you like it. Best done in a raid, where every piece shows.">Arrange the HUD</button></div>
+            <div class="kb-foot"><button type="button" class="btn2 kb-resync" data-tip="If what you see in a raid looks off, this asks the host for the fight as it stands and redraws it, without leaving. A key can be set for it under Keys.">Resync with the host</button></div>
             <div class="kb-foot kb-pref"><label for="kb-frames">Party frames</label><select id="kb-frames"><option value="left">In the corner</option><option value="strip">Above your skills</option></select><span class="kb-note kb-frames-note"></span></div>
             <div class="kb-foot kb-pref"><label class="kb-check" data-tip="Point at a party frame or an ally and press a heal: it goes to them. Off: heals go to the ally you selected, or to you."><input type="checkbox" id="kb-mouseover"> Mouseover casting</label></div>
             <div class="kb-foot kb-pref"><label class="kb-check" data-tip="A small bar over your hero in a raid, like the one over your allies."><input type="checkbox" id="kb-selfbar"> Your own health bar</label></div>
@@ -217,6 +221,7 @@ const Keybinds = (() => {
         if (t.dataset.tab) { showTab(t.dataset.tab); render(); return; }
         if (t.classList.contains('kb-reset')) { for (const a of ACTIONS) binds[a.id] = a.def; save(); labels(); onChange(); render(); return; }
         if (t.classList.contains('kb-arrange')) { closePanel(); arrange(true); return; }
+        if (t.classList.contains('kb-resync')) { if (resync) resync(); return; }
         if (t.classList.contains('kb-wipe')) {
           // two presses, the second within five seconds, and a last browser confirm
           if (!t.dataset.armed || Date.now() - Number(t.dataset.armed) > 5000) { t.dataset.armed = String(Date.now()); t.textContent = 'Press again to delete everything'; t.classList.add('armed'); return; }

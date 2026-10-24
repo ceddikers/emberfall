@@ -299,6 +299,7 @@ const RaidUI = (() => {
       setS(f.cast, casting ? marks.casting.frac : 0);
       f.row.classList.toggle('casting', !!casting);
       const chips = [];
+      if (raid.away && raid.away.has(id) && !p.left) chips.push(`<b class="chip away" data-tip="Their connection dropped. A stand-in plays their hero until they are back.">Away</b>`);
       if (!p.alive && !p.left && raid.rezAsks && raid.rezAsks[id]) chips.push(`<b class="chip rez" data-tip="Asked for a raise">Raise?</b>`);
       for (const [hid, secs, from] of p.hots || []) {
         const h = HOT_ICON[hid];
