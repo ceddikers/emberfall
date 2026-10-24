@@ -15,9 +15,10 @@ const FIGHT = {
   VULN: 0.25,            // damage taken up per stack, from avoidable hits
   VULN_DUR: 15,
   // Threat: damage × (TANK_THREAT for tanks) × the event's own multiplier (clamped to EV_THREAT_MAX), heals × HEAL_THREAT.
-  // It fades (THREAT_FADE of it per second), so what counts is the last ~20 s: a tank who stops hitting for a few
-  // seconds can lose the boss to a bursting DPS. A taunt sets your threat to the top + TAUNT_LEAD and fixes the boss
-  // on you for TAUNT_FIX s (an add: TAUNT_ADD_FIX s). TAUNT_CD matches TAUNT.cd in kits.js (the host allows 1 s of slack).
+  // It fades (THREAT_FADE of it per second), so what counts is the last ~20 s. The boss only weighs it between tanks
+  // while a tank stands (tank()): nobody else can pull him; with every tank down he goes for the most threat. A taunt sets
+  // your threat to the top + TAUNT_LEAD and fixes the boss on you for TAUNT_FIX s (an add: TAUNT_ADD_FIX s). TAUNT_CD
+  // matches TAUNT.cd in kits.js (the host allows 1 s of slack).
   TANK_THREAT: 2.75,
   HEAL_THREAT: 0.2,
   THREAT_FADE: 0.05,
@@ -296,9 +297,10 @@ class FightSim {
     return out;
   }
   alive() { return this.players().filter(p => p.s.alive); }
-  // whoever the boss is on: a taunt's fixation while it lasts, otherwise the most threat
+  // whoever the boss is on: always a tank while one stands (a taunt's fixation, otherwise the tank with the most
+  // threat); with every tank down, the most threat of whoever is left
   tank() {
-    const al = this.alive(), fx = this.boss.fix;
+    const al0 = this.alive(), fx = this.boss.fix, tanks = al0.filter(p => p.s.role === 'tank'), al = tanks.length ? tanks : al0;
     if (fx && fx.until > this.t) { const p = al.find(q => q.id === fx.id); if (p) return p; }
     let best = null;
     for (const p of al) if (!best || p.s.threat > best.s.threat) best = p;

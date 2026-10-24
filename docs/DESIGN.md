@@ -57,12 +57,12 @@ Four ideas from the research shaped every kit.
 **Controls:** right-click to move. Left-click interacts in town, or picks an ally to heal in the arena. **Q W E R D F** are the six skills, **Space** is a shared dash (2 charges, 12 s each), **T** is the hero's Ultimate (see "Ultimates" below), **1–4** target party members, and **`** locks the most hurt ally (again to cycle). **I** opens the inventory and **N** your talents.
 
 **Threat and taunt** (host-side, `client/js/arena/fight.js`):
-- Threat is damage dealt × 2.75 for tanks (× 1 for everyone else), plus 20% of healing done. It fades by 5% a second, so what counts is roughly the last 20 seconds. A tank who keeps hitting holds the boss through normal play; a tank who stops for a few seconds (or a newbie tank against a bursting DPS) loses it.
-- The boss attacks, faces and aims its tankbusters at whoever has the most threat. Adds keep their own threat (from damage dealt to that add, with the same tank multiplier) and go for the nearest player until someone hits them.
+- Threat is damage dealt × 2.75 for tanks (× 1 for everyone else), plus 20% of healing done. It fades by 5% a second, so what counts is roughly the last 20 seconds. It only decides between tanks (and who he turns to once every tank is down).
+- **The boss stays on a tank while one stands** (October 2026 rework, `FightSim.tank()`): he attacks, faces and aims his tankbusters at a living tank, the one with the most threat (or a taunt's fixation) when there are two. Damage and healing from anyone else never pull him. With every tank down he goes for whoever has the most threat, and a raised tank takes him straight back. Adds keep their own threat (from damage dealt to that add, with the same tank multiplier) and go for the nearest player until someone hits them.
 - Death wipes your threat; a raise starts you again from zero.
 - **Taunt (tanks only, every spec), carried by one of the tank's own buttons** (`TAUNT_CARRY` in kits.js: Bastion Brace, Bloodreaver Bloodletting, Runeguard Rune Strike, Ironpalm Read, Gorgemaw Open Wide, Oathbroker Renegotiate; a spec's or talent's replacement of that button carries it too). It is smart: pressing the carrier taunts only when the taunt is off its 20 s cooldown and the enemy you face is on someone else (`Kit.resolve` calls `env.taunt`; the worlds in main.js and raid-host.js decide). A small mark over the carrier shows it ready, and its seconds while it cools. 500 range, aimed at the carrier's target, or the enemy you face. Your threat becomes 10% above the highest, and the boss stays on you for 3 s even if someone out-threats you in that time; an add stays on you for 6 s. Each tank's taunt is its own move with a small gauge tie-in (in the class tables below). The host checks the cooldown, and clamps any threat multiplier a client sends to 0–3.
-- Bot tanks taunt back, after a moment's reaction, when the boss or an add is on someone who isn't a tank: they press the carrier (`RaidHost.botTaunt`), and only that press taunts; if the carrier can't go (no charges, out of reach) they taunt directly so they still hold the boss. They save it for the boss while a DPS is close to pulling.
-- Tuning test (bot raids, the bot tank stops attacking and never taunts while idle): inside the party's 60 s burst windows it loses the boss after 3–6 s; outside them after 7–11 s. In normal play the top DPS sits at about 70–75% of the tank's threat and the bot tank taunts 1–3 times a fight; with taunts switched off a DPS held the boss for 8–33 s of a fight. With the old setting (× 5, no fade) the top DPS sat near 40% and an idle tank never lost it.
+- Bot tanks taunt back, after a moment's reaction, when the boss or an add is on someone who isn't a tank: they press the carrier (`RaidHost.botTaunt`), and only that press taunts; if the carrier can't go (no charges, out of reach) they taunt directly so they still hold the boss. (A boss on a non-tank only happens while every tank is down.) Bot DPS no longer ease off for threat.
+- (Before the October 2026 rework, when DPS could pull the boss) Tuning test (bot raids, the bot tank stops attacking and never taunts while idle): inside the party's 60 s burst windows it loses the boss after 3–6 s; outside them after 7–11 s. In normal play the top DPS sits at about 70–75% of the tank's threat and the bot tank taunts 1–3 times a fight; with taunts switched off a DPS held the boss for 8–33 s of a fight. With the old setting (× 5, no fade) the top DPS sat near 40% and an idle tank never lost it.
 
 **Ally targeting** (for healers), in order of priority:
 1. Shift + the heal key: yourself;
@@ -222,7 +222,7 @@ The highest ceiling: newbies reach 70% of pro damage. The boss's hitbox ring sho
 | W | Mend | GCD | 1.8 s cast, 700 heal. |
 | E | Dawn Petal | GCD | Spend a petal: instant 450 heal + small regen. Petals regrow every 15 s (max 3). |
 | R | Prayer Circle | oGCD | The party takes 10% less damage for 10 s and regenerates (60 s cooldown). |
-| D | Intervention | GCD | 2.5 s cast, 30 s cooldown: raise a dead ally, or 1200 heal. |
+| D | Intervention | GCD | 30 s cooldown: raise a dead ally (5 s cast, like every raise), or 1200 heal (2.5 s cast). |
 | F | Benediction | oGCD | 800 heal + 300 shield (40 s cooldown). |
 
 *Ceiling:* spend Petals where they heal *and* keep Dawnstar coming, and keep Smiting whenever nobody needs healing.
@@ -236,7 +236,7 @@ The highest ceiling: newbies reach 70% of pro damage. The boss's hitbox ring sho
 | E | Thornlash | GCD | 120 + thorns for 30 s. Glows in the last third. |
 | R | Wild Growth | oGCD | Party regen, and your heals are +25% for 15 s (60 s cooldown). |
 | D | Bloom | oGCD | Spend 50 Bloom: 400 instant heal on everyone with your Rejuvenate (the whole party during Wild Growth). Your next Wrath is instant. |
-| F | Rebirth | GCD | 2.5 s cast, 30 s cooldown: raise, or 1100 heal. |
+| F | Rebirth | GCD | 30 s cooldown: raise (5 s cast), or 1100 heal (instant). |
 
 *Ceiling:* Rejuvenate *before* damage lands so no tick is wasted, then attack while it works. Bloom turns that foresight into burst healing.
 
@@ -249,7 +249,7 @@ The highest ceiling: newbies reach 70% of pro damage. The boss's hitbox ring sho
 | E | Shift | oGCD | Toggle stance. Haste needs 20+ Flux; your first Bolt in Haste is instant. |
 | R | Accelerando | oGCD | 60 s party burst: everyone is 10% faster for 15 s; +40 Flux. Aimed at an ally: they are Quickened (12% faster still, 15 s). |
 | D | Stasis | oGCD | (Round 2) 60 s: for 8 s the Bolts' heals are held (25% stronger); press again or let it end to release them to the whole party. Cooldown runs from the release. |
-| F | Recall | GCD | 2.5 s cast, 30 s cooldown: raise, or 1200 heal. |
+| F | Recall | GCD | 30 s cooldown: raise (5 s cast), or 1200 heal (2.5 s cast). |
 
 - **Flux:** Slow stance fills it (+3/s). Haste stance gives 20% faster casts and +10% damage, but drains it (−5/s).
 - Hitting 0 Flux in Haste knocks you into Slow with 3 s of slower casts.
@@ -1508,7 +1508,7 @@ Single talents stay at or under +5.8% pro DPS (Falling Mountain +5.8%, Deflect +
 - **Boss plate:** name, mode and timer. The HP bar has quarter ticks and a pale trail that drains behind each chunk of damage. The cast bar below it flashes when the cast goes off.
   - **What's on the boss**, as small icons under the HP bar with seconds left and an in-game tooltip: Hunter's Mark (Vulnerability), a damage-up (Grubnak's Gorge), a taunt's fixation (the tank's taunt icon), the Inquisitor's Judgment brand with its charges (dimmed if it isn't yours), the last 60 s before the hard enrage, and your own damage over time (Poison, Thorns, Acid with its stacks, the Runeblade's burning rune, the Pyromancer's burns). The host sends its part in the boss update (`fb.bs`: `[kind, seconds, value, who]`); your DoTs come from your own kit.
   - **Upcoming moves** under the cast bar: the boss's next 2–3 moves with countdowns, from the host's `bnext` feed (`{ t: 'bnext', l: [[name, secondsUntil], ...]}`, about once a second). It counts down between updates and hides when there's no feed or it's more than 3 s old. (Testing aid: `?bnext-demo` in the address feeds the local tab a made-up list.)
-- **Threat meter** (under the party frames, raid only): everyone alive, highest first, as a share of the top threat (the tank at 100%), with a thin bar. Your row is lit; a non-tank at 90% or more of the tank's threat turns amber. It reads the threat the host already sends in the party update.
+- **Threat meter** (under the party frames, raid only): those the boss can turn to, highest first, as a share of the top threat, with a thin bar: the living tanks while one stands (so it only shows with two tanks), everyone alive once every tank is down. Your row is lit; anyone the boss isn't on at 90% or more of the top turns amber. It reads the threat the host already sends in the party update.
 - **Party frames** (top left, in role order, with keys 1–4):
   - role mark, name, an eye on whoever the boss is attacking, and their class;
   - a tall HP bar that turns amber below 60% and red below 35%, with a pulsing edge when low;

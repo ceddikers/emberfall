@@ -89,7 +89,7 @@ const TUTORIAL = {
       id: 'roles', title: 'Roles',
       pages: [
         { h: 'Tank', body: [
-          'Hold the boss: keep the most threat, all fight. It auto-attacks its target every few seconds if they are near it, and walks after them.',
+          'Hold the boss: while you stand, it attacks you and nobody else can pull it away. It auto-attacks its target every few seconds if they are near it, and walks after them.',
           'Tankbusters (red casts) hit whoever he is attacking: use a defensive as the cast starts.',
           'Face it away from the party: its busters are cones, and anyone else caught in one takes most of it.',
           'Place him: where the boss stands decides where many mechanics land.',
@@ -102,10 +102,9 @@ const TUTORIAL = {
         { h: 'Damage', body: [
           'Do damage without missing mechanics. A hit you could have avoided costs more damage than greed gains.',
           'Break what the fight asks you to break (eggs, knots, coffins) before it is too late, and kill linked adds together.',
-          'Watch the threat meter: you turn amber at 90% of the tank\'s threat.',
         ] },
         { h: 'Who counts as "the tank"', body: [
-          'Many targeted moves pick from everyone except the boss\'s current target. If you hold aggro, the fight treats you as the tank: you get the buster and skip the spreads.',
+          'Many targeted moves pick from everyone except the boss\'s current target. That is always a tank while one stands; with every tank down, whoever holds aggro is treated as the tank: they get the buster and skip the spreads.',
         ] },
       ],
     },
@@ -114,16 +113,17 @@ const TUTORIAL = {
       pages: [
         { h: 'How threat builds', body: [
           'Damage on the boss is threat. Tanks make 2.75 times as much; healing makes a fifth of its size, for the healer.',
-          'Threat fades about 5% a second, so only the last 20 seconds or so count. A tank who stops hitting for a few seconds can lose the boss to a burst.',
+          'Threat fades about 5% a second, so only the last 20 seconds or so count.',
+          'While a tank stands the boss stays on a tank, whatever anyone else does: with two tanks, the one with more threat. Only with every tank down does he turn to whoever has the most.',
         ] },
         { h: 'The threat meter', body: [
-          'Under the party frames: everyone as a share of the top threat. Your row is lit; a non-tank at 90% of the tank turns amber.',
+          'Under the party frames: the tanks as a share of the top threat, when there are two; with every tank down, everyone left, so you can see who he turns to next. Your row is lit.',
           'An eye on a party frame marks who the boss is attacking.',
         ] },
         { h: 'Taunt',
           body: [
             'Tanks only, and it rides on one of your own skills: the Bastion\'s Brace, the Bloodreaver\'s Bloodletting, the Runeguard\'s Rune Strike, the Ironpalm\'s Read, the Gorgemaw\'s Open Wide and the Oathbroker\'s Renegotiate.',
-            'Use that skill while the enemy you face is attacking someone else and it taunts as well: your threat jumps to 10% above the highest, and the boss stays on you for 3 seconds whatever anyone does (an add: 6 seconds). 20 second cooldown. If the boss is already on you, it is just the skill.',
+            'Use that skill while the enemy you face is attacking someone else and it taunts as well: your threat jumps to 10% above the highest, and the boss stays on you for 3 seconds whatever anyone does (an add: 6 seconds). On the boss, that hands him between two tanks, or takes him back after a raise. 20 second cooldown. If the boss is already on you, it is just the skill.',
             'A small mark above the skill shows the taunt is ready, and its seconds while it cools. An icon under the boss bar shows the fixation. You cannot taunt a boss that is out of reach.',
           ] },
         { h: 'Deaths and adds', body: [

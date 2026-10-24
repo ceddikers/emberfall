@@ -1181,6 +1181,15 @@
     if ((raid.lb || 0) < FIGHT.LB.BAR) { FX.text(player.x, player.y - 56, 'Not ready', '#c8c0d8', 12, 0.7, { kind: 'quiet' }); return; }
     sendCombat({ type: 'lb' });
   }
+  // the Down screen's "ask for a raise" (button or key): the host marks it for everyone's frames, and healer bots raise
+  // whoever asked first once it's safe to stand for the cast (raid-host.js rezAsk, bots.js BotAI.raiseFirst)
+  function askRaise() {
+    if (!raid || raid.state !== 'live' || !amDead() || raid.def.trial || raid.pvp || (raid.rezAsks && raid.rezAsks[Net.id])) return;
+    if (Net.isHost) hostRezAsk(Net.id); else Net.send({ t: 'rez' });
+  }
+  function hostRezAsk(pid) { if (raidHost && hostRoster.some(h => h.id === pid && !h.left)) raidHost.rezAsk(pid); }
+  Net.onHost('rez', hostRezAsk);
+  Net.on('rez', msg => { if (raid && Number.isInteger(msg.id)) (raid.rezAsks = raid.rezAsks || {})[msg.id] = now; });
   Net.on('lb', msg => {
     if (!raid) return;
     const who = entById(msg.id), units = raidUnits(), b = raid.bossDraw, lv = Math.max(1, Math.min(3, msg.lv | 0));
@@ -2190,6 +2199,7 @@
     if (msg.k === 'behind') BOSS_VFX.behind(raid.bossDraw, msg.n);   // [boss presentation] the soft enrage's pass: he gets heavier
     if (msg.k === 'death') raid.doom.delete(msg.id);
     if (msg.k === 'raised' && e) BOSS_VFX.playerRaised(e);
+    if (msg.k === 'raised' && raid.rezAsks) delete raid.rezAsks[msg.id];   // (the ask is answered: askRaise)
     if (SH && e && (msg.k === 'death' || msg.k === 'raised')) { const mine = msg.id === Net.id; SH.play(msg.k === 'death' ? 'death' : 'revive', { vol: 0.9, remote: !mine, at: mine ? null : e }); SH.vo(msg.k === 'death' ? 'hero-down' : 'hero-revive', { id: msg.id, classId: e.cls ? e.cls.id : null, mine, local: mine }); }
     // a Time Stop on the boss (Time Reversal, fight.js pauseBoss): it freezes mid-pose, frosted, under a stopped clock
     if (msg.k === 'pause' && msg.dur > 0) { const d = Math.min(2.5, +msg.dur); raid.bossPause = { at: now, end: now + d }; BOSS_VFX.timeStop(raid.bossDraw, d); }
@@ -2457,6 +2467,7 @@
     if (a === 'metermode') { if (inArena() && !e.repeat) RaidUI.cycleMeter(); return; }
     if (a === 'focus') { if (!e.repeat) setFocus(); return; }
     if (a === 'limit') { if (inArena() && !e.repeat) useLimit(); return; }
+    if (a === 'rezask') { if (inArena() && !e.repeat) askRaise(); return; }
     if (a === 'options') { if (Keybinds.panelOpen()) Keybinds.closePanel(); else openOptions(); return; }
     if (a === 'journal') { Journal.toggle(); return; }
     if (a === 'logbook') { if (Pastimes.anyOpen()) Pastimes.closeAll(); else Pastimes.openBook(); return; }
@@ -4309,7 +4320,7 @@
 
   // clicking your locked ally's frame again lets go of them
   RaidUI.init({ onFrame: id => { lockedAlly = lockedAlly === id ? null : id; }, onLeave: () => leaveRaid(true),
-    onPlaceMark: k => placeMark(k), onWaymark: msg => sendWaymark(msg), onCallouts: () => Pings.openPanel(), onPullIn: () => startPullCountdown(),
+    onPlaceMark: k => placeMark(k), onWaymark: msg => sendWaymark(msg), onCallouts: () => Pings.openPanel(), onPullIn: () => startPullCountdown(), onRezAsk: () => askRaise(),
     onDock: where => { if (player.cls) Save.setSetting(`frames-${player.cls.role}`, where); } });
   // where the party frames sit for your role: healers start with them above the hotbar
   // party frames sit in the corner unless you moved them above your skills (Options, or the dock button on them)

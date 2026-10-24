@@ -157,7 +157,20 @@ class RaidHost {
       burst: this.partyBuffs.some(x => x.kind === 'dmg' && x.end > sim.t) || b.vulnEnd > sim.t,
       dealt: id => (sim.stats[id] ? sim.stats[id].damage : 0) || 0,
       allyMods: id => this.allyMods(id),
+      // fallen players who asked for a raise from the Down screen (rezAsk), the earliest first: healer bots raise them first
+      rezAsks: [...(this.rezAsks || new Map())].filter(([id]) => { const s = sim.ps.get(id); return s && !s.alive && !s.left; }).sort((a, c) => a[1] - c[1]).map(([id]) => id),
     };
+  }
+  // a fallen player asks for a raise (the Down screen's button: main.js askRaise). Everyone sees it on their frame; healer
+  // bots put them first (bots.js BotAI.raiseFirst). It lasts until they're back up. False if refused.
+  rezAsk(pid) {
+    const s = this.sim.ps.get(pid);
+    if (this.sim.state !== 'live' || !s || s.alive || s.left) return false;
+    this.rezAsks = this.rezAsks || new Map();
+    if (this.rezAsks.has(pid)) return false;
+    this.rezAsks.set(pid, this.sim.t);
+    this.emit({ t: 'rez', id: pid });
+    return true;
   }
 
   // A bot spending the Limit Break (the first press spends it, so one bot at most): a DPS saves it for a damage check
@@ -254,11 +267,9 @@ class RaidHost {
   // taunts from here: its other presses of that button don't (bot.tauntWant is unset).
   botTaunt(bot, view) {
     const t = this.sim.t;
-    bot.tauntPre = false;
     const want = bot.actor.tauntReady(t) ? BotAI.tauntTarget(bot, view) : null;
     if (!want) { bot.tauntSeen = null; return; }
-    // (a taunt ahead of a tankbuster's cast is the plan, not a reaction: no moment to notice)
-    if (!bot.tauntSeen || bot.tauntSeen.tg !== want) { bot.tauntSeen = { tg: want, at: t + (bot.tauntPre ? 0.05 : 0.7) }; return; }
+    if (!bot.tauntSeen || bot.tauntSeen.tg !== want) { bot.tauntSeen = { tg: want, at: t + 0.7 }; return; }
     if (t < bot.tauntSeen.at) return;
     bot.tauntSeen = null;
     const k = bot.actor.kit, i = k.def.tauntOn ? k.abilities.findIndex(a => k.baseId(a) === k.def.tauntOn) : -1;
@@ -274,6 +285,7 @@ class RaidHost {
     if (msg.t === 'fight' && (msg.s === 'clear' || msg.s === 'wipe')) msg.pr = this.pull.out(msg, this.sim.t);   // (sent with the result: the results card's pull review)
     // things the bots need to know about themselves
     if (msg.t === 'fev') {
+      if (msg.k === 'raised' && this.rezAsks) this.rezAsks.delete(msg.id);   // (a raise answers the ask: rezAsk)
       const bot = this.bots.find(b => b.id === msg.id);
       if (bot) {
         if (msg.k === 'perfect') bot.actor.notify('perfect', msg);   // (msg.b: it was a tankbuster)
@@ -384,6 +396,9 @@ class RaidHost {
       },
       positional: () => positionalOf(bot, host.sim.boss),
       allyTarget: (actor, ab) => {
+        // a raise being cast lands on the one it was started on, whatever the bot has turned to since (bots.js raiseFor)
+        const rf = bot.raiseFor;
+        if (rf && ab.allowDead && host.sim.t < rf.until) { const rs = host.sim.ps.get(rf.id); if (rs && !rs.alive) return rf.id; }
         const t = bot.healTarget;
         if (t == null) return bot.id;
         const s = host.sim.ps.get(t);
