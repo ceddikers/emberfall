@@ -2424,12 +2424,27 @@ function driftOrbit(k, pos, moving) {
   const g = k.g;
   if (k.has('roost')) { k.buff('orbit', 5, {}, 5, 5); driftOrbitCut(k); }   // (Roost, spec row VII: a full Orbit that needs no circling)
   const t = moving && pos ? k.env.target(DRIFT_NEAR) : null;
-  if (!t || t.x == null) { g.orbA = null; return; }
-  const a = Math.atan2(pos.y - t.y, pos.x - t.x);
-  if (g.orbA != null) g.orbAcc = (g.orbAcc || 0) + Math.abs(driftAngDiff(a, g.orbA));
+  if (!t || t.x == null) { g.orbA = null; g.loop = 0; return; }   // (stop circling and the loop starts over)
+  const a = Math.atan2(pos.y - t.y, pos.x - t.x), da = g.orbA != null ? Math.abs(driftAngDiff(a, g.orbA)) : 0;
+  g.orbAcc = (g.orbAcc || 0) + da;
   g.orbA = a;
   while (g.orbAcc >= 1) { g.orbAcc -= 1; k.buff('orbit', 5, {}, 5, 1); }
+  driftLoop(k, da);
   driftOrbitCut(k);
+}
+// Full Circle: every whole loop flown unbroken round the target close in (a Hook Turn is half of one) ends in a dive:
+// the hawk stoops on it (DRIFT_STOOP_POT, up to 30% more with Drift) and the dive gives 10 Drift
+const DRIFT_STOOP = { id: 'stoop', name: 'Full Circle' }, DRIFT_STOOP_POT = 70;
+function driftLoop(k, da) {
+  const g = k.g;
+  g.loop = (g.loop || 0) + da;
+  if (g.loop < Math.PI * 2) return;
+  g.loop -= Math.PI * 2;
+  if (!k.env.target(DRIFT_NEAR)) return;
+  k.damage(DRIFT_STOOP_POT * (1 + 0.3 * driftK(k)), { ab: DRIFT_STOOP });
+  driftAdd(k, 10);
+  k.stats.stoops = (k.stats.stoops || 0) + 1;
+  k.fx('stoop');
 }
 // the full-Orbit cut: Carve strikes on its own every 1.4s (1s in Roost); Spiral In (spec row VI) makes each one 5% harder than the last (up to 25%)
 function driftOrbitCut(k) {
@@ -2942,7 +2957,7 @@ TALENT_ABILITIES.alembist_quicksilver = { cls: 'alembist', ab: Object.assign(ale
 
 if (typeof module !== 'undefined') Object.assign(module.exports, { kitMoveDest, kitSegDist, THERMIST, thermSpell, thermMove, thermSettle, thermShock, thermBrink, thermMult, thermAt,
   thermEdgeCast, thermEquil, thermUtility, thermInvert, thermPlan, thermTick, thermOverload, DRIFT, DRIFT_BODY, DRIFT_NEAR, DRIFT_REACH, driftAdd, driftTick, driftPass, driftK, driftMax,
-  driftSpend, driftHook, driftRiposte, TALENT_ABILITIES });
+  driftSpend, driftHook, driftRiposte, driftLoop, TALENT_ABILITIES });
 
 // ===================================================================================================================
 // ADVANCED TANKS (tanks-2): Gorgemaw and Oathbroker (docs/plans/2026-10-new-classes.md). Each one leans on the host:
@@ -3612,6 +3627,7 @@ const IRONPALM = {
   FLOW_BREATH: 12, FLOW_LOW: 40,   // Flowing Palms with all three palms Crisp, finished under 40 Breath, gives 12 back
   TAP_REFILL: 0.75,  // winded and still tapping: Breath comes back at this share of the resting pace
   READ: { pct: 0.2, dur: 1.2, counter: 63 },
+  PERFECT: 0.5, PERFECT_REST: 8,   // Perfect Form (talent): a named move with every press Crisp echoes its finishing blow at this strength, at most once every 8s
   pool: { key: 'breath', max: 100, regen: 11, rest: 36, delay: 0.45 },   // (delay: counted from the end of the last press's recovery, engine.js)
 };
 const IP_SLOT = { L: 0, H: 1, K: 2 };
@@ -3727,7 +3743,7 @@ function ipPress(k, ab) {
   g.str = st.s; g.lastPress = now;
   k.stats.presses = (k.stats.presses || 0) + 1;
   if (st.open) { ipBreath(k, inp.cost); k.consume('opening'); k.stats.openings = (k.stats.openings || 0) + 1; }
-  else if (crisp) ipBreath(k, inp.cost * (k.talent('ironpalm_clean') ? 1 : IRONPALM.CRISP_SAVE));
+  else if (crisp) ipBreath(k, inp.cost * IRONPALM.CRISP_SAVE);
   if (crisp) { k.stats.crisp = (k.stats.crisp || 0) + 1; k.env.emit({ type: 'fxLocal', name: 'crisp', data: { x } }); }
   k.ultGain(crisp ? IRONPALM.ULT_CRISP : IRONPALM.ULT_PRESS);   // (Hundred Palms: every press of a string, a Crisp one a little more)
   let pot = inp.pot * (x === 'L' && k.has('guard') ? 1.3 : 1);
@@ -3746,6 +3762,13 @@ function ipPress(k, ab) {
     }
     if (k.def.avalanche) k.buff('rush', k.has('slide') ? 30 : IRONPALM.RUSH_FADE, {}, IRONPALM.RUSH_MAX, mv.seq.length >= 4 ? 2 : 1);   // (a long move: 2)
     if (mv.finish) mv.finish(k, mv, st);
+    // Perfect Form (talent): a named move with every press Crisp strikes again a moment later, its finishing blow at half strength
+    if (k.talent('ironpalm_perfect') && now >= (g.perfectAt || 0) && (st.open || (g.keys.length >= mv.seq.length && g.keys.slice(-mv.seq.length).every(e => e.crisp)))) {
+      g.perfectAt = now + IRONPALM.PERFECT_REST;
+      const echo = (pot + (mv.flurry ? mv.bonus * bonusMult : 0)) * IRONPALM.PERFECT;
+      k.after(0.3, () => { k.damage(echo, { ab: mv, mult, extra: true }); k.fx('perfectForm', { id: mv.id }); });
+      k.stats.perfectForm = (k.stats.perfectForm || 0) + 1;
+    }
     // the spec rows: Flood Tide (Still Water, VI) echoes a named move after a perfect Read; Cascade (Avalanche, VI) drops a rockfall behind a long one
     if (k.has('flood')) { k.consume('flood'); k.damage(25, { ab: mv }); k.fx('echo-palm'); }
     if (k.talent('ironpalm_cascade') && mv.seq.length >= 4 && k.stacks('rush')) { k.damage(5 * k.stacks('rush'), { ab: mv }); k.fx('aftershock'); }
@@ -5984,7 +6007,8 @@ if (typeof module !== 'undefined') Object.assign(module.exports, { TIDE, tideF, 
 //   stride, drop {x, y} (a small light), trail {dx, dy}, festival, wisp, eternal {x, y}, sparks {x, y}, pillar {x, y}.
 // ===================================================================================================================
 const LANTERN = { R: 110, LIFE: 18, BURN: 12, HAND_R: 90, HAND_LIFE: 12, MAX: 3, EMB_MAX: 4, EMB_EVERY: 5, TRIM: 0.25, REACH: 200,
-  BEACON_R: 150, BEACON_MAX: 2, SMALL_R: 75, SMALL_LIFE: 6, SMALL_MAX: 6, STRIDE: 10, STEP: 60, FLOAT_R: 70, FLOAT_LIFE: 12, LIGHT: 8 };
+  BEACON_R: 150, BEACON_MAX: 2, SMALL_R: 75, SMALL_LIFE: 6, SMALL_MAX: 6, STRIDE: 10, STEP: 60, FLOAT_R: 70, FLOAT_LIFE: 12, LIGHT: 8,
+  FLARE: 340 };   // (Flare's burst for each glow: big enough to lift a party out of a Hard raidwide)
 const LK_KIND = { floor: 0, beacon: 1, hand: 2, small: 3, float: 4, eternal: 5 };
 const lkEmbMax = k => (k.talent('lanternkeeper_hoard') ? 5 : LANTERN.EMB_MAX);
 const lkLight = k => k.now < (k.g.lightUntil || 0);
@@ -6105,7 +6129,7 @@ function lkFlare(k, ab, half) {
     const p = lkPos(k);
     for (const l of g.lan) if (lkMovable(l) || l.kind === 'beacon') { const d = Math.hypot(p.x - l.x, p.y - l.y); if (d > 1) { const m = Math.min(40, d); l.x += (p.x - l.x) / d * m; l.y += (p.y - l.y) / d * m; } }
   }
-  let pot = 240 * (half ? 0.5 : 1);
+  let pot = LANTERN.FLARE * (half ? 0.5 : 1);
   if (g.pilgrim && !half) { pot *= 1.3; g.pilgrim = false; }
   const sh = k.talent('lanternkeeper_flareshield') && !half ? lkShieldAmt(k, 120) : 0;
   lkBurst(k, k.healAmount(pot, { ab }).amount, Object.assign({ all: lkLight(k) ? 1 : 0 }, sh ? { sh, full: 1 } : null));
@@ -6185,7 +6209,7 @@ KITS.lanternkeeper = {
     },
     {
       id: 'flare', name: 'Flare', type: 'ogcd', target: 'self', cd: 20, anim: 'big',
-      desc: 'Every lantern bursts at once: everyone in a glow heals {h:240}, once for every glow they stand in. Each wick burns down a stage.',
+      desc: 'Every lantern bursts at once: everyone in a glow heals {h:340}, once for every glow they stand in. Each wick burns down a stage.',
       glow: k => { const b = bossNow(k); return !!(b && b.wide) && k.g.lan.length > 0 && (k.g.inGlow >= 2 || lkLight(k)); },
       effect(k) {
         lkFlare(k, this, false);
@@ -6256,7 +6280,7 @@ ULTIMATES.lanternkeeper = {
   window: {
     dur: LANTERN.LIGHT,
     over: {
-      flare: { fxId: 'beaconflare', name: 'Lighthouse Flare', desc: 'Lighthouse: every lantern bursts at once, and the whole room is in the glow: everyone heals {h:240} for every lantern you have lit.', glow: () => true },
+      flare: { fxId: 'beaconflare', name: 'Lighthouse Flare', desc: 'Lighthouse: every lantern bursts at once, and the whole room is in the glow: everyone heals {h:340} for every lantern you have lit.', glow: () => true },
     },
     onEnd(k) { k.g.lightUntil = 0; k.fx('lk-lighthouseEnd'); },
   },

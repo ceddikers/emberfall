@@ -321,7 +321,7 @@ Two DPS built for players who want more to juggle. On the hero select their tile
 - **Hook Turn mirrors you through the target** (to the point opposite where you stood), which reads clearly and is the same rule for players and bots.
 - **Slipstream's lane speed** is applied on each player's own client (a lane laid by anyone speeds up anyone running along it). Bots don't use lanes for speed; the Driftblade's own Drift refund from re-entering a lane works for everyone, since it lives in the kit.
 - **Stillpoint is a parry built on Brace's timing** (`mitigate` kind `brace`): the host's Perfect Block notice is what triggers the riposte, so it lands with the same fairness window as the Bastion's block.
-- **Orbit** (spec) counts how far you circle round your target at close range; at 5 stacks Carve strikes on its own every 1.4 s while you move. **Comet** (spec) doubles Drift to 200, fills it faster in straight lines (34 a second) and turns Crosswind into **Impact**: a charge 120 px clean through the target for 120 + 4 per Drift, a sure crit from 160.
+- **Orbit** (spec) counts how far you circle round your target at close range; at 5 stacks Carve strikes on its own every 1.4 s while you move, and every whole loop flown unbroken round it ends in a **Full Circle** dive (Hook Turn counts as half a loop). **Comet** (spec) doubles Drift to 200, fills it faster in straight lines (34 a second) and turns Crosswind into **Impact**: a charge 120 px clean through the target for 120 + 4 per Drift, a sure crit from 160.
 - **Passing Strikes credit the enemy you ran through** (damage events can now name their target, `tgt`), so cutting through an add doesn't hit the boss and vice versa.
 - **Kit moves** (`teleport` events with `where`: `dash`, `around`, `through`) play as a dash for players (the same animation and timing as the shared dash) and snap for bots; `kitMoveDest` in `kits.js` is the one rule both use.
 - **Art:** both classes ship without painted icons or portraits (data.js `art: { icons: false, portraits: false }`). The game draws small glyph icons for them instead of asking for files that don't exist, and the hero page shows the animated sprite. Briefs are in `docs/art/`.
@@ -1113,7 +1113,7 @@ The user picked: **story vignettes**, **one per spec**, **built so the spec's tr
 | **Pyromancer · Sigilmancer** (The Burning Circle) | Positioning | Combustion becomes **Ember Circle**: a 20 s circle at your feet (45 s cooldown). Inside it you cast 20% faster and deal 15% more damage; outside, nothing. Bots stay in theirs. |
 | **Thermist · Pendulum** (The Swinging Weight) | Fast swings | Every spell moves the dial a step further; every crossing of 0 adds Momentum (up to 5, +4% damage each, gone after 6 s without a crossing). The Pendulum turns back a step short of the edge. |
 | **Thermist · Zenith** (The Burning Edge) | Holding the edge | At ±5 you stay in **Redline** instead of overloading: +20% damage and the edge spell instant, but Strain builds (11 a second) until you vent it or melt down. Equilibrium becomes **Bleed Off** (15 s): vents 60 Strain behind a shield. |
-| **Driftblade · Orbit** (The Circling Hawk) | Smooth circles | Circling your target at close range builds Orbit (a stack per radian, up to 5, fading 2.5 s after you stop); Hook Turn swings you half a circle, 3 stacks at once; at 5, Carve strikes on its own every 1.4 s while you move. |
+| **Driftblade · Orbit** (The Circling Hawk) | Smooth circles | Circling your target at close range builds Orbit (a stack per radian, up to 5, fading 2.5 s after you stop); Hook Turn swings you half a circle, 3 stacks at once; at 5, Carve strikes on its own every 1.4 s while you move; every whole unbroken loop ends in a Full Circle dive that gives 10 Drift. |
 | **Driftblade · Comet** (The Long Charge) | Big, readable burst | Drift holds 200 and fills faster in straight lines. Crosswind becomes **Impact**: a charge clean through the target that releases everything at once (a sure crit from 160). |
 
 New support: kits can ask where their hero stands (`env.pos`, for the Sigilmancer's circle); heals can target `'lowest'` (the most hurt ally, optionally not a given one), healing pools on the floor (`pool` events, ticked in `fight.js`), and the Inquisitor's brand (`brand` events; `burstBrand` credits each burst to the Inquisitor).
@@ -1439,7 +1439,7 @@ The same rule as the Alembist: moves and behaviour, one plain number (Deep Lungs
 |---|---|---|
 | I | **Swallow's Return** | Crane Step flows on: K L H is a Rising Gate too, so it carries on into Heaven's Drop. |
 | I | **Echoing Palm** | Thousand Palms echoes: three more strikes a moment after the flurry, a third as strong. |
-| I | **Clean Hands** | A Crisp press costs no Breath at all. |
+| I | **Perfect Form** | A named move with every press Crisp strikes again a moment later: its finishing blow echoed at half strength. |
 | II | **Iron Shirt** | Tiger Wall also wraps you in a shield for 5 s. |
 | II | **Deflect** | Reading anything but a tankbuster throws the blow back: your counter hits about twice as hard. |
 | II | **Bell's Echo** | Temple Bell (*Avalanche:* Landslide) also heals the party a little. |
@@ -1453,7 +1453,7 @@ The same rule as the Alembist: moves and behaviour, one plain number (Deep Lungs
 | V | **Falling Mountain** | Heaven's Drop shakes the ground: an aftershock a second later. |
 | V | **Hundred Hands** | Thousand Palms leaves the guard open for 6 s: Light presses hit 30% harder. |
 
-Single talents stay at or under +5.8% pro DPS (Falling Mountain +5.8%, Deflect +5.0% in Still Water, Swallow's Return +2.7 to +3.5%); Clean Hands, Deep Lungs and Quiet Mind read near 0 for the pro, whose Read pauses already refill it, but they carry a player who presses faster than the pro model.
+Single talents stay at or under +5.8% pro DPS (Falling Mountain +5.8%, Deflect +5.0% in Still Water, Swallow's Return +2.7 to +3.5%); Perfect Form reads about +5% (its echo rests 8 s); Deep Lungs and Quiet Mind read near 0 for the pro, whose Read pauses already refill it, but they carry a player who presses faster than the pro model.
 <!-- /ironpalm talents -->
 
 ## 5. What's built (code map)

@@ -579,7 +579,7 @@ TALENTS.ironpalm = [
   [
     { id: 'ironpalm_swallow', name: 'Swallow\'s Return', ab: 'kick', text: 'Crane Step now flows on: Crane Step then Heavy (K L H) is a Rising Gate too, so it can carry on into Heaven\'s Drop.' },
     { id: 'ironpalm_echo', name: 'Echoing Palm', ab: 'fist', text: 'Thousand Palms now echoes: three more strikes of {d:13.2} land a moment after the flurry.' },
-    { id: 'ironpalm_clean', name: 'Clean Hands', ab: 'palm', text: 'A Crisp press now costs no Breath at all.' },
+    { id: 'ironpalm_perfect', name: 'Perfect Form', ab: 'palm', text: 'A named move with every one of its presses Crisp now strikes again a moment later: an echo of its finishing blow at half strength. Once every 8s at most.' },
   ],
   [
     { id: 'ironpalm_shirt', name: 'Iron Shirt', ab: 'kick', text: 'Tiger Wall now also wraps you in a {s:130} shield for 5s.' },
