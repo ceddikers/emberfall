@@ -12,6 +12,8 @@ const vm = require('vm');
 const probs = [];
 const check = (ok, what) => { if (!ok) probs.push(what); };
 const sleep = ms => new Promise(r => setTimeout(r, ms));
+// wait until cond() holds, up to ms (a busy machine can be slow to deliver the stub's ticks)
+const until = async (cond, ms = 3000) => { const end = Date.now() + ms; while (!cond() && Date.now() < end) await sleep(10); };
 
 // ------------------------------------------------------------------------------------------------ 1. the network layer
 // A tiny stand-in for PeerJS: peers by id, data connections as linked pairs, messages JSON-copied and delivered a tick later.
@@ -88,7 +90,8 @@ async function netTests() {
   check(log.includes('hold 2'), `the host should hold the slot when the link drops (log: ${log})`);
   check(!hostSaw.some(s => s === 'leave 2'), 'a held player has not left');
   check(a.link === 'lost' || aSaw.includes('linkback'), 'the tab notices and starts to rejoin');
-  await sleep(120);
+  await until(() => aSaw.includes('linkback') && log.includes('back 2'));
+  await sleep(20);
   check(aSaw.join() === 'linklost,linkback', `the tab should lose the link then get it back, once (saw ${aSaw})`);
   check(log.includes('back 2'), 'the host should hear that player 2 is back');
   check(a.link === 'ok' && a.id === 2 && a.online, 'back online as the same player');
@@ -128,7 +131,8 @@ async function netTests() {
   const wc = await c.join(host.room, 'Cy');
   await sleep(20);
   peers.get([...peers.keys()].filter(k => k.startsWith('anon')).pop()).conns.forEach(x => x.close());
-  await sleep(400);
+  await until(() => cSaw.includes('disconnect') && hostSaw.includes('leave ' + wc.id));
+  await sleep(20);
   check(hostSaw.includes('leave ' + wc.id), 'no raid: a drop removes the player as before');
   check(cSaw.join() === 'linklost,disconnect', `a slot nobody holds: the tab learns it at once and gives up (saw ${cSaw})`);
 
@@ -141,7 +145,8 @@ async function netTests() {
   await sleep(20);
   const dc = peers.get([...peers.keys()].filter(k => k.startsWith('anon')).pop()).conns[0];
   dc.dropLocal();
-  await sleep(120);
+  await until(() => dSaw.includes('linkback') || dSaw.includes('disconnect'));
+  await sleep(20);
   check(dSaw.join() === 'linklost,linkback', `a link only the tab noticed: rejoined (saw ${dSaw})`);
   check(log.includes('back ' + wd.id) && !log.includes('hold ' + wd.id), `taken over without a hold (log ${log})`);
   check(!hostSaw.includes('leave ' + wd.id), 'and still not a leave');
@@ -153,7 +158,8 @@ async function netTests() {
   const fc = forger.connect('emberfall-v1-' + host.room);
   fc.on('open', () => fc.send({ t: 'hello', name: 'Eve', rejoin: 1, tok: 'AAAAAAAAAAAAAAAAAAAAAAAA' }));
   fc.on('data', m => answers.push(m.t));
-  await sleep(50);
+  await until(() => answers.length > 0);
+  await sleep(20);
   check(answers.join() === 'norejoin', `a made-up token is refused (got ${answers})`);
   // and a real player's token cannot be taken by someone who never held it: it needs the exact token, which the host never shares
   check(!JSON.stringify(host.hostHandlers).includes('tok'), 'the token is not exposed');
