@@ -56,7 +56,7 @@ class PvpSim extends FightSim {
     this.sudden = false; this.result = null; this.lastClock = -9;
     this.focus = {};   // what each player last hit (for a damage event that doesn't name its target)
     const b = this.boss; b.untargetable = true; b.hp = b.maxHp = 1; b.x = 0; b.y = 0;
-    for (const s of this.ps.values()) { s.threat = 0; s.maxHp = s.hp = Math.round(s.maxHp * (PVP.TEAM_HP[s.role] || 1)); }
+    for (const s of this.ps.values()) { s.maxHp = s.hp = Math.round(s.maxHp * (PVP.TEAM_HP[s.role] || 1)); }
   }
   addPlayer(p) {
     super.addPlayer(p);

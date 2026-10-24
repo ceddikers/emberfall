@@ -64,6 +64,7 @@ class RaidHost {
     this.spawnR = Math.min(330, ARENA.inner - 70);   // bots start in a ring below the boss, clear of the walls
     this.bots = (opts.bots || []).map((cid, i) => this.makeBot(cid, i));
     this.pull = new PullLog();   // (the pull review: PullLog above)
+    this.seen = new Map();       // what the sim has told the clients that still stands (note() below), for a rejoining or resyncing player's snapshot
     this.sim = new FightSim(this.def, this.mode, () => this.allPlayers(), msg => this.onSimMsg(msg), rngSeed, { hpPct: this.bond.hp, waitPull: !!opts.waitPull, practiceFrom: opts.practiceFrom || 0 });
     this.lastBotBroadcast = -1;
   }
@@ -82,6 +83,136 @@ class RaidHost {
       taken: [], healTarget: null, nextAct: 0 };
     bot.actor = new CombatActor(cls, bot, this.botWorld(bot), this.rng);
     return bot;
+  }
+
+  // ---------------------------------------------------------------- a dropped player's place
+  // A joined player's link dropped: a bot plays their hero meanwhile. It carries the player's own id, so the sim's health,
+  // shield, threat and tally for them simply carry on, and clients draw it as that player (their casts and moves arrive
+  // under their id). h: { id, name, cls, spec, role, x, y, a }. Null if it can't (no such class, or one is already in).
+  standIn(h) {
+    const cls = CLASSES.find(c => c.id === h.cls);
+    if (!cls || this.bots.some(b => b.id === h.id)) return null;
+    this.standSeq = (this.standSeq || 0) + 1;
+    const bot = { id: h.id, name: h.name, cls, spec: h.spec || null, role: h.role || cls.role, bot: true, standIn: true, slot: 40 + this.standSeq,
+      x: Number.isFinite(h.x) ? h.x : 0, y: Number.isFinite(h.y) ? h.y : this.spawnR, a: Number.isFinite(h.a) ? h.a : -Math.PI / 2, moving: false, plan: null, nextThink: 0,
+      taken: [], healTarget: null, nextAct: 0 };
+    bot.actor = new CombatActor(cls, bot, this.botWorld(bot), this.rng);
+    this.bots.push(bot);
+    return bot;
+  }
+  hasStandIn(id) { return this.bots.some(b => b.id === id && b.standIn); }
+  // the player is back (or gone for good): the bot steps out; where it left their hero, or null if there was none
+  releaseStandIn(id) {
+    const i = this.bots.findIndex(b => b.id === id && b.standIn);
+    if (i < 0) return null;
+    const [bot] = this.bots.splice(i, 1);
+    return { x: bot.x, y: bot.y, a: bot.a };
+  }
+
+  // ---------------------------------------------------------------- the snapshot
+  // The sim tells clients most of the fight once, as it happens (a telegraph goes up, a cast begins). A client that
+  // missed it (a dropped link) or drifted needs the picture as it stands now. note() remembers each such message while
+  // what it described still stands; snapshot() replays them with how long ago each began (el), beside the sim's own
+  // periodic reports (boss, party, adds, room, upcoming moves), asked for now. The client plays them through its usual
+  // handlers with its clock set back by el, so a half-grown telegraph is half-grown (main.js applySnapshot).
+  note(msg) {
+    const S = this.seen, t = this.sim ? this.sim.t : 0;
+    switch (msg.t) {
+      case 'tg': case 'pud': case 'teth': case 'zone': case 'roll': case 'reel': case 'sweep': case 'post': case 'azlink': {
+        if (msg.clear) { for (const k of [...S.keys()]) if (k.startsWith(msg.t + ':')) S.delete(k); break; }
+        S.set(msg.t + ':' + msg.id, { msg: Object.assign({}, msg), at: t });
+        break;
+      }
+      case 'tgx': S.delete('tg:' + msg.id); S.delete('azlink:' + msg.id); break;
+      case 'tethx': if (msg.clear) { for (const k of [...S.keys()]) if (k.startsWith('teth:')) S.delete(k); } else S.delete('teth:' + msg.id); break;
+      case 'reelx': S.delete('reel:' + msg.id); break;
+      case 'bcast': S.set('bcast', { msg: Object.assign({}, msg), at: t }); break;
+      case 'bcastend': S.delete('bcast'); break;
+      case 'husk': case 'eggs': case 'lunge': S.set(msg.t + ':' + (this.seenN = (this.seenN || 0) + 1), { msg: Object.assign({}, msg), at: t }); break;
+      case 'edgewarn': S.set('edgewarn', { msg: Object.assign({}, msg), at: t }); break;
+      case 'edge': S.delete('edgewarn'); break;
+      // a room moment: the long ones (a standing room state) are replaced by the next of their kind, the short ones pile up
+      case 'roomev': {
+        const long = (msg.dur || 0) >= 20;
+        if (msg.dur === 0) { S.delete('roomev:' + msg.k); break; }   // (an empty one clears its kind: the brood clock)
+        if (!(msg.dur > 0)) break;
+        S.set('roomev:' + msg.k + (long ? '' : ':' + (this.seenN = (this.seenN || 0) + 1)), { msg: Object.assign({}, msg), at: t });
+        break;
+      }
+      // a class's shared state: the latest report (an empty one clears it)
+      case 'thr': case 'dolls': case 'hounds': case 'lamps': S.set(msg.t, { msg: Object.assign({}, msg), at: t }); break;
+      case 'fight': if (msg.s === 'clear' || msg.s === 'wipe') this.lastFight = msg; break;
+    }
+    if (S.size > 600) this.pruneSeen();
+  }
+  // does what this message described still stand?
+  stands(key, rec) {
+    const sim = this.sim, t = sim.t, m = rec.msg, id = m.id;
+    switch (key.split(':')[0]) {
+      case 'tg': case 'azlink': return sim.mechs.has(id);
+      case 'pud': return sim.puddles.some(p => p.id === id);
+      case 'teth': return sim.tethers.has(id);
+      case 'zone': return sim.zones.some(z => z.id === id);
+      case 'roll': return m.pre ? t < rec.at + (m.delay || 0) + 0.5 : sim.rollers.has(id);
+      case 'reel': return sim.reels.has(id);
+      case 'sweep': return sim.sweeps.has(id);
+      case 'post': return (sim.posts || []).some(c => c.id === id && c.end > t);
+      case 'bcast': return !!sim.boss.cast && sim.boss.cast.name === m.name && t < rec.at + (m.dur || 0);
+      case 'husk': case 'eggs': case 'roomev': return t < rec.at + (m.dur || 0);
+      case 'lunge': return t < rec.at + (m.delay || 0) + (m.n || 0) * (m.step || 0) + 1;
+      case 'edgewarn': return !!sim.edgeNext;
+      case 'thr': case 'dolls': case 'hounds': case 'lamps': return Array.isArray(m.l) && m.l.length > 0;
+      default: return true;
+    }
+  }
+  pruneSeen() { for (const [k, rec] of [...this.seen]) if (!this.stands(k, rec)) this.seen.delete(k); }
+
+  // Run a sim broadcast for its messages only (nothing is sent, and the sim's "already sent" marks are put back so the
+  // regular broadcasts to everyone else are not swallowed).
+  capture(fn) {
+    const sim = this.sim, keep = ['propsDirty', 'lastPropsSend', 'floorSent', 'floorSentAt', 'addsDirty', 'nextKey', 'lastNext', 'gateKey', 'gateSentAt'].map(k => [k, sim[k]]);
+    const emit = sim.emit, out = [];
+    sim.emit = m => out.push(m);
+    try { fn(); } finally { sim.emit = emit; for (const [k, v] of keep) sim[k] = v; }
+    return out;
+  }
+
+  // The fight as it stands, for one player: { rid?, live, msgs: [{ m, el? }], ar } (main.js adds the rest, host-side only:
+  // positions and the raid's start message). Everything in msgs is a message clients already understand.
+  snapshot() {
+    const sim = this.sim, t = sim.t, msgs = [];
+    const add = (m, el) => msgs.push(el > 0.05 ? { m, el: Math.round(el * 100) / 100 } : { m });
+    // the sim's own reports, asked for now (the last of each kind; the floor goes along with the props)
+    const rep = new Map();
+    for (const m of this.capture(() => {
+      sim.floorSent = null;
+      sim.broadcastBoss(); sim.broadcastParty(); sim.broadcastAdds(); sim.broadcastProps(); sim.broadcastNext(true);
+    })) rep.set(m.t, m);
+    if (rep.has('fb')) rep.get('fb').g = sim.gates.map(g => [g.f, g.wall]);   // (the gates ride along only now and then)
+    for (const k of ['fb', 'fps', 'adds', 'props', 'bnext']) if (rep.has(k)) add(rep.get(k));
+    if (sim.state === 'live') add({ t: 'mtr', ft: +t.toFixed(1), d: Object.entries(sim.stats).map(([id, st]) => Scoring.pack(Number(id), st)) });
+    if (this.pullAt != null && this.pullAt > 0) add({ t: 'pcd', n: this.pullAt });
+    // what is on the floor and in the air, in the order it began
+    this.pruneSeen();
+    const live = [...this.seen].sort((a, b) => a[1].at - b[1].at);
+    for (const [key, rec] of live) {
+      let m = rec.msg;
+      if (key.startsWith('tg:')) { const mech = sim.mechs.get(m.id); m = Object.assign({}, m, { shape: JSON.parse(JSON.stringify(mech.shape)) }); }   // (a shape that follows someone has moved since)
+      add(m, t - rec.at);
+    }
+    // buffs on the party and on single allies
+    for (const b of this.partyBuffs) if (b.end > t) add({ t: 'pbuff', kind: b.kind, value: b.value, dur: b.end - t, from: null });
+    for (const b of this.allyBuffs) if (b.end > t) add({ t: 'abuff', to: b.to, id: b.id, kind: b.kind, value: b.value, dur: b.end - t, from: b.from });
+    for (const id of (this.rezAsks || new Map()).keys()) { const s = sim.ps.get(id); if (s && !s.alive && !s.left) add({ t: 'rez', id }); }
+    // boss-specific standing state, read off the sim (each only exists in its own fight)
+    if (sim.polarity && sim.polarity.size) add({ t: 'pol', m: [...sim.polarity].map(([id, s]) => [id, s]) });
+    if (sim.lanterns && sim.lanterns.length) add({ t: 'lant', l: sim.lanterns.map(l => [l.id, Math.round(l.x), Math.round(l.y), l.carrier ?? null, l.last ? 1 : 0]) });
+    if (sim.doomed && sim.doomed.size) for (const [id, end] of sim.doomed) add({ t: 'doomed', ids: [id], dur: Math.max(0.5, end - t) });
+    if (sim.knights && sim.knights.length) add({ t: 'knights', k: sim.knights.map(k => [k.id, k.x, k.y, +k.f.toFixed(2)]) });
+    if (sim.night) add({ t: 'night', on: 1 });
+    // the bots, where they stand now
+    if (this.bots.length) add({ t: 'bots', b: this.bots.map(b => [b.id, Math.round(b.x), Math.round(b.y), +b.a.toFixed(2), b.moving ? 1 : 0]), c: +this.t.toFixed(3) });
+    return { live: sim.state === 'live', state: sim.state, msgs, ar: ARENA.kind === 'circle' ? ARENA.r : null, result: sim.state === 'clear' || sim.state === 'wipe' ? this.lastFight || null : null };
   }
 
   allPlayers() {
@@ -123,7 +254,7 @@ class RaidHost {
       const s = sim.ps.get(p.id) || {};
       // a Gloomsworn's Hollow, for the healer bots (BotAI.hollowNeed): the debt, what has been healed back, and the seconds left
       const hl = s.hollow, t = sim.t;
-      return { id: p.id, x: p.x, y: p.y, role: p.role, alive: !!s.alive, hp: s.hp || 0, maxHp: s.maxHp || 1, left: s.left, threat: s.threat || 0,
+      return { id: p.id, x: p.x, y: p.y, role: p.role, alive: !!s.alive, hp: s.hp || 0, maxHp: s.maxHp || 1, left: s.left,
         hollow: !!hl, debt: hl ? hl.debt : 0, healed: hl ? hl.heal : 0, hollowLeft: hl ? Math.max(0, hl.until - t) : 0, graceLeft: hl ? Math.max(0, hl.graceUntil - t) : 0 };
     });
     const b = sim.boss, lamps = sim.liveLamps ? sim.liveLamps() : [];
@@ -223,7 +354,7 @@ class RaidHost {
           const a = Math.atan2(-dy, -dx);
           const to = { x: bot.x + Math.cos(a) * 170, y: bot.y + Math.sin(a) * 170 };
           ARENA.clamp(to, 40);
-          this.emit({ t: 'cast', id: bot.id, i: 6, x: Math.round(bot.x), y: Math.round(bot.y), tx: Math.round(to.x), ty: Math.round(to.y), ally: null });
+          this.emit({ t: 'cast', id: bot.id, i: 6, x: Math.round(bot.x), y: Math.round(bot.y), tx: Math.round(to.x), ty: Math.round(to.y), ally: null, s: 1 });
           bot.x = to.x; bot.y = to.y; bot.reel = null;
           this.sim.snapReel(bot.id);
         } else { const step = Math.min(d, rl.speed * dt); bot.x += dx / d * step; bot.y += dy / d * step; }
@@ -283,6 +414,7 @@ class RaidHost {
   onSimMsg(msg) {
     if (this.sim && this.sim.state === 'live') this.pull.rec(msg, this.sim.t);
     if (msg.t === 'fight' && (msg.s === 'clear' || msg.s === 'wipe')) msg.pr = this.pull.out(msg, this.sim.t);   // (sent with the result: the results card's pull review)
+    this.note(msg);
     // things the bots need to know about themselves
     if (msg.t === 'fev') {
       if (msg.k === 'raised' && this.rezAsks) this.rezAsks.delete(msg.id);   // (a raise answers the ask: rezAsk)
@@ -444,7 +576,7 @@ class RaidHost {
             if (en) bot.lastEnemy = en.id;
             // (a: the move's id, so a talent's move or a paced kit's named string shows as itself; slot: its button)
             host.emit({ t: 'cast', id: bot.id, i: actor.abilities.includes(ev.ab) ? actor.abilities.indexOf(ev.ab) : (ev.ab.slot ?? -1), a: ev.ab.fxId || ev.ab.id, x: Math.round(bot.x), y: Math.round(bot.y),
-              tx: Math.round(en ? en.x : host.sim.boss.x), ty: Math.round(en ? en.y : host.sim.boss.y), ally: typeof ev.target === 'number' ? ev.target : null, st: ev.st });
+              tx: Math.round(en ? en.x : host.sim.boss.x), ty: Math.round(en ? en.y : host.sim.boss.y), ally: typeof ev.target === 'number' ? ev.target : null, st: ev.st, s: 1 });   // (s: in the raid; a stand-in's casts are drawn like a player's)
             break;
           }
           case 'damage':
