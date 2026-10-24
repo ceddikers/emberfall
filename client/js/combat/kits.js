@@ -4332,7 +4332,7 @@ function alemUltThrow(k, v, t, m) {
 // Strung buff, mariStrung).
 const MARI = { STRETCH: 300, REACH: 64, SPEED: 360, LIMP: 4, REGEN: 15, YANK: 1.2, RING: 24, TAUT: 12, TAUT_MAX: 72, STAGE: 6, FINALE: 253,
   JAB: 40, JAB_EVERY: 4, JAB_FAST: 2, QUICK: 3, CUE: 180, FLOURISH: 100, STRUNG: 0.05,
-  RIPOSTE: 90, RIPOSTE_EVERY: 4, LASH: 0.7, CORD: 480 };
+  DRAW: 0.5, HELD: 10, RIPOSTE: 90, RIPOSTE_EVERY: 4, LASH: 0.7, CORD: 480 };
 const MARI_STRING = { id: 'string', name: 'Bladed String' };
 const MARI_JAB = { id: 'jab', name: 'Jab' };   // (the Doll's own jab: no button, its hits are named for the meters)
 const MARI_FAR = { target: 'enemy', range: 2000 };
@@ -4380,7 +4380,7 @@ function mariLose(k, i, why) {
   g.loseAt = now + 0.4;   // one blow costs one String, even if it lands on both Dolls
   if (why === 'hit' && k.talent('marionettist_standin') && now < (g.swapAt || -9) + 3) { k.fx('standin'); return; }
   if (why === 'far' && k.talent('marionettist_slack')) return;   // (Slack Line: it is only yanked back)
-  g.strings = Math.max(0, g.strings - 1); g.taut = 0;   // (a torn String slackens Taut String)
+  g.strings = Math.max(0, g.strings - 1); g.taut = g.held = 0;   // (a torn String slackens Taut String)
   g.regenAt = now + MARI.REGEN;
   k.stats.strings = (k.stats.strings || 0) + 1;
   k.fx('strtear', { i, w: why === 'hit' ? 1 : 0 });
@@ -4481,11 +4481,11 @@ function mariTick(k) {
     const R = mariER(e) + 10;
     const n = g.dolls.filter(d => kitSegDist(e.x, e.y, p.x, p.y, d.x, d.y) <= R).length;
     if (n) {
-      g.lineAt = now + 1; k.damage((48 + (g.taut || 0)) * n, { ab: MARI_STRING, tgt: e.id, extra: true }); g.taut = Math.min(MARI.TAUT_MAX, (g.taut || 0) + MARI.TAUT);
+      g.lineAt = now + 1; g.held = g.strings >= 3 ? (g.held || 0) + 1 : 0; k.damage((48 + (g.taut || 0)) * n, { ab: MARI_STRING, tgt: e.id, extra: true }); g.taut = Math.min(MARI.TAUT_MAX, (g.taut || 0) + MARI.TAUT);
       if (k.talent('marionettist_saw') && (g.sawN = (g.sawN || 0) + 1) % 5 === 0) { const c = abBase(k, 'cross'); if (c) k.reduceCooldown(c.id, 1.5); }   // (Saw, Cutting Line spec row VI)
     }
-    else g.taut = 0;
-  } else if (k.def.bladed && (!e || mariLimp(k))) g.taut = 0;
+    else g.taut = g.held = 0;
+  } else if (k.def.bladed && (!e || mariLimp(k))) g.taut = g.held = 0;
   // Held Breath (Cutting Line spec row VI): the boss begins a cast, and the line draws tight
   if (k.talent('marionettist_breath')) onBossCast(k, () => { g.taut = MARI.TAUT_MAX; k.buff('heldbreath', 8); });
   // Twin Strings: a Cross-Cut's line lingers and cuts whatever still crosses it
@@ -4515,15 +4515,18 @@ function mariHit(k, ab, pot, o = {}) {
   ds.forEach(() => { total += k.damage(pot * m, Object.assign({ ab, tgt: e.id !== 'dummy' ? e.id : undefined }, o)).amount; });
   return ds.length;
 }
+// Draw Tight (Cutting Line): the longer the line has been held across the enemy unbroken, the harder Cross-Cut and Grand Finale cut
+const mariDraw = k => k.def.bladed ? 1 + MARI.DRAW * Math.min(1, (k.g.held || 0) / MARI.HELD) : 1;
 function mariCross(k, ab) {
   const e = mariEnemy(k), p = mariPos(k);
   if (!e || mariLimp(k)) return;
   const R = mariER(e) + 12, m = k.def.dollMult || 1, lines = [], cue = k.consume('oncue');   // (On Cue: a Swap just before)
   const breath = k.consume('heldbreath') ? 1.5 : 1;   // (Held Breath, Cutting Line spec row VI)
+  const draw = mariDraw(k);
   let hits = 0;
   for (const d of k.g.dolls) {
     lines.push([p.x, p.y, d.x, d.y]);
-    if (kitSegDist(e.x, e.y, p.x, p.y, d.x, d.y) <= R) { hits++; k.damage(560 * m * (cue ? 2 : 1) * breath, { ab, tgt: e.id !== 'dummy' ? e.id : undefined }); }
+    if (kitSegDist(e.x, e.y, p.x, p.y, d.x, d.y) <= R) { hits++; k.damage(560 * m * (cue ? 2 : 1) * breath * draw, { ab, tgt: e.id !== 'dummy' ? e.id : undefined }); }
   }
   k.fx('cut', { n: hits });
   if (hits && k.talent('marionettist_house') && mariInStage(k)) k.partyBuff('dmg', 0.04, 8, { ab });   // (Packed House, Understudy spec row VI)
@@ -4687,7 +4690,7 @@ KITS.marionettist = {
         for (const d of k.g.dolls) { d.mode = 'finale'; d.until = end; }
         // one beat per hit (the routine's look follows them); Standing Ovation: the last one sends the Doll out quick
         for (let i = 0; i < hits; i++) k.after(gap * i, () => {
-          mariHit(k, ab, MARI.FINALE * (six && i === hits - 1 ? 0.5 : 1));   // (Full House: the sixth is a bow, half as hard)
+          mariHit(k, ab, MARI.FINALE * mariDraw(k) * (six && i === hits - 1 ? 0.5 : 1));   // (Full House: the sixth is a bow, half as hard)
           k.fx('finale-beat', { i, n: hits });
           if (i === hits - 1 && k.talent('marionettist_curtain')) mariQuick(k);
           if (k.talent('marionettist_garrote')) {   // (Garrote, Cutting Line spec row VII: each beat the line cuts as well, at 40% of its strength)
