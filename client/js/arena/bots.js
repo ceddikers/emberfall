@@ -13,6 +13,11 @@ const TANK_CDS = ['bulwark', 'zeal', 'undying', 'banner', 'sanctum', 'warcry', '
 // ... and the casts that hurt the whole party, which healers top people up for
 const RAID_CASTS = /^(Grease Fire|Simmer|Venom Mist|Tightening Web|Thunderclap|Thunder Crash|Static Field|Polarity Surge|Skyfall|Barrow Knell|Grave Marks|Gathering Storm|Thunderhead|Royal Tithe|Dirge|Gut Blast|Flare-Up|Last Orders|Gorge|Boil Over|Heavens Fall|Arcane Burst|Convergence|The Tide Rises)$/;
 
+// the rings of spots move() tries round a bot and round its home (radius 60, 130, 220, 330, twelve each): cos and sin of the angle
+// times the radius, as [dx, dy, dx, dy, ...], worked out once
+const BOT_RING = [];
+for (const r of [60, 130, 220, 330]) for (let i = 0; i < 12; i++) { const a = i * Math.PI / 6 + r * 0.01; BOT_RING.push(Math.cos(a) * r, Math.sin(a) * r); }
+
 const BotAI = {
   isMelee(cls) { const r = KITS[cls.id].abilities[0].range; return r === 'melee' || (typeof r === 'number' && r <= 130); },   // (a Reaper's scythe reaches 1.5x melee: it still stands in)
 
@@ -43,7 +48,20 @@ const BotAI = {
 
   // --- Volkar --------------------------------------------------------------------------------
   // polarity pairs: the living + and − players, each side in id order, matched one to one (leftovers stand alone)
+  // One bot's think (move, below) asks the same questions of the same view dozens of times, once per candidate spot. The planners
+  // that hand out jobs (towers, rods, bells, stones, cover, partners) answer for the whole party and don't depend on the spot, so
+  // while move() runs their answers are kept in BotAI._mc (for that view only: any other view, or a call from outside move, works
+  // everything out afresh). Nothing they read changes while a bot thinks.
+  mcOf(view) { const mc = this._mc; return mc && mc.view === view ? mc : null; },
   partner(me, view) {
+    const mc = this.mcOf(view);
+    if (!mc) return this.partnerOf(me, view);
+    if (!mc.partner) mc.partner = new Map();
+    let p = mc.partner.get(me);
+    if (p === undefined) { p = this.partnerOf(me, view); mc.partner.set(me, p); }
+    return p;
+  },
+  partnerOf(me, view) {
     const pol = view.polarity;
     if (!pol || !pol.has(me)) return null;
     const al = view.players.filter(p => p.alive && pol.has(p.id)).sort((a, b) => a.id - b.id);
@@ -54,14 +72,17 @@ const BotAI = {
   },
   // anything standing that shelters from Gale Slam: the rods' posts and rods still waiting for their bolt
   covers(view) {
+    const mc = this.mcOf(view);
+    if (mc && mc.covers) return mc.covers;   // (only ever read)
     const out = (view.posts || []).map(c => ({ x: c.x, y: c.y }));
     for (const m of view.mechs) if (m.tag === 'rod') out.push({ x: m.shape.x, y: m.shape.y });
+    if (mc) mc.covers = out;
     return out;
   },
   sheltered(px, py, view) {
     const b = view.boss;
     return this.covers(view).some(c => {
-      const cx = c.x - b.x, cy = c.y - b.y, cd = Math.hypot(cx, cy);
+      const cx = c.x - b.x, cy = c.y - b.y, cd = hypot2(cx, cy);
       if (cd < 1) return false;
       const ux = cx / cd, uy = cy / cd, qx = px - b.x, qy = py - b.y;
       return qx * ux + qy * uy >= cd - 20 && Math.abs(-qx * uy + qy * ux) <= 34;   // a little inside the real shelter
@@ -70,6 +91,12 @@ const BotAI = {
   // which rod this bot should catch: players without Conductive take them in order, bots before humans (a bot can't
   // count on a person knowing which rod is "theirs"), tanks last
   rodFor(me, view) {
+    const mc = this.mcOf(view);
+    let mine = mc ? mc.rod : undefined;
+    if (mine === undefined) { mine = this.rodPlan(view); if (mc) mc.rod = mine; }
+    return mine === null ? null : (mine[me] ?? null);
+  },
+  rodPlan(view) {
     const rods = view.mechs.filter(m => m.tag === 'rod').sort((a, b) => a.id - b.id);
     if (!rods.length) return null;
     const deb = id => view.debuffs(id).conductive ? 1 : 0, human = p => (p.id < 1000 ? 1 : 0);
@@ -79,18 +106,23 @@ const BotAI = {
     for (const p of order) {
       if (!free.length) break;
       let bi = 0;
-      for (let i = 1; i < free.length; i++) if (Math.hypot(free[i].shape.x - p.x, free[i].shape.y - p.y) < Math.hypot(free[bi].shape.x - p.x, free[bi].shape.y - p.y)) bi = i;
+      for (let i = 1; i < free.length; i++) if (hypot2(free[i].shape.x - p.x, free[i].shape.y - p.y) < hypot2(free[bi].shape.x - p.x, free[bi].shape.y - p.y)) bi = i;
       mine[p.id] = free.splice(bi, 1)[0].id;
     }
-    return mine[me] ?? null;
+    return mine;
   },
 
   // Rod Strike: which standing stone this marked bot brings its bolt down on. The marked take the nearest uncharged
   // stone in turn (a charged one would discharge); null if this bot isn't marked
   stoneFor(me, view) {
+    const mc = this.mcOf(view);
+    let plan = mc ? mc.stone : undefined;
+    if (plan === undefined) { plan = this.stonePlan(view); if (mc) mc.stone = plan; }
+    return plan.marks.some(m => m.follow === me) ? plan.mine[me] || null : null;
+  },
+  stonePlan(view) {
     // people first (they'll take the stone nearest them), then the bots fit round them
     const marks = view.mechs.filter(m => m.tag === 'rodstrike').sort((a, b) => (a.follow >= 1000) - (b.follow >= 1000) || a.id - b.id);
-    if (!marks.some(m => m.follow === me)) return null;
     const free = (view.props || []).filter(p => p.kind === 'stone').sort((a, b) => (a.state > 0) - (b.state > 0));
     const mine = {};
     for (const m of marks) {
@@ -98,10 +130,10 @@ const BotAI = {
       if (!p || !free.length) continue;
       const cool = free.filter(s => !(s.state > 0)), pool = cool.length ? cool : free;
       let best = pool[0];
-      for (const s of pool) if (Math.hypot(s.x - p.x, s.y - p.y) < Math.hypot(best.x - p.x, best.y - p.y)) best = s;
+      for (const s of pool) if (hypot2(s.x - p.x, s.y - p.y) < hypot2(best.x - p.x, best.y - p.y)) best = s;
       mine[m.follow] = best; free.splice(free.indexOf(best), 1);
     }
-    return mine[me] || null;
+    return { marks, mine };
   },
 
   // any other one-person towers (Order Up!'s plates, Egg Sacs): the players take the nearest free one in turn, the
@@ -109,6 +141,12 @@ const BotAI = {
   // Towers that land one after another (Order Up!'s rail) are handed out in the order they land: each goes to whoever
   // can be standing in it in time (free by then, and not still Stuffed from an earlier one: m.stuff), nearest first.
   towerFor(me, view) {
+    const mc = this.mcOf(view);
+    let mine = mc ? mc.tower : undefined;
+    if (mine === undefined) { mine = this.towerPlan(view); if (mc) mc.tower = mine; }
+    return mine === null ? null : (mine[me] ?? null);
+  },
+  towerPlan(view) {
     const towers = view.mechs.filter(m => m.type === 'tower' && m.tag !== 'rod' && m.tag !== 'bell' && m.tag !== 'still').sort((a, b) => a.resolveAt - b.resolveAt || a.id - b.id);
     if (!towers.length) return null;
     const SPEED = 230;
@@ -120,7 +158,7 @@ const BotAI = {
       for (const p of al) {
         const s = st.get(p.id);
         if (s.full > m.resolveAt - 0.05) continue;   // still Stuffed when it lands
-        const arrive = s.free + Math.hypot(m.shape.x - s.x, m.shape.y - s.y) / SPEED, late = Math.max(0, arrive - (m.resolveAt - 0.35));
+        const arrive = s.free + hypot2(m.shape.x - s.x, m.shape.y - s.y) / SPEED, late = Math.max(0, arrive - (m.resolveAt - 0.35));
         const sc = late * 1000 + arrive + (s.tank ? 1.5 : 0) + s.n * 4;   // one each where it can be
         if (sc < bs) { bs = sc; best = p; }
       }
@@ -129,13 +167,23 @@ const BotAI = {
       if (mine[best.id] == null) mine[best.id] = m.id;
       s.x = m.shape.x; s.y = m.shape.y; s.free = m.resolveAt; s.full = m.resolveAt + (m.stuff || 0); s.n++;
     }
-    return mine[me] ?? null;
+    return mine;
   },
 
   // --- the room's props -----------------------------------------------------------------------
   // a cover mechanic: which prop this bot hides behind. Everyone takes a prop in id order, healthiest and nearest
   // first, at most `cap` to a prop (the mechanic's own cap, or enough to fit everyone, two at least)
   coverFor(me, view, m) {
+    const mc = this.mcOf(view);
+    let mine;
+    if (mc) {
+      if (!mc.cover) mc.cover = new Map();
+      mine = mc.cover.get(m);
+      if (mine === undefined) { mine = this.coverPlan(view, m); mc.cover.set(m, mine); }
+    } else mine = this.coverPlan(view, m);
+    return mine === null ? null : (mine[me] || null);
+  },
+  coverPlan(view, m) {
     const props = (view.props || []).filter(p => p.cover);
     if (!props.length) return null;
     const al = view.players.filter(p => p.alive).sort((a, b) => a.id - b.id);
@@ -145,18 +193,24 @@ const BotAI = {
       let best = null, bs = Infinity;
       for (const pr of props) {
         if (!room.get(pr)) continue;
-        const spot = PROPS.shadowSpot(m.src.x, m.src.y, pr, 30), s = Math.hypot(spot.x - p.x, spot.y - p.y) - (pr.maxHp ? pr.hp * 90 : 200);
+        const spot = PROPS.shadowSpot(m.src.x, m.src.y, pr, 30), s = hypot2(spot.x - p.x, spot.y - p.y) - (pr.maxHp ? pr.hp * 90 : 200);
         if (ARENA.sd(spot.x, spot.y) > -16) continue;
-        if ((view.puddles || []).some(pd => Math.hypot(pd.x - spot.x, pd.y - spot.y) < pd.r + 25)) continue;   // a pool in its shadow
+        if ((view.puddles || []).some(pd => hypot2(pd.x - spot.x, pd.y - spot.y) < pd.r + 25)) continue;   // a pool in its shadow
         if (s < bs) { bs = s; best = pr; }
       }
       if (best) { mine[p.id] = best; room.set(best, room.get(best) - 1); }
     }
-    return mine[me] || null;
+    return mine;
   },
   // Still Air (Volkar's Eye): each lit stone wants one person of its own charge. People keep the stone they're nearest
   // (of their charge); the bots take what's left of their charge, nearest first.
   stillFor(me, view) {
+    const mc = this.mcOf(view);
+    let mine = mc ? mc.still : undefined;
+    if (mine === undefined) { mine = this.stillPlan(view); if (mc) mc.still = mine; }
+    return mine === null ? null : (mine[me] ?? null);
+  },
+  stillPlan(view) {
     const pol = view.polarity, stones = view.mechs.filter(m => m.tag === 'still');
     if (!pol || !stones.length) return null;
     const mine = {}, taken = new Set(), al = view.players.filter(p => p.alive);
@@ -165,12 +219,12 @@ const BotAI = {
       let best = null, bd = Infinity;
       for (const m of stones) {
         if (taken.has(m.id) || m.charge !== pol.get(p.id)) continue;
-        const d = Math.hypot(m.shape.x - p.x, m.shape.y - p.y);
+        const d = hypot2(m.shape.x - p.x, m.shape.y - p.y);
         if (d < bd) { bd = d; best = m; }
       }
       if (best) { mine[p.id] = best.id; taken.add(best.id); }
     }
-    return mine[me] ?? null;
+    return mine;
   },
   // Butcher's Charge (Grubnak): where the tank stands so the charge runs into a brick wall, past no cask and away from
   // the stove line along the top wall
@@ -183,7 +237,7 @@ const BotAI = {
       const end = { x: b.x + c * L, y: b.y + s * L };
       if (end.y < -ARENA.hh + 90) continue;   // the stove line
       if (PROPS.ray(b.x, b.y, end.x, end.y, view.props || [], 50)) continue;
-      const spot = { x: b.x + c * 170, y: b.y + s * 170 }, sc = Math.min(L, 500) - Math.hypot(spot.x - b.x, spot.y - (b.y + 125)) * 0.1;
+      const spot = { x: b.x + c * 170, y: b.y + s * 170 }, sc = Math.min(L, 500) - hypot2(spot.x - b.x, spot.y - (b.y + 125)) * 0.1;
       if (ARENA.sd(spot.x, spot.y) > -40) continue;
       if (sc > bs) { bs = sc; best = spot; }
     }
@@ -193,11 +247,17 @@ const BotAI = {
   // --- the Hollow King -------------------------------------------------------------------------
   // Barrow Bells: people go to the bell they're nearest, then the bots fill whatever is still short, nearest first
   bellFor(me, view) {
+    const mc = this.mcOf(view);
+    let mine = mc ? mc.bell : undefined;
+    if (mine === undefined) { mine = this.bellPlan(view); if (mc) mc.bell = mine; }
+    return mine === null ? null : (mine[me] ?? null);
+  },
+  bellPlan(view) {
     const bells = view.mechs.filter(m => m.tag === 'bell').sort((a, b) => a.id - b.id);
     if (!bells.length) return null;
     const need = bells[0].need || 1, room = bells.map(() => need), mine = {};
     const al = view.players.filter(p => p.alive);
-    const dist = (p, m) => Math.hypot(m.shape.x - p.x, m.shape.y - p.y);
+    const dist = (p, m) => hypot2(m.shape.x - p.x, m.shape.y - p.y);
     for (const p of al.filter(q => q.id < 1000)) {
       let bi = 0; bells.forEach((m, i) => { if (dist(p, m) < dist(p, bells[bi])) bi = i; });
       mine[p.id] = bells[bi].id; room[bi]--;
@@ -208,7 +268,7 @@ const BotAI = {
       if (bi < 0) break;
       mine[p.id] = bells[bi].id; room[bi]--;
     }
-    return mine[me] ?? null;
+    return mine;
   },
   // where Doom sends this bot, if anywhere: the doomed walk into the nearest light; a lantern carrier takes it to the
   // doomed; one bot fetches a lantern for a doomed person; in the Long Night one bot carries the last lantern
@@ -216,7 +276,7 @@ const BotAI = {
     const doomed = view.doomed, lants = view.lanterns || [];
     if (!lants.length) return null;
     const me = bot.id, al = view.players.filter(p => p.alive);
-    const near = (p, list) => list.reduce((m, o) => (!m || Math.hypot(o.x - p.x, o.y - p.y) < Math.hypot(m.x - p.x, m.y - p.y) ? o : m), null);
+    const near = (p, list) => list.reduce((m, o) => (!m || hypot2(o.x - p.x, o.y - p.y) < hypot2(m.x - p.x, m.y - p.y) ? o : m), null);
     const doomedPs = doomed ? al.filter(p => doomed.has(p.id)) : [];
     const self = al.find(p => p.id === me);
     if (!self) return null;
@@ -236,7 +296,7 @@ const BotAI = {
     // a doomed person (not a bot, they walk themselves) needs a lantern brought: the nearest free helper goes
     if (!doomedPs.some(p => p.id < 1000) || carriers.size) return null;
     let best = null, bd = Infinity;
-    for (const p of helpers) { const l = near(p, free), d = Math.hypot(l.x - p.x, l.y - p.y); if (d < bd) { bd = d; best = p; } }
+    for (const p of helpers) { const l = near(p, free), d = hypot2(l.x - p.x, l.y - p.y); if (d < bd) { bd = d; best = p; } }
     if (!best || best.id !== me) return null;
     const l = near(self, free);
     return { x: l.x, y: l.y };
@@ -304,8 +364,8 @@ const BotAI = {
     // Frostbite (Hrimgar): a chilled bot walks to the nearest brazier and stands in its warmth
     if (view.bossId === 'titan' && view.debuffs(bot.id).frostbite) {
       let nb = null;
-      for (const p of view.props || []) if (p.kind === 'brazier' && (!nb || Math.hypot(p.x - bot.x, p.y - bot.y) < Math.hypot(nb.x - bot.x, nb.y - bot.y))) nb = p;
-      if (nb) { const d = Math.hypot(bot.x - nb.x, bot.y - nb.y) || 1; return { x: nb.x + (bot.x - nb.x) / d * 55, y: nb.y + (bot.y - nb.y) / d * 55 }; }
+      for (const p of view.props || []) if (p.kind === 'brazier' && (!nb || hypot2(p.x - bot.x, p.y - bot.y) < hypot2(nb.x - bot.x, nb.y - bot.y))) nb = p;
+      if (nb) { const d = hypot2(bot.x - nb.x, bot.y - nb.y) || 1; return { x: nb.x + (bot.x - nb.x) / d * 55, y: nb.y + (bot.y - nb.y) / d * 55 }; }
     }
     // on an add: melee hug it, ranged stand off to one side of it (out of any beam to its sibling)
     const homeId = bot.wantEnemy === 'hold' ? bot.addHome : bot.wantEnemy;
@@ -323,55 +383,102 @@ const BotAI = {
     return { x: b.x + (idx % 2 ? 170 : -170), y: b.y + 250 };
   },
 
-  danger(bot, px, py, view) {
+  // (the memo's pieces for danger(): who is alive, the earliest wave still to land, the telegraphs within 11 s with their time
+  // left and urgency, and the fires a Flambé or the stove line is about to light: none depends on the spot being scored)
+  aliveOf(view) {
+    const mc = this.mcOf(view);
+    if (!mc) return view.players.filter(p => p.alive);
+    return mc.alive || (mc.alive = view.players.filter(p => p.alive));
+  },
+  firstAoe(view) {
+    const mc = this.mcOf(view);
+    if (mc && mc.first !== undefined) return mc.first;
+    let first = null;
+    for (const m of view.mechs) if (m.type === 'aoe' && m.resolveAt > view.t && (!first || m.resolveAt < first.resolveAt)) first = m;
+    if (mc) mc.first = first;
+    return first;
+  },
+  soonMechs(view) {
+    const mc = this.mcOf(view);
+    if (mc && mc.soon) return mc.soon;
+    const ms = [], dts = [], urg = [];
+    for (const m of view.mechs) {
+      const dt = Math.max(0, m.resolveAt - view.t);
+      if (dt > 11) continue;
+      ms.push(m); dts.push(dt); urg.push(1 / (0.4 + dt));
+    }
+    const out = { ms, dts, urg };
+    if (mc) mc.soon = out;
+    return out;
+  },
+  firesOf(view) {
+    const mc = this.mcOf(view);
+    if (mc && mc.fires) return mc.fires;   // (only ever read)
+    const fires = view.mechs.filter(m => m.tag === 'flambe' && m.resolveAt - view.t < 4);
+    for (const z of view.zones || []) if (z.tag === 'stovefire' && view.t > z.startAt - 3) fires.push(z);
+    if (mc) mc.fires = fires;
+    return fires;
+  },
+
+  // move() scores its candidate spots one after another and keeps the lowest score (score = danger + walk + distance terms, a and b
+  // being the two distance terms, bs the best score so far). Every term danger() adds is at least 0 except a healing pool's
+  // bonus (450 each, `negs` of them still to come), so once the running sum (taken down by every pool bonus it could still get,
+  // rounding included: each rounded step is monotone) plus a and b is already at or past bs, the rest of the sum cannot bring the
+  // spot back under it: it returns what it has, which the caller then throws away. past() is that test. Without a, b and bs (any
+  // other caller) danger() always adds everything up.
+  past(pen, negs, a, b, bs) {
+    for (let i = 0; i < negs; i++) pen -= 450;
+    return pen + a + b >= bs;
+  },
+  danger(bot, px, py, view, a = 0, b = 0, bs = NaN) {
     let pen = 0;
     const wall = ARENA.sd(px, py) + 45;   // how far past "45 from the wall" this spot is
     if (wall > 0) pen += 8000 + wall * 100;
     const me = bot.id;
-    const alive = view.players.filter(p => p.alive);
+    const bounded = bs === bs, negs = bot.role !== 'tank' ? (view.pools || []).length : 0;   // (the pool bonuses still to come)
+    const alive = this.aliveOf(view);
     // The Rune Pair (Azerath): the two bearers stand together or well apart, whichever the coming spell wants (view.runes). When they
     // must meet, the higher id walks to the other, so a bot comes to a human bearer and not the other way round
     const rp = view.runes;
     if (rp && rp.on && (rp.a === me || rp.b === me)) {
       const other = alive.find(o => o.id === (rp.a === me ? rp.b : rp.a));
       if (other) {
-        const d = Math.hypot(other.x - px, other.y - py);
+        const d = hypot2(other.x - px, other.y - py);
         if (rp.rule === 'pair') { if (me > other.id) pen += Math.max(0, d - 70) * 25; }
         else pen += Math.max(0, 380 - d) * 18;
       }
     }
     // Waves (Simmer etc.): the area the next hit covers is safe right after it lands. Waiting just outside it,
     // ready to step in, beats standing somewhere that gets hit later and having to cross waves to escape.
-    let first = null;
-    for (const m of view.mechs) if (m.type === 'aoe' && m.resolveAt > view.t && (!first || m.resolveAt < first.resolveAt)) first = m;
+    const first = this.firstAoe(view);
     const besideFirst = first && first.resolveAt - view.t < 4 && !SHAPES.contains(first.shape, px, py, 22) && SHAPES.contains(first.shape, px, py, 75);
-    for (const m of view.mechs) {
-      const dt = Math.max(0, m.resolveAt - view.t);
-      if (dt > 11) continue;
-      const urgency = 1 / (0.4 + dt);
+    const soon = this.soonMechs(view);
+    for (let mi = 0; mi < soon.ms.length; mi++) {
+      if (bounded && mi > 0 && this.past(pen, negs, a, b, bs)) return pen;
+      const m = soon.ms[mi], dt = soon.dts[mi], urgency = soon.urg[mi];
       const s = m.shape;
       // a blast you hide from behind a prop: be in your own prop's shadow (in someone else's will do, at a pinch)
       if (m.cover && (m.type === 'raidwide' || SHAPES.contains(s, px, py, 22))) {
         const pr = this.coverFor(me, view, m), props = view.props || [];
         const ok = pr && PROPS.blocks(pr, m.src.x, m.src.y, px, py, PROPS.COVER_SHRINK + 8);
         // (a cover across the room has to be set off for early: "too late" starts a walk and a second before it lands)
-        const walk = pr ? Math.hypot(pr.x - bot.x, pr.y - bot.y) / 230 + 1 : 0;
+        const walk = pr ? hypot2(pr.x - bot.x, pr.y - bot.y) / 230 + 1 : 0;
         if (!ok) pen += (PROPS.shadowing(m.src.x, m.src.y, px, py, props) ? 1500 : 6000) * urgency + (dt < Math.max(2.5, walk) ? 5000 : 0);
         continue;
       }
       // the Writ (the Hollow King, Hard): bait your own line out to your corner (writSpot); keep out of everyone else's
       if (m.type === 'bait' || (m.type === 'safe' && m.aimFromBoss != null)) {
         if (m.aimFromBoss === me) {
-          if (m.type === 'bait' && dt > (m.lockAt || 0.6) + 0.15) { const sp = this.writSpot(me, view); pen += Math.hypot(sp.x - px, sp.y - py) * 30 * Math.max(urgency, 0.4); }
+          if (m.type === 'bait' && dt > (m.lockAt || 0.6) + 0.15) { const sp = this.writSpot(me, view); pen += hypot2(sp.x - px, sp.y - py) * 30 * Math.max(urgency, 0.4); }
           else if (m.type === 'bait' && SHAPES.contains(s, px, py, 22)) pen += 3000 * urgency;   // locked: step off it before it fires
         } else if (m.type === 'bait' && SHAPES.contains(s, px, py, 30)) pen += 6000 * urgency + (dt < 1.5 ? 5000 : 0);
         // (close to him, every line runs over you)
-        if (m.type === 'bait' && dt < 2 && Math.hypot(px - view.boss.x, py - view.boss.y) < 120) pen += 6000;
+        if (m.type === 'bait' && dt < 2 && hypot2(px - view.boss.x, py - view.boss.y) < 120) pen += 6000;
         continue;
       }
       // Burial Rites: in your own grave when it closes (after the Crown of Graves has landed), out of everyone else's
       if (m.type === 'own') {
-        const d = Math.hypot(s.x - px, s.y - py);
+        const d = hypot2(s.x - px, s.y - py);
         if (m.target === me) { if (d > s.r - 28) pen += (d - s.r + 28) * (dt < 3.9 ? 45 : 1.5); }
         else if (d < s.r + 30 && dt < 3.5) pen += 5000;
         continue;
@@ -381,10 +488,10 @@ const BotAI = {
       if (m.type === 'drop' && (m.tag === 'platedrop' || m.tag === 'groundrod')) {
         if (m.follow === me) {
           const sp = m.tag === 'platedrop' ? this.rushSpot(me, view) : this.rodSpot(me, view);
-          if (sp) pen += Math.hypot(sp.x - px, sp.y - py) * 40 * Math.max(urgency, 0.5);
+          if (sp) pen += hypot2(sp.x - px, sp.y - py) * 40 * Math.max(urgency, 0.5);
         } else {
           const owner = alive.find(o => o.id === m.follow);
-          if (owner && dt < 1.5 && Math.hypot(owner.x - px, owner.y - py) < s.r + 20) pen += 1500 * urgency;
+          if (owner && dt < 1.5 && hypot2(owner.x - px, owner.y - py) < s.r + 20) pen += 1500 * urgency;
         }
         continue;
       }
@@ -395,17 +502,17 @@ const BotAI = {
           bot.dropAt = bot.dropAt || {};
           if (dt < 1.1 && !bot.dropAt[m.id]) bot.dropAt[m.id] = { x: bot.x, y: bot.y };
           const at = bot.dropAt[m.id];
-          if (at) pen += Math.hypot(at.x - px, at.y - py) * 40;
+          if (at) pen += hypot2(at.x - px, at.y - py) * 40;
         } else {
           const owner = alive.find(o => o.id === m.follow);
-          if (owner && dt < 2.2 && Math.hypot(owner.x - px, owner.y - py) < s.r + 40) pen += 3000 * urgency;
+          if (owner && dt < 2.2 && hypot2(owner.x - px, owner.y - py) < s.r + 40) pen += 3000 * urgency;
         }
         continue;
       }
       // Lights Out (the Hollow King): be inside a light when it lands
       if (m.type === 'dark') {
         const L = m.lights ? m.lights() : [];
-        if (!L.some(l => Math.hypot(l.x - px, l.y - py) <= m.lightR - 30)) pen += (L.length ? 6000 : 0) * urgency + (dt < 2 && L.length ? 5000 : 0);
+        if (!L.some(l => hypot2(l.x - px, l.y - py) <= m.lightR - 30)) pen += (L.length ? 6000 : 0) * urgency + (dt < 2 && L.length ? 5000 : 0);
         continue;
       }
       // a throw coming (m.throwDist): stand where it doesn't slam you into a wall or a prop
@@ -417,27 +524,27 @@ const BotAI = {
       // Butcher's Charge aimed at this bot (the tank): stand where it runs into a brick wall, then step aside at the lock
       if (m.tag === 'charge' && m.aimFromBoss === me && dt > (m.lockAt || 0.6) + 0.2) {
         const bait = this.chargeBait(view);
-        if (bait) pen += Math.hypot(bait.x - px, bait.y - py) * 30 * urgency;
+        if (bait) pen += hypot2(bait.x - px, bait.y - py) * 30 * urgency;
         continue;
       }
       switch (m.type) {
         case 'aoe':
           // a cone aimed at me (Venom Spit): bait it out at the edge, then step aside once it locks
           if (m.aimFromBoss === me && dt > (m.lockAt || 0.6) + 0.15) {
-            pen += Math.max(0, ARENA.inner - 70 - Math.hypot(px - view.boss.x, py - view.boss.y)) * 6;
+            pen += Math.max(0, ARENA.inner - 70 - hypot2(px - view.boss.x, py - view.boss.y)) * 6;
             break;
           }
           // a circle that follows me (Spice Rack's jar) goes wherever I go until it locks: nothing to dodge yet
           // ... so carry it where it lands on nobody else (a cask out where it can stand as cover, not in his lap)
           if (m.follow === me && dt > (m.lockAt || 0) + 0.1) {
-            for (const o of alive) if (o.id !== me && Math.hypot(o.x - px, o.y - py) < s.r + 45) pen += 1500 * Math.max(urgency, 0.4);
+            for (const o of alive) if (o.id !== me && hypot2(o.x - px, o.y - py) < s.r + 45) pen += 1500 * Math.max(urgency, 0.4);
             // (a circle that locks where you stand when it does: be on the move by then, so you are leaving it at full speed, not starting to)
-            if (m.tag === 'glob') pen += Math.max(0, 150 - Math.hypot(px - bot.x, py - bot.y)) * 6 * Math.min(1, (dt - (m.lockAt || 0)) + 0.5);
-            if (m.tag === 'cask') { const db = Math.hypot(px - view.boss.x, py - view.boss.y); if (db < 240) pen += (240 - db) * 15; }
+            if (m.tag === 'glob') pen += Math.max(0, 150 - hypot2(px - bot.x, py - bot.y)) * 6 * Math.min(1, (dt - (m.lockAt || 0)) + 0.5);
+            if (m.tag === 'cask') { const db = hypot2(px - view.boss.x, py - view.boss.y); if (db < 240) pen += (240 - db) * 15; }
             break;
           }
           // Funeral March: the open lane (m.safe, a row of spots) is the place to be until the last rank has passed
-          if (m.safe) { const d = Math.min(...m.safe.map(q => Math.hypot(q.x - px, q.y - py))); if (d > 100) pen += (d - 100) * 15 * urgency; }
+          if (m.safe) { const d = Math.min(...m.safe.map(q => hypot2(q.x - px, q.y - py))); if (d > 100) pen += (d - 100) * 15 * urgency; }
           if (SHAPES.contains(s, px, py, 22)) {
             const waitIn = besideFirst && m !== first && m.resolveAt - first.resolveAt > 1;
             // (about to land: nothing else, not even a lantern errand, is worth standing in it)
@@ -451,10 +558,10 @@ const BotAI = {
         case 'chain':
         case 'spread': {
           if (m.follow === me) {
-            for (const o of alive) if (o.id !== me && Math.hypot(o.x - px, o.y - py) < s.r + 50) pen += 2500 * urgency;
+            for (const o of alive) if (o.id !== me && hypot2(o.x - px, o.y - py) < s.r + 50) pen += 2500 * urgency;
           } else {
             const owner = alive.find(o => o.id === m.follow);
-            if (owner && Math.hypot(owner.x - px, owner.y - py) < s.r + 50) pen += 3000 * urgency;
+            if (owner && hypot2(owner.x - px, owner.y - py) < s.r + 50) pen += 3000 * urgency;
           }
           break;
         }
@@ -465,19 +572,19 @@ const BotAI = {
           if (m.tag === 'crash') {
             const owner = alive.find(o => o.id === m.follow);
             if (!owner) break;
-            const d = Math.hypot(owner.x - px, owner.y - py), pt = this.partner(me, view);
+            const d = hypot2(owner.x - px, owner.y - py), pt = this.partner(me, view);
             // (a crash with nobody of the other charge left to share it: its owner brings it into the nearest other
             // pair's, where three or four split both, rather than take one alone)
             const lone = id => !this.partner(id, view);
             if (!pt) {
               const others = view.mechs.filter(o => o.tag === 'crash' && o.follow !== me).map(o => alive.find(q => q.id === o.follow)).filter(Boolean);
-              const near = others.sort((a, b) => Math.hypot(a.x - bot.x, a.y - bot.y) - Math.hypot(b.x - bot.x, b.y - bot.y))[0];
+              const near = others.sort((a, b) => hypot2(a.x - bot.x, a.y - bot.y) - hypot2(b.x - bot.x, b.y - bot.y))[0];
               if (near && near.id === m.follow && d > s.r * 0.5) pen += (d - s.r * 0.5) * 30 * urgency;
             } else if (m.follow === me) {
               for (const o of view.mechs) {
                 if (o.tag !== 'crash' || o.follow === me || lone(o.follow)) continue;
                 const ow = alive.find(q => q.id === o.follow);
-                if (ow && Math.hypot(ow.x - px, ow.y - py) < s.r * 2 + 50) pen += 3000 * urgency;
+                if (ow && hypot2(ow.x - px, ow.y - py) < s.r * 2 + 50) pen += 3000 * urgency;
               }
             } else if (pt && pt.id === m.follow) { if (d > s.r * 0.5) pen += (d - s.r * 0.5) * 30 * urgency; }
             else if (lone(m.follow)) { /* (the lone crash comes to us) */ }
@@ -486,21 +593,21 @@ const BotAI = {
           }
           const owner = alive.find(o => o.id === m.follow);
           const cx = owner ? owner.x : s.x, cy = owner ? owner.y : s.y;
-          const d = Math.hypot(cx - px, cy - py);
+          const d = hypot2(cx - px, cy - py);
           if (d > s.r * 0.55) pen += (d - s.r * 0.55) * 30 * urgency;
           break;
         }
         case 'tower': {
           const mine = m.tag === 'rod' ? this.rodFor(me, view) === m.id : m.tag === 'bell' ? this.bellFor(me, view) === m.id
             : m.tag === 'still' ? this.stillFor(me, view) === m.id : this.towerFor(me, view) === m.id;
-          const inside = Math.hypot(s.x - px, s.y - py) < s.r - 18;
+          const inside = hypot2(s.x - px, s.y - py) < s.r - 18;
           // head for your own tower early: it may be across the room
-          if (mine && !inside) pen += (Math.hypot(s.x - px, s.y - py)) * 12 * Math.max(urgency, 0.3) + (dt < Math.hypot(s.x - bot.x, s.y - bot.y) / 230 + 3 ? (view.room && view.room.threads ? 16000 : 4500) : 1200);   // (a failed tower hits the whole party: a sting or three from Skitterra's threads on the way beats it)
+          if (mine && !inside) pen += (hypot2(s.x - px, s.y - py)) * 12 * Math.max(urgency, 0.3) + (dt < hypot2(s.x - bot.x, s.y - bot.y) / 230 + 3 ? (view.room && view.room.threads ? 16000 : 4500) : 1200);   // (a failed tower hits the whole party: a sting or three from Skitterra's threads on the way beats it)
           // (a plate coming up in a moment is yours to serve: a later blow round it can wait until it has)
           if (mine && !inside && m.tag === 'plate' && dt < 2.5 && m.stuff) pen += dt < 1.2 ? 9000 : 4000;
           // (a plate that leaves you Stuffed is worse than useless if it isn't yours: you can't take your own after it)
           // (the host counts anyone touching it, so keep well clear)
-          if (!mine && (m.stuff ? Math.hypot(s.x - px, s.y - py) < s.r + 30 : inside)) pen += (m.stuff ? 6000 : 2500) * urgency;
+          if (!mine && (m.stuff ? hypot2(s.x - px, s.y - py) < s.r + 30 : inside)) pen += (m.stuff ? 6000 : 2500) * urgency;
           // (my tower with a ball's lane over it just after it lands: stand on the side of it that is the shortest way off the lane)
           if (mine && inside) for (const rl of [...(view.rollers || []), ...(view.rollPre || [])]) {
             if (view.t > rl.end) continue;
@@ -513,16 +620,16 @@ const BotAI = {
           break;
         }
         case 'proximity':
-          pen += (900 - Math.min(900, Math.hypot(px - s.x, py - s.y))) * 8 * urgency;
+          pen += (900 - Math.min(900, hypot2(px - s.x, py - s.y))) * 8 * urgency;
           break;
         // Polarity Surge: be with your opposite-charge partner and away from anyone of your own charge.
         // The pair member with the higher id walks to the other (bots have the higher ids, so they come to you).
         case 'polarity': {
           const pol = view.polarity;
           if (!pol) break;
-          for (const o of alive) if (o.id !== me && pol.get(o.id) === pol.get(me) && Math.hypot(o.x - px, o.y - py) < s.r + 45) pen += 4000 * urgency;
+          for (const o of alive) if (o.id !== me && pol.get(o.id) === pol.get(me) && hypot2(o.x - px, o.y - py) < s.r + 45) pen += 4000 * urgency;
           const pt = this.partner(me, view);
-          if (pt && pt.id < me) { const d = Math.hypot(pt.x - px, pt.y - py); if (d > s.r * 0.45) pen += (d - s.r * 0.45) * 30 * urgency; }
+          if (pt && pt.id < me) { const d = hypot2(pt.x - px, pt.y - py); if (d > s.r * 0.45) pen += (d - s.r * 0.45) * 30 * urgency; }
           break;
         }
         // Gale Slam: either shelter behind a rod or stand where the throw doesn't reach the wall
@@ -544,12 +651,13 @@ const BotAI = {
             const owner = alive.find(o => o.id === m.follow);
             const st = owner && this.stoneFor(m.follow, view);
             if (st && PROPS.sd(st, px, py) < 110) pen += 3000 * urgency;
-            if (owner && Math.hypot(owner.x - px, owner.y - py) < 60) pen += 1500 * urgency;
+            if (owner && hypot2(owner.x - px, owner.y - py) < 60) pen += 1500 * urgency;
           }
           break;
         }
       }
     }
+    if (bounded && this.past(pen, negs, a, b, bs)) return pen;
     // Storm Walls: stay off where each wall will be over the next second
     for (const sw of view.sweeps || []) {
       // behind a boulder (Avalanche) the wall passes over you, once
@@ -573,31 +681,34 @@ const BotAI = {
     }
     for (const e of bot.backs || []) if (view.t > e.from - 0.3 && view.t < e.until && SHAPES.contains(e.shape, px, py, 24)) pen += 7000;
     // Doom: wherever the lanterns send this bot (lanternJob, worked out once per think in move())
-    if (bot.job) pen += Math.min(600, Math.hypot(bot.job.x - px, bot.job.y - py)) * 12;
+    if (bot.job) pen += Math.min(600, hypot2(bot.job.x - px, bot.job.y - py)) * 12;
     // a Sigilmancer's own Ember Circle: it's only strong inside, so leaving costs (but never more than real danger)
     const cir = bot.actor && bot.actor.kit.g.circle;
-    if (cir && cir.end > view.t + 1 && Math.hypot(cir.x - px, cir.y - py) > cir.r - 18) pen += 700;
+    if (cir && cir.end > view.t + 1 && hypot2(cir.x - px, cir.y - py) > cir.r - 18) pen += 700;
+    if (bounded && this.past(pen, negs, a, b, bs)) return pen;
     // a friendly healing pool (Moonwell): worth stepping into if it's close, for everyone but the tank
     // (a Lanternkeeper's glows count once however many overlap, so stacked lights never outweigh a telegraph)
-    if (bot.role !== 'tank') { let lit = false; for (const pl of view.pools || []) if (Math.hypot(pl.x - px, pl.y - py) < pl.r - 25 && Math.hypot(pl.x - bot.x, pl.y - bot.y) < pl.r + 260) { if (pl.lamp) { if (lit) continue; lit = true; } pen -= 450; } }
+    if (bot.role !== 'tank') { let lit = false; for (const pl of view.pools || []) if (hypot2(pl.x - px, pl.y - py) < pl.r - 25 && hypot2(pl.x - bot.x, pl.y - bot.y) < pl.r + 260) { if (pl.lamp) { if (lit) continue; lit = true; } pen -= 450; } }
+    if (bounded && this.past(pen, 0, a, b, bs)) return pen;   // (the pool bonuses are all in now)
     // the closing edge: be well inside where the wall is about to jump to
     const en = view.edgeNext;
-    if (en && en.at - view.t < 6) { const over = Math.hypot(px, py) - (en.r - 60); if (over > 0) pen += 5000 + over * 50; }
+    if (en && en.at - view.t < 6) { const over = hypot2(px, py) - (en.r - 60); if (over > 0) pen += 5000 + over * 50; }
     // (Hard) a wedge of the summit about to break away: off it
     const pc = view.pendingCut;
     if (pc && pc.at - view.t < 7) {
       let d = Math.atan2(py, px) - pc.a0; d -= Math.floor(d / (Math.PI * 2)) * Math.PI * 2;
-      const over = Math.hypot(px, py) - (pc.r - 60);
+      const over = hypot2(px, py) - (pc.r - 60);
       if (d <= pc.a1 - pc.a0 + 0.08 && over > 0) pen += 5000 + over * 50;
     }
     // (a pool over your own tower: a tick or two is cheaper than the tower failing on everyone)
-    const inMine = (view.puddles.length || (view.room && view.room.threads)) && view.mechs.some(m => m.type === 'tower' && m.resolveAt - view.t < 5 && Math.hypot(m.shape.x - px, m.shape.y - py) < m.shape.r - 18 && this.towerFor(me, view) === m.id);
-    for (const pd of view.puddles) if (Math.hypot(pd.x - px, pd.y - py) < pd.r + 28) pen += inMine ? 2200 : 4000;
+    const inMine = (view.puddles.length || (view.room && view.room.threads)) && view.mechs.some(m => m.type === 'tower' && m.resolveAt - view.t < 5 && hypot2(m.shape.x - px, m.shape.y - py) < m.shape.r - 18 && this.towerFor(me, view) === m.id);
+    for (const pd of view.puddles) if (hypot2(pd.x - px, pd.y - py) < pd.r + 28) pen += inMine ? 2200 : 4000;
     // rolling meatballs (and drifting orbs): their whole lane shows from the cast, so keep off any stretch a ball has
     // still to roll over, the more the sooner it gets there
     const rdt = this.rollerIn(view, px, py, 45);
     if (rdt < 1.5) pen += 7000;
     else if (rdt < 6) pen += 9000 / (rdt + 0.5);
+    if (bounded && this.past(pen, 0, a, b, bs)) return pen;
     // her Eightfold Lunge: the lit legs show every strike's direction ahead of its telegraph
     for (const e of view.lungePlan || []) {
       const dt = e.at - view.t;
@@ -605,30 +716,31 @@ const BotAI = {
       if (SHAPES.contains(e.shape, px, py, 30)) pen += 6000 / (0.5 + Math.max(0, dt));
     }
     // being reeled in: get away from her mouth
-    if ((view.reels || []).some(r => r.pid === me)) pen += Math.max(0, 420 - Math.hypot(px - view.boss.x, py - view.boss.y)) * 12;
+    if ((view.reels || []).some(r => r.pid === me)) pen += Math.max(0, 420 - hypot2(px - view.boss.x, py - view.boss.y)) * 12;
     // tethers: stretch a long one, stay close on a short one
     for (const th of view.tethers || []) {
       if (th.a !== me && th.b !== me) continue;
       const other = alive.find(o => o.id === (th.a === me ? th.b : th.a));
       if (!other) continue;
-      const d = Math.hypot(other.x - px, other.y - py);
+      const d = hypot2(other.x - px, other.y - py);
       if (th.kind === 'long' && d < th.len + 70) pen += (th.len + 70 - d) * 25;
       if (th.kind === 'short' && d > th.len - 50) pen += (d - th.len + 50) * 25;
     }
+    if (bounded && this.past(pen, 0, a, b, bs)) return pen;
     // sticky floor slows you down; beams between linked adds burn
     for (const z of view.zones || []) if (SHAPES.contains(z.shape, px, py, 10)) pen += z.effect === 'burn' ? (view.t > z.startAt - 2 ? 6000 : 400) : 350;
     // the room: nobody stands inside a solid prop; grease is best kept clear of, and burning grease avoided
     for (const pr of view.props || []) if (pr.solid && PROPS.sd(pr, px, py) < 16) pen += 9000;
+    if (bounded && this.past(pen, 0, a, b, bs)) return pen;
     // Squall Line (Volkar): stay inside the safe circle as it drifts, where it will be in a moment
     if (view.room && view.room.inSquall && !(view.room.inSquall(px, py, view.t + 0.7, 40) && view.room.inSquall(px, py, view.t, 20))) pen += 7000;
     // floor that has fallen away, or is about to (Skitterra's collapse): stay on the silk
     if (view.room && view.room.safe && !view.room.safe(px, py, true)) pen += view.room.safe(px, py) ? 9000 : 20000;
-    for (const th of (view.room && view.room.threads) || []) if (!th.cut && segDist(px, py, th.x1, th.y1, th.x2, th.y2) < 26 && Math.hypot(px - th.kx, py - th.ky) > 50) pen += inMine ? 600 : 3000;
+    for (const th of (view.room && view.room.threads) || []) if (!th.cut && segDist(px, py, th.x1, th.y1, th.x2, th.y2) < 26 && hypot2(px - th.kx, py - th.ky) > 50) pen += inMine ? 600 : 3000;
     // (grease a fire is about to reach counts as burning: a Flambé stripe, the stove line catching)
-    const fires = view.mechs.filter(m => m.tag === 'flambe' && m.resolveAt - view.t < 4);
-    for (const z of view.zones || []) if (z.tag === 'stovefire' && view.t > z.startAt - 3) fires.push(z);
+    const fires = this.firesOf(view);
     for (const fl of view.floor || []) {
-      if (fl.kind !== 'grease' || Math.hypot(fl.x - px, fl.y - py) >= fl.r + 26) continue;
+      if (fl.kind !== 'grease' || hypot2(fl.x - px, fl.y - py) >= fl.r + 26) continue;
       pen += view.burning(fl) || fires.some(m => SHAPES.contains(m.shape, fl.x, fl.y, fl.r)) ? 5000 : 250;
     }
     for (const a of view.adds || []) {
@@ -639,6 +751,11 @@ const BotAI = {
   },
 
   move(bot, view) {
+    const prev = this._mc;
+    this._mc = { view };
+    try { return this.think(bot, view); } finally { this._mc = prev; }
+  },
+  think(bot, view) {
     const home = this.home(bot, view);
     bot.job = this.lanternJob(bot, view);
     // a thrown cleaver comes back along its line (Cleaver Toss): remember each line until the return has passed
@@ -650,19 +767,16 @@ const BotAI = {
     if (cir && cir.end > view.t + 1) cands.push({ x: cir.x + (bot.x - cir.x) * 0.3, y: cir.y + (bot.y - cir.y) * 0.3 });
     if (bot.role !== 'tank') for (const pl of view.pools || []) cands.push({ x: pl.x + (bot.x - pl.x) * 0.3, y: pl.y + (bot.y - pl.y) * 0.3 });
     for (const c of [{ x: bot.x, y: bot.y }, home]) {
-      for (const r of [60, 130, 220, 330]) for (let i = 0; i < 12; i++) {
-        const a = i * Math.PI / 6 + r * 0.01;
-        cands.push({ x: c.x + Math.cos(a) * r, y: c.y + Math.sin(a) * r });
-      }
+      for (let i = 0; i < BOT_RING.length; i += 2) cands.push({ x: c.x + BOT_RING[i], y: c.y + BOT_RING[i + 1] });
     }
     // cones out of the boss (Eightfold Lunge, the swings): a ring of spots close around it, where a safe side is
     // only a short walk away when it turns
-    if (view.mechs.some(m => m.shape.kind === 'cone' && m.type === 'aoe' && Math.hypot(m.shape.x - view.boss.x, m.shape.y - view.boss.y) < 60)) {
+    if (view.mechs.some(m => m.shape.kind === 'cone' && m.type === 'aoe' && hypot2(m.shape.x - view.boss.x, m.shape.y - view.boss.y) < 60)) {
       for (const r of [125, 190]) for (let i = 0; i < 16; i++) { const a = i * Math.PI / 8; cands.push(ARENA.clamp({ x: view.boss.x + Math.cos(a) * r, y: view.boss.y + Math.sin(a) * r }, 50)); }
     }
     // a Lunge on its way (her lit legs): the same ring round wherever it strikes from (her husk's too)
     const lsrc = [];
-    for (const e of view.lungePlan || []) if (e.at > view.t && !lsrc.some(q => Math.hypot(q.x - e.shape.x, q.y - e.shape.y) < 20)) lsrc.push(e.shape);
+    for (const e of view.lungePlan || []) if (e.at > view.t && !lsrc.some(q => hypot2(q.x - e.shape.x, q.y - e.shape.y) < 20)) lsrc.push(e.shape);
     for (const q of lsrc) for (const r of [110, 170, 240]) for (let i = 0; i < 16; i++) { const a = i * Math.PI / 8 + Math.PI / 16; cands.push(ARENA.clamp({ x: q.x + Math.cos(a) * r, y: q.y + Math.sin(a) * r }, 50)); }
     const lungeGo = lsrc.length ? this.lungeSpot(bot, view) : null;
     if (lungeGo) cands.push(lungeGo);
@@ -694,7 +808,7 @@ const BotAI = {
       // cover: spots in the shadow of the prop this bot takes (and of the others, in case it's full)
       if (m.cover) {
         const mine = this.coverFor(bot.id, view, m);
-        for (const pr of (view.props || []).filter(p => p.cover && (p === mine || Math.hypot(p.x - bot.x, p.y - bot.y) < 500))) {
+        for (const pr of (view.props || []).filter(p => p.cover && (p === mine || hypot2(p.x - bot.x, p.y - bot.y) < 500))) {
           for (const back of [24, 55]) for (const side of [-0.5, 0, 0.5]) cands.push(PROPS.shadowSpot(m.src.x, m.src.y, pr, back, side));
         }
       }
@@ -755,7 +869,7 @@ const BotAI = {
     const burns = (view.zones || []).filter(z => z.effect === 'burn' && (z.tag === 'writburn' || z.tag === 'drown') && view.t > z.startAt - 1);
     const pathCost = c => {
       let pen = 0;
-      const dist = Math.hypot(c.x - bot.x, c.y - bot.y);
+      const dist = hypot2(c.x - bot.x, c.y - bot.y);
       for (const m of landing) {
         const q = Math.min(1, Math.max(0, m.resolveAt - view.t) * speed / Math.max(1, dist));
         if (SHAPES.contains(m.shape, bot.x + (c.x - bot.x) * q, bot.y + (c.y - bot.y) * q, 22)) pen += 6000;
@@ -763,7 +877,7 @@ const BotAI = {
       for (const [a, o] of beams) if (segsCross(bot.x, bot.y, c.x, c.y, a.x, a.y, o.x, o.y)) pen += 3000;
       for (const m of plates) {
         const q = Math.min(1, Math.max(0, m.resolveAt - view.t) * speed / Math.max(1, dist));
-        if (Math.hypot(bot.x + (c.x - bot.x) * q - m.shape.x, bot.y + (c.y - bot.y) * q - m.shape.y) < m.shape.r + 24) pen += 5000;
+        if (hypot2(bot.x + (c.x - bot.x) * q - m.shape.x, bot.y + (c.y - bot.y) * q - m.shape.y) < m.shape.r + 24) pen += 5000;
       }
       // a ball's lane: don't be crossing it as the ball comes through
       if (rolling) for (const q of [0.2, 0.4, 0.6, 0.8, 1]) {
@@ -774,11 +888,11 @@ const BotAI = {
       // (by its knot a thread is safe to step over)
       for (const th of threads) if (segsCross(bot.x, bot.y, c.x, c.y, th.x1, th.y1, th.x2, th.y2) && !(th.kx != null && segDist(th.kx, th.ky, bot.x, bot.y, c.x, c.y) < 38)) pen += 2500;
       if (view.room && view.room.safe && view.room.fallen !== Infinity) for (const q of [0.2, 0.4, 0.6, 0.8]) if (!view.room.safe(bot.x + (c.x - bot.x) * q, bot.y + (c.y - bot.y) * q)) pen += 15000;
-      for (const pd of view.puddles) if (Math.hypot(pd.x - bot.x, pd.y - bot.y) > pd.r + 20 && segDist(pd.x, pd.y, bot.x, bot.y, c.x, c.y) < pd.r + 20) pen += 1200;
+      for (const pd of view.puddles) if (hypot2(pd.x - bot.x, pd.y - bot.y) > pd.r + 20 && segDist(pd.x, pd.y, bot.x, bot.y, c.x, c.y) < pd.r + 20) pen += 1200;
       // burning strips (the Writ's spokes): don't walk through one
       for (const z of burns) for (const q of [0.25, 0.5, 0.75]) if (SHAPES.contains(z.shape, bot.x + (c.x - bot.x) * q, bot.y + (c.y - bot.y) * q, 16)) { pen += 3000; break; }
       if (sweeps.length) {
-        const d = Math.hypot(c.x - bot.x, c.y - bot.y), arrive = d / 230;
+        const d = hypot2(c.x - bot.x, c.y - bot.y), arrive = d / 230;
         for (const q of [0.25, 0.5, 0.75, 1]) if (inWall(bot.x + (c.x - bot.x) * q, bot.y + (c.y - bot.y) * q, view.t + arrive * q)) pen += 5000;
         // and the next half second by the clock (a long walk's quarter marks can all fall after the walls' last turn)
         for (const dt of [0.15, 0.3, 0.5]) { const q = dt / Math.max(0.01, arrive); if (q < 0.25 && inWall(bot.x + (c.x - bot.x) * q, bot.y + (c.y - bot.y) * q, view.t + dt)) pen += 5000; }
@@ -788,7 +902,12 @@ const BotAI = {
     };
     let best = null, bs = Infinity, bd = 0;
     const score = c => {
-      const d = this.danger(bot, c.x, c.y, view), s = d + pathCost(c) + Math.hypot(c.x - home.x, c.y - home.y) * 1.2 + Math.hypot(c.x - bot.x, c.y - bot.y) * 0.6;
+      const a = hypot2(c.x - home.x, c.y - home.y) * 1.2, b = hypot2(c.x - bot.x, c.y - bot.y) * 0.6;
+      const d = this.danger(bot, c.x, c.y, view, a, b, bs);
+      // (pathCost only ever adds penalties, never less than 0, and a rounded sum can't shrink when a term that is at least 0 is
+      // added: a spot that cannot beat the best so far even before the walk is priced cannot after it either)
+      if (d + a + b >= bs) return;
+      const s = d + pathCost(c) + a + b;
       if (s < bs) { bs = s; best = c; bd = d; }
     };
     for (const c of cands) score(c);
@@ -805,7 +924,7 @@ const BotAI = {
     }
     // mid-cast where nothing is about to land: finish it there (a step would interrupt it), as a player would
     const kit = bot.actor && bot.actor.kit;
-    if (kit && kit.cast && kit.cast.end - kit.now < 2.6 && Math.hypot(best.x - bot.x, best.y - bot.y) > 6 && this.danger(bot, bot.x, bot.y, view) < 400) return { x: bot.x, y: bot.y };
+    if (kit && kit.cast && kit.cast.end - kit.now < 2.6 && hypot2(best.x - bot.x, best.y - bot.y) > 6 && this.danger(bot, bot.x, bot.y, view) < 400) return { x: bot.x, y: bot.y };
     return best;
   },
 
@@ -816,7 +935,7 @@ const BotAI = {
     if (bot.role !== 'tank' || typeof TAUNT === 'undefined') return null;
     const al = view.players.filter(p => p.alive), byId = id => al.find(p => p.id === id);
     const notTank = id => { const p = byId(id); return !!p && p.role !== 'tank'; };
-    const reach = (x, y, r) => Math.hypot(x - bot.x, y - bot.y) - r <= TAUNT.range;
+    const reach = (x, y, r) => hypot2(x - bot.x, y - bot.y) - r <= TAUNT.range;
     const b = view.boss;
     if (!b.untargetable && view.bossTarget != null && view.bossTarget !== bot.id && notTank(view.bossTarget) && reach(b.x, b.y, FIGHT.BOSS_R)) return 'boss';
     if (!byId(bot.id)) return null;
@@ -850,14 +969,14 @@ const BotAI = {
       if (!ok[j][k]) continue;
       if (k === times.length - 1) { good[j][k] = true; continue; }
       const reach = Math.max(0, times[k + 1] - times[k] - 0.3) * SPEED;
-      for (let j2 = 0; j2 < spots.length; j2++) if (good[j2][k + 1] && Math.hypot(spots[j2].x - spots[j].x, spots[j2].y - spots[j].y) <= reach) { good[j][k] = true; break; }
+      for (let j2 = 0; j2 < spots.length; j2++) if (good[j2][k + 1] && hypot2(spots[j2].x - spots[j].x, spots[j2].y - spots[j].y) <= reach) { good[j][k] = true; break; }
     }
     // the first step still ahead is the one to be clear at; the bot gets there in the time it has left
     let best = null, bs = Infinity;
     const lead = Math.max(0, times[0] - view.t - 0.25) * SPEED;
     for (let j = 0; j < spots.length; j++) {
       if (!good[j][0]) continue;
-      const d = Math.hypot(spots[j].x - bot.x, spots[j].y - bot.y);
+      const d = hypot2(spots[j].x - bot.x, spots[j].y - bot.y);
       if (d > lead + 20) continue;
       const stays = times.length > 1 && ok[j][1] ? 0 : 60;
       const s = d + stays;
@@ -908,6 +1027,7 @@ const BotAI = {
   // seconds until a ball is over this spot (Infinity if none is coming)
   rollerIn(view, x, y, pad) {
     let best = Infinity;
+    if (!(view.rollers || []).length && !(view.rollPre || []).length) return best;   // (no ball anywhere: nothing to find)
     for (const [enter] of this.rollerSpans(view, x, y, pad)) best = Math.min(best, Math.max(0, enter - view.t));
     return best;
   },
@@ -1042,7 +1162,7 @@ const BotAI = {
           if (a.type !== 'ogcd' || !readyIdx(i)) continue;
           if ((a.replaces || a.id) === 'growth' && a.id !== 'growth') {   // Moonwell: on whoever has the most of the party around them
             if (!avgLow) continue;
-            const near = q => party.filter(o => o.alive && Math.hypot(o.x - q.x, o.y - q.y) < 150).length;
+            const near = q => party.filter(o => o.alive && hypot2(o.x - q.x, o.y - q.y) < 150).length;
             bot.healTarget = party.filter(q => q.alive).sort((x, y) => near(y) - near(x))[0].id;
             return i;
           }
@@ -1200,7 +1320,7 @@ const BOT_CLASS = {
       // aimed far enough ahead along the loop that the bot never catches the point and stops (it walks faster than the
       // loop turns at its ends)
       let p = at(0.8);
-      for (let ahead = 1.2; ahead <= 2.4 && Math.hypot(p.x - bot.x, p.y - bot.y) < 75; ahead += 0.4) p = at(ahead);
+      for (let ahead = 1.2; ahead <= 2.4 && hypot2(p.x - bot.x, p.y - bot.y) < 75; ahead += 0.4) p = at(ahead);
       return p;
     },
     act(bot, k, view, moving) {
@@ -1210,7 +1330,7 @@ const BOT_CLASS = {
       const gale = idx('gale'), hook = idx('hook'), slip = idx('slip'), still = idx('still');
       const myHit = view.mechs.some(m => m.type === 'buster' && (m.target ?? m.follow) === bot.id && m.resolveAt - view.t < 0.7);
       // no flashy moves while there's something on the floor to dodge: a dash or a swing round can land you in it
-      const calm = !view.mechs.some(m => m.type !== 'raidwide' && m.resolveAt - view.t < 3) && !(view.rollers || []).length && !(view.sweeps || []).some(s => view.t < s.end) && !view.puddles.some(p => Math.hypot(p.x - view.boss.x, p.y - view.boss.y) < p.r + 240);
+      const calm = !view.mechs.some(m => m.type !== 'raidwide' && m.resolveAt - view.t < 3) && !(view.rollers || []).length && !(view.sweeps || []).some(s => view.t < s.end) && !view.puddles.some(p => hypot2(p.x - view.boss.x, p.y - view.boss.y) < p.r + 240);
       if (weave && ok(still) && (myHit || k.abilities[still].id === 'tailspin')) return still;
       if (weave && ok(still) && k.ultWin && calm) return still;   // (Eye of the Gale: Eye Step is a blink through the boss)
       if (weave && ok(gale)) return gale;
@@ -1323,7 +1443,7 @@ BotAI.alembist = function (bot, k, view) {
   const raidwideSoon = view.mechs.some(m => m.type === 'raidwide' && m.resolveAt - view.t < 3.5) ||
     (view.bossCast && view.bossCast.left < 3.5 && /Grease|Venom Mist|Thunderclap|Knell|Gorge|Dead Wind|Twin Knell|Pulse/.test(view.bossCast.name));
   const room = vials.length < A.slots, gcdFree = k.gcdRemaining() <= 0 && !k.cast && k.lockUntil <= k.now;
-  const near = (q, r) => alive.filter(o => Math.hypot(o.x - q.x, o.y - q.y) <= r);
+  const near = (q, r) => alive.filter(o => hypot2(o.x - q.x, o.y - q.y) <= r);
   // where a heal splash does the most: the ally with the most missing health around them
   const healSpot = () => alive.map(q => ({ q, v: near(q, 105).reduce((s, o) => s + (1 - frac(o)), 0) })).sort((a, b) => b.v - a.v)[0];
   const crowdSpot = () => alive.map(q => ({ q, n: near(q, 115).length })).sort((a, b) => b.n - a.n)[0];
@@ -1518,7 +1638,7 @@ BotAI.threadweaver = function (bot, k, view) {
   const alive = view.players.filter(p => p.alive && !p.left), frac = p => p.hp / p.maxHp;
   const me = alive.find(p => p.id === bot.id);
   if (!me) return null;
-  const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+  const dist = (a, b) => hypot2(a.x - b.x, a.y - b.y);
   const tank = alive.find(p => p.role === 'tank' && p.id !== bot.id);
   const hurt = [...alive].sort((a, b) => frac(a) - frac(b)), low = hurt[0];
   const mine = (view.threads || []).filter(th => th.from === bot.id);
@@ -1548,7 +1668,7 @@ BotAI.threadweaver = function (bot, k, view) {
     if (ready(tie)) {
       for (const p of alive) {
         if (p.id === bot.id || !linked(p.id)) continue;
-        const inIt = view.mechs.some(m => m.type === 'aoe' && m.resolveAt - view.t < 1.4 && m.follow !== p.id && SHAPES.contains(m.shape, p.x, p.y, 10)) || view.puddles.some(pd => Math.hypot(pd.x - p.x, pd.y - p.y) < pd.r);
+        const inIt = view.mechs.some(m => m.type === 'aoe' && m.resolveAt - view.t < 1.4 && m.follow !== p.id && SHAPES.contains(m.shape, p.x, p.y, 10)) || view.puddles.some(pd => hypot2(pd.x - p.x, pd.y - p.y) < pd.r);
         if (inIt) { bot.healTarget = p.id; k.g.tie = null; return tie; }
       }
     }
@@ -1650,11 +1770,11 @@ BotAI.lanternkeeper = function (bot, k, view) {
   const free = !k.cast && k.lockUntil <= k.now, weave = free && k.gcdRemaining() > 0.45;
   const g = k.g, me = { x: bot.x, y: bot.y };
   const at = l => { if (l.on == null) return l; const p = alive.find(q => q.id === l.on); return p ? { x: p.x + l.ox, y: p.y + l.oy } : null; };
-  const covers = l => { const c = at(l); return c ? alive.filter(p => Math.hypot(p.x - c.x, p.y - c.y) <= l.r).length : 0; };
+  const covers = l => { const c = at(l); return c ? alive.filter(p => hypot2(p.x - c.x, p.y - c.y) <= l.r).length : 0; };
   const floor = g.lan.filter(l => l.on == null && l.kind !== 'eternal');
   const lit = new Set();
-  for (const l of g.lan) { const c = at(l); if (c) for (const p of alive) if (Math.hypot(p.x - c.x, p.y - c.y) <= l.r) lit.add(p.id); }
-  const nearMe = alive.filter(p => p.role !== 'tank' && Math.hypot(p.x - me.x, p.y - me.y) <= LANTERN.R * 0.9).length;
+  for (const l of g.lan) { const c = at(l); if (c) for (const p of alive) if (hypot2(p.x - c.x, p.y - c.y) <= l.r) lit.add(p.id); }
+  const nearMe = alive.filter(p => p.role !== 'tank' && hypot2(p.x - me.x, p.y - me.y) <= LANTERN.R * 0.9).length;
   const flare = idx('flare'), carry = idx('carry'), set = idx('set'), hand = idx('hand'), rel = idx('relight'), trim = idx('trim');
   if (weave) {
     // Flare as a raidwide lands, or as soon as the hurt stand in the light (it is back every 20s: use it)
@@ -1663,7 +1783,7 @@ BotAI.lanternkeeper = function (bot, k, view) {
     // a lantern left behind: carry it to where the party is now
     const ca = k.abilities[carry];
     if (ca && ca.id === 'carry' && ready(carry) && nearMe >= 2) {
-      const n = lkNearest(k, me, l => lkCarryable(k)(l) && Math.hypot(l.x - me.x, l.y - me.y) <= lkCarryReach(k));
+      const n = lkNearest(k, me, l => lkCarryable(k)(l) && hypot2(l.x - me.x, l.y - me.y) <= lkCarryReach(k));
       if (n && n.d > 110 && covers(n.l) < 2 && !BotAI.danger(bot, me.x, me.y, view)) return carry;
     }
     if (ca && ca.id === 'trail' && ready(carry) && g.lan.filter(l => l.kind === 'small').length >= 3 && covers(g.lan.filter(l => l.kind === 'small').slice(-1)[0]) < 2 && nearMe < 2) return carry;
@@ -1686,7 +1806,7 @@ BotAI.lanternkeeper = function (bot, k, view) {
     else {
       // somewhere two allies stand with no lantern lit over them, or a lantern about to go out over them
       // (the party comes to a glow: bots step into healing on the floor, bots.js move)
-      const here = floor.filter(l => Math.hypot(l.x - me.x, l.y - me.y) < l.r * 0.6 && l.end - k.now > 3);
+      const here = floor.filter(l => hypot2(l.x - me.x, l.y - me.y) < l.r * 0.6 && l.end - k.now > 3);
       const lighting = floor.filter(l => l.end - k.now > 3 && covers(l) >= 2).length;
       // (a party under steady raidwides gets a second light right over the first: glows stack, so long as none is snuffed for it)
       const cap = sa.id === 'beacon' ? LANTERN.BEACON_MAX : LANTERN.MAX, fresh = floor.filter(l => l.kind === 'floor' || l.kind === 'beacon').length < cap;
@@ -1703,7 +1823,7 @@ BOT_CLASS.lanternkeeper = {
     const b = view.boss, others = view.players.filter(p => p.alive && !p.left && p.id !== bot.id && p.role !== 'tank');
     if (!others.length) return null;
     const c = others.reduce((a, p) => ({ x: a.x + p.x / others.length, y: a.y + p.y / others.length }), { x: 0, y: 0 });
-    const d = Math.hypot(c.x - b.x, c.y - b.y) || 1, keep = Math.max(d, 210);
+    const d = hypot2(c.x - b.x, c.y - b.y) || 1, keep = Math.max(d, 210);
     // a Wayfarer keeps walking a small loop through them while its Stride is lit, so its lights fall among them
     const k = bot.actor && bot.actor.kit, walk = bot.spec === 'wayfarer' && k && k.now < (k.g.strideUntil || 0) ? 55 : 0, a = view.t * 1.6;
     return ARENA.clamp({ x: b.x + (c.x - b.x) / d * keep + Math.cos(a) * walk, y: b.y + (c.y - b.y) / d * keep + Math.sin(a) * walk }, 60);
@@ -1719,7 +1839,7 @@ BOT_CLASS.threadweaver = {
       if (m.type !== 'buster' || m.resolveAt - view.t > 4.5 || (m.target ?? m.follow) === bot.id) continue;
       const t = view.players.find(p => p.id === (m.target ?? m.follow) && p.alive);
       if (!t || t.role === 'tank' || !me) continue;
-      const o = m.shape, ta = Math.atan2(t.y - o.y, t.x - o.x), back = Math.max((o.r || 320) + 70, Math.hypot(t.x - o.x, t.y - o.y) + 80);
+      const o = m.shape, ta = Math.atan2(t.y - o.y, t.x - o.x), back = Math.max((o.r || 320) + 70, hypot2(t.x - o.x, t.y - o.y) + 80);
       return ARENA.clamp({ x: o.x + Math.cos(ta) * back, y: o.y + Math.sin(ta) * back }, 60);
     }
     return { x: b.x + Math.cos(a) * 165, y: b.y + Math.sin(a) * 165 };
@@ -1762,8 +1882,8 @@ BOT_CLASS.marionettist = {
           const R = mariER(e), lim = mariStretch(k) - 40, cands = [];
           for (const r of [R + 24, R + 55]) for (let s = 0; s < 16; s++) { const a = s * Math.PI / 8; cands.push({ x: e.x + Math.cos(a) * r, y: e.y + Math.sin(a) * r }); }
           for (let s = 0; s < 8; s++) { const a = s * Math.PI / 4; cands.push({ x: me.x + Math.cos(a) * 60, y: me.y + Math.sin(a) * 60 }); }
-          const safe = cands.filter(c => Math.hypot(c.x - me.x, c.y - me.y) <= lim && ARENA.sd(c.x, c.y) < -30 && !BotAI.dollDanger(view, c.x, c.y, 4.5))
-            .sort((a, b) => Math.hypot(a.x - d.x, a.y - d.y) - Math.hypot(b.x - d.x, b.y - d.y));
+          const safe = cands.filter(c => hypot2(c.x - me.x, c.y - me.y) <= lim && ARENA.sd(c.x, c.y) < -30 && !BotAI.dollDanger(view, c.x, c.y, 4.5))
+            .sort((a, b) => hypot2(a.x - d.x, a.y - d.y) - hypot2(b.x - d.x, b.y - d.y));
           // (W moves the Doll nearest the aim: aim from beside this one)
           if (safe.length) { bot.aim = safe[0]; if (k.g.dolls.length > 1 && mariPick(k, safe[0]) !== i) bot.aim = { x: (safe[0].x + d.x * 3) / 4, y: (safe[0].y + d.y * 3) / 4 }; return pull; }
         }
@@ -1963,7 +2083,7 @@ BotAI.kenHits = function (bot, view, reach) {
     if (tg === bot.id) out.push({ at: m.resolveAt, kind: 'buster', own: true });
     else if (reach > 0 && tg != null && me) {
       const a = view.players.find(p => p.id === tg);
-      if (a && a.alive && Math.hypot(a.x - me.x, a.y - me.y) <= reach - 10) out.push({ at: m.resolveAt, kind: 'buster', own: false });
+      if (a && a.alive && hypot2(a.x - me.x, a.y - me.y) <= reach - 10) out.push({ at: m.resolveAt, kind: 'buster', own: false });
     }
   }
   return out.sort((a, b) => a.at - b.at);

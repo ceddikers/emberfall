@@ -8,17 +8,42 @@
 //  rect:   starts at (x, y), goes len along angle, w wide (a line AoE / half-room cleave)
 //  cross:  two rects through (x, y), len each way, w wide, rotated by angle
 
+// Math.hypot(a, b) for two numbers, without the generic builtin's call cost (the bots and the host call it thousands of times a tick).
+// It takes the steps V8's own Math.hypot takes: scale both by the larger magnitude, add the squares, root, scale back (V8 also keeps
+// a Kahan compensation, which is exactly 0 after the first square). So it returns the same number bit for bit, and that is checked
+// on a spread of inputs when this file loads: on an engine that does it differently, hypot2 is just Math.hypot and nothing changes.
+function hypotSteps(a, b) {
+  const x = Math.abs(a), y = Math.abs(b);
+  if (x !== x || y !== y) return x === Infinity || y === Infinity ? Infinity : NaN;
+  const max = x > y ? x : y;
+  if (max === Infinity) return Infinity;
+  if (max === 0) return 0;
+  const p = x / max, q = y / max;
+  return Math.sqrt(p * p + q * q) * max;
+}
+const hypot2 = (() => {
+  let seed = 12345, ok = true;
+  const next = () => { seed = (seed * 1103515245 + 12345) % 2147483648; return seed / 2147483648; };
+  const mags = [1, 1, 1, 1e-3, 1e3, 1e6, 1e-9, 1e12];
+  for (let i = 0; i < 6000 && ok; i++) {
+    const a = (next() - 0.5) * 2 * mags[i & 7], b = (next() - 0.5) * 2 * mags[(i >> 3) & 7];
+    if (hypotSteps(a, b) !== Math.hypot(a, b)) ok = false;
+  }
+  for (const a of [0, -0, 1, -1, 5e-324, 1e300, Infinity, -Infinity, NaN]) for (const b of [0, -0, 1, -1, 5e-324, 1e300, Infinity, -Infinity, NaN]) if (!Object.is(hypotSteps(a, b), Math.hypot(a, b))) ok = false;
+  return ok ? hypotSteps : Math.hypot;
+})();
+
 const SHAPES = {
   contains(s, px, py, pad = 0) {
     const dx = px - s.x, dy = py - s.y;
     switch (s.kind) {
       case 'circle': return dx * dx + dy * dy <= (s.r + pad) * (s.r + pad);
       case 'donut': {
-        const d = Math.hypot(dx, dy);
+        const d = hypot2(dx, dy);
         return d <= s.r + pad && d >= s.r2 - pad;
       }
       case 'cone': {
-        const d = Math.hypot(dx, dy);
+        const d = hypot2(dx, dy);
         if (d > s.r + pad) return false;
         if (d < 1) return true;
         let a = Math.atan2(dy, dx) - s.angle;
@@ -100,6 +125,7 @@ const ARENA_DEFS = {
   hydra: { kind: 'circle', r: 540 },   // a flooded temple: nine columns in a ring, the Mother in the pool at its heart (hydra.js)
   titan: { kind: 'rect', hw: 500, hh: 400, corner: 40 },   // a glacier plateau: a 5 x 4 mosaic of ice sheets 200 across (titan.js), four braziers where four sheets meet
 };
+let POLY_NORMALS = null;   // ARENA.sd's cos/sin of a 'poly' room's side normals, for the current side count
 const ARENA = {
   kind: 'circle', r: 520, hw: 520, hh: 520, corner: 0, n: 0,
   R: 520,       // farthest point of the room from the centre (for "big enough" sizes)
@@ -110,7 +136,7 @@ const ARENA = {
     const d = ARENA_DEFS[id] || { kind: 'circle', r: 520 };
     Object.assign(this, { kind: d.kind, r: d.r || 0, hw: d.hw || 0, hh: d.hh || 0, corner: d.corner || 0, n: d.n || 0, cuts: [] });
     if (d.kind === 'circle') { this.hw = this.hh = this.R = this.inner = this.full = d.r; }
-    else if (d.kind === 'rect') { this.R = Math.hypot(d.hw, d.hh); this.inner = Math.min(d.hw, d.hh); }
+    else if (d.kind === 'rect') { this.R = hypot2(d.hw, d.hh); this.inner = Math.min(d.hw, d.hh); }
     else { this.inner = d.r * Math.cos(Math.PI / d.n); this.R = d.r; this.hw = this.hh = this.inner; }
     return this;
   },
@@ -123,14 +149,20 @@ const ARENA = {
   sd(x, y) {
     if (this.kind === 'rect') {
       const c = this.corner, qx = Math.abs(x) - (this.hw - c), qy = Math.abs(y) - (this.hh - c);
-      return Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - c;
+      return hypot2(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - c;
     }
     if (this.kind === 'poly') {
+      // (the side normals' cos and sin, worked out once per side count: the same calls on the same angles as before)
+      let tab = POLY_NORMALS;
+      if (!tab || tab.n !== this.n) {
+        tab = POLY_NORMALS = { n: this.n, c: [], s: [] };
+        for (let i = 0; i < this.n; i++) { const a = Math.PI / 2 + i * Math.PI * 2 / this.n; tab.c.push(Math.cos(a)); tab.s.push(Math.sin(a)); }
+      }
       let m = -Infinity;
-      for (let i = 0; i < this.n; i++) { const a = Math.PI / 2 + i * Math.PI * 2 / this.n; m = Math.max(m, x * Math.cos(a) + y * Math.sin(a)); }
+      for (let i = 0; i < this.n; i++) m = Math.max(m, x * tab.c[i] + y * tab.s[i]);
       return m - this.inner;
     }
-    return Math.hypot(x, y) - (this.cuts.length ? this.radiusAt(Math.atan2(y, x)) : this.r);
+    return hypot2(x, y) - (this.cuts.length ? this.radiusAt(Math.atan2(y, x)) : this.r);
   },
   // a round room's radius going out along angle a (less where a wedge has broken off)
   radiusAt(a) {
@@ -151,7 +183,7 @@ const ARENA = {
       p.x = Math.max(-lx, Math.min(lx, p.x)); p.y = Math.max(-ly, Math.min(ly, p.y));
       const cx = Math.sign(p.x) * (lx - c), cy = Math.sign(p.y) * (ly - c);
       if (c > 0 && Math.abs(p.x) > lx - c && Math.abs(p.y) > ly - c) {
-        const dx = p.x - cx, dy = p.y - cy, d = Math.hypot(dx, dy);
+        const dx = p.x - cx, dy = p.y - cy, d = hypot2(dx, dy);
         if (d > c) { p.x = cx + dx / d * c; p.y = cy + dy / d * c; }
       }
     } else if (this.kind === 'poly') {
@@ -161,7 +193,7 @@ const ARENA = {
         if (over > 0) { p.x -= nx * over; p.y -= ny * over; }
       }
     } else {
-      const d = Math.hypot(p.x, p.y), lim = Math.max(0, (this.cuts.length ? this.radiusAt(Math.atan2(p.y, p.x)) : this.r) - pad);
+      const d = hypot2(p.x, p.y), lim = Math.max(0, (this.cuts.length ? this.radiusAt(Math.atan2(p.y, p.x)) : this.r) - pad);
       if (d > lim) { p.x *= lim / d; p.y *= lim / d; }
     }
     return p;
@@ -206,7 +238,7 @@ const PROPS = {
   segDist(px, py, ax, ay, bx, by) {
     const dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy;
     const t = l2 ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / l2)) : 0;
-    return Math.hypot(px - ax - dx * t, py - ay - dy * t);
+    return hypot2(px - ax - dx * t, py - ay - dy * t);
   },
   // a point in a rect prop's own frame
   local(pr, x, y) { const c = Math.cos(pr.a || 0), s = Math.sin(pr.a || 0), dx = x - pr.x, dy = y - pr.y; return [dx * c + dy * s, -dx * s + dy * c]; },
@@ -219,9 +251,9 @@ const PROPS = {
   sd(pr, x, y) {
     if (pr.shape === 'rect') {
       const [lx, ly] = this.local(pr, x, y), qx = Math.abs(lx) - pr.w / 2, qy = Math.abs(ly) - pr.h / 2;
-      return Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0);
+      return hypot2(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0);
     }
-    return Math.hypot(x - pr.x, y - pr.y) - pr.r;
+    return hypot2(x - pr.x, y - pr.y) - pr.r;
   },
   // the way out of the prop at (x, y)
   normal(pr, x, y) {
@@ -229,11 +261,11 @@ const PROPS = {
       const [lx, ly] = this.local(pr, x, y), c = Math.cos(pr.a || 0), s = Math.sin(pr.a || 0);
       const qx = Math.abs(lx) - pr.w / 2, qy = Math.abs(ly) - pr.h / 2;
       let u, v;
-      if (qx > 0 && qy > 0) { const d = Math.hypot(qx, qy); u = Math.sign(lx) * qx / d; v = Math.sign(ly) * qy / d; }
+      if (qx > 0 && qy > 0) { const d = hypot2(qx, qy); u = Math.sign(lx) * qx / d; v = Math.sign(ly) * qy / d; }
       else if (qx > qy) { u = Math.sign(lx) || 1; v = 0; } else { u = 0; v = Math.sign(ly) || 1; }
       return [u * c - v * s, u * s + v * c];
     }
-    const dx = x - pr.x, dy = y - pr.y, d = Math.hypot(dx, dy);
+    const dx = x - pr.x, dy = y - pr.y, d = hypot2(dx, dy);
     return d > 0.01 ? [dx / d, dy / d] : [1, 0];
   },
   // push e ({ x, y }, changed in place) out of every solid prop, keeping rad clear of it. True if it moved.
@@ -252,7 +284,7 @@ const PROPS = {
   // the first solid prop a circle of radius rad meets going from a to b: { t (0..1 along the way), prop }, or null
   ray(ax, ay, bx, by, list, rad = 0, filter) {
     let best = null;
-    if (Math.hypot(bx - ax, by - ay) < 0.01) return null;
+    if (hypot2(bx - ax, by - ay) < 0.01) return null;
     for (const pr of list || []) {
       if (!pr.solid || (filter && !filter(pr))) continue;
       let t;
@@ -328,7 +360,7 @@ const PROPS = {
       out.push(lo.c, [sx + Math.cos(base + lo.d) * far, sy + Math.sin(base + lo.d) * far], [sx + Math.cos(base + hi.d) * far, sy + Math.sin(base + hi.d) * far], hi.c);
       return out;
     }
-    const r = pr.r - shrink, dx = pr.x - sx, dy = pr.y - sy, d = Math.hypot(dx, dy);
+    const r = pr.r - shrink, dx = pr.x - sx, dy = pr.y - sy, d = hypot2(dx, dy);
     if (d <= r + 1) return null;
     const base = Math.atan2(dy, dx), b = Math.asin(r / d), tl = Math.sqrt(d * d - r * r);
     for (const s of [-1, 1]) out.push([sx + Math.cos(base + s * b) * tl, sy + Math.sin(base + s * b) * tl]);
@@ -345,9 +377,9 @@ const PROPS = {
   steer(from, to, list, rad = 14) {
     const hit = this.ray(from.x, from.y, to.x, to.y, list, rad);
     if (!hit) return to;
-    const pr = hit.prop, dx = to.x - from.x, dy = to.y - from.y, L = Math.hypot(dx, dy) || 1;
+    const pr = hit.prop, dx = to.x - from.x, dy = to.y - from.y, L = hypot2(dx, dy) || 1;
     const nx = -dy / L, ny = dx / L, side = (pr.x - from.x) * nx + (pr.y - from.y) * ny > 0 ? -1 : 1;
-    const ext = (pr.shape === 'rect' ? Math.hypot(pr.w, pr.h) / 2 : pr.r) + rad + 16;
+    const ext = (pr.shape === 'rect' ? hypot2(pr.w, pr.h) / 2 : pr.r) + rad + 16;
     return { x: pr.x + nx * side * ext + dx / L * ext * 0.3, y: pr.y + ny * side * ext + dy / L * ext * 0.3 };
   },
   // compact form for the 'props' message: [id, kind, rect?, x, y, r | w, h, a, hp, maxHp, flags, state]
@@ -362,4 +394,4 @@ const PROPS = {
   },
 };
 
-if (typeof module !== 'undefined') module.exports = { SHAPES, ARENA, ARENA_DEFS, PROPS };
+if (typeof module !== 'undefined') module.exports = { SHAPES, ARENA, ARENA_DEFS, PROPS, hypot2 };
