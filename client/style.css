@@ -222,6 +222,8 @@ ul.abilities em.meta { display: block; font-style: normal; font-size: 11px; colo
 #dps-meter { position: fixed; left: 50%; top: 14px; transform: translateX(-50%); background: #0d0b12d8; border: 1px solid var(--gold-dim); border-radius: 10px; padding: 6px 16px; font-size: 14px; z-index: 4; pointer-events: none; text-align: center; }
 #dps-meter b { font-size: 20px; color: #fff3d8; font-variant-numeric: tabular-nums; }
 #dps-meter span { margin-left: 10px; color: var(--muted); font-size: 12px; }
+#town-posture { position: fixed; left: 50%; top: 62px; transform: translateX(-50%); width: 240px; z-index: 4; pointer-events: none; text-align: center; }
+#town-posture small { display: block; margin-bottom: 2px; font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
 
 /* Results */
 #results { position: fixed; inset: 0; z-index: 12; display: grid; place-items: center; padding: 16px; background: #07050abb; backdrop-filter: blur(2px); }

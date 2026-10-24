@@ -2196,4 +2196,17 @@ Object.assign(FightSim.prototype, {
   },
 });
 
+// The training yard's stand-in for a raid host, for a Kenseier on the sparring dummy (main.js townKen): a bare FightSim with the one
+// player and a boss that is only a Posture bar, so the yard runs the very same kenEvent / kenIncoming / kenTick / kenNote a raid does.
+// getMe() gives the player's { id, x, y }; emit gets the host's messages (fev kdef / kbrk / kbend). The caller keeps sim.t on its clock.
+FightSim.kenYard = function (getMe, emit) {
+  const sim = Object.create(FightSim.prototype), id = getMe().id;
+  const s = { id, role: 'tank', hp: 1, maxHp: 1, alive: true, shield: 0, mits: [], hots: [], debuffs: {} };
+  Object.assign(sim, { t: 0, state: 'live', postureOn: true, emit, events: [], kenHits: [], def: {}, mode: 'normal',
+    boss: { hp: 1, maxHp: 1, untargetable: false, cast: null, autoAt: 1e9, exposed: 0, exposedUntil: 0 },
+    ps: new Map([[id, s]]), stats: { [id]: { perfects: 0, breaks: 0, taken: 0, mitigated: 0 } } });
+  sim.players = () => [Object.assign({ name: 'you', role: 'tank', cls: 'kenseier' }, getMe(), { s })];
+  return sim;
+};
+
 if (typeof module !== 'undefined') module.exports = { FIGHT, FightSim, segDist, playerBaseHp, MAW_HOST, WEAVE_HOST, DOLL_HOST, HOLLOW_HOST, LAMP_HOST };

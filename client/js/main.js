@@ -239,7 +239,8 @@
     hpFrac: () => { const s = myState(); return s && s.maxHp ? Math.max(0, s.hp / s.maxHp) : 1; },
     // the boss as talents see it (kits.js bossNow): its cast bar, the next move in the bnext feed, who it's on
     boss: () => {
-      if (!inArena() || !raid || raid.state !== 'live') return null;
+      if (!inArena()) return townKenBoss();   // (a Kenseier on the sparring dummy: its swings are the blows; null for everyone else)
+      if (!raid || raid.state !== 'live') return null;
       const c = raid.cast && now <= raid.cast.start + raid.cast.dur ? raid.cast : null, s = myState();
       const n = raid.bnext && raid.bnext.l.length ? Math.max(0, raid.bnext.l[0][1] - (now - raid.bnext.at)) : null;
       // wide: a raidwide is on its way (its cast is up, its telegraph is down, or it's next in the feed within 5s): an Alembist's Salt glows
@@ -346,7 +347,8 @@
   // the next blow aimed at you, for a Kenseier's ring: a boss auto while it is on you, or a tankbuster telegraph that names you.
   // { at: seconds until it lands (a little negative: it just did), kind: 'auto' | 'buster' }, or null
   function kenRing(id = Net.id) {   // (id: whose blow; the ring is drawn for every Kenseier in the raid, drawKenRing)
-    if (!inArena() || !raid || raid.state !== 'live') return null;
+    if (!inArena()) return id === Net.id ? townKenRing() : null;   // (the yard: the sparring dummy's next swing)
+    if (!raid || raid.state !== 'live') return null;
     let best = null;
     if (raid.boss.tg === id && raid.nextAutoAt != null) best = { at: raid.nextAutoAt - now, kind: 'auto' };
     for (const tg of raid.tgs.values()) {
@@ -538,9 +540,10 @@
     const d = lastEnemy && lastEnemy.dummy;
     if (!d) return;
     d.st.hit = now;
-    FX.text(d.x, d.y - 40, txt, col, big, 0.9, tk);
+    const K = town.ken && town.ken.actor === actor ? town.ken : null, more = K && kenBrk(K) ? 1 + KENSEI.BREAK_DMG : 1;   // (a Break: the dummy takes 15% more, as a boss does)
+    FX.text(d.x, d.y - 40, more > 1 ? rnd(ev.amount * more) + (ev.crit ? '!' : '') + (ev.positional ? ' ◆' : '') : txt, col, big, 0.9, tk);
     if (!town.meter || now - town.meter.last > 6) town.meter = { start: now, dmg: 0, last: now, gcd0: actor.kit.stats.gcdTime };
-    town.meter.dmg += ev.amount; town.meter.last = now;
+    town.meter.dmg += ev.amount * more; town.meter.last = now;
   }
 
   // Training-yard stand-ins for what the host does in a raid.
@@ -563,6 +566,7 @@
           const a = actor; later(ev.dur || 8, () => { if (actor === a) a.notify('shieldEnd', { tag: 'ward', frac: 0 }); });
         }
         break;
+      case 'kensei': townKenEvent(ev); break;   // a Kenseier's deflect, Posture and Break: the sparring dummy (townKen)
       case 'maw': case 'ledger': if (typeof CLASS_TOWN !== 'undefined') CLASS_TOWN.event(town, ev, now, actor); break;   // the advanced tanks on the sparring dummy
     }
   }
@@ -571,6 +575,60 @@
     town.shield = null;
     actor && actor.notify('shieldEnd', { tag: s.tag, frac: 1 - Math.max(0, s.amount) / s.max });
   }
+  // ---- a Kenseier on the sparring dummy. The yard plays host with the raid host's own Posture functions (fight.js FightSim.kenYard:
+  // kenEvent / kenIncoming / kenTick), so a deflect is judged by the same KENSEI rules. The dummy's swings are the blows (every
+  // fourth is heavy: a tankbuster) and its Posture fills, recovers and Breaks; Broken, it is staggered (no swings) and takes 15%
+  // more. Only a Kenseier has any of this: for everyone else the yard is as it was.
+  const kenBrk = K => !!(K.sim.boss.post && K.sim.boss.post.until > now);
+  const townSpar = () => dummies.find(d => d.spar && Math.hypot(player.x - d.x, player.y - d.y) < 140) || null;   // (the sparring dummy you stand at)
+  function townKen() {
+    if (!actor || !player.cls || player.cls.id !== 'kenseier') return null;
+    if (town.ken && town.ken.actor === actor) return town.ken;
+    const sim = FightSim.kenYard(() => ({ id: Net.id, x: player.x, y: player.y }), m => {
+      if (m.t !== 'fev' || !actor) return;
+      if (m.k === 'kdef' || m.k === 'kbrk' || m.k === 'kbend') actor.notify(m.k, m);
+      const d = dummies.find(x => x.spar);
+      if (m.k === 'kbrk' && d) d.windup = 0;   // (staggered: a swing in the air is gone)
+      if (m.k === 'kbend' && d && d.nextSwing) d.nextSwing = now + 0.8;   // (it finds its feet and swings again)
+    });
+    sim.t = now;
+    return (town.ken = { actor, sim, s: sim.ps.get(Net.id) });
+  }
+  // the next blow aimed at you (kind 'buster' for the heavy swing), a moment after it too: the closing ring and the Deflect's glow
+  function townKenRing() {
+    const K = townKen(), d = K && townSpar();
+    if (!d || kenBrk(K)) return null;
+    if (d.hitAt != null && now - d.hitAt < 0.3) return { at: d.hitAt - now, kind: d.hitKind };
+    if (!d.nextSwing) return null;
+    return { at: d.nextSwing - now, kind: ((d.swings || 0) + 1) % 4 === 0 ? 'buster' : 'auto' };
+  }
+  // the boss as the kit sees it (kits.js bossNow), while you stand at the sparring dummy
+  function townKenBoss() {
+    const K = townKen(), d = K && townSpar();
+    if (!d) return null;
+    const ring = townKenRing(), cast = K.sim.boss.cast;
+    return { casting: !!cast, castLeft: cast ? Math.max(0, cast.end - now) : 0, next: null, onMe: true, vuln: 0, selfVuln: false, wide: false,
+      hitIn: ring ? ring.at : null, hitKind: ring ? ring.kind : null, posture: null };
+  }
+  function townKenEvent(ev) {
+    const K = townKen(); if (!K) return;
+    K.sim.t = now; K.sim.kenEvent(Net.id, ev);
+    const d = ev.op === 'duel' && dummies.find(x => x.spar);
+    if (d && d.nextSwing) d.nextSwing = Math.min(d.nextSwing, now + KENSEI.DUEL_EVERY);   // (Ember Duel: a steady beat)
+  }
+  // every frame: the heavy swing's wind-up counts as a cast (a full bar holds until it lands, as for a boss), then Posture's own
+  // tick (a Break running out, recovery), and the bar under the meter while you are at the dummy or it is not empty
+  function townKenStep(dt) {
+    const K = townKen();
+    if (!K) { RaidUI.townPosture(null); return; }
+    const sim = K.sim, d = dummies.find(x => x.spar);
+    sim.t = now; K.s.alive = true;
+    sim.boss.cast = d && d.windup && ((d.swings || 0) + 1) % 4 === 0 ? { name: 'Heavy blow', start: d.windup - 0.6, end: d.windup, anim: 'cast' } : null;
+    sim.kenTick(dt);
+    const pk = sim.kenPack();
+    RaidUI.townPosture(townSpar() || pk[0] > 0 || pk[2] > 0 ? { p: pk[0], max: pk[1], broken: pk[2], hold: !!pk[3], rec: !!pk[4] } : null, dt);
+  }
+
   // the sparring dummy's swing landing on you
   function sparHit(d) {
     const dist = Math.hypot(player.x - d.x, player.y - d.y);
@@ -585,6 +643,16 @@
       if (m.kind === 'invuln') { amt = 0; break; }
       if (m.kind !== 'living') amt *= 1 - (m.pct || 0);
     }
+    // a Kenseier's deflect, judged as in a raid (Off-balance takes more, a window that covers the swing turns it aside)
+    const kenK = townKen(), kind = d.heavy ? 'buster' : 'auto';
+    let kd = null, kPre = 0;
+    if (kenK) {
+      kenK.sim.t = now;
+      if (kenK.s.offbal > now) amt *= 1 + KENSEI.OFF_DMG;
+      kPre = amt;
+      kd = kenK.sim.kenIncoming({ id: Net.id, x: player.x, y: player.y, s: kenK.s }, kenK.s, kPre, { kind });
+      if (kd) amt *= kd.mult;
+    }
     if (typeof CLASS_TOWN !== 'undefined') amt = CLASS_TOWN.hit(town, amt, now, actor, player);   // an open jaw, a Ledger
     let absorbed = 0;
     if (town.shield) {
@@ -593,6 +661,7 @@
       if (town.shield.amount <= 0.5) endTownShield();
     }
     amt = rnd(amt);
+    if (kenK && !kd && amt > 0) kenK.sim.kenNote({ id: Net.id }, kPre, amt, { kind });   // (kept for a deflect pressed just after)
     town.taken.push({ t: now, a: amt });
     if (amt > 0) { const dd = Math.hypot(player.x - d.x, player.y - d.y) || 1; player.st.hurt = { t0: now, k: d.heavy ? 1.15 : 0.6, ax: (player.x - d.x) / dd, ay: (player.y - d.y) / dd }; }   // (the flinch: heroes.js heroPose)
     // (left of the body, clear of the name tag; what a shield ate in muted blue beside it)
@@ -601,7 +670,7 @@
     if (perfect) actor.notify('perfect', { b: d.heavy ? 1 : 0 });
     if (reflect) actor.notify('reflect', { b: d.heavy ? 1 : 0 });
     if (read) actor.notify('read', { b: d.heavy ? 1 : 0 });   // (the sparring dummy's every fourth swing counts as a tankbuster)
-    if (amt > 0) actor.notify('taken', { a: amt });
+    if (amt > 0) actor.notify('taken', kenK ? { a: amt, k: kind, df: kd ? kd.q : 0 } : { a: amt });
   }
 
   const ADD_R = 30;
@@ -1425,7 +1494,7 @@
       if (r.id === Net.id) { player.x = sp[0]; player.y = sp[1]; }
     }
     scene = 'arena';
-    town.meter = null; town.meterDone = null; RaidUI.meter(null);
+    town.meter = null; town.meterDone = null; RaidUI.meter(null); RaidUI.townPosture(null); town.ken = null;
     player.target = null; player.interact = null; player.dashMove = null; player.kb = null; player.angle = -Math.PI / 2;
     lockedAlly = null; lastEnemy = null;
     Stagecraft.reset();   // threads and Dolls (classes-c)
@@ -2618,14 +2687,21 @@
         FX.later(BOSS_ATTACK_DUR * 0.5, () => bossImpact(b));
       }
     }
+    townKenStep(dt);   // (a Kenseier's Posture on the sparring dummy)
     for (const d of dummies) {
       d.st.t = now;
       if (!d.spar) continue;
       const near = Math.hypot(player.x - d.x, player.y - d.y) < 140 && actor;
       if (!near) { d.nextSwing = 0; continue; }
+      const K = townKen();
+      if (K && kenBrk(K)) { d.windup = 0; continue; }   // (Broken: staggered, no swings)
       if (!d.nextSwing) d.nextSwing = now + 1.5;
       if (now >= d.nextSwing - 0.6 && !d.windup) d.windup = d.nextSwing;
-      if (now >= d.nextSwing) { d.st.hit = now; d.windup = 0; d.nextSwing = now + FIGHT.AUTO_EVERY; d.swings = (d.swings || 0) + 1; d.heavy = d.swings % 4 === 0; sparHit(d); }
+      if (now >= d.nextSwing) {
+        d.st.hit = now; d.windup = 0; d.nextSwing = now + (K && K.sim.boss.duelUntil > now ? KENSEI.DUEL_EVERY : FIGHT.AUTO_EVERY); d.swings = (d.swings || 0) + 1; d.heavy = d.swings % 4 === 0;
+        d.hitAt = now; d.hitKind = d.heavy ? 'buster' : 'auto';   // (the Kenseier's ring lingers a moment after the blow)
+        sparHit(d);
+      }
     }
     town.buffs = town.buffs.filter(b => b.end > now);
     if (town.shield && town.shield.end <= now) endTownShield();
@@ -2859,9 +2935,11 @@
   // ring at the feet is where it ends; both turn white-gold inside the Perfect window (+-0.12s, KENSEI.PERFECT); an auto's ring is
   // pale, a tankbuster's ember-orange and doubled. It stays a moment after the blow (the Good window runs 0.3s either side).
   function drawKenRing(e) {
-    if (!inArena() || !raid || raid.state !== 'live' || !e.cls || e.cls.id !== 'kenseier') return;
-    const id = e.id === undefined ? Net.id : e.id, ps = raid.party.get(id);
-    if ((ps && !ps.alive) || raid.boss.u || (raid.posture && raid.posture.broken > 0)) return;
+    if (!e.cls || e.cls.id !== 'kenseier') return;
+    const yard = !inArena(), id = e.id === undefined ? Net.id : e.id;
+    if (yard ? id !== Net.id : !raid || raid.state !== 'live') return;   // (the yard: only yours, kenRing)
+    const ps = yard ? null : raid.party.get(id);
+    if (!yard && ((ps && !ps.alive) || raid.boss.u || (raid.posture && raid.posture.broken > 0))) return;
     const r = kenRing(id), LEAD = 1.2;
     if (!r || r.at > LEAD) return;
     const hs = heroScale(), cx = e.x, cy = e.y - (e.lift || 0) + 2 * hs, R0 = 21 * hs, SQ = 0.8, buster = r.kind === 'buster';

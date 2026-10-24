@@ -104,6 +104,12 @@ const RaidUI = (() => {
     dock('left');
     Tip.set($('lb-gauge'), () => limitTip());
     Tip.set(root.querySelector('.bb-post'), () => postureTip());   // (a Kenseier in the party: the boss's Posture)
+    // the sparring dummy's Posture in the yard, for a Kenseier practising on it (main.js townKenStep)
+    const tp = document.createElement('div');
+    tp.id = 'town-posture'; tp.className = 'hidden';
+    tp.innerHTML = '<small>Posture</small><div class="bb-post"><div class="back"></div><div class="fill"></div><div class="crack"></div></div>';
+    document.body.appendChild(tp);
+    Tip.set(tp.querySelector('.bb-post'), () => postureTip());
     // the boss plate grows with its status row and upcoming moves: keep the target frame just below it (style.css)
     if (typeof ResizeObserver !== 'undefined') {
       const bb = $('boss-bar');
@@ -438,8 +444,10 @@ const RaidUI = (() => {
   // Break left), hold (full, held until a cast ends), rec (recovering), by). White-gold fill; a grey back-fill holds the level it is
   // recovering from; a Break flashes the bar and cracks it, then drains it over the Break's seconds; a held bar pulses full.
   let postTrail = 0, postBroke = false, postBrkMax = 4;
-  function posture(raid, now, dt) {
-    const bar = q('.bb-post'), P = raid.posture, on = !!P && raid.state === 'live';
+  function posture(raid, now, dt) { postureBar(q('.bb-post'), raid.posture, raid.state === 'live', dt); }
+  // (the bar itself: the boss's, and the sparring dummy's in the yard, townPosture)
+  function postureBar(bar, P, live, dt) {
+    const on = !!P && live;
     bar.classList.toggle('hidden', !on);
     if (!on) { postTrail = 0; postBroke = false; return; }
     const frac = P.max ? Math.max(0, Math.min(1, P.p / P.max)) : 0, brk = P.broken > 0;
@@ -451,11 +459,17 @@ const RaidUI = (() => {
     if (brk) postTrail = 0;
     else if (P.rec && postTrail > frac) { /* recovering: the grey keeps the level it is draining from */ }
     else postTrail = frac >= postTrail ? frac : Math.max(frac, postTrail - dt * 3);
-    setX(q('.bb-post .fill'), brk ? Math.min(1, P.broken / postBrkMax) : frac);
-    setX(q('.bb-post .back'), postTrail);
+    setX(bar.querySelector('.fill'), brk ? Math.min(1, P.broken / postBrkMax) : frac);
+    setX(bar.querySelector('.back'), postTrail);
     bar.classList.toggle('brk', brk);
     bar.classList.toggle('hold', !!P.hold && !brk);
     bar.classList.toggle('rec', !!P.rec && !brk);
+  }
+  // the yard's plate: P is { p, max, broken, hold, rec } or null (hidden)
+  function townPosture(P, dt = 0.016) {
+    const el = $('town-posture'); if (!el) return;
+    el.classList.toggle('hidden', !P);
+    postureBar(el.querySelector('.bb-post'), P, true, dt);
   }
   function postureTip() {
     return '<b>Posture</b>Only a Kenseier\'s deflects fill it. When it is full the boss Breaks: it staggers and casts nothing, and the party hits harder until the Break ends or a Deathblow lands. It holds full through a cast and breaks when the cast ends. It drains slowly if nothing adds to it; the grey is what is draining away.';
@@ -950,5 +964,5 @@ const RaidUI = (() => {
       `<div class="rr ${cls}"><b>${n}</b><span>${esc(v)}</span><small>${esc(tip)}</small></div>`).join('')}</div>`;
   }
 
-  return { waymarks, prog, intro, toggleMeter, cycleMeter, init, show, setRoster, update, meter, showResults, hideResults, dock, resetRoster: () => { rosterKey = ''; } };
+  return { waymarks, prog, intro, toggleMeter, cycleMeter, init, show, setRoster, update, meter, showResults, hideResults, townPosture, dock, resetRoster: () => { rosterKey = ''; } };
 })();

@@ -1326,7 +1326,7 @@ TALENTS.kenseier = [
   [
     { id: 'kenseier_grand', name: 'Grand Deathblow', ab: 'deathblow', text: 'A Deathblow in the first second of a Break hits 20% harder.' },
     { id: 'kenseier_duel', name: 'Ember Duel', ab: 'guard', grants: true, text: 'New move on F, in place of Guard Stance. Ember Duel (90s): for 10s the boss\'s autos come at a steady beat, every 2s exactly, and every Perfect deflect adds double Posture.' },
-    { id: 'kenseier_lastspark', name: 'Last Spark', ab: 'deathblow', text: 'When you Break the boss, Thousand Cuts charges by a quarter.' },
+    { id: 'kenseier_lastspark', name: 'Last Spark', ab: 'deathblow', text: 'When you Break the boss yourself, Thousand Cuts charges by a quarter (not on the Break Thousand Cuts makes).' },
   ],
 ];
 
@@ -1351,7 +1351,7 @@ SPEC_TALENTS.kenseier = {
     ],
     [
       { id: 'kenseier_sharedpoise', name: 'Shared Poise', ab: 'deflect', text: 'A Perfect deflect for an ally gives them a {s:100} shield for 3s.' },
-      { id: 'kenseier_turnedtide', name: 'Turned Tide', ab: 'deathblow', text: 'A tankbuster you turn back with Redirect adds 20 Posture to the boss.' },
+      { id: 'kenseier_turnedtide', name: 'Turned Tide', ab: 'deathblow', text: 'A blow you turn back with Redirect adds 10 Posture to the boss, or 20 for a tankbuster.' },
     ],
   ],
 };

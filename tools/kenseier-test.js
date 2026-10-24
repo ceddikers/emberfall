@@ -293,5 +293,85 @@ const pdmgs = (sent, id = 1) => sent.filter(m => m.t === 'pdmg' && m.id === id);
   check(kit2.g.poise < 100 && sim2.ps.get(1).hp < sim2.ps.get(1).maxHp, `undeflected hits cost Poise and health (poise ${kit2.g.poise.toFixed(0)})`);
 }
 
+// 13. Last Spark: a Break the Kenseier built charges Thousand Cuts by a quarter; the Break Thousand Cuts forces does not refund it
+{
+  let t = 0;
+  const mk = tal => new Kit(kitFor('kenseier', null), { now: () => t, rng: Math.random, moving: () => false, target: () => ({ id: 'boss', x: 0, y: -40 }), positional: () => 'rear', partyMods: () => ({}), targetMods: () => ({}), selfMods: () => ({}),
+    recentDamage: () => 0, maxHp: () => 1000, hpFrac: () => 1, isDead: () => false, talents: () => new Set(tal), boss: () => null, emit: () => {} });
+  const a = mk(['kenseier_lastspark']), b = mk([]);
+  a.g.ult = 0; b.g.ult = 0;
+  a.notify('kbrk', { secs: 4 }); b.notify('kbrk', { secs: 4 });
+  check(near(a.ultCharge(), 25), `Last Spark charges Thousand Cuts a quarter on a Break (${a.ultCharge()})`);
+  check(b.ultCharge() === 0, `no charge from a Break without Last Spark (${b.ultCharge()})`);
+  t += 10; ULTIMATES.kenseier.effect.call(ULTIMATES.kenseier, a);
+  const was = a.ultCharge(); t += 0.2; a.notify('kbrk', { secs: 4 });
+  check(near(a.ultCharge(), was), `the Break Thousand Cuts forces gives Last Spark nothing (${was} -> ${a.ultCharge()})`);
+  t += 20; a.notify('kbrk', { secs: 4 });
+  check(near(a.ultCharge(), was + 25), `a later Break of your own charges again (${a.ultCharge()})`);
+}
+
+// 14. the training yard (main.js townKen): FightSim.kenYard stands in for the host, the sparring dummy's swings are the blows (every fourth
+// heavy, a tankbuster), and the kit and the yard talk through the same events and notices as in a raid
+{
+  const me = { id: 9, x: 0, y: 0 }, sent = [];
+  let kit = null, t = 0;
+  const sim = FightSim.kenYard(() => me, m => { sent.push(m); if (m.t === 'fev' && ['kdef', 'kbrk', 'kbend'].includes(m.k)) kit.notify(m.k, m); });
+  const s = sim.ps.get(9), P = () => sim.kenPost();
+  const env = { now: () => t, rng: Math.random, moving: () => false, target: () => ({ id: 'dummy', x: 0, y: -40 }), positional: () => 'rear', partyMods: () => ({}), targetMods: () => ({}), selfMods: () => ({}),
+    recentDamage: () => 0, maxHp: () => 1000, hpFrac: () => 1, isDead: () => false, talents: () => null, boss: () => null,
+    emit: ev => { if (ev.type === 'kensei') { sim.t = t; sim.kenEvent(9, ev); } } };
+  kit = new Kit(kitFor('kenseier', null), env);
+  // the yard's swing, as main.js sparHit does it: Off-balance takes more, kenIncoming judges the window, a blow with nothing to meet it is kept
+  const swing = heavy => {
+    const kind = heavy ? 'buster' : 'auto'; sim.t = t;
+    let amt = 1300 * (s.offbal > t ? 1.1 : 1);
+    const kd = sim.kenIncoming({ id: 9, x: 0, y: 0, s }, s, amt, { kind });
+    if (kd) amt *= kd.mult; else sim.kenNote({ id: 9 }, amt, amt, { kind });
+    kit.notify('taken', { a: Math.round(amt), k: kind, df: kd ? kd.q : 0 });
+    return { amt, kd };
+  };
+  // a Perfect on a swing, a heavy one worth more
+  t = 10; kit.press(1); t += 0.05;
+  let r = swing(false);
+  check(r.amt === 0 && r.kd.q === 2 && near(P().p, 18) && kit.stats.perfects === 1 && kit.g.poise === 100, `the yard's swing is Perfect-deflected like a raid's (taken ${r.amt}, q ${r.kd && r.kd.q}, Posture ${P().p})`);
+  t += 5; sim.kenTick(0.05);
+  const p0 = P().p;
+  kit.update(); t += 0.3; kit.update(); kit.press(1); t += 0.05; r = swing(true);
+  check(r.kd && r.kd.q === 2 && near(P().p - p0, 30) && sent.filter(m => m.k === 'kdef').pop().b === 1, `a heavy swing is a tankbuster: +30 (${P().p - p0})`);
+  // a swing with no press costs Poise and health (a hit with nothing to meet it)
+  t += 5; r = swing(false);
+  check(r.amt === 1300 && kit.g.poise < 100, `an unanswered swing lands and costs Poise (poise ${kit.g.poise})`);
+  // ...and a press just after gives it back, Poise included
+  t += 3; kit.g.poise = 100; kit.update(); swing(false); const pl = kit.g.poise; t += 0.1; kit.update(); kit.press(1);
+  check(kit.g.poise >= pl && sent.filter(m => m.k === 'kdef').pop().late === 1, `a late press gives the swing back (poise ${pl} -> ${kit.g.poise})`);
+  // Posture to a Break: the yard's Posture runs on kenTick, the Break is told, Deathblow is usable and ends it
+  const ev = o => { sim.t = t; sim.kenEvent(9, Object.assign({ type: 'kensei', secs: 4, keep: 0 }, o)); };
+  kit = new Kit(kitFor('kenseier', null), env);
+  t += 20; sim.t = t; P().p = 0; P().until = 0; P().at = t; kit.update();
+  check(!kenBroken(kit), 'no Break yet');
+  ev({ op: 'posture', full: 1 });
+  check(P().until > t && kenBroken(kit) && sim.boss.exposedUntil >= P().until - 0.01, 'a full bar Breaks the dummy and the kit knows');
+  check(kit.usable(kit.abilities[3]) && kit.abilities[3].glow(kit), 'Deathblow is usable and glows in the Break');
+  const db0 = kit.stats.casts && kit.stats.casts.deathblow || 0;
+  t += 0.5; kit.update(); kit.press(3); t += 0.1; kit.update();
+  check((kit.stats.casts && kit.stats.casts.deathblow || 0) === db0 + 1 && !kenBroken(kit) && P().until <= t, 'a Deathblow lands and ends the Break');
+  sim.kenTick(0.05); check(sent.filter(m => m.k === 'kbend').length >= 1, 'the Break ends and the kit is told');
+  // the heavy swing's wind-up is a cast: a full bar holds until it ends, then Breaks
+  sim.boss.cast = { name: 'Heavy blow', start: t, end: t + 0.6, anim: 'cast' };
+  ev({ op: 'posture', full: 1 });
+  check(P().hold && !P().until, "a full bar holds through the heavy swing's wind-up");
+  t += 0.7; sim.t = t; sim.boss.cast = null; sim.kenTick(0.05);
+  check(!P().hold && P().until > t, 'and Breaks as it lands');
+  // Thousand Cuts: the whole bar at once (a Break), then the free Deathblow, which does not end it
+  t += 6; sim.t = t; P().until = 0; P().p = 0; kit = new Kit(kitFor('kenseier', null), env); kit.update();
+  ULTIMATES.kenseier.effect.call(ULTIMATES.kenseier, kit);
+  check(P().until > t && kenBroken(kit), 'Thousand Cuts Breaks the dummy at once');
+  t += 0.6; kit.update(); check(P().until > t && kenBroken(kit), 'and its free Deathblow does not end the Break');
+  // Ember Duel's beat and the Break's length for a Deathblade are the kit's own words, passed on as they are
+  t += 10; sim.t = t; sim.kenTick(0.05); sim.kenTick(0.05);
+  ev({ op: 'duel', dur: 10 }); check(sim.boss.duelUntil > t, 'Ember Duel reaches the yard');
+  ev({ op: 'posture', full: 1, secs: 5 }); check(near(P().until - t, 5, 0.01), 'a Break of the length the kit asks for (5 s for a Deathblade)');
+}
+
 if (probs.length) { console.log('Kenseier FAILED:\n  ' + probs.join('\n  ')); process.exit(1); }
-console.log('Kenseier OK: deflect early and late, Mikiri Step, reach, Off-balance, Posture, Break, the held bar, the slid script, Ember Duel, shields, kit and host together');
+console.log('Kenseier OK: deflect early and late, Mikiri Step, reach, Off-balance, Posture, Break, the held bar, the slid script, Ember Duel, shields, kit and host together, Last Spark, the training yard');

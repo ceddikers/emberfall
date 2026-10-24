@@ -6494,7 +6494,7 @@ function kenOnBreak(k, d) {
   g.breakUntil = at + (d.secs || KENSEI.BREAK); g.breakAt = at; g.dbUsed = false;
   k.stats.breaks = (k.stats.breaks || 0) + 1;
   g.feintUntil = 0;
-  if (k.talent('kenseier_lastspark')) k.ultGain(25);   // (Last Spark: a Break you built charges Thousand Cuts a quarter)
+  if (k.talent('kenseier_lastspark') && !(at - (g.thousandAt ?? -9) < 1.5)) k.ultGain(25);   // (Last Spark: a Break you built charges Thousand Cuts a quarter; not the Break Thousand Cuts itself forces)
   // Patient Edge (Deathblade, row VI): a Break you did not spend a Deathblow on within 2 s gives the party +5% damage instead
   if (k.talent('kenseier_patient')) k.after(2, () => { if (g.breakAt === at && !g.dbUsed && kenBroken(k)) k.partyBuff('dmg', 0.05, Math.max(0.5, g.breakUntil - k.now), { ab: abBase(k, 'deathblow') }); });
   k.fx('ken-break', { s: d.secs || KENSEI.BREAK });
@@ -6526,7 +6526,7 @@ function kenRedirect(k, ab) {
   if (!L) return;
   const r = k.damage(Math.min(500, 0.3 * L.a / ENGINE.POT_SCALE), { ab, threat: 2 });
   if (k.talent('kenseier_emberreturn') && r && r.amount > 0) k.healRaw('self', r.amount, { ab });   // (Ember Return)
-  if (L.b && k.talent('kenseier_turnedtide')) kenPosture(k, 20);   // (Turned Tide)
+  if (k.talent('kenseier_turnedtide')) kenPosture(k, L.b ? 20 : 10);   // (Turned Tide: any blow sent back adds Posture, a tankbuster more)
   g.lastDef = null; g.pommelAt = k.now + KENSEI.POMMEL_CD;
   k.fx('ken-redirect', { b: L.b });
   if (up) { const f = g.feint || {}; g.feintUntil = 0; kenPosture(k, kenPerfectPost(k, false) - KENSEI.POST.good); kenPerfectHit(k, { q: 2, a: f.a, b: f.b, to: f.to, up: 1 }); }
@@ -6675,6 +6675,7 @@ ULTIMATES.kenseier = {
     '<div class="it-ult"><span><u>Charge:</u> 1.8% for every Perfect deflect (3.6% on a tankbuster), and a little on its own while you fight. It never drains; a fall keeps half.</span></div>',
   effect(k) {
     const ab = this;
+    k.g.thousandAt = k.now;   // (Last Spark skips the Break this forces)
     kenPosture(k, 0, { full: true });
     k.after(0.5, () => kenDeathblow(k, ab, { mult: 2, ult: true }));
     k.fx('ken-thousand');
