@@ -23,7 +23,7 @@
 
 const VOLKAR = {
   id: 'volkar', name: 'Volkar', title: 'The Storm Titan',
-  hp: { normal: 3620000, hard: 4510000 },
+  hp: { normal: 3620000, hard: 4830000 },
   autoDmg: { normal: 1450, hard: 1550 },
   enrage: { normal: 592, hard: 607 },   // the cast starts here and lands 8 s later (10:00 / 10:15)
   enrageName: 'Skybreak',

@@ -271,8 +271,8 @@ Eight bosses in two sets, each on Normal and Hard. Set 1 is Grubnak, Skitterra, 
 | Boss | HP (Normal / Hard) | Enrage lands | HP gates | Room |
 |---|---|---|---|---|
 | Grubnak, the Ogre Chef | 3.415M / 4.225M | 10:00 / 10:15 "Last Call" | 80 / 50 / 18% | 1040 x 720 kitchen |
-| Queen Skitterra | 3.305M / 4.105M | 10:10 / 10:20 "Devour" | 70 / 28% | octagon, radius 560 |
-| Volkar, the Storm Titan | 3.62M / 4.51M | 10:00 / 10:15 "Skybreak" | 55 / 15% | circle, radius 540, closes in |
+| Queen Skitterra | 3.305M / 3.8M | 10:10 / 10:20 "Devour" | 70 / 28% | octagon, radius 560 |
+| Volkar, the Storm Titan | 3.62M / 4.83M | 10:00 / 10:15 "Skybreak" | 55 / 15% | circle, radius 540, closes in |
 | The Hollow King | 3.56M / 4.345M | 10:30 / 10:40 "Moonset" | 80 / 62 / 46 / 25% | 1200 x 880 hall |
 | Vhalgrath, the Ember Wyrm | 4.8M / 5.635M | 10:20 / 10:30 "Ashfall" | 75 / 50 / 24%, wall 10% | circle, radius 560 |
 | Hrimgar, the Frost Titan | 5.55M / 5.6M | 10:08 / 9:58 "Endless Winter" | 74 / 48 / 22%, wall 10% | 1000 x 800 ice plateau |

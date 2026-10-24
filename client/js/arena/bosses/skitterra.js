@@ -26,7 +26,7 @@
 
 const SKITTERRA = {
   id: 'skitterra', name: 'Queen Skitterra', title: 'Spider Broodmother',
-  hp: { normal: 3305000, hard: 4105000 },
+  hp: { normal: 3305000, hard: 3800000 },
   autoDmg: { normal: 1800, hard: 1650 },
   enrage: { normal: 602, hard: 612 },   // the cast starts here and lands 8 s later (10:10 / 10:20)
   enrageName: 'Devour',
