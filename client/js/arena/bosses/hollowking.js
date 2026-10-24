@@ -347,7 +347,9 @@ const HOLLOWKING = {
     // stays burning as a spoke out from him until the graves close, so the lines must point between the graves (the
     // hall's corners), never at one; then the way in for the Crown and out to every grave stays open. The Pardoned is drawn at random
     // each pull.
-    const WRIT_BURN = 12;
+    // Each line follows its hero while it's aimed, then sets WRIT_LOCK s before it's read: from then it's the red lane on
+    // the floor, fixed, and stepping out of it is stepping out of the blow (the burn only comes after, where it ran).
+    const WRIT_BURN = 12, WRIT_LOCK = 2;
     const writ = () => {
       const d = f.ct(5.5), al = f.alive();
       if (!al.length) return;
@@ -357,7 +359,7 @@ const HOLLOWKING = {
       for (const p of al) {
         const free = p.id === pardoned;
         const m = f.mech({ type: free ? 'safe' : 'bait', shape: { kind: 'rect', x: B.x, y: B.y, angle: 0, len: 1400, w: 110 }, delay: d, dmg: free ? 0 : dmg.writ,
-          target: p.id, aimFromBoss: p.id, lockAt: 0.6, tag: free ? 'pardon' : 'writ',
+          target: p.id, aimFromBoss: p.id, lockAt: WRIT_LOCK, tag: free ? 'pardon' : 'writ',
           // a read writ leaves its line burning on the floor (from a stride off him out to the wall) until the graves
           // close: spokes round him. Aimed at a grave, it bars the way to it; aimed between the graves, it doesn't.
           onResolve: free ? null : () => {

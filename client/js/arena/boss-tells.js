@@ -1627,9 +1627,12 @@ const BossTells = (() => {
       },
     },
     // Writ of Execution (Hard): a grave-chain from him to the hero it names, and the lane the writ's grave-light will
-    // run down, out through them. Red (the outline); the Pardoned's lane isn't painted at all, only its chain hanging
-    // broken. (The pardon is a 'safe' mech: sim data, with no rim.)
+    // run down, out through them. While it's still being aimed (it follows them) the lane is only a pale guide; when it
+    // sets (tg.lockAt before it's read) it flashes white and turns the red lane of the blow, fixed: out of the red is
+    // out of the hit. The Pardoned's lane isn't painted at all, only its chain hanging broken. (The pardon is a 'safe'
+    // mech: sim data, with no rim.)
     writ: {
+      outline: false,   // (its own rim: pale while aimed, red once set; writLane)
       ground(ctx, tg, s, p, k, t, env) { writLane(ctx, tg, s, p, k, t, env, false); },
     },
     pardon: {
@@ -1638,17 +1641,37 @@ const BossTells = (() => {
   };
   function writLane(ctx, tg, s, p, k, t, env, free) {
     const ca = Math.cos(s.angle), sa = Math.sin(s.angle), L = toWall(s.x, s.y, s.angle, s.len);
+    // set: the last tg.lockAt seconds, when the lane no longer follows anyone
+    const left = (1 - p) * tg.dur, lock = tg.lockAt || 0, set = left <= lock, landed = tg.gone != null;
     ctx.save(); SHAPES.trace(ctx, s); ctx.clip();
-    if (!free) { ctx.fillStyle = `rgba(4,10,8,${(0.2 + 0.25 * p) * k})`; ctx.fillRect(-AR() * 2, -AR() * 2, AR() * 4, AR() * 4); }
-    // runes of the sentence running down it (none on a torn writ)
+    if (!free && set) {
+      const q = lock > 0 ? clamp(1 - left / lock, 0, 1) : 1;
+      ctx.fillStyle = `rgba(4,10,8,${(0.35 + 0.15 * q) * k})`; ctx.fillRect(-AR() * 2, -AR() * 2, AR() * 4, AR() * 4);
+      ctx.fillStyle = rgba(COL.danger, (0.12 + 0.12 * q) * k); ctx.fillRect(-AR() * 2, -AR() * 2, AR() * 4, AR() * 4);
+    }
+    // runes of the sentence running down it (none on a torn writ); pale while it's still being aimed
     if (!free) for (let d = 120 + (t * 90) % 90; d < L; d += 90) {
       const x = s.x + ca * d, y = s.y + sa * d;
       ctx.save(); ctx.translate(x, y); ctx.rotate(s.angle);
-      ctx.strokeStyle = rgba('#9affc0', (0.3 + 0.5 * p) * k); ctx.lineWidth = 2;
+      ctx.strokeStyle = rgba('#9affc0', (set ? 0.5 + 0.3 * p : 0.18 + 0.2 * p) * k); ctx.lineWidth = 2;
       ctx.beginPath(); ctx.moveTo(-6, -10); ctx.lineTo(6, 0); ctx.lineTo(-6, 10); ctx.moveTo(-2, -5); ctx.lineTo(-2, 5); ctx.stroke();
       ctx.restore();
     }
     ctx.restore();
+    // the rim: a pale dashed guide while it follows them, then the red edge of the blow once it's set (with a white
+    // flash as it sets), exactly the lane it will hit
+    if (!free) {
+      ctx.save(); SHAPES.trace(ctx, s);
+      if (!set) {
+        ctx.setLineDash([10, 10]); ctx.lineDashOffset = -t * 20;
+        ctx.strokeStyle = rgba('#d8f0e4', 0.35 * k); ctx.lineWidth = 1.5; ctx.stroke();
+      } else {
+        const late = clamp(1 - left / 0.6, 0, 1);
+        ctx.strokeStyle = rgba(COL.danger, (0.7 + 0.3 * late) * k); ctx.lineWidth = 2.5 + late * 1.5; ctx.stroke();
+        if (!landed && lock - left < 0.35) { ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = rgba('#ffffff', (1 - (lock - left) / 0.35) * 0.9 * k); ctx.lineWidth = 6; ctx.stroke(); }
+      }
+      ctx.restore();
+    }
     // the chain from his hand to them: taut and green-lit, or broken and slack
     const e = tg.target != null ? env.entById(tg.target) : null;
     if (!e) return;
