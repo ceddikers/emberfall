@@ -24,7 +24,7 @@ function make(opts = {}) {
   const sim = new FightSim(def, 'normal', () => ps, m => sent.push(m), 7);
   sim.state = 'live'; sim.t = 100; sim.boss.autoAt = 1e9;   // (no autos but the ones the test sends)
   const find = id => sim.players().find(p => p.id === id);
-  const defl = (o = {}) => sim.onEvent(1, Object.assign({ type: 'kensei', op: 'deflect', dur: 0.3, amount: 18, value: 8, mult: 30, r: 0, secs: 4, keep: 0, sh: 0, ticks: 1 }, o));
+  const defl = (o = {}) => sim.onEvent(1, Object.assign({ type: 'kensei', op: 'deflect', dur: 0.22, amount: 18, value: 8, mult: 30, r: 0, secs: 4, keep: 0, sh: 0, ticks: 1 }, o));
   const hit = (id = 1, kind = 'auto', raw = 1000, extra = {}) => sim.damagePlayer(find(id), raw, Object.assign({ kind }, extra));
   const post = () => sim.boss.post ? sim.boss.post.p : 0;
   return { sim, sent, find, defl, hit, post, s: sim.ps.get(1), s2: sim.ps.get(2) };
@@ -32,12 +32,12 @@ function make(opts = {}) {
 const fevs = (sent, k) => sent.filter(m => m.t === 'fev' && m.k === k);
 const pdmgs = (sent, id = 1) => sent.filter(m => m.t === 'pdmg' && m.id === id);
 
-// 1. a press before the blow: within 0.12 s Perfect (nothing taken, +18), up to 0.3 s Good (half, +8), further out nothing
+// 1. a press before the blow: within 0.09 s Perfect (nothing taken, +18), up to 0.22 s Good (a third off, +8), further out nothing
 {
   let { sim, sent, defl, hit, post, s } = make();
   const full = (() => { const h = make(); h.hit(); return pdmgs(h.sent)[0].a; })();
   check(full > 0, 'an auto should hurt a Kenseier with no deflect');
-  defl(); sim.t += 0.1; hit();
+  defl(); sim.t += 0.07; hit();
   let pd = pdmgs(sent).pop();
   check(pd.a === 0 && pd.df === 2, `a Perfect should take the blow whole (a ${pd.a}, df ${pd.df})`);
   check(near(post(), 18), `a Perfect adds 18 Posture (${post()})`);
@@ -45,9 +45,9 @@ const pdmgs = (sent, id = 1) => sent.filter(m => m.t === 'pdmg' && m.id === id);
   check(k && k.q === 2 && k.b === 0 && k.late === 0 && k.a > 0 && near(k.p, 0.09), `the Kenseier is told: Perfect, not a tankbuster, not late, what it would have dealt (${JSON.stringify(k)})`);
   check(s.defl === null, 'the window is spent by the blow it caught');
   ({ sim, sent, defl, hit, post, s } = make());
-  defl(); sim.t += 0.25; hit();
+  defl(); sim.t += 0.2; hit();
   pd = pdmgs(sent).pop();
-  check(Math.abs(pd.a - full * 0.5) <= 1 && pd.df === 1, `a Good should halve it (a ${pd.a} of ${full}, df ${pd.df})`);
+  check(Math.abs(pd.a - full * 2 / 3) <= 1 && pd.df === 1, `a Good should take a third off it (a ${pd.a} of ${full}, df ${pd.df})`);
   check(near(post(), 8), `a Good adds 8 Posture (${post()})`);
   ({ sim, sent, defl, hit, post, s } = make());
   defl(); sim.t += 0.45; hit();
@@ -67,7 +67,7 @@ const pdmgs = (sent, id = 1) => sent.filter(m => m.t === 'pdmg' && m.id === id);
   check(pdmgs(sent).pop().a > 0 && post() === 0, 'an area hit is not something to deflect');
 }
 
-// 2. a press after the blow gives it back (Perfect whole, Good half), if it comes within the window
+// 2. a press after the blow gives it back (Perfect whole, Good a third), if it comes within the window
 {
   let { sim, sent, defl, hit, post, s } = make();
   const hp0 = s.hp;
@@ -78,7 +78,7 @@ const pdmgs = (sent, id = 1) => sent.filter(m => m.t === 'pdmg' && m.id === id);
   check(near(post(), 18) && fevs(sent, 'kdef').pop().late === 1, 'and still adds its Posture, flagged late');
   ({ sim, sent, defl, hit, post, s } = make());
   hit(); sim.t += 0.2; defl();
-  check(Math.abs(s.hp - (s.maxHp - lost / 2)) <= 1.5 && near(post(), 8), `a Good press after the blow gives half back (hp ${s.hp}, lost ${lost})`);
+  check(Math.abs(s.hp - (s.maxHp - lost * 2 / 3)) <= 1.5 && near(post(), 8), `a Good press after the blow gives a third back (hp ${s.hp}, lost ${lost})`);
   ({ sim, sent, defl, hit, post, s } = make());
   hit(); sim.t += 0.4; defl();
   check(near(s.hp, s.maxHp - lost, 1) && post() === 0, 'a press too long after gives nothing back');
@@ -266,11 +266,11 @@ const pdmgs = (sent, id = 1) => sent.filter(m => m.t === 'pdmg' && m.id === id);
   kit = new Kit(kitFor('kenseier', null), env);
   const W = 1, R = 3;
   let presses = 0, dbs = 0, brks = 0, planned = [];
-  for (let i = 0; i < 20 * 120; i++) {
-    sim.tick(0.05); kit.update();
+  for (let i = 0; i < 20 * 120 * 5; i++) {
+    sim.tick(0.01); kit.update();
     // the tank's own press: W 0.05 s before each auto (the boss swings at autoAt)
     const toAuto = sim.boss.autoAt - sim.t;
-    if (toAuto < 0.1 && toAuto > 0.04 && !kenBroken(kit) && planned.indexOf(sim.boss.autoAt) < 0) { planned.push(sim.boss.autoAt); if (kit.press(W)) presses++; }   // (once per swing, none at a staggered boss)
+    if (toAuto < 0.06 && toAuto > 0.04 && !kenBroken(kit) && planned.indexOf(sim.boss.autoAt) < 0) { planned.push(sim.boss.autoAt); if (kit.press(W)) presses++; }   // (once per swing, none at a staggered boss)
     if (kit.gcdRemaining() <= 0 && kit.lockUntil <= kit.now && !(toAuto < 0.45 && toAuto > -0.1)) {   // (nothing pressed just before a swing: it would sit behind the press's animation lock)
       const was = kit.stats.casts.deathblow || 0;
       if (kit.usable(kit.abilities[R]) && kenBroken(kit)) { if (kit.press(R)) dbs++; } else kit.press(0);

@@ -1985,8 +1985,8 @@ BOT_CLASS.kenseier = {
     for (const h of hits) {
       if (h.at - t > 1.2 || K.plans.some(p => same(p, h) || (!p.skip && Math.abs(p.for - h.at) < 0.35))) continue;
       const g = Math.sqrt(-2 * Math.log(1 - u(h.at, 2) * 0.999999)) * Math.cos(2 * Math.PI * u(h.at, 3));
-      const jit = bot.sloppy ? (u(h.at, 1) * 2 - 1) * 0.3 : Math.max(-0.08, Math.min(0.08, g * 0.045));
-      K.plans.push({ kind: h.kind, for: h.at, at: h.at + jit - 0.045, skip: u(h.at, 4) < (bot.sloppy ? 0.15 : 0.02), done: false });
+      const jit = bot.sloppy ? (u(h.at, 1) * 2 - 1) * 0.3 : Math.max(-0.22, Math.min(0.22, g * 0.075));
+      K.plans.push({ kind: h.kind, for: h.at, at: h.at + jit - 0.045, skip: u(h.at, 4) < (bot.sloppy ? 0.15 : 0.05), done: false });
     }
     const planNear = within => K.plans.some(p => !p.done && !p.skip && p.at - t < within && p.at - t > -0.1);
     const defl = idx('deflect'), cut = idx('cut'), db = idx('deathblow'), mantle = idx('mantle'), guard = idx('guard'), mk = idx('mikiri');

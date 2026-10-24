@@ -1002,7 +1002,8 @@ function reaverAfterDrain(k, ab, healed, tide) {
   if (k.talent('bloodreaver_second') && healed > mx * (k.def.spec === 'berserker' ? 0.1 : 0.15)) { reaverGain(k, 20); k.fx('secondHelping'); }
   if (k.talent('bloodreaver_hemorrhage')) { k.dot('hemorrhage', 30, 9, 3, { ab }); k.fx('hemorrhage'); }
   // the spec rows VI-VII: Scar Tissue (Berserker), Spill Over and Blood Font (Hemomancer)
-  if (k.talent('bloodreaver_scar') && hpOf(k) < 0.5) { k.mitigate('self', 0.15, 5, { ab }); k.fx('cauterize'); }
+  if (k.def.spec === 'berserker') { const low = hpOf(k) < 0.5; k.mitigate('self', low ? 0.35 : 0.15, low ? 3 : 2, { ab }); }   // (a Rampage guards you for a moment, better below half HP)
+  if (k.talent('bloodreaver_scar') && hpOf(k) < 0.5) { k.mitigate('lowest', 0.15, 3, { ab }); k.fx('cauterize'); }
   if (k.talent('bloodreaver_spill')) { const over = healed - (1 - hpOf(k)) * mx; if (over > 1) { k.healRaw('lowest', over, { ab }); k.fx('secondHelping'); } }
   if (k.talent('bloodreaver_font') && k.now >= (k.g.fontAt || 0)) {
     k.g.fontAt = k.now + 20;
@@ -6434,7 +6435,7 @@ if (typeof module !== 'undefined') Object.assign(module.exports, { LANTERN, LK_K
 // ken-step, ken-spin, ken-thousand.
 // ===================================================================================================================
 const KENSEI = {
-  PERFECT: 0.12, GOOD: 0.3, GOOD_MANTLE: 0.5, LOCK: 0.6,   // deflect windows (s, either side of the hit; Ash Mantle widens the Good one), the lockout after a miss
+  PERFECT: 0.09, GOOD: 0.22, GOOD_MANTLE: 0.5, LOCK: 0.6,   // deflect windows (s, either side of the hit; Ash Mantle widens the Good one), the lockout after a miss
   MAX: 200,                          // the boss's Posture bar (a Good deflect on every swing breaks it about every 45 s, a Perfect on every swing about every 25 s)
   REST: 4, RECOVER: 5,               // the bar recovers RECOVER a second once nothing has added to it for REST s
   BREAK: 4, BREAK_DEADLY: 5, BREAK_DMG: 0.15,   // a Break: the stagger's length, and how much more the boss takes from the party
@@ -6593,7 +6594,7 @@ function kenOnBreak(k, d) {
 // the Deathblow, a free one under Thousand Cuts (o.ult), and its follow-ups
 function kenDeathblow(k, ab, o = {}) {
   const g = k.g, mult = o.mult || 1, early = k.now - (g.breakAt || 0) <= 1.2;
-  const pot = 900 * mult * (!o.ult && early && k.talent('kenseier_grand') ? 1.2 : 1);
+  const pot = 820 * mult * (!o.ult && early && k.talent('kenseier_grand') ? 1.2 : 1);
   const r = k.damage(pot, { ab, threat: 2 });
   k.healRaw('self', k.env.maxHp() * 0.15, { ab });
   if (k.def.deadly) k.buff('killing', 10);   // (Killing Edge: the boss takes 5% more from you for 10 s)
@@ -6651,7 +6652,7 @@ KITS.kenseier = {
     if (type === 'kdef') kenOnDeflect(k, d);
     else if (type === 'kbrk') kenOnBreak(k, d);
     else if (type === 'kbend') { k.g.breakUntil = 0; }
-    else if (type === 'taken') {   // a blow you took without a deflect costs Poise (a Good deflect's half does not: pdmg's df)
+    else if (type === 'taken') {   // a blow you took without a deflect costs Poise (a Good deflect's two-thirds does not: pdmg's df)
       if (!(d.a > 0) || d.df || !(d.k === 'auto' || d.k === 'buster')) return;
       const cost = d.k === 'buster' ? KENSEI.HIT_BUSTER : KENSEI.HIT;
       k.g.lastTake = { at: k.now, cost };
@@ -6661,7 +6662,7 @@ KITS.kenseier = {
   signature: 'The Beat',
   floor: 'Press Q for the combo. W when it glows, just as a blow lands. R when it glows, D before a big hit, F when the party is about to be hit.',
   ceiling: [
-    'Every boss auto and tankbuster has a beat, and the ring closing on your feet counts it down. Press W as it closes: within a blink of the hit is Perfect (no damage, +18 Posture, +30 on a tankbuster), a little further is Good (half damage, +8).',
+    'Every boss auto and tankbuster has a beat, and the ring closing on your feet counts it down. Press W as it closes: within a blink of the hit is Perfect (no damage, +18 Posture, +30 on a tankbuster), a little further is Good (a third off, +8).',
     'Pressing W with no blow to meet costs Poise and locks the key for a moment. Poise also drains when a blow hits you with no deflect; at nothing you are Off-balance for 2s: no deflects, 10% more damage taken. It refills quickly while you are not hit.',
     'Posture is the boss\'s, and only you can fill it. At full the boss Breaks: 4s of stagger, no casts, and everyone deals 15% more. A full bar holds until a cast ends. Deathblow (R) in a Break hits for {d:900}, but it ends the Break: line it up with the party\'s burst.',
     'Mikiri Step (E) is a small step through an attack: let one land as you move and it passes through you untouched, for 25 Posture.',
@@ -6687,7 +6688,7 @@ KITS.kenseier = {
     },
     {
       id: 'deflect', name: 'Deflect', type: 'ogcd', target: 'self', lock: 0.2, anim: 'guard',
-      desc: 'Meet the next blow with your blade. Pressed within a blink of a boss auto or tankbuster landing on you, either side of it, it turns the blow aside (Perfect: no damage, +18 Posture, +30 on a tankbuster) and a little further out it halves it (Good: +8 Posture). No cooldown, but pressed with no blow to meet it costs a little Poise and the key rests for a moment.',
+      desc: 'Meet the next blow with your blade. Pressed within a blink of a boss auto or tankbuster landing on you, either side of it, it turns the blow aside (Perfect: no damage, +18 Posture, +30 on a tankbuster) and a little further out it takes a third off it (Good: +8 Posture). No cooldown, but pressed with no blow to meet it costs a little Poise and the key rests for a moment.',
       usable: k => !kenOff(k) && k.now >= (k.g.noDefl || 0),
       glow: k => { const b = bossNow(k); return !kenOff(k) && !!(b && b.hitIn != null && b.hitIn <= 0.14 && b.hitIn >= -0.1); },
       effect(k) { kenDeflect(k, this); },
@@ -6706,7 +6707,7 @@ KITS.kenseier = {
     },
     {
       id: 'deathblow', name: 'Deathblow', type: 'gcd', target: 'enemy', range: MELEE, lock: 0.3, anim: 'attack',
-      desc: 'Only while the boss is Broken: a Deathblow for {d:900} that heals you for 15% of your health, and ends the Break early. Out of a Break this is a Pommel: {d:200} and +5 Posture (8s cooldown).',
+      desc: 'Only while the boss is Broken: a Deathblow for {d:820} that heals you for 15% of your health, and ends the Break early. Out of a Break this is a Pommel: {d:200} and +5 Posture (8s cooldown).',
       label: k => (kenBroken(k) ? 'Deathblow' : k.def.warden ? 'Redirect' : 'Pommel'),
       usable: k => kenBroken(k) || (k.now >= (k.g.pommelAt || 0) && (!k.def.warden || !!(k.g.lastDef && k.now - k.g.lastDef.at < 8))),
       // (Feint, row I: right after a Good deflect the Pommel is off the global cooldown)

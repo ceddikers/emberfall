@@ -113,7 +113,7 @@ const SPECS = {
         abilities: {
           drain: {
             id: 'rampage', replaces: 'drain', name: 'Rampage', type: 'gcd', target: 'enemy', range: SPEC_MELEE, anim: 'attack',
-            desc: 'Spend 40 Rage: a wild blow for {d:320}, up to {d:250} more the more the bank holds (the damage you took since your last Rampage, 6s at most). Within 1.2s of a hit that took a tenth of your HP your blood is warm: {d:340} more; after that the bank has gone cold and counts for 30%. It hits harder the lower your HP (up to 70% harder near death) and heals you for 20% of the bank.',
+            desc: 'Spend 40 Rage: a wild blow for {d:320}, up to {d:250} more the more the bank holds (the damage you took since your last Rampage, 6s at most). Within 1.2s of a hit that took a tenth of your HP your blood is warm: {d:340} more; after that the bank has gone cold and counts for 30%. It hits harder the lower your HP (up to 70% harder near death) and heals you for 20% of the bank. It also guards you: 15% less damage for 2s, or 35% for 3s when thrown below half HP.',
             usable: k => reaverDrainOk(k),
             glow: k => reaverDrainGlow(k) || (k.g.blood >= 40 && k.env.hpFrac() < 0.5),
             effect(k) {
@@ -1458,8 +1458,8 @@ SPECS.kenseier = [
       potMult: base.potMult * 0.9,   // balance knob (tools/simulate.js)
       deadly: true,
       abilities: {
-        deflect: { desc: 'Meet the next blow with your blade. Pressed within a blink of a boss auto or tankbuster landing on you, either side of it, it turns the blow aside (Perfect: no damage, +25 Posture, +37 on a tankbuster) and a little further out it halves it (Good: +8 Posture). No cooldown, but pressed with no blow to meet it costs a little Poise and the key rests for a moment.' },
-        deathblow: { desc: 'Only while the boss is Broken (a Break lasts 5s): a Deathblow for {d:900} that heals you for 15% of your health, ends the Break early, and leaves the boss taking 5% more damage from you for 10s. Out of a Break this is a Pommel: {d:200} and +5 Posture (8s cooldown).' },
+        deflect: { desc: 'Meet the next blow with your blade. Pressed within a blink of a boss auto or tankbuster landing on you, either side of it, it turns the blow aside (Perfect: no damage, +25 Posture, +37 on a tankbuster) and a little further out it takes a third off it (Good: +8 Posture). No cooldown, but pressed with no blow to meet it costs a little Poise and the key rests for a moment.' },
+        deathblow: { desc: 'Only while the boss is Broken (a Break lasts 5s): a Deathblow for {d:820} that heals you for 15% of your health, ends the Break early, and leaves the boss taking 5% more damage from you for 10s. Out of a Break this is a Pommel: {d:200} and +5 Posture (8s cooldown).' },
         guard: {
           id: 'iai', replaces: 'guard', icon: 'iai', name: 'Iai Stance', type: 'ogcd', target: 'self', cd: 90, lock: 0.5, anim: 'big',
           desc: 'Sheathe the blade and wait, for 6s: your next Perfect deflect is followed at once by a counter-cut for {d:450}.',
@@ -1479,8 +1479,8 @@ SPECS.kenseier = [
       potMult: base.potMult * 1.0,   // balance knob (tools/simulate.js)
       warden: true,
       abilities: {
-        deflect: { desc: 'Meet the next blow with your blade, or step in front of an ally within 120 of you and meet theirs. Pressed within a blink of a boss auto or tankbuster landing, either side of it, it turns the blow aside (Perfect: no damage, +18 Posture, +30 on a tankbuster) and a little further out it halves it (Good: +8 Posture). For an ally it costs your Poise a little. No cooldown, but pressed with no blow to meet it costs a little Poise and the key rests for a moment.' },
-        deathblow: { desc: 'Only while the boss is Broken: a Deathblow for {d:900} that heals you for 15% of your health, and ends the Break early. Out of a Break this is Redirect (8s cooldown, once you have turned a blow aside in the last 8s): the last blow you deflected goes back at the boss for 30% of what it would have dealt, up to {d:500}.' },
+        deflect: { desc: 'Meet the next blow with your blade, or step in front of an ally within 120 of you and meet theirs. Pressed within a blink of a boss auto or tankbuster landing, either side of it, it turns the blow aside (Perfect: no damage, +18 Posture, +30 on a tankbuster) and a little further out it takes a third off it (Good: +8 Posture). For an ally it costs your Poise a little. No cooldown, but pressed with no blow to meet it costs a little Poise and the key rests for a moment.' },
+        deathblow: { desc: 'Only while the boss is Broken: a Deathblow for {d:820} that heals you for 15% of your health, and ends the Break early. Out of a Break this is Redirect (8s cooldown, once you have turned a blow aside in the last 8s): the last blow you deflected goes back at the boss for 30% of what it would have dealt, up to {d:500}.' },
       },
     }),
   },
