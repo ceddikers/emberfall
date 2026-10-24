@@ -917,16 +917,20 @@ Object.assign(PRO, {
     const cross = abOf(k, 'cross');
     if (cross.type === 'ogcd' && weaveOk(k) && ready(k, 'cross') && k.glows(cross)) return I(k, 'cross');
     if (weaveOk(k) && ready(k, 'pull') && (k.charges(abOf(k, 'pull')) === 2 || k.g.strings < 3 || mariLimp(k))) return I(k, 'pull');
-    if (abOf(k, 'swap').id === 'swap' && k.talent('marionettist_cue') && weaveOk(k) && ready(k, 'swap') && k.cdRemaining(cross) > 3) return I(k, 'swap');
     // Stage Cross: Swap a moment before Cross-Cut comes up, so the cut lands harder (the Doll is back on its mark by then)
-    else if (abOf(k, 'swap').id === 'swap' && weaveOk(k) && ready(k, 'swap') && !k.has('oncue') && k.readyIn(cross) < 4 && k.readyIn(cross) > 1.5) return I(k, 'swap');
+    if (abOf(k, 'swap').id === 'swap' && weaveOk(k) && ready(k, 'swap') && !k.has('oncue') && k.readyIn(cross) < 4 && k.readyIn(cross) > 1.5) return I(k, 'swap');
     if (k.gcdRemaining() > 0.0001 || k.cast) return null;
     const hitIn = ctx.state.dollHitAt != null ? ctx.state.dollHitAt - ctx.t : 99;
     // Pirouette through a blow you see coming (+1 Encore); otherwise keep it for the next one when it's close
     if (ready(k, 'pirouette') && abOf(k, 'pirouette').id === 'pirouette' && hitIn < 1.4) return I(k, 'pirouette');
-    if (ready(k, 'finale') && k.g.encore >= 5) return I(k, 'finale');
+    // (Intermission: a short show from 4, when Cross-Cut is about to give 2 more that would spill)
+    if (ready(k, 'finale') && (k.g.encore >= 5 || (k.talent('marionettist_intermission') && k.g.encore >= 4 && k.readyIn(cross) < 1.5))) return I(k, 'finale');
+    // Cut the Cord: snip with all three tied and a Pull to tie it back (the pull above does, for 1 more Encore)
+    // (it also dances through a blow, as Pirouette: kept for one that's coming when one is close)
+    if (abOf(k, 'pirouette').id === 'cutcord') { if (ready(k, 'pirouette') && k.g.encore <= 3 && (hitIn < 1.4 || hitIn > 12)) return I(k, 'pirouette'); }
     if (cross.type === 'gcd' && ready(k, 'cross') && k.glows(cross)) return I(k, 'cross');   // (Crossfire glows for the Dolls' own line)
     if (ready(k, 'pirouette') && (abOf(k, 'pirouette').id !== 'pirouette' || hitIn > 12)) return I(k, 'pirouette');
+    if (cross.type === 'gcd' && k.has('oncue') && k.readyIn(cross) < 2.5) return null;   // (hold the GCD for the Stage Cross cut)
     return ready(k, 'cue') ? I(k, 'cue') : null;
   },
 });

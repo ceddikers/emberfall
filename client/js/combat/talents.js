@@ -544,24 +544,24 @@ Object.assign(TALENTS, {
 
   marionettist: [
     [
-      { id: 'marionettist_flourish', name: 'Flourish', ab: 'cue', text: 'The last of the quick Jabs a Cue gives now flourishes into a second, lighter stab for {d:100}. Let all three land before you Cue again.', spec: { understudy: 'The last of the quick Jabs a Cue gives now flourishes into a second, lighter stab: {d:58} from each Doll. Let all three land before you Cue again.' } },
-      { id: 'marionettist_lunge', name: 'Lunge', ab: 'pull', text: 'Pull Strings now cuts 40% harder when the Doll passes through an enemy.' },
-      { id: 'marionettist_counterweight', name: 'Counterweight', ab: 'cross', text: 'A Cross-Cut that cuts nothing now gives back half its cooldown.' },
+      { id: 'marionettist_flourish', name: 'Flourish', ab: 'cue', text: 'The last of the quick Jabs a Cue gives now flourishes into a second, lighter stab for {d:100}. Let all three land before you Cue again.', spec: { understudy: 'The last of the quick Jabs a Cue gives now flourishes into a second, lighter stab: {d:58} from each Doll. Let all six land before you Cue again.' } },
+      { id: 'marionettist_riposte', name: 'Riposte', ab: 'cue', text: 'Every fourth Jab the Doll makes is a Riposte, a heavier stab for {d:90} that builds 1 Encore. Its own Jabs now feed the Finale: keep it in reach.', spec: { understudy: 'Every fourth Jab the Dolls make is a Riposte, a heavier stab for {d:52.2} that builds 1 Encore. Their own Jabs now feed the Finale: keep them in reach.' } },
+      { id: 'marionettist_longarms', name: 'Long Arms', ab: 'pull', text: 'Out of reach, the Doll no longer stops: it jabs down the strings from wherever it stands, for {d:28}. Park it clear of a telegraph and it keeps working.', spec: { understudy: 'Out of reach, the Dolls no longer stop: they jab down the strings from wherever they stand, for {d:16.2}. Park them clear of a telegraph and they keep working.' } },
     ],
     [
-      { id: 'marionettist_bodydouble', name: 'Body Double', ab: 'swap', text: 'Swap now also wraps you in a {s:150} shield for 5s.' },
+      { id: 'marionettist_slack', name: 'Slack Line', ab: 'pull', text: 'The Doll straying past the strings\' reach no longer tears a String: it is only yanked back. Only a blow tears one now, so you can run and keep your Strung.' },
       { id: 'marionettist_mended', name: 'Safe Landing', ab: 'pull', text: 'Pull Strings now also leaves the Doll untouchable for 1.5s where it lands.' },
       { id: 'marionettist_standin', name: 'Stand-In', ab: 'swap', text: 'For 3s after a Swap, a blow that lands on the Doll no longer tears a String.' },
     ],
     [
       { id: 'marionettist_tangle', name: 'Tangle', ab: 'pirouette', grants: true, text: 'New move on R, in place of Pirouette. Tangle: the Doll winds its strings round the enemy, a {d:160} cut now and a bleed of {d:38} every 2s for 10s.', spec: { understudy: 'New move on R, in place of Pirouette. Tangle: each Doll winds its strings round the enemy, a {d:92.8} cut now and a bleed of {d:22} every 2s for 10s.' } },
-      { id: 'marionettist_encore', name: 'Encore! Encore!', ab: 'finale', text: 'Grand Finale now leaves you 2 Encore when it ends.' },
+      { id: 'marionettist_cutcord', name: 'Cut the Cord', ab: 'pirouette', grants: true, text: 'New move on R, in place of Pirouette. Cut the Cord: snip one of your own Strings for a {d:480} strike and 2 Encore, and the Doll dances free of any blow for 1.5s. You lose that String\'s Strung until it grows back, or until a Pull Strings ties it back for another Encore.', spec: { understudy: 'New move on R, in place of Pirouette. Cut the Cord: snip one of your own Strings, and each Doll strikes for {d:278.4}, with 2 Encore, and the Dolls dance free of any blow for 1.5s. You lose that String\'s Strung until it grows back, or until a Pull Strings ties it back for another Encore.' } },
       { id: 'marionettist_secondact', name: 'Second Act', ab: 'pirouette', text: 'Pirouette now also gives back a charge of Pull Strings.' },
     ],
     [
       { id: 'marionettist_curtain', name: 'Standing Ovation', ab: 'finale', text: 'The last hit of Grand Finale now sends the Doll out quick: its next three Jabs come twice as fast, as after a Cue.' },
-      { id: 'marionettist_cue', name: 'On Cue', ab: 'swap', text: 'Swap now also takes 3s off Cross-Cut\'s cooldown.' },
-      { id: 'marionettist_quickchange', name: 'Quick Change', ab: 'swap', cd: { swap: -4 }, text: 'Swap recharges 4s faster.' },
+      { id: 'marionettist_intermission', name: 'Intermission', ab: 'finale', text: 'Grand Finale can start from 3 Encore: the routine has one hit for each Encore you spend. Shorter shows, whenever the stage is clear.' },
+      { id: 'marionettist_fullhouse', name: 'Full House', ab: 'finale', text: 'A Grand Finale started with all three Strings tied ends with a sixth hit, a bow half as hard as the others. Keep your Strings whole for the show.' },
     ],
     [
       { id: 'marionettist_curtainrise', name: 'Red Curtain', ab: 'swap', grants: true, text: 'New move on D, in place of Swap. Red Curtain: a red curtain round you for 8s; allies inside take 15% less damage, and the Dolls bow and come back to you.' },

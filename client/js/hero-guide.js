@@ -192,10 +192,11 @@ HERO_GUIDE.threadweaver = {
   ],
 };
 HERO_GUIDE.marionettist = {
-  passive: { name: 'Strings', icon: 'pull', desc: 'The Doll does the fighting, and jabs on its own while you fight and it has the enemy in reach. Three Strings hold it: one tears if it is pulled past 300 px from you or a blow lands on it, and with none left it goes limp for 4s. Pull Strings ties all three back.' },
+  passive: { name: 'Strings', icon: 'pull', desc: 'The Doll does the fighting, and jabs on its own all through a fight while it has the enemy in reach. Three Strings hold it, and each one still tied gives you 5% more damage and 5% faster Jabs (Strung). One tears if the Doll is pulled past 300 px from you or a blow lands on it, and with none left it goes limp for 4s. Pull Strings ties all three back, with 1 Encore for each.' },
   combos: [
     { keys: ['q', 'e'], text: 'Cue, then Cross-Cut with the boss between you and the Doll: the quick Jabs keep coming while you cut.' },
-    { keys: ['w'], text: 'A String torn, or the Doll limp: Pull Strings ties all three back and gets it up at once. Keep a charge for after a blow.' },
+    { keys: ['w'], text: 'A String torn, or the Doll limp: Pull Strings ties all three back (1 Encore each) and gets it up at once. Keep a charge for after a blow: every String is 5% of your damage.' },
+    { keys: ['q'], text: 'The Doll wandered off? Cue sends it lunging back onto its mark across the boss before it stabs.' },
     { keys: ['w', 'e'], text: 'Pull the Doll to the far side of the boss to line up the cut.' },
     { keys: ['r'], text: 'Pirouette when a telegraph is about to land on the Doll (it glows): it spins through the blow and earns 1 more Encore.' },
     { keys: ['d', 'e'], text: 'Swap a few seconds before Cross-Cut comes up: once the Doll is back on its mark, the cut lands twice as hard.' },
