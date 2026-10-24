@@ -1262,8 +1262,6 @@ Object.assign(PRO, {
     const bond0 = g.bond || 0;
     if (weaveOk(k)) {
       if (ready(k, 'calloff') && k.glows(abOf(k, 'calloff'))) return I(k, 'calloff');
-      // (Tag Team: a Relay right before the finisher, for its second rider)
-      if (k.talent('houndmaster_tagteam') && ready(k, 'calloff') && bond0 >= 40 && hdPairNow(k) === 'bringdown') return I(k, 'calloff');
       if (ready(k, 'quarry') && ctx.inBurst(t)) return I(k, 'quarry');
       if (live.length === 2 && live.map(h => h.goal).sort().join() !== want.slice().sort().join()) {
         if (plan === 'bringdown' && ready(k, 'pounce')) return I(k, 'pounce');

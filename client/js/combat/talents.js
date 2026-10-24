@@ -1336,7 +1336,7 @@ TALENTS.kenseier = [
 TALENTS.houndmaster = [
   [
     { id: 'houndmaster_heelnip', name: 'Heel Nip', ab: 'knife', text: 'The third knife hit also sends whichever hound is nearer to the place that would make a pair with the other one. Nothing happens if they already hold a pair, or are on guard.' },
-    { id: 'houndmaster_scentline', name: 'Scent Line', ab: 'flank', text: 'Whistle: Flank sends the hound straight through the boss, and it bites on the way for {d:120}.' },
+    { id: 'houndmaster_scentline', name: 'Scent Line', ab: 'flank', text: 'Whistle: Flank sends the hound straight through the boss, and it bites on the way for {d:120} (at most once every 2.5s).' },
     { id: 'houndmaster_echobark', name: 'Echo Bark', ab: 'finisher', text: 'A finisher of the same pair twice in a row repeats a moment later at 20% of its strength.' },
   ],
   [
@@ -1351,7 +1351,7 @@ TALENTS.houndmaster = [
   ],
   [
     { id: 'houndmaster_bloodscent', name: 'Blood Scent', ab: 'quarry', text: 'Mark the Quarry spreads to the nearest add: while it lasts, every bite also bites it.' },
-    { id: 'houndmaster_drive', name: 'Drive', ab: 'quarry', text: 'While the Mark lasts, Whistle: Flank has no cooldown.' },
+    { id: 'houndmaster_drive', name: 'Drive', ab: 'quarry', text: 'Mark the Quarry also makes both hounds hold their places for as long as the Mark lasts.' },
     { id: 'houndmaster_cornered', name: 'Cornered', ab: 'quarry', text: 'When the Mark ends, both hounds pounce at once and land behind the boss.' },
   ],
   [
@@ -1389,11 +1389,11 @@ SPEC_TALENTS.kenseier = {
 
 // ----------------------------------------------------------------------- HOUNDMASTER
 SPEC_TALENTS.houndmaster = {
-  // Pack Leader, The Two-Dog Hunt: both hounds, coordinated pounces, Relay
+  // Pack Leader, The Two-Dog Hunt: both hounds, coordinated pounces
   packleader: [
     [
       { id: 'houndmaster_pincerdrill', name: 'Pincer Drill', ab: 'finisher', text: 'A Rend sets its bleed on the nearest add as well, if the fight has one. In Wild Hunt every finisher does.' },
-      { id: 'houndmaster_tagteam', name: 'Tag Team', ab: 'calloff', text: 'After a Relay, your next finisher (within 20s) counts every pair: its own blow, with Rend\'s bleed and Hamstring\'s weakness as well.' },
+      { id: 'houndmaster_tagteam', name: 'Tag Team', ab: 'calloff', text: 'After a Call Off, your next finisher (within 20s) counts every pair: its own blow, with Rend\'s bleed and Hamstring\'s weakness as well.' },
     ],
     [
       { id: 'houndmaster_huntinghorn', name: 'Hunting Horn', ab: 'pounce', text: 'A pounce that has landed sounds the horn: for a beat the boss turns its face toward you (it keeps its target), and the hounds keep their sides through the swing.' },

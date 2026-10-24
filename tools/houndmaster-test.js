@@ -231,7 +231,7 @@ function drift(m, secs) {
   check(m.hs().every(h => h.mode !== 'guard'), 'the guard ends after 5s');
   m.kit.engagedAt = m.st.t; m.step(3);
   check(m.hs().every(h => h.slot), `and they go back to their places (${m.hs().map(h => h.slot)})`);
-  check(m.kit.readyIn(m.kit.abilities[D]) > 20, 'a 30s cooldown');
+  check(near(m.kit.readyIn(m.kit.abilities[D]), 15 - 8.7, 0.3), `a 15s cooldown (${m.kit.readyIn(m.kit.abilities[D]).toFixed(1)}s left)`);
 }
 
 // 8. Mark the Quarry: the hounds bite 50% faster and Bond doubles for 12s
@@ -508,9 +508,11 @@ const press3 = m => { for (let i = 0; i < 3; i++) { m.kit.press(Q); m.step(2.6);
   check(n >= 4 && go([TN('bloodscent')], false) === 0 && go(null, true) === 0, `Blood Scent: the Mark's bites reach the add (${n}), nothing else's do`);
 }
 {
-  // Drive: while the Mark lasts Whistle: Flank has no cooldown
-  const go = (talents, mark) => { const m = make({ seed: 70, talents }); m.engage(); m.st.aim = { x: 500, y: 700 }; if (mark) m.kit.press(F); m.step(0.5); m.kit.press(W); m.step(0.4); return m.kit.readyIn(m.kit.abilities[W]); };
-  check(go([TN('drive')], true) < 0.01 && go([TN('drive')], false) > 1.5 && go(null, true) > 1.5, 'Drive: no Whistle cooldown in the Mark, the normal one outside it');
+  // Drive: the Mark also holds both hounds for as long as it lasts
+  const go = talents => { const m = make({ seed: 70, talents }); m.engage(); put(m, 'left', 'right'); m.kit.press(F); m.step(0.2);
+    return { hold: m.kit.g.holdUntil - m.st.t, modes: m.hs().map(h => h.mode) }; };
+  const dv = go([TN('drive')]), d0 = go(null);
+  check(near(dv.hold, 11.8, 0.3) && dv.modes.every(x => x !== 'run') && !(d0.hold > 0), `Drive: the Mark holds both hounds for its length (${dv.hold.toFixed(1)}s, ${dv.modes} / ${d0.hold})`);
 }
 {
   // Cornered: the Mark ends with a pounce from both hounds
@@ -549,11 +551,17 @@ const press3 = m => { for (let i = 0; i < 3; i++) { m.kit.press(Q); m.step(2.6);
   check(!m.kit.stats.alphas, 'and for a Bring Down only');
 }
 
-// 14. the loot: Whistle: Flank again at once from a hound sent off the front; a Bring Down brings a downed hound back
+// the cooldowns and reach: Call Off 15s, Whistle 1s, the finisher from any range
+{
+  const m = make({ seed: 79 }), ab = id => m.kit.abilities.find(a => a.id === id);
+  check(ab('calloff').cd === 15 && ab('flank').cd === 1 && ab('finisher').range >= 2000, `Call Off 15s, Whistle 1s, the finisher reaches from anywhere (${ab('calloff').cd} / ${ab('flank').cd} / ${ab('finisher').range})`);
+}
+
+// 14. the loot: a hound whistled out from the front pays 10 Bond; a Snap brings a downed hound back
 {
   const go = (perk, a) => { const m = make({ seed: 74 }); if (perk) m.kit.gear = () => ({ perks: new Set(['houndmaster_w2']) });
-    m.engage(); put(m, a, 'behind'); m.st.aim = { x: 500, y: 700 }; m.kit.g.next = m.hs()[0].id; m.kit.press(W); m.step(0.4); return m.kit.readyIn(m.kit.abilities[W]); };
-  check(go(true, 'front') < 0.01 && go(true, 'left') > 1.5 && go(false, 'front') > 1.5, 'houndmaster_w2: the Whistle is ready again after sending a hound from the front, and only then');
+    m.engage(); put(m, a, 'behind'); m.st.aim = { x: 500, y: 700 }; m.kit.g.next = m.hs()[0].id; m.kit.g.bond = 0; m.kit.press(W); return m.kit.g.bond; };
+  check(go(true, 'front') === 10 && go(true, 'left') === 0 && go(false, 'front') === 0, `houndmaster_w2: 10 Bond for a hound whistled out from the front, and only then (${go(true, 'front')})`);
   // a downed hound breaks every pair, so the finisher is a Snap: with the perk it brings the hound back
   const snap = perk => { const m = make({ seed: 75 }); if (perk) m.kit.gear = () => ({ perks: new Set(['houndmaster_a4']) });
     m.engage(); put(m, 'behind', 'behind'); m.kit.notify('houndhit', { h: 'rust' }); m.step(0.1); m.kit.g.bond = 100;
@@ -565,10 +573,10 @@ const press3 = m => { for (let i = 0; i < 3; i++) { m.kit.press(Q); m.step(2.6);
   check(m.hs().every(h => h.mode !== 'down'), 'a finisher with nobody down changes nothing');
 }
 
-// 15. Pack Leader (the Two-Dog Hunt): Pounce keeps two charges and a pounce in a pair pays 20 Bond, Call Off is Relay, Harmony, and spec rows VI and VII
+// 15. Pack Leader (the Two-Dog Hunt): Pounce keeps two charges and a pounce in a pair pays 20 Bond, Harmony, and spec rows VI and VII
 {
   const m = make({ spec: 'packleader', seed: 81 });
-  check(m.kit.def.spec === 'packleader' && m.kit.abilities[D].id === 'relay' && m.kit.abilities[D].replaces === 'calloff' && m.kit.abilities[D].name === 'Relay', 'Call Off is Relay for the Pack Leader');
+  check(m.kit.def.spec === 'packleader' && m.kit.abilities[D].id === 'calloff' && m.kit.abilities[D].cd === 15, 'the Pack Leader keeps Call Off');
   m.engage(); put(m, 'left', 'right');
   const P = m.kit.abilities[R];
   check(m.kit.charges(P) === 2, 'Pounce has two charges');
@@ -588,30 +596,6 @@ const press3 = m => { for (let i = 0; i < 3; i++) { m.kit.press(Q); m.step(2.6);
   // the base kit: no second charge, no Bond from a pounce
   const mb = make({ seed: 81 }); mb.engage(); put(mb, 'left', 'right');
   check(!mb.kit.abilities[R].charges && !mb.kit.def.pounceBond, 'and the base class has neither');
-}
-{
-  // Relay: the two hounds trade places at once, the pair holds through it, both bite, neither can be hurt on the way
-  const m = make({ spec: 'packleader', seed: 82 });
-  m.engage(); put(m, 'left', 'right');
-  const [a, b] = m.hs(), ga = a.goal, gb = b.goal, RL = m.kit.abilities[D];
-  check(!m.kit.glows(RL), 'Relay does not glow with nothing coming');
-  m.st.danger = () => true; check(m.kit.glows(RL), 'it glows when a telegraph is about to land on a hound'); m.st.danger = null;
-  m.st.emits.length = 0;
-  check(m.kit.press(D), 'Relay');
-  check(a.goal === gb && b.goal === ga, `the hounds swap places (${ga}/${gb} -> ${a.goal}/${b.goal})`);
-  check(m.dmg('bite').length === 2 && m.fx('relay').length === 1, `both bite and the fx says Relay (${m.dmg('bite').length} bites)`);
-  m.step(0.1);
-  check(m.hs().every(h => h.slot === null) && m.kit.g.pair === 'rend', `the pair holds while they cross (${m.kit.g.pair})`);
-  m.kit.notify('houndhit', { h: a.id });
-  check(a.mode !== 'down', 'and a hound crossing cannot be hurt');
-  m.step(2.5);
-  check(a.slot === gb && b.slot === ga && m.kit.g.pair === 'rend', `they arrive on each other's sides (${a.slot}/${b.slot})`);
-  check(m.kit.readyIn(RL) > 15, `a 20s cooldown (${m.kit.readyIn(RL).toFixed(1)})`);
-  hdDown(m.kit, b); m.step(0.1);
-  check(!m.kit.usable(RL), 'Relay needs both hounds up');
-  const mc = make({ spec: 'packleader', seed: 82 }); mc.engage(); put(mc, 'front', 'behind');
-  mc.kit.press(D); mc.step(0.1);
-  check(mc.kit.g.pair === 'hamstring' && mc.hs().every(h => h.slot === null), 'a Hamstring pair holds through it as well');
 }
 {
   // Harmony: a finisher on a pair you did not use last time does 10% more
@@ -640,13 +624,13 @@ const press3 = m => { for (let i = 0; i < 3; i++) { m.kit.press(Q); m.step(2.6);
   check(!m.kit.dots.has('rend2'), 'with no add there is nothing to jump to');
 }
 {
-  // Tag Team: after a Relay the next finisher counts every pair
-  const go = (tag, relay) => { const m = make({ spec: 'packleader', seed: 85, talents: tag ? ['houndmaster_tagteam'] : null }); m.engage(); put(m, 'behind', 'behind');
-    if (relay) { m.kit.press(D); m.step(0.3); } m.kit.g.bond = 100; m.st.emits.length = 0; m.kit.press(E);
+  // Tag Team: after a Call Off the next finisher counts every pair
+  const go = (tag, call) => { const m = make({ spec: 'packleader', seed: 85, talents: tag ? ['houndmaster_tagteam'] : null }); m.engage();
+    if (call) { m.kit.press(D); m.step(5.5); } put(m, 'behind', 'behind'); m.kit.g.bond = 100; m.st.emits.length = 0; m.kit.press(E);
     return { rend: m.kit.dots.has('rend'), vuln: m.st.emits.filter(e => e.type === 'targetDebuff').length, tt: m.kit.stats.tagTeams || 0, m }; };
   const a = go(true, true), b = go(true, false), c = go(false, true);
-  check(a.rend && a.vuln === 1 && a.tt === 1, `Tag Team: a Bring Down right after a Relay has the bleed and the weakness too (${JSON.stringify({ r: a.rend, v: a.vuln, t: a.tt })})`);
-  check(!b.rend && b.vuln === 0 && !c.rend && c.vuln === 0, 'and neither without the Relay nor without the talent');
+  check(a.rend && a.vuln === 1 && a.tt === 1, `Tag Team: a Bring Down after a Call Off has the bleed and the weakness too (${JSON.stringify({ r: a.rend, v: a.vuln, t: a.tt })})`);
+  check(!b.rend && b.vuln === 0 && !c.rend && c.vuln === 0, 'and neither without the Call Off nor without the talent');
   a.m.kit.g.bond = 100; a.m.step(3); a.m.st.emits.length = 0; a.m.kit.press(E);
   check(a.m.st.emits.filter(e => e.type === 'targetDebuff').length === 0, 'it is for one finisher');
 }
@@ -746,12 +730,12 @@ const stand = (m, slot) => { const a = m.st.face + HD_OFF[slot]; m.st.pos = { x:
   check(rd.length === 1 && near(rd[0].potency, 550, 0.5) && m.fx('ridedown').length === 1, `Ride Down hits for 550 (${rd.map(d => d.potency)})`);
   m.step(0.1);
   check(!hdMounted(m.kit) && m.kit.abilities[W].name === 'Mount' && !m.kit.has('mounted') && m.kit.label(m.kit.abilities[Q]) !== 'Charge', 'the ride is over and the bar is back');
-  check(m.kit.readyIn(m.kit.abilities[W]) > 25, `Mount\'s cooldown starts at the dismount (${m.kit.readyIn(m.kit.abilities[W]).toFixed(1)}s)`);
+  check(m.kit.readyIn(m.kit.abilities[W]) > 15 && m.kit.readyIn(m.kit.abilities[W]) <= 20, `Mount\'s cooldown starts at the dismount (${m.kit.readyIn(m.kit.abilities[W]).toFixed(1)}s)`);
   m.kit.engagedAt = m.st.t; m.step(3);
   check(m.hs()[0].mode !== 'guard' && m.hs()[0].goal, 'Greyfang is back at work');
   // a ride that runs out: no blow, and the cooldown starts then
   const t = make({ spec: 'lonewolf', seed: 96 }); t.engage(); t.kit.press(W); t.st.emits.length = 0; t.step(6.3);
-  check(!hdMounted(t.kit) && t.kit.abilities[W].name === 'Mount' && t.dmg('mount').length === 0 && t.kit.readyIn(t.kit.abilities[W]) > 25, `a ride that runs out is just a dismount, and the cooldown starts (${t.kit.readyIn(t.kit.abilities[W]).toFixed(1)}s)`);
+  check(!hdMounted(t.kit) && t.kit.abilities[W].name === 'Mount' && t.dmg('mount').length === 0 && t.kit.readyIn(t.kit.abilities[W]) > 15, `a ride that runs out is just a dismount, and the cooldown starts (${t.kit.readyIn(t.kit.abilities[W]).toFixed(1)}s)`);
   // Wild Hunt opening and closing in the ride does not take the bar apart
   const w = make({ spec: 'lonewolf', seed: 97 }); w.engage(); w.kit.press(W); w.step(0.6); w.kit.g.ult = 100; w.kit.press(T); w.step(0.2);
   check(w.kit.abilities[W].name === 'Ride Down', 'Wild Hunt in the ride keeps Ride Down on the bar');

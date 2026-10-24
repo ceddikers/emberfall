@@ -1926,8 +1926,9 @@ BOT_CLASS.houndmaster = {
     if (k.def.solo) return hdSoloAct(bot, k, view);
     if (g.lastFin && g.lastFin.at !== bot.hdFinAt) { bot.hdFinAt = g.lastFin.at; bot.hdPlan = ((bot.hdPlan || 0) + 1) % 3; }   // (the next pair after each finisher)
     const plan = bot.hdPlan || 0, want = HD_BOT_WANT[plan];
+    // (Call Off the moment a hound stands in the red: an oGCD, so it does not wait for the weave window)
+    if (e && ok(D) && live.some(h => h.mode !== 'guard' && h.mode !== 'pounce' && BotAI.dollDanger(view, h.x, h.y, 1.6))) return D;
     if (weave && e) {
-      if (ok(D) && live.some(h => h.mode !== 'guard' && h.mode !== 'pounce' && BotAI.dollDanger(view, h.x, h.y, 1.6))) return D;
       if (W >= 0 && k.abilities[W].id === 'howl' && ok(W) && (view.burst || view.t - (bot.hdHAt || 0) > 30)) { bot.hdHAt = view.t; return W; }   // (a Howl on W, if a bot holds the talent: with the party's burst. The Long Chase on F goes through the Quarry's own line)
       if (ok(F)) {
         if (bot.hdQAt == null) bot.hdQAt = view.t;

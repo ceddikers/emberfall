@@ -264,7 +264,7 @@ CLASS_GEAR.houndmaster = { wtype: 'hunting knife', w: ['Kennel Knife', 'Webcut S
 Object.assign(ITEM_PERKS, {
   houndmaster_w1: { ab: 'finisher', text: "A Rend's bleed also makes your hounds' bites hit 10% harder." },
   houndmaster_a2: { ab: 'calloff', text: 'Call Off also gives the hounds a small shield.' },
-  houndmaster_w2: { ab: 'flank', text: 'Whistle: Flank is ready again at once when it sends a hound that was standing in front.' },
+  houndmaster_w2: { ab: 'flank', text: 'Whistling a hound out from in front of the boss gives 10 Bond.' },
   houndmaster_w3: { ab: 'pounce', text: 'Pounce gives 10 Bond per hound that lands in a pair.' },
   houndmaster_a4: { ab: 'finisher', text: 'A Snap also brings a downed hound back on its feet at once.' },
   houndmaster_w7: { ab: 'pounce', text: 'Wild Hunt opens with a pounce from all four spectral hounds.' },

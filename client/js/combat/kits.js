@@ -6858,20 +6858,28 @@ function hdWhistle(k) {
   k.g.next = (other || h).id;
   hdOrder(k, h, hdAimSlot(k, e, h));
   k.fx('whistle', { hound: h.id, kind: 'flank' });
-  if (k.talent('houndmaster_scentline')) hdBite(k, h, e, { mult: 120 / HOUND.BITE, big: true, ab: abBase(k, 'flank') });   // (Scent Line: the hound bites on its way through the boss)
-  if (wasFront && k.perk('houndmaster_w2')) { const fl = abBase(k, 'flank'); if (fl) k.resetCooldown(fl); }   // (item houndmaster_w2: a hound sent from the front, and the Whistle is ready again at once)
+  // (Scent Line: the hound bites on its way through the boss, at most once every 2.5s now that the Whistle is quick)
+  if (k.talent('houndmaster_scentline') && k.now >= (k.g.scentAt ?? -9)) { k.g.scentAt = k.now + 2.5; hdBite(k, h, e, { mult: 120 / HOUND.BITE, big: true, ab: abBase(k, 'flank') }); }
+  if (wasFront && k.perk('houndmaster_w2')) k.gain('bond', 10, 100);   // (item houndmaster_w2: a hound whistled out of the boss's front gives 10 Bond)
   return h;
 }
 // Whistle: Hold, first press: both hounds freeze where they are (or where they are going)
-function hdHold(k, ab) {
+// both hounds hold their places until `until` (they won't drift when the boss turns or moves); `busy` leaves a guarding or
+// pouncing hound to finish first
+function hdHoldAll(k, until, busy = false) {
   const e = hdEnemy(k), g = k.g;
-  if (!e) return;
-  g.holdUntil = k.now + HOUND.HOLD;
+  if (!e) return false;
+  g.holdUntil = Math.max(g.holdUntil || 0, until);
   const F = hdFace(k, e);
   for (const h of hdLiveReal(k)) {
+    if (busy && (h.mode === 'guard' || h.mode === 'pounce')) continue;
     if (!h.goal) { h.ring = Math.atan2(h.y - e.y, h.x - e.x); h.goal = hdSlotOf(h.ring, F); }
     h.mode = 'hold';
   }
+  return true;
+}
+function hdHold(k, ab) {
+  if (!hdHoldAll(k, k.now + HOUND.HOLD)) return;
   if (ab.charges) k.refundCharge(ab.id); else k.cd[ab.id] = k.now + 0.7;   // (a charged Pounce, Pack Leader: the hold costs no charge)
   // (the hold itself is not the move: a second press may come at once, and that one pounces)
   k.fx('whistle', { hound: 'all', kind: 'hold' });
@@ -6914,6 +6922,7 @@ function hdCallOff(k, ab) {
   for (const h of hdLiveReal(k)) { h.mode = 'guard'; h.slot = null; h.safe = Math.max(h.safe, k.now + HOUND.GUARD + 0.2); if (k.perk('houndmaster_a2')) h.shield = true; }   // (Call Off's enhancement: a small shield on each)
   k.mitigate('self', HOUND.GUARD_DR, HOUND.GUARD, { ab });
   k.buff('guarded', HOUND.GUARD);
+  if (k.talent('houndmaster_tagteam')) g.tagUntil = k.now + HDS.TAG;   // (Tag Team, Pack Leader: the next finisher after a Call Off counts every pair)
   k.fx('calloff');
   k.fx('whistle', { hound: 'all', kind: 'call' });
 }
@@ -7125,19 +7134,17 @@ KITS.houndmaster = {
       fx: { type: 'slash', color: '#c9b18a', r: 52, span: 1.5 },
     },
     {
-      id: 'flank', name: 'Whistle: Flank', type: 'ogcd', target: 'none', cd: 2.5, lock: 0.3, anim: 'cast',
+      id: 'flank', name: 'Whistle: Flank', type: 'ogcd', target: 'none', cd: 1, lock: 0.3, anim: 'cast',
       desc: 'Send the next hound (Rust, then Ash; hold Shift for the other) to where you point: the side of the boss nearest your cursor. With the cursor on the boss it takes the flank nearest you. The hound stays there through the boss\'s turns for 10s. It glows when a hound stands in front of the boss, or when the two hounds make no pair.',
       usable: k => !!hdEnemy(k) && hdLiveReal(k).length > 0,
       glow: k => !k.g.all && (k.g.hounds.some(h => !h.spectral && h.slot === 'front') || (hdLiveReal(k).length >= 2 && !k.g.pair)),
-      effect(k) {
-        hdWhistle(k);
-        if (k.talent('houndmaster_drive') && hdQuarry(k)) k.resetCooldown(this);   // (Drive: no cooldown while the Mark lasts)
-      },
+      effect(k) { hdWhistle(k); },
       fx: { type: 'aura', color: '#e8d9a8', r: 30, dur: 0.8 },
     },
     {
-      id: 'finisher', name: 'Pack Finisher', type: 'gcd', target: 'enemy', range: MELEE, lock: 0.3, anim: 'big',
-      desc: `Spend 40 Bond; the move is whichever pair the hounds hold. <b>Rend</b> (the hounds on both flanks): {d:${HOUND.REND + 4 * HOUND.REND_TICK}} with a bleed. <b>Hamstring</b> (front and behind): {d:${HOUND.HAMSTRING}}, and the boss takes 5% more damage for ${HOUND.HAM_DUR}s. ` +
+      id: 'finisher', name: 'Pack Finisher', type: 'gcd', target: 'enemy', range: HD_FAR.range,   // (the hounds do the biting: from anywhere)
+      lock: 0.3, anim: 'big',
+      desc: `Spend 40 Bond, from any range: the hounds do the biting. The move is whichever pair they hold. <b>Rend</b> (the hounds on both flanks): {d:${HOUND.REND + 4 * HOUND.REND_TICK}} with a bleed. <b>Hamstring</b> (front and behind): {d:${HOUND.HAMSTRING}}, and the boss takes 5% more damage for ${HOUND.HAM_DUR}s. ` +
         `<b>Bring Down</b> (both behind): {d:${HOUND.BRING}}. No pair: <b>Snap</b>, {d:${HOUND.SNAP}}. It glows with 40 Bond and a pair held.`,
       label: k => HD_NAMES[hdWild(k) ? 'bringdown' : hdPairNow(k) || 'snap'],
       usable: k => hdWild(k) || (k.g.bond || 0) >= HOUND.COST,
@@ -7155,7 +7162,7 @@ KITS.houndmaster = {
       fx: { type: 'aura', color: '#c46a3a', r: 34, dur: 0.8 },
     },
     {
-      id: 'calloff', name: 'Call Off', type: 'ogcd', target: 'none', cd: 30, lock: 0.3, anim: 'cast',
+      id: 'calloff', name: 'Call Off', type: 'ogcd', target: 'none', cd: 15, lock: 0.3, anim: 'cast',
       desc: `Both hounds sprint to you and stand guard for ${HOUND.GUARD}s: you take 20% less damage, and nothing can touch them. A hound caught in a boss telegraph goes down for ${HOUND.RESPAWN}s, so this is what saves them. It glows when a telegraph is about to land on a hound.`,
       usable: k => hdLiveReal(k).length > 0,
       glow: k => hdDanger(k),
@@ -7168,6 +7175,7 @@ KITS.houndmaster = {
       usable: k => !!hdEnemy(k),
       effect(k) {
         k.g.markUntil = k.now + HOUND.QUARRY; k.buff('quarry', HOUND.QUARRY);
+        if (k.talent('houndmaster_drive')) hdHoldAll(k, k.g.markUntil, true);   // (Drive: the hounds hold their places for the whole Mark)
         if (k.talent('houndmaster_cornered')) k.after(HOUND.QUARRY, () => { if (hdLiveReal(k).length) hdPounce(k); });   // (Cornered: the Mark ends in a pounce from both hounds)
         hdBiteAll(k);
         k.fx('quarry');
@@ -7252,7 +7260,6 @@ function hdRelay(k, ab) {
   }
   hdBiteAll(k, { big: true });
   g.relayAt = k.now;
-  if (k.talent('houndmaster_tagteam')) g.tagUntil = k.now + HDS.TAG;   // (Tag Team: the next finisher counts every pair)
   k.stats.relays = (k.stats.relays || 0) + 1;
   k.fx('relay');
 }
@@ -7271,7 +7278,7 @@ function hdSpecAfter(k, ab) {
   if (ab.id !== 'finisher' || !k.g.lastFin) return;
   const g = k.g, e = hdEnemy(k), tgt = e && e.id !== 'dummy' ? e.id : undefined, key = g.lastFin.pair, wild = hdWild(k);
   let rend = wild || key === 'rend';
-  if (k.talent('houndmaster_tagteam') && k.now < (g.tagUntil || 0)) {   // (Tag Team: after a Relay the next finisher counts every pair: its own blow, with Rend's bleed and Hamstring's weakness)
+  if (k.talent('houndmaster_tagteam') && k.now < (g.tagUntil || 0)) {   // (Tag Team: after a Call Off the next finisher counts every pair: its own blow, with Rend's bleed and Hamstring's weakness)
     g.tagUntil = 0;
     if (!rend) { k.dot('rend', HOUND.REND_TICK, 6, 1.5, { ab: HD_BLEED, tgt }); k.buff('rendbite', 6); rend = true; }
     if (!wild && key !== 'hamstring') k.debuffTarget('vuln', HOUND.HAM_VULN, HOUND.HAM_DUR, { ab });
