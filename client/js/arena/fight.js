@@ -2016,7 +2016,7 @@ Object.assign(FightSim.prototype, {
         if (f < bf && Math.hypot(p.x - me.x, p.y - me.y) <= LAMP_HOST.WAY_R) { bf = f; best = p; }
       }
       if (!best) return;
-      this.lampHeal(pid, best.id, amt);
+      this.applyHeal(pid, best.id, amt);
       this.emit({ t: 'fev', k: 'relit', id: pid, to: best.id, w: 1 });
     } else if (ev.op === 'relight') {
       let best = null, bf = Infinity;
