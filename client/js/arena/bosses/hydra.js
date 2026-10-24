@@ -29,7 +29,7 @@
 
 const HYDRA = {
   id: 'hydra', name: 'The Hydra', title: 'Mother of Nine Heads',
-  hp: { normal: 4950000, hard: 5850000 },
+  hp: { normal: 4950000, hard: 5600000 },
   autoDmg: { normal: 1500, hard: 1650 },
   enrage: { normal: 612, hard: 622 },   // the cast starts here and lands 8 s later (10:20 / 10:30)
   enrageName: 'The Drowning',
