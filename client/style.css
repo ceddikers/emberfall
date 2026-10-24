@@ -187,8 +187,8 @@ ul.abilities em.meta { display: block; font-style: normal; font-size: 11px; colo
 .bb-cast .fill { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, #a83a1a, #ff8a3a); }
 .bb-cast span { position: relative; display: block; text-align: center; font-family: var(--fantasy); font-weight: 700; font-size: 13px; line-height: 20px; text-shadow: 0 1px 3px #000; }
 #party-frames { position: fixed; left: 16px; top: 120px; width: 230px; display: grid; gap: 6px; z-index: 4; }
-.pf { display: flex; gap: 8px; align-items: stretch; padding: 6px 8px; background: #0d0b12d0; border: 1px solid #ffffff1a; border-left: 3px solid var(--rc); border-radius: 8px; cursor: pointer; }
-.pf:hover { border-color: #ffffff55; border-left-color: var(--rc); }
+.pf { display: flex; gap: 8px; align-items: stretch; padding: 6px 8px; background: #0d0b12d0; border: 1px solid #ffffff1a; border-left: 3px solid var(--pc, var(--rc)); border-radius: 8px; cursor: pointer; }
+.pf:hover { border-color: #ffffff55; border-left-color: var(--pc, var(--rc)); }
 .pf.me { background: #1d1826e0; }
 .pf.target { box-shadow: 0 0 0 2px #7dff8a; }
 .pf.dead { opacity: .55; filter: grayscale(.8); }
@@ -288,7 +288,7 @@ ul.abilities em.meta { display: block; font-style: normal; font-size: 11px; colo
 #hero-name:hover { text-decoration: underline dotted #d8b45a88; }
 
 /* ---------------------------------------------------------------- hero select */
-#select { position: fixed; inset: 0; z-index: 15; overflow: auto; padding: 24px 16px;
+#select { position: fixed; inset: 0; z-index: 15; overflow: auto; scrollbar-gutter: stable; padding: 24px 16px;
   background: radial-gradient(ellipse at 50% 30%, #2c2038f2, #0b0810fa 70%); display: grid; place-items: start center; }
 #select.hidden, .sel-page.hidden { display: none; }
 .sel-page { position: relative; width: min(1040px, 100%); }
@@ -601,14 +601,16 @@ kbd { border-radius: 3px; background: #1d1813; border-color: #4a3d2c; color: var
 #boss-cast.next .bc-left { font-size: 13px; color: var(--muted); }
 .bb-cast.done span { color: #2a1608; text-shadow: none; }
 
-/* party frames: number key, role mark, name, aggro eye, class; a tall health bar; your cast toward them; buffs and debuffs */
+/* party frames: number key, role mark, name, aggro eye, class; a tall health bar; your cast toward them; buffs and debuffs.
+   The left edge and the key wear the player's own colour (--pc, FIGHT.SLOTS: their ring and name in the world); the role mark
+   keeps the role's (--rc). */
 #party-frames { left: 14px; top: 14px; width: 244px; gap: 4px; }
 .pf { position: relative; gap: 6px; align-items: center; padding: 5px 8px 5px 5px; background: linear-gradient(90deg, #15120fea, #100e0cd8);
-  border: 1px solid var(--line-soft); border-left: 2px solid var(--rc); border-radius: 3px; transition: border-color .12s, box-shadow .12s; }
-.pf:hover { border-color: var(--gold-dim); border-left-color: var(--rc); background: linear-gradient(90deg, #1c1813f0, #13110ee0); }
+  border: 1px solid var(--line-soft); border-left: 2px solid var(--pc, var(--rc)); border-radius: 3px; transition: border-color .12s, box-shadow .12s; }
+.pf:hover { border-color: var(--gold-dim); border-left-color: var(--pc, var(--rc)); background: linear-gradient(90deg, #1c1813f0, #13110ee0); }
 .pf.me { background: linear-gradient(90deg, #1d1914f0, #13110ee0); }
 .pf.healnext { box-shadow: inset 0 0 0 1px #8dffa040; }
-.pf.target { border-color: #7fdc90; border-left-color: var(--rc); box-shadow: 0 0 0 1px #8dffa090, inset 0 0 14px #8dffa014; }
+.pf.target { border-color: #7fdc90; border-left-color: var(--pc, var(--rc)); box-shadow: 0 0 0 1px #8dffa090, inset 0 0 14px #8dffa014; }
 .pf.dead { opacity: .6; filter: grayscale(.85); }
 .pf .role { display: none; }
 .pf-key { align-self: center; flex: none; min-width: 16px; text-align: center; font-size: 9.5px; padding: 0 3px; color: var(--muted); }
@@ -753,6 +755,10 @@ kbd { border-radius: 3px; background: #1d1813; border-color: #4a3d2c; color: var
 #sel-spec.hidden { display: none; }
 #sel-spec { display: grid; gap: 10px; }
 .spec-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+/* every tab's page shares one cell, so the box keeps the height of the longest page whichever tab is chosen */
+.spec-panes { display: grid; }
+.spec-pane { grid-area: 1 / 1; display: grid; gap: 10px; align-content: start; min-width: 0; visibility: hidden; }
+.spec-pane.on { visibility: visible; }
 .spec-tab { display: grid; gap: 1px; text-align: left; padding: 8px 12px; border-radius: 3px; cursor: pointer; background: #0f0d0bcc;
   border: 1px solid var(--line-soft); color: #e9dfc8; font: inherit; box-shadow: inset 3px 0 0 color-mix(in srgb, var(--sa) 45%, transparent); }
 .spec-tab b { font-family: var(--fantasy); font-size: 14px; letter-spacing: .04em; }

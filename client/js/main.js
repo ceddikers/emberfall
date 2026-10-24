@@ -1360,7 +1360,7 @@
   Net.on('pg', msg => {
     if (!raid || !Number.isFinite(msg.x) || !Number.isFinite(msg.y)) return;
     const r = raid.roster.find(x => x.id === msg.id);
-    Pings.add({ x: msg.x, y: msg.y, c: msg.c, name: r ? r.name : '', color: r && ROLES[r.role] ? ROLES[r.role].color : null }, now);
+    Pings.add({ x: msg.x, y: msg.y, c: msg.c, name: r ? r.name : '', color: r ? partyColor(r.id) || (ROLES[r.role] && ROLES[r.role].color) || null : null }, now);
     if (SH) SH.play('ping', { bus: 'ui', vol: 0.8, key: 'ping', minGap: 0.15 });
   });
   function sendPing(x, y, c) { const msg = { x: Math.round(x), y: Math.round(y), c: c || null }; if (Net.isHost) hostPing(Net.id, msg); else Net.send(Object.assign({ t: 'pg' }, msg)); }
@@ -2992,6 +2992,7 @@
       case 'dummy': drawDummy(ctx, e.x, e.y, e.st, HERO_SCALE); break;
       case 'player': case 'remote': {
         const ps = inArena() ? raid.party.get(e.id === undefined ? Net.id : e.id) : null, dead = !!ps && !ps.alive;
+        const ringColor = partyColor(e.id === undefined ? Net.id : e.id);
         // going down and getting up (heroes.js drawHeroDown): one grey picture taken as they fall, tipped over in 0.4s;
         // on a revive their live self rises back up. (A new raid starts clean, with no fall or rise to play.)
         const dn = e._dn || (e._dn = { dead: false, t: -9, cv: null, raid: null, angle: 0 });
@@ -3004,11 +3005,11 @@
           if (dead && !dn.cv) dn.cv = heroDownSprite(ctx, e.cls, dn.angle, { spec: e.spec });
           const img = dead ? dn.cv : heroSprite(ctx, e.cls, dn.angle, e.st, { spec: e.spec }, null);
           ctx.restore();
-          if (img) { drawHeroDown(ctx, e.cls, e.x, e.y, dn.angle, hs, k, img); break; }
-          if (dead) { ctx.save(); ctx.globalAlpha = 0.4; drawHero(ctx, e.cls, e.x, e.y, e.angle, { t: 0, moving: false, action: null }, hs, { lift: e.lift, spec: e.spec }); ctx.restore(); break; }
+          if (img) { drawHeroDown(ctx, e.cls, e.x, e.y, dn.angle, hs, k, img, ringColor); break; }
+          if (dead) { ctx.save(); ctx.globalAlpha = 0.4; drawHero(ctx, e.cls, e.x, e.y, e.angle, { t: 0, moving: false, action: null }, hs, { lift: e.lift, spec: e.spec, ringColor }); ctx.restore(); break; }
         }
         const em = Pastimes.emoteLook(e, now);
-        drawHero(ctx, e.cls, e.x, e.y, e.angle, e.st, heroScale(), { lift: e.lift, spec: e.spec, emote: em || null });
+        drawHero(ctx, e.cls, e.x, e.y, e.angle, e.st, heroScale(), { lift: e.lift, spec: e.spec, emote: em || null, ringColor });
         drawKenRing(e);
         // what's on them, on the body (heroes.js drawHeroStatus): shields and defensives, chosen-ally buffs, Slowed,
         // Damage Down, Vulnerability, a bleed or venom
@@ -3033,13 +3034,26 @@
     }
   }
 
+  // Each party member's own colour (FIGHT.SLOTS), by their place on the party frames: tank, healer, then the rest by id
+  // (raid-ui.js setRoster, FightSim.slotOf). A raid counts its roster, town everyone in the room. The ring under them,
+  // their name, their pings and their frame wear it; the role keeps its colour on the frame's role mark and the class
+  // name under a town nameplate. null for anyone outside the party (a PvP foe), who keeps the role's colour.
+  const PARTY_ORDER = { tank: 0, healer: 1, dps: 2 };
+  function partyColor(id) {
+    const list = inArena() ? raid.roster.map(r => ({ id: r.id, role: r.role }))
+      : [{ id: Net.id, role: player.cls && player.cls.role }, ...[...remotes.values()].map(r => ({ id: r.id, role: r.cls && r.cls.role }))];
+    list.sort((a, b) => (PARTY_ORDER[a.role] ?? 3) - (PARTY_ORDER[b.role] ?? 3) || a.id - b.id);
+    const i = list.findIndex(x => x.id === id);
+    return i < 0 ? null : FIGHT.SLOTS[i % FIGHT.SLOTS.length];
+  }
+
   function playerTag(e, isMe, hp) {
     // a downed hero's tag sinks with them (lying on the floor) and goes a muted grey
     const dn = inArena() && e._dn, dk = !dn ? 0 : dn.dead ? Math.min(1, (now - dn.t) / 0.4) : Math.max(0, 1 - (now - dn.t) / 0.45);
     const y = e.y - (e.lift || 0) - (e.cls ? 36 : 26) * heroScale() / HERO_SCALE + 14 * dk;
-    const color = e.cls ? ROLES[e.cls.role].color : '#dffaff';
+    const color = e.cls ? ROLES[e.cls.role].color : '#dffaff', own = (e.cls && partyColor(isMe ? Net.id : e.id)) || color;
     if (dk > 0.5) { ctx.save(); ctx.globalAlpha = 0.8; label(ctx, e.name + (isMe ? ' (you)' : ''), e.x, y, '#9c98a8', 11); ctx.restore(); }
-    else label(ctx, e.name + (isMe ? ' (you)' : ''), e.x, y, isMe ? '#fff3d8' : color, 12);
+    else label(ctx, e.name + (isMe ? ' (you)' : ''), e.x, y, own, 12);
     if (e.title && !inArena()) label(ctx, e.title, e.x, y - 13, '#d8b46a', 10);
     const wa = e.emote ? Pastimes.emoteWordA(e, now) : 0;   // (the emote's word eases in, rising, and fades out)
     if (wa > 0.01) { ctx.save(); ctx.globalAlpha = wa; label(ctx, Pastimes.EMOTES[e.emote.kind], e.x, y - (e.title && !inArena() ? 26 : 14) + (1 - wa) * 4, '#e6dcc8', 10.5); ctx.restore(); }
@@ -3475,7 +3489,7 @@
     if (BarrowGate.isOpen()) dot(TOWN.barrow.x, TOWN.barrow.y, 4, '#8fe3dc');   // (the Barrow Gate, once it has risen)
     dot(keeper.x, keeper.y, 3.5, '#ffd65a');
     dot(trainer.x, trainer.y, 3, '#f0d48a');
-    for (const r of remotes.values()) if (r.scene === 0) dot(r.x, r.y, 3.5, r.cls ? ROLES[r.cls.role].color : '#dffaff');
+    for (const r of remotes.values()) if (r.scene === 0) dot(r.x, r.y, 3.5, r.cls ? partyColor(r.id) || ROLES[r.cls.role].color : '#dffaff');
     dot(player.x, player.y, 4.5, '#ffffff');
     c.strokeStyle = 'rgba(255,255,255,0.7)'; c.lineWidth = 1;
     c.strokeRect(cam.x * s, cam.y * s, W * s, H * s);
@@ -3532,11 +3546,11 @@
       : 'Wisp · no hero chosen';
   }
   function updatePartyList() {
-    const all = [{ name: player.name, cls: player.cls, me: true }, ...[...remotes.values()]];
+    const all = [{ id: Net.id, name: player.name, cls: player.cls, me: true }, ...[...remotes.values()]];
     const room = Net.room ? `<div class="room">Room <b>${Net.room}</b>${Net.isHost ? ' · you host' : ''}<button class="copy-room">Copy invite</button></div>` : '';
     const head = Net.solo ? 'Solo' : Net.online ? `In town (${all.length})` : 'Offline';
     $('party').innerHTML = room + `<div class="party-head">${head}</div>` + all.map(p =>
-      `<div class="pm"><i style="background:${p.cls ? ROLES[p.cls.role].color : '#dffaff'}"></i>${escapeHtml(p.name)}${p.me ? ' <em>(you)</em>' : ''}${p.scene === 1 ? ' <em>· raiding</em>' : ''}<small>${p.cls ? p.cls.name : 'Wisp'}</small></div>`).join('');
+      `<div class="pm"><i style="background:${p.cls ? partyColor(p.id) || ROLES[p.cls.role].color : '#dffaff'}"></i>${escapeHtml(p.name)}${p.me ? ' <em>(you)</em>' : ''}${p.scene === 1 ? ' <em>· raiding</em>' : ''}<small>${p.cls ? p.cls.name : 'Wisp'}</small></div>`).join('');
   }
   function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]); }
 
@@ -3655,28 +3669,33 @@
     const box = $('sel-spec'), specs = SPECS[cls.id] || [];
     box.classList.toggle('hidden', !specs.length || !specsRevealed());
     if (!specs.length || !specsRevealed()) return;
-    const spec = specOf(cls.id, selSpec), sk = kitFor(cls.id, selSpec);
     // a spec is sealed until this hero clears the Hollow King, then opens through its trial
     const stateOf = s => (s.id ? Save.specState(cls.id, s.id) : 'open');
     const STATE_TIP = { locked: `Sealed. Clear the Hollow King as the ${cls.name} to open its trial.`, trial: 'Its trial is open.' };
-    const tabs = [{ id: null, name: cls.name, title: 'Base class' }, ...specs].map(s => `<button class="spec-tab ${stateOf(s)}${(s.id || null) === (selSpec || null) ? ' on' : ''}" data-spec="${s.id || ''}" style="--sa:${s.accent || cls.accent}"${STATE_TIP[stateOf(s)] ? ` data-tip="${STATE_TIP[stateOf(s)]}"` : ''}>
+    const all = [{ id: null, name: cls.name, title: 'Base class' }, ...specs];
+    const tabs = all.map(s => `<button class="spec-tab ${stateOf(s)}${(s.id || null) === (selSpec || null) ? ' on' : ''}" data-spec="${s.id || ''}" style="--sa:${s.accent || cls.accent}"${STATE_TIP[stateOf(s)] ? ` data-tip="${STATE_TIP[stateOf(s)]}"` : ''}>
       <b>${s.name}</b><small>${s.title}</small></button>`).join('');
-    let body;
-    if (!spec) body = `<p class="spec-focus">The class as it was made: every specialization starts from here and changes a few things. Pick one to see what it changes.</p>`;
-    else {
+    // every tab's page is drawn, stacked in one cell with only the chosen one shown, so the box is always as tall as
+    // the class's longest page and switching tabs never resizes or moves anything
+    const pane = s => {
+      const spec = s.id && specOf(cls.id, s.id), sk = kitFor(cls.id, s.id || null);
+      if (!spec) return `<p class="spec-focus">The class as it was made: every specialization starts from here and changes a few things. Pick one to see what it changes.</p>`;
       const changes = sk.abilities.map((a, i) => ({ a, was: kit.abilities[i], i })).filter(c => c.a !== c.was);
-      body = `<p class="spec-focus"><u>Specializes in</u> ${spec.focus}</p>
+      return `<p class="spec-focus"><u>Specializes in</u> ${spec.focus}</p>
         <div class="spec-passive"><h5>${spec.passive.name}</h5><p>${spec.passive.desc}</p></div>
         <div class="spec-moves">${changes.map(c => `<div class="spec-move" data-i="${c.i}">
           <i class="ab-icon ${c.a.type}" style="background-image:url(${abilityIcon(cls.id, abilityIconId(c.a))})"></i>
-          <div><b><kbd>${KEYS[c.i]}</kbd>${c.a.name}${c.a.id !== c.was.id ? `<em>New, replaces ${c.was.name}</em>` : '<em>Changed</em>'}</b><p>${c.a.desc}</p></div></div>`).join('')}</div>`;
-      body += trialCard(cls, spec, Save.specState(cls.id, spec.id));
-    }
-    box.innerHTML = Num.fill(`<h4>Specialization</h4><div class="spec-tabs">${tabs}</div>${body}`);
+          <div><b><kbd>${KEYS[c.i]}</kbd>${c.a.name}${c.a.id !== c.was.id ? `<em>New, replaces ${c.was.name}</em>` : '<em>Changed</em>'}</b><p>${c.a.desc}</p></div></div>`).join('')}</div>`
+        + trialCard(cls, spec, Save.specState(cls.id, spec.id));
+    };
+    const panes = all.map(s => `<div class="spec-pane${(s.id || null) === (selSpec || null) ? ' on' : ''}" data-spec="${s.id || ''}"${(s.id || null) === (selSpec || null) ? '' : ' aria-hidden="true"'}>${Num.fill(pane(s), { cls: cls.id, spec: s.id || null })}</div>`).join('');
+    box.innerHTML = `<h4>Specialization</h4><div class="spec-tabs">${tabs}</div><div class="spec-panes">${panes}</div>`;
     box.querySelectorAll('.spec-tab').forEach(b => b.addEventListener('click', () => { selSpec = b.dataset.spec || null; rerender(); }));
-    const tb = box.querySelector('.trial-go');
-    if (tb) tb.addEventListener('click', () => { if (!tb.getAttribute('aria-disabled')) beginTrial(cls, tb.dataset.spec); });
-    box.querySelectorAll('.spec-move').forEach(m => { const i = Number(m.dataset.i); Tip.set(m, () => abilityTip(cls, sk.abilities[i])); });
+    box.querySelectorAll('.trial-go').forEach(tb => tb.addEventListener('click', () => { if (!tb.getAttribute('aria-disabled')) beginTrial(cls, tb.dataset.spec); }));
+    box.querySelectorAll('.spec-pane').forEach(p => {
+      const sk = kitFor(cls.id, p.dataset.spec || null);
+      p.querySelectorAll('.spec-move').forEach(m => { const i = Number(m.dataset.i); Tip.set(m, () => abilityTip(cls, sk.abilities[i])); });
+    });
   }
   // under a sealed or trial-ready spec: the trial's name and memory, and the way in once it's open
   function trialCard(cls, spec, state) {

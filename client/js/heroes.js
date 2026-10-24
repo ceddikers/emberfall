@@ -1023,7 +1023,8 @@ function heroSnapshot(ctx, cls, angle, st, opts, into) {
   return heroSprite(ctx, cls, angle, st, opts, heroPose(st, null), into || heroCanvas());
 }
 
-// cls may be null (wisp). opts: { ring, noShadow, lift, spec, emote: { kind, t, k } (pastimes.js emoteLook) }
+// cls may be null (wisp). opts: { ring, ringColor (the player's party colour; the role's without one), noShadow, lift, spec,
+// emote: { kind, t, k } (pastimes.js emoteLook) }
 function drawHero(ctx, cls, x, y, angle, st, scale = 1, opts = {}) {
   HERO_SPEC = opts.spec || null;
   heroMotion(st, x, y);
@@ -1033,7 +1034,7 @@ function drawHero(ctx, cls, x, y, angle, st, scale = 1, opts = {}) {
   ctx.scale(scale, scale);
   const lift = (opts.lift || 0) + P.hop;
   if (!opts.noShadow) ellipse(ctx, 2, 5, 16 - lift * 0.15 + P.shadow, 12 - lift * 0.12 + P.shadow * 0.5, 0, 'rgba(0,0,0,0.28)');
-  if (cls && opts.ring !== false) ellipse(ctx, 0, 2, 19, 15, 0, null, rgba(ROLES[cls.role].color, 0.85), 2);
+  if (cls && opts.ring !== false) ellipse(ctx, 0, 2, 19, 15, 0, null, rgba(opts.ringColor || ROLES[cls.role].color, 0.85), 2);
   const chP = cls ? channelP(st) : -1;
   if (chP >= 0) drawChannelGround(ctx, cls, st, chP);
   if (opts.spec && SPEC_GROUND[opts.spec]) SPEC_GROUND[opts.spec](ctx, st);
@@ -1066,14 +1067,15 @@ function heroDownSprite(ctx, cls, angle, opts) {
   return cv;
 }
 // A hero going down (k 0 -> 1) or getting up (1 -> 0): img (their picture, at the scale ctx will hold) tipped over
-// onto the floor, falling backward from where they faced, with a soft shadow; the role ring goes to a muted dashed one.
-function drawHeroDown(ctx, cls, x, y, angle, scale, k, img) {
+// onto the floor, falling backward from where they faced, with a soft shadow; their ring (ringColor, as drawHero) goes to a
+// muted dashed one.
+function drawHeroDown(ctx, cls, x, y, angle, scale, k, img, ringColor) {
   ctx.save();
   ctx.translate(x, y); ctx.scale(scale, scale);
   const fa = angle + Math.PI, fx = Math.cos(fa), fy = Math.sin(fa);
   ellipse(ctx, 2 + fx * 7 * k, 5 + fy * 5 * k, 16 + 7 * k, 12 - 2 * k, fa * k, 'rgba(0,0,0,' + (0.28 + 0.06 * k).toFixed(3) + ')');
   if (cls) {
-    if (k < 0.99) ellipse(ctx, 0, 2, 19, 15, 0, null, rgba(ROLES[cls.role].color, 0.85 * (1 - k)), 2);
+    if (k < 0.99) ellipse(ctx, 0, 2, 19, 15, 0, null, rgba(ringColor || ROLES[cls.role].color, 0.85 * (1 - k)), 2);
     ctx.setLineDash([4, 5]);
     ellipse(ctx, 0, 2, 19, 15, 0, null, rgba('#9c98a8', 0.5 * k), 1.5);
     ctx.setLineDash([]);
