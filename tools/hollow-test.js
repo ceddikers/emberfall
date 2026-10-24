@@ -44,7 +44,7 @@ const kinds = (sent, k) => sent.filter(m => m.t === 'fev' && m.k === k);
   // the fps tuple carries [on, debt, healed, left, grace]
   sim.broadcastParty();
   const fps = sent.filter(m => m.t === 'fps').pop(), row = fps && fps.ps.find(r => r[0] === 1);
-  check(row && Array.isArray(row[12]) && row[12][0] === 1 && row[12][1] === 200 * HOLLOW_HOST.DEBT && row[12][2] === 0, `fps row should end with the Hollow tuple (${JSON.stringify(row && row[12])})`);
+  check(row && Array.isArray(row[11]) && row[11][0] === 1 && row[11][1] === 200 * HOLLOW_HOST.DEBT && row[11][2] === 0, `fps row should end with the Hollow tuple (${JSON.stringify(row && row[11])})`);
   // 3. healing pays it: a heal, a shield (half) and a heal over time
   sim.applyHeal(2, 1, 200 * HOLLOW_HOST.DEBT);
   check(s.hp === 1 && s.hollow.heal === 200 * HOLLOW_HOST.DEBT, 'a heal on a Hollow knight pays the debt, not HP');

@@ -345,8 +345,8 @@ const AZERATH = {
       const flip = s => { const o = Object.assign({}, s); o.x = -s.x; o.y = -s.y; if (s.angle != null) o.angle = s.angle + Math.PI; return o; };
       const group = new Set(), n = f.alive().length;
       for (const e of m.list.slice(0, 5)) {
-        if (e.type === 'stack') f.mech({ type: 'stack', shape: flip(e.shape), delay: dd, dmg: e.dmg * 0.9, need: n, tag: e.tag });
-        else f.aoe(flip(e.shape), dd, dmg.counter, { tag: e.tag, group });
+        if (e.type === 'stack') f.mech({ type: 'stack', shape: flip(e.shape), delay: dd, dmg: e.dmg * 0.9, need: n, tag: e.tag, color: 'echo' });   // (color: only the drawing reads it: an echo of the last spell)
+        else f.aoe(flip(e.shape), dd, dmg.counter, { tag: e.tag, group, color: 'echo' });
       }
     };
     // Arcane Mark: one hero's own elemental rises where they stood: a blow for everyone to share, on that spot

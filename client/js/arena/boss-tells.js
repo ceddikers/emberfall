@@ -1712,8 +1712,10 @@ const BossTells = (() => {
   const buster = {
     color: '#ff6a5a',
     ground(ctx, tg, s, p, k, t, env) {
+      if (env.bossId === 'archmage' && typeof AZ_ART !== 'undefined') { AZ_ART.lance(ctx, tg, s, p, k, t, env); return; }   // Azerath's Arcane Lance (archmage-art.js)
       const tgt = tg.target != null ? env.entById(tg.target) : null;
       ctx.save(); SHAPES.trace(ctx, s); ctx.fillStyle = rgba('#ff4a3a', (0.06 + 0.1 * p) * k); ctx.fill(); ctx.restore();
+      if (env.bossId === 'hydra' && typeof HY_TELLS !== 'undefined' && HY_TELLS.buster) { HY_TELLS.buster.ground(ctx, tg, s, p, k, t, env); return; }   // (Rending Maul: hydra-view.js)
       if (env.bossId === 'volkar') {
         // Titan Fist: lightning gathers along the cone and runs to the tank
         for (let i = 0; i < 5; i++) {
@@ -1792,144 +1794,7 @@ const BossTells = (() => {
   };
 
   // ------------------------------------------------------------------ Vhalgrath
-  // The rule here as everywhere: the red outline and the sweeping wash mark the exact area; the embers, cracks and fire
-  // inside are the extra clue, never the only one.
-  // a scorch mark blooming on the stone: a dark heart, a ring of heat, cracks running out of it, embers lifting
-  function scorchBloom(ctx, s, p, k, t, seed) {
-    ctx.save(); SHAPES.trace(ctx, s); ctx.clip();
-    glow(ctx, s.x, s.y, s.r, '#ff6a1a', (0.12 + 0.34 * p) * k);
-    circle(ctx, s.x, s.y, s.r * (0.25 + 0.55 * p), rgba('#0c0504', (0.25 + 0.4 * p) * k));
-    ctx.lineCap = 'round';
-    for (let i = 0; i < 12; i++) {
-      const a = i * TAU / 12 + hash(i, seed) * 0.4, d0 = s.r * 0.2, d1 = s.r * (0.4 + 0.6 * p * (0.6 + 0.4 * hash(i, seed + 1)));
-      ctx.beginPath(); ctx.moveTo(s.x + Math.cos(a) * d0, s.y + Math.sin(a) * d0);
-      ctx.lineTo(s.x + Math.cos(a + 0.12) * (d0 + d1) / 2, s.y + Math.sin(a + 0.12) * (d0 + d1) / 2); ctx.lineTo(s.x + Math.cos(a - 0.05) * d1, s.y + Math.sin(a - 0.05) * d1);
-      ctx.strokeStyle = rgba('#ff9a3a', (0.35 + 0.5 * p) * k); ctx.lineWidth = 2.5; ctx.stroke();
-    }
-    for (let i = 0; i < 14; i++) { const q = (t * 0.8 + hash(i, seed + 2)) % 1, a = hash(i, seed + 3) * TAU, d = hash(i, seed + 4) * s.r * 0.8; circle(ctx, s.x + Math.cos(a) * d, s.y + Math.sin(a) * d - q * 40, 2 + 2 * (1 - q), rgba('#ffd890', 0.8 * (1 - q) * k * (0.3 + p))); }
-    ctx.restore();
-  }
-  // a column of coals and sparks racing along a line toward its end: the trail the dive will follow
-  function emberTrail(ctx, s, p, k, t, seed) {
-    const ca = Math.cos(s.angle), sa = Math.sin(s.angle), L = s.len;
-    ctx.save(); SHAPES.trace(ctx, s); ctx.clip();
-    ctx.fillStyle = rgba('#2a0c04', (0.12 + 0.2 * p) * k); ctx.fillRect(-AR() * 2, -AR() * 2, AR() * 4, AR() * 4);
-    for (let i = 0; i < 44; i++) {
-      const u = (hash(i, seed) + t * (0.25 + 0.4 * p)) % 1, d = u * L, off = (hash(i, seed + 1) - 0.5) * s.w * 0.85;
-      const x = s.x + ca * d - sa * off, y = s.y + sa * d + ca * off;
-      glow(ctx, x, y, 10 + 12 * p, i % 3 ? '#ff7a22' : '#ffd27a', (0.22 + 0.5 * p) * k * (0.5 + 0.5 * Math.sin(t * 6 + i)));
-    }
-    // the line itself, glowing hotter toward where he comes down
-    const g = ctx.createLinearGradient(s.x, s.y, s.x + ca * L, s.y + sa * L);
-    g.addColorStop(0, rgba('#ff8a2a', 0.1 * k)); g.addColorStop(1, rgba('#ffd27a', (0.25 + 0.4 * p) * k));
-    ctx.strokeStyle = g; ctx.lineWidth = 6; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(s.x + ca * L, s.y + sa * L); ctx.stroke();
-    ctx.restore();
-  }
-  const W = {
-    // Tyrant's Roar: the crater darkens and glows at the edges, and the roar rolls out of him in rings
-    roar: {
-      raidwide: true,
-      ground(ctx, tg, s, p, k, t, env) {
-        const R = AR(), b = env.boss;
-        ctx.save(); ctx.fillStyle = `rgba(40,8,0,${(0.08 + 0.26 * easeIn(p)) * k})`; ctx.fillRect(-R - 80, -R - 80, R * 2 + 160, R * 2 + 160); ctx.restore();
-        for (let i = 0; i < 3; i++) { const q = (t * 0.7 + i / 3) % 1; ellipse(ctx, b.x, b.y, 70 + q * R, (70 + q * R) * 0.9, 0, null, rgba('#ff9a4a', 0.25 * (1 - q) * k * (0.4 + 0.6 * p)), 3); }
-      },
-    },
-    // Take Flight / the Roost: a gust through the crater, grit and ash blown across
-    gust: {
-      raidwide: true,
-      ground(ctx, tg, s, p, k, t, env) {
-        const R = AR(), b = env.boss;
-        ctx.save(); ctx.fillStyle = `rgba(20,10,6,${(0.05 + 0.15 * p) * k})`; ctx.fillRect(-R - 80, -R - 80, R * 2 + 160, R * 2 + 160);
-        for (let i = 0; i < 26; i++) {
-          const a = hash(i, 5) * TAU, u = (t * 0.9 + hash(i, 6)) % 1, d0 = R * (1.05 - u * 0.95), x = b.x + Math.cos(a) * d0, y = b.y + Math.sin(a) * d0;
-          line(ctx, x, y, x + Math.cos(a) * 30, y + Math.sin(a) * 30, rgba('#d8c8b0', 0.4 * k * Math.sin(u * Math.PI)), 2);
-        }
-        ctx.restore();
-      },
-    },
-    // Dragonfall: the embers draw the line he will fly along (faint at first, then hot), and a scorch blooms at the end
-    divepath: { ground(ctx, tg, s, p, k, t) { emberTrail(ctx, s, p, k, t, tg.id); } },
-    divepath2: { ground(ctx, tg, s, p, k, t) { emberTrail(ctx, s, p, k, t, tg.id + 7); } },
-    dragonfall: {
-      ground(ctx, tg, s, p, k, t) { scorchBloom(ctx, s, p, k, t, tg.id); },
-      // his shadow comes over the pit, growing
-      air(ctx, tg, s, p, k, t) {
-        const q = easeIn(p);
-        ellipse(ctx, s.x, s.y, s.r * (0.2 + 0.75 * q), s.r * (0.2 + 0.75 * q) * 0.55, 0, rgba('#000000', 0.12 + 0.4 * q), null);
-      },
-    },
-    scorch: { ground(ctx, tg, s, p, k, t) { scorchBloom(ctx, s, p, k, t, tg.id); } },
-    // Ember Breath: fire building inside the cone, tongues of it leaning down its length
-    breath: {
-      ground(ctx, tg, s, p, k, t) {
-        ctx.save(); SHAPES.trace(ctx, s); ctx.clip();
-        const fr = ctx.createRadialGradient(s.x, s.y, 20, s.x, s.y, s.r);
-        fr.addColorStop(0, rgba('#ffd27a', (0.2 + 0.4 * p) * k)); fr.addColorStop(1, rgba('#ff5a1a', (0.04 + 0.2 * p) * k));
-        ctx.fillStyle = fr; ctx.fillRect(s.x - s.r, s.y - s.r, s.r * 2, s.r * 2);
-        for (let i = 0; i < 18; i++) {
-          const a = s.angle + (hash(i, tg.id) - 0.5) * s.arc * 0.9, d = 70 + hash(i, tg.id + 1) * (s.r - 90), x = s.x + Math.cos(a) * d, y = s.y + Math.sin(a) * d;
-          glow(ctx, x, y, 22 + 10 * Math.sin(t * 7 + i), i % 2 ? '#ff8a2a' : '#ffd27a', (0.18 + 0.4 * p) * k);
-        }
-        ctx.restore();
-      },
-    },
-    // Tail Lash: the shadow of the swing, bone spikes along it
-    taillash: {
-      ground(ctx, tg, s, p, k, t) {
-        ctx.save(); SHAPES.trace(ctx, s); ctx.clip();
-        ctx.fillStyle = rgba('#140806', (0.2 + 0.3 * p) * k); ctx.fillRect(s.x - s.r, s.y - s.r, s.r * 2, s.r * 2);
-        for (let i = 0; i < 9; i++) { const a = s.angle - s.arc / 2 + ((i + 0.5) / 9) * s.arc, d = s.r * (0.35 + 0.6 * p); poly(ctx, [s.x + Math.cos(a - 0.04) * d, s.y + Math.sin(a - 0.04) * d, s.x + Math.cos(a) * (d + 26), s.y + Math.sin(a) * (d + 26), s.x + Math.cos(a + 0.04) * d, s.y + Math.sin(a + 0.04) * d], rgba('#e6dcc4', (0.35 + 0.4 * p) * k)); }
-        ctx.restore();
-      },
-    },
-    // burning scales and cinders: a glow on the stone, the ember itself falling from above
-    scales: {
-      ground(ctx, tg, s, p, k, t) { glow(ctx, s.x, s.y, s.r * 1.1, '#ff6a1a', (0.18 + 0.4 * p) * k); circle(ctx, s.x, s.y, s.r * (0.2 + 0.5 * p), rgba('#1a0a06', 0.35 * k)); },
-      air(ctx, tg, s, p, k, t) { const h = (1 - easeIn(p)) * 260; glow(ctx, s.x, s.y - h, 20, '#ffb04a', 0.8 * k); poly(ctx, [s.x - 9, s.y - h, s.x, s.y - h - 12, s.x + 9, s.y - h, s.x, s.y - h + 10], '#b4421a', OUT, 1.5); },
-    },
-    cinder: {
-      ground(ctx, tg, s, p, k, t) { glow(ctx, s.x, s.y, s.r * 1.1, '#ff6a1a', (0.16 + 0.4 * p) * k); },
-      air(ctx, tg, s, p, k, t) { const h = (1 - easeIn(p)) * 300; glow(ctx, s.x, s.y - h, 14, '#ffd27a', 0.9 * k); circle(ctx, s.x, s.y - h, 4, rgba('#fff4c8', k)); },
-    },
-    // the wings' push: chevrons running outward from the line
-    wingbeat: {
-      ground(ctx, tg, s, p, k, t) {
-        ctx.save(); SHAPES.trace(ctx, s); ctx.clip();
-        const ca = Math.cos(s.angle), sa = Math.sin(s.angle);
-        for (let i = 0; i < 22; i++) {
-          const d = hash(i, tg.id) * s.len, u = (t * 0.9 + hash(i, tg.id + 1)) % 1;
-          for (const sd of [-1, 1]) {
-            const off = sd * (20 + u * s.w * 0.5), x = s.x + ca * d - sa * off, y = s.y + sa * d + ca * off;
-            line(ctx, x, y, x - sa * sd * 16, y + ca * sd * 16, rgba('#ffe8c8', 0.45 * (1 - u) * k * (0.3 + p)), 2.5);
-          }
-        }
-        ctx.restore();
-      },
-    },
-    // the rim boiling up
-    boil: {
-      ground(ctx, tg, s, p, k, t) {
-        ctx.save(); SHAPES.trace(ctx, s); ctx.clip();
-        ctx.fillStyle = rgba('#ff5a1a', (0.1 + 0.3 * p) * k); ctx.fillRect(-AR() * 2, -AR() * 2, AR() * 4, AR() * 4);
-        for (let i = 0; i < 40; i++) { const a = hash(i, 11) * TAU, d = s.r2 + hash(i, 12) * (AR() - s.r2), q = (t * 0.5 + hash(i, 13)) % 1; circle(ctx, Math.cos(a) * d, Math.sin(a) * d - q * 14, 3 + q * 5, null, rgba('#ffd890', 0.7 * (1 - q) * k * (0.3 + p)), 1.8); }
-        ctx.restore();
-      },
-    },
-    // the floor-wide fire of the Heart Burn: red from wall to wall except the island, flames licking up
-    heartburn: {
-      ground(ctx, tg, s, p, k, t) {
-        ctx.save(); ARENA.trace(ctx, 4); ctx.clip(); SHAPES.trace(ctx, s); ctx.clip();
-        ctx.fillStyle = rgba('#ff3a0a', (0.1 + 0.3 * p) * k); ctx.fillRect(-AR() * 2, -AR() * 2, AR() * 4, AR() * 4);
-        for (let i = 0; i < 54; i++) {
-          const a = hash(i, 21) * TAU, d = Math.sqrt(hash(i, 22)) * AR(), q = (t * 0.7 + hash(i, 23)) % 1;
-          glow(ctx, Math.cos(a) * d, Math.sin(a) * d - q * 30, 24 + 14 * p, i % 2 ? '#ff7a22' : '#ffd27a', (0.12 + 0.35 * p) * k * (1 - q));
-        }
-        ctx.restore();
-      },
-    },
-    whelpboom: { ground(ctx, tg, s, p, k, t) { glow(ctx, s.x, s.y, s.r * 1.2, '#ff6a1a', (0.14 + 0.45 * p) * k * (0.7 + 0.3 * Math.sin(t * 12))); } },
-  };
+  // His tells, impacts and aftermath live in wyrm-art.js (WYRM_ART); get() and track() ask it.
 
   // ------------------------------------------------------------------ Hrimgar
   // The rule here as everywhere: the red (or blue) outline and the sweeping wash mark the exact area; the frost, cracks and
@@ -2259,10 +2124,11 @@ const BossTells = (() => {
   function track(tgs, t, env) {
     aftNow = t;
     if (marks.length && t < marks[marks.length - 1].at - 1) marks.length = 0;   // the clock went back: a new pull
-    const set = AFTERMATH[env.bossId];
+    const set = env.bossId === 'wyrm' ? (typeof WYRM_ART !== 'undefined' ? WYRM_ART.aftermath(mark, AFTER) : null) : AFTERMATH[env.bossId];
     for (const tg of tgs.values()) {
       if (tg.gone == null || tg._aft) continue;
       tg._aft = true;
+      if (env.bossId === 'archmage' && typeof AZ_ART !== 'undefined' && Math.abs(tg.gone - (tg.start + tg.dur)) <= 0.5) { try { AZ_ART.aftermath(tg, env, { mark, AFTER }); } catch (e) { /* a broken decal never stops the fight drawing */ } continue; }   // Azerath: archmage-art.js
       if (!set || !set[tg.tag] || Math.abs(tg.gone - (tg.start + tg.dur)) > 0.5) continue;
       try { set[tg.tag](tg, env); } catch (e) { /* a broken decal never stops the fight drawing */ }
     }
@@ -2282,13 +2148,13 @@ const BossTells = (() => {
   }
 
   function get(tg, env) {
-    if (tg.type === 'buster') return buster;
+    if (env.bossId === 'wyrm') return (typeof WYRM_ART !== 'undefined' && WYRM_ART.tell(tg.tag, tg.type)) || null;
+    if (tg.type === 'buster') return (env.bossId === 'titan' && typeof TI_ART !== 'undefined' && TI_ART.tell(tg.tag)) || buster;
     if (env.bossId === 'skitterra') return S[tg.tag] || null;
     if (env.bossId === 'volkar') return V[tg.tag] || null;
     if (env.bossId === 'hollowking') return K[tg.tag] || null;
     if (env.bossId === 'hydra') return (typeof HY_TELLS !== 'undefined' && HY_TELLS[tg.tag]) || null;
-    if (env.bossId === 'wyrm') return W[tg.tag] || null;
-    if (env.bossId === 'titan') return HR[tg.tag] || null;
+    if (env.bossId === 'titan') return (typeof TI_ART !== 'undefined' && TI_ART.tell(tg.tag)) || HR[tg.tag] || null;   // (titan-art.js; HR is the older drawing)
     if (env.bossId === 'archmage') return (typeof AZ_ART !== 'undefined' && AZ_ART.tell(tg.tag)) || null;
     return G[tg.tag] || null;
   }
@@ -2569,5 +2435,6 @@ const BossTells = (() => {
     ctx.restore();
   }
 
+  window.HY_BT = { AFTERMATH, mark, AFTER };   // (the Hydra's floor marks are set up in hydra-view.js)
   return { COL, AFTER, afterK, get, ground, air, fade, rims, roleColor, track, drawAftermath, drawRollers, drawReels, drawSweeps, rodPost: (ctx, x, y, t, a) => rodPole(ctx, x, y, t, a, 0.15) };
 })();

@@ -1093,6 +1093,8 @@ const BotAI = {
       const a = ab(i);
       if (a.type !== 'ogcd' || !readyIdx(i)) continue;
       let markMit = false;
+      // a Nightstalker's Shadowstep is a dodge too: take it just as a blow is about to land on this spot
+      if (a.id === 'step' && k.def.spec === 'nightstalker' && BotAI.dollDanger(view, bot.x, bot.y, 0.8)) return i;
       if (k.gcdRemaining() < 0.65 && !k.cast) continue;
       if (a.target === 'ally' || (hotAndHurt && a.id === 'fireblast')) continue;
       // a step that puts you behind the boss (Shadowstep) isn't taken with floor about to land: it could land you in it
@@ -1721,6 +1723,16 @@ BOT_CLASS.threadweaver = {
       return ARENA.clamp({ x: o.x + Math.cos(ta) * back, y: o.y + Math.sin(ta) * back }, 60);
     }
     return { x: b.x + Math.cos(a) * 165, y: b.y + Math.sin(a) * 165 };
+  },
+};
+
+// Nightstalker: stands behind the boss, where Backstab pays the most (Shadowstep as a dodge is in the general oGCD pass above)
+BOT_CLASS.shadowblade = {
+  home(bot, view) {
+    const k = bot.actor && bot.actor.kit;
+    if (!k || k.def.spec !== 'nightstalker') return null;
+    const b = view.boss, a = (b.facing || 0) + Math.PI;
+    return { x: b.x + Math.cos(a) * 110, y: b.y + Math.sin(a) * 110 };
   },
 };
 

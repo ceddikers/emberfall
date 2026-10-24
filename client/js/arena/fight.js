@@ -10,20 +10,19 @@ const FIGHT = {
   BOSS_R: 70,            // boss hitbox radius
   MELEE: 150,            // distance at which the boss autos / walks to the tank
   AUTO_EVERY: 2.8,
-  DMG_DOWN: 0.10,        // damage dealt penalty for getting hit by avoidable attacks
+  DMG_DOWN: 0.10,        // damage dealt penalty, from an avoidable hit of a move that opts in (ddown: true on the mech, puddle, tether, zone...)
   DMG_DOWN_DUR: 10,
-  VULN: 0.25,            // damage taken up per stack, from avoidable hits
+  VULN: 0.25,            // damage taken up per stack, from every avoidable hit
   VULN_DUR: 15,
-  // Threat: damage × (TANK_THREAT for tanks) × the event's own multiplier (clamped to EV_THREAT_MAX), heals × HEAL_THREAT.
-  // It fades (THREAT_FADE of it per second), so what counts is the last ~20 s. The boss only weighs it between tanks
-  // while a tank stands (tank()): nobody else can pull him; with every tank down he goes for the most threat. A taunt sets
-  // your threat to the top + TAUNT_LEAD and fixes the boss on you for TAUNT_FIX s (an add: TAUNT_ADD_FIX s). TAUNT_CD
-  // matches TAUNT.cd in kits.js (the host allows 1 s of slack).
+  // Threat is for adds only: damage × (TANK_THREAT for tanks) × the event's own multiplier (clamped to EV_THREAT_MAX), kept
+  // per add and faded (THREAT_FADE of it per second), so what counts is the last ~20 s. The boss has no threat: he stays on
+  // the tank who taunted last (or, by default, the tank he is on); see tank(). A taunt on an add sets your threat on it to
+  // the top + TAUNT_LEAD and fixes it on you for TAUNT_ADD_FIX s. TAUNT_CD matches TAUNT.cd in kits.js (the host allows
+  // 1 s of slack).
   TANK_THREAT: 2.75,
-  HEAL_THREAT: 0.2,
   THREAT_FADE: 0.05,
   EV_THREAT_MAX: 3,
-  TAUNT_LEAD: 1.1, TAUNT_FIX: 3, TAUNT_ADD_FIX: 6, TAUNT_CD: 20,
+  TAUNT_LEAD: 1.1, TAUNT_ADD_FIX: 6, TAUNT_CD: 20,
   // Raise sickness: a raised player deals and heals PCT less for DUR s. A cast raise is the light kind, an instant raise
   // (a talent, Rewind, a Draught) the heavy one; every earlier death of the party this pull adds PER_DEATH to both, up to
   // MAX. The Limit Break's raise leaves none.
@@ -93,7 +92,7 @@ class FightSim {
     this.vulnStep = def.vuln || FIGHT.VULN;
     this.ps = new Map();
     const n = Math.max(1, Math.min(4, getPlayers().length));
-    this.scale = { hp: [0.42, 0.62, 0.82, 1][n - 1] * FIGHT.NUM_SCALE, dmg: [0.6, 0.8, 0.92, 1][n - 1] * FIGHT.NUM_SCALE, n };
+    this.scale = { hp: FIGHT.NUM_SCALE, dmg: [0.6, 0.8, 0.92, 1][n - 1] * FIGHT.NUM_SCALE, n };
     const hp = Math.round(def.hp[mode] * this.scale.hp);
     // def.spawn: where the boss stands at the pull; def.anchor: it never walks after the tank (Volkar holds the middle)
     const sp = def.spawn || { x: 0, y: -40 };
@@ -121,7 +120,7 @@ class FightSim {
     const gear = p.gear || {};
     const maxHp = Math.round((playerBaseHp(p.role) + Math.max(0, Math.min(180, gear.hp || 0))) * (1 + (this.hpPct || 0)));   // (items.js GEAR_CAPS)
     this.ps.set(p.id, { id: p.id, role: p.role, hp: maxHp, maxHp, alive: true, def: Math.max(0, Math.min(0.11, (gear.def || 0) / 1000)), shield: 0, shieldEnd: 0, shieldMax: 0, shieldFrom: null, shieldTag: null,
-      mits: [], threat: p.role === 'tank' ? 1 : 0, vuln: 0, vulnEnd: 0, dmgDownEnd: 0, weakEnd: 0, hots: [], debuffs: {}, hist: [], diedAt: -99 });
+      mits: [], vuln: 0, vulnEnd: 0, dmgDownEnd: 0, weakEnd: 0, hots: [], debuffs: {}, hist: [], diedAt: -99 });
     this.stats[p.id] = { damage: 0, healing: 0, overheal: 0, taken: 0, mitigated: 0, deaths: 0, avoidable: 0,
       // contribution tracking (scoring.js): seconds as the boss's target, seconds of damage landed on it, towers/stacks soaked, raises given,
       // allies lifted from low health, perfect blocks/reads, tankbusters taken, Ultimates and burst-window hits, wards put up on allies,
@@ -300,14 +299,19 @@ class FightSim {
     return out;
   }
   alive() { return this.players().filter(p => p.s.alive); }
-  // whoever the boss is on: always a tank while one stands (a taunt's fixation, otherwise the tank with the most
-  // threat); with every tank down, the most threat of whoever is left
+  // whoever the boss is on (boss.on): the tank who taunted last, or by default the tank he is on, for as long as that tank
+  // lives. If that tank dies he goes to the other living tank and stays there (a raised tank does not take him back from
+  // it). With every tank down he goes for the nearest player, and the first tank raised takes him back. No threat.
   tank() {
-    const al0 = this.alive(), fx = this.boss.fix, tanks = al0.filter(p => p.s.role === 'tank'), al = tanks.length ? tanks : al0;
-    if (fx && fx.until > this.t) { const p = al.find(q => q.id === fx.id); if (p) return p; }
-    let best = null;
-    for (const p of al) if (!best || p.s.threat > best.s.threat) best = p;
-    return best;
+    const b = this.boss, al = this.alive(), tanks = al.filter(p => p.s.role === 'tank');
+    let on = tanks.find(p => p.id === b.on);
+    if (!on && tanks.length) on = tanks[0];
+    if (!on) {
+      on = al.find(p => p.id === b.on);   // (no tank stands: whoever he turned to stays his target while they live)
+      if (!on) { let nd = Infinity; for (const p of al) { const d = Math.hypot(p.x - b.x, p.y - b.y); if (d < nd) { nd = d; on = p; } } }
+    }
+    b.on = on ? on.id : null;
+    return on || null;
   }
   // an add's target: a taunt's fixation, then the most threat on that add, then (before anyone has hit it) the nearest
   addTarget(a) {
@@ -320,7 +324,8 @@ class FightSim {
     for (const p of al) { const d = Math.hypot(p.x - a.x, p.y - a.y); if (d < nd) { nd = d; best = p; } }
     return best;
   }
-  // Taunt (any tank, tgt = 'boss' or an add's id): threat to the top + 10%, and a short fixation. False if refused.
+  // Taunt (any tank, tgt = 'boss' or an add's id). On the boss he is on you from now on (until you die or the other tank
+  // taunts); on an add, threat to the top + 10% and a short fixation. False if refused.
   taunt(pid, tgt) {
     const s = this.ps.get(pid);
     if (!s || !s.alive || s.role !== 'tank' || this.state !== 'live' || this.t < (s.tauntReady || 0)) return false;
@@ -333,23 +338,20 @@ class FightSim {
       a.fix = { id: pid, until: this.t + FIGHT.TAUNT_ADD_FIX };
     } else {
       if (this.boss.untargetable) return false;
-      let top = 1; for (const p of al) top = Math.max(top, p.s.threat);
-      s.threat = top * FIGHT.TAUNT_LEAD;
-      this.boss.fix = { id: pid, until: this.t + FIGHT.TAUNT_FIX };
+      this.boss.on = pid;
       tgt = 'boss';
     }
     s.tauntReady = this.t + FIGHT.TAUNT_CD - 1;
     this.emit({ t: 'fev', k: 'taunt', id: pid, tg: tgt });
     return true;
   }
-  // a player's share of the room's attention: added to the boss (or an add) and faded every tick
+  // a player's share of an add's attention (damageAdd), faded every tick
   threatMult(s, ev) {
     const m = ev && ev.threat !== undefined ? (Number.isFinite(ev.threat) ? Math.max(0, Math.min(FIGHT.EV_THREAT_MAX, ev.threat)) : 1) : 1;
     return (s.role === 'tank' ? FIGHT.TANK_THREAT : 1) * m;
   }
   fadeThreat(dt) {
     const k = Math.exp(-FIGHT.THREAT_FADE * dt);
-    for (const s of this.ps.values()) s.threat *= k;
     for (const a of this.adds.values()) for (const id in a.threat) a.threat[id] *= k;
   }
   dropThreat(pid) { for (const a of this.adds.values()) delete a.threat[pid]; }
@@ -537,7 +539,6 @@ class FightSim {
         this.lastHit[pid] = this.t;
         if (ev.ub) st.burst++;   // (a hit of an Ultimate or its window)
         if (this.boss.hp <= this.boss.maxHp * 0.2) st.closer += amt;
-        s.threat += amt * this.threatMult(s, ev);
         if (this.boss.hp <= 0) this.end('clear');
         break;
       }
@@ -696,7 +697,7 @@ class FightSim {
     const rs = this.stats[by]; if (rs && by !== tid) rs.raises++;
     ts.alive = true; ts.hollow = null; ts.hp = Math.round(ts.maxHp * Math.max(0.1, Math.min(1, frac)));
     const sick = kind === 'none' ? null : this.sickness(kind);
-    ts.weakEnd = sick ? this.t + sick.dur : 0; ts.weakPct = sick ? sick.pct : 0; ts.threat = ts.role === 'tank' ? 1 : 0; ts.hist = []; this.dropThreat(tid);
+    ts.weakEnd = sick ? this.t + sick.dur : 0; ts.weakPct = sick ? sick.pct : 0; ts.hist = []; this.dropThreat(tid);
     ts.mits.push({ pct: 1, start: this.t, end: this.t + FIGHT.REVIVE_SAFE, kind: 'invuln', from: by });   // a moment to find their feet
     this.emit({ t: 'fev', k: 'raised', id: tid, by });
   }
@@ -713,7 +714,6 @@ class FightSim {
       if (st) { st.healing += real; st.overheal += amt - real; }
       // a heal from someone else on a player: their client shows the number over themselves (bots have no screen)
       if (fromId !== p.id && p.id < 1000 && amt >= 1) this.emit({ t: 'pheal', id: p.id, a: amt });
-      const fs = this.ps.get(fromId); if (fs && fs.alive) fs.threat += real * FIGHT.HEAL_THREAT;
     }
   }
 
@@ -753,7 +753,7 @@ class FightSim {
       if (opts.n) pd.n = opts.n;
       this.emit(pd);
       if (s.hp > 0) return amt;
-      s.hp = 0; s.shield = 0; s.alive = false; s.mits = []; s.hots = []; s.threat = 0; s.diedAt = this.t; this.dropThreat(p.id);
+      s.hp = 0; s.shield = 0; s.alive = false; s.mits = []; s.hots = []; s.diedAt = this.t; this.dropThreat(p.id);
       if (this.classDeath) this.classDeath(p, s);
       this.stats[p.id].deaths++;
       this.emit({ t: 'fev', k: 'death', id: p.id });
@@ -814,8 +814,8 @@ class FightSim {
     else { s.hp -= amt; st.taken += amt; }
     if (opts.avoidable) {
       st.avoidable++; this.avoidCount++;
-      s.dmgDownEnd = this.t + FIGHT.DMG_DOWN_DUR;
-      // lingering ground ticks give Damage Down but don't stack Vulnerability (it would snowball per tick)
+      if (opts.ddown) s.dmgDownEnd = this.t + FIGHT.DMG_DOWN_DUR;   // (Damage Down only where the move opts in: ddown)
+      // lingering ground ticks don't stack Vulnerability (it would snowball per tick)
       if (!opts.noVuln) { s.vuln = Math.min(1, (s.vulnEnd > this.t ? s.vuln : 0) + this.vulnStep); s.vulnEnd = this.t + FIGHT.VULN_DUR; }
     }
     if (s.hp <= 0 && s.mits.some(m => m.kind === 'living') && opts.kind !== 'enrage' && opts.kind !== 'fall') s.hp = 1;
@@ -827,7 +827,7 @@ class FightSim {
     else if (this.postureOn && amt > 0 && (opts.kind === 'auto' || opts.kind === 'buster')) this.kenNote(p, kPre, amt, opts);   // (kept for a deflect pressed just after)   // (taken as Hollow debt: hp stays at 1)
     this.emit(pd);
     if (s.hp <= 0) {
-      s.hp = 0; s.alive = false; s.shield = 0; s.mits = []; s.hots = []; s.threat = 0; s.diedAt = this.t; this.dropThreat(p.id);
+      s.hp = 0; s.alive = false; s.shield = 0; s.mits = []; s.hots = []; s.diedAt = this.t; this.dropThreat(p.id);
       if (this.classDeath) this.classDeath(p, s);
       st.deaths++;
       this.emit({ t: 'fev', k: 'death', id: p.id });
@@ -926,7 +926,9 @@ class FightSim {
     return null;
   }
 
-  // Generic telegraph. opts: { shape, delay, dmg, type, follow, need, tag, onResolve, avoidable, failDmg }
+  // Generic telegraph. opts: { shape, delay, dmg, type, follow, need, tag, onResolve, avoidable, ddown, failDmg }
+  // ddown: true makes an avoidable hit of this move also give Damage Down (every avoidable hit gives Vulnerability; the
+  // same flag goes on a puddle's extra, a tether, zone, roller, reel, sweep or floor-fire's opts, and on damagePlayer's opts)
   // type: 'aoe' | 'raidwide' | 'stack' | 'spread' | 'tower' | 'buster' | 'knockback' | 'proximity'
   // Cover: opts.cover makes the blast come from opts.src (default: where the boss stands now); anyone whose line to it
   // passes through a cover prop is spared. coverCap: at most this many people behind one prop (the nearest to it).
@@ -986,7 +988,7 @@ class FightSim {
     const eat = this.eatInfo ? this.eatInfo(m, inside) : null;
     const hit = (p, dmg, kind, avoidable) => {
       const ea = eat && eat.on && eat.on.some(q => q.id === p.id) ? eat.type : null;
-      this.damagePlayer(p, dmg, { kind, avoidable: avoidable && !ea, eat: ea, mid: m.id, n: m.from }); hits.push(p.id);
+      this.damagePlayer(p, dmg, { kind, avoidable: avoidable && !ea, ddown: m.ddown, eat: ea, mid: m.id, n: m.from }); hits.push(p.id);
     };
     if (eat && eat.whole) {
       this.damagePlayer(eat.whole, m.dmg, { kind: m.tag || m.type, eat: eat.type, mid: m.id, whole: 1, owner: eat.owner, n: m.from });
@@ -1076,7 +1078,7 @@ class FightSim {
   // Lingering ground hazard: damages anyone inside every `every` seconds.
   // extra.slow: standing in it also slows you (the 'slowed' debuff, which clients and bots move slower under)
   puddle(x, y, r, dur, dmg, every = 1, tag = 'puddle', extra = {}) {
-    const pd = { id: this.nextMechId++, x, y, r, end: this.t + dur, dmg, every, tag, last: {}, slow: !!extra.slow };
+    const pd = { id: this.nextMechId++, x, y, r, end: this.t + dur, dmg, every, tag, last: {}, slow: !!extra.slow, ddown: !!extra.ddown };
     this.puddles.push(pd);
     this.emit({ t: 'pud', id: pd.id, x, y, r, dur, tag });
     return pd;
@@ -1089,7 +1091,7 @@ class FightSim {
         if (pd.slow) this.debuff(p.id, 'slowed', 1.2);
         if (this.t - (pd.last[p.id] || -99) < pd.every) continue;
         pd.last[p.id] = this.t;
-        this.damagePlayer(p, pd.dmg, { kind: pd.tag, avoidable: true, noVuln: true });
+        this.damagePlayer(p, pd.dmg, { kind: pd.tag, avoidable: true, noVuln: true, ddown: pd.ddown });
       }
     }
   }
@@ -1113,7 +1115,7 @@ class FightSim {
       if (pa && pb) {
         const d = Math.hypot(pa.x - pb.x, pa.y - pb.y);
         ok = th.kind === 'long' ? d >= th.len : d <= th.len;
-        if (!ok) for (const p of [pa, pb]) this.damagePlayer(p, th.dmg, { kind: th.tag || 'tether', avoidable: true });
+        if (!ok) for (const p of [pa, pb]) this.damagePlayer(p, th.dmg, { kind: th.tag || 'tether', avoidable: true, ddown: th.ddown });
       }
       this.emit({ t: 'tethx', id, ok: ok ? 1 : 0 });
       if (th.onResolve) th.onResolve(ok);
@@ -1186,7 +1188,7 @@ class FightSim {
             if (segDist(p.x, p.y, a.x, a.y, o.x, o.y) > 20) continue;
             if (this.t - (a.linkLast[p.id] || -99) < 1) continue;
             a.linkLast[p.id] = this.t;
-            this.damagePlayer(p, a.linkDmg, { kind: 'silkbeam', avoidable: true, noVuln: true });
+            this.damagePlayer(p, a.linkDmg, { kind: 'silkbeam', avoidable: true, noVuln: true, ddown: a.ddown });
           }
         }
       }
@@ -1212,7 +1214,7 @@ class FightSim {
         for (const p of this.alive()) {
           if (!SHAPES.contains(z.shape, p.x, p.y, 8) || this.t - (z.last[p.id] ?? -9) < 1) continue;
           z.last[p.id] = this.t;
-          this.damagePlayer(p, z.dmg || 4000, { kind: z.tag, avoidable: true, noVuln: true });
+          this.damagePlayer(p, z.dmg || 4000, { kind: z.tag, avoidable: true, noVuln: true, ddown: z.ddown });
         }
         continue;
       }
@@ -1249,7 +1251,7 @@ class FightSim {
       for (const p of this.alive()) {
         if (r.hit[p.id] || Math.hypot(p.x - pos.x, p.y - pos.y) > r.r + 16) continue;
         r.hit[p.id] = true;
-        this.damagePlayer(p, r.dmg, { kind: r.tag, avoidable: true });
+        this.damagePlayer(p, r.dmg, { kind: r.tag, avoidable: true, ddown: r.ddown });
         // shoved sideways, to whichever side of the path they were on
         const cross = Math.cos(r.angle) * (p.y - pos.y) - Math.sin(r.angle) * (p.x - pos.x);
         const ka = r.angle + (cross >= 0 ? Math.PI / 2 : -Math.PI / 2);
@@ -1279,7 +1281,7 @@ class FightSim {
       if (this.t < rl.pullAt) continue;
       if (Math.hypot(p.x - this.boss.x, p.y - this.boss.y) <= rl.reach) {
         this.reels.delete(id);
-        this.damagePlayer(p, rl.dmg, { kind: rl.tag, avoidable: true });
+        this.damagePlayer(p, rl.dmg, { kind: rl.tag, avoidable: true, ddown: rl.ddown });
         this.debuff(p.id, 'slowed', 4);
         this.emit({ t: 'reelx', id, pid: rl.pid, ok: 0 });
       } else if (this.t >= rl.end) { this.reels.delete(id); this.emit({ t: 'reelx', id, pid: rl.pid, ok: 1 }); }
@@ -1319,7 +1321,7 @@ class FightSim {
           if (this.t - (sw.last[key] ?? -9) < 1.5) continue;
           if (sw.cover && PROPS.shadowing(sw.x, sw.y, p.x, p.y, this.props, q => q.kind === sw.cover)) continue;
           sw.last[key] = this.t;
-          this.damagePlayer(p, sw.dmg, { kind: sw.tag, avoidable: true });
+          this.damagePlayer(p, sw.dmg, { kind: sw.tag, avoidable: true, ddown: sw.ddown });
           // shoved the way the wall is turning
           const ta = a + Math.sign(sw.spin || 1) * Math.PI / 2;
           this.emit({ t: 'kb', id: p.id, x: p.x - Math.cos(ta) * 20, y: p.y - Math.sin(ta) * 20, d: sw.kb });
@@ -1387,7 +1389,7 @@ class FightSim {
       for (const p of this.alive()) {
         if (Math.hypot(p.x - fl.x, p.y - fl.y) > fl.r + 10 || this.t - (fl.last[p.id] || -9) < 1) continue;
         fl.last[p.id] = this.t;
-        this.damagePlayer(p, fl.dmg || 4000, { kind: 'burn', avoidable: true, noVuln: true });
+        this.damagePlayer(p, fl.dmg || 4000, { kind: 'burn', avoidable: true, noVuln: true, ddown: fl.ddown });
       }
     }
   }
@@ -1401,7 +1403,7 @@ class FightSim {
     const short = dist - Math.hypot(dest.x - p.x, dest.y - p.y), slam = short > (opts.slamAt ?? 40);
     this.emit({ t: 'kb', id: p.id, x: Math.round(fx), y: Math.round(fy), d: dist });
     if (slam && opts.slam != null) {
-      this.damagePlayer(p, opts.slam, { kind: 'slam', avoidable: true });
+      this.damagePlayer(p, opts.slam, { kind: 'slam', avoidable: true, ddown: opts.ddown });
       this.debuff(p.id, 'rooted', opts.daze ?? 0.6);
       this.emit({ t: 'propfx', k: 'slam', x: Math.round(dest.x), y: Math.round(dest.y), a: +a.toFixed(2), id: prop ? prop.id : null, pid: p.id });
     }
@@ -1430,13 +1432,12 @@ class FightSim {
   }
   // host-side states on the boss, compact: [kind, seconds left (0 = no timer), value, who]
   //   ['vuln', s, % more damage taken] Hunter's Mark · ['dmg', 0, % more damage dealt] (Gorge and the like)
-  //   ['brand', s, charges, Inquisitor's id] · ['fix', s, 0, taunting tank's id] · ['stun', s, % more damage taken] (wall slam)
+  //   ['brand', s, charges, Inquisitor's id] · ['stun', s, % more damage taken] (wall slam)
   bossStatus() {
     const b = this.boss, t = this.t, out = [];
     if (b.vulnEnd > t && b.vuln) out.push(['vuln', Math.ceil(b.vulnEnd - t), Math.round(b.vuln * 100)]);
     if (b.dmgUp > 0) out.push(['dmg', 0, Math.round(b.dmgUp * 100)]);
     if (b.brand && b.brand.end > t && b.brand.charges > 0) out.push(['brand', Math.ceil(b.brand.end - t), b.brand.charges, b.brand.from]);
-    if (b.fix && b.fix.until > t) out.push(['fix', Math.ceil(b.fix.until - t), 0, b.fix.id]);
     if (b.exposedUntil > t) out.push(['stun', Math.ceil(b.exposedUntil - t), Math.round((b.exposed || 0) * 100)]);
     if (b.pauseUntil > t) out.push(['pause', Math.ceil(b.pauseUntil - t), 0]);   // a Time Stop (pauseBoss)
     if (this.wall) out.push(['wall', 0, 0, this.wall.label]);   // sealed at a gate (a wall)
@@ -1458,7 +1459,7 @@ class FightSim {
       const hots = s.hots.map(h => [h.id, Math.max(1, Math.ceil((h.ticks - 1) * h.interval + h.next - this.t)), h.from]);
       list.push([id, Math.round(s.hp), s.maxHp, Math.round(s.shield), s.alive ? 1 : 0,
         s.dmgDownEnd > this.t ? Math.ceil(s.dmgDownEnd - this.t) : 0, s.vulnEnd > this.t ? Math.round(s.vuln * 100) : 0,
-        Math.round((1 - mit) * 100), s.weakEnd > this.t ? [Math.round((s.weakPct || 0) * 100), Math.ceil(s.weakEnd - this.t)] : 0, debuffs, Math.round(s.threat), hots,
+        Math.round((1 - mit) * 100), s.weakEnd > this.t ? [Math.round((s.weakPct || 0) * 100), Math.ceil(s.weakEnd - this.t)] : 0, debuffs, hots,
         s.hollow ? [1, Math.round(s.hollow.debt), Math.round(s.hollow.heal), +Math.max(0, s.hollow.until - this.t).toFixed(1), +Math.max(0, s.hollow.graceUntil - this.t).toFixed(1)] : 0]);   // (a Gloomsworn's Hollow: on, debt, healed, seconds left, grace left)
     }
     this.emit({ t: 'fps', ps: list, lb: Math.round(this.lb), dc: this.partyDeaths(), rc: this.recoverEnd > this.t ? Math.ceil(this.recoverEnd - this.t) : 0 });
@@ -1579,14 +1580,13 @@ Object.assign(FightSim.prototype, {
     if (ev.op === 'default' || ev.op === 'foreclose') this.emit({ t: 'fev', k: 'default', id: pid, b: Math.round(r.boss) });
     this.sendLedger(pid, true);
   },
-  // the boss pays: damage credited to the Oathbroker, with a tank's threat
+  // the boss pays: damage credited to the Oathbroker
   ledgerStrike(pid, amt) {
     const s = this.ps.get(pid), b = this.boss;
     if (!s || b.untargetable || this.state !== 'live' || !(amt > 0)) return;
     amt = Math.round(Math.min(amt, 15000));
     b.hp = Math.max(this.wallHp ?? 0, b.hp - amt);
     this.stats[pid].damage += amt;
-    s.threat += amt * this.threatMult(s, null);
     if (b.hp <= 0) this.end('clear');
   },
   // the owner's copy of a Ledger (and every client's, for the stamps): on every change, and each second while it holds
@@ -1673,7 +1673,7 @@ Object.assign(FightSim.prototype, {
   hollowKill(pid, s, short) {
     const p = this.players().find(q => q.id === pid), st = this.stats[pid];
     this.emit({ t: 'pdmg', id: pid, a: Math.max(1, short), k: 'hollow', hp: 0, dd: 0, n: 'Hollow debt' });
-    s.hp = 0; s.alive = false; s.shield = 0; s.mits = []; s.hots = []; s.threat = 0; s.diedAt = this.t; this.dropThreat(pid);
+    s.hp = 0; s.alive = false; s.shield = 0; s.mits = []; s.hots = []; s.diedAt = this.t; this.dropThreat(pid);
     if (this.classDeath) this.classDeath(p || { id: pid }, s);
     if (st) st.deaths++;
     this.emit({ t: 'fev', k: 'death', id: pid });
@@ -1932,15 +1932,8 @@ Object.assign(FightSim.prototype, {
 //   - Everyone gets the list ('lamps', 10 a second) to draw other keepers' lanterns.
 // Nothing here is trusted: positions, radii and amounts are clamped like any other combat event.
 // ===================================================================================================================
-const LAMP_HOST = { MAX: 12, R: 220, HEAL: 2000, STALE: 1.5, PULSE: 1, STILL: 3, STEADY: 0.05, LINE: 30, HEARTH: 6, LAST_CD: 90, THREAT: 0.33 };
+const LAMP_HOST = { MAX: 12, R: 220, HEAL: 2000, STALE: 1.5, PULSE: 1, STILL: 3, STEADY: 0.05, LINE: 30, HEARTH: 6, LAST_CD: 90 };
 Object.assign(FightSim.prototype, {
-  // a lantern's heal: like any heal, but it draws only a third of the usual healing threat (a light that never stops
-  // would otherwise pull the boss onto its keeper)
-  lampHeal(pid, tid, amt) {
-    const s = this.ps.get(pid), was = s ? s.threat : 0;
-    this.applyHeal(pid, tid, amt);
-    if (s) s.threat = was + (s.threat - was) * LAMP_HOST.THREAT;
-  },
   setLamps(pid, list) {
     if (!Array.isArray(list) || !this.ps.has(pid)) return;
     const n = (v, lo, hi) => Math.max(lo, Math.min(hi, Math.round(Number(v) || 0)));
@@ -1988,7 +1981,7 @@ Object.assign(FightSim.prototype, {
         for (const p of al) {
           if (!(ev.all || this.inLamp(p, l, at))) continue;
           const full = p.s.hp >= p.s.maxHp - 0.5;
-          if (amt && !(ev.full && full)) this.lampHeal(pid, p.id, amt);
+          if (amt && !(ev.full && full)) this.applyHeal(pid, p.id, amt);
           if (sh && (!ev.full || full) && p.s.shield < sh) this.giveShield(pid, p.id, p.s, sh, 8);
         }
       }
@@ -2001,7 +1994,7 @@ Object.assign(FightSim.prototype, {
       }
       if (!best) return;
       const f = best.s.hp / best.s.maxHp;
-      this.lampHeal(pid, best.id, amt);
+      this.applyHeal(pid, best.id, amt);
       if (ev.last && f < 0.2 && this.t - L.lastAt >= LAMP_HOST.LAST_CD) { L.lastAt = this.t; best.s.mits.push({ pct: 0, kind: 'living', start: this.t, end: this.t + 3, from: pid }); }
       this.emit({ t: 'fev', k: 'relit', id: pid, to: best.id });
     }
@@ -2034,12 +2027,12 @@ Object.assign(FightSim.prototype, {
         const inside = al.filter(p => this.inLamp(p, l, at));
         // Lighthouse Keeper: the most hurt one inside heals 30% more
         const lean = l.ln && inside.length ? inside.reduce((a, b) => (b.s.hp / b.s.maxHp < a.s.hp / a.s.maxHp ? b : a)) : null;
-        for (const p of inside) { this.lampHeal(pid, p.id, l.h * (p === lean ? 1.3 : 1)); n++; lit.add(p.id); }
+        for (const p of inside) { this.applyHeal(pid, p.id, l.h * (p === lean ? 1.3 : 1)); n++; lit.add(p.id); }
         // Hearth: seconds in a Great Beacon's glow
         if (l.hh) for (const p of al) {
           const key = l.id + ':' + p.id, was = L.inside.get(key) || 0;
           if (!inside.includes(p)) { L.inside.set(key, 0); continue; }
-          if (was + LAMP_HOST.PULSE >= LAMP_HOST.HEARTH) { this.lampHeal(pid, p.id, l.hh); L.inside.set(key, 0); } else L.inside.set(key, was + LAMP_HOST.PULSE);
+          if (was + LAMP_HOST.PULSE >= LAMP_HOST.HEARTH) { this.applyHeal(pid, p.id, l.hh); L.inside.set(key, 0); } else L.inside.set(key, was + LAMP_HOST.PULSE);
         }
       }
       // Signal Fire: the line between two Great Beacons
@@ -2048,7 +2041,7 @@ Object.assign(FightSim.prototype, {
         const [[, l1, a], [, l2, b]] = sig;
         for (const p of al) {
           if (this.inLamp(p, l1, a) || this.inLamp(p, l2, b) || segDist(p.x, p.y, a.x, a.y, b.x, b.y) > LAMP_HOST.LINE) continue;
-          this.lampHeal(pid, p.id, (l1.h + l2.h) / 4); n++; lit.add(p.id);
+          this.applyHeal(pid, p.id, (l1.h + l2.h) / 4); n++; lit.add(p.id);
         }
       }
       this.emit({ t: 'fev', k: 'lit', id: pid, n, c: lit.size });

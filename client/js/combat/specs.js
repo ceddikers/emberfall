@@ -669,29 +669,27 @@ const SPECS = {
     {
       id: 'nightstalker', name: 'Nightstalker', title: 'The Knife Behind', accent: '#d0304a',
       blurb: 'Wait in the dark behind them. Then end it.',
-      focus: 'Burst from behind. Backstab hits very hard from the rear, a Shadowstep sets up the next one, and Shadow Dance lasts longer, but standing anywhere else costs you more.',
+      focus: 'Burst from behind. Backstab hits very hard from the rear, a Shadowstep sets up the next one and carries you out of a blow, and Shadow Dance lasts longer.',
       gaugeTip: 'Strike gives 1 point, or 2 from behind. Backstab spends every point and hits for {d:115} more for each, with a {d:160} bonus at 5, and more again from behind. A sixth point is lost. A Shadowstep starts you Stalking: your next Backstab hits harder. Shadow Dance entered at 5 points lets the first Backstab in it keep them.',
-      passive: { name: 'From the Shadows', desc: 'Eviscerate becomes Backstab: much stronger from behind, weaker from the front. Shadowstep starts you Stalking: your next Backstab within 6s hits 6% harder. Shadow Dance lasts 14s.' },
+      passive: { name: 'From the Shadows', desc: 'Eviscerate becomes Backstab: much stronger from behind. Shadowstep starts you Stalking (your next Backstab within 6s hits 6% harder) and nothing can touch you for 1s. Shadow Dance lasts 14s.' },
       build: base => {
         const stepBase = base.abilities.find(a => a.id === 'step');
         return {
-        potMult: 0.89,
+        potMult: 0.93,
         abilities: {
           step: {
-            desc: 'Teleport behind the target. For 5s every hit counts as a positional, and you start Stalking: your next Backstab within 6s is 6% harder.',
-            effect(k) { stepBase.effect.call(this, k); k.buff('stalk', 6); },
+            desc: 'Teleport behind the target, and nothing can touch you for 1s. For 5s every hit counts as a positional, and you start Stalking: your next Backstab within 6s is 6% harder.',
+            effect(k) { stepBase.effect.call(this, k); k.buff('stalk', 6); k.mitigate('self', 1, 1, { ab: this, kind: 'invuln' }); },   // (a dodge as well: Shadowstep is untouchable for 1s)
           },
           evis: {
             id: 'backstab', replaces: 'evis', name: 'Backstab', type: 'gcd', target: 'enemy', range: SPEC_MELEE, anim: 'attack',
-            desc: 'Spend all combo points: {d:110} plus {d:115} per point, and {d:160} more at 5 points. From behind it hits {d:60} plus {d:30} per point harder; from the front, 25% weaker.',
+            desc: 'Spend all combo points: {d:110} plus {d:115} per point, and {d:160} more at 5 points. From behind it hits {d:60} plus {d:30} per point harder.',
             usable: k => k.g.combo >= 1,
             glow: k => k.g.combo >= 5 || (k.g.combo >= 4 && k.env.positional() === 'rear'),
             effect(k) {
               const cp = k.g.combo; k.g.combo = 0;
-              const feint = k.talent('shadowblade_feint') && k.has('feint');
-              const front = k.env.positional() === 'front' && !k.has('truenorth') && !k.has('dance') && !feint;
               const stalked = k.has('stalk');
-              const mult = bladeMult(k) * (k.has('dance') ? 1.25 : 1) * (front ? 0.75 : 1) * (k.consume('stalk') ? 1.06 : 1);
+              const mult = bladeMult(k) * (k.has('dance') ? 1.25 : 1) * (k.consume('stalk') ? 1.06 : 1);
               const pot = 110 + 115 * cp + (cp >= 5 ? 160 : 0), bonus = 60 + 30 * cp;
               const o = bladeOpts(k, this, 'rear', bonus, mult);
               if (stalked && k.talent('shadowblade_deaddrop')) o.crit = (o.crit || 0) + 0.3;   // (Dead Drop, spec row VI)
@@ -1217,15 +1215,17 @@ Object.assign(SPECS, {
   marionettist: [
     {
       id: 'cuttingline', name: 'Cutting Line', title: 'The Bladed String', accent: '#ff6a8a',
-      gaugeTip: 'Builds from Cue and the Doll\'s other moves (not its own Jabs); Grand Finale spends it. The strings reach 400 px, and they cut whatever they cross once a second. Taut String: the longer the line stays across, the brighter the red edge and the harder the cut.',
+      gaugeTip: 'Builds from Cue and the Doll\'s other moves (not its own Jabs); Grand Finale spends it. The strings reach 400 px, and they cut whatever they cross once a second. Taut String: the longer the line stays across, the brighter the red edge and the harder the cut, and Cross-Cut and Grand Finale cash it in.',
       blurb: 'Every string a blade. Stand right, and the stage itself bleeds.',
       focus: 'Positioning. The strings always cut what they cross and reach 400 px, and Cross-Cut is off the global cooldown with two charges.',
-      passive: { name: 'Bladed String', desc: 'The strings reach 400 px before they tear, and they cut whatever enemy they cross for {d:48}, once a second. Taut String: every second the line stays across, the cut grows by {d:12}, up to {d:120}; the line leaving the enemy or a String tearing slackens it. Cross-Cut is off the global cooldown, with two charges.' },
+      passive: { name: 'Bladed String', desc: 'The strings reach 400 px before they tear, and they cut whatever enemy they cross for {d:48}, once a second. Taut String: every second the line stays across, the cut grows by {d:12}, up to {d:120}; the line leaving the enemy or a String tearing slackens it. Cross-Cut is off the global cooldown, with two charges, and the strings are Drawn Tight: Cross-Cut and Grand Finale cut up to 50% harder the longer the line has stayed across the enemy with all three Strings tied (10s for the most). A torn String, a String left untied or a line that leaves the enemy slackens it.' },
+      // (a pro keeps the line drawn tight on the dummy, but a raid breaks it often: it aims above its class here so the raid index lands level)
+      balance: 1.12,
       build: base => ({
-        potMult: base.potMult * 0.66,
+        potMult: base.potMult * 0.66 * 0.98,   // balance knob (Draw Tight lifts it)
         stretch: 400, bladed: true,
         abilities: {
-          cross: { type: 'ogcd', charges: 2, cd: 9, lock: 0.4, desc: 'Off the global cooldown, two charges: your strings become blades and cut along the line between you and the Doll. With the enemy on that line it\'s a {d:560} cut and 2 Encore; otherwise it cuts nothing.' },
+          cross: { type: 'ogcd', charges: 2, cd: 9, lock: 0.4, desc: 'Off the global cooldown, two charges: your strings become blades and cut along the line between you and the Doll. With the enemy on that line it\'s a {d:560} cut, up to 50% harder with a long unbroken line, and 2 Encore; otherwise it cuts nothing.' },
         },
       }),
     },

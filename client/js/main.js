@@ -23,7 +23,8 @@
   const TOWN_PACE = 1.35;
   const $ = id => document.getElementById(id);
   const rnd = Math.round;
-  const SH = typeof SoundHooks !== 'undefined' ? SoundHooks : null;   // sound (sound-hooks.js): every call below is guarded by it
+  const SH_REAL = typeof SoundHooks !== 'undefined' ? SoundHooks : null;
+  let SH = SH_REAL;   // sound (sound-hooks.js): every call below is guarded by it (null while a snapshot is replayed: applySnapshot)
   let now = 0, last = performance.now(), started = false;
   // Network smoothing runs on its own clock (interp.js): real time, so a stalled frame or a throttled tab doesn't
   // squeeze arrival stamps together the way the capped game clock `now` would. step() (testing) pushes it along too.
@@ -134,6 +135,8 @@
   const inArena = () => scene === 'arena' && !!raid;
   const myState = () => (raid ? raid.party.get(Net.id) : null);
   const amDead = () => inArena() && !!myState() && !myState().alive;
+  // the link to the host dropped and the tab is winning its place back (net.js): your hero stands still meanwhile, a stand-in plays it
+  const linkLost = () => Net.link === 'lost';
   // a debuff the host has put on you ('slowed', 'rooted', ...)
   const myDebuff = k => { const s = inArena() ? myState() : null; return !!(s && s.debuffs && s.debuffs.some(d => d[0] === k)); };
 
@@ -182,7 +185,7 @@
     now: () => now,
     moving: () => player.st.moving,
     // auto-attacks pause while you're down, dashing or knocked back, and outside a live fight
-    canAuto: () => !amDead() && !player.dashMove && !player.kb && (!inArena() || raid.state === 'live'),
+    canAuto: () => !amDead() && !linkLost() && !player.dashMove && !player.kb && (!inArena() || raid.state === 'live'),
     findEnemy: (a, ab) => {
       const range = ab.range === 'melee' ? 75 : (ab.range || 420);
       if (inArena()) {
@@ -970,7 +973,7 @@
   function pressSlot(i) {
     if (!started || panelOpen()) return;
     if (!actor) { toast('Pick a hero first.'); return; }
-    if (amDead() || (inArena() && raid.state !== 'live' && raid.state !== 'countdown' && raid.state !== 'prepull')) return;
+    if (amDead() || linkLost() || (inArena() && raid.state !== 'live' && raid.state !== 'countdown' && raid.state !== 'prepull')) return;
     Hud.pressed(i);   // (the slot lights, or shakes if it's still cooling: hud.js)
     if (i === 6) { doDash(); return; }
     // T (slot 7): the Ultimate (engine.js; kits without one have nothing there yet)
@@ -1015,6 +1018,8 @@
   let raid = null;
   // host only
   let raidHost = null, hostRoster = [], stopHostTick = null, lastRaidOpts = { mode: 'normal', fill: true, boss: 'grubnak' };
+  let raidEnter = null, raidRid = 0;   // the running raid's start message and its id (a snapshot puts a late player in it)
+  const hostHeld = new Set();          // players whose link dropped and whose hero a stand-in plays (net.js hostHooks)
 
   const RAID_DEFS = { grubnak: GRUBNAK, skitterra: SKITTERRA, volkar: VOLKAR, hollowking: HOLLOWKING, wyrm: WYRM, titan: TITAN };
   // a raid id is a boss id, or 'trial:<spec>' for a specialization trial (trials.js)
@@ -1037,6 +1042,7 @@
     const roster = [me, ...raidHost.bots.map(b => ({ id: b.id, name: b.name, cls: b.cls.id, spec: b.spec, role: b.role, bot: true }))];
     const spawns = { [Net.id]: [0, 300] };
     for (const b of raidHost.bots) spawns[b.id] = [rnd(b.x), rnd(b.y)];
+    raidEnter = null;
     Net.broadcastAll({ t: 'raid', boss: 'trial:' + specId, mode: 'normal', roster, spawns, bond: {} });
     let lastT = performance.now(), endedAt = null;
     stopHostTick = Net.steadyInterval(() => {
@@ -1088,7 +1094,14 @@
     raidHost = new RaidHost({ def, mode, humans: hostHumans, bots: fill ? pickBots(humans) : [], seed: (Math.random() * 1e9) | 0, emit: m => Net.broadcastAll(m), bond: partyBonus(bond), waitPull: true, practiceFrom });
     const roster = [...humans, ...raidHost.bots.map(b => ({ id: b.id, name: b.name, cls: b.cls.id, spec: b.spec, role: b.role, bot: true }))];
     for (const b of raidHost.bots) spawns[b.id] = [rnd(b.x), rnd(b.y)];
-    Net.broadcastAll({ t: 'raid', boss: def.id, mode, roster, spawns, bond, pull: 1, practice: practiceFrom || 0 });
+    // (rid names this run; the start message is kept so a rejoining or resyncing player can be put in it: hostSendSnapshot)
+    raidEnter = { t: 'raid', boss: def.id, mode, roster, spawns, bond, pull: 1, practice: practiceFrom || 0, rid: raidRid = (Date.now() % 1e9) + 1 };
+    Net.broadcastAll(raidEnter);
+    // anyone whose link is down as the run starts has a stand-in from the first moment
+    for (const id of Net.heldIds()) {
+      const h = hostRoster.find(x => x.id === id);
+      if (h) { hostHeld.add(id); raidHost.standIn({ id, name: h.name, cls: h.cls, spec: h.spec, role: h.role, x: h.spawn[0], y: h.spawn[1] }); }
+    }
     hostMarks = loadMarks(def.id);
     Net.broadcastAll({ t: 'wms', m: hostMarks });
     // tick the fight off a worker timer so it keeps running if the host's tab is in the background
@@ -1110,7 +1123,7 @@
   function hostHumans() {
     const out = [];
     for (const h of hostRoster) {
-      if (h.left) continue;
+      if (h.left || hostHeld.has(h.id)) continue;   // (a held place is played by a stand-in bot: raid-host.js standIn)
       let x = h.spawn[0], y = h.spawn[1], a = -Math.PI / 2;
       if (h.id === Net.id) { if (scene === 'arena') { x = player.x; y = player.y; a = player.angle; } }
       else { const r = remotes.get(h.id); if (!r) continue; if (r.scene === 1) { x = r.tx; y = r.ty; a = r.ta; } }
@@ -1140,11 +1153,11 @@
     if (hostTrial) return;   // a trial is a memory: nothing drops
     const humans = hostRoster.filter(h => !h.left && h.cls).map(h => [h.id, h.cls]);
     const b = raidHost && raidHost.sim.boss;
-    if (humans.length) Loot.hostOpen(lastRaidOpts.boss, lastRaidOpts.mode, humans, b ? { x: b.x, y: b.y } : null);
+    if (humans.length) Loot.hostOpen(lastRaidOpts.boss, lastRaidOpts.mode, humans, b ? { x: b.x, y: b.y } : null, raidRid);
   }
   Loot.init({
     broadcast: m => Net.broadcastAll(m),
-    send: m => (!Net.isHost ? Net.send(m) : m.t === 'ctake' ? Loot.hostTake(Net.id, m) : m.t === 'cput' ? Loot.hostPut(Net.id, m) : null),
+    send: m => (!Net.isHost ? Net.send(m) : m.t === 'ctake' ? Loot.hostTake(Net.id, m) : m.t === 'cput' ? Loot.hostPut(Net.id, m) : m.t === 'cack' ? Loot.hostAck(Net.id, m) : null),
     myId: () => Net.id,
     nameOf: id => (id === Net.id ? 'You' : (remotes.get(id) || {}).name || 'Someone'),
     inRaid: () => scene === 'arena',
@@ -1172,6 +1185,7 @@
   Net.on('csalv', m => Loot.onSalvage(m));
   Net.onHost('ctake', (pid, m) => Loot.hostTake(pid, m));
   Net.onHost('cput', (pid, m) => Loot.hostPut(pid, m));
+  Net.onHost('cack', (pid, m) => Loot.hostAck(pid, m));
   // ---------------------------------------------------------------- Limit Break (G)
   // The party's shared gauge (the host's, fight.js): every whole bar is spent at once by whoever presses first, with the
   // effect of their role. Tank: Stand Fast (the party takes less damage). Healer: Rekindle (heals the party; three bars
@@ -1448,6 +1462,52 @@
     if (h) { h.left = true; if (raidHost) raidHost.sim.removePlayer(pid); if (pvpHost) pvpHost.sim.removePlayer(pid); }
   });
 
+  // ---- a dropped player's place (host side; net.js hostHooks, raid-host.js standIn / snapshot)
+  // The link of a joined player dropped mid-raid: their slot is held ~60 s and a bot plays their hero. When their tab
+  // rejoins, the bot steps out and the host sends it the whole picture; after the hold the usual 'leave' follows.
+  const inRaidRun = pid => !!raidHost && !pvpHost && hostRoster.some(h => h.id === pid && !h.left);
+  Net.hostHooks.shouldHold = p => inRaidRun(p.id) && ['countdown', 'prepull', 'live'].includes(raidHost.sim.state);
+  Net.hostHooks.onHold = p => {
+    const h = hostRoster.find(x => x.id === p.id), r = remotes.get(p.id);
+    if (!h || !raidHost) return;
+    const at = r && r.scene === 1 ? { x: r.tx, y: r.ty, a: r.ta } : { x: h.spawn[0], y: h.spawn[1], a: -Math.PI / 2 };   // (where hostHumans last had them)
+    hostHeld.add(p.id);
+    raidHost.standIn({ id: p.id, name: h.name, cls: h.cls, spec: h.spec, role: h.role, x: at.x, y: at.y, a: at.a });
+    Net.broadcastAll({ t: 'away', id: p.id, on: 1 });
+  };
+  Net.hostHooks.onBack = p => {
+    hostHeld.delete(p.id);
+    const at = raidHost ? raidHost.releaseStandIn(p.id) : null;
+    const r = remotes.get(p.id);
+    if (at && r) { r.x = r.tx = at.x; r.y = r.ty = at.y; r.angle = r.ta = at.a; r.track = new Track(at.x, at.y, at.a); r.clock = new SendClock(); }   // (their hero stands where the stand-in left it)
+    Net.broadcastAll({ t: 'away', id: p.id, on: 0 });
+    hostSendSnapshot(p.id, at);
+    // a chest they never confirmed (they dropped as the boss fell): theirs to open now. Only on a rejoin, never a Resync.
+    const chest = Loot.hostChestFor(p.id);
+    if (chest) Net.sendTo(p.id, chest);
+  };
+  // The fight as it stands, to one player: a rejoiner (at: where their hero was left) or a Resync press. If the run is
+  // over or they are not in it, `none` sends them back to town.
+  function hostSendSnapshot(pid, at) {
+    if (!inRaidRun(pid)) { Net.sendTo(pid, { t: 'rsnap', none: 1 }); return; }
+    const snap = raidHost.snapshot();
+    snap.t = 'rsnap'; snap.rid = raidRid; snap.enter = raidEnter || undefined; snap.marks = hostMarks; snap.away = [...hostHeld].filter(id => id !== pid);
+    // where everyone else stands (their own updates only come when they move)
+    snap.ps = [];
+    for (const r of remotes.values()) if (r.id !== pid) snap.ps.push([r.id, rnd(r.tx), rnd(r.ty), +(r.ta || 0).toFixed(2), r.m ? 1 : 0, rnd(r.tl || 0), r.scene ? 1 : 0]);
+    snap.ps.push([Net.id, rnd(player.x), rnd(player.y), +player.angle.toFixed(2), player.st.moving ? 1 : 0, rnd(player.lift), scene === 'arena' ? 1 : 0]);
+    if (at) snap.me = { x: rnd(at.x), y: rnd(at.y), a: +at.a.toFixed(2) };
+    Net.sendTo(pid, snap);
+  }
+  // "Resync" in Options: the same snapshot, asked for. A request at most every 2 s per player.
+  const rsyncAt = new Map();
+  Net.onHost('rsync', pid => {
+    const t = performance.now();
+    if (t - (rsyncAt.get(pid) || -1e9) < 2000) return;
+    rsyncAt.set(pid, t);
+    hostSendSnapshot(pid, null);
+  });
+
   // going in or out of a raid fades up from black instead of cutting straight to the new room
   const sceneVeil = document.createElement('div');
   sceneVeil.id = 'scene-veil';
@@ -1474,7 +1534,7 @@
     sceneFade();
     const sp = def.spawn || { x: 0, y: -40 };
     raid = {
-      def, mode: msg.mode, roster: msg.roster, rosterIds: new Set(msg.roster.map(r => r.id)),
+      def, mode: msg.mode, roster: msg.roster, rosterIds: new Set(msg.roster.map(r => r.id)), rid: msg.rid || 0, away: new Set(),
       // pull: no countdown, the fight starts on the first blow on the boss ('prepull' till then)
       state: msg.pull ? 'prepull' : 'countdown', countdownEnd: now + (msg.pvp ? msg.pvp.cd : 8), fightTime: 0, marks: {},
       prog: null, practice: Number(msg.practice) || 0, deaths: [], meter: null, pullAt: null, tl: { hp: [], casts: [] },
@@ -1732,6 +1792,118 @@
     if (!Net.isHost && raid && (raid.state === 'live' || raid.state === 'countdown')) toast(raid.pvp ? 'The host ended the bout.' : 'The host ended the raid.');
     leaveRaid(false);
   });
+
+  // --- a dropped link, the host's snapshot of the fight, Resync
+  // The status line: a small quiet strip at the top, no modal (the raid keeps drawing behind it)
+  const linkEl = document.createElement('div');
+  linkEl.id = 'link-status';
+  document.body.appendChild(linkEl);
+  let linkHide = null;
+  function showLink(text, kind, secs) {
+    clearTimeout(linkHide);
+    linkEl.textContent = text; linkEl.classList.toggle('back', kind === 'back'); linkEl.classList.add('show');
+    document.body.classList.toggle('link-lost', kind === 'lost');
+    if (secs) linkHide = setTimeout(() => linkEl.classList.remove('show'), secs * 1000);
+  }
+  function hideLink() { clearTimeout(linkHide); linkEl.classList.remove('show'); document.body.classList.remove('link-lost'); }
+  Net.canRejoin = () => scene === 'arena' && !!raid && !raid.pvp;   // (a raid only; anywhere else a dropped link is the old lost connection)
+  Net.on('linklost', () => {
+    if (raid) { raid.lostAt = now; resetRaidInput(); }
+    showLink('Connection lost. Rejoining…', 'lost');
+  });
+  // the host took us back: who is in the room now (the snapshot of the fight follows on its own: applySnapshot)
+  Net.on('linkback', msg => {
+    const list = (msg.welcome && msg.welcome.players) || [], ids = new Set();
+    for (const p of list) {
+      ids.add(p.id);
+      const r = remotes.get(p.id);
+      if (!r) { remotes.set(p.id, makeRemote(p)); continue; }
+      r.cls = CLASSES.find(c => c.id === p.cls) || null; r.spec = r.cls && specOf(r.cls.id, p.spec) ? p.spec : null;
+    }
+    for (const id of [...remotes.keys()]) if (!ids.has(id)) remotes.delete(id);
+    updatePartyList();
+    lastSentKey = '';
+    showLink('Back in the raid.', 'back', 2.5);
+  });
+  Net.on('away', msg => {
+    if (!raid || !raid.away) return;
+    if (msg.on) raid.away.add(msg.id); else raid.away.delete(msg.id);
+    const r = remotes.get(msg.id);
+    if (r) {
+      if (msg.on) toast(`${r.name} lost their connection. A stand-in plays their hero.`);
+      else { toast(`${r.name} is back.`); r.clock = new SendClock(); if (r.track) r.track.settle(); }   // (their own updates take over from the stand-in's)
+    }
+  });
+  // Replays the host's picture of the fight through the usual handlers. Each message carries how long ago it began (el);
+  // the clock is set back by that much while it plays, so a telegraph half grown is half grown. Sounds and effects of
+  // things that began before we looked are not played.
+  let resyncAsked = 0;
+  function applySnapshot(msg) {
+    if (!msg || Net.isHost) return;
+    if (msg.none) {
+      if (scene === 'arena') { toast('That run has ended.'); leaveRaid(false); }
+      return;
+    }
+    const wasSH = SH, t0 = now;
+    SH = null;
+    try {
+      // not in this run yet (it began, or began again, while we were away): join it first
+      if ((!raid || raid.rid !== msg.rid) && msg.enter && msg.enter.t === 'raid') {
+        enterArena(msg.enter);
+        if (msg.me == null && msg.enter.spawns && msg.enter.spawns[Net.id]) { /* enterArena put us at our spawn */ }
+      }
+      if (!raid || raid.pvp) return;
+      const R = raid;
+      // what the fight showed so far is dropped; the replay puts back what still stands
+      R.tgs.clear(); R.puddles.clear(); R.tethers.clear(); R.zones.clear(); R.rollers.clear(); R.reels.clear(); R.sweeps.clear(); R.posts.clear();
+      R.pol.clear(); R.doom.clear(); R.knights.clear(); R.adds.clear(); R.ghosts.length = 0; R.lanterns = []; R.night = false;
+      R.lunges = []; R.husks = []; R.eggs = null; R.pbuffs = []; R.abuffs = []; R.cast = null; R.edgeWarn = null; R.rezAsks = {}; R.props = {}; R.propsUntil = {}; R.bnext = null;
+      R.room = ArenaView.newRoom();
+      R.fightClock = new SendClock(); R.botClock = new SendClock();
+      R.away = new Set(msg.away || []);
+      player.reel = null;
+      Stagecraft.reset(); Lamps.reset(); Kennel.reset();
+      FX.muted = true; VFX.mute(true);
+      if (msg.live && R.state !== 'live') { const f = Net.handlers.fight; if (f) f({ t: 'fight', s: 'live' }); }
+      if (Number.isFinite(msg.ar) && ARENA.kind === 'circle' && ARENA.r !== msg.ar) ARENA.resize(msg.ar);
+      const run = m => { const fn = Net.handlers[m.t]; if (fn) try { fn(m); } catch (e) { console.error(e); } };
+      if (msg.marks) run({ t: 'wms', m: msg.marks });
+      if (Array.isArray(msg.ps)) run({ t: 'snap', ps: msg.ps });
+      for (const it of msg.msgs || []) {
+        if (!it || !it.m || typeof it.m.t !== 'string') continue;
+        now = t0 - Math.max(0, Number(it.el) || 0);
+        run(it.m);
+      }
+      now = t0;
+      if (msg.result && !R.result) run(msg.result);
+      // everything stands at its newest known place, not gliding in from where it was when the link dropped
+      for (const r of remotes.values()) if (r.track) r.track.settle();
+      R.bossTrack.settle();
+      for (const a of R.adds.values()) if (a.track) a.track.settle();
+      for (const b of R.bots.values()) if (b.track) b.track.settle();
+      if (msg.me) {   // a rejoin: our hero is where the stand-in left it, and nothing we had half done carries over
+        player.x = msg.me.x; player.y = msg.me.y; player.angle = msg.me.a;
+        player.target = null; player.dashMove = null; player.kb = null; player.interact = null;
+        if (actor && actor.kit) { actor.kit.cast = null; actor.kit.queued = null; actor.kit.queuedO = null; if (actor.kit.inbuf) actor.kit.inbuf.length = 0; }
+        lastSentKey = '';
+        updateCamera(0, true);
+      }
+      updatePartyList();
+    } finally {
+      now = t0; SH = wasSH;
+      FX.muted = document.hidden; VFX.mute(document.hidden);
+    }
+    if (resyncAsked && performance.now() - resyncAsked < 8000) { resyncAsked = 0; toast('In step with the host.'); }
+  }
+  Net.on('rsnap', applySnapshot);
+  // Resync (Options, or its key): ask the host for the same snapshot, without leaving
+  function requestResync() {
+    if (Net.isHost || Net.solo) { toast('You host this fight: you always see it as it is.'); return; }
+    if (!inArena() || raid.pvp) { toast('Resync is for a raid you have joined.'); return; }
+    if (linkLost() || !Net.online) { toast('Not connected: rejoining first.'); return; }
+    resyncAsked = performance.now();
+    Net.send({ t: 'rsync' });
+  }
   Net.on('fight', msg => {
     if (!raid) return;
     if (msg.s === 'live') {
@@ -1831,14 +2003,14 @@
     raid.rc = msg.rc > 0 ? msg.rc : 0;   // seconds of 'recovering' left (fight.js FIGHT.REC)
     raid.dc = msg.dc > 0 ? msg.dc : 0;   // the party's deaths this pull (raise sickness grows with them: fight.js FIGHT.SICK)
     const listed = new Set();
-    for (const [id, hp, maxHp, shield, alive, dd, vuln, mit, weak, debuffs, threat, hots, hol] of msg.ps) {
+    for (const [id, hp, maxHp, shield, alive, dd, vuln, mit, weak, debuffs, hots, hol] of msg.ps) {
       listed.add(id);
       const s = raid.party.get(id);
       // a Gloomsworn's Hollow: [on, debt, healed, seconds left, grace left] (party frames: raid-ui.js; its own gauge: the kit)
       if (s) s.hollow = Array.isArray(hol) && hol[0] ? { debt: hol[1], healed: hol[2], left: hol[3], grace: hol[4], at: now } : null;
       if (id === Net.id && actor && actor.cls.id === 'gloomsworn') actor.notify('hollowtick', Array.isArray(hol) && hol[0] ? { on: 1, debt: hol[1], healed: hol[2], left: hol[3], grace: hol[4] } : { on: 0 });
       if (SH && s && id === Net.id && s.alive && alive) { if (shield > 0 && !(s.shield > 0)) SH.play('shield-up', { vol: 0.6, key: 'shield-up', minGap: 0.5 }); if (Array.isArray(debuffs) && debuffs.length > (Array.isArray(s.debuffs) ? s.debuffs.length : 0)) SH.play('debuff-on', { vol: 0.75, key: 'debuff-on', minGap: 0.4 }); }
-      if (s) Object.assign(s, { hp, maxHp, shield, alive: !!alive, dd, vuln, mit, weak, debuffs, threat: threat || 0, hots: hots || [], left: false });
+      if (s) Object.assign(s, { hp, maxHp, shield, alive: !!alive, dd, vuln, mit, weak, debuffs, hots: hots || [], left: false });
     }
     // the host stops listing anyone who left the raid; don't leave their last numbers frozen on the frames
     for (const [id, s] of raid.party) if (!listed.has(id) && !s.left) Object.assign(s, { left: true, alive: false, hp: 0, shield: 0, hots: [], debuffs: [] });
@@ -1988,7 +2160,7 @@
     switch (msg.k) {
       case 'spawn': BOSS_VFX.addSpawn(msg.x, msg.y, msg.kind); break;
       case 'death':
-        BOSS_VFX.addDeath(a ? a.x : msg.x, a ? a.y : msg.y);
+        BOSS_VFX.addDeath(a ? a.x : msg.x, a ? a.y : msg.y, a && a.kind);
         removeAdd(msg.id, 0.3);
         if (lockedEnemy === msg.id) lockedEnemy = null;
         break;
@@ -2248,7 +2420,7 @@
     if (!raid) return;
     const at = raid.botClock.map(msg.c, rnow);
     for (const [id, x, y, a, m] of msg.b) {
-      const b = raid.bots.get(id);
+      const b = raid.bots.get(id) || (id < 1000 ? remotes.get(id) : null);   // (a stand-in plays a dropped player's hero under their own id)
       if (!b) continue;
       if (!b.track) b.track = new Track(b.x, b.y, b.angle);
       b.track.push(at, x, y, a);
@@ -2277,7 +2449,7 @@
     return best;
   }
   function moveTo(p, marker) {
-    if (amDead()) return;
+    if (amDead() || linkLost()) return;
     player.target = { x: p.x, y: p.y };
     if (marker) FX.add({ type: 'click', x: p.x, y: p.y, dur: 0.45 });
   }
@@ -2350,6 +2522,7 @@
   function openOptions() {
     Keybinds.openPanel({
       cls: player.cls ? player.cls.id : null,
+      resync: requestResync,
       namer: i => (i < 6 && actor && actor.abilities[i] ? actor.abilities[i].name : i === 7 && actor && actor.kit.ult ? actor.kit.ult.name : null),
       onChange: () => { document.querySelectorAll('#ability-row .slot').forEach(el => { const k = el.querySelector('kbd'); if (k) k.textContent = SLOT_KEYS[Number(el.dataset.i)]; }); updateHelp(); },
       prefs: player.cls ? {
@@ -2471,6 +2644,7 @@
     if (a === 'focus') { if (!e.repeat) setFocus(); return; }
     if (a === 'limit') { if (inArena() && !e.repeat) useLimit(); return; }
     if (a === 'rezask') { if (inArena() && !e.repeat) askRaise(); return; }
+    if (a === 'resync') { if (inArena() && !e.repeat) requestResync(); return; }
     if (a === 'options') { if (Keybinds.panelOpen()) Keybinds.closePanel(); else openOptions(); return; }
     if (a === 'journal') { Journal.toggle(); return; }
     if (a === 'logbook') { if (Pastimes.anyOpen()) Pastimes.closeAll(); else Pastimes.openBook(); return; }
@@ -2599,7 +2773,7 @@
   function updatePlayer(dt) {
     player.st.t = now;
     let moving = false;
-    if (amDead()) { player.st.moving = false; player.target = null; return; }
+    if (amDead() || linkLost()) { player.st.moving = false; player.target = null; player.dashMove = null; return; }
     if (player.kb) {
       const k = player.kb, p = Math.min(1, (now - k.t0) / 0.35), e = easeOut(p);
       player.x = k.sx + (k.tx - k.sx) * e; player.y = k.sy + (k.ty - k.sy) * e;
@@ -3743,6 +3917,7 @@
     if (!player.cls || scene !== 'town') return;
     player.spec = specOf(player.cls.id, specId) && Save.specState(player.cls.id, specId) === 'open' ? specId : null;
     Save.setSpec(player.cls.id, player.spec);
+    Save.setLastHero(player.cls.id, player.spec);
     closePanels();
     const spec = specOf(player.cls.id, player.spec);
     heroPickFx(player, spec ? { accent: spec.accent } : player.cls);
@@ -3906,6 +4081,11 @@
     VFX.pillar(e.x, e.y, { r: 30, h: 220, color: cls.accent, dur: 1.1, follow: e });
     VFX.burst(e.x, e.y, { color: cls.accent, color2: '#ffffff', n: 18, speed: 220 });
   }
+  // the hero you last played, if the game still has that class (its spec only while the spec is still open to you), or null
+  function rememberedHero() {
+    const l = Save.lastHero(), cls = l && CLASSES.find(c => c.id === l.cls);
+    return cls ? { cls, spec: l.spec && specOf(cls.id, l.spec) && Save.specState(cls.id, l.spec) === 'open' ? l.spec : null } : null;
+  }
   function chooseHero(cls, specId) {
     if (typeof cls === 'string') cls = CLASSES.find(c => c.id === cls);   // (window.__game.chooseHero('thresher') from a console: an id without its class left drawHero reading ROLES[undefined])
     if (!cls) return;
@@ -3914,6 +4094,7 @@
     // the spec picked on the hero page, or the one this hero last played
     if (specId !== undefined) Save.setSpec(cls.id, specOf(cls.id, specId) ? specId : null);
     player.spec = specOf(cls.id, Save.spec(cls.id)) ? Save.spec(cls.id) : null;
+    Save.setLastHero(cls.id, player.spec);   // (the next visit, or joining a friend, starts as this hero)
     closePanels();
     heroPickFx(player, cls);
     Inventory.grantStarter(cls.id);
@@ -4133,6 +4314,8 @@
     const r = remotes.get(msg.id);
     if (!r) return;
     remotes.delete(msg.id); toast(`${r.name} left.`); updatePartyList();
+    if (raid && raid.away) raid.away.delete(msg.id);
+    if (Net.isHost) { hostHeld.delete(msg.id); if (raidHost) raidHost.releaseStandIn(msg.id); rsyncAt.delete(msg.id); }   // (the hold ran out: a stand-in steps out for good)
     if (raidHost || pvpHost) { const h = hostRoster.find(x => x.id === msg.id); if (h) { h.left = true; (pvpHost || raidHost).sim.removePlayer(msg.id); } }
   });
   Net.on('snap', msg => {
@@ -4266,6 +4449,7 @@
     TownLife.endTalk(); Loot.leave(); TalentPanel.close();
     chatInput.classList.add('hidden'); chatInput.blur();
     started = false;
+    hideLink();
     joinErr.textContent = 'Lost connection to the host.';
     hostBtn.disabled = joinBtn.disabled = soloBtn.disabled = false;
     for (const b of [hostBtn, joinBtn, soloBtn]) b.textContent = b.dataset.label;
@@ -4304,7 +4488,7 @@
     Title.hide();
     started = true;
     Inventory.showGoldHud(scene !== 'arena');
-    if (!player.cls) openSelect(null);
+    if (!player.cls) { const lh = rememberedHero(); if (lh) chooseHero(lh.cls, lh.spec); else openSelect(null); }   // (no remembered hero: the first time, hero select as ever)
     else { Net.send({ t: 'cls', id: player.cls.id, spec: player.spec }); sendGear(); }   // back after a lost connection: tell the new room who we are
     updatePartyList();
     toast(Net.solo ? `Welcome to Emberfall, ${player.name}. Bots fill the empty slots.` : Net.isHost ? `Hosting · room code ${Net.room}` : `Welcome to Emberfall, ${player.name}.`);
