@@ -263,7 +263,7 @@ const PvpUI = (() => {
 
   function render() {
     const host = deps.isHost(), L = host ? hostLobby() : lobby, me = deps.myId();
-    if (!L) { panel.innerHTML = `<header><h3>The Arena</h3><button type="button" class="close" aria-label="Close">×</button></header><p class="pr-note">Asking the host for the bout…</p>`; return; }
+    if (!L) { panel.innerHTML = `<header><h3>The Arena</h3><button type="button" class="close" aria-label="Close" data-tip="Close (Esc)">×</button></header><p class="pr-note">Asking the host for the bout…</p>`; return; }
     const m = modeOf(L.mode), humans = deps.humans(), who = id => humans.find(h => h.id === id);
     const opts = sel => `<option value="random"${sel === 'random' ? ' selected' : ''}>Any hero</option>` + CLASSES.map(c => `<option value="${c.id}"${sel === c.id ? ' selected' : ''}>${esc(c.name)}</option>`).join('');
     const slot = (x, s, i) => {
@@ -275,7 +275,7 @@ const PvpUI = (() => {
     };
     const placed = new Set(L.sides.flatMap(sd => sd.slice(0, m.size)).filter(x => x.h != null).map(x => x.h));
     const watching = humans.filter(h => !placed.has(h.id));
-    panel.innerHTML = `<header><h3>The Arena</h3><button type="button" class="close" aria-label="Close">×</button></header>
+    panel.innerHTML = `<header><h3>The Arena</h3><button type="button" class="close" aria-label="Close" data-tip="Close (Esc)">×</button></header>
       <p class="pr-note">${esc(m.note)} A short bout, then back to town. Nothing is won but the bout.</p>
       <div class="pv-modes">${MODES.map(x => `<button type="button" class="btn2${x.id === L.mode ? ' on' : ''}" data-mode="${x.id}"${host ? '' : ' disabled data-tip="Only the host picks the mode"'}><b>${x.name}</b><small>${x.tag}</small></button>`).join('')}</div>
       <div class="pv-sides">${L.sides.map((sd, s) => `<section style="--sc:${SIDE_COL[s]}"><h4>${SIDES[s]}</h4><ul>${sd.slice(0, m.size).map((x, i) => slot(x, s, i)).join('')}</ul></section>`).join('<em class="pv-vs">vs</em>')}</div>

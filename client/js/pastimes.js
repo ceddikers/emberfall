@@ -450,7 +450,7 @@ const Pastimes = (() => {
     let el = document.getElementById('pt-' + id);
     if (!el) {
       el = document.createElement('div'); el.id = 'pt-' + id; el.className = 'pt-panel hidden';
-      el.innerHTML = `<header><h3>${esc(heading)}</h3><button type="button" class="close" aria-label="Close">×</button></header><div class="pt-body"></div>`;
+      el.innerHTML = `<header><h3>${esc(heading)}</h3><button type="button" class="close" aria-label="Close" data-tip="Close (Esc)">×</button></header><div class="pt-body"></div>`;
       document.body.appendChild(el);
       el.addEventListener('mousedown', e => e.stopPropagation());
       el.querySelector('.close').addEventListener('click', () => el.classList.add('hidden'));
