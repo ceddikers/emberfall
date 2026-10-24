@@ -116,7 +116,7 @@ const SKITTERRA = {
       const al = f.alive();
       if (al.length < 2) return;
       f.cast('Silk Lines', f.ct(3), 'silk');
-      const tie = (a, b, kind) => f.tether(a.id, b.id, delay, { kind, len: kind === 'long' ? LONG : SHORT, dmg: dmg.tether, tag: 'silk' });
+      const tie = (a, b, kind) => f.tether(a.id, b.id, delay, { kind, len: kind === 'long' ? LONG : SHORT, dmg: dmg.tether, tag: 'silk', ddown: true });
       if (H && al.length >= 4) {
         const sh = f.shuffle(al);
         tie(sh[0], sh[1], 'long'); tie(sh[2], sh[3], 'short');
@@ -136,13 +136,13 @@ const SKITTERRA = {
       f.cast('Venom Spit', d, 'spit');
       for (const p of far) {
         const m = f.mech({ type: 'aoe', shape: { kind: 'cone', x: B.x, y: B.y, r: 1300, arc: 0.42, angle: 0 }, delay: d, dmg: dmg.spit,
-          tag: 'venom', aimFromBoss: p.id, lockAt: 1.2,
+          tag: 'venom', ddown: true, aimFromBoss: p.id, lockAt: 1.2,
           onResolve: () => {
             const q = f.players().find(z => z.id === p.id);
             const dist = q ? Math.hypot(q.x - m.shape.x, q.y - m.shape.y) : 380;
             const L = Math.max(200, dist);
             const at = ARENA.clamp({ x: m.shape.x + Math.cos(m.shape.angle) * L, y: m.shape.y + Math.sin(m.shape.angle) * L }, 60);
-            f.puddle(at.x, at.y, H ? 100 : 90, H ? 60 : 45, dmg.pool, 1, 'venom', { slow: true });
+            f.puddle(at.x, at.y, H ? 100 : 90, H ? 60 : 45, dmg.pool, 1, 'venom', { slow: true, ddown: true });
           } });
       }
     };
@@ -176,7 +176,7 @@ const SKITTERRA = {
         // Hard's role split: the healer is always one of the two
         const healer = role && pool.find(p => p.role === role);
         const picks = healer ? [healer, ...farthest(pool.filter(p => p !== healer), H ? 1 : 0)] : farthest(pool, H ? 2 : 1);
-        for (const p of picks) f.reel(p.id, { speed: H ? 210 : 180, dur: 4, windup: 0.9, dmg: dmg.reel });
+        for (const p of picks) f.reel(p.id, { speed: H ? 210 : 180, dur: 4, windup: 0.9, dmg: dmg.reel, ddown: true });
       });
     };
 

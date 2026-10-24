@@ -117,10 +117,10 @@ const HYDRA = {
       const t = pick1(); if (!t) return;
       const d = cd(h, 3.8);
       wind(h, 'Acid Spray', d);
-      const m = f.mech({ type: 'aoe', shape: { kind: 'cone', x: h.x, y: h.y, r: 780 * h.sz, arc: 0.78, angle: Math.atan2(t.y - h.y, t.x - h.x) }, delay: d, dmg: dmg.acid * h.pw, tag: 'acid',
+      const m = f.mech({ type: 'aoe', shape: { kind: 'cone', x: h.x, y: h.y, r: 780 * h.sz, arc: 0.78, angle: Math.atan2(t.y - h.y, t.x - h.x) }, delay: d, dmg: dmg.acid * h.pw, tag: 'acid', ddown: true,
         onResolve: () => {
           const s = m.shape, c = Math.cos(s.angle), sn = Math.sin(s.angle);
-          const z = f.zone({ shape: { kind: 'cone', x: s.x + c * 190, y: s.y + sn * 190, r: Math.max(120, s.r - 330), arc: s.arc, angle: s.angle }, dur: 8, delay: 0, effect: 'burn', dmg: dmg.pool * h.pw, tag: 'acid' });
+          const z = f.zone({ shape: { kind: 'cone', x: s.x + c * 190, y: s.y + sn * 190, r: Math.max(120, s.r - 330), arc: s.arc, angle: s.angle }, dur: 8, delay: 0, effect: 'burn', dmg: dmg.pool * h.pw, tag: 'acid', ddown: true });
           for (const o of f.alive()) z.last[o.id] = f.t;   // (a second to step off it before it first stings)
         } });
     };
@@ -136,8 +136,8 @@ const HYDRA = {
       const t = pick1(); if (!t) return;
       const d = cd(h, 4.4), n = f.alive().length;
       wind(h, 'Venom Bloom', d);
-      f.mech({ type: 'stack', shape: { kind: 'circle', x: t.x, y: t.y, r: 120 * h.sz }, delay: d, dmg: dmg.bloom * Math.min(n, 4) / 4 * h.pw, follow: t.id, need: Math.max(1, (H ? n : n - 1) - [...f.mechs.values()].filter(m => m.tag === 'sear').length), tag: 'bloom',
-        onResolve: () => { const q = f.alive().find(z => z.id === t.id); const at = q || t; const pd = f.puddle(at.x, at.y, 85, 9, dmg.bloomPool * h.pw, 1, 'bloom', { slow: true }); for (const o of f.alive()) pd.last[o.id] = f.t; } });
+      f.mech({ type: 'stack', shape: { kind: 'circle', x: t.x, y: t.y, r: 120 * h.sz }, delay: d, dmg: dmg.bloom * Math.min(n, 4) / 4 * h.pw, follow: t.id, need: Math.max(1, (H ? n : n - 1) - [...f.mechs.values()].filter(m => m.tag === 'sear').length), tag: 'bloom', ddown: true,
+        onResolve: () => { const q = f.alive().find(z => z.id === t.id); const at = q || t; const pd = f.puddle(at.x, at.y, 85, 9, dmg.bloomPool * h.pw, 1, 'bloom', { slow: true, ddown: true }); for (const o of f.alive()) pd.last[o.id] = f.t; } });
     };
     // Flame Gout: fire under two heroes (one, from a lesser head); each leaves embers
     const gout = h => {
@@ -153,7 +153,7 @@ const HYDRA = {
     const rime = h => {
       const d = cd(h, 4.2);
       wind(h, 'Rime Crown', d);
-      f.mech({ type: 'aoe', shape: { kind: 'donut', x: h.x, y: h.y, r: 345 * h.sz, r2: 130 * h.sz }, delay: d, dmg: dmg.frost * h.pw, tag: 'rime' });
+      f.mech({ type: 'aoe', shape: { kind: 'donut', x: h.x, y: h.y, r: 345 * h.sz, r2: 130 * h.sz }, delay: d, dmg: dmg.frost * h.pw, tag: 'rime', ddown: true });
     };
     // Stormcall: three lines fanned from the head, the middle one through a random hero (a lesser head: two, either side)
     const stormcall = h => {

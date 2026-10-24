@@ -185,7 +185,7 @@ const HOLLOWKING = {
 
     const marks = (d = f.ct(5), who) => {
       if (!who) f.cast('Grave Marks', d, 'marks');
-      for (const p of who || f.alive()) f.mech({ type: 'spread', shape: { kind: 'circle', x: p.x, y: p.y, r: 120 }, delay: d, dmg: dmg.marks, follow: p.id, tag: 'marks' });
+      for (const p of who || f.alive()) f.mech({ type: 'spread', shape: { kind: 'circle', x: p.x, y: p.y, r: 120 }, delay: d, dmg: dmg.marks, follow: p.id, tag: 'marks', ddown: true });
     };
 
     // --- his swings, and the knights who remember them --------------------------------------------
@@ -309,7 +309,7 @@ const HOLLOWKING = {
       const pair = f.shuffle(al.filter(p => !tank || p.id !== tank.id)).slice(0, 2);
       if (pair.length < 2) return;
       const [a, b] = pair;
-      f.tether(a.id, b.id, d, { kind: 'short', len: 160, dmg: dmg.bind, tag: 'bind' });
+      f.tether(a.id, b.id, d, { kind: 'short', len: 160, dmg: dmg.bind, tag: 'bind', ddown: true });
       const rest = al.filter(p => p.id !== a.id && p.id !== b.id && (!tank || p.id !== tank.id));
       if (rest.length) f.afterKeep(d - f.ct(5), () => marks(f.ct(5), rest.filter(p => alive(p.id))));
     };
@@ -364,7 +364,7 @@ const HOLLOWKING = {
           // close: spokes round him. Aimed at a grave, it bars the way to it; aimed between the graves, it doesn't.
           onResolve: free ? null : () => {
             const s = m.shape, c = Math.cos(s.angle), sn = Math.sin(s.angle);
-            f.zone({ shape: { kind: 'rect', x: s.x + c * 95, y: s.y + sn * 95, angle: s.angle, len: 1400, w: 100 }, delay: 0.8, dur: WRIT_BURN - 0.8, effect: 'burn', dmg: dmg.scorch, tag: 'writburn' });
+            f.zone({ shape: { kind: 'rect', x: s.x + c * 95, y: s.y + sn * 95, angle: s.angle, len: 1400, w: 100 }, delay: 0.8, dur: WRIT_BURN - 0.8, effect: 'burn', dmg: dmg.scorch, tag: 'writburn', ddown: true });
           } });
       }
       f.debuff(pardoned, 'pardoned', d);

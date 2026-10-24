@@ -109,7 +109,7 @@ const VOLKAR = {
           const al = f.alive();
           for (const p of al) {
             const near = al.filter(o => o.id !== p.id && Math.hypot(o.x - p.x, o.y - p.y) <= PAIR);
-            if (near.some(o => charge(o.id) === charge(p.id))) f.damagePlayer(p, dmg.surgeSame, { kind: 'arc', avoidable: true });
+            if (near.some(o => charge(o.id) === charge(p.id))) f.damagePlayer(p, dmg.surgeSame, { kind: 'arc', avoidable: true, ddown: true });
             else if (near.length) f.damagePlayer(p, dmg.surgePair, { kind: 'surge' });
             else f.damagePlayer(p, dmg.surgeAlone, { kind: 'surge' });
           }
@@ -129,7 +129,7 @@ const VOLKAR = {
     // Static Field: everyone spreads
     const field = (d = f.ct(5), noCast, mult = 1) => {
       if (noCast) f.anim('field', d); else f.cast('Static Field', d, 'field');
-      for (const p of f.alive()) f.mech({ type: 'spread', shape: { kind: 'circle', x: p.x, y: p.y, r: 115 }, delay: d, dmg: dmg.field * mult, follow: p.id, tag: 'static' });
+      for (const p of f.alive()) f.mech({ type: 'spread', shape: { kind: 'circle', x: p.x, y: p.y, r: 115 }, delay: d, dmg: dmg.field * mult, follow: p.id, tag: 'static', ddown: true });
     };
     // stack in pairs, then scatter (Normal leaves a moment to heal in between)
     const crashField = () => { const d = crash(); f.afterKeep(d + 0.1, () => (H ? field(3.3, true, 0.55) : field(3.8, true, 0.6))); };
@@ -342,7 +342,7 @@ const VOLKAR = {
             struck.add(from.id); path.push(from.id);
             // (a Gorgemaw with its jaw open swallows the bolt: the chain ends in its mouth)
             const ate = f.canEat && f.canEat(from);
-            f.damagePlayer(from, dmg.chain, { kind: 'chain', avoidable: jump > 0 && !ate, eat: 'lance', mid: cm && cm.id });
+            f.damagePlayer(from, dmg.chain, { kind: 'chain', avoidable: jump > 0 && !ate, ddown: true, eat: 'lance', mid: cm && cm.id });
             if (ate) break;
             let next = null, nd = CHAIN + 14;
             for (const p of f.alive()) { if (struck.has(p.id)) continue; const dd = Math.hypot(p.x - from.x, p.y - from.y); if (dd < nd) { nd = dd; next = p; } }

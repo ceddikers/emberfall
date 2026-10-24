@@ -137,7 +137,7 @@ const GRUBNAK = {
             const q = f.alive().find(z => z.id === p.id);
             if (!q) return;
             const dur = H ? 28 : 24, x = q.x, y = q.y;
-            f.puddle(x, y, H ? 95 : 80, dur, dmg.puddle, 1, 'grease');
+            f.puddle(x, y, H ? 95 : 80, dur, dmg.puddle, 1, 'grease', { ddown: true });
             f.afterKeep(dur, () => stain(x, y));
           } });
       }
@@ -232,8 +232,8 @@ const GRUBNAK = {
     const spiceRack = (spots, count = spots.length) => {
       const d = f.ct(6);
       f.cast('Spice Rack', d, 'toss');
-      for (const [x, y] of spots.slice(0, count)) f.aoe({ kind: 'circle', x, y, r: 140 }, d, dmg.spice, { tag: 'spice' });
-      for (const p of f.nonTanks()) f.mech({ type: 'aoe', shape: { kind: 'circle', x: p.x, y: p.y, r: 110 }, delay: d, dmg: dmg.spice, tag: 'spice', follow: p.id, lockAt: 2.5 });
+      for (const [x, y] of spots.slice(0, count)) f.aoe({ kind: 'circle', x, y, r: 140 }, d, dmg.spice, { tag: 'spice', ddown: true });
+      for (const p of f.nonTanks()) f.mech({ type: 'aoe', shape: { kind: 'circle', x: p.x, y: p.y, r: 110 }, delay: d, dmg: dmg.spice, tag: 'spice', ddown: true, follow: p.id, lockAt: 2.5 });
     };
     // Whisk: a cross of beams through him that turns 30° four times. Walk with it. (dir and start angle are set)
     const whisk = (dir, a0) => {
@@ -423,7 +423,7 @@ const GRUBNAK = {
     const flambe = ({ dir = 1, tall = true, first = 0 } = {}) => {
       const d = f.ct(5);
       f.cast('Flambé', d, 'flambe');
-      const burn = s => ({ tag: 'flambe', onResolve: () => f.ignite(s, 4) });
+      const burn = s => ({ tag: 'flambe', ddown: true, onResolve: () => f.ignite(s, 4) });
       if (!H) {
         const n = 6, w = ARENA.hw * 2 / n;
         for (let k = 0; k < n; k++) {

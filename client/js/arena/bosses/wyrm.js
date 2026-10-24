@@ -94,11 +94,11 @@ const WYRM = {
       target = target || nonTank(); if (!target) return null;
       if (cast) f.cast('Ember Breath', delay, 'breath');
       const m = f.mech({ type: 'aoe', shape: { kind: 'cone', x: B.x, y: B.y, r: 760, arc: 0.95, angle: Math.atan2(target.y - B.y, target.x - B.x) }, delay, dmg: dmg.breath,
-        tag: 'breath', aimFromBoss: target.id, lockAt: 1.1,
+        tag: 'breath', ddown: true, aimFromBoss: target.id, lockAt: 1.1,
         onResolve: () => {
           // the molten floor starts a little way out from him: the ground he stands on stays clear
           const s = m.shape, c = Math.cos(s.angle), sn = Math.sin(s.angle);
-          const z = f.zone({ shape: { kind: 'cone', x: s.x + c * 190, y: s.y + sn * 190, r: s.r - 190, arc: s.arc, angle: s.angle }, dur: 20, delay: 0, effect: 'burn', dmg: dmg.molten, tag: 'lava' });
+          const z = f.zone({ shape: { kind: 'cone', x: s.x + c * 190, y: s.y + sn * 190, r: s.r - 190, arc: s.arc, angle: s.angle }, dur: 20, delay: 0, effect: 'burn', dmg: dmg.molten, tag: 'lava', ddown: true });
           for (const o of f.alive()) z.last[o.id] = f.t;   // (a second to step off it before it first burns)
         } });
       aiming.push(m); hold(delay);
@@ -118,8 +118,8 @@ const WYRM = {
       if (!targets.length) return;
       f.cast('Magma Burst', d, 'burst');
       for (const p of targets) {
-        f.mech({ type: 'spread', shape: { kind: 'circle', x: p.x, y: p.y, r: 115 }, delay: d, dmg: dmg.magma, follow: p.id, tag: 'spread',
-          onResolve: () => { const q = f.alive().find(z => z.id === p.id); if (q) { const pd = f.puddle(q.x, q.y, 80, H ? 16 : 14, dmg.puddle, 1, 'ember'); for (const o of f.alive()) pd.last[o.id] = f.t; } } });   // (a second to step out of it before it first burns)
+        f.mech({ type: 'spread', shape: { kind: 'circle', x: p.x, y: p.y, r: 115 }, delay: d, dmg: dmg.magma, follow: p.id, tag: 'spread', ddown: true,
+          onResolve: () => { const q = f.alive().find(z => z.id === p.id); if (q) { const pd = f.puddle(q.x, q.y, 80, H ? 16 : 14, dmg.puddle, 1, 'ember', { ddown: true }); for (const o of f.alive()) pd.last[o.id] = f.t; } } });   // (a second to step out of it before it first burns)
       }
     };
     // Cinder Feast: a stack on a random hero (the tank, standing on him, is forgiven on Normal)
@@ -252,7 +252,7 @@ const WYRM = {
       f.cast('Cinder Rain', f.ct(3), 'rain');
       for (let i = 0; i < n; i++) {
         const a = f.rng() * TAU, r = Math.sqrt(f.rng()) * ((rimR2 || R) - 100), x = Math.round(Math.cos(a) * r), y = Math.round(Math.sin(a) * r);
-        f.afterKeep(i * 0.45, () => f.aoe({ kind: 'circle', x, y, r: 75 }, d, dmg.rain, { tag: 'cinder', onResolve: () => { const pd = f.puddle(x, y, 70, 9, dmg.puddle, 1, 'ember'); for (const o of f.alive()) pd.last[o.id] = f.t; } }));
+        f.afterKeep(i * 0.45, () => f.aoe({ kind: 'circle', x, y, r: 75 }, d, dmg.rain, { tag: 'cinder', ddown: true, onResolve: () => { const pd = f.puddle(x, y, 70, 9, dmg.puddle, 1, 'ember', { ddown: true }); for (const o of f.alive()) pd.last[o.id] = f.t; } }));
       }
     };
     // Heart Flare: a stack on a random hero, and the moment it lands a spread on everyone
