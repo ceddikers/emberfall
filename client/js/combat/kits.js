@@ -4029,7 +4029,7 @@ function weaveTie(k, ab, t) {
   }
   g.tie = pair != null ? null : { t, at: now };
   const sh = k.healAmount(150, { ab }).amount;
-  k.env.emit({ type: 'tie', target: t, pair, mx: weaveMax(k), amount: sh, st: k.def.store || 1, dp: k.def.deep ? 1 : 0, hm: k.talent('threadweaver_skein') ? 6 : 0, ab });
+  k.env.emit({ type: 'tie', target: t, pair, mx: weaveMax(k), amount: sh, st: k.def.store || 1, dp: k.def.deep ? 1 : 0, rg: k.def.ring || 0, hm: k.talent('threadweaver_skein') ? 6 : 0, ab });
   if (!weaveHosted(k) && pair == null) g.n = Math.min(weaveMax(k), (g.n || 0) + 1);
   if (k.talent('threadweaver_crossstitch')) { k.heal(t, 110, { ab }); if (pair != null) k.heal(pair, 110, { ab }); }
   if (k.perk('threadweaver_a2')) k.shield(t, 120, 6, { ab });

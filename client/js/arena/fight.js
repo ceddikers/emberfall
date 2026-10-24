@@ -1723,7 +1723,7 @@ Object.assign(FightSim.prototype, {
         this.threads = this.threads.filter(th => !same(th));
         const mine = this.threads.filter(th => th.from === pid), mx = Math.round(num(ev.mx, 1, WEAVE_HOST.MAX));
         while (mine.length >= mx) { const old = mine.shift(); this.threads.splice(this.threads.indexOf(old), 1); }
-        this.threads.push({ id: this.nextMechId++, from: pid, a, b, at: this.t, log: [], sh: num(ev.amount, 0, 3000), st: num(ev.st, 1, 2), dp: ev.dp ? 1 : 0, hold: this.t + num(ev.hm, 0, 6) });
+        this.threads.push({ id: this.nextMechId++, from: pid, a, b, at: this.t, log: [], sh: num(ev.amount, 0, 3000), st: num(ev.st, 1, 2), dp: ev.dp ? 1 : 0, rg: num(ev.rg, 0, 1), hold: this.t + num(ev.hm, 0, 6) });
         this.weaveDirty = true;
         return;
       }
@@ -1771,6 +1771,19 @@ Object.assign(FightSim.prototype, {
   threadSplit(p, s, amt, opts) {
     if ((!this.threads || !this.threads.length) && !(this.tapestry && this.tapestry.end > this.t)) return amt;
     if (opts.raw || WEAVE_HOST.NO_SPLIT.has(opts.kind) || !(amt > 0) || s.mits.some(m => m.kind === 'invuln')) return amt;
+    // a raidwide is never split along the threads (it would pile onto the weaver at the middle of the web): every thread
+    // rings instead, a heal to both its ends once the hit has landed (weaveTick)
+    if (opts.kind === 'raidwide') {
+      this.ringAcc = this.ringAcc || new Map();
+      for (const th of this.threads || []) if (th.a === p.id || th.b === p.id) {
+        const r = this.ringAcc.get(th) || { at: this.t, sum: 0 };
+        r.sum += amt; this.ringAcc.set(th, r);
+        th.log.push([this.t, amt / 2]);
+        this.carryAcc = this.carryAcc || new Map();
+        this.carryAcc.set(th.from, (this.carryAcc.get(th.from) || 0) + amt / 2);
+      }
+      return amt;
+    }
     // a hit a Gorgemaw's open jaw is about to eat isn't shared: the jaw swallows it (to 25%) and keeps what's left;
     // Ledger bills and settles are raw, so a debt coming due never splits either (NO_SPLIT names them too)
     if (opts.eat && this.canEat && this.canEat(p)) return amt;
@@ -1805,6 +1818,14 @@ Object.assign(FightSim.prototype, {
   weaveTick() {
     if (!this.threads) return;
     const al = new Map(this.alive().map(p => [p.id, p])), snaps = [];
+    if (this.ringAcc && this.ringAcc.size) {   // the web rings after a raidwide: rg of what its two ends took, as a heal to both
+      for (const [th, r] of this.ringAcc) if (r.at < this.t) {
+        this.ringAcc.delete(th);
+        if (!th.rg || !this.threads.includes(th)) continue;
+        for (const e of [th.a, th.b]) if (al.has(e)) this.applyHeal(th.from, e, Math.min(3000, th.rg * r.sum / 2));
+        this.emit({ t: 'thrs', l: [[th.a, th.b, 2]] });
+      }
+    }
     const keep = this.tapestry && this.tapestry.end > this.t && this.tapestry.keep ? this.tapestry.from : null;
     for (const th of [...this.threads]) {
       const a = al.get(th.a), b = al.get(th.b);

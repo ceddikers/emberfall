@@ -1186,10 +1186,10 @@ Object.assign(SPECS, {
       gaugeTip: 'Fills as your threads carry damage. Up to 5 threads, and a heal runs two links deep: 60% to the far end, 30% on through its threads.',
       blurb: 'One web over the whole party, every strand known by touch.',
       focus: 'A network. Up to five threads, and heals travel two links deep, so a web built before the hit heals everyone it touches.',
-      passive: { name: 'Living Web', desc: 'You can hold 5 threads instead of 3, and a heal runs two links deep: 60% to the far end of each thread, then 30% on through that ally\'s own threads.' },
+      passive: { name: 'Living Web', desc: 'You can hold 5 threads instead of 3, and a heal runs two links deep: 60% to the far end of each thread, then 30% on through that ally\'s own threads. A raidwide is not shared along the threads; instead every thread rings, healing both its ends for 40% of what they took.' },
       build: base => ({
         potMult: base.potMult * 0.93,
-        maxThreads: 5, deep: true,
+        maxThreads: 5, deep: true, ring: 0.4,
         abilities: {
           tie: { desc: 'Tie your target to yourself with a glowing thread. Press it on a second ally within 2s and those two are tied to each other instead. On an ally already on your threads, it pulls them up to 220 px along the thread toward its far end instead: yank someone out of a puddle. Up to 5 threads; tying another drops your oldest. Two charges.' },
           shuttle: { desc: 'Instant: throw the shuttle down every thread you hold. It strikes the boss for {d:120} per thread (five threads: {d:600}), and each Thread on you tugs a {h:120} heal to whichever end of it is more hurt.' },
@@ -1201,10 +1201,10 @@ Object.assign(SPECS, {
       gaugeTip: 'Fills as your threads carry damage. Your threads hold 60% more of what they carry, and every thread Snap cuts gives back 10 Spool.',
       blurb: 'Tie it, let it take the strain, then cut it loose with a flourish.',
       focus: 'Burst healing. Threads store more, and Snap is your main heal on a short cooldown that pays you back. A Tie that pulls an ally also shields them.',
-      passive: { name: 'Sharp Shears', desc: 'Snap recharges in 8s, releases 60% more of what a thread carried, and every thread it cuts gives back 10 Spool. A Tie that pulls an ally along a thread also wraps them in a {s:260} shield for 2s.' },
+      passive: { name: 'Sharp Shears', desc: 'Snap recharges in 8s, releases 60% more of what a thread carried, and every thread it cuts gives back 10 Spool. A raidwide is not shared along the threads; every thread rings, healing both its ends for 25% of what they took. A Tie that pulls an ally along a thread also wraps them in a {s:260} shield for 2s.' },
       build: base => ({
         potMult: base.potMult * 1.06,
-        store: 1.6, snipSpool: 10, snipPot: 170, lash: true, shuttleCut: 8,
+        store: 1.6, ring: 0.25, snipSpool: 10, snipPot: 170, lash: true, shuttleCut: 8,
         abilities: {
           snip: { cd: 8, desc: 'Cut the threads on your target (all of yours, if it has none). Each one releases 60% more than the damage it carried in the last 5s as a heal to both its ends (at least {h:170}), and gives back 10 Spool.' },
           shuttle: { desc: 'Instant: throw the shuttle down every thread you hold, and down the cut ends of every thread Snap cut in the last 8s. It strikes the boss for {d:120} per thread, up to 5 ({d:600}), and each Thread on you tugs a {h:120} heal to whichever end of it is more hurt.' },
