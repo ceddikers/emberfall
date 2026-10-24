@@ -169,10 +169,9 @@ CLASSES.push({
 });
 
 // ---------------------------------------------------------------- Houndmaster (melee damage, class 23; docs/plans/2026-10-new-classes-3.md)
-// No painted icons or portraits yet: the game draws its own icons until they are in.
 CLASSES.push({
   id: 'houndmaster', name: 'Houndmaster', title: 'The Huntsman of the Old Road', role: 'dps', difficulty: 3, complexity: 4, accent: '#c46a3a',
-  art: { icons: false, portraits: false },   // (nothing painted yet: hud.js draws the icons from ICON_GLYPHS, the select screen the sprite)
+  art: { portraits: true },
   tagline: 'I whistle. They bite.',
   gameplan: 'Two hounds stand around the boss and bite on their own. Where they stand when you strike decides your finisher: one on each flank, one in front and one behind, or both at its back. Whistle to send them round, hold them through a turn, and call them off the red. Keep them in good places and your combo writes itself.',
 });
