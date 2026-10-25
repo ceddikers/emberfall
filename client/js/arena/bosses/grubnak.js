@@ -269,6 +269,26 @@ const GRUBNAK = {
     const larderChop = () => { larderToss(); f.afterKeep(1.4, () => mince()); };
     // Family Meal with a Ladle Spin right behind it: the stack has to be made out past his reach
     const mealLadle = () => { familyMeal(); f.afterKeep(2.4, () => ladleOrLid(ct(4), 'ladle')); };
+    // Normal's tighter pairs: the same tools, the second landing close behind the first
+    // Soup's On: Ladle Spin, and the Lid Slam lands just after it: out, and straight back in
+    const soupsOn = () => {
+      const d = ct(4), gap = 1.25;
+      f.cast('Ladle Spin', d, 'ladle');
+      f.aoe(ladleShape(), d, dmg.ladle, { tag: 'ladle' });
+      f.aoe(lidShape(), d + gap, dmg.ladle, { tag: 'lid' });
+      hold(d + gap);
+      f.afterKeep(d, () => f.cast('Lid Slam', gap, 'lid'));
+    };
+    // Mince with the Tenderize cleaver right behind it: the tank takes the half that is left and keeps the cleaver off the rest
+    const minceBuster = () => { mince(); f.afterKeep(1.0, tenderize); };
+    // Butcher's Charge and, a breath later, Meat Toss: clear the line, then spread
+    const chargeToss = () => { butcherCharge(); f.afterKeep(0.1, () => meatToss()); };
+    // Order Up! with Larder Toss landing on the first plates: the marked two still have a plate to serve
+    const orderCask = () => { const end = orderUp(); f.afterKeep(Math.max(0.5, ct(7.5) + 0.8 - ct(4.5)), larderToss); return end; };
+    // Larder Toss with Boil Over landing a few seconds behind the casks: the marked two take theirs out toward the walls, the rest follow them out
+    const caskBoil = () => { larderToss(); f.afterKeep(1.4, boilOver); };
+    // Whisk with Boil Over landing between its last beams: out to the walls, and between the wires
+    const whiskBoil = () => { whisk(1, 0.3); f.afterKeep(1.2, boilOver); };
     const farthest = (pool, n) => [...pool].sort((a, b) => Math.hypot(b.x - B.x, b.y - B.y) - Math.hypot(a.x - B.x, a.y - B.y)).slice(0, n);
     // --- the room ---------------------------------------------------------------------------------
     // the stove line runs along the top wall; a fire there fills the top third of the kitchen
@@ -524,12 +544,12 @@ const GRUBNAK = {
       until: 0.8,
       sets: [
         S(H && [3, drains, 'Clogged Drains'], [H ? 3 : 4, grease, 'Grease Fire'],
-          [H ? 10 : 8, () => mince(), MINCE], [H ? 12 : 9, () => ladleOrLid(ct(4), 'ladle'), 'Ladle Spin'], [H ? 10 : 8, () => ladleOrLid(ct(4), 'lid'), 'Lid Slam']),
+          [H ? 10 : 8, () => mince(), MINCE], H ? [12, soupsOn, 'Ladle Spin'] : [9, () => ladleOrLid(ct(4), 'ladle'), 'Ladle Spin'], !H && [8, () => ladleOrLid(ct(4), 'lid'), 'Lid Slam']),
         S([H ? 11 : 9, tenderize, 'Tenderize']),
         S([12, () => meatToss(), 'Meat Toss'], [12, () => familyMeal(), 'Family Meal']),
         S([12, larderToss, 'Larder Toss'], [H ? 10 : 9, gutBlast, 'Gut Blast']),
         // (Normal: one more round of the plain tools before the Mains, a little quicker each)
-        !H && S([9, () => mince(), 'Mince'], [9, tenderize, 'Tenderize']),
+        !H && S([8, soupsOn, 'Ladle Spin'], [9, minceBuster, 'Mince']),
         S([H ? 11 : 9, grease, 'Grease Fire']),
       ].filter(Boolean),
       closing: [[9, larderToss, 'Larder Toss'], [10, gutBlast, 'Gut Blast'], [10, grease, 'Grease Fire']],
@@ -538,12 +558,12 @@ const GRUBNAK = {
 
     const mains = from => f.course({
       until: 0.5,
-      onStart: quicker(0.94),
+      onStart: quicker(0.92),
       sets: [
-        S([5, butcherCharge, "Butcher's Charge"]),
+        S([5, H ? butcherCharge : chargeToss, "Butcher's Charge"]),
         S([13, () => chopChop(), 'Chop Chop']),
         S([13, tenderize, 'Tenderize']),
-        S([12, orderUp, 'Order Up!']),
+        S([12, H ? orderUp : orderCask, 'Order Up!']),
         S([15, tossThenMeal, 'Meat Toss']),
         // (Normal: the casks come down with a Mince right behind them, then the charge with the casks already down)
         S(H && [10, () => bellyFlop(), 'Belly Flop'], H ? [12, larderToss, 'Larder Toss'] : [15, larderChop, 'Larder Toss'], [8, butcherCharge, "Butcher's Charge"], [10, gutBlast, 'Gut Blast']),
@@ -551,7 +571,7 @@ const GRUBNAK = {
         !H && S([11, mealLadle, 'Family Meal']),
         S([12, grease, 'Grease Fire']),
         S([12, orderUp, 'Order Up!'], [6, () => meatballs(LANES.rail), 'Rolling Meatballs'], H && [2.5, cleaverToss, 'Cleaver Toss']),
-        S([H ? 11.5 : 14, tenderize, 'Tenderize']),
+        S([H ? 11.5 : 14, H ? tenderize : minceBuster, H ? 'Tenderize' : 'Mince']),
         S([10, () => chopChop(), 'Chop Chop']),
         S([12, tossThenMeal, 'Meat Toss']),
       ].filter(Boolean),
@@ -570,13 +590,15 @@ const GRUBNAK = {
       next: secondSitting,
     }, from);
 
+    // (Normal: the long gaps between the Second Sitting's calls close up a little; the Dinner Rush's own beats are fixed)
+    const closeUp = sets => (H ? sets : sets.filter(Boolean).map(set => set.map(st => (st && st[0] >= 8 ? [st[0] * 0.88, ...st.slice(1)] : st))));
     const secondSitting = from => f.course({
       until: 0.18,
-      onStart: quicker(0.9),
-      sets: [
-        S([4, () => whisk(1, 0.3), 'Whisk']),
+      onStart: quicker(0.87),
+      sets: closeUp([
+        S([4, () => (H ? whisk(1, 0.3) : whiskBoil()), 'Whisk']),
         S([10, () => { spiceRack(SPICE.a); f.afterKeep(ct(6) + 0.3, () => ladleOrLid(ct(3))); }, 'Spice Rack']),
-        S([14, larderToss, 'Larder Toss'], [6, boilOver, 'Boil Over']),
+        S([14, H ? larderToss : caskBoil, 'Larder Toss'], H && [6, boilOver, 'Boil Over']),
         S([10, () => { tenderize(); if (H) meatHook(); }, 'Tenderize'], [8, gutBlast, 'Gut Blast']),
         H && S([8, mise, 'Mise en Place']),
         // the rail with Meat Toss landing just after the last plate (Hard: the Dinner Rush instead, the plates set by the
@@ -590,24 +612,24 @@ const GRUBNAK = {
         S([10, () => { familyMeal(); f.afterKeep(1.5, () => spiceRack(SPICE.b, 2)); }, 'Family Meal']),
         S([14, () => (H ? mince() : chopChop()), H ? 'Double Chop' : 'Chop Chop'], H && [9, () => bellyFlop(), 'Belly Flop']),
         S([10, tenderize, 'Tenderize']),
-      ].filter(Boolean),
+      ].filter(Boolean)),
       closing: [[10, () => whisk(1, 0.3), 'Whisk'], [3, () => meatballs(LANES.b), 'Rolling Meatballs'], [14, () => chopChop(), 'Chop Chop'], [10, grease, 'Grease Fire']],
       next: dessert,
     }, from);
 
     // the Dessert Trolley: everything at once, then quiet, then Last Orders, then he eats until he drops
     const dessert = from => {
-      const k = H ? 0.85 : 0.85, w = coin('ladle', 'lid');
+      const k = H ? 0.85 : 0.76, w = coin('ladle', 'lid');
       return f.course({
-        onStart: quicker(0.88),
+        onStart: quicker(0.85),
         sets: [
           // each beat lands just as the next is called: the fire passes, then the toss, the balls, the chop...
           S([3, () => flambe({ dir: -1, tall: false, first: 1 }), 'Flambé'],
             [7 * k, () => meatToss(), 'Meat Toss'],
             [2.5 * k, () => meatballs(LANES.c), 'Rolling Meatballs'],
             H && [1.5, cleaverToss, 'Cleaver Toss'],
-            [H ? 2.5 : 4, () => mince(), MINCE],
-            [3.5 * k, () => ladleOrLid(ct(4), w), LL[w]],
+            [H ? 2.5 : 3.4, () => mince(), MINCE],
+            [3.5 * k, H ? () => ladleOrLid(ct(4), w) : soupsOn, H ? LL[w] : 'Ladle Spin'],
             [4 * k, () => spiceRack(SPICE.c), 'Spice Rack'],
             [4 * k, () => familyMeal(), 'Family Meal'],
             [4 * k, () => whisk(H ? -1 : 1, 0), 'Whisk']),

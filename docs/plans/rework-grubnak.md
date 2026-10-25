@@ -39,3 +39,25 @@ Telegraphs never hidden, 8 to 10 minutes, Last Call at about 10:00 (10:15 Hard),
 ## Numbers (bots, 30 runs per seed set)
 
 Normal, `GEAR=fresh`: before 20 of 20; after 89 of 90 (the bots dodge nearly everything, so the target of 85 to 90% was not reached without making weak base-gear parties unwinnable; their deaths now come in the Trolley and the Dinner Rush). Base-gear check line-ups (20 runs): Tidecaller 14, Cleric Aegis 20, Lanternkeeper 17 (before: 10, 20, 14). Hard, `GEAR=mid`: 47 of 90 (52%), unchanged.
+
+## Cool-factor pass (2026-10-26)
+
+*Ask: more fun and complexity without taking difficulty away; cool-looking moves, a dodge that feels earned (a visible whiff), Normal that really tests an expert group.*
+
+**Looks (new `client/js/grubnak-fx.js`, GR_FX, hooked from boss-vfx.js impact, castStart and propFx; it only adds to the older landings).**
+- The whiff, as in the Hollow King's file: a hero the blow did not take who stood within a body of its edge gets a bright streak past them, a ring and sparks, and a kitchen bit by move (steel glint for cleavers, a fleck of broth for the ladle, tin ringing for the lid, a tile chip for the charge and flop, staves for casks, a lick of flame for Flambé). Your own hero also gets a faint flash, a camera push and a soft whoosh. Never drawn for the hit or for anyone far from the edge, and never marks safe floor.
+- Hit-stop and a camera push on the big blows (Mince, Ladle Spin, Lid Slam, Belly Flop, charge, Tenderize, and the charge ending against a wall or the pot), never more than once in a few seconds.
+- Landings on top: the Mince cut line flashes across the whole kitchen and throws carrot, onion and tomato; the Ladle Spin flings broth in a ring; the Lid Slam rings, skitters tin glints and rattles to rest; the Belly Flop bounces a second time; the charge's wind tears down both sides of the lane; casks burst into staves with a hoop ringing off; Flambé's ignition runs the stripe; a plate comes up with a ding.
+- Windups for the casts that had none: Mince and Cleaver Toss (the cleaver glints), Ladle Spin (broth stirred round him, faster and wider), Lid Slam (tin glints drawn in toward him), Belly Flop (dust and heavier beats under his feet), Larder Toss (thumps at the shelves), Flambé (brandy dripping), Rolling Meatballs (the slab).
+
+**Normal, new pairs (same casts, so no new sounds or icons).**
+- **Soup's On**: Ladle Spin with the Lid Slam landing 1.25 s after it (out, then straight back in). In the Appetiser's extra set, the Dessert Trolley (replacing the single ladle or lid) and, on Hard, in the Appetiser in place of the separate ladle and lid.
+- **Mince with Tenderize** a second behind it (the tank takes the safe half and keeps the cleaver off the party): Appetiser extra set, Mains.
+- **Butcher's Charge with Meat Toss** right behind it: clear the line, then spread.
+- **Order Up! with Larder Toss**: the marked two stand at the edge of their plate and step across as the cask lands.
+- **Whisk with Boil Over** between its last beams; **Larder Toss with Boil Over** close behind (Second Sitting).
+- Each course quicker: Mains 0.92, Second Sitting 0.87, Dessert 0.85 of a Normal cast (Hard's floor is 0.85); Dessert gaps 0.76; the Second Sitting's long gaps close up by about an eighth (the Dinner Rush beats stay fixed).
+
+**Hard.** Only change: the Appetiser's separate Ladle Spin and Lid Slam become Soup's On (one move fewer, a tighter one). Hard's list of moves Normal never uses is unchanged.
+
+**Numbers** (bots, 30 runs per seed set 1000/2000/3000). Normal at `GEAR=fresh`: before 88 of 90; after 85 of 90 (94%, seeds 1000/2000/3000: 30, 28, 27; earlier tunings 83 to 86) (dodges are near-perfect for bots, so their losses still come mostly from healer pressure; the tighter pairs added about 4 points of loss, not the 10 asked). Hard `GEAR=mid`: 51 of 90 (57%; 17, 17, 17), before 16 of 30 on seed 1000.
