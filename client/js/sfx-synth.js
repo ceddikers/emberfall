@@ -3197,6 +3197,15 @@
     S.crackle({ at: 0.6, dens: 2, f: 3400, dur: 2.2, pts: [[0.2, 1], [2.2, 0]], peak: 0.14 });
     S.rumble({ dur: 2.6, f: 80, peak: 0.3, a: 0.1 });
   });
+  def('bm-wyrm-searing-descent', 'bm', S => {
+    S.space('cave', 0.4);
+    S.whoosh({ f: 800, f1: 100, dur: 1.2, peakAt: 0.75, peak: 0.3 });
+    S.thud({ at: 1.2, f: 62, f1: 26, dur: 0.8, drive: 2.5, peak: 0.7 });
+    [1.5, 2.3, 3.1].forEach((at, i) => {
+      S.noise({ at, bp: 700 + i * 500, bp1: 2400, q: 1.1, dur: 0.9, a: 0.1, pts: [[0.15, 1], [0.9, 0]], peak: 0.26 });
+      S.crackle({ at, dens: 2.2, f: 3800, dur: 0.8, pts: [[0.1, 1], [0.8, 0]], peak: 0.16 });
+    });
+  });
   def('bm-wyrm-ashfall', 'bm', S => {
     S.space('cave', 0.6);
     S.voice({ f: 50, f1: 36, dur: 3, vowel: 'a', vowel1: 'o', breath: 6, peak: 0.4, lp: 3000, pts: [[0.4, 1], [3, 0]] });

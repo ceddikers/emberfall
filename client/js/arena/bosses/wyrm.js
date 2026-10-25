@@ -7,7 +7,8 @@
 //   Act I, Ground (100% → 75%): Tyrant's Roar, Rending Claws (tankbuster), Ember Breath (a cone at a random hero; molten
 //     floor for 20 s), Tail Lash (the cone behind him), Magma Burst (spread; each puddle stays), Cinder Feast (stack).
 //   Act II, First Flight (75% → 50%): Take Flight, then Dragonfall (the dive) between ground stretches; Twin Pass (two lines
-//     at once, landing on the second, both drawn from the start); Talon Dive (he dives at whoever holds him: the line runs to
+//     at once, crossing, landing on the second close behind the first, both drawn from the start); Searing Descent (a
+//     Dragonfall that breathes a fan of three cones as it lands: leave the ring, then move with the sweep); Talon Dive (he dives at whoever holds him: the line runs to
 //     the tank's feet, and where he lands the ground rings out as the Aftershock, quiet only in the middle by his feet).
 //   The Roost (the seam, opens Act III): he perches on the rim for 12 s and shakes his burning scales loose on random
 //     tiles while two ember whelps harry the party (any left alive when he drops detonate). Then the Crater Boils: the
@@ -200,11 +201,40 @@ const WYRM = {
       const r = dive({ land: L, from: far, name: 'Talon Dive' });
       f.afterKeep(r.d + 0.4, () => aftershock(L));
     };
-    // Twin Pass: two lines at once. He sweeps across the crater along the first without landing, then comes round on the second.
+    // Searing Descent: a Dragonfall that breathes as it lands. The ring comes first; then a fan of fire sweeps out from his feet,
+    // one cone after another (all on the floor from a couple of seconds before the landing, the first one aimed where a random
+    // hero stands then). A cone that has gone off is safe: leave the ring, then move with the sweep.
+    let sweepDir = f.rng() < 0.5 ? 1 : -1;   // the sweep turns the other way each time (the first is random)
+    const searingDescent = () => {
+      const r = dive({ name: 'Searing Descent' }), arc = 0.8, sign = (sweepDir = -sweepDir), lead = 2.0;
+      f.afterKeep(Math.max(0.1, r.d - lead), () => {
+        const tg = nonTank(); if (!tg) return;
+        const base = Math.atan2(tg.y - r.L[1], tg.x - r.L[0]), first = lead + f.ct(1.3), step = f.ct(1.15);
+        for (let i = 0; i < 3; i++) {
+          const angle = base + sign * (i - 1) * arc;
+          f.aoe({ kind: 'cone', x: Math.round(r.L[0]), y: Math.round(r.L[1]), r: 760, arc, angle }, first + i * step, Math.round(dmg.breath * (H ? 0.6 : 0.5)), { tag: 'breath' });
+        }
+      });
+    };
+    // two lane segments (a to b, c to d) that cross: the point, or null
+    const crossAt = (a, b, c, d) => {
+      const rx = b.x - a.x, ry = b.y - a.y, sx = d.x - c.x, sy = d.y - c.y, den = rx * sy - ry * sx;
+      if (Math.abs(den) < 1e-6) return null;
+      const t = ((c.x - a.x) * sy - (c.y - a.y) * sx) / den, u = ((c.x - a.x) * ry - (c.y - a.y) * rx) / den;
+      return t >= 0 && t <= 1 && u >= 0 && u <= 1 ? { x: a.x + t * rx, y: a.y + t * ry } : null;
+    };
+    // Twin Pass: two lines at once. He sweeps across the crater along the first without landing, then comes round on the second;
+    // the two lines cross over the floor, and the second follows close on the first.
     const twinPass = () => {
-      const d1 = f.ct(4.4), gap = f.ct(3.2), t2 = d1 + gap, fly = 1.5;
-      const L1 = f.pick(SPOTS), P1 = f.pick(SPOTS.filter(s => s !== L1));
-      const L2 = f.pick(SPOTS.filter(s => s !== L1)), P2 = f.pick(SPOTS.filter(s => s !== L2));
+      const d1 = f.ct(4.4), gap = f.ct(2.6), t2 = d1 + gap, fly = 1.5;
+      let L1, P1, L2, P2;
+      for (let tries = 0; tries < 24; tries++) {
+        L1 = f.pick(SPOTS); P1 = f.pick(SPOTS.filter(s => s !== L1));
+        L2 = f.pick(SPOTS.filter(s => s !== L1)); P2 = f.pick(SPOTS.filter(s => s !== L2));
+        const A = edgeOf(P1), a1 = Math.atan2(L1[1] - A.y, L1[0] - A.x), l1 = Math.hypot(L1[0] - A.x, L1[1] - A.y) + R * 0.7, C2 = edgeOf(P2);
+        const x = crossAt(A, { x: A.x + Math.cos(a1) * l1, y: A.y + Math.sin(a1) * l1 }, C2, { x: L2[0], y: L2[1] });
+        if (x && Math.hypot(x.x, x.y) < R - 140) break;
+      }
       f.cast('Twin Pass', d1, 'dive');
       // the first line runs from the edge by P1 through the spot L1 and out the far side
       const E1 = edgeOf(P1), ang1 = Math.atan2(L1[1] - E1.y, L1[0] - E1.x), len1 = Math.hypot(L1[0] - E1.x, L1[1] - E1.y) + R * 0.7;
@@ -217,7 +247,7 @@ const WYRM = {
       f.aoe({ kind: 'rect', x: E2.x, y: E2.y, angle: ang2, len: len2, w: PATH_W }, t2, dmg.pass, { tag: 'divepath2', group });
       f.aoe({ kind: 'circle', x: L2[0], y: L2[1], r: LAND_R }, t2, dmg.land, { tag: 'dragonfall', group });
       if (H) wingbeat(E2, ang2, len2, t2 - 0.6);
-      f.afterKeep(d1 - 0.3, () => { f.cast('Dragonfall', gap + 0.3, 'dive'); f.afterKeep(0.8, () => { B.facing = ang2; B.moveTo = { x: E2.x, y: E2.y, speed: 1500 }; }); });
+      f.afterKeep(d1 - 0.3, () => { f.cast('Dragonfall', gap + 0.3, 'dive'); f.afterKeep(0.35, () => { B.facing = ang2; B.moveTo = { x: E2.x, y: E2.y, speed: 2400 }; }); });
       f.afterKeep(t2 - fly, () => { B.moveTo = { x: L2[0], y: L2[1], speed: len2 / fly }; });
       f.afterKeep(t2 + 0.03, () => land(L2, ang2));
     };
@@ -366,7 +396,7 @@ const WYRM = {
         S([8, claws, 'Rending Claws']),
         S([12, () => tailLash(), 'Tail Lash']),
         S([13, takeFlight, 'Take Flight'], [3, () => talonDive(), 'Talon Dive']),
-        S([11, magma, 'Magma Burst']),
+        S([11, takeFlight, 'Take Flight'], [3, () => searingDescent(), 'Searing Descent']),
         S([12, clawsTail, 'Rending Claws']),
         H && S([9.5, cinderRain, 'Cinder Rain']),
         S([12, takeFlight, 'Take Flight'], [3, () => twinPass(), 'Twin Pass']),
@@ -399,7 +429,7 @@ const WYRM = {
       until: 0.1, push: true, onStart: groundStart,
       wall: { label: 'Ember Heart', run: heartRun, until: 'resolved', timeout: 70 },
       sets: [
-        S([4, takeFlight, 'Take Flight'], [3, () => dive(), 'Dragonfall']),
+        S([4, takeFlight, 'Take Flight'], [3, () => searingDescent(), 'Searing Descent']),
         S([8, claws, 'Rending Claws']),
         S([11, takeFlight, 'Take Flight'], [3, () => talonDive(), 'Talon Dive']),
         S([12, H ? heartFlare : magma, H ? 'Heart Flare' : 'Magma Burst']),
@@ -432,7 +462,7 @@ const WYRM = {
     ground(0);
 
     // every move by name, for tools and testing (window.__game.raidHost.sim.moves.dive())
-    f.moves = { roar, claws, tailLash, breath, twinBreath, magma, feast, takeFlight, dive, talonDive, aftershock, cinderRun, twinPass, roost, boils, cinderRain, heartFlare, heartWave, heartRun };
+    f.moves = { roar, claws, tailLash, breath, twinBreath, magma, feast, takeFlight, dive, talonDive, aftershock, cinderRun, twinPass, searingDescent, roost, boils, cinderRain, heartFlare, heartWave, heartRun };
   },
 };
 
