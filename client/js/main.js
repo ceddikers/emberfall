@@ -76,13 +76,24 @@
   // A boss stays sealed (unnamed, under a shroud) until someone on this account has beaten the one before it.
   // (localStorage 'emberfall.unlockAll' = '1' opens everything, for testing.)
   const unlockAll = (() => { try { return localStorage.getItem('emberfall.unlockAll') === '1'; } catch (e) { return false; } })();
-  function bossOpen(boss) { const i = BOSSES.indexOf(boss); return unlockAll || i <= 0 || Save.bossBeaten(BOSSES[i - 1].id); }
+  // In a friend's game the road is theirs: what's open at the statues and the portal follows the host's clears while you're
+  // there. Your save never sees it (your hero, gear, specs and every clear you make there stay yours), and town's own moments
+  // (townsfolk, secrets, bounties) only follow what both of you have reached, so none of yours is spent early.
+  let hostRoad = null;   // { bossId: [normal, hard] } from the host, while you're in someone else's game
+  const road = {
+    beaten: id => (hostRoad ? !!hostRoad[id] && hostRoad[id][0] + hostRoad[id][1] > 0 : Save.bossBeaten(id)),
+    normal: id => (hostRoad ? !!hostRoad[id] && hostRoad[id][0] > 0 : Save.normalBeaten(id)),
+    hard: id => (hostRoad ? !!hostRoad[id] && hostRoad[id][1] > 0 : Save.hardBeaten(id)),
+  };
+  const townBeaten = id => unlockAll || (Save.bossBeaten(id) && road.beaten(id));
+  const myRoad = () => { const o = {}; for (const b of BOSSES) { const n = Save.normalBeaten(b.id), h = Save.hardBeaten(b.id); if (n || h) o[b.id] = [n ? 1 : 0, h ? 1 : 0]; } return o; };
+  function bossOpen(boss, beaten = road.beaten) { const i = BOSSES.indexOf(boss); return unlockAll || i <= 0 || beaten(BOSSES[i - 1].id); }
   // Hard, set by set (data.js BOSSES[].set): locked until every playable boss of the set has fallen on Normal, then it opens a boss at a
   // time, starting with the set's first (Grubnak; Vhalgrath for set 2)
   const bossSet = boss => boss.set || 1;
-  const hardUnlocked = (set = 1) => unlockAll || BOSSES.filter(b => b.playable && bossSet(b) === set).every(b => Save.normalBeaten(b.id));
+  const hardUnlocked = (set = 1) => unlockAll || BOSSES.filter(b => b.playable && bossSet(b) === set).every(b => road.normal(b.id));
   const firstOfSet = boss => { const i = BOSSES.indexOf(boss); return i <= 0 || bossSet(BOSSES[i - 1]) !== bossSet(boss); };
-  function hardOpen(boss) { const i = BOSSES.indexOf(boss); return unlockAll || (hardUnlocked(bossSet(boss)) && (firstOfSet(boss) || Save.hardBeaten(BOSSES[i - 1].id))); }
+  function hardOpen(boss) { const i = BOSSES.indexOf(boss); return unlockAll || (hardUnlocked(bossSet(boss)) && (firstOfSet(boss) || road.hard(BOSSES[i - 1].id))); }
   const hardWhy = boss => { const i = BOSSES.indexOf(boss); return !hardUnlocked(bossSet(boss)) ? (bossSet(boss) === 1 ? 'Clear all four bosses on Normal first.' : bossSet(boss) === 2 ? 'Clear every boss of the wild realm on Normal first.' : 'Clear every boss of the Fallen Star on Normal first.') : `Beat ${BOSSES[i - 1].name} on Hard first.`; };
   const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
   // a portal opens the raid board at the latest open boss of its own set (null while none of the set's bosses is open yet)
@@ -1184,7 +1195,7 @@
   }
   Loot.init({
     broadcast: m => Net.broadcastAll(m),
-    send: m => (!Net.isHost ? Net.send(m) : m.t === 'ctake' ? Loot.hostTake(Net.id, m) : m.t === 'cput' ? Loot.hostPut(Net.id, m) : m.t === 'cack' ? Loot.hostAck(Net.id, m) : null),
+    send: m => (!Net.isHost ? Net.send(m) : m.t === 'ctake' ? Loot.hostTake(Net.id, m) : m.t === 'cput' ? Loot.hostPut(Net.id, m) : m.t === 'cack' ? Loot.hostAck(Net.id, m) : m.t === 'croll' ? Loot.hostRoll(Net.id, m) : m.t === 'cpass' ? Loot.hostPass(Net.id, m) : null),
     myId: () => Net.id,
     nameOf: id => (id === Net.id ? 'You' : (remotes.get(id) || {}).name || 'Someone'),
     inRaid: () => scene === 'arena',
@@ -1210,9 +1221,12 @@
   Net.on('cgot', m => { Loot.onGot(m); if (SH) SH.play('loot-take', { bus: 'ui', key: 'loot-take', minGap: 0.1 }); });
   Net.on('cputok', m => Loot.onPutOk(m));
   Net.on('csalv', m => Loot.onSalvage(m));
+  Net.on('crolled', m => { Loot.onRolled(m); if (SH) SH.play('ui-click', { bus: 'ui', key: 'loot-roll', minGap: 0.1 }); });
   Net.onHost('ctake', (pid, m) => Loot.hostTake(pid, m));
   Net.onHost('cput', (pid, m) => Loot.hostPut(pid, m));
   Net.onHost('cack', (pid, m) => Loot.hostAck(pid, m));
+  Net.onHost('croll', (pid, m) => Loot.hostRoll(pid, m));
+  Net.onHost('cpass', (pid, m) => Loot.hostPass(pid, m));
   // ---------------------------------------------------------------- Limit Break (G)
   // The party's shared gauge (the host's, fight.js): every whole bar is spent at once by whoever presses first, with the
   // effect of their role. Tank: Stand Fast (the party takes less damage). Healer: Rekindle (heals the party; three bars
@@ -1491,6 +1505,7 @@
   Net.onHost('rleave', pid => {
     const h = hostRoster.find(x => x.id === pid);
     if (h) { h.left = true; if (raidHost) raidHost.sim.removePlayer(pid); if (pvpHost) pvpHost.sim.removePlayer(pid); }
+    Loot.hostLeft(pid);   // (a hold on a piece of the chest passes to the next roller)
   });
 
   // ---- a dropped player's place (host side; net.js hostHooks, raid-host.js standIn / snapshot)
@@ -2003,6 +2018,7 @@
     } else if (msg.s === 'clear' && player.cls && !raid.practice) {
       const first = !Save.bossBeaten(raid.def.id);
       Save.recordClear(player.cls.id, raid.def.id, raid.mode);
+      sendRoad();   // (the host's road just grew: everyone in its game walks it)
       if (first) {
         const i = BOSSES.findIndex(b => b.id === raid.def.id), next = BOSSES[i + 1];
         if (next && next.playable) later(3.5, () => toast(`Somewhere past the portal, ${next.name} stirs.`));
@@ -2583,7 +2599,7 @@
   }
   // ---- town life: the townsfolk, unlock moments and feasts (town-life.js)
   TownLife.init({
-    beaten: id => unlockAll || Save.bossBeaten(id),
+    beaten: townBeaten,
     hero: () => (player.cls ? player.cls.id : null),
     role: () => (player.cls ? player.cls.role : null),
     player,
@@ -2650,7 +2666,7 @@
     return true;
   }
   function whenOk(w) {
-    const flags = (Save.get('town') || {}).flags || {}, b = id => unlockAll || Save.bossBeaten(id);
+    const flags = (Save.get('town') || {}).flags || {}, b = townBeaten;
     if (w.beaten && !w.beaten.every(b)) return false;
     if (w.notBeaten && w.notBeaten.some(b)) return false;
     if (w.flags && !w.flags.every(f => flags[f])) return false;
@@ -2659,7 +2675,7 @@
   }
   Pastimes.init({
     player, toast: m => toast(m), addGold: n => Inventory.addGold(n), giveGift, matches: whenOk,
-    bossOpen: id => bossOpen(BOSSES.find(b => b.id === id) || BOSSES[0]), beaten: id => unlockAll || Save.bossBeaten(id),
+    bossOpen: id => bossOpen(BOSSES.find(b => b.id === id) || BOSSES[0], townBeaten), beaten: townBeaten,
     items: () => Inventory.items(), iconURL: key => Inventory.iconURL({ key }),
     onTitle: t => sendTitle(t), later: (s2, fn) => later(s2, fn),
   });
@@ -2674,7 +2690,6 @@
   }
   Net.onHost('ttlreq', (pid, m) => Net.broadcastAll({ t: 'ttl', id: pid, title: typeof m.title === 'string' ? m.title.slice(0, 40) : null }));
   Net.on('ttl', m => { const r = remotes.get(m.id); if (r) r.title = typeof m.title === 'string' ? m.title.slice(0, 40) : null; });
-  Net.on('join', () => setTimeout(() => sendTitle(Pastimes.title()), 400));   // (someone new: they hear your title)
   player.title = Pastimes.title();
   // the journal shows the heroes you've played (the current one first)
   Journal.setOpener(() => ({
@@ -3814,8 +3829,8 @@
   // the hint in the corner follows the road: the yard and the portal at first, then the next boss still standing
   function townObjective() {
     if (!player.cls) return;
-    const next = BOSSES.find(b => !(unlockAll || Save.bossBeaten(b.id)));
-    if (!BOSSES.some(b => Save.bossBeaten(b.id))) setObjective('Try your skills on the <b>Training Yard</b> dummies (east). The red one swings back. When you\'re ready, step into <b>The King\'s Road</b>, the first portal (north).');
+    const next = BOSSES.find(b => !(unlockAll || road.beaten(b.id)));
+    if (!BOSSES.some(b => road.beaten(b.id))) setObjective('Try your skills on the <b>Training Yard</b> dummies (east). The red one swings back. When you\'re ready, step into <b>The King\'s Road</b>, the first portal (north).');
     else if (next) setObjective(`Next: <b>${next.name}</b>. Step into <b>${(TOWN.portals.find(P => P.set === bossSet(next)) || TOWN.portals[0]).name}</b> (north) when your party is ready.`);
     else setObjective('The road is quiet, for now. Try a boss on <b>Hard</b>, or look around town: not everything in Emberfall is out in the open.');
   }
@@ -3931,6 +3946,7 @@
       }
       altar.appendChild(band);
     }
+    altar.style.setProperty('--cols', Math.max(...Object.keys(ROLES).map(r => CLASSES.filter(c => c.role === r).length)));   // (each role's line is this long)
   })();
   // an ability's icon as a CSS background (an Ultimate layers its own painting over the icon it borrows)
   const abBg = (cls, a) => (a.ult ? ultIconBg(cls.id) : `url(${abilityIcon(cls.id, abilityIconId(a))})`);
@@ -4279,7 +4295,7 @@
   // (chestChances in items.js) for the classes the people in the party play: bots bring no class pieces.
   let bossTab = 'raid', lootMode = 'normal';
   const lootCache = new Map();
-  const lootModes = boss => (LOOT_TABLES[boss.id] ? ['normal', 'hard'].filter(m => unlockAll || (m === 'hard' ? Save.hardBeaten(boss.id) : Save.bossBeaten(boss.id))) : []);
+  const lootModes = boss => (LOOT_TABLES[boss.id] ? ['normal', 'hard'].filter(m => unlockAll || (m === 'hard' ? road.hard(boss.id) : road.beaten(boss.id))) : []);
   const slotName = it => (it.slot === 'accessory' ? 'Accessory' : it.slot === 'weapon' ? 'Weapon' : 'Armor');
   const clsName = id => (CLASSES.find(c => c.id === id) || { name: id }).name;
   function itemKeyTip(key, cls) {   // (the inventory's tooltip, compared with what this hero wears in that slot)
@@ -4423,13 +4439,28 @@
     remotes.set(msg.p.id, makeRemote(msg.p));
     toast(`${msg.p.name} joined the town.`);
     updatePartyList();
+    setTimeout(() => sendRoad(msg.p.id), 0);   // (the newcomer walks your road: after their welcome, which goes out just after this, as they drop anything before it)
+    setTimeout(() => sendTitle(Pastimes.title()), 400);   // (and hears your title)
+  });
+  // the host's road, for whoever's in its game (see hostRoad)
+  function sendRoad(id) {
+    if (!Net.isHost || !Net.online || Net.solo) return;
+    const m = { t: 'road', b: myRoad() };
+    if (id == null) Net.broadcastAll(m); else Net.sendTo(id, m);
+  }
+  Net.on('road', m => {
+    if (Net.isHost || !m || !m.b || typeof m.b !== 'object') return;
+    const o = {};
+    for (const b of BOSSES) { const v = m.b[b.id]; if (Array.isArray(v)) o[b.id] = [v[0] ? 1 : 0, v[1] ? 1 : 0]; }
+    hostRoad = o;
+    if (scene !== 'arena') townObjective();
   });
   Net.on('leave', msg => {
     const r = remotes.get(msg.id);
     if (!r) return;
     remotes.delete(msg.id); toast(`${r.name} left.`); updatePartyList();
     if (raid && raid.away) raid.away.delete(msg.id);
-    if (Net.isHost) { hostHeld.delete(msg.id); if (raidHost) raidHost.releaseStandIn(msg.id); rsyncAt.delete(msg.id); }   // (the hold ran out: a stand-in steps out for good)
+    if (Net.isHost) { hostHeld.delete(msg.id); if (raidHost) raidHost.releaseStandIn(msg.id); rsyncAt.delete(msg.id); Loot.hostLeft(msg.id); }   // (the hold ran out: a stand-in steps out for good)
     if (raidHost || pvpHost) { const h = hostRoster.find(x => x.id === msg.id); if (h) { h.left = true; (pvpHost || raidHost).sim.removePlayer(msg.id); } }
   });
   Net.on('snap', msg => {
@@ -4565,6 +4596,7 @@
     started = false;
     hideLink();
     joinErr.textContent = 'Lost connection to the host.';
+    hostRoad = null;
     hostBtn.disabled = joinBtn.disabled = soloBtn.disabled = false;
     for (const b of [hostBtn, joinBtn, soloBtn]) b.textContent = b.dataset.label;
     $('join').classList.remove('hidden');
@@ -4600,6 +4632,7 @@
     }
     $('join').classList.add('hidden');
     Title.hide();
+    if (Net.isHost) hostRoad = null;   // (your own game: your own road)
     started = true;
     Inventory.showGoldHud(scene !== 'arena');
     if (!player.cls) { const lh = rememberedHero(); if (lh) chooseHero(lh.cls, lh.spec); else openSelect(null); }   // (no remembered hero: the first time, hero select as ever)
