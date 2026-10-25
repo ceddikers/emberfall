@@ -49,6 +49,15 @@ Telegraphs never hidden, 8 to 10 minutes (Normal clears at about 8:00, Hard abou
 
 Burial Rites, Gravebind and Court of Bones are rewritten for all 23 heroes (no Crown inside the Rites, no Marks on Gravebind, the Warden in the Court). The tutorial-data block says the same: the Court's phase text and move, the Knell masonry note, Judgement and Echo notes, Gravebind, Burial Rites and Writ (the graves and the Pardoned are drawn each pull). `docs/DESIGN.md` Boss IV (line 347 on) still describes the older Burial Rites and Court and needs the same edits.
 
+## Hard bite pass (2026-10-26)
+
+The user worried the fairness fixes had babied Hard. Kept: the Warden, no Marks on Gravebind, three masonry Knells, the Decree at 21250, Burial Rites untouched. Restored sting, as tighter skill checks rather than softer numbers:
+- Judgement's floor tells are on the floor for 1.8 s on Hard (were 2.2; the first Hard pass was 1.5), and Echo replays for 2.0 s (were 2.2; 1.8 originally). Counting the beat is still possible, with less time to stand around.
+- The Court of Bones' early wall: Grave Marks now land 6 s after the Grave Summons stack on Hard (were 3.5 s), so the stack, the Warden and the skeletons are not stacked with the spread. Normal is unchanged.
+- `HARD_HIT` 1.12 to 1.13: the bots read a shorter floor as well as a longer one, so the clear rate rose to 72% with only the timings changed; one factor brings it back.
+
+Bots, Hard at `GEAR=mid` (30 runs per seed): before this pass 15 / 21 / 22 (seeds 1000, 2000, 3000: 64%). After: 18 / 19 / 23 (67%) and seeds 4000, 5000, 6000: 16 / 21 / 20 (63%); 65% over 180. Normal at `GEAR=fresh` 26 / 26 / 28 (89%). No journal changes: the counterplay is the same.
+
 ## Numbers (bots, 30 runs per seed set)
 
 | | before | after |

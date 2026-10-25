@@ -17,7 +17,7 @@
 //     between: never more than 6 s from one cast to the next. Then the knights move, and he rises.
 //   IV. The Verdict (62% → 25%): calls and their answers overlap: two swings at once and two echoes, Doom with Grave
 //     Marks, the lids and the Decree again. Then Judgement: the Charge Sheet's three swings land in that order, from him
-//     and both knights at once, each shown on the floor for 1.6 s (Hard: 2.2 s, as long as an Echo replay).
+//     and both knights at once, each shown on the floor for 1.6 s (Hard: 1.8 s; an Echo replay shows for 2.0 s).
 //   V. The Long Night (25% → dead): the braziers die; one lantern is left. Doom passes from player to player in a fixed
 //     order (the next one's sigil glows 6 s ahead) and the lantern passes on touch: whoever it cures carries it to the
 //     next. Swings, echoes, Gazes and Knells between, until he falls or the moon sets.
@@ -64,14 +64,14 @@ const HOLLOWKING = {
       marks: H ? 12800 : 8000, bell: H ? 5650 : 4500, bellFail: H ? 2500 : 2000, march: H ? 17500 : 14000, bind: H ? 20000 : 16000,
       throw: H ? 17500 : 14000, summons: H ? 21250 : 11000, lid: H ? 15000 : 12000, decree: H ? 21250 : 15000, masonry: H ? 15000 : 12000, writ: H ? 11250 : 9000, scorch: H ? 5000 : 4000, unburied: H ? 18750 : 15000, grave: H ? 12500 : 10000, restless: H ? 3150 : 2500, coffinHp: 7000, skelHp: 9000, skelBite: H ? 1650 : 1300, wardenHp: H ? 58000 : 48000, wardenBite: H ? 5200 : 3800,
     };
-    const HARD_HIT = 1.12;   // (Hard's every blow, one factor: the bots dodge well since the prop-steering fix, so Hard is retuned here, not by changing a dance)
+    const HARD_HIT = 1.13;   // (Hard's every blow, one factor: the bots dodge well since the prop-steering fix, so Hard is retuned here, not by changing a dance)
     if (H) for (const k in dmg) if (!/Hp$/.test(k)) dmg[k] = Math.round(dmg[k] * HARD_HIT);
     const S = (...steps) => steps.filter(Boolean);
     const GAZE_ARC = 1.2;     // you're looking at him if he's within this angle of where you face (~70° either side)
     const LANT_PICK = 40;     // walk this close to a lantern on the floor to pick it up
     const LANT_CURE = 85;     // a lantern's light cures Doom this far out
-    const ECHO_WARN = H ? 2.2 : 2.6;
-    const JUDGE_WARN = H ? 2.2 : 1.6;   // (each swing of the Judgement is on the floor this long before it lands; they land 1.5 s apart)
+    const ECHO_WARN = H ? 2.0 : 2.6;
+    const JUDGE_WARN = H ? 1.8 : 1.6;   // (each swing of the Judgement is on the floor this long before it lands; they land 1.5 s apart)
     // the Charge Sheet: the swings Judgement brings back, in order
     // (Hard: the order is drawn fresh each pull, so a group cannot learn it; the banners and the floor still show it truthfully)
     const CHARGES = H ? f.shuffle(['stomp', 'audience', 'sweep', 'ring']) : ['stomp', 'sweep', 'ring'];
@@ -625,7 +625,7 @@ const HOLLOWKING = {
         S([5.5, sceptreThrow, 'Sceptre Throw']),
         S([5.5, knell, 'Barrow Knell']),
         S([5.5, graveSummons, 'Grave Summons']),
-        S([3.5, () => marks(), 'Grave Marks']),
+        S([H ? 6 : 3.5, () => marks(), 'Grave Marks']),
         S([6, sceptreThrow, 'Sceptre Throw']),
         S([4.5, kingRises, 'The King Rises']),
         S([5]),

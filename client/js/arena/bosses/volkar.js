@@ -15,7 +15,8 @@
 //     breaking away, wedge by wedge, with no Gale Slam to throw anyone at a wedge about to go.
 //   Heavens Fall (15% → 0%): the summit closes to its last ring and the sky comes down on set spots round him; the whole
 //     party holds each one up together, both charges in it, until the Twin Fall splits the sky in two: a gold and a blue
-//     hold each column. Each is a little harder after the fifth, until he falls or calls Skybreak.
+//     hold each column. Each is a little harder after the fifth, until he falls or calls Skybreak. (Hard: each Heavens Fall breaks
+//     over the summit as it lands and marks everyone: hold it up together, then scatter apart.)
 //   Gathering Storm (in the back half): a heal check. Static ticks on everyone every 1.5 s for 12 s, then one
 //     Thunderhead: more than a whole health bar each in all, so it has to be healed through as it lands.
 // The storm's Pulse hits everyone every 4 s, a twentieth harder each minute. A slow party runs each part's last set again,
@@ -23,7 +24,7 @@
 // Hard: casts 15% faster, 25% more damage; the charges flip as the Eye opens; three rods and three walls; Titan Fist
 // leaves the tank Conductive; Chain Lightning on the healer as Titan Fist lands on the tank (once in the Front, once in the
 // breaking); the summit breaks away a wedge at a time late in the back half (a fall hurts and holds you only a moment); the
-// Twin Fall's second pair of columns; and his moves: Chain Lightning, Ball Lightning, Skyfall (one, in the Front).
+// Twin Fall's second pair of columns (3.4 s behind the first) and the scatter after each Heavens Fall; and his moves: Chain Lightning, Ball Lightning, Skyfall (one, in the Front).
 // The summit's four standing stones are solid, and Rod Strike and Still Air use them.
 // Hard's dance, in the Front (in place of the first Rods + Gale): Grounding Rods (the + players plant them), Supercell
 // (three squall fronts march past them; the cells past a rod stay dry), then a Thunderclap.
@@ -184,7 +185,7 @@ const VOLKAR = {
     // off the edge where the summit has broken away (Hard): heavy damage, and held a moment while the wind drags you back up
     const fall = p => {
       f.damagePlayer(p, dmg.fall, { kind: 'fall', avoidable: true });
-      f.debuff(p.id, 'rooted', 1.5);
+      f.debuff(p.id, 'rooted', 2.5);
       f.emit({ t: 'propfx', k: 'fall', x: Math.round(p.x), y: Math.round(p.y), pid: p.id });
     };
     // Gale Slam: everyone is thrown away from him, except whoever stands behind a rod. Thrown into the wall, or into a
@@ -515,6 +516,8 @@ const VOLKAR = {
           const signs = new Set(inside.map(p => charge(p.id))), both = new Set(f.alive().map(p => charge(p.id))).size > 1;
           if (both && inside.length && signs.size < 2) for (const p of inside) f.damagePlayer(p, dmg.surgeSame, { kind: 'arc', avoidable: true });
         } });
+      // (Hard: the sky that came down breaks over the summit as it lands: everyone is marked, and the party that held it up scatters)
+      if (H && n > 1) f.afterKeep(d + 0.1, () => field(3.3, true, 0.55));
     };
 
     // Twin Fall: the sky splits in two. Two columns on opposite sides of him, shown 5.5 s ahead; each wants a pair, one gold and one
@@ -537,7 +540,7 @@ const VOLKAR = {
       const d = f.ct(5.5), a0 = fallN++ * Math.PI * 0.75 + Math.PI / 4 + 0.4;
       f.cast('Twin Fall', d, 'skyfall');
       twinCols(a0, d, 1, 1);
-      if (H) twinCols(a0 + Math.PI / 2, d + 3.8, 3, 0.5);
+      if (H) twinCols(a0 + Math.PI / 2, d + 3.4, 3, 0.5);
     };
 
     // --- the storm -----------------------------------------------------------------------------------
@@ -648,7 +651,7 @@ const VOLKAR = {
         S([H ? 13 : 15, twinFall, 'Twin Fall']),
       ],
       closing: [[H ? 13 : 15, heavensFall, 'Heavens Fall'], [H ? 13 : 15, twinFall, 'Twin Fall']],
-      ramp: 0.1,
+      ramp: H ? 0.07 : 0.1,   // (Hard: the ramp is gentler; the scatter after each Heavens Fall is what bites)
     }, at);
 
     front(0);

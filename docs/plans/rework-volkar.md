@@ -30,6 +30,16 @@ Hard
 - The finale ends on the Twin Fall. On Hard a second, lighter pair of columns lands a few seconds after the first (shown from the start), so the pairs hold one and run to the next. (A first version had Ball Lightning crossing the columns; the bots could not hold a column through it and it was too much to read, so it went.)
 - Hard's Heavens Fall hits for a little more (41.5k instead of 35.6k) because the finale is where the Hard clear rate is decided.
 
+## Hard bite pass (2026-10-26)
+
+The user worried Hard had been babied. Skill checks tightened instead of numbers softened:
+- Falling off an edge holds you 2.5 s (was 1.5; 5 s originally), the Gale Slam and the crumbling wedges alike. Heavy damage and a real cost for a misstep.
+- The finale was read as a hidden healing check (the Pulse plus a 10% a pass ramp on a 41.5k Heavens Fall). Hard's ramp is now 7% a pass, and each Heavens Fall on Hard breaks over the summit as it lands: everyone is marked (a Static Field at 55% damage) 3.3 s later, so the party holds the column, then scatters. It is a dance step you can see on the floor, not a bigger number. Twin Fall stays, and its second pair of columns lands 3.4 s behind the first (was 3.8).
+- Journal: all 23 Heavens Fall entries say the Hard scatter.
+- The tutorial text for Heavens Fall (`tutorial-data.js`) does not yet mention the Hard scatter (outside this pass's files).
+
+Bots, Hard at `GEAR=mid` (30 runs per seed): before this pass 20 / 19 / 21 (seeds 1000, 2000, 3000: 67%); after 17 / 19 / 15 (57%). Normal at `GEAR=fresh` 28 / 26 / 28 (91%). (The scatter at 65% damage gave 46%, at 50% 63%.)
+
 ## Results (bots)
 
 - Normal, `GEAR=fresh`, 90 runs (three seed sets): 80 clears, 89%, wipes spread over the Front and Back, clear time about 7:50. The 14 base-gear line-ups in `check.js` still clear at least once in three.
