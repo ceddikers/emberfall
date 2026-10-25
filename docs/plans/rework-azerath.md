@@ -61,3 +61,12 @@ Look and feel only: no timing, damage or shape changed, so the rates above stand
 - **The sigil stamp.** Every landing now slams the tower's own sigil onto the floor (a brass ring, the element's rune marks and its sign opening out and fading). Convergence and Sigil Flare run beams between the sigils through the middle of the floor and a star of light over him; the Pyre Rings run a ring of rune marks across the band; the lens burns a white seam along its length; the Counterspell echoes fold in on themselves with the runes turning the wrong way and pale shards flung out.
 - **Screen feel.** Big landings push the camera and hold the frame an instant, with a flash in the element's colour, never more than once in a couple of seconds (your own view only).
 - **The Binding.** A bound elemental's rune ring closes on its sigil with its light climbing; one left unbound tears a ring through the room.
+
+## Skill pass (2026-10-26)
+
+Gameplay half of the fun-and-complexity ask: dodges that are earned, not stumbled into. No new cast names (so no new sound or icon); two existing moves gained a second problem, both difficulties, every shape on the floor from the moment it is laid.
+
+- **Ice Lances, the weave.** The moment the first lines lock on their heroes, a second volley is laid either side of each line and lands a beat after the first (Normal about 1 s, Hard a little less; Hard also has a third line to start with). The ground between a line and its flanks is safe through both, and so is the first line once it has fired. A sloppy side-step lands in a flank. Journal: every hero's Ice Lances entry rewritten.
+- **Rime Rune, dodge then close in.** A lance out of him through each bearer lands a beat before the blue circle (Hard a hair tighter). The bearers have to leave their own lines and still come together, and everyone else has to be off both lines and then in the circle. Journal: every hero's Rime Rune entry rewritten.
+- **Numbers.** Bots dodge every shape, so these moves do not move their clear rate; the Normal Arcane Burst goes 20200 to 20900 to bring Normal toward range. It cannot go much higher: line-up B (squishy, short on damage) clears about 58% before this pass and 44% at 20900, and a bigger Burst (21800) took it to a miss in check.js. Hard unchanged otherwise.
+- **Rates** (30 runs per seed, seeds 1000/2000/3000): Normal `GEAR=post1` 83 of 90 (92%, was 97%; 78 of 90 = 87% at a Burst of 21800, which line-up B cannot take); Hard `GEAR=post2` 51 of 90 (57%, was 62%).

@@ -14,7 +14,9 @@
 //       Rift Rune (void):        a ring of void round each bearer, a quiet middle in it. APART (the same reaction as fire).
 //   Act I, Fire (100% → 78%): Arcane Burst, Arcane Lance (tankbuster), Pyre Rings (two of the three floor rings burn, one after
 //     the other; the third is never painted), Cinder Rune.
-//   Act II, Frost (78% → 55%): Ice Lances (lines out of him through some heroes), Rime Rune, Cinder Rune again.
+//   Act II, Frost (78% → 55%): Ice Lances (lines out of him through some heroes; the moment they lock, a second volley is laid either side
+//     of each and lands a beat after: the strip between is safe through both), Rime Rune (a lance through each bearer lands a beat before
+//     the blue circle: dodge the line, then close in), Cinder Rune again.
 //   The Binding (the seam, opens Act III): the sigils wake and he calls elementals from the middle of the floor. Each follows
 //     the shield, slowly, and must be led into the sigil of its own element and held there a moment (a random element order,
 //     one at a time; one left unbound blasts the room). He can be hit all the while, and the shield is walking the whole time.
@@ -74,7 +76,7 @@ const AZERATH = {
     const TAU = Math.PI * 2;
     const { ELS, RULE, SPELL, TAG, SIG, NAME } = AZ;
     const dmg = {
-      burst: H ? 19200 : 20200, lance: H ? 18600 : 18600, pyre: H ? 17000 : 22300, fire: H ? 16500 : 23900, react: H ? 19500 : 21500, frost: H ? 47500 : 49600,
+      burst: H ? 19200 : 20900, lance: H ? 18600 : 18600, pyre: H ? 17000 : 22300, fire: H ? 16500 : 23900, react: H ? 19500 : 21500, frost: H ? 47500 : 49600,
       beam: H ? 24300 : 21500, void: H ? 16500 : 19100, voidSelf: H ? 8800 : 11400, ice: H ? 25200 : 22300, bolt: H ? 19800 : 17500, rift: H ? 21600 : 19100,
       conv: H ? 27900 : 24600, lens: H ? 18000 : 15900, counter: H ? 21500 : 19100, mark: H ? 47500 : 49600, pulse: H ? 16200 : 14300, surge: H ? 21600 : 23900,
       elBite: H ? 1500 : 1300, flare: H ? 16000 : 15500, flens: H ? 13500 : 13000,
@@ -140,12 +142,22 @@ const AZERATH = {
     const iceLances = () => {
       const pool = f.shuffle(f.nonTanks().length ? f.nonTanks() : f.alive()).slice(0, H ? 3 : 2);
       if (!pool.length) return;
-      const d = f.ct(4.8);
+      const d = f.ct(4.8), lead = [];
       f.cast('Ice Lances', d, 'lances');
       for (const p of pool) {
         const m = f.mech({ type: 'aoe', shape: { kind: 'rect', x: B.x, y: B.y, angle: Math.atan2(p.y - B.y, p.x - B.x), len: 620, w: 110 }, delay: d, dmg: dmg.ice, tag: 'azFrost', ddown: true, aimFromBoss: p.id, lockAt: 1.2,
           onResolve: () => memo(m) });
+        lead.push(m);
       }
+      // the weave: the moment the first lines lock, a second volley is laid either side of each, and lands a beat after the first.
+      // The ground between a line and its flanks is safe through both; the line itself is safe once it has fired
+      f.afterKeep(d - 1.2 + 0.03, () => {
+        const wv = f.ct(H ? 0.95 : 1.05);
+        for (const m of lead) {
+          const a = m.shape.angle;
+          for (const sg of [-1, 1]) f.mech({ type: 'aoe', shape: { kind: 'rect', x: B.x, y: B.y, angle: a + sg * (H ? 0.8 : 0.84), len: 620, w: 110 }, delay: 1.2 - 0.03 + wv, dmg: dmg.ice * 0.8, tag: 'azFrost', ddown: true });
+        }
+      });
     };
     // Leaping Bolt: a circle on one hero, then on the hero nearest them, and on, a heartbeat apart
     const leapingBolt = () => {
@@ -245,6 +257,11 @@ const AZERATH = {
         const sx = A && Bp ? (A.x + Bp.x) / 2 : A ? A.x : 0, sy = A && Bp ? (A.y + Bp.y) / 2 : A ? A.y : 0;
         const m = f.mech({ type: 'stack', shape: { kind: 'circle', x: sx, y: sy, r: H ? 138 : 150 }, delay: d, dmg: dmg.frost * Math.min(n, 4) / 4, need: H ? n : Math.max(1, n - 1), lockAt: 1.2, tag: 'azFrost', onResolve: () => memo(m) });
         if (A && Bp) link(m, rp.a, rp.b, 'mid', 1.2);
+        // a lance out of him through each bearer lands a beat before the stack: dodge the line, then close in
+        for (const id of ids) {
+          const q = live(id); if (!q) continue;
+          f.mech({ type: 'aoe', shape: { kind: 'rect', x: B.x, y: B.y, angle: Math.atan2(q.y - B.y, q.x - B.x), len: 620, w: 110 }, delay: d - (H ? 0.95 : 1.05), dmg: dmg.ice * 0.9, tag: 'azFrost', ddown: true, aimFromBoss: id, lockAt: 0.9 });
+        }
       } else {
         // lightning: a bolt from one bearer to the other. Standing together makes it too short to reach anyone
         if (A && Bp) {
