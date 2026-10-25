@@ -610,13 +610,13 @@ const SPECS = {
               },
             },
             pierce: {
-              id: 'caustic', replaces: 'pierce', name: 'Caustic Arrow', type: 'gcd', target: 'enemy', range: SPEC_RANGED, charges: 2, cd: 12, anim: 'attack',
-              desc: 'Burst every stack of Acid at once: {d:200} plus {d:60} per stack, and {d:100} more for each stack past 5 (at 8: {d:980}). Two charges. Keen Eye adds {d:160} and gives the charge back.',
+              id: 'caustic', replaces: 'pierce', name: 'Caustic Arrow', type: 'ogcd', target: 'enemy', range: SPEC_RANGED, charges: 2, cd: 12, anim: 'attack',
+              desc: 'Burst every stack of Acid at once: {d:120} plus {d:36} per stack, and {d:60} more for each stack past 5 (at 8: {d:588}). Two charges, off the global cooldown. Keen Eye adds {d:100} and gives the charge back.',
               glow: k => k.g.acid >= 8 || (k.g.acid >= 3 && k.charges(k.abById('caustic')) === 2),   // burst a full jar (or before a charge is lost)
               effect(k) {
                 const n = k.g.acid; k.g.acid = 0; k.dots.delete('acid');
                 const keen = k.consume('keen');
-                const pot = 200 + 60 * n + 100 * Math.max(0, n - 5) + (keen ? 160 : 0), r = k.damage(pot, { ab: this });
+                const pot = 120 + 36 * n + 60 * Math.max(0, n - 5) + (keen ? 100 : 0), r = k.damage(pot, { ab: this });
                 if (keen) { k.refundCharge('caustic'); if (k.perk('ranger_w2')) { k.damage(250, { ab: this }); k.fx('empower'); } }
                 rangerPierce(k, keen, r, pot);
                 if (k.talent('ranger_seep') && n > 0) addAcid(k, 1, this);   // (Seep, spec row VI: a stack stays burning)

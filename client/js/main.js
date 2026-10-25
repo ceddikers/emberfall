@@ -1268,7 +1268,7 @@
   };
   PRACTICE_PHASES.hydra = ['Three Heads', 'Six Heads', 'The Submerge', 'Nine Heads', 'Last Heads'];
   PRACTICE_PHASES.archmage = ['Fire', 'Frost', 'The Binding', 'Void', 'Convergence'];
-  PRACTICE_PHASES.corvane = ['The Pass', 'The Shrine', 'The Whetted Edge'];
+  PRACTICE_PHASES.corvane = ['The Pass', 'The Shrine', 'The Whetted Edge', 'The Last Vigil'];
   PRACTICE_PHASES.brannoc = ['First Blood', 'Crowd-Pleaser', 'The Tide Rises', 'The Tidewrought', 'Last Round'];
   PRACTICE_PHASES.morrowoak = ['The Grove', 'Hollowing', 'The Grove Remade', 'Last Bloom'];
   PRACTICE_PHASES.caelum = ['Descent', 'Starfall', 'Ascendant', 'The Sky Comes Down'];
@@ -3830,6 +3830,11 @@
     if (inArena() && s) {
       if (s.dd) out.push({ id: 'dd', name: 'Damage Down', left: s.dd, stacks: 1, bad: true, tip: 'Dealing 10% less damage.' });
       if (s.vuln) out.push({ id: 'vuln', name: 'Vulnerability', label: `+${s.vuln}%`, stacks: 1, bad: true, tip: `Taking ${s.vuln}% more damage.` });
+      // everything else the party list shows on you, with the same icons (status-icons.js)
+      if (s.alive && s.mit) out.push({ id: 'mit', name: 'Mitigation', label: `-${s.mit}%`, stacks: 1, tip: `Taking ${s.mit}% less damage.` });
+      if (s.weak) { const [wp, ws] = Array.isArray(s.weak) ? s.weak : [0, 0]; out.push({ id: 'weak', name: 'Raise Sickness', left: ws || undefined, label: wp ? `-${wp}%` : '', stacks: 1, bad: true, tip: `Just raised: dealing and healing ${wp}% less.` }); }
+      for (const [k, secs] of s.debuffs || []) { const d = STATUS_INFO[k]; out.push({ id: 'd-' + k, name: d ? d[0] : k, left: secs, stacks: 1, bad: true, tip: d ? d[1] : '' }); }
+      for (const [hid, secs] of s.hots || []) { const h = HOT_ICON[hid]; if (h) out.push({ id: 'h-' + hid, name: h[2], left: secs, stacks: 1, img: abilityIcon(h[0], h[1]), tip: 'Healing over time.' }); }
     }
     // gear party bonuses last the whole fight (no timer)
     if (inArena() && raid.bond) for (const b of raid.bond.active) {
@@ -3990,6 +3995,45 @@
   // move text shows exact numbers (numbers.js) for the hero a page is about: the one on the hero page, else yours
   Num.setContext(() => (!sel.classList.contains('hidden') && !selDetail.classList.contains('hidden') && selShown
     ? { cls: selShown.id, spec: selSpec } : { cls: player.cls && player.cls.id, spec: player.spec }));
+  // --- base vs spec: a changed move shown side by side, with the words the spec changed marked (a word diff of the two
+  // texts, tokens like {d:530} compared before they become numbers so a spec's damage scale doesn't mark every hit)
+  const diffTokens = t => String(t).match(/\{[^}]*\}|\d+(?:\.\d+)?[a-z%]*|[A-Za-z'’]+|\s+|[^\sA-Za-z0-9]/g) || [];
+  function textDiff(a, b, ctxA, ctxB) {
+    const A = diffTokens(a), B = diffTokens(b), same = (x, y) => x.toLowerCase() === y.toLowerCase(), isSp = t => /^\s+$/.test(t);
+    const ia = A.map((t, i) => i).filter(i => !isSp(A[i])), ib = B.map((t, i) => i).filter(i => !isSp(B[i]));
+    const n = ia.length, m = ib.length, L = Array.from({ length: n + 1 }, () => new Uint16Array(m + 1));
+    for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--) L[i][j] = same(A[ia[i]], B[ib[j]]) ? L[i + 1][j + 1] + 1 : Math.max(L[i + 1][j], L[i][j + 1]);
+    const chA = new Set(ia), chB = new Set(ib);
+    for (let i = 0, j = 0; i < n && j < m;) {
+      if (same(A[ia[i]], B[ib[j]])) { chA.delete(ia[i]); chB.delete(ib[j]); i++; j++; }
+      else if (L[i + 1][j] >= L[i][j + 1]) i++; else j++;
+    }
+    // a text that was mostly rewritten isn't marked word by word (everything would light up)
+    const render = (T, ch, tag, ctx) => {
+      const calm = ch.size / Math.max(1, T === A ? n : m) > 0.7;
+      const flag = T.map((t, k) => !calm && (isSp(t)
+        ? ch.has(T.findLastIndex((u, q) => q < k && !isSp(u))) && ch.has(T.findIndex((u, q) => q > k && !isSp(u)))
+        : ch.has(k)));
+      let out = '';
+      for (let k = 0; k < T.length; k++) {
+        const t = T[k].charAt(0) === '{' ? Num.fill(T[k], ctx) : T[k];
+        if (!flag[k]) { out += t; continue; }
+        let run = t; while (k + 1 < T.length && flag[k + 1]) run += T[++k].charAt(0) === '{' ? Num.fill(T[k], ctx) : T[k];
+        out += `<${tag}>${run}</${tag}>`;
+      }
+      return out;
+    };
+    return { a: render(A, chA, 'del', ctxA), b: render(B, chB, 'ins', ctxB) };
+  }
+  // one changed move or passive: { key, type, ult, icon (css background), name, meta, desc } on each side
+  function changeCard(was, now, ctxA, ctxB, tag, extra = '') {
+    const d = textDiff(was.desc, now.desc, ctxA, ctxB);
+    const head = (s, other, kbd) => `<div class="chg-head"><i class="ab-icon ${s.type || ''}" style="background-image:${s.icon}"></i>${kbd ? `<kbd>${kbd}</kbd>` : ''}
+      <div><b>${s.name}</b>${s.meta ? `<em${other && other.meta !== s.meta ? ' class="diff"' : ''}>${s.meta}</em>` : ''}</div></div>`;
+    return `<div class="spec-chg"${extra}>
+      <div class="chg-side base"><small class="chg-tag">Base</small>${head(was, now, was.key)}<p>${d.a}</p></div>
+      <div class="chg-side now"><small class="chg-tag${now.isNew ? ' new' : ''}">${tag}</small>${head(now, was)}<p>${d.b}</p></div></div>`;
+  }
   function renderSpecBox(cls, kit, rerender) {
     const box = $('sel-spec'), specs = SPECS[cls.id] || [];
     box.classList.toggle('hidden', !specs.length || !specsRevealed());
@@ -4008,23 +4052,32 @@
       const changes = sk.abilities.map((a, i) => ({ a, was: kit.abilities[i], i })).filter(c => c.a !== c.was);
       const foc = brief(spec.focus), pas = brief(spec.passive.desc);
       const pip = b => (b.more ? '<i class="more"></i>' : '');
-      // the changed moves are a row of icons; each one's tooltip says what the spec did to it
+      // every changed move beside the base one, the changed words marked; unchanged moves stay out of it
+      const ctxA = { cls: cls.id, spec: null }, ctxB = { cls: cls.id, spec: s.id };
+      const side = (a, key, isNew) => ({ type: a.type, icon: abBg(cls, a), name: a.name, meta: abilityMeta(a), desc: a.desc, key, isNew });
+      const cards = changes.map(c => changeCard(side(c.was, KEYS[c.i]), side(c.a, null, c.a.id !== c.was.id), ctxA, ctxB,
+        c.a.id !== c.was.id ? 'Replaced' : 'Changed', ` data-i="${c.i}"`));
+      const gp = HERO_GUIDE[cls.id] && HERO_GUIDE[cls.id].passive;
+      if (spec.classPassive && gp) {
+        const ps = d => ({ type: 'passive', icon: `url(${abilityIcon(cls.id, gp.icon)})`, name: gp.name, meta: 'Passive', desc: d });
+        cards.push(changeCard(ps(gp.desc), ps(spec.classPassive), ctxA, ctxB, 'Changed'));
+      }
       return `<p class="spec-focus"${note(foc, spec.focus)}><u>Specializes in</u> ${foc.head}${pip(foc)}</p>
-        <div class="spec-passive"${note(pas, `<b>${spec.passive.name}</b>${spec.passive.desc}`)}><h5>${spec.passive.name}</h5><p>${pas.head}${pip(pas)}</p></div>
-        <div class="spec-moves"><u>Changes</u>${changes.map(c => `<span class="spec-move ${c.a.type}${c.a.id !== c.was.id ? ' new' : ''}" data-i="${c.i}">
-          <i class="ab-icon ${c.a.type}" style="background-image:url(${abilityIcon(cls.id, abilityIconId(c.a))})"></i><kbd>${KEYS[c.i]}</kbd></span>`).join('')}</div>`
+        <div class="spec-passive"${note(pas, `<b>${spec.passive.name}</b>${spec.passive.desc}`)}><h5>${spec.passive.name}<small class="chg-new">New</small></h5><p>${pas.head}${pip(pas)}</p></div>
+        <div class="spec-changes"><u>What changes from the base class</u>${cards.join('')}</div>`
         + trialCard(cls, spec, Save.specState(cls.id, spec.id));
     };
-    const panes = all.map(s => `<div class="spec-pane${(s.id || null) === (selSpec || null) ? ' on' : ''}" data-spec="${s.id || ''}"${(s.id || null) === (selSpec || null) ? '' : ' aria-hidden="true"'}>${Num.fill(pane(s), { cls: cls.id, spec: s.id || null })}</div>`).join('');
+    const panes = all.map(s => `<div class="spec-pane${(s.id || null) === (selSpec || null) ? ' on' : ''}" data-spec="${s.id || ''}" style="--sa:${s.accent || cls.accent}"${(s.id || null) === (selSpec || null) ? '' : ' aria-hidden="true"'}>${Num.fill(pane(s), { cls: cls.id, spec: s.id || null })}</div>`).join('');
     box.innerHTML = `<h4>Specialization</h4><div class="spec-tabs">${tabs}</div><div class="spec-panes">${panes}</div>`;
     box.querySelectorAll('.spec-tab').forEach(b => b.addEventListener('click', () => { selSpec = b.dataset.spec || null; rerender(); }));
     box.querySelectorAll('.trial-go').forEach(tb => tb.addEventListener('click', () => { if (!tb.getAttribute('aria-disabled')) beginTrial(cls, tb.dataset.spec); }));
     box.querySelectorAll('.spec-pane').forEach(p => {
       const sk = kitFor(cls.id, p.dataset.spec || null);
-      p.querySelectorAll('.spec-move').forEach(m => {
-        const i = Number(m.dataset.i), a = sk.abilities[i], was = kit.abilities[i];
-        const what = a.id !== was.id ? `New, replaces ${was.name}` : 'Changed by this specialization';
-        Tip.set(m, () => `<div class="tip-chg">${what}</div>${abilityTip(cls, a)}${a.id === was.id ? `<div class="tip-was"><u>Base</u> ${was.desc}</div>` : ''}`);
+      // the move's own tooltip (icon and name) on each side of a card, as on the key row
+      p.querySelectorAll('.spec-chg[data-i]').forEach(c => {
+        const i = Number(c.dataset.i);
+        Tip.set(c.querySelector('.base .chg-head'), () => Num.fill(abilityTip(cls, kit.abilities[i]), { cls: cls.id, spec: null }));
+        Tip.set(c.querySelector('.now .chg-head'), () => Num.fill(abilityTip(cls, sk.abilities[i]), { cls: cls.id, spec: p.dataset.spec || null }));
       });
     });
     bindNotes(box);

@@ -1,29 +1,36 @@
 // Boss III: Volkar, the Storm Titan — "The Summit". The storm front.
-// One authored storm, the same on every pull: a steady crescendo, a calm eye, then it all comes back. The question he
-// keeps asking: who do I pair with, and where's cover? Everyone carries + or − all fight (polarity is the spine).
+// One authored storm, the same on every pull: a steady crescendo, a short calm eye, then it all comes back. The question he
+// keeps asking: who do I pair with, and where's cover? Everyone carries + or − all fight (polarity is the spine; the plan and
+// the answers to the design questions are in docs/plans/rework-volkar.md).
 //   The Front (100% → 55%): the gaps tighten from ~15 s to ~8 s. Thunderclap, Titan Fist, Polarity Surge (pair + with −),
-//     Thunder Crash → Static Field, Rod Strike (bring your bolt down on a stone), Gale Slam, Storm Walls, Lightning Rods +
-//     Gale (shelter behind your rod), Avalanche → Storm Walls (behind a boulder), Surge and Crash at once, and the
-//     Squall Line: the safe circle drifts round him for 30 s and the party walks with it.
-//   The Eye (55%, 40 s): the wind drops and the Pulse stops; he stays targetable. Still Air: the four stones light up,
+//     Thunder Crash → Static Field, then the Squall Line early (the safe circle drifts round him for 30 s and the party walks
+//     with it, a Static Field and a Surge landing inside it), Rod Strike (bring your bolt down on a stone), Gale Slam, Storm
+//     Walls (Normal: a Surge lands in them), Lightning Rods + Gale (shelter behind your rod), Avalanche → Storm Walls (behind
+//     a boulder), Surge and Crash at once.
+//   The Eye (55%, ~20 s): the wind drops and the Pulse stops; he stays targetable. Still Air: the four stones light up,
 //     two + and two −. When the Eye closes, be at a stone of your own charge.
-//   The Back of the Storm (55% → 15%): the Front again, mirrored and doubled, while the electrified edge closes in.
+//   The Back of the Storm (55% → 15%): the Front again, mirrored and doubled, while the electrified edge closes in (Normal), with
+//     a second Squall Line (a Thunder Crash lands in it on Normal). Hard splits it in time: the first half is the doubled front
+//     (rods with Gale Slam, Avalanche into Walls, Ball Lightning, Rod Strike, Gathering Storm); the second half is the summit
+//     breaking away, wedge by wedge, with no Gale Slam to throw anyone at a wedge about to go.
 //   Heavens Fall (15% → 0%): the summit closes to its last ring and the sky comes down on set spots round him; the whole
-//     party holds each one up together, both charges in it, each a little harder, until he falls or calls Skybreak.
+//     party holds each one up together, both charges in it, until the Twin Fall splits the sky in two: a gold and a blue
+//     hold each column. Each is a little harder after the fifth, until he falls or calls Skybreak.
 //   Gathering Storm (in the back half): a heal check. Static ticks on everyone every 1.5 s for 12 s, then one
 //     Thunderhead: more than a whole health bar each in all, so it has to be healed through as it lands.
 // The storm's Pulse hits everyone every 4 s, a twentieth harder each minute. A slow party runs each part's last set again,
 // +10% each pass (f.course in fight.js). Every telegraph shows on the floor on every difficulty.
 // Hard: casts 15% faster, 25% more damage; the charges flip as the Eye opens; three rods and three walls; Titan Fist
-// leaves the tank Conductive; Chain Lightning on the healer as Titan Fist lands on the tank; the summit breaks away a
-// wedge at a time late in the back half; Heavens Fall comes faster; and his three moves: Chain Lightning, Ball Lightning,
-// Skyfall. The summit's four standing stones are solid, and Rod Strike and Still Air use them.
+// leaves the tank Conductive; Chain Lightning on the healer as Titan Fist lands on the tank (once in the Front, once in the
+// breaking); the summit breaks away a wedge at a time late in the back half (a fall hurts and holds you only a moment); the
+// Twin Fall's second pair of columns; and his moves: Chain Lightning, Ball Lightning, Skyfall (one, in the Front).
+// The summit's four standing stones are solid, and Rod Strike and Still Air use them.
 // Hard's dance, in the Front (in place of the first Rods + Gale): Grounding Rods (the + players plant them), Supercell
 // (three squall fronts march past them; the cells past a rod stay dry), then a Thunderclap.
 
 const VOLKAR = {
   id: 'volkar', name: 'Volkar', title: 'The Storm Titan',
-  hp: { normal: 3620000, hard: 4830000 },
+  hp: { normal: 3750000, hard: 4400000 },
   autoDmg: { normal: 1450, hard: 1550 },
   enrage: { normal: 592, hard: 607 },   // the cast starts here and lands 8 s later (10:00 / 10:15)
   enrageName: 'Skybreak',
@@ -45,12 +52,12 @@ const VOLKAR = {
     const B = f.boss;
     const TAU = Math.PI * 2;
     const dmg = {
-      clap: H ? 8300 : 7450, fist: H ? 28000 : 23000, surgeAlone: H ? 10800 : 9800, surgeSame: H ? 19100 : 17250, surgePair: H ? 2500 : 2300,
-      storm: H ? 2000 : 1850, thunderhead: H ? 6400 : 5750,
-      crash: H ? 16500 : 14950, field: H ? 7000 : 6300, rod: H ? 6400 : 5750, rodAgain: H ? 15300 : 13800, rodFail: H ? 15300 : 13800, slam: H ? 11400 : 10350, wall: H ? 12100 : 12650, edge: H ? 15300 : 13800, pulse: H ? 400 : 300,
+      clap: H ? 9300 : 7450, fist: H ? 28000 : 23000, surgeAlone: H ? 10800 : 9800, surgeSame: H ? 19100 : 17250, surgePair: H ? 2500 : 2300,
+      storm: H ? 2300 : 1850, thunderhead: H ? 7400 : 5750,
+      crash: H ? 16500 : 14950, field: H ? 7000 : 6300, rod: H ? 6400 : 5750, rodAgain: H ? 15300 : 13800, rodFail: H ? 15300 : 13800, slam: H ? 11400 : 10350, wall: H ? 12100 : 12650, edge: H ? 15300 : 13800, pulse: H ? 440 : 300,
       chain: H ? 8900 : 8050, orb: H ? 15300 : 13800, skyfall: H ? 45800 : 41400,
       strike: H ? 11400 : 9200, strikeOpen: H ? 22900 : 17250, discharge: H ? 15300 : 13800, grounded: H ? 11400 : 10350, boulder: H ? 15300 : 12650, fall: H ? 19100 : 17250,
-      squall: H ? 7600 : 6900, still: H ? 11400 : 10350, stillWrong: H ? 15300 : 13800, heavens: H ? 35600 : 32200, front: H ? 9500 : 8650,
+      squall: H ? 7600 : 6900, still: H ? 11400 : 10350, stillWrong: H ? 15300 : 13800, heavens: H ? 41500 : 32200, front: H ? 9500 : 8650,
     };
     const S = (...steps) => steps.filter(Boolean);
     const room = f.room = { squall: null, eye: false };
@@ -174,10 +181,10 @@ const VOLKAR = {
       return px * ux + py * uy >= cd - 30 && Math.abs(-px * uy + py * ux) <= COVER_W;
     });
 
-    // off the edge where the summit has broken away (Hard): heavy damage, and held while the wind drags you back up
+    // off the edge where the summit has broken away (Hard): heavy damage, and held a moment while the wind drags you back up
     const fall = p => {
       f.damagePlayer(p, dmg.fall, { kind: 'fall', avoidable: true });
-      f.debuff(p.id, 'rooted', 5);
+      f.debuff(p.id, 'rooted', 1.5);
       f.emit({ t: 'propfx', k: 'fall', x: Math.round(p.x), y: Math.round(p.y), pid: p.id });
     };
     // Gale Slam: everyone is thrown away from him, except whoever stands behind a rod. Thrown into the wall, or into a
@@ -352,9 +359,9 @@ const VOLKAR = {
         } });
     };
     // Ball Lightning: orbs gather at the edge of the peak, then drift slowly across it. Touch one and it bursts.
-    const ballLightning = (a0 = 0) => {
+    const ballLightning = (a0 = 0, cast = true) => {
       const d = f.ct(3);
-      f.cast('Ball Lightning', d, 'orbs');
+      if (cast) f.cast('Ball Lightning', d, 'orbs');
       const n = 4;
       for (let i = 0; i < n; i++) {
         const a = a0 + i * TAU / n, R = roomAt(a) - 50;
@@ -468,10 +475,11 @@ const VOLKAR = {
     // The wind drops and the Pulse stops. The four stones light up, two + (gold) and two − (blue), opposite stones alike.
     // When the Eye closes each lit stone wants one person of its own charge at it: a wrong charge there is struck, and a
     // stone nobody answers discharges across the summit. (Fewer than four alive: only as many stones light.)
+    const EYE = 18;   // how long the Eye lasts (from Eye of the Storm to the end of Eye Closes)
     const eyeOpen = () => {
       f.cast('Eye of the Storm', 4, 'storm');
       room.eye = true;
-      f.emit({ t: 'roomev', k: 'eye', dur: 40 });
+      f.emit({ t: 'roomev', k: 'eye', dur: EYE });
       if (H) f.afterKeep(2, flipPolarity);
     };
     const stillAir = (close = 30) => {
@@ -489,7 +497,6 @@ const VOLKAR = {
           } });
       });
     };
-    const distantThunder = () => f.cast('Distant Thunder', 3, 'clap');   // the storm gathering beyond the eye: nothing lands
     const eyeCloses = () => {
       f.cast('Eye Closes', 2, 'storm');
       f.afterKeep(2.2, () => { room.eye = false; });
@@ -510,6 +517,29 @@ const VOLKAR = {
         } });
     };
 
+    // Twin Fall: the sky splits in two. Two columns on opposite sides of him, shown 5.5 s ahead; each wants a pair, one gold and one
+    // blue (the same rule as the Surge: like charges arc). Hard: a second pair of columns, a quarter-turn round, lands a few seconds
+    // after the first, both shown from the start, so the pairs hold one and then run to the next.
+    const TWIN = 150;
+    const twinCols = (a0, d, base, mul) => {
+      const n = f.alive().length;
+      [0, 1].forEach(i => {
+        const a = a0 + i * Math.PI, need = i ? Math.floor(n / 2) : Math.ceil(n / 2), at = { x: Math.cos(a) * TWIN, y: Math.sin(a) * TWIN };
+        f.mech({ type: 'stack', shape: { kind: 'circle', x: at.x, y: at.y, r: 105 }, delay: d, dmg: dmg.heavens * mul * need / 4, need, tag: 'heavens', twin: base + i,
+          onResolve: inside => {
+            const signs = new Set(inside.map(p => charge(p.id)));
+            if (need > 1 && inside.length > 1 && signs.size < 2) for (const p of inside) f.damagePlayer(p, dmg.surgeSame, { kind: 'arc', avoidable: true });
+          } });
+      });
+    };
+    const twinFall = () => {
+      if (f.alive().length < 2) { heavensFall(); return; }
+      const d = f.ct(5.5), a0 = fallN++ * Math.PI * 0.75 + Math.PI / 4 + 0.4;
+      f.cast('Twin Fall', d, 'skyfall');
+      twinCols(a0, d, 1, 1);
+      if (H) twinCols(a0 + Math.PI / 2, d + 3.8, 3, 0.5);
+    };
+
     // --- the storm -----------------------------------------------------------------------------------
     assignPolarity();
     f.afterKeep(6, pulse);
@@ -521,9 +551,11 @@ const VOLKAR = {
         S([15, titanFist, 'Titan Fist']),
         S([15, surge, 'Polarity Surge']),
         S([15, crashField, 'Thunder Crash']),
-        S([15, rodStrike, 'Rod Strike']),
+        // (the Squall Line comes early: the storm's circle drifts round him and the pairs walk it, the fist and a Surge landing inside)
+        S([13, () => squall(1, Math.PI / 2, 360, 150), 'Squall Line'], [9, () => field(), 'Static Field'], [H ? 7 : 8, surge, 'Polarity Surge']),
+        S([14, rodStrike, 'Rod Strike']),
         S([14, () => galeSlam(), 'Gale Slam']),
-        S([13, () => stormWalls(WALL, 1), 'Storm Walls']),
+        S([13, () => stormWalls(WALL, 1), 'Storm Walls'], !H && [4, surge, 'Polarity Surge']),   // (Normal: pair up and walk the gap together)
         H && S([12, () => { titanFist(); chainLightning('healer'); }, 'Chain Lightning']),
         S([H ? 10 : 14, thunderclap, 'Thunderclap']),
         S([12, titanFist, 'Titan Fist']),
@@ -532,9 +564,9 @@ const VOLKAR = {
         H ? S([12, groundingRods, 'Grounding Rods'], [f.ct(4.5) + 0.6, supercell, 'Supercell'], [f.ct(3) + 11, thunderclap, 'Thunderclap'])
           : S([12, () => rodsGale(RODS), 'Lightning Rods']),
         S([H ? 13 : 14, () => avalanche(AV), 'Avalanche'], [5, () => stormWalls(WALL + 1, -1), 'Storm Walls']),
+        H && S([13, skyfall, 'Skyfall']),
         S([14, () => { surge(); crash(f.ct(6)); }, 'Polarity Surge']),
-        S([11, () => squall(1, Math.PI / 2, 360, 150), 'Squall Line'], [12, () => field(), 'Static Field'], [12, surge, 'Polarity Surge']),
-        H && S([12, () => ballLightning(0.3), 'Ball Lightning']),
+        S([12, () => field(), 'Static Field'], [12, surge, 'Polarity Surge']),
         S([H ? 9 : 14, titanFist, 'Titan Fist']),
         S([9, () => rodsGale(RODS + 1), 'Lightning Rods']),
         S([12, crashField, 'Thunder Crash']),
@@ -548,9 +580,8 @@ const VOLKAR = {
       onStart: () => { f.clearSweeps(); f.clearRollers(); },
       sets: [
         S([2, eyeOpen, 'Eye of the Storm']),
-        S([8, () => stillAir(30), 'Still Air']),
-        S([14, distantThunder, 'Distant Thunder']),
-        S([14, eyeCloses, 'Eye Closes']),
+        S([5, () => stillAir(13), 'Still Air']),
+        S([11, eyeCloses, 'Eye Closes']),
         S([4]),
       ],
       next: back,
@@ -575,29 +606,29 @@ const VOLKAR = {
       f.mech({ type: 'raidwide', shape: { kind: 'circle', x: 0, y: 0, r: 0 }, delay: 3, dmg: dmg.thunderhead, hidden: true, tag: 'clap' });
     };
 
-    // the back of the storm: the front again, mirrored and doubled, while the room closes in
+    // the back of the storm: the front again, mirrored and doubled, while the room closes in. (Hard: the first half is the doubled
+    // front with its rods and gale; the second half is the summit breaking, wedge by wedge, with no gale to throw anyone at a wedge.)
+    const brk = (slot, after = 3) => f.afterKeep(after, () => crumble(0.2 + slot * WEDGE, 6));
     const back = at => f.course({
       until: 0.15,
-      onStart: () => {
-        if (!H) { f.afterKeep(60, () => edgeStep(470, 5)); f.afterKeep(150, () => edgeStep(400, 5)); }
-        else [0, 2, 4, 1, 3].forEach((slot, i) => f.afterKeep(140 + i * 20, () => crumble(0.2 + slot * WEDGE, 6)));
-      },
+      onStart: () => { if (!H) { f.afterKeep(60, () => edgeStep(470, 5)); f.afterKeep(150, () => edgeStep(400, 5)); } },
       sets: [
         S([3, () => crash(f.ct(6)), 'Thunder Crash']),   // straight off the stones, into pairs
         S([12, () => { titanFist(); surge(); }, 'Titan Fist']),
         S([12, thunderclap, 'Thunderclap']),
-        S([15, () => rodsGale(RODS + Math.PI), 'Lightning Rods'], [9, surge, 'Polarity Surge']),   // the rods land, then pair up behind them
-        S([15, () => avalanche(AV + Math.PI), 'Avalanche'], [5, () => stormWalls(WALL + Math.PI, -1), 'Storm Walls']),
-        H && S([12, skyfall, 'Skyfall']),
+        S([15, () => rodsGale(RODS + Math.PI), 'Lightning Rods'], [9, surge, 'Polarity Surge']),
+        S([15, () => avalanche(AV + Math.PI), 'Avalanche'], [5, () => stormWalls(WALL + Math.PI, -1), 'Storm Walls'], !H && [7, surge, 'Polarity Surge']),
+        H && S([12, () => ballLightning(0.3), 'Ball Lightning']),
         S([H ? 10 : 14, () => { rodStrike(); titanFist(); }, 'Rod Strike']),
         S([14, gatheringStorm, 'Gathering Storm'], [f.ct(3) + 9, thunderhead, 'Thunderhead']),
-        S([7, () => { if (H) { titanFist(); chainLightning('healer'); } else field(); }, H ? 'Titan Fist' : 'Static Field']),
-        S([10, () => squall(-1, -Math.PI / 2, 320, 120, 24), 'Squall Line'], [13, surge, 'Polarity Surge']),
-        S([11, () => rodsGale(RODS + 2), 'Lightning Rods']),
-        H && S([12, () => ballLightning(2.2), 'Ball Lightning']),
-        S([H ? 10 : 14, () => { crashField(); if (H) stormWalls(WALL + 2, 1); }, 'Thunder Crash']),
-        S([12, thunderclap, 'Thunderclap']),
-        H && S([10, skyfall, 'Skyfall']),
+        // --- (Hard: the breaking of the summit begins here)
+        S([7, () => { if (H) { titanFist(); chainLightning('healer'); } else field(); }, H ? 'Chain Lightning' : 'Static Field']),
+        H ? S([10, () => { squall(-1, -Math.PI / 2, 320, 120, 24); brk(0); }, 'Squall Line'], [13, surge, 'Polarity Surge'])
+          : S([10, () => squall(-1, -Math.PI / 2, 320, 120, 24), 'Squall Line'], [8, crashField, 'Thunder Crash'], [10, surge, 'Polarity Surge']),
+        H ? S([11, () => { rods(RODS + 2); brk(2, 4); }, 'Lightning Rods']) : S([11, () => rodsGale(RODS + 2), 'Lightning Rods']),
+        H && S([12, () => { ballLightning(2.2); brk(4, 5); }, 'Ball Lightning']),
+        S([H ? 10 : 14, () => { crashField(); if (H) brk(1, 6); }, 'Thunder Crash']),
+        S([12, () => { thunderclap(); if (H) brk(3, 5); }, 'Thunderclap']),
         S([10, titanFist, 'Titan Fist']),
         S([10, surge, 'Polarity Surge']),
       ].filter(Boolean),
@@ -605,21 +636,25 @@ const VOLKAR = {
       next: finale,
     }, at);
 
-    // the sky coming down: the summit closes to its last ring and the whole party holds each fall up together
+    // the sky coming down: the summit closes to its last ring; the whole party holds each fall up together, and then the sky splits
+    // in two and a gold and a blue hold each half
     const finale = at => f.course({
       onStart: () => { if (!H) edgeStep(330, 5); },
       sets: [
         S([10, heavensFall, 'Heavens Fall']),   // once the last set has landed
         S([H ? 13 : 15, heavensFall, 'Heavens Fall']),
+        S([H ? 13 : 15, twinFall, 'Twin Fall']),
+        S([H ? 13 : 15, heavensFall, 'Heavens Fall']),
+        S([H ? 13 : 15, twinFall, 'Twin Fall']),
       ],
-      closing: [[H ? 13 : 15, heavensFall, 'Heavens Fall']],
+      closing: [[H ? 13 : 15, heavensFall, 'Heavens Fall'], [H ? 13 : 15, twinFall, 'Twin Fall']],
       ramp: 0.1,
     }, at);
 
     front(0);
 
     f.moves = { thunderclap, titanFist, surge, crash, field, rods, galeSlam, rodsGale, stormWalls, chainLightning, ballLightning, skyfall, rodStrike, avalanche, crumble,
-      edgeStep, squall, eyeOpen, stillAir, eyeCloses, heavensFall, groundingRods, supercell };
+      edgeStep, squall, eyeOpen, stillAir, eyeCloses, heavensFall, twinFall, groundingRods, supercell };
   },
 };
 

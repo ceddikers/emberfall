@@ -10,12 +10,14 @@
 //     in turn, each with the sigil of one of his swings, then go dark. Coffin Lids → Royal Decree (hide behind a lid),
 //     Stomp → its echo with a Gaze, Barrow Bells (two to a bell), Lights Out (stand in a brazier's light).
 //   III. Court of Bones (at 62%, 38 s): he sits on the throne, out of reach, and six coffins wake one by one down the
-//     walls. Break each before it opens; an opened one sends out a skeleton. Meanwhile he hurls his sceptre at whoever
+//     walls. Break each before it opens; an opened one sends out a skeleton. His Grave Warden climbs down from the dais
+//     as well (a big, slow, hard-biting skeleton): the tank takes it and holds it out of the party's way, the melee and
+//     the rest cut it down between coffins. Meanwhile he hurls his sceptre at whoever
 //     stands farthest (twice), the dead gather on a random hero (the party stacks in), and the Knell and Marks fall in
 //     between: never more than 6 s from one cast to the next. Then the knights move, and he rises.
 //   IV. The Verdict (62% → 25%): calls and their answers overlap: two swings at once and two echoes, Doom with Grave
 //     Marks, the lids and the Decree again. Then Judgement: the Charge Sheet's three swings land in that order, from him
-//     and both knights at once, each shown on the floor for only 1.6 s.
+//     and both knights at once, each shown on the floor for 1.6 s (Hard: 2.2 s, as long as an Echo replay).
 //   V. The Long Night (25% → dead): the braziers die; one lantern is left. Doom passes from player to player in a fixed
 //     order (the next one's sigil glows 6 s ahead) and the lantern passes on touch: whoever it cures carries it to the
 //     next. Swings, echoes, Gazes and Knells between, until he falls or the moon sets.
@@ -23,14 +25,18 @@
 //     stay), and the Dirge tolls everyone 8 s later; he holds his blows on the tank meanwhile.
 // A slow party runs each part's last set again, +10% each pass (f.course in fight.js). Every telegraph shows on the
 // floor on every difficulty.
-// Hard: casts 15% faster, 25% more damage; Judgement shown for 1.5 s; the Charge Sheet has four sigils (one is Royal
+// Hard: casts 15% faster, 25% more damage; the Charge Sheet has four sigils (one is Royal
 // Audience: face him); Grave Cleave on the tank as Gravebind lands on the healer and a DPS; Doom on two in the Verdict;
-// two lanterns and two dooms at once in the Long Night; Falling Masonry with each Knell; and his three moves:
+// two lanterns and two dooms at once in the Long Night; Falling Masonry with three of the Knells (not in the Verdict);
+// and his moves:
 //   Royal Audience: his crown blazes. Anyone with their back to the king when it lands is caught, as by the Gaze.
 //   Funeral March: ranks of his dead march across the hall, wall to wall, leaving one lane open the whole way.
-//   Gravebind: a grave-chain binds two players; they must stay close until it breaks, while everyone else spreads.
+//   Gravebind: a grave-chain binds two players (never the tank); they must stay close until it breaks.
+//   Burial Rites and the Writ of Execution: a grave each, and the Writ's burning lines (see burialRites, writ), then in close
+//     for a Crown of Graves and out to your grave.
 // Hard draws its dances fresh each pull (f.rng): the Charge Sheet's order, the Funeral March's open lane, who is Pardoned,
-// who is bound in Gravebind, and which grave is whose; Judgement also brings a stack with a spread 3.5 s behind it.
+// who is bound in Gravebind, and which grave is whose. The Echo replays and the Judgement's swings always land on the beat
+// (the order may be new; the timing never is).
 // The room (arena props): six grave-light braziers down the hall, coffins in the bays along the walls.
 
 const HOLLOWKING = {
@@ -53,17 +59,19 @@ const HOLLOWKING = {
     const B = f.boss;
     const TAU = Math.PI * 2;
     const dmg = {
-      knell: H ? 14050 : 9000, cleave: H ? 35000 : 25000, bleed: H ? 1150 : 750, gaze: H ? 11250 : 9000, gazeAgain: H ? 20000 : 16000, swing: H ? 18750 : 13000, echo: H ? 18750 : 13000,
+      knell: H ? 14050 : 9000, cleave: H ? 35000 : 25000, bleed: H ? 1150 : 750, gaze: H ? 11250 : 9000, gazeAgain: H ? 20000 : 16000, swing: H ? 18750 : 14000, echo: H ? 18750 : 14000,
       dirge: H ? 6250 : 3000,
       marks: H ? 12800 : 8000, bell: H ? 5650 : 4500, bellFail: H ? 2500 : 2000, march: H ? 17500 : 14000, bind: H ? 20000 : 16000,
-      throw: H ? 17500 : 14000, summons: H ? 21250 : 11000, lid: H ? 15000 : 12000, decree: H ? 23750 : 15000, masonry: H ? 15000 : 12000, writ: H ? 11250 : 9000, scorch: H ? 5000 : 4000, unburied: H ? 18750 : 15000, grave: H ? 12500 : 10000, restless: H ? 3150 : 2500, coffinHp: 7000, skelHp: 9000, skelBite: H ? 1650 : 1300,
+      throw: H ? 17500 : 14000, summons: H ? 21250 : 11000, lid: H ? 15000 : 12000, decree: H ? 21250 : 15000, masonry: H ? 15000 : 12000, writ: H ? 11250 : 9000, scorch: H ? 5000 : 4000, unburied: H ? 18750 : 15000, grave: H ? 12500 : 10000, restless: H ? 3150 : 2500, coffinHp: 7000, skelHp: 9000, skelBite: H ? 1650 : 1300, wardenHp: H ? 58000 : 48000, wardenBite: H ? 5200 : 3800,
     };
+    const HARD_HIT = 1.12;   // (Hard's every blow, one factor: the bots dodge well since the prop-steering fix, so Hard is retuned here, not by changing a dance)
+    if (H) for (const k in dmg) if (!/Hp$/.test(k)) dmg[k] = Math.round(dmg[k] * HARD_HIT);
     const S = (...steps) => steps.filter(Boolean);
     const GAZE_ARC = 1.2;     // you're looking at him if he's within this angle of where you face (~70° either side)
     const LANT_PICK = 40;     // walk this close to a lantern on the floor to pick it up
     const LANT_CURE = 85;     // a lantern's light cures Doom this far out
-    const ECHO_WARN = H ? 1.8 : 2.6;
-    const JUDGE_WARN = H ? 1.5 : 1.6;
+    const ECHO_WARN = H ? 2.2 : 2.6;
+    const JUDGE_WARN = H ? 2.2 : 1.6;   // (each swing of the Judgement is on the floor this long before it lands; they land 1.5 s apart)
     // the Charge Sheet: the swings Judgement brings back, in order
     // (Hard: the order is drawn fresh each pull, so a group cannot learn it; the banners and the floor still show it truthfully)
     const CHARGES = H ? f.shuffle(['stomp', 'audience', 'sweep', 'ring']) : ['stomp', 'sweep', 'ring'];
@@ -165,11 +173,13 @@ const HOLLOWKING = {
         onResolve: () => { for (const p of f.alive()) if (facing(p)) caught(p, 'gaze'); } });
     };
 
-    const knell = () => {
+    // (Hard: three of the Knells bring down part of the vault: the Summons' last, Testimony's and Judgement's first. Not in the Verdict, where there is enough on the floor)
+    const knell = rocks => {
       f.cast('Barrow Knell', f.ct(4), 'knell');
       f.mech({ type: 'raidwide', shape: { kind: 'circle', x: 0, y: 0, r: 0 }, delay: f.ct(4), dmg: dmg.knell, hidden: true, tag: 'knell' });
-      masonry();   // Hard: the toll brings down part of the vault
+      if (rocks === true) masonry();
     };
+    const knellRocks = () => knell(true);
 
     const bleed = id => {
       f.debuff(id, 'bleed', 9.2);
@@ -227,8 +237,8 @@ const HOLLOWKING = {
     // Gaze can land with it.
     const echo = (lead = 1.5, onlyLast) => {
       let order = onlyLast ? [(memNext - 1 + f.knights.length) % f.knights.length] : f.knights.map((_, i) => i);
-      // (Hard: which knight answers first, and how soon, is not fixed: the first replay does not land on a beat)
-      if (H && !onlyLast) { order = f.shuffle(order); lead += f.rng() * 1.2; }
+      // (Hard: which knight answers first is not fixed, but the first replay always lands on the beat: the Gaze that rides with it can be counted)
+      if (H && !onlyLast) order = f.shuffle(order);
       let t = lead, first = null;
       for (const i of order) {
         const k = f.knights[i], kind = memory[i];
@@ -310,8 +320,6 @@ const HOLLOWKING = {
       if (pair.length < 2) return;
       const [a, b] = pair;
       f.tether(a.id, b.id, d, { kind: 'short', len: 160, dmg: dmg.bind, tag: 'bind', ddown: true });
-      const rest = al.filter(p => p.id !== a.id && p.id !== b.id && (!tank || p.id !== tank.id));
-      if (rest.length) f.afterKeep(d - f.ct(5), () => marks(f.ct(5), rest.filter(p => alive(p.id))));
     };
 
     // Burial Rites (Hard, the Verdict): he allots each hero a grave of their own, a circle in their own colour (the
@@ -345,7 +353,7 @@ const HOLLOWKING = {
     // the lines go out to the sides, away from each other. One hero's writ is torn up (Pardoned, the broken chain): theirs
     // does nothing, so they're the one free to stand anywhere off the others' lines. The thinking part: a fired line
     // stays burning as a spoke out from him until the graves close, so the lines must point between the graves (the
-    // hall's corners), never at one; then the way in for the Crown and out to every grave stays open. The Pardoned is drawn at random
+    // hall's corners), never at one; then the way out to every grave stays open. The Pardoned is drawn at random
     // each pull.
     // Each line follows its hero while it's aimed, then sets WRIT_LOCK s before it's read: from then it's the red lane on
     // the floor, fixed, and stepping out of it is stepping out of the blow (the burn only comes after, where it ran).
@@ -443,7 +451,7 @@ const HOLLOWKING = {
       f.emit({ t: 'roomev', k: 'charges', l: CHARGES, step, lead: 1, dur: d + 0.5 });
     };
     // Judgement: the charges land in that order, 1.5 s apart, from him and both knights at once (a Crown of Graves from
-    // him only: there's no standing close to three people at once). Each is shown on the floor for only a moment.
+    // him only: there's no standing close to three people at once). Each is on the floor JUDGE_WARN s before it lands.
     const judgement = () => {
       const d = f.ct(5), gapS = 1.5, face = B.facing;
       f.cast('Judgement', d, 'judgement');
@@ -473,6 +481,9 @@ const HOLLOWKING = {
       f.moveBoss(0, -ARENA.hh + 110, 520);
       const spots = COURT.map(([sx, i]) => ({ x: sx * (ARENA.hw - 40), y: COFFIN_Y[i] }));
       f.emit({ t: 'roomev', k: 'court', l: spots.map((s, i) => [s.x, s.y, 7 + i * 3]), dur: 7 + spots.length * 3 });
+      // his Grave Warden climbs down from the dais as the coffins wake: slow, heavy, and it goes for whoever is nearest until
+      // someone is hit or taunts it. The tank's job in this recess (hold it out of the party's way), and the melee's to cut it down
+      f.afterKeep(4, () => f.spawnAdd({ kind: 'warden', x: B.x, y: B.y + 150, hp: dmg.wardenHp, r: 40, speed: 62, bite: dmg.wardenBite, biteEvery: 2.5, prio: 4 }));
       spots.forEach((s, i) => {
         const opensAt = f.t + 7 + i * 3;
         f.spawnAdd({ kind: 'coffin', x: s.x, y: s.y, hp: dmg.coffinHp, r: 30, inert: true, prio: 10 - i, opensAt,
@@ -581,7 +592,7 @@ const HOLLOWKING = {
         S([13, () => swing('stomp'), 'Barrow Stomp']),
         S([13, () => royalDoom(), 'Royal Doom']),
         S([16, () => swing('ring'), 'Crown of Graves']),
-        S([12, knell, 'Barrow Knell']),
+        S([12, knellRocks, 'Barrow Knell']),
       ].filter(Boolean),
       closing: [[10, () => swing('sweep'), 'Sceptre Sweep'], [10, knell, 'Barrow Knell']],
       next: testimony,
@@ -600,7 +611,7 @@ const HOLLOWKING = {
         S([12, graveCleave, 'Grave Cleave']),
         S([12, () => bells(0.6), 'Barrow Bells']),
         S([13, () => lightsOut(), 'Lights Out']),
-        S([11, knell, 'Barrow Knell']),
+        S([11, knellRocks, 'Barrow Knell']),
       ].filter(Boolean),
       closing: [[10, graveCleave, 'Grave Cleave'], [10, () => swing('sweep'), 'Sceptre Sweep'], [10, knell, 'Barrow Knell']],
       next: court,
@@ -673,7 +684,7 @@ const HOLLOWKING = {
       until: 0.25,
       sets: [
         S([3, judgement, 'Judgement']),
-        S([15, knell, 'Barrow Knell']),
+        S([15, knellRocks, 'Barrow Knell']),
         S([12, () => bells(2.2), 'Barrow Bells']),
         S([12, () => lightsOut(), 'Lights Out']),
         S([11, () => swing('stomp'), 'Barrow Stomp'], [5, () => swing('sweep'), 'Sceptre Sweep'], [5.5, () => echo(1.5), 'Echo Knights']),

@@ -702,6 +702,24 @@ const ADD_ART = {
     circle(ctx, 5, 0, 6.5, bone, OUT, 1.8);
     circle(ctx, 7, -2.2, 1.6, enraged ? '#ff4a2a' : '#6dff9a'); circle(ctx, 7, 2.2, 1.6, enraged ? '#ff4a2a' : '#6dff9a');
   },
+  // the Hollow King's Grave Warden (Court of Bones): a tall skeleton in a dead guardsman's plate, a tower shield on one arm
+  warden(ctx, st, enraged) {
+    const sw = swing(actP(st, 'attack')), bone = '#e6e0cc', plate = '#4a5256';
+    glow(ctx, 0, 0, 30, '#6dff9a', 0.2);
+    for (const sy of [-1, 1]) limb(ctx, [-3, 6 * sy, -11, 11 * sy + Math.sin(st.t * 6) * 2 * sy], bone, 2.4);
+    ellipse(ctx, -2, 0, 9, 12, 0, plate, OUT, 2);
+    for (let i = -1; i <= 1; i++) line(ctx, -6, i * 4, 2, i * 4, 'rgba(10,12,12,0.55)', 1.6);
+    ctx.save(); ctx.translate(5, -11); ctx.rotate(-0.2);
+    rrect(ctx, -3, -9, 12, 18, 4, '#5a6266', OUT, 2);
+    line(ctx, 3, -6, 3, 6, rgba('#6dff9a', 0.7), 1.6);
+    ctx.restore();
+    ctx.save(); ctx.translate(5, 11); ctx.rotate(0.5 + sw * 1.3);
+    poly(ctx, [2, -2.4, 34, -2.4, 40, 0, 34, 2.4, 2, 2.4], '#9a9080', OUT, 1.4);
+    ctx.restore();
+    circle(ctx, 6, 0, 7.5, bone, OUT, 1.8);
+    poly(ctx, [2, -7, 12, -3, 12, 3, 2, 7, 4, 0], plate, OUT, 1.4);
+    circle(ctx, 9, -2.4, 1.7, enraged ? '#ff4a2a' : '#6dff9a'); circle(ctx, 9, 2.4, 1.7, enraged ? '#ff4a2a' : '#6dff9a');
+  },
   // an ember whelp (the Roost): a small basalt-black dragon, wings half open, a glow in its throat
   whelp(ctx, st, enraged) {
     const t = st.t || 0, hide = '#3a2420', ember = '#ff8a2a';

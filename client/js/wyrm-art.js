@@ -338,6 +338,18 @@ const WYRM_ART = (() => {
         ctx.restore();
       },
     },
+    // Aftershock: heat running outward over the floor in rings from where he came down, cracks splitting ahead of it
+    aftershock: {
+      ground(ctx, tg, s, p, k, t) {
+        ctx.save(); ARENA.trace(ctx, 4); ctx.clip(); SHAPES.trace(ctx, s); ctx.clip();
+        const g = ctx.createRadialGradient(s.x, s.y, s.r2, s.x, s.y, s.r2 + 600);
+        g.addColorStop(0, rgba(C.amber, (0.08 + 0.22 * p) * k)); g.addColorStop(1, rgba(C.red, (0.08 + 0.2 * p) * k));
+        ctx.fillStyle = g; ctx.fillRect(-AR() * 2, -AR() * 2, AR() * 4, AR() * 4);
+        for (let i = 0; i < 4; i++) { const q = (t * 0.7 + i / 4) % 1; glowRing(ctx, s.x, s.y, s.r2 + 20 + q * 520, C.amber, (0.12 + 0.45 * p) * k * (1 - q), 3.5); }
+        cracks(ctx, s.x, s.y, s.r2 + 6, s.r2 + 90 + 380 * easeOut(p), 24, tg.id, easeOut(p), C.amber, (0.3 + 0.5 * p) * k, 2);
+        ctx.restore();
+      },
+    },
     // the Heart Burn's fire: the floor from wall to wall except the island, flames standing up out of it
     heartburn: {
       ground(ctx, tg, s, p, k, t) {
@@ -616,6 +628,15 @@ const WYRM_ART = (() => {
         H.roomTint('#ff5a1a', 0.2, 0.9);
         H.shockAt(0, 0, { r: AR(), r0: s.r2 || 465, color: C.amber, w: 9, dur: 0.8, flat: 1 });
         H.shake(12);
+        return true;
+      }
+      case 'aftershock': {
+        // the ground kicks outward from his feet: a ring of fire running out to the wall, rock thrown up along it
+        H.shockAt(s.x, s.y, { r: 900, r0: s.r2, color: C.amber, w: 10, dur: 0.8, flat: 1 });
+        H.shockAt(s.x, s.y, { r: 700, r0: s.r2, color: C.hot, w: 4, dur: 0.7, flat: 1, delay: 0.05 });
+        H.roomTint('#ff8a3a', 0.18, 0.7);
+        for (const q of H.scatter({ kind: 'circle', x: s.x, y: s.y, r: 520 }, 10)) VFX.debris(q.x, q.y, { color: '#1c1210', n: 3, speed: 1.4, hot: true });
+        H.shake(11);
         return true;
       }
       case 'heartburn': {

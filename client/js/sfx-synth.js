@@ -664,102 +664,103 @@
     'amb-town': -18.5, 'arrival': -8, 'bm-archmage-arcane-burst': -0.5, 'bm-archmage-arcane-mark': 2,
     'bm-archmage-call-of-the-circle': 2.5, 'bm-archmage-cinder-rune': 1, 'bm-archmage-convergence': 1.5, 'bm-archmage-counterspell': 2.5,
     'bm-archmage-ice-lances': 3, 'bm-archmage-leaping-bolt': 1, 'bm-archmage-pyre-rings': 1, 'bm-archmage-rift-rune': -1.5,
-    'bm-archmage-rime-rune': 0.5, 'bm-archmage-rune-mark': 2, 'bm-archmage-rune-swap': 2, 'bm-archmage-storm-rune': 2,
-    'bm-archmage-the-binding': 1.5, 'bm-archmage-the-tide-rises': 1, 'bm-archmage-void-rifts': -1, 'bm-brannoc-breaker': -0.5,
-    'bm-brannoc-deep-call': -2.5, 'bm-brannoc-double-grip': 2, 'bm-brannoc-fist-slam': -1, 'bm-brannoc-hammer-heel': -1,
-    'bm-brannoc-intro': -1.5, 'bm-brannoc-riposte': 3, 'bm-brannoc-roar-of-the-stands': -1.5, 'bm-brannoc-sand-furrow': 2,
-    'bm-brannoc-sunwheel': 2.5, 'bm-brannoc-sunwheel-unbound': 0.5, 'bm-brannoc-the-final-bell': -1, 'bm-brannoc-the-tide-rises': -0.5,
-    'bm-brannoc-twin-wheels': 3, 'bm-brannoc-undertow-grip': 0.5, 'bm-brannoc-victory-leap': -1, 'bm-caelum-anchored-wake': 2,
-    'bm-caelum-ascendant': -1.5, 'bm-caelum-chorus-of-the-fallen': 0.5, 'bm-caelum-cinder-crown': -1, 'bm-caelum-constellation-fall': -1.5,
-    'bm-caelum-dark-ember': -2.5, 'bm-caelum-eightfold-wake': 1, 'bm-caelum-embers-of-heaven': -0.5, 'bm-caelum-glint': 2.5,
-    'bm-caelum-grace-withdrawn': -1.5, 'bm-caelum-horizon-cut': -1.5, 'bm-caelum-intro': -1.5, 'bm-caelum-nightfall': -1.5,
-    'bm-caelum-pinning-thrust': -1.5, 'bm-caelum-second-coil': -1.5, 'bm-caelum-starfall': -1, 'bm-caelum-the-sky-comes-down': -1.5,
-    'bm-caelum-the-starwyrm': -2.5, 'bm-corvane-comet-draw': 1.5, 'bm-corvane-comet-volley': 3, 'bm-corvane-draw-cut': 4.5,
-    'bm-corvane-false-stance': 2, 'bm-corvane-hollow-breath': 6, 'bm-corvane-hundredfold-parting': 0.5, 'bm-corvane-intro': -2,
-    'bm-corvane-last-light-of-the-pass': -1.5, 'bm-corvane-rising-crane': 1, 'bm-corvane-scabbard-sweep': 2.5, 'bm-corvane-the-vigil': 1,
-    'bm-corvane-whetted-edge': -0.5, 'bm-corvane-white-gale': 3.5, 'bm-grubnak-belly-flop': -1, 'bm-grubnak-butchers-charge': -0.5,
-    'bm-grubnak-chop-chop': 1, 'bm-grubnak-cleaver-toss': 1.5, 'bm-grubnak-clogged-drains': 3.5, 'bm-grubnak-dinner-rush': 3.5,
-    'bm-grubnak-double-chop': 1, 'bm-grubnak-family-meal': 0.5, 'bm-grubnak-flambe': -0.5, 'bm-grubnak-flare-up': -1.5,
-    'bm-grubnak-gorge': 2, 'bm-grubnak-grease-fire': 0.5, 'bm-grubnak-intro': -1, 'bm-grubnak-ladle-spin': 4,
-    'bm-grubnak-larder-toss': 2.5, 'bm-grubnak-lid-slam': -1.5, 'bm-grubnak-meat-toss': 1.5, 'bm-grubnak-mince': 1.5,
-    'bm-grubnak-mise-en-place': 4, 'bm-grubnak-order-up': -3, 'bm-grubnak-rolling-meatballs': 2.5, 'bm-grubnak-service': -1,
-    'bm-grubnak-simmer': 2, 'bm-grubnak-spice-rack': 0.5, 'bm-grubnak-stockpot': 1.5, 'bm-grubnak-tenderize': 1,
-    'bm-grubnak-whisk': 7, 'bm-hollowking-barrow-bells': -1.5, 'bm-hollowking-barrow-knell': 1.5, 'bm-hollowking-coffin-lids': 2,
-    'bm-hollowking-court-of-bones': 1.5, 'bm-hollowking-crown-of-graves': 3.5, 'bm-hollowking-dirge': 0.5, 'bm-hollowking-echo-knights': 4.5,
-    'bm-hollowking-funeral-march': 0.5, 'bm-hollowking-grave-cleave': 0.5, 'bm-hollowking-grave-marks': 4, 'bm-hollowking-grave-summons': 1.5,
-    'bm-hollowking-gravebind': 2.5, 'bm-hollowking-intro': 1.5, 'bm-hollowking-judgement': 0.5, 'bm-hollowking-lantern': 8.5,
-    'bm-hollowking-lights-out': 2, 'bm-hollowking-royal-audience': -1.5, 'bm-hollowking-royal-decree': -1, 'bm-hollowking-royal-doom': 1,
-    'bm-hollowking-royal-gaze': -1.5, 'bm-hollowking-sceptre-sweep': 3.5, 'bm-hollowking-sceptre-throw': 2, 'bm-hollowking-the-charge-sheet': 1.5,
-    'bm-hollowking-the-king-rises': -1, 'bm-hollowking-the-long-night': 1.5, 'bm-hollowking-writ-of-execution': 1.5, 'bm-hydra-acid-spray': 3,
-    'bm-hydra-flame-gout': 3, 'bm-hydra-intro': -3, 'bm-hydra-mire-spit': 2, 'bm-hydra-mothers-cry': -1.5,
-    'bm-hydra-mothers-heart': 0.5, 'bm-hydra-regrowth': 0.5, 'bm-hydra-rending-maul': 1.5, 'bm-hydra-rime-crown': 1,
-    'bm-hydra-searing': 2.5, 'bm-hydra-stonegaze': 0.5, 'bm-hydra-stormcall': 3, 'bm-hydra-the-drowning': -2.5,
-    'bm-hydra-tidal-dance': 3.5, 'bm-hydra-tidal-line': 2, 'bm-hydra-venom-bloom': 3, 'bm-morrowoak-barrow-lantern': 2,
-    'bm-morrowoak-brood-roots': 2.5, 'bm-morrowoak-deeper-roots': -1, 'bm-morrowoak-fourfold-bloom': 1, 'bm-morrowoak-frost-fist': -0.5,
-    'bm-morrowoak-hunger-seed': -1, 'bm-morrowoak-hungering-dark': -1, 'bm-morrowoak-hydra-head': 1.5, 'bm-morrowoak-inhale': -1.5,
-    'bm-morrowoak-intro': -1, 'bm-morrowoak-nothing-left': -3, 'bm-morrowoak-root-lash': -0.5, 'bm-morrowoak-sap-tide': -0.5,
-    'bm-morrowoak-saplings': 3, 'bm-morrowoak-storm-knot': 0.5, 'bm-morrowoak-the-grove-remade': -1, 'bm-morrowoak-the-swallowing': -3,
-    'bm-morrowoak-twin-seed': -0.5, 'bm-morrowoak-wyrm-wing': -1, 'bm-skitterra-acid-deluge': 0.5, 'bm-skitterra-brood': 4.5,
-    'bm-skitterra-ceiling-ambush': 1, 'bm-skitterra-chrysalis': 4, 'bm-skitterra-cocoon-drop': 1.5, 'bm-skitterra-egg-sacs': 1.5,
-    'bm-skitterra-eightfold-lunge': 6.5, 'bm-skitterra-fang-rush': 2, 'bm-skitterra-from-the-dark': 2, 'bm-skitterra-into-the-dark': 2,
-    'bm-skitterra-intro': -1, 'bm-skitterra-molt': 8, 'bm-skitterra-silk-lines': 3.5, 'bm-skitterra-silk-reel': 3.5,
-    'bm-skitterra-silk-wrap': 2.5, 'bm-skitterra-snare-weave': 2, 'bm-skitterra-spiderlings': 11, 'bm-skitterra-spin': 8,
-    'bm-skitterra-spinneret-volley': 16, 'bm-skitterra-strand-reel': 5.5, 'bm-skitterra-the-swarm': 11.5, 'bm-skitterra-the-web-gives-way': 0.5,
-    'bm-skitterra-tightening-web': 2, 'bm-skitterra-venom-drip': 4, 'bm-skitterra-venom-mist': -1.5, 'bm-skitterra-venom-spit': 4,
-    'bm-titan-avalanche': 0.5, 'bm-titan-breath-of-winter': 1.5, 'bm-titan-endless-winter': -1.5, 'bm-titan-frostbite': 2.5,
-    'bm-titan-glacial-stomp': -0.5, 'bm-titan-icefall': 2.5, 'bm-titan-intro': -3, 'bm-titan-rime-slam': 0.5,
-    'bm-titan-titans-grip': 2.5, 'bm-titan-titans-sweep': 2, 'bm-titan-twin-slam': 2, 'bm-titan-whiteout': 1.5,
-    'bm-titan-winters-grasp': 2.5, 'bm-titan-winters-howl': -1, 'bm-volkar-avalanche': 0.5, 'bm-volkar-ball-lightning': 1.5,
-    'bm-volkar-chain-lightning': 3, 'bm-volkar-distant-thunder': 4, 'bm-volkar-eye-closes': 2, 'bm-volkar-eye-of-the-storm': 4.5,
-    'bm-volkar-gale-slam': 4, 'bm-volkar-gathering-storm': 0.5, 'bm-volkar-grounding-rods': 3, 'bm-volkar-heavens-fall': -1,
-    'bm-volkar-intro': -1.5, 'bm-volkar-lightning-rods': 9, 'bm-volkar-polarity-minus': 3, 'bm-volkar-polarity-plus': 3,
-    'bm-volkar-polarity-surge': 1.5, 'bm-volkar-pulse': 4.5, 'bm-volkar-rod-strike': 1.5, 'bm-volkar-skyfall': -0.5,
-    'bm-volkar-squall-line': 3, 'bm-volkar-static-field': 5, 'bm-volkar-still-air': 3, 'bm-volkar-storm-walls': 2,
-    'bm-volkar-supercell': 2, 'bm-volkar-thunder-crash': 1, 'bm-volkar-thunderclap': 1.5, 'bm-volkar-thunderhead': 2.5,
-    'bm-volkar-titan-fist': -1.5, 'bm-wyrm-cinder-rain': 7.5, 'bm-wyrm-ember-breath': 3.5, 'bm-wyrm-intro': -4,
-    'bm-wyrm-take-flight': 3.5, 'bm-wyrm-twin-breath': 3.5, 'boss-death': -2.5, 'boss-enrage': -2.5,
-    'boss-impact-heavy': 0.5, 'boss-impact-light': 7, 'boss-intro': -1.5, 'buff-on': -0.5,
-    'chest-drop': 3.5, 'chest-open': -5, 'cleanse': -5, 'clear': -4.5,
-    'crit': 4, 'dash': 6.5, 'debuff-on': -1, 'dummy-hit': 3,
-    'emote-cheer': -6.5, 'emote-laugh': -2, 'emote-wave': 2, 'feast-chew': 6.5,
-    'feast-clink': -5.5, 'feast-serve': -3.5, 'feast-sting': -2.5, 'fish-bite': 3,
-    'fish-cast': 1.5, 'fish-catch': -3, 'fish-lost': -0.5, 'fish-reel': -0.5,
-    'gloom-hollow-off': -2, 'gloom-hollow-on': 2, 'heal-land': -2.5, 'hit-heavy': 5,
-    'hit-light': 9, 'hm-bark-ash': -0.5, 'hm-bark-ghost': 3.5, 'hm-bark-greyfang': 0.5,
-    'hm-bark-rust': 0.5, 'hm-bite': 8, 'hm-bite-big': 2.5, 'hm-bringdown': -3,
-    'hm-calloff': 1.5, 'hm-down': 3, 'hm-hamstring': 1, 'hm-horn': -6,
-    'hm-howl': -3.5, 'hm-longchase': 1.5, 'hm-mount': -1, 'hm-quarry': 6.5,
-    'hm-relay': 4, 'hm-rend': 0.5, 'hm-ridedown': 2.5, 'hm-snap': 7,
-    'hm-up': 2.5, 'hm-whistle-hold': -7.5, 'hm-whistle-pounce': -7, 'ken-blaze': 0.5,
-    'ken-break': -0.5, 'ken-deathblow': -2, 'ken-good': 8, 'ken-iai': 2.5,
-    'ken-miss': 7.5, 'ken-off': 4.5, 'ken-pass': 6.5, 'ken-perfect': 2,
-    'ken-pommel': 6.5, 'ken-redirect': 1, 'lamp-drop': 11, 'lamp-ember': 14.5,
-    'lamp-end': 6.5, 'lamp-eternal': 0.5, 'lamp-pilgrim': 4.5, 'lamp-pillar': 3,
-    'lamp-snuff': 5.5, 'lamp-sparks': 5, 'lb-fire': -1.5, 'lb-ready': -5,
-    'loot-take': -2, 'low-hp': -4.5, 'npc-talk': -6, 'ping': 2.5,
-    'pip-up': 12, 'portal-enter': -3, 'portal-hum': -22.5, 'pull-count': 0.5,
-    'pull-count-last': -3.5, 'pull-go': -2, 'reaper-blink': 5.5, 'reaper-danse': 5,
-    'reaper-finish1': 4.5, 'reaper-finish2': -0.5, 'reaper-finish3': 1, 'reaper-finish4': -2,
-    'reaper-frenzy': -2.5, 'reaper-gate-bloom': -2.5, 'reaper-gate-close': -1, 'reaper-gate-open': 3.5,
-    'reaper-gate-tone': 8, 'reaper-gatebreaker': 1.5, 'reaper-harvest': -1, 'reaper-moon': 1.5,
-    'reaper-pop-bind': 4.5, 'reaper-pop-death': 3, 'reaper-pop-drain': 4, 'reaper-pop-thread': 9,
-    'reaper-rune': 12.5, 'reaper-rune-emp': 6, 'reaper-slack': 14.5, 'reaper-slash': 2.5,
-    'reaper-star-collapse': -2, 'reaper-star-open': 0.5, 'reaper-swing': 12, 'reaper-veil': -0.5,
-    'revive': -2, 'shield-break': 5, 'shield-up': -4, 'stack-1': 8,
-    'stack-2': -2.5, 'step-grass': 8, 'step-stone': 8.5, 'step-wood': 1.5,
-    'story-page': 3.5, 'tg-aoe': 1.5, 'tg-buster': 1, 'tg-charge': 0.5,
-    'tg-gaze': 0.5, 'tg-knockback': 2.5, 'tg-raidwide': -0.5, 'tg-spread': 5.5,
-    'tg-stack': 1.5, 'tide-bell': 1, 'tide-crash': -1.5, 'tide-crest': 4.5,
-    'tide-gull': 9.5, 'tide-pop': 1.5, 'tide-slack': 10.5, 'tide-wave': 2.5,
-    'title-sting': -3, 'ui-bounty': 0.5, 'ui-buy': -6, 'ui-click': 2,
-    'ui-close': -0.5, 'ui-equip': -2.5, 'ui-error': -3, 'ui-feat': -7,
-    'ui-gold': -4, 'ui-hover': 13, 'ui-secret': -6, 'ult-alembist': 0.5,
-    'ult-bastion': 1.5, 'ult-bloodreaver': 1, 'ult-driftblade': 6.5, 'ult-fire': -1.5,
-    'ult-gloomsworn': -1, 'ult-gorgemaw': 1, 'ult-grovekeeper': 2.5, 'ult-houndmaster': -3.5,
-    'ult-kenseier': -1.5, 'ult-lanternkeeper': -2, 'ult-marionettist': 0.5, 'ult-oathbroker': -1,
-    'ult-pyromancer': -1, 'ult-ranger': 3, 'ult-ready': -4, 'ult-runeguard': -1,
-    'ult-shadowblade': 4, 'ult-thermist': -1, 'ult-threadweaver': -1, 'ult-tidecaller': -2,
-    'waymark': 11.5, 'wipe': -2,
+    'bm-archmage-rime-rune': 0.5, 'bm-archmage-rune-mark': 2, 'bm-archmage-rune-swap': 2, 'bm-archmage-sigil-flare': 1,
+    'bm-archmage-storm-rune': 2, 'bm-archmage-the-binding': 1.5, 'bm-archmage-the-tide-rises': 1, 'bm-archmage-void-rifts': -1,
+    'bm-brannoc-breaker': -0.5, 'bm-brannoc-deep-call': -2.5, 'bm-brannoc-double-grip': 2, 'bm-brannoc-fist-slam': -1,
+    'bm-brannoc-hammer-heel': -1, 'bm-brannoc-intro': -1.5, 'bm-brannoc-riposte': 3, 'bm-brannoc-roar-of-the-stands': -1.5,
+    'bm-brannoc-sand-furrow': 2, 'bm-brannoc-sunwheel': 2.5, 'bm-brannoc-sunwheel-unbound': 0.5, 'bm-brannoc-the-final-bell': -1,
+    'bm-brannoc-the-tide-rises': -0.5, 'bm-brannoc-twin-wheels': 3, 'bm-brannoc-undertow-grip': 0.5, 'bm-brannoc-victory-leap': -1,
+    'bm-caelum-anchored-wake': 2, 'bm-caelum-ascendant': -1.5, 'bm-caelum-chorus-of-the-fallen': 0.5, 'bm-caelum-cinder-crown': -1,
+    'bm-caelum-constellation-fall': -1.5, 'bm-caelum-dark-ember': -2.5, 'bm-caelum-eightfold-wake': 1, 'bm-caelum-embers-of-heaven': -0.5,
+    'bm-caelum-glint': 2.5, 'bm-caelum-grace-withdrawn': -1.5, 'bm-caelum-horizon-cut': -1.5, 'bm-caelum-intro': -1.5,
+    'bm-caelum-nightfall': -1.5, 'bm-caelum-pinning-thrust': -1.5, 'bm-caelum-second-coil': -1.5, 'bm-caelum-starfall': -1,
+    'bm-caelum-the-sky-comes-down': -1.5, 'bm-caelum-the-starwyrm': -2.5, 'bm-corvane-comet-draw': 1.5, 'bm-corvane-comet-volley': 3,
+    'bm-corvane-draw-cut': 4.5, 'bm-corvane-false-stance': 2, 'bm-corvane-hollow-breath': 6, 'bm-corvane-hundredfold-parting': 0.5,
+    'bm-corvane-intro': -2, 'bm-corvane-last-light-of-the-pass': -1.5, 'bm-corvane-rising-crane': 1, 'bm-corvane-scabbard-sweep': 2.5,
+    'bm-corvane-the-last-vigil': -1.5, 'bm-corvane-the-vigil': 1, 'bm-corvane-whetted-edge': -0.5, 'bm-corvane-white-gale': 3.5, 'bm-grubnak-belly-flop': -1,
+    'bm-grubnak-butchers-charge': -0.5, 'bm-grubnak-chop-chop': 1, 'bm-grubnak-cleaver-toss': 1.5, 'bm-grubnak-clogged-drains': 3.5,
+    'bm-grubnak-dinner-rush': 3.5, 'bm-grubnak-double-chop': 1, 'bm-grubnak-family-meal': 0.5, 'bm-grubnak-flambe': -0.5,
+    'bm-grubnak-flare-up': -1.5, 'bm-grubnak-gorge': 2, 'bm-grubnak-grease-fire': 0.5, 'bm-grubnak-intro': -1,
+    'bm-grubnak-ladle-spin': 4, 'bm-grubnak-larder-toss': 2.5, 'bm-grubnak-lid-slam': -1.5, 'bm-grubnak-meat-toss': 1.5,
+    'bm-grubnak-mince': 1.5, 'bm-grubnak-mise-en-place': 4, 'bm-grubnak-order-up': -3, 'bm-grubnak-rolling-meatballs': 2.5,
+    'bm-grubnak-service': -1, 'bm-grubnak-simmer': 2, 'bm-grubnak-spice-rack': 0.5, 'bm-grubnak-stockpot': 1.5,
+    'bm-grubnak-tenderize': 1, 'bm-grubnak-whisk': 7, 'bm-hollowking-barrow-bells': -1.5, 'bm-hollowking-barrow-knell': 1.5,
+    'bm-hollowking-coffin-lids': 2, 'bm-hollowking-court-of-bones': 1.5, 'bm-hollowking-crown-of-graves': 3.5, 'bm-hollowking-dirge': 0.5,
+    'bm-hollowking-echo-knights': 4.5, 'bm-hollowking-funeral-march': 0.5, 'bm-hollowking-grave-cleave': 0.5, 'bm-hollowking-grave-marks': 4,
+    'bm-hollowking-grave-summons': 1.5, 'bm-hollowking-gravebind': 2.5, 'bm-hollowking-intro': 1.5, 'bm-hollowking-judgement': 0.5,
+    'bm-hollowking-lantern': 8.5, 'bm-hollowking-lights-out': 2, 'bm-hollowking-royal-audience': -1.5, 'bm-hollowking-royal-decree': -1,
+    'bm-hollowking-royal-doom': 1, 'bm-hollowking-royal-gaze': -1.5, 'bm-hollowking-sceptre-sweep': 3.5, 'bm-hollowking-sceptre-throw': 2,
+    'bm-hollowking-the-charge-sheet': 1.5, 'bm-hollowking-the-king-rises': -1, 'bm-hollowking-the-long-night': 1.5, 'bm-hollowking-writ-of-execution': 1.5,
+    'bm-hydra-acid-spray': 3, 'bm-hydra-flame-gout': 3, 'bm-hydra-intro': -3, 'bm-hydra-mire-spit': 2,
+    'bm-hydra-mothers-cry': -1.5, 'bm-hydra-mothers-heart': 0.5, 'bm-hydra-regrowth': 0.5, 'bm-hydra-rending-maul': 1.5,
+    'bm-hydra-rime-crown': 1, 'bm-hydra-searing': 2.5, 'bm-hydra-stonegaze': 0.5, 'bm-hydra-stormcall': 3,
+    'bm-hydra-stump-echo': -0.5, 'bm-hydra-tail-thrash': 1, 'bm-hydra-the-drowning': -2.5, 'bm-hydra-tidal-dance': 3.5,
+    'bm-hydra-tidal-line': 2, 'bm-hydra-venom-bloom': 3, 'bm-morrowoak-barrow-lantern': 2, 'bm-morrowoak-brood-roots': 2.5,
+    'bm-morrowoak-deeper-roots': -1, 'bm-morrowoak-fourfold-bloom': 1, 'bm-morrowoak-frost-fist': -0.5, 'bm-morrowoak-hunger-seed': -1,
+    'bm-morrowoak-hungering-dark': -1, 'bm-morrowoak-hydra-head': 1.5, 'bm-morrowoak-inhale': -1.5, 'bm-morrowoak-intro': -1,
+    'bm-morrowoak-nothing-left': -3, 'bm-morrowoak-root-lash': -0.5, 'bm-morrowoak-sap-tide': -0.5, 'bm-morrowoak-saplings': 3,
+    'bm-morrowoak-storm-knot': 0.5, 'bm-morrowoak-the-grove-remade': -1, 'bm-morrowoak-the-swallowing': -3, 'bm-morrowoak-twin-seed': -0.5,
+    'bm-morrowoak-wyrm-wing': -1, 'bm-skitterra-acid-deluge': 0.5, 'bm-skitterra-brood': 4.5, 'bm-skitterra-ceiling-ambush': 1,
+    'bm-skitterra-chrysalis': 4, 'bm-skitterra-cocoon-drop': 1.5, 'bm-skitterra-egg-sacs': 1.5, 'bm-skitterra-eightfold-lunge': 6.5,
+    'bm-skitterra-fang-rush': 2, 'bm-skitterra-from-the-dark': 2, 'bm-skitterra-into-the-dark': 2, 'bm-skitterra-intro': -1,
+    'bm-skitterra-molt': 8, 'bm-skitterra-silk-lines': 3.5, 'bm-skitterra-silk-reel': 3.5, 'bm-skitterra-silk-wrap': 2.5,
+    'bm-skitterra-snare-weave': 2, 'bm-skitterra-spiderlings': 11, 'bm-skitterra-spin': 8, 'bm-skitterra-spinneret-volley': 16,
+    'bm-skitterra-strand-reel': 5.5, 'bm-skitterra-the-swarm': 11.5, 'bm-skitterra-the-web-gives-way': 0.5, 'bm-skitterra-tightening-web': 2,
+    'bm-skitterra-venom-drip': 4, 'bm-skitterra-venom-mist': -1.5, 'bm-skitterra-venom-spit': 4, 'bm-titan-avalanche': 0.5,
+    'bm-titan-breath-of-winter': 1.5, 'bm-titan-endless-winter': -1.5, 'bm-titan-frostbite': 2.5, 'bm-titan-glacial-stomp': -0.5,
+    'bm-titan-icefall': 2.5, 'bm-titan-intro': -3, 'bm-titan-rime-slam': 0.5, 'bm-titan-titans-grip': 2.5,
+    'bm-titan-titans-sweep': 2, 'bm-titan-twin-slam': 2, 'bm-titan-whiteout': 1.5, 'bm-titan-winters-grasp': 2.5,
+    'bm-titan-winters-howl': -1, 'bm-volkar-avalanche': 0.5, 'bm-volkar-ball-lightning': 1.5, 'bm-volkar-chain-lightning': 3,
+    'bm-volkar-eye-closes': 2, 'bm-volkar-eye-of-the-storm': 4.5, 'bm-volkar-gale-slam': 4, 'bm-volkar-gathering-storm': 0.5,
+    'bm-volkar-grounding-rods': 3, 'bm-volkar-heavens-fall': -1, 'bm-volkar-intro': -1.5, 'bm-volkar-lightning-rods': 9,
+    'bm-volkar-polarity-minus': 3, 'bm-volkar-polarity-plus': 3, 'bm-volkar-polarity-surge': 1.5, 'bm-volkar-pulse': 4.5,
+    'bm-volkar-rod-strike': 1.5, 'bm-volkar-skyfall': -0.5, 'bm-volkar-squall-line': 3, 'bm-volkar-static-field': 5,
+    'bm-volkar-still-air': 3, 'bm-volkar-storm-walls': 2, 'bm-volkar-supercell': 2, 'bm-volkar-thunder-crash': 1,
+    'bm-volkar-thunderclap': 1.5, 'bm-volkar-thunderhead': 2.5, 'bm-volkar-titan-fist': -1.5, 'bm-volkar-twin-fall': -1.5,
+    'bm-wyrm-cinder-rain': 7.5, 'bm-wyrm-ember-breath': 3.5, 'bm-wyrm-intro': -4, 'bm-wyrm-take-flight': 3.5,
+    'bm-wyrm-twin-breath': 3.5, 'boss-death': -2.5, 'boss-enrage': -2.5, 'boss-impact-heavy': 0.5,
+    'boss-impact-light': 7, 'boss-intro': -1.5, 'buff-on': -0.5, 'chest-drop': 3.5,
+    'chest-open': -5, 'cleanse': -5, 'clear': -4.5, 'crit': 4,
+    'dash': 6.5, 'debuff-on': -1, 'dummy-hit': 3, 'emote-cheer': -6.5,
+    'emote-laugh': -2, 'emote-wave': 2, 'feast-chew': 6.5, 'feast-clink': -5.5,
+    'feast-serve': -3.5, 'feast-sting': -2.5, 'fish-bite': 3, 'fish-cast': 1.5,
+    'fish-catch': -3, 'fish-lost': -0.5, 'fish-reel': -0.5, 'gloom-hollow-off': -2,
+    'gloom-hollow-on': 2, 'heal-land': -2.5, 'hit-heavy': 5, 'hit-light': 9,
+    'hm-bark-ash': -0.5, 'hm-bark-ghost': 3.5, 'hm-bark-greyfang': 0.5, 'hm-bark-rust': 0.5,
+    'hm-bite': 8, 'hm-bite-big': 2.5, 'hm-bringdown': -3, 'hm-calloff': 1.5,
+    'hm-down': 3, 'hm-hamstring': 1, 'hm-horn': -6, 'hm-howl': -3.5,
+    'hm-longchase': 1.5, 'hm-mount': -1, 'hm-quarry': 6.5, 'hm-relay': 4,
+    'hm-rend': 0.5, 'hm-ridedown': 2.5, 'hm-snap': 7, 'hm-up': 2.5,
+    'hm-whistle-hold': -7.5, 'hm-whistle-pounce': -7, 'ken-blaze': 0.5, 'ken-break': -0.5,
+    'ken-deathblow': -2, 'ken-good': 8, 'ken-iai': 2.5, 'ken-miss': 7.5,
+    'ken-off': 4.5, 'ken-pass': 6.5, 'ken-perfect': 2, 'ken-pommel': 6.5,
+    'ken-redirect': 1, 'lamp-drop': 11, 'lamp-ember': 14.5, 'lamp-end': 6.5,
+    'lamp-eternal': 0.5, 'lamp-pilgrim': 4.5, 'lamp-pillar': 3, 'lamp-snuff': 5.5,
+    'lamp-sparks': 5, 'lb-fire': -1.5, 'lb-ready': -5, 'loot-take': -2,
+    'low-hp': -4.5, 'npc-talk': -6, 'ping': 2.5, 'pip-up': 12,
+    'portal-enter': -3, 'portal-hum': -22.5, 'pull-count': 0.5, 'pull-count-last': -3.5,
+    'pull-go': -2, 'reaper-blink': 5.5, 'reaper-danse': 5, 'reaper-finish1': 4.5,
+    'reaper-finish2': -0.5, 'reaper-finish3': 1, 'reaper-finish4': -2, 'reaper-frenzy': -2.5,
+    'reaper-gate-bloom': -2.5, 'reaper-gate-close': -1, 'reaper-gate-open': 3.5, 'reaper-gate-tone': 8,
+    'reaper-gatebreaker': 1.5, 'reaper-harvest': -1, 'reaper-moon': 1.5, 'reaper-pop-bind': 4.5,
+    'reaper-pop-death': 3, 'reaper-pop-drain': 4, 'reaper-pop-thread': 9, 'reaper-rune': 12.5,
+    'reaper-rune-emp': 6, 'reaper-slack': 14.5, 'reaper-slash': 2.5, 'reaper-star-collapse': -2,
+    'reaper-star-open': 0.5, 'reaper-swing': 12, 'reaper-veil': -0.5, 'revive': -2,
+    'shield-break': 5, 'shield-up': -4, 'stack-1': 8, 'stack-2': -2.5,
+    'step-grass': 8, 'step-stone': 8.5, 'step-wood': 1.5, 'story-page': 3.5,
+    'tg-aoe': 1.5, 'tg-buster': 1, 'tg-charge': 0.5, 'tg-gaze': 0.5,
+    'tg-knockback': 2.5, 'tg-raidwide': -0.5, 'tg-spread': 5.5, 'tg-stack': 1.5,
+    'tide-bell': 1, 'tide-crash': -1.5, 'tide-crest': 4.5, 'tide-gull': 9.5,
+    'tide-pop': 1.5, 'tide-slack': 10.5, 'tide-wave': 2.5, 'title-sting': -3,
+    'ui-bounty': 0.5, 'ui-buy': -6, 'ui-click': 2, 'ui-close': -0.5,
+    'ui-equip': -2.5, 'ui-error': -3, 'ui-feat': -7, 'ui-gold': -4,
+    'ui-hover': 13, 'ui-secret': -6, 'ult-alembist': 0.5, 'ult-bastion': 1.5,
+    'ult-bloodreaver': 1, 'ult-driftblade': 6.5, 'ult-fire': -1.5, 'ult-gloomsworn': -1,
+    'ult-gorgemaw': 1, 'ult-grovekeeper': 2.5, 'ult-houndmaster': -3.5, 'ult-kenseier': -1.5,
+    'ult-lanternkeeper': -2, 'ult-marionettist': 0.5, 'ult-oathbroker': -1, 'ult-pyromancer': -1,
+    'ult-ranger': 3, 'ult-ready': -4, 'ult-runeguard': -1, 'ult-shadowblade': 4,
+    'ult-thermist': -1, 'ult-threadweaver': -1, 'ult-tidecaller': -2, 'waymark': 11.5,
+    'wipe': -2,
   };
   // @@TRIM-END
 
@@ -2846,7 +2847,6 @@
     S.tone({ f: 220, dur: 1.8, a: 0.6, swell: true, peak: 0.06 });
     S.noise({ hp: 8000, dur: 1.6, pts: [[0.8, 1], [1.6, 0]], peak: 0.03 });
   });
-  def('bm-volkar-distant-thunder', 'bm', S => { S.space('hall', 0.4); B.thunder(S, 0, 0.8, true); });
   def('bm-volkar-eye-closes', 'bm', S => {
     S.whoosh({ f: 200, f1: 1500, dur: 1.0, peakAt: 0.9, peak: 0.45 });
     S.rumble({ dur: 1.0, f: 90, f1: 250, peak: 0.3, pts: [[0.95, 1], [1.0, 0]] });
@@ -2872,6 +2872,16 @@
     S.thud({ f: 55, f1: 22, dur: 1.4, drive: 3, peak: 0.8, sub: 0.4 });
     for (let i = 0; i < 8; i++) S.partials({ at: S.rr(0.05, 0.8), set: 'stone', f: S.rr(250, 700), dur: 0.3, peak: 0.12, strike: 0.5 });
     S.rumble({ dur: 2.5, f: 130, peak: 0.4, a: 0.05 });
+  });
+  def('bm-volkar-twin-fall', 'bm', S => {
+    S.space('hall', 0.5);
+    S.crack({ f: 1500, peak: 0.45, pan: -0.7 });
+    S.crack({ at: 0.35, f: 1300, peak: 0.45, pan: 0.7 });
+    B.thunder(S, 0.02, 1.0);
+    S.thud({ f: 62, f1: 24, dur: 1.2, drive: 3, peak: 0.7, sub: 0.4 });
+    S.thud({ at: 0.35, f: 48, f1: 20, dur: 1.2, drive: 3, peak: 0.7, sub: 0.4 });
+    for (let i = 0; i < 6; i++) S.partials({ at: S.rr(0.05, 0.9), set: 'stone', f: S.rr(300, 800), dur: 0.3, peak: 0.1, strike: 0.5, pan: i % 2 ? 0.6 : -0.6 });
+    S.rumble({ dur: 2.5, f: 120, peak: 0.4, a: 0.05 });
   });
   def('bm-volkar-chain-lightning', 'bm', S => {
     for (let i = 0; i < 4; i++) { const pan = -0.6 + i * 0.4; S.zap({ at: i * 0.12, f: 100, dur: 0.18, peak: 0.3, pan }); S.crack({ at: i * 0.12, peak: 0.25, dur: 0.15, pan }); }
@@ -3167,6 +3177,26 @@
     S.thud({ at: 0.6, f: 70, f1: 30, dur: 0.7, drive: 2.5, peak: 0.6 });
     S.crackle({ at: 0.6, dens: 2.4, f: 3600, dur: 1.0, pts: [[0.03, 1], [1.0, 0]], peak: 0.22 });
   });
+  def('bm-wyrm-talon-dive', 'bm', S => {
+    S.voice({ f: 520, f1: 180, dur: 0.9, vowel: 'a', vowel1: 'i', breath: 4, peak: 0.16, lp: 5000, pts: [[0.2, 1], [0.9, 0]] });
+    S.whoosh({ at: 0.2, f: 1400, f1: 120, dur: 1.0, peakAt: 0.7, peak: 0.33 });
+    S.thud({ at: 1.2, f: 70, f1: 28, dur: 0.8, drive: 3, peak: 0.8 });
+    S.crackle({ at: 1.2, lp: 3000, dur: 0.6, pts: [[0.02, 1], [0.6, 0]], peak: 0.2 });
+  });
+  def('bm-wyrm-aftershock', 'bm', S => {
+    S.space('cave', 0.4);
+    [0, 0.45, 0.9].forEach((at, i) => S.thud({ at, f: 84 - i * 12, f1: 34, dur: 0.6, drive: 2, peak: 0.6 - i * 0.1 }));
+    S.rumble({ at: 0.1, dur: 2.2, f: 70, peak: 0.4, a: 0.2 });
+    S.crackle({ at: 0.9, dens: 2, f: 3200, dur: 1.2, pts: [[0.1, 1], [1.2, 0]], peak: 0.2 });
+  });
+  def('bm-wyrm-cinder-run', 'bm', S => {
+    [0, 0.8, 1.6].forEach((at, i) => {
+      S.whoosh({ at, f: 900 - i * 150, f1: 100, dur: 0.7, peakAt: 0.5, peak: 0.3 });
+      S.thud({ at: at + 0.6, f: 66, f1: 26, dur: 0.6, drive: 2.5, peak: 0.6 });
+    });
+    S.crackle({ at: 0.6, dens: 2, f: 3400, dur: 2.2, pts: [[0.2, 1], [2.2, 0]], peak: 0.14 });
+    S.rumble({ dur: 2.6, f: 80, peak: 0.3, a: 0.1 });
+  });
   def('bm-wyrm-ashfall', 'bm', S => {
     S.space('cave', 0.6);
     S.voice({ f: 50, f1: 36, dur: 3, vowel: 'a', vowel1: 'o', breath: 6, peak: 0.4, lp: 3000, pts: [[0.4, 1], [3, 0]] });
@@ -3252,6 +3282,13 @@
     S.rumble({ dur: 4.2, f: 46, peak: 0.55, a: 1.2 });
     S.noise({ bp: 300, bp1: 1400, q: 0.8, dur: 4, a: 1.4, grain: 0.6, pts: [[2.2, 1], [4, 0]], peak: 0.35 });
     [0.8, 1.6, 2.4, 3.2].forEach((at, i) => S.thud({ at, f: 52, f1: 28, dur: 0.7, drive: 2.5, peak: 0.3 + i * 0.07 }));
+  });
+  def('bm-titan-the-lake-rises', 'bm', S => {
+    S.space('hall', 0.6);
+    S.rumble({ dur: 4.8, f: 44, peak: 0.5, a: 1.4 });
+    S.crackle({ dens: 3.5, f: 4800, dur: 3.8, pts: [[0.4, 0.5], [2.2, 1], [3.8, 0]], peak: 0.2 });
+    S.noise({ bp: 240, bp1: 1100, q: 1.1, dur: 4.6, a: 1.8, grain: 0.35, pts: [[2.6, 1], [4.6, 0]], peak: 0.3 });
+    [2.4, 3.1, 3.8, 4.5].forEach((at, i) => { S.thud({ at, f: 64, f1: 26, dur: 0.8, drive: 2, peak: 0.42 + i * 0.06 }); S.bell({ at: at + 0.02, f: mf(48 - i * 2), dur: 2.2, peak: 0.09, lp: 3800 }); });
   });
   def('bm-titan-glacial-stomp', 'bm', S => {
     S.thud({ at: 0.3, f: 50, f1: 22, dur: 1.1, drive: 3.4, peak: 0.85 });
@@ -3369,6 +3406,14 @@
     S.pad({ notes: [mf(45), mf(52), mf(57), mf(64)], dur: 4.4, det: 10, type: 'saw', lpEnv: [250, 2200, 600, 3.2], peak: 0.18 });
     [0, 1.1, 2.2, 3.3].forEach((at, i) => { S.bell({ at, f: mf(57 + i * 3), dur: 2.4, peak: 0.16, lp: 6000 }); S.thud({ at: at + 0.05, f: 70 - i * 6, f1: 30, dur: 0.5, drive: 2, peak: 0.3 }); });
     S.rumble({ at: 3.4, dur: 2.0, f: 60, peak: 0.45, a: 0.3 });
+  });
+  // Sigil Flare: two sigils kindle in turn, a bell for each, and the floor between them cracks as they meet
+  def('bm-archmage-sigil-flare', 'bm', S => {
+    S.space('hall', 0.55);
+    S.pad({ notes: [mf(52), mf(59)], dur: 2.6, det: 8, type: 'saw', lpEnv: [300, 1800, 500, 2.2], peak: 0.15 });
+    [0, 0.9].forEach((at, i) => { S.bell({ at, f: mf(64 + i * 5), dur: 2.0, peak: 0.18, lp: 5500 }); S.thud({ at: at + 0.05, f: 76 - i * 8, f1: 32, dur: 0.5, drive: 2, peak: 0.32 }); });
+    S.crack({ at: 1.8, peak: 0.3, f: 1800 });
+    S.rumble({ at: 1.8, dur: 1.0, f: 70, peak: 0.3, a: 0.2 });
   });
   def('bm-archmage-counterspell', 'bm', S => {
     S.space('hall', 0.5);
@@ -3552,6 +3597,17 @@
     S.thud({ at: 0.15, f: 56, f1: 30, dur: 0.6, drive: 2, peak: 0.38 });
     S.noise({ color: 'pink', bp: 400, bp1: 1100, q: 0.9, dur: 3.6, a: 1.2, pts: [[1.6, 0.7], [3.6, 0]], peak: 0.15 });
     S.glass({ at: 1.8, f: mf(88), dur: 2.0, peak: 0.05 });
+  });
+  def('bm-corvane-the-last-vigil', 'bm', S => {
+    S.space('hall', 0.7);
+    S.bell({ f: mf(43), dur: 5.0, peak: 0.28, lp: 2600 });
+    S.thud({ at: 0.15, f: 54, f1: 28, dur: 0.7, drive: 2.2, peak: 0.4 });
+    S.noise({ color: 'pink', bp: 350, bp1: 1300, q: 0.9, dur: 3.2, a: 1.0, pts: [[1.4, 0.7], [3.2, 0]], peak: 0.14 });
+    [1.2, 1.75, 2.3].forEach((at, i) => {   // the three edges, once each, rising
+      S.metal({ at, set: 'bar', f: 1480 + i * 300, dur: 1.8, peak: 0.12 + i * 0.02, strike: 0.5 });
+      S.glass({ at: at + 0.03, f: mf(84 + i * 4), dur: 0.9, peak: 0.05 });
+    });
+    S.whoosh({ at: 2.2, f: 200, f1: 3000, dur: 0.5, peakAt: 0.85, peak: 0.3 });
   });
   def('bm-corvane-last-light-of-the-pass', 'bm', S => {
     S.space('hall', 0.7);
@@ -4496,6 +4552,18 @@
     S.voice({ at: 0.3, f: 110, f1: 96, dur: 2.0, vowel: 'i', breath: 7, peak: 0.12, lp: 5000, pts: [[0.4, 1], [2.0, 0]] });
     S.glass({ at: 2.2, f: 1760, dur: 1.4, peak: 0.1 });
     S.rumble({ dur: 2.8, f: 50, peak: 0.35, a: 0.6 });
+  });
+  def('bm-hydra-tail-thrash', 'bm', S => {
+    S.whoosh({ f: 90, f1: 520, dur: 0.7, peakAt: 0.55, peak: 0.34 });
+    S.splat({ at: 0.55, peak: 0.42, dur: 0.4 });
+    S.thud({ at: 0.58, f: 62, f1: 28, dur: 0.7, drive: 2, peak: 0.6 });
+    S.bubbles({ at: 0.7, n: 12, f: 250, f1: 1300, spread: 1.0, size: 0.04, peak: 0.1 });
+  });
+  def('bm-hydra-stump-echo', 'bm', S => {
+    S.space('cave', 0.45);
+    S.voice({ f: 190, f1: 120, dur: 1.1, vowel: 'o', vowel1: 'a', breath: 6, peak: 0.16, lp: 3000, pts: [[0.3, 1], [1.1, 0]] });
+    S.bell({ at: 0.15, f: mf(98), dur: 1.4, peak: 0.12, lp: 2600 });
+    S.bubbles({ at: 0.1, n: 7, f: 700, f1: 160, spread: 0.8, size: 0.05, peak: 0.1 });
   });
 
   // ---------------------------------------------------------------------------------------------- install

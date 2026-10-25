@@ -11,7 +11,7 @@ function segsCross(ax, ay, bx, by, cx, cy, dx, dy) {
 const BUSTER_CASTS = /^(Tenderize|Silk Wrap|Titan Fist|Grave Cleave|Arcane Lance)$/;
 const TANK_CDS = ['bulwark', 'zeal', 'undying', 'banner', 'sanctum', 'warcry', 'mantle'];
 // ... and the casts that hurt the whole party, which healers top people up for
-const RAID_CASTS = /^(Grease Fire|Simmer|Venom Mist|Tightening Web|Thunderclap|Thunder Crash|Static Field|Polarity Surge|Skyfall|Barrow Knell|Grave Marks|Gathering Storm|Thunderhead|Royal Tithe|Dirge|Gut Blast|Flare-Up|Last Orders|Gorge|Boil Over|Heavens Fall|Arcane Burst|Convergence|The Tide Rises)$/;
+const RAID_CASTS = /^(Grease Fire|Simmer|Venom Mist|Tightening Web|Thunderclap|Thunder Crash|Static Field|Polarity Surge|Skyfall|Barrow Knell|Grave Marks|Gathering Storm|Thunderhead|Royal Tithe|Dirge|Gut Blast|Flare-Up|Last Orders|Gorge|Boil Over|Heavens Fall|Twin Fall|Arcane Burst|Convergence|The Tide Rises)$/;
 
 // the rings of spots move() tries round a bot and round its home (radius 60, 130, 220, 330, twelve each): cos and sin of the angle
 // times the radius, as [dx, dy, dx, dy, ...], worked out once
@@ -356,6 +356,13 @@ const BotAI = {
     const holes = (view.floor || []).filter(fl => fl.kind === 'hole'), taken = seeds.filter(m => m.botSpot).map(m => m.botSpot);
     const p = view.players.find(q => q.id === me) || { x: 0, y: 0 }, b = view.boss;
     let best = null, bs = Infinity;
+    // beside an old hole the seed feeds it instead of digging a new one: the nearest such place that is floor and clear of the rest
+    for (const h of holes) for (let k = 0; k < 16; k++) {
+      const a = k * Math.PI / 8, x = h.x + Math.cos(a) * (h.r + 66), y = h.y + Math.sin(a) * (h.r + 66);
+      if (hypot2(x, y) > ARENA.inner - 70 || holes.some(o => o !== h && hypot2(o.x - x, o.y - y) < o.r + 60) || taken.some(t => hypot2(t.x - x, t.y - y) < 360) || hypot2(b.x - x, b.y - y) < 260) continue;
+      const v = hypot2(p.x - x, p.y - y);
+      if (v < bs) { bs = v; best = { x, y }; }
+    }
     for (let ring = 0; ring < 4 && !best; ring++) {
       const rr = ARENA.inner - 95 - ring * 165;
       if (rr < 120) break;
@@ -408,6 +415,17 @@ const BotAI = {
     }
     const own = typeof BOT_CLASS !== 'undefined' && BOT_CLASS[bot.cls.id] && BOT_CLASS[bot.cls.id].home;   // a class with its own footwork
     if (own) { const h = own(bot, view); if (h) return h; }
+    // The Lake Rises (Hrimgar): once most of the sheets are marked or under, everyone stands on the frozen ones nearest the boss
+    if (view.bossId === 'titan') {
+      const sh = (view.floor || []).filter(fl => fl.kind === 'sheet'), froz = sh.filter(fl => fl.st === 1);
+      // (the Grasp that chooses the islands: everyone closes in, so the ice joins up)
+      if ((view.next || []).some(n => n[0] === 'The Lake Rises') && !(view.bossCast && view.bossCast.name === 'The Lake Rises')) return { x: b.x + (idx % 2 ? 35 : -35), y: b.y + 110 + (idx > 1 ? 35 : 0) };
+      if (froz.length && sh.filter(fl => fl.st >= 2).length >= 11) {
+        froz.sort((p, q) => hypot2(p.x - b.x, p.y - b.y) - hypot2(q.x - b.x, q.y - b.y));
+        const fl = froz[Math.min(froz.length - 1, bot.role === 'tank' ? 0 : idx % 2)], off = bot.role === 'tank' ? 0 : 60;
+        return { x: fl.x + (idx % 2 ? off : -off), y: fl.y + (idx > 1 ? off : -off) };
+      }
+    }
     // Frostbite (Hrimgar): a chilled bot walks to the nearest brazier and stands in its warmth
     if (view.bossId === 'titan' && view.debuffs(bot.id).frostbite) {
       let nb = null;
@@ -686,6 +704,16 @@ const BotAI = {
             } else if (pt && pt.id === m.follow) { if (d > s.r * 0.5) pen += (d - s.r * 0.5) * 30 * urgency; }
             else if (lone(m.follow)) { /* (the lone crash comes to us) */ }
             else if (d < s.r + 45) pen += 3000 * urgency;
+            break;
+          }
+          // Twin Fall (Volkar): each column wants a gold and a blue. The pairs (a pair first, anyone left over after) take the columns in order
+          if (m.twin) {
+            const keyOf = o => { const op = this.partner(o.id, view); return op ? [0, Math.min(o.id, op.id)] : [1, o.id]; };
+            const ks = [...new Set(alive.map(o => keyOf(o).join(':')))].sort((x, y) => { const [x0, x1] = x.split(':').map(Number), [y0, y1] = y.split(':').map(Number); return x0 - y0 || x1 - y1; });
+            // (only the set that lands first: a later pair of columns waits its turn)
+            if (m.resolveAt > Math.min(...view.mechs.filter(o => o.twin).map(o => o.resolveAt)) + 0.5) break;
+            const mine = ks.indexOf(keyOf(bot).join(':')) % 2 === (m.twin - 1) % 2;
+            if (mine) { const dd = hypot2(s.x - px, s.y - py); if (dd > s.r * 0.55) pen += (dd - s.r * 0.55) * 30 * urgency; }
             break;
           }
           const owner = alive.find(o => o.id === m.follow);
@@ -1306,7 +1334,7 @@ const BotAI = {
     const meP = party.find(p => p.id === bot.id);
     const hotAndHurt = bot.cls.id === 'pyromancer' && k.g.heat >= 80 && meP && meP.hp / meP.maxHp < 0.35;
     // oGCDs: burst and damage when ready; mitigation when the tank is getting hit or a raidwide is coming
-    const castingBig = view.bossCast && /Grease|Tenderize|Boil|Gorge|Last Call|Venom Mist|Silk Wrap|Tightening Web|Devour|Thunderclap|Titan Fist|Eye of the Storm|Skybreak|Skyfall|Barrow Knell|Grave Cleave|Moonset|Heavens Fall|Gut Blast|Flare-Up|Last Orders|Boil Over|Thunderhead|Gorge|Family Meal/.test(view.bossCast.name);
+    const castingBig = view.bossCast && /Grease|Tenderize|Boil|Gorge|Last Call|Venom Mist|Silk Wrap|Tightening Web|Devour|Thunderclap|Titan Fist|Eye of the Storm|Skybreak|Skyfall|Barrow Knell|Grave Cleave|Moonset|Heavens Fall|Twin Fall|Gut Blast|Flare-Up|Last Orders|Boil Over|Thunderhead|Gorge|Family Meal/.test(view.bossCast.name);
     for (let i = 0; i < k.abilities.length; i++) {
       const a = ab(i);
       if (a.type !== 'ogcd' || !readyIdx(i)) continue;

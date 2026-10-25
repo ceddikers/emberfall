@@ -225,17 +225,6 @@ Object.assign(BUFF_TIPS, {
   roost: () => 'Settled on the wind: your Orbit stays full whether you circle or not, Carve cuts on its own every second, and your Drift holds.',
   flood: () => 'The tide is in: your next named moves each wash out a second blow.',
 });
-// status icons for entries with no ability art: drawn line glyphs (12x12, in the icon's text colour)
-const bfSvg = d => `<svg viewBox="0 0 12 12" aria-hidden="true">${d}</svg>`;
-const BUFF_GLYPH = {
-  dd: bfSvg('<path d="M6 1.5v8M2.5 6 6 9.5 9.5 6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>'),
-  vuln: bfSvg('<path d="M6 1 10.5 2.6V6c0 2.6-2 4.2-4.5 5C3.5 10.2 1.5 8.6 1.5 6V2.6Z" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M6.6 2.5 5 5.6l2 .8-1.4 3" fill="none" stroke="currentColor" stroke-width="1.3"/>'),
-  'p-dmg': bfSvg('<path d="M10.5 1.5 9.8 4 4.6 9.2 2.8 7.4 8 2.2ZM2.8 7.4 1.5 10.5l3.1-1.3" fill="currentColor"/>'),
-  'p-crit': bfSvg('<path d="M6 1.2 7.4 4.6 11 6 7.4 7.4 6 10.8 4.6 7.4 1 6 4.6 4.6Z" fill="currentColor"/>'),
-  'p-haste': bfSvg('<path d="M2 2.5 5.5 6 2 9.5M6 2.5 9.5 6 6 9.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>'),
-  bond: bfSvg('<circle cx="4.3" cy="6" r="2.8" fill="none" stroke="currentColor" stroke-width="1.3"/><circle cx="7.7" cy="6" r="2.8" fill="none" stroke="currentColor" stroke-width="1.3"/>'),
-  fx: bfSvg('<path d="M6 1.2 10 4.6 6 10.8 2 4.6Z M2 4.6h8" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>'),
-};
 const tipAttr = s => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
 // the system's reduced-motion setting (the slot's denied shake stays still under it; style.css stops the loops)
 const HUD_CALM = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : null;
@@ -519,8 +508,9 @@ const Hud = {
       const icon = b => {
         if (b.img) return `<u class="bf-icon" style="background-image:url(${b.img})"></u>`;   // (another class's art: an ally's buff on you)
         if (BUFF_ICON[b.id]) return `<u class="bf-icon" style="background-image:url(${abilityIcon(a.cls.id, BUFF_ICON[b.id])})"></u>`;
-        const g = BUFF_GLYPH[b.id] || BUFF_GLYPH[b.bond ? 'bond' : String(b.id).startsWith('fx-') ? 'fx' : ''];
-        return `<u class="bf-icon g">${g || `<em>${(b.name || '?')[0]}</em>`}</u>`;
+        // the shared status icons (status-icons.js): painted once its file is in, a drawn glyph until then
+        const sid = String(b.id), st = STATUS_GLYPH[sid] ? sid : sid.startsWith('d-') ? sid.slice(2) : b.bond ? 'bond' : sid.startsWith('fx-') ? 'fx' : '';
+        return `<u class="bf-icon g">${st ? statusIcon(st) : `<em>${(b.name || '?')[0]}</em>`}</u>`;
       };
       const live = pool.slice(0, n);
       this.buffRow.innerHTML = live.map(b => `<span class="buff${b.bad ? ' bad' : ''}${b.bond ? ' bond' : ''}${!first && !had.has(b.id) ? ' gain' : ''}">${icon(b)}<s></s><i></i></span>`).join('');

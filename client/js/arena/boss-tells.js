@@ -32,6 +32,15 @@ const BossTells = (() => {
   const ROLE_RIM = { aoe: COL.danger, proximity: COL.danger, knockback: COL.danger, hook: COL.danger, spread: COL.danger, chain: COL.danger, bait: COL.danger, drop: COL.danger,
     buster: COL.buster, stack: COL.share, tower: COL.share };
   // (a drop can name its own rim: the Dinner Rush's plates are blue, since each will be a plate to share)
+  // A room can ask for its own red: on Grubnak's warm orange tiles plain red sinks into the floor, so there the danger
+  // turns crimson and every rim gets a dark band under it (COL.casing). Set by ArenaView when the floor is built.
+  const DANGER_KEYS = Object.keys(ROLE_RIM).filter(k => ROLE_RIM[k] === COL.danger);
+  function setRoom(bossId) {
+    const warm = bossId === 'grubnak';
+    COL.danger = warm ? '#ff1f5c' : '#ff3b2f'; COL.dangerHi = warm ? '#ffc2d4' : '#ffb4a8';
+    COL.casing = warm ? '#1a0408' : null;
+    for (const k of DANGER_KEYS) ROLE_RIM[k] = COL.danger;
+  }
   const roleColor = (tg, tell) => ((tg.type === 'own' || tg.type === 'drop') && tg.color) || ROLE_RIM[tg.type] || (tell && tell.color) || '#ffffff';
   // The fair-play outline: a solid rim in the role colour and a faint wash sweeping out from the origin as the cast
   // runs, with a bright leading edge. In the last 0.6s the rim pulses; a shape that follows someone flashes white the
@@ -49,6 +58,7 @@ const BossTells = (() => {
       }
     }
     SHAPES.trace(ctx, s);   // (a donut's hole is left unpainted: only its red ring is drawn)
+    if (COL.casing) { ctx.strokeStyle = rgba(COL.casing, 0.7 * k); ctx.lineWidth = 8; ctx.stroke(); }   // (the dark band, on a bright floor)
     ctx.setLineDash([12, 10]); ctx.lineDashOffset = -t * 24; ctx.strokeStyle = rgba(col, 0.28 * k); ctx.lineWidth = 6; ctx.stroke(); ctx.setLineDash([]);
     ctx.strokeStyle = rgba(col, (0.55 + 0.4 * late) * k); ctx.lineWidth = 2 + late * 1.5; ctx.stroke();
     if (late > 0 && !landed) {
@@ -73,6 +83,7 @@ const BossTells = (() => {
       if (k <= 0) continue;
       const p = clamp((t - tg.start) / tg.dur, 0, 1), late = clamp(1 - (1 - p) * tg.dur / 0.6, 0, 1);
       SHAPES.trace(ctx, tg.live);
+      if (COL.casing) { ctx.strokeStyle = rgba(COL.casing, 0.45 * k); ctx.lineWidth = 4.5; ctx.stroke(); }
       ctx.strokeStyle = rgba(roleColor(tg, tell), (0.35 + 0.35 * late) * k); ctx.lineWidth = 1.5; ctx.stroke();
     }
     ctx.restore();
@@ -606,13 +617,15 @@ const BossTells = (() => {
       },
     },
     // Flambé: brandy glistens in stripes across the tiles, and white-gold flame starts to lick along it just before it
-    // goes up (not blue: blue on the floor means "share it")
+    // goes up (not blue: blue on the floor means "share it"). The stripe is darkened and washed in the danger red, not
+    // brandy orange, which vanished on the orange tiles; the next stripe to go darkens and reddens most.
     flambe: {
       color: '#ffc070',
       ground(ctx, tg, s, p, k, t) {
         const ca = Math.cos(s.angle), sa = Math.sin(s.angle);
         ctx.save(); SHAPES.trace(ctx, s); ctx.clip();
-        ctx.fillStyle = rgba('#b8661a', (0.14 + 0.16 * p) * k); ctx.fillRect(-AR() * 2, -AR() * 2, AR() * 4, AR() * 4);
+        ctx.fillStyle = rgba('#1a0408', (0.18 + 0.22 * p) * k); ctx.fillRect(-AR() * 2, -AR() * 2, AR() * 4, AR() * 4);
+        ctx.fillStyle = rgba(COL.danger, (0.12 + 0.2 * p) * k); ctx.fillRect(-AR() * 2, -AR() * 2, AR() * 4, AR() * 4);
         // a wet sheen sliding along the stripe
         for (let i = 0; i < 12; i++) {
           const q = (t * 0.35 + hash(i, tg.id)) % 1, d = q * s.len, off = (hash(i + 3, tg.id) - 0.5) * s.w * 0.8;
@@ -2448,5 +2461,5 @@ const BossTells = (() => {
   }
 
   window.HY_BT = { AFTERMATH, mark, AFTER };   // (the Hydra's floor marks are set up in hydra-view.js)
-  return { COL, AFTER, afterK, get, ground, air, fade, rims, roleColor, track, drawAftermath, drawRollers, drawReels, drawSweeps, rodPost: (ctx, x, y, t, a) => rodPole(ctx, x, y, t, a, 0.15) };
+  return { COL, setRoom, AFTER, afterK, get, ground, air, fade, rims, roleColor, track, drawAftermath, drawRollers, drawReels, drawSweeps, rodPost: (ctx, x, y, t, a) => rodPole(ctx, x, y, t, a, 0.15) };
 })();

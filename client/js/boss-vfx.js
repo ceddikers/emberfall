@@ -1067,6 +1067,7 @@ const BOSS_VFX = (() => {
   }
   function addSpawn(x, y, kind) {
     if (kind === 'skeleton') return coffinBurst(x + Math.sign(x) * 40, y);
+    if (kind === 'warden') return coffinBurst(x, y);   // (the Hollow King's Grave Warden climbs down from the dais)
     if (kind === 'whelp' && typeof WYRM_ART !== 'undefined') return WYRM_ART.whelpSpawn(x, y, { shockAt, shake });   // (an ember whelp: wyrm-art.js)
     if (kind === 'wisp' && typeof CV_FX !== 'undefined') return CV_FX.wispSpawn(x, y, { shockAt, shake });   // (Corvane's cold wisps: corvane-fx.js)
     if (kind === 'tidehand' && typeof BR_FX !== 'undefined') return BR_FX.handSpawn(x, y, { shockAt, shake });   // (the Tidewrought's hand: brannoc-fx.js)

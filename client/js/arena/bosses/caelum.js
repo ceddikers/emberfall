@@ -20,17 +20,18 @@
 // Every telegraph shows on every difficulty. Hard: casts 15% faster, 25% more damage, and:
 //   Mirrored Wake:        the dance runs twice, the second pass mirrored.
 //   Second Coil:          the Starwyrm returns in Act III and dives along a painted line.
-//   Chorus of the Fallen: once an act, afterimages of Corvane, Brannoc and Morrow-Oak join a dance, each with one of their own moves.
+//   Chorus of the Fallen: once an act, an afterimage of Corvane, Brannoc or Morrow-Oak joins a dance with one of its own moves (on Normal
+//                         and Hard alike all three strike in turn at the end of the last dance).
 //   Dark Ember:           a hero carries a black ember; set down at the shadow's edge, it pushes the shadow back.
 //   and a second Grace Withdrawn during a dance.
 // Hard also draws the afterimage orders, the Starfall spots and the Starwyrm's side each pull.
 
 const CAELUM = {
   id: 'caelum', name: 'Caelum Vey', title: 'the Starborn',
-  hp: { normal: 5200000, hard: 5400000 },
-  hardDmg: 1.24,   // (Hard's damage multiplier; fight.js default 1.25)
+  hp: { normal: 5200000, hard: 5600000 },
+  hardDmg: 1.32,   // (Hard's damage multiplier; fight.js default 1.25)
   autoDmg: { normal: 2600, hard: 2600 },
-  enrage: { normal: 622, hard: 607 },   // the cast starts here and lands 8 s later (10:30 / 10:15)
+  enrage: { normal: 605, hard: 607 },   // the cast starts here and lands 8 s later (10:13 / 10:15)
   enrageName: 'The Sky Comes Down',
   vuln: 0.5,
   spawn: { x: 0, y: -300 },
@@ -54,10 +55,10 @@ const CAELUM = {
     const B = f.boss;
     const TAU = Math.PI * 2;
     const dmg = {
-      glint: H ? 18800 : 20000, wake: H ? 17800 : 19800, crown: H ? 25000 : 26500, crownRing: H ? 2600 : 2900, thrust: H ? 22500 : 24000,
+      glint: H ? 18800 : 20000, wake: H ? 17800 : 19800, crown: H ? 25000 : 26500, crownRing: H ? 1900 : 2100, thrust: H ? 22500 : 24000,
       pinSlam: H ? 8500 : 9500, night: H ? 4200 : 4400, star: H ? 8000 : 9000, starFail: H ? 11000 : 12000, starRain: H ? 5600 : 5900, ember: H ? 17500 : 20000,
-      coil: H ? 19800 : 21000, constellation: H ? 60000 : 70000, horizon: H ? 25000 : 27000, burn: H ? 3000 : 3200,
-      secondCoil: H ? 20000 : 0, chorus: H ? 19500 : 0, darkEmber: H ? 3000 : 0,
+      coil: H ? 19800 : 21000, constellation: H ? 60000 : 70000, horizon: H ? 25000 : 27000, burn: H ? 2000 : 2200, shower: H ? 2600 : 2800, glow: H ? 2400 : 2600,
+      secondCoil: H ? 20000 : 0, chorus: H ? 19500 : 18500, darkEmber: H ? 2200 : 0,
     };
     const S = (...steps) => steps.filter(Boolean);
     const live = id => f.alive().find(p => p.id === id);
@@ -95,8 +96,9 @@ const CAELUM = {
 
     // --- the afterimages ------------------------------------------------------------------------------------------------------
     // Glint: an afterimage at the end of a line toward a hero; the cut runs down the line and he is there
-    const glint = () => {
-      const tgt = nonTank(); if (!tgt) return;
+    // (o.tank: the line is aimed at the tank, who must step off it and then follow him to where he ends)
+    const glint = (o = {}) => {
+      const tgt = o.tank ? f.tank() : nonTank(); if (!tgt) return;
       const d = f.ct(2.6), a = Math.atan2(tgt.y - B.y, tgt.x - B.x), L = Math.max(150, Math.min(700, toWall(B.x, B.y, a) - 70));
       const from = { x: B.x, y: B.y }, end = { x: Math.round(B.x + Math.cos(a) * L), y: Math.round(B.y + Math.sin(a) * L) };
       f.cast('Glint', d, 'glint');
@@ -106,10 +108,11 @@ const CAELUM = {
       f.afterKeep(d, () => { B.x = end.x; B.y = end.y; B.lockFacing = false; });
     };
     // the Chorus of the Fallen (Hard): an afterimage of an earlier set 3 boss joins a dance with one of its own moves
-    const chorusOrder = H ? f.shuffle(['corvane', 'brannoc', 'morrowoak']) : [];
+    // (Normal: once, in the last dance, all three in turn; Hard: one in a dance of every act, and all three in the last)
+    const chorusOrder = f.shuffle(['corvane', 'brannoc', 'morrowoak']);
     let chorusI = 0;
-    const chorus = lead => {
-      const who = chorusOrder[chorusI++ % chorusOrder.length];
+    const chorus = (lead, who = chorusOrder[chorusI++ % chorusOrder.length], later = 0) => {
+      lead += later;
       const a = f.rng() * TAU, at = { x: Math.round(Math.cos(a) * 330), y: Math.round(Math.sin(a) * 330) };
       f.emit({ t: 'roomev', k: 'clchorus:' + (++imgN), who, x: at.x, y: at.y, dur: +(lead + 3).toFixed(2) });
       if (who === 'corvane') {
@@ -142,14 +145,22 @@ const CAELUM = {
       if (!o.quiet) f.cast(name, total, 'wake');
       B.lockFacing = true; hold(total + 0.8);
       const from = { x: Math.round(B.x), y: Math.round(B.y) };
-      f.emit({ t: 'roomev', k: 'climgs:' + (++imgN), l: pts.map((q, i) => { const nx = pts[i + 1]; return [q.x, q.y, i + 1, nx ? +Math.atan2(nx.y - q.y, nx.x - q.x).toFixed(2) : 0]; }), dur: +(total + 0.6).toFixed(2) });
+      const flare = !(o.mirror && H) && !o.noFlare;
+      f.emit({ t: 'roomev', k: 'climgs:' + (++imgN), l: pts.map((q, i) => { const nx = pts[i + 1]; return [q.x, q.y, i + 1, nx ? +Math.atan2(nx.y - q.y, nx.x - q.x).toFixed(2) : 0]; }), fl: flare ? 1 : 0, dur: +(total + 0.6).toFixed(2) });
       let prev = from;
       pts.forEach((q, i) => {
         seg(prev, q, lead + (i + 1) * step);
         f.afterKeep(lead + (i + 1) * step, () => { B.x = q.x; B.y = q.y; if (pts[i + 1]) B.facing = Math.atan2(pts[i + 1].y - q.y, pts[i + 1].x - q.x); });
         prev = q;
       });
-      if (o.chorus && H) chorus(lead);
+      if (o.fallen) { chorus(lead, chorusOrder[0]); chorus(lead, chorusOrder[1], 2.4); chorus(lead, chorusOrder[2], 4.6); }
+      else if (o.chorus && H) chorus(lead);
+      // a flare closes the dance (Starlight, on the last afterimage): the healer's beat after every dance. Never on a hero already
+      // held at nothing by Grace Withdrawn
+      if (flare) f.afterKeep(total + 0.3, () => {
+        if (f.state !== 'live' || f.t < graceUntil) return;
+        f.mech({ type: 'raidwide', shape: { kind: 'circle', x: 0, y: 0, r: 0 }, delay: 0.4, dmg: dmg.glow, hidden: true, tag: 'clGlow', from: 'Starlight' });
+      });
       f.afterKeep(total + 0.1, () => { B.lockFacing = false; });
       // Mirrored Wake (Hard): the same dance again, mirrored across a line through the middle
       if (o.mirror && H) {
@@ -167,6 +178,8 @@ const CAELUM = {
       const tank = f.tank(); if (!tank) return;
       const d = f.ct(4.2);
       f.cast('Cinder Crown', d, 'crown');
+      // (and the embers it throws up come down on everyone a moment after)
+      f.mech({ type: 'raidwide', shape: { kind: 'circle', x: 0, y: 0, r: 0 }, delay: d + 1.4, dmg: dmg.shower, hidden: true, tag: 'clShower', from: 'Cinder Crown' });
       const m = f.mech({ type: 'buster', shape: { kind: 'circle', x: tank.x, y: tank.y, r: 160 }, delay: d, dmg: dmg.crown, target: tank.id, follow: tank.id, lockAt: 0.8, tag: 'clCrown',
         onResolve: () => f.zone({ shape: { kind: 'donut', x: Math.round(m.shape.x), y: Math.round(m.shape.y), r: 250, r2: 168 }, dur: 12, effect: 'burn', dmg: dmg.crownRing, tag: 'clCrownRing' }) });
     };
@@ -188,11 +201,19 @@ const CAELUM = {
     };
     // Grace Withdrawn: his grace leaves the whole party: everyone drops to 1 HP (never lethal), and Nightfall lands on them all a
     // few seconds later. The hardest heal check in the game.
+    // (while everyone is held at nothing the floor's fire is held too: the burning shadow, Cinder Crown's ring and Dark Ember's
+    // pool sit dim and do not burn; only a cut the party has already seen coming can still hurt them)
+    let graceUntil = 0;
+    const holdFire = len => {
+      for (const z of f.zones) if (z.effect === 'burn') { z.startAt = Math.max(z.startAt, f.t + len); if (z.end < 9000) z.end += len; }
+      for (const pd of f.puddles) { pd.end += len; for (const p of f.alive()) pd.last[p.id] = f.t + len - pd.every; }
+    };
     const grace = (o = {}) => {
-      const d = f.ct(o.quick ? 2.4 : 3.2), gap = 8;
+      const d = f.ct(o.quick ? 2.4 : 3.2), gap = H ? 9 : 10;
       f.cast('Grace Withdrawn', d, 'grace');
       f.afterKeep(d, () => {
         if (f.state !== 'live') return;
+        graceUntil = f.t + gap + 0.6; holdFire(gap + 0.6);
         // (tools/check.js's timeline plays a clean party, whose healer has them back up: its dummies keep their health)
         if (!f.cleanRun) for (const p of f.alive()) {
           const s = p.s, lost = Math.max(0, s.hp - 1);
@@ -301,9 +322,14 @@ const CAELUM = {
       f.afterKeep(d, () => { B.untargetable = false; f.anim('ascendant', 2); });
     };
     // Horizon Cut: the whole room is cut across but for a gap (the gap moves every time; shards fall on everything else)
-    const horizon = () => {
+    // o.star: a shard of the meteor falls into the gap (a Starfall tower stands in the one safe lane, painted from the cast)
+    const horizon = (o = {}) => {
       const d = f.ct(5), a = f.rng() * Math.PI, dx = Math.cos(a), dy = Math.sin(a), nx = -dy, ny = dx;
       const g = Math.round((f.rng() - 0.5) * 440), gw = H ? 170 : 190, FAR = 800;
+      if (o.star) {
+        const reach = Math.sqrt(Math.max(0, (shadow.r - 60) ** 2 - g * g)), s0 = Math.round((f.rng() - 0.5) * 2 * Math.min(reach, 190));
+        f.mech({ type: 'tower', shape: { kind: 'circle', x: Math.round(nx * g + dx * s0), y: Math.round(ny * g + dy * s0), r: 85 }, delay: d, dmg: dmg.star, need: 1, failDmg: dmg.starFail, tag: 'clStar' });
+      }
       f.cast('Horizon Cut', d, 'horizon');
       hold(d + 0.4);
       const band = (n0, n1) => { const mid = (n0 + n1) / 2, w = n1 - n0; return { kind: 'rect', x: Math.round(nx * mid - dx * FAR), y: Math.round(ny * mid - dy * FAR), angle: +a.toFixed(3), len: FAR * 2, w: Math.round(w) }; };
@@ -329,12 +355,12 @@ const CAELUM = {
         S([4, glint, 'Glint']),
         S([8, () => wake(), 'Eightfold Wake']),
         S([13, crown, 'Cinder Crown']),
-        S([10, glint, 'Glint'], [6, thrust, 'Pinning Thrust']),
-        S([11, () => wake({ mirror: true, chorus: true }), H ? 'Mirrored Wake' : 'Eightfold Wake']),
-        S([H ? 17 : 13, () => grace(), 'Grace Withdrawn']),
+        S([10, () => glint({ tank: true }), 'Glint'], [6, thrust, 'Pinning Thrust']),
+        S([11, () => wake({ mirror: true }), H ? 'Mirrored Wake' : 'Eightfold Wake']),
+        S([H ? 18 : 14, () => grace(), 'Grace Withdrawn']),
         S([15, crown, 'Cinder Crown']),
-        S([10, glint, 'Glint'], [7, glint, 'Glint']),
-        S([10, () => wake(), 'Eightfold Wake']),
+        S([10, glint, 'Glint'], [7, () => glint({ tank: true }), 'Glint']),
+        S([10, () => wake({ chorus: true }), H ? 'Chorus of the Fallen' : 'Eightfold Wake']),
         S([13, thrust, 'Pinning Thrust']),
         S([10, crown, 'Cinder Crown']),
       ],
@@ -349,15 +375,15 @@ const CAELUM = {
       sets: [
         S([4, () => starfall(2), 'Starfall']),
         S([9, () => wake({ anchored: 2 }), 'Anchored Wake']),
-        S([13, crown, 'Cinder Crown']),
+        S([H ? 12 : 13, crown, 'Cinder Crown']),
         S([10, glint, 'Glint'], [7, thrust, 'Pinning Thrust']),
         S([12, () => starfall(2), 'Starfall'], H && [4, darkEmber, 'Dark Ember']),
         S([H ? 6 : 9, () => wake({ anchored: 2, chorus: true }), H ? 'Chorus of the Fallen' : 'Anchored Wake']),
-        S([13, crown, 'Cinder Crown']),
-        S([11, glint, 'Glint'], [6, glint, 'Glint']),
+        S([H ? 12 : 13, crown, 'Cinder Crown']),
+        S([11, glint, 'Glint'], [6, () => glint({ tank: true }), 'Glint']),
         S([11, () => starfall(2), 'Starfall'], [6, thrust, 'Pinning Thrust']),
-        S([12, () => wake({ anchored: 2 }), 'Anchored Wake']),
-        S([13, crown, 'Cinder Crown']),
+        S([H ? 11 : 12, () => wake({ anchored: 2 }), 'Anchored Wake']),
+        S([H ? 12 : 13, crown, 'Cinder Crown']),
       ],
       closing: [[10, () => starfall(2), 'Starfall'], [10, crown, 'Cinder Crown'], [12, () => wake({ anchored: 2 }), 'Anchored Wake']],
       next: ascendant,
@@ -369,19 +395,19 @@ const CAELUM = {
       onStart: () => { if (!ascended) ascend(); },   // (practice from here: the wall that lays it was passed over)
       sets: [
         S([23.5, crown, 'Cinder Crown']),
-        S([10, horizon, 'Horizon Cut']),
+        S([10, () => horizon({ star: true }), 'Horizon Cut']),
         S([10, glint, 'Glint'], [7, thrust, 'Pinning Thrust']),
         // a second Grace Withdrawn as a Starfall comes down
-        S([11, () => starfall(3), 'Starfall'], [2.8, () => grace({ quick: true }), 'Grace Withdrawn']),
-        S([14, crown, 'Cinder Crown']),
+        S([11, () => starfall(3), 'Starfall'], [3.4, () => grace({ quick: true }), 'Grace Withdrawn']),
+        S([H ? 13 : 14, crown, 'Cinder Crown']),
         S([10, horizon, 'Horizon Cut'], H && [7, secondCoil, 'Second Coil']),
         S([H ? 8 : 11, () => wake({ rings: 2, chorus: true, mirror: true }), H ? 'Mirrored Wake' : 'Eightfold Wake'], H && [6, darkEmber, 'Dark Ember']),
-        S([H ? 13 : 14, thrust, 'Pinning Thrust'], [8, glint, 'Glint']),
-        S([11, () => starfall(3), 'Starfall']),
-        S([12, crown, 'Cinder Crown']),
-        S([10, horizon, 'Horizon Cut']),
-        S([11, () => wake({ rings: 2 }), 'Eightfold Wake'], H && [5, () => grace({ quick: true }), 'Grace Withdrawn']),
-        S([H ? 11 : 14, crown, 'Cinder Crown']),
+        S([H ? 13 : 14, thrust, 'Pinning Thrust'], [8, () => glint({ tank: true }), 'Glint']),
+        S([H ? 10 : 11, () => starfall(3), 'Starfall']),
+        S([H ? 11 : 12, crown, 'Cinder Crown']),
+        S([10, () => horizon({ star: true }), 'Horizon Cut']),
+        S([11, () => wake({ rings: 2, noFlare: H }), 'Eightfold Wake'], H && [5, () => grace({ quick: true }), 'Grace Withdrawn']),
+        S([H ? 13 : 14, crown, 'Cinder Crown']),
         S([10, glint, 'Glint'], [7, thrust, 'Pinning Thrust']),
         S([H ? 9 : 11, () => starfall(3), 'Starfall']),
         S([H ? 7 : 10, horizon, 'Horizon Cut']),
@@ -396,9 +422,9 @@ const CAELUM = {
       sets: [
         S([4, crown, 'Cinder Crown']),
         S([9, horizon, 'Horizon Cut']),
-        S([10, glint, 'Glint'], [6, thrust, 'Pinning Thrust']),
-        S([11, () => wake({ ringR: 455, chorus: true }), H ? 'Chorus of the Fallen' : 'Eightfold Wake']),
-        S([12, () => grace(), 'Grace Withdrawn']),
+        S([10, () => glint({ tank: true }), 'Glint'], [6, thrust, 'Pinning Thrust']),
+        S([11, () => wake({ ringR: 455, fallen: true }), 'Chorus of the Fallen']),
+        S([H ? 13 : 14, () => grace(), 'Grace Withdrawn']),
         S([15, crown, 'Cinder Crown']),
         S([10, horizon, 'Horizon Cut']),
       ],

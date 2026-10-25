@@ -14,7 +14,11 @@
 //     then the cracks come in pairs.
 //   Act IV, the Avalanche (22% → 10% wall): the Grasp, then the Avalanche in five lanes; every sheet in a lane that is not frozen
 //     is hit (the frozen ones are unpainted and safe). At 10% he is sealed (wall: The Plateau Tips) until the waves have passed.
-//   The last stretch (10% → dead): until he falls or Endless Winter lands.
+//   Act V, Last Winter (10% → dead): Winter's Grasp marks three heroes and freezes the sheets under them, then The Lake Rises paints every
+//     other sheet red and sinks it, row by row, for good (no Whiteout, no thaw). The rest is fought on the islands the party chose
+//     (Howl, Fist, a thicker Icefall; Hard adds the Grip) until he falls or Endless Winter lands.
+// Moves follow one another in places (Grasp into Fault Line, Frostbite into a Sweep, Fist into Slam / Icefall / Sweep, Howl into Fist).
+// docs/plans/rework-hrimgar.md has the questions and the reasons.
 // Acts II to IV use PUSH. Every telegraph shows on the floor on every difficulty. Hard: casts 15% faster, 25% more damage, and:
 //   Glacial Stomp: a stomp, then two rings of shards running out from it.
 //   Breath of Winter: a cone that freezes the sheets it crosses instead of hurting, and a burst a few seconds later that breaks them.
@@ -24,7 +28,7 @@
 
 const TITAN = {
   id: 'titan', name: 'Hrimgar', title: 'Warden of the White Reach',
-  hp: { normal: 5550000, hard: 5600000 },
+  hp: { normal: 5150000, hard: 5500000 },
   autoDmg: { normal: 1800, hard: 1980 },
   enrage: { normal: 600, hard: 590 },   // the cast starts here and lands 8 s later (10:08 / 9:58)
   enrageName: 'Endless Winter',
@@ -54,6 +58,7 @@ const TITAN = {
       arc: H ? 18850 : 17500, stomp: H ? 18850 : 16900, ring: H ? 15600 : 13750, breath: H ? 6250 : 5650, burst: H ? 18200 : 16250,
       gripAim: H ? 6500 : 6250, gripStack: H ? 33800 : 30000, crush: H ? 31200 : 27500,
     };
+    if (!H) for (const k in dmg) dmg[k] = Math.round(dmg[k] * 1.12);   // (Normal's hits are a little heavier than before the rework; Hard's table is its own)
     const S = (...steps) => steps.filter(Boolean);
     // --- the floor ------------------------------------------------------------------------------
     const W = 200, COLS = 5, ROWS = 4, X0 = -500, Y0 = -400;
@@ -65,6 +70,7 @@ const TITAN = {
     f.cellAt = cellAt; f.cellState = i => (i >= 0 ? sh[i].st : -1);   // (tools and the bots' view)
     const iced = new Set();               // the sheets Winter's Grasp has frozen (thawed when the next Grasp lands)
     const waters = new Map();             // sheet -> its water zone
+    let lake = false;                     // The Lake Rises: from then on the water stays for the rest of the fight
     const sink = i => {
       setSheet(i, 3);
       const z = { id: f.nextMechId++, effect: 'burn', tag: 'drown', ddown: true, last: {}, shape: rectOf(i), dmg: dmg.water, startAt: f.t, end: 1e9 };
@@ -72,7 +78,7 @@ const TITAN = {
       // the lake freezes over again after a while on its own (and sooner at a Whiteout)
       f.afterKeep(32, () => thaw(i));
     };
-    const thaw = i => { if (sh[i].st === 3) { setSheet(i, 0); const z = waters.get(i); if (z) z.end = f.t; waters.delete(i); } };
+    const thaw = i => { if (!lake && sh[i].st === 3) { setSheet(i, 0); const z = waters.get(i); if (z) z.end = f.t; waters.delete(i); } };
     // a sheet is marked, shows red for d s, and sinks when it lands
     const crack = (i, d) => {
       if (i < 0 || sh[i].st !== 0) return false;
@@ -90,7 +96,7 @@ const TITAN = {
         const hx = p.x - pr.x, hy = p.y - pr.y, hl = Math.hypot(hx, hy);
         if (hl < 2) continue;
         slidAt.set(p.id, f.t + 0.9);
-        f.knock(p, p.x - hx / hl * 20, p.y - hy / hl * 20, 105);
+        f.knock(p, p.x - hx / hl * 20, p.y - hy / hl * 20, 78);
       }
       // black water slows whoever wades in it (the burn is the zone's)
       for (const [i] of waters) for (const p of f.alive()) if (cellAt(p.x, p.y) === i) {
@@ -164,7 +170,7 @@ const TITAN = {
     };
     // Icefall: shards come down out of the aurora, two of them on heroes and the rest scattered
     const icefall = () => {
-      const d = f.ct(3.4), n = 8;
+      const d = f.ct(3.4), n = lake ? 11 : 8;   // (the hail thickens once the lake is up)
       f.cast('Icefall', d, 'cast'); hold(d);
       const who = f.shuffle(f.alive()).slice(0, 2);
       for (let i = 0; i < n; i++) {
@@ -187,8 +193,8 @@ const TITAN = {
 
     // --- the frost ----------------------------------------------------------------------------------
     // Winter's Grasp: frost spreads from the feet of two random heroes (Hard: three); the sheet under each freezes when it lands
-    const grasp = (then) => {
-      const n = H ? 3 : 2, d = f.ct(3.6);
+    const grasp = (then, count) => {
+      const n = count || (H ? 3 : 2), d = f.ct(3.6);
       const who = f.shuffle(f.alive()).slice(0, n);
       f.cast("Winter's Grasp", d, 'cast'); hold(d);
       who.forEach((p, j) => {
@@ -271,7 +277,8 @@ const TITAN = {
       const HOLD = 22;
       const d = f.ct(2.8);
       f.cast('The Long Night', d, 'cast');
-      f.mech({ type: 'raidwide', shape: { kind: 'circle', x: 0, y: 0, r: 0 }, delay: d, dmg: dmg.howl, hidden: true, tag: 'tinight' });
+      // the lights go out and the black water freezes over in the cold: the arcs are not fought wading
+      f.mech({ type: 'raidwide', shape: { kind: 'circle', x: 0, y: 0, r: 0 }, delay: d, dmg: dmg.howl, hidden: true, tag: 'tinight', onResolve: () => { for (let i = 0; i < 20; i++) thaw(i); } });
       f.afterKeep(d, () => f.emit({ t: 'roomev', k: 'night', dur: HOLD }));
       f.afterKeep(d + 0.4, () => sweepAt(null, f.ct(5.6)), "Titan's Sweep");
       f.afterKeep(d + 3.4, () => grasp(), "Winter's Grasp");
@@ -353,6 +360,27 @@ const TITAN = {
       f.afterKeep(lastLands + 1, () => f.wallDown(), 'The Plateau Tips');
     };
 
+    // --- the Lake Rises (the last stretch) ---------------------------------------------------------
+    // The finale of the floor rule. Winter's Grasp freezes the sheet under three heroes (the islands are wherever they stood), then
+    // every sheet that is not frozen is painted red at once and goes under, row by row, and the water stays for the rest of the fight.
+    const lakeFlood = () => {
+      const D = f.ct(5.2), rows = H ? f.pick([[0, 1, 2, 3], [3, 2, 1, 0], [1, 2, 3, 0]]) : [3, 2, 1, 0];
+      f.cast('The Lake Rises', D, 'howl'); hold(D);
+      lake = true;
+      for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) crack(r * COLS + c, D + rows.indexOf(r) * 0.9);
+    };
+    const lakeRises = () => { grasp(null, 3); f.afterKeep(f.ct(3.6) + 0.1, lakeFlood, 'The Lake Rises'); };
+
+    // --- moves that follow one another: the second starts as the first lands (casts never overlap) ---------
+    const howlFist = () => { howl(); f.afterKeep(f.ct(4.6) + 0.5, fist); };
+    const fistSlam = () => { fist(); f.afterKeep(f.ct(4.8) + 0.6, slam); };
+    const fistIcefall = () => { fist(); f.afterKeep(f.ct(4.8) + 0.6, icefall); };
+    const fistSweep = () => { fist(); f.afterKeep(f.ct(4.8) + 0.6, sweep); };
+    const faultSlam = () => { fault(); f.afterKeep(f.ct(5.4) + 0.8, slam); };
+    const sweepSlam = () => { sweep(); f.afterKeep(f.ct(5.4) + 0.5, slam); };
+    const graspFault = () => { grasp(() => f.afterKeep(0.4, fault)); };
+    const frostSweep = () => { frostbite(); f.afterKeep(f.ct(2.6) + 0.5, sweep); };
+
     // --- the acts ------------------------------------------------------------------------------------
     const mix = (head, mid, tail) => [...head, ...(H ? f.shuffle(mid) : mid), ...tail];
     const standing = () => { B.lockFacing = false; B.moveTo = null; };
@@ -363,11 +391,11 @@ const TITAN = {
       sets: mix([S([4, howl, "Winter's Howl"]), S([12, slam, 'Rime Slam']), S([13, fist, 'Glacial Fist'])], [
         S([13, fault, 'Fault Line']),
         H ? S([10, stomp, 'Glacial Stomp']) : S([12, icefall, 'Icefall']),
-        S([13, sweep, "Titan's Sweep"]),
-        S([13, () => { fist(); f.afterKeep(f.ct(4.8) + 0.6, slam); }, 'Glacial Fist']),
+        S([13, sweepSlam, "Titan's Sweep"]),
+        S([13, fistSlam, 'Glacial Fist']),
       ], [
         S([12, howl, "Winter's Howl"]),
-        S([13, icefall, 'Icefall']),
+        S([13, fistIcefall, 'Glacial Fist']),
       ]),
       closing: [[10, howl, "Winter's Howl"], [10, fist, 'Glacial Fist'], [10, slam, 'Rime Slam']],
       next: freezeAct,
@@ -377,12 +405,12 @@ const TITAN = {
     const freezeAct = from => f.course({
       until: 0.48, push: true, onStart: standing,
       sets: mix([S([4, () => grasp(), "Winter's Grasp"]), S([12, frostbite, 'Frostbite']), S([13, fist, 'Glacial Fist'])], [
-        S([13, slam, 'Rime Slam']),
+        S([13, graspFault, "Winter's Grasp"]),
         S([12, whiteout, 'Whiteout']),
         H ? S([10, breath, 'Breath of Winter']) : S([13, twinSlam, 'Twin Slam']),
-        H ? S([10, grip, "Titan's Grip"]) : S([12, fault, 'Fault Line']),
+        H ? S([10, grip, "Titan's Grip"]) : S([12, frostSweep, 'Frostbite']),
       ], [
-        S([12, howl, "Winter's Howl"]),
+        S([12, howlFist, "Winter's Howl"]),
         S([13, frostbite, 'Frostbite']),
       ]),
       closing: [[10, howl, "Winter's Howl"], [10, fist, 'Glacial Fist'], [10, twinSlam, 'Twin Slam']],
@@ -393,13 +421,13 @@ const TITAN = {
     const crackAct = from => f.course({
       until: 0.22, push: true, onStart: standing,
       sets: mix([S([2, longNight, 'The Long Night']), S([24.5, fist, 'Glacial Fist']), S([9, whiteout, 'Whiteout'])], [
-        S([13, () => { fault(); f.afterKeep(f.ct(5.4) + 0.8, slam); }, 'Fault Line']),
-        S([13, frostbite, 'Frostbite']),
+        S([13, faultSlam, 'Fault Line']),
+        H ? S([13, frostSweep, 'Frostbite']) : S([13, frostbite, 'Frostbite']),
         H ? S([10, stomp, 'Glacial Stomp']) : S([13, twinSlam, 'Twin Slam']),
-        H ? S([10, grip, "Titan's Grip"]) : S([13, () => grasp(), "Winter's Grasp"]),
+        H ? S([10, grip, "Titan's Grip"]) : S([13, graspFault, "Winter's Grasp"]),
       ], [
-        S([12, howl, "Winter's Howl"]),
-        S([13, () => { fault(); f.afterKeep(f.ct(5.4) + 0.8, slam); }, 'Fault Line']),
+        S([12, howlFist, "Winter's Howl"]),
+        S([13, faultSlam, 'Fault Line']),
       ]),
       closing: [[10, howl, "Winter's Howl"], [10, fist, 'Glacial Fist'], [10, fault, 'Fault Line']],
       next: avalancheAct,
@@ -411,37 +439,38 @@ const TITAN = {
       wall: { label: 'The Plateau Tips', run: tipRun, until: 'resolved', timeout: 80 },
       sets: [
         S([4, graspAvalanche, "Winter's Grasp"]),
-        S([13, fist, 'Glacial Fist']),
-        S([12, frostbite, 'Frostbite']),
+        S([13, fistIcefall, 'Glacial Fist']),
+        S([12, H ? frostbite : frostSweep, 'Frostbite']),
         S([13, graspAvalanche, "Winter's Grasp"]),
         H ? S([10, breath, 'Breath of Winter']) : S([12, twinSlam, 'Twin Slam']),
-        S([13, () => { fist(); f.afterKeep(f.ct(4.8) + 0.6, sweep); }, 'Glacial Fist']),
+        S([13, fistSweep, 'Glacial Fist']),
         S([13, graspAvalanche, "Winter's Grasp"]),
-        S([13, howl, "Winter's Howl"]),
+        S([13, howlFist, "Winter's Howl"]),
       ],
       closing: [[10, howl, "Winter's Howl"], [10, fist, 'Glacial Fist'], [10, twinSlam, 'Twin Slam']],
       next: lastWinter,
     }, from);
 
-    // the last stretch: the plateau has stopped tipping and he is nearly done
+    // V. Last Winter: the plateau has stopped tipping and the lake rises round the islands the party chose
     const lastWinter = from => f.course({
       onStart: standing,
       sets: [
-        S([3, howl, "Winter's Howl"]),
-        S([11, whiteout, 'Whiteout']),
-        S([12, fault, 'Fault Line']),
-        S([11, fist, 'Glacial Fist']),
-        S([11, twinSlam, 'Twin Slam']),
-        S([11, sweep, "Titan's Sweep"]),
+        S([5, lakeRises, "Winter's Grasp"]),
+        S([13, fist, 'Glacial Fist']),
+        S([10, icefall, 'Icefall']),
+        S([10, howl, "Winter's Howl"]),
+        S([11, H ? grip : fistIcefall, H ? "Titan's Grip" : 'Glacial Fist']),
+        S([11, howl, "Winter's Howl"]),
+        S([11, H ? fistIcefall : icefall, H ? 'Glacial Fist' : 'Icefall']),
       ],
-      closing: [[10, howl, "Winter's Howl"], [10, fist, 'Glacial Fist'], [10, twinSlam, 'Twin Slam']],
+      closing: [[10, howl, "Winter's Howl"], [10, fist, 'Glacial Fist'], [10, icefall, 'Icefall']],
       ramp: 0.08,
     }, from);
 
     thawAct(0);
 
     // every move by name, for tools and testing (window.__game.raidHost.sim.moves.fault())
-    f.moves = { howl, fist, slam, twinSlam, fault, icefall, sweep, grasp, frostbite, whiteout, avalanche, graspAvalanche, longNight, stomp, breath, grip, tipRun };
+    f.moves = { howl, fist, slam, twinSlam, fault, icefall, sweep, grasp, frostbite, whiteout, avalanche, graspAvalanche, longNight, stomp, breath, grip, tipRun, lakeRises, lakeFlood };
   },
 };
 

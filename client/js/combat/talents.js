@@ -157,12 +157,12 @@ const TALENTS = {
     ],
     [
       { id: 'ranger_explosive', name: 'Explosive Shot', ab: 'rapid', grants: true,
-        text: 'Rapid Fire becomes Explosive Shot: spend 50 Focus to plant a charge in the boss that blows 2.5s later for {d:300} ({d:640} if planted in your Hunter\'s Mark). Every Quick Shot or Piercing Arrow that lands before then makes the blast 30% bigger.' },
+        text: 'Rapid Fire becomes Explosive Shot: spend 50 Focus to plant a charge in the boss that blows 2.5s later for {d:300} ({d:640} if planted in your Hunter\'s Mark). Every Quick Shot or Piercing Arrow that lands before then makes the blast 25% bigger.' },
       { id: 'ranger_focusfire', name: 'Focus Fire', ab: 'quick', text: 'At full Focus, Quick Shot no longer wastes it: instead of giving Focus it hits twice as hard.' },
       { id: 'ranger_tracking', name: 'Tracking', ab: 'quick', text: 'Each Quick Shot that doesn\'t light Keen Eye gives 2 more Focus than the one before (up to 10 more). Keen Eye starts the count over.' },
     ],
     [
-      { id: 'ranger_longhunt', name: 'Long Hunt', ab: 'mark', text: 'Hunter\'s Mark lasts 3s longer.' },
+      { id: 'ranger_longhunt', name: 'Long Hunt', ab: 'mark', text: 'Hunter\'s Mark lasts 3s longer.', spec: { venomstrike: 'Hunter\'s Mark lasts 2s longer.' } },
       { id: 'ranger_pin', name: 'Pinning Shot', ab: 'pierce', text: 'A Keen Eye Piercing Arrow now pins the boss: your next Quick Shot is a critical hit (once every 12s).',
         spec: { sharpshooter: 'A Keen Eye Aimed Shot now pins the boss: your next Quick Shot is a critical hit (once every 12s).', venomstrike: 'A Keen Eye Caustic Arrow now pins the boss: your next Quick Shot is a critical hit (once every 12s).' } },
       { id: 'ranger_deathmark', name: 'Marked for Death', ab: 'mark', text: 'When Hunter\'s Mark ends, the mark bursts on the boss for {d:120}, plus {d:90} for every Keen Eye you lit while it lasted.' },

@@ -18,6 +18,7 @@ The design is in `docs/plans/2026-10-set-3-pitches.md` (section IX). The fight s
 | `roomev` `k: 'vigil'` (dur 30) | the Vigil wall begins | |
 | `propfx` `k: 'cvdash'` | a Comet Draw dash lands | `x, y` where he started, `x2, y2` where he stopped at the wall |
 | `propfx` `k: 'cvwisp'` | a wisp reached him (a notch) | `x, y` |
+| `propfx` `k: 'cvlast'` | The Last Vigil begins (the closing act): the lanterns flare, frost runs out from him, the pass goes pale for a breath | `x, y` where he kneels |
 | adds `kind: 'wisp'` | the Vigil's cold wisps; they drift to him and can be killed | |
 | debuff `cracked` on the tank | Sundering Cut landed; Cracked Guard is coming | |
 
@@ -25,7 +26,7 @@ The design is in `docs/plans/2026-10-set-3-pitches.md` (section IX). The fight s
 
 ## Casts (bcast name → anim)
 
-White Gale `gale` · Sundering Cut `cut` · Cracked Guard `guard` · Draw Cut `draw` · Scabbard Sweep `sweepL` / `sweepR` (the scabbard points left or right of his facing) · Still Water `still` · Hollow Breath `breath` · Cold Sheathe `sheathe` · Rising Crane `crane` · Comet Draw / Comet Volley `comet` · Hundredfold Parting `parting` · False Stance `stance` · the stance before an unleashing: `stance`, with `st` in the message (`'crane'`, `'comet'` or `'parting'`) · The Vigil `kneel` · Last Light of the Pass `enrage`. `banim` `slash` when a Parting's slash lands.
+White Gale `gale` · Sundering Cut `cut` · Cracked Guard `guard` · Draw Cut `draw` · Scabbard Sweep `sweepL` / `sweepR` (the scabbard points left or right of his facing) · Still Water `still` · Hollow Breath `breath` · Cold Sheathe `sheathe` · Rising Crane `crane` · Comet Draw / Comet Volley `comet` · Hundredfold Parting `parting` · False Stance `stance` · the stance before an unleashing: `stance`, with `st` in the message (`'crane'`, `'comet'` or `'parting'`) · The Vigil `kneel` · The Last Vigil `kneel` (a short kneel; then the three edges, each with its own stance and cast) · Last Light of the Pass `enrage`. `banim` `slash` when a Parting's slash lands.
 
 ## Telegraph tags (tg `tag`)
 

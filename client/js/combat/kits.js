@@ -308,18 +308,18 @@ const KITS = {
         fx: { type: 'line', color: '#fff2b0', range: 380 },
       },
       {
-        id: 'pierce', name: 'Piercing Arrow', type: 'gcd', target: 'enemy', range: RANGED, charges: 2, cd: 12, anim: 'attack',
-        desc: 'Piercing shot for {d:340}, two charges. With Keen Eye it hits for {d:500} and gives the charge back. Keen Eye banks up to two procs.',
+        id: 'pierce', name: 'Piercing Arrow', type: 'ogcd', target: 'enemy', range: RANGED, charges: 2, cd: 12, anim: 'attack',
+        desc: 'Piercing shot for {d:160}, two charges. Off the global cooldown. With Keen Eye it hits for {d:290} and gives the charge back. Keen Eye banks up to two procs.',
         glow: k => k.has('keen') || k.charges(k.abById('pierce')) === 2,
         effect(k) {
           const keen = k.consume('keen');
           let r;
           if (keen) {
-            r = k.damage(500, { ab: this }); k.refundCharge('pierce');
+            r = k.damage(290, { ab: this }); k.refundCharge('pierce');
             if (k.perk('ranger_w2')) { k.damage(250, { ab: this }); k.fx('empower'); }
           }
-          else r = k.damage(340, { ab: this });
-          rangerPierce(k, keen, r, keen ? 500 : 340);
+          else r = k.damage(160, { ab: this });
+          rangerPierce(k, keen, r, keen ? 290 : 160);
         },
         fx: { type: 'line', color: '#ffd27a', range: 440 },
       },
@@ -338,7 +338,7 @@ const KITS = {
         id: 'mark', name: "Hunter's Mark", type: 'ogcd', target: 'enemy', range: RANGED, cd: 60, anim: 'cast',
         desc: 'Party burst: the boss takes 8% more damage from everyone for 15s. For you, Keen Eye triggers more often, your critical chance is 10% higher and Rapid Fire costs only 25 Focus and hits for {d:760}. A Keen Eye you cash in it while a second is still banked readies Barrage again.',
         effect(k) {
-          const dur = 15 + (k.talent('ranger_longhunt') ? 3 : 0);
+          const dur = 15 + (k.talent('ranger_longhunt') ? (k.def.spec === 'venomstrike' ? 2 : 3) : 0);   // (Venomstrike's Mark is worth more a second: 2s)
           k.debuffTarget('vuln', 0.08, dur, { ab: this }); k.buff('markself', dur);
           rangerMark(k, this, dur);
         },
@@ -1155,7 +1155,7 @@ function rangerRhythm(k, ab, barr, pot) {
   if (k.talent('ranger_rhythm') && k.g.quicks % 4 === 0) k.damage(pot * 0.5, { ab });
 }
 // a shot that lands feeds a waiting Explosive Shot
-function rangerFeed(k) { if (k.g.charge) { k.g.charge.pot *= 1.3; k.g.charge.n++; } }
+function rangerFeed(k) { if (k.g.charge) { k.g.charge.pot *= 1.25; k.g.charge.n++; } }
 // after a Quick Shot (r: its hit): Explosive Shot, Second Wind, Wild Volley
 function rangerQuickAfter(k, ab, r) {
   rangerFeed(k);
@@ -1165,7 +1165,7 @@ function rangerQuickAfter(k, ab, r) {
 // after Piercing Arrow and its spec versions (r: its hit, pot: its strength)
 function rangerPierce(k, keen, r, pot) {
   const ab = abBase(k, 'pierce');
-  rangerFeed(k);
+  if (ab.id !== 'caustic') rangerFeed(k);   // (Explosive Shot grows on Piercing Arrow and Aimed Shot, not on Caustic Arrow's bursts)
   if (k.talent('ranger_lightfoot')) k.reduceCooldown('cloak', 3);
   // a banked Keen Eye (cashed with a second still waiting) inside Hunter's Mark readies Barrage again
   if (keen && k.has('keen') && k.has('markself')) { const bar = abBase(k, 'barrage'); if (bar) { if (k.cdRemaining(bar) <= 0) k.wasted('barrage'); k.resetCooldown(bar); k.fx('empower'); } }
@@ -2784,7 +2784,7 @@ talentMoves('runeguard', {
 talentMoves('ranger', {
   ranger_explosive: {
     id: 'explosive', replaces: 'rapid', icon: 'rapid', name: 'Explosive Shot', type: 'ogcd', target: 'enemy', range: RANGED, cd: 2, anim: 'attack', talent: true,
-    desc: 'Spend 50 Focus (25 while Hunter\'s Mark is up): plant a charge in the boss that blows 2.5s later for {d:300} ({d:640} if planted in the Mark). Every Quick Shot or Piercing Arrow that lands before then makes the blast 30% bigger.',
+    desc: 'Spend 50 Focus (25 while Hunter\'s Mark is up): plant a charge in the boss that blows 2.5s later for {d:300} ({d:640} if planted in the Mark). Every Quick Shot or Piercing Arrow that lands before then makes the blast 25% bigger.',
     usable: k => k.g.focus >= rangerRapidCost(k) && !k.g.charge,
     glow: k => !k.g.charge && (k.g.focus >= 90 || (k.has('markself') && k.g.focus >= 25)),
     effect(k, t) {
@@ -4608,7 +4608,7 @@ KITS.marionettist = {
       desc: 'Fling the Doll to where you aim (within its strings\' reach). It cuts anything it passes through for {d:160}, and stays there until you pull it again or pick another target. Builds 1 Encore on a hit. Every pull also ties all three Strings back (1 Encore for each one tied back), and gets a limp Doll up at once. Two charges.',
       usable: k => k.g.dolls.length > 0,
       effect(k) {
-        const p = mariPos(k), aim = mariAim(k), i = mariPick(k, aim), d = k.g.dolls[i];
+        const p = mariPos(k), aim = mariAim(k), i = k.def.dolls === 2 ? mariPick(k, aim) : mariPick(k, p), d = k.g.dolls[i];   // (Understudy's two Dolls: the one nearest your aim)
         if (!d || !aim) return;
         mariRestring(k);
         let to = { x: aim.x, y: aim.y };
@@ -4746,7 +4746,7 @@ talentMoves('marionettist', {
     fx: { color: '#f0c8dc' },
   },
   marionettist_curtainrise: {
-    id: 'redcurtain', replaces: 'swap', icon: 'swap', name: 'Red Curtain', type: 'ogcd', target: 'self', cd: 45, anim: 'big', talent: true,
+    id: 'redcurtain', replaces: 'swap', icon: 'swap', name: 'Red Curtain', type: 'ogcd', target: 'self', cd: 35, anim: 'big', talent: true,
     desc: 'Drop a red curtain round you for 8s: allies inside take 15% less damage. The Doll bows and comes back to you.',
     effect(k) {
       k.env.emit({ type: 'splash', target: 'self', r: 0, pr: 140, ticks: 5, interval: 1.6, pct: 0.15, ab: this });

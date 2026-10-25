@@ -380,11 +380,63 @@ const PROPS = {
     const d = ext + back, px = -Math.sin(base), py = Math.cos(base), across = side * Math.max(0, wide - 18);
     return { x: pr.x + Math.cos(base) * d + px * across, y: pr.y + Math.sin(base) * d + py * across };
   },
-  // walking from `from` to `to` past solid props: the next point to head for (a step round the first prop in the way)
+  // does the walk a -> b (a circle of radius rad) run into this prop? Unlike ray(), a walker standing right at the prop's
+  // edge (which is where collide() leaves it) still counts, so it can't be told the way is clear while pressed against it.
+  // Returns how far along the walk (0..1) the prop is met, or null.
+  walkHit(pr, a, b, rad) {
+    const slack = 2;   // (collide() leaves the walker at `rad`; this much inside that still counts as outside)
+    if (this.sd(pr, a.x, a.y) < rad - slack) return null;   // already inside: collide() sorts that out
+    if (pr.shape === 'rect') {
+      const [x0, y0] = this.local(pr, a.x, a.y), [x1, y1] = this.local(pr, b.x, b.y), hw = pr.w / 2 + rad - slack, hh = pr.h / 2 + rad - slack;
+      let t0 = 0, t1 = 1;
+      for (const [p, d, h] of [[x0, x1 - x0, hw], [y0, y1 - y0, hh]]) {
+        if (Math.abs(d) < 1e-9) { if (Math.abs(p) > h) return null; continue; }
+        let ta = (-h - p) / d, tb = (h - p) / d;
+        if (ta > tb) [ta, tb] = [tb, ta];
+        t0 = Math.max(t0, ta); t1 = Math.min(t1, tb);
+        if (t0 > t1) return null;
+      }
+      return t0;
+    }
+    if (this.segDist(pr.x, pr.y, a.x, a.y, b.x, b.y) > pr.r + rad - slack) return null;
+    const dx = b.x - a.x, dy = b.y - a.y, l2 = dx * dx + dy * dy;
+    return l2 ? Math.max(0, Math.min(1, ((pr.x - a.x) * dx + (pr.y - a.y) * dy) / l2)) : 0;
+  },
+  // walking from `from` to `to` past solid props: the next point to head for. The first prop in the way gets a ring of
+  // waypoints round it (a rect's corners, a circle's twelve points, all a little wider than the walker needs); the next
+  // stop is the first one on the shortest way round, and it is worked out afresh each step, so a walker hugging the
+  // prop's edge keeps going the same way round instead of stalling against it.
   steer(from, to, list, rad = 14) {
-    const hit = this.ray(from.x, from.y, to.x, to.y, list, rad);
-    if (!hit) return to;
-    const pr = hit.prop, dx = to.x - from.x, dy = to.y - from.y, L = hypot2(dx, dy) || 1;
+    let pr = null, bt = Infinity;
+    for (const q of list || []) {
+      if (!q.solid) continue;
+      const t = this.walkHit(q, from, to, rad);
+      if (t !== null && t < bt) { bt = t; pr = q; }
+    }
+    if (!pr) return to;
+    const ring = [], m = rad + 8;
+    if (pr.shape === 'rect') for (const c of this.corners(pr, m)) ring.push({ x: c[0], y: c[1] });
+    else for (let i = 0; i < 12; i++) { const a = i * Math.PI / 6; ring.push({ x: pr.x + Math.cos(a) * (pr.r + m) / Math.cos(Math.PI / 12), y: pr.y + Math.sin(a) * (pr.r + m) / Math.cos(Math.PI / 12) }); }
+    // waypoints worth using: in the room, clear of every other prop, and not the one the walker is already standing on
+    const ok = ring.map(w => ARENA.sd(w.x, w.y) <= -12 && hypot2(w.x - from.x, w.y - from.y) > 10 && !list.some(q => q !== pr && q.solid && this.sd(q, w.x, w.y) < rad));
+    const n = ring.length, dist = new Array(n).fill(Infinity), first = new Array(n).fill(-1), done = new Array(n).fill(false);
+    const free = (a, b) => this.walkHit(pr, a, b, rad) === null;   // (only this prop: a waypoint on the far side may still need a later re-steer)
+    for (let i = 0; i < n; i++) if (ok[i] && free(from, ring[i])) { dist[i] = hypot2(ring[i].x - from.x, ring[i].y - from.y); first[i] = i; }
+    for (;;) {
+      let u = -1;
+      for (let i = 0; i < n; i++) if (!done[i] && dist[i] < Infinity && (u < 0 || dist[i] < dist[u])) u = i;
+      if (u < 0) break;
+      done[u] = true;
+      for (let v = 0; v < n; v++) if (!done[v] && ok[v] && free(ring[u], ring[v])) {
+        const d = dist[u] + hypot2(ring[v].x - ring[u].x, ring[v].y - ring[u].y);
+        if (d < dist[v]) { dist[v] = d; first[v] = first[u]; }
+      }
+    }
+    let best = -1, bs = Infinity;
+    for (let i = 0; i < n; i++) if (dist[i] < Infinity && free(ring[i], to)) { const s = dist[i] + hypot2(to.x - ring[i].x, to.y - ring[i].y); if (s < bs) { bs = s; best = i; } }
+    if (best >= 0) return ring[first[best]];
+    // no way round that the ring offers (walled in by the room's edge or other props): the old sidestep
+    const dx = to.x - from.x, dy = to.y - from.y, L = hypot2(dx, dy) || 1;
     const nx = -dy / L, ny = dx / L, side = (pr.x - from.x) * nx + (pr.y - from.y) * ny > 0 ? -1 : 1;
     const ext = (pr.shape === 'rect' ? hypot2(pr.w, pr.h) / 2 : pr.r) + rad + 16;
     return { x: pr.x + nx * side * ext + dx / L * ext * 0.3, y: pr.y + ny * side * ext + dy / L * ext * 0.3 };

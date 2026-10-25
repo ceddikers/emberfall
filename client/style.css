@@ -34,7 +34,9 @@ kbd { font-family: inherit; font-size: 11px; font-weight: 700; padding: 1px 5px;
 #chat-input { position: fixed; left: 16px; bottom: 46px; width: 360px; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--gold-dim); background: #0d0b12e8; color: var(--ink); font: inherit; outline: none; }
 
 /* Combat HUD: gauge + ability bar (Q W E R D F + Space) */
-#combat-hud { position: fixed; left: 50%; bottom: 12px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 6px; z-index: 5; }
+#combat-hud { position: fixed; left: 50%; bottom: 12px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 6px; z-index: 5; pointer-events: none; }
+/* (only what you see takes the mouse: the box round the bar, buffs and cast bar is wider and taller than they are) */
+#combat-hud .hud-main, #buff-row > *, #cast-bar { pointer-events: auto; }
 #combat-hud .hud-main { display: flex; align-items: center; gap: 10px; padding: 8px 10px; background: #0d0b12d8; border: 1px solid var(--gold-dim); border-radius: 14px; box-shadow: 0 6px 20px #0009; }
 /* the gauge sits inside the bar, level with the skills (its canvas only trims its own empty edges) */
 .gauge-wrap { width: 130px; height: 116px; margin: -8px 0; }
@@ -661,6 +663,11 @@ kbd { border-radius: 3px; background: #1d1813; border-color: #4a3d2c; color: var
 .chip.hot { padding: 0 4px 0 0; background: #121a0e; border-color: #3e5c2c; color: #dcf2c8; overflow: hidden; }
 .chip.hot u { display: block; width: 14px; height: 14px; background: center / cover no-repeat; border-right: 1px solid #000; }
 .chip.hot.theirs { opacity: .6; }
+.chip.ic { padding: 0 4px 0 0; overflow: hidden; }
+.chip .st-ic { position: relative; display: grid; place-items: center; width: 14px; height: 14px; border-right: 1px solid #000; text-decoration: none; }
+.chip .st-ic svg { width: 10px; height: 10px; }
+/* a painted status icon covers its drawn glyph (status-icons.js) */
+.st-art { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 
 /* the left column in a raid: party frames, then the progression record under them */
 #raid-left { position: fixed; left: 14px; top: 14px; width: 244px; z-index: 4; display: grid; gap: 6px; align-content: start; }
@@ -773,19 +780,33 @@ kbd { border-radius: 3px; background: #1d1813; border-color: #4a3d2c; color: var
 .spec-focus u { text-decoration: none; font-family: var(--fantasy); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--gold); margin-right: 8px; }
 .spec-passive h5 { margin: 0 0 2px; font-family: var(--fantasy); color: #e9d39a; font-size: 12px; letter-spacing: 1px; }
 .spec-passive p { margin: 0; font-size: 13px; line-height: 1.5; }
-.spec-moves { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
-.spec-moves u { text-decoration: none; font-family: var(--fantasy); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--gold); margin-right: 2px; }
-.spec-move { position: relative; display: inline-block; width: 40px; height: 40px; cursor: default; }
-.spec-move .ab-icon { display: block; width: 100%; height: 100%; border-radius: 3px; background: center / cover no-repeat; box-shadow: 0 0 0 1px var(--line), 0 3px 8px #000a; transition: box-shadow .12s; }
-.spec-move .ab-icon.ogcd { border-radius: 50%; }
-.spec-move:hover .ab-icon { box-shadow: 0 0 0 1px var(--gold-dim), 0 3px 8px #000a; }
-.spec-move kbd { position: absolute; right: -5px; bottom: -5px; font-size: 8.5px; padding: 0 3px; }
-.spec-move.new::after { content: ''; position: absolute; top: -3px; right: -3px; width: 6px; height: 6px; transform: rotate(45deg); background: var(--gold); }
+.spec-changes { display: grid; gap: 8px; }
+.spec-changes > u { text-decoration: none; font-family: var(--fantasy); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--gold); }
+.spec-passive h5 .chg-new, .chg-tag.new { margin-left: 8px; font-size: 9.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--gold); }
+.spec-passive h5 .chg-new::before, .chg-tag.new::before { content: ''; display: inline-block; width: 5px; height: 5px; margin-right: 5px; vertical-align: 1px; transform: rotate(45deg); background: var(--gold); }
+/* a changed move: the base one on the left, the specialization's on the right, the changed words marked */
+.spec-chg { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); border-radius: 3px; border: 1px solid var(--line-soft); background: #0f0d0bcc; overflow: hidden; }
+.chg-side { position: relative; display: grid; gap: 5px; align-content: start; padding: 8px 10px 9px; min-width: 0; }
+.chg-side.now { border-left: 1px solid var(--line-soft); background: color-mix(in srgb, var(--sa) 7%, transparent); box-shadow: inset 2px 0 0 color-mix(in srgb, var(--sa) 70%, transparent); }
+.chg-side.now::before { content: ''; position: absolute; left: -4px; top: 21px; width: 7px; height: 7px; transform: rotate(45deg); background: #14110d; border-top: 1px solid var(--gold-dim); border-right: 1px solid var(--gold-dim); }
+.chg-tag { position: absolute; top: 6px; right: 9px; font-family: var(--fantasy); font-size: 9.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+.chg-head { display: flex; align-items: center; gap: 8px; position: relative; padding-right: 54px; cursor: default; }
+.chg-head > i { position: relative; flex: none; width: 30px; height: 30px; border-radius: 3px; background: center / cover no-repeat; box-shadow: 0 0 0 1px var(--line), 0 2px 6px #000a; }
+.chg-head > i.ogcd { border-radius: 50%; }
+.chg-head > i.passive { border-radius: 50%; box-shadow: 0 0 0 1px var(--gold-dim), 0 2px 6px #000a; }
+.chg-head kbd { position: absolute; left: 21px; bottom: -4px; font-size: 8.5px; padding: 0 3px; }
+.chg-head b { display: block; font-family: var(--fantasy); font-size: 13px; letter-spacing: .03em; color: #e9dfc8; line-height: 1.2; }
+.chg-side.now .chg-head b { color: var(--gold-hi); }
+.chg-head em { display: block; font-style: normal; font-size: 10.5px; color: var(--muted); line-height: 1.3; }
+.chg-head em.diff { color: var(--gold); }
+.chg-side p { margin: 0; font-size: 12px; line-height: 1.5; color: #cfc5b2; }
+.chg-side.base p { color: #a99f8e; }
+.chg-side del { text-decoration: none; color: #d9a79c; background: #b8584a26; border-radius: 2px; box-shadow: 0 0 0 1px #b8584a26; }
+.chg-side ins { text-decoration: none; color: #f2dc9c; background: color-mix(in srgb, var(--gold) 20%, transparent); border-radius: 2px; box-shadow: 0 0 0 1px color-mix(in srgb, var(--gold) 20%, transparent); }
+.chg-side del b.num, .chg-side ins b.num { color: inherit; }
+@media (max-width: 700px) { .spec-chg { grid-template-columns: minmax(0, 1fr); } .chg-side.now { border-left: 0; border-top: 1px solid var(--line-soft); } .chg-side.now::before { display: none; } }
 /* a note cut to its first sentence: a small pip says the rest is in the tooltip */
 .more { display: inline-block; width: 5px; height: 5px; margin-left: 7px; vertical-align: 2px; transform: rotate(45deg); border: 1px solid var(--gold-dim); }
-#tip .tip-chg { margin-bottom: 5px; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--gold); }
-#tip .tip-was { margin-top: 6px; padding-top: 5px; border-top: 1px solid var(--line-soft); font-size: 11.5px; color: var(--muted); }
-#tip .tip-was u { text-decoration: none; margin-right: 5px; font-family: var(--fantasy); font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; }
 .key-cell.changed { border-color: color-mix(in srgb, var(--a) 60%, var(--gold-dim)); }
 .key-cell.changed::after { content: ''; position: absolute; top: 6px; right: 6px; width: 6px; height: 6px; transform: rotate(45deg); background: var(--gold); }
 /* sealed specs (no Hollow King clear yet) and specs whose trial is waiting */
@@ -988,6 +1009,7 @@ body:has(#loot:not(.hidden)) #results { padding-right: 332px; }
 .buff { position: relative; display: flex; flex-direction: column; align-items: center; width: 30px; padding: 0; background: none; border: 0; border-radius: 0; color: #dfffd2; cursor: default; }
 .buff .bf-icon { display: grid; place-items: center; width: 26px; height: 26px; margin: 0; vertical-align: 0; border-radius: 2px; background-color: #16201a; border: 1px solid #5fbf4a; box-shadow: 0 0 0 1px #000; }
 .buff .bf-icon svg { width: 15px; height: 15px; }
+.buff .bf-icon.g { position: relative; overflow: hidden; }
 .buff .bf-icon em { font-style: normal; font-family: var(--fantasy); font-weight: 700; font-size: 13px; }
 .buff i { margin: 1px 0 0; padding: 1px 3px; min-width: 14px; text-align: center; font-size: 10.5px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; color: #e8f6e0; background: #0a0807d8; border-radius: 2px; text-shadow: 0 1px 1px #000; }
 .buff i:empty { display: none; }

@@ -3,11 +3,12 @@
 // flight, and the question is always: where is it going to land? He walks after his tank on the ground; in the air he is
 // out of reach, and a faint trail of embers draws the line he will dive along four seconds ahead. The dive lands on one of
 // three crater spots (picked at random each time: the red circle on the floor is the only way to know), and everything on
-// the line or under the landing takes it. Every breath leaves molten ground for 20 s.
+// the line or under the landing takes it. Every breath leaves molten ground for a dozen seconds.
 //   Act I, Ground (100% → 75%): Tyrant's Roar, Rending Claws (tankbuster), Ember Breath (a cone at a random hero; molten
 //     floor for 20 s), Tail Lash (the cone behind him), Magma Burst (spread; each puddle stays), Cinder Feast (stack).
 //   Act II, First Flight (75% → 50%): Take Flight, then Dragonfall (the dive) between ground stretches; Twin Pass (two lines
-//     at once, landing on the second).
+//     at once, landing on the second, both drawn from the start); Talon Dive (he dives at whoever holds him: the line runs to
+//     the tank's feet, and where he lands the ground rings out as the Aftershock, quiet only in the middle by his feet).
 //   The Roost (the seam, opens Act III): he perches on the rim for 12 s and shakes his burning scales loose on random
 //     tiles while two ember whelps harry the party (any left alive when he drops detonate). Then the Crater Boils: the
 //     outer ring of the floor turns molten for the rest of the fight.
@@ -15,19 +16,21 @@
 //   Act IV, Final Flight (24% → 10%): dives close together. At 10% the Ember Heart opens: a WALL (fight.js). He cannot be
 //     hurt until the Heart Burn has passed. Scorch marks bloom at the three crater spots one after another; the last one
 //     marks the island that the floor-wide fire will leave standing (nothing is painted on it: it is the hole in the red).
-//   Last Ember (10% → dead): the burn, until he falls or Ashfall comes.
+//   Last Ember (10% → dead): the burn, until he falls or Ashfall comes. Cinder Run is its own: three landings (Hard: four) in
+//     a row, every line and ring drawn at once; the middle of the crater is on none of them.
 // Acts II to IV use PUSH: a party that reaches a gate early cuts the rest of the act and moves on.
 // Every telegraph shows on the floor on every difficulty. Hard: casts 15% faster, 25% more damage, and:
 //   Wingbeat: each dive's wings shove everyone near the flight line away from it (into a wall, a slam).
 //   Cinder Rain: embers fall across the crater; each leaves a small molten pool.
 //   Heart Flare: a stack on a random hero, then a spread right after it.
+//   Aftershock rings twice (the second ring closes in on his feet) and Cinder Run adds a fourth landing.
 // Hard also shuffles the order of its ground sets each pull, adds a third Heart Burn, and the outer ring boils further in.
 
 const WYRM = {
   id: 'wyrm', name: 'Vhalgrath', title: 'Tyrant of the Cinder Peaks',
   hp: { normal: 4800000, hard: 5430000 },
   autoDmg: { normal: 2300, hard: 2100 },
-  enrage: { normal: 612, hard: 622 },   // the cast starts here and lands 8 s later (10:20 / 10:30)
+  enrage: { normal: 582, hard: 622 },   // the cast starts here and lands 8 s later (9:50 / 10:30)
   enrageName: 'Ashfall',
   vuln: 0.5,
   spawn: { x: 0, y: -60 },
@@ -40,11 +43,13 @@ const WYRM = {
     const B = f.boss;
     const TAU = Math.PI * 2;
     const dmg = {
-      roar: H ? 12100 : 15900, buster: H ? 29700 : 34500, tail: H ? 17000 : 21800, breath: H ? 18700 : 23400, molten: H ? 3000 : 2900, puddle: H ? 2400 : 2300,
+      roar: H ? 12100 : 15900, buster: H ? 19500 : 23500, tail: H ? 17000 : 21800, breath: H ? 18700 : 23400, molten: H ? 2700 : 2500, puddle: H ? 2200 : 2100,
       magma: H ? 11400 : 14700, feast: H ? 32100 : 42000, gust: H ? 3600 : 3500, pass: H ? 14500 : 19200, land: H ? 20600 : 25800, wing: H ? 4600 : 5400, slam: H ? 6600 : 7500,
       scale: H ? 12700 : 16500, boom: H ? 15100 : 18000, boil: H ? 10900 : 14300, scorch: H ? 15700 : 20300, burn: H ? 24800 : 27800, heart: H ? 9100 : 10500,
-      rain: H ? 9100 : 10500, flareStack: H ? 25500 : 30000, flareSpread: H ? 11400 : 13200, whelpHp: 30000, whelpBite: H ? 2300 : 2300, last: H ? 13400 : 14300,
+      rain: H ? 9100 : 10500, quake: H ? 11800 : 14000, flareStack: H ? 25500 : 30000, flareSpread: H ? 9800 : 13200, whelpHp: 30000, whelpBite: H ? 2300 : 2300, last: H ? 13400 : 14300,
     };
+    const K = H ? 1.0 : 1.15;           // tuning: every hit but the floor fire and the whelps, together
+    for (const k in dmg) if (k !== 'molten' && k !== 'puddle' && k !== 'whelpHp' && k !== 'whelpBite') dmg[k] = Math.round(dmg[k] * K);
     const S = (...steps) => steps.filter(Boolean);
     const R = 560;                       // the crater floor's radius (shapes.js)
     const SPOT_R = 260;                  // the three crater spots sit this far from the middle: south, north-west, north-east
@@ -98,7 +103,7 @@ const WYRM = {
         onResolve: () => {
           // the molten floor starts a little way out from him: the ground he stands on stays clear
           const s = m.shape, c = Math.cos(s.angle), sn = Math.sin(s.angle);
-          const z = f.zone({ shape: { kind: 'cone', x: s.x + c * 190, y: s.y + sn * 190, r: s.r - 190, arc: s.arc, angle: s.angle }, dur: 20, delay: 0, effect: 'burn', dmg: dmg.molten, tag: 'lava', ddown: true });
+          const z = f.zone({ shape: { kind: 'cone', x: s.x + c * 190, y: s.y + sn * 190, r: s.r - 190, arc: s.arc, angle: s.angle }, dur: H ? 14 : 12, delay: 0, effect: 'burn', dmg: dmg.molten, tag: 'lava', ddown: true });
           for (const o of f.alive()) z.last[o.id] = f.t;   // (a second to step off it before it first burns)
         } });
       aiming.push(m); hold(delay);
@@ -119,7 +124,7 @@ const WYRM = {
       f.cast('Magma Burst', d, 'burst');
       for (const p of targets) {
         f.mech({ type: 'spread', shape: { kind: 'circle', x: p.x, y: p.y, r: 115 }, delay: d, dmg: dmg.magma, follow: p.id, tag: 'spread', ddown: true,
-          onResolve: () => { const q = f.alive().find(z => z.id === p.id); if (q) { const pd = f.puddle(q.x, q.y, 80, H ? 16 : 14, dmg.puddle, 1, 'ember', { ddown: true }); for (const o of f.alive()) pd.last[o.id] = f.t; } } });   // (a second to step out of it before it first burns)
+          onResolve: () => { const q = f.alive().find(z => z.id === p.id); if (q) { const pd = f.puddle(q.x, q.y, 80, H ? 11 : 9, dmg.puddle, 1, 'ember', { ddown: true }); for (const o of f.alive()) pd.last[o.id] = f.t; } } });   // (a second to step out of it before it first burns)
       }
     };
     // Cinder Feast: a stack on a random hero (the tank, standing on him, is forgiven on Normal)
@@ -141,8 +146,8 @@ const WYRM = {
     };
     // where a dive comes from: the edge of the crater past one of the other two spots
     const edgeOf = P => { const a = Math.atan2(P[1], P[0]); return { x: Math.cos(a) * (R + 190), y: Math.sin(a) * (R + 190) }; };
-    const land = (L, ang) => {
-      B.untargetable = false; B.lockFacing = false; B.moveTo = null;
+    const land = (L, ang, hop) => {
+      B.untargetable = !!hop; B.lockFacing = !!hop; B.moveTo = null;   // (hop: Cinder Run touches down and is off again)
       B.x = L[0]; B.y = L[1]; B.facing = ang; B.autoAt = f.t + 3;
       f.anim('land', 1);
       f.emit({ t: 'propfx', k: 'slam', x: Math.round(L[0]), y: Math.round(L[1]), a: +ang.toFixed(2), boss: 1 });
@@ -166,7 +171,7 @@ const WYRM = {
     const dive = (opts = {}) => {
       const d = opts.delay || f.ct(4.6), L = opts.land || f.pick(SPOTS), P = opts.from || f.pick(SPOTS.filter(s => s !== L));
       const E = edgeOf(P), ang = Math.atan2(L[1] - E.y, L[0] - E.x), len = Math.hypot(L[0] - E.x, L[1] - E.y);
-      if (!opts.quiet) f.cast('Dragonfall', d, 'dive');
+      if (!opts.quiet) f.cast(opts.name || 'Dragonfall', d, 'dive');
       B.untargetable = true; B.lockFacing = true; B.facing = ang; B.moveTo = { x: E.x, y: E.y, speed: 1500 };
       const group = new Set();
       f.aoe({ kind: 'rect', x: E.x, y: E.y, angle: ang, len, w: PATH_W }, d, dmg.pass, { tag: 'divepath', group });
@@ -177,9 +182,27 @@ const WYRM = {
       f.afterKeep(d + 0.03, () => land(L, ang));
       return { E, L, ang, len, d };
     };
+    // Aftershock: where he comes down the ground rings out from his feet; only the middle, by him, is quiet. Hard rings once more,
+    // closer in. Tail of Talon Dive and (not Dragonfall) so the party has a reason to come back to the boss.
+    const aftershock = L => {
+      const d = f.ct(2.8), ring = (r2, at, tag) => f.aoe({ kind: 'donut', x: Math.round(L[0]), y: Math.round(L[1]), r: 1400, r2 }, at, dmg.quake, { tag });
+      f.cast('Aftershock', d, 'roar');
+      ring(250, d, 'aftershock');
+      if (H) ring(140, d + 1.6, 'aftershock');
+    };
+    // a point the dive can come down on: on the floor, and clear of the molten ring once the Crater Boils
+    const onFloor = (x, y) => { const lim = (rimR2 || R) - 140, d = Math.hypot(x, y); return d > lim ? [x / d * lim, y / d * lim] : [x, y]; };
+    // Talon Dive: he dives at whoever holds him. The line runs from the rim to where the tank stands as the cast begins (the
+    // party and the tank both leave it), and when he lands the ground rings out (Aftershock).
+    const talonDive = () => {
+      const t = f.tank(); if (!t) return dive();
+      const L = onFloor(t.x, t.y), far = SPOTS.reduce((a, q) => Math.hypot(q[0] - L[0], q[1] - L[1]) > Math.hypot(a[0] - L[0], a[1] - L[1]) ? q : a, SPOTS[0]);
+      const r = dive({ land: L, from: far, name: 'Talon Dive' });
+      f.afterKeep(r.d + 0.4, () => aftershock(L));
+    };
     // Twin Pass: two lines at once. He sweeps across the crater along the first without landing, then comes round on the second.
     const twinPass = () => {
-      const d1 = f.ct(4.4), gap = f.ct(3.2);
+      const d1 = f.ct(4.4), gap = f.ct(3.2), t2 = d1 + gap, fly = 1.5;
       const L1 = f.pick(SPOTS), P1 = f.pick(SPOTS.filter(s => s !== L1));
       const L2 = f.pick(SPOTS.filter(s => s !== L1)), P2 = f.pick(SPOTS.filter(s => s !== L2));
       f.cast('Twin Pass', d1, 'dive');
@@ -188,19 +211,33 @@ const WYRM = {
       B.untargetable = true; B.lockFacing = true; B.facing = ang1; B.moveTo = { x: E1.x, y: E1.y, speed: 1500 };
       f.aoe({ kind: 'rect', x: E1.x, y: E1.y, angle: ang1, len: len1, w: PATH_W }, d1, dmg.pass, { tag: 'divepath' });
       if (H) wingbeat(E1, ang1, len1, d1 - 0.6);
-      const fly = 1.5;
       f.afterKeep(d1 - fly, () => { B.moveTo = { x: E1.x + Math.cos(ang1) * len1, y: E1.y + Math.sin(ang1) * len1, speed: len1 / fly }; });
-      // ... and the second shows 3.5 s ahead of its landing, as the first goes off
-      f.afterKeep(d1 - 0.3, () => {
-        const E2 = edgeOf(P2), ang2 = Math.atan2(L2[1] - E2.y, L2[0] - E2.x), len2 = Math.hypot(L2[0] - E2.x, L2[1] - E2.y), group = new Set();
-        const dd = gap + 0.3;
-        f.cast('Dragonfall', dd, 'dive');
-        f.afterKeep(0.8, () => { B.facing = ang2; B.moveTo = { x: E2.x, y: E2.y, speed: 1500 }; });
-        f.aoe({ kind: 'rect', x: E2.x, y: E2.y, angle: ang2, len: len2, w: PATH_W }, dd, dmg.pass, { tag: 'divepath2', group });
-        f.aoe({ kind: 'circle', x: L2[0], y: L2[1], r: LAND_R }, dd, dmg.land, { tag: 'dragonfall', group });
-        if (H) wingbeat(E2, ang2, len2, dd - 0.6);
-        f.afterKeep(dd - fly, () => { B.moveTo = { x: L2[0], y: L2[1], speed: len2 / fly }; });
-        f.afterKeep(dd + 0.03, () => land(L2, ang2));
+      // ... and the second, which lands a few seconds after the first has passed, is on the floor from the start too
+      const E2 = edgeOf(P2), ang2 = Math.atan2(L2[1] - E2.y, L2[0] - E2.x), len2 = Math.hypot(L2[0] - E2.x, L2[1] - E2.y), group = new Set();
+      f.aoe({ kind: 'rect', x: E2.x, y: E2.y, angle: ang2, len: len2, w: PATH_W }, t2, dmg.pass, { tag: 'divepath2', group });
+      f.aoe({ kind: 'circle', x: L2[0], y: L2[1], r: LAND_R }, t2, dmg.land, { tag: 'dragonfall', group });
+      if (H) wingbeat(E2, ang2, len2, t2 - 0.6);
+      f.afterKeep(d1 - 0.3, () => { f.cast('Dragonfall', gap + 0.3, 'dive'); f.afterKeep(0.8, () => { B.facing = ang2; B.moveTo = { x: E2.x, y: E2.y, speed: 1500 }; }); });
+      f.afterKeep(t2 - fly, () => { B.moveTo = { x: L2[0], y: L2[1], speed: len2 / fly }; });
+      f.afterKeep(t2 + 0.03, () => land(L2, ang2));
+    };
+    // Cinder Run (the finale's own): he skims the crater and comes down on each of the three spots in turn (Hard: a fourth), every
+    // line and ring drawn from the start. The middle of the crater is on none of them.
+    const cinderRun = () => {
+      const order = f.shuffle(SPOTS);
+      if (H) order.push(f.pick(SPOTS.filter(s => s !== order[2])));
+      const d1 = f.ct(4.4), gap = f.ct(2.6), P = f.pick(SPOTS.filter(s => s !== order[0])), E = edgeOf(P);
+      f.cast('Cinder Run', d1, 'dive');
+      B.untargetable = true; B.lockFacing = true; B.moveTo = { x: E.x, y: E.y, speed: 1500 };
+      let from = E;
+      order.forEach((L, i) => {
+        const at = d1 + i * gap, ang = Math.atan2(L[1] - from.y, L[0] - from.x), len = Math.hypot(L[0] - from.x, L[1] - from.y), group = new Set(), fl = i ? gap - 0.4 : 1.5, src = from;
+        f.aoe({ kind: 'rect', x: src.x, y: src.y, angle: ang, len, w: PATH_W }, at, dmg.pass, { tag: i ? 'divepath2' : 'divepath', group });
+        f.aoe({ kind: 'circle', x: L[0], y: L[1], r: LAND_R }, at, dmg.land, { tag: 'dragonfall', group });
+        if (H && !i) wingbeat(src, ang, len, at - 0.6);
+        f.afterKeep(at - fl, () => { B.facing = ang; B.moveTo = { x: L[0], y: L[1], speed: len / fl }; });
+        f.afterKeep(at + 0.03, () => land(L, ang, i < order.length - 1));
+        from = { x: L[0], y: L[1] };
       });
     };
 
@@ -300,21 +337,20 @@ const WYRM = {
 
     // --- the acts ------------------------------------------------------------------------------------
     const groundStart = () => { grounded(); };
+    // The tank's beat (Rending Claws, Tail Lash, Talon Dive) comes round every other set at most, so the one holding him is never idle long
+    const clawsTail = () => { claws(); f.afterKeep(f.ct(4.4) + 0.6, () => tailLash()); };
+    const doubleBreath = () => { breath(); f.afterKeep(f.ct(4.2) + 0.4, () => breath()); };
     // I. Ground
     const ground = from => f.course({
       until: 0.75, push: true, onStart: groundStart,
-      sets: mix([S([4, roar, "Tyrant's Roar"]), S([12, () => breath(), 'Ember Breath']), S([14, () => tailLash(), 'Tail Lash'])], [
-        S([13, claws, 'Rending Claws']),
-        S([12, magma, 'Magma Burst']),
-        S([12, () => { claws(); f.afterKeep(f.ct(4.4) + 0.6, () => tailLash()); }, 'Rending Claws']),
-        H && S([9.5, cinderRain, 'Cinder Rain']),
-        S([13, feast, 'Cinder Feast']),
-      ].filter(Boolean), [
+      sets: mix([S([4, roar, "Tyrant's Roar"]), S([10, claws, 'Rending Claws']), S([12, () => breath(), 'Ember Breath']), S([13, () => tailLash(), 'Tail Lash'])], [
+        S([12, clawsTail, 'Rending Claws'], [12, magma, 'Magma Burst']),
+        H ? S([12, claws, 'Rending Claws'], [9.5, cinderRain, 'Cinder Rain']) : S([12, claws, 'Rending Claws'], [13, feast, 'Cinder Feast']),
+      ], [
+        S([12, claws, 'Rending Claws']),
         S([12, roar, "Tyrant's Roar"]),
-        S([12, () => { breath(); f.afterKeep(f.ct(4.2) + 0.4, () => breath()); }, 'Ember Breath']),
-        S([13, magma, 'Magma Burst']),
       ]),
-      closing: [[10, roar, "Tyrant's Roar"], [10, claws, 'Rending Claws'], [10, () => breath(), 'Ember Breath']],
+      closing: [[10, roar, "Tyrant's Roar"], [10, claws, 'Rending Claws'], [10, () => breath(), 'Ember Breath'], [10, () => tailLash(), 'Tail Lash']],
       next: flight1,
     }, from);
 
@@ -323,16 +359,16 @@ const WYRM = {
       until: 0.5, push: true, onStart: groundStart,
       sets: [
         S([4, takeFlight, 'Take Flight'], [3, () => dive(), 'Dragonfall']),
-        S([9, claws, 'Rending Claws']),
-        S([12, () => breath(), 'Ember Breath']),
-        S([13, takeFlight, 'Take Flight'], [3, () => dive(), 'Dragonfall']),
-        S([9, magma, 'Magma Burst']),
+        S([8, claws, 'Rending Claws']),
         S([12, () => tailLash(), 'Tail Lash']),
+        S([13, takeFlight, 'Take Flight'], [3, () => talonDive(), 'Talon Dive']),
+        S([11, magma, 'Magma Burst']),
+        S([12, clawsTail, 'Rending Claws']),
         H && S([9.5, cinderRain, 'Cinder Rain']),
         S([12, takeFlight, 'Take Flight'], [3, () => twinPass(), 'Twin Pass']),
         S([13, feast, 'Cinder Feast']),
+        S([12, claws, 'Rending Claws']),
         S([12, roar, "Tyrant's Roar"]),
-        S([12, () => { claws(); f.afterKeep(f.ct(4.4) + 0.6, () => tailLash()); }, 'Rending Claws']),
       ].filter(Boolean),
       closing: [[10, roar, "Tyrant's Roar"], [10, claws, 'Rending Claws'], [10, takeFlight, 'Take Flight'], [3, () => dive(), 'Dragonfall']],
       next: roosted,
@@ -342,19 +378,15 @@ const WYRM = {
     const roosted = from => f.course({
       until: 0.24, push: true, onStart: groundStart,
       sets: mix([S([2, roost, 'The Roost']), S([15.5, boils, 'Crater Boils']), S([9, claws, 'Rending Claws'])], [
-        S([12, twinBreath, 'Twin Breath']),
-        S([13, magma, 'Magma Burst']),
-        H && S([10, heartFlare, 'Heart Flare']),
-        S([12, feast, 'Cinder Feast']),
-        S([12, () => { claws(); f.afterKeep(f.ct(4.4) + 0.6, () => tailLash()); }, 'Rending Claws']),
-        H && S([9.5, cinderRain, 'Cinder Rain']),
+        S([12, clawsTail, 'Rending Claws'], [12, twinBreath, 'Twin Breath']),
+        H ? S([12, claws, 'Rending Claws'], [9.5, cinderRain, 'Cinder Rain']) : S([12, claws, 'Rending Claws'], [13, magma, 'Magma Burst']),
+        S([12, claws, 'Rending Claws'], [12, feast, 'Cinder Feast']),
       ].filter(Boolean), [
+        S([12, claws, 'Rending Claws']),
         S([12, roar, "Tyrant's Roar"]),
-        S([13, () => { breath(); f.afterKeep(f.ct(4.2) + 0.4, () => breath()); }, 'Ember Breath']),
-        S([12, magma, 'Magma Burst']),
-        S([13, () => tailLash(), 'Tail Lash']),
+        S([13, doubleBreath, 'Ember Breath']),
       ]),
-      closing: [[10, roar, "Tyrant's Roar"], [10, claws, 'Rending Claws'], [10, twinBreath, 'Twin Breath']],
+      closing: [[10, roar, "Tyrant's Roar"], [10, claws, 'Rending Claws'], [10, twinBreath, 'Twin Breath'], [10, () => tailLash(), 'Tail Lash']],
       next: flight2,
     }, from);
 
@@ -366,36 +398,37 @@ const WYRM = {
         S([4, takeFlight, 'Take Flight'], [3, () => dive(), 'Dragonfall']),
         S([8, claws, 'Rending Claws']),
         S([11, takeFlight, 'Take Flight'], [3, () => twinPass(), 'Twin Pass']),
-        S([9, H ? heartFlare : magma, H ? 'Heart Flare' : 'Magma Burst']),
+        S([12, H ? heartFlare : magma, H ? 'Heart Flare' : 'Magma Burst']),
+        S([11, takeFlight, 'Take Flight'], [3, () => talonDive(), 'Talon Dive']),
+        S([11, claws, 'Rending Claws']),
         S([12, roar, "Tyrant's Roar"]),
-        S([11, takeFlight, 'Take Flight'], [3, () => dive(), 'Dragonfall']),
         S([9, () => tailLash(), 'Tail Lash'], [8, twinBreath, 'Twin Breath']),
         S([11, takeFlight, 'Take Flight'], [3, () => twinPass(), 'Twin Pass']),
-        S([13, feast, 'Cinder Feast']),
-        S([12, claws, 'Rending Claws']),
+        S([13, claws, 'Rending Claws']),
       ],
-      closing: [[10, roar, "Tyrant's Roar"], [10, claws, 'Rending Claws'], [10, twinBreath, 'Twin Breath']],
+      closing: [[10, roar, "Tyrant's Roar"], [10, claws, 'Rending Claws'], [10, twinBreath, 'Twin Breath'], [10, () => tailLash(), 'Tail Lash']],
       next: lastEmber,
     }, from);
 
-    // Last Ember: the Heart has closed and he is nearly done
+    // Last Ember: the Heart has closed and he is nearly done. Cinder Run is the finale: he skims the crater and comes down on
+    // every spot in turn
     const lastEmber = from => f.course({
       onStart: groundStart,
       sets: [
         S([3, roar, "Tyrant's Roar"]),
+        S([9, takeFlight, 'Take Flight'], [3, () => cinderRun(), 'Cinder Run']),
+        S([14, claws, 'Rending Claws']),
         S([11, twinBreath, 'Twin Breath']),
-        S([11, claws, 'Rending Claws']),
-        S([11, magma, 'Magma Burst']),
-        S([11, () => tailLash(), 'Tail Lash']),
+        S([11, clawsTail, 'Rending Claws']),
       ],
-      closing: [[10, roar, "Tyrant's Roar"], [10, twinBreath, 'Twin Breath'], [10, claws, 'Rending Claws']],
+      closing: [[10, roar, "Tyrant's Roar"], [10, claws, 'Rending Claws'], [10, twinBreath, 'Twin Breath'], [9, takeFlight, 'Take Flight'], [3, () => cinderRun(), 'Cinder Run']],
       ramp: 0.08,
     }, from);
 
     ground(0);
 
     // every move by name, for tools and testing (window.__game.raidHost.sim.moves.dive())
-    f.moves = { roar, claws, tailLash, breath, twinBreath, magma, feast, takeFlight, dive, twinPass, roost, boils, cinderRain, heartFlare, heartWave, heartRun };
+    f.moves = { roar, claws, tailLash, breath, twinBreath, magma, feast, takeFlight, dive, talonDive, aftershock, cinderRun, twinPass, roost, boils, cinderRain, heartFlare, heartWave, heartRun };
   },
 };
 

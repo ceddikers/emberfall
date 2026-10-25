@@ -14,26 +14,31 @@
 //     Hollow Breath (a cold circle that follows the healer), then a Comet Draw.
 //   The Vigil (the WALL at 42%): he kneels in the snow; cold wisps drift toward him, first from the broken lanterns, and each one
 //     that reaches him adds a notch. A lantern's wisp struck down on the way relights its lantern. He rises after a fixed time.
-//   Act III, The Whetted Edge (42% -> dead): all three unleashings, a Parting between each, and at the last one Parting per hero.
-// No push: an act ends at the next set seam after its gate. Every telegraph shows on every difficulty. Hard: casts 15% faster, 25%
-// more damage, and:
-//   Overwhet:          notches landed while he unleashes are kept; one left over fires a second unleashing straight after.
-//   False Stance:      halfway through a wind-up he changes stance; the floor is only painted for the stance he ends on.
-//   Returning Parting: the dance runs again, back the other way, through where everyone has moved to.
+//   Act III, The Whetted Edge (42% -> 16%): all three unleashings, one at a time, and the pairs that make new problems (a Draw Cut
+//     with a Scabbard Sweep laid just behind it, a Draw Cut at the tank on the glass of Still Water or at the healer inside Hollow Breath).
+//   Act IV, The Last Vigil (16% -> dead): he kneels once more, rises and gives all three edges back to back, each stance shown as the last
+//     one lands (the sentence the whole fight has been spelling), then a Hundredfold Parting begun from each hero in turn.
+// No push: an act ends at the next set seam after its gate. Every telegraph shows on every difficulty. Hard: casts 15% faster, 42%
+// more damage (against base numbers set for the old, longer fight), a smaller health bar and an earlier enrage, and:
+//   Overwhet:          notches landed while he unleashes are kept; one left over fires a second unleashing a breath after.
+//   False Stance:      halfway through a wind-up he changes stance; the floor is only painted for the stance he ends on. Never on the
+//                      second unleashing of an Overwhet pair, and never two in a row.
+//   Returning Parting: the dance runs again, back the other way, through where everyone has moved to (also at the end of the Last Vigil).
 //   Comet Volley:      Comet Draw becomes three dashes, each at the hero farthest from where the last one ended.
-// Hard also draws which six of eight lanterns stand, the order of Act III's unleashings and when Hollow Breath comes, fresh each pull.
+// Hard also draws which six of eight lanterns stand, the order of Act III's unleashings, the order of the closing three edges and when
+// Hollow Breath comes, fresh each pull.
 
 const CORVANE = {
   id: 'corvane', name: 'Corvane', title: 'the Unburied Blade',
-  hp: { normal: 5700000, hard: 5900000 },
-  hardDmg: 1.15,   // (Hard's damage multiplier; fight.js default 1.25)
+  hp: { normal: 5700000, hard: 5450000 },
+  hardDmg: 1.42,   // (Hard's damage multiplier; fight.js default 1.25: held up to keep the clear rate when Hard's health was cut for enrage slack)
   autoDmg: { normal: 2200, hard: 2050 },
-  enrage: { normal: 590, hard: 595 },   // the cast starts here and lands 8 s later (9:58 / 10:03: a minute after the script's end, 45 s on Hard)
+  enrage: { normal: 590, hard: 580 },   // the cast starts here and lands 8 s later (9:58 / 9:48: a minute after the script's end, 45 s on Hard)
   enrageName: 'Last Light of the Pass',
   vuln: 0.5,
   spawn: { x: 0, y: -80 },
   arena: { theme: 'pass' },
-  gates: [0.72, { f: 0.42, wall: 1 }],   // where the acts change (ticks on the boss bar; fight.js course)
+  gates: [0.72, { f: 0.42, wall: 1 }, 0.16],   // where the acts change (ticks on the boss bar; fight.js course): the Last Vigil is health-gated, so every party meets it
 
   // the stone lanterns (Hard draws six of the eight spots each pull; Normal stands the same six)
   room(f) {
@@ -48,9 +53,9 @@ const CORVANE = {
     const B = f.boss;
     const TAU = Math.PI * 2;
     const dmg = {
-      gale: H ? 9400 : 14200, cut: H ? 19500 : 22000, guard: H ? 18000 : 20500, draw: H ? 19400 : 23800, sweep: H ? 20200 : 24600,
+      gale: H ? 9400 : 14800, cut: H ? 19500 : 22000, guard: H ? 18000 : 20500, draw: H ? 19400 : 23800, sweep: H ? 20200 : 24600,
       still: H ? 9600 : 9200, breath: H ? 2900 : 3000, crane: H ? 24800 : 28600, comet: H ? 19500 : 26000, part: H ? 22600 : 26400,
-      sheathe: H ? 9000 : 15600, wispHp: 26000, last: H ? 15400 : 17800,
+      sheathe: H ? 9000 : 16200, wispHp: 26000, last: H ? 15400 : 17800,
     };
     const S = (...steps) => steps.filter(Boolean);
     const live = id => f.alive().find(p => p.id === id);
@@ -265,16 +270,20 @@ const CORVANE = {
     };
 
     // the whole unleashing: the stance alone first, then the floor. False Stance (Hard): he shifts stance halfway. Overwhet (Hard):
-    // a notch left over fires a second one straight after. Returns its length (the caller slides the script by it when the gauge fired it).
+    // a notch left over fires a second one a breath after. Returns its length (the caller slides the script by it when the gauge fired it).
+    // A re-read is only asked for once at a time: no False Stance on the second unleashing of a pair, and none two unleashings running.
+    const FLIP_T = STANCE_T * 0.85;   // (the stance he ends on, alone, before its floor is painted)
+    let lastFlip = false;
     const unleash = (st, over) => {
       whet.busy = true;
       let shift = null;
-      if (H && act >= 2 && f.rng() < 0.5) { const other = (act === 2 ? ['crane', 'comet'] : ['crane', 'comet', 'parting']).filter(s => s !== st); shift = st; st = f.pick(other); }
+      if (H && act >= 2 && !over && !lastFlip && f.rng() < 0.5) { const other = (act === 2 ? ['crane', 'comet'] : ['crane', 'comet', 'parting']).filter(s => s !== st); shift = st; st = f.pick(other); }
+      lastFlip = !!shift;
       whet.st = shift || st; sendWhet();
       // (the cast bar says only that the edge is coming: which unleashing it is, his stance tells, then the floor and its own cast)
-      f.cast(over ? 'Overwhet' : 'Whetted Edge', STANCE_T + (shift ? STANCE_T * 0.6 : 0), 'stance', { st: shift || st });
-      if (shift) f.afterKeep(STANCE_T, () => { whet.st = st; sendWhet(); f.cast('False Stance', STANCE_T * 0.6, 'stance', { st }); });
-      const lead = STANCE_T + (shift ? STANCE_T * 0.6 : 0);
+      f.cast(over ? 'Overwhet' : 'Whetted Edge', STANCE_T + (shift ? FLIP_T : 0), 'stance', { st: shift || st });
+      if (shift) f.afterKeep(STANCE_T, () => { whet.st = st; sendWhet(); f.cast('False Stance', FLIP_T, 'stance', { st }); });
+      const lead = STANCE_T + (shift ? FLIP_T : 0);
       let len = lead;
       f.afterKeep(lead, () => {
         if (f.state !== 'live') return;
@@ -289,7 +298,10 @@ const CORVANE = {
         f.afterKeep(end, () => {
           lastSt = st; whet.n = 0; whet.st = null; whet.busy = false;
           const again = whet.over > 0; whet.over = 0; sendWhet();
-          if (again && f.state === 'live' && !f.wall) { const extra = unleash(choose(), true); slide(extra + 1); }   // Overwhet
+          if (again && f.state === 'live' && !f.wall) {   // Overwhet: a breath, then the second one
+            whet.busy = true;
+            f.afterKeep(1.0, () => { if (f.state !== 'live') { whet.busy = false; return; } const extra = unleash(choose(), true); slide(extra + 2); });
+          }
         });
       }, 'Whetted Edge');
       // an estimate of the whole length, for the slide (the parts run on their own clocks)
@@ -318,6 +330,7 @@ const CORVANE = {
     const VIGIL = 22;
     const vigil = () => {
       B.lockFacing = true; B.moveTo = { x: 0, y: -80, speed: 420 };
+      f.clearZones();   // (a Still Water caught by the gate lets go: the glass was laid for another place in the room)
       f.cast('The Vigil', 2.4, 'kneel');
       f.emit({ t: 'roomev', k: 'vigil', dur: VIGIL });
       // the wisps rise first from the lanterns that have broken (each one is that lantern's light), then from the snow
@@ -355,21 +368,80 @@ const CORVANE = {
       }, 'The Vigil Ends');
     };
 
+    // --- the Last Vigil (the closing act) -------------------------------------------------------------------------------------
+    // Health-gated, so every party meets it. He kneels once more, rises, and gives all three edges back to back: each stance is shown
+    // as the last floor lands, so the party reads the next one with the last one's lines still on the ground.
+    const whenFree = fn => {
+      const tick = () => {
+        if (f.state !== 'live') return;
+        if (whet.busy || (B.cast && f.t < B.cast.end)) return f.afterKeep(0.4, tick);
+        fn();
+      };
+      tick();
+    };
+    const threefold = () => {
+      whet.busy = true; whet.n = MAX; whet.over = 0; sendWhet();
+      const order = H ? f.shuffle(['crane', 'comet', 'parting']) : ['crane', 'comet', 'parting'];
+      // (the feed shows the three stances as plain Whetted Edges: their order is for the blade to tell)
+      const runOf = st => st === 'crane' ? f.ct(3.4) + f.ct(1.4) : st === 'comet' ? f.ct(3.6) : f.ct(1.6) + f.alive().length * (f.ct(0.85) + 0.08) + f.ct(1.5);
+      const lead1 = f.ct(STANCE_T * 0.75), o1 = STANCE_T + runOf(order[0]) + 0.3, o2 = o1 + lead1 + runOf(order[1]) + 0.3;
+      f.afterKeep(0.05, () => {}, 'Whetted Edge'); f.afterKeep(o1, () => {}, 'Whetted Edge'); f.afterKeep(o2, () => {}, 'Whetted Edge');
+      const go = i => {
+        if (f.state !== 'live') { whet.busy = false; return; }
+        if (i >= order.length) {
+          const end = sheathe(0.2, true);
+          f.afterKeep(end, () => { lastSt = order[order.length - 1]; whet.n = 0; whet.over = 0; whet.st = null; whet.busy = false; sendWhet(); });
+          return;
+        }
+        const st = order[i], lead = i === 0 ? STANCE_T : f.ct(STANCE_T * 0.75);
+        whet.st = st; sendWhet();
+        f.cast('Whetted Edge', lead, 'stance', { st });
+        f.afterKeep(lead, () => {
+          if (f.state !== 'live') { whet.busy = false; return; }
+          const run = st === 'crane' ? crane() : st === 'comet' ? comet(false) : parting();
+          f.afterKeep(run + 0.3, () => go(i + 1));
+        });
+      };
+      go(0);
+    };
+    const lastVigil = () => {
+      const t0 = f.t;
+      whenFree(() => {
+        if (f.t - t0 > 0.3) slide(f.t - t0);   // (he was still finishing something: the rest of the script waits with him)
+        B.lockFacing = true;
+        f.cast('The Last Vigil', 2.6, 'kneel');
+        f.emit({ t: 'propfx', k: 'cvlast', x: Math.round(B.x), y: Math.round(B.y) });
+        hold(2.8);
+        f.afterKeep(2.7, () => { B.lockFacing = false; threefold(); });
+      });
+    };
+
     // --- the closing dance ---------------------------------------------------------------------------------------------------
-    // one Parting begun from each hero in turn
+    // one Parting begun from each hero in turn (Hard: and the last one is run again, back the other way)
     const finalDance = () => {
       const ids = f.alive().map(p => p.id);
       if (!ids.length) return;
       let at = 0;
+      const one = f.ct(1.6) + ids.length * f.ct(0.85) + f.ct(1.5) + 1.6;
+      const run1 = f.ct(1.6) + ids.length * f.ct(0.85) + f.ct(1.5) + ids.length * 0.08;
       ids.forEach((_, k) => {
-        f.afterKeep(at, () => { if (f.state !== 'live') return; const now = f.alive().map(p => p.id); const r = now.slice(k % now.length).concat(now.slice(0, k % now.length)); parting(r); }, 'Hundredfold Parting');
-        at += f.ct(1.6) + ids.length * f.ct(0.85) + f.ct(1.5) + 1.6;
+        const last = k === ids.length - 1;
+        f.afterKeep(at, () => {
+          if (f.state !== 'live') return;
+          const now = f.alive().map(p => p.id), r = now.slice(k % now.length).concat(now.slice(0, k % now.length));
+          const run = parting(r);
+          if (H && last) f.afterKeep(run + 0.5, () => { if (f.state === 'live') parting(f.alive().map(p => p.id).reverse(), { name: 'Returning Parting' }); });
+        }, 'Hundredfold Parting');
+        at += one;
       });
-      sheathe(at, true);
+      sheathe(H ? at - one + 2 * run1 + 1.2 : at, true);
     };
 
     // --- the acts ------------------------------------------------------------------------------------------------------------
     const tankPair = [cut, 'Sundering Cut'];
+    // (the pairs: two moves close enough that the second is read while the first is still being dodged)
+    const tankDraw = () => drawCut(f.tank());      // a line through the tank: he steps off it without leaving his place
+    const healerDraw = () => drawCut(healer());    // a line through the healer, inside Hollow Breath's circle
     // I. The Pass
     const pass = from => f.course({
       until: 0.72, onStart: () => { act = 1; },
@@ -377,13 +449,13 @@ const CORVANE = {
         S([4, gale, 'White Gale']),
         S([10, () => drawCut(), 'Draw Cut'], [8, () => sweep(), 'Scabbard Sweep']),
         S([10, ...tankPair]),
-        S([13, () => drawCut(), 'Draw Cut'], [7, () => drawCut(), 'Draw Cut']),
-        S([10, () => sweep(), 'Scabbard Sweep'], [9, gale, 'White Gale']),
+        S([11, tankDraw, 'Draw Cut'], [6, () => drawCut(), 'Draw Cut'], [5, gale, 'White Gale']),
+        S([10, () => sweep(), 'Scabbard Sweep'], [6, tankDraw, 'Draw Cut'], [6, gale, 'White Gale']),
+        S([8, ...tankPair]),
+        S([12, () => drawCut(), 'Draw Cut'], [0.8, () => sweep(), 'Scabbard Sweep'], [8, tankDraw, 'Draw Cut']),
+        S([11, gale, 'White Gale'], [6, tankDraw, 'Draw Cut']),
+        S([8, scripted('crane'), 'Whetted Edge']),
         S([12, ...tankPair]),
-        S([13, () => sweep(), 'Scabbard Sweep'], [6, () => drawCut(), 'Draw Cut']),
-        S([10, gale, 'White Gale']),
-        S([12, scripted('crane'), 'Whetted Edge']),
-        S([15, ...tankPair]),
       ],
       closing: [[10, gale, 'White Gale'], [10, cut, 'Sundering Cut'], [12, () => drawCut(), 'Draw Cut']],
       next: shrine,
@@ -395,51 +467,62 @@ const CORVANE = {
       wall: { label: 'The Vigil', run: vigil, until: 'resolved', timeout: VIGIL + 8 },
       sets: [
         S([4, stillWater, 'Still Water']),
-        S([14, ...tankPair]),
-        S([13, () => comet(false), 'Comet Draw']),
-        S([12, hollowBreath, 'Hollow Breath'], [H ? 4 + Math.round(f.rng() * 4) : 6, () => drawCut(), 'Draw Cut']),
-        S([12, gale, 'White Gale']),
-        S([10, stillWater, 'Still Water']),
-        S([14, () => sweep(), 'Scabbard Sweep'], [7, ...tankPair]),
-        S([14, () => comet(false), 'Comet Draw']),
-        S([12, hollowBreath, 'Hollow Breath'], [5, () => sweep(), 'Scabbard Sweep']),
-        S([12, gale, 'White Gale']),
-        S([10, scripted('comet'), 'Whetted Edge']),
-        S([15, stillWater, 'Still Water']),
-        S([14, ...tankPair]),
+        S([12, ...tankPair]),
+        S([12, () => comet(false), 'Comet Draw'], [5, tankDraw, 'Draw Cut']),
+        S([10, hollowBreath, 'Hollow Breath'], [H ? 4 + Math.round(f.rng() * 4) : 6, healerDraw, 'Draw Cut']),
+        S([9, ...tankPair]),
+        S([9, gale, 'White Gale']),
+        S([10, stillWater, 'Still Water'], [3.4, tankDraw, 'Draw Cut']),
+        S([11, () => drawCut(), 'Draw Cut'], [0.8, () => sweep(), 'Scabbard Sweep'], [7, ...tankPair]),
+        S([11, () => comet(false), 'Comet Draw']),
+        S([10, hollowBreath, 'Hollow Breath'], [6, tankDraw, 'Draw Cut']),
+        S([10, gale, 'White Gale'], [5, tankDraw, 'Draw Cut']),
+        S([6, scripted('comet'), 'Whetted Edge']),
+        S([13, stillWater, 'Still Water'], [3.4, tankDraw, 'Draw Cut']),
+        S([11, ...tankPair], [5.5, gale, 'White Gale']),
       ],
       closing: [[10, gale, 'White Gale'], [10, cut, 'Sundering Cut'], [12, stillWater, 'Still Water']],
       next: edge,
     }, from);
 
-    // III. The Whetted Edge: all three unleashings on the script (Hard draws their order), a Parting between each, then the dance
+    // III. The Whetted Edge: the three unleashings on the script (Hard draws their order), the pairs between them
     const edge = from => {
       const order = H ? f.shuffle(['crane', 'comet', 'parting']) : ['crane', 'comet', 'parting'];
       return f.course({
-        onStart: () => { act = 3; B.lockFacing = false; },
+        until: 0.16, onStart: () => { act = 3; B.lockFacing = false; },
         sets: [
-          S([24, twinDraw, 'Draw Cut'], [8, scripted(order[0]), 'Whetted Edge']),
-          S([16, stillWater, 'Still Water']),
+          S([16, twinDraw, 'Draw Cut'], [8, scripted(order[0]), 'Whetted Edge']),
+          S([14, stillWater, 'Still Water'], [3.4, tankDraw, 'Draw Cut']),
           S([10, ...tankPair]),
-          S([12, scripted('parting'), 'Whetted Edge']),
-          S([16, twinDraw, 'Draw Cut'], [8, () => sweep(), 'Scabbard Sweep']),
-          S([10, scripted(order[1]), 'Whetted Edge']),
-          S([16, hollowBreath, 'Hollow Breath'], [8, ...tankPair]),
-          S([12, scripted('parting'), 'Whetted Edge']),
-          S([16, gale, 'White Gale']),
-          S([10, scripted(order[2]), 'Whetted Edge']),
-          S([16, () => sweep(), 'Scabbard Sweep'], [8, ...tankPair]),
-          S([12, finalDance, 'The Last Vigil']),
+          S([12, () => drawCut(), 'Draw Cut'], [0.8, () => sweep(), 'Scabbard Sweep'], [7.5, tankDraw, 'Draw Cut']),
+          S([9, scripted(order[1]), 'Whetted Edge']),
+          S([12, hollowBreath, 'Hollow Breath'], [6, healerDraw, 'Draw Cut']),
+          S([10, ...tankPair], [5.5, gale, 'White Gale']),
+          S([12, scripted(order[2]), 'Whetted Edge']),
+          S([18, ...tankPair]),
         ],
-        closing: [[44, gale, 'White Gale'], [9, cut, 'Sundering Cut'], [12, twinDraw, 'Draw Cut']],
+        closing: [[12, gale, 'White Gale'], [10, cut, 'Sundering Cut'], [12, twinDraw, 'Draw Cut']],
         ramp: 0.08,
+        next: finale,
       }, from);
     };
+
+    // IV. The Last Vigil: all three edges, then a Parting from each hero in turn
+    const finale = from => f.course({
+      onStart: () => { act = 3; B.lockFacing = false; },
+      sets: [
+        S([3, lastVigil, 'The Last Vigil']),
+        S([27, ...tankPair]),
+        S([10, finalDance, 'Hundredfold Parting']),
+      ],
+      closing: [[44, gale, 'White Gale'], [9, cut, 'Sundering Cut'], [12, twinDraw, 'Draw Cut']],   // (the first waits out the dance)
+      ramp: 0.08,
+    }, from);
 
     pass(0);
 
     // every move by name, for tools and testing (window.__game.raidHost.sim.moves.parting())
-    f.moves = { gale, cut, drawCut, twinDraw, sweep, stillWater, hollowBreath, sheathe, crane, comet, parting, unleash, scripted, vigil, finalDance, notch };
+    f.moves = { gale, cut, drawCut, tankDraw, healerDraw, twinDraw, sweep, stillWater, hollowBreath, sheathe, crane, comet, parting, unleash, scripted, vigil, lastVigil, threefold, finalDance, notch };
   },
 };
 

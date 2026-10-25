@@ -82,7 +82,7 @@ const RAIDS = [   // [boss name, boss id, tank, healer, two DPS, optional 'gear=
   ['the Hollow King', 'hollowking', 'bastion:base', 'cleric:base', 'thresher:base', 'ranger:base'],
   // Tidecaller (class 20): the base kit and each spec healing a boss
   ['Grubnak', 'grubnak', 'bastion:base', 'tidecaller:base', 'ranger:base', 'pyromancer:base'],
-  ['Skitterra', 'skitterra', 'bastion:base', 'tidecaller:springtide', 'ranger:base', 'shadowblade:base'],
+  ['Skitterra', 'skitterra', 'bastion:base', 'tidecaller:springtide', 'ranger:base', 'shadowblade:base', 'runs=12'],   // (this line-up clears Skitterra about a quarter of the time at base gear: twelve tries)
   ['Volkar', 'volkar', 'bastion:base', 'tidecaller:undertow', 'ranger:base', 'pyromancer:base'],
   // Lanternkeeper (class 21): the base kit and each spec healing a boss
   ['Grubnak', 'grubnak', 'bastion:base', 'lanternkeeper:base', 'ranger:base', 'pyromancer:base'],

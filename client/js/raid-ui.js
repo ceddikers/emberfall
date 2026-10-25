@@ -7,29 +7,8 @@ const RaidUI = (() => {
   const fmt = n => Math.round(n).toLocaleString('en-US');
   const mmss = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
   // small line icons for party-frame chips (12x12, drawn in the chip's text color)
-  const svg = d => `<svg viewBox="0 0 12 12" aria-hidden="true">${d}</svg>`;
-  const GLYPH = {
-    shield: svg('<path d="M6 1 10.5 2.6V6c0 2.6-2 4.2-4.5 5C3.5 10.2 1.5 8.6 1.5 6V2.6Z" fill="none" stroke="currentColor" stroke-width="1.4"/>'),
-    down: svg('<path d="M6 1.5v8M2.5 6 6 9.5 9.5 6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>'),
-    vuln: svg('<path d="M6 1 10.5 2.6V6c0 2.6-2 4.2-4.5 5C3.5 10.2 1.5 8.6 1.5 6V2.6Z" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M6.6 2.5 5 5.6l2 .8-1.4 3" fill="none" stroke="currentColor" stroke-width="1.3"/>'),
-    weak: svg('<circle cx="6" cy="6" r="4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-dasharray="2 1.6"/>'),
-    tenderized: svg('<path d="M1.5 3.5h6.5v4.5H1.5Z M8 4.5h2.5v2.5H8" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><circle cx="3.6" cy="5.7" r=".9" fill="currentColor"/>'),
-    stuffed: svg('<ellipse cx="6" cy="7.5" rx="4.6" ry="2.2" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M3.5 6.6a2.5 2.5 0 0 1 5 0" fill="none" stroke="currentColor" stroke-width="1.3"/>'),
-    slowed: svg('<path d="M6 1v10M1 6h10M2.5 2.5l7 7M9.5 2.5l-7 7" stroke="currentColor" stroke-width=".9"/><circle cx="6" cy="6" r="2.4" fill="none" stroke="currentColor" stroke-width=".9"/><circle cx="6" cy="6" r="4.3" fill="none" stroke="currentColor" stroke-width=".9"/>'),
-    rooted: svg('<path d="M2 3c2.5 1.2 5.5-1.2 8 0M2 6c2.5 1.2 5.5-1.2 8 0M2 9c2.5 1.2 5.5-1.2 8 0" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>'),
-    conductive: svg('<path d="M7 1 3 6.5h3L5 11l4-5.5H6Z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>'),
-    doom: svg('<path d="M6 1.5c-2.3 0-4 1.6-4 3.8 0 1.3.6 2.2 1.5 2.8V10h5V8.1c.9-.6 1.5-1.5 1.5-2.8 0-2.2-1.7-3.8-4-3.8Z" fill="none" stroke="currentColor" stroke-width="1.2"/><circle cx="4.4" cy="5.5" r="1" fill="currentColor"/><circle cx="7.6" cy="5.5" r="1" fill="currentColor"/>'),
-    dread: svg('<path d="M1 6c1.6-2.6 3.2-3.6 5-3.6S9.4 3.4 11 6c-1.6 2.6-3.2 3.6-5 3.6S2.6 8.6 1 6Z" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M3 9 9 3" stroke="currentColor" stroke-width="1.2"/>'),
-    bleed: svg('<path d="M6 1.5C4.5 4 3 5.6 3 7.4a3 3 0 0 0 6 0C9 5.6 7.5 4 6 1.5Z" fill="none" stroke="currentColor" stroke-width="1.3"/>'),
-    frostbite: svg('<path d="M6 1v10M1.6 3.5l8.8 5M10.4 3.5l-8.8 5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><circle cx="6" cy="6" r="1.4" fill="currentColor"/>'),
-    gripped: svg('<path d="M2 5.5V3m2.5 2.5V2m2.5 3.5V2m2.5 3.5V3M2 5.5c0 3 1.6 5 4 5s3.5-2 3.5-5" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>'),
-    static: svg('<path d="M7 1 3 6.5h3L5 11l4-5.5H6Z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M1.5 3.5h1.5M9 8.5h1.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/>'),
-    aggro: svg('<path d="M1 6c1.6-2.6 3.2-3.6 5-3.6S9.4 3.4 11 6c-1.6 2.6-3.2 3.6-5 3.6S2.6 8.6 1 6Z" fill="none" stroke="currentColor" stroke-width="1.2"/><circle cx="6" cy="6" r="1.7" fill="currentColor"/>'),
-    // on the boss: a Time Stop (an hourglass), hitting harder, and the enrage
-    hourglass: svg('<path d="M2.5 1.2h7M2.5 10.8h7M3.3 1.2c0 2.6 2.7 3.4 2.7 4.8S3.3 8.2 3.3 10.8M8.7 1.2c0 2.6-2.7 3.4-2.7 4.8s2.7 2.2 2.7 4.8" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>'),
-    fury: svg('<path d="M6 1.2 7.4 4.6 11 6 7.4 7.4 6 10.8 4.6 7.4 1 6 4.6 4.6Z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M6 4.4v3.2" stroke="currentColor" stroke-width="1.2"/>'),
-    enrage: svg('<path d="M6 1c.4 2-1.8 3-1.8 5a1.8 1.8 0 0 0 3.6 0c0-.8-.4-1.4-.4-1.4S9.5 5.5 9.5 7.8A3.5 3.5 0 0 1 2.5 7.8C2.5 4.4 6 3.6 6 1Z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>'),
-  };
+  // line icons for party-frame chips and the boss's statuses (shared with the hotbar's row: status-icons.js)
+  const svg = stSvg, GLYPH = STATUS_GLYPH;
   // your own damage over time on the boss, by the kit's DoT id (the icon is the ability that put it there)
   const DOT_INFO = { poison: ['Poison', 'Venom from your blade, ticking every 3s.'], thorn: ['Thorns', 'Your thorns, biting every 3s.'],
     acid: ['Acid', 'Your acid burn, stronger with every stack.'], brand: ['Burning Rune', 'Your rune, burning every 3s.'],
@@ -39,15 +18,6 @@ const RaidUI = (() => {
     healer: svg('<path d="M4.5 1.5h3v3h3v3h-3v3h-3v-3h-3v-3h3Z" fill="currentColor"/>'),
     dps: svg('<path d="M10.5 1.5 9.8 4 4.6 9.2 2.8 7.4 8 2.2ZM2.8 7.4 1.5 10.5l3.1-1.3" fill="currentColor"/>'),
   };
-  const DEBUFF_INFO = { laden: 'Egg-Laden: when it runs out, a venom pool drops where you stand', pardoned: 'Pardoned: your writ is torn up; your line does nothing', tenderized: 'Tenderized: the next cleaver blow hits much harder', stuffed: 'Stuffed: you can\'t eat another plate',
-    slowed: 'Slowed: stuck in silk or venom', rooted: 'Rooted: you can\'t move',
-    conductive: 'Conductive: the next strike you catch hurts far more', doom: 'Royal Doom: when this runs out, so do you',
-    dread: 'Dread: you met his eyes. Meeting them again hurts far more', bleed: 'Bleeding: losing health over time',
-    static: 'Static: the storm is building on you, a jolt every 1.5s',
-    frostbite: 'Frostbitten: slowed by the cold, and when it runs out you are frozen solid', gripped: 'Gripped: held fast in a fist of ice' };
-  // heals over time wear their ability's icon: [class, ability, name]
-  const HOT_ICON = { petal: ['cleric', 'petal', 'Dawn Petal'], prayer: ['cleric', 'prayer', 'Prayer Circle'], rejuv: ['grovekeeper', 'rejuv', 'Rejuvenate'], growth: ['grovekeeper', 'growth', 'Wild Growth'] };
-
   let docked = 'left', onDock = null, hudObserved = false, lastState = '';
   let root, frames = {}, onFrame = null, rosterKey = '', lastT = 0, bossTrail = 1, roster = [], nextKey = '', statusKey = '';
 
@@ -321,11 +291,13 @@ const RaidUI = (() => {
         const hl = p.hollow, paid = hl.debt > 0 ? Math.min(1, hl.healed / hl.debt) : 1, secs = Math.ceil(Math.max(0, hl.left > 0 ? hl.left : hl.grace));
         chips.push(`<b class="chip hollow" data-tip="Hollow: held at 1 HP, dealing 30% more damage. Everything it takes is a debt of ${Math.round(hl.debt)}; ${Math.round(hl.healed)} healed back so far. Heal at least the debt before the ${hl.left > 0 ? 'Hollow and its grace end' : 'grace ends'} or it falls.">Hollow ${Math.round(hl.debt)}<i><s style="width:${Math.round(paid * 100)}%"></s></i>${Math.round(hl.healed)} · ${secs}s</b>`);
       }
-      if (p.mit) chips.push(`<b class="chip mit" data-tip="Taking ${p.mit}% less damage">${GLYPH.shield}${p.mit}%</b>`);
-      if (p.dd) chips.push(`<b class="chip bad" data-tip="Damage Down: dealing 10% less damage">${GLYPH.down}${p.dd}</b>`);
-      if (p.vuln) chips.push(`<b class="chip bad" data-tip="Vulnerability: taking ${p.vuln}% more damage">${GLYPH.vuln}${p.vuln}%</b>`);
-      if (p.weak) { const [wp, ws] = Array.isArray(p.weak) ? p.weak : [0, 0]; chips.push(`<b class="chip bad" data-tip="Raise Sickness: just raised, dealing and healing ${wp}% less for ${ws}s more">${GLYPH.weak}${wp ? wp + '%' : ''}</b>`); }
-      for (const [k, s] of p.debuffs || []) chips.push(`<b class="chip bad" data-tip="${DEBUFF_INFO[k] || k}">${GLYPH[k] || ''}${s}</b>`);
+      // the statuses wear the same icons as the row over your hotbar (status-icons.js)
+      const ic = id => `<u class="st-ic">${statusIcon(id)}</u>`;
+      if (p.mit) chips.push(`<b class="chip mit ic" data-tip="Taking ${p.mit}% less damage">${ic('mit')}${p.mit}%</b>`);
+      if (p.dd) chips.push(`<b class="chip bad ic" data-tip="Damage Down: dealing 10% less damage">${ic('dd')}${p.dd}</b>`);
+      if (p.vuln) chips.push(`<b class="chip bad ic" data-tip="Vulnerability: taking ${p.vuln}% more damage">${ic('vuln')}${p.vuln}%</b>`);
+      if (p.weak) { const [wp, ws] = Array.isArray(p.weak) ? p.weak : [0, 0]; chips.push(`<b class="chip bad ic" data-tip="Raise Sickness: just raised, dealing and healing ${wp}% less for ${ws}s more">${ic('weak')}${wp ? wp + '%' : ''}</b>`); }
+      for (const [k, s] of p.debuffs || []) { const d = STATUS_INFO[k]; chips.push(`<b class="chip bad ic" data-tip="${d ? d[0] + ': ' + d[1] : k}">${ic(k)}${s}</b>`); }
       const key = chips.join('');
       if (key !== f.key) { f.key = key; f.st.innerHTML = key; }
     }

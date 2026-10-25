@@ -690,8 +690,19 @@ const CV_FX = (() => {
       H.shockAt(x1, y1, { r: 70, color: '#ffd890', w: 4, dur: 0.4, flat: 1 });
     } });
   }
+  // the Last Vigil: he kneels once more; every lantern flares, frost runs out from him and the pass goes pale for a breath
+  function lastVigilFx(msg, H) {
+    const x = msg.x, y = msg.y;
+    lanterns().forEach((pr, i) => VFX.fx({ dur: 0.05, delay: 0.15 + i * 0.1, layer: 'air', draw: () => {}, done: () => { VFX.flash(pr.x, pr.y - 30, 64, C.amber, 0.45); VFX.sparks(pr.x, pr.y - 32, { color: C.amber, n: 6, speed: 180 }); } }));
+    H.shockAt(x, y, { r: 420, color: C.frost, w: 8, dur: 1.1, flat: 1 });
+    H.shockAt(x, y, { r: 240, color: '#ffffff', w: 4, dur: 0.9, flat: 1, delay: 0.15 });
+    H.roomTint('#cfe4ff', 0.28, 1.4);
+    flurry(x, y, 26, { speed: 260, size: 1.2 });
+    H.shake(5);
+  }
   function prop(msg, H) {
     if (msg.k === 'cvdash') { dash(msg, H); return true; }
+    if (msg.k === 'cvlast') { lastVigilFx(msg, H); return true; }
     if (msg.k === 'cvwisp') { wispBurst(msg.x, msg.y, H, true); return true; }
     if (msg.k === 'cvrelight') { relight(msg, H); return true; }
     if (msg.kind === 'stonelantern') {

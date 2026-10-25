@@ -4,7 +4,8 @@
 // question is always: which element is it, and who holds the rune? He floats in the middle of the floor and never walks.
 //   THE RUNE PAIR: Rune Mark puts a rune on two heroes (two different elements; both shown on them, and a link joins them).
 //     The spell that follows (named in the upcoming feed: Cinder / Rime / Storm / Rift Rune) is of one of the two elements, and the
-//     element says whether the pair must stand together or apart:
+//     element says whether the pair must stand together or apart. The Mark also lights the sigil of that element on the floor until
+//     the spell lands, and the clients draw each rune by its rule (a closed ring for frost and lightning, a broken one for fire and void):
 //       Cinder Rune (fire):      a ring of fire on each bearer. APART: if they stand close when it is about to land, the runes
 //                                react, and a second circle of flame blooms between them (shown a moment ahead).
 //       Rime Rune (frost):       one shared blow, a blue circle halfway between the two bearers, for everyone to stand in. TOGETHER.
@@ -17,16 +18,20 @@
 //   The Binding (the seam, opens Act III): the sigils wake and he calls elementals from the middle of the floor. Each follows
 //     the shield, slowly, and must be led into the sigil of its own element and held there a moment (a random element order,
 //     one at a time; one left unbound blasts the room). He can be hit all the while, and the shield is walking the whole time.
-//   Act III, Lightning (55% → 32%): Leaping Bolt (a bolt that jumps from hero to the hero nearest them), Storm Rune.
-//   Act IV, Void (32% → 14%): Void Rifts (rifts open where heroes stand, and again where they went), Rift Rune, the older
-//     moves returning mixed.
+//   Act III, Lightning (55% → 32%): Leaping Bolt (a bolt that jumps from hero to the hero nearest them), Storm Rune, Sigil Flare.
+//   Act IV, Void (32% → 14%): Void Rifts (rifts open where heroes stand, and again where they went), Rift Rune, Sigil Flare, the
+//     older moves returning mixed.
+//   Sigil Flare: two neighbouring sigils light and blast together with the lens between them (Convergence on a small scale, so
+//     the finale is a shape the party has met). Hard: the opposite pair follows a moment later, so the party crosses the middle.
 //   Act V, Convergence (14% → dead): all four sigils light together; each circle's telegraph is its own element, and where two
 //     circles overlap a reaction fills the lens between them. The floor between the sigils, out near the wall, is clear. Then
 //     the closing passes until he falls or the tide comes in.
 // Acts use PUSH: a party that reaches a gate early cuts the rest of the act and moves on (no wall in this fight).
 // Every telegraph shows on the floor on every difficulty. Hard: casts 15% faster, 25% more damage, and:
-//   Counterspell: the last spell's areas come again, thrown to the far side of the room, a few seconds later.
-//   Rune Swap:    after the Rune Mark, the runes jump to two other heroes (the spell has not changed).
+//   Counterspell: the last spell's areas (at most three) come again, thrown to the far side of the room, a few seconds later.
+//   Rune Swap:    after the Rune Mark, the runes jump to two other heroes (the spell has not changed; the new bearers get about six
+//                 seconds from the jump to the lock). The Mark, the Swap, the spell and the Counterspell still run as one sequence; the
+//                 Counterspell now waits a breath longer after the spell, and echoes at most three shapes.
 //   Arcane Mark:  one hero's own elemental rises where they stood: a shared blow on that spot, for everyone.
 // Hard also shuffles the order of each act's middle sets each pull, lays a third elemental into the Binding's pulses, and a
 // fifth jump into the Leaping Bolt.
@@ -53,7 +58,7 @@ const AZ = {
 
 const AZERATH = {
   id: 'archmage', name: 'Azerath', title: 'Master of the Seven Circles',
-  hp: { normal: 5500000, hard: 6160000 },
+  hp: { normal: 5800000, hard: 6350000 },
   autoDmg: { normal: 2000, hard: 1850 },
   enrage: { normal: 600, hard: 605 },   // the cast starts here and lands 8 s later
   enrageName: 'The Tide Rises',
@@ -69,10 +74,10 @@ const AZERATH = {
     const TAU = Math.PI * 2;
     const { ELS, RULE, SPELL, TAG, SIG, NAME } = AZ;
     const dmg = {
-      burst: H ? 16000 : 20200, lance: H ? 22500 : 18600, pyre: H ? 25200 : 22300, fire: H ? 20800 : 23900, react: H ? 24300 : 21500, frost: H ? 43200 : 49600,
-      beam: H ? 24300 : 21500, void: H ? 21600 : 19100, voidSelf: H ? 10400 : 11400, ice: H ? 25200 : 22300, bolt: H ? 19800 : 17500, rift: H ? 21600 : 19100,
-      conv: H ? 27900 : 24600, lens: H ? 18000 : 15900, counter: H ? 21600 : 19100, mark: H ? 43200 : 49600, pulse: H ? 16200 : 14300, surge: H ? 21600 : 23900,
-      elBite: H ? 1500 : 1300,
+      burst: H ? 17000 : 20200, lance: H ? 18600 : 18600, pyre: H ? 17000 : 22300, fire: H ? 16500 : 23900, react: H ? 19500 : 21500, frost: H ? 43200 : 49600,
+      beam: H ? 24300 : 21500, void: H ? 16500 : 19100, voidSelf: H ? 8800 : 11400, ice: H ? 25200 : 22300, bolt: H ? 19800 : 17500, rift: H ? 21600 : 19100,
+      conv: H ? 27900 : 24600, lens: H ? 18000 : 15900, counter: H ? 17500 : 19100, mark: H ? 43200 : 49600, pulse: H ? 16200 : 14300, surge: H ? 21600 : 23900,
+      elBite: H ? 1500 : 1300, flare: H ? 16000 : 15500, flens: H ? 13500 : 13000,
     };
     const S = (...steps) => steps.filter(Boolean);
     const live = id => f.alive().find(p => p.id === id);
@@ -173,13 +178,14 @@ const AZERATH = {
     const setPair = (a, b, ea, eb, el, hold) => {
       f.runePair = { a, b, ea, eb, el, rule: RULE[el], on: 1 };
       f.clearTethers();
-      if (b != null) f.tether(a, b, hold, { kind: 'short', len: 99999, dmg: 0, tag: 'rune:' + ea + ':' + eb });
+      if (b != null) f.tether(a, b, hold, { kind: 'short', len: 99999, dmg: 0, tag: 'rune:' + ea + ':' + eb + ':' + el });   // (el: the rune that is live, for the clients' drawing)
     };
     let holdUntil = 0;
     // hold: seconds from now until the spell has landed (the link on the two stays until then)
     const runeMark = (el, hold) => {
       f.cast('Rune Mark', f.ct(2.4), 'rune');
       holdUntil = f.t + hold;
+      f.emit({ t: 'roomev', k: 'live', el, dur: hold });   // the sigil of the coming spell's element lights until it lands (archmage-art.js towerLife)
       const pool = f.nonTanks().length >= 2 ? f.nonTanks() : f.alive();
       if (!pool.length) { f.runePair = null; return; }
       const pr = f.shuffle(pool);
@@ -255,7 +261,8 @@ const AZERATH = {
     };
     // a Rune Mark and the spell that follows it (the spell's name is laid out now, so the upcoming feed already says which element it is)
     const runeSet = (gap, el, o = {}) => {
-      const swap = H && o.swap, g2 = swap ? 3.6 : 7.4, hold = (swap ? 4.2 : 0) + g2 + f.ct(4.6) + 0.35;
+      // (a Swap leaves the new bearers about six seconds from the jump to the lock: the spell begins 5.4 s after the Swap's cast does)
+      const swap = H && o.swap, g2 = swap ? 5.4 : 7.4, hold = (swap ? 4.2 : 0) + g2 + f.ct(4.6) + 0.35;
       return [[gap, () => runeMark(el, hold), 'Rune Mark'], swap && [4.2, runeSwap, 'Rune Swap'], [g2, () => runeSpell(el), SPELL[el]]].filter(Boolean);
     };
 
@@ -322,17 +329,33 @@ const AZERATH = {
 
     // --- Convergence: every sigil lights, each in its own element, and a reaction fills the lens where two meet ------------
     const SR = 225;
+    const N = ELS.length;
+    // the lens where two neighbouring sigils overlap: a reaction of their two elements
+    const lens = (i, delay, dm) => {
+      const e = ELS[i], e2 = ELS[(i + 1) % N], A = SIG[e], C = SIG[e2];
+      const mx = (A[0] + C[0]) / 2, my = (A[1] + C[1]) / 2, ang = Math.atan2(C[1] - A[1], C[0] - A[0]) + Math.PI / 2;
+      f.aoe({ kind: 'rect', x: Math.round(mx - Math.cos(ang) * 125), y: Math.round(my - Math.sin(ang) * 125), angle: ang, len: 250, w: 74 }, delay, dm, { tag: 'azReact:' + e + ':' + e2 });
+    };
     const convergence = () => {
       const d = f.ct(7.2), group = new Set();
       f.cast('Convergence', d, 'conv');
       f.emit({ t: 'roomev', k: 'conv', dur: d + 0.6 });
       for (const e of ELS) f.aoe({ kind: 'circle', x: SIG[e][0], y: SIG[e][1], r: SR }, d, dmg.conv, { tag: TAG[e], group });
-      const N = ELS.length;
-      ELS.forEach((e, i) => {
-        const e2 = ELS[(i + 1) % N], A = SIG[e], C = SIG[e2];
-        const mx = (A[0] + C[0]) / 2, my = (A[1] + C[1]) / 2, ang = Math.atan2(C[1] - A[1], C[0] - A[0]) + Math.PI / 2;
-        f.aoe({ kind: 'rect', x: Math.round(mx - Math.cos(ang) * 125), y: Math.round(my - Math.sin(ang) * 125), angle: ang, len: 250, w: 74 }, d, dmg.lens, { tag: 'azReact:' + e + ':' + e2 });
-      });
+      ELS.forEach((e, i) => lens(i, d, dmg.lens));
+    };
+    // Sigil Flare: two neighbouring sigils light and blast together, with the lens between them. Convergence on a small scale, so the
+    // finale is a shape the party has met. Hard: the opposite pair follows, so the half of the floor that was safe is the next one lit
+    const sigilFlare = () => {
+      const d = f.ct(4.8), gap = f.ct(3), k = f.pick([0, 1, 2, 3]);
+      f.cast('Sigil Flare', d, 'conv');   // (the staff lifts as for Convergence)
+      const pair = (i, delay) => {
+        const group = new Set();
+        f.afterKeep(delay === d ? 0 : d, () => f.emit({ t: 'roomev', k: 'flare', els: [ELS[i], ELS[(i + 1) % N]], dur: (delay === d ? d : gap) + 0.6 }));   // (the two sigils glow until they go)
+        for (const j of [i, (i + 1) % N]) f.aoe({ kind: 'circle', x: SIG[ELS[j]][0], y: SIG[ELS[j]][1], r: SR }, delay, dmg.flare, { tag: TAG[ELS[j]], group });
+        lens(i, delay, dmg.flens);
+      };
+      pair(k, d);
+      if (H) pair((k + 2) % N, d + gap);
     };
 
     // --- Hard only -----------------------------------------------------------------------------------------------------
@@ -344,7 +367,7 @@ const AZERATH = {
       if (!m) return;
       const flip = s => { const o = Object.assign({}, s); o.x = -s.x; o.y = -s.y; if (s.angle != null) o.angle = s.angle + Math.PI; return o; };
       const group = new Set(), n = f.alive().length;
-      for (const e of m.list.slice(0, 5)) {
+      for (const e of m.list.slice(0, 3)) {   // (at most three shapes come back)
         if (e.type === 'stack') f.mech({ type: 'stack', shape: flip(e.shape), delay: dd, dmg: e.dmg * 0.9, need: n, tag: e.tag, color: 'echo' });   // (color: only the drawing reads it: an echo of the last spell)
         else f.aoe(flip(e.shape), dd, dmg.counter, { tag: e.tag, group, color: 'echo' });
       }
@@ -359,7 +382,7 @@ const AZERATH = {
 
     // --- the acts ------------------------------------------------------------------------------------------------------
     const runeS = (gap, el, o) => S(...runeSet(gap, el, o));
-    const withCounter = (steps, after = 5.4) => S(...steps, H && [after, counterspell, 'Counterspell']);
+    const withCounter = (steps, after = 6.2) => S(...steps, H && [after, counterspell, 'Counterspell']);
 
     // I. Fire
     const fire1 = from => f.course({
@@ -372,7 +395,7 @@ const AZERATH = {
         runeS(12, 'fire', { swap: true }),
         S([12, burst, 'Arcane Burst']),
       ]),
-      closing: [[10, burst, 'Arcane Burst'], [10, lance, 'Arcane Lance'], [10, pyre, 'Pyre Rings']],
+      closing: [[10, lance, 'Arcane Lance'], [10, burst, 'Arcane Burst'], [10, pyre, 'Pyre Rings']],   // (the last set ends on a Burst, so no Burst opens the closing passes)
       next: frost1,
     }, from);
 
@@ -404,7 +427,7 @@ const AZERATH = {
         S([12, lance, 'Arcane Lance'], [7.5, leapingBolt, 'Leaping Bolt']),
       ], [
         withCounter(runeSet(12, f.pick(['bolt', 'frost', 'bolt']), { swap: true })),
-        S([12, burst, 'Arcane Burst']),
+        S([12, burst, 'Arcane Burst'], [8, sigilFlare, 'Sigil Flare']),
       ]),
       closing: [[10, burst, 'Arcane Burst'], [10, lance, 'Arcane Lance'], [10, leapingBolt, 'Leaping Bolt']],
       next: void1,
@@ -416,12 +439,12 @@ const AZERATH = {
       sets: mix([S([4, voidRifts, 'Void Rifts']), S([12, lance, 'Arcane Lance'])], [
         runeS(12, 'void'),
         S([12, leapingBolt, 'Leaping Bolt'], [8, voidRifts, 'Void Rifts']),
-        S([12, burst, 'Arcane Burst'], [8, iceLances, 'Ice Lances']),
+        S([12, burst, 'Arcane Burst'], [8, sigilFlare, 'Sigil Flare']),
       ], [
         withCounter(runeSet(12, f.pick(['void', 'fire', 'void']), { swap: true })),
         S([12, burst, 'Arcane Burst']),
       ]),
-      closing: [[10, burst, 'Arcane Burst'], [10, lance, 'Arcane Lance'], [10, voidRifts, 'Void Rifts']],
+      closing: [[10, lance, 'Arcane Lance'], [10, burst, 'Arcane Burst'], [10, voidRifts, 'Void Rifts']],   // (as in Act I: the last set ends on a Burst)
       next: finale,
     }, from);
 
@@ -431,11 +454,11 @@ const AZERATH = {
         S([4, convergence, 'Convergence']),
         S([13, lance, 'Arcane Lance']),
         runeS(12, f.pick(ELS)),
-        S([12, burst, 'Arcane Burst']),
+        !H && S([12, burst, 'Arcane Burst']),   // (Hard's long rune chains carry the finale's time: no plain Burst between them, so the script ends with the usual slack before the enrage)
         withCounter(runeSet(12, f.pick(ELS), { swap: true })),
         S([13, convergence, 'Convergence']),
         S([13, H ? arcaneMark : iceLances, H ? 'Arcane Mark' : 'Ice Lances'], [7, leapingBolt, 'Leaping Bolt']),
-      ],
+      ].filter(Boolean),
       closing: [[10, burst, 'Arcane Burst'], [10, convergence, 'Convergence'], [10, lance, 'Arcane Lance']],
       ramp: 0.08,
     }, from);
@@ -443,7 +466,7 @@ const AZERATH = {
     fire1(0);
 
     // every move by name, for tools and testing (window.__game.raidHost.sim.moves.pyre())
-    f.moves = { burst, lance, pyre, iceLances, leapingBolt, voidRifts, runeMark, runeSpell, runeSwap, bindStart, call, convergence, counterspell, arcaneMark };
+    f.moves = { burst, lance, pyre, iceLances, leapingBolt, voidRifts, runeMark, runeSpell, runeSwap, bindStart, call, convergence, sigilFlare, counterspell, arcaneMark };
   },
 };
 

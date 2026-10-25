@@ -547,22 +547,23 @@ const BR_FX = (() => {
     ctx.restore();
   } };
 
-  // Deep Call: the sea heaving: swells running out from the middle and arrows pointing to the rim, foam piling at the wall
+  // Deep Call: the sea drawing back and dragging the room in: swells closing on the middle and arrows pointing in at it, the water
+  // sucked off the wall (the pull stops a step or two short of the middle: nothing is painted where anyone ends up)
   TELLS.brDeep = { raidwide: true, ground(ctx, tg, s, p, k, t) {
     const R = AR(), sp = 0.4 + 0.9 * p;
     ctx.save(); ARENA.trace(ctx, 2); ctx.clip();
-    const g = ctx.createRadialGradient(0, 0, 20, 0, 0, R); g.addColorStop(0, rgba(C.seaDeep, (0.05 + 0.1 * p) * k)); g.addColorStop(1, rgba(C.sea, (0.04 + 0.14 * p) * k));
+    const g = ctx.createRadialGradient(0, 0, 20, 0, 0, R); g.addColorStop(0, rgba(C.seaDeep, (0.1 + 0.16 * p) * k)); g.addColorStop(1, rgba(C.sea, (0.03 + 0.1 * p) * k));
     ctx.fillStyle = g; ctx.fillRect(-R, -R, R * 2, R * 2);
-    for (let i = 0; i < 5; i++) { const q = (t * sp + i / 5) % 1; ctx.beginPath(); ctx.arc(0, 0, 30 + q * R, 0, TAU); ctx.strokeStyle = rgba(C.foam, 0.12 * (1 - q) * (0.4 + p) * k); ctx.lineWidth = 16 * (1 - q * 0.5); ctx.stroke(); ctx.strokeStyle = rgba('#ffffff', 0.55 * (1 - q) * (0.3 + p) * k); ctx.lineWidth = 2; ctx.stroke(); }
+    for (let i = 0; i < 5; i++) { const q = (t * sp + i / 5) % 1, r = 30 + (1 - q) * R; ctx.beginPath(); ctx.arc(0, 0, r, 0, TAU); ctx.strokeStyle = rgba(C.foam, 0.12 * q * (0.4 + p) * k); ctx.lineWidth = 16 * (0.5 + q * 0.5); ctx.stroke(); ctx.strokeStyle = rgba('#ffffff', 0.55 * q * (0.3 + p) * k); ctx.lineWidth = 2.4; ctx.stroke(); }
     ctx.lineCap = 'round';
     for (let i = 0; i < 16; i++) {
-      const a = i * TAU / 16 + 0.1, q = (t * sp * 0.9 + (i % 2) * 0.5 + hash(i, 3) * 0.2) % 1, d = 120 + q * (R - 150), al = Math.sin(q * Math.PI) * (0.3 + 0.55 * p) * k;
-      ctx.save(); ctx.translate(Math.cos(a) * d, Math.sin(a) * d); ctx.rotate(a);
+      const a = i * TAU / 16 + 0.1, q = (t * sp * 0.9 + (i % 2) * 0.5 + hash(i, 3) * 0.2) % 1, d = (R - 40) - q * (R - 150), al = Math.sin(q * Math.PI) * (0.3 + 0.55 * p) * k;
+      ctx.save(); ctx.translate(Math.cos(a) * d, Math.sin(a) * d); ctx.rotate(a + Math.PI);
       ctx.beginPath(); ctx.moveTo(-26, 0); ctx.lineTo(8, 0); ctx.moveTo(-6, -11); ctx.lineTo(10, 0); ctx.lineTo(-6, 11); ctx.strokeStyle = rgba('#bfeaff', al); ctx.lineWidth = 3.4; ctx.stroke(); ctx.restore();
     }
-    // foam heaping against the wall as it comes
+    // the water falling away from the wall, foam streaming off it
     ARENA.trace(ctx, -6); ctx.lineJoin = 'round';
-    for (const [w, a] of [[60, 0.06], [28, 0.12], [9, 0.34]]) { ctx.strokeStyle = rgba(C.foam, a * (0.3 + p) * k); ctx.lineWidth = w * (0.4 + 0.9 * p); ctx.stroke(); }
+    for (const [w, a] of [[40, 0.05], [16, 0.1], [5, 0.25]]) { ctx.strokeStyle = rgba(C.foam, a * (0.3 + p) * k); ctx.lineWidth = w * (0.4 + 0.9 * p); ctx.stroke(); }
     ctx.restore();
   } };
 
@@ -851,17 +852,22 @@ const BR_FX = (() => {
     H.shake(8);
   };
 
-  // Deep Call: the sea heaves up and goes through the room outward, piling foam at the wall
+  // Deep Call: the sea heaves and goes through the room inward, closing on the middle in rings of foam
   IMP.brDeep = (tg, msg, ctx, H) => {
     H.roomTint(C.sea, 0.3, 1.0);
-    for (let i = 0; i < 4; i++) H.shockAt(0, 0, { r: H.AR * 1.2, color: i % 2 ? C.foam : C.spray, w: 14 - i * 3, dur: 0.75 + i * 0.12, flat: 0.8, delay: i * 0.12 });
     VFX.fx({ dur: 1.1, layer: 'air', draw: (c, p, t, e) => {
-      const k = e.a * Math.min(1, p / 0.15) * (1 - clamp((p - 0.4) / 0.6, 0, 1));
-      c.save(); clipRoom(c); c.lineJoin = 'round'; ARENA.trace(c, -2);
-      for (const [w, col, a] of [[90, C.sea, 0.25], [34, C.foam, 0.55], [8, '#ffffff', 0.9]]) { c.strokeStyle = rgba(col, a * k); c.lineWidth = w * (1 + 0.4 * p); c.stroke(); }
+      const k = e.a * Math.min(1, p / 0.12) * (1 - clamp((p - 0.5) / 0.5, 0, 1));
+      c.save(); clipRoom(c); c.lineJoin = 'round';
+      for (let i = 0; i < 4; i++) {
+        const q = clamp(p * 1.25 - i * 0.12, 0, 1); if (q <= 0 || q >= 1) continue;
+        c.beginPath(); c.arc(0, 0, 70 + (1 - easeOut(q)) * (H.AR * 1.1), 0, TAU);
+        for (const [w, col, a] of [[44 - i * 8, C.sea, 0.22], [16 - i * 3, i % 2 ? C.foam : C.spray, 0.55], [4, '#ffffff', 0.8]]) { c.strokeStyle = rgba(col, a * k * (1 - q * 0.5)); c.lineWidth = w; c.stroke(); }
+      }
+      glow(c, 0, 0, 260 * (0.5 + p), C.spray, 0.35 * k);
       c.restore();
     } });
-    for (const q of H.scatter({ kind: 'circle', x: 0, y: 0, r: H.AR - 40 }, 14)) H.after(Math.random() * 0.4, () => spray(q.x, q.y, 6, { size: 1.2, up: 1.2 }));
+    VFX.shock(0, 0, { r: 220, color: C.foam, w: 10, dur: 0.6, flat: 0.8 });
+    for (const q of H.scatter({ kind: 'circle', x: 0, y: 0, r: H.AR - 40 }, 12)) H.after(Math.random() * 0.4, () => spray(q.x, q.y, 6, { size: 1.2, up: 1.2 }));
     H.shake(11);
   };
 

@@ -810,18 +810,20 @@ const AZ_ART = (() => {
     ctx.save(); ARENA.trace(ctx, 0); ctx.clip();
     for (const cs of a.caus) { const an = cs.a + t * cs.sp; glow(ctx, Math.cos(an) * cs.d, Math.sin(an) * cs.d * 0.95, cs.s, '#5ad0c8', 0.045 + 0.03 * Math.sin(t * 0.6 + cs.ph)); }
     for (const b of a.bubbles) { const u = (t * b.sp + b.ph) % 1, x = Math.cos(b.a) * b.d + Math.sin(t + b.ph) * 6, y = Math.sin(b.a) * b.d * 0.95 - u * 26; circle(ctx, x, y, b.s, null, rgba('#c8fff6', 0.32 * Math.sin(u * Math.PI)), 1); }
-    const bind = ev.bind && t < ev.bind.end ? ev.bind.els || [] : [], conv = ev.conv && t < ev.conv.end ? ev.conv : null;
+    const bind = ev.bind && t < ev.bind.end ? ev.bind.els || [] : [], flare = ev.flare && t < ev.flare.end ? ev.flare.els || [] : [], live = ev.live && t < ev.live.end ? ev.live.el : null, conv = ev.conv && t < ev.conv.end ? ev.conv : null;
     for (const el of ELS) {
       const [x, y] = SIG[el], col = COL[el];
       let k = 0.12 + 0.06 * Math.sin(t * 1.1 + el.length);
       if (bind.includes(el)) k = 0.5 + 0.3 * Math.sin(t * 5);
+      if (flare.includes(el)) k = 0.55 + 0.35 * Math.sin(t * 6);
+      if (live === el) k = Math.max(k, 0.6 + 0.2 * Math.sin(t * 3.4));   // (Rune Mark: the sigil of the coming spell burns until it lands)
       if (conv) k = Math.max(k, 0.25 + 0.55 * clamp((t - conv.start) / Math.max(0.5, conv.end - conv.start), 0, 1));
       const bd = ev.bound && ev.bound.el === el ? ev.bound : null, sg = ev.surge && ev.surge.el === el ? ev.surge : null;
       if (bd && t < bd.end) k = Math.max(k, 1.0 - (t - bd.start) / (bd.end - bd.start) * 0.5);
       glow(ctx, x, y, 150, col, k * 0.55);
       circle(ctx, x, y, 108, null, rgba(col, Math.min(1, k * 1.4) * 0.8), 2.5);
       if (k > 0.3) runes(ctx, x, y, 94, 16, 6, col, Math.min(1, k) * 0.55, t * 0.3, ELS.indexOf(el));
-      if (bind.includes(el)) for (let i = 0; i < 2; i++) { const q = (t * 0.8 + i * 0.5) % 1; circle(ctx, x, y, 108 + q * 50, null, rgba(col, 0.5 * (1 - q)), 2); }
+      if (bind.includes(el) || live === el) for (let i = 0; i < 2; i++) { const q = (t * 0.8 + i * 0.5) % 1; circle(ctx, x, y, 108 + q * 50, null, rgba(col, 0.5 * (1 - q)), 2); }
       if (bd && t < bd.end) {
         const q = (t - bd.start) / (bd.end - bd.start), P2 = P[el];
         circle(ctx, x, y, 108 + q * 200, null, rgba('#ffffff', 0.7 * (1 - q)), 4);
@@ -839,7 +841,7 @@ const AZ_ART = (() => {
   // A sigil of each rune's element under the bearer's feet, a brass medallion over their head holding the rune, a thread from each to
   // him, and between the two a link: thin and dashed while they stand apart, a thick bloom of both elements when they are close.
   function runeLink(ctx, a, b, th, t) {
-    const [, ea, eb] = parse(th.tag), ca = COL[ea] || '#ffffff', cb = COL[eb] || '#ffffff';
+    const [, ea, eb, live] = parse(th.tag), ca = COL[ea] || '#ffffff', cb = COL[eb] || '#ffffff';
     const d = Math.hypot(b.x - a.x, b.y - a.y), near = d < 250, mid = mix2(ca, cb, 0.5), age = Math.max(0, t - (th.start != null ? th.start : t));
     const ay = a.y - 22 - (a.lift || 0), by = b.y - 22 - (b.lift || 0), mx = (a.x + b.x) / 2, my = (ay + by) / 2;
     ctx.save(); ctx.lineCap = 'round';
@@ -863,6 +865,8 @@ const AZ_ART = (() => {
     }
     // a rune under each bearer's feet and over their head
     for (const [e, el, col] of [[a, ea, ca], [b, eb, cb]]) {
+      // the live rune (the element of the coming spell) is the bright one; the other waits dim
+      const isLive = !live || live === el, dim = isLive ? 1 : 0.5;
       const hx = e.x, hy = e.y - 78 - (e.lift || 0) + Math.sin(t * 2.4 + e.x) * 2, arr = clamp(1 - age / 0.5, 0, 1);
       // the floor sigil
       const fy = e.y + 4;
@@ -873,11 +877,20 @@ const AZ_ART = (() => {
       runes(ctx, e.x, fy, 22, 8, 4, col, 0.6, t * 0.8, ELS.indexOf(el));
       if (arr > 0) { circle(ctx, e.x, fy, 26 + 70 * (1 - arr), null, rgba(col, arr * 0.7), 3); glow(ctx, e.x, e.y - 30, 60 * arr + 20, col, 0.6 * arr); }
       // the medallion: a brass ring round a dark disc, the rune in it
-      const sc = 1 + arr * 0.7;
-      glow(ctx, hx, hy, 34 * sc, col, 0.4 + 0.3 * arr);
-      circle(ctx, hx, hy, 16 * sc, 'rgba(6,20,26,0.88)', rgba(BRASS, 0.95), 2.4);
-      circle(ctx, hx, hy, 12.5 * sc, null, rgba(col, 0.8), 1.4);
-      glyph(ctx, el, hx, hy, 8.5 * sc, col, 2);
+      const sc = (1 + arr * 0.7) * (isLive ? 1.18 + 0.05 * Math.sin(t * 5) : 0.9);
+      glow(ctx, hx, hy, 34 * sc, col, (0.4 + 0.3 * arr) * dim + (isLive && live ? 0.2 : 0));
+      circle(ctx, hx, hy, 16 * sc, 'rgba(6,20,26,0.88)', null);
+      // the ring is drawn by what the rune asks: a closed ring for the two that bring the pair together (frost, lightning), a ring
+      // broken in two that drifts apart for the two that part them (fire, the void)
+      ctx.lineCap = 'butt';
+      if (AZ.RULE[el] === 'pair') { circle(ctx, hx, hy, 16 * sc, null, rgba(BRASS, 0.95 * dim), 2.4); circle(ctx, hx, hy, 12.5 * sc, null, rgba(col, 0.8 * dim), 1.4); }
+      else for (const sgn of [-1, 1]) {
+        const off = 2.2 * sc + Math.sin(t * 3) * 0.8, ox = sgn * off, a0 = sgn > 0 ? -1.38 : Math.PI - 1.38;
+        ctx.beginPath(); ctx.arc(hx + ox, hy, 16 * sc, a0, a0 + 2.76); ctx.strokeStyle = rgba(BRASS, 0.95 * dim); ctx.lineWidth = 2.4; ctx.stroke();
+        ctx.beginPath(); ctx.arc(hx + ox, hy, 12.5 * sc, a0, a0 + 2.76); ctx.strokeStyle = rgba(col, 0.8 * dim); ctx.lineWidth = 1.4; ctx.stroke();
+      }
+      ctx.lineCap = 'round';
+      ctx.globalAlpha = dim; glyph(ctx, el, hx, hy, 8.5 * sc, col, 2); ctx.globalAlpha = 1;
     }
     ctx.restore();
   }

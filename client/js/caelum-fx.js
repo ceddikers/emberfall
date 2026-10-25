@@ -200,6 +200,11 @@ const CL_FX = (() => {
       const u = (t * 0.9 + live[r] * 0.31) % 1; glow(ctx, A[0] + dx * (0.15 + 0.7 * u), A[1] + dy * (0.15 + 0.7 * u), 9, P.hi, 0.5 * k * Math.sin(u * Math.PI));
     }
     ctx.restore();
+    // Starlight: the last cut lets go a ring of silver across the room (roomev fl: the dance ends in a flare that touches everyone)
+    if (ev.fl && l.length > 1) {
+      const u = (t - Math.max(...land) - 0.25) / 0.9;
+      if (u > 0 && u < 1) { const q = l[l.length - 1], R = 40 + 640 * easeOut(u); ctx.save(); ctx.globalCompositeOperation = 'lighter'; ellipse(ctx, q[0], q[1] + 30, R, R * 0.8, 0, rgba(P.core, 0.05 * (1 - u)), rgba(P.hi, 0.6 * (1 - u)), 3); ctx.restore(); }
+    }
     for (const i of order) {
       const [x, y, n, face] = l[i], born = ev.start + i * 0.07, a0 = easeOut(clamp((t - born) / 0.45, 0, 1)), since = t - land[i];
       if (a0 <= 0.01) continue;
@@ -262,7 +267,7 @@ const CL_FX = (() => {
   function shadowFloor(ctx, room, t) {
     const ev = room && room.ev && room.ev.clshadow;
     if (!ev) { S.sh = null; return; }
-    const sh = shadowState(ev, t), R = sh.r * (1 + 0.012 * Math.sin(t * 0.9)), x = sh.x, y = sh.y, sky = isSky(), bn = sh.burn;
+    const sh = shadowState(ev, t), R = sh.r * (1 + 0.012 * Math.sin(t * 0.9)), x = sh.x, y = sh.y, sky = isSky(), bn = sh.burn * (S.graceEnd && t < S.graceEnd ? 0.35 : 1);   // (held while Grace Withdrawn has everyone at nothing)
     ctx.save(); ARENA.trace(ctx, 2); ctx.clip();
     const g = ctx.createRadialGradient(x, y, R * 0.1, x, y, R * 1.08);
     const c0 = sky ? '22,16,64' : '2,3,10';
@@ -340,6 +345,9 @@ const CL_FX = (() => {
   }
   function zone(ctx, z, k, t) {
     const s = z.shape;
+    // while Grace Withdrawn holds everyone at nothing the fire is held too: its rim goes dim and dashed, and it does not burn
+    const held = S.graceEnd && t < S.graceEnd;
+    if (held) { k *= 0.45; if (z.tag === 'clShadowBurn') { const sh = S.sh; zoneRim(ctx, sh ? Object.assign({}, s, { r: sh.r, kind: 'circle' }) : s, k, false, t); return; } }
     if (z.tag === 'clShadowBurn') {
       // (the burning itself is part of the shadow, which draws under every zone: this is only its outline, following the shadow as it grows)
       const sh = S.sh, q = sh ? Object.assign({}, s, { r: sh.r * (1 + 0.012 * Math.sin(t * 0.9)), kind: 'circle' }) : s;
@@ -694,6 +702,7 @@ const CL_FX = (() => {
     if (ev.clsummon) wyrm(ctx, room, t);
   }
   function floor(ctx, room, t) {
+    const gr = room && room.ev && room.ev.clgrace; S.graceEnd = gr ? gr.end : 0;
     shadowFloor(ctx, room, t);
     const ev = room && room.ev; if (ev && ev.clascend) ascendFloor(ctx, ev.clascend, t);
   }

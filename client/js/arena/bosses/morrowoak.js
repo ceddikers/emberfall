@@ -19,6 +19,11 @@
 //       Storm Knot (the Storm's): three rods come down where three heroes stand; keep clear of them.
 //       Barrow Lantern (the Hollow King's): a light mark that bursts and passes to the hero farthest away, on a beat.
 //   Act IV, Last Bloom (15% -> dead): what limbs are left, and every one of them fires with a last Fourfold Bloom.
+// THE HUNGER HAS ITS FILL (rework): a seed that bursts beside an old hole feeds it instead of digging a new one, a hole stops growing at a
+//   ceiling, and once six holes are open every seed feeds the nearest. Inhale and Hungering Dark drag you to a hole's edge, never into it, so
+//   a fall is always the walker's own step. One heavy move at a time (seeds, Inhale, Bloom, the limbs, Hungering Dark wait their turn, so a
+//   limb's turn is never stacked on a seed, a Hungering Dark or a Last Gasp: spacing, not cutting), the Lantern's marks never pass to the same hero twice, and Sap Tides are
+//   spaced. Act IV opens with an Inhale that rolls straight into a Fourfold Bloom (the pull puts you at his feet; the petals open there).
 // Every telegraph shows on every difficulty. Hard: casts 15% faster, 25% more damage, and:
 //   Twin Seed:      two seeds, joined: burst them far apart, or they open one giant hole between them.
 //   Hungering Dark: the holes breathe in; the ground round each one drags anyone on it over the edge.
@@ -46,18 +51,34 @@ const MORROWOAK = {
     const TAU = Math.PI * 2;
     const dmg = {
       sap: H ? 11500 : 12600, lash: H ? 23800 : 26000, seed: H ? 16800 : 18000, fall: H ? 20500 : 22000, petal: H ? 19600 : 21500,
-      twin: H ? 15000 : 0, dark: H ? 6000 : 0, swallow: H ? 9000 : 10500, sapHp: H ? 11000 : 12000, limbHp: H ? 185000 : 200000,
-      cleave: H ? 56000 : 60000, chop: H ? 21400 : 23000, roots: H ? 10700 : 11500, rod: H ? 20200 : 22000, lantern: H ? 13100 : 13800,
+      twin: H ? 15000 : 0, dark: H ? 9000 : 0, swallow: H ? 9000 : 10500, sapHp: H ? 11000 : 12000, limbHp: H ? 185000 : 200000,
+      cleave: H ? 52000 : 54000, chop: H ? 21400 : 23000, roots: H ? 10700 : 11500, rod: H ? 20200 : 22000, lantern: H ? 13100 : 13800,
       wing: H ? 20000 : 0, rime: H ? 18400 : 0, rimePool: H ? 2400 : 0, rune: H ? 18900 : 0, head: H ? 19400 : 0,
     };
+    const TUNE = H ? 1.13 : 1.13;   // (the spacing and caps below keep the room fair; this keeps the hits worth healing)
+    for (const k of Object.keys(dmg)) if (k !== 'sapHp' && k !== 'limbHp') dmg[k] = Math.round(dmg[k] * TUNE);
     const S = (...steps) => steps.filter(Boolean);
     const live = id => f.alive().find(p => p.id === id);
     const hold = d => { B.holdUntil = Math.max(B.holdUntil || 0, f.t + d); };
     let sapN = 0;                  // Sap Tide grows every time
     let riding = false;            // the Swallowing: the party rides the pieces down, nobody falls
+    let wallOn = false;            // the Swallowing is under way: nothing waiting for its turn starts
+    // One heavy move at a time: seeds, Inhale, Bloom, a limb's turn and Hungering Dark each take the floor for as long as they run, and
+    // one that comes due sooner waits for the one before it. (Sap Tide and Root Lash are the tank's and healer's own beat and never wait.)
+    let lockUntil = 0;
+    const busy = d => { lockUntil = Math.max(lockUntil, f.t + d); };
+    const serial = (fn, name) => {
+      const go = (...a) => {
+        if (f.state !== 'live' || wallOn) return;
+        const w = lockUntil - f.t;
+        if (w > 0.05) { const re = () => go(...a); re.limb = go.limb; f.afterKeep(w + 0.5, re, name); return; }
+        fn(...a);
+      };
+      return go;
+    };
 
     // --- the holes ------------------------------------------------------------------------------------------------------------
-    const HOLE_R = 75;
+    const HOLE_R = 75, HOLE_MAX = 105, GIANT_R = 125, HOLE_CAP = 6, FEED = 120;   // a hole stops at HOLE_MAX (a Twin Seed's giant one at GIANT_R)
     const holes = [];              // f.floor entries { kind: 'hole', x, y, r } (the same objects the clients and bots get)
     const inHole = (x, y, pad = 0) => holes.find(h => Math.hypot(x - h.x, y - h.y) < h.r - pad);
     const dig = (x, y, r = HOLE_R) => {
@@ -67,9 +88,19 @@ const MORROWOAK = {
       f.emit({ t: 'propfx', k: 'mgdig', x: h.x, y: h.y, r: h.r });
       return h;
     };
+    const ceil = new WeakMap();    // a hole's ceiling (a giant one's is higher)
     const grow = (h, by) => {
-      h.r = Math.min(170, h.r + by); f.floorVer++; f.propsDirty = true;
+      h.r = Math.min(ceil.get(h) || HOLE_MAX, h.r + by); f.floorVer++; f.propsDirty = true;
       f.emit({ t: 'propfx', k: 'mggrow', x: h.x, y: h.y, r: h.r });
+    };
+    // where a seed bursts: beside an old hole (or with the Hunger full, anywhere) it feeds the nearest instead of digging a new one
+    const burst = (x, y, r = HOLE_R) => {
+      let near = null, nd = Infinity;
+      for (const h of holes) { const d = Math.hypot(x - h.x, y - h.y) - h.r; if (d < nd) { nd = d; near = h; } }
+      if (near && (nd < FEED || holes.length >= HOLE_CAP)) { grow(near, r > HOLE_R ? 30 : 14); return near; }
+      const h = dig(x, y, r);
+      if (r > HOLE_R) ceil.set(h, GIANT_R);
+      return h;
     };
     // for the bots: is this spot floor? (soon: with a step's margin round each hole)
     f.room = { fallen: 0, holes, safe: (x, y, soon) => !holes.some(h => Math.hypot(x - h.x, y - h.y) < h.r + (soon ? 30 : 6)) };
@@ -106,10 +137,11 @@ const MORROWOAK = {
     // --- Act I and II moves -----------------------------------------------------------------------------------------------------
     // Hunger Seed: a dark seed rides a hero; where it locks (a moment before it bursts) the ground splits, and then it is a hole.
     // Hard's Twin Seed joins two seeds: burst them apart, or they make one giant hole between them.
-    const seed = (n = 1, twin = false) => {
+    const seed = serial((n = 1, twin = false) => {
       const pool = f.shuffle(f.nonTanks().length >= n ? f.nonTanks() : f.alive()).slice(0, n);
       if (!pool.length) return;
       const d = f.ct(6), lock = 1.6;
+      busy(d + 0.8);
       f.cast(twin && pool.length > 1 ? 'Twin Seed' : 'Hunger Seed', f.ct(3), 'seed');
       const pair = { ok: true, done: false, ms: [] };
       if (twin && pool.length > 1) f.tether(pool[0].id, pool[1].id, d - lock, { kind: 'long', len: 330, dmg: dmg.twin, tag: 'mgTwin', onResolve: ok => { pair.ok = ok; } });
@@ -120,20 +152,20 @@ const MORROWOAK = {
             if (twin && pool.length > 1 && !pair.ok) {
               pair.done = true;
               const [a, b] = pair.ms;
-              dig((a.shape.x + b.shape.x) / 2, (a.shape.y + b.shape.y) / 2, 150);
+              burst((a.shape.x + b.shape.x) / 2, (a.shape.y + b.shape.y) / 2, GIANT_R - 5);
               return;
             }
-            dig(m.shape.x, m.shape.y);
+            burst(m.shape.x, m.shape.y);
           } });
         pair.ms.push(m);
       }
-    };
+    }, 'Hunger Seed');
     // Inhale: the Hunger breathes in, and everyone is dragged toward him; a drag that crosses a hole ends in it
     const PULL = 300;
-    const inhale = () => {
+    const inhale = serial(() => {
       const d = f.ct(4.4);
       f.cast('Inhale', d, 'inhale');
-      hold(d + 0.6);
+      hold(d + 0.6); busy(d + 1.2);
       f.mech({ type: 'drop', shape: { kind: 'circle', x: B.x, y: B.y, r: 0 }, delay: d, dmg: 0, avoidable: false, tag: 'mgInhale', pullDist: PULL,
         onResolve: () => {
           for (const p of f.alive()) {
@@ -141,24 +173,26 @@ const MORROWOAK = {
             if (D < 110) continue;
             const ux = dx / D, uy = dy / D;
             let go = Math.min(PULL, D - 95);
-            for (let s = 0; s <= go; s += 10) if (inHole(p.x + ux * s, p.y + uy * s, 12)) { go = s + 18; break; }
+            // a hole in the way stops the drag at its edge (the Hunger pulls you up to it, never over it)
+            for (let s = 0; s <= go; s += 10) if (inHole(p.x + ux * s, p.y + uy * s, -22)) { go = Math.max(0, s - 12); break; }
             f.knock(p, p.x - ux, p.y - uy, go);
           }
         } });
-    };
+    }, 'Inhale');
     // Fourfold Bloom: four petals open round him (thorn and spark wide, frost and blight narrow), snap shut, turn an eighth of the way
     // (clockwise on Normal; Hard draws the way) and snap again
     const PETALS = ['mgThorn', 'mgFrost', 'mgSpark', 'mgBlight'], ARC = [1.25, 0.55, 1.25, 0.55];
-    const bloom = (o = {}) => {
+    const bloomRaw = (o = {}) => {
       const d = f.ct(o.quick ? 3.8 : 4.6), turn = f.ct(2.4), dir = H && f.rng() < 0.5 ? -1 : 1, a0 = f.rng() * TAU;
       if (!o.quiet) f.cast('Fourfold Bloom', d + turn, 'bloom', { dir });
-      hold(d + turn + 0.4);
+      hold(d + turn + 0.4); busy(d + turn + 1);
       const cx = B.x, cy = B.y;
       const petals = (a, delay) => { const group = new Set(); PETALS.forEach((tag, i) => f.aoe({ kind: 'cone', x: cx, y: cy, r: 1300, arc: ARC[i], angle: +(a + i * Math.PI / 2).toFixed(3) }, delay, dmg.petal, { tag, group })); };
       petals(a0, d);
       f.emit({ t: 'roomev', k: 'mgbloom', x: Math.round(cx), y: Math.round(cy), a: +a0.toFixed(3), dir, at: +d.toFixed(2), turn: +turn.toFixed(2), dur: +(d + turn + 0.6).toFixed(2) });
       f.afterKeep(d - 0.02, () => { if (f.state === 'live') petals(a0 + dir * Math.PI / 4, turn + 0.02); });
     };
+    const bloom = serial(bloomRaw, 'Fourfold Bloom');
     // Root Lash: the tank's buster, and it roots them a moment (so the tank moves him off the holes before, not after)
     const lash = () => {
       const tank = f.tank(); if (!tank) return;
@@ -168,10 +202,15 @@ const MORROWOAK = {
         onResolve: inside => { for (const p of inside) f.debuff(p.id, 'rooted', H ? 2 : 1.5); } });
     };
     // Sap Tide: a raidwide, a little heavier every time
+    let tideAt = -99;
     const sapTide = () => {
+      if (f.state !== 'live') return;
+      const w = tideAt + 9 - f.t;   // two tides are never stacked: one that comes due too soon waits for the one before
+      if (w > 0.05) { f.afterKeep(w, sapTide, 'Sap Tide'); return; }
+      tideAt = f.t;
       const d = f.ct(4.4), k = sapN++;
       f.cast('Sap Tide', d, 'tide');
-      f.mech({ type: 'raidwide', shape: { kind: 'circle', x: 0, y: 0, r: 0 }, delay: d, dmg: Math.round(dmg.sap * Math.min(1.6, 1 + 0.05 * k)), hidden: true, tag: 'mgSap' });
+      f.mech({ type: 'raidwide', shape: { kind: 'circle', x: 0, y: 0, r: 0 }, delay: d, dmg: Math.round(dmg.sap * Math.min(1.5, 1 + 0.05 * k)), hidden: true, tag: 'mgSap' });
     };
     // Saplings: little trees that walk to the nearest hole; one that reaches it, grows it
     const saplings = () => {
@@ -198,20 +237,30 @@ const MORROWOAK = {
       });
     };
     // Hungering Dark (Hard): the holes breathe in; the ground round each one drags anyone on it over the edge
-    const hungeringDark = () => {
+    const hungeringDark = serial(() => {
       if (!holes.length) return;
       const d = f.ct(4.0);
       f.cast('Hungering Dark', d, 'dark');
-      const group = new Set();
+      busy(d + 1);
+      const group = new Set(), pulled = new Set();
       for (const h of holes) {
         f.mech({ type: 'aoe', shape: { kind: 'donut', x: h.x, y: h.y, r: h.r + 95, r2: h.r - 4 }, delay: d, dmg: dmg.dark, tag: 'mgDark', group,
-          onResolve: inside => { for (const p of inside) { const dd = Math.hypot(h.x - p.x, h.y - p.y) || 1; f.knock(p, p.x - (h.x - p.x) / dd, p.y - (h.y - p.y) / dd, dd); } } });
+          onResolve: inside => {
+            // the ground drags you to the hole's edge (one hole's pull a hero, the nearest), never over it
+            for (const p of inside) {
+              if (pulled.has(p.id)) continue;
+              pulled.add(p.id);
+              const dd = Math.hypot(h.x - p.x, h.y - p.y) || 1, go = dd - (h.r + 26);
+              if (go > 4) f.knock(p, p.x - (h.x - p.x) / dd, p.y - (h.y - p.y) / dd, go);
+            }
+          } });
       }
-    };
+    }, 'Hungering Dark');
 
     // --- the Swallowing (the wall) ------------------------------------------------------------------------------------------
     const SWALLOW = 21;
     const swallowing = () => {
+      wallOn = true; lockUntil = 0;
       f.cast('The Swallowing', 6, 'swallow');
       B.lockFacing = true; hold(SWALLOW);
       f.emit({ t: 'roomev', k: 'swallow', dur: SWALLOW });
@@ -238,6 +287,7 @@ const MORROWOAK = {
       f.afterKeep(SWALLOW - 4.5, () => f.cast(H ? 'Deeper Roots' : 'The Grove Remade', 4.5, 'unfold'));
       f.afterKeep(SWALLOW, () => {
         B.lockFacing = false;
+        wallOn = false; lockUntil = 0;
         growLimbs();
         relabel();
         if (f.wall) f.wallDown();
@@ -249,7 +299,7 @@ const MORROWOAK = {
 
     // --- the limbs --------------------------------------------------------------------------------------------------------------
     // Each limb is a breakable part (an inert add with its own bar) held at his side; each one's move is aimed from where it stands.
-    const farFrom = (x, y, not) => { let best = null, bd = -1; for (const p of f.alive()) { if (not && p.id === not) continue; const d = Math.hypot(p.x - x, p.y - y); if (d > bd) { bd = d; best = p; } } return best; };
+    const farFrom = (x, y, not) => { let best = null, bd = -1; for (const p of f.alive()) { if (not && (not instanceof Set ? not.has(p.id) : p.id === not)) continue; const d = Math.hypot(p.x - x, p.y - y); if (d > bd) { bd = d; best = p; } } return best; };
     const nonTank = () => { const pool = f.nonTanks().length ? f.nonTanks() : f.alive(); return pool.length ? f.pick(pool) : null; };
     // Cleaver Bough: a soak on a hero; then a chop from the bough through where they stood
     const cleaver = L => {
@@ -283,10 +333,10 @@ const MORROWOAK = {
     // Barrow Lantern: a light mark bursts on a hero and passes to whoever is farthest from them, on a beat
     const lantern = () => {
       const first = nonTank(); if (!first) return;
-      const d = f.ct(4.0), beat = f.ct(2.6), n = H ? 4 : 3;
+      const d = f.ct(4.0), beat = f.ct(2.6), n = H ? 4 : 3, had = new Set([first.id]);   // (no hero carries it twice)
       f.cast('Barrow Lantern', d + beat * (n - 1), 'lantern');
       const mark = (p, k, delay) => f.mech({ type: 'spread', shape: { kind: 'circle', x: p.x, y: p.y, r: 150 }, delay, dmg: dmg.lantern, follow: p.id, lockAt: 0.3, tag: 'mgLantern',
-        onResolve: () => { if (k + 1 >= n || f.state !== 'live') return; const q = live(p.id) || p, nx = farFrom(q.x, q.y, p.id); if (nx) mark(nx, k + 1, beat); } });
+        onResolve: () => { if (k + 1 >= n || f.state !== 'live') return; const q = live(p.id) || p, nx = farFrom(q.x, q.y, had); if (nx) { had.add(nx.id); mark(nx, k + 1, beat); } } });
       mark(first, 0, d);
     };
     // (Hard: Deeper Roots) Wyrm Wing: the wyrm's wing on its side of him sweeps that whole half of the room
@@ -319,15 +369,16 @@ const MORROWOAK = {
       const tgt = farFrom(lx, ly); if (!tgt) return;
       f.aoe({ kind: 'rect', x: Math.round(lx), y: Math.round(ly), angle: +Math.atan2(tgt.y - ly, tgt.x - lx).toFixed(3), len: 1500, w: 130 }, d, dmg.head, { tag: 'mgHead' });
     };
+    // dur: how long the move holds the floor (cast to last hit), for the one-heavy-move-at-a-time rule
     const LIMB = {
-      cleaver: { name: 'Cleaver Bough', fn: cleaver },
-      brood: { name: 'Brood Roots', fn: broodRoots },
-      storm: { name: 'Storm Knot', fn: stormKnot },
-      lantern: { name: 'Barrow Lantern', fn: lantern },
-      wing: { name: 'Wyrm Wing', fn: wing },
-      rime: { name: 'Frost Fist', fn: rimeFist },
-      rune: { name: 'Archmage Rune', fn: rune },
-      head: { name: 'Hydra Head', fn: head },
+      cleaver: { name: 'Cleaver Bough', fn: cleaver, dur: 6.8 },
+      brood: { name: 'Brood Roots', fn: broodRoots, dur: 4.4 },
+      storm: { name: 'Storm Knot', fn: stormKnot, dur: 4.4 },
+      lantern: { name: 'Barrow Lantern', fn: lantern, dur: H ? 11.8 : 9.2 },
+      wing: { name: 'Wyrm Wing', fn: wing, dur: 4.6 },
+      rime: { name: 'Frost Fist', fn: rimeFist, dur: 5.4 },
+      rune: { name: 'Archmage Rune', fn: rune, dur: 6.6 },
+      head: { name: 'Hydra Head', fn: head, dur: 4.0 },
     };
     const SET1 = ['cleaver', 'brood', 'storm', 'lantern'], SET2 = ['wing', 'rime', 'rune', 'head'];
     const order = H ? f.shuffle([...SET1, ...SET2]).slice(0, 4) : SET1.slice();
@@ -352,7 +403,8 @@ const MORROWOAK = {
             f.emit({ t: 'propfx', k: 'mglimb', x: Math.round(q.x), y: Math.round(q.y), limb: k });
             relabel();
             // Last Gasp (Hard): its move fires once more from where it fell
-            if (H && f.state === 'live') { const at = { x: q.x, y: q.y }; f.afterKeep(1.4, () => { if (f.state === 'live') LIMB[k].fn(at); }, 'Last Gasp'); }
+            // ... but not on top of another heavy move: it waits its turn
+            if (H && f.state === 'live') { const at = { x: q.x, y: q.y }; f.afterKeep(1.4, serial(() => { busy(f.ct(LIMB[k].dur) + 0.8); LIMB[k].fn(at); }, 'Last Gasp'), 'Last Gasp'); }
           } });
         a.limb = k;
         limbs[k] = a;
@@ -362,21 +414,28 @@ const MORROWOAK = {
     // one limb's turn: the next one still living (none left: a Bloom or an Inhale, by turns)
     const BARE = [[() => bloom(), 'Fourfold Bloom'], [() => inhale(), 'Inhale']];
     let bareI = 0;
-    const limbTurn = () => {
+    const limbTurn = serial(() => {
       const ls = liveLimbs();
       if (!ls.length) { BARE[bareI++ % BARE.length][0](); relabel(); return; }
       const k = ls[turnI % ls.length];
       turnI++;
+      busy(f.ct(LIMB[k].dur) + 0.8);
       LIMB[k].fn(limbs[k]);
       relabel();
-    };
+    }, 'The Grove Remade');
     limbTurn.limb = true;
     // Last Bloom: every limb still standing fires, one after another, and then the last Fourfold Bloom
-    const lastBloom = () => {
+    const lastBloom = serial(() => {
       const ls = liveLimbs();
+      busy(ls.length * f.ct(1.6) + f.ct(8));
       ls.forEach((k, i) => f.afterKeep(i * f.ct(1.6), () => { if (f.state === 'live' && f.adds.has(limbs[k].id)) LIMB[k].fn(limbs[k]); }, LIMB[k].name));
-      f.afterKeep(ls.length * f.ct(1.6) + 0.5, () => bloom(), 'Fourfold Bloom');
-    };
+      f.afterKeep(ls.length * f.ct(1.6) + 0.5, () => bloomRaw(), 'Fourfold Bloom');
+    }, 'Fourfold Bloom');
+    // Draw and Bloom: an Inhale that rolls straight into a Fourfold Bloom (the pull puts you at his feet, the petals open there)
+    const drawBloom = serial(() => {
+      inhale();
+      f.afterKeep(f.ct(4.4) + 1.3, () => { if (f.state === 'live') bloom({ quick: true }); }, 'Fourfold Bloom');
+    }, 'Inhale');
 
     // --- the acts -------------------------------------------------------------------------------------------------------------
     const mix = (head, mid, tail) => [...head, ...(H ? f.shuffle(mid) : mid), ...tail];
@@ -440,7 +499,7 @@ const MORROWOAK = {
         S(H ? [9, hungeringDark, 'Hungering Dark'] : [9, inhale, 'Inhale']),
         S([9, ...turn]),
         S([10, lash, 'Root Lash']),
-        S([10, () => bloom(), 'Fourfold Bloom']),
+        S([10, drawBloom, 'Inhale']),
         S([12, ...turn]),
         S([10, sapTide, 'Sap Tide']),
         S([9, ...turn]),
@@ -458,13 +517,14 @@ const MORROWOAK = {
     const lastAct = from => f.course({
       onStart: () => relabel(),
       sets: [
-        S([3, sapTide, 'Sap Tide']),
-        S([9, ...turn]),
-        S([9, lash, 'Root Lash']),
+        S([4, drawBloom, 'Inhale']),
+        S([9, sapTide, 'Sap Tide']),
+        S([8, ...turn]),
+        S([8, lash, 'Root Lash']),
         S([9, lastBloom, 'Fourfold Bloom']),
-        S([16, sapTide, 'Sap Tide']),
+        S([11, sapTide, 'Sap Tide']),
         S([9, ...turn]),
-        S([9, lash, 'Root Lash']),
+        S([8, lash, 'Root Lash']),
       ],
       closing: [[10, sapTide, 'Sap Tide'], [9, lash, 'Root Lash'], [10, lastBloom, 'Fourfold Bloom']],
       ramp: 0.08,
@@ -473,7 +533,7 @@ const MORROWOAK = {
     grove(0);
 
     // every move by name, for tools and testing (window.__game.raidHost.sim.moves.bloom())
-    f.moves = { seed, inhale, bloom, lash, sapTide, saplings, hungeringDark, swallowing, growLimbs, limbTurn, lastBloom, dig, cleaver, broodRoots, stormKnot, lantern, wing, rimeFist, rune, head,
+    f.moves = { seed, inhale, bloom, drawBloom, lash, sapTide, saplings, hungeringDark, swallowing, growLimbs, limbTurn, lastBloom, dig, cleaver, broodRoots, stormKnot, lantern, wing, rimeFist, rune, head,
       limb: k => limbs[k] && LIMB[k].fn(limbs[k]) };
     f.morrowHoles = holes;
   },

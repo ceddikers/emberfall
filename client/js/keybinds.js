@@ -69,7 +69,7 @@ const Keybinds = (() => {
   // Each piece can be nudged anywhere on screen; the offsets are applied as a CSS translate (the docking and the
   // game's own positioning stay as they are underneath).
   const PIECES = [
-    { sel: '#combat-hud', name: 'Hotbar' }, { sel: '#pf-wrap', name: 'Party frames' }, { sel: '#boss-bar', name: 'Boss bar' },
+    { sel: '#combat-hud', fit: '#combat-hud .hud-main', name: 'Hotbar' }, { sel: '#pf-wrap', name: 'Party frames' }, { sel: '#boss-bar', name: 'Boss bar' },
     { sel: '#raid-left', name: 'Progress' }, { sel: '#live-meter', name: 'Damage meter' }, { sel: '#waymarks', name: 'Markers' },
     { sel: '#lb-gauge', name: 'Limit Break' }, { sel: '#minimap', name: 'Minimap' }, { sel: '#target-frame', name: 'Target' }, { sel: '#focus-frame', name: 'Focus' },
   ];
@@ -96,7 +96,7 @@ const Keybinds = (() => {
       }
     }
     if (arranging) for (const g of ghosts) {
-      const el = document.querySelector(g.dataset.sel), r = el && el.getBoundingClientRect();
+      const el = document.querySelector(g.dataset.sel), fit = document.querySelector(g.dataset.fit) || el, r = el && fit.getBoundingClientRect();   // (the outline hugs what you see: the hotbar's box is wider than its bar)
       const show = !!(r && r.width && r.height && !el.closest('.hidden'));   // (fixed pieces have no offsetParent)
       g.classList.toggle('hidden', !show);
       if (show) Object.assign(g.style, { left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', height: r.height + 'px' });
@@ -110,7 +110,7 @@ const Keybinds = (() => {
     if (!on) return;
     for (const p of PIECES) {
       const g = document.createElement('div');
-      g.className = 'hud-ghost hidden'; g.dataset.sel = p.sel; g.innerHTML = `<span>${esc(p.name)}</span>`;
+      g.className = 'hud-ghost hidden'; g.dataset.sel = p.sel; g.dataset.fit = p.fit || p.sel; g.innerHTML = `<span>${esc(p.name)}</span>`;
       g.addEventListener('mousedown', e => {
         e.preventDefault(); e.stopPropagation();
         const o = layout[p.sel] || [0, 0], x0 = e.clientX, y0 = e.clientY;

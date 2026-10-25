@@ -482,6 +482,16 @@
       for (let i = 0; i < 2; i++) { const q = (t * 0.9 + i / 2) % 1; circle(ctx, 0, 0, 60 + (1 - q) * 380, null, rgba('#ffe9a8', 0.3 * q * k * (0.3 + p)), 2.4); }
     } },
     // Rending Maul: the jaws of the Mother close in from either side, fangs along each, on the one she holds
+    // Tail Thrash: the ring of water at her feet, dark green scale with a pale wedge of tail sweeping round it
+    thrash: { ground(ctx, tg, s, p, k, t) {
+      ctx.save(); SHAPES.trace(ctx, s); ctx.clip();
+      ctx.fillStyle = rgba('#0a2a1c', (0.12 + 0.2 * p) * k); ctx.fillRect(s.x - s.r, s.y - s.r, s.r * 2, s.r * 2);
+      for (let i = 0; i < 3; i++) { const q = (t * 0.7 + i / 3) % 1; circle(ctx, s.x, s.y, s.r * (0.3 + 0.7 * q), null, rgba('#9ff0b8', 0.36 * (1 - q) * k * (0.4 + p)), 2.4); }
+      const a0 = t * (1.4 + 3.2 * p);
+      ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.arc(s.x, s.y, s.r, a0 - 0.9, a0); ctx.closePath();
+      ctx.fillStyle = rgba('#c8ffd8', (0.08 + 0.18 * p) * k); ctx.fill();
+      ctx.restore();
+    } },
     buster: { ground(ctx, tg, s, p, k, t, env) {
       const tgt = tg.target != null ? env.entById(tg.target) : null;
       const reach = s.r * 0.92, tx = tgt ? tgt.x : s.x + Math.cos(s.angle) * s.r * 0.5, ty = tgt ? tgt.y : s.y + Math.sin(s.angle) * s.r * 0.5, close = easeOut(clamp(p * 1.05, 0, 1));

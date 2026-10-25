@@ -820,7 +820,7 @@ const ArenaView = {
     // (the scale is rounded up to quarter steps: a window being resized or the zoom settling doesn't rebuild the floor,
     // and the room layer keyed on it, every frame)
     scale = Math.ceil(scale * 4 - 1e-6) / 4;
-    if (this.floorFor !== bossId + '@' + scale) this.buildFloor(bossId, scale);
+    if (this.floorFor !== bossId + '@' + scale) { this.buildFloor(bossId, scale); BossTells.setRoom(bossId); }
     const { bx, by } = this.floorBox;
     ctx.drawImage(this.floor, -bx, -by, bx * 2, by * 2);
   },
@@ -1632,6 +1632,7 @@ const ArenaView = {
     const pulse = late > 0 ? 0.5 + 0.5 * Math.sin(t * (10 + late * 22)) : 0;
     ctx.save();
     SHAPES.trace(ctx, s);
+    if (BossTells.COL.casing) { ctx.strokeStyle = rgba(BossTells.COL.casing, 0.7 * k); ctx.lineWidth = 8; ctx.stroke(); }   // (a dark band, on a bright floor)
     ctx.fillStyle = rgba(color, (0.16 + 0.1 * late + 0.08 * pulse) * k); ctx.fill();
     ctx.save(); ctx.clip();
     ctx.setLineDash([18, 14]); ctx.lineDashOffset = -t * 40;

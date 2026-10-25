@@ -227,7 +227,7 @@ const BossIcons = (() => {
     'Devour': (c, A) => { c.beginPath(); c.arc(32, 30, 22, 0, Math.PI); c.closePath(); c.fillStyle = '#2a1424'; c.fill(); for (const sd of [-1, 1]) fill(c, '#ff7ac0', [[32 + sd * 14, 26], [32 + sd * 6, 26], [32 + sd * 9, 50]]); for (const x of [20, 44]) drop(c, x, 54, 0.5, A); },
     // Volkar
     'Thunderclap': (c, A) => { cloud(c, 32, 22, 1.1, '#5a6a84'); bolt(c, A, 32, 42, 0.9); },
-    'Distant Thunder': (c, A) => { cloud(c, 32, 30, 1, '#4a5874'); bolt(c, 'rgba(127,232,255,0.5)', 44, 42, 0.5); },
+    'Twin Fall': (c, A) => { for (const x of [20, 44]) { fill(c, 'rgba(223,244,255,0.85)', [[x - 6, 0], [x + 6, 0], [x + 8, 48], [x - 8, 48]]); c.beginPath(); c.ellipse(x, 50, 12, 5, 0, 0, TAU); c.strokeStyle = A; c.lineWidth = 2.5; c.stroke(); } },
     'Titan Fist': (c, A) => { fill(c, '#8a9ab0', [[14, 22], [42, 20], [50, 26], [50, 44], [16, 46]]); for (const y of [27, 33, 39]) stroke(c, INK, 2, [[38, y], [50, y]]); bolt(c, A, 54, 14, 0.4); bolt(c, A, 10, 52, 0.4); },
     'Thunder Crash': (c, A) => { cloud(c, 32, 14, 0.9, '#5a6a84'); stroke(c, '#ffe27a', 3, [[32, 22], [30, 32], [22, 46]]); stroke(c, '#ffe27a', 3, [[30, 32], [40, 46]]); disc(c, 22, 50, 4, L); disc(c, 40, 50, 4, L); },
     'Static Field': (c, A) => { ring(c, 32, 32, 18, '#d79bff', 3); bolt(c, '#d79bff', 32, 32, 0.6); },
@@ -397,6 +397,20 @@ const BossIcons = (() => {
       stroke(c, rgba(A, 0.7), 8, [[58, 6], [24, 46]]); stroke(c, '#fff4c8', 2, [[58, 6], [24, 46]]);
       ring(c, 22, 48, 9, A, 3); disc(c, 22, 48, 4, '#ffb04a');
     },
+    // a line of embers down onto a ring round a small figure
+    'Talon Dive': (c, A) => {
+      stroke(c, rgba(A, 0.55), 10, [[12, 2], [32, 36]]); stroke(c, '#ffd27a', 2.5, [[12, 2], [32, 36]]);
+      ring(c, 32, 44, 17, A, 3); disc(c, 32, 44, 4, '#cfd6e0');
+    },
+    // rings running out from the spot he came down on
+    'Aftershock': (c, A) => {
+      disc(c, 32, 34, 5, '#ffd27a'); ring(c, 32, 34, 12, A, 3); ring(c, 32, 34, 20, rgba(A, 0.7), 2.4); ring(c, 32, 34, 28, rgba(A, 0.45), 2);
+    },
+    // three scorched pits joined by his line
+    'Cinder Run': (c, A) => {
+      stroke(c, rgba(A, 0.5), 8, [[10, 46], [32, 12], [54, 46]]); stroke(c, '#ffd27a', 2, [[10, 46], [32, 12], [54, 46]]);
+      for (const [x, y] of [[10, 46], [32, 12], [54, 46]]) { ring(c, x, y, 8, A, 2.6); disc(c, x, y, 3, '#ffb04a'); }
+    },
     // a high rim, a dragon's wing over it, burning scales falling
     'The Roost': (c, A) => {
       inked(c, '#3a2a26', [[0, 20], [64, 20], [64, 28], [0, 28]], 2);
@@ -537,6 +551,13 @@ const BossIcons = (() => {
       fill(c, '#2a3a54', [[0, 44], [18, 34], [36, 44], [50, 32], [64, 42], [64, 64], [0, 64]]); fill(c, '#eaf6ff', [[18, 34], [24, 40], [12, 40]]); fill(c, '#eaf6ff', [[50, 32], [57, 40], [43, 40]]);
       for (const [x, y] of [[8, 12], [54, 10], [20, 54], [44, 56], [30, 48]]) { disc(c, x, y, 2.2, '#ffffff'); }
     },
+    // dark water welling up round three islands of pale ice
+    'The Lake Rises': (c, A) => {
+      fill(c, '#14304f', [[0, 20], [64, 20], [64, 64], [0, 64]]);
+      for (const y of [28, 38, 48, 58]) stroke(c, rgba('#3a7ab8', 0.8), 2, [[0, y], [10, y - 3], [22, y + 2], [34, y - 3], [46, y + 2], [58, y - 2], [64, y]]);
+      for (const [x, y, w] of [[10, 34, 16], [28, 42, 18], [44, 32, 14]]) { inked(c, '#eaf6ff', [[x, y], [x + w, y - 3], [x + w + 3, y + 7], [x + 2, y + 9]], 1.8); stroke(c, rgba(A, 0.9), 1.4, [[x + 3, y + 3], [x + w - 2, y + 1]]); }
+      ring(c, 32, 10, 7, '#eaf6ff', 2); disc(c, 32, 10, 3, rgba('#cfeaff', 0.6));
+    },
     // a sheet of ice tipping on its edge, snow sliding off
     'The Plateau Tips': (c, A) => {
       inked(c, '#cfeaff', [[6, 44], [50, 14], [58, 24], [14, 54]], 2.2); stroke(c, rgba(INK, 0.5), 1.4, [[20, 40], [38, 22]]); stroke(c, rgba(INK, 0.5), 1.4, [[32, 46], [48, 28]]);
@@ -561,6 +582,22 @@ const BossIcons = (() => {
       inked(c, '#16301f', [[6, 38], [20, 46], [44, 46], [58, 38], [44, 34], [20, 34]], 2.2);
       for (const x of [14, 22, 30, 38, 46]) { fill(c, L, [[x, 34], [x + 2.5, 34], [x + 1, 26]]); fill(c, L, [[x + 2, 34], [x + 4.5, 34], [x + 3, 42]]); }
       motion(c, A, [[[6, 12], [14, 18]], [[58, 12], [50, 18]]]);
+    },
+    // a red ring of water round a scaled body, the tail sweeping round it
+    'Tail Thrash': (c, A) => {
+      ring(c, 32, 32, 22, '#ff4a5a', 2.6);
+      inked(c, '#2f5a3a', [[24, 26], [32, 22], [40, 26], [40, 38], [32, 42], [24, 38]], 2);
+      stroke(c, '#9ff0b8', 4, [[40, 36], [50, 40], [54, 30], [48, 18], [38, 12]]);
+      fill(c, L, [[38, 12], [44, 8], [44, 16]]);
+      motion(c, A, [[[10, 14], [18, 8]], [[54, 54], [46, 58]]]);
+    },
+    // a cut stump with a pale ghost of its head rising from it, and a ring where it will strike
+    'Stump Echo': (c) => {
+      ring(c, 32, 40, 20, '#ff4a5a', 2);
+      inked(c, '#2f5a3a', [[22, 56], [24, 42], [40, 42], [42, 56]], 2);
+      disc(c, 32, 42, 6, '#7a1f2a');
+      for (let i = 0; i < 3; i++) stroke(c, rgba('#d8fff0', 0.7 - i * 0.2), 3, [[26 + i * 6, 38], [24 + i * 7, 28 - i * 3], [30 + i * 4, 16 - i * 2]]);
+      inked(c, rgba('#d8fff0', 0.55), [[24, 8], [34, 4], [42, 10], [34, 14]], 1.6);
     },
     // a cone of green spray from a snout, drops and bubbles in it, something eaten through
     'Acid Spray': (c) => {
@@ -733,6 +770,11 @@ const BossIcons = (() => {
     'Convergence': (c, A) => {
       for (const [x, y, col] of [[32, 18, '#ff6a2a'], [46, 32, '#7fd8ff'], [32, 46, '#ffe45a'], [18, 32, '#a05aff']]) { disc(c, x, y, 15, rgba(col, 0.35)); ring(c, x, y, 15, col, 2.5); }
       for (const [x, y] of [[39, 25], [39, 39], [25, 39], [25, 25]]) disc(c, x, y, 3.2, '#ffffff');
+    },
+    // two of the four rings lit and a white lens where they meet
+    'Sigil Flare': (c, A) => {
+      for (const [x, y, col] of [[24, 32, '#ff6a2a'], [40, 32, '#7fd8ff']]) { disc(c, x, y, 15, rgba(col, 0.35)); ring(c, x, y, 15, col, 2.5); }
+      disc(c, 32, 32, 4, '#ffffff'); ring(c, 32, 32, 8, rgba('#ffffff', 0.5), 1.5);
     },
     // a circle thrown across a dotted line to the far side
     'Counterspell': (c, A) => {
