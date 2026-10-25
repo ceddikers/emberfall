@@ -2,6 +2,32 @@
 const WhatsNew = (() => {
   const LOG = [
     {
+      id: '2026-10-25b', title: 'Every raid reworked, and status icons', date: 'October 25',
+      groups: [
+        ['Raids', [
+          'All twelve bosses are reworked for fun on Normal and Hard: moves that combine into new problems, something to do for every role, stronger final acts, and new moves on several fights.',
+          'Hard stays hard: fewer deaths you couldn\'t answer, more you could have. Tells that came too late show sooner, moves no longer pile up with no way out, and a few Hard fights hit harder to make up for it.',
+          'Every fight is retuned, and Hard fights leave time before the enrage, so a wipe is a mistake rather than the clock.',
+          'Grubnak\'s kitchen: danger is crimson with a dark rim, so it stands out on the orange tiles, and Flambé\'s stripes are much easier to see.',
+        ]],
+        ['Buffs and debuffs', [
+          'Painted icons for every buff and debuff, the same above your hotbar and in the party list. Hover any of them for what it does.',
+          'Everything on you now shows above your hotbar: boss debuffs, heals over time, Raise Sickness and damage reduction included.',
+        ]],
+        ['Class changes', [
+          'Ranger: Piercing Arrow and Caustic Arrow are off the global cooldown (a little less damage per arrow). Explosive Shot grows 25% per hit and not from Caustic Arrow. Venomstrike\'s Long Hunt adds 2s.',
+          'Marionettist: Red Curtain\'s cooldown is 35s (was 45s).',
+        ]],
+        ['Interface', [
+          'Hero select shows how each spec changes the class: every changed move beside its base version, with the changed words marked.',
+          'The hotbar only takes clicks where you can see it, so the ground just above and beside it is clickable again; its outline in the layout editor fits the bar.',
+        ]],
+        ['Bots', [
+          'Bots no longer get stuck on the corner of a prop they\'re walking behind, so they reach cover in time.',
+        ]],
+      ],
+    },
+    {
       id: '2026-10-25', title: 'The Houndmaster, the Reaper reborn, and fairer deaths', date: 'October 25',
       groups: [
         ['New hero: the Houndmaster', [
