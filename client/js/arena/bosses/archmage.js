@@ -74,9 +74,9 @@ const AZERATH = {
     const TAU = Math.PI * 2;
     const { ELS, RULE, SPELL, TAG, SIG, NAME } = AZ;
     const dmg = {
-      burst: H ? 17000 : 20200, lance: H ? 18600 : 18600, pyre: H ? 17000 : 22300, fire: H ? 16500 : 23900, react: H ? 19500 : 21500, frost: H ? 43200 : 49600,
+      burst: H ? 19200 : 20200, lance: H ? 18600 : 18600, pyre: H ? 17000 : 22300, fire: H ? 16500 : 23900, react: H ? 19500 : 21500, frost: H ? 47500 : 49600,
       beam: H ? 24300 : 21500, void: H ? 16500 : 19100, voidSelf: H ? 8800 : 11400, ice: H ? 25200 : 22300, bolt: H ? 19800 : 17500, rift: H ? 21600 : 19100,
-      conv: H ? 27900 : 24600, lens: H ? 18000 : 15900, counter: H ? 17500 : 19100, mark: H ? 43200 : 49600, pulse: H ? 16200 : 14300, surge: H ? 21600 : 23900,
+      conv: H ? 27900 : 24600, lens: H ? 18000 : 15900, counter: H ? 21500 : 19100, mark: H ? 47500 : 49600, pulse: H ? 16200 : 14300, surge: H ? 21600 : 23900,
       elBite: H ? 1500 : 1300, flare: H ? 16000 : 15500, flens: H ? 13500 : 13000,
     };
     const S = (...steps) => steps.filter(Boolean);
@@ -129,7 +129,7 @@ const AZERATH = {
     // Pyre Rings: the floor's three rings (the middle disc, the ring round it, the outer ring); two burn one after the other
     const RINGS = [{ kind: 'circle', x: 0, y: 0, r: 170 }, { kind: 'donut', x: 0, y: 0, r: 350, r2: 170 }, { kind: 'donut', x: 0, y: 0, r: 590, r2: 350 }];
     const pyre = () => {
-      const d = f.ct(4.6), gap = f.ct(2.8);
+      const d = f.ct(4.6), gap = f.ct(H ? 2.3 : 2.8);   // (Hard: the rings follow one another closer, so the hop between them is tight)
       const safe = f.pick([0, 1, 1, 2, 2]);
       const order = [0, 1, 2].filter(i => i !== safe);
       if (f.rng() < 0.5) order.reverse();
@@ -150,7 +150,7 @@ const AZERATH = {
     // Leaping Bolt: a circle on one hero, then on the hero nearest them, and on, a heartbeat apart
     const leapingBolt = () => {
       const al = f.alive(); if (!al.length) return;
-      const d0 = f.ct(4.6), step = f.ct(0.95);
+      const d0 = f.ct(4.6), step = f.ct(H ? 0.82 : 0.95);
       f.cast('Leaping Bolt', d0, 'chain');
       let cur = f.pick(f.nonTanks().length ? f.nonTanks() : al);
       const seq = [];
@@ -212,8 +212,8 @@ const AZERATH = {
       const rp = f.runePair; if (!rp || rp.b == null) return;
       f.afterKeep(d - 1.45, () => {
         const a = live(rp.a), b = live(rp.b);
-        if (!a || !b || Math.hypot(a.x - b.x, a.y - b.y) > 250) return;
-        f.aoe({ kind: 'circle', x: Math.round((a.x + b.x) / 2), y: Math.round((a.y + b.y) / 2), r: 165 }, 1.35, dmg.react, { tag: 'azReact:' + rp.ea + ':' + rp.eb });
+        if (!a || !b || Math.hypot(a.x - b.x, a.y - b.y) > (H ? 290 : 250)) return;
+        f.aoe({ kind: 'circle', x: Math.round((a.x + b.x) / 2), y: Math.round((a.y + b.y) / 2), r: H ? 185 : 165 }, 1.35, dmg.react, { tag: 'azReact:' + rp.ea + ':' + rp.eb });
       });
     };
     // the spell: one of the two runes' elements, and the rule that goes with it
@@ -231,7 +231,7 @@ const AZERATH = {
           const m = f.mech({ type: 'spread', shape: { kind: 'circle', x: p.x, y: p.y, r: 125 }, delay: d, dmg: dmg.fire, follow: id, lockAt: 1.1, tag: 'azFire', onResolve: () => memo(m) });
         }
         reactCheck(d);
-        ok = () => { const a = live(rp.a), b = live(rp.b); return !a || !b || Math.hypot(a.x - b.x, a.y - b.y) > 250; };
+        ok = () => { const a = live(rp.a), b = live(rp.b); return !a || !b || Math.hypot(a.x - b.x, a.y - b.y) > (H ? 290 : 250); };
       } else if (el === 'void') {
         for (const id of ids) {
           const p = live(id); if (!p) continue;
@@ -239,11 +239,11 @@ const AZERATH = {
           f.afterKeep(d + 0.03, () => { const q = live(id); if (q) f.damagePlayer(q, dmg.voidSelf, { kind: 'azVoid', n: SPELL.void }); });
         }
         reactCheck(d);
-        ok = () => { const a = live(rp.a), b = live(rp.b); return !a || !b || Math.hypot(a.x - b.x, a.y - b.y) > 250; };
+        ok = () => { const a = live(rp.a), b = live(rp.b); return !a || !b || Math.hypot(a.x - b.x, a.y - b.y) > (H ? 290 : 250); };
       } else if (el === 'frost') {
         const n = f.alive().length;
         const sx = A && Bp ? (A.x + Bp.x) / 2 : A ? A.x : 0, sy = A && Bp ? (A.y + Bp.y) / 2 : A ? A.y : 0;
-        const m = f.mech({ type: 'stack', shape: { kind: 'circle', x: sx, y: sy, r: 150 }, delay: d, dmg: dmg.frost * Math.min(n, 4) / 4, need: H ? n : Math.max(1, n - 1), lockAt: 1.2, tag: 'azFrost', onResolve: () => memo(m) });
+        const m = f.mech({ type: 'stack', shape: { kind: 'circle', x: sx, y: sy, r: H ? 138 : 150 }, delay: d, dmg: dmg.frost * Math.min(n, 4) / 4, need: H ? n : Math.max(1, n - 1), lockAt: 1.2, tag: 'azFrost', onResolve: () => memo(m) });
         if (A && Bp) link(m, rp.a, rp.b, 'mid', 1.2);
       } else {
         // lightning: a bolt from one bearer to the other. Standing together makes it too short to reach anyone
@@ -346,7 +346,7 @@ const AZERATH = {
     // Sigil Flare: two neighbouring sigils light and blast together, with the lens between them. Convergence on a small scale, so the
     // finale is a shape the party has met. Hard: the opposite pair follows, so the half of the floor that was safe is the next one lit
     const sigilFlare = () => {
-      const d = f.ct(4.8), gap = f.ct(3), k = f.pick([0, 1, 2, 3]);
+      const d = f.ct(4.8), gap = f.ct(H ? 2.5 : 3), k = f.pick([0, 1, 2, 3]);
       f.cast('Sigil Flare', d, 'conv');   // (the staff lifts as for Convergence)
       const pair = (i, delay) => {
         const group = new Set();
@@ -361,7 +361,7 @@ const AZERATH = {
     // --- Hard only -----------------------------------------------------------------------------------------------------
     // Counterspell: what the last spell covered comes again, thrown through the middle to the far side of the room
     const counterspell = () => {
-      const d = f.ct(3), dd = f.ct(5.2);
+      const d = f.ct(3), dd = f.ct(3.7);   // (the far side of the room is a run away, and the echo lands soon after the cast)
       f.cast('Counterspell', d, 'counter');
       const m = mem && f.t - mem.at < 30 ? mem : null;
       if (!m) return;
@@ -371,6 +371,9 @@ const AZERATH = {
         if (e.type === 'stack') f.mech({ type: 'stack', shape: flip(e.shape), delay: dd, dmg: e.dmg * 0.9, need: n, tag: e.tag, color: 'echo' });   // (color: only the drawing reads it: an echo of the last spell)
         else f.aoe(flip(e.shape), dd, dmg.counter, { tag: e.tag, group, color: 'echo' });
       }
+      // ... and the echo of the echo: the first two shapes come back to where they began a moment after the far side has gone off
+      const back = new Set();
+      for (const e of m.list.slice(0, 2)) if (e.type !== 'stack') f.aoe(Object.assign({}, e.shape), dd + f.ct(2.1), dmg.counter * 0.85, { tag: e.tag, group: back, color: 'echo' });
     };
     // Arcane Mark: one hero's own elemental rises where they stood: a blow for everyone to share, on that spot
     const arcaneMark = () => {

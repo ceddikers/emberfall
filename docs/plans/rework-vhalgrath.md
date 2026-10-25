@@ -53,3 +53,9 @@ The runeguard, grovekeeper, shadowblade, pyromancer line-up (the second one in t
 Lava hits per Normal run: 10 to 25 before, 1 to 4 after.
 
 Tank beats (Rending Claws, Tail Lash, Talon Dive) in a bot run: the gap was 25 to 100 s before; now it is mostly 20 to 30 s, with the longest (40 to 50 s) at the joins of two acts, where the flight sets begin. Not yet the 10 s the design asks for, but the tank also has the Roost's whelps and the dive's positioning in the air, and the claws are close to as often as is sensible for one tank.
+
+## Hard tuning pass (2026-10-26)
+
+- **The Ember Heart wall (Hard).** Heart Flare no longer stacks with the burns: it comes in the quiet a few seconds after the second burn has landed, and the third Burn only starts more than five seconds after the Flare's spread has gone off. The Flare is tighter (stack and spread circles are smaller / the spread follows sooner) and hits harder; the islands of the three Hard burns are a little smaller (195 / 175 / 160). The wall is about ten seconds longer on Hard.
+- **Tank beats.** A Rending Claws lands between the first two burns on Hard, the Roost's approach now has a Tail Lash instead of a Roar, and Final Flight's sets are re-ordered (Talon Dive, then Claws) so the longest gap in the flights drops from about 50 s to about 35-40 s. Gaps are mostly 20-30 s; the join of Act III into the flights (about 40 s) and the stretch between Twin Passes are the longest left.
+- **Numbers (bots, seeds 1000/2000/3000):** Hard `GEAR=post2` 52 of 90 before the change in the wall, 85% right after moving the Flare, 58% (52 of 90) after the tightening; Normal `GEAR=post1` 76 of 90 (84%).

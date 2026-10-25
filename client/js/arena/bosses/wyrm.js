@@ -46,7 +46,7 @@ const WYRM = {
       roar: H ? 12100 : 15900, buster: H ? 19500 : 23500, tail: H ? 17000 : 21800, breath: H ? 18700 : 23400, molten: H ? 2700 : 2500, puddle: H ? 2200 : 2100,
       magma: H ? 11400 : 14700, feast: H ? 32100 : 42000, gust: H ? 3600 : 3500, pass: H ? 14500 : 19200, land: H ? 20600 : 25800, wing: H ? 4600 : 5400, slam: H ? 6600 : 7500,
       scale: H ? 12700 : 16500, boom: H ? 15100 : 18000, boil: H ? 10900 : 14300, scorch: H ? 15700 : 20300, burn: H ? 24800 : 27800, heart: H ? 9100 : 10500,
-      rain: H ? 9100 : 10500, quake: H ? 11800 : 14000, flareStack: H ? 25500 : 30000, flareSpread: H ? 9800 : 13200, whelpHp: 30000, whelpBite: H ? 2300 : 2300, last: H ? 13400 : 14300,
+      rain: H ? 9100 : 10500, quake: H ? 11800 : 14000, flareStack: H ? 31000 : 30000, flareSpread: H ? 12500 : 13200, whelpHp: 30000, whelpBite: H ? 2300 : 2300, last: H ? 13400 : 14300,
     };
     const K = H ? 1.0 : 1.15;           // tuning: every hit but the floor fire and the whelps, together
     for (const k in dmg) if (k !== 'molten' && k !== 'puddle' && k !== 'whelpHp' && k !== 'whelpBite') dmg[k] = Math.round(dmg[k] * K);
@@ -298,9 +298,9 @@ const WYRM = {
       const t = pool.length ? f.pick(pool) : null; if (!t) return;
       const d = f.ct(4.6), n = f.alive().length;
       f.cast('Heart Flare', d, 'flare');
-      f.mech({ type: 'stack', shape: { kind: 'circle', x: t.x, y: t.y, r: 120 }, delay: d, dmg: dmg.flareStack * Math.min(n, 4) / 4, follow: t.id, need: n, tag: 'stack',
+      f.mech({ type: 'stack', shape: { kind: 'circle', x: t.x, y: t.y, r: 112 }, delay: d, dmg: dmg.flareStack * Math.min(n, 4) / 4, follow: t.id, need: n, tag: 'stack',
         onResolve: () => {
-          for (const p of f.alive()) f.mech({ type: 'spread', shape: { kind: 'circle', x: p.x, y: p.y, r: 105 }, delay: 3, dmg: dmg.flareSpread, follow: p.id, tag: 'spread' });
+          for (const p of f.alive()) f.mech({ type: 'spread', shape: { kind: 'circle', x: p.x, y: p.y, r: 118 }, delay: 2.6, dmg: dmg.flareSpread, follow: p.id, tag: 'spread' });
         } });
     };
 
@@ -308,7 +308,7 @@ const WYRM = {
     // The Heart opens in his chest and he is sealed (fight.js raiseWall). Scorch marks bloom at the three crater spots one by one;
     // the last one marks the island the floor-wide fire leaves standing. Two waves (Hard: three), each smaller.
     const heartWave = (k) => {
-      const order = f.shuffle([0, 1, 2]), hole = [H ? 215 : 235, H ? 195 : 215, 180][k] || 195;
+      const order = f.shuffle([0, 1, 2]), hole = [H ? 195 : 235, H ? 175 : 215, H ? 160 : 180][k] || 195;
       const last = SPOTS[order[2]], d = f.ct(9);
       f.cast('Heart Burn', d, 'heart');
       const step = f.ct(2.0);
@@ -324,12 +324,16 @@ const WYRM = {
       B.lockFacing = false;
       f.emit({ t: 'roomev', k: 'heart', dur: 60 });
       // the waves and their names are laid out now, so the upcoming-moves feed shows them
+      // Hard: the Flare comes in the quiet after the second burn, and the third burn only starts once the Flare's spread has gone off
       const waves = H ? 3 : 2, gap = f.ct(9) + 3.5;
-      for (let k = 0; k < waves; k++) f.afterKeep(3 + k * gap, () => heartWave(k), 'Heart Burn');
-      // meanwhile the tank and the healer have work: a Roar as the last fire lands (Hard: the Flare between the waves), then the Heart
-      // closes in the same breath as a buster (named in the same tick, so the feed never runs short; the next act is laid out at once)
-      if (H) f.afterKeep(3 + 2 * gap - 1.5, heartFlare, 'Heart Flare');
-      const lastLands = 3 + (waves - 1) * gap + f.ct(9);
+      const starts = [3, 3 + gap];
+      let flareAt = 0;
+      if (H) { flareAt = starts[1] + f.ct(9) + 4.5; starts.push(flareAt + f.ct(4.6) + 2.6 + 5.5); }
+      starts.forEach((t, k) => f.afterKeep(t, () => heartWave(k), 'Heart Burn'));
+      // meanwhile the tank and the healer have work: a Roar as the last fire lands, then the Heart closes in the same breath
+      // as a buster (named in the same tick, so the feed never runs short; the next act is laid out at once)
+      if (H) { f.afterKeep(flareAt, heartFlare, 'Heart Flare'); f.afterKeep(starts[0] + f.ct(9) + 0.8, claws, 'Rending Claws'); }   // (the tank's beat between the first two burns)
+      const lastLands = starts[waves - 1] + f.ct(9);
       f.afterKeep(lastLands - 3, roar, "Tyrant's Roar");
       f.afterKeep(lastLands + 1, claws, 'Rending Claws');
       f.afterKeep(lastLands + 1, () => f.wallDown(), 'The Heart Closes');
@@ -366,9 +370,9 @@ const WYRM = {
         S([12, clawsTail, 'Rending Claws']),
         H && S([9.5, cinderRain, 'Cinder Rain']),
         S([12, takeFlight, 'Take Flight'], [3, () => twinPass(), 'Twin Pass']),
-        S([13, feast, 'Cinder Feast']),
         S([12, claws, 'Rending Claws']),
-        S([12, roar, "Tyrant's Roar"]),
+        S([13, feast, 'Cinder Feast']),
+        S([12, () => tailLash(), 'Tail Lash']),   // (the tank's beat before the Roost, where the gap would otherwise run long)
       ].filter(Boolean),
       closing: [[10, roar, "Tyrant's Roar"], [10, claws, 'Rending Claws'], [10, takeFlight, 'Take Flight'], [3, () => dive(), 'Dragonfall']],
       next: roosted,
@@ -397,13 +401,13 @@ const WYRM = {
       sets: [
         S([4, takeFlight, 'Take Flight'], [3, () => dive(), 'Dragonfall']),
         S([8, claws, 'Rending Claws']),
-        S([11, takeFlight, 'Take Flight'], [3, () => twinPass(), 'Twin Pass']),
-        S([12, H ? heartFlare : magma, H ? 'Heart Flare' : 'Magma Burst']),
         S([11, takeFlight, 'Take Flight'], [3, () => talonDive(), 'Talon Dive']),
+        S([12, H ? heartFlare : magma, H ? 'Heart Flare' : 'Magma Burst']),
         S([11, claws, 'Rending Claws']),
+        S([11, takeFlight, 'Take Flight'], [3, () => twinPass(), 'Twin Pass']),
         S([12, roar, "Tyrant's Roar"]),
         S([9, () => tailLash(), 'Tail Lash'], [8, twinBreath, 'Twin Breath']),
-        S([11, takeFlight, 'Take Flight'], [3, () => twinPass(), 'Twin Pass']),
+        S([11, takeFlight, 'Take Flight'], [3, () => talonDive(), 'Talon Dive']),
         S([13, claws, 'Rending Claws']),
       ],
       closing: [[10, roar, "Tyrant's Roar"], [10, claws, 'Rending Claws'], [10, twinBreath, 'Twin Breath'], [10, () => tailLash(), 'Tail Lash']],

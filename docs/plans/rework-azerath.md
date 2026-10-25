@@ -43,3 +43,11 @@ Boss HP 5.8M Normal (was 5.5M) and 6.35M Hard (was 6.16M); the Hard Arcane Burst
 On Hard the finale has no plain Burst between its two rune chains, so the script ends at 9:38 (Normal 9:08), a little under half a minute before the enrage casts.
 
 Clear times: Normal about 545 s, Hard 545 s (plain line-up) to 595 s (A), against an enrage that lands at 608 / 613 s.
+
+## Hard tuning pass (2026-10-26)
+
+Hard `GEAR=post2`, plain line-up, was 87% (78 of 90); now 62% (56 of 90, seeds 1000/2000/3000). Normal `GEAR=post1` 87 of 90.
+
+- **Tighter, not softer.** On Hard the Pyre Rings follow one another closer (2.3 s, was 2.8), the Leaping Bolt hops faster, the Rime Rune circle is a little smaller, the Sigil Flare's second pair follows sooner, and two bearers of a split rune must now stand further apart (and the reaction between them is bigger). The Counterspell lands sooner (a run across the room) and hits a little harder.
+- **The echo of the echo (Hard).** After the far-side copy goes off, the first two shapes come back to where they began, so the old ground is not safe either. A new line in every hero's Counterspell journal entry.
+- **Numbers.** The Hard Arcane Burst is 19200 (was 17000); the Rime Rune and Arcane Mark blows are a tenth stronger. Bots dodge every shape perfectly, so the bite that moves their clear rate is the unavoidable damage.
