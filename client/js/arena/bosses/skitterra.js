@@ -3,10 +3,11 @@
 // egg clutches (each one broken costs damage on her now, and is two fewer spiderlings later), the knots of her threads
 // (each one cut is one less drop in the dark, and one less strip of floor at the end), and her pillars (every Acid
 // Deluge chips the ones you hide behind).
-//   Act I, The Web (100% → 70%): seven movements, a move and the one that answers it: Mist into Silk Wrap; Brood (the two
-//     ripest of the six clutches in the web hatch: kill them together) into Silk Reel; Spin (four threads pillar to
-//     pillar: crossing one stings and roots) into Strand Reel; Venom Spit into a Lunge fought across the pools, then Silk
-//     Lines; Mist into the Wrap-Lunge; Wrap, Spit and Lines; Mist into the Acid Deluge (hide behind a pillar).
+//   Act I, The Web (100% → 70%): eight movements, a move and the one that answers it: Mist into Silk Wrap; Brood (the two
+//     ripest of the six clutches in the web hatch: kill them together) into Silk Reel; Venom Spit into a Lunge fought across
+//     the pools (no threads yet); Strand Reel (Hard: into Fang Rush) on a bare floor; then Spin (four threads pillar to pillar:
+//     crossing one stings and roots) into the Acid Deluge (hide behind a pillar); the Wrap-Lunge across the threads into a
+//     second Spit; Lines into Mist; Reel into Mist.
 //   The Dark Between (70%): she climbs into the dark for about 30 s. The cave falls to pools of light; her shadow runs along
 //     each uncut thread in turn and she drops where it ends. Breaking a thread's knot before she gets there spares you
 //     that drop, but a cut thread is one she hunts instead: her shadow goes to whoever stands farthest and drops there
@@ -16,7 +17,11 @@
 //     (a spiderling; on Hard a linked pair), so the tank holds, the melee cut it down and the ranged go to the knots and
 //     the eggs; a clutch broken first sends nothing, and one is always left for the Swarm. She comes back down and the
 //     outer web turns sticky.
-//   Act II, The Brood (68% → 28%): pairs, then the Swarm: every clutch still standing hatches at once.
+//   Act II, The Brood (68% → 28%): movements of two (Mist into Wrap-Lunge; Lines and Spit; Reel into Spit; Mist into Deluge;
+//     Strand Reel into a Lunge struck from the pillar she hangs on, a wiper from the wall; the Swarm into the Wrap; Lines
+//     into a Lunge that lands as they come due; Spit into Reel across the pools), Hard with its own pairs (Volley into
+//     Reel and Wrap, Mist into Molt, Egg Sacs into Fang Rush, Snare Weave into Deluge, Ambush into Mist). The Swarm: every
+//     clutch still standing hatches at once.
 //   Act III, The Collapse (28% → 0%): the cave floor falls away ring by ring from the walls, four rings, the last taking
 //     the hub down to a disc. The eight spokes and the threads nobody cut stay; anyone on falling floor drops (heavy damage,
 //     held, then hauled back up the silk). Nothing is quiet for long: the Reel, the Lines and the Lunge are fought on
@@ -32,9 +37,9 @@
 
 const SKITTERRA = {
   id: 'skitterra', name: 'Queen Skitterra', title: 'Spider Broodmother',
-  hp: { normal: 3305000, hard: 3800000 },
+  hp: { normal: 3305000, hard: 4000000 },
   autoDmg: { normal: 1800, hard: 1650 },
-  enrage: { normal: 602, hard: 612 },   // the cast starts here and lands 8 s later (10:10 / 10:20)
+  enrage: { normal: 602, hard: 568 },   // the cast starts here and lands 8 s later (10:10 / 9:36)
   enrageName: 'Devour',
   vuln: 0.5,
   arena: { theme: 'webcave' },
@@ -52,7 +57,7 @@ const SKITTERRA = {
     const B = f.boss;
     const TAU = Math.PI * 2;
     const dmg = {
-      mist: H ? 9400 : 9000, wrap: H ? 28700 : 26000, lunge: H ? 12100 : 16900, tether: H ? 17600 : 20800, spit: H ? 11600 : 15600, pool: H ? 2400 : 2850,
+      mist: H ? 9400 : 9000, wrap: H ? 28700 : 26000, lunge: H ? 13300 : 16900, tether: H ? 17600 : 20800, spit: H ? 11600 : 15600, pool: H ? 2400 : 2850,
       bite: H ? 2200 : 2100, fury: H ? 6100 : 7150, beam: H ? 6600 : 7800, reel: H ? 16500 : 22100,
       sac: H ? 5500 : 6500, sacFail: H ? 11000 : 13000, fang: H ? 16500 : 19500, glob: H ? 12100 : 14300, snare: H ? 11000 : 13000,
       deluge: H ? 17600 : 19500, strand: H ? 12100 : 14300, ambush: H ? 17600 : 20800, slam: H ? 5500 : 6500,
@@ -76,7 +81,7 @@ const SKITTERRA = {
     const lunge = (opts = {}) => {
       const src = opts.src || { x: B.x, y: B.y };
       const a0 = opts.a0 ?? f.rng() * TAU, dir = opts.dir ?? (f.rng() < 0.5 ? 1 : -1);
-      const steps = H ? 6 : 4, step = H ? 1.15 : 1.3, d = opts.delay ?? f.ct(5);
+      const steps = H ? 6 : 4, step = H ? 1.0 : 1.3, d = opts.delay ?? f.ct(5);
       if (!opts.husk) {
         lastLunge = { a0, dir };
         B.lockFacing = true;
@@ -147,7 +152,7 @@ const SKITTERRA = {
             const dist = q ? Math.hypot(q.x - m.shape.x, q.y - m.shape.y) : 380;
             const L = Math.max(200, dist);
             const at = ARENA.clamp({ x: m.shape.x + Math.cos(m.shape.angle) * L, y: m.shape.y + Math.sin(m.shape.angle) * L }, 60);
-            f.puddle(at.x, at.y, H ? 100 : 90, H ? 60 : 45, dmg.pool, 1, 'venom', { slow: true, ddown: true });
+            f.puddle(at.x, at.y, H ? 100 : 90, H ? 45 : 45, dmg.pool, 1, 'venom', { slow: true, ddown: true });
           } });
       }
     };
@@ -641,19 +646,22 @@ const SKITTERRA = {
     };
 
     // Act I, The Web: seven movements (two Silk Wraps in all, a long way apart: the tank's cooldowns have to be back), a move and the one that answers it (the pools under a Lunge, the roots under a Reel).
-    // 10 to 12 s of calm between movements, 5 to 8 s inside one.
+    // 10 to 12 s of calm between movements, 5 to 8 s inside one. The threads (Spin) go up only after the Spit-Lunge and the
+    // charges (Strand Reel, Fang Rush) are done, so the first Lunge is fought across pools with no silk to cross, and the
+    // charges land on a bare floor; the Wrap-Lunge later is fought across the threads with no pools left.
     const actOne = at => f.course({
       until: 0.7,
       sets: [
         S([5, venomMist, 'Venom Mist'], [9, () => silkWrap(), 'Silk Wrap']),
         S([13, brood, 'Brood'], [7, () => silkReel(), 'Silk Reel'], H && [10, eggSacs, 'Egg Sacs']),
-        S([15, spin, 'Spin'], [7, strandReel, 'Strand Reel'], H && [9, fangRush, 'Fang Rush']),
         S([14, venomSpit, 'Venom Spit'], [6.5, () => lunge(), 'Eightfold Lunge']),
-        S([11, venomMist, 'Venom Mist'], [12, deluge, 'Acid Deluge']),
+        S([13, strandReel, 'Strand Reel'], H ? [8, fangRush, 'Fang Rush'] : [7, venomMist, 'Venom Mist']),
+        S([11, spin, 'Spin'], [12, deluge, 'Acid Deluge']),
         S([13, wrapLunge, 'Eightfold Lunge'], [9, venomSpit, 'Venom Spit']),
         S([11, () => silkLines(), 'Silk Lines'], [9, venomMist, 'Venom Mist']),
+        S([12, () => silkReel(), 'Silk Reel'], [7, venomMist, 'Venom Mist']),
       ].filter(Boolean),
-      closing: [[10, venomMist, 'Venom Mist'], [12, () => lunge(), 'Eightfold Lunge']],
+      closing: [[10, venomMist, 'Venom Mist'], [12, () => silkReel(), 'Silk Reel']],   // (a party that is behind meets the Reel, not a Lunge over the Spit pools and the threads)
       next: dark,
     }, at);
 
@@ -673,33 +681,51 @@ const SKITTERRA = {
       next: actTwo,
     }, at);
 
-    const actTwo = at => f.course({
-      until: 0.28,
-      onStart: () => { swarmAt = f.t + (H ? 108 : 124) + f.ct(3); broodClock(0, swarmAt - f.t); },
-      sets: [
-        S([3, venomMist, 'Venom Mist']),
-        S([12, wrapLunge, 'Eightfold Lunge']),
-        S([15, linesThenSpit, 'Silk Lines']),
-        H && S([12, volley, 'Spinneret Volley']),
-        S([H ? 12 : 15, () => { silkReel(H ? 'healer' : null); if (H) silkWrap(); }, 'Silk Reel']),
-        S([13, () => (H ? molt() : lunge()), H ? 'Molt' : 'Eightfold Lunge']),
-        S([H ? 15 : 14, strandReel, 'Strand Reel']),
-        H && S([10, ambush, 'Ceiling Ambush']),
-        S([H ? 10 : 14, venomMist, 'Venom Mist']),
-        H && S([11, snareWeave, 'Snare Weave']),
-        S([H ? 15 : 14, deluge, 'Acid Deluge']),
-        S([H ? 6 : 15, swarm, 'The Swarm']),
-        S([14, () => silkWrap(), 'Silk Wrap']),
-        S([14, () => silkLines(), 'Silk Lines']),
-        H && S([12, eggSacs, 'Egg Sacs'], [10, fangRush, 'Fang Rush']),
-        S([14, venomMist, 'Venom Mist']),
-        S([14, () => lunge(), 'Eightfold Lunge']),
-        S([12, linesThenSpit, 'Silk Lines']),
-        S([12, () => silkReel(), 'Silk Reel']),
-      ].filter(Boolean),
-      closing: [[10, venomMist, 'Venom Mist'], [12, () => lunge(), 'Eightfold Lunge']],
-      next: actThree,
-    }, at);
+    // Act II, The Brood: movements of two (a move and the one that answers it), 10 to 12 s of calm between them and 4 to 10 s
+    // inside. The rim Lunge: Strand Reel hangs her on a pillar and the Lunge that follows is struck from there, sweeping the
+    // cave like a wiper from the wall. Reel into Spit drags someone across the pools; Lines into Lunge lands the strikes as the
+    // lines come due; the Swarm into the Wrap holds the tank under what hatched.
+    const rimLunge = () => lunge(Math.hypot(B.x, B.y) > 150 ? { a0: Math.atan2(-B.y, -B.x) + (f.rng() - 0.5) * 0.6 } : {});
+    const twoSets = () => (H ? [
+      S([3, venomMist, 'Venom Mist'], [8, () => lunge(), 'Eightfold Lunge']),
+      S([10, volley, 'Spinneret Volley'], [9, () => { silkReel('healer'); silkWrap(); }, 'Silk Reel']),
+      S([9, venomMist, 'Venom Mist'], [7, molt, 'Molt']),
+      S([11, linesThenSpit, 'Silk Lines']),
+      S([10, eggSacs, 'Egg Sacs'], [9, fangRush, 'Fang Rush']),
+      S([10, swarm, 'The Swarm'], [7, () => silkWrap(), 'Silk Wrap']),
+      S([9, strandReel, 'Strand Reel'], [6, rimLunge, 'Eightfold Lunge']),
+      S([9, snareWeave, 'Snare Weave'], [9, deluge, 'Acid Deluge']),
+      S([9, ambush, 'Ceiling Ambush'], [7, venomMist, 'Venom Mist']),
+      S([9, () => silkLines(), 'Silk Lines'], [4, () => lunge(), 'Eightfold Lunge']),
+      S([9, () => silkReel('healer'), 'Silk Reel'], [6, () => lunge(), 'Eightfold Lunge']),
+      S([9, venomMist, 'Venom Mist'], [8, wrapLunge, 'Eightfold Lunge']),
+      S([9, venomSpit, 'Venom Spit'], [6, () => silkReel('healer'), 'Silk Reel']),
+    ] : [
+      S([3, venomMist, 'Venom Mist'], [8, wrapLunge, 'Eightfold Lunge']),
+      S([12, linesThenSpit, 'Silk Lines']),
+      S([11, () => silkReel(), 'Silk Reel'], [7, venomSpit, 'Venom Spit']),
+      S([11, venomMist, 'Venom Mist'], [10, deluge, 'Acid Deluge']),
+      S([12, strandReel, 'Strand Reel'], [6, rimLunge, 'Eightfold Lunge']),
+      S([12, swarm, 'The Swarm'], [8, () => silkWrap(), 'Silk Wrap']),
+      S([11, () => silkLines(), 'Silk Lines'], [4, () => lunge(), 'Eightfold Lunge']),
+      S([11, venomSpit, 'Venom Spit'], [7, () => silkReel(), 'Silk Reel']),
+      S([11, venomMist, 'Venom Mist'], [9, () => lunge(), 'Eightfold Lunge']),
+      S([12, () => silkLines(), 'Silk Lines'], [8, venomMist, 'Venom Mist']),
+      S([14, strandReel, 'Strand Reel'], [7, venomMist, 'Venom Mist']),
+      S([12, () => silkReel(), 'Silk Reel'], [7, () => lunge(), 'Eightfold Lunge']),
+    ]).filter(Boolean);
+    const actTwo = at => {
+      // the Swarm's own clock on the clutches follows where its step falls in the sets
+      let swarmIn = 0, tt = 0;
+      for (const set of twoSets()) for (const [dt, , name] of set) { tt += dt; if (name === 'The Swarm') swarmIn = tt; }
+      return f.course({
+        until: 0.28,
+        onStart: () => { swarmAt = f.t + swarmIn + f.ct(3); broodClock(0, swarmAt - f.t); },
+        sets: twoSets(),
+        closing: [[10, venomMist, 'Venom Mist'], [12, () => lunge(), 'Eightfold Lunge']],
+        next: actThree,
+      }, at);
+    };
 
     // Act III, The Collapse: nothing is quiet for long. The Reel, the Lines and the Lunge are all fought on thinning silk,
     // a fourth ring takes the hub down to a disc, and she hunts whoever stands farthest out along the spokes.
