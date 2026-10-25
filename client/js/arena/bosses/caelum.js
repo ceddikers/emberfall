@@ -25,6 +25,7 @@
 //   Dark Ember:           a hero carries a black ember; set down at the shadow's edge, it pushes the shadow back.
 //   and a second Grace Withdrawn during a dance.
 // Hard also draws the afterimage orders, the Starfall spots and the Starwyrm's side each pull.
+// Crossed Horizon Cut (same name): two cuts at once at different angles; the only bare floor is where the two gaps meet (Normal once in Act III, Hard once in Act IV).
 
 const CAELUM = {
   id: 'caelum', name: 'Caelum Vey', title: 'the Starborn',
@@ -55,9 +56,9 @@ const CAELUM = {
     const B = f.boss;
     const TAU = Math.PI * 2;
     const dmg = {
-      glint: H ? 18800 : 20000, wake: H ? 17800 : 19800, crown: H ? 25000 : 26500, crownRing: H ? 1900 : 2100, thrust: H ? 22500 : 24000,
+      glint: H ? 18800 : 20000, wake: H ? 17800 : 19800, crown: H ? 25000 : 26500, crownRing: H ? 1900 : 1900, thrust: H ? 22500 : 24000,
       pinSlam: H ? 8500 : 9500, night: H ? 3800 : 4400, star: H ? 8000 : 9000, starFail: H ? 11000 : 12000, starRain: H ? 5600 : 5900, ember: H ? 17500 : 20000,
-      coil: H ? 19800 : 21000, constellation: H ? 60000 : 70000, horizon: H ? 25000 : 27000, burn: H ? 2000 : 2200, shower: H ? 2600 : 2800, glow: H ? 2400 : 2600,
+      coil: H ? 19800 : 21000, constellation: H ? 60000 : 70000, horizon: H ? 25000 : 27000, burn: H ? 2000 : 2000, shower: H ? 2600 : 2700, glow: H ? 2400 : 2600,
       secondCoil: H ? 20000 : 0, chorus: H ? 19500 : 18500, darkEmber: H ? 2200 : 0,
     };
     const S = (...steps) => steps.filter(Boolean);
@@ -323,20 +324,29 @@ const CAELUM = {
     };
     // Horizon Cut: the whole room is cut across but for a gap (the gap moves every time; shards fall on everything else)
     // o.star: a shard of the meteor falls into the gap (a Starfall tower stands in the one safe lane, painted from the cast)
+    // o.cross: two cuts at once at different angles, so the only bare floor is where the two gaps meet (the same name, the same sound)
     const horizon = (o = {}) => {
-      const d = f.ct(5), a = f.rng() * Math.PI, dx = Math.cos(a), dy = Math.sin(a), nx = -dy, ny = dx;
-      const g = Math.round((f.rng() - 0.5) * 440), gw = H ? 135 : 190, FAR = 800;
+      const d = f.ct(5), FAR = 800, group = new Set(), hd = Math.round(dmg.horizon * (o.cross ? (H ? 0.8 : 0.65) : 1));   // (a cut that is harder to meet hits a little lighter)
+      const cuts = [];
+      if (o.cross) {
+        // (the point where the gaps meet is somewhere in the middle of the room; the cuts cross at a good angle, so it is a clear diamond)
+        const pr = Math.sqrt(f.rng()) * 230, pa = f.rng() * TAU, P = { x: Math.cos(pa) * pr, y: Math.sin(pa) * pr }, a1 = f.rng() * Math.PI, a2 = (a1 + 1.0 + f.rng() * 1.14) % Math.PI;
+        for (const a of [a1, a2]) cuts.push({ a, g: Math.round(P.x * -Math.sin(a) + P.y * Math.cos(a)), gw: H ? 200 : 260 });
+      } else cuts.push({ a: f.rng() * Math.PI, g: Math.round((f.rng() - 0.5) * 440), gw: H ? 135 : 190 });
       if (o.star) {
+        const { a, g } = cuts[0], dx = Math.cos(a), dy = Math.sin(a), nx = -dy, ny = dx;
         const reach = Math.sqrt(Math.max(0, (shadow.r - 60) ** 2 - g * g)), s0 = Math.round((f.rng() - 0.5) * 2 * Math.min(reach, 190));
         f.mech({ type: 'tower', shape: { kind: 'circle', x: Math.round(nx * g + dx * s0), y: Math.round(ny * g + dy * s0), r: 85 }, delay: d, dmg: dmg.star, need: 1, failDmg: dmg.starFail, tag: 'clStar' });
       }
       f.cast('Horizon Cut', d, 'horizon');
       hold(d + 0.4);
-      const band = (n0, n1) => { const mid = (n0 + n1) / 2, w = n1 - n0; return { kind: 'rect', x: Math.round(nx * mid - dx * FAR), y: Math.round(ny * mid - dy * FAR), angle: +a.toFixed(3), len: FAR * 2, w: Math.round(w) }; };
-      const group = new Set();
-      f.aoe(band(-FAR, g - gw / 2), d, dmg.horizon, { tag: 'clHorizon', group });
-      f.aoe(band(g + gw / 2, FAR), d, dmg.horizon, { tag: 'clHorizon', group });
-      f.emit({ t: 'roomev', k: 'clhorizon', a: +a.toFixed(3), g, gw, at: +d.toFixed(2), dur: +(d + 0.8).toFixed(2) });
+      for (const { a, g, gw } of cuts) {
+        const dx = Math.cos(a), dy = Math.sin(a), nx = -dy, ny = dx;
+        const band = (n0, n1) => { const mid = (n0 + n1) / 2, w = n1 - n0; return { kind: 'rect', x: Math.round(nx * mid - dx * FAR), y: Math.round(ny * mid - dy * FAR), angle: +a.toFixed(3), len: FAR * 2, w: Math.round(w) }; };
+        f.aoe(band(-FAR, g - gw / 2), d, hd, { tag: 'clHorizon', group });
+        f.aoe(band(g + gw / 2, FAR), d, hd, { tag: 'clHorizon', group });
+        f.emit({ t: 'roomev', k: 'clhorizon:' + (++imgN), a: +a.toFixed(3), g, gw, at: +d.toFixed(2), dur: +(d + 0.8).toFixed(2) });
+      }
     };
     // Second Coil (Hard): the Starwyrm comes back and dives across the room along a painted line
     const secondCoil = () => {
@@ -400,7 +410,7 @@ const CAELUM = {
         // a second Grace Withdrawn as a Starfall comes down
         S([11, () => starfall(3), 'Starfall'], [3.4, () => grace({ quick: true }), 'Grace Withdrawn']),
         S([H ? 13 : 14, crown, 'Cinder Crown']),
-        S([10, horizon, 'Horizon Cut'], H && [7, secondCoil, 'Second Coil']),
+        S([10, () => horizon({ cross: !H }), 'Horizon Cut'], H && [7, secondCoil, 'Second Coil']),   // (Normal: two cuts at once, the bare floor where the gaps meet)
         S([H ? 8 : 11, () => wake({ rings: 2, chorus: true, mirror: true }), H ? 'Mirrored Wake' : 'Eightfold Wake'], H && [6, darkEmber, 'Dark Ember']),
         S([H ? 13 : 14, thrust, 'Pinning Thrust'], [8, () => glint({ tank: true }), 'Glint']),
         S([H ? 10 : 11, () => starfall(3), 'Starfall']),
@@ -426,7 +436,7 @@ const CAELUM = {
         S([11, () => wake({ ringR: 455, fallen: true }), 'Chorus of the Fallen']),
         S([H ? 13 : 14, () => grace(), 'Grace Withdrawn']),
         S([15, crown, 'Cinder Crown']),
-        S([10, horizon, 'Horizon Cut']),
+        S([10, () => horizon({ cross: H }), 'Horizon Cut']),
       ],
       closing: [[10, crown, 'Cinder Crown'], [10, horizon, 'Horizon Cut'], [12, () => wake({ ringR: 455 }), 'Eightfold Wake']],
       ramp: 0.08,

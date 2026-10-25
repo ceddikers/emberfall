@@ -228,6 +228,13 @@ const CL_FX = (() => {
       glow(ctx, x, y + 20, 80, P.core, 0.18 * a0 * bright * out);
       ctx.restore();
       ghostFig(ctx, 'caelum', x, y - (1 - a0) * 10, face, a0 * bright * flick * out);
+      // the blade drawn: light gathers into the figure as the cut comes, and the steel flashes in the last beat
+      if (near > 0.05) {
+        ctx.save(); ctx.globalCompositeOperation = 'lighter';
+        for (let j = 0; j < 8; j++) { const aa = j * TAU / 8 + t * 2.2, rr = 14 + (1 - near) * 120 * (0.6 + 0.4 * hash(j, 71)); glow(ctx, x + Math.cos(aa) * rr, y - 46 + Math.sin(aa) * rr * 0.7, 4 + 2 * near, P.hi, 0.7 * near * out); }
+        if (near > 0.72) { const gq = (near - 0.72) / 0.28; star4(ctx, x + Math.cos(face) * 38, y - 52 + Math.sin(face) * 26, 8 + 16 * gq, face + 0.8, P.core, P.hi, gq * out); glow(ctx, x, y - 40, 60 + 40 * gq, P.hi, 0.28 * gq * out); }
+        ctx.restore();
+      }
       // the way he will face: a chevron ahead of the figure
       if (ev.l.length > 1 || i === 0) {
         ctx.save(); ctx.translate(x + Math.cos(face) * 62, y + 40 + Math.sin(face) * 62 * 0.7); ctx.rotate(face);
@@ -259,7 +266,11 @@ const CL_FX = (() => {
   function shadowState(ev, t) {
     let sh = S.sh;
     if (sh && t < sh.last - 1) sh = null;   // (the clock went back: a new pull)
-    if (!sh) sh = S.sh = { r: ev.r, last: t, x: ev.x, y: ev.y };
+    if (!sh) sh = S.sh = { r: ev.r, last: t, x: ev.x, y: ev.y, tr: ev.r, wave: -99, up: 1 };
+    // the meteor's shadow moving (an act begins and it grows; a Dark Ember pushes it back): a pressure wave runs out of the rim (or in
+    // to it) and the room shudders
+    if (Math.abs(ev.r - sh.tr) > 20 && t > 0) { sh.wave = t; sh.up = ev.r > sh.tr ? 1 : -1; sh.tr = ev.r; shakeNow(sh.up > 0 ? 7 : 4); if (sh.up > 0) cam(0.06, 0.025, 0.5, 1.5); }
+    sh.tr = ev.r;
     const dt = clamp(t - sh.last, 0, 0.1); sh.last = t;
     sh.r += (ev.r - sh.r) * (1 - Math.exp(-dt * 1.7)); sh.x = ev.x; sh.y = ev.y; sh.burn = ev.burn ? Math.min(1, (sh.burn || 0) + dt * 0.8) : Math.max(0, (sh.burn || 0) - dt);
     return sh;
@@ -284,6 +295,14 @@ const CL_FX = (() => {
       glow(ctx, px, py, 5 + 4 * hash(i, 5), hash(i, 6) < 0.5 ? C.ember : C.violetHi, al);
     }
     if (bn > 0.01) shadowBurn(ctx, x, y, R, t, bn);
+    // the wave: a dark ring with a bright lip, going out across the floor as the shadow spreads (or closing in on its edge when pushed back)
+    const wu = (t - sh.wave) / 1.5;
+    if (wu >= 0 && wu < 1) {
+      const rr = sh.up > 0 ? R + 170 * easeOut(wu) : R + 170 * (1 - easeOut(wu)), wk = (1 - wu) * (1 - wu);
+      ctx.globalCompositeOperation = 'source-over'; ctx.beginPath(); ctx.arc(x, y, rr, 0, TAU); ctx.strokeStyle = rgba(C.deep, 0.5 * wk); ctx.lineWidth = 26 * (1 - wu * 0.5); ctx.stroke();
+      ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = rgba(sh.up > 0 ? C.violetHi : '#ffffff', 0.55 * wk); ctx.lineWidth = 3.4; ctx.stroke();
+      for (let i = 0; i < 18; i++) { const a = hash(i, 91) * TAU + wu, px = x + Math.cos(a) * rr, py = y + Math.sin(a) * rr * 0.92; glow(ctx, px, py - 10 * wu, 7, i % 2 ? C.ember : C.violetHi, 0.5 * wk); }
+    }
     ctx.restore();
   }
   // the shadow's floor burning: cracks of ember light across it, a heat that breathes, flames standing along its edge
@@ -458,6 +477,11 @@ const CL_FX = (() => {
     const rear = e.clrear && e.clrear.start >= sum.start - 0.5 ? e.clrear : null;
     const T = t - sum.start, U0 = rear ? rear.start + rear.dur - 2 + 0.3 : sum.end - 4, un = t - U0;
     if (un > 3.2) return;
+    // he lifts the blade and the sky comes loose: a ring of gold goes out across the floor, the room shakes and the light flares once
+    if (T >= 0.2 && T < 3 && once('sumboom' + sum.start)) {
+      shakeNow(7); cam(0.08, 0.03, 0.6, 0); VFX.shock(0, 0, { r: 560, color: C.gold, w: 10, dur: 1.1, flat: 1 }); VFX.shock(0, 0, { r: 320, color: '#ffffff', w: 5, dur: 0.8, flat: 1, delay: 0.12 });
+      screenFx(1.1, (c, W, Hh, tt, p, e) => { c.globalCompositeOperation = 'screen'; c.globalAlpha = 0.22 * Math.pow(1 - clamp(tt / 1.0, 0, 1), 2) * e.a; c.fillStyle = '#ffeebb'; c.fillRect(0, 0, W, Hh); });
+    }
     const fade = clamp(T / 1.2, 0, 1), gather = easeIn(clamp(T / 3.4, 0, 1)) * 0.78;
     const nodes = [], r = wy ? ringOf(wy) : null, sp = wy ? wy.sp || 470 : 470;
     let s = 0, lift = 0, mouth = 0, orb = 0, ha = 0, hs = 1;
@@ -470,6 +494,8 @@ const CL_FX = (() => {
         const arc = da * r.R, Tg = Math.max(1.0, arc / 640), u = clamp((t - rear.start) / Tg, 0, 1), arrive = rear.start + Tg;
         s = sc + arc * (1 - (1 - u) * (1 - u));
         lift = easeOut(clamp((t - arrive) / 1.1, 0, 1));
+        // it rears: the floor shudders and a ring of light goes out from where it rose
+        if (t >= arrive && once('rear' + rear.start)) { shakeNow(8); VFX.shock(rear.x, rear.y, { r: 380, color: C.gold, w: 9, dur: 0.8, flat: 1 }); VFX.shock(rear.x, rear.y, { r: 220, color: '#ffffff', w: 5, dur: 0.6, flat: 1, delay: 0.1 }); dust(rear.x, rear.y, 14, { color: '#ffeebb', speed: 260 }); cam(0.07, 0.03, 0.5, 1.5); }
         orb = clamp((t - arrive - 0.5) / Math.max(0.5, rear.start + rear.dur - 2 - arrive - 0.5), 0, 1);
         mouth = clamp(lift * 1.2, 0, 1) * (0.6 + 0.4 * orb);
       }
@@ -695,10 +721,10 @@ const CL_FX = (() => {
       if (key.startsWith('climgs:')) { if (t < e.end + 0.9) images(ctx, key, e, t, env); }
       else if (key.startsWith('clchorus:')) { if (t < e.end) chorus(ctx, key, e, t); }
       else if (key.startsWith('clwyrm:') && e.dive && t < e.start + (e.at || 0) + 2.6) dive(ctx, key, e, t);
+      else if (key.startsWith('clhorizon') && t < e.end) horizonOver(ctx, e, t);
     }
     if (ev.clgrace && t < ev.clgrace.end + 0.2) graceOver(ctx, ev.clgrace, t, env);
     if (ev.clascend && t < ev.clascend.end + 0.2) ascendOver(ctx, ev.clascend, t, env);
-    if (ev.clhorizon && t < ev.clhorizon.end) horizonOver(ctx, ev.clhorizon, t);
     if (ev.clsummon) wyrm(ctx, room, t);
   }
   function floor(ctx, room, t) {
@@ -1129,6 +1155,41 @@ const CL_FX = (() => {
   const onLine = (ctx, s, L, pad = 6) => (ctx.units || []).filter(u => { const q = dist2line(u, s); return q.al > 0 && q.al < L && q.off < s.w / 2 + pad; });
   let wakeSeq = 0;
 
+  // The whiff: everyone the cut did not take, who stood within a body of it (or slipped clean through it on a dodge), feels the blade
+  // go by: a sliver of light drawn past them, silver pieces thrown off, a ring at their feet; and the one at the keyboard gets the
+  // camera's flinch and a flash at the edge of the screen. Cosmetic only; nothing here changes who was hit.
+  const isMe = u => typeof Net !== 'undefined' && Net && u.id === Net.id;
+  function graze(s, msg, ctx, H, o = {}) {
+    const hits = (msg && msg.hits) || [], pad = o.pad ?? 60, col = o.col || (isSky() ? C.gold : '#e8ecff');
+    for (const u of ctx.units || []) {
+      if (hits.includes(u.id)) continue;
+      const slip = s.kind === 'rect' && SHAPES.contains(s, u.x, u.y, -8);   // (inside the cut and not hurt: a dash through it)
+      if (!slip && !SHAPES.contains(s, u.x, u.y, pad)) continue;
+      if (slip && !o.slip) continue;
+      const ang = s.kind === 'rect' ? s.angle : Math.atan2(u.y - s.y, u.x - s.x), ca = Math.cos(ang), sa = Math.sin(ang);
+      VFX.sparks(u.x, u.y - 24, { color: '#ffffff', n: slip ? 12 : 7, speed: 260 });
+      H.streak(u.x - ca * 140, u.y - sa * 140 + 18, ang, col, { len: 280, w: 5, dur: 0.28 });
+      H.shockAt(u.x, u.y + 6, { r: slip ? 90 : 64, color: col, w: 4, dur: 0.4, flat: 1 });
+      shards(u.x, u.y - 20, slip ? 6 : 3, { speed: 200, size: 0.7 });
+      if (isMe(u)) {
+        cam(0.05, 0.03, 0.4, 0.7);
+        screenFx(0.5, (c, W, Hh, t, p, e) => { const k = (1 - p) * (1 - p) * e.a; c.globalCompositeOperation = 'screen'; const g = c.createRadialGradient(W / 2, Hh / 2, Math.min(W, Hh) * 0.36, W / 2, Hh / 2, Math.hypot(W, Hh) * 0.55); g.addColorStop(0, rgba(col, 0)); g.addColorStop(1, rgba(col, 0.34 * k)); c.fillStyle = g; c.fillRect(0, 0, W, Hh); });
+      }
+    }
+  }
+  // the afterimage cut: he leaves silver copies of himself standing along the line as he goes through, each coming apart in turn
+  function afterTrail(s) {
+    const ca = Math.cos(s.angle), sa = Math.sin(s.angle), L = s.len, n = Math.max(3, Math.min(6, Math.round(L / 150)));
+    VFX.fx({ dur: 0.85, layer: 'air', draw: (c, p, t, e) => {
+      c.save(); clipRoom(c);
+      for (let i = 0; i < n; i++) {
+        const u = (i + 0.7) / (n + 0.4), q = clamp((p - u * 0.3) / 0.5, 0, 1); if (q <= 0 || q >= 1) continue;
+        ghostFig(c, 'caelum', s.x + ca * L * u, s.y + sa * L * u + 24 * q, s.angle, (1 - q) * Math.min(1, q * 6) * e.a);
+      }
+      c.restore();
+    } });
+  }
+
   // a cut: the line of light drawn along it in a stroke, the image at its end shattering into silver, sparks where it passes through
   function cutImp(tg, ctx, H, o = {}) {
     const s = tg.live, ca = Math.cos(s.angle), sa = Math.sin(s.angle), L = s.len, ex = s.x + ca * L, ey = s.y + sa * L, sky = isSky(), col = o.col || (sky ? C.gold : '#c8d4f4'), core = o.core || '#ffffff';
@@ -1141,14 +1202,18 @@ const CL_FX = (() => {
     H.shockAt(ex, ey + 40, { r: 150, color: col, w: 6, dur: 0.5, flat: 1 });
     for (const u of onLine(ctx, s, L)) { VFX.hit(u.x, u.y, core, 1.7); VFX.sparks(u.x, u.y, { color: col, n: 8, speed: 300 }); }
     H.shake(o.shake || 5);
+    // the blade's last arc through the figure at its end, and the whiff for anyone who just missed it
+    if (!o.noArc) VFX.slash(ex, ey - 30, s.angle + Math.PI, { r: 120, span: 2.4, color: col, core, dur: 0.38, sparks: 5, flip: tg.id % 2 === 0 });
+    graze(s, o.msg, ctx, H, { slip: true });
   }
-  IMP.clGlint = (tg, msg, ctx, H) => { cutImp(tg, ctx, H, { w: 20, shake: 7 }); };
+  IMP.clGlint = (tg, msg, ctx, H) => { afterTrail(tg.live); cutImp(tg, ctx, H, { w: 20, shake: 7, msg }); cam(0.06, 0.03, 0.4, 2.5); };
   IMP.clWake = (tg, msg, ctx, H) => {
-    cutImp(tg, ctx, H, {});
+    afterTrail(tg.live);
+    cutImp(tg, ctx, H, { msg });
     // the camera holds a beat after the last cut of a dance
     const my = ++wakeSeq; H.after(0.8, () => { if (wakeSeq === my) cam(0.12, 0.04, 0.55, 0); });
   };
-  IMP.clChorusCut = (tg, msg, ctx, H) => { cutImp(tg, ctx, H, { col: '#8fe0ff', core: '#ffffff', w: 15, sh: { color: '#cfeeff', color2: '#6fb8e8' } }); };
+  IMP.clChorusCut = (tg, msg, ctx, H) => { cutImp(tg, ctx, H, { col: '#8fe0ff', core: '#ffffff', w: 15, sh: { color: '#cfeeff', color2: '#6fb8e8' }, msg, noArc: true }); };
   IMP.clChorusLeap = (tg, msg, ctx, H) => {
     const s = tg.live;
     H.shapeFlash(s, '#ffc23a', { a: 0.3, dur: 0.5 }); VFX.hit(s.x, s.y, '#fff0a8', 2.4);
@@ -1208,7 +1273,13 @@ const CL_FX = (() => {
     VFX.hit(s.x, s.y, '#e8e0ff', fail ? 3.2 : 2.4); H.bang(s.x, s.y, s.r * 1.6, { n: 14, color: C.violet, core: '#ffffff', ink: '#0a0618' });
     VFX.crystals(s.x, s.y, { r: s.r * 0.8, n: 10, h: 90, color: '#cdbfff', dur: 1.3 }); H.shockAt(s.x, s.y, { r: s.r * 2.2, color: fail ? '#ff8a7a' : '#cdbfff', w: 8, dur: 0.6, flat: 1 });
     VFX.sparks(s.x, s.y, { color: '#e8e0ff', n: 18, speed: 420 }); shards(s.x, s.y, 8, { color: '#6a5ac8', color2: '#1c1740' });
-    if (fail) { H.shockAt(s.x, s.y, { r: AR() * 0.9, color: '#ff6a5a', w: 10, dur: 0.8, flat: 1, delay: 0.05 }); H.shake(13); } else H.shake(7);
+    if (fail) { H.shockAt(s.x, s.y, { r: AR() * 0.9, color: '#ff6a5a', w: 10, dur: 0.8, flat: 1, delay: 0.05 }); H.shake(13); cam(0.1, 0.04, 0.5, 1.5); }
+    else {
+      // soaked: the shard is caught, light thrown up the arms of whoever took it, and a second, quieter ring as the crystal settles
+      H.shockAt(s.x, s.y, { r: s.r * 1.4, color: '#ffffff', w: 4, dur: 0.7, flat: 1, delay: 0.18 });
+      for (const u of inside(ctx, s, 6)) { VFX.pillar(u.x, u.y, { r: 22, h: 220, color: '#e8e0ff', dur: 0.6 }); VFX.motes(u.x, u.y, { n: 6, color: '#ffffff', r: 20, rise: 1 }); }
+      H.shake(7); cam(0.06, 0.025, 0.4, 2);
+    }
   };
   IMP.clStarRain = (tg, msg, ctx, H) => {
     H.roomTint(C.violetHi, 0.12, 0.6);
@@ -1222,7 +1293,8 @@ const CL_FX = (() => {
     H.shapeFlash(s, '#ffeebb', { a: 0.22, dur: 0.5 });
     for (let d = 20, i = 0; d < L; d += 40, i++) H.after(d / L * 0.1, () => { const v = (Math.random() - 0.5) * s.w * 0.7; VFX.sparks(s.x + ca * d - sa * v, s.y + sa * d + ca * v, { color: i % 2 ? '#ffeebb' : '#ffffff', n: 2, speed: 240 }); });
     for (const u of onLine(ctx, s, L)) { VFX.hit(u.x, u.y, '#fff4cc', 1.8); dust(u.x, u.y, 6, { color: '#ffeebb' }); }
-    H.shake(4);
+    graze(s, msg, ctx, H, { pad: 70, col: '#ffeebb' });
+    H.shake(5);
   };
   // Embers of Heaven: burning rock comes down on the shard, fire stands up, the star-glass breaks
   IMP.clEmbers = (tg, msg, ctx, H) => {
@@ -1257,6 +1329,8 @@ const CL_FX = (() => {
     H.shake(14); cam(0.14, 0.04, 0.6, 0);
     // anyone left standing in the dark of the star: a cold spark, nothing more
     for (const u of ctx.units || []) if (sh.some(poly => inPoly(poly, u.x, u.y))) VFX.motes(u.x, u.y, { n: 4, color: '#cfd6f2', r: 18, rise: 1 }); else VFX.hit(u.x, u.y, '#fff4cc', 1.6);
+    // anyone who made the dark in time: the light breaks round them like water round a stone
+    for (const u of ctx.units || []) if (sh.some(poly => inPoly(poly, u.x, u.y))) { H.after(0.12, () => { H.shockAt(u.x, u.y + 6, { r: 100, color: '#e8ecff', w: 5, dur: 0.55, flat: 1 }); VFX.sparks(u.x, u.y - 20, { color: '#ffffff', n: 8, speed: 280 }); if (isMe(u)) cam(0.08, 0.03, 0.5, 0); }); }
   };
   // Horizon Cut: the shards come down on the red and the cut is drawn across the whole band
   IMP.clHorizon = (tg, msg, ctx, H) => {
@@ -1265,6 +1339,15 @@ const CL_FX = (() => {
     H.streak(s.x, s.y, s.angle, C.gold, { len: s.len, w: 26, dur: 0.5 }); H.streak(s.x, s.y, s.angle, '#ffffff', { len: s.len, w: 9, dur: 0.38 });
     for (const q of H.scatter(s, 12)) H.after(rand(0, 0.3), () => { VFX.crystals(q.x, q.y, { r: 24, n: 4, h: 58, color: '#ffe9a8', dur: 0.8 }); VFX.sparks(q.x, q.y, { color: '#fff4cc', n: 5, speed: 280 }); VFX.flash(q.x, q.y - 10, 30, '#fff4cc', 0.3); });
     for (const u of inside(ctx, s, 4)) { VFX.hit(u.x, u.y, '#fff4cc', 2); }
+    // the blade's edge where the gap was left: a razor line of light along it and sparks running down it, so a clean dodge is seen
+    const ca = Math.cos(s.angle), sa = Math.sin(s.angle), R = AR();
+    for (const sd of [-1, 1]) {
+      const v = (s.x * -sa + s.y * ca) + sd * s.w / 2; if (Math.abs(v) > R + 20) continue;
+      const bx = -sa * v, by = ca * v;
+      H.streak(bx - ca * R, by - sa * R, s.angle, '#ffffff', { len: R * 2, w: 5, dur: 0.5 });
+      for (let d = -R + 60, i = 0; d < R; d += 85, i++) H.after(0.05 + (d + R) / (R * 2) * 0.25, () => VFX.sparks(bx + ca * d, by + sa * d, { color: i % 2 ? '#fff4cc' : C.gold, n: 3, speed: 230 }));
+    }
+    graze(s, msg, ctx, H, { pad: 70, col: '#fff4cc' });
     H.shake(10); cam(0.1, 0.04, 0.5, 1.5);
   };
   // Second Coil: the serpent goes through, a wake of light behind it
@@ -1274,6 +1357,7 @@ const CL_FX = (() => {
     H.shapeFlash(s, '#ffeebb', { a: 0.3, dur: 0.55 });
     for (let d = 60, i = 0; d < s.len; d += 70, i++) H.after(d / s.len * 0.16, () => VFX.sparks(s.x + ca * d, s.y + sa * d, { color: i % 2 ? '#ffffff' : C.gold, n: 4, speed: 300 }));
     for (const u of onLine(ctx, s, s.len)) { VFX.hit(u.x, u.y, '#fff4cc', 2.2); dust(u.x, u.y, 8, { color: '#ffeebb', speed: 260 }); }
+    graze(s, msg, ctx, H, { pad: 80, col: '#ffeebb', slip: true });
     H.shake(10); cam(0.1, 0.035, 0.5, 2);
   };
 
