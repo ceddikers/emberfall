@@ -60,3 +60,15 @@ The ask: richer signature moves and a dodge that feels earned. Every telegraph i
 - **Windups**: Inhale darkens and rushes the screen's edge inward and rumbles the floor as it builds; the Hunger Seed's lock thumps the ground; Hungering Dark winds the dark inside each hole and flares the rim white in the last breath; every limb's move gathers its colour round the limb (halo, drawn-in motes, a white ring) before it fires.
 - **Screen feel**: Sap Tide floods amber in from the screen's edge; petals, seed bursts and hole births push the camera; the Last Bloom's petals each stand a column of their light and ring the room.
 - **Last Gasp**: the broken limb's stump gathers its colour back for the moment before the move goes off again (the server now sends `gasp` with the break, and `last` on the final Bloom; both only read by the client).
+
+## Gameplay pass (2026-10-26): dodges that ask for skill, and a less metronomic Act III
+
+The ask: more fun and complexity without taking difficulty away, dodges the player earns. Every telegraph is still drawn, red for damage, no safe spot painted; the hole caps, pulls that stop at a lip, one heavy move at a time and Act III's breather are all kept. Both difficulties.
+
+- **Storm Knot**: each rod's ring follows its hero until the last breath (Normal 1.45 s, Hard 1.2 s before it lands) and then sets. Lead it clear of the others, then step out of it: a ring is a stride and a half wide, so the exit has to start the moment it locks.
+- **Brood Roots**: the strands close, then turn half a gap (Hard draws the way) and close again; the second set is painted as the first lands. The middle of a gap is a strand the second time; the ground the first strands struck is safe. Roots hold 2.4 s the first time and 1.5 s the second, so a held hero is never chained. The move holds the floor longer (dur 6.6).
+- **Sap Tide's ebb** (Grove Remade onward): the ground heaves after the tide, a ring at his feet (step out) or the ring round them (step in), painted the moment the tide lands (2.0 s warning, 1.7 s on Hard); the order is out, plain, in, plain (Hard starts at in). Cast name unchanged. New tag `mgEbb` with its own tell and impact in morrowoak-fx.js (sap light welling through the ring).
+- **Act III variety**: the second Inhale of the act is a Fourfold Bloom instead, so the act no longer runs tide, lash, limb, tide.
+- Numbers: `dmg.ebb` 8200 Normal, 7800 Hard (before the shared 1.13 tune).
+- Journals rewritten for Sap Tide, Brood Roots, Storm Knot (all 23 heroes each).
+- Bots: Normal `GEAR=post3` 76 of 90 (84%, was 86%); Hard `GEAR=post4` 49 of 90 (54%, was 62%) on the ebb at 7800 and rods at 1.2 s; Hard is the slightly tighter fight, Normal sits at the edge of its range. A first try (ebb 8800, rods 1.1 s) was 48 of 90 on Hard.

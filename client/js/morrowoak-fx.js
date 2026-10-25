@@ -787,6 +787,18 @@ const MG_FX = (() => {
     for (let i = 0; i < 3; i++) { const q = (t * 0.7 + i / 3) % 1; ctx.beginPath(); ctx.arc(s.x, s.y, r0 + 40 + (1 - q) * 500, 0, TAU); ctx.strokeStyle = rgba(C.runeHi, 0.4 * Math.sin(q * Math.PI) * (0.3 + p) * k); ctx.lineWidth = 3; ctx.stroke(); }
     ctx.restore();
   } };
+  // Sap Tide's ebb: the ground heaving after the tide, amber welling up through the ring (a circle at his feet, or the ring round them)
+  TELLS.mgEbb = { ground(ctx, tg, s, p, k, t) {
+    const R = s.kind === 'donut' ? AR() * 1.1 : s.r, r0 = s.kind === 'donut' ? (s.r2 || 300) : 0;
+    ctx.save(); SHAPES.trace(ctx, s); ctx.clip();
+    ctx.fillStyle = rgba(C.sap, (0.06 + 0.14 * p) * k); ctx.fillRect(s.x - 1500, s.y - 1500, 3000, 3000);
+    for (let i = 0; i < 4; i++) { const q = (t * 0.6 + i / 4) % 1, rr = s.kind === 'donut' ? r0 + 40 + q * (R - r0) : R * (0.2 + 0.8 * q); ctx.beginPath(); ctx.arc(s.x, s.y, rr, 0, TAU); ctx.strokeStyle = rgba(C.sapHi, 0.5 * Math.sin(q * Math.PI) * (0.3 + p) * k); ctx.lineWidth = 3; ctx.stroke(); }
+    for (let i = 0; i < 26; i++) {
+      const a = hash(i, tg.id) * TAU, d = s.kind === 'donut' ? r0 + 30 + hash(i, 5) * (R - r0 - 30) : Math.sqrt(hash(i, 5)) * R * 0.95, q = (t * 0.5 + hash(i, 6)) % 1;
+      glow(ctx, s.x + Math.cos(a) * d, s.y + Math.sin(a) * d * 0.96 - q * 36, 6 + 6 * q, i % 3 ? C.sap : C.sapHi, 0.5 * Math.sin(q * Math.PI) * (0.3 + p) * k);
+    }
+    ctx.restore();
+  } };
   // Hydra Head: the serpent's breath down the lane: scale-pattern in the water, droplets streaming off the head's end, chevrons running the way it goes
   TELLS.mgHead = { ground(ctx, tg, s, p, k, t) {
     lane(ctx, s, (L, hw) => {
@@ -908,7 +920,7 @@ const MG_FX = (() => {
   // splinters fly, and a ring of dust jumps at their feet; the one at the keyboard also gets a flash at the edge of the screen and a push
   // of the camera. Only ever drawn for a hero who was not hit and was close, so it is the reward for a dodge and never a hint of where is safe.
   const WHIFF_COL = { mgThorn: C.thornTip, mgFrost: C.frostHi, mgSpark: C.sparkHi, mgBlight: C.blightHi, mgChop: C.cleaverHi, mgRoots: C.broodHi, mgRod: C.stormHi,
-    mgWing: C.wingHi, mgRime: C.frostHi, mgRune: C.runeHi, mgRuneRing: C.runeHi, mgHead: C.headHi, mgSeed: C.violetHi, mgDark: C.violetHi };
+    mgWing: C.wingHi, mgRime: C.frostHi, mgRune: C.runeHi, mgRuneRing: C.runeHi, mgEbb: C.sapHi, mgHead: C.headHi, mgSeed: C.violetHi, mgDark: C.violetHi };
   const NEAR = 80;   // a hero this close to the edge of a blow (and not hit) gets the whiff
   // which way is "away from the blow" for a hero standing just outside this shape
   function awayFrom(s, u) {
@@ -1192,6 +1204,18 @@ const MG_FX = (() => {
     for (const q of H.scatter({ kind: 'circle', x: 0, y: 0, r: H.AR - 40 }, 10)) { if (Math.hypot(q.x - x, q.y - y) < (s.r2 || 270)) continue; H.after(Math.random() * 0.3, () => { VFX.sparks(q.x, q.y, { color: C.runeHi, n: 5, speed: 300 }); VFX.flash(q.x, q.y - 8, 34, C.rune, 0.3); }); }
     for (const u of inside(ctx, s, 6)) VFX.hit(u.x, u.y, C.runeHi, 1.8);
     H.shake(10);
+  };
+  // Sap Tide's ebb: the amber heaves up through the ring, drops thrown off it
+  IMP.mgEbb = (tg, msg, ctx, H) => {
+    const s = tg.live, x = s.x, y = s.y, r0 = s.kind === 'donut' ? (s.r2 || 300) : 0, R = s.kind === 'donut' ? H.AR * 1.1 : s.r;
+    H.shapeFlash(s, C.sap, { a: 0.3, dur: 0.5 });
+    for (let i = 0; i < 3; i++) H.shockAt(x, y, { r: r0 ? r0 + (R - r0) * (0.4 + 0.3 * i) : R * (1 - i * 0.25), r0: r0 || undefined, color: i % 2 ? C.sapHi : C.sap, w: 11 - i * 3, dur: 0.55 + i * 0.1, flat: 0.8, delay: i * 0.06 });
+    for (const q of H.scatter(s.kind === 'donut' ? { kind: 'circle', x: 0, y: 0, r: H.AR - 30 } : { kind: 'circle', x, y, r: R * 0.9 }, 9)) {
+      if (r0 && Math.hypot(q.x - x, q.y - y) < r0) continue;
+      H.after(Math.random() * 0.25, () => { for (let j = 0; j < 5; j++) { const a = rand(0, TAU), sp = rand(40, 150); VFX.spawn({ x: q.x, y: q.y, z: 8, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * 0.6, vz: rand(120, 240), g: 560, life: rand(0.5, 0.9), size: rand(6, 10), size1: 2, color: j % 2 ? C.sapHi : C.sap, kind: 'drop', add: false, rot: a }); } VFX.flash(q.x, q.y - 8, 34, C.sapHi, 0.3); });
+    }
+    for (const u of inside(ctx, s, 6)) VFX.hit(u.x, u.y, C.sapHi, 1.5);
+    H.shake(6);
   };
   // Hydra Head: the breath: a rush of sea-green water down the lane, spray and foam
   IMP.mgHead = (tg, msg, ctx, H) => {

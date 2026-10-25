@@ -52,7 +52,7 @@ const MORROWOAK = {
     const dmg = {
       sap: H ? 11500 : 12600, lash: H ? 23800 : 26000, seed: H ? 16800 : 18000, fall: H ? 20500 : 22000, petal: H ? 19600 : 21500,
       twin: H ? 15000 : 0, dark: H ? 9000 : 0, swallow: H ? 9000 : 10500, sapHp: H ? 11000 : 12000, limbHp: H ? 185000 : 200000,
-      cleave: H ? 52000 : 54000, chop: H ? 21400 : 23000, roots: H ? 10700 : 11500, rod: H ? 20200 : 22000, lantern: H ? 13100 : 13800,
+      cleave: H ? 52000 : 54000, chop: H ? 21400 : 23000, roots: H ? 10700 : 11500, rod: H ? 20200 : 22000, lantern: H ? 13100 : 13800, ebb: H ? 7800 : 8200,
       wing: H ? 20000 : 0, rime: H ? 18400 : 0, rimePool: H ? 2400 : 0, rune: H ? 18900 : 0, head: H ? 19400 : 0,
     };
     const TUNE = H ? 1.13 : 1.13;   // (the spacing and caps below keep the room fair; this keeps the hits worth healing)
@@ -202,7 +202,10 @@ const MORROWOAK = {
         onResolve: inside => { for (const p of inside) f.debuff(p.id, 'rooted', H ? 2 : 1.5); } });
     };
     // Sap Tide: a raidwide, a little heavier every time
-    let tideAt = -99;
+    // From the Grove Remade on, a tide is followed by the ground heaving: the ring at his feet (out) or the ring round them (in), painted the moment
+    // the tide lands, and every other tide is plain, so the healer's beat is never the same twice
+    let tideAt = -99, ebbOn = false, ebbN = 0;
+    const EBB = ['out', 'plain', 'in', 'plain'];
     const sapTide = () => {
       if (f.state !== 'live') return;
       const w = tideAt + 9 - f.t;   // two tides are never stacked: one that comes due too soon waits for the one before
@@ -211,6 +214,12 @@ const MORROWOAK = {
       const d = f.ct(4.4), k = sapN++;
       f.cast('Sap Tide', d, 'tide');
       f.mech({ type: 'raidwide', shape: { kind: 'circle', x: 0, y: 0, r: 0 }, delay: d, dmg: Math.round(dmg.sap * Math.min(1.5, 1 + 0.05 * k)), hidden: true, tag: 'mgSap' });
+      const v = ebbOn ? EBB[(ebbN++ + (H ? 2 : 0)) % EBB.length] : 'plain';
+      if (v !== 'plain') {
+        const d2 = f.ct(2.0), cx = Math.round(B.x), cy = Math.round(B.y);
+        busy(d + d2 + 0.8);
+        f.afterKeep(d - 0.02, () => { if (f.state === 'live') f.aoe(v === 'out' ? { kind: 'circle', x: cx, y: cy, r: 250 } : { kind: 'donut', x: cx, y: cy, r: 1400, r2: 300 }, d2 + 0.02, dmg.ebb, { tag: 'mgEbb' }); });
+      }
     };
     // Saplings: little trees that walk to the nearest hole; one that reaches it, grows it
     const saplings = () => {
@@ -287,7 +296,7 @@ const MORROWOAK = {
       f.afterKeep(SWALLOW - 4.5, () => f.cast(H ? 'Deeper Roots' : 'The Grove Remade', 4.5, 'unfold'));
       f.afterKeep(SWALLOW, () => {
         B.lockFacing = false;
-        wallOn = false; lockUntil = 0;
+        wallOn = false; lockUntil = 0; ebbOn = true;
         growLimbs();
         relabel();
         if (f.wall) f.wallDown();
@@ -315,21 +324,27 @@ const MORROWOAK = {
     };
     // Brood Roots: strands from the limb, painted first; anyone standing in one when they close is held
     const broodRoots = L => {
-      const d = f.ct(4.2), a0 = f.rng() * TAU, n = 5, lx = L.x, ly = L.y;
-      f.cast('Brood Roots', d, 'roots');
-      const group = new Set();
-      for (let i = 0; i < n; i++) {
-        const a = a0 + i * TAU / n;
-        f.aoe({ kind: 'rect', x: Math.round(lx), y: Math.round(ly), angle: +a.toFixed(3), len: 1100, w: 90 }, d, dmg.roots, { tag: 'mgRoots', group,
-          onResolve: inside => { for (const p of inside) f.debuff(p.id, 'rooted', 3); } });
-      }
+      const d = f.ct(4.2), d2 = f.ct(2.2), a0 = f.rng() * TAU, n = 5, lx = L.x, ly = L.y, dir = H && f.rng() < 0.5 ? -1 : 1;
+      f.cast('Brood Roots', d + d2, 'roots');
+      // five strands, painted first; when they close, the strands turn half a gap and close again (the first gap's middle is now a strand)
+      const strands = (a1, delay, hold1) => {
+        const group = new Set();
+        for (let i = 0; i < n; i++) {
+          const a = a1 + i * TAU / n;
+          f.aoe({ kind: 'rect', x: Math.round(lx), y: Math.round(ly), angle: +a.toFixed(3), len: 1100, w: 90 }, delay, dmg.roots, { tag: 'mgRoots', group,
+            onResolve: inside => { for (const p of inside) f.debuff(p.id, 'rooted', hold1); } });
+        }
+      };
+      strands(a0, d, 2.4);
+      f.afterKeep(d - 0.02, () => { if (f.state === 'live') strands(a0 + dir * TAU / n / 2, d2 + 0.02, 1.5); });
     };
     // Storm Knot: three rods come down where three heroes stand; keep clear of them
     const stormKnot = () => {
       const d = f.ct(4.4), ps = f.shuffle(f.alive()).slice(0, 3);
       f.cast('Storm Knot', d, 'storm');
       const group = new Set();
-      for (const p of ps) f.aoe({ kind: 'circle', x: Math.round(p.x), y: Math.round(p.y), r: 190 }, d, dmg.rod, { tag: 'mgRod', group });
+      // each rod follows its hero until the last breath and then sets: drag it clear of the others, then step out of it
+      for (const p of ps) f.mech({ type: 'aoe', shape: { kind: 'circle', x: Math.round(p.x), y: Math.round(p.y), r: 190 }, delay: d, dmg: dmg.rod, follow: p.id, lockAt: H ? 1.2 : 1.45, tag: 'mgRod', group });
     };
     // Barrow Lantern: a light mark bursts on a hero and passes to whoever is farthest from them, on a beat
     const lantern = () => {
@@ -373,7 +388,7 @@ const MORROWOAK = {
     // dur: how long the move holds the floor (cast to last hit), for the one-heavy-move-at-a-time rule
     const LIMB = {
       cleaver: { name: 'Cleaver Bough', fn: cleaver, dur: 6.8 },
-      brood: { name: 'Brood Roots', fn: broodRoots, dur: 4.4 },
+      brood: { name: 'Brood Roots', fn: broodRoots, dur: 6.6 },
       storm: { name: 'Storm Knot', fn: stormKnot, dur: 4.4 },
       lantern: { name: 'Barrow Lantern', fn: lantern, dur: H ? 11.8 : 9.2 },
       wing: { name: 'Wyrm Wing', fn: wing, dur: 4.6 },
@@ -513,7 +528,7 @@ const MORROWOAK = {
         S([10, ...seeds(2)]),
         S([10, lash, 'Root Lash'], [8, ...turn]),
         S([10, sapTide, 'Sap Tide']),
-        S([9, inhale, 'Inhale']),
+        S([10, () => bloom(), 'Fourfold Bloom']),
         S([9, ...turn]),
       ].filter(Boolean),
       closing: [[10, sapTide, 'Sap Tide'], [9, lash, 'Root Lash'], [9, ...turn]],
