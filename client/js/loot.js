@@ -3,6 +3,10 @@
 // what they like: first come, first served, straight into the bags of the hero they raided with. Anyone can also put
 // an item of their own in, to trade: someone else takes it out. When the raid ends, what's left is salvaged into a
 // little gold for each player, and anything a player put in goes back to them. Bots don't loot.
+// Need-rolls: anyone whose hero can use a piece may Roll for it (1-100, rolled on the host). Until someone rolls, Take is
+// first come, first served as before. The first roll opens a short window (ROLL_WINDOW) in which no one can Take it, so
+// the others get to roll too; after it, the highest roller holds the piece: only they can Take it. Decline (or leaving)
+// passes the hold to the next-highest roller, and once no roller is left the piece is open to everyone again.
 // Works the same solo (the host alone with bots) and with 2-4 people.
 //
 // Messages:
@@ -11,11 +15,14 @@
 //   host -> all    { t: 'cgot', id, pid, key, by }         pid took key out (by: who had put it in, 0 = the boss)
 //   host -> all    { t: 'cputok', id, pid, uid }           pid's item uid went in (they drop it from their bags)
 //   host -> all    { t: 'csalv', id, g }                   the chest is gone: g gold each for what was left
-//   player -> host { t: 'ctake', id, n }  /  { t: 'cput', id, key, uid }
+//   host -> all    { t: 'crolled', id, n, pid, v }          pid rolled v for item n
+//   (chest and cst also carry rolls: [[n, [[pid, v]], [passed pids], holder pid or 0, ms left in the window]])
+//   player -> host { t: 'ctake', id, n }  /  { t: 'cput', id, key, uid }  /  { t: 'croll', id, n }  /  { t: 'cpass', id, n }
 // The clear's gold rides on 'chest'; each player adds it to their own save.
 
 const Loot = (() => {
   const MAX = 12;        // a chest holds this many at most (the boss's, plus anything put in)
+  const ROLL_WINDOW = 8000;   // ms after a piece's first roll in which no one can Take it
   let deps = null;       // from main: { broadcast, send, myId, nameOf, inRaid, addItem(key), addGold(n), itemTip(key, cls), iconURL(key), myItems(), dropItem(uid) }
 
   // ---------------------------------------------------------------- host
@@ -26,9 +33,48 @@ const Loot = (() => {
     const classes = [...new Set(humans.map(h => h[1]))];
     const keys = rollChest(boss, mode, classes, Math.random);
     const id = ((Date.now() / 1000) | 0) % 100000 * 100 + (++seq % 100);
-    hc = { id, boss, who: new Map(humans), items: keys.map(key => [++nseq, key, 0]), acked: new Set(),
+    hc = { id, boss, who: new Map(humans), items: keys.map(key => [++nseq, key, 0]), acked: new Set(), rolls: new Map(), gone: new Set(),
       msg: { t: 'chest', id, run, boss, mode, who: humans, gold: clearGold(boss, mode), at: at ? [Math.round(at.x), Math.round(at.y)] : null } };
-    deps.broadcast(Object.assign({ items: hc.items }, hc.msg));
+    deps.broadcast(Object.assign({ items: hc.items, rolls: [] }, hc.msg));
+  }
+  // a piece's rolls: { r: [[pid, v]] in the order rolled, passed: Set, t0: first roll's time }. The holder is the highest
+  // roller who hasn't passed or left (a tie goes to whoever rolled first).
+  function holderOf(c, rl) {
+    let best = null;
+    for (const [pid, v] of rl.r) if (!rl.passed.has(pid) && !c.gone.has(pid) && (!best || v > best[1])) best = [pid, v];
+    return best ? best[0] : 0;
+  }
+  const windowLeft = rl => Math.max(0, ROLL_WINDOW - (Date.now() - rl.t0));
+  const rollsOut = c => [...c.rolls].map(([n, rl]) => [n, rl.r.map(x => x.slice()),
+    rl.r.map(x => x[0]).filter(pid => rl.passed.has(pid) || c.gone.has(pid)), holderOf(c, rl), windowLeft(rl)]);   // (a roller who left reads as passed)
+  const sendState = c => deps.broadcast({ t: 'cst', id: c.id, items: c.items, rolls: rollsOut(c) });
+  function hostRoll(pid, m) {
+    const c = hc;
+    if (!c || !m || m.id !== c.id || !c.who.has(pid) || c.gone.has(pid)) return;
+    const it = c.items.find(x => x[0] === m.n);
+    if (!it || !canUse(it[1], c.who.get(pid))) return;
+    let rl = c.rolls.get(m.n);
+    if (!rl) c.rolls.set(m.n, rl = { r: [], passed: new Set(), t0: Date.now() });
+    if (rl.r.some(x => x[0] === pid)) return;   // (one roll each)
+    const v = 1 + Math.floor(Math.random() * 100);
+    rl.r.push([pid, v]);
+    deps.broadcast({ t: 'crolled', id: c.id, n: m.n, pid, v });
+    sendState(c);
+  }
+  function hostPass(pid, m) {
+    const c = hc;
+    if (!c || !m || m.id !== c.id) return;
+    const rl = c.rolls.get(m.n);
+    if (!rl || !rl.r.some(x => x[0] === pid) || rl.passed.has(pid)) return;
+    rl.passed.add(pid);
+    sendState(c);
+  }
+  // a player left the raid (or dropped for good): any hold of theirs goes to the next roller
+  function hostLeft(pid) {
+    const c = hc;
+    if (!c || !c.who.has(pid) || c.gone.has(pid)) return;
+    c.gone.add(pid);
+    if ([...c.rolls.values()].some(rl => rl.r.some(x => x[0] === pid))) sendState(c);
   }
   // a player says the chest reached them (gold paid, panel ready): it is never sent to them again
   function hostAck(pid, m) { if (hc && m && m.id === hc.id) hc.acked.add(pid); }
@@ -36,16 +82,19 @@ const Loot = (() => {
   // a player who has the chest keeps it, and the client ignores a chest it has already opened (onChest) in any case.
   function hostChestFor(pid) {
     if (!hc || !hc.who.has(pid) || hc.acked.has(pid)) return null;
-    return Object.assign({ items: hc.items.map(x => x.slice()) }, hc.msg);
+    return Object.assign({ items: hc.items.map(x => x.slice()), rolls: rollsOut(hc) }, hc.msg);
   }
   function hostTake(pid, m) {
     const c = hc;
-    if (!c || !m || m.id !== c.id || !c.who.has(pid)) return;
+    if (!c || !m || m.id !== c.id || !c.who.has(pid) || c.gone.has(pid)) return;
     const i = c.items.findIndex(x => x[0] === m.n);
     if (i < 0) return;
+    const rl = c.rolls.get(m.n), h = rl ? holderOf(c, rl) : 0;
+    if (rl && (windowLeft(rl) > 0 || (h && h !== pid))) return;   // (still rolling, or someone else holds it)
+    c.rolls.delete(m.n);
     const [, key, by] = c.items.splice(i, 1)[0];
     deps.broadcast({ t: 'cgot', id: c.id, pid, key, by });
-    deps.broadcast({ t: 'cst', id: c.id, items: c.items });
+    sendState(c);
   }
   function hostPut(pid, m) {
     const c = hc;
@@ -55,7 +104,7 @@ const Loot = (() => {
     c.puts.add(pid + ':' + m.uid);
     c.items.push([++nseq, m.key, pid]);
     deps.broadcast({ t: 'cputok', id: c.id, pid, uid: m.uid });
-    deps.broadcast({ t: 'cst', id: c.id, items: c.items });
+    sendState(c);
   }
   // the raid is over: the boss's leftovers are salvaged for everyone, players' own items go back to them
   function hostClose() {
@@ -71,7 +120,7 @@ const Loot = (() => {
   }
 
   // ---------------------------------------------------------------- every player
-  let ch = null;         // { id, boss, items, cls, gold, at, open, putting }
+  let ch = null;         // { id, boss, items, rolls, cls, gold, at, open, putting }
   const root = document.createElement('div');
   root.id = 'loot'; root.className = 'hidden';
   document.body.appendChild(root);
@@ -90,8 +139,28 @@ const Loot = (() => {
     while (log.children.length > 7) log.firstChild.remove();
     setTimeout(() => row.classList.add('old'), 15000);
   }
+  const names = new Map();   // pid -> name, so a roller who has left keeps theirs on the chart
+  const nameOf = pid => { const n = deps.nameOf(pid); if (n !== 'Someone') names.set(pid, n); return names.get(pid) || n; };
   const itemSpan = key => `<span style="color:${RARITY[ITEMS[key].rarity].color}">[${esc(ITEMS[key].name)}]</span>`;
   const cleanItems = items => (Array.isArray(items) ? items.filter(x => Array.isArray(x) && Number.isInteger(x[0]) && ITEMS[x[1]]).slice(0, MAX) : []);
+  // rolls from the host: Map n -> { r: [[pid, v]], passed: Set, holder, until: when the window closes here }
+  function cleanRolls(rolls) {
+    const out = new Map(), now = performance.now();
+    if (!Array.isArray(rolls)) return out;
+    for (const x of rolls.slice(0, MAX)) {
+      if (!Array.isArray(x) || !Number.isInteger(x[0]) || !Array.isArray(x[1])) continue;
+      const r = x[1].filter(y => Array.isArray(y) && Number.isInteger(y[1])).slice(0, 8).map(y => [y[0], Math.max(1, Math.min(100, y[1]))]);
+      out.set(x[0], { r, passed: new Set(Array.isArray(x[2]) ? x[2] : []), holder: x[3] || 0, until: now + Math.max(0, Math.min(ROLL_WINDOW, +x[4] || 0)) });
+    }
+    return out;
+  }
+  let tick = 0;   // re-renders while a roll window is counting down
+  function schedule() {
+    clearTimeout(tick);
+    if (!ch || !ch.open) return;
+    const now = performance.now(), next = [...ch.rolls.values()].map(rl => rl.until - now).filter(t => t > 0);
+    if (next.length) tick = setTimeout(render, Math.min(...next) % 1000 + 30);
+  }
 
   const opened = new Set();   // chests this tab has opened (run:id): the gold is paid once, however many times the host sends one
   function onChest(m) {
@@ -103,14 +172,19 @@ const Loot = (() => {
     opened.add(key);
     if (opened.size > 40) opened.delete(opened.values().next().value);
     deps.send({ t: 'cack', id: m.id });
-    ch = { id: m.id, boss: m.boss, items: cleanItems(m.items), cls: me[1], gold: Math.max(0, Math.min(1000, m.gold | 0)),
+    ch = { id: m.id, boss: m.boss, items: cleanItems(m.items), rolls: cleanRolls(m.rolls), cls: me[1], gold: Math.max(0, Math.min(1000, m.gold | 0)),
       at: Array.isArray(m.at) && m.at.every(Number.isFinite) ? { x: m.at[0], y: m.at[1] } : null, open: false, putting: false, born: performance.now() };
     if (ch.gold) { deps.addGold(ch.gold); chatLine(`<b>You</b> received <span class="gold-txt">${ch.gold} gold</span>`); }
     // (the results may already be up: the chest's panel comes with them)
     const r = document.getElementById('results');
     if (r && !r.classList.contains('hidden')) reveal();
   }
-  function onState(m) { if (ch && m && m.id === ch.id) { ch.items = cleanItems(m.items); render(); } }
+  function onState(m) { if (ch && m && m.id === ch.id) { ch.items = cleanItems(m.items); ch.rolls = cleanRolls(m.rolls); render(); } }
+  function onRolled(m) {
+    if (!ch || !m || m.id !== ch.id || !Number.isInteger(m.v)) return;
+    const x = ch.items.find(i => i[0] === m.n);
+    if (x) chatLine(`<b>${esc(nameOf(m.pid))}</b> rolled <b>${Math.max(1, Math.min(100, m.v))}</b> for ${itemSpan(x[1])}`);
+  }
   function onGot(m) {
     if (!m || !ITEMS[m.key]) return;
     const mine = m.pid === deps.myId(), me = deps.myId();
@@ -131,22 +205,44 @@ const Loot = (() => {
   }
 
   function take(n) { if (ch) deps.send({ t: 'ctake', id: ch.id, n }); }
+  function roll(n) { if (ch) deps.send({ t: 'croll', id: ch.id, n }); }
+  function pass(n) { if (ch) deps.send({ t: 'cpass', id: ch.id, n }); }
   const pending = new Set();   // put in, waiting for the host to say so
   function put(inst) { if (!ch || !inst || pending.has(inst.uid)) return; pending.add(inst.uid); deps.send({ t: 'cput', id: ch.id, key: inst.key, uid: inst.uid }); render(); }
 
   function open() { if (!ch) return; ch.open = true; render(); }
-  function close() { root.classList.add('hidden'); root.innerHTML = ''; Tip.hide(); if (ch) { ch.open = false; ch.putting = false; } }
+  function close() { clearTimeout(tick); root.classList.add('hidden'); root.innerHTML = ''; Tip.hide(); if (ch) { ch.open = false; ch.putting = false; } }
   const isOpen = () => !root.classList.contains('hidden');
 
   function render() {
     if (!ch || !ch.open) return;
     const boss = (typeof BOSSES !== 'undefined' && BOSSES.find(b => b.id === ch.boss)) || null;
     const clsName = (CLASSES.find(c => c.id === ch.cls) || {}).name || 'hero';
+    const me = deps.myId(), now = performance.now();
     const cards = ch.items.length ? ch.items.map(([n, key, by]) => {
       const it = ITEMS[key], rar = RARITY[it.rarity], use = canUse(key, ch.cls);
+      const rl = ch.rolls.get(n), mine = rl && rl.r.find(x => x[0] === me);
+      const wait = rl ? Math.ceil((rl.until - now) / 1000) : 0, holder = rl && wait <= 0 ? rl.holder : 0;
+      const hv = holder && (rl.r.find(x => x[0] === holder) || [])[1];
+      // Take: open to all with no rolls; shut while the window counts down, and for everyone but the holder after it
+      const takeOff = wait > 0 || (holder && holder !== me);
+      const takeTip = wait > 0 ? `Rolls are open for ${wait}s` : holder && holder !== me ? `${esc(nameOf(holder))} rolled ${hv} and holds it` : use ? '' : `Your ${esc(clsName)} can't use this`;
+      const takeBtn = `<button class="lc-btn${use ? ' usable' : ''}" data-take="${n}"${takeOff ? ' disabled' : ''}${takeTip ? ` data-tip="${takeTip}"` : ''}>Take</button>`;
+      const rollTip = !use ? `Your ${esc(clsName)} can't use this` : mine ? `You rolled ${mine[1]}` : 'Roll for it. The highest roll holds it';
+      const second = holder === me
+        ? `<button class="lc-btn" data-pass="${n}" data-tip="Pass it to the next-highest roll">Decline</button>`
+        : `<button class="lc-btn${use && !mine ? ' usable' : ''}" data-roll="${n}"${!use || mine ? ' disabled' : ''} data-tip="${rollTip}">Roll</button>`;
+      let chart = '';
+      if (rl && rl.r.length) {
+        const rows = rl.r.slice().sort((a, b) => b[1] - a[1]).map(([pid, v]) => {
+          const st = pid === holder ? ' hold' : rl.passed.has(pid) ? ' out' : '';
+          return `<div class="lr-row${st}"><span class="lr-name">${esc(nameOf(pid))}</span><span class="lr-bar"><i style="width:${v}%"></i></span><span class="lr-v">${v}</span></div>`;
+        }).join('');
+        chart = `<div class="lc-rolls">${rows}${wait > 0 ? `<div class="lr-note">Rolling · ${wait}</div>` : !holder ? '<div class="lr-note">Open to all</div>' : ''}</div>`;
+      }
       return `<div class="loot-card" data-n="${n}" style="--rc:${rar.color}">
         <div class="lc-item"><img src="${deps.iconURL(key)}" alt=""><div><b>${esc(it.name)}</b><small>${rar.name} · ${SLOT_NAME[it.slot]}${by ? ` · from ${esc(deps.nameOf(by))}` : ''}</small></div></div>
-        <div class="lc-acts one"><button class="lc-btn${use ? ' usable' : ''}" data-take="${n}"${use ? '' : ` data-tip="Your ${esc(clsName)} can't use this"`}>Take</button></div></div>`;
+        <div class="lc-acts two">${takeBtn}${second}</div>${chart}</div>`;
     }).join('') : '<p class="loot-empty">Nothing left in the chest.</p>';
     let putting = '';
     if (ch.putting) {
@@ -155,7 +251,7 @@ const Loot = (() => {
     }
     root.innerHTML = `<div class="loot-head"><h4>Spoils</h4>${boss ? `<small>${esc(boss.name)}</small>` : ''}<button class="loot-x" type="button" aria-label="Close" data-tip="Close (Esc)">×</button></div>
       <div class="loot-cards">${cards}</div>
-      <div class="loot-foot"><button class="btn2 loot-putbtn" type="button"${ch.items.length >= MAX ? ' disabled data-tip="The chest is full"' : ''}>${ch.putting ? 'Done' : 'Put something in'}</button><small>Take what you like. Put an item in to trade it.</small></div>${putting}`;
+      <div class="loot-foot"><button class="btn2 loot-putbtn" type="button"${ch.items.length >= MAX ? ' disabled data-tip="The chest is full"' : ''}>${ch.putting ? 'Done' : 'Put something in'}</button><small>Take what you like, or roll for it. Put an item in to trade it.</small></div>${putting}`;
     root.classList.remove('hidden');
     root.querySelector('.loot-x').addEventListener('click', close);
     root.querySelector('.loot-putbtn').addEventListener('click', () => { ch.putting = !ch.putting; render(); });
@@ -164,6 +260,9 @@ const Loot = (() => {
       if (x) Tip.set(el.querySelector('.lc-item'), () => deps.itemTip(x[1], ch && ch.cls));
     });
     root.querySelectorAll('[data-take]').forEach(b => b.addEventListener('click', () => take(Number(b.dataset.take))));
+    root.querySelectorAll('[data-roll]').forEach(b => b.addEventListener('click', () => roll(Number(b.dataset.roll))));
+    root.querySelectorAll('[data-pass]').forEach(b => b.addEventListener('click', () => pass(Number(b.dataset.pass))));
+    schedule();
     root.querySelectorAll('.lp-item').forEach(b => {
       const inst = deps.myItems().find(i => i.uid === Number(b.dataset.uid));
       if (inst) Tip.set(b, () => deps.itemTip(inst.key, ch && ch.cls));
@@ -178,5 +277,5 @@ const Loot = (() => {
   // leaving the raid: the panel goes (the host settles the chest)
   function leave() { close(); ch = null; pending.clear(); deps && deps.unescrowAll(); }
 
-  return { init(d) { deps = d; }, hostOpen, hostAck, hostChestFor, hostTake, hostPut, hostClose, onChest, onState, onGot, onPutOk, onSalvage, open, close, isOpen, reveal, chestAt, leave };
+  return { init(d) { deps = d; }, hostOpen, hostAck, hostChestFor, hostTake, hostPut, hostRoll, hostPass, hostLeft, hostClose, onChest, onState, onRolled, onGot, onPutOk, onSalvage, open, close, isOpen, reveal, chestAt, leave };
 })();

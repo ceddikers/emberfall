@@ -1174,7 +1174,7 @@
   }
   Loot.init({
     broadcast: m => Net.broadcastAll(m),
-    send: m => (!Net.isHost ? Net.send(m) : m.t === 'ctake' ? Loot.hostTake(Net.id, m) : m.t === 'cput' ? Loot.hostPut(Net.id, m) : m.t === 'cack' ? Loot.hostAck(Net.id, m) : null),
+    send: m => (!Net.isHost ? Net.send(m) : m.t === 'ctake' ? Loot.hostTake(Net.id, m) : m.t === 'cput' ? Loot.hostPut(Net.id, m) : m.t === 'cack' ? Loot.hostAck(Net.id, m) : m.t === 'croll' ? Loot.hostRoll(Net.id, m) : m.t === 'cpass' ? Loot.hostPass(Net.id, m) : null),
     myId: () => Net.id,
     nameOf: id => (id === Net.id ? 'You' : (remotes.get(id) || {}).name || 'Someone'),
     inRaid: () => scene === 'arena',
@@ -1200,9 +1200,12 @@
   Net.on('cgot', m => { Loot.onGot(m); if (SH) SH.play('loot-take', { bus: 'ui', key: 'loot-take', minGap: 0.1 }); });
   Net.on('cputok', m => Loot.onPutOk(m));
   Net.on('csalv', m => Loot.onSalvage(m));
+  Net.on('crolled', m => { Loot.onRolled(m); if (SH) SH.play('ui-click', { bus: 'ui', key: 'loot-roll', minGap: 0.1 }); });
   Net.onHost('ctake', (pid, m) => Loot.hostTake(pid, m));
   Net.onHost('cput', (pid, m) => Loot.hostPut(pid, m));
   Net.onHost('cack', (pid, m) => Loot.hostAck(pid, m));
+  Net.onHost('croll', (pid, m) => Loot.hostRoll(pid, m));
+  Net.onHost('cpass', (pid, m) => Loot.hostPass(pid, m));
   // ---------------------------------------------------------------- Limit Break (G)
   // The party's shared gauge (the host's, fight.js): every whole bar is spent at once by whoever presses first, with the
   // effect of their role. Tank: Stand Fast (the party takes less damage). Healer: Rekindle (heals the party; three bars
@@ -1477,6 +1480,7 @@
   Net.onHost('rleave', pid => {
     const h = hostRoster.find(x => x.id === pid);
     if (h) { h.left = true; if (raidHost) raidHost.sim.removePlayer(pid); if (pvpHost) pvpHost.sim.removePlayer(pid); }
+    Loot.hostLeft(pid);   // (a hold on a piece of the chest passes to the next roller)
   });
 
   // ---- a dropped player's place (host side; net.js hostHooks, raid-host.js standIn / snapshot)
@@ -4378,7 +4382,7 @@
     if (!r) return;
     remotes.delete(msg.id); toast(`${r.name} left.`); updatePartyList();
     if (raid && raid.away) raid.away.delete(msg.id);
-    if (Net.isHost) { hostHeld.delete(msg.id); if (raidHost) raidHost.releaseStandIn(msg.id); rsyncAt.delete(msg.id); }   // (the hold ran out: a stand-in steps out for good)
+    if (Net.isHost) { hostHeld.delete(msg.id); if (raidHost) raidHost.releaseStandIn(msg.id); rsyncAt.delete(msg.id); Loot.hostLeft(msg.id); }   // (the hold ran out: a stand-in steps out for good)
     if (raidHost || pvpHost) { const h = hostRoster.find(x => x.id === msg.id); if (h) { h.left = true; (pvpHost || raidHost).sim.removePlayer(msg.id); } }
   });
   Net.on('snap', msg => {

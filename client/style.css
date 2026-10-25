@@ -1350,6 +1350,19 @@ body.in-raid #meter-btn { display: inline-grid; }
 /* the chest panel */
 #loot .loot-x { margin-left: auto; background: none; border: 0; color: var(--muted); font-size: 16px; cursor: pointer; }
 #loot .lc-acts.one { grid-template-columns: 1fr; }
+#loot .lc-acts.two { grid-template-columns: 1fr 1fr; }
+/* need-rolls on a piece: who rolled what, highest first; the holder in gold, a declined or departed roll dimmed */
+#loot .lc-rolls { display: grid; gap: 3px; margin-top: 7px; padding-top: 6px; border-top: 1px solid var(--line-soft); font-size: 11px; font-variant-numeric: tabular-nums; }
+#loot .lr-row { display: grid; grid-template-columns: 74px 1fr 22px; align-items: center; gap: 6px; color: #cfc4b0; }
+#loot .lr-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#loot .lr-bar { height: 4px; background: #1c1814; border: 1px solid #2a231c; border-radius: 1px; overflow: hidden; }
+#loot .lr-bar i { display: block; height: 100%; background: #8a7a62; }
+#loot .lr-v { text-align: right; }
+#loot .lr-row.hold { color: var(--gold-hi); }
+#loot .lr-row.hold .lr-bar i { background: linear-gradient(90deg, var(--gold-dim), var(--gold-hi)); }
+#loot .lr-row.out { opacity: .45; }
+#loot .lr-row.out .lr-name { text-decoration: line-through; }
+#loot .lr-note { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); text-align: right; }
 #loot .loot-empty { margin: 4px 0; font-size: 12px; color: var(--muted); }
 #loot .loot-foot { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
 #loot .loot-foot small { font-size: 10.5px; color: var(--muted); line-height: 1.3; }
