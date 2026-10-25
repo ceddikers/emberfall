@@ -954,7 +954,15 @@ body:has(#loot:not(.hidden)) #results { padding-right: 332px; }
 #altar .altar-band .hc-taken:empty { display: none; }
 .hc-tip { display: grid; gap: 2px; margin: 6px 0; font-size: 12px; }
 .hc-tip u { text-decoration: none; color: var(--muted); margin-right: 4px; }
-@media (min-width: 1100px) { #altar .altar-band .band-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+/* past phone width: one line per role, every line as long as the biggest role (--cols, from main.js), and the tiles as big as
+   fit on the screen so the whole roster shows without scrolling */
+@media (min-width: 761px) {
+  .sel-page#sel-grid { width: auto; max-width: 100%; }
+  .altar-band { grid-template-columns: minmax(0, 1fr); gap: 6px; padding: 8px 10px 10px 0; }
+  .altar-band h3 { display: flex; gap: 8px; align-items: baseline; margin: 0; }
+  #altar { --tile: max(84px, min(200px, calc((100vw - 150px) / var(--cols, 8) - 10px), calc((100vh - 300px) / 3))); }
+  #altar .altar-band .band-grid { grid-template-columns: repeat(var(--cols, 8), var(--tile)); }
+}
 @media (max-width: 760px) { #altar .altar-band .band-grid { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); } }
 
 /* ================================================================ readability pass (after FF14 / WoW conventions)

@@ -3864,6 +3864,7 @@
       }
       altar.appendChild(band);
     }
+    altar.style.setProperty('--cols', Math.max(...Object.keys(ROLES).map(r => CLASSES.filter(c => c.role === r).length)));   // (each role's line is this long)
   })();
   // an ability's icon as a CSS background (an Ultimate layers its own painting over the icon it borrows)
   const abBg = (cls, a) => (a.ult ? ultIconBg(cls.id) : `url(${abilityIcon(cls.id, abilityIconId(a))})`);
