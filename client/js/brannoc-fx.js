@@ -9,6 +9,11 @@
 // clue, and safe floor is never painted. The look follows the painted sheets (docs/art/vfx-reference/brannoc-*.png): wet sand and
 // sea teal, bronze and blazing gold for the Sunwheel, pale ghost-green for the crowd, red banner cloth, gold-orange bounce paths with
 // a bright star at each bounce, blue catch rings.
+// The beat on top (all cosmetic, nothing here changes who is hit): the wheel winds up in his hand and leaves it with a burst; a bounce
+// off a stone rings differently from one off the rim; the ghost crowd gasps at each bounce and roars at a catch; and THE WHIFF: a hero
+// the blow did not take, who stood within a body of it (or slipped clean through it), feels it go by: a sliver of the wheel's rim
+// (or the wave's lash) drawn past them, sparks, a ring, and for your own hero a flash and a flinch of the camera. It is drawn only for
+// a hero the blow did not hit and was close to, so it rewards a dodge and never marks where the safe floor is.
 
 const BR_FX = (() => {
   const hash = (i, n = 0) => { const x = Math.sin(i * 127.1 + n * 311.7) * 43758.5453; return x - Math.floor(x); };
@@ -32,6 +37,11 @@ const BR_FX = (() => {
     try { if (typeof FX !== 'undefined' && FX.cam) { FX.cam.stop(stop); FX.cam.punch(punch, dur); } } catch (e) { /* cosmetic */ }
   }
   const shakeNow = n => { try { if (typeof vfxShake === 'function') vfxShake(n, 'boss'); } catch (e) { /* cosmetic */ } };
+  const isMe = u => typeof Net !== 'undefined' && Net && u.id === Net.id;
+  // a flash at the screen's edge and a small flinch of the camera, for the one at the keyboard only
+  function flinch(col, a = 0.1, dur = 0.18, punch = 0.018) {
+    try { if (typeof FX !== 'undefined' && FX.cam) { FX.cam.flash(col, a, dur); FX.cam.punch(punch, 0.32); } } catch (e) { /* cosmetic */ }
+  }
 
   // ---------------------------------------------------------------- small painted pieces
   // a rect telegraph drawn in its own frame: x runs down the lane, y across it (full: the whole length, however long)
@@ -208,7 +218,19 @@ const BR_FX = (() => {
         ellipse(c, x, y, 26 + 10 * after, 15 + 5 * after, 0, null, rgba(C.foam, 0.7 * k), 2.4);
         for (let j = 0; j < 8; j++) { const a = j * TAU / 8 + 0.3; c.beginPath(); c.moveTo(x + Math.cos(a) * 12, y + Math.sin(a) * 7); c.lineTo(x + Math.cos(a) * (28 + 8 * after), y + Math.sin(a) * (16 + 5 * after)); c.strokeStyle = rgba('#ffffff', 0.8 * k); c.lineWidth = 2; c.stroke(); }
         glow(c, x, y, 38, C.spray, (0.3 + 0.4 * near + 0.4 * after) * k);
+      } else if ((ev.st || []).includes(i)) {
+        // a stone turned it: a cool white-blue star with a ring round it
+        star4(c, x, y, r * 1.1, t * 0.8 + i, '#9fd0ff', '#ffffff', k * (d > P.cum[i] ? Math.max(0.35, after) : 1));
+        ellipse(c, x, y, 24 + 8 * after, 15 + 5 * after, 0, null, rgba('#e8f4ff', 0.6 * k), 2);
       } else star4(c, x, y, r, t * 0.8 + i, C.gold, C.goldHi, k * (d > P.cum[i] ? Math.max(0.35, after) : 1));
+    }
+    // Twin Wheels: a badge of one or two pips at the foot of each road says which leaves first
+    if (ev.ord && d <= 0) {
+      const q = atDist(P, Math.min(P.L, 150)), off = ev.ord === 1 ? 0 : 1;
+      c.save(); c.translate(q.x, q.y - 34);
+      ellipse(c, 0, 0, 22, 14, 0, rgba(C.ink, 0.55 * k), rgba(ev.ord === 1 ? C.gold : C.silver, 0.9 * k), 2);
+      for (let j = 0; j <= off; j++) circle(c, (j - off / 2) * 12, 0, 3.4, rgba(ev.ord === 1 ? C.goldHi : '#ffffff', 0.95 * k));
+      c.restore();
     }
     // where it comes to rest (a blue catch ring is painted there by the catch's own tell; with none, a small gold ring)
     if (!(ev.c && ev.c.length)) { const [x, y] = P.l[P.l.length - 1]; ellipse(c, x, y, 17, 10, 0, null, rgba(col, 0.8 * k), 2.4); glow(c, x, y, 26, glowc, 0.35 * k); }
@@ -217,16 +239,52 @@ const BR_FX = (() => {
   // the thing itself, over the units: the wheel (or the wave's crest) running along its painted path from `at`, stopping at the last point
   function pathOver(c, key, ev, t) {
     const P = pathInfo(ev); if (P.l.length < 2) return;
-    const begin = ev.start + (ev.at || 0); if (t < begin - 0.02) return;
+    const begin = ev.start + (ev.at || 0), big0 = !!ev.big;
+    if (t < begin - 0.02) {
+      // the wind-up: the wheel gathering in his hand: a ghost of the disc spinning up, light drawn in from all round it
+      if (!ev.wave && begin - t < 2.6) {
+        const ch = clamp(1 - (begin - t) / 2.6, 0, 1), [x0, y0] = P.l[0], rr = (big0 ? 70 : 44) * (0.6 + 0.4 * ch);
+        c.save();
+        glow(c, x0, y0 - 30, rr * 2.6, C.gold, 0.2 * ch * ch);
+        for (let i = 0; i < 9; i++) {
+          const a = i * TAU / 9 + t * 0.5, qq = (t * 1.4 + hash(i, 2)) % 1, d0 = rr * (4.2 - 3.0 * qq * (0.5 + ch)), al = Math.sin(qq * Math.PI) * 0.7 * ch;
+          c.beginPath(); c.moveTo(x0 + Math.cos(a) * d0, y0 - 30 + Math.sin(a) * d0 * 0.7); c.lineTo(x0 + Math.cos(a) * (d0 - 22), y0 - 30 + Math.sin(a) * (d0 - 22) * 0.7);
+          c.strokeStyle = rgba(i % 2 ? C.goldHi : C.gold, al); c.lineWidth = 2.4; c.lineCap = 'round'; c.stroke();
+        }
+        wheelDisc(c, x0, y0 - 30, rr, t * (4 + 22 * ch * ch), 0.5 * ch, { lift: 0 });
+        c.restore();
+      }
+      return;
+    }
     const sp = ev.sp || 900, d = clamp((t - begin) * sp, 0, P.L), k = clamp((ev.end - t) / 0.35, 0, 1), big = !!ev.big, wave = !!ev.wave;
     const q = atDist(P, d), r = big ? clamp(ev.w * 0.42, 60, 90) : clamp(ev.w * 0.36, 34, 56);
+    // it leaves his hand: a burst of light and sand at the start of the road, and a push along it
+    const goId = key + ':' + ev.start + ':go';
+    if (!wave && !S.fired.has(goId)) {
+      S.fired.add(goId);
+      if (t - begin < 0.5) {
+        const [x0, y0] = P.l[0], a0 = atDist(P, 4).a;
+        VFX.shock(x0, y0, { r: big ? 260 : 180, color: C.gold, w: 8, dur: 0.5, flat: 0.75 }); VFX.shock(x0, y0, { r: big ? 160 : 110, color: C.goldHi, w: 4, dur: 0.4, flat: 0.75 });
+        VFX.sparks(x0, y0, { color: C.goldHi, n: big ? 26 : 16, speed: 520, angle: a0, spread: 0.8, z: 14 });
+        sandUp(x0, y0, big ? 9 : 5, { size: 0.9 }); shakeNow(big ? 6 : 3.5);
+        if (big) cam(0.05, 0.03, 0.4, 2);
+      }
+    }
     // what it does at each bounce it reaches (once): a flash on the wall, sparks, a ring
     for (let i = 1; i < P.l.length - 1; i++) {
       if (d < P.cum[i]) break;
       const id = key + ':' + ev.start + ':' + i; if (S.fired.has(id)) continue;
       S.fired.add(id); if (S.fired.size > 600) S.fired.clear();
       if (t - begin - P.cum[i] / sp > 0.6) continue;   // (joined late: nothing to see)
-      const [x, y] = P.l[i];
+      const [x, y] = P.l[i], stone = (ev.st || []).includes(i);
+      if (!wave) VFX.motes(x, y, { n: 3, color: C.ghost, r: 22, rise: 1 });   // (the ghost crowd gasps at every bounce)
+      if (stone) {
+        // a stone turned it: pale sparks, chips of rock, a white ring; the road has just changed under their feet
+        VFX.sparks(x, y, { color: '#ffffff', n: big ? 22 : 14, speed: 420 }); VFX.debris(x, y, { color: '#6a6a60', n: big ? 12 : 7, speed: 1.4, size: 1.2 });
+        VFX.shock(x, y, { r: big ? 150 : 105, color: '#e8f4ff', w: 6, dur: 0.5, flat: 0.75 }); VFX.hit(x, y, '#ffffff', big ? 1.9 : 1.3);
+        shakeNow(big ? 6 : 4); if (big) cam(0.06, 0.03, 0.4, 2.5);
+        continue;
+      }
       if (wave) { spray(x, y, 14, { size: 1.3, up: 1.3 }); VFX.shock(x, y, { r: 90, color: C.foam, w: 5, dur: 0.5, flat: 0.7 }); VFX.flash(x, y - 10, 70, C.spray, 0.3); }
       else {
         VFX.sparks(x, y, { color: C.gold, n: big ? 20 : 12, speed: 380 }); VFX.hit(x, y, C.goldHi, big ? 1.7 : 1.15);
@@ -699,6 +757,75 @@ const BR_FX = (() => {
   // ---------------------------------------------------------------- impacts (boss-vfx.js impact() hands every tag of his over)
   // H: the shared helpers boss-vfx.js owns (shapeFlash, shockAt, scatter, after, shake, roomTint, sweep, streak, bang, AFT, coverShadows, clipOut, AR)
   const IMP = {};
+
+  // THE WHIFF. Which way is "away from the blow" for a hero standing just outside this shape
+  function awayFrom(s, u) {
+    if (s.kind === 'rect') {
+      const cs = Math.cos(s.angle), sn = Math.sin(s.angle), across = -(u.x - s.x) * sn + (u.y - s.y) * cs, sg = across >= 0 ? 1 : -1;
+      return { x: -sn * sg, y: cs * sg };
+    }
+    const dx = u.x - s.x, dy = u.y - s.y, dd = Math.hypot(dx, dy) || 1;
+    return { x: dx / dd, y: dy / dd };
+  }
+  // what each blow leaves past a hero: the colour of the sliver and what is flung up
+  const WHIFF = {
+    brWheel: { col: C.goldHi, glow: C.gold, rim: 1 }, brRiposte: { col: '#ffffff', glow: '#9fd0ff', rim: 1 },
+    brWave: { col: '#ffffff', glow: C.spray, wet: 1 }, brWaveBack: { col: '#ffffff', glow: C.spray, wet: 1 },
+    brFurrow: { col: C.goldHi, glow: C.amber, sand: 1 }, brBanner: { col: '#ffb0a0', glow: C.banner, cloth: 1 }, brLeap: { col: '#fff0c8', glow: C.sand, sand: 1 },
+  };
+  // the hero at (u.x, u.y) was not hit: the sliver of the wheel's rim (or the wave's lash) is drawn a stride in front of them, sweeping
+  // the way the blow travels, sparks and a ring at their feet; `slip`: they were inside it and unhurt (a dash through), so it passes through
+  function whiff(u, s, spec, mine, slip) {
+    const a = awayFrom(s, u), tx = -a.y, ty = a.x, trav = s.kind === 'rect' ? s.angle : Math.atan2(ty, tx), ca = Math.cos(trav), sa = Math.sin(trav);
+    const gap = slip ? 0 : 30, ex = u.x - a.x * gap, ey = u.y - a.y * gap - 16;
+    VFX.fx({ dur: 0.34, layer: 'air', draw: (c, p, t, e) => {
+      const k = e.a * (1 - p) * (1 - p), sweep = (easeOut(Math.min(1, p / 0.7)) - 0.35) * 150;
+      c.save();
+      if (spec.rim) {
+        // a curve of the wheel's rim, bright gold with a white edge, spinning past
+        const R = 62, cx = ex - a.x * (R + 4) + ca * sweep, cy = ey - a.y * (R + 4) + sa * sweep, mid = Math.atan2(a.y, a.x);
+        VFX.neonPath(c, spec.col, 5 * (1 - p * 0.5), k, () => { c.arc(cx, cy, R, mid - 0.7, mid + 0.7); });
+        VFX.neonPath(c, '#ffffff', 2, k * 0.85, () => { c.arc(cx, cy, R, mid - 0.4, mid + 0.4); });
+        VFX.neonPath(c, spec.glow, 3, k * 0.55, () => { c.moveTo(ex - ca * 160 + ca * sweep, ey - sa * 160 + sa * sweep); c.lineTo(ex - ca * 30 + ca * sweep, ey - sa * 30 + sa * sweep); });
+      } else {
+        // a lash of foam, sand or cloth along the edge
+        const L = 44 + 70 * easeOut(Math.min(1, p / 0.5));
+        VFX.neonPath(c, spec.col, 4.5 * (1 - p * 0.6), k, () => { c.moveTo(ex - tx * L + ca * sweep * 0.4, ey - ty * L + sa * sweep * 0.4); c.quadraticCurveTo(ex - a.x * 10, ey - a.y * 10, ex + tx * L + ca * sweep * 0.4, ey + ty * L + sa * sweep * 0.4); });
+        VFX.neonPath(c, spec.glow, 2.4, k * 0.7, () => { c.moveTo(ex - tx * L * 0.6, ey - ty * L * 0.6 - 6); c.lineTo(ex + tx * L * 0.6, ey + ty * L * 0.6 - 6); });
+      }
+      c.restore();
+    } });
+    VFX.shock(u.x, u.y + 6, { r: slip ? 96 : 70, color: spec.glow, w: 3.4, dur: 0.36, flat: 0.7 });
+    VFX.sparks(u.x - a.x * 16, u.y - 12, { color: spec.col, n: mine ? 14 : 7, speed: 320, angle: trav, spread: 0.9, up: 80, life: 0.9 });
+    if (spec.wet) spray(u.x - a.x * 20, u.y - 4, mine ? 9 : 4, { size: 0.9, up: 1.1, speed: 200 });
+    if (spec.sand) sandUp(u.x - a.x * 20, u.y, mine ? 5 : 2, { size: 0.7 });
+    if (spec.cloth) for (let i = 0; i < (mine ? 5 : 2); i++) VFX.spawn({ x: u.x - a.x * 24, y: u.y - 8, z: 18, vx: rand(-50, 50), vy: rand(-30, 30), vz: rand(60, 140), g: 260, drag: 0.04, life: rand(0.6, 1.0), size: rand(7, 11), size1: 3, color: i % 3 ? C.banner : C.gold, kind: 'shard', add: false, vr: rand(-8, 8) });
+    if (mine) {
+      // the crowd's gasp, then the flash at the edge of the screen and a flinch of the camera
+      VFX.motes(u.x, u.y - 18, { n: 7, color: C.ghostHi, r: 26, rise: 1.4 });
+      flinch(spec.glow, 0.1, 0.2, 0.02);
+      try { if (typeof Sound !== 'undefined' && Sound.play) Sound.play('dash', { vol: 0.3, key: 'br-whiff', minGap: 0.3 }); } catch (e) { /* cosmetic */ }
+    }
+  }
+  const whiffAt = new Map();
+  function whiffs(tg, msg, ctx) {
+    const spec = WHIFF[tg.tag]; if (!spec || !ctx || !ctx.units) return;
+    const s = tg.live, hits = (msg && msg.hits) || [], t = nowS(), rect = s.kind === 'rect';
+    for (const u of ctx.units) {
+      if (hits.includes(u.id)) continue;
+      if (t - (whiffAt.get(u.id) || -9) < 0.8) continue;
+      let slip = false;
+      if (rect) {
+        // sideways past it only (a hero just off the end of a piece is about to meet the next one)
+        const dx = u.x - s.x, dy = u.y - s.y, al = dx * Math.cos(s.angle) + dy * Math.sin(s.angle);
+        if (al < 12 || al > s.len - 12) continue;
+      }
+      if (SHAPES.contains(s, u.x, u.y)) { if (!rect || (tg.tag !== 'brWheel' && tg.tag !== 'brRiposte')) continue; slip = true; }   // (inside and unhurt: a dash through a wheel's lane; anything else inside was covered or shielded)
+      else if (!SHAPES.contains(s, u.x, u.y, 78)) continue;
+      whiffAt.set(u.id, t);
+      whiff(u, s, spec, isMe(u), slip);
+    }
+  }
   const inside = (ctx, s, pad = 0) => (ctx.units || []).filter(u => SHAPES.contains(s, u.x, u.y, pad));
 
   // a piece of a wheel's path lands as the wheel passes: gold flare along it, sand and sparks thrown up, a hit on anyone it touches
@@ -715,6 +842,7 @@ const BR_FX = (() => {
       const hurt = inside(ctx, s, 6);
       for (const u of hurt) { VFX.hit(u.x, u.y, hot, big ? 2.2 : 1.7); spray(u.x, u.y, 8, { size: 1, speed: 200 }); }
       H.shake(hurt.length ? (big ? 8 : 5) : 2);
+      if (hurt.length && big) cam(0.07, 0.03, 0.45, 2);   // (the giant wheel through a hero: the camera holds a beat)
     };
   }
   IMP.brWheel = wheelImp(C.gold, C.goldHi);
@@ -732,6 +860,10 @@ const BR_FX = (() => {
       H.shockAt(hx, hy, { r: 120, color: C.catchHi, w: 5, dur: 0.6, flat: 0.8, delay: 0.06 });
       VFX.sparks(hx, hy, { color: C.goldHi, n: 22, speed: 440 });
       spray(hx, hy, 18, { size: 1.3, up: 1.2 }); sandUp(hx, hy, 8);
+      // the ghost crowd roars for the catch: pale rings out across the sand and light thrown up off the wall
+      for (let i = 0; i < 2; i++) H.shockAt(hx, hy, { r: 300 + i * 120, color: i ? C.ghostHi : C.ghost, w: 6 - i * 2, dur: 0.8 + i * 0.15, flat: 0.8, delay: 0.1 + i * 0.1 });
+      VFX.motes(hx, hy - 20, { n: 14, color: C.ghostHi, r: 40, rise: 1.8 });
+      if (who && isMe(who)) flinch(C.gold, 0.12, 0.25, 0.022);
       H.shake(11); cam(0.12, 0.04, 0.5, 1.5);
     } else {
       // nobody caught it: the wheel slams into the sand and bursts
@@ -868,7 +1000,14 @@ const BR_FX = (() => {
     } });
     VFX.shock(0, 0, { r: 220, color: C.foam, w: 10, dur: 0.6, flat: 0.8 });
     for (const q of H.scatter({ kind: 'circle', x: 0, y: 0, r: H.AR - 40 }, 12)) H.after(Math.random() * 0.4, () => spray(q.x, q.y, 6, { size: 1.2, up: 1.2 }));
-    H.shake(11);
+    // everyone is dragged in: a streak behind each hero, back the way they came
+    for (const u of ctx.units || []) {
+      const r = Math.hypot(u.x, u.y), pull = Math.min(170, Math.max(0, r - 70)); if (pull < 20) continue;
+      const ang = Math.atan2(-u.y, -u.x);
+      H.streak(u.x, u.y - 12, ang, C.foam, { len: pull, w: 12, dur: 0.35 });
+      VFX.sparks(u.x, u.y - 10, { color: '#ffffff', n: 5, speed: 200, angle: ang + Math.PI, spread: 0.6 });
+    }
+    H.shake(11); cam(0.1, 0.045, 0.7, 2);
   };
 
   // ---------------------------------------------------------------- propfx (boss-vfx.js propFx() asks first when it is his)
@@ -910,7 +1049,8 @@ const BR_FX = (() => {
     spray(x, y, 26, { size: 1.5, up: 1.5, speed: 280 });
     VFX.debris(x, y, { color: '#b07a2a', n: 8, speed: 1.2 });
     H.shockAt(x, y, { r: 150, color: C.foam, w: 8, dur: 0.55, flat: 0.8 }); H.shockAt(x, y, { r: 90, color: C.goldHi, w: 4, dur: 0.4, flat: 0.8, delay: 0.05 });
-    H.shake(6);
+    VFX.motes(x, y - 20, { n: 12, color: C.ghostHi, r: 36, rise: 1.6 });   // (the held hero is let go: the crowd cheers)
+    H.shake(6); cam(0.07, 0.03, 0.45, 1.5);
   }
 
   // ---------------------------------------------------------------- the Tide Rises (ArenaView.drawRoomOver hands it over, from roomev 'tide')
@@ -920,7 +1060,7 @@ const BR_FX = (() => {
   const TIDE = { rim: 560, ring: 478 };
   function tideOver(c, ev, t) {
     const u = t - ev.start; if (u < 0) return;
-    if (!S.tide || S.tide.start !== ev.start) S.tide = { start: ev.start, geys: 0, ghost: 0, shake: 0, bolt: 0, base: 0, crown: 0 };
+    if (!S.tide || S.tide.start !== ev.start) S.tide = { start: ev.start, geys: 0, ghost: 0, shake: 0, bolt: 0, base: 0, crown: 0, risen: 0 };
     const T = S.tide, R = TIDE.rim, out = clamp((ev.end - t) / 0.8, 0, 1);
     const cover = u < 6 ? easeIO(clamp(u / 5.9, 0, 1)) : 1;                   // how far the water has climbed in from the wall
     const drain = u < 6 ? 0 : easeOut(clamp((u - 6) / 2.8, 0, 1));              // and how far it has gone out again
@@ -941,6 +1081,15 @@ const BR_FX = (() => {
     while (T.bolt < BOLTS.length && u >= BOLTS[T.bolt]) { const i = T.bolt++, a = hash(i, 51) * TAU, d = 120 + 300 * hash(i, 52), tx = Math.cos(a) * d, ty = Math.sin(a) * d * 0.9; if (u - BOLTS[i] < 0.5) { VFX.lightning(tx + rand(-120, 120), ty - 760, tx, ty, { color: '#e8fbff', jag: 28, dur: 0.4 }); VFX.hit(tx, ty, C.foam, 1.4); } }
     // the sea heaving up round the place he will stand
     while (T.base < 3 && u >= [4.3, 5.1, 5.9][T.base]) { const i = T.base++; if (u - [4.3, 5.1, 5.9][i] < 0.6) { VFX.shock(0, -380, { r: 330 + 60 * i, color: C.foam, w: 10, dur: 0.9, flat: 0.55 }); spray(0, -380, 16, { size: 1.6, up: 1.6, speed: 300 }); } }
+    // and at the last he stands up out of it: the column falls away in a ring of white water, the camera holds
+    if (!T.risen && u >= 8.0) {
+      T.risen = 1;
+      if (u - 8.0 < 0.6) {
+        for (let i = 0; i < 3; i++) VFX.shock(0, -380, { r: 420 - i * 90, color: i % 2 ? '#ffffff' : C.spray, w: 12 - i * 3, dur: 0.9 + i * 0.12, flat: 0.55 });
+        spray(0, -400, 30, { size: 1.8, up: 1.8, speed: 380 }); VFX.flash(0, -430, 220, C.foam, 0.4);
+        shakeNow(10); cam(0.14, 0.05, 0.8, 0);
+      }
+    }
     // spray flung off the crown of the column
     if (u > 5.0 && u < 8.2 && u - T.crown > 0.05) { T.crown = u; for (let i = 0; i < 2; i++) { const a = rand(0, TAU), d = rand(30, 150); VFX.spawn({ x: Math.cos(a) * d, y: -400 + Math.sin(a) * d * 0.5, z: rand(220, 520), vx: Math.cos(a) * rand(30, 90), vy: Math.sin(a) * 40, vz: rand(-30, 60), g: 300, life: rand(0.8, 1.4), size: rand(10, 18), size1: 2, color: Math.random() < 0.5 ? C.foam : C.spray, kind: 'glow' }); } }
 
@@ -1020,11 +1169,23 @@ const BR_FX = (() => {
     c.restore();
   }
 
+  // The Last Round begins: the ghost crowd rises to its feet and the sea answers the bell; three rings of pale light go out through the
+  // sand and the room shakes once (a one-shot beat, nothing on the floor)
+  function lastRoundOver(ev, t) {
+    const u = t - ev.start; if (u < 0 || ev.done) return;
+    ev.done = 1;
+    if (u > 1.2) return;
+    for (let i = 0; i < 3; i++) VFX.shock(0, 0, { r: AR() * (1.1 - i * 0.22), color: i % 2 ? C.ghostHi : C.ghost, w: 11 - i * 3, dur: 0.8 + i * 0.12, flat: 0.8, delay: i * 0.12 });
+    for (let i = 0; i < 10; i++) { const a = rand(0, TAU); VFX.spawn({ x: Math.cos(a) * (AR() - 30), y: Math.sin(a) * (AR() - 30), z: rand(10, 60), vx: -Math.cos(a) * rand(20, 60), vy: -Math.sin(a) * rand(20, 60), vz: rand(60, 150), life: rand(1.2, 2.0), size: rand(12, 20), size1: 2, color: i % 2 ? C.ghost : C.ghostHi, kind: 'glow' }); }
+    shakeNow(8); cam(0.08, 0.04, 0.6, 0);
+  }
+
   // ---------------------------------------------------------------- the room over the units (ArenaView.drawRoomOver hands it over)
   function roomOver(ctx, room, t, env) {
     const ev = room && room.ev; if (!ev) return;
     for (const key in ev) if (key.startsWith('brpath:') && t < ev[key].end) pathOver(ctx, key, ev[key], t);
     if (ev.tide && t < ev.tide.end) tideOver(ctx, ev.tide, t, env); else if (S.tide) S.tide = null;
+    if (ev.lastround && t < ev.lastround.end) lastRoundOver(ev.lastround, t);
   }
 
   // ---------------------------------------------------------------- the enrage, the entrance, the fall
@@ -1110,6 +1271,7 @@ const BR_FX = (() => {
     // (boss-vfx.js impact(): his moves land here; a tag it does not know falls through to the shared ones)
     impact(tg, msg, ctx, H) {
       const f = tg.type === 'buster' ? IMP.buster : IMP[tg.tag]; if (!f) return false;
+      try { whiffs(tg, msg, ctx); } catch (e) { /* cosmetic */ }
       f(tg, msg, ctx, H); return true;
     },
     wheelDisc, spray,

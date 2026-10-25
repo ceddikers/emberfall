@@ -20,7 +20,7 @@
 //   Act IV, Last Round (20% -> dead, PUSH): everything faster and in pairs; it ends on three jobs at once: a Grip held on a hero, a
 //     six-bounce wheel (break the hand, catch the rings) and the fist on the tank.
 // Every telegraph shows on every difficulty. Hard: casts 15% faster, 22% more damage, and:
-//   Twin Wheels: two wheels at once, crossing paths, two catch points (in the sea too).
+//   Twin Wheels: two wheels, the second thrown a beat after the first, crossing paths, two catch points (in the sea too).
 //   Double Grip: both hands, on two heroes; the party splits to break them.
 //   Riposte:     a caught wheel is kicked back once more, along a new painted path.
 //   Riptide:     Breaker's wave bounces twice.
@@ -78,15 +78,15 @@ const BRANNOC = {
       return best;
     };
     const bounce = (x, y, a, n, pad = 40, obs = null) => {
-      const RW = ARENA.r - pad, pts = [[x, y]];
+      const RW = ARENA.r - pad, pts = [[x, y]], st = [];   // (st: which bounces were off a stone and not the rim: the painted road marks them)
       let dx = Math.cos(a), dy = Math.sin(a);
       for (let i = 0; i < n; i++) {
         const h = nextHit(x, y, dx, dy, RW, obs);
-        x += dx * h.t; y += dy * h.t; pts.push([x, y]);
+        x += dx * h.t; y += dy * h.t; pts.push([x, y]); if (!h.wall) st.push(i + 1);
         const nx = h.wall ? x / RW : (x - h.ox) / h.orr, ny = h.wall ? y / RW : (y - h.oy) / h.orr, dd = dx * nx + dy * ny;
         dx -= 2 * dd * nx; dy -= 2 * dd * ny;
       }
-      return { pts, dx, dy, obs, RW };
+      return { pts, dx, dy, obs, RW, st };
     };
     // a throw that doesn't run through the middle (a path there would bounce straight back at him): its first line passes the
     // centre at least `near` off, at most `far`
@@ -141,7 +141,7 @@ const BRANNOC = {
       cs.forEach((c, i) => f.mech({ type: 'tower', shape: { kind: 'circle', x: Math.round(c.x), y: Math.round(c.y), r: R }, delay: o.delay + c.s / o.speed, dmg: dmg[o.catchDmg || 'catch'], need: 1,
         failDmg: dmg.burst, tag: 'brCatch', onResolve: (inside) => { if (o.onCatch) o.onCatch(i, inside.length > 0, c); } }));
       f.emit({ t: 'roomev', k: 'brpath:' + (++pathN), l: pts.map(([x, y]) => [Math.round(x), Math.round(y)]), c: cs.map(c => [Math.round(c.x), Math.round(c.y)]), sp: o.speed,
-        at: +o.delay.toFixed(2), w: o.w, big: o.w > 150 ? 1 : 0, dur: +(o.delay + along[along.length - 1] / o.speed + 0.5).toFixed(2) });
+        at: +o.delay.toFixed(2), w: o.w, big: o.w > 150 ? 1 : 0, st: o.stones || [], ord: o.ord || 0, dur: +(o.delay + along[along.length - 1] / o.speed + 0.5).toFixed(2) });
       return o.delay + along[along.length - 1] / o.speed;
     };
     // where a path comes to rest: partway down the next line after its last bounce
@@ -159,8 +159,8 @@ const BRANNOC = {
       // (in the sea the stones on the ring are posts for it too)
       const obs = titan ? stones.map(([x, y]) => [x, y, 88]) : null;
       const plan = a => { const path = bounce(B.x, B.y, a, n, 40, obs); return { path, end: rest(path) }; };
-      const throwOne = ({ path, end }) => {
-        lay([...path.pts, end], { w: 130, speed: 950, delay: d, catches: [end], banners: o.banners,
+      const throwOne = ({ path, end }, late = 0) => {
+        lay([...path.pts, end], { w: 130, speed: 950, delay: d + late, catches: [end], banners: o.banners, stones: path.st, ord: late > 0 ? 2 : (H && o.twin ? 1 : 0),
           onCatch: (i, ok, c) => { if (ok && H) f.afterKeep(0.3, () => riposte(c)); } });
       };
       // (on the stones' ring its resting ring wants floor of its own, clear of the stones and the other stretches of the road)
@@ -173,10 +173,13 @@ const BRANNOC = {
       if (H && o.twin) {
         let p2 = null;
         for (let k = 0; k < 40 && !p2; k++) { const q = plan(a1 + Math.PI * (0.45 + f.rng() * 0.45) * (f.rng() < 0.5 ? -1 : 1)); if (Math.hypot(q.end[0] - p1.end[0], q.end[1] - p1.end[1]) > 340 && good(q)) p2 = q; }
-        if (p2) throwOne(p2);
+        if (p2) throwOne(p2, TWIN_LATE);
       }
       f.afterKeep(d + 0.4, () => { B.lockFacing = false; });
     };
+    // (Twin Wheels: the second wheel is thrown a beat after the first and runs the second-painted road, so the crossing is clear for a
+    // moment between the two: a hero who reads both roads can cut through it, one who stands in it is caught by the second)
+    const TWIN_LATE = 1.1;
     // Riposte (Hard): the catcher's wheel is kicked back once more along a fresh path, two bounces, nothing to catch
     const riposte = (c) => {
       if (f.state !== 'live') return;
@@ -343,7 +346,7 @@ const BRANNOC = {
       const d = f.ct(4.8);
       if (!quiet) f.cast('Sunwheel Unbound', d, 'unbound');
       const { path, end, mid } = unboundPlan(n, B.x, B.y + 120);
-      lay([...path.pts, end], { w: 190, speed: 800, delay: d, catches: [mid, end], catchR: 100, dmg: 'wheel', catchDmg: 'catchBig' });
+      lay([...path.pts, end], { w: 190, speed: 800, delay: d, catches: [mid, end], catchR: 100, dmg: 'wheel', catchDmg: 'catchBig', stones: path.st });
     };
     // Deep Call: the sea heaves and drags everyone in toward the middle (never closer than a step or two from it). Nothing is thrown at
     // the rim afterwards: the pull is the set-up for what follows (the fist, a wheel), not a trap against the wall.
@@ -433,6 +436,7 @@ const BRANNOC = {
     // IV. Last Round: everything faster and in pairs, and at the last three jobs at once: a hand holds someone, a six-bounce wheel runs
     // and the fist comes down on the tank
     const lastRound = from => f.course({
+      onStart: () => f.emit({ t: 'roomev', k: 'lastround', dur: 4 }),   // (the sea and the ghost crowd answer the last bell: brannoc-fx.js)
       sets: [
         S([4, deepCall, 'Deep Call'], [PULL, fist, 'Fist Slam']),
         S([11, breaker, 'Breaker'], [7, () => unbound(4), 'Sunwheel Unbound']),
