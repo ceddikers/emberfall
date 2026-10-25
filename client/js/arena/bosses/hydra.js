@@ -16,6 +16,8 @@
 //   that head's move from the stump), in place of the next head's turn: the Heart, in small.
 //   The body keeps a three-beat rhythm: Rending Maul, Tail Thrash (a ring at her feet), Mother's Cry. No head lands within a beat
 //   and a half of a Cry or a Maul, and the big Hard moves (Gaze, Tidal Dance) hold the heads' round while they run.
+//   Tail Thrash has a second half, the Undertow: a ring just outside the first, landing a breath after it (both drawn from the
+//   start): out of the first, then in or out of the second. The head whose turn is next rears a breath before it casts.
 //   Act I, Three Heads (100% → 75%): Acid, Tide and Venom rise. Mother's Cry, Rending Maul, Tail Thrash.
 //   Act II, Six Heads (75% → 45%): Flame, Frost and Storm rise at the three gaps between them.
 //   The Submerge (the seam): she dives for 15 s and the temple floods (everyone wades, slowed). Five lesser heads break
@@ -57,7 +59,7 @@ const HYDRA = {
     const B = f.boss;
     const TAU = Math.PI * 2;
     const dmg = {
-      cry: H ? 10200 : 10800, thrash: H ? 9800 : 8400, maul: H ? 22000 : 18000, gazeAll: H ? 21000 : 0, dance: H ? 12700 : 0, heart: H ? 16100 : 16600,
+      cry: H ? 10200 : 10800, thrash: H ? 9800 : 8400, undertow: H ? 9000 : 7000, maul: H ? 22000 : 18000, gazeAll: H ? 21000 : 0, dance: H ? 12700 : 0, heart: H ? 16100 : 16600,
       acid: H ? 16600 : 16200, pool: H ? 2100 : 2200, tide: H ? 18700 : 18700, bloom: H ? 30700 : 28300, bloomPool: H ? 1700 : 1700,
       flame: H ? 13200 : 13200, ember: H ? 2000 : 2000, frost: H ? 15600 : 15600, storm: H ? 13500 : 13500, gaze: H ? 21500 : 21200,
       mire: H ? 7300 : 7400, mirePool: H ? 1700 : 1700, sear: 1400, rise: H ? 7000 : 7500,
@@ -304,6 +306,20 @@ const HYDRA = {
       if (great[0]) great[0].add.prio = 5;
     });
 
+    // the head whose turn is next rears a breath before its cast (a ring closes on its base): the read for which head is up
+    // when the order is drawn fresh each pull. If a stump is to answer in its place, the stump gathers instead.
+    let rearAt = 0;
+    f.ticker(() => {
+      if (paused || f.t < rearAt) return;
+      const e = rot()[0]; if (!e || !e.head) return;
+      const left = e.t - f.t;
+      if (left > 1.3 || left < 0.35) return;
+      const h = e.head, o = echoQ[0], src = o ? { x: slotPos(o.slot).x, y: slotPos(o.slot).y, el: o.el, lesser: false, surf: false } : h;
+      if (f.t - (h.rearT ?? -9) < 4) return;
+      h.rearT = f.t; rearAt = f.t + 0.3;
+      f.emit({ t: 'propfx', k: 'rear', x: Math.round(src.x), y: Math.round(src.y), el: src.el, dur: +left.toFixed(2), s: src.lesser ? 0 : 1, st: o ? 1 : 0 });
+    });
+
     // --- the body ---------------------------------------------------------------------------------------------
     // a body move that lands d after it starts never lands on top of a head: if one is about to, it starts a moment later, and
     // the heads' round keeps clear of the place it lands
@@ -336,10 +352,16 @@ const HYDRA = {
       });
     };
     // Tail Thrash: the Mother's tail sweeps the ring of water at her feet; whoever stands by her (the knight, a melee hand) steps out
+    // ... and the water she flung out comes back: the Undertow, a ring just outside the first, lands a moment after it. Both
+    // are drawn from the start; whoever stood out of the first has a breath, after it lands, to step in or out of the second.
     const thrash = () => {
-      const d = f.ct(2.8);
-      f.cast('Tail Thrash', d, 'maul');
-      f.mech({ type: 'aoe', shape: { kind: 'circle', x: B.x, y: B.y, r: 230 }, delay: d, dmg: dmg.thrash, tag: 'thrash' });
+      const d = f.ct(2.8), gap = f.ct(H ? 1.2 : 1.45);
+      bodyAt(d + gap, () => {
+        f.cast('Tail Thrash', d, 'maul');
+        f.mech({ type: 'aoe', shape: { kind: 'circle', x: B.x, y: B.y, r: 230 }, delay: d, dmg: dmg.thrash, tag: 'thrash' });
+        f.mech({ type: 'aoe', shape: { kind: 'donut', x: B.x, y: B.y, r: 372, r2: 230 }, delay: d + gap, dmg: dmg.undertow, tag: 'undertow' });
+        f.afterKeep(d, () => { if (!paused) f.cast('Undertow', gap, 'maul'); });
+      });
     };
     // Hydra's Gaze (Hard): the whole inside of the temple. Only the ground near the wall is left out.
     const hydraGaze = () => {

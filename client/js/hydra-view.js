@@ -492,6 +492,22 @@
       ctx.fillStyle = rgba('#c8ffd8', (0.08 + 0.18 * p) * k); ctx.fill();
       ctx.restore();
     } },
+    // Undertow: the ring outside the first, foam running inward across it, lines of pull strengthening as it nears
+    undertow: { ground(ctx, tg, s, p, k, t) {
+      ctx.save(); SHAPES.trace(ctx, s); ctx.clip('evenodd');
+      ctx.fillStyle = rgba('#0a3a40', (0.08 + 0.16 * p) * k); ctx.fillRect(s.x - s.r, s.y - s.r, s.r * 2, s.r * 2);
+      for (let i = 0; i < 4; i++) {
+        const q = (t * (0.5 + 0.9 * p) + i / 4) % 1, r = s.r - (s.r - s.r2) * q;
+        ripple(ctx, s.x, s.y, r, 2, t * 3 + i, 72); ctx.strokeStyle = rgba('#d8fff4', 0.55 * Math.sin(q * Math.PI) * k * (0.35 + p)); ctx.lineWidth = 2.4; ctx.stroke();
+      }
+      const mid = (s.r + s.r2) / 2;
+      for (let j = 0; j < 16; j++) {
+        const a = j * TAU / 16 + t * 0.15, x = s.x + Math.cos(a) * mid, y = s.y + Math.sin(a) * mid, ux = -Math.cos(a), uy = -Math.sin(a), nx = -uy, ny = ux;
+        ctx.beginPath(); ctx.moveTo(x - ux * -8 + nx * 9, y - uy * -8 + ny * 9); ctx.lineTo(x + ux * 8, y + uy * 8); ctx.lineTo(x - ux * -8 - nx * 9, y - uy * -8 - ny * 9);
+        ctx.strokeStyle = rgba('#e8fffc', (0.16 + 0.4 * p) * k); ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.stroke();
+      }
+      ctx.restore();
+    } },
     buster: { ground(ctx, tg, s, p, k, t, env) {
       const tgt = tg.target != null ? env.entById(tg.target) : null;
       const reach = s.r * 0.92, tx = tgt ? tgt.x : s.x + Math.cos(s.angle) * s.r * 0.5, ty = tgt ? tgt.y : s.y + Math.sin(s.angle) * s.r * 0.5, close = easeOut(clamp(p * 1.05, 0, 1));
@@ -591,6 +607,22 @@
         else circle(c, mx, my, 2.2 + 1.4 * p, rgba(col, 0.95), INK, 0.8);   // acid and venom: drops
       }
       c.restore();
+    },
+    // the snap: at the end of the cast the gathered light breaks off the mouth and a ring runs out of the head's foot
+    done: () => {
+      const bx = msg.x, by = msg.y - 22;
+      VFX.burst(bx, by, { color: col, color2: '#ffffff', n: msg.s ? 12 : 6, speed: 230, size: msg.s ? 10 : 7, flash: false });
+      VFX.flash(bx, by, msg.s ? 74 : 48, col, 0.18);
+      VFX.shock(msg.x, msg.y + 6, { r: msg.s ? 78 : 52, color: col, w: 4, dur: 0.36, flat: 0.6 });
+    } });
+    // the charge on the water at the head's foot: a ring that tightens and burns brighter as the blow nears
+    VFX.fx({ dur, layer: 'ground', draw: (c, p, t, e) => {
+      const k = e.a * Math.min(1, p / 0.12) * Math.min(1, (1 - p) / 0.05) * big;
+      if (k <= 0) return;
+      c.save(); clipRoom(c);
+      const r = 44 - 14 * p, pu = 0.5 + 0.5 * Math.sin(t * (6 + 16 * p * p));
+      ellipse(c, msg.x, msg.y + 8, r, r * 0.55, 0, rgba(col, (0.04 + 0.1 * p) * k), rgba(col, (0.25 + 0.5 * p) * k * (0.7 + 0.3 * pu)), 1.6 + 1.8 * p);
+      c.restore();
     } });
   }
 
@@ -633,13 +665,131 @@
     } });
   }
 
+  // ---------------------------------------------------------------------- the beat on top of a landing
+  // The camera holds for a beat when something big lands (main.js FX.cam), and THE WHIFF: a hero the blow did not take, who stood
+  // within a stride of its edge, feels a crest of water throw past them; for your own hero a flash, a push of the camera and a
+  // whoosh. It is drawn only for a hero the blow missed and was close to, so it rewards a dodge and never marks where is safe.
+  const FS = { camAt: -99, whiffAt: new Map() };
+  const nowS = () => (typeof performance !== 'undefined' ? performance.now() : Date.now()) / 1000;
+  function cam(stop = 0.06, punch = 0.03, dur = 0.45, gap = 2.5) {
+    const t = nowS(); if (t - FS.camAt < gap) return; FS.camAt = t;
+    try { if (typeof FX !== 'undefined' && FX.cam) { FX.cam.stop(stop); FX.cam.punch(punch, dur); } } catch (e) { /* cosmetic */ }
+  }
+  const CAMS = { cry: [0.05, 0.026], buster: [0.07, 0.034], thrash: [0.07, 0.034], undertow: [0.045, 0.024], bloom: [0.05, 0.026], hgaze: [0.09, 0.04], heartbeat: [0.1, 0.05], surge: [0.06, 0.03], tide: [0.04, 0.02], storm: [0.04, 0.02] };
+  const WHIFF_COL = { acid: '#d8ff6a', tide: '#9ffff0', rime: '#e8f8ff', storm: '#ffe45a', thrash: '#9ff0b8', undertow: '#7ffff0', hgaze: '#ffffff', buster: '#ff8a7a' };
+  const NEAR = 80;   // a hero this close to the edge of a blow (and not hit) gets the whiff
+  // which way is "away from the blow" for a hero standing just outside this shape
+  function awayFrom(s, u) {
+    if (s.kind === 'rect') {
+      const c = Math.cos(s.angle), sn = Math.sin(s.angle), across = -(u.x - s.x) * sn + (u.y - s.y) * c, sg = across >= 0 ? 1 : -1;
+      return { x: -sn * sg, y: c * sg };
+    }
+    const dx = u.x - s.x, dy = u.y - s.y, d = Math.hypot(dx, dy) || 1;
+    if (s.kind === 'cone') {   // (off the side of the cone: along the way round it, not out from its mouth)
+      const an = Math.atan2(dy, dx); let df = an - s.angle; while (df > Math.PI) df -= TAU; while (df < -Math.PI) df += TAU;
+      if (Math.abs(df) > (s.arc || 0) / 2) { const sg = df >= 0 ? 1 : -1; return { x: -Math.sin(an) * sg, y: Math.cos(an) * sg }; }
+    }
+    const sg = s.kind === 'donut' && d < s.r2 ? -1 : 1;   // (inside a ring's hole, away from the blow is inward)
+    return { x: sg * dx / d, y: sg * dy / d };
+  }
+  function whiff(u, s, tag, mine) {
+    const col = WHIFF_COL[tag] || '#d8fff4', a = awayFrom(s, u), tx = -a.y, ty = a.x;
+    const ex = u.x - a.x * 34, ey = u.y - a.y * 34 - 14;
+    VFX.fx({ dur: 0.38, layer: 'air', draw: (c, p, t, e) => {
+      const k = e.a * (1 - p) * (1 - p), L = 38 + 62 * easeOut(Math.min(1, p / 0.5)), sh = (p - 0.2) * 46, bx = ex + a.x * sh, by = ey + a.y * sh;
+      c.save();
+      // a crest of water, bowed toward the blow it came off, with foam flung from it
+      VFX.neonPath(c, col, 5 * (1 - p * 0.6), k, () => { c.moveTo(bx - tx * L, by - ty * L); c.quadraticCurveTo(bx - a.x * 22, by - a.y * 22 - 6, bx + tx * L, by + ty * L); });
+      c.fillStyle = rgba('#ffffff', 0.9 * k);
+      for (let i = 0; i < 6; i++) { const q = (i + 0.5) / 6 * 2 - 1, fx = bx + tx * L * q + a.x * (10 + 36 * p * (0.5 + hy(i, 3))), fy = by + ty * L * q + a.y * (10 + 36 * p * (0.5 + hy(i, 3))) - 18 * p * hy(i, 5); c.beginPath(); c.arc(fx, fy, 1.4 + 1.8 * hy(i, 7) * (1 - p), 0, TAU); c.fill(); }
+      c.restore();
+    } });
+    VFX.shock(u.x, u.y + 6, { r: 62, color: col, w: 3, dur: 0.34, flat: 0.6 });
+    VFX.splash(u.x - a.x * 14, u.y, { color: col, n: mine ? 8 : 5, speed: 0.95 });
+    VFX.sparks(u.x - a.x * 18, u.y - 10, { color: '#ffffff', n: mine ? 8 : 4, speed: 280, angle: Math.atan2(a.y, a.x), spread: 0.9, up: 70, life: 0.8 });
+    if (mine) {
+      try {
+        if (typeof FX !== 'undefined' && FX.cam) { FX.cam.flash(col, 0.08, 0.16); FX.cam.punch(0.018, 0.32); }
+        if (typeof Sound !== 'undefined' && Sound.play) Sound.play('dash', { vol: 0.3, key: 'hy-whiff', minGap: 0.3 });
+      } catch (e) { /* cosmetic */ }
+    }
+  }
+  function whiffs(tg, msg, ctx) {
+    const tag = tg.type === 'buster' ? 'buster' : tg.tag;
+    if (!ctx || !ctx.units || !WHIFF_COL[tag] || !tg.live) return;
+    const s = tg.live, hits = (msg && msg.hits) || [], t = nowS();
+    for (const u of ctx.units) {
+      if (hits.includes(u.id) || (tag === 'buster' && u.id === tg.target)) continue;
+      if (t - (FS.whiffAt.get(u.id) || -9) < 0.7) continue;
+      if (SHAPES.contains(s, u.x, u.y)) continue;   // inside and not hit: covered or shielded, not a dodge
+      if (!SHAPES.contains(s, u.x, u.y, NEAR)) continue;
+      FS.whiffAt.set(u.id, t);
+      whiff(u, s, tag, typeof Net !== 'undefined' && u.id === Net.id);
+    }
+  }
+
+  // the head whose turn is next rears: a ring closes on its base and its light gathers (for a stump about to answer, a ghost of
+  // light stands over the stump instead). It is the read for which head is up, never a mark of where to stand.
+  function rearFx(msg) {
+    const E = HY_EL[msg.el] || HY_EL.acid, dur = Math.max(0.45, msg.dur || 1), big = msg.s ? 1 : 0.7, x = msg.x, y = msg.y;
+    VFX.fx({ dur, layer: 'ground', draw: (c, p, t, e) => {
+      const k = e.a * Math.min(1, p / 0.15) * Math.min(1, (1 - p) / 0.1) * big;
+      if (k <= 0) return;
+      c.save(); clipRoom(c);
+      for (let i = 0; i < 2; i++) { const q = (p * 1.4 + i * 0.5) % 1, r = (1 - q) * 66 + 26; ellipse(c, x, y + 8, r, r * 0.55, 0, null, rgba(E.glow, 0.5 * q * k), 2); }
+      const pu = 0.5 + 0.5 * Math.sin(t * (10 + 14 * p));
+      ellipse(c, x, y + 8, 30 - 6 * p, (30 - 6 * p) * 0.55, 0, rgba(E.glow, (0.08 + 0.16 * p) * k), rgba(E.glow, (0.55 + 0.4 * p) * k), 2.2 + 1.6 * p);
+      glow(c, x, y - 16, 26 + 22 * p, E.glow, (0.14 + 0.3 * p) * k * (0.8 + 0.2 * pu));
+      if (msg.st) {   // (a stump: a ghost of its head, a column of pale light)
+        const g = c.createLinearGradient(x, y - 120, x, y); g.addColorStop(0, rgba(E.glow, 0)); g.addColorStop(1, rgba(E.glow, 0.34 * k * p));
+        c.fillStyle = g; c.fillRect(x - 14, y - 120, 28, 120);
+      }
+      c.restore();
+    } });
+  }
+  // a head that falls to the cutting: it tumbles from where it stood, spinning, and slaps down in the water
+  function fallingHead(msg) {
+    const art = typeof ADD_ART !== 'undefined' && ADD_ART['hy-' + msg.el]; if (!art) return;
+    const face = Math.atan2(msg.y, msg.x), dir = Math.random() < 0.5 ? 1 : -1, sp = rnd(1.5, 3) * dir, E = HY_EL[msg.el] || HY_EL.acid;
+    VFX.fx({ dur: 0.85, layer: 'air', draw: (c, p, t, e) => {
+      const q = p, h = 60 * Math.sin(Math.min(1, q * 1.15) * Math.PI) * (1 - q * 0.3), out = Math.cos(face) * 60 * easeOut(q), outy = Math.sin(face) * 60 * easeOut(q);
+      c.save(); c.globalAlpha = e.a * Math.min(1, (1 - q) / 0.3);
+      c.translate(msg.x + out, msg.y - 20 + outy - h + q * q * 40); c.rotate(face + sp * q * 1.6);
+      art(c, { t, hs: 1.3 }, false);
+      c.restore();
+    }, done: () => {
+      const x = msg.x + Math.cos(face) * 60, y = msg.y + Math.sin(face) * 60;
+      VFX.splash(x, y, { color: E.glow, n: 12, speed: 1.4 }); VFX.shock(x, y, { r: 80, color: E.glow, w: 4, dur: 0.4, flat: 0.7 });
+    } });
+  }
+  // a stump answering: the ghost of the head that grew there rises out of it and strikes
+  function ghostHead(msg) {
+    const art = typeof ADD_ART !== 'undefined' && ADD_ART['hy-' + msg.el]; if (!art) return;
+    const face = Math.atan2(msg.y, msg.x), E = HY_EL[msg.el] || HY_EL.acid, dur = 1.25;
+    VFX.fx({ dur, layer: 'air', draw: (c, p, t, e) => {
+      const rise = easeOut(clamp(p / 0.4, 0, 1)), out = clamp((1 - p) / 0.25, 0, 1), lunge = p > 0.55 ? Math.sin(clamp((p - 0.55) / 0.35, 0, 1) * Math.PI) : 0;
+      const k = e.a * out * rise;
+      if (k <= 0.01) return;
+      c.save(); c.translate(msg.x + Math.cos(face) * lunge * 46, msg.y - 20 + Math.sin(face) * lunge * 32 + (1 - rise) * 46);
+      glow(c, 0, 0, 70, E.glow, 0.3 * k);
+      c.globalAlpha = 0.58 * k; c.rotate(face);
+      art(c, { t: t * 1.4, hs: 2.2, action: { type: 'attack', t0: dur * 0.55, dur: dur * 0.3 } }, false);
+      c.restore();
+      c.save(); c.globalCompositeOperation = 'lighter';
+      for (let i = 0; i < 6; i++) { const a = i * TAU / 6 + t * 2.4, d = 24 + 34 * rise; glow(c, msg.x + Math.cos(a) * d, msg.y - 20 + Math.sin(a) * d * 0.6 - 26 * p, 8, E.glow, 0.7 * k); }
+      c.restore();
+    } });
+  }
+
   const HY_FX = {
     // returns true when the move is hers and handled here
-    impact(tg, ctx, H) {
-      if (tg.type === 'buster') { IMP.buster(tg, ctx, H); return true; }
-      const f = IMP[tg.tag];
+    impact(tg, ctx, H, msg) {
+      try { whiffs(tg, msg, ctx); } catch (e) { /* cosmetic */ }
+      const key = tg.type === 'buster' ? 'buster' : tg.tag, f = tg.type === 'buster' ? IMP.buster : IMP[tg.tag];
       if (!f) return false;
-      f(tg, ctx, H); return true;
+      f(tg, ctx, H);
+      if (CAMS[key]) cam(CAMS[key][0], CAMS[key][1], 0.45, key === 'heartbeat' ? 0.5 : 2.5);
+      return true;
     },
     prop(msg, H) {
       const col = (HY_EL[msg.el] || HY_EL.acid).glow;
@@ -649,6 +799,14 @@
         VFX.splash(msg.x, msg.y - 20, { color: '#9be83a', n: 12, speed: 1.3 }); VFX.splash(msg.x, msg.y - 20, { color: '#8a2a1a', n: 8, speed: 1.1 });
         VFX.smoke(msg.x, msg.y - 10, { n: 4, color: '#14271d', size: 30, a: 0.5, speed: 60 });
         stumpFx(msg); H.shake(7);
+        fallingHead(msg); cam(0.07, 0.035, 0.5, 1.2);
+        VFX.fx({ dur: 0.5, layer: 'air', draw: (c, p, t, e) => {   // a fountain of ichor from the wound
+          c.save(); c.globalAlpha = e.a * (1 - p); c.lineCap = 'round';
+          for (let i = 0; i < 7; i++) { const a = -Math.PI / 2 + (i - 3) * 0.32, L = (50 + 40 * hy(i, 4)) * easeOut(Math.min(1, p / 0.5)); line(c, msg.x, msg.y - 26, msg.x + Math.cos(a) * L * 0.6, msg.y - 26 + Math.sin(a) * L + p * p * 40, rgba(i % 2 ? '#9be83a' : '#8a2a1a', 0.85), 3.2 - 1.6 * p); }
+          c.restore();
+        } });
+      } else if (msg.k === 'rear') {
+        rearFx(msg);
       } else if (msg.k === 'sear') {
         setStump(msg.x, msg.y, 'burn');
         VFX.pillar(msg.x, msg.y, { r: 36, h: 150, color: '#ffb060', dur: 0.8 });
@@ -658,6 +816,9 @@
         VFX.sparks(msg.x, msg.y - 20, { color: '#ffd27a', n: 14, speed: 300 });
         VFX.smoke(msg.x, msg.y - 20, { n: 5, color: '#2a2220', size: 34, a: 0.55, speed: 80 });
         H.shake(5);
+        H.shockAt(msg.x, msg.y, { r: 190, color: '#fff2c0', w: 5, dur: 0.7, flat: 1, delay: 0.12 });
+        VFX.burst(msg.x, msg.y - 30, { color: '#ffd27a', color2: '#ffffff', n: 12, speed: 210, size: 9 });
+        cam(0.05, 0.026, 0.4, 1.5);
       } else if (msg.k === 'regrow') {
         setStump(msg.x, msg.y, 'regrow');
         H.shockAt(msg.x, msg.y, { r: 120, color: '#c8ff5a', w: 7, dur: 0.6, flat: 1 });
@@ -672,6 +833,7 @@
         VFX.splash(0, 0, { color: '#4fd8cc', n: 24, speed: 1.6 });
         H.shake(8);
       } else if (msg.k === 'echo') {
+        ghostHead(msg);
         VFX.fx({ dur: 1.4, layer: 'air', draw: (c, p, t, e) => {
           const k = e.a * (1 - p);
           c.save(); c.globalAlpha = k; VFX.glowAt(c, msg.x, msg.y - 22, 46 * (0.6 + 0.6 * p), col, 0.7);
@@ -917,10 +1079,70 @@
       VFX.splash(s.x, s.y, { color: '#d8fff4', n: 18, speed: 1.4 });
       H.shake(6);
     },
+    // the Heart beats twice, lub-dub: the second a little behind and a little smaller, and a gold pulse runs down nine veins to the columns
     heartbeat(tg, ctx, H) {
       H.roomTint('#ffd870', 0.3, 1.0);
       H.shockAt(0, 0, { r: H.AR * 1.1, color: '#ffe9a8', w: 10, dur: 0.8, flat: 1 });
       H.shake(12);
+      H.after(0.26, () => { H.shockAt(0, 0, { r: H.AR * 0.9, color: '#fff2c0', w: 7, dur: 0.7, flat: 1 }); H.roomTint('#ffe9a8', 0.18, 0.6); H.shake(8); });
+      VFX.fx({ dur: 1.5, layer: 'ground', draw: (c, p, t, e) => {
+        c.save(); clipRoom(c); c.lineCap = 'round';
+        for (let i = 0; i < 9; i++) {
+          const a = -Math.PI / 2 + i * TAU / 9, wob = Math.sin(i * 2.3) * 0.12, k = e.a * (1 - p * p);
+          const reach = 400 * easeOut(clamp(p / 0.4, 0, 1)), q = clamp((p - 0.05) / 0.45, 0, 1);
+          c.beginPath(); c.moveTo(Math.cos(a) * 60, Math.sin(a) * 60); c.quadraticCurveTo(Math.cos(a + wob) * reach * 0.5, Math.sin(a + wob) * reach * 0.5, Math.cos(a) * reach, Math.sin(a) * reach);
+          c.strokeStyle = rgba('#3a0a0a', 0.55 * k); c.lineWidth = 12; c.stroke(); c.strokeStyle = rgba('#ff5a3a', 0.8 * k); c.lineWidth = 5; c.stroke(); c.strokeStyle = rgba('#ffe9a8', k); c.lineWidth = 1.8; c.stroke();
+          if (q < 1) glow(c, Math.cos(a + wob * 0.6) * 400 * q, Math.sin(a + wob * 0.6) * 400 * q, 26, '#fff2c0', 0.9 * k);
+        }
+        c.restore();
+      } });
+      VFX.flash(0, 0, 160, '#ffe9a8', 0.4);
+    },
+    // Tail Thrash: the tail comes round her once, a thick curl of scaled hide with a foam tip, and flings the water out in a ring
+    thrash(tg, ctx, H) {
+      const s = tg.live, b = { x: s.x, y: s.y }, a0 = Math.random() * TAU, dir = Math.random() < 0.5 ? 1 : -1;
+      H.shapeFlash(s, '#9ff0b8', { a: 0.3, dur: 0.5 });
+      H.shockAt(b.x, b.y, { r: s.r, color: '#c8ffd8', w: 10, dur: 0.55, flat: 1 });
+      H.shockAt(b.x, b.y, { r: s.r * 1.35, color: '#7ffff0', w: 5, dur: 0.7, flat: 1, delay: 0.1 });
+      VFX.fx({ dur: 0.62, layer: 'air', draw: (c, p, t, e) => {
+        const lead = a0 + dir * easeOut(clamp(p / 0.5, 0, 1)) * TAU * 1.05, k = e.a * Math.min(1, (1 - p) / 0.3);
+        c.save(); clipRoom(c); c.lineJoin = 'round';
+        const N = 22, pts = [];
+        for (let i = 0; i <= N; i++) { const q = i / N, a = lead - dir * q * 1.9, r = s.r * (0.9 - 0.18 * q); pts.push([b.x + Math.cos(a) * r, b.y + Math.sin(a) * r * 0.86, (1 - q) * 20 + 3]); }
+        c.beginPath();
+        pts.forEach(([x, y, w], i) => { const a = lead - dir * (i / N) * 1.9; (i ? c.lineTo : c.moveTo).call(c, x + Math.cos(a) * w * 0.4, y + Math.sin(a) * w * 0.4 - w * 0.2); });
+        for (let i = N; i >= 0; i--) { const [x, y, w] = pts[i], a = lead - dir * (i / N) * 1.9; c.lineTo(x - Math.cos(a) * w * 0.4, y - Math.sin(a) * w * 0.4 + w * 0.2); }
+        c.closePath(); c.globalAlpha = k; c.fillStyle = '#2f5a3a'; c.fill(); c.lineWidth = 2.6; c.strokeStyle = INK; c.stroke();
+        c.beginPath(); pts.forEach(([x, y], i) => (i ? c.lineTo(x, y - 3) : c.moveTo(x, y - 3))); c.strokeStyle = rgba('#c8ffd8', 0.8 * k); c.lineWidth = 2; c.stroke();
+        const tip = pts[0];
+        VFX.glowAt(c, tip[0], tip[1] - 6, 46, '#e8fffc', 0.7 * k);
+        c.restore();
+      } });
+      for (let j = 0; j < 14; j++) H.after(j * 0.028, () => { const a = a0 + dir * (j / 13) * TAU * 1.05; VFX.splash(b.x + Math.cos(a) * s.r * 0.9, b.y + Math.sin(a) * s.r * 0.8, { color: '#e8fffc', n: 4, speed: 1.1 }); });
+      H.shake(9);
+    },
+    // Undertow: the water she threw out is dragged back in: foam runs inward across the ring and the rim of the first blow draws shut
+    undertow(tg, ctx, H) {
+      const s = tg.live;
+      H.shapeFlash(s, '#7ffff0', { a: 0.3, dur: 0.5 });
+      VFX.fx({ dur: 0.95, layer: 'ground', draw: (c, p, t, e) => {
+        c.save(); clipRoom(c); SHAPES.trace(c, s); c.clip('evenodd'); c.lineJoin = 'round';
+        for (let i = 0; i < 3; i++) {
+          const q = clamp((p - i * 0.1) / 0.55, 0, 1); if (q <= 0) continue;
+          const r = s.r - (s.r - s.r2) * easeOut(q) + 6, k = e.a * (1 - q * q) * Math.min(1, (1 - p) / 0.3);
+          ripple(c, s.x, s.y, r, 3, t * 9 + i);
+          c.strokeStyle = rgba('#031a1c', 0.5 * k); c.lineWidth = 11; c.stroke(); c.strokeStyle = rgba('#7ff0e0', k); c.lineWidth = 6; c.stroke(); c.strokeStyle = rgba('#ffffff', k); c.lineWidth = 2; c.stroke();
+        }
+        for (let j = 0; j < 36; j++) {
+          const a = j * TAU / 36 + hy(j, 2) * 0.1, q = clamp((p - hy(j, 4) * 0.2) / 0.55, 0, 1), r = s.r - (s.r - s.r2) * easeOut(q), len = 10 + 16 * hy(j, 6), k = e.a * (1 - q) * Math.min(1, (1 - p) / 0.3);
+          if (q <= 0) continue;
+          line(c, s.x + Math.cos(a) * (r + len), s.y + Math.sin(a) * (r + len), s.x + Math.cos(a) * r, s.y + Math.sin(a) * r, rgba('#f4ffff', 0.9 * k), 2.4);
+        }
+        c.restore();
+      } });
+      for (const q of H.scatter(s, 10)) H.after(rnd(0, 0.3), () => VFX.splash(q.x, q.y, { color: '#d8fff4', n: 4, speed: 0.9 }));
+      H.shockAt(s.x, s.y, { r: s.r2 * 0.9, color: '#d8fff4', w: 7, dur: 0.5, flat: 1, delay: 0.25 });
+      H.shake(8);
     },
     // Rending Maul: both jaws snap shut on her and the claws rake the stone
     buster(tg, ctx, H) {

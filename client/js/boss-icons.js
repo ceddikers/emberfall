@@ -591,6 +591,14 @@ const BossIcons = (() => {
       fill(c, L, [[38, 12], [44, 8], [44, 16]]);
       motion(c, A, [[[10, 14], [18, 8]], [[54, 54], [46, 58]]]);
     },
+    // a red ring round a smaller one, the water drawn in across the band between them
+    'Undertow': (c, A) => {
+      ring(c, 32, 32, 25, '#ff4a5a', 2.6);
+      ring(c, 32, 32, 13, '#ff4a5a', 2);
+      for (const [x, y, x2, y2] of [[56, 32, 40, 32], [14, 20, 24, 25], [14, 44, 24, 39]]) stroke(c, '#9ff0f0', 3, [[x, y], [x2, y2]]);
+      for (const [x, y] of [[40, 32], [24, 25], [24, 39]]) fill(c, L, [[x, y - 4], [x + (x > 32 ? -7 : 7), y], [x, y + 4]]);
+      motion(c, A, [[[8, 8], [16, 14]], [[56, 56], [48, 50]]]);
+    },
     // a cut stump with a pale ghost of its head rising from it, and a ring where it will strike
     'Stump Echo': (c) => {
       ring(c, 32, 40, 20, '#ff4a5a', 2);

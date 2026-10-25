@@ -918,9 +918,9 @@ const BOSS_VFX = (() => {
     // Vhalgrath: wyrm-art.js has the look of every move of his (a tag it does not know falls through to the shared ones)
     if (ctx && ctx.boss === 'wyrm' && typeof WYRM_ART !== 'undefined' && WYRM_ART.impact(tg, ctx, { shapeFlash, shockAt, scatter, after, shake, roomTint, sweep, AFT }, msg)) return;
     // the Hydra: every move of hers lands in hydra-view.js (HY_FX)
-    if (ctx && ctx.boss === 'hydra' && typeof HY_FX !== 'undefined' && HY_FX.impact(tg, ctx, { shapeFlash, shockAt, scatter, after, shake, roomTint, sweep, streak, bang, AFT, coverShadows, clipOut, AR: AR() })) return;
+    if (ctx && ctx.boss === 'hydra' && typeof HY_FX !== 'undefined' && HY_FX.impact(tg, ctx, { shapeFlash, shockAt, scatter, after, shake, roomTint, sweep, streak, bang, AFT, coverShadows, clipOut, AR: AR() }, msg)) return;
     // Corvane: every move of his lands in corvane-fx.js (CV_FX); a tag it does not know falls through to the shared ones
-    if (ctx && ctx.boss === 'corvane' && typeof CV_FX !== 'undefined' && CV_FX.impact(tg, ctx, { shapeFlash, shockAt, scatter, after, shake, roomTint, sweep, streak, bang, AFT, coverShadows, clipOut, AR: AR() })) return;
+    if (ctx && ctx.boss === 'corvane' && typeof CV_FX !== 'undefined' && CV_FX.impact(tg, ctx, { shapeFlash, shockAt, scatter, after, shake, roomTint, sweep, streak, bang, AFT, coverShadows, clipOut, AR: AR() }, msg)) return;
     // Brannoc: every move of his lands in brannoc-fx.js (BR_FX); a tag it does not know falls through to the shared ones
     if (ctx && ctx.boss === 'brannoc' && typeof BR_FX !== 'undefined' && BR_FX.impact(tg, msg, ctx, { shapeFlash, shockAt, scatter, after, shake, roomTint, sweep, streak, bang, AFT, coverShadows, clipOut, AR: AR() })) return;
     // Morrow-Oak: every move of his lands in morrowoak-fx.js (MG_FX); a tag it does not know falls through to the shared ones
@@ -1079,6 +1079,7 @@ const BOSS_VFX = (() => {
     if (bossKind === 'skitterra' && anim === 'chrysalis') chrysalis(bossDraw, dur);
     const key = castKey(bossKind, anim, name), sh = SH(bossDraw);
     if (bossKind === 'wyrm' && typeof WYRM_ART !== 'undefined') WYRM_ART.cast(sh, bossDraw, dur, anim, name, { drawIn, emit, beat, P });   // (wyrm-art.js: what gathers on him for each move)
+    if (bossKind === 'corvane' && typeof CV_FX !== 'undefined' && CV_FX.cast) CV_FX.cast(sh, bossDraw, dur, anim, name, { drawIn, emit, beat, soon, own });   // (corvane-fx.js: the gathering for each stance and move)
     if (anim === 'enrage') enrageStart(bossKind, bossDraw, dur);
     else { const fx = CAST_FX[bossKind] && CAST_FX[bossKind][(CAST_USE[bossKind] && CAST_USE[bossKind][key]) || key]; if (fx) fx(sh, bossDraw, dur); }
     const pal = CAST_COLOR[bossKind] || {}, color = anim === 'enrage' ? (ENR[bossKind] || '#ff3a2a') : pal[anim] || pal.def || '#ffffff';

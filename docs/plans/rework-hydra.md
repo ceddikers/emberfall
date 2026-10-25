@@ -44,3 +44,11 @@ Bots, 30 runs per seed set, three sets (`seed=1000/2000/3000`), default line-up 
 - Every hit is scaled by one factor per difficulty (`HIT`: Hard 1.22, Normal 1.26). Mean clear about 8:45 to 9:00 (enrage 10:20 / 10:30).
 - The scripted timeline is 9:44 Normal / 9:51 Hard (check: 480 to 600 s of script, no feed gaps). The Heart now lifts the seal's bookkeeping a head early (so the feed reads across the join) but keeps the floor under her health until the beat.
 - `tutorial-data.js` has no Hydra block (only Grubnak's; briefings are hidden), so nothing there changed.
+
+## Cool-factor pass (2026-10-26)
+
+- **Undertow (both difficulties).** Tail Thrash now has a second half: a ring just outside the first (a breath behind it; a little shorter on Hard) that lands once the first has. Both are drawn from the start. Out for the first, then step in toward her or stay wide of both: the band between is struck. New cast and sound (`bm-hydra-undertow`), a journal entry per hero. The heads keep clear of the pair.
+- **The next head rears.** A breath before a head casts, a ring closes on its base (for a stump about to answer, a pillar of light stands over the stump). It is the read for which head is up, which matters most on Hard where the order is drawn fresh each pull.
+- **Looks.** Every head's cast gathers a charge ring at its foot and snaps with a burst; a cut head tumbles and ichor fountains from the wound; the Stump Echo is a ghost head rising and striking; Tail Thrash is a curl of tail round the ring; the Undertow is foam dragged inward; the Heart beats twice with a gold pulse down nine veins. The big landings hold the camera a beat.
+- **The whiff.** A hero a blow just missed gets a crest of water thrown past them (for your own hero a flash, a push and a whoosh): `HY_FX.impact` now gets the landing's `hits` from boss-vfx.js.
+- Bots, three seed sets of 30: Normal `GEAR=post1` 78 of 90 (87%), Hard `GEAR=post2` 47 of 90 (52%).
