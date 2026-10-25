@@ -452,11 +452,11 @@ const AZ_ART = (() => {
   // the Arcane Lance is drawn by the generic buster tell in boss-tells.js, which hands it over to us
   const lance = lanceTell;
 
-  // ---------------------------------------------------------------- screen feel, the sigil stamp and the whiff (all cosmetic)
+  // ---------------------------------------------------------------- screen feel and the sigil stamp (all cosmetic)
   // The camera holds for a beat when something big lands (the existing hook: main.js FX.cam), never more than once in a couple of
   // seconds; a flash in the colour of the element for your own view only.
   const nowS = () => (typeof performance !== 'undefined' ? performance.now() : Date.now()) / 1000;
-  const AS = { camAt: -99, whiffAt: new Map(), once: new Set() };
+  const AS = { camAt: -99, once: new Set() };
   function feel(stop, punch, dur, gap, flashCol, flashA) {
     const t = nowS(); if (t - AS.camAt < gap) return; AS.camAt = t;
     try { if (typeof FX !== 'undefined' && FX.cam) { if (stop) FX.cam.stop(stop); FX.cam.punch(punch, dur); if (flashCol) FX.cam.flash(flashCol, flashA || 0.18, 0.32); } } catch (e) { /* cosmetic */ }
@@ -500,52 +500,6 @@ const AZ_ART = (() => {
       c.restore();
       VFX.glowAt(c, ex, ey - 6, 26 + 20 * (1 - p), col, 0.7 * k);
     } });
-  }
-  // which way is "away from the blow" for a hero standing just outside a shape
-  function awayFrom(s, u) {
-    if (s.kind === 'rect') {
-      const c = Math.cos(s.angle), sn = Math.sin(s.angle), across = -(u.x - s.x) * sn + (u.y - s.y) * c, sg = across >= 0 ? 1 : -1;
-      return { x: -sn * sg, y: c * sg };
-    }
-    const dx = u.x - s.x, dy = u.y - s.y, d = Math.hypot(dx, dy) || 1, sg = s.kind === 'donut' && d < s.r2 ? -1 : 1;   // (in a ring's hole, away from the blow is inward)
-    return { x: sg * dx / d, y: sg * dy / d };
-  }
-  // THE WHIFF: a hero who stood just outside a blow when it landed (and was not hit) feels its edge go by: a streak of the element
-  // along the edge a stride in front of them, a small rune ring at their feet, sparks, and for your own hero a faint flash, a push
-  // of the camera and a soft whoosh. Only ever drawn for a hero the blow did not hit and was close to: a reward, never a hint.
-  function whiff(u, s, col, mine, echo) {
-    const a = awayFrom(s, u), tx = -a.y, ty = a.x, ex = u.x - a.x * 34, ey = u.y - a.y * 34 - 14;
-    VFX.fx({ dur: 0.34, layer: 'air', draw: (c, p, t, e) => {
-      const k = e.a * (1 - p) * (1 - p), L = 40 + 62 * easeOut(Math.min(1, p / 0.5)), sh = (p - 0.2) * 40;
-      c.save();
-      VFX.neonPath(c, col, 4.5 * (1 - p * 0.6), k, () => { c.moveTo(ex - tx * L + a.x * sh, ey - ty * L + a.y * sh); c.lineTo(ex + tx * L + a.x * sh, ey + ty * L + a.y * sh); });
-      VFX.neonPath(c, '#ffffff', 2, k * 0.8, () => { c.moveTo(ex - tx * L * 0.5 + a.x * sh, ey - ty * L * 0.5 + a.y * sh); c.lineTo(ex + tx * L * 0.5 + a.x * sh, ey + ty * L * 0.5 + a.y * sh); });
-      c.restore();
-    } });
-    stamp(u.x, u.y + 6, 40, null, { col, hot: '#ffffff', dur: 0.5, dir: echo ? -1 : 1 });
-    VFX.sparks(u.x - a.x * 18, u.y - 10, { color: col, n: mine ? 12 : 7, speed: 300, angle: Math.atan2(a.y, a.x), spread: 0.9, up: 80, life: 0.9 });
-    if (mine) {
-      try {
-        if (typeof FX !== 'undefined' && FX.cam) { FX.cam.flash(col, 0.09, 0.18); FX.cam.punch(0.018, 0.32); }
-        if (typeof Sound !== 'undefined' && Sound.play) Sound.play('dash', { vol: 0.3, rate: 1.25, key: 'az-whiff', minGap: 0.3 });
-      } catch (e) { /* cosmetic */ }
-    }
-  }
-  const NEAR = 80;   // a hero this close to the edge of a blow (and not hit) gets the whiff
-  function whiffs(tg, msg, ctx) {
-    if (!ctx || !ctx.units || !msg) return;
-    if (tg.type === 'raidwide' || tg.type === 'buster' || tg.type === 'stack' || tg.type === 'tower' || tg.type === 'safe') return;
-    const s = tg.live; if (!s || (s.kind !== 'circle' && s.kind !== 'donut' && s.kind !== 'rect')) return;
-    if ((s.kind === 'rect' && s.len < 40) || (s.kind !== 'rect' && !(s.r > 40))) return;
-    const hits = msg.hits || [], t = nowS(), col = colOf(tg, s), echo = tg.color === 'echo';
-    for (const u of ctx.units) {
-      if (hits.includes(u.id)) continue;
-      if (t - (AS.whiffAt.get(u.id) || -9) < 0.7) continue;
-      if (SHAPES.contains(s, u.x, u.y)) continue;   // inside and not hit: covered or shielded, not a dodge
-      if (!SHAPES.contains(s, u.x, u.y, NEAR)) continue;
-      AS.whiffAt.set(u.id, t);
-      whiff(u, s, col, typeof Net !== 'undefined' && u.id === Net.id, echo);
-    }
   }
   // the last beat of a wait, inside the area that is about to go: a ring of the element closing on the middle (or sweeping in from
   // the rim of a band) and landing at the instant the blow does, a spearhead of light running down a line. It sits wholly inside the
@@ -612,7 +566,6 @@ const AZ_ART = (() => {
 
   function impact(tg, ctx, H, msg) {
     const s = tg.live, [base, e1, e2] = parse(tg.tag);
-    try { whiffs(tg, msg, ctx); } catch (e) { /* cosmetic */ }
     if (tg.type === 'buster') {
       const e = tg.target != null ? ctx.entById(tg.target) : null, x = e ? e.x : s.x + Math.cos(s.angle) * 160, y = e ? e.y : s.y + Math.sin(s.angle) * 160;
       // a spear of arcane light thrown from his staff, and a spiked blue burst where it lands

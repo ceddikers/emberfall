@@ -1,4 +1,4 @@
-// Queen Skitterra: what her blows feel like when they land, what a dodge feels like when it works, and the Silk Reel's drag.
+// Queen Skitterra: what her blows feel like when they land, and the Silk Reel's drag.
 // The floor tells (red damage, blue shares, the ghost chain) are in boss-tells.js block S; the casting wind-ups and the other
 // landings are in boss-vfx.js; this file is the beat on top of them, reached from boss-vfx.js impact() through SK_FX (every call
 // guarded by `typeof SK_FX !== 'undefined'`, and impact() returns false so the older landing still plays):
@@ -6,9 +6,6 @@
 //     silk fibres flying and a web of cracks at the tip; Strand Reel's silk twangs like a plucked string; From the Dark lands
 //     in a star of snapped threads;
 //   - hit-stop and a push of the camera on the big ones (never more than once in a short while);
-//   - THE WHIFF: a hero who stood just outside a blow when it landed gets the leg's tip (or the glob, or the strand) cracking
-//     past them: a bright streak, flying fibres or droplets, a ring at their feet, and for your own hero a flash, a push of the
-//     camera and a soft whoosh. Only ever drawn for a hero the blow did not hit and was close to: a reward, never a hint;
 //   - THE REEL'S LINE: gap() and pullPath() read the floor the Collapse has taken, for main.js's drag, the host's bots and
 //     boss-tells.js drawReels: the silk drags you in a straight line but stops dead at the brink of fallen floor, taut, and
 //     holds there (dash to snap it).
@@ -16,73 +13,17 @@
 const SK_FX = (() => {
   const rand = (a, b) => a + Math.random() * (b - a);
   const nowS = () => (typeof performance !== 'undefined' ? performance.now() : Date.now()) / 1000;
-  const S = { camAt: -99, whiffAt: new Map(), legAt: -99 };
-  const COL = { lunge: '#ffb0dc', venom: '#b8ff5a', strand: '#f4f0ff', fang: '#ff9ad0', ambush: '#e8dcff', glob: '#f4f0ff' };
-  const WHIFF = new Set(['lunge', 'venom', 'strand', 'fang', 'ambush', 'glob']);
-  const NEAR = 80;   // a hero this close to the edge of a blow (and not hit) gets the whiff
+  const S = { camAt: -99, legAt: -99 };
 
   // the camera holds for a beat when something big lands (main.js FX.cam); never more than once in a short while
   function cam(stop = 0.06, punch = 0.03, dur = 0.45, gap = 2.0) {
     const t = nowS(); if (t - S.camAt < gap) return; S.camAt = t;
     try { if (typeof FX !== 'undefined' && FX.cam) { FX.cam.stop(stop); FX.cam.punch(punch, dur); } } catch (e) { /* cosmetic */ }
   }
-  function awayFrom(s, u) {
-    if (s.kind === 'rect') {
-      const c = Math.cos(s.angle), sn = Math.sin(s.angle), across = -(u.x - s.x) * sn + (u.y - s.y) * c, sg = across >= 0 ? 1 : -1;
-      return { x: -sn * sg, y: c * sg };
-    }
-    if (s.kind === 'cone') {
-      let da = Math.atan2(u.y - s.y, u.x - s.x) - s.angle; da = Math.atan2(Math.sin(da), Math.cos(da));
-      const sg = da >= 0 ? 1 : -1, a = s.angle + sg * (s.arc / 2 + 0.5);   // (out past the cone's side)
-      return { x: Math.cos(a), y: Math.sin(a) };
-    }
-    const dx = u.x - s.x, dy = u.y - s.y, d = Math.hypot(dx, dy) || 1;
-    return { x: dx / d, y: dy / d };
-  }
   // white fibres flung off a snapped strand
   function fibres(x, y, n, dirx, diry, spread = 140) {
     for (let i = 0; i < n; i++) VFX.spawn({ x: x + rand(-14, 14), y: y + rand(-10, 10), z: rand(10, 40), vx: dirx * rand(60, 200) + rand(-spread, spread) * 0.4, vy: diry * rand(60, 200) + rand(-spread, spread) * 0.4,
       vz: rand(30, 120), g: 260, life: rand(0.45, 0.8), size: rand(9, 14), color: '#ffffff', stretch: 4.5, vr: rand(-8, 8) });
-  }
-
-  // the blow's edge cracking past a hero: a streak a stride in front of them, spider-flavoured by what struck
-  function whiff(u, s, tag, mine) {
-    const col = COL[tag] || '#ffffff', a = awayFrom(s, u), tx = -a.y, ty = a.x;
-    const ex = u.x - a.x * 30, ey = u.y - a.y * 30 - 14;
-    if (tag === 'venom' || tag === 'glob') {
-      // droplets / a glob of silk flung past
-      VFX.sparks(u.x - a.x * 16, u.y - 12, { color: col, n: mine ? 14 : 8, speed: 280, angle: Math.atan2(a.y, a.x), spread: 1.1, up: 90, life: 0.9 });
-      VFX.splash(u.x - a.x * 24, u.y, { color: tag === 'venom' ? '#8ad82a' : '#f4f0ff', n: mine ? 8 : 4, speed: 1.1 });
-    } else {
-      VFX.fx({ dur: 0.34, layer: 'air', draw: (c, p, t, e) => {
-        const k = e.a * (1 - p) * (1 - p), L = 40 + 70 * easeOut(Math.min(1, p / 0.5)), sh = (p - 0.2) * 44;
-        c.save();
-        // the leg-tip (or strand) as a tapering streak: bright at the head, thin at the tail
-        VFX.neonPath(c, col, 4.5 * (1 - p * 0.6), k, () => { c.moveTo(ex - tx * L + a.x * sh, ey - ty * L + a.y * sh); c.lineTo(ex + tx * L + a.x * sh, ey + ty * L + a.y * sh); });
-        VFX.neonPath(c, '#ffffff', 2, k * 0.85, () => { c.moveTo(ex - tx * L * 0.45 + a.x * sh, ey - ty * L * 0.45 + a.y * sh); c.lineTo(ex + tx * L * 0.45 + a.x * sh, ey + ty * L * 0.45 + a.y * sh); });
-        c.restore();
-      } });
-      fibres(ex, ey, mine ? 6 : 3, a.x, a.y);
-    }
-    VFX.shock(u.x, u.y + 6, { r: 60, color: col, w: 3, dur: 0.32, flat: 0.6 });
-    if (mine) {
-      try {
-        if (typeof FX !== 'undefined' && FX.cam) { FX.cam.flash('#ffffff', 0.08, 0.15); FX.cam.punch(0.018, 0.32); }
-        if (typeof Sound !== 'undefined' && Sound.play) Sound.play('dash', { vol: 0.3, rate: 1.35, key: 'sk-whiff', minGap: 0.3 });
-      } catch (e) { /* cosmetic */ }
-    }
-  }
-  function whiffs(tg, msg, ctx) {
-    if (!ctx || !ctx.units || !WHIFF.has(tg.tag)) return;
-    const s = tg.live, hits = (msg && msg.hits) || [], t = nowS();
-    for (const u of ctx.units) {
-      if (hits.includes(u.id)) continue;
-      if (t - (S.whiffAt.get(u.id) || -9) < 0.7) continue;
-      if (SHAPES.contains(s, u.x, u.y)) continue;   // inside and not hit: covered or shielded, not a dodge
-      if (!SHAPES.contains(s, u.x, u.y, NEAR)) continue;
-      S.whiffAt.set(u.id, t);
-      whiff(u, s, tg.tag, typeof Net !== 'undefined' && u.id === Net.id);
-    }
   }
 
   // a Lunge strike: her leg, jointed, comes down the cone and drives in. The tip is where the old claw burst already is.
@@ -148,7 +89,6 @@ const SK_FX = (() => {
   }
 
   function impact(tg, msg, ctx, H) {
-    try { whiffs(tg, msg, ctx); } catch (e) { /* cosmetic */ }
     const tag = tg.tag;
     try {
       if (tag === 'lunge') { legStab(tg, H); cam(0.035, 0.018, 0.3, 1.6); }
@@ -190,6 +130,6 @@ const SK_FX = (() => {
     return Math.max(0, Math.min(step, pp.len));
   }
 
-  return { impact, whiff, gap, pullPath, pullStep };
+  return { impact, gap, pullPath, pullStep };
 })();
 

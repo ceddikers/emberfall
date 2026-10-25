@@ -19,62 +19,13 @@ const TI_ART = (() => {
   const cellOf = (x, y) => { const cx = Math.floor((x + 500) / 200), cy = Math.floor((y + 400) / 200); return cx < 0 || cx > 4 || cy < 0 || cy > 3 ? null : { x: -500 + cx * 200, y: -400 + cy * 200 }; };
   const BRAZIERS = [[-300, -200], [300, -200], [-300, 200], [300, 200]];
 
-  // ---------------------------------------------------------------- the screen-feel of his big blows, and the whiff
+  // ---------------------------------------------------------------- the screen-feel of his big blows
   // The camera holds a beat when something big lands (main.js FX.cam); never more than once in a few seconds.
   const nowS = () => (typeof performance !== 'undefined' ? performance.now() : Date.now()) / 1000;
-  const FEEL = { camAt: -99, whiffAt: new Map() };
+  const FEEL = { camAt: -99 };
   function cam(stop = 0.06, punch = 0.03, dur = 0.45, gap = 2.5) {
     const t = nowS(); if (t - FEEL.camAt < gap) return; FEEL.camAt = t;
     try { if (typeof FX !== 'undefined' && FX.cam) { FX.cam.stop(stop); FX.cam.punch(punch, dur); } } catch (e) { /* cosmetic */ }
-  }
-  // which way is "away from the blow" for a hero standing just outside this shape
-  function awayFrom(s, u) {
-    if (s.kind === 'rect') {
-      const c = Math.cos(s.angle), sn = Math.sin(s.angle), across = -(u.x - s.x) * sn + (u.y - s.y) * c, sg = across >= 0 ? 1 : -1;
-      return { x: -sn * sg, y: c * sg };
-    }
-    const dx = u.x - s.x, dy = u.y - s.y, d = Math.hypot(dx, dy) || 1;
-    if (s.kind === 'cone') {
-      let rel = Math.atan2(dy, dx) - s.angle; while (rel > Math.PI) rel -= TAU; while (rel < -Math.PI) rel += TAU;
-      if (Math.abs(rel) > s.arc / 2) { const sg = rel > 0 ? 1 : -1, a = s.angle + sg * s.arc / 2; return { x: -Math.sin(a) * sg, y: Math.cos(a) * sg }; }
-    }
-    const sg = s.kind === 'donut' && d < s.r2 ? -1 : 1;   // (inside a ring's hole, away from the blow is inward)
-    return { x: sg * dx / d, y: sg * dy / d };
-  }
-  // the edge of a blow cracking past a hero: a streak of ice along the edge a stride in front of them, a ring of frost at their
-  // feet and snow thrown off; for your own hero a pale flash, a push of the camera and a soft whoosh
-  function whiff(u, s, mine) {
-    const a = awayFrom(s, u), tx = -a.y, ty = a.x, ex = u.x - a.x * 34, ey = u.y - a.y * 34 - 14;
-    VFX.fx({ dur: 0.34, layer: 'air', draw: (c, p, t, e) => {
-      const k = e.a * (1 - p) * (1 - p), L = 40 + 60 * easeOut(Math.min(1, p / 0.5)), sh = (p - 0.2) * 40;
-      c.save();
-      VFX.neonPath(c, '#9fd8ff', 5 * (1 - p * 0.6), k, () => { c.moveTo(ex - tx * L + a.x * sh, ey - ty * L + a.y * sh); c.lineTo(ex + tx * L + a.x * sh, ey + ty * L + a.y * sh); });
-      VFX.neonPath(c, '#ffffff', 2, k * 0.85, () => { c.moveTo(ex - tx * L * 0.5 + a.x * sh, ey - ty * L * 0.5 + a.y * sh); c.lineTo(ex + tx * L * 0.5 + a.x * sh, ey + ty * L * 0.5 + a.y * sh); });
-      for (let i = -2; i <= 2; i++) { const q = i / 2, bx = ex + tx * L * q * 0.8 + a.x * sh, by = ey + ty * L * q * 0.8 + a.y * sh; spike(c, bx, by + 6, (14 + 10 * hash(i + 3, 7)) * (1 - p), 3.4, a.x * 0.2, k * 1.2); }
-      c.restore();
-    } });
-    VFX.shock(u.x, u.y + 6, { r: 64, color: '#dff4ff', w: 3, dur: 0.34, flat: 0.6 });
-    VFX.sparks(u.x - a.x * 18, u.y - 10, { color: '#f4fbff', n: mine ? 14 : 8, speed: 300, angle: Math.atan2(a.y, a.x), spread: 0.9, up: 80, life: 0.9 });
-    if (mine) {
-      try {
-        if (typeof FX !== 'undefined' && FX.cam) { FX.cam.flash('#e8f6ff', 0.1, 0.18); FX.cam.punch(0.02, 0.34); }
-        if (typeof Sound !== 'undefined' && Sound.play) Sound.play('dash', { vol: 0.3, rate: 0.85, key: 'ti-whiff', minGap: 0.3 });
-      } catch (e) { /* cosmetic */ }
-    }
-  }
-  const WHIFF = new Set(['tisweep', 'tisweep2', 'tislam', 'tifault', 'ticicle', 'tislide', 'tistomp', 'tiring', 'tibreath', 'tisink', 'tiburst']);
-  const NEAR = 80;   // a hero this close to the edge of a blow (and not hit) gets the whiff
-  function whiffs(tg, msg, ctx) {
-    if (!ctx || !ctx.units || !WHIFF.has(tg.tag)) return;
-    const s = tg.live, hits = (msg && msg.hits) || [], t = nowS();
-    for (const u of ctx.units) {
-      if (hits.includes(u.id)) continue;
-      if (t - (FEEL.whiffAt.get(u.id) || -9) < 0.7) continue;
-      if (SHAPES.contains(s, u.x, u.y)) continue;   // inside and not hit: covered or shielded, not a dodge
-      if (!SHAPES.contains(s, u.x, u.y, NEAR)) continue;
-      FEEL.whiffAt.set(u.id, t);
-      whiff(u, s, typeof Net !== 'undefined' && u.id === Net.id);
-    }
   }
 
   // ---------------------------------------------------------------- pieces
@@ -561,7 +512,6 @@ const TI_ART = (() => {
   // H: { shapeFlash, shockAt, scatter, after, shake, roomTint, sweep } from boss-vfx.js. Returns false for a tag it does not know.
   function impact(tg, msg, ctx, H) {
     const s = tg.live, bd = (ctx && ctx.bossDraw) || { x: 0, y: -250 };
-    try { whiffs(tg, msg, ctx); } catch (e) { /* cosmetic */ }
     switch (tg.tag) {
       case 'tihowl': {
         H.roomTint('#cfeaff', 0.2, 0.8);

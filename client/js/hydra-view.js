@@ -666,67 +666,14 @@
   }
 
   // ---------------------------------------------------------------------- the beat on top of a landing
-  // The camera holds for a beat when something big lands (main.js FX.cam), and THE WHIFF: a hero the blow did not take, who stood
-  // within a stride of its edge, feels a crest of water throw past them; for your own hero a flash, a push of the camera and a
-  // whoosh. It is drawn only for a hero the blow missed and was close to, so it rewards a dodge and never marks where is safe.
-  const FS = { camAt: -99, whiffAt: new Map() };
+  // The camera holds for a beat when something big lands (main.js FX.cam).
+  const FS = { camAt: -99 };
   const nowS = () => (typeof performance !== 'undefined' ? performance.now() : Date.now()) / 1000;
   function cam(stop = 0.06, punch = 0.03, dur = 0.45, gap = 2.5) {
     const t = nowS(); if (t - FS.camAt < gap) return; FS.camAt = t;
     try { if (typeof FX !== 'undefined' && FX.cam) { FX.cam.stop(stop); FX.cam.punch(punch, dur); } } catch (e) { /* cosmetic */ }
   }
   const CAMS = { cry: [0.05, 0.026], buster: [0.07, 0.034], thrash: [0.07, 0.034], undertow: [0.045, 0.024], bloom: [0.05, 0.026], hgaze: [0.09, 0.04], heartbeat: [0.1, 0.05], surge: [0.06, 0.03], tide: [0.04, 0.02], storm: [0.04, 0.02] };
-  const WHIFF_COL = { acid: '#d8ff6a', tide: '#9ffff0', rime: '#e8f8ff', storm: '#ffe45a', thrash: '#9ff0b8', undertow: '#7ffff0', hgaze: '#ffffff', buster: '#ff8a7a' };
-  const NEAR = 80;   // a hero this close to the edge of a blow (and not hit) gets the whiff
-  // which way is "away from the blow" for a hero standing just outside this shape
-  function awayFrom(s, u) {
-    if (s.kind === 'rect') {
-      const c = Math.cos(s.angle), sn = Math.sin(s.angle), across = -(u.x - s.x) * sn + (u.y - s.y) * c, sg = across >= 0 ? 1 : -1;
-      return { x: -sn * sg, y: c * sg };
-    }
-    const dx = u.x - s.x, dy = u.y - s.y, d = Math.hypot(dx, dy) || 1;
-    if (s.kind === 'cone') {   // (off the side of the cone: along the way round it, not out from its mouth)
-      const an = Math.atan2(dy, dx); let df = an - s.angle; while (df > Math.PI) df -= TAU; while (df < -Math.PI) df += TAU;
-      if (Math.abs(df) > (s.arc || 0) / 2) { const sg = df >= 0 ? 1 : -1; return { x: -Math.sin(an) * sg, y: Math.cos(an) * sg }; }
-    }
-    const sg = s.kind === 'donut' && d < s.r2 ? -1 : 1;   // (inside a ring's hole, away from the blow is inward)
-    return { x: sg * dx / d, y: sg * dy / d };
-  }
-  function whiff(u, s, tag, mine) {
-    const col = WHIFF_COL[tag] || '#d8fff4', a = awayFrom(s, u), tx = -a.y, ty = a.x;
-    const ex = u.x - a.x * 34, ey = u.y - a.y * 34 - 14;
-    VFX.fx({ dur: 0.38, layer: 'air', draw: (c, p, t, e) => {
-      const k = e.a * (1 - p) * (1 - p), L = 38 + 62 * easeOut(Math.min(1, p / 0.5)), sh = (p - 0.2) * 46, bx = ex + a.x * sh, by = ey + a.y * sh;
-      c.save();
-      // a crest of water, bowed toward the blow it came off, with foam flung from it
-      VFX.neonPath(c, col, 5 * (1 - p * 0.6), k, () => { c.moveTo(bx - tx * L, by - ty * L); c.quadraticCurveTo(bx - a.x * 22, by - a.y * 22 - 6, bx + tx * L, by + ty * L); });
-      c.fillStyle = rgba('#ffffff', 0.9 * k);
-      for (let i = 0; i < 6; i++) { const q = (i + 0.5) / 6 * 2 - 1, fx = bx + tx * L * q + a.x * (10 + 36 * p * (0.5 + hy(i, 3))), fy = by + ty * L * q + a.y * (10 + 36 * p * (0.5 + hy(i, 3))) - 18 * p * hy(i, 5); c.beginPath(); c.arc(fx, fy, 1.4 + 1.8 * hy(i, 7) * (1 - p), 0, TAU); c.fill(); }
-      c.restore();
-    } });
-    VFX.shock(u.x, u.y + 6, { r: 62, color: col, w: 3, dur: 0.34, flat: 0.6 });
-    VFX.splash(u.x - a.x * 14, u.y, { color: col, n: mine ? 8 : 5, speed: 0.95 });
-    VFX.sparks(u.x - a.x * 18, u.y - 10, { color: '#ffffff', n: mine ? 8 : 4, speed: 280, angle: Math.atan2(a.y, a.x), spread: 0.9, up: 70, life: 0.8 });
-    if (mine) {
-      try {
-        if (typeof FX !== 'undefined' && FX.cam) { FX.cam.flash(col, 0.08, 0.16); FX.cam.punch(0.018, 0.32); }
-        if (typeof Sound !== 'undefined' && Sound.play) Sound.play('dash', { vol: 0.3, key: 'hy-whiff', minGap: 0.3 });
-      } catch (e) { /* cosmetic */ }
-    }
-  }
-  function whiffs(tg, msg, ctx) {
-    const tag = tg.type === 'buster' ? 'buster' : tg.tag;
-    if (!ctx || !ctx.units || !WHIFF_COL[tag] || !tg.live) return;
-    const s = tg.live, hits = (msg && msg.hits) || [], t = nowS();
-    for (const u of ctx.units) {
-      if (hits.includes(u.id) || (tag === 'buster' && u.id === tg.target)) continue;
-      if (t - (FS.whiffAt.get(u.id) || -9) < 0.7) continue;
-      if (SHAPES.contains(s, u.x, u.y)) continue;   // inside and not hit: covered or shielded, not a dodge
-      if (!SHAPES.contains(s, u.x, u.y, NEAR)) continue;
-      FS.whiffAt.set(u.id, t);
-      whiff(u, s, tag, typeof Net !== 'undefined' && u.id === Net.id);
-    }
-  }
 
   // the head whose turn is next rears: a ring closes on its base and its light gathers (for a stump about to answer, a ghost of
   // light stands over the stump instead). It is the read for which head is up, never a mark of where to stand.
@@ -784,7 +731,6 @@
   const HY_FX = {
     // returns true when the move is hers and handled here
     impact(tg, ctx, H, msg) {
-      try { whiffs(tg, msg, ctx); } catch (e) { /* cosmetic */ }
       const key = tg.type === 'buster' ? 'buster' : tg.tag, f = tg.type === 'buster' ? IMP.buster : IMP[tg.tag];
       if (!f) return false;
       f(tg, ctx, H);

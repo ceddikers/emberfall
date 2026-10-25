@@ -1155,28 +1155,6 @@ const CL_FX = (() => {
   const onLine = (ctx, s, L, pad = 6) => (ctx.units || []).filter(u => { const q = dist2line(u, s); return q.al > 0 && q.al < L && q.off < s.w / 2 + pad; });
   let wakeSeq = 0;
 
-  // The whiff: everyone the cut did not take, who stood within a body of it (or slipped clean through it on a dodge), feels the blade
-  // go by: a sliver of light drawn past them, silver pieces thrown off, a ring at their feet; and the one at the keyboard gets the
-  // camera's flinch and a flash at the edge of the screen. Cosmetic only; nothing here changes who was hit.
-  const isMe = u => typeof Net !== 'undefined' && Net && u.id === Net.id;
-  function graze(s, msg, ctx, H, o = {}) {
-    const hits = (msg && msg.hits) || [], pad = o.pad ?? 60, col = o.col || (isSky() ? C.gold : '#e8ecff');
-    for (const u of ctx.units || []) {
-      if (hits.includes(u.id)) continue;
-      const slip = s.kind === 'rect' && SHAPES.contains(s, u.x, u.y, -8);   // (inside the cut and not hurt: a dash through it)
-      if (!slip && !SHAPES.contains(s, u.x, u.y, pad)) continue;
-      if (slip && !o.slip) continue;
-      const ang = s.kind === 'rect' ? s.angle : Math.atan2(u.y - s.y, u.x - s.x), ca = Math.cos(ang), sa = Math.sin(ang);
-      VFX.sparks(u.x, u.y - 24, { color: '#ffffff', n: slip ? 12 : 7, speed: 260 });
-      H.streak(u.x - ca * 140, u.y - sa * 140 + 18, ang, col, { len: 280, w: 5, dur: 0.28 });
-      H.shockAt(u.x, u.y + 6, { r: slip ? 90 : 64, color: col, w: 4, dur: 0.4, flat: 1 });
-      shards(u.x, u.y - 20, slip ? 6 : 3, { speed: 200, size: 0.7 });
-      if (isMe(u)) {
-        cam(0.05, 0.03, 0.4, 0.7);
-        screenFx(0.5, (c, W, Hh, t, p, e) => { const k = (1 - p) * (1 - p) * e.a; c.globalCompositeOperation = 'screen'; const g = c.createRadialGradient(W / 2, Hh / 2, Math.min(W, Hh) * 0.36, W / 2, Hh / 2, Math.hypot(W, Hh) * 0.55); g.addColorStop(0, rgba(col, 0)); g.addColorStop(1, rgba(col, 0.34 * k)); c.fillStyle = g; c.fillRect(0, 0, W, Hh); });
-      }
-    }
-  }
   // the afterimage cut: he leaves silver copies of himself standing along the line as he goes through, each coming apart in turn
   function afterTrail(s) {
     const ca = Math.cos(s.angle), sa = Math.sin(s.angle), L = s.len, n = Math.max(3, Math.min(6, Math.round(L / 150)));
@@ -1202,18 +1180,17 @@ const CL_FX = (() => {
     H.shockAt(ex, ey + 40, { r: 150, color: col, w: 6, dur: 0.5, flat: 1 });
     for (const u of onLine(ctx, s, L)) { VFX.hit(u.x, u.y, core, 1.7); VFX.sparks(u.x, u.y, { color: col, n: 8, speed: 300 }); }
     H.shake(o.shake || 5);
-    // the blade's last arc through the figure at its end, and the whiff for anyone who just missed it
+    // the blade's last arc through the figure at its end
     if (!o.noArc) VFX.slash(ex, ey - 30, s.angle + Math.PI, { r: 120, span: 2.4, color: col, core, dur: 0.38, sparks: 5, flip: tg.id % 2 === 0 });
-    graze(s, o.msg, ctx, H, { slip: true });
   }
-  IMP.clGlint = (tg, msg, ctx, H) => { afterTrail(tg.live); cutImp(tg, ctx, H, { w: 20, shake: 7, msg }); cam(0.06, 0.03, 0.4, 2.5); };
+  IMP.clGlint = (tg, msg, ctx, H) => { afterTrail(tg.live); cutImp(tg, ctx, H, { w: 20, shake: 7 }); cam(0.06, 0.03, 0.4, 2.5); };
   IMP.clWake = (tg, msg, ctx, H) => {
     afterTrail(tg.live);
-    cutImp(tg, ctx, H, { msg });
+    cutImp(tg, ctx, H);
     // the camera holds a beat after the last cut of a dance
     const my = ++wakeSeq; H.after(0.8, () => { if (wakeSeq === my) cam(0.12, 0.04, 0.55, 0); });
   };
-  IMP.clChorusCut = (tg, msg, ctx, H) => { cutImp(tg, ctx, H, { col: '#8fe0ff', core: '#ffffff', w: 15, sh: { color: '#cfeeff', color2: '#6fb8e8' }, msg, noArc: true }); };
+  IMP.clChorusCut = (tg, msg, ctx, H) => { cutImp(tg, ctx, H, { col: '#8fe0ff', core: '#ffffff', w: 15, sh: { color: '#cfeeff', color2: '#6fb8e8' }, noArc: true }); };
   IMP.clChorusLeap = (tg, msg, ctx, H) => {
     const s = tg.live;
     H.shapeFlash(s, '#ffc23a', { a: 0.3, dur: 0.5 }); VFX.hit(s.x, s.y, '#fff0a8', 2.4);
@@ -1293,7 +1270,6 @@ const CL_FX = (() => {
     H.shapeFlash(s, '#ffeebb', { a: 0.22, dur: 0.5 });
     for (let d = 20, i = 0; d < L; d += 40, i++) H.after(d / L * 0.1, () => { const v = (Math.random() - 0.5) * s.w * 0.7; VFX.sparks(s.x + ca * d - sa * v, s.y + sa * d + ca * v, { color: i % 2 ? '#ffeebb' : '#ffffff', n: 2, speed: 240 }); });
     for (const u of onLine(ctx, s, L)) { VFX.hit(u.x, u.y, '#fff4cc', 1.8); dust(u.x, u.y, 6, { color: '#ffeebb' }); }
-    graze(s, msg, ctx, H, { pad: 70, col: '#ffeebb' });
     H.shake(5);
   };
   // Embers of Heaven: burning rock comes down on the shard, fire stands up, the star-glass breaks
@@ -1329,8 +1305,6 @@ const CL_FX = (() => {
     H.shake(14); cam(0.14, 0.04, 0.6, 0);
     // anyone left standing in the dark of the star: a cold spark, nothing more
     for (const u of ctx.units || []) if (sh.some(poly => inPoly(poly, u.x, u.y))) VFX.motes(u.x, u.y, { n: 4, color: '#cfd6f2', r: 18, rise: 1 }); else VFX.hit(u.x, u.y, '#fff4cc', 1.6);
-    // anyone who made the dark in time: the light breaks round them like water round a stone
-    for (const u of ctx.units || []) if (sh.some(poly => inPoly(poly, u.x, u.y))) { H.after(0.12, () => { H.shockAt(u.x, u.y + 6, { r: 100, color: '#e8ecff', w: 5, dur: 0.55, flat: 1 }); VFX.sparks(u.x, u.y - 20, { color: '#ffffff', n: 8, speed: 280 }); if (isMe(u)) cam(0.08, 0.03, 0.5, 0); }); }
   };
   // Horizon Cut: the shards come down on the red and the cut is drawn across the whole band
   IMP.clHorizon = (tg, msg, ctx, H) => {
@@ -1347,7 +1321,6 @@ const CL_FX = (() => {
       H.streak(bx - ca * R, by - sa * R, s.angle, '#ffffff', { len: R * 2, w: 5, dur: 0.5 });
       for (let d = -R + 60, i = 0; d < R; d += 85, i++) H.after(0.05 + (d + R) / (R * 2) * 0.25, () => VFX.sparks(bx + ca * d, by + sa * d, { color: i % 2 ? '#fff4cc' : C.gold, n: 3, speed: 230 }));
     }
-    graze(s, msg, ctx, H, { pad: 70, col: '#fff4cc' });
     H.shake(10); cam(0.1, 0.04, 0.5, 1.5);
   };
   // Second Coil: the serpent goes through, a wake of light behind it
@@ -1357,7 +1330,6 @@ const CL_FX = (() => {
     H.shapeFlash(s, '#ffeebb', { a: 0.3, dur: 0.55 });
     for (let d = 60, i = 0; d < s.len; d += 70, i++) H.after(d / s.len * 0.16, () => VFX.sparks(s.x + ca * d, s.y + sa * d, { color: i % 2 ? '#ffffff' : C.gold, n: 4, speed: 300 }));
     for (const u of onLine(ctx, s, s.len)) { VFX.hit(u.x, u.y, '#fff4cc', 2.2); dust(u.x, u.y, 8, { color: '#ffeebb', speed: 260 }); }
-    graze(s, msg, ctx, H, { pad: 80, col: '#ffeebb', slip: true });
     H.shake(10); cam(0.1, 0.035, 0.5, 2);
   };
 

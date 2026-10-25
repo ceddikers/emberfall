@@ -890,27 +890,7 @@ const BOSS_VFX = (() => {
     for (const q of scatter(s, 10)) after(rand(0, 0.15), () => VFX.pillar(q.x, q.y, { r: 16, h: 90 + rand(0, 60), color, dur: 0.45 }));
   }
 
-  // Volkar: a lane or cell of the storm lands and you were within a body's width of it, unhurt: the bolt tears past, a white flash of
-  // charge crackles off you and the camera leans in. Cosmetic and brief (your own hero only); it says "you read that one" and tells
-  // nothing the red outline had not already told.
-  let grazeAt = -9;
-  function graze(tg, msg, ctx) {
-    if (!ctx || ctx.boss !== 'volkar' || tg.type !== 'aoe' || typeof FX === 'undefined' || !FX.me) return;
-    if (msg && msg.hits && typeof Net !== 'undefined' && msg.hits.includes(Net.id)) return;
-    const me = FX.me, s = tg.live, tn = clk();
-    if (tn - grazeAt < 0.4 || !s || SHAPES.contains(s, me.x, me.y, 14) || !SHAPES.contains(s, me.x, me.y, 52)) return;
-    grazeAt = tn;
-    const ang = Math.atan2(me.y - s.y, me.x - s.x);
-    VFX.lightning(s.x, s.y - 30, me.x - Math.cos(ang) * 22, me.y - 14, { color: '#ffffff', jag: 12, dur: 0.22 });
-    VFX.sparks(me.x, me.y - 14, { color: '#dffbff', n: 12, speed: 300 });
-    VFX.burst(me.x, me.y - 14, { color: '#9ff4ff', color2: '#ffffff', n: 8, speed: 160, size: 7 });
-    shockAt(me.x, me.y, { r: 62, color: '#ffffff', w: 3, dur: 0.3, flat: 1 });
-    cam('punch', 0.012, 0.25);
-    try { if (typeof Sound !== 'undefined') Sound.play('dash', { vol: 0.28, rate: 1.5, key: 'volkar-graze', minGap: 0.4 }); } catch (e) { /* cosmetic */ }
-  }
-
   function impact(tg, msg, ctx) {
-    graze(tg, msg, ctx);
     // Azerath: every tag of his lands in archmage-art.js
     if (ctx && ctx.boss === 'archmage' && typeof AZ_ART !== 'undefined') { AZ_ART.impact(tg, ctx, { shapeFlash, shockAt, scatter, after, shake, roomTint, sweep }, msg); return; }
     // Hrimgar: his moves land in titan-art.js (a tag it does not know falls through to the older drawing below)
@@ -927,11 +907,11 @@ const BOSS_VFX = (() => {
     if (ctx && ctx.boss === 'morrowoak' && typeof MG_FX !== 'undefined' && MG_FX.impact(tg, msg, ctx, { shapeFlash, shockAt, scatter, after, shake, roomTint, sweep, streak, bang, AFT, coverShadows, clipOut, AR: AR() })) return;
     // Caelum: every move of his lands in caelum-fx.js (CL_FX); a tag it does not know falls through to the shared ones
     if (ctx && ctx.boss === 'caelum' && typeof CL_FX !== 'undefined' && CL_FX.impact(tg, msg, ctx, { shapeFlash, shockAt, scatter, after, shake, roomTint, sweep, streak, bang, AFT, coverShadows, clipOut, AR: AR() })) return;
-    // The Hollow King: the beat on top of his landings (hit-stop, the whiff past a hero who dodged, the thrown sceptre) lands in hollowking-fx.js (HK_FX); it returns true only for a landing it draws whole
+    // The Hollow King: the beat on top of his landings (hit-stop, the thrown sceptre) lands in hollowking-fx.js (HK_FX); it returns true only for a landing it draws whole
     if (ctx && ctx.boss === 'hollowking' && typeof HK_FX !== 'undefined' && HK_FX.impact(tg, msg, ctx, { shapeFlash, shockAt, scatter, after, shake, roomTint, sweep, streak, bang, AFT, coverShadows, clipOut, AR: AR() })) return;
-    // Grubnak: the beat on top of his landings (hit-stop, the whiff past a hero who dodged, the kitchen bits flung) lands in grubnak-fx.js (GR_FX); it only adds, so the landing below still plays
+    // Grubnak: the beat on top of his landings (hit-stop, the kitchen bits flung) lands in grubnak-fx.js (GR_FX); it only adds, so the landing below still plays
     if (ctx && ctx.boss === 'grubnak' && typeof GR_FX !== 'undefined' && GR_FX.impact(tg, msg, ctx, { shapeFlash, shockAt, scatter, after, shake, roomTint, sweep, streak, bang, AFT, coverShadows, clipOut, AR: AR() })) return;
-    // Queen Skitterra: the leg driving in, the whiff past a hero who dodged, hit-stop on the big landings (skitterra-fx.js, SK_FX); it only adds to the older landing, which still plays
+    // Queen Skitterra: the leg driving in, hit-stop on the big landings (skitterra-fx.js, SK_FX); it only adds to the older landing, which still plays
     if (ctx && ctx.boss === 'skitterra' && typeof SK_FX !== 'undefined') SK_FX.impact(tg, msg, ctx, { shapeFlash, shockAt, scatter, after, shake, roomTint, sweep, streak, bang, AFT, coverShadows, clipOut, AR: AR() });
     // (an untagged raidwide washes the room in the boss's own colour, softly, instead of a grey-white veil)
     if (tg.type === 'raidwide') { (IMPACT[tg.tag] || (() => { roomTint({ grubnak: '#ff8a3a', skitterra: '#b070ff', volkar: '#7fc8ff', hollowking: '#6dff9a', wyrm: '#ff8a3a', titan: '#9fd8ff' }[ctx && ctx.boss] || '#ffffff', 0.15); shake(6); }))(tg, ctx); return; }

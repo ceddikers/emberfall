@@ -10,10 +10,7 @@
 // sea teal, bronze and blazing gold for the Sunwheel, pale ghost-green for the crowd, red banner cloth, gold-orange bounce paths with
 // a bright star at each bounce, blue catch rings.
 // The beat on top (all cosmetic, nothing here changes who is hit): the wheel winds up in his hand and leaves it with a burst; a bounce
-// off a stone rings differently from one off the rim; the ghost crowd gasps at each bounce and roars at a catch; and THE WHIFF: a hero
-// the blow did not take, who stood within a body of it (or slipped clean through it), feels it go by: a sliver of the wheel's rim
-// (or the wave's lash) drawn past them, sparks, a ring, and for your own hero a flash and a flinch of the camera. It is drawn only for
-// a hero the blow did not hit and was close to, so it rewards a dodge and never marks where the safe floor is.
+// off a stone rings differently from one off the rim; the ghost crowd gasps at each bounce and roars at a catch.
 
 const BR_FX = (() => {
   const hash = (i, n = 0) => { const x = Math.sin(i * 127.1 + n * 311.7) * 43758.5453; return x - Math.floor(x); };
@@ -758,74 +755,6 @@ const BR_FX = (() => {
   // H: the shared helpers boss-vfx.js owns (shapeFlash, shockAt, scatter, after, shake, roomTint, sweep, streak, bang, AFT, coverShadows, clipOut, AR)
   const IMP = {};
 
-  // THE WHIFF. Which way is "away from the blow" for a hero standing just outside this shape
-  function awayFrom(s, u) {
-    if (s.kind === 'rect') {
-      const cs = Math.cos(s.angle), sn = Math.sin(s.angle), across = -(u.x - s.x) * sn + (u.y - s.y) * cs, sg = across >= 0 ? 1 : -1;
-      return { x: -sn * sg, y: cs * sg };
-    }
-    const dx = u.x - s.x, dy = u.y - s.y, dd = Math.hypot(dx, dy) || 1;
-    return { x: dx / dd, y: dy / dd };
-  }
-  // what each blow leaves past a hero: the colour of the sliver and what is flung up
-  const WHIFF = {
-    brWheel: { col: C.goldHi, glow: C.gold, rim: 1 }, brRiposte: { col: '#ffffff', glow: '#9fd0ff', rim: 1 },
-    brWave: { col: '#ffffff', glow: C.spray, wet: 1 }, brWaveBack: { col: '#ffffff', glow: C.spray, wet: 1 },
-    brFurrow: { col: C.goldHi, glow: C.amber, sand: 1 }, brBanner: { col: '#ffb0a0', glow: C.banner, cloth: 1 }, brLeap: { col: '#fff0c8', glow: C.sand, sand: 1 },
-  };
-  // the hero at (u.x, u.y) was not hit: the sliver of the wheel's rim (or the wave's lash) is drawn a stride in front of them, sweeping
-  // the way the blow travels, sparks and a ring at their feet; `slip`: they were inside it and unhurt (a dash through), so it passes through
-  function whiff(u, s, spec, mine, slip) {
-    const a = awayFrom(s, u), tx = -a.y, ty = a.x, trav = s.kind === 'rect' ? s.angle : Math.atan2(ty, tx), ca = Math.cos(trav), sa = Math.sin(trav);
-    const gap = slip ? 0 : 30, ex = u.x - a.x * gap, ey = u.y - a.y * gap - 16;
-    VFX.fx({ dur: 0.34, layer: 'air', draw: (c, p, t, e) => {
-      const k = e.a * (1 - p) * (1 - p), sweep = (easeOut(Math.min(1, p / 0.7)) - 0.35) * 150;
-      c.save();
-      if (spec.rim) {
-        // a curve of the wheel's rim, bright gold with a white edge, spinning past
-        const R = 62, cx = ex - a.x * (R + 4) + ca * sweep, cy = ey - a.y * (R + 4) + sa * sweep, mid = Math.atan2(a.y, a.x);
-        VFX.neonPath(c, spec.col, 5 * (1 - p * 0.5), k, () => { c.arc(cx, cy, R, mid - 0.7, mid + 0.7); });
-        VFX.neonPath(c, '#ffffff', 2, k * 0.85, () => { c.arc(cx, cy, R, mid - 0.4, mid + 0.4); });
-        VFX.neonPath(c, spec.glow, 3, k * 0.55, () => { c.moveTo(ex - ca * 160 + ca * sweep, ey - sa * 160 + sa * sweep); c.lineTo(ex - ca * 30 + ca * sweep, ey - sa * 30 + sa * sweep); });
-      } else {
-        // a lash of foam, sand or cloth along the edge
-        const L = 44 + 70 * easeOut(Math.min(1, p / 0.5));
-        VFX.neonPath(c, spec.col, 4.5 * (1 - p * 0.6), k, () => { c.moveTo(ex - tx * L + ca * sweep * 0.4, ey - ty * L + sa * sweep * 0.4); c.quadraticCurveTo(ex - a.x * 10, ey - a.y * 10, ex + tx * L + ca * sweep * 0.4, ey + ty * L + sa * sweep * 0.4); });
-        VFX.neonPath(c, spec.glow, 2.4, k * 0.7, () => { c.moveTo(ex - tx * L * 0.6, ey - ty * L * 0.6 - 6); c.lineTo(ex + tx * L * 0.6, ey + ty * L * 0.6 - 6); });
-      }
-      c.restore();
-    } });
-    VFX.shock(u.x, u.y + 6, { r: slip ? 96 : 70, color: spec.glow, w: 3.4, dur: 0.36, flat: 0.7 });
-    VFX.sparks(u.x - a.x * 16, u.y - 12, { color: spec.col, n: mine ? 14 : 7, speed: 320, angle: trav, spread: 0.9, up: 80, life: 0.9 });
-    if (spec.wet) spray(u.x - a.x * 20, u.y - 4, mine ? 9 : 4, { size: 0.9, up: 1.1, speed: 200 });
-    if (spec.sand) sandUp(u.x - a.x * 20, u.y, mine ? 5 : 2, { size: 0.7 });
-    if (spec.cloth) for (let i = 0; i < (mine ? 5 : 2); i++) VFX.spawn({ x: u.x - a.x * 24, y: u.y - 8, z: 18, vx: rand(-50, 50), vy: rand(-30, 30), vz: rand(60, 140), g: 260, drag: 0.04, life: rand(0.6, 1.0), size: rand(7, 11), size1: 3, color: i % 3 ? C.banner : C.gold, kind: 'shard', add: false, vr: rand(-8, 8) });
-    if (mine) {
-      // the crowd's gasp, then the flash at the edge of the screen and a flinch of the camera
-      VFX.motes(u.x, u.y - 18, { n: 7, color: C.ghostHi, r: 26, rise: 1.4 });
-      flinch(spec.glow, 0.1, 0.2, 0.02);
-      try { if (typeof Sound !== 'undefined' && Sound.play) Sound.play('dash', { vol: 0.3, key: 'br-whiff', minGap: 0.3 }); } catch (e) { /* cosmetic */ }
-    }
-  }
-  const whiffAt = new Map();
-  function whiffs(tg, msg, ctx) {
-    const spec = WHIFF[tg.tag]; if (!spec || !ctx || !ctx.units) return;
-    const s = tg.live, hits = (msg && msg.hits) || [], t = nowS(), rect = s.kind === 'rect';
-    for (const u of ctx.units) {
-      if (hits.includes(u.id)) continue;
-      if (t - (whiffAt.get(u.id) || -9) < 0.8) continue;
-      let slip = false;
-      if (rect) {
-        // sideways past it only (a hero just off the end of a piece is about to meet the next one)
-        const dx = u.x - s.x, dy = u.y - s.y, al = dx * Math.cos(s.angle) + dy * Math.sin(s.angle);
-        if (al < 12 || al > s.len - 12) continue;
-      }
-      if (SHAPES.contains(s, u.x, u.y)) { if (!rect || (tg.tag !== 'brWheel' && tg.tag !== 'brRiposte')) continue; slip = true; }   // (inside and unhurt: a dash through a wheel's lane; anything else inside was covered or shielded)
-      else if (!SHAPES.contains(s, u.x, u.y, 78)) continue;
-      whiffAt.set(u.id, t);
-      whiff(u, s, spec, isMe(u), slip);
-    }
-  }
   const inside = (ctx, s, pad = 0) => (ctx.units || []).filter(u => SHAPES.contains(s, u.x, u.y, pad));
 
   // a piece of a wheel's path lands as the wheel passes: gold flare along it, sand and sparks thrown up, a hit on anyone it touches
@@ -1271,7 +1200,6 @@ const BR_FX = (() => {
     // (boss-vfx.js impact(): his moves land here; a tag it does not know falls through to the shared ones)
     impact(tg, msg, ctx, H) {
       const f = tg.type === 'buster' ? IMP.buster : IMP[tg.tag]; if (!f) return false;
-      try { whiffs(tg, msg, ctx); } catch (e) { /* cosmetic */ }
       f(tg, msg, ctx, H); return true;
     },
     wheelDisc, spray,

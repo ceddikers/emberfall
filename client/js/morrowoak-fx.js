@@ -5,7 +5,7 @@
 // (ArenaView.drawPuddles), the Swallowing and the limbs growing (ArenaView.drawZones and drawRoomOver hand over), and the enrage,
 // entrance and fall. Loaded after morrowoak-art.js; the other files reach it through MG_FX and every call is guarded by
 // `typeof MG_FX !== 'undefined'`.
-// On top of the moves: the whiff for a hero a blow just missed, the hole's lip giving under a close step, light lifting off every hole, and
+// On top of the moves: the hole's lip giving under a close step, light lifting off every hole, and
 // each windup's screen feel (Inhale's closing edges, Sap Tide's amber, a limb gathering its colour). All cosmetic; nothing changes who is hit.
 // The rule as everywhere: the red (or blue) outline marks the exact area and is drawn by boss-tells.js; what is painted inside is the
 // clue, and safe floor is never painted. The look follows the painted sheets (docs/art/vfx-reference/morrowoak-*.png): scorched cracked
@@ -43,7 +43,7 @@ const MG_FX = (() => {
   }
   const shakeNow = n => { try { if (typeof vfxShake === 'function') vfxShake(n, 'boss'); } catch (e) { /* cosmetic */ } };
   const SPLIT = -96;   // how far above his feet the Hunger's split sits on the screen (the chest of the trunk)
-  Object.assign(S, { whiffAt: new Map(), hitAt: new Map(), lip: new Map(), lipAt: new Map(), holeAt: new Map(), rumbleAt: -99 });
+  Object.assign(S, { lip: new Map(), lipAt: new Map(), holeAt: new Map(), rumbleAt: -99 });
   const isMe = u => typeof Net !== 'undefined' && Net && u && u.id === Net.id;
   const once = key => { if (S.fired.has(key)) return false; if (S.fired.size > 500) S.fired.clear(); S.fired.add(key); return true; };
   // a whole-screen layer in screen space (your own view only), over everything on the arena canvas
@@ -915,71 +915,6 @@ const MG_FX = (() => {
   // a ring drawing in (the Hunger's breath): VFX.shock reads r0 > r as a ring that closes
   const closing = (x, y, r0, r1, color, w, dur, delay) => VFX.shock(x, y, { r0, r: r1, color, w, dur, flat: 0.8, delay });
 
-  // THE WHIFF: a hero the blow did not take, who stood within a stride of its edge (or slipped clean through a lane or a petal on a dash),
-  // feels it go by: the edge cracks past them in a streak of the move's own light, the grove's dead leaves are thrown off the wind of it,
-  // splinters fly, and a ring of dust jumps at their feet; the one at the keyboard also gets a flash at the edge of the screen and a push
-  // of the camera. Only ever drawn for a hero who was not hit and was close, so it is the reward for a dodge and never a hint of where is safe.
-  const WHIFF_COL = { mgThorn: C.thornTip, mgFrost: C.frostHi, mgSpark: C.sparkHi, mgBlight: C.blightHi, mgChop: C.cleaverHi, mgRoots: C.broodHi, mgRod: C.stormHi,
-    mgWing: C.wingHi, mgRime: C.frostHi, mgRune: C.runeHi, mgRuneRing: C.runeHi, mgEbb: C.sapHi, mgHead: C.headHi, mgSeed: C.violetHi, mgDark: C.violetHi };
-  const NEAR = 80;   // a hero this close to the edge of a blow (and not hit) gets the whiff
-  // which way is "away from the blow" for a hero standing just outside this shape
-  function awayFrom(s, u) {
-    if (s.kind === 'rect') {
-      const c = Math.cos(s.angle), sn = Math.sin(s.angle), across = -(u.x - s.x) * sn + (u.y - s.y) * c, sg = across >= 0 ? 1 : -1;
-      return { x: -sn * sg, y: c * sg };
-    }
-    if (s.kind === 'cone') {
-      let df = Math.atan2(u.y - s.y, u.x - s.x) - s.angle; df = Math.atan2(Math.sin(df), Math.cos(df));
-      const sg = df >= 0 ? 1 : -1, edge = s.angle + sg * s.arc / 2;
-      return { x: -Math.sin(edge) * sg, y: Math.cos(edge) * sg };
-    }
-    const dx = u.x - s.x, dy = u.y - s.y, d = Math.hypot(dx, dy) || 1, sg = s.kind === 'donut' && d < (s.r2 || 0) ? -1 : 1;   // (inside a ring's hole, away from the blow is inward)
-    return { x: sg * dx / d, y: sg * dy / d };
-  }
-  function whiff(u, s, tag, mine, slip) {
-    const col = WHIFF_COL[tag] || C.violetHi, a = awayFrom(s, u), tx = -a.y, ty = a.x;
-    const ex = u.x - a.x * 34, ey = u.y - a.y * 34 - 14;   // (the edge, just toward the blow from them)
-    VFX.fx({ dur: 0.34, layer: 'air', draw: (c, p, t, e) => {
-      const k = e.a * (1 - p) * (1 - p), L = 44 + 64 * easeOut(Math.min(1, p / 0.5)), sh = (p - 0.2) * 44;
-      c.save();
-      VFX.neonPath(c, col, 4.8 * (1 - p * 0.6), k, () => { c.moveTo(ex - tx * L + a.x * sh, ey - ty * L + a.y * sh); c.lineTo(ex + tx * L + a.x * sh, ey + ty * L + a.y * sh); });
-      VFX.neonPath(c, '#ffffff', 2, k * 0.8, () => { c.moveTo(ex - tx * L * 0.5 + a.x * sh, ey - ty * L * 0.5 + a.y * sh); c.lineTo(ex + tx * L * 0.5 + a.x * sh, ey + ty * L * 0.5 + a.y * sh); });
-      c.restore();
-    } });
-    VFX.shock(u.x, u.y + 6, { r: slip ? 92 : 66, color: col, w: 3.2, dur: 0.34, flat: 0.6 });
-    VFX.sparks(u.x - a.x * 18, u.y - 10, { color: col, n: mine || slip ? 12 : 7, speed: 300, angle: Math.atan2(a.y, a.x), spread: 0.9, up: 80, life: 0.9 });
-    // the grove's leaves thrown off the wind of it, and bark splinters
-    for (let i = 0; i < (slip ? 6 : 4); i++) {
-      const sp = rand(120, 260), sd = rand(-0.7, 0.7), vx = (a.x * Math.cos(sd) - a.y * Math.sin(sd)) * sp, vy = (a.x * Math.sin(sd) + a.y * Math.cos(sd)) * sp * 0.6;
-      VFX.spawn({ x: u.x - a.x * 26, y: u.y - a.y * 18, z: rand(8, 30), vx, vy, vz: rand(50, 140), g: 260, drag: 0.05, life: rand(0.6, 1.1), size: rand(7, 12), size1: 3, color: i % 3 ? C.leaf : '#8a6a2a', kind: 'leaf', add: false, vr: rand(-12, 12), flutter: 8 });
-    }
-    for (let i = 0; i < 3; i++) { const sp = rand(110, 230); VFX.spawn({ x: u.x - a.x * 24, y: u.y - a.y * 16, z: rand(8, 24), vx: a.x * sp + rand(-30, 30), vy: a.y * sp * 0.6 + rand(-20, 20), vz: rand(60, 150), g: 520, life: rand(0.4, 0.7), size: rand(5, 9), size1: 1, color: i % 2 ? '#7a6448' : col, kind: 'shard', add: false, vr: rand(-12, 12) }); }
-    if (mine) {
-      try {
-        if (typeof FX !== 'undefined' && FX.cam) { FX.cam.flash(col, 0.1, 0.18); FX.cam.punch(0.02, 0.32); if (slip) FX.cam.stop(0.04); }
-        if (typeof Sound !== 'undefined' && Sound.play) Sound.play('dash', { vol: 0.3, key: 'mg-whiff', minGap: 0.3 });
-      } catch (e) { /* cosmetic */ }
-      screenFx(0.5, (c, W, Hh, tt, pp, e) => { const k = (1 - pp) * (1 - pp) * e.a; vig(c, W, Hh, col, 0.3 * k, 0.4, 'screen'); });
-    }
-  }
-  function whiffs(tg, msg, ctx) {
-    const tag = tg.tag; if (!ctx || !ctx.units || !WHIFF_COL[tag]) return;
-    const s = tg.live, hits = (msg && msg.hits) || [], slipOk = s.kind === 'rect' || s.kind === 'cone';
-    for (const id of hits) S.hitAt.set(id, nowS());
-    // (a beat later, so every blow of the same moment has said who it took: a hero hurt by one petal is not a dodger of the next)
-    later(0.08, () => {
-      const t = nowS();
-      for (const u of ctx.units) {
-        if (hits.includes(u.id) || t - (S.hitAt.get(u.id) || -9) < 0.45) continue;
-        if (t - (S.whiffAt.get(u.id) || -9) < 0.7) continue;
-        const slip = slipOk && SHAPES.contains(s, u.x, u.y, -8);   // inside a lane or a petal and not hurt: a dash through it
-        if (!slip && (SHAPES.contains(s, u.x, u.y) || !SHAPES.contains(s, u.x, u.y, NEAR))) continue;   // (inside any other shape and not hit: covered or shielded, not a dodge)
-        S.whiffAt.set(u.id, t);
-        whiff(u, s, tag, isMe(u), slip);
-      }
-    });
-  }
-
   // Hunger Seed bursts: the seed splits like a geode: black crystal spires thrown up round them, violet light through the cracks, shards flying
   IMP.mgSeed = (tg, msg, ctx, H) => {
     const s = tg.live, x = s.x, y = s.y;
@@ -1643,7 +1578,6 @@ const MG_FX = (() => {
     // (boss-vfx.js impact(): his moves land here; a tag it does not know falls through to the shared ones)
     impact(tg, msg, ctx, H) {
       const f = tg.type === 'buster' ? IMP.buster : IMP[tg.tag]; if (!f) return false;
-      try { whiffs(tg, msg, ctx); } catch (e) { /* cosmetic */ }
       f(tg, msg, ctx, H); return true;
     },
     pit, spire, gem, LIMBFX,

@@ -1,14 +1,10 @@
-// Grubnak: what his blows feel like when they land, what gathers on him before they fall, and what a dodge feels like when it works.
+// Grubnak: what his blows feel like when they land, and what gathers on him before they fall.
 // The floor tells (crimson damage, blue shares) are in boss-tells.js block G; the older landings and the casting poses are in
 // boss-vfx.js; this file is the beat on top of them, reached from boss-vfx.js through GR_FX (every call guarded by
 // `typeof GR_FX !== 'undefined'`, and it only ever adds to the older landing, so the older one still plays):
 //   - a hit-stop and a push of the camera when one of his big blows lands (never more than once in a few seconds);
 //   - kitchen-flavoured landings on top: the cut line of a Mince throwing carrot, onion and tomato, the Ladle Spin flinging broth,
 //     the Lid Slam ringing and rattling, the Belly Flop's second bounce, casks bursting into staves and a hoop, the charge's wind;
-//   - THE WHIFF: a hero who stood just outside a blow when it landed gets the blow's edge cracking past them: a bright streak along
-//     the edge, a ring and sparks at their feet, a kitchen bit (steel sparks, a fleck of broth, a tile chip, a lick of flame), and for
-//     your own hero a flash, a push of the camera and a soft whoosh. It is only ever drawn for a hero the blow did not hit and was
-//     close to, so it is a reward for a dodge, never a hint of where the safe floor is (safe floor is never painted);
 //   - the windups of the moves that had none (Mince, Ladle Spin, Lid Slam, Belly Flop, Larder Toss, Flambé): the ladle's broth
 //     spinning outwards, the lid's tin glints drawn in, the brandy dripping.
 // Nothing here changes who is hit.
@@ -16,12 +12,7 @@
 const GR_FX = (() => {
   const rand = (a, b) => a + Math.random() * (b - a);
   const nowS = () => (typeof performance !== 'undefined' ? performance.now() : Date.now()) / 1000;
-  const S = { camAt: -99, whiffAt: new Map() };
-  // the colour of each blow's edge cracking past (warm steel, broth, tin, fire; never the danger red, which is the floor's)
-  const COL = { mince: '#fff0d0', ladle: '#ffd08a', lid: '#d8e8ff', charge: '#f4e6cc', cask: '#f0d0a0', flop: '#f4e4cc', cleaver: '#fff0d8', cleaverback: '#fff0d8',
-    flambe: '#ffe08a', spice: '#ffb090', whisk: '#fff6dc', simmer: '#ffc080', buster: '#fff0d8' };
-  const WHIFF = new Set(Object.keys(COL));
-  const NEAR = 80;   // a hero this close to the edge of a blow (and not hit) gets the whiff
+  const S = { camAt: -99 };
   // [hit-stop, camera push] of the blows that earn a held breath
   const CAMP = { mince: [0.05, 0.028], ladle: [0.05, 0.026], lid: [0.06, 0.03], flop: [0.07, 0.034], charge: [0.04, 0.02], buster: [0.05, 0.024] };
 
@@ -29,63 +20,6 @@ const GR_FX = (() => {
   function cam(stop = 0.06, punch = 0.03, dur = 0.45, gap = 2.5) {
     const t = nowS(); if (t - S.camAt < gap) return; S.camAt = t;
     try { if (typeof FX !== 'undefined' && FX.cam) { FX.cam.stop(stop); FX.cam.punch(punch, dur); } } catch (e) { /* cosmetic */ }
-  }
-  // which way is "away from the blow" for a hero standing just outside this shape
-  function awayFrom(s, u) {
-    if (s.kind === 'rect' || s.kind === 'cross') {
-      const c = Math.cos(s.angle), sn = Math.sin(s.angle), dx = u.x - s.x, dy = u.y - s.y;
-      let across = -dx * sn + dy * c;
-      if (s.kind === 'cross') { const along = dx * c + dy * sn; if (Math.abs(along) < Math.abs(across)) { const a2 = along >= 0 ? 1 : -1; return { x: c * a2, y: sn * a2 }; } }
-      const sg = across >= 0 ? 1 : -1;
-      return { x: -sn * sg, y: c * sg };
-    }
-    const dx = u.x - s.x, dy = u.y - s.y, d = Math.hypot(dx, dy) || 1, sg = s.kind === 'donut' && d < s.r2 ? -1 : 1;   // (inside a ring's hole, away from the blow is inward)
-    return { x: sg * dx / d, y: sg * dy / d };
-  }
-
-  // the kitchen bit of a whiff: steel sparks off the cleaver, a fleck of broth off the ladle, tin ringing, a chip off the tile, a lick of flame
-  function bit(tag, u, a, mine) {
-    const px = u.x - a.x * 16, py = u.y - 10, ang = Math.atan2(a.y, a.x);
-    if (tag === 'ladle') VFX.splash(px, u.y, { color: '#d8902a', n: mine ? 8 : 5, speed: 1.1 });
-    else if (tag === 'lid') { VFX.glint(px, py, { z: 8, size: 20, color: '#eef6ff' }); VFX.sparks(px, py, { color: '#ffffff', n: 5, angle: ang, spread: 0.5, speed: 420 }); }
-    else if (tag === 'flambe') VFX.flare(px, u.y - 6, { color: '#ffb040', n: 6, r: 10, h: 0.9 });
-    else if (tag === 'charge' || tag === 'flop') { VFX.smoke(px, u.y, { color: '#d8c4a4', n: 2, size: 26, a: 0.5, speed: 90 }); VFX.debris(px, py, { color: '#c9b48e', n: 3, speed: 0.9, size: 0.8 }); }
-    else if (tag === 'cask') VFX.debris(px, py, { color: '#a0703a', n: 4, speed: 1.0, size: 0.9 });
-    else if (tag === 'spice') VFX.smoke(px, u.y, { color: '#c84a2a', n: 2, size: 24, a: 0.45, speed: 70 });
-    else { VFX.glint(px, py, { z: 8, size: 18, color: '#fff6e0' }); VFX.sparks(px, py, { color: '#fff0c8', n: 5, angle: ang, spread: 0.6, speed: 400 }); }
-  }
-  // the edge of a blow cracking past a hero: a streak along the edge a stride in front of them, wind and sparks, a ring at their feet
-  function whiff(u, s, tag, mine) {
-    const col = COL[tag] || '#ffffff', a = awayFrom(s, u), tx = -a.y, ty = a.x;
-    const ex = u.x - a.x * 34, ey = u.y - a.y * 34 - 14;   // (the edge, just toward the blow from them)
-    VFX.fx({ dur: 0.34, layer: 'air', draw: (c, p, t, e) => {
-      const k = e.a * (1 - p) * (1 - p), L = 44 + 64 * easeOut(Math.min(1, p / 0.5)), sh = (p - 0.2) * 40;
-      c.save();
-      VFX.neonPath(c, col, 4.5 * (1 - p * 0.6), k, () => { c.moveTo(ex - tx * L + a.x * sh, ey - ty * L + a.y * sh); c.lineTo(ex + tx * L + a.x * sh, ey + ty * L + a.y * sh); });
-      VFX.neonPath(c, '#ffffff', 2, k * 0.8, () => { c.moveTo(ex - tx * L * 0.5 + a.x * sh, ey - ty * L * 0.5 + a.y * sh); c.lineTo(ex + tx * L * 0.5 + a.x * sh, ey + ty * L * 0.5 + a.y * sh); });
-      c.restore();
-    } });
-    VFX.shock(u.x, u.y + 6, { r: 62, color: col, w: 3, dur: 0.32, flat: 0.6 });
-    VFX.sparks(u.x - a.x * 18, u.y - 10, { color: col, n: mine ? 12 : 7, speed: 300, angle: Math.atan2(a.y, a.x), spread: 0.9, up: 80, life: 0.9 });
-    bit(tag, u, a, mine);
-    if (mine) {
-      try {
-        if (typeof FX !== 'undefined' && FX.cam) { FX.cam.flash('#fff4d8', 0.09, 0.16); FX.cam.punch(0.018, 0.32); }
-        if (typeof Sound !== 'undefined' && Sound.play) Sound.play('dash', { vol: 0.32, key: 'gr-whiff', minGap: 0.3 });
-      } catch (e) { /* cosmetic */ }
-    }
-  }
-  function whiffs(tg, msg, ctx) {
-    if (!ctx || !ctx.units || !WHIFF.has(tg.tag) || !tg.live) return;
-    const s = tg.live, hits = (msg && msg.hits) || [], t = nowS();
-    for (const u of ctx.units) {
-      if (hits.includes(u.id)) continue;
-      if (t - (S.whiffAt.get(u.id) || -9) < 0.7) continue;
-      if (SHAPES.contains(s, u.x, u.y)) continue;   // inside and not hit: covered or shielded, not a dodge
-      if (!SHAPES.contains(s, u.x, u.y, NEAR)) continue;
-      S.whiffAt.set(u.id, t);
-      whiff(u, s, tg.tag, typeof Net !== 'undefined' && u.id === Net.id);
-    }
   }
 
   // ---------------------------------------------------------------- what each blow adds when it lands
@@ -166,7 +100,6 @@ const GR_FX = (() => {
 
   function impact(tg, msg, ctx, H) {
     const tag = tg.tag;
-    try { whiffs(tg, msg, ctx); } catch (e) { /* cosmetic */ }
     try {
       const c = CAMP[tag]; if (c) cam(c[0], c[1]);
       if (tag === 'mince') minceAfter(tg, H);
@@ -236,5 +169,5 @@ const GR_FX = (() => {
     }
   }
 
-  return { impact, whiff, prop, cast };
+  return { impact, prop, cast };
 })();

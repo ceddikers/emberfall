@@ -487,62 +487,14 @@ const WYRM_ART = (() => {
   }
   const pillarAt = (x, y, o) => VFX.pillar(x, y, o);
 
-  // ---------------------------------------------------------------- feel: the camera on the big hits, and the whiff
-  // THE WHIFF: a hero who stood just outside a dive's lane or landing, a breath, a lash or an Aftershock ring when it landed gets the
-  // blow's edge cracking past them (an ember streak, sparks, a ring of heat at their feet, and for your own hero a faint flash, a push
-  // of the camera and a soft whoosh). It is only ever drawn for a hero the blow did not hit and was close to, after it has landed, so it
-  // is a reward for a dodge and never a hint of where is safe.
+  // ---------------------------------------------------------------- feel: the camera on the big hits
   const nowS = () => (typeof performance !== 'undefined' ? performance.now() : Date.now()) / 1000;
-  const FEEL = { camAt: -99, whiffAt: new Map() };
+  const FEEL = { camAt: -99 };
   const isMe = u => typeof Net !== 'undefined' && Net && u.id === Net.id;
-  const WHIFF_TAGS = new Set(['divepath', 'divepath2', 'dragonfall', 'breath', 'taillash', 'aftershock']);
-  const NEAR = 80;
   // the camera holds for a beat and leans in (your own screen only; main.js FX.cam); never more than once in a short while
   function cam(stop = 0.06, punch = 0.03, dur = 0.45, gap = 1.2, flash) {
     const t = nowS(); if (t - FEEL.camAt < gap) return; FEEL.camAt = t;
     try { if (typeof FX !== 'undefined' && FX.cam) { if (flash) FX.cam.flash(flash[0], flash[1], flash[2] || 0.3); if (stop) FX.cam.stop(stop); if (punch) FX.cam.punch(punch, dur); } } catch (e) { /* cosmetic */ }
-  }
-  // which way is "away from the blow" for a hero standing just outside this shape
-  function awayFrom(s, u) {
-    if (s.kind === 'rect') {
-      const c = Math.cos(s.angle), sn = Math.sin(s.angle), across = -(u.x - s.x) * sn + (u.y - s.y) * c, sg = across >= 0 ? 1 : -1;
-      return { x: -sn * sg, y: c * sg };
-    }
-    const dx = u.x - s.x, dy = u.y - s.y, d = Math.hypot(dx, dy) || 1;
-    if (s.kind === 'cone') { let da = Math.atan2(dy, dx) - s.angle; while (da > Math.PI) da -= TAU; while (da < -Math.PI) da += TAU; const sg = da >= 0 ? 1 : -1; return { x: -dy / d * sg, y: dx / d * sg }; }
-    const sg = s.kind === 'donut' && d < (s.r2 || 0) ? -1 : 1;   // (in a ring's hole, away from the blow is inward)
-    return { x: sg * dx / d, y: sg * dy / d };
-  }
-  function whiff(u, s, mine) {
-    const a = awayFrom(s, u), tx = -a.y, ty = a.x, ex = u.x - a.x * 34, ey = u.y - a.y * 34 - 14;   // (the edge, just toward the blow from them)
-    VFX.fx({ dur: 0.34, layer: 'air', draw: (c, p, t, e) => {
-      const k = e.a * (1 - p) * (1 - p), L = 44 + 70 * easeOut(Math.min(1, p / 0.5)), sh = (p - 0.2) * 44;
-      c.save();
-      VFX.neonPath(c, '#ff9a2a', 5 * (1 - p * 0.6), k, () => { c.moveTo(ex - tx * L + a.x * sh, ey - ty * L + a.y * sh); c.lineTo(ex + tx * L + a.x * sh, ey + ty * L + a.y * sh); });
-      VFX.neonPath(c, '#fff4d8', 2, k * 0.85, () => { c.moveTo(ex - tx * L * 0.5 + a.x * sh, ey - ty * L * 0.5 + a.y * sh); c.lineTo(ex + tx * L * 0.5 + a.x * sh, ey + ty * L * 0.5 + a.y * sh); });
-      c.restore();
-    } });
-    VFX.shock(u.x, u.y + 6, { r: 66, color: '#ffb04a', w: 3, dur: 0.34, flat: 0.6 });
-    VFX.sparks(u.x - a.x * 18, u.y - 10, { color: C.hot, n: mine ? 14 : 8, speed: 320, angle: Math.atan2(a.y, a.x), spread: 0.9, up: 90, life: 0.9 });
-    for (let i = 0; i < (mine ? 5 : 3); i++) VFX.spawn({ x: u.x - a.x * rnd(10, 30), y: u.y - a.y * rnd(10, 30), z: rnd(10, 40), vx: a.x * rnd(60, 160), vy: a.y * rnd(60, 160), vz: rnd(40, 120), life: rnd(0.5, 0.9), size: rnd(4, 8), size1: 0, color: i % 2 ? '#ffb040' : '#ff6a1a' });
-    if (mine) {
-      try {
-        if (typeof FX !== 'undefined' && FX.cam) { FX.cam.flash('#ffb060', 0.1, 0.16); FX.cam.punch(0.02, 0.32); }
-        if (typeof Sound !== 'undefined' && Sound.play) Sound.play('dash', { vol: 0.3, rate: 0.7, key: 'wy-whiff', minGap: 0.3 });
-      } catch (e) { /* cosmetic */ }
-    }
-  }
-  function whiffs(tg, msg, ctx) {
-    if (!ctx || !ctx.units || !WHIFF_TAGS.has(tg.tag)) return;
-    const s = tg.live, hits = (msg && msg.hits) || [], t = nowS();
-    for (const u of ctx.units) {
-      if (hits.includes(u.id)) continue;
-      if (t - (FEEL.whiffAt.get(u.id) || -9) < 0.7) continue;
-      if (SHAPES.contains(s, u.x, u.y)) continue;   // inside and not hit: covered or shielded, not a dodge
-      if (!SHAPES.contains(s, u.x, u.y, NEAR)) continue;
-      FEEL.whiffAt.set(u.id, t);
-      whiff(u, s, isMe(u));
-    }
   }
   // embers thrown up out of a point and falling back (a landing, an eruption)
   function fountain(x, y, r, n, o = {}) {
@@ -577,7 +529,6 @@ const WYRM_ART = (() => {
 
   // the impact of each of his moves; returns true when it handled the tag
   function impact(tg, ctx, H, msg) {
-    try { whiffs(tg, msg, ctx); } catch (e) { /* cosmetic */ }
     const s = tg.live, b = (ctx && ctx.bossDraw) || { x: 0, y: 0, f: 0 };
     const tag = tg.tag;
     if (tg.type === 'buster') {

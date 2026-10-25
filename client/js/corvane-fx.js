@@ -18,7 +18,7 @@ const CV_FX = (() => {
   const nowS = () => (typeof performance !== 'undefined' ? performance.now() : Date.now()) / 1000;
   // what the moves remember between frames: when the last Sundering Cut landed (so Cracked Guard reads as the second blow), the
   // angle of the first Rising Crane (so the second can show its turn), when the camera last held, the afterimages already shown
-  const S = { out: new Set(), cutAt: -99, guard: false, craneA: null, camAt: -99, img: { n: 0, at: {} }, whiffAt: new Map(), n: null, over: 0, stopAt: -99 };
+  const S = { out: new Set(), cutAt: -99, guard: false, craneA: null, camAt: -99, img: { n: 0, at: {} }, n: null, over: 0 };
   // how far a line from (x, y) along a runs before it meets the wall
   const wall = (x, y, a, max = 2400) => { const c = Math.cos(a), s = Math.sin(a); let d = 0; while (d < max && ARENA.sd(x + c * d, y + s * d) < -10) d += 12; return d; };
   const inPoly = (poly, x, y) => { let r = false; for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) { const [xi, yi] = poly[i], [xj, yj] = poly[j]; if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) r = !r; } return r; };
@@ -658,77 +658,6 @@ const CV_FX = (() => {
     cam(0.06, 0.024, 0.45, 1.5);
   };
 
-  // ---------------------------------------------------------------- the whiff (a blow that just missed a hero)
-  // A hero who stood within a stride of a blow's edge, and was not hit, feels the blade go by: a bright sliver of the edge drawn past
-  // them, torn strands of snow-cloth thrown off, a ring at their feet; for your own hero a flash at the screen's rim, a push of the
-  // camera, a held breath and a soft whoosh. Only ever drawn for a hero the blow did not take and was close to, so it is a reward for
-  // a dodge, never a hint of where is safe.
-  const NEAR = 80;
-  const WHIFF = new Set(['cvDraw', 'cvComet', 'cvCrane', 'cvCrane2', 'cvSweep', 'cvPart']);
-  const isMe = u => typeof Net !== 'undefined' && Net && u.id === Net.id;
-  // a whole-screen layer: fn(c, W, H, t, p, e) each frame in screen space
-  function screenFx(dur, fn) {
-    return VFX.fx({ dur, layer: 'air', draw: (c, p, t, e) => { c.save(); c.setTransform(1, 0, 0, 1, 0, 0); fn(c, c.canvas.width, c.canvas.height, t, p, e); c.restore(); } });
-  }
-  // where the edge of a blow lies from a hero it just missed: gap (px between them), dir (the way the edge runs), away (from the blow to them)
-  function edgeOf(s, u) {
-    if (s.kind === 'rect') {
-      const c = Math.cos(s.angle), sn = Math.sin(s.angle), across = -(u.x - s.x) * sn + (u.y - s.y) * c, sg = across >= 0 ? 1 : -1;
-      return { gap: Math.max(14, Math.abs(across) - s.w / 2), dir: { x: c, y: sn }, away: { x: -sn * sg, y: c * sg } };
-    }
-    const dx = u.x - s.x, dy = u.y - s.y, d = Math.hypot(dx, dy) || 1, h = Math.atan2(dy, dx);
-    const rel = Math.atan2(Math.sin(h - s.angle), Math.cos(h - s.angle)), sg = rel >= 0 ? 1 : -1;
-    return { gap: Math.max(14, (Math.abs(rel) - s.arc / 2) * d), dir: { x: dx / d, y: dy / d }, away: { x: -Math.sin(h) * sg, y: Math.cos(h) * sg } };
-  }
-  function whiff(u, s, tag, mine) {
-    const e = edgeOf(s, u), col = tag === 'cvPart' ? C.silverHi : tag === 'cvComet' ? C.white : C.frost, back = Math.min(e.gap, 58);
-    const gx = u.x - e.away.x * back, gy = u.y - e.away.y * back - 16, dx = e.dir.x, dy = e.dir.y;
-    VFX.fx({ dur: 0.36, layer: 'air', draw: (c, p, t, q) => {
-      const k = q.a * (1 - p) * (1 - p), L = 44 + 84 * easeOut(Math.min(1, p / 0.45)), sh = (p - 0.15) * 80;   // (the edge, and the last inch of it running on past)
-      c.save(); c.lineCap = 'round';
-      VFX.neonPath(c, col, 5.5 * (1 - p * 0.6), k, () => { c.moveTo(gx + dx * (sh - L), gy + dy * (sh - L)); c.lineTo(gx + dx * (sh + L), gy + dy * (sh + L)); });
-      VFX.neonPath(c, '#ffffff', 1.8, k * 0.9, () => { c.moveTo(gx + dx * (sh - L * 0.5), gy + dy * (sh - L * 0.5)); c.lineTo(gx + dx * (sh + L * 0.5), gy + dy * (sh + L * 0.5)); });
-      // the air torn after the edge: a fainter line set back from it that comes late
-      const k2 = k * clamp((p - 0.12) / 0.3, 0, 1) * 0.6;
-      c.beginPath(); c.moveTo(gx - e.away.x * 16 + dx * (sh - L * 0.7), gy - e.away.y * 16 + dy * (sh - L * 0.7)); c.lineTo(gx - e.away.x * 16 + dx * (sh + L * 0.3), gy - e.away.y * 16 + dy * (sh + L * 0.3));
-      c.strokeStyle = rgba(C.ice, k2); c.lineWidth = 1.4; c.stroke();
-      c.restore();
-    } });
-    VFX.shock(u.x, u.y + 6, { r: 66, color: col, w: 3, dur: 0.34, flat: 0.6 });
-    VFX.sparks(u.x - e.away.x * 16, u.y - 12, { color: '#eef8ff', n: mine ? 12 : 7, speed: 300, angle: Math.atan2(e.away.y, e.away.x), spread: 0.9, up: 80, life: 0.9 });
-    // strands of cloak and scarf the blade cut free as it went by
-    for (let i = 0; i < (mine ? 6 : 3); i++) {
-      const sp = rand(120, 260);
-      VFX.spawn({ x: u.x, y: u.y, z: rand(26, 54), vx: (e.away.x * 0.7 + rand(-0.4, 0.4)) * sp, vy: (e.away.y * 0.7 + rand(-0.4, 0.4)) * sp * 0.7, vz: rand(40, 150), g: 420, drag: 0.02, life: 0.8, size: 9, color: i % 2 ? '#dff4ff' : '#8a96a8', kind: 'shard', add: false, vr: rand(-12, 12) });
-    }
-    flurry(u.x - e.away.x * 10, u.y, mine ? 8 : 4, { speed: 140, size: 0.8 });
-    if (mine) {
-      try {
-        if (typeof FX !== 'undefined' && FX.cam) {
-          FX.cam.flash(col, 0.1, 0.2); FX.cam.punch(0.02, 0.34);
-          const tn = nowS(); if (tn - S.stopAt > 1.2) { S.stopAt = tn; FX.cam.stop(0.04); }   // (a held breath, not every time)
-        }
-        if (typeof Sound !== 'undefined' && Sound.play) Sound.play('dash', { vol: 0.3, key: 'cv-whiff', minGap: 0.3 });
-      } catch (err) { /* cosmetic */ }
-      screenFx(0.5, (c, W, Hh, t, p, q) => {
-        const k = (1 - p) * (1 - p) * q.a; c.globalCompositeOperation = 'screen';
-        const g = c.createRadialGradient(W / 2, Hh / 2, Math.min(W, Hh) * 0.38, W / 2, Hh / 2, Math.hypot(W, Hh) * 0.55); g.addColorStop(0, rgba(col, 0)); g.addColorStop(1, rgba(col, 0.3 * k));
-        c.fillStyle = g; c.fillRect(0, 0, W, Hh);
-      });
-    }
-  }
-  function whiffs(tg, msg, ctx) {
-    if (!ctx || !ctx.units || !msg || !WHIFF.has(tg.tag)) return;
-    const s = tg.live, hits = msg.hits || [], t = nowS();
-    for (const u of ctx.units) {
-      if (hits.includes(u.id)) continue;
-      if (t - (S.whiffAt.get(u.id) || -9) < 0.7) continue;
-      if (SHAPES.contains(s, u.x, u.y)) continue;   // inside and not hit: sheltered, not a dodge
-      if (!SHAPES.contains(s, u.x, u.y, NEAR)) continue;
-      S.whiffAt.set(u.id, t);
-      whiff(u, s, tg.tag, isMe(u));
-    }
-  }
   // silver copies of him standing along a cut, each coming apart in turn (the figure that drew it)
   function ghostTrail(x, y, ang, L, n) {
     const ca = Math.cos(ang), sa = Math.sin(ang);
@@ -1055,7 +984,6 @@ const CV_FX = (() => {
   return {
     tell: tag => TELLS[tag] || null, buster, zone, roomOver, aftermath, prop, enrage, enrageLand, intro, death,
     impact(tg, ctx, H, msg) {
-      try { whiffs(tg, msg, ctx); } catch (e) { /* cosmetic */ }
       if (tg.type === 'buster') { IMP.buster(tg, ctx, H); return true; }
       const f = IMP[tg.tag]; if (!f) return false;
       f(tg, ctx, H); return true;
