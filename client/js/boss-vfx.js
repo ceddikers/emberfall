@@ -929,6 +929,8 @@ const BOSS_VFX = (() => {
     if (ctx && ctx.boss === 'caelum' && typeof CL_FX !== 'undefined' && CL_FX.impact(tg, msg, ctx, { shapeFlash, shockAt, scatter, after, shake, roomTint, sweep, streak, bang, AFT, coverShadows, clipOut, AR: AR() })) return;
     // The Hollow King: the beat on top of his landings (hit-stop, the whiff past a hero who dodged, the thrown sceptre) lands in hollowking-fx.js (HK_FX); it returns true only for a landing it draws whole
     if (ctx && ctx.boss === 'hollowking' && typeof HK_FX !== 'undefined' && HK_FX.impact(tg, msg, ctx, { shapeFlash, shockAt, scatter, after, shake, roomTint, sweep, streak, bang, AFT, coverShadows, clipOut, AR: AR() })) return;
+    // Grubnak: the beat on top of his landings (hit-stop, the whiff past a hero who dodged, the kitchen bits flung) lands in grubnak-fx.js (GR_FX); it only adds, so the landing below still plays
+    if (ctx && ctx.boss === 'grubnak' && typeof GR_FX !== 'undefined' && GR_FX.impact(tg, msg, ctx, { shapeFlash, shockAt, scatter, after, shake, roomTint, sweep, streak, bang, AFT, coverShadows, clipOut, AR: AR() })) return;
     // (an untagged raidwide washes the room in the boss's own colour, softly, instead of a grey-white veil)
     if (tg.type === 'raidwide') { (IMPACT[tg.tag] || (() => { roomTint({ grubnak: '#ff8a3a', skitterra: '#b070ff', volkar: '#7fc8ff', hollowking: '#6dff9a', wyrm: '#ff8a3a', titan: '#9fd8ff' }[ctx && ctx.boss] || '#ffffff', 0.15); shake(6); }))(tg, ctx); return; }
     if (tg.type === 'proximity') { (IMPACT[tg.tag] || IMPACT.boil)(tg); shake(10); return; }
@@ -1079,6 +1081,7 @@ const BOSS_VFX = (() => {
     if (bossKind === 'skitterra' && anim === 'chrysalis') chrysalis(bossDraw, dur);
     const key = castKey(bossKind, anim, name), sh = SH(bossDraw);
     if (bossKind === 'wyrm' && typeof WYRM_ART !== 'undefined') WYRM_ART.cast(sh, bossDraw, dur, anim, name, { drawIn, emit, beat, P });   // (wyrm-art.js: what gathers on him for each move)
+    if (bossKind === 'grubnak' && typeof GR_FX !== 'undefined' && !(CAST_FX.grubnak && CAST_FX.grubnak[key])) GR_FX.cast(sh, bossDraw, dur, anim, name, { drawIn, emit, beat, P, own, soon, shockAt, CAST_FX: CAST_FX.grubnak });   // (grubnak-fx.js: the windups of the moves that had none)
     if (bossKind === 'corvane' && typeof CV_FX !== 'undefined' && CV_FX.cast) CV_FX.cast(sh, bossDraw, dur, anim, name, { drawIn, emit, beat, soon, own });   // (corvane-fx.js: the gathering for each stance and move)
     if (anim === 'enrage') enrageStart(bossKind, bossDraw, dur);
     else { const fx = CAST_FX[bossKind] && CAST_FX[bossKind][(CAST_USE[bossKind] && CAST_USE[bossKind][key]) || key]; if (fx) fx(sh, bossDraw, dur); }
@@ -1494,10 +1497,11 @@ const BOSS_VFX = (() => {
   function hydraFx(msg) { return typeof HY_FX !== 'undefined' && HY_FX.prop(msg, { shockAt, shake, roomTint, bang }); }
   function propFx(msg, room, entById, bossKind) {
     if (hydraFx(msg)) return;
-    if ((bossKind === 'corvane' || msg.kind === 'stonelantern') && typeof CV_FX !== 'undefined' && CV_FX.prop(msg, { shockAt, shake })) return;   // (Corvane's dash, wisps and lanterns: corvane-fx.js)
+    if ((bossKind === 'corvane' || msg.kind === 'stonelantern') && typeof CV_FX !== 'undefined' && CV_FX.prop(msg, { shockAt, shake, roomTint })) return;   // (Corvane's dash, wisps and lanterns: corvane-fx.js)
     if (bossKind === 'brannoc' && typeof BR_FX !== 'undefined' && BR_FX.prop(msg, { shockAt, shake })) return;   // (Brannoc's leap and crush: brannoc-fx.js)
     if (bossKind === 'morrowoak' && typeof MG_FX !== 'undefined' && MG_FX.prop(msg, { shockAt, shake, entById })) return;   // (Morrow-Oak's holes, a hero falling in, a limb breaking: morrowoak-fx.js)
     if (bossKind === 'caelum' && typeof CL_FX !== 'undefined' && CL_FX.prop(msg, { shockAt, shake })) return;   // (Caelum's Dark Ember and the star's shards breaking: caelum-fx.js)
+    if (bossKind === 'grubnak' && typeof GR_FX !== 'undefined') GR_FX.prop(msg, { shockAt, shake });   // (the charge ending: a held beat on top; the dust and grit below still play)
     if (bossKind === 'titan' && typeof TI_ART !== 'undefined' && TI_ART.propFx(msg, room, entById, { shockAt })) return;   // (Hrimgar: frozen solid, warmed: titan-art.js)
     const st = PROP_STUFF[msg.kind] || { color: '#6a6a72', dust: '#b0b0b8', size: 1 };
     if (msg.k === 'chip') {

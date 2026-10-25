@@ -133,6 +133,20 @@ const WYRM_ART = (() => {
       ctx.strokeStyle = g; ctx.lineWidth = 4 + 3 * hash(i, seed + 3); ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(hx, hy); ctx.stroke();
       glow(ctx, hx, hy, 11 + 6 * p, C.hot, (0.3 + 0.4 * p) * k);
     }
+    // chevrons running the way he flies, quicker as it nears
+    for (let i = 0; i < 6; i++) {
+      const u = (t * (0.3 + 0.5 * p) + i / 6) % 1, d = u * L, hx = s.x + ca * d, hy = s.y + sa * d, al = (0.1 + 0.4 * p) * k * Math.sin(u * Math.PI);
+      ctx.beginPath(); ctx.moveTo(hx - ca * 22 - sa * 20, hy - sa * 22 + ca * 20); ctx.lineTo(hx, hy); ctx.lineTo(hx - ca * 22 + sa * 20, hy - sa * 22 - ca * 20);
+      ctx.strokeStyle = rgba(C.hot, al); ctx.lineWidth = 3.4; ctx.lineJoin = 'round'; ctx.stroke();
+    }
+    // where he comes in: heat at the head of the lane, swelling
+    glow(ctx, s.x, s.y, 90 + 70 * p, C.fire, (0.2 + 0.4 * p) * k);
+    // the last half second: both edges of the lane flare
+    const fl = clamp((p - 0.85) / 0.15, 0, 1);
+    if (fl > 0) for (const side of [-1, 1]) {
+      ctx.strokeStyle = rgba(C.white, 0.7 * fl * k); ctx.lineWidth = 5;
+      ctx.beginPath(); ctx.moveTo(s.x - sa * hw * side, s.y + ca * hw * side); ctx.lineTo(s.x + ca * L - sa * hw * side, s.y + sa * L + ca * hw * side); ctx.stroke();
+    }
     // sparks thrown off to either side
     for (let i = 0; i < 22; i++) {
       const u = (t * 0.5 + hash(i, seed + 4)) % 1, d = hash(i, seed + 5) * L, off = (hash(i, seed + 6) - 0.5) * s.w * 0.9, x = s.x + ca * d - sa * off, y = s.y + sa * d + ca * off;
@@ -272,6 +286,14 @@ const WYRM_ART = (() => {
           ctx.strokeStyle = rgba(C.ash, (0.12 + 0.25 * p) * k); ctx.lineWidth = 3; ctx.stroke();
         }
         ctx.restore();
+        // the last second: a ring of heat closing in on the edge of the circle (it arrives exactly as he does), the edge going white-hot
+        const cl = clamp((p - 0.62) / 0.38, 0, 1);
+        if (cl > 0) {
+          ctx.save(); ARENA.trace(ctx, 4); ctx.clip();
+          glowRing(ctx, s.x, s.y, s.r * (1 + 0.55 * (1 - easeOut(cl))), C.hot, 0.55 * k * Math.sin(Math.min(1, cl * 1.4) * Math.PI * 0.5), 3);
+          glowRing(ctx, s.x, s.y, s.r, C.white, 0.7 * k * easeIn(cl), 4);
+          ctx.restore();
+        }
       },
       air(ctx, tg, s, p, k) {
         const q = easeIn(p), r = s.r * (0.2 + 0.75 * q);
@@ -465,11 +487,101 @@ const WYRM_ART = (() => {
   }
   const pillarAt = (x, y, o) => VFX.pillar(x, y, o);
 
+  // ---------------------------------------------------------------- feel: the camera on the big hits, and the whiff
+  // THE WHIFF: a hero who stood just outside a dive's lane or landing, a breath, a lash or an Aftershock ring when it landed gets the
+  // blow's edge cracking past them (an ember streak, sparks, a ring of heat at their feet, and for your own hero a faint flash, a push
+  // of the camera and a soft whoosh). It is only ever drawn for a hero the blow did not hit and was close to, after it has landed, so it
+  // is a reward for a dodge and never a hint of where is safe.
+  const nowS = () => (typeof performance !== 'undefined' ? performance.now() : Date.now()) / 1000;
+  const FEEL = { camAt: -99, whiffAt: new Map() };
+  const isMe = u => typeof Net !== 'undefined' && Net && u.id === Net.id;
+  const WHIFF_TAGS = new Set(['divepath', 'divepath2', 'dragonfall', 'breath', 'taillash', 'aftershock']);
+  const NEAR = 80;
+  // the camera holds for a beat and leans in (your own screen only; main.js FX.cam); never more than once in a short while
+  function cam(stop = 0.06, punch = 0.03, dur = 0.45, gap = 1.2, flash) {
+    const t = nowS(); if (t - FEEL.camAt < gap) return; FEEL.camAt = t;
+    try { if (typeof FX !== 'undefined' && FX.cam) { if (flash) FX.cam.flash(flash[0], flash[1], flash[2] || 0.3); if (stop) FX.cam.stop(stop); if (punch) FX.cam.punch(punch, dur); } } catch (e) { /* cosmetic */ }
+  }
+  // which way is "away from the blow" for a hero standing just outside this shape
+  function awayFrom(s, u) {
+    if (s.kind === 'rect') {
+      const c = Math.cos(s.angle), sn = Math.sin(s.angle), across = -(u.x - s.x) * sn + (u.y - s.y) * c, sg = across >= 0 ? 1 : -1;
+      return { x: -sn * sg, y: c * sg };
+    }
+    const dx = u.x - s.x, dy = u.y - s.y, d = Math.hypot(dx, dy) || 1;
+    if (s.kind === 'cone') { let da = Math.atan2(dy, dx) - s.angle; while (da > Math.PI) da -= TAU; while (da < -Math.PI) da += TAU; const sg = da >= 0 ? 1 : -1; return { x: -dy / d * sg, y: dx / d * sg }; }
+    const sg = s.kind === 'donut' && d < (s.r2 || 0) ? -1 : 1;   // (in a ring's hole, away from the blow is inward)
+    return { x: sg * dx / d, y: sg * dy / d };
+  }
+  function whiff(u, s, mine) {
+    const a = awayFrom(s, u), tx = -a.y, ty = a.x, ex = u.x - a.x * 34, ey = u.y - a.y * 34 - 14;   // (the edge, just toward the blow from them)
+    VFX.fx({ dur: 0.34, layer: 'air', draw: (c, p, t, e) => {
+      const k = e.a * (1 - p) * (1 - p), L = 44 + 70 * easeOut(Math.min(1, p / 0.5)), sh = (p - 0.2) * 44;
+      c.save();
+      VFX.neonPath(c, '#ff9a2a', 5 * (1 - p * 0.6), k, () => { c.moveTo(ex - tx * L + a.x * sh, ey - ty * L + a.y * sh); c.lineTo(ex + tx * L + a.x * sh, ey + ty * L + a.y * sh); });
+      VFX.neonPath(c, '#fff4d8', 2, k * 0.85, () => { c.moveTo(ex - tx * L * 0.5 + a.x * sh, ey - ty * L * 0.5 + a.y * sh); c.lineTo(ex + tx * L * 0.5 + a.x * sh, ey + ty * L * 0.5 + a.y * sh); });
+      c.restore();
+    } });
+    VFX.shock(u.x, u.y + 6, { r: 66, color: '#ffb04a', w: 3, dur: 0.34, flat: 0.6 });
+    VFX.sparks(u.x - a.x * 18, u.y - 10, { color: C.hot, n: mine ? 14 : 8, speed: 320, angle: Math.atan2(a.y, a.x), spread: 0.9, up: 90, life: 0.9 });
+    for (let i = 0; i < (mine ? 5 : 3); i++) VFX.spawn({ x: u.x - a.x * rnd(10, 30), y: u.y - a.y * rnd(10, 30), z: rnd(10, 40), vx: a.x * rnd(60, 160), vy: a.y * rnd(60, 160), vz: rnd(40, 120), life: rnd(0.5, 0.9), size: rnd(4, 8), size1: 0, color: i % 2 ? '#ffb040' : '#ff6a1a' });
+    if (mine) {
+      try {
+        if (typeof FX !== 'undefined' && FX.cam) { FX.cam.flash('#ffb060', 0.1, 0.16); FX.cam.punch(0.02, 0.32); }
+        if (typeof Sound !== 'undefined' && Sound.play) Sound.play('dash', { vol: 0.3, rate: 0.7, key: 'wy-whiff', minGap: 0.3 });
+      } catch (e) { /* cosmetic */ }
+    }
+  }
+  function whiffs(tg, msg, ctx) {
+    if (!ctx || !ctx.units || !WHIFF_TAGS.has(tg.tag)) return;
+    const s = tg.live, hits = (msg && msg.hits) || [], t = nowS();
+    for (const u of ctx.units) {
+      if (hits.includes(u.id)) continue;
+      if (t - (FEEL.whiffAt.get(u.id) || -9) < 0.7) continue;
+      if (SHAPES.contains(s, u.x, u.y)) continue;   // inside and not hit: covered or shielded, not a dodge
+      if (!SHAPES.contains(s, u.x, u.y, NEAR)) continue;
+      FEEL.whiffAt.set(u.id, t);
+      whiff(u, s, isMe(u));
+    }
+  }
+  // embers thrown up out of a point and falling back (a landing, an eruption)
+  function fountain(x, y, r, n, o = {}) {
+    for (let i = 0; i < n; i++) {
+      const a = rnd(0, TAU), d = rnd(0, r), sp = rnd(40, o.out ?? 150);
+      VFX.spawn({ x: x + Math.cos(a) * d, y: y + Math.sin(a) * d * 0.7, z: rnd(0, 20), vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * 0.7, vz: rnd(o.vz0 ?? 220, o.vz1 ?? 460), g: 520, life: rnd(0.8, 1.4), size: rnd(4, 10), size1: 0, add: true, color: i % 3 ? '#ffb040' : (i % 3 === 0 && i % 2 ? '#fff0c0' : '#ff6a1a') });
+    }
+  }
+  // his shadow and a streak of fire racing down a dive's lane as he goes over it (the lane's last beat, after the embers have burned)
+  function flyover(s) {
+    const ca = Math.cos(s.angle), sa = Math.sin(s.angle), L = s.len;
+    VFX.fx({ dur: 0.38, layer: 'air', draw: (c, p, t, e) => {
+      const q = easeOut(p), d = L * q, x = s.x + ca * d, y = s.y + sa * d, k = e.a * Math.min(1, p / 0.1) * (1 - Math.max(0, p - 0.7) / 0.3);
+      c.save(); ARENA.trace(c, 4); c.clip();
+      // his shadow: a body and the span of the wings across the lane
+      c.translate(x, y); c.rotate(s.angle);
+      c.fillStyle = rgba('#000000', 0.38 * k);
+      c.beginPath(); c.ellipse(0, 0, 150, 38, 0, 0, TAU); c.fill();
+      c.beginPath(); c.moveTo(20, 0); c.lineTo(-30, -s.w * 0.62); c.lineTo(-80, -s.w * 0.46); c.lineTo(-50, 0); c.lineTo(-80, s.w * 0.46); c.lineTo(-30, s.w * 0.62); c.closePath(); c.fill();
+      c.restore();
+      // the white-hot head with its long tail
+      c.save(); ARENA.trace(c, 4); c.clip();
+      const tl = Math.min(d + 20, 330), g = c.createLinearGradient(x - ca * tl, y - sa * tl, x, y);
+      g.addColorStop(0, rgba(C.fire, 0)); g.addColorStop(0.7, rgba(C.amber, 0.6 * k)); g.addColorStop(1, rgba(C.white, 0.95 * k));
+      c.lineCap = 'round'; c.strokeStyle = g; c.lineWidth = 24 * (1 - p * 0.4); c.beginPath(); c.moveTo(x - ca * tl, y - sa * tl); c.lineTo(x, y); c.stroke();
+      c.restore();
+      glow(c, x, y - 10, 60, C.hot, 0.8 * k);
+    }, tick: () => {
+      const d = Math.random() * L * 0.9; VFX.spawn({ x: s.x + ca * d - sa * rnd(-70, 70), y: s.y + sa * d + ca * rnd(-70, 70), z: 8, vz: rnd(60, 160), life: rnd(0.4, 0.8), size: rnd(4, 8), size1: 0, color: Math.random() < 0.5 ? '#ffb040' : '#ff6a1a' });
+    } });
+  }
+
   // the impact of each of his moves; returns true when it handled the tag
-  function impact(tg, ctx, H) {
+  function impact(tg, ctx, H, msg) {
+    try { whiffs(tg, msg, ctx); } catch (e) { /* cosmetic */ }
     const s = tg.live, b = (ctx && ctx.bossDraw) || { x: 0, y: 0, f: 0 };
     const tag = tg.tag;
     if (tg.type === 'buster') {
+      if (tg.target != null && isMe({ id: tg.target })) cam(0.05, 0.026, 0.4, 2);   // (the blow at you: a hold and a push)
       // Rending Claws: three gashes torn along the cone, fire standing in them, rock thrown up
       const e = tg.target != null && ctx.entById ? ctx.entById(tg.target) : null, x = e ? e.x : s.x + Math.cos(s.angle) * 160, y = e ? e.y : s.y + Math.sin(s.angle) * 160;
       H.shapeFlash(s, '#ff4a3a', { a: 0.26 });
@@ -497,6 +609,9 @@ const WYRM_ART = (() => {
         flames(list);
         for (let i = 0; i < 9; i++) { const a = rnd(0, TAU), r = rnd(250, 420); VFX.debris(b.x + Math.cos(a) * r, b.y + Math.sin(a) * r, { color: '#2a1c18', n: 2, speed: 1.1, hot: true }); }
         VFX.sparks(b.x, b.y, { color: C.hot, n: 16, speed: 420 });
+        H.shockAt(b.x, b.y, { r: 700, color: C.deep, w: 6, dur: 1.0, flat: 1, delay: 0.24 });   // (the last ring out to the wall)
+        fountain(b.x, b.y, 260, 16, { out: 220, vz0: 160, vz1: 340 });
+        cam(0.05, 0.03, 0.5, 2, ['#ff8a3a', 0.14, 0.3]);
         H.shake(11);
         return true;
       }
@@ -513,6 +628,15 @@ const WYRM_ART = (() => {
         H.shapeFlash(s, '#e8c8a0', { a: 0.26, dur: 0.45 });
         for (let i = 0; i < 9; i++) { const a = s.angle - s.arc / 2 + (i + 0.5) / 9 * s.arc, d = rnd(0.5, 0.95) * s.r; VFX.smoke(s.x + Math.cos(a) * d, s.y + Math.sin(a) * d, { n: 1, color: '#6a5648', size: 32, a: 0.55, speed: 140 }); }
         for (const q of H.scatter(s, 5)) VFX.debris(q.x, q.y, { color: '#2a1c18', n: 2, speed: 1 });
+        // the lash cracks through the cone: a bone-pale arc whipping across it, sparks off the stone where it struck
+        VFX.fx({ dur: 0.34, layer: 'air', draw: (c, p, t, e) => {
+          const k = e.a * (1 - p) * (1 - p), a0 = s.angle - s.arc / 2, a1 = a0 + s.arc * easeOut(Math.min(1, p / 0.7));
+          c.save(); ARENA.trace(c, 4); c.clip();
+          for (const [rr, w] of [[s.r * 0.55, 8], [s.r * 0.78, 6], [s.r * 0.97, 4]]) VFX.neonPath(c, '#f0e2c0', w * (1 - p * 0.5), k * 0.8, () => { c.arc(s.x, s.y, rr, a0, a1); });
+          c.restore();
+        } });
+        for (let i = 0; i < 4; i++) { const a = s.angle - s.arc / 2 + (i + 0.5) / 4 * s.arc; VFX.sparks(s.x + Math.cos(a) * s.r * 0.8, s.y + Math.sin(a) * s.r * 0.8, { color: C.hot, n: 5, speed: 260 }); }
+        cam(0.04, 0.02, 0.35, 2);
         H.shake(9);
         return true;
       }
@@ -523,6 +647,10 @@ const WYRM_ART = (() => {
         H.shapeFlash(s, '#ff7a1a', { a: 0.26, dur: 0.6 });
         for (const q of H.scatter(s, 9)) H.after(rnd(0.15, 0.6), () => VFX.debris(q.x, q.y, { color: '#2a1c18', n: 2, speed: 1.1, hot: true }));
         VFX.smoke(s.x + Math.cos(s.angle) * L * 0.8, s.y + Math.sin(s.angle) * L * 0.8, { n: 4, color: '#4a3a38', size: 34, a: 0.4, speed: 60, r: 120 });
+        // the heat of it rolling out: a ring running down the cone, the far end flaring, embers lifting off the whole swath
+        for (let i = 0; i < 3; i++) H.shockAt(s.x + Math.cos(s.angle) * (L * (0.25 + i * 0.28)), s.y + Math.sin(s.angle) * (L * (0.25 + i * 0.28)), { r: 150 + i * 60, color: i ? C.fire : C.hot, w: 5, dur: 0.5, flat: 1, delay: 0.1 + i * 0.1 });
+        for (const q of H.scatter(s, 10)) H.after(rnd(0.1, 0.7), () => fountain(q.x, q.y, 20, 3, { out: 40, vz0: 120, vz1: 260 }));
+        cam(0.03, 0.02, 0.4, 1.5);
         H.shake(7);
         return true;
       }
@@ -546,6 +674,8 @@ const WYRM_ART = (() => {
         H.shockAt(s.x, s.y, { r: s.r * 1.1, color: '#ffffff', w: 4, dur: 0.4, flat: 1, delay: 0.05 });
         VFX.debris(s.x, s.y, { color: '#1c1210', n: 14, speed: 1.5, hot: true, up: 1.5, size: 1.4 });
         H.roomTint('#ff8a3a', 0.12, 0.6);
+        fountain(s.x, s.y, s.r * 0.6, 20, { out: 200 });
+        cam(0.06, 0.035, 0.5, 2, ['#ffb060', 0.16, 0.3]);
         H.shake(13);
         return true;
       }
@@ -556,6 +686,10 @@ const WYRM_ART = (() => {
         lineFlames(s.x, s.y, s.x + ca * s.len, s.y + sa * s.len, 95, { h: 62, w: 13, travel: 0.35, life: 0.9 });
         H.AFT.scorch(s.x, s.y, s.x + ca * s.len, s.y + sa * s.len, { w: 70, dur: 6, ember: '#ffb040', smokeRate: 0.06 });
         for (const q of H.scatter(s, 8)) VFX.sparks(q.x, q.y, { color: C.hot, n: 3, speed: 280 });
+        flyover(s);
+        // the wind of him going over: ash flung out to both sides along the whole lane
+        for (let i = 0; i < 7; i++) { const d = (i + 0.5) / 7 * s.len; H.after(d / s.len * 0.3, () => { for (const sd of [-1, 1]) VFX.smoke(s.x + ca * d - sa * sd * 90, s.y + sa * d + ca * sd * 90, { n: 1, color: '#8a7e74', size: 34, a: 0.5, speed: 150 }); }); }
+        cam(0.02, 0.015, 0.35, 0.6);
         H.shake(6);
         return true;
       }
@@ -572,6 +706,14 @@ const WYRM_ART = (() => {
         H.AFT.crater(s.x, s.y, { r: s.r * 0.8, dur: 8 });
         H.AFT.decal(s.x, s.y, { style: 'crack', r: s.r * 0.8, dur: 8, a: 0.6, seed: s.x * 0.01 + s.y * 0.013 });
         H.roomTint('#ff8a3a', 0.16, 0.6);
+        // the weight of it: a second ring a beat behind, a fountain of embers coming down for a while, ash flung off the rim of the pit,
+        // the screen blinking white-gold and pushing in
+        H.shockAt(s.x, s.y, { r: s.r * 1.9, color: C.red, w: 8, dur: 0.85, flat: 1, delay: 0.12 });
+        H.shockAt(s.x, s.y, { r: s.r * 2.6, color: C.deep, w: 5, dur: 1.1, flat: 1, delay: 0.24 });
+        fountain(s.x, s.y, s.r * 0.7, 34, { out: 260, vz0: 260, vz1: 560 });
+        for (let i = 0; i < 12; i++) { const a = i * TAU / 12 + rnd(-0.1, 0.1); VFX.smoke(s.x + Math.cos(a) * s.r * 0.8, s.y + Math.sin(a) * s.r * 0.6, { n: 1, color: '#6a5a50', size: 40, a: 0.55, speed: 200 }); }
+        VFX.sparks(s.x, s.y - 10, { color: C.white, n: 26, speed: 460 });
+        cam(0.08, 0.045, 0.55, 1.2, ['#ffc070', 0.26, 0.35]);
         H.shake(15);
         return true;
       }
@@ -619,6 +761,7 @@ const WYRM_ART = (() => {
           VFX.fx({ dur: 0.7, layer: 'air', draw: (c, p, t, e) => { const q = easeOut(p), v = sd * q * 220, k = e.a * (1 - p); c.save(); c.lineCap = 'round'; c.strokeStyle = rgba(C.ash, 0.6 * k); c.lineWidth = 4; c.beginPath(); c.moveTo(x - sa * (v - sd * 40), y + ca * (v - sd * 40)); c.lineTo(x - sa * v, y + ca * v); c.stroke(); c.strokeStyle = rgba('#ffffff', 0.7 * k); c.lineWidth = 1.4; c.stroke(); c.restore(); } });
         }
         for (const q of H.scatter(s, 8)) VFX.debris(q.x, q.y, { color: '#3a2c26', n: 3, speed: 1.4 });
+        cam(0.03, 0.02, 0.35, 1);
         H.shake(8);
         return true;
       }
@@ -627,6 +770,8 @@ const WYRM_ART = (() => {
         flood(0, 0, AR(), s.r2 || 465, 1.2);
         H.roomTint('#ff5a1a', 0.2, 0.9);
         H.shockAt(0, 0, { r: AR(), r0: s.r2 || 465, color: C.amber, w: 9, dur: 0.8, flat: 1 });
+        for (let i = 0; i < 18; i++) { const a = i * TAU / 18 + rnd(-0.1, 0.1), r = (s.r2 || 465) + rnd(10, 80); H.after(rnd(0, 0.5), () => fountain(Math.cos(a) * r, Math.sin(a) * r, 24, 3, { out: 50, vz0: 200, vz1: 420 })); }
+        cam(0.06, 0.04, 0.6, 2, ['#ff7a2a', 0.22, 0.4]);
         H.shake(12);
         return true;
       }
@@ -636,6 +781,9 @@ const WYRM_ART = (() => {
         H.shockAt(s.x, s.y, { r: 700, r0: s.r2, color: C.hot, w: 4, dur: 0.7, flat: 1, delay: 0.05 });
         H.roomTint('#ff8a3a', 0.18, 0.7);
         for (const q of H.scatter({ kind: 'circle', x: s.x, y: s.y, r: 520 }, 10)) VFX.debris(q.x, q.y, { color: '#1c1210', n: 3, speed: 1.4, hot: true });
+        // embers thrown up along the ring as it runs out
+        for (let i = 0; i < 14; i++) { const a = i * TAU / 14 + rnd(-0.15, 0.15), d = s.r2 + 290 + rnd(0, 120); H.after(0.05 + i * 0.03, () => fountain(s.x + Math.cos(a) * d, s.y + Math.sin(a) * d, 20, 3, { out: 60, vz0: 160, vz1: 340 })); }
+        cam(0.05, 0.03, 0.45, 1.2, ['#ffb060', 0.14, 0.25]);
         H.shake(11);
         return true;
       }
@@ -644,6 +792,9 @@ const WYRM_ART = (() => {
         flood(s.x, s.y, AR() + Math.hypot(s.x, s.y), s.r2, 1.3, { n: 34, h: 170 });
         H.roomTint('#ff5a1a', 0.32, 1.0);
         H.shockAt(s.x, s.y, { r: 900, r0: s.r2, color: C.hot, w: 10, dur: 0.8, flat: 1 });
+        H.shockAt(s.x, s.y, { r: 1300, r0: s.r2, color: C.red, w: 6, dur: 1.1, flat: 1, delay: 0.2 });
+        for (let i = 0; i < 20; i++) { const a = rnd(0, TAU), d = s.r2 + rnd(30, 520); H.after(rnd(0, 0.6), () => fountain(s.x + Math.cos(a) * d, s.y + Math.sin(a) * d, 24, 3, { out: 60, vz0: 240, vz1: 520 })); }
+        cam(0.09, 0.05, 0.7, 2, ['#ff8a3a', 0.34, 0.5]);
         H.shake(16);
         return true;
       }
@@ -894,6 +1045,9 @@ const WYRM_ART = (() => {
       H.emit(sh, dur, 0.9, () => { const a = rnd(0, TAU), d = rnd(60, 140); VFX.smoke(b.x + Math.cos(a) * d, b.y + Math.sin(a) * d * 0.7, { n: 1, color: '#7a6e64', size: 26, a: 0.5, speed: 160 }); });
       H.drawIn(sh, dur, () => b, { color: '#cfc3b4', r: 170, gr: 60, rate: 0.5, glow: false });
     } else if (anim === 'dive') {
+      // wings drawn wide, the heat gathering along them, a pulse thrown off with every beat
+      H.drawIn(sh, dur, chest, { color: '#ffb040', color2: '#fff4d8', r: 120, gr: 50, rate: 0.5, z: 30 });
+      H.beat(sh, dur, 0.7, () => { const q = chest(); VFX.shock(q.x, q.y, { r: 150, color: '#ffb040', w: 4, dur: 0.5, flat: 0.8 }); });
       H.emit(sh, dur, 0.6, () => { const a = rnd(0, TAU); VFX.spawn({ x: b.x + Math.cos(a) * 40, y: b.y + Math.sin(a) * 30, z: 40, vz: rnd(20, 60), life: rnd(0.5, 0.9), size: rnd(3, 6), size1: 0, color: '#ffb040' }); });
     } else if (anim === 'roost') {
       H.emit(sh, dur, 0.8, () => { const a = rnd(0, TAU), d = rnd(40, 120); VFX.spawn({ x: b.x + Math.cos(a) * d, y: b.y + Math.sin(a) * d * 0.7, z: 60, vz: -rnd(20, 60), life: rnd(0.6, 1), size: rnd(3, 6), size1: 0, color: '#ff8a2a' }); });
