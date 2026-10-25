@@ -189,7 +189,7 @@ const MORROWOAK = {
       const cx = B.x, cy = B.y;
       const petals = (a, delay) => { const group = new Set(); PETALS.forEach((tag, i) => f.aoe({ kind: 'cone', x: cx, y: cy, r: 1300, arc: ARC[i], angle: +(a + i * Math.PI / 2).toFixed(3) }, delay, dmg.petal, { tag, group })); };
       petals(a0, d);
-      f.emit({ t: 'roomev', k: 'mgbloom', x: Math.round(cx), y: Math.round(cy), a: +a0.toFixed(3), dir, at: +d.toFixed(2), turn: +turn.toFixed(2), dur: +(d + turn + 0.6).toFixed(2) });
+      f.emit({ t: 'roomev', k: 'mgbloom', x: Math.round(cx), y: Math.round(cy), a: +a0.toFixed(3), dir, at: +d.toFixed(2), turn: +turn.toFixed(2), dur: +(d + turn + 0.6).toFixed(2), last: o.last ? 1 : 0 });
       f.afterKeep(d - 0.02, () => { if (f.state === 'live') petals(a0 + dir * Math.PI / 4, turn + 0.02); });
     };
     const bloom = serial(bloomRaw, 'Fourfold Bloom');
@@ -407,7 +407,7 @@ const MORROWOAK = {
         const a = f.spawnAdd({ kind: 'limb-' + k, x: B.x + ox, y: B.y + oy, hp: dmg.limbHp, r: 36, inert: true, prio: 3,
           onTick: q => { q.x = B.x + ox; q.y = B.y + oy; q.facing = Math.atan2(oy, ox); },
           onDeath: q => {
-            f.emit({ t: 'propfx', k: 'mglimb', x: Math.round(q.x), y: Math.round(q.y), limb: k });
+            f.emit({ t: 'propfx', k: 'mglimb', x: Math.round(q.x), y: Math.round(q.y), limb: k, gasp: H ? 1 : 0 });
             relabel();
             // Last Gasp (Hard): its move fires once more from where it fell
             // ... but not on top of another heavy move: it waits its turn
@@ -436,7 +436,7 @@ const MORROWOAK = {
       const ls = liveLimbs();
       busy(ls.length * f.ct(1.6) + f.ct(8));
       ls.forEach((k, i) => f.afterKeep(i * f.ct(1.6), () => { if (f.state === 'live' && f.adds.has(limbs[k].id)) LIMB[k].fn(limbs[k]); }, LIMB[k].name));
-      f.afterKeep(ls.length * f.ct(1.6) + 0.5, () => bloomRaw(), 'Fourfold Bloom');
+      f.afterKeep(ls.length * f.ct(1.6) + 0.5, () => bloomRaw({ last: true }), 'Fourfold Bloom');
     }, 'Fourfold Bloom');
     // Draw and Bloom: an Inhale that rolls straight into a Fourfold Bloom (the pull puts you at his feet, the petals open there)
     const drawBloom = serial(() => {

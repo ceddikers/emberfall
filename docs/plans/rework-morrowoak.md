@@ -49,3 +49,14 @@ moves and tune spacing, caps and numbers instead.
 ## Second pass (2026-10-26): the first minute of Act III
 
 Hard: the first limb waits 3 s longer after the Swallowing and the post-Swallowing Root Lash 4 s longer (the healer's breather); the first two limbs to take a turn are never Cleaver Bough or Barrow Lantern; the first Twin Seed of the new room comes after the limbs have taken three turns (it sat on top of the Swallowing's aftermath). Normal moves the same Hunger Seed set later. Bots: Hard `GEAR=post4` 56 of 90 (62%); Normal `GEAR=post3` 77 of 90.
+
+## Cool-factor pass (2026-10-26): looks and screen feel only, no mechanic changed
+
+The ask: richer signature moves and a dodge that feels earned. Every telegraph is drawn exactly as before (red damage, blue share, no safe spot painted); nothing here changes who is hit.
+
+- **The whiff** (morrowoak-fx.js `whiffs`): a hero a blow did not take, within a stride of its edge (or slipped through a lane or petal), gets the edge cracking past them in the move's own light, dead leaves and bark thrown off the wind of it, a ring of dust; your own hero also gets a flash at the edge of the screen and a push of the camera. A hero hurt by any blow of the same moment never gets one.
+- **The lip**: coming to a hole's rim without falling (a step taken just short, or an Inhale or Hungering Dark pull that stops at the edge) knocks clods into the dark and flares the rim.
+- **Holes alive**: light lifts off every hole and the odd dead leaf is pulled in; a new hole stands up a column of light for a heartbeat.
+- **Windups**: Inhale darkens and rushes the screen's edge inward and rumbles the floor as it builds; the Hunger Seed's lock thumps the ground; Hungering Dark winds the dark inside each hole and flares the rim white in the last breath; every limb's move gathers its colour round the limb (halo, drawn-in motes, a white ring) before it fires.
+- **Screen feel**: Sap Tide floods amber in from the screen's edge; petals, seed bursts and hole births push the camera; the Last Bloom's petals each stand a column of their light and ring the room.
+- **Last Gasp**: the broken limb's stump gathers its colour back for the moment before the move goes off again (the server now sends `gasp` with the break, and `last` on the final Bloom; both only read by the client).

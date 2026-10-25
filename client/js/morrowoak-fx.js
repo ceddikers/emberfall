@@ -5,6 +5,8 @@
 // (ArenaView.drawPuddles), the Swallowing and the limbs growing (ArenaView.drawZones and drawRoomOver hand over), and the enrage,
 // entrance and fall. Loaded after morrowoak-art.js; the other files reach it through MG_FX and every call is guarded by
 // `typeof MG_FX !== 'undefined'`.
+// On top of the moves: the whiff for a hero a blow just missed, the hole's lip giving under a close step, light lifting off every hole, and
+// each windup's screen feel (Inhale's closing edges, Sap Tide's amber, a limb gathering its colour). All cosmetic; nothing changes who is hit.
 // The rule as everywhere: the red (or blue) outline marks the exact area and is drawn by boss-tells.js; what is painted inside is the
 // clue, and safe floor is never painted. The look follows the painted sheets (docs/art/vfx-reference/morrowoak-*.png): scorched cracked
 // brown earth, withered bark, a few dead gold leaves, the Hunger as black-violet with a bright violet rim, amber sap, and each limb in
@@ -41,6 +43,21 @@ const MG_FX = (() => {
   }
   const shakeNow = n => { try { if (typeof vfxShake === 'function') vfxShake(n, 'boss'); } catch (e) { /* cosmetic */ } };
   const SPLIT = -96;   // how far above his feet the Hunger's split sits on the screen (the chest of the trunk)
+  Object.assign(S, { whiffAt: new Map(), hitAt: new Map(), lip: new Map(), lipAt: new Map(), holeAt: new Map(), rumbleAt: -99 });
+  const isMe = u => typeof Net !== 'undefined' && Net && u && u.id === Net.id;
+  const once = key => { if (S.fired.has(key)) return false; if (S.fired.size > 500) S.fired.clear(); S.fired.add(key); return true; };
+  // a whole-screen layer in screen space (your own view only), over everything on the arena canvas
+  function screenFx(dur, fn) {
+    return VFX.fx({ dur, layer: 'air', draw: (c, p, t, e) => { c.save(); c.setTransform(1, 0, 0, 1, 0, 0); fn(c, c.canvas.width, c.canvas.height, t, p, e); c.restore(); } });
+  }
+  // the screen's edge darkened or lit in a colour (a vignette): a is how strong, inner how far in it starts (0..1 of the short side)
+  function vig(c, W, Hh, col, a, inner = 0.34, mode = 'source-over') {
+    if (a <= 0.004) return;
+    c.globalCompositeOperation = mode;
+    const g = c.createRadialGradient(W / 2, Hh / 2, Math.min(W, Hh) * inner, W / 2, Hh / 2, Math.hypot(W, Hh) * 0.56);
+    g.addColorStop(0, rgba(col, 0)); g.addColorStop(1, rgba(col, Math.min(1, a)));
+    c.fillStyle = g; c.fillRect(0, 0, W, Hh); c.globalCompositeOperation = 'source-over';
+  }
 
   // ---------------------------------------------------------------- small painted pieces
   // a rect telegraph drawn in its own frame: x runs down the lane, y across it (full: the whole length, however long)
@@ -154,6 +171,19 @@ const MG_FX = (() => {
     const i = limbIndex(key), b = env && env.boss; if (i < 0 || !b) return null;
     return { x: b.x + SIDE[i][0] * 120, y: b.y + SIDE[i][1] * 95 };
   }
+  // the limb gathering its move: a halo in its own colour, motes drawn into it faster as it nears, a white-hot ring in the last breath
+  // (drawn on the ground behind the limb, in every warning of a limb's move; a is how much of it to draw, for a move drawn several times)
+  function limbCharge(ctx, x, y, col, hi, p, t, a = 1) {
+    const pulse = 0.65 + 0.35 * Math.sin(t * (6 + 12 * p)), k = (0.3 + 0.6 * p) * a;
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    glow(ctx, x, y - 18, 64 + 56 * p * pulse, col, 0.34 * k);
+    for (let i = 0; i < 8; i++) {
+      const q = (t * (0.7 + 1.1 * p) + i / 8) % 1, an = i * TAU / 8 + t * 0.6, d = 130 * (1 - q);
+      glow(ctx, x + Math.cos(an) * d, y - 18 + Math.sin(an) * d * 0.7, 3 + 7 * (1 - q), i % 2 ? hi : col, 0.7 * q * k);
+    }
+    if (p > 0.82) { const w = (p - 0.82) / 0.18; ctx.beginPath(); ctx.ellipse(x, y + 4, 52 * (1.7 - 0.7 * w), 52 * (1.7 - 0.7 * w) * 0.5, 0, 0, TAU); ctx.strokeStyle = rgba('#ffffff', 0.8 * w * a); ctx.lineWidth = 2.6; ctx.stroke(); }
+    ctx.restore();
+  }
 
   // Hunger Seed: the dark seed hanging over their head, pulsing faster as it nears, a ring shrinking round them. At the lock (1.6 s before it
   // bursts) the ground splits under the circle: cracks run out with violet light in them and the dark opens, so the carrier sees where the hole
@@ -176,6 +206,8 @@ const MG_FX = (() => {
     if (locked) {
       // the ground splits: a ragged dark opening, cracks running out of it with violet light inside
       const R2 = r * 0.83 * easeOut(q);
+      // the lock: the ground gives a thump, a ring closes on the circle and violet shards jump (once)
+      if (once('seedlock' + tg.id)) { closing(s.x, s.y + 6, r * 1.5, r * 0.7, C.violetHi, 7, 0.45, 0); hungerUp(s.x, s.y, 8, { size: 0.9, speed: 200 }); shakeNow(4); }
       crackStar(ctx, s.x, s.y, r * 1.02 * easeOut(q), 12, tg.id + 7, (0.55 + 0.4 * q) * k, { w: 2.4, jag: 8 });
       pit(ctx, s.x, s.y, R2, k * (0.5 + 0.5 * q), tg.id);
       glow(ctx, s.x, s.y, r * 0.9, C.violet, 0.2 * q * k * (0.7 + 0.3 * Math.sin(t * 9)));
@@ -221,6 +253,19 @@ const MG_FX = (() => {
   // it comes; violet roots glow along the floor toward his feet. There is nothing on the floor to stand outside of: the pull is the move.
   TELLS.mgInhale = { outline: false, ground(ctx, tg, s, p, k, t, env) {
     const R = AR(), cx = s.x, cy = s.y, sp = 0.45 + 1.7 * p;
+    // on your own screen: the edges darken and rush inward as the breath comes, and the floor rumbles under it
+    if (once('inh' + tg.id)) screenFx((tg.dur || 4.4) + 0.5, (c, W, Hh, tt, pp, e) => {
+      const q = clamp(tt / (tg.dur || 4.4), 0, 1), k = easeIn(q) * (1 - clamp((tt - (tg.dur || 4.4)) / 0.4, 0, 1)) * e.a;
+      vig(c, W, Hh, '#0a0418', 0.38 * k, 0.34);
+      c.save(); c.lineCap = 'round';
+      for (let i = 0; i < 26; i++) {
+        const a = i * TAU / 26 + hash(i, 4) * 0.3, qq = (tt * (0.9 + 1.2 * q) * (0.6 + hash(i, 5)) + hash(i, 6)) % 1, d0 = Math.hypot(W, Hh) * 0.55, d = d0 * (1 - qq * 0.55), len = 30 + 120 * q * hash(i, 7);
+        c.beginPath(); c.moveTo(W / 2 + Math.cos(a) * d, Hh / 2 + Math.sin(a) * d * 0.8); c.lineTo(W / 2 + Math.cos(a) * (d - len), Hh / 2 + Math.sin(a) * (d - len) * 0.8);
+        c.strokeStyle = rgba(i % 3 ? C.violetHi : C.bone, 0.28 * k * Math.sin(qq * Math.PI)); c.lineWidth = 1.5 + 2 * hash(i, 8); c.stroke();
+      }
+      c.restore();
+    });
+    if (p > 0.3 && nowS() - S.rumbleAt > 0.4) { S.rumbleAt = nowS(); shakeNow(1 + 3 * p * p); }
     ctx.save(); ARENA.trace(ctx, 2); ctx.clip();
     // roots glowing along the ground toward him
     for (let i = 0; i < 12; i++) {
@@ -470,6 +515,18 @@ const MG_FX = (() => {
     }
     glow(ctx, s.x, s.y, R * 0.9, C.violet, (0.05 + 0.12 * p) * k);
     ctx.restore();
+    // inside the hole itself (never floor): the dark turning, three arms of light wound into it, the rim flaring white in the last breath
+    if (r0 > 8) {
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
+      for (let arm = 0; arm < 3; arm++) {
+        ctx.beginPath();
+        for (let j = 0; j <= 14; j++) { const u = j / 14, an = arm * TAU / 3 + t * (1.4 + 3 * p) + u * 3.2, d = r0 * (0.92 - 0.85 * u); const x = s.x + Math.cos(an) * d, y = s.y + Math.sin(an) * d * 0.9; j ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
+        ctx.strokeStyle = rgba(C.violetHi, (0.18 + 0.5 * p) * k); ctx.lineWidth = 2.4; ctx.stroke();
+      }
+      glow(ctx, s.x, s.y, r0 * 0.8, C.violet, (0.15 + 0.35 * p * p) * k);
+      if (p > 0.85) { const w = (p - 0.85) / 0.15; ctx.beginPath(); ctx.ellipse(s.x, s.y, r0 * (1.0 + 0.5 * (1 - w)), r0 * 0.9 * (1.0 + 0.5 * (1 - w)), 0, 0, TAU); ctx.strokeStyle = rgba('#ffffff', 0.7 * w * k); ctx.lineWidth = 3; ctx.stroke(); }
+      ctx.restore();
+    }
   } };
 
   // The Swallowing's blow: the dark comes in off the rim and the whole floor rings with violet seams
@@ -502,6 +559,7 @@ const MG_FX = (() => {
     // the line of the chop to come: from the bough through the middle of the soak, to the wall
     const L = limbPos(env, 'cleaver');
     if (L) {
+      limbCharge(ctx, L.x, L.y, C.cleaver, C.cleaverHi, p, t);
       const a = Math.atan2(s.y - L.y, s.x - L.x), ca = Math.cos(a), sa = Math.sin(a), ex = L.x + ca * 2600, ey = L.y + sa * 2600;
       ctx.save(); clipRoom(ctx); ctx.lineCap = 'round';
       ctx.beginPath(); ctx.moveTo(L.x, L.y); ctx.lineTo(ex, ey); ctx.strokeStyle = rgba(C.cleaverDk, 0.3 * k); ctx.lineWidth = 6; ctx.stroke();
@@ -552,6 +610,7 @@ const MG_FX = (() => {
       glow(ctx, 0, 0, hw * 1.6, C.brood, (0.15 + 0.3 * p) * k);
       glow(ctx, X, 0, hw * 1.1, C.broodHi, 0.3 * k * (p < 0.99 ? 1 : 0));
     }, true);
+    limbCharge(ctx, s.x, s.y, C.brood, C.broodHi, p, t, 0.3);
   } };
 
   // a lightning rod: a hexagonal cyan crystal on a ring of runes
@@ -587,6 +646,7 @@ const MG_FX = (() => {
       ctx.restore();
     }
     rodCrystal(ctx, s.x, s.y + 4, 96 * (0.5 + 0.5 * easeOut(clamp(p * 3, 0, 1))), 22, t, k, p);
+    { const Ls = limbPos(env, 'storm'); if (Ls) limbCharge(ctx, Ls.x, Ls.y, C.storm, C.stormHi, p, t, 0.34); }
   } };
 
   // a watching eye: an almond with a lit iris, rays above it
@@ -619,7 +679,7 @@ const MG_FX = (() => {
 
   // ---------------------------------------------------------------- Hard: the second set's limbs
   // Wyrm Wing: a bat-wing of bark and ember fanned out over half the room: ribs of burnt wood, the membrane scalloped between their tips, seams of ember
-  TELLS.mgWing = { ground(ctx, tg, s, p, k, t) {
+  TELLS.mgWing = { ground(ctx, tg, s, p, k, t, env) {
     const L = Math.min(s.r, 760), reach = L * easeOut(clamp(p * 1.3, 0, 1)), half = s.arc / 2, N = 6;
     ctx.save(); SHAPES.trace(ctx, s); ctx.clip();
     const tips = [];
@@ -639,6 +699,7 @@ const MG_FX = (() => {
     }
     for (let i = 0; i < 26; i++) { const a = s.angle + (hash(i, 1) * 2 - 1) * half * 0.85, d = hash(i, 2) * reach, q = (t * 0.6 + hash(i, 3)) % 1; glow(ctx, s.x + Math.cos(a) * d, s.y + Math.sin(a) * d - q * 36, 5 + 4 * q, i % 3 ? C.wing : C.wingHi, 0.55 * (1 - q) * (0.3 + p) * k); }
     ctx.restore();
+    { const Lw = limbPos(env, 'wing'); if (Lw) limbCharge(ctx, Lw.x, Lw.y, C.wing, C.wingHi, p, t); }
   } };
 
   // an ice-bound fist hanging over a point, closing
@@ -668,6 +729,7 @@ const MG_FX = (() => {
     for (let i = 0; i < 9; i++) { const q = (t * 0.4 + hash(i, 3)) % 1, a = hash(i, 4) * TAU, d = r * hash(i, 5) * 0.8; glow(ctx, s.x + Math.cos(a) * d, s.y + Math.sin(a) * d - q * 20, 26, C.frost, 0.12 * Math.sin(q * Math.PI) * k); }
     ctx.restore();
     iceFist(ctx, s.x, s.y, r * 0.55 * (1.15 - 0.15 * p), (0.3 + 0.6 * p) * k, (1 - easeIn(p)) * 180, t);
+    { const Lr = limbPos(env, 'rime'); if (Lr) limbCharge(ctx, Lr.x, Lr.y, C.rime, C.frostHi, p, t); }
   } };
   // the ice a Frost Fist leaves (ArenaView.drawPuddles hands over): a pale slick, cracked, glittering, with a red rim (it hurts and it slows)
   function puddle(ctx, p, r, k, t) {
@@ -740,6 +802,7 @@ const MG_FX = (() => {
       for (let i = -2; i <= 2; i++) { ctx.beginPath(); ctx.moveTo(2, i * op * 0.42); ctx.lineTo(16, i * op * 0.3); ctx.strokeStyle = rgba('#f0fff8', 0.7 * k); ctx.lineWidth = 2; ctx.stroke(); }
       glow(ctx, 0, 0, hw * 1.4, C.head, (0.15 + 0.3 * p) * k);
     }, true);
+    limbCharge(ctx, s.x, s.y, C.head, C.headHi, p, t);
   } };
 
   // ---------------------------------------------------------------- what stays on the floor (boss-tells.js track() asks once per landed move)
@@ -840,6 +903,71 @@ const MG_FX = (() => {
   // a ring drawing in (the Hunger's breath): VFX.shock reads r0 > r as a ring that closes
   const closing = (x, y, r0, r1, color, w, dur, delay) => VFX.shock(x, y, { r0, r: r1, color, w, dur, flat: 0.8, delay });
 
+  // THE WHIFF: a hero the blow did not take, who stood within a stride of its edge (or slipped clean through a lane or a petal on a dash),
+  // feels it go by: the edge cracks past them in a streak of the move's own light, the grove's dead leaves are thrown off the wind of it,
+  // splinters fly, and a ring of dust jumps at their feet; the one at the keyboard also gets a flash at the edge of the screen and a push
+  // of the camera. Only ever drawn for a hero who was not hit and was close, so it is the reward for a dodge and never a hint of where is safe.
+  const WHIFF_COL = { mgThorn: C.thornTip, mgFrost: C.frostHi, mgSpark: C.sparkHi, mgBlight: C.blightHi, mgChop: C.cleaverHi, mgRoots: C.broodHi, mgRod: C.stormHi,
+    mgWing: C.wingHi, mgRime: C.frostHi, mgRune: C.runeHi, mgRuneRing: C.runeHi, mgHead: C.headHi, mgSeed: C.violetHi, mgDark: C.violetHi };
+  const NEAR = 80;   // a hero this close to the edge of a blow (and not hit) gets the whiff
+  // which way is "away from the blow" for a hero standing just outside this shape
+  function awayFrom(s, u) {
+    if (s.kind === 'rect') {
+      const c = Math.cos(s.angle), sn = Math.sin(s.angle), across = -(u.x - s.x) * sn + (u.y - s.y) * c, sg = across >= 0 ? 1 : -1;
+      return { x: -sn * sg, y: c * sg };
+    }
+    if (s.kind === 'cone') {
+      let df = Math.atan2(u.y - s.y, u.x - s.x) - s.angle; df = Math.atan2(Math.sin(df), Math.cos(df));
+      const sg = df >= 0 ? 1 : -1, edge = s.angle + sg * s.arc / 2;
+      return { x: -Math.sin(edge) * sg, y: Math.cos(edge) * sg };
+    }
+    const dx = u.x - s.x, dy = u.y - s.y, d = Math.hypot(dx, dy) || 1, sg = s.kind === 'donut' && d < (s.r2 || 0) ? -1 : 1;   // (inside a ring's hole, away from the blow is inward)
+    return { x: sg * dx / d, y: sg * dy / d };
+  }
+  function whiff(u, s, tag, mine, slip) {
+    const col = WHIFF_COL[tag] || C.violetHi, a = awayFrom(s, u), tx = -a.y, ty = a.x;
+    const ex = u.x - a.x * 34, ey = u.y - a.y * 34 - 14;   // (the edge, just toward the blow from them)
+    VFX.fx({ dur: 0.34, layer: 'air', draw: (c, p, t, e) => {
+      const k = e.a * (1 - p) * (1 - p), L = 44 + 64 * easeOut(Math.min(1, p / 0.5)), sh = (p - 0.2) * 44;
+      c.save();
+      VFX.neonPath(c, col, 4.8 * (1 - p * 0.6), k, () => { c.moveTo(ex - tx * L + a.x * sh, ey - ty * L + a.y * sh); c.lineTo(ex + tx * L + a.x * sh, ey + ty * L + a.y * sh); });
+      VFX.neonPath(c, '#ffffff', 2, k * 0.8, () => { c.moveTo(ex - tx * L * 0.5 + a.x * sh, ey - ty * L * 0.5 + a.y * sh); c.lineTo(ex + tx * L * 0.5 + a.x * sh, ey + ty * L * 0.5 + a.y * sh); });
+      c.restore();
+    } });
+    VFX.shock(u.x, u.y + 6, { r: slip ? 92 : 66, color: col, w: 3.2, dur: 0.34, flat: 0.6 });
+    VFX.sparks(u.x - a.x * 18, u.y - 10, { color: col, n: mine || slip ? 12 : 7, speed: 300, angle: Math.atan2(a.y, a.x), spread: 0.9, up: 80, life: 0.9 });
+    // the grove's leaves thrown off the wind of it, and bark splinters
+    for (let i = 0; i < (slip ? 6 : 4); i++) {
+      const sp = rand(120, 260), sd = rand(-0.7, 0.7), vx = (a.x * Math.cos(sd) - a.y * Math.sin(sd)) * sp, vy = (a.x * Math.sin(sd) + a.y * Math.cos(sd)) * sp * 0.6;
+      VFX.spawn({ x: u.x - a.x * 26, y: u.y - a.y * 18, z: rand(8, 30), vx, vy, vz: rand(50, 140), g: 260, drag: 0.05, life: rand(0.6, 1.1), size: rand(7, 12), size1: 3, color: i % 3 ? C.leaf : '#8a6a2a', kind: 'leaf', add: false, vr: rand(-12, 12), flutter: 8 });
+    }
+    for (let i = 0; i < 3; i++) { const sp = rand(110, 230); VFX.spawn({ x: u.x - a.x * 24, y: u.y - a.y * 16, z: rand(8, 24), vx: a.x * sp + rand(-30, 30), vy: a.y * sp * 0.6 + rand(-20, 20), vz: rand(60, 150), g: 520, life: rand(0.4, 0.7), size: rand(5, 9), size1: 1, color: i % 2 ? '#7a6448' : col, kind: 'shard', add: false, vr: rand(-12, 12) }); }
+    if (mine) {
+      try {
+        if (typeof FX !== 'undefined' && FX.cam) { FX.cam.flash(col, 0.1, 0.18); FX.cam.punch(0.02, 0.32); if (slip) FX.cam.stop(0.04); }
+        if (typeof Sound !== 'undefined' && Sound.play) Sound.play('dash', { vol: 0.3, key: 'mg-whiff', minGap: 0.3 });
+      } catch (e) { /* cosmetic */ }
+      screenFx(0.5, (c, W, Hh, tt, pp, e) => { const k = (1 - pp) * (1 - pp) * e.a; vig(c, W, Hh, col, 0.3 * k, 0.4, 'screen'); });
+    }
+  }
+  function whiffs(tg, msg, ctx) {
+    const tag = tg.tag; if (!ctx || !ctx.units || !WHIFF_COL[tag]) return;
+    const s = tg.live, hits = (msg && msg.hits) || [], slipOk = s.kind === 'rect' || s.kind === 'cone';
+    for (const id of hits) S.hitAt.set(id, nowS());
+    // (a beat later, so every blow of the same moment has said who it took: a hero hurt by one petal is not a dodger of the next)
+    later(0.08, () => {
+      const t = nowS();
+      for (const u of ctx.units) {
+        if (hits.includes(u.id) || t - (S.hitAt.get(u.id) || -9) < 0.45) continue;
+        if (t - (S.whiffAt.get(u.id) || -9) < 0.7) continue;
+        const slip = slipOk && SHAPES.contains(s, u.x, u.y, -8);   // inside a lane or a petal and not hurt: a dash through it
+        if (!slip && (SHAPES.contains(s, u.x, u.y) || !SHAPES.contains(s, u.x, u.y, NEAR))) continue;   // (inside any other shape and not hit: covered or shielded, not a dodge)
+        S.whiffAt.set(u.id, t);
+        whiff(u, s, tag, isMe(u), slip);
+      }
+    });
+  }
+
   // Hunger Seed bursts: the seed splits like a geode: black crystal spires thrown up round them, violet light through the cracks, shards flying
   IMP.mgSeed = (tg, msg, ctx, H) => {
     const s = tg.live, x = s.x, y = s.y;
@@ -854,7 +982,7 @@ const MG_FX = (() => {
     for (const u of inside(ctx, s, 6)) VFX.hit(u.x, u.y, C.violetHi, 2);
     H.shockAt(x, y, { r: s.r * 1.5, color: C.violet, w: 9, dur: 0.55, flat: 0.8 });
     H.shockAt(x, y, { r: s.r * 0.9, color: C.violetHi, w: 4, dur: 0.45, flat: 0.8, delay: 0.06 });
-    H.shake(8);
+    H.shake(8); cam(0.05, 0.025, 0.4, 3);
   };
   // Inhale lands: the breath goes in: rings closing on his split, a gust of dust and leaves, a flare in his chest
   IMP.mgInhale = (tg, msg, ctx, H) => {
@@ -882,7 +1010,15 @@ const MG_FX = (() => {
         });
       }
       for (const u of inside(ctx, s, 6)) { VFX.hit(u.x, u.y, hi, 1.8); }
-      H.shake(7);
+      H.shake(7); cam(0.06, 0.028, 0.45, 1.6);
+      // the Last Bloom: the finale of the fight lands harder: a column of the petal's light at its tip, a wide ring, the room lit for a beat
+      const bl = evs().mgbloom;
+      if (bl && bl.last && once('lastbloom' + tg.id)) {
+        const tx = s.x + Math.cos(s.angle) * reach * 0.8, ty = s.y + Math.sin(s.angle) * reach * 0.8;
+        if (ARENA.sd(tx, ty) < -10) VFX.pillar(tx, ty, { r: 44, h: 420, color: col, dur: 0.8 });
+        H.shockAt(s.x, s.y, { r: reach * 0.9, color: hi, w: 10, dur: 0.7, flat: 0.8 });
+        H.roomTint(col, 0.16, 0.7); H.shake(12); cam(0.1, 0.04, 0.7, 1.2);
+      }
     };
   }
   IMP.mgThorn = petalImp(C.thorn, C.thornTip, '#102a06', 'thorn');
@@ -918,7 +1054,9 @@ const MG_FX = (() => {
       for (let j = 0; j < 7; j++) { const a = rand(0, TAU), sp = rand(40, 160); VFX.spawn({ x: q.x, y: q.y, z: 8, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * 0.6, vz: rand(120, 260), g: 560, life: rand(0.6, 1), size: rand(6, 11), size1: 2, color: j % 2 ? C.sapHi : C.sap, kind: 'drop', add: false, rot: a + Math.PI / 2 }); }
       VFX.flash(q.x, q.y - 8, 40, C.sapHi, 0.3);
     });
-    H.shake(6);
+    // on your own screen: the amber floods in from the edges and ebbs, and the camera takes the blow
+    screenFx(0.9, (c, W, Hh, tt, pp, e) => vig(c, W, Hh, C.sap, 0.34 * Math.pow(1 - pp, 1.6) * e.a, 0.3, 'screen'));
+    H.shake(6); cam(0.04, 0.022, 0.5, 4);
   };
 
   // Hungering Dark: each hole breathes in: its rim flares, a ring closes on it, dust and leaves sucked across the ground, anyone on it dragged
@@ -1086,7 +1224,10 @@ const MG_FX = (() => {
     VFX.smoke(x, y, { n: 6, color: '#7a6a58', size: 34, a: 0.5, speed: 90, r: r * 0.9 });
     hungerUp(x, y, 10, { size: 1.0, speed: 220 });
     for (const [rr, col, w] of [[r * 1.7, C.violet, 8], [r * 1.2, C.violetHi, 4]]) H.shockAt(x, y, { r: rr, color: col, w, dur: 0.55, flat: 0.8 });
-    H.shake(8);
+    // a column of the Hunger's light stands up out of it for a heartbeat: this ground is gone for good
+    VFX.pillar(x, y, { r: r * 0.55, h: 300, color: C.violet, dur: 0.8 });
+    VFX.pillar(x, y, { r: r * 0.2, h: 360, color: '#ffffff', dur: 0.55 });
+    H.shake(8); cam(0.05, 0.025, 0.4, 2.5);
   }
   // a sapling dives into a hole and the rim tears wider: the little tree falling in, a shock ring and a ragged tear running out to the new edge
   function grow(msg, H) {
@@ -1156,6 +1297,18 @@ const MG_FX = (() => {
     for (let i = 0; i < 6; i++) { const a = rand(0, TAU), sp = rand(40, 100); VFX.spawn({ x, y, z: 20, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * 0.6, vz: rand(40, 120), g: 120, life: rand(1, 1.6), size: rand(8, 12), size1: 3, color: C.leaf, kind: 'leaf', add: false, vr: rand(-6, 6), flutter: 6 }); }
     H.shockAt(x, y, { r: 200, color: L.col, w: 10, dur: 0.55, flat: 0.8 });
     H.shockAt(x, y, { r: 120, color: L.hi, w: 5, dur: 0.45, flat: 0.8, delay: 0.06 });
+    // Last Gasp (Hard): the stump is not done; its colour pulls back into the broken wood, ring after ring, and flares as the move goes off again
+    if (msg.gasp) {
+      VFX.fx({ dur: 1.5, layer: 'ground', draw: (c, p, t, e) => {
+        const k = e.a * Math.min(1, t / 0.25) * (1 - clamp((t - 1.32) / 0.18, 0, 1)), q = clamp(t / 1.4, 0, 1), pulse = 0.65 + 0.35 * Math.sin(t * (9 + 14 * q));
+        c.save(); c.globalCompositeOperation = 'lighter';
+        glow(c, x, y - 12, 46 + 70 * q * pulse, L.col, 0.42 * k);
+        for (let i = 0; i < 3; i++) { const u = (t * 0.9 + i / 3) % 1, rr = 150 * (1 - u); c.beginPath(); c.ellipse(x, y + 4, rr, rr * 0.5, 0, 0, TAU); c.strokeStyle = rgba(L.hi, 0.6 * u * k); c.lineWidth = 2.4; c.stroke(); }
+        for (let i = 0; i < 6; i++) { const u = (t * 0.7 + i / 6) % 1, an = i * TAU / 6 + t, d = 110 * (1 - u); glow(c, x + Math.cos(an) * d, y - 10 + Math.sin(an) * d * 0.6, 3 + 6 * (1 - u), L.hi, 0.7 * u * k); }
+        c.restore();
+      } });
+      later(1.4, () => { VFX.flash(x, y - 24, 130, L.hi, 0.35); H.shockAt(x, y, { r: 230, color: L.col, w: 8, dur: 0.5, flat: 0.8 }); });
+    }
     H.shake(11); cam(0.1, 0.035, 0.45, 2);
   }
   function prop(msg, H) {
@@ -1327,9 +1480,41 @@ const MG_FX = (() => {
     const ev = room && room.ev; if (!ev) return;
     if (ev.swallow && t < ev.swallow.end + 1.4) swallowFloor(ctx, ev.swallow, t);
   }
+  // the holes, living: violet light lifting off each one, an odd dead leaf pulled in; (the pits themselves are drawn by morrowoak-art.js)
+  function holeLife(room) {
+    const fl = room.floor, n = nowS();
+    for (const h of fl) {
+      if (h.kind !== 'hole' || n < (S.holeAt.get(h.id) || 0)) continue;
+      S.holeAt.set(h.id, n + 0.3 + Math.random() * 0.3);
+      const a = rand(0, TAU), d = h.r * rand(0.7, 1.0);
+      VFX.spawn({ x: h.x + Math.cos(a) * d, y: h.y + Math.sin(a) * d * 0.9, z: 2, vx: -Math.cos(a) * 10, vy: -Math.sin(a) * 8, vz: rand(40, 90), g: -12, life: rand(1.0, 1.7), size: rand(5, 9), size1: 0, color: Math.random() < 0.5 ? C.violetHi : C.violet, kind: 'glow', add: true });
+      if (Math.random() < 0.25) { const b = rand(0, TAU), e = h.r * rand(1.3, 1.9); VFX.spawn({ x: h.x + Math.cos(b) * e, y: h.y + Math.sin(b) * e * 0.9, z: rand(10, 30), vx: -Math.cos(b) * 70, vy: -Math.sin(b) * 60, vz: rand(-10, 10), g: 40, drag: 0.1, life: rand(0.8, 1.2), size: rand(7, 11), size1: 1, color: C.leaf, kind: 'leaf', add: false, vr: rand(-6, 6), flutter: 5 }); }
+    }
+  }
+  // the lip: a hero who comes to a hole's edge and does not fall (a step taken just short, or a pull that stopped at the rim) feels the
+  // ground give: clods knocked off tumble into the dark, the rim flares where the foot was. A reward for the precise step, never a hint.
+  function lipGraze(room, env) {
+    const fl = room.floor, units = env && env.units; if (!units) return;
+    const n = nowS();
+    for (const h of fl) {
+      if (h.kind !== 'hole') continue;
+      for (const u of units) {
+        const d = Math.hypot(u.x - h.x, u.y - h.y), inBand = d > h.r - 8 && d < h.r + 28, key = u.id + ':' + h.id, was = S.lip.get(key);
+        S.lip.set(key, inBand);
+        if (!inBand || was || n - (S.lipAt.get(u.id) || -9) < 1.2) continue;
+        S.lipAt.set(u.id, n);
+        const a = Math.atan2(u.y - h.y, u.x - h.x), lx = h.x + Math.cos(a) * h.r, ly = h.y + Math.sin(a) * h.r * 0.95;
+        for (let i = 0; i < 6; i++) VFX.spawn({ x: lx + rand(-8, 8), y: ly + rand(-6, 6), z: 6, vx: -Math.cos(a) * rand(30, 90) + rand(-20, 20), vy: -Math.sin(a) * rand(20, 60), vz: rand(20, 80), g: 300, life: rand(0.4, 0.7), size: rand(4, 8), size1: 0, color: i % 2 ? C.earth : C.earthHi, kind: 'shard', add: false, vr: rand(-8, 8) });
+        VFX.sparks(lx, ly - 4, { color: C.violetHi, n: 7, speed: 170, angle: a + Math.PI, spread: 0.9 });
+        VFX.shock(lx, ly, { r: 50, color: C.violet, w: 3, dur: 0.36, flat: 0.8 });
+        if (isMe(u)) { try { if (typeof FX !== 'undefined' && FX.cam) FX.cam.punch(0.012, 0.28); if (typeof Sound !== 'undefined' && Sound.play) Sound.play('dash', { vol: 0.16, key: 'mg-lip', minGap: 0.5 }); } catch (e) { /* cosmetic */ } }
+      }
+    }
+  }
   function roomOver(ctx, room, t, env) {
     const ev = room && room.ev; if (!ev) return;
     S.units = env && env.units;
+    if (room.floor && room.floor.length) { holeLife(room); lipGraze(room, env); }
     if (ev.swallow && t < ev.swallow.end + 1.4) swallowOver(ctx, ev.swallow, t, env);
     if (ev.mglimbs && env && env.boss) { const L = ev.mglimbs; if (S.limbs !== L.start) { if (t - L.start > 1.5) S.limbs = L.start; else limbsGrow(L, env); } }
   }
@@ -1434,6 +1619,7 @@ const MG_FX = (() => {
     // (boss-vfx.js impact(): his moves land here; a tag it does not know falls through to the shared ones)
     impact(tg, msg, ctx, H) {
       const f = tg.type === 'buster' ? IMP.buster : IMP[tg.tag]; if (!f) return false;
+      try { whiffs(tg, msg, ctx); } catch (e) { /* cosmetic */ }
       f(tg, msg, ctx, H); return true;
     },
     pit, spire, gem, LIMBFX,
