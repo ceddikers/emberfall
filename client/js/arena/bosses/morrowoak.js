@@ -293,8 +293,9 @@ const MORROWOAK = {
         if (f.wall) f.wallDown();
       }, H ? 'Deeper Roots' : 'The Grove Remade');
       // (and what the limbs do as they wake is laid now, so the feed reads across the wall into Act III)
-      f.atKeep(f.t + SWALLOW + 4, limbTurn, LIMB[order[0]].name);
-      f.afterKeep(SWALLOW + 13, lash, 'Root Lash');
+      // (Hard: the first limb waits a few seconds more, the healer's breather after the Swallowing)
+      f.atKeep(f.t + SWALLOW + (H ? 7 : 4), limbTurn, LIMB[order[0]].name);
+      f.afterKeep(SWALLOW + (H ? 17 : 13), lash, 'Root Lash');
     };
 
     // --- the limbs --------------------------------------------------------------------------------------------------------------
@@ -382,6 +383,12 @@ const MORROWOAK = {
     };
     const SET1 = ['cleaver', 'brood', 'storm', 'lantern'], SET2 = ['wing', 'rime', 'rune', 'head'];
     const order = H ? f.shuffle([...SET1, ...SET2]).slice(0, 4) : SET1.slice();
+    // (Hard: the first two limbs to take a turn are never the two soaking, spreading ones, Cleaver Bough and Barrow Lantern: the party
+    // gets its footing in the new room before the heavy ones come round)
+    if (H) for (const k of ['cleaver', 'lantern']) {
+      const i = order.indexOf(k);
+      if (i >= 0 && i < 2) { const j = order.findIndex((q, n) => n >= 2 && q !== 'cleaver' && q !== 'lantern'); if (j >= 0) [order[i], order[j]] = [order[j], order[i]]; }
+    }
     const SIDE = [[-1, -1], [1, -1], [1, 1], [-1, 1]];   // where each limb stands at his side (the four diagonals)
     const limbs = {};
     let turnI = 0, grown = false;
@@ -492,9 +499,9 @@ const MORROWOAK = {
         S([22, ...turn]),
         S([10, sapTide, 'Sap Tide']),
         S([9, ...turn]),
-        S([10, ...seeds(2)]),
         S([10, ...turn]),
         S([10, lash, 'Root Lash'], [8, ...turn]),
+        S([10, ...seeds(2)]),   // (the first seeds of the new room come after the limbs have found their rhythm, not on top of the Swallowing)
         S([10, sapTide, 'Sap Tide']),
         S(H ? [9, hungeringDark, 'Hungering Dark'] : [9, inhale, 'Inhale']),
         S([9, ...turn]),

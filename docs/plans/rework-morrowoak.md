@@ -45,3 +45,7 @@ moves and tune spacing, caps and numbers instead.
 - Telegraphs unchanged on every difficulty; no new hidden tell.
 - Normal GEAR=post3 target 85 to 90 percent, Hard GEAR=post4 target 55 to 60 percent (three seed sets of 30).
 - Journal pages rewritten for what changed: Hunger Seed (feeding), Inhale, Hungering Dark, Last Gasp.
+
+## Second pass (2026-10-26): the first minute of Act III
+
+Hard: the first limb waits 3 s longer after the Swallowing and the post-Swallowing Root Lash 4 s longer (the healer's breather); the first two limbs to take a turn are never Cleaver Bough or Barrow Lantern; the first Twin Seed of the new room comes after the limbs have taken three turns (it sat on top of the Swallowing's aftermath). Normal moves the same Hunger Seed set later. Bots: Hard `GEAR=post4` 56 of 90 (62%); Normal `GEAR=post3` 77 of 90.

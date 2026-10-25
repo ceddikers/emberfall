@@ -28,10 +28,10 @@
 
 const BRANNOC = {
   id: 'brannoc', name: 'Brannoc', title: 'the Undefeated',
-  hp: { normal: 5600000, hard: 5800000 },
-  hardDmg: 1.22,   // (Hard's damage multiplier; fight.js default 1.25)
+  hp: { normal: 5600000, hard: 5450000 },
+  hardDmg: 1.34,   // (Hard's damage multiplier; fight.js default 1.25; a little up as the health came down, so hits still bite)
   autoDmg: { normal: 2200, hard: 2050 },
-  enrage: { normal: 607, hard: 612 },   // the cast starts here and lands 8 s later (10:15 / 10:20)
+  enrage: { normal: 607, hard: 632 },   // the cast starts here and lands 8 s later (10:15 / 10:40)
   enrageName: 'The Final Bell',
   vuln: 0.5,
   spawn: { x: 0, y: -60 },
@@ -46,7 +46,8 @@ const BRANNOC = {
     const TAU = Math.PI * 2;
     const dmg = {
       roar: H ? 11200 : 14000, heel1: H ? 15000 : 17000, heel2: H ? 19000 : 22000, leap: H ? 21000 : 24500, wheel: H ? 19800 : 23000,
-      catch: H ? 15500 : 18000, catchBig: H ? 11500 : 13000, burst: H ? 17000 : 20000, furrow: H ? 3400 : 3200, furrowLine: H ? 15800 : 18200, banner: H ? 17000 : 19600,
+      catch: H ? 15500 : 18000, catchBig: H ? 11500 : 13000, burst: H ? 10500 : 14000,   // (a missed catch still stings the room, but never chains into dead healers)
+      furrow: H ? 3400 : 3200, furrowLine: H ? 15800 : 18200, banner: H ? 17000 : 19600,
       slam: H ? 20500 : 23500, wave: H ? 21000 : 24000, bleed: H ? 1300 : 1200, undertow: H ? 19000 : 27000, deep: H ? 14000 : 16400,
       handHp: H ? 17000 : 30000, rise: H ? 9800 : 11200,
     };

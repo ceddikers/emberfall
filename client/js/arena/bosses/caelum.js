@@ -28,10 +28,10 @@
 
 const CAELUM = {
   id: 'caelum', name: 'Caelum Vey', title: 'the Starborn',
-  hp: { normal: 5200000, hard: 5600000 },
-  hardDmg: 1.32,   // (Hard's damage multiplier; fight.js default 1.25)
+  hp: { normal: 5200000, hard: 5200000 },   // (Hard was 5.6M: the slowest clears used to land on the enrage cast; now 20 s or more clear)
+  hardDmg: 1.50,   // (Hard's damage multiplier; fight.js default 1.25; up as the health came down, so every hit still has to be earned)
   autoDmg: { normal: 2600, hard: 2600 },
-  enrage: { normal: 605, hard: 607 },   // the cast starts here and lands 8 s later (10:13 / 10:15)
+  enrage: { normal: 605, hard: 625 },   // the cast starts here and lands 8 s later (10:13 / 10:33)
   enrageName: 'The Sky Comes Down',
   vuln: 0.5,
   spawn: { x: 0, y: -300 },
@@ -56,7 +56,7 @@ const CAELUM = {
     const TAU = Math.PI * 2;
     const dmg = {
       glint: H ? 18800 : 20000, wake: H ? 17800 : 19800, crown: H ? 25000 : 26500, crownRing: H ? 1900 : 2100, thrust: H ? 22500 : 24000,
-      pinSlam: H ? 8500 : 9500, night: H ? 4200 : 4400, star: H ? 8000 : 9000, starFail: H ? 11000 : 12000, starRain: H ? 5600 : 5900, ember: H ? 17500 : 20000,
+      pinSlam: H ? 8500 : 9500, night: H ? 3800 : 4400, star: H ? 8000 : 9000, starFail: H ? 11000 : 12000, starRain: H ? 5600 : 5900, ember: H ? 17500 : 20000,
       coil: H ? 19800 : 21000, constellation: H ? 60000 : 70000, horizon: H ? 25000 : 27000, burn: H ? 2000 : 2200, shower: H ? 2600 : 2800, glow: H ? 2400 : 2600,
       secondCoil: H ? 20000 : 0, chorus: H ? 19500 : 18500, darkEmber: H ? 2200 : 0,
     };
@@ -179,7 +179,7 @@ const CAELUM = {
       const d = f.ct(4.2);
       f.cast('Cinder Crown', d, 'crown');
       // (and the embers it throws up come down on everyone a moment after)
-      f.mech({ type: 'raidwide', shape: { kind: 'circle', x: 0, y: 0, r: 0 }, delay: d + 1.4, dmg: dmg.shower, hidden: true, tag: 'clShower', from: 'Cinder Crown' });
+      f.afterKeep(d + 1.0, () => { if (f.state === 'live' && f.t + 0.4 >= graceUntil) f.mech({ type: 'raidwide', shape: { kind: 'circle', x: 0, y: 0, r: 0 }, delay: 0.4, dmg: dmg.shower, hidden: true, tag: 'clShower', from: 'Cinder Crown' }); });   // (never on heroes held at nothing)
       const m = f.mech({ type: 'buster', shape: { kind: 'circle', x: tank.x, y: tank.y, r: 160 }, delay: d, dmg: dmg.crown, target: tank.id, follow: tank.id, lockAt: 0.8, tag: 'clCrown',
         onResolve: () => f.zone({ shape: { kind: 'donut', x: Math.round(m.shape.x), y: Math.round(m.shape.y), r: 250, r2: 168 }, dur: 12, effect: 'burn', dmg: dmg.crownRing, tag: 'clCrownRing' }) });
     };
@@ -209,7 +209,7 @@ const CAELUM = {
       for (const pd of f.puddles) { pd.end += len; for (const p of f.alive()) pd.last[p.id] = f.t + len - pd.every; }
     };
     const grace = (o = {}) => {
-      const d = f.ct(o.quick ? 2.4 : 3.2), gap = H ? 9 : 10;
+      const d = f.ct(o.quick ? 2.4 : 3.2), gap = H ? 10 : 10;
       f.cast('Grace Withdrawn', d, 'grace');
       f.afterKeep(d, () => {
         if (f.state !== 'live') return;
@@ -221,7 +221,7 @@ const CAELUM = {
           f.emit({ t: 'pdmg', id: p.id, a: Math.round(lost), k: 'clGrace', hp: 1, dd: 0, n: 'Grace Withdrawn' });
         }
         f.emit({ t: 'roomev', k: 'clgrace', dur: gap });
-        B.noAutoUntil = Math.max(B.noAutoUntil || 0, f.t + gap + 0.5);   // (no blade on anyone while they are held at nothing)
+        B.noAutoUntil = Math.max(B.noAutoUntil || 0, f.t + gap + 3);   // (no blade on anyone while they are held at nothing, nor in the breath after Nightfall: the healer's catch-up)
         f.cast('Nightfall', gap, 'night');
         f.mech({ type: 'raidwide', shape: { kind: 'circle', x: 0, y: 0, r: 0 }, delay: gap, dmg: dmg.night, hidden: true, tag: 'clNight', from: 'Nightfall' });
       });
@@ -231,7 +231,7 @@ const CAELUM = {
     const starfall = (n = 2) => {
       const d = f.ct(5), taken = [], minR = f.form ? 40 : 175;
       f.cast('Starfall', d, 'starfall');
-      f.mech({ type: 'raidwide', shape: { kind: 'circle', x: 0, y: 0, r: 0 }, delay: d, dmg: dmg.starRain, hidden: true, tag: 'clStarRain' });
+      f.afterKeep(d - 0.4, () => { if (f.state === 'live' && f.t + 0.4 >= graceUntil) f.mech({ type: 'raidwide', shape: { kind: 'circle', x: 0, y: 0, r: 0 }, delay: 0.4, dmg: dmg.starRain, hidden: true, tag: 'clStarRain' }); });
       for (let i = 0; i < n; i++) {
         const at = inShadow(taken, minR); if (!at) break;
         taken.push(at);
@@ -325,7 +325,7 @@ const CAELUM = {
     // o.star: a shard of the meteor falls into the gap (a Starfall tower stands in the one safe lane, painted from the cast)
     const horizon = (o = {}) => {
       const d = f.ct(5), a = f.rng() * Math.PI, dx = Math.cos(a), dy = Math.sin(a), nx = -dy, ny = dx;
-      const g = Math.round((f.rng() - 0.5) * 440), gw = H ? 170 : 190, FAR = 800;
+      const g = Math.round((f.rng() - 0.5) * 440), gw = H ? 135 : 190, FAR = 800;
       if (o.star) {
         const reach = Math.sqrt(Math.max(0, (shadow.r - 60) ** 2 - g * g)), s0 = Math.round((f.rng() - 0.5) * 2 * Math.min(reach, 190));
         f.mech({ type: 'tower', shape: { kind: 'circle', x: Math.round(nx * g + dx * s0), y: Math.round(ny * g + dy * s0), r: 85 }, delay: d, dmg: dmg.star, need: 1, failDmg: dmg.starFail, tag: 'clStar' });

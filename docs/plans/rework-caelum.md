@@ -42,3 +42,7 @@ Telegraphs never hidden, the afterimage rule, the shadow and Starfall, the Starw
 
 Before: Normal `GEAR=post3` 22 of 30 on seed 1 (about 73%; target 85 to 90); Hard `GEAR=post4` 16 of 30 on seed 1 (33% over three sets; target about 50%).
 After: Normal 83 of 90 (92%, clears at 485 to 575 s against an enrage landing at 613 s); Hard 49 of 90 (54%, clears at 510 to 610 s against an enrage landing at 615 s). The first Grace no longer decides the pull (it used to end 1 pull in 5 on Normal).
+
+## Second pass (2026-10-26): enrage slack and the healer's single point of failure
+
+Hard health 5.6M to 5.2M, damage multiplier 1.32 to 1.50, Horizon Cut's gap 170 to 135 wide (a tighter lane to earn), and the enrage cast 607 to 625 (slowest bot clears now about 606 s, about 20 s clear of the cast). Grace Withdrawn on Hard: the gap is 10 s (was 9), Nightfall 3800 (was 4200), the blade stays off a few seconds after Nightfall so the healer can catch up, and the hidden raidwides (Cinder Crown's embers, Starfall's rain) never land on heroes held at nothing. Bots, Hard `GEAR=post4`: 45 of 90 before; 61 of 120 after (seed 4000 is the low one). Normal `GEAR=post3` 73 of 90.

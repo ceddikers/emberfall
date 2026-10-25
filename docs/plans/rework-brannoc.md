@@ -34,3 +34,7 @@ Telegraphs never hidden, 8 to 10 minutes, one enrage, the closing passes for a s
 ## Numbers (bots, three seed sets of 30)
 
 Before: Normal `GEAR=post3` 85 of 90 (94%); Hard `GEAR=post4` 64 of 90 (71%). After: Normal 83 of 90 (92%) with the strong line-up, the weaker check line-up (runeguard, grovekeeper, shadowblade, pyromancer) about 65% as before; Hard 109 of 180 (61%) over six seed sets, deaths in the Grip (hand not broken in time) and the early catches. Hard clears run to about 608 s in the slowest runs, so the cast at 612 s is just clear of them.
+
+## Second pass (2026-10-26): enrage slack and the missed catch
+
+Hard health 5.8M to 5.45M, damage multiplier 1.22 to 1.34, and The Final Bell casts at 632 (was 612): the slowest bot clears are about 595 s, about 35 s clear of the cast. A missed catch bursts on the room for 10500 on Hard (was 17000) and 14000 on Normal (was 20000): still a mistake that costs, no longer a wipe chain into dead healers. Bots: Hard `GEAR=post4` 50 of 90 (56%); Normal `GEAR=post3` 83 of 90.
