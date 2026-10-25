@@ -57,3 +57,7 @@ Brief: more fun and complexity without taking away difficulty: signature moves l
 - **Screen-feel on the big ones.** The meteor's shadow sends a pressure wave out across the floor (and the room shudders) every time it grows, and a ring back in when a Dark Ember pushes it; the Starwyrm's summon, rear and breath, a caught Starfall (light up the arms of whoever took it) and a missed one, the razor edges left where a Horizon Cut's gap was, and a camera hold on a Glint.
 - **Tuning.** Normal's fire (Cinder Crown's ring, the burning shadow, its embers) a little lighter (2100 to 1900, 2200 to 2000, 2800 to 2700) to pay for the crossed cut. Bots: Normal `GEAR=post3` 81% before, 79 of 90 after (seeds 1000 to 3000; 106 of 120 with seed 4000); Hard `GEAR=post4` 52 of 90 before, 45 of 90 after (50%).
 - Journal: all 23 Horizon Cut pages now say two cuts can come at once and where the safe floor is.
+
+## Fix (2026-10-26, review of sets 2 and 3)
+
+Dark Ember barely mattered: a set ember shrank the shadow for the rest of its act, and the next form's shadow and the burning shadow of the last act were set fresh, so the Hard-only move had almost no payoff. What the embers did now stays for the fight: each ember set at the edge keeps the later shadows 20 smaller, each one missed lets them 20 further in (at most 20 in all). Bots, Hard `GEAR=post4`: 30 per ember gave 54 of 90 (60%, was 45 of 90), so 20: 46 of 90 (51%). Normal is unchanged (no embers).

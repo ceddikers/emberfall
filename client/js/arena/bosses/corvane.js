@@ -37,7 +37,7 @@
 const CORVANE = {
   id: 'corvane', name: 'Corvane', title: 'the Unburied Blade',
   hp: { normal: 5700000, hard: 5450000 },
-  hardDmg: 1.335,   // (Hard's damage multiplier; fight.js default 1.25: it was 1.42, a numbers bump: part of that difficulty now lives in the Hard-only skill moves below)
+  hardDmg: 1.33,   // (Hard's damage multiplier; fight.js default 1.25: it was 1.42, a numbers bump: part of that difficulty now lives in the Hard-only skill moves below)
   autoDmg: { normal: 2200, hard: 2050 },
   enrage: { normal: 590, hard: 580 },   // the cast starts here and lands 8 s later (9:58 / 9:48: a minute after the script's end, 45 s on Hard)
   enrageName: 'Last Light of the Pass',
@@ -68,6 +68,9 @@ const CORVANE = {
     const nonTank = () => { const pool = f.nonTanks().length ? f.nonTanks() : f.alive(); return pool.length ? f.pick(pool) : null; };
     const healer = () => f.alive().find(p => p.role === 'healer') || nonTank();
     const hold = d => { B.holdUntil = Math.max(B.holdUntil || 0, f.t + d); };
+    // an earned unleashing waits out a move still on the floor and a follow-up still to come (it never starts on top of one)
+    let quietAt = 0;
+    const busyFor = d => { quietAt = Math.max(quietAt, f.t + d); };
     // how far a line from (x, y) along a runs before it meets the wall
     const toWall = (x, y, a) => { const c = Math.cos(a), s = Math.sin(a); let d = 0; while (d < 2400 && ARENA.sd(x + c * d, y + s * d) < -12) d += 12; return Math.max(60, d); };
 
@@ -85,9 +88,14 @@ const CORVANE = {
     };
     // every avoidable hit he lands (fight.js damagePlayer calls this). A hero feeds him at most a notch every second and a half,
     // so one bad step is one notch; in the Vigil only the wisps count.
-    f.onAvoidable = (p) => {
+    // A lingering hazard (the glass of Still Water, Hollow Breath's five breaths) is one bad step however long it is stood in.
+    const LINGER = { cvStill: 1, cvBreath: 1 }, lingered = {};
+    f.onAvoidable = (p, o) => {
       if (f.wall || f.state !== 'live' || f.cleanRun) return;   // (cleanRun: tools/check.js's timeline, whose dummies take every hit)
       if (f.t - (lastNotch[p.id] ?? -9) < 1.5) return;
+      const k = o && LINGER[o.kind] ? p.id + o.kind : null;
+      if (k && f.t - (lingered[k] ?? -99) < 12) return;
+      if (k) lingered[k] = f.t;
       lastNotch[p.id] = f.t;
       notch(1);
     };
@@ -172,13 +180,13 @@ const CORVANE = {
       const ang = B.facing;
       f.zone({ shape: { kind: 'cone', x: Math.round(B.x), y: Math.round(B.y), r: 760, arc: 2.2, angle: +ang.toFixed(3) }, dur, delay: d, effect: 'burn', dmg: dmg.still, tag: 'cvStill' });
       B.noAutoUntil = f.t + d + dur;
-      hold(d + dur);
+      hold(d + dur); busyFor(d + dur);
       f.afterKeep(d + dur, () => { B.lockFacing = false; });
     };
     // Hollow Breath: a cold circle that follows the healer and bites anyone else in it, five breaths
     const hollowBreath = () => {
       const h = healer(); if (!h) return;
-      f.cast('Hollow Breath', f.ct(2), 'breath');
+      f.cast('Hollow Breath', f.ct(2), 'breath'); busyFor(5 * 2.2 + 0.2);
       for (let i = 0; i < 5; i++) {
         f.afterKeep(i * 2.2, () => {
           const q = live(h.id); if (!q) return;
@@ -253,6 +261,7 @@ const CORVANE = {
     // pair names: a line from the far side through the place everyone just ran to. who: 'tank' | 'healer' | 'any'
     const cometDraw = (who = 'tank') => {
       const run = comet(false);
+      busyFor(run + 0.55 + f.ct(3.0) + 0.3);
       f.afterKeep(run + 0.55, () => {
         if (f.state !== 'live') return;
         const tgt = who === 'tank' ? f.tank() : who === 'healer' ? healer() : nonTank();
@@ -338,6 +347,7 @@ const CORVANE = {
     f.ticker(() => {
       if (whet.busy || whet.n < MAX || f.wall || f.state !== 'live') return;
       if (B.cast && f.t < B.cast.end) return;
+      if (f.t < quietAt) return;
       if (f.def.enrage && f.t > f.def.enrage[f.mode] - 25) return;
       const len = unleash(choose());
       slide(len + 1);
@@ -346,7 +356,10 @@ const CORVANE = {
     const scripted = st => () => {
       if (whet.busy) return;
       whet.n = MAX; sendWhet();
-      unleash(st || choose());
+      const len = unleash(st || choose());
+      // (Hard's Returning Parting, or a Volley, can run past the next step: the rest of the script waits for it)
+      const next = f.events.reduce((m, e) => (e.step && e.t > f.t ? Math.min(m, e.t) : m), Infinity);
+      if (next < Infinity && f.t + len + 1 > next) slide(f.t + len + 1 - next);
     };
 
     // --- the Vigil (the wall) ------------------------------------------------------------------------------------------------

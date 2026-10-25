@@ -51,3 +51,7 @@ Play:
 - No new cast names, so no new sounds. Journal: the Sweep and Icefall entries for all 23 heroes carry the new counterplay.
 
 Bots after (90 runs, three seed sets): Normal `GEAR=post1` 77 of 90 (86%); Hard `GEAR=post2` 51 of 90 (57%).
+
+## Fix (2026-10-26, review of sets 2 and 3)
+
+Winter's Grasp landing on a red sheet froze it, but the sheet still sank a moment later, under the hero who froze it. Freezing a red sheet now calls its sinking off (its red is cleared and it does not hit). Bots unchanged: Normal `GEAR=post1` 77 of 90, Hard `GEAR=post2` 51 of 90.

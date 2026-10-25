@@ -212,9 +212,9 @@ const AZERATH = {
       f.cast('Rune Swap', d, 'swap');
       f.afterKeep(d, () => {
         const cur = f.runePair; if (!cur) return;
-        let pool = f.nonTanks().filter(p => p.id !== cur.a && p.id !== cur.b);
-        if (pool.length < 2) pool = f.alive().filter(p => p.id !== cur.a && p.id !== cur.b).concat(f.alive().filter(p => p.id === cur.a || p.id === cur.b));
-        const pr = f.shuffle(pool);
+        // (two heroes who don't bear one: the other damage dealers first, then the tank, and only then, in a small party, one of the pair)
+        const was = p => p.id === cur.a || p.id === cur.b, t = f.tank();
+        const pr = f.shuffle(f.nonTanks().filter(p => !was(p))).concat(t && !was(t) ? [t] : [], f.shuffle(f.alive().filter(was)));
         if (pr.length < 2) return;
         setPair(pr[0].id, pr[1].id, cur.ea, cur.eb, cur.el, Math.max(1, holdUntil - f.t));
       });

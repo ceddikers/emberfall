@@ -240,7 +240,9 @@ const CAELUM = {
       }
     };
     // Dark Ember (Hard): a black ember rides a hero; set down at the shadow's edge, it pushes the shadow back a step (anywhere else
-    // it burns where it falls)
+    // it burns where it falls). What the embers did stays: each one set at the edge keeps the sky that much smaller for the rest of
+    // the fight (the second form's shadow and the burning shadow of the end), and each one missed lets it in a little further.
+    let held = 0;
     const darkEmber = () => {
       const tgt = nonTank(); if (!tgt) return;
       const d = f.ct(9);
@@ -248,8 +250,8 @@ const CAELUM = {
       const m = f.mech({ type: 'drop', shape: { kind: 'circle', x: tgt.x, y: tgt.y, r: 70 }, delay: d, dmg: 0, follow: tgt.id, lockAt: 0.6, tag: 'clEmber', avoidable: false,
         onResolve: () => {
           const x = m.shape.x, y = m.shape.y, edge = Math.abs(Math.hypot(x - shadow.x, y - shadow.y) - shadow.r);
-          if (edge < 80) { setShadow(Math.max(140, shadow.r - 55)); f.emit({ t: 'propfx', k: 'clember', x: Math.round(x), y: Math.round(y), ok: 1 }); }
-          else { f.puddle(x, y, 100, 10, dmg.darkEmber, 1, 'clEmberBurn'); f.emit({ t: 'propfx', k: 'clember', x: Math.round(x), y: Math.round(y), ok: 0 }); }
+          if (edge < 80) { held += 20; setShadow(Math.max(140, shadow.r - 55)); f.emit({ t: 'propfx', k: 'clember', x: Math.round(x), y: Math.round(y), ok: 1 }); }
+          else { held = Math.max(-20, held - 20); f.puddle(x, y, 100, 10, dmg.darkEmber, 1, 'clEmberBurn'); f.emit({ t: 'propfx', k: 'clember', x: Math.round(x), y: Math.round(y), ok: 0 }); }
         } });
     };
 
@@ -318,7 +320,7 @@ const CAELUM = {
         f.edgeGrace = f.t + 3;
         for (const p of f.alive()) { const r = Math.hypot(p.x, p.y); if (r > ARENA.r - 50) f.knock(p, p.x * 3, p.y * 3, r - (ARENA.r - 90)); }
         B.x = 0; B.y = -60; B.moveTo = null;
-        setShadow(300);
+        setShadow(300 - held);
       });
       f.afterKeep(d, () => { B.untargetable = false; f.anim('ascendant', 2); });
     };
@@ -428,7 +430,7 @@ const CAELUM = {
 
     // IV. The Sky Comes Down: the shadow burns, and grows; the last dance runs round the clear ground left at the rim
     const skyComes = from => f.course({
-      onStart: () => { setShadow(340, true); f.afterKeep(36, () => { if (f.state === 'live') setShadow(390, true); }); },
+      onStart: () => { setShadow(340 - held, true); f.afterKeep(36, () => { if (f.state === 'live') setShadow(390 - held, true); }); },
       sets: [
         S([4, crown, 'Cinder Crown']),
         S([9, horizon, 'Horizon Cut']),

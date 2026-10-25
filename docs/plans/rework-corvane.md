@@ -61,3 +61,10 @@ Goal: more spectacle and more skill in the dodge without taking difficulty away;
 Journal: Draw Cut and Comet Draw entries for every hero say what the new pairs ask.
 
 Numbers (bots, 30 runs per seed set, three sets). Normal `GEAR=post3`: 77 of 90 (86%). Hard `GEAR=post4`: multiplier 1.34 gave 43 of 90 (48%), 1.33 gave 52 of 90 (58%), 1.30 gave 67 of 90 (74%): the clear rate is steep around here, so the multiplier is the last thing tuned; the final 1.335 gives 47 of 90 (52%), clears at about 505 s.
+
+## Fixes (2026-10-26, review of sets 2 and 3)
+
+- **One bad step, one notch.** Standing in the glass of Still Water or in Hollow Breath fed him a notch every second and a half, so one hero lingering could fill the Whetstone alone. A lingering hazard now gives at most one notch per hero.
+- **An earned unleashing never starts on top of a move.** The gauge only waited for his cast bar, so a Comet Draw that filled it could start an unleashing in the half second before its own Draw Cut (two re-reads and a cast bar cut short). It now waits out Still Water's glass, Hollow Breath and a Comet Draw's follow-up.
+- **The script waits for a long scripted unleashing.** On Hard a scripted Parting with its Returning Parting runs about 17 s, and the next set started 12 to 14 s after it (in about two pulls in three). When an unleashing on the script would run past the next step, the rest of the script now slides by the difference.
+- Hard was a little harder with all three (38 of 90; with each one switched off in turn 38 to 45, so no one fix carried it), so the Hard multiplier goes 1.335 to 1.32 (56 of 90, 62%) and then 1.33: 49 of 90 (54%). Normal `GEAR=post3` 78 of 90 (87%).

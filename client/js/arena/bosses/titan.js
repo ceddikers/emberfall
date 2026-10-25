@@ -83,9 +83,12 @@ const TITAN = {
     const crack = (i, d) => {
       if (i < 0 || sh[i].st !== 0) return false;
       setSheet(i, 2);
-      f.aoe(rectOf(i), d, dmg.sink, { tag: 'tisink', onResolve: () => sink(i) });
+      sinking.set(i, f.aoe(rectOf(i), d, dmg.sink, { tag: 'tisink', onResolve: () => { sinking.delete(i); if (sh[i].st === 2) sink(i); } }));
       return true;
     };
+    // a red sheet frozen before it sinks is saved: its sinking is called off
+    const sinking = new Map();
+    const unsink = i => { const m = sinking.get(i); if (m) { f.cancel(m); sinking.delete(i); } };
     // frozen ground is slick: stepping onto it from other ground shoves you a short way along the way you were going
     const prev = new Map(), slidAt = new Map();
     const wadeT = new Map(), NUMB = 0.55;   // seconds in the water before the slow bites
@@ -223,7 +226,7 @@ const TITAN = {
           onResolve: () => {
             if (j === 0) { for (const i of iced) if (sh[i].st === 1) setSheet(i, 0); iced.clear(); }
             const m2 = f.alive().find(q => q.id === p.id), x = m2 ? m2.x : p.x, y = m2 ? m2.y : p.y, c = cellAt(x, y);
-            if (c >= 0 && (sh[c].st === 0 || sh[c].st === 2)) { setSheet(c, 1); iced.add(c); }
+            if (c >= 0 && (sh[c].st === 0 || sh[c].st === 2)) { if (sh[c].st === 2) unsink(c); setSheet(c, 1); iced.add(c); }
           } });
       });
       if (then) f.afterKeep(d + 0.05, then);

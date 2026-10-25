@@ -70,3 +70,7 @@ Gameplay half of the fun-and-complexity ask: dodges that are earned, not stumble
 - **Rime Rune, dodge then close in.** A lance out of him through each bearer lands a beat before the blue circle (Hard a hair tighter). The bearers have to leave their own lines and still come together, and everyone else has to be off both lines and then in the circle. Journal: every hero's Rime Rune entry rewritten.
 - **Numbers.** Bots dodge every shape, so these moves do not move their clear rate; the Normal Arcane Burst goes 20200 to 20900 to bring Normal toward range. It cannot go much higher: line-up B (squishy, short on damage) clears about 58% before this pass and 44% at 20900, and a bigger Burst (21800) took it to a miss in check.js. Hard unchanged otherwise.
 - **Rates** (30 runs per seed, seeds 1000/2000/3000): Normal `GEAR=post1` 83 of 90 (92%, was 97%; 78 of 90 = 87% at a Burst of 21800, which line-up B cannot take); Hard `GEAR=post2` 51 of 90 (57%, was 62%).
+
+## Fix (2026-10-26, review of sets 2 and 3)
+
+Rune Swap never reached "two other heroes" in a party of four: with three damage dealers and two bearing runes, the fallback shuffled everyone, so the runes could land back on the same pair (about one in six) or on the tank. The new pair is now the other damage dealer and then the tank, and only in a smaller party one of the old pair. Bots, Hard `GEAR=post2`: 50 of 90 (56%, was 57%).
