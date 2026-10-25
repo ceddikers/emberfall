@@ -39,3 +39,25 @@ Telegraphs never hidden, the question and the Whetstone as they were, 8 to 10 mi
 ## Numbers (bots, 30 runs per seed set, three sets)
 
 Normal, `GEAR=post3`: before 80 of 90 (89%); after 79 of 90 (88%). Hard, `GEAR=post4`: before 52 of 90 (58%), clears at 543 to 555 s on average; after 49 of 90 (54%), clears at 508 s on average (the tail ends near 570 s, against an enrage cast at 580). Base-gear check line-ups still clear.
+
+## Cool-factor pass (2026-10-26)
+
+Goal: more spectacle and more skill in the dodge without taking difficulty away; Hard's difficulty moved out of a numbers bump and into the moves.
+
+**Looks (corvane-fx.js).**
+- Each stance reads on the blade as it is drawn, before any floor is painted (cast windups, new `cast()` hook from boss-vfx.js castStart): a folding fan of cold light opens behind his shoulder (Rising Crane), a lance of white light climbs above him (Comet), silver rings run out across the snow with the faint figures of the afterimages standing at the edges (Parting). Sparks are rubbed off the edge all the while (quicker on Overwhet); False Stance shears a ghost off his figure.
+- The Whetstone shows itself: every notch added flares the edge where he stands, a full blade runs a ring out across the pass (the roomOver hook watches the gauge).
+- The whiff: a hero who stood within a stride of a blow's edge and was not hit gets the blade's edge cracking past (a sliver of light along the edge, strands of cloak cut loose, a ring at the feet); for your own hero a frost flash at the screen's rim, a push of the camera, a held breath and a soft whoosh. Draw Cut, Comet Draw, both Rising Crane fans, the Sweep and every line of the Parting. Drawn only for a hero the blow did not take, so it rewards a dodge and never hints at the safe place.
+- Landings: Draw Cut leaves a crescent at his hand and silver copies of him standing along the line; Comet and Parting trail the same copies; the Sweep and Crane add the blade's own crescent; Cold Sheathe closes with one thin white line across the pass and a flash; Sundering Cut and the dash hold the camera a beat. The Comet's windup now has its own kind of gathering for each of Draw, Sundering, Cracked Guard, Still Water (rings of cold) and the kneels.
+- The Last Vigil finale: every standing lantern sends a beam of its flame to him, frost runs out toward each lantern, and as the last flame arrives a column of white fills the pass with a flash (it was throwing an error half-way through before: the shared propfx helper had no roomTint).
+- Camera: the existing hold-the-camera helper now takes its own gap, so the smaller landings can punch more often than the big ones.
+
+**Gameplay.**
+1. **Comet Draw into Draw Cut.** After the dash he turns where it left him, at the wall across the room, and draws a line back through the place everyone just ran to (Act II: at the tank on Normal; Hard also lets it fall on anyone). The pair replaces one tank Draw Cut in the Shrine. Same cast names, so no new sounds.
+2. **Staggered Twin Draw (Act III).** The two lines are both painted at once but the second lands a beat after the first and keeps following its own hero while the first lands: the step that gets you off one line must not put you on the other.
+3. **Hard: the second Rising Crane fan turns toward the side most of the party is standing on.** The turn is painted from the start on the second fan as before; the party that would have used that door has to read the arrow.
+4. **Hard damage multiplier 1.42 to 1.335.** The difficulty it carried lives in 1 to 3 now (Hard has them more often: the Act II Comet Draw is followed by a line at anyone, not only the tank). The Hard enrage stays at 9:40.
+
+Journal: Draw Cut and Comet Draw entries for every hero say what the new pairs ask.
+
+Numbers (bots, 30 runs per seed set, three sets). Normal `GEAR=post3`: 77 of 90 (86%). Hard `GEAR=post4`: multiplier 1.34 gave 43 of 90 (48%), 1.33 gave 52 of 90 (58%), 1.30 gave 67 of 90 (74%): the clear rate is steep around here, so the multiplier is the last thing tuned; the final 1.335 gives 47 of 90 (52%), clears at about 505 s.

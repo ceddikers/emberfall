@@ -931,6 +931,8 @@ const BOSS_VFX = (() => {
     if (ctx && ctx.boss === 'hollowking' && typeof HK_FX !== 'undefined' && HK_FX.impact(tg, msg, ctx, { shapeFlash, shockAt, scatter, after, shake, roomTint, sweep, streak, bang, AFT, coverShadows, clipOut, AR: AR() })) return;
     // Grubnak: the beat on top of his landings (hit-stop, the whiff past a hero who dodged, the kitchen bits flung) lands in grubnak-fx.js (GR_FX); it only adds, so the landing below still plays
     if (ctx && ctx.boss === 'grubnak' && typeof GR_FX !== 'undefined' && GR_FX.impact(tg, msg, ctx, { shapeFlash, shockAt, scatter, after, shake, roomTint, sweep, streak, bang, AFT, coverShadows, clipOut, AR: AR() })) return;
+    // Queen Skitterra: the leg driving in, the whiff past a hero who dodged, hit-stop on the big landings (skitterra-fx.js, SK_FX); it only adds to the older landing, which still plays
+    if (ctx && ctx.boss === 'skitterra' && typeof SK_FX !== 'undefined') SK_FX.impact(tg, msg, ctx, { shapeFlash, shockAt, scatter, after, shake, roomTint, sweep, streak, bang, AFT, coverShadows, clipOut, AR: AR() });
     // (an untagged raidwide washes the room in the boss's own colour, softly, instead of a grey-white veil)
     if (tg.type === 'raidwide') { (IMPACT[tg.tag] || (() => { roomTint({ grubnak: '#ff8a3a', skitterra: '#b070ff', volkar: '#7fc8ff', hollowking: '#6dff9a', wyrm: '#ff8a3a', titan: '#9fd8ff' }[ctx && ctx.boss] || '#ffffff', 0.15); shake(6); }))(tg, ctx); return; }
     if (tg.type === 'proximity') { (IMPACT[tg.tag] || IMPACT.boil)(tg); shake(10); return; }

@@ -18,20 +18,26 @@
 //     with a Scabbard Sweep laid just behind it, a Draw Cut at the tank on the glass of Still Water or at the healer inside Hollow Breath).
 //   Act IV, The Last Vigil (16% -> dead): he kneels once more, rises and gives all three edges back to back, each stance shown as the last
 //     one lands (the sentence the whole fight has been spelling), then a Hundredfold Parting begun from each hero in turn.
-// No push: an act ends at the next set seam after its gate. Every telegraph shows on every difficulty. Hard: casts 15% faster, 42%
-// more damage (against base numbers set for the old, longer fight), a smaller health bar and an earlier enrage, and:
+// Pairs that ask for skill, on both difficulties: a Comet Draw is followed by a Draw Cut from where the dash left him (a line from the far
+// wall through the place everyone just ran to), and the two lines of an Act III twin Draw land a beat apart, the second still following its
+// own hero while the first lands.
+// No push: an act ends at the next set seam after its gate. Every telegraph shows on every difficulty. Hard: casts 15% faster, about a third
+// more damage (a smaller multiplier than it was: the difficulty moved into the moves below), a smaller health bar and an earlier enrage, and:
 //   Overwhet:          notches landed while he unleashes are kept; one left over fires a second unleashing a breath after.
 //   False Stance:      halfway through a wind-up he changes stance; the floor is only painted for the stance he ends on. Never on the
 //                      second unleashing of an Overwhet pair, and never two in a row.
 //   Returning Parting: the dance runs again, back the other way, through where everyone has moved to (also at the end of the Last Vigil).
 //   Comet Volley:      Comet Draw becomes three dashes, each at the hero farthest from where the last one ended.
+//   Closing Fan:       the second Rising Crane fan turns toward the side most of the party is standing on (the door they would have used
+//                      is the one that closes; the turn is painted from the start, like everything else); a Comet Draw in Act II may be
+//                      followed by a Draw Cut at anyone, not only the tank.
 // Hard also draws which six of eight lanterns stand, the order of Act III's unleashings, the order of the closing three edges and when
 // Hollow Breath comes, fresh each pull.
 
 const CORVANE = {
   id: 'corvane', name: 'Corvane', title: 'the Unburied Blade',
   hp: { normal: 5700000, hard: 5450000 },
-  hardDmg: 1.42,   // (Hard's damage multiplier; fight.js default 1.25: held up to keep the clear rate when Hard's health was cut for enrage slack)
+  hardDmg: 1.335,   // (Hard's damage multiplier; fight.js default 1.25: it was 1.42, a numbers bump: part of that difficulty now lives in the Hard-only skill moves below)
   autoDmg: { normal: 2200, hard: 2050 },
   enrage: { normal: 590, hard: 580 },   // the cast starts here and lands 8 s later (9:58 / 9:48: a minute after the script's end, 45 s on Hard)
   enrageName: 'Last Light of the Pass',
@@ -139,13 +145,14 @@ const CORVANE = {
         aimFromBoss: target.id, lockAt: 0.5, tag: 'cvDraw' });
       hold(d);
     };
-    // two at once, at two different heroes (Act III)
+    // two at two different heroes (Act III), both lines painted at once, the second landing a beat after the first: the line you stepped
+    // out of puts you somewhere, and the second line is still following its own hero while the first lands
     const twinDraw = () => {
       const pool = f.shuffle(f.nonTanks().length > 1 ? f.nonTanks() : f.alive());
-      const d = f.ct(3.4);
-      f.cast('Draw Cut', d, 'draw');
-      for (const p of pool.slice(0, 2)) f.mech({ type: 'aoe', shape: { kind: 'rect', x: B.x, y: B.y, angle: Math.atan2(p.y - B.y, p.x - B.x), len: 1300, w: 110 }, delay: d, dmg: dmg.draw, aimFromBoss: p.id, lockAt: 0.5, tag: 'cvDraw' });
-      hold(d);
+      const d = f.ct(3.4), gap = f.ct(0.9);
+      f.cast('Draw Cut', d + gap, 'draw');
+      pool.slice(0, 2).forEach((p, i) => f.mech({ type: 'aoe', shape: { kind: 'rect', x: B.x, y: B.y, angle: Math.atan2(p.y - B.y, p.x - B.x), len: 1300, w: 110 }, delay: d + i * gap, dmg: dmg.draw, aimFromBoss: p.id, lockAt: 0.5, tag: 'cvDraw' }));
+      hold(d + gap);
     };
     // Scabbard Sweep: half the room on the side the scabbard points to
     const sweep = (side) => {
@@ -192,7 +199,15 @@ const CORVANE = {
     // each returns how long it runs from the moment its floor is painted
     const crane = () => {
       const d = f.ct(3.4), gap = f.ct(1.4), tgt = nonTank();
-      const a = tgt ? Math.atan2(tgt.y - B.y, tgt.x - B.x) : B.facing, turn = (f.rng() < 0.5 ? -1 : 1) * Math.PI / 4;
+      const a = tgt ? Math.atan2(tgt.y - B.y, tgt.x - B.x) : B.facing;
+      // Hard: the second fan turns toward the side most of the party is standing on (the door they would have used closes); a tie is the dice
+      let side = f.rng() < 0.5 ? -1 : 1;
+      if (H) {
+        let lean = 0;
+        for (const p of f.alive()) { const da = Math.atan2(Math.sin(Math.atan2(p.y - B.y, p.x - B.x) - a), Math.cos(Math.atan2(p.y - B.y, p.x - B.x) - a)); lean += da > 0.05 ? 1 : da < -0.05 ? -1 : 0; }
+        if (lean) side = lean > 0 ? 1 : -1;
+      }
+      const turn = side * Math.PI / 4;
       f.cast('Rising Crane', d + gap, 'crane');
       B.lockFacing = true; B.facing = a; hold(d + gap);
       const group = new Set();
@@ -233,6 +248,16 @@ const CORVANE = {
       for (let i = 1; i < n; i++) f.afterKeep(d + (i - 1) * step + 0.05, () => cometOne(step - 0.05, taken));
       f.afterKeep(d + (n - 1) * step + 0.2, () => { B.lockFacing = false; });
       return d + (n - 1) * step;
+    };
+    // Comet Draw, and then he turns where the dash left him (at the wall, across the room from the party) and draws on whoever the
+    // pair names: a line from the far side through the place everyone just ran to. who: 'tank' | 'healer' | 'any'
+    const cometDraw = (who = 'tank') => {
+      const run = comet(false);
+      f.afterKeep(run + 0.55, () => {
+        if (f.state !== 'live') return;
+        const tgt = who === 'tank' ? f.tank() : who === 'healer' ? healer() : nonTank();
+        if (tgt) drawCut(tgt);
+      }, 'Draw Cut');
     };
     // he blinks to each hero in turn and leaves a numbered afterimage where they stood; then one slash runs through them all, in order,
     // from where he began and back to it. order: hero ids (default: everyone, shuffled)
@@ -468,13 +493,13 @@ const CORVANE = {
       sets: [
         S([4, stillWater, 'Still Water']),
         S([12, ...tankPair]),
-        S([12, () => comet(false), 'Comet Draw'], [5, tankDraw, 'Draw Cut']),
+        S([12, () => cometDraw('tank'), 'Comet Draw']),
         S([10, hollowBreath, 'Hollow Breath'], [H ? 4 + Math.round(f.rng() * 4) : 6, healerDraw, 'Draw Cut']),
         S([9, ...tankPair]),
         S([9, gale, 'White Gale']),
         S([10, stillWater, 'Still Water'], [3.4, tankDraw, 'Draw Cut']),
         S([11, () => drawCut(), 'Draw Cut'], [0.8, () => sweep(), 'Scabbard Sweep'], [7, ...tankPair]),
-        S([11, () => comet(false), 'Comet Draw']),
+        S([11, H ? () => cometDraw('any') : () => comet(false), 'Comet Draw']),
         S([10, hollowBreath, 'Hollow Breath'], [6, tankDraw, 'Draw Cut']),
         S([10, gale, 'White Gale'], [5, tankDraw, 'Draw Cut']),
         S([6, scripted('comet'), 'Whetted Edge']),
@@ -522,7 +547,7 @@ const CORVANE = {
     pass(0);
 
     // every move by name, for tools and testing (window.__game.raidHost.sim.moves.parting())
-    f.moves = { gale, cut, drawCut, tankDraw, healerDraw, twinDraw, sweep, stillWater, hollowBreath, sheathe, crane, comet, parting, unleash, scripted, vigil, lastVigil, threefold, finalDance, notch };
+    f.moves = { gale, cut, drawCut, tankDraw, healerDraw, twinDraw, sweep, stillWater, hollowBreath, sheathe, crane, comet, cometDraw, parting, unleash, scripted, vigil, lastVigil, threefold, finalDance, notch };
   },
 };
 

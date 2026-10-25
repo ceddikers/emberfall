@@ -18,13 +18,13 @@ const CV_FX = (() => {
   const nowS = () => (typeof performance !== 'undefined' ? performance.now() : Date.now()) / 1000;
   // what the moves remember between frames: when the last Sundering Cut landed (so Cracked Guard reads as the second blow), the
   // angle of the first Rising Crane (so the second can show its turn), when the camera last held, the afterimages already shown
-  const S = { out: new Set(), cutAt: -99, guard: false, craneA: null, camAt: -99, img: { n: 0, at: {} } };
+  const S = { out: new Set(), cutAt: -99, guard: false, craneA: null, camAt: -99, img: { n: 0, at: {} }, whiffAt: new Map(), n: null, over: 0, stopAt: -99 };
   // how far a line from (x, y) along a runs before it meets the wall
   const wall = (x, y, a, max = 2400) => { const c = Math.cos(a), s = Math.sin(a); let d = 0; while (d < max && ARENA.sd(x + c * d, y + s * d) < -10) d += 12; return d; };
   const inPoly = (poly, x, y) => { let r = false; for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) { const [xi, yi] = poly[i], [xj, yj] = poly[j]; if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) r = !r; } return r; };
   // the camera holds for a beat when an unleashing lands (the existing hook: main.js FX.cam); never more than once in a few seconds
-  function cam(stop = 0.1, punch = 0.035, dur = 0.5) {
-    const t = nowS(); if (t - S.camAt < 3) return; S.camAt = t;
+  function cam(stop = 0.1, punch = 0.035, dur = 0.5, gap = 3) {
+    const t = nowS(); if (t - S.camAt < gap) return; S.camAt = t;
     try { if (typeof FX !== 'undefined' && FX.cam) { FX.cam.stop(stop); FX.cam.punch(punch, dur); } } catch (e) { /* cosmetic */ }
   }
 
@@ -358,6 +358,14 @@ const CV_FX = (() => {
   // ---------------------------------------------------------------- the Parting's afterimages (ArenaView.drawRoomOver hands it over)
   // numbered silver ghosts of him standing where each hero stood, until the slash
   function roomOver(ctx, room, t, env) {
+    // the Whetstone gaining a notch: the edge flares where he stands (the gauge is a roomev, 'whet')
+    const w = room && room.ev && room.ev.whet, bb = env && env.boss;
+    if (w && bb) {
+      const n = w.n | 0, over = w.over | 0, prev = S.n == null ? (t - w.start < 0.6 ? 0 : n) : S.n;
+      if (n > prev) notchFx(bb, n, n >= (w.max || 4));
+      else if (over > S.over) overFx(bb);
+      S.n = n; S.over = over;
+    } else { S.n = null; S.over = 0; }
     const ev = room && room.ev && room.ev.cvimgs;
     if (!ev || t >= ev.end || !ev.l || !ev.l.length) { if (S.img.n) S.img = { n: 0, at: {} }; return; }
     const l = ev.l;
@@ -509,6 +517,7 @@ const CV_FX = (() => {
     }
     VFX.debris(x, y, { color: '#cfe0f0', n: 8, speed: 1.1 });
     H.shake(second ? 12 : 8);
+    cam(second ? 0.1 : 0.06, second ? 0.032 : 0.022, 0.45, 1.2);
   };
 
   // Draw Cut: the hair of light becomes a white cut along the whole line; snow thrown up off it
@@ -519,7 +528,12 @@ const CV_FX = (() => {
     H.shapeFlash(s, '#cfeeff', { a: 0.22, dur: 0.45 });
     for (let d = 90, i = 0; d < L; d += 85, i++) H.after(d / L * 0.14, () => { VFX.smoke(s.x + ca * d, s.y + sa * d, { n: 1, color: '#eaf2fa', size: 30, a: 0.5, speed: 90 }); if (i % 2) VFX.sparks(s.x + ca * d, s.y + sa * d, { color: '#eaf8ff', n: 3, speed: 240 }); });
     for (const u of ctx.units || []) { const q = dist2line(u, s); if (q.al > 0 && q.al < L && q.off < s.w / 2 + 8) { VFX.hit(u.x, u.y, '#bfe8ff', 1.8); VFX.crystals(u.x, u.y, { r: 26, n: 5, h: 46, color: '#cfeeff', dur: 0.8 }); flurry(u.x, u.y, 6); } }
+    // the draw itself: a crescent of the blade at his hand, the silver figure left standing along the cut, a ring where it ends
+    VFX.slash(s.x, s.y - 26, s.angle, { r: 120, span: 2.2, color: C.frost, core: '#ffffff', dur: 0.36, sparks: 5 });
+    ghostTrail(s.x, s.y, s.angle, L, 4);
+    H.shockAt(s.x + ca * L, s.y + sa * L, { r: 120, color: '#dff4ff', w: 5, dur: 0.45, flat: 1 });
     H.shake(6);
+    cam(0.04, 0.02, 0.35, 1.2);
   };
 
   // Scabbard Sweep: a great wheel of snow thrown round the room
@@ -538,7 +552,10 @@ const CV_FX = (() => {
       c.restore();
     } });
     for (const q of H.scatter(s, 16)) H.after(rand(0, 0.35), () => { VFX.smoke(q.x, q.y, { n: 1, color: '#eef6ff', size: 42, a: 0.55, speed: 150 }); if (Math.random() < 0.5) VFX.sparks(q.x, q.y, { color: '#eaf8ff', n: 2, speed: 200 }); });
+    // the scabbard's own crescent follows the wheel of snow round
+    VFX.slash(s.x, s.y - 22, s.angle, { r: 150, span: Math.min(2.8, s.arc * 0.9), color: '#dff0ff', core: '#ffffff', dur: 0.42, sparks: 6, flip: side > 0 });
     H.shake(9);
+    cam(0.05, 0.026, 0.4, 2);
   };
 
   // White Gale: the blizzard breaks across the room from one side
@@ -580,7 +597,9 @@ const CV_FX = (() => {
     } });
     for (const q of H.scatter(s, 9)) H.after(rand(0, 0.35), () => { VFX.crystals(q.x, q.y, { r: 22, n: 3, h: 46, color: '#cfeeff', dur: 0.7 }); VFX.sparks(q.x, q.y, { color: '#eaf8ff', n: 3, speed: 240 }); });
     H.shake(second ? 13 : 9);
-    if (second) cam(0.1, 0.035, 0.5);
+    if (second) cam(0.1, 0.035, 0.5, 1); else cam(0.04, 0.022, 0.4, 1.2);
+    // the blade comes back across the room along the fan's own centre
+    VFX.slash(s.x, s.y - 26, s.angle, { r: 170, span: 2.6, color: '#cfeeff', core: '#ffffff', dur: 0.4, sparks: 6, flip: second });
   };
   IMP.cvCrane2 = IMP.cvCrane;
 
@@ -605,8 +624,9 @@ const CV_FX = (() => {
     VFX.crystals(ex, ey, { r: 46, n: 8, h: 60, color: '#cfeeff', dur: 1.0 });
     H.shockAt(ex, ey, { r: 170, color: '#dff4ff', w: 6, dur: 0.5, flat: 1 });
     flurry(ex, ey, 12, { speed: 220 });
+    ghostTrail(s.x, s.y, s.angle, L, 5);
     H.shake(10);
-    cam(0.1, 0.035, 0.5);
+    cam(0.1, 0.035, 0.5, 0.9);
   };
 
   // Hundredfold Parting: each line of the zigzag lights white at once; silver sparks where the slash passes through an image
@@ -619,8 +639,10 @@ const CV_FX = (() => {
     VFX.hit(ex, ey, '#dfe8ff', 1.2);
     flurry(ex, ey, 6, { speed: 160 });
     for (const u of ctx.units || []) { const q = dist2line(u, s); if (q.al > 0 && q.al < s.len && q.off < s.w / 2 + 6) VFX.hit(u.x, u.y, '#dfe8ff', 1.4); }
+    ghostTrail(s.x, s.y, s.angle, s.len, Math.max(2, Math.min(4, Math.round(s.len / 220))));
+    VFX.slash(ex, ey - 20, s.angle + Math.PI, { r: 80, span: 1.8, color: C.silver, core: '#ffffff', dur: 0.3, sparks: 3 });
     H.shake(5);
-    cam(0.1, 0.03, 0.5);
+    cam(0.1, 0.03, 0.5, 1.2);
   };
 
   // Cold Sheathe: the blade goes home; a ring of cold goes out from him across the pass
@@ -629,8 +651,223 @@ const CV_FX = (() => {
     H.roomTint('#eaf6ff', 0.22, 0.8);
     for (let i = 0; i < 3; i++) H.shockAt(b.x, b.y, { r: H.AR * 1.2, color: i ? '#cfeeff' : '#ffffff', w: 10 - i * 3, dur: 0.7 + i * 0.12, flat: 1, delay: i * 0.1 });
     flurry(b.x, b.y, 18, { speed: 260 });
+    // the blade home: one thin white line across the whole pass, there and gone
+    VFX.fx({ dur: 0.7, layer: 'air', draw: (c, p, t, e) => horizonCut(c, 0.5, t, e.a * (1 - p) * (1 - p) * Math.min(1, p / 0.08), 1) });
+    try { if (typeof FX !== 'undefined' && FX.cam) FX.cam.flash('#eaf6ff', 0.14, 0.25); } catch (err) { /* cosmetic */ }
     H.shake(7);
+    cam(0.06, 0.024, 0.45, 1.5);
   };
+
+  // ---------------------------------------------------------------- the whiff (a blow that just missed a hero)
+  // A hero who stood within a stride of a blow's edge, and was not hit, feels the blade go by: a bright sliver of the edge drawn past
+  // them, torn strands of snow-cloth thrown off, a ring at their feet; for your own hero a flash at the screen's rim, a push of the
+  // camera, a held breath and a soft whoosh. Only ever drawn for a hero the blow did not take and was close to, so it is a reward for
+  // a dodge, never a hint of where is safe.
+  const NEAR = 80;
+  const WHIFF = new Set(['cvDraw', 'cvComet', 'cvCrane', 'cvCrane2', 'cvSweep', 'cvPart']);
+  const isMe = u => typeof Net !== 'undefined' && Net && u.id === Net.id;
+  // a whole-screen layer: fn(c, W, H, t, p, e) each frame in screen space
+  function screenFx(dur, fn) {
+    return VFX.fx({ dur, layer: 'air', draw: (c, p, t, e) => { c.save(); c.setTransform(1, 0, 0, 1, 0, 0); fn(c, c.canvas.width, c.canvas.height, t, p, e); c.restore(); } });
+  }
+  // where the edge of a blow lies from a hero it just missed: gap (px between them), dir (the way the edge runs), away (from the blow to them)
+  function edgeOf(s, u) {
+    if (s.kind === 'rect') {
+      const c = Math.cos(s.angle), sn = Math.sin(s.angle), across = -(u.x - s.x) * sn + (u.y - s.y) * c, sg = across >= 0 ? 1 : -1;
+      return { gap: Math.max(14, Math.abs(across) - s.w / 2), dir: { x: c, y: sn }, away: { x: -sn * sg, y: c * sg } };
+    }
+    const dx = u.x - s.x, dy = u.y - s.y, d = Math.hypot(dx, dy) || 1, h = Math.atan2(dy, dx);
+    const rel = Math.atan2(Math.sin(h - s.angle), Math.cos(h - s.angle)), sg = rel >= 0 ? 1 : -1;
+    return { gap: Math.max(14, (Math.abs(rel) - s.arc / 2) * d), dir: { x: dx / d, y: dy / d }, away: { x: -Math.sin(h) * sg, y: Math.cos(h) * sg } };
+  }
+  function whiff(u, s, tag, mine) {
+    const e = edgeOf(s, u), col = tag === 'cvPart' ? C.silverHi : tag === 'cvComet' ? C.white : C.frost, back = Math.min(e.gap, 58);
+    const gx = u.x - e.away.x * back, gy = u.y - e.away.y * back - 16, dx = e.dir.x, dy = e.dir.y;
+    VFX.fx({ dur: 0.36, layer: 'air', draw: (c, p, t, q) => {
+      const k = q.a * (1 - p) * (1 - p), L = 44 + 84 * easeOut(Math.min(1, p / 0.45)), sh = (p - 0.15) * 80;   // (the edge, and the last inch of it running on past)
+      c.save(); c.lineCap = 'round';
+      VFX.neonPath(c, col, 5.5 * (1 - p * 0.6), k, () => { c.moveTo(gx + dx * (sh - L), gy + dy * (sh - L)); c.lineTo(gx + dx * (sh + L), gy + dy * (sh + L)); });
+      VFX.neonPath(c, '#ffffff', 1.8, k * 0.9, () => { c.moveTo(gx + dx * (sh - L * 0.5), gy + dy * (sh - L * 0.5)); c.lineTo(gx + dx * (sh + L * 0.5), gy + dy * (sh + L * 0.5)); });
+      // the air torn after the edge: a fainter line set back from it that comes late
+      const k2 = k * clamp((p - 0.12) / 0.3, 0, 1) * 0.6;
+      c.beginPath(); c.moveTo(gx - e.away.x * 16 + dx * (sh - L * 0.7), gy - e.away.y * 16 + dy * (sh - L * 0.7)); c.lineTo(gx - e.away.x * 16 + dx * (sh + L * 0.3), gy - e.away.y * 16 + dy * (sh + L * 0.3));
+      c.strokeStyle = rgba(C.ice, k2); c.lineWidth = 1.4; c.stroke();
+      c.restore();
+    } });
+    VFX.shock(u.x, u.y + 6, { r: 66, color: col, w: 3, dur: 0.34, flat: 0.6 });
+    VFX.sparks(u.x - e.away.x * 16, u.y - 12, { color: '#eef8ff', n: mine ? 12 : 7, speed: 300, angle: Math.atan2(e.away.y, e.away.x), spread: 0.9, up: 80, life: 0.9 });
+    // strands of cloak and scarf the blade cut free as it went by
+    for (let i = 0; i < (mine ? 6 : 3); i++) {
+      const sp = rand(120, 260);
+      VFX.spawn({ x: u.x, y: u.y, z: rand(26, 54), vx: (e.away.x * 0.7 + rand(-0.4, 0.4)) * sp, vy: (e.away.y * 0.7 + rand(-0.4, 0.4)) * sp * 0.7, vz: rand(40, 150), g: 420, drag: 0.02, life: 0.8, size: 9, color: i % 2 ? '#dff4ff' : '#8a96a8', kind: 'shard', add: false, vr: rand(-12, 12) });
+    }
+    flurry(u.x - e.away.x * 10, u.y, mine ? 8 : 4, { speed: 140, size: 0.8 });
+    if (mine) {
+      try {
+        if (typeof FX !== 'undefined' && FX.cam) {
+          FX.cam.flash(col, 0.1, 0.2); FX.cam.punch(0.02, 0.34);
+          const tn = nowS(); if (tn - S.stopAt > 1.2) { S.stopAt = tn; FX.cam.stop(0.04); }   // (a held breath, not every time)
+        }
+        if (typeof Sound !== 'undefined' && Sound.play) Sound.play('dash', { vol: 0.3, key: 'cv-whiff', minGap: 0.3 });
+      } catch (err) { /* cosmetic */ }
+      screenFx(0.5, (c, W, Hh, t, p, q) => {
+        const k = (1 - p) * (1 - p) * q.a; c.globalCompositeOperation = 'screen';
+        const g = c.createRadialGradient(W / 2, Hh / 2, Math.min(W, Hh) * 0.38, W / 2, Hh / 2, Math.hypot(W, Hh) * 0.55); g.addColorStop(0, rgba(col, 0)); g.addColorStop(1, rgba(col, 0.3 * k));
+        c.fillStyle = g; c.fillRect(0, 0, W, Hh);
+      });
+    }
+  }
+  function whiffs(tg, msg, ctx) {
+    if (!ctx || !ctx.units || !msg || !WHIFF.has(tg.tag)) return;
+    const s = tg.live, hits = msg.hits || [], t = nowS();
+    for (const u of ctx.units) {
+      if (hits.includes(u.id)) continue;
+      if (t - (S.whiffAt.get(u.id) || -9) < 0.7) continue;
+      if (SHAPES.contains(s, u.x, u.y)) continue;   // inside and not hit: sheltered, not a dodge
+      if (!SHAPES.contains(s, u.x, u.y, NEAR)) continue;
+      S.whiffAt.set(u.id, t);
+      whiff(u, s, tg.tag, isMe(u));
+    }
+  }
+  // silver copies of him standing along a cut, each coming apart in turn (the figure that drew it)
+  function ghostTrail(x, y, ang, L, n) {
+    const ca = Math.cos(ang), sa = Math.sin(ang);
+    VFX.fx({ dur: 0.85, layer: 'air', draw: (c, p, t, e) => {
+      c.save(); clipRoom(c);
+      for (let i = 0; i < n; i++) {
+        const u = (i + 0.7) / (n + 0.4), q = clamp((p - u * 0.3) / 0.5, 0, 1); if (q <= 0 || q >= 1) continue;
+        ghostFig(c, x + ca * L * u, y + sa * L * u + 22 * q, ang, (1 - q) * Math.min(1, q * 6) * e.a);
+      }
+      c.restore();
+    } });
+  }
+
+  // ---------------------------------------------------------------- the gathering while he casts (boss-vfx.js castStart() asks)
+  // what each stance and move looks like as it is drawn: the stance reads on the blade before any floor is painted. The shared ring
+  // and glow stay under all of it. H: { drawIn, emit, beat, soon, own } from boss-vfx.js.
+  const stanceNow = () => { const ev = typeof ArenaView !== 'undefined' && ArenaView.liveRoom && ArenaView.liveRoom.ev && ArenaView.liveRoom.ev.whet; return ev ? ev.st || null : null; };
+  function cast(sh, b, dur, anim, name, H) {
+    const own = e => H.own(sh, e), bx = () => b.x, by = () => b.y;
+    if (anim === 'stance') {
+      const st = stanceNow(), flip = name === 'False Stance', over = name === 'Overwhet';
+      // the whetstone: sparks rubbed off the edge, quicker as it nears
+      H.beat(sh, dur, over ? 0.14 : 0.2, () => { VFX.sparks(bx() + rand(-22, 22), by() - rand(34, 86), { color: '#eaf8ff', n: 3, speed: 180, up: 70 }); });
+      if (st === 'crane') {
+        // blade low and back: a folding fan of cold light opens behind his shoulder
+        own(VFX.fx({ dur: dur + 0.2, layer: 'air', draw: (c, p, t, e) => {
+          const k = e.a * Math.min(1, p / 0.2) * (1 - clamp((p - 0.94) / 0.06, 0, 1)), open = easeOut(clamp(p / 0.85, 0, 1)), cx = bx(), cy = by() - 64, len = 110 + 100 * easeOut(p);
+          c.save(); c.lineCap = 'round';
+          glow(c, cx, cy, 60 + 50 * p, C.ice, 0.16 * k);
+          for (let i = 0; i < 8; i += 2) { const a0 = -Math.PI / 2 - 1.0 * open + 2.0 * open * (i / 8), a1 = a0 + 2.0 * open / 8; c.beginPath(); c.moveTo(cx, cy); c.ellipse(cx, cy, len, len * 0.8, 0, a0, a1); c.closePath(); c.fillStyle = rgba(C.ice, (0.05 + 0.1 * p) * k); c.fill(); }
+          for (let i = 0; i < 9; i++) {
+            const an = -Math.PI / 2 - 1.0 * open + 2.0 * open * (i / 8), ca = Math.cos(an), sa = Math.sin(an);
+            c.beginPath(); c.moveTo(cx + ca * 24, cy + sa * 20); c.lineTo(cx + ca * len, cy + sa * len * 0.8);
+            c.strokeStyle = rgba(C.deep, 0.35 * k); c.lineWidth = (i % 2 ? 1.6 : 3) + 2.5; c.stroke();
+            c.strokeStyle = rgba(i % 2 ? C.ice : C.white, (0.35 + 0.55 * p) * k); c.lineWidth = i % 2 ? 1.6 : 3; c.stroke();
+          }
+          c.beginPath(); c.ellipse(cx, cy, len, len * 0.8, 0, -Math.PI / 2 - 1.0 * open, -Math.PI / 2 + 1.0 * open); c.strokeStyle = rgba(C.white, (0.2 + 0.5 * p) * k); c.lineWidth = 2; c.stroke();
+          c.restore();
+        } }));
+        H.drawIn(sh, dur, () => ({ x: bx() - 14, y: by() - 30 }), { color: C.frost, color2: '#ffffff', r: 90, z: 16, rate: 0.5 });
+      } else if (st === 'comet') {
+        // blade raised high: a lance of white light climbs the sky above him, chevrons running up it
+        own(VFX.fx({ dur: dur + 0.2, layer: 'air', draw: (c, p, t, e) => {
+          const k = e.a * Math.min(1, p / 0.15) * (1 - clamp((p - 0.94) / 0.06, 0, 1)), h = 40 + 330 * easeOut(clamp(p / 0.9, 0, 1)), cx = bx(), base = by() - 70, w = 7 + 9 * p;
+          c.save();
+          const g = c.createLinearGradient(cx, base, cx, base - h); g.addColorStop(0, rgba(C.white, 0.7 * k)); g.addColorStop(1, rgba(C.frost, 0));
+          c.fillStyle = g; c.fillRect(cx - w, base - h, w * 2, h);
+          c.lineCap = 'round'; c.beginPath(); c.moveTo(cx, base); c.lineTo(cx, base - h); c.strokeStyle = rgba('#ffffff', (0.5 + 0.5 * p) * k); c.lineWidth = 2.4; c.stroke();
+          for (let i = 0; i < 5; i++) { const y = base - ((t * (160 + 200 * p) + i * h / 5) % h), f2 = 1 - (base - y) / h; c.beginPath(); c.moveTo(cx - 14, y + 12); c.lineTo(cx, y); c.lineTo(cx + 14, y + 12); c.strokeStyle = rgba(C.ice, 0.6 * f2 * k); c.lineWidth = 1.8; c.stroke(); }
+          glow(c, cx, base - h, 30 + 40 * p, C.white, (0.2 + 0.4 * p) * k);
+          c.restore();
+        } }));
+        H.drawIn(sh, dur, () => ({ x: bx(), y: by() - 100 }), { color: C.white, color2: C.frost, r: 80, z: 40, rate: 0.5 });
+      } else if (st === 'parting') {
+        // blade planted in the snow: silver rings run out across it, and the figures he will leave stand up at the edges, faint
+        own(VFX.fx({ dur: dur + 0.2, layer: 'ground', draw: (c, p, t, e) => {
+          const k = e.a * Math.min(1, p / 0.15) * (1 - clamp((p - 0.94) / 0.06, 0, 1));
+          c.save();
+          for (let i = 0; i < 3; i++) { const q = (p * 1.6 + i / 3) % 1; ellipse(c, bx(), by() + 10, 40 + q * 230, (40 + q * 230) * 0.8, 0, null, rgba(C.silverHi, (1 - q) * (0.2 + 0.5 * p) * k), 1.8); }
+          c.restore();
+        } }));
+        own(VFX.fx({ dur: dur + 0.2, layer: 'air', draw: (c, p, t, e) => {
+          const a = clamp((p - 0.35) / 0.4, 0, 1) * (1 - clamp((p - 0.94) / 0.06, 0, 1)) * e.a; if (a <= 0.02) return;
+          c.save(); clipRoom(c);
+          [[-1, 1], [1, 1], [0, -1]].forEach(([sx, sy], i) => ghostFig(c, bx() + sx * 150, by() + 30 + (sy < 0 ? -140 : 0), Math.atan2(-sy * 30, -sx * 150), a * 0.75 * (0.8 + 0.2 * Math.sin(t * 5 + i)), { t }));
+          c.restore();
+        } }));
+      }
+      if (flip) {
+        // False Stance: the figure comes apart in two, the old stance shearing off him
+        own(VFX.fx({ dur, layer: 'air', draw: (c, p, t, e) => {
+          const a = Math.abs(Math.sin(t * 17)) * (1 - p * 0.5) * e.a * 0.7;
+          c.save(); clipRoom(c);
+          ghostFig(c, bx() + Math.sin(t * 29) * 26, by() + 2, b.f || 0, a, { t });
+          c.restore();
+        } }));
+        H.soon(sh, 0.02, () => { VFX.shock(bx(), by() + 8, { r: 130, color: C.frost, w: 3, dur: 0.4, flat: 1 }); });
+      }
+      if (over) {
+        // Overwhet: a second ring of sparks as the edge is run along the stone again
+        H.beat(sh, dur, 0.28, () => { VFX.shock(bx(), by() + 8, { r: 100, color: '#ffffff', w: 2, dur: 0.35, flat: 1 }); });
+      }
+    } else if (anim === 'draw') {
+      // iaido: the hand settles on the hilt, a hair of light at the mouth of the scabbard, and the click as it leaves
+      own(VFX.fx({ dur, layer: 'air', draw: (c, p, t, e) => {
+        const k = e.a * Math.min(1, p / 0.2), hx = bx() + 12, hy = by() - 50;
+        glow(c, hx, hy, 16 + 22 * p, C.white, (0.12 + 0.5 * p * p) * k * (0.85 + 0.15 * Math.sin(t * 22)));
+        c.save(); c.lineCap = 'round'; c.beginPath(); c.moveTo(hx - 4, hy + 2); c.lineTo(hx + 8 + 36 * p * p, hy - 2 - 10 * p * p); c.strokeStyle = rgba('#ffffff', (0.3 + 0.6 * p) * k); c.lineWidth = 1.4 + p; c.stroke(); c.restore();
+      } }));
+      H.drawIn(sh, dur, () => ({ x: bx() + 12, y: by() - 50 }), { color: C.ice, r: 54, z: 0, rate: 0.35, glow: false });
+      H.soon(sh, Math.max(0.05, dur - 0.1), () => { VFX.flash(bx() + 14, by() - 52, 54, '#ffffff', 0.18); VFX.sparks(bx() + 14, by() - 52, { color: '#ffffff', n: 8, speed: 300, up: 40 }); });
+    } else if (anim === 'cut' || anim === 'guard') {
+      // the blade is lifted over the head and a long vertical of light gathers along it
+      own(VFX.fx({ dur: dur + 0.1, layer: 'air', draw: (c, p, t, e) => {
+        const k = e.a * Math.min(1, p / 0.2) * (1 - clamp((p - 0.95) / 0.05, 0, 1)), cx = bx(), top = by() - 120 - 190 * easeOut(p);
+        c.save(); c.lineCap = 'round';
+        c.beginPath(); c.moveTo(cx + 6, by() - 96); c.lineTo(cx + 6, top); c.strokeStyle = rgba(C.frost, (0.2 + 0.3 * p) * k); c.lineWidth = anim === 'guard' ? 14 : 10; c.stroke();
+        c.strokeStyle = rgba('#ffffff', (0.4 + 0.5 * p) * k); c.lineWidth = anim === 'guard' ? 3.6 : 2.6; c.stroke();
+        glow(c, cx + 6, top, 24 + 26 * p, C.white, (0.2 + 0.4 * p) * k);
+        c.restore();
+      } }));
+    } else if (anim === 'comet') {
+      // he sets his weight: the wind pulls in along the snow toward his feet, then lets go
+      H.emit(sh, dur, 0.9, (p) => { const a = rand(0, TAU), r = rand(150, 330) * (1 - p * 0.4); VFX.spawn({ x: bx() + Math.cos(a) * r, y: by() + 10 + Math.sin(a) * r * 0.5, z: 6, vx: -Math.cos(a) * r * 1.6, vy: -Math.sin(a) * r * 0.8, life: 0.55, size: 6, size1: 2, color: '#eaf6ff', kind: 'glow' }); });
+      H.soon(sh, Math.max(0.05, dur - 0.15), () => { VFX.flash(bx(), by() - 40, 90, '#ffffff', 0.2); VFX.shock(bx(), by() + 8, { r: 160, color: '#ffffff', w: 4, dur: 0.35, flat: 1 }); });
+    } else if (anim === 'kneel') {
+      // frost spreading out across the snow from the kneeling figure, the cracks finding the lanterns
+      const big = name === 'The Last Vigil', R = big ? 330 : 200;
+      own(VFX.fx({ dur: dur + (big ? 1.2 : 0.6), layer: 'ground', draw: (c, p, t, e) => {
+        const grow = easeOut(clamp(p / 0.7, 0, 1)), k = e.a * (1 - clamp((p - 0.75) / 0.25, 0, 1));
+        c.save(); ARENA.trace(c, 2); c.clip();
+        crackStar(c, bx(), by() + 6, R * grow, big ? 16 : 11, 61, 0.7 * k, { w: 1.8, jag: 7 });
+        ellipse(c, bx(), by() + 8, R * grow * 0.9, R * grow * 0.72, 0, rgba(C.ice, 0.06 * k), rgba(C.white, 0.5 * k), 2);
+        c.restore();
+      } }));
+    } else if (anim === 'still') {
+      // glass forming: little rings of cold running out from his feet
+      H.beat(sh, dur, 0.4, () => { VFX.shock(bx() + rand(-30, 30), by() + 12, { r: 110, color: '#cfeeff', w: 3, dur: 0.5, flat: 1 }); VFX.crystals(bx() + rand(-70, 70), by() + rand(30, 110), { r: 16, n: 2, h: 30, color: '#cfeeff', dur: 0.6 }); });
+    }
+  }
+
+  // ---------------------------------------------------------------- the blade sharpening (roomOver sees the gauge change)
+  // a notch added: the edge flares where he stands; a full blade is a bigger flare and a ring running out
+  function notchFx(b, n, full) {
+    const x = b.x, y = b.y - 66;
+    VFX.flash(x + 10, y, 42 + n * 10, C.frost, 0.26);
+    VFX.sparks(x + 10, y, { color: '#eaf8ff', n: 8 + n * 3, speed: 300, up: 110 });
+    VFX.shock(b.x, b.y + 8, { r: 70 + n * 16, color: full ? '#ffffff' : C.frost, w: 3 + n, dur: 0.45, flat: 1 });
+    if (full) {
+      VFX.fx({ dur: 0.9, layer: 'air', draw: (c, p, t, e) => { const k = e.a * (1 - p) * (1 - p); VFX.neonRing(c, b.x, b.y + 4, 60 + 340 * easeOut(p), C.ice, 7 * (1 - p), k, 0.8); glow(c, x + 10, y, 90 * (1 - p * 0.4), C.white, 0.4 * k); } });
+      flurry(b.x, b.y, 14, { speed: 200 });
+      cam(0.05, 0.02, 0.4, 2);
+    }
+  }
+  function overFx(b) {
+    VFX.flash(b.x + 10, b.y - 66, 64, '#ffffff', 0.22);
+    VFX.sparks(b.x + 10, b.y - 66, { color: '#ffffff', n: 12, speed: 340, up: 130 });
+    VFX.shock(b.x, b.y + 8, { r: 150, color: '#ffffff', w: 4, dur: 0.4, flat: 1 });
+  }
 
   // ---------------------------------------------------------------- propfx (boss-vfx.js propFx() asks first: it is his, or it is a lantern)
   function dash(msg, H) {
@@ -649,7 +886,10 @@ const CV_FX = (() => {
     VFX.sparks(x, y, { color: '#eaf8ff', n: 8, speed: 240 });
     flurry(x2, y2, 12, { speed: 220 });
     H.shockAt(x2, y2, { r: 130, color: '#dff4ff', w: 6, dur: 0.45, flat: 1 });
+    H.shockAt(x, y, { r: 100, color: '#ffffff', w: 5, dur: 0.35, flat: 1 });
+    VFX.flash(x, y - 40, 80, '#ffffff', 0.18);
     H.shake(4);
+    cam(0.04, 0.02, 0.3, 0.8);
   }
   function wispBurst(x, y, H, big) {
     VFX.flash(x, y - 20, big ? 70 : 44, C.frost, 0.3);
@@ -690,15 +930,49 @@ const CV_FX = (() => {
       H.shockAt(x1, y1, { r: 70, color: '#ffd890', w: 4, dur: 0.4, flat: 1 });
     } });
   }
-  // the Last Vigil: he kneels once more; every lantern flares, frost runs out from him and the pass goes pale for a breath
+  // the Last Vigil: he kneels once more. Every standing lantern gives him its flame (a beam of amber light runs to him and the flame
+  // travels it), frost runs out across the snow, the pass goes pale, and as the last flame arrives he is wrapped in a column of white
   function lastVigilFx(msg, H) {
-    const x = msg.x, y = msg.y;
-    lanterns().forEach((pr, i) => VFX.fx({ dur: 0.05, delay: 0.15 + i * 0.1, layer: 'air', draw: () => {}, done: () => { VFX.flash(pr.x, pr.y - 30, 64, C.amber, 0.45); VFX.sparks(pr.x, pr.y - 32, { color: C.amber, n: 6, speed: 180 }); } }));
+    const x = msg.x, y = msg.y, lans = lanterns();
+    lans.forEach((pr, i) => VFX.fx({ dur: 0.05, delay: 0.15 + i * 0.1, layer: 'air', draw: () => {}, done: () => { VFX.flash(pr.x, pr.y - 30, 64, C.amber, 0.45); VFX.sparks(pr.x, pr.y - 32, { color: C.amber, n: 6, speed: 180 }); } }));
+    // the beams: lantern to blade, the flame running up each
+    VFX.fx({ dur: 2.3, layer: 'air', draw: (c, p, t, e) => {
+      const k = e.a * Math.min(1, p / 0.12) * (1 - clamp((p - 0.82) / 0.18, 0, 1));
+      c.save(); c.lineCap = 'round';
+      lans.forEach((pr, i) => {
+        const q = clamp((p - 0.06 - i * 0.04) / 0.55, 0, 1), mx = pr.x + (x - pr.x) * 0.5, my = Math.min(pr.y, y) - 80 - 30 * (i % 3);
+        const bz = u => ({ x: (1 - u) * (1 - u) * pr.x + 2 * (1 - u) * u * mx + u * u * x, y: (1 - u) * (1 - u) * (pr.y - 34) + 2 * (1 - u) * u * my + u * u * (y - 60) });
+        c.beginPath(); for (let j = 0; j <= 18; j++) { const pt = bz(j / 18 * easeOut(q)); j ? c.lineTo(pt.x, pt.y) : c.moveTo(pt.x, pt.y); }
+        c.strokeStyle = rgba(C.amber, 0.16 * k); c.lineWidth = 9; c.stroke(); c.strokeStyle = rgba('#ffe8b8', 0.5 * k); c.lineWidth = 2; c.stroke();
+        const hd = bz(easeOut(q)); glow(c, hd.x, hd.y, 22, '#ffd890', 0.7 * k);
+      });
+      glow(c, x, y - 60, 40 + 90 * p, C.white, 0.35 * k * p);
+      c.restore();
+    } });
+    // frost across the snow from the kneeling figure, lines running toward the lanterns
+    VFX.fx({ dur: 2.8, layer: 'ground', draw: (c, p, t, e) => {
+      const grow = easeOut(clamp(p / 0.5, 0, 1)), k = e.a * (1 - clamp((p - 0.7) / 0.3, 0, 1));
+      c.save(); ARENA.trace(c, 2); c.clip();
+      crackStar(c, x, y + 6, 380 * grow, 18, 83, 0.7 * k, { w: 2, jag: 8 });
+      ellipse(c, x, y + 8, 300 * grow, 240 * grow, 0, rgba(C.ice, 0.05 * k), rgba(C.white, 0.5 * k), 2.4);
+      for (const pr of lans) crackLine(c, x, y + 6, x + (pr.x - x) * grow, y + 6 + (pr.y - y) * grow, Math.round(pr.x + pr.y), 0.45 * k, { w: 1.6, jag: 9, seg: 26, col: '#ffe8b8' });
+      c.restore();
+    } });
     H.shockAt(x, y, { r: 420, color: C.frost, w: 8, dur: 1.1, flat: 1 });
     H.shockAt(x, y, { r: 240, color: '#ffffff', w: 4, dur: 0.9, flat: 1, delay: 0.15 });
     H.roomTint('#cfe4ff', 0.28, 1.4);
     flurry(x, y, 26, { speed: 260, size: 1.2 });
     H.shake(5);
+    // as the last flame reaches him: a column of white, the whole pass lit for a breath
+    VFX.fx({ dur: 0.05, delay: 1.5, layer: 'air', draw: () => {}, done: () => {
+      VFX.pillar(x, y, { r: 62, h: 560, color: '#cfeeff', dur: 1.1 });
+      H.shockAt(x, y, { r: 560, color: '#ffffff', w: 10, dur: 0.9, flat: 1 });
+      H.shockAt(x, y, { r: 330, color: C.amber, w: 5, dur: 0.8, flat: 1, delay: 0.1 });
+      flurry(x, y, 30, { speed: 340, size: 1.3 });
+      try { if (typeof FX !== 'undefined' && FX.cam) FX.cam.flash('#eaf6ff', 0.3, 0.55); } catch (err) { /* cosmetic */ }
+      H.shake(9);
+      cam(0.1, 0.04, 0.6, 0);
+    } });
   }
   function prop(msg, H) {
     if (msg.k === 'cvdash') { dash(msg, H); return true; }
@@ -780,11 +1054,13 @@ const CV_FX = (() => {
 
   return {
     tell: tag => TELLS[tag] || null, buster, zone, roomOver, aftermath, prop, enrage, enrageLand, intro, death,
-    impact(tg, ctx, H) {
+    impact(tg, ctx, H, msg) {
+      try { whiffs(tg, msg, ctx); } catch (e) { /* cosmetic */ }
       if (tg.type === 'buster') { IMP.buster(tg, ctx, H); return true; }
       const f = IMP[tg.tag]; if (!f) return false;
       f(tg, ctx, H); return true;
     },
+    cast(sh, b, dur, anim, name, H) { try { cast(sh, b, dur, anim, name, H); } catch (e) { /* cosmetic */ } },
     wispSpawn(x, y, H) { VFX.flash(x, y - 14, 40, C.frost, 0.25); flurry(x, y, 8, { speed: 110, size: 0.9 }); H.shockAt(x, y, { r: 60, color: '#cfeeff', w: 3, dur: 0.4, flat: 1 }); },
     wispDeath(x, y, H) { wispBurst(x, y, H, false); },
     // the room and lantern art may read these
