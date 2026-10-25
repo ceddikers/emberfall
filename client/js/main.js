@@ -2728,6 +2728,7 @@
     else if (!e.repeat && selfCast && selfCast.i === idx) selfCast = null;
     pressSlot(idx);
   }
+  const heldSlots = new Map(), HOLD_REPEAT = 0.1;   // (skill keys held down, by physical key: repeatHeld)
   let shiftDown = false;   // (Shift held at a key press: a Houndmaster's Whistle: Flank sends the other hound)
   window.addEventListener('keydown', e => { shiftDown = !!e.shiftKey; }, true);
   window.addEventListener('keyup', e => { shiftDown = !!e.shiftKey; }, true);
@@ -2776,8 +2777,26 @@
     if (act === 'chat') { chatInput.classList.remove('hidden'); chatInput.focus(); e.preventDefault(); return; }
     if (act === 'hurt') { e.preventDefault(); lockMostHurt(); return; }
     if (act === 'cycle') { e.preventDefault(); cycleTarget(e.shiftKey ? -1 : 1); return; }
+    // a held skill key (Q W E R D F) repeats on its own clock, not the browser's: the browser's repeat follows only
+    // the last key pressed, so an oGCD tapped while Q is held would stop Q
+    if (act && /^s[0-5]$/.test(act)) {
+      e.preventDefault();
+      if (e.repeat) return;
+      heldSlots.set(e.code, { a: act, next: now + HOLD_REPEAT });
+      runAction(act, e);
+      return;
+    }
     if (act) { e.preventDefault(); runAction(act, e); }
   });
+  window.addEventListener('keyup', e => { heldSlots.delete(e.code); });
+  window.addEventListener('blur', () => heldSlots.clear());
+  function repeatHeld() {
+    for (const h of heldSlots.values()) {
+      if (now < h.next) continue;
+      h.next = now + HOLD_REPEAT;
+      runAction(h.a, { repeat: true, shiftKey: shiftDown });
+    }
+  }
   // same order as the party frames: tank, healer, dps
   function partyOrder() {
     if (!inArena()) return [Net.id, ...[...remotes.values()].filter(r => r.scene === 0).map(r => r.id)];
@@ -2803,6 +2822,7 @@
     vfxClock += vdt;
     VFX.update(vfxClock, vdt);
     runTimers();
+    repeatHeld();
     updatePlayer(dt);
     if (actor) {
       const down = amDead();

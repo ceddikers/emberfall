@@ -335,6 +335,15 @@ const Hud = {
       return `<b>${g.label}</b><em>${meta.join(' · ')}</em>${info.desc}${info.extra ? info.extra(k) : ''}`;
     });
     this.el.classList.remove('hidden');
+    this.centre();
+  },
+
+  // the skills sit at the screen's centre, not the bar's: the bar steps left by half the gauge (never off a narrow screen)
+  centre() {
+    const main = this.el.querySelector('.hud-main'), z = parseFloat(this.el.style.zoom) || 1;
+    const room = Math.max(0, (window.innerWidth / z - main.offsetWidth) / 2 - 8);
+    main.style.translate = `${-Math.round(Math.min(((this.gw || 130) + 10) / 2, room))}px 0`;
+    if (!this._centred) { this._centred = true; window.addEventListener('resize', () => this.actor && this.centre()); }
   },
 
   hide() { this.el.classList.add('hidden'); this.actor = null; },
