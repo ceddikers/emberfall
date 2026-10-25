@@ -4356,7 +4356,7 @@
     remotes.set(msg.p.id, makeRemote(msg.p));
     toast(`${msg.p.name} joined the town.`);
     updatePartyList();
-    sendRoad(msg.p.id);   // (the newcomer walks your road)
+    setTimeout(() => sendRoad(msg.p.id), 0);   // (the newcomer walks your road: after their welcome, which goes out just after this, as they drop anything before it)
     setTimeout(() => sendTitle(Pastimes.title()), 400);   // (and hears your title)
   });
   // the host's road, for whoever's in its game (see hostRoad)
