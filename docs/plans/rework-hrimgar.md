@@ -39,3 +39,15 @@ Numbers: Normal health 5.15M (was 5.55M) and Normal hits 12% heavier (the new co
 - Hard, `GEAR=post2`, 90 runs: 51 clears, 57%; clear time about 8:50 against the 9:58 enrage.
 - Before the Lake was given a bot rule, bots stayed where the water rose and drowned; the two bot rules in `bots.js` (close in at the Grasp that chooses the islands, then stand on the frozen sheets) fixed that. A first version with the Sweep in the last act killed bots and would have killed players the same way (no dry ground to step round an arc), so the Sweep is not used there.
 - `tutorial-data.js` has no Hrimgar briefing (only the first four bosses have one), so nothing was added there.
+
+## Cool-factor pass (2026-10-26)
+
+Looks (`titan-art.js`): a frost whiff beat (a streak of ice past a hero a blow just missed, a frost ring and thrown snow; for your own hero a pale flash, a push of the camera and a soft whoosh), hit-stop and camera pushes on the big landings (guarded so they never stack), the Sweep's wind running along the arc and its edges kindling in the last moments, a ring of frost closing on the Slam and the Icefall, an aurora beam behind each falling shard, black water pressing in at the edges of a cracking sheet and a column of water and widening rings when it sinks, a crack running ahead of the Fault Line's crystals, a second wave from the Howl and the Slam.
+
+Play:
+- Black water numbs rather than slows at once: the legs go heavy only after a little over half a second in it, so a quick crossing keeps its pace and a hero who lingers (or is chilled and wading when a Sweep arrives) can still leave it in time. This answers the rescore's trap of a slowed hero in the water when a Sweep arrives.
+- The Sweep now has a backhand (both difficulties; Hard's is longer, wider and harder, Normal's smaller and slower). It appears just before the first blow falls, follows the same hero as they dodge and fixes late, so the first dodge has to leave room for a second. It is drawn violet-edged with its wind running the other way. Moves that follow a Sweep wait for it. The Long Night's arcs are unchanged.
+- The two Icefall shards on heroes follow their hero and fix a moment before landing (the others stay where they were thrown).
+- No new cast names, so no new sounds. Journal: the Sweep and Icefall entries for all 23 heroes carry the new counterplay.
+
+Bots after (90 runs, three seed sets): Normal `GEAR=post1` 77 of 90 (86%); Hard `GEAR=post2` 51 of 90 (57%).

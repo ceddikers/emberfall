@@ -88,7 +88,8 @@ const TITAN = {
     };
     // frozen ground is slick: stepping onto it from other ground shoves you a short way along the way you were going
     const prev = new Map(), slidAt = new Map();
-    f.ticker(() => {
+    const wadeT = new Map(), NUMB = 0.55;   // seconds in the water before the slow bites
+    f.ticker(dtT => {
       for (const p of f.alive()) {
         const c = cellAt(p.x, p.y), pr = prev.get(p.id);
         prev.set(p.id, { x: p.x, y: p.y, c });
@@ -98,9 +99,13 @@ const TITAN = {
         slidAt.set(p.id, f.t + 0.9);
         f.knock(p, p.x - hx / hl * 20, p.y - hy / hl * 20, 78);
       }
-      // black water slows whoever wades in it (the burn is the zone's)
+      // black water numbs whoever lingers in it: a quick crossing is at full pace, but the legs go heavy after a heartbeat (the burn is the zone's)
+      for (const p of f.alive()) {
+        const w = waters.has(cellAt(p.x, p.y)), t0 = wadeT.get(p.id) || 0;
+        wadeT.set(p.id, w ? t0 + dtT : Math.max(0, t0 - dtT * 2));
+        if (w && t0 > NUMB) f.debuff(p.id, 'slowed', 0.35);
+      }
       for (const [i] of waters) for (const p of f.alive()) if (cellAt(p.x, p.y) === i) {
-        f.debuff(p.id, 'slowed', 0.35);
         if (typeof process !== 'undefined' && process.env && process.env.TITAN_DEBUG && f.t - (p.dbgAt || -9) > 0.9) { p.dbgAt = f.t; console.log('DROWN', f.t.toFixed(1), p.id, Math.round(p.x), Math.round(p.y), 'cell', i, 'mechs', [...f.mechs.values()].filter(m => m.resolveAt - f.t < 6).map(m => m.tag + '@' + (m.resolveAt - f.t).toFixed(1)).join(',')); }
       }
     });
@@ -177,19 +182,35 @@ const TITAN = {
         let x, y;
         if (who[i]) { x = who[i].x; y = who[i].y; }
         else { x = Math.round(-460 + f.rng() * 920); y = Math.round(-360 + f.rng() * 720); }
-        f.afterKeep(i * 0.45, () => f.aoe({ kind: 'circle', x: Math.round(x), y: Math.round(y), r: 88 }, d, dmg.icicle, { tag: 'ticicle' }));
+        // the two on heroes hunt them: the ring follows its hero and fixes a moment before the shard lands, so it is outrun and then left behind
+        if (who[i]) { const hid = who[i].id; f.afterKeep(i * 0.45, () => f.aoe({ kind: 'circle', x: Math.round(x), y: Math.round(y), r: 88 }, d, dmg.icicle, { tag: 'ticicle', follow: hid, lockAt: 0.85 })); }
+        else f.afterKeep(i * 0.45, () => f.aoe({ kind: 'circle', x: Math.round(x), y: Math.round(y), r: 88 }, d, dmg.icicle, { tag: 'ticicle' }));
       }
     };
     // Titan's Sweep: a huge slow arc at a random hero
-    const sweepAt = (tgt, d, cast = true) => {
+    // The backhand. A narrower, shorter arc comes back for the same hero just after the first lands; it appears a heartbeat
+    // before the first blow falls, follows them as they dodge and fixes late, so the first dodge must leave room for a second.
+    // (Normal's is smaller and slower.)
+    const BACK_GAP = H ? 1.8 : 2.1, BACK = H ? { r: 560, arc: 1.4, k: 0.8 } : { r: 480, arc: 1.2, k: 0.65 };
+    const backhand = (tgt, d) => {
+      f.afterKeep(d - 0.6, () => {
+        const t2 = f.alive().find(q => q.id === tgt.id) || nonTank(); if (!t2) return;
+        const m2 = f.mech({ type: 'aoe', shape: { kind: 'cone', x: B.x, y: B.y, r: BACK.r, arc: BACK.arc, angle: Math.atan2(t2.y - B.y, t2.x - B.x) }, delay: 0.6 + f.ct(BACK_GAP), dmg: Math.round(dmg.sweep * BACK.k),
+          aimFromBoss: t2.id, lockAt: 0.85, tag: 'tisweep2' });
+        aiming.push(m2); hold(0.6 + f.ct(BACK_GAP));
+      });
+    };
+    const sweepAt = (tgt, d, cast = true, back = false) => {
       tgt = tgt || nonTank(); if (!tgt) return null;
       if (cast) f.cast("Titan's Sweep", d, 'sweep');
       const m = f.mech({ type: 'aoe', shape: { kind: 'cone', x: B.x, y: B.y, r: 660, arc: 1.9, angle: Math.atan2(tgt.y - B.y, tgt.x - B.x) }, delay: d, dmg: dmg.sweep,
         aimFromBoss: tgt.id, lockAt: 1.3, tag: 'tisweep' });
       aiming.push(m); hold(d);
+      if (back) backhand(tgt, d);
       return m;
     };
-    const sweep = () => sweepAt(null, f.ct(5.4));
+    const sweep = () => sweepAt(null, f.ct(5.4), true, true);
+    const sweepGap = () => f.ct(5.4) + f.ct(BACK_GAP) + 0.3;   // (how long until a move that follows a Sweep may begin)
 
     // --- the frost ----------------------------------------------------------------------------------
     // Winter's Grasp: frost spreads from the feet of two random heroes (Hard: three); the sheet under each freezes when it lands
@@ -377,7 +398,7 @@ const TITAN = {
     const fistIcefall = () => { fist(); f.afterKeep(f.ct(4.8) + 0.6, icefall); };
     const fistSweep = () => { fist(); f.afterKeep(f.ct(4.8) + 0.6, sweep); };
     const faultSlam = () => { fault(); f.afterKeep(f.ct(5.4) + 0.8, slam); };
-    const sweepSlam = () => { sweep(); f.afterKeep(f.ct(5.4) + 0.5, slam); };
+    const sweepSlam = () => { sweep(); f.afterKeep(sweepGap() + 0.3, slam); };
     const graspFault = () => { grasp(() => f.afterKeep(0.4, fault)); };
     const frostSweep = () => { frostbite(); f.afterKeep(f.ct(2.6) + 0.5, sweep); };
 

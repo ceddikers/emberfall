@@ -19,6 +19,64 @@ const TI_ART = (() => {
   const cellOf = (x, y) => { const cx = Math.floor((x + 500) / 200), cy = Math.floor((y + 400) / 200); return cx < 0 || cx > 4 || cy < 0 || cy > 3 ? null : { x: -500 + cx * 200, y: -400 + cy * 200 }; };
   const BRAZIERS = [[-300, -200], [300, -200], [-300, 200], [300, 200]];
 
+  // ---------------------------------------------------------------- the screen-feel of his big blows, and the whiff
+  // The camera holds a beat when something big lands (main.js FX.cam); never more than once in a few seconds.
+  const nowS = () => (typeof performance !== 'undefined' ? performance.now() : Date.now()) / 1000;
+  const FEEL = { camAt: -99, whiffAt: new Map() };
+  function cam(stop = 0.06, punch = 0.03, dur = 0.45, gap = 2.5) {
+    const t = nowS(); if (t - FEEL.camAt < gap) return; FEEL.camAt = t;
+    try { if (typeof FX !== 'undefined' && FX.cam) { FX.cam.stop(stop); FX.cam.punch(punch, dur); } } catch (e) { /* cosmetic */ }
+  }
+  // which way is "away from the blow" for a hero standing just outside this shape
+  function awayFrom(s, u) {
+    if (s.kind === 'rect') {
+      const c = Math.cos(s.angle), sn = Math.sin(s.angle), across = -(u.x - s.x) * sn + (u.y - s.y) * c, sg = across >= 0 ? 1 : -1;
+      return { x: -sn * sg, y: c * sg };
+    }
+    const dx = u.x - s.x, dy = u.y - s.y, d = Math.hypot(dx, dy) || 1;
+    if (s.kind === 'cone') {
+      let rel = Math.atan2(dy, dx) - s.angle; while (rel > Math.PI) rel -= TAU; while (rel < -Math.PI) rel += TAU;
+      if (Math.abs(rel) > s.arc / 2) { const sg = rel > 0 ? 1 : -1, a = s.angle + sg * s.arc / 2; return { x: -Math.sin(a) * sg, y: Math.cos(a) * sg }; }
+    }
+    const sg = s.kind === 'donut' && d < s.r2 ? -1 : 1;   // (inside a ring's hole, away from the blow is inward)
+    return { x: sg * dx / d, y: sg * dy / d };
+  }
+  // the edge of a blow cracking past a hero: a streak of ice along the edge a stride in front of them, a ring of frost at their
+  // feet and snow thrown off; for your own hero a pale flash, a push of the camera and a soft whoosh
+  function whiff(u, s, mine) {
+    const a = awayFrom(s, u), tx = -a.y, ty = a.x, ex = u.x - a.x * 34, ey = u.y - a.y * 34 - 14;
+    VFX.fx({ dur: 0.34, layer: 'air', draw: (c, p, t, e) => {
+      const k = e.a * (1 - p) * (1 - p), L = 40 + 60 * easeOut(Math.min(1, p / 0.5)), sh = (p - 0.2) * 40;
+      c.save();
+      VFX.neonPath(c, '#9fd8ff', 5 * (1 - p * 0.6), k, () => { c.moveTo(ex - tx * L + a.x * sh, ey - ty * L + a.y * sh); c.lineTo(ex + tx * L + a.x * sh, ey + ty * L + a.y * sh); });
+      VFX.neonPath(c, '#ffffff', 2, k * 0.85, () => { c.moveTo(ex - tx * L * 0.5 + a.x * sh, ey - ty * L * 0.5 + a.y * sh); c.lineTo(ex + tx * L * 0.5 + a.x * sh, ey + ty * L * 0.5 + a.y * sh); });
+      for (let i = -2; i <= 2; i++) { const q = i / 2, bx = ex + tx * L * q * 0.8 + a.x * sh, by = ey + ty * L * q * 0.8 + a.y * sh; spike(c, bx, by + 6, (14 + 10 * hash(i + 3, 7)) * (1 - p), 3.4, a.x * 0.2, k * 1.2); }
+      c.restore();
+    } });
+    VFX.shock(u.x, u.y + 6, { r: 64, color: '#dff4ff', w: 3, dur: 0.34, flat: 0.6 });
+    VFX.sparks(u.x - a.x * 18, u.y - 10, { color: '#f4fbff', n: mine ? 14 : 8, speed: 300, angle: Math.atan2(a.y, a.x), spread: 0.9, up: 80, life: 0.9 });
+    if (mine) {
+      try {
+        if (typeof FX !== 'undefined' && FX.cam) { FX.cam.flash('#e8f6ff', 0.1, 0.18); FX.cam.punch(0.02, 0.34); }
+        if (typeof Sound !== 'undefined' && Sound.play) Sound.play('dash', { vol: 0.3, rate: 0.85, key: 'ti-whiff', minGap: 0.3 });
+      } catch (e) { /* cosmetic */ }
+    }
+  }
+  const WHIFF = new Set(['tisweep', 'tisweep2', 'tislam', 'tifault', 'ticicle', 'tislide', 'tistomp', 'tiring', 'tibreath', 'tisink', 'tiburst']);
+  const NEAR = 80;   // a hero this close to the edge of a blow (and not hit) gets the whiff
+  function whiffs(tg, msg, ctx) {
+    if (!ctx || !ctx.units || !WHIFF.has(tg.tag)) return;
+    const s = tg.live, hits = (msg && msg.hits) || [], t = nowS();
+    for (const u of ctx.units) {
+      if (hits.includes(u.id)) continue;
+      if (t - (FEEL.whiffAt.get(u.id) || -9) < 0.7) continue;
+      if (SHAPES.contains(s, u.x, u.y)) continue;   // inside and not hit: covered or shielded, not a dodge
+      if (!SHAPES.contains(s, u.x, u.y, NEAR)) continue;
+      FEEL.whiffAt.set(u.id, t);
+      whiff(u, s, typeof Net !== 'undefined' && u.id === Net.id);
+    }
+  }
+
   // ---------------------------------------------------------------- pieces
   // six-armed snowflake
   function flake(c, x, y, r, col, lw, rot = 0) {
@@ -259,6 +317,9 @@ const TI_ART = (() => {
       ctx.save(); SHAPES.trace(ctx, s); ctx.clip();
       glow(ctx, s.x, s.y, s.r * 1.1, C.red, (0.08 + 0.3 * p) * k);
       ctx.restore();
+      // a ring of frost closing onto the rim: it meets it as the fist lands, so the moment can be felt as well as seen
+      circle(ctx, s.x, s.y, s.r * (1 + 0.8 * (1 - eIn(p))), null, rgba('#ffffff', (0.15 + 0.5 * p) * k), 2.4);
+      circle(ctx, s.x, s.y, s.r * (1 + 0.8 * (1 - eIn(p))) + 5, null, rgba('#9fd8ff', 0.25 * p * k), 7);
       cracks(ctx, s.x, s.y, s.r * 0.97, 0.35 + 0.65 * easeOut(p), tg.id, { n: 11, glow: C.red, core: C.redHi });
       for (let i = 0; i < 12; i++) { const a = i * TAU / 12 + hash(i, tg.id) * 0.3, d = s.r * (0.82 + 0.16 * hash(i, tg.id + 1)); poly(ctx, [s.x + Math.cos(a - 0.04) * d, s.y + Math.sin(a - 0.04) * d, s.x + Math.cos(a) * (d + 10 + 14 * p), s.y + Math.sin(a) * (d + 10 + 14 * p), s.x + Math.cos(a + 0.04) * d, s.y + Math.sin(a + 0.04) * d], rgba('#e6f6ff', (0.3 + 0.4 * p) * k), INK, 1); }
     },
@@ -275,6 +336,11 @@ const TI_ART = (() => {
       ctx.save(); SHAPES.trace(ctx, s); ctx.clip();
       ctx.fillStyle = rgba(frost ? '#eaf6ff' : C.red, (frost ? 0.22 + 0.14 * p : 0.05 + 0.18 * p) * k); ctx.fillRect(s.x - 4, s.y - s.w / 2 - 4, s.len + 8, s.w + 8);
       glow(ctx, cx, cy, 130, C.red, (0.1 + 0.26 * p) * k);
+      // black water pressing up through the edges of the sheet, closing in as the time runs down
+      if (!frost) {
+        ctx.lineJoin = 'miter'; ctx.strokeStyle = rgba('#03102a', 0.5 * k * (0.3 + 0.7 * p)); ctx.lineWidth = 8 + 84 * eIn(p); ctx.strokeRect(s.x, s.y - s.w / 2, s.len, s.w);
+        ctx.strokeStyle = rgba('#5fa8e8', 0.3 * p * k); ctx.lineWidth = 2; ctx.strokeRect(s.x + 4 + 46 * eIn(p), s.y - s.w / 2 + 4 + 46 * eIn(p), s.len - 8 - 92 * eIn(p), s.w - 8 - 92 * eIn(p));
+      }
       cracks(ctx, cx, cy, 135, 0.5 + 0.5 * p, tg.id, { n: 11, glow: C.red, core: C.redHi, wi: 5 });
       const lift = eIn(p) * 5; ctx.strokeStyle = rgba('#ffffff', 0.45 * p * k); ctx.lineWidth = 2;
       ctx.beginPath(); ctx.moveTo(s.x, s.y - s.w / 2); ctx.lineTo(cx + lift, cy); ctx.lineTo(s.x + s.len, s.y - s.w / 2); ctx.moveTo(s.x, s.y + s.w / 2); ctx.lineTo(cx - lift, cy); ctx.lineTo(s.x + s.len, s.y + s.w / 2); ctx.stroke();
@@ -314,9 +380,12 @@ const TI_ART = (() => {
       circle(ctx, s.x, s.y, s.r * 0.92, null, rgba('#ffffff', (0.5 + 0.4 * p) * k), 2.4);
       circle(ctx, s.x, s.y, s.r * (0.3 + 0.35 * (1 - p)), null, rgba('#ffffff', 0.5 * k), 1.6);
       const gl = 10 + 14 * p; line(ctx, s.x - gl, s.y, s.x + gl, s.y, rgba('#ffffff', 0.8 * k), 2); line(ctx, s.x, s.y - gl, s.x, s.y + gl, rgba('#ffffff', 0.8 * k), 2);
+      circle(ctx, s.x, s.y, s.r * (1 + 0.7 * (1 - eIn(p))), null, rgba('#ffffff', (0.1 + 0.45 * p) * k), 2);
     },
     air(ctx, tg, s, p, k) {
       const h = (1 - eIn(p)) * 380 + 20;
+      const ag = ctx.createLinearGradient(0, s.y - 520, 0, s.y); ag.addColorStop(0, rgba(C.aur, 0)); ag.addColorStop(0.7, rgba(C.aur, 0.1 * p * k)); ag.addColorStop(1, rgba(C.vio, 0.2 * p * k));
+      ctx.fillStyle = ag; ctx.fillRect(s.x - 16, s.y - 520, 32, 520);
       const g = ctx.createLinearGradient(0, s.y - h - 140, 0, s.y - h); g.addColorStop(0, rgba('#bff0ff', 0)); g.addColorStop(1, rgba('#bff0ff', 0.4 * k));
       ctx.fillStyle = g; ctx.fillRect(s.x - 9, s.y - h - 140, 18, 140);
       ctx.save(); ctx.globalAlpha = k;
@@ -327,22 +396,39 @@ const TI_ART = (() => {
       glow(ctx, s.x, s.y - h - 30, 26, '#ffffff', 0.55 * k);
     },
   };
-  // Titan's Sweep: a great arc of glass-blue, ringed and ribbed, a sheen running along it
-  TELLS.tisweep = {
+  // Titan's Sweep: a great arc of glass-blue, ringed and ribbed, a sheen running along it; the wind gathers along the arc in the
+  // direction the blow will travel, faster as it comes, and the edges of the arc kindle in the last moments. The backhand (tisweep2)
+  // is the same drawn narrower, violet-edged, the wind running the other way.
+  const sweepTell = (back) => ({
     ground(ctx, tg, s, p, k, t) {
       ctx.save(); SHAPES.trace(ctx, s); ctx.clip();
       const g = ctx.createRadialGradient(s.x, s.y, 40, s.x, s.y, s.r);
-      g.addColorStop(0, rgba(C.night, (0.3 + 0.2 * p) * k)); g.addColorStop(1, rgba(C.frost, (0.06 + 0.2 * p) * k));
+      g.addColorStop(0, rgba(C.night, (0.3 + 0.2 * p) * k)); g.addColorStop(1, rgba(back ? '#c8b8ff' : C.frost, (0.06 + 0.2 * p) * k));
       ctx.fillStyle = g; ctx.fillRect(s.x - s.r, s.y - s.r, s.r * 2, s.r * 2);
-      const a0 = s.angle - s.arc / 2, a1 = s.angle + s.arc / 2;
+      const a0 = s.angle - s.arc / 2, a1 = s.angle + s.arc / 2, dir = back ? -1 : 1;
       for (const f of [0.38, 0.62, 0.86]) { ctx.beginPath(); ctx.arc(s.x, s.y, s.r * f, a0, a1); ctx.strokeStyle = rgba('#ffffff', (0.22 + 0.35 * p) * k); ctx.lineWidth = 2; ctx.stroke(); }
       for (let i = 1; i < 7; i++) { const a = a0 + (a1 - a0) * i / 7; line(ctx, s.x + Math.cos(a) * s.r * 0.2, s.y + Math.sin(a) * s.r * 0.2, s.x + Math.cos(a) * s.r, s.y + Math.sin(a) * s.r, rgba('#ffffff', (0.12 + 0.2 * p) * k), 1.4); }
-      const sh = a0 + (a1 - a0) * ((t * 0.5) % 1);
+      const sh = a0 + (a1 - a0) * ((dir > 0 ? t * 0.5 : 1 - ((t * 0.9) % 1)) % 1);
       ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.arc(s.x, s.y, s.r, sh - 0.07, sh + 0.07); ctx.closePath(); ctx.fillStyle = rgba('#ffffff', (0.1 + 0.2 * p) * k); ctx.fill();
+      // the wind: short bright strokes along the arc, running the way the blow will travel, quicker as it nears
+      ctx.lineCap = 'round';
+      for (let i = 0; i < 16; i++) {
+        const rad = s.r * (0.22 + 0.74 * hash(i, 41)), sp = (0.25 + 0.9 * p * p) * (0.7 + 0.6 * hash(i, 42)), u = ((hash(i, 43) + dir * t * sp * 0.6) % 1 + 1) % 1, a = a0 + (a1 - a0) * u;
+        ctx.beginPath(); ctx.arc(s.x, s.y, rad, a, a - dir * (0.05 + 0.1 * p) * (1 + 120 / rad)); ctx.strokeStyle = rgba('#ffffff', (0.2 + 0.5 * p) * k * Math.sin(u * Math.PI)); ctx.lineWidth = 2.4; ctx.stroke();
+      }
       ctx.beginPath(); ctx.arc(s.x, s.y, s.r - 3, a0, a1); ctx.strokeStyle = rgba('#eaf8ff', (0.5 + 0.4 * p) * k); ctx.lineWidth = 5; ctx.stroke();
+      // the last moments: both edges kindle and the whole arc catches the light
+      const lit = cl((p - 0.72) / 0.28);
+      if (lit > 0) {
+        for (const a of [a0, a1]) { line(ctx, s.x, s.y, s.x + Math.cos(a) * s.r, s.y + Math.sin(a) * s.r, rgba(back ? '#e4d8ff' : '#ffffff', 0.55 * lit * k), 7 * lit); line(ctx, s.x, s.y, s.x + Math.cos(a) * s.r, s.y + Math.sin(a) * s.r, rgba('#ffffff', 0.9 * lit * k), 2.2); }
+        ctx.fillStyle = rgba('#ffffff', 0.11 * lit * lit * k * (0.6 + 0.4 * Math.sin(t * 30))); ctx.fillRect(s.x - s.r, s.y - s.r, s.r * 2, s.r * 2);
+      }
+      if (back) for (let i = 0; i < 4; i++) { const a = a1 - (a1 - a0) * (i + 0.5) / 4, d = s.r * (0.5 + 0.1 * i); poly(ctx, [s.x + Math.cos(a + 0.05) * d, s.y + Math.sin(a + 0.05) * d, s.x + Math.cos(a - 0.07) * (d + 30), s.y + Math.sin(a - 0.07) * (d + 30), s.x + Math.cos(a + 0.05) * (d + 14), s.y + Math.sin(a + 0.05) * (d + 14)], rgba('#e4d8ff', (0.3 + 0.4 * p) * k)); }
       ctx.restore();
     },
-  };
+  });
+  TELLS.tisweep = sweepTell(false);
+  TELLS.tisweep2 = sweepTell(true);
   // Winter's Grasp (a marker): frost lacing out from the feet of the chosen, and the sheet under them going glassy
   TELLS.tigrasp = {
     ground(ctx, tg, s, p, k, t) {
@@ -475,13 +561,15 @@ const TI_ART = (() => {
   // H: { shapeFlash, shockAt, scatter, after, shake, roomTint, sweep } from boss-vfx.js. Returns false for a tag it does not know.
   function impact(tg, msg, ctx, H) {
     const s = tg.live, bd = (ctx && ctx.bossDraw) || { x: 0, y: -250 };
+    try { whiffs(tg, msg, ctx); } catch (e) { /* cosmetic */ }
     switch (tg.tag) {
       case 'tihowl': {
         H.roomTint('#cfeaff', 0.2, 0.8);
         H.shockAt(bd.x, bd.y, { r: 760, color: '#f6fcff', w: 16, dur: 0.9, flat: 1 });
         H.shockAt(bd.x, bd.y, { r: 520, color: '#5fa8e8', w: 12, dur: 0.8, flat: 1, delay: 0.08 });
         core(bd.x, bd.y, 300, { dur: 0.7 });
-        rimSpikes(bd); lace(4.5); H.shake(10); return true;
+        H.shockAt(bd.x, bd.y, { r: 900, color: '#bfe0ff', w: 8, dur: 1.1, flat: 1, delay: 0.3 });
+        rimSpikes(bd); lace(4.5); H.shake(10); cam(0.07, 0.034, 0.6, 4); return true;
       }
       case 'tinight': {
         H.roomTint('#304a80', 0.25, 1.0);
@@ -511,7 +599,7 @@ const TI_ART = (() => {
         } });
         H.after(0.1, () => {
           core(x, y, 150, { dur: 0.5 }); ringSpikes(x, y, 70, 14, 56, 112, { dur: 1.7, hold: 0.55 });
-          H.shockAt(x, y, { r: 170, color: '#f6fcff', w: 10, dur: 0.5, flat: 1 }); chips(x, y, 12, 1.5); VFX.hit(x, y, '#bfe8ff', 2.3); H.shake(13);
+          H.shockAt(x, y, { r: 170, color: '#f6fcff', w: 10, dur: 0.5, flat: 1 }); chips(x, y, 12, 1.5); VFX.hit(x, y, '#bfe8ff', 2.3); H.shake(13); cam(0.07, 0.03);
           const sd = Math.random() * 9;
           decal(4.5, (c, k) => {
             cracks(c, x, y, 96, 1, sd, { n: 10, core: '#ffffff', wi: 4 });
@@ -527,6 +615,9 @@ const TI_ART = (() => {
         core(s.x, s.y, s.r * 0.9, { dur: 0.5, col: C.red });
         ringSpikes(s.x, s.y, s.r * 0.9, 16, 40, 84, { dur: 1.6, hold: 0.5, delay: 0.04 });
         H.shockAt(s.x, s.y, { r: s.r * 1.3, color: '#ffe0da', w: 9, dur: 0.55, flat: 1 }); chips(s.x, s.y, 12, 1.4); H.shake(13);
+        H.shockAt(s.x, s.y, { r: s.r * 2.1, color: '#9fd8ff', w: 5, dur: 0.7, flat: 1, delay: 0.16 });
+        for (const q of H.scatter({ kind: 'circle', x: s.x, y: s.y, r: s.r * 1.6 }, 8)) H.after(rand(0.05, 0.3), () => chips(q.x, q.y, 2, 1.0));
+        cam(0.06, 0.03);
         const sd = Math.random() * 9;
         decal(4.5, (c, k, T) => {
           const warm = Math.max(0, 1 - T / 2.4);
@@ -558,7 +649,20 @@ const TI_ART = (() => {
           c.restore();
         } });
         H.shockAt(x, y, { r: 150, color: '#7fc8ff', w: 7, dur: 0.6, flat: 1 });
-        VFX.splash(x, y, { color: '#4a8ac8', n: 16 }); chips(x, y, 10, 1.2); H.shake(7); return true;
+        VFX.splash(x, y, { color: '#4a8ac8', n: 16 }); chips(x, y, 10, 1.2); H.shake(7);
+        // the lake heaves up through the break: a column of black water falling back in spray, then rings widening over the sunk sheet
+        if (!frost) {
+          VFX.fx({ dur: 0.8, layer: 'air', delay: 0.08, draw: (c, p, t, e) => {
+            const up = easeOut(Math.min(1, p / 0.35)), k = (1 - cl((p - 0.4) / 0.6)) * e.a;
+            c.save(); c.globalAlpha = 0.85 * k;
+            const g = c.createLinearGradient(0, y, 0, y - 120 * up); g.addColorStop(0, '#04122c'); g.addColorStop(1, '#8fd0ff');
+            c.fillStyle = g; c.beginPath(); c.moveTo(x - 30 * (1 - p * 0.5), y + 6); c.quadraticCurveTo(x - 16, y - 120 * up, x, y - 130 * up); c.quadraticCurveTo(x + 16, y - 120 * up, x + 30 * (1 - p * 0.5), y + 6); c.closePath(); c.fill();
+            for (let i = 0; i < 9; i++) { const a = hash(i, sd) * TAU, fall = p * p, dx = Math.cos(a) * 60 * p, dy = -130 * up * (0.5 + 0.5 * hash(i, sd + 1)) + 150 * fall * hash(i, sd + 2); glow(c, x + dx, y + dy, 7, '#dff4ff', 0.8 * k); }
+            c.restore();
+          } });
+          decal(2.6, (c, k, T) => { for (let i = 0; i < 3; i++) { const q = (T * 0.55 + i / 3) % 1; ellipse(c, x, y, 20 + q * 96, 12 + q * 58, 0, null, rgba('#9fd8ff', 0.8 * k * (1 - q)), 2.4); } }, { max: 0.7 });
+        }
+        return true;
       }
       case 'tifault': {
         const ca = Math.cos(s.angle), sa = Math.sin(s.angle), L = s.len, list = [];
@@ -573,6 +677,14 @@ const TI_ART = (() => {
           c.strokeStyle = rgba('#ff6a5a', 0.6); c.lineWidth = 26 * (1 - p * 0.6); c.stroke(); c.strokeStyle = '#ffffff'; c.lineWidth = 6 * (1 - p); c.stroke(); c.restore();
         } });
         for (const q of H.scatter(s, 10)) H.after(rand(0, 0.3), () => chips(q.x, q.y, 3, 1.1));
+        // the crack races out along the line ahead of the crystals, a white head with a long cold tail
+        VFX.fx({ dur: 0.5, layer: 'air', draw: (c, p, t, e) => {
+          const hd = easeOut(Math.min(1, p / 0.7)) * L, fade = 1 - cl((p - 0.7) / 0.3);
+          c.save(); c.lineCap = 'round';
+          VFX.neonPath(c, '#bfe8ff', 7, fade * e.a * 0.8, () => { c.moveTo(s.x + ca * Math.max(0, hd - 260), s.y + sa * Math.max(0, hd - 260)); c.lineTo(s.x + ca * hd, s.y + sa * hd); });
+          c.restore(); glow(c, s.x + ca * hd, s.y + sa * hd - 8, 46, '#ffffff', 0.8 * fade * e.a);
+        } });
+        cam(0.06, 0.03);
         const sd = Math.random() * 9, top = [], bot = [];
         for (let i = 0; i <= 18; i++) { const u = i / 18 * L, j = (hash(i, sd) - 0.5) * 22; top.push([s.x + ca * u - sa * (-20 + j), s.y + sa * u + ca * (-20 + j)]); bot.push([s.x + ca * u - sa * (20 - j), s.y + sa * u + ca * (20 - j)]); }
         decal(6, (c, k, T) => {
@@ -600,9 +712,16 @@ const TI_ART = (() => {
         }, { max: 0.7 });
         return true;
       }
-      case 'tisweep': {
-        const a0 = s.angle - s.arc / 2, a1 = s.angle + s.arc / 2;
-        H.shapeFlash(s, '#cfeaff', { a: 0.3, dur: 0.6 });
+      case 'tisweep': case 'tisweep2': {
+        const back = tg.tag === 'tisweep2', a0 = back ? s.angle + s.arc / 2 : s.angle - s.arc / 2, a1 = back ? s.angle - s.arc / 2 : s.angle + s.arc / 2;   // (the backhand comes back the other way)
+        H.shapeFlash(s, back ? '#e4d8ff' : '#cfeaff', { a: 0.3, dur: 0.6 });
+        // a pale crescent hangs a heartbeat after the blade, and the plateau rings under the blow
+        VFX.fx({ dur: 0.75, layer: 'air', delay: 0.35, draw: (c, p, t, e) => {
+          const k = e.a * (1 - p) * (1 - p); c.save(); clipArena(c);
+          for (const [r, w] of [[0.5, 6], [0.72, 4], [0.92, 3]]) VFX.neonPath(c, back ? '#e4d8ff' : '#cfeaff', w * (1 - p * 0.5), k * 0.7, () => { c.arc(s.x, s.y, s.r * r + p * 50, s.angle - s.arc / 2 * (1 - 0.1 * p), s.angle + s.arc / 2 * (1 - 0.1 * p)); });
+          c.restore();
+        } });
+        cam(back ? 0.04 : 0.055, back ? 0.022 : 0.028, 0.45, back ? 1.2 : 2.5);
         VFX.fx({ dur: 0.9, layer: 'air', draw: (c, p, t, e) => {
           const cur = a0 + (a1 - a0) * easeOut(Math.min(1, p / 0.55)), fade = 1 - cl((p - 0.55) / 0.45), N = 26;
           if (fade <= 0) return;
@@ -669,7 +788,7 @@ const TI_ART = (() => {
           for (let i = 0; i < 18; i++) { const d = front - hash(i, sd + 7) * 140; if (d < 0 || d > L || cloud <= 0) continue; const lat = (hash(i, sd + 8) - 0.5) * s.w; line(c, s.x + ca * d + nx * lat, s.y + sa * d + ny * lat - 12, s.x + ca * d + nx * lat, s.y + sa * d + ny * lat, rgba('#ffffff', 0.8 * cloud), 2.4); }
           c.restore();
         } });
-        H.after(0.15, () => H.shake(10));
+        H.after(0.15, () => H.shake(10)); cam(0.05, 0.026, 0.5, 1.6);
         H.after(0.55, () => decal(4.5, (c, k) => {
           for (let i = 0; i < 6; i++) { const x = s.x + ca * L * (0.1 + 0.85 * hash(i, sd + 9)) + nx * (hash(i, sd + 10) - 0.5) * s.w * 0.7, y = s.y + sa * L * (0.1 + 0.85 * hash(i, sd + 9)) + ny * (hash(i, sd + 10) - 0.5) * s.w * 0.7; ellipse(c, x, y, 36, 16, 0, rgba('#a8404a', 0.4 * k)); }
           for (const r of rocks) { const d = r.fin; rock(c, s.x + ca * d + nx * r.lat, s.y + sa * d + ny * r.lat, r.r, d * 0.05 * r.sp, k * 1.6, sd); ellipse(c, s.x + ca * d + nx * r.lat, s.y + sa * d + ny * r.lat + r.r * 0.7, r.r * 1.3, r.r * 0.45, 0, rgba('#f2faff', 0.9 * k)); }
@@ -681,7 +800,7 @@ const TI_ART = (() => {
         VFX.spikeburst(s.x, s.y, { r: s.r * 0.85, n: 18, color: C.red, core: '#ffffff', ink: '#1a0614', dur: 0.5 });
         core(s.x, s.y, s.r * 1.1, { dur: 0.55, col: C.red });
         ringSpikes(s.x, s.y, s.r * 0.95, 20, 70, 126, { dur: 1.8, hold: 0.6, wide: 1.3 });
-        H.shockAt(s.x, s.y, { r: s.r * 1.5, color: '#f6fcff', w: 12, dur: 0.6, flat: 1 }); chips(s.x, s.y, 14, 1.6); H.shake(14);
+        H.shockAt(s.x, s.y, { r: s.r * 1.5, color: '#f6fcff', w: 12, dur: 0.6, flat: 1 }); chips(s.x, s.y, 14, 1.6); H.shake(14); cam(0.07, 0.034);
         const sd = Math.random() * 9;
         decal(4.5, (c, k, T) => {
           cracks(c, s.x, s.y, s.r * 0.95, 1, sd, { n: 12, glow: T < 2 ? C.red : C.frost, core: T < 2 ? C.redHi : '#ffffff' });
