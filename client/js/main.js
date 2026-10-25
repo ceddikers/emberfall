@@ -4327,10 +4327,12 @@
     });
     refreshBossList();
   })();
-  // names and thumbnails for the bosses that are open; the rest read as sealed
-  function refreshBossList() {
+  // names and thumbnails for the bosses that are open; the rest read as sealed. Given a set, only that set's bosses are listed
+  // (a portal or a statue shows the raids of its own set)
+  function refreshBossList(set = null) {
     BOSSES.forEach((boss, i) => {
       const t = bossThumbs[i], open = bossOpen(boss);
+      t.b.classList.toggle('hidden', set != null && bossSet(boss) !== set);
       t.b.classList.toggle('sealed', !open);
       t.b.querySelector('b').textContent = open ? boss.name : 'Sealed';
       t.b.querySelector('small').textContent = open ? `Boss ${ROMAN[i]} · ${boss.title}` : `Boss ${ROMAN[i]} · after ${bossOpen(BOSSES[i - 1]) ? BOSSES[i - 1].name : `Boss ${ROMAN[i - 1]}`}`;
@@ -4452,7 +4454,7 @@
   }
   function openBossPanel(boss) {
     if (scene !== 'town') return;
-    refreshBossList();
+    refreshBossList(bossSet(boss));
     sel.classList.add('hidden');
     overlay.classList.remove('hidden'); bossPanel.classList.remove('hidden');
     player.target = null;
