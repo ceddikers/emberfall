@@ -253,3 +253,145 @@ Palette: black-green water, algae and moss green, brass and bone; each head's el
 5. Rending Maul (tankbuster): a wide jaw closing on the tank from both sides over a dark cone.
 6. The Drowning (enrage): the water rising over the whole temple, bone-white hands reaching up out of it.
 ```
+
+---
+
+# Set 3: The Fallen Star
+
+Every set 3 room has the same meteor hanging in its sky (a faint spark over Corvane's pass, a burning mass over Caelum's crater), so each sheet's first row is the room with it.
+
+## Corvane, the Unburied Blade: part 1 of 2
+
+```
+A game VFX concept sheet titled "BOSS CORVANE THE UNBURIED BLADE (Part 1 of 2)", in a clean, hand-painted, stylised fantasy RPG style. Top-down three-quarter view, about 50 degrees from overhead. Six rows, one effect per row, each row in three panels left to right: (1) THE WARNING: the floor marking for this move, shaped and decorated so it could only be this move, plus the boss's tell (his stance while he winds up); (2) THE IMPACT: the bold main shape, a hot white core, a saturated mid colour and dark inky outer edges; (3) THE AFTERMATH: what stays on the floor for a few seconds. A small grey hero silhouette in each panel for scale. Flat, readable shapes with hard edges; soft glow only at the very core. Plain dark night-blue background. A short handwritten label above each row; no other text.
+
+The boss: a tall dead guard in black lacquered armour cracked with frost, a stiff tattered dark cloak, and a broad single-edged blade he carries point-down like a walking staff. A line of pale light runs along the blade's back edge in four notches (the Whetstone gauge). He fights in a snowy mountain pass at night: a ruined shrine against the north wall, a row of squat stone lanterns, and a faint spark of a falling star high in the sky.
+
+Palette: snow white and moonlit blue-grey, black lacquer, frost cyan for his blade, silver for afterimages, warm amber only in the lantern flames.
+
+1. The room: the pass seen from above, the shrine, six stone lanterns lit amber; and the Whetstone gauge on his blade at 0, 2 and 4 notches (at 4, the whole edge burns white).
+2. Draw Cut: a thin line of frost scored across the snow through one hero, his hand on the hilt; the cut snapping out along it; a long clean groove left in the snow.
+3. Scabbard Sweep: his scabbard pointing left, half the room on that side marked; the sweep throwing a wave of snow; the snow flattened in a half-circle.
+4. Sundering Cut and Cracked Guard (tankbuster): an overhead blow on the tank over a dark cone, the tank's guard cracking with a frosty fracture mark; then the second, heavier follow-up.
+5. White Gale (hits everyone): a sideways blizzard sweeping the whole pass, the lanterns guttering.
+6. Still Water: him planted in a parry stance, a frozen glassy sheen spreading over the floor in front of him (a half-circle); a hero struck as they stand in it, ice flaking off.
+```
+
+## Corvane: part 2 of 2
+
+```
+A game VFX concept sheet titled "BOSS CORVANE THE UNBURIED BLADE (Part 2 of 2)", in a clean, hand-painted, stylised fantasy RPG style. Top-down three-quarter view, about 50 degrees from overhead. Six rows, one effect per row, each row in three panels left to right: (1) THE WARNING: the floor marking for this move, shaped and decorated so it could only be this move, plus the boss's tell (his stance while he winds up); (2) THE IMPACT: the bold main shape, a hot white core, a saturated mid colour and dark inky outer edges; (3) THE AFTERMATH: what stays on the floor for a few seconds. A small grey hero silhouette in each panel for scale. Flat, readable shapes with hard edges; soft glow only at the very core. Plain dark night-blue background. A short handwritten label above each row; no other text.
+
+The boss: a tall dead guard in black lacquered armour cracked with frost, a stiff tattered dark cloak, a broad single-edged blade with a burning white edge. Snowy mountain pass at night, stone lanterns.
+
+Palette: snow white and moonlit blue-grey, black lacquer, frost cyan, silver afterimages, amber lantern light.
+
+1. Rising Crane (stance: blade low and swept back): a wide fan of frost in front of him, then a second fan turned to one side; two overlapping fan-shaped scars in the snow.
+2. Comet Draw (stance: blade raised high overhead): a straight dash line from him through the farthest hero to the wall, a hero crouched behind a stone lantern in its shadow; the dash as a streak of white light; the lantern split in two afterwards.
+3. Hundredfold Parting (stance: blade sheathed point-down in the snow): four numbered silver afterimages of him standing round the room, thin lines joining them in order; one slash racing along all the lines; the snow cut in a zigzag.
+4. Hollow Breath: a cold mist circle following one hero (the healer), frost crawling out from them; a second hero caught at its edge, rimed over.
+5. The Vigil: him kneeling in the snow with his blade across his knees, cold blue wisps drifting toward him from broken lanterns; a wisp popping into snowflakes when struck.
+6. Last Light of the Pass (enrage): every lantern going out at once and his blade drawn in a single horizon-wide white line across the whole pass.
+```
+
+## Brannoc the Undefeated: part 1 of 2
+
+```
+A game VFX concept sheet titled "BOSS BRANNOC THE UNDEFEATED (Part 1 of 2)", in a clean, hand-painted, stylised fantasy RPG style. Top-down three-quarter view, about 50 degrees from overhead. Six rows, one effect per row, each row in three panels left to right: (1) THE WARNING: the floor marking for this move, shaped and decorated so it could only be this move, plus the boss's tell; (2) THE IMPACT: the bold main shape, a hot white core, a saturated mid colour and dark inky outer edges; (3) THE AFTERMATH: what stays on the floor for a few seconds. A small grey hero silhouette in each panel for scale. Flat, readable shapes with hard edges; soft glow only at the very core. Plain dark sea-green background. A short handwritten label above each row; no other text.
+
+The boss: a huge laughing pit-fighter, bare arms covered in old victory brands, a gilded half-helm, and on his back the Sunwheel, a round bronze war-shield with a blazing gold rim that he throws like a discus. He fights in a drowned colosseum: half-flooded sand, ghostly pale spectators in the stands, torn banners on the walls, the spark of a falling star in the sky.
+
+Palette: wet sand and sea teal, bronze and blazing gold for the Sunwheel, ghost pale green for the crowd, banner crimson.
+
+1. The room: the half-flooded arena from above, the ghost crowd, banners; the falling star a little bigger than over Corvane's pass.
+2. Sunwheel: the bank-shot path painted on the sand bounce by bounce off three walls, a blue catch circle on the path; the wheel streaking along it; a hero catching it and staggering back.
+3. Victory Leap: a red ring under one hero and his shadow growing over it; the landing crater of sand and spray; him posing arms up, open to hits.
+4. Hammer Heel (tankbuster): two heel stamps on the tank, the second bigger.
+5. Roar of the Stands (hits everyone): the ghost crowd rising and roaring, pale rings of sound from the stands.
+6. Sand Furrow and Banner Fall: a slow line dragged through the sand by his heel; banners knocked loose by the wheel falling in red rectangles.
+```
+
+## Brannoc: part 2 of 2, the Tidewrought
+
+```
+A game VFX concept sheet titled "BOSS BRANNOC, THE TIDEWROUGHT (Part 2 of 2)", in a clean, hand-painted, stylised fantasy RPG style. Top-down three-quarter view, about 50 degrees from overhead. Six rows, one effect per row, each row in three panels left to right: (1) THE WARNING: the floor marking for this move, shaped and decorated so it could only be this move, plus the boss's tell; (2) THE IMPACT: the bold main shape, a hot white core, a saturated mid colour and dark inky outer edges; (3) THE AFTERMATH: what stays on the floor for a few seconds. A small grey hero silhouette in each panel for scale. Flat, readable shapes with hard edges; soft glow only at the very core. Plain dark sea-green background. A short handwritten label above each row; no other text.
+
+The boss, second form: the Tidewrought, a colossal sea-titan rising out of open water, a shell of barnacled bronze plate, one great fist made of the Sunwheel grown huge. The party stands on a broken ring of stone in an open sea under the falling star.
+
+Palette: deep sea teal and white foam, barnacle grey, bronze and blazing gold, a stormy sky.
+
+1. The Tide Rises: the colosseum flooding and breaking apart, him rising in a column of water, the heroes landing on the stone ring.
+2. Undertow Grip: the shadow of a giant hand over one hero, then the hand closing on them (a breakable hand); the hero held and bleeding.
+3. Breaker: a fist slam sending a wave across the ring that bounces off the rim, both paths painted; debris blocking the wave.
+4. Sunwheel Unbound: a giant wheel's path bouncing five times round the ring with two blue catch circles.
+5. Deep Call (hits everyone): the sea heaving, everyone shoved toward the rim (never off it).
+6. The Final Bell (enrage): a huge bronze bell tolling under the sea, the whole ring swamped.
+```
+
+## Morrow-Oak, the Starved Grove: part 1 of 2
+
+```
+A game VFX concept sheet titled "BOSS MORROW-OAK THE STARVED GROVE (Part 1 of 2)", in a clean, hand-painted, stylised fantasy RPG style. Top-down three-quarter view, about 50 degrees from overhead. Six rows, one effect per row, each row in three panels left to right: (1) THE WARNING: the floor marking for this move, shaped and decorated so it could only be this move, plus the boss's tell; (2) THE IMPACT: the bold main shape, a hot white core, a saturated mid colour and dark inky outer edges; (3) THE AFTERMATH: what stays on the floor for a few seconds. A small grey hero silhouette in each panel for scale. Flat, readable shapes with hard edges; soft glow only at the very core. Plain dark brown-black background. A short handwritten label above each row; no other text.
+
+The boss: an elder tree as tall as a tower whose heartwood has split open on a starless dark (the Hunger), branches for arms, a crown of dead leaves floating round a hollow face; he moves like a slow landslide. The room is a dead grove on a crater's rim, roots everywhere, the falling star large and burning in the sky.
+
+Palette: dead bark brown and bone-grey, sickly leaf gold, the Hunger as a flat starless black with a faint violet rim; thorn green, frost pale blue, spark yellow and blight purple for the four petals.
+
+1. The room: the dead grove from above, roots across the floor, the burning star overhead.
+2. Hunger Seed: a dark seed pulsing over a hero's head with a shrinking ring, the ground splitting under them; the burst; a permanent hole of starless black left in the floor.
+3. Inhale: everything pulled toward him, dead leaves streaming in; a hero dragged into a hole and climbing out slowly.
+4. Fourfold Bloom: four great petals opening round him (thorn, frost, spark, blight), turning once before they snap shut.
+5. Root Lash (tankbuster): a root whipping the tank and binding their feet for a moment.
+6. Sap Tide and Saplings (hits everyone): amber sap welling up over the whole floor; small walking saplings heading for a hole and the hole widening when one reaches it.
+```
+
+## Morrow-Oak: part 2 of 2, the Grove Remade
+
+```
+A game VFX concept sheet titled "BOSS MORROW-OAK, THE GROVE REMADE (Part 2 of 2)", in a clean, hand-painted, stylised fantasy RPG style. Top-down three-quarter view, about 50 degrees from overhead. Six rows, one effect per row, each row in three panels left to right: (1) THE WARNING: the floor marking for this move, shaped and decorated so it could only be this move, plus the boss's tell; (2) THE IMPACT: the bold main shape, a hot white core, a saturated mid colour and dark inky outer edges; (3) THE AFTERMATH: what stays on the floor for a few seconds. A small grey hero silhouette in each panel for scale. Flat, readable shapes with hard edges; soft glow only at the very core. Plain dark brown-black background. A short handwritten label above each row; no other text.
+
+The boss, second form: the tree risen out of the Hunger with four limbs grown from things he fed it, each limb a breakable part: a cleaver-shaped bough (an ogre chef's cleaver in bark), a mass of spider-leg roots, a knot of storm stone with three lightning rods, and a hanging barrow lantern. The party stands on floating chunks of the grove over the dark, the old holes still in them.
+
+Palette: bark and bone-grey, the Hunger's starless black, and each limb's old colour: cleaver orange, spider acid green, storm cyan, barrow ghost green.
+
+1. The Swallowing: the grove tearing loose and falling, the heroes riding pieces of it down onto a floating platform.
+2. Cleaver Bough: a blue soak circle on one hero, then a chopping line through it.
+3. Brood Roots: root strands painted on the floor, then holding a hero who stood in them.
+4. Storm Knot: three lightning rods driven into the floor, a bolt striking the one nearest a hero.
+5. Barrow Lantern: a ghostly light mark jumping from hero to hero on a beat.
+6. Nothing Left (enrage): the last of the floor eaten by the dark, only the star's light left.
+```
+
+## Caelum Vey, the Starborn: part 1 of 2
+
+```
+A game VFX concept sheet titled "BOSS CAELUM VEY THE STARBORN (Part 1 of 2)", in a clean, hand-painted, stylised fantasy RPG style. Top-down three-quarter view, about 50 degrees from overhead. Six rows, one effect per row, each row in three panels left to right: (1) THE WARNING: the floor marking for this move, shaped and decorated so it could only be this move, plus the boss's tell; (2) THE IMPACT: the bold main shape, a hot white core, a saturated mid colour and dark inky outer edges; (3) THE AFTERMATH: what stays on the floor for a few seconds. A small grey hero silhouette in each panel for scale. Flat, readable shapes with hard edges; soft glow only at the very core. Plain deep indigo background. A short handwritten label above each row; no other text.
+
+The boss: a tall still figure in armour of black glass veined with white light, face hidden behind a smooth silver mask, a halo of broken star-shards turning slowly behind his back, a narrow blade that is a sliver of starlight. He fights on the floor of the crater round a half-buried star, the meteor's shadow a dark disc on the floor that grows each act.
+
+Palette: black glass, white starlight, silver afterimages, indigo night, a cold violet-white for the shadow's burn.
+
+1. The room: the crater floor and the half-buried star; the meteor huge overhead and its shadow on the floor, small, then large.
+2. Glint: a silver afterimage of him standing at the far end of a line, the dash cut flashing along it.
+3. Eightfold Wake: eight numbered afterimages round the room, each facing the next, red lines drawn ahead between them; the cuts racing round in order.
+4. Starfall: shards breaking off the meteor and falling as blue soak circles on heroes inside the shadow.
+5. Cinder Crown and Pinning Thrust (tankbusters): a crown of fire on the tank leaving a burning ring; a lunge driving the tank back to the wall along a line.
+6. Grace Withdrawn and Nightfall: every hero's light dimming to almost nothing, then night falling on all of them a beat later.
+```
+
+## Caelum Vey: part 2 of 2, the Starwyrm and Ascendant
+
+```
+A game VFX concept sheet titled "BOSS CAELUM VEY, ASCENDANT (Part 2 of 2)", in a clean, hand-painted, stylised fantasy RPG style. Top-down three-quarter view, about 50 degrees from overhead. Six rows, one effect per row, each row in three panels left to right: (1) THE WARNING: the floor marking for this move, shaped and decorated so it could only be this move, plus the boss's tell; (2) THE IMPACT: the bold main shape, a hot white core, a saturated mid colour and dark inky outer edges; (3) THE AFTERMATH: what stays on the floor for a few seconds. A small grey hero silhouette in each panel for scale. Flat, readable shapes with hard edges; soft glow only at the very core. Plain deep indigo background. A short handwritten label above each row; no other text.
+
+The boss, second form: the same masked figure risen above a field of cloud over the falling meteor, his halo opened into a wheel of floating blades.
+
+Palette: black glass, white starlight, silver, cloud white and gold, the meteor's burning orange underneath.
+
+1. The Starwyrm: constellations coming loose and knotting into a serpent made of stars, coiling round the room as a moving red band.
+2. Constellation Fall: the serpent rearing on the rim and breathing starlight across the floor, the heroes sheltering behind the half-buried star; Embers of Heaven chipping its edge first.
+3. Ascendant: the crater falling away, the circle of cloud, the halo opening into a wheel of blades.
+4. Two-ring Eightfold Wake: an inner and outer ring of numbered afterimages.
+5. Horizon Cut: a sweep across the whole width of the room through a gap marked by falling shards.
+6. The Sky Comes Down (enrage): the meteor landing; and the win: the meteor breaking into falling stars over a dark landscape.
+```

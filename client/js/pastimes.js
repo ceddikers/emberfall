@@ -235,7 +235,7 @@ const Pastimes = (() => {
   }
 
   // ---------------------------------------------------------------- the bounty board
-  const BOARD = { x: 1380, y: 300 };
+  const BOARD = { x: 1500, y: 606 };   // (on the portal terrace, between the third and fourth portals)
   const week = () => Math.floor((Date.now() / 86400000 + 3) / 7);   // weeks turn over on Monday
   function rngFor(seed) { let x = (seed * 2654435761) >>> 0 || 1; return () => ((x = (x * 1103515245 + 12345) >>> 0) / 4294967296); }
   function weekly() {

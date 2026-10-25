@@ -11,9 +11,9 @@ const TOWN_SECRETS = [
       'A tin of coins sits in the gap, with a note scratched on the lid: "For the next round. C."'],
     reward: { gold: 20 }, set: 'found-corwin-tin' },
 
-  { id: 'kings-road', name: 'Words on the back of the gate', at: { x: 1200, y: 128 }, r: 24,
+  { id: 'kings-road', name: 'Words on the back of the gate', at: { x: 780, y: 566 }, r: 24,
     when: {}, look: 'carving',
-    lines: ['Letters are cut into the back of the portal ring, worn almost smooth: THE KING\'S ROAD.',
+    lines: ['Letters are cut into the back of the first portal\'s ring, worn almost smooth: THE KING\'S ROAD.',
       'Below them, four words in a column: KITCHEN. SILVER. BEACON. BARROW.',
       'There were more words under those. The stone has been chipped away.'],
     reward: { lore: true }, set: 'read-kings-road' },
@@ -56,7 +56,7 @@ const TOWN_SECRETS = [
     reward: { gold: 25 }, set: 'found-cleaver-mark' },
 
   // ---------------------------------------------------------------- after Skitterra
-  { id: 'spiderling', name: 'A tiny web in the north trees', at: { x: 850, y: 115 }, r: 24,
+  { id: 'spiderling', name: 'A tiny web in the north trees', at: { x: 585, y: 118 }, r: 24,
     when: { beaten: ['skitterra'] }, look: 'glint',
     lines: ['One of her children got out. It has spun a web between two roots no wider than your hand.',
       'Caught in it: three coppers and a button. The spiderling watches you take them with all eight eyes, and does not forgive you.'],
@@ -69,7 +69,7 @@ const TOWN_SECRETS = [
     reward: { gold: 25 }, set: 'found-hask-purse' },
 
   // ---------------------------------------------------------------- after Volkar
-  { id: 'storm-glass', name: 'Glass on the hill', at: { x: 420, y: 120 }, r: 24,
+  { id: 'storm-glass', name: 'Glass on the hill', at: { x: 350, y: 106 }, r: 24,
     when: { beaten: ['volkar'] }, look: 'glint',
     lines: ['Up on the hill by the hut, the grass is burned in a star, and at its heart is a crust of green glass. It is still warm.',
       'The old song says the town took its name from a night like this: a coal fell from the beacon and landed here burning.'],
@@ -88,7 +88,7 @@ const TOWN_SECRETS = [
       'Under it, newly scratched in a terrible hand: HE CAME BACK. Coins have been left on top, the way you do for luck.'],
     reward: { gold: 30 } },
 
-  { id: 'pale-prints', name: 'Footprints from the gate', at: { x: 1090, y: 150 }, r: 24,
+  { id: 'pale-prints', name: 'Footprints from the gate', at: { x: 900, y: 640 }, r: 24,
     when: { beaten: ['hollowking'] }, look: 'footprints',
     lines: ['Pale footprints in the frost behind the gate, many kinds of boot, none of them warm. They come out of the portal in pairs.',
       'They walk a little way toward town, and stop exactly where you are standing.'],

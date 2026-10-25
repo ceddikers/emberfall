@@ -1716,6 +1716,10 @@ const BossTells = (() => {
       const tgt = tg.target != null ? env.entById(tg.target) : null;
       ctx.save(); SHAPES.trace(ctx, s); ctx.fillStyle = rgba('#ff4a3a', (0.06 + 0.1 * p) * k); ctx.fill(); ctx.restore();
       if (env.bossId === 'hydra' && typeof HY_TELLS !== 'undefined' && HY_TELLS.buster) { HY_TELLS.buster.ground(ctx, tg, s, p, k, t, env); return; }   // (Rending Maul: hydra-view.js)
+      if (env.bossId === 'corvane' && typeof CV_FX !== 'undefined') { CV_FX.buster(ctx, tg, s, p, k, t, env); return; }   // Corvane's Sundering Cut and Cracked Guard (corvane-fx.js)
+      if (env.bossId === 'brannoc' && typeof BR_FX !== 'undefined') { BR_FX.buster(ctx, tg, s, p, k, t, env); return; }   // Brannoc's Hammer Heel and Fist Slam (brannoc-fx.js)
+      if (env.bossId === 'morrowoak' && typeof MG_FX !== 'undefined') { MG_FX.buster(ctx, tg, s, p, k, t, env); return; }   // Morrow-Oak's Root Lash (morrowoak-fx.js)
+      if (env.bossId === 'caelum' && typeof CL_FX !== 'undefined') { CL_FX.buster(ctx, tg, s, p, k, t, env); return; }   // Caelum's Cinder Crown and Pinning Thrust (caelum-fx.js)
       if (env.bossId === 'volkar') {
         // Titan Fist: lightning gathers along the cone and runs to the tank
         for (let i = 0; i < 5; i++) {
@@ -2129,6 +2133,10 @@ const BossTells = (() => {
       if (tg.gone == null || tg._aft) continue;
       tg._aft = true;
       if (env.bossId === 'archmage' && typeof AZ_ART !== 'undefined' && Math.abs(tg.gone - (tg.start + tg.dur)) <= 0.5) { try { AZ_ART.aftermath(tg, env, { mark, AFTER }); } catch (e) { /* a broken decal never stops the fight drawing */ } continue; }   // Azerath: archmage-art.js
+      if (env.bossId === 'corvane' && typeof CV_FX !== 'undefined' && Math.abs(tg.gone - (tg.start + tg.dur)) <= 0.5) { try { CV_FX.aftermath(tg, env, { mark, AFTER }); } catch (e) { /* a broken decal never stops the fight drawing */ } continue; }   // Corvane: corvane-fx.js
+      if (env.bossId === 'brannoc' && typeof BR_FX !== 'undefined' && Math.abs(tg.gone - (tg.start + tg.dur)) <= 0.5) { try { BR_FX.aftermath(tg, env, { mark, AFTER }); } catch (e) { /* a broken decal never stops the fight drawing */ } continue; }   // Brannoc: brannoc-fx.js
+      if (env.bossId === 'morrowoak' && typeof MG_FX !== 'undefined' && Math.abs(tg.gone - (tg.start + tg.dur)) <= 0.5) { try { MG_FX.aftermath(tg, env, { mark, AFTER }); } catch (e) { /* a broken decal never stops the fight drawing */ } continue; }   // Morrow-Oak: morrowoak-fx.js
+      if (env.bossId === 'caelum' && typeof CL_FX !== 'undefined' && Math.abs(tg.gone - (tg.start + tg.dur)) <= 0.5) { try { CL_FX.aftermath(tg, env, { mark, AFTER }); } catch (e) { /* a broken decal never stops the fight drawing */ } continue; }   // Caelum: caelum-fx.js
       if (!set || !set[tg.tag] || Math.abs(tg.gone - (tg.start + tg.dur)) > 0.5) continue;
       try { set[tg.tag](tg, env); } catch (e) { /* a broken decal never stops the fight drawing */ }
     }
@@ -2156,6 +2164,10 @@ const BossTells = (() => {
     if (env.bossId === 'hydra') return (typeof HY_TELLS !== 'undefined' && HY_TELLS[tg.tag]) || null;
     if (env.bossId === 'titan') return (typeof TI_ART !== 'undefined' && TI_ART.tell(tg.tag)) || HR[tg.tag] || null;   // (titan-art.js; HR is the older drawing)
     if (env.bossId === 'archmage') return (typeof AZ_ART !== 'undefined' && AZ_ART.tell(tg.tag)) || null;
+    if (env.bossId === 'corvane') return (typeof CV_FX !== 'undefined' && CV_FX.tell(tg.tag)) || null;   // (corvane-fx.js)
+    if (env.bossId === 'brannoc') return (typeof BR_FX !== 'undefined' && BR_FX.tell(tg.tag)) || null;   // (brannoc-fx.js)
+    if (env.bossId === 'morrowoak') return (typeof MG_FX !== 'undefined' && MG_FX.tell(tg.tag)) || null;   // (morrowoak-fx.js)
+    if (env.bossId === 'caelum') return (typeof CL_FX !== 'undefined' && CL_FX.tell(tg.tag)) || null;   // (caelum-fx.js)
     return G[tg.tag] || null;
   }
   // under everyone (called inside the arena clip)
@@ -2192,7 +2204,7 @@ const BossTells = (() => {
   // A chain of the same move (Eightfold Lunge's legs, Whisk's crosses, Simmer's waves): the one landing next is drawn
   // full strength, the one after it as a ghost, anything later fainter still.
   function ghost(tg, env) {
-    if (!env.tgs) return 1;
+    if (!env.tgs || env.bossId === 'brannoc' || env.bossId === 'morrowoak' || env.bossId === 'caelum') return 1;   // (Brannoc's path pieces, waves and heel blows, Morrow-Oak's petals, strands and rods, Caelum's Wake cuts are read together, never ghosted)
     const at = tg.start + tg.dur;
     // (steps, not telegraphs: a layer of many circles landing together counts once)
     const ahead = new Set();

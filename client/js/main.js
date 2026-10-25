@@ -31,7 +31,7 @@
   let rOff = 0;
   const realNow = () => performance.now() / 1000 + rOff;
   let rnow = realNow();
-  let townLayer = null, layerScale = 1, minimapBase = null;
+  let townLayer = null, roomLayer = null, layerScale = 1, minimapBase = null;
   let scene = 'town', zoom = 1;
   // an Ultimate's screen moments (screenFlash, zoomPunch, hitStop... next to hurtVignette) and a fall noticed once
   const screenFx = { flash: null, dim: null };
@@ -83,23 +83,34 @@
   const hardUnlocked = (set = 1) => unlockAll || BOSSES.filter(b => b.playable && bossSet(b) === set).every(b => Save.normalBeaten(b.id));
   const firstOfSet = boss => { const i = BOSSES.indexOf(boss); return i <= 0 || bossSet(BOSSES[i - 1]) !== bossSet(boss); };
   function hardOpen(boss) { const i = BOSSES.indexOf(boss); return unlockAll || (hardUnlocked(bossSet(boss)) && (firstOfSet(boss) || Save.hardBeaten(BOSSES[i - 1].id))); }
-  const hardWhy = boss => { const i = BOSSES.indexOf(boss); return !hardUnlocked(bossSet(boss)) ? (bossSet(boss) === 1 ? 'Clear all four bosses on Normal first.' : 'Clear every boss of the wild realm on Normal first.') : `Beat ${BOSSES[i - 1].name} on Hard first.`; };
-  const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX'];
-  const lastOpenBoss = () => [...BOSSES].reverse().find(b => b.playable && bossOpen(b)) || BOSSES[0];
+  const hardWhy = boss => { const i = BOSSES.indexOf(boss); return !hardUnlocked(bossSet(boss)) ? (bossSet(boss) === 1 ? 'Clear all four bosses on Normal first.' : bossSet(boss) === 2 ? 'Clear every boss of the wild realm on Normal first.' : 'Clear every boss of the Fallen Star on Normal first.') : `Beat ${BOSSES[i - 1].name} on Hard first.`; };
+  const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
+  // a portal opens the raid board at the latest open boss of its own set (null while none of the set's bosses is open yet)
+  const setOpenBoss = set => [...BOSSES].reverse().find(b => b.playable && bossSet(b) === set && bossOpen(b)) || null;
+  const portalOpen = P => !P.sealed && !!setOpenBoss(P.set);
+  function portalUse(P) {
+    const boss = P.sealed ? null : setOpenBoss(P.set);
+    if (boss) openBossPanel(boss);
+    else toast(P.sealed ? 'Chained and shrouded. Whatever is behind it is not ready yet.' : `${P.name} is sealed. The road behind it has not been walked.`);
+  }
   // the specializations stay a secret until the Hollow King has fallen once on this account
   const specsRevealed = () => unlockAll || Save.bossBeaten('hollowking');
+  const HALL_FIT = { morrowoak: 0.55 };   // (a statue far taller than the rest is drawn smaller in the hall, so its crown doesn't hide the row behind it)
   const statues = BOSSES.map((boss, i) => ({
-    kind: 'boss', boss, x: TOWN.pedestals[i].x, y: TOWN.pedestals[i].y - 6, angle: Math.PI / 2, st: newSt(i), nextAct: 2 + i * 1.5,
+    kind: 'boss', boss, x: TOWN.pedestals[i].x, y: TOWN.pedestals[i].y - 5, sc: PED_S, fit: HALL_FIT[boss.id] || 1, angle: Math.PI / 2, st: newSt(i), nextAct: 2 + i * 1.5,
   }));
+  // each statue's name plaque is an entity too: drawn over the next row's statue (a tall one would hide it), but under a hero standing in front of the last row's
+  const plaques = TOWN.pedestals.map((pd, i) => ({ kind: 'stagecraft', x: pd.x, y: pd.y + (i < TOWN.pedestals.length - 4 ? 152 : 62), draw: c => { if (BOSSES[i]) drawPlaque(c, pd, bossOpen(BOSSES[i]) ? BOSSES[i].name : 'Sealed'); } }));
   // The first dummy fights back (every 2.8s, like a raid boss's auto-attack) so tanks can practice their defensives.
   const dummies = TOWN.dummies.map((d, i) => ({ kind: 'dummy', x: d.x, y: d.y, st: { t: 0, hit: -10 }, spar: i === 0, nextSwing: 0, windup: 0 }));
 
   const interactables = [
     { x: keeper.x, y: keeper.y, r: 22, reach: 80, label: 'Barkeep', open: () => openSelect(null) },
     { x: trainer.x, y: trainer.y, r: 22, reach: 80, label: 'Trainer', open: () => openTalents() },
-    ...statues.map(b => ({ x: b.x, y: b.y, r: 58, reach: 120, get label() { return bossOpen(b.boss) ? b.boss.name : 'Sealed'; }, open: () => openBossPanel(b.boss) })),
-    { x: TOWN.portal.x, y: TOWN.portal.y, r: TOWN.portal.r, reach: 130, label: 'Raid Portal', open: () => openBossPanel(lastOpenBoss()) },
+    ...statues.map(b => ({ x: b.x, y: b.y, r: 58 * PED_S, reach: 115, get label() { return bossOpen(b.boss) ? b.boss.name : 'Sealed'; }, open: () => openBossPanel(b.boss) })),
+    ...TOWN.portals.map(P => ({ x: P.x, y: P.y, r: P.r, reach: 130, get label() { return P.sealed ? 'Sealed' : portalOpen(P) ? P.name : P.name + ' (sealed)'; }, open: () => portalUse(P) })),
     ...TOWN.houses.filter(b => b.hall).map(b => ({ x: b.x + b.w / 2, y: b.y + b.h + 8, r: 26, reach: 90, label: 'Practice Hall', open: () => openPractice() })),
+    { x: TOWN.smithy.x + TOWN.smithy.w / 2, y: TOWN.smithy.y + TOWN.smithy.h + 8, r: 26, reach: 90, label: 'Forge', open: () => openForge() },   // fusion (forge.js)
     ...(TOWN.arena ? [{ x: TOWN.arena.door.x, y: TOWN.arena.door.y, r: 26, reach: 90, label: 'The Arena', open: () => openArena() }] : []),   // PvP (pvp-ui.js)
   ];
 
@@ -133,6 +144,7 @@
   const town = { buffs: [], abuffs: [], vuln: 0, vulnEnd: 0, mits: [], shield: null, taken: [], meter: null, meterDone: null };
 
   const inArena = () => scene === 'arena' && !!raid;
+  const inRoom = () => scene === 'town' && inTrophyRoom(player);   // (inside the Trophy Hall: its own room east of the town, town.js)
   const myState = () => (raid ? raid.party.get(Net.id) : null);
   const amDead = () => inArena() && !!myState() && !myState().alive;
   // the link to the host dropped and the tab is winning its place back (net.js): your hero stands still meanwhile, a stand-in plays it
@@ -153,6 +165,11 @@
     if (!player.cls) { toast('Pick a hero first.'); return; }
     closePanels();
     TalentPanel.open();
+  }
+  function openForge() {
+    if (!player.cls) { toast('Pick a hero first.'); return; }
+    closePanels();
+    Forge.open();
   }
   function talentsChanged() {
     talentCache = null;
@@ -269,7 +286,7 @@
     picked: () => { const t = lockedTarget(); return t ? { id: lockedEnemy, x: t.x, y: t.y, r: t.r } : null; },   // (each dummy its own id: a new pick sends a parked Doll back to work)
     collide: (a, o, r) => {
       if (inArena()) { clampArena(o); if (raid.room.props.length) PROPS.collide(o, raid.room.props, r); }
-      else { o.x = clamp(o.x, 40, WORLD.w - 40); o.y = clamp(o.y, 40, WORLD.h - 40); }
+      else townClamp(o);
     },
     threads: () => (inArena() ? Stagecraft.threadsOf(Net.id, entById) : null),
     dolls: (a, list) => Stagecraft.setMine(list, player.cls && player.cls.id, actor && actor.kit),
@@ -943,7 +960,7 @@
       else if (Number.isFinite(ev.x) && Number.isFinite(ev.y)) { dest.x = ev.x; dest.y = ev.y; }
       else return;
     } else dest = kitMoveDest(ev.where, player, tgt, player.target || mouseWorld(), ev.d);
-    if (inArena()) clampArena(dest); else { dest.x = clamp(dest.x, 40, WORLD.w - 40); dest.y = clamp(dest.y, 40, WORLD.h - 40); }
+    if (inArena()) clampArena(dest); else townClamp(dest, 40, player);
     player.dashMove = { sx: player.x, sy: player.y, tx: dest.x, ty: dest.y, t0: now };
     if (face) player.angle = tgt && ev.where !== 'dash' ? Math.atan2(tgt.y - dest.y, tgt.x - dest.x) : Math.atan2(dest.y - player.y, dest.x - player.x);
     player.target = null; player.interact = null;
@@ -998,7 +1015,7 @@
     let a = Math.atan2(to.y - player.y, to.x - player.x);
     if (Math.hypot(to.x - player.x, to.y - player.y) < 4) a = player.angle;
     const dest = { x: player.x + Math.cos(a) * DASH_DIST, y: player.y + Math.sin(a) * DASH_DIST };
-    if (inArena()) clampArena(dest); else { dest.x = clamp(dest.x, 40, WORLD.w - 40); dest.y = clamp(dest.y, 40, WORLD.h - 40); }
+    if (inArena()) clampArena(dest); else townClamp(dest, 40, player);
     // (a Reaper's Blink hears where it went from and to, and whether it crossed a telegraph: kits.js reapBlink)
     const through = inArena() && [0, 0.34, 0.67, 1].some(f => world.danger(actor, player.x + (dest.x - player.x) * f, player.y + (dest.y - player.y) * f, 99));
     if (!actor.useDash(now, { from: { x: player.x, y: player.y }, to: { x: dest.x, y: dest.y }, through })) return;
@@ -1031,6 +1048,10 @@
   // a raid id is a boss id, or 'trial:<spec>' for a specialization trial (trials.js)
   RAID_DEFS.hydra = HYDRA;   // (set 2, Boss VIII: hydra.js)
   RAID_DEFS.archmage = AZERATH;   // (set 2, Boss VII: archmage.js)
+  RAID_DEFS.corvane = CORVANE;   // (set 3, Boss IX: corvane.js)
+  RAID_DEFS.brannoc = BRANNOC;   // (set 3, Boss X: brannoc.js)
+  RAID_DEFS.morrowoak = MORROWOAK;   // (set 3, Boss XI: morrowoak.js)
+  RAID_DEFS.caelum = CAELUM;   // (set 3, Boss XII: caelum.js)
   const raidDef = id => RAID_DEFS[id] || (typeof id === 'string' && id.startsWith('trial:') ? trialDef(id.slice(6)) : null);
   let hostTrial = null;   // host: the spec whose trial is running, if it's a trial
   let trialPrevSpec;      // the spec you wore before stepping into a trial (undefined when not in one)
@@ -1233,6 +1254,10 @@
   };
   PRACTICE_PHASES.hydra = ['Three Heads', 'Six Heads', 'The Submerge', 'Nine Heads', 'Last Heads'];
   PRACTICE_PHASES.archmage = ['Fire', 'Frost', 'The Binding', 'Void', 'Convergence'];
+  PRACTICE_PHASES.corvane = ['The Pass', 'The Shrine', 'The Whetted Edge'];
+  PRACTICE_PHASES.brannoc = ['First Blood', 'Crowd-Pleaser', 'The Tide Rises', 'The Tidewrought', 'Last Round'];
+  PRACTICE_PHASES.morrowoak = ['The Grove', 'Hollowing', 'The Grove Remade', 'Last Bloom'];
+  PRACTICE_PHASES.caelum = ['Descent', 'Starfall', 'Ascendant', 'The Sky Comes Down'];
   let practicePanel = null, practicePick = { boss: 'grubnak', mode: 'normal' };
   function openPractice() {
     if (!practicePanel) {
@@ -1616,6 +1641,7 @@
     const wasPvp = !!(raid && raid.pvp);
     if (wasPvp) { document.body.classList.remove('in-pvp'); PvpUI.leave(); }
     const wasTrial = trialPrevSpec !== undefined;
+    const fromSet = (() => { const b = raid && raid.def && BOSSES.find(x => x.id === raid.def.id); return b ? bossSet(b) : 1; })();
     if (trialPrevSpec !== undefined) {
       player.spec = trialPrevSpec; trialPrevSpec = undefined;
       if (player.cls) Net.send({ t: 'cls', id: player.cls.id, spec: player.spec });
@@ -1627,7 +1653,9 @@
     FX.clear(); VFX.clear(); clearTimers();
     RaidUI.show(false);
     RaidUI.hideResults();
-    player.x = TOWN.portal.x + (Math.random() - 0.5) * 80; player.y = TOWN.portal.y + TOWN.portal.r + 30;
+    // (back out at the portal of the set you fought in, below its plaque)
+    const homePortal = TOWN.portals.find(P => P.set === fromSet) || TOWN.portals[0];
+    player.x = homePortal.x + (Math.random() - 0.5) * 70; player.y = homePortal.y + homePortal.r + 62;
     if (wasPvp && TOWN.arena) { player.x = TOWN.arena.door.x + (Math.random() - 0.5) * 60; player.y = TOWN.arena.door.y - 50; }   // (out of the Arena's gate)
     if (wasTrial && BarrowGate.isOpen()) { const sp = BarrowGate.exitSpot(); player.x = sp.x; player.y = sp.y; }   // (a trial lets you out at the Barrow Gate)
     player.target = null; player.dashMove = null; player.kb = null;
@@ -2036,6 +2064,7 @@
     const tg = raid.tgs.get(msg.id);
     if (!tg || tg.gone != null) return;
     tg.gone = now;
+    if (msg.x) return;   // (taken off the floor before it landed: fight.js cancel)
     BOSS_VFX.impact(tg, msg, { entById, boss: raid.def.id, pol: raid.pol, units: raidUnits(), props: raid.room.props, room: raid.room, bossDraw: raid.bossDraw });
     if (msg.fail) BOSS_VFX.failed(tg);
     if (SH && tg.type !== 'safe') SH.impact(tg.type, !!(msg.hits && msg.hits.includes(Net.id)));
@@ -2144,6 +2173,8 @@
     else if (msg.name === 'gorge' || msg.name === 'roar') { st.action = { type: 'attack', t0: now, dur: 1.4 }; BOSS_VFX.roar(raid.boss.x, raid.boss.y, raid.def.id); }
     else if (msg.name === 'wrap') { raid.props.silk = true; raid.propsUntil.silk = now + msg.dur + 0.3; }
     else if (msg.name === 'field') { raid.props.charge = true; raid.propsUntil.charge = now + msg.dur + 0.3; }
+    else if (msg.name === 'ascendant') { raid.props.clAscendant = true; raid.propsUntil.clAscendant = now + msg.dur + 0.2; }   // (Caelum risen: caelum-art.js)
+    else if (msg.name === 'pose' || msg.name === 'risen') { raid.props[msg.name] = true; raid.propsUntil[msg.name] = now + msg.dur + 0.2; }   // (Brannoc: arms up for the crowd; the Tidewrought risen: brannoc-art.js)
   });
   // --- adds, tethers, zones and Skitterra's legs (all host-driven)
   Net.on('adds', msg => {
@@ -2298,7 +2329,12 @@
   // the room: props and floor state (the whole list), a prop chipped / broken / slammed into, and room moments
   Net.on('props', msg => { if (raid) ArenaView.roomProps(raid.room, msg, now); });
   Net.on('propfx', msg => { if (raid) BOSS_VFX.propFx(msg, raid.room, entById, raid.def.id); });
-  Net.on('roomev', msg => { if (raid) ArenaView.roomEvent(raid.room, msg, now, entById); });
+  Net.on('roomev', msg => {
+    if (!raid) return;
+    // the room changes shape mid-fight (fight.js setForm): the walls move here at once, and the floor is rebuilt for the new form
+    if (msg.k === 'form') { raid.form = msg.form || null; ARENA.use(raid.def.id + (raid.form ? ':' + raid.form : '')); }
+    ArenaView.roomEvent(raid.room, msg, now, entById);
+  });
 
   // --- the Hollow King
   // lanterns: [id, x, y, carrier, last]; a carried one is drawn in its carrier's hands
@@ -2716,9 +2752,9 @@
     if (act && /^f\d+$/.test(kname)) e.preventDefault();   // (a bound F key never opens the browser's help or search)
     if (act === 'options' || act === 'journal' || act === 'logbook') { e.preventDefault(); if (!e.repeat) runAction(act, e); return; }
     const floating = () => { Journal.close(); Tutorial.close(); Keybinds.closePanel(); };   // (a full page never opens behind them)
-    if (act === 'bags' && !selOpen() && overlay.classList.contains('hidden')) { TalentPanel.close(); floating(); Inventory.toggle(); return; }
+    if (act === 'bags' && !selOpen() && overlay.classList.contains('hidden')) { TalentPanel.close(); Forge.close(); floating(); Inventory.toggle(); return; }
     if (act === 'talents' && started && !selOpen() && overlay.classList.contains('hidden')) {
-      if (TalentPanel.isOpen()) TalentPanel.close(); else { floating(); openTalents(); }
+      if (TalentPanel.isOpen()) TalentPanel.close(); else { floating(); Forge.close(); openTalents(); }
       return;
     }
     if (panelOpen()) return;
@@ -2743,7 +2779,7 @@
   }
 
   let lastSent = 0, lastSentKey = '';
-  let wasInPortal = false;
+  let wasInPortal = -1;
 
   function update(dt) {
     FX.update(now, dt);
@@ -2777,9 +2813,9 @@
     Stagecraft.update(now, dt); Kennel.update(now, dt);
     updateRemotes(dt);
     if (scene === 'town') updateTown(dt); else updateArena(dt);
-    TownLife.update(dt, now, scene === 'town' && started);
+    TownLife.update(dt, now, scene === 'town' && started && !inRoom());   // (the town's moments wait while you are inside the Trophy Hall)
     Pastimes.update(now, scene === 'town' && started);
-    BarrowGate.update(dt, now, scene === 'town' && started);
+    BarrowGate.update(dt, now, scene === 'town' && started && !inRoom());
     if (scene === 'town') TownLife.checkDistance(); else if (TownLife.isTalking()) TownLife.endTalk();
     updateCamera(dt);
   }
@@ -2852,10 +2888,29 @@
       player.interact = null; player.target = null;
       it.open();
     }
-    // stepping into the portal opens the raid board (once per visit)
-    const inPortal = Math.hypot(player.x - TOWN.portal.x, player.y - TOWN.portal.y) < TOWN.portal.r - 10;
-    if (inPortal && !wasInPortal) openBossPanel(lastOpenBoss());
+    // stepping into a portal opens its raid board (once per visit)
+    const inPortal = TOWN.portals.findIndex(P => Math.hypot(player.x - P.x, player.y - P.y) < P.r - 10);
+    if (inPortal >= 0 && inPortal !== wasInPortal) portalUse(TOWN.portals[inPortal]);
     wasInPortal = inPortal;
+    trophyStep();
+  }
+
+  // the Trophy Hall's two pads (town.js TOWN.trophy at the building's door, TOWN.hall.pad inside): stepping onto the one you are near carries
+  // you to the other, a short fade between. You are set down a little way off the far pad, and each works again once you have stepped clear of it.
+  let padArmed = true;
+  function trophyStep() {
+    const inside = inRoom(), P = inside ? TOWN.hall.pad : TOWN.trophy.pad, d = Math.hypot(player.x - P.x, player.y - P.y);
+    if (d > P.r + 20) padArmed = true;
+    if (d >= 20 || !padArmed) return;
+    padArmed = false;
+    const to = inside ? TOWN.trophy.out : TOWN.hall.from;
+    player.x = to.x + (inside ? (Math.random() - 0.5) * 36 : 0); player.y = to.y;
+    player.angle = inside ? Math.PI / 2 : -Math.PI / 2;
+    player.target = null; player.interact = null; player.dashMove = null; player.kb = null;
+    lockedAlly = null; lockedEnemy = null; camFocus = null;
+    resolveCollisions(player);
+    sceneFade(); updateCamera(0, true);
+    if (SH) SH.play('portal-enter', { vol: 0.5 });
   }
 
   // send our position ~12 times a second when it changes
@@ -2972,6 +3027,22 @@
     for (const key of Object.keys(raid.propsUntil)) if (now > raid.propsUntil[key]) { delete raid.props[key]; delete raid.propsUntil[key]; }
     bd.st.props = raid.props;
     if (raid.def.id === 'hydra') { raid.props.dive = !!b.u; raid.props.heart = !!raid.wallLabel; }   // (the Mother sinks while she is out of reach; the Heart shows in her chest while she is sealed)
+    // (Corvane: his stance, the notches on his blade and the Vigil's kneel, from the room's whet / vigil moments: corvane-art.js draws them)
+    if (raid.def.id === 'corvane') { const ev = raid.room.ev, w = ev.whet, vg = ev.vigil; raid.props.stance = w ? w.st || null : null; raid.props.notch = w ? w.n | 0 : 0; raid.props.over = w ? w.over | 0 : 0; raid.props.kneel = !!(vg && now < vg.end && raid.wallLabel); }
+    if (raid.def.id === 'brannoc') {   // (the Tidewrought: brannoc-art.js draws the second form; the Sunwheel is off his back / his fist while a wheel is in flight)
+      raid.props.titan = raid.form === 'sea';
+      let wo = false;
+      for (const k in raid.room.ev) if (k.startsWith('brpath:')) { const e = raid.room.ev[k]; if (!e.wave && now >= e.start + (e.at || 0) - 0.05 && now < e.end + 0.6) { wo = true; break; } }
+      raid.props.wheelOut = wo;
+    }
+    if (raid.def.id === 'morrowoak') {   // (the Grove Remade: morrowoak-art.js draws the second form; his adds read their facing and their move from st.props)
+      raid.props.remade = raid.form === 'remade';
+      if (typeof MG_ART !== 'undefined') for (const a of raid.adds.values()) a.st.props = { f: a.f, act: a.kind.startsWith('limb-') && !!raid.props[MG_ART.LIMB_PROP[a.kind.slice(5)]] };
+    }
+    if (raid.def.id === 'caelum') {   // (the Ascendant form and his blade, longer each act: caelum-art.js; the blade grows with the meteor's shadow)
+      raid.props.sky = raid.form === 'sky';
+      const cs = raid.room.ev.clshadow; raid.props.clBlade = cs ? cs.r : 150;
+    }
     if (raid.def.id === 'wyrm') { raid.props.air = !!b.u && !raid.props.perch; if (raid.wallLabel) raid.props.heart = true; }   // (Vhalgrath: lifted while he is out of reach; the Ember Heart shows in his chest while he is sealed)
     // telegraphs that follow players or track the tank
     for (const [id, tg] of raid.tgs) {
@@ -3104,13 +3175,14 @@
       return;
     }
     zoom = Math.abs(zoom - 1) < 0.003 || snap ? 1 : zoom + (1 - zoom) * (1 - Math.exp(-5 * dt));   // (easing back out of a scene's zoom)
-    const tx = clamp(player.x - W / zoom / 2, 0, Math.max(0, WORLD.w - W / zoom));
-    const ty = clamp(player.y - H / zoom / 2, 0, Math.max(0, WORLD.h - H / zoom));
+    const B = inRoom() ? TOWN.room : { x: 0, y: 0, w: WORLD.w, h: WORLD.h };   // (the town, or the Trophy Hall's room)
+    const tx = clamp(player.x - W / zoom / 2, B.x, Math.max(B.x, B.x + B.w - W / zoom));
+    const ty = clamp(player.y - H / zoom / 2, B.y, Math.max(B.y, B.y + B.h - H / zoom));
     const kt = 1 - Math.exp(-8 * dt);
     cam.x += (tx - cam.x) * kt;
     cam.y += (ty - cam.y) * kt;
-    if (W / zoom > WORLD.w) cam.x = (WORLD.w - W / zoom) / 2;
-    if (H / zoom > WORLD.h) cam.y = (WORLD.h - H / zoom) / 2;
+    if (W / zoom > B.w) cam.x = B.x + (B.w - W / zoom) / 2;
+    if (H / zoom > B.h) cam.y = B.y + (B.h - H / zoom) / 2;
   }
 
   function bossImpact(b) {
@@ -3190,7 +3262,7 @@
       case 'hero': drawHero(ctx, e.cls, e.x, e.y, e.angle, e.st, HERO_SCALE); break;
       case 'keeper': drawKeeper(ctx, e.x, e.y, e.angle, e.st, HERO_SCALE); break;
       case 'trainer': drawTrainer(ctx, e.x, e.y, e.angle, e.st, HERO_SCALE); break;
-      case 'boss': if (bossOpen(e.boss)) drawBoss(ctx, e.boss, e.x, e.y, e.angle, e.st, BOSS_SCALE); else drawShroud(ctx, e.x, e.y); break;
+      case 'boss': if (bossOpen(e.boss)) drawBoss(ctx, e.boss, e.x, e.y, e.angle, e.st, BOSS_SCALE * (e.sc || 1) * (e.fit || 1)); else if (e.sc) { ctx.save(); ctx.translate(e.x, e.y); ctx.scale(e.sc, e.sc); drawShroud(ctx, 0, 0); ctx.restore(); } else drawShroud(ctx, e.x, e.y); break;
       case 'dummy': drawDummy(ctx, e.x, e.y, e.st, HERO_SCALE); break;
       case 'player': case 'remote': {
         const ps = inArena() ? raid.party.get(e.id === undefined ? Net.id : e.id) : null, dead = !!ps && !ps.alive;
@@ -3386,7 +3458,7 @@
 
   let lineupLabelAt = null;   // (the last frame the deck heroes' names were eased)
   function renderTown() {
-    ctx.fillStyle = '#2d4a22'; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = inRoom() ? '#0c0a08' : '#2d4a22'; ctx.fillRect(0, 0, W, H);
     const [sx, sy] = shakeOffset();
     // (snapped to device pixels, not whole CSS pixels: on a 2x screen a half-pixel step is visible as jitter)
     const cx = Math.round((cam.x + sx) * DPR) / DPR, cy = Math.round((cam.y + sy) * DPR) / DPR;
@@ -3396,7 +3468,8 @@
     const vx = clamp(cx, 0, WORLD.w), vy = clamp(cy, 0, WORLD.h);
     const vw = Math.min(W / zoom, WORLD.w - vx), vh = Math.min(H / zoom, WORLD.h - vy);
     if (vw > 0 && vh > 0) ctx.drawImage(townLayer, vx * layerScale, vy * layerScale, vw * layerScale, vh * layerScale, vx, vy, vw, vh);
-    drawTownDynamic(ctx, now);
+    if (cx + W / zoom > TOWN.room.x) ctx.drawImage(roomLayer, TOWN.room.x, TOWN.room.y, TOWN.room.w, TOWN.room.h);
+    drawTownDynamic(ctx, now, TOWN.portals.map(portalOpen));
 
     FX.draw(ctx, true);
     VFX.draw(ctx, 'ground');
@@ -3423,9 +3496,8 @@
     Pastimes.drawGround(ctx, now);
     BarrowGate.drawGround(ctx, now);
     TownLife.drawGround(ctx, now, TOWN.pedestals, BOSSES.map(b => b.id));
-    TOWN.pedestals.forEach((pd, i) => { if (BOSSES[i]) drawPlaque(ctx, pd, bossOpen(BOSSES[i]) ? BOSSES[i].name : 'Sealed'); });
     for (const h of lineup) drawDeckPad(ctx, h.home ? h.home.x : h.x, h.home ? h.home.y : h.y, lineup.filter(o => o.cls.role === h.cls.role).length > 3);
-    const ents = [...lineup, keeper, trainer, ...statues, ...dummies, player, ...townRemotes, ...Stagecraft.entities(now, scEnv), ...Kennel.entities(now, scEnv), ...TownLife.entities(HERO_SCALE), ...BarrowGate.entities(now)].filter(e => !TownLife.hides(e));
+    const ents = [...lineup, keeper, trainer, ...statues, ...dummies, player, ...townRemotes, ...Stagecraft.entities(now, scEnv), ...Kennel.entities(now, scEnv), ...TownLife.entities(HERO_SCALE), ...BarrowGate.entities(now), ...plaques].filter(e => !TownLife.hides(e) && (e.x == null || inTrophyRoom(e) === inRoom()));   // (what is in the Trophy Hall's room is only drawn from inside it, and the town only from outside)
     ents.sort((a, b) => a.y - b.y);
     for (const e of ents) { if (e.kind === 'stagecraft') e.draw(ctx); else drawEntity(e); }
     Stagecraft.drawOver(ctx, now, scEnv);
@@ -3469,14 +3541,14 @@
   // from his silhouette, instead of a CSS filter with a drop-shadow on a canvas up to ~1320 px a side every frame.
 
   function renderArena() {
-    ctx.fillStyle = { volkar: '#080b11', hollowking: '#0a0c0e', wyrm: '#0b0706', titan: '#070d14' }[raid.def.id] || (raid.def.id === 'hydra' ? '#04100c' : raid.def.id === 'archmage' ? '#04141a' : '#120d0a'); ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = { volkar: '#080b11', hollowking: '#0a0c0e', wyrm: '#0b0706', titan: '#070d14' }[raid.def.id] || (raid.def.id === 'hydra' ? '#04100c' : raid.def.id === 'archmage' ? '#04141a' : raid.def.id === 'corvane' ? '#070a14' : raid.def.id === 'brannoc' ? '#04121a' : raid.def.id === 'morrowoak' ? '#07080a' : raid.def.id === 'caelum' ? '#05060e' : '#120d0a'); ctx.fillRect(0, 0, W, H);
     const [sx, sy] = shakeOffset(), px = DPR * zoom;
     ctx.scale(zoom, zoom);
     // (snapped to device pixels, like the town's camera, so a resting or shaking view never shimmers half a pixel)
     ctx.translate(Math.round((-cam.x + sx) * px) / px, Math.round((-cam.y + sy) * px) / px);
     if (raid.pvp) { if (raid.pvp.ctf) PvpView.drawField(ctx, now); else PvpView.drawRing(ctx, now); }
     else {
-      ArenaView.drawFloor(ctx, raid.def.id, Math.min(1.5, DPR * zoom));
+      ArenaView.drawFloor(ctx, raid.def.id + (raid.form ? ':' + raid.form : ''), Math.min(1.5, DPR * zoom));
       ArenaView.drawAmbient(ctx, now);
       ArenaView.drawEdge(ctx, now, raid.edgeWarn);
     }
@@ -3681,22 +3753,27 @@
   }
   function drawMinimap() {
     if (scene !== 'town') return;
+    // (inside the Trophy Hall's room the town map has nothing to show: it is put away until you step back out)
+    const away = inRoom();
+    if (mini._away !== away) { mini._away = away; mini.style.visibility = away ? 'hidden' : ''; }
+    if (away) return;
     const c = prep(mini), s = MW / WORLD.w;
     c.drawImage(minimapBase, 0, 0, MW, MH);
     const dot = (x, y, r, col) => circle(c, x * s, y * s, r, col, OUT, 1);
-    for (const b of statues) dot(b.x, b.y, 3.5, bossOpen(b.boss) ? '#ff6a5a' : '#6a5a80');
-    dot(TOWN.portal.x, TOWN.portal.y, 4.5, '#b080ff');
+    for (const P of TOWN.portals) dot(P.x, P.y, 4.5, P.sealed ? '#5a5660' : !portalOpen(P) ? '#6a5a80' : P.set === 1 ? '#b080ff' : P.set === 2 ? '#9be05a' : '#8fb0ff');
     for (const b of TOWN.houses) if (b.hall) dot(b.x + b.w / 2, b.y + b.h / 2, 4, '#7fd0a0');
+    dot(TOWN.trophy.x + TOWN.trophy.w / 2, TOWN.trophy.y + TOWN.trophy.h / 2, 4, '#e8c15a');   // (the Trophy Hall)
     if (TOWN.arena) dot(TOWN.arena.x + TOWN.arena.w / 2, TOWN.arena.y + TOWN.arena.h / 2, 4, '#e8a05a');
     if (BarrowGate.isOpen()) dot(TOWN.barrow.x, TOWN.barrow.y, 4, '#8fe3dc');   // (the Barrow Gate, once it has risen)
     dot(keeper.x, keeper.y, 3.5, '#ffd65a');
     dot(trainer.x, trainer.y, 3, '#f0d48a');
-    for (const r of remotes.values()) if (r.scene === 0) dot(r.x, r.y, 3.5, r.cls ? partyColor(r.id) || ROLES[r.cls.role].color : '#dffaff');
+    for (const r of remotes.values()) if (r.scene === 0 && !inTrophyRoom(r)) dot(r.x, r.y, 3.5, r.cls ? partyColor(r.id) || ROLES[r.cls.role].color : '#dffaff');
     dot(player.x, player.y, 4.5, '#ffffff');
     c.strokeStyle = 'rgba(255,255,255,0.7)'; c.lineWidth = 1;
     c.strokeRect(cam.x * s, cam.y * s, W * s, H * s);
   }
   mini.addEventListener('mousedown', e => {
+    if (inRoom()) return;
     const r = mini.getBoundingClientRect();
     moveTo({ x: (e.clientX - r.left) / MW * WORLD.w, y: (e.clientY - r.top) / MH * WORLD.h }, true);
     player.interact = null;
@@ -3738,8 +3815,8 @@
   function townObjective() {
     if (!player.cls) return;
     const next = BOSSES.find(b => !(unlockAll || Save.bossBeaten(b.id)));
-    if (!BOSSES.some(b => Save.bossBeaten(b.id))) setObjective('Try your skills on the <b>Training Yard</b> dummies (east). The red one swings back. When you\'re ready, step into the <b>Raid Portal</b> (north).');
-    else if (next) setObjective(`Next on the King's Road: <b>${next.name}</b>. Step into the <b>Raid Portal</b> (north) when your party is ready.`);
+    if (!BOSSES.some(b => Save.bossBeaten(b.id))) setObjective('Try your skills on the <b>Training Yard</b> dummies (east). The red one swings back. When you\'re ready, step into <b>The King\'s Road</b>, the first portal (north).');
+    else if (next) setObjective(`Next: <b>${next.name}</b>. Step into <b>${(TOWN.portals.find(P => P.set === bossSet(next)) || TOWN.portals[0]).name}</b> (north) when your party is ready.`);
     else setObjective('The road is quiet, for now. Try a boss on <b>Hard</b>, or look around town: not everything in Emberfall is out in the open.');
   }
   function updateHeroName() {
@@ -3786,7 +3863,7 @@
   const sel = $('select'), selGrid = $('sel-grid'), selDetail = $('sel-detail');
   let preview = null;
   const selOpen = () => !sel.classList.contains('hidden');
-  const panelOpen = () => !overlay.classList.contains('hidden') || selOpen() || Inventory.isOpen() || TalentPanel.isOpen();
+  const panelOpen = () => !overlay.classList.contains('hidden') || selOpen() || Inventory.isOpen() || TalentPanel.isOpen() || Forge.isOpen();
   function closePanels() {
     Tutorial.close();
     overlay.classList.add('hidden'); bossPanel.classList.add('hidden');
@@ -3794,6 +3871,7 @@
     sel.classList.add('hidden');
     Inventory.close();
     TalentPanel.close();
+    Forge.close();
     preview = null; selPortrait = null;
     Tip.hide();
     if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
@@ -4482,7 +4560,7 @@
     if (scene === 'arena') leaveRaid(false);
     closePanels(); if (Inventory.isOpen()) Inventory.toggle();
     Journal.close(); Tutorial.close(); Keybinds.closePanel(); Keybinds.arrange(false); Pings.closePanel(); closePractice(); closeBarrow();
-    TownLife.endTalk(); Loot.leave(); TalentPanel.close();
+    TownLife.endTalk(); Loot.leave(); TalentPanel.close(); Forge.close();
     chatInput.classList.add('hidden'); chatInput.blur();
     started = false;
     hideLink();
@@ -4594,8 +4672,9 @@
   Tip.set(bagBtn, keyTip('Inventory', 'bags'));
   Tip.set($('opt-btn'), keyTip('Options', 'options'));
   Tip.set($('menu-chip'), keyTip('Options', 'options'));
-  bagBtn.addEventListener('click', () => { if (started && !selOpen()) { TalentPanel.close(); Inventory.toggle(); } });
+  bagBtn.addEventListener('click', () => { if (started && !selOpen()) { TalentPanel.close(); Forge.close(); Inventory.toggle(); } });
   document.body.appendChild(bagBtn);
+  Forge.init({ cls: () => player.cls && player.cls.id, toast });
   TalentPanel.init({
     cls: () => player.cls,
     spec: () => player.spec,
@@ -4660,6 +4739,7 @@
   fontsReady.then(() => {
     layerScale = Math.min(DPR, 1.5);
     townLayer = buildTownLayer(layerScale);
+    roomLayer = buildRoomLayer(layerScale);
     minimapBase = document.createElement('canvas');
     minimapBase.width = MW * 2; minimapBase.height = MH * 2;
     minimapBase.getContext('2d').drawImage(townLayer, 0, 0, MW * 2, MH * 2);

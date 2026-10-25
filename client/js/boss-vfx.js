@@ -878,6 +878,14 @@ const BOSS_VFX = (() => {
     if (ctx && ctx.boss === 'wyrm' && typeof WYRM_ART !== 'undefined' && WYRM_ART.impact(tg, ctx, { shapeFlash, shockAt, scatter, after, shake, roomTint, sweep, AFT })) return;
     // the Hydra: every move of hers lands in hydra-view.js (HY_FX)
     if (ctx && ctx.boss === 'hydra' && typeof HY_FX !== 'undefined' && HY_FX.impact(tg, ctx, { shapeFlash, shockAt, scatter, after, shake, roomTint, sweep, streak, bang, AFT, coverShadows, clipOut, AR: AR() })) return;
+    // Corvane: every move of his lands in corvane-fx.js (CV_FX); a tag it does not know falls through to the shared ones
+    if (ctx && ctx.boss === 'corvane' && typeof CV_FX !== 'undefined' && CV_FX.impact(tg, ctx, { shapeFlash, shockAt, scatter, after, shake, roomTint, sweep, streak, bang, AFT, coverShadows, clipOut, AR: AR() })) return;
+    // Brannoc: every move of his lands in brannoc-fx.js (BR_FX); a tag it does not know falls through to the shared ones
+    if (ctx && ctx.boss === 'brannoc' && typeof BR_FX !== 'undefined' && BR_FX.impact(tg, msg, ctx, { shapeFlash, shockAt, scatter, after, shake, roomTint, sweep, streak, bang, AFT, coverShadows, clipOut, AR: AR() })) return;
+    // Morrow-Oak: every move of his lands in morrowoak-fx.js (MG_FX); a tag it does not know falls through to the shared ones
+    if (ctx && ctx.boss === 'morrowoak' && typeof MG_FX !== 'undefined' && MG_FX.impact(tg, msg, ctx, { shapeFlash, shockAt, scatter, after, shake, roomTint, sweep, streak, bang, AFT, coverShadows, clipOut, AR: AR() })) return;
+    // Caelum: every move of his lands in caelum-fx.js (CL_FX); a tag it does not know falls through to the shared ones
+    if (ctx && ctx.boss === 'caelum' && typeof CL_FX !== 'undefined' && CL_FX.impact(tg, msg, ctx, { shapeFlash, shockAt, scatter, after, shake, roomTint, sweep, streak, bang, AFT, coverShadows, clipOut, AR: AR() })) return;
     // (an untagged raidwide washes the room in the boss's own colour, softly, instead of a grey-white veil)
     if (tg.type === 'raidwide') { (IMPACT[tg.tag] || (() => { roomTint({ grubnak: '#ff8a3a', skitterra: '#b070ff', volkar: '#7fc8ff', hollowking: '#6dff9a', wyrm: '#ff8a3a', titan: '#9fd8ff' }[ctx && ctx.boss] || '#ffffff', 0.15); shake(6); }))(tg, ctx); return; }
     if (tg.type === 'proximity') { (IMPACT[tg.tag] || IMPACT.boil)(tg); shake(10); return; }
@@ -952,6 +960,11 @@ const BOSS_VFX = (() => {
     wyrm: { def: '#ff8a2a', breath: '#ffd27a', roar: '#ff5a1a', dive: '#ffb04a', fly: '#ffd2a0', heart: '#ffe08a', roost: '#ff7a3a' },
     archmage: { def: '#7fe8e0', fire: '#ff6a2a', pyre: '#ff6a2a', frost: '#7fd8ff', lances: '#7fd8ff', bolt: '#ffe45a', chain: '#ffe45a', void: '#a05aff', rifts: '#a05aff', rune: '#ffe08a', swap: '#ffe08a', mark: '#ffe08a', conv: '#ffffff', bind: '#3fe0d0', counter: '#c8a0ff', lance: '#9af0ff' },
     hydra: { def: '#7fe0a8', head: '#c8ffd8', cry: '#ffe9a8', maul: '#ffb070', dive: '#7ffff0', heart: '#ffe08a', gaze: '#e8e8f8' },
+    corvane: { def: '#bfe4ff', gale: '#eaf6ff', comet: '#ffffff', parting: '#dfe8ff', sheathe: '#dfe8ff', still: '#9fd8f8', breath: '#e8f4ff', crane: '#cfeeff' },
+    brannoc: { def: '#ffc23a', throw: '#ffc23a', riposte: '#e8f4ff', leap: '#ffd890', heel: '#ffb050', roar: '#8ff5c8', furrow: '#ff9a2a', rise: '#9fe8f0', slam: '#9fe8f0', grip: '#6fd0e0', unbound: '#fff0a8', call: '#7fe0f0' },
+    morrowoak: { def: '#a064ff', seed: '#a064ff', inhale: '#dcc4ff', bloom: '#d8e08a', lash: '#c8a070', tide: '#ffb020', saplings: '#b8d070', dark: '#a064ff', swallow: '#a064ff', unfold: '#dcc4ff',
+      cleaver: '#ff8a2a', roots: '#b8ef5a', storm: '#7fe8ff', lantern: '#6dff9a', wing: '#ff6a2a', fist: '#8ad0ee', rune: '#3fe0c8', head: '#4ad8a0' },
+    caelum: { def: '#cfd6f2', glint: '#e8ecff', wake: '#e8ecff', crown: '#cdbfff', thrust: '#cdbfff', grace: '#f4f7ff', night: '#8c70ff', starfall: '#cdbfff', ember: '#ff9a4a', summon: '#ffd36a', embers: '#ff9a4a', constellation: '#fff0b8', ascend: '#ffffff', horizon: '#ffd36a', coil: '#ffd36a' },
   };
   // the wind-up while the boss casts: motes spiral in, a ring tightens, everything brightens near the end
   // Gorge: the whole kitchen is sucked into him: arms of fire and food spiralling in, tightening as he swallows
@@ -1048,19 +1061,23 @@ const BOSS_VFX = (() => {
     shake(8);
   }
   function roar(x, y, bossKind) {
-    const color = bossKind === 'skitterra' ? '#d08aff' : bossKind === 'volkar' ? '#7fe8ff' : '#ffb050';
+    const color = bossKind === 'skitterra' ? '#d08aff' : bossKind === 'volkar' ? '#7fe8ff' : bossKind === 'corvane' ? '#bfe4ff' : '#ffb050';
     for (let i = 0; i < 3; i++) shockAt(x, y, { r: 260, color, w: 6, dur: 0.6, flat: 1, delay: i * 0.12 });
     shake(5);
   }
   function addSpawn(x, y, kind) {
     if (kind === 'skeleton') return coffinBurst(x + Math.sign(x) * 40, y);
     if (kind === 'whelp' && typeof WYRM_ART !== 'undefined') return WYRM_ART.whelpSpawn(x, y, { shockAt, shake });   // (an ember whelp: wyrm-art.js)
+    if (kind === 'wisp' && typeof CV_FX !== 'undefined') return CV_FX.wispSpawn(x, y, { shockAt, shake });   // (Corvane's cold wisps: corvane-fx.js)
+    if (kind === 'tidehand' && typeof BR_FX !== 'undefined') return BR_FX.handSpawn(x, y, { shockAt, shake });   // (the Tidewrought's hand: brannoc-fx.js)
     VFX.swirl(x, y, { r: 60, color: '#c8ff6a', dur: 0.7, arms: 3 });
     VFX.burst(x, y, { color: '#e8ff9a', color2: '#ffffff', n: 14, speed: 200 });
     VFX.smoke(x, y, { color: '#d8e8b0', n: 6, size: 26, a: 0.6, speed: 70 });
   }
   function addDeath(x, y, kind) {
     if (kind === 'whelp' && typeof WYRM_ART !== 'undefined') return WYRM_ART.whelpDeath(x, y, { shockAt, shake, after });
+    if (kind === 'wisp' && typeof CV_FX !== 'undefined') return CV_FX.wispDeath(x, y, { shockAt, shake });
+    if (kind === 'tidehand' && typeof BR_FX !== 'undefined') return BR_FX.handDeath(x, y, { shockAt, shake });
     VFX.charge(x, y - 10, { color: '#c070ff', n: 10, r: 60, dur: 0.3 });
     after(0.28, () => {
       VFX.burst(x, y, { color: '#c070ff', color2: '#ffffff', n: 18, speed: 260, size: 15 });
@@ -1432,6 +1449,10 @@ const BOSS_VFX = (() => {
   function hydraFx(msg) { return typeof HY_FX !== 'undefined' && HY_FX.prop(msg, { shockAt, shake, roomTint, bang }); }
   function propFx(msg, room, entById, bossKind) {
     if (hydraFx(msg)) return;
+    if ((bossKind === 'corvane' || msg.kind === 'stonelantern') && typeof CV_FX !== 'undefined' && CV_FX.prop(msg, { shockAt, shake })) return;   // (Corvane's dash, wisps and lanterns: corvane-fx.js)
+    if (bossKind === 'brannoc' && typeof BR_FX !== 'undefined' && BR_FX.prop(msg, { shockAt, shake })) return;   // (Brannoc's leap and crush: brannoc-fx.js)
+    if (bossKind === 'morrowoak' && typeof MG_FX !== 'undefined' && MG_FX.prop(msg, { shockAt, shake, entById })) return;   // (Morrow-Oak's holes, a hero falling in, a limb breaking: morrowoak-fx.js)
+    if (bossKind === 'caelum' && typeof CL_FX !== 'undefined' && CL_FX.prop(msg, { shockAt, shake })) return;   // (Caelum's Dark Ember and the star's shards breaking: caelum-fx.js)
     if (bossKind === 'titan' && typeof TI_ART !== 'undefined' && TI_ART.propFx(msg, room, entById, { shockAt })) return;   // (Hrimgar: frozen solid, warmed: titan-art.js)
     const st = PROP_STUFF[msg.kind] || { color: '#6a6a72', dust: '#b0b0b8', size: 1 };
     if (msg.k === 'chip') {
@@ -1747,6 +1768,15 @@ const BOSS_VFX = (() => {
     hollowking: { cleave: [['windup', 0.1]], marks: [['marks', 0.3]], judgement: [['gavel', 0.3]], charges: [['scroll', 0.4]], enrage: [['rise', 0.5], ['gaze', 0.5]] },
     archmage: { fire: [['fire', 0.5]], pyre: [['fire', 0.5]], frost: [['frost', 0.5]], lances: [['frost', 0.5]], bolt: [['bolt', 0.5]], chain: [['bolt', 0.5]], void: [['void', 0.5]], rifts: [['void', 0.5]],
       rune: [['rune', 0.6]], swap: [['rune', 0.6]], mark: [['rune', 0.6]], bind: [['bind', 0.8]], conv: [['conv', 0.8]], counter: [['counter', 0.6]], burst: [['burst', 0.4]], lance: [['lance', 0.4]], enrage: [['conv', 0.5], ['burst', 0.5]] },
+    corvane: { cut: [['raise', 0.25]], guard: [['raise', 0.25]], draw: [['draw', 0.3]], sweepL: [['sweepL', 0.3]], sweepR: [['sweepR', 0.3]], still: [['still', 7.4]], gale: [['gale', 0.5]], breath: [['breath', 0.5]], sheathe: [['sheathe', 0.6]], enrage: [['raise', 0.5], ['gale', 0.5], ['burn', 0.5]] },   // (corvane-art.js)
+    brannoc: { throw: [['throw', 0.3]], riposte: [['kick', 0.3]], leap: [['leap', 0.1]], heel: [['heel', 0.3]], roar: [['roar', 0.4]], furrow: [['furrow', 0.4]], rise: [['rise', 0.4]],
+      slam: [['slam', 0.5]], grip: [['grip', 0.5]], unbound: [['unbound', 0.5]], call: [['call', 0.5]], enrage: [['call', 0.5], ['bell', 0.5]] },   // (brannoc-art.js)
+    morrowoak: { seed: [['mgSeed', 0.3]], inhale: [['mgInhale', 0.5]], bloom: [['mgBloom', 0.6]], lash: [['mgLash', 0.4]], tide: [['mgTide', 0.5]], saplings: [['mgSaplings', 0.3]], dark: [['mgDark', 0.4]],
+      swallow: [['mgSwallow', 2.5]], unfold: [['mgUnfold', 0.6]], cleaver: [['mgCleaver', 0.4]], roots: [['mgRoots', 0.4]], storm: [['mgStorm', 0.4]], lantern: [['mgLantern', 0.4]], wing: [['mgWing', 0.4]],
+      fist: [['mgFist', 0.4]], rune: [['mgRune', 0.4]], head: [['mgHead', 0.4]], enrage: [['mgRage', 0.5]] },   // (morrowoak-art.js)
+    caelum: { glint: [['clGlint', 0.3]], wake: [['clWake', 0.3]], crown: [['clCrown', 0.4]], thrust: [['clThrust', 0.4]], grace: [['clGrace', 0.6]], night: [['clNight', 0.4]],
+      starfall: [['clSummon', 0.4]], ember: [['clEmber', 0.4]], summon: [['clSummon', 1.2]], embers: [['clSummon', 0.5]], constellation: [['clSummon', 0.6]],
+      ascend: [['clAscend', 0.3]], horizon: [['clHorizon', 0.5]], coil: [['clHorizon', 0.5]], enrage: [['clRage', 0.5]] },   // (caelum-art.js)
   };
   const castKey = (kind, anim, name) => {
     if (kind === 'grubnak' && anim === 'boil' && name === 'Flare-Up') return 'heave';
@@ -1924,6 +1954,10 @@ const BOSS_VFX = (() => {
   const ENR = { grubnak: '#ff2a10', skitterra: '#b02aff', volkar: '#7a8aff', hollowking: '#9ac8ff', wyrm: '#ff5a1a', titan: '#9fe8ff' };
   ENR.archmage = '#3fe0d0';
   ENR.hydra = '#3affb0';
+  ENR.corvane = '#bfe4ff';
+  ENR.brannoc = '#ffc23a';
+  ENR.morrowoak = '#a064ff';
+  ENR.caelum = '#ffb870';
   function enrageStart(kind, b, dur) {
     const sh = SH(b); if (sh.death) return;
     sh.enrAt = clk(); sh.enrDur = dur; sh.landed = false;
@@ -2013,11 +2047,23 @@ const BOSS_VFX = (() => {
   }
   // the Drowning builds: the water climbs and white hands reach up out of it (hydra-view.js)
   ENRAGE_SEQ.hydra = (sh, b, dur) => HY_FX.enrage(sh, b, dur, { own, wash, scatter, shockAt, shake, roomTint, AR: AR() });
+  // Last Light of the Pass: every lantern goes out and one white line opens along the horizon (corvane-fx.js)
+  ENRAGE_SEQ.corvane = (sh, b, dur) => { if (typeof CV_FX !== 'undefined') CV_FX.enrage(sh, b, dur, { own, soon, emit, wash, scatter, shockAt, shake, roomTint, AR: AR() }); };
+  // The Final Bell: a bronze bell tolling under the sea, the ring swamped (brannoc-fx.js)
+  ENRAGE_SEQ.brannoc = (sh, b, dur) => { if (typeof BR_FX !== 'undefined') BR_FX.enrage(sh, b, dur, { own, soon, emit, wash, scatter, shockAt, shake, roomTint, AR: AR() }); };
+  // Nothing Left: the Hunger swallows the whole room, light and all (morrowoak-fx.js)
+  ENRAGE_SEQ.morrowoak = (sh, b, dur) => { if (typeof MG_FX !== 'undefined') MG_FX.enrage(sh, b, dur, { own, soon, emit, wash, scatter, shockAt, shake, roomTint, AR: AR() }); };
+  // The Sky Comes Down: the meteor over every room of the set falls (caelum-fx.js)
+  ENRAGE_SEQ.caelum = (sh, b, dur) => { if (typeof CL_FX !== 'undefined') CL_FX.enrage(sh, b, dur, { own, soon, emit, wash, scatter, shockAt, shake, roomTint, AR: AR() }); };
   // the lethal moment (once): each boss's own end of the world, then the wipe follows
   function enrageLand(kind, b) {
     const sh = SH(b); if (sh.landed || sh.death) return; sh.landed = true;
     shake(14);
     if (kind === 'hydra' && typeof HY_FX !== 'undefined' && HY_FX.enrageLand(b, { scatter, shockAt, roomTint, AR: AR() })) return;
+    if (kind === 'corvane' && typeof CV_FX !== 'undefined') { softFlash(sh, '#eaf6ff', 0.5, 1.0); CV_FX.enrageLand(b, { shockAt, roomTint, scatter, shake, AR: AR() }); return; }
+    if (kind === 'brannoc' && typeof BR_FX !== 'undefined') { softFlash(sh, '#fff0a8', 0.5, 1.0); BR_FX.enrageLand(b, { shockAt, roomTint, scatter, shake, AR: AR() }); return; }
+    if (kind === 'morrowoak' && typeof MG_FX !== 'undefined') { softFlash(sh, '#e8dcff', 0.5, 1.0); MG_FX.enrageLand(b, { shockAt, roomTint, scatter, shake, AR: AR() }); return; }
+    if (kind === 'caelum' && typeof CL_FX !== 'undefined') { softFlash(sh, '#fff4dc', 0.5, 1.0); CL_FX.enrageLand(b, { shockAt, roomTint, scatter, shake, AR: AR() }); return; }
     if (kind === 'grubnak') {
       softFlash(sh, '#ff6a2a', 0.35, 0.7);
       bang(b.x, b.y - 20, 240, { n: 20, dur: 0.6, hole: 0.42, fill: '#ff8a2a', core: '#ffd27a' });   // (a ring of flame spikes round him: he stays in sight, no white-out)
@@ -2048,8 +2094,16 @@ const BOSS_VFX = (() => {
   const INTRO_DUR = { grubnak: 1.5, skitterra: 1.6, volkar: 1.2, hollowking: 2.2, wyrm: 2.0, titan: 2.2 };
   INTRO_DUR.archmage = 2.2;
   INTRO_DUR.hydra = 2.0;
+  INTRO_DUR.corvane = 2.2;
+  INTRO_DUR.brannoc = 2.4;
+  INTRO_DUR.morrowoak = 2.6;
+  INTRO_DUR.caelum = 3.4;
   function intro(kind, b) {
     const sh = SH(b); sh.intro = { at: clk(), kind };
+    if (kind === 'corvane' && typeof CV_FX !== 'undefined') CV_FX.intro(sh, b, { soon, shockAt, shake });   // (corvane-fx.js)
+    if (kind === 'brannoc' && typeof BR_FX !== 'undefined') BR_FX.intro(sh, b, { soon, shockAt, shake });   // (brannoc-fx.js)
+    if (kind === 'morrowoak' && typeof MG_FX !== 'undefined') MG_FX.intro(sh, b, { soon, shockAt, shake });   // (morrowoak-fx.js)
+    if (kind === 'caelum' && typeof CL_FX !== 'undefined') CL_FX.intro(sh, b, { soon, own, shockAt, shake });   // (caelum-fx.js)
     if (kind === 'grubnak') {
       // he slams a stockpot down in front of him: a clang, a ring, a gout of steam
       soon(sh, 0.7, () => {
@@ -2111,9 +2165,17 @@ const BOSS_VFX = (() => {
   const DEATH_DUR = { grubnak: 2.2, skitterra: 2.2, volkar: 2.3, hollowking: 2.4, wyrm: 2.6, titan: 2.8 };
   DEATH_DUR.archmage = 2.8;
   DEATH_DUR.hydra = 2.8;
+  DEATH_DUR.corvane = 2.8;
+  DEATH_DUR.brannoc = 3.0;
+  DEATH_DUR.morrowoak = 3.4;
+  DEATH_DUR.caelum = 4.2;
   function bossDeath(kind, b) {
     const sh = SH(b); if (sh.death) return;
     cut(sh); sh.enrAt = -9; sh.behind = 0; sh.death = { at: clk(), kind };
+    if (kind === 'corvane' && typeof CV_FX !== 'undefined') { CV_FX.death(sh, b, { soon, emit, shockAt, shake }); return; }   // (corvane-fx.js)
+    if (kind === 'brannoc' && typeof BR_FX !== 'undefined') { BR_FX.death(sh, b, { soon, emit, shockAt, shake }); return; }   // (brannoc-fx.js)
+    if (kind === 'morrowoak' && typeof MG_FX !== 'undefined') { MG_FX.death(sh, b, { soon, emit, shockAt, shake }); return; }   // (morrowoak-fx.js)
+    if (kind === 'caelum' && typeof CL_FX !== 'undefined') { CL_FX.death(sh, b, { soon, emit, own, scatter, roomTint, shockAt, shake, AR: AR() }); return; }   // (caelum-fx.js)
     if (kind === 'grubnak') {
       // he staggers, then goes down flat on his face; a pot lid clangs away across the tiles, steam everywhere
       emit(sh, 0.8, 0.25, () => VFX.smoke(b.x + rand(-30, 30), b.y - 30, { color: '#f6f2ee', n: 1, size: 24, a: 0.4, speed: 30 }));
@@ -2242,6 +2304,10 @@ const BOSS_VFX = (() => {
       else if (kind === 'wyrm') { if (s < 0.3) q.alpha = 0; else { const u = Math.min(1, (s - 0.3) / 0.6); q.alpha = easeOut(u); q.grow *= 1.2 - 0.2 * easeOut(Math.min(1, (s - 0.3) / 1.2)); if (s < 1.5) X('roar', true); } }
       else if (kind === 'archmage') { if (s < 0.4) q.alpha = 0; else { const u = Math.min(1, (s - 0.4) / 1.0); q.alpha = easeOut(u); q.oy += (1 - easeOut(u)) * 50; q.grow *= 1.1 - 0.1 * easeOut(u); X('conv', s < 1.6); } }
       else if (kind === 'hydra') { if (s < 0.3) q.alpha = 0; else { const u = Math.min(1, (s - 0.3) / 0.9); q.alpha = easeOut(u); q.oy += (1 - easeOut(u)) * 40; if (s < 1.5) X('cry', true); } }
+      else if (kind === 'corvane') { if (s < 0.3) q.alpha = 0; else { const u = Math.min(1, (s - 0.3) / 1.0); q.alpha = easeOut(u); q.ghost = Math.max(q.ghost, 1 - u); } }   // (he is seen coming through the snow)
+      else if (kind === 'brannoc') { if (s < 0.5) q.alpha = 0; else { const u = Math.min(1, (s - 0.5) / 0.7); q.alpha = easeOut(u); q.oy += (1 - easeOut(u)) * 36; q.grow *= 1.1 - 0.1 * easeOut(u); } }   // (he strides out of the sand to the crowd's roar: brannoc-fx.js)
+      else if (kind === 'morrowoak') { if (s < 0.4) q.alpha = 0; else { const u = Math.min(1, (s - 0.4) / 1.4); q.alpha = easeOut(u); q.oy += (1 - easeOut(u)) * 56; q.sy *= 0.92 + 0.08 * easeOut(u); } }   // (he rises out of the cracked floor: morrowoak-fx.js)
+      else if (kind === 'caelum') { if (s < 0.7) q.alpha = 0; else { const u = Math.min(1, (s - 0.7) / 1.5); q.alpha = easeOut(u); q.ghost = Math.max(q.ghost, 1 - u); q.oy -= (1 - easeOut(u)) * 60; } }   // (he walks out of the star's light, silver and see-through at first: caelum-fx.js)
     }
     // the fall
     if (sh.death) {
@@ -2268,6 +2334,28 @@ const BOSS_VFX = (() => {
         const u = Math.min(1, s / 2.4);
         if (s < 1.0) { X('conv', true); q.ox += Math.sin(s * 33) * 2; } else q.alpha = 1 - easeOut(Math.min(1, (s - 1.0) / 1.6));
         q.oy += 26 * easeOut(u); q.grow *= 1 - 0.08 * u; q.dark = Math.max(q.dark, 0.4 * u);
+      } else if (kind === 'brannoc') {
+        // the Tidewrought sinks back under the sea, the water closing over him (brannoc-fx.js has the rest)
+        const u = Math.min(1, s / 2.6);
+        if (s < 0.5) q.ox += Math.sin(s * 31) * 2.2;
+        q.oy += 150 * easeOut(Math.max(0, Math.min(1, (s - 0.4) / 2.2))); q.alpha = 1 - easeOut(Math.max(0, Math.min(1, (s - 1.2) / 1.6))); q.grow *= 1 - 0.05 * u; q.dark = Math.max(q.dark, 0.4 * u);
+      } else if (kind === 'morrowoak') {
+        // the tree shudders and goes still and grey, the Hunger in his split closing (morrowoak-fx.js has the rest); what is left stays
+        const u = Math.min(1, s / 3.0);
+        if (s < 0.7) q.ox += Math.sin(s * 29) * 2.4 * (1 - s / 0.7);
+        q.oy += 14 * easeOut(u); q.grow *= 1 - 0.035 * u; q.dark = Math.max(q.dark, 0.42 * easeOut(Math.min(1, s / 2.4))); q.alpha = 1 - 0.35 * easeOut(Math.max(0, Math.min(1, (s - 2.2) / 1.0)));
+      } else if (kind === 'caelum') {
+        // the halo breaks and the light goes out of the glass: he goes to silver, see-through, and rises out of the body as it fades (caelum-fx.js has the rest)
+        const u = Math.min(1, s / 3.2), g = Math.min(1, Math.max(0, (s - 0.9) / 2.0));
+        if (s < 0.5) q.ox += Math.sin(s * 37) * 2 * (1 - s / 0.5);
+        q.grow *= 1 - 0.03 * u; q.ghost = Math.max(q.ghost, easeOut(g)); q.oy -= 36 * easeOut(g); q.alpha = 1 - easeOut(Math.max(0, Math.min(1, (s - 1.5) / 1.7)));
+      } else if (kind === 'corvane') {
+        // he goes to a knee, shudders, and crumbles into snow (corvane-fx.js has the rest)
+        const u = Math.min(1, s / 2.4), g = Math.min(1, Math.max(0, (s - 1.0) / 1.5));
+        if (s > 0.35) X('kneel', true);
+        if (s < 0.6) q.ox += Math.sin(s * 37) * 1.8;
+        q.grow *= 1 - 0.06 * Math.min(1, s / 0.6);
+        if (s > 1.0) { q.alpha = 1 - easeOut(g); q.dark = Math.max(q.dark, 0.2 * u); q.oy += 8 * easeOut(g); }
       } else if (kind === 'hydra') {
         // she sinks back into the pool, the brass collar last, and the water goes still
         const u = Math.min(1, s / 2.4);
@@ -2298,7 +2386,8 @@ const BOSS_VFX = (() => {
       drawBoss(ctx, def, 0, 0, bd.f, st, S); ctx.restore(); return;
     }
     // otherwise into a small layer of his own, tinted there (source-atop keeps his own shape), then onto the scene
-    const m = ctx.getTransform(), px = Math.min(Math.hypot(m.a, m.b) || 1, 1.5), N = Math.ceil(BOX * px);
+    const BOXW = kind === 'brannoc' && st.props && st.props.titan ? 1200 : BOX;   // (the Tidewrought is far wider than any other body)
+    const m = ctx.getTransform(), px = Math.min(Math.hypot(m.a, m.b) || 1, 1.5), N = Math.ceil(BOXW * px);
     if (!layerCv) { layerCv = document.createElement('canvas'); silCv = document.createElement('canvas'); }
     if (layerCv.width !== N) { layerCv.width = layerCv.height = N; silCv.width = silCv.height = N; }
     const c = layerCv.getContext('2d');
@@ -2319,7 +2408,7 @@ const BOSS_VFX = (() => {
     }
     fill('#ffffff', 0.55 * flash);
     c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
-    const X0 = x - BOX / 2, Y0 = y - BOX / 2;
+    const X0 = x - BOXW / 2, Y0 = y - BOXW / 2;
     ctx.save();
     if (rim && rimA > 0.02) {
       // his outline: his silhouette in one colour, laid a few px out round him under the body
@@ -2328,15 +2417,19 @@ const BOSS_VFX = (() => {
       s.drawImage(layerCv, 0, 0); s.globalCompositeOperation = 'source-in'; s.fillStyle = rim; s.fillRect(0, 0, N, N);
       const r = 3;
       ctx.globalAlpha = alpha * Math.min(1, rimA) * 0.6;
-      for (const [dx, dy] of [[-r, 0], [r, 0], [0, -r], [0, r], [-r * 0.7, -r * 0.7], [r * 0.7, r * 0.7], [r * 0.7, -r * 0.7], [-r * 0.7, r * 0.7]]) ctx.drawImage(silCv, X0 + dx, Y0 + dy, BOX, BOX);
+      for (const [dx, dy] of [[-r, 0], [r, 0], [0, -r], [0, r], [-r * 0.7, -r * 0.7], [r * 0.7, r * 0.7], [r * 0.7, -r * 0.7], [-r * 0.7, r * 0.7]]) ctx.drawImage(silCv, X0 + dx, Y0 + dy, BOXW, BOXW);
     }
     ctx.globalAlpha = alpha * (ghost > 0.02 ? 1 - 0.35 * ghost : 1);
-    ctx.drawImage(layerCv, X0, Y0, BOX, BOX);
+    ctx.drawImage(layerCv, X0, Y0, BOXW, BOXW);
     ctx.restore();
   }
   const PAL_GHOST = { grubnak: '#ffe8c8', skitterra: '#e8dcff', volkar: '#cfeeff', hollowking: '#c8ffd8', wyrm: '#ffd8b0', titan: '#e8f6ff' };
   PAL_GHOST.archmage = '#bff8f0';
   PAL_GHOST.hydra = '#c8ffd8';
+  PAL_GHOST.corvane = '#dfeaff';
+  PAL_GHOST.brannoc = '#cfeee8';
+  PAL_GHOST.morrowoak = '#d8c8f4';
+  PAL_GHOST.caelum = '#dde2ee';
   // how much of him is there (the hitbox ring fades with him: he's gone, falling or not yet come in)
   const presence = bd => (bd && bd.show ? bd.show.alpha : 1) * (bd && bd.show && bd.show.death ? Math.max(0, 1 - (clk() - bd.show.death.at) / 0.5) : 1);
   function setClock(fn) { clockFn = fn; }

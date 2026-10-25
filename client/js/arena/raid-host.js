@@ -608,6 +608,7 @@ class RaidHost {
               break;
             }
             bot.x = b.x + Math.cos(a) * (FIGHT.BOSS_R + 45); bot.y = b.y + Math.sin(a) * (FIGHT.BOSS_R + 45);
+            ARENA.clamp(bot, 40);   // (kept on the floor, as a hero's own step behind is: a boss by the wall has no room behind it)
             break;
           }
           case 'heal': case 'hot': case 'shield': case 'mit': case 'raise': case 'rewind':

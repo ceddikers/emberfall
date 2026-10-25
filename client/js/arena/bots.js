@@ -195,6 +195,7 @@ const BotAI = {
         if (!room.get(pr)) continue;
         const spot = PROPS.shadowSpot(m.src.x, m.src.y, pr, 30), s = hypot2(spot.x - p.x, spot.y - p.y) - (pr.maxHp ? pr.hp * 90 : 200);
         if (ARENA.sd(spot.x, spot.y) > -16) continue;
+        if (props.some(q => q !== pr && q.solid !== false && PROPS.sd(q, spot.x, spot.y) < 16)) continue;   // (its shadow falls into another prop: nowhere to stand)
         if ((view.puddles || []).some(pd => hypot2(pd.x - spot.x, pd.y - spot.y) < pd.r + 25)) continue;   // a pool in its shadow
         if (s < bs) { bs = s; best = pr; }
       }
@@ -345,6 +346,52 @@ const BotAI = {
   },
   // the Grounding Rods (Volkar, Hard): the + players plant theirs a cell either side of him, in the row through him
   // (the lower id west, the other east), so every lane of still air the fronts leave runs past his flanks
+  // Morrow-Oak's Hunger Seed: the carrier takes its seed out to the edge, clear of the holes already made, of the other carrier's
+  // spot and of him (a ring further in once the edge is full): the nearest such spot. Planned once a seed and kept on its
+  // telegraph, so the carrier doesn't change its mind on the way.
+  seedSpot(me, view) {
+    const seeds = view.mechs.filter(m => m.tag === 'mgSeed'), mine = seeds.find(m => m.follow === me);
+    if (!mine) return null;
+    if (mine.botSpot) return mine.botSpot;
+    const holes = (view.floor || []).filter(fl => fl.kind === 'hole'), taken = seeds.filter(m => m.botSpot).map(m => m.botSpot);
+    const p = view.players.find(q => q.id === me) || { x: 0, y: 0 }, b = view.boss;
+    let best = null, bs = Infinity;
+    for (let ring = 0; ring < 4 && !best; ring++) {
+      const rr = ARENA.inner - 95 - ring * 165;
+      if (rr < 120) break;
+      for (let k = 0; k < 36; k++) {
+        const a = k * Math.PI / 18, x = Math.cos(a) * rr, y = Math.sin(a) * rr;
+        if (holes.some(h => hypot2(h.x - x, h.y - y) < h.r + 120) || taken.some(t => hypot2(t.x - x, t.y - y) < 360) || hypot2(b.x - x, b.y - y) < 260) continue;
+        const v = hypot2(p.x - x, p.y - y);
+        if (v < bs) { bs = v; best = { x, y }; }
+      }
+    }
+    mine.botSpot = best || { x: p.x, y: p.y };
+    return mine.botSpot;
+  },
+  // ... and its tank holds him where no hole is near, so an Inhale drags nobody over one (kept while it stays clear)
+  clearSpot(view) {
+    const holes = (view.floor || []).filter(fl => fl.kind === 'hole');
+    if (!holes.length) return null;
+    const clear = (x, y) => Math.min(...holes.map(h => hypot2(h.x - x, h.y - y) - h.r));
+    const keep = this._mgSpot;
+    if (keep && keep.n === holes.length && clear(keep.x, keep.y) > 260) return keep;
+    let best = null, bv = -Infinity;
+    for (let gx = -320; gx <= 320; gx += 80) for (let gy = -320; gy <= 320; gy += 80) {
+      if (gx * gx + gy * gy > 340 * 340) continue;
+      const v = Math.min(clear(gx, gy), 420) - hypot2(gx, gy) * 0.25;
+      if (v > bv) { bv = v; best = { x: gx, y: gy, n: holes.length }; }
+    }
+    this._mgSpot = best;
+    return best;
+  },
+  // Caelum's Dark Ember (Hard): the carrier sets it down on the shadow's edge, at the nearest point of it
+  emberSpot(me, view) {
+    const sh = view.room && view.room.shadow, p = view.players.find(q => q.id === me);
+    if (!sh || !p) return null;
+    const d = hypot2(p.x - sh.x, p.y - sh.y) || 1;
+    return { x: sh.x + (p.x - sh.x) / d * sh.r, y: sh.y + (p.y - sh.y) / d * sh.r };
+  },
   rodSpot(me, view) {
     const carriers = view.mechs.filter(m => m.tag === 'groundrod').map(m => m.follow).sort((a, b) => a - b);
     const i = carriers.indexOf(me), b = view.boss;
@@ -375,12 +422,49 @@ const BotAI = {
       const d = this.isMelee(bot.cls) ? add.r + 40 : 230;
       return { x: add.x + Math.cos(toC) * d, y: add.y + Math.sin(toC) * d };
     }
+    // Corvane: his Sundering Cut breaks any stone lantern it reaches, so the tank turns him away from them and the rest stand behind
+    if (view.bossId === 'corvane') {
+      const a = this.faceAway(view), c = Math.cos(a), sn = Math.sin(a);
+      if (bot.role === 'tank') return { x: b.x + c * 125, y: b.y + sn * 125 };
+      const side = idx % 2 ? 1 : -1, back = this.isMelee(bot.cls) ? 115 : 250, wide = this.isMelee(bot.cls) ? 40 : 170;
+      return { x: b.x - c * back - sn * wide * side, y: b.y - sn * back + c * wide * side };
+    }
+    if (view.bossId === 'morrowoak' && bot.role === 'tank') { const c = this.clearSpot(view); if (c) return { x: c.x, y: c.y }; }
+    // Caelum's Constellation Fall: the whole floor but the star's shadow, so everyone (the tank too) goes behind their piece of it
+    if (view.bossId === 'caelum') {
+      const big = view.mechs.find(m => m.cover && m.shape.r >= 1200 && m.resolveAt - view.t < 6);
+      const pr = big && this.coverFor(bot.id, view, big);
+      if (pr) return PROPS.shadowSpot(big.src.x, big.src.y, pr, 30 + (bot.slot || 0) % 2 * 25, 0);
+    }
     if (bot.role === 'tank') return { x: b.x, y: b.y - 125 };
     if (this.isMelee(bot.cls)) return { x: b.x + (idx % 2 ? 40 : -40), y: b.y + 115 };
     // (Skitterra aims her Venom Spit and Fang Rush at whoever stands farthest from her: the healer stands nearer than the
     // damage dealers, so the party's one healer isn't the one they are aimed at)
     if (bot.role === 'healer' && view.bossId === 'skitterra') return { x: b.x + (idx % 2 ? 150 : -150), y: b.y + 175 };
     return { x: b.x + (idx % 2 ? 170 : -170), y: b.y + 250 };
+  },
+  // which way Corvane's tank turns him (radians from the boss): a heading whose blow reaches no stone lantern, with room behind
+  // the tank, kept while it still works so the tank doesn't dance about
+  faceAway(view) {
+    const b = view.boss, lan = (view.props || []).filter(p => p.kind === 'stonelantern');
+    const bad = a => {
+      let pen = 0;
+      for (const p of lan) {
+        const dx = p.x - b.x, dy = p.y - b.y;
+        let da = Math.atan2(dy, dx) - a; da = Math.atan2(Math.sin(da), Math.cos(da));
+        if (hypot2(dx, dy) < 420 && Math.abs(da) < 0.85) pen += 1000;
+      }
+      return pen + Math.max(0, ARENA.sd(b.x + Math.cos(a) * 125, b.y + Math.sin(a) * 125) + 90) * 20;
+    };
+    const keep = this._corvA;
+    if (keep != null && bad(keep) === 0) return keep;
+    let best = -Math.PI / 2, bs = Infinity;
+    for (let k = 0; k < 16; k++) {
+      const a = -Math.PI / 2 + k * Math.PI / 8, v = bad(a) + (keep != null ? Math.abs(Math.atan2(Math.sin(a - keep), Math.cos(a - keep))) * 30 : 0);
+      if (v < bs) { bs = v; best = a; }
+    }
+    this._corvA = best;
+    return best;
   },
 
   // (the memo's pieces for danger(): who is alive, the earliest wave still to land, the telegraphs within 11 s with their time
@@ -458,7 +542,8 @@ const BotAI = {
       const m = soon.ms[mi], dt = soon.dts[mi], urgency = soon.urg[mi];
       const s = m.shape;
       // a blast you hide from behind a prop: be in your own prop's shadow (in someone else's will do, at a pinch)
-      if (m.cover && (m.type === 'raidwide' || SHAPES.contains(s, px, py, 22))) {
+      // (a line aimed at me follows me until it locks: wherever I go I am in it, so only cover will do)
+      if (m.cover && (m.type === 'raidwide' || m.aimFromBoss === me || SHAPES.contains(s, px, py, 22))) {
         const pr = this.coverFor(me, view, m), props = view.props || [];
         const ok = pr && PROPS.blocks(pr, m.src.x, m.src.y, px, py, PROPS.COVER_SHRINK + 8);
         // (a cover across the room has to be set off for early: "too late" starts a walk and a second before it lands)
@@ -483,11 +568,22 @@ const BotAI = {
         else if (d < s.r + 30 && dt < 3.5) pen += 5000;
         continue;
       }
+      // a pull toward him coming (m.pullDist, Morrow-Oak's Inhale): stand where the drag crosses no hole
+      if (m.pullDist) {
+        if (dt < 5 && view.room && view.room.safe) {
+          const bx = view.boss.x, by = view.boss.y, D = hypot2(bx - px, by - py);
+          if (D > 110) {
+            const go = Math.min(m.pullDist, D - 95), ux = (bx - px) / D, uy = (by - py) / D;
+            for (const q of [0.2, 0.4, 0.6, 0.8, 1]) if (!view.room.safe(px + ux * go * q, py + uy * go * q, true)) { pen += 7000 * Math.max(urgency, 0.5); break; }
+          }
+        }
+        continue;
+      }
       // Hard's placements with one right answer: the Dinner Rush's plates (rushSpot) and the Grounding Rods (rodSpot).
       // The carrier walks to its spot of the plan; everyone else keeps off a carrier as it sets down
-      if (m.type === 'drop' && (m.tag === 'platedrop' || m.tag === 'groundrod')) {
+      if (m.type === 'drop' && (m.tag === 'platedrop' || m.tag === 'groundrod' || m.tag === 'clEmber')) {
         if (m.follow === me) {
-          const sp = m.tag === 'platedrop' ? this.rushSpot(me, view) : this.rodSpot(me, view);
+          const sp = m.tag === 'platedrop' ? this.rushSpot(me, view) : m.tag === 'clEmber' ? this.emberSpot(me, view) : this.rodSpot(me, view);
           if (sp) pen += hypot2(sp.x - px, sp.y - py) * 40 * Math.max(urgency, 0.5);
         } else {
           const owner = alive.find(o => o.id === m.follow);
@@ -537,6 +633,7 @@ const BotAI = {
           // a circle that follows me (Spice Rack's jar) goes wherever I go until it locks: nothing to dodge yet
           // ... so carry it where it lands on nobody else (a cask out where it can stand as cover, not in his lap)
           if (m.follow === me && dt > (m.lockAt || 0) + 0.1) {
+            if (m.tag === 'mgSeed') { const sp = this.seedSpot(me, view); if (sp) pen += hypot2(sp.x - px, sp.y - py) * 40 * Math.max(urgency, 0.5); }
             for (const o of alive) if (o.id !== me && hypot2(o.x - px, o.y - py) < s.r + 45) pen += 1500 * Math.max(urgency, 0.4);
             // (a circle that locks where you stand when it does: be on the move by then, so you are leaving it at full speed, not starting to)
             if (m.tag === 'glob') pen += Math.max(0, 150 - hypot2(px - bot.x, py - bot.y)) * 6 * Math.min(1, (dt - (m.lockAt || 0)) + 0.5);
@@ -802,7 +899,8 @@ const BotAI = {
         const s = m.shape, c = Math.cos(s.angle), sn = Math.sin(s.angle);
         cands.push({ x: s.x + c * d - sn * off * s.w, y: s.y + sn * d + c * off * s.w });
       }
-      if (m.type === 'drop' && m.follow === bot.id && (m.tag === 'platedrop' || m.tag === 'groundrod')) { const sp = m.tag === 'platedrop' ? this.rushSpot(bot.id, view) : this.rodSpot(bot.id, view); if (sp) cands.push(sp); }
+      if (m.tag === 'mgSeed' && m.follow === bot.id && view.t < m.resolveAt - (m.lockAt || 0)) { const sp = this.seedSpot(bot.id, view); if (sp) cands.push(sp); }
+      if (m.type === 'drop' && m.follow === bot.id && (m.tag === 'platedrop' || m.tag === 'groundrod' || m.tag === 'clEmber')) { const sp = m.tag === 'platedrop' ? this.rushSpot(bot.id, view) : m.tag === 'clEmber' ? this.emberSpot(bot.id, view) : this.rodSpot(bot.id, view); if (sp) cands.push(sp); }
       if (m.type === 'own' && m.target === bot.id) cands.push({ x: m.shape.x, y: m.shape.y });
       if (m.type === 'bait' && m.aimFromBoss === bot.id) cands.push(this.writSpot(bot.id, view));
       // cover: spots in the shadow of the prop this bot takes (and of the others, in case it's full)

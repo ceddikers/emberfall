@@ -3,8 +3,9 @@
 //   node tools/bot-raid.js [normal|hard] [runs] [classes comma-separated] [boss id]
 //   e.g. node tools/bot-raid.js normal 5 skitterra   (arguments can come in any order; the boss defaults to grubnak)
 //   seed=N uses another set of seeds; first=K starts at run K (0-based) of the set, so first=5 with 5 runs plays what runs 6-10 of a
-//   10-run job play (tools/check.js cuts long jobs into pieces that way); WHY=1 prints the last hits before each death, NEXT=1 the upcoming-moves feed
-//   gear=fresh|mid|full|post1|post2 (or GEAR=...) gives every bot representative player gear (see buildGear below); FEAST=pie|stew|broth|tarts
+//   10-run job play (tools/check.js cuts long jobs into pieces that way); WHY=1 prints the last hits before each death, NEXT=1 the upcoming-moves feed,
+//   TRACE=1 the boss's casts, walls, adds and props as they happen
+//   gear=fresh|mid|full|post1|post2|post3|post4 (or GEAR=...) gives every bot representative player gear (see buildGear below); FEAST=pie|stew|broth|tarts
 //   picks the meal for 'full', 'post1' and 'post2' (default pie, none at the other levels). SUMMARY=1 prints one machine-readable line only.
 //   stop=clear stops after the first clear (only tools/check.js passes it, for its final yes-or-no; for data, play every run): the runs
 //   before it play exactly as without it, and the closing lines count the runs played.
@@ -24,6 +25,14 @@ const { HYDRA } = load('arena/bosses/hydra.js');
 DEFS.hydra = HYDRA;
 const { AZERATH } = load('arena/bosses/archmage.js');
 DEFS.archmage = AZERATH;
+const { CORVANE } = load('arena/bosses/corvane.js');
+DEFS.corvane = CORVANE;   // (set 3, Boss IX)
+const { BRANNOC } = load('arena/bosses/brannoc.js');
+DEFS.brannoc = BRANNOC;   // (set 3, Boss X)
+const { MORROWOAK } = load('arena/bosses/morrowoak.js');
+DEFS.morrowoak = MORROWOAK;   // (set 3, Boss XI)
+const { CAELUM } = load('arena/bosses/caelum.js');
+DEFS.caelum = CAELUM;   // (set 3, Boss XII, the finale)
 const { TRIALS, trialDef } = load('arena/trials.js');
 
 const ITEMSMOD = load('items.js');
@@ -86,6 +95,25 @@ const POST2 = [
   { g_slate: 'g_glacial', g_pepper: 'g_tidering' },                // U6 R8
   { g_apron: 'g_circlerobe', g_iron: 'g_coldiron' },               // U7 R6
 ];
+// post3 swaps on top of POST2: the party that has also cleared set 2 on Hard (four chests at Hard odds, about 18 items: the median
+// party wears two set-2 Mythics and five more set-2 Legendaries in place of Uncommon and Rare pieces). This is the target for SET 3
+// NORMAL. Bonuses: set-2 tiers 5-8 at 2-3 wearers each.
+const POST3 = [
+  { g_brand: 'g_ninthhead' },                                      // L8 (the tank keeps its Gillcharm)
+  { g_sigil: 'g_arcanum' },                                         // L7
+  { g_glacial: 'm_titanfur', g_tidering: 'g_ninthhead' },          // M6 L8
+  { g_circlerobe: 'm_archrobe', g_coldiron: 'g_glaciereye' },      // M7 L6
+];
+// post4 swaps on top of POST3: the party that has also cleared set 3 on Normal (four chests at Normal odds: about 9 Uncommon, 5 Rare,
+// 2 Legendary). Each swap is a real upgrade of the same rarity (items.js SET3_STEP), never a class piece or a Mythic; post3 leaves
+// one Rare and the general Legendaries to swap, so the median party wears one set-3 Rare and two set-3 Legendaries. This is the
+// target for SET 3 HARD; 'post3' on Hard is the party that skips the new loot (tuned to be harder than this).
+const POST4 = [
+  { g_gillcharm: 'g_passlantern' },                                // R9 (the tank keeps its health and defence)
+  { g_kindle: 'g_lastleaf' },                                      // L11
+  {},
+  { g_glaciereye: 'g_champlaurel' },                               // L10
+];
 function buildGear(level, entries) {
   if (!level || level === 'base') return null;
   const sets = entries.map((e, i) => {
@@ -97,13 +125,15 @@ function buildGear(level, entries) {
       const tiers = [[1, 1, 1, 1], [1, 1, 1, 1], [2, 2, 3, 3], [4, 4, 4, 4]][i % 4];
       keys = [w(tiers[0]), GEN[tiers[1]][2], GEN[tiers[2]][3], GEN[tiers[3]][4]];
     } else if (level === 'full') keys = [`${cls}_w1`, 'm_deadcourt', 'm_broodeye', 'm_torc'];
-    else if (level === 'post1' || level === 'post2') {
+    else if (level === 'post1' || level === 'post2' || level === 'post3' || level === 'post4') {
       keys = POST1[i % 4].map(k => k.replace('{c}', cls));
-      if (level === 'post2') keys = keys.map((k, j) => { const sw = POST2[i % 4][POST1[i % 4][j]]; return sw === 'WEAPON6' ? (main === 'mag' ? 'g_frostwand' : 'g_frostmaul') : sw || k; });
-    } else { console.error('gear levels: base, fresh, mid, full, post1, post2'); process.exit(1); }
+      if (level !== 'post1') keys = keys.map((k, j) => { const sw = POST2[i % 4][POST1[i % 4][j]]; return sw === 'WEAPON6' ? (main === 'mag' ? 'g_frostwand' : 'g_frostmaul') : sw || k; });
+      if (level === 'post3' || level === 'post4') keys = keys.map(k => POST3[i % 4][k] || k);
+      if (level === 'post4') keys = keys.map(k => POST4[i % 4][k] || k);
+    } else { console.error('gear levels: base, fresh, mid, full, post1, post2, post3, post4'); process.exit(1); }
     const insts = keys.map(key => { if (!ITEMSMOD.ITEMS[key]) throw new Error('no item ' + key); return { key }; });
     const t = ITEMSMOD.gearTotals(cls, insts);
-    if (level === 'full' || level === 'post1' || level === 'post2') {   // the feast (town-life.js feastTotals), added after the caps
+    if (level === 'full' || level === 'post1' || level === 'post2' || level === 'post3' || level === 'post4') {   // the feast (town-life.js feastTotals), added after the caps
       const { stat, pct } = FEASTS_[process.env.FEAST || 'pie'];
       const role = CLASSES.find(c => c.id === cls).role;
       const x = stat === 'hp' ? { hp: Math.round(1100 * pct / 100) } : stat === 'speed' ? { haste: pct }
@@ -132,6 +162,8 @@ for (let r = first; r < first + runs; r++) {
   const casts = [];
   const host = new RaidHost({ def, mode, humans: () => [], bots: comp, seed: seed0 + r * 77, bond: GEARSET ? GEARSET.bond : undefined, emit: msg => {
     if (msg.t === 'bcast') casts.push(msg.name);
+    // TRACE=1: print the boss's casts, the walls, adds and props as they happen
+    if (process.env.TRACE && (msg.t === 'bcast' || (msg.t === 'fev' && msg.k === 'wall') || (msg.t === 'addev' && msg.k !== 'bite') || msg.t === 'propfx')) console.log(`   ${host.sim.t.toFixed(1)} ${msg.t} ${msg.name || msg.k || ''} ${msg.label || msg.kind || ''}`);
     // NEXT=1: print the upcoming-moves feed whenever it changes
     if (msg.t === 'bnext' && process.env.NEXT) console.log(`   ${host.sim.t.toFixed(1)} next: ${msg.l.map(([n, s]) => `${n} ${s}s`).join(', ')}`);
   } });

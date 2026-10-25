@@ -5,7 +5,7 @@
 const fs = require('fs');
 const path = require('path');
 const ROOT = path.join(__dirname, '..');
-const BOSSES = ['grubnak', 'skitterra', 'volkar', 'hollowking', 'wyrm', 'titan', 'archmage', 'hydra'];
+const BOSSES = ['grubnak', 'skitterra', 'volkar', 'hollowking', 'wyrm', 'titan', 'archmage', 'hydra', 'corvane', 'brannoc', 'morrowoak', 'caelum'];
 const CAP = 55;   // the voices doc says about 45 to 50; a little slack
 const BANNED = /\b(debuffs?|buffs?|dps|aggro|threat|mechanics?|telegraphs?|hp|health bar|cooldowns?|procs?|gcd|aoe|tankbusters?|raidwides?|enrage[ds]?)\b/i;
 // Voice distinctness: two heroes' entries for the SAME move must not read as one voice. Measured as the Dice overlap of

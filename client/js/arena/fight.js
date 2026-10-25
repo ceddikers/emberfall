@@ -118,8 +118,8 @@ class FightSim {
     // gear (humans only, already capped by the host): flat HP and a little damage reduction
     if (p.cls === 'kenseier') this.postureOn = true;   // (a Kenseier in the party: the boss carries Posture, KENSEI_HOST at the end of this file)
     const gear = p.gear || {};
-    const maxHp = Math.round((playerBaseHp(p.role) + Math.max(0, Math.min(180, gear.hp || 0))) * (1 + (this.hpPct || 0)));   // (items.js GEAR_CAPS)
-    this.ps.set(p.id, { id: p.id, role: p.role, hp: maxHp, maxHp, alive: true, def: Math.max(0, Math.min(0.11, (gear.def || 0) / 1000)), shield: 0, shieldEnd: 0, shieldMax: 0, shieldFrom: null, shieldTag: null,
+    const maxHp = Math.round((playerBaseHp(p.role) + Math.max(0, Math.min(210, gear.hp || 0))) * (1 + (this.hpPct || 0)));   // (items.js GEAR_CAPS)
+    this.ps.set(p.id, { id: p.id, role: p.role, hp: maxHp, maxHp, alive: true, def: Math.max(0, Math.min(0.12, (gear.def || 0) / 1000)), shield: 0, shieldEnd: 0, shieldMax: 0, shieldFrom: null, shieldTag: null,
       mits: [], vuln: 0, vulnEnd: 0, dmgDownEnd: 0, weakEnd: 0, hots: [], debuffs: {}, hist: [], diedAt: -99 });
     this.stats[p.id] = { damage: 0, healing: 0, overheal: 0, taken: 0, mitigated: 0, deaths: 0, avoidable: 0,
       // contribution tracking (scoring.js): seconds as the boss's target, seconds of damage landed on it, towers/stacks soaked, raises given,
@@ -761,7 +761,7 @@ class FightSim {
       return amt;
     }
     // (opts.scaled: already in small numbers, e.g. a share passed along a thread, but still mitigated as usual)
-    let amt = opts.raw || opts.scaled ? raw : raw * this.scale.dmg * (this.hard ? 1.25 : 1) * (1 + this.boss.dmgUp);
+    let amt = opts.raw || opts.scaled ? raw : raw * this.scale.dmg * (this.hard ? this.def.hardDmg ?? 1.25 : 1) * (1 + this.boss.dmgUp);   // (def.hardDmg: a boss's own Hard multiplier)
     if (this.recoverEnd > this.t && !opts.raw) amt *= 1 - FIGHT.REC.CUT;   // recovering after a death (Hard)
     if (!opts.shared) amt = this.threadSplit(p, s, amt, opts);   // threads split the hit evenly along them (classes-c)
     if (s.vulnEnd > this.t && !opts.raw) amt *= 1 + s.vuln;
@@ -815,6 +815,7 @@ class FightSim {
     else { s.hp -= amt; st.taken += amt; }
     if (opts.avoidable) {
       st.avoidable++; this.avoidCount++;
+      if (this.onAvoidable) this.onAvoidable(p, opts);   // a boss that keeps count of its own (Corvane's Whetstone)
       if (opts.ddown) s.dmgDownEnd = this.t + FIGHT.DMG_DOWN_DUR;   // (Damage Down only where the move opts in: ddown)
       // lingering ground ticks don't stack Vulnerability (it would snowball per tick)
       if (!opts.noVuln) { s.vuln = Math.min(1, (s.vulnEnd > this.t ? s.vuln : 0) + this.vulnStep); s.vulnEnd = this.t + FIGHT.VULN_DUR; }
@@ -1075,6 +1076,16 @@ class FightSim {
 
   raidwide(dmg, delay = 0) { return this.mech({ type: 'raidwide', shape: { kind: 'circle', x: this.boss.x, y: this.boss.y, r: 0 }, delay, dmg, hidden: true }); }
   aoe(shape, delay, dmg, extra = {}) { return this.mech(Object.assign({ type: 'aoe', shape, delay, dmg }, extra)); }
+  // take a telegraph off the floor before it lands (a thrown wheel caught mid-flight): nothing resolves, and the clients fade it
+  // without an impact (tgx x: 1)
+  cancel(m) { if (!m || !this.mechs.has(m.id)) return; this.mechs.delete(m.id); this.emit({ t: 'tgx', id: m.id, hits: [], x: 1 }); }
+  // the room changes shape mid-fight (set 3: a colosseum floods into a ring of stone, a crater falls away to cloud). form names an
+  // ARENA_DEFS entry '<boss id>:<form>' (null: the boss's own room again); the clients rebuild their floor from the roomev
+  setForm(form) {
+    this.form = form || null;
+    ARENA.use(this.def.id + (this.form ? ':' + this.form : ''));
+    this.emit({ t: 'roomev', k: 'form', form: this.form, dur: 9999 });
+  }
 
   // Lingering ground hazard: damages anyone inside every `every` seconds.
   // extra.slow: standing in it also slows you (the 'slowed' debuff, which clients and bots move slower under)

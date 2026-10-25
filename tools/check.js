@@ -104,6 +104,20 @@ RAIDS.push(
   ['the Hydra', 'hydra', 'bastion:base', 'cleric:aegis', 'ranger:sharpshooter', 'pyromancer:cataclysm', 'gear=post1'],
   ['the Hydra', 'hydra', 'runeguard:runeblade', 'grovekeeper:moonwell', 'shadowblade:bladedancer', 'pyromancer:sigilmancer', 'gear=post1'],
 );
+// set 3: Corvane, the Unburied Blade (Boss IX). Set 3 Normal is for a party that has cleared set 2 on Normal and Hard (post3)
+RAIDS.push(
+  ['Corvane', 'corvane', 'bastion:base', 'cleric:aegis', 'ranger:sharpshooter', 'pyromancer:cataclysm', 'gear=post3'],
+  ['Corvane', 'corvane', 'runeguard:runeblade', 'grovekeeper:moonwell', 'shadowblade:bladedancer', 'pyromancer:sigilmancer', 'gear=post3'],
+);
+// set 3: Brannoc the Undefeated (Boss X)
+RAIDS.push(
+  ['Brannoc', 'brannoc', 'bastion:base', 'cleric:aegis', 'ranger:sharpshooter', 'pyromancer:cataclysm', 'gear=post3'],
+  ['Brannoc', 'brannoc', 'runeguard:runeblade', 'grovekeeper:moonwell', 'shadowblade:bladedancer', 'pyromancer:sigilmancer', 'gear=post3'],
+  ['Morrow-Oak', 'morrowoak', 'bastion:base', 'cleric:aegis', 'ranger:sharpshooter', 'pyromancer:cataclysm', 'gear=post3'],
+  ['Morrow-Oak', 'morrowoak', 'runeguard:runeblade', 'grovekeeper:moonwell', 'shadowblade:bladedancer', 'pyromancer:sigilmancer', 'gear=post3'],
+  ['Caelum Vey', 'caelum', 'bastion:base', 'cleric:aegis', 'ranger:sharpshooter', 'pyromancer:cataclysm', 'gear=post3'],
+  ['Caelum Vey', 'caelum', 'runeguard:runeblade', 'grovekeeper:moonwell', 'shadowblade:bladedancer', 'pyromancer:sigilmancer', 'gear=post3'],
+);
 // Hard smoke runs: one per boss, with the plain line-up. Bots aren't expected to clear Hard; the script just has to run
 // clean and the longest of 3 fights has to last a while (HARD_MIN seconds) before they wipe
 const HARD_COMP = 'bastion:base,cleric:base,ranger:base,pyromancer:base';
@@ -112,6 +126,10 @@ const HARD_BOSSES = [['Grubnak', 'grubnak'], ['Skitterra', 'skitterra'], ['Volka
 
 HARD_BOSSES.push(['the Hydra', 'hydra', 'gear=post2']);
 HARD_BOSSES.push(['Azerath', 'archmage', 'gear=post2']);
+HARD_BOSSES.push(['Corvane', 'corvane', 'gear=post3']);
+HARD_BOSSES.push(['Brannoc', 'brannoc', 'gear=post3']);
+HARD_BOSSES.push(['Morrow-Oak', 'morrowoak', 'gear=post3']);
+HARD_BOSSES.push(['Caelum Vey', 'caelum', 'gear=post3']);
 const results = [];
 let into = results;   // where pass() and fail() write: the stage being read (see stage)
 const pass = (name, detail = '') => into.push({ ok: true, name, detail });
@@ -191,7 +209,7 @@ function data() {
   // party bonuses: nothing for one person, the right totals for groups, junk from clients cleaned out
   const b1 = partyBonus({ 1: 1 }), b4 = partyBonus({ 1: 4, 2: 2 });
   const bondOk = !b1.active.length && b4.hp === 0.05 && b4.dmg === 0.03 && b4.crit === 0.02 && b4.active.length === 2 &&
-    JSON.stringify(sanitizeSources([1, '2', 2, 9, 'x'])) === '[1,2]' && sanitizeSources('junk').length === 0;
+    JSON.stringify(sanitizeSources([1, '2', 2, 99, 'x'])) === '[1,2]' && sanitizeSources('junk').length === 0;
   if (bondOk) pass('Party bonuses add up'); else fail('Party bonuses add up', JSON.stringify({ b1, b4 }));
 
   // arena shapes: clamping always lands inside, and the wall distance matches the shape
@@ -625,6 +643,10 @@ function pump() {
 const CHOREO = [['Grubnak', 'grubnak', 'GRUBNAK'], ['Skitterra', 'skitterra', 'SKITTERRA'], ['Volkar', 'volkar', 'VOLKAR'], ['The Hollow King', 'hollowking', 'HOLLOWKING'], ['Vhalgrath', 'wyrm', 'WYRM'], ['Hrimgar', 'titan', 'TITAN']];
 CHOREO.push(['The Hydra', 'hydra', 'HYDRA']);
 CHOREO.push(['Azerath', 'archmage', 'AZERATH']);
+CHOREO.push(['Corvane', 'corvane', 'CORVANE']);
+CHOREO.push(['Brannoc', 'brannoc', 'BRANNOC']);
+CHOREO.push(['Morrow-Oak', 'morrowoak', 'MORROWOAK']);
+CHOREO.push(['Caelum Vey', 'caelum', 'CAELUM']);
 const TL = { WARN_MIN: 1.2, GAP_MAX: 16, RAID_MAX: 150, BUSTER_MAX: 180, LEN_MIN: 480, LEN_MAX: 600 };
 function timelines() {
   const load = p => require(path.join(ROOT, 'client/js', p));
@@ -639,6 +661,7 @@ function timelines() {
       const players = [['tank', 0, 120], ['healer', -200, 200], ['dps', 200, 200], ['dps', 0, 260]].map(([role, x, y], i) => ({ id: i + 1, name: role + i, role, cls: 'x', x, y, a: 0 }));
       const sim = new FightSim(def, mode, () => players, () => {}, 4242);
       for (const s of sim.ps.values()) { s.hp = s.maxHp = 1e12; }
+      sim.cleanRun = true;   // (the dummies stand still and take every hit: a script that answers mistakes, like Corvane's Whetstone, plays as for a clean party)
       const named = [], raid = [], buster = [];
       let short = 0, lastCourse = null;
       // every course: its steps must all have names

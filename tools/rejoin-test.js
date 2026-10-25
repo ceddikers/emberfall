@@ -175,6 +175,7 @@ function raidTests() {
     grubnak: load('arena/bosses/grubnak.js').GRUBNAK, skitterra: load('arena/bosses/skitterra.js').SKITTERRA, volkar: load('arena/bosses/volkar.js').VOLKAR,
     hollowking: load('arena/bosses/hollowking.js').HOLLOWKING, wyrm: load('arena/bosses/wyrm.js').WYRM, titan: load('arena/bosses/titan.js').TITAN,
     hydra: load('arena/bosses/hydra.js').HYDRA, archmage: load('arena/bosses/archmage.js').AZERATH,
+    corvane: load('arena/bosses/corvane.js').CORVANE, brannoc: load('arena/bosses/brannoc.js').BRANNOC, morrowoak: load('arena/bosses/morrowoak.js').MORROWOAK, caelum: load('arena/bosses/caelum.js').CAELUM,
   };
   const people = [
     { id: 1, name: 'Tank', cls: 'bastion', spec: null, role: 'tank', x: 0, y: 320, a: -1.57 },

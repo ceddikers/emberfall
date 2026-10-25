@@ -111,6 +111,21 @@ const Inventory = (() => {
     if (typeof Sound !== 'undefined') Sound.play('ui-gold', { bus: 'ui', key: 'ui-gold', minGap: 0.1 });
     changed(); showGold();
   }
+  // Forge fusion: `donor`'s passive moves onto `recv` (items.js forgeCheck has the rules) for gold, and the donor is used up
+  // (taken off first if worn). -> true when it was done
+  function fuse(clsId, recv, donor) {
+    if (!data.items.includes(recv) || !data.items.includes(donor) || recv.owner !== clsId || donor.owner !== clsId) return false;
+    const chk = forgeCheck(recv, donor);
+    if (!chk.ok || Save.gold() < chk.cost) return false;
+    Save.addGold(-chk.cost);
+    if (chk.src === recv.key) delete recv.fx; else recv.fx = chk.src;
+    data.items = data.items.filter(i => i !== donor);
+    for (const e of Object.values(data.equip)) for (const sl in e) if (e[sl] === donor.uid) e[sl] = null;
+    if (selected && selected.inst === donor) selected = null;
+    if (typeof Sound !== 'undefined') Sound.play('ui-equip', { bus: 'ui', key: 'ui-equip', minGap: 0.15 });
+    changed(); showGold();
+    return true;
+  }
   const wornBy = inst => Object.entries(data.equip).filter(([, e]) => Object.values(e).includes(inst.uid)).map(([c]) => c);
 
   // ---------------------------------------------------------------- gold: in the bag, and quietly on the town HUD
@@ -486,13 +501,16 @@ const Inventory = (() => {
       return `<div class="st-line">${v ? STAT_INFO[s].fmt(v) : '—'} ${STAT_INFO[s].name}${diff}</div>`;
     }).join('');
     const ok = clsId && slotsFor(inst).some(s => canEquip(inst, clsId, s));
-    const fxLine = it.fxText ? `<div class="it-fx" style="--rc:${rar.color}">${it.fxText}</div>` : '';
-    const perk = ITEM_PERKS[inst.key];
+    // a fused item (Forge) shows the passive it carries, and whose it was
+    const src = passiveKey(inst), fused = !!src && src !== inst.key, from = fused ? ` <span class="it-from">(from ${ITEMS[src].name})</span>` : '';
+    const fxLine = fused ? (ITEMS[src].fxText ? `<div class="it-fx" style="--rc:${rar.color}"><u>Fused:</u> ${ITEMS[src].fxText}${from}</div>` : '')
+      : it.fxText ? `<div class="it-fx" style="--rc:${rar.color}">${it.fxText}</div>` : '';
+    const perk = src && ITEM_PERKS[src];
     // your specialization may have replaced that move: name both
     const baseAb = perk && KITS[it.cls].abilities.find(a => a.id === perk.ab);
     const specAb = perk && kitFor(it.cls, Save.spec(it.cls)).abilities.find(a => (a.replaces || a.id) === perk.ab);
     const perkName = perk && (specAb && specAb.name !== baseAb.name ? `${baseAb.name} (your ${specAb.name})` : baseAb.name);
-    const perkLine = perk ? `<div class="it-perk"><i style="background-image:url(${abilityIcon(it.cls, perk.ab)})"></i><span><u>Enhances ${perkName}:</u> ${perk.text}</span></div>` : '';
+    const perkLine = perk ? `<div class="it-perk"><i style="background-image:url(${abilityIcon(it.cls, perk.ab)})"></i><span><u>${fused ? 'Fused · ' : ''}Enhances ${perkName}:</u> ${perk.text}${from}</span></div>` : '';
     // the boss's party bonus: what 2, 3 and 4 people wearing its gear give the whole group
     const pb = PARTY_BONUS[it.tier];
     const bondLine = pb ? `<div class="it-bond"><u>Party bonus: ${pb.name}</u>${[2, 3, 4].map(n => `<span><i>${n}</i> ${bonusText(pb.tiers[n])}</span>`).join('')}<small>When that many in your group wear ${pb.boss} gear.</small></div>` : '';
@@ -655,7 +673,8 @@ const Inventory = (() => {
     init(d) { deps = d; },
     open, close, isOpen, toggle() { if (isOpen()) close(); else open(); }, frame,
     setExtra(fn) { extra = fn; modsCache.clear(); }, refresh() { modsCache.clear(); if (deps) deps.onChange(); },
-    add, drop, spare, sendTo, escrow, settle, unescrow, unescrowAll, equip, unequip, mods, totals, grantStarter, loadout, items: () => data.items,
+    add, drop, spare, sendTo, fuse, wornBy, bag: clsId => { claim(clsId); return mine(clsId); },
+    escrow, settle, unescrow, unescrowAll, equip, unequip, mods, totals, grantStarter, loadout, items: () => data.items,
     itemName: inst => ITEMS[inst.key].name, rarityColor: inst => RARITY[itemRarity(inst)].color, iconURL, itemTip,
     addGold, showGoldHud(v) { goldHud.classList.toggle('hidden', !v); }, refreshGold: showGold,
   };

@@ -104,7 +104,7 @@ const TOWN_NPCS = [
     id: 'hask',
     name: 'Hask', title: 'Portal Sergeant',
     look: { skin: '#b07a58', hair: '#5a5a5a', coat: '#4a5a78', apron: null, hat: 'cap', beard: true, build: 'broad' },
-    at: { x: 1310, y: 410 },
+    at: { x: 1160, y: 612 },
     wander: 0,
     arrives: null,
     entrance: null,
@@ -230,7 +230,7 @@ const TOWN_NPCS = [
     id: 'tobble',
     name: 'Tobble', title: 'Hermit',
     look: { skin: '#b89a7a', hair: '#e8e4dc', coat: '#4e5a3a', apron: null, hat: 'hood', beard: true, build: 'slim' },
-    at: { x: 430, y: 390 },
+    at: { x: 346, y: 398 },
     wander: 30,
     arrives: null,
     entrance: null,
@@ -240,6 +240,9 @@ const TOWN_NPCS = [
       { when: { hero: 'grovekeeper', notBeaten: ['skitterra'] },
         lines: ["Moss on your boots. Good moss. You can sit by my hut. Most can't."],
         choices: [{ text: 'Ask about the caves', next: 'silk' }, { text: 'Goodbye' }] },
+      { when: { beaten: ['morrowoak'] },
+        lines: ["Something has come up in the plaza, green, where I have walked ten thousand times and seen only stone. I sat with it all morning.",
+          "The old tree ate his own grove to go on living. It would be rude to say I told him so. I did, though. Not to his face."] },
       { when: { beaten: ['hydra'], flags: ['fountain-nine'] },
         lines: ["It said my name. In all nine of them, one after another. We are no longer on speaking terms."] },
       { when: { beaten: ['hydra'] },
@@ -476,6 +479,9 @@ const TOWN_NPCS = [
         choices: [{ text: 'Hold still', next: 'verse' }, { text: 'Goodbye' }] },
       { when: { hero: 'marionettist' },
         lines: ["A fellow artist! Your doll has better posture than my last three audiences put together."] },
+      { when: { beaten: ['brannoc'] },
+        lines: ["Brannoc the Undefeated! I could hear it from the road: a whole stand of people clapping, and nobody there to be clapping.",
+          "They've gone quiet now. I'm told that's the only review that counts. I still need a rhyme for 'undefeated', and 'defeated' is cheating."] },
       { when: { beaten: ['hollowking'] },
         lines: ["The last verse! The King falls, the bells go still... I need a word for quiet that isn't quiet."] },
       { when: { beaten: ['volkar'] },
@@ -506,6 +512,9 @@ const TOWN_NPCS = [
       { when: { hero: 'chronomancer' },
         lines: ["You again. Or you first. With your sort it's hard to say. Sit down before you've already left."],
         choices: [{ text: 'Read my fortune', next: 'fortune' }, { text: 'What else do you see?', next: 'roads' }, { text: 'Goodbye' }] },
+      { when: { beaten: ['caelum'] },
+        lines: ["Look up. For a season the whole sky leaned north, and I could not read a card for the glare. Now it comes down in pieces, slow enough to count.",
+          "Go on, wish on one. Tonight it costs nothing. The cards say it is the last free thing in the realm."] },
       { when: { beaten: ['hollowking'] },
         lines: ["The cards are quiet. The dead have stopped shuffling them.",
           "But behind each of you I see two old roads opening, walked once by someone of the court. Go on. Walk them."] },
@@ -529,10 +538,10 @@ const TOWN_NPCS = [
     id: 'aldric',
     name: 'Sir Aldric', title: 'Last of the Guard',
     look: { skin: '#b8c8c0', hair: '#c8d8d0', coat: '#2e4a3e', apron: null, hat: 'none', beard: true, build: 'broad' },
-    at: { x: 1080, y: 400 },
+    at: { x: 906, y: 714 },
     wander: 0,
     arrives: 'hollowking',
-    entrance: { from: { x: 1200, y: 340 }, lines: [
+    entrance: { from: { x: 780, y: 658 }, lines: [
       "Do not draw. I am done with drawing.",
       "I am Aldric, last of the Hollow King's guard. My oath was to stand until the end. You brought the end.",
       "Your town has a fountain. I had forgotten fountains. I believe I will stay a while.",
@@ -545,6 +554,9 @@ const TOWN_NPCS = [
         lines: ["A knight who keeps a ledger. My king could have used one. Perhaps then he would have paid what he owed."] },
       { when: { hero: 'runeguard' },
         lines: ["You write wards on the air. The King's heir had a warden who did the same. She was never once harmed."] },
+      { when: { beaten: ['corvane'] },
+        lines: ["There are lanterns on the road that were not there. I know the look of a post that nobody came to relieve.",
+          "Keep them lit. A guard should always be able to see that someone remembers."] },
       { when: {},
         lines: ["The court remembers how each of its defenders fought. Those memories are yours now. Go and ask for them.",
           "I stood a hundred years. Forgive me if I stand a while longer. Sitting feels like surrender."] },
@@ -608,7 +620,8 @@ const TOWN_GIFTS = {
 // `decor` is optional: a small extra thing to draw in town from then on (ignore it if not built).
 //   cookfire: a cookpot over a fire beside Gaspard; silk-lanterns: the plaza lamps glow pale silver;
 //   kites: two or three children's kites bobbing over the plaza; bunting: festival bunting strung across the plaza.
-//   (set 2: forge-embers, snowfall, chalk-circle, wishing-pool, all drawn in town-life.js; see docs/plans/town-life.md)
+//   (set 2: forge-embers, snowfall, chalk-circle, wishing-pool, all drawn in town-life.js; see docs/plans/town-life.md;
+//   set 3: pass-lanterns, two stone lanterns flanking the road between the portals above the plaza; victory-banners, two sun-banners on the road in from the south; seedlings, two young trees east of the plaza; starfall, stars drifting down over the whole town and a splinter of star-glass in the middle of the Trophy Hall's third row)
 const TOWN_UNLOCKS = {
   grubnak: { toast: 'The Scullery fires are out. A cook has come up the south road with a cart, and Grubnak\'s cleaver hangs on his statue.', trophy: 'cleaver', feast: true, decor: 'cookfire' },
   skitterra: { toast: 'The Broodmother\'s silk drapes her statue, the plaza lamps burn silver, and a bard has followed the news into town.', trophy: 'web', decor: 'silk-lanterns' },
@@ -619,6 +632,11 @@ const TOWN_UNLOCKS = {
   titan: { toast: 'A cold wind has come down from the White Reach. It is snowing lightly over Emberfall, and the children have been busy by the Tankard.', trophy: 'ice-shard', decor: 'snowfall' },
   archmage: { toast: 'Water is running out of the Drowned Tower. A very damp apprentice has come round the pond with a chalk-box under his arm.', trophy: 'sigil', decor: 'chalk-circle' },
   hydra: { toast: 'The Drowned Temple has gone still. A fang of the Mother hangs on her statue, and the fountain in the square is clear, with something gold shining at the bottom.', trophy: 'fang', decor: 'wishing-pool' },
+  // set 3 (the Fallen Star)
+  corvane: { toast: 'The pass is relieved at last. The guard\'s sheathed blade rests on his statue, and two old lanterns burn at the head of the portal road.', trophy: 'sheathed-blade', decor: 'pass-lanterns' },
+  brannoc: { toast: 'The colosseum has stopped cheering. The Sunwheel hangs on the champion\'s statue, and two sun-banners now stand on the road in from the south.', trophy: 'sunwheel', decor: 'victory-banners' },
+  morrowoak: { toast: 'The Hunger has gone quiet. A split length of Morrow-Oak\'s heartwood rests on his statue, and two green shoots have come up through the paving east of the fountain.', trophy: 'heartwood', decor: 'seedlings' },
+  caelum: { toast: 'The meteor has broken. Stars are falling slowly over Emberfall tonight, Caelum\'s silver mask hangs on his statue, and a splinter of black star-glass stands in the paving between the statues.', trophy: 'silver-mask', decor: 'starfall' },
 };
 
 // Quill's wards (the Archmage's apprentice): a small hour-long buff on yourself that stacks with a feast. `buff.stat` is

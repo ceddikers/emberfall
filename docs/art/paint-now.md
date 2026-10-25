@@ -248,7 +248,57 @@ Then copy `client/icons/boss/archmage/the-binding.png` to `client/icons/boss/arc
 
 ---
 
-## Checklist (199 files)
+## Set 3 boss icons
+**This section contains move art for bosses you may not have fought.** Same format as set 2. After slicing, tell me so I add the boss folder (`corvane`, `brannoc`, `morrowoak`, `caelum`) to `PAINTED` in `client/js/boss-icons.js`.
+
+**Corvane, sheet 1 (9 icons)** → save the whole sheet, then slice (256 × 256) into `client/icons/boss/corvane/<name>.png` in reading order: `white-gale`, `sundering-cut`, `cracked-guard`, `draw-cut`, `scabbard-sweep`, `still-water`, `hollow-breath`, `cold-sheathe`, `rising-crane`
+```text
+Cel-shaded cartoon fantasy game ability icons on one square sheet, a 3 × 3 grid with thin plain gaps, read left to right, top to bottom; use all nine cells. Each icon is one bold object with a thick dark outline, flat colours, one hard shadow, light from the upper left, the corners empty, no glow. Palette: night-blue snowy background, black lacquer, snow white and moonlit blue-grey objects, frost cyan accent for danger only, warm amber only in a stone lantern's flame. The nine icons: (1) White Gale: sideways blizzard of snow streaks across a small stone lantern, its flame bent flat. (2) Sundering Cut: broad single-edged black blade in an overhead blow onto a dark wedge of ground, a stone lantern splitting at its edge. (3) Cracked Guard: round black lacquered shield split by a star-shaped frost fracture, a blade edge wedged in it. (4) Draw Cut: long thin line of frost scored across snow, a sword hilt with a half-drawn blade at its near end. (5) Scabbard Sweep: black lacquered scabbard swung in a half-circle, snow thrown up on one side only. (6) Still Water: half-circle sheet of glassy pale ice, a blade planted point-down at its flat edge. (7) Hollow Breath: ring of pale cold mist with frost crawling out, five small frost puffs trailing in an arc. (8) Cold Sheathe: blade sliding into a black scabbard, a ring of frost spreading from its mouth. (9) Rising Crane: blade swept low and back at the lower left, two overlapping fan-shaped frost scars, the second turned. No people, no faces, no text.
+```
+
+**Corvane, sheet 2 (8 icons)** → save the whole sheet, then slice (256 × 256) into `client/icons/boss/corvane/<name>.png` in reading order: `comet-draw`, `comet-volley`, `hundredfold-parting`, `false-stance`, `the-vigil`, `whetted-edge`, `the-last-vigil`, `last-light-of-the-pass`
+```text
+Cel-shaded cartoon fantasy game ability icons on one square sheet, a 3 × 3 grid with thin plain gaps, read left to right, top to bottom; use the first eight cells, leave the ninth empty. Each icon is one bold object with a thick dark outline, flat colours, one hard shadow, light from the upper left, the corners empty, no glow. Palette: night-blue snowy background, black lacquer, snow white and moonlit blue-grey objects, frost cyan accent for danger only, silver for afterimages, warm amber only in a stone lantern's flame. The eight icons: (1) Comet Draw: one straight streak of white light from lower left to upper right, a squat stone lantern with a dark shadow wedge behind it beside the streak. (2) Comet Volley: three straight white streaks fanned from one point at the left, each ending at a different spot on a pale wall line. (3) Hundredfold Parting: four slim silver afterimage blades apart on the snow, one to four small dots over them, a thin zigzag line joining them in order. (4) False Stance: a broad blade drawn twice, a pale ghost raised overhead and a solid black one low and swept back, a curved double arrow between. (5) The Vigil: a broad blade laid across two small stones in snow, three pale blue wisps drifting toward it, a broken stone lantern at the edge. (6) Whetted Edge: grey whetstone block with a broad blade along it, four notches on the blade's back, three frost cyan and the fourth burning white. (7) The Last Vigil: a ring of six slim silver afterimage blades standing with points inward, a thin line joining them. (8) Last Light of the Pass: a row of six stone lanterns going dark, a single pale line cut across the whole width above them. No people, no faces, no text.
+```
+
+**Brannoc, sheet 1 (9 icons)** → save the whole sheet, then slice (256 × 256) into `client/icons/boss/brannoc/<name>.png` in reading order: `sunwheel`, `twin-wheels`, `riposte`, `victory-leap`, `hammer-heel`, `roar-of-the-stands`, `sand-furrow`, `the-tide-rises`, `fist-slam`
+```text
+Cel-shaded cartoon fantasy game ability icons on one square sheet, a 3 × 3 grid with thin plain gaps, read left to right, top to bottom; use all nine cells. Each icon is one bold object with a thick dark outline, flat colours, one hard shadow, light from the upper left, the corners empty, no glow. Palette: dark teal water and weathered stone background, bronze, gold and bone objects, red banner cloth, gold-orange bounce paths and stars, pale ghost-green only for the crowd, blue only for a catch point, red only for a ground ring. The nine icons: (1) Sunwheel: a round bronze war-shield with a blazing gold sun rim flying along a dotted gold path that bounces off three stone walls in bright stars, a blue ring at its end. (2) Twin Wheels: two bronze sun-rimmed wheels on two dotted gold paths crossing in an X with a bright star where they cross, a blue ring at the end of each path. (3) Riposte: a bronze sun-rimmed wheel struck back by a heavy sandalled bronze-strapped foot, a new dotted gold path curving away from it, two impact lines. (4) Victory Leap: a gilded half-helm and a bare fist falling from the top of the square, a huge round dark shadow on the stone below it, a red ring round the shadow. (5) Hammer Heel: a huge bronze-strapped sandal heel stamping straight down on a red ring, stone shards and water flying, two thick impact lines. (6) Roar of the Stands: a curved tier of empty stone seats with pale green ghost-wisps rising over it, three pale ring-shaped waves of sound rolling out. (7) Sand Furrow: a long dark churned furrow of sand drawn diagonally across wet stone, a bronze heel at its start, a spray of sand along it. (8) The Tide Rises: a ring of cracked stone columns toppling outward while a great teal wave with curled white crests rises through its middle, three bold upward arrows. (9) Fist Slam: a colossal barnacled bronze fist slamming down on a stone ring, a star-shaped crack and a ring of spray round it, two thick impact lines. No people, no faces, no text.
+```
+
+**Brannoc, sheet 2 (6 icons)** → save the whole sheet, then slice (256 × 256) into `client/icons/boss/brannoc/<name>.png` in reading order: `breaker`, `undertow-grip`, `double-grip`, `sunwheel-unbound`, `deep-call`, `the-final-bell`
+```text
+Cel-shaded cartoon fantasy game ability icons on one square sheet, a 3 × 3 grid with thin plain gaps, read left to right, top to bottom; use only the first six cells and leave the other three empty and plain. Each icon is one bold object with a thick dark outline, flat colours, one hard shadow, light from the upper left, the corners empty, no glow. Palette: dark teal water and weathered stone background, bronze, gold and bone objects, red banner cloth, gold-orange bounce paths and stars, pale ghost-green only for the crowd, blue only for a catch point, red only for a ground ring. The six icons: (1) Breaker: a bronze fist striking the sea at the left, a bold wave line running to a stone rim at the right and bouncing back as a second line, one blue and one red. (2) Undertow Grip: a giant barnacled bronze hand closing from above over a small red ring on a stone floor, its dark shadow stretched across the stone. (3) Double Grip: two giant barnacled bronze hands, one from each side of the square, each closing over its own small red ring. (4) Sunwheel Unbound: a huge bronze sun-rimmed wheel on a dotted gold path with four bright bounce stars round a stone ring, two blue rings on the path. (5) Deep Call: a ring of stone with curled teal wave crests rolling across it and four short bold arrows pointing outward to its rim. (6) The Final Bell: a huge bronze bell with a gold rim sunk under teal water, three gold sound rings spreading out from it, a few bubbles. No people, no faces, no text.
+```
+
+**Morrow-Oak, sheet 1 (9 icons)** → save the whole sheet, then slice (256 × 256) into `client/icons/boss/morrowoak/<name>.png` in reading order: `hunger-seed`, `inhale`, `fourfold-bloom`, `root-lash`, `sap-tide`, `saplings`, `the-swallowing`, `twin-seed`, `hungering-dark`
+```text
+Cel-shaded cartoon fantasy game ability icons on one square sheet, a 3 × 3 grid with thin plain gaps, read left to right, top to bottom; use all nine cells. Each icon is one bold object with a thick dark outline, flat colours, one hard shadow, light from the upper left, the corners empty, no glow. Palette: scorched cracked brown earth background, withered grey-brown bark and dead gold leaves, black-violet with a bright violet rim only for the Hunger, amber-gold only for sap, one accent per limb in its own colour, blue only for a soak, red only for a ground ring. The nine icons: (1) Hunger Seed: a black faceted seed with a bright violet rim floating over a thin violet ring on cracked earth, three small violet cracks running out of the ring. (2) Inhale: a split in a tree trunk showing a black-violet hollow, curved violet streaks spiralling into it, a few small stones and dead leaves pulled in. (3) Fourfold Bloom: a great bud seen from above opening into four large petals in a cross: thorned green, ice blue, gold-spark and violet-blight, a dark round heart in the middle. (4) Root Lash: a thick gnarled root swung in a wide arc over cracked earth, a thin red arc drawn under its sweep, a pale burst at its tip. (5) Sap Tide: a wave of glowing amber sap spreading over cracked earth in gold veins, three tiny sprouts with gold leaves in it. (6) Saplings: three small walking sapling trees on root feet with gold flower buds, all heading toward a dark violet-rimmed hole at the corner. (7) The Swallowing: cracked ground breaking into six floating chunks over a black void, each chunk rimmed in violet, one chunk tilted as it falls. (8) Twin Seed: two black violet-rimmed seeds side by side joined by a thin violet line, two short bold arrows pointing apart, one huge ghost-outline hole behind them. (9) Hungering Dark: a round black hole with a violet rim, short curved arrows drawn toward it from all sides, one dead leaf being pulled in at the edge. No people, no faces, no text.
+```
+
+**Morrow-Oak, sheet 2 (9 icons)** → save the whole sheet, then slice (256 × 256) into `client/icons/boss/morrowoak/<name>.png` in reading order: `cleaver-bough`, `brood-roots`, `storm-knot`, `barrow-lantern`, `deeper-roots`, `wyrm-wing`, `frost-fist`, `archmage-rune`, `hydra-head`
+```text
+Cel-shaded cartoon fantasy game ability icons on one square sheet, a 3 × 3 grid with thin plain gaps, read left to right, top to bottom; use all nine cells. Each icon is one bold object with a thick dark outline, flat colours, one hard shadow, light from the upper left, the corners empty, no glow. Palette: scorched cracked brown earth background, withered grey-brown bark and dead gold leaves, black-violet with a bright violet rim only for the Hunger, amber-gold only for sap, one accent per limb in its own colour, blue only for a soak, red only for a ground ring. The nine icons: (1) Cleaver Bough: a huge branch shaped like a cleaver, its edge burning orange, a blue ring on stone and one long orange line running through the ring. (2) Brood Roots: lime-green root strands lacing across cracked stone, a glowing green knot where they cross, one root coiling up. (3) Storm Knot: a gnarled wooden knot holding three cyan crystal rods, thin cyan lines joining the rods in a triangle on the ground. (4) Barrow Lantern: a green-glass lantern hanging on a chain from a dead bough, a dashed pale-green arc leaving it toward a small green ring. (5) Deeper Roots: four root tips reaching down through cracked ground, each cradling one tiny sign: a dragon wing, a snowflake, a rune disc and a serpent head. (6) Wyrm Wing: a bat-like dragon wing grown from a dead branch, bark-brown membrane with ember-orange veins. (7) Frost Fist: a huge fist made of grey bark with pale blue frost on its knuckles, coming down on cracked earth. (8) Archmage Rune: a brass ring with one bold rune set in a wooden knot, a small orange dot and a small blue dot orbiting it. (9) Hydra Head: a green serpent head with open jaws at the end of a bark-scaled branch neck. No people, no faces, no text.
+```
+
+**Morrow-Oak, sheet 3 (2 icons)** → save the whole sheet, then slice (256 × 256) into `client/icons/boss/morrowoak/<name>.png` in reading order: `last-gasp`, `nothing-left`
+```text
+Cel-shaded cartoon fantasy game ability icons on one square sheet, a 3 × 3 grid with thin plain gaps, read left to right, top to bottom; use only the first two cells and leave the other seven empty and plain. Each icon is one bold object with a thick dark outline, flat colours, one hard shadow, light from the upper left, the corners empty, no glow. Palette: scorched cracked brown earth background, withered grey-brown bark and dead gold leaves, black-violet with a bright violet rim only for the Hunger, amber-gold only for sap, one accent per limb in its own colour, blue only for a soak, red only for a ground ring. The two icons: (1) Last Gasp: a snapped limb lying on cracked earth with one bright pulse ring and a spark bursting from its broken end. (2) Nothing Left: a black void spreading out of the middle of a ring of cracked earth, a few small chunks and one gold leaf left, an orange-red meteor edge at the top. No people, no faces, no text.
+```
+
+**Caelum Vey, sheet 1 (9 icons)** → save the whole sheet, then slice (256 × 256) into `client/icons/boss/caelum/<name>.png` in reading order: `glint`, `eightfold-wake`, `anchored-wake`, `starfall`, `cinder-crown`, `pinning-thrust`, `grace-withdrawn`, `nightfall`, `mirrored-wake`
+```text
+Cel-shaded cartoon fantasy game ability icons on one square sheet, a 3 × 3 grid with thin plain gaps, read left to right, top to bottom; use all nine cells. Each icon is one bold object with a thick dark outline, flat colours, one hard shadow, light from the upper left, the corners empty, no glow. Palette: midnight indigo background, black glass, silver-white and pale violet objects, violet only for star shards, red only for a danger lane, pale blue only for a soak ring; on the cloud and meteor icons cream, gold and burning orange-red. The nine icons: (1) Glint: a thin starlight blade streaking straight across the square leaving a long silver line, a pale translucent afterimage of the blade standing at the far end, two speed lines. (2) Eightfold Wake: eight small silver afterimage blades standing in a ring, thin red lines joining each to the next in order, one tiny dot over the first. (3) Anchored Wake: a ring of silver afterimage blades with two of them replaced by small pale blue rings on the floor, red lines joining all of them. (4) Starfall: a jagged dark-violet star shard falling from the top onto a pale blue ring, a small violet impact star at the ring. (5) Cinder Crown: a crown-shaped ring of spiked violet flame hovering over a violet ring on the floor. (6) Pinning Thrust: a narrow starlight blade thrust straight along a red lane into a wall at the right, the wall cracking round its point. (7) Grace Withdrawn: five small white points of light in a row, each with a thin black ring closing in round it. (8) Nightfall: a huge black ellipse with a jagged violet rim swallowing the floor, five tiny white lights inside it. (9) Mirrored Wake: a ring of silver afterimage blades on the left and its mirror image on the right, a dotted vertical line between them. No people, no faces, no text.
+```
+
+**Caelum Vey, sheet 2 (9 icons)** → save the whole sheet, then slice (256 × 256) into `client/icons/boss/caelum/<name>.png` in reading order: `the-starwyrm`, `embers-of-heaven`, `constellation-fall`, `ascendant`, `horizon-cut`, `the-sky-comes-down`, `second-coil`, `chorus-of-the-fallen`, `dark-ember`
+```text
+Cel-shaded cartoon fantasy game ability icons on one square sheet, a 3 × 3 grid with thin plain gaps, read left to right, top to bottom; use all nine cells. Each icon is one bold object with a thick dark outline, flat colours, one hard shadow, light from the upper left, the corners empty, no glow. Palette: midnight indigo background, black glass, silver-white and pale violet objects, violet only for star shards, red only for a danger lane, pale blue only for a soak ring; on the cloud and meteor icons cream, gold and burning orange-red. The nine icons: (1) The Starwyrm: a constellation of white-gold star points joined by thin lines into a coiled serpent with open jaws, on deep indigo. (2) Embers of Heaven: two falling orange-gold embers chipping the corner off a golden star-shaped crystal shard. (3) Constellation Fall: a broad beam of white-gold light sweeping from a star-serpent head at the right across the square, a golden crystal shard in front of it casting a dark shadow wedge. (4) Ascendant: a wheel of twelve slim black gold-edged blades floating round a bright hub, cream cloud under them. (5) Horizon Cut: one wide horizontal band of white-gold light across the whole square with a small gap in the middle marked by two falling golden shards. (6) The Sky Comes Down: a great orange-red burning meteor filling the top of the square, a ring of cream cloud below it. (7) Second Coil: a star-serpent diving diagonally down a red lane, gold stars trailing behind it. (8) Chorus of the Fallen: four pale silver ghost-outlines in a ring: a broad single-edged blade, a round sun-rimmed shield, an oak leaf and a thin starlight blade. (9) Dark Ember: a small black ember with a violet rim set in a pale ring at the edge of a dark disc, a few gold specks. No people, no faces, no text.
+```
+
+---
+
+## Checklist (269 files)
 
 ### Gloomsworn (25)
 - [x] `client/portraits/gloomsworn.png`
@@ -464,4 +514,82 @@ Then copy `client/icons/boss/archmage/the-binding.png` to `client/icons/boss/arc
 - [ ] `client/icons/boss/hydra/hydras-gaze.png`
 - [ ] `client/icons/boss/archmage/call-of-the-circle.png`
 
-Total: 199 files (Gloomsworn 25, Reaper 23, Tidecaller 23, Lanternkeeper 24, Marionettist and Threadweaver 3, Set 2 general items 32, Set 2 boss icons 69).
+### Corvane boss icons (17)
+- [ ] `client/icons/boss/corvane/white-gale.png`
+- [ ] `client/icons/boss/corvane/sundering-cut.png`
+- [ ] `client/icons/boss/corvane/cracked-guard.png`
+- [ ] `client/icons/boss/corvane/draw-cut.png`
+- [ ] `client/icons/boss/corvane/scabbard-sweep.png`
+- [ ] `client/icons/boss/corvane/still-water.png`
+- [ ] `client/icons/boss/corvane/hollow-breath.png`
+- [ ] `client/icons/boss/corvane/cold-sheathe.png`
+- [ ] `client/icons/boss/corvane/rising-crane.png`
+- [ ] `client/icons/boss/corvane/comet-draw.png`
+- [ ] `client/icons/boss/corvane/comet-volley.png`
+- [ ] `client/icons/boss/corvane/hundredfold-parting.png`
+- [ ] `client/icons/boss/corvane/false-stance.png`
+- [ ] `client/icons/boss/corvane/the-vigil.png`
+- [ ] `client/icons/boss/corvane/whetted-edge.png`
+- [ ] `client/icons/boss/corvane/the-last-vigil.png`
+- [ ] `client/icons/boss/corvane/last-light-of-the-pass.png`
+
+### Brannoc boss icons (15)
+- [ ] `client/icons/boss/brannoc/sunwheel.png`
+- [ ] `client/icons/boss/brannoc/twin-wheels.png`
+- [ ] `client/icons/boss/brannoc/riposte.png`
+- [ ] `client/icons/boss/brannoc/victory-leap.png`
+- [ ] `client/icons/boss/brannoc/hammer-heel.png`
+- [ ] `client/icons/boss/brannoc/roar-of-the-stands.png`
+- [ ] `client/icons/boss/brannoc/sand-furrow.png`
+- [ ] `client/icons/boss/brannoc/the-tide-rises.png`
+- [ ] `client/icons/boss/brannoc/fist-slam.png`
+- [ ] `client/icons/boss/brannoc/breaker.png`
+- [ ] `client/icons/boss/brannoc/undertow-grip.png`
+- [ ] `client/icons/boss/brannoc/double-grip.png`
+- [ ] `client/icons/boss/brannoc/sunwheel-unbound.png`
+- [ ] `client/icons/boss/brannoc/deep-call.png`
+- [ ] `client/icons/boss/brannoc/the-final-bell.png`
+
+### Morrow-Oak boss icons (20)
+- [ ] `client/icons/boss/morrowoak/hunger-seed.png`
+- [ ] `client/icons/boss/morrowoak/inhale.png`
+- [ ] `client/icons/boss/morrowoak/fourfold-bloom.png`
+- [ ] `client/icons/boss/morrowoak/root-lash.png`
+- [ ] `client/icons/boss/morrowoak/sap-tide.png`
+- [ ] `client/icons/boss/morrowoak/saplings.png`
+- [ ] `client/icons/boss/morrowoak/the-swallowing.png`
+- [ ] `client/icons/boss/morrowoak/twin-seed.png`
+- [ ] `client/icons/boss/morrowoak/hungering-dark.png`
+- [ ] `client/icons/boss/morrowoak/cleaver-bough.png`
+- [ ] `client/icons/boss/morrowoak/brood-roots.png`
+- [ ] `client/icons/boss/morrowoak/storm-knot.png`
+- [ ] `client/icons/boss/morrowoak/barrow-lantern.png`
+- [ ] `client/icons/boss/morrowoak/deeper-roots.png`
+- [ ] `client/icons/boss/morrowoak/wyrm-wing.png`
+- [ ] `client/icons/boss/morrowoak/frost-fist.png`
+- [ ] `client/icons/boss/morrowoak/archmage-rune.png`
+- [ ] `client/icons/boss/morrowoak/hydra-head.png`
+- [ ] `client/icons/boss/morrowoak/last-gasp.png`
+- [ ] `client/icons/boss/morrowoak/nothing-left.png`
+
+### Caelum Vey boss icons (18)
+- [ ] `client/icons/boss/caelum/glint.png`
+- [ ] `client/icons/boss/caelum/eightfold-wake.png`
+- [ ] `client/icons/boss/caelum/anchored-wake.png`
+- [ ] `client/icons/boss/caelum/starfall.png`
+- [ ] `client/icons/boss/caelum/cinder-crown.png`
+- [ ] `client/icons/boss/caelum/pinning-thrust.png`
+- [ ] `client/icons/boss/caelum/grace-withdrawn.png`
+- [ ] `client/icons/boss/caelum/nightfall.png`
+- [ ] `client/icons/boss/caelum/mirrored-wake.png`
+- [ ] `client/icons/boss/caelum/the-starwyrm.png`
+- [ ] `client/icons/boss/caelum/embers-of-heaven.png`
+- [ ] `client/icons/boss/caelum/constellation-fall.png`
+- [ ] `client/icons/boss/caelum/ascendant.png`
+- [ ] `client/icons/boss/caelum/horizon-cut.png`
+- [ ] `client/icons/boss/caelum/the-sky-comes-down.png`
+- [ ] `client/icons/boss/caelum/second-coil.png`
+- [ ] `client/icons/boss/caelum/chorus-of-the-fallen.png`
+- [ ] `client/icons/boss/caelum/dark-ember.png`
+
+Total: 269 files (Gloomsworn 25, Reaper 23, Tidecaller 23, Lanternkeeper 24, Marionettist and Threadweaver 3, Set 2 general items 32, Set 2 boss icons 69, Corvane boss icons 17, Brannoc 15, Morrow-Oak 20, Caelum 18).

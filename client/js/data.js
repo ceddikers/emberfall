@@ -275,6 +275,51 @@ const BOSSES = [
       { name: "Hard: Regrowth, Tidal Dance, Hydra's Gaze", desc: 'A missed stump grows an extra head, two heads send their tides across each other, and the whole temple is watched.' },
     ],
   },
+  // ---- set 3: the Fallen Star (docs/plans/2026-10-set-3-pitches.md)
+  {
+    id: 'corvane', name: 'Corvane', title: 'the Unburied Blade', color: '#9fc8ec', playable: true, set: 3,
+    blurb: 'A guard stands in a snowed-in mountain pass on the crater road. Nobody ever came to relieve him, so he has kept the pass ever since, and he duels everyone who comes up it.',
+    mechanics: [
+      { name: 'The Whetstone', desc: 'Every blow he lands on the careless sharpens his blade. When the edge is full, he unleashes it.' },
+      { name: 'Stances', desc: 'How he holds the blade tells you what is coming.' },
+      { name: 'The Lanterns', desc: 'The old stone lanterns of the pass give shelter, once each.' },
+      { name: 'The Vigil', desc: 'He kneels in the snow, and the cold of the pass comes to him.' },
+      { name: 'Hard: Overwhet, False Stance, Returning Parting, Comet Volley', desc: 'His edge holds more than it should, his stance can lie, his dance comes back, and his dash comes three times.' },
+    ],
+  },
+  {
+    id: 'brannoc', name: 'Brannoc', title: 'the Undefeated', color: '#d8a24a', playable: true, set: 3,
+    blurb: 'An arena sank into the sea long ago with its champion still in it. He still fights there, for a crowd of ghosts, and he has never once been beaten.',
+    mechanics: [
+      { name: 'The Sunwheel', desc: 'He throws his shield like a discus, and it comes off the walls. Somebody has to catch it.' },
+      { name: 'Victory Leap', desc: 'He lands on someone, then stops to enjoy the crowd.' },
+      { name: 'The Tide Rises', desc: 'Halfway through the bout, the sea comes for the arena.' },
+      { name: 'The Tidewrought', desc: 'What rises from the water has his reach and his fists, grown huge.' },
+      { name: 'Hard: Twin Wheels, Double Grip, Riposte, Riptide', desc: 'Two wheels cross, both hands close, a caught wheel is kicked back, and the waves come back twice.' },
+    ],
+  },
+  {
+    id: 'morrowoak', name: 'Morrow-Oak', title: 'the Starved Grove', color: '#8a9a6a', playable: true, set: 3,
+    blurb: 'The oldest tree in the realm drank from the fallen star, and something in his heartwood has been hungry ever since. He feeds it his own grove.',
+    mechanics: [
+      { name: 'The Hunger', desc: 'What it eats stays gone. Choose where the floor goes.' },
+      { name: 'Inhale', desc: 'It breathes in, and everything slides toward him.' },
+      { name: 'Fourfold Bloom', desc: 'Four petals open around him, and they do not stay still.' },
+      { name: 'The Swallowing', desc: 'Halfway through, the Hunger takes the whole grove.' },
+      { name: 'Hard: Twin Seed, Hungering Dark, Deeper Roots, Last Gasp', desc: 'Seeds come in pairs, the holes pull, he grows older limbs, and a broken one strikes once more.' },
+    ],
+  },
+  {
+    id: 'caelum', name: 'Caelum Vey', title: 'the Starborn', color: '#e9dcae', playable: true, set: 3,
+    blurb: 'The star chose him. He walks where others run, and the meteor that has hung over every road you took is coming down at his word.',
+    mechanics: [
+      { name: 'Afterimages', desc: 'He is always somewhere before he is there.' },
+      { name: 'The Shadow', desc: "The meteor's shadow grows on the floor. It is the clock." },
+      { name: 'Grace Withdrawn', desc: 'For a moment, nobody has anything left.' },
+      { name: 'The Starwyrm', desc: 'The constellations come loose.' },
+      { name: 'Hard: Mirrored Wake, Second Coil, Chorus of the Fallen, Dark Ember', desc: 'Every dance twice, the serpent returns, old foes dance with him, and the dark can be pushed back.' },
+    ],
+  },
 ];
 
 // Lets Node tools reuse this file.

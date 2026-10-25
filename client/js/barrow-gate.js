@@ -2,7 +2,7 @@
 // (arena/trials.js). It does not exist until some hero on this account has cleared the Hollow King (Save.trialsOpen);
 // the first time it shows, it rises out of the cold with a short arrival moment (a banner, the camera, a ring of mist).
 // Everything is drawn here in code: a broken barrow arch with a cold ghost-light in its mouth, standing stones, flagstones
-// worn pale, a path of stepping stones from the east terrace. Colours are the Shade's: grey-green stone, pale cyan light.
+// worn pale, a path of stepping stones from the Trophy Hall's east wall. Colours are the Shade's: grey-green stone, pale cyan light.
 // main.js owns the panel (openBarrow) and the trial start; this file is only the place itself.
 
 const BarrowGate = (() => {
@@ -62,7 +62,7 @@ const BarrowGate = (() => {
     if (now - quietSince < QUIET) return;
     book.seen[SEEN] = 1; Save.commit();
     bornAt = now;
-    deps.banner('Cold mist has come down off the Barrow, and a broken arch stands in it beside the east terrace. Whoever passes through finds the Hollow King\'s hall as it was, and the old trials waiting in it.');
+    deps.banner('Cold mist has come down off the Barrow, and a broken arch stands in it beside the Trophy Hall. Whoever passes through finds the Hollow King\'s hall as it was, and the old trials waiting in it.');
     deps.focus({ x: g().x, y: g().y + 10 });
     deps.sound();
   }
@@ -188,8 +188,8 @@ const BarrowGate = (() => {
       if (r() < 0.3) ellipse(ctx, (r() - 0.5) * w * 0.5, h * 0.2, w * 0.35, 3, 0, 'rgba(95,125,104,0.6)');
       ctx.restore();
     }
-    // the stepping stones from the east terrace: pale at the gate, lost in the grass toward the road
-    const path = [[-288, 106], [-246, 100], [-204, 94], [-162, 86], [-122, 76], [-84, 66], [-48, 58]];
+    // the stepping stones from the Trophy Hall's east wall: pale at the gate, lost in the grass toward the road
+    const path = [[-204, 94], [-162, 86], [-122, 76], [-84, 66], [-48, 58]];
     path.forEach(([px, py], i) => {
       const k = (i + 1) / path.length;
       ctx.save(); ctx.translate(px + (r() - 0.5) * 6, py + (r() - 0.5) * 6); ctx.rotate((r() - 0.5) * 0.9);

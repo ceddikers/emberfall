@@ -219,7 +219,10 @@ const SoundHooks = (() => {
   // ---------------------------------------------------------------- music
   const music = (id, o) => { if (has()) safe(() => Sound.music.set(id, o)); };
   // the phase (course) where Normal crossfades into the boss's Hard track, late in the fight
-  const LAYER_AT = { grubnak: 3, skitterra: 3, volkar: 3, hollowking: 5, wyrm: 4, titan: 3, archmage: 4, hydra: 4 };
+  const LAYER_AT = { grubnak: 3, skitterra: 3, volkar: 3, hollowking: 5, wyrm: 4, titan: 3, archmage: 4, hydra: 4, corvane: 3, brannoc: 3, morrowoak: 3, caelum: 3 };
+  // a boss whose second track is its second form's music, not a harder take of the first: both difficulties start on the
+  // first track and turn at the form change
+  const TURN = new Set(['brannoc', 'morrowoak', 'caelum']);
   function phase(bossId, n) {
     // (on Hard that track plays the whole fight: it is not layered over)
     if (has() && LAYER_AT[bossId] && n >= LAYER_AT[bossId] && !/-hard$/.test(String(Sound.music.current() || ''))) safe(() => Sound.music.layer('mus-' + bossId));
@@ -227,7 +230,7 @@ const SoundHooks = (() => {
   // the fight's track: 'mus-<boss>-hard' on Hard if that track exists, else 'mus-<boss>'
   function bossTrack(bossId, mode) {
     const hard = 'mus-' + bossId + '-hard';
-    return mode === 'hard' && has() && Sound.music.has && Sound.music.has(hard) ? hard : 'mus-' + bossId;
+    return mode === 'hard' && !TURN.has(bossId) && has() && Sound.music.has && Sound.music.has(hard) ? hard : 'mus-' + bossId;
   }
 
   // ---------------------------------------------------------------- the scene's beds, once a frame
@@ -238,7 +241,7 @@ const SoundHooks = (() => {
     if (typeof TOWN === 'undefined') return 'grass';
     if (TOWN.deck && inRect(x, y, TOWN.deck)) return 'wood';
     if (TOWN.plaza && Math.hypot(x - TOWN.plaza.x, y - TOWN.plaza.y) < TOWN.plaza.r) return 'stone';
-    if (TOWN.portal && Math.hypot(x - TOWN.portal.x, y - TOWN.portal.y) < 165) return 'stone';
+    if (TOWN.hall && inRect(x, y, TOWN.hall)) return 'stone';
     if (TOWN.terrace && inRect(x, y, TOWN.terrace)) return 'stone';
     return 'grass';
   }
@@ -251,8 +254,9 @@ const SoundHooks = (() => {
       if (town && !amb) amb = Sound.loop('amb-town', { bus: 'amb', vol: 0.5, fade: 2 });
       else if (!town && amb) { amb.stop(1.2); amb = null; }
       // the portal hums louder the nearer you are (a bed, on the ambience bus)
-      const P = typeof TOWN !== 'undefined' ? TOWN.portal : null;
-      const pv = town && P ? Math.max(0, 1 - Math.hypot(x - P.x, y - P.y) / 650) : 0, pvol = pv * pv * 0.8;
+      const PS = typeof TOWN !== 'undefined' ? TOWN.portals : null;   // (the nearest of the four sets the pitch)
+      let pd = Infinity; if (town && PS) for (const P of PS) pd = Math.min(pd, Math.hypot(x - P.x, y - P.y));
+      const pv = town && PS ? Math.max(0, 1 - pd / 650) : 0, pvol = pv * pv * 0.8;
       if (pvol > 0.01) { if (!hum) hum = Sound.loop('portal-hum', { bus: 'amb', vol: pvol, fade: 1 }); else hum.setVol(pvol, 0.3); }
       else if (hum) { hum.stop(0.8); hum = null; }
       if (town && moving) { const t = performance.now(); if (t - lastStep > 360) { lastStep = t; play(STEP[ground(x, y)], STEP_O); } }

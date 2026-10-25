@@ -665,84 +665,101 @@
     'bm-archmage-call-of-the-circle': 2.5, 'bm-archmage-cinder-rune': 1, 'bm-archmage-convergence': 1.5, 'bm-archmage-counterspell': 2.5,
     'bm-archmage-ice-lances': 3, 'bm-archmage-leaping-bolt': 1, 'bm-archmage-pyre-rings': 1, 'bm-archmage-rift-rune': -1.5,
     'bm-archmage-rime-rune': 0.5, 'bm-archmage-rune-mark': 2, 'bm-archmage-rune-swap': 2, 'bm-archmage-storm-rune': 2,
-    'bm-archmage-the-binding': 1.5, 'bm-archmage-the-tide-rises': 1, 'bm-archmage-void-rifts': -1, 'bm-grubnak-belly-flop': -1,
-    'bm-grubnak-butchers-charge': -0.5, 'bm-grubnak-chop-chop': 1, 'bm-grubnak-cleaver-toss': 1.5, 'bm-grubnak-clogged-drains': 3.5,
-    'bm-grubnak-dinner-rush': 3.5, 'bm-grubnak-double-chop': 1, 'bm-grubnak-family-meal': 0.5, 'bm-grubnak-flambe': -0.5,
-    'bm-grubnak-flare-up': -1.5, 'bm-grubnak-gorge': 2, 'bm-grubnak-grease-fire': 0.5, 'bm-grubnak-intro': -1,
-    'bm-grubnak-ladle-spin': 4, 'bm-grubnak-larder-toss': 2.5, 'bm-grubnak-lid-slam': -1.5, 'bm-grubnak-meat-toss': 1.5,
-    'bm-grubnak-mince': 1.5, 'bm-grubnak-mise-en-place': 4, 'bm-grubnak-order-up': -3, 'bm-grubnak-rolling-meatballs': 2.5,
-    'bm-grubnak-service': -1, 'bm-grubnak-simmer': 2, 'bm-grubnak-spice-rack': 0.5, 'bm-grubnak-stockpot': 1.5,
-    'bm-grubnak-tenderize': 1, 'bm-grubnak-whisk': 7, 'bm-hollowking-barrow-bells': -1.5, 'bm-hollowking-barrow-knell': 1.5,
-    'bm-hollowking-coffin-lids': 2, 'bm-hollowking-court-of-bones': 1.5, 'bm-hollowking-crown-of-graves': 3.5, 'bm-hollowking-dirge': 0.5,
-    'bm-hollowking-echo-knights': 4.5, 'bm-hollowking-funeral-march': 0.5, 'bm-hollowking-grave-cleave': 0.5, 'bm-hollowking-grave-marks': 4,
-    'bm-hollowking-grave-summons': 1.5, 'bm-hollowking-gravebind': 2.5, 'bm-hollowking-intro': 1.5, 'bm-hollowking-judgement': 0.5,
-    'bm-hollowking-lantern': 8.5, 'bm-hollowking-lights-out': 2, 'bm-hollowking-royal-audience': -1.5, 'bm-hollowking-royal-decree': -1,
-    'bm-hollowking-royal-doom': 1, 'bm-hollowking-royal-gaze': -1.5, 'bm-hollowking-sceptre-sweep': 3.5, 'bm-hollowking-sceptre-throw': 2,
-    'bm-hollowking-the-charge-sheet': 1.5, 'bm-hollowking-the-king-rises': -1, 'bm-hollowking-the-long-night': 1.5, 'bm-hollowking-writ-of-execution': 1.5,
-    'bm-hydra-acid-spray': 3, 'bm-hydra-flame-gout': 3, 'bm-hydra-intro': -3, 'bm-hydra-mire-spit': 2,
-    'bm-hydra-mothers-cry': -1.5, 'bm-hydra-mothers-heart': 0.5, 'bm-hydra-regrowth': 0.5, 'bm-hydra-rending-maul': 1.5,
-    'bm-hydra-rime-crown': 1, 'bm-hydra-searing': 2.5, 'bm-hydra-stonegaze': 0.5, 'bm-hydra-stormcall': 3,
-    'bm-hydra-the-drowning': -2.5, 'bm-hydra-tidal-dance': 3.5, 'bm-hydra-tidal-line': 2, 'bm-hydra-venom-bloom': 3,
-    'bm-skitterra-acid-deluge': 0.5, 'bm-skitterra-brood': 4.5, 'bm-skitterra-ceiling-ambush': 1, 'bm-skitterra-chrysalis': 4,
-    'bm-skitterra-cocoon-drop': 1.5, 'bm-skitterra-egg-sacs': 1.5, 'bm-skitterra-eightfold-lunge': 6.5, 'bm-skitterra-fang-rush': 2,
-    'bm-skitterra-from-the-dark': 2, 'bm-skitterra-into-the-dark': 2, 'bm-skitterra-intro': -1, 'bm-skitterra-molt': 8,
-    'bm-skitterra-silk-lines': 3.5, 'bm-skitterra-silk-reel': 3.5, 'bm-skitterra-silk-wrap': 2.5, 'bm-skitterra-snare-weave': 2,
-    'bm-skitterra-spiderlings': 11, 'bm-skitterra-spin': 8, 'bm-skitterra-spinneret-volley': 16, 'bm-skitterra-strand-reel': 5.5,
-    'bm-skitterra-the-swarm': 11.5, 'bm-skitterra-the-web-gives-way': 0.5, 'bm-skitterra-tightening-web': 2, 'bm-skitterra-venom-drip': 4,
-    'bm-skitterra-venom-mist': -1.5, 'bm-skitterra-venom-spit': 4, 'bm-titan-avalanche': 0.5, 'bm-titan-breath-of-winter': 1.5,
-    'bm-titan-endless-winter': -1.5, 'bm-titan-frostbite': 2.5, 'bm-titan-glacial-stomp': -0.5, 'bm-titan-icefall': 2.5,
-    'bm-titan-intro': -3, 'bm-titan-rime-slam': 0.5, 'bm-titan-titans-grip': 2.5, 'bm-titan-titans-sweep': 2,
-    'bm-titan-twin-slam': 2, 'bm-titan-whiteout': 1.5, 'bm-titan-winters-grasp': 2.5, 'bm-titan-winters-howl': -1,
-    'bm-volkar-avalanche': 0.5, 'bm-volkar-ball-lightning': 1.5, 'bm-volkar-chain-lightning': 3, 'bm-volkar-distant-thunder': 4,
-    'bm-volkar-eye-closes': 2, 'bm-volkar-eye-of-the-storm': 4.5, 'bm-volkar-gale-slam': 4, 'bm-volkar-gathering-storm': 0.5,
-    'bm-volkar-grounding-rods': 3, 'bm-volkar-heavens-fall': -1, 'bm-volkar-intro': -1.5, 'bm-volkar-lightning-rods': 9,
-    'bm-volkar-polarity-minus': 3, 'bm-volkar-polarity-plus': 3, 'bm-volkar-polarity-surge': 1.5, 'bm-volkar-pulse': 4.5,
-    'bm-volkar-rod-strike': 1.5, 'bm-volkar-skyfall': -0.5, 'bm-volkar-squall-line': 3, 'bm-volkar-static-field': 5,
-    'bm-volkar-still-air': 3, 'bm-volkar-storm-walls': 2, 'bm-volkar-supercell': 2, 'bm-volkar-thunder-crash': 1,
-    'bm-volkar-thunderclap': 1.5, 'bm-volkar-thunderhead': 2.5, 'bm-volkar-titan-fist': -1.5, 'bm-wyrm-cinder-rain': 7.5,
-    'bm-wyrm-ember-breath': 3.5, 'bm-wyrm-intro': -4, 'bm-wyrm-take-flight': 3.5, 'bm-wyrm-twin-breath': 3.5,
-    'boss-death': -2.5, 'boss-enrage': -2.5, 'boss-impact-heavy': 0.5, 'boss-impact-light': 7,
-    'boss-intro': -1.5, 'buff-on': -0.5, 'chest-drop': 3.5, 'chest-open': -5,
-    'cleanse': -5, 'clear': -4.5, 'crit': 4, 'dash': 6.5,
-    'debuff-on': -1, 'dummy-hit': 3, 'emote-cheer': -6.5, 'emote-laugh': -2,
-    'emote-wave': 2, 'feast-chew': 6.5, 'feast-clink': -5.5, 'feast-serve': -3.5,
-    'feast-sting': -2.5, 'fish-bite': 3, 'fish-cast': 1.5, 'fish-catch': -3,
-    'fish-lost': -0.5, 'fish-reel': -0.5, 'gloom-hollow-off': -2, 'gloom-hollow-on': 2,
-    'heal-land': -2.5, 'hit-heavy': 5, 'hit-light': 9, 'hm-bark-ash': -0.5,
-    'hm-bark-ghost': 3.5, 'hm-bark-greyfang': 0.5, 'hm-bark-rust': 0.5, 'hm-bite': 8,
-    'hm-bite-big': 2.5, 'hm-bringdown': -3, 'hm-calloff': 1.5, 'hm-down': 3,
-    'hm-hamstring': 1, 'hm-horn': -6, 'hm-howl': -3.5, 'hm-longchase': 1.5,
-    'hm-mount': -1, 'hm-quarry': 6.5, 'hm-relay': 4, 'hm-rend': 0.5,
-    'hm-ridedown': 2.5, 'hm-snap': 7, 'hm-up': 2.5, 'hm-whistle-hold': -7.5,
-    'hm-whistle-pounce': -7, 'ken-blaze': 0.5, 'ken-break': -0.5, 'ken-deathblow': -2,
-    'ken-good': 8, 'ken-iai': 2.5, 'ken-miss': 7.5, 'ken-off': 4.5,
-    'ken-pass': 6.5, 'ken-perfect': 2, 'ken-pommel': 6.5, 'ken-redirect': 1,
-    'lamp-drop': 11, 'lamp-ember': 14.5, 'lamp-end': 6.5, 'lamp-eternal': 0.5,
-    'lamp-pilgrim': 4.5, 'lamp-pillar': 3, 'lamp-snuff': 5.5, 'lamp-sparks': 5,
-    'lb-fire': -1.5, 'lb-ready': -5, 'loot-take': -2, 'low-hp': -4.5,
-    'npc-talk': -6, 'ping': 2.5, 'pip-up': 12, 'portal-enter': -3,
-    'portal-hum': -22.5, 'pull-count': 0.5, 'pull-count-last': -3.5, 'pull-go': -2,
-    'reaper-blink': 5.5, 'reaper-danse': 5, 'reaper-finish1': 4.5, 'reaper-finish2': -0.5,
-    'reaper-finish3': 1, 'reaper-finish4': -2, 'reaper-frenzy': -2.5, 'reaper-gate-bloom': -2.5,
-    'reaper-gate-close': -1, 'reaper-gate-open': 3.5, 'reaper-gate-tone': 8, 'reaper-gatebreaker': 1.5,
-    'reaper-harvest': -1, 'reaper-moon': 1.5, 'reaper-pop-bind': 4.5, 'reaper-pop-death': 3,
-    'reaper-pop-drain': 4, 'reaper-pop-thread': 9, 'reaper-rune': 12.5, 'reaper-rune-emp': 6,
-    'reaper-slack': 14.5, 'reaper-slash': 2.5, 'reaper-star-collapse': -2, 'reaper-star-open': 0.5,
-    'reaper-swing': 12, 'reaper-veil': -0.5, 'revive': -2, 'shield-break': 5,
-    'shield-up': -4, 'stack-1': 8, 'stack-2': -2.5, 'step-grass': 8,
-    'step-stone': 8.5, 'step-wood': 1.5, 'story-page': 3.5, 'tg-aoe': 1.5,
-    'tg-buster': 1, 'tg-charge': 0.5, 'tg-gaze': 0.5, 'tg-knockback': 2.5,
-    'tg-raidwide': -0.5, 'tg-spread': 5.5, 'tg-stack': 1.5, 'tide-bell': 1,
-    'tide-crash': -1.5, 'tide-crest': 4.5, 'tide-gull': 9.5, 'tide-pop': 1.5,
-    'tide-slack': 10.5, 'tide-wave': 2.5, 'title-sting': -3, 'ui-bounty': 0.5,
-    'ui-buy': -6, 'ui-click': 2, 'ui-close': -0.5, 'ui-equip': -2.5,
-    'ui-error': -3, 'ui-feat': -7, 'ui-gold': -4, 'ui-hover': 13,
-    'ui-secret': -6, 'ult-alembist': 0.5, 'ult-bastion': 1.5, 'ult-bloodreaver': 1,
-    'ult-driftblade': 6.5, 'ult-fire': -1.5, 'ult-gloomsworn': -1, 'ult-gorgemaw': 1,
-    'ult-grovekeeper': 2.5, 'ult-houndmaster': -3.5, 'ult-kenseier': -1.5, 'ult-lanternkeeper': -2,
-    'ult-marionettist': 0.5, 'ult-oathbroker': -1, 'ult-pyromancer': -1, 'ult-ranger': 3,
-    'ult-ready': -4, 'ult-runeguard': -1, 'ult-shadowblade': 4, 'ult-thermist': -1,
-    'ult-threadweaver': -1, 'ult-tidecaller': -2, 'waymark': 11.5, 'wipe': -2,
+    'bm-archmage-the-binding': 1.5, 'bm-archmage-the-tide-rises': 1, 'bm-archmage-void-rifts': -1, 'bm-brannoc-breaker': -0.5,
+    'bm-brannoc-deep-call': -2.5, 'bm-brannoc-double-grip': 2, 'bm-brannoc-fist-slam': -1, 'bm-brannoc-hammer-heel': -1,
+    'bm-brannoc-intro': -1.5, 'bm-brannoc-riposte': 3, 'bm-brannoc-roar-of-the-stands': -1.5, 'bm-brannoc-sand-furrow': 2,
+    'bm-brannoc-sunwheel': 2.5, 'bm-brannoc-sunwheel-unbound': 0.5, 'bm-brannoc-the-final-bell': -1, 'bm-brannoc-the-tide-rises': -0.5,
+    'bm-brannoc-twin-wheels': 3, 'bm-brannoc-undertow-grip': 0.5, 'bm-brannoc-victory-leap': -1, 'bm-caelum-anchored-wake': 2,
+    'bm-caelum-ascendant': -1.5, 'bm-caelum-chorus-of-the-fallen': 0.5, 'bm-caelum-cinder-crown': -1, 'bm-caelum-constellation-fall': -1.5,
+    'bm-caelum-dark-ember': -2.5, 'bm-caelum-eightfold-wake': 1, 'bm-caelum-embers-of-heaven': -0.5, 'bm-caelum-glint': 2.5,
+    'bm-caelum-grace-withdrawn': -1.5, 'bm-caelum-horizon-cut': -1.5, 'bm-caelum-intro': -1.5, 'bm-caelum-nightfall': -1.5,
+    'bm-caelum-pinning-thrust': -1.5, 'bm-caelum-second-coil': -1.5, 'bm-caelum-starfall': -1, 'bm-caelum-the-sky-comes-down': -1.5,
+    'bm-caelum-the-starwyrm': -2.5, 'bm-corvane-comet-draw': 1.5, 'bm-corvane-comet-volley': 3, 'bm-corvane-draw-cut': 4.5,
+    'bm-corvane-false-stance': 2, 'bm-corvane-hollow-breath': 6, 'bm-corvane-hundredfold-parting': 0.5, 'bm-corvane-intro': -2,
+    'bm-corvane-last-light-of-the-pass': -1.5, 'bm-corvane-rising-crane': 1, 'bm-corvane-scabbard-sweep': 2.5, 'bm-corvane-the-vigil': 1,
+    'bm-corvane-whetted-edge': -0.5, 'bm-corvane-white-gale': 3.5, 'bm-grubnak-belly-flop': -1, 'bm-grubnak-butchers-charge': -0.5,
+    'bm-grubnak-chop-chop': 1, 'bm-grubnak-cleaver-toss': 1.5, 'bm-grubnak-clogged-drains': 3.5, 'bm-grubnak-dinner-rush': 3.5,
+    'bm-grubnak-double-chop': 1, 'bm-grubnak-family-meal': 0.5, 'bm-grubnak-flambe': -0.5, 'bm-grubnak-flare-up': -1.5,
+    'bm-grubnak-gorge': 2, 'bm-grubnak-grease-fire': 0.5, 'bm-grubnak-intro': -1, 'bm-grubnak-ladle-spin': 4,
+    'bm-grubnak-larder-toss': 2.5, 'bm-grubnak-lid-slam': -1.5, 'bm-grubnak-meat-toss': 1.5, 'bm-grubnak-mince': 1.5,
+    'bm-grubnak-mise-en-place': 4, 'bm-grubnak-order-up': -3, 'bm-grubnak-rolling-meatballs': 2.5, 'bm-grubnak-service': -1,
+    'bm-grubnak-simmer': 2, 'bm-grubnak-spice-rack': 0.5, 'bm-grubnak-stockpot': 1.5, 'bm-grubnak-tenderize': 1,
+    'bm-grubnak-whisk': 7, 'bm-hollowking-barrow-bells': -1.5, 'bm-hollowking-barrow-knell': 1.5, 'bm-hollowking-coffin-lids': 2,
+    'bm-hollowking-court-of-bones': 1.5, 'bm-hollowking-crown-of-graves': 3.5, 'bm-hollowking-dirge': 0.5, 'bm-hollowking-echo-knights': 4.5,
+    'bm-hollowking-funeral-march': 0.5, 'bm-hollowking-grave-cleave': 0.5, 'bm-hollowking-grave-marks': 4, 'bm-hollowking-grave-summons': 1.5,
+    'bm-hollowking-gravebind': 2.5, 'bm-hollowking-intro': 1.5, 'bm-hollowking-judgement': 0.5, 'bm-hollowking-lantern': 8.5,
+    'bm-hollowking-lights-out': 2, 'bm-hollowking-royal-audience': -1.5, 'bm-hollowking-royal-decree': -1, 'bm-hollowking-royal-doom': 1,
+    'bm-hollowking-royal-gaze': -1.5, 'bm-hollowking-sceptre-sweep': 3.5, 'bm-hollowking-sceptre-throw': 2, 'bm-hollowking-the-charge-sheet': 1.5,
+    'bm-hollowking-the-king-rises': -1, 'bm-hollowking-the-long-night': 1.5, 'bm-hollowking-writ-of-execution': 1.5, 'bm-hydra-acid-spray': 3,
+    'bm-hydra-flame-gout': 3, 'bm-hydra-intro': -3, 'bm-hydra-mire-spit': 2, 'bm-hydra-mothers-cry': -1.5,
+    'bm-hydra-mothers-heart': 0.5, 'bm-hydra-regrowth': 0.5, 'bm-hydra-rending-maul': 1.5, 'bm-hydra-rime-crown': 1,
+    'bm-hydra-searing': 2.5, 'bm-hydra-stonegaze': 0.5, 'bm-hydra-stormcall': 3, 'bm-hydra-the-drowning': -2.5,
+    'bm-hydra-tidal-dance': 3.5, 'bm-hydra-tidal-line': 2, 'bm-hydra-venom-bloom': 3, 'bm-morrowoak-barrow-lantern': 2,
+    'bm-morrowoak-brood-roots': 2.5, 'bm-morrowoak-deeper-roots': -1, 'bm-morrowoak-fourfold-bloom': 1, 'bm-morrowoak-frost-fist': -0.5,
+    'bm-morrowoak-hunger-seed': -1, 'bm-morrowoak-hungering-dark': -1, 'bm-morrowoak-hydra-head': 1.5, 'bm-morrowoak-inhale': -1.5,
+    'bm-morrowoak-intro': -1, 'bm-morrowoak-nothing-left': -3, 'bm-morrowoak-root-lash': -0.5, 'bm-morrowoak-sap-tide': -0.5,
+    'bm-morrowoak-saplings': 3, 'bm-morrowoak-storm-knot': 0.5, 'bm-morrowoak-the-grove-remade': -1, 'bm-morrowoak-the-swallowing': -3,
+    'bm-morrowoak-twin-seed': -0.5, 'bm-morrowoak-wyrm-wing': -1, 'bm-skitterra-acid-deluge': 0.5, 'bm-skitterra-brood': 4.5,
+    'bm-skitterra-ceiling-ambush': 1, 'bm-skitterra-chrysalis': 4, 'bm-skitterra-cocoon-drop': 1.5, 'bm-skitterra-egg-sacs': 1.5,
+    'bm-skitterra-eightfold-lunge': 6.5, 'bm-skitterra-fang-rush': 2, 'bm-skitterra-from-the-dark': 2, 'bm-skitterra-into-the-dark': 2,
+    'bm-skitterra-intro': -1, 'bm-skitterra-molt': 8, 'bm-skitterra-silk-lines': 3.5, 'bm-skitterra-silk-reel': 3.5,
+    'bm-skitterra-silk-wrap': 2.5, 'bm-skitterra-snare-weave': 2, 'bm-skitterra-spiderlings': 11, 'bm-skitterra-spin': 8,
+    'bm-skitterra-spinneret-volley': 16, 'bm-skitterra-strand-reel': 5.5, 'bm-skitterra-the-swarm': 11.5, 'bm-skitterra-the-web-gives-way': 0.5,
+    'bm-skitterra-tightening-web': 2, 'bm-skitterra-venom-drip': 4, 'bm-skitterra-venom-mist': -1.5, 'bm-skitterra-venom-spit': 4,
+    'bm-titan-avalanche': 0.5, 'bm-titan-breath-of-winter': 1.5, 'bm-titan-endless-winter': -1.5, 'bm-titan-frostbite': 2.5,
+    'bm-titan-glacial-stomp': -0.5, 'bm-titan-icefall': 2.5, 'bm-titan-intro': -3, 'bm-titan-rime-slam': 0.5,
+    'bm-titan-titans-grip': 2.5, 'bm-titan-titans-sweep': 2, 'bm-titan-twin-slam': 2, 'bm-titan-whiteout': 1.5,
+    'bm-titan-winters-grasp': 2.5, 'bm-titan-winters-howl': -1, 'bm-volkar-avalanche': 0.5, 'bm-volkar-ball-lightning': 1.5,
+    'bm-volkar-chain-lightning': 3, 'bm-volkar-distant-thunder': 4, 'bm-volkar-eye-closes': 2, 'bm-volkar-eye-of-the-storm': 4.5,
+    'bm-volkar-gale-slam': 4, 'bm-volkar-gathering-storm': 0.5, 'bm-volkar-grounding-rods': 3, 'bm-volkar-heavens-fall': -1,
+    'bm-volkar-intro': -1.5, 'bm-volkar-lightning-rods': 9, 'bm-volkar-polarity-minus': 3, 'bm-volkar-polarity-plus': 3,
+    'bm-volkar-polarity-surge': 1.5, 'bm-volkar-pulse': 4.5, 'bm-volkar-rod-strike': 1.5, 'bm-volkar-skyfall': -0.5,
+    'bm-volkar-squall-line': 3, 'bm-volkar-static-field': 5, 'bm-volkar-still-air': 3, 'bm-volkar-storm-walls': 2,
+    'bm-volkar-supercell': 2, 'bm-volkar-thunder-crash': 1, 'bm-volkar-thunderclap': 1.5, 'bm-volkar-thunderhead': 2.5,
+    'bm-volkar-titan-fist': -1.5, 'bm-wyrm-cinder-rain': 7.5, 'bm-wyrm-ember-breath': 3.5, 'bm-wyrm-intro': -4,
+    'bm-wyrm-take-flight': 3.5, 'bm-wyrm-twin-breath': 3.5, 'boss-death': -2.5, 'boss-enrage': -2.5,
+    'boss-impact-heavy': 0.5, 'boss-impact-light': 7, 'boss-intro': -1.5, 'buff-on': -0.5,
+    'chest-drop': 3.5, 'chest-open': -5, 'cleanse': -5, 'clear': -4.5,
+    'crit': 4, 'dash': 6.5, 'debuff-on': -1, 'dummy-hit': 3,
+    'emote-cheer': -6.5, 'emote-laugh': -2, 'emote-wave': 2, 'feast-chew': 6.5,
+    'feast-clink': -5.5, 'feast-serve': -3.5, 'feast-sting': -2.5, 'fish-bite': 3,
+    'fish-cast': 1.5, 'fish-catch': -3, 'fish-lost': -0.5, 'fish-reel': -0.5,
+    'gloom-hollow-off': -2, 'gloom-hollow-on': 2, 'heal-land': -2.5, 'hit-heavy': 5,
+    'hit-light': 9, 'hm-bark-ash': -0.5, 'hm-bark-ghost': 3.5, 'hm-bark-greyfang': 0.5,
+    'hm-bark-rust': 0.5, 'hm-bite': 8, 'hm-bite-big': 2.5, 'hm-bringdown': -3,
+    'hm-calloff': 1.5, 'hm-down': 3, 'hm-hamstring': 1, 'hm-horn': -6,
+    'hm-howl': -3.5, 'hm-longchase': 1.5, 'hm-mount': -1, 'hm-quarry': 6.5,
+    'hm-relay': 4, 'hm-rend': 0.5, 'hm-ridedown': 2.5, 'hm-snap': 7,
+    'hm-up': 2.5, 'hm-whistle-hold': -7.5, 'hm-whistle-pounce': -7, 'ken-blaze': 0.5,
+    'ken-break': -0.5, 'ken-deathblow': -2, 'ken-good': 8, 'ken-iai': 2.5,
+    'ken-miss': 7.5, 'ken-off': 4.5, 'ken-pass': 6.5, 'ken-perfect': 2,
+    'ken-pommel': 6.5, 'ken-redirect': 1, 'lamp-drop': 11, 'lamp-ember': 14.5,
+    'lamp-end': 6.5, 'lamp-eternal': 0.5, 'lamp-pilgrim': 4.5, 'lamp-pillar': 3,
+    'lamp-snuff': 5.5, 'lamp-sparks': 5, 'lb-fire': -1.5, 'lb-ready': -5,
+    'loot-take': -2, 'low-hp': -4.5, 'npc-talk': -6, 'ping': 2.5,
+    'pip-up': 12, 'portal-enter': -3, 'portal-hum': -22.5, 'pull-count': 0.5,
+    'pull-count-last': -3.5, 'pull-go': -2, 'reaper-blink': 5.5, 'reaper-danse': 5,
+    'reaper-finish1': 4.5, 'reaper-finish2': -0.5, 'reaper-finish3': 1, 'reaper-finish4': -2,
+    'reaper-frenzy': -2.5, 'reaper-gate-bloom': -2.5, 'reaper-gate-close': -1, 'reaper-gate-open': 3.5,
+    'reaper-gate-tone': 8, 'reaper-gatebreaker': 1.5, 'reaper-harvest': -1, 'reaper-moon': 1.5,
+    'reaper-pop-bind': 4.5, 'reaper-pop-death': 3, 'reaper-pop-drain': 4, 'reaper-pop-thread': 9,
+    'reaper-rune': 12.5, 'reaper-rune-emp': 6, 'reaper-slack': 14.5, 'reaper-slash': 2.5,
+    'reaper-star-collapse': -2, 'reaper-star-open': 0.5, 'reaper-swing': 12, 'reaper-veil': -0.5,
+    'revive': -2, 'shield-break': 5, 'shield-up': -4, 'stack-1': 8,
+    'stack-2': -2.5, 'step-grass': 8, 'step-stone': 8.5, 'step-wood': 1.5,
+    'story-page': 3.5, 'tg-aoe': 1.5, 'tg-buster': 1, 'tg-charge': 0.5,
+    'tg-gaze': 0.5, 'tg-knockback': 2.5, 'tg-raidwide': -0.5, 'tg-spread': 5.5,
+    'tg-stack': 1.5, 'tide-bell': 1, 'tide-crash': -1.5, 'tide-crest': 4.5,
+    'tide-gull': 9.5, 'tide-pop': 1.5, 'tide-slack': 10.5, 'tide-wave': 2.5,
+    'title-sting': -3, 'ui-bounty': 0.5, 'ui-buy': -6, 'ui-click': 2,
+    'ui-close': -0.5, 'ui-equip': -2.5, 'ui-error': -3, 'ui-feat': -7,
+    'ui-gold': -4, 'ui-hover': 13, 'ui-secret': -6, 'ult-alembist': 0.5,
+    'ult-bastion': 1.5, 'ult-bloodreaver': 1, 'ult-driftblade': 6.5, 'ult-fire': -1.5,
+    'ult-gloomsworn': -1, 'ult-gorgemaw': 1, 'ult-grovekeeper': 2.5, 'ult-houndmaster': -3.5,
+    'ult-kenseier': -1.5, 'ult-lanternkeeper': -2, 'ult-marionettist': 0.5, 'ult-oathbroker': -1,
+    'ult-pyromancer': -1, 'ult-ranger': 3, 'ult-ready': -4, 'ult-runeguard': -1,
+    'ult-shadowblade': 4, 'ult-thermist': -1, 'ult-threadweaver': -1, 'ult-tidecaller': -2,
+    'waymark': 11.5, 'wipe': -2,
   };
   // @@TRIM-END
 
@@ -3379,6 +3396,931 @@
     S.rumble({ dur: 5, f: 48, peak: 0.5, a: 0.8 });
     S.pad({ notes: [mf(40), mf(47), mf(52)], dur: 4.4, det: 12, type: 'saw', lpEnv: [200, 1600, 400, 3], peak: 0.2 });
     [3.0, 3.4, 3.8].forEach(at => S.bell({ at, f: mf(48), dur: 3, peak: 0.2, lp: 2500 }));
+  });
+
+  // ---------------------------------------------------------------------------------------------- Corvane (the Unburied Blade)
+  // steel on a cold night: a slow scrape of a blade leaving the scabbard, ice cracking, wind, one bell-like ring as the edge fills,
+  // the long hiss of a dash across snow. No voice.
+  def('bm-corvane-intro', 'sting', S => {
+    S.space('hall', 0.6);
+    S.noise({ color: 'pink', bp: 500, bp1: 1500, q: 0.8, dur: 3.2, a: 1.2, pts: [[1.4, 0.7], [3.2, 0]], peak: 0.2 });
+    S.scrape({ at: 0.9, f: 3400, q: 2.2, dur: 1.5, rate: 26, peak: 0.16, pts: [[0.5, 1], [1.5, 0]] });
+    S.metal({ at: 2.4, set: 'bar', f: 1480, dur: 3.0, peak: 0.16, strike: 0.4 });
+    S.bell({ at: 2.45, f: mf(88), dur: 3.2, peak: 0.06, lp: 8000 });
+    S.rumble({ dur: 3.2, f: 44, peak: 0.25, a: 0.6 });
+  });
+  def('bm-corvane-white-gale', 'bm', S => {
+    S.space('hall', 0.5);
+    S.noise({ bp: 500, bp1: 2600, q: 1.1, dur: 2.0, a: 0.5, pts: [[0.8, 0.8], [1.2, 1], [2.0, 0]], peak: 0.32 });
+    S.crackle({ at: 0.5, dens: 3, f: 6000, dur: 1.6, pts: [[0.2, 1], [1.6, 0]], peak: 0.12 });
+    S.tone({ f: 1200, f1: 760, dur: 1.8, a: 0.4, peak: 0.04 });
+    S.rumble({ dur: 2.0, f: 52, peak: 0.28, a: 0.3 });
+  });
+  def('bm-corvane-sundering-cut', 'bm', S => {
+    S.scrape({ f: 3000, q: 2, dur: 0.35, rate: 30, peak: 0.12, pts: [[0.05, 1], [0.35, 0]] });
+    S.whoosh({ at: 0.3, f: 300, f1: 2400, dur: 0.35, peakAt: 0.85, peak: 0.34 });
+    S.metal({ at: 0.62, set: 'plate', f: 480, dur: 0.9, peak: 0.28, strike: 0.7 });
+    S.thud({ at: 0.62, f: 66, f1: 28, dur: 0.8, drive: 3, peak: 0.7 });
+    S.glass({ at: 0.64, f: 2700, dur: 0.8, peak: 0.08 });
+  });
+  def('bm-corvane-cracked-guard', 'bm', S => {
+    S.glass({ f: 2300, dur: 0.5, peak: 0.1 });
+    S.crackle({ at: 0.05, dens: 5, f: 4800, dur: 0.7, pts: [[0.02, 1], [0.7, 0]], peak: 0.24 });
+    S.whoosh({ at: 0.45, f: 260, f1: 2000, dur: 0.3, peakAt: 0.85, peak: 0.28 });
+    S.metal({ at: 0.74, set: 'plate', f: 380, dur: 1.1, peak: 0.34, strike: 0.8 });
+    S.thud({ at: 0.74, f: 56, f1: 24, dur: 1.0, drive: 3.5, peak: 0.8 });
+    S.crack({ at: 0.74, peak: 0.3, dur: 0.2 });
+    S.glass({ at: 0.78, f: 1700, dur: 1.0, peak: 0.12 });
+  });
+  def('bm-corvane-draw-cut', 'bm', S => {
+    S.scrape({ f: 3800, q: 2.4, dur: 0.4, rate: 22, peak: 0.16, pts: [[0.05, 0.7], [0.3, 1], [0.4, 0]] });
+    S.metal({ at: 0.38, set: 'bar', f: 2900, dur: 0.5, peak: 0.12 });
+    S.whoosh({ at: 0.45, f: 700, f1: 4200, dur: 0.35, peakAt: 0.9, peak: 0.3 });
+    S.noise({ at: 0.55, bp: 6000, q: 1.4, dur: 0.18, a: 0.002, pts: [[0.01, 1], [0.18, 0]], peak: 0.14 });
+  });
+  def('bm-corvane-scabbard-sweep', 'bm', S => {
+    S.wood({ f: 190, dur: 0.14, peak: 0.28 });
+    S.whoosh({ at: 0.1, f: 120, f1: 640, dur: 0.75, peakAt: 0.72, peak: 0.42 });
+    S.noise({ at: 0.15, bp: 500, bp1: 900, q: 1.4, dur: 0.6, a: 0.2, pts: [[0.3, 1], [0.6, 0]], peak: 0.12 });
+    S.thud({ at: 0.82, f: 80, f1: 38, dur: 0.5, drive: 2.5, peak: 0.45 });
+    S.wood({ at: 0.82, f: 150, dur: 0.12, peak: 0.2 });
+  });
+  def('bm-corvane-still-water', 'bm', S => {
+    S.space('hall', 0.55);
+    S.glass({ f: mf(88), dur: 2.4, peak: 0.12 });
+    S.glass({ at: 0.12, f: mf(95), dur: 2.0, peak: 0.08 });
+    S.partials({ at: 0.04, set: 'glass', f: mf(76), dur: 2.8, peak: 0.1, am: [3, 0.3] });
+    S.noise({ bp: 4200, q: 4, dur: 2.2, a: 1.0, pts: [[1.2, 0.6], [2.2, 0]], peak: 0.05 });
+    S.crackle({ at: 1.1, dens: 1, f: 6400, dur: 1.2, pts: [[0.1, 1], [1.2, 0]], peak: 0.07 });
+  });
+  def('bm-corvane-hollow-breath', 'bm', S => {
+    S.space('hall', 0.5);
+    S.noise({ bp: 900, bp1: 350, q: 1.5, dur: 1.4, a: 0.5, pts: [[0.6, 1], [1.4, 0]], peak: 0.26 });
+    S.tone({ f: 640, f1: 420, dur: 1.2, a: 0.3, peak: 0.05 });
+    S.glass({ at: 0.7, f: 1580, dur: 1.0, peak: 0.09 });
+    S.crackle({ at: 0.8, dens: 2, f: 5500, dur: 0.7, pts: [[0.05, 1], [0.7, 0]], peak: 0.1 });
+  });
+  def('bm-corvane-cold-sheathe', 'bm', S => {
+    S.space('hall', 0.45);
+    S.scrape({ f: 2800, q: 2, dur: 0.9, rate: 20, peak: 0.14, pts: [[0.1, 0.4], [0.8, 1], [0.9, 0]] });
+    S.metal({ at: 0.92, set: 'plate', f: 540, dur: 0.7, peak: 0.26, strike: 0.7 });
+    S.thud({ at: 0.92, f: 58, f1: 26, dur: 1.0, drive: 3, peak: 0.7 });
+    S.bell({ at: 0.95, f: mf(84), dur: 2.8, peak: 0.1, lp: 7000 });
+    S.noise({ at: 1.0, bp: 3000, q: 2, dur: 1.0, a: 0.1, pts: [[0.05, 1], [1.0, 0]], peak: 0.07 });
+  });
+  def('bm-corvane-rising-crane', 'bm', S => {
+    S.space('hall', 0.4);
+    S.scrape({ f: 3300, q: 2, dur: 0.6, rate: 24, peak: 0.12, pts: [[0.1, 0.5], [0.6, 1], [0.7, 0]] });
+    S.whoosh({ at: 0.4, f: 200, f1: 1600, dur: 0.6, peakAt: 0.85, peak: 0.4 });
+    S.metal({ at: 0.98, set: 'bar', f: 1700, dur: 2.0, peak: 0.12, strike: 0.5 });
+    S.whoosh({ at: 1.4, f: 240, f1: 2000, dur: 0.5, peakAt: 0.85, peak: 0.36 });
+    S.metal({ at: 1.88, set: 'bar', f: 2000, dur: 1.8, peak: 0.1, strike: 0.5 });
+    S.glass({ at: 1.9, f: 2900, dur: 0.7, peak: 0.06 });
+  });
+  def('bm-corvane-comet-draw', 'bm', S => {
+    S.space('hall', 0.45);
+    S.bell({ f: mf(81), dur: 1.8, peak: 0.12, lp: 8000 });
+    S.noise({ at: 0.1, bp: 2500, bp1: 5000, q: 2.4, dur: 0.6, a: 0.5, pts: [[0.5, 1], [0.6, 0]], peak: 0.1 });
+    S.whoosh({ at: 0.65, f: 400, f1: 5200, dur: 0.9, peakAt: 0.2, peak: 0.42 });
+    S.noise({ at: 0.65, bp: 3000, bp1: 1200, q: 0.9, dur: 1.3, a: 0.02, pts: [[0.05, 1], [1.3, 0]], peak: 0.22 });
+    S.thud({ at: 1.4, f: 70, f1: 30, dur: 0.7, drive: 2.5, peak: 0.45 });
+  });
+  def('bm-corvane-comet-volley', 'bm', S => {
+    S.space('hall', 0.45);
+    S.bell({ f: mf(81), dur: 1.4, peak: 0.1, lp: 8000 });
+    [0.35, 1.3, 2.25].forEach((at, i) => {
+      S.whoosh({ at, f: 400 + i * 120, f1: 5400, dur: 0.8, peakAt: 0.2, peak: 0.36 });
+      S.noise({ at, bp: 3000, bp1: 1200, q: 0.9, dur: 1.0, a: 0.02, pts: [[0.05, 1], [1.0, 0]], peak: 0.17 });
+      S.thud({ at: at + 0.7, f: 70, f1: 30, dur: 0.5, drive: 2.5, peak: 0.34 });
+      S.bell({ at: at + 0.7, f: mf(86 + i * 3), dur: 1.2, peak: 0.07, lp: 8000 });
+    });
+  });
+  def('bm-corvane-hundredfold-parting', 'bm', S => {
+    S.space('hall', 0.55);
+    S.bell({ f: mf(79), dur: 2.2, peak: 0.12, lp: 8000 });
+    [0.35, 0.8, 1.2, 1.55, 1.85, 2.1].forEach((at, i) => {
+      S.noise({ at, bp: 2400 + i * 500, bp1: 700, q: 1.3, dur: 0.22, a: 0.004, pts: [[0.01, 1], [0.22, 0]], peak: 0.2 });
+      S.glass({ at: at + 0.03, f: 2200 + i * 380, dur: 0.6, peak: 0.07 });
+    });
+    S.whoosh({ at: 2.3, f: 300, f1: 3600, dur: 0.45, peakAt: 0.85, peak: 0.36 });
+    S.metal({ at: 2.75, set: 'bar', f: 1900, dur: 2.4, peak: 0.14, strike: 0.6 });
+    S.thud({ at: 2.75, f: 62, f1: 28, dur: 0.8, drive: 2.8, peak: 0.5 });
+  });
+  def('bm-corvane-false-stance', 'bm', S => {
+    S.space('hall', 0.4);
+    S.metal({ f: 1500, dur: 1.4, peak: 0.1, strike: 0.5 });
+    S.scrape({ at: 0.35, f: 3000, q: 2, dur: 0.3, rate: 36, peak: 0.12, pts: [[0.03, 1], [0.3, 0]] });
+    S.metal({ at: 0.7, set: 'bar', f: 1780, dur: 1.6, peak: 0.11, strike: 0.5 });
+    S.glass({ at: 0.72, f: 2500, dur: 0.6, peak: 0.07 });
+    S.tone({ at: 0.35, f: 1800, f1: 700, dur: 0.5, peak: 0.035 });
+  });
+  def('bm-corvane-whetted-edge', 'bm', S => {
+    S.space('hall', 0.5);
+    S.noise({ bp: 700, bp1: 2400, q: 1.0, dur: 2.0, a: 0.7, pts: [[1.2, 0.8], [2.0, 0]], peak: 0.14 });
+    S.scrape({ f: 3600, q: 2.2, dur: 1.2, rate: 18, peak: 0.07, pts: [[0.8, 1], [1.2, 0]] });
+    [0, 0.45, 0.85, 1.2].forEach((at, i) => S.glass({ at: at + 0.1, f: mf(81 + i * 3), dur: 1.0, peak: 0.05 + i * 0.012 }));
+    S.metal({ at: 1.25, set: 'bar', f: 1760, dur: 1.8, peak: 0.16, strike: 0.4 });
+    S.bell({ at: 1.3, f: mf(93), dur: 2.0, peak: 0.07, lp: 8000 });
+  });
+  def('bm-corvane-overwhet', 'bm', S => {
+    S.space('hall', 0.5);
+    S.noise({ bp: 900, bp1: 3200, q: 1.2, dur: 1.9, a: 0.6, pts: [[1.1, 0.9], [1.9, 0]], peak: 0.15 });
+    S.scrape({ f: 4200, q: 2.6, dur: 1.4, rate: 30, peak: 0.1, pts: [[1.0, 1], [1.4, 0]] });
+    [0, 0.35, 0.65, 0.9, 1.1].forEach((at, i) => S.glass({ at: at + 0.05, f: mf(84 + i * 3), dur: 0.7, peak: 0.05 + i * 0.012, am: [9, 0.4] }));
+    S.metal({ at: 1.2, set: 'bar', f: 2100, dur: 1.4, peak: 0.14, strike: 0.5, spread: 40 });
+    S.tone({ at: 1.2, f: 3300, f1: 2600, dur: 0.8, peak: 0.035 });
+    S.crack({ at: 1.55, peak: 0.28, dur: 0.2 });
+    S.crackle({ at: 1.55, dens: 4, f: 5600, dur: 0.7, pts: [[0.02, 1], [0.7, 0]], peak: 0.16 });
+    S.glass({ at: 1.58, f: 1900, dur: 1.0, peak: 0.1 });
+  });
+  def('bm-corvane-returning-parting', 'bm', S => {
+    S.space('hall', 0.55);
+    S.bell({ f: mf(72), dur: 2.2, peak: 0.12, lp: 6000 });
+    [0.3, 0.65, 0.95, 1.2, 1.45, 1.7].forEach((at, i) => {
+      S.noise({ at, bp: 5200 - i * 500, bp1: 600, q: 1.3, dur: 0.22, a: 0.004, pts: [[0.01, 1], [0.22, 0]], peak: 0.2 });
+      S.glass({ at: at + 0.03, f: 3700 - i * 330, dur: 0.6, peak: 0.07 });
+    });
+    S.whoosh({ at: 1.9, f: 3200, f1: 260, dur: 0.5, peakAt: 0.15, peak: 0.36 });
+    S.metal({ at: 2.3, set: 'bar', f: 1450, dur: 2.4, peak: 0.14, strike: 0.6 });
+    S.thud({ at: 2.3, f: 58, f1: 26, dur: 0.8, drive: 2.8, peak: 0.5 });
+    S.crackle({ at: 2.3, dens: 2, f: 5000, dur: 0.8, pts: [[0.02, 1], [0.8, 0]], peak: 0.1 });
+  });
+  def('bm-corvane-the-vigil', 'bm', S => {
+    S.space('hall', 0.7);
+    S.bell({ f: mf(45), dur: 4.6, peak: 0.26, lp: 2600 });
+    S.bell({ at: 0.9, f: mf(52), dur: 3.8, peak: 0.1, lp: 3200 });
+    S.thud({ at: 0.15, f: 56, f1: 30, dur: 0.6, drive: 2, peak: 0.38 });
+    S.noise({ color: 'pink', bp: 400, bp1: 1100, q: 0.9, dur: 3.6, a: 1.2, pts: [[1.6, 0.7], [3.6, 0]], peak: 0.15 });
+    S.glass({ at: 1.8, f: mf(88), dur: 2.0, peak: 0.05 });
+  });
+  def('bm-corvane-last-light-of-the-pass', 'bm', S => {
+    S.space('hall', 0.7);
+    S.bell({ f: mf(40), dur: 5.4, peak: 0.34, lp: 2400 });
+    S.noise({ bp: 400, bp1: 3600, q: 0.9, dur: 4.2, a: 1.6, pts: [[2.8, 1], [4.2, 0]], peak: 0.32 });
+    S.rumble({ dur: 4.4, f: 46, peak: 0.45, a: 1.0 });
+    S.scrape({ at: 1.6, f: 3600, q: 2.2, dur: 1.6, rate: 22, peak: 0.12, pts: [[1.0, 1], [1.6, 0]] });
+    S.metal({ at: 3.3, set: 'bar', f: 1480, dur: 3.0, peak: 0.2, strike: 0.5 });
+    S.whoosh({ at: 3.2, f: 200, f1: 3400, dur: 0.6, peakAt: 0.9, peak: 0.34 });
+    S.thud({ at: 3.85, f: 52, f1: 24, dur: 1.2, drive: 3.4, peak: 0.8 });
+    S.crackle({ at: 3.85, dens: 4, f: 5600, dur: 1.2, pts: [[0.02, 1], [1.2, 0]], peak: 0.22 });
+  });
+
+  // ---------------------------------------------------------------------------------------------- Brannoc (the Undefeated)
+  // bronze ringing off stone: the shield's whirr and a bright clang at every bounce, a ghost crowd's roar, wet sand and water;
+  // after the Tide Rises the deep sea: heavy surf, groaning metal, a huge slow bell. Laughs and roars are vowel textures only.
+  const brWhirr = (S, at, dur, f, f1, pan, pk) => {
+    S.noise({ at, bp: f, bp1: f1, q: 3, dur, a: 0.05, am: [34, 0.7, 'square'], grain: 0.3, pts: [[dur * 0.5, 1], [dur, 0.7]], peak: pk, pan });
+    S.tone({ at, type: 'saw', f: f * 0.18, f1: f1 * 0.14, dur, a: 0.05, lp: 1400, peak: pk * 0.2, am: [28, 0.6], pan });
+  };
+  const brClang = (S, at, f, pk, pan) => {
+    S.metal({ at, set: 'plate', f, dur: 0.9, peak: pk, strike: 0.8, pan });
+    S.metal({ at: at + 0.01, set: 'bar', f: f * 3.1, dur: 0.5, peak: pk * 0.35, click: 0, pan });
+  };
+  const brLaugh = (S, at, pk, f, n) => {
+    for (let i = 0; i < (n || 4); i++) S.voice({ at: at + i * 0.17, f: (f || 105) * (1 - i * 0.03), f1: (f || 105) * (0.84 - i * 0.03), dur: 0.14, vowel: 'a', vowel1: 'o', breath: 0.7, lp: 1700, peak: pk * (1 - i * 0.1) });
+  };
+  const brCrowd = (S, at, dur, pk) => {
+    S.noise({ at, color: 'pink', bp: 350, bp1: 1400, q: 0.7, dur, a: dur * 0.4, pts: [[dur * 0.6, 1], [dur, 0]], peak: pk });
+    [0, 1, 2, 3].forEach(i => S.voice({ at: at + i * 0.07, f: 98 + i * 17, f1: 118 + i * 14, dur: dur * 0.9, vowel: i % 2 ? 'o' : 'a', vowel1: 'u', breath: 1.4, lp: 1600, peak: pk * 0.3, a: dur * 0.35, pan: (i - 1.5) * 0.5 }));
+  };
+  def('bm-brannoc-intro', 'sting', S => {
+    S.space('hall', 0.6);
+    brCrowd(S, 0, 2.6, 0.2);
+    S.drum({ at: 1.2, f: 72, dur: 0.8, peak: 0.5 });
+    brClang(S, 1.4, 520, 0.24);
+    brClang(S, 1.62, 700, 0.2);
+    brLaugh(S, 2.0, 0.3, 100, 4);
+    S.metal({ at: 2.7, set: 'plate', f: 440, dur: 1.6, peak: 0.2, strike: 0.5 });
+    S.rumble({ dur: 3.2, f: 44, peak: 0.2, a: 0.6 });
+  });
+  def('bm-brannoc-sunwheel', 'bm', S => {
+    S.space('hall', 0.4);
+    S.metal({ f: 620, dur: 0.4, peak: 0.16, strike: 0.9 });
+    S.whoosh({ at: 0.05, f: 200, f1: 1600, dur: 0.4, peakAt: 0.9, peak: 0.3 });
+    brWhirr(S, 0.35, 1.5, 1800, 3200, 0, 0.36);
+    [0.75, 1.3, 1.8].forEach((at, i) => brClang(S, at, 900 + i * 110, 0.3 - i * 0.04));
+    S.glass({ at: 0.78, f: 3300, dur: 0.6, peak: 0.06 });
+  });
+  def('bm-brannoc-twin-wheels', 'bm', S => {
+    S.space('hall', 0.4);
+    S.whoosh({ f: 200, f1: 1800, dur: 0.4, peakAt: 0.9, peak: 0.3 });
+    brWhirr(S, 0.3, 1.5, 1500, 2800, -0.7, 0.3);
+    brWhirr(S, 0.5, 1.5, 2100, 3600, 0.7, 0.3);
+    [[0.75, 820, -0.7], [1.0, 1060, 0.7], [1.35, 880, -0.7], [1.6, 1130, 0.7], [1.95, 940, -0.5], [2.1, 1200, 0.5]].forEach(([at, f, p], i) => brClang(S, at, f, 0.28 - i * 0.02, p));
+  });
+  def('bm-brannoc-riposte', 'bm', S => {
+    S.space('hall', 0.35);
+    brClang(S, 0, 760, 0.3);
+    S.scrape({ at: 0.04, f: 3600, q: 2.4, dur: 0.25, rate: 40, peak: 0.1, pts: [[0.03, 1], [0.25, 0]] });
+    S.whoosh({ at: 0.32, f: 3400, f1: 300, dur: 0.22, peakAt: 0.2, peak: 0.34 });
+    brWhirr(S, 0.5, 0.9, 2600, 3400, 0, 0.14);
+    brClang(S, 0.62, 1180, 0.26);
+    S.glass({ at: 0.64, f: 3000, dur: 0.5, peak: 0.07 });
+  });
+  def('bm-brannoc-victory-leap', 'bm', S => {
+    S.space('hall', 0.5);
+    S.voice({ f: 110, f1: 190, dur: 0.35, vowel: 'o', vowel1: 'a', breath: 0.8, lp: 1800, peak: 0.28 });
+    S.thud({ at: 0.05, f: 90, f1: 50, dur: 0.18, peak: 0.35 });
+    S.whoosh({ at: 0.15, f: 200, f1: 2200, dur: 0.7, peakAt: 0.9, peak: 0.32 });
+    brCrowd(S, 0.5, 1.4, 0.16);
+    S.whoosh({ at: 1.1, f: 2400, f1: 160, dur: 0.6, peakAt: 0.2, peak: 0.34 });
+    S.thud({ at: 1.75, f: 62, f1: 26, dur: 1.1, drive: 3.2, peak: 0.85 });
+    S.noise({ at: 1.75, color: 'pink', bp: 900, bp1: 300, q: 0.8, dur: 1.0, a: 0.01, pts: [[0.05, 1], [1.0, 0]], peak: 0.26 });
+    S.splat({ at: 1.78, dur: 0.4, peak: 0.28 });
+    brClang(S, 1.77, 420, 0.18);
+    brLaugh(S, 2.25, 0.2, 100, 3);
+  });
+  def('bm-brannoc-hammer-heel', 'bm', S => {
+    S.space('room', 0.3);
+    S.whoosh({ f: 120, f1: 800, dur: 0.4, peakAt: 0.85, peak: 0.36 });
+    S.thud({ at: 0.42, f: 74, f1: 34, dur: 0.6, drive: 2.6, peak: 0.6 });
+    S.noise({ at: 0.42, color: 'pink', bp: 800, bp1: 300, q: 0.9, dur: 0.4, a: 0.004, pts: [[0.03, 1], [0.4, 0]], peak: 0.2 });
+    S.whoosh({ at: 0.7, f: 100, f1: 600, dur: 0.35, peakAt: 0.85, peak: 0.34 });
+    S.thud({ at: 1.04, f: 58, f1: 24, dur: 1.1, drive: 3.4, peak: 0.9 });
+    S.metal({ at: 1.04, set: 'plate', f: 360, dur: 1.2, peak: 0.28, strike: 0.8 });
+    S.splat({ at: 1.06, dur: 0.5, peak: 0.3 });
+    S.crack({ at: 1.04, peak: 0.3, dur: 0.2 });
+  });
+  def('bm-brannoc-roar-of-the-stands', 'bm', S => {
+    S.space('hall', 0.75);
+    brCrowd(S, 0, 2.6, 0.4);
+    [0, 1, 2, 3, 4].forEach(i => S.voice({ at: 0.15 + i * 0.05, f: 130 + i * 31, f1: 210 + i * 25, dur: 2.0, vowel: 'a', vowel1: 'o', breath: 1.8, lp: 2400, peak: 0.1, a: 0.8, pan: (i - 2) * 0.4 }));
+    [0.9, 1.3, 1.7, 2.1].forEach((at, i) => { S.drum({ at, f: 68, dur: 0.5, peak: 0.45 }); S.wood({ at: at + 0.02, f: 1200 + i * 90, dur: 0.05, peak: 0.12 }); });
+    S.rumble({ dur: 2.8, f: 50, peak: 0.4, a: 0.5 });
+    S.noise({ at: 0.6, bp: 1800, bp1: 3500, q: 0.8, dur: 2.0, a: 0.8, pts: [[1.0, 1], [2.0, 0]], peak: 0.12 });
+    S.thud({ at: 2.3, f: 60, f1: 26, dur: 0.9, drive: 3, peak: 0.7 });
+  });
+  def('bm-brannoc-sand-furrow', 'bm', S => {
+    S.space('room', 0.35);
+    S.metal({ f: 880, dur: 0.6, peak: 0.16, strike: 0.9 });
+    S.thud({ at: 0.03, f: 70, f1: 36, dur: 0.4, drive: 2, peak: 0.5 });
+    S.noise({ at: 0.1, color: 'pink', bp: 500, bp1: 1900, q: 0.9, dur: 1.3, a: 0.12, pts: [[0.4, 1], [1.3, 0]], peak: 0.3 });
+    S.scrape({ at: 0.1, f: 1100, q: 1.2, dur: 1.2, rate: 17, peak: 0.12, pts: [[0.3, 1], [1.2, 0]] });
+    S.rumble({ at: 0.1, dur: 1.4, f: 46, peak: 0.35, a: 0.2 });
+    S.whoosh({ at: 0.4, color: 'brown', f: 90, f1: 500, dur: 0.9, peakAt: 0.35, peak: 0.24 });
+    S.noise({ at: 1.2, bp: 3800, q: 1, dur: 0.7, a: 0.05, grain: 0.7, pts: [[0.1, 1], [0.7, 0]], peak: 0.1 });
+    S.bubbles({ at: 1.0, n: 4, f: 300, f1: 900, spread: 0.4, size: 0.035, peak: 0.08 });
+  });
+  def('bm-brannoc-the-tide-rises', 'bm', S => {
+    S.space('hall', 0.75);
+    S.noise({ color: 'brown', bp: 150, bp1: 1100, q: 0.8, dur: 5.2, a: 2.2, pts: [[3.6, 1], [5.2, 0]], peak: 0.42 });
+    S.noise({ color: 'pink', hp: 2600, lp: 9000, grain: 0.8, grainRate: 1.2, dur: 4.6, a: 2.0, pts: [[3.2, 1], [4.6, 0]], peak: 0.12 });
+    S.rumble({ dur: 5.4, f: 42, peak: 0.55, a: 1.0 });
+    [0.5, 1.4, 2.5, 3.5].forEach((at, i) => { S.crack({ at, peak: 0.34, dur: 0.22 }); S.metal({ at, set: 'stone', f: 140 - i * 12, dur: 1.2, peak: 0.24, strike: 0.9 }); S.thud({ at, f: 60, f1: 28, dur: 0.7, drive: 3, peak: 0.55 }); });
+    S.creak({ at: 0.8, dur: 3.0, f: 20, f1: 10, res: [400, 850, 1500], q: 11, peak: 0.18 });
+    S.bubbles({ at: 1.5, n: 18, f: 200, f1: 1100, spread: 3, bias: 0.8, peak: 0.12 });
+    S.bell({ at: 3.8, f: mf(38), dur: 3.6, peak: 0.16, lp: 1800 });
+    S.whoosh({ at: 3.3, color: 'brown', f: 100, f1: 1400, dur: 1.2, peakAt: 0.85, peak: 0.4 });
+  });
+  def('bm-brannoc-fist-slam', 'bm', S => {
+    S.space('hall', 0.6);
+    S.whoosh({ color: 'brown', f: 70, f1: 500, dur: 0.7, peakAt: 0.9, peak: 0.4 });
+    S.creak({ dur: 0.7, f: 20, f1: 10, res: [450, 950], q: 12, peak: 0.16 });
+    S.thud({ at: 0.75, f: 48, f1: 20, dur: 1.5, drive: 4, peak: 1 });
+    S.metal({ at: 0.75, set: 'plate', f: 250, dur: 1.8, peak: 0.34, strike: 0.9 });
+    S.crack({ at: 0.75, peak: 0.34, dur: 0.22 });
+    S.noise({ at: 0.78, color: 'brown', bp: 1200, bp1: 200, q: 0.8, dur: 1.4, a: 0.01, pts: [[0.05, 1], [1.4, 0]], peak: 0.34 });
+    S.splat({ at: 0.8, dur: 0.6, peak: 0.34 });
+    S.rumble({ at: 0.75, dur: 1.8, f: 38, peak: 0.4, a: 0.1 });
+  });
+  def('bm-brannoc-breaker', 'bm', S => {
+    S.space('hall', 0.65);
+    S.thud({ f: 56, f1: 28, dur: 0.7, drive: 3, peak: 0.6 });
+    S.metal({ set: 'plate', f: 270, dur: 1.4, peak: 0.24, strike: 0.9 });
+    S.noise({ at: 0.3, color: 'brown', bp: 120, bp1: 1500, q: 0.8, dur: 2.2, a: 1.4, pts: [[1.5, 1], [2.2, 0.8]], peak: 0.42 });
+    S.noise({ at: 0.5, color: 'pink', hp: 2400, lp: 9000, grain: 0.8, dur: 2.0, a: 1.2, pts: [[1.5, 1], [2.0, 0]], peak: 0.14 });
+    S.whoosh({ at: 1.2, color: 'brown', f: 150, f1: 1800, dur: 0.9, peakAt: 0.8, peak: 0.4 });
+    S.thud({ at: 2.2, f: 52, f1: 24, dur: 1.2, drive: 3.2, peak: 0.7 });
+    S.splat({ at: 2.2, dur: 0.6, peak: 0.3 });
+    S.noise({ at: 2.4, bp: 1800, bp1: 400, q: 0.7, dur: 1.6, a: 0.05, pts: [[0.1, 1], [1.6, 0]], peak: 0.2 });
+    S.bubbles({ at: 2.4, n: 12, f: 300, f1: 1400, spread: 1.0, bias: 0.8, peak: 0.1 });
+  });
+  const brGripOne = (S, at, pan) => {
+    S.noise({ at, color: 'brown', bp: 1400, bp1: 200, q: 0.9, dur: 0.7, a: 0.05, pts: [[0.1, 1], [0.7, 0]], peak: 0.28, pan });
+    S.bubbles({ at, n: 8, f: 1400, f1: 300, spread: 0.5, size: 0.035, peak: 0.12, pan });
+    S.creak({ at: at + 0.35, dur: 0.6, f: 24, f1: 11, res: [380, 800, 1400], q: 11, peak: 0.18, pan });
+    S.splat({ at: at + 0.65, dur: 0.4, peak: 0.3, pan });
+    S.thud({ at: at + 0.65, f: 66, f1: 30, dur: 0.7, drive: 2.6, peak: 0.55, pan });
+    S.metal({ at: at + 0.7, set: 'bar', f: 210, dur: 1.0, peak: 0.12, strike: 0.7, pan });
+  };
+  def('bm-brannoc-undertow-grip', 'bm', S => {
+    S.space('hall', 0.55);
+    brGripOne(S, 0, 0);
+    S.rumble({ at: 0.6, dur: 1.2, f: 40, peak: 0.3, a: 0.1 });
+  });
+  def('bm-brannoc-double-grip', 'bm', S => {
+    S.space('hall', 0.55);
+    brGripOne(S, 0, -0.5);
+    brGripOne(S, 0.55, 0.5);
+    S.rumble({ at: 1.1, dur: 1.4, f: 38, peak: 0.34, a: 0.1 });
+  });
+  def('bm-brannoc-sunwheel-unbound', 'bm', S => {
+    S.space('hall', 0.65);
+    S.rumble({ dur: 3.4, f: 48, peak: 0.34, a: 0.6 });
+    S.whoosh({ color: 'brown', f: 90, f1: 1200, dur: 0.8, peakAt: 0.9, peak: 0.34 });
+    S.noise({ at: 0.6, bp: 500, bp1: 1300, q: 2.4, dur: 2.2, a: 0.3, am: [18, 0.7, 'square'], grain: 0.3, pts: [[0.8, 1], [2.2, 0.7]], peak: 0.26 });
+    S.tone({ at: 0.6, type: 'saw', f: 70, f1: 110, dur: 2.2, a: 0.3, lp: 900, am: [15, 0.6], peak: 0.12 });
+    [1.0, 1.6, 2.2, 2.8].forEach((at, i) => {
+      S.metal({ at, set: 'plate', f: 300 - i * 14, dur: 1.8, peak: 0.34, strike: 0.9 });
+      S.bell({ at, f: mf(48 - i), dur: 1.6, peak: 0.1, lp: 2400 });
+      S.thud({ at, f: 56, f1: 26, dur: 0.7, drive: 3, peak: 0.55 });
+      S.splat({ at: at + 0.02, dur: 0.3, peak: 0.16 });
+    });
+    S.glass({ at: 1.04, f: 2900, dur: 0.8, peak: 0.07 });
+  });
+  def('bm-brannoc-deep-call', 'bm', S => {
+    S.space('hall', 0.8);
+    S.tone({ f: 46, f1: 62, dur: 2.8, a: 0.9, vib: [3.2, 0.03, 0.5], fm: [2, 1.2, 0.2], lp: 700, pts: [[0.9, 1], [2.8, 0]], peak: 0.4 });
+    S.voice({ at: 0.2, f: 52, f1: 66, dur: 2.4, vowel: 'o', vowel1: 'u', breath: 0.5, lp: 900, a: 0.8, peak: 0.16 });
+    S.rumble({ dur: 3.4, f: 40, peak: 0.45, a: 0.8 });
+    S.bell({ at: 1.3, f: mf(40), dur: 3.0, peak: 0.12, lp: 1600 });
+    S.noise({ at: 1.6, color: 'brown', bp: 120, bp1: 1400, q: 0.8, dur: 1.8, a: 0.5, pts: [[0.8, 1], [1.8, 0]], peak: 0.34 });
+    S.whoosh({ at: 1.7, color: 'brown', f: 90, f1: 900, dur: 0.9, peakAt: 0.7, peak: 0.34 });
+    S.thud({ at: 2.1, f: 54, f1: 24, dur: 1.0, drive: 3, peak: 0.6 });
+  });
+  def('bm-brannoc-the-final-bell', 'bm', S => {
+    S.space('hall', 0.8);
+    S.noise({ color: 'brown', bp: 130, bp1: 1800, q: 0.8, dur: 5.8, a: 2.6, pts: [[4.2, 1], [5.8, 0]], peak: 0.42 });
+    S.rumble({ dur: 6.0, f: 38, peak: 0.55, a: 1.4 });
+    S.creak({ at: 0.6, dur: 3.4, f: 18, f1: 9, res: [350, 760, 1300], q: 12, peak: 0.2 });
+    [0, 1.9, 3.4, 4.5].forEach((at, i) => { S.bell({ at, f: mf(33), dur: 4.6, peak: 0.28 + i * 0.03, lp: 1500 }); S.thud({ at, f: 44, f1: 24, dur: 0.9, drive: 3, peak: 0.55 }); S.metal({ at, set: 'plate', f: 170, dur: 1.4, peak: 0.12, strike: 0.9 }); });
+    S.bubbles({ at: 1.0, n: 16, f: 150, f1: 800, spread: 3.5, bias: 0.8, peak: 0.1 });
+    S.whoosh({ at: 4.2, color: 'brown', f: 90, f1: 1900, dur: 1.2, peakAt: 0.9, peak: 0.42 });
+    S.noise({ at: 5.0, color: 'pink', hp: 2400, lp: 9000, grain: 0.8, dur: 1.8, a: 0.05, pts: [[0.1, 1], [1.8, 0]], peak: 0.2 });
+    S.crack({ at: 5.4, peak: 0.34, dur: 0.22 });
+    S.thud({ at: 5.4, f: 44, f1: 20, dur: 1.6, drive: 4, peak: 0.95 });
+  });
+
+  // ---------------------------------------------------------------------------------------------- Morrow-Oak (the Starved Grove)
+  // an elder tree like a slow landslide: groaning, creaking wood, dry leaves, roots tearing out of the earth, amber sap welling.
+  // The Hunger is the opposite of sound: reversed swells, a low drone that pulls the ear in, then a cut. After the Swallowing the
+  // limbs echo the bosses they were grown from, warped through wood (a chop, silk, storm, a grave-lantern's toll; a wing, ice, a rune, a hiss).
+  const moCreak = (S, at, dur, pk, pan, f0, f1) => S.creak({ at, dur, f: f0 || 22, f1: f1 || 12, res: [310, 690, 1250], q: 11, peak: pk, pan });
+  const moLeaves = (S, at, dur, pk, pan) => S.noise({ at, color: 'pink', hp: 2800, lp: 9000, grain: 0.85, grainRate: 1.4, dur, pts: [[dur * 0.35, 1], [dur, 0]], peak: pk, pan });
+  const moRootTear = (S, at, pk, pan) => {
+    S.noise({ at, color: 'brown', bp: 900, bp1: 160, q: 0.9, dur: 0.6, a: 0.01, pts: [[0.04, 1], [0.6, 0]], peak: pk * 0.8, pan });
+    S.crackle({ at, dens: 0.8, f: 1400, dur: 0.6, pts: [[0.02, 1], [0.6, 0]], peak: pk * 0.5, pan });
+    moCreak(S, at, 0.5, pk * 0.5, pan, 30, 14);
+    S.thud({ at: at + 0.04, f: 70, f1: 32, dur: 0.5, drive: 2, peak: pk * 0.8, pan });
+  };
+  // a reversed swell that is pulled inward and cut: the Hunger drawing breath
+  const moVoid = (S, at, dur, pk, f0, f1) => {
+    S.noise({ at, color: 'brown', bp: 1700, bp1: 90, q: 1.1, dur, pts: [[dur * 0.94, 1], [dur, 0]], peak: pk });
+    S.tone({ at, f: f0 || 150, f1: f1 || 36, dur, fm: [0.5, 1.3, 0.2], lp: 600, pts: [[dur * 0.92, 1], [dur, 0]], peak: pk * 0.55 });
+  };
+  const moSap = (S, at, pk) => {
+    S.bubbles({ at, n: 8, f: 160, f1: 520, spread: 0.7, size: 0.07, bias: 0.8, peak: pk });
+    S.noise({ at, color: 'brown', bp: 400, bp1: 180, q: 1.2, dur: 0.9, pts: [[0.3, 1], [0.9, 0]], peak: pk * 1.2 });
+  };
+  def('bm-morrowoak-intro', 'sting', S => {
+    S.space('hall', 0.65);
+    S.rumble({ dur: 3.4, f: 42, peak: 0.3, a: 1.0 });
+    moCreak(S, 0.2, 2.6, 0.2, 0, 18, 9);
+    moLeaves(S, 0.3, 2.6, 0.12);
+    [0.8, 1.6, 2.3].forEach((at, i) => S.thud({ at, f: 56 - i * 4, f1: 26, dur: 0.9, drive: 3, peak: 0.45 + i * 0.1 }));
+    moVoid(S, 1.5, 1.8, 0.2, 130, 34);
+    S.tone({ at: 1.8, f: 46, f1: 40, dur: 1.6, a: 0.5, lp: 500, peak: 0.1 });
+  });
+  def('bm-morrowoak-hunger-seed', 'bm', S => {
+    S.space('room', 0.35);
+    S.bubbles({ n: 6, f: 200, f1: 700, spread: 0.7, size: 0.05, peak: 0.1 });
+    moVoid(S, 0.1, 1.0, 0.24, 800, 90);
+    S.thud({ at: 1.2, f: 62, f1: 26, dur: 0.8, drive: 2.6, peak: 0.6 });
+    S.crack({ at: 1.2, peak: 0.26, dur: 0.2 });
+    S.noise({ at: 1.22, color: 'brown', bp: 900, bp1: 200, q: 0.8, dur: 0.7, a: 0.01, pts: [[0.05, 1], [0.7, 0]], peak: 0.3 });
+    moLeaves(S, 1.3, 0.6, 0.1);
+  });
+  def('bm-morrowoak-twin-seed', 'bm', S => {
+    S.space('room', 0.4);
+    S.bubbles({ n: 5, f: 200, f1: 700, spread: 0.6, size: 0.05, peak: 0.08, pan: -0.6 });
+    S.bubbles({ at: 0.15, n: 5, f: 260, f1: 900, spread: 0.6, size: 0.05, peak: 0.08, pan: 0.6 });
+    S.tone({ f: 118, f1: 150, dur: 1.2, a: 0.8, fm: [1.5, 0.8, 0.1], lp: 700, peak: 0.1, pan: -0.5 });
+    S.tone({ f: 124, f1: 164, dur: 1.2, a: 0.8, fm: [1.5, 0.8, 0.1], lp: 700, peak: 0.1, pan: 0.5 });
+    moVoid(S, 0.2, 1.1, 0.2, 700, 80);
+    [1.3, 1.45].forEach((at, i) => { S.thud({ at, f: 64 - i * 6, f1: 26, dur: 0.8, drive: 2.6, peak: 0.5, pan: i ? 0.5 : -0.5 }); S.crack({ at, peak: 0.2, dur: 0.18, pan: i ? 0.5 : -0.5 }); });
+    S.rumble({ at: 1.3, dur: 1.2, f: 42, peak: 0.3, a: 0.1 });
+  });
+  def('bm-morrowoak-inhale', 'bm', S => {
+    S.space('hall', 0.6);
+    moVoid(S, 0, 2.6, 0.4, 1200, 70);
+    moLeaves(S, 0.2, 2.2, 0.14);
+    S.noise({ color: 'white', hp: 1500, lp: 7000, bp: 2200, bp1: 400, q: 0.7, dur: 2.5, pts: [[2.3, 1], [2.5, 0]], peak: 0.12 });
+    S.rumble({ dur: 2.8, f: 46, peak: 0.34, a: 2.0 });
+    moCreak(S, 1.0, 1.6, 0.14, 0, 16, 28);
+    S.thud({ at: 2.6, f: 50, f1: 22, dur: 0.6, drive: 3, peak: 0.45 });
+  });
+  def('bm-morrowoak-fourfold-bloom', 'bm', S => {
+    S.space('hall', 0.45);
+    S.whoosh({ color: 'brown', f: 100, f1: 700, dur: 0.9, peakAt: 0.9, peak: 0.26 });
+    moCreak(S, 0, 0.9, 0.16, 0, 20, 34);
+    [0, 1, 2, 3].forEach(i => S.wood({ at: 0.7 + i * 0.05, f: 520 + i * 160, dur: 0.12, peak: 0.12, pan: (i - 1.5) * 0.5 }));
+    [1.0, 2.0].forEach((at, j) => {
+      S.crack({ at, peak: 0.34, dur: 0.22 });
+      S.thud({ at, f: 70, f1: 32, dur: 0.6, drive: 2.4, peak: 0.6 });
+      S.glass({ at: at + 0.02, f: 2400 + j * 300, dur: 0.5, peak: 0.07 });
+      S.crackle({ at, dens: 3, f: 5000, dur: 0.4, pts: [[0.02, 1], [0.4, 0]], peak: 0.1 });
+      S.noise({ at, color: 'brown', bp: 600, bp1: 200, q: 0.8, dur: 0.5, a: 0.01, pts: [[0.04, 1], [0.5, 0]], peak: 0.2 });
+    });
+    S.whoosh({ at: 1.2, f: 600, f1: 300, dur: 0.6, peakAt: 0.4, peak: 0.2 });
+    moLeaves(S, 2.05, 0.9, 0.12);
+  });
+  def('bm-morrowoak-root-lash', 'bm', S => {
+    S.space('hall', 0.35);
+    moCreak(S, 0, 0.5, 0.18, 0, 16, 30);
+    S.whoosh({ color: 'brown', f: 90, f1: 900, dur: 0.5, peakAt: 0.9, peak: 0.36 });
+    S.crack({ at: 0.52, peak: 0.4, dur: 0.22 });
+    S.thud({ at: 0.52, f: 58, f1: 26, dur: 0.9, drive: 3, peak: 0.85 });
+    S.wood({ at: 0.54, f: 300, dur: 0.15, peak: 0.3 });
+    moRootTear(S, 0.55, 0.3);
+    S.whoosh({ at: 0.9, f: 800, f1: 150, dur: 0.4, peakAt: 0.3, peak: 0.2 });
+    S.splat({ at: 0.6, dur: 0.3, peak: 0.12 });
+  });
+  def('bm-morrowoak-sap-tide', 'bm', S => {
+    S.space('hall', 0.55);
+    S.rumble({ dur: 2.6, f: 52, peak: 0.4, a: 0.5 });
+    S.noise({ color: 'brown', bp: 150, bp1: 700, q: 0.9, dur: 2.4, a: 0.8, pts: [[1.3, 1], [2.4, 0]], peak: 0.3 });
+    [0, 0.5, 1.0, 1.5].forEach((at, i) => moSap(S, at, 0.12 + i * 0.03));
+    moCreak(S, 0.3, 1.8, 0.12, 0, 14, 10);
+    S.thud({ at: 1.6, f: 50, f1: 24, dur: 1.2, drive: 3, peak: 0.7 });
+    S.splat({ at: 1.62, dur: 0.6, peak: 0.28 });
+    S.bell({ at: 1.65, f: mf(40), dur: 2.2, peak: 0.07, lp: 1400 });
+  });
+  def('bm-morrowoak-saplings', 'bm', S => {
+    S.space('room', 0.4);
+    S.rumble({ dur: 1.6, f: 60, peak: 0.25, a: 0.3 });
+    for (let i = 0; i < 6; i++) {
+      const at = 0.1 + i * 0.17, pan = (i % 3 - 1) * 0.6;
+      S.thud({ at, f: 140 - i * 6, f1: 70, dur: 0.14, drive: 1.5, peak: 0.28, pan });
+      S.wood({ at: at + 0.02, f: 700 + i * 70, dur: 0.08, peak: 0.16, pan });
+      moLeaves(S, at, 0.25, 0.07, pan);
+    }
+    S.voice({ at: 0.2, f: 220, f1: 330, dur: 0.9, vowel: 'u', vowel1: 'o', breath: 1.4, lp: 1100, peak: 0.08, a: 0.4 });
+    S.creak({ at: 0.8, dur: 0.8, f: 40, f1: 24, res: [600, 1400], q: 10, peak: 0.12 });
+    S.bubbles({ at: 1.0, n: 4, f: 300, f1: 900, spread: 0.4, peak: 0.06 });
+  });
+  def('bm-morrowoak-hungering-dark', 'bm', S => {
+    S.space('hall', 0.6);
+    [[0, -0.7, 1100], [0.35, 0.7, 900], [0.7, 0, 1300]].forEach(([at, pan, f]) => moVoid(S, at, 1.4, 0.2, f, 60));
+    S.rumble({ dur: 2.4, f: 40, peak: 0.4, a: 1.4 });
+    S.tone({ f: 44, f1: 34, dur: 2.4, a: 1.2, lp: 400, peak: 0.16, am: [3, 0.5] });
+    moCreak(S, 0.4, 1.6, 0.12, 0, 14, 8);
+    S.thud({ at: 2.1, f: 46, f1: 20, dur: 1.4, drive: 3.6, peak: 0.9 });
+    S.noise({ at: 2.12, color: 'brown', bp: 1100, bp1: 120, q: 0.8, dur: 1.4, a: 0.01, pts: [[0.05, 1], [1.4, 0]], peak: 0.3 });
+  });
+  def('bm-morrowoak-the-swallowing', 'bm', S => {
+    S.space('hall', 0.85);
+    // the whole grove tearing loose and falling into the dark
+    S.rumble({ dur: 8, f: 46, peak: 0.55, a: 1.5 });
+    S.noise({ color: 'brown', bp: 120, bp1: 1600, q: 0.8, dur: 6.5, pts: [[5.5, 1], [6.5, 0]], peak: 0.4 });
+    moCreak(S, 0, 4.5, 0.22, 0, 16, 7);
+    [0.3, 0.9, 1.6, 2.4, 3.3, 4.3].forEach((at, i) => { moRootTear(S, at, 0.3 + i * 0.03, (i % 3 - 1) * 0.5); S.metal({ at, set: 'stone', f: 130 - i * 8, dur: 1.2, peak: 0.12, strike: 0.9 }); });
+    moLeaves(S, 0.6, 5.0, 0.16);
+    moVoid(S, 2.5, 4.2, 0.46, 1600, 40);
+    S.pad({ at: 3, notes: [mf(34), mf(41), mf(46)], dur: 3.8, det: 14, type: 'saw', lpEnv: [150, 800, 200, 3], peak: 0.12 });
+    S.whoosh({ at: 5.6, color: 'brown', f: 2200, f1: 70, dur: 1.4, peakAt: 0.2, peak: 0.36 });
+    S.thud({ at: 6.9, f: 42, f1: 18, dur: 2.0, drive: 4, peak: 1 });
+    S.crack({ at: 6.9, peak: 0.34, dur: 0.22 });
+    S.bell({ at: 6.95, f: mf(30), dur: 4.8, peak: 0.16, lp: 1100 });
+    S.rumble({ at: 6.9, dur: 3.5, f: 36, peak: 0.45, a: 0.1 });
+  });
+  def('bm-morrowoak-the-grove-remade', 'bm', S => {
+    S.space('hall', 0.65);
+    S.rumble({ dur: 3.8, f: 44, peak: 0.4, a: 1.0 });
+    moCreak(S, 0, 3.4, 0.22, 0, 14, 26);
+    [0.5, 1.2, 1.9, 2.6].forEach((at, i) => {
+      S.noise({ at, color: 'brown', bp: 150, bp1: 900, q: 0.9, dur: 0.8, a: 0.4, pts: [[0.5, 1], [0.8, 0]], peak: 0.26, pan: (i - 1.5) * 0.5 });
+      S.wood({ at: at + 0.55, f: 260 + i * 40, dur: 0.2, peak: 0.28, pan: (i - 1.5) * 0.5 });
+      S.crack({ at: at + 0.55, peak: 0.2, dur: 0.15, pan: (i - 1.5) * 0.5 });
+    });
+    moLeaves(S, 0.4, 3.0, 0.14);
+    S.choir({ at: 1.0, notes: [mf(34), mf(41)], dur: 2.8, vowel: 'o', vowel1: 'u', lp: 700, peak: 0.1 });
+    S.thud({ at: 3.2, f: 54, f1: 24, dur: 1.2, drive: 3.2, peak: 0.8 });
+    S.bell({ at: 3.2, f: mf(38), dur: 2.6, peak: 0.1, lp: 1400 });
+  });
+  def('bm-morrowoak-deeper-roots', 'bm', S => {
+    S.space('hall', 0.7);
+    S.rumble({ dur: 4.2, f: 40, peak: 0.5, a: 0.9 });
+    moCreak(S, 0, 3.8, 0.26, 0, 12, 24);
+    moVoid(S, 0, 1.4, 0.22, 600, 60);
+    [0.4, 0.9, 1.4, 1.9, 2.4].forEach((at, i) => moRootTear(S, at, 0.34 + i * 0.03, (i % 2 ? 0.5 : -0.5)));
+    [1.2, 1.9, 2.6].forEach((at, i) => S.metal({ at, set: 'stone', f: 110 - i * 8, dur: 1.4, peak: 0.16, strike: 0.9 }));
+    S.choir({ at: 1.2, notes: [mf(31), mf(38), mf(43)], dur: 3.0, vowel: 'o', vowel1: 'u', lp: 600, peak: 0.12 });
+    moLeaves(S, 0.6, 3.0, 0.14);
+    S.thud({ at: 3.5, f: 48, f1: 20, dur: 1.6, drive: 3.8, peak: 0.95 });
+    S.splat({ at: 3.52, dur: 0.6, peak: 0.26 });
+  });
+  def('bm-morrowoak-cleaver-bough', 'bm', S => {
+    S.space('hall', 0.4);
+    moCreak(S, 0, 0.7, 0.2, 0, 18, 30);
+    S.whoosh({ color: 'brown', f: 90, f1: 1000, dur: 0.7, peakAt: 0.9, peak: 0.34 });
+    S.metal({ at: 0.72, set: 'plate', f: 320, dur: 1.0, peak: 0.28, strike: 0.9 });
+    S.wood({ at: 0.72, f: 200, dur: 0.3, peak: 0.4 });
+    S.thud({ at: 0.72, f: 52, f1: 24, dur: 1.0, drive: 3.4, peak: 0.95 });
+    S.splat({ at: 0.74, dur: 0.4, peak: 0.24 });
+    S.crack({ at: 0.72, peak: 0.3, dur: 0.2 });
+    S.metal({ at: 1.2, set: 'bar', f: 150, dur: 0.7, peak: 0.08, strike: 0.6 });
+  });
+  def('bm-morrowoak-brood-roots', 'bm', S => {
+    S.space('room', 0.4);
+    // many legs on dry wood, strung with silk
+    for (let i = 0; i < 9; i++) {
+      const at = 0.05 + i * 0.09 + (i % 2) * 0.03, pan = Math.sin(i * 2.1) * 0.7;
+      S.wood({ at, f: 520 + (i * 97) % 500, dur: 0.06, peak: 0.16, pan });
+      S.tick({ at: at + 0.02, f: 2600 + (i * 211) % 900, peak: 0.06, pan });
+    }
+    S.skitter({ at: 0.1, dur: 0.9, n: 14, f: 3200, f1: 1500, peak: 0.1 });
+    S.scrape({ at: 0.3, f: 4200, q: 3, dur: 0.9, rate: 55, peak: 0.07, pts: [[0.3, 1], [0.9, 0]] });
+    moCreak(S, 0.4, 0.9, 0.14, 0, 36, 20);
+    S.whoosh({ at: 0.9, f: 700, f1: 2400, dur: 0.4, peakAt: 0.7, peak: 0.22 });
+    [1.1, 1.18, 1.26].forEach((at, i) => S.thud({ at, f: 90 - i * 6, f1: 40, dur: 0.3, drive: 2, peak: 0.4, pan: (i - 1) * 0.5 }));
+  });
+  def('bm-morrowoak-storm-knot', 'bm', S => {
+    S.space('hall', 0.5);
+    moCreak(S, 0, 0.8, 0.16, 0, 22, 40);
+    S.zap({ at: 0.1, f: 90, f1: 140, dur: 0.9, jit: 1.5, peak: 0.1 });
+    S.crackle({ at: 0.15, dens: 2.5, f: 3200, dur: 0.9, pts: [[0.4, 1], [0.9, 0.5]], peak: 0.12 });
+    S.rumble({ dur: 1.4, f: 70, peak: 0.3, a: 0.5 });
+    [1.0, 1.35, 1.7].forEach((at, i) => {
+      S.crack({ at, peak: 0.4, dur: 0.3, pan: (i - 1) * 0.6 });
+      S.zap({ at, f: 140, f1: 70, dur: 0.3, peak: 0.16, pan: (i - 1) * 0.6 });
+      S.thud({ at: at + 0.02, f: 72, f1: 32, dur: 0.6, drive: 2.8, peak: 0.6, pan: (i - 1) * 0.6 });
+      S.wood({ at: at + 0.03, f: 380, dur: 0.15, peak: 0.2, pan: (i - 1) * 0.6 });
+    });
+    S.noise({ at: 1.0, color: 'brown', bp: 1100, bp1: 220, q: 0.8, dur: 1.4, a: 0.5, pts: [[0.1, 1], [1.4, 0]], peak: 0.16 });
+  });
+  def('bm-morrowoak-barrow-lantern', 'bm', S => {
+    S.space('hall', 0.7);
+    // a grave-lantern's toll hung on a creaking branch
+    moCreak(S, 0, 1.0, 0.14, 0, 16, 11);
+    S.bell({ at: 0.3, f: mf(52), dur: 2.4, peak: 0.2, lp: 2200 });
+    S.wood({ at: 0.3, f: 340, dur: 0.18, peak: 0.2 });
+    S.bell({ at: 1.2, f: mf(50), dur: 2.4, peak: 0.16, lp: 2000 });
+    S.pad({ at: 0.5, notes: [mf(52), mf(59)], dur: 2.0, det: 6, type: 'tri', lpEnv: [300, 1100, 300, 1.2], peak: 0.08 });
+    S.noise({ at: 0.6, color: 'pink', bp: 700, bp1: 1200, q: 1.2, dur: 1.8, a: 0.6, pts: [[0.9, 0.8], [1.8, 0]], peak: 0.1 });
+    moLeaves(S, 1.5, 0.8, 0.07);
+    S.thud({ at: 1.2, f: 60, f1: 30, dur: 0.6, drive: 2, peak: 0.4 });
+  });
+  def('bm-morrowoak-wyrm-wing', 'bm', S => {
+    S.space('hall', 0.6);
+    // a scorched bat-wing of bark and ember: a creaking unfurl, one roar, a down-draught
+    moCreak(S, 0, 0.9, 0.2, 0, 20, 34);
+    S.voice({ at: 0.15, f: 78, f1: 120, dur: 0.9, vowel: 'a', vowel1: 'o', breath: 1.6, lp: 1700, peak: 0.26, a: 0.3 });
+    S.whoosh({ at: 0.6, color: 'brown', f: 140, f1: 1800, dur: 0.8, peakAt: 0.85, peak: 0.4 });
+    S.thud({ at: 1.4, f: 54, f1: 24, dur: 1.2, drive: 3.2, peak: 0.85 });
+    S.noise({ at: 1.4, color: 'brown', bp: 1600, bp1: 200, q: 0.7, dur: 1.4, a: 0.04, pts: [[0.1, 1], [1.4, 0]], peak: 0.36 });
+    S.sizzle({ at: 1.4, dur: 1.2, pts: [[0.1, 1], [1.2, 0]], peak: 0.1 });
+    S.crackle({ at: 1.4, dens: 1.2, f: 2200, dur: 1.0, pts: [[0.05, 1], [1.0, 0]], peak: 0.2 });
+    moLeaves(S, 1.5, 0.8, 0.1);
+  });
+  def('bm-morrowoak-frost-fist', 'bm', S => {
+    S.space('hall', 0.55);
+    moCreak(S, 0, 0.8, 0.18, 0, 14, 24);
+    S.crackle({ at: 0.1, dens: 4, f: 5200, dur: 0.7, pts: [[0.3, 1], [0.7, 0]], peak: 0.12 });
+    S.whoosh({ at: 0.35, color: 'brown', f: 80, f1: 600, dur: 0.5, peakAt: 0.9, peak: 0.32 });
+    S.thud({ at: 0.9, f: 46, f1: 20, dur: 1.4, drive: 3.8, peak: 1 });
+    S.wood({ at: 0.9, f: 240, dur: 0.2, peak: 0.3 });
+    S.glass({ at: 0.92, f: 2100, dur: 1.0, peak: 0.12 });
+    S.glass({ at: 0.98, f: 3100, dur: 0.7, peak: 0.08 });
+    S.crackle({ at: 0.92, dens: 5, f: 5800, dur: 0.9, pts: [[0.02, 1], [0.9, 0]], peak: 0.22 });
+    S.noise({ at: 1.1, bp: 4600, q: 1, dur: 0.8, a: 0.05, grain: 0.7, pts: [[0.1, 1], [0.8, 0]], peak: 0.1 });
+  });
+  def('bm-morrowoak-archmage-rune', 'bm', S => {
+    S.space('hall', 0.7);
+    // a rune carved in bark waking: a rising chime ring, a pause, then the outer ring breaks
+    moCreak(S, 0, 0.6, 0.14, 0, 18, 12);
+    [0, 1, 2, 3, 4].forEach(i => S.glass({ at: 0.2 + i * 0.16, f: mf(74 + i * 4), dur: 1.4, peak: 0.07 + i * 0.01 }));
+    S.pad({ at: 0.2, notes: [mf(62), mf(69)], dur: 1.6, det: 10, type: 'sine', lpEnv: [400, 2200, 600, 1.0], peak: 0.1 });
+    S.whoosh({ at: 0.9, f: 200, f1: 3000, dur: 0.7, peakAt: 0.9, peak: 0.26 });
+    S.bell({ at: 1.6, f: mf(60), dur: 2.6, peak: 0.16, lp: 5000 });
+    S.thud({ at: 1.6, f: 60, f1: 28, dur: 0.9, drive: 2.8, peak: 0.6 });
+    S.wood({ at: 1.62, f: 420, dur: 0.14, peak: 0.2 });
+    S.whoosh({ at: 2.0, f: 3000, f1: 400, dur: 0.6, peakAt: 0.2, peak: 0.24 });
+    S.glass({ at: 2.1, f: mf(90), dur: 1.4, peak: 0.07 });
+  });
+  def('bm-morrowoak-hydra-head', 'bm', S => {
+    S.space('room', 0.45);
+    // a serpent head of wet bark: a hiss, a strike, a wet snap
+    moCreak(S, 0, 0.6, 0.16, 0, 24, 40);
+    S.noise({ at: 0.1, color: 'white', bp: 5200, bp1: 3400, q: 1.2, dur: 1.0, grain: 0.5, pts: [[0.5, 1], [1.0, 0]], peak: 0.18 });
+    S.bubbles({ at: 0.4, n: 6, f: 300, f1: 1100, spread: 0.5, peak: 0.07 });
+    S.whoosh({ at: 1.0, f: 600, f1: 3400, dur: 0.25, peakAt: 0.85, peak: 0.36 });
+    S.crack({ at: 1.27, peak: 0.34, dur: 0.18 });
+    S.splat({ at: 1.27, dur: 0.4, peak: 0.34 });
+    S.thud({ at: 1.27, f: 74, f1: 34, dur: 0.6, drive: 2.4, peak: 0.7 });
+    S.wood({ at: 1.3, f: 360, dur: 0.14, peak: 0.24 });
+    S.noise({ at: 1.5, color: 'white', bp: 5600, bp1: 2800, q: 1.2, dur: 0.6, a: 0.02, grain: 0.5, pts: [[0.1, 1], [0.6, 0]], peak: 0.12 });
+  });
+  def('bm-morrowoak-nothing-left', 'bm', S => {
+    S.space('hall', 0.9);
+    // the end of everything: every voice of the grove in turn, then the void drawing the last sound out of the room
+    S.rumble({ dur: 7, f: 40, peak: 0.55, a: 1.6, pts: [[4.5, 1], [7, 0]] });
+    moCreak(S, 0, 4.0, 0.22, 0, 16, 7);
+    moLeaves(S, 0.2, 3.5, 0.16);
+    [0.4, 1.3, 2.2, 3.1].forEach((at, i) => {
+      S.metal({ at, set: 'stone', f: 120 - i * 10, dur: 1.4, peak: 0.16, strike: 0.9 });
+      S.thud({ at, f: 56 - i * 3, f1: 24, dur: 0.9, drive: 3, peak: 0.55 + i * 0.07 });
+      S.bell({ at, f: mf(34 - i), dur: 3.0, peak: 0.12, lp: 1200 });
+    });
+    moVoid(S, 1.8, 5.0, 0.5, 1800, 34);
+    S.choir({ at: 2.4, notes: [mf(28), mf(35), mf(40)], dur: 4.2, vowel: 'o', vowel1: 'u', lp: 600, peak: 0.14, pts: [[3.6, 1], [4.2, 0]] });
+    S.whoosh({ at: 6.2, color: 'brown', f: 2600, f1: 60, dur: 1.0, peakAt: 0.15, peak: 0.4 });
+    S.thud({ at: 7.0, f: 40, f1: 16, dur: 2.4, drive: 4.2, peak: 1 });
+    S.crack({ at: 7.0, peak: 0.3, dur: 0.2 });
+  });
+
+  // ---------------------------------------------------------------------------------------------- Caelum Vey (the Starborn)
+  // black glass and starlight: thin, high, singing blade tones; the hush before each cut and a clean glassy slice; afterimages as
+  // shimmering echoes; deep cosmic drones and choir pads for the Starwyrm and the Ascendant; the meteor as a vast, slow roar that
+  // grows closer. Grace Withdrawn drains the room, Nightfall is a dark toll. No words.
+  const caHush = (S, at, dur, pk, f0, f1) => {      // the held breath before a cut: thin air drawn in and up
+    S.noise({ at, bp: f0 || 2600, bp1: f1 || 6200, q: 5, dur, a: dur * 0.85, pts: [[dur * 0.92, 1], [dur, 0]], peak: pk });
+    S.tone({ at, f: (f0 || 2600) * 0.5, f1: (f1 || 6200) * 0.5, dur, a: dur * 0.8, pts: [[dur * 0.92, 1], [dur, 0]], peak: pk * 0.14 });
+  };
+  const caSlice = (S, at, f, pk, pan) => {          // a clean glassy cut: a bright whoosh, a thin ring, a hair of sparkle
+    S.whoosh({ at, f: f * 0.5, f1: f * 2.6, dur: 0.26, peakAt: 0.8, peak: pk, q: 2, pan });
+    S.noise({ at: at + 0.2, hp: 6500, dur: 0.1, a: 0.002, pts: [[0.005, 1], [0.1, 0]], peak: pk * 0.4, pan });
+    S.glass({ at: at + 0.22, f, dur: 0.9, peak: pk * 0.34, pan });
+    S.tone({ at: at + 0.22, f: f * 2.01, dur: 0.7, a: 0.003, peak: pk * 0.07, pan });
+  };
+  const caEcho = (S, at, f, pk, n, pan) => {         // an afterimage: the same note again and again, fainter, shimmering
+    for (let i = 0; i < (n || 3); i++) S.glass({ at: at + i * 0.12, f: f * (1 + i * 0.004), dur: 0.8, peak: pk * Math.pow(0.6, i), am: [11 + i * 2, 0.5], pan });
+  };
+  const caStars = (S, at, n, spread, pk, f0, f1) => {   // star-dust: a scatter of tiny high chimes
+    for (let i = 0; i < n; i++) {
+      const u = ((i * 0.618) % 1), a = at + spread * u;
+      S.tone({ at: a, f: f0 * Math.pow(f1 / f0, (i * 0.37) % 1), dur: 0.5, a: 0.003, peak: pk * (0.5 + 0.5 * ((i * 0.31) % 1)), pan: Math.sin(i * 2.3) * 0.7 });
+    }
+  };
+  const caDrone = (S, at, dur, pk, notes) => {       // a deep cosmic drone under a long thing
+    S.pad({ at, notes: notes || [mf(31), mf(38), mf(43)], dur, det: 11, type: 'saw', lpEnv: [140, 900, 220, dur * 0.6], peak: pk });
+    S.rumble({ at, dur, f: 40, peak: pk * 1.6, a: dur * 0.4 });
+  };
+  const caMeteor = (S, at, dur, pk) => {             // the meteor: a vast slow roar, growing closer
+    S.noise({ at, color: 'brown', bp: 90, bp1: 1400, q: 0.8, dur, a: dur * 0.7, pts: [[dur * 0.85, 1], [dur, 0.7]], peak: pk });
+    S.noise({ at, color: 'pink', hp: 1800, lp: 8000, grain: 0.7, grainRate: 1.2, dur, a: dur * 0.75, pts: [[dur * 0.9, 1], [dur, 0.6]], peak: pk * 0.28 });
+    S.tone({ at, f: 38, f1: 56, dur, a: dur * 0.6, fm: [1.5, 0.8, 0.2], lp: 400, peak: pk * 0.4 });
+  };
+  def('bm-caelum-intro', 'sting', S => {
+    S.space('hall', 0.8);
+    // a bright, cold chime and a breath: he says one line
+    S.rumble({ dur: 3.4, f: 42, peak: 0.22, a: 1.2 });
+    caStars(S, 0, 7, 1.4, 0.04, 2600, 6200);
+    S.glass({ at: 0.8, f: mf(93), dur: 3.0, peak: 0.12 });
+    S.glass({ at: 0.86, f: mf(100), dur: 2.6, peak: 0.07 });
+    S.partials({ at: 0.82, set: 'glass', f: mf(81), dur: 3.2, peak: 0.1, am: [2.4, 0.3] });
+    caHush(S, 1.5, 1.0, 0.1, 1800, 4200);
+    S.voice({ at: 1.9, f: 108, f1: 94, dur: 1.0, vowel: 'o', vowel1: 'u', breath: 2.4, lp: 1500, peak: 0.1, a: 0.3 });
+    S.metal({ at: 2.6, set: 'bar', f: 2200, dur: 1.6, peak: 0.07, strike: 0.2 });
+    S.thud({ at: 2.7, f: 54, f1: 28, dur: 1.0, drive: 2, peak: 0.3 });
+  });
+  def('bm-caelum-glint', 'bm', S => {
+    S.space('hall', 0.45);
+    caHush(S, 0, 0.5, 0.1);
+    S.glass({ at: 0.4, f: mf(100), dur: 0.5, peak: 0.07 });
+    caSlice(S, 0.55, 3200, 0.3);
+    caEcho(S, 0.8, 3600, 0.06, 3);
+  });
+  // the Wakes: a dance of afterimages. Each is a run of hush-and-slice, the afterimage's echo trailing behind.
+  def('bm-caelum-eightfold-wake', 'bm', S => {
+    S.space('hall', 0.55);
+    caHush(S, 0, 0.7, 0.1);
+    for (let i = 0; i < 8; i++) {
+      const at = 0.7 + i * 0.3, pan = ((i % 2) ? 1 : -1) * 0.6, f = 2800 + i * 260;
+      S.glass({ at: at - 0.2, f: f * 1.5, dur: 0.4, peak: 0.04, pan });
+      caSlice(S, at, f, 0.22 + i * 0.012, pan);
+    }
+    caEcho(S, 3.0, 4200, 0.07, 4);
+    S.rumble({ at: 0.7, dur: 2.4, f: 50, peak: 0.16, a: 1.0 });
+    S.metal({ at: 3.2, set: 'bar', f: 2600, dur: 2.0, peak: 0.08, strike: 0.3 });
+  });
+  def('bm-caelum-anchored-wake', 'bm', S => {
+    S.space('hall', 0.6);
+    // cuts held in place by a low bell: the anchors
+    S.bell({ f: mf(57), dur: 3.4, peak: 0.16, lp: 3000 });
+    S.thud({ f: 62, f1: 30, dur: 0.7, drive: 2, peak: 0.4 });
+    caHush(S, 0.4, 0.6, 0.09);
+    for (let i = 0; i < 6; i++) {
+      const at = 1.0 + i * 0.32, pan = ((i % 2) ? 1 : -1) * 0.5;
+      caSlice(S, at, 2700 + i * 220, 0.22, pan);
+      if (i === 2) { S.bell({ at: at + 0.15, f: mf(57), dur: 2.6, peak: 0.12, lp: 3000 }); S.thud({ at: at + 0.15, f: 62, f1: 30, dur: 0.6, drive: 2, peak: 0.3 }); }
+    }
+    S.bell({ at: 3.1, f: mf(57), dur: 3.0, peak: 0.14, lp: 3000 });
+    caEcho(S, 3.1, 3900, 0.06, 3);
+  });
+  def('bm-caelum-mirrored-wake', 'bm', S => {
+    S.space('hall', 0.65);
+    // the pass rising, then the same pass again falling: a mirror
+    caHush(S, 0, 0.6, 0.09);
+    for (let i = 0; i < 6; i++) caSlice(S, 0.6 + i * 0.26, 2200 + i * 420, 0.2, -0.6 + i * 0.24);
+    S.glass({ at: 2.2, f: mf(103), dur: 1.4, peak: 0.08 });
+    S.noise({ at: 2.2, bp: 5200, q: 6, dur: 0.3, a: 0.01, pts: [[0.05, 1], [0.3, 0]], peak: 0.08 });
+    for (let i = 0; i < 6; i++) caSlice(S, 2.5 + i * 0.26, 4300 - i * 420, 0.18 - i * 0.012, 0.6 - i * 0.24);
+    caEcho(S, 3.9, 2400, 0.06, 4);
+    S.rumble({ dur: 4.2, f: 50, peak: 0.2, a: 1.2 });
+    S.thud({ at: 2.25, f: 60, f1: 28, dur: 0.9, drive: 2.4, peak: 0.45 });
+    S.bell({ at: 2.25, f: mf(55), dur: 2.4, peak: 0.1, lp: 2800 });
+  });
+  def('bm-caelum-chorus-of-the-fallen', 'bm', S => {
+    S.space('hall', 0.9);
+    // the three bosses before him, ghostly: Corvane's drawn steel and glass bell, Brannoc's shield clang and crowd, Morrow-Oak's
+    // creak and leaves, each thin and far, under a hollow chord
+    S.choir({ at: 0, notes: [mf(45), mf(52), mf(57)], dur: 3.8, vowel: 'o', vowel1: 'u', lp: 900, peak: 0.1, pts: [[2.4, 1], [3.8, 0]] });
+    S.scrape({ at: 0.4, f: 3600, q: 2.2, dur: 0.7, rate: 24, peak: 0.07, pts: [[0.3, 1], [0.7, 0]], pan: -0.7 });
+    S.metal({ at: 1.05, set: 'bar', f: 1480, dur: 2.2, peak: 0.06, strike: 0.3, pan: -0.7 });
+    S.bell({ at: 1.08, f: mf(88), dur: 2.4, peak: 0.04, lp: 6000, pan: -0.7 });
+    S.metal({ at: 1.5, set: 'plate', f: 700, dur: 1.4, peak: 0.1, strike: 0.7, pan: 0.7 });
+    S.metal({ at: 1.51, set: 'bar', f: 2200, dur: 0.8, peak: 0.04, click: 0, pan: 0.7 });
+    S.noise({ at: 1.3, color: 'pink', bp: 350, bp1: 1300, q: 0.7, dur: 1.6, a: 0.7, pts: [[1.0, 1], [1.6, 0]], peak: 0.06, pan: 0.7 });
+    S.creak({ at: 2.1, dur: 1.4, f: 18, f1: 11, res: [310, 690, 1250], q: 11, peak: 0.1 });
+    S.noise({ at: 2.2, color: 'pink', hp: 2800, lp: 9000, grain: 0.85, grainRate: 1.4, dur: 1.4, pts: [[0.5, 1], [1.4, 0]], peak: 0.05 });
+    caEcho(S, 2.9, 3000, 0.05, 4);
+    S.glass({ at: 3.2, f: mf(88), dur: 2.0, peak: 0.05 });
+    S.thud({ at: 3.4, f: 50, f1: 24, dur: 1.2, drive: 2.4, peak: 0.45 });
+    S.rumble({ dur: 3.8, f: 42, peak: 0.2, a: 1.2 });
+  });
+  def('bm-caelum-cinder-crown', 'bm', S => {
+    S.space('hall', 0.55);
+    // a crown of embers set on the tank: a toll, a flare, the ring crackling out
+    S.bell({ f: mf(48), dur: 2.6, peak: 0.2, lp: 2600 });
+    caHush(S, 0.1, 0.8, 0.07, 1400, 3600);
+    S.whoosh({ at: 0.75, f: 300, f1: 2800, dur: 0.4, peakAt: 0.85, peak: 0.34 });
+    S.thud({ at: 1.15, f: 56, f1: 26, dur: 1.2, drive: 3.2, peak: 0.85 });
+    S.crack({ at: 1.15, peak: 0.3, dur: 0.22 });
+    S.glass({ at: 1.17, f: 2400, dur: 1.0, peak: 0.1 });
+    S.sizzle({ at: 1.2, dur: 1.8, pts: [[0.1, 1], [1.8, 0]], peak: 0.16 });
+    S.crackle({ at: 1.2, dens: 1.6, f: 2600, dur: 2.0, pts: [[0.3, 1], [2.0, 0]], peak: 0.2 });
+    S.noise({ at: 1.3, color: 'brown', bp: 900, bp1: 180, q: 0.8, dur: 1.4, a: 0.04, pts: [[0.1, 1], [1.4, 0]], peak: 0.26 });
+    S.bell({ at: 1.2, f: mf(60), dur: 2.2, peak: 0.08, lp: 5000 });
+  });
+  def('bm-caelum-pinning-thrust', 'bm', S => {
+    S.space('hall', 0.4);
+    // the blade turning after the tank, locking; one long lunge and the pin
+    caHush(S, 0, 0.7, 0.08, 3000, 7000);
+    S.tone({ at: 0.1, f: 2100, f1: 2500, dur: 0.6, a: 0.3, peak: 0.03, am: [8, 0.6] });
+    S.metal({ at: 0.55, set: 'bar', f: 3300, dur: 0.5, peak: 0.07, strike: 0.2 });
+    S.whoosh({ at: 0.75, f: 500, f1: 6000, dur: 0.5, peakAt: 0.9, peak: 0.4, q: 2 });
+    S.thud({ at: 1.2, f: 62, f1: 24, dur: 1.1, drive: 3.4, peak: 0.9 });
+    S.metal({ at: 1.2, set: 'plate', f: 520, dur: 1.2, peak: 0.26, strike: 0.8 });
+    S.glass({ at: 1.22, f: 3400, dur: 1.2, peak: 0.12 });
+    S.crack({ at: 1.2, peak: 0.3, dur: 0.2 });
+    S.scrape({ at: 1.3, f: 2400, q: 3, dur: 0.8, rate: 30, peak: 0.1, pts: [[0.05, 1], [0.8, 0]] });
+    S.metal({ at: 1.85, set: 'bar', f: 1700, dur: 1.4, peak: 0.1, strike: 0.5 });
+  });
+  def('bm-caelum-grace-withdrawn', 'bm', S => {
+    S.space('hall', 0.7);
+    // the room drained: a bright chord that falls away, every sound pulled thin and out, a long silence with one hair of glass
+    S.pad({ notes: [mf(69), mf(76), mf(81)], dur: 1.8, det: 6, type: 'sine', lpEnv: [3000, 2400, 300, 1.0], peak: 0.14 });
+    S.glass({ f: mf(93), dur: 1.6, peak: 0.1 });
+    S.tone({ at: 0.2, f: 1800, f1: 90, dur: 2.2, a: 0.1, curve: 'exp', pts: [[0.3, 1], [2.2, 0]], peak: 0.1 });
+    S.noise({ at: 0.1, bp: 5200, bp1: 400, q: 1.5, dur: 2.2, a: 0.05, pts: [[0.3, 1], [2.2, 0]], peak: 0.2 });
+    S.whoosh({ at: 0.5, f: 4000, f1: 120, dur: 1.4, peakAt: 0.2, peak: 0.26 });
+    caStars(S, 0.2, 6, 1.2, 0.04, 6200, 2600);
+    S.thud({ at: 1.9, f: 40, f1: 18, dur: 1.4, drive: 2.5, peak: 0.34 });
+    S.glass({ at: 3.0, f: mf(100), dur: 2.4, peak: 0.03 });
+  });
+  def('bm-caelum-nightfall', 'bm', S => {
+    S.space('hall', 0.8);
+    // a dark, heavy toll: the sky closing
+    S.bell({ f: mf(31), dur: 5.4, peak: 0.34, lp: 1800 });
+    S.thud({ f: 46, f1: 20, dur: 1.8, drive: 4, peak: 1 });
+    S.crack({ peak: 0.28, dur: 0.22 });
+    S.noise({ color: 'brown', bp: 1400, bp1: 100, q: 0.8, dur: 2.2, a: 0.03, pts: [[0.08, 1], [2.2, 0]], peak: 0.4 });
+    S.rumble({ dur: 4.4, f: 36, peak: 0.5, a: 0.1 });
+    S.bell({ at: 1.5, f: mf(26), dur: 5.0, peak: 0.26, lp: 1400 });
+    S.thud({ at: 1.5, f: 40, f1: 18, dur: 1.6, drive: 3.4, peak: 0.7 });
+    S.choir({ at: 0.3, notes: [mf(26), mf(33)], dur: 3.6, vowel: 'o', vowel1: 'u', lp: 500, peak: 0.1, pts: [[1.2, 1], [3.6, 0]] });
+    S.whoosh({ at: 0.05, color: 'brown', f: 2400, f1: 80, dur: 1.4, peakAt: 0.1, peak: 0.3 });
+  });
+  def('bm-caelum-starfall', 'bm', S => {
+    S.space('hall', 0.65);
+    // shards breaking off the meteor and falling: high falling whistles, each ending in a bright thump, a roar behind
+    caMeteor(S, 0, 2.6, 0.2);
+    [[0.3, 4800, 0.7], [0.65, 5600, -0.5], [1.0, 4200, 0.2], [1.3, 5200, -0.8], [1.6, 4600, 0.5]].forEach(([at, f, pan], i) => {
+      S.tone({ at, f, f1: f * 0.2, dur: 0.6, a: 0.01, curve: 'exp', pts: [[0.04, 1], [0.6, 0]], peak: 0.05, pan });
+      S.whoosh({ at, f: f * 0.8, f1: f * 0.15, dur: 0.55, peakAt: 0.15, peak: 0.16, pan });
+      S.thud({ at: at + 0.5, f: 80 - i * 4, f1: 36, dur: 0.5, drive: 2.2, peak: 0.4, pan });
+      S.glass({ at: at + 0.52, f: 2400 + i * 300, dur: 0.9, peak: 0.1, pan });
+    });
+    S.crackle({ at: 1.8, dens: 3, f: 5000, dur: 1.2, pts: [[0.1, 1], [1.2, 0]], peak: 0.12 });
+    S.thud({ at: 2.4, f: 52, f1: 22, dur: 1.4, drive: 3.4, peak: 0.8 });
+  });
+  def('bm-caelum-dark-ember', 'bm', S => {
+    S.space('hall', 0.5);
+    // a black ember: the absence of a spark; a low pulse that pulls the highs out and drops a dull coal
+    S.noise({ bp: 4200, bp1: 300, q: 2.4, dur: 1.0, a: 0.01, pts: [[0.06, 1], [1.0, 0]], peak: 0.12 });
+    S.tone({ f: 120, f1: 58, dur: 1.4, a: 0.3, fm: [0.5, 1.4, 0.2], lp: 500, pts: [[0.5, 1], [1.4, 0]], peak: 0.26, am: [3.4, 0.5] });
+    S.thud({ at: 0.9, f: 50, f1: 24, dur: 1.2, drive: 3, peak: 0.7 });
+    S.sizzle({ at: 0.92, dur: 0.9, pts: [[0.05, 1], [0.9, 0]], peak: 0.08 });
+    S.crackle({ at: 0.95, dens: 0.8, f: 1400, dur: 1.0, pts: [[0.05, 1], [1.0, 0]], peak: 0.12 });
+    S.glass({ at: 1.0, f: mf(52), dur: 1.4, peak: 0.07 });
+  });
+  def('bm-caelum-the-starwyrm', 'bm', S => {
+    S.space('hall', 0.85);
+    // the constellations come loose and the serpent of stars wakes: a drone and choir rising, stars scattering, a long low call
+    caDrone(S, 0, 4.4, 0.16, [mf(31), mf(38), mf(45)]);
+    S.choir({ at: 0.4, notes: [mf(43), mf(50), mf(55)], dur: 3.8, vowel: 'a', vowel1: 'o', lp: 1400, peak: 0.12, pts: [[2.4, 1], [3.8, 0]] });
+    caStars(S, 0.2, 18, 2.8, 0.05, 1800, 7000);
+    [0, 1, 2, 3].forEach(i => S.glass({ at: 1.2 + i * 0.3, f: mf(81 + i * 5), dur: 1.4, peak: 0.07 }));
+    S.tone({ at: 2.0, f: 52, f1: 96, dur: 1.8, a: 0.5, fm: [2, 1.4, 0.3], lp: 900, vib: [3.6, 0.04, 0.4], pts: [[1.0, 1], [1.8, 0]], peak: 0.28 });
+    S.voice({ at: 2.1, f: 60, f1: 84, dur: 1.6, vowel: 'o', vowel1: 'a', breath: 1.4, lp: 1100, peak: 0.12, a: 0.5 });
+    S.whoosh({ at: 3.0, f: 300, f1: 5200, dur: 1.2, peakAt: 0.9, peak: 0.34 });
+    S.thud({ at: 4.1, f: 48, f1: 22, dur: 1.4, drive: 3.4, peak: 0.8 });
+    S.bell({ at: 4.1, f: mf(38), dur: 3.0, peak: 0.12, lp: 2200 });
+  });
+  def('bm-caelum-embers-of-heaven', 'bm', S => {
+    S.space('hall', 0.6);
+    // star-glass struck off the half-buried star: glassy ringing impacts, burning
+    caMeteor(S, 0, 1.8, 0.14);
+    [[0.7, 2600, -0.5], [1.15, 2100, 0.6], [1.6, 3000, 0]].forEach(([at, f, pan]) => {
+      S.whoosh({ at: at - 0.35, f: 3600, f1: 500, dur: 0.4, peakAt: 0.2, peak: 0.2, pan });
+      S.thud({ at, f: 64, f1: 28, dur: 0.9, drive: 3, peak: 0.6, pan });
+      S.glass({ at: at + 0.02, f, dur: 1.4, peak: 0.16, pan });
+      S.glass({ at: at + 0.05, f: f * 1.5, dur: 0.9, peak: 0.08, pan });
+      S.crackle({ at, dens: 3.5, f: 5600, dur: 0.9, pts: [[0.02, 1], [0.9, 0]], peak: 0.18, pan });
+      S.sizzle({ at: at + 0.1, dur: 0.9, pts: [[0.1, 1], [0.9, 0]], peak: 0.07, pan });
+    });
+    S.rumble({ at: 0.6, dur: 1.6, f: 46, peak: 0.3, a: 0.2 });
+  });
+  def('bm-caelum-constellation-fall', 'bm', S => {
+    S.space('hall', 0.85);
+    // the serpent rears and breathes: starlight pouring across the whole floor; a long swell of bright air and choir, a falling
+    // run of glass, and a hush where the shadow is
+    S.tone({ f: 54, f1: 72, dur: 1.4, a: 0.5, fm: [2, 1.2, 0.3], lp: 800, peak: 0.24 });
+    S.voice({ at: 0.1, f: 70, f1: 100, dur: 1.2, vowel: 'o', vowel1: 'a', breath: 1.4, lp: 1200, peak: 0.12, a: 0.3 });
+    caHush(S, 0.8, 1.2, 0.1, 1200, 5200);
+    S.noise({ at: 1.8, bp: 800, bp1: 6500, q: 0.8, dur: 3.0, a: 0.5, pts: [[1.2, 1], [3.0, 0]], peak: 0.36 });
+    S.noise({ at: 1.9, color: 'pink', hp: 3000, lp: 9500, grain: 0.7, dur: 2.6, a: 0.4, pts: [[1.0, 1], [2.6, 0]], peak: 0.14 });
+    S.choir({ at: 1.8, notes: [mf(57), mf(64), mf(69), mf(76)], dur: 3.2, vowel: 'a', vowel1: 'o', lp: 2400, peak: 0.12, pts: [[1.2, 1], [3.2, 0]] });
+    for (let i = 0; i < 10; i++) S.glass({ at: 1.9 + i * 0.16, f: mf(100 - i * 2), dur: 1.0, peak: 0.07, pan: Math.sin(i * 1.7) * 0.7 });
+    S.rumble({ at: 1.8, dur: 3.0, f: 46, peak: 0.34, a: 0.4 });
+    S.thud({ at: 1.85, f: 52, f1: 24, dur: 1.4, drive: 3, peak: 0.6 });
+  });
+  def('bm-caelum-ascendant', 'bm', S => {
+    S.space('hall', 0.9);
+    // the crater falls away and he rises above the clouds: the ground tearing loose, a drop into wind, then a vast open choir
+    // with the meteor roaring below
+    S.rumble({ dur: 8, f: 40, peak: 0.5, a: 1.2, pts: [[3.5, 1], [8, 0]] });
+    [0.2, 0.8, 1.5, 2.3].forEach((at, i) => { S.metal({ at, set: 'stone', f: 120 - i * 8, dur: 1.4, peak: 0.18, strike: 0.9 }); S.thud({ at, f: 56 - i * 4, f1: 24, dur: 0.9, drive: 3, peak: 0.5 + i * 0.07 }); S.crack({ at, peak: 0.22, dur: 0.2 }); });
+    caDrone(S, 0.4, 7, 0.14, [mf(31), mf(38), mf(43)]);
+    S.whoosh({ at: 2.5, color: 'brown', f: 90, f1: 3400, dur: 2.2, peakAt: 0.9, peak: 0.42 });
+    caMeteor(S, 3, 4.4, 0.22);
+    S.noise({ at: 4.6, color: 'pink', bp: 1400, bp1: 3000, q: 0.5, dur: 3.2, a: 1.0, pts: [[1.4, 1], [3.2, 0]], peak: 0.14 });
+    S.choir({ at: 4.4, notes: [mf(43), mf(50), mf(55), mf(62)], dur: 3.6, vowel: 'a', vowel1: 'o', lp: 2200, peak: 0.16, pts: [[1.6, 1], [3.6, 0]] });
+    S.choir({ at: 5.0, notes: [mf(67), mf(74)], dur: 3.0, vowel: 'i', vowel1: 'a', lp: 3200, peak: 0.07 });
+    caStars(S, 4.6, 14, 3.0, 0.045, 2400, 7800);
+    S.bell({ at: 5.2, f: mf(50), dur: 3.8, peak: 0.14, lp: 3200 });
+    S.glass({ at: 5.3, f: mf(93), dur: 2.6, peak: 0.1 });
+    S.thud({ at: 4.5, f: 44, f1: 20, dur: 1.8, drive: 3.6, peak: 0.8 });
+  });
+  def('bm-caelum-horizon-cut', 'bm', S => {
+    S.space('hall', 0.7);
+    // one cut the width of the room: the long hush, a single high sweep, and a rain of falling glass either side of the gap
+    caHush(S, 0, 1.3, 0.14, 1600, 7200);
+    S.tone({ f: 800, f1: 3200, dur: 1.3, a: 1.0, peak: 0.04, pts: [[1.2, 1], [1.3, 0]] });
+    S.whoosh({ at: 1.3, f: 400, f1: 7000, dur: 0.9, peakAt: 0.8, peak: 0.42, q: 2.2 });
+    S.noise({ at: 2.05, hp: 6000, dur: 0.14, a: 0.002, pts: [[0.005, 1], [0.14, 0]], peak: 0.2 });
+    S.glass({ at: 2.1, f: 3800, dur: 2.4, peak: 0.18 });
+    S.glass({ at: 2.12, f: 2500, dur: 2.0, peak: 0.1 });
+    S.scrape({ at: 2.1, f: 5200, q: 3, dur: 0.9, rate: 28, peak: 0.1, pts: [[0.1, 1], [0.9, 0]] });
+    for (let i = 0; i < 12; i++) {
+      const at = 2.5 + i * 0.12 + (i % 3) * 0.04;
+      S.glass({ at, f: 1800 + ((i * 523) % 2400), dur: 0.7, peak: 0.05 + ((i * 7) % 5) * 0.008, pan: Math.sin(i * 2.4) * 0.8 });
+      if (i % 3 === 0) S.thud({ at: at + 0.05, f: 90 - i * 3, f1: 40, dur: 0.4, drive: 1.6, peak: 0.28, pan: Math.sin(i * 2.4) * 0.8 });
+    }
+    S.thud({ at: 2.05, f: 58, f1: 24, dur: 1.2, drive: 3.2, peak: 0.7 });
+  });
+  def('bm-caelum-second-coil', 'bm', S => {
+    S.space('hall', 0.7);
+    // the serpent of stars diving straight across the room: a starlit trail, a rising call, and a body-length rush
+    S.tone({ f: 70, f1: 140, dur: 1.0, a: 0.4, fm: [2, 1.4, 0.3], lp: 1000, peak: 0.22 });
+    S.voice({ at: 0.05, f: 76, f1: 130, dur: 0.9, vowel: 'o', vowel1: 'a', breath: 1.6, lp: 1300, peak: 0.12, a: 0.3 });
+    caStars(S, 0.4, 8, 0.9, 0.05, 2200, 6800);
+    S.whoosh({ at: 0.9, f: 300, f1: 4800, dur: 0.9, peakAt: 0.55, peak: 0.42 });
+    S.noise({ at: 1.0, color: 'brown', bp: 400, bp1: 1400, q: 0.9, dur: 1.0, a: 0.1, pts: [[0.4, 1], [1.0, 0]], peak: 0.26 });
+    for (let i = 0; i < 9; i++) S.glass({ at: 1.0 + i * 0.1, f: 3600 - i * 200, dur: 0.8, peak: 0.06, pan: -0.7 + i * 0.17 });
+    S.thud({ at: 1.95, f: 54, f1: 24, dur: 1.3, drive: 3.4, peak: 0.85 });
+    S.glass({ at: 1.97, f: 2100, dur: 1.4, peak: 0.12 });
+    S.crackle({ at: 1.95, dens: 3, f: 5200, dur: 1.0, pts: [[0.02, 1], [1.0, 0]], peak: 0.16 });
+  });
+  def('bm-caelum-the-sky-comes-down', 'bm', S => {
+    S.space('hall', 0.95);
+    // the end of the set: the meteor falls. A vast, slow roar that swells for the whole cast, the choir and drone of everything
+    // he has called, bells tolling as it nears, then the strike, a shatter of glass, and a long ring-out into silence
+    S.rumble({ dur: 10, f: 38, peak: 0.6, a: 6, pts: [[7.4, 1], [9.6, 0.8], [10, 0]] });
+    caMeteor(S, 0, 8.4, 0.46);
+    S.noise({ at: 1.0, color: 'pink', bp: 300, bp1: 3400, q: 0.7, dur: 7.6, a: 5.4, pts: [[7.0, 1], [7.6, 0.6]], peak: 0.3 });
+    caDrone(S, 0.4, 8, 0.14, [mf(29), mf(36), mf(41)]);
+    S.choir({ at: 1.5, notes: [mf(41), mf(48), mf(53), mf(60)], dur: 6.2, vowel: 'a', vowel1: 'o', lp: 2000, peak: 0.16, pts: [[4.6, 1], [6.2, 0.8]] });
+    S.choir({ at: 3.2, notes: [mf(65), mf(72)], dur: 4.6, vowel: 'i', vowel1: 'a', lp: 3200, peak: 0.07 });
+    [1.0, 2.8, 4.4, 5.6, 6.5, 7.2].forEach((at, i) => { S.bell({ at, f: mf(31 + (i % 2) * 5), dur: 4.6, peak: 0.22 + i * 0.02, lp: 1800 }); S.thud({ at, f: 44, f1: 22, dur: 0.9, drive: 3, peak: 0.45 + i * 0.05 }); });
+    caStars(S, 2.0, 22, 5.2, 0.04, 2400, 8000);
+    S.whoosh({ at: 6.4, color: 'brown', f: 200, f1: 3800, dur: 1.6, peakAt: 0.95, peak: 0.44 });
+    S.thud({ at: 8.2, f: 38, f1: 14, dur: 3.0, drive: 4.5, peak: 1 });
+    S.crack({ at: 8.2, peak: 0.36, dur: 0.3 });
+    S.noise({ at: 8.2, color: 'brown', bp: 1800, bp1: 100, q: 0.7, dur: 2.8, a: 0.02, pts: [[0.1, 1], [2.8, 0]], peak: 0.5 });
+    for (let i = 0; i < 12; i++) S.glass({ at: 8.25 + i * 0.07, f: 1600 + ((i * 611) % 3200), dur: 1.8, peak: 0.1, pan: Math.sin(i * 2.1) * 0.8 });
+    S.bell({ at: 8.3, f: mf(31), dur: 5.5, peak: 0.3, lp: 1600 });
+    S.rumble({ at: 8.2, dur: 4.4, f: 34, peak: 0.5, a: 0.1 });
   });
 
   // ============================================================================================== 6. loops

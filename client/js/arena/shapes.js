@@ -124,6 +124,13 @@ const ARENA_DEFS = {
   archmage: { kind: 'circle', r: 540 },   // a drowned tower: seven circles of spellwork on the floor, four elemental sigils (archmage.js)
   hydra: { kind: 'circle', r: 540 },   // a flooded temple: nine columns in a ring, the Mother in the pool at its heart (hydra.js)
   titan: { kind: 'rect', hw: 500, hh: 400, corner: 40 },   // a glacier plateau: a 5 x 4 mosaic of ice sheets 200 across (titan.js), four braziers where four sheets meet
+  corvane: { kind: 'rect', hw: 560, hh: 400, corner: 40 },   // a snowy mountain pass: the shrine against the top wall, six stone lanterns (corvane.js)
+  brannoc: { kind: 'circle', r: 560 },   // a drowned colosseum: half-flooded sand, ghost stands, banners on the wall (brannoc.js)
+  'brannoc:sea': { kind: 'circle', r: 480 },   // ...then a broken ring of stone in an open sea, the Tidewrought standing in the water at its north edge
+  morrowoak: { kind: 'circle', r: 560 },   // a dead grove on the crater's rim, roots everywhere; the Hunger's holes are kept as f.floor (morrowoak.js)
+  'morrowoak:remade': { kind: 'circle', r: 520 },
+  caelum: { kind: 'circle', r: 560 },   // the crater floor round the half-buried star, under the meteor's shadow (caelum.js)
+  'caelum:sky': { kind: 'circle', r: 520 },   // ...then a circle of cloud above the falling meteor   // ...then the floating pieces of the grove over the dark, the holes still in them
 };
 let POLY_NORMALS = null;   // ARENA.sd's cos/sin of a 'poly' room's side normals, for the current side count
 const ARENA = {

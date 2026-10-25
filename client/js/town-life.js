@@ -214,6 +214,18 @@ const TownLife = (() => {
     else if (kind === 'ice-shard') { poly(ctx, [0, -13, 5, -3, 3, 9, -3, 9, -5, -3], 'rgba(170,226,255,0.85)', OUT, 1.5); line(ctx, -1, -8, -1, 5, 'rgba(255,255,255,0.85)', 1.2); poly(ctx, [8, -2, 11, 5, 7, 9, 5, 4], 'rgba(200,240,255,0.8)', OUT, 1); }
     else if (kind === 'sigil') { circle(ctx, 0, 0, 10.5, null, '#8fe0d0', 1.6); circle(ctx, 0, 0, 6, null, '#8fe0d0', 1.2); for (let i = 0; i < 7; i++) { const a = i / 7 * Math.PI * 2 - Math.PI / 2; circle(ctx, Math.cos(a) * 10.5, Math.sin(a) * 10.5, 1.9, ['#ff7a3a', '#8fd8ff', '#ffe45a', '#b07aff', '#dff7f0', '#dff7f0', '#dff7f0'][i], OUT, 0.8); } }
     else if (kind === 'fang') { poly(ctx, [-4, -11, 4, -11, 5, -4, 1, 11, -5, -4], '#ece4c4', OUT, 1.5); line(ctx, 0, -9, 1, 3, 'rgba(120,100,60,0.5)', 1); circle(ctx, 1, 13, 1.6, '#8ac04a'); }
+    else if (kind === 'sunwheel') { circle(ctx, 0, 0, 11.5, '#c88a2a', OUT, 1.6); circle(ctx, 0, 0, 9.5, null, '#ffd55a', 1.8); circle(ctx, 0, 0, 7, '#e6aa44'); for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2 + now * 0.4; line(ctx, Math.cos(a) * 3, Math.sin(a) * 3, Math.cos(a) * 12.5, Math.sin(a) * 12.5, 'rgba(255,214,90,0.8)', 1); } circle(ctx, 0, 0, 3.4, '#8a5a1c', OUT, 1.2); circle(ctx, -0.8, -0.8, 1.2, '#ffe9a0'); }
+    else if (kind === 'sheathed-blade') { ctx.rotate(0.55); rrect(ctx, -3.2, -13, 6.4, 23, 2.4, '#1d2234', OUT, 1.5); line(ctx, -0.6, -9, -0.6, 6, '#bfe4ff', 1); line(ctx, 1.2, -4, 1.2, 4, 'rgba(240,248,255,0.8)', 0.8); rrect(ctx, -6.5, 9, 13, 3.2, 1.2, '#a8b2c4', OUT, 1.2); rrect(ctx, -2.2, 11.5, 4.4, 6, 1.2, '#4a3c34', OUT, 1.2); }
+    else if (kind === 'heartwood') {
+      rrect(ctx, -9, -12, 18, 24, 6, '#6b5640', OUT, 1.6); rrect(ctx, -6, -9, 5, 18, 2, '#85704f');
+      poly(ctx, [1.5, -12, 4.5, -5, 1, -1, 4, 5, 1.5, 12, -1.5, 4, 1, -1, -2, -6], '#150a22', '#b07aff', 1.2);   // the split, and the dark in it
+      poly(ctx, [7, -12, 12, -9, 9, -4, 6, -8], '#d8aa3c', OUT, 1); line(ctx, 7.5, -9, 10.5, -7.5, 'rgba(120,80,10,0.6)', 0.8);   // one dead gold leaf caught on it
+    }
+    else if (kind === 'silver-mask') {
+      poly(ctx, [10, -14, 13, -7, 10, -1, 7, -7], '#dfe8f6', OUT, 1); poly(ctx, [-11, -10, -8, -4, -11, 1, -14, -4], '#c4d0e6', OUT, 1);   // two shards of the halo
+      ellipse(ctx, 0, 0, 8, 11.5, 0, '#c9d2de', OUT, 1.6); ellipse(ctx, -2.4, -3, 2.8, 5.6, 0.2, 'rgba(255,255,255,0.6)');   // a smooth mask, no face on it
+      line(ctx, 1.5, -9, 2, 8, 'rgba(110,122,150,0.55)', 0.8);
+    }
     ctx.restore();
   }
   function drawDecor(ctx, kind, now) {
@@ -222,18 +234,21 @@ const TownLife = (() => {
     } else if (kind === 'silk-lanterns') {
       for (const l of TOWN.lamps || []) glow(ctx, l.x, l.y - 28, 26, '#dfe6ff', 0.3 + Math.sin(now * 1.5 + l.x) * 0.06);
     } else if (kind === 'kites') {
-      const spots = [[980, 760], [1460, 700], [1700, 1180]];
+      const spots = [[960, 810], [1480, 810], [1700, 1180]];
       spots.forEach(([x, y], i) => {
         const kx = x + Math.sin(now * 0.7 + i) * 18, ky = y - 120 + Math.cos(now * 0.9 + i * 2) * 10;
         ctx.save(); ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo(x + 20, y - 60, kx, ky); ctx.stroke(); ctx.restore();
         poly(ctx, [kx, ky - 12, kx + 8, ky, kx, ky + 12, kx - 8, ky], ['#e85a5a', '#5ab0e8', '#e8c15a'][i], OUT, 1.2);
       });
     } else if (kind === 'bunting') {
-      const p = TOWN.portal, a = { x: p.x - 170, y: p.y + 110 }, b = { x: p.x + 170, y: p.y + 110 };
-      ctx.save(); ctx.strokeStyle = '#3a2a1c'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.quadraticCurveTo(p.x, p.y + 150, b.x, b.y); ctx.stroke(); ctx.restore();
-      for (let i = 1; i < 12; i++) {
-        const t = i / 12, x = a.x + (b.x - a.x) * t, y = (1 - t) * (1 - t) * a.y + 2 * (1 - t) * t * (p.y + 150) + t * t * b.y;
-        poly(ctx, [x - 6, y, x + 6, y, x, y + 11 + Math.sin(now * 3 + i) * 1.5], ['#c84a4a', '#e8c15a', '#4a8ac8'][i % 3], OUT, 0.8);
+      // two swags along the Trophy Hall's front wall, one each side of its opening
+      const H = TOWN.hall, fy = H.y + H.h - 18;
+      for (const [x0, x1, sd] of [[H.x + 40, H.door.x - 40, 0], [H.door.x + H.door.w + 40, H.x + H.w - 40, 1]]) {
+        ctx.save(); ctx.strokeStyle = '#3a2a1c'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(x0, fy); ctx.quadraticCurveTo((x0 + x1) / 2, fy + 40, x1, fy); ctx.stroke(); ctx.restore();
+        for (let i = 1; i < 12; i++) {
+          const t = i / 12, x = x0 + (x1 - x0) * t, y = (1 - t) * (1 - t) * fy + 2 * (1 - t) * t * (fy + 40) + t * t * fy;
+          poly(ctx, [x - 6, y, x + 6, y, x, y + 11 + Math.sin(now * 3 + i + sd) * 1.5], ['#c84a4a', '#e8c15a', '#4a8ac8'][(i + sd) % 3], OUT, 0.8);
+        }
       }
     } else if (kind === 'forge-embers') {
       decorSolid(kind, [{ x: SCALE_AT.x, y: SCALE_AT.y + 4, r: 15 }]);
@@ -245,7 +260,132 @@ const TownLife = (() => {
       drawChalkCircle(ctx, now);
     } else if (kind === 'wishing-pool') {
       drawWishingPool(ctx, now);
+    } else if (kind === 'pass-lanterns') {
+      decorSolid(kind, PASS_LANTERNS.map(l => ({ x: l.x, y: l.y, r: 9 })));
+      for (const l of PASS_LANTERNS) drawLanternGround(ctx, l, now);
+    } else if (kind === 'victory-banners') {
+      decorSolid(kind, SUN_BANNERS.map(b => ({ x: b.x, y: b.y, r: 8 })));
+      for (const b of SUN_BANNERS) drawBannerGround(ctx, b, now);
+    } else if (kind === 'seedlings') {
+      decorSolid(kind, SEEDLINGS.map(t => ({ x: t.x, y: t.y, r: 7 * t.k })));
+      for (const t of SEEDLINGS) drawSeedlingGround(ctx, t, now);
+    } else if (kind === 'starfall') {
+      const g = starGlassAt();
+      if (g) decorSolid(kind, [{ x: g.x, y: g.y + 2, r: 8 }]);
+      drawStarfall(ctx, now);
+      if (g) drawStarGlassGround(ctx, g, now);
     }
+  }
+
+  // ---------------------------------------------------------------- set 3 decor
+  // two stone lanterns flanking the road between the portals, above the plaza, snow-dusted and lit (the lantern itself is an entity, so heroes pass behind it)
+  const PASS_LANTERNS = [{ x: 1126, y: 702, s: 0 }, { x: 1274, y: 702, s: 1 }];
+  function drawLanternGround(ctx, l, now) {
+    const fl = Math.sin(now * 7 + l.s * 2.3) * 0.04 + Math.sin(now * 17 + l.s) * 0.025;
+    ellipse(ctx, l.x, l.y + 3, 26, 9, 0, 'rgba(226,236,250,0.5)');   // the snow that stays at its foot
+    ellipse(ctx, l.x - 9 + l.s * 18, l.y + 8, 8, 3, 0, 'rgba(240,246,255,0.45)');
+    glow(ctx, l.x, l.y - 22, 62, '#ffb45a', 0.2 + fl);
+    glow(ctx, l.x, l.y + 2, 40, '#ffcf8a', 0.08 + fl * 0.5);
+    for (let i = 0; i < 3; i++) {   // a few frost motes drifting down from the lamp
+      const q = (now * 0.22 + i / 3 + l.s * 0.37) % 1;
+      circle(ctx, l.x + Math.sin(now * 0.9 + i * 2.1 + l.s) * 12, l.y - 40 + q * 38, 1.1, 'rgba(236,246,255,' + (0.7 * (1 - q)).toFixed(2) + ')');
+    }
+  }
+  function drawPassLantern(ctx, l, now) {
+    const { x, y } = l, fl = Math.sin(now * 7 + l.s * 2.3) * 0.08 + Math.sin(now * 17 + l.s) * 0.05;
+    ellipse(ctx, x + 4, y + 4, 15, 5, 0, 'rgba(0,0,0,0.28)');
+    rrect(ctx, x - 10, y - 7, 20, 8, 2, '#8b909b', OUT, 1.6);
+    rrect(ctx, x - 4.5, y - 22, 9, 16, 2, '#9a9fa9', OUT, 1.5);
+    rrect(ctx, x - 9.5, y - 36, 19, 15, 2.5, '#a9aeb8', OUT, 1.6);
+    rrect(ctx, x - 6, y - 33, 12, 9, 1.5, 'rgba(255,' + Math.round(196 + fl * 80) + ',110,1)', OUT, 1);
+    circle(ctx, x, y - 28.5, 2.4, '#fff1c4');
+    line(ctx, x, y - 33, x, y - 24, 'rgba(120,70,20,0.55)', 1);
+    poly(ctx, [x - 15, y - 35, x - 6, y - 45, x + 6, y - 45, x + 15, y - 35], '#7d828d', OUT, 1.6);
+    ellipse(ctx, x, y - 45, 7, 2.6, 0, '#f2f6fc');   // snow on the cap
+    circle(ctx, x, y - 49, 2.2, '#9a9fa9', OUT, 1);
+  }
+
+  // two red sun-banners on tall poles where the road comes in from the south, a sandy patch at each foot (drawn as entities, so heroes pass behind)
+  const SUN_BANNERS = [{ x: 1126, y: 1150, s: 0 }, { x: 1274, y: 1150, s: 1 }];
+  function drawBannerGround(ctx, b, now) {
+    ellipse(ctx, b.x, b.y + 4, 30, 10, 0, 'rgba(214,186,128,0.5)');
+    for (let i = 0; i < 2; i++) {   // a few gold motes lifting off the banner's wheel
+      const q = (now * 0.2 + i / 2 + b.s * 0.31) % 1;
+      circle(ctx, b.x + Math.sin(now * 0.8 + i * 2.7 + b.s) * 10, b.y - 60 - q * 30, 1.2, 'rgba(255,214,110,' + (0.65 * (1 - q)).toFixed(2) + ')');
+    }
+  }
+  function drawSunBanner(ctx, b, now) {
+    const { x, y } = b, sw = Math.sin(now * 1.6 + b.s * 1.9) * 3.2;
+    ellipse(ctx, x + 4, y + 4, 13, 5, 0, 'rgba(0,0,0,0.28)');
+    rrect(ctx, x - 7, y - 5, 14, 7, 2, '#6a5a44', OUT, 1.5);
+    rrect(ctx, x - 2, y - 82, 4, 78, 1.5, '#5a3e22', OUT, 1.4);
+    circle(ctx, x, y - 84, 3.4, '#e2bb58', OUT, 1.2);
+    rrect(ctx, x - 14, y - 78, 28, 3, 1.2, '#4a3018', OUT, 1);   // the cross-bar
+    poly(ctx, [x - 12, y - 75, x + 12, y - 75, x + 12 + sw * 0.6, y - 42, x + sw, y - 33, x - 12 + sw * 0.6, y - 42], '#b8321e', OUT, 1.6);   // the cloth, swallow-tailed
+    poly(ctx, [x - 12, y - 75, x + 12, y - 75, x + 12, y - 71, x - 12, y - 71], '#e2bb58');
+    const wx = x + sw * 0.3, wy = y - 58;
+    circle(ctx, wx, wy, 7.4, null, '#ffd55a', 1.6); circle(ctx, wx, wy, 2.4, '#ffd55a');
+    for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2; line(ctx, wx + Math.cos(a) * 3, wy + Math.sin(a) * 3, wx + Math.cos(a) * 7.4, wy + Math.sin(a) * 7.4, '#ffd55a', 1); }
+  }
+
+  // two seedlings come up through the paving just east of the plaza, a dark cracked patch at each foot (the trees are entities, so heroes pass behind)
+  const SEEDLINGS = [{ x: 1500, y: 1000, s: 0, k: 1 }, { x: 1548, y: 1040, s: 1, k: 0.78 }];
+  function drawSeedlingGround(ctx, t, now) {
+    ellipse(ctx, t.x, t.y + 3, 30 * t.k, 10 * t.k, 0, 'rgba(58,42,28,0.5)');
+    line(ctx, t.x - 22 * t.k, t.y + 5, t.x - 9 * t.k, t.y + 2, 'rgba(24,14,10,0.55)', 1); line(ctx, t.x + 9 * t.k, t.y + 3, t.x + 24 * t.k, t.y + 8, 'rgba(24,14,10,0.55)', 1);
+    for (let i = 0; i < 2; i++) {   // a mote of amber lifting off the new growth
+      const q = (now * 0.18 + i / 2 + t.s * 0.4) % 1;
+      circle(ctx, t.x + Math.sin(now * 0.8 + i * 2.4 + t.s) * 8, t.y - 40 * t.k - q * 26, 1.1, 'rgba(255,196,84,' + (0.6 * (1 - q)).toFixed(2) + ')');
+    }
+  }
+  function drawSeedling(ctx, t, now) {
+    const { x, y, k } = t, sw = Math.sin(now * 1.1 + t.s * 2.2) * 2.2 * k;
+    ellipse(ctx, x + 3, y + 4, 11 * k, 4 * k, 0, 'rgba(0,0,0,0.26)');
+    ctx.save(); ctx.strokeStyle = OUT; ctx.lineWidth = 5.4 * k; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x, y + 2); ctx.quadraticCurveTo(x - 3 * k, y - 20 * k, x + sw * 0.5, y - 40 * k); ctx.stroke();
+    ctx.strokeStyle = '#7a6244'; ctx.lineWidth = 3 * k; ctx.stroke(); ctx.restore();
+    line(ctx, x + sw * 0.25, y - 24 * k, x + 11 * k + sw, y - 33 * k, '#7a6244', 1.8 * k);
+    line(ctx, x - 1.5 * k, y - 18 * k, x - 11 * k + sw * 0.6, y - 28 * k, '#7a6244', 1.6 * k);
+    const leaves = [[0, -45, 1], [11, -35, 0.8], [-11, -30, 0.8], [5, -52, 0.6], [-5, -40, 0.7]];
+    leaves.forEach(([lx, ly, ls], i) => {
+      const px = x + (lx + sw * (0.6 + i * 0.12)) * k, py = y + ly * k, w = 5.6 * ls * k;
+      poly(ctx, [px, py - w * 1.5, px + w, py, px, py + w * 1.2, px - w, py], i === 2 ? '#d8aa3c' : '#7fa84a', OUT, 1);
+    });
+    glow(ctx, x + sw * 0.5, y - 44 * k, 16 * k, '#ffc45a', 0.16 + Math.sin(now * 2 + t.s) * 0.04);
+  }
+
+  // the meteor has broken: slow stars drifting down over the whole town, and a splinter of black star-glass standing where the four set 3 statues meet
+  // (the splinter is an entity, so heroes pass behind it; its spot follows the Trophy Hall, so it moves with the layout: the middle of the third row)
+  function starGlassAt() {
+    const T = typeof TOWN !== 'undefined' && TOWN, H = T && T.hall;
+    if (!H || !H.rows || H.rows.length < 3) return null;
+    return { x: H.x + H.w / 2, y: H.rows[2] - 8 };
+  }
+  function drawStarfall(ctx, now) {
+    for (let i = 0; i < 34; i++) {
+      const h1 = (i * 0.6180339) % 1, h2 = (i * 0.7548776 + 0.17) % 1, sp = 26 + (i % 6) * 7, big = i % 7 === 0;
+      const x = ((h1 * 2400 - now * 9 + Math.sin(now * 0.4 + i) * 6) % 2400 + 2400) % 2400, y = (h2 * 1700 + now * sp) % 1700;
+      const len = 16 + (i % 4) * 7, tw = 0.6 + 0.4 * Math.sin(now * 2.1 + i * 1.9);
+      const bx = x + len * 0.3, by = y - len;   // the trail leans back toward where it came from
+      ctx.save(); ctx.globalAlpha = 0.55 * tw; line(ctx, x, y, bx, by, 'rgba(214,228,255,0.9)', big ? 1.6 : 1); ctx.restore();
+      if (big) glow(ctx, x, y, 14, '#cfe0ff', 0.2 * tw);
+      circle(ctx, x, y, big ? 2 : 1.3, 'rgba(250,252,255,' + (0.75 * tw).toFixed(2) + ')');
+      if (big && tw > 0.85) drawSpark(ctx, x, y, 4.5, (tw - 0.85) / 0.15);
+    }
+  }
+  function drawStarGlassGround(ctx, g, now) {
+    ellipse(ctx, g.x, g.y + 4, 24, 8, 0, 'rgba(20,18,34,0.4)');
+    for (const [dx, dy] of [[-20, 3], [-9, 7], [11, 6], [22, 2]]) line(ctx, g.x + dx * 0.4, g.y + 4 + dy * 0.3, g.x + dx, g.y + 4 + dy * 0.6, 'rgba(236,242,255,0.5)', 0.9);   // hairline cracks in the stone
+    glow(ctx, g.x, g.y - 8, 40, '#cfe0ff', 0.1 + Math.sin(now * 1.3) * 0.03);
+  }
+  function drawStarGlass(ctx, g, now) {
+    const { x, y } = g, p = 0.5 + 0.5 * Math.sin(now * 1.3);
+    poly(ctx, [x - 8, y + 3, x - 5, y - 14, x - 1, y - 30, x + 2, y - 15, x + 7, y - 21, x + 9, y + 3], '#0d0b18', OUT, 1.6);
+    poly(ctx, [x - 2, y + 2, x - 1, y - 24, x + 2, y - 14], 'rgba(40,36,64,0.9)');
+    line(ctx, x - 2.5, y - 1, x - 0.5, y - 26, 'rgba(240,246,255,' + (0.6 + p * 0.3).toFixed(2) + ')', 1.2);   // the white vein through it
+    line(ctx, x + 4, y - 2, x + 5, y - 16, 'rgba(240,246,255,0.45)', 0.8);
+    glow(ctx, x - 1, y - 14, 20, '#e4eeff', 0.12 + p * 0.1);
+    const q = (now * 0.16) % 1;
+    circle(ctx, x + Math.sin(now * 0.9) * 5, y - 30 - q * 22, 1.1, 'rgba(236,244,255,' + (0.7 * (1 - q)).toFixed(2) + ')');
   }
 
   // ---------------------------------------------------------------- set 2 decor (docs/plans/town-life.md, "Set 2 additions")
@@ -285,7 +425,7 @@ const TownLife = (() => {
     }
   }
   // the snow family by the Tankard (drawn as entities, so heroes pass in front of and behind them)
-  const SNOWMEN = [{ x: 802, y: 722, s: 1.15, c: '#c84a4a' }, { x: 848, y: 746, s: 1, c: '#4a8ac8' }, { x: 776, y: 760, s: 0.68, c: '#e8c15a', grump: true }];
+  const SNOWMEN = [{ x: 850, y: 812, s: 1.15, c: '#c84a4a' }, { x: 896, y: 836, s: 1, c: '#4a8ac8' }, { x: 824, y: 850, s: 0.68, c: '#e8c15a', grump: true }];
   function drawSnowman(ctx, m) {
     const { x, y, s } = m;
     ellipse(ctx, x + 3 * s, y + 4 * s, 13 * s, 6 * s, 0, 'rgba(0,0,0,0.22)');
@@ -350,13 +490,17 @@ const TownLife = (() => {
       if (!deps.beaten(b) || !state().seen[b]) continue;
       if (u.decor) drawDecor(ctx, u.decor, now);
       const i = bossIds.indexOf(b);
-      if (u.trophy && pedestals[i]) drawTrophy(ctx, u.trophy, pedestals[i].x + 52, pedestals[i].y + 18, now);
+      if (u.trophy && pedestals[i]) drawTrophy(ctx, u.trophy, pedestals[i].x + 52 * PED_S, pedestals[i].y + 18 * PED_S, now);
     }
     groundMeal(ctx, now);
   }
   function entities(scale) {
     const out = folk.filter(f => deps && present(f)).map(f => ({ kind: 'stagecraft', y: f.y, draw: ctx => drawFolk(ctx, f, scale) }));
     if (deps && deps.beaten('titan') && state().seen.titan) for (const m of SNOWMEN) out.push({ kind: 'stagecraft', y: m.y, draw: ctx => drawSnowman(ctx, m) });
+    if (deps && deps.beaten('corvane') && state().seen.corvane) for (const l of PASS_LANTERNS) out.push({ kind: 'stagecraft', y: l.y, draw: ctx => drawPassLantern(ctx, l, deps.now ? deps.now() : 0) });
+    if (deps && deps.beaten('brannoc') && state().seen.brannoc) for (const b of SUN_BANNERS) out.push({ kind: 'stagecraft', y: b.y, draw: ctx => drawSunBanner(ctx, b, deps.now ? deps.now() : 0) });
+    if (deps && deps.beaten('morrowoak') && state().seen.morrowoak) for (const t of SEEDLINGS) out.push({ kind: 'stagecraft', y: t.y, draw: ctx => drawSeedling(ctx, t, deps.now ? deps.now() : 0) });
+    if (deps && deps.beaten('caelum') && state().seen.caelum) { const g = starGlassAt(); if (g) out.push({ kind: 'stagecraft', y: g.y, draw: ctx => drawStarGlass(ctx, g, deps.now ? deps.now() : 0) }); }
     if (feastSc) {
       for (const d of feastSc.diners) out.push({ kind: 'stagecraft', y: d.y, draw: ctx => drawDiner(ctx, d, scale) });
       out.push({ kind: 'stagecraft', y: 99999, draw: ctx => drawMealOver(ctx, feastSc ? feastSc.now : 0) });

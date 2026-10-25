@@ -243,6 +243,10 @@
     hydra: 'mothers-cry rending-maul acid-spray tidal-line venom-bloom flame-gout rime-crown stormcall stonegaze mire-spit searing submerge mothers-heart the-drowning regrowth tidal-dance hydras-gaze',
     titan: 'winters-howl glacial-fist rime-slam twin-slam fault-line icefall titans-sweep winters-grasp frostbite whiteout the-long-night avalanche glacial-stomp breath-of-winter titans-grip endless-winter',
     archmage: 'arcane-burst arcane-lance rune-mark cinder-rune rime-rune storm-rune rift-rune pyre-rings ice-lances leaping-bolt void-rifts the-binding call-of-the-circle convergence counterspell rune-swap arcane-mark the-tide-rises',
+    corvane: 'white-gale sundering-cut cracked-guard draw-cut scabbard-sweep still-water hollow-breath cold-sheathe rising-crane comet-draw comet-volley hundredfold-parting false-stance whetted-edge overwhet returning-parting the-vigil last-light-of-the-pass',
+    brannoc: 'sunwheel twin-wheels riposte victory-leap hammer-heel roar-of-the-stands sand-furrow the-tide-rises fist-slam breaker undertow-grip double-grip sunwheel-unbound deep-call the-final-bell',
+    morrowoak: 'hunger-seed twin-seed inhale fourfold-bloom root-lash sap-tide saplings hungering-dark the-swallowing the-grove-remade deeper-roots cleaver-bough brood-roots storm-knot barrow-lantern wyrm-wing frost-fist archmage-rune hydra-head nothing-left',
+    caelum: 'glint eightfold-wake anchored-wake mirrored-wake chorus-of-the-fallen cinder-crown pinning-thrust grace-withdrawn nightfall starfall dark-ember the-starwyrm embers-of-heaven constellation-fall ascendant horizon-cut second-coil the-sky-comes-down',
   };
   const ALIAS = {
     grubnak: { 'butcher-s-charge': 'butchers-charge', 'order-up-plus': 'order-up', 'flame': 'flambe', 'meatballs': 'rolling-meatballs' },
@@ -252,7 +256,7 @@
     wyrm: { roar: 'tyrants-roar', claws: 'rending-claws', breath: 'ember-breath', tail: 'tail-lash', magma: 'magma-burst', feast: 'cinder-feast', flight: 'take-flight', dive: 'dragonfall', roost: 'the-roost', boils: 'crater-boils', 'heart-burn-wave': 'heart-burn', rain: 'cinder-rain', flare: 'heart-flare' },
     titan: { howl: 'winters-howl', fist: 'glacial-fist', slam: 'rime-slam', fault: 'fault-line', sweep: 'titans-sweep', grasp: 'winters-grasp', stomp: 'glacial-stomp', breath: 'breath-of-winter', grip: 'titans-grip', 'long-night': 'the-long-night' },
   };
-  const BOSS_ALIAS = { 'hollow-king': 'hollowking', 'the-hollow-king': 'hollowking', 'queen-skitterra': 'skitterra', vhalgrath: 'wyrm', azerath: 'archmage', 'the-sunken-archmage': 'archmage', 'the-ember-wyrm': 'wyrm', hrimgar: 'titan', 'the-frost-titan': 'titan' };
+  const BOSS_ALIAS = { 'hollow-king': 'hollowking', 'the-hollow-king': 'hollowking', 'queen-skitterra': 'skitterra', vhalgrath: 'wyrm', azerath: 'archmage', 'the-sunken-archmage': 'archmage', 'the-ember-wyrm': 'wyrm', hrimgar: 'titan', 'the-frost-titan': 'titan', 'the-unburied-blade': 'corvane', 'brannoc-the-undefeated': 'brannoc', 'the-tidewrought': 'brannoc', tidewrought: 'brannoc', 'morrow-oak': 'morrowoak', 'the-starved-grove': 'morrowoak', 'starved-grove': 'morrowoak', 'caelum-vey': 'caelum', 'the-starborn': 'caelum', starborn: 'caelum' };
   const TABLE = {};
   for (const b in MOVES) { TABLE[b] = {}; for (const s of MOVES[b].split(' ')) TABLE[b][s] = 'bm-' + b + '-' + s; for (const a in ALIAS[b]) TABLE[b][a] = TABLE[b][ALIAS[b][a]]; }
   // (anim: the boss animation the hook may pass along; unused for now, kept for move-less casts later)

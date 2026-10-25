@@ -13,7 +13,7 @@ const ArenaView = {
     // a round room is drawn at its full size (Volkar's closes in later; the dead ground is drawn over it)
     const ex = ARENA.kind === 'poly' ? ARENA.R : ARENA.kind === 'circle' ? ARENA.full : ARENA.hw;
     const ey = ARENA.kind === 'poly' ? ARENA.R : ARENA.kind === 'circle' ? ARENA.full : ARENA.hh;
-    const M = bossId === 'volkar' ? 260 : bossId === 'hollowking' ? 160 : bossId === 'wyrm' ? 200 : 120, bx = Math.ceil(ex + M), by = Math.ceil(ey + M);
+    const M = bossId === 'volkar' ? 260 : bossId === 'hollowking' ? 160 : bossId === 'brannoc' ? 260 : bossId === 'brannoc:sea' ? 340 : bossId === 'morrowoak' ? 220 : bossId === 'morrowoak:remade' ? 300 : bossId === 'caelum' ? 300 : bossId === 'caelum:sky' ? 320 : (bossId === 'wyrm' || bossId === 'corvane') ? 200 : 120, bx = Math.ceil(ex + M), by = Math.ceil(ey + M);
     const cv = document.createElement('canvas');
     cv.width = Math.ceil(bx * 2 * scale); cv.height = Math.ceil(by * 2 * scale);
     const c = cv.getContext('2d');
@@ -26,6 +26,13 @@ const ArenaView = {
     else if (bossId === 'wyrm') this.buildCrater(c, bx, by);
     else if (bossId === 'titan') this.buildGlacier(c, bx, by);
     else if (bossId === 'archmage') this.buildTower(c, bx, by);   // (archmage-art.js)
+    else if (bossId === 'corvane') this.buildPass(c, bx, by);   // (corvane-art.js)
+    else if (bossId === 'brannoc') this.buildColosseum(c, bx, by);   // (brannoc-art.js)
+    else if (bossId === 'brannoc:sea') this.buildSeaRing(c, bx, by);   // (brannoc-art.js: the second form's room)
+    else if (bossId === 'morrowoak') this.buildGrove(c, bx, by);   // (morrowoak-art.js)
+    else if (bossId === 'morrowoak:remade') this.buildRemade(c, bx, by);   // (morrowoak-art.js: the second form's room)
+    else if (bossId === 'caelum') this.buildStarCrater(c, bx, by);   // (caelum-art.js: the crater round the half-buried star)
+    else if (bossId === 'caelum:sky') this.buildSky(c, bx, by);   // (caelum-art.js: the second form's room, the cloud above the meteor)
     else this.buildKitchen(c, bx, by);
     this.floor = cv; this.floorFor = bossId + '@' + scale; this.floorBox = { bx, by };
   },
@@ -828,6 +835,13 @@ const ArenaView = {
     else if (a.kind === 'barrow') this.barrowLife(ctx, a, t);
     else if (a.kind === 'glacier') this.glacierLife(ctx, a, t);
     else if (a.kind === 'tower') this.towerLife(ctx, a, t);   // (archmage-art.js)
+    else if (a.kind === 'pass') this.passLife(ctx, a, t);   // (corvane-art.js)
+    else if (a.kind === 'colosseum') this.colosseumLife(ctx, a, t);   // (brannoc-art.js)
+    else if (a.kind === 'sea') this.seaLife(ctx, a, t);   // (brannoc-art.js)
+    else if (a.kind === 'grove') this.groveLife(ctx, a, t);   // (morrowoak-art.js)
+    else if (a.kind === 'remade') this.remadeLife(ctx, a, t);   // (morrowoak-art.js)
+    else if (a.kind === 'starcrater') this.starCraterLife(ctx, a, t);   // (caelum-art.js)
+    else if (a.kind === 'skyring') this.skyLife(ctx, a, t);   // (caelum-art.js)
     else if (a.kind === 'temple') this.templeLife(ctx, a, t);
   },
 
@@ -1232,6 +1246,8 @@ const ArenaView = {
       if (p.tag === 'venom') { this.venomPool(ctx, p, r, k, t); continue; }
       if (p.tag === 'bloom' || p.tag === 'mire') { this.hydraPool(ctx, p, r, k, t); continue; }
       if (p.tag === 'ember') { if (this.floorFor && this.floorFor.startsWith('hydra@')) this.hydraEmber(ctx, p, r, k, t); else this.emberPool(ctx, p, r, k, t); continue; }
+      if (p.tag === 'mgRimeIce') { if (typeof MG_FX !== 'undefined') MG_FX.puddle(ctx, p, r, k, t); continue; }   // (Morrow-Oak's Frost Fist ice: morrowoak-fx.js)
+      if (p.tag === 'clEmberBurn') { if (typeof CL_FX !== 'undefined') CL_FX.puddle(ctx, p, r, k, t); continue; }   // (Caelum's Dark Ember burning where it fell: caelum-fx.js)
       // hot grease: a glossy brown pool, bubbling; it only burns (flames, an orange glow) once fire has reached it
       const lit = this.puddleLit(p, t);
       if (lit) glow(ctx, p.x, p.y, r * 1.25, '#ff6a2a', 0.18 * k);
@@ -1309,7 +1325,10 @@ const ArenaView = {
 
   // lasting zones: the sticky outer web in Skitterra's phase 2
   drawZones(ctx, zones, t) {
+    if (typeof CL_FX !== 'undefined' && this.liveRoom) CL_FX.floor(ctx, this.liveRoom, t);   // (Caelum's meteor shadow, and the crater breaking under Ascendant: caelum-fx.js)
     BossTells.drawAftermath(ctx, t);   // the faint marks landed mechanics leave: under every zone, puddle and telegraph
+    if (typeof BR_FX !== 'undefined' && this.liveRoom) BR_FX.floor(ctx, this.liveRoom, t);   // (Brannoc's bank shot: every thrown path painted bounce by bounce: brannoc-fx.js)
+    if (typeof MG_FX !== 'undefined' && this.liveRoom) MG_FX.floor(ctx, this.liveRoom, t);   // (Morrow-Oak's Swallowing under the units: morrowoak-fx.js)
     const R = ARENA.R;
     for (const z of zones.values()) {
       // fades in as the web spreads, and out over its last second
@@ -1322,6 +1341,9 @@ const ArenaView = {
       if (z.tag === 'acid') { if (this.floorFor && this.floorFor.startsWith('hydra@')) this.hydraAcid(ctx, z, k, t); else this.acidFloor(ctx, z, k, t); continue; }
       if (z.tag === 'writburn') { this.writBurn(ctx, z, t); continue; }
       if (z.tag === 'lava') { this.moltenFloor(ctx, z, k, t); continue; }
+      if (z.tag === 'cvStill') { if (typeof CV_FX !== 'undefined') CV_FX.zone(ctx, z, k, t); continue; }   // (Corvane's Still Water: corvane-fx.js)
+      if (z.tag === 'brFurrow') { if (typeof BR_FX !== 'undefined') BR_FX.zone(ctx, z, k, t); continue; }   // (Brannoc's Sand Furrow: brannoc-fx.js)
+      if (z.tag === 'clShadowBurn' || z.tag === 'clCrownRing') { if (typeof CL_FX !== 'undefined') CL_FX.zone(ctx, z, k, t); continue; }   // (Caelum's burning shadow and Cinder Crown's ring of fire: caelum-fx.js)
       ctx.save();
       ARENA.trace(ctx, 2); ctx.clip();   // the web stops at the walls, whatever shape they are
       SHAPES.trace(ctx, s);
@@ -1447,6 +1469,7 @@ const ArenaView = {
     this.tetherSeen(th, a, b, t, ok);
     if (th.tag === 'bind') return this.graveChain(ctx, a, b, th, t, d, ok);
     if (String(th.tag).startsWith('rune:')) return this.runeLink(ctx, a, b, th, t);   // Azerath's Rune Pair (archmage-art.js)
+    if (th.tag === 'mgTwin' && typeof MG_FX !== 'undefined') return MG_FX.twin(ctx, a, b, th, t, d, ok);   // Morrow-Oak's Twin Seed (morrowoak-fx.js)
     const color = !hard ? '#f0eaff' : th.kind === 'long' ? '#6dff7a' : '#ffe6a8';
     const w = th.kind === 'short' ? 6 : 3;
     const left = Math.max(0, th.end - t), p = 1 - left / Math.max(0.1, th.end - th.start);
@@ -1482,7 +1505,7 @@ const ArenaView = {
       if (e.frame >= this._tframe - 1) continue;   // still being drawn
       m.delete(th);
       if (Math.abs(e.last - e.end) > 0.6 || typeof VFX === 'undefined' || !VFX.fx) continue;
-      const col = e.tag === 'bind' ? '#9affc0' : !hard ? '#f0eaff' : e.kind === 'long' ? '#6dff7a' : '#ffe6a8';
+      const col = e.tag === 'bind' ? '#9affc0' : e.tag === 'mgTwin' ? '#c8a8ff' : !hard ? '#f0eaff' : e.kind === 'long' ? '#6dff7a' : '#ffe6a8';
       const mx = (e.ax + e.bx) / 2, my = (e.ay + e.by) / 2;
       VFX.fx({ dur: 0.45, layer: 'air', draw: (c, p) => {
         const q = easeOut(p), k = 1 - p;
@@ -1887,6 +1910,8 @@ const ArenaView = {
   },
   // what a broken prop leaves on the floor
   rubble(c, fl, r) {
+    if (fl.of === 'stonelantern') return this.lanternRubble(c, fl, r);   // (corvane-art.js)
+    if (fl.of === 'starshard') return this.shardRubble(c, fl, r);   // (caelum-art.js)
     const wood = fl.of === 'cask', silk = fl.of === 'pillar', green = fl.of === 'lid';
     glow(c, fl.x, fl.y, fl.r * 1.2, wood ? '#3a1e08' : '#0a0a0c', 0.45);
     if (wood) {   // staves, a hoop and a wine-dark stain
@@ -1937,6 +1962,7 @@ const ArenaView = {
   // under everything that stands: the floor layer, burning grease, and the darkness of Lights Out
   drawRoomUnder(ctx, room, t, v) {
     this.drawRoomFloor(ctx, room);
+    if (typeof MG_ART !== 'undefined') MG_ART.holes(ctx, room, t);   // Morrow-Oak's holes: always drawn, at their current size (morrowoak-art.js)
     if (this.amb && this.amb.kind === 'barrow') this.chargeBanners(ctx, room, t);
     for (const fl of room.floor) {
       const until = room.lit.get(fl.id);
@@ -2060,6 +2086,10 @@ const ArenaView = {
   },
   // over the units: marks that belong over heads (Volkar's rod strike) and the like
   drawRoomOver(ctx, room, t, env) {
+    if (typeof CV_FX !== 'undefined' && env && env.bossId === 'corvane') CV_FX.roomOver(ctx, room, t, env);   // the Hundredfold Parting's numbered afterimages (corvane-fx.js)
+    if (typeof BR_FX !== 'undefined' && env && env.bossId === 'brannoc') BR_FX.roomOver(ctx, room, t, env);   // the Sunwheel and Breaker's wave on their painted paths, and the Tide Rises (brannoc-fx.js)
+    if (typeof MG_FX !== 'undefined' && env && env.bossId === 'morrowoak') MG_FX.roomOver(ctx, room, t, env);   // the Swallowing's falling slabs and the limbs growing (morrowoak-fx.js)
+    if (typeof CL_FX !== 'undefined' && env && env.bossId === 'caelum') CL_FX.roomOver(ctx, room, t, env);   // Caelum's afterimages, the Starwyrm, Grace Withdrawn and Ascendant (caelum-fx.js)
     // Grubnak stuck in the wall after a charge: stars turning round his head
     const st = room.ev.stuck;
     if (st && t < st.end && env.boss) {
@@ -2140,6 +2170,10 @@ const ArenaView = {
       case 'stone': this.standingStone(ctx, pr, t); break;
       case 'boulder': this.boulder(ctx, pr, t); break;
       case 'pot': this.stockpot(ctx, pr, t); break;
+      case 'stonelantern': this.stoneLantern(ctx, pr, t); break;   // (corvane-art.js)
+      case 'debris': this.debrisProp(ctx, pr, t); break;   // (brannoc-art.js)
+      case 'starcore': this.starCore(ctx, pr, t); break;   // (caelum-art.js)
+      case 'starshard': this.starShard(ctx, pr, t); break;   // (caelum-art.js)
       default: ellipse(ctx, pr.x + 4, pr.y + 6, pr.r * 1.1, pr.r * 0.6, 0, 'rgba(0,0,0,0.4)'); circle(ctx, pr.x, pr.y, pr.r, '#6a6a72', OUT, 2.5);
     }
     ctx.restore();

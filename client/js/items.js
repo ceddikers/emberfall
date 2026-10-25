@@ -11,8 +11,9 @@
 //   Rare       stats + a small effect               Legendary  a strong effect (class enhancements live here)
 //   Mythic     a build-defining effect (two per boss)
 
-// (raised for set 2's step: set-1 gear alone tops out under the old 150/150/100/10/10; fight.js clamps HP and DEF to match)
-const GEAR_CAPS = { hp: 180, phys: 160, mag: 160, def: 110, haste: 12, crit: 12 };
+// (raised for each set's step: set-1 gear alone tops out under the old 150/150/100/10/10, set 2 raised it to 180/160/160/110/12/12,
+// set 3 to the figures below; fight.js clamps HP and DEF to match)
+const GEAR_CAPS = { hp: 210, phys: 175, mag: 175, def: 120, haste: 13, crit: 13 };
 const CLASS_MAIN = {
   bastion: 'phys', bloodreaver: 'phys', ranger: 'phys', shadowblade: 'phys',
   runeguard: 'mag', pyromancer: 'mag', cleric: 'mag', grovekeeper: 'mag', chronomancer: 'mag',
@@ -38,10 +39,14 @@ const STAT_INFO = {
 
 // Where an item comes from (an item's `tier`). Within a set every boss drops gear of the same strength: bosses differ in
 // themes, effects and party bonuses, not in how good their gear is. Set 2 (tiers 5-8) is one step up: its pieces carry
-// SET2_STEP times the budget of a set-1 piece of the same rarity, so the new realm's loot is worth wearing.
+// SET2_STEP times the budget of a set-1 piece of the same rarity, so the new realm's loot is worth wearing. Set 3 (tier 9 on)
+// is a further step: SET3_STEP times a set-2 piece (so about 1.32 times set 1). The ilvl offsets are from set 1.
 const SET2_STEP = 1.15, SET2_ILVL = 8;
+const SET3_STEP = 1.15, SET3_ILVL = 16;
+const gearStep = tier => (tier >= 9 ? SET2_STEP * SET3_STEP : tier >= 5 ? SET2_STEP : 1);
+const gearIlvl = tier => (tier >= 9 ? SET3_ILVL : tier >= 5 ? SET2_ILVL : 0);
 const TIERS = { 0: { name: 'Recruit' }, 1: { name: 'Grubnak' }, 2: { name: 'Skitterra' }, 3: { name: 'Volkar' }, 4: { name: 'Hollow King' },
-  5: { name: 'Vhalgrath' }, 6: { name: 'Hrimgar' }, 7: { name: 'Azerath' }, 8: { name: 'The Hydra' } };
+  5: { name: 'Vhalgrath' }, 6: { name: 'Hrimgar' }, 7: { name: 'Azerath' }, 8: { name: 'The Hydra' }, 9: { name: 'Corvane' }, 10: { name: 'Brannoc' }, 11: { name: 'Morrow-Oak' }, 12: { name: 'Caelum Vey' } };
 
 const CLASS_GEAR = {
   bastion: { wtype: 'sword', w: ["Recruit's Arming Sword", 'Cleaverguard Sword', 'Silkrend Oathblade', 'Stormward Oathblade', 'Barrowking Oathblade'], a: ['Iron Skillet Plate', 'Broodwarden Plate', 'Thunderforged Plate', 'Gravewarden Plate'] },
@@ -444,6 +449,72 @@ const ITEMS = {};
       fx: [{ on: 'crit', buff: { dmg: 0.02 }, dur: 10, stacks: 6, name: 'Many Heads' }], fxText: 'Each critical hit grows another head: +2% damage for 10 s, stacking up to 6 times.' },
     { key: 'm_hydramantle', name: 'Mantle of Nine Heads', slot: 'armor', atype: 'chitin', tier: 8, rarity: M, base: { hp: 75, def: 50 },
       fx: [{ on: 'gcd', chance: 0.25, strike: 70 }, { on: 'heal', icd: 10, mend: 0.03 }], fxText: 'Each GCD has a 25% chance to bite for about 35 extra damage, and healing or shielding anyone mends 3% of your HP (once every 10 s).' },
+
+    // Corvane, the Unburied Blade (set 3, the Fallen Star): the last guard of the crater road. Frost-cracked lacquer, a
+    // whetstone, a pass lantern, a blade kept in its scabbard; sharpness, standing your ground and shelter.
+    { key: 'g_passblade', name: 'Sheathed Pass-Blade', slot: 'weapon', main: 'phys', wtype: 'sword', tier: 9, rarity: U, base: { main: 86, crit: 2, haste: 1 } },
+    { key: 'g_lanternstaff', name: "Lanternbearer's Staff", slot: 'weapon', main: 'mag', wtype: 'branch', tier: 9, rarity: U, base: { main: 86, crit: 1, haste: 2 } },
+    { key: 'g_lacquer', name: 'Frost-Cracked Lacquer Plate', slot: 'armor', tier: 9, rarity: U, atype: 'scale', base: { hp: 80, def: 48 } },
+    { key: 'g_whetstone', name: "Guard's Whetstone", slot: 'accessory', atype: 'charm', tier: 9, rarity: R, base: { crit: 3, main: 12 },
+      fx: [{ on: 'gcd', chance: 0.12, buff: { crit: 0.05 }, dur: 6, name: 'Honed' }], fxText: 'Your GCDs have a 12% chance to hone your edge: +5% critical chance for 6 s.' },
+    { key: 'g_passlantern', name: 'Pass Lantern', slot: 'accessory', atype: 'lantern', tier: 9, rarity: R, base: { hp: 55, def: 25 },
+      fx: [{ on: 'dash', icd: 12, ward: 120, dur: 5 }], fxText: 'After you dash, the lantern shelters you with a ward of about 60 for 5 s (once every 12 s).' },
+    { key: 'g_lastwatch', name: 'Last Watch Medal', slot: 'accessory', atype: 'amulet', tier: 9, rarity: L, base: { crit: 3, main: 12 },
+      fx: [{ while: 'hpAbove', frac: 0.7, crit: 0.04 }], fxText: 'Untouched: while above 70% HP, +4% critical chance.' },
+    { key: 'm_whetstone', name: 'The Unburied Whetstone', slot: 'accessory', atype: 'charm', tier: 9, rarity: M, base: { main: 12, crit: 3 },
+      fx: [{ on: 'crit', buff: { dmg: 0.03 }, dur: 8, stacks: 4, name: 'Whetted' }], fxText: 'Whetted: each critical hit puts a notch in your edge: +3% damage for 8 s, stacking up to 4 times.' },
+    { key: 'm_lastguard', name: 'Cloak of the Last Guard', slot: 'armor', atype: 'shroud', tier: 9, rarity: M, base: { hp: 75, def: 50 },
+      fx: [{ on: 'ogcd', icd: 10, ward: 140, dur: 6 }, { while: 'hpAbove', frac: 0.7, dmg: 0.04 }], fxText: 'Unrelieved: an oGCD raises a frost ward of about 70 over you for 6 s (once every 10 s), and above 70% HP, +4% damage.' },
+
+    // Brannoc the Undefeated (set 3): the champion of a drowned colosseum. Bronze crusted with barnacles, a gilded half-helm,
+    // victory brands, the Sunwheel and a crowd of ghosts; showmanship, rebounds and never being counted out.
+    { key: 'g_pitaxe', name: "Pit-Fighter's Brand-Axe", slot: 'weapon', main: 'phys', wtype: 'axe', tier: 10, rarity: U, base: { main: 88, crit: 2, haste: 1 } },
+    { key: 'g_sunstandard', name: 'Sunwheel Standard', slot: 'weapon', main: 'mag', wtype: 'sunstaff', tier: 10, rarity: U, base: { main: 88, crit: 1, haste: 2 } },
+    { key: 'g_bronzecuirass', name: 'Barnacled Bronze Cuirass', slot: 'armor', tier: 10, rarity: U, atype: 'scale', base: { hp: 82, def: 50 } },
+    { key: 'g_brandring', name: 'Victory Brand Ring', slot: 'accessory', atype: 'ring', tier: 10, rarity: R, base: { crit: 3, main: 12 },
+      fx: [{ on: 'gcd', chance: 0.12, buff: { haste: 0.05 }, dur: 6, name: 'Rebound' }], fxText: 'Rebound: your GCDs have a 12% chance to come back faster: +5% haste for 6 s.' },
+    { key: 'g_crowdtoken', name: 'Ghost Crowd Token', slot: 'accessory', atype: 'charm', tier: 10, rarity: R, base: { hp: 55, def: 25 },
+      fx: [{ on: 'ogcd', icd: 10, mend: 0.03 }], fxText: 'The stands cheer you on: each oGCD you use (at most once every 10 s) recovers 3% of your HP.' },
+    { key: 'g_champlaurel', name: "Pit Champion's Laurel", slot: 'accessory', atype: 'amulet', tier: 10, rarity: L, base: { crit: 3, main: 12 },
+      fx: [{ while: 'hpBelow', frac: 0.5, dmg: 0.06 }], fxText: 'Not counted out: while below 50% HP, +6% damage.' },
+    { key: 'm_sunwheel', name: 'The Sunwheel', slot: 'accessory', atype: 'broodeye', tier: 10, rarity: M, base: { main: 12, haste: 3 },
+      fx: [{ on: 'gcd', chance: 0.2, strike: 80, cdr: 0.5 }], fxText: 'Bounce: each GCD has a 20% chance to fling the Sunwheel off the foe for about 40 extra damage, and it comes back with 0.5 s off your other oGCD cooldowns.' },
+    { key: 'm_halfhelm', name: "Champion's Gilded Harness", slot: 'armor', atype: 'thunderhead', tier: 10, rarity: M, base: { hp: 75, def: 50 },
+      fx: [{ on: 'dash', icd: 8, buff: { dmg: 0.05, haste: 0.03 }, dur: 6, name: 'Showman' }, { on: 'dash', icd: 12, ward: 140, dur: 6 }], fxText: 'Showman: after you dash (once every 8 s), +5% damage and +3% haste for 6 s; and (once every 12 s) the crowd raises a ward of about 70 over you for 6 s.' },
+
+    // Morrow-Oak, the Starved Grove (set 3): the oldest tree in the realm, who drank from the star and fed his grove to the
+    // Hunger in his split heartwood. Root-bark, heartwood, dead gold leaves, amber sap, seed pods and the dark that eats;
+    // fast growth, small mercies and nothing wasted.
+    { key: 'g_rootbow', name: 'Rootbark Longbow', slot: 'weapon', main: 'phys', wtype: 'bow', tier: 11, rarity: U, base: { main: 90, crit: 2, haste: 1 } },
+    { key: 'g_amberfocus', name: 'Sap-Amber Focus', slot: 'weapon', main: 'mag', wtype: 'focus', tier: 11, rarity: U, base: { main: 90, crit: 1, haste: 2 } },
+    { key: 'g_barkplate', name: 'Grove-Elder Barkplate', slot: 'armor', tier: 11, rarity: U, atype: 'chitin', base: { hp: 84, def: 51 } },
+    { key: 'g_seedpodring', name: 'Seedpod Ring', slot: 'accessory', atype: 'ring', tier: 11, rarity: R, base: { crit: 3, main: 12 },
+      fx: [{ on: 'crit', buff: { haste: 0.02 }, dur: 8, stacks: 3, name: 'Quickening' }], fxText: 'Quickening: each critical hit splits a pod and sows a little speed: +2% haste for 8 s, stacking up to 3 times.' },
+    { key: 'g_sapcharm', name: 'Amber Sap Charm', slot: 'accessory', atype: 'charm', tier: 11, rarity: R, base: { hp: 55, def: 25 },
+      fx: [{ on: 'gcd', chance: 0.12, icd: 10, ward: 110, dur: 5 }], fxText: 'Your GCDs have a 12% chance to seal amber sap over you: a ward of about 55 for 5 s (once every 10 s).' },
+    { key: 'g_lastleaf', name: 'Last Leaf Pendant', slot: 'accessory', atype: 'amulet', tier: 11, rarity: L, base: { crit: 3, main: 12 },
+      fx: [{ while: 'always', recast: 0.06 }], fxText: 'Nothing wasted: your oGCD cooldowns are 6% shorter.' },
+    { key: 'm_leafcrown', name: 'Crown of Dead Leaves', slot: 'accessory', atype: 'crown', tier: 11, rarity: M, base: { main: 12, crit: 3 },
+      fx: [{ on: 'gcd', chance: 0.18, strike: 90, mend: 0.02 }], fxText: 'Fed: each GCD has an 18% chance to feed a leaf to the Hunger: about 45 extra damage, and what it leaves behind mends 2% of your HP.' },
+    { key: 'm_groveremade', name: 'Mantle of the Grove Remade', slot: 'armor', atype: 'venomweave', tier: 11, rarity: M, base: { hp: 75, def: 50 },
+      fx: [{ on: 'crit', icd: 10, mend: 0.04 }, { while: 'hpBelow', frac: 0.5, recast: 0.08 }], fxText: 'Regrowth: your critical hits (once every 10 s) mend 4% of your HP, and while below 50% HP your oGCD cooldowns are 8% shorter.' },
+
+    // Caelum Vey, the Starborn (set 3, the finale): the star's chosen, who calls the meteor down. Black star-glass veined with white
+    // light, the smooth silver mask, the halo's broken shards, blades of starlight, meteor iron and cloud-silk; being there first,
+    // afterimages and a sky held up.
+    { key: 'g_starsliver', name: 'Starlight Sliver', slot: 'weapon', main: 'phys', wtype: 'sword', tier: 12, rarity: U, base: { main: 92, crit: 2, haste: 1 } },
+    { key: 'g_halowand', name: 'Halo-Shard Wand', slot: 'weapon', main: 'mag', wtype: 'wand', tier: 12, rarity: U, base: { main: 92, crit: 1, haste: 2 } },
+    { key: 'g_glassplate', name: 'Black Star-Glass Plate', slot: 'armor', tier: 12, rarity: U, atype: 'scale', base: { hp: 86, def: 52 } },
+    { key: 'g_meteorband', name: 'Meteor-Iron Band', slot: 'accessory', atype: 'ring', tier: 12, rarity: R, base: { crit: 3, main: 12 },
+      fx: [{ on: 'dash', icd: 8, buff: { crit: 0.04 }, dur: 5, name: 'Afterimage' }], fxText: 'Afterimage: after you dash (once every 8 s), +4% critical chance for 5 s.' },
+    { key: 'g_cloudsilk', name: 'Cloud-Silk Sash', slot: 'accessory', atype: 'charm', tier: 12, rarity: R, base: { hp: 55, def: 25 },
+      fx: [{ while: 'hpAbove', frac: 0.5, haste: 0.03 }], fxText: 'Weightless: while above 50% HP, +3% haste.' },
+    { key: 'g_haloshard', name: 'Halo Shard Pendant', slot: 'accessory', atype: 'amulet', tier: 12, rarity: L, base: { crit: 3, main: 12 },
+      fx: [{ on: 'ogcd', icd: 6, buff: { dmg: 0.04 }, dur: 6, name: 'Foretold' }], fxText: 'Foretold: an oGCD (at most once every 6 s) marks the next few moments for you: +4% damage for 6 s.' },
+    { key: 'm_silvermask', name: 'The Silver Mask', slot: 'accessory', atype: 'crown', tier: 12, rarity: M, base: { main: 12, crit: 3 },
+      fx: [{ on: 'dash', icd: 10, buff: { dmg: 0.05 }, dur: 6, name: 'First There' }, { on: 'gcd', chance: 0.2, strike: 110 }], fxText: 'First There: after you dash (once every 10 s), +5% damage for 6 s; and each GCD has a 20% chance to leave an afterimage that cuts for about 55 extra damage.' },
+    { key: 'm_fallenmantle', name: 'Mantle of the Fallen Star', slot: 'armor', atype: 'thunderhead', tier: 12, rarity: M, base: { hp: 75, def: 50 },
+      fx: [{ on: 'ogcd', icd: 12, ward: 160, dur: 6 }, { while: 'always', recast: 0.05 }], fxText: 'Starfall: an oGCD (once every 12 s) draws a ward of about 80 over you for 6 s, and your oGCD cooldowns are 5% shorter.' },
   ];
   for (const it of gen) ITEMS[it.key] = it;
   // every effect gets an id (its proc cooldowns and buffs are tracked by it)
@@ -460,7 +531,7 @@ const ITEMS = {};
 // the actual numbers on an item instance { key }, for a given class (class/general 'main' becomes phys or mag)
 function itemStats(inst, clsId) {
   const it = ITEMS[inst.key]; if (!it) return {};
-  const k = RARITY[it.rarity].power * (it.tier >= 5 ? SET2_STEP : 1);
+  const k = RARITY[it.rarity].power * gearStep(it.tier);
   const out = {};
   for (const [s, v] of Object.entries(it.base)) {
     const stat = s === 'main' ? (it.main || CLASS_MAIN[clsId] || 'phys') : s;
@@ -470,7 +541,7 @@ function itemStats(inst, clsId) {
   return out;
 }
 const itemRarity = inst => (ITEMS[inst.key] ? ITEMS[inst.key].rarity : 0);
-const itemLevel = inst => RARITY[itemRarity(inst)].ilvl + (ITEMS[inst.key] && ITEMS[inst.key].tier >= 5 ? SET2_ILVL : 0);
+const itemLevel = inst => RARITY[itemRarity(inst)].ilvl + (ITEMS[inst.key] ? gearIlvl(ITEMS[inst.key].tier) : 0);
 const sellPrice = inst => RARITY[itemRarity(inst)].sell;
 
 // can this class put this item in this slot?  slot: weapon | armor | acc1 | acc2
@@ -493,13 +564,48 @@ function gearTotals(clsId, insts) {
   for (const s in t) t[s] = Math.min(GEAR_CAPS[s], t[s]);
   return t;
 }
+// ---------------------------------------------------------------- Forge fusion (forge.js)
+// At the Forge a newer item takes an old item's passive: the instance gains `fx: <donor item key>` and everything that reads
+// its passive (gearMods, the tooltip) reads that item's instead of its own. The donor is used up. Stats, name, look and boss tier
+// (so the party bonus) stay the receiving item's own. Old saves have no `fx`, and read as before.
+const hasPassive = it => !!(it && (ITEM_PERKS[it.key] || (it.fx && it.fx.length)));
+// the item whose passive this instance carries (its own key, or its fused one), or null when it has none.
+// A fused key only counts if it fits the item: same slot, and a class piece only takes its own class's.
+function passiveKey(inst) {
+  const own = inst && ITEMS[inst.key]; if (!own) return null;
+  const f = inst.fx && inst.fx !== inst.key ? ITEMS[inst.fx] : null;
+  const src = f && hasPassive(f) && f.slot === own.slot && (f.cls || null) === (own.cls || null) && !f.gift ? inst.fx : inst.key;
+  return hasPassive(ITEMS[src]) ? src : null;
+}
+// gold to fuse a passive of this rarity
+const FORGE_COST = { [R_RARE]: 10, [R_LEGENDARY]: 15, [R_MYTHIC]: 20 };
+// Can `donor`'s passive go onto `recv`? -> { ok, why?, cost?, src? }  (src: the item key whose passive moves)
+//   same slot only; the receiving item is at least as rare as the passive; class pieces only with the same class's pieces
+function forgeCheck(recv, donor) {
+  const r = recv && ITEMS[recv.key], d = donor && ITEMS[donor.key];
+  if (!r || !d || recv === donor) return { ok: false, why: 'Not an item' };
+  if (r.gift || d.gift) return { ok: false, why: 'A keepsake' };
+  const src = passiveKey(donor);
+  if (!src) return { ok: false, why: 'Carries no passive' };
+  if (r.slot !== d.slot) return { ok: false, why: 'Another slot' };
+  if ((r.cls || null) !== (d.cls || null)) return { ok: false, why: "A class piece fuses only with its own class's pieces" };
+  if (ITEMS[src].rarity > r.rarity) return { ok: false, why: 'Rarer than the receiving item' };
+  if (passiveKey(recv) === src) return { ok: false, why: 'Already carries that passive' };
+  return { ok: true, src, cost: FORGE_COST[ITEMS[src].rarity] || 0 };
+}
+
 // what the combat engine and the host use
 function gearMods(clsId, t, insts = []) {
   const main = CLASS_MAIN[clsId] || 'phys';
-  const perks = new Set(insts.filter(i => i && ITEM_PERKS[i.key] && ITEMS[i.key].cls === clsId).map(i => i.key));
-  // item effects (run by the kit: Kit.itemHook / Kit.fxMod); the same ring in both slots only counts once
-  const seen = new Set(), fx = [];
-  for (const i of insts) if (i && ITEMS[i.key] && ITEMS[i.key].fx && !seen.has(i.key)) { seen.add(i.key); fx.push(...ITEMS[i.key].fx); }
+  // item effects (run by the kit: Kit.itemHook / Kit.fxMod); the same ring in both slots only counts once. A fused item
+  // brings its donor's passive (passiveKey) in place of its own.
+  const perks = new Set(), seen = new Set(), fx = [];
+  for (const i of insts) {
+    if (!i || !ITEMS[i.key]) continue;
+    const src = passiveKey(i); if (!src) continue;
+    if (ITEM_PERKS[src] && ITEMS[src].cls === clsId && ITEMS[i.key].cls === clsId) perks.add(src);
+    if (ITEMS[src].fx && !seen.has(src)) { seen.add(src); fx.push(...ITEMS[src].fx); }
+  }
   return { power: (t[main] || 0) / 1000, crit: (t.crit || 0) / 100, haste: (t.haste || 0) / 100, hp: t.hp || 0, def: (t.def || 0) / 1000, perks, fx };
 }
 // host side: never trust a client's numbers beyond the caps
@@ -532,6 +638,15 @@ const PARTY_BONUS = {
     tiers: { 2: { crit: 0.02, dmg: 0.02 }, 3: { crit: 0.03, haste: 0.02, dmg: 0.02 }, 4: { crit: 0.04, haste: 0.02, dmg: 0.03 } } },
   8: { name: 'Nine Heads', boss: 'The Hydra', flavor: 'Cut one down and the rest grow wiser.',
     tiers: { 2: { hp: 0.03, crit: 0.02 }, 3: { hp: 0.04, crit: 0.03, haste: 0.02 }, 4: { hp: 0.05, crit: 0.03, haste: 0.03 } } },
+  // set 3 (a further step, like its gear)
+  9: { name: 'The Held Pass', boss: 'Corvane', flavor: 'Nobody ever came to relieve him. Stand the watch together.',
+    tiers: { 2: { crit: 0.03, haste: 0.02 }, 3: { crit: 0.04, haste: 0.02, dmg: 0.03 }, 4: { crit: 0.05, haste: 0.03, dmg: 0.04 } } },
+  10: { name: 'Crowd on Its Feet', boss: 'Brannoc', flavor: 'No champion ever won alone. Give the stands something to roar for.',
+    tiers: { 2: { dmg: 0.03, hp: 0.03 }, 3: { dmg: 0.04, hp: 0.04, haste: 0.02 }, 4: { dmg: 0.05, hp: 0.05, haste: 0.03 } } },
+  11: { name: 'Roots Entwined', boss: 'Morrow-Oak', flavor: 'The Hunger takes what stands alone. Keep your roots together.',
+    tiers: { 2: { dmg: 0.04, hp: 0.04 }, 3: { dmg: 0.05, hp: 0.05, haste: 0.03 }, 4: { dmg: 0.06, hp: 0.06, haste: 0.04 } } },
+  12: { name: 'Eightfold Wake', boss: 'Caelum Vey', flavor: 'He was always going to be there first. Be there together.',
+    tiers: { 2: { dmg: 0.05, hp: 0.05 }, 3: { dmg: 0.06, hp: 0.06, haste: 0.04 }, 4: { dmg: 0.07, hp: 0.07, haste: 0.05 } } },
 };
 const BONUS_STAT = { hp: 'max HP', dmg: 'damage', crit: 'critical chance', haste: 'haste' };
 const bonusText = m => Object.entries(m).map(([k, v]) => `+${Math.round(v * 100)}% ${BONUS_STAT[k]}`).join(', ');
@@ -559,7 +674,7 @@ function partyBonus(counts) {
 // A clear drops a chest: 4 items on Normal, 5 on Hard. Each item rolls its rarity first, then picks an item of that
 // rarity from the boss's table. Class items only roll for classes a human in the run plays (bots don't count).
 // The chest is first come: anyone takes an item and the party can trade it on (loot.js).
-const BOSS_TIER = { grubnak: 1, skitterra: 2, volkar: 3, hollowking: 4, wyrm: 5, titan: 6, archmage: 7, hydra: 8 };
+const BOSS_TIER = { grubnak: 1, skitterra: 2, volkar: 3, hollowking: 4, wyrm: 5, titan: 6, archmage: 7, hydra: 8, corvane: 9, brannoc: 10, morrowoak: 11, caelum: 12 };
 const CHEST_SIZE = { normal: 4, hard: 5 };
 const CHEST_ODDS = {   // percent by rarity: [Uncommon, Rare, Legendary, Mythic]
   normal: [55, 30, 12, 3],
@@ -572,7 +687,7 @@ for (const [boss, tier] of Object.entries(BOSS_TIER)) {
   for (const it of Object.values(ITEMS)) if (it.tier === tier && t[it.rarity]) t[it.rarity].push(it.key);
 }
 // gold for clearing a boss (Hard doubles it; wipes and trials give nothing)
-const CLEAR_GOLD = { grubnak: 40, skitterra: 45, volkar: 50, hollowking: 60, wyrm: 65, titan: 70, archmage: 75, hydra: 85 };
+const CLEAR_GOLD = { grubnak: 40, skitterra: 45, volkar: 50, hollowking: 60, wyrm: 65, titan: 70, archmage: 75, hydra: 85, corvane: 95, brannoc: 105, morrowoak: 115, caelum: 125 };
 const clearGold = (bossId, mode) => (CLEAR_GOLD[bossId] || 0) * (mode === 'hard' ? 2 : 1);
 
 // classes: the classes the humans in the run play. -> [item keys]
@@ -604,5 +719,5 @@ function chestChances(bossId, mode, classes, n = 20000) {
 const canUse = (key, clsId) => !!ITEMS[key] && slotsFor({ key }).some(s => canEquip({ key }, clsId, s));
 
 if (typeof module !== 'undefined') module.exports = { ITEMS, GEAR_CAPS, CLASS_MAIN, RARITY, itemStats, itemRarity, canEquip, gearTotals, gearMods, sanitizeGear,
-  PARTY_BONUS, gearSources, sanitizeSources, partyBonus, ITEM_PERKS, TIERS, FX_TRIGGERS, FX_CONDITIONS, FX_ACTIONS, FX_MODS, FX_KEYS,
+  hasPassive, passiveKey, forgeCheck, FORGE_COST, PARTY_BONUS, gearSources, sanitizeSources, partyBonus, ITEM_PERKS, TIERS, FX_TRIGGERS, FX_CONDITIONS, FX_ACTIONS, FX_MODS, FX_KEYS,
   BOSS_TIER, LOOT_TABLES, CHEST_ODDS, CHEST_SIZE, rollChest, chestChances, canUse, clearGold, sellPrice };

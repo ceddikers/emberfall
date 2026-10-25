@@ -304,3 +304,49 @@ S2-29. **Gillcharm** (`g_gillcharm`): a small fan-shaped charm of three pale gre
 S2-30. **Ninth Head Pendant** (`g_ninthhead`): a gold pendant shaped like a small serpent head with open jaws and a venom-green gem eye, on a chain.
 S2-31. **Eye of the Drowned Mother** (`m_hydraeye`): a large round pale green slit-pupil eye in a bronze setting, eight small eyes ringing it, on a chain of kelp links.
 S2-32. **Mantle of Nine Heads** (`m_hydramantle`): a green-black scale mantle with nine small serpent-head shoulder crests in a fan, sea-glass blue eyes, and a torn trailing cape of wet scales.
+
+## Set 3 sheet (Corvane first; more bosses are added below as they are built; 2026-10)
+**Tier style:** set 3 is the Fallen Star. Corvane is the unburied guard of the crater road (black lacquer cracked with frost-white lines, moon-grey steel, worn cord wrapping, a little warm amber lantern flame as the only warm colour, a faint silver edge-glint on blades). General items only: any class can wear them. Same layout rules as above; numbered S3-1 up; files go in `client/items/<key>.png` (key in brackets). Until painted they fall back to the drawn icons of the closest existing shape.
+
+### Corvane
+S3-1. **Sheathed Pass-Blade** (`g_passblade`): a broad single-edged sword resting in a black lacquer scabbard, only a hand's width of pale steel showing at the hilt, frost cracks across the lacquer, a faded grey cord wound round the grip.
+S3-2. **Lanternbearer's Staff** (`g_lanternstaff`): a plain dark pole staff with a small stone lantern hung from an iron hook at the top, a single warm amber flame in it, frost on the pole and a scrap of grey cloth tied below.
+S3-3. **Frost-Cracked Lacquer Plate** (`g_lacquer`): a lamellar breastplate of black lacquered plates laced with grey cord, white frost-line cracks running across them, a stiff tattered grey cloth tab at the hip.
+S3-4. **Guard's Whetstone** (`g_whetstone`): a worn blue-grey whetstone block with a groove down the middle, a grey cord loop through a drilled hole, a few pale silver scrape marks and a pinch of frost.
+S3-5. **Pass Lantern** (`g_passlantern`): a small square stone lantern with a pointed cap, a flat warm amber flame in its window, snow on the cap and a short iron chain to hang it by.
+S3-6. **Last Watch Medal** (`g_lastwatch`): a round tarnished-silver guard's medal with a stamped lantern-and-blade mark, one corner cracked off, on a faded dark blue ribbon.
+S3-7. **The Unburied Whetstone** (`m_whetstone`): a long dark whetstone with four neat pale notches cut along its edge, the first lit with a thin silver line of light, wrapped at one end in black lacquered cord, frost along the top.
+S3-8. **Cloak of the Last Guard** (`m_lastguard`): a stiff tattered grey cloak over black lacquer shoulder plates, frost-white cracks in the lacquer, a rusted chain clasp, the hem ragged and white with snow.
+
+### Brannoc
+**Style:** Brannoc is the champion of a drowned colosseum (green-bronze plate crusted with pale barnacles, gilded fittings gone dull with salt, wet sand, red sun-banner cloth, a blazing gold-orange Sunwheel rim, a faint ghost-green glow for the crowd). General items only.
+S3-9. **Pit-Fighter's Brand-Axe** (`g_pitaxe`): a broad single-bladed arena axe, bronze head with a scalloped edge, the flat of the blade covered in small burned-in victory marks, a wet leather-wrapped haft and a tuft of dried seaweed at the butt.
+S3-10. **Sunwheel Standard** (`g_sunstandard`): a tall banner-pole staff topped with a small round bronze disc with a blazing gold rim and eight short rays, a scrap of red sun-banner cloth tied just below it, barnacles on the pole's lower end.
+S3-11. **Barnacled Bronze Cuirass** (`g_bronzecuirass`): a sculpted bronze breastplate gone green-teal, pale barnacle clusters across one shoulder, one gilded rib line still bright, a torn red sash at the waist, wet sand in the creases.
+S3-12. **Victory Brand Ring** (`g_brandring`): a thick bronze ring with a flat face burned with a small sun-and-laurel mark, a gold rim worn smooth, a tiny barnacle on the band.
+S3-13. **Ghost Crowd Token** (`g_crowdtoken`): a round worn bronze arena-ticket token with a stamped crowd silhouette, pale ghost-green light seeping through a crack, a frayed cord loop through a drilled hole.
+S3-14. **Pit Champion's Laurel** (`g_champlaurel`): a gold-leaf laurel wreath pendant, a few leaves bent and tarnished, a single drop of sea water on one leaf, hung on a short chain of bronze links.
+S3-15. **The Sunwheel** (`m_sunwheel`): a round bronze war-shield seen face on, concentric rings and a boss in the centre, the rim blazing gold-orange with small flames and spray, a few barnacles crusting its lower edge, trailing a curved gold motion line as if just thrown.
+S3-16. **Champion's Gilded Harness** (`m_halfhelm`): a bronze shoulder-and-chest harness with a gilded half-helm resting on top of it, rows of burned victory brands along the plates, red banner cloth hanging from the shoulders, barnacles and a trailing strand of kelp.
+
+### Morrow-Oak
+**Style:** Morrow-Oak is the oldest tree in the realm, split open on the Hunger (dry grey-brown root-bark and cracked heartwood, dead gold leaves, a few drops of thick amber sap, and one starless black-violet seam with a bright violet rim where the dark has been). General items only.
+S3-17. **Rootbark Longbow** (`g_rootbow`): a tall longbow grown rather than carved, grey-brown root-bark with knots along the limbs, a taut pale cord string, one tiny dead gold leaf still clinging at the grip and a hairline black-violet crack down the belly.
+S3-18. **Sap-Amber Focus** (`g_amberfocus`): a short root-wood handle holding up a rough lump of amber the size of a fist, a curled seed suspended in it, a thin bright thread of violet at its heart, a few root tendrils wrapped round the base.
+S3-19. **Grove-Elder Barkplate** (`g_barkplate`): a breastplate of overlapping slabs of dry grey-brown bark laced with root cord, a split down the middle showing pale heartwood, a few dead gold leaves tucked into the shoulder straps and a thin violet-black seam along one edge.
+S3-20. **Seedpod Ring** (`g_seedpodring`): a ring of twisted dark root, set with a small dry seed pod split along one side to show a pale green sprout inside, a single dead gold leaf pressed to the band.
+S3-21. **Amber Sap Charm** (`g_sapcharm`): a small drop-shaped piece of amber with a leaf-shaped dark inclusion, a bead of fresh sap clinging to its tip, a short loop of root-fibre cord through a drilled hole.
+S3-22. **Last Leaf Pendant** (`g_lastleaf`): a single dead gold leaf, curled at the edges and veined, pressed flat in a thin ring of dark root-bark, hung on a short chain of knotted bark fibre, one vein faintly lit violet.
+S3-23. **Crown of Dead Leaves** (`m_leafcrown`): a thin circlet of black root-wood twined with dozens of dead gold leaves that lift away from it as if caught in a slow wind, the hollow inside the circlet dark violet with a bright violet rim, a few leaves drifting inward and vanishing.
+S3-24. **Mantle of the Grove Remade** (`m_groveremade`): a heavy mantle of grey-brown bark plates and woven root, several stumps of mismatched limbs grafted on at the shoulders, each a different muted colour, amber sap drying down the front, a thin violet seam where it was stitched together.
+
+### Caelum Vey
+**Style:** Caelum Vey is the star's chosen, calm and untouchable (black star-glass veined with white light, a smooth silver mask, the broken shards of a halo, narrow blades of starlight, dark meteor iron with a rim of dull orange-red where it burned, pale cloud-silk, and deep night violet behind everything). Cold white and silver are the light; the only warm colour is a thin ember line on the meteor iron. General items only.
+S3-25. **Starlight Sliver** (`g_starsliver`): a narrow straight sword whose whole blade is a sliver of white starlight, hard-edged and slightly see-through at the tip, set in a plain black star-glass hilt with a thin silver guard, a faint second ghost-blade offset beside it.
+S3-26. **Halo-Shard Wand** (`g_halowand`): a slim black star-glass rod with a single jagged pale shard hovering a finger's width above its tip, held there by nothing, a white vein of light running down the rod, a tiny silver ring at the grip.
+S3-27. **Black Star-Glass Plate** (`g_glassplate`): a breastplate of overlapping panes of black glass, each cracked through with a fine white vein of light, a smooth silver collar, a few drifting star-dust motes on the shoulders and a pale cloud-silk sash at the waist.
+S3-28. **Meteor-Iron Band** (`g_meteorband`): a heavy ring of dark pitted meteor iron, one thin line of dull orange-red along its edge where it once burned, a small chip of white star-glass set flat in the face, faint silver light seeping from the setting.
+S3-29. **Cloud-Silk Sash** (`g_cloudsilk`): a folded length of pale cloud-silk, nearly weightless and softly blurred at the edges, a silver thread running through it, tied once at the middle with a small black star-glass bead and drifting as if in a slow wind.
+S3-30. **Halo Shard Pendant** (`g_haloshard`): a single jagged shard of pale star-glass in a thin silver frame, white light caught inside it, on a fine silver chain, a second ghost-outline of the shard just behind it as if it had already moved.
+S3-31. **The Silver Mask** (`m_silvermask`): a smooth, featureless silver mask seen face on, no eyes or mouth, only a faint seam down the middle and a soft sheen, a halo of small broken star-shards hanging in an arc behind it, a see-through afterimage of the mask offset to one side.
+S3-32. **Mantle of the Fallen Star** (`m_fallenmantle`): a long dark mantle edged with black star-glass plates over the shoulders, white veins of light running through the glass, the cloth behind fading from night violet into a trail of falling stars, a thin ember-orange line along one hem where the meteor's light touched it.

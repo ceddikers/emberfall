@@ -58,7 +58,7 @@ const RaidUI = (() => {
     root.className = 'hidden';
     root.innerHTML = `
       <div id="boss-bar">
-        <div class="bb-top"><b class="bb-name"></b><span class="bb-mode"></span><em class="bb-tot"></em><span class="bb-time"></span></div>
+        <div class="bb-top"><b class="bb-name"></b><i class="bb-title"></i><span class="bb-mode"></span><em class="bb-tot"></em><span class="bb-time"></span></div>
         <div class="bb-hp"><div class="trail"></div><div class="fill"></div><div class="ticks"></div><div class="gates"></div><div class="vuln"></div><div class="goal hidden"></div><span></span></div>
         <div class="bb-post hidden"><div class="back"></div><div class="fill"></div><div class="crack"></div></div>
         <div class="bb-status"></div>
@@ -201,7 +201,13 @@ const RaidUI = (() => {
     lastState = raid.state;
     liveMeter(raid, myId);
     const b = raid.boss;
-    setText(q('.bb-name'), raid.def.name);
+    // a boss with a second form (def.forms, fight.js setForm; raid.form is set in main.js when the form moment arrives): the bar shows that form's name and title
+    // and its own look (a sea-teal fill, a bronze edge: style.css #boss-bar.form), the same health bar, no reset
+    const fm = raid.form && raid.def.forms && raid.def.forms[raid.form];
+    setText(q('.bb-name'), fm ? fm.name : raid.def.name);
+    setText(q('.bb-title'), fm && fm.title ? fm.title : '');
+    q('#boss-bar').classList.toggle('form', !!fm);
+    if (fm) q('#boss-bar').dataset.form = raid.form; else delete q('#boss-bar').dataset.form;
     const mode = q('.bb-mode');
     setText(mode, raid.mode === 'hard' ? 'Hard' : 'Normal');
     mode.classList.toggle('hard', raid.mode === 'hard');
