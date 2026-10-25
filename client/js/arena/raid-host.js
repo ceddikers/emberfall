@@ -351,13 +351,26 @@ class RaidHost {
       if (rl && this.sim.t >= rl.pullAt) {
         const b = this.sim.boss, dx = b.x - bot.x, dy = b.y - bot.y, d = Math.hypot(dx, dy) || 1;
         if (this.sim.t >= rl.snapAt) {
-          const a = Math.atan2(-dy, -dx);
+          // (a player snaps along the silk, not off it: on a floor with fallen ring the bot takes the first heading, back along the drag first, that lands on floor)
+          let a = Math.atan2(-dy, -dx);
+          const rm = this.sim.room;
+          if (rm && rm.safe) for (const off of [0, 0.5, -0.5, 1.0, -1.0, 1.5, -1.5, 2.2, -2.2, Math.PI]) {
+            const q = { x: bot.x + Math.cos(a + off) * 170, y: bot.y + Math.sin(a + off) * 170 };
+            ARENA.clamp(q, 40);
+            if (rm.safe(q.x, q.y, true)) { a += off; break; }
+          }
           const to = { x: bot.x + Math.cos(a) * 170, y: bot.y + Math.sin(a) * 170 };
           ARENA.clamp(to, 40);
           this.emit({ t: 'cast', id: bot.id, i: 6, x: Math.round(bot.x), y: Math.round(bot.y), tx: Math.round(to.x), ty: Math.round(to.y), ally: null, s: 1 });
           bot.x = to.x; bot.y = to.y; bot.reel = null;
           this.sim.snapReel(bot.id);
-        } else { const step = Math.min(d, rl.speed * dt); bot.x += dx / d * step; bot.y += dy / d * step; }
+        } else {
+          // (the silk stops dead at the brink of fallen floor: the same rule as a player's drag, main.js / skitterra-fx.js)
+          let step = Math.min(d, rl.speed * dt);
+          const rm = this.sim.room;
+          if (rm && rm.safe && !rm.safe(bot.x + dx / d * (step + 22), bot.y + dy / d * (step + 22))) step = 0;
+          bot.x += dx / d * step; bot.y += dy / d * step;
+        }
       }
       // (rooted, or standing still for a raise while the spot stays clear: BotAI.act sets stillUntil)
       if (bot.plan && (rooted || (bot.stillUntil > this.sim.t && BotAI.stillOk(bot, view)))) bot.moving = false;

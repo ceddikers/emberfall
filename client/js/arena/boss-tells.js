@@ -2408,7 +2408,32 @@ const BossTells = (() => {
       const tx = sx + (ex - sx) * shoot, ty = sy + (ey - sy) * shoot;
       const pulling = t >= rl.pullAt;
       const d = Math.hypot(tx - sx, ty - sy) || 1, nx = -(ty - sy) / d, ny = (tx - sx) / d;
-      const vib = pulling ? Math.sin(t * 40) * 3 : 0;
+      // the line she will drag you along, drawn on the floor from the first moment: pale chevrons running in toward her, and where the
+      // Collapse has taken the floor, the silk stops dead at the brink (an anchor bar and a taut, shuddering thread; dash to snap it).
+      // It is only the path of the drag; where it is safe to be is never painted.
+      const held = !!rl.held && pulling;
+      if (typeof SK_FX !== 'undefined' && shoot >= 1) {
+        const pp = SK_FX.pullPath(env.room, e.x, e.y, b.x, b.y), run = (t * (pulling ? 150 : 60)) % 46, ca = pp.ux, sa = pp.uy;
+        ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+        const fade = Math.min(1, (t - rl.start - 0.35) / 0.3) * 0.75;
+        for (let d = 14 + run; d < pp.len - 12; d += 46) {
+          const x = e.x + ca * d, y = e.y + sa * d + 2, a = fade * Math.min(1, d / 40) * Math.min(1, (pp.len - d) / 40);
+          ctx.beginPath(); ctx.moveTo(x - ca * 11 - sa * 12, y - sa * 11 + ca * 12); ctx.lineTo(x + ca * 10, y + sa * 10); ctx.lineTo(x - ca * 11 + sa * 12, y - sa * 11 - ca * 12);
+          ctx.strokeStyle = `rgba(20,10,30,${0.7 * a})`; ctx.lineWidth = 8; ctx.stroke(); ctx.strokeStyle = `rgba(244,240,255,${a})`; ctx.lineWidth = 3.4; ctx.stroke();
+        }
+        if (pp.held) {
+          // the brink: the bar where the silk catches, and a short dashed run on past it in red (the drag would go on over the fallen floor)
+          const ax = pp.x + ca * 22, ay = pp.y + sa * 22 + 2, pulse = 0.6 + 0.4 * Math.sin(t * (held ? 18 : 6));
+          ctx.beginPath(); ctx.moveTo(ax - sa * 48, ay + ca * 48); ctx.lineTo(ax + sa * 48, ay - ca * 48);
+          ctx.strokeStyle = `rgba(20,10,30,${0.75 * fade})`; ctx.lineWidth = 11; ctx.stroke(); ctx.strokeStyle = rgba(COL.danger, (held ? 1 : 0.85 * pulse) * fade); ctx.lineWidth = 6; ctx.stroke();
+          ctx.strokeStyle = `rgba(255,255,255,${0.9 * fade})`; ctx.lineWidth = 1.4; ctx.stroke();
+          ctx.setLineDash([9, 9]); ctx.beginPath(); ctx.moveTo(ax + ca * 8, ay + sa * 8); ctx.lineTo(ax + ca * 120, ay + sa * 120);
+          ctx.strokeStyle = rgba(COL.dangerHi, 0.55 * fade); ctx.lineWidth = 2.4; ctx.stroke(); ctx.setLineDash([]);
+          if (held) glow(ctx, ax, ay, 30 + Math.sin(t * 30) * 5, '#ff8a7a', 0.45);
+        }
+        ctx.restore();
+      }
+      const vib = pulling ? Math.sin(t * 40) * (held ? 8 : 3) : 0;
       ctx.save(); ctx.lineCap = 'round';
       ctx.beginPath(); ctx.moveTo(sx, sy); ctx.quadraticCurveTo((sx + tx) / 2 + nx * (pulling ? vib : 18), (sy + ty) / 2 + ny * (pulling ? vib : 18), tx, ty);
       ctx.strokeStyle = 'rgba(240,240,255,0.3)'; ctx.lineWidth = 8; ctx.stroke();

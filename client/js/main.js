@@ -2908,10 +2908,12 @@
     else if (rl && now >= rl.pullAt && !player.dashMove && !player.kb) {
       const b = raid.boss, dx = b.x - player.x, dy = b.y - player.y, d = Math.hypot(dx, dy);
       if (d > 80) {
-        const step = Math.min(d - 80, rl.sp * dt);
+        // (Skitterra's Collapse: the silk drags you straight at her but stops dead at the brink of fallen floor, taut; dash to snap it: skitterra-fx.js)
+        const step = typeof SK_FX !== 'undefined' ? SK_FX.pullStep(raid.room, player.x, player.y, b.x, b.y, Math.min(d - 80, rl.sp * dt)) : Math.min(d - 80, rl.sp * dt);
+        rl.held = typeof SK_FX !== 'undefined' && step < Math.min(d - 80, rl.sp * dt) - 0.01;
         player.x += dx / d * step; player.y += dy / d * step;
         clampArena(player);
-        moving = true;
+        moving = step > 0;
       }
     }
     player.st.moving = moving;

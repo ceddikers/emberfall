@@ -57,7 +57,7 @@ const SKITTERRA = {
     const B = f.boss;
     const TAU = Math.PI * 2;
     const dmg = {
-      mist: H ? 9400 : 9000, wrap: H ? 28700 : 26000, lunge: H ? 13300 : 16900, tether: H ? 17600 : 20800, spit: H ? 11600 : 15600, pool: H ? 2400 : 2850,
+      mist: H ? 9400 : 9000, wrap: H ? 28700 : 26000, lunge: H ? 14400 : 16900, tether: H ? 17600 : 20800, spit: H ? 11600 : 15600, pool: H ? 2400 : 2850,
       bite: H ? 2200 : 2100, fury: H ? 6100 : 7150, beam: H ? 6600 : 7800, reel: H ? 16500 : 22100,
       sac: H ? 5500 : 6500, sacFail: H ? 11000 : 13000, fang: H ? 16500 : 19500, glob: H ? 12100 : 14300, snare: H ? 11000 : 13000,
       deluge: H ? 17600 : 19500, strand: H ? 12100 : 14300, ambush: H ? 17600 : 20800, slam: H ? 5500 : 6500,
