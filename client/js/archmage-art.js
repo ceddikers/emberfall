@@ -439,6 +439,7 @@ const AZ_ART = (() => {
       const g = GROUND[moveOf(tg, s)];
       if (g) g(ctx, tg, s, p, k, t, env);
       if (tg.color === 'echo') echoTell(ctx, tg, s, p, k, t);
+      if (g || tg.color === 'echo') lockCue(ctx, tg, s, p, k, t);
     },
   });
   const TELLS = {
@@ -450,6 +451,128 @@ const AZ_ART = (() => {
   const tell = tag => TELLS[parse(tag)[0]] || null;
   // the Arcane Lance is drawn by the generic buster tell in boss-tells.js, which hands it over to us
   const lance = lanceTell;
+
+  // ---------------------------------------------------------------- screen feel, the sigil stamp and the whiff (all cosmetic)
+  // The camera holds for a beat when something big lands (the existing hook: main.js FX.cam), never more than once in a couple of
+  // seconds; a flash in the colour of the element for your own view only.
+  const nowS = () => (typeof performance !== 'undefined' ? performance.now() : Date.now()) / 1000;
+  const AS = { camAt: -99, whiffAt: new Map(), once: new Set() };
+  function feel(stop, punch, dur, gap, flashCol, flashA) {
+    const t = nowS(); if (t - AS.camAt < gap) return; AS.camAt = t;
+    try { if (typeof FX !== 'undefined' && FX.cam) { if (stop) FX.cam.stop(stop); FX.cam.punch(punch, dur); if (flashCol) FX.cam.flash(flashCol, flashA || 0.18, 0.32); } } catch (e) { /* cosmetic */ }
+  }
+  const onceAt = key => { if (AS.once.has(key)) return false; if (AS.once.size > 200) AS.once.clear(); AS.once.add(key); return true; };
+  const ELM = { pyre: 'fire', cinder: 'fire', convFire: 'fire', lances: 'frost', rime: 'frost', convFrost: 'frost', leap: 'bolt', convBolt: 'bolt', azBeam: 'bolt', rifts: 'void', rift: 'void', convVoid: 'void' };
+  const ECHO_COL = '#c8a0ff';
+  // the colour a shape's landing is in (the element of the move; a lens is the mix of its two; an echo is pale violet)
+  function colOf(tg, s) {
+    if (tg.color === 'echo') return ECHO_COL;
+    const [base, e1, e2] = parse(tg.tag);
+    if (base === 'azReact') return mix2(COL[e1] || '#ffffff', COL[e2] || '#ffffff', 0.5);
+    if (base === 'azMark') return (P[e1] || P.fire).col;
+    if (base === 'azPulse') return WATER;
+    const el = ELM[moveOf(tg, s)];
+    return el ? P[el].col : '#9af0ff';
+  }
+  // the sigil slams onto the floor where a blow lands: a brass ring and the element's rune marks opening out and fading, its sign
+  // flashing in the middle. The tower's own hand on every landing; it sits inside the area that just hit.
+  function stamp(x, y, r, el, o = {}) {
+    const Q = P[el] || null, col = o.col || (Q ? Q.col : '#9af0ff'), hot = o.hot || (Q ? Q.hot : '#ffffff'), dir = o.dir || 1, seed = (Math.abs(x) * 7 + Math.abs(y) * 3) | 0;
+    VFX.fx({ dur: o.dur || 0.75, layer: 'ground', draw: (c, p, t, e) => {
+      const a = e.a * Math.pow(1 - p, 1.5), q = easeOut(Math.min(1, p / 0.4));
+      c.save(); c.globalCompositeOperation = 'lighter';
+      circle(c, x, y, r * (0.55 + 0.7 * q), null, rgba(col, 0.8 * a), 2.5 + 4 * (1 - p));
+      circle(c, x, y, r * (0.42 + 0.55 * q), null, rgba(BRASS, 0.7 * a), 1.6);
+      glow(c, x, y, r * 0.7, col, 0.4 * a * (1 - q * 0.5));
+      c.restore();
+      runes(c, x, y, r * (0.5 + 0.55 * q), Math.max(8, Math.round(r / 7)), 6, hot, 0.9 * a, dir * t * 2.4, seed);
+      if (Q && !o.noGlyph) glyph(c, el, x, y, r * 0.3 * (1.5 - 0.5 * q), rgba(hot, 0.9 * a), 3);
+    } });
+  }
+  // a beam of the element drawn from a point to another and gone: the working running between sigils
+  function beamFx(x1, y1, x2, y2, col, w = 7, dur = 0.5) {
+    VFX.fx({ dur, layer: 'air', draw: (c, p, t, e) => {
+      const k = e.a * (1 - p) * (1 - p), reach = easeOut(Math.min(1, p / 0.3));
+      const ex = x1 + (x2 - x1) * reach, ey = y1 + (y2 - y1) * reach;
+      c.save();
+      VFX.neonPath(c, col, w * (1 - p * 0.5), k, () => { c.moveTo(x1, y1 - 6); c.lineTo(ex, ey - 6); });
+      VFX.neonPath(c, '#ffffff', w * 0.35, k, () => { c.moveTo(x1, y1 - 6); c.lineTo(ex, ey - 6); });
+      c.restore();
+      VFX.glowAt(c, ex, ey - 6, 26 + 20 * (1 - p), col, 0.7 * k);
+    } });
+  }
+  // which way is "away from the blow" for a hero standing just outside a shape
+  function awayFrom(s, u) {
+    if (s.kind === 'rect') {
+      const c = Math.cos(s.angle), sn = Math.sin(s.angle), across = -(u.x - s.x) * sn + (u.y - s.y) * c, sg = across >= 0 ? 1 : -1;
+      return { x: -sn * sg, y: c * sg };
+    }
+    const dx = u.x - s.x, dy = u.y - s.y, d = Math.hypot(dx, dy) || 1, sg = s.kind === 'donut' && d < s.r2 ? -1 : 1;   // (in a ring's hole, away from the blow is inward)
+    return { x: sg * dx / d, y: sg * dy / d };
+  }
+  // THE WHIFF: a hero who stood just outside a blow when it landed (and was not hit) feels its edge go by: a streak of the element
+  // along the edge a stride in front of them, a small rune ring at their feet, sparks, and for your own hero a faint flash, a push
+  // of the camera and a soft whoosh. Only ever drawn for a hero the blow did not hit and was close to: a reward, never a hint.
+  function whiff(u, s, col, mine, echo) {
+    const a = awayFrom(s, u), tx = -a.y, ty = a.x, ex = u.x - a.x * 34, ey = u.y - a.y * 34 - 14;
+    VFX.fx({ dur: 0.34, layer: 'air', draw: (c, p, t, e) => {
+      const k = e.a * (1 - p) * (1 - p), L = 40 + 62 * easeOut(Math.min(1, p / 0.5)), sh = (p - 0.2) * 40;
+      c.save();
+      VFX.neonPath(c, col, 4.5 * (1 - p * 0.6), k, () => { c.moveTo(ex - tx * L + a.x * sh, ey - ty * L + a.y * sh); c.lineTo(ex + tx * L + a.x * sh, ey + ty * L + a.y * sh); });
+      VFX.neonPath(c, '#ffffff', 2, k * 0.8, () => { c.moveTo(ex - tx * L * 0.5 + a.x * sh, ey - ty * L * 0.5 + a.y * sh); c.lineTo(ex + tx * L * 0.5 + a.x * sh, ey + ty * L * 0.5 + a.y * sh); });
+      c.restore();
+    } });
+    stamp(u.x, u.y + 6, 40, null, { col, hot: '#ffffff', dur: 0.5, dir: echo ? -1 : 1 });
+    VFX.sparks(u.x - a.x * 18, u.y - 10, { color: col, n: mine ? 12 : 7, speed: 300, angle: Math.atan2(a.y, a.x), spread: 0.9, up: 80, life: 0.9 });
+    if (mine) {
+      try {
+        if (typeof FX !== 'undefined' && FX.cam) { FX.cam.flash(col, 0.09, 0.18); FX.cam.punch(0.018, 0.32); }
+        if (typeof Sound !== 'undefined' && Sound.play) Sound.play('dash', { vol: 0.3, rate: 1.25, key: 'az-whiff', minGap: 0.3 });
+      } catch (e) { /* cosmetic */ }
+    }
+  }
+  const NEAR = 80;   // a hero this close to the edge of a blow (and not hit) gets the whiff
+  function whiffs(tg, msg, ctx) {
+    if (!ctx || !ctx.units || !msg) return;
+    if (tg.type === 'raidwide' || tg.type === 'buster' || tg.type === 'stack' || tg.type === 'tower' || tg.type === 'safe') return;
+    const s = tg.live; if (!s || (s.kind !== 'circle' && s.kind !== 'donut' && s.kind !== 'rect')) return;
+    if ((s.kind === 'rect' && s.len < 40) || (s.kind !== 'rect' && !(s.r > 40))) return;
+    const hits = msg.hits || [], t = nowS(), col = colOf(tg, s), echo = tg.color === 'echo';
+    for (const u of ctx.units) {
+      if (hits.includes(u.id)) continue;
+      if (t - (AS.whiffAt.get(u.id) || -9) < 0.7) continue;
+      if (SHAPES.contains(s, u.x, u.y)) continue;   // inside and not hit: covered or shielded, not a dodge
+      if (!SHAPES.contains(s, u.x, u.y, NEAR)) continue;
+      AS.whiffAt.set(u.id, t);
+      whiff(u, s, col, typeof Net !== 'undefined' && u.id === Net.id, echo);
+    }
+  }
+  // the last beat of a wait, inside the area that is about to go: a ring of the element closing on the middle (or sweeping in from
+  // the rim of a band) and landing at the instant the blow does, a spearhead of light running down a line. It sits wholly inside the
+  // red; it times the landing, it never paints anything safe.
+  function lockCue(ctx, tg, s, p, k, t) {
+    if (p < 0.7 || !(k > 0)) return;
+    const u = (p - 0.7) / 0.3, col = colOf(tg, s), a = (0.2 + 0.6 * u) * k;
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
+    if (s.kind === 'circle' && s.r > 40) {
+      SHAPES.trace(ctx, s); ctx.clip();
+      const rr = s.r * (1 - 0.94 * u);
+      circle(ctx, s.x, s.y, rr, null, rgba(col, a * 0.8), 3 + 4 * u);
+      circle(ctx, s.x, s.y, rr, null, rgba('#ffffff', a * 0.9), 1.4);
+    } else if (s.kind === 'donut') {
+      SHAPES.trace(ctx, s); ctx.clip();
+      const rr = s.r - (s.r - s.r2) * u;
+      circle(ctx, s.x, s.y, rr, null, rgba(col, a * 0.8), 3 + 3 * u);
+      circle(ctx, s.x, s.y, rr, null, rgba('#ffffff', a * 0.9), 1.4);
+    } else if (s.kind === 'rect' && s.len > 100) {
+      SHAPES.trace(ctx, s); ctx.clip();
+      const ca = Math.cos(s.angle), sa = Math.sin(s.angle), d = 40 + (s.len - 60) * easeOut(u), hx = s.x + ca * d, hy = s.y + sa * d;
+      ctx.beginPath(); ctx.moveTo(s.x + ca * Math.max(0, d - 120), s.y + sa * Math.max(0, d - 120)); ctx.lineTo(hx, hy);
+      ctx.strokeStyle = rgba(col, a * 0.7); ctx.lineWidth = 9; ctx.stroke(); ctx.strokeStyle = rgba('#ffffff', a); ctx.lineWidth = 2.4; ctx.stroke();
+      glow(ctx, hx, hy, 34, col, 0.7 * a);
+    }
+    ctx.restore();
+  }
 
   // ---------------------------------------------------------------- impacts (boss-vfx.js impact() hands every tag of his over)
   // standing things that burst up out of the floor and die down: items = [{ x, y, h, w, lean, at, ph }]
@@ -487,8 +610,9 @@ const AZ_ART = (() => {
   function ringShock(H, x, y, r, col, w = 6, r0 = 0) { H.shockAt(x, y, { r, r0, color: col, w, dur: 0.5, flat: 1 }); }
   let lastBolt = null;   // where the last Leaping Bolt came down (the next one's arc starts there)
 
-  function impact(tg, ctx, H) {
+  function impact(tg, ctx, H, msg) {
     const s = tg.live, [base, e1, e2] = parse(tg.tag);
+    try { whiffs(tg, msg, ctx); } catch (e) { /* cosmetic */ }
     if (tg.type === 'buster') {
       const e = tg.target != null ? ctx.entById(tg.target) : null, x = e ? e.x : s.x + Math.cos(s.angle) * 160, y = e ? e.y : s.y + Math.sin(s.angle) * 160;
       // a spear of arcane light thrown from his staff, and a spiked blue burst where it lands
@@ -505,6 +629,9 @@ const AZ_ART = (() => {
       erupt('frost', x, y, 54, 7, { h: 74, w: 9, dur: 0.9 });
       VFX.sparks(x, y, { color: '#d8f6ff', n: 10, speed: 380 });
       H.shockAt(x, y, { r: 120, color: '#9af0ff', w: 6, flat: 1 }); H.shake(9);
+      stamp(x, y, 84, 'frost', { col: '#9af0ff', dur: 0.8 });
+      for (let i = 0; i < 6; i++) { const a = i * TAU / 6 + Math.random() * 0.4; beamFx(x, y, x + Math.cos(a) * 120, y + Math.sin(a) * 120, '#bfeaff', 3.5, 0.35); }
+      feel(0.05, 0.028, 0.4, 2.2, '#bfeaff', 0.1);
       return;
     }
     if (base === 'azBurst') {
@@ -512,11 +639,15 @@ const AZ_ART = (() => {
       burstAt('arc', 0, 0, 230, { n: 16, dur: 0.6, z: 10 });
       for (const [r, d] of [[352, 0], [520, 0.08]]) H.after(d, () => ringShock(H, 0, 0, r, '#9af0ff', 8));
       for (let i = 0; i < 12; i++) { const a = i * TAU / 12 + Math.random() * 0.2; VFX.sparks(Math.cos(a) * 170, Math.sin(a) * 170, { color: '#d8f6ff', n: 3, speed: 240 }); }
+      stamp(0, 0, 200, null, { col: '#9af0ff', hot: '#ffffff', dur: 0.9 });
+      VFX.fx({ dur: 0.7, layer: 'air', draw: (c, p, t, e) => { const k = e.a * (1 - p); c.save(); c.globalCompositeOperation = 'lighter'; hexStar(c, 0, -14, 90 + 380 * easeOut(p), rgba('#d8f6ff', 0.8 * k), 3 + 3 * (1 - p), t * 2); hexStar(c, 0, -14, 60 + 240 * easeOut(p), rgba('#ffffff', 0.7 * k), 1.6, -t * 2.6); c.restore(); } });
+      feel(0.05, 0.03, 0.45, 2.2, '#bfeaff', 0.16);
       H.shake(8); return;
     }
     if (base === 'azSurge') {
       H.roomTint('#a05aff', 0.22, 0.8);
-      for (const el of ELS) burstAt(el, AZ.SIG[el][0], AZ.SIG[el][1], 140, { n: 12 });
+      for (const el of ELS) { burstAt(el, AZ.SIG[el][0], AZ.SIG[el][1], 140, { n: 12 }); stamp(AZ.SIG[el][0], AZ.SIG[el][1], 150, el, { dur: 0.9 }); beamFx(AZ.SIG[el][0], AZ.SIG[el][1], 0, 0, COL[el], 6, 0.6); }
+      feel(0.07, 0.035, 0.5, 2.2, '#a05aff', 0.22);
       H.shake(9); return;
     }
     const mv = moveOf(tg, s), echo = tg.color === 'echo';
@@ -528,6 +659,9 @@ const AZ_ART = (() => {
       eruptItems('fire', items, 1.15);
       for (const rr of ri ? [ri, ro] : [ro]) H.shockAt(0, 0, { r: Math.min(rr + 10, ARENA.R + 20), color: '#ffb04a', w: 8, dur: 0.6, flat: 1, clip: 1 });
       for (const q of H.scatter(s, 16)) H.after(Math.random() * 0.3, () => VFX.sparks(q.x, q.y, { color: '#ffd27a', n: 3, speed: 260 }));
+      // the fire runs out across the band: a ring of rune marks sweeping from the inner edge to the outer, the heat at its back
+      VFX.fx({ dur: 0.7, layer: 'air', draw: (c, p, t, e) => { const q = easeOut(p), rr = ri + (ro - ri) * q, k = e.a * (1 - p); c.save(); ARENA.trace(c, 4); c.clip(); c.globalCompositeOperation = 'lighter'; circle(c, 0, 0, Math.max(4, rr), null, rgba('#ffb04a', 0.7 * k), 5 + 5 * (1 - p)); circle(c, 0, 0, Math.max(4, rr), null, rgba('#fff2c0', 0.8 * k), 1.6); c.restore(); runes(c, 0, 0, Math.max(10, rr - 16), Math.max(10, Math.round(rr / 14)), 6, '#fff2c0', 0.8 * k, t * 3, 4); } });
+      feel(0.05, 0.026, 0.4, 2.2, '#ff9a4a', 0.12);
       H.shake(8);
     } else if (mv === 'cinder') {
       H.shapeFlash(s, COL.fire, { a: 0.38, dur: 0.55 });
@@ -536,12 +670,16 @@ const AZ_ART = (() => {
       VFX.pillar(s.x, s.y, { r: s.r * 0.4, h: 220, color: '#ff8a2a', dur: 0.6 });
       ringShock(H, s.x, s.y, s.r * 1.15, '#ffb04a', 7);
       VFX.sparks(s.x, s.y, { color: '#ffd27a', n: 12, speed: 320 }); H.shake(7);
+      stamp(s.x, s.y, s.r * 1.05, 'fire');
     } else if (mv === 'lances') {
       H.shapeFlash(s, COL.frost, { a: 0.34, dur: 0.55 }); H.sweep(s, '#e8faff', 0.4);
       const ca = Math.cos(s.angle), sa = Math.sin(s.angle), nx = -sa, ny = ca, items = [], L = Math.min(s.len, 640);
       for (let u = 56; u < L; u += 34) { const at = u / L * 0.28; for (let j = 0; j < 2; j++) { const v = (Math.random() - 0.5) * (s.w - 24), big = Math.abs(v) < s.w * 0.18; items.push({ x: s.x + ca * u + nx * v, y: s.y + sa * u + ny * v, h: (big ? rnd(70, 110) : rnd(34, 70)) * (0.8 + 0.4 * (1 - u / L)), w: big ? 12 : 8, lean: (Math.random() - 0.5) * 0.5, at }); } }
       eruptItems('frost', items, 1.2);
       H.shockAt(s.x + ca * L, s.y + sa * L, { r: 70, color: '#bfeaff', w: 5, dur: 0.4, flat: 1 });
+      for (let u = 120; u < L; u += 170) stamp(s.x + ca * u, s.y + sa * u, 54, 'frost', { dur: 0.6 });
+      beamFx(s.x + ca * 50, s.y + sa * 50, s.x + ca * L, s.y + sa * L, '#e8faff', 6, 0.4);
+      feel(0.05, 0.026, 0.4, 2.2, '#bfeaff', 0.1);
       H.shake(8);
     } else if (mv === 'rime') {
       H.shapeFlash(s, COL.frost, { a: 0.36, dur: 0.6 });
@@ -551,6 +689,8 @@ const AZ_ART = (() => {
       eruptItems('frost', items, 1.2);
       burstAt('frost', s.x, s.y, s.r * 0.8, { n: 16, dur: 0.5 });
       ringShock(H, s.x, s.y, s.r * 1.25, '#d8f6ff', 7);
+      stamp(s.x, s.y, s.r * 1.05, 'frost', { dur: 0.85 });
+      feel(0.06, 0.03, 0.45, 2.2, '#d8f6ff', 0.14);
       H.shake(7);
     } else if (mv === 'leap') {
       H.shapeFlash(s, COL.bolt, { a: 0.3, dur: 0.45 });
@@ -562,12 +702,14 @@ const AZ_ART = (() => {
       }
       lastBolt = { x: s.x, y: s.y, at: tg.start, now: performance.now() / 1000 };
       VFX.sparks(s.x, s.y, { color: '#fff6b0', n: 8, speed: 300 }); H.shake(8);
+      stamp(s.x, s.y, s.r * 1.1, 'bolt', { dur: 0.6 });
     } else if (mv === 'rifts') {
       H.shapeFlash(s, COL.void, { a: 0.36, dur: 0.6 });
       erupt('void', s.x, s.y, s.r * 0.8, 10, { h: 110, w: 12, dur: 1.1 });
       VFX.swirl(s.x, s.y, { r: s.r * 0.9, color: '#a05aff', dur: 0.7, arms: 3, inward: 1 });
       ringShock(H, s.x, s.y, s.r * 1.2, '#c8a0ff', 6);
       VFX.debris(s.x, s.y, { color: '#1a1226', n: 7, speed: 1.1 }); H.shake(7);
+      stamp(s.x, s.y, s.r * 1.05, 'void', { dir: -1 });
     } else if (mv === 'rift') {
       H.shapeFlash(s, COL.void, { a: 0.34, dur: 0.6 });
       const mid = (s.r + s.r2) / 2, items = [], n = Math.round(TAU * mid / 30);
@@ -575,12 +717,17 @@ const AZ_ART = (() => {
       eruptItems('void', items.filter(it => ARENA.sd(it.x, it.y) < -8), 1.1);
       H.shockAt(s.x, s.y, { r: s.r, r0: s.r2, color: '#c8a0ff', w: 7, dur: 0.5, flat: 1 });
       VFX.swirl(s.x, s.y, { r: s.r * 0.85, color: '#a05aff', dur: 0.7, arms: 4, inward: 1 }); H.shake(8);
+      stamp(s.x, s.y, s.r * 0.85, 'void', { dir: -1 });
     } else if (mv === 'convFire' || mv === 'convFrost' || mv === 'convBolt' || mv === 'convVoid') {
       const el = { convFire: 'fire', convFrost: 'frost', convBolt: 'bolt', convVoid: 'void' }[mv];
       H.shapeFlash(s, COL[el], { a: 0.4, dur: 0.7 });
       burstAt(el, s.x, s.y, s.r * 0.9, { n: 16, dur: 0.6 });
       erupt(el, s.x, s.y, s.r * 0.78, el === 'bolt' ? 7 : 16, { h: 100, w: 12, dur: 1.2 });
       ringShock(H, s.x, s.y, s.r * 1.2, P[el].hot, 8);
+      stamp(s.x, s.y, s.r * 1.1, el, { dur: 1.0 });
+      beamFx(s.x, s.y, 0, 0, COL[el], 8, 0.6);   // (the sigils answer one another through the middle of the floor)
+      if (onceAt('conv' + Math.round(tg.start * 4))) { H.roomTint('#ffffff', 0.12, 0.6); VFX.fx({ dur: 0.8, layer: 'air', draw: (c, p, t, e) => { c.save(); c.globalCompositeOperation = 'lighter'; hexStar(c, 0, -10, 40 + 260 * easeOut(p), rgba('#ffffff', 0.8 * e.a * (1 - p)), 3, t * 2.4); c.restore(); glow(c, 0, -10, 120 * (1 - p * 0.5), '#ffffff', 0.5 * e.a * (1 - p)); } }); }
+      feel(0.09, 0.045, 0.55, 3, COL[el], 0.15);
       H.shake(10);
     } else if (base === 'azBeam') {
       H.shapeFlash(s, COL.bolt, { a: 0.3, dur: 0.45 }); H.sweep(s, '#fffbe0', 0.3);
@@ -595,7 +742,9 @@ const AZ_ART = (() => {
       const pts2 = H.scatter(s, 10);
       pts2.forEach((q, i) => H.after(Math.random() * 0.2, () => { burstAt(i % 2 ? e1 : e2, q.x, q.y, 36, { n: 10, dur: 0.35 }); }));
       VFX.fx({ dur: 0.5, layer: 'air', draw: (c, p, t, e) => { const cx = s.kind === 'rect' ? s.x + Math.cos(s.angle) * s.len / 2 : s.x, cy = s.kind === 'rect' ? s.y + Math.sin(s.angle) * s.len / 2 : s.y; VFX.glowAt(c, cx, cy, 70 * (1 - p * 0.4), '#ffffff', e.a * (1 - p) * 0.9); } });
-      if (s.kind === 'circle') ringShock(H, s.x, s.y, s.r * 1.2, mid, 7);
+      if (s.kind === 'circle') { ringShock(H, s.x, s.y, s.r * 1.2, mid, 7); stamp(s.x, s.y, s.r * 1.05, null, { col: mid, hot: '#ffffff' }); }
+      else { H.sweep(s, '#ffffff', 0.35); const ca = Math.cos(s.angle), sa = Math.sin(s.angle); beamFx(s.x, s.y, s.x + ca * s.len, s.y + sa * s.len, mid, 9, 0.45); }
+      feel(0.05, 0.026, 0.4, 2.2, mid, 0.14);
       H.shake(8);
     } else if (base === 'azMark') {
       const Q = P[e1] || P.fire;
@@ -604,6 +753,8 @@ const AZ_ART = (() => {
       erupt(e1 in P ? e1 : 'fire', s.x, s.y, s.r * 0.7, 9, { h: 90, w: 11, dur: 1.0 });
       VFX.pillar(s.x, s.y, { r: s.r * 0.5, h: 300, color: Q.col, dur: 0.6 });
       ringShock(H, s.x, s.y, s.r * 1.3, Q.col, 6); H.shake(7);
+      stamp(s.x, s.y, s.r * 1.1, e1 in P ? e1 : 'fire', { dur: 0.9 });
+      feel(0.06, 0.03, 0.45, 2.2, Q.col, 0.16);
     } else if (base === 'azPulse') {
       H.shapeFlash(s, WATER, { a: 0.3, dur: 0.4 });
       for (let i = 0; i < 3; i++) H.shockAt(s.x, s.y, { r: s.r * (1.1 + i * 0.35), color: '#bff8f0', w: 4, dur: 0.5, flat: 1, delay: i * 0.1 });
@@ -611,7 +762,15 @@ const AZ_ART = (() => {
     } else {
       H.shapeFlash(s, P[e1] ? P[e1].col : '#9af0ff', { a: 0.34 });
     }
-    if (echo) { ringShock(H, s.x, s.y, Math.min(s.r || 90, 200) * 1.1, '#c8a0ff', 5); VFX.sparks(s.x, s.y, { color: '#e0d0ff', n: 8, speed: 260 }); }
+    if (echo) {
+      // the echo of the echo: the shape folds in on itself, a mirror of runes turning the wrong way, pale shards flung out
+      const er = Math.min(s.r || 90, 200), ex = s.kind === 'rect' ? s.x + Math.cos(s.angle) * s.len / 2 : s.x, ey = s.kind === 'rect' ? s.y + Math.sin(s.angle) * s.len / 2 : s.y;
+      ringShock(H, ex, ey, er * 1.1, ECHO_COL, 5); VFX.sparks(ex, ey, { color: '#e0d0ff', n: 10, speed: 280 });
+      stamp(ex, ey, Math.max(46, er * 0.9), 'void', { col: ECHO_COL, hot: '#f2e8ff', dir: -1, dur: 0.8 });
+      VFX.swirl(ex, ey, { r: Math.max(50, er * 0.8), color: ECHO_COL, dur: 0.6, arms: 3, inward: 1 });
+      for (let i = 0; i < 5; i++) { const a = Math.random() * TAU; VFX.spawn({ x: ex, y: ey, z: 6, vx: Math.cos(a) * 130, vy: Math.sin(a) * 90, vz: 120 + Math.random() * 160, g: 480, life: 0.7, size: 8, color: '#e0d0ff', kind: 'shard', add: true, vr: (Math.random() - 0.5) * 10 }); }
+      feel(0.04, 0.022, 0.4, 2.2, ECHO_COL, 0.12);
+    }
   }
 
   // ---------------------------------------------------------------- aftermath (boss-tells.js track() asks once per landed mechanic)
@@ -831,8 +990,16 @@ const AZ_ART = (() => {
         const gr = ctx.createLinearGradient(0, y - 190, 0, y); gr.addColorStop(0, rgba(P2.glow, 0)); gr.addColorStop(0.8, rgba(P2.glow, 0.5 * (1 - q * 0.7))); gr.addColorStop(1, rgba('#ffffff', 0.7 * (1 - q * 0.7)));
         ctx.fillStyle = gr; ctx.beginPath(); ctx.rect(x - 34, y - 190, 68, 190); ctx.fill();
         glyph(ctx, el, x, y - 70 - 40 * q, 22, rgba(P2.hot, 0.85 * (1 - q * 0.6)), 3);
+        // the rune ring that held it closes on the sigil and its light climbs, the bright seal of a thing well bound
+        runes(ctx, x, y, 150 * (1 - q) + 30, 20, 6, P2.hot, 0.9 * (1 - q), -t * 3, ELS.indexOf(el));
+        circle(ctx, x, y, 150 * (1 - q) + 30, null, rgba(BRASS, 0.8 * (1 - q)), 2);
+        for (let i = 0; i < 8; i++) { const u = (q * 1.4 + i / 8) % 1, an = i * 0.8 + t; glow(ctx, x + Math.cos(an) * 46 * (1 - u), y - u * 180, 7, P2.hot, 0.7 * (1 - u) * (1 - q * 0.5)); }
       }
-      if (sg && t < sg.end) glow(ctx, x, y, 220, col, 0.5 * (1 - (t - sg.start) / (sg.end - sg.start)));
+      if (sg && t < sg.end) {
+        const q = (t - sg.start) / (sg.end - sg.start);
+        glow(ctx, x, y, 220, col, 0.5 * (1 - q));
+        circle(ctx, x, y, 60 + q * 520, null, rgba(col, 0.7 * (1 - q)), 5 * (1 - q) + 1);   // (an unbound one tears loose: a ring through the room)
+      }
     }
     ctx.restore();
   }
@@ -875,6 +1042,9 @@ const AZ_ART = (() => {
       circle(ctx, 0, 0, 31, null, rgba(BRASS, 0.5), 1.4);
       ctx.restore();
       runes(ctx, e.x, fy, 22, 8, 4, col, 0.6, t * 0.8, ELS.indexOf(el));
+      // the last moment before the spell is cast from them: the rune tightens, a ring closing on the bearer's feet and the medallion flaring
+      const rem = th.end != null ? th.end - t : 9;
+      if (isLive && rem > 0 && rem < 1.6) { const u = 1 - rem / 1.6; ctx.save(); ctx.globalCompositeOperation = 'lighter'; circle(ctx, e.x, fy, 26 + (1 - u) * 52, null, rgba(col, 0.25 + 0.6 * u), 2 + 2 * u); circle(ctx, e.x, fy, 26 + (1 - u) * 52, null, rgba('#ffffff', 0.5 * u), 1); ctx.restore(); }
       if (arr > 0) { circle(ctx, e.x, fy, 26 + 70 * (1 - arr), null, rgba(col, arr * 0.7), 3); glow(ctx, e.x, e.y - 30, 60 * arr + 20, col, 0.6 * arr); }
       // the medallion: a brass ring round a dark disc, the rune in it
       const sc = (1 + arr * 0.7) * (isLive ? 1.18 + 0.05 * Math.sin(t * 5) : 0.9);
