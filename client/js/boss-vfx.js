@@ -8,6 +8,8 @@ const BOSS_VFX = (() => {
   // (shared-fx polish) routed through the one shake function (ability-vfx.js vfxShake): a boss always shakes everyone
   const shake = n => { if (typeof vfxShake === 'function') vfxShake(n, 'boss'); else FX.shake = Math.max(FX.shake, n); };
   const after = (sec, fn) => VFX.fx({ dur: sec, layer: 'ground', draw() {}, done: fn });
+  // (screen feel for the big hits: your own camera only; a no-op where the camera isn't there: FX.cam in main.js)
+  const cam = (k, ...a) => { try { if (typeof FX !== 'undefined' && FX.cam && FX.cam[k]) FX.cam[k](...a); } catch (e) { /* cosmetic */ } };
   const clipArena = c => { ARENA.trace(c, 4); c.clip(); };
   // a floor ring: one that would reach a wall stops at it (it runs along the floor, never over the brickwork)
   const shockAt = (x, y, o = {}) => VFX.shock(x, y, ARENA.sd(x, y) + Math.max(o.r ?? 80, o.r0 ?? 0) > -4 ? Object.assign({ clip: 1 }, o) : o);
@@ -698,6 +700,7 @@ const BOSS_VFX = (() => {
         bang(q.x, q.y, 34, { n: 9, color: '#5ab8ff', core: '#dff6ff', ink: '#0a1a3a', dur: 0.3, layer: 'ground', z: 2 });
         VFX.sparks(q.x, q.y, { color: '#bfe8ff', n: 5, speed: 220 });
       });
+      cam('flash', '#cfe8ff', 0.22, 0.3); cam('punch', 0.02, 0.4);   // (the sky cracks: a white blink, a push in)
       shake(8);
     },
     surge(tg, ctx) {
@@ -728,6 +731,8 @@ const BOSS_VFX = (() => {
       VFX.pillar(s.x, s.y, { r: s.r * 0.5, h: 260, color: '#fff0a0', dur: 0.6 });
       shockAt(s.x, s.y, { r: s.r * 1.3, color: '#ffe27a', w: 6, flat: 1 });
       AFT.decal(s.x, s.y, { style: 'crack', r: 50, dur: 2.2, a: 0.5, seed: Math.random() * 6 });
+      // the bolt splitting between them: the rest of the party standing under it is lit with it (a held stack is a good beat)
+      if (us.length > 1) { cam('flash', '#fff2b0', 0.16, 0.25); cam('stop', 0.05); }
       shake(6);
     },
     static(tg) {
@@ -756,6 +761,20 @@ const BOSS_VFX = (() => {
       for (let i = 0; i < 10; i++) { const a = i * TAU / 10, r = s.r * 1.2; VFX.debris(s.x + Math.cos(a) * r, s.y + Math.sin(a) * r * 0.8, { color: '#5a6270', n: 3, speed: 1.2 }); }
       AFT.crater(s.x, s.y, { r: s.r * 1.5, color: '#4fc8ff', core: '#dff6ff', cracks: 12, flames: 0, dur: 7, a: 0.6 });
       roomTint('#dff4ff', 0.25, 0.5);
+      // the weight of it: a second ring a beat behind, a shower of sky-shards, light coming up out of the crater, the screen
+      // flashing white and pushing in (and the frame holds for an instant)
+      shockAt(s.x, s.y, { r: s.r * 3.2, color: '#dff4ff', w: 10, dur: 0.7, flat: 1, delay: 0.1 });
+      shockAt(s.x, s.y, { r: s.r * 4.8, color: '#9fe0ff', w: 5, dur: 0.9, flat: 1, delay: 0.22 });
+      for (let i = 0; i < 12; i++) after(rand(0, 0.35), () => { const a = rand(0, TAU), d = rand(s.r * 0.4, s.r * 1.5); VFX.spawn({ x: s.x + Math.cos(a) * d, y: s.y + Math.sin(a) * d * 0.7, z: 10, vx: Math.cos(a) * 60, vy: Math.sin(a) * 40, vz: rand(180, 380), g: 520, life: 0.8, size: rand(7, 12), color: i % 2 ? '#ffffff' : '#9fe0ff', kind: 'shard', add: true, vr: rand(-10, 10) }); });
+      VFX.sparks(s.x, s.y - 10, { color: '#ffffff', n: 24, speed: 420 });
+      // a Twin Fall column (the columns are the smaller ring): a bolt runs through him to the other column
+      if (s.r < 110) {
+        const b = (ctx && ctx.bossDraw) || { x: 0, y: 0 };
+        VFX.lightning(s.x, s.y - 20, b.x, b.y - 30, { color: '#ffe27a', jag: 24, dur: 0.5 });
+        VFX.lightning(b.x, b.y - 30, -s.x, -s.y - 20, { color: '#6ad8ff', jag: 24, dur: 0.5 });
+        VFX.lightning(s.x, s.y - 20, -s.x, -s.y - 20, { color: '#ffffff', jag: 34, dur: 0.35 });
+      }
+      cam('flash', '#eaf6ff', 0.4, 0.45); cam('punch', 0.045, 0.55); cam('stop', 0.09);
       shake(11);
     },
     gale(tg) {
@@ -778,6 +797,8 @@ const BOSS_VFX = (() => {
       for (let i = 0; i < 3; i++) shockAt(s.x, s.y, { r: 640, color: '#cfeaff', w: 12 - i * 3, dur: 0.7, flat: 1, delay: i * 0.12 });
       AFT.decal(s.x, s.y, { style: 'crack', r: 110, dur: 3, a: 0.6, seed: Math.random() * 6 });
       roomTint('#dff4ff', 0.3, 0.6);
+      for (let i = 0; i < 14; i++) after(rand(0, 0.3), () => { const a = rand(0, TAU), d = rand(30, 200); VFX.spawn({ x: s.x + Math.cos(a) * d, y: s.y + Math.sin(a) * d * 0.7, z: 10, vx: Math.cos(a) * 90, vy: Math.sin(a) * 60, vz: rand(160, 340), g: 520, life: 0.8, size: rand(6, 11), color: i % 2 ? '#ffffff' : '#bfe8ff', kind: 'shard', add: true, vr: rand(-10, 10) }); });
+      cam('flash', '#eaf6ff', 0.42, 0.5); cam('punch', 0.05, 0.6); cam('stop', 0.1);
       shake(12);
     },
     // Rod Strike: the bolts come in their own message (propfx 'bolt'); Avalanche: the boulder thuds down where it stops
@@ -869,13 +890,33 @@ const BOSS_VFX = (() => {
     for (const q of scatter(s, 10)) after(rand(0, 0.15), () => VFX.pillar(q.x, q.y, { r: 16, h: 90 + rand(0, 60), color, dur: 0.45 }));
   }
 
+  // Volkar: a lane or cell of the storm lands and you were within a body's width of it, unhurt: the bolt tears past, a white flash of
+  // charge crackles off you and the camera leans in. Cosmetic and brief (your own hero only); it says "you read that one" and tells
+  // nothing the red outline had not already told.
+  let grazeAt = -9;
+  function graze(tg, msg, ctx) {
+    if (!ctx || ctx.boss !== 'volkar' || tg.type !== 'aoe' || typeof FX === 'undefined' || !FX.me) return;
+    if (msg && msg.hits && typeof Net !== 'undefined' && msg.hits.includes(Net.id)) return;
+    const me = FX.me, s = tg.live, tn = clk();
+    if (tn - grazeAt < 0.4 || !s || SHAPES.contains(s, me.x, me.y, 14) || !SHAPES.contains(s, me.x, me.y, 52)) return;
+    grazeAt = tn;
+    const ang = Math.atan2(me.y - s.y, me.x - s.x);
+    VFX.lightning(s.x, s.y - 30, me.x - Math.cos(ang) * 22, me.y - 14, { color: '#ffffff', jag: 12, dur: 0.22 });
+    VFX.sparks(me.x, me.y - 14, { color: '#dffbff', n: 12, speed: 300 });
+    VFX.burst(me.x, me.y - 14, { color: '#9ff4ff', color2: '#ffffff', n: 8, speed: 160, size: 7 });
+    shockAt(me.x, me.y, { r: 62, color: '#ffffff', w: 3, dur: 0.3, flat: 1 });
+    cam('punch', 0.012, 0.25);
+    try { if (typeof Sound !== 'undefined') Sound.play('dash', { vol: 0.28, rate: 1.5, key: 'volkar-graze', minGap: 0.4 }); } catch (e) { /* cosmetic */ }
+  }
+
   function impact(tg, msg, ctx) {
+    graze(tg, msg, ctx);
     // Azerath: every tag of his lands in archmage-art.js
-    if (ctx && ctx.boss === 'archmage' && typeof AZ_ART !== 'undefined') { AZ_ART.impact(tg, ctx, { shapeFlash, shockAt, scatter, after, shake, roomTint, sweep }); return; }
+    if (ctx && ctx.boss === 'archmage' && typeof AZ_ART !== 'undefined') { AZ_ART.impact(tg, ctx, { shapeFlash, shockAt, scatter, after, shake, roomTint, sweep }, msg); return; }
     // Hrimgar: his moves land in titan-art.js (a tag it does not know falls through to the older drawing below)
     if (ctx && ctx.boss === 'titan' && typeof TI_ART !== 'undefined' && TI_ART.impact(tg, msg, ctx, { shapeFlash, shockAt, scatter, after, shake, roomTint, sweep })) return;
     // Vhalgrath: wyrm-art.js has the look of every move of his (a tag it does not know falls through to the shared ones)
-    if (ctx && ctx.boss === 'wyrm' && typeof WYRM_ART !== 'undefined' && WYRM_ART.impact(tg, ctx, { shapeFlash, shockAt, scatter, after, shake, roomTint, sweep, AFT })) return;
+    if (ctx && ctx.boss === 'wyrm' && typeof WYRM_ART !== 'undefined' && WYRM_ART.impact(tg, ctx, { shapeFlash, shockAt, scatter, after, shake, roomTint, sweep, AFT }, msg)) return;
     // the Hydra: every move of hers lands in hydra-view.js (HY_FX)
     if (ctx && ctx.boss === 'hydra' && typeof HY_FX !== 'undefined' && HY_FX.impact(tg, ctx, { shapeFlash, shockAt, scatter, after, shake, roomTint, sweep, streak, bang, AFT, coverShadows, clipOut, AR: AR() })) return;
     // Corvane: every move of his lands in corvane-fx.js (CV_FX); a tag it does not know falls through to the shared ones
@@ -886,6 +927,8 @@ const BOSS_VFX = (() => {
     if (ctx && ctx.boss === 'morrowoak' && typeof MG_FX !== 'undefined' && MG_FX.impact(tg, msg, ctx, { shapeFlash, shockAt, scatter, after, shake, roomTint, sweep, streak, bang, AFT, coverShadows, clipOut, AR: AR() })) return;
     // Caelum: every move of his lands in caelum-fx.js (CL_FX); a tag it does not know falls through to the shared ones
     if (ctx && ctx.boss === 'caelum' && typeof CL_FX !== 'undefined' && CL_FX.impact(tg, msg, ctx, { shapeFlash, shockAt, scatter, after, shake, roomTint, sweep, streak, bang, AFT, coverShadows, clipOut, AR: AR() })) return;
+    // The Hollow King: the beat on top of his landings (hit-stop, the whiff past a hero who dodged, the thrown sceptre) lands in hollowking-fx.js (HK_FX); it returns true only for a landing it draws whole
+    if (ctx && ctx.boss === 'hollowking' && typeof HK_FX !== 'undefined' && HK_FX.impact(tg, msg, ctx, { shapeFlash, shockAt, scatter, after, shake, roomTint, sweep, streak, bang, AFT, coverShadows, clipOut, AR: AR() })) return;
     // (an untagged raidwide washes the room in the boss's own colour, softly, instead of a grey-white veil)
     if (tg.type === 'raidwide') { (IMPACT[tg.tag] || (() => { roomTint({ grubnak: '#ff8a3a', skitterra: '#b070ff', volkar: '#7fc8ff', hollowking: '#6dff9a', wyrm: '#ff8a3a', titan: '#9fd8ff' }[ctx && ctx.boss] || '#ffffff', 0.15); shake(6); }))(tg, ctx); return; }
     if (tg.type === 'proximity') { (IMPACT[tg.tag] || IMPACT.boil)(tg); shake(10); return; }
@@ -1500,6 +1543,17 @@ const BOSS_VFX = (() => {
       if (msg.kind !== 'stone' && msg.kind !== 'post') { AFT.scorch(x, y, x, y, { w: 70, dur: 6, ember: '#7fe8ff', smokeRate: 0.12 }); AFT.decal(x, y, { style: 'crack', r: 50, dur: 6, a: 0.6, seed: Math.random() * 6 }); }
       roomTint('#bfe8ff', 0.1, 0.25);
       shake(msg.kind === 'stone' ? 5 : 8);
+    } else if (msg.k === 'lee') {
+      // Gale Slam turned aside by a rod: the wind parts round it and closes behind, a ring of calm and a spark off the iron (the hero
+      // who stood in the lee gets the clean white flash)
+      const e = msg.pid != null && entById ? entById(msg.pid) : null;
+      if (e) {
+        shockAt(e.x, e.y, { r: 84, color: '#ffffff', w: 4, dur: 0.4, flat: 1 });
+        VFX.sparks(e.x, e.y - 18, { color: '#eaf8ff', n: 10, speed: 260 });
+        VFX.aura(e, { style: 'ring', color: '#bfe8ff', r: 28, dur: 0.7, rate: 0.7 });
+        if (typeof FX !== 'undefined' && FX.me && e === FX.me) { cam('punch', 0.02, 0.35); try { if (typeof Sound !== 'undefined') Sound.play('dash', { vol: 0.3, rate: 0.8, key: 'volkar-lee', minGap: 0.5 }); } catch (err) { /* cosmetic */ } }
+      }
+      if (msg.x != null) { VFX.sparks(msg.x, msg.y - 80, { color: '#dffbff', n: 6, speed: 220 }); VFX.lightning(msg.x, msg.y - 84, msg.x + rand(-26, 26), msg.y - 150, { color: '#9ff4ff', jag: 10, dur: 0.2 }); }
     } else if (msg.k === 'discharge') {
       // a stone that was still charged lets it all go into everyone near it
       const r = msg.r || 180;
@@ -1886,6 +1940,22 @@ const BOSS_VFX = (() => {
         } }));
         beat(sh, dur, 0.5, () => VFX.lightning(b.x + rand(-40, 40), b.y - 170, b.x + rand(-20, 20), b.y - 40, { color: '#bff6ff', jag: 12, dur: 0.18 }));
       },
+      // Heavens Fall, Twin Fall, Skyfall: the cloud over him opens and a shaft of pale light thickens down onto the summit, motes streaming
+      // up into it, bolts wandering the edge of the shaft; it brightens to the moment it falls
+      fall(sh, b, dur) {
+        CAST_FX.volkar.sky(sh, b, dur);
+        own(sh, VFX.fx({ dur, layer: 'air', draw: (c, p, t, e) => {
+          const k = e.a * Math.min(1, p / 0.12) * Math.min(1, (1 - p) / 0.05), w = 8 + 40 * easeIn(p), top = b.y - 360;
+          c.save(); c.globalCompositeOperation = 'lighter';
+          const g = c.createLinearGradient(0, top, 0, b.y - 20);
+          g.addColorStop(0, 'rgba(223,244,255,0)'); g.addColorStop(0.5, `rgba(223,244,255,${0.18 * k * (0.4 + p)})`); g.addColorStop(1, `rgba(255,255,255,${0.3 * k * (0.3 + p)})`);
+          c.fillStyle = g; c.fillRect(b.x - w, top, w * 2, b.y - 20 - top);
+          VFX.glowAt(c, b.x, top + 30, 50 + 90 * p, '#dff4ff', k * (0.2 + 0.4 * p));
+          c.restore();
+        } }));
+        emit(sh, dur, 0.55, (p) => { const a = rand(0, TAU), d = rand(70, 190); VFX.spawn({ x: b.x + Math.cos(a) * d, y: b.y + Math.sin(a) * d * 0.6, z: 6, vx: -Math.cos(a) * 20, vy: -Math.sin(a) * 12, vz: rand(150, 240), life: rand(0.7, 1.1), size: rand(3, 5), size1: 0, color: Math.random() < 0.6 ? '#dff4ff' : '#9fe0ff' }); });
+        beat(sh, dur, 0.7, (p) => VFX.lightning(b.x + rand(-30, 30), b.y - 340, b.x + rand(-60, 60) * (1 + p), b.y - 20, { color: '#ffffff', jag: 18, dur: 0.14 }));
+      },
       // lightning gathering in the striking fist
       fist(sh, b, dur) { const pt = P(b, 'volkar', 18, 36); drawIn(sh, dur, pt, { color: '#9ff4ff', r: 70, gr: 30 }); beat(sh, dur, 0.3, () => { const q = pt(), a = rand(0, TAU); VFX.lightning(q.x + Math.cos(a) * 70, q.y + Math.sin(a) * 50, q.x, q.y, { color: '#dffbff', jag: 10, dur: 0.14 }); }); },
       // Polarity Surge: gold into one hand, blue into the other
@@ -1932,7 +2002,7 @@ const BOSS_VFX = (() => {
   const CAST_USE = {
     skitterra: { mist: 'venom', spit: 'venom', deluge: 'venom', fang: 'venom', wrap: 'silk', silk: 'silk', web: 'silk', strand: 'silk', cocoon: 'silk', volley: 'silk', reel: 'silk',
       lunge: 'claws', molt: 'claws', brood: 'brood', eggs: 'brood', ambush: 'ambush' },
-    volkar: { clap: 'sky', storm: 'sky', skyfall: 'sky', fist: 'fist', avalanche: 'fist', surge: 'surge', rods: 'crackle', crash: 'crackle', field: 'crackle', chain: 'crackle', orbs: 'crackle', gale: 'gale' },
+    volkar: { clap: 'sky', storm: 'sky', skyfall: 'fall', fist: 'fist', avalanche: 'fist', surge: 'surge', rods: 'crackle', crash: 'crackle', field: 'crackle', chain: 'crackle', orbs: 'crackle', gale: 'gale' },
     hollowking: { cleave: 'cleave', marks: 'marks', judgement: 'judgement', charges: 'charges', doom: 'doom', gaze: 'gaze', lightsout: 'lights', rise: 'rise', night: 'rise', march: 'rise',
       sweep: 'pool', stomp: 'pool', ring: 'pool', bind: 'pool', lids: 'rise', decree: 'rise', knell: 'pool', bells: 'pool', audience: 'audience' },
   };

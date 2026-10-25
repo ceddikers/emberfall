@@ -1505,6 +1505,11 @@ const BossTells = (() => {
       ground(ctx, tg, s, p, k, t) {
         const col = swingCol(tg);
         graveLight(ctx, s, p, k, t, col, tg.id);
+        // rings drawing in toward him, quickening: the stomp lands as they meet (a count for the beat, inside the red)
+        for (let i = 0; i < 3; i++) {
+          const q = (p * (1.6 + 0.9 * p) + i / 3) % 1;
+          ellipse(ctx, s.x, s.y, s.r * (1 - q), s.r * (1 - q) * 0.92, 0, null, rgba(col, (0.1 + 0.4 * p) * Math.sin(q * Math.PI) * k), 2.5);
+        }
         // cracks spreading out through the flagstones
         ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
         for (let i = 0; i < 10; i++) {
@@ -1541,6 +1546,27 @@ const BossTells = (() => {
         ArenaView.spreadMarker(ctx, s, p, k, t);
         ctx.save(); ctx.translate(s.x, s.y); ctx.rotate(t * 0.6);
         for (let i = 0; i < 4; i++) { const a = i * TAU / 4; line(ctx, Math.cos(a) * s.r * 0.35, Math.sin(a) * s.r * 0.35, Math.cos(a) * s.r * 0.75, Math.sin(a) * s.r * 0.75, rgba('#c8ffd8', 0.6 * k), 2); }
+        ctx.restore();
+      },
+    },
+    // Sceptre Throw: the lane the sceptre will fly down. It follows its hero (a pale guide, a faint red under it) and sets for the last
+    // moment before it is hurled: then it is the red lane of the blow, fixed (the same lane as the Writ's, boss-tells.js writLane)
+    throw: {
+      outline: false,
+      ground(ctx, tg, s, p, k, t, env) {
+        const left = (1 - p) * tg.dur, set = left <= (tg.lockAt || 0);
+        if (!set) { ctx.save(); SHAPES.trace(ctx, s); ctx.fillStyle = rgba(COL.danger, (0.06 + 0.06 * p) * k); ctx.fill(); ctx.restore(); }
+        writLane(ctx, tg, s, p, k, t, env, false);
+        // the sceptre gathering gold at his hand, and the chevrons that will carry it
+        const ca = Math.cos(s.angle), sa = Math.sin(s.angle), L = toWall(s.x, s.y, s.angle, s.len);
+        glow(ctx, s.x + ca * 64, s.y + sa * 64 - 26, 22 + 22 * p, '#ffe08a', (0.25 + 0.5 * p) * k);
+        ctx.save(); SHAPES.trace(ctx, s); ctx.clip();
+        for (let d = 90 + ((t * (80 + 260 * p)) % 120); d < L; d += 120) {
+          const x = s.x + ca * d, y = s.y + sa * d;
+          ctx.save(); ctx.translate(x, y); ctx.rotate(s.angle);
+          poly(ctx, [10, 0, -8, -14, -3, 0, -8, 14], rgba('#ffe08a', (0.12 + 0.35 * p) * k), null);
+          ctx.restore();
+        }
         ctx.restore();
       },
     },

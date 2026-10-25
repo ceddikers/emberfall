@@ -45,3 +45,20 @@ Bots, Hard at `GEAR=mid` (30 runs per seed): before this pass 20 / 19 / 21 (seed
 - Normal, `GEAR=fresh`, 90 runs (three seed sets): 80 clears, 89%, wipes spread over the Front and Back, clear time about 7:50. The 14 base-gear line-ups in `check.js` still clear at least once in three.
 - Hard, `GEAR=mid`, 180 runs (six seed sets): 105 clears, 58%; mean clear 566 s against the 607 s enrage (about 40 s of slack). Wipes are mostly in the finale (the Heavens and Twin Falls), a few in the Back.
 - Journal: Distant Thunder entries removed, Twin Fall entries added for all 23 heroes. Sound: `bm-volkar-twin-fall` added (sfx-map, sfx-synth, rendered trim), icon in boss-icons.js, guide text in tutorial-data.js.
+
+## Cool-factor pass (2026-10-26)
+
+The ask: more spectacle and more earned dodges, without taking difficulty away (Hard especially).
+
+Moves that combine (no new cast names, nothing hidden):
+- **Surge into Static Field.** A Polarity Surge now often has a Static Field follow it the moment it lands (shown from then, 3.4 s Normal / 2.8 s Hard). A Surge wants a partner within 150, the field wants everyone 115 apart, so the one ground that answers both is a long stride from your partner. Used in the Front (the second Surge), at the end of the Back, and after the Squall in the Back. Both fields hit for 55% of a full Static Field.
+- **The Squall Line closes in.** The quiet circle narrows over the last 65% of its walk (Front 360 to 300 Normal / 260 Hard; Back 320 to 270 Normal / 232 Hard), drawn by the red edge itself closing (`room.inSquall` and `squallDraw` use the same curve). The Surge landing inside it now lands in the tight end.
+- (Tried and dropped: a Rod Strike while the second Storm Walls turn on Normal. Bots at base gear with a weak healer line-up fell from about 70% to 50%; the Surge stays there.)
+- **Twin Fall on Normal** gets a lighter second pair (45%) a quarter-turn round, 4.4 s behind the first, like Hard's (heavier, 3.4 s).
+
+Spectacle and feel (`boss-vfx.js`, `arena-view.js`):
+- Heavens Fall / Twin Fall / Skyfall: a new windup (the cloud opens and a shaft of light thickens onto the summit, motes streaming up, bolts at its edge); the impact adds a trailing second and third ring, a shower of sky shards, a white screen flash, a camera push-in and a brief hit-stop. A Twin Fall column also throws a gold and a blue bolt through him to the other column.
+- Thunderclap and a Thunder Crash held by the whole pair flash and push the camera.
+- A graze beat: when a storm lane or cell lands and you are within a body's width of it, unhurt, a white bolt tears past and sparks crackle off you with a small camera lean and a quiet whoosh. When Gale Slam is turned aside by a rod ('lee'), a ring and sparks mark it.
+
+Bots: Normal `GEAR=fresh` 30 / 24 / 25 of 30 (88%); Hard `GEAR=mid` 16 / 16 / 19 (57%; the first, gentler numbers gave 61%, so the circle and the field were tightened once). The bots handle all of this well (they read the field and the shrinking circle); a person has less slack than the sims show.

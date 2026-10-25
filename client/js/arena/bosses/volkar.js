@@ -122,7 +122,11 @@ const VOLKAR = {
             else f.damagePlayer(p, dmg.surgeAlone, { kind: 'surge' });
           }
         } });
+      return d;
     };
+    // pair, then split at once: a Surge wants a partner within 150, and the Static Field that follows wants everyone 115 apart, so for a
+    // moment the partner stands in the one ring of ground (115 to 150 away) that answers both (the field shows once the Surge has landed)
+    const surgeField = () => { const d = surge(); f.afterKeep(d + 0.1, () => field(H ? 2.8 : 3.4, true, H ? 0.55 : 0.55)); };
 
     // Thunder Crash: a stack on every + player, so pairs stack together and keep apart from the other pair
     const crash = (d = f.ct(5.5)) => {
@@ -175,12 +179,13 @@ const VOLKAR = {
       for (const m of f.mechs.values()) if (m.tag === 'rod') out.push({ x: m.shape.x, y: m.shape.y });
       return out;
     };
-    const sheltered = p => covers().some(c => {
+    const shelterOf = p => covers().find(c => {
       const cx = c.x - B.x, cy = c.y - B.y, cd = Math.hypot(cx, cy);
       if (cd < 1) return false;
       const ux = cx / cd, uy = cy / cd, px = p.x - B.x, py = p.y - B.y;
       return px * ux + py * uy >= cd - 30 && Math.abs(-px * uy + py * ux) <= COVER_W;
     });
+    const sheltered = p => !!shelterOf(p);
 
     // off the edge where the summit has broken away (Hard): heavy damage, and held a moment while the wind drags you back up
     const fall = p => {
@@ -195,7 +200,8 @@ const VOLKAR = {
       f.mech({ type: 'gale', shape: { kind: 'circle', x: B.x, y: B.y, r: 120 }, delay: d, dmg: 0, dist: GALE, tag: 'gale', avoidable: false,
         onResolve: () => {
           for (const p of f.alive()) {
-            if (sheltered(p)) continue;
+            const lee = shelterOf(p);
+            if (lee) { f.emit({ t: 'propfx', k: 'lee', x: Math.round(lee.x), y: Math.round(lee.y), pid: p.id }); continue; }   // (the wind parts round the rod: a beat to show it)
             const res = f.knock(p, B.x, B.y, GALE);
             if (!res.slam) continue;
             const a = Math.atan2(res.dest.y, res.dest.x);
@@ -385,13 +391,16 @@ const VOLKAR = {
     // The electrified edge closes in on one side and opens on the other, so the safe circle (radius R, its centre D
     // from him) orbits him once over `dur` seconds. He's always inside it. Outside: a jolt every second. Clients get one
     // message and move it on their own clock; the circle shows from the cast, with a ghost of where it's going.
+    // (the quiet circle also draws in over the last of the walk: from the middle of the run it narrows from R to R1, shown by the red edge
+    // closing on it; the client draws the same curve from the same two numbers)
+    const squallR = (q, t) => q.R - (q.R - q.R1) * Math.max(0, Math.min(1, ((t - q.start) / q.dur - 0.35) / 0.65));
     const squallAt = (q, t) => { const a = q.a0 + q.dir * TAU * Math.max(0, Math.min(1, (t - q.start) / q.dur)); return { x: Math.cos(a) * q.D, y: Math.sin(a) * q.D }; };
-    const squall = (dir, a0, R, D, dur = 30) => {
+    const squall = (dir, a0, R, D, dur = 30, R1 = R) => {
       const d = f.ct(4);
       f.cast('Squall Line', d, 'storm');
-      const q = { dir, a0, R, D, dur, start: f.t + d, end: f.t + d + dur, last: {} };
+      const q = { dir, a0, R, R1, D, dur, start: f.t + d, end: f.t + d + dur, last: {} };
       room.squall = q;
-      f.emit({ t: 'roomev', k: 'squall', dir, a0: +a0.toFixed(3), R, D, sdur: dur, at: d, dur: d + dur });
+      f.emit({ t: 'roomev', k: 'squall', dir, a0: +a0.toFixed(3), R, R1, D, sdur: dur, at: d, dur: d + dur });
     };
     f.ticker(() => {
       const q = room.squall;
@@ -399,12 +408,12 @@ const VOLKAR = {
       if (f.t > q.end) { room.squall = null; return; }
       const c = squallAt(q, f.t);
       for (const p of f.alive()) {
-        if (Math.hypot(p.x - c.x, p.y - c.y) <= q.R - 10 || f.t - (q.last[p.id] ?? -9) < 1) continue;
+        if (Math.hypot(p.x - c.x, p.y - c.y) <= squallR(q, f.t) - 10 || f.t - (q.last[p.id] ?? -9) < 1) continue;
         q.last[p.id] = f.t;
         f.damagePlayer(p, dmg.squall, { kind: 'edge', avoidable: true, noVuln: true });
       }
     });
-    room.inSquall = (x, y, t, pad = 0) => { const q = room.squall; if (!q || t < q.start - 1 || t > q.end) return true; const c = squallAt(q, t); return Math.hypot(x - c.x, y - c.y) <= q.R - pad; };
+    room.inSquall = (x, y, t, pad = 0) => { const q = room.squall; if (!q || t < q.start - 1 || t > q.end) return true; const c = squallAt(q, t); return Math.hypot(x - c.x, y - c.y) <= squallR(q, t) - pad; };
 
     // --- Supercell (Hard, the Front): the party plants the rods, and the storm fronts march past them ---------------
     // Grounding Rods: an iron rod hangs over each + player; where they stand when it comes down, it's driven into the
@@ -541,6 +550,7 @@ const VOLKAR = {
       f.cast('Twin Fall', d, 'skyfall');
       twinCols(a0, d, 1, 1);
       if (H) twinCols(a0 + Math.PI / 2, d + 3.4, 3, 0.5);
+      else twinCols(a0 + Math.PI / 2, d + 4.4, 3, 0.45);   // (Normal: a lighter second pair too, a little later)
     };
 
     // --- the storm -----------------------------------------------------------------------------------
@@ -555,7 +565,7 @@ const VOLKAR = {
         S([15, surge, 'Polarity Surge']),
         S([15, crashField, 'Thunder Crash']),
         // (the Squall Line comes early: the storm's circle drifts round him and the pairs walk it, the fist and a Surge landing inside)
-        S([13, () => squall(1, Math.PI / 2, 360, 150), 'Squall Line'], [9, () => field(), 'Static Field'], [H ? 7 : 8, surge, 'Polarity Surge']),
+        S([13, () => squall(1, Math.PI / 2, 360, 150, 30, H ? 260 : 300), 'Squall Line'], [9, () => field(), 'Static Field'], [H ? 7 : 8, surge, 'Polarity Surge']),
         S([14, rodStrike, 'Rod Strike']),
         S([14, () => galeSlam(), 'Gale Slam']),
         S([13, () => stormWalls(WALL, 1), 'Storm Walls'], !H && [4, surge, 'Polarity Surge']),   // (Normal: pair up and walk the gap together)
@@ -569,7 +579,7 @@ const VOLKAR = {
         S([H ? 13 : 14, () => avalanche(AV), 'Avalanche'], [5, () => stormWalls(WALL + 1, -1), 'Storm Walls']),
         H && S([13, skyfall, 'Skyfall']),
         S([14, () => { surge(); crash(f.ct(6)); }, 'Polarity Surge']),
-        S([12, () => field(), 'Static Field'], [12, surge, 'Polarity Surge']),
+        S([12, () => field(), 'Static Field'], [12, surgeField, 'Polarity Surge']),
         S([H ? 9 : 14, titanFist, 'Titan Fist']),
         S([9, () => rodsGale(RODS + 1), 'Lightning Rods']),
         S([12, crashField, 'Thunder Crash']),
@@ -620,14 +630,14 @@ const VOLKAR = {
         S([12, () => { titanFist(); surge(); }, 'Titan Fist']),
         S([12, thunderclap, 'Thunderclap']),
         S([15, () => rodsGale(RODS + Math.PI), 'Lightning Rods'], [9, surge, 'Polarity Surge']),
-        S([15, () => avalanche(AV + Math.PI), 'Avalanche'], [5, () => stormWalls(WALL + Math.PI, -1), 'Storm Walls'], !H && [7, surge, 'Polarity Surge']),
+        S([15, () => avalanche(AV + Math.PI), 'Avalanche'], [5, () => stormWalls(WALL + Math.PI, -1), 'Storm Walls'], !H && [7, surge, 'Polarity Surge']),   // (Normal: the marked run for a stone with the walls turning)
         H && S([12, () => ballLightning(0.3), 'Ball Lightning']),
         S([H ? 10 : 14, () => { rodStrike(); titanFist(); }, 'Rod Strike']),
         S([14, gatheringStorm, 'Gathering Storm'], [f.ct(3) + 9, thunderhead, 'Thunderhead']),
         // --- (Hard: the breaking of the summit begins here)
         S([7, () => { if (H) { titanFist(); chainLightning('healer'); } else field(); }, H ? 'Chain Lightning' : 'Static Field']),
-        H ? S([10, () => { squall(-1, -Math.PI / 2, 320, 120, 24); brk(0); }, 'Squall Line'], [13, surge, 'Polarity Surge'])
-          : S([10, () => squall(-1, -Math.PI / 2, 320, 120, 24), 'Squall Line'], [8, crashField, 'Thunder Crash'], [10, surge, 'Polarity Surge']),
+        H ? S([10, () => { squall(-1, -Math.PI / 2, 320, 120, 24, 232); brk(0); }, 'Squall Line'], [13, surgeField, 'Polarity Surge'])
+          : S([10, () => squall(-1, -Math.PI / 2, 320, 120, 24, 270), 'Squall Line'], [8, crashField, 'Thunder Crash'], [10, surgeField, 'Polarity Surge']),
         H ? S([11, () => { rods(RODS + 2); brk(2, 4); }, 'Lightning Rods']) : S([11, () => rodsGale(RODS + 2), 'Lightning Rods']),
         H && S([12, () => { ballLightning(2.2); brk(4, 5); }, 'Ball Lightning']),
         S([H ? 10 : 14, () => { crashField(); if (H) brk(1, 6); }, 'Thunder Crash']),
@@ -656,7 +666,7 @@ const VOLKAR = {
 
     front(0);
 
-    f.moves = { thunderclap, titanFist, surge, crash, field, rods, galeSlam, rodsGale, stormWalls, chainLightning, ballLightning, skyfall, rodStrike, avalanche, crumble,
+    f.moves = { thunderclap, titanFist, surge, surgeField, crash, field, rods, galeSlam, rodsGale, stormWalls, chainLightning, ballLightning, skyfall, rodStrike, avalanche, crumble,
       edgeStep, squall, eyeOpen, stillAir, eyeCloses, heavensFall, twinFall, groundingRods, supercell };
   },
 };

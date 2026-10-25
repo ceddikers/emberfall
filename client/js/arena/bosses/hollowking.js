@@ -64,7 +64,7 @@ const HOLLOWKING = {
       marks: H ? 12800 : 8000, bell: H ? 5650 : 4500, bellFail: H ? 2500 : 2000, march: H ? 17500 : 14000, bind: H ? 20000 : 16000,
       throw: H ? 17500 : 14000, summons: H ? 21250 : 11000, lid: H ? 15000 : 12000, decree: H ? 21250 : 15000, masonry: H ? 15000 : 12000, writ: H ? 11250 : 9000, scorch: H ? 5000 : 4000, unburied: H ? 18750 : 15000, grave: H ? 12500 : 10000, restless: H ? 3150 : 2500, coffinHp: 7000, skelHp: 9000, skelBite: H ? 1650 : 1300, wardenHp: H ? 58000 : 48000, wardenBite: H ? 5200 : 3800,
     };
-    const HARD_HIT = 1.13;   // (Hard's every blow, one factor: the bots dodge well since the prop-steering fix, so Hard is retuned here, not by changing a dance)
+    const HARD_HIT = 1.165;   // (Hard's every blow, one factor: the bots dodge well since the prop-steering fix, so Hard is retuned here, not by changing a dance)
     if (H) for (const k in dmg) if (!/Hp$/.test(k)) dmg[k] = Math.round(dmg[k] * HARD_HIT);
     const S = (...steps) => steps.filter(Boolean);
     const GAZE_ARC = 1.2;     // you're looking at him if he's within this angle of where you face (~70° either side)
@@ -204,15 +204,37 @@ const HOLLOWKING = {
         : kind === 'stomp' ? { kind: 'circle', x, y, r: echo ? 290 : 320 }
           : { kind: 'donut', x, y, r: 1100, r2: echo ? 250 : 210 });
     const SWING_NAME = { sweep: 'Sceptre Sweep', stomp: 'Barrow Stomp', ring: 'Crown of Graves' };
+    // The Stomp's Aftershock: the hall answers the stomp a beat later with the Crown's ring (everywhere but close round him).
+    // Be out of the stomp when it lands, then in again before the ring: a step out and a dash back through the line.
+    // Both are on the floor well before the first lands (the ring is laid down at half the cast).
+    const AFTER_GAP = H ? 1.0 : 1.25;
+    const aftershock = (x, y, d) => {
+      f.afterKeep(d * 0.45, () => f.mech({ type: 'aoe', shape: { kind: 'donut', x, y, r: 1100, r2: 190 }, delay: d * 0.55 + AFTER_GAP, dmg: dmg.swing, tag: 'ring' }));
+    };
+    // The Sweep's Backhand: the sceptre comes back the other way. When the first cone lands, the one behind him is laid down
+    // (BACK_WARN s on the floor): whoever slipped round behind him to dodge the front slips out to his flank. Cones: the first
+    // covers the front, the second the back (a little narrower); the two flanks stay clear.
+    const BACK_WARN = H ? 1.25 : 1.5;
+    const backhand = s0 => {
+      B.lockFacing = true;
+      const s = { kind: 'cone', x: s0.x, y: s0.y, r: 1100, arc: 1.75, angle: s0.angle + Math.PI };
+      f.echoPlan.push({ knight: -1, kind: 'sweep', at: f.t + BACK_WARN, shape: s });
+      f.mech({ type: 'aoe', shape: s, delay: BACK_WARN, dmg: dmg.swing, tag: 'sweep',
+        onResolve: () => { B.lockFacing = false; f.echoPlan = f.echoPlan.filter(e => e.knight !== -1 || e.shape !== s); } });
+    };
     // a swing; a risen knight remembers it as it lands. (quiet: a second swing in the same breath, no cast bar of its own)
     // (noMemory: the knights don't take this one in: Burial Rites' Crown of Graves)
-    const swing = (kind, quiet, noMemory) => {
+    // (combo: the Sweep's Backhand, or the Stomp's Aftershock; see below)
+    const swing = (kind, quiet, noMemory, combo) => {
       const d = f.ct(4.5);
       if (!quiet) f.cast(SWING_NAME[kind], d, kind);
       if (kind === 'sweep') B.lockFacing = true;
-      f.mech({ type: 'aoe', shape: swingShape(kind, B.x, B.y, B.facing, false), delay: d, dmg: dmg.swing, tag: kind,
+      if (combo && kind === 'stomp') aftershock(B.x, B.y, d);
+      const shape0 = swingShape(kind, B.x, B.y, B.facing, false);
+      f.mech({ type: 'aoe', shape: shape0, delay: d, dmg: dmg.swing, tag: kind,
         onResolve: () => {
-          if (kind === 'sweep') B.lockFacing = false;
+          if (combo && kind === 'sweep') backhand(shape0);
+          else if (kind === 'sweep') B.lockFacing = false;
           if (f.knights.length && !noMemory) {
             // (Hard: whichever knight is free takes it in, chosen at random: the flash on the knight is the only tell)
             let i = memNext % f.knights.length;
@@ -504,6 +526,21 @@ const HOLLOWKING = {
       const far = [...al].sort((a, b) => Math.hypot(b.x - B.x, b.y - B.y) - Math.hypot(a.x - B.x, a.y - B.y)).slice(0, H && al.length > 2 ? 2 : 1);
       for (const p of far) f.mech({ type: 'aoe', shape: { kind: 'rect', x: B.x, y: B.y, angle: 0, len: 1300, w: 120 }, delay: d, dmg: dmg.throw, tag: 'throw', aimFromBoss: p.id, lockAt: 1.0 });
     };
+    // Sceptre Throw, thrice (the Verdict, Judgement): the sceptre is hurled three times, at three heroes in turn (never the tank;
+    // the same hero twice if the party is small), VOLLEY_GAP s apart. Each line follows its hero until VOLLEY_LOCK s before it lands and
+    // then sets: a step out of a set line is a dodge, and the lines are all on the floor from the cast, so the party can see where
+    // each one will run and keep out of its neighbours'. Every line is red from the boss out to the wall.
+    const VOLLEY_GAP = H ? 0.85 : 1.05, VOLLEY_LOCK = H ? 0.7 : 0.85;
+    const sceptreVolley = () => {
+      const al = f.alive();
+      if (al.length < 2) return;
+      const d = f.ct(3.4), pool = f.shuffle(f.nonTanks().length ? f.nonTanks() : al);
+      f.cast('Sceptre Throw', d, 'cleave');
+      for (let i = 0; i < 3; i++) {
+        const p = pool[i % pool.length];
+        f.mech({ type: 'aoe', shape: { kind: 'rect', x: B.x, y: B.y, angle: 0, len: 1300, w: 100 }, delay: d + i * VOLLEY_GAP, dmg: dmg.throw, tag: 'throw', aimFromBoss: p.id, lockAt: VOLLEY_LOCK });
+      }
+    };
     // Grave Summons: the dead gather on one of them (never the tank); wherever they are standing, the party closes on them
     const graveSummons = () => {
       const al = f.alive();
@@ -585,11 +622,11 @@ const HOLLOWKING = {
       until: 0.8,
       sets: [
         S([5, knell, 'Barrow Knell']),
-        S([12, () => swing('sweep'), 'Sceptre Sweep']),
+        S([12, () => swing('sweep', false, false, true), 'Sceptre Sweep']),
         S([13, () => gaze(), 'Royal Gaze']),
         H && S([8, () => audience(), 'Royal Audience']),
         S([H ? 9 : 13, graveCleave, 'Grave Cleave']),
-        S([13, () => swing('stomp'), 'Barrow Stomp']),
+        S([13, () => swing('stomp', false, false, true), 'Barrow Stomp']),
         S([13, () => royalDoom(), 'Royal Doom']),
         S([16, () => swing('ring'), 'Crown of Graves']),
         S([12, knellRocks, 'Barrow Knell']),
@@ -675,7 +712,7 @@ const HOLLOWKING = {
         S([13, tithe, 'Royal Tithe'], [f.ct(5) + 3, dirge, 'Dirge']),
         S([7, () => swing('ring'), 'Crown of Graves'], [5.5, () => echoGaze(1.5), 'Royal Gaze']),
         H && S([10, () => march(-1, laneY()), 'Funeral March']),
-        S([12, knell, 'Barrow Knell']),
+        S([12, sceptreVolley, 'Sceptre Throw']),
       ].filter(Boolean),
       closing: [[10, graveCleave, 'Grave Cleave'], [10, () => swing('sweep'), 'Sceptre Sweep'], [10, knell, 'Barrow Knell']],
       next: judged,
@@ -687,7 +724,7 @@ const HOLLOWKING = {
         S([15, knellRocks, 'Barrow Knell']),
         S([12, () => bells(2.2), 'Barrow Bells']),
         S([12, () => lightsOut(), 'Lights Out']),
-        S([11, () => swing('stomp'), 'Barrow Stomp'], [5, () => swing('sweep'), 'Sceptre Sweep'], [5.5, () => echo(1.5), 'Echo Knights']),
+        S([11, () => swing('stomp', false, false, true), 'Barrow Stomp'], [5, () => swing('sweep'), 'Sceptre Sweep'], [5.5, () => echo(1.5), 'Echo Knights']),
         S([12, () => { graveCleave(); if (H) gravebind(); }, 'Grave Cleave']),
         H && S([10, () => audience(), 'Royal Audience']),
         H && S([11, gatherThenScatter, 'Grave Summons']),

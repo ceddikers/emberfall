@@ -2331,16 +2331,17 @@ const ArenaView = {
     const begin = q.start + q.at, p = clamp((t - begin) / Math.max(0.1, q.sdur), 0, 1);
     const at = u => { const a = q.a0 + q.dir * TAU * clamp(u, 0, 1); return { x: Math.cos(a) * q.D, y: Math.sin(a) * q.D }; };
     const c = at(p), warm = t < begin;
+    const Rn = q.R - (q.R - (q.R1 == null ? q.R : q.R1)) * clamp((p - 0.35) / 0.65, 0, 1);   // (the quiet circle narrows over the last of the walk: volkar.js squallR)
     const k = clamp((t - q.start) / 0.4, 0, 1) * clamp((q.end - t) / 0.5, 0, 1);
     if (k <= 0) return;
     ctx.save(); ctx.globalAlpha = k;
     ARENA.trace(ctx, 2); ctx.clip();
-    ctx.beginPath(); ctx.rect(-3000, -3000, 6000, 6000); ctx.arc(c.x, c.y, q.R, 0, TAU, true);
+    ctx.beginPath(); ctx.rect(-3000, -3000, 6000, 6000); ctx.arc(c.x, c.y, Rn, 0, TAU, true);
     ctx.fillStyle = `rgba(8,16,34,${warm ? 0.25 + 0.15 * Math.sin(t * 6) : 0.55})`; ctx.fill('evenodd');
     ctx.fillStyle = rgba(BossTells.COL.danger, warm ? 0.06 + 0.04 * Math.sin(t * 6) : 0.12); ctx.fill('evenodd');   // the damage, in red
     if (!warm) {
       // the storm out there: dark cloud drifting low over the rock, and a web of lightning crawling across it
-      ctx.save(); ctx.beginPath(); ctx.rect(-3000, -3000, 6000, 6000); ctx.arc(c.x, c.y, q.R + 8, 0, TAU, true); ctx.clip('evenodd');
+      ctx.save(); ctx.beginPath(); ctx.rect(-3000, -3000, 6000, 6000); ctx.arc(c.x, c.y, Rn + 8, 0, TAU, true); ctx.clip('evenodd');
       const fr = Math.floor(t * 10), R = ARENA.R;
       for (let i = 0; i < 14; i++) { const a = hash01(i * 5 + 3) * TAU + t * 0.03, d = Math.sqrt(hash01(i * 11 + 2)) * R; glow(ctx, Math.cos(a) * d, Math.sin(a) * d, 100, '#1a2438', 0.4); }
       for (let i = 0; i < 26; i++) {
@@ -2352,18 +2353,18 @@ const ArenaView = {
       ctx.restore();
     }
     // the storm's edge, in red (drawn on the storm side, so the quiet circle stays clean)
-    ctx.save(); ctx.beginPath(); ctx.rect(-3000, -3000, 6000, 6000); ctx.arc(c.x, c.y, q.R, 0, TAU, true); ctx.clip('evenodd');
-    ctx.beginPath(); ctx.arc(c.x, c.y, q.R, 0, TAU);
+    ctx.save(); ctx.beginPath(); ctx.rect(-3000, -3000, 6000, 6000); ctx.arc(c.x, c.y, Rn, 0, TAU, true); ctx.clip('evenodd');
+    ctx.beginPath(); ctx.arc(c.x, c.y, Rn, 0, TAU);
     ctx.strokeStyle = rgba(BossTells.COL.danger, 0.35); ctx.lineWidth = 14; ctx.stroke();
     ctx.restore();
-    ctx.beginPath(); ctx.arc(c.x, c.y, q.R, 0, TAU);
+    ctx.beginPath(); ctx.arc(c.x, c.y, Rn, 0, TAU);
     ctx.strokeStyle = rgba(BossTells.COL.danger, 0.8 + Math.sin(t * 13) * 0.15); ctx.lineWidth = 2.5; ctx.stroke();
     if (!warm) {
       const n = 22;
       for (let i = 0; i < n; i++) {
         if ((Math.floor(t * 9) + i * 7) % 3 === 0) continue;
         const a0 = i * TAU / n + Math.floor(t * 9) * 0.07, a1 = a0 + TAU / n;
-        jagged(ctx, c.x + Math.cos(a0) * q.R, c.y + Math.sin(a0) * q.R, c.x + Math.cos(a1) * q.R, c.y + Math.sin(a1) * q.R, Math.floor(t * 12) * 7 + i, '#7fe8ff', 1.4);
+        jagged(ctx, c.x + Math.cos(a0) * Rn, c.y + Math.sin(a0) * Rn, c.x + Math.cos(a1) * Rn, c.y + Math.sin(a1) * Rn, Math.floor(t * 12) * 7 + i, '#7fe8ff', 1.4);
       }
     }
     // which way the storm is coming: its front is the trailing side of the circle, where the edge closes in. Chevrons
@@ -2371,11 +2372,11 @@ const ArenaView = {
     // circle will be: that would paint the safe spot)
     if (p < 1) {
       const ca = q.a0 + q.dir * TAU * p, tx = -Math.sin(ca) * q.dir, ty = Math.cos(ca) * q.dir, back = Math.atan2(-ty, -tx), run = (t * 0.8) % 1;
-      ctx.save(); ctx.beginPath(); ctx.rect(-3000, -3000, 6000, 6000); ctx.arc(c.x, c.y, q.R + 4, 0, TAU, true); ctx.clip('evenodd');
-      ctx.beginPath(); ctx.arc(c.x, c.y, q.R + 10, back - 1.1, back + 1.1);
+      ctx.save(); ctx.beginPath(); ctx.rect(-3000, -3000, 6000, 6000); ctx.arc(c.x, c.y, Rn + 4, 0, TAU, true); ctx.clip('evenodd');
+      ctx.beginPath(); ctx.arc(c.x, c.y, Rn + 10, back - 1.1, back + 1.1);
       ctx.strokeStyle = rgba(BossTells.COL.dangerHi, warm ? 0.35 + 0.2 * Math.sin(t * 6) : 0.65); ctx.lineWidth = 8; ctx.stroke();
       for (let i = -3; i <= 3; i++) for (let row = 0; row < 3; row++) {
-        const a = back + i * 0.3, d = q.R + 40 + (row - run) * 52, x = c.x + Math.cos(a) * d, y = c.y + Math.sin(a) * d;   // (marching in on the circle)
+        const a = back + i * 0.3, d = Rn + 40 + (row - run) * 52, x = c.x + Math.cos(a) * d, y = c.y + Math.sin(a) * d;   // (marching in on the circle)
         const al = (warm ? 0.55 : 0.85) * (1 - Math.abs(i) / 4.5) * (row === 0 ? 1 - run : row === 2 ? Math.min(1, run * 3) : 1);
         ctx.save(); ctx.translate(x, y); ctx.rotate(Math.atan2(ty, tx));
         poly(ctx, [-14, -20, 14, 0, -14, 20, -5, 0], rgba(BossTells.COL.dangerHi, al), rgba('#1a0a08', 0.7 * al), 2);

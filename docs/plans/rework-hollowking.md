@@ -68,3 +68,21 @@ Bots, Hard at `GEAR=mid` (30 runs per seed): before this pass 15 / 21 / 22 (seed
 Scripted length with standing dummies: Normal 8:46, Hard 9:50 (the check allows 8:00 to 10:00). Bots clear Normal at about 7:55 and Hard at about 9:05.
 
 **Retune 2026-10-25 (after the bot prop-steering fix).** The bots now take cover and dodge round props properly, and Hard went from 60% to 92% (83 of 90). Burial Rites and every dance are untouched; every Hard blow (not HP) is scaled by one factor, `HARD_HIT = 1.12`, right after the `dmg` table in `hollowking.js`. Result at `GEAR=mid`: 15 / 21 / 22 of 30 (seeds 1000, 2000, 3000: 64%) and 17 / 22 / 19 (seeds 4000, 5000, 6000: 64%). Target: about 20 of 30 (65 to 67%). Normal at `GEAR=fresh` is unchanged by it: 26 / 26 / 28 of 30 (89%). Bots clear Hard at about 9:00, the enrage lands at 10:40.
+
+## Cool-factor pass (2026-10-26)
+
+The user: more fun and complexity without taking difficulty away; abilities that look good, dodges that feel earned by skill. Burial Rites (graves, Writ, Crown of Graves, graves open 19.5 s) is untouched. No new cast names (so no new sounds, icons or voice lines); every new blow is drawn on the floor from the start, red for damage, no safe spots painted.
+
+**Moves that combine (both difficulties).**
+- **Barrow Stomp, Aftershock** (the Summons and the first stomp of Judgement): the ring of the Crown of Graves (everywhere but close round him) lands 1.25 s after the stomp (Hard 1.0 s). Be out for the stomp, then in again before the ring: a step out and a dash back through the line. Both are on the floor well before the stomp lands (the ring is laid at 45% of the cast). The knights remember only the stomp.
+- **Sceptre Sweep, Backhand** (the Summons only): when the first cone lands, a second, narrower cone behind him is laid down for 1.5 s (Hard 1.25 s). Whoever slipped round behind him slips out to his flank; the flanks are clean for both strokes. He holds his facing until it lands.
+- **Sceptre Throw, as a volley** (the Verdict's last set, in place of its last Barrow Knell): three throws at three random non-tanks, 1.05 s apart (Hard 0.85 s), each line following its hero until 0.85 s (Hard 0.7 s) before it lands, then set. All three lines are on the floor from the cast. Step off your own, keep out of the others'. The Court's single throw is unchanged (and its tell is now the Writ's: pale guide while it follows, red once set).
+
+**What it looks like and feels like** (new file `client/js/hollowking-fx.js`, `HK_FX`, called from `boss-vfx.js impact()`; tells in `boss-tells.js` block K).
+- **The whiff:** a hero who stood just outside a blow when it landed (within 80 px, not hit) gets the blow's edge cracking past them: a bright streak along the edge, a ring of wind and sparks at their feet; your own hero also gets a faint white flash, a push of the camera and a soft whoosh. Drawn only for a hero it did not hit and was close to, so it rewards a dodge and never hints where is safe.
+- **Weight:** a hit-stop and a push of the camera when a Sweep, Stomp, Crown or Knell lands (never more than once every few seconds); the Sweep leaves a lingering crescent, the Stomp rings twice and sends light up through the floor; the thrown sceptre is seen flying down its lane, spinning, and bites into the wall.
+- **Wind-ups:** the Stomp's red circle has rings drawing in toward him, quickening, meeting as it lands (a count for the beat, painted inside the red); the Throw's lane shows chevrons running out and gold gathering at his hand.
+
+**Numbers.** The bots read every telegraph, so the new moves cost them little: Hard went to about 74% with the new moves at the old factors. Retuned in one place, `HARD_HIT` 1.13 to 1.165 (each blow, not HP), and the Hard warns above were tightened a little (the Aftershock gap, the Backhand and the volley's lock). Bots, Hard at `GEAR=mid`, 30 runs per seed: 18 / 19 / 21 (seeds 1000, 2000, 3000) and 19 / 22 / 21 (4000, 5000, 6000), 67% over 180. Normal at `GEAR=fresh`: 24 / 26 / 30 (89%). Scripted length unchanged (Normal 8:47, Hard 9:59 in the timeline check; the volley takes the place of a Knell in the Verdict).
+
+**Journals** for the Sweep, the Stomp and the Throw are rewritten for all 23 heroes (the flank for both strokes; out then straight back in; three throws, each at its own hero), and the tutorial block says the same.
